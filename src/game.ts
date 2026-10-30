@@ -288,6 +288,9 @@ export class MaxFlizGameEngine {
   private dofBlurMaterial: THREE.ShaderMaterial | null = null;
   private bulldozerHitCooldowns = new Map<string, number>();
   private globalEnemyShoutCooldown = 0;
+  // Re-evaluate the nearest enemies in short slices instead of allocating/sorting every rendered frame.
+  private waveDirectorCooldown = 0;
+  private activeChaserIds = new Set<string>();
 
   public getPacingFactor(): number {
     if (this.state !== 'playing' || this.levelStartTime <= 0) return 0.50;
@@ -838,6 +841,8 @@ export class MaxFlizGameEngine {
     this.collectedVipCount = 0;
     this.abilityTimer = 0;
     this.levelStartTime = performance.now();
+    this.waveDirectorCooldown = 0;
+    this.activeChaserIds.clear();
     this.marcinReclamationTimer = 0;
     this.grzesiekCrushTimer = 0;
     this.grzesiekCrushPulse = 0;
@@ -894,6 +899,8 @@ export class MaxFlizGameEngine {
     this.hazards = [];
     this.explosiveBarrels = [];
     this.enemies = [];
+    this.activeChaserIds.clear();
+    this.waveDirectorCooldown = 0;
     this.enemyProjectiles = [];
     this.particles = [];
     this.projectiles = [];
@@ -3457,29 +3464,33 @@ export class MaxFlizGameEngine {
       this.globalEnemyShoutCooldown -= dt;
     }
 
-    // WAVE DIRECTOR: Calculate distances and limit simultaneously chasing enemies to 4 (or 5 with boss)
-    const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
-    const maxActiveChasers = isMobile ? 4 : 5;
+    // WAVE DIRECTOR: Rebuild the nearest-engager list at 5-6 Hz. Enemy movement
+    // still updates every frame; only the expensive candidate allocation/sort is throttled.
+    this.waveDirectorCooldown -= dt;
+    if (this.waveDirectorCooldown <= 0) {
+      this.waveDirectorCooldown = 0.18;
+      const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
+      const maxActiveChasers = isMobile ? 4 : 5;
+      const activeCandidates: { enemy: EnemyItem; dist: number }[] = [];
 
-    // Collect candidates within aggro range
-    const activeCandidates: { enemy: EnemyItem; dist: number }[] = [];
-    for (const e of this.enemies) {
-      if (e.state === 'defeated' || !e.mesh) continue;
-      const d = Math.hypot(this.playerPos.x - e.x, this.playerPos.z - e.z);
-      if (d > 26.0 && e.type !== 'walczak' && e.type !== 'krol_leto') {
-        if (e.mesh.visible) e.mesh.visible = false;
-        continue;
+      for (const e of this.enemies) {
+        if (e.state === 'defeated' || !e.mesh) continue;
+        const d = Math.hypot(this.playerPos.x - e.x, this.playerPos.z - e.z);
+        if (d > 26.0 && e.type !== 'walczak' && e.type !== 'krol_leto') {
+          if (e.mesh.visible) e.mesh.visible = false;
+          continue;
+        }
+        if (!e.mesh.visible) e.mesh.visible = true;
+        if (e.type !== 'walczak' && e.type !== 'krol_leto' && d <= 18.0) {
+          activeCandidates.push({ enemy: e, dist: d });
+        }
       }
-      if (!e.mesh.visible) e.mesh.visible = true;
-      if (e.type !== 'walczak' && e.type !== 'krol_leto' && d <= 18.0) {
-        activeCandidates.push({ enemy: e, dist: d });
-      }
-    }
 
-    activeCandidates.sort((a, b) => a.dist - b.dist);
-    const allowedChasers = new Set<string>();
-    for (let i = 0; i < Math.min(maxActiveChasers, activeCandidates.length); i++) {
-      allowedChasers.add(activeCandidates[i].enemy.id);
+      activeCandidates.sort((a, b) => a.dist - b.dist);
+      this.activeChaserIds.clear();
+      for (let i = 0; i < Math.min(maxActiveChasers, activeCandidates.length); i++) {
+        this.activeChaserIds.add(activeCandidates[i].enemy.id);
+      }
     }
 
     this.enemies.forEach((e) => {
@@ -3554,7 +3565,7 @@ export class MaxFlizGameEngine {
       }
 
       // Check whether this enemy is allowed to engage or must hold position in wave
-      const canActivelyChase = e.type === 'walczak' || e.type === 'krol_leto' || allowedChasers.has(e.id);
+      const canActivelyChase = e.type === 'walczak' || e.type === 'krol_leto' || this.activeChaserIds.has(e.id);
 
       // SIGHT & DETECTION LOGIC
       const detectionRange = (e.type === 'walczak' || e.type === 'krol_leto') ? 16.0 : (e.state === 'chase' ? 12.0 : 8.5);
