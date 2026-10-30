@@ -86,6 +86,23 @@ import {
 } from './warehouseAssets.ts';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
+export interface SurvivalUpgradeOption {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+}
+
+export interface SurvivalSnapshot {
+  elapsedSeconds: number;
+  wave: number;
+  kills: number;
+  level: number;
+  xp: number;
+  xpToNext: number;
+  aliveEnemies: number;
+}
+
 export interface GameCallbacks {
   onScoreUpdate: (score: number, collectedVip: number, totalVip: number) => void;
   onHpUpdate: (hp: number, maxHp: number) => void;
@@ -97,6 +114,8 @@ export interface GameCallbacks {
   onPerksUpdate?: (perks: ActivePerks) => void;
   onFloatingText?: (text: string, x: number, y: number, z: number, type?: 'points' | 'vip' | 'easter-egg' | 'damage' | 'perk' | 'combo' | 'enemy_shout', metadata?: any) => void;
   onPerkDropBanner?: (name: string, icon: string, desc: string, color: string) => void;
+  onSurvivalUpdate?: (snapshot: SurvivalSnapshot) => void;
+  onSurvivalLevelUp?: (options: SurvivalUpgradeOption[]) => void;
 }
 
 export class MaxFlizGameEngine {
@@ -292,6 +311,25 @@ export class MaxFlizGameEngine {
   private waveDirectorCooldown = 0;
   private activeChaserIds = new Set<string>();
   private threatTier = 0;
+
+  // Survival Shift is an independent mode. Campaign state and progression remain unchanged.
+  private gameMode: 'campaign' | 'survival' = 'campaign';
+  private survivalElapsed = 0;
+  private survivalSpawnTimer = 0;
+  private survivalCleanupTimer = 4;
+  private survivalUiTimer = 0;
+  private survivalWave = 1;
+  private survivalKills = 0;
+  private survivalLevel = 1;
+  private survivalXp = 0;
+  private survivalXpToNext = 6;
+  private survivalBossWave = 0;
+  private survivalDamageMultiplier = 1;
+  private survivalAttackRateMultiplier = 1;
+  private survivalMoveMultiplier = 1;
+  private survivalMagnetMultiplier = 1;
+  private survivalPendingOptions: SurvivalUpgradeOption[] = [];
+  private survivalXpGems: { mesh: THREE.Mesh; value: number; life: number; phase: number }[] = [];
 
   public getPacingFactor(): number {
     if (this.state !== 'playing' || this.levelStartTime <= 0) return 0.50;
@@ -807,6 +845,7 @@ export class MaxFlizGameEngine {
   }
 
   public startTitle() {
+    this.gameMode = 'campaign';
     this.state = 'title';
     this.hp = this.maxHp;
     this.score = 0;
@@ -835,6 +874,7 @@ export class MaxFlizGameEngine {
   }
 
   public startGame(levelId = 1) {
+    this.gameMode = 'campaign';
     this.state = 'playing';
     this.hp = this.maxHp;
     this.score = 0;
@@ -845,6 +885,21 @@ export class MaxFlizGameEngine {
     this.waveDirectorCooldown = 0;
     this.activeChaserIds.clear();
     this.threatTier = 0;
+    this.survivalElapsed = 0;
+    this.survivalSpawnTimer = 0;
+    this.survivalCleanupTimer = 4;
+    this.survivalUiTimer = 0;
+    this.survivalWave = 1;
+    this.survivalKills = 0;
+    this.survivalLevel = 1;
+    this.survivalXp = 0;
+    this.survivalXpToNext = 6;
+    this.survivalBossWave = 0;
+    this.survivalDamageMultiplier = 1;
+    this.survivalAttackRateMultiplier = 1;
+    this.survivalMoveMultiplier = 1;
+    this.survivalMagnetMultiplier = 1;
+    this.survivalPendingOptions = [];
     this.marcinReclamationTimer = 0;
     this.grzesiekCrushTimer = 0;
     this.grzesiekCrushPulse = 0;
@@ -883,7 +938,105 @@ export class MaxFlizGameEngine {
     this.sayRandomVoiceLine();
   }
 
+  public startSurvival() {
+    // Build the existing warehouse environment, then replace campaign encounters with a managed arena.
+    this.startGame(1);
+    this.gameMode = 'survival';
+    this.levelBounds = { minX: -31, maxX: 31, minZ: -13.5, maxZ: 13.5 };
+    this.currentActiveSector = 1;
+    this.currentLevelId = 1;
+    this.playerPos.set(0, 0.5, 0);
+    this.playerVel.set(0, 0, 0);
+    if (this.playerGroup) this.playerGroup.position.copy(this.playerPos);
+    this.smoothCamY = this.playerPos.y;
+    this.currentLookAt.set(this.playerPos.x, this.playerPos.y + 0.85, this.playerPos.z);
+
+    for (const enemy of this.enemies) {
+      if (enemy.mesh) this.levelRoot.remove(enemy.mesh);
+    }
+    this.enemies = [];
+    for (const hazard of this.hazards) {
+      if (hazard.mesh) this.levelRoot.remove(hazard.mesh);
+      if (hazard.warningMesh) this.levelRoot.remove(hazard.warningMesh);
+    }
+    this.hazards = [];
+    for (const barrel of this.explosiveBarrels) {
+      if (barrel.mesh) this.levelRoot.remove(barrel.mesh);
+    }
+    this.explosiveBarrels = [];
+    for (const tile of this.fallingTiles) {
+      this.levelRoot.remove(tile.mesh);
+      this.levelRoot.remove(tile.warningRing);
+    }
+    this.fallingTiles = [];
+    this.fallingTileSpawnTimer = 0;
+    this.randomSpawnTimer = 6;
+
+    this.callbacks.onBossUpdate?.('', 0, 0, false);
+    this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+    this.emitFloatingToast('SURVIVAL SHIFT — PRZETRWAJ ZMIANĘ!', this.playerPos.x, this.playerPos.y + 1.8, this.playerPos.z, 'combo');
+  }
+
+  public getGameMode(): 'campaign' | 'survival' {
+    return this.gameMode;
+  }
+
+  public getSurvivalSnapshot(): SurvivalSnapshot {
+    return {
+      elapsedSeconds: Math.floor(this.survivalElapsed),
+      wave: this.survivalWave,
+      kills: this.survivalKills,
+      level: this.survivalLevel,
+      xp: this.survivalXp,
+      xpToNext: this.survivalXpToNext,
+      aliveEnemies: this.enemies.reduce((count, enemy) => count + (enemy.state === 'defeated' ? 0 : 1), 0),
+    };
+  }
+
+  public chooseSurvivalUpgrade(id: string): boolean {
+    if (this.gameMode !== 'survival' || this.state !== 'levelup') return false;
+    const choice = this.survivalPendingOptions.find((option) => option.id === id);
+    if (!choice) return false;
+
+    switch (choice.id) {
+      case 'damage':
+        this.survivalDamageMultiplier *= 1.20;
+        break;
+      case 'rapid':
+        this.survivalAttackRateMultiplier *= 0.88;
+        break;
+      case 'boots':
+        this.survivalMoveMultiplier *= 1.10;
+        break;
+      case 'magnet':
+        this.survivalMagnetMultiplier *= 1.65;
+        break;
+      case 'reinforced':
+        this.maxHp += 1;
+        this.hp = Math.min(this.maxHp, this.hp + 1);
+        this.callbacks.onHpUpdate(this.hp, this.maxHp);
+        break;
+      case 'medkit':
+        this.hp = Math.min(this.maxHp, this.hp + 1);
+        this.activePerks.shield = true;
+        this.callbacks.onHpUpdate(this.hp, this.maxHp);
+        this.callbacks.onPerksUpdate?.(this.activePerks);
+        break;
+    }
+
+    this.survivalPendingOptions = [];
+    this.state = 'playing';
+    this.emitFloatingToast('ULEPSZENIE: ' + choice.title, this.playerPos.x, this.playerPos.y + 1.6, this.playerPos.z, 'perk');
+    this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+
+    if (this.survivalXp >= this.survivalXpToNext) {
+      this.beginSurvivalLevelUp();
+    }
+    return true;
+  }
+
   public togglePause() {
+    if (this.gameMode === 'survival' && this.state === 'levelup') return;
     if (this.state === 'playing') {
       this.state = 'paused';
     } else if (this.state === 'paused') {
@@ -898,6 +1051,14 @@ export class MaxFlizGameEngine {
     this.platforms = [];
     this.collectibles = [];
     this.droppedPerks = [];
+    for (const gem of this.survivalXpGems) {
+      this.levelRoot.remove(gem.mesh);
+      gem.mesh.geometry.dispose();
+      const material = gem.mesh.material;
+      if (Array.isArray(material)) material.forEach((item) => item.dispose());
+      else material.dispose();
+    }
+    this.survivalXpGems = [];
     this.hazards = [];
     this.explosiveBarrels = [];
     this.enemies = [];
@@ -2683,17 +2844,24 @@ export class MaxFlizGameEngine {
       }
 
       this.updatePlayerMovement(simDt);
-      this.updateSectorProgression();
+      if (this.gameMode === 'survival') {
+        this.updateSurvivalDirector(simDt);
+      } else {
+        this.updateSectorProgression();
+      }
       this.updateCoffeeMachines(simDt);
       this.updateCollectibles(simDt);
       this.updateDroppedPerks(simDt);
-      this.updateHazards(simDt);
-      this.updateExplosiveBarrels(simDt);
-      this.updateFallingTiles(simDt);
+      if (this.gameMode !== 'survival') {
+        this.updateHazards(simDt);
+        this.updateExplosiveBarrels(simDt);
+        this.updateFallingTiles(simDt);
+        this.updateTimedEvents(simDt);
+      }
       this.updateRandomSpawners(simDt);
-      this.updateTimedEvents(simDt);
       this.updateEnemies(simDt);
       this.updateProjectiles(simDt);
+      if (this.gameMode === 'survival') this.updateSurvivalXpGems(simDt);
       this.updateBimberMolotovs(simDt);
       this.updateBimberFirePuddles(simDt);
       this.updateSpecialEffects(simDt);
@@ -2849,6 +3017,7 @@ export class MaxFlizGameEngine {
     }
 
     let speed = this.charDef.speed * this.getPacingFactor();
+    if (this.gameMode === 'survival') speed *= this.survivalMoveMultiplier;
     if (this.marcinWoTPenaltyTimer > 0) {
       this.marcinWoTPenaltyTimer = Math.max(0, this.marcinWoTPenaltyTimer - dt);
       speed *= 0.70; // 30% speed penalty during Kierownik WoT event
@@ -4229,7 +4398,8 @@ export class MaxFlizGameEngine {
 
       let destroyProj = false;
       const berserkMult = (this.activePerks.kfcBerserk || 0) > 0 ? 2 : 1;
-      const baseDmg = (p.damage ?? (this.charDef.id === 'dawid' ? 2 : 1)) * berserkMult;
+      const baseDmg = (p.damage ?? (this.charDef.id === 'dawid' ? 2 : 1)) *
+        berserkMult * (this.gameMode === 'survival' ? this.survivalDamageMultiplier : 1);
 
       for (const e of this.enemies) {
         if (e.state === 'defeated') continue;
@@ -4544,8 +4714,10 @@ export class MaxFlizGameEngine {
     const isThirdCombo = this.attackComboStep === 0;
 
     // Operator-specific attack cadence
-    this.attackCooldownTimer =
+    const baseAttackCooldown =
       charId === 'mateusz' ? 0.24 : charId === 'grzesiek' ? 0.42 : charId === 'dawid' ? 0.36 : 0.32;
+    this.attackCooldownTimer = baseAttackCooldown *
+      (this.gameMode === 'survival' ? this.survivalAttackRateMultiplier : 1);
     this.attackSwingTimer = 0.26;
 
     sound.playAttackWhoosh();
@@ -5190,6 +5362,10 @@ export class MaxFlizGameEngine {
     const finalPoints = Math.round(points * comboMultiplier);
     this.score += finalPoints;
     this.handleMateuszPassive(2);
+    if (this.gameMode === 'survival') {
+      this.survivalKills++;
+      this.spawnSurvivalXpGem(e.x, e.y, e.z, e.maxHp >= 4 ? 3 : 1);
+    }
 
     if (showToast) {
       this.emitFloatingToast(`+${finalPoints} Pkt Neutralizacja!`, e.x, e.y + 1, e.z, 'points');
