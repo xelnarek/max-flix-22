@@ -951,7 +951,7 @@ export class MaxFlizGameEngine {
     // Build the existing warehouse environment, then replace campaign encounters with a managed arena.
     this.startGame(1);
     this.gameMode = 'survival';
-    this.levelBounds = { minX: -31, maxX: 31, minZ: -13.5, maxZ: 13.5 };
+    this.levelBounds = { minX: -34, maxX: 34, minZ: -17, maxZ: 17 };
     this.currentActiveSector = 1;
     this.currentLevelId = 1;
     this.playerPos.set(0, 0.5, 0);
@@ -2952,7 +2952,7 @@ export class MaxFlizGameEngine {
 
   private updateSurvivalDirector(dt: number) {
     this.survivalElapsed += dt;
-    const nextWave = 1 + Math.floor(this.survivalElapsed / 32);
+    const nextWave = 1 + Math.floor(this.survivalElapsed / 30);
     if (nextWave > this.survivalWave) {
       this.survivalWave = nextWave;
       this.emitFloatingToast('FALA ' + this.survivalWave + ' — NOWA ZMIANA WCHODZI NA HALĘ!', this.playerPos.x, this.playerPos.y + 1.7, this.playerPos.z, 'combo');
@@ -2966,17 +2966,17 @@ export class MaxFlizGameEngine {
 
     this.survivalSpawnTimer -= dt;
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
-    const enemyCap = isMobile ? 18 : 28;
+    const enemyCap = isMobile ? 24 : 36;
     const aliveCount = this.enemies.reduce((count, enemy) => count + (enemy.state === 'defeated' ? 0 : 1), 0);
 
     if (this.survivalSpawnTimer <= 0 && aliveCount < enemyCap) {
       const groupSize = Math.min(
-        isMobile ? 5 : 7,
-        2 + Math.floor(this.survivalWave * 0.55),
+        isMobile ? 6 : 8,
+        2 + Math.floor(this.survivalWave * 0.65),
         enemyCap - aliveCount
       );
       for (let i = 0; i < groupSize; i++) this.spawnSurvivalEnemy(this.survivalWave);
-      this.survivalSpawnTimer = Math.max(2.8, 7.5 - this.survivalWave * 0.28);
+      this.survivalSpawnTimer = Math.max(2.2, 7.0 - this.survivalWave * 0.30);
     }
 
     this.survivalCleanupTimer -= dt;
@@ -3000,7 +3000,7 @@ export class MaxFlizGameEngine {
 
   private getSurvivalSpawnPoint(): { x: number; z: number } {
     const angle = Math.random() * Math.PI * 2;
-    const radius = 13 + Math.random() * 3;
+    const radius = 15 + Math.random() * 4;
     const x = THREE.MathUtils.clamp(
       this.playerPos.x + Math.cos(angle) * radius,
       this.levelBounds.minX + 2.5,
@@ -3041,10 +3041,10 @@ export class MaxFlizGameEngine {
     enemy.startX = minZ;
     enemy.endX = maxZ;
     enemy.mesh.position.set(x, enemy.y, z);
-    const scaling = 1 + Math.min(1.8, Math.max(0, wave - 1) * 0.075);
+    const scaling = 1 + Math.min(2.6, Math.max(0, wave - 1) * 0.095);
     enemy.maxHp = Math.max(1, Math.ceil(enemy.maxHp * scaling));
     enemy.hp = enemy.maxHp;
-    enemy.speed *= 1 + Math.min(0.42, Math.max(0, wave - 1) * 0.018);
+    enemy.speed *= 1 + Math.min(0.60, Math.max(0, wave - 1) * 0.025);
     enemy.shoutTimer = 1.0 + Math.random() * 3.0;
   }
 
@@ -3058,9 +3058,9 @@ export class MaxFlizGameEngine {
     }
     const boss = this.enemies[this.enemies.length - 1];
     if (boss) {
-      boss.maxHp = Math.round(14 + wave * 1.6);
+      boss.maxHp = Math.round(18 + wave * 2.0);
       boss.hp = boss.maxHp;
-      boss.speed *= 1 + Math.min(0.5, wave * 0.012);
+      boss.speed *= 1 + Math.min(0.65, wave * 0.015);
       boss.startX = this.levelBounds.minX + 2.5;
       boss.endX = this.levelBounds.maxX - 2.5;
       boss.specialActionTimer = 2.0;
