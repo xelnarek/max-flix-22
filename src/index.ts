@@ -543,6 +543,22 @@ class MaxFlizScene extends xb.Script {
           if (survivalXpFill) survivalXpFill.style.width = Math.min(100, (snapshot.xp / Math.max(1, snapshot.xpToNext)) * 100) + '%';
           if (survivalKillsElem) survivalKillsElem.textContent = String(snapshot.kills);
           if (survivalEnemiesElem) survivalEnemiesElem.textContent = String(snapshot.aliveEnemies);
+          const weaponRack = document.getElementById('survival-weapons-list');
+          if (weaponRack) {
+            weaponRack.replaceChildren();
+            if (!snapshot.weapons.length) {
+              const starter = document.createElement('span');
+              starter.className = 'survival-weapon-chip starter';
+              starter.textContent = '🥊 Broń operatora • start';
+              weaponRack.appendChild(starter);
+            }
+            for (const weapon of snapshot.weapons) {
+              const chip = document.createElement('span');
+              chip.className = 'survival-weapon-chip' + (weapon.evolved ? ' evolved' : '');
+              chip.textContent = weapon.icon + ' ' + weapon.name + ' • ' + weapon.level + '/5' + (weapon.evolved ? ' ✦' : '');
+              weaponRack.appendChild(chip);
+            }
+          }
           if (survivalRerollBtn) {
             survivalRerollBtn.textContent = '🔄 PRZELOSUJ (' + snapshot.rerolls + ')';
             survivalRerollBtn.disabled = snapshot.rerolls <= 0;
@@ -850,19 +866,42 @@ class MaxFlizScene extends xb.Script {
       });
     });
 
+    const refreshZoneLocks = () => {
+      const unlocked = this.engine.getUnlockedSector();
+      document.querySelectorAll<HTMLElement>('.zone-card').forEach((card) => {
+        const level = Number(card.getAttribute('data-level') || '1');
+        const locked = level > unlocked;
+        card.classList.toggle('locked', locked);
+        card.setAttribute('aria-disabled', locked ? 'true' : 'false');
+        const pill = card.querySelector<HTMLElement>('.zone-checkpoint-pill');
+        if (!pill) return;
+        if (locked && level === 2) pill.textContent = 'ZAMKNIĘTY • POKONAJ BOSMANA';
+        else if (locked && level === 3) pill.textContent = 'ZAMKNIĘTY • POKONAJ KRÓLA-LETO';
+        else if (level === 1) pill.textContent = 'START GŁÓWNY';
+        else pill.textContent = 'CHECKPOINT ODBLOKOWANY';
+      });
+    };
     document.querySelectorAll('.zone-card').forEach((card) => {
       const selectZone = (e?: Event) => {
-        if (e) {
-          e.preventDefault();
-          e.stopPropagation();
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        const level = parseInt(card.getAttribute('data-level') || '1', 10);
+        if (level > this.engine.getUnlockedSector()) {
+          const pill = card.querySelector<HTMLElement>('.zone-checkpoint-pill');
+          if (pill) {
+            pill.textContent = level === 2
+              ? 'WYMAGANE: POKONAJ BOSMANA W SEKTORZE A'
+              : 'WYMAGANE: POKONAJ KRÓLA-LETO W SEKTORZE B';
+          }
+          return;
         }
         document.querySelectorAll('.zone-card').forEach((c) => c.classList.remove('active'));
         card.classList.add('active');
-        this.selectedLevelId = parseInt(card.getAttribute('data-level') || '1', 10);
+        this.selectedLevelId = level;
       };
       card.addEventListener('click', selectZone);
       card.addEventListener('touchend', selectZone);
     });
+    refreshZoneLocks();
 
     let startingGame = false;
     const doStartGame = async (e?: Event) => {
@@ -1248,6 +1287,7 @@ class MaxFlizScene extends xb.Script {
         titleScreen.classList.remove('hidden');
         titleScreen.style.setProperty('display', 'flex', 'important');
       }
+      refreshZoneLocks();
       this.engine.startTitle();
     });
 
@@ -1273,6 +1313,7 @@ class MaxFlizScene extends xb.Script {
         titleScreen.classList.remove('hidden');
         titleScreen.style.setProperty('display', 'flex', 'important');
       }
+      refreshZoneLocks();
       this.engine.startTitle();
     });
 
