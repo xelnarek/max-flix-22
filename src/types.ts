@@ -164,7 +164,7 @@ export interface LevelConfig {
   dialogueQuote: string;
 }
 
-export type GameState = 'title' | 'playing' | 'paused' | 'victory' | 'gameover';
+export type GameState = 'title' | 'playing' | 'paused' | 'levelup' | 'victory' | 'gameover';
 
 export interface ActivePerks {
   doubleJump: number;   // remaining duration in seconds (>0 enables 2nd jump)
