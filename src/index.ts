@@ -12,7 +12,7 @@ import { sound } from './sound.ts';
 import { IntroCutsceneManager } from './introCutscene.ts';
 import { PixelIntroManager } from './pixelIntro.ts';
 import { ComicIntroManager } from './comicIntro.ts';
-import { CharacterId } from './types.ts';
+import { CharacterId, PerkType } from './types.ts';
 import { AssetItem, assetLoader } from './assets.ts';
 
 // warehouseAssets imports moved to assets.ts where they are preloaded
@@ -835,10 +835,10 @@ class MaxFlizScene extends xb.Script {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const btnEl = e.currentTarget as HTMLElement;
-        const perkId = btnEl.getAttribute('data-perk') as any;
+        const perkId = btnEl.getAttribute('data-perk') as PerkType | null;
         if (perkId && this.engine) {
           const pPos = this.engine.getPlayerPos();
-          this.engine.spawnDroppedPerk(pPos.x + 1.8, pPos.z, perkId);
+          this.engine.spawnDroppedPerk(pPos.x + 1.8, 0.5, pPos.z, perkId);
         }
         const originalText = btnEl.textContent || 'DROP W GRZE';
         btnEl.textContent = 'ZRZUCONO OBOK! 📦';
@@ -1051,7 +1051,6 @@ class MaxFlizScene extends xb.Script {
       this.pixelIntro.start();
     };
 
-    document.getElementById('btn-open-story-modal')?.addEventListener('click', launch3dCutscene);
     document.getElementById('btn-open-3d-cutscene')?.addEventListener('click', launch3dCutscene);
     document.getElementById('btn-open-3d-cutscene')?.addEventListener('touchend', launch3dCutscene);
 
@@ -1171,6 +1170,11 @@ class MaxFlizScene extends xb.Script {
         }
       }
     };
+
+    bindTap(document.getElementById('btn-open-story-modal'), () => {
+      updateStorySlides(0);
+      storyModal?.classList.remove('hidden');
+    });
 
     btnCloseStory?.addEventListener('click', () => {
       storyModal?.classList.add('hidden');

@@ -1171,7 +1171,7 @@ export class MaxFlizGameEngine {
     const pool: SurvivalUpgradeOption[] = [
       { id: 'damage', icon: '🎯', title: 'WZMOCNIONA AMUNICJA', description: '+20% obrażeń wszystkich ataków operatora.' },
       { id: 'rapid', icon: '⚡', title: 'SZYBSZY ATAK', description: 'Skrócenie czasu między atakami o 12%.' },
-      { id: 'boots', icon: '👟', title: 'BUTY SPRINTU', description: '+6% prędkości poruszania się.' },
+      { id: 'boots', icon: '👟', title: 'BUTY SPRINTU', description: '+10% prędkości poruszania się.' },
       { id: 'magnet', icon: '🧲', title: 'MAGNES XP', description: 'Znacznie większy zasięg przyciągania kryształów XP.' },
       { id: 'reinforced', icon: '⛑️', title: 'WZMOCNIONY KASK', description: '+1 maksymalny punkt zdrowia i natychmiastowe uzupełnienie.' },
       { id: 'medkit', icon: '☕', title: 'ZESTAW RATUNKOWY', description: 'Odzyskaj 1 punkt zdrowia i aktywuj tarczę na jedno trafienie.' },

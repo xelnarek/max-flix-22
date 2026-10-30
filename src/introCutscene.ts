@@ -732,7 +732,7 @@ export class IntroCutsceneManager {
           <div class="act-step" data-act="1"><span class="act-num">2</span> <span class="act-name">MARCIN</span></div>
           <div class="act-step" data-act="2"><span class="act-num">3</span> <span class="act-name">GRZESIEK & DAWID</span></div>
           <div class="act-step" data-act="3"><span class="act-num">4</span> <span class="act-name">MATEUSZ & PIOTR</span></div>
-          <div class="act-step" data-act="4"><span class="act-num">5</span> <span class="act-name">FINAŁ</span></div>
+          <div class="act-step" data-act="4"><span class="act-num">5</span> <span class="act-name">SURVIVAL SHIFT</span></div>
         </div>
         <div class="cinematic-progress-track">
           <div id="cinematic-progress-fill" class="cinematic-progress-fill"></div>
@@ -844,8 +844,8 @@ export class IntroCutsceneManager {
         text: '“Mateusz: Laga mają! BSOD i platyna wpada na konto! • Piotr: 70 voltów bimbru zza regału B4! Ogień na gresie!”',
       },
       {
-        badge: '🏆 BOHATEROWIE MAX-FLIZ',
-        text: '“Dostawa zabezpieczona! Wybierz swojego magazyniera i rozpocznij zmianę w Max-Fliz Showdown 3D!”',
+        badge: '⚔️ EKIPA MAX-FLIZ • SURVIVAL SHIFT',
+        text: '“Dostawa zabezpieczona, ale syrena już wyje! Fale co 42 sekundy, bossowie, pułapki i pięć eventów. Zbieraj XP, łącz moduły w ewolucje i nie daj się Walczakowi!”',
       },
     ];
 
