@@ -5214,6 +5214,7 @@ export class MaxFlizGameEngine {
   public triggerAbility() {
     if (this.state !== 'playing' || this.abilityTimer > 0) return;
     this.abilityTimer = this.charDef.abilityCooldown;
+    const abilityDamageMultiplier = this.gameMode === 'survival' ? this.survivalDamageMultiplier : 1;
 
     sound.playAbility(this.currentCharacterId);
     this.cameraShake = 0.45;
@@ -5235,8 +5236,9 @@ export class MaxFlizGameEngine {
         if (dist < radius) {
           e.stunTimer = 5.0;
           e.state = 'stunned';
-          e.hp = Math.max(0, e.hp - 2);
-          this.emitFloatingToast('-2 HP Pieczęć WZ!', e.x, e.y + 0.8, e.z, 'damage');
+          const damage = Math.ceil(2 * abilityDamageMultiplier);
+          e.hp = Math.max(0, e.hp - damage);
+          this.emitFloatingToast('-' + damage + ' HP Pieczęć WZ!', e.x, e.y + 0.8, e.z, 'damage');
           if (e.hp <= 0) {
             this.defeatEnemy(e, 240, false);
           }
@@ -5261,12 +5263,13 @@ export class MaxFlizGameEngine {
         const dirDot = (dx * forward.x + dz * forward.z) / Math.max(1, dist);
         if (dist < 5.6 && dirDot > -0.35) {
           e.shieldActive = false;
-          e.hp -= 3;
+          const damage = Math.ceil(3 * abilityDamageMultiplier);
+          e.hp -= damage;
           e.stunTimer = 2.0;
           e.state = 'stunned';
           this.cameraShake = 0.65;
           this.spawnParticleRing(e.x, e.y + 0.6, e.z, 0x86efac);
-          this.emitFloatingToast('-3 HP ŚCISK 44CM!', e.x, e.y + 0.8, e.z, 'damage');
+          this.emitFloatingToast('-' + Math.ceil(3 * abilityDamageMultiplier) + ' HP ŚCISK 44CM!', e.x, e.y + 0.8, e.z, 'damage');
           if (e.hp <= 0) {
             this.defeatEnemy(e, 300, false);
           }
@@ -5303,7 +5306,7 @@ export class MaxFlizGameEngine {
           mesh: tile,
           vel: forward.multiplyScalar(17.5),
           life: 1.45,
-          damage: 2,
+          damage: Math.ceil(2 * abilityDamageMultiplier),
           pierce: 4,
           ricochet: true,
           collectItems: true,
@@ -5328,8 +5331,9 @@ export class MaxFlizGameEngine {
         if (dist < 11.0) {
           e.stunTimer = 5.5;
           e.state = 'stunned';
-          e.hp = Math.max(0, e.hp - 1);
-          this.emitFloatingToast('💻 BSOD LAG -1 HP!', e.x, e.y + 0.8, e.z, 'damage');
+          const damage = Math.ceil(1 * abilityDamageMultiplier);
+          e.hp = Math.max(0, e.hp - damage);
+          this.emitFloatingToast('💻 BSOD LAG -' + damage + ' HP!', e.x, e.y + 0.8, e.z, 'damage');
           if (e.hp <= 0) this.defeatEnemy(e, 240, false);
         }
       });
