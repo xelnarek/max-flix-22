@@ -1258,6 +1258,7 @@ class MaxFlizScene extends xb.Script {
         titleScreen.classList.remove('hidden');
         titleScreen.style.setProperty('display', 'flex', 'important');
       }
+      refreshZoneLocks();
       this.engine.startTitle();
     });
 
