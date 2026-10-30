@@ -3283,7 +3283,7 @@ export class MaxFlizGameEngine {
         break;
     }
     projectile.mesh.position.copy(start);
-    projectile.mesh.castShadow = false;
+    (projectile.mesh as THREE.Mesh).castShadow = false;
     this.levelRoot.add(projectile.mesh);
     this.projectiles.push(projectile);
     this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.85, this.playerPos.z, definition.color);
@@ -5205,8 +5205,8 @@ export class MaxFlizGameEngine {
                 if (other.id !== e.id && other.state !== 'defeated') {
                   if (Math.hypot(other.x - e.x, other.z - e.z) <= p.aoeRadius) {
                     other.hp -= this.scaleSurvivalDamage(1);
-                    other.stunTimer = Math.max(other.stunTimer, p.stunDuration || 1.2);
-                    other.state = 'stunned';
+                    other.stunTimer = Math.max(other.stunTimer, this.gameMode === 'survival' ? 0.22 : (p.stunDuration || 1.2));
+                    if (this.gameMode !== 'survival' || (p.stunDuration || 0) > 0.8) other.state = 'stunned';
                     this.emitFloatingToast('📑 AUDYT AoE -1 HP!', other.x, other.y + 1.1, other.z, 'damage');
                     if (other.hp <= 0) {
                       this.defeatEnemy(other, 240, true);
@@ -5219,8 +5219,8 @@ export class MaxFlizGameEngine {
             if (e.hp <= 0) {
               this.defeatEnemy(e, 250, true);
             } else {
-              e.stunTimer = Math.max(e.stunTimer, p.stunDuration || 0.65);
-              e.state = 'stunned';
+              e.stunTimer = Math.max(e.stunTimer, this.gameMode === 'survival' ? 0.14 : (p.stunDuration || 0.65));
+              if (this.gameMode !== 'survival' || (p.stunDuration || 0) > 0.8) e.state = 'stunned';
             }
           }
 
