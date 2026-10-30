@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Max-Fliz Magazyn Showdown 3D</title>
-    <meta name="description" content="Trójwymiarowa platformówka izometryczna w szalonym magazynie firmy Max-Fliz. Pokieruj Marcinem, Grześkiem, Dawidem lub Mateuszem, omijaj wózki widłowe i steruj magazynem." />
+    <meta name="description" content="Magazyn Showdown 3D: kampania w trzech sektorach i Survival Shift z falami, bossami, pułapkami, eventami, perkami oraz ewolucjami buildów." />
     <meta property="og:title" content="Max-Fliz Magazyn Showdown 3D" />
-    <meta property="og:description" content="Trójwymiarowa platformówka izometryczna w szalonym magazynie firmy Max-Fliz. Pokieruj Marcinem, Grześkiem, Dawidem lub Mateuszem, omijaj wózki widłowe i utwórz idealną dostawę VIP." />
+    <meta property="og:description" content="Magazyn Showdown 3D: trzy sektory kampanii, osobny Survival Shift, nowe typy wrogów, 11 perków, 12 ulepszeń i cztery ewolucje buildów." />
     <meta property="og:type" content="website" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -297,7 +297,11 @@
           <div class="menu-top-header">
             <div class="brand-badge-pill">MAX-FLIZ • LOGISTICS COMPLEX</div>
             <h1 class="menu-game-title">MAGAZYN SHOWDOWN 3D</h1>
-            <p class="menu-game-subtitle">Zintegrowany kompleks logistyczny 3D • 3 połączone sektory • Dostawa VIP</p>
+            <p class="menu-game-subtitle">KAMPANIA 3-SEKTOROWA • SURVIVAL SHIFT • ROGUELITE PROGRESJA</p>
+            <div class="menu-release-strip">
+              <span class="menu-release-pill">PATCH 30.10.2026</span>
+              <span>SHIFT OVERHAUL</span><span>18 TYPÓW WROGÓW</span><span>11 PERKÓW</span><span>4 EWOLUCJE</span>
+            </div>
             <button id="btn-top-intro-3d" class="btn-top-intro-pill" title="Obejrzyj pełny kinowy film fabularny 3D">
               <svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
               <span>FILM INTRO 3D</span>
@@ -328,6 +332,9 @@
                 <svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
               </span>
               <span class="tab-label">MODUŁY BHP</span>
+            </button>
+            <button class="menu-tab-btn codex-tab-btn" data-tab="tab-field-guide">
+              <span class="tab-icon">📚</span><span class="tab-label">KODEKS</span>
             </button>
             <button class="menu-tab-btn" data-tab="tab-leaderboard">
               <span class="tab-icon">
@@ -473,13 +480,13 @@
 
             <div id="tab-enemies" class="tab-panel">
               <div class="combat-guide-banner">
-                <div class="combat-guide-title">SYSTEM WALKI I NEUTRALIZACJI ZAGROŻEŃ</div>
+                <div class="combat-guide-title">SYSTEM WALKI • KAMPANIA I SURVIVAL SHIFT</div>
                 <div class="combat-guide-methods">
                   <div class="combat-method">
                     <span class="method-icon">🥊</span>
                     <div class="method-text">
                       <strong>Atak Bezpośredni [Klawisz F / J / Lewy Klik / ATAK]</strong>
-                      <span>Szybki cios segregatorem, łatą lub kluczem. Zadaje obrażenia, odrzuca przeciwnika i przerywa jego szarżę.</span>
+                      <span>W kampanii używaj F / J / lewego kliknięcia. W Survival Shift operator automatycznie namierza i atakuje najbliższy cel; ręczny atak nadal pozostaje dostępny.</span>
                     </div>
                   </div>
                   <div class="combat-method">
@@ -589,7 +596,7 @@
             <div id="tab-perks" class="tab-panel">
               <div class="perks-panel-header">
                 <div class="perks-panel-title">SYSTEM ZRZUTÓW MODUŁÓW BHP & POWER-UPÓW W ŚWIECIE 3D</div>
-                <div class="perks-panel-desc">Wszystkie 7 modułów wypada bezpośrednio na mapie jako <strong>świecące zasobniki 3D</strong> z pokonanych wrogów, eventów czasowych [T] oraz na wysokich antresolach. Kliknij <strong>DROP W GRZE</strong>, aby zrzucić moduł obok bohatera!</div>
+                <div class="perks-panel-desc">Wszystkie 11 modułów wypada bezpośrednio na mapie jako <strong>świecące zasobniki 3D</strong> z pokonanych wrogów, eventów czasowych [T] oraz na wysokich antresolach. Kliknij <strong>DROP W GRZE</strong>, aby zrzucić moduł obok bohatera!</div>
               </div>
               <div class="perk-shop-grid">
                 <div class="perk-card" data-perk="kfc_bucket">
@@ -601,7 +608,7 @@
                     </div>
                     <button class="btn-perk-activate" data-perk="kfc_bucket">DROP W GRZE</button>
                   </div>
-                  <div class="perk-card-desc">Gorące stripsy! Natychmiast leczy +1 Kubek Kawy, daje +40% prędkości i aktywuje Furię KFC (podwójne obrażenia oraz ognista aura) na 14 sekund.</div>
+                  <div class="perk-card-desc">Gorące stripsy! Natychmiast przywracają do 2 punktów zdrowia i aktywują na 16 sekund Furię KFC: podwójne obrażenia oraz odporność na spowolnienie klejem.</div>
                 </div>
 
                 <div class="perk-card" data-perk="golden_paleciak">
@@ -613,7 +620,7 @@
                     </div>
                     <button class="btn-perk-activate" data-perk="golden_paleciak">DROP W GRZE</button>
                   </div>
-                  <div class="perk-card-desc">Tryb Niezniszczalnego Tarana na 10 sekund! Rozjeżdżaj wrogów samym biegiem, ignoruj klej na podłodze i zgarniaj +250 pkt za każde staranowanie.</div>
+                  <div class="perk-card-desc">Tryb Tarana na 14 sekund. Rozjeżdżaj przeciwników podczas biegu i przecinaj grupy wrogów w ciasnych alejkach.</div>
                 </div>
 
                 <div class="perk-card" data-perk="stretch_armor">
@@ -625,7 +632,7 @@
                     </div>
                     <button class="btn-perk-activate" data-perk="stretch_armor">DROP W GRZE</button>
                   </div>
-                  <div class="perk-card-desc">10 warstw czarnej folii stretch! Daje Tarczę Ochronną, +12 sekund Podwójnego Skoku oraz odbija napastników przy kontakcie.</div>
+                  <div class="perk-card-desc">Zbroja daje tarczę oraz 10 sekund całkowitej nietykalności. Najlepsza do przebicia się przez zagęszczoną grupę przeciwników.</div>
                 </div>
 
                 <div class="perk-card" data-perk="hardhat">
@@ -674,8 +681,160 @@
                     <button class="btn-perk-activate" data-perk="espresso_boost">DROP W GRZE</button>
                   </div>
                   <div class="perk-card-desc">Zwiększa prędkość poruszania się o +55% na 18 sekund, pozwalając błyskawicznie przeskakiwać między sektorami A, B i C.</div>
+                  <div class="perk-card" data-perk="attack_haste">
+                    <div class="perk-card-top"><div class="perk-card-icon">📡</div><div class="perk-card-head-info"><div class="perk-card-title">Tryb Turbo Skanera</div><span class="perk-source-tag">Źródło: Eventy Survival • Zrzuty specjalne</span></div><button class="btn-perk-activate" data-perk="attack_haste">DROP W GRZE</button></div>
+                    <div class="perk-card-desc">Przez 22 sekundy skraca odstęp między atakami operatora o 28%. Dobre rozwiązanie, gdy arena zaczyna się zagęszczać.</div>
+                  </div>
+                  <div class="perk-card" data-perk="arc_drone">
+                    <div class="perk-card-top"><div class="perk-card-icon">🤖</div><div class="perk-card-head-info"><div class="perk-card-title">Dron Piorun — asysta</div><span class="perk-source-tag">Źródło: Event AGV • Rozwój operatora</span></div><button class="btn-perk-activate" data-perk="arc_drone">DROP W GRZE</button></div>
+                    <div class="perk-card-desc">Przez 28 sekund dron co około 1,65 s razi najbliższego wroga impulsem elektrycznym w zasięgu 12 m. To sojusznicza jednostka — nie myl jej z wrogim dronem patrolowym.</div>
+                  </div>
+                  <div class="perk-card" data-perk="xp_surge">
+                    <div class="perk-card-top"><div class="perk-card-icon">📈</div><div class="perk-card-head-info"><div class="perk-card-title">Premia za normę</div><span class="perk-source-tag">Źródło: Black Friday • Zrzuty Survival</span></div><button class="btn-perk-activate" data-perk="xp_surge">DROP W GRZE</button></div>
+                    <div class="perk-card-desc">Przez 24 sekundy każdy zebrany kryształ XP daje o 50% więcej doświadczenia. Przyspiesza zdobywanie kolejnych poziomów.</div>
+                  </div>
+                  <div class="perk-card" data-perk="damage_ward">
+                    <div class="perk-card-top"><div class="perk-card-icon">🪵</div><div class="perk-card-head-info"><div class="perk-card-title">Pancerz z palety EURO</div><span class="perk-source-tag">Źródło: BHP • Zrzuty Survival</span></div><button class="btn-perk-activate" data-perk="damage_ward">DROP W GRZE</button></div>
+                    <div class="perk-card-desc">Przez 24 sekundy blokuje jedno trafienie, a osłona odnawia blok co 2,4 sekundy. Nie daje jednak zgody na stanie w laserze CNC.</div>
+                  </div>
                 </div>
               </div>
+            </div>
+
+            <div id="tab-field-guide" class="tab-panel field-guide-panel">
+              <section class="field-guide-hero">
+                <div class="field-guide-kicker">MAX-FLIZ INTELLIGENCE DIVISION • FIELD MANUAL 02.6</div>
+                <div class="field-guide-heading-row"><div><h2>BAZA TAKTYCZNA</h2><p>Pełny przewodnik po zawartości gry: kampania, Survival Shift, przeciwnicy, pułapki, eventy, perki, ulepszenia i sekrety. Wszystko w jednym miejscu, przed wejściem na halę.</p></div><div class="field-guide-stamp">AKTUALNE<br>30.10.2026</div></div>
+                <div class="field-guide-metrics">
+                  <div><strong>18</strong><span>typów zagrożeń</span></div><div><strong>4</strong><span>pułapki</span></div><div><strong>5</strong><span>eventów</span></div><div><strong>11</strong><span>perków</span></div><div><strong>12</strong><span>ulepszeń</span></div><div><strong>4</strong><span>ewolucje</span></div>
+                </div>
+              </section>
+
+              <section class="field-guide-section">
+                <div class="field-guide-section-head"><span class="field-guide-index">01</span><div><h3>DWA TRYBY • JEDEN KOMPLEKS</h3><p>Kampania prowadzi przez historię i trzy sektory. Survival Shift jest osobną areną, w której rozwijasz build i próbujesz wytrzymać jak najdłużej.</p></div></div>
+                <div class="field-guide-card-grid two-col">
+                  <article class="field-guide-card"><span class="field-guide-icon">🗺️</span><h4>KAMPANIA • MEGA-MAPA</h4><p>Trzy połączone sektory bez ekranów ładowania: Magazyn B4, Showroom & SPA i Terminal VIP. Zbieraj zamówienia, zaliczaj checkpointy i pokonuj bossów, aby doprowadzić dostawę do końca.</p><small>CEL: DOSTAWA VIP • EKSPLORACJA • BOSSOWIE</small></article>
+                  <article class="field-guide-card"><span class="field-guide-icon">⚔️</span><h4>SURVIVAL SHIFT • ROGUELITE</h4><p>Samodzielna arena, fale co 42 sekundy i automatyczne namierzanie najbliższego wroga. Co 5 fal pojawia się boss; co 10 fal jest nim Król-Leto. Boss zostawia skrzynię z łupem i dodatkowe XP.</p><small>CEL: PRZETRWAJ • ZBIERAJ XP • SKŁADAJ BUILD</small></article>
+                </div>
+                <div class="field-guide-callout"><strong>Tempo i czytelność:</strong> początek Survival jest wolniejszy, a tempo narasta stopniowo. Grupy i spawn są ograniczone. Limit aktywnych przeciwników wynosi 24 na urządzeniach mobilnych i 36 na desktopie.</div>
+              </section>
+
+              <section class="field-guide-section">
+                <div class="field-guide-section-head"><span class="field-guide-index">02</span><div><h3>ROSTER ZAGROŻEŃ • 18 TYPÓW</h3><p>Obserwuj tor ruchu i nie daj się zamknąć w alejce. Dron przeciwnika i dron asystujący to dwie różne jednostki.</p></div></div>
+                <div class="field-guide-card-grid three-col">
+                  <article class="field-guide-card enemy"><span class="field-guide-icon">🧟</span><h4>Zombie-Magazynier</h4><p>Podstawowy wróg Survival. Powolny napór nocnej zmiany, groźny w dużej grupie.</p><small>TAKTYKA: NIE DAJ SIĘ OTACZAĆ</small></article>
+                  <article class="field-guide-card enemy"><span class="field-guide-icon">📦</span><h4>Kurier Ekspresowy</h4><p>Mobilny dostawca z paczką i awizem. Próbuje dopaść operatora w wąskich przejściach.</p><small>TAKTYKA: ZMIENIAJ KIERUNEK</small></article>
+                  <article class="field-guide-card enemy"><span class="field-guide-icon">🪚</span><h4>Monter Wiesław</h4><p>Agresywny fachowiec z poziomicą i szlifierką. Żaden wymiar nie jest dla niego prawidłowy.</p><small>TAKTYKA: TRZYMAJ DYSTANS</small></article>
+                  <article class="field-guide-card enemy"><span class="field-guide-icon">⛑️</span><h4>Inspektor BHP</h4><p>Kontroler z gwizdkiem i paraliżującymi uwagami. Pojawia się także podczas niezapowiedzianego audytu.</p><small>TAKTYKA: UNIKAJ JEGO PRESJI</small></article>
+                  <article class="field-guide-card enemy"><span class="field-guide-icon">💼</span><h4>Handlowiec</h4><p>Rzuca ofertami, prospektami i obietnicami rabatu. Zostawiony bez kontroli potrafi zająć pół alejki.</p><small>TAKTYKA: NIE DAJ MU CIĘ OSACZYĆ</small></article>
+                  <article class="field-guide-card enemy"><span class="field-guide-icon">📑</span><h4>Klient z reklamacją</h4><p>Dołącza do puli od 3. fali. Ma pretensje o fakturę, termin i odcień fugi — najlepiej jednocześnie.</p><small>TAKTYKA: NIE STÓJ W MIEJSCU</small></article>
+                  <article class="field-guide-card enemy"><span class="field-guide-icon">🎨</span><h4>Architektka</h4><p>Dołącza od 4. fali. Jej projekt wymaga beżu, którego nie ma w żadnym katalogu.</p><small>TAKTYKA: KONTROLUJ POZYCJĘ</small></article>
+                  <article class="field-guide-card enemy"><span class="field-guide-icon">🇮🇹</span><h4>Włoski dostawca</h4><p>Od 5. fali wnosi na halę temperament, włoską armaturę i zamieszanie większe niż dokument WZ.</p><small>TAKTYKA: NIE DAJ SIĘ ZAGNAĆ W RÓG</small></article>
+                  <article class="field-guide-card enemy"><span class="field-guide-icon">🔧</span><h4>Serwisanci</h4><p>Ekipa od awarii pomp, wanien i systemów. W Survival pojawia się od 6. fali.</p><small>TAKTYKA: NIE DAJ SIĘ ZATRZYMAĆ</small></article>
+                  <article class="field-guide-card enemy"><span class="field-guide-icon">🚚</span><h4>Pan Roman</h4><p>Legenda dostaw bez awiza. W Survival wchodzi od 7. fali, a event zaginionej palety wystawia go na trasę.</p><small>TAKTYKA: ZOSTAW DROGĘ ODWROTU</small></article>
+                  <article class="field-guide-card enemy"><span class="field-guide-icon">🏎️</span><h4>Sztaplar / operator paleciaka</h4><p>Rajdowiec z alei B4. Od 8. fali potrafi rozpędzić chaos do poziomu driftu na gresie.</p><small>TAKTYKA: ZEJDŹ Z LINII JAZDY</small></article>
+                  <article class="field-guide-card enemy"><span class="field-guide-icon">🛡️</span><h4>Elitarny strażnik</h4><p>Pancerny ochroniarz Walczaka. W puli Survival pełni rolę cięższego przeciwnika.</p><small>TAKTYKA: NIE ATAKUJ NA ŚLEPO</small></article>
+                  <article class="field-guide-card enemy"><span class="field-guide-icon">⚡</span><h4>Dron Piorun</h4><p>Jednostka patrolowa i przeciwnik eventu AGV. Atakuje impulsami; nie jest Twoim sojusznikiem.</p><small>TAKTYKA: RUCH I ZMIANA POZYCJI</small></article>
+                  <article class="field-guide-card enemy"><span class="field-guide-icon">🤖</span><h4>Robot AGV</h4><p>Autonomiczny wózek transportowy z błędną trasą i wadliwym radarem. Występuje w kampanii.</p><small>TAKTYKA: NIE BLOKUJ MU KORYTARZA</small></article>
+                  <article class="field-guide-card enemy"><span class="field-guide-icon">🚜</span><h4>Wózek widłowy</h4><p>Ruchome zagrożenie kampanii, które wymusza obserwowanie toru jazdy i bezpiecznych przejść.</p><small>TAKTYKA: PATRZ NA TOR JAZDY</small></article>
+                  <article class="field-guide-card enemy boss"><span class="field-guide-icon">👔</span><h4>Były kierownik Walczak</h4><p>Boss kampanii i fal Survival. Atakuje megafonem oraz karami umownymi. Co piątą falę przypomina, że premia jest „w trakcie akceptacji”.</p><small>TAKTYKA: UNIKI • RUCH • OKNO PO ATAKU</small></article>
+                  <article class="field-guide-card enemy boss"><span class="field-guide-icon">👑</span><h4>Król-Leto</h4><p>Boss kampanii oraz co 10. fali Survival. Rzuca dyscyplinarkami i nie uznaje odwołań.</p><small>TAKTYKA: NIE ZOSTAWAJ W JEDNYM MIEJSCU</small></article>
+                  <article class="field-guide-card enemy boss"><span class="field-guide-icon">⚓</span><h4>Bosman z Krakowa</h4><p>Mini-boss kampanii. Uderza odprawami, raportami i presją wyników. Spotkanie, które mogło być mailem.</p><small>TAKTYKA: PILNUJ DYSTANSU</small></article>
+                </div>
+              </section>
+
+              <section class="field-guide-section">
+                <div class="field-guide-section-head"><span class="field-guide-index">03</span><div><h3>PUŁAPKI I STREFY NIEBEZPIECZNE</h3><p>Każda pułapka potrafi zablokować trasę odwrotu. Nie walcz plecami do nieznanego.</p></div></div>
+                <div class="field-guide-card-grid four-col">
+                  <article class="field-guide-card hazard"><span class="field-guide-icon">🍯</span><h4>Rozlany klej Mapei</h4><p>Lepka strefa mocno spowalniająca ruch. Utrudnia zmianę kierunku i ucieczkę.</p><small>OMIJAJ PLAMĘ</small></article>
+                  <article class="field-guide-card hazard"><span class="field-guide-icon">🔴</span><h4>Laser CNC</h4><p>Aktywna wiązka przecinarki do spieków. Obserwuj ostrzeżenie i nie przecinaj toru lasera.</p><small>PRZESKOCZ LUB OMIŃ</small></article>
+                  <article class="field-guide-card hazard"><span class="field-guide-icon">💨</span><h4>Gejzer pary</h4><p>Wyrzut gorącej pary pod ciśnieniem. Odsuń się od wylotu, zanim strefa się uaktywni.</p><small>ODSUŃ SIĘ OD WYLOTU</small></article>
+                  <article class="field-guide-card hazard"><span class="field-guide-icon">🏗️</span><h4>Prasa hydrauliczna 500T</h4><p>Ciężka prasa ze strefą zgniotu. Nie zostawaj w obszarze jej pracy.</p><small>OPUŚĆ STREFĘ PRACY</small></article>
+                </div>
+                <div class="field-guide-callout"><strong>Rotacja pułapek:</strong> nowa pułapka pojawia się mniej więcej co 29–41 sekund; maksymalnie cztery mogą być aktywne naraz. Tymczasowe instalacje znikają po około 42 sekundach.</div>
+              </section>
+
+              <section class="field-guide-section">
+                <div class="field-guide-section-head"><span class="field-guide-index">04</span><div><h3>WYDARZENIA MAGAZYNOWE • 5 SCENARIUSZY</h3><p>Event zmienia układ areny i cele do wykonania. Czytaj baner — podaje nazwę i nagrodę wydarzenia.</p></div></div>
+                <div class="field-guide-card-grid two-col">
+                  <article class="field-guide-card event"><span class="field-guide-icon">🍗</span><h4>DOSTAWA KFC — ALARM GŁODOWY</h4><p>Trzech Zombie-Magazynierów wyczuwa stripsy, a na mapie pojawia się Kubełek KFC. Dawid znów zamówił za mało.</p></article>
+                  <article class="field-guide-card event"><span class="field-guide-icon">🚨</span><h4>NIEZAPOWIEDZIANA KONTROLA BHP</h4><p>Dołącza Inspektor, pojawia się dodatkowa pułapka oraz Kask BHP. Nagle wszyscy pamiętają, gdzie leży instrukcja stanowiskowa.</p></article>
+                  <article class="field-guide-card event"><span class="field-guide-icon">💸</span><h4>BLACK FRIDAY W SHOWROOMIE</h4><p>20 sekund podwójnych punktów, kryształy XP, Magnes Zamówień i klient polujący na rabat -80%.</p></article>
+                  <article class="field-guide-card event"><span class="field-guide-icon">🤖</span><h4>AWARIA SYSTEMU AGV</h4><p>Serwisant, operator paleciaka i wrogi Dron Piorun. W nagrodę można zdobyć moduł sojuszniczego Drona-Asysty.</p></article>
+                  <article class="field-guide-card event"><span class="field-guide-icon">📦</span><h4>ZAGINIONA PALETA PREMIUM</h4><p>Pan Roman pojawia się przy tajemniczym ładunku. Skrzynia z łupem zawiera losowy moduł — sprawdź, czy warto ryzykować trasę.</p></article>
+                </div>
+                <div class="field-guide-callout"><strong>Częstotliwość:</strong> pierwszy event może pojawić się po około 38 sekundach. Kolejne są losowane w odstępach około 68–92 sekund.</div>
+              </section>
+
+              <section class="field-guide-section">
+                <div class="field-guide-section-head"><span class="field-guide-index">05</span><div><h3>11 PERKÓW • ZASOBNIKI 3D</h3><p>Perk to efekt czasowy odebrany z zasobnika. Nie myl go z ulepszeniem poziomu — ulepszenia rozwijają build na stałe w danym biegu.</p></div></div>
+                <div class="field-guide-card-grid two-col">
+                  <article class="field-guide-card perk"><span class="field-guide-icon">⛑️</span><h4>Atestowany Kask BHP</h4><p>Jednorazowa tarcza blokująca bezpośrednie trafienie.</p><small>1 BLOK • BEZ LICZNIKA CZASU</small></article>
+                  <article class="field-guide-card perk"><span class="field-guide-icon">👟</span><h4>Buty Magazynowe Vibram</h4><p>Włączają podwójny skok i ułatwiają wyjście z ciasnego korytarza.</p><small>25 SEKUND</small></article>
+                  <article class="field-guide-card perk"><span class="field-guide-icon">🧲</span><h4>Radiowy Magnes Zamówień</h4><p>Przyciąga pobliskie zamówienia, próbki i zasobniki do operatora.</p><small>20 SEKUND</small></article>
+                  <article class="field-guide-card perk"><span class="field-guide-icon">☕</span><h4>Podwójne Espresso</h4><p>Zwiększa prędkość ruchu o 65%, by wyjść z okrążenia lub dopaść kryształy.</p><small>18 SEKUND</small></article>
+                  <article class="field-guide-card perk"><span class="field-guide-icon">🍗</span><h4>Kubełek KFC od Dawida</h4><p>Leczy do 2 punktów zdrowia, zapewnia podwójne obrażenia i odporność na spowolnienie klejem.</p><small>16 SEKUND FURII</small></article>
+                  <article class="field-guide-card perk"><span class="field-guide-icon">🚜</span><h4>Złoty Paleciak Turbo B4</h4><p>Aktywuje tryb tarana: zderzaj się z przeciwnikami i przecinaj ich grupy.</p><small>14 SEKUND</small></article>
+                  <article class="field-guide-card perk"><span class="field-guide-icon">🛡️</span><h4>Zbroja z Folii Stretch VIP</h4><p>Zapewnia tarczę oraz 10 sekund całkowitej nietykalności.</p><small>10 SEKUND NIETYKALNOŚCI</small></article>
+                  <article class="field-guide-card perk"><span class="field-guide-icon">📡</span><h4>Tryb Turbo Skanera</h4><p>Skraca odstęp między atakami operatora o 28%.</p><small>22 SEKUNDY</small></article>
+                  <article class="field-guide-card perk"><span class="field-guide-icon">🤖</span><h4>Dron Piorun — asysta</h4><p>Sojuszniczy dron razi najbliższego wroga co około 1,65 sekundy w zasięgu 12 metrów.</p><small>28 SEKUND</small></article>
+                  <article class="field-guide-card perk"><span class="field-guide-icon">📈</span><h4>Premia za normę</h4><p>Każdy zebrany kryształ XP daje o 50% więcej doświadczenia.</p><small>24 SEKUNDY</small></article>
+                  <article class="field-guide-card perk"><span class="field-guide-icon">🪵</span><h4>Pancerz z palety EURO</h4><p>Blokuje jedno trafienie, a osłona odnawia blok co 2,4 sekundy.</p><small>24 SEKUNDY</small></article>
+                </div>
+              </section>
+
+              <section class="field-guide-section">
+                <div class="field-guide-section-head"><span class="field-guide-index">06</span><div><h3>12 MODUŁÓW ROZWOJU OPERATORA</h3><p>Po zdobyciu poziomu akcja staje. Otrzymujesz trzy losowe propozycje — wybierz jedną i buduj swój styl gry.</p></div></div>
+                <div class="field-guide-card-grid three-col">
+                  <article class="field-guide-card upgrade"><span class="field-guide-icon">🎯</span><h4>Wzmocniona amunicja</h4><p>+20% obrażeń ataków operatora.</p></article>
+                  <article class="field-guide-card upgrade"><span class="field-guide-icon">⚡</span><h4>Szybszy atak</h4><p>O 12% krótszy odstęp między atakami.</p></article>
+                  <article class="field-guide-card upgrade"><span class="field-guide-icon">👟</span><h4>Buty sprintu</h4><p>+10% prędkości ruchu.</p></article>
+                  <article class="field-guide-card upgrade"><span class="field-guide-icon">🧲</span><h4>Magnes XP</h4><p>Większy zasięg przyciągania kryształów doświadczenia.</p></article>
+                  <article class="field-guide-card upgrade"><span class="field-guide-icon">⛑️</span><h4>Wzmocniony kask</h4><p>+1 maksymalnego zdrowia i natychmiastowe +1 zdrowia.</p></article>
+                  <article class="field-guide-card upgrade"><span class="field-guide-icon">☕</span><h4>Zestaw ratunkowy</h4><p>Odzyskaj 1 zdrowie i otrzymaj tarczę na jedno trafienie.</p></article>
+                  <article class="field-guide-card upgrade"><span class="field-guide-icon">🎯</span><h4>Zasięg audytu</h4><p>+12% zasięgu automatycznego namierzania celu.</p></article>
+                  <article class="field-guide-card upgrade"><span class="field-guide-icon">📈</span><h4>Premia za normę</h4><p>+18% doświadczenia z kryształów XP.</p></article>
+                  <article class="field-guide-card upgrade"><span class="field-guide-icon">📦</span><h4>Łowca okazji</h4><p>Zwiększa mnożnik szansy na dodatkowe zrzuty perków.</p></article>
+                  <article class="field-guide-card upgrade"><span class="field-guide-icon">🩹</span><h4>Przerwa regeneracyjna</h4><p>Odblokowuje okresowe odzyskiwanie 1 punktu zdrowia.</p></article>
+                  <article class="field-guide-card upgrade"><span class="field-guide-icon">🤖</span><h4>Dron asystujący</h4><p>Przywołuje drona rażącego wrogów przez 32 sekundy.</p></article>
+                  <article class="field-guide-card upgrade"><span class="field-guide-icon">🪵</span><h4>Paleta ochronna</h4><p>Zapewnia 24 sekundy okresowej osłony.</p></article>
+                </div>
+                <div class="field-guide-callout"><strong>Tokeny na bieg:</strong> na start otrzymujesz 1 przerzut i 1 pominięcie. Przerzut losuje nowy zestaw propozycji; pominięcie zamyka wybór bez pobrania ulepszenia.</div>
+              </section>
+
+              <section class="field-guide-section">
+                <div class="field-guide-section-head"><span class="field-guide-index">07</span><div><h3>EWOLUCJE BUILDÓW • ŁĄCZ MODUŁY</h3><p>To stałe bonusy w ramach bieżącego biegu Survival. Nie są osobnymi dropami — odblokowują się automatycznie po spełnieniu warunków.</p></div></div>
+                <div class="field-guide-card-grid two-col">
+                  <article class="field-guide-card evolution"><span class="field-guide-icon">🔥</span><h4>OVERDRIVE: LINIA OGNIA</h4><p><strong>Warunek:</strong> 3× Wzmocniona amunicja + 2× Szybszy atak. <strong>Efekt:</strong> +35% obrażeń i dodatkowe 16% przyspieszenia ataku.</p></article>
+                  <article class="field-guide-card evolution"><span class="field-guide-icon">⚡</span><h4>PIORUN MK II</h4><p><strong>Warunek:</strong> 2× Dron asystujący + 2× Zasięg audytu. <strong>Efekt:</strong> częstsze impulsy drona i zwiększony zasięg namierzania.</p></article>
+                  <article class="field-guide-card evolution"><span class="field-guide-icon">📦</span><h4>PREMIUM LOGISTICS</h4><p><strong>Warunek:</strong> 2× Premia za normę + 2× Łowca okazji. <strong>Efekt:</strong> +25% XP oraz +20% mnożnika szansy na dodatkowe zrzuty.</p></article>
+                  <article class="field-guide-card evolution"><span class="field-guide-icon">🛡️</span><h4>FORT BHP</h4><p><strong>Warunek:</strong> 2× Przerwa regeneracyjna + 2× Paleta ochronna. <strong>Efekt:</strong> szybsza regeneracja i wydłużona osłona.</p></article>
+                </div>
+              </section>
+
+              <section class="field-guide-section">
+                <div class="field-guide-section-head"><span class="field-guide-index">08</span><div><h3>SEKRETY I SKRZYNIE Z ŁUPEM</h3><p>Nie wszystko leży na środku alejki. Czasem trzeba zejść z głównej trasy i sprawdzić obrzeża hali.</p></div></div>
+                <div class="field-guide-card-grid three-col">
+                  <article class="field-guide-card secret"><span class="field-guide-icon">📁</span><h4>Teczka z premią Walczaka</h4><p>Ukryty obiekt specjalny. Walczak twierdzi, że w środku są dokumenty do podpisu. Lepiej nie sprawdzać.</p></article>
+                  <article class="field-guide-card secret"><span class="field-guide-icon">☕</span><h4>Zapomniany automat z 1998 roku</h4><p>Relikt przerwy kawowej sprzed ery terminali. Nikt nie wie, czy kawa działa, ale automat nadal pobiera drobne.</p></article>
+                  <article class="field-guide-card secret"><span class="field-guide-icon">👑</span><h4>Złoty tron kierownika</h4><p>Najbardziej niepraktyczny mebel w kompleksie. Sekret pojawia się poza główną trasą i nagradza eksplorację.</p></article>
+                </div>
+                <div class="field-guide-callout"><strong>Warunek sekretu:</strong> raz na bieg, po osiągnięciu co najmniej 4. fali, gra losuje możliwość pojawienia się obiektu (34% szansy). Jeśli sekret się pojawi, szukaj go na obrzeżach areny. Bossowie zostawiają skrzynie z łupem i dodatkowe XP.</div>
+              </section>
+
+              <section class="field-guide-section field-guide-last">
+                <div class="field-guide-section-head"><span class="field-guide-index">09</span><div><h3>PROTOKÓŁ STEROWANIA</h3><p>Najpierw pozycja, potem atak. W Survival poruszaj się tak, by zbierać XP i nie zamknąć sobie drogi odwrotu.</p></div></div>
+                <div class="field-guide-controls">
+                  <div><kbd>W A S D</kbd><kbd>↑ ↓ ← →</kbd><span>Ruch</span></div>
+                  <div><kbd>SPACJA</kbd><span>Skok / stomp na wroga</span></div>
+                  <div><kbd>F</kbd><kbd>J</kbd><kbd>KLIK</kbd><span>Atak ręczny</span></div>
+                  <div><kbd>E</kbd><kbd>SHIFT</kbd><span>Umiejętność specjalna</span></div>
+                  <div><kbd>C</kbd><span>Zmiana kamery</span></div>
+                  <div><kbd>P</kbd><kbd>ESC</kbd><span>Pauza</span></div>
+                  <div><kbd>M</kbd><span>Dźwięk</span></div>
+                  <div><kbd>T</kbd><span>Event magazynowy w kampanii</span></div>
+                </div>
+              </section>
             </div>
 
             <div id="tab-leaderboard" class="tab-panel">
@@ -698,7 +857,7 @@
                 <div class="story-card-badge">FILM KINOWY 3D • SILNIK CZASU RZECZYWISTEGO</div>
                 <div class="story-card-title">AFERA W MAX-FLIZ: BITWA O DOSTAWĘ GRESU</div>
                 <p class="story-card-desc">
-                  Obejrzyj humorystyczne wprowadzenie 3D na żywo! Zobacz, jak były kierownik Walczak oraz Król-Leto blokują kompleks logistyczny, a Marcin przybija potężną Pieczęć WZ, Grzesiek odpala Ścisk Zagłady, Dawid miota gresem Calacatta 120x280, Mateusz zawiesza drony atakiem BSOD, a Piotr podpala parkiet 70% bimbrem!
+                  Poznaj aferę o dostawę Calacatty, ekipę operatorów i powrót Walczaka. Kronika pokazuje także Survival Shift: fale przeciwników, pułapki, wydarzenia magazynowe, tajne ładunki i cztery ewolucje buildów.
                 </p>
                 <div class="story-btn-row">
                   <button id="btn-open-3d-cutscene" class="btn-story-launch primary-3d-launch">
@@ -707,7 +866,7 @@
                   </button>
                   <button id="btn-open-pixel-intro" class="btn-story-launch secondary-pixel-launch">
                     <span class="launch-icon">📼</span>
-                    <span>RETRO ARCADE 2000s INTRO (VHS)</span>
+                    <span>RETRO ARCADE 2000s • VHS EDITION</span>
                   </button>
                 </div>
               </div>
@@ -717,11 +876,11 @@
           <div class="menu-fixed-bottom-bar">
             <button id="btn-start-game" class="btn-primary-start">
               <span class="start-text">ROZPOCZNIJ ZMIANĘ NA MEGA-MAPIE</span>
-              <span class="start-subtext">KLIKNIJ LUB NACIŚNIJ SPACJĘ / ENTER • SEKTOR A ➔ B ➔ C</span>
+              <span class="start-subtext">KAMPANIA • SEKTOR A → B → C • SPACJA / ENTER</span>
             </button>
             <button id="btn-start-survival" class="btn-survival-start">
               <span class="survival-start-title">⚔️ SURVIVAL SHIFT</span>
-              <span class="survival-start-subtitle">AUTO-ATAK • FALE • XP • ULEPSZENIA • BOSSOWIE</span>
+              <span class="survival-start-subtitle">AUTO-ATAK • FALE CO 42 S • EVENTY • PERKI • EWOLUCJE</span>
             </button>
             <div class="menu-controls-hint">
               <span>Sterowanie: WSAD / Strzałki / Joystick • SPACJA = Skok • F / Klik = Atak • E / Shift = Super Moc</span>
@@ -741,6 +900,7 @@
             <div class="dot" data-slide="1"></div>
             <div class="dot" data-slide="2"></div>
             <div class="dot" data-slide="3"></div>
+            <div class="dot" data-slide="4"></div>
           </div>
 
           <div class="story-slides-container">
@@ -782,13 +942,21 @@
                 <div class="quote-item"><strong>🎮 Mateusz:</strong> "Laga mam! BSOD i platyna wpada na konto!"</div>
                 <div class="quote-item"><strong>🍾 Piotr:</strong> "Flaszka z bimbrem 70% zza regału B4! Ogień na gresie!"</div>
               </div>
+            <div class="story-slide hidden" data-slide-index="4">
+              <div class="story-slide-badge retro-badge">⚔️ RETRO VHS AKT V: NOWA ZMIANA — SURVIVAL SHIFT</div>
+              <div class="story-slide-icon retro-3d-icon">🧟⚡📦</div>
+              <div class="story-slide-title">Hala Żyje. Zmiana Nie Ma Końca.</div>
+              <div class="story-slide-text">
+                Survival Shift jest osobnym trybem roguelite. Co 42 sekundy nadchodzi kolejna fala, co piątą falę wchodzi boss, a co dziesiątą Król-Leto. Na arenie pojawiają się cztery rodzaje pułapek i pięć wydarzeń: alarm KFC, kontrola BHP, Black Friday, awaria AGV oraz zaginiona paleta Pana Romana. Zbieraj kryształy XP, wybieraj moduły rozwoju, łącz je w cztery ewolucje buildów i wypatruj sekretów. Pamiętaj: dron po Twojej stronie to asysta, a dron z czerwonym znacznikiem to problem. I nie ufaj paleciakowi — on też nie ufa Tobie.
+              </div>
+            </div>
             </div>
           </div>
 
           <div class="story-nav-bar">
             <button id="btn-story-prev" class="btn-story-nav" disabled>⬅️ POPRZEDNI</button>
             <button id="btn-story-next" class="btn-story-nav btn-primary">DALEJ ➔</button>
-            <button id="btn-story-play" class="btn-story-nav btn-start-now hidden">🚀 DO AKCJI!</button>
+            <button id="btn-story-play" class="btn-story-nav btn-start-now hidden">🚀 ROZPOCZNIJ KAMPANIĘ</button>
           </div>
         </div>
       </div>
