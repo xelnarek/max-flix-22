@@ -3492,7 +3492,6 @@ button {
 
 
 /* Hide campaign-only navigation and random-event controls while Survival is active. */
-#game-shell.survival-mode #minimap-container,
 #game-shell.survival-mode .vip-pill,
 #game-shell.survival-mode #btn-event,
 #game-shell.survival-mode #btn-top-event,
