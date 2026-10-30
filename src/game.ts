@@ -1053,6 +1053,12 @@ export class MaxFlizGameEngine {
     this.platforms = [];
     this.collectibles = [];
     this.droppedPerks = [];
+    this.lootCrates = [];
+    this.coffeeMachines = [];
+    this.fallingTiles = [];
+    this.fallingTileSpawnTimer = 0;
+    this.randomSpawnTimer = 0;
+    this.bulldozerHitCooldowns.clear();
     for (const gem of this.survivalXpGems) {
       this.levelRoot.remove(gem.mesh);
       gem.mesh.geometry.dispose();
@@ -5689,7 +5695,10 @@ export class MaxFlizGameEngine {
       }
       sound.stopMusic();
       sound.playGameOver();
-      this.callbacks.onGameOver(reason);
+      const finalReason = this.gameMode === 'survival'
+        ? reason + ' | Fala ' + this.survivalWave + ' • ' + this.survivalKills + ' eliminacji • ' + Math.floor(this.survivalElapsed) + ' s'
+        : reason;
+      this.callbacks.onGameOver(finalReason);
     }
   }
 
