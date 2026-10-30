@@ -1,0 +1,4539 @@
+import * as THREE from 'three';
+import { CHARACTERS } from './characters.ts';
+import { sound } from './sound.ts';
+import {
+  ActivePerks,
+  AVAILABLE_PERKS,
+  CharacterDef,
+  CharacterId,
+  CollectibleItem,
+  DroppedPerkItem,
+  EnemyItem,
+  GameState,
+  HazardItem,
+  PerkType,
+  PlatformBlock,
+} from './types.ts';
+import {
+  createArchitectEnemyModel,
+  createAgvRobotModel,
+  createAisleArrow,
+  createBathtubModel,
+  createBhpDigitalScoreboard,
+  createBimberBottleMolotov,
+  createMolotovFirePuddle,
+  createCoffeeVendingMachineModel,
+  createCarraraCollectible,
+  createCharacterModel,
+  createCustomerEnemyModel,
+  createDeliveryVan,
+  createDroppedPerkCrate,
+  createEliteGuardEnemyModel,
+  createEspressoCollectible,
+  createFinishGate,
+  createForkliftModel,
+  createGoldenCutterCollectible,
+  createGoldenThroneEasterEgg,
+  createGroutCollectible,
+  createHandlowiecEnemyModel,
+  createHighBayCatwalk,
+  createHighBayLamp,
+  createIndustrialSteamVent,
+  createInspectorEnemyModel,
+  createMagnetCollectible,
+  createMonterEnemyModel,
+  createNeonShowroomSign,
+  createPenaltyNoticeProjectile,
+  createPiorunDronModel,
+  createSecretFolderEasterEgg,
+  createTilePallet,
+  createVintageCoffeeCornerEasterEgg,
+  createVolumetricLightBeam,
+  createWalczakBossModel,
+  createWarehouseRack,
+  createKurierEnemyModel,
+  createItalianVendorEnemyModel,
+  createSztaplarEnemyModel,
+  createSprayGraffitiDecal,
+  createCrimeSceneBodyOutlineDecal,
+  createKrolLetoBossModel,
+  createDisplayPodium,
+  createGlassPartition,
+  createShowroomPlant,
+  createTrackSpotlights,
+  createExplosiveBarrelModel,
+  createLargeTileModel,
+  createLootCrateModel,
+  createPanRomanEnemyModel,
+  createSanitarywareProjectile,
+  createSerwisanciEnemyModel,
+  createSparkZapProjectile,
+  createBosmanKrakowBossModel,
+  createOdprawaClipboardProjectile,
+  getFloorTexture,
+  getShowroomMarbleFloorTexture,
+  getShowroomWallTexture,
+  getTerminalGraniteFloorTexture,
+  getHazardStripeTexture,
+  getMaxFlizLogoTexture,
+  getWallTexture,
+} from './warehouseAssets.ts';
+
+export interface GameCallbacks {
+  onScoreUpdate: (score: number, collectedVip: number, totalVip: number) => void;
+  onHpUpdate: (hp: number, maxHp: number) => void;
+  onAbilityCooldown: (progress: number, ready: boolean) => void;
+  onSpeechBubble: (text: string) => void;
+  onLevelComplete: (levelId: number, score: number, timeStr: string) => void;
+  onGameOver: (reason: string) => void;
+  onBossUpdate?: (name: string, hp: number, maxHp: number, visible: boolean, phase?: number) => void;
+  onPerksUpdate?: (perks: ActivePerks) => void;
+  onFloatingText?: (text: string, x: number, y: number, z: number, type?: 'points' | 'vip' | 'easter-egg' | 'damage' | 'perk' | 'combo' | 'enemy_shout', metadata?: any) => void;
+  onPerkDropBanner?: (name: string, icon: string, desc: string, color: string) => void;
+}
+
+export class MaxFlizGameEngine {
+  public static readonly ENEMY_QUOTES: Record<string, string[]> = {
+    customer: [
+      "Gdzie moja faktura proforma?! Czekam od rana!",
+      "Ta fuga miała być popielata, a jest mysia!",
+      "Żądam natychmiastowej rozmowy z kierownikiem!",
+      "Panie, w Castoramie mieli to 30% taniej!",
+      "Dlaczego ten gres jest krzywy o pół milimetra?!",
+      "Kierownik Walczak obiecał mi rabat 40% na płytki!",
+      "Kto mi zapłaci za przestój ekipy kafelkarzy?!",
+    ],
+    architect: [
+      "Ten beż jest zbyt chłodny o 2 Kelvin!",
+      "Czy to na pewno oryginalny spiek kwarcowy z Bolonii?!",
+      "Kto pozwolił na fugę 2mm?! Tylko bezfugowo i z mikro-fazą!",
+      "Mój projekt penthouse'u w Sopocie legnie w gruzach!",
+      "Ostrożnie z tym 샘plem! To limitowana edycja z Mediolanu!",
+      "Zmieńcie to oświetlenie, gres traci swoją organiczną duszę!",
+    ],
+    pan_roman: [
+      "Panowie spieszę się, na pace mam 8 wanien wolnostojących!",
+      "Gdzie mam zrzucić te kible?! Byle nie na deszczu!",
+      "Rudy z DPD znowu zajął moją rampę rozładunkową!",
+      "Panie kierowniku, pieczątka na WZ-tce i mnie nie ma!",
+      "Uwaga na paleciak, hamulce skończyły się w 2018 roku!",
+      "Rzucam umywalką, łap pan albo będzie po premii!",
+    ],
+    kurier: [
+      "Awizo zostawione w gaśnicy BHP na trzecim piętrze!",
+      "Dostawa Johnny Walker Express dla prezesa!",
+      "Mam 40 paczek i 12 minut do końca zmiany!",
+      "Podpisz pan cokolwiek palcem po brudnym ekranie!",
+      "Paczka lekko obita, ale w środku na bank nic nie pękło!",
+      "Paczkomat był pełny, więc rzuciłem pod drzwi rampy!",
+    ],
+    serwisant: [
+      "Kto wcisnął grzałkę w wannie bez wlanej wody?!",
+      "Tu jest zwarcie na pompie hydromasażu, zaraz wywali korki!",
+      "Nie dotykaj tej fazy, to kabel zasilający od prezesa!",
+      "Gdzie jest schemat bezpieczników z sektora B?!",
+      "Trzymaj probówkę, jak zaiskrzy to znaczy że działa!",
+    ],
+    sztaplar_szalony: [
+      "Z drogi, paleciak nie ma ABS-u ani litości!",
+      "Drift na mokrym gresie Calacatta to moja jedyna pasja!",
+      "Kto zostawił puste kartony w alei głównej?!",
+      "Paleta 800 kilo leci z góry, klakson zepsuty!",
+      "Kierownik mówił 'ostrożnie', ale ja mam normę do wyrobienia!",
+    ],
+    inspector: [
+      "Protokół BHP: brak atestowanego kasku i gilotyna bez osłony!",
+      "Zaraz wstrzymam wydawanie towaru na cały długi weekend!",
+      "Gdzie jest certyfikat CE na te wanny z masażem bąbelkowym?!",
+      "Mandat 5000 zł za brak żółtych linii ostrzegawczych!",
+      "Widzę tu rażące naruszenie przepisów przeciwpożarowych!",
+    ],
+    handlowiec: [
+      "Tylko dzisiaj: rabat inwestycyjny 35% na armaturę!",
+      "Mam klienta na 1200 metrów kwadratowych mozaiki!",
+      "Kierownik zgodzi się na darmowy transport z wniesieniem!",
+      "Podpiszmy aneks, dorzucę zapas fugi epoksydowej gratis!",
+      "Ten marmur sprzedaje się sam, proszę brać zanim zdrożeje!",
+    ],
+    monter: [
+      "Wiesław, podaj poziomicę, tu jest centymetr spadku na metrze!",
+      "Klej dwuskładnikowy już wiąże w wiadrze, ruszajcie się!",
+      "Za taką stawkę za metr to ja mogę co najwyżej fugować!",
+      "Kto kładł te płytki pod prąd słojów drewna?!",
+      "Dociągnij ten syfon, bo znowu zaleje showroom na dole!",
+    ],
+    agv_robot: [
+      "BEEP-BOOP: Wykryto przeszkodę biologiczną w alei B4.",
+      "SYSTEM: Kurs kolizyjny z wanną akrylową. Manewr omijania nieudany.",
+      "BATERIA: 98%. Przewożę 16 misek wiszących bezkołnierzowych.",
+      "OSTRZEŻENIE: Algorytm autonomiczny żąda podwyżki w watogodzinach.",
+    ],
+    piorun_dron: [
+      "SKAN KODU KRESKOWEGO: Błąd sumy kontrolnej!",
+      "ALERT DRONA: Wykryto operatora bez uprawnień UDT kat. II!",
+      "PROMIENIOWANIE WI-FI: Sygnał z centrali Max-Fliz 100%.",
+      "RADAR LASEROWY: Paleta krzywo ustawiona o 3 stopnie!",
+    ],
+    elite_walczak_guard: [
+      "Wstęp do Sektora VIP tylko z przepustką dyrektorską!",
+      "Chronimy ostatnią paletę Calacatta Gold przed spekulantami!",
+      "Stój! Walczak nie przyjmuje już żadnych reklamacji!",
+      "Tylko przez mój trup dotkniesz tej armatury z 24k złota!",
+    ],
+    bosman_krakow: [
+      "Odprawa 3-miesięczna czeka na każdego marudera!",
+      "W Krakowie na centrali nikt tak flegmatycznie palet nie nosił!",
+      "Podpisuj rozwiązanie umowy za porozumieniem stron!",
+      "Rzucam teczką personalną, unikaj jak potrafisz!",
+      "Na mój pokład wchodzą tylko ludzie z certyfikatem UDT!",
+    ],
+    walczak: [
+      "Ja tu byłem kierownikiem zanim wybudowano ten salon!",
+      "Na mojej zmianie nie ma przerw na papierosa ani kawę!",
+      "Karę umowną 50 000 zł wyślę ci poleconym za potwierdzeniem!",
+      "Szczekaczka Walczaka zagłuszy twoje żałosne prośby o premię!",
+      "TRYB SZAŁU: Cały magazyn zostaje na bezpłatne nadgodziny!",
+      "Zafuguję cię w tym regale wysokiego składowania!",
+    ],
+    krol_leto: [
+      "Jam jest Król-Leto, Pan na Spiekach i Władca Wszystkich Salonów!",
+      "Twoja umowa na czas określony właśnie dobiegła końca!",
+      "Na kolana przed majestatem włoskiego gresu 120x280!",
+      "Dyscyplinarka ze skutkiem natychmiastowym bez prawa do odprawy!",
+      "Zostaniesz zafugowany w postumencie ekspozycyjnym na wieczność!",
+      "Żaden magazynier nie opuści tego terminala żywy!",
+    ],
+  };
+
+  public scene: THREE.Scene;
+  public camera: THREE.PerspectiveCamera;
+  public container: HTMLElement;
+  public threeRenderer: THREE.WebGLRenderer | null = null;
+
+  private state: GameState = 'title';
+  private currentCharacterId: CharacterId = 'marcin';
+  private charDef: CharacterDef;
+  private coffeeMachines: { mesh: THREE.Group; x: number; y: number; z: number; cooldown: number }[] = [];
+
+  public getGameState(): GameState {
+    return this.state;
+  }
+
+  // Player state
+  private playerPos = new THREE.Vector3(0, 1, 0);
+  private playerVel = new THREE.Vector3(0, 0, 0);
+  private playerRot = 0;
+  private isGrounded = false;
+  private coyoteTimer = 0;
+  private jumpBufferTimer = 0;
+  private hp = 3;
+  private maxHp = 3;
+  private score = 0;
+  private comboStreak = 0;
+  private comboTimer = 0;
+  private collectedVipCount = 0;
+  private totalVipCount = 0;
+  private invulnerableTimer = 0;
+  private abilityTimer = 0;
+  private abilityActiveDuration = 0;
+  private attackCooldownTimer = 0;
+  private attackSwingTimer = 0;
+  private walkCycle = 0;
+  private speechBubbleTimer = 0;
+  private levelStartTime = 0;
+  private cameraShake = 0;
+  private screenShakeDuration = 0;
+  private screenShakeIntensity = 0;
+  private screenShakeTimer = 0;
+  private cameraMode: 'iso' | 'close' = 'iso';
+  private camZoomFactor = 1.0;
+  private minimapZoomScale = 3.5;
+  private minimapVisible = true;
+  private minimapFrameCounter = 0;
+  private finishGatePos = new THREE.Vector3(30, 0, 0);
+  private smoothCamY = 0.5;
+  private currentCamOffset = new THREE.Vector3(9.0, 16.0, 15.0);
+  private currentLookAt = new THREE.Vector3(0, 1.2, 0);
+  private bossCamZoom = 1.0;
+  private finishWarningTimer = 0;
+  private dodgeCooldownTimer = 0;
+  private hitStopTimer = 0;
+  private targetRing!: THREE.Mesh;
+  private bloomPulseTimer = 0;
+  private levelBounds = { minX: -35, maxX: 35, minZ: -15, maxZ: 15 };
+
+  public triggerBloomPulse(durationSec = 0.3) {
+    this.bloomPulseTimer = durationSec;
+  }
+
+  public zoomInCamera() {
+    this.camZoomFactor = Math.max(0.4, this.camZoomFactor - 0.15);
+  }
+
+  public zoomOutCamera() {
+    this.camZoomFactor = Math.min(2.8, this.camZoomFactor + 0.15);
+  }
+
+  public setCamZoomFactor(val: number) {
+    this.camZoomFactor = THREE.MathUtils.clamp(val, 0.4, 2.2);
+  }
+
+  public getCamZoomFactor(): number {
+    return this.camZoomFactor;
+  }
+
+  public toggleCameraMode(): 'iso' | 'close' {
+    this.cameraMode = this.cameraMode === 'iso' ? 'close' : 'iso';
+    return this.cameraMode;
+  }
+
+  public zoomInMinimap() {
+    this.minimapZoomScale = Math.min(7.5, this.minimapZoomScale + 0.8);
+  }
+
+  public zoomOutMinimap() {
+    this.minimapZoomScale = Math.max(1.8, this.minimapZoomScale - 0.8);
+  }
+
+  public toggleMinimap() {
+    this.minimapVisible = !this.minimapVisible;
+    const elem = document.getElementById('minimap-container');
+    if (elem) {
+      if (this.minimapVisible) elem.classList.remove('collapsed');
+      else elem.classList.add('collapsed');
+    }
+  }
+
+  public setLevelVisible(visible: boolean) {
+    this.levelRoot.visible = visible;
+    if (this.targetRing) this.targetRing.visible = visible;
+  }
+
+  public triggerScreenShake(intensity: number, durationSec: number = 0.5) {
+    this.screenShakeIntensity = Math.max(this.screenShakeIntensity, intensity);
+    this.screenShakeDuration = durationSec;
+    this.screenShakeTimer = durationSec;
+    this.cameraShake = Math.max(this.cameraShake, intensity * 0.6);
+  }
+
+  public triggerHitStop(durationSec = 0.04) {
+    this.hitStopTimer = Math.max(this.hitStopTimer, durationSec);
+  }
+  private marcinReclamationTimer = 0;
+  private grzesiekCrushTimer = 0;
+  private grzesiekCrushPulse = 0;
+  private mateuszPassiveCount = 0;
+  private mateuszLagTimer = 0;
+
+  // Active Perks & Jump Modifiers
+  private activePerks: ActivePerks = {
+    doubleJump: 0,
+    shield: false,
+    magnet: 0,
+    speedBoost: 0,
+  };
+  private hasDoubleJumped = false;
+
+  // 3D Player Meshes
+  private playerGroup: THREE.Group | null = null;
+  private leftLeg: THREE.Mesh | null = null;
+  private rightLeg: THREE.Mesh | null = null;
+  private leftArm: THREE.Mesh | null = null;
+  private rightArm: THREE.Mesh | null = null;
+  private playerHead: THREE.Mesh | null = null;
+  private playerBody: THREE.Mesh | null = null;
+
+  // Level geometry & entities
+  private currentLevelId = 1;
+  private levelRoot = new THREE.Group();
+  private platforms: PlatformBlock[] = [];
+  private collectibles: CollectibleItem[] = [];
+  private droppedPerks: DroppedPerkItem[] = [];
+  private hazards: HazardItem[] = [];
+  private explosiveBarrels: {
+    id: string;
+    x: number;
+    y: number;
+    z: number;
+    mesh: THREE.Group;
+    fuseTimer: number;
+    exploded: boolean;
+  }[] = [];
+  private enemies: EnemyItem[] = [];
+  private enemyProjectiles: { mesh: THREE.Mesh; vel: THREE.Vector3; life: number; isDyscyplinarka?: boolean }[] = [];
+  private particles: {
+    mesh: THREE.Mesh;
+    vel: THREE.Vector3;
+    life: number;
+    maxLife: number;
+  }[] = [];
+  private projectiles: {
+    mesh: THREE.Mesh;
+    vel: THREE.Vector3;
+    life: number;
+  }[] = [];
+  private specialEffects: {
+    mesh: THREE.Mesh | THREE.Group;
+    life: number;
+    maxLife: number;
+    grow: number;
+    spin: number;
+    update?: (dt: number, progress: number) => void;
+  }[] = [];
+  private bimberMolotovs: {
+    mesh: THREE.Group;
+    pos: THREE.Vector3;
+    vel: THREE.Vector3;
+    spin: THREE.Vector3;
+    life: number;
+    flameLight?: THREE.PointLight;
+    flameMesh?: THREE.Mesh;
+  }[] = [];
+  private bimberFirePuddles: {
+    group: THREE.Group;
+    x: number;
+    y: number;
+    z: number;
+    radius: number;
+    duration: number;
+    maxDuration: number;
+    tickTimer: number;
+    flames: THREE.Mesh[];
+    light: THREE.PointLight;
+  }[] = [];
+  private fallingTiles: {
+    id: string;
+    x: number;
+    y: number;
+    z: number;
+    targetY: number;
+    fallSpeed: number;
+    state: 'warning' | 'falling' | 'shattered';
+    warningTimer: number;
+    mesh: THREE.Group;
+    warningRing: THREE.Mesh;
+  }[] = [];
+  private lootCrates: { mesh: THREE.Group; x: number; y: number; z: number }[] = [];
+  private fallingTileSpawnTimer = 0;
+  private randomSpawnTimer = 0;
+
+  // Input state
+  private keys: Record<string, boolean> = {};
+  private virtualJoystick = { x: 0, y: 0 };
+  private callbacks: GameCallbacks;
+
+  // Lighting
+  private dirLight!: THREE.DirectionalLight;
+  private hemiLight!: THREE.HemisphereLight;
+  private ambientLight!: THREE.AmbientLight;
+  private rimLight!: THREE.DirectionalLight;
+
+  constructor(scene: THREE.Scene, camera: THREE.PerspectiveCamera, container: HTMLElement, callbacks: GameCallbacks) {
+    this.scene = scene;
+    this.camera = camera;
+    this.container = container;
+    this.callbacks = callbacks;
+    this.charDef = CHARACTERS[this.currentCharacterId];
+
+    this.camera.far = 160;
+    this.scene.background = new THREE.Color(0x07131d);
+    this.scene.add(this.levelRoot);
+
+    this.targetRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.65, 0.75, 32),
+      new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.45, side: THREE.DoubleSide })
+    );
+    this.targetRing.rotation.x = -Math.PI / 2;
+    this.scene.add(this.targetRing);
+
+    this.setupLighting();
+    this.setupInput();
+    // loadLevel(1) removed from constructor to prevent blocking main thread on boot
+  }
+
+  private setupLighting() {
+    this.ambientLight = new THREE.AmbientLight(0xcfe8ff, 0.7);
+    this.scene.add(this.ambientLight);
+
+    this.hemiLight = new THREE.HemisphereLight(0xbfe6ff, 0x101827, 1.45);
+    this.scene.add(this.hemiLight);
+
+    const isMobile = window.innerWidth < 900;
+    this.dirLight = new THREE.DirectionalLight(0xfff4d6, 3.6);
+    this.dirLight.position.set(18, 28, 16);
+    this.dirLight.castShadow = true;
+    const shadowMapSize = isMobile ? 1024 : 2048;
+    this.dirLight.shadow.mapSize.width = shadowMapSize;
+    this.dirLight.shadow.mapSize.height = shadowMapSize;
+    this.dirLight.shadow.camera.near = 0.5;
+    this.dirLight.shadow.camera.far = 80;
+    const d = 22;
+    this.dirLight.shadow.camera.left = -d;
+    this.dirLight.shadow.camera.right = d;
+    this.dirLight.shadow.camera.top = d;
+    this.dirLight.shadow.camera.bottom = -d;
+    this.dirLight.shadow.bias = isMobile ? -0.001 : -0.0004;
+    this.scene.add(this.dirLight);
+
+    this.rimLight = new THREE.DirectionalLight(0x60a5fa, 1.2);
+    this.rimLight.position.set(-18, 10, -16);
+    this.scene.add(this.rimLight);
+
+    this.scene.fog = new THREE.Fog(0x091827, 18, 90);
+  }
+
+  private setupInput() {
+    window.addEventListener('keydown', (e) => {
+      this.keys[e.code] = true;
+      if (e.code === 'Space') {
+        this.jumpBufferTimer = 0.16;
+        e.preventDefault();
+      }
+      if (e.code === 'KeyE' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+        this.triggerAbility();
+      }
+      if (e.code === 'KeyF' || e.code === 'KeyJ' || e.code === 'KeyX' || e.code === 'Numpad0') {
+        this.triggerAttack();
+      }
+      if (e.code === 'Escape' || e.code === 'KeyP') {
+        this.togglePause();
+      }
+      if (e.code === 'KeyC' || e.code === 'KeyV') {
+        this.toggleCameraMode();
+      }
+      if (e.code === 'Equal' || e.code === 'NumpadAdd') {
+        this.zoomInCamera();
+      }
+      if (e.code === 'Minus' || e.code === 'NumpadSubtract') {
+        this.zoomOutCamera();
+      }
+      if (e.code === 'KeyN') {
+        this.toggleMinimap();
+      }
+    });
+
+    this.container?.addEventListener('wheel', (e: WheelEvent) => {
+      if (this.state === 'playing') {
+        e.preventDefault();
+        if (e.deltaY > 0) {
+          this.zoomOutCamera();
+        } else {
+          this.zoomInCamera();
+        }
+      }
+    }, { passive: false });
+
+    window.addEventListener('keyup', (e) => {
+      this.keys[e.code] = false;
+      if (e.code === 'Space') {
+        if (this.playerVel.y > 2.0) {
+          this.playerVel.y *= 0.52;
+        }
+      }
+    });
+
+    const canvasContainer = document.getElementById('game-canvas-container');
+    canvasContainer?.addEventListener('pointerdown', (e) => {
+      if (this.state === 'playing' && e.button === 0) {
+        const target = e.target as HTMLElement | null;
+        if (target && (target.closest('.hud-layer') || target.closest('.touch-layer') || target.closest('.game-modal') || target.closest('.game-screen'))) {
+          return;
+        }
+        this.triggerAttack();
+      }
+    });
+
+    window.addEventListener('blur', () => {
+      this.keys = {};
+      this.virtualJoystick = { x: 0, y: 0 };
+    });
+  }
+
+  public setVirtualInput(x: number, y: number) {
+    this.virtualJoystick.x = x;
+    this.virtualJoystick.y = y;
+  }
+
+  public selectCharacter(id: CharacterId) {
+    this.currentCharacterId = id;
+    this.charDef = CHARACTERS[id];
+    this.rebuildPlayerMesh();
+    this.sayRandomVoiceLine();
+  }
+
+  public getCharacterDef(): CharacterDef {
+    return this.charDef;
+  }
+
+  public getCameraMode(): 'iso' | 'close' {
+    return this.cameraMode;
+  }
+
+  public isPaused(): boolean {
+    return this.state === 'paused';
+  }
+
+  public setCamera(camera: THREE.PerspectiveCamera) {
+    this.camera = camera;
+  }
+
+  public setScene(scene: THREE.Scene) {
+    this.scene = scene;
+    if (!this.scene.children.includes(this.levelRoot)) {
+      this.scene.add(this.levelRoot);
+    }
+  }
+
+  private rebuildPlayerMesh() {
+    if (this.playerGroup) {
+      this.levelRoot.remove(this.playerGroup);
+    }
+    const built = createCharacterModel(this.charDef);
+    this.playerGroup = built.group;
+    this.leftLeg = built.leftLeg;
+    this.rightLeg = built.rightLeg;
+    this.leftArm = built.leftArm;
+    this.rightArm = built.rightArm;
+    this.playerHead = built.head;
+    this.playerBody = built.body;
+    this.playerGroup.position.copy(this.playerPos);
+    this.levelRoot.add(this.playerGroup);
+  }
+
+  public startTitle() {
+    this.state = 'title';
+    this.hp = this.maxHp;
+    this.score = 0;
+    this.collectedVipCount = 0;
+    this.abilityTimer = 0;
+    this.activePerks = {
+      doubleJump: 0,
+      shield: false,
+      magnet: 0,
+      speedBoost: 0,
+    };
+    this.marcinReclamationTimer = 0;
+    this.grzesiekCrushTimer = 0;
+    this.grzesiekCrushPulse = 0;
+    this.callbacks.onPerksUpdate?.(this.activePerks);
+    this.callbacks.onSpeechBubble('');
+    this.rebuildPlayerMesh();
+    this.playerPos.set(0, 0.5, 0);
+    this.callbacks.onBossUpdate?.('', 0, 0, false);
+    this.setLevelVisible(true);
+    
+    // Build initial level for title visual if not already built
+    if (this.platforms.length === 0) {
+      this.loadLevel(1);
+    }
+  }
+
+  public startGame(levelId = 1) {
+    this.state = 'playing';
+    this.hp = this.maxHp;
+    this.score = 0;
+    this.comboStreak = 0;
+    this.collectedVipCount = 0;
+    this.abilityTimer = 0;
+    this.levelStartTime = performance.now();
+    this.marcinReclamationTimer = 0;
+    this.grzesiekCrushTimer = 0;
+    this.grzesiekCrushPulse = 0;
+    this.playerVel.set(0, 0, 0);
+    this.screenShakeTimer = 0;
+    this.screenShakeIntensity = 0;
+    this.cameraShake = 0;
+    if (this.container) {
+      this.container.style.transform = '';
+    }
+    this.invulnerableTimer = 0;
+    this.hitStopTimer = 0;
+    this.virtualJoystick = { x: 0, y: 0 };
+    this.keys = {};
+    this.activePerks = {
+      doubleJump: 0,
+      shield: false,
+      magnet: 0,
+      speedBoost: 0,
+    };
+    this.cameraMode = 'close';
+    
+    // Wider view for mobile to see more of the warehouse
+    if (window.innerWidth < 900) {
+      this.camZoomFactor = 2.4;
+    } else {
+      this.camZoomFactor = 1.0;
+    }
+
+    this.callbacks.onPerksUpdate?.(this.activePerks);
+    this.callbacks.onSpeechBubble('');
+    this.loadLevel(levelId);
+    this.callbacks.onHpUpdate(this.hp, this.maxHp);
+    this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+    this.sayRandomVoiceLine();
+  }
+
+  public togglePause() {
+    if (this.state === 'playing') {
+      this.state = 'paused';
+    } else if (this.state === 'paused') {
+      this.state = 'playing';
+    }
+  }
+
+  private clearLevel() {
+    while (this.levelRoot.children.length > 0) {
+      this.levelRoot.remove(this.levelRoot.children[0]);
+    }
+    this.platforms = [];
+    this.collectibles = [];
+    this.droppedPerks = [];
+    this.hazards = [];
+    this.explosiveBarrels = [];
+    this.enemies = [];
+    this.enemyProjectiles = [];
+    this.particles = [];
+    this.projectiles = [];
+    this.specialEffects = [];
+    this.bimberMolotovs = [];
+    this.bimberFirePuddles = [];
+    this.totalVipCount = 0;
+    this.collectedVipCount = 0;
+    this.marcinReclamationTimer = 0;
+    this.grzesiekCrushTimer = 0;
+    this.grzesiekCrushPulse = 0;
+  }
+
+  private currentActiveSector = 1;
+
+  public loadLevel(levelId: number) {
+    this.currentLevelId = levelId;
+    this.currentActiveSector = levelId;
+    this.clearLevel();
+    this.rebuildPlayerMesh();
+
+    // Unified Mega-Map Layout: Sektor A (-36..+36) -> Sektor B (+36..+116) -> Sektor C (+116..+206)
+    this.scene.background = new THREE.Color(0x07131d);
+    this.levelBounds = { minX: -36, maxX: 206, minZ: -16, maxZ: 16 };
+    
+    this.buildLevel1();
+    this.buildLevel2(76);
+    this.buildLevel3(161);
+
+    // Spawn player at chosen starting sector checkpoint on the unified map
+    if (levelId === 2) {
+      this.playerPos.set(41, 0.5, 0);
+    } else if (levelId === 3) {
+      this.playerPos.set(121, 0.5, 0);
+    } else {
+      this.playerPos.set(-32, 0.5, 0);
+    }
+    this.playerVel.set(0, 0, 0);
+    if (this.playerGroup) {
+      this.playerGroup.position.copy(this.playerPos);
+    }
+
+    this.smoothCamY = this.playerPos.y;
+    this.currentLookAt.set(this.playerPos.x, this.playerPos.y + 0.85, this.playerPos.z);
+    this.finishWarningTimer = 0;
+
+    this.callbacks.onBossUpdate?.('', 0, 0, false);
+    this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+  }
+
+  private addJumpPad(x: number, y: number, z: number, launchForce = 17.5) {
+    const padGroup = new THREE.Group();
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.8, roughness: 0.2 });
+    const baseMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.95, 0.18, 16), baseMat);
+    
+    const ringGeo = new THREE.RingGeometry(0.4, 0.8, 16);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide });
+    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+    ringMesh.rotation.x = -Math.PI / 2;
+    ringMesh.position.y = 0.095;
+
+    const springMesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.3, 0.3, 0.25, 8),
+      new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.9, roughness: 0.2 })
+    );
+    springMesh.position.y = 0.12;
+
+    const arrowMesh = createAisleArrow(1.2);
+    arrowMesh.position.y = 0.105;
+    arrowMesh.rotation.y = Math.PI;
+
+    padGroup.add(baseMesh, ringMesh, springMesh, arrowMesh);
+    padGroup.position.set(x, y, z);
+    this.levelRoot.add(padGroup);
+
+    this.platforms.push({
+      x,
+      y: y + 0.1,
+      z,
+      width: 1.7,
+      height: 0.2,
+      depth: 1.7,
+      type: 'jump_pad',
+      bounce: launchForce,
+      mesh: padGroup,
+    });
+  }
+
+  private addSpeedPad(x: number, y: number, z: number) {
+    const padGroup = new THREE.Group();
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0x020617, roughness: 0.3 });
+    const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.08, 3.2), baseMat);
+
+    const stripeMat = new THREE.MeshBasicMaterial({ map: getHazardStripeTexture(), transparent: true, opacity: 0.95 });
+    const stripeMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 3.0), stripeMat);
+    stripeMesh.rotation.x = -Math.PI / 2;
+    stripeMesh.position.y = 0.045;
+
+    padGroup.add(baseMesh, stripeMesh);
+    padGroup.position.set(x, y, z);
+    this.levelRoot.add(padGroup);
+
+    this.platforms.push({
+      x,
+      y: y + 0.04,
+      z,
+      width: 1.6,
+      height: 0.08,
+      depth: 3.2,
+      type: 'speed_pad',
+      mesh: padGroup,
+    });
+  }
+
+  private addExplosiveBarrel(id: string, x: number, y: number, z: number) {
+    const mesh = createExplosiveBarrelModel();
+    mesh.position.set(x, y, z);
+    this.levelRoot.add(mesh);
+
+    this.explosiveBarrels.push({
+      id,
+      x,
+      y,
+      z,
+      mesh,
+      fuseTimer: -1,
+      exploded: false,
+    });
+
+    this.platforms.push({
+      x,
+      y: y + 0.55,
+      z,
+      width: 0.85,
+      height: 1.1,
+      depth: 0.85,
+      type: 'shelf',
+      mesh,
+    });
+  }
+
+  private addGroutItem(id: string, x: number, y: number, z: number, points = 50) {
+    const mesh = createGroutCollectible();
+    mesh.position.set(x, y, z);
+    this.levelRoot.add(mesh);
+    this.collectibles.push({
+      id,
+      type: 'grout',
+      name: 'Puszka Fugi Max-Fliz',
+      x,
+      y,
+      z,
+      mesh,
+      collected: false,
+      points,
+    });
+  }
+
+  private addVipItem(id: string, x: number, y: number, z: number, name: string, points = 300) {
+    const mesh = createCarraraCollectible();
+    mesh.position.set(x, y, z);
+    this.levelRoot.add(mesh);
+    this.totalVipCount++;
+    this.collectibles.push({
+      id,
+      type: 'vip_item',
+      name,
+      x,
+      y,
+      z,
+      mesh,
+      collected: false,
+      points,
+    });
+  }
+
+  private addEspressoItem(id: string, x: number, y: number, z: number) {
+    const mesh = createEspressoCollectible();
+    mesh.position.set(x, y, z);
+    this.levelRoot.add(mesh);
+    this.collectibles.push({
+      id,
+      type: 'espresso',
+      name: 'Espresso z Showroomu (+Prędkość)',
+      x,
+      y,
+      z,
+      mesh,
+      collected: false,
+      points: 100,
+    });
+  }
+
+  private addMagnetItem(id: string, x: number, y: number, z: number) {
+    const mesh = createMagnetCollectible();
+    mesh.position.set(x, y, z);
+    this.levelRoot.add(mesh);
+    this.collectibles.push({
+      id,
+      type: 'magnet',
+      name: 'Skaner Radiowy (+Magnes)',
+      x,
+      y,
+      z,
+      mesh,
+      collected: false,
+      points: 120,
+    });
+  }
+
+  private addGoldenCutterItem(id: string, x: number, y: number, z: number) {
+    const mesh = createGoldenCutterCollectible();
+    mesh.position.set(x, y, z);
+    this.levelRoot.add(mesh);
+    this.collectibles.push({
+      id,
+      type: 'golden_cutter',
+      name: 'Złota Gilotyna do Gresu (+Podwójny Skok)',
+      x,
+      y,
+      z,
+      mesh,
+      collected: false,
+      points: 150,
+    });
+  }
+
+  private addEasterEgg(id: string, x: number, y: number, z: number, name: string, eggType: 'throne' | 'coffee' | 'folder', points = 500) {
+    let group: THREE.Group;
+    if (eggType === 'throne') {
+      group = createGoldenThroneEasterEgg();
+    } else if (eggType === 'coffee') {
+      group = createVintageCoffeeCornerEasterEgg();
+    } else {
+      group = createSecretFolderEasterEgg();
+    }
+    group.position.set(x, y, z);
+    this.levelRoot.add(group);
+
+    this.collectibles.push({
+      id,
+      type: 'easter_egg',
+      name,
+      x,
+      y,
+      z,
+      mesh: group,
+      collected: false,
+      points,
+    });
+  }
+
+  private addForkliftHazard(id: string, startX: number, endX: number, z: number, speed: number, color = 0xf59e0b) {
+    const built = createForkliftModel(color);
+    built.group.position.set(startX, 0, z);
+    this.levelRoot.add(built.group);
+    this.hazards.push({
+      id,
+      type: 'forklift',
+      mesh: built.group,
+      startX,
+      startZ: z,
+      endX,
+      endZ: z,
+      x: startX,
+      y: 0,
+      z,
+      speed,
+      width: 1.8,
+      length: 2.8,
+      dir: 1,
+      active: true,
+    });
+  }
+
+  private addCustomerEnemy(id: string, x: number, minX: number, maxX: number, name: string) {
+    const built = createCustomerEnemyModel();
+    built.group.position.set(x, 0.4, minX);
+    this.levelRoot.add(built.group);
+    this.enemies.push({
+      id,
+      type: 'customer',
+      name,
+      mesh: built.group,
+      speechMesh: null,
+      x,
+      y: 0.4,
+      z: minX,
+      startX: minX,
+      endX: maxX,
+      speed: 1.8,
+      dir: 1,
+      hp: 2,
+      maxHp: 2,
+      state: 'patrol',
+      stunTimer: 0,
+      shoutTimer: 0,
+      shoutText: '',
+      attackCooldown: 0,
+      walkCycle: 0,
+      legL: built.legL,
+      legR: built.legR,
+      armL: built.armL,
+      armR: built.armR,
+    });
+  }
+
+  private addArchitectEnemy(id: string, x: number, maxX: number, z: number, name: string) {
+    const built = createArchitectEnemyModel();
+    built.group.position.set(x, 0.4, z);
+    this.levelRoot.add(built.group);
+    this.enemies.push({
+      id,
+      type: 'architect',
+      name,
+      mesh: built.group,
+      speechMesh: null,
+      x,
+      y: 0.4,
+      z,
+      startX: x,
+      endX: maxX,
+      speed: 2.2,
+      dir: 1,
+      hp: 3,
+      maxHp: 3,
+      state: 'patrol',
+      stunTimer: 0,
+      shoutTimer: 0,
+      shoutText: '',
+      attackCooldown: 0,
+      walkCycle: 0,
+      legL: built.legL,
+      legR: built.legR,
+      armL: built.armL,
+      armR: built.armR,
+    });
+  }
+
+  private addAgvRobotEnemy(id: string, minX: number, maxX: number, z: number, name: string) {
+    const built = createAgvRobotModel();
+    built.group.position.set(minX, 0.2, z);
+    this.levelRoot.add(built.group);
+    this.enemies.push({
+      id,
+      type: 'agv_robot',
+      name,
+      mesh: built.group,
+      x: minX,
+      y: 0.2,
+      z,
+      startX: minX,
+      endX: maxX,
+      speed: 2.6,
+      dir: 1,
+      hp: 2,
+      maxHp: 2,
+      state: 'patrol',
+      stunTimer: 0,
+      shoutTimer: 0,
+      shoutText: '',
+      attackCooldown: 0,
+      walkCycle: 0,
+    });
+  }
+
+  private addWalczakBossEnemy(id: string, x: number, z: number) {
+    const built = createWalczakBossModel();
+    built.group.position.set(x, 0.6, z);
+    this.levelRoot.add(built.group);
+    this.enemies.push({
+      id,
+      type: 'walczak',
+      name: 'Były Kierownik Walczak',
+      mesh: built.group,
+      speechMesh: null,
+      x,
+      y: 0.6,
+      z,
+      startX: x - 14,
+      endX: x + 14,
+      speed: 3.2,
+      dir: -1,
+      hp: 10,
+      maxHp: 10,
+      state: 'patrol',
+      stunTimer: 0,
+      shoutTimer: 0,
+      shoutText: '',
+      attackCooldown: 0,
+      walkCycle: 0,
+      legL: built.legL,
+      legR: built.legR,
+      armL: built.armL,
+      armR: built.armR,
+      specialActionTimer: 2.5,
+      bossPhase: 1,
+    });
+  }
+
+  private addKrolLetoBossEnemy(id: string, x: number, z: number) {
+    const built = createKrolLetoBossModel();
+    built.group.position.set(x, 0.6, z);
+    this.levelRoot.add(built.group);
+    this.enemies.push({
+      id,
+      type: 'krol_leto',
+      name: 'Król-Leto (Dyrektor Generalny)',
+      mesh: built.group,
+      speechMesh: null,
+      x,
+      y: 0.6,
+      z,
+      startX: x - 12,
+      endX: x + 12,
+      speed: 3.8,
+      dir: -1,
+      hp: 12,
+      maxHp: 12,
+      state: 'patrol',
+      stunTimer: 0,
+      shoutTimer: 0,
+      shoutText: '',
+      attackCooldown: 0,
+      walkCycle: 0,
+      legL: built.legL,
+      legR: built.legR,
+      armL: built.armL,
+      armR: built.armR,
+      specialActionTimer: 2.2,
+      bossPhase: 1,
+    });
+  }
+
+  private addInspectorEnemy(id: string, x: number, minX: number, maxX: number, name: string) {
+    const built = createInspectorEnemyModel();
+    built.group.position.set(x, 0.4, minX);
+    this.levelRoot.add(built.group);
+    this.enemies.push({
+      id,
+      type: 'inspector',
+      name,
+      mesh: built.group,
+      speechMesh: null,
+      x,
+      y: 0.4,
+      z: minX,
+      startX: minX,
+      endX: maxX,
+      speed: 2.0,
+      dir: 1,
+      hp: 3,
+      maxHp: 3,
+      state: 'patrol',
+      stunTimer: 0,
+      shoutTimer: 0,
+      shoutText: '',
+      attackCooldown: 0,
+      walkCycle: 0,
+      legL: built.legL,
+      legR: built.legR,
+      armL: built.armL,
+      armR: built.armR,
+      specialActionTimer: 2.5,
+    });
+  }
+
+  private addHandlowiecEnemy(id: string, x: number, minX: number, maxX: number, name: string) {
+    const built = createHandlowiecEnemyModel();
+    built.group.position.set(x, 0.4, minX);
+    this.levelRoot.add(built.group);
+    this.enemies.push({
+      id,
+      type: 'handlowiec',
+      name,
+      mesh: built.group,
+      speechMesh: null,
+      x,
+      y: 0.4,
+      z: minX,
+      startX: minX,
+      endX: maxX,
+      speed: 2.8,
+      dir: 1,
+      hp: 3,
+      maxHp: 3,
+      state: 'patrol',
+      stunTimer: 0,
+      shoutTimer: 0,
+      shoutText: '',
+      attackCooldown: 0,
+      walkCycle: 0,
+      legL: built.legL,
+      legR: built.legR,
+      armL: built.armL,
+      armR: built.armR,
+      specialActionTimer: 3.0,
+    });
+  }
+
+  private addMonterEnemy(id: string, x: number, minX: number, maxX: number, name: string) {
+    const built = createMonterEnemyModel();
+    built.group.position.set(x, 0.4, minX);
+    this.levelRoot.add(built.group);
+    this.enemies.push({
+      id,
+      type: 'monter',
+      name,
+      mesh: built.group,
+      speechMesh: null,
+      x,
+      y: 0.4,
+      z: minX,
+      startX: minX,
+      endX: maxX,
+      speed: 2.2,
+      dir: 1,
+      hp: 4,
+      maxHp: 4,
+      state: 'patrol',
+      stunTimer: 0,
+      shoutTimer: 0,
+      shoutText: '',
+      attackCooldown: 0,
+      walkCycle: 0,
+      legL: built.legL,
+      legR: built.legR,
+      armL: built.armL,
+      armR: built.armR,
+      specialActionTimer: 2.8,
+    });
+  }
+
+  private addPanRomanEnemy(id: string, x: number, minX: number, maxX: number, name = 'Pan Roman z Dostawą') {
+    const built = createPanRomanEnemyModel();
+    built.group.position.set(x, 0.4, minX);
+    this.levelRoot.add(built.group);
+    this.enemies.push({
+      id,
+      type: 'pan_roman',
+      name,
+      mesh: built.group,
+      speechMesh: null,
+      x,
+      y: 0.4,
+      z: minX,
+      startX: minX,
+      endX: maxX,
+      speed: 3.2,
+      dir: 1,
+      hp: 4,
+      maxHp: 4,
+      state: 'patrol',
+      stunTimer: 0,
+      shoutTimer: 0,
+      shoutText: '',
+      attackCooldown: 0,
+      walkCycle: 0,
+      legL: built.legL,
+      legR: built.legR,
+      armL: built.armL,
+      armR: built.armR,
+      specialActionTimer: 2.0,
+    });
+  }
+
+  private addSerwisanciEnemy(id: string, x: number, minX: number, maxX: number, name = 'Serwisant Max-Flixu') {
+    const built = createSerwisanciEnemyModel();
+    built.group.position.set(x, 0.4, minX);
+    this.levelRoot.add(built.group);
+    this.enemies.push({
+      id,
+      type: 'serwisant',
+      name,
+      mesh: built.group,
+      speechMesh: null,
+      x,
+      y: 0.4,
+      z: minX,
+      startX: minX,
+      endX: maxX,
+      speed: 2.6,
+      dir: 1,
+      hp: 3,
+      maxHp: 3,
+      state: 'patrol',
+      stunTimer: 0,
+      shoutTimer: 0,
+      shoutText: '',
+      attackCooldown: 0,
+      walkCycle: 0,
+      legL: built.legL,
+      legR: built.legR,
+      armL: built.armL,
+      armR: built.armR,
+      specialActionTimer: 2.4,
+    });
+  }
+
+  private addBosmanKrakowBossEnemy(id: string, x: number, z: number) {
+    const built = createBosmanKrakowBossModel();
+    built.group.position.set(x, 0.6, z);
+    this.levelRoot.add(built.group);
+    this.enemies.push({
+      id,
+      type: 'bosman_krakow',
+      name: 'Bosman z Krakowa (Mini-Boss)',
+      mesh: built.group,
+      speechMesh: null,
+      x,
+      y: 0.6,
+      z,
+      startX: x - 10,
+      endX: x + 10,
+      speed: 2.4,
+      dir: -1,
+      hp: 8,
+      maxHp: 8,
+      state: 'patrol',
+      stunTimer: 0,
+      shoutTimer: 0,
+      shoutText: '',
+      attackCooldown: 0,
+      walkCycle: 0,
+      legL: built.legL,
+      legR: built.legR,
+      armL: built.armL,
+      armR: built.armR,
+      specialActionTimer: 2.8,
+    });
+  }
+
+  private addPiorunDronEnemy(id: string, startX: number, endX: number, z: number, y = 1.9, name = 'Piorun Dron Magazynowy AI') {
+    const built = createPiorunDronModel();
+    built.group.position.set(startX, y, z);
+    this.levelRoot.add(built.group);
+    this.enemies.push({
+      id,
+      type: 'piorun_dron',
+      name,
+      mesh: built.group,
+      x: startX,
+      y,
+      z,
+      startX,
+      endX,
+      speed: 3.5,
+      dir: 1,
+      hp: 2,
+      maxHp: 2,
+      state: 'patrol',
+      stunTimer: 0,
+      shoutTimer: 0,
+      shoutText: '',
+      attackCooldown: 0,
+      walkCycle: 0,
+      legL: built.rotors[0],
+      legR: built.rotors[1],
+      armL: built.rotors[2],
+      armR: built.rotors[3],
+    });
+  }
+
+  private addEliteGuardEnemy(id: string, x: number, minX: number, maxX: number, name: string) {
+    const built = createEliteGuardEnemyModel();
+    built.group.position.set(x, 0.5, minX);
+    this.levelRoot.add(built.group);
+    this.enemies.push({
+      id,
+      type: 'elite_walczak_guard',
+      name,
+      mesh: built.group,
+      speechMesh: null,
+      x,
+      y: 0.5,
+      z: minX,
+      startX: minX,
+      endX: maxX,
+      speed: 2.4,
+      dir: 1,
+      hp: 5,
+      maxHp: 5,
+      state: 'patrol',
+      stunTimer: 0,
+      shoutTimer: 0,
+      shoutText: '',
+      attackCooldown: 0,
+      walkCycle: 0,
+      legL: built.legL,
+      legR: built.legR,
+      armL: built.armL,
+      armR: built.armR,
+      shieldActive: true,
+    });
+  }
+
+  private addKurierEnemy(id: string, x: number, minX: number, maxX: number, name = 'Rudy z DPD od Johnny Walker') {
+    const built = createKurierEnemyModel();
+    built.group.position.set(x, 0.4, minX);
+    this.levelRoot.add(built.group);
+    this.enemies.push({
+      id,
+      type: 'kurier',
+      name,
+      mesh: built.group,
+      speechMesh: null,
+      x,
+      y: 0.4,
+      z: minX,
+      startX: minX,
+      endX: maxX,
+      speed: 4.5,
+      dir: 1,
+      hp: 2,
+      maxHp: 2,
+      state: 'patrol',
+      stunTimer: 0,
+      shoutTimer: 0,
+      shoutText: '',
+      attackCooldown: 0,
+      walkCycle: 0,
+      legL: built.legL,
+      legR: built.legR,
+      armL: built.armL,
+      armR: built.armR,
+    });
+  }
+
+  private addItalianVendorEnemy(id: string, x: number, minX: number, maxX: number, name = 'Włoski Dostawca Armatury z Mediolanu') {
+    const built = createItalianVendorEnemyModel();
+    built.group.position.set(x, 0.4, minX);
+    this.levelRoot.add(built.group);
+    this.enemies.push({
+      id,
+      type: 'przedstawiciel_włoski',
+      name,
+      mesh: built.group,
+      speechMesh: null,
+      x,
+      y: 0.4,
+      z: minX,
+      startX: minX,
+      endX: maxX,
+      speed: 2.6,
+      dir: 1,
+      hp: 3,
+      maxHp: 3,
+      state: 'patrol',
+      stunTimer: 0,
+      shoutTimer: 0,
+      shoutText: '',
+      attackCooldown: 0,
+      walkCycle: 0,
+      legL: built.legL,
+      legR: built.legR,
+      armL: built.armL,
+      armR: built.armR,
+      specialActionTimer: 2.5,
+    });
+  }
+
+  private addSztaplarEnemy(id: string, x: number, minX: number, maxX: number, name = 'Szalony Operator Paleciaka B4') {
+    const built = createSztaplarEnemyModel();
+    built.group.position.set(x, 0.5, minX);
+    this.levelRoot.add(built.group);
+    this.enemies.push({
+      id,
+      type: 'sztaplar_szalony',
+      name,
+      mesh: built.group,
+      speechMesh: null,
+      x,
+      y: 0.5,
+      z: minX,
+      startX: minX,
+      endX: maxX,
+      speed: 3.5,
+      dir: 1,
+      hp: 4,
+      maxHp: 4,
+      state: 'patrol',
+      stunTimer: 0,
+      shoutTimer: 0,
+      shoutText: '',
+      attackCooldown: 0,
+      walkCycle: 0,
+      legL: built.legL,
+      legR: built.legR,
+      armL: built.armL,
+      armR: built.armR,
+    });
+  }
+
+  private spawnLootCrate(x: number, y: number, z: number) {
+    const mesh = createLootCrateModel();
+    mesh.position.set(x, y + 0.25, z);
+    this.levelRoot.add(mesh);
+    this.lootCrates.push({ mesh, x, y: y + 0.25, z });
+    this.platforms.push({ x, y: y + 0.5, z, width: 0.5, height: 0.5, depth: 0.5, type: 'pallet', mesh });
+  }
+
+  private updateLootCrates(dt: number) {
+    for (let i = this.lootCrates.length - 1; i >= 0; i--) {
+      const crate = this.lootCrates[i];
+      crate.mesh.rotation.y += dt * 1.5;
+      
+      const dist = Math.hypot(crate.x - this.playerPos.x, crate.z - this.playerPos.z);
+      if (dist < 1.0) {
+        this.spawnDroppedPerk(crate.x, crate.y, crate.z);
+        this.levelRoot.remove(crate.mesh);
+        this.lootCrates.splice(i, 1);
+      }
+    }
+  }
+
+  public spawnDroppedPerk(x: number, y: number, z: number, forcedPerkId?: PerkType) {
+    const perkDef = forcedPerkId
+      ? AVAILABLE_PERKS.find((p) => p.id === forcedPerkId)!
+      : AVAILABLE_PERKS[Math.floor(Math.random() * AVAILABLE_PERKS.length)];
+
+    const id = `drop_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+    const mesh = createDroppedPerkCrate(perkDef.id, perkDef.color);
+    mesh.position.set(x, y + 0.1, z);
+    this.levelRoot.add(mesh);
+
+    const dropped: DroppedPerkItem = {
+      id,
+      perkId: perkDef.id,
+      name: perkDef.name,
+      icon: perkDef.icon,
+      color: perkDef.color,
+      x,
+      y: y + 0.1,
+      z,
+      initialY: y + 0.1,
+      mesh,
+      collected: false,
+      life: 55, // 55 seconds to collect
+      duration: perkDef.duration || 20,
+    };
+
+    this.droppedPerks.push(dropped);
+    this.spawnParticleRing(x, y + 0.6, z, perkDef.color);
+    this.emitFloatingToast(`📦 ZRZUT: ${perkDef.name}!`, x, y + 1.2, z, 'perk');
+    sound.playPickup(1);
+  }
+
+  private updateDroppedPerks(dt: number) {
+    const time = performance.now() * 0.003;
+
+    for (let i = this.droppedPerks.length - 1; i >= 0; i--) {
+      const perk = this.droppedPerks[i];
+      if (perk.collected || !perk.mesh) continue;
+
+      perk.life -= dt;
+      if (perk.life <= 0) {
+        this.levelRoot.remove(perk.mesh);
+        this.droppedPerks.splice(i, 1);
+        continue;
+      }
+
+      // Floating bob and spin
+      perk.mesh.rotation.y += dt * 2.2;
+      perk.mesh.position.y = perk.initialY + Math.sin(time + i * 1.5) * 0.18;
+
+      // Magnetic pull to player
+      const dist = Math.hypot(perk.x - this.playerPos.x, perk.z - this.playerPos.z);
+      const dy = Math.abs(perk.y - (this.playerPos.y + 0.5));
+
+      const magnetActive = this.activePerks.magnet > 0 || this.charDef.id === 'marcin';
+      const magnetRadius = magnetActive ? 9.5 : 2.5;
+
+      if (dist < magnetRadius) {
+        const pullSpeed = (magnetActive ? 10.5 : 4.5) * dt;
+        perk.x += ((this.playerPos.x - perk.x) / Math.max(0.1, dist)) * pullSpeed;
+        perk.z += ((this.playerPos.z - perk.z) / Math.max(0.1, dist)) * pullSpeed;
+        perk.y += ((this.playerPos.y + 0.6 - perk.y) / Math.max(0.1, dist)) * pullSpeed;
+        perk.mesh.position.set(perk.x, perk.y, perk.z);
+      }
+
+      // Collect condition
+      if (dist < 1.15 && dy < 1.4) {
+        perk.collected = true;
+        this.levelRoot.remove(perk.mesh);
+        this.droppedPerks.splice(i, 1);
+
+        this.activatePerk(perk.perkId, perk.duration);
+        sound.playPickup(3);
+        this.spawnParticleRing(perk.x, perk.y + 0.6, perk.z, perk.color);
+        this.score += 250;
+        this.emitFloatingToast(`⚡ ODBIÓR: ${perk.name}!`, perk.x, perk.y + 1.2, perk.z, 'perk');
+
+        const def = AVAILABLE_PERKS.find((p) => p.id === perk.perkId);
+        const hexColor = `#${perk.color.toString(16).padStart(6, '0')}`;
+        this.callbacks.onPerkDropBanner?.(perk.name, perk.icon, def?.description || 'Aktywowano ulepszenie!', hexColor);
+        this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+      }
+    }
+  }
+
+  private emitFloatingToast(
+    text: string,
+    worldX: number,
+    worldY: number,
+    worldZ: number,
+    type: 'points' | 'vip' | 'easter-egg' | 'damage' | 'perk' | 'combo' | 'enemy_shout' = 'points',
+    metadata?: any
+  ) {
+    this.callbacks.onFloatingText?.(text, worldX, worldY, worldZ, type, metadata);
+  }
+
+
+  private buildLevel1() {
+    // 1. Expanded Warehouse Floor (72x40, x: -36 to +36, z: -20 to +20)
+    // Widened significantly in Z-axis for rich lateral exploration!
+    const floorGeo = new THREE.PlaneGeometry(72, 40);
+    const floorMat = new THREE.MeshStandardMaterial({
+      map: getFloorTexture(),
+      roughness: 0.28,
+      metalness: 0.1,
+    });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    this.levelRoot.add(floor);
+    this.platforms.push({ x: 0, y: 0, z: 0, width: 72, height: 0.2, depth: 40, type: 'floor' });
+
+    // Back Wall pushed to z = -19.5 with industrial corrugated siding
+    const wallGeo = new THREE.BoxGeometry(72, 9.5, 0.4);
+    const wallMat = new THREE.MeshStandardMaterial({ map: getWallTexture(), roughness: 0.7 });
+    const backWall = new THREE.Mesh(wallGeo, wallMat);
+    backWall.position.set(0, 4.75, -19.5);
+    this.levelRoot.add(backWall);
+
+    // Glowing Neon Showroom & Logistics Overhead Banner
+    const neonSign = createNeonShowroomSign('MAX-FLIZ • SEKTOR A: LOGISTYKA B4', '#38bdf8');
+    neonSign.position.set(0, 6.8, -19.2);
+    this.levelRoot.add(neonSign);
+
+    // Overhead Digital Industrial LED Scoreboard
+    const scoreboard1 = createBhpDigitalScoreboard('SEKTOR A: DNI BEZ POTŁUCZONEJ PŁYTKI: 0');
+    scoreboard1.position.set(0, 6.8, -10.0);
+    this.levelRoot.add(scoreboard1);
+
+    // Volumetric Overhead High-Bay Lamps & Light Beams
+    [-28, -14, 0, 14, 28].forEach((lx) => {
+      const lamp = createHighBayLamp();
+      lamp.position.set(lx, 7.2, 0);
+      const beam = createVolumetricLightBeam();
+      beam.position.set(lx, 7.2, 0);
+      this.levelRoot.add(lamp, beam);
+    });
+
+    // Floor Pedestrian & Navigation Safety Arrows along main runway and south wing
+    [-24, -16, -8, 0, 8, 16, 24, 32].forEach((ax) => {
+      const arrow = createAisleArrow(1.5);
+      arrow.position.set(ax, 0.015, -2.0);
+      this.levelRoot.add(arrow);
+
+      const arrowSouth = createAisleArrow(1.2);
+      arrowSouth.position.set(ax, 0.015, 8.0);
+      this.levelRoot.add(arrowSouth);
+    });
+
+    // Steam vents along the back wall
+    [-26, -10, 8, 24].forEach((vx) => {
+      const vent = createIndustrialSteamVent();
+      vent.position.set(vx, 0, -18.8);
+      this.levelRoot.add(vent);
+    });
+
+    // High Warehouse Racks — MOVED STRICTLY TO BACKGROUND (z = -12.5 and -8.5)
+    // NEVER obscuring the foreground or the camera's sightline!
+    const rack1 = createWarehouseRack(6.0, 4.2, 1.5);
+    rack1.position.set(-18, 0, -12.5);
+    const rack2 = createWarehouseRack(6.0, 4.2, 1.5);
+    rack2.position.set(0, 0, -12.5);
+    const rack3 = createWarehouseRack(6.0, 4.2, 1.5);
+    rack3.position.set(18, 0, -12.5);
+    const rackBack4 = createWarehouseRack(6.0, 4.2, 1.5);
+    rackBack4.position.set(-8, 0, -8.0);
+    const rackBack5 = createWarehouseRack(6.0, 4.2, 1.5);
+    rackBack5.position.set(10, 0, -8.0);
+    this.levelRoot.add(rack1, rack2, rack3, rackBack4, rackBack5);
+
+    this.platforms.push({ x: -18, y: 1.4, z: -12.5, width: 6.0, height: 0.15, depth: 1.5, type: 'shelf' });
+    this.platforms.push({ x: 0, y: 1.4, z: -12.5, width: 6.0, height: 0.15, depth: 1.5, type: 'shelf' });
+    this.platforms.push({ x: 18, y: 1.4, z: -12.5, width: 6.0, height: 0.15, depth: 1.5, type: 'shelf' });
+    this.platforms.push({ x: -8, y: 1.4, z: -8.0, width: 6.0, height: 0.15, depth: 1.5, type: 'shelf' });
+    this.platforms.push({ x: 10, y: 1.4, z: -8.0, width: 6.0, height: 0.15, depth: 1.5, type: 'shelf' });
+
+    // Elevated Steel Catwalk Connecting Background Racks at y=3.4
+    const catwalk1 = createHighBayCatwalk(12.0, 1.6);
+    catwalk1.position.set(-9, 3.4, -12.5);
+    const catwalk2 = createHighBayCatwalk(12.0, 1.6);
+    catwalk2.position.set(9, 3.4, -12.5);
+    this.levelRoot.add(catwalk1, catwalk2);
+    this.platforms.push({ x: -9, y: 3.4, z: -12.5, width: 12.0, height: 0.15, depth: 1.6, type: 'scaffold' });
+    this.platforms.push({ x: 9, y: 3.4, z: -12.5, width: 12.0, height: 0.15, depth: 1.6, type: 'scaffold' });
+
+    // Multi-tier Pallet Platforms — Center & South Wing
+    // Low profile in the foreground so the runway is 100% visible!
+    const palletPositions = [
+      { x: -30, z: -2.5, tier: 1 },
+      { x: -26, z: 2.5, tier: 2 },
+      { x: -22, z: -2.5, tier: 1 },
+      { x: -18, z: 2.5, tier: 2 },
+      { x: -14, z: -2.2, tier: 1 },
+      { x: -10, z: 2.5, tier: 2 },
+      { x: -6, z: -2.5, tier: 1 },
+      { x: -2, z: 2.2, tier: 2 },
+      { x: 2, z: -2.5, tier: 1 },
+      { x: 6, z: 2.5, tier: 2 },
+      { x: 10, z: -2.2, tier: 1 },
+      { x: 14, z: 2.5, tier: 2 },
+      { x: 18, z: -2.5, tier: 1 },
+      { x: 22, z: 2.2, tier: 2 },
+      { x: 26, z: -2.5, tier: 1 },
+      // LATERAL SOUTH WING (z: 8 to 16)
+      { x: -28, z: 12.0, tier: 1 },
+      { x: -20, z: 9.5, tier: 2 },
+      { x: -12, z: 13.5, tier: 1 },
+      { x: -4, z: 10.0, tier: 2 },
+      { x: 4, z: 14.0, tier: 1 },
+      { x: 12, z: 10.5, tier: 2 },
+      { x: 20, z: 13.0, tier: 1 },
+      { x: 28, z: 9.5, tier: 2 },
+    ];
+    palletPositions.forEach((p, idx) => {
+      const pallet = createTilePallet(p.tier);
+      pallet.position.set(p.x, 0, p.z);
+      this.levelRoot.add(pallet);
+      const h = p.tier === 1 ? 0.6 : 0.95;
+      this.platforms.push({ x: p.x, y: h / 2, z: p.z, width: 1.25, height: h, depth: 1.05, type: 'pallet' });
+      this.addGroutItem(`grout_l1_${idx}`, p.x, h + 0.35, p.z, 50);
+    });
+
+    // Interactive Coffee Vending Machine in South Wing ("KAWIARKA B4 EXPRESS")
+    const coffee1 = createCoffeeVendingMachineModel();
+    coffee1.position.set(-16, 0, 15.5);
+    this.levelRoot.add(coffee1);
+    this.coffeeMachines.push({ mesh: coffee1, x: -16, y: 0, z: 15.5, cooldown: 0 });
+    this.platforms.push({ x: -16, y: 0.9, z: 15.5, width: 0.85, height: 1.8, depth: 0.65, type: 'shelf' });
+
+    // Interactive Jump Pads & Speed Boost Pads
+    this.addJumpPad(-21, 0, -4.5, 17.5);
+    this.addJumpPad(5, 0, 4.5, 17.0);
+    this.addJumpPad(-8, 0, 14.0, 18.0); // Jump pad from south wing to catwalk!
+    this.addSpeedPad(-12, 0, 0);
+    this.addSpeedPad(12, 0, 0);
+    this.addSpeedPad(0, 0, 11.0); // South corridor speed boost!
+    this.addSpeedPad(34, 0, 0); // Boost pad right through the Sector A -> B transition gate!
+
+    // Explosive Chemical Barrels (Beczki Kleju Pro Flex)
+    this.addExplosiveBarrel('barrel_l1_1', -15, 0, -3.5);
+    this.addExplosiveBarrel('barrel_l1_2', 15, 0, 3.5);
+    this.addExplosiveBarrel('barrel_l1_3', -2, 0, 15.0);
+
+    // VIP Collectibles
+    this.addVipItem('vip_tile1', -18, 1.8, -12.5, 'Gres Hiszpański Calacatta Gold 120x60');
+    this.addVipItem('vip_tile2', 0, 1.8, -12.5, 'Złota Mozaika Ceramiczna Max-Fliz');
+    this.addVipItem('vip_tile3', 18, 1.8, -12.5, 'Klej do Wielkiego Formatu Pro Flex');
+    this.addVipItem('vip_tile4', -9, 3.8, -12.5, 'Specyfikacja Projektowa dla Hotelu 5*');
+    this.addVipItem('vip_tile5', 20, 1.4, 13.0, 'Złota Próbka Spieku z Mediolanu (Bok B4)');
+
+    // Pre-placed World-Drop Perks
+    this.spawnDroppedPerk(-9, 3.8, -12.5, 'vibram_boots');
+    this.spawnDroppedPerk(9, 3.8, -12.5, 'hardhat');
+    this.spawnDroppedPerk(-20, 1.4, 9.5, 'order_magnet');
+    this.spawnDroppedPerk(14, 0.5, 3.5, 'espresso_boost');
+
+    // Bonus Collectibles & Espresso
+    this.addEspressoItem('esp_l1_1', -20, 0.4, 3.5);
+    this.addEspressoItem('esp_l1_2', 8, 0.4, -3.5);
+    this.addGoldenCutterItem('cutter_l1_1', 14, 1.8, -12.5);
+    this.addGoldenCutterItem('cutter_l1_2', -12, 1.2, 13.5);
+    this.addMagnetItem('mag_l1_1', -6, 1.0, 2.5);
+
+    // Easter Eggs
+    this.addEasterEgg('egg_coffee_1', -24, 0.05, -15.5, 'Ukryty Kącik Kawowy Zdzicha', 'coffee', 400);
+    this.addEasterEgg('egg_wz_1', 12, 1.85, 10.5, 'Zaginiona WZ-tka z 2012 Roku', 'folder', 450);
+    
+    // Loot Crates
+    this.spawnLootCrate(-20, 0, 5);
+    this.spawnLootCrate(15, 0, -5);
+    this.spawnLootCrate(0, 3.4, -12.5);
+    this.spawnLootCrate(16, 0, 14.5);
+    this.spawnLootCrate(-24, 0, 12.0);
+
+    // Forklift Hazard
+    this.addForkliftHazard('forklift_1', -24, 20, 0, 4.4, 0xf59e0b);
+    this.addForkliftHazard('forklift_1_south', -20, 18, 11.5, 3.8, 0x0284c7);
+
+    // Spray Graffiti & Crime Scene Chalk Outline Decals
+    const arkadiusz1 = createSprayGraffitiDecal();
+    arkadiusz1.position.set(-14, 0.035, -3.5);
+    arkadiusz1.rotation.x = -Math.PI / 2;
+    arkadiusz1.scale.set(1.4, 1.4, 1);
+    this.levelRoot.add(arkadiusz1);
+
+    const crime1 = createCrimeSceneBodyOutlineDecal('RUDY ŚMIERDZIUCH');
+    crime1.position.set(-26, 0.035, 8.5);
+    crime1.rotation.y = Math.PI / 4;
+    crime1.scale.setScalar(3.2); 
+    this.levelRoot.add(crime1);
+
+    // Enemies in Sector A
+    this.addCustomerEnemy('cust_1', -16, -6, 6, 'Klient z Reklamacją na Fugi');
+    this.addCustomerEnemy('cust_2', 4, -6, 6, 'Pan Janusz (Gdzie moja faktura?!)');
+    this.addCustomerEnemy('cust_3', -8, -6, 6, 'Awanturujący się Klient po Rabaty');
+    this.addPanRomanEnemy('pan_roman_l1', -8, -6, 6, 'Pan Roman z Dostawą Sanitariatów');
+    this.addSerwisanciEnemy('serwisant_l1', -15, -6, 6, 'Serwisant Max-Flixu');
+    this.addBosmanKrakowBossEnemy('bosman_l1', 0, 0);
+    this.addKurierEnemy('kurier_l1_1', -10, -6, 6, 'Rudy z DPD (Johnny Walker Express)');
+    this.addItalianVendorEnemy('ital_l1_1', 8, -5, 5, 'Włoski Dostawca Armatury z Mediolanu');
+    this.addSztaplarEnemy('sztaplar_l1_1', -2, -6, 6, 'Szalony Operator Paleciaka B4');
+    this.addEliteGuardEnemy('guard_l1_1', -22, -4, 4, 'Strażnik Sektora A');
+    this.addInspectorEnemy('insp_l1_1', 14, -5, 5, 'Audytor Terenowy');
+    this.addHandlowiecEnemy('handl_l1_1', -4, -6, 6, 'Przedstawiciel z Teczką');
+    this.addMonterEnemy('monter_l1_1', 18, -4, 4, 'Glazurnik Wiesław (Poziomica!)');
+    this.addAgvRobotEnemy('agv_1', -4, 12, 2.8, 'Autonomiczny AGV ze zlewami');
+    this.addAgvRobotEnemy('agv_2', 8, -12, -2.8, 'Szalony Sztaplar AGV B4');
+    this.addPiorunDronEnemy('dron_1', -18, 16, 0, 2.2, 'Piorun Dron Skaner Kodów B4');
+    this.addEliteGuardEnemy('guard_l1_2', 20, -5, 5, 'Warta Honorowa Calacatta');
+    this.addHandlowiecEnemy('handl_l1_2', -12, -4, 4, 'Dyrektor Handlowy (Rabat 5%!)');
+
+    // Enemies in South Wing
+    this.addCustomerEnemy('cust_l1_south', -6, 8, 16, 'Klient z Projektantem (Bok B4)');
+    this.addMonterEnemy('monter_l1_south', 10, 8, 16, 'Majster Kafelkarz');
+    this.addAgvRobotEnemy('agv_l1_south', -18, 6, 12.0, 'AGV Paletowy Południe');
+
+    // Accent Lighting
+    const l1 = new THREE.PointLight(0x38bdf8, 18, 28);
+    l1.position.set(-18, 5, 8);
+    this.levelRoot.add(l1);
+    const l2 = new THREE.PointLight(0xf59e0b, 15, 25);
+    l2.position.set(12, 4, -8);
+    this.levelRoot.add(l2);
+    const l3 = new THREE.PointLight(0x10b981, 14, 24);
+    l3.position.set(-4, 4, 14);
+    this.levelRoot.add(l3);
+
+    this.addPiorunDronEnemy('dron_2', -10, 22, -4, 2.4, 'Dron Inspekcyjny Sektora B');
+
+    // Open Sector A -> Sector B Transition Archway
+    const sectorGateAB = createFinishGate();
+    sectorGateAB.position.set(35.5, 0, 0);
+    this.levelRoot.add(sectorGateAB);
+    const gateSignAB = createNeonShowroomSign('PRZEJŚCIE • SEKTOR B: SHOWROOM & SPA ➔', '#f59e0b');
+    gateSignAB.position.set(35.5, 5.2, 0);
+    gateSignAB.scale.setScalar(0.55);
+    this.levelRoot.add(gateSignAB);
+  }
+
+  private buildLevel2(offsetX = 76) {
+    // 1. High-Contrast Luxury Italian Nero Marquina & Gold Marble Floor (80x42, x: +36 to +116, z: -21 to +21)
+    // Deep dark obsidian marble: eliminates all washed-out white glare, pristine visibility for bathtubs and items!
+    const floorGeo = new THREE.PlaneGeometry(80, 42);
+    const floorMat = new THREE.MeshStandardMaterial({
+      map: getShowroomMarbleFloorTexture(),
+      roughness: 0.22,
+      metalness: 0.15,
+      color: 0xffffff,
+    });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set(offsetX, 0, 0);
+    floor.receiveShadow = true;
+    this.levelRoot.add(floor);
+    this.platforms.push({ x: offsetX, y: 0, z: 0, width: 80, height: 0.2, depth: 42, type: 'floor' });
+
+    // Architectural Natural Oak Slat Showroom Wall with LED Cove Lighting (Pushed back to z = -20.5)
+    const wallGeo = new THREE.BoxGeometry(80, 9.5, 0.4);
+    const wallMat = new THREE.MeshStandardMaterial({
+      map: getShowroomWallTexture(),
+      roughness: 0.35,
+      metalness: 0.1,
+      color: 0xffffff,
+    });
+    const backWall = new THREE.Mesh(wallGeo, wallMat);
+    backWall.position.set(offsetX, 4.75, -20.5);
+    this.levelRoot.add(backWall);
+
+    // Showroom Neon Sign
+    const neonSign = createNeonShowroomSign('MAX-FLIZ SHOWROOM • SEKTOR B: WANNY & SPA', '#ec4899');
+    neonSign.position.set(offsetX, 6.8, -20.2);
+    this.levelRoot.add(neonSign);
+
+    // Overhead Digital Scoreboard in Showroom
+    const scoreboard2 = createBhpDigitalScoreboard('SHOWROOM: ZAKAZ KĄPIELI W EKSPOZYCJI VIP!');
+    scoreboard2.position.set(offsetX, 7.0, -10.0);
+    this.levelRoot.add(scoreboard2);
+
+    // Ceiling Track Spotlights
+    [-24, -8, 8, 24].forEach((tx) => {
+      const track = createTrackSpotlights(8.0);
+      track.position.set(offsetX + tx, 7.2, 0);
+      this.levelRoot.add(track);
+    });
+
+    // Glass Partitions — PLACED EXCLUSIVELY ON NORTH SIDE (z = -9.5) so foreground is 100% open!
+    [-26, -14, -2, 10, 22].forEach((px) => {
+      const glassNorth = createGlassPartition(2.8, 2.4);
+      glassNorth.position.set(offsetX + px, 0, -9.5);
+      this.levelRoot.add(glassNorth);
+    });
+
+    // Ceramic Planters with Greenery along perimeter
+    [-34, -26, -16, -6, 4, 14, 24, 32].forEach((px, idx) => {
+      const plant = createShowroomPlant();
+      plant.position.set(offsetX + px, 0, idx % 2 === 0 ? -16.5 : 17.5);
+      this.levelRoot.add(plant);
+    });
+
+    // Super Bouncy Bathtubs placed on Luxury Podiums
+    // Staggered open diagonal layout — NO FOREGROUND OBSTRUCTIONS!
+    const tubPositions = [
+      { x: -30, z: -6.0 },
+      { x: -22, z: 3.5 },
+      { x: -14, z: -5.5 },
+      { x: -4, z: 4.0 },
+      { x: 6, z: -6.0 },
+      { x: 16, z: 3.5 },
+      { x: 26, z: -5.5 },
+      // LATERAL SOUTH VIP SPA & JACUZZI LOUNGE (z: 11 to 16)
+      { x: -26, z: 13.0 },
+      { x: -10, z: 14.5 },
+      { x: 8, z: 12.5 },
+      { x: 22, z: 14.0 },
+    ];
+    tubPositions.forEach((tp, idx) => {
+      const worldX = offsetX + tp.x;
+      const podium = createDisplayPodium(3.2, 2.0, 0.22);
+      podium.position.set(worldX, 0, tp.z);
+      this.levelRoot.add(podium);
+
+      const tub = createBathtubModel();
+      tub.position.set(worldX, 0.22, tp.z);
+      this.levelRoot.add(tub);
+      this.platforms.push({
+        x: worldX,
+        y: 0.72,
+        z: tp.z,
+        width: 2.4,
+        height: 1.0,
+        depth: 1.4,
+        type: 'bathtub',
+        bounce: 17.5,
+      });
+      this.addGroutItem(`grout_l2_${idx}`, worldX, 1.6, tp.z, 60);
+    });
+
+    // Elevated Luxury Catwalks — STRICTLY ON NORTH SIDE (z = -12.5 to -8.0)
+    // Never blocking the bathtubs, enemies, or player runway!
+    const catwalks = [
+      { x: -28, y: 3.5, z: -8.0, w: 5.5, d: 2.4 },
+      { x: -14, y: 3.5, z: -8.0, w: 5.5, d: 2.4 },
+      { x: 0, y: 3.5, z: -8.0, w: 5.5, d: 2.4 },
+      { x: 14, y: 3.5, z: -8.0, w: 5.5, d: 2.4 },
+      { x: 28, y: 3.5, z: -8.0, w: 5.5, d: 2.4 },
+    ];
+    catwalks.forEach((cw, idx) => {
+      const worldX = offsetX + cw.x;
+      const cwGroup = createHighBayCatwalk(cw.w, cw.d);
+      cwGroup.position.set(worldX, cw.y, cw.z);
+      this.levelRoot.add(cwGroup);
+      this.platforms.push({ x: worldX, y: cw.y, z: cw.z, width: cw.w, height: 0.2, depth: cw.d, type: 'shelf' });
+      this.addGroutItem(`grout_cw_${idx}`, worldX, cw.y + 0.4, cw.z, 80);
+    });
+
+    // Interactive Coffee Vending Machine in Showroom Lounge
+    const coffee2 = createCoffeeVendingMachineModel();
+    coffee2.position.set(offsetX - 18, 0, 16.5);
+    this.levelRoot.add(coffee2);
+    this.coffeeMachines.push({ mesh: coffee2, x: offsetX - 18, y: 0, z: 16.5, cooldown: 0 });
+    this.platforms.push({ x: offsetX - 18, y: 0.9, z: 16.5, width: 0.85, height: 1.8, depth: 0.65, type: 'shelf' });
+
+    // Interactive Jump Pads & Speed Pads in Showroom
+    this.addJumpPad(offsetX - 14, 0, -3.5, 17.5);
+    this.addJumpPad(offsetX + 8, 0, 3.5, 17.0);
+    this.addJumpPad(offsetX - 2, 0, 12.0, 18.0); // South spa launchpad!
+    this.addSpeedPad(offsetX - 4, 0, 0);
+    this.addSpeedPad(offsetX + 14, 0, 0);
+    this.addSpeedPad(offsetX, 0, 8.5); // South spa runner speedpad!
+    this.addSpeedPad(offsetX + 38, 0, 0); // Boost pad through Sector B -> C transition gate!
+
+    // Explosive Chemical Barrels
+    this.addExplosiveBarrel('barrel_l2_1', offsetX - 10, 0, -4.0);
+    this.addExplosiveBarrel('barrel_l2_2', offsetX + 10, 0, 4.0);
+    this.addExplosiveBarrel('barrel_l2_3', offsetX + 18, 0, 15.0);
+
+    // VIP Showroom Items
+    this.addVipItem('vip_bath1', offsetX - 28, 3.9, -8.0, 'Złota Bateria Wolnostojąca Villeroy & Boch');
+    this.addVipItem('vip_bath2', offsetX, 3.9, -8.0, 'Wanna Wolnostojąca z Hydromasażem Marmur Carrara');
+    this.addVipItem('vip_bath3', offsetX + 28, 3.9, -8.0, 'Umywalka Nablatowa z Naturalnego Onyksu');
+    this.addVipItem('vip_bath4', offsetX + 8, 1.6, 12.5, 'Kolekcja Armatury Złotej z Mediolanu (VIP SPA)');
+
+    // Dropped Perks & Collectibles in World
+    this.spawnDroppedPerk(offsetX - 14, 3.9, -8.0, 'espresso_boost');
+    this.spawnDroppedPerk(offsetX + 14, 3.9, -8.0, 'order_magnet');
+    this.spawnDroppedPerk(offsetX + 22, 0.5, -6, 'hardhat');
+    this.spawnDroppedPerk(offsetX - 28, 3.9, -8.0, 'vibram_boots');
+    this.spawnDroppedPerk(offsetX - 10, 1.6, 14.5, 'vibram_boots');
+
+    this.addEspressoItem('esp_l2_1', offsetX - 22, 0.4, -2.0);
+    this.addEspressoItem('esp_l2_2', offsetX + 18, 0.4, 2.0);
+    this.addGoldenCutterItem('cutter_l2_1', offsetX - 26, 1.6, 13.0);
+    this.addMagnetItem('mag_l2_1', offsetX + 12, 3.9, -8.0);
+
+    // Easter Eggs
+    this.addEasterEgg('egg_throne_1', offsetX + 30, 0.05, -14.5, 'Złoty Tron Prezesa z 24k Złotem', 'throne', 600);
+    this.addEasterEgg('egg_l2_coffee', offsetX - 32, 0.05, 15.5, 'Tajemna Kawiarka Ciśnieniowa z Mediolanu (Zapas Espresso)', 'coffee', 500);
+    this.addEasterEgg('egg_l2_wz', offsetX + 6, 0.05, 16.0, 'Zagubiona Umowa z Włoską Fabryką Gresu na Wyłączność', 'folder', 550);
+
+    // Decals - Visible against the dark marble!
+    const spray2 = createSprayGraffitiDecal();
+    spray2.position.set(offsetX, 0.035, -4.0);
+    spray2.rotation.x = -Math.PI / 2;
+    spray2.scale.setScalar(2.5);
+    this.levelRoot.add(spray2);
+
+    const crime2 = createCrimeSceneBodyOutlineDecal('RUDY ŚMIERDZIUCH');
+    crime2.position.set(offsetX - 28, 0.035, 9.0);
+    crime2.scale.setScalar(3.0);
+    this.levelRoot.add(crime2);
+
+    // Dense Enemies in Showroom
+    this.addCustomerEnemy('cust_l2_1', offsetX - 22, -6, 6, 'Zdezorientowany Klient Szukający Syfonu');
+    this.addCustomerEnemy('cust_l2_2', offsetX + 10, -6, 6, 'Klient z Projektantką Wnętrz');
+    this.addPanRomanEnemy('pan_roman_l2', offsetX, -6, 6, 'Pan Roman z Dostawą Sanitariatów');
+    this.addSerwisanciEnemy('serwisant_l2', offsetX + 5, -6, 6, 'Serwisant Max-Flixu');
+    this.addBosmanKrakowBossEnemy('bosman_l2', offsetX + 20, 0);
+    this.addKurierEnemy('kurier_l2_1', offsetX - 16, -6, 6, 'Rudy z DPD (Johnny Walker Express)');
+    this.addItalianVendorEnemy('ital_l2_1', offsetX + 2, -6, 6, 'Przedstawiciel Fabryki z Bolonii');
+    this.addSztaplarEnemy('sztaplar_l2_1', offsetX + 18, -6, 6, 'Kierowca Sztaplarki Showroomu');
+    this.addArchitectEnemy('arch_l2_1', offsetX - 12, offsetX - 2, -4, 'Główny Projektant Wnętrz z Warszawy');
+    this.addArchitectEnemy('arch_l2_2', offsetX + 6, offsetX + 16, 4, 'Krytyk Mieszanek Tynkarskich i Beżu');
+    this.addInspectorEnemy('insp_l2_1', offsetX - 4, -6, 6, 'Inspektor BHP z PIP-u');
+    this.addHandlowiecEnemy('handl_l2_1', offsetX + 14, -6, 6, 'Kierownik Sprzedaży Salonu');
+    this.addMonterEnemy('monter_l2_1', offsetX - 14, -6, 6, 'Hydraulik z Kluczem Nastawnym');
+    this.addPiorunDronEnemy('dron_l2_1', offsetX - 20, offsetX + 20, 0, 2.4, 'Dron Multimedialny Showroomu');
+    this.addEliteGuardEnemy('guard_l2_1', offsetX - 30, -5, 5, 'Strażnik Calacatta Gold');
+    this.addAgvRobotEnemy('agv_l2_1', offsetX, offsetX + 15, -8.0, 'AGV Salonowy (Lustra)');
+
+    // South Spa Lounge Enemies
+    this.addArchitectEnemy('arch_l2_south', offsetX - 16, offsetX - 4, 13.0, 'Architekt Luksusu Spa');
+    this.addCustomerEnemy('cust_l2_south', offsetX + 12, 8, 17, 'Klientka VIP po Jacuzzi');
+
+    // BOSS LEVEL 2: Król-Leto
+    this.addKrolLetoBossEnemy('boss_krol_leto_l2', offsetX + 24, 0);
+
+    // Loot Crates on Level 2
+    this.spawnLootCrate(offsetX - 25, 0, 0);
+    this.spawnLootCrate(offsetX + 15, 3.5, -8.0);
+    this.spawnLootCrate(offsetX, 0, 8);
+    this.spawnLootCrate(offsetX + 30, 0, -8);
+    this.spawnLootCrate(offsetX - 15, 0, 14);
+    this.spawnLootCrate(offsetX + 16, 0, 15);
+
+    // Open Sector B -> Sector C Transition Archway
+    const sectorGateBC = createFinishGate();
+    sectorGateBC.position.set(offsetX + 39.5, 0, 0);
+    this.levelRoot.add(sectorGateBC);
+    const gateSignBC = createNeonShowroomSign('PRZEJŚCIE • SEKTOR C: TERMINAL PRZEŁADUNKOWY ➔', '#ef4444');
+    gateSignBC.position.set(offsetX + 39.5, 5.2, 0);
+    gateSignBC.scale.setScalar(0.55);
+    this.levelRoot.add(gateSignBC);
+  }
+
+  private buildLevel3(offsetX = 161) {
+    // 1. High-Bay Terminal Arena Floor (90x44, x: +116 to +206, z: -22 to +22)
+    const floorGeo = new THREE.PlaneGeometry(90, 44);
+    const floorMat = new THREE.MeshStandardMaterial({ map: getTerminalGraniteFloorTexture(), roughness: 0.28, metalness: 0.18 });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set(offsetX, 0, 0);
+    floor.receiveShadow = true;
+    this.levelRoot.add(floor);
+    this.platforms.push({ x: offsetX, y: 0, z: 0, width: 90, height: 0.2, depth: 44, type: 'floor' });
+
+    // Terminal Back Wall (Pushed back to z = -21.5)
+    const wallGeo = new THREE.BoxGeometry(90, 10.0, 0.4);
+    const wallMat = new THREE.MeshStandardMaterial({ map: getWallTexture(), roughness: 0.65 });
+    const backWall = new THREE.Mesh(wallGeo, wallMat);
+    backWall.position.set(offsetX, 5.0, -21.5);
+    this.levelRoot.add(backWall);
+
+    const neonSign = createNeonShowroomSign('MAX-FLIZ TERMINAL • SEKTOR C: STREFA ZAŁADUNKU VIP', '#f59e0b');
+    neonSign.position.set(offsetX, 7.2, -21.2);
+    this.levelRoot.add(neonSign);
+
+    // Overhead Digital Scoreboard in Terminal
+    const scoreboard3 = createBhpDigitalScoreboard('TERMINAL VIP: ODPRAWA KURIERÓW • BRAK TARYFY ULGOWEJ!');
+    scoreboard3.position.set(offsetX + 10, 7.2, -10.0);
+    this.levelRoot.add(scoreboard3);
+
+    // High-Bay Terminal Racks — MOVED STRICTLY TO BACKGROUND (z = -14.0 and -10.5)
+    // NEVER blocking the central arena or the delivery dock from the camera!
+    [-26, -6, 14].forEach((rx, idx) => {
+      const worldX = offsetX + rx;
+      const rackBack = createWarehouseRack(6.5, 4.4, 1.6);
+      rackBack.position.set(worldX, 0, -14.0);
+      this.levelRoot.add(rackBack);
+      this.platforms.push({ x: worldX, y: 1.4, z: -14.0, width: 6.5, height: 0.15, depth: 1.6, type: 'shelf' });
+
+      const cw = createHighBayCatwalk(8.0, 1.8);
+      cw.position.set(worldX, 3.6, -14.0);
+      this.levelRoot.add(cw);
+      this.platforms.push({ x: worldX, y: 3.6, z: -14.0, width: 8.0, height: 0.18, depth: 1.8, type: 'scaffold' });
+    });
+
+    // Pallet stepping stones in central corridor and south loading wing (z: -4 to +16)
+    [-32, -18, -4, 10, 24].forEach((px, idx) => {
+      const worldX = offsetX + px;
+      const pz = idx % 2 === 0 ? -3.2 : 3.2;
+      const pallet = createTilePallet(idx % 2 === 0 ? 2 : 1);
+      pallet.position.set(worldX, 0, pz);
+      this.levelRoot.add(pallet);
+      const h = idx % 2 === 0 ? 0.95 : 0.6;
+      this.platforms.push({ x: worldX, y: h / 2, z: pz, width: 1.25, height: h, depth: 1.05, type: 'pallet' });
+      this.addGroutItem(`grout_l3_${idx}`, worldX, h + 0.35, pz, 75);
+    });
+
+    // South Wing (Terminal C-Bis: z = 8 to 17) Pallet Staging Area
+    [-24, -10, 4, 18].forEach((px, idx) => {
+      const worldX = offsetX + px;
+      const pallet = createTilePallet(1, 'nero');
+      pallet.position.set(worldX, 0, 12.5);
+      this.levelRoot.add(pallet);
+      this.platforms.push({ x: worldX, y: 0.3, z: 12.5, width: 1.25, height: 0.6, depth: 1.05, type: 'pallet' });
+      this.addGroutItem(`grout_l3_south_${idx}`, worldX, 0.95, 12.5, 80);
+    });
+
+    // Interactive Coffee Vending Machine in Terminal
+    const coffee3 = createCoffeeVendingMachineModel();
+    coffee3.position.set(offsetX - 6, 0, 16.5);
+    this.levelRoot.add(coffee3);
+    this.coffeeMachines.push({ mesh: coffee3, x: offsetX - 6, y: 0, z: 16.5, cooldown: 0 });
+    this.platforms.push({ x: offsetX - 6, y: 0.9, z: 16.5, width: 0.85, height: 1.8, depth: 0.65, type: 'shelf' });
+
+    this.addJumpPad(offsetX - 28, 0, -5.0, 18.0);
+    this.addJumpPad(offsetX + 4, 0, 5.0, 18.0);
+    this.addJumpPad(offsetX - 14, 0, 13.0, 18.5); // South terminal shortcut launchpad!
+    this.addSpeedPad(offsetX - 14, 0, 0);
+    this.addSpeedPad(offsetX + 18, 0, 0);
+    this.addSpeedPad(offsetX + 2, 0, 10.0); // South corridor speedpad!
+
+    this.addExplosiveBarrel('barrel_l3_1', offsetX - 12, 0, -4.5);
+    this.addExplosiveBarrel('barrel_l3_2', offsetX + 16, 0, 4.5);
+    this.addExplosiveBarrel('barrel_l3_3', offsetX - 2, 0, 14.5);
+
+    // VIP Collectibles in Sector C
+    this.addVipItem('vip_term1', offsetX - 26, 4.0, -14.0, 'Paleta Eksportowa Spieków Kwarcowych 300x100');
+    this.addVipItem('vip_term2', offsetX - 6, 4.0, -14.0, 'Złoty Zestaw Podtynkowy Penthouse VIP');
+    this.addVipItem('vip_term3', offsetX + 14, 4.0, -14.0, 'Główny List Przewozowy Konwoju Max-Fliz');
+    this.addVipItem('vip_term4', offsetX + 28, 1.2, 0, 'Kluczyki do Floty Dostawczej Prezesa');
+    this.addVipItem('vip_term5', offsetX + 18, 1.2, 12.5, 'Pieczęć Notarialna Odbioru Towaru');
+
+    // Strategic Perks
+    this.spawnDroppedPerk(offsetX - 20, 0.5, 0, 'vibram_boots');
+    this.spawnDroppedPerk(offsetX + 20, 0.5, 0, 'hardhat');
+    this.spawnDroppedPerk(offsetX - 6, 4.0, -14.0, 'espresso_boost');
+    this.spawnDroppedPerk(offsetX + 4, 0.5, 12.5, 'order_magnet');
+
+    // Forklift Hazard in Sector C
+    this.addForkliftHazard('forklift_3', offsetX - 34, offsetX + 26, 0, 5.2, 0xef4444);
+    this.addForkliftHazard('forklift_3_south', offsetX - 24, offsetX + 20, 11.0, 4.0, 0xf59e0b);
+
+    // Bosses & Enemies in Sector C
+    this.addWalczakBossEnemy('boss_walczak', offsetX + 30, -5);
+    this.addKrolLetoBossEnemy('boss_krol_leto_l3', offsetX + 30, 5);
+    this.addBosmanKrakowBossEnemy('bosman_l3', offsetX + 15, 0);
+    
+    this.addEliteGuardEnemy('guard_l3_1', offsetX, -8, 8, 'Elitarna Straż');
+    this.addKurierEnemy('kurier_l3_1', offsetX - 25, -6, 6, 'Kurier Ekspresowy');
+    this.addItalianVendorEnemy('ital_l3_1', offsetX - 15, -6, 6, 'Włoski Delegat');
+    this.addSztaplarEnemy('sztaplar_l3_1', offsetX + 5, -6, 6, 'Operator Agresywny');
+    this.addArchitectEnemy('arch_l3_1', offsetX - 10, offsetX + 10, 0, 'Główny Architekt');
+    this.addCustomerEnemy('cust_l3_1', offsetX - 20, -5, 5, 'Klient VIP');
+    this.addHandlowiecEnemy('handl_l3_1', offsetX + 10, -5, 5, 'Dyrektor Handlowy');
+    this.addInspectorEnemy('insp_l3_1', offsetX - 30, -5, 5, 'Główny Inspektor');
+    this.addMonterEnemy('monter_l3_1', offsetX + 20, -6, 6, 'Majster Budowy');
+    this.addPiorunDronEnemy('dron_l3_1', offsetX - 20, offsetX + 20, 0, 2.5, 'Dron Bitewny');
+
+    // South Wing Enemies
+    this.addPanRomanEnemy('pan_roman_l3_south', offsetX - 12, 8, 17, 'Pan Roman na Rampie C');
+    this.addKurierEnemy('kurier_l3_south', offsetX + 8, 8, 17, 'Kurier z Płytkami (Johnny Walker)');
+
+    // Loot Crates
+    this.spawnLootCrate(offsetX - 30, 0, 5);
+    this.spawnLootCrate(offsetX, 0, 10);
+    this.spawnLootCrate(offsetX + 30, 0, -10);
+    this.spawnLootCrate(offsetX - 14, 0, 15);
+    this.spawnLootCrate(offsetX + 12, 0, 14);
+
+    // Final Finish Gate & Delivery Van at the end of Sector C (x = 201)
+    const finishGate = createFinishGate();
+    finishGate.position.set(offsetX + 40, 0, 0);
+    this.finishGatePos.set(offsetX + 40, 0, 0);
+    this.levelRoot.add(finishGate);
+
+    const van = createDeliveryVan();
+    van.position.set(offsetX + 41.8, 0, 0);
+    van.rotation.y = -Math.PI / 2;
+    this.levelRoot.add(van);
+    this.platforms.push({ x: offsetX + 41.8, y: 0.8, z: 0, width: 3.5, height: 1.6, depth: 2.6, type: 'finish_truck' });
+    
+    // Lighting
+    const l = new THREE.PointLight(0xef4444, 20, 40);
+    l.position.set(offsetX + 25, 5, 0);
+    this.levelRoot.add(l);
+  }
+
+  public update(dt: number) {
+    this.updateLootCrates(dt);
+    if (this.state !== 'playing' && this.state !== 'title') return;
+
+    let effectiveDt = dt;
+    if (this.hitStopTimer > 0) {
+      this.hitStopTimer = Math.max(0, this.hitStopTimer - dt);
+      effectiveDt = dt * 0.2;
+    }
+    const simDt = effectiveDt;
+
+    this.updatePerkTimers(simDt);
+
+    if (this.state === 'playing') {
+      if (this.invulnerableTimer > 0) this.invulnerableTimer -= simDt;
+      if (this.marcinReclamationTimer > 0) this.marcinReclamationTimer = Math.max(0, this.marcinReclamationTimer - simDt);
+      if (this.grzesiekCrushTimer > 0) this.grzesiekCrushTimer = Math.max(0, this.grzesiekCrushTimer - simDt);
+      if (this.grzesiekCrushPulse > 0) this.grzesiekCrushPulse = Math.max(0, this.grzesiekCrushPulse - simDt);
+      if (this.mateuszLagTimer > 0) this.mateuszLagTimer = Math.max(0, this.mateuszLagTimer - simDt);
+      if (this.finishWarningTimer > 0) this.finishWarningTimer = Math.max(0, this.finishWarningTimer - simDt);
+
+      if (this.speechBubbleTimer > 0) {
+        this.speechBubbleTimer -= simDt;
+        if (this.speechBubbleTimer <= 0) {
+          this.callbacks.onSpeechBubble('');
+        }
+      }
+
+      if (this.comboTimer > 0) {
+        this.comboTimer -= simDt;
+        if (this.comboTimer <= 0) {
+          this.comboStreak = 0;
+        }
+      }
+
+      this.updatePlayerMovement(simDt);
+      this.updateSectorProgression();
+      this.updateCoffeeMachines(simDt);
+      this.updateCollectibles(simDt);
+      this.updateDroppedPerks(simDt);
+      this.updateHazards(simDt);
+      this.updateExplosiveBarrels(simDt);
+      this.updateFallingTiles(simDt);
+      this.updateRandomSpawners(simDt);
+      this.updateEnemies(simDt);
+      this.updateProjectiles(simDt);
+      this.updateBimberMolotovs(simDt);
+      this.updateBimberFirePuddles(simDt);
+      this.updateSpecialEffects(simDt);
+      this.updateParticles(simDt);
+    }
+
+    if (this.bloomPulseTimer > 0) {
+      this.bloomPulseTimer -= dt;
+      if (this.threeRenderer) {
+        const exposure = 1.12 + Math.max(0, Math.sin(this.bloomPulseTimer * 10) * 0.5);
+        this.threeRenderer.toneMappingExposure = exposure;
+      }
+    } else {
+      if (this.threeRenderer) this.threeRenderer.toneMappingExposure = 1.12;
+    }
+
+    this.updateCamera(dt);
+  }
+
+  private updateSectorProgression() {
+    const px = this.playerPos.x;
+    const newSector = px < 36 ? 1 : px < 116 ? 2 : 3;
+    if (newSector !== this.currentActiveSector) {
+      this.currentActiveSector = newSector;
+      this.currentLevelId = newSector;
+      const minimapTitle = document.querySelector('#minimap-container .minimap-title');
+      if (newSector === 1) {
+        if (minimapTitle) minimapTitle.textContent = 'SEKTOR A: MAGAZYN B4';
+      } else if (newSector === 2) {
+        if (minimapTitle) minimapTitle.textContent = 'SEKTOR B: SHOWROOM SPA';
+        this.emitFloatingToast('WKROCZONO DO SEKTORA B: SHOWROOM & SPA!', px, this.playerPos.y + 1.5, this.playerPos.z, 'vip');
+        this.callbacks.onPerkDropBanner?.('SEKTOR B: SHOWROOM & SPA', '🛁', 'Punkt kontrolny odblokowany! Wykorzystaj wanny jako trampoliny!', '#ec4899');
+      } else if (newSector === 3) {
+        if (minimapTitle) minimapTitle.textContent = 'SEKTOR C: TERMINAL VIP';
+        this.emitFloatingToast('WKROCZONO DO SEKTORA C: TERMINAL PRZEŁADUNKOWY!', px, this.playerPos.y + 1.5, this.playerPos.z, 'combo');
+        this.callbacks.onPerkDropBanner?.('SEKTOR C: TERMINAL PRZEŁADUNKOWY', '🚛', 'Ostatnia prosta do vana dostawczego! Pokonaj Zarząd!', '#f59e0b');
+      }
+    }
+
+    // Dynamic proximity Boss HUD update
+    let nearestBoss: EnemyItem | null = null;
+    let nearestDist = 36;
+    for (const e of this.enemies) {
+      if (e.state === 'defeated') continue;
+      if (e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow') {
+        const d = Math.hypot(e.x - this.playerPos.x, e.z - this.playerPos.z);
+        if (d < nearestDist) {
+          nearestDist = d;
+          nearestBoss = e;
+        }
+      }
+    }
+    if (nearestBoss) {
+      this.callbacks.onBossUpdate?.(nearestBoss.name, nearestBoss.hp, nearestBoss.maxHp, true, nearestBoss.bossPhase);
+    } else {
+      this.callbacks.onBossUpdate?.('', 0, 0, false);
+    }
+  }
+
+  private updateCoffeeMachines(dt: number) {
+    for (const cm of this.coffeeMachines) {
+      if (cm.cooldown > 0) {
+        cm.cooldown -= dt;
+      }
+      const dist = Math.hypot(cm.x - this.playerPos.x, cm.z - this.playerPos.z);
+      if (dist < 1.25 && cm.cooldown <= 0) {
+        cm.cooldown = 12.0; // 12 second cooldown per machine
+        this.activatePerk('espresso_boost', 6);
+        sound.playPerkPickup();
+        this.emitFloatingToast('☕ POTRÓJNE ESPRESSO Z KAWIARKI B4!', cm.x, cm.y + 1.8, cm.z, 'perk');
+        this.spawnParticleRing(cm.x, cm.y + 1.0, cm.z, 0x38bdf8);
+        this.sayQuote('Aaaah! Mocna czarna kawa! Szybkość +35%!');
+      }
+    }
+  }
+
+  private updatePerkTimers(dt: number) {
+    let changed = false;
+    if (this.activePerks.doubleJump > 0) {
+      this.activePerks.doubleJump = Math.max(0, this.activePerks.doubleJump - dt);
+      changed = true;
+    }
+    if (this.activePerks.magnet > 0) {
+      this.activePerks.magnet = Math.max(0, this.activePerks.magnet - dt);
+      changed = true;
+    }
+    if (this.activePerks.speedBoost > 0) {
+      this.activePerks.speedBoost = Math.max(0, this.activePerks.speedBoost - dt);
+      changed = true;
+    }
+    if (changed) {
+      this.callbacks.onPerksUpdate?.(this.activePerks);
+    }
+  }
+
+  private updatePlayerMovement(dt: number) {
+    let screenX = 0;
+    let screenY = 0;
+
+    if (this.keys['KeyD'] || this.keys['ArrowRight']) screenX += 1;
+    if (this.keys['KeyA'] || this.keys['ArrowLeft']) screenX -= 1;
+    if (this.keys['KeyW'] || this.keys['ArrowUp']) screenY += 1;
+    if (this.keys['KeyS'] || this.keys['ArrowDown']) screenY -= 1;
+
+    if (Math.abs(this.virtualJoystick.x) > 0.08 || Math.abs(this.virtualJoystick.y) > 0.08) {
+      screenX = this.virtualJoystick.x;
+      screenY = -this.virtualJoystick.y;
+    }
+
+    const camToPlayerX = this.playerPos.x - this.camera.position.x;
+    const camToPlayerZ = this.playerPos.z - this.camera.position.z;
+    const camFwdLen = Math.hypot(camToPlayerX, camToPlayerZ);
+    const fwdX = camFwdLen > 0.001 ? camToPlayerX / camFwdLen : 0;
+    const fwdZ = camFwdLen > 0.001 ? camToPlayerZ / camFwdLen : -1;
+    const rightX = -fwdZ;
+    const rightZ = fwdX;
+
+    let inputX = rightX * screenX + fwdX * screenY;
+    let inputZ = rightZ * screenX + fwdZ * screenY;
+
+    const inputLen = Math.hypot(inputX, inputZ);
+    if (inputLen > 1) {
+      inputX /= inputLen;
+      inputZ /= inputLen;
+    }
+
+    let speed = this.charDef.speed;
+    if (this.charDef.id === 'mateusz' && this.invulnerableTimer > 0) {
+      speed *= 1.45;
+    }
+    if (this.activePerks.speedBoost > 0) {
+      speed *= 1.35;
+      if (Math.random() < 0.25) {
+        this.spawnDust(this.playerPos.x, this.playerPos.y, this.playerPos.z, 0xec4899);
+      }
+    }
+
+    if (inputLen > 0.08) {
+      const targetX = inputX * speed;
+      const targetZ = inputZ * speed;
+      this.playerVel.x = THREE.MathUtils.damp(this.playerVel.x, targetX, 28, dt);
+      this.playerVel.z = THREE.MathUtils.damp(this.playerVel.z, targetZ, 28, dt);
+      this.playerVel.x = THREE.MathUtils.clamp(this.playerVel.x, -speed * 1.35, speed * 1.35);
+      this.playerVel.z = THREE.MathUtils.clamp(this.playerVel.z, -speed * 1.35, speed * 1.35);
+      this.playerRot = Math.atan2(inputX, inputZ);
+
+      this.walkCycle += dt * 15;
+      if (this.leftLeg && this.rightLeg && this.leftArm && this.rightArm) {
+        this.leftLeg.rotation.x = Math.sin(this.walkCycle) * 0.6;
+        this.rightLeg.rotation.x = -Math.sin(this.walkCycle) * 0.6;
+        this.leftArm.rotation.x = -Math.sin(this.walkCycle) * 0.6;
+        this.rightArm.rotation.x = Math.sin(this.walkCycle) * 0.6;
+      }
+    } else {
+      this.playerVel.x = THREE.MathUtils.damp(this.playerVel.x, 0, 32, dt);
+      this.playerVel.z = THREE.MathUtils.damp(this.playerVel.z, 0, 32, dt);
+      if (this.leftLeg && this.rightLeg && this.leftArm && this.rightArm) {
+        this.leftLeg.rotation.x = 0;
+        this.rightLeg.rotation.x = 0;
+        this.leftArm.rotation.x = 0;
+        this.rightArm.rotation.x = 0;
+      }
+    }
+
+    if (this.grzesiekCrushTimer > 0) {
+      const t = 1 - this.grzesiekCrushTimer / 0.9;
+      const swing = Math.sin(t * Math.PI);
+      if (this.leftArm && this.rightArm) {
+        this.leftArm.rotation.z = -1.2 + swing * 1.5;
+        this.rightArm.rotation.z = 1.2 - swing * 1.5;
+        this.leftArm.rotation.x = -1.3 + swing * 1.8;
+        this.rightArm.rotation.x = -1.3 + swing * 1.8;
+      }
+    }
+
+    if (this.marcinReclamationTimer > 0 && this.playerGroup) {
+      const pulse = 1 + Math.sin(performance.now() * 0.02) * 0.08;
+      this.playerGroup.scale.set(pulse, 1.08, pulse);
+    }
+
+    if (this.attackCooldownTimer > 0) this.attackCooldownTimer -= dt;
+    if (this.attackSwingTimer > 0) {
+      this.attackSwingTimer -= dt;
+      if (this.rightArm) {
+        this.rightArm.rotation.x = -1.8 + (this.attackSwingTimer / 0.25) * 1.5;
+        this.rightArm.rotation.z = -0.4;
+      }
+    } else if (this.rightArm) {
+      this.rightArm.rotation.z = 0;
+    }
+
+    const gravity = 22.0;
+    this.playerVel.y -= gravity * dt;
+
+    if (this.isGrounded) {
+      this.coyoteTimer = 0.12;
+      this.hasDoubleJumped = false;
+    } else {
+      this.coyoteTimer -= dt;
+    }
+
+    if (this.jumpBufferTimer > 0) {
+      this.jumpBufferTimer -= dt;
+      if (this.coyoteTimer > 0) {
+        this.playerVel.y = this.charDef.jumpForce;
+        this.isGrounded = false;
+        this.coyoteTimer = 0;
+        this.jumpBufferTimer = 0;
+        sound.playJump();
+        this.spawnDust(this.playerPos.x, this.playerPos.y, this.playerPos.z);
+        if (this.playerGroup) this.playerGroup.scale.set(0.82, 1.25, 0.82);
+      } else if (this.activePerks.doubleJump > 0 && !this.hasDoubleJumped) {
+        this.playerVel.y = this.charDef.jumpForce * 1.05;
+        this.hasDoubleJumped = true;
+        this.jumpBufferTimer = 0;
+        sound.playDoubleJump();
+        this.spawnParticleRing(this.playerPos.x, this.playerPos.y, this.playerPos.z, 0x38bdf8);
+        this.sayQuote('PODWÓJNY SKOK! Sprężyste odbicie Vibram!');
+        if (this.playerGroup) this.playerGroup.scale.set(0.8, 1.3, 0.8);
+      }
+    }
+
+    // Continuous unified Mega-Map boundaries across all 3 connected sectors (expanded in Z)
+    const maxZForSector = this.playerPos.x < 36 ? 19.0 : this.playerPos.x < 116 ? 19.0 : 21.0;
+    const currentBounds = { minX: -34.5, maxX: 204.5, minZ: -maxZForSector, maxZ: maxZForSector };
+
+    const nextX = THREE.MathUtils.clamp(this.playerPos.x + this.playerVel.x * dt, currentBounds.minX, currentBounds.maxX);
+    const nextY = this.playerPos.y + this.playerVel.y * dt;
+    const nextZ = THREE.MathUtils.clamp(this.playerPos.z + this.playerVel.z * dt, currentBounds.minZ, currentBounds.maxZ);
+
+    let landed = false;
+    const pRadius = 0.28;
+
+    for (const plat of this.platforms) {
+      const minX = plat.x - plat.width / 2;
+      const maxX = plat.x + plat.width / 2;
+      const minZ = plat.z - plat.depth / 2;
+      const maxZ = plat.z + plat.depth / 2;
+      const topY = plat.y + plat.height / 2;
+
+      if (nextX + pRadius > minX && nextX - pRadius < maxX &&
+          nextZ + pRadius > minZ && nextZ - pRadius < maxZ) {
+
+        if (this.playerPos.y >= topY - 0.22 && nextY <= topY) {
+          if (plat.type === 'bathtub' && plat.bounce) {
+            this.playerVel.y = plat.bounce;
+            sound.playBounce();
+            this.cameraShake = 0.35;
+            this.sayQuote('HOP DO WANNY! Odlot na regał!');
+            this.spawnParticleRing(plat.x, topY, plat.z, 0x06b6d4);
+          } else if (plat.type === 'jump_pad' && plat.bounce) {
+            this.playerVel.y = plat.bounce;
+            sound.playBounce();
+            this.triggerScreenShake(0.35, 0.25);
+            this.sayQuote('SKOCZNIA! ODLOT NAD REGAŁAMI!');
+            this.spawnParticleRing(plat.x, topY, plat.z, 0x38bdf8);
+            this.emitFloatingToast('WYBICIE SKOCZNI!', plat.x, topY + 0.6, plat.z, 'perk');
+            if (this.playerGroup) this.playerGroup.scale.set(0.7, 1.4, 0.7);
+          } else if (plat.type === 'speed_pad') {
+            const currentSpeed = Math.hypot(this.playerVel.x, this.playerVel.z);
+            const moveAngle = Math.atan2(this.playerVel.z, this.playerVel.x) || 0;
+            const boost = 14.5;
+            this.playerVel.x = Math.cos(moveAngle) * (currentSpeed + boost);
+            this.playerVel.z = Math.sin(moveAngle) * (currentSpeed + boost);
+            this.spawnParticleRing(plat.x, topY, plat.z, 0xf59e0b);
+            this.emitFloatingToast('SPRINT BOOST!', plat.x, topY + 0.6, plat.z, 'perk');
+            this.playerVel.y = 0;
+            this.playerPos.y = topY;
+            landed = true;
+
+            if (this.camera instanceof THREE.PerspectiveCamera) {
+              const baseFov = 45;
+              this.camera.fov = baseFov + 8;
+              this.camera.updateProjectionMatrix();
+            }
+          } else {
+            this.playerVel.y = 0;
+            this.playerPos.y = topY;
+            landed = true;
+            if (plat.type === 'conveyor') {
+              this.playerPos.x += 3.6 * dt;
+            }
+          }
+
+          if (plat.type === 'finish_truck') {
+            this.checkLevelFinish();
+          }
+        }
+      }
+    }
+
+    const wasGrounded = this.isGrounded;
+    this.isGrounded = landed;
+    this.playerPos.x = nextX;
+    if (!landed) {
+      this.playerPos.y = Math.max(0.0, nextY);
+      if (this.playerPos.y === 0.0) {
+        landed = true;
+        this.playerVel.y = 0;
+      }
+    }
+    this.playerPos.z = nextZ;
+
+    // Proximity trigger for the final finish gate / delivery van at the end of Sector C (x = 201)
+    const finishTriggerX = 200.0;
+    if (this.playerPos.x >= finishTriggerX && Math.abs(this.playerPos.z) < 3.5 && this.playerPos.y >= 0) {
+      this.checkLevelFinish();
+    }
+
+    if (!wasGrounded && landed && this.playerGroup) {
+      this.playerGroup.scale.set(1.2, 0.82, 1.2);
+    }
+
+    if (this.playerPos.y < -4.5) {
+      this.takeDamage('Wypadłeś z rampy załadunkowej!');
+      const respawnX = this.currentActiveSector === 3 ? 121 : this.currentActiveSector === 2 ? 41 : -32;
+      this.playerPos.set(respawnX, 2, 0);
+      this.playerVel.set(0, 0, 0);
+    }
+    // SOLID BOUNDARY CLAMPING
+    this.playerPos.x = THREE.MathUtils.clamp(this.playerPos.x, this.levelBounds.minX, this.levelBounds.maxX);
+    this.playerPos.z = THREE.MathUtils.clamp(this.playerPos.z, this.levelBounds.minZ, this.levelBounds.maxZ);
+
+    if (this.playerGroup) {
+      this.playerGroup.position.copy(this.playerPos);
+      this.playerGroup.rotation.y = this.playerRot;
+      this.playerGroup.scale.lerp(new THREE.Vector3(1, 1, 1), dt * 8);
+    }
+
+    if (this.targetRing) {
+      this.targetRing.position.set(this.playerPos.x, 0.05, this.playerPos.z);
+      this.targetRing.rotation.z += dt * 2;
+      (this.targetRing.material as THREE.MeshBasicMaterial).opacity = 0.3 + Math.sin(performance.now() * 0.005) * 0.15;
+    }
+  }
+
+  private updateCollectibles(dt: number) {
+    this.collectibles.forEach((c) => {
+      if (c.collected || !c.mesh) return;
+
+      c.mesh.rotation.y += dt * 2.5;
+
+      // Magnet Perk pull
+      if (this.activePerks.magnet > 0) {
+        const magDist = Math.hypot(c.x - this.playerPos.x, c.z - this.playerPos.z);
+        if (magDist < 8.5) {
+          const pullSpeed = 9.0 * dt;
+          c.x += ((this.playerPos.x - c.x) / magDist) * pullSpeed;
+          c.z += ((this.playerPos.z - c.z) / magDist) * pullSpeed;
+          c.y += ((this.playerPos.y + 0.5 - c.y) / magDist) * pullSpeed;
+          c.mesh.position.set(c.x, c.y, c.z);
+        }
+      }
+
+      const dist = Math.hypot(c.x - this.playerPos.x, c.z - this.playerPos.z);
+      const dy = Math.abs(c.y - (this.playerPos.y + 0.5));
+
+      if (dist < 0.95 && dy < 1.2) {
+        c.collected = true;
+        this.levelRoot.remove(c.mesh);
+
+        if (c.type === 'grout') {
+          this.score += c.points;
+          this.handleMateuszPassive(1);
+          sound.playPickup();
+          this.emitFloatingToast(`+${c.points} Pkt Fuga`, c.x, c.y + 0.5, c.z, 'points');
+        } else if (c.type === 'vip_item') {
+          this.score += c.points;
+          this.handleMateuszPassive(1);
+          this.collectedVipCount++;
+          sound.playPickup(2);
+          this.sayQuote(`ZEBRANO VIP: ${c.name}!`);
+          this.emitFloatingToast(`📦 VIP ITEM!`, c.x, c.y + 0.5, c.z, 'vip');
+        } else if (c.type === 'espresso') {
+          this.activatePerk('espresso_boost', 18);
+          this.emitFloatingToast(`☕ ESPRESSO!`, c.x, c.y + 0.5, c.z, 'points');
+        } else if (c.type === 'magnet') {
+          this.activatePerk('order_magnet', 20);
+          this.emitFloatingToast(`🧲 RADIOMAGNES!`, c.x, c.y + 0.5, c.z, 'points');
+        } else if (c.type === 'golden_cutter') {
+          this.activatePerk('vibram_boots', 25);
+          this.emitFloatingToast(`👟 VIBRAM BOOTS!`, c.x, c.y + 0.5, c.z, 'points');
+        } else if (c.type === 'easter_egg') {
+          this.score += c.points;
+          this.handleMateuszPassive(1);
+          sound.playEasterEgg();
+          this.sayQuote(`EASTER EGG ODNALEZIONY: ${c.name}! (+${c.points} pkt)`);
+          this.emitFloatingToast(`🎉 EASTER EGG!`, c.x, c.y + 0.5, c.z, 'easter-egg');
+        }
+
+        this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+      }
+    });
+  }
+
+  private updateHazards(dt: number) {
+    this.hazards.forEach((h) => {
+      if (!h.active || !h.mesh) return;
+
+      if (h.type === 'forklift') {
+        h.x += h.speed * h.dir * dt;
+        if (h.dir > 0 && h.x >= h.endX!) {
+          h.dir = -1;
+          h.mesh.rotation.y = Math.PI;
+        } else if (h.dir < 0 && h.x <= h.startX) {
+          h.dir = 1;
+          h.mesh.rotation.y = 0;
+        }
+        h.mesh.position.set(h.x, h.y, h.z);
+
+        const dist = Math.hypot(h.x - this.playerPos.x, h.z - this.playerPos.z);
+        if (dist < 1.4 && Math.abs(h.y - this.playerPos.y) < 1.2) {
+          this.takeDamage('Zostałeś potrącony przez wózek widłowy!');
+        }
+      }
+    });
+  }
+
+  private updateExplosiveBarrels(dt: number) {
+    for (let i = this.explosiveBarrels.length - 1; i >= 0; i--) {
+      const b = this.explosiveBarrels[i];
+      if (b.exploded || !b.mesh) continue;
+
+      const distToPlayer = Math.hypot(b.x - this.playerPos.x, b.z - this.playerPos.z);
+      const isPlayerAttacking = this.attackSwingTimer > 0;
+
+      // Trigger fuse on melee attack or player proximity when attacking
+      if (isPlayerAttacking && distToPlayer < 2.4 && b.fuseTimer < 0) {
+        b.fuseTimer = 0.55;
+        sound.playAlert();
+        this.emitFloatingToast('⚡ LONT ZAPALONY!', b.x, b.y + 1.2, b.z, 'damage');
+      }
+
+      if (b.fuseTimer > 0) {
+        b.fuseTimer -= dt;
+        const pulse = 1.0 + Math.sin(performance.now() * 0.04) * 0.22;
+        b.mesh.scale.set(pulse, pulse, pulse);
+
+        if (b.fuseTimer <= 0) {
+          b.exploded = true;
+          this.levelRoot.remove(b.mesh);
+          sound.playExplosion();
+          this.triggerScreenShake(1.2, 0.8);
+          this.spawnParticleRing(b.x, b.y + 0.5, b.z, 0xef4444);
+          this.emitFloatingToast('💥 EKSPLOZJA KLEJU PRO FLEX!', b.x, b.y + 1.2, b.z, 'damage');
+
+          // Detonate and damage enemies in 5.2m radius
+          this.enemies.forEach((e) => {
+            if (e.state === 'defeated') return;
+            const edist = Math.hypot(e.x - b.x, e.z - b.z);
+            if (edist < 5.2) {
+              e.hp = Math.max(0, e.hp - 3);
+              e.stunTimer = 3.5;
+              e.state = 'stunned';
+              this.emitFloatingToast('💥 -3 HP!', e.x, e.y + 1.2, e.z, 'damage');
+              if (e.hp <= 0 && e.type !== 'walczak' && e.type !== 'krol_leto') {
+                e.state = 'defeated';
+                if (e.mesh) e.mesh.visible = false;
+                this.score += 350;
+                this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+              }
+            }
+          });
+
+          // Player splash damage if close
+          if (distToPlayer < 3.2) {
+            this.takeDamage('Zostałeś obrzucony eksplozyjnym klejem PRO FLEX!');
+          }
+
+          this.explosiveBarrels.splice(i, 1);
+        }
+      }
+    }
+  }
+
+  private static readonly ENEMY_QUOTES: Record<string, string[]> = {
+    customer: [
+      "Gdzie moje kafelki?!",
+      "Awantura o rabat 10%!",
+      "Chcę widzieć kierownika!",
+      "Płytki miały być gładkie!"
+    ],
+    architect: [
+      "To ma być ecru czy beż?!",
+      "Brak dylatacji na podłodze!",
+      "Gres niezgodny z projektem!",
+      "Wizualizacja mówiła inaczej!"
+    ],
+    agv_robot: [
+      "BEEP BOOP ZLEW B4!",
+      "Uwaga! Transport palety!",
+      "Błąd czujnika przeszkód!",
+      "Sztaplowanie w toku!"
+    ],
+    inspector: [
+      "Gdzie kask BHP?!",
+      "Brak protokołu odbioru!",
+      "Mandat 500 PLN za bałagan!",
+      "Przekroczenie normy hałasu!"
+    ],
+    handlowiec: [
+      "Mam super ofertę na zlew!",
+      "Rabat 3% tylko dzisiaj!",
+      "A może zestaw baterii?!",
+      "Darmowa dostawa do hotelu!"
+    ],
+    monter: [
+      "Dobiję to gumowym młotkiem!",
+      "Brak poziomu w alei!",
+      "Cięcie po skosie 45°!",
+      "Mieszam klej wysokie wiązanie!"
+    ],
+    piorun_dron: [
+      "BZZZT SKAN KODU B4!",
+      "Niezgodność numeru WZ!",
+      "Skanowanie palety A1!",
+      "Detekcja ruchu w alei!"
+    ],
+    elite_walczak_guard: [
+      "Strefa Walczaka zamknięta!",
+      "Brak przepustki B4!",
+      "Odwrót z magazynu!",
+      "Tarcza BHP w gotowości!"
+    ],
+    kurier: [
+      "Dostawa DPD od Rudego z DPD! Załatwię Johnny Walkera tanio",
+      "Paczka ekspresowa DPD dla VIP! Załatwię Johnny Walkera tanio",
+      "Paczka od Rudego! Załatwię Johnny Walkera tanio",
+      "Johnny Walker Express u drzwi! Załatwię Johnny Walkera tanio"
+    ],
+    przedstawiciel_włoski: [
+      "Mamma mia, armatura de lux!",
+      "Zlatane baterie z Mediolanu!",
+      "Prego, uwaga na marmur!",
+      "Amore, to jest prawdziwy styl!"
+    ],
+    sztaplar_szalony: [
+      "Z drogi, 3 tony ładunku!",
+      "Paleciak bez hamulców!",
+      "Uwaga wyjazd z alei C!",
+      "Czysta moc 300 Nm!"
+    ],
+    walczak: [
+      "Ten magazyn jest MÓJ!",
+      "Anuluję wszystkie faktury!",
+      "Zawiadamiam Centralę!",
+      "Nikt tu nie wygra ze mną!"
+    ],
+    krol_leto: [
+      "ZWALNIAM CIĘ DYSCYPLINARNIE!",
+      "Dyscyplinarka w trybie natychmiastowym!",
+      "Oddawaj kask BHP i przepustkę!",
+      "Moja decyzja o zwolnieniu jest OSTATECZNA!",
+      "Błąd w WZ-tce? To koniec Twojej kariery!"
+    ],
+    pan_roman: [
+      "Panowie spieszę się! To tylko jakieś sanitariaty!",
+      "Dostawa dla Klienta z Kęt! Uwaga na umywalki!",
+      "Proszę zrobić przejście w alei A3!"
+    ],
+    serwisant: [
+      "Przyjaciele! Kto nam pomoże?!",
+      "Serwis Max-Flix na trasie! Szybka naprawa!",
+      "Sprawdzam opór na fugach i zasilaniu!"
+    ],
+    bosman_krakow: [
+      "Odprawa 3-msc w toku! Wyniki albo kara!",
+      "Raport kwartalny do podpisu na cito!",
+      "W Krakowie tak się zamówień nie spóźnia!"
+    ]
+  };
+
+  private updateEnemies(dt: number) {
+    this.enemies.forEach((e) => {
+      if (e.state === 'defeated' || !e.mesh) return;
+
+      const dx = this.playerPos.x - e.x;
+      const dz = this.playerPos.z - e.z;
+      const distToPlayer = Math.hypot(dx, dz);
+
+      // Distance culling: skip heavy updates for distant non-boss enemies
+      if (distToPlayer > 42 && e.type !== 'walczak' && e.type !== 'krol_leto') return;
+
+      if (!e.hpBar) {
+        e.hpBar = new THREE.Group();
+        const bg = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.08), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.6 }));
+        const fill = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.08), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+        fill.position.z = 0.01;
+        e.hpBar.add(bg, fill);
+        e.hpBar.position.y = e.type === 'walczak' || e.type === 'krol_leto' ? 2.4 : 1.65;
+        e.mesh.add(e.hpBar);
+        e.hpFill = fill;
+        e.hpBar.visible = false;
+      }
+      if (e.hpBar) {
+        const isDamaged = e.hp < e.maxHp;
+        e.hpBar.visible = isDamaged;
+        if (isDamaged) {
+          e.hpBar.lookAt(this.camera.position);
+          e.hpFill.scale.x = Math.max(0, e.hp / e.maxHp);
+          e.hpFill.position.x = (e.hpFill.scale.x - 1) * 0.4;
+        }
+      }
+
+      e.walkCycle += dt * 8;
+      if (e.legL && e.legR && e.type !== 'piorun_dron') {
+        e.legL.rotation.x = Math.sin(e.walkCycle) * 0.5;
+        e.legR.rotation.x = -Math.sin(e.walkCycle) * 0.5;
+      }
+
+      // TACTICAL INDICATOR
+      if (e.state === 'chase' || e.state === 'searching') {
+        const pulse = 1.0 + Math.sin(performance.now() * 0.01) * 0.15;
+        e.mesh.scale.set(pulse, pulse, pulse);
+      } else {
+        e.mesh.scale.set(1, 1, 1);
+      }
+
+      if (e.stunTimer > 0) {
+        e.stunTimer -= dt;
+        if (e.stunTimer <= 0) {
+          e.state = 'searching';
+          e.searchTimer = 2.5;
+        }
+        return;
+      }
+
+      // SIGHT & DETECTION LOGIC
+      const detectionRange = (e.type === 'walczak' || e.type === 'krol_leto') ? 16.0 : (e.state === 'chase' ? 12.0 : 8.5);
+      const canSeePlayer = distToPlayer < detectionRange;
+
+      if (canSeePlayer) {
+        e.state = 'chase';
+        e.lastKnownPlayerPos = { x: this.playerPos.x, z: this.playerPos.z };
+        e.searchTimer = 0;
+      } else if (e.state === 'chase') {
+        e.state = 'searching';
+        e.searchTimer = 3.5;
+      }
+
+      if (e.state === 'searching' && e.searchTimer !== undefined) {
+        e.searchTimer -= dt;
+        if (e.searchTimer <= 0) {
+          e.state = 'patrol';
+          e.lastKnownPlayerPos = null;
+        } else if (e.lastKnownPlayerPos) {
+          const sdx = e.lastKnownPlayerPos.x - e.x;
+          const sdz = e.lastKnownPlayerPos.z - e.z;
+          const sdist = Math.hypot(sdx, sdz);
+          if (sdist > 0.5) {
+            e.x += (sdx / sdist) * e.speed * 0.7 * dt;
+            e.z += (sdz / sdist) * e.speed * 0.7 * dt;
+          }
+        }
+      }
+
+      // Random Shout Quotes floating above head without frame
+      e.shoutTimer = (e.shoutTimer || 0) - dt;
+      if (e.shoutTimer <= 0 && distToPlayer < 12.0) {
+        e.shoutTimer = 3.2 + Math.random() * 2.8;
+        const quotes = MaxFlizGameEngine.ENEMY_QUOTES[e.type] || ["Z drogi!"];
+        const quote = quotes[Math.floor(Math.random() * quotes.length)];
+        e.shoutText = quote;
+        this.emitFloatingToast(quote, e.x, e.y + 1.25, e.z, 'enemy_shout', { enemyType: e.type });
+      }
+
+      // Special movement per type
+      if (e.type === 'piorun_dron') {
+        if (e.legL) e.legL.rotation.y += dt * 30;
+        if (e.legR) e.legR.rotation.y += dt * 30;
+        if (e.armL) e.armL.rotation.y += dt * 30;
+        if (e.armR) e.armR.rotation.y += dt * 30;
+
+        e.x += e.speed * e.dir * dt;
+        if (e.dir > 0 && e.x >= e.endX) {
+          e.dir = -1;
+        } else if (e.dir < 0 && e.x <= e.startX) {
+          e.dir = 1;
+        }
+        e.mesh.position.set(e.x, e.y + Math.sin(performance.now() * 0.005) * 0.12, e.z);
+      } else if (e.type === 'walczak') {
+        // Boss AI: Walczak
+        const isPhase2 = e.hp <= e.maxHp * 0.5;
+        if (isPhase2 && e.bossPhase !== 2) {
+          e.bossPhase = 2;
+          e.speed *= 1.45;
+          sound.playSirens();
+          this.triggerScreenShake(0.8, 1.0);
+          this.emitFloatingToast('🚨 WALCZAK: TRYB SZAŁU (FAZA 2)!', e.x, e.y + 1.8, e.z, 'damage');
+        }
+
+        if (distToPlayer < 14.0) {
+          const angle = Math.atan2(dx, dz);
+          e.mesh.rotation.y = angle;
+          e.x += (dx / Math.max(0.1, distToPlayer)) * e.speed * 0.95 * dt;
+          e.z += (dz / Math.max(0.1, distToPlayer)) * e.speed * 0.95 * dt;
+        } else {
+          e.x += e.speed * e.dir * dt;
+          if (e.dir > 0 && e.x >= e.endX) {
+            e.dir = -1;
+            e.mesh.rotation.y = Math.PI / 2;
+          } else if (e.dir < 0 && e.x <= e.startX) {
+            e.dir = 1;
+            e.mesh.rotation.y = -Math.PI / 2;
+          }
+        }
+        e.mesh.position.set(e.x, e.y, e.z);
+
+        if (e.specialActionTimer !== undefined) {
+          e.specialActionTimer -= dt;
+          const cooldown = isPhase2 ? 1.8 : 3.0;
+          if (e.specialActionTimer <= 0) {
+            e.specialActionTimer = cooldown;
+            this.spawnPenaltyNotice(e.x, e.y + 1.2, e.z);
+          }
+        }
+        this.callbacks.onBossUpdate?.(e.name, e.hp, e.maxHp, true, e.bossPhase);
+      } else if (e.type === 'krol_leto') {
+        // Boss AI: Król-Leto
+        const isPhase2 = e.hp <= e.maxHp * 0.5;
+        if (isPhase2 && e.bossPhase !== 2) {
+          e.bossPhase = 2;
+          e.speed *= 1.5;
+          sound.playEvilLaugh();
+          this.triggerScreenShake(1.2, 1.5);
+          this.emitFloatingToast('🔥 KRÓL-LETO: OSTATECZNE ZWOLNIENIE!', e.x, e.y + 1.8, e.z, 'damage');
+        }
+
+        if (distToPlayer < 15.0) {
+          const angle = Math.atan2(dx, dz);
+          e.mesh.rotation.y = angle;
+          e.x += (dx / Math.max(0.1, distToPlayer)) * e.speed * 1.05 * dt;
+          e.z += (dz / Math.max(0.1, distToPlayer)) * e.speed * 1.05 * dt;
+          if (isPhase2 && Math.random() < 0.05) this.triggerScreenShake(0.1, 0.2);
+        } else if (e.state === 'searching' && e.lastKnownPlayerPos) {
+          const angle = Math.atan2(e.lastKnownPlayerPos.x - e.x, e.lastKnownPlayerPos.z - e.z);
+          e.mesh.rotation.y = angle;
+        } else {
+          e.x += e.speed * e.dir * dt;
+          if (e.dir > 0 && e.x >= e.endX) {
+            e.dir = -1;
+            e.mesh.rotation.y = Math.PI / 2;
+          } else if (e.dir < 0 && e.x <= e.startX) {
+            e.dir = 1;
+            e.mesh.rotation.y = -Math.PI / 2;
+          }
+        }
+        e.mesh.position.set(e.x, e.y, e.z);
+
+        if (e.specialActionTimer !== undefined) {
+          e.specialActionTimer -= dt;
+          const cooldown = isPhase2 ? 1.2 : 2.2;
+          if (e.specialActionTimer <= 0 && distToPlayer < 12.0) {
+            e.specialActionTimer = cooldown;
+            this.spawnDyscyplinarkaNotice(e.x, e.y + 1.2, e.z);
+            this.emitFloatingToast('🚨 DYSCYPLINARKA!', e.x, e.y + 1.5, e.z, 'damage');
+          }
+        }
+        this.callbacks.onBossUpdate?.(e.name, e.hp, e.maxHp, true, e.bossPhase);
+      } else {
+        // Dynamic Chase / Tracking AI for ground enemies
+        const chaseRadius = e.type === 'kurier' ? 14.0 : e.type === 'sztaplar_szalony' ? 12.0 : 10.0;
+
+        if (distToPlayer < chaseRadius) {
+          if (e.state === 'patrol' && !e.alerted) {
+            e.alerted = true;
+            this.emitFloatingToast('!', e.x, e.y + 1.35, e.z, 'damage');
+            sound.playAlert();
+          }
+          e.state = 'chase';
+          const angle = Math.atan2(dx, dz);
+          e.mesh.rotation.y = angle;
+
+          const chaseSpeed = e.speed * (e.type === 'kurier' ? 1.35 : 1.2);
+          e.x += (dx / Math.max(0.1, distToPlayer)) * chaseSpeed * dt;
+          e.z += (dz / Math.max(0.1, distToPlayer)) * chaseSpeed * dt;
+        } else {
+          e.alerted = false;
+          e.state = 'patrol';
+          e.z += e.speed * e.dir * dt;
+          if (e.dir > 0 && e.z >= e.endX) {
+            e.dir = -1;
+            e.mesh.rotation.y = Math.PI;
+          } else if (e.dir < 0 && e.z <= e.startX) {
+            e.dir = 1;
+            e.mesh.rotation.y = 0;
+          }
+        }
+        e.mesh.position.set(e.x, e.y, e.z);
+
+        // Ranged special attacks
+        if ((e.type === 'handlowiec' || e.type === 'przedstawiciel_włoski') && e.specialActionTimer !== undefined) {
+          e.specialActionTimer -= dt;
+          if (e.specialActionTimer <= 0 && distToPlayer < 9.0) {
+            e.specialActionTimer = 2.8;
+            this.spawnPenaltyNotice(e.x, e.y + 0.8, e.z);
+            const msg = e.type === 'przedstawiciel_włoski' ? '🇮🇹 ARMATURA DE LUX!' : '📑 OFERTA RABATOWA!';
+            this.emitFloatingToast(msg, e.x, e.y + 1.2, e.z, 'damage');
+          }
+        } else if (e.type === 'inspector' && e.specialActionTimer !== undefined) {
+          e.specialActionTimer -= dt;
+          if (e.specialActionTimer <= 0 && distToPlayer < 6.5) {
+            e.specialActionTimer = 2.8;
+            sound.playWhistle();
+            this.emitFloatingToast('🚨 KONTROLA BHP!', e.x, e.y + 1.2, e.z, 'damage');
+          }
+        } else if (e.type === 'pan_roman' && e.specialActionTimer !== undefined) {
+          e.specialActionTimer -= dt;
+          if (e.specialActionTimer <= 0 && distToPlayer < 10.0) {
+            e.specialActionTimer = 2.5;
+            this.spawnSanitarywareProjectile(e.x, e.y + 0.8, e.z);
+            this.emitFloatingToast('📦 UMYWALKA W DRODZE!', e.x, e.y + 1.2, e.z, 'damage');
+          }
+        } else if (e.type === 'serwisant' && e.specialActionTimer !== undefined) {
+          e.specialActionTimer -= dt;
+          if (e.specialActionTimer <= 0 && distToPlayer < 8.5) {
+            e.specialActionTimer = 2.2;
+            this.spawnSparkZapProjectile(e.x, e.y + 0.8, e.z);
+            this.emitFloatingToast('⚡ ISKRA SERWISU!', e.x, e.y + 1.2, e.z, 'damage');
+          }
+        } else if (e.type === 'bosman_krakow' && e.specialActionTimer !== undefined) {
+          e.specialActionTimer -= dt;
+          if (e.specialActionTimer <= 0 && distToPlayer < 12.0) {
+            e.specialActionTimer = 2.4;
+            this.spawnOdprawaClipboardProjectile(e.x, e.y + 1.0, e.z);
+            this.emitFloatingToast('📋 ODPRAWA 3-MSC (FATAL HIT)!', e.x, e.y + 1.4, e.z, 'damage');
+          }
+        }
+      }
+
+      // Check collision with player
+      const dist = Math.hypot(e.x - this.playerPos.x, e.z - this.playerPos.z);
+      const hitRadius = e.type === 'walczak' || e.type === 'krol_leto' ? 1.5 : e.type === 'elite_walczak_guard' ? 1.3 : 1.1;
+
+      if (dist < hitRadius) {
+        // 1. STOMP MECHANIC (Naskok z góry)
+        if (this.playerVel.y < -0.8 && this.playerPos.y > e.y + 0.35) {
+          const bounceForce = e.type === 'agv_robot' ? this.charDef.jumpForce * 1.3 : this.charDef.jumpForce * 0.95;
+          this.playerVel.y = bounceForce;
+          sound.playBounce();
+          this.cameraShake = 0.35;
+          this.spawnParticleRing(e.x, e.y + 0.8, e.z, 0x38bdf8);
+
+          e.hp -= 2;
+          this.emitFloatingToast('💥 STOMP! +150', e.x, e.y + 1.2, e.z, 'points');
+          this.emitFloatingToast('-2 HP', e.x, e.y + 0.7, e.z, 'damage');
+
+          if (e.hp <= 0) {
+            this.defeatEnemy(e, 260, true);
+          } else {
+            e.stunTimer = 1.0;
+            e.state = 'stunned';
+          }
+        } else if (Math.abs(e.y - this.playerPos.y) < 1.1) {
+          // Horizontal Contact
+          if (this.marcinReclamationTimer > 0) {
+            e.stunTimer = 2.5;
+            e.state = 'stunned';
+            this.emitFloatingToast('🛡️ AUDYT BHP!', e.x, e.y + 1, e.z, 'perk');
+          } else if (this.grzesiekCrushTimer > 0) {
+            e.hp -= 3;
+            this.emitFloatingToast('-3 HP ŚCISK!', e.x, e.y + 1, e.z, 'damage');
+            if (e.hp <= 0) this.defeatEnemy(e, 280, true);
+          } else if (e.type === 'krol_leto') {
+            if (this.activePerks.shield) {
+              this.activePerks.shield = false;
+              this.invulnerableTimer = 1.2;
+              sound.playShieldBreak();
+              this.sayQuote('Kask BHP zamortyzował atak Króla-Leto!');
+            } else {
+              this.takeDamage('🚨 ZWOLNIENIE DYSCYPLINARNE NA HITA OD KRÓLA-LETO!');
+            }
+          } else {
+            this.takeDamage(`Zaatakował Cię: ${e.name}!`);
+          }
+        }
+      }
+    });
+  }
+
+  private spawnPenaltyNotice(x: number, y: number, z: number) {
+    const mesh = createPenaltyNoticeProjectile();
+    mesh.position.set(x, y, z);
+    this.levelRoot.add(mesh);
+    const dir = new THREE.Vector3(this.playerPos.x - x, 0, this.playerPos.z - z).normalize();
+    this.enemyProjectiles.push({ mesh, vel: dir.multiplyScalar(7.5), life: 3.5 });
+    sound.playWhistle();
+  }
+
+  private spawnDyscyplinarkaNotice(x: number, y: number, z: number) {
+    const mesh = createPenaltyNoticeProjectile();
+    mesh.scale.setScalar(1.6);
+    (mesh.material as THREE.MeshStandardMaterial).color.setHex(0xef4444);
+    mesh.position.set(x, y, z);
+    this.levelRoot.add(mesh);
+    const dir = new THREE.Vector3(this.playerPos.x - x, 0, this.playerPos.z - z).normalize();
+    this.enemyProjectiles.push({ mesh, vel: dir.multiplyScalar(10.0), life: 3.5, isDyscyplinarka: true });
+    sound.playWhistle();
+  }
+
+  private spawnSanitarywareProjectile(x: number, y: number, z: number) {
+    const mesh = createSanitarywareProjectile();
+    mesh.position.set(x, y, z);
+    this.levelRoot.add(mesh);
+    const dir = new THREE.Vector3(this.playerPos.x - x, 0.2, this.playerPos.z - z).normalize();
+    this.enemyProjectiles.push({ mesh, vel: dir.multiplyScalar(8.2), life: 3.5 });
+    sound.playWoosh();
+  }
+
+  private spawnSparkZapProjectile(x: number, y: number, z: number) {
+    const mesh = createSparkZapProjectile();
+    mesh.position.set(x, y, z);
+    this.levelRoot.add(mesh);
+    const dir = new THREE.Vector3(this.playerPos.x - x, 0.1, this.playerPos.z - z).normalize();
+    this.enemyProjectiles.push({ mesh, vel: dir.multiplyScalar(9.5), life: 3.0 });
+    sound.playElectricalSparks();
+  }
+
+  private spawnOdprawaClipboardProjectile(x: number, y: number, z: number) {
+    const mesh = createOdprawaClipboardProjectile();
+    mesh.position.set(x, y, z);
+    this.levelRoot.add(mesh);
+    const dir = new THREE.Vector3(this.playerPos.x - x, 0.1, this.playerPos.z - z).normalize();
+    this.enemyProjectiles.push({ mesh, vel: dir.multiplyScalar(10.0), life: 4.0, isDyscyplinarka: true });
+    sound.playWhistle();
+    this.triggerScreenShake(0.4, 0.3);
+  }
+
+  private spawnFallingTileHazard(x: number, z: number, targetY = 0) {
+    const tileMesh = createLargeTileModel();
+    tileMesh.position.set(x, 12, z);
+    tileMesh.rotation.x = 0.2;
+    tileMesh.rotation.z = -0.35;
+    this.levelRoot.add(tileMesh);
+
+    // Red warning circle/ring indicator on ground
+    const ringGeo = new THREE.RingGeometry(0.2, 1.8, 24);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
+    const warningRing = new THREE.Mesh(ringGeo, ringMat);
+    warningRing.rotation.x = -Math.PI / 2;
+    warningRing.position.set(x, targetY + 0.02, z);
+    this.levelRoot.add(warningRing);
+
+    sound.playSirenAlert();
+    this.emitFloatingToast('⚠️ UWAGA! SPADAJĄCY GRES 120x280!', x, targetY + 1.5, z, 'damage');
+
+    this.fallingTiles.push({
+      id: `tile_${Date.now()}_${Math.random()}`,
+      x,
+      y: 12,
+      z,
+      targetY,
+      fallSpeed: 0,
+      state: 'warning',
+      warningTimer: 1.1,
+      mesh: tileMesh,
+      warningRing,
+    });
+  }
+
+  private updateFallingTiles(dt: number) {
+    // Periodically auto-spawn falling tile hazards near player in active game
+    this.fallingTileSpawnTimer += dt;
+    if (this.fallingTileSpawnTimer >= 8.5) {
+      this.fallingTileSpawnTimer = 0;
+      // Spawn near player offset
+      const offsetX = (Math.random() - 0.5) * 12;
+      const offsetZ = (Math.random() - 0.5) * 8;
+      const spawnX = Math.max(this.levelBounds.minX + 4, Math.min(this.levelBounds.maxX - 4, this.playerPos.x + offsetX));
+      const spawnZ = Math.max(this.levelBounds.minZ + 2, Math.min(this.levelBounds.maxZ - 2, this.playerPos.z + offsetZ));
+      this.spawnFallingTileHazard(spawnX, spawnZ, 0);
+    }
+
+    for (let i = this.fallingTiles.length - 1; i >= 0; i--) {
+      const tile = this.fallingTiles[i];
+      if (tile.state === 'warning') {
+        tile.warningTimer -= dt;
+        // Pulse warning ring scale and opacity
+        const scale = 1 + Math.sin(tile.warningTimer * 20) * 0.15;
+        tile.warningRing.scale.set(scale, scale, 1);
+        (tile.warningRing.material as THREE.MeshBasicMaterial).opacity = 0.5 + Math.sin(tile.warningTimer * 25) * 0.35;
+
+        if (tile.warningTimer <= 0) {
+          tile.state = 'falling';
+        }
+      } else if (tile.state === 'falling') {
+        tile.fallSpeed += 28 * dt; // Gravity acceleration
+        tile.y -= tile.fallSpeed * dt;
+        tile.mesh.position.y = tile.y;
+        tile.mesh.rotation.x += dt * 3.0;
+        tile.mesh.rotation.y += dt * 4.0;
+
+        if (tile.y <= tile.targetY + 0.1) {
+          // Impact!
+          tile.state = 'shattered';
+          this.levelRoot.remove(tile.mesh);
+          this.levelRoot.remove(tile.warningRing);
+          this.fallingTiles.splice(i, 1);
+
+          // Explosion sound & screen shake
+          sound.playExplosion();
+          this.triggerScreenShake(0.6, 0.4);
+
+          // Glass / Tile Shatter Particles
+          this.spawnExplosionParticles(tile.x, tile.targetY + 0.3, tile.z, 0xf3f4f6, 28);
+          this.spawnParticleRing(tile.x, tile.targetY + 0.1, tile.z, 0xd97706);
+
+          // AoE Damage to Player
+          const playerDist = Math.hypot(this.playerPos.x - tile.x, this.playerPos.z - tile.z);
+          if (playerDist < 2.2 && Math.abs(this.playerPos.y - tile.targetY) < 1.5) {
+            this.takeDamage('Spadający Wielki Format Gresu Calacatta 120x280!');
+          }
+
+          // Damage or stun nearby enemies
+          for (const enemy of this.enemies) {
+            if (enemy.hp <= 0) continue;
+            const enemyDist = Math.hypot(enemy.x - tile.x, enemy.z - tile.z);
+            if (enemyDist < 2.5) {
+              enemy.hp -= 3;
+              enemy.stunTimer = 2.5;
+              this.emitFloatingToast('💥 TILE CRASH! -3 HP', enemy.x, enemy.y + 1.2, enemy.z, 'damage');
+              if (enemy.hp <= 0) {
+                this.defeatEnemy(enemy, 260, true);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private updateRandomSpawners(dt: number) {
+    this.randomSpawnTimer += dt;
+    if (this.randomSpawnTimer >= 10.0) {
+      this.randomSpawnTimer = 0;
+      // Spawn random Espresso or Nitro Boost pickup in active sector
+      const rx = (Math.random() - 0.5) * 44;
+      const rz = (Math.random() - 0.5) * 14;
+      const isCoffee = Math.random() > 0.4;
+      if (isCoffee) {
+        this.addEspressoItem(`rand_esp_${Date.now()}`, rx, 0.4, rz);
+        this.emitFloatingToast('☕ DOKIEROWANE ESPRESSO Z AUTOMATU!', rx, 1.2, rz, 'perk');
+      } else {
+        this.spawnDroppedPerk(rx, 0.5, rz, 'espresso_boost');
+      }
+    }
+  }
+
+  private updateProjectiles(dt: number) {
+    for (let i = this.projectiles.length - 1; i >= 0; i--) {
+      const p = this.projectiles[i];
+      p.life -= dt;
+      p.mesh.position.addScaledVector(p.vel, dt);
+
+      let hit = false;
+      this.enemies.forEach((e) => {
+        if (e.state === 'defeated') return;
+        const dist = Math.hypot(p.mesh.position.x - e.x, p.mesh.position.z - e.z);
+        if (dist < 1.25 && Math.abs(p.mesh.position.y - e.y) < 1.2) {
+          hit = true;
+
+          // Check if guard has active shield
+          if (e.shieldActive && this.charDef.id !== 'grzesiek') {
+            sound.playShieldBreak();
+            this.triggerBloomPulse(0.08);
+            this.emitFloatingToast('🛡️ BLOK TARCZY!', e.x, e.y + 1, e.z, 'damage');
+            e.shieldActive = false; // Shield breaks after 1 hit!
+          } else {
+            const dmg = this.charDef.id === 'dawid' ? 2 : 1;
+            e.hp -= dmg;
+            sound.playSmack();
+            this.triggerBloomPulse(0.1);
+            this.cameraShake = 0.25;
+            this.spawnParticleRing(e.x, e.y + 0.8, e.z, 0xf59e0b);
+            this.emitFloatingToast(`-${dmg} HP`, e.x, e.y + 0.8, e.z, 'damage');
+
+            if (e.hp <= 0) {
+              this.defeatEnemy(e, 250, true);
+            } else {
+              e.stunTimer = 0.6;
+              e.state = 'stunned';
+            }
+          }
+        }
+      });
+
+      if (hit || p.life <= 0) {
+        this.levelRoot.remove(p.mesh);
+        this.projectiles.splice(i, 1);
+      }
+    }
+
+    for (let i = this.enemyProjectiles.length - 1; i >= 0; i--) {
+      const ep = this.enemyProjectiles[i];
+      ep.life -= dt;
+      ep.mesh.position.addScaledVector(ep.vel, dt);
+
+      const dist = Math.hypot(ep.mesh.position.x - this.playerPos.x, ep.mesh.position.z - this.playerPos.z);
+      if (dist < 0.85 && Math.abs(ep.mesh.position.y - this.playerPos.y) < 1.0) {
+        if (ep.isDyscyplinarka) {
+          if (this.activePerks.shield) {
+            this.activePerks.shield = false;
+            this.invulnerableTimer = 1.2;
+            sound.playShieldBreak();
+            this.sayQuote('Kask BHP zamortyzował DYSCYPLINARKĘ Króla-Leto!');
+            this.emitFloatingToast('🛡️ BLOK DYSCYPLINARKI!', this.playerPos.x, this.playerPos.y + 1, this.playerPos.z, 'perk');
+          } else {
+            this.takeDamage('🚨 ZWOLNIENIE DYSCYPLINARNE NA HITA OD KRÓLA-LETO!', 99);
+          }
+        } else {
+          this.takeDamage('Trafiło Cię wezwanie wyjaśniające od Walczaka!');
+        }
+        this.levelRoot.remove(ep.mesh);
+        this.enemyProjectiles.splice(i, 1);
+        continue;
+      }
+
+      if (ep.life <= 0) {
+        this.levelRoot.remove(ep.mesh);
+        this.enemyProjectiles.splice(i, 1);
+      }
+    }
+  }
+
+  private updateSpecialEffects(dt: number) {
+    for (let i = this.specialEffects.length - 1; i >= 0; i--) {
+      const effect = this.specialEffects[i];
+      effect.life -= dt;
+      const t = 1 - effect.life / effect.maxLife;
+
+      if (effect.update) {
+        effect.update(dt, t);
+      } else {
+        effect.mesh.scale.setScalar(1 + t * effect.grow);
+        effect.mesh.rotation.z += dt * effect.spin;
+        const mat = (effect.mesh as THREE.Mesh).material as THREE.MeshBasicMaterial | THREE.MeshStandardMaterial | undefined;
+        if (mat && 'opacity' in mat) {
+          mat.opacity = Math.max(0, (effect.life / effect.maxLife) * 0.9);
+        }
+      }
+
+      if (effect.life <= 0) {
+        this.levelRoot.remove(effect.mesh);
+        this.specialEffects.splice(i, 1);
+      }
+    }
+  }
+
+  private spawnGrzesiekShockwave() {
+    // 1. Ground Shockwaves
+    const geo = new THREE.TorusGeometry(0.9, 0.12, 14, 48);
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x4ade80,
+      transparent: true,
+      opacity: 0.9,
+      side: THREE.DoubleSide,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.rotation.x = Math.PI / 2;
+    mesh.position.set(this.playerPos.x, this.playerPos.y + 0.12, this.playerPos.z);
+    mesh.scale.setScalar(0.2);
+    this.levelRoot.add(mesh);
+    this.specialEffects.push({ mesh, life: 0.7, maxLife: 0.7, grow: 7.5, spin: 9.0 });
+
+    const ring2 = new THREE.Mesh(
+      new THREE.TorusGeometry(1.2, 0.08, 12, 32),
+      new THREE.MeshBasicMaterial({ color: 0x86efac, transparent: true, opacity: 0.65, side: THREE.DoubleSide })
+    );
+    ring2.rotation.x = Math.PI / 2;
+    ring2.position.set(this.playerPos.x, this.playerPos.y + 0.12, this.playerPos.z);
+    ring2.scale.setScalar(0.18);
+    this.levelRoot.add(ring2);
+    this.specialEffects.push({ mesh: ring2, life: 0.6, maxLife: 0.6, grow: 8.5, spin: -7.0 });
+
+    // 2. GIANT ROTATING & SQUEEZING MECHANICAL CRUSHER ARM (ŚCIŚK ZAGŁADY)
+    const armGroup = new THREE.Group();
+    armGroup.position.set(this.playerPos.x, this.playerPos.y + 1.1, this.playerPos.z);
+
+    const steelMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.2 });
+    const greenMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, metalness: 0.5, roughness: 0.3, emissive: 0x15803d, emissiveIntensity: 0.5 });
+    const chromeMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.1 });
+    const teethMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.7, roughness: 0.2, emissive: 0xeab308, emissiveIntensity: 0.4 });
+
+    // Base Turret
+    const baseMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 0.3, 16), steelMat);
+    armGroup.add(baseMesh);
+
+    // Boom arm
+    const boomGroup = new THREE.Group();
+    boomGroup.position.set(0, 0.15, 0);
+
+    const boomMesh = new THREE.Mesh(new THREE.BoxGeometry(0.22, 1.2, 0.22), greenMat);
+    boomMesh.position.set(0, 0.6, 0.2);
+    boomMesh.rotation.x = 0.4;
+    boomGroup.add(boomMesh);
+
+    // Hydraulic cylinder
+    const cylMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.8, 12), chromeMat);
+    cylMesh.position.set(0, 0.5, 0.05);
+    cylMesh.rotation.x = 0.4;
+    boomGroup.add(cylMesh);
+
+    // Forearm
+    const forearmGroup = new THREE.Group();
+    forearmGroup.position.set(0, 1.1, 0.5);
+
+    const forearmMesh = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.9, 0.2), steelMat);
+    forearmMesh.position.set(0, 0.4, 0.2);
+    forearmMesh.rotation.x = -0.5;
+    forearmGroup.add(forearmMesh);
+
+    // Squeezing Pincer Jaws
+    const clawBaseGroup = new THREE.Group();
+    clawBaseGroup.position.set(0, 0.8, 0.4);
+
+    const clawHub = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 12), greenMat);
+    clawBaseGroup.add(clawHub);
+
+    // Left Jaw
+    const leftJaw = new THREE.Group();
+    const leftJawBar = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.7, 0.15), steelMat);
+    leftJawBar.position.set(-0.25, 0.35, 0);
+    leftJawBar.rotation.z = -0.2;
+    leftJaw.add(leftJawBar);
+
+    const leftTeeth = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.3, 0.12), teethMat);
+    leftTeeth.position.set(-0.15, 0.6, 0.08);
+    leftJaw.add(leftTeeth);
+    clawBaseGroup.add(leftJaw);
+
+    // Right Jaw
+    const rightJaw = new THREE.Group();
+    const rightJawBar = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.7, 0.15), steelMat);
+    rightJawBar.position.set(0.25, 0.35, 0);
+    rightJawBar.rotation.z = 0.2;
+    rightJaw.add(rightJawBar);
+
+    const rightTeeth = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.3, 0.12), teethMat);
+    rightTeeth.position.set(0.15, 0.6, 0.08);
+    rightJaw.add(rightTeeth);
+    clawBaseGroup.add(rightJaw);
+
+    forearmGroup.add(clawBaseGroup);
+    boomGroup.add(forearmGroup);
+    armGroup.add(boomGroup);
+
+    armGroup.scale.setScalar(1.6);
+    this.levelRoot.add(armGroup);
+
+    let sparkTimer = 0;
+
+    this.specialEffects.push({
+      mesh: armGroup,
+      life: 0.9,
+      maxLife: 0.9,
+      grow: 0,
+      spin: 0,
+      update: (dt: number, progress: number) => {
+        // High-speed rotation around Y-axis
+        armGroup.rotation.y += dt * 18.0;
+
+        // Dynamic heavy slam arc
+        armGroup.rotation.x = Math.sin(progress * Math.PI) * 0.5;
+
+        // SQUEEZING / PINCHING CLAW ACTION (Obracające się i ściskające ramię):
+        const closeAmount = Math.max(0, Math.sin(progress * Math.PI)); 
+        leftJaw.rotation.z = closeAmount * 0.85;
+        rightJaw.rotation.z = -closeAmount * 0.85;
+
+        // Glowing teeth intensity
+        teethMat.emissiveIntensity = 0.4 + closeAmount * 1.8;
+
+        // Energy sparks burst during peak crush
+        if (progress > 0.2 && progress < 0.8) {
+          sparkTimer += dt;
+          if (sparkTimer > 0.04) {
+            sparkTimer = 0;
+            this.spawnParticleRing(
+              armGroup.position.x + (Math.random() - 0.5) * 0.8,
+              armGroup.position.y + 1.2,
+              armGroup.position.z + (Math.random() - 0.5) * 0.8,
+              0x4ade80
+            );
+          }
+        }
+
+        // Smooth scale fade out near end
+        if (progress > 0.7) {
+          const fade = (1 - progress) / 0.3;
+          armGroup.scale.setScalar(1.6 * fade);
+        }
+      },
+    });
+  }
+
+  private updateParticles(dt: number) {
+    if (this.particles.length > 80) {
+      const excess = this.particles.splice(0, this.particles.length - 80);
+      excess.forEach((p) => this.levelRoot.remove(p.mesh));
+    }
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const pt = this.particles[i];
+      pt.life -= dt;
+      pt.mesh.position.addScaledVector(pt.vel, dt);
+      const scale = Math.max(0.001, pt.life / pt.maxLife);
+      pt.mesh.scale.setScalar(scale);
+
+      if (pt.life <= 0) {
+        this.levelRoot.remove(pt.mesh);
+        this.particles.splice(i, 1);
+      }
+    }
+  }
+
+  public triggerJump() {
+    if (this.state !== 'playing') return;
+    this.jumpBufferTimer = 0.22;
+  }
+
+  public triggerAttack() {
+    if (this.state !== 'playing' || this.attackCooldownTimer > 0) return;
+    this.attackCooldownTimer = 0.35;
+    this.attackSwingTimer = 0.25;
+
+    sound.playAttackWhoosh();
+
+    const forward = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
+    const projGeo = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+    const projMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3, emissive: 0xf59e0b, emissiveIntensity: 0.5 });
+    const proj = new THREE.Mesh(projGeo, projMat);
+    proj.position.set(this.playerPos.x, this.playerPos.y + 0.8, this.playerPos.z).addScaledVector(forward, 0.6);
+    this.levelRoot.add(proj);
+
+    this.projectiles.push({
+      mesh: proj,
+      vel: forward.multiplyScalar(14.0),
+      life: 0.8,
+    });
+
+    // Agile enemies attempt dodge reactions
+    this.enemies.forEach((e) => {
+      if (e.state === 'defeated' || e.state === 'stunned') return;
+      const dist = Math.hypot(e.x - this.playerPos.x, e.z - this.playerPos.z);
+      if (dist < 4.0 && (e.type === 'piorun_dron' || e.type === 'kurier' || e.type === 'monter' || e.type === 'elite_walczak_guard')) {
+        if (Math.random() < 0.4) {
+          const dodgeOffset = (Math.random() > 0.5 ? 1.4 : -1.4);
+          e.z = THREE.MathUtils.clamp(e.z + dodgeOffset, e.startX, e.endX);
+          this.emitFloatingToast('💨 UNIK!', e.x, e.y + 1.0, e.z, 'damage');
+        }
+      }
+    });
+  }
+
+  public triggerAbility() {
+    if (this.state !== 'playing' || this.abilityTimer > 0) return;
+    this.abilityTimer = this.charDef.abilityCooldown;
+
+    sound.playAbility(this.currentCharacterId);
+    this.cameraShake = 0.45;
+    this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.5, this.playerPos.z, this.charDef.color);
+
+    if (this.currentCharacterId === 'marcin') {
+      this.marcinReclamationTimer = 8;
+      this.invulnerableTimer = Math.max(this.invulnerableTimer, 8);
+      this.hp = Math.min(this.maxHp, this.hp + 1);
+      this.callbacks.onHpUpdate(this.hp, this.maxHp);
+      this.sayQuote('WYJAZD NA REKLAMACJE! Zamykam tę sprawę pieczęcią – 8 sekund całkowitej nietykalności i +1 Kawa!');
+      sound.playReclamation();
+      this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.5, this.playerPos.z, 0xcbd5e1);
+      const radius = 8.5;
+      this.enemies.forEach((e) => {
+        if (e.state === 'defeated') return;
+        const dist = Math.hypot(e.x - this.playerPos.x, e.z - this.playerPos.z);
+        if (dist < radius) {
+          e.stunTimer = 5.0;
+          e.state = 'stunned';
+          e.hp = Math.max(0, e.hp - 1);
+          this.emitFloatingToast('-1 HP Pieczęć', e.x, e.y + 0.8, e.z, 'damage');
+          if (e.hp <= 0) {
+            this.defeatEnemy(e, 220, false);
+          }
+        }
+      });
+    } else if (this.currentCharacterId === 'grzesiek') {
+      this.grzesiekCrushTimer = 0.9;
+      this.grzesiekCrushPulse = 1.0;
+      this.spawnGrzesiekShockwave();
+      const forward = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
+      this.playerPos.x += forward.x * 1.6;
+      this.playerPos.z += forward.z * 1.6;
+      this.sayQuote('ŚCIŚK ZAGŁADY! 44 cm obwodu ramienia. Tu nie ma już miejsca na wątpliwości!');
+      sound.playSciskCrush();
+      this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.5, this.playerPos.z, 0x4ade80);
+      this.enemies.forEach((e) => {
+        if (e.state === 'defeated') return;
+        const dx = e.x - this.playerPos.x;
+        const dz = e.z - this.playerPos.z;
+        const dist = Math.hypot(dx, dz);
+        const dirDot = (dx * forward.x + dz * forward.z) / Math.max(1, dist);
+        if (dist < 5.2 && dirDot > -0.3) {
+          e.hp -= 3;
+          e.stunTimer = 1.6;
+          e.state = 'stunned';
+          this.cameraShake = 0.65;
+          this.spawnParticleRing(e.x, e.y + 0.6, e.z, 0x86efac);
+          this.emitFloatingToast('-3 HP ŚCISK!', e.x, e.y + 0.8, e.z, 'damage');
+          if (e.hp <= 0) {
+            this.defeatEnemy(e, 300, false);
+          }
+        }
+      });
+    } else if (this.currentCharacterId === 'dawid') {
+      this.activatePerk('hardhat', 15);
+      this.sayQuote('JA WIEM LEPIEJ! Gres Calacatta 120x280 leci pod kątem 45 stopni!');
+      sound.playAttackWhoosh();
+      const angles = [-0.35, 0, 0.35];
+      angles.forEach((offsetAngle) => {
+        const rot = this.playerRot + offsetAngle;
+        const forward = new THREE.Vector3(Math.sin(rot), 0, Math.cos(rot));
+        const tileGeo = new THREE.BoxGeometry(0.7, 0.1, 0.45);
+        const tileMat = new THREE.MeshStandardMaterial({
+          color: 0xf8fafc,
+          emissive: 0xd97706,
+          emissiveIntensity: 0.6,
+          metalness: 0.8,
+          roughness: 0.2,
+        });
+        const tile = new THREE.Mesh(tileGeo, tileMat);
+        tile.position.set(this.playerPos.x, this.playerPos.y + 0.6, this.playerPos.z).addScaledVector(forward, 0.6);
+        this.levelRoot.add(tile);
+        this.projectiles.push({
+          mesh: tile,
+          vel: forward.multiplyScalar(16.0),
+          life: 1.2,
+        });
+      });
+      this.emitFloatingToast('🧱 GRESOWY DESZCZ!', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
+    } else if (this.currentCharacterId === 'mateusz') {
+      this.hp = Math.min(this.maxHp, this.hp + 1);
+      this.callbacks.onHpUpdate(this.hp, this.maxHp);
+      this.sayQuote('BSOD! ŁAPCIE LAGA! Niech system Max-Fliz się zawiesi!');
+      sound.playAbility('mateusz');
+      this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.8, this.playerPos.z, 0x3b82f6);
+      this.emitFloatingToast('🎮 ATAL BSOD: LAGI DLA WROGÓW!', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
+      
+      this.enemies.forEach((e) => {
+        if (e.state === 'defeated') return;
+        const dist = Math.hypot(e.x - this.playerPos.x, e.z - this.playerPos.z);
+        if (dist < 10.0) {
+          e.stunTimer = 5.0;
+          e.state = 'stunned';
+          this.emitFloatingToast('LAG...', e.x, e.y + 0.8, e.z, 'damage');
+        }
+      });
+    } else if (this.currentCharacterId === 'piotr') {
+      this.sayQuote('FLASZKA ZE SKARBCZYKA! 70% bimbru zza regału B4 – z drogi, bo będzie ogień!');
+      this.throwBimberMolotov();
+    }
+  }
+
+  private throwBimberMolotov() {
+    sound.playMolotovThrow();
+    this.attackSwingTimer = 0.35;
+    if (this.rightArm) {
+      this.rightArm.rotation.x = -2.2;
+    }
+
+    const forward = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
+    const molotovData = createBimberBottleMolotov();
+    const startPos = new THREE.Vector3(
+      this.playerPos.x + forward.x * 0.7,
+      this.playerPos.y + 1.1,
+      this.playerPos.z + forward.z * 0.7
+    );
+    molotovData.group.position.copy(startPos);
+    this.levelRoot.add(molotovData.group);
+
+    // Initial forward velocity + high arc
+    const throwVel = forward.clone().multiplyScalar(13.5);
+    throwVel.y = 5.8;
+
+    this.bimberMolotovs.push({
+      mesh: molotovData.group,
+      pos: startPos,
+      vel: throwVel,
+      spin: new THREE.Vector3(
+        8.0 + Math.random() * 4.0,
+        3.0 + Math.random() * 2.0,
+        2.0 + Math.random() * 2.0
+      ),
+      life: 2.8,
+      flameLight: molotovData.flameLight,
+      flameMesh: molotovData.flameMesh,
+    });
+
+    this.emitFloatingToast('🍾 KOKTAJL MOŁOTOWA Z BIMBREM!', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'combo');
+  }
+
+  private updateBimberMolotovs(dt: number) {
+    for (let i = this.bimberMolotovs.length - 1; i >= 0; i--) {
+      const b = this.bimberMolotovs[i];
+      b.life -= dt;
+
+      // Gravity pulls it down
+      b.vel.y -= 17.0 * dt;
+      b.pos.addScaledVector(b.vel, dt);
+
+      // Tumbling spin in flight
+      b.mesh.rotation.x += b.spin.x * dt;
+      b.mesh.rotation.y += b.spin.y * dt;
+      b.mesh.rotation.z += b.spin.z * dt;
+      b.mesh.position.copy(b.pos);
+
+      // Flickering flame wick
+      if (b.flameMesh) {
+        const pulse = 1.0 + Math.sin(performance.now() * 0.02) * 0.3;
+        b.flameMesh.scale.set(pulse, pulse * 1.2, pulse);
+      }
+      if (b.flameLight) {
+        b.flameLight.intensity = 2.0 + Math.sin(performance.now() * 0.03) * 0.8;
+      }
+
+      // Trail of glowing sparks/smoke
+      if (Math.random() < 0.5) {
+        this.spawnParticleRing(b.pos.x, b.pos.y, b.pos.z, 0xff7700);
+      }
+
+      // Check collision with enemies
+      let hitEnemy = false;
+      this.enemies.forEach((e) => {
+        if (e.state === 'defeated') return;
+        const dist = Math.hypot(b.pos.x - e.x, b.pos.z - e.z);
+        if (dist < 1.15 && Math.abs(b.pos.y - e.y) < 1.2) {
+          hitEnemy = true;
+        }
+      });
+
+      // Find platform ground height beneath the bottle
+      let floorY = 0;
+      for (const p of this.platforms) {
+        const halfW = p.width / 2;
+        const halfD = p.depth / 2;
+        if (
+          b.pos.x >= p.x - halfW &&
+          b.pos.x <= p.x + halfW &&
+          b.pos.z >= p.z - halfD &&
+          b.pos.z <= p.z + halfD
+        ) {
+          const top = p.y + p.height / 2;
+          if (top > floorY && b.pos.y >= top - 0.4) {
+            floorY = top;
+          }
+        }
+      }
+
+      const hitGround = b.pos.y <= floorY + 0.15 && b.vel.y <= 0;
+
+      if (hitEnemy || hitGround || b.life <= 0) {
+        // DETONATION!
+        this.detonateBimberMolotov(b.pos.x, Math.max(floorY, 0), b.pos.z);
+        this.levelRoot.remove(b.mesh);
+        this.bimberMolotovs.splice(i, 1);
+      }
+    }
+  }
+
+  private detonateBimberMolotov(x: number, y: number, z: number) {
+    sound.playGlassShatter();
+    sound.playFireCrackle();
+    this.triggerScreenShake(0.55, 0.45);
+
+    // 1. Shards of broken glass flying in all directions
+    for (let s = 0; s < 12; s++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 3.0 + Math.random() * 5.0;
+      const shardGeo = new THREE.BoxGeometry(0.08, 0.08, 0.03);
+      const shardMat = new THREE.MeshBasicMaterial({ color: 0x86efac, transparent: true, opacity: 0.9 });
+      const shard = new THREE.Mesh(shardGeo, shardMat);
+      shard.position.set(x, y + 0.3, z);
+      this.levelRoot.add(shard);
+      this.particles.push({
+        mesh: shard,
+        vel: new THREE.Vector3(Math.cos(angle) * speed, 2.5 + Math.random() * 3.5, Math.sin(angle) * speed),
+        life: 0.6,
+        maxLife: 0.6,
+      });
+    }
+
+    // 2. Fireball impact flash
+    const flashGeo = new THREE.SphereGeometry(1.6, 16, 16);
+    const flashMat = new THREE.MeshBasicMaterial({
+      color: 0xff3b00,
+      transparent: true,
+      opacity: 0.85,
+    });
+    const flash = new THREE.Mesh(flashGeo, flashMat);
+    flash.position.set(x, y + 0.6, z);
+    this.levelRoot.add(flash);
+    this.specialEffects.push({
+      mesh: flash,
+      life: 0.45,
+      maxLife: 0.45,
+      grow: 3.5,
+      spin: 4.0,
+    });
+
+    // 3. Initial burst damage to anyone in the direct splash
+    this.enemies.forEach((e) => {
+      if (e.state === 'defeated') return;
+      const dist = Math.hypot(e.x - x, e.z - z);
+      if (dist < 3.2 && Math.abs(e.y - y) < 1.8) {
+        e.hp -= 2;
+        e.stunTimer = 1.5;
+        e.state = 'stunned';
+        e.onFireTimer = 3.5;
+        this.emitFloatingToast('💥 -2 HP KOKTAJL!', e.x, e.y + 0.9, e.z, 'damage');
+        if (e.hp <= 0) {
+          this.defeatEnemy(e, 280, false);
+        }
+      }
+    });
+
+    this.emitFloatingToast('🔥 MORZE OGNIA 70%!', x, y + 1.3, z, 'combo');
+
+    // 4. Create persistent burning fire puddle
+    const puddle = createMolotovFirePuddle(3.8);
+    puddle.group.position.set(x, y + 0.02, z);
+    this.levelRoot.add(puddle.group);
+
+    this.bimberFirePuddles.push({
+      group: puddle.group,
+      x,
+      y,
+      z,
+      radius: 3.8,
+      duration: 6.0,
+      maxDuration: 6.0,
+      tickTimer: 0.4,
+      flames: puddle.flames,
+      light: puddle.light,
+    });
+  }
+
+  private updateBimberFirePuddles(dt: number) {
+    for (let i = this.bimberFirePuddles.length - 1; i >= 0; i--) {
+      const p = this.bimberFirePuddles[i];
+      p.duration -= dt;
+
+      // Animate flickering fire spires
+      const time = performance.now() * 0.001;
+      p.flames.forEach((flame) => {
+        const u = flame.userData;
+        const flicker = Math.sin(time * u.speed + u.phase);
+        const scaleY = Math.max(0.3, 1.0 + flicker * 0.4);
+        flame.scale.set(1.0 + flicker * 0.15, scaleY, 1.0 + flicker * 0.15);
+      });
+
+      // Flickering light
+      p.light.intensity = 3.5 + Math.sin(time * 14) * 1.2;
+
+      // Rising smoke and embers
+      if (Math.random() < 0.45) {
+        const angle = Math.random() * Math.PI * 2;
+        const r = Math.sqrt(Math.random()) * (p.radius * 0.7);
+        const ex = p.x + Math.cos(angle) * r;
+        const ez = p.z + Math.sin(angle) * r;
+        const ember = new THREE.Mesh(
+          new THREE.BoxGeometry(0.08, 0.08, 0.08),
+          new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.9 })
+        );
+        ember.position.set(ex, p.y + 0.3, ez);
+        this.levelRoot.add(ember);
+        this.particles.push({
+          mesh: ember,
+          vel: new THREE.Vector3((Math.random() - 0.5) * 0.8, 1.8 + Math.random() * 1.5, (Math.random() - 0.5) * 0.8),
+          life: 0.5,
+          maxLife: 0.5,
+        });
+      }
+
+      // Damage ticks over time
+      p.tickTimer -= dt;
+      if (p.tickTimer <= 0) {
+        p.tickTimer = 0.5; // Damage every 0.5s
+
+        this.enemies.forEach((e) => {
+          if (e.state === 'defeated') return;
+          const dist = Math.hypot(e.x - p.x, e.z - p.z);
+          if (dist < p.radius && Math.abs(e.y - p.y) < 1.5) {
+            e.hp -= 1;
+            e.onFireTimer = 2.0;
+            e.speed = Math.max(1.0, e.speed * 0.85); // Slowed by burning bimber
+            sound.playHit();
+            this.emitFloatingToast('🔥 -1 HP OGIEŃ!', e.x, e.y + 0.8, e.z, 'damage');
+            this.spawnParticleRing(e.x, e.y + 0.5, e.z, 0xff5500);
+
+            if (e.hp <= 0) {
+              this.defeatEnemy(e, 260, false);
+            }
+          }
+        });
+      }
+
+      // Fade out near expiration
+      if (p.duration <= 0.8) {
+        const fade = p.duration / 0.8;
+        p.group.scale.set(fade, fade, fade);
+        p.light.intensity *= fade;
+      }
+
+      if (p.duration <= 0) {
+        // Puddle extinguishes with a puff of smoke
+        for (let k = 0; k < 6; k++) {
+          this.spawnDust(p.x + (Math.random() - 0.5) * 2, p.y + 0.2, p.z + (Math.random() - 0.5) * 2, 0x64748b);
+        }
+        this.levelRoot.remove(p.group);
+        this.bimberFirePuddles.splice(i, 1);
+      }
+    }
+  }
+
+  private defeatEnemy(e: EnemyItem, points: number, showToast: boolean = true) {
+    if (e.state === 'defeated') return;
+    e.state = 'defeated';
+    e.mesh.visible = false;
+    const hitStopDur = (e.type === 'walczak' || e.type === 'krol_leto') ? 0.22 : 0.05;
+    this.triggerHitStop(hitStopDur);
+
+    // Combo streak calculation
+    this.comboStreak++;
+    this.comboTimer = this.charDef.id === 'mateusz' ? 5.5 : 3.8;
+    const comboMultiplier = 1 + (this.comboStreak - 1) * 0.25;
+    const finalPoints = Math.round(points * comboMultiplier);
+    this.score += finalPoints;
+    this.handleMateuszPassive(2);
+
+    if (showToast) {
+      this.emitFloatingToast(`+${finalPoints} Pkt Neutralizacja!`, e.x, e.y + 1, e.z, 'points');
+    }
+
+    if (this.comboStreak >= 2) {
+      const comboMsg =
+        this.comboStreak >= 5
+          ? `👑 LEGENDARNY KIEROWNIK x${this.comboStreak}!`
+          : this.comboStreak >= 4
+            ? `⚡⚡ SAKRAMENCKI FLOW x${this.comboStreak}!`
+            : this.comboStreak >= 3
+              ? `🔥🔥 WŚCIEKŁY MAGAZYNIER x${this.comboStreak}!`
+              : `🔥 COMBO x${this.comboStreak}!`;
+      this.emitFloatingToast(comboMsg, e.x, e.y + 1.6, e.z, 'combo');
+    }
+
+    this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+
+    // In-world Perk Drop (Perki dropione na mapie z wrogów!)
+    const dropChance =
+      this.charDef.id === 'piotr'
+        ? 1.0
+        : e.type === 'walczak' || e.maxHp >= 4
+          ? 1.0
+          : 0.48;
+
+    if (Math.random() <= dropChance) {
+      this.spawnDroppedPerk(e.x, e.y + 0.1, e.z);
+    }
+
+    if (e.type === 'walczak' || e.maxHp >= 4) {
+      this.callbacks.onBossUpdate?.(e.name, 0, e.maxHp, false);
+      this.sayQuote('BYŁY KIEROWNIK WALCZAK ZANEUTRALIZOWANY! Droga wolna!');
+
+      // Intense long screen shake for boss defeat!
+      this.triggerScreenShake(2.2, 1.25);
+
+      this.spawnParticleRing(e.x, e.y + 1.0, e.z, 0xef4444);
+      this.spawnParticleRing(e.x, e.y + 1.5, e.z, 0xf59e0b);
+      this.spawnParticleRing(e.x, e.y + 2.0, e.z, 0x3b82f6);
+
+      const geo = new THREE.TorusGeometry(1.2, 0.18, 16, 48);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.95, side: THREE.DoubleSide });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.rotation.x = Math.PI / 2;
+      mesh.position.set(e.x, e.y + 0.5, e.z);
+      this.levelRoot.add(mesh);
+      this.specialEffects.push({ mesh, life: 1.2, maxLife: 1.2, grow: 12.0, spin: 15.0 });
+    } else {
+      // Mild screen shake for regular enemies
+      this.triggerScreenShake(0.35, 0.25);
+    }
+  }
+
+  private takeDamage(reason: string, amount: number = 1) {
+    if (this.invulnerableTimer > 0) return;
+
+    if (this.marcinReclamationTimer > 0) {
+      this.triggerScreenShake(0.2, 0.2);
+      return;
+    }
+
+    if (this.activePerks.shield) {
+      this.activePerks.shield = false;
+      this.invulnerableTimer = 1.2;
+      sound.playShieldBreak();
+      this.sayQuote('Kask BHP amortyzował uderzenie!');
+      this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 1, this.playerPos.z, 0x3b82f6);
+      this.callbacks.onPerksUpdate?.(this.activePerks);
+      this.triggerScreenShake(0.4, 0.3);
+      return;
+    }
+
+    this.hp = Math.max(0, this.hp - amount);
+    this.invulnerableTimer = 1.8;
+    sound.playHit();
+    this.triggerBloomPulse(0.45);
+    this.callbacks.onHpUpdate(this.hp, this.maxHp);
+
+    // Screen Shake on damage received by player!
+    this.triggerScreenShake(0.9, 0.5);
+
+    if (this.hp <= 0) {
+      this.state = 'gameover';
+      this.playerVel.set(0, 0, 0);
+      this.screenShakeTimer = 0;
+      this.screenShakeIntensity = 0;
+      this.cameraShake = 0;
+      if (this.container) {
+        this.container.style.transform = '';
+      }
+      sound.stopMusic();
+      sound.playGameOver();
+      this.callbacks.onGameOver(reason);
+    }
+  }
+
+  private checkLevelFinish() {
+    if (this.state !== 'playing') return;
+
+    const requiredVip = Math.min(4, this.totalVipCount);
+    if (this.collectedVipCount < requiredVip) {
+      if (this.finishWarningTimer <= 0) {
+        this.finishWarningTimer = 2.5;
+        const remaining = requiredVip - this.collectedVipCount;
+        this.sayQuote(`BHP Magazynu: Zbierz jeszcze min. ${remaining} zamówień VIP przed załadunkiem do vana!`);
+        this.emitFloatingToast(`BRAKUJE ${remaining} VIP!`, this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'vip');
+        sound.playHit();
+      }
+      return;
+    }
+
+    this.state = 'victory';
+    sound.stopMusic();
+    sound.playWin();
+    const elapsed = Math.max(1, Math.round((performance.now() - this.levelStartTime) / 1000));
+    const m = Math.floor(elapsed / 60);
+    const s = elapsed % 60;
+    const timeStr = `${m}:${s < 10 ? '0' : ''}${s}`;
+    this.callbacks.onLevelComplete(3, this.score, timeStr);
+  }
+
+  private spawnDust(x: number, y: number, z: number, color = 0xd1d5db) {
+    const geo = new THREE.SphereGeometry(0.08, 6, 6);
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x, y + 0.1, z);
+    this.levelRoot.add(mesh);
+    this.particles.push({
+      mesh,
+      vel: new THREE.Vector3((Math.random() - 0.5) * 1.5, Math.random() * 0.8 + 0.2, (Math.random() - 0.5) * 1.5),
+      life: 0.4,
+      maxLife: 0.4,
+    });
+  }
+
+  private spawnParticleRing(x: number, y: number, z: number, color = 0x38bdf8) {
+    const num = 16;
+    for (let i = 0; i < num; i++) {
+      const angle = (i / num) * Math.PI * 2;
+      const geo = new THREE.BoxGeometry(0.12, 0.12, 0.12);
+      const mat = new THREE.MeshBasicMaterial({ color });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, y, z);
+      this.levelRoot.add(mesh);
+      this.particles.push({
+        mesh,
+        vel: new THREE.Vector3(Math.cos(angle) * 4.5, Math.random() * 1.2, Math.sin(angle) * 4.5),
+        life: 0.6,
+        maxLife: 0.6,
+      });
+    }
+  }
+
+  private spawnExplosionParticles(x: number, y: number, z: number, color = 0xf3f4f6, count = 20) {
+    for (let i = 0; i < count; i++) {
+      const geo = new THREE.BoxGeometry(0.12, 0.12, 0.12);
+      const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, y, z);
+      this.levelRoot.add(mesh);
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2.0 + Math.random() * 6.0;
+      this.particles.push({
+        mesh,
+        vel: new THREE.Vector3(Math.cos(angle) * speed, Math.random() * 4.0 + 1.0, Math.sin(angle) * speed),
+        life: 0.7,
+        maxLife: 0.7,
+      });
+    }
+  }
+
+  private sayQuote(quote: string) {
+    this.speechBubbleTimer = 3.5;
+    this.callbacks.onSpeechBubble(quote);
+  }
+
+  private sayRandomVoiceLine() {
+    if (this.charDef.voiceLines && this.charDef.voiceLines.length > 0) {
+      const idx = Math.floor(Math.random() * this.charDef.voiceLines.length);
+      this.sayQuote(this.charDef.voiceLines[idx]);
+    }
+  }
+
+  private updateCamera(dt: number) {
+    if (this.state === 'title') {
+      const t = performance.now() * 0.0006;
+      const radius = 4.5;
+      const height = 1.8 + Math.sin(t * 0.8) * 0.35;
+      const px = this.playerPos.x;
+      const py = this.playerPos.y;
+      const pz = this.playerPos.z;
+
+      this.camera.position.x = px + Math.sin(t) * radius;
+      this.camera.position.z = pz + Math.cos(t) * radius;
+      this.camera.position.y = py + height;
+      this.camera.lookAt(px, py + 1.0, pz);
+
+      if (this.playerGroup) {
+        this.playerGroup.rotation.y = Math.sin(t * 0.8) * 0.35;
+      }
+      return;
+    }
+
+    // Determine target positions with smooth velocity look-ahead
+    const velLookAheadX = THREE.MathUtils.clamp(this.playerVel.x * 0.18, -2.5, 2.5);
+    const velLookAheadZ = THREE.MathUtils.clamp(this.playerVel.z * 0.18, -2.5, 2.5);
+    const targetX = this.playerPos.x + velLookAheadX;
+    const targetZ = this.playerPos.z + velLookAheadZ;
+
+    // Smooth vertical tracking: dampen camera Y so jumping doesn't violently bounce the screen
+    const targetGroundY = this.isGrounded ? this.playerPos.y : this.smoothCamY;
+    this.smoothCamY = THREE.MathUtils.damp(this.smoothCamY, targetGroundY, this.isGrounded ? 8.0 : 2.4, dt);
+    const targetY = this.smoothCamY;
+
+    // Check if an active boss is nearby to dynamically pull camera out slightly for tactical awareness
+    const activeBoss = this.enemies.find((e) => (e.type === 'walczak' || e.type === 'krol_leto') && e.state !== 'defeated');
+    let targetBossZoom = 1.0;
+    if (activeBoss) {
+      const bossDist = Math.hypot(activeBoss.x - this.playerPos.x, activeBoss.z - this.playerPos.z);
+      if (bossDist < 20) {
+        targetBossZoom = 1.18;
+      }
+    }
+    this.bossCamZoom = THREE.MathUtils.damp(this.bossCamZoom, targetBossZoom, 2.5, dt);
+
+    // Target offsets for camera modes:
+    // Close: immersive wide action view (X=4.5, Y=8.0, Z=8.5)
+    // Iso: wide-angle warehouse tactical overview (X=9.0, Y=16.0, Z=15.0)
+    const zoomMultiplier = this.bossCamZoom * this.camZoomFactor;
+    const targetOffsetX = (this.cameraMode === 'iso' ? 9.0 : 4.5) * zoomMultiplier;
+    const targetOffsetY = (this.cameraMode === 'iso' ? 16.0 : 8.0) * zoomMultiplier;
+    const targetOffsetZ = (this.cameraMode === 'iso' ? 15.0 : 8.5) * zoomMultiplier;
+
+    // Smoothly interpolate camera offset between modes
+    this.currentCamOffset.x = THREE.MathUtils.damp(this.currentCamOffset.x, targetOffsetX, 4.5, dt);
+    this.currentCamOffset.y = THREE.MathUtils.damp(this.currentCamOffset.y, targetOffsetY, 4.5, dt);
+    this.currentCamOffset.z = THREE.MathUtils.damp(this.currentCamOffset.z, targetOffsetZ, 4.5, dt);
+
+    // FOV decay
+    if (this.camera instanceof THREE.PerspectiveCamera) {
+      const baseFov = 45;
+      if (this.camera.fov !== baseFov) {
+        this.camera.fov = THREE.MathUtils.damp(this.camera.fov, baseFov, 4.0, dt);
+        this.camera.updateProjectionMatrix();
+      }
+    }
+
+    const camTarget = new THREE.Vector3(
+      targetX + this.currentCamOffset.x,
+      targetY + this.currentCamOffset.y,
+      targetZ + this.currentCamOffset.z
+    );
+
+    let shakeX = 0;
+    let shakeY = 0;
+    let shakeZ = 0;
+
+    if (this.screenShakeTimer > 0) {
+      this.screenShakeTimer -= dt;
+      const progress = Math.max(0, this.screenShakeTimer / Math.max(0.001, this.screenShakeDuration));
+      const currentIntensity = this.screenShakeIntensity * Math.pow(progress, 1.2);
+
+      shakeX = (Math.random() - 0.5) * currentIntensity * 2.2;
+      shakeY = (Math.random() - 0.5) * currentIntensity * 2.2;
+      shakeZ = (Math.random() - 0.5) * currentIntensity * 2.2;
+
+      // DOM container shake transform
+      if (this.container) {
+        const domPxX = (Math.random() - 0.5) * currentIntensity * 28;
+        const domPxY = (Math.random() - 0.5) * currentIntensity * 28;
+        const domDeg = (Math.random() - 0.5) * currentIntensity * 3.5;
+        this.container.style.transform = `translate3d(${domPxX.toFixed(1)}px, ${domPxY.toFixed(1)}px, 0px) rotate(${domDeg.toFixed(2)}deg)`;
+      }
+
+      if (this.screenShakeTimer <= 0) {
+        this.screenShakeIntensity = 0;
+        if (this.container) {
+          this.container.style.transform = '';
+        }
+      }
+    } else if (this.cameraShake > 0) {
+      shakeX = (Math.random() - 0.5) * this.cameraShake;
+      shakeY = (Math.random() - 0.5) * this.cameraShake;
+      shakeZ = (Math.random() - 0.5) * this.cameraShake;
+      this.cameraShake = Math.max(0, this.cameraShake - dt * 2.0);
+      if (this.container && this.container.style.transform !== '') {
+        this.container.style.transform = '';
+      }
+    } else {
+      if (this.container && this.container.style.transform !== '') {
+        this.container.style.transform = '';
+      }
+    }
+
+    camTarget.x += shakeX;
+    camTarget.y += shakeY;
+    camTarget.z += shakeZ;
+
+    // Smooth camera position follow
+    this.camera.position.lerp(camTarget, dt * 6.5);
+
+    // Smooth lookAt target leading slightly in velocity direction
+    const desiredLookAt = new THREE.Vector3(
+      this.playerPos.x + velLookAheadX * 0.4 + shakeX * 0.3,
+      this.smoothCamY + 0.85 + shakeY * 0.3,
+      this.playerPos.z + velLookAheadZ * 0.4 + shakeZ * 0.3
+    );
+    this.currentLookAt.lerp(desiredLookAt, dt * 7.5);
+    this.camera.lookAt(this.currentLookAt);
+
+    if (this.dirLight) {
+      this.dirLight.position.set(this.playerPos.x + 14, 28, this.playerPos.z + 12);
+      this.dirLight.target.position.copy(this.playerPos);
+      this.dirLight.target.updateMatrixWorld();
+    }
+    if (this.rimLight) {
+      this.rimLight.position.set(this.playerPos.x - 18, 12, this.playerPos.z - 18);
+    }
+  }
+
+  public getPlayerPos(): THREE.Vector3 {
+    return this.playerPos.clone();
+  }
+
+  public getScore(): number {
+    return this.score;
+  }
+
+  public getCollectedVipCount(): number {
+    return this.collectedVipCount;
+  }
+
+  public getElapsedSeconds(): number {
+    return Math.max(1, Math.round((performance.now() - this.levelStartTime) / 1000));
+  }
+
+  public isBossDefeated(): boolean {
+    return this.enemies.some((e) => e.type === 'walczak' && e.state === 'defeated');
+  }
+
+  public getActivePerks(): ActivePerks {
+    return { ...this.activePerks };
+  }
+
+  public activatePerk(perkId: 'hardhat' | 'vibram_boots' | 'order_magnet' | 'espresso_boost', duration: number = 20): boolean {
+    if (perkId === 'hardhat') {
+      this.activePerks.shield = true;
+      sound.playPerkPickup();
+      this.sayQuote('Założono atestowany kask BHP!');
+    } else if (perkId === 'vibram_boots') {
+      this.activePerks.doubleJump = Math.max(this.activePerks.doubleJump, duration);
+      sound.playDoubleJump();
+      this.sayQuote('Buty robocze Vibram: podwójny skok w powietrzu aktywny!');
+    } else if (perkId === 'order_magnet') {
+      this.activePerks.magnet = Math.max(this.activePerks.magnet, duration);
+      sound.playMagnetHum();
+      this.sayQuote('Skaner radiowy przyciąga zamówienia!');
+    } else if (perkId === 'espresso_boost') {
+      this.activePerks.speedBoost = Math.max(this.activePerks.speedBoost, duration);
+      sound.playPerkPickup();
+      this.sayQuote('Podwójne espresso: sprint po korytarzu!');
+    }
+
+    this.callbacks.onPerksUpdate?.(this.activePerks);
+    return true;
+  }
+
+  private handleMateuszPassive(amount: number) {
+    if (this.currentCharacterId !== 'mateusz') return;
+    this.mateuszPassiveCount += amount;
+    if (this.mateuszPassiveCount >= 9) {
+      this.mateuszPassiveCount -= 9;
+      this.activatePerk('espresso_boost', 3);
+      this.invulnerableTimer = Math.max(this.invulnerableTimer, 3);
+      this.sayQuote('UMOWA NA 9 MIESIĘCY! Speedrun aktywowany!');
+      this.emitFloatingToast('🚀 SPEEDRUN CONTRACT!', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'combo');
+      this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.5, this.playerPos.z, 0xffffff);
+    }
+  }
+
+  public renderMinimap(canvas: HTMLCanvasElement | null) {
+    if (!canvas || this.state !== 'playing' || !this.minimapVisible) return;
+    
+    this.minimapFrameCounter++;
+    if (this.minimapFrameCounter % 2 !== 0) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    // High-tech radar dark background
+    ctx.fillStyle = '#0b0f19';
+    ctx.fillRect(0, 0, w, h);
+
+    const centerX = w / 2;
+    const centerY = h / 2;
+    const scale = this.minimapZoomScale;
+
+    // Concentric grid rings
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.18)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, w * 0.22, 0, Math.PI * 2);
+    ctx.arc(centerX, centerY, w * 0.42, 0, Math.PI * 2);
+    ctx.moveTo(centerX, 0); ctx.lineTo(centerX, h);
+    ctx.moveTo(0, centerY); ctx.lineTo(w, centerY);
+    ctx.stroke();
+
+    // 1. Level Platforms & Aisle Boundaries
+    ctx.fillStyle = 'rgba(30, 41, 59, 0.85)';
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
+    ctx.lineWidth = 1;
+
+    for (let i = 0; i < this.platforms.length; i++) {
+      const p = this.platforms[i];
+      const dx = (p.x - this.playerPos.x) * scale;
+      const dz = (p.z - this.playerPos.z) * scale;
+      const pw = Math.max(3, p.width * scale);
+      const pd = Math.max(3, p.depth * scale);
+
+      const mx = centerX + dx - pw / 2;
+      const my = centerY + dz - pd / 2;
+
+      if (mx + pw >= 0 && mx <= w && my + pd >= 0 && my <= h) {
+        ctx.fillRect(mx, my, pw, pd);
+        ctx.strokeRect(mx, my, pw, pd);
+      }
+    }
+
+    // 2. Collectibles & VIP Orders
+    for (let i = 0; i < this.collectibles.length; i++) {
+      const col = this.collectibles[i];
+      if (col.collected) continue;
+      const dx = (col.x - this.playerPos.x) * scale;
+      const dz = (col.z - this.playerPos.z) * scale;
+      const mx = centerX + dx;
+      const my = centerY + dz;
+
+      if (mx >= 0 && mx <= w && my >= 0 && my <= h) {
+        ctx.fillStyle = col.type === 'vip_item' || col.type === 'golden_cutter' ? '#f59e0b' : '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(mx, my, col.type === 'vip_item' ? 4.5 : 3.0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // 3. Dropped Perk Crates
+    for (let i = 0; i < this.droppedPerks.length; i++) {
+      const perk = this.droppedPerks[i];
+      if (perk.collected) continue;
+      const dx = (perk.x - this.playerPos.x) * scale;
+      const dz = (perk.z - this.playerPos.z) * scale;
+      const mx = centerX + dx;
+      const my = centerY + dz;
+
+      if (mx >= 0 && mx <= w && my >= 0 && my <= h) {
+        ctx.fillStyle = '#a855f7';
+        ctx.beginPath();
+        ctx.arc(mx, my, 4.0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // 4. Exit Gate (WYJŚCIE 🏁)
+    if (this.finishGatePos) {
+      const dx = (this.finishGatePos.x - this.playerPos.x) * scale;
+      const dz = (this.finishGatePos.z - this.playerPos.z) * scale;
+      const mx = centerX + dx;
+      const my = centerY + dz;
+
+      ctx.fillStyle = '#22c55e';
+      ctx.beginPath();
+      ctx.arc(mx, my, 6.0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#4ade80';
+      ctx.font = '900 9px Google Sans, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('WYJŚCIE 🏁', mx, my - 8);
+    }
+
+    // 5. Enemies (Red markers / Alert Exclamation)
+    for (let i = 0; i < this.enemies.length; i++) {
+      const e = this.enemies[i];
+      if (e.state === 'defeated') continue;
+      const dx = (e.x - this.playerPos.x) * scale;
+      const dz = (e.z - this.playerPos.z) * scale;
+      const mx = centerX + dx;
+      const my = centerY + dz;
+
+      if (mx >= -10 && mx <= w + 10 && my >= -10 && my <= h + 10) {
+        const isBoss = e.type === 'walczak' || e.type === 'krol_leto';
+        ctx.fillStyle = isBoss ? '#ef4444' : e.state === 'chase' || e.state === 'charging' ? '#ff4d4d' : '#f43f5e';
+        const size = isBoss ? 6.5 : 4.0;
+
+        ctx.beginPath();
+        ctx.arc(mx, my, size, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (isBoss) {
+          ctx.strokeStyle = '#facc15';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+
+        if (e.state === 'chase' || e.state === 'charging') {
+          ctx.fillStyle = '#facc15';
+          ctx.font = '900 11px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('!', mx, my - size - 2);
+        }
+      }
+    }
+
+    // 6. Player Marker (Centered with direction indicator)
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.rotate(this.playerRot);
+
+    ctx.fillStyle = '#38bdf8';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+
+    ctx.beginPath();
+    ctx.moveTo(0, -9);
+    ctx.lineTo(6, 6);
+    ctx.lineTo(0, 3);
+    ctx.lineTo(-6, 6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.restore();
+
+    // Radar scan line effect
+    const sweep = (performance.now() * 0.0025) % (Math.PI * 2);
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.lineTo(centerX + Math.cos(sweep) * (w * 0.45), centerY + Math.sin(sweep) * (h * 0.45));
+    ctx.stroke();
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "summary":  "Plan implementacji:\n1. UI Polish: Dodanie efektów glow, przejść (transitions) dla przycisków w menu, oraz system cząsteczkowy tła menu.\n2. Integracja Przeciwników: Aktualizacja buildLevel1, 2, 3 w `src/game.ts` o Pan Roman, Serwisanci, Bosman.\n3. System Skrzynek z Łupem (Loot Crates): Implementacja klasy `LootCrate` w `warehouseAssets.ts` i `game.ts`, zawierającej losowe perki/punkty.",
+  "updatedAt":  "2026-10-30T03:23:33.763924846Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}
