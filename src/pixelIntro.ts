@@ -817,7 +817,7 @@ export class PixelIntroManager {
       },
       {
         speaker: '⚔️ EKIPA MAX-FLIZ • SURVIVAL SHIFT',
-        text: '“Dostawa to dopiero początek! Fale co 42 sekundy, bossowie, pułapki, pięć eventów, 12 modułów rozwoju i cztery ewolucje buildów. Wskakuj na zmianę!”',
+        text: '“Dostawa to dopiero początek! Fale co 60 sekund, bossowie, pułapki, pięć eventów, 12 modułów rozwoju i cztery ewolucje buildów. Wskakuj na zmianę!”',
       },
     ];
 
