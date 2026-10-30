@@ -7,7 +7,7 @@ import {
   getTopLeaderboard,
   testFirestoreConnection,
 } from './firebase.ts';
-import { MaxFlizGameEngine } from './game.ts';
+import { MaxFlizGameEngine, type SurvivalSnapshot, type SurvivalUpgradeOption } from './game.ts';
 import { sound } from './sound.ts';
 import { IntroCutsceneManager } from './introCutscene.ts';
 import { PixelIntroManager } from './pixelIntro.ts';
@@ -45,6 +45,9 @@ class MaxFlizScene extends xb.Script {
   private lastFpsTime: number = performance.now();
   private frameCount: number = 0;
   private currentFps: number = 60;
+  private lastMinimapRenderAt: number = 0;
+  private pausedForVisibility: boolean = false;
+  private resizeObserver: ResizeObserver | null = null;
 
   // Duplicate init() and update() removed from here. Handled at the bottom of the class.
 
@@ -63,8 +66,9 @@ class MaxFlizScene extends xb.Script {
 
   private setupUIAndEngine() {
     const handleResize = () => {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
+      // visualViewport reflects the usable viewport on mobile browsers when browser chrome changes size.
+      const width = Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth));
+      const height = Math.max(1, Math.round(window.visualViewport?.height || window.innerHeight));
       const aspect = width / height;
 
       if (this.camera) {
@@ -83,15 +87,11 @@ class MaxFlizScene extends xb.Script {
 
       const renderer = (xb.core?.renderer as THREE.WebGLRenderer) || null;
       if (renderer) {
-        if (typeof renderer.setSize === 'function') {
-          renderer.setSize(width, height, false);
-        }
-        // Mobile 60 FPS optimization: Clamp DPR to 1.5 on mobile to avoid GPU bandwidth bottleneck on high-res phones
-        const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
+        // Set DPR before dimensions so Three.js recreates the drawing buffer at the final scale.
+        const isMobile = width < 900 || ('ontouchstart' in window);
         const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2.0);
-        if (typeof renderer.setPixelRatio === 'function') {
-          renderer.setPixelRatio(dpr);
-        }
+        renderer.setPixelRatio(dpr);
+        renderer.setSize(width, height, false);
       }
 
       if (this.engine && typeof this.engine.applyAutoCameraScaleForViewport === 'function') {
@@ -99,8 +99,20 @@ class MaxFlizScene extends xb.Script {
       }
     };
 
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', () => setTimeout(handleResize, 150));
+    let resizeFrame = 0;
+    const scheduleResize = () => {
+      if (resizeFrame) cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(() => {
+        resizeFrame = 0;
+        handleResize();
+      });
+    };
+
+    window.addEventListener('resize', scheduleResize, { passive: true });
+    window.addEventListener('orientationchange', () => {
+      window.setTimeout(scheduleResize, 180);
+    }, { passive: true });
+    window.visualViewport?.addEventListener('resize', scheduleResize, { passive: true });
     // Do not call handleResize() immediately here because xb.core.renderer is not ready yet.
     // It will be handled in the init() method below.
 
@@ -116,12 +128,23 @@ class MaxFlizScene extends xb.Script {
     const abilityIcon = document.getElementById('ability-icon');
 
     const titleScreen = document.getElementById('title-screen');
+    const gameShell = document.getElementById('game-shell');
     const hudTop = document.getElementById('hud-top');
     const hudBottom = document.getElementById('hud-bottom');
     const touchControls = document.getElementById('touch-controls');
     const pauseModal = document.getElementById('pause-modal');
     const victoryModal = document.getElementById('victory-modal');
     const gameoverModal = document.getElementById('gameover-modal');
+    const survivalHud = document.getElementById('survival-hud');
+    const survivalLevelUp = document.getElementById('survival-levelup');
+    const survivalUpgradeOptions = document.getElementById('survival-upgrade-options');
+    const survivalTimeElem = document.getElementById('survival-time');
+    const survivalWaveElem = document.getElementById('survival-wave');
+    const survivalLevelElem = document.getElementById('survival-level');
+    const survivalXpElem = document.getElementById('survival-xp');
+    const survivalXpFill = document.getElementById('survival-xp-fill');
+    const survivalKillsElem = document.getElementById('survival-kills');
+    const survivalEnemiesElem = document.getElementById('survival-enemies');
 
     const victoryScore = document.getElementById('victory-score');
     const victoryTime = document.getElementById('victory-time');
@@ -145,6 +168,10 @@ class MaxFlizScene extends xb.Script {
     const perkBulldozerTimer = document.getElementById('perk-bulldozer-timer');
 
     const container = document.getElementById('game-canvas-container');
+    if (container && typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(scheduleResize);
+      this.resizeObserver.observe(container);
+    }
 
     interface ActiveToast {
       element: HTMLElement;
@@ -440,6 +467,8 @@ class MaxFlizScene extends xb.Script {
           hudBottom?.classList.add('hidden');
           touchControls?.classList.add('hidden');
           bossHudBar?.classList.add('hidden');
+          survivalHud?.classList.add('hidden');
+          survivalLevelUp?.classList.add('hidden');
 
           const nickInput = document.getElementById('player-nickname-input') as HTMLInputElement | null;
           const submitBtn = document.getElementById('btn-submit-score') as HTMLButtonElement | null;
@@ -483,6 +512,46 @@ class MaxFlizScene extends xb.Script {
           hudBottom?.classList.add('hidden');
           touchControls?.classList.add('hidden');
           bossHudBar?.classList.add('hidden');
+          survivalHud?.classList.add('hidden');
+          survivalLevelUp?.classList.add('hidden');
+        },
+        onSurvivalUpdate: (snapshot: SurvivalSnapshot) => {
+          const minutes = Math.floor(snapshot.elapsedSeconds / 60);
+          const seconds = snapshot.elapsedSeconds % 60;
+          if (survivalTimeElem) survivalTimeElem.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+          if (survivalWaveElem) survivalWaveElem.textContent = String(snapshot.wave);
+          if (survivalLevelElem) survivalLevelElem.textContent = String(snapshot.level);
+          if (survivalXpElem) survivalXpElem.textContent = snapshot.xp + ' / ' + snapshot.xpToNext + ' XP';
+          if (survivalXpFill) survivalXpFill.style.width = Math.min(100, (snapshot.xp / Math.max(1, snapshot.xpToNext)) * 100) + '%';
+          if (survivalKillsElem) survivalKillsElem.textContent = String(snapshot.kills);
+          if (survivalEnemiesElem) survivalEnemiesElem.textContent = String(snapshot.aliveEnemies);
+        },
+        onSurvivalLevelUp: (options: SurvivalUpgradeOption[]) => {
+          if (!survivalUpgradeOptions || !survivalLevelUp) return;
+          survivalUpgradeOptions.replaceChildren();
+          for (const option of options) {
+            const card = document.createElement('button');
+            card.type = 'button';
+            card.className = 'survival-upgrade-card';
+            const icon = document.createElement('span');
+            icon.className = 'survival-upgrade-icon';
+            icon.textContent = option.icon;
+            const title = document.createElement('span');
+            title.className = 'survival-upgrade-title';
+            title.textContent = option.title;
+            const description = document.createElement('span');
+            description.className = 'survival-upgrade-description';
+            description.textContent = option.description;
+            card.append(icon, title, description);
+            card.addEventListener('click', () => {
+              survivalLevelUp.classList.add('hidden');
+              if (!this.engine.chooseSurvivalUpgrade(option.id)) {
+                survivalLevelUp.classList.remove('hidden');
+              }
+            });
+            survivalUpgradeOptions.appendChild(card);
+          }
+          survivalLevelUp.classList.remove('hidden');
         },
         onBossUpdate: (name, hp, maxHp, visible, phase) => {
           if (!bossHudBar || !bossNameElem || !bossHpTextElem || !bossHpFillElem) return;
@@ -792,12 +861,49 @@ class MaxFlizScene extends xb.Script {
       pauseModal?.classList.add('hidden');
       victoryModal?.classList.add('hidden');
       gameoverModal?.classList.add('hidden');
+      survivalLevelUp?.classList.add('hidden');
+      survivalHud?.classList.add('hidden');
 
       hudTop?.classList.remove('hidden');
       hudBottom?.classList.remove('hidden');
       touchControls?.classList.remove('hidden');
 
+      gameShell?.classList.remove('survival-mode');
       this.engine.startGame(this.selectedLevelId);
+      setTimeout(() => { startingGame = false; }, 600);
+    };
+
+    const doStartSurvival = async (e?: Event) => {
+      if (startingGame) return;
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      await assetLoader.waitUntilReady('Gra 3D');
+
+      startingGame = true;
+      if (this.pixelIntro && this.pixelIntro.isRunning()) this.pixelIntro.stop();
+      if (this.cutscene && this.cutscene.isRunning()) this.cutscene.stop();
+      this.engine.setLevelVisible(true);
+
+      const storyModal = document.getElementById('story-intro-modal');
+      storyModal?.classList.add('hidden');
+      if (titleScreen) {
+        titleScreen.classList.add('hidden');
+        titleScreen.style.setProperty('display', 'none', 'important');
+      }
+      pauseModal?.classList.add('hidden');
+      victoryModal?.classList.add('hidden');
+      gameoverModal?.classList.add('hidden');
+      survivalLevelUp?.classList.add('hidden');
+
+      hudTop?.classList.remove('hidden');
+      hudBottom?.classList.remove('hidden');
+      touchControls?.classList.remove('hidden');
+      survivalHud?.classList.remove('hidden');
+      gameShell?.classList.add('survival-mode');
+
+      this.engine.startSurvival();
       setTimeout(() => { startingGame = false; }, 600);
     };
 
@@ -825,6 +931,7 @@ class MaxFlizScene extends xb.Script {
 
     const startBtn = document.getElementById('btn-start-game');
     bindTap(startBtn, doStartGame);
+    bindTap(document.getElementById('btn-start-survival'), doStartSurvival);
 
     window.addEventListener('keydown', (e) => {
       const storyModal = document.getElementById('story-intro-modal');
@@ -1099,6 +1206,9 @@ class MaxFlizScene extends xb.Script {
 
     bindTap(document.getElementById('btn-menu-victory'), () => {
       victoryModal?.classList.add('hidden');
+      survivalHud?.classList.add('hidden');
+      survivalLevelUp?.classList.add('hidden');
+      gameShell?.classList.remove('survival-mode');
       if (titleScreen) {
         titleScreen.classList.remove('hidden');
         titleScreen.style.setProperty('display', 'flex', 'important');
@@ -1107,15 +1217,23 @@ class MaxFlizScene extends xb.Script {
     });
 
     bindTap(document.getElementById('btn-retry'), () => {
+      const retrySurvival = this.engine.getGameMode() === 'survival';
       gameoverModal?.classList.add('hidden');
+      survivalLevelUp?.classList.add('hidden');
       hudTop?.classList.remove('hidden');
       hudBottom?.classList.remove('hidden');
       touchControls?.classList.remove('hidden');
-      this.engine.startGame(this.selectedLevelId);
+      survivalHud?.classList.toggle('hidden', !retrySurvival);
+      gameShell?.classList.toggle('survival-mode', retrySurvival);
+      if (retrySurvival) this.engine.startSurvival();
+      else this.engine.startGame(this.selectedLevelId);
     });
 
     bindTap(document.getElementById('btn-menu-gameover'), () => {
       gameoverModal?.classList.add('hidden');
+      survivalHud?.classList.add('hidden');
+      survivalLevelUp?.classList.add('hidden');
+      gameShell?.classList.remove('survival-mode');
       if (titleScreen) {
         titleScreen.classList.remove('hidden');
         titleScreen.style.setProperty('display', 'flex', 'important');
@@ -1168,6 +1286,20 @@ class MaxFlizScene extends xb.Script {
     ensureLeaderboardServices().catch(console.warn);
     renderLeaderboard();
 
+    // Do not let a backgrounded mobile browser continue a live run invisibly.
+    // Resume only when this handler itself caused the pause; manual pauses stay paused.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        if (this.engine?.getGameState() === 'playing') {
+          this.engine.togglePause();
+          this.pausedForVisibility = true;
+        }
+      } else if (this.pausedForVisibility && this.engine?.getGameState() === 'paused') {
+        this.engine.togglePause();
+        this.pausedForVisibility = false;
+      }
+    });
+
     this.setupTouchControls();
 
     if (titleScreen) {
@@ -1183,7 +1315,9 @@ class MaxFlizScene extends xb.Script {
     const joystickKnob = document.getElementById('joystick-knob');
     if (!joystickZone || !joystickBase || !joystickKnob) return;
 
-    let activePointerId: number | string | null = null;
+    // Pointer Events unify touch, pen and mouse. Mixing Touch + Pointer listeners
+    // caused duplicate starts and occasional stuck movement on Android browsers.
+    let activePointerId: number | null = null;
     let startX = 0;
     let startY = 0;
     const maxRadius = 52;
@@ -1195,113 +1329,81 @@ class MaxFlizScene extends xb.Script {
       this.engine.setVirtualInput(0, 0);
     };
 
-    const handleStart = (clientX: number, clientY: number, id: number | string) => {
-      activePointerId = id;
-      startX = clientX;
-      startY = clientY;
+    const handleStart = (event: PointerEvent) => {
+      if (activePointerId !== null || event.button > 0) return;
+      activePointerId = event.pointerId;
+      startX = event.clientX;
+      startY = event.clientY;
 
       joystickBase.style.left = `${startX}px`;
       joystickBase.style.top = `${startY}px`;
       joystickBase.classList.add('active');
       joystickKnob.style.transform = 'translate(0px, 0px)';
       this.engine.setVirtualInput(0, 0);
+
+      try {
+        joystickZone.setPointerCapture(event.pointerId);
+      } catch {
+        // Pointer capture is optional; window listeners remain as a fallback.
+      }
+      if (event.cancelable) event.preventDefault();
     };
 
-    const handleMove = (clientX: number, clientY: number) => {
-      const dx = clientX - startX;
-      const dy = clientY - startY;
+    const handleMove = (event: PointerEvent) => {
+      if (activePointerId !== event.pointerId) return;
+      const dx = event.clientX - startX;
+      const dy = event.clientY - startY;
       const dist = Math.hypot(dx, dy);
       const clampedDist = Math.min(dist, maxRadius);
       const angle = Math.atan2(dy, dx);
-
       const nx = Math.cos(angle) * clampedDist;
       const ny = Math.sin(angle) * clampedDist;
 
       joystickKnob.style.transform = `translate(${nx.toFixed(1)}px, ${ny.toFixed(1)}px)`;
-      // Normalize virtual input [-1 .. +1]
       this.engine.setVirtualInput(nx / maxRadius, ny / maxRadius);
+      if (event.cancelable) event.preventDefault();
     };
 
-    const onTouchStart = (e: TouchEvent) => {
-      if (activePointerId !== null) return;
-      if (e.changedTouches.length > 0) {
-        const touch = e.changedTouches[0];
-        handleStart(touch.clientX, touch.clientY, `touch_${touch.identifier}`);
-        if (e.cancelable) e.preventDefault();
-      }
+    const handleEnd = (event: PointerEvent) => {
+      if (activePointerId !== event.pointerId) return;
+      resetJoystick();
     };
 
-    const onTouchMove = (e: TouchEvent) => {
-      if (activePointerId === null) return;
-      for (let i = 0; i < e.touches.length; i++) {
-        const touch = e.touches[i];
-        if (`touch_${touch.identifier}` === activePointerId) {
-          handleMove(touch.clientX, touch.clientY);
-          if (e.cancelable) e.preventDefault();
-          break;
-        }
-      }
-    };
-
-    const onTouchEnd = (e: TouchEvent) => {
-      if (activePointerId === null) return;
-      let stillActive = false;
-      for (let i = 0; i < e.touches.length; i++) {
-        if (`touch_${e.touches[i].identifier}` === activePointerId) {
-          stillActive = true;
-          break;
-        }
-      }
-      if (!stillActive) {
-        resetJoystick();
-      }
-    };
-
-    // Pointer events fallback for mouse & pointer-based mobile browsers
-    const onPointerDown = (e: PointerEvent) => {
-      if (activePointerId !== null) return;
-      handleStart(e.clientX, e.clientY, `ptr_${e.pointerId}`);
-      if (e.cancelable) e.preventDefault();
-    };
-
-    const onPointerMove = (e: PointerEvent) => {
-      if (activePointerId === null || `ptr_${e.pointerId}` !== activePointerId) return;
-      handleMove(e.clientX, e.clientY);
-      if (e.cancelable) e.preventDefault();
-    };
-
-    const onPointerUp = (e: PointerEvent) => {
-      if (activePointerId !== null && `ptr_${e.pointerId}` === activePointerId) {
-        resetJoystick();
-      }
-    };
-
-    joystickZone.addEventListener('touchstart', onTouchStart, { passive: false });
-    window.addEventListener('touchmove', onTouchMove, { passive: false });
-    window.addEventListener('touchend', onTouchEnd, { passive: true });
-    window.addEventListener('touchcancel', resetJoystick, { passive: true });
-
-    joystickZone.addEventListener('pointerdown', onPointerDown, { passive: false });
-    window.addEventListener('pointermove', onPointerMove, { passive: false });
-    window.addEventListener('pointerup', onPointerUp, { passive: true });
-    window.addEventListener('pointercancel', resetJoystick, { passive: true });
+    joystickZone.addEventListener('pointerdown', handleStart, { passive: false });
+    joystickZone.addEventListener('lostpointercapture', (event) => {
+      if (activePointerId === event.pointerId) resetJoystick();
+    });
+    window.addEventListener('pointermove', handleMove, { passive: false });
+    window.addEventListener('pointerup', handleEnd, { passive: true });
+    window.addEventListener('pointercancel', handleEnd, { passive: true });
     window.addEventListener('blur', resetJoystick);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) resetJoystick();
+    });
 
     const bindTouchAction = (id: string, action: () => void) => {
       const btn = document.getElementById(id);
       if (!btn) return;
       let lastTrigger = 0;
-      const trigger = (e: Event) => {
+      const trigger = (event: Event) => {
         const now = Date.now();
-        if (now - lastTrigger < 90) return;
+        if (now - lastTrigger < 120) return;
         lastTrigger = now;
-        if (e.cancelable) e.preventDefault();
-        e.stopPropagation();
+        if (event.cancelable) event.preventDefault();
+        event.stopPropagation();
         action();
       };
-      btn.addEventListener('touchstart', trigger, { passive: false });
-      btn.addEventListener('pointerdown', trigger, { passive: false });
-      btn.addEventListener('click', trigger);
+
+      if ('PointerEvent' in window) {
+        btn.addEventListener('pointerdown', trigger, { passive: false });
+        // Keep keyboard and assistive-technology activation without replaying
+        // the synthetic click emitted after a pointer interaction.
+        btn.addEventListener('click', (event) => {
+          if ((event as MouseEvent).detail === 0) trigger(event);
+        });
+      } else {
+        btn.addEventListener('click', trigger);
+      }
     };
 
     bindTouchAction('btn-touch-attack', () => this.engine.triggerAttack());
@@ -1323,10 +1425,12 @@ class MaxFlizScene extends xb.Script {
     this.add(this.particleSystem);
 
     // 2. Initial resize now that xb.core is ready
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+    const width = Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth));
+    const height = Math.max(1, Math.round(window.visualViewport?.height || window.innerHeight));
     const renderer = (xb.core?.renderer as THREE.WebGLRenderer) || null;
-    if (renderer && typeof renderer.setSize === 'function') {
+    if (renderer) {
+      const isMobile = width < 900 || ('ontouchstart' in window);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2.0));
       renderer.setSize(width, height, false);
     }
 
@@ -1418,8 +1522,12 @@ class MaxFlizScene extends xb.Script {
       } else if (this.engine) {
         this.engine.update(dt);
         const minimapCanvas = document.getElementById('minimap-canvas') as HTMLCanvasElement | null;
-        if (minimapCanvas) {
+        const now = performance.now();
+        // Canvas minimap is intentionally capped at 10 Hz; drawing it every
+        // rendered frame wastes CPU on phones without making navigation clearer.
+        if (minimapCanvas && now - this.lastMinimapRenderAt >= 100) {
           this.engine.renderMinimap(minimapCanvas);
+          this.lastMinimapRenderAt = now;
         }
       }
       (this as any)._updateToasts?.(dt);
