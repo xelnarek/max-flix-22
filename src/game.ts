@@ -101,6 +101,9 @@ export interface SurvivalSnapshot {
   xp: number;
   xpToNext: number;
   aliveEnemies: number;
+  rerolls: number;
+  skips: number;
+  activeHazards: number;
 }
 
 export interface GameCallbacks {
@@ -328,15 +331,37 @@ export class MaxFlizGameEngine {
   private survivalAttackRateMultiplier = 1;
   private survivalMoveMultiplier = 1;
   private survivalMagnetMultiplier = 1;
+  private survivalRangeMultiplier = 1;
+  private survivalXpMultiplier = 1;
+  private survivalDropMultiplier = 1;
+  private survivalRegenMultiplier = 0;
+  private survivalRegenTimer = 60;
+  private survivalEventTimer = 36;
+  private survivalHazardTimer = 24;
+  private survivalHazardSequence = 0;
+  private survivalDroneCooldown = 1.2;
+  private survivalRerolls = 1;
+  private survivalSkips = 1;
+  private survivalSecretSpawned = false;
+  private armorBlockCooldown = 0;
   private survivalPendingOptions: SurvivalUpgradeOption[] = [];
   private survivalXpGems: { mesh: THREE.Mesh; value: number; life: number; phase: number }[] = [];
+  // Every XP pickup shares these GPU resources instead of allocating a geometry/material per kill.
+  private readonly survivalXpGemGeometry = new THREE.OctahedronGeometry(0.20, 0);
+  private readonly survivalXpGemMaterial = new THREE.MeshStandardMaterial({
+    color: 0x38bdf8,
+    emissive: 0x0284c7,
+    emissiveIntensity: 1.5,
+    metalness: 0.2,
+    roughness: 0.28,
+  });
 
   public getPacingFactor(): number {
-    if (this.state !== 'playing' || this.levelStartTime <= 0) return this.gameMode === 'survival' ? 0.78 : 0.50;
+    if (this.state !== 'playing' || this.levelStartTime <= 0) return this.gameMode === 'survival' ? 0.56 : 0.42;
     const elapsedSec = (performance.now() - this.levelStartTime) / 1000;
-    if (this.gameMode === 'survival') return Math.min(1.0, 0.78 + (elapsedSec / 180) * 0.22);
-    // Starts at 0.50 (50% speed) and linearly scales up to 1.0 (100% speed) over 150 seconds (Vampire Survivors style pacing)
-    return Math.min(1.0, 0.50 + (elapsedSec / 150) * 0.50);
+    // A slower opening and a longer ramp-up make movement and combat easier to read.
+    if (this.gameMode === 'survival') return Math.min(0.78, 0.56 + (elapsedSec / 420) * 0.22);
+    return Math.min(0.80, 0.42 + (elapsedSec / 300) * 0.38);
   }
 
   private scaleSurvivalDamage(baseDamage: number): number {
@@ -908,6 +933,19 @@ export class MaxFlizGameEngine {
     this.survivalAttackRateMultiplier = 1;
     this.survivalMoveMultiplier = 1;
     this.survivalMagnetMultiplier = 1;
+    this.survivalRangeMultiplier = 1;
+    this.survivalXpMultiplier = 1;
+    this.survivalDropMultiplier = 1;
+    this.survivalRegenMultiplier = 0;
+    this.survivalRegenTimer = 60;
+    this.survivalEventTimer = 36;
+    this.survivalHazardTimer = 24;
+    this.survivalHazardSequence = 0;
+    this.survivalDroneCooldown = 1.2;
+    this.survivalRerolls = 1;
+    this.survivalSkips = 1;
+    this.survivalSecretSpawned = false;
+    this.armorBlockCooldown = 0;
     this.survivalPendingOptions = [];
     this.marcinReclamationTimer = 0;
     this.grzesiekCrushTimer = 0;
@@ -930,6 +968,10 @@ export class MaxFlizGameEngine {
       speedBoost: 0,
       kfcBerserk: 0,
       bulldozer: 0,
+      attackHaste: 0,
+      arcDrone: 0,
+      xpSurge: 0,
+      damageWard: 0,
     };
     this.timedEventCooldown = 16.0;
     this.doublePointsTimer = 0;
@@ -952,6 +994,9 @@ export class MaxFlizGameEngine {
     this.startGame(1);
     this.gameMode = 'survival';
     this.levelBounds = { minX: -34, maxX: 34, minZ: -17, maxZ: 17 };
+    this.survivalSpawnTimer = 6.5;
+    this.survivalEventTimer = 38;
+    this.survivalHazardTimer = 26;
     this.currentActiveSector = 1;
     this.currentLevelId = 1;
     this.playerPos.set(0, 0.5, 0);
@@ -997,6 +1042,9 @@ export class MaxFlizGameEngine {
       xp: this.survivalXp,
       xpToNext: this.survivalXpToNext,
       aliveEnemies: this.enemies.reduce((count, enemy) => count + (enemy.state === 'defeated' ? 0 : 1), 0),
+      rerolls: this.survivalRerolls,
+      skips: this.survivalSkips,
+      activeHazards: this.hazards.filter((hazard) => hazard.active).length,
     };
   }
 
@@ -1029,6 +1077,26 @@ export class MaxFlizGameEngine {
         this.callbacks.onHpUpdate(this.hp, this.maxHp);
         this.callbacks.onPerksUpdate?.(this.activePerks);
         break;
+      case 'range':
+        this.survivalRangeMultiplier = Math.min(1.8, this.survivalRangeMultiplier * 1.12);
+        break;
+      case 'growth':
+        this.survivalXpMultiplier = Math.min(2.5, this.survivalXpMultiplier * 1.18);
+        break;
+      case 'scavenger':
+        this.survivalDropMultiplier = Math.min(2.8, this.survivalDropMultiplier * 1.25);
+        break;
+      case 'regen':
+        this.survivalRegenMultiplier = Math.min(2.0, this.survivalRegenMultiplier + 0.35);
+        break;
+      case 'drone':
+        this.activePerks.arcDrone = Math.max(this.activePerks.arcDrone || 0, 32);
+        this.callbacks.onPerksUpdate?.(this.activePerks);
+        break;
+      case 'armor':
+        this.activePerks.damageWard = Math.max(this.activePerks.damageWard || 0, 24);
+        this.callbacks.onPerksUpdate?.(this.activePerks);
+        break;
     }
 
     this.survivalPendingOptions = [];
@@ -1039,6 +1107,47 @@ export class MaxFlizGameEngine {
     if (this.survivalXp >= this.survivalXpToNext) {
       this.beginSurvivalLevelUp();
     }
+    return true;
+  }
+
+  private rollSurvivalUpgradeOptions(excluded: string[] = []): SurvivalUpgradeOption[] {
+    const pool: SurvivalUpgradeOption[] = [
+      { id: 'damage', icon: '🎯', title: 'WZMOCNIONA AMUNICJA', description: '+20% obrażeń wszystkich ataków operatora.' },
+      { id: 'rapid', icon: '⚡', title: 'SZYBSZY ATAK', description: 'Skrócenie czasu między atakami o 12%.' },
+      { id: 'boots', icon: '👟', title: 'BUTY SPRINTU', description: '+6% prędkości poruszania się.' },
+      { id: 'magnet', icon: '🧲', title: 'MAGNES XP', description: 'Znacznie większy zasięg przyciągania kryształów XP.' },
+      { id: 'reinforced', icon: '⛑️', title: 'WZMOCNIONY KASK', description: '+1 maksymalny punkt zdrowia i natychmiastowe uzupełnienie.' },
+      { id: 'medkit', icon: '☕', title: 'ZESTAW RATUNKOWY', description: 'Odzyskaj 1 punkt zdrowia i aktywuj tarczę na jedno trafienie.' },
+      { id: 'range', icon: '🎯', title: 'ZASIĘG AUDYTU', description: '+12% zasięgu automatycznego namierzania przeciwników.' },
+      { id: 'growth', icon: '📈', title: 'PREMIA ZA NORMĘ', description: '+18% doświadczenia z kryształów XP.' },
+      { id: 'scavenger', icon: '📦', title: 'ŁOWCA OKAZJI', description: 'Częstsze zrzuty dodatkowych perków od zwykłych przeciwników.' },
+      { id: 'regen', icon: '🩹', title: 'PRZERWA REGENERACYJNA', description: 'Co pewien czas odzyskujesz 1 punkt zdrowia.' },
+      { id: 'drone', icon: '🤖', title: 'DRON ASYSTUJĄCY', description: 'Dron przez 32 sekundy razi najbliższego wroga impulsem.' },
+      { id: 'armor', icon: '🪵', title: 'PALETA OCHRONNA', description: 'Otrzymujesz 24 sekundy okresowej osłony.' },
+    ].filter((option) => !excluded.includes(option.id));
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    return pool.slice(0, 3);
+  }
+
+  public rerollSurvivalUpgrades(): boolean {
+    if (this.gameMode !== 'survival' || this.state !== 'levelup' || this.survivalRerolls <= 0) return false;
+    this.survivalRerolls--;
+    this.survivalPendingOptions = this.rollSurvivalUpgradeOptions(this.survivalPendingOptions.map((option) => option.id));
+    this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+    this.callbacks.onSurvivalLevelUp?.([...this.survivalPendingOptions]);
+    sound.playPickup();
+    return true;
+  }
+
+  public skipSurvivalUpgrade(): boolean {
+    if (this.gameMode !== 'survival' || this.state !== 'levelup' || this.survivalSkips <= 0) return false;
+    this.survivalSkips--;
+    this.state = 'playing';
+    this.emitFloatingToast('POMINIĘTO WYBÓR — ZACHOWANO TEMPO ZMIANY', this.playerPos.x, this.playerPos.y + 1.5, this.playerPos.z, 'perk');
+    this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
     return true;
   }
 
@@ -1086,11 +1195,8 @@ export class MaxFlizGameEngine {
     this.randomSpawnTimer = 0;
     this.bulldozerHitCooldowns.clear();
     for (const gem of this.survivalXpGems) {
+      // Shared XP geometry/material remain alive for the next Survival run.
       this.levelRoot.remove(gem.mesh);
-      gem.mesh.geometry.dispose();
-      const material = gem.mesh.material;
-      if (Array.isArray(material)) material.forEach((item) => item.dispose());
-      else material.dispose();
     }
     this.survivalXpGems = [];
     this.hazards = [];
@@ -2068,7 +2174,10 @@ export class MaxFlizGameEngine {
       if (dist < 1.0) {
         this.spawnDroppedPerk(crate.x, crate.y, crate.z);
         this.levelRoot.remove(crate.mesh);
+        this.platforms = this.platforms.filter((platform) => platform.mesh !== crate.mesh);
         this.lootCrates.splice(i, 1);
+        this.spawnParticleRing(crate.x, crate.y + 0.4, crate.z, 0xfacc15);
+        sound.playPickup(3);
       }
     }
   }
@@ -2886,8 +2995,8 @@ export class MaxFlizGameEngine {
       this.updateCoffeeMachines(simDt);
       this.updateCollectibles(simDt);
       this.updateDroppedPerks(simDt);
+      this.updateHazards(simDt);
       if (this.gameMode !== 'survival') {
-        this.updateHazards(simDt);
         this.updateExplosiveBarrels(simDt);
         this.updateFallingTiles(simDt);
         this.updateTimedEvents(simDt);
@@ -2933,7 +3042,7 @@ export class MaxFlizGameEngine {
   private updateSurvivalAutoCombat() {
     if (this.state !== 'playing' || this.gameMode !== 'survival' || this.attackCooldownTimer > 0) return;
     let target: EnemyItem | null = null;
-    let nearest = 10.5;
+    let nearest = 10.5 * (this.gameMode === 'survival' ? this.survivalRangeMultiplier : 1);
     for (const enemy of this.enemies) {
       if (enemy.state === 'defeated' || !enemy.mesh) continue;
       const distance = Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z);
@@ -2952,11 +3061,24 @@ export class MaxFlizGameEngine {
 
   private updateSurvivalDirector(dt: number) {
     this.survivalElapsed += dt;
-    const nextWave = 1 + Math.floor(this.survivalElapsed / 30);
+    const nextWave = 1 + Math.floor(this.survivalElapsed / 42);
     if (nextWave > this.survivalWave) {
       this.survivalWave = nextWave;
-      this.emitFloatingToast('FALA ' + this.survivalWave + ' — NOWA ZMIANA WCHODZI NA HALĘ!', this.playerPos.x, this.playerPos.y + 1.7, this.playerPos.z, 'combo');
+      this.emitFloatingToast('FALA ' + this.survivalWave + ' — KOLEJNA ZMIANA WCHODZI NA HALĘ!', this.playerPos.x, this.playerPos.y + 1.7, this.playerPos.z, 'combo');
       sound.playAlert();
+
+      // Secret objects are deliberately placed away from the centre line.
+      if (!this.survivalSecretSpawned && this.survivalWave >= 4 && Math.random() < 0.34) {
+        this.survivalSecretSpawned = true;
+        const side = Math.random() < 0.5 ? -1 : 1;
+        const secretX = THREE.MathUtils.clamp(this.playerPos.x + side * 22, this.levelBounds.minX + 3, this.levelBounds.maxX - 3);
+        const secretZ = THREE.MathUtils.clamp(this.playerPos.z + (Math.random() - 0.5) * 18, this.levelBounds.minZ + 2, this.levelBounds.maxZ - 2);
+        const secretRoll = Math.random();
+        const secretType = secretRoll < 0.34 ? 'folder' : secretRoll < 0.67 ? 'coffee' : 'throne';
+        const secretName = secretType === 'folder' ? 'Teczka z premią Walczaka' : secretType === 'coffee' ? 'Zapomniany automat z 1998 roku' : 'Złoty tron kierownika';
+        this.addEasterEgg('survival_secret_' + this.survivalWave, secretX, 0.2, secretZ, secretName, secretType, 1800);
+        this.callbacks.onPerkDropBanner?.('TAJNY ŁADUNEK NAMIERZONY', '🔎', 'Radar wykrył nietypowy obiekt poza głównym korytarzem. Sprawdź obrzeża hali.', '#a78bfa');
+      }
     }
 
     if (this.survivalWave >= 5 && this.survivalWave % 5 === 0 && this.survivalBossWave !== this.survivalWave) {
@@ -2968,15 +3090,25 @@ export class MaxFlizGameEngine {
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
     const enemyCap = isMobile ? 24 : 36;
     const aliveCount = this.enemies.reduce((count, enemy) => count + (enemy.state === 'defeated' ? 0 : 1), 0);
-
     if (this.survivalSpawnTimer <= 0 && aliveCount < enemyCap) {
-      const groupSize = Math.min(
-        isMobile ? 6 : 8,
-        2 + Math.floor(this.survivalWave * 0.65),
-        enemyCap - aliveCount
-      );
+      const groupSize = Math.min(isMobile ? 5 : 7, 2 + Math.floor(this.survivalWave * 0.38), enemyCap - aliveCount);
       for (let i = 0; i < groupSize; i++) this.spawnSurvivalEnemy(this.survivalWave);
-      this.survivalSpawnTimer = Math.max(2.2, 7.0 - this.survivalWave * 0.30);
+      this.survivalSpawnTimer = Math.max(6.2, 11.2 - this.survivalWave * 0.18);
+    }
+
+    this.updateSurvivalEvents(dt);
+    this.updateSurvivalDrone(dt);
+
+    if (this.survivalRegenMultiplier > 0) {
+      this.survivalRegenTimer -= dt;
+      if (this.survivalRegenTimer <= 0) {
+        if (this.hp < this.maxHp) {
+          this.hp = Math.min(this.maxHp, this.hp + 1);
+          this.callbacks.onHpUpdate(this.hp, this.maxHp);
+          this.emitFloatingToast('🩹 REGENERACJA BHP: +1 KAWA', this.playerPos.x, this.playerPos.y + 1.4, this.playerPos.z, 'perk');
+        }
+        this.survivalRegenTimer = Math.max(24, 60 / this.survivalRegenMultiplier);
+      }
     }
 
     this.survivalCleanupTimer -= dt;
@@ -2995,6 +3127,183 @@ export class MaxFlizGameEngine {
     if (this.survivalUiTimer <= 0) {
       this.survivalUiTimer = 0.25;
       this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+    }
+  }
+
+  private disposeTemporaryObject(object: THREE.Object3D) {
+    const geometries = new Set<THREE.BufferGeometry>();
+    const materials = new Set<THREE.Material>();
+    object.traverse((child) => {
+      const mesh = child as THREE.Mesh;
+      if (mesh.geometry) geometries.add(mesh.geometry);
+      const material = mesh.material;
+      if (Array.isArray(material)) material.forEach((entry) => materials.add(entry));
+      else if (material) materials.add(material);
+    });
+    geometries.forEach((geometry) => geometry.dispose());
+    materials.forEach((material) => material.dispose());
+  }
+
+  private updateSurvivalDrone(dt: number) {
+    if (this.gameMode !== 'survival' || (this.activePerks.arcDrone || 0) <= 0) return;
+    this.survivalDroneCooldown -= dt;
+    if (this.survivalDroneCooldown > 0) return;
+    this.survivalDroneCooldown = 1.65;
+    let target: EnemyItem | null = null;
+    let nearest = 12;
+    for (const enemy of this.enemies) {
+      if (enemy.state === 'defeated' || !enemy.mesh) continue;
+      const distance = Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z);
+      if (distance < nearest) { nearest = distance; target = enemy; }
+    }
+    if (!target) return;
+    target.hp -= 1;
+    this.spawnParticleRing(target.x, target.y + 0.6, target.z, 0x22d3ee);
+    this.emitFloatingToast('⚡ DRON PIORUN: IMPULS!', target.x, target.y + 1.25, target.z, 'perk');
+    sound.playElectricalSparks();
+    if (target.hp <= 0) this.defeatEnemy(target, 180, true);
+  }
+
+  private updateSurvivalEvents(dt: number) {
+    // Temporary Survival traps expire and release their mesh resources.
+    for (let i = this.hazards.length - 1; i >= 0; i--) {
+      const hazard = this.hazards[i];
+      if (hazard.life === undefined) continue;
+      hazard.life -= dt;
+      if (hazard.life > 0) continue;
+      hazard.active = false;
+      if (hazard.mesh) {
+        this.levelRoot.remove(hazard.mesh);
+        this.disposeTemporaryObject(hazard.mesh);
+      }
+      if (hazard.warningMesh) {
+        this.levelRoot.remove(hazard.warningMesh);
+        this.disposeTemporaryObject(hazard.warningMesh);
+      }
+      this.hazards.splice(i, 1);
+    }
+
+    this.survivalHazardTimer -= dt;
+    if (this.survivalHazardTimer <= 0) {
+      this.spawnSurvivalHazard();
+      this.survivalHazardTimer = 29 + Math.random() * 12;
+    }
+    this.survivalEventTimer -= dt;
+    if (this.survivalEventTimer <= 0) {
+      this.triggerSurvivalWarehouseEvent();
+      this.survivalEventTimer = 68 + Math.random() * 24;
+    }
+  }
+
+  private spawnSurvivalHazard() {
+    if (this.hazards.filter((hazard) => hazard.active).length >= 4) return;
+    const point = this.getSurvivalSpawnPoint();
+    const x = THREE.MathUtils.clamp(point.x, this.levelBounds.minX + 3, this.levelBounds.maxX - 3);
+    const z = THREE.MathUtils.clamp(point.z, this.levelBounds.minZ + 3, this.levelBounds.maxZ - 3);
+    const id = 'survival_trap_' + (++this.survivalHazardSequence) + '_' + Math.floor(performance.now());
+    switch (this.survivalHazardSequence % 4) {
+      case 1:
+        this.addGlueSpillTrap(id, x, z, 2.5);
+        this.emitFloatingToast('🍯 ROZLANE MAPEI! UWAŻAJ NA BUTY!', x, 1.4, z, 'damage');
+        break;
+      case 2:
+        this.addLaserCutterTrap(id, x, z, 5.2, 1.8);
+        this.emitFloatingToast('⚠️ LASER CNC URUCHOMIONY — SKOK NAD WIĄZKĄ!', x, 1.5, z, 'damage');
+        break;
+      case 3:
+        this.addSteamGeyserTrap(id, x, z, 5.5);
+        this.emitFloatingToast('💨 GEJZER PARY: STREFA POD CIŚNIENIEM!', x, 1.5, z, 'damage');
+        break;
+      default:
+        this.addHydraulicPressTrap(id, x, z, 4.4);
+        this.emitFloatingToast('🔨 PRASA HYDRAULICZNA — NIE PODKŁADAJ RĘKI!', x, 1.6, z, 'damage');
+        break;
+    }
+    const spawnedTrap = this.hazards[this.hazards.length - 1];
+    if (spawnedTrap) spawnedTrap.life = 42;
+    this.spawnParticleRing(x, 0.25, z, 0xf59e0b);
+  }
+
+  private disposeTemporaryObject(object: THREE.Object3D) {
+    const geometries = new Set<THREE.BufferGeometry>();
+    const materials = new Set<THREE.Material>();
+    object.traverse((child) => {
+      const mesh = child as THREE.Mesh;
+      if (mesh.geometry) geometries.add(mesh.geometry);
+      const material = mesh.material;
+      if (Array.isArray(material)) material.forEach((entry) => materials.add(entry));
+      else if (material) materials.add(material);
+    });
+    geometries.forEach((geometry) => geometry.dispose());
+    materials.forEach((material) => material.dispose());
+  }
+
+  private updateSurvivalDrone(dt: number) {
+    if (this.gameMode !== 'survival' || (this.activePerks.arcDrone || 0) <= 0) return;
+    this.survivalDroneCooldown -= dt;
+    if (this.survivalDroneCooldown > 0) return;
+    this.survivalDroneCooldown = 1.65;
+    let target: EnemyItem | null = null;
+    let nearest = 12;
+    for (const enemy of this.enemies) {
+      if (enemy.state === 'defeated' || !enemy.mesh) continue;
+      const distance = Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z);
+      if (distance < nearest) { nearest = distance; target = enemy; }
+    }
+    if (!target) return;
+    target.hp -= 1;
+    this.spawnParticleRing(target.x, target.y + 0.6, target.z, 0x22d3ee);
+    this.emitFloatingToast('⚡ DRON PIORUN: IMPULS!', target.x, target.y + 1.25, target.z, 'perk');
+    sound.playElectricalSparks();
+    if (target.hp <= 0) this.defeatEnemy(target, 180, true);
+  }
+
+  private triggerSurvivalWarehouseEvent() {
+    const point = this.getSurvivalSpawnPoint();
+    const px = this.playerPos.x, pz = this.playerPos.z;
+    const x = point.x, z = point.z;
+    const eventIndex = Math.floor(Math.random() * 5);
+    const stamp = Math.floor(performance.now());
+
+    if (eventIndex === 0) {
+      sound.playSirens();
+      this.callbacks.onPerkDropBanner?.('🍗 DOSTAWA KFC — ALARM GŁODOWY!', '🧟', 'Trzech magazynierów-zombie wyczuło stripsy. Złap kubełek, zanim zrobią inwentaryzację Twojego lunchu.', '#ef4444');
+      this.sayQuote('Dawid otworzył kubełek na rampie. Teraz cała hala ma jeden cel: panierka.');
+      for (let i = 0; i < 3; i++) {
+        const ex = THREE.MathUtils.clamp(px + (i - 1) * 8, this.levelBounds.minX + 3, this.levelBounds.maxX - 3);
+        const ez = THREE.MathUtils.clamp(pz + (i % 2 === 0 ? -8 : 8), this.levelBounds.minZ + 2, this.levelBounds.maxZ - 2);
+        this.addZombieWorkerEnemy('survival_kfc_' + stamp + '_' + i, ex, Math.max(this.levelBounds.minZ + 0.5, ez - 2.5), Math.min(this.levelBounds.maxZ - 0.5, ez + 2.5), 'Zombie po nocnej zmianie — priorytet: stripsy');
+      }
+      this.spawnDroppedPerk(x, 0.5, z, 'kfc_bucket');
+    } else if (eventIndex === 1) {
+      sound.playSirens();
+      this.callbacks.onPerkDropBanner?.('🚨 NIEZAPOWIEDZIANA KONTROLA BHP!', '⛑️', 'Inspektor i dodatkowa pułapka. Kask nie jest wyposażeniem opcjonalnym.', '#38bdf8');
+      this.sayQuote('Inspektor BHP pyta, kto zatwierdził paletę jako schody ewakuacyjne. Wszyscy nagle nie znają kierownika.');
+      this.addInspectorEnemy('survival_inspector_' + stamp, x, Math.max(this.levelBounds.minZ + 1, z - 3), Math.min(this.levelBounds.maxZ - 1, z + 3), 'Inspektor BHP — kontrola bez kawy');
+      this.spawnDroppedPerk(px + 4, 0.5, pz, 'hardhat');
+      this.spawnSurvivalHazard();
+    } else if (eventIndex === 2) {
+      sound.playPickup(3);
+      this.doublePointsTimer = Math.max(this.doublePointsTimer, 20);
+      this.callbacks.onPerkDropBanner?.('💸 BLACK FRIDAY W SHOWROOMIE!', '🛁', 'Przez 20 sekund podwójne punkty. Klienci pytają, czy można dać jeszcze 80% rabatu.', '#10b981');
+      this.sayQuote('Rabat osiemdziesiąt procent, marża minus sto. Ktoś to zatwierdził, więc korzystaj!');
+      for (let i = 0; i < 4; i++) this.spawnSurvivalXpGem(x + (i - 1.5) * 1.6, 0.4, z + (i % 2 ? 1.4 : -1.4), 2);
+      this.spawnDroppedPerk(x + 3, 0.5, z, 'order_magnet');
+      this.addCustomerEnemy('survival_hunter_' + stamp, x - 8, Math.max(this.levelBounds.minZ + 1, z - 4), Math.min(this.levelBounds.maxZ - 1, z + 4), 'Klient polujący na rabat -80%');
+    } else if (eventIndex === 3) {
+      sound.playSirens();
+      this.callbacks.onPerkDropBanner?.('🤖 AWARIA SYSTEMU AGV!', '⚡', 'Roboty transportowe zgubiły trasę. Przetrwaj kontrolowany chaos i zbierz moduł drona.', '#22d3ee');
+      this.sayQuote('System AGV zgłosił błąd: paleta szuka magazyniera, magazynier szuka przerwy.');
+      this.addSerwisanciEnemy('survival_serwis_' + stamp, x, Math.max(this.levelBounds.minZ + 1, z - 4), Math.min(this.levelBounds.maxZ - 1, z + 4), 'Serwisant z kluczem 17');
+      this.addSztaplarEnemy('survival_sztaplar_' + stamp, THREE.MathUtils.clamp(px + 11, this.levelBounds.minX + 3, this.levelBounds.maxX - 3), Math.max(this.levelBounds.minZ + 1, pz - 3), Math.min(this.levelBounds.maxZ - 1, pz + 3), 'Operator paleciaka po trzeciej kawie');
+      this.addPiorunDronEnemy('survival_agv_' + stamp, x - 4, x + 4, z, 1.9, 'Dron Piorun — błędna trasa AGV');
+      this.spawnDroppedPerk(x + 2, 0.5, z, 'arc_drone');
+    } else {
+      sound.playPickup(2);
+      this.callbacks.onPerkDropBanner?.('📦 ZAGINIONA PALETA PREMIUM!', '🔎', 'Pan Roman zostawił tajemniczy ładunek. Skrzynia zawiera losowy moduł.', '#f59e0b');
+      this.sayQuote('Pan Roman przyjechał z dostawą. Dokument WZ ma cztery strony, ale żadnej strony tytułowej.');
+      this.addPanRomanEnemy('survival_roman_' + stamp, x, Math.max(this.levelBounds.minZ + 1, z - 4), Math.min(this.levelBounds.maxZ - 1, z + 4), 'Pan Roman — dostawa bez awiza');
+      this.spawnLootCrate(THREE.MathUtils.clamp(px + 5, this.levelBounds.minX + 3, this.levelBounds.maxX - 3), 0, THREE.MathUtils.clamp(pz + 3, this.levelBounds.minZ + 2, this.levelBounds.maxZ - 2));
     }
   }
 
@@ -3021,31 +3330,32 @@ export class MaxFlizGameEngine {
     const maxZ = THREE.MathUtils.clamp(z + 2.2, this.levelBounds.minZ + 0.5, this.levelBounds.maxZ - 0.5);
     const roll = Math.random();
 
-    if (wave < 3 || roll < 0.25) {
-      this.addZombieWorkerEnemy(id, x, minZ, maxZ, 'Zombie-Magazynier — głodny po nocnej zmianie');
-    } else if (wave < 5 || roll < 0.46) {
-      this.addKurierEnemy(id, x, minZ, maxZ, 'Kurier Ekspresowy — paczka bez awiza');
-    } else if (roll < 0.65) {
-      this.addMonterEnemy(id, x, minZ, maxZ, 'Monter Wiesław — poziomica w dłoni');
-    } else if (roll < 0.80) {
-      this.addInspectorEnemy(id, x, minZ, maxZ, 'Inspektor BHP — kontrola bez zapowiedzi');
-    } else if (roll < 0.91) {
-      this.addHandlowiecEnemy(id, x, minZ, maxZ, 'Handlowiec — oferta nie do odrzucenia');
-    } else {
-      this.addEliteGuardEnemy(id, x, minZ, maxZ, 'Elitarny strażnik sektora');
-    }
+    if (wave < 3 || roll < 0.16) this.addZombieWorkerEnemy(id, x, minZ, maxZ, 'Zombie-Magazynier — głodny po nocnej zmianie');
+    else if (roll < 0.29) this.addKurierEnemy(id, x, minZ, maxZ, 'Kurier Ekspresowy — paczka bez awiza');
+    else if (roll < 0.41) this.addMonterEnemy(id, x, minZ, maxZ, 'Monter Wiesław — poziomica w dłoni');
+    else if (roll < 0.52) this.addInspectorEnemy(id, x, minZ, maxZ, 'Inspektor BHP — kontrola bez zapowiedzi');
+    else if (roll < 0.63) this.addHandlowiecEnemy(id, x, minZ, maxZ, 'Handlowiec — oferta nie do odrzucenia');
+    else if (wave >= 3 && roll < 0.72) this.addCustomerEnemy(id, x, minZ, maxZ, 'Klient z reklamacją na 17 stron');
+    else if (wave >= 4 && roll < 0.79) this.addArchitectEnemy(id, x, x + 4.5, z, 'Architektka — odcień beżu numer 47');
+    else if (wave >= 5 && roll < 0.85) this.addItalianVendorEnemy(id, x, minZ, maxZ, 'Włoski dostawca armatury — mamma mia');
+    else if (wave >= 6 && roll < 0.90) this.addSerwisanciEnemy(id, x, minZ, maxZ, 'Serwisant — zgłoszenie numer 404');
+    else if (wave >= 7 && roll < 0.94) this.addPanRomanEnemy(id, x, minZ, maxZ, 'Pan Roman — dostawa bez awiza');
+    else if (wave >= 8 && roll < 0.975) this.addSztaplarEnemy(id, x, minZ, maxZ, 'Operator paleciaka — drift w alei B4');
+    else this.addEliteGuardEnemy(id, x, minZ, maxZ, 'Elitarny strażnik sektora');
 
     const enemy = this.enemies[this.enemies.length - 1];
     if (!enemy) return;
-    enemy.z = z;
-    enemy.startX = minZ;
-    enemy.endX = maxZ;
-    enemy.mesh.position.set(x, enemy.y, z);
-    const scaling = 1 + Math.min(2.6, Math.max(0, wave - 1) * 0.095);
+    if (enemy.type !== 'architect') {
+      enemy.z = z;
+      enemy.startX = minZ;
+      enemy.endX = maxZ;
+      enemy.mesh.position.set(x, enemy.y, z);
+    }
+    const scaling = 1 + Math.min(1.8, Math.max(0, wave - 1) * 0.07);
     enemy.maxHp = Math.max(1, Math.ceil(enemy.maxHp * scaling));
     enemy.hp = enemy.maxHp;
-    enemy.speed *= 1 + Math.min(0.60, Math.max(0, wave - 1) * 0.025);
-    enemy.shoutTimer = 1.0 + Math.random() * 3.0;
+    enemy.speed *= 0.80 * (1 + Math.min(0.34, Math.max(0, wave - 1) * 0.014));
+    enemy.shoutTimer = 2.0 + Math.random() * 4.0;
   }
 
   private spawnSurvivalBoss(wave: number) {
@@ -3058,9 +3368,9 @@ export class MaxFlizGameEngine {
     }
     const boss = this.enemies[this.enemies.length - 1];
     if (boss) {
-      boss.maxHp = Math.round(18 + wave * 2.0);
+      boss.maxHp = Math.round(20 + wave * 2.1);
       boss.hp = boss.maxHp;
-      boss.speed *= 1 + Math.min(0.65, wave * 0.015);
+      boss.speed *= 0.86 * (1 + Math.min(0.38, wave * 0.012));
       boss.startX = this.levelBounds.minX + 2.5;
       boss.endX = this.levelBounds.maxX - 2.5;
       boss.specialActionTimer = 2.0;
@@ -3076,15 +3386,7 @@ export class MaxFlizGameEngine {
   }
 
   private spawnSurvivalXpGem(x: number, y: number, z: number, value: number) {
-    const geometry = new THREE.OctahedronGeometry(0.20, 0);
-    const material = new THREE.MeshStandardMaterial({
-      color: 0x38bdf8,
-      emissive: 0x0284c7,
-      emissiveIntensity: 1.5,
-      metalness: 0.2,
-      roughness: 0.28,
-    });
-    const mesh = new THREE.Mesh(geometry, material);
+    const mesh = new THREE.Mesh(this.survivalXpGemGeometry, this.survivalXpGemMaterial);
     mesh.position.set(x, y + 0.8, z);
     mesh.castShadow = false;
     mesh.receiveShadow = false;
@@ -3112,23 +3414,20 @@ export class MaxFlizGameEngine {
       }
 
       if (distance < 1.25) {
-        this.survivalXp += gem.value;
-        this.score += gem.value * 12;
+        const xpValue = Math.max(1, Math.round(gem.value * this.survivalXpMultiplier * ((this.activePerks.xpSurge || 0) > 0 ? 1.5 : 1)));
+        this.survivalXp += xpValue;
+        this.score += xpValue * 12;
         this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
         sound.playPickup();
         this.levelRoot.remove(gem.mesh);
-        gem.mesh.geometry.dispose();
-        (gem.mesh.material as THREE.Material).dispose();
         this.survivalXpGems.splice(i, 1);
-        this.emitFloatingToast('+' + gem.value + ' XP', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
+        this.emitFloatingToast('+' + xpValue + ' XP', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
         if (this.survivalXp >= this.survivalXpToNext && this.state === 'playing') {
           this.beginSurvivalLevelUp();
           break;
         }
       } else if (gem.life <= 0) {
         this.levelRoot.remove(gem.mesh);
-        gem.mesh.geometry.dispose();
-        (gem.mesh.material as THREE.Material).dispose();
         this.survivalXpGems.splice(i, 1);
       }
     }
@@ -3138,20 +3437,8 @@ export class MaxFlizGameEngine {
     if (this.gameMode !== 'survival' || this.state !== 'playing') return;
     this.survivalXp -= this.survivalXpToNext;
     this.survivalLevel++;
-    this.survivalXpToNext = Math.round(6 + this.survivalLevel * 2.7);
-    const pool: SurvivalUpgradeOption[] = [
-      { id: 'damage', icon: '🎯', title: 'WZMOCNIONA AMUNICJA', description: '+20% obrażeń wszystkich ataków operatora.' },
-      { id: 'rapid', icon: '⚡', title: 'SZYBSZY ATAK', description: 'Skrócenie czasu między atakami o 12%.' },
-      { id: 'boots', icon: '👟', title: 'BUTY SPRINTU', description: '+10% prędkości poruszania się.' },
-      { id: 'magnet', icon: '🧲', title: 'MAGNES XP', description: 'Znacznie większy zasięg przyciągania kryształów XP.' },
-      { id: 'reinforced', icon: '⛑️', title: 'WZMOCNIONY KASK', description: '+1 maksymalny punkt zdrowia i natychmiastowe uzupełnienie.' },
-      { id: 'medkit', icon: '☕', title: 'ZESTAW RATUNKOWY', description: 'Odzyskaj 1 punkt zdrowia i aktywuj tarczę na jedno trafienie.' },
-    ];
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [pool[i], pool[j]] = [pool[j], pool[i]];
-    }
-    this.survivalPendingOptions = pool.slice(0, 3);
+    this.survivalXpToNext = Math.round(7 + this.survivalLevel * 2.2);
+    this.survivalPendingOptions = this.rollSurvivalUpgradeOptions();
     this.state = 'levelup';
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
     this.callbacks.onSurvivalLevelUp?.([...this.survivalPendingOptions]);
@@ -3237,6 +3524,11 @@ export class MaxFlizGameEngine {
       this.activePerks.bulldozer = Math.max(0, (this.activePerks.bulldozer || 0) - dt);
       changed = true;
     }
+    if ((this.activePerks.attackHaste || 0) > 0) { this.activePerks.attackHaste = Math.max(0, (this.activePerks.attackHaste || 0) - dt); changed = true; }
+    if ((this.activePerks.arcDrone || 0) > 0) { this.activePerks.arcDrone = Math.max(0, (this.activePerks.arcDrone || 0) - dt); changed = true; }
+    if ((this.activePerks.xpSurge || 0) > 0) { this.activePerks.xpSurge = Math.max(0, (this.activePerks.xpSurge || 0) - dt); changed = true; }
+    if ((this.activePerks.damageWard || 0) > 0) { this.activePerks.damageWard = Math.max(0, (this.activePerks.damageWard || 0) - dt); changed = true; }
+    if (this.armorBlockCooldown > 0) this.armorBlockCooldown = Math.max(0, this.armorBlockCooldown - dt);
     if (this.doublePointsTimer > 0) {
       this.doublePointsTimer = Math.max(0, this.doublePointsTimer - dt);
     }
@@ -4979,7 +5271,8 @@ export class MaxFlizGameEngine {
     const baseAttackCooldown =
       charId === 'mateusz' ? 0.24 : charId === 'grzesiek' ? 0.42 : charId === 'dawid' ? 0.36 : 0.32;
     this.attackCooldownTimer = baseAttackCooldown *
-      (this.gameMode === 'survival' ? this.survivalAttackRateMultiplier : 1);
+      (this.gameMode === 'survival' ? this.survivalAttackRateMultiplier : 1) *
+      ((this.activePerks.attackHaste || 0) > 0 ? 0.72 : 1);
     this.attackSwingTimer = 0.26;
 
     sound.playAttackWhoosh();
@@ -5631,6 +5924,10 @@ export class MaxFlizGameEngine {
     if (this.gameMode === 'survival') {
       this.survivalKills++;
       this.spawnSurvivalXpGem(e.x, e.y, e.z, e.maxHp >= 4 ? 3 : 1);
+      if (this.survivalKills % 8 === 0) {
+        this.spawnParticleRing(e.x, e.y + 0.7, e.z, 0x38bdf8);
+        this.emitFloatingToast('📦 NORMA ZMIANY WYROBIONA x8!', e.x, e.y + 1.8, e.z, 'combo');
+      }
     }
 
     if (showToast) {
@@ -5665,9 +5962,18 @@ export class MaxFlizGameEngine {
         : isBossReward
           ? 1.0
           : 0.48;
+    const finalDropChance = this.gameMode === 'survival'
+      ? (isSurvivalEliteReward ? 1.0 : Math.min(0.55, dropChance * this.survivalDropMultiplier))
+      : dropChance;
 
-    if (Math.random() <= dropChance) {
+    if (Math.random() <= finalDropChance) {
       this.spawnDroppedPerk(e.x, e.y + 0.1, e.z);
+    }
+
+    if (this.gameMode === 'survival' && (e.type === 'walczak' || e.type === 'krol_leto')) {
+      this.spawnLootCrate(e.x + 1.2, 0, e.z);
+      this.spawnSurvivalXpGem(e.x, e.y, e.z, 8);
+      this.emitFloatingToast('🏆 SKRZYNIA Z NAGRODĄ BOSS-A!', e.x, e.y + 2.0, e.z, 'combo');
     }
 
     if (e.type === 'walczak' || e.maxHp >= 4) {
@@ -5699,6 +6005,15 @@ export class MaxFlizGameEngine {
 
     if (this.marcinReclamationTimer > 0) {
       this.triggerScreenShake(0.2, 0.2);
+      return;
+    }
+
+    if ((this.activePerks.damageWard || 0) > 0 && this.armorBlockCooldown <= 0) {
+      this.armorBlockCooldown = 2.4;
+      this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.9, this.playerPos.z, 0x84cc16);
+      this.emitFloatingToast('🪵 PALETA EURO ZABLOKOWAŁA UDERZENIE!', this.playerPos.x, this.playerPos.y + 1.4, this.playerPos.z, 'perk');
+      sound.playShieldBreak();
+      this.triggerScreenShake(0.22, 0.18);
       return;
     }
 
@@ -6066,6 +6381,22 @@ export class MaxFlizGameEngine {
       this.invulnerableTimer = Math.max(this.invulnerableTimer, duration);
       sound.playPerkPickup();
       this.sayQuote('ZBROJA Z CZARNEJ FOLII STRETCH VIP! 10 sekund całkowitej nietykalności!');
+    } else if (perkId === 'attack_haste') {
+      this.activePerks.attackHaste = Math.max(this.activePerks.attackHaste || 0, duration);
+      sound.playPerkPickup();
+      this.sayQuote('Skaner w trybie turbo. Wreszcie ktoś tutaj pracuje szybciej niż drukarka etykiet.');
+    } else if (perkId === 'arc_drone') {
+      this.activePerks.arcDrone = Math.max(this.activePerks.arcDrone || 0, duration);
+      sound.playElectricalSparks();
+      this.sayQuote('Dron Piorun dołącza do zmiany. Tym razem nie zgubił ładowarki.');
+    } else if (perkId === 'xp_surge') {
+      this.activePerks.xpSurge = Math.max(this.activePerks.xpSurge || 0, duration);
+      sound.playPerkPickup();
+      this.sayQuote('Premia za normę naliczona. Dział kadr potwierdza, że to nie pomyłka.');
+    } else if (perkId === 'damage_ward') {
+      this.activePerks.damageWard = Math.max(this.activePerks.damageWard || 0, duration);
+      sound.playShieldBreak();
+      this.sayQuote('Paleta EURO klasy A. Wreszcie coś w tym magazynie ma certyfikat.');
     }
 
     this.callbacks.onPerksUpdate?.(this.activePerks);
