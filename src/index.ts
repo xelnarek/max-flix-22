@@ -157,19 +157,15 @@ class MaxFlizScene extends xb.Script {
     let globalLastDialogueTime = 0;
 
     const createDialogueCard = (text: string, speakerType: string, side: 'left' | 'right' = 'right') => {
-      const containerId = side === 'left' ? 'dialogue-container-left' : 'dialogue-container-right';
-      const containerElem = document.getElementById(containerId);
+      const containerElem = document.getElementById('dialogue-container-top');
       if (!containerElem) return;
 
       const now = Date.now();
       // Anti-spam: enforce global cooldown so dialogues don't stack and clutter the screen
-      if (now - globalLastDialogueTime < 3800) return;
+      if (now - globalLastDialogueTime < 2600) return;
       globalLastDialogueTime = now;
 
-      const leftContainer = document.getElementById('dialogue-container-left');
-      const rightContainer = document.getElementById('dialogue-container-right');
-      if (leftContainer) leftContainer.innerHTML = '';
-      if (rightContainer) rightContainer.innerHTML = '';
+      containerElem.innerHTML = '';
 
       const card = document.createElement('div');
       const isHero = side === 'left';
@@ -193,8 +189,8 @@ class MaxFlizScene extends xb.Script {
         card.classList.add('fading-out');
         setTimeout(() => {
           if (card.parentElement === containerElem) card.remove();
-        }, 400);
-      }, 4500);
+        }, 300);
+      }, 2600);
     };
 
     const getHeroMeta = () => {
@@ -1187,20 +1183,20 @@ class MaxFlizScene extends xb.Script {
     const joystickKnob = document.getElementById('joystick-knob');
     if (!joystickZone || !joystickBase || !joystickKnob) return;
 
-    let touchId: number | null = null;
+    let activePointerId: number | string | null = null;
     let startX = 0;
     let startY = 0;
-    const maxRadius = 50;
+    const maxRadius = 52;
 
     const resetJoystick = () => {
-      touchId = null;
+      activePointerId = null;
       joystickBase.classList.remove('active');
       joystickKnob.style.transform = 'translate(0px, 0px)';
       this.engine.setVirtualInput(0, 0);
     };
 
-    const handleStart = (clientX: number, clientY: number, id: number) => {
-      touchId = id;
+    const handleStart = (clientX: number, clientY: number, id: number | string) => {
+      activePointerId = id;
       startX = clientX;
       startY = clientY;
 
@@ -1222,23 +1218,24 @@ class MaxFlizScene extends xb.Script {
       const ny = Math.sin(angle) * clampedDist;
 
       joystickKnob.style.transform = `translate(${nx.toFixed(1)}px, ${ny.toFixed(1)}px)`;
+      // Normalize virtual input [-1 .. +1]
       this.engine.setVirtualInput(nx / maxRadius, ny / maxRadius);
     };
 
     const onTouchStart = (e: TouchEvent) => {
-      if (touchId !== null) return;
+      if (activePointerId !== null) return;
       if (e.changedTouches.length > 0) {
         const touch = e.changedTouches[0];
-        handleStart(touch.clientX, touch.clientY, touch.identifier);
+        handleStart(touch.clientX, touch.clientY, `touch_${touch.identifier}`);
         if (e.cancelable) e.preventDefault();
       }
     };
 
     const onTouchMove = (e: TouchEvent) => {
-      if (touchId === null) return;
+      if (activePointerId === null) return;
       for (let i = 0; i < e.touches.length; i++) {
         const touch = e.touches[i];
-        if (touch.identifier === touchId) {
+        if (`touch_${touch.identifier}` === activePointerId) {
           handleMove(touch.clientX, touch.clientY);
           if (e.cancelable) e.preventDefault();
           break;
@@ -1247,10 +1244,10 @@ class MaxFlizScene extends xb.Script {
     };
 
     const onTouchEnd = (e: TouchEvent) => {
-      if (touchId === null) return;
+      if (activePointerId === null) return;
       let stillActive = false;
       for (let i = 0; i < e.touches.length; i++) {
-        if (e.touches[i].identifier === touchId) {
+        if (`touch_${e.touches[i].identifier}` === activePointerId) {
           stillActive = true;
           break;
         }
@@ -1260,24 +1257,21 @@ class MaxFlizScene extends xb.Script {
       }
     };
 
-    // Pointer events fallback for mouse / simulated touch in emulator
+    // Pointer events fallback for mouse & pointer-based mobile browsers
     const onPointerDown = (e: PointerEvent) => {
-      if (e.pointerType === 'touch') return; // Handled by TouchEvents
-      if (touchId !== null) return;
-      handleStart(e.clientX, e.clientY, e.pointerId);
+      if (activePointerId !== null) return;
+      handleStart(e.clientX, e.clientY, `ptr_${e.pointerId}`);
       if (e.cancelable) e.preventDefault();
     };
 
     const onPointerMove = (e: PointerEvent) => {
-      if (e.pointerType === 'touch') return;
-      if (touchId === null || e.pointerId !== touchId) return;
+      if (activePointerId === null || `ptr_${e.pointerId}` !== activePointerId) return;
       handleMove(e.clientX, e.clientY);
       if (e.cancelable) e.preventDefault();
     };
 
     const onPointerUp = (e: PointerEvent) => {
-      if (e.pointerType === 'touch') return;
-      if (touchId !== null && e.pointerId === touchId) {
+      if (activePointerId !== null && `ptr_${e.pointerId}` === activePointerId) {
         resetJoystick();
       }
     };
@@ -1299,7 +1293,7 @@ class MaxFlizScene extends xb.Script {
       let lastTrigger = 0;
       const trigger = (e: Event) => {
         const now = Date.now();
-        if (now - lastTrigger < 120) return;
+        if (now - lastTrigger < 90) return;
         lastTrigger = now;
         if (e.cancelable) e.preventDefault();
         e.stopPropagation();
@@ -1600,7 +1594,7 @@ async function startApp() {
         r.toneMapping = THREE.ACESFilmicToneMapping;
         r.toneMappingExposure = 1.15;
         r.shadowMap.enabled = true;
-        r.shadowMap.type = THREE.PCFSoftShadowMap;
+        r.shadowMap.type = isMobileDevice ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
       }
 
       // PERSISTENT BACKGROUND ENFORCEMENT: Fight simulator environment default (trees/living room)

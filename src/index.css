@@ -3024,4 +3024,18 @@ body {
   font-size: 10px;
 }
 
+/* RIGHT SIDE ACTIVE PERKS PANEL (Vampire Survivors Style Stack) */
+.hud-perks-right-panel {
+  position: fixed;
+  right: 14px;
+  top: 72px;
+  z-index: 550;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  pointer-events: none;
+}
+
+
 

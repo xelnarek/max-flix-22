@@ -259,7 +259,7 @@ export class MaxFlizGameEngine {
   private screenShakeDuration = 0;
   private screenShakeIntensity = 0;
   private screenShakeTimer = 0;
-  private cameraMode: 'tpp' | 'close' | 'iso' = 'tpp';
+  private cameraMode: 'tpp' | 'close' | 'iso' = 'iso';
   private camZoomFactor = 1.0;
   private minimapZoomScale = 3.5;
   private minimapVisible = true;
@@ -267,7 +267,7 @@ export class MaxFlizGameEngine {
   private finishGatePos = new THREE.Vector3(30, 0, 0);
   private smoothCamY = 0.5;
   // Tactical Elevated camera default (~45° isometric/tactical perspective like Hades/Brawl Stars)
-  private currentCamOffset = new THREE.Vector3(-2.8, 9.8, 9.2);
+  private currentCamOffset = new THREE.Vector3(0.0, 16.5, 13.5);
   private currentLookAt = new THREE.Vector3(0, 1.2, 0);
   private bossCamZoom = 1.0;
   private finishWarningTimer = 0;
@@ -290,10 +290,10 @@ export class MaxFlizGameEngine {
   private globalEnemyShoutCooldown = 0;
 
   public getPacingFactor(): number {
-    if (this.state !== 'playing' || this.levelStartTime <= 0) return 0.65;
+    if (this.state !== 'playing' || this.levelStartTime <= 0) return 0.50;
     const elapsedSec = (performance.now() - this.levelStartTime) / 1000;
-    // Starts at 0.65 (65% speed) and linearly scales up to 1.0 (100% speed) over 90 seconds
-    return Math.min(1.0, 0.65 + (elapsedSec / 90) * 0.35);
+    // Starts at 0.50 (50% speed) and linearly scales up to 1.0 (100% speed) over 150 seconds (Vampire Survivors style pacing)
+    return Math.min(1.0, 0.50 + (elapsedSec / 150) * 0.50);
   }
 
   public triggerBloomPulse(durationSec = 0.3) {
@@ -865,7 +865,7 @@ export class MaxFlizGameEngine {
     this.glueSlowTimer = 0;
     this.attackComboStep = 0;
     this.bulldozerHitCooldowns.clear();
-    this.cameraMode = 'tpp';
+    this.cameraMode = 'iso';
     this.applyAutoCameraScaleForViewport();
 
     this.callbacks.onPerksUpdate?.(this.activePerks);
