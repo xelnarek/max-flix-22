@@ -3130,40 +3130,6 @@ export class MaxFlizGameEngine {
     }
   }
 
-  private disposeTemporaryObject(object: THREE.Object3D) {
-    const geometries = new Set<THREE.BufferGeometry>();
-    const materials = new Set<THREE.Material>();
-    object.traverse((child) => {
-      const mesh = child as THREE.Mesh;
-      if (mesh.geometry) geometries.add(mesh.geometry);
-      const material = mesh.material;
-      if (Array.isArray(material)) material.forEach((entry) => materials.add(entry));
-      else if (material) materials.add(material);
-    });
-    geometries.forEach((geometry) => geometry.dispose());
-    materials.forEach((material) => material.dispose());
-  }
-
-  private updateSurvivalDrone(dt: number) {
-    if (this.gameMode !== 'survival' || (this.activePerks.arcDrone || 0) <= 0) return;
-    this.survivalDroneCooldown -= dt;
-    if (this.survivalDroneCooldown > 0) return;
-    this.survivalDroneCooldown = 1.65;
-    let target: EnemyItem | null = null;
-    let nearest = 12;
-    for (const enemy of this.enemies) {
-      if (enemy.state === 'defeated' || !enemy.mesh) continue;
-      const distance = Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z);
-      if (distance < nearest) { nearest = distance; target = enemy; }
-    }
-    if (!target) return;
-    target.hp -= 1;
-    this.spawnParticleRing(target.x, target.y + 0.6, target.z, 0x22d3ee);
-    this.emitFloatingToast('⚡ DRON PIORUN: IMPULS!', target.x, target.y + 1.25, target.z, 'perk');
-    sound.playElectricalSparks();
-    if (target.hp <= 0) this.defeatEnemy(target, 180, true);
-  }
-
   private updateSurvivalEvents(dt: number) {
     // Temporary Survival traps expire and release their mesh resources.
     for (let i = this.hazards.length - 1; i >= 0; i--) {
