@@ -3039,3 +3039,207 @@ body {
 
 
 
+
+
+/* --------------------------------------------------------------------------
+   MOBILE RESPONSIVE PASS — safe areas, viewport changes and touch ergonomics
+   Keeps the campaign HUD and existing game controls intact.
+   -------------------------------------------------------------------------- */
+html,
+body {
+  min-width: 320px;
+  min-height: 100%;
+  -webkit-text-size-adjust: 100%;
+  touch-action: pan-y;
+}
+
+#game-canvas-container,
+#game-canvas-container canvas {
+  touch-action: none;
+}
+
+#game-shell {
+  min-height: 100%;
+  min-height: 100dvh;
+  overflow: clip;
+}
+
+.game-screen {
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+.title-screen,
+#title-screen,
+#pause-modal,
+#victory-modal,
+#gameover-modal {
+  padding-top: max(12px, env(safe-area-inset-top));
+  padding-right: max(12px, env(safe-area-inset-right));
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  padding-left: max(12px, env(safe-area-inset-left));
+}
+
+.title-sheet {
+  max-width: min(100%, 1180px);
+  max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+button,
+[role="button"],
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+@media (max-width: 900px), (pointer: coarse) {
+  #hud-top {
+    padding-top: max(8px, env(safe-area-inset-top));
+    padding-left: max(8px, env(safe-area-inset-left));
+    padding-right: max(8px, env(safe-area-inset-right));
+  }
+
+  .joystick-zone {
+    width: min(48vw, 260px) !important;
+    height: min(42dvh, 300px) !important;
+    bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    left: max(6px, env(safe-area-inset-left)) !important;
+  }
+
+  .joystick-base {
+    width: clamp(104px, 18vw, 138px);
+    height: clamp(104px, 18vw, 138px);
+  }
+
+  .touch-actions-zone {
+    right: max(12px, env(safe-area-inset-right)) !important;
+    bottom: max(12px, env(safe-area-inset-bottom)) !important;
+    gap: clamp(8px, 2vw, 14px);
+  }
+
+  .touch-action-btn {
+    min-width: 62px;
+    min-height: 62px;
+    width: clamp(62px, 13vw, 82px);
+    height: clamp(62px, 13vw, 82px);
+    font-size: clamp(10px, 2.6vw, 13px);
+  }
+
+  .hero-badge {
+    max-width: min(48vw, 250px);
+    padding: 5px 9px;
+  }
+
+  .hero-name {
+    font-size: clamp(11px, 3vw, 14px);
+  }
+
+  .stat-pill {
+    min-width: 0;
+    padding: 5px 7px;
+    gap: 4px;
+  }
+
+  .stat-label {
+    display: none;
+  }
+
+  .dialogue-side-container {
+    top: calc(58px + env(safe-area-inset-top));
+    width: min(42vw, 190px);
+  }
+
+  #fps-badge {
+    right: max(8px, env(safe-area-inset-right));
+    bottom: max(8px, env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 600px) {
+  .title-sheet {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 18px;
+  }
+
+  .menu-tabs-bar {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .menu-tabs-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .menu-tab-btn {
+    flex: 0 0 auto;
+  }
+
+  #hud-top .top-right {
+    max-width: 54vw;
+  }
+
+  .hud-top-quick-controls {
+    gap: 4px;
+  }
+
+  .cam-zoom-slider-container {
+    display: none;
+  }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  #hud-top {
+    padding-top: max(4px, env(safe-area-inset-top));
+    padding-bottom: 2px;
+  }
+
+  .hero-avatar {
+    width: 26px;
+    height: 26px;
+    font-size: 18px;
+  }
+
+  .joystick-zone {
+    height: 54dvh !important;
+  }
+
+  .joystick-base {
+    width: 92px;
+    height: 92px;
+  }
+
+  .touch-action-btn {
+    min-width: 54px;
+    min-height: 54px;
+    width: 54px;
+    height: 54px;
+  }
+
+  .title-sheet {
+    max-height: calc(100dvh - 12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-sheet,
+  .menu-tab-btn,
+  .touch-action-btn {
+    scroll-behavior: auto;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
