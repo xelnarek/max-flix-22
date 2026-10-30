@@ -877,6 +877,7 @@ export class MaxFlizGameEngine {
   public startGame(levelId = 1) {
     this.gameMode = 'campaign';
     this.state = 'playing';
+    this.maxHp = 3;
     this.hp = this.maxHp;
     this.score = 0;
     this.comboStreak = 0;
