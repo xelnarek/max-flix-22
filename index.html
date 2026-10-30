@@ -214,7 +214,6 @@
         <div class="survival-chip survival-xp-chip"><span class="survival-chip-label">DOŚWIADCZENIE</span><strong id="survival-xp">0 / 6 XP</strong><span class="survival-xp-track"><span id="survival-xp-fill"></span></span></div>
         <div class="survival-chip"><span class="survival-chip-label">ELIMINACJE</span><strong id="survival-kills">0</strong></div>
         <div class="survival-chip"><span class="survival-chip-label">WROGOWIE</span><strong id="survival-enemies">0</strong></div>
-        <div class="survival-weapon-rack"><span class="survival-weapon-rack-label">ARSENAŁ</span><div id="survival-weapons-list" class="survival-weapons-list"><span class="survival-weapon-chip starter">🥊 Broń operatora • start</span></div></div>
       </div>
 
       <div id="survival-levelup" class="game-modal hidden survival-levelup-modal">
@@ -433,7 +432,7 @@
                   <span class="megamap-tag">POŁĄCZONY KOMPLEKS 240M</span>
                   <span class="megamap-title">ZINTEGROWANA MEGA-MAPA MAX-FLIZ (3 SEKTORY W 1 ŚWIECIE)</span>
                 </div>
-                <p class="megamap-banner-sub">Kompleks jest jednym światem, ale przejścia są blokowane. Sektor B otwiera się po pokonaniu Bosmana Kraków w A. Sektor C otwiera się po pokonaniu Króla-Leto w B. W finale pokonaj Walczaka i Króla-Leto oraz zbierz wymagane zamówienia VIP, zanim dojdziesz do vana. Odblokowane checkpointy zostają zapisane.</p>
+                <p class="megamap-banner-sub">Wszystkie trzy sektory tworzą jedną ciągłą mapę bez ekranów ładowania! Przebiegnij przez bramy transferowe od Sektora A aż do vana w Sektorze C lub wybierz sektor startowy (Punkt Kontrolny) poniżej:</p>
                 <div class="megamap-route-flow">
                   <div class="route-node">SEKTOR A: LOGISTYKA B4</div>
                   <div class="route-arrow">➔</div>
@@ -451,7 +450,7 @@
                       <div class="zone-title">Sektor A: Magazyn Logistyki B4 (Start Główny • 0m – 72m)</div>
                       <span class="zone-checkpoint-pill">START DOMYŚLNY</span>
                     </div>
-                    <div class="zone-desc">Start kampanii. Pokonaj Bosmana Kraków, aby wyłączyć blokadę bramy B i otworzyć checkpoint Showroomu SPA. Samo dojście do bramy nie wystarczy.</div>
+                    <div class="zone-desc">Rozpocznij zmianę od pierwszej alei gresu Calacatta, omiń sztaplarkę Zdzicha, zbierz zamówienia VIP na kładkach i przebij się przez otwartą bramę transferową prosto do Showroomu!</div>
                   </div>
                 </div>
 
@@ -460,9 +459,9 @@
                   <div class="zone-info">
                     <div class="zone-header-row">
                       <div class="zone-title">Sektor B: Showroom & Wanny SPA (Punkt Kontrolny • 72m – 152m)</div>
-                      <span class="zone-checkpoint-pill">ZAMKNIĘTY • POKONAJ BOSMANA</span>
+                      <span class="zone-checkpoint-pill">CHECKPOINT 2</span>
                     </div>
-                    <div class="zone-desc">Checkpoint dostępny po pokonaniu Bosmana w sektorze A. Pokonaj Króla-Leto w Showroomie, aby otworzyć przejście do Terminala VIP.</div>
+                    <div class="zone-desc">Rozpocznij bezpośrednio w luksusowym salonie marmuru! Wybijaj się z wanien wolnostojących na antresole, pokonaj Króla-Leto i przejdź przez bramę prosto do Terminala Przeładunkowego.</div>
                   </div>
                 </div>
 
@@ -471,9 +470,9 @@
                   <div class="zone-info">
                     <div class="zone-header-row">
                       <div class="zone-title">Sektor C: Terminal Przeładunkowy VIP (Finał • 152m – 242m)</div>
-                      <span class="zone-checkpoint-pill">ZAMKNIĘTY • POKONAJ KRÓLA-LETO</span>
+                      <span class="zone-checkpoint-pill">CHECKPOINT 3</span>
                     </div>
-                    <div class="zone-desc">Checkpoint dostępny po pokonaniu Króla-Leto w sektorze B. Finał wymaga pokonania Walczaka i Króla-Leto oraz zebrania wymaganych paczek VIP.</div>
+                    <div class="zone-desc">Ostatni sektor kompleksu! Trzypiętrowe regały wysokiego składowania, pędzące wózki widłowe i ostateczne starcie z Byłym Kierownikiem Walczakiem przed rampą firmowego vana!</div>
                   </div>
                 </div>
               </div>
@@ -713,12 +712,11 @@
 
               <section class="field-guide-section">
                 <div class="field-guide-section-head"><span class="field-guide-index">01</span><div><h3>DWA TRYBY • JEDEN KOMPLEKS</h3><p>Kampania prowadzi przez historię i trzy sektory. Survival Shift jest osobną areną, w której rozwijasz build i próbujesz wytrzymać jak najdłużej.</p></div></div>
-                <div class="field-guide-card-grid three-col">
+                <div class="field-guide-card-grid two-col">
                   <article class="field-guide-card"><span class="field-guide-icon">🗺️</span><h4>KAMPANIA • MEGA-MAPA</h4><p>Trzy połączone sektory bez ekranów ładowania: Magazyn B4, Showroom & SPA i Terminal VIP. Zbieraj zamówienia, zaliczaj checkpointy i pokonuj bossów, aby doprowadzić dostawę do końca.</p><small>CEL: DOSTAWA VIP • EKSPLORACJA • BOSSOWIE</small></article>
-                  <article class="field-guide-card"><span class="field-guide-icon">⚔️</span><h4>SURVIVAL SHIFT • ROGUELITE</h4><p>Samodzielna arena, fale co 60 sekund i automatyczne namierzanie. Ataki mają niezależne, długie przeładowania. Co 5 fal pojawia się boss; co 10 fal jest nim Król-Leto. Boss zostawia skrzynię z łupem i dodatkowe XP.</p><small>CEL: PRZETRWAJ • ZBIERAJ XP • SKŁADAJ BUILD</small></article>
-                  <article class="field-guide-card"><span class="field-guide-icon">🔫</span><h4>ARSENAŁ • 5 BRONI AUTONOMICZNYCH</h4><p>Działo paletowe (wybuch), Tarcza diamentowa (przebicie), Mina Mapei (spowolnienie), Kubełek bombowy (ogień) i Dron Piorun (naprowadzanie). Każda broń ma własny, długi cooldown. Poziomy 1–5 poprawiają rytm stopniowo; ewolucja pojawia się dopiero po 5 minutach i maksymalnym poziomie broni.</p><small>TAKTYKA: DOBIERAJ WZORY ATAKU, NIE TYLKO SUROWE OBRAŻENIA</small></article>
+                  <article class="field-guide-card"><span class="field-guide-icon">⚔️</span><h4>SURVIVAL SHIFT • ROGUELITE</h4><p>Samodzielna arena, fale co 42 sekundy i automatyczne namierzanie najbliższego wroga. Co 5 fal pojawia się boss; co 10 fal jest nim Król-Leto. Boss zostawia skrzynię z łupem i dodatkowe XP.</p><small>CEL: PRZETRWAJ • ZBIERAJ XP • SKŁADAJ BUILD</small></article>
                 </div>
-                <div class="field-guide-callout"><strong>Tempo i czytelność:</strong> fale przychodzą co 60 sekund, liczebność grup i limit przeciwników są ograniczone. Maksymalnie 14 aktywnych przeciwników na urządzeniach mobilnych i 22 na desktopie. Im dalej w zmianę, tym bardziej wytrzymali są wrogowie.</div>
+                <div class="field-guide-callout"><strong>Tempo i czytelność:</strong> początek Survival jest wolniejszy, a tempo narasta stopniowo. Grupy i spawn są ograniczone. Limit aktywnych przeciwników wynosi 24 na urządzeniach mobilnych i 36 na desktopie.</div>
               </section>
 
               <section class="field-guide-section">
@@ -954,7 +952,7 @@
               <div class="story-slide-icon retro-3d-icon">🧟⚡📦</div>
               <div class="story-slide-title">Hala Żyje. Zmiana Nie Ma Końca.</div>
               <div class="story-slide-text">
-                Survival Shift jest osobnym trybem roguelite. Co 60 sekund nadchodzi kolejna fala, co piątą falę wchodzi boss, a co dziesiątą Król-Leto. Na arenie pojawiają się cztery rodzaje pułapek i pięć wydarzeń: alarm KFC, kontrola BHP, Black Friday, awaria AGV oraz zaginiona paleta Pana Romana. Zbieraj kryształy XP, wybieraj moduły rozwoju i odblokowuj pięć broni: Działo paletowe, Tarczę diamentową, Minę Mapei, Kubełek bombowy i Drona Piorun. Każda strzela niezależnie, ale początkowo bardzo rzadko. Broń rozwijasz do poziomu 5; po 5 minutach zmiany może pojawić się jej rzadka ewolucja. Łącz też cztery ewolucje buildów i wypatruj sekretów. Pamiętaj: dron po Twojej stronie to asysta, a dron z czerwonym znacznikiem to problem. I nie ufaj paleciakowi — on też nie ufa Tobie.
+                Survival Shift jest osobnym trybem roguelite. Co 42 sekundy nadchodzi kolejna fala, co piątą falę wchodzi boss, a co dziesiątą Król-Leto. Na arenie pojawiają się cztery rodzaje pułapek i pięć wydarzeń: alarm KFC, kontrola BHP, Black Friday, awaria AGV oraz zaginiona paleta Pana Romana. Zbieraj kryształy XP, wybieraj moduły rozwoju, łącz je w cztery ewolucje buildów i wypatruj sekretów. Pamiętaj: dron po Twojej stronie to asysta, a dron z czerwonym znacznikiem to problem. I nie ufaj paleciakowi — on też nie ufa Tobie.
               </div>
             </div>
             </div>

@@ -845,7 +845,7 @@ export class IntroCutsceneManager {
       },
       {
         badge: '⚔️ EKIPA MAX-FLIZ • SURVIVAL SHIFT',
-        text: '“Dostawa zabezpieczona, ale syrena już wyje! Fale co 60 sekund, bossowie, pułapki i pięć eventów. Zbieraj XP, łącz moduły w ewolucje i nie daj się Walczakowi!”',
+        text: '“Dostawa zabezpieczona, ale syrena już wyje! Fale co 42 sekundy, bossowie, pułapki i pięć eventów. Zbieraj XP, łącz moduły w ewolucje i nie daj się Walczakowi!”',
       },
     ];
 

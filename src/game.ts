@@ -520,7 +520,6 @@ export class MaxFlizGameEngine {
     boomerang?: boolean;
     returning?: boolean;
     homing?: boolean;
-    weaponProjectile?: boolean;
     aoeRadius?: number;
     stunDuration?: number;
     slowOnHit?: boolean;
@@ -676,7 +675,7 @@ export class MaxFlizGameEngine {
     this.rimLight.position.set(-16, 10, -14);
     this.scene.add(this.rimLight);
 
-    this.scene.fog = new THREE.Fog(0x091827, 34, 125);
+    this.scene.fog = new THREE.Fog(0x091827, 20, 85);
 
     // Depth-of-Field Background Blur Shader Overlay attached to Camera
     const dofMat = new THREE.ShaderMaterial({
@@ -1260,18 +1259,6 @@ export class MaxFlizGameEngine {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
-    // Guaranteed new-weapon offer while the arsenal is still incomplete.
-    // This avoids a long string of stat-only level-ups before the player gets a build identity.
-    const newWeaponOffer = pool.find((option) => option.id.startsWith('weapon_unlock:'));
-    if (newWeaponOffer) {
-      const remaining = pool.filter((option) => option.id !== newWeaponOffer.id);
-      return [newWeaponOffer, ...remaining.slice(0, 2)];
-    }
-    const weaponProgressOffer = pool.find((option) => option.id.startsWith('weapon_'));
-    if (weaponProgressOffer) {
-      const remaining = pool.filter((option) => option.id !== weaponProgressOffer.id);
-      return [weaponProgressOffer, ...remaining.slice(0, 2)];
-    }
     return pool.slice(0, 3);
   }
 
@@ -1350,9 +1337,6 @@ export class MaxFlizGameEngine {
     this.threatTier = 0;
     this.enemyProjectiles = [];
     this.particles = [];
-    for (const projectile of this.projectiles) {
-      if (projectile.weaponProjectile) this.disposeTemporaryObject(projectile.mesh);
-    }
     this.projectiles = [];
     this.specialEffects = [];
     this.bimberMolotovs = [];
@@ -1411,7 +1395,7 @@ export class MaxFlizGameEngine {
     const postMaterial = new THREE.MeshStandardMaterial({ color: 0x17283a, metalness: 0.72, roughness: 0.28, emissive: accent, emissiveIntensity: 0.18 });
     const fieldMaterial = new THREE.MeshStandardMaterial({ color: accent, emissive: accent, emissiveIntensity: 0.85, transparent: true, opacity: 0.23, roughness: 0.2, metalness: 0.3, side: THREE.DoubleSide });
     const postGeometry = new THREE.BoxGeometry(0.72, 5.2, 0.8);
-    for (const z of [-15.3, 15.3]) {
+    for (const z of [-8.1, 8.1]) {
       const post = new THREE.Mesh(postGeometry, postMaterial);
       post.position.set(0, 2.6, z);
       group.add(post);
@@ -1419,10 +1403,10 @@ export class MaxFlizGameEngine {
       beacon.position.set(0, 4.5, z);
       group.add(beacon);
     }
-    const barrier = new THREE.Mesh(new THREE.BoxGeometry(0.20, 4.4, 30.6), fieldMaterial);
+    const barrier = new THREE.Mesh(new THREE.BoxGeometry(0.20, 4.4, 16.0), fieldMaterial);
     barrier.position.set(0, 2.2, 0);
     group.add(barrier);
-    const lintel = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.45, 31.6), postMaterial);
+    const lintel = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.45, 17.2), postMaterial);
     lintel.position.set(0, 5.1, 0);
     group.add(lintel);
     group.position.x = x;
@@ -3252,12 +3236,11 @@ export class MaxFlizGameEngine {
     });
     const projectile: {
       mesh: THREE.Object3D; vel: THREE.Vector3; life: number; maxLife: number; damage: number;
-      pierce?: number; homing?: boolean; weaponProjectile?: boolean; aoeRadius?: number; slowOnHit?: boolean;
+      pierce?: number; homing?: boolean; aoeRadius?: number; slowOnHit?: boolean;
       igniteOnHit?: boolean; spinSpeed?: number; hitIds: Set<string>;
     } = {
-      mesh: new THREE.Group(),
+      mesh: new THREE.Mesh(new THREE.IcosahedronGeometry(0.28 + weapon.level * 0.025, 1), material),
       vel: direction.clone().multiplyScalar(10.5), life: 2.8, maxLife: 2.8, damage, hitIds: new Set<string>(),
-      weaponProjectile: true,
     };
     switch (weapon.id) {
       case 'pallet_cannon':
@@ -3299,7 +3282,7 @@ export class MaxFlizGameEngine {
         break;
     }
     projectile.mesh.position.copy(start);
-    (projectile.mesh as THREE.Mesh).castShadow = false;
+    projectile.mesh.castShadow = false;
     this.levelRoot.add(projectile.mesh);
     this.projectiles.push(projectile);
     this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.85, this.playerPos.z, definition.color);
@@ -3770,9 +3753,16 @@ export class MaxFlizGameEngine {
       screenY = -this.virtualJoystick.y;
     }
 
-    // Stable world-axis movement: keyboard and joystick do not rotate when the camera mode changes.
-    let inputX = screenX;
-    let inputZ = -screenY;
+    const camToPlayerX = this.playerPos.x - this.camera.position.x;
+    const camToPlayerZ = this.playerPos.z - this.camera.position.z;
+    const camFwdLen = Math.hypot(camToPlayerX, camToPlayerZ);
+    const fwdX = camFwdLen > 0.001 ? camToPlayerX / camFwdLen : 0;
+    const fwdZ = camFwdLen > 0.001 ? camToPlayerZ / camFwdLen : -1;
+    const rightX = -fwdZ;
+    const rightZ = fwdX;
+
+    let inputX = rightX * screenX + fwdX * screenY;
+    let inputZ = rightZ * screenX + fwdZ * screenY;
 
     const inputLen = Math.hypot(inputX, inputZ);
     if (inputLen > 1) {
@@ -3787,22 +3777,22 @@ export class MaxFlizGameEngine {
       speed *= 0.70; // 30% speed penalty during Kierownik WoT event
     }
     if (this.charDef.id === 'mateusz' && this.invulnerableTimer > 0) {
-      speed *= 1.10;
+      speed *= 1.45;
     }
     if (this.activePerks.speedBoost > 0) {
-      speed *= 1.18;
+      speed *= 1.35;
       if (Math.random() < 0.25) {
         this.spawnDust(this.playerPos.x, this.playerPos.y, this.playerPos.z, 0xec4899);
       }
     }
     if ((this.activePerks.kfcBerserk || 0) > 0) {
-      speed *= 1.15;
+      speed *= 1.38;
       if (Math.random() < 0.3) {
         this.spawnDust(this.playerPos.x, this.playerPos.y, this.playerPos.z, 0xef4444);
       }
     }
     if ((this.activePerks.bulldozer || 0) > 0) {
-      speed *= 1.10;
+      speed *= 1.25;
       if (Math.random() < 0.3) {
         this.spawnDust(this.playerPos.x, this.playerPos.y, this.playerPos.z, 0xfacc15);
       }
@@ -3814,10 +3804,10 @@ export class MaxFlizGameEngine {
     if (inputLen > 0.08) {
       const targetX = inputX * speed;
       const targetZ = inputZ * speed;
-      this.playerVel.x = THREE.MathUtils.damp(this.playerVel.x, targetX, 14, dt);
-      this.playerVel.z = THREE.MathUtils.damp(this.playerVel.z, targetZ, 14, dt);
-      this.playerVel.x = THREE.MathUtils.clamp(this.playerVel.x, -speed * 1.08, speed * 1.08);
-      this.playerVel.z = THREE.MathUtils.clamp(this.playerVel.z, -speed * 1.08, speed * 1.08);
+      this.playerVel.x = THREE.MathUtils.damp(this.playerVel.x, targetX, 28, dt);
+      this.playerVel.z = THREE.MathUtils.damp(this.playerVel.z, targetZ, 28, dt);
+      this.playerVel.x = THREE.MathUtils.clamp(this.playerVel.x, -speed * 1.35, speed * 1.35);
+      this.playerVel.z = THREE.MathUtils.clamp(this.playerVel.z, -speed * 1.35, speed * 1.35);
       this.playerRot = Math.atan2(inputX, inputZ);
 
       this.walkCycle += dt * 15;
@@ -3828,8 +3818,8 @@ export class MaxFlizGameEngine {
         this.rightArm.rotation.x = Math.sin(this.walkCycle) * 0.6;
       }
     } else {
-      this.playerVel.x = THREE.MathUtils.damp(this.playerVel.x, 0, 16, dt);
-      this.playerVel.z = THREE.MathUtils.damp(this.playerVel.z, 0, 16, dt);
+      this.playerVel.x = THREE.MathUtils.damp(this.playerVel.x, 0, 32, dt);
+      this.playerVel.z = THREE.MathUtils.damp(this.playerVel.z, 0, 32, dt);
       if (this.leftLeg && this.rightLeg && this.leftArm && this.rightArm) {
         this.leftLeg.rotation.x = 0;
         this.rightLeg.rotation.x = 0;
@@ -3900,25 +3890,7 @@ export class MaxFlizGameEngine {
     const maxZForSector = this.playerPos.x < 36 ? 19.0 : this.playerPos.x < 116 ? 19.0 : 21.0;
     const currentBounds = { minX: -34.5, maxX: 204.5, minZ: -maxZForSector, maxZ: maxZForSector };
 
-    let nextX = THREE.MathUtils.clamp(this.playerPos.x + this.playerVel.x * dt, currentBounds.minX, currentBounds.maxX);
-    if (this.gameMode === 'campaign') {
-      const blockedBoundary = this.maxUnlockedSector < 2 && this.playerPos.x <= 36 && nextX > 35.35
-        ? 35.35
-        : this.maxUnlockedSector < 3 && this.playerPos.x <= 116 && nextX > 115.35 ? 115.35 : null;
-      if (blockedBoundary !== null) {
-        nextX = blockedBoundary;
-        this.playerVel.x = 0;
-        if (this.gateNoticeCooldown <= 0) {
-          const message = blockedBoundary < 100
-            ? 'BRAMA B ZAMKNIĘTA — POKONAJ BOSMANA W SEKTORZE A'
-            : 'BRAMA C ZAMKNIĘTA — POKONAJ KRÓLA-LETO W SEKTORZE B';
-          this.emitFloatingToast(message, this.playerPos.x, this.playerPos.y + 1.7, this.playerPos.z, 'vip');
-          sound.playAlert();
-          this.gateNoticeCooldown = 2.4;
-        }
-      }
-    }
-    this.gateNoticeCooldown = Math.max(0, this.gateNoticeCooldown - dt);
+    const nextX = THREE.MathUtils.clamp(this.playerPos.x + this.playerVel.x * dt, currentBounds.minX, currentBounds.maxX);
     const nextY = this.playerPos.y + this.playerVel.y * dt;
     const nextZ = THREE.MathUtils.clamp(this.playerPos.z + this.playerVel.z * dt, currentBounds.minZ, currentBounds.maxZ);
 
@@ -3953,7 +3925,7 @@ export class MaxFlizGameEngine {
           } else if (plat.type === 'speed_pad') {
             const currentSpeed = Math.hypot(this.playerVel.x, this.playerVel.z);
             const moveAngle = Math.atan2(this.playerVel.z, this.playerVel.x) || 0;
-            const boost = 7.5;
+            const boost = 14.5;
             this.playerVel.x = Math.cos(moveAngle) * (currentSpeed + boost);
             this.playerVel.z = Math.sin(moveAngle) * (currentSpeed + boost);
             this.spawnParticleRing(plat.x, topY, plat.z, 0xf59e0b);
@@ -5221,8 +5193,8 @@ export class MaxFlizGameEngine {
                 if (other.id !== e.id && other.state !== 'defeated') {
                   if (Math.hypot(other.x - e.x, other.z - e.z) <= p.aoeRadius) {
                     other.hp -= this.scaleSurvivalDamage(1);
-                    other.stunTimer = Math.max(other.stunTimer, this.gameMode === 'survival' ? 0.22 : (p.stunDuration || 1.2));
-                    if (this.gameMode !== 'survival' || (p.stunDuration || 0) > 0.8) other.state = 'stunned';
+                    other.stunTimer = Math.max(other.stunTimer, p.stunDuration || 1.2);
+                    other.state = 'stunned';
                     this.emitFloatingToast('📑 AUDYT AoE -1 HP!', other.x, other.y + 1.1, other.z, 'damage');
                     if (other.hp <= 0) {
                       this.defeatEnemy(other, 240, true);
@@ -5235,8 +5207,8 @@ export class MaxFlizGameEngine {
             if (e.hp <= 0) {
               this.defeatEnemy(e, 250, true);
             } else {
-              e.stunTimer = Math.max(e.stunTimer, this.gameMode === 'survival' ? 0.14 : (p.stunDuration || 0.65));
-              if (this.gameMode !== 'survival' || (p.stunDuration || 0) > 0.8) e.state = 'stunned';
+              e.stunTimer = Math.max(e.stunTimer, p.stunDuration || 0.65);
+              e.state = 'stunned';
             }
           }
 
@@ -5254,7 +5226,6 @@ export class MaxFlizGameEngine {
 
       if (destroyProj || p.life <= 0) {
         this.levelRoot.remove(p.mesh);
-        if (p.weaponProjectile) this.disposeTemporaryObject(p.mesh);
         this.projectiles.splice(i, 1);
       }
     }
@@ -5496,12 +5467,11 @@ export class MaxFlizGameEngine {
     const isThirdCombo = this.attackComboStep === 0;
 
     // Operator-specific attack cadence
-    const baseAttackCooldown = this.gameMode === 'survival'
-      ? 2.85
-      : charId === 'mateusz' ? 0.34 : charId === 'grzesiek' ? 0.52 : charId === 'dawid' ? 0.46 : 0.42;
+    const baseAttackCooldown =
+      charId === 'mateusz' ? 0.24 : charId === 'grzesiek' ? 0.42 : charId === 'dawid' ? 0.36 : 0.32;
     this.attackCooldownTimer = baseAttackCooldown *
       (this.gameMode === 'survival' ? this.survivalAttackRateMultiplier : 1) *
-      ((this.activePerks.attackHaste || 0) > 0 ? (this.gameMode === 'survival' ? 0.90 : 0.82) : 1);
+      ((this.activePerks.attackHaste || 0) > 0 ? 0.72 : 1);
     this.attackSwingTimer = 0.26;
 
     sound.playAttackWhoosh();
@@ -5742,18 +5712,16 @@ export class MaxFlizGameEngine {
 
   public triggerAbility() {
     if (this.state !== 'playing' || this.abilityTimer > 0) return;
-    this.abilityTimer = this.charDef.abilityCooldown * (this.gameMode === 'survival' ? 2.0 : 1.25);
-    const abilityDamageMultiplier = this.gameMode === 'survival'
-      ? Math.min(1.2, this.survivalDamageMultiplier * 0.78) : 1;
+    this.abilityTimer = this.charDef.abilityCooldown;
+    const abilityDamageMultiplier = this.gameMode === 'survival' ? this.survivalDamageMultiplier : 1;
 
     sound.playAbility(this.currentCharacterId);
     this.cameraShake = 0.45;
     this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.5, this.playerPos.z, this.charDef.color);
 
     if (this.currentCharacterId === 'marcin') {
-      const protectionTime = this.gameMode === 'survival' ? 3.0 : 8.0;
-      this.marcinReclamationTimer = protectionTime;
-      this.invulnerableTimer = Math.max(this.invulnerableTimer, protectionTime);
+      this.marcinReclamationTimer = 8;
+      this.invulnerableTimer = Math.max(this.invulnerableTimer, 8);
       this.hp = Math.min(this.maxHp, this.hp + 1);
       this.callbacks.onHpUpdate(this.hp, this.maxHp);
       this.activatePerk('order_magnet', 10);
@@ -5765,7 +5733,7 @@ export class MaxFlizGameEngine {
         if (e.state === 'defeated') return;
         const dist = Math.hypot(e.x - this.playerPos.x, e.z - this.playerPos.z);
         if (dist < radius) {
-          e.stunTimer = this.gameMode === 'survival' ? 1.1 : 5.0;
+          e.stunTimer = 5.0;
           e.state = 'stunned';
           const damage = Math.ceil(2 * abilityDamageMultiplier);
           e.hp = Math.max(0, e.hp - damage);
@@ -5778,7 +5746,7 @@ export class MaxFlizGameEngine {
     } else if (this.currentCharacterId === 'grzesiek') {
       this.grzesiekCrushTimer = 0.9;
       this.grzesiekCrushPulse = 1.0;
-      this.activatePerk('golden_paleciak', this.gameMode === 'survival' ? 2.6 : 6);
+      this.activatePerk('golden_paleciak', 6);
       this.spawnGrzesiekShockwave();
       const forward = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
       this.playerPos.x += forward.x * 1.8;
@@ -5796,7 +5764,7 @@ export class MaxFlizGameEngine {
           e.shieldActive = false;
           const damage = Math.ceil(3 * abilityDamageMultiplier);
           e.hp -= damage;
-          e.stunTimer = this.gameMode === 'survival' ? 0.9 : 2.0;
+          e.stunTimer = 2.0;
           e.state = 'stunned';
           this.cameraShake = 0.65;
           this.spawnParticleRing(e.x, e.y + 0.6, e.z, 0x86efac);
@@ -5807,7 +5775,7 @@ export class MaxFlizGameEngine {
         }
       });
     } else if (this.currentCharacterId === 'dawid') {
-      this.activatePerk('hardhat', this.gameMode === 'survival' ? 4.5 : 15);
+      this.activatePerk('hardhat', 15);
       // Dawid also drops a fresh KFC bucket right in front of him!
       const fwd = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
       this.addKfcBucketItem(
@@ -5818,7 +5786,7 @@ export class MaxFlizGameEngine {
       );
       this.sayQuote('JA WIEM LEPIEJ! Salwa 5 płyt Calacatta 120x280 pod kątem 45° + świeży Kubełek KFC!');
       sound.playAttackWhoosh();
-      const angles = this.gameMode === 'survival' ? [-0.22, 0, 0.22] : [-0.5, -0.25, 0, 0.25, 0.5];
+      const angles = [-0.5, -0.25, 0, 0.25, 0.5];
       angles.forEach((offsetAngle) => {
         const rot = this.playerRot + offsetAngle;
         const forward = new THREE.Vector3(Math.sin(rot), 0, Math.cos(rot));
@@ -5837,8 +5805,8 @@ export class MaxFlizGameEngine {
           mesh: tile,
           vel: forward.multiplyScalar(17.5),
           life: 1.45,
-          damage: this.gameMode === 'survival' ? 1 : 2,
-          pierce: this.gameMode === 'survival' ? 1 : 4,
+          damage: 2,
+          pierce: 4,
           ricochet: true,
           collectItems: true,
           spinSpeed: 12.0,
@@ -5849,8 +5817,8 @@ export class MaxFlizGameEngine {
     } else if (this.currentCharacterId === 'mateusz') {
       this.hp = Math.min(this.maxHp, this.hp + 1);
       this.callbacks.onHpUpdate(this.hp, this.maxHp);
-      this.activatePerk('espresso_boost', this.gameMode === 'survival' ? 2.8 : 6);
-      this.activatePerk('vibram_boots', this.gameMode === 'survival' ? 3.5 : 8);
+      this.activatePerk('espresso_boost', 6);
+      this.activatePerk('vibram_boots', 8);
       this.sayQuote('BSOD OVERCLOCK! Zamrażam wrogów w promieniu 11m + Speedrun i 2x Skok!');
       sound.playAbility('mateusz');
       this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.8, this.playerPos.z, 0x3b82f6);
@@ -5860,7 +5828,7 @@ export class MaxFlizGameEngine {
         if (e.state === 'defeated') return;
         const dist = Math.hypot(e.x - this.playerPos.x, e.z - this.playerPos.z);
         if (dist < 11.0) {
-          e.stunTimer = this.gameMode === 'survival' ? 1.2 : 5.5;
+          e.stunTimer = 5.5;
           e.state = 'stunned';
           const damage = Math.ceil(1 * abilityDamageMultiplier);
           e.hp = Math.max(0, e.hp - damage);
@@ -5871,10 +5839,8 @@ export class MaxFlizGameEngine {
     } else if (this.currentCharacterId === 'piotr') {
       this.sayQuote('POTRÓJNA FLASZKA ZE SKARBCZYKA! 3x 70% bimbru zza regału B4 – ściana ognia na gresie!');
       this.throwBimberMolotov(0);
-      if (this.gameMode !== 'survival') {
-        this.throwBimberMolotov(-0.28);
-        this.throwBimberMolotov(0.28);
-      }
+      this.throwBimberMolotov(-0.28);
+      this.throwBimberMolotov(0.28);
     }
   }
 
@@ -6144,10 +6110,6 @@ export class MaxFlizGameEngine {
     if (e.state === 'defeated') return;
     e.state = 'defeated';
     e.mesh.visible = false;
-    if (this.gameMode === 'campaign') {
-      if (e.id === 'bosman_l1') this.unlockCampaignSector(2);
-      if (e.id === 'boss_krol_leto_l2') this.unlockCampaignSector(3);
-    }
     const hitStopDur = (e.type === 'walczak' || e.type === 'krol_leto') ? 0.22 : 0.05;
     this.triggerHitStop(hitStopDur);
 
@@ -6295,16 +6257,6 @@ export class MaxFlizGameEngine {
   private checkLevelFinish() {
     if (this.state !== 'playing') return;
 
-    const finalBossIds = ['boss_walczak', 'boss_krol_leto_l3'];
-    const livingFinalBosses = this.enemies.filter((enemy) => finalBossIds.includes(enemy.id) && enemy.state !== 'defeated');
-    if (livingFinalBosses.length > 0) {
-      if (this.finishWarningTimer <= 0) {
-        this.finishWarningTimer = 3.0;
-        this.emitFloatingToast('TERMINAL VIP ZABLOKOWANY — POKONAJ OBU BOSSÓW!', this.playerPos.x, this.playerPos.y + 1.5, this.playerPos.z, 'vip');
-        sound.playHit();
-      }
-      return;
-    }
     const requiredVip = Math.min(4, this.totalVipCount);
     if (this.collectedVipCount < requiredVip) {
       if (this.finishWarningTimer <= 0) {
@@ -6438,21 +6390,18 @@ export class MaxFlizGameEngine {
     // 'tpp' (Default): Podwyższony widok taktyczny (~45° widok z góry i zza pleców w stylu Hades / Brawl Stars)
     // Zapewnia pełną widoczność flankujących wrogów, pułapek posadzkowych i alei magazynu bez zasłaniania przez regały!
     const zoomMultiplier = this.bossCamZoom * this.camZoomFactor;
-    let baseOffsetX = -2.0;
-    let baseOffsetY = 13.5;
-    let baseOffsetZ = 7.4;
-    if (this.gameMode === 'survival') {
-      baseOffsetX = 0.0;
-      baseOffsetY = 24.0;
-      baseOffsetZ = 5.5;
-    } else if (this.cameraMode === 'close') {
-      baseOffsetX = -3.4;
-      baseOffsetY = 7.2;
-      baseOffsetZ = 4.4;
+    let baseOffsetX = -2.5;
+    let baseOffsetY = 10.5;
+    let baseOffsetZ = 8.8;
+
+    if (this.cameraMode === 'close') {
+      baseOffsetX = -4.2;
+      baseOffsetY = 5.8;
+      baseOffsetZ = 5.2;
     } else if (this.cameraMode === 'iso') {
       baseOffsetX = 0.0;
-      baseOffsetY = 19.0;
-      baseOffsetZ = 6.8;
+      baseOffsetY = 14.0;
+      baseOffsetZ = 12.0;
     }
 
     const targetOffsetX = baseOffsetX * zoomMultiplier;
@@ -6467,9 +6416,7 @@ export class MaxFlizGameEngine {
     // Responsive FOV based on screen aspect ratio (mobile portrait vs landscape vs desktop)
     if (this.camera instanceof THREE.PerspectiveCamera) {
       const aspect = (window.innerWidth || 1280) / Math.max(1, window.innerHeight || 720);
-      const baseFov = this.gameMode === 'survival'
-        ? (aspect < 0.65 ? 66 : aspect < 1.0 ? 60 : aspect < 1.35 ? 54 : 50)
-        : (aspect < 0.65 ? 60 : aspect < 1.0 ? 54 : aspect < 1.35 ? 48 : 45);
+      const baseFov = aspect < 0.65 ? 60 : aspect < 1.0 ? 54 : aspect < 1.35 ? 48 : 45;
       if (Math.abs(this.camera.fov - baseFov) > 0.2) {
         this.camera.fov = THREE.MathUtils.damp(this.camera.fov, baseFov, 4.0, dt);
         this.camera.updateProjectionMatrix();
@@ -6531,7 +6478,6 @@ export class MaxFlizGameEngine {
     camTarget.y += shakeY;
     camTarget.z += shakeZ;
 
-    if (this.dofBlurPassMesh) this.dofBlurPassMesh.visible = this.gameMode !== 'survival';
     // Smooth camera position follow
     this.camera.position.lerp(camTarget, dt * 7.5);
 
