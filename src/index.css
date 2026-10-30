@@ -3243,3 +3243,191 @@ button {
     animation-duration: 0.01ms !important;
   }
 }
+
+
+/* SURVIVAL SHIFT — dedicated HUD, mode launcher and level-up choices */
+.btn-survival-start {
+  width: 100%;
+  max-width: 440px;
+  padding: 11px 20px;
+  border: 1px solid rgba(56, 189, 248, 0.62);
+  border-radius: 999px;
+  background: linear-gradient(135deg, #12354a 0%, #0e7490 100%);
+  color: #f0f9ff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-family: inherit;
+  font-weight: 900;
+  cursor: pointer;
+  pointer-events: auto !important;
+  touch-action: manipulation;
+  box-shadow: 0 8px 24px rgba(8, 145, 178, 0.28), inset 0 1px 0 rgba(255,255,255,.16);
+  transition: transform .15s ease, filter .15s ease;
+}
+.btn-survival-start:hover { filter: brightness(1.12); transform: translateY(-1px); }
+.btn-survival-start:active { transform: scale(.97); }
+.survival-start-title { font-size: 14px; letter-spacing: 1.1px; }
+.survival-start-subtitle { font-size: 9px; letter-spacing: .65px; color: #bae6fd; }
+
+.survival-hud {
+  position: fixed;
+  top: calc(82px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 72;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  width: min(740px, calc(100vw - 24px));
+  pointer-events: none;
+}
+.survival-chip {
+  min-width: 68px;
+  padding: 7px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  border: 1px solid rgba(148, 163, 184, .24);
+  border-radius: 11px;
+  background: rgba(7, 16, 29, .84);
+  color: #f8fafc;
+  box-shadow: 0 5px 18px rgba(0,0,0,.24);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  text-align: center;
+}
+.survival-chip-label {
+  color: #94a3b8;
+  font-size: 8px;
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: .8px;
+}
+.survival-chip strong {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  line-height: 1.35;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.survival-xp-chip { min-width: 126px; }
+.survival-xp-chip strong { font-size: 12px; }
+.survival-xp-track {
+  width: 100%;
+  height: 4px;
+  margin-top: 3px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(148, 163, 184, .2);
+}
+.survival-xp-track > span {
+  display: block;
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #0ea5e9, #67e8f9);
+  box-shadow: 0 0 8px rgba(56, 189, 248, .75);
+  transition: width .18s ease;
+}
+
+.survival-levelup-modal { z-index: 160 !important; }
+.survival-levelup-card {
+  width: min(920px, 96%);
+  max-width: 920px;
+  border-color: rgba(56, 189, 248, .55);
+  background: linear-gradient(145deg, rgba(8, 24, 40, .98), rgba(15, 23, 42, .98));
+}
+.survival-levelup-icon {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  color: #e0f2fe;
+  font-size: 32px;
+  font-weight: 900;
+  background: linear-gradient(145deg, #0369a1, #0e7490);
+  box-shadow: 0 0 28px rgba(14, 165, 233, .3);
+}
+.survival-levelup-card .modal-title { color: #7dd3fc; letter-spacing: 1.2px; }
+.survival-upgrade-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.survival-upgrade-card {
+  min-width: 0;
+  min-height: 156px;
+  padding: 16px 13px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+  border: 1px solid rgba(56, 189, 248, .28);
+  border-radius: 14px;
+  color: #e2e8f0;
+  background: rgba(15, 37, 57, .88);
+  cursor: pointer;
+  pointer-events: auto !important;
+  touch-action: manipulation;
+  transition: transform .15s ease, border-color .15s ease, background .15s ease;
+}
+.survival-upgrade-card:hover,
+.survival-upgrade-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: #38bdf8;
+  background: rgba(14, 116, 144, .28);
+  outline: none;
+}
+.survival-upgrade-icon { font-size: 25px; }
+.survival-upgrade-title {
+  color: #f8fafc;
+  font-size: 12px;
+  line-height: 1.3;
+  font-weight: 900;
+  letter-spacing: .35px;
+}
+.survival-upgrade-description {
+  color: #a8bdce;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+@media (max-width: 720px) {
+  .survival-hud {
+    top: calc(76px + env(safe-area-inset-top));
+    width: calc(100vw - 14px);
+    gap: 4px;
+  }
+  .survival-chip {
+    min-width: 54px;
+    padding: 5px 6px;
+    border-radius: 9px;
+  }
+  .survival-chip-label { font-size: 7px; letter-spacing: .4px; }
+  .survival-chip strong { font-size: 12px; }
+  .survival-xp-chip { min-width: 100px; }
+  .survival-xp-chip strong { font-size: 10px; }
+  .survival-upgrade-grid { grid-template-columns: 1fr; gap: 7px; }
+  .survival-upgrade-card {
+    min-height: 0;
+    padding: 10px 12px;
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 9px;
+    align-items: center;
+  }
+  .survival-upgrade-icon { grid-row: 1 / span 2; font-size: 23px; }
+  .survival-upgrade-title { font-size: 11px; }
+  .survival-upgrade-description { font-size: 10px; }
+  .survival-levelup-card { gap: 8px; }
+}
