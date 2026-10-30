@@ -47,6 +47,7 @@ class MaxFlizScene extends xb.Script {
   private currentFps: number = 60;
   private lastMinimapRenderAt: number = 0;
   private pausedForVisibility: boolean = false;
+  private resizeObserver: ResizeObserver | null = null;
 
   // Duplicate init() and update() removed from here. Handled at the bottom of the class.
 
@@ -86,15 +87,11 @@ class MaxFlizScene extends xb.Script {
 
       const renderer = (xb.core?.renderer as THREE.WebGLRenderer) || null;
       if (renderer) {
-        if (typeof renderer.setSize === 'function') {
-          renderer.setSize(width, height, false);
-        }
-        // Mobile 60 FPS optimization: Clamp DPR to 1.5 on mobile to avoid GPU bandwidth bottleneck on high-res phones
-        const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
+        // Set DPR before dimensions so Three.js recreates the drawing buffer at the final scale.
+        const isMobile = width < 900 || ('ontouchstart' in window);
         const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2.0);
-        if (typeof renderer.setPixelRatio === 'function') {
-          renderer.setPixelRatio(dpr);
-        }
+        renderer.setPixelRatio(dpr);
+        renderer.setSize(width, height, false);
       }
 
       if (this.engine && typeof this.engine.applyAutoCameraScaleForViewport === 'function') {
@@ -161,8 +158,8 @@ class MaxFlizScene extends xb.Script {
 
     const container = document.getElementById('game-canvas-container');
     if (container && typeof ResizeObserver !== 'undefined') {
-      const resizeObserver = new ResizeObserver(scheduleResize);
-      resizeObserver.observe(container);
+      this.resizeObserver = new ResizeObserver(scheduleResize);
+      this.resizeObserver.observe(container);
     }
 
     interface ActiveToast {
@@ -1271,6 +1268,9 @@ class MaxFlizScene extends xb.Script {
     };
 
     joystickZone.addEventListener('pointerdown', handleStart, { passive: false });
+    joystickZone.addEventListener('lostpointercapture', (event) => {
+      if (activePointerId === event.pointerId) resetJoystick();
+    });
     window.addEventListener('pointermove', handleMove, { passive: false });
     window.addEventListener('pointerup', handleEnd, { passive: true });
     window.addEventListener('pointercancel', handleEnd, { passive: true });
