@@ -148,6 +148,8 @@ class MaxFlizScene extends xb.Script {
     const survivalXpFill = document.getElementById('survival-xp-fill');
     const survivalKillsElem = document.getElementById('survival-kills');
     const survivalEnemiesElem = document.getElementById('survival-enemies');
+    const survivalRerollBtn = document.getElementById('btn-survival-reroll') as HTMLButtonElement | null;
+    const survivalSkipBtn = document.getElementById('btn-survival-skip') as HTMLButtonElement | null;
 
     const victoryScore = document.getElementById('victory-score');
     const victoryTime = document.getElementById('victory-time');
@@ -441,6 +443,19 @@ class MaxFlizScene extends xb.Script {
               perkBadgeBulldozer.classList.add('hidden');
             }
           }
+          const perkTimers: Array<[string, number | undefined]> = [
+            ['perk-badge-haste', perks.attackHaste],
+            ['perk-badge-drone', perks.arcDrone],
+            ['perk-badge-xp', perks.xpSurge],
+            ['perk-badge-ward', perks.damageWard],
+          ];
+          for (const [id, remaining] of perkTimers) {
+            const badge = document.getElementById(id);
+            const timer = badge?.querySelector('.perk-timer');
+            if (!badge) continue;
+            badge.classList.toggle('hidden', !(remaining && remaining > 0));
+            if (timer && remaining) timer.textContent = `${Math.ceil(remaining)}s`;
+          }
         },
         onLevelComplete: (levelId, score, timeStr) => {
           this.lastScore = score;
@@ -528,6 +543,14 @@ class MaxFlizScene extends xb.Script {
           if (survivalXpFill) survivalXpFill.style.width = Math.min(100, (snapshot.xp / Math.max(1, snapshot.xpToNext)) * 100) + '%';
           if (survivalKillsElem) survivalKillsElem.textContent = String(snapshot.kills);
           if (survivalEnemiesElem) survivalEnemiesElem.textContent = String(snapshot.aliveEnemies);
+          if (survivalRerollBtn) {
+            survivalRerollBtn.textContent = '🔄 PRZELOSUJ (' + snapshot.rerolls + ')';
+            survivalRerollBtn.disabled = snapshot.rerolls <= 0;
+          }
+          if (survivalSkipBtn) {
+            survivalSkipBtn.textContent = '⏭ POMIŃ (' + snapshot.skips + ')';
+            survivalSkipBtn.disabled = snapshot.skips <= 0;
+          }
         },
         onSurvivalLevelUp: (options: SurvivalUpgradeOption[]) => {
           if (!survivalUpgradeOptions || !survivalLevelUp) return;
@@ -571,6 +594,11 @@ class MaxFlizScene extends xb.Script {
         },
       }
     );
+
+    survivalRerollBtn?.addEventListener('click', () => this.engine.rerollSurvivalUpgrades());
+    survivalSkipBtn?.addEventListener('click', () => {
+      if (this.engine.skipSurvivalUpgrade()) survivalLevelUp?.classList.add('hidden');
+    });
 
     // Lazy instantiation of cutscenes only when needed
     this.cutscene = null;
