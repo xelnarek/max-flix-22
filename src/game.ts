@@ -291,6 +291,7 @@ export class MaxFlizGameEngine {
   // Re-evaluate the nearest enemies in short slices instead of allocating/sorting every rendered frame.
   private waveDirectorCooldown = 0;
   private activeChaserIds = new Set<string>();
+  private threatTier = 0;
 
   public getPacingFactor(): number {
     if (this.state !== 'playing' || this.levelStartTime <= 0) return 0.50;
@@ -843,6 +844,7 @@ export class MaxFlizGameEngine {
     this.levelStartTime = performance.now();
     this.waveDirectorCooldown = 0;
     this.activeChaserIds.clear();
+    this.threatTier = 0;
     this.marcinReclamationTimer = 0;
     this.grzesiekCrushTimer = 0;
     this.grzesiekCrushPulse = 0;
@@ -901,6 +903,7 @@ export class MaxFlizGameEngine {
     this.enemies = [];
     this.activeChaserIds.clear();
     this.waveDirectorCooldown = 0;
+    this.threatTier = 0;
     this.enemyProjectiles = [];
     this.particles = [];
     this.projectiles = [];
@@ -3464,13 +3467,32 @@ export class MaxFlizGameEngine {
       this.globalEnemyShoutCooldown -= dt;
     }
 
+    // Progressive pressure: unlock more simultaneous attackers as a run develops.
+    // It uses the campaign's existing enemy set; no extra entities are spawned here.
+    const elapsedSec = this.levelStartTime > 0 ? (performance.now() - this.levelStartTime) / 1000 : 0;
+    const nextThreatTier = Math.min(4, Math.floor(elapsedSec / 55));
+    if (nextThreatTier > this.threatTier) {
+      this.threatTier = nextThreatTier;
+      const tierMessages = [
+        '',
+        'ALARM MAGAZYNU: wzmożona aktywność przeciwników!',
+        'UWAGA: kolejna zmiana weszła do akcji!',
+        'SEKTOR ZAOSTRZA OCHRONĘ — trzymaj pozycję!',
+        'MAKSYMALNY POZIOM ZAGROŻENIA — przetrwaj napór!',
+      ];
+      this.emitFloatingToast(tierMessages[this.threatTier], this.playerPos.x, this.playerPos.y + 1.6, this.playerPos.z, 'damage');
+      sound.playAlert();
+    }
+
     // WAVE DIRECTOR: Rebuild the nearest-engager list at 5-6 Hz. Enemy movement
     // still updates every frame; only the expensive candidate allocation/sort is throttled.
     this.waveDirectorCooldown -= dt;
     if (this.waveDirectorCooldown <= 0) {
       this.waveDirectorCooldown = 0.18;
       const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
-      const maxActiveChasers = isMobile ? 4 : 5;
+      const baseChasers = isMobile ? 2 : 3;
+      const platformCap = isMobile ? 4 : 5;
+      const maxActiveChasers = Math.min(platformCap, baseChasers + Math.floor(this.threatTier * 0.75));
       const activeCandidates: { enemy: EnemyItem; dist: number }[] = [];
 
       for (const e of this.enemies) {
@@ -3568,7 +3590,10 @@ export class MaxFlizGameEngine {
       const canActivelyChase = e.type === 'walczak' || e.type === 'krol_leto' || this.activeChaserIds.has(e.id);
 
       // SIGHT & DETECTION LOGIC
-      const detectionRange = (e.type === 'walczak' || e.type === 'krol_leto') ? 16.0 : (e.state === 'chase' ? 12.0 : 8.5);
+      const threatAwareness = 1 + this.threatTier * 0.025;
+      const detectionRange = (e.type === 'walczak' || e.type === 'krol_leto')
+        ? 16.0
+        : (e.state === 'chase' ? 12.0 : 8.5) * threatAwareness;
       const canSeePlayer = distToPlayer < detectionRange && canActivelyChase;
 
       if (canSeePlayer) {
@@ -3727,7 +3752,8 @@ export class MaxFlizGameEngine {
               ? 1.42
               : e.type === 'kurier'
                 ? 1.35
-                : 1.2);
+                : 1.2) *
+            (1 + this.threatTier * 0.04);
           e.x += (dx / Math.max(0.1, distToPlayer)) * chaseSpeed * dt;
           e.z += (dz / Math.max(0.1, distToPlayer)) * chaseSpeed * dt;
         } else {
