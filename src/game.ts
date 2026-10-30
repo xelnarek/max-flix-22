@@ -5650,10 +5650,12 @@ export class MaxFlizGameEngine {
     this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
 
     // In-world Perk Drop (Perki dropione na mapie z wrogów!)
-    const dropChance =
-      this.charDef.id === 'piotr'
+    const isBossReward = e.type === 'walczak' || e.type === 'krol_leto' || e.maxHp >= 4;
+    const dropChance = this.gameMode === 'survival'
+      ? (isBossReward ? 1.0 : 0.18)
+      : this.charDef.id === 'piotr'
         ? 1.0
-        : e.type === 'walczak' || e.maxHp >= 4
+        : isBossReward
           ? 1.0
           : 0.48;
 
