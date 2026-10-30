@@ -203,6 +203,24 @@
       <div id="floating-popups-layer" class="floating-popups-layer" aria-hidden="true"></div>
       <div id="perk-drop-banner" class="perk-drop-banner hidden"></div>
 
+      <div id="survival-hud" class="survival-hud hidden" aria-live="polite">
+        <div class="survival-chip"><span class="survival-chip-label">CZAS</span><strong id="survival-time">00:00</strong></div>
+        <div class="survival-chip"><span class="survival-chip-label">FALA</span><strong id="survival-wave">1</strong></div>
+        <div class="survival-chip"><span class="survival-chip-label">POZIOM</span><strong id="survival-level">1</strong></div>
+        <div class="survival-chip survival-xp-chip"><span class="survival-chip-label">DOŚWIADCZENIE</span><strong id="survival-xp">0 / 6 XP</strong><span class="survival-xp-track"><span id="survival-xp-fill"></span></span></div>
+        <div class="survival-chip"><span class="survival-chip-label">ELIMINACJE</span><strong id="survival-kills">0</strong></div>
+        <div class="survival-chip"><span class="survival-chip-label">WROGOWIE</span><strong id="survival-enemies">0</strong></div>
+      </div>
+
+      <div id="survival-levelup" class="game-modal hidden survival-levelup-modal">
+        <div class="modal-card survival-levelup-card">
+          <div class="survival-levelup-icon">⬆</div>
+          <div class="modal-title">AWANS OPERATORA</div>
+          <p class="modal-desc">Wybierz jeden moduł na tę zmianę. Wybór natychmiast zmieni parametry walki.</p>
+          <div id="survival-upgrade-options" class="survival-upgrade-grid"></div>
+        </div>
+      </div>
+
       <div id="hud-bottom" class="hud-layer hidden">
         <div class="bottom-dock">
           <button id="btn-attack" class="attack-button" title="Atak bezpośredni (F / J / Klik)">
@@ -691,6 +709,10 @@
             <button id="btn-start-game" class="btn-primary-start">
               <span class="start-text">ROZPOCZNIJ ZMIANĘ NA MEGA-MAPIE</span>
               <span class="start-subtext">KLIKNIJ LUB NACIŚNIJ SPACJĘ / ENTER • SEKTOR A ➔ B ➔ C</span>
+            </button>
+            <button id="btn-start-survival" class="btn-survival-start">
+              <span class="survival-start-title">⚔️ SURVIVAL SHIFT</span>
+              <span class="survival-start-subtitle">NIESKOŃCZONE FALE • XP • ULEPSZENIA • BOSSOWIE</span>
             </button>
             <div class="menu-controls-hint">
               <span>Sterowanie: WSAD / Strzałki / Joystick • SPACJA = Skok • F / Klik = Atak • E / Shift = Super Moc</span>
