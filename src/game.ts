@@ -520,6 +520,7 @@ export class MaxFlizGameEngine {
     boomerang?: boolean;
     returning?: boolean;
     homing?: boolean;
+    weaponProjectile?: boolean;
     aoeRadius?: number;
     stunDuration?: number;
     slowOnHit?: boolean;
@@ -938,7 +939,6 @@ export class MaxFlizGameEngine {
     this.maxHp = 3;
     this.hp = this.maxHp;
     this.gateNoticeCooldown = 0;
-    this.gateNoticeCooldown = 0;
     this.score = 0;
     this.comboStreak = 0;
     this.collectedVipCount = 0;
@@ -1260,6 +1260,18 @@ export class MaxFlizGameEngine {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
+    // Guaranteed new-weapon offer while the arsenal is still incomplete.
+    // This avoids a long string of stat-only level-ups before the player gets a build identity.
+    const newWeaponOffer = pool.find((option) => option.id.startsWith('weapon_unlock:'));
+    if (newWeaponOffer) {
+      const remaining = pool.filter((option) => option.id !== newWeaponOffer.id);
+      return [newWeaponOffer, ...remaining.slice(0, 2)];
+    }
+    const weaponProgressOffer = pool.find((option) => option.id.startsWith('weapon_'));
+    if (weaponProgressOffer) {
+      const remaining = pool.filter((option) => option.id !== weaponProgressOffer.id);
+      return [weaponProgressOffer, ...remaining.slice(0, 2)];
+    }
     return pool.slice(0, 3);
   }
 
@@ -1338,6 +1350,9 @@ export class MaxFlizGameEngine {
     this.threatTier = 0;
     this.enemyProjectiles = [];
     this.particles = [];
+    for (const projectile of this.projectiles) {
+      if (projectile.weaponProjectile) this.disposeTemporaryObject(projectile.mesh);
+    }
     this.projectiles = [];
     this.specialEffects = [];
     this.bimberMolotovs = [];
@@ -1396,7 +1411,7 @@ export class MaxFlizGameEngine {
     const postMaterial = new THREE.MeshStandardMaterial({ color: 0x17283a, metalness: 0.72, roughness: 0.28, emissive: accent, emissiveIntensity: 0.18 });
     const fieldMaterial = new THREE.MeshStandardMaterial({ color: accent, emissive: accent, emissiveIntensity: 0.85, transparent: true, opacity: 0.23, roughness: 0.2, metalness: 0.3, side: THREE.DoubleSide });
     const postGeometry = new THREE.BoxGeometry(0.72, 5.2, 0.8);
-    for (const z of [-8.1, 8.1]) {
+    for (const z of [-15.3, 15.3]) {
       const post = new THREE.Mesh(postGeometry, postMaterial);
       post.position.set(0, 2.6, z);
       group.add(post);
@@ -1404,10 +1419,10 @@ export class MaxFlizGameEngine {
       beacon.position.set(0, 4.5, z);
       group.add(beacon);
     }
-    const barrier = new THREE.Mesh(new THREE.BoxGeometry(0.20, 4.4, 16.0), fieldMaterial);
+    const barrier = new THREE.Mesh(new THREE.BoxGeometry(0.20, 4.4, 30.6), fieldMaterial);
     barrier.position.set(0, 2.2, 0);
     group.add(barrier);
-    const lintel = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.45, 17.2), postMaterial);
+    const lintel = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.45, 31.6), postMaterial);
     lintel.position.set(0, 5.1, 0);
     group.add(lintel);
     group.position.x = x;
@@ -3240,8 +3255,9 @@ export class MaxFlizGameEngine {
       pierce?: number; homing?: boolean; aoeRadius?: number; slowOnHit?: boolean;
       igniteOnHit?: boolean; spinSpeed?: number; hitIds: Set<string>;
     } = {
-      mesh: new THREE.Mesh(new THREE.IcosahedronGeometry(0.28 + weapon.level * 0.025, 1), material),
+      mesh: new THREE.Group(),
       vel: direction.clone().multiplyScalar(10.5), life: 2.8, maxLife: 2.8, damage, hitIds: new Set<string>(),
+      weaponProjectile: true,
     };
     switch (weapon.id) {
       case 'pallet_cannon':
@@ -5238,6 +5254,7 @@ export class MaxFlizGameEngine {
 
       if (destroyProj || p.life <= 0) {
         this.levelRoot.remove(p.mesh);
+        if (p.weaponProjectile) this.disposeTemporaryObject(p.mesh);
         this.projectiles.splice(i, 1);
       }
     }
