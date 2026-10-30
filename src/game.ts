@@ -954,9 +954,7 @@ export class MaxFlizGameEngine {
     this.smoothCamY = this.playerPos.y;
     this.currentLookAt.set(this.playerPos.x, this.playerPos.y + 0.85, this.playerPos.z);
 
-    for (const enemy of this.enemies) {
-      if (enemy.mesh) this.levelRoot.remove(enemy.mesh);
-    }
+    for (const enemy of this.enemies) this.disposeEnemyModel(enemy);
     this.enemies = [];
     for (const hazard of this.hazards) {
       if (hazard.mesh) this.levelRoot.remove(hazard.mesh);
@@ -1047,7 +1045,28 @@ export class MaxFlizGameEngine {
     }
   }
 
+  private disposeEnemyModel(enemy: EnemyItem) {
+    const mesh = enemy.mesh as THREE.Object3D | undefined;
+    if (!mesh) return;
+    this.levelRoot.remove(mesh);
+
+    // Release per-enemy GPU geometry/material resources after the entity is gone.
+    // Textures are intentionally not disposed here because asset textures may be shared.
+    const geometries = new Set<THREE.BufferGeometry>();
+    const materials = new Set<THREE.Material>();
+    mesh.traverse((object) => {
+      const renderable = object as THREE.Mesh;
+      if (renderable.geometry) geometries.add(renderable.geometry);
+      const material = renderable.material;
+      if (Array.isArray(material)) material.forEach((item) => materials.add(item));
+      else if (material) materials.add(material);
+    });
+    geometries.forEach((geometry) => geometry.dispose());
+    materials.forEach((material) => material.dispose());
+  }
+
   private clearLevel() {
+    for (const enemy of this.enemies) this.disposeEnemyModel(enemy);
     while (this.levelRoot.children.length > 0) {
       this.levelRoot.remove(this.levelRoot.children[0]);
     }
@@ -2960,7 +2979,7 @@ export class MaxFlizGameEngine {
       for (let i = this.enemies.length - 1; i >= 0; i--) {
         const enemy = this.enemies[i];
         if (enemy.state === 'defeated') {
-          if (enemy.mesh) this.levelRoot.remove(enemy.mesh);
+          this.disposeEnemyModel(enemy);
           this.enemies.splice(i, 1);
         }
       }
