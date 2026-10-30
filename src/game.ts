@@ -3061,6 +3061,8 @@ export class MaxFlizGameEngine {
       boss.maxHp = Math.round(14 + wave * 1.6);
       boss.hp = boss.maxHp;
       boss.speed *= 1 + Math.min(0.5, wave * 0.012);
+      boss.startX = this.levelBounds.minX + 2.5;
+      boss.endX = this.levelBounds.maxX - 2.5;
       boss.specialActionTimer = 2.0;
     }
     sound.playSirens();
@@ -5650,9 +5652,14 @@ export class MaxFlizGameEngine {
     this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
 
     // In-world Perk Drop (Perki dropione na mapie z wrogów!)
-    const isBossReward = e.type === 'walczak' || e.type === 'krol_leto' || e.maxHp >= 4;
+    const isBossReward =
+      e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' ||
+      e.type === 'elite_walczak_guard' || e.maxHp >= 4;
+    const isSurvivalEliteReward =
+      e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' ||
+      e.type === 'elite_walczak_guard';
     const dropChance = this.gameMode === 'survival'
-      ? (isBossReward ? 1.0 : 0.18)
+      ? (isSurvivalEliteReward ? 1.0 : 0.18)
       : this.charDef.id === 'piotr'
         ? 1.0
         : isBossReward
