@@ -1654,4 +1654,123 @@ html, body {
   transform: translateY(-1px) !important;
 }
 
+/* Modern Typography Overhauls (Space Grotesk + Plus Jakarta Sans + JetBrains Mono) */
+body, button, input, select, textarea {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
 
+h1, h2, h3, .menu-game-title, .hero-name, .dialogue-box-name, .title-brand, .boss-name, .attack-name, .ability-name, .char-card-name, .char-details-title, .zone-title, .enemy-guide-title, .perk-card-title, .megamap-title {
+  font-family: 'Space Grotesk', 'Outfit', sans-serif !important;
+  letter-spacing: -0.015em !important;
+}
+
+.stat-value, .perk-timer, .minimap-title, .badge-label, .score-number, .char-code-tag, .stat-num, .brand-badge-pill, .zone-checkpoint-pill {
+  font-family: 'JetBrains Mono', 'Space Grotesk', monospace !important;
+}
+
+/* Enriched Operator Details Box: Attack, Super Skill & Passive Cards */
+.char-details-title {
+  font-size: 16.5px !important;
+  font-weight: 800 !important;
+  color: #fef08a !important;
+  margin-bottom: 4px !important;
+}
+
+.char-details-bio {
+  font-size: 12.5px !important;
+  color: #cbd5e1 !important;
+  line-height: 1.48 !important;
+  margin-bottom: 8px !important;
+}
+
+.char-details-attack {
+  font-size: 12px !important;
+  color: #fed7aa !important;
+  line-height: 1.45 !important;
+  background: linear-gradient(90deg, rgba(249, 115, 22, 0.16), rgba(15, 23, 42, 0.65)) !important;
+  border: 1px solid rgba(249, 115, 22, 0.38) !important;
+  border-left: 3.5px solid #f97316 !important;
+  border-radius: 9px !important;
+  padding: 8px 12px !important;
+  margin-top: 6px !important;
+}
+
+.char-details-attack strong {
+  color: #fb923c !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+}
+
+.char-details-skill {
+  font-size: 12px !important;
+  color: #bae6fd !important;
+  line-height: 1.45 !important;
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.15), rgba(15, 23, 42, 0.65)) !important;
+  border: 1px solid rgba(56, 189, 248, 0.36) !important;
+  border-left: 3.5px solid #38bdf8 !important;
+  border-radius: 9px !important;
+  padding: 8px 12px !important;
+  margin-top: 6px !important;
+}
+
+.char-details-skill strong {
+  color: #38bdf8 !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+}
+
+.char-details-passive {
+  font-size: 12px !important;
+  color: #a7f3d0 !important;
+  line-height: 1.45 !important;
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.14), rgba(15, 23, 42, 0.65)) !important;
+  border: 1px solid rgba(52, 211, 153, 0.34) !important;
+  border-left: 3.5px solid #10b981 !important;
+  border-radius: 9px !important;
+  padding: 8px 12px !important;
+  margin-top: 6px !important;
+}
+
+.char-details-passive strong {
+  color: #34d399 !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+}
+
+/* Event Trigger Button Styling */
+.event-top-btn, .event-dock-btn {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(245, 158, 11, 0.25)) !important;
+  border-color: rgba(251, 191, 36, 0.55) !important;
+  color: #fef08a !important;
+}
+
+.event-top-btn:hover, .event-dock-btn:hover {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.42), rgba(245, 158, 11, 0.42)) !important;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.45) !important;
+}
+
+/* New HUD Badges for KFC Bucket & Golden Pallet Jack Bulldozer */
+.perk-badge.perk-kfc {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(185, 28, 28, 0.95)) !important;
+  border: 1px solid rgba(254, 202, 202, 0.6) !important;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.5) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  animation: pulse-kfc 1.5s infinite alternate ease-in-out;
+}
+
+@keyframes pulse-kfc {
+  0% { transform: scale(1); box-shadow: 0 4px 14px rgba(239, 68, 68, 0.5); }
+  100% { transform: scale(1.05); box-shadow: 0 6px 20px rgba(239, 68, 68, 0.85); }
+}
+
+.perk-badge.perk-bulldozer {
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.95), rgba(202, 138, 4, 0.95)) !important;
+  border: 1px solid rgba(254, 240, 138, 0.65) !important;
+  box-shadow: 0 4px 14px rgba(234, 179, 8, 0.55) !important;
+  color: #111827 !important;
+  font-weight: 900 !important;
+  animation: pulse-bulldozer 1.4s infinite alternate ease-in-out;
+}
+
+@keyframes pulse-bulldozer {
+  0% { transform: scale(1); box-shadow: 0 4px 14px rgba(234, 179, 8, 0.5); }
+  100% { transform: scale(1.04); box-shadow: 0 6px 22px rgba(234, 179, 8, 0.85); }
+}

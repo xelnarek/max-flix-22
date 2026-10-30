@@ -8,7 +8,9 @@
     <meta property="og:title" content="Max-Fliz Magazyn Showdown 3D" />
     <meta property="og:description" content="Trójwymiarowa platformówka izometryczna w szalonym magazynie firmy Max-Fliz. Pokieruj Marcinem, Grześkiem, Dawidem lub Mateuszem, omijaj wózki widłowe i utwórz idealną dostawę VIP." />
     <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600;700;800&family=Outfit:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/src/index.css" />
     <link rel="stylesheet" href="/src/theme-enhancements.css" />
   </head>
@@ -99,6 +101,8 @@
             <div id="perk-badge-jump" class="perk-badge perk-jump hidden" title="Podwójny Skok">👟 2x SKOK <span id="perk-jump-timer" class="perk-timer"></span></div>
             <div id="perk-badge-magnet" class="perk-badge perk-magnet hidden" title="Magnes Zamówień">🧲 MAGNES <span id="perk-magnet-timer" class="perk-timer"></span></div>
             <div id="perk-badge-speed" class="perk-badge perk-speed hidden" title="Podwójne Espresso (Sprint)">☕ SPRINT <span id="perk-speed-timer" class="perk-timer"></span></div>
+            <div id="perk-badge-kfc" class="perk-badge perk-kfc hidden" title="Kubełek KFC (Furia x2 Dmg)">🍗 FURIA KFC <span id="perk-kfc-timer" class="perk-timer"></span></div>
+            <div id="perk-badge-bulldozer" class="perk-badge perk-bulldozer hidden" title="Złoty Paleciak (Taran B4)">🚜 TARAN B4 <span id="perk-bulldozer-timer" class="perk-timer"></span></div>
           </div>
 
           <div id="dialogue-container-left" class="dialogue-side-container left"></div>
@@ -163,6 +167,13 @@
             <button id="btn-top-zoom-out" class="top-icon-btn camera-top-btn" title="Oddal kamerę (- / Kółko)">
               <span class="btn-ctrl-icon">🔍-</span>
             </button>
+            <button id="btn-top-event" class="top-icon-btn event-top-btn" title="Wyzwól losowy Event Magazynowy (T)">
+              <span class="btn-ctrl-icon">🎲</span>
+              <span class="btn-ctrl-label">
+                <span class="label-full">EVENT [T]</span>
+                <span class="label-short">EVENT</span>
+              </span>
+            </button>
             <button id="btn-top-camera" class="top-icon-btn camera-top-btn" title="Zmień kąt widoku kamery (C)">
               <span class="btn-ctrl-icon">📐</span>
               <span class="btn-ctrl-label">
@@ -208,6 +219,11 @@
               <span class="ability-hint">MOC [E]</span>
             </div>
             <div id="ability-cooldown-overlay" class="cooldown-overlay"></div>
+          </button>
+
+          <button id="btn-event" class="dock-btn event-dock-btn" title="Wyzwól Event Magazynowy (T)">
+            <span class="btn-icon">🎲</span>
+            <span class="btn-text">Event [T]</span>
           </button>
 
           <button id="btn-camera" class="dock-btn camera-dock-btn" title="Zmień kąt widoku (C)">
@@ -300,7 +316,7 @@
                   <div class="char-card-badge">👷‍♂️</div>
                   <div class="char-card-name">Marcin</div>
                   <div class="char-card-role">Kierownik Logistyki</div>
-                  <div class="char-card-ability">Pieczęć WZ • Stun & Tarcza</div>
+                  <div class="char-card-ability">Segregator WZ • Pieczęć 9m</div>
                 </div>
 
                 <div class="char-card" data-char="grzesiek">
@@ -308,7 +324,7 @@
                   <div class="char-card-badge">🚜</div>
                   <div class="char-card-name">Grzesiek</div>
                   <div class="char-card-role">Ściskacz 44cm</div>
-                  <div class="char-card-ability">Ścisk Zagłady • Ramię 360°</div>
+                  <div class="char-card-ability">Łata 200cm • Taran B4</div>
                 </div>
 
                 <div class="char-card" data-char="dawid">
@@ -316,7 +332,7 @@
                   <div class="char-card-badge">💪</div>
                   <div class="char-card-name">Dawid</div>
                   <div class="char-card-role">Arcymistrz Gresu</div>
-                  <div class="char-card-ability">Rzut Płytą 120x280 & Kask</div>
+                  <div class="char-card-ability">Tarcza 45° • 5x Gres + KFC</div>
                 </div>
 
                 <div class="char-card" data-char="mateusz">
@@ -324,7 +340,7 @@
                   <div class="char-card-badge">🎮</div>
                   <div class="char-card-name">Mateusz</div>
                   <div class="char-card-role">Gejmer & IT Spec</div>
-                  <div class="char-card-ability">Atak BSOD • Lag Wrogów</div>
+                  <div class="char-card-ability">DualSense x3 • BSOD 11m</div>
                 </div>
 
                 <div class="char-card" data-char="piotr">
@@ -332,15 +348,16 @@
                   <div class="char-card-badge">👨‍🔧</div>
                   <div class="char-card-name">Piotr</div>
                   <div class="char-card-role">Weteran • Bimber 70%</div>
-                  <div class="char-card-ability">Koktajl Mołotowa 70%</div>
+                  <div class="char-card-ability">Bumerang Klucz • 3x Mołotow</div>
                 </div>
               </div>
 
               <div id="char-details-box" class="char-details-box">
                 <div class="char-details-title" id="char-detail-title">Marcin – Władca WZ-tek i Harmonogramu</div>
                 <div class="char-details-bio" id="char-detail-bio">Zna każdy kod kreskowy płytek na pamięć. Gdy krzyknie na korytarzu, nawet sztaplarka staje dęba.</div>
-                <div class="char-details-skill" id="char-detail-skill"><strong>⚡ Super Umiejętność:</strong> Pieczęć WZ-tki & Protokół Reklamacji – wbija pieczęć w podłogę, regeneruje 1 punkt kawy, ogłusza wrogów i daje nietykalność.</div>
-                <div class="char-details-passive" id="char-detail-passive"><strong>🛡️ Zdolność Pasywna:</strong> Autorytet BHP & Pieczęć Pewności – Zasięg automatycznego przyciągania zamówień VIP i WZ-tek powiększony o 100%. Odporny na odrzuty.</div>
+                <div class="char-details-attack" id="char-detail-attack"><strong>🥊 Atak Podstawowy [F / Klik]:</strong> Rzut Segregatorem WZ + Fala Audytu – rzuca pancernym segregatorem z fakturami, który wybucha impulsem audytu (2.2m), zasysa pobliskie worki z fugą i co 3. rzut zadaje Krytyczną Pieczęć (2x obrażeń)!</div>
+                <div class="char-details-skill" id="char-detail-skill"><strong>⚡ Super Umiejętność [E]:</strong> Pieczęć WZ-tki & Protokół Reklamacji – wbija gigantyczną pieczęć w posadzkę (9m), leczy +1 Kawę, paraliżuje wrogów na 5s i włącza Magnes Zamówień.</div>
+                <div class="char-details-passive" id="char-detail-passive"><strong>🛡️ Zdolność Pasywna:</strong> Autorytet Kierownika & Segregator Audytu – zasięg przyciągania zamówień VIP i WZ-tek +100% oraz pełna odporność na odrzut.</div>
 
                 <div class="char-stats-container">
                   <div class="stat-bar-row">
@@ -519,15 +536,63 @@
                   <div class="enemy-guide-title">Pan Roman & Serwisanci</div>
                   <div class="enemy-guide-desc">Pędzą przez wszystkie 3 sektory z dostawą sanitariatów i dylatacji.<br><small class="enemy-sig">"Szybko, bo mi gres w aucie stygnie, a fucha w Brzesku czeka!"</small></div>
                 </div>
+
+                <div class="enemy-guide-card boss-guide-card">
+                  <div class="enemy-guide-badge">🍗</div>
+                  <div class="enemy-guide-title">Magazynier-Zombie KFC (Fala Eventowa)</div>
+                  <div class="enemy-guide-desc">Wygłodniała fala nocnej zmiany szarżująca po dostawie od Dawida! Pokonani zrzucają <strong>Kubełki KFC (Furia 2x Dmg)</strong>.<br><small class="enemy-sig">"DAWID PRZYWIÓZŁ STRIPSY... ODDAWAJ KUBEŁEK!"</small></div>
+                </div>
+
+                <div class="enemy-guide-card">
+                  <div class="enemy-guide-badge">🔴</div>
+                  <div class="enemy-guide-title">Pułapki: Gilotyna CNC, Prasa 500T & Gejzery</div>
+                  <div class="enemy-guide-desc">Uważaj na <strong>Laserowe Gilotyny do Spieków</strong>, <strong>Prasy Hydrauliczne 500T</strong>, wybuchające <strong>Gejzery Pary</strong> oraz plamy <strong>Kleju Mapei C2TE</strong> spowalniające ruch o 65%!</div>
+                </div>
               </div>
             </div>
 
             <div id="tab-perks" class="tab-panel">
               <div class="perks-panel-header">
-                <div class="perks-panel-title">SYSTEM ZRZUTÓW MODUŁÓW BHP W ŚWIECIE 3D</div>
-                <div class="perks-panel-desc">Wszystkie 4 ulepszenia wypadają bezpośrednio na mapie jako <strong>świecące zasobniki 3D</strong> z pokonanych przeciwników, skrzyń zaopatrzeniowych oraz na wysokich antresolach.</div>
+                <div class="perks-panel-title">SYSTEM ZRZUTÓW MODUŁÓW BHP & POWER-UPÓW W ŚWIECIE 3D</div>
+                <div class="perks-panel-desc">Wszystkie 7 modułów wypada bezpośrednio na mapie jako <strong>świecące zasobniki 3D</strong> z pokonanych wrogów, eventów czasowych [T] oraz na wysokich antresolach. Kliknij <strong>DROP W GRZE</strong>, aby zrzucić moduł obok bohatera!</div>
               </div>
               <div class="perk-shop-grid">
+                <div class="perk-card" data-perk="kfc_bucket">
+                  <div class="perk-card-top">
+                    <div class="perk-card-icon">🍗</div>
+                    <div class="perk-card-head-info">
+                      <div class="perk-card-title">Kubełek KFC od Dawida (Furia + Leczenie)</div>
+                      <span class="perk-source-tag">Źródło: Event KFC • Fala Zombie • Dawid [E]</span>
+                    </div>
+                    <button class="btn-perk-activate" data-perk="kfc_bucket">DROP W GRZE</button>
+                  </div>
+                  <div class="perk-card-desc">Gorące stripsy! Natychmiast leczy +1 Kubek Kawy, daje +40% prędkości i aktywuje Furię KFC (podwójne obrażenia oraz ognista aura) na 14 sekund.</div>
+                </div>
+
+                <div class="perk-card" data-perk="golden_paleciak">
+                  <div class="perk-card-top">
+                    <div class="perk-card-icon">🚜</div>
+                    <div class="perk-card-head-info">
+                      <div class="perk-card-title">Złoty Paleciak Turbo B4 (Taran)</div>
+                      <span class="perk-source-tag">Źródło: Elita • Grzesiek [E] • Eventy</span>
+                    </div>
+                    <button class="btn-perk-activate" data-perk="golden_paleciak">DROP W GRZE</button>
+                  </div>
+                  <div class="perk-card-desc">Tryb Niezniszczalnego Tarana na 10 sekund! Rozjeżdżaj wrogów samym biegiem, ignoruj klej na podłodze i zgarniaj +250 pkt za każde staranowanie.</div>
+                </div>
+
+                <div class="perk-card" data-perk="stretch_armor">
+                  <div class="perk-card-top">
+                    <div class="perk-card-icon">🧻</div>
+                    <div class="perk-card-head-info">
+                      <div class="perk-card-title">Zbroja z Folii Stretch VIP</div>
+                      <span class="perk-source-tag">Źródło: Magazyn B4 • Nalot BHP</span>
+                    </div>
+                    <button class="btn-perk-activate" data-perk="stretch_armor">DROP W GRZE</button>
+                  </div>
+                  <div class="perk-card-desc">10 warstw czarnej folii stretch! Daje Tarczę Ochronną, +12 sekund Podwójnego Skoku oraz odbija napastników przy kontakcie.</div>
+                </div>
+
                 <div class="perk-card" data-perk="hardhat">
                   <div class="perk-card-top">
                     <div class="perk-card-icon">⛑️</div>

@@ -34,6 +34,7 @@ export type CollectibleType =
   | 'espresso'
   | 'magnet'
   | 'golden_cutter'
+  | 'kfc_bucket'
   | 'carrara'
   | 'easter_egg';
 
@@ -66,7 +67,8 @@ export type EnemyType =
   | 'krol_leto'
   | 'pan_roman'
   | 'serwisant'
-  | 'bosman_krakow';
+  | 'bosman_krakow'
+  | 'zombie_pracownik';
 
 export interface EnemyItem {
   id: string;
@@ -108,7 +110,16 @@ export interface EnemyItem {
 
 export interface HazardItem {
   id: string;
-  type: 'forklift' | 'spill' | 'steam_faucet' | 'falling_lamp' | 'conveyor';
+  type:
+    | 'forklift'
+    | 'spill'
+    | 'steam_faucet'
+    | 'falling_lamp'
+    | 'conveyor'
+    | 'glue_spill'
+    | 'laser_cutter'
+    | 'steam_geyser'
+    | 'hydraulic_press';
   mesh?: any;
   startX: number;
   startZ: number;
@@ -122,6 +133,10 @@ export interface HazardItem {
   length: number;
   dir: number;
   active: boolean;
+  timer?: number;
+  phase?: number;
+  movingPart?: any;
+  warningMesh?: any;
 }
 
 export interface PlatformBlock {
@@ -155,9 +170,18 @@ export interface ActivePerks {
   shield: boolean;      // Foreman hardhat 1-hit invulnerability
   magnet: number;       // remaining duration in seconds
   speedBoost: number;   // remaining duration in seconds
+  kfcBerserk?: number;  // KFC chicken feast: 2x damage + speed + slow immunity
+  bulldozer?: number;   // Golden Pallet Jack: ram enemies on contact
 }
 
-export type PerkType = 'hardhat' | 'vibram_boots' | 'order_magnet' | 'espresso_boost';
+export type PerkType =
+  | 'hardhat'
+  | 'vibram_boots'
+  | 'order_magnet'
+  | 'espresso_boost'
+  | 'kfc_bucket'
+  | 'golden_paleciak'
+  | 'stretch_armor';
 
 export interface PerkDef {
   id: PerkType;
@@ -204,7 +228,7 @@ export const AVAILABLE_PERKS: PerkDef[] = [
   {
     id: 'order_magnet',
     name: 'Radiowy Magnes Zamówień',
-    description: 'Przyciąga wszystkie palety, WZ-tki, kleje i próbki marmuru z odległości aż 9 metrów!',
+    description: 'Przyciąga wszystkie palety, WZ-tki, kleje i próbki marmuru z odległości aż 10 metrów!',
     icon: '🧲',
     color: 0x8b5cf6,
     duration: 20,
@@ -217,5 +241,30 @@ export const AVAILABLE_PERKS: PerkDef[] = [
     color: 0xf59e0b,
     duration: 18,
   },
+  {
+    id: 'kfc_bucket',
+    name: 'Kubełek KFC od Dawida',
+    description: 'Gorące stripsy i skrzydełka! Leczy +2 Kawy BHP, daje Furię KFC (podwójne obrażenia i odporność na klej)!',
+    icon: '🍗',
+    color: 0xef4444,
+    duration: 16,
+  },
+  {
+    id: 'golden_paleciak',
+    name: 'Złoty Paleciak Turbo B4',
+    description: 'Tryb Tarana! Rozjeżdżasz wrogów samym biegiem, zadając im 3 HP obrażeń przy zderzeniu!',
+    icon: '🚜',
+    color: 0xeab308,
+    duration: 14,
+  },
+  {
+    id: 'stretch_armor',
+    name: 'Zbroja z Folii Stretch VIP',
+    description: 'Owijasz się 5 warstwami czarnej folii stretch: Tarcza BHP + 10 sekund całkowitej nietykalności!',
+    icon: '🛡️',
+    color: 0x06b6d4,
+    duration: 10,
+  },
 ];
+
 

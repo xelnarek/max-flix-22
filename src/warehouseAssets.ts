@@ -457,34 +457,52 @@ export function createDisplayPodium(width = 3.4, depth = 2.2, height = 0.22): TH
   const group = new THREE.Group();
   group.name = 'showroom_podium';
 
-  // White Carrara Marble Top Slab
-  const topMat = new THREE.MeshStandardMaterial({
-    color: 0xf8fafc,
-    roughness: 0.12,
-    metalness: 0.1,
+  // 1. Tier 1 (y: 0.006 -> 0.056): Recessed Warm Amber LED Cove Plinth Base
+  // Strict vertical separation prevents coplanar Z-fighting with the floor (y=0) and main slab!
+  const ledMat = new THREE.MeshStandardMaterial({
+    color: 0xfef08a,
+    emissive: 0xf59e0b,
+    emissiveIntensity: 1.4,
+    roughness: 0.2,
   });
-  const slab = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), topMat);
-  slab.position.y = height / 2;
+  const ledSkirt = new THREE.Mesh(new THREE.BoxGeometry(width - 0.18, 0.05, depth - 0.18), ledMat);
+  ledSkirt.position.y = 0.031;
+
+  // 2. Tier 2 (y: 0.056 -> 0.192): Main Polished Carrara Marble Architectural Slab
+  const topMat = new THREE.MeshStandardMaterial({
+    map: getMarbleTexture('calacatta'),
+    color: 0xf8fafc,
+    roughness: 0.1,
+    metalness: 0.12,
+  });
+  const slabHeight = Math.max(0.12, height - 0.084);
+  const slab = new THREE.Mesh(new THREE.BoxGeometry(width, slabHeight, depth), topMat);
+  slab.position.y = 0.056 + slabHeight / 2;
   slab.castShadow = true;
   slab.receiveShadow = true;
 
-  // Brushed Brass Edge Trim
+  // 3. Tier 3 (y: 0.192 -> 0.220): Bevelled 24k Brushed Brass Crown Frame (Strictly ABOVE slab)
   const brassMat = new THREE.MeshStandardMaterial({
     color: 0xd4af37,
-    metalness: 0.85,
-    roughness: 0.2,
+    metalness: 0.92,
+    roughness: 0.16,
   });
-  const trim = new THREE.Mesh(new THREE.BoxGeometry(width + 0.04, 0.04, depth + 0.04), brassMat);
-  trim.position.y = height - 0.02;
+  const trim = new THREE.Mesh(new THREE.BoxGeometry(width + 0.04, 0.028, depth + 0.04), brassMat);
+  trim.position.y = 0.056 + slabHeight + 0.014;
+  trim.castShadow = true;
+  trim.receiveShadow = true;
 
-  // Recessed Warm LED Cove Light Skirt
-  const ledMat = new THREE.MeshBasicMaterial({
-    color: 0xfef08a,
+  // 4. Tier 4 (y: 0.220 -> 0.234): Raised Dark Obsidian Inlay Pad for Bathtub Pedestal Feet
+  const inlayMat = new THREE.MeshStandardMaterial({
+    color: 0x0f172a,
+    roughness: 0.18,
+    metalness: 0.25,
   });
-  const ledSkirt = new THREE.Mesh(new THREE.BoxGeometry(width - 0.1, 0.04, depth - 0.1), ledMat);
-  ledSkirt.position.y = 0.02;
+  const inlayPad = new THREE.Mesh(new THREE.BoxGeometry(width - 0.22, 0.014, depth - 0.22), inlayMat);
+  inlayPad.position.y = 0.056 + slabHeight + 0.028 + 0.007;
+  inlayPad.receiveShadow = true;
 
-  group.add(slab, trim, ledSkirt);
+  group.add(ledSkirt, slab, trim, inlayPad);
   return group;
 }
 
@@ -1122,17 +1140,20 @@ export function createCharacterModel(def: CharacterDef): {
   }
   group.add(accessory);
 
-  // 6. Dynamic Soft Ground Contact Shadow
+  // 6. Dynamic Soft Ground Contact Shadow (with polygonOffset to prevent floor Z-fighting)
   const shadowGeo = new THREE.PlaneGeometry(0.55, 0.55);
   const shadowMat = new THREE.MeshBasicMaterial({
     color: 0x000000,
     transparent: true,
     opacity: 0.4,
     depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
   });
   const shadow = new THREE.Mesh(shadowGeo, shadowMat);
   shadow.rotation.x = -Math.PI / 2;
-  shadow.position.y = 0.01;
+  shadow.position.y = 0.015;
   group.add(shadow);
 
   return { group, leftLeg, rightLeg, leftArm, rightArm, head, body, accessory, shadow };
@@ -1325,48 +1346,132 @@ export function createBathtubModel(): THREE.Group {
   const group = new THREE.Group();
   group.name = 'bathtub_trampoline';
 
-  // White freestanding acrylic tub
+  const goldMat = new THREE.MeshStandardMaterial({
+    color: 0xf59e0b,
+    roughness: 0.14,
+    metalness: 0.94,
+  });
+
+  // 1. 4 Sculpted Brushed-Gold Claw/Pedestal Feet (y: 0.014 -> 0.074)
+  // Elevates the bathtub hull cleanly above the podium inlay pad with zero Z-fighting!
+  const footGeo = new THREE.CylinderGeometry(0.06, 0.085, 0.06, 16);
+  [
+    [-0.58, 0.044, -0.34],
+    [-0.58, 0.044, 0.34],
+    [0.58, 0.044, -0.34],
+    [0.58, 0.044, 0.34],
+  ].forEach(([fx, fy, fz]) => {
+    const foot = new THREE.Mesh(footGeo, goldMat);
+    foot.position.set(fx, fy, fz);
+    foot.castShadow = true;
+    group.add(foot);
+  });
+
+  // Gold Chassis Plinth Ring under tub hull (y: 0.074 -> 0.104)
+  const baseRing = new THREE.Mesh(new THREE.CylinderGeometry(0.58, 0.55, 0.03, 32), goldMat);
+  baseRing.scale.set(1.38, 1, 0.80);
+  baseRing.position.y = 0.089;
+  group.add(baseRing);
+
+  // 2. High-Gloss Sanitary Acrylic Outer Shell (y: 0.104 -> 0.624)
   const tubMat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
-    roughness: 0.08,
-    metalness: 0.05,
+    roughness: 0.06,
+    metalness: 0.08,
   });
-
-  const tubOuter = new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.58, 0.62, 32), tubMat);
-  tubOuter.scale.set(1.4, 1, 0.82);
-  tubOuter.position.y = 0.31;
+  const tubOuter = new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.56, 0.52, 36), tubMat);
+  tubOuter.scale.set(1.42, 1, 0.84);
+  tubOuter.position.y = 0.364;
   tubOuter.castShadow = true;
+  tubOuter.receiveShadow = true;
   group.add(tubOuter);
 
-  // Shimmering water pool
+  // 3. Ergonomic Rolled Acrylic Top Rim (y: 0.624)
+  const rimTorus = new THREE.Mesh(new THREE.TorusGeometry(0.65, 0.045, 16, 40), tubMat);
+  rimTorus.rotation.x = Math.PI / 2;
+  rimTorus.scale.set(1.42, 0.84, 1);
+  rimTorus.position.y = 0.624;
+  group.add(rimTorus);
+
+  // 4. Deep Basin Interior Cavity Liner (y: 0.626, strictly above tubOuter cap so it never clips!)
+  const basinMat = new THREE.MeshStandardMaterial({
+    color: 0x083344,
+    roughness: 0.15,
+    metalness: 0.2,
+  });
+  const basinWell = new THREE.Mesh(new THREE.CylinderGeometry(0.61, 0.61, 0.012, 36), basinMat);
+  basinWell.scale.set(1.36, 1, 0.78);
+  basinWell.position.y = 0.626;
+  group.add(basinWell);
+
+  // 5. Crystal-Clear Illuminated Hydro-Massage Water Pool (y: 0.636)
   const waterMat = new THREE.MeshStandardMaterial({
     color: 0x06b6d4,
+    emissive: 0x0891b2,
+    emissiveIntensity: 0.45,
     roughness: 0.05,
-    metalness: 0.15,
+    metalness: 0.18,
     transparent: true,
-    opacity: 0.85,
+    opacity: 0.9,
   });
-  const water = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.06, 32), waterMat);
-  water.scale.set(1.36, 1, 0.78);
-  water.position.y = 0.54;
+  const water = new THREE.Mesh(new THREE.CylinderGeometry(0.59, 0.59, 0.014, 36), waterMat);
+  water.scale.set(1.34, 1, 0.76);
+  water.position.y = 0.636;
   group.add(water);
 
-  // Luxury Gold Floor-Standing Mixer Faucet
-  const goldMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.15, metalness: 0.95 });
-  const faucetPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.9, 16), goldMat);
-  faucetPipe.position.set(0.94, 0.45, 0);
-  const faucetArch = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.03, 8, 16, Math.PI), goldMat);
-  faucetArch.position.set(0.82, 0.9, 0);
-  faucetArch.rotation.z = Math.PI / 2;
-  group.add(faucetPipe, faucetArch);
+  // 6. 3D Hydro-Massage Foam Bubbles & Golden Side Jets
+  const bubbleMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    emissive: 0xe0f2fe,
+    emissiveIntensity: 0.3,
+    roughness: 0.2,
+  });
+  [
+    [-0.45, 0.65, -0.15, 0.055],
+    [-0.35, 0.65, 0.18, 0.045],
+    [0.38, 0.65, -0.18, 0.05],
+    [0.48, 0.65, 0.12, 0.06],
+    [0.0, 0.65, -0.28, 0.048],
+    [-0.12, 0.65, 0.26, 0.052],
+  ].forEach(([bx, by, bz, br]) => {
+    const b = new THREE.Mesh(new THREE.SphereGeometry(br, 10, 10), bubbleMat);
+    b.position.set(bx, by, bz);
+    group.add(b);
+  });
 
-  // Glowing spring launch ring decal
+  // Luxury Headrest Cushion at left end
+  const pillowMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4 });
+  const pillow = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.36, 12), pillowMat);
+  pillow.rotation.x = Math.PI / 2;
+  pillow.position.set(-0.88, 0.67, 0);
+  group.add(pillow);
+
+  // 7. Luxury Gold Floor-Standing Waterfall Mixer Faucet
+  const faucetPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.038, 0.96, 16), goldMat);
+  faucetPipe.position.set(1.02, 0.48, 0);
+  const faucetBase = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.04, 16), goldMat);
+  faucetBase.position.set(1.02, 0.034, 0);
+  const faucetArch = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.03, 12, 20, Math.PI), goldMat);
+  faucetArch.position.set(0.87, 0.95, 0);
+  faucetArch.rotation.z = Math.PI / 2;
+  const handleBar = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.22, 10), goldMat);
+  handleBar.rotation.x = Math.PI / 2;
+  handleBar.position.set(1.02, 0.72, 0);
+  group.add(faucetPipe, faucetBase, faucetArch, handleBar);
+
+  // 8. Elevated Glowing Trampoline Launch Ring Decal (y: 0.655 with polygonOffset)
   const ring = new THREE.Mesh(
-    new THREE.RingGeometry(0.2, 0.3, 32),
-    new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide })
+    new THREE.RingGeometry(0.22, 0.34, 32),
+    new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    })
   );
   ring.rotation.x = -Math.PI / 2;
-  ring.position.y = 0.57;
+  ring.position.y = 0.655;
   group.add(ring);
 
   return group;
@@ -2289,12 +2394,18 @@ export function createFinishGate(): THREE.Group {
  */
 export function createAisleArrow(length = 1.2): THREE.Group {
   const group = new THREE.Group();
-  const mat = new THREE.MeshBasicMaterial({ color: 0x22c55e, side: THREE.DoubleSide });
+  const mat = new THREE.MeshBasicMaterial({
+    color: 0x22c55e,
+    side: THREE.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
+  });
 
   const shaft = new THREE.Mesh(new THREE.PlaneGeometry(length * 0.6, 0.25), mat);
   shaft.rotation.x = -Math.PI / 2;
   shaft.position.x = -length * 0.2;
-  shaft.position.y = 0.015;
+  shaft.position.y = 0.02;
 
   const head = new THREE.Mesh(new THREE.BufferGeometry(), mat);
   const vertices = new Float32Array([
@@ -2303,7 +2414,7 @@ export function createAisleArrow(length = 1.2): THREE.Group {
     0, 0, 0.4,
   ]);
   head.geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-  head.position.y = 0.015;
+  head.position.y = 0.02;
 
   group.add(shaft, head);
   return group;
@@ -2816,6 +2927,35 @@ export function createDroppedPerkCrate(perkId: string, color: number): THREE.Gro
       new THREE.MeshStandardMaterial({ color: 0x8b5cf6, metalness: 0.8, emissive: 0x6d28d9, emissiveIntensity: 0.6 })
     );
     coreProp.rotation.z = Math.PI;
+  } else if (perkId === 'kfc_bucket') {
+    const bucketGrp = new THREE.Group();
+    const bMesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.16, 0.12, 0.22, 16),
+      new THREE.MeshStandardMaterial({ color: 0xdc2626, emissive: 0x991b1b, emissiveIntensity: 0.5, roughness: 0.2 })
+    );
+    const chickenTop = new THREE.Mesh(
+      new THREE.SphereGeometry(0.14, 12, 10),
+      new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xd97706, emissiveIntensity: 0.4, roughness: 0.4 })
+    );
+    chickenTop.position.y = 0.1;
+    bucketGrp.add(bMesh, chickenTop);
+    coreProp = bucketGrp;
+  } else if (perkId === 'golden_paleciak') {
+    const jackGrp = new THREE.Group();
+    const forkL = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 0.05, 0.28),
+      new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.9, roughness: 0.1, emissive: 0xca8a04, emissiveIntensity: 0.5 })
+    );
+    forkL.position.x = -0.07;
+    const forkR = forkL.clone();
+    forkR.position.x = 0.07;
+    jackGrp.add(forkL, forkR);
+    coreProp = jackGrp;
+  } else if (perkId === 'stretch_armor') {
+    coreProp = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.14, 0.14, 0.26, 16),
+      new THREE.MeshStandardMaterial({ color: 0x06b6d4, metalness: 0.7, roughness: 0.15, emissive: 0x0891b2, emissiveIntensity: 0.6 })
+    );
   } else {
     // Espresso
     coreProp = new THREE.Mesh(
@@ -3394,6 +3534,9 @@ export function createSprayGraffitiDecal(text: string = "ARKADIUSZ"): THREE.Mesh
     opacity: 0.95,
     depthWrite: false,
     side: THREE.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
   });
 
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 2.1), mat);
@@ -3473,11 +3616,14 @@ export function createCrimeSceneBodyOutlineDecal(label: string = 'RUDY ŚMIERDZI
     opacity: 0.92,
     depthWrite: false,
     side: THREE.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
   });
 
   const decalMesh = new THREE.Mesh(new THREE.PlaneGeometry(4.8, 4.8), mat);
   decalMesh.rotation.x = -Math.PI / 2;
-  decalMesh.position.y = 0.02;
+  decalMesh.position.y = 0.025;
 
   group.add(decalMesh);
   return group;
@@ -4136,3 +4282,394 @@ export function createBhpDigitalScoreboard(title = 'BHP MAX-FLIZ • DNI BEZ POT
 
   return group;
 }
+
+/**
+ * 42. NEW COLLECTIBLE / POWER-UP: Kubełek Kurczaka z KFC od Dawida ("WTORKOWY KUBEŁEK MOCY!")
+ */
+export function createKfcBucketCollectible(): THREE.Group {
+  const group = new THREE.Group();
+  group.name = 'kfc_bucket_collectible';
+
+  // Red & White Striped Bucket Texture
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d')!;
+  for (let i = 0; i < 8; i++) {
+    ctx.fillStyle = i % 2 === 0 ? '#dc2626' : '#ffffff';
+    ctx.fillRect(i * 32, 0, 32, 128);
+  }
+  ctx.fillStyle = '#111827';
+  ctx.fillRect(48, 34, 160, 56);
+  ctx.strokeStyle = '#facc15';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(48, 34, 160, 56);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '900 26px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('KFC DAWID', 128, 70);
+
+  const bucketTex = new THREE.CanvasTexture(canvas);
+  bucketTex.colorSpace = THREE.SRGBColorSpace;
+
+  const bucketMat = new THREE.MeshStandardMaterial({
+    map: bucketTex,
+    roughness: 0.25,
+    metalness: 0.1,
+  });
+  const bucket = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.18, 0.34, 24), bucketMat);
+  bucket.position.y = 0.22;
+  bucket.castShadow = true;
+  group.add(bucket);
+
+  // White Rim
+  const rim = new THREE.Mesh(
+    new THREE.TorusGeometry(0.24, 0.018, 10, 24),
+    new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 })
+  );
+  rim.rotation.x = Math.PI / 2;
+  rim.position.y = 0.39;
+  group.add(rim);
+
+  // Crispy Golden Fried Chicken Drumsticks sticking out the top!
+  const chickenMat = new THREE.MeshStandardMaterial({
+    color: 0xd97706,
+    emissive: 0x92400e,
+    emissiveIntensity: 0.35,
+    roughness: 0.45,
+  });
+  const boneMat = new THREE.MeshStandardMaterial({ color: 0xfef3c7, roughness: 0.3 });
+
+  for (let i = 0; i < 4; i++) {
+    const angle = (i / 4) * Math.PI * 2 + 0.3;
+    const drumstick = new THREE.Group();
+    const meat = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 10), chickenMat);
+    meat.scale.set(1.2, 0.9, 0.9);
+    const bone = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.12, 8), boneMat);
+    bone.position.set(0.09, 0.05, 0);
+    bone.rotation.z = -0.6;
+    drumstick.add(meat, bone);
+    drumstick.position.set(Math.cos(angle) * 0.09, 0.43, Math.sin(angle) * 0.09);
+    drumstick.rotation.y = angle;
+    group.add(drumstick);
+  }
+
+  // Glowing Aura Ring
+  const aura = new THREE.Mesh(
+    new THREE.TorusGeometry(0.32, 0.018, 8, 24),
+    new THREE.MeshBasicMaterial({ color: 0xef4444 })
+  );
+  aura.rotation.x = Math.PI / 2;
+  aura.position.y = 0.12;
+  group.add(aura);
+
+  return group;
+}
+
+/**
+ * 43. NEW ENEMY: Głodny Zombie-Pracownik ("DAWID PRZYWIÓZŁ KFC! DAJ STRIPSA!")
+ */
+export function createZombieWorkerEnemyModel(): {
+  group: THREE.Group;
+  legL: THREE.Mesh;
+  legR: THREE.Mesh;
+  armL: THREE.Mesh;
+  armR: THREE.Mesh;
+  head: THREE.Mesh;
+} {
+  const group = new THREE.Group();
+  group.name = 'enemy_zombie_worker';
+
+  const zombieSkinMat = new THREE.MeshStandardMaterial({ color: 0x84cc16, roughness: 0.55 });
+  const vestMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.5 }); // KFC Red / Tattered Vest
+  const pantsMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
+  const eyeGlowMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+
+  // Body leaning slightly forward in zombie hunger
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.48, 0.24), vestMat);
+  body.position.y = 0.56;
+  body.rotation.x = 0.15;
+  body.castShadow = true;
+  group.add(body);
+
+  // Head
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.26, 0.26), zombieSkinMat);
+  head.position.set(0, 0.94, 0.04);
+  head.castShadow = true;
+  group.add(head);
+
+  // Glowing Hungry Eyes & Open Drooling Mouth
+  const eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.04, 0.02), eyeGlowMat);
+  eyeL.position.set(-0.06, 0.96, 0.175);
+  const eyeR = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.04, 0.02), eyeGlowMat);
+  eyeR.position.set(0.06, 0.96, 0.175);
+  const mouth = new THREE.Mesh(
+    new THREE.BoxGeometry(0.12, 0.06, 0.02),
+    new THREE.MeshBasicMaterial({ color: 0x7f1d1d })
+  );
+  mouth.position.set(0, 0.87, 0.175);
+  group.add(eyeL, eyeR, mouth);
+
+  // Tilted Hardhat
+  const helmet = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.16, 0.17, 0.09, 14),
+    new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.3 })
+  );
+  helmet.position.set(0.02, 1.1, 0.04);
+  helmet.rotation.z = -0.22;
+  group.add(helmet);
+
+  // Legs
+  const legGeo = new THREE.BoxGeometry(0.13, 0.36, 0.15);
+  const legL = new THREE.Mesh(legGeo, pantsMat);
+  legL.position.set(-0.1, 0.19, 0);
+  legL.castShadow = true;
+  const legR = new THREE.Mesh(legGeo, pantsMat);
+  legR.position.set(0.1, 0.19, 0);
+  legR.castShadow = true;
+  group.add(legL, legR);
+
+  // Outstretched Zombie Arms reaching for KFC!
+  const armGeo = new THREE.BoxGeometry(0.11, 0.4, 0.11);
+  const armL = new THREE.Mesh(armGeo, zombieSkinMat);
+  armL.position.set(-0.25, 0.68, 0.16);
+  armL.rotation.x = -1.35;
+  armL.castShadow = true;
+
+  const armR = new THREE.Mesh(armGeo, zombieSkinMat);
+  armR.position.set(0.25, 0.68, 0.16);
+  armR.rotation.x = -1.35;
+  armR.castShadow = true;
+  group.add(armL, armR);
+
+  // Contact Shadow
+  const shadow = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.55, 0.55),
+    new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity: 0.4,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    })
+  );
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.y = 0.015;
+  group.add(shadow);
+
+  return { group, legL, legR, armL, armR, head };
+}
+
+/**
+ * 44. TRAP 1: Plama Rozlanego Kleju Epoksydowego Mapei (Spowalnia ruch o 55%!)
+ */
+export function createGlueSpillTrapModel(radius = 2.2): THREE.Group {
+  const group = new THREE.Group();
+  group.name = 'trap_glue_spill';
+
+  // Glossy sticky amber-green epoxy puddle
+  const puddleMat = new THREE.MeshStandardMaterial({
+    color: 0x84cc16,
+    emissive: 0x4d7c0f,
+    emissiveIntensity: 0.45,
+    roughness: 0.08,
+    metalness: 0.15,
+    transparent: true,
+    opacity: 0.88,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
+  });
+  const puddle = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius * 1.04, 0.025, 28), puddleMat);
+  puddle.position.y = 0.015;
+  group.add(puddle);
+
+  // Overturned Glue Bucket on edge
+  const bucketMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3, metalness: 0.2 });
+  const bucket = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.18, 0.42, 16), bucketMat);
+  bucket.rotation.z = Math.PI / 2.2;
+  bucket.position.set(-radius * 0.55, 0.18, -0.2);
+  bucket.castShadow = true;
+  group.add(bucket);
+
+  // Bubbles in sticky glue
+  const bubbleMat = new THREE.MeshStandardMaterial({ color: 0xbef264, emissive: 0x65a30d, emissiveIntensity: 0.5, roughness: 0.1 });
+  for (let i = 0; i < 7; i++) {
+    const angle = (i / 7) * Math.PI * 2;
+    const dist = radius * (0.25 + (i % 3) * 0.22);
+    const b = new THREE.Mesh(new THREE.SphereGeometry(0.08 + (i % 2) * 0.04, 10, 10), bubbleMat);
+    b.position.set(Math.cos(angle) * dist, 0.04, Math.sin(angle) * dist);
+    group.add(b);
+  }
+
+  return group;
+}
+
+/**
+ * 45. TRAP 2: Automatyczna Gilotyna Laserowa do Wielkiego Formatu (Ruchoma wiązka i tarcza!)
+ */
+export function createLaserCutterTrapModel(width = 4.6): {
+  group: THREE.Group;
+  bladeCarriage: THREE.Group;
+} {
+  const group = new THREE.Group();
+  group.name = 'trap_laser_cutter';
+
+  const pillarMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.85, roughness: 0.2 });
+  const hazardMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.5, roughness: 0.3 });
+  const laserMat = new THREE.MeshBasicMaterial({ color: 0xff0033 });
+
+  const halfW = width / 2;
+
+  // Left & Right CNC Laser Emitter Turrets
+  [-halfW, halfW].forEach((px) => {
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.34, 0.18, 16), hazardMat);
+    base.position.set(px, 0.09, 0);
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.24, 1.1, 0.24), pillarMat);
+    post.position.set(px, 0.64, 0);
+    post.castShadow = true;
+    const emitter = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 12), laserMat);
+    emitter.position.set(px, 0.55, 0);
+    group.add(base, post, emitter);
+  });
+
+  // Top Guide Rail
+  const rail = new THREE.Mesh(new THREE.BoxGeometry(width, 0.08, 0.12), pillarMat);
+  rail.position.set(0, 1.15, 0);
+  group.add(rail);
+
+  // Glowing Horizontal Red Laser Beam (at jumpable height y = 0.48)
+  const laserBeam = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, width - 0.2, 12), laserMat);
+  laserBeam.rotation.z = Math.PI / 2;
+  laserBeam.position.set(0, 0.48, 0);
+  group.add(laserBeam);
+
+  // Oscillating Diamond Saw Blade Carriage
+  const bladeCarriage = new THREE.Group();
+  bladeCarriage.position.set(0, 0.55, 0);
+  const carriageBox = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.26, 0.26), hazardMat);
+  carriageBox.position.y = 0.6;
+  const diamondDisk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.42, 0.42, 0.03, 24),
+    new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.95, roughness: 0.1, emissive: 0xef4444, emissiveIntensity: 0.35 })
+  );
+  diamondDisk.rotation.x = Math.PI / 2;
+  bladeCarriage.add(carriageBox, diamondDisk);
+  group.add(bladeCarriage);
+
+  return { group, bladeCarriage };
+}
+
+/**
+ * 46. TRAP 3: Pęknięty Hydrant / Gejzer Wrzątku z Bojlera (Wybucha parą pod ciśnieniem!)
+ */
+export function createSteamGeyserTrapModel(): {
+  group: THREE.Group;
+  steamColumn: THREE.Mesh;
+  warningRing: THREE.Mesh;
+} {
+  const group = new THREE.Group();
+  group.name = 'trap_steam_geyser';
+
+  const brassMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.85, roughness: 0.2 });
+  const redValveMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.3 });
+
+  // Floor grate & brass nozzle
+  const grate = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.6, 0.08, 20), brassMat);
+  grate.position.y = 0.04;
+  const valveWheel = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.035, 8, 16), redValveMat);
+  valveWheel.rotation.x = Math.PI / 2;
+  valveWheel.position.y = 0.11;
+  group.add(grate, valveWheel);
+
+  // Pulsing Warning Ring on Floor
+  const warningRing = new THREE.Mesh(
+    new THREE.RingGeometry(0.62, 1.35, 28),
+    new THREE.MeshBasicMaterial({
+      color: 0xef4444,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.5,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    })
+  );
+  warningRing.rotation.x = -Math.PI / 2;
+  warningRing.position.y = 0.02;
+  group.add(warningRing);
+
+  // High-Pressure Erupting Steam Column (scaled dynamically in updateHazards)
+  const steamGeo = new THREE.CylinderGeometry(0.65, 0.25, 3.6, 16, 1, true);
+  steamGeo.translate(0, 1.8, 0);
+  const steamMat = new THREE.MeshBasicMaterial({
+    color: 0xe0f2fe,
+    transparent: true,
+    opacity: 0.75,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const steamColumn = new THREE.Mesh(steamGeo, steamMat);
+  steamColumn.visible = false;
+  group.add(steamColumn);
+
+  return { group, steamColumn, warningRing };
+}
+
+/**
+ * 47. TRAP 4: Prasa Hydrauliczna do Testowania Gresu (Spadający Młot Udarowy BHP!)
+ */
+export function createHydraulicPressTrapModel(): {
+  group: THREE.Group;
+  stamper: THREE.Group;
+} {
+  const group = new THREE.Group();
+  group.name = 'trap_hydraulic_press';
+
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.85, roughness: 0.25 });
+  const hazardMat = new THREE.MeshStandardMaterial({ map: getHazardStripeTexture(), roughness: 0.3 });
+  const chromeMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.95, roughness: 0.1 });
+
+  // 2 Side Support Columns & Overhead Crossbeam
+  [-1.35, 1.35].forEach((px) => {
+    const col = new THREE.Mesh(new THREE.BoxGeometry(0.22, 3.6, 0.22), frameMat);
+    col.position.set(px, 1.8, 0);
+    col.castShadow = true;
+    group.add(col);
+  });
+  const topBeam = new THREE.Mesh(new THREE.BoxGeometry(3.1, 0.32, 0.45), frameMat);
+  topBeam.position.set(0, 3.6, 0);
+  group.add(topBeam);
+
+  // Moving Hydraulic Stamper Block + Piston
+  const stamper = new THREE.Group();
+  const block = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.55, 1.2), hazardMat);
+  block.castShadow = true;
+  const piston = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 3.2, 16), chromeMat);
+  piston.position.y = 1.8;
+  stamper.add(block, piston);
+  stamper.position.y = 2.6;
+  group.add(stamper);
+
+  // Floor Impact Target Pad
+  const pad = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.2, 1.3),
+    new THREE.MeshBasicMaterial({
+      color: 0xef4444,
+      transparent: true,
+      opacity: 0.35,
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    })
+  );
+  pad.rotation.x = -Math.PI / 2;
+  pad.position.y = 0.02;
+  group.add(pad);
+
+  return { group, stamper };
+}
+

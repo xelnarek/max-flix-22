@@ -88,6 +88,10 @@ class MaxFlizScene extends xb.Script {
           renderer.setPixelRatio(dpr);
         }
       }
+
+      if (this.engine && typeof this.engine.applyAutoCameraScaleForViewport === 'function') {
+        this.engine.applyAutoCameraScaleForViewport();
+      }
     };
 
     window.addEventListener('resize', handleResize);
@@ -130,6 +134,10 @@ class MaxFlizScene extends xb.Script {
     const perkMagnetTimer = document.getElementById('perk-magnet-timer');
     const perkBadgeSpeed = document.getElementById('perk-badge-speed');
     const perkSpeedTimer = document.getElementById('perk-speed-timer');
+    const perkBadgeKfc = document.getElementById('perk-badge-kfc');
+    const perkKfcTimer = document.getElementById('perk-kfc-timer');
+    const perkBadgeBulldozer = document.getElementById('perk-badge-bulldozer');
+    const perkBulldozerTimer = document.getElementById('perk-bulldozer-timer');
 
     const container = document.getElementById('game-canvas-container');
 
@@ -209,6 +217,7 @@ class MaxFlizScene extends xb.Script {
         inspector: { name: 'Inspektor', role: 'BHP / PIP', avatar: '📋' },
         sztaplar_szalony: { name: 'Zdzichu', role: 'Mistrz Sztaplarki', avatar: '🚜' },
         piorun_dron: { name: 'PIORUN', role: 'Dron AI', avatar: '⚡' },
+        zombie_pracownik: { name: 'Zombie-Magazynier', role: 'Głód KFC', avatar: '🧟' },
       };
       return metaMap[type] || { name: 'Pracownik', role: 'Magazyn', avatar: '👷' };
     };
@@ -384,6 +393,22 @@ class MaxFlizScene extends xb.Script {
               perkBadgeSpeed.classList.add('hidden');
             }
           }
+          if (perkBadgeKfc && perkKfcTimer) {
+            if (perks.kfcBerserk > 0) {
+              perkBadgeKfc.classList.remove('hidden');
+              perkKfcTimer.textContent = `${Math.ceil(perks.kfcBerserk)}s`;
+            } else {
+              perkBadgeKfc.classList.add('hidden');
+            }
+          }
+          if (perkBadgeBulldozer && perkBulldozerTimer) {
+            if (perks.bulldozer > 0) {
+              perkBadgeBulldozer.classList.remove('hidden');
+              perkBulldozerTimer.textContent = `${Math.ceil(perks.bulldozer)}s`;
+            } else {
+              perkBadgeBulldozer.classList.add('hidden');
+            }
+          }
         },
         onLevelComplete: (levelId, score, timeStr) => {
           this.lastScore = score;
@@ -496,26 +521,37 @@ class MaxFlizScene extends xb.Script {
       const attackNameElem = document.getElementById('attack-name');
       const attackIconElem = document.getElementById('attack-icon');
       const attackNames: Record<CharacterId, string> = {
-        marcin: 'Cios Segregatorem',
-        grzesiek: 'Łata Brukarska',
-        dawid: 'Przecinak do Gresu',
-        mateusz: 'Chluśnięcie Espresso',
-        piotr: 'Rzut Kluczem Francuskim',
+        marcin: 'Segregator WZ + Impuls',
+        grzesiek: 'Łata 200cm + Fala 44cm',
+        dawid: 'Diamentowa Tarcza 45°',
+        mateusz: 'Salwa DualSense RGB x3',
+        piotr: 'Bumerangowy Klucz 70%',
       };
       const attackIcons: Record<CharacterId, string> = {
-        marcin: '🥊', grzesiek: '🔨', dawid: '🔪', mateusz: '☕', piotr: '🔧',
+        marcin: '📘', grzesiek: '🔨', dawid: '⚙️', mateusz: '🎮', piotr: '🔧',
+      };
+      const attackDescriptions: Record<CharacterId, string> = {
+        marcin: 'Rzuca pancernym Segregatorem WZ z fakturami, który wybucha falą audytu (2.2m), zasysa pobliskie worki z fugą, a co 3. rzut wbija Krytyczną Złotą Pieczęć (2x obrażeń)!',
+        grzesiek: 'Potężny zamach 2-metrową Łatą Brukarską (łuk 140°): zadaje 2 pkt obrażeń naraz, natychmiast kruszy tarcze ochroniarzy i wypuszcza falę uderzeniową o podwójnym odrzucie.',
+        dawid: 'Wystrzeliwuje wirującą Diamentową Tarczę 45° oraz płytę Calacatta, która przebija wielu wrogów w linii, rykoszetuje od ścian i zbiera po drodze worki z fugą (co 3. atak leci podwójna tarcza!).',
+        mateusz: 'Błyskawiczna potrójna salwa samonaprowadzających krążków PlayStation DualSense RGB (□ △ ○), które same skręcają do celów i nakładają efekt Glitch-Lag (-30% prędkości wroga).',
+        piotr: 'Rzuca ciężkim Kluczem Francuskim 70% jak bumerangiem – klucz przebija wrogów w locie tam i z powrotem oraz zostawia iskry bimbru podpalające przeciwników!',
       };
       if (attackNameElem) attackNameElem.textContent = attackNames[id] || 'Atak';
       if (attackIconElem) attackIconElem.textContent = attackIcons[id] || '🥊';
 
       const detailTitle = document.getElementById('char-detail-title');
       const detailBio = document.getElementById('char-detail-bio');
+      const detailAttack = document.getElementById('char-detail-attack');
       const detailSkill = document.getElementById('char-detail-skill');
       const detailPassive = document.getElementById('char-detail-passive');
       if (detailTitle && detailBio && detailSkill) {
         detailTitle.textContent = `${def.name} – ${def.title}`;
         detailBio.textContent = def.bio;
-        detailSkill.innerHTML = `<strong>⚡ Super Umiejętność:</strong> ${def.abilityName} – ${def.abilityDescription}`;
+        if (detailAttack) {
+          detailAttack.innerHTML = `<strong>🥊 Atak Podstawowy [F / Klik]:</strong> ${attackNames[id]} – ${attackDescriptions[id]}`;
+        }
+        detailSkill.innerHTML = `<strong>⚡ Super Umiejętność [E]:</strong> ${def.abilityName} – ${def.abilityDescription}`;
         if (detailPassive) {
           detailPassive.innerHTML = `<strong>🛡️ Zdolność Pasywna:</strong> ${def.passiveName} – ${def.passiveDescription}`;
         }
@@ -697,8 +733,13 @@ class MaxFlizScene extends xb.Script {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const btnEl = e.currentTarget as HTMLElement;
-        const originalText = btnEl.textContent || 'DROP W GRZE 📍';
-        btnEl.textContent = 'DROPI NA MAPIE! 📦';
+        const perkId = btnEl.getAttribute('data-perk') as any;
+        if (perkId && this.engine) {
+          const pPos = this.engine.getPlayerPos();
+          this.engine.spawnDroppedPerk(pPos.x + 1.8, pPos.z, perkId);
+        }
+        const originalText = btnEl.textContent || 'DROP W GRZE';
+        btnEl.textContent = 'ZRZUCONO OBOK! 📦';
         btnEl.classList.add('activated');
         setTimeout(() => {
           btnEl.textContent = originalText;
@@ -898,15 +939,24 @@ class MaxFlizScene extends xb.Script {
 
     const handleCameraToggle = () => {
       const mode = this.engine.toggleCameraMode();
-      if (mode === 'close') {
-        spawnFloatingToast('📐 KAMERA 3D: AKCJA ZA PLECAMI', this.engine.getPlayerPos().x, this.engine.getPlayerPos().y + 1.2, this.engine.getPlayerPos().z, 'combo');
+      if (mode === 'tpp') {
+        spawnFloatingToast('📐 KAMERA 3D: WIDOK ZZA PLECÓW (TPP)', this.engine.getPlayerPos().x, this.engine.getPlayerPos().y + 1.2, this.engine.getPlayerPos().z, 'combo');
+      } else if (mode === 'close') {
+        spawnFloatingToast('📐 KAMERA 3D: BLISKA AKCJA', this.engine.getPlayerPos().x, this.engine.getPlayerPos().y + 1.2, this.engine.getPlayerPos().z, 'perk');
       } else {
-        spawnFloatingToast('📐 KAMERA 3D: SZEROKI PRZEGLĄD', this.engine.getPlayerPos().x, this.engine.getPlayerPos().y + 1.2, this.engine.getPlayerPos().z, 'vip');
+        spawnFloatingToast('📐 KAMERA 3D: SZEROKI PRZEGLĄD (ISO)', this.engine.getPlayerPos().x, this.engine.getPlayerPos().y + 1.2, this.engine.getPlayerPos().z, 'vip');
       }
+      if (zoomSlider) zoomSlider.value = this.engine.getCamZoomFactor().toString();
     };
 
     bindTap(document.getElementById('btn-top-camera'), handleCameraToggle);
     bindTap(document.getElementById('btn-camera'), handleCameraToggle);
+
+    const handleEventTrigger = () => {
+      this.engine.triggerTimedWarehouseEvent();
+    };
+    bindTap(document.getElementById('btn-top-event'), handleEventTrigger);
+    bindTap(document.getElementById('btn-event'), handleEventTrigger);
 
     bindTap(document.getElementById('btn-top-zoom-in'), () => {
       this.engine.zoomInCamera();
