@@ -3058,7 +3058,7 @@ export class MaxFlizGameEngine {
     }
     const boss = this.enemies[this.enemies.length - 1];
     if (boss) {
-      boss.maxHp = 14 + wave * 1.6;
+      boss.maxHp = Math.round(14 + wave * 1.6);
       boss.hp = boss.maxHp;
       boss.speed *= 1 + Math.min(0.5, wave * 0.012);
       boss.specialActionTimer = 2.0;
