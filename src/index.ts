@@ -7,7 +7,7 @@ import {
   getTopLeaderboard,
   testFirestoreConnection,
 } from './firebase.ts';
-import { MaxFlizGameEngine } from './game.ts';
+import { MaxFlizGameEngine, type SurvivalSnapshot, type SurvivalUpgradeOption } from './game.ts';
 import { sound } from './sound.ts';
 import { IntroCutsceneManager } from './introCutscene.ts';
 import { PixelIntroManager } from './pixelIntro.ts';
@@ -134,6 +134,16 @@ class MaxFlizScene extends xb.Script {
     const pauseModal = document.getElementById('pause-modal');
     const victoryModal = document.getElementById('victory-modal');
     const gameoverModal = document.getElementById('gameover-modal');
+    const survivalHud = document.getElementById('survival-hud');
+    const survivalLevelUp = document.getElementById('survival-levelup');
+    const survivalUpgradeOptions = document.getElementById('survival-upgrade-options');
+    const survivalTimeElem = document.getElementById('survival-time');
+    const survivalWaveElem = document.getElementById('survival-wave');
+    const survivalLevelElem = document.getElementById('survival-level');
+    const survivalXpElem = document.getElementById('survival-xp');
+    const survivalXpFill = document.getElementById('survival-xp-fill');
+    const survivalKillsElem = document.getElementById('survival-kills');
+    const survivalEnemiesElem = document.getElementById('survival-enemies');
 
     const victoryScore = document.getElementById('victory-score');
     const victoryTime = document.getElementById('victory-time');
@@ -456,6 +466,8 @@ class MaxFlizScene extends xb.Script {
           hudBottom?.classList.add('hidden');
           touchControls?.classList.add('hidden');
           bossHudBar?.classList.add('hidden');
+          survivalHud?.classList.add('hidden');
+          survivalLevelUp?.classList.add('hidden');
 
           const nickInput = document.getElementById('player-nickname-input') as HTMLInputElement | null;
           const submitBtn = document.getElementById('btn-submit-score') as HTMLButtonElement | null;
@@ -499,6 +511,45 @@ class MaxFlizScene extends xb.Script {
           hudBottom?.classList.add('hidden');
           touchControls?.classList.add('hidden');
           bossHudBar?.classList.add('hidden');
+          survivalHud?.classList.add('hidden');
+          survivalLevelUp?.classList.add('hidden');
+        },
+        onSurvivalUpdate: (snapshot: SurvivalSnapshot) => {
+          const minutes = Math.floor(snapshot.elapsedSeconds / 60);
+          const seconds = snapshot.elapsedSeconds % 60;
+          if (survivalTimeElem) survivalTimeElem.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+          if (survivalWaveElem) survivalWaveElem.textContent = String(snapshot.wave);
+          if (survivalLevelElem) survivalLevelElem.textContent = String(snapshot.level);
+          if (survivalXpElem) survivalXpElem.textContent = snapshot.xp + ' / ' + snapshot.xpToNext + ' XP';
+          if (survivalXpFill) survivalXpFill.style.width = Math.min(100, (snapshot.xp / Math.max(1, snapshot.xpToNext)) * 100) + '%';
+          if (survivalKillsElem) survivalKillsElem.textContent = String(snapshot.kills);
+          if (survivalEnemiesElem) survivalEnemiesElem.textContent = String(snapshot.aliveEnemies);
+        },
+        onSurvivalLevelUp: (options: SurvivalUpgradeOption[]) => {
+          if (!survivalUpgradeOptions || !survivalLevelUp) return;
+          survivalUpgradeOptions.replaceChildren();
+          for (const option of options) {
+            const card = document.createElement('button');
+            card.type = 'button';
+            card.className = 'survival-upgrade-card';
+            const icon = document.createElement('span');
+            icon.className = 'survival-upgrade-icon';
+            icon.textContent = option.icon;
+            const title = document.createElement('span');
+            title.className = 'survival-upgrade-title';
+            title.textContent = option.title;
+            const description = document.createElement('span');
+            description.className = 'survival-upgrade-description';
+            description.textContent = option.description;
+            card.append(icon, title, description);
+            card.addEventListener('click', () => {
+              if (this.engine.chooseSurvivalUpgrade(option.id)) {
+                survivalLevelUp.classList.add('hidden');
+              }
+            });
+            survivalUpgradeOptions.appendChild(card);
+          }
+          survivalLevelUp.classList.remove('hidden');
         },
         onBossUpdate: (name, hp, maxHp, visible, phase) => {
           if (!bossHudBar || !bossNameElem || !bossHpTextElem || !bossHpFillElem) return;
@@ -808,12 +859,47 @@ class MaxFlizScene extends xb.Script {
       pauseModal?.classList.add('hidden');
       victoryModal?.classList.add('hidden');
       gameoverModal?.classList.add('hidden');
+      survivalLevelUp?.classList.add('hidden');
+      survivalHud?.classList.add('hidden');
 
       hudTop?.classList.remove('hidden');
       hudBottom?.classList.remove('hidden');
       touchControls?.classList.remove('hidden');
 
       this.engine.startGame(this.selectedLevelId);
+      setTimeout(() => { startingGame = false; }, 600);
+    };
+
+    const doStartSurvival = async (e?: Event) => {
+      if (startingGame) return;
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      await assetLoader.waitUntilReady('Gra 3D');
+
+      startingGame = true;
+      if (this.pixelIntro && this.pixelIntro.isRunning()) this.pixelIntro.stop();
+      if (this.cutscene && this.cutscene.isRunning()) this.cutscene.stop();
+      this.engine.setLevelVisible(true);
+
+      const storyModal = document.getElementById('story-intro-modal');
+      storyModal?.classList.add('hidden');
+      if (titleScreen) {
+        titleScreen.classList.add('hidden');
+        titleScreen.style.setProperty('display', 'none', 'important');
+      }
+      pauseModal?.classList.add('hidden');
+      victoryModal?.classList.add('hidden');
+      gameoverModal?.classList.add('hidden');
+      survivalLevelUp?.classList.add('hidden');
+
+      hudTop?.classList.remove('hidden');
+      hudBottom?.classList.remove('hidden');
+      touchControls?.classList.remove('hidden');
+      survivalHud?.classList.remove('hidden');
+
+      this.engine.startSurvival();
       setTimeout(() => { startingGame = false; }, 600);
     };
 
@@ -841,6 +927,7 @@ class MaxFlizScene extends xb.Script {
 
     const startBtn = document.getElementById('btn-start-game');
     bindTap(startBtn, doStartGame);
+    bindTap(document.getElementById('btn-start-survival'), doStartSurvival);
 
     window.addEventListener('keydown', (e) => {
       const storyModal = document.getElementById('story-intro-modal');
@@ -1115,6 +1202,8 @@ class MaxFlizScene extends xb.Script {
 
     bindTap(document.getElementById('btn-menu-victory'), () => {
       victoryModal?.classList.add('hidden');
+      survivalHud?.classList.add('hidden');
+      survivalLevelUp?.classList.add('hidden');
       if (titleScreen) {
         titleScreen.classList.remove('hidden');
         titleScreen.style.setProperty('display', 'flex', 'important');
@@ -1123,15 +1212,21 @@ class MaxFlizScene extends xb.Script {
     });
 
     bindTap(document.getElementById('btn-retry'), () => {
+      const retrySurvival = this.engine.getGameMode() === 'survival';
       gameoverModal?.classList.add('hidden');
+      survivalLevelUp?.classList.add('hidden');
       hudTop?.classList.remove('hidden');
       hudBottom?.classList.remove('hidden');
       touchControls?.classList.remove('hidden');
-      this.engine.startGame(this.selectedLevelId);
+      survivalHud?.classList.toggle('hidden', !retrySurvival);
+      if (retrySurvival) this.engine.startSurvival();
+      else this.engine.startGame(this.selectedLevelId);
     });
 
     bindTap(document.getElementById('btn-menu-gameover'), () => {
       gameoverModal?.classList.add('hidden');
+      survivalHud?.classList.add('hidden');
+      survivalLevelUp?.classList.add('hidden');
       if (titleScreen) {
         titleScreen.classList.remove('hidden');
         titleScreen.style.setProperty('display', 'flex', 'important');
