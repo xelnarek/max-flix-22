@@ -5306,7 +5306,7 @@ export class MaxFlizGameEngine {
           mesh: tile,
           vel: forward.multiplyScalar(17.5),
           life: 1.45,
-          damage: Math.ceil(2 * abilityDamageMultiplier),
+          damage: 2,
           pierce: 4,
           ricochet: true,
           collectItems: true,
