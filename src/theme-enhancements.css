@@ -1774,3 +1774,363 @@ h1, h2, h3, .menu-game-title, .hero-name, .dialogue-box-name, .title-brand, .bos
   0% { transform: scale(1); box-shadow: 0 4px 14px rgba(234, 179, 8, 0.5); }
   100% { transform: scale(1.04); box-shadow: 0 6px 22px rgba(234, 179, 8, 0.85); }
 }
+
+
+/* ==========================================================
+   MAX-FLIZ VISUAL PASS — adaptive layout + premium menu
+   ========================================================== */
+:root {
+  --ui-scale: 1;
+  --ui-gold: #f5b942;
+  --ui-gold-soft: rgba(245, 185, 66, 0.22);
+  --ui-panel: rgba(7, 13, 24, 0.94);
+  --ui-line: rgba(183, 203, 228, 0.16);
+}
+
+#title-screen {
+  padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right))
+    max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+}
+
+#title-screen .title-sheet {
+  width: min(96vw, 1280px);
+  max-width: 1280px;
+  height: min(94dvh, 920px);
+  max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 16px);
+  padding: calc(16px * var(--ui-scale)) calc(20px * var(--ui-scale));
+  gap: calc(12px * var(--ui-scale));
+  border-radius: 26px;
+  border: 1px solid rgba(217, 226, 240, 0.15);
+  background:
+    radial-gradient(ellipse at 50% -18%, rgba(30, 122, 169, 0.25), transparent 54%),
+    linear-gradient(145deg, rgba(10, 20, 34, 0.97), rgba(4, 9, 18, 0.985) 68%);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.72), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+#title-screen .menu-top-header {
+  gap: calc(7px * var(--ui-scale));
+  padding: calc(10px * var(--ui-scale)) 12px calc(12px * var(--ui-scale));
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  background: linear-gradient(180deg, rgba(17, 34, 53, 0.55), rgba(7, 13, 24, 0));
+}
+
+#title-screen .brand-badge-pill {
+  padding: calc(5px * var(--ui-scale)) calc(15px * var(--ui-scale));
+  border-color: rgba(245, 185, 66, 0.72);
+  color: #ffda87;
+  background: linear-gradient(90deg, rgba(24, 58, 85, 0.92), rgba(10, 18, 30, 0.96));
+  font-size: calc(10px * var(--ui-scale));
+  letter-spacing: 0.22em;
+  box-shadow: 0 0 22px rgba(37, 151, 205, 0.12);
+}
+
+#title-screen .menu-game-title {
+  font-size: clamp(24px, calc(3.2vw * var(--ui-scale)), 46px) !important;
+  letter-spacing: 0.075em !important;
+  line-height: 1.04;
+  filter: drop-shadow(0 5px 18px rgba(245, 185, 66, 0.16));
+}
+
+#title-screen .menu-game-subtitle {
+  max-width: 760px;
+  font-size: calc(12px * var(--ui-scale)) !important;
+  letter-spacing: 0.045em;
+  line-height: 1.5;
+}
+
+#title-screen .btn-top-intro-pill {
+  min-height: calc(36px * var(--ui-scale));
+  padding: 7px 18px !important;
+  border-radius: 12px !important;
+  background: linear-gradient(110deg, rgba(17, 78, 109, 0.5), rgba(13, 28, 46, 0.85)) !important;
+  border: 1px solid rgba(56, 189, 248, 0.42) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.07), 0 7px 24px rgba(0,0,0,0.2);
+}
+
+#title-screen .menu-tabs-bar {
+  display: grid !important;
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  gap: calc(7px * var(--ui-scale)) !important;
+  padding: calc(7px * var(--ui-scale)) !important;
+  border-radius: 15px !important;
+  border: 1px solid var(--ui-line) !important;
+  background: rgba(3, 9, 18, 0.76) !important;
+}
+
+#title-screen .menu-tab-btn {
+  min-width: 0;
+  min-height: calc(42px * var(--ui-scale));
+  padding: calc(8px * var(--ui-scale)) 5px !important;
+  border-radius: 11px !important;
+  font-size: calc(10px * var(--ui-scale)) !important;
+  letter-spacing: 0.04em !important;
+  background: linear-gradient(180deg, rgba(33, 50, 69, 0.58), rgba(12, 21, 34, 0.8)) !important;
+  border: 1px solid rgba(157, 178, 201, 0.12) !important;
+  color: #a9b8c9 !important;
+}
+
+#title-screen .menu-tab-btn.active {
+  color: #fff4d7 !important;
+  background: linear-gradient(135deg, rgba(170, 110, 28, 0.54), rgba(33, 73, 96, 0.72)) !important;
+  border-color: rgba(245, 185, 66, 0.72) !important;
+  box-shadow: 0 0 0 1px rgba(245, 185, 66, 0.14) inset, 0 7px 22px rgba(0, 0, 0, 0.25) !important;
+}
+
+#title-screen .menu-tab-btn .tab-icon {
+  font-size: calc(15px * var(--ui-scale)) !important;
+}
+
+#title-screen .menu-tab-content-area {
+  min-height: 0;
+  padding: 2px calc(4px * var(--ui-scale)) 2px 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245, 185, 66, 0.42) rgba(15, 23, 42, 0.35);
+}
+
+#title-screen .tab-panel {
+  gap: calc(12px * var(--ui-scale));
+}
+
+#title-screen .char-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: calc(10px * var(--ui-scale));
+}
+
+#title-screen .char-card {
+  min-height: calc(142px * var(--ui-scale));
+  padding: calc(13px * var(--ui-scale)) 9px;
+  gap: calc(5px * var(--ui-scale));
+  border-radius: 15px;
+  background: linear-gradient(155deg, rgba(30, 48, 68, 0.72), rgba(8, 17, 29, 0.94));
+  border-color: rgba(170, 193, 218, 0.16);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+#title-screen .char-card.active {
+  border-color: rgba(245, 185, 66, 0.82);
+  background: linear-gradient(155deg, rgba(80, 77, 53, 0.68), rgba(13, 28, 43, 0.97));
+  box-shadow: 0 0 0 1px rgba(245,185,66,0.18) inset, 0 14px 32px rgba(0,0,0,0.3);
+}
+
+#title-screen .char-card-badge {
+  font-size: calc(30px * var(--ui-scale));
+  filter: drop-shadow(0 5px 9px rgba(0,0,0,0.35));
+}
+
+#title-screen .char-card-name {
+  font-size: calc(15px * var(--ui-scale));
+}
+
+#title-screen .char-card-role {
+  font-size: calc(10px * var(--ui-scale));
+}
+
+#title-screen .char-card-ability {
+  font-size: calc(9px * var(--ui-scale));
+  line-height: 1.35;
+}
+
+#title-screen .char-details-box,
+#title-screen .combat-guide-banner,
+#title-screen .megamap-pipeline-banner,
+#title-screen .zone-card,
+#title-screen .enemy-guide-card,
+#title-screen .perk-card,
+#title-screen .story-preview-card {
+  border-radius: 16px;
+  border-color: rgba(165, 190, 216, 0.16);
+  background: linear-gradient(145deg, rgba(15, 30, 47, 0.92), rgba(7, 14, 24, 0.97));
+  box-shadow: 0 14px 34px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.045);
+}
+
+#title-screen .menu-fixed-bottom-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: calc(10px * var(--ui-scale));
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  padding-top: calc(8px * var(--ui-scale));
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+#title-screen .btn-primary-start,
+#title-screen .btn-survival-start {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  min-height: calc(66px * var(--ui-scale));
+  padding: calc(12px * var(--ui-scale)) 14px;
+  border-radius: 14px;
+  font-size: calc(14px * var(--ui-scale));
+  letter-spacing: 0.045em;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.17);
+}
+
+#title-screen .btn-primary-start {
+  background: linear-gradient(115deg, #f6c75f, #dc8c2d 62%, #a9571f);
+  color: #161b22;
+}
+
+#title-screen .btn-survival-start {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(248, 113, 113, 0.58);
+  background: linear-gradient(115deg, rgba(125, 32, 35, 0.96), rgba(44, 18, 27, 0.98));
+  color: #fff0eb;
+  cursor: pointer;
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.28), 0 0 22px rgba(239,68,68,0.1);
+}
+
+#title-screen .btn-survival-start:hover {
+  filter: brightness(1.13);
+  transform: translateY(-2px);
+}
+
+#title-screen .start-text {
+  font-size: calc(14px * var(--ui-scale));
+  line-height: 1.25;
+}
+
+#title-screen .start-subtext,
+#title-screen .menu-controls-hint {
+  font-size: calc(9px * var(--ui-scale));
+  line-height: 1.45;
+}
+
+#title-screen .menu-controls-hint {
+  grid-column: 1 / -1;
+  text-align: center;
+  opacity: 0.78;
+}
+
+#hud-top {
+  gap: calc(7px * var(--ui-scale));
+  padding-top: calc(9px * var(--ui-scale) + env(safe-area-inset-top));
+}
+
+.hero-badge,
+.stat-pill,
+.top-icon-btn,
+.perk-badge,
+.survival-chip {
+  font-size: clamp(10px, calc(12px * var(--ui-scale)), 14px);
+}
+
+.hero-badge {
+  padding: calc(6px * var(--ui-scale)) calc(9px * var(--ui-scale));
+}
+
+.top-icon-btn {
+  padding: calc(6px * var(--ui-scale)) calc(10px * var(--ui-scale));
+}
+
+.stat-pill {
+  padding: calc(5px * var(--ui-scale)) calc(8px * var(--ui-scale));
+}
+
+#survival-hud {
+  gap: calc(7px * var(--ui-scale));
+  padding: calc(7px * var(--ui-scale));
+  max-width: min(96vw, 1100px);
+}
+
+.survival-chip {
+  min-width: 0;
+  padding: calc(7px * var(--ui-scale)) calc(10px * var(--ui-scale));
+}
+
+#fps-badge {
+  font-size: calc(10px * var(--ui-scale));
+  padding: calc(5px * var(--ui-scale)) calc(8px * var(--ui-scale));
+}
+
+@media (max-width: 820px) {
+  #title-screen .title-sheet {
+    width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    padding: max(10px, env(safe-area-inset-top)) calc(10px * var(--ui-scale))
+      max(10px, env(safe-area-inset-bottom));
+  }
+
+  #title-screen .menu-tabs-bar {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+  }
+
+  #title-screen .menu-tab-btn {
+    min-height: calc(38px * var(--ui-scale));
+    font-size: calc(9px * var(--ui-scale)) !important;
+  }
+
+  #title-screen .char-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #title-screen .char-card {
+    min-height: calc(116px * var(--ui-scale));
+  }
+
+  #title-screen .menu-fixed-bottom-bar {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  #title-screen .btn-primary-start,
+  #title-screen .btn-survival-start {
+    min-height: calc(56px * var(--ui-scale));
+  }
+
+  #title-screen .menu-controls-hint {
+    display: none;
+  }
+
+  #hud-top {
+    gap: calc(4px * var(--ui-scale));
+  }
+
+  .hud-top-quick-controls {
+    gap: calc(3px * var(--ui-scale));
+  }
+
+  .top-icon-btn {
+    padding: calc(4px * var(--ui-scale)) calc(7px * var(--ui-scale));
+  }
+}
+
+@media (max-height: 720px) and (min-width: 821px) {
+  #title-screen .title-sheet {
+    padding-top: 6px;
+    padding-bottom: 6px;
+    gap: 6px;
+  }
+
+  #title-screen .menu-top-header {
+    gap: 3px;
+    padding-top: 3px;
+    padding-bottom: 5px;
+  }
+
+  #title-screen .char-card {
+    min-height: 105px;
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #title-screen .char-card,
+  #title-screen .menu-tab-btn,
+  #title-screen .btn-primary-start,
+  #title-screen .btn-survival-start {
+    transition: none !important;
+    animation: none !important;
+  }
+}
