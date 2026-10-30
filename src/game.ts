@@ -3252,7 +3252,7 @@ export class MaxFlizGameEngine {
     });
     const projectile: {
       mesh: THREE.Object3D; vel: THREE.Vector3; life: number; maxLife: number; damage: number;
-      pierce?: number; homing?: boolean; aoeRadius?: number; slowOnHit?: boolean;
+      pierce?: number; homing?: boolean; weaponProjectile?: boolean; aoeRadius?: number; slowOnHit?: boolean;
       igniteOnHit?: boolean; spinSpeed?: number; hitIds: Set<string>;
     } = {
       mesh: new THREE.Group(),
