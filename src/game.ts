@@ -847,6 +847,7 @@ export class MaxFlizGameEngine {
 
   public startTitle() {
     this.gameMode = 'campaign';
+    this.maxHp = 3;
     this.state = 'title';
     this.hp = this.maxHp;
     this.score = 0;
@@ -4447,7 +4448,7 @@ export class MaxFlizGameEngine {
   }
 
   public triggerTimedWarehouseEvent(forcedIndex?: number) {
-    if (this.state !== 'playing') return;
+    if (this.state !== 'playing' || this.gameMode === 'survival') return;
     const eventIdx = forcedIndex !== undefined ? forcedIndex : this.timedEventIndex % 5;
     this.timedEventIndex++;
     this.timedEventCooldown = 26.0;
