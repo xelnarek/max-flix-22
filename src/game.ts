@@ -339,6 +339,12 @@ export class MaxFlizGameEngine {
     return Math.min(1.0, 0.50 + (elapsedSec / 150) * 0.50);
   }
 
+  private scaleSurvivalDamage(baseDamage: number): number {
+    return this.gameMode === 'survival'
+      ? Math.max(1, Math.ceil(baseDamage * this.survivalDamageMultiplier))
+      : baseDamage;
+  }
+
   public triggerBloomPulse(durationSec = 0.3) {
     this.bloomPulseTimer = durationSec;
   }
@@ -4247,7 +4253,7 @@ export class MaxFlizGameEngine {
           this.cameraShake = 0.35;
           this.spawnParticleRing(e.x, e.y + 0.8, e.z, 0x38bdf8);
 
-          e.hp -= 2;
+          e.hp -= this.scaleSurvivalDamage(2);
           this.emitFloatingToast('💥 STOMP! +150', e.x, e.y + 1.2, e.z, 'points');
           this.emitFloatingToast('-2 HP', e.x, e.y + 0.7, e.z, 'damage');
 
@@ -4264,7 +4270,7 @@ export class MaxFlizGameEngine {
             const lastHit = this.bulldozerHitCooldowns.get(e.id) || 0;
             if (nowMs - lastHit > 550) {
               this.bulldozerHitCooldowns.set(e.id, nowMs);
-              e.hp -= 3;
+              e.hp -= this.scaleSurvivalDamage(3);
               e.stunTimer = 2.2;
               e.state = 'stunned';
               sound.playSmack();
@@ -4278,7 +4284,7 @@ export class MaxFlizGameEngine {
             e.state = 'stunned';
             this.emitFloatingToast('🛡️ AUDYT BHP!', e.x, e.y + 1, e.z, 'perk');
           } else if (this.grzesiekCrushTimer > 0) {
-            e.hp -= 3;
+            e.hp -= this.scaleSurvivalDamage(3);
             this.emitFloatingToast('-3 HP ŚCISK!', e.x, e.y + 1, e.z, 'damage');
             if (e.hp <= 0) this.defeatEnemy(e, 280, true);
           } else if (e.type === 'krol_leto') {
@@ -4653,8 +4659,7 @@ export class MaxFlizGameEngine {
 
       let destroyProj = false;
       const berserkMult = (this.activePerks.kfcBerserk || 0) > 0 ? 2 : 1;
-      const baseDmg = (p.damage ?? (this.charDef.id === 'dawid' ? 2 : 1)) *
-        berserkMult * (this.gameMode === 'survival' ? this.survivalDamageMultiplier : 1);
+      const baseDmg = this.scaleSurvivalDamage(p.damage ?? (this.charDef.id === 'dawid' ? 2 : 1)) * berserkMult;
 
       for (const e of this.enemies) {
         if (e.state === 'defeated') continue;
@@ -4694,7 +4699,7 @@ export class MaxFlizGameEngine {
               for (const other of this.enemies) {
                 if (other.id !== e.id && other.state !== 'defeated') {
                   if (Math.hypot(other.x - e.x, other.z - e.z) <= p.aoeRadius) {
-                    other.hp -= 1;
+                    other.hp -= this.scaleSurvivalDamage(1);
                     other.stunTimer = Math.max(other.stunTimer, p.stunDuration || 1.2);
                     other.state = 'stunned';
                     this.emitFloatingToast('📑 AUDYT AoE -1 HP!', other.x, other.y + 1.1, other.z, 'damage');
@@ -5497,7 +5502,7 @@ export class MaxFlizGameEngine {
       if (e.state === 'defeated') return;
       const dist = Math.hypot(e.x - x, e.z - z);
       if (dist < 3.2 && Math.abs(e.y - y) < 1.8) {
-        e.hp -= 2;
+        e.hp -= this.scaleSurvivalDamage(2);
         e.stunTimer = 1.5;
         e.state = 'stunned';
         e.onFireTimer = 3.5;
@@ -5575,7 +5580,7 @@ export class MaxFlizGameEngine {
           if (e.state === 'defeated') return;
           const dist = Math.hypot(e.x - p.x, e.z - p.z);
           if (dist < p.radius && Math.abs(e.y - p.y) < 1.5) {
-            e.hp -= 1;
+            e.hp -= this.scaleSurvivalDamage(1);
             e.onFireTimer = 2.0;
             e.speed = Math.max(1.0, e.speed * 0.85); // Slowed by burning bimber
             sound.playHit();
