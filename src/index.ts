@@ -543,8 +543,9 @@ class MaxFlizScene extends xb.Script {
             description.textContent = option.description;
             card.append(icon, title, description);
             card.addEventListener('click', () => {
-              if (this.engine.chooseSurvivalUpgrade(option.id)) {
-                survivalLevelUp.classList.add('hidden');
+              survivalLevelUp.classList.add('hidden');
+              if (!this.engine.chooseSurvivalUpgrade(option.id)) {
+                survivalLevelUp.classList.remove('hidden');
               }
             });
             survivalUpgradeOptions.appendChild(card);
