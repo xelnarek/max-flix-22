@@ -42,6 +42,9 @@ class MaxFlizScene extends xb.Script {
   private lastLoopTick: number = performance.now();
   private launch3dCutsceneFn: ((e?: Event, maxDurationSec?: number) => Promise<void>) | null = null;
   private particleSystem: THREE.Points | null = null;
+  private lastFpsTime: number = performance.now();
+  private frameCount: number = 0;
+  private currentFps: number = 60;
 
   // Duplicate init() and update() removed from here. Handled at the bottom of the class.
 
@@ -83,7 +86,9 @@ class MaxFlizScene extends xb.Script {
         if (typeof renderer.setSize === 'function') {
           renderer.setSize(width, height, false);
         }
-        const dpr = Math.min(window.devicePixelRatio || 1, 2.0);
+        // Mobile 60 FPS optimization: Clamp DPR to 1.5 on mobile to avoid GPU bandwidth bottleneck on high-res phones
+        const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
+        const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2.0);
         if (typeof renderer.setPixelRatio === 'function') {
           renderer.setPixelRatio(dpr);
         }
@@ -149,7 +154,7 @@ class MaxFlizScene extends xb.Script {
       maxAge: number;
     }
     const activeToasts: ActiveToast[] = [];
-    const activeDialogueThrottle = new Map<string, number>();
+    let globalLastDialogueTime = 0;
 
     const createDialogueCard = (text: string, speakerType: string, side: 'left' | 'right' = 'right') => {
       const containerId = side === 'left' ? 'dialogue-container-left' : 'dialogue-container-right';
@@ -157,10 +162,9 @@ class MaxFlizScene extends xb.Script {
       if (!containerElem) return;
 
       const now = Date.now();
-      const throttleKey = `${speakerType}_${side}`;
-      const lastShout = activeDialogueThrottle.get(throttleKey) || 0;
-      if (now - lastShout < 3500) return;
-      activeDialogueThrottle.set(throttleKey, now);
+      // Anti-spam: enforce global cooldown so dialogues don't stack and clutter the screen
+      if (now - globalLastDialogueTime < 3800) return;
+      globalLastDialogueTime = now;
 
       const leftContainer = document.getElementById('dialogue-container-left');
       const rightContainer = document.getElementById('dialogue-container-right');
@@ -394,17 +398,19 @@ class MaxFlizScene extends xb.Script {
             }
           }
           if (perkBadgeKfc && perkKfcTimer) {
-            if (perks.kfcBerserk > 0) {
+            const kfcTime = perks.kfcBerserk ?? 0;
+            if (kfcTime > 0) {
               perkBadgeKfc.classList.remove('hidden');
-              perkKfcTimer.textContent = `${Math.ceil(perks.kfcBerserk)}s`;
+              perkKfcTimer.textContent = `${Math.ceil(kfcTime)}s`;
             } else {
               perkBadgeKfc.classList.add('hidden');
             }
           }
           if (perkBadgeBulldozer && perkBulldozerTimer) {
-            if (perks.bulldozer > 0) {
+            const bullTime = perks.bulldozer ?? 0;
+            if (bullTime > 0) {
               perkBadgeBulldozer.classList.remove('hidden');
-              perkBulldozerTimer.textContent = `${Math.ceil(perks.bulldozer)}s`;
+              perkBulldozerTimer.textContent = `${Math.ceil(bullTime)}s`;
             } else {
               perkBadgeBulldozer.classList.add('hidden');
             }
@@ -940,11 +946,11 @@ class MaxFlizScene extends xb.Script {
     const handleCameraToggle = () => {
       const mode = this.engine.toggleCameraMode();
       if (mode === 'tpp') {
-        spawnFloatingToast('📐 KAMERA 3D: WIDOK ZZA PLECÓW (TPP)', this.engine.getPlayerPos().x, this.engine.getPlayerPos().y + 1.2, this.engine.getPlayerPos().z, 'combo');
+        spawnFloatingToast('📐 KAMERA: PODWYŻSZONY WIDOK TAKTYCZNY', this.engine.getPlayerPos().x, this.engine.getPlayerPos().y + 1.2, this.engine.getPlayerPos().z, 'combo');
       } else if (mode === 'close') {
-        spawnFloatingToast('📐 KAMERA 3D: BLISKA AKCJA', this.engine.getPlayerPos().x, this.engine.getPlayerPos().y + 1.2, this.engine.getPlayerPos().z, 'perk');
+        spawnFloatingToast('📐 KAMERA: BLISKA AKCJA ZZA RAMIENIA', this.engine.getPlayerPos().x, this.engine.getPlayerPos().y + 1.2, this.engine.getPlayerPos().z, 'perk');
       } else {
-        spawnFloatingToast('📐 KAMERA 3D: SZEROKI PRZEGLĄD (ISO)', this.engine.getPlayerPos().x, this.engine.getPlayerPos().y + 1.2, this.engine.getPlayerPos().z, 'vip');
+        spawnFloatingToast('📐 KAMERA: SZEROKI PRZEGLĄD (ISO)', this.engine.getPlayerPos().x, this.engine.getPlayerPos().y + 1.2, this.engine.getPlayerPos().z, 'vip');
       }
       if (zoomSlider) zoomSlider.value = this.engine.getCamZoomFactor().toString();
     };
@@ -1391,6 +1397,25 @@ class MaxFlizScene extends xb.Script {
   }
 
   private tick(dt: number) {
+    this.frameCount++;
+    const now = performance.now();
+    if (now - this.lastFpsTime >= 350) {
+      this.currentFps = Math.round((this.frameCount * 1000) / Math.max(1, now - this.lastFpsTime));
+      this.frameCount = 0;
+      this.lastFpsTime = now;
+      const fpsValueElem = document.getElementById('fps-value');
+      if (fpsValueElem) {
+        fpsValueElem.textContent = this.currentFps.toString();
+        if (this.currentFps >= 55) {
+          fpsValueElem.style.color = '#34d399';
+        } else if (this.currentFps >= 30) {
+          fpsValueElem.style.color = '#facc15';
+        } else {
+          fpsValueElem.style.color = '#f87171';
+        }
+      }
+    }
+
     try {
       if (this.pixelIntro && this.pixelIntro.isRunning()) {
         // Pixel intro updates internally via its own canvas RAF
@@ -1570,7 +1595,8 @@ async function startApp() {
       // High fidelity rendering configuration
       if (xb.core.renderer) {
         const r = xb.core.renderer as THREE.WebGLRenderer;
-        r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2.5));
+        const isMobileDevice = window.innerWidth < 900 || ('ontouchstart' in window);
+        r.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.5 : 2.0));
         r.toneMapping = THREE.ACESFilmicToneMapping;
         r.toneMappingExposure = 1.15;
         r.shadowMap.enabled = true;

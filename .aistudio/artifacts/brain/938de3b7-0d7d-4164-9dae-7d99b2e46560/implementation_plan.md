@@ -1,27 +1,50 @@
-# Implementation Plan: Max-Fliz 3D Logistics Engine Overhaul
+# Plan Przebudowy: Widok i Tempo Vampire Survivors oraz Uporządkowanie UI
 
-## Phase 1: Security & Stability (Firestore Fix)
-- **Objective:** Fix `permission-denied` and implement robust error handling.
-- **Actions:**
-    - Review `firestore.rules`.
-    - Apply hardened security rules (default-deny, ABAC, robust schema validation).
-    - Implement `handleFirestoreError` in the Firebase service integration.
-    - Deploy updated rules using `rpc_action`.
+Plan przebudowy perspektywy gry na szeroki widok z góry w stylu *Vampire Survivors*, znaczącego stonowania tempa ruchu (50% na starcie) oraz likwidacji nakładających się ramek i chaosu w interfejsie na smartfonach.
 
-## Phase 2: UI/UX Modernization
-- **Objective:** Redesign UI to "Premium Dark Glassmorphism with gold Max-Fliz neon accents".
-- **Actions:**
-    - Update `src/index.css` and `src/theme-enhancements.css` with the new design tokens.
-    - Refactor `index.html` UI overlay components to match the new look (modern fonts, glassmorphism, consistent spacing).
+---
 
-## Phase 3: World Unification
-- **Objective:** Merge 3 distinct maps into a single continuous linear progression.
-- **Actions:**
-    - Analyze `src/game.ts` to identify sector-loading logic.
-    - Re-architect the world generation to stream the 3 zones as continuous segments.
-    - Update sector transition gates to be seamless.
+## 1. Wybrane Decyzje Użytkownika
 
-## Verification & Delivery
-- Validate Firestore rules via `firebase-integration-rpc` testing patterns.
-- Ensure the build succeeds with `compile_applet`.
-- Deploy updated assets and code to the development environment.
+- **Kamera & Widok Mapy**: Szeroki rzut z góry (*Top-Down / Isometric Overview* ~60° z dużą odległością), ukazujący duży obszar magazynu, alejek i zbliżających się wrogów – dokładnie tak jak w *Vampire Survivors*.
+- **Tempo Rozgrywki**: **Bardzo stonowany start przy 50% prędkości bazowej**, z wolnym, płynnym narastaniem tempa w czasie trwania starcia (do 100% w 150 sekund).
+- **Czyszczenie i Reorganizacja Interfejsu (Mobile UI)**:
+  - Przeniesienie aktywnej listy perków (`#hud-perks-row`) na **prawą krawędź ekranu**.
+  - Umieszczenie dymków dialogowych / powiadomień na **górze na środku** z mniejszym rozmiarem i szybkim znikaniem (2.8s), by nigdy nie zasłaniały statystyk ani paska HP.
+  - Wyśrodkowanie paska Bossa (`#boss-hud-bar`) na samej górze.
+  - Skompresowanie ikonek i usunięcie nakładania się ramek na małych ekranach.
+
+---
+
+## 2. Plan Modyfikacji Krok po Kroku
+
+### Krok 1: Nowy Kąt i Dystans Kamery w `src/game.ts`
+- Zaktualizowanie bazowych offsetów kamery w trybie `tpp`:
+  ```ts
+  baseOffsetX = 0.0;
+  baseOffsetY = 16.5; // Wysoki widok z góry
+  baseOffsetZ = 12.5;
+  ```
+- Zwiększenie zasięgu pola widzenia (FOV) na urządzeniach mobilnych, zapewniające przegląd dużej części mapy.
+
+### Krok 2: Wolniejsze Tempo w `src/game.ts`
+- Zmiana wzoru `getPacingFactor()`:
+  ```ts
+  // Start od 0.50 (50%), płynny przyrost do 1.0 w ciągu 150s
+  return Math.min(1.0, 0.50 + (elapsedSec / 150) * 0.50);
+  ```
+- Dostosowanie prędkości gracza, skoku i przeciwników do nowego widoku taktycznego.
+
+### Krok 3: Reorganizacja CSS i HTML w `src/index.css` & `src/index.ts`
+- **Prawa strona ekranu**: `#hud-perks-row` otrzymuje pozycję `right: 12px; top: 72px; flex-direction: column; align-items: flex-end;`.
+- **Środek na górze**:
+  - Dymki tekstowe `.speech-bubble-pop` – wyśrodkowane na górze (`top: 56px; left: 50%; transform: translateX(-50%);`), maks. szerokość 320px, kompaktowy padding.
+  - Pasek bossa `#boss-hud-bar` – umieszczony wyżej, z powężonymi marginesami.
+- **Top cluster**: Zmniejszenie rozmiarów ikonek w lewym górnym rogu na telefonach, wyeliminowanie nakładania się tekstu i przycisków.
+
+---
+
+## 3. Weryfikacja
+
+- Skompilowanie za pomocą `compile_applet` oraz `lint_applet`.
+- Sprawdzenie braku nakładania się elementów UI w widoku pionowym na smartfonach.

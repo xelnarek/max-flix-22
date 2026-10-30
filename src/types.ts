@@ -106,6 +106,7 @@ export interface EnemyItem {
   alerted?: boolean;
   hpBar?: any;
   hpFill?: any;
+  threatRing?: any;
 }
 
 export interface HazardItem {
