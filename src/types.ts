@@ -138,6 +138,7 @@ export interface HazardItem {
   phase?: number;
   movingPart?: any;
   warningMesh?: any;
+  life?: number; // temporary Survival traps are removed after their active window
 }
 
 export interface PlatformBlock {
@@ -173,6 +174,10 @@ export interface ActivePerks {
   speedBoost: number;   // remaining duration in seconds
   kfcBerserk?: number;  // KFC chicken feast: 2x damage + speed + slow immunity
   bulldozer?: number;   // Golden Pallet Jack: ram enemies on contact
+  attackHaste?: number;
+  arcDrone?: number;
+  xpSurge?: number;
+  damageWard?: number;
 }
 
 export type PerkType =
@@ -182,7 +187,11 @@ export type PerkType =
   | 'espresso_boost'
   | 'kfc_bucket'
   | 'golden_paleciak'
-  | 'stretch_armor';
+  | 'stretch_armor'
+  | 'attack_haste'
+  | 'arc_drone'
+  | 'xp_surge'
+  | 'damage_ward';
 
 export interface PerkDef {
   id: PerkType;
@@ -265,6 +274,39 @@ export const AVAILABLE_PERKS: PerkDef[] = [
     icon: '🛡️',
     color: 0x06b6d4,
     duration: 10,
+  },
+
+  {
+    id: 'attack_haste',
+    name: 'Tryb Turbo Skanera',
+    description: 'Przez 22 sekundy skraca odstęp między atakami operatora.',
+    icon: '📡',
+    color: 0x38bdf8,
+    duration: 22,
+  },
+  {
+    id: 'arc_drone',
+    name: 'Dron Piorun — asysta',
+    description: 'Przez 28 sekund dron okresowo razi najbliższego przeciwnika impulsem elektrycznym.',
+    icon: '🤖',
+    color: 0x22d3ee,
+    duration: 28,
+  },
+  {
+    id: 'xp_surge',
+    name: 'Premia za normę',
+    description: 'Przez 24 sekundy kryształy doświadczenia dają 50% więcej XP.',
+    icon: '📈',
+    color: 0xa78bfa,
+    duration: 24,
+  },
+  {
+    id: 'damage_ward',
+    name: 'Pancerz z palety EURO',
+    description: 'Przez 24 sekundy blokuje jedno trafienie co 2,4 sekundy.',
+    icon: '🪵',
+    color: 0x84cc16,
+    duration: 24,
   },
 ];
 
