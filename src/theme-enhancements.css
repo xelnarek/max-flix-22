@@ -2134,3 +2134,39 @@ h1, h2, h3, .menu-game-title, .hero-name, .dialogue-box-name, .title-brand, .bos
     animation: none !important;
   }
 }
+
+
+/* Survival Shift: reroll, skip tokens and active perk feedback */
+.survival-upgrade-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+.survival-upgrade-actions button {
+  min-height: 42px;
+  padding: 9px 16px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 11px;
+  background: linear-gradient(135deg, rgba(23, 43, 62, 0.96), rgba(8, 15, 26, 0.98));
+  color: #e5edf7;
+  font: 800 11px 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.survival-upgrade-actions button:not(:disabled):hover {
+  border-color: rgba(245, 185, 66, 0.7);
+  box-shadow: 0 0 18px rgba(245, 185, 66, 0.14);
+}
+.survival-upgrade-actions button:disabled { opacity: 0.35; cursor: not-allowed; }
+.survival-levelup-hint { margin: 2px 0 0; color: #93a4b8; font-size: 10px; text-align: center; }
+#hud-perks-row .perk-badge { animation: perkBadgeArrive 0.25s ease-out both; }
+@keyframes perkBadgeArrive {
+  from { opacity: 0; transform: translateY(-5px) scale(0.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (max-width: 600px) {
+  .survival-upgrade-actions button { min-height: 38px; padding: 7px 12px; font-size: 10px; }
+  .survival-levelup-hint { font-size: 9px; }
+}
