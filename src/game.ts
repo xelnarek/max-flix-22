@@ -327,6 +327,8 @@ export class MaxFlizGameEngine {
   private survivalXp = 0;
   private survivalXpToNext = 6;
   private survivalBossWave = 0;
+  private survivalUpgradeStacks: Record<string, number> = {};
+  private survivalEvolutions = new Set<string>();
   private survivalDamageMultiplier = 1;
   private survivalAttackRateMultiplier = 1;
   private survivalMoveMultiplier = 1;
@@ -994,6 +996,18 @@ export class MaxFlizGameEngine {
     this.startGame(1);
     this.gameMode = 'survival';
     this.levelBounds = { minX: -34, maxX: 34, minZ: -17, maxZ: 17 };
+    this.survivalUpgradeStacks = {};
+    this.survivalEvolutions.clear();
+    this.survivalDamageMultiplier = 1;
+    this.survivalAttackRateMultiplier = 1;
+    this.survivalMoveMultiplier = 1;
+    this.survivalMagnetMultiplier = 1;
+    this.survivalRangeMultiplier = 1;
+    this.survivalXpMultiplier = 1;
+    this.survivalDropMultiplier = 1;
+    this.survivalRegenMultiplier = 0;
+    this.survivalRegenTimer = 60;
+    this.survivalDroneCooldown = 1.2;
     this.survivalSpawnTimer = 6.5;
     this.survivalEventTimer = 38;
     this.survivalHazardTimer = 26;
@@ -1053,6 +1067,7 @@ export class MaxFlizGameEngine {
     const choice = this.survivalPendingOptions.find((option) => option.id === id);
     if (!choice) return false;
 
+    this.survivalUpgradeStacks[choice.id] = (this.survivalUpgradeStacks[choice.id] || 0) + 1;
     switch (choice.id) {
       case 'damage':
         this.survivalDamageMultiplier *= 1.20;
@@ -1099,6 +1114,7 @@ export class MaxFlizGameEngine {
         break;
     }
 
+    this.checkSurvivalEvolutions();
     this.survivalPendingOptions = [];
     this.state = 'playing';
     this.emitFloatingToast('ULEPSZENIE: ' + choice.title, this.playerPos.x, this.playerPos.y + 1.6, this.playerPos.z, 'perk');
@@ -1108,6 +1124,47 @@ export class MaxFlizGameEngine {
       this.beginSurvivalLevelUp();
     }
     return true;
+  }
+
+  private checkSurvivalEvolutions() {
+    const stacks = this.survivalUpgradeStacks;
+    const unlock = (id: string, title: string, description: string, apply: () => void) => {
+      if (this.survivalEvolutions.has(id)) return;
+      this.survivalEvolutions.add(id);
+      apply();
+      this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.5, this.playerPos.z, 0xfbbf24);
+      this.triggerBloomPulse(0.65);
+      this.triggerScreenShake(0.22, 0.18);
+      this.emitFloatingToast('EWOLUCJA: ' + title, this.playerPos.x, this.playerPos.y + 2.0, this.playerPos.z, 'combo');
+      this.callbacks.onPerkDropBanner?.(title, '✨', description, '#fbbf24');
+      sound.playAbility(this.currentCharacterId);
+    };
+    if ((stacks.damage || 0) >= 3 && (stacks.rapid || 0) >= 2) {
+      unlock('overdrive', 'OVERDRIVE: LINIA OGNIA', '+35% obrażeń i kolejny skok szybkości ataku.', () => {
+        this.survivalDamageMultiplier *= 1.35; this.survivalAttackRateMultiplier *= 0.84;
+      });
+    }
+    if ((stacks.drone || 0) >= 2 && (stacks.range || 0) >= 2) {
+      unlock('piorun_mk2', 'PIORUN MK II', 'Dron atakuje częściej i namierza cele z większej odległości.', () => {
+        this.activePerks.arcDrone = Math.max(this.activePerks.arcDrone || 0, 45);
+        this.survivalDroneCooldown = 0.72;
+        this.survivalRangeMultiplier = Math.min(2.2, this.survivalRangeMultiplier * 1.18);
+        this.callbacks.onPerksUpdate?.(this.activePerks);
+      });
+    }
+    if ((stacks.growth || 0) >= 2 && (stacks.scavenger || 0) >= 2) {
+      unlock('premium_logistics', 'PREMIUM LOGISTICS', 'Stałe +25% XP i +20% szansy na dodatkowe zrzuty.', () => {
+        this.survivalXpMultiplier = Math.min(3.2, this.survivalXpMultiplier * 1.25);
+        this.survivalDropMultiplier = Math.min(3.2, this.survivalDropMultiplier * 1.20);
+      });
+    }
+    if ((stacks.regen || 0) >= 2 && (stacks.armor || 0) >= 2) {
+      unlock('bhp_fortress', 'FORT BHP', 'Regeneracja działa szybciej, a osłona dłużej chroni przed trafieniami.', () => {
+        this.survivalRegenMultiplier = Math.min(2.8, this.survivalRegenMultiplier + 0.8);
+        this.activePerks.damageWard = Math.max(this.activePerks.damageWard || 0, 36);
+        this.callbacks.onPerksUpdate?.(this.activePerks);
+      });
+    }
   }
 
   private rollSurvivalUpgradeOptions(excluded: string[] = []): SurvivalUpgradeOption[] {
