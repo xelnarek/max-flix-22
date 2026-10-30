@@ -136,7 +136,7 @@ export class PixelIntroManager {
           <div class="pixel-step" data-scene="1">2. MARCIN</div>
           <div class="pixel-step" data-scene="2">3. GRZESIEK & DAWID</div>
           <div class="pixel-step" data-scene="3">4. MATEUSZ & PIOTR</div>
-          <div class="pixel-step" data-scene="4">5. FINAŁ AKCJI</div>
+          <div class="pixel-step" data-scene="4">5. SURVIVAL SHIFT</div>
         </div>
         <div class="pixel-progress-track">
           <div id="pixel-progress-fill" class="pixel-progress-fill"></div>
@@ -816,8 +816,8 @@ export class PixelIntroManager {
         text: '“Mateusz: Laga mają! BSOD i platyna wpada na konto! • Piotr: 70 voltów zza regału B4! Ogień na gresie!”',
       },
       {
-        speaker: '🏆 BOHATEROWIE MAX-FLIZ',
-        text: '“Dostawa zabezpieczona! Wybierz swojego magazyniera i rozpocznij zmianę w Max-Fliz Showdown 3D!”',
+        speaker: '⚔️ EKIPA MAX-FLIZ • SURVIVAL SHIFT',
+        text: '“Dostawa to dopiero początek! Fale co 42 sekundy, bossowie, pułapki, pięć eventów, 12 modułów rozwoju i cztery ewolucje buildów. Wskakuj na zmianę!”',
       },
     ];
 
