@@ -2862,6 +2862,7 @@ export class MaxFlizGameEngine {
       }
       this.updateRandomSpawners(simDt);
       this.updateEnemies(simDt);
+      if (this.gameMode === 'survival') this.updateSurvivalAutoCombat();
       this.updateProjectiles(simDt);
       if (this.gameMode === 'survival') this.updateSurvivalXpGems(simDt);
       this.updateBimberMolotovs(simDt);
@@ -2895,6 +2896,26 @@ export class MaxFlizGameEngine {
     }
 
     this.updateCamera(dt);
+  }
+
+  private updateSurvivalAutoCombat() {
+    if (this.state !== 'playing' || this.gameMode !== 'survival' || this.attackCooldownTimer > 0) return;
+    let target: EnemyItem | null = null;
+    let nearest = 10.5;
+    for (const enemy of this.enemies) {
+      if (enemy.state === 'defeated' || !enemy.mesh) continue;
+      const distance = Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z);
+      if (distance < nearest) {
+        nearest = distance;
+        target = enemy;
+      }
+    }
+    if (!target) return;
+
+    // Aim the existing operator-specific weapon at the nearest threat. Manual attacks remain available.
+    this.playerRot = Math.atan2(target.x - this.playerPos.x, target.z - this.playerPos.z);
+    if (this.playerGroup) this.playerGroup.rotation.y = this.playerRot;
+    this.triggerAttack();
   }
 
   private updateSurvivalDirector(dt: number) {
