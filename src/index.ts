@@ -48,6 +48,7 @@ class MaxFlizScene extends xb.Script {
   private lastMinimapRenderAt: number = 0;
   private pausedForVisibility: boolean = false;
   private resizeObserver: ResizeObserver | null = null;
+  private lastAdaptiveQualityAt: number = 0;
 
   // Duplicate init() and update() removed from here. Handled at the bottom of the class.
 
@@ -70,6 +71,8 @@ class MaxFlizScene extends xb.Script {
       const width = Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth));
       const height = Math.max(1, Math.round(window.visualViewport?.height || window.innerHeight));
       const aspect = width / height;
+      const uiScale = Math.min(1.12, Math.max(0.82, Math.min(width / 430, height / 820)));
+      document.documentElement.style.setProperty('--ui-scale', uiScale.toFixed(3));
 
       if (this.camera) {
         if (aspect < 0.75) {
@@ -89,7 +92,7 @@ class MaxFlizScene extends xb.Script {
       if (renderer) {
         // Set DPR before dimensions so Three.js recreates the drawing buffer at the final scale.
         const isMobile = width < 900 || ('ontouchstart' in window);
-        const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2.0);
+        const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.75 : 2.25);
         renderer.setPixelRatio(dpr);
         renderer.setSize(width, height, false);
       }
@@ -1494,6 +1497,27 @@ class MaxFlizScene extends xb.Script {
     this.tick(dt);
   }
 
+  private updateAdaptiveRenderQuality(now: number) {
+    if (now - this.lastAdaptiveQualityAt < 2500) return;
+    this.lastAdaptiveQualityAt = now;
+
+    const renderer = (xb.core?.renderer as THREE.WebGLRenderer) || null;
+    if (!renderer) return;
+
+    const width = Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth));
+    const height = Math.max(1, Math.round(window.visualViewport?.height || window.innerHeight));
+    const isMobile = width < 900 || ('ontouchstart' in window);
+    const deviceCap = isMobile ? 1.75 : 2.25;
+    const fpsScale = this.currentFps < 34 ? 0.72 : this.currentFps < 44 ? 0.82 : this.currentFps < 52 ? 0.92 : 1;
+    const targetDpr = Math.max(0.9, Math.min(window.devicePixelRatio || 1, deviceCap) * fpsScale);
+
+    // Change drawing-buffer resolution only when the target differs meaningfully.
+    // This avoids reallocating GPU buffers on every frame or on tiny FPS fluctuations.
+    if (Math.abs(renderer.getPixelRatio() - targetDpr) < 0.12) return;
+    renderer.setPixelRatio(targetDpr);
+    renderer.setSize(width, height, false);
+  }
+
   private tick(dt: number) {
     this.frameCount++;
     const now = performance.now();
@@ -1513,6 +1537,8 @@ class MaxFlizScene extends xb.Script {
         }
       }
     }
+
+    this.updateAdaptiveRenderQuality(now);
 
     try {
       if (this.pixelIntro && this.pixelIntro.isRunning()) {
@@ -1698,7 +1724,8 @@ async function startApp() {
       if (xb.core.renderer) {
         const r = xb.core.renderer as THREE.WebGLRenderer;
         const isMobileDevice = window.innerWidth < 900 || ('ontouchstart' in window);
-        r.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.5 : 2.0));
+        r.outputColorSpace = THREE.SRGBColorSpace;
+        r.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.75 : 2.25));
         r.toneMapping = THREE.ACESFilmicToneMapping;
         r.toneMappingExposure = 1.15;
         r.shadowMap.enabled = true;
