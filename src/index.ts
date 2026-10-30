@@ -128,6 +128,7 @@ class MaxFlizScene extends xb.Script {
     const abilityIcon = document.getElementById('ability-icon');
 
     const titleScreen = document.getElementById('title-screen');
+    const gameShell = document.getElementById('game-shell');
     const hudTop = document.getElementById('hud-top');
     const hudBottom = document.getElementById('hud-bottom');
     const touchControls = document.getElementById('touch-controls');
@@ -867,6 +868,7 @@ class MaxFlizScene extends xb.Script {
       hudBottom?.classList.remove('hidden');
       touchControls?.classList.remove('hidden');
 
+      gameShell?.classList.remove('survival-mode');
       this.engine.startGame(this.selectedLevelId);
       setTimeout(() => { startingGame = false; }, 600);
     };
@@ -899,6 +901,7 @@ class MaxFlizScene extends xb.Script {
       hudBottom?.classList.remove('hidden');
       touchControls?.classList.remove('hidden');
       survivalHud?.classList.remove('hidden');
+      gameShell?.classList.add('survival-mode');
 
       this.engine.startSurvival();
       setTimeout(() => { startingGame = false; }, 600);
@@ -1205,6 +1208,7 @@ class MaxFlizScene extends xb.Script {
       victoryModal?.classList.add('hidden');
       survivalHud?.classList.add('hidden');
       survivalLevelUp?.classList.add('hidden');
+      gameShell?.classList.remove('survival-mode');
       if (titleScreen) {
         titleScreen.classList.remove('hidden');
         titleScreen.style.setProperty('display', 'flex', 'important');
@@ -1220,6 +1224,7 @@ class MaxFlizScene extends xb.Script {
       hudBottom?.classList.remove('hidden');
       touchControls?.classList.remove('hidden');
       survivalHud?.classList.toggle('hidden', !retrySurvival);
+      gameShell?.classList.toggle('survival-mode', retrySurvival);
       if (retrySurvival) this.engine.startSurvival();
       else this.engine.startGame(this.selectedLevelId);
     });
@@ -1228,6 +1233,7 @@ class MaxFlizScene extends xb.Script {
       gameoverModal?.classList.add('hidden');
       survivalHud?.classList.add('hidden');
       survivalLevelUp?.classList.add('hidden');
+      gameShell?.classList.remove('survival-mode');
       if (titleScreen) {
         titleScreen.classList.remove('hidden');
         titleScreen.style.setProperty('display', 'flex', 'important');
