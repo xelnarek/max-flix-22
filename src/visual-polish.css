@@ -1817,7 +1817,7 @@ button:disabled { cursor: not-allowed !important; filter: grayscale(.35); opacit
 
 @media (max-width: 1100px), (pointer: coarse) {
   #game-shell.survival-mode .survival-hud {
-    top: calc(100px + env(safe-area-inset-top)) !important;
+    top: calc(116px + env(safe-area-inset-top)) !important;
     left: max(6px, env(safe-area-inset-left)) !important;
     width: calc(100vw - 12px - env(safe-area-inset-left) - env(safe-area-inset-right)) !important;
     min-width: 0 !important;
@@ -1930,7 +1930,7 @@ button:disabled { cursor: not-allowed !important; filter: grayscale(.35); opacit
   #game-shell.survival-mode #hud-top #btn-top-pause { display: inline-flex !important; }
 
   #game-shell.survival-mode #minimap-container {
-    top: calc(230px + env(safe-area-inset-top)) !important;
+    top: calc(246px + env(safe-area-inset-top)) !important;
     left: max(6px, env(safe-area-inset-left)) !important;
     width: clamp(108px, 31vw, 126px) !important;
     max-width: 36vw !important;
@@ -1948,7 +1948,7 @@ button:disabled { cursor: not-allowed !important; filter: grayscale(.35); opacit
     font-size: 6px !important;
   }
   #game-shell.survival-mode #hud-top .boss-hud-bar {
-    top: calc(230px + env(safe-area-inset-top)) !important;
+    top: calc(246px + env(safe-area-inset-top)) !important;
     left: calc(max(6px, env(safe-area-inset-left)) + clamp(108px, 31vw, 126px) + 10px) !important;
     right: max(6px, env(safe-area-inset-right)) !important;
     width: auto !important;
@@ -1970,11 +1970,11 @@ button:disabled { cursor: not-allowed !important; filter: grayscale(.35); opacit
   #game-shell.survival-mode #hud-top .boss-hp-track { height: 5px !important; margin-top: 4px !important; }
 
   #game-shell.survival-mode .dialogue-side-container {
-    top: calc(278px + env(safe-area-inset-top)) !important;
+    top: calc(294px + env(safe-area-inset-top)) !important;
     width: min(178px, calc(50vw - 12px)) !important;
   }
   #game-shell.survival-mode .dialogue-side-container.left {
-    top: calc(314px + env(safe-area-inset-top)) !important;
+    top: calc(330px + env(safe-area-inset-top)) !important;
     left: max(6px, env(safe-area-inset-left)) !important;
   }
   #game-shell.survival-mode .dialogue-side-container.right {
@@ -1990,7 +1990,7 @@ button:disabled { cursor: not-allowed !important; filter: grayscale(.35); opacit
 
 @media (max-width: 390px) {
   #game-shell.survival-mode .survival-hud {
-    top: calc(98px + env(safe-area-inset-top)) !important;
+    top: calc(112px + env(safe-area-inset-top)) !important;
   }
   #game-shell.survival-mode #hud-top .hud-cluster.top-left {
     max-width: min(34vw, 116px) !important;
@@ -2005,26 +2005,26 @@ button:disabled { cursor: not-allowed !important; filter: grayscale(.35); opacit
     height: 24px !important;
   }
   #game-shell.survival-mode #minimap-container {
-    top: calc(224px + env(safe-area-inset-top)) !important;
+    top: calc(240px + env(safe-area-inset-top)) !important;
     width: 110px !important;
     max-width: 35vw !important;
   }
   #game-shell.survival-mode #hud-top .boss-hud-bar {
-    top: calc(224px + env(safe-area-inset-top)) !important;
+    top: calc(240px + env(safe-area-inset-top)) !important;
     left: calc(max(6px, env(safe-area-inset-left)) + 110px + 10px) !important;
   }
   #game-shell.survival-mode .dialogue-side-container.left {
-    top: calc(304px + env(safe-area-inset-top)) !important;
+    top: calc(320px + env(safe-area-inset-top)) !important;
   }
   #game-shell.survival-mode .dialogue-side-container.right {
-    top: calc(268px + env(safe-area-inset-top)) !important;
+    top: calc(284px + env(safe-area-inset-top)) !important;
   }
 }
 
 /* Compressed but non-overlapping lane for landscape phones and short browser windows. */
 @media (max-height: 560px) and (pointer: coarse) {
   #game-shell.survival-mode .survival-hud {
-    top: calc(94px + env(safe-area-inset-top)) !important;
+    top: calc(110px + env(safe-area-inset-top)) !important;
   }
   #game-shell.survival-mode .survival-metrics {
     grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
@@ -2033,10 +2033,10 @@ button:disabled { cursor: not-allowed !important; filter: grayscale(.35); opacit
   #game-shell.survival-mode .survival-weapon-rack { min-height: 26px !important; }
   #game-shell.survival-mode #minimap-container,
   #game-shell.survival-mode #hud-top .boss-hud-bar {
-    top: calc(158px + env(safe-area-inset-top)) !important;
+    top: calc(198px + env(safe-area-inset-top)) !important;
   }
   #game-shell.survival-mode .dialogue-side-container {
-    top: calc(202px + env(safe-area-inset-top)) !important;
+    top: calc(242px + env(safe-area-inset-top)) !important;
   }
 }
 
