@@ -38,6 +38,12 @@ test('the closing ring contracts smoothly and never expands past its starting ra
   assert.equal(getHordeRingRadius(Number.NaN, 13.4, 6.8), 13.4);
 });
 
+test('vertical compression keeps the ring inside the narrow north-south arena span', () => {
+  const point = getHordeRingPoint(1, 4, 0, 0, 10, 0, 0.62);
+  assert.ok(Math.abs(point.x) < 1e-9);
+  assert.ok(Math.abs(point.z - 6.2) < 1e-9);
+});
+
 test('invalid totals and radii cannot produce non-finite spawn coordinates', () => {
   const point = getHordeRingPoint(0, 0, 5, 6, Number.NaN);
   assert.ok(Number.isFinite(point.x));
