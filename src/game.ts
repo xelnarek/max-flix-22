@@ -4646,29 +4646,6 @@ export class MaxFlizGameEngine {
     }
   }
 
-  private spawnSebixBrick(x: number, y: number, z: number, targetX: number, targetZ: number) {
-    const group = new THREE.Group();
-    const brickMaterial = new THREE.MeshStandardMaterial({ color: 0x9a3412, roughness: 0.86 });
-    const mortarMaterial = new THREE.MeshStandardMaterial({ color: 0xf5d0a4, roughness: 0.95 });
-    const brick = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.19, 0.22), brickMaterial);
-    group.add(brick);
-    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.025, 0.225), mortarMaterial);
-    stripe.position.y = 0.045;
-    group.add(stripe);
-    group.position.set(x,y,z);
-    this.levelRoot.add(group);
-    const direction = new THREE.Vector3(targetX-x,0.22,targetZ-z).normalize();
-    this.enemyProjectiles.push({
-      mesh: group as unknown as THREE.Mesh,
-      vel: direction.multiplyScalar(7.2),
-      life: 3.0,
-      kind: 'sebix_brick',
-      gravity: 2.15,
-      spin: 5.2,
-    });
-    sound.playWhistle();
-  }
-
   private spawnPomazaniecLollipop(x: number, y: number, z: number, targetX: number, targetZ: number, variant: number) {
     const colors = [0xf43f5e, 0xf472b6, 0x8b5cf6, 0x22c55e, 0xf59e0b];
     const color = colors[variant % colors.length];
