@@ -89,6 +89,15 @@ import {
 } from './warehouseAssets.ts';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
+// Shared floor-guide geometry/materials. Instanced markings add readable scale and
+// route structure to the large warehouse floors with only one draw call per sector.
+const SECTOR_FLOOR_GUIDE_GEOMETRY = new THREE.BoxGeometry(1.25, 0.014, 0.055);
+const SECTOR_FLOOR_GUIDE_MATERIALS: Record<1 | 2 | 3, THREE.MeshBasicMaterial> = {
+  1: new THREE.MeshBasicMaterial({ color: 0xf59e0b, toneMapped: false }),
+  2: new THREE.MeshBasicMaterial({ color: 0xc19a5b, toneMapped: false }),
+  3: new THREE.MeshBasicMaterial({ color: 0x58b7d8, toneMapped: false }),
+};
+
 export interface SurvivalUpgradeOption {
   id: string;
   icon: string;
@@ -3514,6 +3523,48 @@ export class MaxFlizGameEngine {
   }
 
 
+  private addSectorFloorGuides(centerX: number, halfWidth: number, sector: 1 | 2 | 3) {
+    const transforms: Array<{ x: number; z: number; rotationY: number }> = [];
+
+    // Two broken longitudinal safety lines frame the combat lanes without
+    // cluttering the central route or adding physical collision geometry.
+    for (const z of [-6.2, 6.2]) {
+      for (let x = centerX - halfWidth + 3.2; x <= centerX + halfWidth - 3.2; x += 2.55) {
+        transforms.push({ x, z, rotationY: 0 });
+      }
+    }
+
+    // Short transverse aisle markings make sector entrances and transitions
+    // visible from the elevated camera angle.
+    for (const x of [centerX - halfWidth + 4.8, centerX + halfWidth - 4.8]) {
+      for (let z = -4.5; z <= 4.5; z += 1.5) {
+        transforms.push({ x, z, rotationY: Math.PI / 2 });
+      }
+    }
+
+    const guides = new THREE.InstancedMesh(
+      SECTOR_FLOOR_GUIDE_GEOMETRY,
+      SECTOR_FLOOR_GUIDE_MATERIALS[sector],
+      transforms.length
+    );
+    const dummy = new THREE.Object3D();
+    transforms.forEach((entry, index) => {
+      dummy.position.set(entry.x, 0.022, entry.z);
+      dummy.rotation.set(0, entry.rotationY, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      guides.setMatrixAt(index, dummy.matrix);
+    });
+    guides.instanceMatrix.setUsage(THREE.StaticDrawUsage);
+    guides.instanceMatrix.needsUpdate = true;
+    guides.castShadow = false;
+    guides.receiveShadow = false;
+    guides.frustumCulled = false;
+    guides.renderOrder = 1;
+    guides.name = `sector_${sector}_floor_guides`;
+    this.levelRoot.add(guides);
+  }
+
   private buildLevel1() {
     // 1. Expanded Warehouse Floor (72x40, x: -36 to +36, z: -20 to +20)
     const floorTex1 = getFloorTexture().clone();
@@ -3532,6 +3583,7 @@ export class MaxFlizGameEngine {
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     this.levelRoot.add(floor);
+    this.addSectorFloorGuides(0, 36, 1);
     this.platforms.push({ x: 0, y: 0, z: 0, width: 72, height: 0.2, depth: 40, type: 'floor' });
 
     // Back Wall pushed to z = -19.5 with industrial corrugated siding
@@ -3833,6 +3885,7 @@ export class MaxFlizGameEngine {
     floor.position.set(offsetX, 0, 0);
     floor.receiveShadow = true;
     this.levelRoot.add(floor);
+    this.addSectorFloorGuides(offsetX, 40, 2);
     this.platforms.push({ x: offsetX, y: 0, z: 0, width: 80, height: 0.2, depth: 42, type: 'floor' });
 
     // Architectural Natural Oak Slat Showroom Wall with LED Cove Lighting (Pushed back to z = -20.5)
@@ -4073,6 +4126,7 @@ export class MaxFlizGameEngine {
     floor.position.set(offsetX, 0, 0);
     floor.receiveShadow = true;
     this.levelRoot.add(floor);
+    this.addSectorFloorGuides(offsetX, 45, 3);
     this.platforms.push({ x: offsetX, y: 0, z: 0, width: 90, height: 0.2, depth: 44, type: 'floor' });
 
     // Terminal Back Wall (Pushed back to z = -21.5)
