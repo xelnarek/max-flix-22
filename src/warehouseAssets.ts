@@ -1304,18 +1304,40 @@ export function createCharacterModel(def: CharacterDef): {
     accessory.position.set(0.28, 0.51, 0.18);
     accessory.rotation.x = 0.18;
   } else {
-    // Piotr's compact BB pistol: metallic barrel, trigger grip and a red laser diode.
-    const pistolMat = new THREE.MeshStandardMaterial({ color: 0x374151, metalness: 0.86, roughness: 0.22 });
-    const slide = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.105, 0.34), pistolMat);
-    const grip = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.21, 0.14), new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.78 }));
-    grip.position.set(0, -0.14, -0.06);
-    const muzzle = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.08, 10), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
-    muzzle.rotation.x = Math.PI / 2;
-    muzzle.position.z = 0.205;
-    const laserDot = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff1744 }));
-    laserDot.position.set(0, 0.025, 0.18);
-    slide.add(grip, muzzle, laserDot);
-    accessory.add(slide);
+    // Piotr's signature heavy ratchet wrench: recognisable open jaw, chrome shaft and red grip.
+    const chrome = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.92, roughness: 0.18 });
+    const darkSteel = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.86, roughness: 0.24 });
+    const redRubber = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.68 });
+    const wrench = new THREE.Group();
+    const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.105, 0.57, 0.075), chrome);
+    shaft.position.y = -0.06;
+    wrench.add(shaft);
+    const grip = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.23, 0.09), redRubber);
+    grip.position.set(0, -0.27, 0.008);
+    wrench.add(grip);
+    const neck = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.13, 0.09), darkSteel);
+    neck.position.set(0, 0.25, 0);
+    wrench.add(neck);
+    const jawBase = new THREE.Mesh(new THREE.TorusGeometry(0.145, 0.045, 8, 20, Math.PI * 1.48), chrome);
+    jawBase.position.set(0, 0.40, 0);
+    jawBase.rotation.z = -Math.PI * 0.24;
+    wrench.add(jawBase);
+    const jawLeft = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.19, 0.09), chrome);
+    jawLeft.position.set(-0.12, 0.51, 0);
+    jawLeft.rotation.z = -0.40;
+    const jawRight = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.19, 0.09), chrome);
+    jawRight.position.set(0.12, 0.51, 0);
+    jawRight.rotation.z = 0.40;
+    wrench.add(jawLeft, jawRight);
+    const ratchetInset = new THREE.Mesh(new THREE.CylinderGeometry(0.057, 0.057, 0.025, 12), darkSteel);
+    ratchetInset.position.set(0, 0.39, 0.052);
+    ratchetInset.rotation.x = Math.PI / 2;
+    wrench.add(ratchetInset);
+    const redMark = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.10, 0.018), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+    redMark.position.set(0, -0.26, 0.055);
+    wrench.add(redMark);
+    accessory.add(wrench);
+    accessory.scale.setScalar(0.92);
     accessory.position.set(0.28, 0.51, 0.18);
     accessory.rotation.x = 0.18;
   }
