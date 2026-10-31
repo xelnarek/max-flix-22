@@ -1189,3 +1189,94 @@ button:disabled { cursor: not-allowed !important; filter: grayscale(.35); opacit
   background: #0b1420;
   overflow: hidden;
 }
+
+
+/* Survival HUD recovery: restore the player readout, zoom controls and dialogue rails. */
+#game-shell.survival-mode #hud-top .hud-cluster.top-left {
+  display:flex!important; position:fixed!important; top:max(7px,env(safe-area-inset-top))!important;
+  left:max(8px,env(safe-area-inset-left))!important; width:auto!important; max-width:190px!important;
+  align-items:flex-start!important; z-index:78!important;
+}
+#game-shell.survival-mode #hud-top .hero-badge {
+  display:flex!important; visibility:visible!important; border:1px solid rgba(148,190,214,.28)!important;
+  border-radius:10px!important; background:rgba(5,14,27,.88)!important; box-shadow:0 8px 24px rgba(0,0,0,.28)!important;
+}
+#game-shell.survival-mode #hud-top .dialogue-side-container {
+  display:flex!important; visibility:visible!important; pointer-events:none!important; z-index:79!important;
+}
+#game-shell.survival-mode #hud-top .hud-top-quick-controls { display:flex!important; visibility:visible!important; z-index:80!important; }
+#game-shell.survival-mode #hud-top .cam-zoom-slider-container,
+#game-shell.survival-mode #hud-top #btn-top-zoom-in,
+#game-shell.survival-mode #hud-top #btn-top-zoom-out,
+#game-shell.survival-mode #hud-top #btn-top-camera {
+  display:flex!important; visibility:visible!important; pointer-events:auto!important;
+}
+#game-shell.survival-mode #hud-top .cam-zoom-slider-container {
+  width:112px!important; min-width:92px!important; height:34px!important; box-sizing:border-box!important;
+  padding:0 7px!important; gap:5px!important; border:1px solid rgba(125,211,252,.24)!important;
+  border-radius:9px!important; background:rgba(5,16,29,.86)!important;
+}
+#game-shell.survival-mode #hud-top .cam-zoom-slider { display:block!important; width:100%!important; min-width:0!important; accent-color:#38bdf8; }
+#game-shell.survival-mode #hud-top #btn-top-event { display:none!important; }
+#game-shell.survival-mode #hud-top .top-icon-btn { min-width:36px!important; min-height:34px!important; border-radius:9px!important; }
+#game-shell.survival-mode #hud-perks-row {
+  top:calc(146px + env(safe-area-inset-top))!important; right:max(8px,env(safe-area-inset-right))!important;
+  z-index:77!important; gap:4px!important;
+}
+#game-shell.survival-mode #hud-perks-row .perk-badge {
+  padding:4px 7px!important; border-radius:7px!important; font-size:8px!important;
+  background:rgba(5,18,31,.9)!important; box-shadow:0 3px 10px rgba(0,0,0,.22)!important;
+}
+#game-shell.survival-mode .dialogue-box-card {
+  border:1px solid rgba(148,190,214,.32)!important; border-left:3px solid #38bdf8!important;
+  border-radius:11px!important; background:rgba(5,14,23,.94)!important;
+  box-shadow:0 8px 24px rgba(0,0,0,.34),0 0 0 1px rgba(255,255,255,.025)!important;
+}
+#game-shell.survival-mode .dialogue-box-card.enemy-style { border-left-color:#f59e0b!important; }
+#game-shell.survival-mode .dialogue-box-card.hero-style { border-left-color:#38bdf8!important; }
+#game-shell.survival-mode .dialogue-box-text { display:-webkit-box!important; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+@media (max-width:900px), (pointer:coarse) {
+  #game-shell.survival-mode #hud-top .hud-cluster.top-left {
+    top:max(5px,env(safe-area-inset-top))!important; left:max(6px,env(safe-area-inset-left))!important; max-width:128px!important;
+  }
+  #game-shell.survival-mode #hud-top .hero-badge { gap:5px!important; padding:4px 6px!important; max-width:126px!important; }
+  #game-shell.survival-mode #hud-top .hero-avatar { width:27px!important; height:27px!important; font-size:16px!important; }
+  #game-shell.survival-mode #hud-top .hero-name { font-size:10px!important; }
+  #game-shell.survival-mode #hud-top .hero-role { font-size:7px!important; }
+  #game-shell.survival-mode #hud-top .hp-mug { font-size:11px!important; }
+  #game-shell.survival-mode #hud-top .hud-top-quick-controls {
+    position:fixed!important; top:max(4px,env(safe-area-inset-top))!important;
+    right:max(6px,env(safe-area-inset-right))!important; left:auto!important; margin:0!important; gap:3px!important; flex-wrap:nowrap!important;
+  }
+  #game-shell.survival-mode #hud-top .cam-zoom-slider-container {
+    width:clamp(58px,18vw,78px)!important; min-width:54px!important; height:32px!important; padding:0 5px!important; gap:3px!important;
+  }
+  #game-shell.survival-mode #hud-top .zoom-icon { font-size:11px!important; }
+  #game-shell.survival-mode #hud-top .top-icon-btn,
+  #game-shell.survival-mode #hud-top #btn-top-camera,
+  #game-shell.survival-mode #hud-top #btn-top-zoom-in,
+  #game-shell.survival-mode #hud-top #btn-top-zoom-out {
+    display:flex!important; min-width:28px!important; width:30px!important; min-height:32px!important; height:32px!important;
+    justify-content:center!important; padding:3px 4px!important; border-radius:8px!important;
+  }
+  #game-shell.survival-mode #hud-top .top-icon-btn .btn-ctrl-label { display:none!important; }
+  #game-shell.survival-mode #hud-top #btn-top-sound,
+  #game-shell.survival-mode #hud-top #btn-top-pause { display:flex!important; }
+  #game-shell.survival-mode #hud-perks-row {
+    top:auto!important; right:max(8px,env(safe-area-inset-right))!important;
+    bottom:calc(82px + env(safe-area-inset-bottom))!important; left:auto!important;
+    transform:none!important; max-width:min(48vw,210px)!important; flex-direction:column!important; align-items:flex-end!important;
+  }
+  #game-shell.survival-mode #hud-perks-row .perk-badge { max-width:100%!important; font-size:7px!important; padding:4px 6px!important; }
+  #game-shell.survival-mode .dialogue-side-container { top:calc(238px + env(safe-area-inset-top))!important; width:min(178px,calc(50vw - 12px))!important; }
+  #game-shell.survival-mode .dialogue-side-container.left { left:6px!important; }
+  #game-shell.survival-mode .dialogue-side-container.right { right:6px!important; }
+}
+@media (max-width:390px) {
+  #game-shell.survival-mode #hud-top .hero-badge { max-width:112px!important; }
+  #game-shell.survival-mode #hud-top .cam-zoom-slider-container { width:55px!important; min-width:50px!important; }
+  #game-shell.survival-mode #hud-top .top-icon-btn,
+  #game-shell.survival-mode #hud-top #btn-top-camera,
+  #game-shell.survival-mode #hud-top #btn-top-zoom-in,
+  #game-shell.survival-mode #hud-top #btn-top-zoom-out { min-width:26px!important; width:27px!important; }
+}
