@@ -7420,6 +7420,7 @@ export class MaxFlizGameEngine {
         ctx.closePath();
         ctx.fillStyle = markerColor;
         ctx.fill();
+        ctx.globalAlpha = 1;
       }
     }
 
