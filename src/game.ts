@@ -2497,6 +2497,12 @@ export class MaxFlizGameEngine {
     this.viewportAspect = aspect;
     this.isHandheldViewport = w < 900 || ('ontouchstart' in window);
 
+    const targetFov = aspect < 0.65 ? 60 : aspect < 1.0 ? 54 : aspect < 1.35 ? 48 : 45;
+    if (this.camera instanceof THREE.PerspectiveCamera && Math.abs(this.camera.fov - targetFov) > 0.05) {
+      this.camera.fov = targetFov;
+      this.camera.updateProjectionMatrix();
+    }
+
     // Portrait FOV is already wider vertically. A smaller distance multiplier
     // keeps the operator readable instead of making the character tiny on phones.
     if (aspect < 0.65) {
