@@ -598,6 +598,25 @@ export class MaxFlizGameEngine {
     update?: (dt: number, progress: number) => void;
     cleanup?: () => void;
   }[] = [];
+  private marcinTank: {
+    group: THREE.Group;
+    turret: THREE.Group;
+    tracks: THREE.Mesh[];
+    life: number;
+    maxLife: number;
+    cooldown: number;
+    dustTimer: number;
+  } | null = null;
+  private mateuszCats: {
+    group: THREE.Group;
+    tail: THREE.Group;
+    life: number;
+    maxLife: number;
+    attackCooldown: number;
+    orbitAngle: number;
+    pounceTimer: number;
+    pounceTarget: THREE.Vector3 | null;
+  }[] = [];
   private bimberMolotovs: {
     mesh: THREE.Group;
     pos: THREE.Vector3;
@@ -1668,6 +1687,16 @@ export class MaxFlizGameEngine {
 
   private clearLevel() {
     for (const enemy of this.enemies) this.disposeEnemyModel(enemy);
+    if (this.marcinTank) {
+      this.levelRoot.remove(this.marcinTank.group);
+      this.disposeTemporaryObject(this.marcinTank.group);
+      this.marcinTank = null;
+    }
+    for (const cat of this.mateuszCats) {
+      this.levelRoot.remove(cat.group);
+      this.disposeTemporaryObject(cat.group);
+    }
+    this.mateuszCats = [];
     // Lollipop meshes own their geometry/materials; release them before the scene is reset.
     for (const projectile of this.enemyProjectiles) {
       if (projectile.kind === 'pomazaniec_lollipop' || projectile.kind === 'sebix_brick') this.disposeTemporaryObject(projectile.mesh);
@@ -3904,6 +3933,8 @@ export class MaxFlizGameEngine {
       }
       this.updateRandomSpawners(simDt);
       this.updateEnemies(simDt);
+      this.updateMarcinTank(simDt);
+      this.updateMateuszCats(simDt);
       if (this.gameMode === 'survival') this.updateSurvivalAutoCombat(simDt);
       this.updateProjectiles(simDt);
       if (this.gameMode === 'survival') this.updateSurvivalXpGems(simDt);
