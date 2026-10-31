@@ -173,6 +173,8 @@ export class MaxFlizGameEngine {
       "Podpisz pan cokolwiek palcem po brudnym ekranie!",
       "Paczka lekko obita, ale w środku na bank nic nie pękło!",
       "Paczkomat był pełny, więc rzuciłem pod drzwi rampy!",
+      "PILNE NA JUŻ! PODPIS PÓŹNIEJ, PACZKA TERAZ!",
+      "NIE MA CZASU NA AWIZACJĘ — EXPRESS B4!",
     ],
     serwisant: [
       "Kto wcisnął grzałkę w wannie bez wlanej wody?!",
@@ -363,6 +365,15 @@ export class MaxFlizGameEngine {
   private gameMode: 'campaign' | 'survival' = 'campaign';
   private survivalElapsed = 0;
   private survivalSpawnTimer = 0;
+  private survivalSurgeTimeLeft = 0;
+  private survivalSurgeSpawnQueue = 0;
+  private survivalSurgeSpawnTimer = 0;
+  private survivalSurgeDirection = 0;
+  private survivalNextSurgeAt = 90;
+  private survivalSurgeSpawned = 0;
+  private survivalMiniBossSpawned = false;
+  private survivalPhaseTwoAnnounced = false;
+  private survivalAuditorAuraCooldown = 0;
   private survivalCleanupTimer = 4;
   private survivalUiTimer = 0;
   private survivalWave = 1;
@@ -1076,6 +1087,15 @@ export class MaxFlizGameEngine {
     this.threatTier = 0;
     this.survivalElapsed = 0;
     this.survivalSpawnTimer = 0;
+    this.survivalSurgeTimeLeft = 0;
+    this.survivalSurgeSpawnQueue = 0;
+    this.survivalSurgeSpawnTimer = 0;
+    this.survivalSurgeDirection = 0;
+    this.survivalNextSurgeAt = 90;
+    this.survivalSurgeSpawned = 0;
+    this.survivalMiniBossSpawned = false;
+    this.survivalPhaseTwoAnnounced = false;
+    this.survivalAuditorAuraCooldown = 0;
     this.survivalCleanupTimer = 4;
     this.survivalUiTimer = 0;
     this.survivalWave = 1;
@@ -4230,6 +4250,22 @@ export class MaxFlizGameEngine {
       this.spawnSurvivalPomazaniecMarker();
     }
     this.updateSurvivalPomazaniecMarker(dt);
+    if (!this.survivalPhaseTwoAnnounced && this.survivalElapsed >= 90) {
+      this.survivalPhaseTwoAnnounced = true;
+      this.callbacks.onSurvivalAnnouncement?.(
+        'DOSTAWA Z MEDIOLANU',
+        'Druga zmiana weszła na halę',
+        'Włoscy dostawcy armatury i ciężkie paleciaki dołączają do natarcia. Zmień pozycję i pilnuj wolnych alejek.'
+      );
+      this.emitFloatingToast('🇮🇹 DOSTAWA Z MEDIOLANU — NOWE JEDNOSTKI!', this.playerPos.x, this.playerPos.y + 1.8, this.playerPos.z, 'combo');
+      sound.playAlert();
+    }
+    if (this.survivalElapsed >= 180 && !this.survivalMiniBossSpawned) {
+      this.survivalMiniBossSpawned = true;
+      this.spawnSurvivalAuditor();
+    }
+    if (this.survivalElapsed >= this.survivalNextSurgeAt) this.beginSurvivalHordeSurge();
+    this.updateSurvivalAuditorAura(dt);
     const nextWave = 1 + Math.floor(this.survivalElapsed / 60);
     if (nextWave > this.survivalWave) {
       this.survivalWave = nextWave;
@@ -4250,20 +4286,25 @@ export class MaxFlizGameEngine {
       }
     }
 
+    // First major boss at 05:00; later boss cycles recur every five minutes.
+    const majorBossWave = Math.floor(this.survivalElapsed / 300) * 5;
     if (
-      this.survivalWave >= 5 &&
-      this.survivalWave % 5 === 0 &&
-      this.survivalBossWave !== this.survivalWave &&
-      this.survivalPendingBossWave !== this.survivalWave
+      this.survivalElapsed >= 300 &&
+      this.survivalBossWave !== majorBossWave &&
+      this.survivalPendingBossWave !== majorBossWave
     ) {
-      // Give the player a readable warning window before the boss enters the arena.
-      this.survivalPendingBossWave = this.survivalWave;
+      this.survivalPendingBossWave = majorBossWave;
       this.survivalBossWarningTimer = 6.0;
-      this.emitFloatingToast('ALARM BOSS — PRZYGOTUJ SIĘ!', this.playerPos.x, this.playerPos.y + 2.0, this.playerPos.z, 'damage');
+      this.emitFloatingToast(
+        majorBossWave === 5 ? 'INWENTARYZACJA GIGANT — ZA 6 SEKUND!' : 'ALARM BOSS — PRZYGOTUJ SIĘ!',
+        this.playerPos.x, this.playerPos.y + 2.0, this.playerPos.z, 'damage'
+      );
       this.callbacks.onPerkDropBanner?.(
-        'NADCHODZI BOSS • 6 SEKUND',
+        majorBossWave === 5 ? 'KIEROWNIK LOGISTYKI • 6 SEKUND' : 'NADCHODZI BOSS • 6 SEKUND',
         '🚨',
-        'Zbliża się kierownik zmiany. Zbierz kryształy XP, znajdź wolny korytarz i przygotuj się na starcie.',
+        majorBossWave === 5
+          ? 'Nadchodzi Inwentaryzacja Gigant. Przygotuj się na szarżę i szeroką falę uderzeniową.'
+          : 'Zbliża się kolejny kierownik zmiany. Zbierz kryształy XP i przygotuj się do starcia.',
         '#ef4444'
       );
       sound.playBossWarning();
@@ -4279,20 +4320,40 @@ export class MaxFlizGameEngine {
       }
     }
 
-    this.survivalSpawnTimer -= dt;
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
-    // Poco F6-class hardware can sustain a busier arena; retain a hard ceiling
-    // so particle, AI and shadow costs stay predictable during long runs.
     const pomazaniecRaidActive = this.survivalPomazaniecTriggered && !this.survivalPomazaniecCompleted;
-    // Reserve five temporary slots for the one-time secret wave without permanently
-    // increasing the regular enemy ceiling on mobile or desktop.
-    const enemyCap = (isMobile ? 22 : 34) + (pomazaniecRaidActive ? 5 : 0);
+    const surgeActive = this.survivalSurgeTimeLeft > 0;
+    const enemyCap = (isMobile ? 22 : 34) + (pomazaniecRaidActive ? 5 : 0) + (surgeActive ? (isMobile ? 4 : 6) : 0);
     const aliveCount = this.enemies.reduce((count, enemy) => count + (enemy.state === 'defeated' ? 0 : 1), 0);
-    if (this.survivalSpawnTimer <= 0 && aliveCount < enemyCap) {
-      const groupLimit = isMobile ? 5 : 7;
-      const groupSize = Math.min(groupLimit, 2 + Math.floor(this.survivalWave * 0.32), enemyCap - aliveCount);
-      for (let i = 0; i < groupSize; i++) this.spawnSurvivalEnemy(this.survivalWave);
-      this.survivalSpawnTimer = Math.max(8.2, 13.5 - this.survivalWave * 0.16);
+    if (surgeActive) {
+      this.survivalSurgeTimeLeft = Math.max(0, this.survivalSurgeTimeLeft - dt);
+      this.survivalSurgeSpawnTimer -= dt;
+      if (this.survivalSurgeTimeLeft > 0 && this.survivalSurgeSpawnQueue > 0 && this.survivalSurgeSpawnTimer <= 0 && aliveCount < enemyCap) {
+        this.spawnSurvivalSurgeEnemy();
+        this.survivalSurgeSpawnQueue--;
+        this.survivalSurgeSpawned++;
+        this.survivalSurgeSpawnTimer = 0.26;
+      } else if (this.survivalSurgeTimeLeft > 0 && this.survivalSurgeSpawnQueue > 0 && aliveCount >= enemyCap) {
+        this.survivalSurgeSpawnTimer = 0.08;
+      }
+      if (this.survivalSurgeTimeLeft <= 0) {
+        this.survivalSurgeSpawnQueue = 0;
+        this.survivalSpawnTimer = Math.max(this.survivalSpawnTimer, 1.8);
+        this.callbacks.onSurvivalAnnouncement?.(
+          'FALOWA SZARŻA ODPARTA',
+          'Kurierzy nie dowieźli normy',
+          'Na halę weszło ' + this.survivalSurgeSpawned + ' z 45 jednostek Pilne na Już. Standardowe dostawy wracają.'
+        );
+        this.emitFloatingToast('FALOWA SZARŻA ODPARTA!', this.playerPos.x, this.playerPos.y + 1.8, this.playerPos.z, 'combo');
+      }
+    } else {
+      this.survivalSpawnTimer -= dt;
+      if (this.survivalSpawnTimer <= 0 && aliveCount < enemyCap) {
+        const groupLimit = isMobile ? 5 : 7;
+        const groupSize = Math.min(groupLimit, 2 + Math.floor(this.survivalWave * 0.32), enemyCap - aliveCount);
+        for (let i = 0; i < groupSize; i++) this.spawnSurvivalEnemy(this.survivalWave);
+        this.survivalSpawnTimer = Math.max(8.2, 13.5 - this.survivalWave * 0.16);
+      }
     }
 
     this.updateSurvivalEvents(dt);
@@ -4326,6 +4387,126 @@ export class MaxFlizGameEngine {
     if (this.survivalUiTimer <= 0) {
       this.survivalUiTimer = 0.25;
       this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+    }
+  }
+
+
+  private beginSurvivalHordeSurge() {
+    if (this.survivalSurgeTimeLeft > 0 || this.gameMode !== 'survival') return;
+    this.survivalSurgeTimeLeft = 15;
+    this.survivalSurgeSpawnQueue = 45;
+    this.survivalSurgeSpawnTimer = 0;
+    this.survivalSurgeSpawned = 0;
+    const directions = [
+      { x: 1, z: 0, label: 'WSCHÓD' },
+      { x: -1, z: 0, label: 'ZACHÓD' },
+      { x: 0, z: 1, label: 'POŁUDNIE' },
+      { x: 0, z: -1, label: 'PÓŁNOC' },
+    ];
+    const available = directions.filter((direction) =>
+      (direction.x > 0 && this.levelBounds.maxX - this.playerPos.x > 18) ||
+      (direction.x < 0 && this.playerPos.x - this.levelBounds.minX > 18) ||
+      (direction.z > 0 && this.levelBounds.maxZ - this.playerPos.z > 12) ||
+      (direction.z < 0 && this.playerPos.z - this.levelBounds.minZ > 12)
+    );
+    const candidates = available.length ? available : directions;
+    const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+    this.survivalSurgeDirection = directions.indexOf(chosen);
+    this.survivalNextSurgeAt += 90;
+    this.callbacks.onSurvivalAnnouncement?.(
+      'FALOWA SZARŻA',
+      '45 kurierów • 15 sekund',
+      'Pilne na Już nadciąga od strony ' + chosen.label + '. Standardowy spawner zostaje wstrzymany — przebij się przez dostawę!'
+    );
+    this.emitFloatingToast('🚨 FALOWA SZARŻA — NADCIĄGA EXPRESS!', this.playerPos.x, this.playerPos.y + 1.9, this.playerPos.z, 'damage');
+    this.spawnParticleRing(this.playerPos.x, 0.16, this.playerPos.z, 0xf59e0b);
+    this.triggerScreenShake(0.34, 0.3);
+    sound.playBossWarning();
+  }
+
+  private spawnSurvivalSurgeEnemy() {
+    const directions = [
+      { x: 1, z: 0 }, { x: -1, z: 0 }, { x: 0, z: 1 }, { x: 0, z: -1 },
+    ];
+    const direction = directions[this.survivalSurgeDirection] || directions[0];
+    const tangentX = -direction.z;
+    const tangentZ = direction.x;
+    const laneOffset = (Math.random() - 0.5) * 13.5;
+    const x = THREE.MathUtils.clamp(this.playerPos.x + direction.x * 23 + tangentX * laneOffset, this.levelBounds.minX + 2.5, this.levelBounds.maxX - 2.5);
+    const z = THREE.MathUtils.clamp(this.playerPos.z + direction.z * 23 + tangentZ * laneOffset, this.levelBounds.minZ + 1.5, this.levelBounds.maxZ - 1.5);
+    const minZ = THREE.MathUtils.clamp(z - 0.35, this.levelBounds.minZ + 0.5, this.levelBounds.maxZ - 0.5);
+    const maxZ = THREE.MathUtils.clamp(z + 0.35, this.levelBounds.minZ + 0.5, this.levelBounds.maxZ - 0.5);
+    const id = 'survival_surge_' + Math.floor(performance.now()) + '_' + Math.floor(Math.random() * 100000);
+    this.addKurierEnemy(id, x, minZ, maxZ, 'Pilne na Już! • Kurier Express B4');
+    const runner = this.enemies[this.enemies.length - 1];
+    if (!runner) return;
+    runner.surgeRunner = true;
+    runner.maxHp = 1;
+    runner.hp = 1;
+    runner.speed = Math.max(5.8, runner.speed * 2.25);
+    runner.state = 'chase';
+    runner.alerted = true;
+    runner.shoutTimer = 1.2 + Math.random() * 1.5;
+    runner.z = z;
+    runner.startX = minZ;
+    runner.endX = maxZ;
+    runner.mesh.position.set(x, runner.y, z);
+  }
+
+  private spawnSurvivalAuditor() {
+    const { x, z } = this.getSurvivalSpawnPoint();
+    const id = 'survival_auditor_' + Math.floor(performance.now());
+    const minZ = THREE.MathUtils.clamp(z - 2.6, this.levelBounds.minZ + 0.5, this.levelBounds.maxZ - 0.5);
+    const maxZ = THREE.MathUtils.clamp(z + 2.6, this.levelBounds.minZ + 0.5, this.levelBounds.maxZ - 0.5);
+    this.addInspectorEnemy(id, x, minZ, maxZ, 'Audytor Niezapowiedziany');
+    const auditor = this.enemies[this.enemies.length - 1];
+    if (!auditor) return;
+    auditor.type = 'walczak';
+    auditor.name = 'Audytor Niezapowiedziany';
+    auditor.maxHp = 42;
+    auditor.hp = auditor.maxHp;
+    auditor.speed *= 0.84;
+    auditor.startX = this.levelBounds.minX + 3;
+    auditor.endX = this.levelBounds.maxX - 3;
+    auditor.specialActionTimer = 2.6;
+    auditor.bossPhase = 1;
+    auditor.survivalAuditor = true;
+    const auraRing = new THREE.Mesh(
+      new THREE.RingGeometry(8.2, 8.48, 64),
+      new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.42, side: THREE.DoubleSide, depthWrite: false })
+    );
+    auraRing.rotation.x = -Math.PI / 2;
+    auraRing.position.y = 0.055;
+    auditor.mesh.add(auraRing);
+    auditor.auraRing = auraRing;
+    this.callbacks.onBossUpdate?.(auditor.name, auditor.hp, auditor.maxHp, true, 1);
+    this.callbacks.onSurvivalAnnouncement?.(
+      'AUDYTOR NIEZAPOWIEDZIANY',
+      'Kontrola bez awizacji',
+      'Czerwona strefa wzmacnia pobliskich przeciwników. Zlikwiduj Audytora albo wyciągnij hordę poza jego aurę.'
+    );
+    this.emitFloatingToast('📋 AUDYT BEZ ZAPOWIEDZI!', x, 2.15, z, 'damage');
+    this.spawnParticleRing(x, 0.18, z, 0xef4444);
+    this.triggerScreenShake(0.48, 0.42);
+    this.triggerBloomPulse(0.38);
+    sound.playBossWarning();
+  }
+
+  private updateSurvivalAuditorAura(dt: number) {
+    this.survivalAuditorAuraCooldown -= dt;
+    if (this.survivalAuditorAuraCooldown > 0) return;
+    this.survivalAuditorAuraCooldown = 0.28;
+    const auditor = this.enemies.find((enemy) => enemy.survivalAuditor && enemy.state !== 'defeated');
+    for (const enemy of this.enemies) {
+      if (enemy.state === 'defeated' || enemy.survivalAuditor) continue;
+      const insideAura = Boolean(auditor && Math.hypot(enemy.x - auditor.x, enemy.z - auditor.z) <= 8.2);
+      if (insideAura && !enemy.auraBuffed) {
+        enemy.speed *= 1.18;
+        enemy.auraBuffed = true;
+      } else if (!insideAura && enemy.auraBuffed) {
+        enemy.speed /= 1.18;
+        enemy.auraBuffed = false;
+      }
     }
   }
 
@@ -5068,11 +5249,14 @@ export class MaxFlizGameEngine {
     const maxZ = THREE.MathUtils.clamp(z + 2.2, this.levelBounds.minZ + 0.5, this.levelBounds.maxZ - 0.5);
     const roll = Math.random();
 
-    // Keep the classic warehouse roster in rotation: wave gates unlock varieties,
-    // while wider probability bands prevent late-run enemies from becoming effectively invisible.
+    // Early Survival rotates Kurier, the reckless B4 operator and a smaller zombie group.
     const sebixAlreadyActive = this.enemies.some((enemy) => enemy.type === 'sebix_m' && enemy.state !== 'defeated');
     if (wave >= 8 && !sebixAlreadyActive && Math.random() < 0.065) this.addSebixEnemy(id,x,minZ,maxZ);
     else if (wave >= 6 && Math.random() < 0.04) this.addBosmanKrakowBossEnemy(id,x,z);
+    else if (this.survivalElapsed < 90 && roll < 0.52) this.addKurierEnemy(id, x, minZ, maxZ, 'Kurier Ekspresowy — pilna dostawa');
+    else if (this.survivalElapsed < 90 && roll < 0.82) this.addSztaplarEnemy(id, x, minZ, maxZ, 'Szalony Operator B4 — paleciak bez hamulców');
+    else if (this.survivalElapsed >= 90 && this.survivalElapsed < 180 && roll < 0.28) this.addItalianVendorEnemy(id, x, minZ, maxZ, 'Włoski Dostawca Armatury — mamma mia');
+    else if (this.survivalElapsed >= 90 && this.survivalElapsed < 180 && roll < 0.45) this.addSztaplarEnemy(id, x, minZ, maxZ, 'Paleciak Ciężki — dostawa z Mediolanu');
     else if (wave < 3 || roll < 0.12) this.addZombieWorkerEnemy(id, x, minZ, maxZ, 'Zombie-Magazynier — głodny po nocnej zmianie');
     else if (roll < 0.22) this.addKurierEnemy(id, x, minZ, maxZ, 'Kurier Ekspresowy — paczka bez awiza');
     else if (roll < 0.32) this.addMonterEnemy(id, x, minZ, maxZ, 'Monter Wiesław — poziomica w dłoni');
@@ -5146,7 +5330,8 @@ export class MaxFlizGameEngine {
       this.applyEnemyVisualPolish(boss);
       if (boss.mesh) this.applyStorybookStyle(boss.mesh);
       boss.aiOrbitSign = wave % 2 === 0 ? 1 : -1;
-      boss.maxHp = Math.round(26 + wave * 2.6);
+      if (wave === 5) boss.name = 'Kierownik Logistyki • Inwentaryzacja Gigant';
+      boss.maxHp = wave === 5 ? 78 : Math.round(46 + wave * 3.1);
       boss.hp = boss.maxHp;
       boss.speed *= 0.86 * (1 + Math.min(0.38, wave * 0.012));
       boss.startX = this.levelBounds.minX + 2.5;
@@ -5936,6 +6121,19 @@ export class MaxFlizGameEngine {
   }
 
   private updateSurvivalEnemyTactics(enemy: EnemyItem, dt: number, distanceToPlayer: number) {
+    if (enemy.surgeRunner) {
+      const dx = this.playerPos.x - enemy.x;
+      const dz = this.playerPos.z - enemy.z;
+      if (distanceToPlayer > 1.15) {
+        const inverseDistance = 1 / Math.max(0.1, distanceToPlayer);
+        enemy.x = THREE.MathUtils.clamp(enemy.x + dx * inverseDistance * enemy.speed * dt, this.levelBounds.minX + 1.0, this.levelBounds.maxX - 1.0);
+        enemy.z = THREE.MathUtils.clamp(enemy.z + dz * inverseDistance * enemy.speed * dt, this.levelBounds.minZ + 0.8, this.levelBounds.maxZ - 0.8);
+      }
+      enemy.mesh.rotation.y = Math.atan2(dx, dz);
+      enemy.mesh.position.set(enemy.x, enemy.y, enemy.z);
+      enemy.state = 'chase';
+      return;
+    }
     const role = this.getSurvivalEnemyRole(enemy);
     const engaged = this.activeChaserIds.has(enemy.id) || enemy.type === 'pomazaniec';
     const slot = enemy.aiSlot || 0;
@@ -6132,6 +6330,7 @@ export class MaxFlizGameEngine {
 
       e.walkCycle += dt * 8;
       if (e.shieldRing?.visible) e.shieldRing.rotation.z += dt * 1.25;
+      if (e.auraRing) e.auraRing.rotation.z += dt * 0.18;
       if (e.bikeWheels) e.bikeWheels.forEach((wheel) => wheel.rotateX(dt * (e.state === 'chase' ? 8.5 : 3.4)));
       if (e.propeller) e.propeller.rotation.y += dt * (e.state === 'chase' ? 34 : 18);
       if (e.type === 'pomazaniec') e.mesh.rotation.x = THREE.MathUtils.lerp(e.mesh.rotation.x, 0, Math.min(1, dt * 3.2));
@@ -6150,7 +6349,7 @@ export class MaxFlizGameEngine {
         const ringMesh = new THREE.Mesh(
           new THREE.RingGeometry(0.42, 0.54, 20),
           new THREE.MeshBasicMaterial({
-            color: e.type === 'pomazaniec' ? 0xec4899 : 0xef4444,
+            color: e.surgeRunner ? 0xf59e0b : e.type === 'pomazaniec' ? 0xec4899 : 0xef4444,
             transparent: true,
             opacity: 0.65,
             side: THREE.DoubleSide,
@@ -6274,8 +6473,30 @@ export class MaxFlizGameEngine {
           e.specialActionTimer -= dt;
           const cooldown = isPhase2 ? 1.8 : 3.0;
           if (e.specialActionTimer <= 0) {
-            e.specialActionTimer = cooldown;
-            this.spawnPenaltyNotice(e.x, e.y + 1.2, e.z);
+            if (e.name.includes('Inwentaryzacja Gigant')) {
+              if (e.chargeTimer === undefined) {
+                e.chargeTimer = 0.88;
+                this.spawnParticleRing(e.x, 0.16, e.z, 0xef4444);
+                this.emitFloatingToast('⚠️ INWENTARYZACJA GIGANT — UDERZENIE ZA CHWILĘ!', e.x, e.y + 1.8, e.z, 'damage');
+                sound.playBossWarning();
+              } else {
+                e.chargeTimer -= dt;
+                if (e.chargeTimer <= 0) {
+                  e.chargeTimer = undefined;
+                  e.specialActionTimer = cooldown + 0.7;
+                  this.triggerScreenShake(0.78, 0.48);
+                  this.triggerHitStop(0.09);
+                  this.triggerBloomPulse(0.52);
+                  this.spawnParticleRing(e.x, 0.2, e.z, 0xf97316);
+                  this.spawnExplosionParticles(e.x, 0.55, e.z, 0xfbbf24, 24);
+                  if (distToPlayer < 8.7) this.takeDamage('💥 FALA UDERZENIOWA INWENTARYZACJI GIGANT!');
+                  else this.emitFloatingToast('💨 FALA UDERZENIOWA MINĘŁA!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'perk');
+                }
+              }
+            } else {
+              e.specialActionTimer = cooldown;
+              this.spawnPenaltyNotice(e.x, e.y + 1.2, e.z);
+            }
           }
         }
         this.callbacks.onBossUpdate?.(e.name, e.hp, e.maxHp, true, e.bossPhase);
