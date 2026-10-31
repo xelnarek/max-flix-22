@@ -1547,9 +1547,11 @@ class MaxFlizScene extends xb.Script {
     }
 
     if (this.engine) {
+      // Give the engine the live renderer before traversing scene materials so
+      // anisotropy can be capped to the device's actual GPU support.
+      if (renderer) this.engine.threeRenderer = renderer;
       this.engine.setScene(scene);
       this.engine.setCamera(camera);
-      if (renderer) this.engine.threeRenderer = renderer;
     }
 
     if (this.cutscene) {
@@ -1827,7 +1829,7 @@ async function startApp() {
         r.outputColorSpace = THREE.SRGBColorSpace;
         r.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.65 : 2.0));
         r.toneMapping = THREE.ACESFilmicToneMapping;
-        r.toneMappingExposure = 1.15;
+        r.toneMappingExposure = 1.08;
         r.shadowMap.enabled = true;
         r.shadowMap.type = isMobileDevice ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
       }
