@@ -31,14 +31,16 @@ export function getHordeRingPoint(
   centerZ: number,
   radius: number,
   startAngle = 0,
+  verticalScale = 1,
 ): HordeRingPoint {
   const safeTotal = Math.max(1, Math.floor(Number.isFinite(total) ? total : 1));
   const safeIndex = Number.isFinite(index) ? index : 0;
   const angle = startAngle + (safeIndex / safeTotal) * Math.PI * 2;
   const safeRadius = Math.max(0, Number.isFinite(radius) ? radius : 0);
+  const safeVerticalScale = Math.max(0, Math.min(1, Number.isFinite(verticalScale) ? verticalScale : 1));
   return {
     x: centerX + Math.cos(angle) * safeRadius,
-    z: centerZ + Math.sin(angle) * safeRadius,
+    z: centerZ + Math.sin(angle) * safeRadius * safeVerticalScale,
     angle,
   };
 }
