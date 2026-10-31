@@ -107,6 +107,10 @@ export interface EnemyItem {
   hpBar?: any;
   hpFill?: any;
   threatRing?: any;
+  // Stable formation data for Survival's encirclement director.
+  aiSlot?: number;
+  aiFlankAngle?: number;
+  aiOrbitSign?: number;
 }
 
 export interface HazardItem {
