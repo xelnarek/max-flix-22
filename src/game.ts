@@ -341,6 +341,7 @@ export class MaxFlizGameEngine {
   private hitStopTimer = 0;
   private targetRing!: THREE.Mesh;
   private bloomPulseTimer = 0;
+  private bloomPulseDuration = 0.3;
   private levelBounds = { minX: -35, maxX: 35, minZ: -15, maxZ: 15 };
   private envMapInitialized = false;
   private attackComboStep = 0;
@@ -453,7 +454,9 @@ export class MaxFlizGameEngine {
   }
 
   public triggerBloomPulse(durationSec = 0.3) {
-    this.bloomPulseTimer = durationSec;
+    const duration = THREE.MathUtils.clamp(durationSec, 0.08, 1.4);
+    this.bloomPulseTimer = Math.max(this.bloomPulseTimer, duration);
+    this.bloomPulseDuration = Math.max(this.bloomPulseDuration, this.bloomPulseTimer);
   }
 
   public zoomInCamera() {
@@ -577,6 +580,9 @@ export class MaxFlizGameEngine {
     vel: THREE.Vector3;
     life: number;
     maxLife: number;
+    gravity?: number;
+    baseScale?: number;
+    rotVel?: THREE.Vector3;
   }[] = [];
   private projectiles: {
     mesh: THREE.Object3D;
@@ -4000,14 +4006,20 @@ export class MaxFlizGameEngine {
 
     if (this.bloomPulseTimer > 0) {
       this.bloomPulseTimer = Math.max(0, this.bloomPulseTimer - dt);
-      // A tiny controlled highlight lift replaces the old 1.6+ exposure flash,
-      // which clipped gold/skin colours and made the scene look washed out.
+      // A frame-rate independent highlight envelope: rise, peak, and fade.
+      // This is deliberately restrained so gold, skin and pale tile surfaces keep detail.
       if (this.threeRenderer) {
-        const pulse = Math.max(0, Math.sin((0.45 - this.bloomPulseTimer) * 12));
-        this.threeRenderer.toneMappingExposure = 1.08 + pulse * 0.045;
+        const progress = THREE.MathUtils.clamp(
+          1 - this.bloomPulseTimer / Math.max(0.08, this.bloomPulseDuration),
+          0,
+          1
+        );
+        const pulse = Math.sin(Math.PI * progress);
+        this.threeRenderer.toneMappingExposure = 1.08 + pulse * 0.075;
       }
     } else if (this.threeRenderer) {
       this.threeRenderer.toneMappingExposure = 1.08;
+      this.bloomPulseDuration = 0.3;
     }
 
     this.updateCamera(dt);
@@ -7439,17 +7451,21 @@ export class MaxFlizGameEngine {
   private spawnCompactImpact(x: number, y: number, z: number, color: number) {
     for (let i = 0; i < 3; i++) {
       const mesh = new THREE.Mesh(
-        new THREE.BoxGeometry(0.055, 0.055, 0.055),
-        new THREE.MeshBasicMaterial({ color })
+        new THREE.TetrahedronGeometry(0.055 + Math.random() * 0.025, 0),
+        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95, toneMapped: false })
       );
       const angle = (i / 3) * Math.PI * 2;
       mesh.position.set(x, y, z);
+      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
       this.levelRoot.add(mesh);
       this.particles.push({
         mesh,
-        vel: new THREE.Vector3(Math.cos(angle) * 1.1, 0.6 + i * 0.12, Math.sin(angle) * 1.1),
-        life: 0.22,
-        maxLife: 0.22,
+        vel: new THREE.Vector3(Math.cos(angle) * 1.5, 0.75 + i * 0.16, Math.sin(angle) * 1.5),
+        life: 0.28,
+        maxLife: 0.28,
+        gravity: 1.8,
+        baseScale: 0.8 + Math.random() * 0.35,
+        rotVel: new THREE.Vector3(5 + Math.random() * 4, 4 + Math.random() * 5, 3 + Math.random() * 4),
       });
     }
   }
@@ -7464,9 +7480,17 @@ export class MaxFlizGameEngine {
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const pt = this.particles[i];
       pt.life -= dt;
+      if (pt.gravity !== undefined) pt.vel.y -= pt.gravity * dt;
       pt.mesh.position.addScaledVector(pt.vel, dt);
-      const scale = Math.max(0.001, pt.life / pt.maxLife);
-      pt.mesh.scale.setScalar(scale);
+      if (pt.rotVel) {
+        pt.mesh.rotation.x += pt.rotVel.x * dt;
+        pt.mesh.rotation.y += pt.rotVel.y * dt;
+        pt.mesh.rotation.z += pt.rotVel.z * dt;
+      }
+      const lifeRatio = THREE.MathUtils.clamp(pt.life / pt.maxLife, 0, 1);
+      pt.mesh.scale.setScalar((pt.baseScale ?? 1) * Math.max(0.001, lifeRatio));
+      const material = Array.isArray(pt.mesh.material) ? pt.mesh.material[0] : pt.mesh.material;
+      if (material.transparent) material.opacity = lifeRatio * 0.96;
 
       if (pt.life <= 0) {
         this.disposeParticleMesh(pt.mesh);
@@ -8654,6 +8678,15 @@ export class MaxFlizGameEngine {
     this.triggerBloomPulse(0.45);
     this.callbacks.onHpUpdate(this.hp, this.maxHp);
 
+    // Short directional vignette makes real HP loss readable without tinting shield blocks.
+    const gameShell = document.getElementById('game-shell');
+    if (gameShell) {
+      gameShell.classList.remove('damage-flash');
+      void gameShell.offsetWidth;
+      gameShell.classList.add('damage-flash');
+      window.setTimeout(() => gameShell.classList.remove('damage-flash'), 480);
+    }
+
     // Screen Shake on damage received by player!
     this.triggerScreenShake(0.9, 0.5);
 
@@ -8727,38 +8760,70 @@ export class MaxFlizGameEngine {
   private spawnParticleRing(x: number, y: number, z: number, color = 0x38bdf8) {
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
     const num = isMobile ? 8 : 14;
+    const lightColor = new THREE.Color(color);
     for (let i = 0; i < num; i++) {
       const angle = (i / num) * Math.PI * 2;
-      const geo = new THREE.BoxGeometry(0.12, 0.12, 0.12);
-      const mat = new THREE.MeshBasicMaterial({ color });
+      const size = 0.085 + Math.random() * 0.065;
+      const geo = i % 3 === 0
+        ? new THREE.OctahedronGeometry(size, 0)
+        : new THREE.TetrahedronGeometry(size, 0);
+      const tint = lightColor.clone().offsetHSL(0, 0, i % 2 === 0 ? 0.12 : -0.055);
+      const mat = new THREE.MeshBasicMaterial({ color: tint, transparent: true, opacity: 0.96, toneMapped: false });
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.set(x, y, z);
+      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
       this.levelRoot.add(mesh);
       this.particles.push({
         mesh,
-        vel: new THREE.Vector3(Math.cos(angle) * 4.2, Math.random() * 1.0, Math.sin(angle) * 4.2),
-        life: 0.55,
-        maxLife: 0.55,
+        vel: new THREE.Vector3(
+          Math.cos(angle) * (3.4 + Math.random() * 1.4),
+          0.7 + Math.random() * 1.65,
+          Math.sin(angle) * (3.4 + Math.random() * 1.4)
+        ),
+        life: 0.62,
+        maxLife: 0.62,
+        gravity: 3.6,
+        baseScale: 0.75 + Math.random() * 0.65,
+        rotVel: new THREE.Vector3(
+          (Math.random() - 0.5) * 11,
+          (Math.random() - 0.5) * 14,
+          (Math.random() - 0.5) * 11
+        ),
       });
     }
   }
 
   private spawnExplosionParticles(x: number, y: number, z: number, color = 0xf3f4f6, count = 20) {
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
-    const actualCount = isMobile ? Math.min(10, count) : count;
+    const actualCount = isMobile ? Math.min(10, count) : Math.min(28, count);
+    const baseColor = new THREE.Color(color);
     for (let i = 0; i < actualCount; i++) {
-      const geo = new THREE.BoxGeometry(0.12, 0.12, 0.12);
-      const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9 });
+      const size = 0.075 + Math.random() * 0.105;
+      const geo = i % 3 === 0
+        ? new THREE.BoxGeometry(size, size, size)
+        : i % 3 === 1
+          ? new THREE.TetrahedronGeometry(size * 1.35, 0)
+          : new THREE.OctahedronGeometry(size * 1.15, 0);
+      const tint = baseColor.clone().offsetHSL(0, 0, (Math.random() - 0.5) * 0.18);
+      const mat = new THREE.MeshBasicMaterial({ color: tint, transparent: true, opacity: 0.96, toneMapped: false });
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.set(x, y, z);
+      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
       this.levelRoot.add(mesh);
       const angle = Math.random() * Math.PI * 2;
-      const speed = 2.0 + Math.random() * 5.0;
+      const speed = 2.2 + Math.random() * 4.8;
       this.particles.push({
         mesh,
-        vel: new THREE.Vector3(Math.cos(angle) * speed, Math.random() * 3.5 + 1.0, Math.sin(angle) * speed),
-        life: 0.65,
-        maxLife: 0.65,
+        vel: new THREE.Vector3(Math.cos(angle) * speed, 1.4 + Math.random() * 3.8, Math.sin(angle) * speed),
+        life: 0.74,
+        maxLife: 0.74,
+        gravity: 4.5,
+        baseScale: 0.7 + Math.random() * 0.8,
+        rotVel: new THREE.Vector3(
+          (Math.random() - 0.5) * 13,
+          (Math.random() - 0.5) * 16,
+          (Math.random() - 0.5) * 13
+        ),
       });
     }
   }
