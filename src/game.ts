@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { clampHorizontalPosition } from './arenaBounds.ts';
 import { ParticleMeshPool, type ParticleShape } from './particlePool.ts';
 import { CHARACTERS } from './characters.ts';
 import { sound } from './sound.ts';
@@ -91,6 +92,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 // Shared floor-guide geometry/materials. Instanced markings add readable scale and
 // route structure to the large warehouse floors with only one draw call per sector.
+const PLAYER_UNIT_SCALE = new THREE.Vector3(1, 1, 1);
 const SECTOR_FLOOR_GUIDE_GEOMETRY = new THREE.BoxGeometry(1.25, 0.014, 0.055);
 const SECTOR_FLOOR_GUIDE_MATERIALS: Record<1 | 2 | 3, THREE.MeshBasicMaterial> = {
   1: new THREE.MeshBasicMaterial({ color: 0xf59e0b, toneMapped: false }),
@@ -6059,22 +6061,33 @@ export class MaxFlizGameEngine {
       }
     }
 
-    // Continuous unified Mega-Map boundaries across all 3 connected sectors (expanded in Z)
+    // Campaign uses the full connected mega-map bounds. Survival uses its own arena.
+    // Keep these bounds for the entire movement transaction so obstacle and conveyor
+    // resolution cannot push the player outside the same limits used by the first step.
     const maxZForSector = this.playerPos.x < 36 ? 19.0 : this.playerPos.x < 116 ? 19.0 : 21.0;
     const currentBounds = this.gameMode === 'survival'
       ? this.levelBounds
       : { minX: -34.5, maxX: 204.5, minZ: -maxZForSector, maxZ: maxZForSector };
 
-    let nextX = THREE.MathUtils.clamp(this.playerPos.x + this.playerVel.x * dt, currentBounds.minX, currentBounds.maxX);
+    const attemptedX = this.playerPos.x + this.playerVel.x * dt;
+    const attemptedZ = this.playerPos.z + this.playerVel.z * dt;
+    let nextX = THREE.MathUtils.clamp(attemptedX, currentBounds.minX, currentBounds.maxX);
+    let nextZ = THREE.MathUtils.clamp(attemptedZ, currentBounds.minZ, currentBounds.maxZ);
+    if (nextX !== attemptedX) this.playerVel.x = 0;
+    if (nextZ !== attemptedZ) this.playerVel.z = 0;
+
+    // Remember the locked campaign gate for the whole movement transaction.
+    // A conveyor or obstacle correction later in this method must not bypass it.
+    let campaignGateBoundary: number | null = null;
     if (this.gameMode === 'campaign') {
-      const blockedBoundary = this.maxUnlockedSector < 2 && this.playerPos.x <= 36 && nextX > 35.35
+      campaignGateBoundary = this.maxUnlockedSector < 2 && this.playerPos.x <= 36
         ? 35.35
-        : this.maxUnlockedSector < 3 && this.playerPos.x <= 116 && nextX > 115.35 ? 115.35 : null;
-      if (blockedBoundary !== null) {
-        nextX = blockedBoundary;
+        : this.maxUnlockedSector < 3 && this.playerPos.x <= 116 ? 115.35 : null;
+      if (campaignGateBoundary !== null && nextX > campaignGateBoundary) {
+        nextX = campaignGateBoundary;
         this.playerVel.x = 0;
         if (this.gateNoticeCooldown <= 0) {
-          const message = blockedBoundary < 100
+          const message = campaignGateBoundary < 100
             ? 'BRAMA B ZAMKNIĘTA — POKONAJ BOSMANA W SEKTORZE A'
             : 'BRAMA C ZAMKNIĘTA — POKONAJ KRÓLA-LETO W SEKTORZE B';
           this.emitFloatingToast(message, this.playerPos.x, this.playerPos.y + 1.7, this.playerPos.z, 'vip');
@@ -6085,7 +6098,6 @@ export class MaxFlizGameEngine {
     }
     this.gateNoticeCooldown = Math.max(0, this.gateNoticeCooldown - dt);
     const nextY = this.playerPos.y + this.playerVel.y * dt;
-    let nextZ = THREE.MathUtils.clamp(this.playerPos.z + this.playerVel.z * dt, currentBounds.minZ, currentBounds.maxZ);
 
     let landed = false;
     const pRadius = 0.28;
@@ -6157,7 +6169,9 @@ export class MaxFlizGameEngine {
             this.playerPos.y = topY;
             landed = true;
             if (plat.type === 'conveyor') {
-              this.playerPos.x += 3.6 * dt;
+              // The position is committed from nextX below; changing playerPos.x
+              // here was overwritten later and made conveyors appear decorative.
+              nextX += 3.6 * dt;
             }
           }
 
@@ -6166,6 +6180,12 @@ export class MaxFlizGameEngine {
           }
         }
       }
+    }
+
+    // Re-apply the gate after platform carry (notably conveyors), then commit.
+    if (campaignGateBoundary !== null && nextX > campaignGateBoundary) {
+      nextX = campaignGateBoundary;
+      this.playerVel.x = 0;
     }
 
     const wasGrounded = this.isGrounded;
@@ -6196,14 +6216,23 @@ export class MaxFlizGameEngine {
       this.playerPos.set(respawnX, 2, 0);
       this.playerVel.set(0, 0, 0);
     }
-    // SOLID BOUNDARY CLAMPING
-    this.playerPos.x = THREE.MathUtils.clamp(this.playerPos.x, this.levelBounds.minX, this.levelBounds.maxX);
-    this.playerPos.z = THREE.MathUtils.clamp(this.playerPos.z, this.levelBounds.minZ, this.levelBounds.maxZ);
+    // Final safety clamp uses the exact bounds selected for this mode/sector.
+    // The old levelBounds clamp was narrower than the campaign mega-map and
+    // silently restricted campaign movement to Z ±16 instead of ±19/±21.
+    const boundedPlayerPosition = clampHorizontalPosition(
+      this.playerPos.x,
+      this.playerPos.z,
+      currentBounds
+    );
+    if (boundedPlayerPosition.constrainedX) this.playerVel.x = 0;
+    if (boundedPlayerPosition.constrainedZ) this.playerVel.z = 0;
+    this.playerPos.x = boundedPlayerPosition.x;
+    this.playerPos.z = boundedPlayerPosition.z;
 
     if (this.playerGroup) {
       this.playerGroup.position.copy(this.playerPos);
       this.playerGroup.rotation.y = this.playerRot;
-      this.playerGroup.scale.lerp(new THREE.Vector3(1, 1, 1), dt * 8);
+      this.playerGroup.scale.lerp(PLAYER_UNIT_SCALE, dt * 8);
       const motionRatio = Math.min(1, Math.hypot(this.playerVel.x, this.playerVel.z) / Math.max(0.1, this.charDef.speed));
       const idleBreath = Math.sin(performance.now() * 0.0021) * 0.006 * (1 - motionRatio);
       this.playerGroup.position.y += idleBreath;
@@ -6635,6 +6664,23 @@ export class MaxFlizGameEngine {
     }
   }
 
+  private clampEnemyToArena(enemy: EnemyItem): void {
+    const zLimit = enemy.x < 36 ? 19.0 : enemy.x < 116 ? 19.0 : 21.0;
+    const bounds = this.gameMode === 'survival'
+      ? this.levelBounds
+      : { minX: -34.5, maxX: 204.5, minZ: -zLimit, maxZ: zLimit };
+    const inset = enemy.type === 'walczak' || enemy.type === 'krol_leto'
+      ? 1.55
+      : enemy.type === 'sebix_m'
+        ? 1.4
+        : 0.8;
+    const bounded = clampHorizontalPosition(enemy.x, enemy.z, bounds, inset);
+    enemy.x = bounded.x;
+    enemy.z = bounded.z;
+    enemy.mesh.position.x = bounded.x;
+    enemy.mesh.position.z = bounded.z;
+  }
+
   private updateEnemies(dt: number) {
     if (this.globalEnemyShoutCooldown > 0) {
       this.globalEnemyShoutCooldown -= dt;
@@ -6701,6 +6747,9 @@ export class MaxFlizGameEngine {
     this.enemies.forEach((e) => {
       if (e.state === 'defeated' || !e.mesh) return;
 
+      // Clamp before culling/AI so even actors displaced by hazards or a prior
+      // special move cannot remain outside the playable arena while off-screen.
+      this.clampEnemyToArena(e);
       const dx = this.playerPos.x - e.x;
       const dz = this.playerPos.z - e.z;
       const distToPlayer = Math.hypot(dx, dz);
@@ -7081,6 +7130,11 @@ export class MaxFlizGameEngine {
           }
         }
       }
+
+      // One final guard after every archetype-specific movement path. Several
+      // bosses and special enemies move directly (dash/chase), bypassing patrol
+      // bounds; keep the rendered mesh and hit-test position in sync.
+      this.clampEnemyToArena(e);
 
       // Check collision with player
       const dist = Math.hypot(e.x - this.playerPos.x, e.z - this.playerPos.z);
