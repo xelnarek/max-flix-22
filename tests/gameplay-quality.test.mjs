@@ -157,3 +157,15 @@ test('pixel intro has a single mobile-safe launch path and cannot start twice fr
   assert.match(intro, /MAX-FLIX I GRANICA ABSURDU/);
   assert.match(intro, /INWENTARYZACJA: 0 BŁĘDÓW/);
 });
+
+test('Survival start locks duplicate taps before awaiting shared asset readiness', async () => {
+  const app = await read('../src/index.ts');
+  const start = app.indexOf('const doStartSurvival = async');
+  const end = app.indexOf('const bindTap =', start);
+  assert.ok(start >= 0 && end > start, 'Survival startup handler should be present');
+  const handler = app.slice(start, end);
+  assert.match(handler, /startingGame = true;[\s\S]*?await assetLoader\.waitUntilReady\('Gra 3D'\)/);
+  assert.match(handler, /if \(startingGame\) return/);
+  assert.match(handler, /finally \{[\s\S]*?startingGame = false/);
+  assert.match(handler, /startButton\.disabled = true/);
+});

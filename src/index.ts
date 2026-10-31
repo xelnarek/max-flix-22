@@ -1113,31 +1113,56 @@ class MaxFlizScene extends xb.Script {
         e.preventDefault();
         e.stopPropagation();
       }
-      await assetLoader.waitUntilReady('Gra 3D');
 
+      // Lock before waiting for assets, just like the campaign route. Without
+      // this, two taps separated by more than the tap debounce can both resume
+      // here and construct duplicate Survival arenas.
       startingGame = true;
-      if (this.pixelIntro && this.pixelIntro.isRunning()) this.pixelIntro.stop();
-      this.engine.setLevelVisible(true);
-
-      const storyModal = document.getElementById('story-intro-modal');
-      storyModal?.classList.add('hidden');
-      if (titleScreen) {
-        titleScreen.classList.add('hidden');
-        titleScreen.style.setProperty('display', 'none', 'important');
+      const startButton = document.getElementById('btn-start-survival') as HTMLButtonElement | null;
+      if (startButton) {
+        startButton.disabled = true;
+        startButton.setAttribute('aria-busy', 'true');
       }
-      pauseModal?.classList.add('hidden');
-      victoryModal?.classList.add('hidden');
-      gameoverModal?.classList.add('hidden');
-      survivalLevelUp?.classList.add('hidden');
 
-      hudTop?.classList.remove('hidden');
-      hudBottom?.classList.remove('hidden');
-      touchControls?.classList.remove('hidden');
-      survivalHud?.classList.remove('hidden');
-      gameShell?.classList.add('survival-mode');
+      try {
+        await assetLoader.waitUntilReady('Gra 3D');
 
-      this.engine.startSurvival();
-      setTimeout(() => { startingGame = false; }, 600);
+        if (!this.engine || typeof this.engine.startSurvival !== 'function') {
+          throw new Error('Silnik Survival Shift nie jest jeszcze gotowy.');
+        }
+
+        if (this.pixelIntro?.isRunning()) this.pixelIntro.stop();
+        this.engine.setLevelVisible(true);
+
+        const storyModal = document.getElementById('story-intro-modal');
+        storyModal?.classList.add('hidden');
+        if (titleScreen) {
+          titleScreen.classList.add('hidden');
+          titleScreen.style.setProperty('display', 'none', 'important');
+        }
+        pauseModal?.classList.add('hidden');
+        victoryModal?.classList.add('hidden');
+        gameoverModal?.classList.add('hidden');
+        survivalLevelUp?.classList.add('hidden');
+
+        hudTop?.classList.remove('hidden');
+        hudBottom?.classList.remove('hidden');
+        touchControls?.classList.remove('hidden');
+        survivalHud?.classList.remove('hidden');
+        gameShell?.classList.add('survival-mode');
+
+        this.engine.startSurvival();
+      } finally {
+        // Keep the lock briefly after the synchronous scene swap so late touch
+        // and synthetic click events cannot immediately start another arena.
+        setTimeout(() => {
+          startingGame = false;
+          if (startButton) {
+            startButton.disabled = false;
+            startButton.removeAttribute('aria-busy');
+          }
+        }, 600);
+      }
     };
 
     const bindTap = (elem: HTMLElement | null, fn: (e: Event) => void) => {
