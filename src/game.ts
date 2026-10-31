@@ -4104,7 +4104,7 @@ export class MaxFlizGameEngine {
       sound.playAlert();
 
       // Secret objects are deliberately placed away from the centre line.
-      if (!this.survivalSecretSpawned && this.survivalWave >= 4 && Math.random() < 0.34) {
+      if (!this.survivalSecretSpawned && this.survivalWave >= 3 && Math.random() < 0.68) {
         this.survivalSecretSpawned = true;
         const side = Math.random() < 0.5 ? -1 : 1;
         const secretX = THREE.MathUtils.clamp(this.playerPos.x + side * 22, this.levelBounds.minX + 3, this.levelBounds.maxX - 3);
@@ -4631,6 +4631,134 @@ export class MaxFlizGameEngine {
     sound.playLollipopThrow();
   }
 
+  private spawnSebixBrick(x: number, y: number, z: number, targetX: number, targetZ: number) {
+    const group = new THREE.Group();
+    const brickMaterial = new THREE.MeshStandardMaterial({ color: 0x9a3412, roughness: 0.86 });
+    const mortarMaterial = new THREE.MeshStandardMaterial({ color: 0xf5d0a4, roughness: 0.95 });
+    const brick = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.19, 0.22), brickMaterial);
+    group.add(brick);
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.025, 0.225), mortarMaterial);
+    stripe.position.y = 0.045;
+    group.add(stripe);
+    group.position.set(x,y,z);
+    this.levelRoot.add(group);
+    const direction = new THREE.Vector3(targetX-x,0.22,targetZ-z).normalize();
+    this.enemyProjectiles.push({
+      mesh: group as unknown as THREE.Mesh,
+      vel: direction.multiplyScalar(7.2),
+      life: 3.0,
+      kind: 'sebix_brick',
+      gravity: 2.15,
+      spin: 5.2,
+    });
+    sound.playWhistle();
+    this.emitFloatingToast('🧱 SEBIX M. RZUCA CEGŁĄ!', x, y+0.45, z, 'damage');
+  }
+
+  private updateSebixBehaviour(enemy: EnemyItem, dt: number, distance: number, dx: number, dz: number) {
+    enemy.rageTime = (enemy.rageTime || 0) + dt;
+    if (enemy.rageTime >= 10 && (enemy.bossPhase || 1) < 2) {
+      enemy.bossPhase = 2;
+      enemy.speed *= 1.34;
+      enemy.maxHp = Math.ceil(enemy.maxHp * 1.12);
+      enemy.hp = Math.min(enemy.maxHp, enemy.hp + 2);
+      this.callbacks.onPerkDropBanner?.(
+        'SEBIX M. • ZACZYNA SIĘ ROZGRZEWKA',
+        '💪',
+        'Cegły lecą szybciej. Sebix przyspiesza i zaczyna zamykać dystans.',
+        '#f97316'
+      );
+      this.triggerScreenShake(0.22,0.14);
+      sound.playBossWarning();
+    }
+    if (enemy.rageTime >= 24 && (enemy.bossPhase || 1) < 3) {
+      enemy.bossPhase = 3;
+      enemy.speed *= 1.42;
+      enemy.specialActionTimer = Math.min(enemy.specialActionTimer || 0, 1.2);
+      this.callbacks.onPerkDropBanner?.(
+        'SEBIX M. • TRYB TARANU HULK B4',
+        '🔥',
+        'Podłoże zaczyna płonąć. Uważaj na czerwono-pomarańczowe ostrzeżenie przed szarżą.',
+        '#ef4444'
+      );
+      sound.playSirens();
+      this.triggerScreenShake(0.48,0.28);
+      this.triggerBloomPulse(0.38);
+    }
+
+    const facePlayer = () => { enemy.mesh.rotation.y = Math.atan2(dx,dz); };
+    if ((enemy.dashTimer || 0) > 0) {
+      enemy.dashTimer = Math.max(0,(enemy.dashTimer || 0)-dt);
+      const dir = enemy.chargeDir ?? Math.atan2(dx,dz);
+      enemy.x += Math.sin(dir) * enemy.speed * 2.45 * dt;
+      enemy.z += Math.cos(dir) * enemy.speed * 2.45 * dt;
+      enemy.mesh.rotation.y = dir;
+      enemy.mesh.position.set(enemy.x,enemy.y,enemy.z);
+      enemy.trailTimer = (enemy.trailTimer || 0)-dt;
+      if ((enemy.trailTimer || 0) <= 0) {
+        enemy.trailTimer = 0.105;
+        this.spawnDust(enemy.x,0.025,enemy.z,0xff6a00);
+        this.spawnDust(enemy.x+(Math.random()-0.5)*0.5,0.045,enemy.z+(Math.random()-0.5)*0.5,0xef4444);
+      }
+      if (enemy.dashTimer <= 0) {
+        enemy.state = 'chase';
+        enemy.specialActionTimer = 4.2;
+        enemy.chargeDir = undefined;
+        this.triggerScreenShake(0.32,0.2);
+      }
+      return;
+    }
+
+    if (enemy.chargeTimer !== undefined) {
+      enemy.chargeTimer = Math.max(0,enemy.chargeTimer-dt);
+      enemy.state = 'charging';
+      facePlayer();
+      if (enemy.chargeTimer <= 0) {
+        enemy.chargeTimer = undefined;
+        enemy.dashTimer = 0.78;
+        enemy.chargeDir = Math.atan2(dx,dz);
+        enemy.state = 'chase';
+        sound.playBossWarning();
+        this.triggerScreenShake(0.26,0.17);
+      }
+      return;
+    }
+
+    const phase = enemy.bossPhase || 1;
+    if (phase >= 3) {
+      enemy.specialActionTimer = (enemy.specialActionTimer ?? 0)-dt;
+      if (distance < 13 && (enemy.specialActionTimer || 0) <= 0) {
+        enemy.chargeTimer = 0.72;
+        enemy.chargeDir = Math.atan2(dx,dz);
+        enemy.state = 'charging';
+        this.spawnParticleRing(enemy.x,0.12,enemy.z,0xef4444);
+        this.emitFloatingToast('🔥 SEBIX ŁADUJE TARAN — ZEJDŹ Z LINII!',enemy.x,enemy.y+2.2,enemy.z,'damage');
+        sound.playBossWarning();
+        return;
+      }
+      enemy.trailTimer = (enemy.trailTimer || 0)-dt;
+      if ((enemy.trailTimer || 0) <= 0) {
+        enemy.trailTimer = 0.24;
+        this.spawnDust(enemy.x,0.025,enemy.z,0xff7a18);
+      }
+    } else {
+      enemy.specialActionTimer = (enemy.specialActionTimer ?? 0)-dt;
+      if (distance < 16 && (enemy.specialActionTimer || 0) <= 0) {
+        enemy.specialActionTimer = phase >= 2 ? 3.1 : 4.5;
+        facePlayer();
+        this.spawnSebixBrick(enemy.x,enemy.y+1.35,enemy.z,this.playerPos.x,this.playerPos.z);
+      }
+    }
+
+    if (distance > 1.7) {
+      const pace = phase === 1 ? 0.78 : 1.0;
+      enemy.x += (dx/Math.max(0.1,distance))*enemy.speed*pace*dt;
+      enemy.z += (dz/Math.max(0.1,distance))*enemy.speed*pace*dt;
+    }
+    facePlayer();
+    enemy.mesh.position.set(enemy.x,enemy.y+Math.sin(enemy.walkCycle*1.7)*0.018,enemy.z);
+  }
+
   private updateSurvivalDrone(dt: number) {
     if (this.gameMode !== 'survival' || (this.activePerks.arcDrone || 0) <= 0) return;
     this.survivalDroneCooldown -= dt;
@@ -4745,7 +4873,8 @@ export class MaxFlizGameEngine {
     const maxZ = THREE.MathUtils.clamp(z + 2.2, this.levelBounds.minZ + 0.5, this.levelBounds.maxZ - 0.5);
     const roll = Math.random();
 
-    if (wave < 3 || roll < 0.16) this.addZombieWorkerEnemy(id, x, minZ, maxZ, 'Zombie-Magazynier — głodny po nocnej zmianie');
+    if (wave >= 8 && Math.random() < 0.065) this.addSebixEnemy(id,x,minZ,maxZ);
+    else if (wave < 3 || roll < 0.16) this.addZombieWorkerEnemy(id, x, minZ, maxZ, 'Zombie-Magazynier — głodny po nocnej zmianie');
     else if (roll < 0.29) this.addKurierEnemy(id, x, minZ, maxZ, 'Kurier Ekspresowy — paczka bez awiza');
     else if (roll < 0.41) this.addMonterEnemy(id, x, minZ, maxZ, 'Monter Wiesław — poziomica w dłoni');
     else if (roll < 0.52) this.addInspectorEnemy(id, x, minZ, maxZ, 'Inspektor BHP — kontrola bez zapowiedzi');
@@ -5600,7 +5729,7 @@ export class MaxFlizGameEngine {
 
 
   private getSurvivalEnemyRole(enemy: EnemyItem): 'bruiser' | 'flanker' | 'ranged' | 'support' {
-    if (enemy.type === 'sztaplar_szalony' || enemy.type === 'elite_walczak_guard' || enemy.type === 'agv_robot') return 'bruiser';
+    if (enemy.type === 'sztaplar_szalony' || enemy.type === 'elite_walczak_guard' || enemy.type === 'agv_robot' || enemy.type === 'sebix_m') return 'bruiser';
     if (enemy.type === 'inspector') return 'support';
     if (enemy.type === 'handlowiec' || enemy.type === 'przedstawiciel_włoski' || enemy.type === 'pan_roman' || enemy.type === 'serwisant' || enemy.type === 'pomazaniec') return 'ranged';
     if (enemy.type === 'kurier' || enemy.type === 'zombie_pracownik' || enemy.type === 'monter') return 'flanker';
@@ -5742,7 +5871,7 @@ export class MaxFlizGameEngine {
       for (const e of this.enemies) {
         if (e.state === 'defeated' || !e.mesh) continue;
         const d = Math.hypot(this.playerPos.x - e.x, this.playerPos.z - e.z);
-        if (d > 26.0 && e.type !== 'walczak' && e.type !== 'krol_leto') {
+        if (d > 26.0 && e.type !== 'walczak' && e.type !== 'krol_leto' && e.type !== 'sebix_m') {
           if (e.mesh.visible) e.mesh.visible = false;
           continue;
         }
@@ -5775,7 +5904,7 @@ export class MaxFlizGameEngine {
       const distToPlayer = Math.hypot(dx, dz);
 
       // Distance culling: skip heavy updates for distant non-boss enemies
-      if (distToPlayer > 26.0 && e.type !== 'walczak' && e.type !== 'krol_leto') {
+      if (distToPlayer > 26.0 && e.type !== 'walczak' && e.type !== 'krol_leto' && e.type !== 'sebix_m') {
         if (e.mesh.visible) e.mesh.visible = false;
         return;
       }
@@ -5848,7 +5977,7 @@ export class MaxFlizGameEngine {
       }
 
       // Check whether this enemy is allowed to engage or must hold position in wave
-      const canActivelyChase = e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'pomazaniec' || this.activeChaserIds.has(e.id);
+      const canActivelyChase = e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'pomazaniec' || e.type === 'sebix_m' || this.activeChaserIds.has(e.id);
 
       // SIGHT & DETECTION LOGIC
       const threatAwareness = 1 + this.threatTier * 0.025;
@@ -6001,7 +6130,9 @@ export class MaxFlizGameEngine {
         }
         this.callbacks.onBossUpdate?.(e.name, e.hp, e.maxHp, true, e.bossPhase);
       } else {
-        if (this.gameMode === 'survival') {
+        if (e.type === 'sebix_m') {
+          this.updateSebixBehaviour(e,dt,distToPlayer,dx,dz);
+        } else if (this.gameMode === 'survival') {
           this.updateSurvivalEnemyTactics(e, dt, distToPlayer);
         } else {
           // Dynamic Chase / Tracking AI for ground enemies
@@ -6128,7 +6259,7 @@ export class MaxFlizGameEngine {
         e.mesh.position.y = e.y + Math.sin(e.walkCycle * 1.65) * 0.025;
         e.mesh.rotation.z = Math.sin(e.walkCycle * 1.1) * 0.018;
       }
-      const hitRadius = e.type === 'walczak' || e.type === 'krol_leto' ? 1.5 : e.type === 'elite_walczak_guard' ? 1.3 : 1.1;
+      const hitRadius = e.type === 'sebix_m' ? (e.dashTimer && e.dashTimer > 0 ? 1.85 : 1.35) : e.type === 'walczak' || e.type === 'krol_leto' ? 1.5 : e.type === 'elite_walczak_guard' ? 1.3 : 1.1;
 
       if (dist < hitRadius) {
         // 1. STOMP MECHANIC (Naskok z góry)
