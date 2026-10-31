@@ -1033,6 +1033,9 @@ export class MaxFlizGameEngine {
     this.rebuildPlayerMesh();
     this.sectorGates = [null, null, null, null];
     this.levelBounds = { minX: -58, maxX: 58, minZ: -18.2, maxZ: 18.2 };
+    this.minimapFrameCounter = 0;
+    const minimapTitle = document.querySelector('#minimap-container .minimap-title');
+    if (minimapTitle) minimapTitle.textContent = 'RADAR • ARENA SURVIVAL 120M';
     this.sectorGates.forEach((gate) => { if (gate) gate.visible = false; });
     this.scene.background = new THREE.Color(0x080f1c);
     this.buildSurvivalArenaExpansion();
@@ -7294,6 +7297,24 @@ export class MaxFlizGameEngine {
         const oh = Math.max(3, obstacle.halfDepth * 2 * scale);
         ctx.fillRect(ox - ow / 2, oy - oh / 2, ow, oh);
         ctx.strokeRect(ox - ow / 2, oy - oh / 2, ow, oh);
+      }
+    }
+
+    if (isSurvivalMap) {
+      // Active hazards are amber markers; the radar gives a route warning before the player reaches them.
+      for (const hazard of this.hazards) {
+        if (!hazard.active) continue;
+        const hx = centerX + (hazard.x - mapCenterX) * scale;
+        const hy = centerY + (hazard.z - mapCenterZ) * scale;
+        if (hx < 0 || hx > w || hy < 0 || hy > h) continue;
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.moveTo(hx, hy - 3.5);
+        ctx.lineTo(hx + 3.5, hy);
+        ctx.lineTo(hx, hy + 3.5);
+        ctx.lineTo(hx - 3.5, hy);
+        ctx.closePath();
+        ctx.fill();
       }
     }
 
