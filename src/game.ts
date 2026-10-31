@@ -1147,6 +1147,63 @@ export class MaxFlizGameEngine {
     this.levelRoot.add(centerFloor);
     this.platforms.push({ x: 0, y: 0, z: 0, width: 72, height: 0.2, depth: 40, type: 'floor' });
 
+    // Low-contrast aisle guides make the large floor readable without filling it
+    // with clutter. Instanced marks keep the mobile draw-call cost predictable.
+    const aisleGuideMat = new THREE.MeshStandardMaterial({
+      color: 0x3b8da6,
+      emissive: 0x17475c,
+      emissiveIntensity: 0.22,
+      roughness: 0.58,
+      metalness: 0.18,
+    });
+    for (const z of [-9.2, 9.2]) {
+      const line = new THREE.Mesh(new THREE.BoxGeometry(112, 0.022, 0.055), aisleGuideMat);
+      line.position.set(0, 0.012, z);
+      line.receiveShadow = false;
+      line.castShadow = false;
+      this.levelRoot.add(line);
+    }
+
+    const dashMaterial = new THREE.MeshStandardMaterial({
+      color: 0xd79a42,
+      emissive: 0x5c3512,
+      emissiveIntensity: 0.16,
+      roughness: 0.62,
+      metalness: 0.12,
+    });
+    const dashGeometry = new THREE.BoxGeometry(2.4, 0.024, 0.075);
+    const aisleDashes = new THREE.InstancedMesh(dashGeometry, dashMaterial, 13);
+    const dashTransform = new THREE.Object3D();
+    for (let i = 0; i < 13; i++) {
+      dashTransform.position.set(-52 + i * 8.65, 0.013, 0);
+      dashTransform.updateMatrix();
+      aisleDashes.setMatrixAt(i, dashTransform.matrix);
+    }
+    aisleDashes.instanceMatrix.needsUpdate = true;
+    aisleDashes.castShadow = false;
+    aisleDashes.receiveShadow = false;
+    this.levelRoot.add(aisleDashes);
+
+    // High-bay ceiling luminaires are one instanced batch, not dozens of separate meshes.
+    const fixtureMaterial = new THREE.MeshStandardMaterial({
+      color: 0xc5d9e2,
+      emissive: 0x4c91a9,
+      emissiveIntensity: 0.32,
+      roughness: 0.28,
+      metalness: 0.42,
+    });
+    const fixtureGeometry = new THREE.BoxGeometry(3.6, 0.12, 0.38);
+    const fixtures = new THREE.InstancedMesh(fixtureGeometry, fixtureMaterial, 8);
+    for (let i = 0; i < 8; i++) {
+      dashTransform.position.set(-49 + i * 14, 8.35, 0);
+      dashTransform.updateMatrix();
+      fixtures.setMatrixAt(i, dashTransform.matrix);
+    }
+    fixtures.instanceMatrix.needsUpdate = true;
+    fixtures.castShadow = false;
+    fixtures.receiveShadow = false;
+    this.levelRoot.add(fixtures);
+
     // Continuous side walls frame the complete 120 x 40 m arena.
     for (const zSide of [-1, 1]) {
       const sideWall = new THREE.Mesh(new THREE.BoxGeometry(119, 9.5, 0.48), wallMaterial);
