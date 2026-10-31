@@ -45,7 +45,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     passiveDescription: 'Podstawowy atak to ciężki rzut hantlem. Co trzeci rzut jest mocniejszy, przebija kilku przeciwników i odrzuca ich na boki.',
     abilityName: 'Ścisk Zagłady 44cm + Tryb Tarana',
     abilityDescription: 'Wzywa obracające się hydrauliczne ramię miażdżące o sile 44 ton (3 HP obrażeń obszarowych) oraz aktywuje na 6 sekund Tryb Tarana – rozjeżdżasz wrogów samym biegiem!',
-    abilityCooldown: 4.5,
+    abilityCooldown: 12.0,
     voiceLines: [
       'Ściskam, bo muszę! To nie jest agresja, to czysta logistyczna potrzeba!',
       '44 cm obwodu ramienia i jeden ruch, a cała aleja robi się pusta!',
@@ -77,7 +77,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     passiveDescription: 'Podstawowy atak wyrzuca rolkę folii stretch. Trafiony przeciwnik zostaje spowolniony i na krótko owinięty folią; co trzeci rzut rozrzuca dodatkowe pasma.',
     abilityName: 'Salwa Calacatta 120x280 & Dostawa Kubełka KFC',
     abilityDescription: 'Wyrzuca 5 gigantycznych rykoszetujących płyt gresowych, aktywuje Kask BHP oraz zrzuca gorący Kubełek KFC (+HP i Furia KFC)!',
-    abilityCooldown: 5.0,
+    abilityCooldown: 13.0,
     voiceLines: [
       'Ja wiem lepiej, jak kłaść ten gres! Walczak nie ma zielonego pojęcia!',
       'Przywiozłem świeży kubełek z KFC! Kto pierwszy ten lepszy, reszta robi dylatację!',
@@ -141,7 +141,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     passiveDescription: 'Piotr ma stały podwójny skok i 100% szansy na drop perków. Klucz grzechotkowy wraca po rzucie, więc dobrze ustawiony tor pozwala przeciąć linię wrogów również podczas powrotu.',
     abilityName: 'Potrójna Salwa Flaszek z Bimbrem 70% (Mołotow x3)',
     abilityDescription: 'Piotr wyjmuje zza regału B4 aż 3 płonące butelki 70% bimbru jednocześnie i miota nimi przed siebie, zamieniając cały korytarz w ścianę żywego ognia!',
-    abilityCooldown: 4.8,
+    abilityCooldown: 13.5,
     voiceLines: [
       'Bimber ze skarbczyka! 70 voltów zrobionych na drożdżach szlachetnych zza regału B4!',
       'Z drogi, bo rzucam flaszką! To stary przepis magazynowy – pali się lepiej niż napalm!',
