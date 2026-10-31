@@ -2155,18 +2155,23 @@ export class MaxFlizGameEngine {
       return;
     }
 
-    // Compact shoulder guards and a chest ID plate improve silhouette recognition without enlarging hitboxes.
+    // Rounded shoulder guards and a sculpted chest badge add depth without changing hitboxes.
     for (const side of [-1, 1]) {
-      const shoulder = new THREE.Mesh(new THREE.BoxGeometry(0.18 * scale, 0.13 * scale, 0.22 * scale), armorMat);
+      const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.13 * scale, 12, 8), armorMat);
+      shoulder.scale.set(1.42, 0.74, 1.0);
       shoulder.position.set(side * 0.235 * scale, 0.73 * scale, 0.015);
       shoulder.rotation.z = side * -0.12;
       shoulder.castShadow = false;
       root.add(shoulder);
     }
-    const chestPlate = new THREE.Mesh(new THREE.BoxGeometry(0.22 * scale, 0.18 * scale, 0.045 * scale), accentMat);
+    const chestPlate = new THREE.Mesh(new THREE.SphereGeometry(0.13 * scale, 14, 10), accentMat);
+    chestPlate.scale.set(1.28, 0.76, 0.34);
     chestPlate.position.set(0, 0.59 * scale, 0.155 * scale);
     chestPlate.castShadow = false;
-    root.add(chestPlate);
+    const chestStripe = new THREE.Mesh(new THREE.BoxGeometry(0.19 * scale, 0.025 * scale, 0.018 * scale), darkMat);
+    chestStripe.position.set(0, 0.60 * scale, 0.199 * scale);
+    chestStripe.castShadow = false;
+    root.add(chestPlate, chestStripe);
     const belt = new THREE.Mesh(new THREE.BoxGeometry(0.34 * scale, 0.075 * scale, 0.26 * scale), darkMat);
     belt.position.set(0, 0.34 * scale, 0);
     belt.castShadow = false;
@@ -2182,7 +2187,8 @@ export class MaxFlizGameEngine {
 
     // Role-specific silhouettes: readable at a distance without enlarging collision bodies.
     if (isBoss) {
-      const crest = new THREE.Mesh(new THREE.BoxGeometry(0.34 * scale, 0.12 * scale, 0.14 * scale), accentMat);
+      const crest = new THREE.Mesh(new THREE.SphereGeometry(0.18 * scale, 12, 8), accentMat);
+      crest.scale.set(1.65, 0.58, 0.72);
       crest.position.set(0, 1.16 * scale, 0.015);
       crest.castShadow = false;
       root.add(crest);
@@ -2225,15 +2231,24 @@ export class MaxFlizGameEngine {
     }
   }
 
-  // Soft, saturated low-poly shading gives the warehouse a readable storybook look
-  // without replacing the existing models, textures, animations or lighting setup.
+  // Retain a low-poly industrial look on hard edges, but do not facet the
+  // rounded faces, heads, limbs and equipment that define character silhouettes.
   private applyStorybookStyle(root: THREE.Object3D) {
     root.traverse((object) => {
       if (!(object instanceof THREE.Mesh)) return;
+      const geometry = object.geometry;
+      const isCurvedSurface =
+        geometry instanceof THREE.SphereGeometry ||
+        geometry instanceof THREE.CapsuleGeometry ||
+        geometry instanceof THREE.CylinderGeometry ||
+        geometry instanceof THREE.ConeGeometry ||
+        geometry instanceof THREE.TorusGeometry ||
+        geometry instanceof THREE.TorusKnotGeometry;
       const materials = Array.isArray(object.material) ? object.material : [object.material];
       for (const material of materials) {
         if (material instanceof THREE.MeshStandardMaterial || material instanceof THREE.MeshPhysicalMaterial) {
-          material.flatShading = true;
+          if (isCurvedSurface) material.userData.preserveSmoothShading = true;
+          material.flatShading = material.userData.preserveSmoothShading !== true;
           material.roughness = Math.max(material.roughness, 0.58);
           material.metalness = Math.min(material.metalness, 0.42);
           if (material.color) material.color.offsetHSL(0, 0.10, 0.015);
