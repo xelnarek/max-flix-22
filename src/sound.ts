@@ -2,7 +2,14 @@
  * Advanced Web Audio procedural sound synthesizer for Max-Fliz 3D.
  * 100% procedural with zero external audio assets.
  */
+export interface AudioSettings {
+  master: number;
+  music: number;
+  effects: number;
+}
+
 class SoundEngine {
+  private static readonly SETTINGS_KEY = 'maxFlizAudioSettings:v1';
   private ctx: AudioContext | null = null;
   private isMuted: boolean = false;
   private musicInterval: number | null = null;
@@ -10,9 +17,96 @@ class SoundEngine {
   private musicPlaying: boolean = false;
   private musicRequested: boolean = false;
   private musicGain: GainNode | null = null;
+  private masterBus: GainNode | null = null;
+  private musicBus: GainNode | null = null;
+  private effectsBus: GainNode | null = null;
   private lastAttackWhooshAt = -Infinity;
+  private settings: AudioSettings = { master: 0.82, music: 0.48, effects: 0.82 };
 
-  constructor() {}
+  constructor() {
+    this.loadSettings();
+  }
+
+  private clampVolume(value: number): number {
+    return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0;
+  }
+
+  private loadSettings() {
+    try {
+      const raw = window.localStorage.getItem(SoundEngine.SETTINGS_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Partial<AudioSettings>;
+      this.settings = {
+        master: this.clampVolume(saved.master ?? this.settings.master),
+        music: this.clampVolume(saved.music ?? this.settings.music),
+        effects: this.clampVolume(saved.effects ?? this.settings.effects),
+      };
+    } catch {
+      // Audio must remain available even when browser storage is blocked or corrupted.
+    }
+  }
+
+  private persistSettings() {
+    try {
+      window.localStorage.setItem(SoundEngine.SETTINGS_KEY, JSON.stringify(this.settings));
+    } catch {
+      // Keep the current session's settings when storage is unavailable.
+    }
+  }
+
+  private ensureAudioGraph() {
+    if (!this.ctx) return;
+    if (!this.masterBus) {
+      this.masterBus = this.ctx.createGain();
+      this.masterBus.connect(this.ctx.destination);
+    }
+    if (!this.musicBus) {
+      this.musicBus = this.ctx.createGain();
+      this.musicBus.connect(this.masterBus);
+    }
+    if (!this.effectsBus) {
+      this.effectsBus = this.ctx.createGain();
+      this.effectsBus.connect(this.masterBus);
+    }
+    const now = this.ctx.currentTime;
+    this.masterBus.gain.setTargetAtTime(this.settings.master, now, 0.025);
+    this.musicBus.gain.setTargetAtTime(this.settings.music, now, 0.025);
+    this.effectsBus.gain.setTargetAtTime(this.settings.effects, now, 0.025);
+  }
+
+  private applyVolumeSettings() {
+    this.ensureAudioGraph();
+  }
+
+  public getAudioSettings(): AudioSettings {
+    return { ...this.settings };
+  }
+
+  public setMasterVolume(value: number) {
+    this.settings.master = this.clampVolume(value);
+    this.applyVolumeSettings();
+    this.persistSettings();
+  }
+
+  public setMusicVolume(value: number) {
+    this.settings.music = this.clampVolume(value);
+    this.applyVolumeSettings();
+    this.persistSettings();
+  }
+
+  public setEffectsVolume(value: number) {
+    this.settings.effects = this.clampVolume(value);
+    this.applyVolumeSettings();
+    this.persistSettings();
+  }
+
+  public setAudioSettings(settings: Partial<AudioSettings>) {
+    if (settings.master !== undefined) this.settings.master = this.clampVolume(settings.master);
+    if (settings.music !== undefined) this.settings.music = this.clampVolume(settings.music);
+    if (settings.effects !== undefined) this.settings.effects = this.clampVolume(settings.effects);
+    this.applyVolumeSettings();
+    this.persistSettings();
+  }
 
   public initCtx() {
     if (!this.ctx) {
@@ -21,8 +115,11 @@ class SoundEngine {
         this.ctx = new AudioCtx();
       }
     }
-    if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
+    if (!this.ctx) return;
+    this.ensureAudioGraph();
+    if (this.ctx.state === 'suspended') {
+      // A browser may reject resume until the next trusted user gesture; do not leak that rejection.
+      void this.ctx.resume().catch(() => undefined);
     }
   }
 
@@ -58,7 +155,7 @@ class SoundEngine {
     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.16);
 
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.effectsBus ?? this.ctx.destination);
 
     osc.start(t);
     osc.stop(t + 0.17);
@@ -82,7 +179,7 @@ class SoundEngine {
     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.32);
 
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.effectsBus ?? this.ctx.destination);
 
     osc.start(t);
     osc.stop(t + 0.33);
@@ -109,7 +206,7 @@ class SoundEngine {
       gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.18);
 
       osc.connect(gain);
-      gain.connect(this.ctx!.destination);
+      gain.connect(this.effectsBus ?? this.ctx!.destination);
 
       osc.start(startTime);
       osc.stop(startTime + 0.19);
@@ -132,7 +229,7 @@ class SoundEngine {
       gain.gain.setValueAtTime(0.2, st);
       gain.gain.exponentialRampToValueAtTime(0.01, st + 0.15);
       osc.connect(gain);
-      gain.connect(this.ctx!.destination);
+      gain.connect(this.effectsBus ?? this.ctx!.destination);
       osc.start(st);
       osc.stop(st + 0.16);
     });
@@ -151,7 +248,7 @@ class SoundEngine {
     gain.gain.setValueAtTime(0.2, t);
     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.effectsBus ?? this.ctx.destination);
     osc.start(t);
     osc.stop(t + 0.21);
   }
@@ -170,7 +267,7 @@ class SoundEngine {
     gain.gain.setValueAtTime(0.25, t);
     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.12);
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.effectsBus ?? this.ctx.destination);
     osc.start(t);
     osc.stop(t + 0.13);
   }
@@ -188,7 +285,7 @@ class SoundEngine {
     gain.gain.setValueAtTime(0.3, t);
     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.26);
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.effectsBus ?? this.ctx.destination);
     osc.start(t);
     osc.stop(t + 0.27);
   }
@@ -210,7 +307,7 @@ class SoundEngine {
       gain.gain.setValueAtTime(0.4, t);
       gain.gain.exponentialRampToValueAtTime(0.01, t + 0.35);
       osc.connect(gain);
-      gain.connect(this.ctx.destination);
+      gain.connect(this.effectsBus ?? this.ctx.destination);
       osc.start(t);
       osc.stop(t + 0.36);
 
@@ -222,7 +319,7 @@ class SoundEngine {
       bGain.gain.setValueAtTime(0.25, t + 0.05);
       bGain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
       bell.connect(bGain);
-      bGain.connect(this.ctx.destination);
+      bGain.connect(this.effectsBus ?? this.ctx.destination);
       bell.start(t + 0.05);
       bell.stop(t + 0.61);
     } else if (charId === 'grzesiek') {
@@ -235,7 +332,7 @@ class SoundEngine {
       gain.gain.setValueAtTime(0.3, t);
       gain.gain.exponentialRampToValueAtTime(0.01, t + 0.35);
       osc.connect(gain);
-      gain.connect(this.ctx.destination);
+      gain.connect(this.effectsBus ?? this.ctx.destination);
       osc.start(t);
       osc.stop(t + 0.36);
     } else if (charId === 'dawid') {
@@ -249,7 +346,7 @@ class SoundEngine {
       gain.gain.setValueAtTime(0.32, t);
       gain.gain.exponentialRampToValueAtTime(0.01, t + 0.28);
       osc.connect(gain);
-      gain.connect(this.ctx.destination);
+      gain.connect(this.effectsBus ?? this.ctx.destination);
       osc.start(t);
       osc.stop(t + 0.3);
     } else if (charId === 'piotr') {
@@ -264,7 +361,7 @@ class SoundEngine {
         gain.gain.setValueAtTime(0.24, t + i * 0.04);
         gain.gain.exponentialRampToValueAtTime(0.01, t + i * 0.04 + 0.18);
         osc.connect(gain);
-        gain.connect(this.ctx!.destination);
+        gain.connect(this.effectsBus ?? this.ctx!.destination);
         osc.start(t + i * 0.04);
         osc.stop(t + i * 0.04 + 0.19);
       });
@@ -285,7 +382,7 @@ class SoundEngine {
       gain.gain.setValueAtTime(0.22, t);
       gain.gain.exponentialRampToValueAtTime(0.01, t + 0.26);
       osc.connect(gain);
-      gain.connect(this.ctx!.destination);
+      gain.connect(this.effectsBus ?? this.ctx!.destination);
       osc.start(t);
       osc.stop(t + 0.28);
     });
@@ -308,7 +405,7 @@ class SoundEngine {
     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.28);
 
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.effectsBus ?? this.ctx.destination);
 
     osc.start(t);
     osc.stop(t + 0.3);
@@ -330,7 +427,7 @@ class SoundEngine {
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
 
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.effectsBus ?? this.ctx.destination);
     osc.start(t);
     osc.stop(t + 0.62);
 
@@ -346,7 +443,7 @@ class SoundEngine {
     noiseGain.gain.setValueAtTime(0.5, t);
     noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
     noise.connect(noiseGain);
-    noiseGain.connect(this.ctx.destination);
+    noiseGain.connect(this.effectsBus ?? this.ctx.destination);
     noise.start(t);
   }
 
@@ -378,7 +475,7 @@ class SoundEngine {
       gain.gain.exponentialRampToValueAtTime(0.01, st + note.d);
 
       osc.connect(gain);
-      gain.connect(this.ctx!.destination);
+      gain.connect(this.effectsBus ?? this.ctx!.destination);
 
       osc.start(st);
       osc.stop(st + note.d + 0.02);
@@ -405,7 +502,7 @@ class SoundEngine {
       gain.gain.exponentialRampToValueAtTime(0.001, st + 0.38);
 
       osc.connect(gain);
-      gain.connect(this.ctx!.destination);
+      gain.connect(this.effectsBus ?? this.ctx!.destination);
 
       osc.start(st);
       osc.stop(st + 0.39);
@@ -431,7 +528,7 @@ class SoundEngine {
       gain.gain.exponentialRampToValueAtTime(0.01, st + 0.3);
 
       osc.connect(gain);
-      gain.connect(this.ctx!.destination);
+      gain.connect(this.effectsBus ?? this.ctx!.destination);
 
       osc.start(st);
       osc.stop(st + 0.32);
@@ -452,7 +549,7 @@ class SoundEngine {
     this.musicGain = this.ctx.createGain();
     this.musicGain.gain.setValueAtTime(0.001, now);
     this.musicGain.gain.exponentialRampToValueAtTime(0.34, now + 0.8);
-    this.musicGain.connect(this.ctx.destination);
+    this.musicGain.connect(this.musicBus ?? this.ctx.destination);
     this.musicStep = 0;
     this.musicPlaying = true;
     this.playMusicStep();
@@ -545,7 +642,7 @@ class SoundEngine {
       gain.gain.setValueAtTime(0.2, t + i * 0.045);
       gain.gain.exponentialRampToValueAtTime(0.005, t + i * 0.045 + 0.2);
       osc.connect(gain);
-      gain.connect(this.ctx!.destination);
+      gain.connect(this.effectsBus ?? this.ctx!.destination);
       osc.start(t + i * 0.045);
       osc.stop(t + i * 0.045 + 0.22);
     });
@@ -564,7 +661,7 @@ class SoundEngine {
     gain.gain.setValueAtTime(0.3, t);
     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.effectsBus ?? this.ctx.destination);
     osc.start(t);
     osc.stop(t + 0.26);
   }
@@ -582,7 +679,7 @@ class SoundEngine {
     gain.gain.setValueAtTime(0.25, t);
     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.18);
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.effectsBus ?? this.ctx.destination);
     osc.start(t);
     osc.stop(t + 0.19);
   }
@@ -601,7 +698,7 @@ class SoundEngine {
     gain.gain.setValueAtTime(0.18, t);
     gain.gain.linearRampToValueAtTime(0.01, t + 0.18);
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.effectsBus ?? this.ctx.destination);
     osc.start(t);
     osc.stop(t + 0.2);
   }
@@ -619,7 +716,7 @@ class SoundEngine {
     gain.gain.setValueAtTime(0.15, t);
     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.14);
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.effectsBus ?? this.ctx.destination);
     osc.start(t);
     osc.stop(t + 0.15);
   }
@@ -640,7 +737,7 @@ class SoundEngine {
     gain.gain.setValueAtTime(0.16, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.effectsBus ?? this.ctx.destination);
     osc.start(t);
     osc.stop(t + 0.15);
   }
@@ -658,7 +755,7 @@ class SoundEngine {
     gain.gain.setValueAtTime(0.45, t);
     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.16);
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.effectsBus ?? this.ctx.destination);
     osc.start(t);
     osc.stop(t + 0.18);
   }
@@ -678,7 +775,7 @@ class SoundEngine {
     gain.gain.setValueAtTime(0.5, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.effectsBus ?? this.ctx.destination);
     osc.start(t);
     osc.stop(t + 0.42);
 
@@ -691,7 +788,7 @@ class SoundEngine {
     mGain.gain.setValueAtTime(0.3, t + 0.05);
     mGain.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
     metallic.connect(mGain);
-    mGain.connect(this.ctx.destination);
+    mGain.connect(this.effectsBus ?? this.ctx.destination);
     metallic.start(t + 0.05);
     metallic.stop(t + 0.47);
   }
@@ -711,7 +808,7 @@ class SoundEngine {
     subGain.gain.setValueAtTime(0.6, t);
     subGain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
     sub.connect(subGain);
-    subGain.connect(this.ctx.destination);
+    subGain.connect(this.effectsBus ?? this.ctx.destination);
     sub.start(t);
     sub.stop(t + 0.37);
 
@@ -724,7 +821,7 @@ class SoundEngine {
     noiseGain.gain.setValueAtTime(0.35, t);
     noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
     noiseOsc.connect(noiseGain);
-    noiseGain.connect(this.ctx.destination);
+    noiseGain.connect(this.effectsBus ?? this.ctx.destination);
     noiseOsc.start(t);
     noiseOsc.stop(t + 0.22);
   }
@@ -744,7 +841,7 @@ class SoundEngine {
     sGain.gain.setValueAtTime(0.18, t);
     sGain.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
     sizzle.connect(sGain);
-    sGain.connect(this.ctx.destination);
+    sGain.connect(this.effectsBus ?? this.ctx.destination);
     sizzle.start(t);
     sizzle.stop(t + 0.26);
 
@@ -758,7 +855,7 @@ class SoundEngine {
     wGain.gain.setValueAtTime(0.3, t);
     wGain.gain.exponentialRampToValueAtTime(0.01, t + 0.35);
     whoosh.connect(wGain);
-    wGain.connect(this.ctx.destination);
+    wGain.connect(this.effectsBus ?? this.ctx.destination);
     whoosh.start(t);
     whoosh.stop(t + 0.36);
   }
@@ -778,7 +875,7 @@ class SoundEngine {
     thudGain.gain.setValueAtTime(0.5, t);
     thudGain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
     thud.connect(thudGain);
-    thudGain.connect(this.ctx.destination);
+    thudGain.connect(this.effectsBus ?? this.ctx.destination);
     thud.start(t);
     thud.stop(t + 0.3);
 
@@ -793,7 +890,7 @@ class SoundEngine {
       gain.gain.setValueAtTime(0.2, t + idx * 0.02);
       gain.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.02 + 0.16);
       osc.connect(gain);
-      gain.connect(this.ctx!.destination);
+      gain.connect(this.effectsBus ?? this.ctx!.destination);
       osc.start(t + idx * 0.02);
       osc.stop(t + idx * 0.02 + 0.17);
     });
@@ -815,7 +912,7 @@ class SoundEngine {
     roarGain.gain.setValueAtTime(0.4, t);
     roarGain.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
     roar.connect(roarGain);
-    roarGain.connect(this.ctx.destination);
+    roarGain.connect(this.effectsBus ?? this.ctx.destination);
     roar.start(t);
     roar.stop(t + 0.56);
 
@@ -828,7 +925,7 @@ class SoundEngine {
       popGain.gain.setValueAtTime(0.18, t + offset);
       popGain.gain.exponentialRampToValueAtTime(0.01, t + offset + 0.08);
       pop.connect(popGain);
-      popGain.connect(this.ctx!.destination);
+      popGain.connect(this.effectsBus ?? this.ctx!.destination);
       pop.start(t + offset);
       pop.stop(t + offset + 0.09);
     });
@@ -851,7 +948,7 @@ class SoundEngine {
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.85);
 
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.effectsBus ?? this.ctx.destination);
 
     osc.start(t);
     osc.stop(t + 0.86);
@@ -882,7 +979,7 @@ class SoundEngine {
     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.52);
 
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.effectsBus ?? this.ctx.destination);
 
     osc.start(t);
     osc.stop(t + 0.53);
@@ -904,7 +1001,7 @@ class SoundEngine {
       envelope.gain.setValueAtTime(0.13, t + offset);
       envelope.gain.exponentialRampToValueAtTime(0.001, t + offset + 0.3);
       alarm.connect(envelope);
-      envelope.connect(this.ctx!.destination);
+      envelope.connect(this.effectsBus ?? this.ctx!.destination);
       alarm.start(t + offset);
       alarm.stop(t + offset + 0.31);
     });
@@ -917,7 +1014,7 @@ class SoundEngine {
     impactGain.gain.setValueAtTime(0.2, t + 0.68);
     impactGain.gain.exponentialRampToValueAtTime(0.001, t + 0.97);
     impact.connect(impactGain);
-    impactGain.connect(this.ctx.destination);
+    impactGain.connect(this.effectsBus ?? this.ctx.destination);
     impact.start(t + 0.68);
     impact.stop(t + 0.98);
   }
@@ -941,7 +1038,7 @@ class SoundEngine {
       gain.gain.exponentialRampToValueAtTime(0.01, st + 0.11);
 
       osc.connect(gain);
-      gain.connect(this.ctx!.destination);
+      gain.connect(this.effectsBus ?? this.ctx!.destination);
 
       osc.start(st);
       osc.stop(st + 0.12);
@@ -967,7 +1064,7 @@ class SoundEngine {
       gain.gain.exponentialRampToValueAtTime(0.001, st + 0.4);
 
       osc.connect(gain);
-      gain.connect(this.ctx!.destination);
+      gain.connect(this.effectsBus ?? this.ctx!.destination);
 
       osc.start(st);
       osc.stop(st + 0.42);
@@ -988,7 +1085,7 @@ class SoundEngine {
     gain.gain.setValueAtTime(0.15, t);
     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.12);
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.effectsBus ?? this.ctx.destination);
     osc.start(t);
     osc.stop(t + 0.13);
   }
