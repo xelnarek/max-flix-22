@@ -27,8 +27,8 @@ test('particle meshes are reused without exceeding the configured cap', () => {
     const reused = pool.acquire('octahedron', 0x00ff44, 1.75, 0.72);
     assert.equal(reused, first);
     assert.equal(reused.geometry.type, 'OctahedronGeometry');
-    assert.equal((reused.material as THREE.MeshBasicMaterial).color.getHex(), 0x00ff44);
-    assert.equal((reused.material as THREE.MeshBasicMaterial).opacity, 0.72);
+    assert.equal((reused.material).color.getHex(), 0x00ff44);
+    assert.equal((reused.material).opacity, 0.72);
     assert.equal(reused.scale.x, 1.75);
     assert.equal(pool.allocatedCount, 2);
 
