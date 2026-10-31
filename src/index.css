@@ -536,16 +536,6 @@ body {
   margin-bottom: 2px;
 }
 
-.dialogue-box-role {
-  display: block;
-  margin-top: 1px;
-  color: rgba(186, 206, 230, 0.72);
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.075em;
-  text-transform: uppercase;
-}
-
 .dialogue-box-name {
   font-size: 13px;
   font-weight: 800;
@@ -555,9 +545,13 @@ body {
 }
 
 .dialogue-box-role {
-  font-size: 10px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.6);
+  display: block;
+  margin-top: 1px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+  color: rgba(186, 206, 230, 0.72);
 }
 
 .dialogue-box-text {
@@ -577,7 +571,6 @@ body {
 @media (max-width: 600px) {
   .dialogue-side-container {
     width: min(310px, calc(100vw - 24px));
-    width: 260px;
     top: 12%;
   }
   .dialogue-side-container.left { left: 12px; }
