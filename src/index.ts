@@ -166,6 +166,7 @@ class MaxFlizScene extends xb.Script {
     const gameShell = document.getElementById('game-shell');
     const hudTop = document.getElementById('hud-top');
     const hudBottom = document.getElementById('hud-bottom');
+    const hudPerksRow = document.getElementById('hud-perks-row');
     const touchControls = document.getElementById('touch-controls');
     const pauseModal = document.getElementById('pause-modal');
     const victoryModal = document.getElementById('victory-modal');
@@ -537,6 +538,8 @@ class MaxFlizScene extends xb.Script {
             badge.classList.toggle('hidden', !(remaining && remaining > 0));
             if (timer && remaining) timer.textContent = `${Math.ceil(remaining)}s`;
           }
+          const hasVisiblePerk = Boolean(hudPerksRow && hudPerksRow.querySelector('.perk-badge:not(.hidden)'));
+          hudPerksRow?.classList.toggle('hidden', !hasVisiblePerk);
         },
         onLevelComplete: (levelId, score, timeStr) => {
           this.lastScore = score;
@@ -566,6 +569,7 @@ class MaxFlizScene extends xb.Script {
           hudBottom?.classList.add('hidden');
           touchControls?.classList.add('hidden');
           bossHudBar?.classList.add('hidden');
+          hudPerksRow?.classList.add('hidden');
           survivalHud?.classList.add('hidden');
           survivalLevelUp?.classList.add('hidden');
 
@@ -612,6 +616,7 @@ class MaxFlizScene extends xb.Script {
           hudBottom?.classList.add('hidden');
           touchControls?.classList.add('hidden');
           bossHudBar?.classList.add('hidden');
+          hudPerksRow?.classList.add('hidden');
           survivalHud?.classList.add('hidden');
           survivalLevelUp?.classList.add('hidden');
         },
@@ -1341,6 +1346,7 @@ class MaxFlizScene extends xb.Script {
 
     bindTap(document.getElementById('btn-menu-pause'), () => {
       pauseModal?.classList.add('hidden');
+      hudPerksRow?.classList.add('hidden');
       survivalHud?.classList.add('hidden');
       survivalLevelUp?.classList.add('hidden');
       gameShell?.classList.remove('survival-mode');
