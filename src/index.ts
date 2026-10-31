@@ -2046,7 +2046,7 @@ async function startApp() {
 
     console.log('[App:Boot] 🛠️ Inicjalizacja silnika 3D (XR Blocks Core)...');
     const options = new xb.Options();
-    options.setAppTitle('Max-FliX i granicaAbsurdu');
+    options.setAppTitle('Max-FliX i granica Absurdu');
     
     // Explicitly disable all AR/XR features for desktop-only gameplay
     options.reticles.enabled = false;
