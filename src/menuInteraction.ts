@@ -5,13 +5,14 @@
 export class ThreeClickTrigger {
   private clicks = 0;
   private lastClickAt = Number.NEGATIVE_INFINITY;
+  private readonly windowMs: number;
+  private readonly requiredClicks: number;
 
-  constructor(
-    private readonly windowMs = 2400,
-    private readonly requiredClicks = 3,
-  ) {
+  constructor(windowMs = 2400, requiredClicks = 3) {
     if (!Number.isFinite(windowMs) || windowMs <= 0) throw new RangeError('windowMs must be positive');
     if (!Number.isInteger(requiredClicks) || requiredClicks < 1) throw new RangeError('requiredClicks must be a positive integer');
+    this.windowMs = windowMs;
+    this.requiredClicks = requiredClicks;
   }
 
   register(timestamp: number): boolean {
