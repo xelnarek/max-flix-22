@@ -3717,7 +3717,7 @@ export class MaxFlizGameEngine {
 
     // High-Bay Terminal Racks — MOVED STRICTLY TO BACKGROUND (z = -14.0 and -10.5)
     // NEVER blocking the central arena or the delivery dock from the camera!
-    [-26, -6, 14].forEach((rx, idx) => {
+    [-26, -6, 14, 34].forEach((rx, idx) => {
       const worldX = offsetX + rx;
       const rackBack = createWarehouseRack(6.5, 4.4, 1.6);
       rackBack.position.set(worldX, 0, -14.0);
@@ -3744,7 +3744,7 @@ export class MaxFlizGameEngine {
     });
 
     // South Wing (Terminal C-Bis: z = 8 to 17) Pallet Staging Area
-    [-24, -10, 4, 18].forEach((px, idx) => {
+    [-24, -10, 4, 18, 32].forEach((px, idx) => {
       const worldX = offsetX + px;
       const pallet = createTilePallet(1, 'nero');
       pallet.position.set(worldX, 0, 12.5);
