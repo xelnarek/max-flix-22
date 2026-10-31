@@ -12,6 +12,60 @@ let marbleTextures: Record<string, THREE.CanvasTexture> = {};
 let hazardStripeTexture: THREE.CanvasTexture | null = null;
 let stretchWrapTexture: THREE.CanvasTexture | null = null;
 let wallTexture: THREE.CanvasTexture | null = null;
+// Shared deterministic micro-surface maps. Reused across meshes to avoid per-object texture allocations.
+let industrialRoughnessTexture: THREE.CanvasTexture | null = null;
+let industrialBumpTexture: THREE.CanvasTexture | null = null;
+
+function getIndustrialSurfaceMaps(): { roughness: THREE.CanvasTexture; bump: THREE.CanvasTexture } {
+  if (industrialRoughnessTexture && industrialBumpTexture) return { roughness: industrialRoughnessTexture, bump: industrialBumpTexture };
+  const size = 256;
+  const roughCanvas = document.createElement('canvas');
+  const bumpCanvas = document.createElement('canvas');
+  roughCanvas.width = roughCanvas.height = size;
+  bumpCanvas.width = bumpCanvas.height = size;
+  const roughCtx = roughCanvas.getContext('2d');
+  const bumpCtx = bumpCanvas.getContext('2d');
+  if (!roughCtx || !bumpCtx) throw new Error('Nie udało się utworzyć tekstur PBR.');
+  const roughData = roughCtx.createImageData(size, size);
+  const bumpData = bumpCtx.createImageData(size, size);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = (y * size + x) * 4;
+      const n1 = Math.abs(Math.sin(x * 127.1 + y * 311.7) * 43758.5453) % 1;
+      const n2 = Math.abs(Math.sin(x * 269.5 + y * 183.3) * 24634.6345) % 1;
+      const grain = n1 * 0.68 + n2 * 0.32;
+      const rough = Math.round(142 + grain * 82);
+      const bump = Math.round(122 + grain * 12 + (n2 - 0.5) * 5);
+      roughData.data[i] = roughData.data[i + 1] = roughData.data[i + 2] = rough;
+      roughData.data[i + 3] = 255;
+      bumpData.data[i] = bumpData.data[i + 1] = bumpData.data[i + 2] = bump;
+      bumpData.data[i + 3] = 255;
+    }
+  }
+  roughCtx.putImageData(roughData, 0, 0);
+  bumpCtx.putImageData(bumpData, 0, 0);
+  industrialRoughnessTexture = new THREE.CanvasTexture(roughCanvas);
+  industrialRoughnessTexture.colorSpace = THREE.NoColorSpace;
+  industrialRoughnessTexture.wrapS = industrialRoughnessTexture.wrapT = THREE.RepeatWrapping;
+  industrialRoughnessTexture.minFilter = THREE.LinearMipmapLinearFilter;
+  industrialRoughnessTexture.magFilter = THREE.LinearFilter;
+  industrialBumpTexture = new THREE.CanvasTexture(bumpCanvas);
+  industrialBumpTexture.colorSpace = THREE.NoColorSpace;
+  industrialBumpTexture.wrapS = industrialBumpTexture.wrapT = THREE.RepeatWrapping;
+  industrialBumpTexture.minFilter = THREE.LinearMipmapLinearFilter;
+  industrialBumpTexture.magFilter = THREE.LinearFilter;
+  return { roughness: industrialRoughnessTexture, bump: industrialBumpTexture };
+}
+
+/** Adds subtle roughness and surface relief to shared industrial materials. */
+export function applyIndustrialPbr(material: THREE.Material, bumpScale = 0.016): void {
+  if (!(material instanceof THREE.MeshStandardMaterial)) return;
+  const maps = getIndustrialSurfaceMaps();
+  material.roughnessMap = maps.roughness;
+  material.bumpMap = maps.bump;
+  material.bumpScale = bumpScale;
+  material.needsUpdate = true;
+}
 
 /**
  * 1. Ultra High-Res Polished Epoxy Warehouse Floor
