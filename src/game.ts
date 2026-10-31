@@ -1671,18 +1671,21 @@ export class MaxFlizGameEngine {
 
     // Small, repeated aisle identifiers are visible as landmarks rather than HUD clutter.
     const signs = [
-      { label: 'STREFA 01', accent: '#38bdf8', x: -30, z: -19.39, rotation: 0 },
-      { label: 'STREFA 02', accent: '#f59e0b', x: 0, z: -19.39, rotation: 0 },
-      { label: 'STREFA 03', accent: '#34d399', x: 30, z: -19.39, rotation: 0 },
-      { label: 'STREFA 01', accent: '#38bdf8', x: -30, z: 19.39, rotation: Math.PI },
-      { label: 'STREFA 02', accent: '#f59e0b', x: 0, z: 19.39, rotation: Math.PI },
-      { label: 'STREFA 03', accent: '#34d399', x: 30, z: 19.39, rotation: Math.PI },
+      { label: 'STREFA 01', accent: '#38bdf8', x: -30, y: 6.4, z: -19.39, rotation: 0 },
+      { label: 'STREFA 02', accent: '#f59e0b', x: 0, y: 6.4, z: -19.39, rotation: 0 },
+      { label: 'STREFA 03', accent: '#34d399', x: 30, y: 6.4, z: -19.39, rotation: 0 },
+      { label: 'STREFA 01', accent: '#38bdf8', x: -30, y: 6.4, z: 19.39, rotation: Math.PI },
+      { label: 'STREFA 02', accent: '#f59e0b', x: 0, y: 6.4, z: 19.39, rotation: Math.PI },
+      { label: 'STREFA 03', accent: '#34d399', x: 30, y: 6.4, z: 19.39, rotation: Math.PI },
+      { label: 'DOK 01', accent: '#f59e0b', x: -58.94, y: 7.55, z: 0, rotation: Math.PI / 2 },
+      { label: 'DOK 02', accent: '#f59e0b', x: 58.94, y: 7.55, z: 0, rotation: -Math.PI / 2 },
     ];
     const backboards = new THREE.InstancedMesh(new THREE.BoxGeometry(3.7, 1.38, 0.16), steel, signs.length);
     const signFaces = new THREE.Group();
     index = 0;
     for (const sign of signs) {
-      dummy.position.set(sign.x, 6.4, sign.z);
+      const signY = sign.y ?? 6.4;
+      dummy.position.set(sign.x, signY, sign.z);
       dummy.rotation.set(0, sign.rotation, 0);
       dummy.scale.set(1, 1, 1);
       dummy.updateMatrix();
@@ -1692,7 +1695,9 @@ export class MaxFlizGameEngine {
         new THREE.PlaneGeometry(3.38, 1.12),
         this.getSurvivalArenaLabelMaterial(sign.label, sign.accent)
       );
-      face.position.set(sign.x, 6.4, sign.z + (sign.rotation === 0 ? 0.09 : -0.09));
+      const offsetX = sign.rotation === Math.PI / 2 ? 0.09 : sign.rotation === -Math.PI / 2 ? -0.09 : 0;
+      const offsetZ = sign.rotation === 0 ? 0.09 : sign.rotation === Math.PI ? -0.09 : 0;
+      face.position.set(sign.x + offsetX, signY, sign.z + offsetZ);
       face.rotation.y = sign.rotation;
       face.castShadow = false;
       face.receiveShadow = false;
