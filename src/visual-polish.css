@@ -2008,3 +2008,27 @@ button:disabled { cursor: not-allowed !important; filter: grayscale(.35); opacit
 @media (max-height: 560px) and (pointer: coarse) {
   #game-shell .dialogue-side-container { bottom: max(78px, calc(env(safe-area-inset-bottom) + 64px)) !important; }
 }
+
+/* Higher-specificity Survival selectors used to pin two old dialogue rails.
+   Override those legacy top offsets now that the HUD owns one shared panel. */
+#game-shell.survival-mode #hud-top .dialogue-side-container {
+  top: auto !important;
+  bottom: max(104px, calc(env(safe-area-inset-bottom) + 88px)) !important;
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%) !important;
+  width: min(360px, calc(100vw - 28px)) !important;
+  max-width: min(360px, calc(100vw - 28px)) !important;
+}
+@media (max-width: 900px), (pointer: coarse) {
+  #game-shell.survival-mode #hud-top .dialogue-side-container {
+    bottom: max(98px, calc(env(safe-area-inset-bottom) + 82px)) !important;
+    width: min(316px, calc(100vw - 24px)) !important;
+    max-width: min(316px, calc(100vw - 24px)) !important;
+  }
+}
+@media (max-height: 560px) and (pointer: coarse) {
+  #game-shell.survival-mode #hud-top .dialogue-side-container {
+    bottom: max(78px, calc(env(safe-area-inset-bottom) + 64px)) !important;
+  }
+}
