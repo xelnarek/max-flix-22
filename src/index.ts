@@ -13,6 +13,7 @@ import { PixelIntroManager } from './pixelIntro.ts';
 import { CharacterId, PerkType } from './types.ts';
 import { AssetItem, assetLoader } from './assets.ts';
 import { SelectiveBloomPipeline } from './selectiveBloom.ts';
+import { ThreeClickTrigger } from './menuInteraction.ts';
 
 // warehouseAssets imports moved to assets.ts where they are preloaded
 
@@ -129,7 +130,7 @@ class MaxFlizScene extends xb.Script {
         const isMobile = width < 900 || ('ontouchstart' in window);
         // High-density mobile rendering: sharper textures and silhouettes on Poco F6.
         // The cap is intentional to prevent fill-rate spikes during dense survival waves.
-        const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.65 : 2.0);
+        const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.75 : 2.0);
         renderer.setPixelRatio(dpr);
         renderer.setSize(width, height, false);
         this.selectiveBloom?.resize(width, height, renderer.getPixelRatio());
@@ -732,10 +733,14 @@ class MaxFlizScene extends xb.Script {
         marcin: '🚜', grzesiek: '💥', dawid: '🧱', mateusz: '🐈', piotr: '🔧',
       };
       if (heroAvatar) heroAvatar.innerHTML = operatorPortrait(id);
+      // The menu has five hand-drawn, role-specific insignias. Keep those marks
+      // intact instead of replacing every one with the same generic face portrait.
       document.querySelectorAll<HTMLElement>('.char-card[data-char]').forEach((card) => {
         const cardId = card.dataset.char as CharacterId | undefined;
-        const badge = card.querySelector<HTMLElement>('.char-card-badge');
-        if (cardId && badge) badge.innerHTML = operatorPortrait(cardId);
+        if (!cardId) return;
+        const accent = CHARACTERS[cardId].color.toString(16).padStart(6, '0');
+        card.style.setProperty('--operator-accent', `#${accent}`);
+        card.setAttribute('aria-pressed', String(cardId === id));
       });
       if (abilityIcon) abilityIcon.textContent = abilityIcons[id] || '⚡';
 
@@ -1098,6 +1103,37 @@ class MaxFlizScene extends xb.Script {
         }
       }, { passive: false });
     };
+
+
+    // Secret menu interaction: three deliberate taps/clicks on the title reveal
+    // the Capybara Mafia. The sequence resets after a short pause.
+    const capybaraTrigger = new ThreeClickTrigger(2400, 3);
+    const menuTitleTrigger = document.querySelector<HTMLElement>('.menu-game-title');
+    const capybaraModal = document.getElementById('capybara-mafia-easter-egg');
+    const capybaraCloseButtons = capybaraModal?.querySelectorAll<HTMLElement>('[data-capybara-close]');
+    const closeCapybaraMeeting = () => {
+      if (!capybaraModal) return;
+      capybaraModal.classList.add('hidden');
+      capybaraModal.setAttribute('aria-hidden', 'true');
+      menuTitleTrigger?.focus();
+    };
+    menuTitleTrigger?.addEventListener('click', () => {
+      if (!capybaraModal || !capybaraTrigger.register(Date.now())) return;
+      capybaraModal.classList.remove('hidden');
+      capybaraModal.setAttribute('aria-hidden', 'false');
+      capybaraModal.querySelector<HTMLButtonElement>('.capybara-easter-close')?.focus();
+    });
+    capybaraCloseButtons?.forEach((button) => button.addEventListener('click', closeCapybaraMeeting));
+    capybaraModal?.addEventListener('click', (event) => {
+      if (event.target === capybaraModal || (event.target as HTMLElement).dataset.capybaraClose === 'true') {
+        closeCapybaraMeeting();
+      }
+    });
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && capybaraModal && !capybaraModal.classList.contains('hidden')) {
+        closeCapybaraMeeting();
+      }
+    });
 
     const startBtn = document.getElementById('btn-start-game');
     bindTap(startBtn, doStartGame);
@@ -1714,7 +1750,7 @@ class MaxFlizScene extends xb.Script {
     const width = Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth));
     const height = Math.max(1, Math.round(window.visualViewport?.height || window.innerHeight));
     const isMobile = width < 900 || ('ontouchstart' in window);
-    const deviceCap = isMobile ? 1.65 : 2.0;
+    const deviceCap = isMobile ? 1.75 : 2.0;
     const fpsScale = this.currentFps < 34 ? 0.72 : this.currentFps < 44 ? 0.82 : this.currentFps < 52 ? 0.92 : 1;
     const targetDpr = Math.max(0.85, Math.min(window.devicePixelRatio || 1, deviceCap) * fpsScale);
 
@@ -1917,7 +1953,7 @@ async function startApp() {
 
     console.log('[App:Boot] 🛠️ Inicjalizacja silnika 3D (XR Blocks Core)...');
     const options = new xb.Options();
-    options.setAppTitle('Max-Fliz Magazyn Showdown 3D');
+    options.setAppTitle('Max-FliX i granicaAbsurdu');
     
     // Explicitly disable all AR/XR features for desktop-only gameplay
     options.reticles.enabled = false;
@@ -1947,7 +1983,7 @@ async function startApp() {
         const r = xb.core.renderer as THREE.WebGLRenderer;
         const isMobileDevice = window.innerWidth < 900 || ('ontouchstart' in window);
         r.outputColorSpace = THREE.SRGBColorSpace;
-        r.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.65 : 2.0));
+        r.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.75 : 2.0));
         r.toneMapping = THREE.ACESFilmicToneMapping;
         r.toneMappingExposure = 1.08;
         r.shadowMap.enabled = true;
