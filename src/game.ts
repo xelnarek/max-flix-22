@@ -336,6 +336,17 @@ export class MaxFlizGameEngine {
   // Tactical Elevated camera default (~45° isometric/tactical perspective like Hades/Brawl Stars)
   private currentCamOffset = new THREE.Vector3(-2.2, 6.9, 8.2);
   private currentLookAt = new THREE.Vector3(0, 1.2, 0);
+  // Reused camera scratch vectors: avoid two Vector3 allocations on every frame.
+  private readonly cameraTargetPosition = new THREE.Vector3();
+  private readonly desiredLookAtPosition = new THREE.Vector3();
+  private cameraBossCheckCooldown = 0;
+  private cameraBossTargetZoom = 1.0;
+  private viewportAspect =
+    (window.visualViewport?.width || window.innerWidth) /
+    Math.max(1, window.visualViewport?.height || window.innerHeight);
+  private isHandheldViewport =
+    (window.visualViewport?.width || window.innerWidth) < 900 ||
+    ('ontouchstart' in window);
   private bossCamZoom = 1.0;
   private finishWarningTimer = 0;
   private dodgeCooldownTimer = 0;
@@ -2464,21 +2475,22 @@ export class MaxFlizGameEngine {
   }
 
   public applyAutoCameraScaleForViewport() {
-    const w = window.innerWidth || 1280;
-    const h = window.innerHeight || 720;
-    const aspect = w / Math.max(1, h);
+    const w = Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth || 1280));
+    const h = Math.max(1, Math.round(window.visualViewport?.height || window.innerHeight || 720));
+    const aspect = w / h;
+    this.viewportAspect = aspect;
+    this.isHandheldViewport = w < 900 || ('ontouchstart' in window);
+
+    // Portrait FOV is already wider vertically. A smaller distance multiplier
+    // keeps the operator readable instead of making the character tiny on phones.
     if (aspect < 0.65) {
-      // Tall portrait smartphone
-      this.camZoomFactor = 1.24;
+      this.camZoomFactor = 1.12;
     } else if (aspect < 1.0) {
-      // Standard portrait phone / tablet
-      this.camZoomFactor = 1.15;
+      this.camZoomFactor = 1.07;
     } else if (w < 920) {
-      // Mobile landscape
-      this.camZoomFactor = 1.02;
-    } else {
-      // Desktop / widescreen
       this.camZoomFactor = 1.0;
+    } else {
+      this.camZoomFactor = 0.98;
     }
   }
 
@@ -9147,8 +9159,9 @@ export class MaxFlizGameEngine {
   }
 
   private updateCamera(dt: number) {
+    const now = performance.now();
     if (this.state === 'title') {
-      const t = performance.now() * 0.0006;
+      const t = now * 0.0006;
       const radius = 4.5;
       const height = 1.8 + Math.sin(t * 0.8) * 0.35;
       const px = this.playerPos.x;
@@ -9167,8 +9180,10 @@ export class MaxFlizGameEngine {
     }
 
     // Determine target positions with smooth velocity look-ahead
-    const velLookAheadX = THREE.MathUtils.clamp(this.playerVel.x * 0.18, -2.5, 2.5);
-    const velLookAheadZ = THREE.MathUtils.clamp(this.playerVel.z * 0.18, -2.5, 2.5);
+    const lookAheadFactor = this.isHandheldViewport ? 0.11 : 0.14;
+    const lookAheadLimit = this.isHandheldViewport ? 1.7 : 2.1;
+    const velLookAheadX = THREE.MathUtils.clamp(this.playerVel.x * lookAheadFactor, -lookAheadLimit, lookAheadLimit);
+    const velLookAheadZ = THREE.MathUtils.clamp(this.playerVel.z * lookAheadFactor, -lookAheadLimit, lookAheadLimit);
     const targetX = this.playerPos.x + velLookAheadX;
     const targetZ = this.playerPos.z + velLookAheadZ;
 
@@ -9177,16 +9192,22 @@ export class MaxFlizGameEngine {
     this.smoothCamY = THREE.MathUtils.damp(this.smoothCamY, targetGroundY, this.isGrounded ? 8.0 : 2.4, dt);
     const targetY = this.smoothCamY;
 
-    // Check if an active boss is nearby to dynamically pull camera out slightly for tactical awareness
-    const activeBoss = this.enemies.find((e) => (e.type === 'walczak' || e.type === 'krol_leto') && e.state !== 'defeated');
-    let targetBossZoom = 1.0;
-    if (activeBoss) {
-      const bossDist = Math.hypot(activeBoss.x - this.playerPos.x, activeBoss.z - this.playerPos.z);
-      if (bossDist < 20) {
-        targetBossZoom = 1.18;
+    // Boss proximity does not need a full enemy-array scan every rendered frame.
+    // Refresh it at 5 Hz and smoothly interpolate the resulting camera pull-back.
+    this.cameraBossCheckCooldown -= dt;
+    if (this.cameraBossCheckCooldown <= 0) {
+      this.cameraBossTargetZoom = 1.0;
+      for (const enemy of this.enemies) {
+        if ((enemy.type !== 'walczak' && enemy.type !== 'krol_leto') || enemy.state === 'defeated') continue;
+        const bossDist = Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z);
+        if (bossDist < 22) {
+          this.cameraBossTargetZoom = 1.14;
+          break;
+        }
       }
+      this.cameraBossCheckCooldown = 0.2;
     }
-    this.bossCamZoom = THREE.MathUtils.damp(this.bossCamZoom, targetBossZoom, 2.5, dt);
+    this.bossCamZoom = THREE.MathUtils.damp(this.bossCamZoom, this.cameraBossTargetZoom, 2.8, dt);
 
     // Target offsets for camera modes:
     // 'tpp' (Default): Podwyższony widok taktyczny (~45° widok z góry i zza pleców w stylu Hades / Brawl Stars)
@@ -9212,13 +9233,13 @@ export class MaxFlizGameEngine {
     const targetOffsetZ = baseOffsetZ * zoomMultiplier;
 
     // Smoothly interpolate camera offset between modes
-    this.currentCamOffset.x = THREE.MathUtils.damp(this.currentCamOffset.x, targetOffsetX, 5.2, dt);
-    this.currentCamOffset.y = THREE.MathUtils.damp(this.currentCamOffset.y, targetOffsetY, 5.2, dt);
-    this.currentCamOffset.z = THREE.MathUtils.damp(this.currentCamOffset.z, targetOffsetZ, 5.2, dt);
+    this.currentCamOffset.x = THREE.MathUtils.damp(this.currentCamOffset.x, targetOffsetX, 4.6, dt);
+    this.currentCamOffset.y = THREE.MathUtils.damp(this.currentCamOffset.y, targetOffsetY, 4.6, dt);
+    this.currentCamOffset.z = THREE.MathUtils.damp(this.currentCamOffset.z, targetOffsetZ, 4.6, dt);
 
     // Responsive FOV based on screen aspect ratio (mobile portrait vs landscape vs desktop)
     if (this.camera instanceof THREE.PerspectiveCamera) {
-      const aspect = (window.innerWidth || 1280) / Math.max(1, window.innerHeight || 720);
+      const aspect = this.viewportAspect;
       const baseFov = this.gameMode === 'survival'
         ? (aspect < 0.65 ? 58 : aspect < 1.0 ? 54 : aspect < 1.35 ? 48 : 45)
         : (aspect < 0.65 ? 60 : aspect < 1.0 ? 54 : aspect < 1.35 ? 48 : 45);
@@ -9228,7 +9249,7 @@ export class MaxFlizGameEngine {
       }
     }
 
-    const camTarget = new THREE.Vector3(
+    const camTarget = this.cameraTargetPosition.set(
       targetX + this.currentCamOffset.x,
       targetY + this.currentCamOffset.y,
       targetZ + this.currentCamOffset.z
@@ -9237,46 +9258,24 @@ export class MaxFlizGameEngine {
     let shakeX = 0;
     let shakeY = 0;
     let shakeZ = 0;
-    const isMobileDevice = window.innerWidth < 900 || ('ontouchstart' in window);
+    const isMobileDevice = this.isHandheldViewport;
+    const shakePhase = now * 0.032;
 
     if (this.screenShakeTimer > 0) {
       this.screenShakeTimer -= dt;
       const progress = Math.max(0, this.screenShakeTimer / Math.max(0.001, this.screenShakeDuration));
-      // Calibrated shake: reduced by 65% to prevent disorientation while keeping impact feel
-      const currentIntensity = this.screenShakeIntensity * Math.pow(progress, 1.2) * 0.35;
+      // Smooth camera-space impact pulse: no random per-frame jitter and no DOM transform.
+      const currentIntensity = this.screenShakeIntensity * Math.pow(progress, 1.2) * 0.30;
+      shakeX = Math.sin(shakePhase * 1.07) * currentIntensity * 0.52;
+      shakeY = Math.cos(shakePhase * 1.31) * currentIntensity * 0.34;
+      shakeZ = Math.sin(shakePhase * 0.79) * currentIntensity * 0.18;
 
-      shakeX = (Math.random() - 0.5) * currentIntensity * 1.5;
-      shakeY = (Math.random() - 0.5) * currentIntensity * 1.5;
-      shakeZ = (Math.random() - 0.5) * currentIntensity * 1.5;
-
-      // DOM container shake transform (disabled on mobile to avoid costly browser layout reflows)
-      if (this.container && !isMobileDevice) {
-        const domPxX = (Math.random() - 0.5) * currentIntensity * 10;
-        const domPxY = (Math.random() - 0.5) * currentIntensity * 10;
-        const domDeg = (Math.random() - 0.5) * currentIntensity * 1.2;
-        this.container.style.transform = `translate3d(${domPxX.toFixed(1)}px, ${domPxY.toFixed(1)}px, 0px) rotate(${domDeg.toFixed(2)}deg)`;
-      } else if (this.container && isMobileDevice && this.container.style.transform !== '') {
-        this.container.style.transform = '';
-      }
-
-      if (this.screenShakeTimer <= 0) {
-        this.screenShakeIntensity = 0;
-        if (this.container) {
-          this.container.style.transform = '';
-        }
-      }
+      if (this.screenShakeTimer <= 0) this.screenShakeIntensity = 0;
     } else if (this.cameraShake > 0) {
-      shakeX = (Math.random() - 0.5) * this.cameraShake * 0.4;
-      shakeY = (Math.random() - 0.5) * this.cameraShake * 0.4;
-      shakeZ = (Math.random() - 0.5) * this.cameraShake * 0.4;
+      shakeX = Math.sin(shakePhase * 0.91) * this.cameraShake * 0.20;
+      shakeY = Math.cos(shakePhase * 1.17) * this.cameraShake * 0.16;
+      shakeZ = Math.sin(shakePhase * 0.73) * this.cameraShake * 0.08;
       this.cameraShake = Math.max(0, this.cameraShake - dt * 2.5);
-      if (this.container && this.container.style.transform !== '') {
-        this.container.style.transform = '';
-      }
-    } else {
-      if (this.container && this.container.style.transform !== '') {
-        this.container.style.transform = '';
-      }
     }
 
     camTarget.x += shakeX;
@@ -9289,10 +9288,9 @@ export class MaxFlizGameEngine {
       this.gameMode !== 'survival' && !isMobileDevice;
     // Frame-rate independent camera follow. The previous linear lerp was tied to FPS:
     // on a 60/90/120 Hz phone it produced different response and visible judder.
-    const isHandheldViewport = window.innerWidth < 900 || ('ontouchstart' in window);
     const positionDamping = this.gameMode === 'survival'
-      ? (isHandheldViewport ? 8.8 : 7.8)
-      : (isHandheldViewport ? 9.2 : 8.2);
+      ? (this.isHandheldViewport ? 7.8 : 7.2)
+      : (this.isHandheldViewport ? 8.4 : 7.7);
     this.camera.position.x = THREE.MathUtils.damp(this.camera.position.x, camTarget.x, positionDamping, dt);
     this.camera.position.y = THREE.MathUtils.damp(this.camera.position.y, camTarget.y, positionDamping, dt);
     this.camera.position.z = THREE.MathUtils.damp(this.camera.position.z, camTarget.z, positionDamping, dt);
@@ -9302,12 +9300,12 @@ export class MaxFlizGameEngine {
     const lookAheadY = this.cameraMode === 'tpp' ? 0.7 : this.cameraMode === 'close' ? 1.1 : 0.5;
     const lookAheadZ = this.cameraMode === 'tpp' ? 0.0 : this.cameraMode === 'close' ? -0.5 : 0.0;
 
-    const desiredLookAt = new THREE.Vector3(
+    const desiredLookAt = this.desiredLookAtPosition.set(
       this.playerPos.x + lookAheadX + velLookAheadX * 0.45 + shakeX * 0.3,
       this.smoothCamY + lookAheadY + shakeY * 0.3,
       this.playerPos.z + lookAheadZ + velLookAheadZ * 0.45 + shakeZ * 0.3
     );
-    const lookDamping = isHandheldViewport ? 9.6 : 8.8;
+    const lookDamping = this.isHandheldViewport ? 9.2 : 8.6;
     this.currentLookAt.x = THREE.MathUtils.damp(this.currentLookAt.x, desiredLookAt.x, lookDamping, dt);
     this.currentLookAt.y = THREE.MathUtils.damp(this.currentLookAt.y, desiredLookAt.y, lookDamping, dt);
     this.currentLookAt.z = THREE.MathUtils.damp(this.currentLookAt.z, desiredLookAt.z, lookDamping, dt);
@@ -9321,11 +9319,14 @@ export class MaxFlizGameEngine {
 
     // Dynamic Shader Uniform Updates for Depth of Field and Stencil Outline
     if (this.dofBlurMaterial) {
-      this.dofBlurMaterial.uniforms.uTime.value = performance.now() * 0.001;
-      this.dofBlurMaterial.uniforms.uScreenSize.value.set(window.innerWidth || 1280, window.innerHeight || 720);
+      this.dofBlurMaterial.uniforms.uTime.value = now * 0.001;
+      this.dofBlurMaterial.uniforms.uScreenSize.value.set(
+        window.visualViewport?.width || window.innerWidth || 1280,
+        window.visualViewport?.height || window.innerHeight || 720
+      );
     }
     if (this.outlineMaterial) {
-      this.outlineMaterial.uniforms.uTime.value = performance.now() * 0.001;
+      this.outlineMaterial.uniforms.uTime.value = now * 0.001;
       if ((this.activePerks.kfcBerserk || 0) > 0) {
         this.outlineMaterial.uniforms.uColor.value.setHex(0xef4444);
       } else if ((this.activePerks.bulldozer || 0) > 0) {
