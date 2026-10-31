@@ -939,7 +939,9 @@ class MaxFlizScene extends xb.Script {
       tabBtn.addEventListener('touchend', activateTab);
     });
 
-    document.querySelectorAll('.char-card').forEach((card) => {
+    document.querySelectorAll<HTMLElement>('.char-card').forEach((card) => {
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
       const selectChar = (e?: Event) => {
         if (e) {
           e.preventDefault();
@@ -948,12 +950,13 @@ class MaxFlizScene extends xb.Script {
         document.querySelectorAll('.char-card').forEach((c) => c.classList.remove('active'));
         card.classList.add('active');
         const charId = card.getAttribute('data-char') as CharacterId;
-        if (charId) {
-          updateCharacterUI(charId);
-        }
+        if (charId) updateCharacterUI(charId);
       };
       card.addEventListener('click', selectChar);
       card.addEventListener('touchend', selectChar);
+      card.addEventListener('keydown', (event: KeyboardEvent) => {
+        if (event.key === 'Enter' || event.key === ' ') selectChar(event);
+      });
     });
 
     document.querySelectorAll('.btn-perk-activate').forEach((btn) => {
@@ -1649,7 +1652,7 @@ class MaxFlizScene extends xb.Script {
     const renderer = activeRenderer instanceof THREE.WebGLRenderer ? activeRenderer : null;
     if (renderer) {
       const isMobile = width < 900 || ('ontouchstart' in window);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.65 : 2.0));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.75 : 2.0));
       renderer.setSize(width, height, false);
     }
 
