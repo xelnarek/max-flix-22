@@ -3516,3 +3516,123 @@ button {
   background: #334155;
   color: #cbd5e1;
 }
+
+
+/* Poco F6 / modern Android touch layout pass */
+@media (max-width: 900px), (pointer: coarse) {
+  html, body {
+    width: 100%;
+    min-width: 0;
+    min-height: 100%;
+    min-height: 100dvh;
+    overflow: hidden;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  #game-shell {
+    width: 100vw !important;
+    width: 100dvw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    overflow: hidden;
+  }
+
+  #game-canvas-container,
+  #game-canvas-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100vw !important;
+    max-height: 100dvh !important;
+  }
+
+  /* Prevent menus and dialogs from being wider than the usable phone viewport. */
+  #title-screen,
+  #pause-modal,
+  #victory-modal,
+  #gameover-modal,
+  #survival-levelup {
+    box-sizing: border-box;
+    max-width: 100vw;
+    max-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  #title-screen > *,
+  #pause-modal > *,
+  #victory-modal > *,
+  #gameover-modal > *,
+  #survival-levelup > * {
+    max-width: min(100%, 560px);
+    min-width: 0;
+  }
+
+  button, .top-icon-btn, .minimap-btn {
+    min-height: 40px;
+    touch-action: manipulation;
+  }
+
+  .top-icon-btn {
+    min-height: 36px;
+    padding: 6px 9px;
+    font-size: clamp(10px, 2.8vw, 12px);
+  }
+
+  .stat-pill {
+    padding: 4px 7px;
+    font-size: clamp(10px, 2.7vw, 12px);
+  }
+
+  .stat-label { font-size: clamp(8px, 2.1vw, 9px); }
+  .stat-value { font-size: clamp(11px, 3vw, 13px); }
+
+  .boss-hud-bar {
+    width: min(220px, calc(100vw - 32px));
+  }
+
+  .dialogue-side-container {
+    width: min(260px, calc(100vw - 24px));
+  }
+}
+
+@media (max-width: 420px) {
+  #hud-top {
+    gap: 5px;
+    padding-left: max(6px, env(safe-area-inset-left));
+    padding-right: max(6px, env(safe-area-inset-right));
+  }
+
+  .hud-cluster.top-left,
+  .hud-cluster.top-right {
+    max-width: 49%;
+  }
+
+  .hero-badge {
+    gap: 5px;
+    padding: 4px 7px;
+  }
+
+  .hero-avatar {
+    width: 26px;
+    height: 26px;
+    font-size: 15px;
+  }
+
+  .hero-name { font-size: 11px; }
+}
+
+/* Keep the colourful, storybook presentation crisp rather than hazy. */
+@media (max-width: 900px), (pointer: coarse) {
+  .dialogue-box-card,
+  .hero-badge,
+  .boss-hud-bar,
+  .top-icon-btn {
+    -webkit-backdrop-filter: blur(10px) saturate(145%);
+    backdrop-filter: blur(10px) saturate(145%);
+  }
+}
