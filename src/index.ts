@@ -23,7 +23,45 @@ window.addEventListener('unhandledrejection', (e) => {
   console.warn('Unhandled Rejection Captured:', e.reason);
 });
 
-// assetLoader moved to assets.ts
+// Portraits are hand-authored vector caricatures: real faces and workwear, not generic role emoji.
+const operatorPortrait = (id: CharacterId): string => {
+  const people: Record<CharacterId, { skin: string; hair: string; shirt: string; accent: string; helmet: string; beard: string; brows: string; cap?: boolean }> = {
+    marcin: { skin: '#e9b995', hair: '#49342a', shirt: '#1e3a8a', accent: '#f0f4f8', helmet: '#f8fafc', beard: '', brows: '#49342a' },
+    grzesiek: { skin: '#d9a27f', hair: '#2c211c', shirt: '#166534', accent: '#facc15', helmet: '#facc15', beard: '#29201d', brows: '#29201d' },
+    dawid: { skin: '#e4b18d', hair: '#4a2c20', shirt: '#b45309', accent: '#fb923c', helmet: '#f97316', beard: '#4b2d22', brows: '#382219' },
+    mateusz: { skin: '#e7b99c', hair: '#362820', shirt: '#5b21b6', accent: '#c4b5fd', helmet: '#7c3aed', beard: '#45362f', brows: '#362820', cap: true },
+    piotr: { skin: '#d4a585', hair: '#77736d', shirt: '#7f1d1d', accent: '#ef4444', helmet: '#dc2626', beard: '#77736d', brows: '#66615c' },
+  };
+  const p = people[id];
+  const helmet = p.cap
+    ? `<path d="M22 27 Q26 8 50 12 Q68 15 67 31 L54 29 Q41 25 22 32Z" fill="${p.helmet}" stroke="#111827" stroke-opacity=".5" stroke-width="2"/><path d="M54 26 Q70 25 75 33 Q62 38 49 32Z" fill="${p.accent}"/><path d="M27 17 Q19 6 15 15" fill="none" stroke="#111827" stroke-width="4" stroke-linecap="round"/>`
+    : `<path d="M17 31 Q18 9 48 8 Q77 9 79 31 L75 34 Q49 25 21 35Z" fill="${p.helmet}" stroke="#172033" stroke-opacity=".62" stroke-width="2"/><path d="M15 29 Q48 22 81 30 L82 36 Q47 31 14 38Z" fill="${p.accent}" stroke="#172033" stroke-opacity=".45" stroke-width="1.5"/><path d="M33 20 L61 20" stroke="#64748b" stroke-width="2" stroke-linecap="round"/>`;
+  const beard = p.beard
+    ? `<path d="M28 60 Q48 70 68 60 L65 76 Q58 87 48 87 Q36 86 30 75Z" fill="${p.beard}"/>`
+    : '';
+  const capExtra = p.cap
+    ? `<path d="M25 22 Q45 17 64 25" fill="none" stroke="#e9d5ff" stroke-width="2.5"/><circle cx="68" cy="30" r="3" fill="#f472b6"/>`
+    : `<rect x="39" y="29" width="18" height="5" rx="2.5" fill="${p.accent}" opacity=".95"/>`;
+  return `<svg class="operator-portrait" viewBox="0 0 96 96" role="img" aria-label="Portret operatora ${id}" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="op-bg-${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${p.shirt}"/><stop offset="1" stop-color="#0b1420"/></linearGradient><linearGradient id="op-face-${id}" x1="0" y1="0" x2=".2" y2="1"><stop offset="0" stop-color="#f4d0ae"/><stop offset="1" stop-color="${p.skin}"/></linearGradient></defs>
+    <rect x="2" y="2" width="92" height="92" rx="19" fill="url(#op-bg-${id})"/>
+    <path d="M8 96 Q10 74 30 69 L66 69 Q87 75 89 96Z" fill="${p.shirt}"/>
+    <path d="M27 75 L38 65 L58 65 L70 76 L64 96 L32 96Z" fill="${p.accent}" opacity=".82"/>
+    <path d="M40 61 L56 61 L59 73 L48 81 L37 73Z" fill="${p.skin}"/>
+    <ellipse cx="48" cy="45" rx="24" ry="27" fill="url(#op-face-${id})"/>
+    <path d="M24 43 Q20 16 47 16 Q75 16 72 44 Q66 32 58 30 Q43 34 28 29Z" fill="${p.hair}"/>
+    <ellipse cx="23" cy="47" rx="4.2" ry="7" fill="${p.skin}"/><ellipse cx="73" cy="47" rx="4.2" ry="7" fill="${p.skin}"/>
+    <path d="M32 43 Q38 39 43 43 M54 43 Q60 39 65 43" fill="none" stroke="${p.brows}" stroke-width="3.4" stroke-linecap="round"/>
+    <ellipse cx="38" cy="48" rx="2.8" ry="3.3" fill="#152033"/><ellipse cx="59" cy="48" rx="2.8" ry="3.3" fill="#152033"/>
+    <path d="M48 48 L45 57 Q48 60 51 57" fill="none" stroke="#a86f58" stroke-width="2" stroke-linecap="round"/>
+    <path d="M39 63 Q48 68 58 62" fill="none" stroke="#713d36" stroke-width="2.5" stroke-linecap="round"/>
+    ${beard}
+    ${helmet}
+    ${capExtra}
+    <path d="M9 85 L28 77 M87 85 L68 77" stroke="#e2e8f0" stroke-opacity=".45" stroke-width="2"/>
+    <circle cx="78" cy="77" r="4" fill="${p.accent}" stroke="#f8fafc" stroke-opacity=".7" stroke-width="1"/>
+  </svg>`;
+};
 
 class MaxFlizScene extends xb.Script {
   private engine!: MaxFlizGameEngine;
@@ -201,7 +239,8 @@ class MaxFlizScene extends xb.Script {
       const meta = { ...baseMeta, name: speakerName || baseMeta.name };
       const avatar = document.createElement('div');
       avatar.className = 'dialogue-box-avatar';
-      avatar.textContent = meta.avatar;
+      if (isHero) avatar.innerHTML = operatorPortrait(this.selectedCharId);
+      else avatar.textContent = meta.avatar;
       const content = document.createElement('div');
       content.className = 'dialogue-box-content';
       const header = document.createElement('div');
@@ -230,13 +269,10 @@ class MaxFlizScene extends xb.Script {
 
     const getHeroMeta = () => {
       const def = CHARACTERS[this.selectedCharId];
-      const avatarIcons: Record<string, string> = {
-        marcin: '👷‍♂️', grzesiek: '🚜', dawid: '💪', mateusz: '🎮', piotr: '👨‍🔧',
-      };
       return {
         name: def.name,
         role: 'BOHATER LOGISTYKI',
-        avatar: avatarIcons[this.selectedCharId] || '👷‍♂️',
+        avatar: operatorPortrait(this.selectedCharId),
       };
     };
 
