@@ -1731,6 +1731,8 @@ export class MaxFlizGameEngine {
     this.addSurvivalArenaInstance(signBacks);
     faces.traverse((child) => {
       if (child instanceof THREE.Mesh) {
+        child.castShadow = false;
+        child.receiveShadow = false;
         const material = child.material as THREE.Material & { map?: THREE.Texture | null };
         this.survivalArenaInstanceGeometries.add(child.geometry);
         this.survivalArenaInstanceMaterials.add(child.material as THREE.Material);
