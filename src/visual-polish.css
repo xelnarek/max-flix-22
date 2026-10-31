@@ -89,6 +89,7 @@ button:focus-visible, [role="button"]:focus-visible, .char-card:focus-visible,
   backdrop-filter: blur(14px) saturate(125%) !important;
 }
 .menu-top-header {
+  transform: none !important;
   position: relative;
   padding: 20px 24px 16px !important;
   margin: 0 !important;
@@ -405,6 +406,19 @@ button:focus-visible, [role="button"]:focus-visible, .char-card:focus-visible,
 .zone-preview-b::before { inset: 9px 17px; transform: skewY(-5deg); border-color: rgba(113,199,223,.42); background: repeating-linear-gradient(90deg, transparent 0 16px, rgba(113,199,223,.23) 16px 18px); }
 .zone-preview-c { --zone-color: #e6a75d; background-color: #211b17; }
 .zone-preview-c::before { inset: 8px 10px; border-color: rgba(230,167,93,.42); background: repeating-linear-gradient(90deg, transparent 0 18px, rgba(230,167,93,.25) 18px 20px), repeating-linear-gradient(0deg, transparent 0 18px, rgba(230,167,93,.17) 18px 20px); }
+.zone-preview-label {
+  position: absolute;
+  z-index: 3;
+  left: 7px;
+  bottom: 5px;
+  padding: 2px 4px;
+  border: 1px solid rgba(156,190,211,.16);
+  border-radius: 4px;
+  background: rgba(3,10,16,.78);
+  color: #b9cfdb;
+  font: 800 7px/1.2 "JetBrains Mono", monospace;
+  letter-spacing: .08em;
+}
 .zone-preview-dot {
   position: absolute;
   z-index: 2;
