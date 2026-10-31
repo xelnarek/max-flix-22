@@ -729,6 +729,25 @@ export class MaxFlizGameEngine {
     this.camera.add(dofMesh);
   }
 
+  /** Adjusts the global fill/rim balance when the player enters a new map zone. */
+  private applySectorLighting(sector: number) {
+    const profiles = {
+      1: { ambient: 0xd9e8ff, hemi: 0x9edcff, ground: 0x253044, rim: 0x62c6e8, fog: 0x091827, ambientPower: 0.92, hemiPower: 1.35, rimPower: 1.15 },
+      2: { ambient: 0xffead1, hemi: 0xffd7a1, ground: 0x38302a, rim: 0xffc078, fog: 0x211a18, ambientPower: 0.94, hemiPower: 1.30, rimPower: 1.35 },
+      3: { ambient: 0xcde9f2, hemi: 0x8bc8df, ground: 0x1c2d38, rim: 0x39b8c8, fog: 0x081a24, ambientPower: 0.88, hemiPower: 1.30, rimPower: 1.45 },
+      4: { ambient: 0xc2d8f2, hemi: 0x7db5de, ground: 0x111d2c, rim: 0x60a5fa, fog: 0x080f1c, ambientPower: 0.86, hemiPower: 1.22, rimPower: 1.30 },
+    } as const;
+    const profile = profiles[sector as keyof typeof profiles] || profiles[1];
+    this.ambientLight.color.setHex(profile.ambient);
+    this.ambientLight.intensity = profile.ambientPower;
+    this.hemiLight.color.setHex(profile.hemi);
+    this.hemiLight.groundColor.setHex(profile.ground);
+    this.hemiLight.intensity = profile.hemiPower;
+    this.rimLight.color.setHex(profile.rim);
+    this.rimLight.intensity = profile.rimPower;
+    if (this.scene.fog instanceof THREE.Fog) this.scene.fog.color.setHex(profile.fog);
+  }
+
   private setupInput() {
     window.addEventListener('keydown', (e) => {
       this.keys[e.code] = true;
@@ -1068,6 +1087,7 @@ export class MaxFlizGameEngine {
     if (minimapTitle) minimapTitle.textContent = 'RADAR • ARENA SURVIVAL 120M';
     this.sectorGates.forEach((gate) => { if (gate) gate.visible = false; });
     this.scene.background = new THREE.Color(0x080f1c);
+    this.applySectorLighting(4);
     this.buildSurvivalArenaExpansion();
     this.applySceneTextureQuality();
     if (this.scene.fog instanceof THREE.Fog) {
@@ -1745,6 +1765,7 @@ export class MaxFlizGameEngine {
 
     // Unified Mega-Map Layout: Sektor A (-36..+36) -> Sektor B (+36..+116) -> Sektor C (+116..+206)
     this.scene.background = new THREE.Color(0x07131d);
+    this.applySectorLighting(levelId);
     this.levelBounds = { minX: -36, maxX: 206, minZ: -16, maxZ: 16 };
     
     this.buildLevel1();
@@ -4167,6 +4188,7 @@ export class MaxFlizGameEngine {
     if (newSector !== this.currentActiveSector) {
       this.currentActiveSector = newSector;
       this.currentLevelId = newSector;
+      this.applySectorLighting(newSector);
       const minimapTitle = document.querySelector('#minimap-container .minimap-title');
       if (newSector === 1) {
         if (minimapTitle) minimapTitle.textContent = 'SEKTOR A: MAGAZYN B4';
