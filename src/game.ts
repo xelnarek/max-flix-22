@@ -6673,6 +6673,7 @@ export class MaxFlizGameEngine {
         const distBack = toPlayer.length();
         if (distBack < 0.75) {
           this.levelRoot.remove(p.mesh);
+          if (p.weaponProjectile) this.disposeTemporaryObject(p.mesh);
           this.projectiles.splice(i, 1);
           continue;
         }
@@ -7774,7 +7775,7 @@ export class MaxFlizGameEngine {
       e.type === 'elite_walczak_guard' || e.maxHp >= 4;
     const isSurvivalEliteReward =
       e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' ||
-      e.type === 'elite_walczak_guard';
+      e.type === 'elite_walczak_guard' || e.type === 'sebix_m';
     const dropChance = this.gameMode === 'survival'
       ? (isSurvivalEliteReward ? 1.0 : 0.18)
       : this.charDef.id === 'piotr'
@@ -7790,17 +7791,25 @@ export class MaxFlizGameEngine {
       this.spawnDroppedPerk(e.x, e.y + 0.1, e.z);
     }
 
-    if (this.gameMode === 'survival' && (e.type === 'walczak' || e.type === 'krol_leto')) {
+    if (this.gameMode === 'survival' && (e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'sebix_m')) {
       this.spawnLootCrate(e.x + 1.2, 0, e.z);
-      this.spawnSurvivalXpGem(e.x, e.y, e.z, 8);
-      this.emitFloatingToast('🏆 SKRZYNIA Z NAGRODĄ BOSS-A!', e.x, e.y + 2.0, e.z, 'combo');
+      this.spawnSurvivalXpGem(e.x, e.y, e.z, e.type === 'sebix_m' ? 5 : 8);
+      this.emitFloatingToast(e.type === 'sebix_m' ? '🔥 SEBIX ROZBROJONY — SKRZYNIA B4!' : '🏆 SKRZYNIA Z NAGRODĄ BOSS-A!', e.x, e.y + 2.0, e.z, 'combo');
     }
 
-    if (e.type === 'walczak' || e.maxHp >= 4) {
+    if (e.type === 'sebix_m') {
       this.callbacks.onBossUpdate?.(e.name, 0, e.maxHp, false);
-      this.sayQuote('BYŁY KIEROWNIK WALCZAK ZANEUTRALIZOWANY! Droga wolna!');
+      this.sayQuote('SEBIX M. ZGASZONY! Cegły wracają na paletę, a B4 odzyskuje spokój.');
+      this.triggerScreenShake(1.05, 0.72);
+      this.triggerBloomPulse(0.48);
+      this.spawnParticleRing(e.x, e.y + 0.7, e.z, 0xf97316);
+      this.spawnParticleRing(e.x, e.y + 1.35, e.z, 0xef4444);
+      this.spawnExplosionParticles(e.x, e.y + 0.8, e.z, 0xff7a18, 20);
+    } else if (e.type === 'walczak' || e.maxHp >= 4) {
+      this.callbacks.onBossUpdate?.(e.name, 0, e.maxHp, false);
+      this.sayQuote(e.type === 'walczak' ? 'BYŁY KIEROWNIK WALCZAK ZANEUTRALIZOWANY! Droga wolna!' : e.name.toUpperCase() + ' — NEUTRALIZACJA ZAKOŃCZONA!');
 
-      // Intense long screen shake for boss defeat!
+      // Intense long screen shake for major enemy defeats.
       this.triggerScreenShake(2.2, 1.25);
 
       this.spawnParticleRing(e.x, e.y + 1.0, e.z, 0xef4444);
