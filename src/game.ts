@@ -6036,9 +6036,9 @@ export class MaxFlizGameEngine {
 
       // Global Throttled Shout Quotes (max 1 quote at a time across all enemies with 4.0s minimum gap)
       e.shoutTimer = (e.shoutTimer || 0) - dt;
-      if (e.shoutTimer <= 0 && distToPlayer < 9.0 && this.globalEnemyShoutCooldown <= 0) {
-        e.shoutTimer = 4.5 + Math.random() * 3.0;
-        this.globalEnemyShoutCooldown = 4.0;
+      if (e.shoutTimer <= 0 && distToPlayer < 12.0 && this.globalEnemyShoutCooldown <= 0) {
+        e.shoutTimer = 5.0 + Math.random() * 2.4;
+        this.globalEnemyShoutCooldown = 3.1;
         const quotes = MaxFlizGameEngine.ENEMY_QUOTES[e.type] || ["Z drogi!"];
         const quote = quotes[Math.floor(Math.random() * quotes.length)];
         e.shoutText = quote;
