@@ -1111,18 +1111,11 @@ export function createCharacterModel(def: CharacterDef): {
   if (def.id === 'grzesiek' || def.id === 'dawid' || def.id === 'mateusz' || def.id === 'piotr') {
     const beardMat = new THREE.MeshStandardMaterial({ color: beardColors[def.id], roughness: 0.98 });
     const beard = new THREE.Mesh(new THREE.SphereGeometry(0.105, 12, 8), beardMat);
-    beard.scale.set(0.92, def.id === 'dawid' ? 0.25 : 0.38, 0.62);
-    beard.position.set(0, 0.842, 0.075);
+    const beardHeight = def.id === 'grzesiek' ? 0.42 : def.id === 'dawid' ? 0.20 : 0.32;
+    beard.scale.set(0.86, beardHeight, 0.54);
+    beard.position.set(0, 0.805, 0.058);
     group.add(beard);
-    if (def.id === 'dawid' || def.id === 'piotr') {
-      const moustacheLeft = new THREE.Mesh(new THREE.SphereGeometry(0.04, 10, 7), beardMat);
-      const moustacheRight = moustacheLeft.clone();
-      moustacheLeft.scale.set(1.0, 0.42, 0.45);
-      moustacheRight.scale.copy(moustacheLeft.scale);
-      moustacheLeft.position.set(-0.029, 0.89, 0.146);
-      moustacheRight.position.set(0.029, 0.89, 0.146);
-      group.add(moustacheLeft, moustacheRight);
-    }
+
   }
 
   // Reusable domed hardhat builder. Curved shells read more naturally than
@@ -1149,7 +1142,7 @@ export function createCharacterModel(def: CharacterDef): {
 
   const smile = new THREE.Mesh(new THREE.SphereGeometry(0.026, 8, 6), new THREE.MeshBasicMaterial({ color: 0x7f1d1d }));
   smile.scale.set(1.35, 0.42, 0.5);
-  smile.position.set(0, 0.88, 0.145);
+  smile.position.set(0, 0.885, 0.158);
   group.add(smile);
 
   // Safety Hardhat or Cap
