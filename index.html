@@ -888,17 +888,13 @@
             </div>
 
             <div id="tab-story" class="tab-panel">
-              <div class="story-preview-card">
-                <div class="story-card-badge">FILM KINOWY 3D • SILNIK CZASU RZECZYWISTEGO</div>
+              <div class="story-preview-card story-archive-preview">
+                <div class="story-card-badge">ARCHIWUM OPERACYJNE • TAŚMA VHS 1998</div>
                 <div class="story-card-title">AFERA W MAX-FLIZ: BITWA O DOSTAWĘ GRESU</div>
                 <p class="story-card-desc">
-                  Poznaj aferę o dostawę Calacatty, ekipę operatorów i powrót Walczaka. Kronika pokazuje także Survival Shift: fale przeciwników, pułapki, wydarzenia magazynowe, tajne ładunki i cztery ewolucje buildów.
+                  Pięć aktów briefingu: sabotaż dostawy Calacatty, profile operatorów, roster przeciwników, sekretne teksty z hali i zasady Survival Shift. To archiwum świata gry — bez przerywnika filmowego.
                 </p>
                 <div class="story-btn-row">
-                  <button id="btn-open-3d-cutscene" class="btn-story-launch primary-3d-launch">
-                    <span class="launch-icon">🎬</span>
-                    <span>URUCHOM FILM KINOWY 3D</span>
-                  </button>
                   <button id="btn-open-pixel-intro" class="btn-story-launch secondary-pixel-launch">
                     <span class="launch-icon">📼</span>
                     <span>RETRO ARCADE 2000s • VHS EDITION</span>
@@ -973,67 +969,75 @@
       </div>
 
       <div id="story-intro-modal" class="game-modal hidden">
-        <div class="modal-card story-modal-card retro-vhs-card">
+        <div class="modal-card story-modal-card retro-vhs-card" role="dialog" aria-modal="true" aria-label="Pięcioaktowy briefing Magazyn Showdown">
           <div class="vhs-scanlines-overlay"></div>
-          <div class="vhs-timestamp">REC 🔴 [1998-10-26 VHS 3D]</div>
-          <button id="btn-close-story" class="story-close-btn" title="Zamknij">✕</button>
+          <div class="vhs-timestamp">ARCHIWUM ZMIANY • KASETA 26.10.1998 • REC</div>
+          <button id="btn-close-story" class="story-close-btn" title="Zamknij briefing" aria-label="Zamknij briefing">✕</button>
 
-          <div class="story-progress-dots">
-            <div class="dot active" data-slide="0"></div>
-            <div class="dot" data-slide="1"></div>
-            <div class="dot" data-slide="2"></div>
-            <div class="dot" data-slide="3"></div>
-            <div class="dot" data-slide="4"></div>
+          <div class="story-progress-dots" aria-label="Postęp briefingu">
+            <button class="dot active" type="button" data-slide="0" aria-label="Akt pierwszy"></button>
+            <button class="dot" type="button" data-slide="1" aria-label="Akt drugi"></button>
+            <button class="dot" type="button" data-slide="2" aria-label="Akt trzeci"></button>
+            <button class="dot" type="button" data-slide="3" aria-label="Akt czwarty"></button>
+            <button class="dot" type="button" data-slide="4" aria-label="Akt piąty"></button>
           </div>
 
           <div class="story-slides-container">
-            <div class="story-slide active" data-slide-index="0">
-              <div class="story-slide-badge retro-badge">📹 RETRO VHS AKT I: AFERA W MAX-FLIZ</div>
-              <div class="story-slide-icon retro-3d-icon">🏢⚡</div>
-              <div class="story-slide-title">Giga Dostawa Gresu & Sabotaż Walczaka!</div>
+            <section class="story-slide active" data-slide-index="0">
+              <div class="story-slide-badge retro-badge">AKT I • INCYDENT / DOSTAWA CALACATTY</div>
+              <div class="story-slide-icon retro-3d-icon">🏭⚠️</div>
+              <div class="story-slide-title">Paleta, której nie wolno było ruszać</div>
               <div class="story-slide-text">
-                Ruszamy w retro podróż 3D do magazynu Max-Fliz! Były kierownik Walczak nie mógł znieść sukcesu nowej ekipy. Wkradł się w nocy, zaryglował aleje z włoskim spiekiem Calacatta i rozrzucił próbki po całym magazynie.
+                Nocna dostawa Calacatty 120×280 dotarła do Max-Fliz z opóźnieniem, bez kompletnej dokumentacji i z plombą, której nikt nie potrafił wyjaśnić. Były kierownik Walczak wykorzystał zamieszanie: zablokował alejki, przestawił palety i rozrzucił próbki po trzech sektorach. Rano magazyn obudził się jak arena po nieudanym audycie. Twoje zadanie jest proste tylko na papierze: odzyskać ładunek, odblokować przejścia i ustalić, kto naprawdę steruje tą zmianą.
               </div>
-            </div>
+              <div class="story-act-objective"><strong>CEL OPERACYJNY:</strong> odzyskaj zamówienia VIP, pokonaj strażników sektorów i doprowadź dostawę do terminala C.</div>
+            </section>
 
-            <div class="story-slide hidden" data-slide-index="1">
-              <div class="story-slide-badge retro-badge">🧱 RETRO VHS AKT II: BOHATEROWIE LOGISTYKI</div>
-              <div class="story-slide-icon retro-3d-icon">💪🧱</div>
-              <div class="story-slide-title">Ekipa Max-Fliz Wkracza Do Akcji!</div>
+            <section class="story-slide hidden" data-slide-index="1">
+              <div class="story-slide-badge retro-badge">AKT II • OPERATORZY / PIĘĆ SPECJALIZACJI</div>
+              <div class="story-slide-icon retro-3d-icon">👥🔧</div>
+              <div class="story-slide-title">Pięć osób, pięć zupełnie różnych metod</div>
               <div class="story-slide-text">
-                Marcin przybija WZ-tki pieczęcią reklamacyjną, Grzesiek używa 44 cm bicepsa i Ścisku Zagłady, Dawid rzuca wielkim gresem Calacatta 120x280 ("Ja Wiem Najlepiej!"), a Mateusz rzuca padem DualSense i wywołuje BSOD!
+                Marcin kontroluje sytuację pieczęcią WZ i zaklęciami Optima. Grzesiek rozwiązuje problemy siłą 44-centymetrowego bicepsa oraz Ściskiem Zagłady. Dawid stawia na wielki format: rolka stretch, płyty Calacatta i dostawy KFC. Mateusz jest mobilnym impulsem elektrycznym — paralizator, BSOD i speedrun przez alejki. Piotr to czerwony punkt na mapie: szybki, precyzyjny strzelec BB, weteran skrótów i potrójnej salwy zza regału B4.
               </div>
-            </div>
+              <div class="story-act-objective"><strong>WYBÓR OPERATORA:</strong> dobierz mobilność, siłę, zasięg i defensywę do własnego stylu gry.</div>
+            </section>
 
-            <div class="story-slide hidden" data-slide-index="2">
-              <div class="story-slide-badge retro-badge">🎮 RETRO VHS AKT III: LEGENDA GEJMERA</div>
-              <div class="story-slide-icon retro-3d-icon">🎮🔥</div>
-              <div class="story-slide-title">Mateusz i 9 Miesięcy Kontraktu!</div>
+            <section class="story-slide hidden" data-slide-index="2">
+              <div class="story-slide-badge retro-badge">AKT III • ROSTER / STARE ZAGROŻENIA WRACAJĄ</div>
+              <div class="story-slide-icon retro-3d-icon">👔🚜🤖</div>
+              <div class="story-slide-title">Hala nie jest pusta. Po prostu nie każdy czeka w tym samym miejscu.</div>
               <div class="story-slide-text">
-                Mateusz podpisał umowę na 9 miesięcy i traktuje magazyn jak Dark Souls. Gdy złapie "Laga", wrogowie stają w miejscu (BSOD), a on speedrunuje przez korytarze, zbierając trofea i pijąc kawę z automatu!
+                Klienci z reklamacją ruszają do zwarcia, architekci pilnują swojego beżu, kurierzy przecinają korytarze, monterzy i serwisanci atakują narzędziami, a handlowcy zasypują halę ofertami. Pan Roman przywozi sanitariaty, Bosman z Krakowa rzuca teczką odprawy, operatorzy sztaplarek taranują alejki, AGV szuka kolizji, a dron Piorun skanuje wszystko, co się rusza. Nad tym stoją Walczak i Król-Leto. W Survival część rosteru odblokowuje się falami — nie znika z gry.
               </div>
-            </div>
+              <div class="story-act-objective"><strong>ZASADA:</strong> obserwuj rolę przeciwnika i jego okrzyk. Sygnał ataku jest wskazówką, nie dekoracją.</div>
+            </section>
 
-            <div class="story-slide hidden" data-slide-index="3">
-              <div class="story-slide-badge retro-badge">🗣️ RETRO VHS AKT IV: CYTATY I HASŁA BOJOWE</div>
-              <div class="story-slide-icon retro-3d-icon">🥊🎮</div>
-              <div class="story-slide-title">Hasła Bojowe Magazyn Showdown 3D!</div>
+            <section class="story-slide hidden" data-slide-index="3">
+              <div class="story-slide-badge retro-badge">AKT IV • EASTER EGGS / TEKSTY Z HALI</div>
+              <div class="story-slide-icon retro-3d-icon">📼💬🔎</div>
+              <div class="story-slide-title">Magazyn ma własne poczucie humoru</div>
+              <div class="story-slide-text">
+                Zaglądaj za regały i na obrzeża mapy. Możesz trafić na Kącik Kawowy Zdzicha, zagubioną WZ-tkę, złoty tron prezesa, teczkę Walczaka albo zapomniany automat z 1998 roku. Po odkryciu powinien wyskoczyć czytelny komunikat z nazwą sekretu i nagrodą. Przeciwnicy też komentują sytuację: „Kto mi zapłaci za przestój ekipy?”, „Dostawa Johnny Walker Express dla prezesa!” albo „Paleciak nie ma ABS-u ani litości!”. W Survival wypatruj również różowego znacznika Pomazańca — podejście uruchamia rajd pięciu rowerzystów z lizakami.
+              </div>
               <div class="story-quotes-grid">
-                <div class="quote-item"><strong>👷‍♂️ Marcin:</strong> "Pieczęć WZ wbita! Protokół reklamacji zamyka sprawę!"</div>
-                <div class="quote-item"><strong>🚜 Grzesiek:</strong> "44 cm w ramieniu i Ścisk Zagłady miażdży aleję!"</div>
-                <div class="quote-item"><strong>💪 Dawid:</strong> "Gres 120x280 leci pod kątem 45° – Ja Wiem Najlepiej!"</div>
-                <div class="quote-item"><strong>🎮 Mateusz:</strong> "Laga mam! BSOD i platyna wpada na konto!"</div>
-                <div class="quote-item"><strong>🍾 Piotr:</strong> "Flaszka z bimbrem 70% zza regału B4! Ogień na gresie!"</div>
+                <div class="quote-item"><strong>Marcin:</strong> „Gdzie jest podpis na WZ?! Bez podpisu paleta nie wyjedzie!”</div>
+                <div class="quote-item"><strong>Grzesiek:</strong> „44 centymetry i robi się miejsce w alejce!”</div>
+                <div class="quote-item"><strong>Dawid:</strong> „Ja wiem lepiej. Odsunąć się, gres leci!”</div>
+                <div class="quote-item"><strong>Mateusz:</strong> „Laga mam! Zaraz naprawię wam serwer!”</div>
+                <div class="quote-item"><strong>Piotr:</strong> „Z drogi. Weteran zna skrót przez B4.”</div>
               </div>
-            <div class="story-slide hidden" data-slide-index="4">
-              <div class="story-slide-badge retro-badge">⚔️ RETRO VHS AKT V: NOWA ZMIANA — SURVIVAL SHIFT</div>
-              <div class="story-slide-icon retro-3d-icon">🧟⚡📦</div>
-              <div class="story-slide-title">Hala Żyje. Zmiana Nie Ma Końca.</div>
+            </section>
+
+            <section class="story-slide hidden" data-slide-index="4">
+              <div class="story-slide-badge retro-badge">AKT V • SURVIVAL SHIFT / BEZ KOŃCA ZMIANY</div>
+              <div class="story-slide-icon retro-3d-icon">⚔️🧟📦</div>
+              <div class="story-slide-title">Przetrwaj falę. Zbuduj broń. Złam schemat.</div>
               <div class="story-slide-text">
-                Survival Shift jest osobnym trybem roguelite rozgrywanym na powiększonej hali z dodatkowymi alejami, osłonami ładunkowymi i regałami. Co 60 sekund nadchodzi kolejna fala, co piątą falę wchodzi boss, a co dziesiątą Król-Leto. Przeciwnicy pełnią różne role: napierają frontem, próbują obejść operatora, utrzymują dystans i atakują z boku. Na arenie pojawiają się cztery rodzaje pułapek i pięć wydarzeń: alarm KFC, kontrola BHP, Black Friday, awaria AGV oraz zaginiona paleta Pana Romana. Zbieraj kryształy XP, wybieraj moduły rozwoju i odblokowuj osiem broni: Działo paletowe, Tarczę diamentową, Minę Mapei, Kubełek bombowy, Drona Piorun, Nitownicę UDT, Impuls skanera B4 i Wirujące tarcze. Pociski i trafienia mają mniejszą skalę, aby nie zasłaniać pola walki. Broń rozwijasz do poziomu 5; po 5 minutach zmiany może pojawić się jej ewolucja, ale wymaga także pasywnego modułu dopasowanego do konkretnej broni. Każda z ośmiu broni ma inną ewolucję, a poza nimi możesz zbudować cztery niezależne synergie pasywne. Wypatruj sekretów. Pamiętaj: dron po Twojej stronie to asysta, a dron z czerwonym znacznikiem to problem. I nie ufaj paleciakowi — on też nie ufa Tobie.
+                Survival Shift to osobny tryb roguelite na rozbudowanej hali. Co minutę rośnie fala, a co piątą falę pojawia się boss z sześci sekundowym ostrzeżeniem. Zbieraj kryształy XP, wybieraj moduły pasywne, odblokowuj osiem broni i doprowadzaj je do poziomu 5. Ewolucja wymaga także odpowiedniego modułu. Na mapie działają cztery rodzaje pułapek, rotujące wydarzenia, tajne ładunki i jednorazowy rajd Pomazańców. Regularni przeciwnicy mają role: bruiser, flanker, ranged i support. Nie stój w miejscu, nie daj się zamknąć między regałami i nie marnuj przerzutów na bonusy, których build nie potrzebuje.
               </div>
-            </div>
-            </div>
+              <div class="story-act-objective"><strong>CEL:</strong> przetrwaj jak najdłużej, zbuduj spójną synergię i pobij własny rekord.</div>
+            </section>
           </div>
 
           <div class="story-nav-bar">
