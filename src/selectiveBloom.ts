@@ -187,6 +187,7 @@ export class SelectiveBloomPipeline {
     if (this.disposed) return;
     this.disposed = true;
     this.composer.dispose();
+    this.bloomPass.dispose();
     this.overlayQuad.removeFromParent();
     this.overlayQuad.geometry.dispose();
     this.overlayMaterial.dispose();
