@@ -1063,3 +1063,41 @@ button:disabled { cursor: not-allowed !important; filter: grayscale(.35); opacit
   .story-modal-card .story-slide-text { font-size: 10px; line-height: 1.58; }
   .story-act-objective { margin-top: 12px; font-size: 9px; }
 }
+
+
+/* Easter Egg discovery is a reward moment: keep the exact secret name readable
+   while allowing the world-projected position to remain controlled by the game loop. */
+.floating-score-toast.easter-egg {
+  display: block !important;
+  width: max-content;
+  max-width: min(84vw, 480px);
+  padding: 11px 17px !important;
+  border: 1px solid rgba(244,114,182,.72) !important;
+  border-radius: 12px !important;
+  background:
+    linear-gradient(115deg, rgba(63,18,56,.97), rgba(22,22,43,.97) 64%, rgba(73,44,18,.95)) !important;
+  color: #fff2fb !important;
+  font: 900 clamp(11px, 1.4vw, 16px)/1.35 "Space Grotesk", sans-serif !important;
+  letter-spacing: .015em;
+  white-space: normal !important;
+  text-align: center;
+  text-shadow: 0 2px 10px rgba(0,0,0,.82), 0 0 14px rgba(244,114,182,.34) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.46), 0 0 24px rgba(244,114,182,.22), inset 0 1px 0 rgba(255,255,255,.1) !important;
+  animation: mf-easter-discovery 3.55s ease-out both !important;
+  z-index: 60 !important;
+}
+@keyframes mf-easter-discovery {
+  0% { opacity: 0; filter: brightness(.65); }
+  12% { opacity: 1; filter: brightness(1.2); }
+  24% { opacity: 1; filter: brightness(1); }
+  87% { opacity: 1; filter: brightness(1); }
+  100% { opacity: 0; filter: brightness(.9); }
+}
+@media (max-width: 600px) {
+  .floating-score-toast.easter-egg {
+    max-width: min(88vw, 390px);
+    padding: 9px 12px !important;
+    font-size: 11px !important;
+    line-height: 1.32 !important;
+  }
+}
