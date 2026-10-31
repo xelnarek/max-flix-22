@@ -24,7 +24,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
       'Kto przestawił gres Calacatta Gold bez mojej autoryzacji?!',
       'Protokół reklamacji otwarty – zamykam tę aleję na własnych warunkach!'
     ],
-    bio: 'Legenda krakowskiej logistyki Max-Fliz. Nigdy nie rozstaje się z aluminiową podkładką z dokumentami i pancernym tabletem. Zna kod kreskowy każdego formatu płytek na pamięć. Gdy Marcin krzyknie "KTO TO PODPISAŁ?!", na hali cichną nawet silniki spalinowych sztaplarek.',
+    bio: 'Legenda krakowskiej logistyki Max-Fliz i człowiek, który potrafi rozpoznać błędnie wystawioną WZ-tkę po samym dźwięku drukarki. Na zmianę przynosi pancerny tablet, aluminiową podkładkę i minę człowieka, który już wie, że ktoś pomylił sektor. Pamięta kody produktów, układ regałów i wszystkie obietnice dostawców, których nikt nigdy nie potwierdził na piśmie. W walce stawia na kontrolę sytuacji, precyzję i autorytet kierownika. Jego najgroźniejszy okrzyk brzmi: „KTO TO PODPISAŁ?!”. Nawet sztaplarka wtedy przechodzi na luz.',
     stats: {
       speed: 4,
       jump: 3,
@@ -56,7 +56,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
       'HDS-em bym to szybciej zdjął, ale biceps też daje radę!',
       'Ściskacz 44cm to nie tylko ksywka, to styl życia na Magazynie C!'
     ],
-    bio: 'Prawdziwy gladiator korytarza C. Potrafi podnieść paletę kleju bez użycia paleciaka i zawrócić wózkiem widłowym na monecie 5-złotowej. W ramieniu ma dumne 44 cm obwodu wypracowane na tysiącach ton hiszpańskiego gresu. Kiedy rusza do przodu, żadna przeszkoda nie ma racji bytu.',
+    bio: 'Gladiator korytarza C, legenda siłowni i jedyny człowiek, który patrzy na paletę kleju jak na rozgrzewkę. Słynne 44 centymetry w ramieniu nie są jednostką miary, tylko ostrzeżeniem dla wszystkich, którzy zastawiają przejazd. Potrafi zrobić nawrót wózkiem na monecie pięciozłotowej, a ciężar hantla ocenia po tym, jak głośno jęknie regał. W walce stawia na brutalną siłę i przebijanie się przez tłum. Nie zna pojęcia „za ciężkie” — zna tylko „podaj drugą stronę”.',
     stats: {
       speed: 5,
       jump: 3,
@@ -88,7 +88,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
       'Ja tu rządzę formatem, ty zajmij się fugą!',
       '45 stopni to nie tylko kąt, to moja życiowa filozofia montażu!'
     ],
-    bio: 'Bezkompromisowy autorytet ceramiki luksusowej i król nocnych dostaw z KFC. Jego motto: "Ja wiem lepiej!" uciszyło już setki pseudo-ekspertów i zdezorientowanych architektów. Posiada tytaniczny skok, dzięki któremu bez trudu sięga najwyższych poziomów regałów wysokiego składu.',
+    bio: 'Arcymistrz wielkiego formatu, samozwańczy ekspert od ceramiki premium i dostawca KFC na zmianie nocnej. Jego ulubione zdanie „Ja wiem lepiej!” potrafi zakończyć dyskusję szybciej niż komunikat o zamknięciu magazynu. Format 120×280 nosi z dumą, a rolką stretchu potrafi opakować problem, którego nie rozwiązałby cały dział reklamacji. W walce wykorzystuje zasięg, spowalnianie przeciwników i potężne skoki. Twierdzi, że każda płytka ma właściwą stronę — po prostu inni jeszcze jej nie odkryli.',
     stats: {
       speed: 4,
       jump: 5,
@@ -120,7 +120,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
       'Ten wózek widłowy ma hitboxy jak w Elden Ring!',
       'Spawn-kill na klientach to moja specjalność!'
     ],
-    bio: 'Maniak konsolowy, który każdą wolną chwilę na magazynie spędza planując kolejne trofeum. Podpisał umowę na 9 miesięcy i odlicza dni do wolności, traktując korytarze Max-Fliz jak mapę w wymagającym souliksie. Jego biurko w showroomie to w rzeczywistości zamaskowane stanowisko gamingowe z PS5.',
+    bio: 'Łowca platyn, specjalista od padów i człowiek, który potrafi porównać każdą zmianę na magazynie do poziomu trudności w grze. Umowę na dziewięć miesięcy traktuje jak długi quest poboczny, a każdy kolejny dzień odhacza z precyzją speedrunnera. W showroomie ma mentalne stanowisko gamingowe, a w głowie mapę wszystkich skrótów, które pozwalają ominąć nudne obowiązki. W walce stawia na mobilność, impulsy elektryczne i kocią asystę. Gdy słyszy „lag”, najpierw sprawdza ping, a dopiero później, czy to przypadkiem nie wózek AGV.',
     stats: {
       speed: 5,
       jump: 4,
@@ -152,7 +152,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
       'Pamiętam jak tu szczere pole było, a Walczak jeszcze w pieluchy dzwonił!',
       'To nie dym, to aromat tradycji z rocznika 2012!'
     ],
-    bio: 'Żywa historia i fundament magazynu Max-Fliz. Przetrwał kilkanaście reorganizacji, przeprowadzek i fuzji. Zna każdy zakamarek hali i tajemne schowki za paletami gresu. Jego sekretna broń to ukryta flaszka z 70-procentowym bimbrem domowej roboty, którą podpala i ciska niczym koktajl Mołotowa, zamieniając korytarz w morze ognia.',
+    bio: 'Weteran Max-Fliz, człowiek-instytucja i żywe archiwum każdej reorganizacji, przeprowadzki oraz tajemniczego zniknięcia palety. Zna skróty za regałami, pamięta stare oznaczenia sektorów i wie, które drzwi otwierają się dopiero po mocniejszym pociągnięciu. W zanadrzu trzyma klucz grzechotkowy B4 oraz legendarny zapas domowego bimbru, którego pochodzenie pozostaje przedmiotem wewnętrznego dochodzenia. W walce jest wszechstronny, odporny i nie odpuszcza nawet wtedy, gdy reszta zmiany dawno odbiła kartę. Jego motto: „Za moich czasów palety same się nie przesuwały”.',
     stats: {
       speed: 5,
       jump: 4,
