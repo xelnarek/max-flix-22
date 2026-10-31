@@ -121,19 +121,6 @@ button:focus-visible, [role="button"]:focus-visible, .char-card:focus-visible,
   border-color: rgba(242,184,75,.32) !important;
   color: var(--mf-amber-2) !important;
 }
-.btn-top-intro-pill {
-  min-height: 32px !important;
-  padding: 6px 12px !important;
-  border: 1px solid rgba(98,198,232,.34) !important;
-  border-radius: 7px !important;
-  background: rgba(25, 72, 91, .28) !important;
-  color: #bfeafa !important;
-  font: 800 9px/1 "JetBrains Mono", monospace !important;
-  letter-spacing: .09em !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.04) !important;
-}
-.btn-top-intro-pill:hover { background: rgba(25,72,91,.5) !important; border-color: var(--mf-cyan) !important; }
-
 /* Navigation is a control rail, not a row of unrelated pills. */
 .menu-tabs-bar {
   display: flex !important;
