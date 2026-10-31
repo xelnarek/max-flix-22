@@ -895,6 +895,9 @@ export function createCharacterModel(def: CharacterDef): {
   const skinMat = new THREE.MeshStandardMaterial({ color: 0xffdbac, roughness: 0.55 });
   const clothesMat = new THREE.MeshStandardMaterial({ color: def.color, roughness: 0.5 });
   const vestMat = new THREE.MeshStandardMaterial({ color: def.secondaryColor, roughness: 0.3 });
+  const armorMat = new THREE.MeshStandardMaterial({ color: 0x253447, roughness: 0.62, metalness: 0.36 });
+  const trimMat = new THREE.MeshStandardMaterial({ color: def.secondaryColor, roughness: 0.42, metalness: 0.2, emissive: def.secondaryColor, emissiveIntensity: 0.07 });
+  const rubberMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.9 });
   const silverReflectMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.2, metalness: 0.6 });
   const pantsMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7 });
   const bootMat = new THREE.MeshStandardMaterial({ color: 0x3f2c1d, roughness: 0.8 }); // leather work boots
@@ -912,6 +915,42 @@ export function createCharacterModel(def: CharacterDef): {
   vest.position.y = 0.56;
   group.add(vest);
 
+  // Functional silhouette upgrades: padded shoulders, harness, radio, belt and ID plate.
+  const harness = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.34, 0.30), armorMat);
+  harness.position.set(0, 0.56, 0.015);
+  harness.rotation.z = 0.08;
+  group.add(harness);
+
+  const chestId = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.105, 0.035), trimMat);
+  chestId.position.set(0.105, 0.66, 0.15);
+  group.add(chestId);
+
+  const belt = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.075, 0.29), armorMat);
+  belt.position.y = 0.34;
+  group.add(belt);
+  const beltBuckle = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.075, 0.035), trimMat);
+  beltBuckle.position.set(0, 0.34, 0.17);
+  group.add(beltBuckle);
+
+  const radio = new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.16, 0.07), armorMat);
+  radio.position.set(-0.235, 0.65, -0.035);
+  const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.12, 5), rubberMat);
+  antenna.position.set(-0.245, 0.79, -0.035);
+  group.add(radio, antenna);
+
+  const shoulderGeometry = new THREE.DodecahedronGeometry(0.12, 0);
+  for (const side of [-1, 1]) {
+    const pad = new THREE.Mesh(shoulderGeometry, armorMat);
+    pad.scale.set(1.15, 0.68, 1.0);
+    pad.position.set(side * 0.245, 0.72, 0);
+    pad.rotation.z = side * -0.16;
+    group.add(pad);
+
+    const shoulderStripe = new THREE.Mesh(new THREE.BoxGeometry(0.105, 0.025, 0.17), trimMat);
+    shoulderStripe.position.set(side * 0.245, 0.735, 0.078);
+    group.add(shoulderStripe);
+  }
+
   // Silver Retro-Reflective Stripes on Vest
   const stripeH = new THREE.Mesh(new THREE.BoxGeometry(0.39, 0.04, 0.29), silverReflectMat);
   stripeH.position.y = 0.54;
@@ -922,7 +961,7 @@ export function createCharacterModel(def: CharacterDef): {
   group.add(stripeH, stripeV1, stripeV2);
 
   // 2. Head with Face Details
-  const headGeo = new THREE.BoxGeometry(0.26, 0.28, 0.26);
+  const headGeo = new THREE.SphereGeometry(0.145, 10, 7);
   const head = new THREE.Mesh(headGeo, skinMat);
   head.position.y = 0.94;
   head.castShadow = true;
@@ -1027,6 +1066,17 @@ export function createCharacterModel(def: CharacterDef): {
 
   group.add(leftLeg, rightLeg);
 
+  // Knee guards follow the animated leg bones instead of floating beside the character.
+  for (const leg of [leftLeg, rightLeg]) {
+    const knee = new THREE.Mesh(new THREE.DodecahedronGeometry(0.092, 0), armorMat);
+    knee.scale.set(0.95, 0.55, 0.72);
+    knee.position.set(0, 0.02, 0.083);
+    leg.add(knee);
+    const reflectiveKneeMark = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.022, 0.02), trimMat);
+    reflectiveKneeMark.position.set(0, 0.02, 0.145);
+    leg.add(reflectiveKneeMark);
+  }
+
   // 4. Arms & Hands
   const armGeo = new THREE.BoxGeometry(0.1, 0.36, 0.11);
   const leftArm = new THREE.Mesh(armGeo, clothesMat);
@@ -1046,6 +1096,17 @@ export function createCharacterModel(def: CharacterDef): {
   const rightHand = new THREE.Mesh(handGeo, skinMat);
   rightHand.position.set(0, -0.18, 0);
   rightArm.add(rightHand);
+
+  // Wrist guards and small grip cuffs move with the animated forearms.
+  for (const arm of [leftArm, rightArm]) {
+    const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.073, 0.073, 0.07, 8), armorMat);
+    cuff.rotation.x = Math.PI / 2;
+    cuff.position.set(0, -0.12, 0);
+    arm.add(cuff);
+    const cuffBand = new THREE.Mesh(new THREE.BoxGeometry(0.105, 0.025, 0.11), trimMat);
+    cuffBand.position.set(0, -0.12, 0.012);
+    arm.add(cuffBand);
+  }
 
   group.add(leftArm, rightArm);
 
@@ -1139,6 +1200,18 @@ export function createCharacterModel(def: CharacterDef): {
     accessory.rotation.x = 0.3;
   }
   group.add(accessory);
+
+  // Subtle cargo tags and pockets give each operator a more finished logistics silhouette.
+  const sidePocket = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.13, 0.10), armorMat);
+  sidePocket.position.set(0.205, 0.42, 0.12);
+  group.add(sidePocket);
+  const pocketLabel = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.035, 0.015), trimMat);
+  pocketLabel.position.set(0.205, 0.45, 0.177);
+  group.add(pocketLabel);
+
+  const rearHarnessClip = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.08, 0.035), silverReflectMat);
+  rearHarnessClip.position.set(0, 0.49, -0.15);
+  group.add(rearHarnessClip);
 
   // 6. Dynamic Soft Ground Contact Shadow (with polygonOffset to prevent floor Z-fighting)
   const shadowGeo = new THREE.PlaneGeometry(0.55, 0.55);
