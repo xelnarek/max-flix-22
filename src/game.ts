@@ -669,8 +669,9 @@ export class MaxFlizGameEngine {
     this.dirLight.position.set(16, 26, 14);
     this.dirLight.castShadow = true;
     
-    // Performance optimization: 512px shadow map on mobile for stable 60 FPS, 1024px on desktop
-    const shadowMapSize = isMobile ? 512 : 1024;
+    // Sharp contact shadows matter for character readability. Keep mobile at
+    // 1024² (Poco F6 class hardware) and reserve 2048² for desktop.
+    const shadowMapSize = isMobile ? 1024 : 2048;
     this.dirLight.shadow.mapSize.width = shadowMapSize;
     this.dirLight.shadow.mapSize.height = shadowMapSize;
     this.dirLight.shadow.camera.near = 0.5;
@@ -680,8 +681,10 @@ export class MaxFlizGameEngine {
     this.dirLight.shadow.camera.right = d;
     this.dirLight.shadow.camera.top = d;
     this.dirLight.shadow.camera.bottom = -d;
-    this.dirLight.shadow.bias = isMobile ? -0.0008 : -0.0004;
-    (this.dirLight.shadow as any).normalBias = 0.02;
+    this.dirLight.shadow.camera.updateProjectionMatrix();
+    this.dirLight.shadow.bias = isMobile ? -0.00045 : -0.00025;
+    this.dirLight.shadow.normalBias = isMobile ? 0.035 : 0.025;
+    this.dirLight.shadow.radius = isMobile ? 1 : 2;
     this.scene.add(this.dirLight);
 
     this.rimLight = new THREE.DirectionalLight(0x7dd3fc, 1.25);
@@ -690,12 +693,10 @@ export class MaxFlizGameEngine {
 
     this.scene.fog = new THREE.Fog(0x091827, 34, 125);
 
-    // Depth-of-Field Background Blur Shader Overlay attached to Camera
+    // Subtle camera-space vignette. This is intentionally not called DOF:
+    // a real depth-of-field blur needs a depth-aware post-processing pass.
+    // The vignette is restrained so it never darkens the operator or combat HUD.
     const dofMat = new THREE.ShaderMaterial({
-      uniforms: {
-        uTime: { value: 0 },
-        uScreenSize: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
-      },
       vertexShader: `
         varying vec2 vUv;
         void main() {
@@ -705,20 +706,12 @@ export class MaxFlizGameEngine {
       `,
       fragmentShader: `
         varying vec2 vUv;
-        uniform vec2 uScreenSize;
-        uniform float uTime;
-
         void main() {
-          // Soft Depth-of-Field tilt-shift background blur shader
-          // Gently softens upper/lower distant warehouse clutter beyond combat focus zone
-          float distFromFocusCenter = abs(vUv.y - 0.44);
-          float blurFactor = smoothstep(0.24, 0.48, distFromFocusCenter);
-
-          // Subtle atmospheric depth blur color mask
-          vec3 depthColor = vec3(0.02, 0.05, 0.10);
-          float alpha = blurFactor * 0.18;
-
-          gl_FragColor = vec4(depthColor, alpha);
+          vec2 centered = (vUv - 0.5) * vec2(1.0, 0.86);
+          float edge = smoothstep(0.38, 0.78, length(centered));
+          vec3 vignetteColor = vec3(0.012, 0.026, 0.040);
+          float alpha = edge * 0.075;
+          gl_FragColor = vec4(vignetteColor, alpha);
         }
       `,
       transparent: true,
@@ -840,6 +833,36 @@ export class MaxFlizGameEngine {
     if (!this.scene.children.includes(this.levelRoot)) {
       this.scene.add(this.levelRoot);
     }
+    this.applySceneTextureQuality();
+  }
+
+  /**
+   * Apply device-appropriate anisotropic filtering once after a world is built.
+   * This improves oblique floor, wall and sign texture clarity without raising
+   * the drawing-buffer resolution or adding per-frame CPU work.
+   */
+  private applySceneTextureQuality() {
+    if (!this.threeRenderer) return;
+    const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
+    const maxAnisotropy = this.threeRenderer.capabilities.getMaxAnisotropy();
+    const targetAnisotropy = Math.max(1, Math.min(maxAnisotropy, isMobile ? 8 : 16));
+    const textureSlots = [
+      'map', 'alphaMap', 'aoMap', 'bumpMap', 'displacementMap',
+      'emissiveMap', 'lightMap', 'metalnessMap', 'normalMap', 'roughnessMap',
+    ];
+    this.levelRoot.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      for (const material of materials) {
+        for (const slot of textureSlots) {
+          const texture = (material as any)[slot];
+          if (texture instanceof THREE.Texture && texture.anisotropy < targetAnisotropy) {
+            texture.anisotropy = targetAnisotropy;
+            texture.needsUpdate = true;
+          }
+        }
+      }
+    });
   }
 
   private rebuildPlayerMesh() {
@@ -1045,6 +1068,7 @@ export class MaxFlizGameEngine {
     this.sectorGates.forEach((gate) => { if (gate) gate.visible = false; });
     this.scene.background = new THREE.Color(0x080f1c);
     this.buildSurvivalArenaExpansion();
+    this.applySceneTextureQuality();
     if (this.scene.fog instanceof THREE.Fog) {
       this.scene.fog.color.setHex(0x080f1c);
       this.scene.fog.near = 42;
@@ -1672,7 +1696,8 @@ export class MaxFlizGameEngine {
     this.sectorGates = [null, null, null, null];
     this.buildSectorGate(36, 2);
     this.buildSectorGate(116, 3);
-    if (this.scene.fog instanceof THREE.Fog) { this.scene.fog.near = 34; this.scene.fog.far = 125; }
+    if (this.scene.fog instanceof THREE.Fog) { this.scene.fog.near = 42; this.scene.fog.far = 148; }
+    this.applySceneTextureQuality();
 
     // Spawn player at chosen starting sector checkpoint on the unified map
     if (levelId === 2) {
@@ -3520,13 +3545,15 @@ export class MaxFlizGameEngine {
     }
 
     if (this.bloomPulseTimer > 0) {
-      this.bloomPulseTimer -= dt;
+      this.bloomPulseTimer = Math.max(0, this.bloomPulseTimer - dt);
+      // A tiny controlled highlight lift replaces the old 1.6+ exposure flash,
+      // which clipped gold/skin colours and made the scene look washed out.
       if (this.threeRenderer) {
-        const exposure = 1.12 + Math.max(0, Math.sin(this.bloomPulseTimer * 10) * 0.5);
-        this.threeRenderer.toneMappingExposure = exposure;
+        const pulse = Math.max(0, Math.sin((0.45 - this.bloomPulseTimer) * 12));
+        this.threeRenderer.toneMappingExposure = 1.08 + pulse * 0.045;
       }
-    } else {
-      if (this.threeRenderer) this.threeRenderer.toneMappingExposure = 1.12;
+    } else if (this.threeRenderer) {
+      this.threeRenderer.toneMappingExposure = 1.08;
     }
 
     this.updateCamera(dt);
@@ -7257,9 +7284,9 @@ export class MaxFlizGameEngine {
   public renderMinimap(canvas: HTMLCanvasElement | null) {
     if (!canvas || this.state !== 'playing' || !this.minimapVisible) return;
     
+    // The caller already caps this renderer at 10 Hz; do not halve it again here.
     this.minimapFrameCounter++;
-    if (this.minimapFrameCounter % 2 !== 0) return;
-    
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -7267,9 +7294,22 @@ export class MaxFlizGameEngine {
     const h = canvas.height;
     ctx.clearRect(0, 0, w, h);
 
-    // High-tech radar dark background
-    ctx.fillStyle = '#0b0f19';
+    // Layered tactical map surface with a restrained technical grid.
+    const radarBg = ctx.createLinearGradient(0, 0, w, h);
+    radarBg.addColorStop(0, '#0b1b27');
+    radarBg.addColorStop(1, '#07121d');
+    ctx.fillStyle = radarBg;
     ctx.fillRect(0, 0, w, h);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(117, 166, 192, 0.09)';
+    ctx.lineWidth = 0.6;
+    for (let x = 10; x < w; x += 12) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    }
+    for (let y = 10; y < h; y += 12) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+    ctx.restore();
 
     const centerX = w / 2;
     const centerY = h / 2;
@@ -7283,8 +7323,8 @@ export class MaxFlizGameEngine {
     const playerMapY = centerY + (this.playerPos.z - mapCenterZ) * scale;
 
     // Survival uses a full-map tactical view; campaign retains the close-range rotating radar.
-    ctx.strokeStyle = 'rgba(56, 189, 248, 0.18)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(107, 180, 211, 0.22)';
+    ctx.lineWidth = 0.9;
     ctx.beginPath();
     if (!isSurvivalMap) {
       ctx.arc(centerX, centerY, w * 0.22, 0, Math.PI * 2);
@@ -7296,15 +7336,15 @@ export class MaxFlizGameEngine {
     if (isSurvivalMap) {
       const mapWidth = (this.levelBounds.maxX - this.levelBounds.minX) * scale;
       const mapDepth = (this.levelBounds.maxZ - this.levelBounds.minZ) * scale;
-      ctx.strokeStyle = 'rgba(125, 211, 252, 0.75)';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = 'rgba(117, 211, 232, 0.85)';
+      ctx.lineWidth = 1.6;
       ctx.strokeRect(centerX - mapWidth / 2, centerY - mapDepth / 2, mapWidth, mapDepth);
     }
 
     // 1. Level Platforms & Aisle Boundaries
-    ctx.fillStyle = 'rgba(30, 41, 59, 0.85)';
-    ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
-    ctx.lineWidth = 1;
+    ctx.fillStyle = 'rgba(37, 59, 73, 0.74)';
+    ctx.strokeStyle = 'rgba(127, 167, 189, 0.48)';
+    ctx.lineWidth = 0.9;
 
     for (let i = 0; i < this.platforms.length; i++) {
       const p = this.platforms[i];
@@ -7323,10 +7363,10 @@ export class MaxFlizGameEngine {
     }
 
     if (isSurvivalMap) {
-      // Cargo stacks and racks are drawn as small neutral blocks so routes and cover are visible.
-      ctx.fillStyle = 'rgba(148, 163, 184, 0.88)';
-      ctx.strokeStyle = 'rgba(226, 232, 240, 0.75)';
-      ctx.lineWidth = 1;
+      // Rack and pallet cover use a separate cool metal tone, clearly distinct from floors.
+      ctx.fillStyle = 'rgba(133, 157, 171, 0.88)';
+      ctx.strokeStyle = 'rgba(207, 224, 233, 0.76)';
+      ctx.lineWidth = 0.9;
       for (const obstacle of this.survivalObstacles) {
         const ox = centerX + (obstacle.x - mapCenterX) * scale;
         const oy = centerY + (obstacle.z - mapCenterZ) * scale;
@@ -7344,13 +7384,41 @@ export class MaxFlizGameEngine {
         const hx = centerX + (hazard.x - mapCenterX) * scale;
         const hy = centerY + (hazard.z - mapCenterZ) * scale;
         if (hx < 0 || hx > w || hy < 0 || hy > h) continue;
-        ctx.fillStyle = '#fbbf24';
+        const hazardColors: Record<HazardItem['type'], string> = {
+          forklift: '#f59e0b',
+          spill: '#eab308',
+          steam_faucet: '#67e8f9',
+          falling_lamp: '#fda4af',
+          conveyor: '#94a3b8',
+          glue_spill: '#a3e635',
+          cement_spill: '#cbd5e1',
+          laser_cutter: '#fb7185',
+          steam_geyser: '#67e8f9',
+          hydraulic_press: '#f59e0b',
+        };
+        const markerColor = hazardColors[hazard.type] || '#fbbf24';
+        const radiusX = Math.max(3, hazard.width * scale * 0.5);
+        const radiusY = Math.max(3, hazard.length * scale * 0.5);
+        ctx.fillStyle = markerColor;
+        ctx.globalAlpha = 0.12;
         ctx.beginPath();
-        ctx.moveTo(hx, hy - 3.5);
-        ctx.lineTo(hx + 3.5, hy);
-        ctx.lineTo(hx, hy + 3.5);
-        ctx.lineTo(hx - 3.5, hy);
+        ctx.ellipse(hx, hy, Math.min(17, radiusX), Math.min(12, radiusY), 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 0.88;
+        ctx.strokeStyle = markerColor;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 2]);
+        ctx.beginPath();
+        ctx.ellipse(hx, hy, Math.min(17, radiusX), Math.min(12, radiusY), 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(hx, hy - 3.2);
+        ctx.lineTo(hx + 3.2, hy);
+        ctx.lineTo(hx, hy + 3.2);
+        ctx.lineTo(hx - 3.2, hy);
         ctx.closePath();
+        ctx.fillStyle = markerColor;
         ctx.fill();
       }
     }
@@ -7365,7 +7433,7 @@ export class MaxFlizGameEngine {
       const my = centerY + dz;
 
       if (mx >= 0 && mx <= w && my >= 0 && my <= h) {
-        ctx.fillStyle = col.type === 'vip_item' || col.type === 'golden_cutter' ? '#f59e0b' : '#38bdf8';
+        ctx.fillStyle = col.type === 'vip_item' || col.type === 'golden_cutter' ? '#ffd27b' : '#67d6f0';
         ctx.beginPath();
         ctx.arc(mx, my, col.type === 'vip_item' ? 4.5 : 3.0, 0, Math.PI * 2);
         ctx.fill();
@@ -7382,7 +7450,7 @@ export class MaxFlizGameEngine {
       const my = centerY + dz;
 
       if (mx >= 0 && mx <= w && my >= 0 && my <= h) {
-        ctx.fillStyle = '#a855f7';
+        ctx.fillStyle = '#c3a1ff';
         ctx.beginPath();
         ctx.arc(mx, my, 4.0, 0, Math.PI * 2);
         ctx.fill();
@@ -7396,7 +7464,7 @@ export class MaxFlizGameEngine {
       const mx = centerX + dx;
       const my = centerY + dz;
 
-      ctx.fillStyle = '#22c55e';
+      ctx.fillStyle = '#64dda7';
       ctx.beginPath();
       ctx.arc(mx, my, 6.0, 0, Math.PI * 2);
       ctx.fill();
@@ -7421,7 +7489,9 @@ export class MaxFlizGameEngine {
 
       if (mx >= -10 && mx <= w + 10 && my >= -10 && my <= h + 10) {
         const isBoss = e.type === 'walczak' || e.type === 'krol_leto';
-        ctx.fillStyle = isBoss ? '#ef4444' : e.state === 'chase' || e.state === 'charging' ? '#ff4d4d' : '#f43f5e';
+        const isAggressive = e.state === 'chase' || e.state === 'charging';
+        const isRanged = e.type === 'handlowiec' || e.type === 'przedstawiciel_włoski' || e.type === 'inspector';
+        ctx.fillStyle = isBoss ? '#fb7185' : isAggressive ? '#ff6573' : isRanged ? '#f5b454' : '#d9829d';
         const size = isBoss ? 6.5 : 4.0;
 
         ctx.beginPath();
@@ -7429,8 +7499,13 @@ export class MaxFlizGameEngine {
         ctx.fill();
 
         if (isBoss) {
-          ctx.strokeStyle = '#facc15';
+          ctx.strokeStyle = '#ffe1a3';
           ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(mx, my, size + 3, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(251,113,133,.36)';
+          ctx.lineWidth = 1;
           ctx.stroke();
         }
 
@@ -7448,8 +7523,10 @@ export class MaxFlizGameEngine {
     ctx.translate(playerMapX, playerMapY);
     ctx.rotate(this.playerRot);
 
-    ctx.fillStyle = '#38bdf8';
-    ctx.strokeStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(98,198,232,.85)';
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = '#74dcf2';
+    ctx.strokeStyle = '#f3fbff';
     ctx.lineWidth = 1.5;
 
     ctx.beginPath();
@@ -7463,13 +7540,15 @@ export class MaxFlizGameEngine {
 
     ctx.restore();
 
-    // Radar scan line effect
-    const sweep = (performance.now() * 0.0025) % (Math.PI * 2);
-    ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
-    ctx.lineWidth = 1.5;
+    // Radar sweep originates from the operator in both modes.
+    const sweep = (performance.now() * 0.0018) % (Math.PI * 2);
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(98, 198, 232, 0.28)';
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(centerX, centerY);
-    ctx.lineTo(centerX + Math.cos(sweep) * (w * 0.45), centerY + Math.sin(sweep) * (h * 0.45));
+    ctx.moveTo(playerMapX, playerMapY);
+    ctx.lineTo(playerMapX + Math.cos(sweep) * (isSurvivalMap ? w * 0.42 : w * 0.45),
+      playerMapY + Math.sin(sweep) * (isSurvivalMap ? h * 0.42 : h * 0.45));
     ctx.stroke();
   }
 }
