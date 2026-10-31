@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { ParticleMeshPool, type ParticleShape } from './particlePool.ts';
 import { CHARACTERS } from './characters.ts';
 import { sound } from './sound.ts';
 import {
@@ -584,6 +585,8 @@ export class MaxFlizGameEngine {
     baseScale?: number;
     rotVel?: THREE.Vector3;
   }[] = [];
+  // One bounded pool owns all short-lived combat-fragment geometry/materials.
+  private readonly particlePool = new ParticleMeshPool(75);
   private projectiles: {
     mesh: THREE.Object3D;
     vel: THREE.Vector3;
@@ -1772,7 +1775,7 @@ export class MaxFlizGameEngine {
     this.survivalXpGems = [];
     this.hazards = [];
     this.explosiveBarrels = [];
-    for (const particle of this.particles) this.disposeParticleMesh(particle.mesh);
+    for (const particle of this.particles) this.particlePool.release(particle.mesh);
     this.particles = [];
     this.enemies = [];
     this.activeChaserIds.clear();
@@ -7440,20 +7443,13 @@ export class MaxFlizGameEngine {
     });
   }
 
-  private disposeParticleMesh(mesh: THREE.Mesh) {
-    this.levelRoot.remove(mesh);
-    if (mesh.geometry) mesh.geometry.dispose();
-    const material = mesh.material;
-    if (Array.isArray(material)) material.forEach((entry) => entry.dispose());
-    else material.dispose();
-  }
-
   private spawnCompactImpact(x: number, y: number, z: number, color: number) {
     for (let i = 0; i < 3; i++) {
-      const mesh = new THREE.Mesh(
-        new THREE.TetrahedronGeometry(0.055 + Math.random() * 0.025, 0),
-        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95, toneMapped: false })
-      );
+      const size = 0.055 + Math.random() * 0.025;
+      const baseScale = size * (0.8 + Math.random() * 0.35);
+      const mesh = this.particlePool.acquire('tetrahedron', color, baseScale, 0.95);
+      if (!mesh) break;
+
       const angle = (i / 3) * Math.PI * 2;
       mesh.position.set(x, y, z);
       mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
@@ -7464,7 +7460,7 @@ export class MaxFlizGameEngine {
         life: 0.28,
         maxLife: 0.28,
         gravity: 1.8,
-        baseScale: 0.8 + Math.random() * 0.35,
+        baseScale,
         rotVel: new THREE.Vector3(5 + Math.random() * 4, 4 + Math.random() * 5, 3 + Math.random() * 4),
       });
     }
@@ -7475,8 +7471,9 @@ export class MaxFlizGameEngine {
     const maxBudget = isMobile ? 36 : 75;
     if (this.particles.length > maxBudget) {
       const excess = this.particles.splice(0, this.particles.length - maxBudget);
-      excess.forEach((particle) => this.disposeParticleMesh(particle.mesh));
+      excess.forEach((particle) => this.particlePool.release(particle.mesh));
     }
+
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const pt = this.particles[i];
       pt.life -= dt;
@@ -7489,11 +7486,11 @@ export class MaxFlizGameEngine {
       }
       const lifeRatio = THREE.MathUtils.clamp(pt.life / pt.maxLife, 0, 1);
       pt.mesh.scale.setScalar((pt.baseScale ?? 1) * Math.max(0.001, lifeRatio));
-      const material = Array.isArray(pt.mesh.material) ? pt.mesh.material[0] : pt.mesh.material;
+      const material = pt.mesh.material as THREE.MeshBasicMaterial;
       if (material.transparent) material.opacity = lifeRatio * 0.96;
 
       if (pt.life <= 0) {
-        this.disposeParticleMesh(pt.mesh);
+        this.particlePool.release(pt.mesh);
         this.particles.splice(i, 1);
       }
     }
@@ -8360,9 +8357,8 @@ export class MaxFlizGameEngine {
     for (let s = 0; s < 12; s++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 3.0 + Math.random() * 5.0;
-      const shardGeo = new THREE.BoxGeometry(0.08, 0.08, 0.03);
-      const shardMat = new THREE.MeshBasicMaterial({ color: 0x86efac, transparent: true, opacity: 0.9 });
-      const shard = new THREE.Mesh(shardGeo, shardMat);
+      const shard = this.particlePool.acquire('flat-box', 0x86efac, 0.08, 0.9);
+      if (!shard) break;
       shard.position.set(x, y + 0.3, z);
       this.levelRoot.add(shard);
       this.particles.push({
@@ -8370,6 +8366,7 @@ export class MaxFlizGameEngine {
         vel: new THREE.Vector3(Math.cos(angle) * speed, 2.5 + Math.random() * 3.5, Math.sin(angle) * speed),
         life: 0.6,
         maxLife: 0.6,
+        baseScale: 0.08,
       });
     }
 
@@ -8451,18 +8448,18 @@ export class MaxFlizGameEngine {
         const r = Math.sqrt(Math.random()) * (p.radius * 0.7);
         const ex = p.x + Math.cos(angle) * r;
         const ez = p.z + Math.sin(angle) * r;
-        const ember = new THREE.Mesh(
-          new THREE.BoxGeometry(0.08, 0.08, 0.08),
-          new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.9 })
-        );
-        ember.position.set(ex, p.y + 0.3, ez);
-        this.levelRoot.add(ember);
-        this.particles.push({
-          mesh: ember,
-          vel: new THREE.Vector3((Math.random() - 0.5) * 0.8, 1.8 + Math.random() * 1.5, (Math.random() - 0.5) * 0.8),
-          life: 0.5,
-          maxLife: 0.5,
-        });
+        const ember = this.particlePool.acquire('box', 0xffaa00, 0.08, 0.9);
+        if (ember) {
+          ember.position.set(ex, p.y + 0.3, ez);
+          this.levelRoot.add(ember);
+          this.particles.push({
+            mesh: ember,
+            vel: new THREE.Vector3((Math.random() - 0.5) * 0.8, 1.8 + Math.random() * 1.5, (Math.random() - 0.5) * 0.8),
+            life: 0.5,
+            maxLife: 0.5,
+            baseScale: 0.08,
+          });
+        }
       }
 
       // Damage ticks over time
@@ -8747,9 +8744,8 @@ export class MaxFlizGameEngine {
   }
 
   private spawnDust(x: number, y: number, z: number, color = 0xd1d5db) {
-    const geo = new THREE.SphereGeometry(0.08, 6, 6);
-    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8 });
-    const mesh = new THREE.Mesh(geo, mat);
+    const mesh = this.particlePool.acquire('sphere', color, 0.08, 0.8);
+    if (!mesh) return;
     mesh.position.set(x, y + 0.1, z);
     this.levelRoot.add(mesh);
     this.particles.push({
@@ -8757,6 +8753,7 @@ export class MaxFlizGameEngine {
       vel: new THREE.Vector3((Math.random() - 0.5) * 1.5, Math.random() * 0.8 + 0.2, (Math.random() - 0.5) * 1.5),
       life: 0.4,
       maxLife: 0.4,
+      baseScale: 0.08,
     });
   }
 
@@ -8767,12 +8764,12 @@ export class MaxFlizGameEngine {
     for (let i = 0; i < num; i++) {
       const angle = (i / num) * Math.PI * 2;
       const size = 0.085 + Math.random() * 0.065;
-      const geo = i % 3 === 0
-        ? new THREE.OctahedronGeometry(size, 0)
-        : new THREE.TetrahedronGeometry(size, 0);
+      const shape: ParticleShape = i % 3 === 0 ? 'octahedron' : 'tetrahedron';
+      const baseScale = size * (0.75 + Math.random() * 0.65);
       const tint = lightColor.clone().offsetHSL(0, 0, i % 2 === 0 ? 0.12 : -0.055);
-      const mat = new THREE.MeshBasicMaterial({ color: tint, transparent: true, opacity: 0.96, toneMapped: false });
-      const mesh = new THREE.Mesh(geo, mat);
+      const mesh = this.particlePool.acquire(shape, tint, baseScale, 0.96);
+      if (!mesh) continue;
+
       mesh.position.set(x, y, z);
       mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
       this.levelRoot.add(mesh);
@@ -8786,7 +8783,7 @@ export class MaxFlizGameEngine {
         life: 0.62,
         maxLife: 0.62,
         gravity: 3.6,
-        baseScale: 0.75 + Math.random() * 0.65,
+        baseScale,
         rotVel: new THREE.Vector3(
           (Math.random() - 0.5) * 11,
           (Math.random() - 0.5) * 14,
@@ -8802,14 +8799,22 @@ export class MaxFlizGameEngine {
     const baseColor = new THREE.Color(color);
     for (let i = 0; i < actualCount; i++) {
       const size = 0.075 + Math.random() * 0.105;
-      const geo = i % 3 === 0
-        ? new THREE.BoxGeometry(size, size, size)
-        : i % 3 === 1
-          ? new THREE.TetrahedronGeometry(size * 1.35, 0)
-          : new THREE.OctahedronGeometry(size * 1.15, 0);
+      let shape: ParticleShape;
+      let shapeScale = 1;
+      if (i % 3 === 0) {
+        shape = 'box';
+      } else if (i % 3 === 1) {
+        shape = 'tetrahedron';
+        shapeScale = 1.35;
+      } else {
+        shape = 'octahedron';
+        shapeScale = 1.15;
+      }
+      const baseScale = size * shapeScale * (0.7 + Math.random() * 0.8);
       const tint = baseColor.clone().offsetHSL(0, 0, (Math.random() - 0.5) * 0.18);
-      const mat = new THREE.MeshBasicMaterial({ color: tint, transparent: true, opacity: 0.96, toneMapped: false });
-      const mesh = new THREE.Mesh(geo, mat);
+      const mesh = this.particlePool.acquire(shape, tint, baseScale, 0.96);
+      if (!mesh) continue;
+
       mesh.position.set(x, y, z);
       mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
       this.levelRoot.add(mesh);
@@ -8821,7 +8826,7 @@ export class MaxFlizGameEngine {
         life: 0.74,
         maxLife: 0.74,
         gravity: 4.5,
-        baseScale: 0.7 + Math.random() * 0.8,
+        baseScale,
         rotVel: new THREE.Vector3(
           (Math.random() - 0.5) * 13,
           (Math.random() - 0.5) * 16,
