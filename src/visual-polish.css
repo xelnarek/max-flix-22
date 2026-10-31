@@ -1139,3 +1139,53 @@ button:disabled { cursor: not-allowed !important; filter: grayscale(.35); opacit
   .zone-map-schematic { inset: 3px; width: calc(100% - 6px); height: calc(100% - 6px); }
   .zone-preview-label { font-size: 6px !important; }
 }
+
+
+/* Consistent human operator portraits across the selection grid, HUD and dialogue cards. */
+.operator-portrait {
+  display: block;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  border-radius: inherit;
+}
+.char-card-badge.operator-emblem {
+  overflow: hidden !important;
+  padding: 0 !important;
+  background: #0b1420 !important;
+  border-color: color-mix(in srgb, var(--operator-accent) 44%, transparent) !important;
+}
+.char-card-badge.operator-emblem .operator-portrait {
+  border-radius: 13px;
+  filter: saturate(1.08) contrast(1.04);
+}
+.hero-avatar {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 0 !important;
+}
+.hero-avatar .operator-portrait {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}
+.dialogue-box-avatar {
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+.dialogue-box-avatar .operator-portrait {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}
+.leaderboard-hero-tag .operator-portrait {
+  width: 34px;
+  height: 34px;
+  display: block;
+  border: 1px solid rgba(148,163,184,.30);
+  border-radius: 9px;
+  background: #0b1420;
+  overflow: hidden;
+}

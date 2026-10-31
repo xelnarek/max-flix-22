@@ -298,30 +298,39 @@ class SoundEngine {
     const t = this.ctx.currentTime;
 
     if (charId === 'marcin') {
-      // Stamp thump + sonic bell reverberation
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(160, t);
-      osc.frequency.exponentialRampToValueAtTime(40, t + 0.35);
-      gain.gain.setValueAtTime(0.4, t);
-      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.35);
-      osc.connect(gain);
-      gain.connect(this.effectsBus ?? this.ctx.destination);
-      osc.start(t);
-      osc.stop(t + 0.36);
+      // A short diesel starter, tracked engine rev and radio confirmation for the WZ-404.
+      const engine = this.ctx.createOscillator();
+      const engineGain = this.ctx.createGain();
+      engine.type = 'sawtooth';
+      engine.frequency.setValueAtTime(62, t);
+      engine.frequency.exponentialRampToValueAtTime(118, t + 0.28);
+      engine.frequency.exponentialRampToValueAtTime(78, t + 0.68);
+      engineGain.gain.setValueAtTime(0.0001, t);
+      engineGain.gain.exponentialRampToValueAtTime(0.23, t + 0.07);
+      engineGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.82);
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(420, t);
+      filter.frequency.linearRampToValueAtTime(760, t + 0.25);
+      engine.connect(filter);
+      filter.connect(engineGain);
+      engineGain.connect(this.effectsBus ?? this.ctx.destination);
+      engine.start(t);
+      engine.stop(t + 0.84);
 
-      // Bell chime
-      const bell = this.ctx.createOscillator();
-      const bGain = this.ctx.createGain();
-      bell.type = 'sine';
-      bell.frequency.setValueAtTime(1174, t + 0.05);
-      bGain.gain.setValueAtTime(0.25, t + 0.05);
-      bGain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
-      bell.connect(bGain);
-      bGain.connect(this.effectsBus ?? this.ctx.destination);
-      bell.start(t + 0.05);
-      bell.stop(t + 0.61);
+      const radio = this.ctx.createOscillator();
+      const radioGain = this.ctx.createGain();
+      radio.type = 'square';
+      radio.frequency.setValueAtTime(880, t + 0.24);
+      radio.frequency.setValueAtTime(1320, t + 0.34);
+      radio.frequency.setValueAtTime(990, t + 0.44);
+      radioGain.gain.setValueAtTime(0.0001, t + 0.24);
+      radioGain.gain.exponentialRampToValueAtTime(0.09, t + 0.27);
+      radioGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.58);
+      radio.connect(radioGain);
+      radioGain.connect(this.effectsBus ?? this.ctx.destination);
+      radio.start(t + 0.24);
+      radio.stop(t + 0.59);
     } else if (charId === 'grzesiek') {
       // Turbo engine dash
       const osc = this.ctx.createOscillator();
@@ -352,20 +361,96 @@ class SoundEngine {
     } else if (charId === 'piotr') {
       this.playMolotovThrow();
     } else {
-      // Mateusz Espresso boost chimes
-      [523, 659, 783, 1046, 1318].forEach((f, i) => {
+      // Three tiny, distinct meow-like notes announce the incoming cat squad.
+      [620, 760, 920].forEach((frequency, index) => {
+        const start = t + index * 0.12;
         const osc = this.ctx!.createOscillator();
         const gain = this.ctx!.createGain();
         osc.type = 'triangle';
-        osc.frequency.setValueAtTime(f, t + i * 0.04);
-        gain.gain.setValueAtTime(0.24, t + i * 0.04);
-        gain.gain.exponentialRampToValueAtTime(0.01, t + i * 0.04 + 0.18);
+        osc.frequency.setValueAtTime(frequency, start);
+        osc.frequency.exponentialRampToValueAtTime(frequency * 1.42, start + 0.07);
+        osc.frequency.exponentialRampToValueAtTime(frequency * 0.76, start + 0.19);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.13, start + 0.025);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.23);
         osc.connect(gain);
         gain.connect(this.effectsBus ?? this.ctx!.destination);
-        osc.start(t + i * 0.04);
-        osc.stop(t + i * 0.04 + 0.19);
+        osc.start(start);
+        osc.stop(start + 0.24);
       });
     }
+  }
+
+  /** Low, punchy cannon report with a short metallic tail for the WZ-404 tank. */
+  public playTankCannon() {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const start = this.ctx.currentTime;
+    const boom = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+    boom.type = 'sawtooth';
+    boom.frequency.setValueAtTime(118, start);
+    boom.frequency.exponentialRampToValueAtTime(38, start + 0.22);
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(920, start);
+    filter.frequency.exponentialRampToValueAtTime(180, start + 0.24);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(0.42, start + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.34);
+    boom.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.effectsBus ?? this.ctx.destination);
+    boom.start(start);
+    boom.stop(start + 0.35);
+
+    const metal = this.ctx.createOscillator();
+    const metalGain = this.ctx.createGain();
+    metal.type = 'triangle';
+    metal.frequency.setValueAtTime(780, start + 0.018);
+    metal.frequency.exponentialRampToValueAtTime(240, start + 0.27);
+    metalGain.gain.setValueAtTime(0.0001, start + 0.018);
+    metalGain.gain.exponentialRampToValueAtTime(0.11, start + 0.03);
+    metalGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.30);
+    metal.connect(metalGain);
+    metalGain.connect(this.effectsBus ?? this.ctx.destination);
+    metal.start(start + 0.018);
+    metal.stop(start + 0.31);
+  }
+
+  /** Soft paw-tap, quick whisker swoosh and a playful meow chirp for a cat pounce. */
+  public playCatPounce() {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const start = this.ctx.currentTime;
+    const paw = this.ctx.createOscillator();
+    const pawGain = this.ctx.createGain();
+    paw.type = 'sine';
+    paw.frequency.setValueAtTime(190, start);
+    paw.frequency.exponentialRampToValueAtTime(72, start + 0.10);
+    pawGain.gain.setValueAtTime(0.0001, start);
+    pawGain.gain.exponentialRampToValueAtTime(0.12, start + 0.008);
+    pawGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.13);
+    paw.connect(pawGain);
+    pawGain.connect(this.effectsBus ?? this.ctx.destination);
+    paw.start(start);
+    paw.stop(start + 0.14);
+
+    const meow = this.ctx.createOscillator();
+    const meowGain = this.ctx.createGain();
+    meow.type = 'triangle';
+    meow.frequency.setValueAtTime(680 + Math.random() * 150, start + 0.035);
+    meow.frequency.exponentialRampToValueAtTime(1040 + Math.random() * 120, start + 0.12);
+    meow.frequency.exponentialRampToValueAtTime(520, start + 0.24);
+    meowGain.gain.setValueAtTime(0.0001, start + 0.035);
+    meowGain.gain.exponentialRampToValueAtTime(0.075, start + 0.06);
+    meowGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.25);
+    meow.connect(meowGain);
+    meowGain.connect(this.effectsBus ?? this.ctx.destination);
+    meow.start(start + 0.035);
+    meow.stop(start + 0.26);
   }
 
   public playHonk() {
