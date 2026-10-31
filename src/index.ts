@@ -71,7 +71,9 @@ class MaxFlizScene extends xb.Script {
       const width = Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth));
       const height = Math.max(1, Math.round(window.visualViewport?.height || window.innerHeight));
       const aspect = width / height;
-      const uiScale = Math.min(1.12, Math.max(0.82, Math.min(width / 430, height / 820)));
+      // Use the Poco F6's ~393 CSS-pixel portrait width as the baseline.
+      // Avoid shrinking the entire interface on modern 6.6–6.7 inch phones.
+      const uiScale = Math.min(1.12, Math.max(0.90, Math.min(width / 390, height / 780)));
       document.documentElement.style.setProperty('--ui-scale', uiScale.toFixed(3));
 
       if (this.camera) {
@@ -92,7 +94,9 @@ class MaxFlizScene extends xb.Script {
       if (renderer) {
         // Set DPR before dimensions so Three.js recreates the drawing buffer at the final scale.
         const isMobile = width < 900 || ('ontouchstart' in window);
-        const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.75 : 2.25);
+        // High-density mobile rendering: sharper textures and silhouettes on Poco F6.
+        // The cap is intentional to prevent fill-rate spikes during dense survival waves.
+        const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.9 : 2.25);
         renderer.setPixelRatio(dpr);
         renderer.setSize(width, height, false);
       }
