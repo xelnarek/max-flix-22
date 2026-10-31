@@ -3906,11 +3906,6 @@ export class MaxFlizGameEngine {
       this.spawnDroppedPerk(x + 3.5, 0.5, z, 'xp_surge');
       this.addInspectorEnemy('survival_task_inspector_' + stamp, x - 8, Math.max(this.levelBounds.minZ + 1, z - 3), Math.min(this.levelBounds.maxZ - 1, z + 3), 'Kontroler zlecenia — podpis albo blokada');
     }
-      this.callbacks.onPerkDropBanner?.('📦 ZAGINIONA PALETA PREMIUM!', '🔎', 'Pan Roman zostawił tajemniczy ładunek. Skrzynia zawiera losowy moduł.', '#f59e0b');
-      this.sayQuote('Pan Roman przyjechał z dostawą. Dokument WZ ma cztery strony, ale żadnej strony tytułowej.');
-      this.addPanRomanEnemy('survival_roman_' + stamp, x, Math.max(this.levelBounds.minZ + 1, z - 4), Math.min(this.levelBounds.maxZ - 1, z + 4), 'Pan Roman — dostawa bez awiza');
-      this.spawnLootCrate(THREE.MathUtils.clamp(px + 5, this.levelBounds.minX + 3, this.levelBounds.maxX - 3), 0, THREE.MathUtils.clamp(pz + 3, this.levelBounds.minZ + 2, this.levelBounds.maxZ - 2));
-    }
   }
 
   private getSurvivalSpawnPoint(): { x: number; z: number } {
