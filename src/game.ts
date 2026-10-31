@@ -130,6 +130,7 @@ export interface GameCallbacks {
   onPerksUpdate?: (perks: ActivePerks) => void;
   onFloatingText?: (text: string, x: number, y: number, z: number, type?: 'points' | 'vip' | 'easter-egg' | 'damage' | 'perk' | 'combo' | 'enemy_shout', metadata?: any) => void;
   onPerkDropBanner?: (name: string, icon: string, desc: string, color: string) => void;
+  onSurvivalAnnouncement?: (title: string, subtitle: string, detail: string) => void;
   onSurvivalUpdate?: (snapshot: SurvivalSnapshot) => void;
   onSurvivalLevelUp?: (options: SurvivalUpgradeOption[]) => void;
 }
@@ -252,6 +253,14 @@ export class MaxFlizGameEngine {
       "Kubełek jest MÓJ! Nie dzielę się frytkami!",
       "Móóózg... znaczy KURCZAAAK z dostawy Dawida!",
     ],
+    pomazaniec: [
+      "POMAZAŃCEEEE! KTO MA JESZCZE DWA KÓŁKA?!",
+      "Razem mamy w siedmiu więcej lat niż rozumu!",
+      "Lizak w dłoń! Godzilla Dawida nie ucieknie!",
+      "Dzwonek działa, hamulce są opcjonalne!",
+      "MAM CZAPKĘ Z WIATRAKIEM, CZYLI JESTEM DOWÓDCĄ!",
+      "Dawidzilla! Nadciągamy z prędkością trzech kilometrów na godzinę!",
+    ],
   };
 
   public scene: THREE.Scene;
@@ -371,6 +380,11 @@ export class MaxFlizGameEngine {
   private survivalRerolls = 1;
   private survivalSkips = 1;
   private survivalSecretSpawned = false;
+  private survivalPomazaniecSpawned = false;
+  private survivalPomazaniecTriggered = false;
+  private survivalPomazaniecCompleted = false;
+  private survivalPomazaniecMarker: THREE.Group | null = null;
+  private survivalPomazaniecMarkerPulse = 0;
   private armorBlockCooldown = 0;
   private survivalPendingOptions: SurvivalUpgradeOption[] = [];
   private survivalXpGems: { mesh: THREE.Mesh; value: number; life: number; phase: number }[] = [];
@@ -524,7 +538,15 @@ export class MaxFlizGameEngine {
     exploded: boolean;
   }[] = [];
   private enemies: EnemyItem[] = [];
-  private enemyProjectiles: { mesh: THREE.Mesh; vel: THREE.Vector3; life: number; isDyscyplinarka?: boolean }[] = [];
+  private enemyProjectiles: {
+    mesh: THREE.Mesh;
+    vel: THREE.Vector3;
+    life: number;
+    isDyscyplinarka?: boolean;
+    kind?: 'pomazaniec_lollipop';
+    gravity?: number;
+    spin?: number;
+  }[] = [];
   private particles: {
     mesh: THREE.Mesh;
     vel: THREE.Vector3;
@@ -1045,6 +1067,10 @@ export class MaxFlizGameEngine {
     this.survivalRerolls = 1;
     this.survivalSkips = 1;
     this.survivalSecretSpawned = false;
+    this.survivalPomazaniecSpawned = false;
+    this.survivalPomazaniecTriggered = false;
+    this.survivalPomazaniecCompleted = false;
+    this.survivalPomazaniecMarkerPulse = 0;
     this.armorBlockCooldown = 0;
     this.survivalPendingOptions = [];
     this.marcinReclamationTimer = 0;
