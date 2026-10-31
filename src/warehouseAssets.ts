@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CharacterDef } from './types.ts';
+import { CharacterDef, CharacterId } from './types.ts';
 
 // Cached procedural textures
 let floorTexture: THREE.CanvasTexture | null = null;
@@ -1682,6 +1682,9 @@ export function createWarehouseRack(width = 4.0, height = 3.8, depth = 1.2): THR
   const blueMat = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.4, metalness: 0.45 });
   const orangeBeamMat = new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.35, metalness: 0.4 });
   const meshDeckMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.6, metalness: 0.65 });
+  applyIndustrialPbr(blueMat, 0.022);
+  applyIndustrialPbr(orangeBeamMat, 0.018);
+  applyIndustrialPbr(meshDeckMat, 0.026);
 
   const halfW = width / 2;
   const halfD = depth / 2;
@@ -1726,6 +1729,37 @@ export function createWarehouseRack(width = 4.0, height = 3.8, depth = 1.2): THR
       group.add(p1, p2);
     }
   });
+
+  // Rear X-bracing and bolted base plates make the rack read as a real load-bearing frame.
+  // Shared brace geometry and materials keep the added draw-call cost modest.
+  const braceGeometry = new THREE.CylinderGeometry(0.018, 0.018, 1, 6);
+  const braceMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.78, roughness: 0.34 });
+  applyIndustrialPbr(braceMat, 0.012);
+  const rearZ = -halfD - 0.075;
+  const addBrace = (from: THREE.Vector3, to: THREE.Vector3) => {
+    const direction = new THREE.Vector3().subVectors(to, from);
+    const brace = new THREE.Mesh(braceGeometry, braceMat);
+    brace.position.copy(from).add(to).multiplyScalar(0.5);
+    brace.scale.y = direction.length();
+    brace.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+    brace.castShadow = true;
+    group.add(brace);
+  };
+  addBrace(new THREE.Vector3(-halfW + 0.08, 0.22, rearZ), new THREE.Vector3(halfW - 0.08, height - 0.22, rearZ));
+  addBrace(new THREE.Vector3(halfW - 0.08, 0.22, rearZ), new THREE.Vector3(-halfW + 0.08, height - 0.22, rearZ));
+
+  const footPlateGeometry = new THREE.BoxGeometry(0.24, 0.055, 0.24);
+  const anchorBoltGeometry = new THREE.CylinderGeometry(0.025, 0.025, 0.025, 8);
+  const boltMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.24 });
+  for (const [x, z] of [[-halfW, -halfD], [-halfW, halfD], [halfW, -halfD], [halfW, halfD]] as const) {
+    const foot = new THREE.Mesh(footPlateGeometry, meshDeckMat);
+    foot.position.set(x, 0.035, z);
+    foot.castShadow = true;
+    group.add(foot);
+    const bolt = new THREE.Mesh(anchorBoltGeometry, boltMat);
+    bolt.position.set(x, 0.075, z);
+    group.add(bolt);
+  }
 
   return group;
 }
