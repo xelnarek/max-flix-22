@@ -18,6 +18,7 @@ interface DarkenedMesh {
 export class SelectiveBloomPipeline {
   private readonly composer: EffectComposer;
   private readonly bloomPass: UnrealBloomPass;
+  private readonly renderPass: RenderPass;
   private readonly darkMaterialCache = new Map<THREE.Material, THREE.Material>();
   private readonly candidates: THREE.Mesh[] = [];
   private readonly overlayScene = new THREE.Scene();
@@ -33,6 +34,7 @@ export class SelectiveBloomPipeline {
   constructor(
     private readonly renderer: THREE.WebGLRenderer,
     private readonly scene: THREE.Scene,
+    camera: THREE.Camera,
     width: number,
     height: number,
     pixelRatio: number,
@@ -49,6 +51,7 @@ export class SelectiveBloomPipeline {
 
     this.composer = new EffectComposer(renderer, target);
     this.composer.renderToScreen = false;
+    this.renderPass = new RenderPass(scene, camera);
     this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(1, 1),
       isMobile ? 0.68 : 0.88,
@@ -56,7 +59,7 @@ export class SelectiveBloomPipeline {
       0.78
     );
     this.bloomPass.renderToScreen = false;
-    this.composer.addPass(new RenderPass(scene, new THREE.PerspectiveCamera()));
+    this.composer.addPass(this.renderPass);
     this.composer.addPass(this.bloomPass);
 
     this.overlayMaterial = new THREE.ShaderMaterial({
@@ -110,6 +113,7 @@ export class SelectiveBloomPipeline {
     if (this.disposed) return;
 
     this.enabled = shouldEnableSelectiveBloom(fps, this.isMobile, this.enabled);
+    this.renderPass.camera = camera;
     if (!this.enabled || this.renderer.xr.isPresenting || camera instanceof THREE.ArrayCamera) {
       this.renderer.render(this.scene, camera);
       return;
@@ -183,10 +187,19 @@ export class SelectiveBloomPipeline {
   private refreshCandidates(now: number): void {
     this.lastScanAt = now;
     this.candidates.length = 0;
+    const liveMaterials = new Set<THREE.Material>();
     this.scene.traverse((object) => {
-      if (!(object instanceof THREE.Mesh) || !object.visible || !object.material) return;
+      if (!(object instanceof THREE.Mesh) || !object.material) return;
       this.candidates.push(object);
+      const entries = Array.isArray(object.material) ? object.material : [object.material];
+      entries.forEach((material) => liveMaterials.add(material));
     });
+    for (const [original, dark] of this.darkMaterialCache) {
+      if (!liveMaterials.has(original)) {
+        dark.dispose();
+        this.darkMaterialCache.delete(original);
+      }
+    }
   }
 
   private isEmissive(material: THREE.Material | THREE.Material[]): boolean {
