@@ -1439,6 +1439,7 @@ export class MaxFlizGameEngine {
     this.checkSurvivalEvolutions();
     this.survivalPendingOptions = [];
     this.state = 'playing';
+    sound.startMusic();
     this.emitFloatingToast('ULEPSZENIE: ' + choice.title, this.playerPos.x, this.playerPos.y + 1.6, this.playerPos.z, 'perk');
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
 
@@ -1558,6 +1559,7 @@ export class MaxFlizGameEngine {
     if (this.gameMode !== 'survival' || this.state !== 'levelup' || this.survivalSkips <= 0) return false;
     this.survivalSkips--;
     this.state = 'playing';
+    sound.startMusic();
     this.emitFloatingToast('POMINIĘTO WYBÓR — ZACHOWANO TEMPO ZMIANY', this.playerPos.x, this.playerPos.y + 1.5, this.playerPos.z, 'perk');
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
     return true;
@@ -4220,6 +4222,7 @@ export class MaxFlizGameEngine {
     this.survivalXpToNext = Math.round(10 + this.survivalLevel * 3.0);
     this.survivalPendingOptions = this.rollSurvivalUpgradeOptions();
     this.state = 'levelup';
+    sound.stopMusic();
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
     this.callbacks.onSurvivalLevelUp?.([...this.survivalPendingOptions]);
     sound.playAbility(this.currentCharacterId);
