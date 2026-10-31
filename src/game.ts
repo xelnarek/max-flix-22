@@ -1366,6 +1366,25 @@ export class MaxFlizGameEngine {
 
   private currentActiveSector = 1;
 
+  // Soft, saturated low-poly shading gives the warehouse a readable storybook look
+  // without replacing the existing models, textures, animations or lighting setup.
+  private applyStorybookStyle(root: THREE.Object3D) {
+    root.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      for (const material of materials) {
+        if (material instanceof THREE.MeshStandardMaterial || material instanceof THREE.MeshPhysicalMaterial) {
+          material.flatShading = true;
+          material.roughness = Math.max(material.roughness, 0.58);
+          material.metalness = Math.min(material.metalness, 0.42);
+          if (material.color) material.color.offsetHSL(0, 0.10, 0.015);
+          material.needsUpdate = true;
+        }
+      }
+      object.castShadow = object.castShadow && object.geometry !== undefined;
+    });
+  }
+
   public loadLevel(levelId: number) {
     this.currentLevelId = levelId;
     this.currentActiveSector = levelId;
@@ -1379,6 +1398,7 @@ export class MaxFlizGameEngine {
     this.buildLevel1();
     this.buildLevel2(76);
     this.buildLevel3(161);
+    this.applyStorybookStyle(this.levelRoot);
     this.sectorGates = [null, null, null, null];
     this.buildSectorGate(36, 2);
     this.buildSectorGate(116, 3);
@@ -3562,6 +3582,7 @@ export class MaxFlizGameEngine {
 
     const enemy = this.enemies[this.enemies.length - 1];
     if (!enemy) return;
+    if (enemy.mesh) this.applyStorybookStyle(enemy.mesh);
     if (enemy.type !== 'architect') {
       enemy.z = z;
       enemy.startX = minZ;
