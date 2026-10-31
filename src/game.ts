@@ -3344,6 +3344,14 @@ export class MaxFlizGameEngine {
     this.addMonterEnemy('monter_l1_south', 10, 8, 16, 'Majster Kafelkarz');
     this.addAgvRobotEnemy('agv_l1_south', -18, 6, 12.0, 'AGV Paletowy Południe');
 
+    // Overhead warehouse light rails break up the long roofline and give the aisles readable pools of light.
+    [-24, 0, 24].forEach((tx, index) => {
+      const rail = createTrackSpotlights(7.8);
+      rail.position.set(tx, 7.35, -3.5);
+      rail.rotation.y = index === 1 ? Math.PI / 2 : 0;
+      this.levelRoot.add(rail);
+    });
+
     // Accent Lighting
     const l1 = new THREE.PointLight(0x38bdf8, 18, 28);
     l1.position.set(-18, 5, 8);
@@ -3697,6 +3705,14 @@ export class MaxFlizGameEngine {
       const plant=createShowroomPlant();
       plant.position.set(displayX-side*2.1,0,displayZ-1.1);
       this.levelRoot.add(plant);
+    });
+
+    // Roof-mounted high-bay rails create a visible terminal ceiling rhythm and light the loading lanes.
+    [-30, -10, 12, 32].forEach((tx, index) => {
+      const rail = createTrackSpotlights(8.6);
+      rail.position.set(offsetX + tx, 7.75, -2.0);
+      rail.rotation.y = index % 2 === 0 ? 0 : Math.PI / 2;
+      this.levelRoot.add(rail);
     });
 
     // High-Bay Terminal Racks — MOVED STRICTLY TO BACKGROUND (z = -14.0 and -10.5)
