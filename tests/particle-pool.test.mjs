@@ -16,24 +16,24 @@ test('particle meshes are reused without exceeding the configured cap', () => {
     assert.equal(pool.availableCount, 0);
     assert.equal(pool.acquire('box', 0xffffff), null);
 
-    first!.position.set(4, 5, 6);
-    pool.release(first!);
-    pool.release(first!);
+    first.position.set(4, 5, 6);
+    pool.release(first);
+    pool.release(first);
 
-    assert.equal(first!.parent, null);
-    assert.equal(first!.visible, false);
+    assert.equal(first.parent, null);
+    assert.equal(first.visible, false);
     assert.equal(pool.availableCount, 1);
 
     const reused = pool.acquire('octahedron', 0x00ff44, 1.75, 0.72);
     assert.equal(reused, first);
-    assert.equal(reused!.geometry.type, 'OctahedronGeometry');
-    assert.equal((reused!.material as THREE.MeshBasicMaterial).color.getHex(), 0x00ff44);
-    assert.equal((reused!.material as THREE.MeshBasicMaterial).opacity, 0.72);
-    assert.equal(reused!.scale.x, 1.75);
+    assert.equal(reused.geometry.type, 'OctahedronGeometry');
+    assert.equal((reused.material as THREE.MeshBasicMaterial).color.getHex(), 0x00ff44);
+    assert.equal((reused.material as THREE.MeshBasicMaterial).opacity, 0.72);
+    assert.equal(reused.scale.x, 1.75);
     assert.equal(pool.allocatedCount, 2);
 
-    pool.release(reused!);
-    pool.release(second!);
+    pool.release(reused);
+    pool.release(second);
     assert.equal(pool.availableCount, 2);
   } finally {
     pool.dispose();
