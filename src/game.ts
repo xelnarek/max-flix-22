@@ -4921,22 +4921,24 @@ export class MaxFlizGameEngine {
     const maxZ = THREE.MathUtils.clamp(z + 2.2, this.levelBounds.minZ + 0.5, this.levelBounds.maxZ - 0.5);
     const roll = Math.random();
 
+    // Keep the classic warehouse roster in rotation: wave gates unlock varieties,
+    // while wider probability bands prevent late-run enemies from becoming effectively invisible.
     if (wave >= 8 && Math.random() < 0.065) this.addSebixEnemy(id,x,minZ,maxZ);
     else if (wave >= 6 && Math.random() < 0.04) this.addBosmanKrakowBossEnemy(id,x,z);
-    else if (wave < 3 || roll < 0.16) this.addZombieWorkerEnemy(id, x, minZ, maxZ, 'Zombie-Magazynier — głodny po nocnej zmianie');
-    else if (roll < 0.29) this.addKurierEnemy(id, x, minZ, maxZ, 'Kurier Ekspresowy — paczka bez awiza');
-    else if (roll < 0.41) this.addMonterEnemy(id, x, minZ, maxZ, 'Monter Wiesław — poziomica w dłoni');
-    else if (roll < 0.52) this.addInspectorEnemy(id, x, minZ, maxZ, 'Inspektor BHP — kontrola bez zapowiedzi');
-    else if (roll < 0.63) this.addHandlowiecEnemy(id, x, minZ, maxZ, 'Handlowiec — oferta nie do odrzucenia');
-    else if (wave >= 7 && roll < 0.69) this.addAgvRobotEnemy(id, x, x, z, 'AGV-9 — autonomiczny paleciak w trybie kolizyjnym');
-    else if (wave >= 3 && roll < 0.72) this.addCustomerEnemy(id, x, minZ, maxZ, 'Klient z reklamacją na 17 stron');
-    else if (wave >= 4 && roll < 0.79) this.addArchitectEnemy(id, x, x + 4.5, z, 'Architektka — odcień beżu numer 47');
-    else if (wave >= 5 && roll < 0.85) this.addItalianVendorEnemy(id, x, minZ, maxZ, 'Włoski dostawca armatury — mamma mia');
-    else if (wave >= 6 && roll < 0.90) this.addSerwisanciEnemy(id, x, minZ, maxZ, 'Serwisant — zgłoszenie numer 404');
-    else if (wave >= 7 && roll < 0.94) this.addPanRomanEnemy(id, x, minZ, maxZ, 'Pan Roman — dostawa bez awiza');
-    else if (wave >= 8 && roll < 0.955) this.addSztaplarEnemy(id, x, minZ, maxZ, 'Operator paleciaka — drift w alei B4');
-    else if (wave >= 9 && roll < 0.972) this.addSerwisanciEnemy(id, x, minZ, maxZ, 'Serwisant AGV — awaria protokołu');
-    else if (wave >= 10 && roll < 0.986) this.addPanRomanEnemy(id, x, minZ, maxZ, 'Pan Roman — kontrola rampy');
+    else if (wave < 3 || roll < 0.12) this.addZombieWorkerEnemy(id, x, minZ, maxZ, 'Zombie-Magazynier — głodny po nocnej zmianie');
+    else if (roll < 0.22) this.addKurierEnemy(id, x, minZ, maxZ, 'Kurier Ekspresowy — paczka bez awiza');
+    else if (roll < 0.32) this.addMonterEnemy(id, x, minZ, maxZ, 'Monter Wiesław — poziomica w dłoni');
+    else if (roll < 0.42) this.addInspectorEnemy(id, x, minZ, maxZ, 'Inspektor BHP — kontrola bez zapowiedzi');
+    else if (roll < 0.52) this.addHandlowiecEnemy(id, x, minZ, maxZ, 'Handlowiec — oferta nie do odrzucenia');
+    else if (wave >= 7 && roll < 0.60) this.addAgvRobotEnemy(id, x, x, z, 'AGV-9 — autonomiczny paleciak w trybie kolizyjnym');
+    else if (wave >= 3 && roll < 0.68) this.addCustomerEnemy(id, x, minZ, maxZ, 'Klient z reklamacją na 17 stron');
+    else if (wave >= 4 && roll < 0.75) this.addArchitectEnemy(id, x, x + 4.5, z, 'Architektka — odcień beżu numer 47');
+    else if (wave >= 5 && roll < 0.82) this.addItalianVendorEnemy(id, x, minZ, maxZ, 'Włoski dostawca armatury — mamma mia');
+    else if (wave >= 6 && roll < 0.89) this.addSerwisanciEnemy(id, x, minZ, maxZ, 'Serwisant — zgłoszenie numer 404');
+    else if (wave >= 7 && roll < 0.95) this.addPanRomanEnemy(id, x, minZ, maxZ, 'Pan Roman — dostawa bez awiza');
+    else if (wave >= 8 && roll < 0.975) this.addSztaplarEnemy(id, x, minZ, maxZ, 'Operator paleciaka — drift w alei B4');
+    else if (wave >= 9 && roll < 0.99) this.addSerwisanciEnemy(id, x, minZ, maxZ, 'Serwisant AGV — awaria protokołu');
+    else if (wave >= 10 && roll < 0.998) this.addPanRomanEnemy(id, x, minZ, maxZ, 'Pan Roman — kontrola rampy');
     else this.addEliteGuardEnemy(id, x, minZ, maxZ, 'Elitarny strażnik sektora');
 
     const enemy = this.enemies[this.enemies.length - 1];
@@ -5536,7 +5538,7 @@ export class MaxFlizGameEngine {
           this.handleMateuszPassive(1);
           sound.playEasterEgg();
           this.sayQuote(`EASTER EGG ODNALEZIONY: ${c.name}! (+${c.points * ptsMult} pkt)`);
-          this.emitFloatingToast(`🎉 EASTER EGG!`, c.x, c.y + 0.5, c.z, 'easter-egg');
+          this.emitFloatingToast(`🎉 ${c.name.toUpperCase()} • +${c.points * ptsMult} PKT!`, c.x, c.y + 0.62, c.z, 'easter-egg');
         }
 
         this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
