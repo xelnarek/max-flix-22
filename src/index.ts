@@ -108,14 +108,16 @@ class MaxFlizScene extends xb.Script {
       document.documentElement.style.setProperty('--ui-scale', uiScale.toFixed(3));
 
       if (this.camera) {
-        if (aspect < 0.75) {
-          this.camera.fov = 64;
+        // Keep resize-time framing in sync with the in-game camera profile.
+        // This avoids a second, visible FOV correction on the next gameplay frame.
+        if (aspect < 0.65) {
+          this.camera.fov = 60;
         } else if (aspect < 1.0) {
-          this.camera.fov = 58;
+          this.camera.fov = 54;
         } else if (aspect < 1.35) {
-          this.camera.fov = 50;
+          this.camera.fov = 48;
         } else {
-          this.camera.fov = 44;
+          this.camera.fov = 45;
         }
         this.camera.aspect = aspect;
         this.camera.updateProjectionMatrix();
@@ -1618,10 +1620,11 @@ class MaxFlizScene extends xb.Script {
     const scene = xb.core?.scene || this.fallbackScene;
     const camera = (xb.core?.camera as THREE.PerspectiveCamera) || this.camera;
 
-    // AGGRESSIVE BACKGROUND CLEANUP
+    // Replace any simulator backdrop, but leave fog distances and sector colour
+    // under the game engine's control. Overwriting fog here crushed the far map
+    // into near-black and removed the sense of depth in every warehouse sector.
     if (scene) {
-      scene.background = new THREE.Color(0x020408);
-      scene.fog = new THREE.Fog(0x020408, 1, 60);
+      scene.background = new THREE.Color(0x07131d);
     }
 
     if (this.engine) {
@@ -1634,6 +1637,9 @@ class MaxFlizScene extends xb.Script {
 
     this.camera = camera;
     this.engine.startTitle();
+    // Apply the initial viewport profile immediately; waiting for the next
+    // resize event leaves portrait devices with the desktop camera distance.
+    this.engine.applyAutoCameraScaleForViewport();
 
     // The selective bloom hook uses XR Blocks' supported scene-render override.
     // Non-WebGL backends retain their normal render path.
@@ -1692,20 +1698,9 @@ class MaxFlizScene extends xb.Script {
       }
     }
 
-    // 2. PERSISTENT BACKGROUND ENFORCEMENT
-    if (xb.core.scene) {
-       const info = (xb.core.renderer as any)?.info;
-       const frame = info?.render?.frame || 0;
-       const gameState = this.engine?.getGameState() || 'title';
-       
-         if (gameState === 'title' || frame < 120) {
-           xb.core.scene.background = new THREE.Color(0x020408);
-           if (xb.core.scene.fog instanceof THREE.Fog) {
-              xb.core.scene.fog.color.setHex(0x020408);
-           }
-         }
-    }
-
+    // The game engine owns the scene palette and sector fog. Do not force a
+    // black background/fog every frame: it overrides each sector's lighting
+    // profile and creates avoidable per-frame Color allocations.
     this.tick(dt);
   }
 
@@ -1959,10 +1954,10 @@ async function startApp() {
         r.shadowMap.type = isMobileDevice ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
       }
 
-      // PERSISTENT BACKGROUND ENFORCEMENT: Fight simulator environment default (trees/living room)
+      // Keep the simulator environment out of view without replacing the
+      // game's fog profile; each sector controls its own atmospheric colour.
       if (xb.core.scene) {
-        xb.core.scene.background = new THREE.Color(0x020408);
-        xb.core.scene.fog = new THREE.Fog(0x020408, 1, 60);
+        xb.core.scene.background = new THREE.Color(0x07131d);
       }
 
       // Ensure the container itself is opaque black to hide any leaking simulator UI

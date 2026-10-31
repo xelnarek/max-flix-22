@@ -62,9 +62,9 @@ export class SelectiveBloomPipeline {
     this.renderPass = new RenderPass(scene, camera);
     this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(1, 1),
-      isMobile ? 0.68 : 0.88,
+      isMobile ? 0.62 : 0.82,
       0.42,
-      0.78
+      0.80
     );
     this.bloomPass.renderToScreen = false;
     this.composer.addPass(this.renderPass);
@@ -73,7 +73,7 @@ export class SelectiveBloomPipeline {
     this.overlayMaterial = new THREE.ShaderMaterial({
       uniforms: {
         bloomTexture: { value: this.bloomPass.renderTargetsHorizontal[0].texture },
-        bloomStrength: { value: isMobile ? 0.34 : 0.42 },
+        bloomStrength: { value: isMobile ? 0.30 : 0.38 },
       },
       vertexShader: `
         varying vec2 vUv;
@@ -111,8 +111,10 @@ export class SelectiveBloomPipeline {
 
   resize(width: number, height: number, pixelRatio: number): void {
     if (this.disposed) return;
-    const scale = this.isMobile ? 0.52 : 0.64;
-    const cap = this.isMobile ? 0.9 : 1.15;
+    // Bloom is a secondary polish pass. Keep it cheaper than the main scene,
+    // especially on mobile GPUs where high-resolution post FX compete with gameplay.
+    const scale = this.isMobile ? 0.42 : 0.58;
+    const cap = this.isMobile ? 0.82 : 1.0;
     this.composer.setPixelRatio(Math.max(0.35, Math.min(cap, pixelRatio * scale)));
     this.composer.setSize(Math.max(1, width), Math.max(1, height));
   }

@@ -89,6 +89,15 @@ import {
 } from './warehouseAssets.ts';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
+// Shared floor-guide geometry/materials. Instanced markings add readable scale and
+// route structure to the large warehouse floors with only one draw call per sector.
+const SECTOR_FLOOR_GUIDE_GEOMETRY = new THREE.BoxGeometry(1.25, 0.014, 0.055);
+const SECTOR_FLOOR_GUIDE_MATERIALS: Record<1 | 2 | 3, THREE.MeshBasicMaterial> = {
+  1: new THREE.MeshBasicMaterial({ color: 0xf59e0b, toneMapped: false }),
+  2: new THREE.MeshBasicMaterial({ color: 0xc19a5b, toneMapped: false }),
+  3: new THREE.MeshBasicMaterial({ color: 0x58b7d8, toneMapped: false }),
+};
+
 export interface SurvivalUpgradeOption {
   id: string;
   icon: string;
@@ -318,7 +327,8 @@ export class MaxFlizGameEngine {
   private screenShakeDuration = 0;
   private screenShakeIntensity = 0;
   private screenShakeTimer = 0;
-  private cameraMode: 'tpp' | 'close' | 'iso' = 'close';
+  // Elevated tactical framing is the default so mobile players can read lanes and threats.
+  private cameraMode: 'tpp' | 'close' | 'iso' = 'tpp';
   private camZoomFactor = 0.94;
   private maxUnlockedSector = (() => {
     try {
@@ -334,8 +344,19 @@ export class MaxFlizGameEngine {
   private finishGatePos = new THREE.Vector3(30, 0, 0);
   private smoothCamY = 0.5;
   // Tactical Elevated camera default (~45° isometric/tactical perspective like Hades/Brawl Stars)
-  private currentCamOffset = new THREE.Vector3(-2.2, 6.9, 8.2);
+  private currentCamOffset = new THREE.Vector3(-2.2, 10.8, 9.2);
   private currentLookAt = new THREE.Vector3(0, 1.2, 0);
+  // Reused camera scratch vectors: avoid two Vector3 allocations on every frame.
+  private readonly cameraTargetPosition = new THREE.Vector3();
+  private readonly desiredLookAtPosition = new THREE.Vector3();
+  private cameraBossCheckCooldown = 0;
+  private cameraBossTargetZoom = 1.0;
+  private viewportAspect =
+    (window.visualViewport?.width || window.innerWidth) /
+    Math.max(1, window.visualViewport?.height || window.innerHeight);
+  private isHandheldViewport =
+    (window.visualViewport?.width || window.innerWidth) < 900 ||
+    ('ontouchstart' in window);
   private bossCamZoom = 1.0;
   private finishWarningTimer = 0;
   private dodgeCooldownTimer = 0;
@@ -836,10 +857,10 @@ export class MaxFlizGameEngine {
   /** Adjusts the global fill/rim balance when the player enters a new map zone. */
   private applySectorLighting(sector: number) {
     const profiles = {
-      1: { ambient: 0xd9e8ff, hemi: 0x9edcff, ground: 0x253044, rim: 0x62c6e8, fog: 0x091827, ambientPower: 0.92, hemiPower: 1.35, rimPower: 1.15 },
-      2: { ambient: 0xffead1, hemi: 0xffd7a1, ground: 0x38302a, rim: 0xffc078, fog: 0x211a18, ambientPower: 0.94, hemiPower: 1.30, rimPower: 1.35 },
-      3: { ambient: 0xcde9f2, hemi: 0x8bc8df, ground: 0x1c2d38, rim: 0x39b8c8, fog: 0x081a24, ambientPower: 0.88, hemiPower: 1.30, rimPower: 1.45 },
-      4: { ambient: 0xc2d8f2, hemi: 0x7db5de, ground: 0x111d2c, rim: 0x60a5fa, fog: 0x080f1c, ambientPower: 0.86, hemiPower: 1.22, rimPower: 1.30 },
+      1: { ambient: 0xdeefff, hemi: 0xb6e4ff, ground: 0x36475d, rim: 0x7dd3fc, fog: 0x15283a, ambientPower: 0.98, hemiPower: 1.40, rimPower: 1.25 },
+      2: { ambient: 0xfff0de, hemi: 0xffe3bd, ground: 0x514638, rim: 0xffd08a, fog: 0x302a26, ambientPower: 0.98, hemiPower: 1.36, rimPower: 1.35 },
+      3: { ambient: 0xddf5ff, hemi: 0xa2daef, ground: 0x314858, rim: 0x56d5e2, fog: 0x132e3a, ambientPower: 0.96, hemiPower: 1.38, rimPower: 1.40 },
+      4: { ambient: 0xdcebff, hemi: 0xa6cffd, ground: 0x2b3b54, rim: 0x7db7ff, fog: 0x15253c, ambientPower: 0.94, hemiPower: 1.32, rimPower: 1.35 },
     } as const;
     const profile = profiles[sector as keyof typeof profiles] || profiles[1];
     this.ambientLight.color.setHex(profile.ambient);
@@ -2144,18 +2165,23 @@ export class MaxFlizGameEngine {
       return;
     }
 
-    // Compact shoulder guards and a chest ID plate improve silhouette recognition without enlarging hitboxes.
+    // Rounded shoulder guards and a sculpted chest badge add depth without changing hitboxes.
     for (const side of [-1, 1]) {
-      const shoulder = new THREE.Mesh(new THREE.BoxGeometry(0.18 * scale, 0.13 * scale, 0.22 * scale), armorMat);
+      const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.13 * scale, 12, 8), armorMat);
+      shoulder.scale.set(1.42, 0.74, 1.0);
       shoulder.position.set(side * 0.235 * scale, 0.73 * scale, 0.015);
       shoulder.rotation.z = side * -0.12;
       shoulder.castShadow = false;
       root.add(shoulder);
     }
-    const chestPlate = new THREE.Mesh(new THREE.BoxGeometry(0.22 * scale, 0.18 * scale, 0.045 * scale), accentMat);
+    const chestPlate = new THREE.Mesh(new THREE.SphereGeometry(0.13 * scale, 14, 10), accentMat);
+    chestPlate.scale.set(1.28, 0.76, 0.34);
     chestPlate.position.set(0, 0.59 * scale, 0.155 * scale);
     chestPlate.castShadow = false;
-    root.add(chestPlate);
+    const chestStripe = new THREE.Mesh(new THREE.BoxGeometry(0.19 * scale, 0.025 * scale, 0.018 * scale), darkMat);
+    chestStripe.position.set(0, 0.60 * scale, 0.199 * scale);
+    chestStripe.castShadow = false;
+    root.add(chestPlate, chestStripe);
     const belt = new THREE.Mesh(new THREE.BoxGeometry(0.34 * scale, 0.075 * scale, 0.26 * scale), darkMat);
     belt.position.set(0, 0.34 * scale, 0);
     belt.castShadow = false;
@@ -2171,7 +2197,8 @@ export class MaxFlizGameEngine {
 
     // Role-specific silhouettes: readable at a distance without enlarging collision bodies.
     if (isBoss) {
-      const crest = new THREE.Mesh(new THREE.BoxGeometry(0.34 * scale, 0.12 * scale, 0.14 * scale), accentMat);
+      const crest = new THREE.Mesh(new THREE.SphereGeometry(0.18 * scale, 12, 8), accentMat);
+      crest.scale.set(1.65, 0.58, 0.72);
       crest.position.set(0, 1.16 * scale, 0.015);
       crest.castShadow = false;
       root.add(crest);
@@ -2214,15 +2241,24 @@ export class MaxFlizGameEngine {
     }
   }
 
-  // Soft, saturated low-poly shading gives the warehouse a readable storybook look
-  // without replacing the existing models, textures, animations or lighting setup.
+  // Retain a low-poly industrial look on hard edges, but do not facet the
+  // rounded faces, heads, limbs and equipment that define character silhouettes.
   private applyStorybookStyle(root: THREE.Object3D) {
     root.traverse((object) => {
       if (!(object instanceof THREE.Mesh)) return;
+      const geometry = object.geometry;
+      const isCurvedSurface =
+        geometry instanceof THREE.SphereGeometry ||
+        geometry instanceof THREE.CapsuleGeometry ||
+        geometry instanceof THREE.CylinderGeometry ||
+        geometry instanceof THREE.ConeGeometry ||
+        geometry instanceof THREE.TorusGeometry ||
+        geometry instanceof THREE.TorusKnotGeometry;
       const materials = Array.isArray(object.material) ? object.material : [object.material];
       for (const material of materials) {
         if (material instanceof THREE.MeshStandardMaterial || material instanceof THREE.MeshPhysicalMaterial) {
-          material.flatShading = true;
+          if (isCurvedSurface) material.userData.preserveSmoothShading = true;
+          material.flatShading = material.userData.preserveSmoothShading !== true;
           material.roughness = Math.max(material.roughness, 0.58);
           material.metalness = Math.min(material.metalness, 0.42);
           if (material.color) material.color.offsetHSL(0, 0.10, 0.015);
@@ -2464,21 +2500,28 @@ export class MaxFlizGameEngine {
   }
 
   public applyAutoCameraScaleForViewport() {
-    const w = window.innerWidth || 1280;
-    const h = window.innerHeight || 720;
-    const aspect = w / Math.max(1, h);
+    const w = Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth || 1280));
+    const h = Math.max(1, Math.round(window.visualViewport?.height || window.innerHeight || 720));
+    const aspect = w / h;
+    this.viewportAspect = aspect;
+    this.isHandheldViewport = w < 900 || ('ontouchstart' in window);
+
+    const targetFov = aspect < 0.65 ? 60 : aspect < 1.0 ? 54 : aspect < 1.35 ? 48 : 45;
+    if (this.camera instanceof THREE.PerspectiveCamera && Math.abs(this.camera.fov - targetFov) > 0.05) {
+      this.camera.fov = targetFov;
+      this.camera.updateProjectionMatrix();
+    }
+
+    // Portrait FOV is already wider vertically. A smaller distance multiplier
+    // keeps the operator readable instead of making the character tiny on phones.
     if (aspect < 0.65) {
-      // Tall portrait smartphone
-      this.camZoomFactor = 1.24;
+      this.camZoomFactor = 1.12;
     } else if (aspect < 1.0) {
-      // Standard portrait phone / tablet
-      this.camZoomFactor = 1.15;
+      this.camZoomFactor = 1.07;
     } else if (w < 920) {
-      // Mobile landscape
-      this.camZoomFactor = 1.02;
-    } else {
-      // Desktop / widescreen
       this.camZoomFactor = 1.0;
+    } else {
+      this.camZoomFactor = 0.98;
     }
   }
 
@@ -3480,6 +3523,48 @@ export class MaxFlizGameEngine {
   }
 
 
+  private addSectorFloorGuides(centerX: number, halfWidth: number, sector: 1 | 2 | 3) {
+    const transforms: Array<{ x: number; z: number; rotationY: number }> = [];
+
+    // Two broken longitudinal safety lines frame the combat lanes without
+    // cluttering the central route or adding physical collision geometry.
+    for (const z of [-6.2, 6.2]) {
+      for (let x = centerX - halfWidth + 3.2; x <= centerX + halfWidth - 3.2; x += 2.55) {
+        transforms.push({ x, z, rotationY: 0 });
+      }
+    }
+
+    // Short transverse aisle markings make sector entrances and transitions
+    // visible from the elevated camera angle.
+    for (const x of [centerX - halfWidth + 4.8, centerX + halfWidth - 4.8]) {
+      for (let z = -4.5; z <= 4.5; z += 1.5) {
+        transforms.push({ x, z, rotationY: Math.PI / 2 });
+      }
+    }
+
+    const guides = new THREE.InstancedMesh(
+      SECTOR_FLOOR_GUIDE_GEOMETRY,
+      SECTOR_FLOOR_GUIDE_MATERIALS[sector],
+      transforms.length
+    );
+    const dummy = new THREE.Object3D();
+    transforms.forEach((entry, index) => {
+      dummy.position.set(entry.x, 0.022, entry.z);
+      dummy.rotation.set(0, entry.rotationY, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      guides.setMatrixAt(index, dummy.matrix);
+    });
+    guides.instanceMatrix.setUsage(THREE.StaticDrawUsage);
+    guides.instanceMatrix.needsUpdate = true;
+    guides.castShadow = false;
+    guides.receiveShadow = false;
+    guides.frustumCulled = false;
+    guides.renderOrder = 1;
+    guides.name = `sector_${sector}_floor_guides`;
+    this.levelRoot.add(guides);
+  }
+
   private buildLevel1() {
     // 1. Expanded Warehouse Floor (72x40, x: -36 to +36, z: -20 to +20)
     const floorTex1 = getFloorTexture().clone();
@@ -3498,6 +3583,7 @@ export class MaxFlizGameEngine {
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     this.levelRoot.add(floor);
+    this.addSectorFloorGuides(0, 36, 1);
     this.platforms.push({ x: 0, y: 0, z: 0, width: 72, height: 0.2, depth: 40, type: 'floor' });
 
     // Back Wall pushed to z = -19.5 with industrial corrugated siding
@@ -3799,6 +3885,7 @@ export class MaxFlizGameEngine {
     floor.position.set(offsetX, 0, 0);
     floor.receiveShadow = true;
     this.levelRoot.add(floor);
+    this.addSectorFloorGuides(offsetX, 40, 2);
     this.platforms.push({ x: offsetX, y: 0, z: 0, width: 80, height: 0.2, depth: 42, type: 'floor' });
 
     // Architectural Natural Oak Slat Showroom Wall with LED Cove Lighting (Pushed back to z = -20.5)
@@ -4039,6 +4126,7 @@ export class MaxFlizGameEngine {
     floor.position.set(offsetX, 0, 0);
     floor.receiveShadow = true;
     this.levelRoot.add(floor);
+    this.addSectorFloorGuides(offsetX, 45, 3);
     this.platforms.push({ x: offsetX, y: 0, z: 0, width: 90, height: 0.2, depth: 44, type: 'floor' });
 
     // Terminal Back Wall (Pushed back to z = -21.5)
@@ -9147,8 +9235,9 @@ export class MaxFlizGameEngine {
   }
 
   private updateCamera(dt: number) {
+    const now = performance.now();
     if (this.state === 'title') {
-      const t = performance.now() * 0.0006;
+      const t = now * 0.0006;
       const radius = 4.5;
       const height = 1.8 + Math.sin(t * 0.8) * 0.35;
       const px = this.playerPos.x;
@@ -9167,8 +9256,10 @@ export class MaxFlizGameEngine {
     }
 
     // Determine target positions with smooth velocity look-ahead
-    const velLookAheadX = THREE.MathUtils.clamp(this.playerVel.x * 0.18, -2.5, 2.5);
-    const velLookAheadZ = THREE.MathUtils.clamp(this.playerVel.z * 0.18, -2.5, 2.5);
+    const lookAheadFactor = this.isHandheldViewport ? 0.11 : 0.14;
+    const lookAheadLimit = this.isHandheldViewport ? 1.7 : 2.1;
+    const velLookAheadX = THREE.MathUtils.clamp(this.playerVel.x * lookAheadFactor, -lookAheadLimit, lookAheadLimit);
+    const velLookAheadZ = THREE.MathUtils.clamp(this.playerVel.z * lookAheadFactor, -lookAheadLimit, lookAheadLimit);
     const targetX = this.playerPos.x + velLookAheadX;
     const targetZ = this.playerPos.z + velLookAheadZ;
 
@@ -9177,16 +9268,22 @@ export class MaxFlizGameEngine {
     this.smoothCamY = THREE.MathUtils.damp(this.smoothCamY, targetGroundY, this.isGrounded ? 8.0 : 2.4, dt);
     const targetY = this.smoothCamY;
 
-    // Check if an active boss is nearby to dynamically pull camera out slightly for tactical awareness
-    const activeBoss = this.enemies.find((e) => (e.type === 'walczak' || e.type === 'krol_leto') && e.state !== 'defeated');
-    let targetBossZoom = 1.0;
-    if (activeBoss) {
-      const bossDist = Math.hypot(activeBoss.x - this.playerPos.x, activeBoss.z - this.playerPos.z);
-      if (bossDist < 20) {
-        targetBossZoom = 1.18;
+    // Boss proximity does not need a full enemy-array scan every rendered frame.
+    // Refresh it at 5 Hz and smoothly interpolate the resulting camera pull-back.
+    this.cameraBossCheckCooldown -= dt;
+    if (this.cameraBossCheckCooldown <= 0) {
+      this.cameraBossTargetZoom = 1.0;
+      for (const enemy of this.enemies) {
+        if ((enemy.type !== 'walczak' && enemy.type !== 'krol_leto') || enemy.state === 'defeated') continue;
+        const bossDist = Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z);
+        if (bossDist < 22) {
+          this.cameraBossTargetZoom = 1.14;
+          break;
+        }
       }
+      this.cameraBossCheckCooldown = 0.2;
     }
-    this.bossCamZoom = THREE.MathUtils.damp(this.bossCamZoom, targetBossZoom, 2.5, dt);
+    this.bossCamZoom = THREE.MathUtils.damp(this.bossCamZoom, this.cameraBossTargetZoom, 2.8, dt);
 
     // Target offsets for camera modes:
     // 'tpp' (Default): Podwyższony widok taktyczny (~45° widok z góry i zza pleców w stylu Hades / Brawl Stars)
@@ -9212,13 +9309,13 @@ export class MaxFlizGameEngine {
     const targetOffsetZ = baseOffsetZ * zoomMultiplier;
 
     // Smoothly interpolate camera offset between modes
-    this.currentCamOffset.x = THREE.MathUtils.damp(this.currentCamOffset.x, targetOffsetX, 5.2, dt);
-    this.currentCamOffset.y = THREE.MathUtils.damp(this.currentCamOffset.y, targetOffsetY, 5.2, dt);
-    this.currentCamOffset.z = THREE.MathUtils.damp(this.currentCamOffset.z, targetOffsetZ, 5.2, dt);
+    this.currentCamOffset.x = THREE.MathUtils.damp(this.currentCamOffset.x, targetOffsetX, 4.6, dt);
+    this.currentCamOffset.y = THREE.MathUtils.damp(this.currentCamOffset.y, targetOffsetY, 4.6, dt);
+    this.currentCamOffset.z = THREE.MathUtils.damp(this.currentCamOffset.z, targetOffsetZ, 4.6, dt);
 
     // Responsive FOV based on screen aspect ratio (mobile portrait vs landscape vs desktop)
     if (this.camera instanceof THREE.PerspectiveCamera) {
-      const aspect = (window.innerWidth || 1280) / Math.max(1, window.innerHeight || 720);
+      const aspect = this.viewportAspect;
       const baseFov = this.gameMode === 'survival'
         ? (aspect < 0.65 ? 58 : aspect < 1.0 ? 54 : aspect < 1.35 ? 48 : 45)
         : (aspect < 0.65 ? 60 : aspect < 1.0 ? 54 : aspect < 1.35 ? 48 : 45);
@@ -9228,7 +9325,7 @@ export class MaxFlizGameEngine {
       }
     }
 
-    const camTarget = new THREE.Vector3(
+    const camTarget = this.cameraTargetPosition.set(
       targetX + this.currentCamOffset.x,
       targetY + this.currentCamOffset.y,
       targetZ + this.currentCamOffset.z
@@ -9237,46 +9334,24 @@ export class MaxFlizGameEngine {
     let shakeX = 0;
     let shakeY = 0;
     let shakeZ = 0;
-    const isMobileDevice = window.innerWidth < 900 || ('ontouchstart' in window);
+    const isMobileDevice = this.isHandheldViewport;
+    const shakePhase = now * 0.032;
 
     if (this.screenShakeTimer > 0) {
       this.screenShakeTimer -= dt;
       const progress = Math.max(0, this.screenShakeTimer / Math.max(0.001, this.screenShakeDuration));
-      // Calibrated shake: reduced by 65% to prevent disorientation while keeping impact feel
-      const currentIntensity = this.screenShakeIntensity * Math.pow(progress, 1.2) * 0.35;
+      // Smooth camera-space impact pulse: no random per-frame jitter and no DOM transform.
+      const currentIntensity = this.screenShakeIntensity * Math.pow(progress, 1.2) * 0.30;
+      shakeX = Math.sin(shakePhase * 1.07) * currentIntensity * 0.52;
+      shakeY = Math.cos(shakePhase * 1.31) * currentIntensity * 0.34;
+      shakeZ = Math.sin(shakePhase * 0.79) * currentIntensity * 0.18;
 
-      shakeX = (Math.random() - 0.5) * currentIntensity * 1.5;
-      shakeY = (Math.random() - 0.5) * currentIntensity * 1.5;
-      shakeZ = (Math.random() - 0.5) * currentIntensity * 1.5;
-
-      // DOM container shake transform (disabled on mobile to avoid costly browser layout reflows)
-      if (this.container && !isMobileDevice) {
-        const domPxX = (Math.random() - 0.5) * currentIntensity * 10;
-        const domPxY = (Math.random() - 0.5) * currentIntensity * 10;
-        const domDeg = (Math.random() - 0.5) * currentIntensity * 1.2;
-        this.container.style.transform = `translate3d(${domPxX.toFixed(1)}px, ${domPxY.toFixed(1)}px, 0px) rotate(${domDeg.toFixed(2)}deg)`;
-      } else if (this.container && isMobileDevice && this.container.style.transform !== '') {
-        this.container.style.transform = '';
-      }
-
-      if (this.screenShakeTimer <= 0) {
-        this.screenShakeIntensity = 0;
-        if (this.container) {
-          this.container.style.transform = '';
-        }
-      }
+      if (this.screenShakeTimer <= 0) this.screenShakeIntensity = 0;
     } else if (this.cameraShake > 0) {
-      shakeX = (Math.random() - 0.5) * this.cameraShake * 0.4;
-      shakeY = (Math.random() - 0.5) * this.cameraShake * 0.4;
-      shakeZ = (Math.random() - 0.5) * this.cameraShake * 0.4;
+      shakeX = Math.sin(shakePhase * 0.91) * this.cameraShake * 0.20;
+      shakeY = Math.cos(shakePhase * 1.17) * this.cameraShake * 0.16;
+      shakeZ = Math.sin(shakePhase * 0.73) * this.cameraShake * 0.08;
       this.cameraShake = Math.max(0, this.cameraShake - dt * 2.5);
-      if (this.container && this.container.style.transform !== '') {
-        this.container.style.transform = '';
-      }
-    } else {
-      if (this.container && this.container.style.transform !== '') {
-        this.container.style.transform = '';
-      }
     }
 
     camTarget.x += shakeX;
@@ -9289,10 +9364,9 @@ export class MaxFlizGameEngine {
       this.gameMode !== 'survival' && !isMobileDevice;
     // Frame-rate independent camera follow. The previous linear lerp was tied to FPS:
     // on a 60/90/120 Hz phone it produced different response and visible judder.
-    const isHandheldViewport = window.innerWidth < 900 || ('ontouchstart' in window);
     const positionDamping = this.gameMode === 'survival'
-      ? (isHandheldViewport ? 8.8 : 7.8)
-      : (isHandheldViewport ? 9.2 : 8.2);
+      ? (this.isHandheldViewport ? 7.8 : 7.2)
+      : (this.isHandheldViewport ? 8.4 : 7.7);
     this.camera.position.x = THREE.MathUtils.damp(this.camera.position.x, camTarget.x, positionDamping, dt);
     this.camera.position.y = THREE.MathUtils.damp(this.camera.position.y, camTarget.y, positionDamping, dt);
     this.camera.position.z = THREE.MathUtils.damp(this.camera.position.z, camTarget.z, positionDamping, dt);
@@ -9302,12 +9376,12 @@ export class MaxFlizGameEngine {
     const lookAheadY = this.cameraMode === 'tpp' ? 0.7 : this.cameraMode === 'close' ? 1.1 : 0.5;
     const lookAheadZ = this.cameraMode === 'tpp' ? 0.0 : this.cameraMode === 'close' ? -0.5 : 0.0;
 
-    const desiredLookAt = new THREE.Vector3(
+    const desiredLookAt = this.desiredLookAtPosition.set(
       this.playerPos.x + lookAheadX + velLookAheadX * 0.45 + shakeX * 0.3,
       this.smoothCamY + lookAheadY + shakeY * 0.3,
       this.playerPos.z + lookAheadZ + velLookAheadZ * 0.45 + shakeZ * 0.3
     );
-    const lookDamping = isHandheldViewport ? 9.6 : 8.8;
+    const lookDamping = this.isHandheldViewport ? 9.2 : 8.6;
     this.currentLookAt.x = THREE.MathUtils.damp(this.currentLookAt.x, desiredLookAt.x, lookDamping, dt);
     this.currentLookAt.y = THREE.MathUtils.damp(this.currentLookAt.y, desiredLookAt.y, lookDamping, dt);
     this.currentLookAt.z = THREE.MathUtils.damp(this.currentLookAt.z, desiredLookAt.z, lookDamping, dt);
@@ -9321,11 +9395,14 @@ export class MaxFlizGameEngine {
 
     // Dynamic Shader Uniform Updates for Depth of Field and Stencil Outline
     if (this.dofBlurMaterial) {
-      this.dofBlurMaterial.uniforms.uTime.value = performance.now() * 0.001;
-      this.dofBlurMaterial.uniforms.uScreenSize.value.set(window.innerWidth || 1280, window.innerHeight || 720);
+      this.dofBlurMaterial.uniforms.uTime.value = now * 0.001;
+      this.dofBlurMaterial.uniforms.uScreenSize.value.set(
+        window.visualViewport?.width || window.innerWidth || 1280,
+        window.visualViewport?.height || window.innerHeight || 720
+      );
     }
     if (this.outlineMaterial) {
-      this.outlineMaterial.uniforms.uTime.value = performance.now() * 0.001;
+      this.outlineMaterial.uniforms.uTime.value = now * 0.001;
       if ((this.activePerks.kfcBerserk || 0) > 0) {
         this.outlineMaterial.uniforms.uColor.value.setHex(0xef4444);
       } else if ((this.activePerks.bulldozer || 0) > 0) {
