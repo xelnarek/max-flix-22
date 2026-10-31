@@ -1110,94 +1110,100 @@ export function createCharacterModel(def: CharacterDef): {
 
   group.add(leftArm, rightArm);
 
-  // 5. Unique Hero Signature Prop
+  // 5. Unique signature equipment: the five operators should be readable at a glance.
   const accessory = new THREE.Group();
   if (def.id === 'marcin') {
-    // Official WZ delivery clipboard & tablet
-    const board = new THREE.Mesh(
-      new THREE.BoxGeometry(0.2, 0.28, 0.02),
-      new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.7 })
+    // Optima spell-console: a compact company-software tablet with a glowing work-order screen.
+    const consoleBody = new THREE.Mesh(
+      new THREE.BoxGeometry(0.32, 0.23, 0.055),
+      new THREE.MeshStandardMaterial({ color: 0x172554, metalness: 0.55, roughness: 0.3 })
     );
-    const paper = new THREE.Mesh(
-      new THREE.BoxGeometry(0.17, 0.24, 0.022),
-      new THREE.MeshBasicMaterial({ color: 0xffffff })
+    const screenCanvas = document.createElement('canvas');
+    screenCanvas.width = 256; screenCanvas.height = 160;
+    const screenCtx = screenCanvas.getContext('2d')!;
+    screenCtx.fillStyle = '#071426'; screenCtx.fillRect(0, 0, 256, 160);
+    screenCtx.fillStyle = '#38bdf8'; screenCtx.font = '900 34px sans-serif';
+    screenCtx.fillText('OPTIMA', 18, 54);
+    screenCtx.fillStyle = '#86efac'; screenCtx.font = '700 22px monospace';
+    screenCtx.fillText('WZ  ✓  404', 18, 96);
+    screenCtx.fillStyle = '#fbbf24'; screenCtx.fillRect(18, 118, 184, 8);
+    const screenTexture = new THREE.CanvasTexture(screenCanvas);
+    screenTexture.colorSpace = THREE.SRGBColorSpace;
+    const screen = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.285, 0.18),
+      new THREE.MeshBasicMaterial({ map: screenTexture })
     );
-    const goldClip = new THREE.Mesh(
-      new THREE.BoxGeometry(0.08, 0.04, 0.03),
-      new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.9 })
-    );
-    goldClip.position.y = 0.12;
-    board.add(paper, goldClip);
-    accessory.add(board);
-    accessory.position.set(0.26, 0.52, 0.16);
-    accessory.rotation.x = 0.45;
+    screen.position.z = 0.031;
+    consoleBody.add(screen);
+    accessory.add(consoleBody);
+    accessory.position.set(0.25, 0.53, 0.17);
+    accessory.rotation.x = 0.42;
   } else if (def.id === 'grzesiek') {
-    // Pallet jack tiller handle with wheels
-    const tiller = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.02, 0.02, 0.42),
-      new THREE.MeshStandardMaterial({ color: 0xdc2626, metalness: 0.7 })
-    );
-    const tBar = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.02, 0.02, 0.22),
-      new THREE.MeshStandardMaterial({ color: 0x111827 })
-    );
-    tBar.rotation.z = Math.PI / 2;
-    tBar.position.y = 0.2;
-    tiller.add(tBar);
-    accessory.add(tiller);
-    accessory.position.set(0.28, 0.48, 0.14);
-    accessory.rotation.x = 0.5;
+    // Heavy dumbbell: two dark steel plates joined by a thick grip.
+    const steel = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.86, roughness: 0.22 });
+    const green = new THREE.MeshStandardMaterial({ color: 0x22c55e, metalness: 0.45, roughness: 0.3 });
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.66, 10), steel);
+    bar.rotation.x = Math.PI / 2;
+    accessory.add(bar);
+    [-0.31, 0.31].forEach((z) => {
+      const weight = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.16, 12), steel);
+      weight.rotation.x = Math.PI / 2;
+      weight.position.z = z;
+      accessory.add(weight);
+      const collar = new THREE.Mesh(new THREE.TorusGeometry(0.105, 0.018, 6, 12), green);
+      collar.position.z = z > 0 ? z - 0.085 : z + 0.085;
+      accessory.add(collar);
+    });
+    accessory.position.set(0.27, 0.50, 0.18);
+    accessory.rotation.x = 0.38;
   } else if (def.id === 'dawid') {
-    // Giant Calacatta gold slab held upright
-    const tile = new THREE.Mesh(
-      new THREE.BoxGeometry(0.38, 0.54, 0.035),
-      new THREE.MeshStandardMaterial({
-        map: getMarbleTexture('calacatta'),
-        roughness: 0.1,
-        metalness: 0.1,
-      })
-    );
-    accessory.add(tile);
-    accessory.position.set(0, 0.58, 0.25);
-    accessory.rotation.x = -0.15;
+    // A clearly visible roll of stretch film, with a dark cardboard core and glossy wrapping.
+    const film = new THREE.MeshStandardMaterial({ color: 0xdbeafe, roughness: 0.13, metalness: 0.12, transparent: true, opacity: 0.78 });
+    const core = new THREE.MeshStandardMaterial({ color: 0x374151, roughness: 0.85 });
+    const roll = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.42, 16), film);
+    const innerCore = new THREE.Mesh(new THREE.CylinderGeometry(0.047, 0.047, 0.44, 12), core);
+    roll.add(innerCore);
+    accessory.add(roll);
+    [-0.19, 0.19].forEach((y) => {
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.012, 6, 16), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.18, metalness: 0.2 }));
+      rim.rotation.x = Math.PI / 2;
+      rim.position.y = y;
+      accessory.add(rim);
+    });
+    accessory.position.set(0.28, 0.51, 0.17);
+    accessory.rotation.x = 0.25;
   } else if (def.id === 'mateusz') {
-    // Mateusz steaming ceramic espresso mug
-    const mug = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.07, 0.06, 0.14, 16),
-      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 })
-    );
-    const coffeeInside = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.06, 0.06, 0.02, 16),
-      new THREE.MeshBasicMaterial({ color: 0x2b1406 })
-    );
-    coffeeInside.position.y = 0.06;
-    mug.add(coffeeInside);
-    accessory.add(mug);
-    accessory.position.set(0.26, 0.5, 0.18);
+    // Compact two-prong stun gun with a bright electric contact.
+    const gunBody = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.12, 0.31), new THREE.MeshStandardMaterial({ color: 0x7c3aed, metalness: 0.55, roughness: 0.28 }));
+    const grip = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.2, 0.12), new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.7 }));
+    grip.position.set(0, -0.13, -0.04);
+    const emitter = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.06, 0.08), new THREE.MeshBasicMaterial({ color: 0x67e8f9 }));
+    emitter.position.set(0, 0.025, 0.18);
+    gunBody.add(grip, emitter);
+    [-0.065, 0.065].forEach((x) => {
+      const prong = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.02, 0.16, 6), new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.85 }));
+      prong.position.set(x, 0.02, 0.27);
+      prong.rotation.x = Math.PI / 2;
+      gunBody.add(prong);
+    });
+    accessory.add(gunBody);
+    accessory.position.set(0.28, 0.51, 0.18);
+    accessory.rotation.x = 0.18;
   } else {
-    // Piotr Signature Precision Laser Level (Laserowa Poziomica Cyfrowa)
-    const levelBody = new THREE.Mesh(
-      new THREE.BoxGeometry(0.44, 0.08, 0.07),
-      new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.8, roughness: 0.2 })
-    );
-    // Spirit level vial window in center
-    const vial = new THREE.Mesh(
-      new THREE.BoxGeometry(0.12, 0.04, 0.075),
-      new THREE.MeshBasicMaterial({ color: 0x84cc16 })
-    );
-    levelBody.add(vial);
-    // Front laser diode emitter
-    const laserDiode = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.015, 0.015, 0.03, 8),
-      new THREE.MeshBasicMaterial({ color: 0xff0000 })
-    );
-    laserDiode.rotation.z = Math.PI / 2;
-    laserDiode.position.set(0.23, 0, 0);
-    levelBody.add(laserDiode);
-    accessory.add(levelBody);
-    accessory.position.set(0.28, 0.52, 0.18);
-    accessory.rotation.y = 0.2;
-    accessory.rotation.x = 0.3;
+    // Piotr's compact BB pistol: metallic barrel, trigger grip and a red laser diode.
+    const pistolMat = new THREE.MeshStandardMaterial({ color: 0x374151, metalness: 0.86, roughness: 0.22 });
+    const slide = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.105, 0.34), pistolMat);
+    const grip = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.21, 0.14), new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.78 }));
+    grip.position.set(0, -0.14, -0.06);
+    const muzzle = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.08, 10), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+    muzzle.rotation.x = Math.PI / 2;
+    muzzle.position.z = 0.205;
+    const laserDot = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff1744 }));
+    laserDot.position.set(0, 0.025, 0.18);
+    slide.add(grip, muzzle, laserDot);
+    accessory.add(slide);
+    accessory.position.set(0.28, 0.51, 0.18);
+    accessory.rotation.x = 0.18;
   }
   group.add(accessory);
 
@@ -1229,6 +1235,8 @@ export function createCharacterModel(def: CharacterDef): {
   shadow.position.y = 0.015;
   group.add(shadow);
 
+  // Slightly larger operator silhouette; gameplay hitboxes remain unchanged.
+  group.scale.setScalar(1.08);
   return { group, leftLeg, rightLeg, leftArm, rightArm, head, body, accessory, shadow };
 }
 
@@ -4577,6 +4585,57 @@ export function createGlueSpillTrapModel(radius = 2.2): THREE.Group {
     group.add(b);
   }
 
+  return group;
+}
+
+/**
+ * Wet concrete spill: a visible cement puddle and overturned bucket, used as a temporary Survival hazard.
+ * Kept intentionally low-poly to avoid adding a costly effect to a crowded mobile scene.
+ */
+export function createCementSpillTrapModel(radius = 2.35): THREE.Group {
+  const group = new THREE.Group();
+  group.name = 'trap_cement_spill';
+
+  const cementMat = new THREE.MeshStandardMaterial({
+    color: 0x737b82,
+    roughness: 0.82,
+    metalness: 0.02,
+    transparent: true,
+    opacity: 0.94,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
+  });
+  const puddle = new THREE.Mesh(
+    new THREE.CylinderGeometry(radius, radius * 1.02, 0.035, 24),
+    cementMat
+  );
+  puddle.position.y = 0.025;
+  group.add(puddle);
+
+  const bucketMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.42, metalness: 0.12 });
+  const bucket = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.17, 0.38, 12), bucketMat);
+  bucket.rotation.z = Math.PI / 2.35;
+  bucket.position.set(-radius * 0.48, 0.17, -0.18);
+  bucket.castShadow = true;
+  group.add(bucket);
+
+  const rim = new THREE.Mesh(
+    new THREE.TorusGeometry(0.195, 0.018, 6, 14),
+    new THREE.MeshStandardMaterial({ color: 0xd1d5db, metalness: 0.35, roughness: 0.6 })
+  );
+  rim.rotation.z = Math.PI / 2.35;
+  rim.position.copy(bucket.position);
+  group.add(rim);
+
+  const lumpMat = new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.9 });
+  for (let i = 0; i < 5; i++) {
+    const angle = (i / 5) * Math.PI * 2;
+    const lump = new THREE.Mesh(new THREE.IcosahedronGeometry(0.11 + (i % 2) * 0.035, 0), lumpMat);
+    lump.position.set(Math.cos(angle) * radius * (0.25 + (i % 2) * 0.12), 0.055, Math.sin(angle) * radius * 0.26);
+    lump.scale.y = 0.45;
+    group.add(lump);
+  }
   return group;
 }
 
