@@ -1156,6 +1156,7 @@ export class MaxFlizGameEngine {
     this.survivalSurgeDirection = 0;
     this.survivalNextSurgeAt = 90;
     this.survivalSurgeSpawned = 0;
+    this.survivalSurgeTargetCount = 0;
     this.survivalMiniBossSpawned = false;
     this.survivalPhaseTwoAnnounced = false;
     this.survivalAuditorAuraCooldown = 0;
@@ -7169,9 +7170,11 @@ export class MaxFlizGameEngine {
 
       // SIGHT & DETECTION LOGIC
       const threatAwareness = 1 + this.threatTier * 0.025;
-      const detectionRange = (e.type === 'walczak' || e.type === 'krol_leto')
-        ? 16.0
-        : (e.state === 'chase' ? 12.0 : 8.5) * threatAwareness;
+      const detectionRange = e.surgeRunner
+        ? 40.0
+        : (e.type === 'walczak' || e.type === 'krol_leto')
+          ? 16.0
+          : (e.state === 'chase' ? 12.0 : 8.5) * threatAwareness;
       const canSeePlayer = distToPlayer < detectionRange && canActivelyChase;
 
       if (canSeePlayer) {
@@ -10069,7 +10072,6 @@ export class MaxFlizGameEngine {
           steam_faucet: '#67e8f9',
           falling_lamp: '#fda4af',
           conveyor: '#94a3b8',
-          glue_spill: '#a3e635',
           cement_spill: '#cbd5e1',
           laser_cutter: '#fb7185',
           steam_geyser: '#67e8f9',
