@@ -2095,7 +2095,13 @@ export class MaxFlizGameEngine {
       this.disposePomazaniecObject(this.survivalPomazaniecMarker);
       this.survivalPomazaniecMarker = null;
     }
+    for (const hazard of this.hazards) {
+      if ((hazard.type === 'stretch_barrier' || hazard.type === 'roller_gate') && hazard.mesh) {
+        this.disposeTemporaryObject(hazard.mesh);
+      }
+    }
     this.clearSurvivalSurgeRing();
+    this.survivalSurgeTargetCount = 0;
     this.disposeSurvivalArenaInstances();
     while (this.levelRoot.children.length > 0) {
       this.levelRoot.remove(this.levelRoot.children[0]);
@@ -4980,6 +4986,7 @@ export class MaxFlizGameEngine {
         enemy.type !== 'krol_leto' &&
         enemy.type !== 'bosman_krakow' &&
         enemy.type !== 'pomazaniec' &&
+        enemy.type !== 'piorun_dron' &&
         enemy.type !== 'sebix_m'
       )
       .sort((a, b) => {
