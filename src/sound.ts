@@ -8,6 +8,9 @@ class SoundEngine {
   private musicInterval: number | null = null;
   private musicStep: number = 0;
   private musicPlaying: boolean = false;
+  private musicRequested: boolean = false;
+  private musicGain: GainNode | null = null;
+  private lastAttackWhooshAt = -Infinity;
 
   constructor() {}
 
@@ -25,7 +28,12 @@ class SoundEngine {
 
   public toggleMute(): boolean {
     this.isMuted = !this.isMuted;
-    this.stopMusic();
+    if (this.isMuted) {
+      // Preserve the user's current music preference while silencing all audio.
+      this.stopMusic(false);
+    } else if (this.musicRequested) {
+      this.startMusic();
+    }
     return this.isMuted;
   }
 
@@ -430,17 +438,97 @@ class SoundEngine {
     });
   }
 
+  /**
+   * A quiet, original industrial synth loop. It is generated locally with Web Audio,
+   * so the game needs no downloaded music assets and works offline.
+   */
   public startMusic() {
-    this.musicPlaying = false;
-    this.stopMusic();
+    this.musicRequested = true;
+    if (this.isMuted || this.musicPlaying) return;
+    this.initCtx();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    this.musicGain = this.ctx.createGain();
+    this.musicGain.gain.setValueAtTime(0.001, now);
+    this.musicGain.gain.exponentialRampToValueAtTime(0.34, now + 0.8);
+    this.musicGain.connect(this.ctx.destination);
+    this.musicStep = 0;
+    this.musicPlaying = true;
+    this.playMusicStep();
+    this.musicInterval = window.setInterval(() => this.playMusicStep(), 310);
   }
 
-  public stopMusic() {
+  private playMusicStep() {
+    if (!this.ctx || !this.musicGain || !this.musicPlaying || this.isMuted) return;
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const step = this.musicStep;
+    this.musicStep = (this.musicStep + 1) % 16;
+
+    // Slow minor-key bass motif with restrained metallic accents.
+    const bassline = [55, 0, 55, 0, 65.41, 0, 73.42, 0, 49, 0, 49, 0, 58.27, 0, 65.41, 0];
+    const bassFrequency = bassline[step];
+    if (bassFrequency > 0) {
+      const oscillator = ctx.createOscillator();
+      const envelope = ctx.createGain();
+      oscillator.type = 'triangle';
+      oscillator.frequency.setValueAtTime(bassFrequency, now);
+      envelope.gain.setValueAtTime(0.12, now);
+      envelope.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      oscillator.connect(envelope);
+      envelope.connect(this.musicGain);
+      oscillator.start(now);
+      oscillator.stop(now + 0.27);
+    }
+
+    // Soft industrial kick on each second beat; deliberately low in the mix.
+    if (step % 4 === 0) {
+      const kick = ctx.createOscillator();
+      const kickGain = ctx.createGain();
+      kick.type = 'sine';
+      kick.frequency.setValueAtTime(82, now);
+      kick.frequency.exponentialRampToValueAtTime(38, now + 0.16);
+      kickGain.gain.setValueAtTime(0.16, now);
+      kickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.17);
+      kick.connect(kickGain);
+      kickGain.connect(this.musicGain);
+      kick.start(now);
+      kick.stop(now + 0.18);
+    }
+
+    // A short, distant metal chime gives the loop progression without crowding SFX.
+    if (step === 6 || step === 14) {
+      const chime = ctx.createOscillator();
+      const chimeGain = ctx.createGain();
+      chime.type = 'sine';
+      chime.frequency.setValueAtTime(step === 6 ? 392 : 440, now);
+      chimeGain.gain.setValueAtTime(0.045, now);
+      chimeGain.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
+      chime.connect(chimeGain);
+      chimeGain.connect(this.musicGain);
+      chime.start(now);
+      chime.stop(now + 0.44);
+    }
+  }
+
+  public stopMusic(clearPreference = true) {
+    if (clearPreference) this.musicRequested = false;
     if (this.musicInterval !== null) {
-      clearInterval(this.musicInterval);
+      window.clearInterval(this.musicInterval);
       this.musicInterval = null;
     }
     this.musicPlaying = false;
+    this.musicStep = 0;
+
+    const gain = this.musicGain;
+    this.musicGain = null;
+    if (gain && this.ctx) {
+      const now = this.ctx.currentTime;
+      gain.gain.cancelScheduledValues(now);
+      gain.gain.setTargetAtTime(0.0001, now, 0.035);
+      window.setTimeout(() => gain.disconnect(), 240);
+    }
   }
 
   public playPerkPickup() {
@@ -541,17 +629,20 @@ class SoundEngine {
     this.initCtx();
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
+    // Several weapons can fire in the same frame; avoid a harsh stack of identical whooshes.
+    if (t - this.lastAttackWhooshAt < 0.13) return;
+    this.lastAttackWhooshAt = t;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(400, t);
-    osc.frequency.exponentialRampToValueAtTime(80, t + 0.12);
-    gain.gain.setValueAtTime(0.35, t);
-    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.12);
+    osc.frequency.setValueAtTime(340, t);
+    osc.frequency.exponentialRampToValueAtTime(95, t + 0.14);
+    gain.gain.setValueAtTime(0.16, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
     osc.connect(gain);
     gain.connect(this.ctx.destination);
     osc.start(t);
-    osc.stop(t + 0.13);
+    osc.stop(t + 0.15);
   }
 
   public playSmack() {
@@ -795,6 +886,40 @@ class SoundEngine {
 
     osc.start(t);
     osc.stop(t + 0.53);
+  }
+
+  public playBossWarning() {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+
+    // Two descending industrial alarm pulses followed by a restrained low impact.
+    [0, 0.34].forEach((offset, index) => {
+      const alarm = this.ctx!.createOscillator();
+      const envelope = this.ctx!.createGain();
+      alarm.type = 'sawtooth';
+      alarm.frequency.setValueAtTime(index === 0 ? 620 : 520, t + offset);
+      alarm.frequency.linearRampToValueAtTime(index === 0 ? 420 : 350, t + offset + 0.28);
+      envelope.gain.setValueAtTime(0.13, t + offset);
+      envelope.gain.exponentialRampToValueAtTime(0.001, t + offset + 0.3);
+      alarm.connect(envelope);
+      envelope.connect(this.ctx!.destination);
+      alarm.start(t + offset);
+      alarm.stop(t + offset + 0.31);
+    });
+
+    const impact = this.ctx.createOscillator();
+    const impactGain = this.ctx.createGain();
+    impact.type = 'sine';
+    impact.frequency.setValueAtTime(76, t + 0.68);
+    impact.frequency.exponentialRampToValueAtTime(34, t + 0.95);
+    impactGain.gain.setValueAtTime(0.2, t + 0.68);
+    impactGain.gain.exponentialRampToValueAtTime(0.001, t + 0.97);
+    impact.connect(impactGain);
+    impactGain.connect(this.ctx.destination);
+    impact.start(t + 0.68);
+    impact.stop(t + 0.98);
   }
 
   public playEvilLaugh() {
