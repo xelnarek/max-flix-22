@@ -128,13 +128,25 @@ test('camera fades only tagged perimeter walls that intersect the camera-to-play
   assert.ok((game.match(/this\.registerCameraOccluder\(backWall\)/g) || []).length >= 3);
 });
 
-test('touch Survival HUD prioritizes playfield and removes the mobile zoom rail', async () => {
-  const css = await read('../src/index.css');
+test('touch Survival HUD wins the final CSS cascade and keeps the camera rail off the playfield', async () => {
+  const [css, finalHudCss, html] = await Promise.all([
+    read('../src/index.css'), read('../src/hud-layout.css'), read('../index.html')
+  ]);
   assert.match(css, /Compact Survival HUD: keep the actual arena visible/);
   assert.match(css, /width: min\(248px, calc\(100vw - 138px\)\)/);
   assert.match(css, /\.survival-weapon-rack,[\s\S]*?display: none !important/);
-  assert.match(css, /\.cam-zoom-slider-container\s*\{\s*display: none !important/);
   assert.match(css, /top: calc\(98px \+ env\(safe-area-inset-top\)\)/);
+  assert.match(finalHudCss, /Final Survival mobile HUD owner/);
+  assert.match(finalHudCss, /#game-shell\.survival-mode \.survival-hud\s*\{[\s\S]*?right: max\(8px, env\(safe-area-inset-right\)\) !important/);
+  assert.match(finalHudCss, /#game-shell\.survival-mode #hud-top \.cam-zoom-slider-container\s*\{\s*display: none !important/);
+  assert.ok(html.indexOf('visual-polish.css') < html.indexOf('hud-layout.css'), 'final touch HUD override must load after legacy visual-polish rules');
+});
+
+test('Survival menu copy stays synchronized with the actual 60-second wave clock', async () => {
+  const [game, html] = await Promise.all([read('../src/game.ts'), read('../index.html')]);
+  assert.match(game, /const nextWave = 1 \+ Math\.floor\(this\.survivalElapsed \/ 60\)/);
+  assert.match(html, /AUTO-ATAK • FALE CO 60 S/);
+  assert.doesNotMatch(html, /FALE CO 42 S/);
 });
 
 test('pixel intro has a single mobile-safe launch path and cannot start twice from touch plus synthetic click', async () => {
