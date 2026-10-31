@@ -2911,6 +2911,8 @@ export class MaxFlizGameEngine {
       const mesh=object as THREE.Mesh;
       if(mesh.isMesh){mesh.castShadow=true;mesh.receiveShadow=false;}
     });
+    // Bring his silhouette in line with the normal human-sized warehouse enemies.
+    group.scale.setScalar(0.88);
     return {group,legL,legR,armL,armR};
   }
 
