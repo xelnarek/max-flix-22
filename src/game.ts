@@ -95,7 +95,7 @@ export interface SurvivalUpgradeOption {
   description: string;
 }
 
-export type SurvivalWeaponId = 'pallet_cannon' | 'diamond_saw' | 'glue_mine' | 'kfc_bomber' | 'piorun_drone' | 'forklift_bolter' | 'scanner_pulse' | 'orbit_blades';
+export type SurvivalWeaponId = 'pallet_cannon' | 'diamond_saw' | 'glue_mine' | 'kfc_bomber' | 'piorun_drone' | 'forklift_bolter' | 'scanner_pulse' | 'orbit_blades' | 'calacatta_shards' | 'steam_bomb' | 'forklift_horn' | 'wz_boomerang';
 export interface SurvivalWeaponState { id: SurvivalWeaponId; level: number; cooldown: number; evolved?: boolean; }
 type SurvivalPassiveId = 'damage' | 'rapid' | 'boots' | 'magnet' | 'reinforced' | 'medkit' | 'range' | 'growth' | 'scavenger' | 'regen' | 'drone' | 'armor';
 const SURVIVAL_WEAPON_DEFS: Record<SurvivalWeaponId, {
@@ -112,6 +112,10 @@ const SURVIVAL_WEAPON_DEFS: Record<SurvivalWeaponId, {
   forklift_bolter: { name: 'Nitownica UDT', evolvedName: 'NITOWNICA OBLĘŻNICZA', icon: '🔩', description: 'Wąski, szybki pocisk przebijający kilka celów.', cooldown: 6.3, unlockAfter: 435, color: 0xfbbf24, evolutionPassive: 'rapid', evolutionPassiveLabel: 'Rytm ataku' },
   scanner_pulse: { name: 'Impuls skanera B4', evolvedName: 'SKANER TOTALNY', icon: '📡', description: 'Namierzający impuls przebijający zwartą formację.', cooldown: 8.1, unlockAfter: 510, color: 0x67e8f9, evolutionPassive: 'range', evolutionPassiveLabel: 'Zasięg audytu' },
   orbit_blades: { name: 'Wirujące tarcze', evolvedName: 'ORBITALNA STREFA BHP', icon: '⚙️', description: 'Ostrza krążące wokół operatora i chroniące bliski dystans.', cooldown: 13.0, unlockAfter: 585, color: 0x86efac, evolutionPassive: 'armor', evolutionPassiveLabel: 'Paleta ochronna' },
+  calacatta_shards: { name: 'Odłamki Calacatty', evolvedName: 'BURZA WIELKIEGO FORMATU', icon: '💎', description: 'Ciężkie odłamki gresu lecące w wachlarzu i przebijające kilka celów.', cooldown: 10.8, unlockAfter: 630, color: 0xe5e7eb, evolutionPassive: 'damage', evolutionPassiveLabel: 'Wzmocniona amunicja' },
+  steam_bomb: { name: 'Bomba Parowa', evolvedName: 'KOCIOŁ B4', icon: '♨️', description: 'Ciśnieniowy pocisk tworzący strefę spowolnienia wśród przeciwników.', cooldown: 12.2, unlockAfter: 675, color: 0x7dd3fc, evolutionPassive: 'regen', evolutionPassiveLabel: 'Przerwa regeneracyjna' },
+  forklift_horn: { name: 'Klakson Sztaplarki', evolvedName: 'ALARM CAŁEJ HALI', icon: '📣', description: 'Fala dźwiękowa odrzuca i ogłusza wrogów wokół operatora.', cooldown: 15.5, unlockAfter: 720, color: 0xfb923c, evolutionPassive: 'armor', evolutionPassiveLabel: 'Paleta ochronna' },
+  wz_boomerang: { name: 'WZ-Bumerang', evolvedName: 'PROTOKÓŁ POWROTU', icon: '📜', description: 'Magiczna WZ-tka przecina linię wrogów i wraca do operatora.', cooldown: 11.8, unlockAfter: 765, color: 0xfbbf24, evolutionPassive: 'growth', evolutionPassiveLabel: 'Premia za normę' },
 };
 export interface SurvivalSnapshot {
   elapsedSeconds: number; wave: number; kills: number; level: number; xp: number; xpToNext: number;
@@ -7841,6 +7845,43 @@ export class MaxFlizGameEngine {
       this.activePerks.damageWard = Math.max(this.activePerks.damageWard || 0, duration);
       sound.playShieldBreak();
       this.sayQuote('Paleta EURO klasy A. Wreszcie coś w tym magazynie ma certyfikat.');
+    } else if (perkId === 'forklift_horn') {
+      let affected = 0;
+      for (const enemy of this.enemies) {
+        if (enemy.state === 'defeated' || Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z) > 7) continue;
+        enemy.stunTimer = Math.max(enemy.stunTimer, 1.6);
+        enemy.state = 'stunned';
+        enemy.hp -= 1;
+        affected++;
+        if (enemy.hp <= 0) this.defeatEnemy(enemy, 220, true);
+        this.spawnParticleRing(enemy.x, enemy.y + 0.55, enemy.z, 0xf97316);
+      }
+      sound.playBossWarning();
+      this.triggerScreenShake(0.32, 0.18);
+      this.spawnParticleRing(this.playerPos.x, 0.18, this.playerPos.z, 0xf97316);
+      this.emitFloatingToast('📣 KLAKSON B4! ' + affected + ' WROGÓW OGŁUSZONYCH', this.playerPos.x, this.playerPos.y + 1.6, this.playerPos.z, 'combo');
+    } else if (perkId === 'night_shift_espresso') {
+      this.activePerks.speedBoost = Math.max(this.activePerks.speedBoost, duration);
+      this.activePerks.attackHaste = Math.max(this.activePerks.attackHaste || 0, duration);
+      sound.playPerkPickup();
+      this.sayQuote('NOCNA ZMIANA: PODWÓJNE ESPRESSO! Kto śpi, ten nie wyrabia normy!');
+    } else if (perkId === 'golden_wz') {
+      this.score += 600;
+      this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+      if (this.gameMode === 'survival') {
+        for (let i = 0; i < 8; i++) {
+          const angle = (i / 8) * Math.PI * 2;
+          this.spawnSurvivalXpGem(this.playerPos.x + Math.cos(angle) * 1.5, 0.25, this.playerPos.z + Math.sin(angle) * 1.5, 1);
+        }
+      }
+      sound.playEasterEgg();
+      this.sayQuote('ZŁOTA WZ-TKA! Kadry zatwierdziły premię. Tego dokumentu nie zgub!');
+      this.emitFloatingToast('📜 +600 PKT • 8 XP', this.playerPos.x, this.playerPos.y + 1.5, this.playerPos.z, 'combo');
+    } else if (perkId === 'pallet_guard') {
+      this.activePerks.damageWard = Math.max(this.activePerks.damageWard || 0, duration);
+      this.activePerks.shield = true;
+      sound.playShieldBreak();
+      this.sayQuote('BARYKADA EURO! Teraz nawet reklamacja odbije się od palety!');
     }
 
     this.callbacks.onPerksUpdate?.(this.activePerks);
