@@ -1655,6 +1655,10 @@ export class MaxFlizGameEngine {
 
   private clearLevel() {
     for (const enemy of this.enemies) this.disposeEnemyModel(enemy);
+    // Lollipop meshes own their geometry/materials; release them before the scene is reset.
+    for (const projectile of this.enemyProjectiles) {
+      if (projectile.kind === 'pomazaniec_lollipop') this.disposeTemporaryObject(projectile.mesh);
+    }
     if (this.survivalPomazaniecMarker) {
       this.levelRoot.remove(this.survivalPomazaniecMarker);
       this.disposePomazaniecObject(this.survivalPomazaniecMarker);
@@ -5690,6 +5694,7 @@ export class MaxFlizGameEngine {
       if (e.shieldRing?.visible) e.shieldRing.rotation.z += dt * 1.25;
       if (e.bikeWheels) e.bikeWheels.forEach((wheel) => wheel.rotateX(dt * (e.state === 'chase' ? 8.5 : 3.4)));
       if (e.propeller) e.propeller.rotation.y += dt * (e.state === 'chase' ? 34 : 18);
+      if (e.type === 'pomazaniec') e.mesh.rotation.x = THREE.MathUtils.lerp(e.mesh.rotation.x, 0, Math.min(1, dt * 3.2));
       if (e.legL && e.legR && e.type !== 'piorun_dron') {
         e.legL.rotation.x = Math.sin(e.walkCycle) * 0.5;
         e.legR.rotation.x = -Math.sin(e.walkCycle) * 0.5;
@@ -7429,15 +7434,8 @@ export class MaxFlizGameEngine {
         this.survivalPomazaniecCompleted = true;
         this.score += 1500;
         this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
-        for (let index = 0; index < 5; index++) {
-          const angle = (index / 5) * Math.PI * 2;
-          this.spawnSurvivalXpGem(
-            this.playerPos.x + Math.sin(angle) * 2.2,
-            0.35,
-            this.playerPos.z + Math.cos(angle) * 2.2,
-            3
-          );
-        }
+        // Each of the five defeated riders already drops 3 XP. Keep the bonus at
+        // 15 XP total instead of spawning a second, duplicate set of XP gems.
         this.callbacks.onSurvivalAnnouncement?.(
           'GODZILLA DAWIDA: OCALONA (CHWILOWO)',
           'RAJD POMAZAŃCÓW ROZBITY!',
