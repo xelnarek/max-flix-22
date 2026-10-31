@@ -4443,7 +4443,7 @@ export class MaxFlizGameEngine {
     const id = 'survival_surge_' + Math.floor(performance.now()) + '_' + Math.floor(Math.random() * 100000);
     this.addKurierEnemy(id, x, minZ, maxZ, 'Pilne na Już! • Kurier Express B4');
     const runner = this.enemies[this.enemies.length - 1];
-    if (!runner) return;
+    if (!runner?.mesh) return;
     runner.surgeRunner = true;
     runner.maxHp = 1;
     runner.hp = 1;
@@ -4464,7 +4464,7 @@ export class MaxFlizGameEngine {
     const maxZ = THREE.MathUtils.clamp(z + 2.6, this.levelBounds.minZ + 0.5, this.levelBounds.maxZ - 0.5);
     this.addInspectorEnemy(id, x, minZ, maxZ, 'Audytor Niezapowiedziany');
     const auditor = this.enemies[this.enemies.length - 1];
-    if (!auditor) return;
+    if (!auditor?.mesh) return;
     auditor.type = 'walczak';
     auditor.name = 'Audytor Niezapowiedziany';
     auditor.maxHp = 42;
