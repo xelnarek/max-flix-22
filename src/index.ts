@@ -96,7 +96,7 @@ class MaxFlizScene extends xb.Script {
         const isMobile = width < 900 || ('ontouchstart' in window);
         // High-density mobile rendering: sharper textures and silhouettes on Poco F6.
         // The cap is intentional to prevent fill-rate spikes during dense survival waves.
-        const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.9 : 2.25);
+        const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.65 : 2.0);
         renderer.setPixelRatio(dpr);
         renderer.setSize(width, height, false);
       }
@@ -1533,7 +1533,7 @@ class MaxFlizScene extends xb.Script {
     const renderer = (xb.core?.renderer as THREE.WebGLRenderer) || null;
     if (renderer) {
       const isMobile = width < 900 || ('ontouchstart' in window);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2.0));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.65 : 2.0));
       renderer.setSize(width, height, false);
     }
 
@@ -1607,9 +1607,9 @@ class MaxFlizScene extends xb.Script {
     const width = Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth));
     const height = Math.max(1, Math.round(window.visualViewport?.height || window.innerHeight));
     const isMobile = width < 900 || ('ontouchstart' in window);
-    const deviceCap = isMobile ? 1.75 : 2.25;
+    const deviceCap = isMobile ? 1.65 : 2.0;
     const fpsScale = this.currentFps < 34 ? 0.72 : this.currentFps < 44 ? 0.82 : this.currentFps < 52 ? 0.92 : 1;
-    const targetDpr = Math.max(0.9, Math.min(window.devicePixelRatio || 1, deviceCap) * fpsScale);
+    const targetDpr = Math.max(0.85, Math.min(window.devicePixelRatio || 1, deviceCap) * fpsScale);
 
     // Change drawing-buffer resolution only when the target differs meaningfully.
     // This avoids reallocating GPU buffers on every frame or on tiny FPS fluctuations.
@@ -1825,7 +1825,7 @@ async function startApp() {
         const r = xb.core.renderer as THREE.WebGLRenderer;
         const isMobileDevice = window.innerWidth < 900 || ('ontouchstart' in window);
         r.outputColorSpace = THREE.SRGBColorSpace;
-        r.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.75 : 2.25));
+        r.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.65 : 2.0));
         r.toneMapping = THREE.ACESFilmicToneMapping;
         r.toneMappingExposure = 1.15;
         r.shadowMap.enabled = true;
