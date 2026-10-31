@@ -4776,52 +4776,6 @@ export function createZombieWorkerEnemyModel(): {
 /**
  * 44. TRAP 1: Plama Rozlanego Kleju Epoksydowego Mapei (Spowalnia ruch o 55%!)
  */
-export function createGlueSpillTrapModel(radius = 2.2): THREE.Group {
-  const group = new THREE.Group();
-  group.name = 'trap_glue_spill';
-
-  // Glossy sticky amber-green epoxy puddle
-  const puddleMat = new THREE.MeshStandardMaterial({
-    color: 0x84cc16,
-    emissive: 0x4d7c0f,
-    emissiveIntensity: 0.45,
-    roughness: 0.08,
-    metalness: 0.15,
-    transparent: true,
-    opacity: 0.88,
-    polygonOffset: true,
-    polygonOffsetFactor: -2,
-    polygonOffsetUnits: -2,
-  });
-  const puddle = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius * 1.04, 0.025, 28), puddleMat);
-  puddle.position.y = 0.015;
-  group.add(puddle);
-
-  // Overturned Glue Bucket on edge
-  const bucketMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3, metalness: 0.2 });
-  const bucket = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.18, 0.42, 16), bucketMat);
-  bucket.rotation.z = Math.PI / 2.2;
-  bucket.position.set(-radius * 0.55, 0.18, -0.2);
-  bucket.castShadow = true;
-  group.add(bucket);
-
-  // Bubbles in sticky glue
-  const bubbleMat = new THREE.MeshStandardMaterial({ color: 0xbef264, emissive: 0x65a30d, emissiveIntensity: 0.5, roughness: 0.1 });
-  for (let i = 0; i < 7; i++) {
-    const angle = (i / 7) * Math.PI * 2;
-    const dist = radius * (0.25 + (i % 3) * 0.22);
-    const b = new THREE.Mesh(new THREE.SphereGeometry(0.08 + (i % 2) * 0.04, 10, 10), bubbleMat);
-    b.position.set(Math.cos(angle) * dist, 0.04, Math.sin(angle) * dist);
-    group.add(b);
-  }
-
-  return group;
-}
-
-/**
- * Wet concrete spill: a visible cement puddle and overturned bucket, used as a temporary Survival hazard.
- * Kept intentionally low-poly to avoid adding a costly effect to a crowded mobile scene.
- */
 export function createCementSpillTrapModel(radius = 2.35): THREE.Group {
   const group = new THREE.Group();
   group.name = 'trap_cement_spill';
@@ -5035,3 +4989,146 @@ export function createHydraulicPressTrapModel(): {
   return { group, stamper };
 }
 
+
+/**
+ * Temporary stretch-film barrier: two industrial posts with a transparent
+ * film web and highly visible warning hardware. It replaces the misleading
+ * green puddle hazard with a readable, jumpable obstacle.
+ */
+export function createStretchFilmBarrierModel(width = 5.2): THREE.Group {
+  const safeWidth = THREE.MathUtils.clamp(Number.isFinite(width) ? width : 5.2, 3.2, 7.5);
+  const group = new THREE.Group();
+  group.name = 'trap_stretch_film_barrier';
+
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0x273747, metalness: 0.72, roughness: 0.4 });
+  const orangeMat = new THREE.MeshStandardMaterial({
+    color: 0xf59e0b, metalness: 0.28, roughness: 0.48,
+    emissive: 0x7c3d0a, emissiveIntensity: 0.12,
+  });
+  const filmMat = new THREE.MeshPhysicalMaterial({
+    color: 0xb9d9e8,
+    roughness: 0.16,
+    metalness: 0.04,
+    transparent: true,
+    opacity: 0.27,
+    transmission: 0.12,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+
+  const film = new THREE.Mesh(new THREE.PlaneGeometry(safeWidth * 0.82, 0.72, 8, 2), filmMat);
+  film.position.set(0, 0.65, 0);
+  group.add(film);
+
+  // Subtle vertical creases catch the aisle lighting so the transparent web is
+  // still visible from the game's elevated camera without becoming opaque.
+  const creaseMat = new THREE.MeshBasicMaterial({
+    color: 0xc7e9f4, transparent: true, opacity: 0.24,
+    side: THREE.DoubleSide, depthWrite: false, toneMapped: false,
+  });
+  for (let i = 1; i <= 6; i++) {
+    const x = -safeWidth * 0.38 + (safeWidth * 0.76 * i) / 7;
+    const crease = new THREE.Mesh(new THREE.PlaneGeometry(0.025, 0.68), creaseMat);
+    crease.position.set(x, 0.65, 0.008);
+    group.add(crease);
+  }
+
+  const reel = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.09, 0.09, safeWidth * 0.9, 12),
+    frameMat
+  );
+  reel.rotation.z = Math.PI / 2;
+  reel.position.y = 1.05;
+  group.add(reel);
+
+  for (const side of [-1, 1]) {
+    const x = side * safeWidth * 0.46;
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.12, 0.52), frameMat);
+    base.position.set(x, 0.07, 0);
+    base.castShadow = true;
+    group.add(base);
+
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.16, 1.18, 0.16), orangeMat);
+    post.position.set(x, 0.62, 0);
+    post.castShadow = true;
+    group.add(post);
+
+    for (const y of [0.28, 0.52, 0.76, 1.0]) {
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.168, 0.055, 0.168), frameMat);
+      stripe.position.set(x, y, 0);
+      group.add(stripe);
+    }
+
+    const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.095, 10, 8), orangeMat);
+    beacon.position.set(x, 1.28, 0);
+    group.add(beacon);
+  }
+
+  const floorMark = new THREE.Mesh(
+    new THREE.BoxGeometry(safeWidth, 0.025, 0.12),
+    new THREE.MeshBasicMaterial({ color: 0xfbbf24, toneMapped: false })
+  );
+  floorMark.position.y = 0.025;
+  group.add(floorMark);
+  return group;
+}
+
+/**
+ * Moving roller gate: a compact three-roller industrial obstacle on a guided
+ * frame. The parent travels across the aisle; the rollers turn independently.
+ */
+export function createRollerGateTrapModel(width = 4.8): {
+  group: THREE.Group;
+  rollers: THREE.Group;
+} {
+  const safeWidth = THREE.MathUtils.clamp(Number.isFinite(width) ? width : 4.8, 3.2, 7.0);
+  const group = new THREE.Group();
+  group.name = 'trap_moving_roller_gate';
+
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0x263748, metalness: 0.78, roughness: 0.38 });
+  const warningMat = new THREE.MeshStandardMaterial({ map: getHazardStripeTexture(), roughness: 0.48, metalness: 0.12 });
+  const rollerMat = new THREE.MeshStandardMaterial({ color: 0x8a9baa, metalness: 0.84, roughness: 0.24 });
+
+  for (const side of [-1, 1]) {
+    const x = side * safeWidth * 0.5;
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.16, 1.1), warningMat);
+    foot.position.set(x, 0.08, 0);
+    group.add(foot);
+
+    const upright = new THREE.Mesh(new THREE.BoxGeometry(0.18, 2.35, 0.2), frameMat);
+    upright.position.set(x, 1.16, 0);
+    upright.castShadow = true;
+    group.add(upright);
+
+    const safetyLamp = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), warningMat);
+    safetyLamp.position.set(x, 2.42, 0);
+    group.add(safetyLamp);
+  }
+
+  const crossbar = new THREE.Mesh(new THREE.BoxGeometry(safeWidth + 0.2, 0.22, 0.24), frameMat);
+  crossbar.position.y = 2.28;
+  group.add(crossbar);
+
+  const rollers = new THREE.Group();
+  rollers.name = 'roller_gate_moving_bank';
+  for (let i = 0; i < 3; i++) {
+    const roller = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.19, 0.19, safeWidth - 0.36, 14),
+      rollerMat
+    );
+    roller.rotation.z = Math.PI / 2;
+    roller.position.set(0, 0.48 + i * 0.58, 0);
+    roller.castShadow = true;
+    rollers.add(roller);
+
+    const endCapGeometry = new THREE.CylinderGeometry(0.23, 0.23, 0.055, 14);
+    for (const side of [-1, 1]) {
+      const cap = new THREE.Mesh(endCapGeometry, frameMat);
+      cap.rotation.z = Math.PI / 2;
+      cap.position.set(side * (safeWidth * 0.5 - 0.24), 0.48 + i * 0.58, 0);
+      rollers.add(cap);
+    }
+  }
+  group.add(rollers);
+  return { group, rollers };
+}
