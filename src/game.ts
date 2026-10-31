@@ -4459,7 +4459,6 @@ export class MaxFlizGameEngine {
     if (!readyWeapon) return;
 
     this.fireSurvivalWeapon(readyWeapon, target);
-    const levelFactor = Math.max(0.78, 1 - (readyWeapon.level - 1) * 0.055);
     readyWeapon.cooldown = getSurvivalWeaponReloadSeconds(
       SURVIVAL_WEAPON_DEFS[readyWeapon.id].cooldown, readyWeapon.level, !!readyWeapon.evolved
     );
