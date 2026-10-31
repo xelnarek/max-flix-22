@@ -1759,10 +1759,16 @@ class MaxFlizScene extends xb.Script {
       } else if (this.engine) {
         this.engine.update(dt);
         const minimapCanvas = document.getElementById('minimap-canvas') as HTMLCanvasElement | null;
+        const minimapContainer = document.getElementById('minimap-container');
+        const minimapIsVisible = !!minimapCanvas
+          && !!minimapContainer
+          && !minimapContainer.classList.contains('collapsed')
+          && minimapContainer.getClientRects().length > 0
+          && this.engine.getGameState() === 'playing';
         const now = performance.now();
-        // Canvas minimap is intentionally capped at 10 Hz; drawing it every
-        // rendered frame wastes CPU on phones without making navigation clearer.
-        if (minimapCanvas && now - this.lastMinimapRenderAt >= 100) {
+        // Do not spend CPU drawing a minimap hidden by the user, outside a run,
+        // or removed from layout. When visible, keep the 10 Hz cap for mobile.
+        if (minimapIsVisible && minimapCanvas && now - this.lastMinimapRenderAt >= 100) {
           this.engine.renderMinimap(minimapCanvas);
           this.lastMinimapRenderAt = now;
         }
