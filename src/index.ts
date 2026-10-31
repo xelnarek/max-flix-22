@@ -1778,6 +1778,8 @@ class MaxFlizScene extends xb.Script {
   }
 
   override dispose(): void {
+    this.engine?.dispose();
+
     this.restoreSelectiveBloomOverride?.();
     this.restoreSelectiveBloomOverride = null;
     this.selectiveBloom?.dispose();

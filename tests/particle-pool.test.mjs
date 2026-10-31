@@ -51,3 +51,31 @@ test('disposed particle pools stop handing out meshes', () => {
   assert.equal(pool.availableCount, 0);
   assert.equal(pool.acquire('sphere', 0xffffff), null);
 });
+
+test('pool rejects foreign meshes and invalid capacities without corrupting its inventory', () => {
+  assert.throws(() => new ParticleMeshPool(0), RangeError);
+  assert.throws(() => new ParticleMeshPool(1.5), RangeError);
+
+  const pool = new ParticleMeshPool(1);
+  const foreign = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshBasicMaterial()
+  );
+  try {
+    pool.release(foreign);
+    assert.equal(pool.allocatedCount, 0);
+    assert.equal(pool.availableCount, 0);
+
+    const owned = pool.acquire('tetrahedron', 0xffffff);
+    assert.ok(owned);
+    pool.release(foreign);
+    assert.equal(pool.availableCount, 0);
+    assert.equal(pool.allocatedCount, 1);
+    pool.release(owned);
+    assert.equal(pool.availableCount, 1);
+  } finally {
+    pool.dispose();
+    foreign.geometry.dispose();
+    (foreign.material).dispose();
+  }
+});
