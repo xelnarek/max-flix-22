@@ -4735,11 +4735,10 @@ export class MaxFlizGameEngine {
     if (enemy.chargeTimer !== undefined) {
       enemy.chargeTimer = Math.max(0,enemy.chargeTimer-dt);
       enemy.state = 'charging';
-      facePlayer();
+      enemy.mesh.rotation.y = enemy.chargeDir ?? Math.atan2(dx,dz);
       if (enemy.chargeTimer <= 0) {
         enemy.chargeTimer = undefined;
         enemy.dashTimer = 0.78;
-        enemy.chargeDir = Math.atan2(dx,dz);
         enemy.state = 'chase';
         sound.playBossWarning();
         this.triggerScreenShake(0.26,0.17);
@@ -4897,6 +4896,7 @@ export class MaxFlizGameEngine {
     const roll = Math.random();
 
     if (wave >= 8 && Math.random() < 0.065) this.addSebixEnemy(id,x,minZ,maxZ);
+    else if (wave >= 6 && Math.random() < 0.04) this.addBosmanKrakowBossEnemy(id,x,z);
     else if (wave < 3 || roll < 0.16) this.addZombieWorkerEnemy(id, x, minZ, maxZ, 'Zombie-Magazynier — głodny po nocnej zmianie');
     else if (roll < 0.29) this.addKurierEnemy(id, x, minZ, maxZ, 'Kurier Ekspresowy — paczka bez awiza');
     else if (roll < 0.41) this.addMonterEnemy(id, x, minZ, maxZ, 'Monter Wiesław — poziomica w dłoni');
@@ -5754,7 +5754,7 @@ export class MaxFlizGameEngine {
   private getSurvivalEnemyRole(enemy: EnemyItem): 'bruiser' | 'flanker' | 'ranged' | 'support' {
     if (enemy.type === 'sztaplar_szalony' || enemy.type === 'elite_walczak_guard' || enemy.type === 'agv_robot' || enemy.type === 'sebix_m') return 'bruiser';
     if (enemy.type === 'inspector') return 'support';
-    if (enemy.type === 'handlowiec' || enemy.type === 'przedstawiciel_włoski' || enemy.type === 'pan_roman' || enemy.type === 'serwisant' || enemy.type === 'pomazaniec') return 'ranged';
+    if (enemy.type === 'handlowiec' || enemy.type === 'przedstawiciel_włoski' || enemy.type === 'pan_roman' || enemy.type === 'serwisant' || enemy.type === 'pomazaniec' || enemy.type === 'bosman_krakow') return 'ranged';
     if (enemy.type === 'kurier' || enemy.type === 'zombie_pracownik' || enemy.type === 'monter') return 'flanker';
     return 'flanker';
   }
@@ -5939,7 +5939,7 @@ export class MaxFlizGameEngine {
         const fill = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.08), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
         fill.position.z = 0.01;
         e.hpBar.add(bg, fill);
-        e.hpBar.position.y = e.type === 'walczak' || e.type === 'krol_leto' ? 2.4 : 1.65;
+        e.hpBar.position.y = e.type === 'sebix_m' ? 2.65 : e.type === 'walczak' || e.type === 'krol_leto' ? 2.4 : 1.65;
         e.mesh.add(e.hpBar);
         e.hpFill = fill;
         e.hpBar.visible = false;
