@@ -4909,8 +4909,8 @@ export class MaxFlizGameEngine {
     const radius = getHordeRingRadius(progress, initialRadius, finalRadius);
     const outer = ringGroup.children[0] as THREE.Mesh | undefined;
     const inner = ringGroup.children[1] as THREE.Mesh | undefined;
-    if (outer) outer.scale.set(radius, radius, 1);
-    if (inner) inner.scale.set(radius * 0.82, radius * 0.82, 1);
+    if (outer) outer.scale.set(radius, radius * 0.62, 1);
+    if (inner) inner.scale.set(radius * 0.82, radius * 0.62 * 0.82, 1);
     const outerMaterial = outer?.material as THREE.MeshBasicMaterial | undefined;
     const innerMaterial = inner?.material as THREE.MeshBasicMaterial | undefined;
     if (outerMaterial) outerMaterial.opacity = 0.24 + (1 - progress) * 0.34;
@@ -4932,16 +4932,18 @@ export class MaxFlizGameEngine {
 
     // Keep every point inside the arena. Near a wall, move the centre inward
     // just enough for the player to remain inside the perimeter.
-    const safeInset = settings.initialRadius;
+    const ringVerticalScale = 0.62;
+    const safeInsetX = settings.initialRadius;
+    const safeInsetZ = settings.initialRadius * ringVerticalScale;
     this.survivalSurgeCenterX = THREE.MathUtils.clamp(
       this.playerPos.x,
-      this.levelBounds.minX + safeInset,
-      this.levelBounds.maxX - safeInset,
+      this.levelBounds.minX + safeInsetX,
+      this.levelBounds.maxX - safeInsetX,
     );
     this.survivalSurgeCenterZ = THREE.MathUtils.clamp(
       this.playerPos.z,
-      this.levelBounds.minZ + safeInset,
-      this.levelBounds.maxZ - safeInset,
+      this.levelBounds.minZ + safeInsetZ,
+      this.levelBounds.maxZ - safeInsetZ,
     );
 
     const ringGroup = new THREE.Group();
@@ -5000,7 +5002,7 @@ export class MaxFlizGameEngine {
       const point = getHordeRingPoint(
         index, settings.enemyCount,
         this.survivalSurgeCenterX, this.survivalSurgeCenterZ,
-        settings.initialRadius, -Math.PI / 2,
+        settings.initialRadius, -Math.PI / 2, 0.62,
       );
       enemy.x = THREE.MathUtils.clamp(point.x, this.levelBounds.minX + 1.2, this.levelBounds.maxX - 1.2);
       enemy.z = THREE.MathUtils.clamp(point.z, this.levelBounds.minZ + 1.0, this.levelBounds.maxZ - 1.0);
@@ -5042,6 +5044,7 @@ export class MaxFlizGameEngine {
       this.survivalSurgeCenterZ,
       settings.initialRadius,
       -Math.PI / 2,
+      0.62,
     );
     const x = THREE.MathUtils.clamp(point.x, this.levelBounds.minX + 1.2, this.levelBounds.maxX - 1.2);
     const z = THREE.MathUtils.clamp(point.z, this.levelBounds.minZ + 1.0, this.levelBounds.maxZ - 1.0);
@@ -6674,11 +6677,9 @@ export class MaxFlizGameEngine {
         if (playerCrossesBarrier && (h.cooldown || 0) <= 0) {
           h.cooldown = 1.45;
           this.glueSlowTimer = Math.max(this.glueSlowTimer, 0.72);
-          const pushX = this.playerPos.x - h.x;
-          const pushZ = this.playerPos.z - h.z;
-          const distance = Math.hypot(pushX, pushZ) || 1;
-          this.playerVel.x += (pushX / distance) * 1.8;
-          this.playerVel.z += (pushZ / distance || 1) * 1.8;
+          const approachDirection = Math.sign(this.playerVel.z) || (this.playerPos.z >= h.z ? 1 : -1);
+          this.playerVel.z = -approachDirection * 2.4;
+          this.playerVel.x *= 0.78;
           this.emitFloatingToast('🧻 FOLIA STRETCH! PRZEBIJ SIĘ ALBO PRZESKOCZ!', this.playerPos.x, this.playerPos.y + 1.0, this.playerPos.z, 'damage');
         }
         for (const enemy of this.enemies) {
@@ -6947,9 +6948,9 @@ export class MaxFlizGameEngine {
       const dx = enemy.x - other.x;
       const dz = enemy.z - other.z;
       const d2 = dx * dx + dz * dz;
-      if (d2 > 0.01 && d2 < 4.0) {
+      if (d2 > 0.01 && d2 < 6.76) {
         const d = Math.sqrt(d2);
-        const force = (2.0 - d) / (2.0 * d);
+        const force = (2.6 - d) / (2.6 * d);
         separationX += dx * force;
         separationZ += dz * force;
       }
@@ -6983,8 +6984,8 @@ export class MaxFlizGameEngine {
       }
     }
 
-    steerX += separationX * 1.8 + avoidX * 2.2;
-    steerZ += separationZ * 1.8 + avoidZ * 2.2;
+    steerX += separationX * 3.0 + avoidX * 2.2;
+    steerZ += separationZ * 3.0 + avoidZ * 2.2;
     const steerMagnitude = Math.hypot(steerX, steerZ) || 1;
     steerX /= steerMagnitude;
     steerZ /= steerMagnitude;
