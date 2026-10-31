@@ -1016,7 +1016,7 @@ class MaxFlizScene extends xb.Script {
     refreshZoneLocks();
 
     let startingGame = false;
-    const doStartGame = async (e?: Event) => {
+    const launchCampaignGame = async (e?: Event) => {
       if (startingGame) return;
       if (e) {
         e.preventDefault();
@@ -1050,6 +1050,20 @@ class MaxFlizScene extends xb.Script {
       gameShell?.classList.remove('survival-mode');
       this.engine.startGame(this.selectedLevelId);
       setTimeout(() => { startingGame = false; }, 600);
+    };
+
+    // Campaign entry opens the five-act briefing first. The final briefing
+    // action calls launchCampaignGame(), so this wrapper cannot recursively start itself.
+    let openCampaignBriefing = () => {
+      document.getElementById('story-intro-modal')?.classList.remove('hidden');
+    };
+    const doStartGame = (e?: Event) => {
+      if (startingGame) return;
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      openCampaignBriefing();
     };
 
     const doStartSurvival = async (e?: Event) => {
@@ -1345,6 +1359,12 @@ class MaxFlizScene extends xb.Script {
       }
     };
 
+    openCampaignBriefing = () => {
+      updateStorySlides(0);
+      storyModal?.classList.remove('hidden');
+      storyModal?.querySelector<HTMLButtonElement>('#btn-close-story')?.focus();
+    };
+
     bindTap(document.getElementById('btn-open-story-modal'), () => {
       updateStorySlides(0);
       storyModal?.classList.remove('hidden');
@@ -1364,7 +1384,7 @@ class MaxFlizScene extends xb.Script {
 
     btnStoryPlay?.addEventListener('click', () => {
       storyModal?.classList.add('hidden');
-      doStartGame();
+      launchCampaignGame();
     });
 
     storyDots.forEach((dot) => {
