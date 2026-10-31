@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { clampHorizontalPosition } from './arenaBounds.ts';
 import { isWithinBossImpactRadius } from './combatTelegraphs.ts';
+import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
 import {
   getAbilityCooldownSeconds,
   getBaseAttackCooldownSeconds,
@@ -91,8 +92,9 @@ import {
   getWallTexture,
   createKfcBucketCollectible,
   createZombieWorkerEnemyModel,
-  createGlueSpillTrapModel,
   createCementSpillTrapModel,
+  createStretchFilmBarrierModel,
+  createRollerGateTrapModel,
   createLaserCutterTrapModel,
   createSteamGeyserTrapModel,
   createHydraulicPressTrapModel,
@@ -406,6 +408,11 @@ export class MaxFlizGameEngine {
   private survivalSurgeDirection = 0;
   private survivalNextSurgeAt = 90;
   private survivalSurgeSpawned = 0;
+  private survivalSurgeTargetCount = 0;
+  private survivalSurgeCenterX = 0;
+  private survivalSurgeCenterZ = 0;
+  private survivalSurgeCurrentRadius = 13.4;
+  private survivalSurgeRing: THREE.Group | null = null;
   private survivalMiniBossSpawned = false;
   private survivalPhaseTwoAnnounced = false;
   private survivalAuditorAuraCooldown = 0;
@@ -1150,6 +1157,7 @@ export class MaxFlizGameEngine {
     this.survivalSurgeDirection = 0;
     this.survivalNextSurgeAt = 90;
     this.survivalSurgeSpawned = 0;
+    this.survivalSurgeTargetCount = 0;
     this.survivalMiniBossSpawned = false;
     this.survivalPhaseTwoAnnounced = false;
     this.survivalAuditorAuraCooldown = 0;
@@ -2088,6 +2096,13 @@ export class MaxFlizGameEngine {
       this.disposePomazaniecObject(this.survivalPomazaniecMarker);
       this.survivalPomazaniecMarker = null;
     }
+    for (const hazard of this.hazards) {
+      if ((hazard.type === 'stretch_barrier' || hazard.type === 'roller_gate') && hazard.mesh) {
+        this.disposeTemporaryObject(hazard.mesh);
+      }
+    }
+    this.clearSurvivalSurgeRing();
+    this.survivalSurgeTargetCount = 0;
     this.disposeSurvivalArenaInstances();
     while (this.levelRoot.children.length > 0) {
       this.levelRoot.remove(this.levelRoot.children[0]);
@@ -2298,6 +2313,7 @@ export class MaxFlizGameEngine {
     this.buildLevel1();
     this.buildLevel2(76);
     this.buildLevel3(161);
+    this.buildCampaignHighBayDressing();
     for (const enemy of this.enemies) this.applyEnemyVisualPolish(enemy);
     this.applyStorybookStyle(this.levelRoot);
     this.sectorGates = [null, null, null, null];
@@ -2325,6 +2341,62 @@ export class MaxFlizGameEngine {
 
     this.callbacks.onBossUpdate?.('', 0, 0, false);
     this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+  }
+
+  /**
+   * Shared high-bay roof, pipework and lighting details for the campaign mega-map.
+   * Instanced geometry keeps extra architecture within a small draw-call budget.
+   */
+  private buildCampaignHighBayDressing() {
+    const steel = new THREE.MeshStandardMaterial({ color: 0x3b5061, metalness: 0.68, roughness: 0.48 });
+    const safetyOrange = new THREE.MeshStandardMaterial({ color: 0xe99a32, metalness: 0.32, roughness: 0.52, emissive: 0x693a0d, emissiveIntensity: 0.12 });
+    const pipeMaterial = new THREE.MeshStandardMaterial({ color: 0x738392, metalness: 0.76, roughness: 0.3 });
+    const lampMaterial = new THREE.MeshStandardMaterial({ color: 0xdbeafe, roughness: 0.38, emissive: 0x91c9e8, emissiveIntensity: 0.42 });
+    const dummy = new THREE.Object3D();
+    const bayXs: number[] = [];
+    for (let x = -24; x <= 192; x += 24) bayXs.push(x);
+
+    const crossTrusses = new THREE.InstancedMesh(new THREE.BoxGeometry(0.28, 0.24, 34.5), steel, bayXs.length);
+    bayXs.forEach((x, index) => {
+      dummy.position.set(x, 8.62, 0); dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1, 1); dummy.updateMatrix();
+      crossTrusses.setMatrixAt(index, dummy.matrix);
+    });
+    crossTrusses.instanceMatrix.needsUpdate = true;
+    this.addSurvivalArenaInstance(crossTrusses);
+
+    const roofRails = new THREE.InstancedMesh(new THREE.BoxGeometry(236, 0.15, 0.18), safetyOrange, 2);
+    [-16.8, 16.8].forEach((z, index) => {
+      dummy.position.set(85, 8.52, z); dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1, 1); dummy.updateMatrix();
+      roofRails.setMatrixAt(index, dummy.matrix);
+    });
+    roofRails.instanceMatrix.needsUpdate = true;
+    this.addSurvivalArenaInstance(roofRails);
+
+    const servicePipes = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.075, 0.075, 236, 8), pipeMaterial, 3);
+    [-10, 0, 10].forEach((z, index) => {
+      dummy.position.set(85, 7.9, z); dummy.rotation.set(0, 0, Math.PI / 2); dummy.scale.set(1, 1, 1); dummy.updateMatrix();
+      servicePipes.setMatrixAt(index, dummy.matrix);
+    });
+    servicePipes.instanceMatrix.needsUpdate = true;
+    this.addSurvivalArenaInstance(servicePipes);
+
+    const fixtures = new THREE.InstancedMesh(new THREE.BoxGeometry(3.6, 0.12, 0.56), lampMaterial, bayXs.length * 2);
+    let index = 0;
+    for (const x of bayXs) for (const z of [-7.2, 7.2]) {
+      dummy.position.set(x + 8, 8.0, z); dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1, 1); dummy.updateMatrix();
+      fixtures.setMatrixAt(index++, dummy.matrix);
+    }
+    fixtures.instanceMatrix.needsUpdate = true;
+    this.addSurvivalArenaInstance(fixtures);
+
+    const perimeterPosts = new THREE.InstancedMesh(new THREE.BoxGeometry(0.26, 7.9, 0.26), steel, bayXs.length * 2);
+    index = 0;
+    for (const x of bayXs) for (const z of [-17.3, 17.3]) {
+      dummy.position.set(x, 3.95, z); dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1, 1); dummy.updateMatrix();
+      perimeterPosts.setMatrixAt(index++, dummy.matrix);
+    }
+    perimeterPosts.instanceMatrix.needsUpdate = true;
+    this.addSurvivalArenaInstance(perimeterPosts);
   }
 
   private buildSectorGate(x: number, targetSector: 2 | 3) {
@@ -2627,25 +2699,24 @@ export class MaxFlizGameEngine {
     });
   }
 
-  private addGlueSpillTrap(id: string, x: number, z: number, radius = 1.9) {
-    const mesh = createGlueSpillTrapModel(radius);
+  private addStretchFilmBarrierTrap(id: string, x: number, z: number, width = 5.2) {
+    const mesh = createStretchFilmBarrierModel(width);
     mesh.position.set(x, 0, z);
     this.levelRoot.add(mesh);
-    this.hazards.push({
-      id,
-      type: 'glue_spill',
-      mesh,
-      startX: x,
-      startZ: z,
-      x,
-      y: 0,
-      z,
-      speed: 0,
-      width: radius * 2,
-      length: radius * 2,
-      dir: 1,
-      active: true,
-    });
+    this.hazards.push({ id, type: 'stretch_barrier', mesh, startX: x, startZ: z, x, y: 0, z,
+      speed: 0, width, length: 1.0, dir: 1, active: true, cooldown: 0 });
+  }
+
+  private addRollerGateTrap(id: string, x: number, z: number, speed = 2.2, width = 4.8) {
+    const built = createRollerGateTrapModel(width);
+    const halfTravel = 2.35;
+    const startZ = THREE.MathUtils.clamp(z - halfTravel, this.levelBounds.minZ + 1.5, this.levelBounds.maxZ - 1.5);
+    const endZ = THREE.MathUtils.clamp(z + halfTravel, this.levelBounds.minZ + 1.5, this.levelBounds.maxZ - 1.5);
+    built.group.position.set(x, 0, startZ);
+    this.levelRoot.add(built.group);
+    this.hazards.push({ id, type: 'roller_gate', mesh: built.group, movingPart: built.rollers,
+      startX: x, startZ, endX: x, endZ, x, y: 0, z: startZ, speed, width, length: 1.25,
+      dir: 1, active: true, cooldown: 0 });
   }
 
   private addLaserCutterTrap(id: string, x: number, z: number, width = 3.8, speed = 2.6) {
@@ -3777,8 +3848,9 @@ export class MaxFlizGameEngine {
     // Forklift Hazards & New Interactive Warehouse Traps in Sector A
     this.addForkliftHazard('forklift_1', -24, 20, 0, 4.4, 0xf59e0b);
     this.addForkliftHazard('forklift_1_south', -20, 18, 11.5, 3.8, 0x0284c7);
-    this.addGlueSpillTrap('glue_l1_1', -16, -1.2, 1.8);
-    this.addGlueSpillTrap('glue_l1_2', 6, 4.5, 2.0);
+    this.addStretchFilmBarrierTrap('stretch_l1_1', -16, -1.2, 5.0);
+    this.addStretchFilmBarrierTrap('stretch_l1_2', 6, 4.5, 4.6);
+    this.addRollerGateTrap('roller_l1_1', 18, -5.5, 2.0, 4.6);
     this.addLaserCutterTrap('laser_l1_1', -3, 0, 4.0, 2.6);
     this.addSteamGeyserTrap('steam_l1_1', 11, -1.5, 4.0);
     this.addHydraulicPressTrap('press_l1_1', 24, 0, 3.0);
@@ -4061,7 +4133,8 @@ export class MaxFlizGameEngine {
     this.addSteamGeyserTrap('steam_l2_2', offsetX + 2, -1.5, 3.8);
     this.addSteamGeyserTrap('steam_l2_3', offsetX + 14, 9.0, 4.2);
     this.addLaserCutterTrap('laser_l2_1', offsetX - 8, 0, 4.2, 2.8);
-    this.addGlueSpillTrap('glue_l2_1', offsetX + 10, 1.5, 2.1);
+    this.addStretchFilmBarrierTrap('stretch_l2_1', offsetX + 10, 1.5, 5.0);
+    this.addRollerGateTrap('roller_l2_1', offsetX - 24, 5.5, 2.3, 5.0);
     this.addHydraulicPressTrap('press_l2_1', offsetX + 20, -2.0, 3.2);
     this.addZombieWorkerEnemy('zombie_l2_1', offsetX - 6, -5, 5);
     this.addZombieWorkerEnemy('zombie_l2_2', offsetX + 16, -5, 5);
@@ -4277,7 +4350,8 @@ export class MaxFlizGameEngine {
     this.addHydraulicPressTrap('press_l3_2', offsetX + 12, 0, 3.6);
     this.addLaserCutterTrap('laser_l3_1', offsetX - 8, 0, 4.4, 3.2);
     this.addSteamGeyserTrap('steam_l3_1', offsetX + 2, 2.5, 3.6);
-    this.addGlueSpillTrap('glue_l3_1', offsetX + 20, -2.0, 2.2);
+    this.addStretchFilmBarrierTrap('stretch_l3_1', offsetX + 20, -2.0, 5.2);
+    this.addRollerGateTrap('roller_l3_1', offsetX - 34, 4.5, 2.5, 5.2);
     this.addZombieWorkerEnemy('zombie_l3_1', offsetX - 16, -6, 6);
     this.addZombieWorkerEnemy('zombie_l3_2', offsetX + 6, -6, 6);
 
@@ -4742,6 +4816,7 @@ export class MaxFlizGameEngine {
     }
 
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
+    const hordeSettings = getSurvivalHordeSettings(isMobile);
     const pomazaniecRaidActive = this.survivalPomazaniecTriggered && !this.survivalPomazaniecCompleted;
     const surgeActive = this.survivalSurgeTimeLeft > 0;
     const enemyCap = (isMobile ? 22 : 34) + (pomazaniecRaidActive ? 5 : 0) + (surgeActive ? (isMobile ? 4 : 6) : 0);
@@ -4749,21 +4824,31 @@ export class MaxFlizGameEngine {
     if (surgeActive) {
       this.survivalSurgeTimeLeft = Math.max(0, this.survivalSurgeTimeLeft - dt);
       this.survivalSurgeSpawnTimer -= dt;
+      const progress = 1 - this.survivalSurgeTimeLeft / hordeSettings.durationSeconds;
+      this.updateSurvivalHordeRing(progress, hordeSettings.initialRadius, hordeSettings.finalRadius);
       if (this.survivalSurgeTimeLeft > 0 && this.survivalSurgeSpawnQueue > 0 && this.survivalSurgeSpawnTimer <= 0 && aliveCount < enemyCap) {
         this.spawnSurvivalSurgeEnemy();
         this.survivalSurgeSpawnQueue--;
         this.survivalSurgeSpawned++;
-        this.survivalSurgeSpawnTimer = 0.26;
+        this.survivalSurgeSpawnTimer = hordeSettings.spawnIntervalSeconds;
       } else if (this.survivalSurgeTimeLeft > 0 && this.survivalSurgeSpawnQueue > 0 && aliveCount >= enemyCap) {
-        this.survivalSurgeSpawnTimer = 0.08;
+        this.survivalSurgeSpawnTimer = 0.10;
       }
       if (this.survivalSurgeTimeLeft <= 0) {
         this.survivalSurgeSpawnQueue = 0;
+        this.clearSurvivalSurgeRing();
+        for (const enemy of this.enemies) {
+          if (enemy.surgeRunner) {
+            enemy.surgeRunner = false;
+            enemy.aiFlankAngle = undefined;
+            enemy.aiOrbitSign = undefined;
+          }
+        }
         this.survivalSpawnTimer = Math.max(this.survivalSpawnTimer, 1.8);
         this.callbacks.onSurvivalAnnouncement?.(
           'FALOWA SZARŻA ODPARTA',
-          'Kurierzy nie dowieźli normy',
-          'Na halę weszło ' + this.survivalSurgeSpawned + ' z 45 jednostek Pilne na Już. Standardowe dostawy wracają.'
+          'Pierścień przełamany',
+          'W ringowej szarży pojawiło się ' + this.survivalSurgeSpawned + ' z ' + this.survivalSurgeTargetCount + ' przeciwników. Standardowe dostawy wracają.',
         );
         this.emitFloatingToast('FALOWA SZARŻA ODPARTA!', this.playerPos.x, this.playerPos.y + 1.8, this.playerPos.z, 'combo');
       }
@@ -4812,65 +4897,194 @@ export class MaxFlizGameEngine {
   }
 
 
+  private clearSurvivalSurgeRing() {
+    if (!this.survivalSurgeRing) return;
+    this.levelRoot.remove(this.survivalSurgeRing);
+    this.disposeTemporaryObject(this.survivalSurgeRing);
+    this.survivalSurgeRing = null;
+  }
+
+  private updateSurvivalHordeRing(progress: number, initialRadius: number, finalRadius: number) {
+    const ringGroup = this.survivalSurgeRing;
+    if (!ringGroup) return;
+    const radius = getHordeRingRadius(progress, initialRadius, finalRadius);
+    this.survivalSurgeCurrentRadius = radius;
+
+    // Keep the perimeter centred on the operator while respecting the narrower
+    // north/south bounds of the arena. This is the same centre used by enemy AI.
+    const verticalScale = 0.62;
+    this.survivalSurgeCenterX = THREE.MathUtils.clamp(
+      this.playerPos.x,
+      this.levelBounds.minX + initialRadius,
+      this.levelBounds.maxX - initialRadius,
+    );
+    this.survivalSurgeCenterZ = THREE.MathUtils.clamp(
+      this.playerPos.z,
+      this.levelBounds.minZ + initialRadius * verticalScale,
+      this.levelBounds.maxZ - initialRadius * verticalScale,
+    );
+    ringGroup.position.set(this.survivalSurgeCenterX, 0.065, this.survivalSurgeCenterZ);
+
+    const outer = ringGroup.children[0] as THREE.Mesh | undefined;
+    const inner = ringGroup.children[1] as THREE.Mesh | undefined;
+    if (outer) outer.scale.set(radius, radius * verticalScale, 1);
+    if (inner) inner.scale.set(radius * 0.82, radius * verticalScale * 0.82, 1);
+    const outerMaterial = outer?.material as THREE.MeshBasicMaterial | undefined;
+    const innerMaterial = inner?.material as THREE.MeshBasicMaterial | undefined;
+    if (outerMaterial) outerMaterial.opacity = 0.24 + (1 - progress) * 0.34;
+    if (innerMaterial) innerMaterial.opacity = 0.16 + (1 - progress) * 0.22;
+  }
+
   private beginSurvivalHordeSurge() {
     if (this.survivalSurgeTimeLeft > 0 || this.gameMode !== 'survival') return;
-    this.survivalSurgeTimeLeft = 15;
-    this.survivalSurgeSpawnQueue = 45;
-    this.survivalSurgeSpawnTimer = 0;
+    const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
+    const settings = getSurvivalHordeSettings(isMobile);
+    this.clearSurvivalSurgeRing();
+
+    this.survivalSurgeTimeLeft = settings.durationSeconds;
+    this.survivalSurgeTargetCount = settings.enemyCount;
+    this.survivalSurgeCurrentRadius = settings.initialRadius;
+    this.survivalSurgeSpawnQueue = settings.enemyCount;
+    this.survivalSurgeSpawnTimer = 0.12;
     this.survivalSurgeSpawned = 0;
-    const directions = [
-      { x: 1, z: 0, label: 'WSCHÓD' },
-      { x: -1, z: 0, label: 'ZACHÓD' },
-      { x: 0, z: 1, label: 'POŁUDNIE' },
-      { x: 0, z: -1, label: 'PÓŁNOC' },
-    ];
-    const available = directions.filter((direction) =>
-      (direction.x > 0 && this.levelBounds.maxX - this.playerPos.x > 18) ||
-      (direction.x < 0 && this.playerPos.x - this.levelBounds.minX > 18) ||
-      (direction.z > 0 && this.levelBounds.maxZ - this.playerPos.z > 12) ||
-      (direction.z < 0 && this.playerPos.z - this.levelBounds.minZ > 12)
-    );
-    const candidates = available.length ? available : directions;
-    const chosen = candidates[Math.floor(Math.random() * candidates.length)];
-    this.survivalSurgeDirection = directions.indexOf(chosen);
     this.survivalNextSurgeAt += 90;
+
+    // Keep every point inside the arena. Near a wall, move the centre inward
+    // just enough for the player to remain inside the perimeter.
+    const ringVerticalScale = 0.62;
+    const safeInsetX = settings.initialRadius;
+    const safeInsetZ = settings.initialRadius * ringVerticalScale;
+    this.survivalSurgeCenterX = THREE.MathUtils.clamp(
+      this.playerPos.x,
+      this.levelBounds.minX + safeInsetX,
+      this.levelBounds.maxX - safeInsetX,
+    );
+    this.survivalSurgeCenterZ = THREE.MathUtils.clamp(
+      this.playerPos.z,
+      this.levelBounds.minZ + safeInsetZ,
+      this.levelBounds.maxZ - safeInsetZ,
+    );
+
+    const ringGroup = new THREE.Group();
+    ringGroup.name = 'survival_horde_closing_ring';
+    ringGroup.position.set(this.survivalSurgeCenterX, 0.065, this.survivalSurgeCenterZ);
+    const outerMaterial = new THREE.MeshBasicMaterial({
+      color: 0xf59e0b,
+      transparent: true,
+      opacity: 0.58,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      toneMapped: false,
+    });
+    const innerMaterial = new THREE.MeshBasicMaterial({
+      color: 0xef4444,
+      transparent: true,
+      opacity: 0.34,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      toneMapped: false,
+    });
+    const outerRing = new THREE.Mesh(new THREE.RingGeometry(0.965, 1, 96), outerMaterial);
+    outerRing.rotation.x = -Math.PI / 2;
+    outerRing.scale.set(settings.initialRadius, settings.initialRadius, 1);
+    const innerRing = new THREE.Mesh(new THREE.RingGeometry(0.955, 1, 72), innerMaterial);
+    innerRing.rotation.x = -Math.PI / 2;
+    innerRing.scale.set(settings.initialRadius * 0.82, settings.initialRadius * 0.82, 1);
+    ringGroup.add(outerRing, innerRing);
+    this.levelRoot.add(ringGroup);
+    this.survivalSurgeRing = ringGroup;
+
+    // Reuse ordinary enemies as the first ring members. This creates a full
+    // perimeter immediately without a sudden 12–16 model allocation spike.
+    const reusableEnemies = this.enemies
+      .filter((enemy) =>
+        enemy.state !== 'defeated' &&
+        !!enemy.mesh &&
+        enemy.mesh.visible &&
+        !enemy.surgeRunner &&
+        !enemy.survivalAuditor &&
+        enemy.type !== 'walczak' &&
+        enemy.type !== 'krol_leto' &&
+        enemy.type !== 'bosman_krakow' &&
+        enemy.type !== 'pomazaniec' &&
+        enemy.type !== 'piorun_dron' &&
+        enemy.type !== 'sebix_m'
+      )
+      .sort((a, b) => {
+        const aDistance = Math.hypot(a.x - this.survivalSurgeCenterX, a.z - this.survivalSurgeCenterZ);
+        const bDistance = Math.hypot(b.x - this.survivalSurgeCenterX, b.z - this.survivalSurgeCenterZ);
+        return aDistance - bDistance;
+      })
+      .slice(0, settings.enemyCount);
+
+    reusableEnemies.forEach((enemy, index) => {
+      const point = getHordeRingPoint(
+        index, settings.enemyCount,
+        this.survivalSurgeCenterX, this.survivalSurgeCenterZ,
+        settings.initialRadius, -Math.PI / 2, 0.62,
+      );
+      enemy.x = THREE.MathUtils.clamp(point.x, this.levelBounds.minX + 1.2, this.levelBounds.maxX - 1.2);
+      enemy.z = THREE.MathUtils.clamp(point.z, this.levelBounds.minZ + 1.0, this.levelBounds.maxZ - 1.0);
+      enemy.mesh.position.set(enemy.x, enemy.y, enemy.z);
+      enemy.mesh.rotation.y = point.angle + Math.PI;
+      enemy.surgeRunner = true;
+      enemy.aiSlot = index;
+      enemy.aiFlankAngle = Math.PI / 2 - point.angle;
+      enemy.aiOrbitSign = index % 2 === 0 ? 1 : -1;
+      enemy.speed = THREE.MathUtils.clamp(enemy.speed * 1.04, 2.4, 3.9);
+      enemy.state = 'chase';
+      enemy.alerted = true;
+      enemy.shoutTimer = Math.min(enemy.shoutTimer || 1.2, 1.4);
+    });
+
+    this.survivalSurgeSpawned = reusableEnemies.length;
+    this.survivalSurgeSpawnQueue = settings.enemyCount - reusableEnemies.length;
+    this.survivalSurgeSpawnTimer = this.survivalSurgeSpawnQueue > 0 ? 0.18 : settings.spawnIntervalSeconds;
+    this.survivalSurgeDirection = 0;
+
     this.callbacks.onSurvivalAnnouncement?.(
       'FALOWA SZARŻA',
-      '45 kurierów • 15 sekund',
-      'Pilne na Już nadciąga od strony ' + chosen.label + '. Standardowy spawner zostaje wstrzymany — przebij się przez dostawę!'
+      settings.enemyCount + ' przeciwników • zamykający się pierścień',
+      'Pilne na Już otacza Cię ze wszystkich stron. Przebij się przez luki w szyku, zanim pierścień zamknie się przy Twojej pozycji.',
     );
-    this.emitFloatingToast('🚨 FALOWA SZARŻA — NADCIĄGA EXPRESS!', this.playerPos.x, this.playerPos.y + 1.9, this.playerPos.z, 'damage');
+    this.emitFloatingToast('🚨 FALOWA SZARŻA — PIERŚCIEŃ SIĘ ZACISKA!', this.playerPos.x, this.playerPos.y + 1.9, this.playerPos.z, 'damage');
     this.spawnParticleRing(this.playerPos.x, 0.16, this.playerPos.z, 0xf59e0b);
-    this.triggerScreenShake(0.34, 0.3);
+    this.triggerScreenShake(0.26, 0.24);
     sound.playBossWarning();
   }
 
   private spawnSurvivalSurgeEnemy() {
-    const directions = [
-      { x: 1, z: 0 }, { x: -1, z: 0 }, { x: 0, z: 1 }, { x: 0, z: -1 },
-    ];
-    const direction = directions[this.survivalSurgeDirection] || directions[0];
-    const tangentX = -direction.z;
-    const tangentZ = direction.x;
-    const laneOffset = (Math.random() - 0.5) * 13.5;
-    const x = THREE.MathUtils.clamp(this.playerPos.x + direction.x * 23 + tangentX * laneOffset, this.levelBounds.minX + 2.5, this.levelBounds.maxX - 2.5);
-    const z = THREE.MathUtils.clamp(this.playerPos.z + direction.z * 23 + tangentZ * laneOffset, this.levelBounds.minZ + 1.5, this.levelBounds.maxZ - 1.5);
+    const settings = getSurvivalHordeSettings(window.innerWidth < 900 || ('ontouchstart' in window));
+    const slot = this.survivalSurgeSpawned;
+    const point = getHordeRingPoint(
+      slot,
+      Math.max(1, this.survivalSurgeTargetCount),
+      this.survivalSurgeCenterX,
+      this.survivalSurgeCenterZ,
+      settings.initialRadius,
+      -Math.PI / 2,
+      0.62,
+    );
+    const x = THREE.MathUtils.clamp(point.x, this.levelBounds.minX + 1.2, this.levelBounds.maxX - 1.2);
+    const z = THREE.MathUtils.clamp(point.z, this.levelBounds.minZ + 1.0, this.levelBounds.maxZ - 1.0);
     const minZ = THREE.MathUtils.clamp(z - 0.35, this.levelBounds.minZ + 0.5, this.levelBounds.maxZ - 0.5);
     const maxZ = THREE.MathUtils.clamp(z + 0.35, this.levelBounds.minZ + 0.5, this.levelBounds.maxZ - 0.5);
     const id = 'survival_surge_' + Math.floor(performance.now()) + '_' + Math.floor(Math.random() * 100000);
     this.addKurierEnemy(id, x, minZ, maxZ, 'Pilne na Już! • Kurier Express B4');
     const runner = this.enemies[this.enemies.length - 1];
     if (!runner?.mesh) return;
+
     runner.surgeRunner = true;
-    runner.maxHp = 1;
-    runner.hp = 1;
-    runner.speed = Math.max(5.8, runner.speed * 2.25);
+    runner.maxHp = 2;
+    runner.hp = 2;
+    runner.speed = 3.4;
     runner.state = 'chase';
     runner.alerted = true;
-    runner.shoutTimer = 1.2 + Math.random() * 1.5;
+    runner.aiSlot = slot;
+    runner.aiFlankAngle = Math.PI / 2 - point.angle;
+    runner.aiOrbitSign = slot % 2 === 0 ? 1 : -1;
+    runner.shoutTimer = 1.4 + Math.random() * 1.2;
     runner.z = z;
-    runner.startX = minZ;
-    runner.endX = maxZ;
     runner.mesh.position.set(x, runner.y, z);
   }
 
@@ -4968,14 +5182,14 @@ export class MaxFlizGameEngine {
     const x = THREE.MathUtils.clamp(point.x, this.levelBounds.minX + 3, this.levelBounds.maxX - 3);
     const z = THREE.MathUtils.clamp(point.z, this.levelBounds.minZ + 3, this.levelBounds.maxZ - 3);
     const id = 'survival_trap_' + (++this.survivalHazardSequence) + '_' + Math.floor(performance.now());
-    switch (this.survivalHazardSequence % 5) {
+    switch (this.survivalHazardSequence % 6) {
       case 1:
         this.addCementSpillTrap(id, x, z, 2.35);
-        this.emitFloatingToast('🧱 ROZLANY CEMENT NA ALEI! OBJAZD ALBO CIĘŻKIE BUTY!', x, 1.4, z, 'damage');
+        this.emitFloatingToast('🧱 ŚWIEŻY BETON! ZMIEŃ ALEJKĘ!', x, 1.4, z, 'damage');
         break;
       case 2:
-        this.addGlueSpillTrap(id, x, z, 2.5);
-        this.emitFloatingToast('🍯 ROZLANE MAPEI! UWAŻAJ NA BUTY!', x, 1.4, z, 'damage');
+        this.addStretchFilmBarrierTrap(id, x, z, 5.0);
+        this.emitFloatingToast('🧻 ROZPIĘTA FOLIA STRETCH! PRZESKOCZ LUB PRZEBIJ SIĘ!', x, 1.4, z, 'damage');
         break;
       case 3:
         this.addLaserCutterTrap(id, x, z, 5.2, 1.8);
@@ -4985,9 +5199,13 @@ export class MaxFlizGameEngine {
         this.addSteamGeyserTrap(id, x, z, 5.5);
         this.emitFloatingToast('💨 GEJZER PARY: STREFA POD CIŚNIENIEM!', x, 1.5, z, 'damage');
         break;
-      default:
+      case 5:
         this.addHydraulicPressTrap(id, x, z, 4.4);
         this.emitFloatingToast('🔨 PRASA HYDRAULICZNA — NIE PODKŁADAJ RĘKI!', x, 1.6, z, 'damage');
+        break;
+      default:
+        this.addRollerGateTrap(id, x, z, 2.5, 5.0);
+        this.emitFloatingToast('⚙️ RUCHOMA BRAMA ROLEK! NIE DAJ SIĘ PRZYGNIEŚĆ!', x, 1.6, z, 'damage');
         break;
     }
     const spawnedTrap = this.hazards[this.hazards.length - 1];
@@ -6432,6 +6650,7 @@ export class MaxFlizGameEngine {
     const now = performance.now() * 0.001;
     this.hazards.forEach((h) => {
       if (!h.active || !h.mesh) return;
+      h.cooldown = Math.max(0, (h.cooldown || 0) - dt);
 
       if (h.type === 'forklift') {
         h.x += h.speed * h.dir * dt;
@@ -6469,21 +6688,53 @@ export class MaxFlizGameEngine {
             e.z -= (e.z - h.z) * 0.18 * dt;
           }
         }
-      } else if (h.type === 'glue_spill') {
-        const radius = h.width * 0.5;
-        const dist = Math.hypot(h.x - this.playerPos.x, h.z - this.playerPos.z);
-        if (dist < radius && this.playerPos.y < 0.35) {
-          if (this.glueSlowTimer <= 0.1 && (this.activePerks.kfcBerserk || 0) <= 0 && this.activePerks.speedBoost <= 0) {
-            this.emitFloatingToast('🍯 KLEJ MAPEI! SPOWOLNIENIE -50%!', this.playerPos.x, this.playerPos.y + 1.0, this.playerPos.z, 'damage');
-          }
-          this.glueSlowTimer = 0.35;
+      } else if (h.type === 'stretch_barrier') {
+        const playerCrossesBarrier =
+          Math.abs(this.playerPos.x - h.x) < h.width * 0.5 &&
+          Math.abs(this.playerPos.z - h.z) < 0.72 &&
+          this.playerPos.y < 0.78;
+        if (playerCrossesBarrier && (h.cooldown || 0) <= 0) {
+          h.cooldown = 1.45;
+          this.glueSlowTimer = Math.max(this.glueSlowTimer, 0.72);
+          const approachDirection = Math.sign(this.playerVel.z) || (this.playerPos.z >= h.z ? 1 : -1);
+          this.playerVel.z = -approachDirection * 2.4;
+          this.playerVel.x *= 0.78;
+          this.emitFloatingToast('🧻 FOLIA STRETCH! PRZEBIJ SIĘ ALBO PRZESKOCZ!', this.playerPos.x, this.playerPos.y + 1.0, this.playerPos.z, 'damage');
         }
-        // Glue also slows down enemies walking through it
-        for (const e of this.enemies) {
-          if (e.state === 'defeated') continue;
-          if (Math.hypot(e.x - h.x, e.z - h.z) < radius) {
-            e.x -= (e.x - h.x) * 0.4 * dt;
-            e.z -= (e.z - h.z) * 0.4 * dt;
+        for (const enemy of this.enemies) {
+          if (enemy.state === 'defeated' || enemy.stunTimer > 0) continue;
+          if (Math.abs(enemy.x - h.x) < h.width * 0.5 && Math.abs(enemy.z - h.z) < 0.72) {
+            enemy.stunTimer = 0.72;
+            enemy.state = 'stunned';
+            this.emitFloatingToast('🧻 ZAWINIĘTY W STRETCH!', enemy.x, enemy.y + 1.0, enemy.z, 'damage');
+          }
+        }
+      } else if (h.type === 'roller_gate') {
+        h.z += h.speed * h.dir * dt;
+        if (h.dir > 0 && h.z >= (h.endZ ?? h.startZ + 2.35)) h.dir = -1;
+        else if (h.dir < 0 && h.z <= h.startZ) h.dir = 1;
+        h.mesh.position.set(h.x, h.y, h.z);
+        if (h.movingPart) h.movingPart.rotation.x += dt * 9.0;
+
+        const playerInsideGate =
+          Math.abs(this.playerPos.x - h.x) < h.width * 0.5 - 0.18 &&
+          Math.abs(this.playerPos.z - h.z) < 0.96 &&
+          this.playerPos.y < 1.05;
+        if (playerInsideGate && (h.cooldown || 0) <= 0) {
+          h.cooldown = 1.35;
+          this.takeDamage('Przygnieciony przez ruchomą bramę rolek transportowych!');
+          this.playerVel.z += (this.playerPos.z >= h.z ? 1 : -1) * 3.8;
+          this.playerVel.x += (this.playerPos.x >= h.x ? 1 : -1) * 1.2;
+          this.triggerScreenShake(0.18, 0.12);
+        }
+        for (const enemy of this.enemies) {
+          if (enemy.state === 'defeated' || enemy.stunTimer > 0) continue;
+          if (Math.abs(enemy.x - h.x) < h.width * 0.5 - 0.15 && Math.abs(enemy.z - h.z) < 0.9) {
+            enemy.hp -= 1;
+            enemy.stunTimer = 0.95;
+            enemy.state = 'stunned';
+            this.emitFloatingToast('⚙️ PRASA ROLEK -1 HP!', enemy.x, enemy.y + 1.0, enemy.z, 'damage');
+            if (enemy.hp <= 0 && enemy.type !== 'walczak' && enemy.type !== 'krol_leto') this.defeatEnemy(enemy, 180, true);
           }
         }
       } else if (h.type === 'laser_cutter') {
@@ -6541,12 +6792,23 @@ export class MaxFlizGameEngine {
         }
 
         if (isErupting) {
-          const dist = Math.hypot(this.playerPos.x - h.x, this.playerPos.z - h.z);
-          if (dist < 1.15 && this.playerPos.y < 2.8) {
-            this.playerVel.y = 16.5;
-            this.isGrounded = false;
-            sound.playBounce();
-            this.emitFloatingToast('💨 GEJZER PARY! WYRZUT W GÓRĘ!', h.x, 1.8, h.z, 'perk');
+          const dx = this.playerPos.x - h.x;
+          const dz = this.playerPos.z - h.z;
+          const dist = Math.hypot(dx, dz);
+          if (dist < 1.45 && this.playerPos.y < 1.0 && (h.cooldown || 0) <= 0) {
+            h.cooldown = 2.0;
+            const directionX = dist > 0.05 ? dx / dist : Math.sin(this.playerRot);
+            const directionZ = dist > 0.05 ? dz / dist : Math.cos(this.playerRot);
+            this.playerVel.x += directionX * 3.2;
+            this.playerVel.z += directionZ * 3.2;
+            const horizontalSpeed = Math.hypot(this.playerVel.x, this.playerVel.z);
+            if (horizontalSpeed > 7.0) {
+              this.playerVel.x *= 7.0 / horizontalSpeed;
+              this.playerVel.z *= 7.0 / horizontalSpeed;
+            }
+            // The geyser is a side blast. It never overwrites jump velocity or launches the player into the roof.
+            this.takeDamage('Uderzenie bocznym podmuchem gejzera parowego!');
+            this.emitFloatingToast('💨 PODMUCH PARY — ODSKOCZ W BOK!', h.x, 1.4, h.z, 'damage');
           }
           for (const e of this.enemies) {
             if (e.state === 'defeated') continue;
@@ -6670,34 +6932,28 @@ export class MaxFlizGameEngine {
   }
 
   private updateSurvivalEnemyTactics(enemy: EnemyItem, dt: number, distanceToPlayer: number) {
-    if (enemy.surgeRunner) {
-      const dx = this.playerPos.x - enemy.x;
-      const dz = this.playerPos.z - enemy.z;
-      if (distanceToPlayer > 0.72) {
-        const inverseDistance = 1 / Math.max(0.1, distanceToPlayer);
-        enemy.x = THREE.MathUtils.clamp(enemy.x + dx * inverseDistance * enemy.speed * dt, this.levelBounds.minX + 1.0, this.levelBounds.maxX - 1.0);
-        enemy.z = THREE.MathUtils.clamp(enemy.z + dz * inverseDistance * enemy.speed * dt, this.levelBounds.minZ + 0.8, this.levelBounds.maxZ - 0.8);
-      }
-      enemy.mesh.rotation.y = Math.atan2(dx, dz);
-      enemy.mesh.position.set(enemy.x, enemy.y, enemy.z);
-      enemy.state = 'chase';
-      return;
-    }
     const role = this.getSurvivalEnemyRole(enemy);
-    const engaged = this.activeChaserIds.has(enemy.id) || enemy.type === 'pomazaniec';
+    const engaged = this.activeChaserIds.has(enemy.id) || enemy.type === 'pomazaniec' || !!enemy.surgeRunner;
     const slot = enemy.aiSlot || 0;
-    const anchorAngle = enemy.aiFlankAngle ?? Math.atan2(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z);
-    const drift = Math.sin(this.survivalElapsed * 0.62 + slot * 1.7) * (engaged ? 0.16 : 0.10);
+    const inHordeRing = !!enemy.surgeRunner && this.survivalSurgeTimeLeft > 0;
+    const anchorX = inHordeRing ? this.survivalSurgeCenterX : this.playerPos.x;
+    const anchorZ = inHordeRing ? this.survivalSurgeCenterZ : this.playerPos.z;
+    const anchorAngle = enemy.aiFlankAngle ?? Math.atan2(enemy.x - anchorX, enemy.z - anchorZ);
+    const drift = Math.sin(this.survivalElapsed * 0.62 + slot * 1.7) * (engaged ? 0.10 : 0.10);
     const angle = anchorAngle + drift;
 
-    let preferredRadius = engaged
-      ? role === 'support' ? 5.5 : role === 'ranged' ? 7.7 : role === 'bruiser' ? 2.25 : 3.0
-      : role === 'support' ? 15.0 : role === 'ranged' ? 14.0 : 12.6;
+    // Ring members follow the visible contracting perimeter instead of all
+    // selecting the same close-range target and collapsing onto the player.
+    let preferredRadius = inHordeRing
+      ? this.survivalSurgeCurrentRadius
+      : engaged
+        ? role === 'support' ? 5.5 : role === 'ranged' ? 7.7 : role === 'bruiser' ? 2.25 : 3.0
+        : role === 'support' ? 15.0 : role === 'ranged' ? 14.0 : 12.6;
 
     // Ranged attackers try to hold a useful firing lane instead of walking into melee range.
-    if (engaged && role === 'ranged' && distanceToPlayer < preferredRadius - 1.0) preferredRadius += 1.0;
-    const targetX = this.playerPos.x + Math.sin(angle) * preferredRadius;
-    const targetZ = this.playerPos.z + Math.cos(angle) * preferredRadius;
+    if (!inHordeRing && engaged && role === 'ranged' && distanceToPlayer < preferredRadius - 1.0) preferredRadius += 1.0;
+    const targetX = anchorX + Math.sin(angle) * preferredRadius;
+    const targetZ = anchorZ + Math.cos(angle) * preferredRadius * (inHordeRing ? 0.62 : 1);
     let steerX = targetX - enemy.x;
     let steerZ = targetZ - enemy.z;
     const steerLength = Math.hypot(steerX, steerZ);
@@ -6718,9 +6974,9 @@ export class MaxFlizGameEngine {
       const dx = enemy.x - other.x;
       const dz = enemy.z - other.z;
       const d2 = dx * dx + dz * dz;
-      if (d2 > 0.01 && d2 < 4.0) {
+      if (d2 > 0.01 && d2 < 6.76) {
         const d = Math.sqrt(d2);
-        const force = (2.0 - d) / (2.0 * d);
+        const force = (2.6 - d) / (2.6 * d);
         separationX += dx * force;
         separationZ += dz * force;
       }
@@ -6754,8 +7010,8 @@ export class MaxFlizGameEngine {
       }
     }
 
-    steerX += separationX * 1.8 + avoidX * 2.2;
-    steerZ += separationZ * 1.8 + avoidZ * 2.2;
+    steerX += separationX * 3.0 + avoidX * 2.2;
+    steerZ += separationZ * 3.0 + avoidZ * 2.2;
     const steerMagnitude = Math.hypot(steerX, steerZ) || 1;
     steerX /= steerMagnitude;
     steerZ /= steerMagnitude;
@@ -6944,13 +7200,15 @@ export class MaxFlizGameEngine {
       }
 
       // Check whether this enemy is allowed to engage or must hold position in wave
-      const canActivelyChase = e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'pomazaniec' || e.type === 'sebix_m' || this.activeChaserIds.has(e.id);
+      const canActivelyChase = e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'pomazaniec' || e.type === 'sebix_m' || !!e.surgeRunner || this.activeChaserIds.has(e.id);
 
       // SIGHT & DETECTION LOGIC
       const threatAwareness = 1 + this.threatTier * 0.025;
-      const detectionRange = (e.type === 'walczak' || e.type === 'krol_leto')
-        ? 16.0
-        : (e.state === 'chase' ? 12.0 : 8.5) * threatAwareness;
+      const detectionRange = e.surgeRunner
+        ? 40.0
+        : (e.type === 'walczak' || e.type === 'krol_leto')
+          ? 16.0
+          : (e.state === 'chase' ? 12.0 : 8.5) * threatAwareness;
       const canSeePlayer = distToPlayer < detectionRange && canActivelyChase;
 
       if (canSeePlayer) {
@@ -9848,7 +10106,8 @@ export class MaxFlizGameEngine {
           steam_faucet: '#67e8f9',
           falling_lamp: '#fda4af',
           conveyor: '#94a3b8',
-          glue_spill: '#a3e635',
+          stretch_barrier: '#f59e0b',
+          roller_gate: '#94a3b8',
           cement_spill: '#cbd5e1',
           laser_cutter: '#fb7185',
           steam_geyser: '#67e8f9',

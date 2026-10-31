@@ -14,6 +14,7 @@ import { CharacterId, PerkType } from './types.ts';
 import { AssetItem, assetLoader } from './assets.ts';
 import { SelectiveBloomPipeline } from './selectiveBloom.ts';
 import { ThreeClickTrigger } from './menuInteraction.ts';
+import { calculateUiViewport } from './uiViewport.ts';
 
 // warehouseAssets imports moved to assets.ts where they are preloaded
 
@@ -85,6 +86,7 @@ class MaxFlizScene extends xb.Script {
   private pausedForVisibility: boolean = false;
   private resizeObserver: ResizeObserver | null = null;
   private lastAdaptiveQualityAt: number = 0;
+  private hasAppliedInitialViewport = false;
   private selectiveBloom: SelectiveBloomPipeline | null = null;
   private restoreSelectiveBloomOverride: (() => void) | null = null;
 
@@ -105,8 +107,14 @@ class MaxFlizScene extends xb.Script {
       const aspect = width / height;
       // Use the Poco F6's ~393 CSS-pixel portrait width as the baseline.
       // Avoid shrinking the entire interface on modern 6.6–6.7 inch phones.
-      const uiScale = Math.min(1.12, Math.max(0.90, Math.min(width / 390, height / 780)));
-      document.documentElement.style.setProperty('--ui-scale', uiScale.toFixed(3));
+      const isTouchViewport = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+      const uiProfile = calculateUiViewport(width, height, isTouchViewport);
+      const root = document.documentElement;
+      root.style.setProperty('--ui-scale', uiProfile.scale.toFixed(3));
+      root.style.setProperty('--ui-font-scale', uiProfile.fontScale.toFixed(3));
+      root.style.setProperty('--ui-panel-max', uiProfile.panelMaxWidth + 'px');
+      root.dataset.uiDensity = uiProfile.density;
+      root.dataset.uiLandscapeTouch = String(uiProfile.landscapeTouch);
 
       if (this.camera) {
         // Keep resize-time framing in sync with the in-game camera profile.
@@ -1016,7 +1024,7 @@ class MaxFlizScene extends xb.Script {
     refreshZoneLocks();
 
     let startingGame = false;
-    const doStartGame = async (e?: Event) => {
+    const launchCampaignGame = async (e?: Event) => {
       if (startingGame) return;
       if (e) {
         e.preventDefault();
@@ -1050,6 +1058,20 @@ class MaxFlizScene extends xb.Script {
       gameShell?.classList.remove('survival-mode');
       this.engine.startGame(this.selectedLevelId);
       setTimeout(() => { startingGame = false; }, 600);
+    };
+
+    // Campaign entry opens the five-act briefing first. The final briefing
+    // action calls launchCampaignGame(), so this wrapper cannot recursively start itself.
+    let openCampaignBriefing = () => {
+      document.getElementById('story-intro-modal')?.classList.remove('hidden');
+    };
+    const doStartGame = (e?: Event) => {
+      if (startingGame) return;
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      openCampaignBriefing();
     };
 
     const doStartSurvival = async (e?: Event) => {
@@ -1345,6 +1367,12 @@ class MaxFlizScene extends xb.Script {
       }
     };
 
+    openCampaignBriefing = () => {
+      updateStorySlides(0);
+      storyModal?.classList.remove('hidden');
+      storyModal?.querySelector<HTMLButtonElement>('#btn-close-story')?.focus();
+    };
+
     bindTap(document.getElementById('btn-open-story-modal'), () => {
       updateStorySlides(0);
       storyModal?.classList.remove('hidden');
@@ -1364,7 +1392,7 @@ class MaxFlizScene extends xb.Script {
 
     btnStoryPlay?.addEventListener('click', () => {
       storyModal?.classList.add('hidden');
-      doStartGame();
+      launchCampaignGame();
     });
 
     storyDots.forEach((dot) => {
@@ -1720,7 +1748,38 @@ class MaxFlizScene extends xb.Script {
   }
 
 
+  private applyInitialViewportProfile() {
+    const width = Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth));
+    const height = Math.max(1, Math.round(window.visualViewport?.height || window.innerHeight));
+    const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    const profile = calculateUiViewport(width, height, isTouch);
+    const root = document.documentElement;
+    root.style.setProperty('--ui-scale', profile.scale.toFixed(3));
+    root.style.setProperty('--ui-font-scale', profile.fontScale.toFixed(3));
+    root.style.setProperty('--ui-panel-max', profile.panelMaxWidth + 'px');
+    root.dataset.uiDensity = profile.density;
+    root.dataset.uiLandscapeTouch = String(profile.landscapeTouch);
+
+    const aspect = width / height;
+    this.camera.aspect = aspect;
+    this.camera.fov = aspect < 0.65 ? 60 : aspect < 1 ? 54 : aspect < 1.35 ? 48 : 45;
+    this.camera.updateProjectionMatrix();
+
+    const renderer = (xb.core?.renderer as THREE.WebGLRenderer) || null;
+    if (renderer) {
+      const isMobile = width < 900 || isTouch;
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.75 : 2.0));
+      renderer.setSize(width, height, false);
+      this.selectiveBloom?.resize(width, height, renderer.getPixelRatio());
+    }
+    this.engine?.applyAutoCameraScaleForViewport();
+  }
+
   update() {
+    if (!this.hasAppliedInitialViewport && xb.core?.renderer) {
+      this.hasAppliedInitialViewport = true;
+      this.applyInitialViewportProfile();
+    }
     this.lastLoopTick = performance.now();
     const rawDt = xb.getDeltaTime();
     const dt = Math.min(Math.max(rawDt || 0.016, 0.001), 0.08);
