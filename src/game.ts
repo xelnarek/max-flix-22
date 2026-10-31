@@ -93,14 +93,17 @@ export interface SurvivalUpgradeOption {
   description: string;
 }
 
-export type SurvivalWeaponId = 'pallet_cannon' | 'diamond_saw' | 'glue_mine' | 'kfc_bomber' | 'piorun_drone';
+export type SurvivalWeaponId = 'pallet_cannon' | 'diamond_saw' | 'glue_mine' | 'kfc_bomber' | 'piorun_drone' | 'forklift_bolter' | 'scanner_pulse' | 'orbit_blades';
 export interface SurvivalWeaponState { id: SurvivalWeaponId; level: number; cooldown: number; evolved?: boolean; }
 const SURVIVAL_WEAPON_DEFS: Record<SurvivalWeaponId, { name: string; icon: string; description: string; cooldown: number; color: number }> = {
-  pallet_cannon: { name: 'Działo paletowe', icon: '🧱', description: 'Ciężki pocisk z niewielkim wybuchem. Wolny start, stopniowe ulepszenia.', cooldown: 7.8, color: 0xf59e0b },
-  diamond_saw: { name: 'Tarcza diamentowa', icon: '💿', description: 'Wirująca tarcza przebijająca linię wrogów. Długi czas przeładowania.', cooldown: 8.8, color: 0x22d3ee },
-  glue_mine: { name: 'Mina Mapei', icon: '🟣', description: 'Powolna mina zadająca obrażenia obszarowe i osłabiająca wrogów.', cooldown: 10.2, color: 0xa78bfa },
-  kfc_bomber: { name: 'Kubełek bombowy', icon: '🍗', description: 'Ciężki wybuchowy kubełek. Mało strzałów, duży efekt obszarowy.', cooldown: 11.5, color: 0xef4444 },
-  piorun_drone: { name: 'Dron Piorun', icon: '🤖', description: 'Powolny pocisk samonaprowadzający. Ulepszenia wzmacniają impuls.', cooldown: 9.4, color: 0x38bdf8 },
+  pallet_cannon: { name: 'Działo paletowe', icon: '🧱', description: 'Mały, precyzyjny pocisk z ograniczoną falą uderzeniową.', cooldown: 7.8, color: 0xf59e0b },
+  diamond_saw: { name: 'Tarcza diamentowa', icon: '💿', description: 'Kompaktowa tarcza przebijająca linię wrogów.', cooldown: 8.8, color: 0x22d3ee },
+  glue_mine: { name: 'Mina Mapei', icon: '🟣', description: 'Niewielka mina spowalniająca przeciwników w małym promieniu.', cooldown: 10.2, color: 0xa78bfa },
+  kfc_bomber: { name: 'Kubełek bombowy', icon: '🍗', description: 'Lekki pocisk obszarowy; krótki, czytelny wybuch.', cooldown: 11.5, color: 0xef4444 },
+  piorun_drone: { name: 'Dron Piorun', icon: '🤖', description: 'Mały pocisk samonaprowadzający.', cooldown: 9.4, color: 0x38bdf8 },
+  forklift_bolter: { name: 'Nitownica UDT', icon: '🔩', description: 'Szybkie, małe pociski przebijające kilku wrogów.', cooldown: 6.3, color: 0xfbbf24 },
+  scanner_pulse: { name: 'Impuls skanera B4', icon: '📡', description: 'Precyzyjny impuls namierzający cel i przebijający szyk.', cooldown: 8.1, color: 0x67e8f9 },
+  orbit_blades: { name: 'Wirujące tarcze', icon: '⚙️', description: 'Trzy małe ostrza krążą wokół operatora i chronią bliski dystans.', cooldown: 13.0, color: 0x86efac },
 };
 export interface SurvivalSnapshot {
   elapsedSeconds: number; wave: number; kills: number; level: number; xp: number; xpToNext: number;
@@ -489,6 +492,7 @@ export class MaxFlizGameEngine {
   private currentLevelId = 1;
   private levelRoot = new THREE.Group();
   private platforms: PlatformBlock[] = [];
+  private survivalObstacles: { x: number; z: number; halfWidth: number; halfDepth: number }[] = [];
   private collectibles: CollectibleItem[] = [];
   private droppedPerks: DroppedPerkItem[] = [];
   private hazards: HazardItem[] = [];
@@ -528,6 +532,10 @@ export class MaxFlizGameEngine {
     collectItems?: boolean;
     spinSpeed?: number;
     hitIds?: Set<string>;
+    orbiting?: boolean;
+    orbitAngle?: number;
+    orbitRadius?: number;
+    orbitSpeed?: number;
   }[] = [];
   private specialEffects: {
     mesh: THREE.Mesh | THREE.Group;
@@ -1021,9 +1029,10 @@ export class MaxFlizGameEngine {
     // Build the existing warehouse environment, then replace campaign encounters with a managed arena.
     this.startGame(1);
     this.gameMode = 'survival';
-    this.levelBounds = { minX: -34, maxX: 34, minZ: -17, maxZ: 17 };
+    this.levelBounds = { minX: -58, maxX: 58, minZ: -18.2, maxZ: 18.2 };
     this.sectorGates.forEach((gate) => { if (gate) gate.visible = false; });
     this.scene.background = new THREE.Color(0x080f1c);
+    this.buildSurvivalArenaExpansion();
     if (this.scene.fog instanceof THREE.Fog) {
       this.scene.fog.color.setHex(0x080f1c);
       this.scene.fog.near = 28;
@@ -1075,6 +1084,128 @@ export class MaxFlizGameEngine {
     this.callbacks.onBossUpdate?.('', 0, 0, false);
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
     this.emitFloatingToast('SURVIVAL SHIFT — PRZETRWAJ ZMIANĘ!', this.playerPos.x, this.playerPos.y + 1.8, this.playerPos.z, 'combo');
+  }
+
+
+  private buildSurvivalArenaExpansion() {
+    this.survivalObstacles = [];
+    const floorTexture = getFloorTexture().clone();
+    floorTexture.needsUpdate = true;
+    floorTexture.wrapS = THREE.RepeatWrapping;
+    floorTexture.wrapT = THREE.RepeatWrapping;
+    floorTexture.repeat.set(3, 4);
+    const floorMaterial = new THREE.MeshStandardMaterial({ map: floorTexture, roughness: 0.62, metalness: 0.12 });
+    const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x1c2c3d, roughness: 0.72, metalness: 0.32 });
+    const trimMaterial = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.48, metalness: 0.24, emissive: 0x7c2d12, emissiveIntensity: 0.12 });
+    const palletMaterial = new THREE.MeshStandardMaterial({ color: 0x76513a, roughness: 0.88 });
+    const crateMaterials = [
+      new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.82 }),
+      new THREE.MeshStandardMaterial({ color: 0x854d0e, roughness: 0.78 }),
+      new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.72 }),
+    ];
+    const floorGeometry = new THREE.PlaneGeometry(23.5, 40);
+
+    for (const side of [-1, 1]) {
+      const bayFloor = new THREE.Mesh(floorGeometry, floorMaterial);
+      bayFloor.rotation.x = -Math.PI / 2;
+      bayFloor.position.set(side * 47.75, -0.015, 0);
+      bayFloor.receiveShadow = true;
+      this.levelRoot.add(bayFloor);
+      this.platforms.push({ x: side * 47.75, y: 0, z: 0, width: 23.5, height: 0.2, depth: 40, type: 'floor' });
+
+      const endWall = new THREE.Mesh(new THREE.BoxGeometry(0.65, 9.5, 40), wallMaterial);
+      endWall.position.set(side * 59.35, 4.75, 0);
+      this.levelRoot.add(endWall);
+
+      for (const zSide of [-1, 1]) {
+        const sideWall = new THREE.Mesh(new THREE.BoxGeometry(24.0, 9.5, 0.48), wallMaterial);
+        sideWall.position.set(side * 47.75, 4.75, zSide * 19.65);
+        this.levelRoot.add(sideWall);
+        const warningStripe = new THREE.Mesh(new THREE.BoxGeometry(23.5, 0.12, 0.52), trimMaterial);
+        warningStripe.position.set(side * 47.75, 0.09, zSide * 19.25);
+        this.levelRoot.add(warningStripe);
+      }
+
+      // Structural columns and compact high-bay lighting make the new wings read as real warehouse space.
+      for (const localX of [39.5, 48.0, 56.0]) {
+        for (const z of [-17.0, 17.0]) {
+          const column = new THREE.Mesh(new THREE.BoxGeometry(0.42, 8.3, 0.42), wallMaterial);
+          column.position.set(side * localX, 4.15, z);
+          this.levelRoot.add(column);
+          const foot = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.22, 0.82), trimMaterial);
+          foot.position.set(side * localX, 0.12, z);
+          this.levelRoot.add(foot);
+        }
+      }
+
+      const coverPoints = [
+        { x: side * 42.5, z: -11.0, variant: 0 },
+        { x: side * 48.0, z: 10.5, variant: 1 },
+        { x: side * 54.0, z: -7.0, variant: 2 },
+        { x: side * 55.0, z: 12.0, variant: 0 },
+      ];
+      for (const point of coverPoints) {
+        const group = new THREE.Group();
+        const base = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.24, 1.95), palletMaterial);
+        base.position.y = 0.12;
+        group.add(base);
+        const lower = new THREE.Mesh(new THREE.BoxGeometry(1.28, 1.02, 1.58), crateMaterials[point.variant]);
+        lower.position.set(-0.28, 0.75, 0);
+        lower.castShadow = false;
+        const upper = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.78, 1.2), crateMaterials[(point.variant + 1) % crateMaterials.length]);
+        upper.position.set(0.62, 1.62, 0.08);
+        upper.castShadow = false;
+        const band = new THREE.Mesh(new THREE.BoxGeometry(1.32, 0.075, 1.62), trimMaterial);
+        band.position.set(-0.28, 1.06, 0);
+        group.add(lower, upper, band);
+        group.position.set(point.x, 0, point.z);
+        this.levelRoot.add(group);
+        this.survivalObstacles.push({ x: point.x, z: point.z, halfWidth: 1.55, halfDepth: 1.08 });
+      }
+
+      // A low staging rack on the outer side gives ranged enemies and the player cover to navigate around.
+      const rack = new THREE.Group();
+      const rackPostGeometry = new THREE.BoxGeometry(0.12, 3.4, 0.12);
+      for (const xOffset of [-1.75, 1.75]) {
+        for (const zOffset of [-0.9, 0.9]) {
+          const post = new THREE.Mesh(rackPostGeometry, trimMaterial);
+          post.position.set(xOffset, 1.7, zOffset);
+          rack.add(post);
+        }
+      }
+      for (const y of [0.45, 1.6, 2.75]) {
+        const shelf = new THREE.Mesh(new THREE.BoxGeometry(3.7, 0.13, 2.0), wallMaterial);
+        shelf.position.y = y;
+        rack.add(shelf);
+      }
+      rack.position.set(side * 51.5, 0, 0);
+      this.levelRoot.add(rack);
+      this.survivalObstacles.push({ x: side * 51.5, z: 0, halfWidth: 1.95, halfDepth: 1.15 });
+
+      const beacon = new THREE.PointLight(side < 0 ? 0x38bdf8 : 0xf59e0b, 2.0, 16);
+      beacon.position.set(side * 48.0, 6.8, 0);
+      this.levelRoot.add(beacon);
+      const overhead = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.12, 0.22), trimMaterial);
+      overhead.position.set(side * 48.0, 8.5, 0);
+      this.levelRoot.add(overhead);
+    }
+
+    // A few low barricades in the original bay break long sight lines without sealing the centre lane.
+    for (const point of [
+      { x: -22, z: 12 }, { x: 22, z: -12 }, { x: -8, z: -14 }, { x: 9, z: 14 },
+    ]) {
+      const barricade = new THREE.Group();
+      const base = new THREE.Mesh(new THREE.BoxGeometry(2.45, 0.22, 1.25), palletMaterial);
+      base.position.y = 0.11;
+      const crate = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.88, 1.05), crateMaterials[1]);
+      crate.position.y = 0.66;
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(2.12, 0.09, 1.08), trimMaterial);
+      stripe.position.y = 0.9;
+      barricade.add(base, crate, stripe);
+      barricade.position.set(point.x, 0, point.z);
+      this.levelRoot.add(barricade);
+      this.survivalObstacles.push({ x: point.x, z: point.z, halfWidth: 1.32, halfDepth: 0.72 });
+    }
   }
 
   public getGameMode(): 'campaign' | 'survival' {
@@ -1329,6 +1460,7 @@ export class MaxFlizGameEngine {
       this.levelRoot.remove(this.levelRoot.children[0]);
     }
     this.platforms = [];
+    this.survivalObstacles = [];
     this.collectibles = [];
     this.droppedPerks = [];
     this.lootCrates = [];
@@ -1344,12 +1476,13 @@ export class MaxFlizGameEngine {
     this.survivalXpGems = [];
     this.hazards = [];
     this.explosiveBarrels = [];
+    for (const particle of this.particles) this.disposeParticleMesh(particle.mesh);
+    this.particles = [];
     this.enemies = [];
     this.activeChaserIds.clear();
     this.waveDirectorCooldown = 0;
     this.threatTier = 0;
     this.enemyProjectiles = [];
-    this.particles = [];
     for (const projectile of this.projectiles) {
       if (projectile.weaponProjectile) this.disposeTemporaryObject(projectile.mesh);
     }
@@ -1365,6 +1498,53 @@ export class MaxFlizGameEngine {
   }
 
   private currentActiveSector = 1;
+
+
+  private applyEnemyVisualPolish(enemy: EnemyItem) {
+    const root = enemy.mesh as THREE.Group | undefined;
+    if (!root || root.userData.enemyVisualPolishApplied) return;
+    root.userData.enemyVisualPolishApplied = true;
+
+    const palette: Record<string, number> = {
+      customer: 0xef4444, architect: 0xa78bfa, inspector: 0x38bdf8,
+      handlowiec: 0xf59e0b, monter: 0x22c55e, kurier: 0xf97316,
+      przedstawiciel_włoski: 0xdc2626, sztaplar_szalony: 0xfacc15,
+      pan_roman: 0x92400e, serwisant: 0x06b6d4, zombie_pracownik: 0x84cc16,
+      elite_walczak_guard: 0xf43f5e, walczak: 0xf59e0b, krol_leto: 0xa855f7,
+      bosman_krakow: 0x0ea5e9, agv_robot: 0x38bdf8, piorun_dron: 0x22d3ee,
+    };
+    const accent = palette[enemy.type] || 0x38bdf8;
+    const isBoss = enemy.type === 'walczak' || enemy.type === 'krol_leto' || enemy.type === 'bosman_krakow';
+    const scale = isBoss ? 1.35 : 1;
+    const armorMat = new THREE.MeshStandardMaterial({ color: 0x26384b, roughness: 0.68, metalness: 0.42 });
+    const accentMat = new THREE.MeshStandardMaterial({ color: accent, roughness: 0.48, metalness: 0.22, emissive: accent, emissiveIntensity: 0.10 });
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.82, metalness: 0.16 });
+
+    // Compact shoulder guards and a chest ID plate improve silhouette recognition without enlarging hitboxes.
+    for (const side of [-1, 1]) {
+      const shoulder = new THREE.Mesh(new THREE.BoxGeometry(0.18 * scale, 0.13 * scale, 0.22 * scale), armorMat);
+      shoulder.position.set(side * 0.235 * scale, 0.73 * scale, 0.015);
+      shoulder.rotation.z = side * -0.12;
+      shoulder.castShadow = false;
+      root.add(shoulder);
+    }
+    const chestPlate = new THREE.Mesh(new THREE.BoxGeometry(0.22 * scale, 0.18 * scale, 0.045 * scale), accentMat);
+    chestPlate.position.set(0, 0.59 * scale, 0.155 * scale);
+    chestPlate.castShadow = false;
+    root.add(chestPlate);
+    const belt = new THREE.Mesh(new THREE.BoxGeometry(0.34 * scale, 0.075 * scale, 0.26 * scale), darkMat);
+    belt.position.set(0, 0.34 * scale, 0);
+    belt.castShadow = false;
+    root.add(belt);
+    const backModule = new THREE.Mesh(new THREE.BoxGeometry(0.20 * scale, 0.25 * scale, 0.12 * scale), armorMat);
+    backModule.position.set(0, 0.57 * scale, -0.15 * scale);
+    backModule.castShadow = false;
+    root.add(backModule);
+    const insignia = new THREE.Mesh(new THREE.SphereGeometry(0.055 * scale, 7, 6), accentMat);
+    insignia.position.set(0, 0.61 * scale, 0.19 * scale);
+    insignia.castShadow = false;
+    root.add(insignia);
+  }
 
   // Soft, saturated low-poly shading gives the warehouse a readable storybook look
   // without replacing the existing models, textures, animations or lighting setup.
@@ -1398,6 +1578,7 @@ export class MaxFlizGameEngine {
     this.buildLevel1();
     this.buildLevel2(76);
     this.buildLevel3(161);
+    for (const enemy of this.enemies) this.applyEnemyVisualPolish(enemy);
     this.applyStorybookStyle(this.levelRoot);
     this.sectorGates = [null, null, null, null];
     this.buildSectorGate(36, 2);
@@ -3260,6 +3441,40 @@ export class MaxFlizGameEngine {
   }
 
   private fireSurvivalWeapon(weapon: SurvivalWeaponState, target: EnemyItem) {
+
+    if (weapon.id === 'orbit_blades') {
+      const count = weapon.level >= 4 ? 4 : 3;
+      for (let i = 0; i < count; i++) {
+        const bladeMaterial = new THREE.MeshStandardMaterial({
+          color: SURVIVAL_WEAPON_DEFS[weapon.id].color,
+          emissive: SURVIVAL_WEAPON_DEFS[weapon.id].color,
+          emissiveIntensity: weapon.evolved ? 0.55 : 0.28,
+          roughness: 0.42,
+          metalness: 0.38,
+        });
+        const blade = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.035, 5, 10), bladeMaterial);
+        blade.rotation.x = Math.PI / 2;
+        blade.castShadow = false;
+        this.levelRoot.add(blade);
+        this.projectiles.push({
+          mesh: blade,
+          vel: new THREE.Vector3(),
+          life: weapon.evolved ? 5.8 : 4.8,
+          maxLife: weapon.evolved ? 5.8 : 4.8,
+          damage: 1 + (weapon.level >= 3 ? 1 : 0) + (weapon.evolved ? 1 : 0),
+          pierce: 40,
+          weaponProjectile: true,
+          hitIds: new Set<string>(),
+          orbiting: true,
+          orbitAngle: (i / count) * Math.PI * 2,
+          orbitRadius: weapon.evolved ? 1.9 : 1.55,
+          orbitSpeed: (weapon.evolved ? 3.0 : 2.55) * (i % 2 === 0 ? 1 : -1),
+          spinSpeed: 7.0,
+        });
+      }
+      return;
+    }
+
     const direction = new THREE.Vector3(target.x - this.playerPos.x, 0, target.z - this.playerPos.z);
     if (direction.lengthSq() < 0.001) return;
     direction.normalize();
@@ -3281,13 +3496,13 @@ export class MaxFlizGameEngine {
     };
     switch (weapon.id) {
       case 'pallet_cannon':
-        projectile.mesh = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.24, 0.44), material);
+        projectile.mesh = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.13, 0.20), material);
         projectile.vel = direction.clone().multiplyScalar(10);
-        projectile.aoeRadius = weapon.level >= 3 ? 1.8 : 1.2;
+        projectile.aoeRadius = weapon.level >= 3 ? 1.45 : 1.05;
         projectile.pierce = weapon.level >= 5 ? 1 : 0;
         break;
       case 'diamond_saw':
-        projectile.mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.12, 16), material);
+        projectile.mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.075, 12), material);
         (projectile.mesh as THREE.Mesh).rotation.x = Math.PI / 2;
         projectile.vel = direction.clone().multiplyScalar(13.2);
         projectile.life = projectile.maxLife = 2.2;
@@ -3295,34 +3510,54 @@ export class MaxFlizGameEngine {
         projectile.spinSpeed = 12;
         break;
       case 'glue_mine':
-        projectile.mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(0.34, 0), material);
+        projectile.mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(0.20, 0), material);
         projectile.vel = direction.clone().multiplyScalar(7.2);
         projectile.life = projectile.maxLife = 3.4;
-        projectile.aoeRadius = weapon.level >= 4 ? 2.8 : 2.1;
+        projectile.aoeRadius = weapon.level >= 4 ? 2.1 : 1.65;
         projectile.slowOnHit = true;
         projectile.pierce = weapon.evolved ? 1 : 0;
         break;
       case 'kfc_bomber':
-        projectile.mesh = new THREE.Mesh(new THREE.SphereGeometry(0.34, 12, 10), material);
+        projectile.mesh = new THREE.Mesh(new THREE.SphereGeometry(0.20, 10, 8), material);
         projectile.vel = direction.clone().multiplyScalar(8.4);
         projectile.life = projectile.maxLife = 3.1;
-        projectile.aoeRadius = weapon.level >= 4 ? 3.4 : 2.6;
+        projectile.aoeRadius = weapon.level >= 4 ? 2.65 : 2.05;
         projectile.igniteOnHit = weapon.level >= 3 || Boolean(weapon.evolved);
         projectile.spinSpeed = 8;
         break;
       case 'piorun_drone':
-        projectile.mesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.27, 1), material);
+        projectile.mesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.15, 0), material);
         projectile.vel = direction.clone().multiplyScalar(8.8);
         projectile.life = projectile.maxLife = 4.2;
         projectile.homing = true;
         projectile.pierce = weapon.evolved ? 1 : 0;
         break;
+      case 'forklift_bolter': {
+        const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.055, 0.28, 6), material);
+        bolt.rotation.x = Math.PI / 2;
+        bolt.rotation.y = Math.atan2(direction.x, direction.z);
+        projectile.mesh = bolt;
+        projectile.vel = direction.clone().multiplyScalar(18.5);
+        projectile.life = projectile.maxLife = 1.75;
+        projectile.pierce = weapon.level >= 3 ? 2 : 1;
+        projectile.spinSpeed = 2.2;
+        break;
+      }
+      case 'scanner_pulse': {
+        const pulse = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.08, 0.42), material);
+        pulse.rotation.y = Math.atan2(direction.x, direction.z);
+        projectile.mesh = pulse;
+        projectile.vel = direction.clone().multiplyScalar(14.8);
+        projectile.life = projectile.maxLife = 2.0;
+        projectile.homing = true;
+        projectile.pierce = weapon.level >= 4 ? 3 : 2;
+        break;
+      }
     }
     projectile.mesh.position.copy(start);
     (projectile.mesh as THREE.Mesh).castShadow = false;
     this.levelRoot.add(projectile.mesh);
     this.projectiles.push(projectile);
-    this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.85, this.playerPos.z, definition.color);
     sound.playAttackWhoosh();
   }
 
@@ -3357,12 +3592,13 @@ export class MaxFlizGameEngine {
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
     // Poco F6-class hardware can sustain a busier arena; retain a hard ceiling
     // so particle, AI and shadow costs stay predictable during long runs.
-    const enemyCap = isMobile ? 18 : 28;
+    const enemyCap = isMobile ? 22 : 34;
     const aliveCount = this.enemies.reduce((count, enemy) => count + (enemy.state === 'defeated' ? 0 : 1), 0);
     if (this.survivalSpawnTimer <= 0 && aliveCount < enemyCap) {
-      const groupSize = Math.min(isMobile ? 4 : 5, 1 + Math.floor(this.survivalWave * 0.25), enemyCap - aliveCount);
+      const groupLimit = isMobile ? 5 : 7;
+      const groupSize = Math.min(groupLimit, 2 + Math.floor(this.survivalWave * 0.32), enemyCap - aliveCount);
       for (let i = 0; i < groupSize; i++) this.spawnSurvivalEnemy(this.survivalWave);
-      this.survivalSpawnTimer = Math.max(9.0, 14.0 - this.survivalWave * 0.14);
+      this.survivalSpawnTimer = Math.max(8.2, 13.5 - this.survivalWave * 0.16);
     }
 
     this.updateSurvivalEvents(dt);
@@ -3544,7 +3780,7 @@ export class MaxFlizGameEngine {
 
   private getSurvivalSpawnPoint(): { x: number; z: number } {
     const angle = Math.random() * Math.PI * 2;
-    const radius = 15 + Math.random() * 4;
+    const radius = 18 + Math.random() * 5;
     const x = THREE.MathUtils.clamp(
       this.playerPos.x + Math.cos(angle) * radius,
       this.levelBounds.minX + 2.5,
@@ -3582,7 +3818,10 @@ export class MaxFlizGameEngine {
 
     const enemy = this.enemies[this.enemies.length - 1];
     if (!enemy) return;
-    if (enemy.mesh) this.applyStorybookStyle(enemy.mesh);
+    if (enemy.mesh) {
+      this.applyEnemyVisualPolish(enemy);
+      this.applyStorybookStyle(enemy.mesh);
+    }
     if (enemy.type !== 'architect') {
       enemy.z = z;
       enemy.startX = minZ;
@@ -3606,6 +3845,9 @@ export class MaxFlizGameEngine {
     }
     const boss = this.enemies[this.enemies.length - 1];
     if (boss) {
+      this.applyEnemyVisualPolish(boss);
+      this.applyStorybookStyle(boss.mesh);
+      boss.aiOrbitSign = wave % 2 === 0 ? 1 : -1;
       boss.maxHp = Math.round(26 + wave * 2.6);
       boss.hp = boss.maxHp;
       boss.speed *= 0.86 * (1 + Math.min(0.38, wave * 0.012));
@@ -3923,7 +4165,9 @@ export class MaxFlizGameEngine {
 
     // Continuous unified Mega-Map boundaries across all 3 connected sectors (expanded in Z)
     const maxZForSector = this.playerPos.x < 36 ? 19.0 : this.playerPos.x < 116 ? 19.0 : 21.0;
-    const currentBounds = { minX: -34.5, maxX: 204.5, minZ: -maxZForSector, maxZ: maxZForSector };
+    const currentBounds = this.gameMode === 'survival'
+      ? this.levelBounds
+      : { minX: -34.5, maxX: 204.5, minZ: -maxZForSector, maxZ: maxZForSector };
 
     let nextX = THREE.MathUtils.clamp(this.playerPos.x + this.playerVel.x * dt, currentBounds.minX, currentBounds.maxX);
     if (this.gameMode === 'campaign') {
@@ -3945,10 +4189,30 @@ export class MaxFlizGameEngine {
     }
     this.gateNoticeCooldown = Math.max(0, this.gateNoticeCooldown - dt);
     const nextY = this.playerPos.y + this.playerVel.y * dt;
-    const nextZ = THREE.MathUtils.clamp(this.playerPos.z + this.playerVel.z * dt, currentBounds.minZ, currentBounds.maxZ);
+    let nextZ = THREE.MathUtils.clamp(this.playerPos.z + this.playerVel.z * dt, currentBounds.minZ, currentBounds.maxZ);
 
     let landed = false;
     const pRadius = 0.28;
+
+    // Ground-level crate stacks and staging racks in the enlarged Survival wings have real collision.
+    if (this.gameMode === 'survival' && this.playerPos.y < 1.0) {
+      for (const obstacle of this.survivalObstacles) {
+        const dx = nextX - obstacle.x;
+        const dz = nextZ - obstacle.z;
+        const overlapX = obstacle.halfWidth + pRadius - Math.abs(dx);
+        const overlapZ = obstacle.halfDepth + pRadius - Math.abs(dz);
+        if (overlapX <= 0 || overlapZ <= 0) continue;
+        if (overlapX < overlapZ) {
+          const sign = Math.sign(dx || this.playerVel.x || 1);
+          nextX = obstacle.x + sign * (obstacle.halfWidth + pRadius);
+          this.playerVel.x = 0;
+        } else {
+          const sign = Math.sign(dz || this.playerVel.z || 1);
+          nextZ = obstacle.z + sign * (obstacle.halfDepth + pRadius);
+          this.playerVel.z = 0;
+        }
+      }
+    }
 
     for (const plat of this.platforms) {
       const minX = plat.x - plat.width / 2;
@@ -4438,6 +4702,100 @@ export class MaxFlizGameEngine {
     ]
   };
 
+
+  private getSurvivalEnemyRole(enemy: EnemyItem): 'bruiser' | 'flanker' | 'ranged' | 'support' {
+    if (enemy.type === 'sztaplar_szalony' || enemy.type === 'elite_walczak_guard') return 'bruiser';
+    if (enemy.type === 'inspector') return 'support';
+    if (enemy.type === 'handlowiec' || enemy.type === 'przedstawiciel_włoski' || enemy.type === 'pan_roman' || enemy.type === 'serwisant') return 'ranged';
+    if (enemy.type === 'kurier' || enemy.type === 'zombie_pracownik' || enemy.type === 'monter') return 'flanker';
+    return 'flanker';
+  }
+
+  private updateSurvivalEnemyTactics(enemy: EnemyItem, dt: number, distanceToPlayer: number) {
+    const role = this.getSurvivalEnemyRole(enemy);
+    const engaged = this.activeChaserIds.has(enemy.id);
+    const slot = enemy.aiSlot || 0;
+    const anchorAngle = enemy.aiFlankAngle ?? Math.atan2(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z);
+    const drift = Math.sin(this.survivalElapsed * 0.62 + slot * 1.7) * (engaged ? 0.16 : 0.10);
+    const angle = anchorAngle + drift;
+
+    let preferredRadius = engaged
+      ? role === 'support' ? 5.5 : role === 'ranged' ? 7.7 : role === 'bruiser' ? 2.25 : 3.0
+      : role === 'support' ? 15.0 : role === 'ranged' ? 14.0 : 12.6;
+
+    // Ranged attackers try to hold a useful firing lane instead of walking into melee range.
+    if (engaged && role === 'ranged' && distanceToPlayer < preferredRadius - 1.0) preferredRadius += 1.0;
+    const targetX = this.playerPos.x + Math.sin(angle) * preferredRadius;
+    const targetZ = this.playerPos.z + Math.cos(angle) * preferredRadius;
+    let steerX = targetX - enemy.x;
+    let steerZ = targetZ - enemy.z;
+    const steerLength = Math.hypot(steerX, steerZ);
+
+    if (steerLength < 0.72 && engaged) {
+      const orbitSign = enemy.aiOrbitSign || 1;
+      steerX = Math.cos(angle) * orbitSign;
+      steerZ = -Math.sin(angle) * orbitSign;
+    } else if (steerLength < 0.72 && !engaged) {
+      steerX = Math.cos(angle);
+      steerZ = -Math.sin(angle);
+    }
+
+    let separationX = 0;
+    let separationZ = 0;
+    for (const other of this.enemies) {
+      if (other.id === enemy.id || other.state === 'defeated') continue;
+      const dx = enemy.x - other.x;
+      const dz = enemy.z - other.z;
+      const d2 = dx * dx + dz * dz;
+      if (d2 > 0.01 && d2 < 4.0) {
+        const d = Math.sqrt(d2);
+        const force = (2.0 - d) / (2.0 * d);
+        separationX += dx * force;
+        separationZ += dz * force;
+      }
+    }
+
+    let avoidX = 0;
+    let avoidZ = 0;
+    for (const obstacle of this.survivalObstacles) {
+      const nearestX = THREE.MathUtils.clamp(enemy.x, obstacle.x - obstacle.halfWidth, obstacle.x + obstacle.halfWidth);
+      const nearestZ = THREE.MathUtils.clamp(enemy.z, obstacle.z - obstacle.halfDepth, obstacle.z + obstacle.halfDepth);
+      const dx = enemy.x - nearestX;
+      const dz = enemy.z - nearestZ;
+      const d2 = dx * dx + dz * dz;
+      if (d2 > 0.0025 && d2 < 3.2) {
+        const d = Math.sqrt(d2);
+        const force = (1.8 - d) / (1.8 * d);
+        avoidX += dx * force;
+        avoidZ += dz * force;
+      }
+    }
+
+    steerX += separationX * 1.8 + avoidX * 2.2;
+    steerZ += separationZ * 1.8 + avoidZ * 2.2;
+    const steerMagnitude = Math.hypot(steerX, steerZ) || 1;
+    steerX /= steerMagnitude;
+    steerZ /= steerMagnitude;
+
+    const roleSpeed = role === 'bruiser' ? 0.82 : role === 'flanker' ? 1.12 : role === 'support' ? 0.88 : 0.94;
+    const waveSpeed = 1 + Math.min(0.18, Math.max(0, this.survivalWave - 1) * 0.009);
+    const pressureSpeed = engaged ? 1 : 0.48;
+    const speed = enemy.speed * roleSpeed * waveSpeed * pressureSpeed;
+
+    enemy.x = THREE.MathUtils.clamp(enemy.x + steerX * speed * dt, this.levelBounds.minX + 1.2, this.levelBounds.maxX - 1.2);
+    enemy.z = THREE.MathUtils.clamp(enemy.z + steerZ * speed * dt, this.levelBounds.minZ + 1.0, this.levelBounds.maxZ - 1.0);
+    enemy.mesh.rotation.y = Math.atan2(this.playerPos.x - enemy.x, this.playerPos.z - enemy.z);
+    enemy.mesh.position.set(enemy.x, enemy.y, enemy.z);
+    enemy.state = engaged ? 'chase' : 'patrol';
+
+    if (engaged && !enemy.alerted) {
+      enemy.alerted = true;
+      this.emitFloatingToast(enemy.type === 'zombie_pracownik' ? '🍗!' : '!', enemy.x, enemy.y + 1.25, enemy.z, 'damage');
+    } else if (!engaged) {
+      enemy.alerted = false;
+    }
+  }
+
   private updateEnemies(dt: number) {
     if (this.globalEnemyShoutCooldown > 0) {
       this.globalEnemyShoutCooldown -= dt;
@@ -4466,9 +4824,11 @@ export class MaxFlizGameEngine {
     if (this.waveDirectorCooldown <= 0) {
       this.waveDirectorCooldown = 0.18;
       const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
-      const baseChasers = isMobile ? 1 : 2;
-      const platformCap = isMobile ? 2 : 3;
-      const maxActiveChasers = Math.min(platformCap, baseChasers + Math.floor(this.threatTier * 0.75));
+      const survivalMode = this.gameMode === 'survival';
+      const pressureSteps = survivalMode ? Math.floor(Math.max(0, this.survivalWave - 1) / 3) : Math.floor(this.threatTier * 0.75);
+      const baseChasers = survivalMode ? (isMobile ? 3 : 4) : (isMobile ? 1 : 2);
+      const platformCap = survivalMode ? (isMobile ? 6 : 8) : (isMobile ? 2 : 3);
+      const maxActiveChasers = Math.min(platformCap, baseChasers + pressureSteps);
       const activeCandidates: { enemy: EnemyItem; dist: number }[] = [];
 
       for (const e of this.enemies) {
@@ -4479,15 +4839,28 @@ export class MaxFlizGameEngine {
           continue;
         }
         if (!e.mesh.visible) e.mesh.visible = true;
-        if (e.type !== 'walczak' && e.type !== 'krol_leto' && d <= 18.0) {
+        const engageRadius = survivalMode ? 28.0 : 18.0;
+        if (e.type !== 'walczak' && e.type !== 'krol_leto' && d <= engageRadius) {
           activeCandidates.push({ enemy: e, dist: d });
         }
       }
 
       activeCandidates.sort((a, b) => a.dist - b.dist);
+      const previouslyActive = new Set(this.activeChaserIds);
       this.activeChaserIds.clear();
-      for (let i = 0; i < Math.min(maxActiveChasers, activeCandidates.length); i++) {
-        this.activeChaserIds.add(activeCandidates[i].enemy.id);
+      const activeCount = Math.min(maxActiveChasers, activeCandidates.length);
+      const firstCandidate = activeCandidates[0]?.enemy;
+      const formationBase = firstCandidate
+        ? Math.atan2(firstCandidate.x - this.playerPos.x, firstCandidate.z - this.playerPos.z)
+        : 0;
+      for (let i = 0; i < activeCount; i++) {
+        const enemy = activeCandidates[i].enemy;
+        if (!previouslyActive.has(enemy.id)) {
+          enemy.aiSlot = i;
+          enemy.aiFlankAngle = formationBase + (i / Math.max(1, activeCount)) * Math.PI * 2;
+          enemy.aiOrbitSign = i % 2 === 0 ? 1 : -1;
+        }
+        this.activeChaserIds.add(enemy.id);
       }
     }
 
@@ -4636,8 +5009,15 @@ export class MaxFlizGameEngine {
         if (distToPlayer < 14.0) {
           const angle = Math.atan2(dx, dz);
           e.mesh.rotation.y = angle;
-          e.x += (dx / Math.max(0.1, distToPlayer)) * e.speed * 0.95 * dt;
-          e.z += (dz / Math.max(0.1, distToPlayer)) * e.speed * 0.95 * dt;
+          if (this.gameMode === 'survival') {
+            const side = e.aiOrbitSign || 1;
+            const invDist = 1 / Math.max(0.1, distToPlayer);
+            e.x += ((dx * invDist) * 0.72 + (dz * invDist) * 0.46 * side) * e.speed * dt;
+            e.z += ((dz * invDist) * 0.72 - (dx * invDist) * 0.46 * side) * e.speed * dt;
+          } else {
+            e.x += (dx / Math.max(0.1, distToPlayer)) * e.speed * 0.95 * dt;
+            e.z += (dz / Math.max(0.1, distToPlayer)) * e.speed * 0.95 * dt;
+          }
         } else {
           e.x += e.speed * e.dir * dt;
           if (e.dir > 0 && e.x >= e.endX) {
@@ -4673,8 +5053,15 @@ export class MaxFlizGameEngine {
         if (distToPlayer < 15.0) {
           const angle = Math.atan2(dx, dz);
           e.mesh.rotation.y = angle;
-          e.x += (dx / Math.max(0.1, distToPlayer)) * e.speed * 1.05 * dt;
-          e.z += (dz / Math.max(0.1, distToPlayer)) * e.speed * 1.05 * dt;
+          if (this.gameMode === 'survival') {
+            const side = e.aiOrbitSign || -1;
+            const invDist = 1 / Math.max(0.1, distToPlayer);
+            e.x += ((dx * invDist) * 0.68 + (dz * invDist) * 0.52 * side) * e.speed * dt;
+            e.z += ((dz * invDist) * 0.68 - (dx * invDist) * 0.52 * side) * e.speed * dt;
+          } else {
+            e.x += (dx / Math.max(0.1, distToPlayer)) * e.speed * 1.05 * dt;
+            e.z += (dz / Math.max(0.1, distToPlayer)) * e.speed * 1.05 * dt;
+          }
           if (isPhase2 && Math.random() < 0.05) this.triggerScreenShake(0.1, 0.2);
         } else if (e.state === 'searching' && e.lastKnownPlayerPos) {
           const angle = Math.atan2(e.lastKnownPlayerPos.x - e.x, e.lastKnownPlayerPos.z - e.z);
@@ -4702,49 +5089,55 @@ export class MaxFlizGameEngine {
         }
         this.callbacks.onBossUpdate?.(e.name, e.hp, e.maxHp, true, e.bossPhase);
       } else {
-        // Dynamic Chase / Tracking AI for ground enemies
-        const chaseRadius =
-          e.type === 'zombie_pracownik'
-            ? 18.0
-            : e.type === 'kurier'
-              ? 14.0
-              : e.type === 'sztaplar_szalony'
-                ? 12.0
-                : 10.0;
-
-        if (distToPlayer < chaseRadius) {
-          if (e.state === 'patrol' && !e.alerted) {
-            e.alerted = true;
-            this.emitFloatingToast(e.type === 'zombie_pracownik' ? '🍗!' : '!', e.x, e.y + 1.35, e.z, 'damage');
-            sound.playAlert();
-          }
-          e.state = 'chase';
-          const angle = Math.atan2(dx, dz);
-          e.mesh.rotation.y = angle;
-
-          const chaseSpeed =
-            e.speed *
-            (e.type === 'zombie_pracownik'
-              ? 1.42
-              : e.type === 'kurier'
-                ? 1.35
-                : 1.2) *
-            (1 + this.threatTier * 0.04);
-          e.x += (dx / Math.max(0.1, distToPlayer)) * chaseSpeed * dt;
-          e.z += (dz / Math.max(0.1, distToPlayer)) * chaseSpeed * dt;
+        if (this.gameMode === 'survival') {
+          this.updateSurvivalEnemyTactics(e, dt, distToPlayer);
         } else {
-          e.alerted = false;
-          e.state = 'patrol';
-          e.z += e.speed * e.dir * dt;
-          if (e.dir > 0 && e.z >= e.endX) {
-            e.dir = -1;
-            e.mesh.rotation.y = Math.PI;
-          } else if (e.dir < 0 && e.z <= e.startX) {
-            e.dir = 1;
-            e.mesh.rotation.y = 0;
+          // Dynamic Chase / Tracking AI for ground enemies
+          const chaseRadius =
+            e.type === 'zombie_pracownik'
+              ? 18.0
+              : e.type === 'kurier'
+                ? 14.0
+                : e.type === 'sztaplar_szalony'
+                  ? 12.0
+                  : 10.0;
+  
+          if (distToPlayer < chaseRadius) {
+            if (e.state === 'patrol' && !e.alerted) {
+              e.alerted = true;
+              this.emitFloatingToast(e.type === 'zombie_pracownik' ? '🍗!' : '!', e.x, e.y + 1.35, e.z, 'damage');
+              sound.playAlert();
+            }
+            e.state = 'chase';
+            const angle = Math.atan2(dx, dz);
+            e.mesh.rotation.y = angle;
+  
+            const chaseSpeed =
+              e.speed *
+              (e.type === 'zombie_pracownik'
+                ? 1.42
+                : e.type === 'kurier'
+                  ? 1.35
+                  : 1.2) *
+              (1 + this.threatTier * 0.04);
+            e.x += (dx / Math.max(0.1, distToPlayer)) * chaseSpeed * dt;
+            e.z += (dz / Math.max(0.1, distToPlayer)) * chaseSpeed * dt;
+          } else {
+            e.alerted = false;
+            e.state = 'patrol';
+            e.z += e.speed * e.dir * dt;
+            if (e.dir > 0 && e.z >= e.endX) {
+              e.dir = -1;
+              e.mesh.rotation.y = Math.PI;
+            } else if (e.dir < 0 && e.z <= e.startX) {
+              e.dir = 1;
+              e.mesh.rotation.y = 0;
+            }
           }
+          e.mesh.position.set(e.x, e.y, e.z);
+  
+  
         }
-        e.mesh.position.set(e.x, e.y, e.z);
 
         // Ranged special attacks
         if ((e.type === 'handlowiec' || e.type === 'przedstawiciel_włoski') && e.specialActionTimer !== undefined) {
@@ -5178,7 +5571,18 @@ export class MaxFlizGameEngine {
         }
       }
 
-      p.mesh.position.addScaledVector(p.vel, dt);
+      if (p.orbiting) {
+        p.orbitAngle = (p.orbitAngle || 0) + (p.orbitSpeed || 2.5) * dt;
+        const orbitAngle = p.orbitAngle;
+        const radius = p.orbitRadius || 1.55;
+        p.mesh.position.set(
+          this.playerPos.x + Math.cos(orbitAngle) * radius,
+          this.playerPos.y + 0.78 + Math.sin(orbitAngle * 2.0) * 0.08,
+          this.playerPos.z + Math.sin(orbitAngle) * radius
+        );
+      } else {
+        p.mesh.position.addScaledVector(p.vel, dt);
+      }
       if (p.spinSpeed) {
         p.mesh.rotation.y += p.spinSpeed * dt;
       }
@@ -5225,9 +5629,13 @@ export class MaxFlizGameEngine {
             if (e.shieldActive) e.shieldActive = false;
             e.hp -= baseDmg;
             sound.playSmack();
-            this.triggerBloomPulse(0.1);
-            this.cameraShake = 0.25;
-            this.spawnParticleRing(e.x, e.y + 0.8, e.z, this.charDef.color);
+            if (p.weaponProjectile) {
+              this.spawnCompactImpact(e.x, e.y + 0.72, e.z, 0x7dd3fc);
+            } else {
+              this.triggerBloomPulse(0.1);
+              this.cameraShake = 0.25;
+              this.spawnParticleRing(e.x, e.y + 0.8, e.z, this.charDef.color);
+            }
             this.emitFloatingToast(`-${baseDmg} HP`, e.x, e.y + 0.8, e.z, 'damage');
 
             if (p.slowOnHit) {
@@ -5236,19 +5644,20 @@ export class MaxFlizGameEngine {
             }
             if (p.igniteOnHit) {
               e.onFireTimer = 2.5;
-              this.spawnParticleRing(e.x, e.y + 0.5, e.z, 0xff5500);
+              if (!p.weaponProjectile) this.spawnParticleRing(e.x, e.y + 0.5, e.z, 0xff5500);
             }
 
             // AoE shockwave on hit (Marcin's WZ Binder Stamp)
             if (p.aoeRadius && p.aoeRadius > 0) {
-              this.spawnParticleRing(e.x, e.y + 0.4, e.z, 0xf59e0b);
+              if (p.weaponProjectile) this.spawnCompactImpact(e.x, e.y + 0.36, e.z, 0xf59e0b);
+              else this.spawnParticleRing(e.x, e.y + 0.4, e.z, 0xf59e0b);
               for (const other of this.enemies) {
                 if (other.id !== e.id && other.state !== 'defeated') {
                   if (Math.hypot(other.x - e.x, other.z - e.z) <= p.aoeRadius) {
                     other.hp -= this.scaleSurvivalDamage(1);
                     other.stunTimer = Math.max(other.stunTimer, this.gameMode === 'survival' ? 0.22 : (p.stunDuration || 1.2));
                     if (this.gameMode !== 'survival' || (p.stunDuration || 0) > 0.8) other.state = 'stunned';
-                    this.emitFloatingToast('📑 AUDYT AoE -1 HP!', other.x, other.y + 1.1, other.z, 'damage');
+                    if (!p.weaponProjectile) this.emitFloatingToast('📑 AUDYT AoE -1 HP!', other.x, other.y + 1.1, other.z, 'damage');
                     if (other.hp <= 0) {
                       this.defeatEnemy(other, 240, true);
                     }
@@ -5487,12 +5896,38 @@ export class MaxFlizGameEngine {
     });
   }
 
+  private disposeParticleMesh(mesh: THREE.Mesh) {
+    this.levelRoot.remove(mesh);
+    if (mesh.geometry) mesh.geometry.dispose();
+    const material = mesh.material;
+    if (Array.isArray(material)) material.forEach((entry) => entry.dispose());
+    else material.dispose();
+  }
+
+  private spawnCompactImpact(x: number, y: number, z: number, color: number) {
+    for (let i = 0; i < 3; i++) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.055, 0.055, 0.055),
+        new THREE.MeshBasicMaterial({ color })
+      );
+      const angle = (i / 3) * Math.PI * 2;
+      mesh.position.set(x, y, z);
+      this.levelRoot.add(mesh);
+      this.particles.push({
+        mesh,
+        vel: new THREE.Vector3(Math.cos(angle) * 1.1, 0.6 + i * 0.12, Math.sin(angle) * 1.1),
+        life: 0.22,
+        maxLife: 0.22,
+      });
+    }
+  }
+
   private updateParticles(dt: number) {
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
     const maxBudget = isMobile ? 36 : 75;
     if (this.particles.length > maxBudget) {
       const excess = this.particles.splice(0, this.particles.length - maxBudget);
-      excess.forEach((p) => this.levelRoot.remove(p.mesh));
+      excess.forEach((particle) => this.disposeParticleMesh(particle.mesh));
     }
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const pt = this.particles[i];
@@ -5502,7 +5937,7 @@ export class MaxFlizGameEngine {
       pt.mesh.scale.setScalar(scale);
 
       if (pt.life <= 0) {
-        this.levelRoot.remove(pt.mesh);
+        this.disposeParticleMesh(pt.mesh);
         this.particles.splice(i, 1);
       }
     }
