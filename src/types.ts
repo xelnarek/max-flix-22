@@ -68,7 +68,8 @@ export type EnemyType =
   | 'pan_roman'
   | 'serwisant'
   | 'bosman_krakow'
-  | 'zombie_pracownik';
+  | 'zombie_pracownik'
+  | 'pomazaniec';
 
 export interface EnemyItem {
   id: string;
@@ -108,6 +109,8 @@ export interface EnemyItem {
   hpFill?: any;
   threatRing?: any;
   shieldRing?: any;
+  bikeWheels?: any[];
+  propeller?: any;
   // Stable formation data for Survival's encirclement director.
   aiSlot?: number;
   aiFlankAngle?: number;
