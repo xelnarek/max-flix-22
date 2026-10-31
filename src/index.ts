@@ -1183,14 +1183,57 @@ class MaxFlizScene extends xb.Script {
 
     const topSoundIcon = document.getElementById('top-sound-icon');
     const soundIcon = document.getElementById('sound-icon');
-    const handleSoundToggle = () => {
-      const isMuted = sound.toggleMute();
-      const icon = isMuted ? '🔇' : '🔊';
+    const updateSoundIcons = () => {
+      const icon = sound.getMuted() ? '🔇' : '🔊';
       if (topSoundIcon) topSoundIcon.textContent = icon;
       if (soundIcon) soundIcon.textContent = icon;
     };
+    const handleSoundToggle = () => {
+      sound.toggleMute();
+      updateSoundIcons();
+    };
     bindTap(document.getElementById('btn-top-sound'), handleSoundToggle);
     bindTap(document.getElementById('btn-sound'), handleSoundToggle);
+    updateSoundIcons();
+
+    const masterVolumeInput = document.getElementById('audio-master-volume') as HTMLInputElement | null;
+    const musicVolumeInput = document.getElementById('audio-music-volume') as HTMLInputElement | null;
+    const effectsVolumeInput = document.getElementById('audio-effects-volume') as HTMLInputElement | null;
+    const masterVolumeOutput = document.getElementById('audio-master-value');
+    const musicVolumeOutput = document.getElementById('audio-music-value');
+    const effectsVolumeOutput = document.getElementById('audio-effects-value');
+
+    const syncAudioSettingsUI = () => {
+      const settings = sound.getAudioSettings();
+      if (masterVolumeInput) masterVolumeInput.value = String(Math.round(settings.master * 100));
+      if (musicVolumeInput) musicVolumeInput.value = String(Math.round(settings.music * 100));
+      if (effectsVolumeInput) effectsVolumeInput.value = String(Math.round(settings.effects * 100));
+      if (masterVolumeOutput) masterVolumeOutput.textContent = Math.round(settings.master * 100) + '%';
+      if (musicVolumeOutput) musicVolumeOutput.textContent = Math.round(settings.music * 100) + '%';
+      if (effectsVolumeOutput) effectsVolumeOutput.textContent = Math.round(settings.effects * 100) + '%';
+    };
+
+    const bindVolumeControl = (
+      input: HTMLInputElement | null,
+      output: HTMLElement | null,
+      apply: (value: number) => void
+    ) => {
+      if (!input || !output) return;
+      input.addEventListener('input', () => {
+        const value = Math.min(100, Math.max(0, Number(input.value) || 0));
+        apply(value / 100);
+        output.textContent = Math.round(value) + '%';
+      });
+    };
+
+    bindVolumeControl(masterVolumeInput, masterVolumeOutput, (value) => sound.setMasterVolume(value));
+    bindVolumeControl(musicVolumeInput, musicVolumeOutput, (value) => sound.setMusicVolume(value));
+    bindVolumeControl(effectsVolumeInput, effectsVolumeOutput, (value) => sound.setEffectsVolume(value));
+    document.getElementById('btn-audio-reset')?.addEventListener('click', () => {
+      sound.setAudioSettings({ master: 0.82, music: 0.48, effects: 0.82 });
+      syncAudioSettingsUI();
+    });
+    syncAudioSettingsUI();
 
     const handlePause = () => {
       this.engine.togglePause();

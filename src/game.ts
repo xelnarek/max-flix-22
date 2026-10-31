@@ -97,16 +97,21 @@ export interface SurvivalUpgradeOption {
 
 export type SurvivalWeaponId = 'pallet_cannon' | 'diamond_saw' | 'glue_mine' | 'kfc_bomber' | 'piorun_drone' | 'forklift_bolter' | 'scanner_pulse' | 'orbit_blades';
 export interface SurvivalWeaponState { id: SurvivalWeaponId; level: number; cooldown: number; evolved?: boolean; }
-const SURVIVAL_WEAPON_DEFS: Record<SurvivalWeaponId, { name: string; icon: string; description: string; cooldown: number; unlockAfter: number; color: number }> = {
-  // Arsenal unlocks are deliberately spaced out so each new weapon feels like a milestone.
-  pallet_cannon: { name: 'Działo paletowe', icon: '🧱', description: 'Mały, precyzyjny pocisk z ograniczoną falą uderzeniową.', cooldown: 7.8, unlockAfter: 70, color: 0xf59e0b },
-  diamond_saw: { name: 'Tarcza diamentowa', icon: '💿', description: 'Kompaktowa tarcza przebijająca linię wrogów.', cooldown: 8.8, unlockAfter: 135, color: 0x22d3ee },
-  glue_mine: { name: 'Mina Mapei', icon: '🟣', description: 'Niewielka mina spowalniająca przeciwników w małym promieniu.', cooldown: 10.2, unlockAfter: 210, color: 0xa78bfa },
-  kfc_bomber: { name: 'Kubełek bombowy', icon: '🍗', description: 'Lekki pocisk obszarowy; krótki, czytelny wybuch.', cooldown: 11.5, unlockAfter: 285, color: 0xef4444 },
-  piorun_drone: { name: 'Dron Piorun', icon: '🤖', description: 'Mały pocisk samonaprowadzający.', cooldown: 9.4, unlockAfter: 360, color: 0x38bdf8 },
-  forklift_bolter: { name: 'Nitownica UDT', icon: '🔩', description: 'Szybkie, małe pociski przebijające kilku wrogów.', cooldown: 6.3, unlockAfter: 435, color: 0xfbbf24 },
-  scanner_pulse: { name: 'Impuls skanera B4', icon: '📡', description: 'Precyzyjny impuls namierzający cel i przebijający szyk.', cooldown: 8.1, unlockAfter: 510, color: 0x67e8f9 },
-  orbit_blades: { name: 'Wirujące tarcze', icon: '⚙️', description: 'Trzy małe ostrza krążą wokół operatora i chronią bliski dystans.', cooldown: 13.0, unlockAfter: 585, color: 0x86efac },
+type SurvivalPassiveId = 'damage' | 'rapid' | 'boots' | 'magnet' | 'reinforced' | 'medkit' | 'range' | 'growth' | 'scavenger' | 'regen' | 'drone' | 'armor';
+const SURVIVAL_WEAPON_DEFS: Record<SurvivalWeaponId, {
+  name: string; evolvedName: string; icon: string; description: string; cooldown: number;
+  unlockAfter: number; color: number; evolutionPassive: SurvivalPassiveId; evolutionPassiveLabel: string;
+}> = {
+  // Each weapon has a distinct late-run evolution and a matching passive requirement.
+  // Unlock times are spaced so the arsenal grows over the first ten minutes instead of flooding the first level-ups.
+  pallet_cannon: { name: 'Działo paletowe', evolvedName: 'PALETA GIGA', icon: '🧱', description: 'Precyzyjny pocisk z kontrolowaną falą uderzeniową.', cooldown: 7.8, unlockAfter: 70, color: 0xf59e0b, evolutionPassive: 'damage', evolutionPassiveLabel: 'Wzmocniona amunicja' },
+  diamond_saw: { name: 'Tarcza diamentowa', evolvedName: 'TARCZA RYKOSZETU', icon: '💿', description: 'Ostrze przebija linię przeciwników i może odbić się od granicy areny.', cooldown: 8.8, unlockAfter: 135, color: 0x22d3ee, evolutionPassive: 'range', evolutionPassiveLabel: 'Zasięg audytu' },
+  glue_mine: { name: 'Mina Mapei', evolvedName: 'MAPEI BLACKOUT', icon: '🟣', description: 'Mina obszarowa spowalniająca i rozbijająca szyk wrogów.', cooldown: 10.2, unlockAfter: 210, color: 0xa78bfa, evolutionPassive: 'magnet', evolutionPassiveLabel: 'Magnes XP' },
+  kfc_bomber: { name: 'Kubełek bombowy', evolvedName: 'KUBEŁEK FURII', icon: '🍗', description: 'Pocisk obszarowy z podpaleniem celów.', cooldown: 11.5, unlockAfter: 285, color: 0xef4444, evolutionPassive: 'scavenger', evolutionPassiveLabel: 'Łowca okazji' },
+  piorun_drone: { name: 'Dron Piorun', evolvedName: 'PIORUN CHAIN MK II', icon: '🤖', description: 'Szybki pocisk samonaprowadzający z dodatkowym przebiciem.', cooldown: 9.4, unlockAfter: 360, color: 0x38bdf8, evolutionPassive: 'drone', evolutionPassiveLabel: 'Dron asystujący' },
+  forklift_bolter: { name: 'Nitownica UDT', evolvedName: 'NITOWNICA OBLĘŻNICZA', icon: '🔩', description: 'Wąski, szybki pocisk przebijający kilka celów.', cooldown: 6.3, unlockAfter: 435, color: 0xfbbf24, evolutionPassive: 'rapid', evolutionPassiveLabel: 'Rytm ataku' },
+  scanner_pulse: { name: 'Impuls skanera B4', evolvedName: 'SKANER TOTALNY', icon: '📡', description: 'Namierzający impuls przebijający zwartą formację.', cooldown: 8.1, unlockAfter: 510, color: 0x67e8f9, evolutionPassive: 'range', evolutionPassiveLabel: 'Zasięg audytu' },
+  orbit_blades: { name: 'Wirujące tarcze', evolvedName: 'ORBITALNA STREFA BHP', icon: '⚙️', description: 'Ostrza krążące wokół operatora i chroniące bliski dystans.', cooldown: 13.0, unlockAfter: 585, color: 0x86efac, evolutionPassive: 'armor', evolutionPassiveLabel: 'Paleta ochronna' },
 };
 export interface SurvivalSnapshot {
   elapsedSeconds: number; wave: number; kills: number; level: number; xp: number; xpToNext: number;
@@ -401,8 +406,10 @@ export class MaxFlizGameEngine {
   }
 
   private scaleSurvivalDamage(baseDamage: number): number {
+    // Rounded integer damage avoids fractional HP while allowing damage upgrades
+    // to cross a meaningful breakpoint for one-damage weapons after several stacks.
     return this.gameMode === 'survival'
-      ? Math.max(1, Math.floor(baseDamage * this.survivalDamageMultiplier))
+      ? Math.max(1, Math.round(baseDamage * this.survivalDamageMultiplier))
       : baseDamage;
   }
 
@@ -1357,8 +1364,11 @@ export class MaxFlizGameEngine {
       skips: this.survivalSkips,
       activeHazards: this.hazards.filter((hazard) => hazard.active).length,
       weapons: this.survivalWeapons.map((weapon) => ({
-        id: weapon.id, name: SURVIVAL_WEAPON_DEFS[weapon.id].name, icon: SURVIVAL_WEAPON_DEFS[weapon.id].icon,
-        level: weapon.level, evolved: Boolean(weapon.evolved),
+        id: weapon.id,
+        name: weapon.evolved ? SURVIVAL_WEAPON_DEFS[weapon.id].evolvedName : SURVIVAL_WEAPON_DEFS[weapon.id].name,
+        icon: SURVIVAL_WEAPON_DEFS[weapon.id].icon,
+        level: weapon.level,
+        evolved: Boolean(weapon.evolved),
       })),
     };
   }
@@ -1381,10 +1391,21 @@ export class MaxFlizGameEngine {
     } else if (choice.id.startsWith('weapon_evolve:')) {
       const weaponId = choice.id.slice('weapon_evolve:'.length) as SurvivalWeaponId;
       const weapon = this.survivalWeapons.find((entry) => entry.id === weaponId);
-      if (weapon && weapon.level >= 5 && !weapon.evolved && this.survivalElapsed >= 300) {
-        weapon.evolved = true; weapon.cooldown = 0.25;
+      const definition = SURVIVAL_WEAPON_DEFS[weaponId];
+      const hasPassivePair = (this.survivalUpgradeStacks[definition.evolutionPassive] || 0) > 0;
+      if (weapon && weapon.level >= 5 && !weapon.evolved && this.survivalElapsed >= 300 && hasPassivePair) {
+        weapon.evolved = true;
+        weapon.cooldown = 0.25;
         this.triggerBloomPulse(0.7);
-        this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.6, this.playerPos.z, SURVIVAL_WEAPON_DEFS[weaponId].color);
+        this.triggerScreenShake(0.24, 0.2);
+        this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.6, this.playerPos.z, definition.color);
+        this.callbacks.onPerkDropBanner?.(
+          definition.evolvedName,
+          '✦',
+          definition.name + ' osiągnęła pełną ewolucję. Jej zachowanie i siła ataku zostały ulepszone.',
+          '#fbbf24'
+        );
+        sound.playAbility(this.currentCharacterId);
       }
     } else {
       this.survivalUpgradeStacks[choice.id] = (this.survivalUpgradeStacks[choice.id] || 0) + 1;
@@ -1505,25 +1526,28 @@ export class MaxFlizGameEngine {
       { id: 'drone', icon: '🤖', title: 'DRON ASYSTUJĄCY', description: 'Dron przez 32 sekundy razi najbliższego wroga impulsem.' },
       { id: 'armor', icon: '🪵', title: 'PALETA OCHRONNA', description: 'Otrzymujesz 24 sekundy okresowej osłony.' },
     ].filter((option) => !excluded.includes(option.id));
-    let newWeaponOfferAdded = false;
     for (const [weaponId, definition] of Object.entries(SURVIVAL_WEAPON_DEFS) as Array<[SurvivalWeaponId, typeof SURVIVAL_WEAPON_DEFS[SurvivalWeaponId]]>) {
       const owned = this.survivalWeapons.find((weapon) => weapon.id === weaponId);
       if (!owned) {
-        if (!newWeaponOfferAdded && this.survivalElapsed >= definition.unlockAfter) {
-          newWeaponOfferAdded = true;
+        if (this.survivalElapsed >= definition.unlockAfter) {
           const unlockMinute = Math.ceil(definition.unlockAfter / 60);
           pool.push({ id: 'weapon_unlock:' + weaponId, icon: definition.icon,
             title: 'NOWA BROŃ: ' + definition.name.toUpperCase(),
-            description: definition.description + ' Odblokowanie od ' + unlockMinute + '. minuty. Odstęp: ' + definition.cooldown.toFixed(1) + ' s.' });
+            description: definition.description + ' Dostępna od około ' + unlockMinute + '. minuty. Odstęp: ' + definition.cooldown.toFixed(1) + ' s.' });
         }
       } else if (owned.level < 5) {
         pool.push({ id: 'weapon_upgrade:' + weaponId, icon: definition.icon,
           title: definition.name.toUpperCase() + ' • POZIOM ' + (owned.level + 1),
           description: 'Nieznacznie zwiększ obrażenia i skróć przeładowanie. Poziom ' + (owned.level + 1) + '/5.' });
-      } else if (!owned.evolved && this.survivalElapsed >= 300) {
+      } else if (
+        !owned.evolved &&
+        owned.level >= 5 &&
+        this.survivalElapsed >= 300 &&
+        (this.survivalUpgradeStacks[definition.evolutionPassive] || 0) > 0
+      ) {
         pool.push({ id: 'weapon_evolve:' + weaponId, icon: '✦',
-          title: 'EWOLUCJA: ' + definition.name.toUpperCase(),
-          description: 'RZADKI MODUŁ • wymagane 5 poziomów i 5 minut zmiany. Duży, ale kontrolowany skok mocy.' });
+          title: 'EWOLUCJA: ' + definition.evolvedName,
+          description: 'Wymagania: broń poziom 5, 5 minut Survival i moduł „' + definition.evolutionPassiveLabel + '”. Otrzymasz unikalną wersję tej broni.' });
       }
     }
     for (let i = pool.length - 1; i > 0; i--) {
@@ -1534,12 +1558,19 @@ export class MaxFlizGameEngine {
     // This avoids a long string of stat-only level-ups before the player gets a build identity.
     const newWeaponOffer = pool.find((option) => option.id.startsWith('weapon_unlock:'));
     if (newWeaponOffer) {
-      const remaining = pool.filter((option) => option.id !== newWeaponOffer.id);
+      // Never show two new weapons in one level-up. Unchosen, time-unlocked weapons
+      // stay eligible for later level-ups instead of blocking the rest of the arsenal.
+      const remaining = pool.filter((option) =>
+        option.id !== newWeaponOffer.id && !option.id.startsWith('weapon_unlock:')
+      );
       return [newWeaponOffer, ...remaining.slice(0, 2)];
     }
     const weaponProgressOffer = pool.find((option) => option.id.startsWith('weapon_'));
     if (weaponProgressOffer) {
-      const remaining = pool.filter((option) => option.id !== weaponProgressOffer.id);
+      // Offer at most one weapon upgrade/evolution at a time to keep choices readable.
+      const remaining = pool.filter((option) =>
+        option.id !== weaponProgressOffer.id && !option.id.startsWith('weapon_')
+      );
       return [weaponProgressOffer, ...remaining.slice(0, 2)];
     }
     return pool.slice(0, 3);
@@ -3691,7 +3722,7 @@ export class MaxFlizGameEngine {
   private fireSurvivalWeapon(weapon: SurvivalWeaponState, target: EnemyItem) {
 
     if (weapon.id === 'orbit_blades') {
-      const count = weapon.level >= 4 ? 4 : 3;
+      const count = weapon.evolved ? 5 : weapon.level >= 4 ? 4 : 3;
       for (let i = 0; i < count; i++) {
         const bladeMaterial = new THREE.MeshStandardMaterial({
           color: SURVIVAL_WEAPON_DEFS[weapon.id].color,
@@ -3736,7 +3767,7 @@ export class MaxFlizGameEngine {
     const projectile: {
       mesh: THREE.Object3D; vel: THREE.Vector3; life: number; maxLife: number; damage: number;
       pierce?: number; homing?: boolean; weaponProjectile?: boolean; aoeRadius?: number; slowOnHit?: boolean;
-      igniteOnHit?: boolean; spinSpeed?: number; hitIds: Set<string>;
+      igniteOnHit?: boolean; spinSpeed?: number; ricochet?: boolean; hitIds: Set<string>;
     } = {
       mesh: new THREE.Group(),
       vel: direction.clone().multiplyScalar(10.5), life: 2.8, maxLife: 2.8, damage, hitIds: new Set<string>(),
@@ -3745,60 +3776,62 @@ export class MaxFlizGameEngine {
     switch (weapon.id) {
       case 'pallet_cannon':
         projectile.mesh = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.13, 0.20), material);
-        projectile.vel = direction.clone().multiplyScalar(10);
-        projectile.aoeRadius = weapon.level >= 3 ? 1.45 : 1.05;
-        projectile.pierce = weapon.level >= 5 ? 1 : 0;
+        projectile.vel = direction.clone().multiplyScalar(weapon.evolved ? 11.2 : 10);
+        projectile.aoeRadius = weapon.evolved ? 2.15 : weapon.level >= 3 ? 1.45 : 1.05;
+        projectile.pierce = weapon.evolved ? 2 : weapon.level >= 5 ? 1 : 0;
         break;
       case 'diamond_saw':
         projectile.mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.075, 12), material);
         (projectile.mesh as THREE.Mesh).rotation.x = Math.PI / 2;
-        projectile.vel = direction.clone().multiplyScalar(13.2);
-        projectile.life = projectile.maxLife = 2.2;
-        projectile.pierce = 1 + (weapon.level >= 4 ? 1 : 0) + (weapon.evolved ? 1 : 0);
-        projectile.spinSpeed = 12;
+        projectile.vel = direction.clone().multiplyScalar(weapon.evolved ? 14.8 : 13.2);
+        projectile.life = projectile.maxLife = weapon.evolved ? 2.8 : 2.2;
+        projectile.pierce = 1 + (weapon.level >= 4 ? 1 : 0) + (weapon.evolved ? 3 : 0);
+        projectile.ricochet = Boolean(weapon.evolved);
+        projectile.spinSpeed = weapon.evolved ? 15 : 12;
         break;
       case 'glue_mine':
         projectile.mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(0.20, 0), material);
         projectile.vel = direction.clone().multiplyScalar(7.2);
         projectile.life = projectile.maxLife = 3.4;
-        projectile.aoeRadius = weapon.level >= 4 ? 2.1 : 1.65;
+        projectile.aoeRadius = weapon.evolved ? 2.85 : weapon.level >= 4 ? 2.1 : 1.65;
         projectile.slowOnHit = true;
-        projectile.pierce = weapon.evolved ? 1 : 0;
+        projectile.pierce = weapon.evolved ? 2 : 0;
         break;
       case 'kfc_bomber':
         projectile.mesh = new THREE.Mesh(new THREE.SphereGeometry(0.20, 10, 8), material);
         projectile.vel = direction.clone().multiplyScalar(8.4);
         projectile.life = projectile.maxLife = 3.1;
-        projectile.aoeRadius = weapon.level >= 4 ? 2.65 : 2.05;
+        projectile.aoeRadius = weapon.evolved ? 3.35 : weapon.level >= 4 ? 2.65 : 2.05;
         projectile.igniteOnHit = weapon.level >= 3 || Boolean(weapon.evolved);
-        projectile.spinSpeed = 8;
+        projectile.pierce = weapon.evolved ? 1 : 0;
+        projectile.spinSpeed = weapon.evolved ? 11 : 8;
         break;
       case 'piorun_drone':
         projectile.mesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.15, 0), material);
         projectile.vel = direction.clone().multiplyScalar(8.8);
-        projectile.life = projectile.maxLife = 4.2;
+        projectile.life = projectile.maxLife = weapon.evolved ? 4.8 : 4.2;
         projectile.homing = true;
-        projectile.pierce = weapon.evolved ? 1 : 0;
+        projectile.pierce = weapon.evolved ? 3 : 0;
         break;
       case 'forklift_bolter': {
         const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.055, 0.28, 6), material);
         bolt.rotation.x = Math.PI / 2;
         bolt.rotation.y = Math.atan2(direction.x, direction.z);
         projectile.mesh = bolt;
-        projectile.vel = direction.clone().multiplyScalar(18.5);
+        projectile.vel = direction.clone().multiplyScalar(weapon.evolved ? 21.5 : 18.5);
         projectile.life = projectile.maxLife = 1.75;
-        projectile.pierce = weapon.level >= 3 ? 2 : 1;
-        projectile.spinSpeed = 2.2;
+        projectile.pierce = weapon.evolved ? 4 : weapon.level >= 3 ? 2 : 1;
+        projectile.spinSpeed = weapon.evolved ? 3.2 : 2.2;
         break;
       }
       case 'scanner_pulse': {
         const pulse = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.08, 0.42), material);
         pulse.rotation.y = Math.atan2(direction.x, direction.z);
         projectile.mesh = pulse;
-        projectile.vel = direction.clone().multiplyScalar(14.8);
+        projectile.vel = direction.clone().multiplyScalar(weapon.evolved ? 16.8 : 14.8);
         projectile.life = projectile.maxLife = 2.0;
         projectile.homing = true;
-        projectile.pierce = weapon.level >= 4 ? 3 : 2;
+        projectile.pierce = weapon.evolved ? 5 : weapon.level >= 4 ? 3 : 2;
         break;
       }
     }
@@ -4131,6 +4164,31 @@ export class MaxFlizGameEngine {
     enemy.maxHp = Math.max(1, Math.ceil(enemy.maxHp * scaling));
     enemy.hp = enemy.maxHp;
     enemy.speed *= 0.66 * (1 + Math.min(0.26, Math.max(0, wave - 1) * 0.010));
+
+    // Rare late-run variant: an armored AGV with a visible shield and a telegraphed pulse.
+    // It reuses the existing AGV rig and only allocates its shield ring when promoted.
+    if (enemy.type === 'agv_robot' && wave >= 11 && Math.random() < 0.45) {
+      enemy.name = 'AGV-9 SENTINEL • OSŁONA MAGNETYCZNA';
+      enemy.maxHp = Math.ceil(enemy.maxHp * 1.75);
+      enemy.hp = enemy.maxHp;
+      enemy.speed *= 0.88;
+      enemy.shieldActive = true;
+      enemy.specialActionTimer = 3.4;
+      const shieldRing = new THREE.Mesh(
+        new THREE.TorusGeometry(0.72, 0.055, 7, 28),
+        new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.82, depthWrite: false })
+      );
+      shieldRing.rotation.x = Math.PI / 2;
+      shieldRing.position.y = 0.72;
+      enemy.mesh.add(shieldRing);
+      enemy.shieldRing = shieldRing;
+      this.callbacks.onPerkDropBanner?.(
+        'ELITARNY AGV-9 SENTINEL',
+        '🛡️',
+        'Osłona blokuje pierwsze trafienie. Uważaj na czerwone ostrzeżenie przed impulsem elektrycznym.',
+        '#38bdf8'
+      );
+    }
     enemy.shoutTimer = 2.0 + Math.random() * 4.0;
   }
 
@@ -5234,6 +5292,7 @@ export class MaxFlizGameEngine {
       }
 
       e.walkCycle += dt * 8;
+      if (e.shieldRing?.visible) e.shieldRing.rotation.z += dt * 1.25;
       if (e.legL && e.legR && e.type !== 'piorun_dron') {
         e.legL.rotation.x = Math.sin(e.walkCycle) * 0.5;
         e.legR.rotation.x = -Math.sin(e.walkCycle) * 0.5;
@@ -5476,6 +5535,29 @@ export class MaxFlizGameEngine {
           e.mesh.position.set(e.x, e.y, e.z);
   
   
+        }
+
+        // The Sentinel warns before firing. The projectile aims at the player's position
+        // only after the wind-up, so moving during the warning is a meaningful dodge.
+        if (this.gameMode === 'survival' && e.name.includes('AGV-9 SENTINEL') && e.specialActionTimer !== undefined) {
+          if (e.specialActionTimer > 0) {
+            e.specialActionTimer -= dt;
+          } else if (distToPlayer < 15.0) {
+            if (e.chargeTimer === undefined) {
+              e.chargeTimer = 0.9;
+              this.spawnParticleRing(e.x, 0.24, e.z, 0xef4444);
+              this.emitFloatingToast('AGV-9: ŁADOWANIE IMPULSU — ZEJDŹ Z LINII!', e.x, e.y + 1.2, e.z, 'damage');
+              sound.playBossWarning();
+            } else {
+              e.chargeTimer -= dt;
+              if (e.chargeTimer <= 0) {
+                this.spawnSparkZapProjectile(e.x, e.y + 0.75, e.z);
+                this.emitFloatingToast('⚡ AGV-9: IMPULS OCHRONY!', e.x, e.y + 1.3, e.z, 'damage');
+                e.specialActionTimer = 6.4;
+                e.chargeTimer = undefined;
+              }
+            }
+          }
         }
 
         // Ranged special attacks
@@ -5964,8 +6046,12 @@ export class MaxFlizGameEngine {
             this.triggerBloomPulse(0.08);
             this.emitFloatingToast('🛡️ BLOK TARCZY!', e.x, e.y + 1, e.z, 'damage');
             e.shieldActive = false;
+            if (e.shieldRing) e.shieldRing.visible = false;
           } else {
-            if (e.shieldActive) e.shieldActive = false;
+            if (e.shieldActive) {
+              e.shieldActive = false;
+              if (e.shieldRing) e.shieldRing.visible = false;
+            }
             e.hp -= baseDmg;
             sound.playSmack();
             if (p.weaponProjectile) {
