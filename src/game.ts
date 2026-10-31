@@ -97,15 +97,16 @@ export interface SurvivalUpgradeOption {
 
 export type SurvivalWeaponId = 'pallet_cannon' | 'diamond_saw' | 'glue_mine' | 'kfc_bomber' | 'piorun_drone' | 'forklift_bolter' | 'scanner_pulse' | 'orbit_blades';
 export interface SurvivalWeaponState { id: SurvivalWeaponId; level: number; cooldown: number; evolved?: boolean; }
-const SURVIVAL_WEAPON_DEFS: Record<SurvivalWeaponId, { name: string; icon: string; description: string; cooldown: number; color: number }> = {
-  pallet_cannon: { name: 'Działo paletowe', icon: '🧱', description: 'Mały, precyzyjny pocisk z ograniczoną falą uderzeniową.', cooldown: 7.8, color: 0xf59e0b },
-  diamond_saw: { name: 'Tarcza diamentowa', icon: '💿', description: 'Kompaktowa tarcza przebijająca linię wrogów.', cooldown: 8.8, color: 0x22d3ee },
-  glue_mine: { name: 'Mina Mapei', icon: '🟣', description: 'Niewielka mina spowalniająca przeciwników w małym promieniu.', cooldown: 10.2, color: 0xa78bfa },
-  kfc_bomber: { name: 'Kubełek bombowy', icon: '🍗', description: 'Lekki pocisk obszarowy; krótki, czytelny wybuch.', cooldown: 11.5, color: 0xef4444 },
-  piorun_drone: { name: 'Dron Piorun', icon: '🤖', description: 'Mały pocisk samonaprowadzający.', cooldown: 9.4, color: 0x38bdf8 },
-  forklift_bolter: { name: 'Nitownica UDT', icon: '🔩', description: 'Szybkie, małe pociski przebijające kilku wrogów.', cooldown: 6.3, color: 0xfbbf24 },
-  scanner_pulse: { name: 'Impuls skanera B4', icon: '📡', description: 'Precyzyjny impuls namierzający cel i przebijający szyk.', cooldown: 8.1, color: 0x67e8f9 },
-  orbit_blades: { name: 'Wirujące tarcze', icon: '⚙️', description: 'Trzy małe ostrza krążą wokół operatora i chronią bliski dystans.', cooldown: 13.0, color: 0x86efac },
+const SURVIVAL_WEAPON_DEFS: Record<SurvivalWeaponId, { name: string; icon: string; description: string; cooldown: number; unlockAfter: number; color: number }> = {
+  // Arsenal unlocks are deliberately spaced out so each new weapon feels like a milestone.
+  pallet_cannon: { name: 'Działo paletowe', icon: '🧱', description: 'Mały, precyzyjny pocisk z ograniczoną falą uderzeniową.', cooldown: 7.8, unlockAfter: 70, color: 0xf59e0b },
+  diamond_saw: { name: 'Tarcza diamentowa', icon: '💿', description: 'Kompaktowa tarcza przebijająca linię wrogów.', cooldown: 8.8, unlockAfter: 135, color: 0x22d3ee },
+  glue_mine: { name: 'Mina Mapei', icon: '🟣', description: 'Niewielka mina spowalniająca przeciwników w małym promieniu.', cooldown: 10.2, unlockAfter: 210, color: 0xa78bfa },
+  kfc_bomber: { name: 'Kubełek bombowy', icon: '🍗', description: 'Lekki pocisk obszarowy; krótki, czytelny wybuch.', cooldown: 11.5, unlockAfter: 285, color: 0xef4444 },
+  piorun_drone: { name: 'Dron Piorun', icon: '🤖', description: 'Mały pocisk samonaprowadzający.', cooldown: 9.4, unlockAfter: 360, color: 0x38bdf8 },
+  forklift_bolter: { name: 'Nitownica UDT', icon: '🔩', description: 'Szybkie, małe pociski przebijające kilku wrogów.', cooldown: 6.3, unlockAfter: 435, color: 0xfbbf24 },
+  scanner_pulse: { name: 'Impuls skanera B4', icon: '📡', description: 'Precyzyjny impuls namierzający cel i przebijający szyk.', cooldown: 8.1, unlockAfter: 510, color: 0x67e8f9 },
+  orbit_blades: { name: 'Wirujące tarcze', icon: '⚙️', description: 'Trzy małe ostrza krążą wokół operatora i chronią bliski dystans.', cooldown: 13.0, unlockAfter: 585, color: 0x86efac },
 };
 export interface SurvivalSnapshot {
   elapsedSeconds: number; wave: number; kills: number; level: number; xp: number; xpToNext: number;
@@ -344,6 +345,8 @@ export class MaxFlizGameEngine {
   private survivalXp = 0;
   private survivalXpToNext = 6;
   private survivalBossWave = 0;
+  private survivalBossWarningTimer = 0;
+  private survivalPendingBossWave = 0;
   private survivalUpgradeStacks: Record<string, number> = {};
   private survivalEvolutions = new Set<string>();
   private survivalWeapons: SurvivalWeaponState[] = [];
@@ -424,13 +427,16 @@ export class MaxFlizGameEngine {
   }
 
   public toggleCameraMode(): 'tpp' | 'close' | 'iso' {
+    // Three distinct, predictable views: follow -> close -> tactical -> follow.
     if (this.cameraMode === 'tpp') {
       this.cameraMode = 'close';
     } else if (this.cameraMode === 'close') {
-      this.cameraMode = 'close';
-    this.camZoomFactor = Math.min(this.camZoomFactor, 0.96);
+      this.cameraMode = 'iso';
     } else {
       this.cameraMode = 'tpp';
+    }
+    if (this.cameraMode === 'close') {
+      this.camZoomFactor = Math.min(this.camZoomFactor, 0.96);
     }
     return this.cameraMode;
   }
@@ -959,6 +965,7 @@ export class MaxFlizGameEngine {
   }
 
   public startTitle() {
+    sound.stopMusic();
     this.gameMode = 'campaign';
     this.maxHp = 3;
     this.state = 'title';
@@ -991,6 +998,7 @@ export class MaxFlizGameEngine {
   public startGame(levelId = 1) {
     this.gameMode = 'campaign';
     this.state = 'playing';
+    sound.startMusic();
     this.maxHp = 3;
     this.hp = this.maxHp;
     this.gateNoticeCooldown = 0;
@@ -1012,6 +1020,8 @@ export class MaxFlizGameEngine {
     this.survivalXp = 0;
     this.survivalXpToNext = 9;
     this.survivalBossWave = 0;
+    this.survivalBossWarningTimer = 0;
+    this.survivalPendingBossWave = 0;
     this.survivalDamageMultiplier = 1;
     this.survivalAttackRateMultiplier = 1;
     this.survivalMoveMultiplier = 1;
@@ -1380,10 +1390,11 @@ export class MaxFlizGameEngine {
       this.survivalUpgradeStacks[choice.id] = (this.survivalUpgradeStacks[choice.id] || 0) + 1;
       switch (choice.id) {
       case 'damage':
-        this.survivalDamageMultiplier *= 1.12;
+        this.survivalDamageMultiplier = Math.min(1.85, this.survivalDamageMultiplier * 1.12);
         break;
       case 'rapid':
-        this.survivalAttackRateMultiplier *= 0.94;
+        // Attack-speed upgrades remain useful without turning the run into a screen-filling machine gun.
+        this.survivalAttackRateMultiplier = Math.max(0.86, this.survivalAttackRateMultiplier * 0.97);
         break;
       case 'boots':
         this.survivalMoveMultiplier = Math.min(1.24, this.survivalMoveMultiplier * 1.06);
@@ -1493,12 +1504,17 @@ export class MaxFlizGameEngine {
       { id: 'drone', icon: '🤖', title: 'DRON ASYSTUJĄCY', description: 'Dron przez 32 sekundy razi najbliższego wroga impulsem.' },
       { id: 'armor', icon: '🪵', title: 'PALETA OCHRONNA', description: 'Otrzymujesz 24 sekundy okresowej osłony.' },
     ].filter((option) => !excluded.includes(option.id));
+    let newWeaponOfferAdded = false;
     for (const [weaponId, definition] of Object.entries(SURVIVAL_WEAPON_DEFS) as Array<[SurvivalWeaponId, typeof SURVIVAL_WEAPON_DEFS[SurvivalWeaponId]]>) {
       const owned = this.survivalWeapons.find((weapon) => weapon.id === weaponId);
       if (!owned) {
-        pool.push({ id: 'weapon_unlock:' + weaponId, icon: definition.icon,
-          title: 'NOWA BROŃ: ' + definition.name.toUpperCase(),
-          description: definition.description + ' Bazowy odstęp: ' + definition.cooldown.toFixed(1) + ' s.' });
+        if (!newWeaponOfferAdded && this.survivalElapsed >= definition.unlockAfter) {
+          newWeaponOfferAdded = true;
+          const unlockMinute = Math.ceil(definition.unlockAfter / 60);
+          pool.push({ id: 'weapon_unlock:' + weaponId, icon: definition.icon,
+            title: 'NOWA BROŃ: ' + definition.name.toUpperCase(),
+            description: definition.description + ' Odblokowanie od ' + unlockMinute + '. minuty. Odstęp: ' + definition.cooldown.toFixed(1) + ' s.' });
+        }
       } else if (owned.level < 5) {
         pool.push({ id: 'weapon_upgrade:' + weaponId, icon: definition.icon,
           title: definition.name.toUpperCase() + ' • POZIOM ' + (owned.level + 1),
@@ -1551,8 +1567,10 @@ export class MaxFlizGameEngine {
     if (this.gameMode === 'survival' && this.state === 'levelup') return;
     if (this.state === 'playing') {
       this.state = 'paused';
+      sound.stopMusic();
     } else if (this.state === 'paused') {
       this.state = 'playing';
+      sound.startMusic();
     }
   }
 
@@ -3811,9 +3829,33 @@ export class MaxFlizGameEngine {
       }
     }
 
-    if (this.survivalWave >= 5 && this.survivalWave % 5 === 0 && this.survivalBossWave !== this.survivalWave) {
-      this.survivalBossWave = this.survivalWave;
-      this.spawnSurvivalBoss(this.survivalWave);
+    if (
+      this.survivalWave >= 5 &&
+      this.survivalWave % 5 === 0 &&
+      this.survivalBossWave !== this.survivalWave &&
+      this.survivalPendingBossWave !== this.survivalWave
+    ) {
+      // Give the player a readable warning window before the boss enters the arena.
+      this.survivalPendingBossWave = this.survivalWave;
+      this.survivalBossWarningTimer = 6.0;
+      this.emitFloatingToast('ALARM BOSS — PRZYGOTUJ SIĘ!', this.playerPos.x, this.playerPos.y + 2.0, this.playerPos.z, 'damage');
+      this.callbacks.onPerkDropBanner?.(
+        'NADCHODZI BOSS • 6 SEKUND',
+        '🚨',
+        'Zbliża się kierownik zmiany. Zbierz kryształy XP, znajdź wolny korytarz i przygotuj się na starcie.',
+        '#ef4444'
+      );
+      sound.playBossWarning();
+      this.triggerScreenShake(0.24, 0.12);
+    }
+    if (this.survivalBossWarningTimer > 0) {
+      this.survivalBossWarningTimer = Math.max(0, this.survivalBossWarningTimer - dt);
+      if (this.survivalBossWarningTimer <= 0 && this.survivalPendingBossWave > 0) {
+        const bossWave = this.survivalPendingBossWave;
+        this.survivalPendingBossWave = 0;
+        this.survivalBossWave = bossWave;
+        this.spawnSurvivalBoss(bossWave);
+      }
     }
 
     this.survivalSpawnTimer -= dt;
@@ -4060,6 +4102,7 @@ export class MaxFlizGameEngine {
     else if (roll < 0.41) this.addMonterEnemy(id, x, minZ, maxZ, 'Monter Wiesław — poziomica w dłoni');
     else if (roll < 0.52) this.addInspectorEnemy(id, x, minZ, maxZ, 'Inspektor BHP — kontrola bez zapowiedzi');
     else if (roll < 0.63) this.addHandlowiecEnemy(id, x, minZ, maxZ, 'Handlowiec — oferta nie do odrzucenia');
+    else if (wave >= 7 && roll < 0.69) this.addAgvRobotEnemy(id, x, x, z, 'AGV-9 — autonomiczny paleciak w trybie kolizyjnym');
     else if (wave >= 3 && roll < 0.72) this.addCustomerEnemy(id, x, minZ, maxZ, 'Klient z reklamacją na 17 stron');
     else if (wave >= 4 && roll < 0.79) this.addArchitectEnemy(id, x, x + 4.5, z, 'Architektka — odcień beżu numer 47');
     else if (wave >= 5 && roll < 0.85) this.addItalianVendorEnemy(id, x, minZ, maxZ, 'Włoski dostawca armatury — mamma mia');
@@ -4985,7 +5028,7 @@ export class MaxFlizGameEngine {
 
 
   private getSurvivalEnemyRole(enemy: EnemyItem): 'bruiser' | 'flanker' | 'ranged' | 'support' {
-    if (enemy.type === 'sztaplar_szalony' || enemy.type === 'elite_walczak_guard') return 'bruiser';
+    if (enemy.type === 'sztaplar_szalony' || enemy.type === 'elite_walczak_guard' || enemy.type === 'agv_robot') return 'bruiser';
     if (enemy.type === 'inspector') return 'support';
     if (enemy.type === 'handlowiec' || enemy.type === 'przedstawiciel_włoski' || enemy.type === 'pan_roman' || enemy.type === 'serwisant') return 'ranged';
     if (enemy.type === 'kurier' || enemy.type === 'zombie_pracownik' || enemy.type === 'monter') return 'flanker';
@@ -6250,7 +6293,7 @@ export class MaxFlizGameEngine {
 
     // Deliberate, readable cadence: these are physical signature attacks, not machine-gun spam.
     const baseAttackCooldown = this.gameMode === 'survival'
-      ? 2.85
+      ? 3.25
       : charId === 'piotr' ? 0.28
         : charId === 'mateusz' ? 0.66
           : charId === 'dawid' ? 0.70
