@@ -7590,7 +7590,6 @@ export class MaxFlizGameEngine {
     this.triggerScreenShake(0.30, 0.18);
     this.triggerBloomPulse(0.30);
     this.spawnParticleRing(this.playerPos.x, 0.22, this.playerPos.z, 0x8ca34b);
-    sound.playTankCannon();
   }
 
   private updateMarcinTank(dt: number) {
