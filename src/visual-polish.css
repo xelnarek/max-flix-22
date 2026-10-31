@@ -2416,3 +2416,70 @@ button:disabled { cursor: not-allowed !important; filter: grayscale(.35); opacit
   #title-screen .menu-game-title { transition: none !important; }
   .capybara-easter-dialog { animation: none; }
 }
+
+
+/* Campaign briefing entry: secondary to the main launch actions, but always visible. */
+#title-screen .btn-story-open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: min(100%, 430px);
+  min-height: 38px;
+  margin: 10px auto 4px;
+  padding: 8px 14px;
+  border: 1px solid rgba(135, 191, 216, .28);
+  border-radius: 10px;
+  background: linear-gradient(120deg, rgba(28, 56, 74, .72), rgba(8, 21, 33, .78));
+  color: #c5d9e6;
+  font: 800 9px/1.4 "JetBrains Mono", monospace;
+  letter-spacing: .07em;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 7px 18px rgba(0,0,0,.16);
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
+}
+#title-screen .btn-story-open:hover {
+  border-color: rgba(242,184,75,.58);
+  background: linear-gradient(120deg, rgba(48, 75, 87, .82), rgba(19, 35, 48, .86));
+  color: #fff0cf;
+  transform: translateY(-1px);
+}
+.story-modal-card {
+  width: min(var(--ui-panel-max, 920px), calc(100vw - 24px));
+  max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+}
+.story-modal-card .story-slides-container {
+  padding: calc(8px * var(--ui-scale, 1)) clamp(10px, 2vw, 22px);
+}
+.story-modal-card .story-slide {
+  padding: calc(20px * var(--ui-scale, 1));
+}
+.story-modal-card .story-slide-text {
+  font-size: calc(12px * var(--ui-font-scale, 1));
+}
+.story-modal-card .story-nav-bar {
+  padding: calc(12px * var(--ui-scale, 1)) 14px max(10px, env(safe-area-inset-bottom));
+}
+@media (max-width: 600px), (max-height: 560px) {
+  #title-screen .btn-story-open {
+    min-height: 34px;
+    margin-top: 6px;
+    font-size: 8px;
+  }
+  .story-modal-card {
+    width: calc(100vw - 12px);
+    max-height: calc(100dvh - 12px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    border-radius: 14px;
+  }
+  .story-modal-card .story-slides-container {
+    padding: 4px 8px;
+  }
+  .story-modal-card .story-slide {
+    min-height: 0;
+    padding: 10px;
+  }
+  .story-modal-card .story-slide-title {
+    font-size: clamp(16px, 3.5vw, 22px);
+    margin: 6px 0 8px;
+  }
+}
