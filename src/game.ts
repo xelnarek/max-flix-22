@@ -4260,11 +4260,11 @@ export class MaxFlizGameEngine {
       this.emitFloatingToast('🇮🇹 DOSTAWA Z MEDIOLANU — NOWE JEDNOSTKI!', this.playerPos.x, this.playerPos.y + 1.8, this.playerPos.z, 'combo');
       sound.playAlert();
     }
+    if (this.survivalElapsed >= this.survivalNextSurgeAt) this.beginSurvivalHordeSurge();
     if (this.survivalElapsed >= 180 && !this.survivalMiniBossSpawned) {
       this.survivalMiniBossSpawned = true;
       this.spawnSurvivalAuditor();
     }
-    if (this.survivalElapsed >= this.survivalNextSurgeAt) this.beginSurvivalHordeSurge();
     this.updateSurvivalAuditorAura(dt);
     const nextWave = 1 + Math.floor(this.survivalElapsed / 60);
     if (nextWave > this.survivalWave) {
@@ -4288,10 +4288,14 @@ export class MaxFlizGameEngine {
 
     // First major boss at 05:00; later boss cycles recur every five minutes.
     const majorBossWave = Math.floor(this.survivalElapsed / 300) * 5;
+    const activeSurvivalBoss = this.enemies.some((enemy) =>
+      (enemy.type === 'walczak' || enemy.type === 'krol_leto') && enemy.state !== 'defeated'
+    );
     if (
       this.survivalElapsed >= 300 &&
       this.survivalBossWave !== majorBossWave &&
-      this.survivalPendingBossWave !== majorBossWave
+      this.survivalPendingBossWave !== majorBossWave &&
+      !activeSurvivalBoss
     ) {
       this.survivalPendingBossWave = majorBossWave;
       this.survivalBossWarningTimer = 6.0;
@@ -4300,7 +4304,7 @@ export class MaxFlizGameEngine {
         this.playerPos.x, this.playerPos.y + 2.0, this.playerPos.z, 'damage'
       );
       this.callbacks.onPerkDropBanner?.(
-        majorBossWave === 5 ? 'KIEROWNIK LOGISTYKI • 6 SEKUND' : 'NADCHODZI BOSS • 6 SEKUND',
+        majorBossWave === 5 ? 'INWENTARYZACJA GIGANT • 6 SEKUND' : 'NADCHODZI BOSS • 6 SEKUND',
         '🚨',
         majorBossWave === 5
           ? 'Nadchodzi Inwentaryzacja Gigant. Przygotuj się na szarżę i szeroką falę uderzeniową.'
@@ -5344,7 +5348,7 @@ export class MaxFlizGameEngine {
     this.triggerBloomPulse(0.7);
     this.spawnParticleRing(x, 0.6, z, 0xf59e0b);
     this.callbacks.onPerkDropBanner?.(
-      wave % 10 === 0 ? 'KRÓL-LETO WRACA DO MAGAZYNU!' : 'WALCZAK WJEŻDŻA NA ZMIANĘ!',
+      wave % 10 === 0 ? 'KRÓL-LETO WRACA DO MAGAZYNU!' : wave === 5 ? 'INWENTARYZACJA GIGANT WJEŻDŻA NA HALĘ!' : 'WALCZAK WJEŻDŻA NA ZMIANĘ!',
       wave % 10 === 0 ? '👑' : '👔',
       'Boss fali ' + wave + ' — pokonaj go, aby zdobyć dodatkowe doświadczenie',
       '#ef4444'
@@ -6124,7 +6128,7 @@ export class MaxFlizGameEngine {
     if (enemy.surgeRunner) {
       const dx = this.playerPos.x - enemy.x;
       const dz = this.playerPos.z - enemy.z;
-      if (distanceToPlayer > 1.15) {
+      if (distanceToPlayer > 0.72) {
         const inverseDistance = 1 / Math.max(0.1, distanceToPlayer);
         enemy.x = THREE.MathUtils.clamp(enemy.x + dx * inverseDistance * enemy.speed * dt, this.levelBounds.minX + 1.0, this.levelBounds.maxX - 1.0);
         enemy.z = THREE.MathUtils.clamp(enemy.z + dz * inverseDistance * enemy.speed * dt, this.levelBounds.minZ + 0.8, this.levelBounds.maxZ - 0.8);
