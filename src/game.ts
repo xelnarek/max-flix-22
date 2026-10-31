@@ -7414,6 +7414,422 @@ export class MaxFlizGameEngine {
     });
   }
 
+  private createMarcinTankModel(): { group: THREE.Group; turret: THREE.Group; tracks: THREE.Mesh[] } {
+    const group = new THREE.Group();
+    group.name = 'marcin_wz404_tank';
+    const olive = new THREE.MeshStandardMaterial({ color: 0x647a3a, roughness: 0.66, metalness: 0.34 });
+    const oliveLight = new THREE.MeshStandardMaterial({ color: 0x8ca34b, roughness: 0.54, metalness: 0.3 });
+    const darkSteel = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.82, metalness: 0.52 });
+    const steel = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.35, metalness: 0.82 });
+    const amber = new THREE.MeshStandardMaterial({ color: 0xfbbf24, emissive: 0xd97706, emissiveIntensity: 0.72 });
+    const red = new THREE.MeshStandardMaterial({ color: 0xb91c1c, emissive: 0x7f1d1d, emissiveIntensity: 0.22 });
+    const addBox = (parent: THREE.Object3D, geometry: THREE.BoxGeometry, material: THREE.Material, x: number, y: number, z: number) => {
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    };
+
+    // Low-profile six-wheeled tracked hull with a readable front glacis.
+    const hull = addBox(group, new THREE.BoxGeometry(1.38, 0.42, 1.95), olive, 0, 0.48, 0);
+    hull.rotation.x = -0.045;
+    addBox(group, new THREE.BoxGeometry(1.47, 0.13, 1.78), oliveLight, 0, 0.73, -0.02);
+    const frontGlacis = addBox(group, new THREE.BoxGeometry(1.30, 0.28, 0.25), oliveLight, 0, 0.42, 0.88);
+    frontGlacis.rotation.x = -0.28;
+    addBox(group, new THREE.BoxGeometry(1.18, 0.12, 0.28), darkSteel, 0, 0.28, 0.99);
+
+    const tracks: THREE.Mesh[] = [];
+    for (const side of [-1, 1]) {
+      const track = new THREE.Mesh(
+        new THREE.TorusGeometry(0.40, 0.105, 7, 26),
+        darkSteel
+      );
+      track.position.set(side * 0.72, 0.39, -0.03);
+      track.rotation.y = Math.PI / 2;
+      track.castShadow = true;
+      group.add(track);
+      tracks.push(track);
+      for (let wheelIndex = 0; wheelIndex < 4; wheelIndex++) {
+        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.12, 12), steel);
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(side * 0.76, 0.37, -0.62 + wheelIndex * 0.40);
+        group.add(wheel);
+        const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.13, 10), oliveLight);
+        hub.rotation.z = Math.PI / 2;
+        hub.position.copy(wheel.position);
+        group.add(hub);
+      }
+      const fender = addBox(group, new THREE.BoxGeometry(0.10, 0.15, 1.48), oliveLight, side * 0.77, 0.66, -0.02);
+      fender.castShadow = false;
+    }
+
+    // A distinct rotating turret with a long barrel and a glowing muzzle ring.
+    const turret = new THREE.Group();
+    turret.position.set(0, 0.82, -0.06);
+    group.add(turret);
+    const turretBase = new THREE.Mesh(new THREE.CylinderGeometry(0.47, 0.54, 0.18, 16), darkSteel);
+    turretBase.position.y = -0.05;
+    turret.add(turretBase);
+    addBox(turret, new THREE.BoxGeometry(0.92, 0.38, 0.78), oliveLight, 0, 0.16, -0.04);
+    const mantlet = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.20, 0.26, 12), olive);
+    mantlet.rotation.x = Math.PI / 2;
+    mantlet.position.set(0, 0.18, 0.36);
+    turret.add(mantlet);
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.115, 1.16, 12), steel);
+    barrel.rotation.x = Math.PI / 2;
+    barrel.position.set(0, 0.18, 0.91);
+    turret.add(barrel);
+    const muzzle = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.13, 12), darkSteel);
+    muzzle.rotation.x = Math.PI / 2;
+    muzzle.position.set(0, 0.18, 1.48);
+    turret.add(muzzle);
+    const muzzleBand = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.018, 6, 14), amber);
+    muzzleBand.position.set(0, 0.18, 1.55);
+    turret.add(muzzleBand);
+
+    const hatch = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.19, 0.12, 12), darkSteel);
+    hatch.position.set(-0.22, 0.40, -0.20);
+    turret.add(hatch);
+    const commander = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), olive);
+    commander.position.set(-0.22, 0.52, -0.20);
+    turret.add(commander);
+
+    for (const side of [-1, 1]) {
+      const headlight = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), amber);
+      headlight.position.set(side * 0.48, 0.50, 1.02);
+      group.add(headlight);
+      const exhaust = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.075, 0.24, 8), darkSteel);
+      exhaust.position.set(side * 0.43, 0.72, -0.76);
+      group.add(exhaust);
+    }
+    const badge = new THREE.Mesh(new THREE.BoxGeometry(0.50, 0.17, 0.035), red);
+    badge.position.set(0, 0.69, 1.0);
+    group.add(badge);
+    // Keep the tank model legible at normal gameplay zoom without adding a heavy text texture.
+    const badgeStripe = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.025, 0.015), amber);
+    badgeStripe.position.set(0, 0.70, 1.022);
+    group.add(badgeStripe);
+
+    group.scale.setScalar(0.92);
+    group.traverse((object) => {
+      const mesh = object as THREE.Mesh;
+      if (mesh.isMesh) {
+        mesh.castShadow = true;
+        mesh.receiveShadow = false;
+      }
+    });
+    return { group, turret, tracks };
+  }
+
+  private spawnMarcinTank() {
+    if (this.marcinTank) {
+      this.levelRoot.remove(this.marcinTank.group);
+      this.disposeTemporaryObject(this.marcinTank.group);
+      this.marcinTank = null;
+    }
+    const built = this.createMarcinTankModel();
+    const forward = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
+    built.group.position.set(
+      this.playerPos.x - forward.x * 2.6,
+      0.06,
+      this.playerPos.z - forward.z * 2.6
+    );
+    built.group.rotation.y = this.playerRot;
+    this.levelRoot.add(built.group);
+    const duration = this.gameMode === 'survival' ? 6.0 : 8.0;
+    this.marcinTank = {
+      group: built.group,
+      turret: built.turret,
+      tracks: built.tracks,
+      life: duration,
+      maxLife: duration,
+      cooldown: 0.45,
+      dustTimer: 0,
+    };
+    this.sayQuote('WORLD OF TAAAAANKS! NOOBIE! Zajmijcie pozycje, artyleria Optima wjeżdża!');
+    this.callbacks.onPerkDropBanner?.(
+      'WORLD OF TAAAAANKS! NOOBIE!',
+      '🚜',
+      'Czołg WZ-404 melduje gotowość. Przez kilka sekund sam namierza i ostrzeliwuje przeciwników.',
+      '#8ca34b'
+    );
+    this.emitFloatingToast('🚜 WZ-404 • ARTYLERIA OPTIMA ONLINE!', this.playerPos.x, this.playerPos.y + 1.55, this.playerPos.z, 'combo');
+    this.triggerScreenShake(0.30, 0.18);
+    this.triggerBloomPulse(0.30);
+    this.spawnParticleRing(this.playerPos.x, 0.22, this.playerPos.z, 0x8ca34b);
+    sound.playTankCannon();
+  }
+
+  private updateMarcinTank(dt: number) {
+    const tank = this.marcinTank;
+    if (!tank) return;
+    tank.life -= dt;
+    if (tank.life <= 0) {
+      const position = tank.group.position.clone();
+      this.levelRoot.remove(tank.group);
+      this.disposeTemporaryObject(tank.group);
+      this.marcinTank = null;
+      this.spawnParticleRing(position.x, 0.18, position.z, 0xfbbf24);
+      this.emitFloatingToast('🏁 WZ-404 wraca do garażu. Raport: noobów mniej.', position.x, 1.25, position.z, 'perk');
+      return;
+    }
+
+    const forward = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
+    const desiredX = this.playerPos.x - forward.x * 2.6;
+    const desiredZ = this.playerPos.z - forward.z * 2.6;
+    tank.group.position.x = THREE.MathUtils.lerp(tank.group.position.x, desiredX, Math.min(1, dt * 2.8));
+    tank.group.position.z = THREE.MathUtils.lerp(tank.group.position.z, desiredZ, Math.min(1, dt * 2.8));
+    tank.group.position.y = 0.06 + Math.sin(performance.now() * 0.004) * 0.018;
+    tank.group.rotation.y = THREE.MathUtils.lerp(tank.group.rotation.y, this.playerRot, Math.min(1, dt * 2.2));
+    tank.tracks.forEach((track) => { track.rotation.x += dt * 5.5; });
+
+    let target: EnemyItem | null = null;
+    let nearest = 23.5;
+    for (const enemy of this.enemies) {
+      if (enemy.state === 'defeated' || !enemy.mesh?.visible) continue;
+      const distance = Math.hypot(enemy.x - tank.group.position.x, enemy.z - tank.group.position.z);
+      if (distance < nearest) {
+        nearest = distance;
+        target = enemy;
+      }
+    }
+    if (!target) return;
+
+    const aimX = target.x - tank.group.position.x;
+    const aimZ = target.z - tank.group.position.z;
+    const worldAngle = Math.atan2(aimX, aimZ);
+    tank.turret.rotation.y = THREE.MathUtils.lerp(
+      tank.turret.rotation.y,
+      worldAngle - tank.group.rotation.y,
+      Math.min(1, dt * 5.5)
+    );
+
+    tank.cooldown -= dt;
+    if (tank.cooldown > 0) return;
+    tank.cooldown = this.gameMode === 'survival' ? 1.35 : 1.05;
+
+    const direction = new THREE.Vector3(aimX, target.y + 0.65 - (tank.group.position.y + 1.02), aimZ);
+    if (direction.lengthSq() < 0.001) return;
+    direction.normalize();
+    const shell = new THREE.Group();
+    const shellMat = new THREE.MeshStandardMaterial({
+      color: 0xfbbf24, emissive: 0xf97316, emissiveIntensity: 1.4, roughness: 0.26, metalness: 0.36,
+    });
+    const core = new THREE.Mesh(new THREE.SphereGeometry(0.19, 10, 8), shellMat);
+    const collar = new THREE.Mesh(
+      new THREE.TorusGeometry(0.20, 0.035, 6, 12),
+      new THREE.MeshBasicMaterial({ color: 0xfff7ae })
+    );
+    collar.rotation.x = Math.PI / 2;
+    shell.add(core, collar);
+    const start = tank.group.position.clone().add(new THREE.Vector3(0, 1.12, 0)).addScaledVector(direction, 1.18);
+    shell.position.copy(start);
+    this.levelRoot.add(shell);
+    const damage = this.gameMode === 'survival' ? 2 : 3;
+    this.projectiles.push({
+      mesh: shell,
+      vel: direction.multiplyScalar(23),
+      life: 2.2,
+      maxLife: 2.2,
+      damage: this.scaleSurvivalDamage(damage),
+      pierce: 0,
+      aoeRadius: 1.7,
+      stunDuration: 0.7,
+      weaponProjectile: true,
+      hitIds: new Set<string>(),
+    });
+    sound.playTankCannon();
+    this.triggerScreenShake(0.10, 0.07);
+    this.spawnParticleRing(start.x, start.y, start.z, 0xfbbf24);
+  }
+
+  private createMateuszCatModel(index: number): { group: THREE.Group; tail: THREE.Group } {
+    const group = new THREE.Group();
+    group.name = 'mateusz_cat_companion_' + index;
+    const furPalette = [0xd97706, 0x1f2937, 0xe2e8f0];
+    const fur = new THREE.MeshStandardMaterial({ color: furPalette[index % furPalette.length], roughness: 0.9 });
+    const furLight = new THREE.MeshStandardMaterial({ color: index === 2 ? 0xf8fafc : 0xfbbf24, roughness: 0.86 });
+    const pink = new THREE.MeshStandardMaterial({ color: 0xf9a8d4, roughness: 0.65 });
+    const dark = new THREE.MeshBasicMaterial({ color: 0x0f172a });
+    const cyan = new THREE.MeshStandardMaterial({ color: 0x67e8f9, emissive: 0x0891b2, emissiveIntensity: 0.7 });
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.31, 12, 9), fur);
+    body.scale.set(1.0, 0.80, 1.35);
+    body.position.y = 0.38;
+    group.add(body);
+    const chest = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 8), furLight);
+    chest.scale.set(0.82, 1.05, 0.62);
+    chest.position.set(0, 0.36, 0.32);
+    group.add(chest);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.25, 12, 10), fur);
+    head.position.set(0, 0.69, 0.43);
+    group.add(head);
+    for (const side of [-1, 1]) {
+      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.095, 0.25, 7), fur);
+      ear.position.set(side * 0.16, 0.91, 0.40);
+      ear.rotation.z = side * -0.22;
+      group.add(ear);
+      const innerEar = new THREE.Mesh(new THREE.ConeGeometry(0.047, 0.14, 6), pink);
+      innerEar.position.set(side * 0.16, 0.91, 0.438);
+      innerEar.rotation.z = side * -0.22;
+      group.add(innerEar);
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), dark);
+      eye.position.set(side * 0.09, 0.72, 0.655);
+      group.add(eye);
+      for (let whisker = 0; whisker < 2; whisker++) {
+        const line = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.22, 5), furLight);
+        line.position.set(side * (0.17 + whisker * 0.015), 0.60 - whisker * 0.045, 0.64);
+        line.rotation.z = side * (Math.PI / 2 + 0.14 * (whisker ? -1 : 1));
+        line.rotation.x = Math.PI / 2;
+        group.add(line);
+      }
+    }
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), pink);
+    nose.position.set(0, 0.63, 0.68);
+    group.add(nose);
+
+    for (const side of [-1, 1]) {
+      for (const z of [-0.02, 0.54]) {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.075, 0.27, 8), fur);
+        leg.position.set(side * 0.19, 0.17, z);
+        group.add(leg);
+      }
+    }
+    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.032, 6, 14), cyan);
+    collar.position.set(0, 0.55, 0.35);
+    collar.rotation.x = Math.PI / 2;
+    group.add(collar);
+    const bell = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), amber);
+    bell.position.set(0, 0.50, 0.50);
+    group.add(bell);
+
+    const tail = new THREE.Group();
+    tail.position.set(0, 0.43, -0.35);
+    const tailCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, 0.10, -0.17),
+      new THREE.Vector3(0, 0.31, -0.27),
+      new THREE.Vector3(0, 0.44, -0.14),
+    ]);
+    const tailMesh = new THREE.Mesh(new THREE.TubeGeometry(tailCurve, 10, 0.045, 6, false), fur);
+    tail.add(tailMesh);
+    group.add(tail);
+
+    group.traverse((object) => {
+      const mesh = object as THREE.Mesh;
+      if (mesh.isMesh) {
+        mesh.castShadow = true;
+        mesh.receiveShadow = false;
+      }
+    });
+    return { group, tail };
+  }
+
+  private spawnMateuszCats() {
+    for (const cat of this.mateuszCats) {
+      this.levelRoot.remove(cat.group);
+      this.disposeTemporaryObject(cat.group);
+    }
+    this.mateuszCats = [];
+    const duration = this.gameMode === 'survival' ? 6.5 : 9.5;
+    for (let index = 0; index < 3; index++) {
+      const built = this.createMateuszCatModel(index);
+      const angle = this.playerRot + (index / 3) * Math.PI * 2;
+      built.group.position.set(
+        this.playerPos.x + Math.sin(angle) * 1.65,
+        0.08,
+        this.playerPos.z + Math.cos(angle) * 1.65
+      );
+      built.group.rotation.y = angle + Math.PI;
+      this.levelRoot.add(built.group);
+      this.mateuszCats.push({
+        group: built.group,
+        tail: built.tail,
+        life: duration,
+        maxLife: duration,
+        attackCooldown: 0.35 + index * 0.28,
+        orbitAngle: (index / 3) * Math.PI * 2,
+        pounceTimer: 0,
+        pounceTarget: null,
+      });
+    }
+    this.sayQuote('KOCIA ARMIA ONLINE! Trzy futrzaste jednostki bojowe: Miau, Miau i Miau-Critical!');
+    this.callbacks.onPerkDropBanner?.(
+      'KOCIA ARMIA ONLINE • 3× MIAU-CRITICAL',
+      '🐈',
+      'Trzy koty orbitują wokół Mateusza, doskakują do przeciwników i zadają obrażenia przez kilka sekund.',
+      '#67e8f9'
+    );
+    this.emitFloatingToast('🐈🐈🐈 TRZY KOTY • MIAU-CRITICAL!', this.playerPos.x, this.playerPos.y + 1.55, this.playerPos.z, 'combo');
+    this.triggerBloomPulse(0.26);
+    this.triggerScreenShake(0.16, 0.10);
+    this.spawnParticleRing(this.playerPos.x, 0.22, this.playerPos.z, 0x67e8f9);
+    sound.playCatPounce();
+  }
+
+  private updateMateuszCats(dt: number) {
+    for (let index = this.mateuszCats.length - 1; index >= 0; index--) {
+      const cat = this.mateuszCats[index];
+      cat.life -= dt;
+      if (cat.life <= 0) {
+        this.levelRoot.remove(cat.group);
+        this.disposeTemporaryObject(cat.group);
+        this.mateuszCats.splice(index, 1);
+        continue;
+      }
+
+      cat.orbitAngle += dt * (cat.pounceTimer > 0 ? 0.65 : 1.15);
+      const angle = this.playerRot + cat.orbitAngle;
+      const baseX = this.playerPos.x + Math.sin(angle) * 1.72;
+      const baseZ = this.playerPos.z + Math.cos(angle) * 1.72;
+      let targetX = baseX;
+      let targetZ = baseZ;
+      let jumpHeight = 0;
+      if (cat.pounceTimer > 0 && cat.pounceTarget) {
+        cat.pounceTimer = Math.max(0, cat.pounceTimer - dt);
+        const progress = 1 - cat.pounceTimer / 0.42;
+        const reach = progress < 0.58 ? progress / 0.58 : (1 - progress) / 0.42;
+        const weight = THREE.MathUtils.clamp(reach, 0, 1);
+        targetX = THREE.MathUtils.lerp(baseX, cat.pounceTarget.x, weight);
+        targetZ = THREE.MathUtils.lerp(baseZ, cat.pounceTarget.z, weight);
+        jumpHeight = Math.sin(Math.PI * THREE.MathUtils.clamp(progress, 0, 1)) * 0.62;
+        if (cat.pounceTimer <= 0) cat.pounceTarget = null;
+      }
+
+      cat.group.position.x = THREE.MathUtils.lerp(cat.group.position.x, targetX, Math.min(1, dt * 8.5));
+      cat.group.position.z = THREE.MathUtils.lerp(cat.group.position.z, targetZ, Math.min(1, dt * 8.5));
+      cat.group.position.y = 0.08 + jumpHeight + Math.sin(performance.now() * 0.008 + index * 2.1) * 0.035;
+      cat.group.rotation.y = Math.atan2(this.playerPos.x - cat.group.position.x, this.playerPos.z - cat.group.position.z);
+      cat.tail.rotation.x = Math.sin(performance.now() * 0.006 + index) * 0.42;
+      if (cat.life < 0.8) cat.group.scale.setScalar(Math.max(0.05, cat.life / 0.8));
+
+      cat.attackCooldown -= dt;
+      if (cat.attackCooldown > 0 || cat.pounceTimer > 0) continue;
+      let target: EnemyItem | null = null;
+      let nearest = 10.5;
+      for (const enemy of this.enemies) {
+        if (enemy.state === 'defeated' || !enemy.mesh?.visible) continue;
+        const distance = Math.hypot(enemy.x - cat.group.position.x, enemy.z - cat.group.position.z);
+        if (distance < nearest) {
+          nearest = distance;
+          target = enemy;
+        }
+      }
+      if (!target) continue;
+      const damage = this.scaleSurvivalDamage(1);
+      target.hp -= damage;
+      target.stunTimer = Math.max(target.stunTimer, 0.28);
+      if (target.hp <= 0) this.defeatEnemy(target, 220, false);
+      cat.pounceTarget = new THREE.Vector3(target.x, 0.08, target.z);
+      cat.pounceTimer = 0.42;
+      cat.attackCooldown = 1.28 + index * 0.17;
+      this.spawnParticleRing(target.x, target.y + 0.28, target.z, index === 0 ? 0xfbbf24 : index === 1 ? 0x67e8f9 : 0xf9a8d4);
+      this.emitFloatingToast('🐈 MIAU-CRITICAL! -' + damage + ' HP', target.x, target.y + 1.15, target.z, 'damage');
+      sound.playCatPounce();
+    }
+  }
+
   public triggerAbility() {
     if (this.state !== 'playing' || this.abilityTimer > 0) return;
     this.abilityTimer = this.charDef.abilityCooldown * (this.gameMode === 'survival' ? 2.0 : 1.25);
