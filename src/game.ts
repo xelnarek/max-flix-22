@@ -97,16 +97,21 @@ export interface SurvivalUpgradeOption {
 
 export type SurvivalWeaponId = 'pallet_cannon' | 'diamond_saw' | 'glue_mine' | 'kfc_bomber' | 'piorun_drone' | 'forklift_bolter' | 'scanner_pulse' | 'orbit_blades';
 export interface SurvivalWeaponState { id: SurvivalWeaponId; level: number; cooldown: number; evolved?: boolean; }
-const SURVIVAL_WEAPON_DEFS: Record<SurvivalWeaponId, { name: string; icon: string; description: string; cooldown: number; unlockAfter: number; color: number }> = {
-  // Arsenal unlocks are deliberately spaced out so each new weapon feels like a milestone.
-  pallet_cannon: { name: 'Działo paletowe', icon: '🧱', description: 'Mały, precyzyjny pocisk z ograniczoną falą uderzeniową.', cooldown: 7.8, unlockAfter: 70, color: 0xf59e0b },
-  diamond_saw: { name: 'Tarcza diamentowa', icon: '💿', description: 'Kompaktowa tarcza przebijająca linię wrogów.', cooldown: 8.8, unlockAfter: 135, color: 0x22d3ee },
-  glue_mine: { name: 'Mina Mapei', icon: '🟣', description: 'Niewielka mina spowalniająca przeciwników w małym promieniu.', cooldown: 10.2, unlockAfter: 210, color: 0xa78bfa },
-  kfc_bomber: { name: 'Kubełek bombowy', icon: '🍗', description: 'Lekki pocisk obszarowy; krótki, czytelny wybuch.', cooldown: 11.5, unlockAfter: 285, color: 0xef4444 },
-  piorun_drone: { name: 'Dron Piorun', icon: '🤖', description: 'Mały pocisk samonaprowadzający.', cooldown: 9.4, unlockAfter: 360, color: 0x38bdf8 },
-  forklift_bolter: { name: 'Nitownica UDT', icon: '🔩', description: 'Szybkie, małe pociski przebijające kilku wrogów.', cooldown: 6.3, unlockAfter: 435, color: 0xfbbf24 },
-  scanner_pulse: { name: 'Impuls skanera B4', icon: '📡', description: 'Precyzyjny impuls namierzający cel i przebijający szyk.', cooldown: 8.1, unlockAfter: 510, color: 0x67e8f9 },
-  orbit_blades: { name: 'Wirujące tarcze', icon: '⚙️', description: 'Trzy małe ostrza krążą wokół operatora i chronią bliski dystans.', cooldown: 13.0, unlockAfter: 585, color: 0x86efac },
+type SurvivalPassiveId = 'damage' | 'rapid' | 'boots' | 'magnet' | 'reinforced' | 'medkit' | 'range' | 'growth' | 'scavenger' | 'regen' | 'drone' | 'armor';
+const SURVIVAL_WEAPON_DEFS: Record<SurvivalWeaponId, {
+  name: string; evolvedName: string; icon: string; description: string; cooldown: number;
+  unlockAfter: number; color: number; evolutionPassive: SurvivalPassiveId; evolutionPassiveLabel: string;
+}> = {
+  // Each weapon has a distinct late-run evolution and a matching passive requirement.
+  // Unlock times are spaced so the arsenal grows over the first ten minutes instead of flooding the first level-ups.
+  pallet_cannon: { name: 'Działo paletowe', evolvedName: 'PALETA GIGA', icon: '🧱', description: 'Precyzyjny pocisk z kontrolowaną falą uderzeniową.', cooldown: 7.8, unlockAfter: 70, color: 0xf59e0b, evolutionPassive: 'damage', evolutionPassiveLabel: 'Wzmocniona amunicja' },
+  diamond_saw: { name: 'Tarcza diamentowa', evolvedName: 'TARCZA RYKOSZETU', icon: '💿', description: 'Ostrze przebija linię przeciwników i może odbić się od granicy areny.', cooldown: 8.8, unlockAfter: 135, color: 0x22d3ee, evolutionPassive: 'range', evolutionPassiveLabel: 'Zasięg audytu' },
+  glue_mine: { name: 'Mina Mapei', evolvedName: 'MAPEI BLACKOUT', icon: '🟣', description: 'Mina obszarowa spowalniająca i rozbijająca szyk wrogów.', cooldown: 10.2, unlockAfter: 210, color: 0xa78bfa, evolutionPassive: 'magnet', evolutionPassiveLabel: 'Magnes XP' },
+  kfc_bomber: { name: 'Kubełek bombowy', evolvedName: 'KUBEŁEK FURII', icon: '🍗', description: 'Pocisk obszarowy z podpaleniem celów.', cooldown: 11.5, unlockAfter: 285, color: 0xef4444, evolutionPassive: 'scavenger', evolutionPassiveLabel: 'Łowca okazji' },
+  piorun_drone: { name: 'Dron Piorun', evolvedName: 'PIORUN CHAIN MK II', icon: '🤖', description: 'Szybki pocisk samonaprowadzający z dodatkowym przebiciem.', cooldown: 9.4, unlockAfter: 360, color: 0x38bdf8, evolutionPassive: 'drone', evolutionPassiveLabel: 'Dron asystujący' },
+  forklift_bolter: { name: 'Nitownica UDT', evolvedName: 'NITOWNICA OBLĘŻNICZA', icon: '🔩', description: 'Wąski, szybki pocisk przebijający kilka celów.', cooldown: 6.3, unlockAfter: 435, color: 0xfbbf24, evolutionPassive: 'rapid', evolutionPassiveLabel: 'Rytm ataku' },
+  scanner_pulse: { name: 'Impuls skanera B4', evolvedName: 'SKANER TOTALNY', icon: '📡', description: 'Namierzający impuls przebijający zwartą formację.', cooldown: 8.1, unlockAfter: 510, color: 0x67e8f9, evolutionPassive: 'range', evolutionPassiveLabel: 'Zasięg audytu' },
+  orbit_blades: { name: 'Wirujące tarcze', evolvedName: 'ORBITALNA STREFA BHP', icon: '⚙️', description: 'Ostrza krążące wokół operatora i chroniące bliski dystans.', cooldown: 13.0, unlockAfter: 585, color: 0x86efac, evolutionPassive: 'armor', evolutionPassiveLabel: 'Paleta ochronna' },
 };
 export interface SurvivalSnapshot {
   elapsedSeconds: number; wave: number; kills: number; level: number; xp: number; xpToNext: number;
@@ -401,8 +406,10 @@ export class MaxFlizGameEngine {
   }
 
   private scaleSurvivalDamage(baseDamage: number): number {
+    // Rounded integer damage avoids fractional HP while allowing damage upgrades
+    // to cross a meaningful breakpoint for one-damage weapons after several stacks.
     return this.gameMode === 'survival'
-      ? Math.max(1, Math.floor(baseDamage * this.survivalDamageMultiplier))
+      ? Math.max(1, Math.round(baseDamage * this.survivalDamageMultiplier))
       : baseDamage;
   }
 
@@ -1357,8 +1364,11 @@ export class MaxFlizGameEngine {
       skips: this.survivalSkips,
       activeHazards: this.hazards.filter((hazard) => hazard.active).length,
       weapons: this.survivalWeapons.map((weapon) => ({
-        id: weapon.id, name: SURVIVAL_WEAPON_DEFS[weapon.id].name, icon: SURVIVAL_WEAPON_DEFS[weapon.id].icon,
-        level: weapon.level, evolved: Boolean(weapon.evolved),
+        id: weapon.id,
+        name: weapon.evolved ? SURVIVAL_WEAPON_DEFS[weapon.id].evolvedName : SURVIVAL_WEAPON_DEFS[weapon.id].name,
+        icon: SURVIVAL_WEAPON_DEFS[weapon.id].icon,
+        level: weapon.level,
+        evolved: Boolean(weapon.evolved),
       })),
     };
   }
@@ -1381,10 +1391,21 @@ export class MaxFlizGameEngine {
     } else if (choice.id.startsWith('weapon_evolve:')) {
       const weaponId = choice.id.slice('weapon_evolve:'.length) as SurvivalWeaponId;
       const weapon = this.survivalWeapons.find((entry) => entry.id === weaponId);
-      if (weapon && weapon.level >= 5 && !weapon.evolved && this.survivalElapsed >= 300) {
-        weapon.evolved = true; weapon.cooldown = 0.25;
+      const definition = SURVIVAL_WEAPON_DEFS[weaponId];
+      const hasPassivePair = (this.survivalUpgradeStacks[definition.evolutionPassive] || 0) > 0;
+      if (weapon && weapon.level >= 5 && !weapon.evolved && this.survivalElapsed >= 300 && hasPassivePair) {
+        weapon.evolved = true;
+        weapon.cooldown = 0.25;
         this.triggerBloomPulse(0.7);
-        this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.6, this.playerPos.z, SURVIVAL_WEAPON_DEFS[weaponId].color);
+        this.triggerScreenShake(0.24, 0.2);
+        this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.6, this.playerPos.z, definition.color);
+        this.callbacks.onPerkDropBanner?.(
+          definition.evolvedName,
+          '✦',
+          definition.name + ' osiągnęła pełną ewolucję. Jej zachowanie i siła ataku zostały ulepszone.',
+          '#fbbf24'
+        );
+        sound.playAbility(this.currentCharacterId);
       }
     } else {
       this.survivalUpgradeStacks[choice.id] = (this.survivalUpgradeStacks[choice.id] || 0) + 1;
@@ -1520,10 +1541,15 @@ export class MaxFlizGameEngine {
         pool.push({ id: 'weapon_upgrade:' + weaponId, icon: definition.icon,
           title: definition.name.toUpperCase() + ' • POZIOM ' + (owned.level + 1),
           description: 'Nieznacznie zwiększ obrażenia i skróć przeładowanie. Poziom ' + (owned.level + 1) + '/5.' });
-      } else if (!owned.evolved && this.survivalElapsed >= 300) {
+      } else if (
+        !owned.evolved &&
+        owned.level >= 5 &&
+        this.survivalElapsed >= 300 &&
+        (this.survivalUpgradeStacks[definition.evolutionPassive] || 0) > 0
+      ) {
         pool.push({ id: 'weapon_evolve:' + weaponId, icon: '✦',
-          title: 'EWOLUCJA: ' + definition.name.toUpperCase(),
-          description: 'RZADKI MODUŁ • wymagane 5 poziomów i 5 minut zmiany. Duży, ale kontrolowany skok mocy.' });
+          title: 'EWOLUCJA: ' + definition.evolvedName,
+          description: 'Wymagania: broń poziom 5, 5 minut Survival i moduł „' + definition.evolutionPassiveLabel + '”. Otrzymasz unikalną wersję tej broni.' });
       }
     }
     for (let i = pool.length - 1; i > 0; i--) {
