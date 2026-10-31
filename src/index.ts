@@ -253,10 +253,14 @@ class MaxFlizScene extends xb.Script {
         sztaplar_szalony: { name: 'Zdzichu', role: 'Mistrz Sztaplarki', avatar: '🚜' },
         pan_roman: { name: 'Pan Roman', role: 'Dostawa bez awiza', avatar: '📦' },
         serwisant: { name: 'Serwisant', role: 'Zgłoszenie 404', avatar: '🧰' },
+        przedstawiciel_włoski: { name: 'Włoski dostawca', role: 'Mamma mia / armatura', avatar: '🇮🇹' },
+        elite_walczak_guard: { name: 'Strażnik Walczaka', role: 'Ochrona Calacatty', avatar: '🛡️' },
         bosman_krakow: { name: 'Bosman z Krakowa', role: 'Odprawa 3-MSC', avatar: '📋' },
         agv_robot: { name: 'Robot AGV', role: 'Zgubiona trasa', avatar: '🤖' },
         piorun_dron: { name: 'PIORUN', role: 'Dron AI', avatar: '⚡' },
         zombie_pracownik: { name: 'Zombie-Magazynier', role: 'Głód KFC', avatar: '🧟' },
+        pomazaniec: { name: 'Pomazaniec', role: 'Rowerowy rajd / lizaki', avatar: '🚲' },
+        sebix_m: { name: 'Sebix M.', role: 'Taran B4 / cegły', avatar: '🔥' },
       };
       return metaMap[type] || { name: 'Pracownik', role: 'Magazyn', avatar: '👷' };
     };
@@ -286,7 +290,7 @@ class MaxFlizScene extends xb.Script {
       toast.style.willChange = 'transform, opacity';
       popupsLayer.appendChild(toast);
 
-      const duration = 1.6;
+      const duration = type === 'easter-egg' ? 3.6 : type === 'combo' ? 2.0 : 1.6;
 
       activeToasts.push({
         element: toast,
@@ -312,7 +316,7 @@ class MaxFlizScene extends xb.Script {
           continue;
         }
 
-        const floatSpeed = t.type === 'enemy_shout' ? 0.22 : 0.8;
+        const floatSpeed = t.type === 'enemy_shout' ? 0.22 : t.type === 'easter-egg' ? 0.28 : 0.8;
         t.worldPos.y += dt * floatSpeed;
 
         tempVec.copy(t.worldPos);
