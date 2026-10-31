@@ -1638,29 +1638,39 @@ class MaxFlizScene extends xb.Script {
     // The selective bloom hook uses XR Blocks' supported scene-render override.
     // Non-WebGL backends retain their normal render path.
     const core = xb.core;
-    if (renderer && core && scene) {
-      this.selectiveBloom?.dispose();
+    if (renderer && core && scene && renderer.extensions.has('EXT_color_buffer_float')) {
       this.restoreSelectiveBloomOverride?.();
-      const isMobile = width < 900 || ('ontouchstart' in window);
-      const pipeline = new SelectiveBloomPipeline(
-        renderer, scene, camera, width, height, renderer.getPixelRatio(), isMobile
-      );
-      const previousOverride = core.renderSceneOverride;
-      const renderOverride: NonNullable<typeof core.renderSceneOverride> = (activeRenderer, activeScene, activeCamera) => {
-        if (this.selectiveBloom === pipeline && activeRenderer instanceof THREE.WebGLRenderer && activeScene === scene) {
-          pipeline.render(activeCamera, this.currentFps, performance.now());
-        } else if (previousOverride) {
-          previousOverride(activeRenderer, activeScene, activeCamera);
-        } else {
-          const fallbackRenderer = activeRenderer as unknown as { render?: (targetScene: THREE.Scene, targetCamera: THREE.Camera) => void };
-          fallbackRenderer.render?.(activeScene, activeCamera);
-        }
-      };
-      this.selectiveBloom = pipeline;
-      core.renderSceneOverride = renderOverride;
-      this.restoreSelectiveBloomOverride = () => {
-        if (core.renderSceneOverride === renderOverride) core.renderSceneOverride = previousOverride;
-      };
+      this.restoreSelectiveBloomOverride = null;
+      this.selectiveBloom?.dispose();
+      this.selectiveBloom = null;
+      try {
+        const isMobile = width < 900 || ('ontouchstart' in window);
+        const pipeline = new SelectiveBloomPipeline(
+          renderer, scene, camera, width, height, renderer.getPixelRatio(), isMobile
+        );
+        const previousOverride = core.renderSceneOverride;
+        const renderOverride: NonNullable<typeof core.renderSceneOverride> = (activeRenderer, activeScene, activeCamera) => {
+          if (this.selectiveBloom === pipeline && activeRenderer instanceof THREE.WebGLRenderer && activeScene === scene) {
+            pipeline.render(activeCamera, this.currentFps, performance.now());
+          } else if (previousOverride) {
+            previousOverride(activeRenderer, activeScene, activeCamera);
+          } else {
+            const fallbackRenderer = activeRenderer as unknown as { render?: (targetScene: THREE.Scene, targetCamera: THREE.Camera) => void };
+            fallbackRenderer.render?.(activeScene, activeCamera);
+          }
+        };
+        this.selectiveBloom = pipeline;
+        core.renderSceneOverride = renderOverride;
+        this.restoreSelectiveBloomOverride = () => {
+          if (core.renderSceneOverride === renderOverride) core.renderSceneOverride = previousOverride;
+        };
+      } catch (error) {
+        this.selectiveBloom?.dispose();
+        this.selectiveBloom = null;
+        console.warn('Selective Bloom unavailable; keeping the standard renderer:', error);
+      }
+    } else if (renderer && core && !renderer.extensions.has('EXT_color_buffer_float')) {
+      console.info('Selective Bloom skipped: this GPU does not expose half-float render targets.');
     }
   }
 
