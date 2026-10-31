@@ -3355,6 +3355,32 @@ export class MaxFlizGameEngine {
 
     this.addPiorunDronEnemy('dron_2', -10, 22, -4, 2.4, 'Dron Inspekcyjny Sektora B');
 
+    // Perimeter product islands: adds visual landmarks and colour without narrowing the central movement lanes.
+    [-1, 1].forEach((side, index) => {
+      const displayX = side * 31.8;
+      const displayZ = -15.6;
+      const podium = createDisplayPodium(2.4, 1.6, 0.24);
+      podium.position.set(displayX,0,displayZ);
+      this.levelRoot.add(podium);
+      const tile = createLargeTileModel();
+      tile.position.set(displayX,0.29,displayZ);
+      tile.rotation.y = side * 0.10;
+      this.levelRoot.add(tile);
+      const marker = createNeonShowroomSign(index === 0 ? 'CALACATTA • 120×280' : 'MAX-FLIZ • PREMIUM GRES', index === 0 ? '#67e8f9' : '#fbbf24');
+      marker.position.set(displayX,2.6,displayZ-0.7);
+      marker.scale.setScalar(0.30);
+      this.levelRoot.add(marker);
+      const accent = new THREE.PointLight(index === 0 ? 0x38bdf8 : 0xf59e0b, 5.5, 9);
+      accent.position.set(displayX,2.4,displayZ);
+      this.levelRoot.add(accent);
+    });
+
+    const plantA = createShowroomPlant();
+    plantA.position.set(-33.4,0,11.2);
+    const plantB = createShowroomPlant();
+    plantB.position.set(33.4,0,11.2);
+    this.levelRoot.add(plantA,plantB);
+
     // Open Sector A -> Sector B Transition Archway
     const sectorGateAB = createFinishGate();
     sectorGateAB.position.set(35.5, 0, 0);
@@ -3647,6 +3673,29 @@ export class MaxFlizGameEngine {
     const scoreboard3 = createBhpDigitalScoreboard('TERMINAL VIP: ODPRAWA KURIERÓW • BRAK TARYFY ULGOWEJ!');
     scoreboard3.position.set(offsetX + 10, 7.2, -10.0);
     this.levelRoot.add(scoreboard3);
+
+    // Brighter terminal-side visual anchors: illuminated slab kiosks, plant silhouettes and loading signage.
+    [-1,1].forEach((side,index)=>{
+      const displayX=offsetX+side*39;
+      const displayZ=14.4;
+      const podium=createDisplayPodium(2.5,1.75,0.24);
+      podium.position.set(displayX,0,displayZ);
+      this.levelRoot.add(podium);
+      const slab=createLargeTileModel();
+      slab.position.set(displayX,0.29,displayZ);
+      slab.rotation.y=side*0.14;
+      this.levelRoot.add(slab);
+      const sign=createNeonShowroomSign(index===0?'WZ / WYDANIE TOWARU':'RAMPY • TERMINAL C',index===0?'#67e8f9':'#fb7185');
+      sign.position.set(displayX,2.55,displayZ-0.8);
+      sign.scale.setScalar(0.30);
+      this.levelRoot.add(sign);
+      const light=new THREE.PointLight(index===0?0x38bdf8:0xef4444,6.5,10);
+      light.position.set(displayX,2.2,displayZ);
+      this.levelRoot.add(light);
+      const plant=createShowroomPlant();
+      plant.position.set(displayX-side*2.1,0,displayZ-1.1);
+      this.levelRoot.add(plant);
+    });
 
     // High-Bay Terminal Racks — MOVED STRICTLY TO BACKGROUND (z = -14.0 and -10.5)
     // NEVER blocking the central arena or the delivery dock from the camera!
