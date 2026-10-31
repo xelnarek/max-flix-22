@@ -955,6 +955,11 @@ export function createCharacterModel(def: CharacterDef): {
   const silverReflectMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.2, metalness: 0.6 });
   const pantsMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7 });
   const bootMat = new THREE.MeshStandardMaterial({ color: 0x3f2c1d, roughness: 0.8 }); // leather work boots
+  applyIndustrialPbr(clothesMat, 0.010);
+  applyIndustrialPbr(vestMat, 0.012);
+  applyIndustrialPbr(armorMat, 0.018);
+  applyIndustrialPbr(pantsMat, 0.016);
+  applyIndustrialPbr(bootMat, 0.012);
 
   // 1. Torso Body
   const bodyGeo = new THREE.BoxGeometry(0.36, 0.46, 0.26);
@@ -1021,23 +1026,78 @@ export function createCharacterModel(def: CharacterDef): {
   head.castShadow = true;
   group.add(head);
 
-  // Big expressive eyes
-  const eyeWhite = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  const eyePupil = new THREE.MeshBasicMaterial({ color: 0x1e293b });
-  [-0.07, 0.07].forEach((ex) => {
-    const ew = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.02), eyeWhite);
-    ew.position.set(ex, 0.96, 0.135);
-    const ep = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.025), eyePupil);
-    ep.position.set(ex, 0.96, 0.138);
-    group.add(ew, ep);
+  // Rounded, better-readable facial features. These are stylized game caricatures,
+  // not a claim of photogrammetric likeness.
+  const eyeWhite = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.32 });
+  const eyePupil = new THREE.MeshBasicMaterial({ color: 0x172033 });
+  const browMat = new THREE.MeshStandardMaterial({ color: def.id === 'piotr' ? 0x59616a : 0x34251e, roughness: 0.92 });
+  [-0.07, 0.07].forEach((ex, index) => {
+    const ew = new THREE.Mesh(new THREE.SphereGeometry(0.032, 10, 8), eyeWhite);
+    ew.scale.set(1.0, 0.86, 0.58);
+    ew.position.set(ex, 0.96, 0.132);
+    const ep = new THREE.Mesh(new THREE.SphereGeometry(0.015, 8, 6), eyePupil);
+    ep.position.set(ex + (index === 0 ? 0.003 : -0.003), 0.96, 0.153);
+    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.072, 0.014, 0.022), browMat);
+    brow.position.set(ex, 1.012, 0.132);
+    brow.rotation.z = index === 0 ? 0.10 : -0.10;
+    group.add(ew, ep, brow);
   });
 
-  // Smile / Mouth
-  const smile = new THREE.Mesh(
-    new THREE.BoxGeometry(0.08, 0.02, 0.02),
-    new THREE.MeshBasicMaterial({ color: 0x991b1b })
-  );
-  smile.position.set(0, 0.88, 0.135);
+  [-1, 1].forEach((side) => {
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.046, 10, 8), skinMat);
+    ear.scale.set(0.58, 0.9, 0.72);
+    ear.position.set(side * 0.137, 0.925, -0.008);
+    group.add(ear);
+  });
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.037, 10, 8), skinMat);
+  nose.scale.set(0.78, 1.05, 0.72);
+  nose.position.set(0, 0.925, 0.151);
+  group.add(nose);
+
+  // Distinct hair/beard silhouettes help identify the five operators from gameplay distance.
+  const hairColors: Record<CharacterId, number> = { marcin: 0x35271f, grzesiek: 0x241b18, dawid: 0x58331f, mateusz: 0x392b25, piotr: 0x77716a };
+  const beardColors: Record<CharacterId, number> = { marcin: 0x000000, grzesiek: 0x211916, dawid: 0x51301f, mateusz: 0x52453d, piotr: 0x77716a };
+  const hairMat = new THREE.MeshStandardMaterial({ color: hairColors[def.id], roughness: 0.95 });
+  const sideburns = [-1, 1].map((side) => {
+    const sideburn = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.09, 0.065), hairMat);
+    sideburn.position.set(side * 0.126, 0.91, 0.064);
+    return sideburn;
+  });
+  group.add(...sideburns);
+
+  if (def.id === 'grzesiek' || def.id === 'dawid' || def.id === 'mateusz' || def.id === 'piotr') {
+    const beardMat = new THREE.MeshStandardMaterial({ color: beardColors[def.id], roughness: 0.98 });
+    const beard = new THREE.Mesh(new THREE.SphereGeometry(0.105, 12, 8), beardMat);
+    beard.scale.set(0.92, def.id === 'dawid' ? 0.25 : 0.38, 0.62);
+    beard.position.set(0, 0.842, 0.075);
+    group.add(beard);
+    if (def.id === 'dawid' || def.id === 'piotr') {
+      const moustacheLeft = new THREE.Mesh(new THREE.SphereGeometry(0.04, 10, 7), beardMat);
+      const moustacheRight = moustacheLeft.clone();
+      moustacheLeft.scale.set(1.0, 0.42, 0.45);
+      moustacheRight.scale.copy(moustacheLeft.scale);
+      moustacheLeft.position.set(-0.029, 0.89, 0.146);
+      moustacheRight.position.set(0.029, 0.89, 0.146);
+      group.add(moustacheLeft, moustacheRight);
+    }
+  }
+
+  // Curved helmet crowns soften the previously flat block-like hardhat profile.
+  if (def.id !== 'mateusz') {
+    const helmetColors: Record<CharacterId, number> = { marcin: 0xf8fafc, grzesiek: 0xfacc15, dawid: 0xea580c, mateusz: 0x7c3aed, piotr: 0xef4444 };
+    const crown = new THREE.Mesh(
+      new THREE.SphereGeometry(0.17, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2),
+      new THREE.MeshStandardMaterial({ color: helmetColors[def.id], roughness: 0.34, metalness: 0.08 })
+    );
+    crown.scale.y = 0.58;
+    crown.position.y = 1.105;
+    crown.castShadow = true;
+    group.add(crown);
+  }
+
+  const smile = new THREE.Mesh(new THREE.SphereGeometry(0.026, 8, 6), new THREE.MeshBasicMaterial({ color: 0x7f1d1d }));
+  smile.scale.set(1.35, 0.42, 0.5);
+  smile.position.set(0, 0.88, 0.145);
   group.add(smile);
 
   // Safety Hardhat or Cap
