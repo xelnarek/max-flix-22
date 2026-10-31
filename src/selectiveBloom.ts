@@ -10,6 +10,11 @@ type DarkenableMaterial = THREE.Material & {
   emissiveIntensity?: number;
 };
 
+interface BloomMeshCandidate {
+  mesh: THREE.Mesh;
+  isEmitter: boolean;
+}
+
 interface DarkenedMesh {
   mesh: THREE.Mesh;
   original: THREE.Material | THREE.Material[];
@@ -20,7 +25,10 @@ export class SelectiveBloomPipeline {
   private readonly bloomPass: UnrealBloomPass;
   private readonly renderPass: RenderPass;
   private readonly darkMaterialCache = new Map<THREE.Material, THREE.Material>();
-  private readonly candidates: THREE.Mesh[] = [];
+  private readonly darkMaterialArrayCache = new Map<THREE.Material[], THREE.Material[]>();
+  private readonly candidates: BloomMeshCandidate[] = [];
+  private readonly darkenedMeshes: DarkenedMesh[] = [];
+  private readonly blackBackground = new THREE.Color(0x000000);
   private readonly overlayScene = new THREE.Scene();
   private readonly overlayCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   private readonly overlayMaterial: THREE.ShaderMaterial;
@@ -121,24 +129,25 @@ export class SelectiveBloomPipeline {
 
     if (now - this.lastScanAt >= 1200) this.refreshCandidates(now);
 
-    const darkened: DarkenedMesh[] = [];
+    const darkened = this.darkenedMeshes;
+    darkened.length = 0;
     const previousBackground = this.scene.background;
     const previousAutoClear = this.renderer.autoClear;
 
     try {
       // Only clearly emissive meshes remain bright. Other opaque geometry is
       // rendered black so it still writes depth and occludes emitters behind it.
-      for (const mesh of this.candidates) {
-        if (!mesh.visible) continue;
+      for (const candidate of this.candidates) {
+        const mesh = candidate.mesh;
+        if (!mesh.visible || candidate.isEmitter) continue;
         const original = mesh.material;
-        if (this.isEmissive(original)) continue;
         darkened.push({ mesh, original });
         mesh.material = Array.isArray(original)
-          ? original.map((material) => this.getDarkMaterial(material))
+          ? this.getDarkMaterialArray(original)
           : this.getDarkMaterial(original);
       }
 
-      this.scene.background = new THREE.Color(0x000000);
+      this.scene.background = this.blackBackground;
       this.composer.render();
     } catch (error) {
       if (!this.failureLogged) {
@@ -151,6 +160,8 @@ export class SelectiveBloomPipeline {
         darkened[i].mesh.material = darkened[i].original;
       }
       this.scene.background = previousBackground;
+      this.renderer.autoClear = previousAutoClear;
+      darkened.length = 0;
     }
 
     // Always draw the actual scene first; the lower-resolution bloom texture
@@ -181,18 +192,26 @@ export class SelectiveBloomPipeline {
     this.overlayMaterial.dispose();
     for (const material of this.darkMaterialCache.values()) material.dispose();
     this.darkMaterialCache.clear();
+    this.darkMaterialArrayCache.clear();
     this.candidates.length = 0;
+    this.darkenedMeshes.length = 0;
   }
 
   private refreshCandidates(now: number): void {
     this.lastScanAt = now;
     this.candidates.length = 0;
     const liveMaterials = new Set<THREE.Material>();
+    const liveArrays = new Set<THREE.Material[]>();
     this.scene.traverse((object) => {
       if (!(object instanceof THREE.Mesh) || !object.material) return;
-      this.candidates.push(object);
-      const entries = Array.isArray(object.material) ? object.material : [object.material];
-      entries.forEach((material) => liveMaterials.add(material));
+      const material = object.material;
+      this.candidates.push({ mesh: object, isEmitter: this.isEmissive(material) });
+      if (Array.isArray(material)) {
+        liveArrays.add(material);
+        material.forEach((entry) => liveMaterials.add(entry));
+      } else {
+        liveMaterials.add(material);
+      }
     });
     for (const [original, dark] of this.darkMaterialCache) {
       if (!liveMaterials.has(original)) {
@@ -200,6 +219,17 @@ export class SelectiveBloomPipeline {
         this.darkMaterialCache.delete(original);
       }
     }
+    for (const original of this.darkMaterialArrayCache.keys()) {
+      if (!liveArrays.has(original)) this.darkMaterialArrayCache.delete(original);
+    }
+  }
+
+  private getDarkMaterialArray(original: THREE.Material[]): THREE.Material[] {
+    const cached = this.darkMaterialArrayCache.get(original);
+    if (cached) return cached;
+    const dark = original.map((material) => this.getDarkMaterial(material));
+    this.darkMaterialArrayCache.set(original, dark);
+    return dark;
   }
 
   private isEmissive(material: THREE.Material | THREE.Material[]): boolean {
