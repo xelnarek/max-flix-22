@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { clampHorizontalPosition } from './arenaBounds.ts';
+import { isWithinBossImpactRadius } from './combatTelegraphs.ts';
 import {
   getAbilityCooldownSeconds,
   getBaseAttackCooldownSeconds,
@@ -5453,6 +5454,106 @@ export class MaxFlizGameEngine {
     });
   }
 
+  /**
+   * A short-lived floor lane gives a readable dodge window before a directional
+   * boss projectile. One InstancedMesh keeps the signal to a single draw call.
+   */
+  private spawnBossLaneTelegraph(
+    x: number,
+    z: number,
+    direction: number,
+    length: number,
+    width: number,
+    color: number,
+    duration: number
+  ) {
+    const safeLength = Math.max(1, Number.isFinite(length) ? length : 1);
+    const safeWidth = Math.max(0.5, Number.isFinite(width) ? width : 0.5);
+    const life = THREE.MathUtils.clamp(Number.isFinite(duration) ? duration : 0.6, 0.2, 1.5);
+    const group = new THREE.Group();
+    group.position.set(x, 0.065, z);
+    group.rotation.y = Number.isFinite(direction) ? direction : 0;
+
+    const material = new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.26,
+      depthWrite: false,
+      toneMapped: false,
+      side: THREE.DoubleSide,
+    });
+    const barGeometry = new THREE.BoxGeometry(1, 0.025, 1);
+    const bars = new THREE.InstancedMesh(barGeometry, material, 6);
+    const dummy = new THREE.Object3D();
+    const placements = [
+      { x: 0, z: safeLength * 0.5, sx: safeWidth, sz: safeLength },
+      { x: -safeWidth * 0.5, z: safeLength * 0.5, sx: 0.075, sz: safeLength },
+      { x: safeWidth * 0.5, z: safeLength * 0.5, sx: 0.075, sz: safeLength },
+      { x: 0, z: safeLength * 0.25, sx: safeWidth * 0.82, sz: 0.065 },
+      { x: 0, z: safeLength * 0.5, sx: safeWidth * 0.82, sz: 0.065 },
+      { x: 0, z: safeLength * 0.75, sx: safeWidth * 0.82, sz: 0.065 },
+    ];
+    placements.forEach((placement, index) => {
+      dummy.position.set(placement.x, 0, placement.z);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(placement.sx, 1, placement.sz);
+      dummy.updateMatrix();
+      bars.setMatrixAt(index, dummy.matrix);
+    });
+    bars.instanceMatrix.needsUpdate = true;
+    group.add(bars);
+    this.levelRoot.add(group);
+    this.specialEffects.push({
+      mesh: group,
+      life,
+      maxLife: life,
+      grow: 0,
+      spin: 0,
+      update: (_dt, progress) => {
+        const fade = 1 - progress;
+        material.opacity = 0.13 + fade * (0.12 + Math.sin(progress * Math.PI * 8) * 0.07);
+        group.scale.x = 1 + Math.sin(progress * Math.PI * 6) * 0.035;
+      },
+      cleanup: () => this.disposeTemporaryObject(group),
+    });
+  }
+
+  /** Red expanding floor ring marking a boss's fixed-position area attack. */
+  private spawnBossImpactTelegraph(x: number, z: number, radius: number, color: number, duration: number) {
+    const safeRadius = Math.max(0.5, Number.isFinite(radius) ? radius : 0.5);
+    const life = THREE.MathUtils.clamp(Number.isFinite(duration) ? duration : 0.6, 0.2, 1.5);
+    const group = new THREE.Group();
+    group.position.set(x, 0.075, z);
+    const material = new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.76,
+      depthWrite: false,
+      toneMapped: false,
+      side: THREE.DoubleSide,
+    });
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(Math.max(0.1, safeRadius - 0.18), safeRadius, 64),
+      material
+    );
+    ring.rotation.x = -Math.PI / 2;
+    group.add(ring);
+    this.levelRoot.add(group);
+    this.specialEffects.push({
+      mesh: group,
+      life,
+      maxLife: life,
+      grow: 0,
+      spin: 0,
+      update: (_dt, progress) => {
+        const pulse = 1 + Math.sin(progress * Math.PI * 8) * 0.018;
+        group.scale.set(pulse, 1, pulse);
+        material.opacity = 0.24 + (1 - progress) * 0.52;
+      },
+      cleanup: () => this.disposeTemporaryObject(group),
+    });
+  }
+
   private updateSebixBehaviour(enemy: EnemyItem, dt: number, distance: number, dx: number, dz: number) {
     enemy.rageTime = (enemy.rageTime || 0) + dt;
     if (enemy.rageTime >= 10 && (enemy.bossPhase || 1) < 2) {
@@ -5527,6 +5628,7 @@ export class MaxFlizGameEngine {
         enemy.chargeTimer = 0.72;
         enemy.chargeDir = Math.atan2(dx,dz);
         enemy.state = 'charging';
+        this.spawnBossLaneTelegraph(enemy.x, enemy.z, enemy.chargeDir, 12.5, 2.6, 0xef4444, 0.72);
         this.spawnParticleRing(enemy.x,0.12,enemy.z,0xef4444);
         this.emitFloatingToast('🔥 SEBIX ŁADUJE TARAN — ZEJDŹ Z LINII!',enemy.x,enemy.y+2.2,enemy.z,'damage');
         sound.playBossWarning();
@@ -6916,7 +7018,11 @@ export class MaxFlizGameEngine {
           this.emitFloatingToast('🚨 ' + bossTitle + ': TRYB SZAŁU (FAZA 2)!', e.x, e.y + 1.8, e.z, 'damage');
         }
 
-        if (distToPlayer < 14.0) {
+        const isChargingImpact = e.name.includes('Inwentaryzacja Gigant') && e.chargeTimer !== undefined;
+        if (isChargingImpact) {
+          // Hold the boss at the marked impact point until the warning resolves.
+          e.mesh.rotation.y = Math.atan2(dx, dz);
+        } else if (distToPlayer < 14.0) {
           const angle = Math.atan2(dx, dz);
           e.mesh.rotation.y = angle;
           if (this.gameMode === 'survival') {
@@ -6947,6 +7053,7 @@ export class MaxFlizGameEngine {
             if (e.name.includes('Inwentaryzacja Gigant')) {
               if (e.chargeTimer === undefined) {
                 e.chargeTimer = 0.88;
+                this.spawnBossImpactTelegraph(e.x, e.z, 8.7, 0xef4444, 0.88);
                 this.spawnParticleRing(e.x, 0.16, e.z, 0xef4444);
                 this.emitFloatingToast('⚠️ INWENTARYZACJA GIGANT — UDERZENIE ZA CHWILĘ!', e.x, e.y + 1.8, e.z, 'damage');
                 sound.playBossWarning();
@@ -6960,7 +7067,9 @@ export class MaxFlizGameEngine {
                   this.triggerBloomPulse(0.52);
                   this.spawnParticleRing(e.x, 0.2, e.z, 0xf97316);
                   this.spawnExplosionParticles(e.x, 0.55, e.z, 0xfbbf24, 24);
-                  if (distToPlayer < 8.7) this.takeDamage('💥 FALA UDERZENIOWA INWENTARYZACJI GIGANT!');
+                  if (isWithinBossImpactRadius(this.playerPos.x, this.playerPos.z, e.x, e.z, 8.7)) {
+                    this.takeDamage('💥 FALA UDERZENIOWA INWENTARYZACJI GIGANT!');
+                  }
                   else this.emitFloatingToast('💨 FALA UDERZENIOWA MINĘŁA!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'perk');
                 }
               }
@@ -6982,7 +7091,10 @@ export class MaxFlizGameEngine {
           this.emitFloatingToast('🔥 KRÓL-LETO: OSTATECZNE ZWOLNIENIE!', e.x, e.y + 1.8, e.z, 'damage');
         }
 
-        if (distToPlayer < 15.0) {
+        if (e.chargeTimer !== undefined) {
+          // Keep the boss aligned with the committed lane while the warning is visible.
+          e.mesh.rotation.y = e.chargeDir ?? Math.atan2(dx, dz);
+        } else if (distToPlayer < 15.0) {
           const angle = Math.atan2(dx, dz);
           e.mesh.rotation.y = angle;
           if (this.gameMode === 'survival') {
@@ -7012,11 +7124,24 @@ export class MaxFlizGameEngine {
 
         if (e.specialActionTimer !== undefined) {
           e.specialActionTimer -= dt;
-          const cooldown = isPhase2 ? 1.2 : 2.2;
-          if (e.specialActionTimer <= 0 && distToPlayer < 12.0) {
-            e.specialActionTimer = cooldown;
-            this.spawnDyscyplinarkaNotice(e.x, e.y + 1.2, e.z);
-            this.emitFloatingToast('🚨 DYSCYPLINARKA!', e.x, e.y + 1.5, e.z, 'damage');
+          const cooldown = isPhase2 ? 2.7 : 3.8;
+          if (e.chargeTimer !== undefined) {
+            e.chargeTimer = Math.max(0, e.chargeTimer - dt);
+            if (e.chargeTimer <= 0) {
+              const lockedDirection = e.chargeDir ?? Math.atan2(dx, dz);
+              e.chargeTimer = undefined;
+              e.chargeDir = undefined;
+              e.specialActionTimer = cooldown;
+              this.spawnDyscyplinarkaNotice(e.x, e.y + 1.2, e.z, lockedDirection);
+              this.emitFloatingToast('⚖️ WYROK WYSTRZELONY — UNIKAJ LINII!', e.x, e.y + 1.5, e.z, 'damage');
+            }
+          } else if (e.specialActionTimer <= 0 && distToPlayer < 12.0) {
+            e.chargeTimer = 0.68;
+            e.chargeDir = Math.atan2(dx, dz);
+            this.spawnBossLaneTelegraph(e.x, e.z, e.chargeDir, 13.5, 2.2, isPhase2 ? 0xf97316 : 0xef4444, 0.68);
+            this.emitFloatingToast('🚨 DYSCYPLINARKA — ZEJDŹ Z ZAZNACZONEJ LINII!', e.x, e.y + 1.5, e.z, 'damage');
+            sound.playBossWarning();
+            this.triggerScreenShake(0.12, 0.12);
           }
         }
         this.callbacks.onBossUpdate?.(e.name, e.hp, e.maxHp, true, e.bossPhase);
@@ -7226,13 +7351,15 @@ export class MaxFlizGameEngine {
     sound.playWhistle();
   }
 
-  private spawnDyscyplinarkaNotice(x: number, y: number, z: number) {
+  private spawnDyscyplinarkaNotice(x: number, y: number, z: number, lockedDirection?: number) {
     const mesh = createPenaltyNoticeProjectile();
     mesh.scale.setScalar(1.6);
     (mesh.material as THREE.MeshStandardMaterial).color.setHex(0xef4444);
     mesh.position.set(x, y, z);
     this.levelRoot.add(mesh);
-    const dir = new THREE.Vector3(this.playerPos.x - x, 0, this.playerPos.z - z).normalize();
+    const dir = Number.isFinite(lockedDirection)
+      ? new THREE.Vector3(Math.sin(lockedDirection as number), 0, Math.cos(lockedDirection as number))
+      : new THREE.Vector3(this.playerPos.x - x, 0, this.playerPos.z - z).normalize();
     this.enemyProjectiles.push({ mesh, vel: dir.multiplyScalar(10.0), life: 3.5, isDyscyplinarka: true });
     sound.playWhistle();
   }
