@@ -3789,19 +3789,30 @@ export class MaxFlizGameEngine {
   }
 
   private getSurvivalSpawnPoint(): { x: number; z: number } {
-    const angle = Math.random() * Math.PI * 2;
-    const radius = 18 + Math.random() * 5;
-    const x = THREE.MathUtils.clamp(
-      this.playerPos.x + Math.cos(angle) * radius,
-      this.levelBounds.minX + 2.5,
-      this.levelBounds.maxX - 2.5
-    );
-    const z = THREE.MathUtils.clamp(
-      this.playerPos.z + Math.sin(angle) * radius,
-      this.levelBounds.minZ + 1.5,
-      this.levelBounds.maxZ - 1.5
-    );
-    return { x, z };
+    // Sample several perimeter positions and reject cargo stacks / racks before accepting a spawn.
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 18 + Math.random() * 5;
+      const x = THREE.MathUtils.clamp(
+        this.playerPos.x + Math.cos(angle) * radius,
+        this.levelBounds.minX + 2.5,
+        this.levelBounds.maxX - 2.5
+      );
+      const z = THREE.MathUtils.clamp(
+        this.playerPos.z + Math.sin(angle) * radius,
+        this.levelBounds.minZ + 1.5,
+        this.levelBounds.maxZ - 1.5
+      );
+      const blocked = this.survivalObstacles.some((obstacle) =>
+        Math.abs(x - obstacle.x) < obstacle.halfWidth + 1.2 &&
+        Math.abs(z - obstacle.z) < obstacle.halfDepth + 1.2
+      );
+      if (!blocked) return { x, z };
+    }
+    return {
+      x: THREE.MathUtils.clamp(this.playerPos.x - 22, this.levelBounds.minX + 2.5, this.levelBounds.maxX - 2.5),
+      z: THREE.MathUtils.clamp(this.playerPos.z + 16, this.levelBounds.minZ + 1.5, this.levelBounds.maxZ - 1.5),
+    };
   }
 
   private spawnSurvivalEnemy(wave: number) {
