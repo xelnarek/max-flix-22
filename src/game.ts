@@ -1526,16 +1526,14 @@ export class MaxFlizGameEngine {
       { id: 'drone', icon: '🤖', title: 'DRON ASYSTUJĄCY', description: 'Dron przez 32 sekundy razi najbliższego wroga impulsem.' },
       { id: 'armor', icon: '🪵', title: 'PALETA OCHRONNA', description: 'Otrzymujesz 24 sekundy okresowej osłony.' },
     ].filter((option) => !excluded.includes(option.id));
-    let newWeaponOfferAdded = false;
     for (const [weaponId, definition] of Object.entries(SURVIVAL_WEAPON_DEFS) as Array<[SurvivalWeaponId, typeof SURVIVAL_WEAPON_DEFS[SurvivalWeaponId]]>) {
       const owned = this.survivalWeapons.find((weapon) => weapon.id === weaponId);
       if (!owned) {
-        if (!newWeaponOfferAdded && this.survivalElapsed >= definition.unlockAfter) {
-          newWeaponOfferAdded = true;
+        if (this.survivalElapsed >= definition.unlockAfter) {
           const unlockMinute = Math.ceil(definition.unlockAfter / 60);
           pool.push({ id: 'weapon_unlock:' + weaponId, icon: definition.icon,
             title: 'NOWA BROŃ: ' + definition.name.toUpperCase(),
-            description: definition.description + ' Odblokowanie od ' + unlockMinute + '. minuty. Odstęp: ' + definition.cooldown.toFixed(1) + ' s.' });
+            description: definition.description + ' Dostępna od około ' + unlockMinute + '. minuty. Odstęp: ' + definition.cooldown.toFixed(1) + ' s.' });
         }
       } else if (owned.level < 5) {
         pool.push({ id: 'weapon_upgrade:' + weaponId, icon: definition.icon,
@@ -1560,12 +1558,19 @@ export class MaxFlizGameEngine {
     // This avoids a long string of stat-only level-ups before the player gets a build identity.
     const newWeaponOffer = pool.find((option) => option.id.startsWith('weapon_unlock:'));
     if (newWeaponOffer) {
-      const remaining = pool.filter((option) => option.id !== newWeaponOffer.id);
+      // Never show two new weapons in one level-up. Unchosen, time-unlocked weapons
+      // stay eligible for later level-ups instead of blocking the rest of the arsenal.
+      const remaining = pool.filter((option) =>
+        option.id !== newWeaponOffer.id && !option.id.startsWith('weapon_unlock:')
+      );
       return [newWeaponOffer, ...remaining.slice(0, 2)];
     }
     const weaponProgressOffer = pool.find((option) => option.id.startsWith('weapon_'));
     if (weaponProgressOffer) {
-      const remaining = pool.filter((option) => option.id !== weaponProgressOffer.id);
+      // Offer at most one weapon upgrade/evolution at a time to keep choices readable.
+      const remaining = pool.filter((option) =>
+        option.id !== weaponProgressOffer.id && !option.id.startsWith('weapon_')
+      );
       return [weaponProgressOffer, ...remaining.slice(0, 2)];
     }
     return pool.slice(0, 3);
@@ -4159,6 +4164,31 @@ export class MaxFlizGameEngine {
     enemy.maxHp = Math.max(1, Math.ceil(enemy.maxHp * scaling));
     enemy.hp = enemy.maxHp;
     enemy.speed *= 0.66 * (1 + Math.min(0.26, Math.max(0, wave - 1) * 0.010));
+
+    // Rare late-run variant: an armored AGV with a visible shield and a telegraphed pulse.
+    // It reuses the existing AGV rig and only allocates its shield ring when promoted.
+    if (enemy.type === 'agv_robot' && wave >= 11 && Math.random() < 0.45) {
+      enemy.name = 'AGV-9 SENTINEL • OSŁONA MAGNETYCZNA';
+      enemy.maxHp = Math.ceil(enemy.maxHp * 1.75);
+      enemy.hp = enemy.maxHp;
+      enemy.speed *= 0.88;
+      enemy.shieldActive = true;
+      enemy.specialActionTimer = 3.4;
+      const shieldRing = new THREE.Mesh(
+        new THREE.TorusGeometry(0.72, 0.055, 7, 28),
+        new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.82, depthWrite: false })
+      );
+      shieldRing.rotation.x = Math.PI / 2;
+      shieldRing.position.y = 0.72;
+      enemy.mesh.add(shieldRing);
+      enemy.shieldRing = shieldRing;
+      this.callbacks.onPerkDropBanner?.(
+        'ELITARNY AGV-9 SENTINEL',
+        '🛡️',
+        'Osłona blokuje pierwsze trafienie. Uważaj na czerwone ostrzeżenie przed impulsem elektrycznym.',
+        '#38bdf8'
+      );
+    }
     enemy.shoutTimer = 2.0 + Math.random() * 4.0;
   }
 
@@ -5262,6 +5292,7 @@ export class MaxFlizGameEngine {
       }
 
       e.walkCycle += dt * 8;
+      if (e.shieldRing?.visible) e.shieldRing.rotation.z += dt * 1.25;
       if (e.legL && e.legR && e.type !== 'piorun_dron') {
         e.legL.rotation.x = Math.sin(e.walkCycle) * 0.5;
         e.legR.rotation.x = -Math.sin(e.walkCycle) * 0.5;
@@ -5504,6 +5535,29 @@ export class MaxFlizGameEngine {
           e.mesh.position.set(e.x, e.y, e.z);
   
   
+        }
+
+        // The Sentinel warns before firing. The projectile aims at the player's position
+        // only after the wind-up, so moving during the warning is a meaningful dodge.
+        if (this.gameMode === 'survival' && e.name.includes('AGV-9 SENTINEL') && e.specialActionTimer !== undefined) {
+          if (e.specialActionTimer > 0) {
+            e.specialActionTimer -= dt;
+          } else if (distToPlayer < 15.0) {
+            if (e.chargeTimer === undefined) {
+              e.chargeTimer = 0.9;
+              this.spawnParticleRing(e.x, 0.24, e.z, 0xef4444);
+              this.emitFloatingToast('AGV-9: ŁADOWANIE IMPULSU — ZEJDŹ Z LINII!', e.x, e.y + 1.2, e.z, 'damage');
+              sound.playBossWarning();
+            } else {
+              e.chargeTimer -= dt;
+              if (e.chargeTimer <= 0) {
+                this.spawnSparkZapProjectile(e.x, e.y + 0.75, e.z);
+                this.emitFloatingToast('⚡ AGV-9: IMPULS OCHRONY!', e.x, e.y + 1.3, e.z, 'damage');
+                e.specialActionTimer = 6.4;
+                e.chargeTimer = undefined;
+              }
+            }
+          }
         }
 
         // Ranged special attacks
@@ -5992,8 +6046,12 @@ export class MaxFlizGameEngine {
             this.triggerBloomPulse(0.08);
             this.emitFloatingToast('🛡️ BLOK TARCZY!', e.x, e.y + 1, e.z, 'damage');
             e.shieldActive = false;
+            if (e.shieldRing) e.shieldRing.visible = false;
           } else {
-            if (e.shieldActive) e.shieldActive = false;
+            if (e.shieldActive) {
+              e.shieldActive = false;
+              if (e.shieldRing) e.shieldRing.visible = false;
+            }
             e.hp -= baseDmg;
             sound.playSmack();
             if (p.weaponProjectile) {
