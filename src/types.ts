@@ -69,7 +69,8 @@ export type EnemyType =
   | 'serwisant'
   | 'bosman_krakow'
   | 'zombie_pracownik'
-  | 'pomazaniec';
+  | 'pomazaniec'
+  | 'sebix_m';
 
 export interface EnemyItem {
   id: string;
@@ -111,6 +112,9 @@ export interface EnemyItem {
   shieldRing?: any;
   bikeWheels?: any[];
   propeller?: any;
+  rageTime?: number;
+  trailTimer?: number;
+  dashTimer?: number;
   // Stable formation data for Survival's encirclement director.
   aiSlot?: number;
   aiFlankAngle?: number;
@@ -200,7 +204,11 @@ export type PerkType =
   | 'attack_haste'
   | 'arc_drone'
   | 'xp_surge'
-  | 'damage_ward';
+  | 'damage_ward'
+  | 'forklift_horn'
+  | 'night_shift_espresso'
+  | 'golden_wz'
+  | 'pallet_guard';
 
 export interface PerkDef {
   id: PerkType;
@@ -316,6 +324,36 @@ export const AVAILABLE_PERKS: PerkDef[] = [
     icon: '🪵',
     color: 0x84cc16,
     duration: 24,
+  },
+  {
+    id: 'forklift_horn',
+    name: 'Klakson Sztaplarki B4',
+    description: 'Jednorazowy impuls dźwiękowy ogłusza przeciwników w promieniu 7 metrów i przerywa ich szarże.',
+    icon: '📣',
+    color: 0xf97316,
+  },
+  {
+    id: 'night_shift_espresso',
+    name: 'Espresso Nocnej Zmiany',
+    description: 'Przez 20 sekund zwiększa prędkość i tempo ataku. Działa również z aktywnymi perkami turbo.',
+    icon: '⚡',
+    color: 0xeab308,
+    duration: 20,
+  },
+  {
+    id: 'golden_wz',
+    name: 'Złota WZ-tka',
+    description: 'Natychmiast przyznaje 600 punktów i 8 kryształów XP. Rzadki, jednorazowy zastrzyk progresji.',
+    icon: '📜',
+    color: 0xfbbf24,
+  },
+  {
+    id: 'pallet_guard',
+    name: 'Barykada EURO',
+    description: 'Przez 18 sekund aktywuje dodatkową osłonę i zmniejsza ryzyko kolejnego trafienia.',
+    icon: '🛡️',
+    color: 0x65a30d,
+    duration: 18,
   },
 ];
 
