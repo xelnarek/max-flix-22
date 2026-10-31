@@ -133,7 +133,8 @@ export interface HazardItem {
     | 'steam_faucet'
     | 'falling_lamp'
     | 'conveyor'
-    | 'glue_spill'
+    | 'stretch_barrier'
+    | 'roller_gate'
     | 'cement_spill'
     | 'laser_cutter'
     | 'steam_geyser'
@@ -156,6 +157,7 @@ export interface HazardItem {
   movingPart?: any;
   warningMesh?: any;
   life?: number; // temporary Survival traps are removed after their active window
+  cooldown?: number; // contact cooldown for traps that can hit repeatedly
 }
 
 export interface PlatformBlock {
