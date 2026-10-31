@@ -1280,3 +1280,11 @@ button:disabled { cursor: not-allowed !important; filter: grayscale(.35); opacit
   #game-shell.survival-mode #hud-top #btn-top-zoom-in,
   #game-shell.survival-mode #hud-top #btn-top-zoom-out { min-width:26px!important; width:27px!important; }
 }
+
+
+/* Reserve a clean top strip for the operator portrait and camera rail on mobile. */
+@media (max-width:900px), (pointer:coarse) {
+  #game-shell.survival-mode .survival-hud {
+    top:calc(42px + env(safe-area-inset-top))!important;
+  }
+}
