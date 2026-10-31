@@ -4569,6 +4569,10 @@ export class MaxFlizGameEngine {
       this.playerGroup.position.copy(this.playerPos);
       this.playerGroup.rotation.y = this.playerRot;
       this.playerGroup.scale.lerp(new THREE.Vector3(1, 1, 1), dt * 8);
+      const motionRatio = Math.min(1, Math.hypot(this.playerVel.x, this.playerVel.z) / Math.max(0.1, this.charDef.speed));
+      const idleBreath = Math.sin(performance.now() * 0.0021) * 0.006 * (1 - motionRatio);
+      this.playerGroup.position.y += idleBreath;
+      this.playerGroup.rotation.z = Math.sin(performance.now() * 0.0017) * 0.006 * (1 - motionRatio);
     }
 
     if (this.targetRing) {
@@ -5187,6 +5191,11 @@ export class MaxFlizGameEngine {
       if (e.legL && e.legR && e.type !== 'piorun_dron') {
         e.legL.rotation.x = Math.sin(e.walkCycle) * 0.5;
         e.legR.rotation.x = -Math.sin(e.walkCycle) * 0.5;
+      }
+      if (e.armL && e.armR && e.type !== 'piorun_dron') {
+        const armSwing = Math.sin(e.walkCycle) * (e.state === 'chase' ? 0.34 : 0.20);
+        e.armL.rotation.x = -armSwing;
+        e.armR.rotation.x = armSwing;
       }
 
       // Ground Threat Ring for actively chasing enemies
