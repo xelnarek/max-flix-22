@@ -84,6 +84,7 @@ import {
   createLaserCutterTrapModel,
   createSteamGeyserTrapModel,
   createHydraulicPressTrapModel,
+  applyIndustrialPbr,
 } from './warehouseAssets.ts';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
@@ -1131,6 +1132,7 @@ export class MaxFlizGameEngine {
     floorTexture.wrapT = THREE.RepeatWrapping;
     floorTexture.repeat.set(3, 4);
     const floorMaterial = new THREE.MeshStandardMaterial({ map: floorTexture, roughness: 0.62, metalness: 0.12 });
+    applyIndustrialPbr(floorMaterial, 0.018);
     const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x1c2c3d, roughness: 0.72, metalness: 0.32 });
     const trimMaterial = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.48, metalness: 0.24, emissive: 0x7c2d12, emissiveIntensity: 0.12 });
     const palletMaterial = new THREE.MeshStandardMaterial({ color: 0x76513a, roughness: 0.88 });
@@ -2862,6 +2864,7 @@ export class MaxFlizGameEngine {
       roughness: 0.24,
       metalness: 0.14,
     });
+    applyIndustrialPbr(floorMat, 0.012);
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
@@ -2898,6 +2901,7 @@ export class MaxFlizGameEngine {
       beam.position.set(lx, 7.2, 0);
       this.levelRoot.add(lamp, beam);
     });
+    applyIndustrialPbr(wallMat, 0.022);
 
     // Floor Pedestrian & Navigation Safety Arrows along main runway and south wing
     [-24, -16, -8, 0, 8, 16, 24, 32].forEach((ax) => {
@@ -3126,6 +3130,7 @@ export class MaxFlizGameEngine {
       metalness: 0.22,
       color: 0xffffff,
     });
+    applyIndustrialPbr(floorMat, 0.008);
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(offsetX, 0, 0);
@@ -3146,6 +3151,7 @@ export class MaxFlizGameEngine {
       metalness: 0.14,
       color: 0xffffff,
     });
+    applyIndustrialPbr(wallMat, 0.022);
     const backWall = new THREE.Mesh(wallGeo, wallMat);
     backWall.position.set(offsetX, 4.75, -20.5);
     this.levelRoot.add(backWall);
@@ -3364,6 +3370,7 @@ export class MaxFlizGameEngine {
     floorTex3.repeat.set(9, 4);
     const floorGeo = new THREE.PlaneGeometry(90, 44);
     const floorMat = new THREE.MeshStandardMaterial({ map: floorTex3, roughness: 0.24, metalness: 0.22 });
+    applyIndustrialPbr(floorMat, 0.012);
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(offsetX, 0, 0);
@@ -3406,6 +3413,7 @@ export class MaxFlizGameEngine {
       this.levelRoot.add(cw);
       this.platforms.push({ x: worldX, y: 3.6, z: -14.0, width: 8.0, height: 0.18, depth: 1.8, type: 'scaffold' });
     });
+    applyIndustrialPbr(wallMat, 0.022);
 
     // Pallet stepping stones in central corridor and south loading wing (z: -4 to +16)
     [-32, -18, -4, 10, 24].forEach((px, idx) => {
