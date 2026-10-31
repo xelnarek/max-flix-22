@@ -1669,7 +1669,7 @@ export class MaxFlizGameEngine {
     for (const enemy of this.enemies) this.disposeEnemyModel(enemy);
     // Lollipop meshes own their geometry/materials; release them before the scene is reset.
     for (const projectile of this.enemyProjectiles) {
-      if (projectile.kind === 'pomazaniec_lollipop') this.disposeTemporaryObject(projectile.mesh);
+      if (projectile.kind === 'pomazaniec_lollipop' || projectile.kind === 'sebix_brick') this.disposeTemporaryObject(projectile.mesh);
     }
     if (this.survivalPomazaniecMarker) {
       this.levelRoot.remove(this.survivalPomazaniecMarker);
@@ -4597,6 +4597,29 @@ export class MaxFlizGameEngine {
     }
   }
 
+  private spawnSebixBrick(x: number, y: number, z: number, targetX: number, targetZ: number) {
+    const group = new THREE.Group();
+    const brickMaterial = new THREE.MeshStandardMaterial({ color: 0x9a3412, roughness: 0.86 });
+    const mortarMaterial = new THREE.MeshStandardMaterial({ color: 0xf5d0a4, roughness: 0.95 });
+    const brick = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.19, 0.22), brickMaterial);
+    group.add(brick);
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.025, 0.225), mortarMaterial);
+    stripe.position.y = 0.045;
+    group.add(stripe);
+    group.position.set(x,y,z);
+    this.levelRoot.add(group);
+    const direction = new THREE.Vector3(targetX-x,0.22,targetZ-z).normalize();
+    this.enemyProjectiles.push({
+      mesh: group as unknown as THREE.Mesh,
+      vel: direction.multiplyScalar(7.2),
+      life: 3.0,
+      kind: 'sebix_brick',
+      gravity: 2.15,
+      spin: 5.2,
+    });
+    sound.playWhistle();
+  }
+
   private spawnPomazaniecLollipop(x: number, y: number, z: number, targetX: number, targetZ: number, variant: number) {
     const colors = [0xf43f5e, 0xf472b6, 0x8b5cf6, 0x22c55e, 0xf59e0b];
     const color = colors[variant % colors.length];
@@ -6803,18 +6826,25 @@ export class MaxFlizGameEngine {
           this.triggerBloomPulse(0.16);
           sound.playLollipopHit();
           this.emitFloatingToast('🍭 LIZAK PROSTO W CZOŁO!', this.playerPos.x, this.playerPos.y + 1.25, this.playerPos.z, 'damage');
+        } else if (ep.kind === 'sebix_brick') {
+          this.takeDamage('🧱 Sebix M. trafił Cię cegłą z nocnej zmiany!');
+          this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.55, this.playerPos.z, 0xf97316);
+          this.spawnExplosionParticles(this.playerPos.x,0.18,this.playerPos.z,0xff7a18,8);
+          this.triggerScreenShake(0.26,0.16);
+          sound.playSmack();
+          this.emitFloatingToast('🧱 CEGŁA PROSTO W KASK!', this.playerPos.x, this.playerPos.y + 1.25, this.playerPos.z, 'damage');
         } else {
           this.takeDamage('Trafiło Cię wezwanie wyjaśniające od Walczaka!');
         }
         this.levelRoot.remove(ep.mesh);
-        if (ep.kind === 'pomazaniec_lollipop') this.disposeTemporaryObject(ep.mesh);
+        if (ep.kind === 'pomazaniec_lollipop' || ep.kind === 'sebix_brick') this.disposeTemporaryObject(ep.mesh);
         this.enemyProjectiles.splice(i, 1);
         continue;
       }
 
       if (ep.life <= 0) {
         this.levelRoot.remove(ep.mesh);
-        if (ep.kind === 'pomazaniec_lollipop') this.disposeTemporaryObject(ep.mesh);
+        if (ep.kind === 'pomazaniec_lollipop' || ep.kind === 'sebix_brick') this.disposeTemporaryObject(ep.mesh);
         this.enemyProjectiles.splice(i, 1);
       }
     }
