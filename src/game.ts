@@ -3335,10 +3335,12 @@ export class MaxFlizGameEngine {
 
     this.survivalSpawnTimer -= dt;
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
-    const enemyCap = isMobile ? 14 : 22;
+    // Poco F6-class hardware can sustain a busier arena; retain a hard ceiling
+    // so particle, AI and shadow costs stay predictable during long runs.
+    const enemyCap = isMobile ? 18 : 28;
     const aliveCount = this.enemies.reduce((count, enemy) => count + (enemy.state === 'defeated' ? 0 : 1), 0);
     if (this.survivalSpawnTimer <= 0 && aliveCount < enemyCap) {
-      const groupSize = Math.min(isMobile ? 3 : 4, 1 + Math.floor(this.survivalWave * 0.22), enemyCap - aliveCount);
+      const groupSize = Math.min(isMobile ? 4 : 5, 1 + Math.floor(this.survivalWave * 0.25), enemyCap - aliveCount);
       for (let i = 0; i < groupSize; i++) this.spawnSurvivalEnemy(this.survivalWave);
       this.survivalSpawnTimer = Math.max(9.0, 14.0 - this.survivalWave * 0.14);
     }
@@ -3553,7 +3555,9 @@ export class MaxFlizGameEngine {
     else if (wave >= 5 && roll < 0.85) this.addItalianVendorEnemy(id, x, minZ, maxZ, 'Włoski dostawca armatury — mamma mia');
     else if (wave >= 6 && roll < 0.90) this.addSerwisanciEnemy(id, x, minZ, maxZ, 'Serwisant — zgłoszenie numer 404');
     else if (wave >= 7 && roll < 0.94) this.addPanRomanEnemy(id, x, minZ, maxZ, 'Pan Roman — dostawa bez awiza');
-    else if (wave >= 8 && roll < 0.975) this.addSztaplarEnemy(id, x, minZ, maxZ, 'Operator paleciaka — drift w alei B4');
+    else if (wave >= 8 && roll < 0.955) this.addSztaplarEnemy(id, x, minZ, maxZ, 'Operator paleciaka — drift w alei B4');
+    else if (wave >= 9 && roll < 0.972) this.addSerwisanciEnemy(id, x, minZ, maxZ, 'Serwisant AGV — awaria protokołu');
+    else if (wave >= 10 && roll < 0.986) this.addPanRomanEnemy(id, x, minZ, maxZ, 'Pan Roman — kontrola rampy');
     else this.addEliteGuardEnemy(id, x, minZ, maxZ, 'Elitarny strażnik sektora');
 
     const enemy = this.enemies[this.enemies.length - 1];
@@ -6531,9 +6535,19 @@ export class MaxFlizGameEngine {
     camTarget.y += shakeY;
     camTarget.z += shakeZ;
 
-    if (this.dofBlurPassMesh) this.dofBlurPassMesh.visible = this.gameMode !== 'survival';
-    // Smooth camera position follow
-    this.camera.position.lerp(camTarget, dt * 7.5);
+    // Keep the playfield crisp on phones: depth-of-field softens small enemies,
+    // telegraphs and pickup silhouettes on a high-density 6.67-inch display.
+    if (this.dofBlurPassMesh) this.dofBlurPassMesh.visible =
+      this.gameMode !== 'survival' && !isMobileDevice;
+    // Frame-rate independent camera follow. The previous linear lerp was tied to FPS:
+    // on a 60/90/120 Hz phone it produced different response and visible judder.
+    const isHandheldViewport = window.innerWidth < 900 || ('ontouchstart' in window);
+    const positionDamping = this.gameMode === 'survival'
+      ? (isHandheldViewport ? 8.8 : 7.8)
+      : (isHandheldViewport ? 9.2 : 8.2);
+    this.camera.position.x = THREE.MathUtils.damp(this.camera.position.x, camTarget.x, positionDamping, dt);
+    this.camera.position.y = THREE.MathUtils.damp(this.camera.position.y, camTarget.y, positionDamping, dt);
+    this.camera.position.z = THREE.MathUtils.damp(this.camera.position.z, camTarget.z, positionDamping, dt);
 
     // Look ahead framing for tactical readability
     const lookAheadX = this.cameraMode === 'tpp' ? 1.8 : this.cameraMode === 'close' ? 2.4 : 0.5;
@@ -6545,7 +6559,10 @@ export class MaxFlizGameEngine {
       this.smoothCamY + lookAheadY + shakeY * 0.3,
       this.playerPos.z + lookAheadZ + velLookAheadZ * 0.45 + shakeZ * 0.3
     );
-    this.currentLookAt.lerp(desiredLookAt, dt * 8.5);
+    const lookDamping = isHandheldViewport ? 9.6 : 8.8;
+    this.currentLookAt.x = THREE.MathUtils.damp(this.currentLookAt.x, desiredLookAt.x, lookDamping, dt);
+    this.currentLookAt.y = THREE.MathUtils.damp(this.currentLookAt.y, desiredLookAt.y, lookDamping, dt);
+    this.currentLookAt.z = THREE.MathUtils.damp(this.currentLookAt.z, desiredLookAt.z, lookDamping, dt);
     this.camera.lookAt(this.currentLookAt);
 
     if (this.dirLight) {
