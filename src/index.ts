@@ -1031,47 +1031,79 @@ class MaxFlizScene extends xb.Script {
         e.stopPropagation();
       }
 
-      await assetLoader.waitUntilReady('Gra 3D');
-
+      // Lock immediately, before awaiting asset readiness. This prevents two
+      // quick taps from starting two independent campaign transitions.
       startingGame = true;
-      if (this.pixelIntro && this.pixelIntro.isRunning()) {
-        this.pixelIntro.stop();
+      const startButton = document.getElementById('btn-start-game') as HTMLButtonElement | null;
+      if (startButton) {
+        startButton.disabled = true;
+        startButton.setAttribute('aria-busy', 'true');
       }
-      this.engine.setLevelVisible(true);
 
-      const storyModal = document.getElementById('story-intro-modal');
-      storyModal?.classList.add('hidden');
-      if (titleScreen) {
-        titleScreen.classList.add('hidden');
-        titleScreen.style.setProperty('display', 'none', 'important');
+      try {
+        await assetLoader.waitUntilReady('Gra 3D');
+
+        if (!this.engine || typeof this.engine.startGame !== 'function') {
+          throw new Error('Silnik gry nie jest jeszcze gotowy.');
+        }
+
+        if (this.pixelIntro?.isRunning()) this.pixelIntro.stop();
+        this.engine.setLevelVisible(true);
+        // Start the engine before dismissing the menu. If initialization fails,
+        // the player remains on the menu and can retry instead of seeing a dead screen.
+        this.engine.startGame(this.selectedLevelId);
+
+        document.getElementById('story-intro-modal')?.classList.add('hidden');
+        if (titleScreen) {
+          titleScreen.classList.add('hidden');
+          titleScreen.style.setProperty('display', 'none', 'important');
+        }
+        pauseModal?.classList.add('hidden');
+        victoryModal?.classList.add('hidden');
+        gameoverModal?.classList.add('hidden');
+        survivalLevelUp?.classList.add('hidden');
+        survivalHud?.classList.add('hidden');
+        hudTop?.classList.remove('hidden');
+        hudBottom?.classList.remove('hidden');
+        touchControls?.classList.remove('hidden');
+        gameShell?.classList.remove('survival-mode');
+
+        document.getElementById('campaign-start-error')?.remove();
+      } catch (error) {
+        console.error('[Campaign] Nie udało się uruchomić kampanii:', error);
+        titleScreen?.classList.remove('hidden');
+        titleScreen?.style.setProperty('display', 'flex', 'important');
+        hudTop?.classList.add('hidden');
+        hudBottom?.classList.add('hidden');
+        touchControls?.classList.add('hidden');
+
+        let errorBanner = document.getElementById('campaign-start-error');
+        if (!errorBanner && titleScreen) {
+          errorBanner = document.createElement('div');
+          errorBanner.id = 'campaign-start-error';
+          errorBanner.setAttribute('role', 'alert');
+          errorBanner.style.cssText = 'position:relative;z-index:10000002;max-width:min(92vw,620px);margin:12px auto;padding:12px 16px;border:1px solid rgba(248,113,113,.65);border-radius:12px;background:rgba(69,10,10,.94);color:#fee2e2;font:600 13px/1.45 system-ui,sans-serif;text-align:center;';
+          titleScreen.appendChild(errorBanner);
+        }
+        if (errorBanner) {
+          errorBanner.textContent = 'Kampania nie wystartowała. Silnik zgłosił błąd — sprawdź połączenie i spróbuj ponownie.';
+        }
+      } finally {
+        startingGame = false;
+        if (startButton) {
+          startButton.disabled = false;
+          startButton.removeAttribute('aria-busy');
+        }
       }
-      pauseModal?.classList.add('hidden');
-      victoryModal?.classList.add('hidden');
-      gameoverModal?.classList.add('hidden');
-      survivalLevelUp?.classList.add('hidden');
-      survivalHud?.classList.add('hidden');
-
-      hudTop?.classList.remove('hidden');
-      hudBottom?.classList.remove('hidden');
-      touchControls?.classList.remove('hidden');
-
-      gameShell?.classList.remove('survival-mode');
-      this.engine.startGame(this.selectedLevelId);
-      setTimeout(() => { startingGame = false; }, 600);
     };
 
-    // Campaign entry opens the five-act briefing first. The final briefing
-    // action calls launchCampaignGame(), so this wrapper cannot recursively start itself.
+    // The primary CTA starts the campaign immediately. The briefing remains
+    // available as an optional archive so it can never block entry to the game.
     let openCampaignBriefing = () => {
       document.getElementById('story-intro-modal')?.classList.remove('hidden');
     };
     const doStartGame = (e?: Event) => {
-      if (startingGame) return;
-      if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-      openCampaignBriefing();
+      void launchCampaignGame(e);
     };
 
     const doStartSurvival = async (e?: Event) => {
@@ -1378,25 +1410,24 @@ class MaxFlizScene extends xb.Script {
       storyModal?.classList.remove('hidden');
     });
 
-    btnCloseStory?.addEventListener('click', () => {
+    bindTap(btnCloseStory, () => {
       storyModal?.classList.add('hidden');
     });
 
-    btnStoryPrev?.addEventListener('click', () => {
+    bindTap(btnStoryPrev, () => {
       updateStorySlides(currentSlide - 1);
     });
 
-    btnStoryNext?.addEventListener('click', () => {
+    bindTap(btnStoryNext, () => {
       updateStorySlides(currentSlide + 1);
     });
 
-    btnStoryPlay?.addEventListener('click', () => {
-      storyModal?.classList.add('hidden');
-      launchCampaignGame();
+    bindTap(btnStoryPlay, (event) => {
+      void launchCampaignGame(event);
     });
 
     storyDots.forEach((dot) => {
-      dot.addEventListener('click', () => {
+      bindTap(dot as HTMLElement, () => {
         const slideIdx = parseInt(dot.getAttribute('data-slide') || '0', 10);
         updateStorySlides(slideIdx);
       });
