@@ -5004,7 +5004,8 @@ export class MaxFlizGameEngine {
 
     // Keep the classic warehouse roster in rotation: wave gates unlock varieties,
     // while wider probability bands prevent late-run enemies from becoming effectively invisible.
-    if (wave >= 8 && Math.random() < 0.065) this.addSebixEnemy(id,x,minZ,maxZ);
+    const sebixAlreadyActive = this.enemies.some((enemy) => enemy.type === 'sebix_m' && enemy.state !== 'defeated');
+    if (wave >= 8 && !sebixAlreadyActive && Math.random() < 0.065) this.addSebixEnemy(id,x,minZ,maxZ);
     else if (wave >= 6 && Math.random() < 0.04) this.addBosmanKrakowBossEnemy(id,x,z);
     else if (wave < 3 || roll < 0.12) this.addZombieWorkerEnemy(id, x, minZ, maxZ, 'Zombie-Magazynier — głodny po nocnej zmianie');
     else if (roll < 0.22) this.addKurierEnemy(id, x, minZ, maxZ, 'Kurier Ekspresowy — paczka bez awiza');
