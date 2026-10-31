@@ -1269,7 +1269,7 @@ button:disabled { cursor: not-allowed !important; filter: grayscale(.35); opacit
   }
   #game-shell.survival-mode #hud-perks-row .perk-badge { max-width:100%!important; font-size:7px!important; padding:4px 6px!important; }
   #game-shell.survival-mode .dialogue-side-container { top:calc(238px + env(safe-area-inset-top))!important; width:min(178px,calc(50vw - 12px))!important; }
-  #game-shell.survival-mode .dialogue-side-container.left { left:6px!important; }
+  #game-shell.survival-mode .dialogue-side-container.left { top:calc(282px + env(safe-area-inset-top))!important; left:6px!important; }
   #game-shell.survival-mode .dialogue-side-container.right { right:6px!important; }
 }
 @media (max-width:390px) {
