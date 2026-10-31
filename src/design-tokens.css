@@ -1,0 +1,26 @@
+/* MAX-FLIZ design tokens — single source for the current industrial visual system. */
+:root {
+  color-scheme: dark;
+  --mf-bg: #070d15;
+  --mf-bg-raised: #0c1520;
+  --mf-surface: rgba(13, 24, 36, 0.94);
+  --mf-surface-2: rgba(18, 32, 47, 0.92);
+  --mf-surface-3: rgba(23, 41, 58, 0.94);
+  --mf-line: rgba(165, 190, 211, 0.15);
+  --mf-line-strong: rgba(165, 190, 211, 0.28);
+  --mf-text: #f2f6fa;
+  --mf-text-2: #b6c4d1;
+  --mf-muted: #8295a8;
+  --mf-amber: #f2b84b;
+  --mf-amber-2: #ffd47b;
+  --mf-cyan: #62c6e8;
+  --mf-green: #58d6a0;
+  --mf-red: #f07178;
+  --mf-blue: #7aaef5;
+  --mf-radius-sm: 9px;
+  --mf-radius: 14px;
+  --mf-radius-lg: 20px;
+  --mf-shadow: 0 18px 48px rgba(0, 0, 0, .34);
+  --mf-focus: 0 0 0 3px rgba(98, 198, 232, .22);
+}
+

@@ -96,7 +96,7 @@ class MaxFlizScene extends xb.Script {
         const isMobile = width < 900 || ('ontouchstart' in window);
         // High-density mobile rendering: sharper textures and silhouettes on Poco F6.
         // The cap is intentional to prevent fill-rate spikes during dense survival waves.
-        const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.9 : 2.25);
+        const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.65 : 2.0);
         renderer.setPixelRatio(dpr);
         renderer.setSize(width, height, false);
       }
@@ -192,8 +192,8 @@ class MaxFlizScene extends xb.Script {
     const activeToasts: ActiveToast[] = [];
     let globalLastDialogueTime = 0;
 
-    const createDialogueCard = (text: string, speakerType: string, side: 'left' | 'right' = 'right') => {
-      const containerElem = document.getElementById('dialogue-container-top');
+    const createDialogueCard = (text: string, speakerType: string, side: 'left' | 'right' = 'right', speakerName?: string) => {
+      const containerElem = document.getElementById(side === 'left' ? 'dialogue-container-left' : 'dialogue-container-right');
       if (!containerElem) return;
 
       const now = Date.now();
@@ -201,24 +201,33 @@ class MaxFlizScene extends xb.Script {
       if (now - globalLastDialogueTime < 2600) return;
       globalLastDialogueTime = now;
 
-      containerElem.innerHTML = '';
+      containerElem.replaceChildren();
 
       const card = document.createElement('div');
       const isHero = side === 'left';
       card.className = `dialogue-box-card ${isHero ? 'hero-style' : 'enemy-style'}`;
 
-      const meta = isHero ? getHeroMeta() : getEnemyMeta(speakerType);
-
-      card.innerHTML = `
-        <div class="dialogue-box-avatar">${meta.avatar}</div>
-        <div class="dialogue-box-content">
-          <div class="dialogue-box-header">
-            <span class="dialogue-box-name">${meta.name}</span>
-          </div>
-          <p class="dialogue-box-text">${text}</p>
-        </div>
-      `;
-
+      const baseMeta = isHero ? getHeroMeta() : getEnemyMeta(speakerType);
+      const meta = { ...baseMeta, name: speakerName || baseMeta.name };
+      const avatar = document.createElement('div');
+      avatar.className = 'dialogue-box-avatar';
+      avatar.textContent = meta.avatar;
+      const content = document.createElement('div');
+      content.className = 'dialogue-box-content';
+      const header = document.createElement('div');
+      header.className = 'dialogue-box-header';
+      const name = document.createElement('span');
+      name.className = 'dialogue-box-name';
+      name.textContent = meta.name;
+      const role = document.createElement('span');
+      role.className = 'dialogue-box-role';
+      role.textContent = meta.role;
+      header.append(name, role);
+      const quote = document.createElement('p');
+      quote.className = 'dialogue-box-text';
+      quote.textContent = text;
+      content.append(header, quote);
+      card.append(avatar, content);
       containerElem.appendChild(card);
 
       setTimeout(() => {
@@ -252,6 +261,10 @@ class MaxFlizScene extends xb.Script {
         monter: { name: 'Monter', role: 'Glazurnik Pro', avatar: '🪚' },
         inspector: { name: 'Inspektor', role: 'BHP / PIP', avatar: '📋' },
         sztaplar_szalony: { name: 'Zdzichu', role: 'Mistrz Sztaplarki', avatar: '🚜' },
+        pan_roman: { name: 'Pan Roman', role: 'Dostawa bez awiza', avatar: '📦' },
+        serwisant: { name: 'Serwisant', role: 'Zgłoszenie 404', avatar: '🧰' },
+        bosman_krakow: { name: 'Bosman z Krakowa', role: 'Odprawa 3-MSC', avatar: '📋' },
+        agv_robot: { name: 'Robot AGV', role: 'Zgubiona trasa', avatar: '🤖' },
         piorun_dron: { name: 'PIORUN', role: 'Dron AI', avatar: '⚡' },
         zombie_pracownik: { name: 'Zombie-Magazynier', role: 'Głód KFC', avatar: '🧟' },
       };
@@ -267,7 +280,7 @@ class MaxFlizScene extends xb.Script {
       metadata?: any
     ) => {
       if (type === 'enemy_shout') {
-        createDialogueCard(text, metadata?.enemyType || 'customer');
+        createDialogueCard(text, metadata?.enemyType || 'customer', 'right', metadata?.enemyName);
         return;
       }
 
@@ -652,21 +665,21 @@ class MaxFlizScene extends xb.Script {
       const attackNameElem = document.getElementById('attack-name');
       const attackIconElem = document.getElementById('attack-icon');
       const attackNames: Record<CharacterId, string> = {
-        marcin: 'Segregator WZ + Impuls',
-        grzesiek: 'Łata 200cm + Fala 44cm',
-        dawid: 'Diamentowa Tarcza 45°',
-        mateusz: 'Salwa DualSense RGB x3',
-        piotr: 'Bumerangowy Klucz 70%',
+        marcin: 'Zaklęcia Optima',
+        grzesiek: 'Rzut hantlem 44 cm',
+        dawid: 'Rzut rolką stretchu',
+        mateusz: 'Paralizator',
+        piotr: 'Pistolet BB + laser',
       };
       const attackIcons: Record<CharacterId, string> = {
-        marcin: '📘', grzesiek: '🔨', dawid: '⚙️', mateusz: '🎮', piotr: '🔧',
+        marcin: '🔮', grzesiek: '🏋️', dawid: '📦', mateusz: '⚡', piotr: '🔴',
       };
       const attackDescriptions: Record<CharacterId, string> = {
-        marcin: 'Rzuca pancernym Segregatorem WZ z fakturami, który wybucha falą audytu (2.2m), zasysa pobliskie worki z fugą, a co 3. rzut wbija Krytyczną Złotą Pieczęć (2x obrażeń)!',
-        grzesiek: 'Potężny zamach 2-metrową Łatą Brukarską (łuk 140°): zadaje 2 pkt obrażeń naraz, natychmiast kruszy tarcze ochroniarzy i wypuszcza falę uderzeniową o podwójnym odrzucie.',
-        dawid: 'Wystrzeliwuje wirującą Diamentową Tarczę 45° oraz płytę Calacatta, która przebija wielu wrogów w linii, rykoszetuje od ścian i zbiera po drodze worki z fugą (co 3. atak leci podwójna tarcza!).',
-        mateusz: 'Błyskawiczna potrójna salwa samonaprowadzających krążków PlayStation DualSense RGB (□ △ ○), które same skręcają do celów i nakładają efekt Glitch-Lag (-30% prędkości wroga).',
-        piotr: 'Rzuca ciężkim Kluczem Francuskim 70% jak bumerangiem – klucz przebija wrogów w locie tam i z powrotem oraz zostawia iskry bimbru podpalające przeciwników!',
+        marcin: 'Wysyła świetlny znak-zlecenie z programu Optima. Trafiony cel zostaje ogłuszony, a co trzeci czar tworzy mocniejszą pieczęć audytu.',
+        grzesiek: 'Miota ciężkim stalowym hantlem. Co trzeci rzut jest większy, mocniej odrzuca i przebija kilku przeciwników.',
+        dawid: 'Rzuca rolką folii stretch, która owija i spowalnia przeciwników. Co trzeci rzut mocniej wiąże cel.',
+        mateusz: 'Strzela pojedynczym impulsem paralizatora. Trafiony przeciwnik dostaje elektryczny stun; co trzeci impuls jest mocniejszy.',
+        piotr: 'Strzela małymi metalowymi kulkami z pistoletu BB. Krótki czerwony promień lasera pokazuje kierunek strzału; co trzeci strzał jest mocniejszy.',
       };
       if (attackNameElem) attackNameElem.textContent = attackNames[id] || 'Atak';
       if (attackIconElem) attackIconElem.textContent = attackIcons[id] || '🥊';
@@ -1520,7 +1533,7 @@ class MaxFlizScene extends xb.Script {
     const renderer = (xb.core?.renderer as THREE.WebGLRenderer) || null;
     if (renderer) {
       const isMobile = width < 900 || ('ontouchstart' in window);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2.0));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.65 : 2.0));
       renderer.setSize(width, height, false);
     }
 
@@ -1534,9 +1547,11 @@ class MaxFlizScene extends xb.Script {
     }
 
     if (this.engine) {
+      // Give the engine the live renderer before traversing scene materials so
+      // anisotropy can be capped to the device's actual GPU support.
+      if (renderer) this.engine.threeRenderer = renderer;
       this.engine.setScene(scene);
       this.engine.setCamera(camera);
-      if (renderer) this.engine.threeRenderer = renderer;
     }
 
     if (this.cutscene) {
@@ -1594,9 +1609,9 @@ class MaxFlizScene extends xb.Script {
     const width = Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth));
     const height = Math.max(1, Math.round(window.visualViewport?.height || window.innerHeight));
     const isMobile = width < 900 || ('ontouchstart' in window);
-    const deviceCap = isMobile ? 1.75 : 2.25;
+    const deviceCap = isMobile ? 1.65 : 2.0;
     const fpsScale = this.currentFps < 34 ? 0.72 : this.currentFps < 44 ? 0.82 : this.currentFps < 52 ? 0.92 : 1;
-    const targetDpr = Math.max(0.9, Math.min(window.devicePixelRatio || 1, deviceCap) * fpsScale);
+    const targetDpr = Math.max(0.85, Math.min(window.devicePixelRatio || 1, deviceCap) * fpsScale);
 
     // Change drawing-buffer resolution only when the target differs meaningfully.
     // This avoids reallocating GPU buffers on every frame or on tiny FPS fluctuations.
@@ -1812,9 +1827,9 @@ async function startApp() {
         const r = xb.core.renderer as THREE.WebGLRenderer;
         const isMobileDevice = window.innerWidth < 900 || ('ontouchstart' in window);
         r.outputColorSpace = THREE.SRGBColorSpace;
-        r.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.75 : 2.25));
+        r.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.65 : 2.0));
         r.toneMapping = THREE.ACESFilmicToneMapping;
-        r.toneMappingExposure = 1.15;
+        r.toneMappingExposure = 1.08;
         r.shadowMap.enabled = true;
         r.shadowMap.type = isMobileDevice ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
       }

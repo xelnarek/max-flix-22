@@ -80,9 +80,11 @@ import {
   createKfcBucketCollectible,
   createZombieWorkerEnemyModel,
   createGlueSpillTrapModel,
+  createCementSpillTrapModel,
   createLaserCutterTrapModel,
   createSteamGeyserTrapModel,
   createHydraulicPressTrapModel,
+  applyIndustrialPbr,
 } from './warehouseAssets.ts';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
@@ -286,8 +288,8 @@ export class MaxFlizGameEngine {
   private screenShakeDuration = 0;
   private screenShakeIntensity = 0;
   private screenShakeTimer = 0;
-  private cameraMode: 'tpp' | 'close' | 'iso' = 'iso';
-  private camZoomFactor = 1.0;
+  private cameraMode: 'tpp' | 'close' | 'iso' = 'close';
+  private camZoomFactor = 0.94;
   private maxUnlockedSector = (() => {
     try {
       const saved = Number(window.localStorage.getItem('maxFlizUnlockedSector') || '1');
@@ -302,7 +304,7 @@ export class MaxFlizGameEngine {
   private finishGatePos = new THREE.Vector3(30, 0, 0);
   private smoothCamY = 0.5;
   // Tactical Elevated camera default (~45° isometric/tactical perspective like Hades/Brawl Stars)
-  private currentCamOffset = new THREE.Vector3(0.0, 16.5, 13.5);
+  private currentCamOffset = new THREE.Vector3(-2.2, 6.9, 8.2);
   private currentLookAt = new THREE.Vector3(0, 1.2, 0);
   private bossCamZoom = 1.0;
   private finishWarningTimer = 0;
@@ -317,6 +319,8 @@ export class MaxFlizGameEngine {
   private timedEventIndex = 0;
   private doublePointsTimer = 0;
   private glueSlowTimer = 0;
+  private cementSlowTimer = 0;
+  private heroQuipTimer = 24;
   private marcinWoTPenaltyTimer = 0;
   private outlineMaterial: THREE.ShaderMaterial | null = null;
   private dofBlurPassMesh: THREE.Mesh | null = null;
@@ -423,7 +427,8 @@ export class MaxFlizGameEngine {
     if (this.cameraMode === 'tpp') {
       this.cameraMode = 'close';
     } else if (this.cameraMode === 'close') {
-      this.cameraMode = 'iso';
+      this.cameraMode = 'close';
+    this.camZoomFactor = Math.min(this.camZoomFactor, 0.96);
     } else {
       this.cameraMode = 'tpp';
     }
@@ -654,19 +659,20 @@ export class MaxFlizGameEngine {
   }
 
   private setupLighting() {
-    this.ambientLight = new THREE.AmbientLight(0xcfe8ff, 0.8);
+    this.ambientLight = new THREE.AmbientLight(0xd9e8ff, 0.92);
     this.scene.add(this.ambientLight);
 
-    this.hemiLight = new THREE.HemisphereLight(0xbfe6ff, 0x101827, 1.5);
+    this.hemiLight = new THREE.HemisphereLight(0x9edcff, 0x253044, 1.35);
     this.scene.add(this.hemiLight);
 
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
-    this.dirLight = new THREE.DirectionalLight(0xfff4d6, 3.5);
+    this.dirLight = new THREE.DirectionalLight(0xffe8c9, 3.25);
     this.dirLight.position.set(16, 26, 14);
     this.dirLight.castShadow = true;
     
-    // Performance optimization: 512px shadow map on mobile for stable 60 FPS, 1024px on desktop
-    const shadowMapSize = isMobile ? 512 : 1024;
+    // Sharp contact shadows matter for character readability. Keep mobile at
+    // 1024² (Poco F6 class hardware) and reserve 2048² for desktop.
+    const shadowMapSize = isMobile ? 1024 : 2048;
     this.dirLight.shadow.mapSize.width = shadowMapSize;
     this.dirLight.shadow.mapSize.height = shadowMapSize;
     this.dirLight.shadow.camera.near = 0.5;
@@ -676,22 +682,22 @@ export class MaxFlizGameEngine {
     this.dirLight.shadow.camera.right = d;
     this.dirLight.shadow.camera.top = d;
     this.dirLight.shadow.camera.bottom = -d;
-    this.dirLight.shadow.bias = isMobile ? -0.0008 : -0.0004;
-    (this.dirLight.shadow as any).normalBias = 0.02;
+    this.dirLight.shadow.camera.updateProjectionMatrix();
+    this.dirLight.shadow.bias = isMobile ? -0.00045 : -0.00025;
+    this.dirLight.shadow.normalBias = isMobile ? 0.035 : 0.025;
+    this.dirLight.shadow.radius = isMobile ? 1 : 2;
     this.scene.add(this.dirLight);
 
-    this.rimLight = new THREE.DirectionalLight(0x60a5fa, 1.1);
+    this.rimLight = new THREE.DirectionalLight(0x7dd3fc, 1.25);
     this.rimLight.position.set(-16, 10, -14);
     this.scene.add(this.rimLight);
 
     this.scene.fog = new THREE.Fog(0x091827, 34, 125);
 
-    // Depth-of-Field Background Blur Shader Overlay attached to Camera
+    // Subtle camera-space vignette. This is intentionally not called DOF:
+    // a real depth-of-field blur needs a depth-aware post-processing pass.
+    // The vignette is restrained so it never darkens the operator or combat HUD.
     const dofMat = new THREE.ShaderMaterial({
-      uniforms: {
-        uTime: { value: 0 },
-        uScreenSize: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
-      },
       vertexShader: `
         varying vec2 vUv;
         void main() {
@@ -701,20 +707,12 @@ export class MaxFlizGameEngine {
       `,
       fragmentShader: `
         varying vec2 vUv;
-        uniform vec2 uScreenSize;
-        uniform float uTime;
-
         void main() {
-          // Soft Depth-of-Field tilt-shift background blur shader
-          // Gently softens upper/lower distant warehouse clutter beyond combat focus zone
-          float distFromFocusCenter = abs(vUv.y - 0.44);
-          float blurFactor = smoothstep(0.24, 0.48, distFromFocusCenter);
-
-          // Subtle atmospheric depth blur color mask
-          vec3 depthColor = vec3(0.02, 0.05, 0.10);
-          float alpha = blurFactor * 0.18;
-
-          gl_FragColor = vec4(depthColor, alpha);
+          vec2 centered = (vUv - 0.5) * vec2(1.0, 0.86);
+          float edge = smoothstep(0.38, 0.78, length(centered));
+          vec3 vignetteColor = vec3(0.012, 0.026, 0.040);
+          float alpha = edge * 0.075;
+          gl_FragColor = vec4(vignetteColor, alpha);
         }
       `,
       transparent: true,
@@ -729,6 +727,25 @@ export class MaxFlizGameEngine {
     dofMesh.renderOrder = 998;
     this.dofBlurPassMesh = dofMesh;
     this.camera.add(dofMesh);
+  }
+
+  /** Adjusts the global fill/rim balance when the player enters a new map zone. */
+  private applySectorLighting(sector: number) {
+    const profiles = {
+      1: { ambient: 0xd9e8ff, hemi: 0x9edcff, ground: 0x253044, rim: 0x62c6e8, fog: 0x091827, ambientPower: 0.92, hemiPower: 1.35, rimPower: 1.15 },
+      2: { ambient: 0xffead1, hemi: 0xffd7a1, ground: 0x38302a, rim: 0xffc078, fog: 0x211a18, ambientPower: 0.94, hemiPower: 1.30, rimPower: 1.35 },
+      3: { ambient: 0xcde9f2, hemi: 0x8bc8df, ground: 0x1c2d38, rim: 0x39b8c8, fog: 0x081a24, ambientPower: 0.88, hemiPower: 1.30, rimPower: 1.45 },
+      4: { ambient: 0xc2d8f2, hemi: 0x7db5de, ground: 0x111d2c, rim: 0x60a5fa, fog: 0x080f1c, ambientPower: 0.86, hemiPower: 1.22, rimPower: 1.30 },
+    } as const;
+    const profile = profiles[sector as keyof typeof profiles] || profiles[1];
+    this.ambientLight.color.setHex(profile.ambient);
+    this.ambientLight.intensity = profile.ambientPower;
+    this.hemiLight.color.setHex(profile.hemi);
+    this.hemiLight.groundColor.setHex(profile.ground);
+    this.hemiLight.intensity = profile.hemiPower;
+    this.rimLight.color.setHex(profile.rim);
+    this.rimLight.intensity = profile.rimPower;
+    if (this.scene.fog instanceof THREE.Fog) this.scene.fog.color.setHex(profile.fog);
   }
 
   private setupInput() {
@@ -836,6 +853,36 @@ export class MaxFlizGameEngine {
     if (!this.scene.children.includes(this.levelRoot)) {
       this.scene.add(this.levelRoot);
     }
+    this.applySceneTextureQuality();
+  }
+
+  /**
+   * Apply device-appropriate anisotropic filtering once after a world is built.
+   * This improves oblique floor, wall and sign texture clarity without raising
+   * the drawing-buffer resolution or adding per-frame CPU work.
+   */
+  private applySceneTextureQuality() {
+    if (!this.threeRenderer) return;
+    const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
+    const maxAnisotropy = this.threeRenderer.capabilities.getMaxAnisotropy();
+    const targetAnisotropy = Math.max(1, Math.min(maxAnisotropy, isMobile ? 8 : 16));
+    const textureSlots = [
+      'map', 'alphaMap', 'aoMap', 'bumpMap', 'displacementMap',
+      'emissiveMap', 'lightMap', 'metalnessMap', 'normalMap', 'roughnessMap',
+    ];
+    this.levelRoot.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      for (const material of materials) {
+        for (const slot of textureSlots) {
+          const texture = (material as any)[slot];
+          if (texture instanceof THREE.Texture && texture.anisotropy < targetAnisotropy) {
+            texture.anisotropy = targetAnisotropy;
+            texture.needsUpdate = true;
+          }
+        }
+      }
+    });
   }
 
   private rebuildPlayerMesh() {
@@ -1012,6 +1059,8 @@ export class MaxFlizGameEngine {
     this.timedEventCooldown = 16.0;
     this.doublePointsTimer = 0;
     this.glueSlowTimer = 0;
+    this.cementSlowTimer = 0;
+    this.heroQuipTimer = 24 + Math.random() * 8;
     this.attackComboStep = 0;
     this.bulldozerHitCooldowns.clear();
     this.cameraMode = 'iso';
@@ -1038,11 +1087,13 @@ export class MaxFlizGameEngine {
     if (minimapTitle) minimapTitle.textContent = 'RADAR • ARENA SURVIVAL 120M';
     this.sectorGates.forEach((gate) => { if (gate) gate.visible = false; });
     this.scene.background = new THREE.Color(0x080f1c);
+    this.applySectorLighting(4);
     this.buildSurvivalArenaExpansion();
+    this.applySceneTextureQuality();
     if (this.scene.fog instanceof THREE.Fog) {
       this.scene.fog.color.setHex(0x080f1c);
-      this.scene.fog.near = 28;
-      this.scene.fog.far = 76;
+      this.scene.fog.near = 42;
+      this.scene.fog.far = 112;
     }
     this.survivalUpgradeStacks = {};
     this.survivalEvolutions.clear();
@@ -1058,8 +1109,8 @@ export class MaxFlizGameEngine {
     this.survivalRegenTimer = 60;
     this.survivalDroneCooldown = 1.2;
     this.survivalSpawnTimer = 10.5;
-    this.survivalEventTimer = 52;
-    this.survivalHazardTimer = 26;
+    this.survivalEventTimer = 24;
+    this.survivalHazardTimer = 12;
     this.currentActiveSector = 1;
     this.currentLevelId = 1;
     this.playerPos.set(0, 0.5, 0);
@@ -1101,6 +1152,7 @@ export class MaxFlizGameEngine {
     floorTexture.wrapT = THREE.RepeatWrapping;
     floorTexture.repeat.set(3, 4);
     const floorMaterial = new THREE.MeshStandardMaterial({ map: floorTexture, roughness: 0.62, metalness: 0.12 });
+    applyIndustrialPbr(floorMaterial, 0.018);
     const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x1c2c3d, roughness: 0.72, metalness: 0.32 });
     const trimMaterial = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.48, metalness: 0.24, emissive: 0x7c2d12, emissiveIntensity: 0.12 });
     const palletMaterial = new THREE.MeshStandardMaterial({ color: 0x76513a, roughness: 0.88 });
@@ -1116,6 +1168,63 @@ export class MaxFlizGameEngine {
     centerFloor.receiveShadow = true;
     this.levelRoot.add(centerFloor);
     this.platforms.push({ x: 0, y: 0, z: 0, width: 72, height: 0.2, depth: 40, type: 'floor' });
+
+    // Low-contrast aisle guides make the large floor readable without filling it
+    // with clutter. Instanced marks keep the mobile draw-call cost predictable.
+    const aisleGuideMat = new THREE.MeshStandardMaterial({
+      color: 0x3b8da6,
+      emissive: 0x17475c,
+      emissiveIntensity: 0.22,
+      roughness: 0.58,
+      metalness: 0.18,
+    });
+    for (const z of [-9.2, 9.2]) {
+      const line = new THREE.Mesh(new THREE.BoxGeometry(112, 0.022, 0.055), aisleGuideMat);
+      line.position.set(0, 0.012, z);
+      line.receiveShadow = false;
+      line.castShadow = false;
+      this.levelRoot.add(line);
+    }
+
+    const dashMaterial = new THREE.MeshStandardMaterial({
+      color: 0xd79a42,
+      emissive: 0x5c3512,
+      emissiveIntensity: 0.16,
+      roughness: 0.62,
+      metalness: 0.12,
+    });
+    const dashGeometry = new THREE.BoxGeometry(2.4, 0.024, 0.075);
+    const aisleDashes = new THREE.InstancedMesh(dashGeometry, dashMaterial, 13);
+    const dashTransform = new THREE.Object3D();
+    for (let i = 0; i < 13; i++) {
+      dashTransform.position.set(-52 + i * 8.65, 0.013, 0);
+      dashTransform.updateMatrix();
+      aisleDashes.setMatrixAt(i, dashTransform.matrix);
+    }
+    aisleDashes.instanceMatrix.needsUpdate = true;
+    aisleDashes.castShadow = false;
+    aisleDashes.receiveShadow = false;
+    this.levelRoot.add(aisleDashes);
+
+    // High-bay ceiling luminaires are one instanced batch, not dozens of separate meshes.
+    const fixtureMaterial = new THREE.MeshStandardMaterial({
+      color: 0xc5d9e2,
+      emissive: 0x4c91a9,
+      emissiveIntensity: 0.32,
+      roughness: 0.28,
+      metalness: 0.42,
+    });
+    const fixtureGeometry = new THREE.BoxGeometry(3.6, 0.12, 0.38);
+    const fixtures = new THREE.InstancedMesh(fixtureGeometry, fixtureMaterial, 8);
+    for (let i = 0; i < 8; i++) {
+      dashTransform.position.set(-49 + i * 14, 8.35, 0);
+      dashTransform.updateMatrix();
+      fixtures.setMatrixAt(i, dashTransform.matrix);
+    }
+    fixtures.instanceMatrix.needsUpdate = true;
+    fixtures.castShadow = false;
+    fixtures.receiveShadow = false;
+    this.levelRoot.add(fixtures);
 
     // Continuous side walls frame the complete 120 x 40 m arena.
     for (const zSide of [-1, 1]) {
@@ -1656,6 +1765,7 @@ export class MaxFlizGameEngine {
 
     // Unified Mega-Map Layout: Sektor A (-36..+36) -> Sektor B (+36..+116) -> Sektor C (+116..+206)
     this.scene.background = new THREE.Color(0x07131d);
+    this.applySectorLighting(levelId);
     this.levelBounds = { minX: -36, maxX: 206, minZ: -16, maxZ: 16 };
     
     this.buildLevel1();
@@ -1666,7 +1776,8 @@ export class MaxFlizGameEngine {
     this.sectorGates = [null, null, null, null];
     this.buildSectorGate(36, 2);
     this.buildSectorGate(116, 3);
-    if (this.scene.fog instanceof THREE.Fog) { this.scene.fog.near = 34; this.scene.fog.far = 125; }
+    if (this.scene.fog instanceof THREE.Fog) { this.scene.fog.near = 42; this.scene.fog.far = 148; }
+    this.applySceneTextureQuality();
 
     // Spawn player at chosen starting sector checkpoint on the unified map
     if (levelId === 2) {
@@ -1958,6 +2069,27 @@ export class MaxFlizGameEngine {
       legR: built.legR,
       armL: built.armL,
       armR: built.armR,
+    });
+  }
+
+  private addCementSpillTrap(id: string, x: number, z: number, radius = 2.35) {
+    const mesh = createCementSpillTrapModel(radius);
+    mesh.position.set(x, 0, z);
+    this.levelRoot.add(mesh);
+    this.hazards.push({
+      id,
+      type: 'cement_spill',
+      mesh,
+      startX: x,
+      startZ: z,
+      x,
+      y: 0,
+      z,
+      speed: 0,
+      width: radius * 2,
+      length: radius * 2,
+      dir: 1,
+      active: true,
     });
   }
 
@@ -2753,6 +2885,7 @@ export class MaxFlizGameEngine {
       roughness: 0.24,
       metalness: 0.14,
     });
+    applyIndustrialPbr(floorMat, 0.012);
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
@@ -2789,6 +2922,7 @@ export class MaxFlizGameEngine {
       beam.position.set(lx, 7.2, 0);
       this.levelRoot.add(lamp, beam);
     });
+    applyIndustrialPbr(wallMat, 0.022);
 
     // Floor Pedestrian & Navigation Safety Arrows along main runway and south wing
     [-24, -16, -8, 0, 8, 16, 24, 32].forEach((ax) => {
@@ -3017,6 +3151,7 @@ export class MaxFlizGameEngine {
       metalness: 0.22,
       color: 0xffffff,
     });
+    applyIndustrialPbr(floorMat, 0.008);
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(offsetX, 0, 0);
@@ -3037,6 +3172,7 @@ export class MaxFlizGameEngine {
       metalness: 0.14,
       color: 0xffffff,
     });
+    applyIndustrialPbr(wallMat, 0.022);
     const backWall = new THREE.Mesh(wallGeo, wallMat);
     backWall.position.set(offsetX, 4.75, -20.5);
     this.levelRoot.add(backWall);
@@ -3255,6 +3391,7 @@ export class MaxFlizGameEngine {
     floorTex3.repeat.set(9, 4);
     const floorGeo = new THREE.PlaneGeometry(90, 44);
     const floorMat = new THREE.MeshStandardMaterial({ map: floorTex3, roughness: 0.24, metalness: 0.22 });
+    applyIndustrialPbr(floorMat, 0.012);
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(offsetX, 0, 0);
@@ -3297,6 +3434,7 @@ export class MaxFlizGameEngine {
       this.levelRoot.add(cw);
       this.platforms.push({ x: worldX, y: 3.6, z: -14.0, width: 8.0, height: 0.18, depth: 1.8, type: 'scaffold' });
     });
+    applyIndustrialPbr(wallMat, 0.022);
 
     // Pallet stepping stones in central corridor and south loading wing (z: -4 to +16)
     [-32, -18, -4, 10, 24].forEach((px, idx) => {
@@ -3439,6 +3577,11 @@ export class MaxFlizGameEngine {
           this.callbacks.onSpeechBubble('');
         }
       }
+      this.heroQuipTimer -= simDt;
+      if (this.heroQuipTimer <= 0 && this.speechBubbleTimer <= 0) {
+        this.sayRandomVoiceLine();
+        this.heroQuipTimer = 31 + Math.random() * 22;
+      }
 
       if (this.comboTimer > 0) {
         this.comboTimer -= simDt;
@@ -3488,13 +3631,15 @@ export class MaxFlizGameEngine {
     }
 
     if (this.bloomPulseTimer > 0) {
-      this.bloomPulseTimer -= dt;
+      this.bloomPulseTimer = Math.max(0, this.bloomPulseTimer - dt);
+      // A tiny controlled highlight lift replaces the old 1.6+ exposure flash,
+      // which clipped gold/skin colours and made the scene look washed out.
       if (this.threeRenderer) {
-        const exposure = 1.12 + Math.max(0, Math.sin(this.bloomPulseTimer * 10) * 0.5);
-        this.threeRenderer.toneMappingExposure = exposure;
+        const pulse = Math.max(0, Math.sin((0.45 - this.bloomPulseTimer) * 12));
+        this.threeRenderer.toneMappingExposure = 1.08 + pulse * 0.045;
       }
-    } else {
-      if (this.threeRenderer) this.threeRenderer.toneMappingExposure = 1.12;
+    } else if (this.threeRenderer) {
+      this.threeRenderer.toneMappingExposure = 1.08;
     }
 
     this.updateCamera(dt);
@@ -3740,31 +3885,35 @@ export class MaxFlizGameEngine {
     this.survivalHazardTimer -= dt;
     if (this.survivalHazardTimer <= 0) {
       this.spawnSurvivalHazard();
-      this.survivalHazardTimer = 29 + Math.random() * 12;
+      this.survivalHazardTimer = 23 + Math.random() * 9;
     }
     this.survivalEventTimer -= dt;
     if (this.survivalEventTimer <= 0) {
       this.triggerSurvivalWarehouseEvent();
-      this.survivalEventTimer = 68 + Math.random() * 24;
+      this.survivalEventTimer = 43 + Math.random() * 14;
     }
   }
 
   private spawnSurvivalHazard() {
-    if (this.hazards.filter((hazard) => hazard.active).length >= 4) return;
+    if (this.hazards.filter((hazard) => hazard.active).length >= 3) return;
     const point = this.getSurvivalSpawnPoint();
     const x = THREE.MathUtils.clamp(point.x, this.levelBounds.minX + 3, this.levelBounds.maxX - 3);
     const z = THREE.MathUtils.clamp(point.z, this.levelBounds.minZ + 3, this.levelBounds.maxZ - 3);
     const id = 'survival_trap_' + (++this.survivalHazardSequence) + '_' + Math.floor(performance.now());
-    switch (this.survivalHazardSequence % 4) {
+    switch (this.survivalHazardSequence % 5) {
       case 1:
+        this.addCementSpillTrap(id, x, z, 2.35);
+        this.emitFloatingToast('🧱 ROZLANY CEMENT NA ALEI! OBJAZD ALBO CIĘŻKIE BUTY!', x, 1.4, z, 'damage');
+        break;
+      case 2:
         this.addGlueSpillTrap(id, x, z, 2.5);
         this.emitFloatingToast('🍯 ROZLANE MAPEI! UWAŻAJ NA BUTY!', x, 1.4, z, 'damage');
         break;
-      case 2:
+      case 3:
         this.addLaserCutterTrap(id, x, z, 5.2, 1.8);
         this.emitFloatingToast('⚠️ LASER CNC URUCHOMIONY — SKOK NAD WIĄZKĄ!', x, 1.5, z, 'damage');
         break;
-      case 3:
+      case 4:
         this.addSteamGeyserTrap(id, x, z, 5.5);
         this.emitFloatingToast('💨 GEJZER PARY: STREFA POD CIŚNIENIEM!', x, 1.5, z, 'damage');
         break;
@@ -3774,7 +3923,7 @@ export class MaxFlizGameEngine {
         break;
     }
     const spawnedTrap = this.hazards[this.hazards.length - 1];
-    if (spawnedTrap) spawnedTrap.life = 42;
+    if (spawnedTrap) spawnedTrap.life = 36;
     this.spawnParticleRing(x, 0.25, z, 0xf59e0b);
   }
 
@@ -3816,7 +3965,7 @@ export class MaxFlizGameEngine {
     const point = this.getSurvivalSpawnPoint();
     const px = this.playerPos.x, pz = this.playerPos.z;
     const x = point.x, z = point.z;
-    const eventIndex = Math.floor(Math.random() * 5);
+    const eventIndex = Math.floor(Math.random() * 6);
     const stamp = Math.floor(performance.now());
 
     if (eventIndex === 0) {
@@ -3852,12 +4001,23 @@ export class MaxFlizGameEngine {
       this.addSztaplarEnemy('survival_sztaplar_' + stamp, THREE.MathUtils.clamp(px + 11, this.levelBounds.minX + 3, this.levelBounds.maxX - 3), Math.max(this.levelBounds.minZ + 1, pz - 3), Math.min(this.levelBounds.maxZ - 1, pz + 3), 'Operator paleciaka po trzeciej kawie');
       this.addPiorunDronEnemy('survival_agv_' + stamp, x - 4, x + 4, z, 1.9, 'Dron Piorun — błędna trasa AGV');
       this.spawnDroppedPerk(x + 2, 0.5, z, 'arc_drone');
-    } else {
+    } else if (eventIndex === 4) {
       sound.playPickup(2);
       this.callbacks.onPerkDropBanner?.('📦 ZAGINIONA PALETA PREMIUM!', '🔎', 'Pan Roman zostawił tajemniczy ładunek. Skrzynia zawiera losowy moduł.', '#f59e0b');
       this.sayQuote('Pan Roman przyjechał z dostawą. Dokument WZ ma cztery strony, ale żadnej strony tytułowej.');
       this.addPanRomanEnemy('survival_roman_' + stamp, x, Math.max(this.levelBounds.minZ + 1, z - 4), Math.min(this.levelBounds.maxZ - 1, z + 4), 'Pan Roman — dostawa bez awiza');
       this.spawnLootCrate(THREE.MathUtils.clamp(px + 5, this.levelBounds.minX + 3, this.levelBounds.maxX - 3), 0, THREE.MathUtils.clamp(pz + 3, this.levelBounds.minZ + 2, this.levelBounds.maxZ - 2));
+    } else {
+      sound.playSirens();
+      this.callbacks.onPerkDropBanner?.('🟦 PILNE ZLECENIE OPTIMA: SKAN 3 PALET!', '📦', 'Na hali pojawiły się trzy złote etykiety. Zbierz je, zanim kontroler zamknie zlecenie.', '#38bdf8');
+      this.sayQuote('Optima wrzuciła trzy pilne zlecenia na tę samą minutę. Klasyka. Zbieraj etykiety, ja spróbuję dodzwonić się do IT.');
+      for (let i = 0; i < 3; i++) {
+        const taskX = THREE.MathUtils.clamp(x + (i - 1) * 3.4, this.levelBounds.minX + 3, this.levelBounds.maxX - 3);
+        const taskZ = THREE.MathUtils.clamp(z + (i % 2 === 0 ? -2.2 : 2.2), this.levelBounds.minZ + 2, this.levelBounds.maxZ - 2);
+        this.addGroutItem('survival_optima_scan_' + stamp + '_' + i, taskX, 0.55, taskZ, 180);
+      }
+      this.spawnDroppedPerk(x + 3.5, 0.5, z, 'xp_surge');
+      this.addInspectorEnemy('survival_task_inspector_' + stamp, x - 8, Math.max(this.levelBounds.minZ + 1, z - 3), Math.min(this.levelBounds.maxZ - 1, z + 3), 'Kontroler zlecenia — podpis albo blokada');
     }
   }
 
@@ -4028,6 +4188,7 @@ export class MaxFlizGameEngine {
     if (newSector !== this.currentActiveSector) {
       this.currentActiveSector = newSector;
       this.currentLevelId = newSector;
+      this.applySectorLighting(newSector);
       const minimapTitle = document.querySelector('#minimap-container .minimap-title');
       if (newSector === 1) {
         if (minimapTitle) minimapTitle.textContent = 'SEKTOR A: MAGAZYN B4';
@@ -4112,6 +4273,9 @@ export class MaxFlizGameEngine {
     if (this.glueSlowTimer > 0) {
       this.glueSlowTimer = Math.max(0, this.glueSlowTimer - dt);
     }
+    if (this.cementSlowTimer > 0) {
+      this.cementSlowTimer = Math.max(0, this.cementSlowTimer - dt);
+    }
     if (changed) {
       this.callbacks.onPerksUpdate?.(this.activePerks);
     }
@@ -4170,6 +4334,9 @@ export class MaxFlizGameEngine {
     }
     if (this.glueSlowTimer > 0 && (this.activePerks.kfcBerserk || 0) <= 0 && this.activePerks.speedBoost <= 0) {
       speed *= 0.48;
+    }
+    if (this.cementSlowTimer > 0 && (this.activePerks.kfcBerserk || 0) <= 0 && this.activePerks.speedBoost <= 0) {
+      speed *= 0.72;
     }
 
     if (inputLen > 0.08) {
@@ -4402,6 +4569,10 @@ export class MaxFlizGameEngine {
       this.playerGroup.position.copy(this.playerPos);
       this.playerGroup.rotation.y = this.playerRot;
       this.playerGroup.scale.lerp(new THREE.Vector3(1, 1, 1), dt * 8);
+      const motionRatio = Math.min(1, Math.hypot(this.playerVel.x, this.playerVel.z) / Math.max(0.1, this.charDef.speed));
+      const idleBreath = Math.sin(performance.now() * 0.0021) * 0.006 * (1 - motionRatio);
+      this.playerGroup.position.y += idleBreath;
+      this.playerGroup.rotation.z = Math.sin(performance.now() * 0.0017) * 0.006 * (1 - motionRatio);
     }
 
     if (this.targetRing) {
@@ -4501,6 +4672,22 @@ export class MaxFlizGameEngine {
             this.emitFloatingToast('🛡️ AUTORYTET BHP: STOP SZTAPLARKI!', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
           } else {
             this.takeDamage('Zostałeś potrącony przez wózek widłowy!');
+          }
+        }
+      } else if (h.type === 'cement_spill') {
+        const radius = h.width * 0.5;
+        const dist = Math.hypot(h.x - this.playerPos.x, h.z - this.playerPos.z);
+        if (dist < radius && this.playerPos.y < 0.35) {
+          if (this.cementSlowTimer <= 0.1 && (this.activePerks.kfcBerserk || 0) <= 0 && this.activePerks.speedBoost <= 0) {
+            this.emitFloatingToast('🧱 ŚWIEŻY CEMENT! BUTY WAŻĄ TERAZ TONĘ!', this.playerPos.x, this.playerPos.y + 1.0, this.playerPos.z, 'damage');
+          }
+          this.cementSlowTimer = 0.45;
+        }
+        for (const e of this.enemies) {
+          if (e.state === 'defeated') continue;
+          if (Math.hypot(e.x - h.x, e.z - h.z) < radius) {
+            e.x -= (e.x - h.x) * 0.18 * dt;
+            e.z -= (e.z - h.z) * 0.18 * dt;
           }
         }
       } else if (h.type === 'glue_spill') {
@@ -5005,6 +5192,11 @@ export class MaxFlizGameEngine {
         e.legL.rotation.x = Math.sin(e.walkCycle) * 0.5;
         e.legR.rotation.x = -Math.sin(e.walkCycle) * 0.5;
       }
+      if (e.armL && e.armR && e.type !== 'piorun_dron') {
+        const armSwing = Math.sin(e.walkCycle) * (e.state === 'chase' ? 0.34 : 0.20);
+        e.armL.rotation.x = -armSwing;
+        e.armR.rotation.x = armSwing;
+      }
 
       // Ground Threat Ring for actively chasing enemies
       if (!e.threatRing && e.type !== 'piorun_dron') {
@@ -5079,7 +5271,7 @@ export class MaxFlizGameEngine {
         const quotes = MaxFlizGameEngine.ENEMY_QUOTES[e.type] || ["Z drogi!"];
         const quote = quotes[Math.floor(Math.random() * quotes.length)];
         e.shoutText = quote;
-        this.emitFloatingToast(quote, e.x, e.y + 1.25, e.z, 'enemy_shout', { enemyType: e.type });
+        this.emitFloatingToast(quote, e.x, e.y + 1.25, e.z, 'enemy_shout', { enemyType: e.type, enemyName: e.name });
       }
 
       // Special movement per type
@@ -6056,13 +6248,17 @@ export class MaxFlizGameEngine {
     this.attackComboStep = (this.attackComboStep + 1) % 3;
     const isThirdCombo = this.attackComboStep === 0;
 
-    // Operator-specific attack cadence
+    // Deliberate, readable cadence: these are physical signature attacks, not machine-gun spam.
     const baseAttackCooldown = this.gameMode === 'survival'
       ? 2.85
-      : charId === 'mateusz' ? 0.34 : charId === 'grzesiek' ? 0.52 : charId === 'dawid' ? 0.46 : 0.42;
+      : charId === 'piotr' ? 0.28
+        : charId === 'mateusz' ? 0.66
+          : charId === 'dawid' ? 0.70
+            : charId === 'grzesiek' ? 0.78
+              : 0.86;
     this.attackCooldownTimer = baseAttackCooldown *
       (this.gameMode === 'survival' ? this.survivalAttackRateMultiplier : 1) *
-      ((this.activePerks.attackHaste || 0) > 0 ? (this.gameMode === 'survival' ? 0.90 : 0.82) : 1);
+      ((this.activePerks.attackHaste || 0) > 0 ? (this.gameMode === 'survival' ? 0.90 : 0.88) : 1);
     this.attackSwingTimer = 0.26;
 
     sound.playAttackWhoosh();
@@ -6070,232 +6266,172 @@ export class MaxFlizGameEngine {
     const startOrigin = new THREE.Vector3(this.playerPos.x, this.playerPos.y + 0.82, this.playerPos.z).addScaledVector(forward, 0.65);
 
     if (charId === 'marcin') {
-      // MARCIN: Throws a 3D Navy & Gold WZ Binder that creates a magnetic audit shockwave on hit; every 3rd throw is a Critical Golden Stamp!
-      const binderGroup = new THREE.Group();
-      const coverMat = new THREE.MeshStandardMaterial({
-        color: isThirdCombo ? 0xf59e0b : 0x1e3a8a,
-        roughness: 0.25,
-        metalness: isThirdCombo ? 0.75 : 0.3,
-        emissive: isThirdCombo ? 0xd97706 : 0x1e40af,
-        emissiveIntensity: isThirdCombo ? 0.6 : 0.25,
+      // Marcin casts a compact Optima software spell: a holographic work-order rune.
+      const spell = new THREE.Group();
+      const coreMat = new THREE.MeshStandardMaterial({
+        color: isThirdCombo ? 0x67e8f9 : 0x38bdf8,
+        emissive: isThirdCombo ? 0x0891b2 : 0x0369a1,
+        emissiveIntensity: isThirdCombo ? 1.25 : 0.8,
+        metalness: 0.35,
+        roughness: 0.22,
       });
-      const cover = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.1, 0.46), coverMat);
-      const pages = new THREE.Mesh(
-        new THREE.BoxGeometry(0.32, 0.07, 0.42),
-        new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4 })
+      const core = new THREE.Mesh(new THREE.OctahedronGeometry(isThirdCombo ? 0.29 : 0.22, 0), coreMat);
+      const ringA = new THREE.Mesh(
+        new THREE.TorusGeometry(isThirdCombo ? 0.42 : 0.32, 0.035, 7, 18),
+        new THREE.MeshBasicMaterial({ color: 0x67e8f9, transparent: true, opacity: 0.85 })
       );
-      pages.position.x = 0.02;
-      const goldSpine = new THREE.Mesh(
-        new THREE.BoxGeometry(0.06, 0.11, 0.47),
-        new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.85, roughness: 0.2 })
+      ringA.rotation.x = Math.PI / 2;
+      const ringB = new THREE.Mesh(
+        new THREE.TorusGeometry(isThirdCombo ? 0.34 : 0.26, 0.022, 6, 16),
+        new THREE.MeshBasicMaterial({ color: 0xa78bfa, transparent: true, opacity: 0.75 })
       );
-      goldSpine.position.x = -0.16;
-      binderGroup.add(cover, pages, goldSpine);
-      if (isThirdCombo) binderGroup.scale.setScalar(1.35);
-      binderGroup.position.copy(startOrigin);
-      this.levelRoot.add(binderGroup);
-
-      // Pull nearby grouts slightly toward Marcin on every binder throw
-      for (const c of this.collectibles) {
-        if (!c.collected && c.mesh && Math.hypot(c.x - this.playerPos.x, c.z - this.playerPos.z) < 6.5) {
-          c.x = THREE.MathUtils.lerp(c.x, this.playerPos.x, 0.28);
-          c.z = THREE.MathUtils.lerp(c.z, this.playerPos.z, 0.28);
-          c.mesh.position.set(c.x, c.y, c.z);
-        }
-      }
-
+      ringB.rotation.y = Math.PI / 2;
+      spell.add(core, ringA, ringB);
+      spell.position.copy(startOrigin);
+      this.levelRoot.add(spell);
       this.projectiles.push({
-        mesh: binderGroup,
-        vel: forward.clone().multiplyScalar(15.5),
-        life: 0.95,
+        mesh: spell,
+        vel: forward.clone().multiplyScalar(14.2),
+        life: 1.35,
         damage: isThirdCombo ? 2 : 1,
-        aoeRadius: isThirdCombo ? 2.8 : 1.8,
-        stunDuration: isThirdCombo ? 1.6 : 0.9,
-        spinSpeed: 14.0,
+        pierce: isThirdCombo ? 2 : 1,
+        aoeRadius: isThirdCombo ? 1.55 : 1.0,
+        stunDuration: isThirdCombo ? 1.15 : 0.55,
+        spinSpeed: 8.0,
         hitIds: new Set(),
       });
       if (isThirdCombo) {
-        this.emitFloatingToast('📑 KRYTYCZNY AUDYT WZ!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'perk');
+        this.emitFloatingToast('🟦 OPTIMA: ZLECENIE ZATWIERDZONE!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'perk');
       }
     } else if (charId === 'grzesiek') {
-      // GRZESIEK: Wide 140-degree Melee Cleave with a 200cm Aluminum Screed Level (Łata Brukarska) + Heavy 44cm Shockwave Crescent!
-      const screedGroup = new THREE.Group();
-      const barMat = new THREE.MeshStandardMaterial({
-        color: 0xe2e8f0,
-        metalness: 0.88,
-        roughness: 0.18,
-        emissive: 0x22c55e,
-        emissiveIntensity: 0.35,
+      // Grzesiek throws a steel dumbbell; every third throw is the heavy 44 cm special.
+      const dumbbell = new THREE.Group();
+      const steel = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.9, roughness: 0.2 });
+      const collarMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, metalness: 0.55, roughness: 0.25 });
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.74, 10), steel);
+      shaft.rotation.x = Math.PI / 2;
+      dumbbell.add(shaft);
+      [-0.34, 0.34].forEach((z) => {
+        const weight = new THREE.Mesh(
+          new THREE.CylinderGeometry(isThirdCombo ? 0.25 : 0.21, isThirdCombo ? 0.25 : 0.21, 0.18, 12),
+          steel
+        );
+        weight.rotation.x = Math.PI / 2;
+        weight.position.z = z;
+        dumbbell.add(weight);
+        const collar = new THREE.Mesh(new THREE.TorusGeometry(0.105, 0.018, 6, 12), collarMat);
+        collar.position.z = z > 0 ? z - 0.10 : z + 0.10;
+        dumbbell.add(collar);
       });
-      const screedBar = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.12, 0.22), barMat);
-      const vial = new THREE.Mesh(
-        new THREE.BoxGeometry(0.28, 0.14, 0.24),
-        new THREE.MeshBasicMaterial({ color: 0x4ade80 })
-      );
-      const waveArc = new THREE.Mesh(
-        new THREE.TorusGeometry(0.95, 0.08, 10, 24, Math.PI * 0.85),
-        new THREE.MeshBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.85 })
-      );
-      waveArc.rotation.x = Math.PI / 2;
-      screedGroup.add(screedBar, vial, waveArc);
-      screedGroup.position.copy(startOrigin);
-      screedGroup.rotation.y = this.playerRot;
-      this.levelRoot.add(screedGroup);
-
-      // Immediate close-range 140-degree cleave knockback & shield-break
-      const berserkMult = (this.activePerks.kfcBerserk || 0) > 0 ? 2 : 1;
-      for (const e of this.enemies) {
-        if (e.state === 'defeated') continue;
-        const dx = e.x - this.playerPos.x;
-        const dz = e.z - this.playerPos.z;
-        const dist = Math.hypot(dx, dz);
-        const dot = (dx * forward.x + dz * forward.z) / Math.max(0.1, dist);
-        if (dist < 3.4 && dot > -0.15) {
-          if (e.shieldActive) {
-            e.shieldActive = false;
-            sound.playShieldBreak();
-            this.emitFloatingToast('💥 TARCZA ROZBITA 44CM!', e.x, e.y + 1.3, e.z, 'combo');
-          }
-          e.hp -= 2 * berserkMult;
-          e.stunTimer = 1.2;
-          e.state = 'stunned';
-          // Double knockback passive
-          e.x += (dx / Math.max(0.1, dist)) * 2.4;
-          e.z = THREE.MathUtils.clamp(e.z + (dz / Math.max(0.1, dist)) * 2.4, -17, 17);
-          this.emitFloatingToast(`🔨 ŁATA 200CM! -${2 * berserkMult} HP`, e.x, e.y + 1.0, e.z, 'damage');
-          if (e.hp <= 0) this.defeatEnemy(e, 270, true);
-        }
-      }
-
+      if (isThirdCombo) dumbbell.scale.setScalar(1.18);
+      dumbbell.position.copy(startOrigin);
+      this.levelRoot.add(dumbbell);
       this.projectiles.push({
-        mesh: screedGroup,
-        vel: forward.clone().multiplyScalar(13.0),
-        life: 0.55,
-        damage: 2,
-        pierce: 3,
+        mesh: dumbbell,
+        vel: forward.clone().multiplyScalar(14.6),
+        life: 1.35,
+        damage: isThirdCombo ? 3 : 2,
+        pierce: isThirdCombo ? 3 : 1,
+        stunDuration: 0.65,
+        spinSpeed: 13.0,
+        hitIds: new Set(),
+      });
+      if (isThirdCombo) this.emitFloatingToast('💪 HANTLA 44 CM — CIĘŻKI RZUT!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'combo');
+    } else if (charId === 'dawid') {
+      // Dawid launches a roll of stretch wrap; a hit briefly binds/slows the target.
+      const wrapRoll = new THREE.Group();
+      const filmMat = new THREE.MeshStandardMaterial({ color: 0xdbeafe, metalness: 0.16, roughness: 0.12, transparent: true, opacity: 0.84 });
+      const coreMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.8 });
+      const roll = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.56, 14), filmMat);
+      roll.rotation.x = Math.PI / 2;
+      const core = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.58, 10), coreMat);
+      core.rotation.x = Math.PI / 2;
+      const looseFilm = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.42, 0.48),
+        new THREE.MeshBasicMaterial({ color: 0xe0f2fe, transparent: true, opacity: 0.42, side: THREE.DoubleSide, depthWrite: false })
+      );
+      looseFilm.position.z = -0.24;
+      wrapRoll.add(roll, core, looseFilm);
+      wrapRoll.position.copy(startOrigin);
+      this.levelRoot.add(wrapRoll);
+      this.projectiles.push({
+        mesh: wrapRoll,
+        vel: forward.clone().multiplyScalar(14.8),
+        life: 1.4,
+        damage: isThirdCombo ? 2 : 1,
+        pierce: isThirdCombo ? 3 : 2,
+        slowOnHit: true,
+        stunDuration: isThirdCombo ? 1.2 : 0.7,
         spinSpeed: 18.0,
         hitIds: new Set(),
       });
-    } else if (charId === 'dawid') {
-      // DAWID: High-Velocity Spinning 45° Diamond Saw Blade + Beveled Calacatta Slab that pierces, ricochets, and collects items!
-      const bladeGroup = new THREE.Group();
-      const disc = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.46, 0.46, 0.05, 24),
-        new THREE.MeshStandardMaterial({
-          color: 0xe2e8f0,
-          metalness: 0.92,
-          roughness: 0.14,
-          emissive: 0xd97706,
-          emissiveIntensity: 0.35,
-        })
-      );
-      const rim = new THREE.Mesh(
-        new THREE.TorusGeometry(0.46, 0.035, 8, 24),
-        new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.85, roughness: 0.2, emissive: 0xf59e0b, emissiveIntensity: 0.5 })
-      );
-      rim.rotation.x = Math.PI / 2;
-      const tileCore = new THREE.Mesh(
-        new THREE.BoxGeometry(0.48, 0.08, 0.48),
-        new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.18, metalness: 0.2 })
-      );
-      tileCore.rotation.y = Math.PI / 4;
-      bladeGroup.add(disc, rim, tileCore);
-      bladeGroup.position.copy(startOrigin);
-      this.levelRoot.add(bladeGroup);
-
-      // Slight angle spread on 3rd combo shot (fires 2 blades at ±12°)
-      const angles = isThirdCombo ? [-0.18, 0.18] : [0];
-      angles.forEach((angOffset, idx) => {
-        const meshInstance = idx === 0 ? bladeGroup : bladeGroup.clone();
-        if (idx > 0) this.levelRoot.add(meshInstance);
-        const dir = new THREE.Vector3(Math.sin(this.playerRot + angOffset), 0, Math.cos(this.playerRot + angOffset));
-        this.projectiles.push({
-          mesh: meshInstance,
-          vel: dir.multiplyScalar(19.0),
-          life: 1.25,
-          damage: 2,
-          pierce: 3,
-          ricochet: true,
-          collectItems: true,
-          spinSpeed: 28.0,
-          hitIds: new Set(),
-        });
-      });
+      if (isThirdCombo) this.emitFloatingToast('📦 STRETCH VIP — ZAWIJAMY TEMAT!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'combo');
     } else if (charId === 'mateusz') {
-      // MATEUSZ: Triple Burst of Homing PlayStation DualSense RGB Discs (□, △, ○) that Glitch-Slow enemies!
-      const spreadAngles = [-0.22, 0, 0.22];
-      const colors = [0xec4899, 0x38bdf8, 0xa855f7];
-      spreadAngles.forEach((ang, idx) => {
-        const orbGroup = new THREE.Group();
-        const ring = new THREE.Mesh(
-          new THREE.TorusGeometry(0.2, 0.055, 10, 20),
-          new THREE.MeshBasicMaterial({ color: colors[idx] })
-        );
-        ring.rotation.x = Math.PI / 2;
-        const core = new THREE.Mesh(
-          new THREE.OctahedronGeometry(0.14, 0),
-          new THREE.MeshBasicMaterial({ color: 0xffffff })
-        );
-        orbGroup.add(ring, core);
-        orbGroup.position.copy(startOrigin);
-        this.levelRoot.add(orbGroup);
-
-        const dir = new THREE.Vector3(Math.sin(this.playerRot + ang), 0, Math.cos(this.playerRot + ang));
-        this.projectiles.push({
-          mesh: orbGroup,
-          vel: dir.multiplyScalar(16.5),
-          life: 0.95,
-          damage: 1,
-          homing: true,
-          slowOnHit: true,
-          spinSpeed: 20.0,
-          hitIds: new Set(),
-        });
+      // Mateusz uses a taser: a single fast, readable electric dart, not a screen-filling triple burst.
+      const taserDart = new THREE.Group();
+      const body = new THREE.Mesh(
+        new THREE.BoxGeometry(0.16, 0.10, 0.34),
+        new THREE.MeshStandardMaterial({ color: 0x7c3aed, metalness: 0.55, roughness: 0.25, emissive: 0x4c1d95, emissiveIntensity: 0.35 })
+      );
+      const emitter = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.06, 0.08), new THREE.MeshBasicMaterial({ color: 0x67e8f9 }));
+      emitter.position.z = 0.18;
+      taserDart.add(body, emitter);
+      [-0.065, 0.065].forEach((x) => {
+        const prong = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.18, 6), new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.8 }));
+        prong.position.set(x, 0, 0.26);
+        prong.rotation.x = Math.PI / 2;
+        taserDart.add(prong);
       });
-    } else if (charId === 'piotr') {
-      // PIOTR: Throws a Heavy Crimson Pipe Wrench (Bumerangowy Klucz Francuski) that returns to Piotr, hitting twice & igniting with 70% Bimber sparks!
-      const wrenchGroup = new THREE.Group();
-      const redSteel = new THREE.MeshStandardMaterial({
-        color: 0xef4444,
-        metalness: 0.75,
-        roughness: 0.25,
-        emissive: 0xdc2626,
-        emissiveIntensity: 0.35,
-      });
-      const chromeJaw = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.9, roughness: 0.15 });
-      const handle = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.08, 0.72), redSteel);
-      const jawTop = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.1, 0.16), chromeJaw);
-      jawTop.position.set(0.08, 0, 0.32);
-      const jawBot = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.09, 0.12), chromeJaw);
-      jawBot.position.set(0.06, 0, 0.14);
-      wrenchGroup.add(handle, jawTop, jawBot);
-      wrenchGroup.position.copy(startOrigin);
-      this.levelRoot.add(wrenchGroup);
-
+      taserDart.position.copy(startOrigin);
+      this.levelRoot.add(taserDart);
       this.projectiles.push({
-        mesh: wrenchGroup,
-        vel: forward.clone().multiplyScalar(16.5),
-        life: 1.35,
-        maxLife: 1.35,
-        damage: 1,
-        pierce: 4,
-        boomerang: true,
-        returning: false,
-        igniteOnHit: true,
-        spinSpeed: 24.0,
+        mesh: taserDart,
+        vel: forward.clone().multiplyScalar(19.5),
+        life: 1.15,
+        damage: isThirdCombo ? 2 : 1,
+        pierce: 1,
+        slowOnHit: true,
+        stunDuration: isThirdCombo ? 1.65 : 1.0,
+        spinSpeed: 2.0,
         hitIds: new Set(),
       });
+      sound.playElectricalSparks();
+      if (isThirdCombo) this.emitFloatingToast('⚡ TASER: PODWÓJNY IMPULS!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'combo');
+    } else if (charId === 'piotr') {
+      // Piotr fires small steel BBs. A short-lived laser line makes the firing direction readable.
+      const pellet = new THREE.Mesh(
+        new THREE.SphereGeometry(0.065, 8, 6),
+        new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.98, roughness: 0.13 })
+      );
+      pellet.position.copy(startOrigin);
+      this.levelRoot.add(pellet);
+      this.projectiles.push({
+        mesh: pellet,
+        vel: forward.clone().multiplyScalar(35.0),
+        life: 1.0,
+        damage: isThirdCombo ? 2 : 1,
+        pierce: isThirdCombo ? 1 : 0,
+        hitIds: new Set(),
+      });
+
+      const laserSight = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.009, 0.009, 5.3, 6),
+        new THREE.MeshBasicMaterial({ color: 0xff1744, transparent: true, opacity: 0.9, depthWrite: false })
+      );
+      laserSight.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), forward);
+      laserSight.position.copy(startOrigin).addScaledVector(forward, 2.65);
+      this.levelRoot.add(laserSight);
+      this.specialEffects.push({ mesh: laserSight, life: 0.11, maxLife: 0.11, grow: 0, spin: 0 });
     }
 
-    // Agile enemies attempt dodge reactions
+    // Small dodge reactions remain readable and do not drown the operator's projectile.
     this.enemies.forEach((e) => {
       if (e.state === 'defeated' || e.state === 'stunned') return;
       const dist = Math.hypot(e.x - this.playerPos.x, e.z - this.playerPos.z);
       if (dist < 4.0 && (e.type === 'piorun_dron' || e.type === 'kurier' || e.type === 'monter' || e.type === 'elite_walczak_guard')) {
-        if (Math.random() < 0.35) {
-          const dodgeOffset = Math.random() > 0.5 ? 1.4 : -1.4;
+        if (Math.random() < 0.22) {
+          const dodgeOffset = Math.random() > 0.5 ? 1.1 : -1.1;
           e.z = THREE.MathUtils.clamp(e.z + dodgeOffset, e.startX, e.endX);
-          this.emitFloatingToast('💨 UNIK!', e.x, e.y + 1.0, e.z, 'damage');
         }
       }
     });
@@ -6999,22 +7135,20 @@ export class MaxFlizGameEngine {
     // 'tpp' (Default): Podwyższony widok taktyczny (~45° widok z góry i zza pleców w stylu Hades / Brawl Stars)
     // Zapewnia pełną widoczność flankujących wrogów, pułapek posadzkowych i alei magazynu bez zasłaniania przez regały!
     const zoomMultiplier = this.bossCamZoom * this.camZoomFactor;
-    let baseOffsetX = -2.0;
-    let baseOffsetY = 13.5;
-    let baseOffsetZ = 7.4;
-    if (this.gameMode === 'survival') {
-      baseOffsetX = 0.0;
-      baseOffsetY = 24.0;
-      baseOffsetZ = 5.5;
-    } else if (this.cameraMode === 'close') {
-      baseOffsetX = -3.4;
-      baseOffsetY = 7.2;
-      baseOffsetZ = 4.4;
+    let baseOffsetX = -2.2;
+    let baseOffsetY = 10.8;
+    let baseOffsetZ = 9.2;
+    if (this.cameraMode === 'close') {
+      // Closer, lower over-the-shoulder framing makes faces, props and character silhouettes readable.
+      baseOffsetX = -2.2;
+      baseOffsetY = 6.9;
+      baseOffsetZ = 8.2;
     } else if (this.cameraMode === 'iso') {
       baseOffsetX = 0.0;
-      baseOffsetY = 19.0;
-      baseOffsetZ = 6.8;
+      baseOffsetY = 15.8;
+      baseOffsetZ = 10.2;
     }
+    // Survival uses the same low oblique follow camera; never force a near-vertical overhead view.
 
     const targetOffsetX = baseOffsetX * zoomMultiplier;
     const targetOffsetY = baseOffsetY * zoomMultiplier;
@@ -7029,7 +7163,7 @@ export class MaxFlizGameEngine {
     if (this.camera instanceof THREE.PerspectiveCamera) {
       const aspect = (window.innerWidth || 1280) / Math.max(1, window.innerHeight || 720);
       const baseFov = this.gameMode === 'survival'
-        ? (aspect < 0.65 ? 66 : aspect < 1.0 ? 60 : aspect < 1.35 ? 54 : 50)
+        ? (aspect < 0.65 ? 58 : aspect < 1.0 ? 54 : aspect < 1.35 ? 48 : 45)
         : (aspect < 0.65 ? 60 : aspect < 1.0 ? 54 : aspect < 1.35 ? 48 : 45);
       if (Math.abs(this.camera.fov - baseFov) > 0.2) {
         this.camera.fov = THREE.MathUtils.damp(this.camera.fov, baseFov, 4.0, dt);
@@ -7246,9 +7380,9 @@ export class MaxFlizGameEngine {
   public renderMinimap(canvas: HTMLCanvasElement | null) {
     if (!canvas || this.state !== 'playing' || !this.minimapVisible) return;
     
+    // The caller already caps this renderer at 10 Hz; do not halve it again here.
     this.minimapFrameCounter++;
-    if (this.minimapFrameCounter % 2 !== 0) return;
-    
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -7256,9 +7390,22 @@ export class MaxFlizGameEngine {
     const h = canvas.height;
     ctx.clearRect(0, 0, w, h);
 
-    // High-tech radar dark background
-    ctx.fillStyle = '#0b0f19';
+    // Layered tactical map surface with a restrained technical grid.
+    const radarBg = ctx.createLinearGradient(0, 0, w, h);
+    radarBg.addColorStop(0, '#0b1b27');
+    radarBg.addColorStop(1, '#07121d');
+    ctx.fillStyle = radarBg;
     ctx.fillRect(0, 0, w, h);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(117, 166, 192, 0.09)';
+    ctx.lineWidth = 0.6;
+    for (let x = 10; x < w; x += 12) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    }
+    for (let y = 10; y < h; y += 12) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+    ctx.restore();
 
     const centerX = w / 2;
     const centerY = h / 2;
@@ -7272,8 +7419,8 @@ export class MaxFlizGameEngine {
     const playerMapY = centerY + (this.playerPos.z - mapCenterZ) * scale;
 
     // Survival uses a full-map tactical view; campaign retains the close-range rotating radar.
-    ctx.strokeStyle = 'rgba(56, 189, 248, 0.18)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(107, 180, 211, 0.22)';
+    ctx.lineWidth = 0.9;
     ctx.beginPath();
     if (!isSurvivalMap) {
       ctx.arc(centerX, centerY, w * 0.22, 0, Math.PI * 2);
@@ -7285,15 +7432,15 @@ export class MaxFlizGameEngine {
     if (isSurvivalMap) {
       const mapWidth = (this.levelBounds.maxX - this.levelBounds.minX) * scale;
       const mapDepth = (this.levelBounds.maxZ - this.levelBounds.minZ) * scale;
-      ctx.strokeStyle = 'rgba(125, 211, 252, 0.75)';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = 'rgba(117, 211, 232, 0.85)';
+      ctx.lineWidth = 1.6;
       ctx.strokeRect(centerX - mapWidth / 2, centerY - mapDepth / 2, mapWidth, mapDepth);
     }
 
     // 1. Level Platforms & Aisle Boundaries
-    ctx.fillStyle = 'rgba(30, 41, 59, 0.85)';
-    ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
-    ctx.lineWidth = 1;
+    ctx.fillStyle = 'rgba(37, 59, 73, 0.74)';
+    ctx.strokeStyle = 'rgba(127, 167, 189, 0.48)';
+    ctx.lineWidth = 0.9;
 
     for (let i = 0; i < this.platforms.length; i++) {
       const p = this.platforms[i];
@@ -7312,10 +7459,10 @@ export class MaxFlizGameEngine {
     }
 
     if (isSurvivalMap) {
-      // Cargo stacks and racks are drawn as small neutral blocks so routes and cover are visible.
-      ctx.fillStyle = 'rgba(148, 163, 184, 0.88)';
-      ctx.strokeStyle = 'rgba(226, 232, 240, 0.75)';
-      ctx.lineWidth = 1;
+      // Rack and pallet cover use a separate cool metal tone, clearly distinct from floors.
+      ctx.fillStyle = 'rgba(133, 157, 171, 0.88)';
+      ctx.strokeStyle = 'rgba(207, 224, 233, 0.76)';
+      ctx.lineWidth = 0.9;
       for (const obstacle of this.survivalObstacles) {
         const ox = centerX + (obstacle.x - mapCenterX) * scale;
         const oy = centerY + (obstacle.z - mapCenterZ) * scale;
@@ -7333,14 +7480,43 @@ export class MaxFlizGameEngine {
         const hx = centerX + (hazard.x - mapCenterX) * scale;
         const hy = centerY + (hazard.z - mapCenterZ) * scale;
         if (hx < 0 || hx > w || hy < 0 || hy > h) continue;
-        ctx.fillStyle = '#fbbf24';
+        const hazardColors: Record<HazardItem['type'], string> = {
+          forklift: '#f59e0b',
+          spill: '#eab308',
+          steam_faucet: '#67e8f9',
+          falling_lamp: '#fda4af',
+          conveyor: '#94a3b8',
+          glue_spill: '#a3e635',
+          cement_spill: '#cbd5e1',
+          laser_cutter: '#fb7185',
+          steam_geyser: '#67e8f9',
+          hydraulic_press: '#f59e0b',
+        };
+        const markerColor = hazardColors[hazard.type] || '#fbbf24';
+        const radiusX = Math.max(3, hazard.width * scale * 0.5);
+        const radiusY = Math.max(3, hazard.length * scale * 0.5);
+        ctx.fillStyle = markerColor;
+        ctx.globalAlpha = 0.12;
         ctx.beginPath();
-        ctx.moveTo(hx, hy - 3.5);
-        ctx.lineTo(hx + 3.5, hy);
-        ctx.lineTo(hx, hy + 3.5);
-        ctx.lineTo(hx - 3.5, hy);
-        ctx.closePath();
+        ctx.ellipse(hx, hy, Math.min(17, radiusX), Math.min(12, radiusY), 0, 0, Math.PI * 2);
         ctx.fill();
+        ctx.globalAlpha = 0.88;
+        ctx.strokeStyle = markerColor;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 2]);
+        ctx.beginPath();
+        ctx.ellipse(hx, hy, Math.min(17, radiusX), Math.min(12, radiusY), 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(hx, hy - 3.2);
+        ctx.lineTo(hx + 3.2, hy);
+        ctx.lineTo(hx, hy + 3.2);
+        ctx.lineTo(hx - 3.2, hy);
+        ctx.closePath();
+        ctx.fillStyle = markerColor;
+        ctx.fill();
+        ctx.globalAlpha = 1;
       }
     }
 
@@ -7354,7 +7530,7 @@ export class MaxFlizGameEngine {
       const my = centerY + dz;
 
       if (mx >= 0 && mx <= w && my >= 0 && my <= h) {
-        ctx.fillStyle = col.type === 'vip_item' || col.type === 'golden_cutter' ? '#f59e0b' : '#38bdf8';
+        ctx.fillStyle = col.type === 'vip_item' || col.type === 'golden_cutter' ? '#ffd27b' : '#67d6f0';
         ctx.beginPath();
         ctx.arc(mx, my, col.type === 'vip_item' ? 4.5 : 3.0, 0, Math.PI * 2);
         ctx.fill();
@@ -7371,7 +7547,7 @@ export class MaxFlizGameEngine {
       const my = centerY + dz;
 
       if (mx >= 0 && mx <= w && my >= 0 && my <= h) {
-        ctx.fillStyle = '#a855f7';
+        ctx.fillStyle = '#c3a1ff';
         ctx.beginPath();
         ctx.arc(mx, my, 4.0, 0, Math.PI * 2);
         ctx.fill();
@@ -7385,7 +7561,7 @@ export class MaxFlizGameEngine {
       const mx = centerX + dx;
       const my = centerY + dz;
 
-      ctx.fillStyle = '#22c55e';
+      ctx.fillStyle = '#64dda7';
       ctx.beginPath();
       ctx.arc(mx, my, 6.0, 0, Math.PI * 2);
       ctx.fill();
@@ -7410,7 +7586,9 @@ export class MaxFlizGameEngine {
 
       if (mx >= -10 && mx <= w + 10 && my >= -10 && my <= h + 10) {
         const isBoss = e.type === 'walczak' || e.type === 'krol_leto';
-        ctx.fillStyle = isBoss ? '#ef4444' : e.state === 'chase' || e.state === 'charging' ? '#ff4d4d' : '#f43f5e';
+        const isAggressive = e.state === 'chase' || e.state === 'charging';
+        const isRanged = e.type === 'handlowiec' || e.type === 'przedstawiciel_włoski' || e.type === 'inspector';
+        ctx.fillStyle = isBoss ? '#fb7185' : isAggressive ? '#ff6573' : isRanged ? '#f5b454' : '#d9829d';
         const size = isBoss ? 6.5 : 4.0;
 
         ctx.beginPath();
@@ -7418,8 +7596,13 @@ export class MaxFlizGameEngine {
         ctx.fill();
 
         if (isBoss) {
-          ctx.strokeStyle = '#facc15';
+          ctx.strokeStyle = '#ffe1a3';
           ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(mx, my, size + 3, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(251,113,133,.36)';
+          ctx.lineWidth = 1;
           ctx.stroke();
         }
 
@@ -7437,8 +7620,10 @@ export class MaxFlizGameEngine {
     ctx.translate(playerMapX, playerMapY);
     ctx.rotate(this.playerRot);
 
-    ctx.fillStyle = '#38bdf8';
-    ctx.strokeStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(98,198,232,.85)';
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = '#74dcf2';
+    ctx.strokeStyle = '#f3fbff';
     ctx.lineWidth = 1.5;
 
     ctx.beginPath();
@@ -7452,13 +7637,15 @@ export class MaxFlizGameEngine {
 
     ctx.restore();
 
-    // Radar scan line effect
-    const sweep = (performance.now() * 0.0025) % (Math.PI * 2);
-    ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
-    ctx.lineWidth = 1.5;
+    // Radar sweep originates from the operator in both modes.
+    const sweep = (performance.now() * 0.0018) % (Math.PI * 2);
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(98, 198, 232, 0.28)';
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(centerX, centerY);
-    ctx.lineTo(centerX + Math.cos(sweep) * (w * 0.45), centerY + Math.sin(sweep) * (h * 0.45));
+    ctx.moveTo(playerMapX, playerMapY);
+    ctx.lineTo(playerMapX + Math.cos(sweep) * (isSurvivalMap ? w * 0.42 : w * 0.45),
+      playerMapY + Math.sin(sweep) * (isSurvivalMap ? h * 0.42 : h * 0.45));
     ctx.stroke();
   }
 }

@@ -13,6 +13,8 @@
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600;700;800&family=Outfit:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/src/index.css" />
     <link rel="stylesheet" href="/src/theme-enhancements.css" />
+    <link rel="stylesheet" href="/src/design-tokens.css" />
+    <link rel="stylesheet" href="/src/visual-polish.css" />
   </head>
   <body>
     <!-- REAL-TIME ASSET & ENGINE LOADER OVERLAY -->
@@ -119,7 +121,7 @@
               </div>
             </div>
             <div id="minimap-body" class="minimap-body">
-              <canvas id="minimap-canvas" width="200" height="150"></canvas>
+              <canvas id="minimap-canvas" width="384" height="288"></canvas>
             </div>
             <div class="minimap-legend">
               <span class="legend-item"><span class="dot player"></span>Ty</span>
@@ -364,51 +366,51 @@
               <div class="char-grid">
                 <div class="char-card active" data-char="marcin">
                   <div class="char-code-tag">ID // LOG-01</div>
-                  <div class="char-card-badge">👷‍♂️</div>
+                  <div class="char-card-badge">🔮</div>
                   <div class="char-card-name">Marcin</div>
                   <div class="char-card-role">Kierownik Logistyki</div>
-                  <div class="char-card-ability">Segregator WZ • Pieczęć 9m</div>
+                  <div class="char-card-ability">Zaklęcia Optima • Pieczęć 9m</div>
                 </div>
 
                 <div class="char-card" data-char="grzesiek">
                   <div class="char-code-tag">ID // HYD-44</div>
-                  <div class="char-card-badge">🚜</div>
+                  <div class="char-card-badge">🏋️</div>
                   <div class="char-card-name">Grzesiek</div>
                   <div class="char-card-role">Ściskacz 44cm</div>
-                  <div class="char-card-ability">Łata 200cm • Taran B4</div>
+                  <div class="char-card-ability">Rzut hantlem • Ścisk 44cm</div>
                 </div>
 
                 <div class="char-card" data-char="dawid">
                   <div class="char-code-tag">ID // GRS-28</div>
-                  <div class="char-card-badge">💪</div>
+                  <div class="char-card-badge">📦</div>
                   <div class="char-card-name">Dawid</div>
                   <div class="char-card-role">Arcymistrz Gresu</div>
-                  <div class="char-card-ability">Tarcza 45° • 5x Gres + KFC</div>
+                  <div class="char-card-ability">Rolka stretch • Dostawa KFC</div>
                 </div>
 
                 <div class="char-card" data-char="mateusz">
                   <div class="char-code-tag">ID // SYS-99</div>
-                  <div class="char-card-badge">🎮</div>
+                  <div class="char-card-badge">⚡</div>
                   <div class="char-card-name">Mateusz</div>
                   <div class="char-card-role">Gejmer & IT Spec</div>
-                  <div class="char-card-ability">DualSense x3 • BSOD 11m</div>
+                  <div class="char-card-ability">Paralizator • BSOD 11m</div>
                 </div>
 
                 <div class="char-card" data-char="piotr">
                   <div class="char-code-tag">ID // WET-70</div>
-                  <div class="char-card-badge">👨‍🔧</div>
+                  <div class="char-card-badge">🔴</div>
                   <div class="char-card-name">Piotr</div>
                   <div class="char-card-role">Weteran • Bimber 70%</div>
-                  <div class="char-card-ability">Bumerang Klucz • 3x Mołotow</div>
+                  <div class="char-card-ability">Pistolet BB • Laser + 3x Mołotow</div>
                 </div>
               </div>
 
               <div id="char-details-box" class="char-details-box">
                 <div class="char-details-title" id="char-detail-title">Marcin – Władca WZ-tek i Harmonogramu</div>
                 <div class="char-details-bio" id="char-detail-bio">Zna każdy kod kreskowy płytek na pamięć. Gdy krzyknie na korytarzu, nawet sztaplarka staje dęba.</div>
-                <div class="char-details-attack" id="char-detail-attack"><strong>🥊 Atak Podstawowy [F / Klik]:</strong> Rzut Segregatorem WZ + Fala Audytu – rzuca pancernym segregatorem z fakturami, który wybucha impulsem audytu (2.2m), zasysa pobliskie worki z fugą i co 3. rzut zadaje Krytyczną Pieczęć (2x obrażeń)!</div>
+                <div class="char-details-attack" id="char-detail-attack"><strong>🥊 Atak Podstawowy [F / Klik]:</strong> Zaklęcie Optima – przywołuje świetlisty znak-zlecenie z programu Optima, który ogłusza cel; co trzeci czar tworzy mocniejszą Pieczęć Audytu.</div>
                 <div class="char-details-skill" id="char-detail-skill"><strong>⚡ Super Umiejętność [E]:</strong> Pieczęć WZ-tki & Protokół Reklamacji – wbija gigantyczną pieczęć w posadzkę (9m), leczy +1 Kawę, paraliżuje wrogów na 5s i włącza Magnes Zamówień.</div>
-                <div class="char-details-passive" id="char-detail-passive"><strong>🛡️ Zdolność Pasywna:</strong> Autorytet Kierownika & Segregator Audytu – zasięg przyciągania zamówień VIP i WZ-tek +100% oraz pełna odporność na odrzut.</div>
+                <div class="char-details-passive" id="char-detail-passive"><strong>🛡️ Zdolność Pasywna:</strong> Mistrz Zaklęć Optima – świetlne zlecenia przyciągają zamówienia VIP (+100% zasięgu) i co trzeci czar tworzy mocniejszą Pieczęć Audytu.</div>
 
                 <div class="char-stats-container">
                   <div class="stat-bar-row">
@@ -461,6 +463,7 @@
                     </div>
                     <div class="zone-desc">Start kampanii. Pokonaj Bosmana Kraków, aby wyłączyć blokadę bramy B i otworzyć checkpoint Showroomu SPA. Samo dojście do bramy nie wystarczy.</div>
                   </div>
+                  <div class="zone-preview zone-preview-a" aria-hidden="true"><span class="zone-preview-dot"></span><span class="zone-preview-label">MAGAZYN / B4</span></div>
                 </div>
 
                 <div class="zone-card" data-level="2">
@@ -472,6 +475,7 @@
                     </div>
                     <div class="zone-desc">Checkpoint dostępny po pokonaniu Bosmana w sektorze A. Pokonaj Króla-Leto w Showroomie, aby otworzyć przejście do Terminala VIP.</div>
                   </div>
+                  <div class="zone-preview zone-preview-b" aria-hidden="true"><span class="zone-preview-dot"></span><span class="zone-preview-label">SHOWROOM / SPA</span></div>
                 </div>
 
                 <div class="zone-card" data-level="3">
@@ -483,6 +487,7 @@
                     </div>
                     <div class="zone-desc">Checkpoint dostępny po pokonaniu Króla-Leto w sektorze B. Finał wymaga pokonania Walczaka i Króla-Leto oraz zebrania wymaganych paczek VIP.</div>
                   </div>
+                  <div class="zone-preview zone-preview-c" aria-hidden="true"><span class="zone-preview-dot"></span><span class="zone-preview-label">TERMINAL / VIP</span></div>
                 </div>
               </div>
             </div>
