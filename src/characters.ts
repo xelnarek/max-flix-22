@@ -137,8 +137,8 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     secondaryColor: 0xfacc15, // Bright Yellow
     speed: 9.0,
     jumpForce: 9.4,
-    passiveName: 'Klucz Grzechotkowy B4 — Rzut Weterana',
-    passiveDescription: 'Podstawowy atak miota dużym, wirującym kluczem grzechotkowym. Przebija kolejnych przeciwników, wraca do Piotra i przy każdym powrocie ponownie przecina linię wrogów. Co trzeci rzut to ciężki, czerwono rozgrzany klucz.',
+    passiveName: 'Weteran B4 — Droga Powrotna',
+    passiveDescription: 'Piotr ma stały podwójny skok i 100% szansy na drop perków. Klucz grzechotkowy wraca po rzucie, więc dobrze ustawiony tor pozwala przeciąć linię wrogów również podczas powrotu.',
     abilityName: 'Potrójna Salwa Flaszek z Bimbrem 70% (Mołotow x3)',
     abilityDescription: 'Piotr wyjmuje zza regału B4 aż 3 płonące butelki 70% bimbru jednocześnie i miota nimi przed siebie, zamieniając cały korytarz w ścianę żywego ognia!',
     abilityCooldown: 4.8,
