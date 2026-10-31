@@ -122,6 +122,7 @@ export interface HazardItem {
     | 'falling_lamp'
     | 'conveyor'
     | 'glue_spill'
+    | 'cement_spill'
     | 'laser_cutter'
     | 'steam_geyser'
     | 'hydraulic_press';
