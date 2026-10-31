@@ -6737,7 +6737,7 @@ export class MaxFlizGameEngine {
             if (enemy.hp <= 0 && enemy.type !== 'walczak' && enemy.type !== 'krol_leto') this.defeatEnemy(enemy, 180, true);
           }
         }
-      } else if (h.type === 'laser_cutter') {      } else if (h.type === 'laser_cutter') {
+      } else if (h.type === 'laser_cutter') {
         h.phase = (h.phase || 0) + dt * h.speed;
         const halfSpan = h.length * 0.5 - 0.35;
         const bladeZ = Math.sin(h.phase) * halfSpan;
