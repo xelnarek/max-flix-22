@@ -119,6 +119,10 @@ export interface EnemyItem {
   aiSlot?: number;
   aiFlankAngle?: number;
   aiOrbitSign?: number;
+  surgeRunner?: boolean;
+  survivalAuditor?: boolean;
+  auraBuffed?: boolean;
+  auraRing?: any;
 }
 
 export interface HazardItem {
