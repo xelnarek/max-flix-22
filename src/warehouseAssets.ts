@@ -1126,7 +1126,6 @@ export function createCharacterModel(def: CharacterDef): {
       earMuff.position.set(ex, 1.05, 0);
       group.add(earMuff);
     });
-    group.add(helmet, brim);
   } else if (def.id === 'dawid') {
     // Orange/Red Heavy Duty Hardhat with chin strap
     addHardHat(0xea580c, 0x7c2d12);
@@ -1148,7 +1147,7 @@ export function createCharacterModel(def: CharacterDef): {
     const ledLens = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.04, 12), new THREE.MeshBasicMaterial({ color: 0xfacc15 }));
     ledLens.rotation.x = Math.PI / 2;
     ledLens.position.set(0, 1.09, 0.21);
-    group.add(helmet, brim, lampMount, ledLens);
+    group.add(lampMount, ledLens);
   }
 
   // 3. Legs & Leather Steel-toe Boots
