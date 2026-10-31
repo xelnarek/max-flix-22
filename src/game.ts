@@ -1708,6 +1708,7 @@ export class MaxFlizGameEngine {
       if (projectile.weaponProjectile) this.disposeTemporaryObject(projectile.mesh);
     }
     this.projectiles = [];
+    for (const effect of this.specialEffects) effect.cleanup?.();
     this.specialEffects = [];
     this.bimberMolotovs = [];
     this.bimberFirePuddles = [];
