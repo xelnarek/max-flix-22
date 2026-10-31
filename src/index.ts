@@ -1346,6 +1346,7 @@ class MaxFlizScene extends xb.Script {
 
     bindTap(document.getElementById('btn-menu-pause'), () => {
       pauseModal?.classList.add('hidden');
+      hudPerksRow?.classList.add('hidden');
       survivalHud?.classList.add('hidden');
       survivalLevelUp?.classList.add('hidden');
       gameShell?.classList.remove('survival-mode');
