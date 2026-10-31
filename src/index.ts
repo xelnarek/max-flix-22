@@ -1637,6 +1637,9 @@ class MaxFlizScene extends xb.Script {
 
     this.camera = camera;
     this.engine.startTitle();
+    // Apply the initial viewport profile immediately; waiting for the next
+    // resize event leaves portrait devices with the desktop camera distance.
+    this.engine.applyAutoCameraScaleForViewport();
 
     // The selective bloom hook uses XR Blocks' supported scene-render override.
     // Non-WebGL backends retain their normal render path.
