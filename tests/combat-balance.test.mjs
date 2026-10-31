@@ -38,7 +38,7 @@ test('weapon reload improves gradually without the previous large late-level red
   const base = 10;
   assert.equal(getSurvivalWeaponReloadSeconds(base, 1), 10);
   assert.equal(getSurvivalWeaponReloadSeconds(base, 5), 8.8);
-  assert.equal(getSurvivalWeaponReloadSeconds(base, 5, true), 7.92);
+  assert.ok(Math.abs(getSurvivalWeaponReloadSeconds(base, 5, true) - 7.92) < 1e-9);
   assert.ok(getSurvivalWeaponReloadSeconds(base, 5, true) > base * 0.78 * 0.82);
 });
 
