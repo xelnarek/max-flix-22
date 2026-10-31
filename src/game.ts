@@ -1655,6 +1655,11 @@ export class MaxFlizGameEngine {
 
   private clearLevel() {
     for (const enemy of this.enemies) this.disposeEnemyModel(enemy);
+    if (this.survivalPomazaniecMarker) {
+      this.levelRoot.remove(this.survivalPomazaniecMarker);
+      this.disposePomazaniecObject(this.survivalPomazaniecMarker);
+      this.survivalPomazaniecMarker = null;
+    }
     while (this.levelRoot.children.length > 0) {
       this.levelRoot.remove(this.levelRoot.children[0]);
     }
@@ -3870,6 +3875,10 @@ export class MaxFlizGameEngine {
 
   private updateSurvivalDirector(dt: number) {
     this.survivalElapsed += dt;
+    if (!this.survivalPomazaniecSpawned && this.survivalElapsed >= 135) {
+      this.spawnSurvivalPomazaniecMarker();
+    }
+    this.updateSurvivalPomazaniecMarker(dt);
     const nextWave = 1 + Math.floor(this.survivalElapsed / 60);
     if (nextWave > this.survivalWave) {
       this.survivalWave = nextWave;
@@ -3923,7 +3932,10 @@ export class MaxFlizGameEngine {
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
     // Poco F6-class hardware can sustain a busier arena; retain a hard ceiling
     // so particle, AI and shadow costs stay predictable during long runs.
-    const enemyCap = isMobile ? 22 : 34;
+    const pomazaniecRaidActive = this.survivalPomazaniecTriggered && !this.survivalPomazaniecCompleted;
+    // Reserve five temporary slots for the one-time secret wave without permanently
+    // increasing the regular enemy ceiling on mobile or desktop.
+    const enemyCap = (isMobile ? 22 : 34) + (pomazaniecRaidActive ? 5 : 0);
     const aliveCount = this.enemies.reduce((count, enemy) => count + (enemy.state === 'defeated' ? 0 : 1), 0);
     if (this.survivalSpawnTimer <= 0 && aliveCount < enemyCap) {
       const groupLimit = isMobile ? 5 : 7;
@@ -5474,14 +5486,14 @@ export class MaxFlizGameEngine {
   private getSurvivalEnemyRole(enemy: EnemyItem): 'bruiser' | 'flanker' | 'ranged' | 'support' {
     if (enemy.type === 'sztaplar_szalony' || enemy.type === 'elite_walczak_guard' || enemy.type === 'agv_robot') return 'bruiser';
     if (enemy.type === 'inspector') return 'support';
-    if (enemy.type === 'handlowiec' || enemy.type === 'przedstawiciel_włoski' || enemy.type === 'pan_roman' || enemy.type === 'serwisant') return 'ranged';
+    if (enemy.type === 'handlowiec' || enemy.type === 'przedstawiciel_włoski' || enemy.type === 'pan_roman' || enemy.type === 'serwisant' || enemy.type === 'pomazaniec') return 'ranged';
     if (enemy.type === 'kurier' || enemy.type === 'zombie_pracownik' || enemy.type === 'monter') return 'flanker';
     return 'flanker';
   }
 
   private updateSurvivalEnemyTactics(enemy: EnemyItem, dt: number, distanceToPlayer: number) {
     const role = this.getSurvivalEnemyRole(enemy);
-    const engaged = this.activeChaserIds.has(enemy.id);
+    const engaged = this.activeChaserIds.has(enemy.id) || enemy.type === 'pomazaniec';
     const slot = enemy.aiSlot || 0;
     const anchorAngle = enemy.aiFlankAngle ?? Math.atan2(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z);
     const drift = Math.sin(this.survivalElapsed * 0.62 + slot * 1.7) * (engaged ? 0.16 : 0.10);
@@ -5676,6 +5688,8 @@ export class MaxFlizGameEngine {
 
       e.walkCycle += dt * 8;
       if (e.shieldRing?.visible) e.shieldRing.rotation.z += dt * 1.25;
+      if (e.bikeWheels) e.bikeWheels.forEach((wheel) => wheel.rotateX(dt * (e.state === 'chase' ? 8.5 : 3.4)));
+      if (e.propeller) e.propeller.rotation.y += dt * (e.state === 'chase' ? 34 : 18);
       if (e.legL && e.legR && e.type !== 'piorun_dron') {
         e.legL.rotation.x = Math.sin(e.walkCycle) * 0.5;
         e.legR.rotation.x = -Math.sin(e.walkCycle) * 0.5;
@@ -5691,7 +5705,7 @@ export class MaxFlizGameEngine {
         const ringMesh = new THREE.Mesh(
           new THREE.RingGeometry(0.42, 0.54, 20),
           new THREE.MeshBasicMaterial({
-            color: 0xef4444,
+            color: e.type === 'pomazaniec' ? 0xec4899 : 0xef4444,
             transparent: true,
             opacity: 0.65,
             side: THREE.DoubleSide,
@@ -5717,7 +5731,7 @@ export class MaxFlizGameEngine {
       }
 
       // Check whether this enemy is allowed to engage or must hold position in wave
-      const canActivelyChase = e.type === 'walczak' || e.type === 'krol_leto' || this.activeChaserIds.has(e.id);
+      const canActivelyChase = e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'pomazaniec' || this.activeChaserIds.has(e.id);
 
       // SIGHT & DETECTION LOGIC
       const threatAwareness = 1 + this.threatTier * 0.025;
@@ -5985,6 +5999,10 @@ export class MaxFlizGameEngine {
 
       // Check collision with player
       const dist = Math.hypot(e.x - this.playerPos.x, e.z - this.playerPos.z);
+      if (e.type === 'pomazaniec') {
+        e.mesh.position.y = e.y + Math.sin(e.walkCycle * 1.65) * 0.025;
+        e.mesh.rotation.z = Math.sin(e.walkCycle * 1.1) * 0.018;
+      }
       const hitRadius = e.type === 'walczak' || e.type === 'krol_leto' ? 1.5 : e.type === 'elite_walczak_guard' ? 1.3 : 1.1;
 
       if (dist < hitRadius) {
