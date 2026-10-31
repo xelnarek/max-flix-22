@@ -7228,7 +7228,7 @@ export class MaxFlizGameEngine {
     // Deliberate, readable cadence: these are physical signature attacks, not machine-gun spam.
     const baseAttackCooldown = this.gameMode === 'survival'
       ? 3.25
-      : charId === 'piotr' ? 0.28
+      : charId === 'piotr' ? 0.64
         : charId === 'mateusz' ? 0.66
           : charId === 'dawid' ? 0.70
             : charId === 'grzesiek' ? 0.78
@@ -7376,29 +7376,55 @@ export class MaxFlizGameEngine {
       if (isThirdCombo) this.emitFloatingToast('⚡ TASER: PODWÓJNY IMPULS!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'combo');
     } else if (charId === 'piotr') {
       // Piotr fires small steel BBs. A short-lived laser line makes the firing direction readable.
-      const pellet = new THREE.Mesh(
-        new THREE.SphereGeometry(0.065, 8, 6),
-        new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.98, roughness: 0.13 })
-      );
-      pellet.position.copy(startOrigin);
-      this.levelRoot.add(pellet);
+      // Piotr throws a heavy ratchet wrench. It cuts through a line of enemies,
+      // then returns through the crowd for a second pass like a seasoned B4 boomerang.
+      const wrench = new THREE.Group();
+      const chrome = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.92, roughness: 0.17 });
+      const darkSteel = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.88, roughness: 0.23 });
+      const redGrip = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.68 });
+      const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.92), chrome);
+      wrench.add(shaft);
+      const grip = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.19, 0.26), redGrip);
+      grip.position.z = -0.28;
+      wrench.add(grip);
+      const jawRing = new THREE.Mesh(new THREE.TorusGeometry(0.23, 0.075, 8, 18, Math.PI * 1.58), chrome);
+      jawRing.position.z = 0.49;
+      jawRing.rotation.z = -Math.PI * 0.20;
+      wrench.add(jawRing);
+      const jawLeft = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.19, 0.12), chrome);
+      jawLeft.position.set(-0.15, 0.14, 0.62);
+      jawLeft.rotation.z = -0.42;
+      const jawRight = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.19, 0.12), chrome);
+      jawRight.position.set(0.15, 0.14, 0.62);
+      jawRight.rotation.z = 0.42;
+      wrench.add(jawLeft, jawRight);
+      const ratchetCore = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.07, 12), darkSteel);
+      ratchetCore.rotation.x = Math.PI / 2;
+      ratchetCore.position.set(0, 0, 0.50);
+      wrench.add(ratchetCore);
+      if (isThirdCombo) {
+        const hotRim = new THREE.Mesh(new THREE.TorusGeometry(0.27, 0.025, 6, 18), new THREE.MeshBasicMaterial({ color: 0xf87171 }));
+        hotRim.position.z = 0.50;
+        wrench.add(hotRim);
+        wrench.scale.setScalar(1.16);
+      }
+      wrench.position.copy(startOrigin);
+      wrench.rotation.y = this.playerRot;
+      this.levelRoot.add(wrench);
       this.projectiles.push({
-        mesh: pellet,
-        vel: forward.clone().multiplyScalar(35.0),
-        life: 1.0,
-        damage: isThirdCombo ? 2 : 1,
-        pierce: isThirdCombo ? 1 : 0,
+        mesh: wrench,
+        vel: forward.clone().multiplyScalar(22.5),
+        life: 1.9,
+        maxLife: 1.9,
+        damage: isThirdCombo ? 3 : 2,
+        pierce: isThirdCombo ? 4 : 2,
+        boomerang: true,
+        stunDuration: 0.48,
+        spinSpeed: 20,
+        weaponProjectile: true,
         hitIds: new Set(),
       });
-
-      const laserSight = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.009, 0.009, 5.3, 6),
-        new THREE.MeshBasicMaterial({ color: 0xff1744, transparent: true, opacity: 0.9, depthWrite: false })
-      );
-      laserSight.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), forward);
-      laserSight.position.copy(startOrigin).addScaledVector(forward, 2.65);
-      this.levelRoot.add(laserSight);
-      this.specialEffects.push({ mesh: laserSight, life: 0.11, maxLife: 0.11, grow: 0, spin: 0 });
+      if (isThirdCombo) this.emitFloatingToast('🔧 GRZECHOTKA B4 — GWINT ZAGŁADY!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'combo');
     }
 
     // Small dodge reactions remain readable and do not drown the operator's projectile.
@@ -7633,7 +7659,7 @@ export class MaxFlizGameEngine {
       vel: direction.multiplyScalar(23),
       life: 2.2,
       maxLife: 2.2,
-      damage: this.scaleSurvivalDamage(damage),
+      damage,
       pierce: 0,
       aoeRadius: 1.7,
       stunDuration: 0.7,
@@ -7654,6 +7680,7 @@ export class MaxFlizGameEngine {
     const pink = new THREE.MeshStandardMaterial({ color: 0xf9a8d4, roughness: 0.65 });
     const dark = new THREE.MeshBasicMaterial({ color: 0x0f172a });
     const cyan = new THREE.MeshStandardMaterial({ color: 0x67e8f9, emissive: 0x0891b2, emissiveIntensity: 0.7 });
+    const amber = new THREE.MeshStandardMaterial({ color: 0xfbbf24, emissive: 0xd97706, emissiveIntensity: 0.35 });
     const body = new THREE.Mesh(new THREE.SphereGeometry(0.31, 12, 9), fur);
     body.scale.set(1.0, 0.80, 1.35);
     body.position.y = 0.38;
@@ -7841,30 +7868,12 @@ export class MaxFlizGameEngine {
     this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.5, this.playerPos.z, this.charDef.color);
 
     if (this.currentCharacterId === 'marcin') {
-      const protectionTime = this.gameMode === 'survival' ? 3.0 : 8.0;
-      this.marcinReclamationTimer = protectionTime;
-      this.invulnerableTimer = Math.max(this.invulnerableTimer, protectionTime);
+      // The WZ-404 is a temporary autonomous support unit, not a one-frame visual burst.
       this.hp = Math.min(this.maxHp, this.hp + 1);
       this.callbacks.onHpUpdate(this.hp, this.maxHp);
-      this.activatePerk('order_magnet', 10);
-      this.sayQuote('PIECZĘĆ WZ WBITA! 8 sekund nietykalności, +1 Kawa i Audyt Reklamacyjny na 9 metrów!');
-      sound.playReclamation();
-      this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.5, this.playerPos.z, 0xfacc15);
-      const radius = 9.0;
-      this.enemies.forEach((e) => {
-        if (e.state === 'defeated') return;
-        const dist = Math.hypot(e.x - this.playerPos.x, e.z - this.playerPos.z);
-        if (dist < radius) {
-          e.stunTimer = this.gameMode === 'survival' ? 1.1 : 5.0;
-          e.state = 'stunned';
-          const damage = Math.ceil(2 * abilityDamageMultiplier);
-          e.hp = Math.max(0, e.hp - damage);
-          this.emitFloatingToast('-' + damage + ' HP Pieczęć WZ!', e.x, e.y + 0.8, e.z, 'damage');
-          if (e.hp <= 0) {
-            this.defeatEnemy(e, 240, false);
-          }
-        }
-      });
+      this.activatePerk('order_magnet', 8);
+      this.spawnMarcinTank();
+      this.sayQuote('WORLD OF TAAAAANKS! NOOBIE! To nie jest WoT tutorial — artyleria wjeżdża na halę!');
     } else if (this.currentCharacterId === 'grzesiek') {
       this.grzesiekCrushTimer = 0.9;
       this.grzesiekCrushPulse = 1.0;
@@ -7937,27 +7946,9 @@ export class MaxFlizGameEngine {
       });
       this.emitFloatingToast('🧱 SALWA GRESU 120x280 + 🍗 KFC!', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
     } else if (this.currentCharacterId === 'mateusz') {
-      this.hp = Math.min(this.maxHp, this.hp + 1);
-      this.callbacks.onHpUpdate(this.hp, this.maxHp);
-      this.activatePerk('espresso_boost', this.gameMode === 'survival' ? 2.8 : 6);
+      this.activatePerk('espresso_boost', this.gameMode === 'survival' ? 3.5 : 7);
       this.activatePerk('vibram_boots', this.gameMode === 'survival' ? 3.5 : 8);
-      this.sayQuote('BSOD OVERCLOCK! Zamrażam wrogów w promieniu 11m + Speedrun i 2x Skok!');
-      sound.playAbility('mateusz');
-      this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.8, this.playerPos.z, 0x3b82f6);
-      this.emitFloatingToast('🎮 KOPUŁA BSOD & OVERCLOCK!', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
-
-      this.enemies.forEach((e) => {
-        if (e.state === 'defeated') return;
-        const dist = Math.hypot(e.x - this.playerPos.x, e.z - this.playerPos.z);
-        if (dist < 11.0) {
-          e.stunTimer = this.gameMode === 'survival' ? 1.2 : 5.5;
-          e.state = 'stunned';
-          const damage = Math.ceil(1 * abilityDamageMultiplier);
-          e.hp = Math.max(0, e.hp - damage);
-          this.emitFloatingToast('💻 BSOD LAG -' + damage + ' HP!', e.x, e.y + 0.8, e.z, 'damage');
-          if (e.hp <= 0) this.defeatEnemy(e, 240, false);
-        }
-      });
+      this.spawnMateuszCats();
     } else if (this.currentCharacterId === 'piotr') {
       this.sayQuote('POTRÓJNA FLASZKA ZE SKARBCZYKA! 3x 70% bimbru zza regału B4 – ściana ognia na gresie!');
       this.throwBimberMolotov(0);
