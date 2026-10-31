@@ -7418,6 +7418,39 @@ export class MaxFlizGameEngine {
       }
     }
 
+    if (e.type === 'pomazaniec') {
+      this.spawnParticleRing(e.x, e.y + 0.35, e.z, 0xf472b6);
+      this.spawnParticleRing(e.x, e.y + 0.78, e.z, 0xfacc15);
+      sound.playLollipopHit();
+      const pomazanceRemaining = this.enemies.filter((enemy) =>
+        enemy.type === 'pomazaniec' && enemy.state !== 'defeated'
+      ).length;
+      if (pomazanceRemaining === 0 && this.survivalPomazaniecTriggered && !this.survivalPomazaniecCompleted) {
+        this.survivalPomazaniecCompleted = true;
+        this.score += 1500;
+        this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+        for (let index = 0; index < 5; index++) {
+          const angle = (index / 5) * Math.PI * 2;
+          this.spawnSurvivalXpGem(
+            this.playerPos.x + Math.sin(angle) * 2.2,
+            0.35,
+            this.playerPos.z + Math.cos(angle) * 2.2,
+            3
+          );
+        }
+        this.callbacks.onSurvivalAnnouncement?.(
+          'GODZILLA DAWIDA: OCALONA (CHWILOWO)',
+          'RAJD POMAZAŃCÓW ROZBITY!',
+          'Pięć rowerków, zero hamulców. Premia za obronę hali: +1 500 punktów i 15 XP do zebrania.'
+        );
+        this.emitFloatingToast('🏆 POMAZANIEC RAID — +1 500 PKT!', this.playerPos.x, this.playerPos.y + 1.9, this.playerPos.z, 'combo');
+        sound.playPomazaniecVictory();
+        this.triggerHitStop(0.12);
+        this.triggerScreenShake(0.42, 0.34);
+        this.triggerBloomPulse(0.42);
+      }
+    }
+
     if (showToast) {
       this.emitFloatingToast(`+${finalPoints} Pkt Neutralizacja!`, e.x, e.y + 1, e.z, 'points');
     }
