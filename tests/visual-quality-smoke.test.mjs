@@ -49,7 +49,7 @@ test('all five character bios have expanded beyond the short menu summary', asyn
   const ids = ['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr'];
   for (const id of ids) {
     const start = source.indexOf('  ' + id + ': {');
-    const next = source.indexOf('\n  ', start + 4);
+    const next = source.indexOf('\n  },', start + 4);
     const block = source.slice(start, next === -1 ? source.length : next);
     const bio = block.match(/bio: '([^']+)'/);
     assert.ok(bio, 'missing bio for ' + id);
