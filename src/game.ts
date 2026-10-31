@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { clampHorizontalPosition } from './arenaBounds.ts';
 import { isWithinBossImpactRadius } from './combatTelegraphs.ts';
+import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
 import {
   getAbilityCooldownSeconds,
   getBaseAttackCooldownSeconds,
@@ -91,8 +92,9 @@ import {
   getWallTexture,
   createKfcBucketCollectible,
   createZombieWorkerEnemyModel,
-  createGlueSpillTrapModel,
   createCementSpillTrapModel,
+  createStretchFilmBarrierModel,
+  createRollerGateTrapModel,
   createLaserCutterTrapModel,
   createSteamGeyserTrapModel,
   createHydraulicPressTrapModel,
@@ -406,6 +408,10 @@ export class MaxFlizGameEngine {
   private survivalSurgeDirection = 0;
   private survivalNextSurgeAt = 90;
   private survivalSurgeSpawned = 0;
+  private survivalSurgeTargetCount = 0;
+  private survivalSurgeCenterX = 0;
+  private survivalSurgeCenterZ = 0;
+  private survivalSurgeRing: THREE.Group | null = null;
   private survivalMiniBossSpawned = false;
   private survivalPhaseTwoAnnounced = false;
   private survivalAuditorAuraCooldown = 0;
@@ -2088,6 +2094,7 @@ export class MaxFlizGameEngine {
       this.disposePomazaniecObject(this.survivalPomazaniecMarker);
       this.survivalPomazaniecMarker = null;
     }
+    this.clearSurvivalSurgeRing();
     this.disposeSurvivalArenaInstances();
     while (this.levelRoot.children.length > 0) {
       this.levelRoot.remove(this.levelRoot.children[0]);
@@ -2298,6 +2305,7 @@ export class MaxFlizGameEngine {
     this.buildLevel1();
     this.buildLevel2(76);
     this.buildLevel3(161);
+    this.buildCampaignHighBayDressing();
     for (const enemy of this.enemies) this.applyEnemyVisualPolish(enemy);
     this.applyStorybookStyle(this.levelRoot);
     this.sectorGates = [null, null, null, null];
@@ -2325,6 +2333,62 @@ export class MaxFlizGameEngine {
 
     this.callbacks.onBossUpdate?.('', 0, 0, false);
     this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+  }
+
+  /**
+   * Shared high-bay roof, pipework and lighting details for the campaign mega-map.
+   * Instanced geometry keeps extra architecture within a small draw-call budget.
+   */
+  private buildCampaignHighBayDressing() {
+    const steel = new THREE.MeshStandardMaterial({ color: 0x3b5061, metalness: 0.68, roughness: 0.48 });
+    const safetyOrange = new THREE.MeshStandardMaterial({ color: 0xe99a32, metalness: 0.32, roughness: 0.52, emissive: 0x693a0d, emissiveIntensity: 0.12 });
+    const pipeMaterial = new THREE.MeshStandardMaterial({ color: 0x738392, metalness: 0.76, roughness: 0.3 });
+    const lampMaterial = new THREE.MeshStandardMaterial({ color: 0xdbeafe, roughness: 0.38, emissive: 0x91c9e8, emissiveIntensity: 0.42 });
+    const dummy = new THREE.Object3D();
+    const bayXs: number[] = [];
+    for (let x = -24; x <= 192; x += 24) bayXs.push(x);
+
+    const crossTrusses = new THREE.InstancedMesh(new THREE.BoxGeometry(0.28, 0.24, 34.5), steel, bayXs.length);
+    bayXs.forEach((x, index) => {
+      dummy.position.set(x, 8.62, 0); dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1, 1); dummy.updateMatrix();
+      crossTrusses.setMatrixAt(index, dummy.matrix);
+    });
+    crossTrusses.instanceMatrix.needsUpdate = true;
+    this.addSurvivalArenaInstance(crossTrusses);
+
+    const roofRails = new THREE.InstancedMesh(new THREE.BoxGeometry(236, 0.15, 0.18), safetyOrange, 2);
+    [-16.8, 16.8].forEach((z, index) => {
+      dummy.position.set(85, 8.52, z); dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1, 1); dummy.updateMatrix();
+      roofRails.setMatrixAt(index, dummy.matrix);
+    });
+    roofRails.instanceMatrix.needsUpdate = true;
+    this.addSurvivalArenaInstance(roofRails);
+
+    const servicePipes = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.075, 0.075, 236, 8), pipeMaterial, 3);
+    [-10, 0, 10].forEach((z, index) => {
+      dummy.position.set(85, 7.9, z); dummy.rotation.set(0, 0, Math.PI / 2); dummy.scale.set(1, 1, 1); dummy.updateMatrix();
+      servicePipes.setMatrixAt(index, dummy.matrix);
+    });
+    servicePipes.instanceMatrix.needsUpdate = true;
+    this.addSurvivalArenaInstance(servicePipes);
+
+    const fixtures = new THREE.InstancedMesh(new THREE.BoxGeometry(3.6, 0.12, 0.56), lampMaterial, bayXs.length * 2);
+    let index = 0;
+    for (const x of bayXs) for (const z of [-7.2, 7.2]) {
+      dummy.position.set(x + 8, 8.0, z); dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1, 1); dummy.updateMatrix();
+      fixtures.setMatrixAt(index++, dummy.matrix);
+    }
+    fixtures.instanceMatrix.needsUpdate = true;
+    this.addSurvivalArenaInstance(fixtures);
+
+    const perimeterPosts = new THREE.InstancedMesh(new THREE.BoxGeometry(0.26, 7.9, 0.26), steel, bayXs.length * 2);
+    index = 0;
+    for (const x of bayXs) for (const z of [-17.3, 17.3]) {
+      dummy.position.set(x, 3.95, z); dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1, 1); dummy.updateMatrix();
+      perimeterPosts.setMatrixAt(index++, dummy.matrix);
+    }
+    perimeterPosts.instanceMatrix.needsUpdate = true;
+    this.addSurvivalArenaInstance(perimeterPosts);
   }
 
   private buildSectorGate(x: number, targetSector: 2 | 3) {
@@ -2627,25 +2691,24 @@ export class MaxFlizGameEngine {
     });
   }
 
-  private addGlueSpillTrap(id: string, x: number, z: number, radius = 1.9) {
-    const mesh = createGlueSpillTrapModel(radius);
+  private addStretchFilmBarrierTrap(id: string, x: number, z: number, width = 5.2) {
+    const mesh = createStretchFilmBarrierModel(width);
     mesh.position.set(x, 0, z);
     this.levelRoot.add(mesh);
-    this.hazards.push({
-      id,
-      type: 'glue_spill',
-      mesh,
-      startX: x,
-      startZ: z,
-      x,
-      y: 0,
-      z,
-      speed: 0,
-      width: radius * 2,
-      length: radius * 2,
-      dir: 1,
-      active: true,
-    });
+    this.hazards.push({ id, type: 'stretch_barrier', mesh, startX: x, startZ: z, x, y: 0, z,
+      speed: 0, width, length: 1.0, dir: 1, active: true, cooldown: 0 });
+  }
+
+  private addRollerGateTrap(id: string, x: number, z: number, speed = 2.2, width = 4.8) {
+    const built = createRollerGateTrapModel(width);
+    const halfTravel = 2.35;
+    const startZ = THREE.MathUtils.clamp(z - halfTravel, this.levelBounds.minZ + 1.5, this.levelBounds.maxZ - 1.5);
+    const endZ = THREE.MathUtils.clamp(z + halfTravel, this.levelBounds.minZ + 1.5, this.levelBounds.maxZ - 1.5);
+    built.group.position.set(x, 0, startZ);
+    this.levelRoot.add(built.group);
+    this.hazards.push({ id, type: 'roller_gate', mesh: built.group, movingPart: built.rollers,
+      startX: x, startZ, endX: x, endZ, x, y: 0, z: startZ, speed, width, length: 1.25,
+      dir: 1, active: true, cooldown: 0 });
   }
 
   private addLaserCutterTrap(id: string, x: number, z: number, width = 3.8, speed = 2.6) {
@@ -6670,21 +6733,8 @@ export class MaxFlizGameEngine {
   }
 
   private updateSurvivalEnemyTactics(enemy: EnemyItem, dt: number, distanceToPlayer: number) {
-    if (enemy.surgeRunner) {
-      const dx = this.playerPos.x - enemy.x;
-      const dz = this.playerPos.z - enemy.z;
-      if (distanceToPlayer > 0.72) {
-        const inverseDistance = 1 / Math.max(0.1, distanceToPlayer);
-        enemy.x = THREE.MathUtils.clamp(enemy.x + dx * inverseDistance * enemy.speed * dt, this.levelBounds.minX + 1.0, this.levelBounds.maxX - 1.0);
-        enemy.z = THREE.MathUtils.clamp(enemy.z + dz * inverseDistance * enemy.speed * dt, this.levelBounds.minZ + 0.8, this.levelBounds.maxZ - 0.8);
-      }
-      enemy.mesh.rotation.y = Math.atan2(dx, dz);
-      enemy.mesh.position.set(enemy.x, enemy.y, enemy.z);
-      enemy.state = 'chase';
-      return;
-    }
     const role = this.getSurvivalEnemyRole(enemy);
-    const engaged = this.activeChaserIds.has(enemy.id) || enemy.type === 'pomazaniec';
+    const engaged = this.activeChaserIds.has(enemy.id) || enemy.type === 'pomazaniec' || !!enemy.surgeRunner;
     const slot = enemy.aiSlot || 0;
     const anchorAngle = enemy.aiFlankAngle ?? Math.atan2(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z);
     const drift = Math.sin(this.survivalElapsed * 0.62 + slot * 1.7) * (engaged ? 0.16 : 0.10);
@@ -6944,7 +6994,7 @@ export class MaxFlizGameEngine {
       }
 
       // Check whether this enemy is allowed to engage or must hold position in wave
-      const canActivelyChase = e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'pomazaniec' || e.type === 'sebix_m' || this.activeChaserIds.has(e.id);
+      const canActivelyChase = e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'pomazaniec' || e.type === 'sebix_m' || !!e.surgeRunner || this.activeChaserIds.has(e.id);
 
       // SIGHT & DETECTION LOGIC
       const threatAwareness = 1 + this.threatTier * 0.025;
