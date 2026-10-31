@@ -11,11 +11,13 @@ export class ParticleMeshPool {
   private readonly allocated = new Set<THREE.Mesh>();
   private readonly available: THREE.Mesh[] = [];
   private disposed = false;
+  private readonly maxMeshes: number;
 
-  constructor(private readonly maxMeshes = 75) {
+  constructor(maxMeshes = 75) {
     if (!Number.isInteger(maxMeshes) || maxMeshes < 1) {
       throw new RangeError('ParticleMeshPool maxMeshes must be a positive integer.');
     }
+    this.maxMeshes = maxMeshes;
 
     this.geometries = {
       tetrahedron: new THREE.TetrahedronGeometry(1, 0),
