@@ -10106,6 +10106,8 @@ export class MaxFlizGameEngine {
           steam_faucet: '#67e8f9',
           falling_lamp: '#fda4af',
           conveyor: '#94a3b8',
+          stretch_barrier: '#f59e0b',
+          roller_gate: '#94a3b8',
           cement_spill: '#cbd5e1',
           laser_cutter: '#fb7185',
           steam_geyser: '#67e8f9',
