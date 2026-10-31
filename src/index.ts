@@ -12,6 +12,7 @@ import { sound } from './sound.ts';
 import { PixelIntroManager } from './pixelIntro.ts';
 import { CharacterId, PerkType } from './types.ts';
 import { AssetItem, assetLoader } from './assets.ts';
+import { SelectiveBloomPipeline } from './selectiveBloom.ts';
 
 // warehouseAssets imports moved to assets.ts where they are preloaded
 
@@ -83,6 +84,8 @@ class MaxFlizScene extends xb.Script {
   private pausedForVisibility: boolean = false;
   private resizeObserver: ResizeObserver | null = null;
   private lastAdaptiveQualityAt: number = 0;
+  private selectiveBloom: SelectiveBloomPipeline | null = null;
+  private restoreSelectiveBloomOverride: (() => void) | null = null;
 
   // Duplicate init() and update() removed from here. Handled at the bottom of the class.
 
@@ -127,6 +130,7 @@ class MaxFlizScene extends xb.Script {
         const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.65 : 2.0);
         renderer.setPixelRatio(dpr);
         renderer.setSize(width, height, false);
+        this.selectiveBloom?.resize(width, height, renderer.getPixelRatio());
       }
 
       if (this.engine && typeof this.engine.applyAutoCameraScaleForViewport === 'function') {
@@ -1603,7 +1607,8 @@ class MaxFlizScene extends xb.Script {
     // 2. Initial resize now that xb.core is ready
     const width = Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth));
     const height = Math.max(1, Math.round(window.visualViewport?.height || window.innerHeight));
-    const renderer = (xb.core?.renderer as THREE.WebGLRenderer) || null;
+    const activeRenderer = xb.core?.renderer;
+    const renderer = activeRenderer instanceof THREE.WebGLRenderer ? activeRenderer : null;
     if (renderer) {
       const isMobile = width < 900 || ('ontouchstart' in window);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.65 : 2.0));
@@ -1629,6 +1634,34 @@ class MaxFlizScene extends xb.Script {
 
     this.camera = camera;
     this.engine.startTitle();
+
+    // The selective bloom hook uses XR Blocks' supported scene-render override.
+    // Non-WebGL backends retain their normal render path.
+    const core = xb.core;
+    if (renderer && core && scene) {
+      this.selectiveBloom?.dispose();
+      this.restoreSelectiveBloomOverride?.();
+      const isMobile = width < 900 || ('ontouchstart' in window);
+      const pipeline = new SelectiveBloomPipeline(
+        renderer, scene, camera, width, height, renderer.getPixelRatio(), isMobile
+      );
+      const previousOverride = core.renderSceneOverride;
+      const renderOverride: NonNullable<typeof core.renderSceneOverride> = (activeRenderer, activeScene, activeCamera) => {
+        if (this.selectiveBloom === pipeline && activeRenderer instanceof THREE.WebGLRenderer && activeScene === scene) {
+          pipeline.render(activeCamera, this.currentFps, performance.now());
+        } else if (previousOverride) {
+          previousOverride(activeRenderer, activeScene, activeCamera);
+        } else {
+          const fallbackRenderer = activeRenderer as unknown as { render?: (targetScene: THREE.Scene, targetCamera: THREE.Camera) => void };
+          fallbackRenderer.render?.(activeScene, activeCamera);
+        }
+      };
+      this.selectiveBloom = pipeline;
+      core.renderSceneOverride = renderOverride;
+      this.restoreSelectiveBloomOverride = () => {
+        if (core.renderSceneOverride === renderOverride) core.renderSceneOverride = previousOverride;
+      };
+    }
   }
 
 
@@ -1685,6 +1718,7 @@ class MaxFlizScene extends xb.Script {
     if (Math.abs(renderer.getPixelRatio() - targetDpr) < 0.12) return;
     renderer.setPixelRatio(targetDpr);
     renderer.setSize(width, height, false);
+    this.selectiveBloom?.resize(width, height, renderer.getPixelRatio());
   }
 
   private tick(dt: number) {
@@ -1731,6 +1765,14 @@ class MaxFlizScene extends xb.Script {
 
   onSelectEnd(event: xb.SelectEvent) {
     this.engine?.triggerAbility();
+  }
+
+  override dispose(): void {
+    this.restoreSelectiveBloomOverride?.();
+    this.restoreSelectiveBloomOverride = null;
+    this.selectiveBloom?.dispose();
+    this.selectiveBloom = null;
+    super.dispose();
   }
 }
 
