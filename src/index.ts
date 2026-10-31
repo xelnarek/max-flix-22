@@ -1176,6 +1176,7 @@ class MaxFlizScene extends xb.Script {
     });
 
     const launchPixelIntro = async (e?: Event) => {
+      if (this.pixelIntro?.isRunning()) return;
       if (e) {
         e.preventDefault();
         e.stopPropagation();
@@ -1211,7 +1212,6 @@ class MaxFlizScene extends xb.Script {
     };
 
     document.getElementById('btn-open-pixel-intro')?.addEventListener('click', launchPixelIntro);
-    document.getElementById('btn-open-pixel-intro')?.addEventListener('touchend', launchPixelIntro);
 
     document.getElementById('btn-attack')?.addEventListener('click', () => {
       this.engine.triggerAttack();
