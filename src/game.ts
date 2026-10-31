@@ -596,6 +596,7 @@ export class MaxFlizGameEngine {
     grow: number;
     spin: number;
     update?: (dt: number, progress: number) => void;
+    cleanup?: () => void;
   }[] = [];
   private bimberMolotovs: {
     mesh: THREE.Group;
@@ -4704,6 +4705,70 @@ export class MaxFlizGameEngine {
     this.emitFloatingToast('🧱 SEBIX M. RZUCA CEGŁĄ!', x, y+0.45, z, 'damage');
   }
 
+  private spawnSebixFireTrail(x: number, z: number, direction: number) {
+    // A short-lived ground scorch with three rising tongues of orange/red flame.
+    // Geometry and materials are unique to this patch and disposed at the end of its life.
+    const group = new THREE.Group();
+    group.position.set(x, 0.035, z);
+    group.rotation.y = direction;
+
+    const groundMaterial = new THREE.MeshBasicMaterial({
+      color: 0xf97316,
+      transparent: true,
+      opacity: 0.62,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 1.5), groundMaterial);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = 0.005;
+    group.add(ground);
+
+    const flameColors = [0xf97316, 0xef4444, 0xfacc15];
+    flameColors.forEach((color, index) => {
+      const flameMaterial = new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0.76 - index * 0.12,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+      const tongue = new THREE.Mesh(new THREE.ConeGeometry(0.12 + index * 0.025, 0.42 + index * 0.08, 6), flameMaterial);
+      tongue.position.set((index - 1) * 0.19, 0.19 + index * 0.025, (index - 1) * 0.27);
+      tongue.rotation.z = (index - 1) * 0.3;
+      tongue.rotation.x = (index - 1) * 0.12;
+      group.add(tongue);
+    });
+
+    this.levelRoot.add(group);
+    this.specialEffects.push({
+      mesh: group,
+      life: 0.58,
+      maxLife: 0.58,
+      grow: 0,
+      spin: 0,
+      update: (_dt, progress) => {
+        const fade = Math.max(0, 1 - progress);
+        group.scale.set(0.86 + progress * 0.24, 0.75 + progress * 0.2, 0.86 + progress * 0.24);
+        group.children.forEach((child) => {
+          const mesh = child as THREE.Mesh;
+          const material = mesh.material as THREE.MeshBasicMaterial;
+          material.opacity = fade * (mesh === ground ? 0.62 : 0.76);
+        });
+      },
+      cleanup: () => {
+        group.traverse((object) => {
+          const mesh = object as THREE.Mesh;
+          if (!mesh.isMesh) return;
+          mesh.geometry.dispose();
+          const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          materials.forEach((material) => material.dispose());
+        });
+      },
+    });
+  }
+
   private updateSebixBehaviour(enemy: EnemyItem, dt: number, distance: number, dx: number, dz: number) {
     enemy.rageTime = (enemy.rageTime || 0) + dt;
     if (enemy.rageTime >= 10 && (enemy.bossPhase || 1) < 2) {
@@ -4746,8 +4811,7 @@ export class MaxFlizGameEngine {
       enemy.trailTimer = (enemy.trailTimer || 0)-dt;
       if ((enemy.trailTimer || 0) <= 0) {
         enemy.trailTimer = 0.105;
-        this.spawnDust(enemy.x,0.025,enemy.z,0xff6a00);
-        this.spawnDust(enemy.x+(Math.random()-0.5)*0.5,0.045,enemy.z+(Math.random()-0.5)*0.5,0xef4444);
+        this.spawnSebixFireTrail(enemy.x, enemy.z, dir);
       }
       if (enemy.dashTimer <= 0) {
         enemy.state = 'chase';
@@ -4787,7 +4851,7 @@ export class MaxFlizGameEngine {
       enemy.trailTimer = (enemy.trailTimer || 0)-dt;
       if ((enemy.trailTimer || 0) <= 0) {
         enemy.trailTimer = 0.24;
-        this.spawnDust(enemy.x,0.025,enemy.z,0xff7a18);
+        this.spawnSebixFireTrail(enemy.x, enemy.z, enemy.mesh.rotation.y);
       }
     } else {
       enemy.specialActionTimer = (enemy.specialActionTimer ?? 0)-dt;
@@ -6898,6 +6962,7 @@ export class MaxFlizGameEngine {
 
       if (effect.life <= 0) {
         this.levelRoot.remove(effect.mesh);
+        effect.cleanup?.();
         this.specialEffects.splice(i, 1);
       }
     }
