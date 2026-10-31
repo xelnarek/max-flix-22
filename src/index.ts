@@ -549,18 +549,27 @@ class MaxFlizScene extends xb.Script {
           if (survivalEnemiesElem) survivalEnemiesElem.textContent = String(snapshot.aliveEnemies);
           const weaponRack = document.getElementById('survival-weapons-list');
           if (weaponRack) {
-            weaponRack.replaceChildren();
-            if (!snapshot.weapons.length) {
-              const starter = document.createElement('span');
-              starter.className = 'survival-weapon-chip starter';
-              starter.textContent = '🥊 Broń operatora • start';
-              weaponRack.appendChild(starter);
-            }
-            for (const weapon of snapshot.weapons) {
-              const chip = document.createElement('span');
-              chip.className = 'survival-weapon-chip' + (weapon.evolved ? ' evolved' : '');
-              chip.textContent = weapon.icon + ' ' + weapon.name + ' • ' + weapon.level + '/5' + (weapon.evolved ? ' ✦' : '');
-              weaponRack.appendChild(chip);
+            // The Survival snapshot refreshes four times per second; rebuild chips only when the arsenal changes.
+            const signature = snapshot.weapons.map((weapon) => weapon.id + ':' + weapon.level + ':' + Number(weapon.evolved)).join('|');
+            if (weaponRack.dataset.signature !== signature) {
+              weaponRack.dataset.signature = signature;
+              weaponRack.replaceChildren();
+              if (!snapshot.weapons.length) {
+                const starter = document.createElement('span');
+                starter.className = 'survival-weapon-chip starter';
+                starter.textContent = '🥊 Operator';
+                starter.title = 'Broń operatora • broń podstawowa';
+                weaponRack.appendChild(starter);
+              }
+              for (const weapon of snapshot.weapons) {
+                const chip = document.createElement('span');
+                chip.className = 'survival-weapon-chip' + (weapon.evolved ? ' evolved' : '');
+                const fullLabel = weapon.icon + ' ' + weapon.name + ' • poziom ' + weapon.level + '/5' + (weapon.evolved ? ' • ewolucja' : '');
+                chip.textContent = weapon.icon + ' ' + weapon.name + ' ' + weapon.level + '/5' + (weapon.evolved ? ' ✦' : '');
+                chip.title = fullLabel;
+                chip.setAttribute('aria-label', fullLabel);
+                weaponRack.appendChild(chip);
+              }
             }
           }
           if (survivalRerollBtn) {

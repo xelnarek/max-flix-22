@@ -208,13 +208,21 @@
       <div id="perk-drop-banner" class="perk-drop-banner hidden"></div>
 
       <div id="survival-hud" class="survival-hud hidden" aria-live="polite">
-        <div class="survival-chip"><span class="survival-chip-label">CZAS</span><strong id="survival-time">00:00</strong></div>
-        <div class="survival-chip"><span class="survival-chip-label">FALA</span><strong id="survival-wave">1</strong></div>
-        <div class="survival-chip"><span class="survival-chip-label">POZIOM</span><strong id="survival-level">1</strong></div>
-        <div class="survival-chip survival-xp-chip"><span class="survival-chip-label">DOŚWIADCZENIE</span><strong id="survival-xp">0 / 6 XP</strong><span class="survival-xp-track"><span id="survival-xp-fill"></span></span></div>
-        <div class="survival-chip"><span class="survival-chip-label">ELIMINACJE</span><strong id="survival-kills">0</strong></div>
-        <div class="survival-chip"><span class="survival-chip-label">WROGOWIE</span><strong id="survival-enemies">0</strong></div>
-        <div class="survival-weapon-rack"><span class="survival-weapon-rack-label">ARSENAŁ</span><div id="survival-weapons-list" class="survival-weapons-list"><span class="survival-weapon-chip starter">🥊 Broń operatora • start</span></div></div>
+        <div class="survival-hud-main">
+          <div class="survival-hud-kicker"><span class="survival-live-dot"></span> SURVIVAL SHIFT <span class="survival-hud-divider">/</span> STREFA OPERACYJNA</div>
+          <div class="survival-metrics">
+            <div class="survival-chip time-chip"><span class="survival-chip-label">CZAS</span><strong id="survival-time">00:00</strong></div>
+            <div class="survival-chip wave-chip"><span class="survival-chip-label">FALA</span><strong id="survival-wave">1</strong></div>
+            <div class="survival-chip level-chip"><span class="survival-chip-label">POZIOM</span><strong id="survival-level">1</strong></div>
+            <div class="survival-chip survival-xp-chip"><span class="survival-chip-label">DOŚWIADCZENIE</span><strong id="survival-xp">0 / 6 XP</strong><span class="survival-xp-track"><span id="survival-xp-fill"></span></span></div>
+            <div class="survival-chip kills-chip"><span class="survival-chip-label">ELIMINACJE</span><strong id="survival-kills">0</strong></div>
+            <div class="survival-chip enemies-chip"><span class="survival-chip-label">WROGOWIE</span><strong id="survival-enemies">0</strong></div>
+          </div>
+        </div>
+        <div class="survival-weapon-rack">
+          <span class="survival-weapon-rack-label">ARSENAŁ</span>
+          <div id="survival-weapons-list" class="survival-weapons-list"><span class="survival-weapon-chip starter">🥊 Broń operatora • start</span></div>
+        </div>
       </div>
 
       <div id="survival-levelup" class="game-modal hidden survival-levelup-modal">
@@ -716,7 +724,7 @@
                 <div class="field-guide-card-grid three-col">
                   <article class="field-guide-card"><span class="field-guide-icon">🗺️</span><h4>KAMPANIA • MEGA-MAPA</h4><p>Trzy połączone sektory bez ekranów ładowania: Magazyn B4, Showroom & SPA i Terminal VIP. Zbieraj zamówienia, zaliczaj checkpointy i pokonuj bossów, aby doprowadzić dostawę do końca.</p><small>CEL: DOSTAWA VIP • EKSPLORACJA • BOSSOWIE</small></article>
                   <article class="field-guide-card"><span class="field-guide-icon">⚔️</span><h4>SURVIVAL SHIFT • ROGUELITE</h4><p>Samodzielna arena, fale co 60 sekund i automatyczne namierzanie. Ataki mają niezależne, długie przeładowania. Co 5 fal pojawia się boss; co 10 fal jest nim Król-Leto. Boss zostawia skrzynię z łupem i dodatkowe XP.</p><small>CEL: PRZETRWAJ • ZBIERAJ XP • SKŁADAJ BUILD</small></article>
-                  <article class="field-guide-card"><span class="field-guide-icon">🔫</span><h4>ARSENAŁ • 5 BRONI AUTONOMICZNYCH</h4><p>Działo paletowe (wybuch), Tarcza diamentowa (przebicie), Mina Mapei (spowolnienie), Kubełek bombowy (ogień) i Dron Piorun (naprowadzanie). Każda broń ma własny, długi cooldown. Poziomy 1–5 poprawiają rytm stopniowo; ewolucja pojawia się dopiero po 5 minutach i maksymalnym poziomie broni.</p><small>TAKTYKA: DOBIERAJ WZORY ATAKU, NIE TYLKO SUROWE OBRAŻENIA</small></article>
+                  <article class="field-guide-card"><span class="field-guide-icon">🔫</span><h4>ARSENAŁ • 8 BRONI AUTONOMICZNYCH</h4><p>Działo paletowe (mały wybuch), Tarcza diamentowa (przebicie), Mina Mapei (spowolnienie), Kubełek bombowy (ogień), Dron Piorun (naprowadzanie), Nitownica UDT (szybkie pociski), Impuls skanera B4 (precyzyjne namierzanie) i Wirujące tarcze (obrona orbitalna). Każda broń działa niezależnie, ma własny rytm przeładowania i rozwija się do poziomu 5; rzadka ewolucja wymaga 5 minut i maksymalnego poziomu.</p><small>TAKTYKA: DOBIERAJ WZORY ATAKU, NIE TYLKO SUROWE OBRAŻENIA</small></article>
                 </div>
                 <div class="field-guide-callout"><strong>Tempo i czytelność:</strong> fale przychodzą co 60 sekund, liczebność grup i limit przeciwników są ograniczone. Maksymalnie 14 aktywnych przeciwników na urządzeniach mobilnych i 22 na desktopie. Im dalej w zmianę, tym bardziej wytrzymali są wrogowie.</div>
               </section>
@@ -954,7 +962,7 @@
               <div class="story-slide-icon retro-3d-icon">🧟⚡📦</div>
               <div class="story-slide-title">Hala Żyje. Zmiana Nie Ma Końca.</div>
               <div class="story-slide-text">
-                Survival Shift jest osobnym trybem roguelite. Co 60 sekund nadchodzi kolejna fala, co piątą falę wchodzi boss, a co dziesiątą Król-Leto. Na arenie pojawiają się cztery rodzaje pułapek i pięć wydarzeń: alarm KFC, kontrola BHP, Black Friday, awaria AGV oraz zaginiona paleta Pana Romana. Zbieraj kryształy XP, wybieraj moduły rozwoju i odblokowuj pięć broni: Działo paletowe, Tarczę diamentową, Minę Mapei, Kubełek bombowy i Drona Piorun. Każda strzela niezależnie, ale początkowo bardzo rzadko. Broń rozwijasz do poziomu 5; po 5 minutach zmiany może pojawić się jej rzadka ewolucja. Łącz też cztery ewolucje buildów i wypatruj sekretów. Pamiętaj: dron po Twojej stronie to asysta, a dron z czerwonym znacznikiem to problem. I nie ufaj paleciakowi — on też nie ufa Tobie.
+                Survival Shift jest osobnym trybem roguelite rozgrywanym na powiększonej hali z dodatkowymi alejami, osłonami ładunkowymi i regałami. Co 60 sekund nadchodzi kolejna fala, co piątą falę wchodzi boss, a co dziesiątą Król-Leto. Przeciwnicy pełnią różne role: napierają frontem, próbują obejść operatora, utrzymują dystans i atakują z boku. Na arenie pojawiają się cztery rodzaje pułapek i pięć wydarzeń: alarm KFC, kontrola BHP, Black Friday, awaria AGV oraz zaginiona paleta Pana Romana. Zbieraj kryształy XP, wybieraj moduły rozwoju i odblokowuj osiem broni: Działo paletowe, Tarczę diamentową, Minę Mapei, Kubełek bombowy, Drona Piorun, Nitownicę UDT, Impuls skanera B4 i Wirujące tarcze. Pociski i trafienia mają mniejszą skalę, aby nie zasłaniać pola walki. Broń rozwijasz do poziomu 5; po 5 minutach zmiany może pojawić się jej rzadka ewolucja. Łącz też cztery ewolucje buildów i wypatruj sekretów. Pamiętaj: dron po Twojej stronie to asysta, a dron z czerwonym znacznikiem to problem. I nie ufaj paleciakowi — on też nie ufa Tobie.
               </div>
             </div>
             </div>
