@@ -165,3 +165,102 @@
     padding-left: max(3px, env(safe-area-inset-left));
   }
 }
+
+
+/*
+ * Final Survival mobile HUD owner.
+ * Earlier index.css and visual-polish.css both contain legacy Survival layouts;
+ * this stylesheet loads last, so the compact touch layout must be finalized here.
+ */
+@media (max-width: 900px), (pointer: coarse) {
+  #game-shell.survival-mode .survival-hud {
+    top: calc(42px + env(safe-area-inset-top)) !important;
+    left: auto !important;
+    right: max(8px, env(safe-area-inset-right)) !important;
+    width: min(248px, calc(100vw - 138px)) !important;
+    min-width: 0 !important;
+    max-width: calc(100vw - 138px) !important;
+    transform: none !important;
+    gap: 0 !important;
+  }
+
+  #game-shell.survival-mode .survival-hud-main {
+    min-width: 0 !important;
+    padding: 5px 6px !important;
+  }
+
+  #game-shell.survival-mode .survival-hud-kicker,
+  #game-shell.survival-mode .survival-weapon-rack,
+  #game-shell.survival-mode .level-chip,
+  #game-shell.survival-mode .kills-chip,
+  #game-shell.survival-mode .enemies-chip {
+    display: none !important;
+  }
+
+  #game-shell.survival-mode .survival-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 4px !important;
+  }
+
+  #game-shell.survival-mode .survival-chip {
+    min-width: 0 !important;
+    min-height: 34px !important;
+    padding: 4px 6px !important;
+  }
+
+  /* The old touch toolbar re-enabled this rail with a more specific selector. */
+  #game-shell.survival-mode #hud-top .cam-zoom-slider-container {
+    display: none !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+  }
+
+  #game-shell.survival-mode #minimap-container {
+    top: calc(98px + env(safe-area-inset-top)) !important;
+    left: max(6px, env(safe-area-inset-left)) !important;
+    transform: scale(.78) !important;
+    transform-origin: top left !important;
+  }
+
+  #game-shell.survival-mode #hud-top .boss-hud-bar {
+    top: calc(100px + env(safe-area-inset-top)) !important;
+    left: auto !important;
+    right: max(6px, env(safe-area-inset-right)) !important;
+    width: min(168px, 44vw) !important;
+    max-width: min(168px, 44vw) !important;
+    transform: none !important;
+    margin: 0 !important;
+  }
+}
+
+@media (max-width: 420px), (pointer: coarse) and (max-width: 900px) {
+  #game-shell.survival-mode .survival-hud {
+    width: min(214px, calc(100vw - 126px)) !important;
+    max-width: calc(100vw - 126px) !important;
+  }
+
+  #game-shell.survival-mode #minimap-container {
+    transform: scale(.70) !important;
+  }
+
+  #game-shell.survival-mode #hud-top .boss-hud-bar {
+    top: calc(94px + env(safe-area-inset-top)) !important;
+  }
+}
+
+@media (max-height: 560px) and (pointer: coarse) {
+  #game-shell.survival-mode .survival-hud {
+    top: calc(42px + env(safe-area-inset-top)) !important;
+  }
+
+  #game-shell.survival-mode .survival-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  #game-shell.survival-mode .survival-weapon-rack {
+    display: none !important;
+  }
+}
