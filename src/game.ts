@@ -3840,8 +3840,9 @@ export class MaxFlizGameEngine {
     // Forklift Hazards & New Interactive Warehouse Traps in Sector A
     this.addForkliftHazard('forklift_1', -24, 20, 0, 4.4, 0xf59e0b);
     this.addForkliftHazard('forklift_1_south', -20, 18, 11.5, 3.8, 0x0284c7);
-    this.addGlueSpillTrap('glue_l1_1', -16, -1.2, 1.8);
-    this.addGlueSpillTrap('glue_l1_2', 6, 4.5, 2.0);
+    this.addStretchFilmBarrierTrap('stretch_l1_1', -16, -1.2, 5.0);
+    this.addStretchFilmBarrierTrap('stretch_l1_2', 6, 4.5, 4.6);
+    this.addRollerGateTrap('roller_l1_1', 18, -5.5, 2.0, 4.6);
     this.addLaserCutterTrap('laser_l1_1', -3, 0, 4.0, 2.6);
     this.addSteamGeyserTrap('steam_l1_1', 11, -1.5, 4.0);
     this.addHydraulicPressTrap('press_l1_1', 24, 0, 3.0);
@@ -4124,7 +4125,8 @@ export class MaxFlizGameEngine {
     this.addSteamGeyserTrap('steam_l2_2', offsetX + 2, -1.5, 3.8);
     this.addSteamGeyserTrap('steam_l2_3', offsetX + 14, 9.0, 4.2);
     this.addLaserCutterTrap('laser_l2_1', offsetX - 8, 0, 4.2, 2.8);
-    this.addGlueSpillTrap('glue_l2_1', offsetX + 10, 1.5, 2.1);
+    this.addStretchFilmBarrierTrap('stretch_l2_1', offsetX + 10, 1.5, 5.0);
+    this.addRollerGateTrap('roller_l2_1', offsetX - 24, 5.5, 2.3, 5.0);
     this.addHydraulicPressTrap('press_l2_1', offsetX + 20, -2.0, 3.2);
     this.addZombieWorkerEnemy('zombie_l2_1', offsetX - 6, -5, 5);
     this.addZombieWorkerEnemy('zombie_l2_2', offsetX + 16, -5, 5);
@@ -4340,7 +4342,8 @@ export class MaxFlizGameEngine {
     this.addHydraulicPressTrap('press_l3_2', offsetX + 12, 0, 3.6);
     this.addLaserCutterTrap('laser_l3_1', offsetX - 8, 0, 4.4, 3.2);
     this.addSteamGeyserTrap('steam_l3_1', offsetX + 2, 2.5, 3.6);
-    this.addGlueSpillTrap('glue_l3_1', offsetX + 20, -2.0, 2.2);
+    this.addStretchFilmBarrierTrap('stretch_l3_1', offsetX + 20, -2.0, 5.2);
+    this.addRollerGateTrap('roller_l3_1', offsetX - 34, 4.5, 2.5, 5.2);
     this.addZombieWorkerEnemy('zombie_l3_1', offsetX - 16, -6, 6);
     this.addZombieWorkerEnemy('zombie_l3_2', offsetX + 6, -6, 6);
 
@@ -5149,14 +5152,14 @@ export class MaxFlizGameEngine {
     const x = THREE.MathUtils.clamp(point.x, this.levelBounds.minX + 3, this.levelBounds.maxX - 3);
     const z = THREE.MathUtils.clamp(point.z, this.levelBounds.minZ + 3, this.levelBounds.maxZ - 3);
     const id = 'survival_trap_' + (++this.survivalHazardSequence) + '_' + Math.floor(performance.now());
-    switch (this.survivalHazardSequence % 5) {
+    switch (this.survivalHazardSequence % 6) {
       case 1:
         this.addCementSpillTrap(id, x, z, 2.35);
-        this.emitFloatingToast('🧱 ROZLANY CEMENT NA ALEI! OBJAZD ALBO CIĘŻKIE BUTY!', x, 1.4, z, 'damage');
+        this.emitFloatingToast('🧱 ŚWIEŻY BETON! ZMIEŃ ALEJKĘ!', x, 1.4, z, 'damage');
         break;
       case 2:
-        this.addGlueSpillTrap(id, x, z, 2.5);
-        this.emitFloatingToast('🍯 ROZLANE MAPEI! UWAŻAJ NA BUTY!', x, 1.4, z, 'damage');
+        this.addStretchFilmBarrierTrap(id, x, z, 5.0);
+        this.emitFloatingToast('🧻 ROZPIĘTA FOLIA STRETCH! PRZESKOCZ LUB PRZEBIJ SIĘ!', x, 1.4, z, 'damage');
         break;
       case 3:
         this.addLaserCutterTrap(id, x, z, 5.2, 1.8);
@@ -5166,9 +5169,13 @@ export class MaxFlizGameEngine {
         this.addSteamGeyserTrap(id, x, z, 5.5);
         this.emitFloatingToast('💨 GEJZER PARY: STREFA POD CIŚNIENIEM!', x, 1.5, z, 'damage');
         break;
-      default:
+      case 5:
         this.addHydraulicPressTrap(id, x, z, 4.4);
         this.emitFloatingToast('🔨 PRASA HYDRAULICZNA — NIE PODKŁADAJ RĘKI!', x, 1.6, z, 'damage');
+        break;
+      default:
+        this.addRollerGateTrap(id, x, z, 2.5, 5.0);
+        this.emitFloatingToast('⚙️ RUCHOMA BRAMA ROLEK! NIE DAJ SIĘ PRZYGNIEŚĆ!', x, 1.6, z, 'damage');
         break;
     }
     const spawnedTrap = this.hazards[this.hazards.length - 1];
@@ -6613,6 +6620,7 @@ export class MaxFlizGameEngine {
     const now = performance.now() * 0.001;
     this.hazards.forEach((h) => {
       if (!h.active || !h.mesh) return;
+      h.cooldown = Math.max(0, (h.cooldown || 0) - dt);
 
       if (h.type === 'forklift') {
         h.x += h.speed * h.dir * dt;
@@ -6650,24 +6658,58 @@ export class MaxFlizGameEngine {
             e.z -= (e.z - h.z) * 0.18 * dt;
           }
         }
-      } else if (h.type === 'glue_spill') {
-        const radius = h.width * 0.5;
-        const dist = Math.hypot(h.x - this.playerPos.x, h.z - this.playerPos.z);
-        if (dist < radius && this.playerPos.y < 0.35) {
-          if (this.glueSlowTimer <= 0.1 && (this.activePerks.kfcBerserk || 0) <= 0 && this.activePerks.speedBoost <= 0) {
-            this.emitFloatingToast('🍯 KLEJ MAPEI! SPOWOLNIENIE -50%!', this.playerPos.x, this.playerPos.y + 1.0, this.playerPos.z, 'damage');
-          }
-          this.glueSlowTimer = 0.35;
+      } else if (h.type === 'stretch_barrier') {
+        const playerCrossesBarrier =
+          Math.abs(this.playerPos.x - h.x) < h.width * 0.5 &&
+          Math.abs(this.playerPos.z - h.z) < 0.72 &&
+          this.playerPos.y < 0.78;
+        if (playerCrossesBarrier && (h.cooldown || 0) <= 0) {
+          h.cooldown = 1.45;
+          this.glueSlowTimer = Math.max(this.glueSlowTimer, 0.72);
+          const pushX = this.playerPos.x - h.x;
+          const pushZ = this.playerPos.z - h.z;
+          const distance = Math.hypot(pushX, pushZ) || 1;
+          this.playerVel.x += (pushX / distance) * 1.8;
+          this.playerVel.z += (pushZ / distance || 1) * 1.8;
+          this.emitFloatingToast('🧻 FOLIA STRETCH! PRZEBIJ SIĘ ALBO PRZESKOCZ!', this.playerPos.x, this.playerPos.y + 1.0, this.playerPos.z, 'damage');
         }
-        // Glue also slows down enemies walking through it
-        for (const e of this.enemies) {
-          if (e.state === 'defeated') continue;
-          if (Math.hypot(e.x - h.x, e.z - h.z) < radius) {
-            e.x -= (e.x - h.x) * 0.4 * dt;
-            e.z -= (e.z - h.z) * 0.4 * dt;
+        for (const enemy of this.enemies) {
+          if (enemy.state === 'defeated' || enemy.stunTimer > 0) continue;
+          if (Math.abs(enemy.x - h.x) < h.width * 0.5 && Math.abs(enemy.z - h.z) < 0.72) {
+            enemy.stunTimer = 0.72;
+            enemy.state = 'stunned';
+            this.emitFloatingToast('🧻 ZAWINIĘTY W STRETCH!', enemy.x, enemy.y + 1.0, enemy.z, 'damage');
           }
         }
-      } else if (h.type === 'laser_cutter') {
+      } else if (h.type === 'roller_gate') {
+        h.z += h.speed * h.dir * dt;
+        if (h.dir > 0 && h.z >= (h.endZ ?? h.startZ + 2.35)) h.dir = -1;
+        else if (h.dir < 0 && h.z <= h.startZ) h.dir = 1;
+        h.mesh.position.set(h.x, h.y, h.z);
+        if (h.movingPart) h.movingPart.rotation.x += dt * 9.0;
+
+        const playerInsideGate =
+          Math.abs(this.playerPos.x - h.x) < h.width * 0.5 - 0.18 &&
+          Math.abs(this.playerPos.z - h.z) < 0.96 &&
+          this.playerPos.y < 1.05;
+        if (playerInsideGate && (h.cooldown || 0) <= 0) {
+          h.cooldown = 1.35;
+          this.takeDamage('Przygnieciony przez ruchomą bramę rolek transportowych!');
+          this.playerVel.z += (this.playerPos.z >= h.z ? 1 : -1) * 3.8;
+          this.playerVel.x += (this.playerPos.x >= h.x ? 1 : -1) * 1.2;
+          this.triggerScreenShake(0.18, 0.12);
+        }
+        for (const enemy of this.enemies) {
+          if (enemy.state === 'defeated' || enemy.stunTimer > 0) continue;
+          if (Math.abs(enemy.x - h.x) < h.width * 0.5 - 0.15 && Math.abs(enemy.z - h.z) < 0.9) {
+            enemy.hp -= 1;
+            enemy.stunTimer = 0.95;
+            enemy.state = 'stunned';
+            this.emitFloatingToast('⚙️ PRASA ROLEK -1 HP!', enemy.x, enemy.y + 1.0, enemy.z, 'damage');
+            if (enemy.hp <= 0 && enemy.type !== 'walczak' && enemy.type !== 'krol_leto') this.defeatEnemy(enemy, 180, true);
+          }
+        }
+      } else if (h.type === 'laser_cutter') {      } else if (h.type === 'laser_cutter') {
         h.phase = (h.phase || 0) + dt * h.speed;
         const halfSpan = h.length * 0.5 - 0.35;
         const bladeZ = Math.sin(h.phase) * halfSpan;
@@ -6722,12 +6764,23 @@ export class MaxFlizGameEngine {
         }
 
         if (isErupting) {
-          const dist = Math.hypot(this.playerPos.x - h.x, this.playerPos.z - h.z);
-          if (dist < 1.15 && this.playerPos.y < 2.8) {
-            this.playerVel.y = 16.5;
-            this.isGrounded = false;
-            sound.playBounce();
-            this.emitFloatingToast('💨 GEJZER PARY! WYRZUT W GÓRĘ!', h.x, 1.8, h.z, 'perk');
+          const dx = this.playerPos.x - h.x;
+          const dz = this.playerPos.z - h.z;
+          const dist = Math.hypot(dx, dz);
+          if (dist < 1.45 && this.playerPos.y < 1.0 && (h.cooldown || 0) <= 0) {
+            h.cooldown = 2.0;
+            const directionX = dist > 0.05 ? dx / dist : Math.sin(this.playerRot);
+            const directionZ = dist > 0.05 ? dz / dist : Math.cos(this.playerRot);
+            this.playerVel.x += directionX * 3.2;
+            this.playerVel.z += directionZ * 3.2;
+            const horizontalSpeed = Math.hypot(this.playerVel.x, this.playerVel.z);
+            if (horizontalSpeed > 7.0) {
+              this.playerVel.x *= 7.0 / horizontalSpeed;
+              this.playerVel.z *= 7.0 / horizontalSpeed;
+            }
+            // The geyser is a side blast. It never overwrites jump velocity or launches the player into the roof.
+            this.takeDamage('Uderzenie bocznym podmuchem gejzera parowego!');
+            this.emitFloatingToast('💨 PODMUCH PARY — ODSKOCZ W BOK!', h.x, 1.4, h.z, 'damage');
           }
           for (const e of this.enemies) {
             if (e.state === 'defeated') continue;
