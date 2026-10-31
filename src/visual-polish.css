@@ -1282,114 +1282,6 @@ button:disabled { cursor: not-allowed !important; filter: grayscale(.35); opacit
 }
 
 
-/* World-anchored comic dialogue: the bubble follows the speaker through camera motion. */
-.enemy-world-bubble {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: max-content;
-  max-width: min(220px, 29vw);
-  padding: 7px 10px 8px;
-  border: 1px solid rgba(245, 158, 11, .48);
-  border-left: 3px solid #f59e0b;
-  border-radius: 11px 11px 11px 3px;
-  background: linear-gradient(145deg, rgba(24, 20, 15, .97), rgba(8, 15, 23, .96));
-  box-shadow: 0 8px 22px rgba(0,0,0,.46), 0 0 16px rgba(245,158,11,.12);
-  color: #f8fafc;
-  pointer-events: none;
-  user-select: none;
-  z-index: 30;
-  contain: layout paint;
-  backdrop-filter: blur(8px) saturate(125%);
-  -webkit-backdrop-filter: blur(8px) saturate(125%);
-}
-.enemy-world-bubble::after {
-  content: "";
-  position: absolute;
-  left: 17px;
-  bottom: -6px;
-  width: 10px;
-  height: 10px;
-  background: #111714;
-  border-right: 1px solid rgba(245,158,11,.48);
-  border-bottom: 1px solid rgba(245,158,11,.48);
-  transform: rotate(45deg);
-}
-.enemy-world-bubble.boss-style {
-  max-width: min(270px, 36vw);
-  border-color: rgba(248, 113, 113, .62);
-  border-left-color: #ef4444;
-  background: linear-gradient(145deg, rgba(45, 15, 20, .98), rgba(13, 14, 24, .97));
-  box-shadow: 0 9px 26px rgba(0,0,0,.52), 0 0 20px rgba(239,68,68,.18);
-}
-.enemy-world-bubble.boss-style::after {
-  background: #251117;
-  border-color: rgba(248,113,113,.62);
-}
-.enemy-world-bubble-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-.enemy-world-bubble-avatar {
-  display: grid;
-  place-items: center;
-  flex: 0 0 25px;
-  width: 25px;
-  height: 25px;
-  border: 1px solid rgba(255,255,255,.13);
-  border-radius: 7px;
-  background: rgba(255,255,255,.07);
-  font-size: 15px;
-}
-.enemy-world-bubble-identity {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  gap: 1px;
-}
-.enemy-world-bubble-name {
-  overflow: hidden;
-  color: #fff7ed;
-  font: 900 9px/1.15 "Space Grotesk", sans-serif;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.enemy-world-bubble-role {
-  overflow: hidden;
-  color: #c2a77f;
-  font: 700 7px/1.15 "JetBrains Mono", monospace;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.enemy-world-bubble.boss-style .enemy-world-bubble-name { color: #fee2e2; }
-.enemy-world-bubble.boss-style .enemy-world-bubble-role { color: #fca5a5; }
-.enemy-world-bubble-quote {
-  margin: 0;
-  color: #f8fafc;
-  font: 800 10px/1.35 "Plus Jakarta Sans", sans-serif;
-  overflow-wrap: anywhere;
-  text-shadow: 0 1px 4px rgba(0,0,0,.8);
-}
-@media (max-width: 900px), (pointer: coarse) {
-  .enemy-world-bubble {
-    max-width: min(170px, 43vw);
-    padding: 6px 8px 7px;
-    gap: 3px;
-    border-radius: 9px 9px 9px 3px;
-  }
-  .enemy-world-bubble-avatar { width: 21px; height: 21px; flex-basis: 21px; font-size: 13px; }
-  .enemy-world-bubble-name { font-size: 8px; }
-  .enemy-world-bubble-role { font-size: 6px; }
-  .enemy-world-bubble-quote { font-size: 9px; line-height: 1.3; }
-}
-@media (max-width: 390px) {
-  .enemy-world-bubble { max-width: min(148px, 40vw); padding: 5px 7px 6px; }
-  .enemy-world-bubble-quote { font-size: 8px; }
-}
-
-
 /* ==========================================================================
    SURVIVAL HUD 2.1 — separate the top information hierarchy.
    Keep the existing controls and handlers; only change layout and legibility.
@@ -2059,4 +1951,60 @@ button:disabled { cursor: not-allowed !important; filter: grayscale(.35); opacit
   0% { opacity: 0; transform: scale(1.025); }
   18% { opacity: 1; transform: scale(1); }
   100% { opacity: 0; }
+}
+
+
+/* One restrained dialogue panel. Character quotes stay on screen space, never on world coordinates. */
+#game-shell .dialogue-side-container {
+  position: fixed !important;
+  left: 50% !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: max(104px, calc(env(safe-area-inset-bottom) + 88px)) !important;
+  transform: translateX(-50%) !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: stretch !important;
+  width: min(360px, calc(100vw - 28px)) !important;
+  max-width: min(360px, calc(100vw - 28px)) !important;
+  z-index: 95 !important;
+  pointer-events: none !important;
+}
+#game-shell .dialogue-side-container:empty { display: none !important; }
+#game-shell .dialogue-box-card {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 8px 10px !important;
+  gap: 8px !important;
+  border: 1px solid rgba(148, 190, 214, .3) !important;
+  border-left: 3px solid #f59e0b !important;
+  border-radius: 11px !important;
+  background: rgba(5, 14, 23, .93) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .34) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  backdrop-filter: blur(8px) saturate(120%);
+  pointer-events: none !important;
+}
+#game-shell .dialogue-box-card.hero-style { border-left-color: #38bdf8 !important; }
+#game-shell .dialogue-box-text {
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 11px !important;
+  line-height: 1.34 !important;
+}
+#game-shell .dialogue-box-avatar { flex: 0 0 30px !important; width: 30px !important; height: 30px !important; }
+@media (max-width: 600px), (pointer: coarse) {
+  #game-shell .dialogue-side-container {
+    bottom: max(98px, calc(env(safe-area-inset-bottom) + 82px)) !important;
+    width: min(316px, calc(100vw - 24px)) !important;
+    max-width: min(316px, calc(100vw - 24px)) !important;
+  }
+  #game-shell .dialogue-box-card { padding: 7px 9px !important; gap: 7px !important; }
+  #game-shell .dialogue-box-avatar { flex-basis: 27px !important; width: 27px !important; height: 27px !important; }
+  #game-shell .dialogue-box-text { font-size: 10px !important; line-height: 1.3 !important; }
+}
+@media (max-height: 560px) and (pointer: coarse) {
+  #game-shell .dialogue-side-container { bottom: max(78px, calc(env(safe-area-inset-bottom) + 64px)) !important; }
 }
