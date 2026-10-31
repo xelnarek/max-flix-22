@@ -86,6 +86,7 @@ class MaxFlizScene extends xb.Script {
   private pausedForVisibility: boolean = false;
   private resizeObserver: ResizeObserver | null = null;
   private lastAdaptiveQualityAt: number = 0;
+  private hasAppliedInitialViewport = false;
   private selectiveBloom: SelectiveBloomPipeline | null = null;
   private restoreSelectiveBloomOverride: (() => void) | null = null;
 
@@ -1747,7 +1748,38 @@ class MaxFlizScene extends xb.Script {
   }
 
 
+  private applyInitialViewportProfile() {
+    const width = Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth));
+    const height = Math.max(1, Math.round(window.visualViewport?.height || window.innerHeight));
+    const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    const profile = calculateUiViewport(width, height, isTouch);
+    const root = document.documentElement;
+    root.style.setProperty('--ui-scale', profile.scale.toFixed(3));
+    root.style.setProperty('--ui-font-scale', profile.fontScale.toFixed(3));
+    root.style.setProperty('--ui-panel-max', profile.panelMaxWidth + 'px');
+    root.dataset.uiDensity = profile.density;
+    root.dataset.uiLandscapeTouch = String(profile.landscapeTouch);
+
+    const aspect = width / height;
+    this.camera.aspect = aspect;
+    this.camera.fov = aspect < 0.65 ? 60 : aspect < 1 ? 54 : aspect < 1.35 ? 48 : 45;
+    this.camera.updateProjectionMatrix();
+
+    const renderer = (xb.core?.renderer as THREE.WebGLRenderer) || null;
+    if (renderer) {
+      const isMobile = width < 900 || isTouch;
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.75 : 2.0));
+      renderer.setSize(width, height, false);
+      this.selectiveBloom?.resize(width, height, renderer.getPixelRatio());
+    }
+    this.engine?.applyAutoCameraScaleForViewport();
+  }
+
   update() {
+    if (!this.hasAppliedInitialViewport && xb.core?.renderer) {
+      this.hasAppliedInitialViewport = true;
+      this.applyInitialViewportProfile();
+    }
     this.lastLoopTick = performance.now();
     const rawDt = xb.getDeltaTime();
     const dt = Math.min(Math.max(rawDt || 0.016, 0.001), 0.08);
