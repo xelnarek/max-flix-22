@@ -363,6 +363,10 @@ export class MaxFlizGameEngine {
   // Reused camera scratch vectors: avoid two Vector3 allocations on every frame.
   private readonly cameraTargetPosition = new THREE.Vector3();
   private readonly desiredLookAtPosition = new THREE.Vector3();
+  private readonly cameraOcclusionRaycaster = new THREE.Raycaster();
+  private cameraOcclusionCooldown = 0;
+  private readonly cameraOccluders: THREE.Mesh[] = [];
+  private readonly cameraOccluderMaterials = new Map<THREE.Mesh, { original: THREE.Material | THREE.Material[]; faded: THREE.Material | THREE.Material[]; originals: THREE.Material[]; fades: THREE.Material[] }>();
   private cameraBossCheckCooldown = 0;
   private cameraBossTargetZoom = 1.0;
   private viewportAspect =
@@ -1394,6 +1398,7 @@ export class MaxFlizGameEngine {
     for (const zSide of [-1, 1]) {
       const sideWall = new THREE.Mesh(new THREE.BoxGeometry(119, 9.5, 0.48), wallMaterial);
       sideWall.position.set(0, 4.75, zSide * 19.65);
+      this.registerCameraOccluder(sideWall);
       this.levelRoot.add(sideWall);
       const warningStripe = new THREE.Mesh(new THREE.BoxGeometry(119, 0.12, 0.52), trimMaterial);
       warningStripe.position.set(0, 0.09, zSide * 19.25);
@@ -1410,6 +1415,7 @@ export class MaxFlizGameEngine {
 
       const endWall = new THREE.Mesh(new THREE.BoxGeometry(0.65, 9.5, 40), wallMaterial);
       endWall.position.set(side * 59.35, 4.75, 0);
+      this.registerCameraOccluder(endWall);
       this.levelRoot.add(endWall);
 
       // Structural columns and compact high-bay lighting make the new wings read as real warehouse space.
@@ -2084,7 +2090,66 @@ export class MaxFlizGameEngine {
     this.mateuszCats = [];
   }
 
+  private registerCameraOccluder(mesh: THREE.Mesh) {
+    if (this.cameraOccluderMaterials.has(mesh)) return;
+    const original = mesh.material;
+    const originals = Array.isArray(original) ? original : [original];
+    const fades = originals.map((material) => material.clone());
+    const faded = Array.isArray(original) ? fades : fades[0];
+    mesh.material = faded;
+    mesh.userData.cameraOccluder = true;
+    this.cameraOccluders.push(mesh);
+    this.cameraOccluderMaterials.set(mesh, { original, faded, originals, fades });
+  }
+
+  private updateCameraOcclusion(dt: number) {
+    this.cameraOcclusionCooldown -= dt;
+    if (this.cameraOcclusionCooldown > 0) return;
+    this.cameraOcclusionCooldown = 0.075;
+    if (this.cameraOccluders.length === 0) return;
+
+    const target = this.desiredLookAtPosition.set(
+      this.playerPos.x,
+      this.playerPos.y + 0.92,
+      this.playerPos.z
+    );
+    const direction = target.sub(this.camera.position);
+    const distance = direction.length();
+    if (distance <= 0.5) return;
+    direction.multiplyScalar(1 / distance);
+    this.cameraOcclusionRaycaster.set(this.camera.position, direction);
+    this.cameraOcclusionRaycaster.near = 0.05;
+    this.cameraOcclusionRaycaster.far = Math.max(0.05, distance - 0.42);
+    const hitMeshes = new Set(
+      this.cameraOcclusionRaycaster.intersectObjects(this.cameraOccluders, false)
+        .map((hit) => hit.object as THREE.Mesh)
+    );
+
+    for (const [mesh, state] of this.cameraOccluderMaterials) {
+      const shouldFade = hitMeshes.has(mesh);
+      state.fades.forEach((material, index) => {
+        const original = state.originals[index];
+        material.transparent = shouldFade ? true : original.transparent;
+        material.opacity = shouldFade ? Math.min(original.opacity, 0.18) : original.opacity;
+        material.depthWrite = shouldFade ? false : original.depthWrite;
+        material.needsUpdate = true;
+      });
+    }
+  }
+
+  private restoreCameraOccluders() {
+    for (const [mesh, state] of this.cameraOccluderMaterials) {
+      mesh.material = state.original;
+      state.fades.forEach((material) => material.dispose());
+      delete mesh.userData.cameraOccluder;
+    }
+    this.cameraOccluderMaterials.clear();
+    this.cameraOccluders.length = 0;
+    this.cameraOcclusionCooldown = 0;
+  }
+
   private clearLevel() {
+    this.restoreCameraOccluders();
     for (const enemy of this.enemies) this.disposeEnemyModel(enemy);
     this.clearOperatorCompanions();
     // Lollipop meshes own their geometry/materials; release them before the scene is reset.
@@ -3682,6 +3747,7 @@ export class MaxFlizGameEngine {
     const wallMat = new THREE.MeshStandardMaterial({ map: wallTex1, roughness: 0.62, metalness: 0.18 });
     const backWall = new THREE.Mesh(wallGeo, wallMat);
     backWall.position.set(0, 4.75, -19.5);
+    this.registerCameraOccluder(backWall);
     this.levelRoot.add(backWall);
 
     // Glowing Neon Showroom & Logistics Overhead Banner
@@ -3991,6 +4057,7 @@ export class MaxFlizGameEngine {
     applyIndustrialPbr(wallMat, 0.022);
     const backWall = new THREE.Mesh(wallGeo, wallMat);
     backWall.position.set(offsetX, 4.75, -20.5);
+    this.registerCameraOccluder(backWall);
     this.levelRoot.add(backWall);
 
     // Showroom Neon Sign
@@ -4227,6 +4294,7 @@ export class MaxFlizGameEngine {
     const wallMat = new THREE.MeshStandardMaterial({ map: wallTex3, roughness: 0.58, metalness: 0.2 });
     const backWall = new THREE.Mesh(wallGeo, wallMat);
     backWall.position.set(offsetX, 5.0, -21.5);
+    this.registerCameraOccluder(backWall);
     this.levelRoot.add(backWall);
 
     const neonSign = createNeonShowroomSign('MAX-FLIZ TERMINAL • SEKTOR C: STREFA ZAŁADUNKU VIP', '#f59e0b');
@@ -9835,6 +9903,7 @@ export class MaxFlizGameEngine {
     this.currentLookAt.y = THREE.MathUtils.damp(this.currentLookAt.y, desiredLookAt.y, lookDamping, dt);
     this.currentLookAt.z = THREE.MathUtils.damp(this.currentLookAt.z, desiredLookAt.z, lookDamping, dt);
     this.camera.lookAt(this.currentLookAt);
+    this.updateCameraOcclusion(dt);
 
     if (this.dirLight) {
       this.dirLight.position.set(this.playerPos.x + 14, 28, this.playerPos.z + 12);

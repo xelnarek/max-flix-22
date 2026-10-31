@@ -586,7 +586,7 @@ export class PixelIntroManager {
       );
     });
 
-    // Walczak Flees in Panic on Right Edge
+    // Walczak flees with the only remaining copy of the inventory spreadsheet.
     const fleeX = w * 0.88 + st * 150;
     ctx.font = '72px sans-serif';
     ctx.fillText('🏃‍♂️👔💨', fleeX, h * 0.75);
@@ -603,8 +603,20 @@ export class PixelIntroManager {
     ctx.fillStyle = titleGrad;
     ctx.font = '900 64px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('MAX-FLIZ SHOWDOWN 3D: GOTOWI DO AKCJI!', w * 0.5, h * 0.16);
+    ctx.fillText('MAX-FLIX I GRANICA ABSURDU', w * 0.5, h * 0.16);
 
+    ctx.restore();
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(2, 6, 23, .76)';
+    ctx.fillRect(w * 0.20, h * 0.84, w * 0.60, h * 0.075);
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(w * 0.20, h * 0.84, w * 0.60, h * 0.075);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 25px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('INWENTARYZACJA: 0 BŁĘDÓW. WALCZAK: 1 SZT. BRAK.', w * 0.5, h * 0.89);
     ctx.restore();
 
     this.triggerOnce('act4_applause', 0.5, () => {

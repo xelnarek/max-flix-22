@@ -99,3 +99,46 @@ test('device-aware viewport profile is applied immediately after the renderer be
   assert.match(css, /data-ui-landscape-touch="true"/);
   assert.match(viewport, /export function calculateUiViewport/);
 });
+
+test('campaign mega-map always assembles all three connected sectors from every campaign start', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /public startGame\(levelId = 1\)/);
+  assert.match(game, /this\.loadLevel\(levelId\)/);
+  const loadLevel = game.slice(game.indexOf('public loadLevel(levelId: number)'), game.indexOf('private buildCampaignHighBayDressing'));
+  assert.match(loadLevel, /this\.buildLevel1\(\)/);
+  assert.match(loadLevel, /this\.buildLevel2\(76\)/);
+  assert.match(loadLevel, /this\.buildLevel3\(161\)/);
+  assert.match(loadLevel, /minX: -36, maxX: 206/);
+  assert.match(loadLevel, /this\.buildSectorGate\(36, 2\)/);
+  assert.match(loadLevel, /this\.buildSectorGate\(116, 3\)/);
+});
+
+test('camera fades only tagged perimeter walls that intersect the camera-to-player ray', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /private registerCameraOccluder\(mesh: THREE\.Mesh\)/);
+  assert.match(game, /private updateCameraOcclusion\(dt: number\)/);
+  assert.match(game, /cameraOcclusionRaycaster\.intersectObjects\(this\.cameraOccluders, false\)/);
+  assert.match(game, /this\.cameraOcclusionCooldown = 0\.075/);
+  assert.match(game, /Math\.min\(original\.opacity, 0\.18\)/);
+  assert.match(game, /this\.restoreCameraOccluders\(\)/);
+  assert.match(game, /this\.updateCameraOcclusion\(dt\)/);
+  assert.ok((game.match(/this\.registerCameraOccluder\(backWall\)/g) || []).length >= 3);
+});
+
+test('touch Survival HUD prioritizes playfield and removes the mobile zoom rail', async () => {
+  const css = await read('../src/index.css');
+  assert.match(css, /Compact Survival HUD: keep the actual arena visible/);
+  assert.match(css, /width: min\(248px, calc\(100vw - 138px\)\)/);
+  assert.match(css, /\.survival-weapon-rack,[\s\S]*?display: none !important/);
+  assert.match(css, /\.cam-zoom-slider-container\s*\{\s*display: none !important/);
+  assert.match(css, /top: calc\(98px \+ env\(safe-area-inset-top\)\)/);
+});
+
+test('pixel intro has a single mobile-safe launch path and cannot start twice from touch plus synthetic click', async () => {
+  const [app, intro] = await Promise.all([read('../src/index.ts'), read('../src/pixelIntro.ts')]);
+  assert.match(app, /if \(this\.pixelIntro\?\.isRunning\(\)\) return/);
+  assert.match(app, /btn-open-pixel-intro'\)\?\.addEventListener\('click', launchPixelIntro\)/);
+  assert.doesNotMatch(app, /btn-open-pixel-intro'\)\?\.addEventListener\('touchend', launchPixelIntro\)/);
+  assert.match(intro, /MAX-FLIX I GRANICA ABSURDU/);
+  assert.match(intro, /INWENTARYZACJA: 0 BŁĘDÓW/);
+});
