@@ -75,15 +75,18 @@ test('campaign map receives instanced warehouse structure without per-frame crea
   assert.match(game, /private disposeSurvivalArenaInstances\(\)/);
 });
 
-test('campaign start opens the five-act briefing and the final action starts the game', async () => {
+test('primary campaign CTA starts immediately while briefing stays optional and touch-operable', async () => {
   const [app, html] = await Promise.all([read('../src/index.ts'), read('../index.html')]);
   assert.match(html, /id="story-intro-modal"/);
   assert.match(html, /id="btn-open-story-modal"/);
   assert.match(app, /const launchCampaignGame = async/);
-  assert.match(app, /const doStartGame = \(e\?: Event\) =>/);
-  assert.match(app, /openCampaignBriefing\(\);/);
+  assert.match(app, /startingGame = true;[\s\S]*?await assetLoader\.waitUntilReady\('Gra 3D'\)/);
+  assert.match(app, /this\.engine\.startGame\(this\.selectedLevelId\)/);
+  assert.match(app, /const doStartGame = \(e\?: Event\) => \{\s*void launchCampaignGame\(e\);/);
+  assert.match(app, /bindTap\(startBtn, doStartGame\)/);
   assert.match(app, /openCampaignBriefing = \(\) => \{/);
-  assert.match(app, /btnStoryPlay\?\.addEventListener\('click',[\s\S]*?launchCampaignGame\(\)/);
+  assert.match(app, /bindTap\(btnStoryPlay,[\s\S]*?launchCampaignGame\(event\)/);
+  assert.match(app, /campaign-start-error/);
 });
 
 test('device-aware viewport profile is applied immediately after the renderer becomes available', async () => {
