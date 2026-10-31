@@ -5957,8 +5957,16 @@ export class MaxFlizGameEngine {
           }
         }
 
-        // Ranged special attacks
-        if ((e.type === 'handlowiec' || e.type === 'przedstawiciel_włoski') && e.specialActionTimer !== undefined) {
+        // The tiny riders keep their distance and throw visible, arcing lollipops.
+        if (e.type === 'pomazaniec' && e.specialActionTimer !== undefined) {
+          e.specialActionTimer -= dt;
+          if (e.specialActionTimer <= 0 && distToPlayer < 13.0) {
+            e.specialActionTimer = 4.35 + Math.random() * 1.25;
+            e.mesh.rotation.y = Math.atan2(dx, dz);
+            e.mesh.rotation.x = -0.08;
+            this.spawnPomazaniecLollipop(e.x, e.y + 1.03, e.z, this.playerPos.x, this.playerPos.z, e.aiSlot || 0);
+          }
+        } else if ((e.type === 'handlowiec' || e.type === 'przedstawiciel_włoski') && e.specialActionTimer !== undefined) {
           e.specialActionTimer -= dt;
           if (e.specialActionTimer <= 0 && distToPlayer < 9.0) {
             e.specialActionTimer = 2.8;
@@ -6522,7 +6530,12 @@ export class MaxFlizGameEngine {
     for (let i = this.enemyProjectiles.length - 1; i >= 0; i--) {
       const ep = this.enemyProjectiles[i];
       ep.life -= dt;
+      if (ep.gravity) ep.vel.y -= ep.gravity * dt;
       ep.mesh.position.addScaledVector(ep.vel, dt);
+      if (ep.spin) {
+        ep.mesh.rotation.z += ep.spin * dt;
+        ep.mesh.rotation.x += ep.spin * 0.32 * dt;
+      }
 
       const dist = Math.hypot(ep.mesh.position.x - this.playerPos.x, ep.mesh.position.z - this.playerPos.z);
       if (dist < 0.85 && Math.abs(ep.mesh.position.y - this.playerPos.y) < 1.0) {
@@ -6536,16 +6549,24 @@ export class MaxFlizGameEngine {
           } else {
             this.takeDamage('🚨 ZWOLNIENIE DYSCYPLINARNE NA HITA OD KRÓLA-LETO!', 99);
           }
+        } else if (ep.kind === 'pomazaniec_lollipop') {
+          this.takeDamage('🍭 Trafił Cię lizak wystrzelony przez Pomazańca!');
+          this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.55, this.playerPos.z, 0xf472b6);
+          this.triggerBloomPulse(0.16);
+          sound.playLollipopHit();
+          this.emitFloatingToast('🍭 LIZAK PROSTO W CZOŁO!', this.playerPos.x, this.playerPos.y + 1.25, this.playerPos.z, 'damage');
         } else {
           this.takeDamage('Trafiło Cię wezwanie wyjaśniające od Walczaka!');
         }
         this.levelRoot.remove(ep.mesh);
+        if (ep.kind === 'pomazaniec_lollipop') this.disposeTemporaryObject(ep.mesh);
         this.enemyProjectiles.splice(i, 1);
         continue;
       }
 
       if (ep.life <= 0) {
         this.levelRoot.remove(ep.mesh);
+        if (ep.kind === 'pomazaniec_lollipop') this.disposeTemporaryObject(ep.mesh);
         this.enemyProjectiles.splice(i, 1);
       }
     }
