@@ -7044,7 +7044,7 @@ export class MaxFlizGameEngine {
     if (this.camera instanceof THREE.PerspectiveCamera) {
       const aspect = (window.innerWidth || 1280) / Math.max(1, window.innerHeight || 720);
       const baseFov = this.gameMode === 'survival'
-        ? (aspect < 0.65 ? 66 : aspect < 1.0 ? 60 : aspect < 1.35 ? 54 : 50)
+        ? (aspect < 0.65 ? 58 : aspect < 1.0 ? 54 : aspect < 1.35 ? 48 : 45)
         : (aspect < 0.65 ? 60 : aspect < 1.0 ? 54 : aspect < 1.35 ? 48 : 45);
       if (Math.abs(this.camera.fov - baseFov) > 0.2) {
         this.camera.fov = THREE.MathUtils.damp(this.camera.fov, baseFov, 4.0, dt);
