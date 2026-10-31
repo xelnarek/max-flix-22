@@ -79,9 +79,9 @@ export function getFloorTexture(): THREE.CanvasTexture {
 
   // 1. Sleek Architectural Dark Graphite Epoxy Floor Base
   const baseGrad = ctx.createRadialGradient(512, 512, 40, 512, 512, 900);
-  baseGrad.addColorStop(0, '#151922');
-  baseGrad.addColorStop(0.5, '#0e1218');
-  baseGrad.addColorStop(1, '#080a0f');
+  baseGrad.addColorStop(0, '#293443');
+  baseGrad.addColorStop(0.5, '#202b39');
+  baseGrad.addColorStop(1, '#151f2c');
   ctx.fillStyle = baseGrad;
   ctx.fillRect(0, 0, 1024, 1024);
 
@@ -201,14 +201,14 @@ export function getWallTexture(): THREE.CanvasTexture {
   canvas.height = 256;
   const ctx = canvas.getContext('2d')!;
 
-  ctx.fillStyle = '#1e293b';
+  ctx.fillStyle = '#29384a';
   ctx.fillRect(0, 0, 512, 256);
 
   // Ribbed steel cladding panels
   for (let x = 0; x < 512; x += 16) {
-    ctx.fillStyle = '#0f172a';
+    ctx.fillStyle = '#1c2939';
     ctx.fillRect(x, 0, 4, 256);
-    ctx.fillStyle = '#334155';
+    ctx.fillStyle = '#465b70';
     ctx.fillRect(x + 4, 0, 4, 256);
   }
 
@@ -241,9 +241,9 @@ export function getShowroomMarbleFloorTexture(): THREE.CanvasTexture {
   // 1. Deep Luxury Dark Obsidian & Nero Marquina Italian Marble Base
   // High contrast so white bathtubs, collectibles, characters and enemies are vividly visible!
   const bgGrad = ctx.createRadialGradient(512, 512, 60, 512, 512, 850);
-  bgGrad.addColorStop(0, '#1c2434');
-  bgGrad.addColorStop(0.45, '#131924');
-  bgGrad.addColorStop(1, '#0b0f17');
+  bgGrad.addColorStop(0, '#2c384a');
+  bgGrad.addColorStop(0.45, '#202a3a');
+  bgGrad.addColorStop(1, '#182232');
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, 1024, 1024);
 
@@ -308,7 +308,7 @@ export function getShowroomMarbleFloorTexture(): THREE.CanvasTexture {
   }
 
   // 4. Central Decorative Inlay Runway (Midnight Velvet & Illuminated Gold Medallions)
-  ctx.fillStyle = 'rgba(7, 10, 18, 0.92)';
+  ctx.fillStyle = 'rgba(15, 22, 33, 0.86)';
   ctx.fillRect(384, 0, 256, 1024);
 
   // Luminous Gold borders of runner
@@ -440,7 +440,7 @@ export function getTerminalGraniteFloorTexture(): THREE.CanvasTexture {
   const ctx = canvas.getContext('2d')!;
 
   // Dark flamed granite base (Deep Navy/Black)
-  ctx.fillStyle = '#080c16';
+  ctx.fillStyle = '#1b2736';
   ctx.fillRect(0, 0, 1024, 1024);
 
   // Granite stone slabs 128x128 with texture noise
@@ -448,7 +448,7 @@ export function getTerminalGraniteFloorTexture(): THREE.CanvasTexture {
   for (let x = 0; x < 1024; x += tileSize) {
     for (let y = 0; y < 1024; y += tileSize) {
       const v = (x * 17 + y * 23) % 15;
-      ctx.fillStyle = `rgb(${12 + v}, ${18 + v}, ${30 + v})`;
+      ctx.fillStyle = `rgb(${26 + v}, ${36 + v}, ${50 + v})`;
       ctx.fillRect(x + 2, y + 2, tileSize - 4, tileSize - 4);
       
       // Grainy stone texture
@@ -962,15 +962,17 @@ export function createCharacterModel(def: CharacterDef): {
   applyIndustrialPbr(bootMat, 0.012);
 
   // 1. Torso Body
-  const bodyGeo = new THREE.BoxGeometry(0.36, 0.46, 0.26);
+  const bodyGeo = new THREE.CapsuleGeometry(0.18, 0.10, 4, 12);
   const body = new THREE.Mesh(bodyGeo, clothesMat);
+  body.scale.z = 0.72;
   body.position.y = 0.54;
   body.castShadow = true;
   group.add(body);
 
   // High-Vis Safety Vest
-  const vestGeo = new THREE.BoxGeometry(0.38, 0.34, 0.28);
+  const vestGeo = new THREE.CapsuleGeometry(0.19, 0.08, 4, 12);
   const vest = new THREE.Mesh(vestGeo, vestMat);
+  vest.scale.z = 0.74;
   vest.position.y = 0.56;
   group.add(vest);
 
@@ -1020,7 +1022,7 @@ export function createCharacterModel(def: CharacterDef): {
   group.add(stripeH, stripeV1, stripeV2);
 
   // 2. Head with Face Details
-  const headGeo = new THREE.SphereGeometry(0.145, 10, 7);
+  const headGeo = new THREE.SphereGeometry(0.145, 16, 12);
   const head = new THREE.Mesh(headGeo, skinMat);
   head.position.y = 0.94;
   head.castShadow = true;
@@ -1082,18 +1084,27 @@ export function createCharacterModel(def: CharacterDef): {
     }
   }
 
-  // Curved helmet crowns soften the previously flat block-like hardhat profile.
-  if (def.id !== 'mateusz') {
-    const helmetColors: Record<CharacterId, number> = { marcin: 0xf8fafc, grzesiek: 0xfacc15, dawid: 0xea580c, mateusz: 0x7c3aed, piotr: 0xef4444 };
-    const crown = new THREE.Mesh(
-      new THREE.SphereGeometry(0.17, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2),
-      new THREE.MeshStandardMaterial({ color: helmetColors[def.id], roughness: 0.34, metalness: 0.08 })
+  // Reusable domed hardhat builder. Curved shells read more naturally than
+  // the previous square caps while preserving each operator's colour identity.
+  const addHardHat = (helmetColor: number, badgeColor: number) => {
+    const helmetMat = new THREE.MeshStandardMaterial({ color: helmetColor, roughness: 0.34, metalness: 0.08 });
+    const dome = new THREE.Mesh(
+      new THREE.SphereGeometry(0.18, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2),
+      helmetMat
     );
-    crown.scale.y = 0.58;
-    crown.position.y = 1.105;
-    crown.castShadow = true;
-    group.add(crown);
-  }
+    dome.scale.y = 0.72;
+    dome.position.y = 1.045;
+    dome.castShadow = true;
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.03, 20), helmetMat);
+    brim.scale.set(1.02, 1, 1.06);
+    brim.position.set(0, 1.045, 0.015);
+    const badge = new THREE.Mesh(
+      new THREE.BoxGeometry(0.075, 0.042, 0.018),
+      new THREE.MeshStandardMaterial({ color: badgeColor, roughness: 0.5 })
+    );
+    badge.position.set(0, 1.10, 0.175);
+    group.add(dome, brim, badge);
+  };
 
   const smile = new THREE.Mesh(new THREE.SphereGeometry(0.026, 8, 6), new THREE.MeshBasicMaterial({ color: 0x7f1d1d }));
   smile.scale.set(1.35, 0.42, 0.5);
@@ -1102,22 +1113,11 @@ export function createCharacterModel(def: CharacterDef): {
 
   // Safety Hardhat or Cap
   if (def.id === 'marcin') {
-    // White Shift Manager Helmet with badge
-    const helmetMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2, metalness: 0.1 });
-    const helmet = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.14, 0.32), helmetMat);
-    helmet.position.y = 1.08;
-    const brim = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.03, 0.38), helmetMat);
-    brim.position.set(0, 1.03, 0.03);
-    const badge = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.05, 0.02), new THREE.MeshBasicMaterial({ color: 0x2563eb }));
-    badge.position.set(0, 1.10, 0.165);
-    group.add(helmet, brim, badge);
+    // White Shift Manager hardhat with blue identification plate.
+    addHardHat(0xf8fafc, 0x2563eb);
   } else if (def.id === 'grzesiek') {
     // Yellow Hardhat with ear defenders
-    const helmetMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.25 });
-    const helmet = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.14, 0.32), helmetMat);
-    helmet.position.y = 1.08;
-    const brim = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.03, 0.38), helmetMat);
-    brim.position.set(0, 1.03, 0.03);
+    addHardHat(0xfacc15, 0x111827);
     // Industrial ear defenders
     const earMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.6 });
     [-0.18, 0.18].forEach((ex) => {
@@ -1129,27 +1129,19 @@ export function createCharacterModel(def: CharacterDef): {
     group.add(helmet, brim);
   } else if (def.id === 'dawid') {
     // Orange/Red Heavy Duty Hardhat with chin strap
-    const helmetMat = new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.25 });
-    const helmet = new THREE.Mesh(new THREE.BoxGeometry(0.33, 0.15, 0.33), helmetMat);
-    helmet.position.y = 1.08;
-    const brim = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.03, 0.38), helmetMat);
-    brim.position.set(0, 1.03, 0.03);
-    group.add(helmet, brim);
+    addHardHat(0xea580c, 0x7c2d12);
   } else if (def.id === 'mateusz') {
     // Mateusz Designer Cap backwards
     const capMat = new THREE.MeshStandardMaterial({ color: 0x7c3aed, roughness: 0.5 });
-    const cap = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.12, 0.30), capMat);
-    cap.position.y = 1.06;
-    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.03, 0.14), capMat);
-    visor.position.set(0, 1.03, -0.16);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.17, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), capMat);
+    cap.scale.y = 0.62;
+    cap.position.y = 1.045;
+    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.026, 0.15), capMat);
+    visor.position.set(0, 1.035, -0.16);
     group.add(cap, visor);
   } else {
     // Piotr Senior Foreman Crimson Hardhat with Tactical LED Headlamp & Laser Visor
-    const helmetMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.2, metalness: 0.15 });
-    const helmet = new THREE.Mesh(new THREE.BoxGeometry(0.33, 0.15, 0.33), helmetMat);
-    helmet.position.y = 1.08;
-    const brim = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.03, 0.38), helmetMat);
-    brim.position.set(0, 1.03, 0.03);
+    addHardHat(0xef4444, 0xfacc15);
     // Tactical LED Headlamp
     const lampMount = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.07, 0.05), new THREE.MeshStandardMaterial({ color: 0x18181b }));
     lampMount.position.set(0, 1.09, 0.18);
@@ -1160,22 +1152,26 @@ export function createCharacterModel(def: CharacterDef): {
   }
 
   // 3. Legs & Leather Steel-toe Boots
-  const legGeo = new THREE.BoxGeometry(0.13, 0.34, 0.15);
+  const legGeo = new THREE.CapsuleGeometry(0.065, 0.21, 3, 10);
   const leftLeg = new THREE.Mesh(legGeo, pantsMat);
+  leftLeg.scale.z = 1.12;
   leftLeg.position.set(-0.1, 0.19, 0);
   leftLeg.castShadow = true;
 
   const rightLeg = new THREE.Mesh(legGeo, pantsMat);
+  rightLeg.scale.z = 1.12;
   rightLeg.position.set(0.1, 0.19, 0);
   rightLeg.castShadow = true;
 
-  const bootGeo = new THREE.BoxGeometry(0.14, 0.1, 0.2);
+  const bootGeo = new THREE.SphereGeometry(0.1, 12, 8);
   const leftBoot = new THREE.Mesh(bootGeo, bootMat);
-  leftBoot.position.set(0, -0.15, 0.02);
+  leftBoot.scale.set(0.86, 0.54, 1.32);
+  leftBoot.position.set(0, -0.15, 0.045);
   leftLeg.add(leftBoot);
 
   const rightBoot = new THREE.Mesh(bootGeo, bootMat);
-  rightBoot.position.set(0, -0.15, 0.02);
+  rightBoot.scale.copy(leftBoot.scale);
+  rightBoot.position.copy(leftBoot.position);
   rightLeg.add(rightBoot);
 
   group.add(leftLeg, rightLeg);
@@ -1192,12 +1188,14 @@ export function createCharacterModel(def: CharacterDef): {
   }
 
   // 4. Arms & Hands
-  const armGeo = new THREE.BoxGeometry(0.1, 0.36, 0.11);
+  const armGeo = new THREE.CapsuleGeometry(0.05, 0.24, 3, 10);
   const leftArm = new THREE.Mesh(armGeo, clothesMat);
+  leftArm.scale.z = 1.05;
   leftArm.position.set(-0.25, 0.54, 0);
   leftArm.castShadow = true;
 
   const rightArm = new THREE.Mesh(armGeo, clothesMat);
+  rightArm.scale.z = 1.05;
   rightArm.position.set(0.25, 0.54, 0);
   rightArm.castShadow = true;
 
