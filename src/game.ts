@@ -265,6 +265,14 @@ export class MaxFlizGameEngine {
       "MAM CZAPKĘ Z WIATRAKIEM, CZYLI JESTEM DOWÓDCĄ!",
       "Dawidzilla! Nadciągamy z prędkością trzech kilometrów na godzinę!",
     ],
+    sebix_m: [
+      "CO SIĘ GAPISZ?! CEGŁA JEST NAJPIERWOTNIEJSZYM ARGUMENTEM!",
+      "DOPIERO SIĘ ROZGRZEWAM! ZARAZ ZOBACZYSZ TURBO!",
+      "NIE MAM KOSZULKI, BO MIĘŚNIE NIE POTRZEBUJĄ UBRANIA!",
+      "KTO PRZESTAWIŁ MOJĄ PALETĘ?! TERAZ BĘDZIE TARAN!",
+      "ODPALAM TRYB HULK B4! ODSUNĄĆ SIĘ OD ALEJKI!",
+      "TO NIE SĄ OPARZENIA. TO ŚLADY PO MOIM WEJŚCIU!",
+    ],
   };
 
   public scene: THREE.Scene;
@@ -547,7 +555,7 @@ export class MaxFlizGameEngine {
     vel: THREE.Vector3;
     life: number;
     isDyscyplinarka?: boolean;
-    kind?: 'pomazaniec_lollipop';
+    kind?: 'pomazaniec_lollipop' | 'sebix_brick';
     gravity?: number;
     spin?: number;
   }[] = [];
@@ -2805,6 +2813,136 @@ export class MaxFlizGameEngine {
       armL: built.armL,
       armR: built.armR,
       specialActionTimer: 2.5,
+    });
+  }
+
+  private createSebixEnemyModel(): {
+    group: THREE.Group;
+    legL: THREE.Group;
+    legR: THREE.Group;
+    armL: THREE.Group;
+    armR: THREE.Group;
+  } {
+    const group = new THREE.Group();
+    group.name = 'enemy_sebix_m';
+
+    const skin = new THREE.MeshStandardMaterial({ color: 0xc58b68, roughness: 0.76 });
+    const skinLight = new THREE.MeshStandardMaterial({ color: 0xd6a07c, roughness: 0.72 });
+    const shorts = new THREE.MeshStandardMaterial({ color: 0x172033, roughness: 0.9 });
+    const shoeMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.86 });
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x171717 });
+    const mouthMat = new THREE.MeshBasicMaterial({ color: 0x451a1a });
+    const toothMat = new THREE.MeshBasicMaterial({ color: 0xfff7ed });
+    const addSphere = (parent: THREE.Object3D, material: THREE.Material, position: [number,number,number], scale: [number,number,number]) => {
+      const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 10), material);
+      mesh.position.set(...position);
+      mesh.scale.set(...scale);
+      parent.add(mesh);
+      mesh.castShadow = true;
+      return mesh;
+    };
+    const addLimb = (parent: THREE.Object3D, start: THREE.Vector3, end: THREE.Vector3, radius: number, material: THREE.Material) => {
+      const delta = end.clone().sub(start);
+      const limb = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.82, radius, delta.length(), 9), material);
+      limb.position.copy(start).add(end).multiplyScalar(0.5);
+      limb.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), delta.normalize());
+      parent.add(limb);
+      limb.castShadow = true;
+      return limb;
+    };
+
+    const shortsMesh = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.32, 0.38), shorts);
+    shortsMesh.position.set(0, 0.88, 0);
+    group.add(shortsMesh);
+
+    // Shirtless, broad-chested silhouette. The deliberately overbuilt pecs and shoulders
+    // read clearly at the game's normal camera distance without excessive polygon cost.
+    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.40, 0.88, 12), skin);
+    torso.position.set(0, 1.42, 0);
+    group.add(torso);
+    addSphere(group, skinLight, [-0.18, 1.56, 0.13], [0.26, 0.20, 0.18]);
+    addSphere(group, skinLight, [0.18, 1.56, 0.13], [0.26, 0.20, 0.18]);
+    addSphere(group, skin, [0, 1.22, 0.29], [0.17, 0.22, 0.12]);
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.14,0.20,10), skin);
+    neck.position.set(0,1.92,0);
+    group.add(neck);
+
+    // Bald head and unmistakable crooked grin.
+    addSphere(group, skinLight, [0,2.18,0.04], [0.245,0.285,0.235]);
+    addSphere(group, skin, [0,2.405,0.055], [0.20,0.08,0.205]);
+    for(const side of [-1,1]){
+      addSphere(group, eyeMat, [side*0.085,2.22,0.245], [0.028,0.043,0.018]);
+      addSphere(group, skin, [side*0.092,2.30,0.235], [0.075,0.035,0.04]);
+    }
+    addSphere(group, mouthMat, [0.015,2.075,0.247], [0.13,0.053,0.018]);
+    const grin = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.027,0.018),toothMat);
+    grin.position.set(0.015,2.092,0.263);
+    grin.rotation.z=-0.12;
+    group.add(grin);
+
+    const armL = new THREE.Group();
+    const armR = new THREE.Group();
+    armL.position.set(-0.36,1.69,0);
+    armR.position.set(0.36,1.69,0);
+    group.add(armL,armR);
+    for(const [pivot,side] of [[armL,-1],[armR,1]] as Array<[THREE.Group,number]>){
+      addSphere(pivot,skin,[side*0.07,-0.03,0],[0.20,0.20,0.21]);
+      addLimb(pivot,new THREE.Vector3(side*0.07,-0.08,0),new THREE.Vector3(side*0.13,-0.38,0.05),0.115,skin);
+      addSphere(pivot,skinLight,[side*0.13,-0.40,0.06],[0.14,0.13,0.14]);
+      addLimb(pivot,new THREE.Vector3(side*0.13,-0.41,0.05),new THREE.Vector3(side*0.17,-0.64,0.13),0.095,skinLight);
+      addSphere(pivot,skin,[side*0.17,-0.69,0.15],[0.13,0.12,0.13]);
+    }
+
+    const legL = new THREE.Group();
+    const legR = new THREE.Group();
+    legL.position.set(-0.19,0.78,0);
+    legR.position.set(0.19,0.78,0);
+    group.add(legL,legR);
+    for(const [pivot,side] of [[legL,-1],[legR,1]] as Array<[THREE.Group,number]>){
+      addLimb(pivot,new THREE.Vector3(0,0,0),new THREE.Vector3(0,-0.38,0.02),0.115,skin);
+      addLimb(pivot,new THREE.Vector3(0,-0.36,0.02),new THREE.Vector3(0,-0.68,0.06),0.09,skinLight);
+      const shoe=new THREE.Mesh(new THREE.BoxGeometry(0.18,0.11,0.28),shoeMat);
+      shoe.position.set(0,-0.72,0.13);
+      pivot.add(shoe);
+    }
+    group.traverse((object)=>{
+      const mesh=object as THREE.Mesh;
+      if(mesh.isMesh){mesh.castShadow=true;mesh.receiveShadow=false;}
+    });
+    return {group,legL,legR,armL,armR};
+  }
+
+  private addSebixEnemy(id: string, x: number, minZ: number, maxZ: number) {
+    const built=this.createSebixEnemyModel();
+    built.group.position.set(x,0.08,minZ);
+    this.levelRoot.add(built.group);
+    this.enemies.push({
+      id,
+      type:'sebix_m',
+      name:'Sebix M. • Niezatrzymany Taranujący',
+      mesh:built.group,
+      speechMesh:null,
+      x,y:0.08,z:minZ,
+      startX:minZ,
+      endX:maxZ,
+      speed:1.65,
+      dir:1,
+      hp:14,
+      maxHp:14,
+      state:'patrol',
+      stunTimer:0,
+      shoutTimer:1.5,
+      shoutText:'',
+      attackCooldown:0,
+      walkCycle:0,
+      legL:built.legL,
+      legR:built.legR,
+      armL:built.armL,
+      armR:built.armR,
+      specialActionTimer:2.4,
+      rageTime:0,
+      trailTimer:0,
+      dashTimer:0,
     });
   }
 
