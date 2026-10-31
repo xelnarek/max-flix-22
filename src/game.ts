@@ -411,6 +411,7 @@ export class MaxFlizGameEngine {
   private survivalSurgeTargetCount = 0;
   private survivalSurgeCenterX = 0;
   private survivalSurgeCenterZ = 0;
+  private survivalSurgeCurrentRadius = 13.4;
   private survivalSurgeRing: THREE.Group | null = null;
   private survivalMiniBossSpawned = false;
   private survivalPhaseTwoAnnounced = false;
@@ -4907,10 +4908,27 @@ export class MaxFlizGameEngine {
     const ringGroup = this.survivalSurgeRing;
     if (!ringGroup) return;
     const radius = getHordeRingRadius(progress, initialRadius, finalRadius);
+    this.survivalSurgeCurrentRadius = radius;
+
+    // Keep the perimeter centred on the operator while respecting the narrower
+    // north/south bounds of the arena. This is the same centre used by enemy AI.
+    const verticalScale = 0.62;
+    this.survivalSurgeCenterX = THREE.MathUtils.clamp(
+      this.playerPos.x,
+      this.levelBounds.minX + initialRadius,
+      this.levelBounds.maxX - initialRadius,
+    );
+    this.survivalSurgeCenterZ = THREE.MathUtils.clamp(
+      this.playerPos.z,
+      this.levelBounds.minZ + initialRadius * verticalScale,
+      this.levelBounds.maxZ - initialRadius * verticalScale,
+    );
+    ringGroup.position.set(this.survivalSurgeCenterX, 0.065, this.survivalSurgeCenterZ);
+
     const outer = ringGroup.children[0] as THREE.Mesh | undefined;
     const inner = ringGroup.children[1] as THREE.Mesh | undefined;
-    if (outer) outer.scale.set(radius, radius * 0.62, 1);
-    if (inner) inner.scale.set(radius * 0.82, radius * 0.62 * 0.82, 1);
+    if (outer) outer.scale.set(radius, radius * verticalScale, 1);
+    if (inner) inner.scale.set(radius * 0.82, radius * verticalScale * 0.82, 1);
     const outerMaterial = outer?.material as THREE.MeshBasicMaterial | undefined;
     const innerMaterial = inner?.material as THREE.MeshBasicMaterial | undefined;
     if (outerMaterial) outerMaterial.opacity = 0.24 + (1 - progress) * 0.34;
@@ -4925,6 +4943,7 @@ export class MaxFlizGameEngine {
 
     this.survivalSurgeTimeLeft = settings.durationSeconds;
     this.survivalSurgeTargetCount = settings.enemyCount;
+    this.survivalSurgeCurrentRadius = settings.initialRadius;
     this.survivalSurgeSpawnQueue = settings.enemyCount;
     this.survivalSurgeSpawnTimer = 0.12;
     this.survivalSurgeSpawned = 0;
@@ -5010,7 +5029,7 @@ export class MaxFlizGameEngine {
       enemy.mesh.rotation.y = point.angle + Math.PI;
       enemy.surgeRunner = true;
       enemy.aiSlot = index;
-      enemy.aiFlankAngle = point.angle;
+      enemy.aiFlankAngle = Math.PI / 2 - point.angle;
       enemy.aiOrbitSign = index % 2 === 0 ? 1 : -1;
       enemy.speed = THREE.MathUtils.clamp(enemy.speed * 1.04, 2.4, 3.9);
       enemy.state = 'chase';
@@ -5062,7 +5081,7 @@ export class MaxFlizGameEngine {
     runner.state = 'chase';
     runner.alerted = true;
     runner.aiSlot = slot;
-    runner.aiFlankAngle = point.angle;
+    runner.aiFlankAngle = Math.PI / 2 - point.angle;
     runner.aiOrbitSign = slot % 2 === 0 ? 1 : -1;
     runner.shoutTimer = 1.4 + Math.random() * 1.2;
     runner.z = z;
@@ -6916,18 +6935,25 @@ export class MaxFlizGameEngine {
     const role = this.getSurvivalEnemyRole(enemy);
     const engaged = this.activeChaserIds.has(enemy.id) || enemy.type === 'pomazaniec' || !!enemy.surgeRunner;
     const slot = enemy.aiSlot || 0;
-    const anchorAngle = enemy.aiFlankAngle ?? Math.atan2(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z);
-    const drift = Math.sin(this.survivalElapsed * 0.62 + slot * 1.7) * (engaged ? 0.16 : 0.10);
+    const inHordeRing = !!enemy.surgeRunner && this.survivalSurgeTimeLeft > 0;
+    const anchorX = inHordeRing ? this.survivalSurgeCenterX : this.playerPos.x;
+    const anchorZ = inHordeRing ? this.survivalSurgeCenterZ : this.playerPos.z;
+    const anchorAngle = enemy.aiFlankAngle ?? Math.atan2(enemy.x - anchorX, enemy.z - anchorZ);
+    const drift = Math.sin(this.survivalElapsed * 0.62 + slot * 1.7) * (engaged ? 0.10 : 0.10);
     const angle = anchorAngle + drift;
 
-    let preferredRadius = engaged
-      ? role === 'support' ? 5.5 : role === 'ranged' ? 7.7 : role === 'bruiser' ? 2.25 : 3.0
-      : role === 'support' ? 15.0 : role === 'ranged' ? 14.0 : 12.6;
+    // Ring members follow the visible contracting perimeter instead of all
+    // selecting the same close-range target and collapsing onto the player.
+    let preferredRadius = inHordeRing
+      ? this.survivalSurgeCurrentRadius
+      : engaged
+        ? role === 'support' ? 5.5 : role === 'ranged' ? 7.7 : role === 'bruiser' ? 2.25 : 3.0
+        : role === 'support' ? 15.0 : role === 'ranged' ? 14.0 : 12.6;
 
     // Ranged attackers try to hold a useful firing lane instead of walking into melee range.
-    if (engaged && role === 'ranged' && distanceToPlayer < preferredRadius - 1.0) preferredRadius += 1.0;
-    const targetX = this.playerPos.x + Math.sin(angle) * preferredRadius;
-    const targetZ = this.playerPos.z + Math.cos(angle) * preferredRadius;
+    if (!inHordeRing && engaged && role === 'ranged' && distanceToPlayer < preferredRadius - 1.0) preferredRadius += 1.0;
+    const targetX = anchorX + Math.sin(angle) * preferredRadius;
+    const targetZ = anchorZ + Math.cos(angle) * preferredRadius * (inHordeRing ? 0.62 : 1);
     let steerX = targetX - enemy.x;
     let steerZ = targetZ - enemy.z;
     const steerLength = Math.hypot(steerX, steerZ);
