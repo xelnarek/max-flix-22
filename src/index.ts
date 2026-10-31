@@ -1071,6 +1071,7 @@ class MaxFlizScene extends xb.Script {
         document.getElementById('campaign-start-error')?.remove();
       } catch (error) {
         console.error('[Campaign] Nie udało się uruchomić kampanii:', error);
+        document.getElementById('story-intro-modal')?.classList.add('hidden');
         titleScreen?.classList.remove('hidden');
         titleScreen?.style.setProperty('display', 'flex', 'important');
         hudTop?.classList.add('hidden');
