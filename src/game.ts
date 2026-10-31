@@ -376,6 +376,8 @@ export class MaxFlizGameEngine {
   private survivalUpgradeStacks: Record<string, number> = {};
   private survivalEvolutions = new Set<string>();
   private survivalWeapons: SurvivalWeaponState[] = [];
+  // Serializes ready weapon shots so a full cooldown queue never empties in one frame.
+  private survivalWeaponDispatchCooldown = 0;
   private survivalDamageMultiplier = 1;
   private survivalAttackRateMultiplier = 1;
   private survivalMoveMultiplier = 1;
@@ -1174,6 +1176,7 @@ export class MaxFlizGameEngine {
     this.survivalUpgradeStacks = {};
     this.survivalEvolutions.clear();
     this.survivalWeapons = [];
+    this.survivalWeaponDispatchCooldown = 0;
     this.survivalDamageMultiplier = 1;
     this.survivalAttackRateMultiplier = 1;
     this.survivalMoveMultiplier = 1;
@@ -1440,13 +1443,23 @@ export class MaxFlizGameEngine {
     if (choice.id.startsWith('weapon_unlock:')) {
       const weaponId = choice.id.slice('weapon_unlock:'.length) as SurvivalWeaponId;
       if (!this.survivalWeapons.some((weapon) => weapon.id === weaponId)) {
-        this.survivalWeapons.push({ id: weaponId, level: 1, cooldown: 0.45 });
+        this.survivalWeapons.push({
+          id: weaponId,
+          level: 1,
+          // Let the player see the new weapon before its first shot; avoid an instant unlock volley.
+          cooldown: SURVIVAL_WEAPON_DEFS[weaponId].cooldown * 0.55,
+        });
         sound.playAbility(this.currentCharacterId);
       }
     } else if (choice.id.startsWith('weapon_upgrade:')) {
       const weaponId = choice.id.slice('weapon_upgrade:'.length) as SurvivalWeaponId;
       const weapon = this.survivalWeapons.find((entry) => entry.id === weaponId);
-      if (weapon && weapon.level < 5) { weapon.level++; weapon.cooldown = 0.35; }
+      if (weapon && weapon.level < 5) {
+        weapon.level++;
+        const upgradedCooldown = SURVIVAL_WEAPON_DEFS[weaponId].cooldown * Math.max(0.78, 1 - (weapon.level - 1) * 0.055);
+        // An upgrade improves the next shot without forcing an immediate extra shot.
+        weapon.cooldown = Math.min(weapon.cooldown, upgradedCooldown);
+      }
     } else if (choice.id.startsWith('weapon_evolve:')) {
       const weaponId = choice.id.slice('weapon_evolve:'.length) as SurvivalWeaponId;
       const weapon = this.survivalWeapons.find((entry) => entry.id === weaponId);
@@ -1454,7 +1467,9 @@ export class MaxFlizGameEngine {
       const hasPassivePair = (this.survivalUpgradeStacks[definition.evolutionPassive] || 0) > 0;
       if (weapon && weapon.level >= 5 && !weapon.evolved && this.survivalElapsed >= 300 && hasPassivePair) {
         weapon.evolved = true;
-        weapon.cooldown = 0.25;
+        const evolvedCooldown = definition.cooldown * Math.max(0.78, 1 - (weapon.level - 1) * 0.055) * 0.82;
+        // Preserve the current reload. The evolution changes impact, not the global shot cadence.
+        weapon.cooldown = Math.min(weapon.cooldown, evolvedCooldown);
         this.triggerBloomPulse(0.7);
         this.triggerScreenShake(0.24, 0.2);
         this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.6, this.playerPos.z, definition.color);
@@ -3980,6 +3995,9 @@ export class MaxFlizGameEngine {
 
   private updateSurvivalAutoCombat(dt: number) {
     if (this.state !== 'playing' || this.gameMode !== 'survival') return;
+
+    this.survivalWeaponDispatchCooldown = Math.max(0, this.survivalWeaponDispatchCooldown - dt);
+
     let target: EnemyItem | null = null;
     let nearest = 18 * this.survivalRangeMultiplier;
     for (const enemy of this.enemies) {
@@ -3987,18 +4005,28 @@ export class MaxFlizGameEngine {
       const distance = Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z);
       if (distance < nearest) { nearest = distance; target = enemy; }
     }
+
     if (target) {
       this.playerRot = Math.atan2(target.x - this.playerPos.x, target.z - this.playerPos.z);
       if (this.playerGroup) this.playerGroup.rotation.y = this.playerRot;
       if (this.attackCooldownTimer <= 0) this.triggerAttack();
     }
+
+    // All reloads progress independently, even while no target is in range.
     for (const weapon of this.survivalWeapons) {
       weapon.cooldown = Math.max(0, weapon.cooldown - dt);
-      if (weapon.cooldown > 0 || !target) continue;
-      this.fireSurvivalWeapon(weapon, target);
-      const levelFactor = Math.max(0.78, 1 - (weapon.level - 1) * 0.055);
-      weapon.cooldown = SURVIVAL_WEAPON_DEFS[weapon.id].cooldown * levelFactor * (weapon.evolved ? 0.82 : 1);
     }
+
+    // Fire at most one weapon per dispatch window. If several reloads finish together,
+    // their shots are spaced out instead of landing as one screen-filling burst.
+    if (!target || this.survivalWeaponDispatchCooldown > 0) return;
+    const readyWeapon = this.survivalWeapons.find((weapon) => weapon.cooldown <= 0);
+    if (!readyWeapon) return;
+
+    this.fireSurvivalWeapon(readyWeapon, target);
+    const levelFactor = Math.max(0.78, 1 - (readyWeapon.level - 1) * 0.055);
+    readyWeapon.cooldown = SURVIVAL_WEAPON_DEFS[readyWeapon.id].cooldown * levelFactor * (readyWeapon.evolved ? 0.82 : 1);
+    this.survivalWeaponDispatchCooldown = 0.72;
   }
 
   private fireSurvivalWeapon(weapon: SurvivalWeaponState, target: EnemyItem) {
