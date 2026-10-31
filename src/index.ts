@@ -277,6 +277,75 @@ class MaxFlizScene extends xb.Script {
       };
     };
 
+    const createEnemyWorldBubble = (
+      text: string,
+      speakerType: string,
+      speakerName: string | undefined,
+      x: number,
+      y: number,
+      z: number
+    ) => {
+      const layer = document.getElementById('floating-popups-layer');
+      if (!layer) return;
+
+      const now = Date.now();
+      if (now - globalLastDialogueTime < 1450) return;
+      globalLastDialogueTime = now;
+
+      // Keep the arena readable on phones: old bubbles are recycled before the cap is exceeded.
+      const activeBubbles = activeToasts.filter((toast) => toast.type === 'enemy_shout');
+      if (activeBubbles.length >= 8) {
+        const oldest = activeBubbles[0];
+        oldest.element.remove();
+        const oldestIndex = activeToasts.indexOf(oldest);
+        if (oldestIndex >= 0) activeToasts.splice(oldestIndex, 1);
+      }
+
+      const baseMeta = getEnemyMeta(speakerType);
+      const meta = { ...baseMeta, name: speakerName || baseMeta.name };
+      const isBoss = /walczak|krol_leto|audytor|boss|sebix/i.test(meta.name) ||
+        speakerType === 'walczak' || speakerType === 'krol_leto' || speakerType === 'bosman_krakow';
+
+      const bubble = document.createElement('div');
+      bubble.className = 'enemy-world-bubble' + (isBoss ? ' boss-style' : '');
+      bubble.setAttribute('role', 'status');
+      bubble.setAttribute('aria-label', meta.name + ': ' + text);
+
+      const header = document.createElement('div');
+      header.className = 'enemy-world-bubble-header';
+      const avatar = document.createElement('span');
+      avatar.className = 'enemy-world-bubble-avatar';
+      avatar.textContent = meta.avatar;
+      const identity = document.createElement('span');
+      identity.className = 'enemy-world-bubble-identity';
+      const name = document.createElement('strong');
+      name.className = 'enemy-world-bubble-name';
+      name.textContent = meta.name;
+      const role = document.createElement('small');
+      role.className = 'enemy-world-bubble-role';
+      role.textContent = meta.role;
+      identity.append(name, role);
+      header.append(avatar, identity);
+
+      const quote = document.createElement('p');
+      quote.className = 'enemy-world-bubble-quote';
+      quote.textContent = '„' + text + '”';
+      bubble.append(header, quote);
+      bubble.style.position = 'absolute';
+      bubble.style.top = '0';
+      bubble.style.left = '0';
+      bubble.style.willChange = 'transform, opacity';
+      layer.appendChild(bubble);
+
+      activeToasts.push({
+        element: bubble,
+        worldPos: new THREE.Vector3(x, y + 0.45, z),
+        type: 'enemy_shout',
+        age: 0,
+        maxAge: isBoss ? 3.0 : 2.55,
+      });
+    };
+
     const getEnemyMeta = (type: string) => {
       const metaMap: Record<string, { name: string; role: string; avatar: string }> = {
         kurier: { name: 'Rudy z DPD', role: 'Johnny Walker Express', avatar: '🚚' },
@@ -311,7 +380,7 @@ class MaxFlizScene extends xb.Script {
       metadata?: any
     ) => {
       if (type === 'enemy_shout') {
-        createDialogueCard(text, metadata?.enemyType || 'customer', 'right', metadata?.enemyName);
+        createEnemyWorldBubble(text, metadata?.enemyType || 'customer', metadata?.enemyName, x, y, z);
         return;
       }
 
