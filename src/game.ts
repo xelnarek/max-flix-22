@@ -4805,6 +4805,7 @@ export class MaxFlizGameEngine {
     }
 
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
+    const hordeSettings = getSurvivalHordeSettings(isMobile);
     const pomazaniecRaidActive = this.survivalPomazaniecTriggered && !this.survivalPomazaniecCompleted;
     const surgeActive = this.survivalSurgeTimeLeft > 0;
     const enemyCap = (isMobile ? 22 : 34) + (pomazaniecRaidActive ? 5 : 0) + (surgeActive ? (isMobile ? 4 : 6) : 0);
@@ -4812,21 +4813,31 @@ export class MaxFlizGameEngine {
     if (surgeActive) {
       this.survivalSurgeTimeLeft = Math.max(0, this.survivalSurgeTimeLeft - dt);
       this.survivalSurgeSpawnTimer -= dt;
+      const progress = 1 - this.survivalSurgeTimeLeft / hordeSettings.durationSeconds;
+      this.updateSurvivalHordeRing(progress, hordeSettings.initialRadius, hordeSettings.finalRadius);
       if (this.survivalSurgeTimeLeft > 0 && this.survivalSurgeSpawnQueue > 0 && this.survivalSurgeSpawnTimer <= 0 && aliveCount < enemyCap) {
         this.spawnSurvivalSurgeEnemy();
         this.survivalSurgeSpawnQueue--;
         this.survivalSurgeSpawned++;
-        this.survivalSurgeSpawnTimer = 0.26;
+        this.survivalSurgeSpawnTimer = hordeSettings.spawnIntervalSeconds;
       } else if (this.survivalSurgeTimeLeft > 0 && this.survivalSurgeSpawnQueue > 0 && aliveCount >= enemyCap) {
-        this.survivalSurgeSpawnTimer = 0.08;
+        this.survivalSurgeSpawnTimer = 0.10;
       }
       if (this.survivalSurgeTimeLeft <= 0) {
         this.survivalSurgeSpawnQueue = 0;
+        this.clearSurvivalSurgeRing();
+        for (const enemy of this.enemies) {
+          if (enemy.surgeRunner) {
+            enemy.surgeRunner = false;
+            enemy.aiFlankAngle = undefined;
+            enemy.aiOrbitSign = undefined;
+          }
+        }
         this.survivalSpawnTimer = Math.max(this.survivalSpawnTimer, 1.8);
         this.callbacks.onSurvivalAnnouncement?.(
           'FALOWA SZARŻA ODPARTA',
-          'Kurierzy nie dowieźli normy',
-          'Na halę weszło ' + this.survivalSurgeSpawned + ' z 45 jednostek Pilne na Już. Standardowe dostawy wracają.'
+          'Pierścień przełamany',
+          'W ringowej szarży pojawiło się ' + this.survivalSurgeSpawned + ' z ' + this.survivalSurgeTargetCount + ' przeciwników. Standardowe dostawy wracają.',
         );
         this.emitFloatingToast('FALOWA SZARŻA ODPARTA!', this.playerPos.x, this.playerPos.y + 1.8, this.playerPos.z, 'combo');
       }
@@ -4875,65 +4886,172 @@ export class MaxFlizGameEngine {
   }
 
 
+  private clearSurvivalSurgeRing() {
+    if (!this.survivalSurgeRing) return;
+    this.levelRoot.remove(this.survivalSurgeRing);
+    this.disposeTemporaryObject(this.survivalSurgeRing);
+    this.survivalSurgeRing = null;
+  }
+
+  private updateSurvivalHordeRing(progress: number, initialRadius: number, finalRadius: number) {
+    const ringGroup = this.survivalSurgeRing;
+    if (!ringGroup) return;
+    const radius = getHordeRingRadius(progress, initialRadius, finalRadius);
+    const outer = ringGroup.children[0] as THREE.Mesh | undefined;
+    const inner = ringGroup.children[1] as THREE.Mesh | undefined;
+    if (outer) outer.scale.set(radius, radius, 1);
+    if (inner) inner.scale.set(radius * 0.82, radius * 0.82, 1);
+    const outerMaterial = outer?.material as THREE.MeshBasicMaterial | undefined;
+    const innerMaterial = inner?.material as THREE.MeshBasicMaterial | undefined;
+    if (outerMaterial) outerMaterial.opacity = 0.24 + (1 - progress) * 0.34;
+    if (innerMaterial) innerMaterial.opacity = 0.16 + (1 - progress) * 0.22;
+  }
+
   private beginSurvivalHordeSurge() {
     if (this.survivalSurgeTimeLeft > 0 || this.gameMode !== 'survival') return;
-    this.survivalSurgeTimeLeft = 15;
-    this.survivalSurgeSpawnQueue = 45;
-    this.survivalSurgeSpawnTimer = 0;
+    const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
+    const settings = getSurvivalHordeSettings(isMobile);
+    this.clearSurvivalSurgeRing();
+
+    this.survivalSurgeTimeLeft = settings.durationSeconds;
+    this.survivalSurgeTargetCount = settings.enemyCount;
+    this.survivalSurgeSpawnQueue = settings.enemyCount;
+    this.survivalSurgeSpawnTimer = 0.12;
     this.survivalSurgeSpawned = 0;
-    const directions = [
-      { x: 1, z: 0, label: 'WSCHÓD' },
-      { x: -1, z: 0, label: 'ZACHÓD' },
-      { x: 0, z: 1, label: 'POŁUDNIE' },
-      { x: 0, z: -1, label: 'PÓŁNOC' },
-    ];
-    const available = directions.filter((direction) =>
-      (direction.x > 0 && this.levelBounds.maxX - this.playerPos.x > 18) ||
-      (direction.x < 0 && this.playerPos.x - this.levelBounds.minX > 18) ||
-      (direction.z > 0 && this.levelBounds.maxZ - this.playerPos.z > 12) ||
-      (direction.z < 0 && this.playerPos.z - this.levelBounds.minZ > 12)
-    );
-    const candidates = available.length ? available : directions;
-    const chosen = candidates[Math.floor(Math.random() * candidates.length)];
-    this.survivalSurgeDirection = directions.indexOf(chosen);
     this.survivalNextSurgeAt += 90;
+
+    // Keep every point inside the arena. Near a wall, move the centre inward
+    // just enough for the player to remain inside the perimeter.
+    const safeInset = settings.initialRadius;
+    this.survivalSurgeCenterX = THREE.MathUtils.clamp(
+      this.playerPos.x,
+      this.levelBounds.minX + safeInset,
+      this.levelBounds.maxX - safeInset,
+    );
+    this.survivalSurgeCenterZ = THREE.MathUtils.clamp(
+      this.playerPos.z,
+      this.levelBounds.minZ + safeInset,
+      this.levelBounds.maxZ - safeInset,
+    );
+
+    const ringGroup = new THREE.Group();
+    ringGroup.name = 'survival_horde_closing_ring';
+    ringGroup.position.set(this.survivalSurgeCenterX, 0.065, this.survivalSurgeCenterZ);
+    const outerMaterial = new THREE.MeshBasicMaterial({
+      color: 0xf59e0b,
+      transparent: true,
+      opacity: 0.58,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      toneMapped: false,
+    });
+    const innerMaterial = new THREE.MeshBasicMaterial({
+      color: 0xef4444,
+      transparent: true,
+      opacity: 0.34,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      toneMapped: false,
+    });
+    const outerRing = new THREE.Mesh(new THREE.RingGeometry(0.965, 1, 96), outerMaterial);
+    outerRing.rotation.x = -Math.PI / 2;
+    outerRing.scale.set(settings.initialRadius, settings.initialRadius, 1);
+    const innerRing = new THREE.Mesh(new THREE.RingGeometry(0.955, 1, 72), innerMaterial);
+    innerRing.rotation.x = -Math.PI / 2;
+    innerRing.scale.set(settings.initialRadius * 0.82, settings.initialRadius * 0.82, 1);
+    ringGroup.add(outerRing, innerRing);
+    this.levelRoot.add(ringGroup);
+    this.survivalSurgeRing = ringGroup;
+
+    // Reuse ordinary enemies as the first ring members. This creates a full
+    // perimeter immediately without a sudden 12–16 model allocation spike.
+    const reusableEnemies = this.enemies
+      .filter((enemy) =>
+        enemy.state !== 'defeated' &&
+        !!enemy.mesh &&
+        enemy.mesh.visible &&
+        !enemy.surgeRunner &&
+        !enemy.survivalAuditor &&
+        enemy.type !== 'walczak' &&
+        enemy.type !== 'krol_leto' &&
+        enemy.type !== 'bosman_krakow' &&
+        enemy.type !== 'pomazaniec' &&
+        enemy.type !== 'sebix_m'
+      )
+      .sort((a, b) => {
+        const aDistance = Math.hypot(a.x - this.survivalSurgeCenterX, a.z - this.survivalSurgeCenterZ);
+        const bDistance = Math.hypot(b.x - this.survivalSurgeCenterX, b.z - this.survivalSurgeCenterZ);
+        return aDistance - bDistance;
+      })
+      .slice(0, settings.enemyCount);
+
+    reusableEnemies.forEach((enemy, index) => {
+      const point = getHordeRingPoint(
+        index, settings.enemyCount,
+        this.survivalSurgeCenterX, this.survivalSurgeCenterZ,
+        settings.initialRadius, -Math.PI / 2,
+      );
+      enemy.x = THREE.MathUtils.clamp(point.x, this.levelBounds.minX + 1.2, this.levelBounds.maxX - 1.2);
+      enemy.z = THREE.MathUtils.clamp(point.z, this.levelBounds.minZ + 1.0, this.levelBounds.maxZ - 1.0);
+      enemy.mesh.position.set(enemy.x, enemy.y, enemy.z);
+      enemy.mesh.rotation.y = point.angle + Math.PI;
+      enemy.surgeRunner = true;
+      enemy.aiSlot = index;
+      enemy.aiFlankAngle = point.angle;
+      enemy.aiOrbitSign = index % 2 === 0 ? 1 : -1;
+      enemy.speed = THREE.MathUtils.clamp(enemy.speed * 1.04, 2.4, 3.9);
+      enemy.state = 'chase';
+      enemy.alerted = true;
+      enemy.shoutTimer = Math.min(enemy.shoutTimer || 1.2, 1.4);
+    });
+
+    this.survivalSurgeSpawned = reusableEnemies.length;
+    this.survivalSurgeSpawnQueue = settings.enemyCount - reusableEnemies.length;
+    this.survivalSurgeSpawnTimer = this.survivalSurgeSpawnQueue > 0 ? 0.18 : settings.spawnIntervalSeconds;
+    this.survivalSurgeDirection = 0;
+
     this.callbacks.onSurvivalAnnouncement?.(
       'FALOWA SZARŻA',
-      '45 kurierów • 15 sekund',
-      'Pilne na Już nadciąga od strony ' + chosen.label + '. Standardowy spawner zostaje wstrzymany — przebij się przez dostawę!'
+      settings.enemyCount + ' przeciwników • zamykający się pierścień',
+      'Pilne na Już otacza Cię ze wszystkich stron. Przebij się przez luki w szyku, zanim pierścień zamknie się przy Twojej pozycji.',
     );
-    this.emitFloatingToast('🚨 FALOWA SZARŻA — NADCIĄGA EXPRESS!', this.playerPos.x, this.playerPos.y + 1.9, this.playerPos.z, 'damage');
+    this.emitFloatingToast('🚨 FALOWA SZARŻA — PIERŚCIEŃ SIĘ ZACISKA!', this.playerPos.x, this.playerPos.y + 1.9, this.playerPos.z, 'damage');
     this.spawnParticleRing(this.playerPos.x, 0.16, this.playerPos.z, 0xf59e0b);
-    this.triggerScreenShake(0.34, 0.3);
+    this.triggerScreenShake(0.26, 0.24);
     sound.playBossWarning();
   }
 
   private spawnSurvivalSurgeEnemy() {
-    const directions = [
-      { x: 1, z: 0 }, { x: -1, z: 0 }, { x: 0, z: 1 }, { x: 0, z: -1 },
-    ];
-    const direction = directions[this.survivalSurgeDirection] || directions[0];
-    const tangentX = -direction.z;
-    const tangentZ = direction.x;
-    const laneOffset = (Math.random() - 0.5) * 13.5;
-    const x = THREE.MathUtils.clamp(this.playerPos.x + direction.x * 23 + tangentX * laneOffset, this.levelBounds.minX + 2.5, this.levelBounds.maxX - 2.5);
-    const z = THREE.MathUtils.clamp(this.playerPos.z + direction.z * 23 + tangentZ * laneOffset, this.levelBounds.minZ + 1.5, this.levelBounds.maxZ - 1.5);
+    const settings = getSurvivalHordeSettings(window.innerWidth < 900 || ('ontouchstart' in window));
+    const slot = this.survivalSurgeSpawned;
+    const point = getHordeRingPoint(
+      slot,
+      Math.max(1, this.survivalSurgeTargetCount),
+      this.survivalSurgeCenterX,
+      this.survivalSurgeCenterZ,
+      settings.initialRadius,
+      -Math.PI / 2,
+    );
+    const x = THREE.MathUtils.clamp(point.x, this.levelBounds.minX + 1.2, this.levelBounds.maxX - 1.2);
+    const z = THREE.MathUtils.clamp(point.z, this.levelBounds.minZ + 1.0, this.levelBounds.maxZ - 1.0);
     const minZ = THREE.MathUtils.clamp(z - 0.35, this.levelBounds.minZ + 0.5, this.levelBounds.maxZ - 0.5);
     const maxZ = THREE.MathUtils.clamp(z + 0.35, this.levelBounds.minZ + 0.5, this.levelBounds.maxZ - 0.5);
     const id = 'survival_surge_' + Math.floor(performance.now()) + '_' + Math.floor(Math.random() * 100000);
     this.addKurierEnemy(id, x, minZ, maxZ, 'Pilne na Już! • Kurier Express B4');
     const runner = this.enemies[this.enemies.length - 1];
     if (!runner?.mesh) return;
+
     runner.surgeRunner = true;
-    runner.maxHp = 1;
-    runner.hp = 1;
-    runner.speed = Math.max(5.8, runner.speed * 2.25);
+    runner.maxHp = 2;
+    runner.hp = 2;
+    runner.speed = 3.4;
     runner.state = 'chase';
     runner.alerted = true;
-    runner.shoutTimer = 1.2 + Math.random() * 1.5;
+    runner.aiSlot = slot;
+    runner.aiFlankAngle = point.angle;
+    runner.aiOrbitSign = slot % 2 === 0 ? 1 : -1;
+    runner.shoutTimer = 1.4 + Math.random() * 1.2;
     runner.z = z;
-    runner.startX = minZ;
-    runner.endX = maxZ;
     runner.mesh.position.set(x, runner.y, z);
   }
 
