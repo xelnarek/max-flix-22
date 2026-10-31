@@ -1026,9 +1026,12 @@ export class MaxFlizGameEngine {
   }
 
   public startSurvival() {
-    // Build the existing warehouse environment, then replace campaign encounters with a managed arena.
+    // Reuse campaign initialization for the selected operator, then build a clean, dedicated Survival arena.
     this.startGame(1);
     this.gameMode = 'survival';
+    this.clearLevel();
+    this.rebuildPlayerMesh();
+    this.sectorGates = [null, null, null, null];
     this.levelBounds = { minX: -58, maxX: 58, minZ: -18.2, maxZ: 18.2 };
     this.sectorGates.forEach((gate) => { if (gate) gate.visible = false; });
     this.scene.background = new THREE.Color(0x080f1c);
@@ -1104,6 +1107,22 @@ export class MaxFlizGameEngine {
       new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.72 }),
     ];
     const floorGeometry = new THREE.PlaneGeometry(23.5, 40);
+    const centerFloor = new THREE.Mesh(new THREE.PlaneGeometry(72, 40), floorMaterial);
+    centerFloor.rotation.x = -Math.PI / 2;
+    centerFloor.position.set(0, -0.015, 0);
+    centerFloor.receiveShadow = true;
+    this.levelRoot.add(centerFloor);
+    this.platforms.push({ x: 0, y: 0, z: 0, width: 72, height: 0.2, depth: 40, type: 'floor' });
+
+    // Continuous side walls frame the complete 120 x 40 m arena.
+    for (const zSide of [-1, 1]) {
+      const sideWall = new THREE.Mesh(new THREE.BoxGeometry(119, 9.5, 0.48), wallMaterial);
+      sideWall.position.set(0, 4.75, zSide * 19.65);
+      this.levelRoot.add(sideWall);
+      const warningStripe = new THREE.Mesh(new THREE.BoxGeometry(119, 0.12, 0.52), trimMaterial);
+      warningStripe.position.set(0, 0.09, zSide * 19.25);
+      this.levelRoot.add(warningStripe);
+    }
 
     for (const side of [-1, 1]) {
       const bayFloor = new THREE.Mesh(floorGeometry, floorMaterial);
@@ -1116,15 +1135,6 @@ export class MaxFlizGameEngine {
       const endWall = new THREE.Mesh(new THREE.BoxGeometry(0.65, 9.5, 40), wallMaterial);
       endWall.position.set(side * 59.35, 4.75, 0);
       this.levelRoot.add(endWall);
-
-      for (const zSide of [-1, 1]) {
-        const sideWall = new THREE.Mesh(new THREE.BoxGeometry(24.0, 9.5, 0.48), wallMaterial);
-        sideWall.position.set(side * 47.75, 4.75, zSide * 19.65);
-        this.levelRoot.add(sideWall);
-        const warningStripe = new THREE.Mesh(new THREE.BoxGeometry(23.5, 0.12, 0.52), trimMaterial);
-        warningStripe.position.set(side * 47.75, 0.09, zSide * 19.25);
-        this.levelRoot.add(warningStripe);
-      }
 
       // Structural columns and compact high-bay lighting make the new wings read as real warehouse space.
       for (const localX of [39.5, 48.0, 56.0]) {
@@ -3846,7 +3856,7 @@ export class MaxFlizGameEngine {
     const boss = this.enemies[this.enemies.length - 1];
     if (boss) {
       this.applyEnemyVisualPolish(boss);
-      this.applyStorybookStyle(boss.mesh);
+      if (boss.mesh) this.applyStorybookStyle(boss.mesh);
       boss.aiOrbitSign = wave % 2 === 0 ? 1 : -1;
       boss.maxHp = Math.round(26 + wave * 2.6);
       boss.hp = boss.maxHp;
