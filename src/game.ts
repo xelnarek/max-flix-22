@@ -1533,6 +1533,32 @@ export class MaxFlizGameEngine {
     const accentMat = new THREE.MeshStandardMaterial({ color: accent, roughness: 0.48, metalness: 0.22, emissive: accent, emissiveIntensity: 0.10 });
     const darkMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.82, metalness: 0.16 });
 
+    if (enemy.type === 'agv_robot' || enemy.type === 'piorun_dron') {
+      // Wheeled AGV and quadcopter keep machine silhouettes instead of receiving humanoid armour.
+      if (enemy.type === 'agv_robot') {
+        const sensorRail = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.075, 0.12), accentMat);
+        sensorRail.position.set(0, 0.56, 0);
+        const frontScanner = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.09, 0.055), darkMat);
+        frontScanner.position.set(0, 0.48, 0.37);
+        const statusBeacon = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), accentMat);
+        statusBeacon.position.set(-0.31, 0.42, -0.2);
+        root.add(sensorRail, frontScanner, statusBeacon);
+      } else {
+        const sidePods = [-1, 1].map((side) => {
+          const pod = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 0.22), armorMat);
+          pod.position.set(side * 0.31, 0.52, -0.04);
+          pod.rotation.z = side * 0.16;
+          return pod;
+        });
+        const topFin = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.22, 5), accentMat);
+        topFin.position.set(0, 0.78, -0.03);
+        const sensorEye = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), accentMat);
+        sensorEye.position.set(0, 0.51, 0.29);
+        root.add(...sidePods, topFin, sensorEye);
+      }
+      return;
+    }
+
     // Compact shoulder guards and a chest ID plate improve silhouette recognition without enlarging hitboxes.
     for (const side of [-1, 1]) {
       const shoulder = new THREE.Mesh(new THREE.BoxGeometry(0.18 * scale, 0.13 * scale, 0.22 * scale), armorMat);
