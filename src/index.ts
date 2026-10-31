@@ -717,13 +717,15 @@ class MaxFlizScene extends xb.Script {
       if (hudHeroRole) hudHeroRole.textContent = def.role;
       if (abilityName) abilityName.textContent = def.abilityName;
 
-      const avatarIcons: Record<CharacterId, string> = {
-        marcin: '👷‍♂️', grzesiek: '🚜', dawid: '💪', mateusz: '🎮', piotr: '👨‍🔧',
-      };
       const abilityIcons: Record<CharacterId, string> = {
-        marcin: '📜', grzesiek: '⚡', dawid: '🧱', mateusz: '☕', piotr: '🍾',
+        marcin: '🚜', grzesiek: '💥', dawid: '🧱', mateusz: '🐈', piotr: '🔧',
       };
-      if (heroAvatar) heroAvatar.textContent = avatarIcons[id];
+      if (heroAvatar) heroAvatar.innerHTML = operatorPortrait(id);
+      document.querySelectorAll<HTMLElement>('.char-card[data-char]').forEach((card) => {
+        const cardId = card.dataset.char as CharacterId | undefined;
+        const badge = card.querySelector<HTMLElement>('.char-card-badge');
+        if (cardId && badge) badge.innerHTML = operatorPortrait(cardId);
+      });
       if (abilityIcon) abilityIcon.textContent = abilityIcons[id] || '⚡';
 
       const attackNameElem = document.getElementById('attack-name');
@@ -733,17 +735,17 @@ class MaxFlizScene extends xb.Script {
         grzesiek: 'Rzut hantlem 44 cm',
         dawid: 'Rzut rolką stretchu',
         mateusz: 'Paralizator',
-        piotr: 'Pistolet BB + laser',
+        piotr: 'Klucz Grzechotkowy B4',
       };
       const attackIcons: Record<CharacterId, string> = {
-        marcin: '🔮', grzesiek: '🏋️', dawid: '📦', mateusz: '⚡', piotr: '🔴',
+        marcin: '🔮', grzesiek: '🏋️', dawid: '📦', mateusz: '⚡', piotr: '🔧',
       };
       const attackDescriptions: Record<CharacterId, string> = {
         marcin: 'Wysyła świetlny znak-zlecenie z programu Optima. Trafiony cel zostaje ogłuszony, a co trzeci czar tworzy mocniejszą pieczęć audytu.',
         grzesiek: 'Miota ciężkim stalowym hantlem. Co trzeci rzut jest większy, mocniej odrzuca i przebija kilku przeciwników.',
         dawid: 'Rzuca rolką folii stretch, która owija i spowalnia przeciwników. Co trzeci rzut mocniej wiąże cel.',
         mateusz: 'Strzela pojedynczym impulsem paralizatora. Trafiony przeciwnik dostaje elektryczny stun; co trzeci impuls jest mocniejszy.',
-        piotr: 'Strzela małymi metalowymi kulkami z pistoletu BB. Krótki czerwony promień lasera pokazuje kierunek strzału; co trzeci strzał jest mocniejszy.',
+        piotr: 'Miota ciężkim kluczem grzechotkowym B4. Wiruje, przebija kilka celów i wraca przez tłum do Piotra; co trzeci rzut jest mocniejszy i rozgrzany do czerwoności.',
       };
       if (attackNameElem) attackNameElem.textContent = attackNames[id] || 'Atak';
       if (attackIconElem) attackIconElem.textContent = attackIcons[id] || '🥊';
@@ -851,10 +853,11 @@ class MaxFlizScene extends xb.Script {
           topScores.forEach((entry, idx) => {
             const rankIcons = ['🥇', '🥈', '🥉'];
             const rankDisplay = idx < 3 ? rankIcons[idx] : `${idx + 1}.`;
-            const heroIcons: Record<string, string> = {
-              Marcin: '👷‍♂️', Grzesiek: '🚜', Dawid: '💪', Mateusz: '☕', Piotr: '👨‍🔧',
+            const heroIds: Record<string, CharacterId> = {
+              Marcin: 'marcin', Grzesiek: 'grzesiek', Dawid: 'dawid', Mateusz: 'mateusz', Piotr: 'piotr',
             };
-            const heroIcon = heroIcons[entry.hero] || '👷‍♂️';
+            const heroId = heroIds[entry.hero];
+            const heroIcon = heroId ? operatorPortrait(heroId) : '👷‍♂️';
             const bossBadge = entry.bossDefeated ? '<span title="Były Kierownik Walczak skasowany!">👔💥</span>' : '';
             const mins = Math.floor(entry.timeSeconds / 60);
             const secs = entry.timeSeconds % 60;
