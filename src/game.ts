@@ -130,6 +130,7 @@ export interface GameCallbacks {
   onPerksUpdate?: (perks: ActivePerks) => void;
   onFloatingText?: (text: string, x: number, y: number, z: number, type?: 'points' | 'vip' | 'easter-egg' | 'damage' | 'perk' | 'combo' | 'enemy_shout', metadata?: any) => void;
   onPerkDropBanner?: (name: string, icon: string, desc: string, color: string) => void;
+  onSurvivalAnnouncement?: (title: string, subtitle: string, detail: string) => void;
   onSurvivalUpdate?: (snapshot: SurvivalSnapshot) => void;
   onSurvivalLevelUp?: (options: SurvivalUpgradeOption[]) => void;
 }
@@ -252,6 +253,14 @@ export class MaxFlizGameEngine {
       "Kubełek jest MÓJ! Nie dzielę się frytkami!",
       "Móóózg... znaczy KURCZAAAK z dostawy Dawida!",
     ],
+    pomazaniec: [
+      "POMAZAŃCEEEE! KTO MA JESZCZE DWA KÓŁKA?!",
+      "Razem mamy w siedmiu więcej lat niż rozumu!",
+      "Lizak w dłoń! Godzilla Dawida nie ucieknie!",
+      "Dzwonek działa, hamulce są opcjonalne!",
+      "MAM CZAPKĘ Z WIATRAKIEM, CZYLI JESTEM DOWÓDCĄ!",
+      "Dawidzilla! Nadciągamy z prędkością trzech kilometrów na godzinę!",
+    ],
   };
 
   public scene: THREE.Scene;
@@ -371,6 +380,11 @@ export class MaxFlizGameEngine {
   private survivalRerolls = 1;
   private survivalSkips = 1;
   private survivalSecretSpawned = false;
+  private survivalPomazaniecSpawned = false;
+  private survivalPomazaniecTriggered = false;
+  private survivalPomazaniecCompleted = false;
+  private survivalPomazaniecMarker: THREE.Group | null = null;
+  private survivalPomazaniecMarkerPulse = 0;
   private armorBlockCooldown = 0;
   private survivalPendingOptions: SurvivalUpgradeOption[] = [];
   private survivalXpGems: { mesh: THREE.Mesh; value: number; life: number; phase: number }[] = [];
@@ -524,7 +538,15 @@ export class MaxFlizGameEngine {
     exploded: boolean;
   }[] = [];
   private enemies: EnemyItem[] = [];
-  private enemyProjectiles: { mesh: THREE.Mesh; vel: THREE.Vector3; life: number; isDyscyplinarka?: boolean }[] = [];
+  private enemyProjectiles: {
+    mesh: THREE.Mesh;
+    vel: THREE.Vector3;
+    life: number;
+    isDyscyplinarka?: boolean;
+    kind?: 'pomazaniec_lollipop';
+    gravity?: number;
+    spin?: number;
+  }[] = [];
   private particles: {
     mesh: THREE.Mesh;
     vel: THREE.Vector3;
@@ -1045,6 +1067,10 @@ export class MaxFlizGameEngine {
     this.survivalRerolls = 1;
     this.survivalSkips = 1;
     this.survivalSecretSpawned = false;
+    this.survivalPomazaniecSpawned = false;
+    this.survivalPomazaniecTriggered = false;
+    this.survivalPomazaniecCompleted = false;
+    this.survivalPomazaniecMarkerPulse = 0;
     this.armorBlockCooldown = 0;
     this.survivalPendingOptions = [];
     this.marcinReclamationTimer = 0;
@@ -1629,6 +1655,15 @@ export class MaxFlizGameEngine {
 
   private clearLevel() {
     for (const enemy of this.enemies) this.disposeEnemyModel(enemy);
+    // Lollipop meshes own their geometry/materials; release them before the scene is reset.
+    for (const projectile of this.enemyProjectiles) {
+      if (projectile.kind === 'pomazaniec_lollipop') this.disposeTemporaryObject(projectile.mesh);
+    }
+    if (this.survivalPomazaniecMarker) {
+      this.levelRoot.remove(this.survivalPomazaniecMarker);
+      this.disposePomazaniecObject(this.survivalPomazaniecMarker);
+      this.survivalPomazaniecMarker = null;
+    }
     while (this.levelRoot.children.length > 0) {
       this.levelRoot.remove(this.levelRoot.children[0]);
     }
@@ -3844,6 +3879,10 @@ export class MaxFlizGameEngine {
 
   private updateSurvivalDirector(dt: number) {
     this.survivalElapsed += dt;
+    if (!this.survivalPomazaniecSpawned && this.survivalElapsed >= 135) {
+      this.spawnSurvivalPomazaniecMarker();
+    }
+    this.updateSurvivalPomazaniecMarker(dt);
     const nextWave = 1 + Math.floor(this.survivalElapsed / 60);
     if (nextWave > this.survivalWave) {
       this.survivalWave = nextWave;
@@ -3897,7 +3936,10 @@ export class MaxFlizGameEngine {
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
     // Poco F6-class hardware can sustain a busier arena; retain a hard ceiling
     // so particle, AI and shadow costs stay predictable during long runs.
-    const enemyCap = isMobile ? 22 : 34;
+    const pomazaniecRaidActive = this.survivalPomazaniecTriggered && !this.survivalPomazaniecCompleted;
+    // Reserve five temporary slots for the one-time secret wave without permanently
+    // increasing the regular enemy ceiling on mobile or desktop.
+    const enemyCap = (isMobile ? 22 : 34) + (pomazaniecRaidActive ? 5 : 0);
     const aliveCount = this.enemies.reduce((count, enemy) => count + (enemy.state === 'defeated' ? 0 : 1), 0);
     if (this.survivalSpawnTimer <= 0 && aliveCount < enemyCap) {
       const groupLimit = isMobile ? 5 : 7;
@@ -4016,6 +4058,363 @@ export class MaxFlizGameEngine {
     });
     geometries.forEach((geometry) => geometry.dispose());
     materials.forEach((material) => material.dispose());
+  }
+
+  private createPomazaniecRiderModel(variant: number, withSign = false): {
+    group: THREE.Group;
+    wheels: THREE.Mesh[];
+    propeller: THREE.Group;
+  } {
+    const group = new THREE.Group();
+    group.name = withSign ? 'POMAZANIEC_SECRET_MARKER' : 'POMAZANIEC_RIDER';
+    const shirtColors = [0x2563eb, 0xf97316, 0x16a34a, 0xa855f7, 0xdc2626];
+    const shirtColor = shirtColors[variant % shirtColors.length];
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.62, roughness: 0.34 });
+    const shirtMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.7 });
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0xf2c6a5, roughness: 0.82 });
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x182536, roughness: 0.86 });
+    const tireMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.92 });
+    const accentMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.45, roughness: 0.35 });
+    const hatMat = new THREE.MeshStandardMaterial({ color: variant % 2 === 0 ? 0xfacc15 : 0xf472b6, roughness: 0.62 });
+    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.5 });
+    const addBeam = (start: THREE.Vector3, end: THREE.Vector3, radius: number, material: THREE.Material) => {
+      const direction = new THREE.Vector3().subVectors(end, start);
+      const beam = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, direction.length(), 7), material);
+      beam.position.copy(start).add(end).multiplyScalar(0.5);
+      beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+      group.add(beam);
+      return beam;
+    };
+
+    // Tiny, low-slung bicycle: two visible wheels, a compact frame, pedals and handlebars.
+    const rearHub = new THREE.Vector3(0, 0.34, -0.56);
+    const frontHub = new THREE.Vector3(0, 0.34, 0.56);
+    const crank = new THREE.Vector3(0, 0.43, -0.02);
+    const wheelGeometry = new THREE.TorusGeometry(0.285, 0.047, 7, 18);
+    const wheels: THREE.Mesh[] = [];
+    for (const hub of [rearHub, frontHub]) {
+      const wheel = new THREE.Mesh(wheelGeometry, tireMat);
+      wheel.rotation.y = Math.PI / 2;
+      wheel.position.copy(hub);
+      wheel.castShadow = false;
+      wheel.receiveShadow = false;
+      group.add(wheel);
+      wheels.push(wheel);
+      const axle = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.11, 8), accentMat);
+      axle.rotation.z = Math.PI / 2;
+      axle.position.copy(hub);
+      group.add(axle);
+    }
+    addBeam(rearHub, crank, 0.035, frameMat);
+    addBeam(crank, frontHub, 0.035, frameMat);
+    addBeam(rearHub, new THREE.Vector3(0, 0.73, -0.16), 0.034, frameMat);
+    addBeam(new THREE.Vector3(0, 0.73, -0.16), crank, 0.03, frameMat);
+    addBeam(frontHub, new THREE.Vector3(0, 0.72, 0.34), 0.036, frameMat);
+    addBeam(new THREE.Vector3(0, 0.72, 0.34), new THREE.Vector3(0, 0.43, -0.02), 0.028, frameMat);
+
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.075, 0.18), darkMat);
+    seat.position.set(0, 0.77, -0.18);
+    seat.rotation.x = -0.08;
+    group.add(seat);
+    const handlebarStem = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.27, 7), frameMat);
+    handlebarStem.position.set(0, 0.77, 0.45);
+    handlebarStem.rotation.x = -0.25;
+    group.add(handlebarStem);
+    const handlebar = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.48, 7), darkMat);
+    handlebar.rotation.z = Math.PI / 2;
+    handlebar.position.set(0, 0.84, 0.50);
+    group.add(handlebar);
+    const bell = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 7), accentMat);
+    bell.position.set(0.17, 0.88, 0.5);
+    group.add(bell);
+
+    // The rider is deliberately hunched low over the bars, with bent knees and tiny shoes.
+    const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.14, 0.23, 4, 8), shirtMat);
+    torso.position.set(0, 0.79, -0.01);
+    torso.rotation.x = -0.40;
+    group.add(torso);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.205, 12, 10), skinMat);
+    head.position.set(0, 1.075, 0.12);
+    group.add(head);
+    for (const eyeX of [-0.068, 0.068]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.024, 6, 6), darkMat);
+      eye.position.set(eyeX, 1.095, 0.305);
+      group.add(eye);
+    }
+    const grin = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.008, 4, 10, Math.PI), darkMat);
+    grin.position.set(0, 1.02, 0.31);
+    group.add(grin);
+
+    const capBrim = new THREE.Mesh(new THREE.CylinderGeometry(0.235, 0.235, 0.045, 12), hatMat);
+    capBrim.position.set(0, 1.27, 0.11);
+    group.add(capBrim);
+    const capTop = new THREE.Mesh(new THREE.SphereGeometry(0.19, 10, 8), hatMat);
+    capTop.scale.set(1, 0.55, 1);
+    capTop.position.set(0, 1.32, 0.06);
+    group.add(capTop);
+    const propeller = new THREE.Group();
+    propeller.position.set(0, 1.43, 0.06);
+    const bladeA = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.035, 0.11), whiteMat);
+    const bladeB = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.035, 0.68), hatMat);
+    propeller.add(bladeA, bladeB);
+    const propellerHub = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 8), accentMat);
+    propeller.add(propellerHub);
+    group.add(propeller);
+
+    // Bent elbows reach forward to the tiny handlebars.
+    addBeam(new THREE.Vector3(-0.14, 0.91, 0.01), new THREE.Vector3(-0.19, 0.79, 0.34), 0.052, skinMat);
+    addBeam(new THREE.Vector3(0.14, 0.91, 0.01), new THREE.Vector3(0.19, 0.79, 0.34), 0.052, skinMat);
+    for (const side of [-1, 1]) {
+      const hand = new THREE.Mesh(new THREE.SphereGeometry(0.065, 7, 6), skinMat);
+      hand.position.set(side * 0.19, 0.79, 0.43);
+      group.add(hand);
+      addBeam(new THREE.Vector3(side * 0.10, 0.65, -0.12), new THREE.Vector3(side * 0.20, 0.49, 0.16), 0.065, darkMat);
+      addBeam(new THREE.Vector3(side * 0.20, 0.49, 0.16), new THREE.Vector3(side * 0.18, 0.29, 0.36), 0.06, darkMat);
+      const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.09, 0.22), accentMat);
+      shoe.position.set(side * 0.18, 0.24, 0.40);
+      group.add(shoe);
+    }
+    const crankBar = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.34, 6), accentMat);
+    crankBar.rotation.z = Math.PI / 2;
+    crankBar.position.copy(crank);
+    group.add(crankBar);
+    for (const side of [-1, 1]) {
+      const pedal = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.035, 0.07), darkMat);
+      pedal.position.set(side * 0.22, 0.43, -0.02);
+      group.add(pedal);
+    }
+
+    const dynamicTextures: THREE.Texture[] = [];
+    if (withSign) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.027, 0.027, 0.48, 7), accentMat);
+      post.position.set(0, 1.08, 0.78);
+      post.rotation.x = -0.15;
+      group.add(post);
+      const signCanvas = document.createElement('canvas');
+      signCanvas.width = 512;
+      signCanvas.height = 196;
+      const context = signCanvas.getContext('2d');
+      if (context) {
+        context.fillStyle = '#111827';
+        context.fillRect(0, 0, signCanvas.width, signCanvas.height);
+        context.strokeStyle = '#facc15';
+        context.lineWidth = 12;
+        context.strokeRect(7, 7, signCanvas.width - 14, signCanvas.height - 14);
+        context.fillStyle = '#fdf2f8';
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.font = '900 58px Arial, sans-serif';
+        context.fillText('POMAZANIEC', 256, 101, 470);
+      }
+      const signTexture = new THREE.CanvasTexture(signCanvas);
+      signTexture.colorSpace = THREE.SRGBColorSpace;
+      dynamicTextures.push(signTexture);
+      const signBacking = new THREE.Mesh(
+        new THREE.BoxGeometry(1.18, 0.48, 0.055),
+        new THREE.MeshStandardMaterial({ color: 0x172033, metalness: 0.24, roughness: 0.58 })
+      );
+      signBacking.position.set(0, 1.34, 0.88);
+      group.add(signBacking);
+      const signFace = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.1, 0.40),
+        new THREE.MeshBasicMaterial({ map: signTexture, side: THREE.DoubleSide, toneMapped: false })
+      );
+      signFace.position.set(0, 1.34, 0.914);
+      group.add(signFace);
+      group.userData.dynamicTextures = dynamicTextures;
+    }
+
+    group.traverse((object) => {
+      const mesh = object as THREE.Mesh;
+      if (mesh.isMesh) {
+        mesh.castShadow = false;
+        mesh.receiveShadow = false;
+      }
+    });
+    return { group, wheels, propeller };
+  }
+
+  private disposePomazaniecObject(object: THREE.Object3D) {
+    const dynamicTextures = (object.userData.dynamicTextures || []) as THREE.Texture[];
+    this.disposeTemporaryObject(object);
+    for (const texture of dynamicTextures) texture.dispose();
+  }
+
+  private spawnSurvivalPomazaniecMarker() {
+    if (this.survivalPomazaniecSpawned || this.gameMode !== 'survival') return;
+    this.survivalPomazaniecSpawned = true;
+    const point = this.getSurvivalSpawnPoint();
+    const rider = this.createPomazaniecRiderModel(0, true);
+    const marker = rider.group;
+    marker.position.set(point.x, 0, point.z);
+    const pulseRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.78, 0.98, 32),
+      new THREE.MeshBasicMaterial({ color: 0xf472b6, transparent: true, opacity: 0.78, side: THREE.DoubleSide, depthWrite: false })
+    );
+    pulseRing.rotation.x = -Math.PI / 2;
+    pulseRing.position.y = 0.035;
+    marker.add(pulseRing);
+    marker.userData.pulseRing = pulseRing;
+    marker.userData.wheels = rider.wheels;
+    marker.userData.propeller = rider.propeller;
+    this.levelRoot.add(marker);
+    this.survivalPomazaniecMarker = marker;
+    this.survivalPomazaniecMarkerPulse = 0;
+    this.callbacks.onSurvivalAnnouncement?.(
+      'OBIEKT NIEZIDENTYFIKOWANY',
+      'Na obrzeżu hali stoi mały rowerzysta w czapce z wiatraczkiem.',
+      'Na kierownicy ma tabliczkę „POMAZANIEC”. Podejdź bliżej.'
+    );
+    this.emitFloatingToast('🚲 POMAZANIEC — PODEJDŹ DO TABLICZKI!', point.x, 1.8, point.z, 'perk');
+  }
+
+  private updateSurvivalPomazaniecMarker(dt: number) {
+    const marker = this.survivalPomazaniecMarker;
+    if (!marker || this.survivalPomazaniecTriggered) return;
+    this.survivalPomazaniecMarkerPulse += dt;
+    const dx = this.playerPos.x - marker.position.x;
+    const dz = this.playerPos.z - marker.position.z;
+    marker.rotation.y = Math.atan2(dx, dz);
+    marker.position.y = Math.sin(this.survivalPomazaniecMarkerPulse * 2.2) * 0.018;
+    const propeller = marker.userData.propeller as THREE.Group | undefined;
+    if (propeller) propeller.rotation.y += dt * 22;
+    const wheels = marker.userData.wheels as THREE.Mesh[] | undefined;
+    if (wheels) wheels.forEach((wheel) => wheel.rotateX(dt * 2.1));
+    const ring = marker.userData.pulseRing as THREE.Mesh | undefined;
+    if (ring) {
+      const pulse = 0.94 + Math.sin(this.survivalPomazaniecMarkerPulse * 3.3) * 0.12;
+      ring.scale.setScalar(pulse);
+      const material = ring.material as THREE.MeshBasicMaterial;
+      material.opacity = 0.48 + (Math.sin(this.survivalPomazaniecMarkerPulse * 3.3) + 1) * 0.18;
+    }
+    if (Math.hypot(dx, dz) < 3.6) this.triggerPomazaniecSecretEvent();
+  }
+
+  private getPomazaniecSpawnPoint(index: number): { x: number; z: number } {
+    const baseAngle = this.playerRot + (index / 5) * Math.PI * 2;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const angle = baseAngle + attempt * 0.31;
+      const radius = 7.8 + (attempt % 3) * 0.65;
+      const x = THREE.MathUtils.clamp(
+        this.playerPos.x + Math.sin(angle) * radius,
+        this.levelBounds.minX + 2.8,
+        this.levelBounds.maxX - 2.8
+      );
+      const z = THREE.MathUtils.clamp(
+        this.playerPos.z + Math.cos(angle) * radius,
+        this.levelBounds.minZ + 1.8,
+        this.levelBounds.maxZ - 1.8
+      );
+      const blocked = this.survivalObstacles.some((obstacle) =>
+        Math.abs(x - obstacle.x) < obstacle.halfWidth + 0.85 &&
+        Math.abs(z - obstacle.z) < obstacle.halfDepth + 0.85
+      );
+      const overlapsEnemy = this.enemies.some((enemy) =>
+        enemy.state !== 'defeated' && Math.hypot(enemy.x - x, enemy.z - z) < 1.8
+      );
+      if (!blocked && !overlapsEnemy) return { x, z };
+    }
+    const angle = baseAngle;
+    return {
+      x: THREE.MathUtils.clamp(this.playerPos.x + Math.sin(angle) * 9, this.levelBounds.minX + 2.8, this.levelBounds.maxX - 2.8),
+      z: THREE.MathUtils.clamp(this.playerPos.z + Math.cos(angle) * 9, this.levelBounds.minZ + 1.8, this.levelBounds.maxZ - 1.8),
+    };
+  }
+
+  private addPomazaniecEnemy(id: string, x: number, z: number, index: number) {
+    const rider = this.createPomazaniecRiderModel(index + 1, false);
+    rider.group.position.set(x, 0, z);
+    rider.group.rotation.y = Math.atan2(this.playerPos.x - x, this.playerPos.z - z);
+    this.levelRoot.add(rider.group);
+    this.enemies.push({
+      id,
+      type: 'pomazaniec',
+      name: 'Pomazaniec #' + (index + 1) + ' • rajd na rowerkach',
+      mesh: rider.group,
+      x,
+      y: 0.08,
+      z,
+      startX: x - 2.2,
+      endX: x + 2.2,
+      speed: 3.5 + (index % 2) * 0.16,
+      dir: 1,
+      hp: 4,
+      maxHp: 4,
+      state: 'chase',
+      stunTimer: 0,
+      shoutTimer: 1.4 + index * 0.42,
+      shoutText: '',
+      attackCooldown: 0,
+      walkCycle: index * 0.8,
+      specialActionTimer: 2.2 + index * 0.46,
+      bikeWheels: rider.wheels,
+      propeller: rider.propeller,
+      aiSlot: 20 + index,
+      aiFlankAngle: Math.atan2(x - this.playerPos.x, z - this.playerPos.z),
+      aiOrbitSign: index % 2 === 0 ? 1 : -1,
+    });
+  }
+
+  private triggerPomazaniecSecretEvent() {
+    if (this.survivalPomazaniecTriggered || this.gameMode !== 'survival') return;
+    this.survivalPomazaniecTriggered = true;
+    const marker = this.survivalPomazaniecMarker;
+    if (marker) {
+      this.levelRoot.remove(marker);
+      this.disposePomazaniecObject(marker);
+      this.survivalPomazaniecMarker = null;
+    }
+
+    this.callbacks.onSurvivalAnnouncement?.(
+      'Pomazańceeee idziemy zbić Godzillę Dawida , razem mamy w 7 więcej lat !',
+      'RAJD NA ROWERKACH • PIĘCIU POMAZAŃCÓW',
+      'Pięciu maluchów rusza do szturmu. Uważaj na salwy lizaków i nie daj się dogonić kolumnie rowerków!'
+    );
+    this.emitFloatingToast('🍭 LIZAKI W DŁOŃ! GODZILLA DAWIDA CZEKA!', this.playerPos.x, this.playerPos.y + 1.9, this.playerPos.z, 'combo');
+    sound.playPomazaniecEntrance();
+    this.triggerScreenShake(0.36, 0.28);
+    this.triggerHitStop(0.07);
+    this.triggerBloomPulse(0.34);
+
+    for (let index = 0; index < 5; index++) {
+      const point = this.getPomazaniecSpawnPoint(index);
+      this.addPomazaniecEnemy('survival_pomazaniec_' + index + '_' + Math.floor(performance.now()), point.x, point.z, index);
+      this.spawnParticleRing(point.x, 0.12, point.z, index % 2 === 0 ? 0xf472b6 : 0xfacc15);
+    }
+  }
+
+  private spawnPomazaniecLollipop(x: number, y: number, z: number, targetX: number, targetZ: number, variant: number) {
+    const colors = [0xf43f5e, 0xf472b6, 0x8b5cf6, 0x22c55e, 0xf59e0b];
+    const color = colors[variant % colors.length];
+    const candy = new THREE.Mesh(
+      new THREE.SphereGeometry(0.155, 12, 10),
+      new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.42, roughness: 0.26, metalness: 0.08 })
+    );
+    const stick = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.022, 0.026, 0.42, 7),
+      new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.65 })
+    );
+    stick.position.y = -0.24;
+    candy.add(stick);
+    const spiral = new THREE.Mesh(
+      new THREE.TorusGeometry(0.095, 0.014, 5, 14),
+      new THREE.MeshBasicMaterial({ color: 0xffffff })
+    );
+    spiral.position.z = 0.115;
+    candy.add(spiral);
+
+    candy.position.set(x, y, z);
+    this.levelRoot.add(candy);
+    const direction = new THREE.Vector3(targetX - x, 0.10, targetZ - z).normalize();
+    this.enemyProjectiles.push({
+      mesh: candy,
+      vel: direction.multiplyScalar(7.6),
+      life: 3.1,
+      kind: 'pomazaniec_lollipop',
+      gravity: 1.35,
+      spin: 8.5,
+    });
+    sound.playLollipopThrow();
   }
 
   private updateSurvivalDrone(dt: number) {
@@ -5091,14 +5490,14 @@ export class MaxFlizGameEngine {
   private getSurvivalEnemyRole(enemy: EnemyItem): 'bruiser' | 'flanker' | 'ranged' | 'support' {
     if (enemy.type === 'sztaplar_szalony' || enemy.type === 'elite_walczak_guard' || enemy.type === 'agv_robot') return 'bruiser';
     if (enemy.type === 'inspector') return 'support';
-    if (enemy.type === 'handlowiec' || enemy.type === 'przedstawiciel_włoski' || enemy.type === 'pan_roman' || enemy.type === 'serwisant') return 'ranged';
+    if (enemy.type === 'handlowiec' || enemy.type === 'przedstawiciel_włoski' || enemy.type === 'pan_roman' || enemy.type === 'serwisant' || enemy.type === 'pomazaniec') return 'ranged';
     if (enemy.type === 'kurier' || enemy.type === 'zombie_pracownik' || enemy.type === 'monter') return 'flanker';
     return 'flanker';
   }
 
   private updateSurvivalEnemyTactics(enemy: EnemyItem, dt: number, distanceToPlayer: number) {
     const role = this.getSurvivalEnemyRole(enemy);
-    const engaged = this.activeChaserIds.has(enemy.id);
+    const engaged = this.activeChaserIds.has(enemy.id) || enemy.type === 'pomazaniec';
     const slot = enemy.aiSlot || 0;
     const anchorAngle = enemy.aiFlankAngle ?? Math.atan2(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z);
     const drift = Math.sin(this.survivalElapsed * 0.62 + slot * 1.7) * (engaged ? 0.16 : 0.10);
@@ -5293,6 +5692,9 @@ export class MaxFlizGameEngine {
 
       e.walkCycle += dt * 8;
       if (e.shieldRing?.visible) e.shieldRing.rotation.z += dt * 1.25;
+      if (e.bikeWheels) e.bikeWheels.forEach((wheel) => wheel.rotateX(dt * (e.state === 'chase' ? 8.5 : 3.4)));
+      if (e.propeller) e.propeller.rotation.y += dt * (e.state === 'chase' ? 34 : 18);
+      if (e.type === 'pomazaniec') e.mesh.rotation.x = THREE.MathUtils.lerp(e.mesh.rotation.x, 0, Math.min(1, dt * 3.2));
       if (e.legL && e.legR && e.type !== 'piorun_dron') {
         e.legL.rotation.x = Math.sin(e.walkCycle) * 0.5;
         e.legR.rotation.x = -Math.sin(e.walkCycle) * 0.5;
@@ -5308,7 +5710,7 @@ export class MaxFlizGameEngine {
         const ringMesh = new THREE.Mesh(
           new THREE.RingGeometry(0.42, 0.54, 20),
           new THREE.MeshBasicMaterial({
-            color: 0xef4444,
+            color: e.type === 'pomazaniec' ? 0xec4899 : 0xef4444,
             transparent: true,
             opacity: 0.65,
             side: THREE.DoubleSide,
@@ -5334,7 +5736,7 @@ export class MaxFlizGameEngine {
       }
 
       // Check whether this enemy is allowed to engage or must hold position in wave
-      const canActivelyChase = e.type === 'walczak' || e.type === 'krol_leto' || this.activeChaserIds.has(e.id);
+      const canActivelyChase = e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'pomazaniec' || this.activeChaserIds.has(e.id);
 
       // SIGHT & DETECTION LOGIC
       const threatAwareness = 1 + this.threatTier * 0.025;
@@ -5560,8 +5962,16 @@ export class MaxFlizGameEngine {
           }
         }
 
-        // Ranged special attacks
-        if ((e.type === 'handlowiec' || e.type === 'przedstawiciel_włoski') && e.specialActionTimer !== undefined) {
+        // The tiny riders keep their distance and throw visible, arcing lollipops.
+        if (e.type === 'pomazaniec' && e.specialActionTimer !== undefined) {
+          e.specialActionTimer -= dt;
+          if (e.specialActionTimer <= 0 && distToPlayer < 13.0) {
+            e.specialActionTimer = 4.35 + Math.random() * 1.25;
+            e.mesh.rotation.y = Math.atan2(dx, dz);
+            e.mesh.rotation.x = -0.08;
+            this.spawnPomazaniecLollipop(e.x, e.y + 1.03, e.z, this.playerPos.x, this.playerPos.z, e.aiSlot || 0);
+          }
+        } else if ((e.type === 'handlowiec' || e.type === 'przedstawiciel_włoski') && e.specialActionTimer !== undefined) {
           e.specialActionTimer -= dt;
           if (e.specialActionTimer <= 0 && distToPlayer < 9.0) {
             e.specialActionTimer = 2.8;
@@ -5602,6 +6012,10 @@ export class MaxFlizGameEngine {
 
       // Check collision with player
       const dist = Math.hypot(e.x - this.playerPos.x, e.z - this.playerPos.z);
+      if (e.type === 'pomazaniec') {
+        e.mesh.position.y = e.y + Math.sin(e.walkCycle * 1.65) * 0.025;
+        e.mesh.rotation.z = Math.sin(e.walkCycle * 1.1) * 0.018;
+      }
       const hitRadius = e.type === 'walczak' || e.type === 'krol_leto' ? 1.5 : e.type === 'elite_walczak_guard' ? 1.3 : 1.1;
 
       if (dist < hitRadius) {
@@ -6121,7 +6535,12 @@ export class MaxFlizGameEngine {
     for (let i = this.enemyProjectiles.length - 1; i >= 0; i--) {
       const ep = this.enemyProjectiles[i];
       ep.life -= dt;
+      if (ep.gravity) ep.vel.y -= ep.gravity * dt;
       ep.mesh.position.addScaledVector(ep.vel, dt);
+      if (ep.spin) {
+        ep.mesh.rotation.z += ep.spin * dt;
+        ep.mesh.rotation.x += ep.spin * 0.32 * dt;
+      }
 
       const dist = Math.hypot(ep.mesh.position.x - this.playerPos.x, ep.mesh.position.z - this.playerPos.z);
       if (dist < 0.85 && Math.abs(ep.mesh.position.y - this.playerPos.y) < 1.0) {
@@ -6135,16 +6554,24 @@ export class MaxFlizGameEngine {
           } else {
             this.takeDamage('🚨 ZWOLNIENIE DYSCYPLINARNE NA HITA OD KRÓLA-LETO!', 99);
           }
+        } else if (ep.kind === 'pomazaniec_lollipop') {
+          this.takeDamage('🍭 Trafił Cię lizak wystrzelony przez Pomazańca!');
+          this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.55, this.playerPos.z, 0xf472b6);
+          this.triggerBloomPulse(0.16);
+          sound.playLollipopHit();
+          this.emitFloatingToast('🍭 LIZAK PROSTO W CZOŁO!', this.playerPos.x, this.playerPos.y + 1.25, this.playerPos.z, 'damage');
         } else {
           this.takeDamage('Trafiło Cię wezwanie wyjaśniające od Walczaka!');
         }
         this.levelRoot.remove(ep.mesh);
+        if (ep.kind === 'pomazaniec_lollipop') this.disposeTemporaryObject(ep.mesh);
         this.enemyProjectiles.splice(i, 1);
         continue;
       }
 
       if (ep.life <= 0) {
         this.levelRoot.remove(ep.mesh);
+        if (ep.kind === 'pomazaniec_lollipop') this.disposeTemporaryObject(ep.mesh);
         this.enemyProjectiles.splice(i, 1);
       }
     }
@@ -6993,6 +7420,32 @@ export class MaxFlizGameEngine {
       if (this.survivalKills % 8 === 0) {
         this.spawnParticleRing(e.x, e.y + 0.7, e.z, 0x38bdf8);
         this.emitFloatingToast('📦 NORMA ZMIANY WYROBIONA x8!', e.x, e.y + 1.8, e.z, 'combo');
+      }
+    }
+
+    if (e.type === 'pomazaniec') {
+      this.spawnParticleRing(e.x, e.y + 0.35, e.z, 0xf472b6);
+      this.spawnParticleRing(e.x, e.y + 0.78, e.z, 0xfacc15);
+      sound.playLollipopHit();
+      const pomazanceRemaining = this.enemies.filter((enemy) =>
+        enemy.type === 'pomazaniec' && enemy.state !== 'defeated'
+      ).length;
+      if (pomazanceRemaining === 0 && this.survivalPomazaniecTriggered && !this.survivalPomazaniecCompleted) {
+        this.survivalPomazaniecCompleted = true;
+        this.score += 1500;
+        this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+        // Each of the five defeated riders already drops 3 XP. Keep the bonus at
+        // 15 XP total instead of spawning a second, duplicate set of XP gems.
+        this.callbacks.onSurvivalAnnouncement?.(
+          'GODZILLA DAWIDA: OCALONA (CHWILOWO)',
+          'RAJD POMAZAŃCÓW ROZBITY!',
+          'Pięć rowerków, zero hamulców. Premia za obronę hali: +1 500 punktów i 15 XP do zebrania.'
+        );
+        this.emitFloatingToast('🏆 POMAZANIEC RAID — +1 500 PKT!', this.playerPos.x, this.playerPos.y + 1.9, this.playerPos.z, 'combo');
+        sound.playPomazaniecVictory();
+        this.triggerHitStop(0.12);
+        this.triggerScreenShake(0.42, 0.34);
+        this.triggerBloomPulse(0.42);
       }
     }
 

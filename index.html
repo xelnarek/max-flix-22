@@ -208,6 +208,12 @@
 
       <div id="floating-popups-layer" class="floating-popups-layer" aria-hidden="true"></div>
       <div id="perk-drop-banner" class="perk-drop-banner hidden"></div>
+      <div id="survival-event-announcement" class="survival-event-announcement hidden" role="status" aria-live="assertive" aria-atomic="true">
+        <div class="survival-event-kicker">MAX-FLIZ INTELLIGENCE • SPECIAL FIELD EVENT</div>
+        <div id="survival-event-title" class="survival-event-title"></div>
+        <div id="survival-event-subtitle" class="survival-event-subtitle"></div>
+        <div id="survival-event-detail" class="survival-event-detail"></div>
+      </div>
 
       <div id="survival-hud" class="survival-hud hidden" aria-live="polite">
         <div class="survival-hud-main">
@@ -311,7 +317,7 @@
             <p class="menu-game-subtitle">KAMPANIA 3-SEKTOROWA • SURVIVAL SHIFT • ROGUELITE PROGRESJA</p>
             <div class="menu-release-strip">
               <span class="menu-release-pill">PATCH 30.10.2026</span>
-              <span>SHIFT OVERHAUL</span><span>18 TYPÓW WROGÓW</span><span>11 PERKÓW</span><span>4 BUILDY + 8 BRONI</span>
+              <span>SHIFT OVERHAUL</span><span>19 TYPÓW WROGÓW</span><span>11 PERKÓW</span><span>4 BUILDY + 8 BRONI</span>
             </div>
             <button id="btn-top-intro-3d" class="btn-top-intro-pill" title="Obejrzyj pełny kinowy film fabularny 3D">
               <svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
@@ -724,7 +730,7 @@
                 <div class="field-guide-kicker">MAX-FLIZ INTELLIGENCE DIVISION • FIELD MANUAL 02.6</div>
                 <div class="field-guide-heading-row"><div><h2>BAZA TAKTYCZNA</h2><p>Pełny przewodnik po zawartości gry: kampania, Survival Shift, przeciwnicy, pułapki, eventy, perki, ulepszenia i sekrety. Wszystko w jednym miejscu, przed wejściem na halę.</p></div><div class="field-guide-stamp">AKTUALNE<br>30.10.2026</div></div>
                 <div class="field-guide-metrics">
-                  <div><strong>18</strong><span>typów zagrożeń</span></div><div><strong>4</strong><span>pułapki</span></div><div><strong>5</strong><span>eventów</span></div><div><strong>11</strong><span>perków</span></div><div><strong>12</strong><span>ulepszeń</span></div><div><strong>12</strong><span>ewolucji buildów i broni</span></div>
+                  <div><strong>19</strong><span>typów zagrożeń</span></div><div><strong>4</strong><span>pułapki</span></div><div><strong>5</strong><span>eventów</span></div><div><strong>11</strong><span>perków</span></div><div><strong>12</strong><span>ulepszeń</span></div><div><strong>12</strong><span>ewolucji buildów i broni</span></div>
                 </div>
               </section>
 
@@ -735,11 +741,11 @@
                   <article class="field-guide-card"><span class="field-guide-icon">⚔️</span><h4>SURVIVAL SHIFT • ROGUELITE</h4><p>Samodzielna arena, fale co 60 sekund i automatyczne namierzanie. Ataki mają niezależne, długie przeładowania. Co 5 fal pojawia się boss; co 10 fal jest nim Król-Leto. Boss zostawia skrzynię z łupem i dodatkowe XP.</p><small>CEL: PRZETRWAJ • ZBIERAJ XP • SKŁADAJ BUILD</small></article>
                   <article class="field-guide-card"><span class="field-guide-icon">🔫</span><h4>ARSENAŁ • 8 BRONI AUTONOMICZNYCH</h4><p>Działo paletowe (fala uderzeniowa), Tarcza diamentowa (przebicie i rykoszet), Mina Mapei (spowolnienie), Kubełek bombowy (ogień), Dron Piorun (naprowadzanie), Nitownica UDT (szybkie przebicie), Impuls skanera B4 (precyzyjne namierzanie) i Wirujące tarcze (obrona orbitalna). Broń rozwijasz do poziomu 5. Unikalna ewolucja wymaga 5 minut Survival oraz co najmniej jednego poziomu przypisanego modułu pasywnego.</p><small>TAKTYKA: DOBIERAJ WZORY ATAKU, NIE TYLKO SUROWE OBRAŻENIA</small></article>
                 </div>
-                <div class="field-guide-callout"><strong>Tempo i czytelność:</strong> fale przychodzą co 60 sekund, liczebność grup i limit przeciwników są ograniczone. Maksymalnie 14 aktywnych przeciwników na urządzeniach mobilnych i 22 na desktopie. Im dalej w zmianę, tym bardziej wytrzymali są wrogowie.</div>
+                <div class="field-guide-callout"><strong>Tempo i czytelność:</strong> fale przychodzą co 60 sekund, liczebność grup i limit przeciwników są ograniczone. Maksymalnie 22 aktywnych przeciwników na urządzeniach mobilnych i 34 na desktopie. Sekretna fala Pomazańców otrzymuje pięć krótkotrwałych, dodatkowych slotów. Im dalej w zmianę, tym bardziej wytrzymali są wrogowie.</div>
               </section>
 
               <section class="field-guide-section">
-                <div class="field-guide-section-head"><span class="field-guide-index">02</span><div><h3>ROSTER ZAGROŻEŃ • 18 TYPÓW</h3><p>Obserwuj tor ruchu i nie daj się zamknąć w alejce. Dron przeciwnika i dron asystujący to dwie różne jednostki.</p></div></div>
+                <div class="field-guide-section-head"><span class="field-guide-index">02</span><div><h3>ROSTER ZAGROŻEŃ • 19 TYPÓW</h3><p>Obserwuj tor ruchu i nie daj się zamknąć w alejce. Dron przeciwnika i dron asystujący to dwie różne jednostki.</p></div></div>
                 <div class="field-guide-card-grid three-col">
                   <article class="field-guide-card enemy"><span class="field-guide-icon">🧟</span><h4>Zombie-Magazynier</h4><p>Podstawowy wróg Survival. Powolny napór nocnej zmiany, groźny w dużej grupie.</p><small>TAKTYKA: NIE DAJ SIĘ OTACZAĆ</small></article>
                   <article class="field-guide-card enemy"><span class="field-guide-icon">📦</span><h4>Kurier Ekspresowy</h4><p>Mobilny dostawca z paczką i awizem. Próbuje dopaść operatora w wąskich przejściach.</p><small>TAKTYKA: ZMIENIAJ KIERUNEK</small></article>
@@ -755,6 +761,7 @@
                   <article class="field-guide-card enemy"><span class="field-guide-icon">🛡️</span><h4>Elitarny strażnik</h4><p>Pancerny ochroniarz Walczaka. W puli Survival pełni rolę cięższego przeciwnika.</p><small>TAKTYKA: NIE ATAKUJ NA ŚLEPO</small></article>
                   <article class="field-guide-card enemy"><span class="field-guide-icon">⚡</span><h4>Dron Piorun</h4><p>Jednostka patrolowa i przeciwnik eventu AGV. Atakuje impulsami; nie jest Twoim sojusznikiem.</p><small>TAKTYKA: RUCH I ZMIANA POZYCJI</small></article>
                   <article class="field-guide-card enemy"><span class="field-guide-icon">🤖</span><h4>Robot AGV-9 / SENTINEL</h4><p>Autonomiczny wózek transportowy. W Survival od fali 11 może pojawić się rzadka odmiana Sentinel: ma osłonę blokującą pierwsze trafienie i ładuje impuls elektryczny po wyraźnym czerwonym ostrzeżeniu.</p><small>TAKTYKA: ZBIJ OSŁONĘ, POTEM ZEJDŹ Z LINII IMPULSU</small></article>
+                  <article class="field-guide-card enemy pomazaniec-guide-card"><span class="field-guide-icon">🚲</span><h4>Pomazaniec • Rajd na rowerkach</h4><p>Pięciu małych rajdowców w czapkach z wiatraczkiem. W Survival po 2:15 min raz na bieg pojawia się jeden z tabliczką „POMAZANIEC”. Podejdź do niego, aby uruchomić zasadzkę — rzucają lizakami, a za pokonanie całej piątki dostajesz 1 500 punktów i 15 XP.</p><small>TAKTYKA: RUSZAJ SIĘ • UNIKAJ LIZAKÓW • ZBIERZ BONUS</small></article>
                   <article class="field-guide-card enemy"><span class="field-guide-icon">🚜</span><h4>Wózek widłowy</h4><p>Ruchome zagrożenie kampanii, które wymusza obserwowanie toru jazdy i bezpiecznych przejść.</p><small>TAKTYKA: PATRZ NA TOR JAZDY</small></article>
                   <article class="field-guide-card enemy boss"><span class="field-guide-icon">👔</span><h4>Były kierownik Walczak</h4><p>Boss kampanii i fal Survival. Atakuje megafonem oraz karami umownymi. Co piątą falę przypomina, że premia jest „w trakcie akceptacji”.</p><small>TAKTYKA: UNIKI • RUCH • OKNO PO ATAKU</small></article>
                   <article class="field-guide-card enemy boss"><span class="field-guide-icon">👑</span><h4>Król-Leto</h4><p>Boss kampanii oraz co 10. fali Survival. Rzuca dyscyplinarkami i nie uznaje odwołań.</p><small>TAKTYKA: NIE ZOSTAWAJ W JEDNYM MIEJSCU</small></article>
@@ -849,6 +856,7 @@
                   <article class="field-guide-card secret"><span class="field-guide-icon">📁</span><h4>Teczka z premią Walczaka</h4><p>Ukryty obiekt specjalny. Walczak twierdzi, że w środku są dokumenty do podpisu. Lepiej nie sprawdzać.</p></article>
                   <article class="field-guide-card secret"><span class="field-guide-icon">☕</span><h4>Zapomniany automat z 1998 roku</h4><p>Relikt przerwy kawowej sprzed ery terminali. Nikt nie wie, czy kawa działa, ale automat nadal pobiera drobne.</p></article>
                   <article class="field-guide-card secret"><span class="field-guide-icon">👑</span><h4>Złoty tron kierownika</h4><p>Najbardziej niepraktyczny mebel w kompleksie. Sekret pojawia się poza główną trasą i nagradza eksplorację.</p></article>
+                  <article class="field-guide-card secret pomazaniec-secret-card"><span class="field-guide-icon">🚲</span><h4>Tabliczka „POMAZANIEC”</h4><p>Jednorazowy sekret Survival. Po 2 minutach i 15 sekundach rowerzysta może pojawić się na obrzeżu areny. Zbliżenie do niego uruchamia pięcioosobowy rajd na rowerkach i ostrzał lizakami.</p><small>ODKRYJ • PODEJDŹ • PRZETRWAJ • ODBIERZ PREMIĘ</small></article>
                 </div>
                 <div class="field-guide-callout"><strong>Warunek sekretu:</strong> raz na bieg, po osiągnięciu co najmniej 4. fali, gra losuje możliwość pojawienia się obiektu (34% szansy). Jeśli sekret się pojawi, szukaj go na obrzeżach areny. Bossowie zostawiają skrzynie z łupem i dodatkowe XP.</div>
               </section>

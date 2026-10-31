@@ -375,6 +375,37 @@ class MaxFlizScene extends xb.Script {
       }, 1800);
     };
 
+    const hideSurvivalAnnouncement = () => {
+      const announcement = document.getElementById('survival-event-announcement');
+      if (!announcement) return;
+      clearTimeout((announcement as any)._timeout);
+      announcement.classList.add('hidden');
+      announcement.classList.remove('is-visible');
+    };
+
+    const showSurvivalAnnouncement = (title: string, subtitle: string, detail: string) => {
+      const announcement = document.getElementById('survival-event-announcement');
+      const titleElement = document.getElementById('survival-event-title');
+      const subtitleElement = document.getElementById('survival-event-subtitle');
+      const detailElement = document.getElementById('survival-event-detail');
+      if (!announcement || !titleElement || !subtitleElement || !detailElement) return;
+
+      // textContent keeps event dialogue safe and avoids reparsing dynamic text as HTML.
+      titleElement.textContent = title;
+      subtitleElement.textContent = subtitle;
+      detailElement.textContent = detail;
+      clearTimeout((announcement as any)._timeout);
+      announcement.classList.add('hidden');
+      announcement.classList.remove('is-visible');
+      void announcement.offsetWidth;
+      announcement.classList.remove('hidden');
+      announcement.classList.add('is-visible');
+      (announcement as any)._timeout = window.setTimeout(() => {
+        announcement.classList.add('hidden');
+        announcement.classList.remove('is-visible');
+      }, 6100);
+    };
+
     this.engine = new MaxFlizGameEngine(
       this as unknown as THREE.Scene,
       this.camera,
@@ -385,6 +416,9 @@ class MaxFlizScene extends xb.Script {
         },
         onPerkDropBanner: (name, icon, desc, color) => {
           showPerkDropBanner(name, icon, desc, color);
+        },
+        onSurvivalAnnouncement: (title, subtitle, detail) => {
+          showSurvivalAnnouncement(title, subtitle, detail);
         },
         onScoreUpdate: (score, collectedVip, totalVip) => {
           if (hudScore) hudScore.textContent = score.toString();
@@ -535,6 +569,7 @@ class MaxFlizScene extends xb.Script {
           }
         },
         onGameOver: (reason) => {
+          hideSurvivalAnnouncement();
           if (gameoverReason) gameoverReason.textContent = reason;
           const container = document.getElementById('game-canvas-container');
           if (container) container.style.transform = '';
