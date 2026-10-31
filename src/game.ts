@@ -1027,6 +1027,7 @@ export class MaxFlizGameEngine {
 
   public startTitle() {
     sound.stopMusic();
+    this.clearOperatorCompanions();
     this.gameMode = 'campaign';
     this.maxHp = 3;
     this.state = 'title';
@@ -1685,8 +1686,7 @@ export class MaxFlizGameEngine {
     materials.forEach((material) => material.dispose());
   }
 
-  private clearLevel() {
-    for (const enemy of this.enemies) this.disposeEnemyModel(enemy);
+  private clearOperatorCompanions() {
     if (this.marcinTank) {
       this.levelRoot.remove(this.marcinTank.group);
       this.disposeTemporaryObject(this.marcinTank.group);
@@ -1697,6 +1697,11 @@ export class MaxFlizGameEngine {
       this.disposeTemporaryObject(cat.group);
     }
     this.mateuszCats = [];
+  }
+
+  private clearLevel() {
+    for (const enemy of this.enemies) this.disposeEnemyModel(enemy);
+    this.clearOperatorCompanions();
     // Lollipop meshes own their geometry/materials; release them before the scene is reset.
     for (const projectile of this.enemyProjectiles) {
       if (projectile.kind === 'pomazaniec_lollipop' || projectile.kind === 'sebix_brick') this.disposeTemporaryObject(projectile.mesh);
