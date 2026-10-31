@@ -5187,7 +5187,7 @@ export class MaxFlizGameEngine {
     let nearestDist = 36;
     for (const e of this.enemies) {
       if (e.state === 'defeated') continue;
-      if (e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow') {
+      if (e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' || e.type === 'sebix_m') {
         const d = Math.hypot(e.x - this.playerPos.x, e.z - this.playerPos.z);
         if (d < nearestDist) {
           nearestDist = d;
