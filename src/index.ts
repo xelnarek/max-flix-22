@@ -1271,12 +1271,20 @@ class MaxFlizScene extends xb.Script {
     });
 
     bindTap(document.getElementById('btn-restart-pause'), () => {
+      const restartSurvival = this.engine.getGameMode() === 'survival';
       pauseModal?.classList.add('hidden');
-      this.engine.startGame(this.selectedLevelId);
+      survivalLevelUp?.classList.add('hidden');
+      survivalHud?.classList.toggle('hidden', !restartSurvival);
+      gameShell?.classList.toggle('survival-mode', restartSurvival);
+      if (restartSurvival) this.engine.startSurvival();
+      else this.engine.startGame(this.selectedLevelId);
     });
 
     bindTap(document.getElementById('btn-menu-pause'), () => {
       pauseModal?.classList.add('hidden');
+      survivalHud?.classList.add('hidden');
+      survivalLevelUp?.classList.add('hidden');
+      gameShell?.classList.remove('survival-mode');
       hudTop?.classList.add('hidden');
       hudBottom?.classList.add('hidden');
       touchControls?.classList.add('hidden');
