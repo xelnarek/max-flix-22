@@ -1922,35 +1922,42 @@ export function createCustomerEnemyModel(): {
   group.add(body);
 
   // Head with Angry Expression
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.26, 0.24), skinMat);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.145, 14, 10), skinMat);
+  head.scale.set(1.0, 1.08, 0.92);
   head.position.y = 0.9;
   head.castShadow = true;
   group.add(head);
 
   // Hair
-  const hair = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.08, 0.26), hairMat);
-  hair.position.y = 1.04;
+  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.15, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), hairMat);
+  hair.scale.y = 0.58;
+  hair.position.y = 1.035;
   group.add(hair);
 
-  // Angry Slanted Eyebrows & Eyes
-  const browMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-  const bL = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.02, 0.02), browMat);
-  bL.position.set(-0.06, 0.96, 0.13);
-  bL.rotation.z = -0.3;
-  const bR = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.02, 0.02), browMat);
-  bR.position.set(0.06, 0.96, 0.13);
-  bR.rotation.z = 0.3;
-
-  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-  const eL = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.02), eyeMat);
-  eL.position.set(-0.06, 0.92, 0.13);
-  const eR = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.02), eyeMat);
-  eR.position.set(0.06, 0.92, 0.13);
-
-  // Angry open shouting mouth
-  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.05, 0.02), new THREE.MeshBasicMaterial({ color: 0x7f1d1d }));
-  mouth.position.set(0, 0.84, 0.13);
-  group.add(bL, bR, eL, eR, mouth);
+  // Angry readable expression: light eyes, furrowed brows, nose and open mouth.
+  const browMat = new THREE.MeshStandardMaterial({ color: 0x2b1715, roughness: 0.95 });
+  const eyeWhite = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
+  const pupilMat = new THREE.MeshBasicMaterial({ color: 0x111827 });
+  [-1, 1].forEach((side) => {
+    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.018, 0.02), browMat);
+    brow.position.set(side * 0.06, 0.97, 0.129);
+    brow.rotation.z = side * -0.28;
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.024, 8, 6), eyeWhite);
+    eye.position.set(side * 0.06, 0.925, 0.135);
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.012, 7, 5), pupilMat);
+    pupil.position.set(side * 0.06, 0.925, 0.153);
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.038, 8, 6), skinMat);
+    ear.scale.set(0.55, 1, 0.7);
+    ear.position.set(side * 0.14, 0.9, 0);
+    group.add(brow, eye, pupil, ear);
+  });
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.032, 8, 6), skinMat);
+  nose.scale.set(0.8, 1, 0.65);
+  nose.position.set(0, 0.89, 0.15);
+  const mouth = new THREE.Mesh(new THREE.SphereGeometry(0.032, 8, 6), new THREE.MeshBasicMaterial({ color: 0x7f1d1d }));
+  mouth.scale.set(1.25, 0.75, 0.45);
+  mouth.position.set(0, 0.84, 0.145);
+  group.add(nose, mouth);
 
   // Legs
   const legGeo = new THREE.BoxGeometry(0.12, 0.32, 0.14);
@@ -2025,15 +2032,21 @@ export function createWalczakBossModel(): {
   group.add(shirt, tie);
 
   // Head with Glasses & Stern Look
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.3, 0.28), skinMat);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 14, 10), skinMat);
+  head.scale.set(1.08, 1.0, 0.92);
   head.position.y = 1.02;
   head.castShadow = true;
   group.add(head);
 
   // Silver Hair combed back
-  const hair = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.08, 0.3), new THREE.MeshStandardMaterial({ color: 0x94a3b8 }));
-  hair.position.y = 1.18;
-  group.add(hair);
+  const silverHairMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.88 });
+  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.17, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), silverHairMat);
+  hair.scale.y = 0.58;
+  hair.position.y = 1.16;
+  const sweptTuft = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 7), silverHairMat);
+  sweptTuft.scale.set(1.35, 0.42, 0.72);
+  sweptTuft.position.set(-0.055, 1.205, -0.035);
+  group.add(hair, sweptTuft);
 
   // Black frame Glasses
   const glassMat = new THREE.MeshBasicMaterial({ color: 0x0f172a });
@@ -2044,6 +2057,22 @@ export function createWalczakBossModel(): {
   const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.015, 0.02), glassMat);
   bridge.position.set(0, 1.05, 0.145);
   group.add(rimL, rimR, bridge);
+  const executiveNose = new THREE.Mesh(new THREE.SphereGeometry(0.036, 10, 8), skinMat);
+  executiveNose.scale.set(0.78, 1.08, 0.72);
+  executiveNose.position.set(0, 1.0, 0.152);
+  const executiveMouth = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), new THREE.MeshBasicMaterial({ color: 0x7f1d1d }));
+  executiveMouth.scale.set(1.2, 0.35, 0.45);
+  executiveMouth.position.set(0, 0.91, 0.14);
+  const executiveBrowMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.9 });
+  [-1, 1].forEach((side) => {
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.044, 8, 6), skinMat);
+    ear.scale.set(0.55, 0.95, 0.7);
+    ear.position.set(side * 0.155, 1.02, 0);
+    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.015, 0.02), executiveBrowMat);
+    brow.position.set(side * 0.07, 1.08, 0.135);
+    group.add(ear, brow);
+  });
+  group.add(executiveNose, executiveMouth);
 
   // Legs & Polished Oxford Shoes
   const legGeo = new THREE.BoxGeometry(0.14, 0.36, 0.16);
