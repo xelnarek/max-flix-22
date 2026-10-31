@@ -6,9 +6,9 @@ const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
 test('game identity is consistently renamed in the title screen and engine boot', async () => {
   const [html, app] = await Promise.all([read('../index.html'), read('../src/index.ts')]);
-  assert.match(html, /<title>Max-FliX i granica Absurdu<\\/title>/);
+  assert.match(html, /<title>Max-FliX i granica Absurdu<\/title>/);
   assert.match(html, /MAX-FLIX[\s\S]*granica[\s\S]*Absurdu/);
-  assert.match(app, /setAppTitle\\('Max-FliX i granica Absurdu'\\)/);
+  assert.match(app, /setAppTitle\('Max-FliX i granica Absurdu'\)/);
 });
 
 test('the five playable operator cards retain five bespoke SVG emblems', async () => {
