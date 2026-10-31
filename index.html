@@ -208,13 +208,21 @@
       <div id="perk-drop-banner" class="perk-drop-banner hidden"></div>
 
       <div id="survival-hud" class="survival-hud hidden" aria-live="polite">
-        <div class="survival-chip"><span class="survival-chip-label">CZAS</span><strong id="survival-time">00:00</strong></div>
-        <div class="survival-chip"><span class="survival-chip-label">FALA</span><strong id="survival-wave">1</strong></div>
-        <div class="survival-chip"><span class="survival-chip-label">POZIOM</span><strong id="survival-level">1</strong></div>
-        <div class="survival-chip survival-xp-chip"><span class="survival-chip-label">DOŚWIADCZENIE</span><strong id="survival-xp">0 / 6 XP</strong><span class="survival-xp-track"><span id="survival-xp-fill"></span></span></div>
-        <div class="survival-chip"><span class="survival-chip-label">ELIMINACJE</span><strong id="survival-kills">0</strong></div>
-        <div class="survival-chip"><span class="survival-chip-label">WROGOWIE</span><strong id="survival-enemies">0</strong></div>
-        <div class="survival-weapon-rack"><span class="survival-weapon-rack-label">ARSENAŁ</span><div id="survival-weapons-list" class="survival-weapons-list"><span class="survival-weapon-chip starter">🥊 Broń operatora • start</span></div></div>
+        <div class="survival-hud-main">
+          <div class="survival-hud-kicker"><span class="survival-live-dot"></span> SURVIVAL SHIFT <span class="survival-hud-divider">/</span> STREFA OPERACYJNA</div>
+          <div class="survival-metrics">
+            <div class="survival-chip time-chip"><span class="survival-chip-label">CZAS</span><strong id="survival-time">00:00</strong></div>
+            <div class="survival-chip wave-chip"><span class="survival-chip-label">FALA</span><strong id="survival-wave">1</strong></div>
+            <div class="survival-chip level-chip"><span class="survival-chip-label">POZIOM</span><strong id="survival-level">1</strong></div>
+            <div class="survival-chip survival-xp-chip"><span class="survival-chip-label">DOŚWIADCZENIE</span><strong id="survival-xp">0 / 6 XP</strong><span class="survival-xp-track"><span id="survival-xp-fill"></span></span></div>
+            <div class="survival-chip kills-chip"><span class="survival-chip-label">ELIMINACJE</span><strong id="survival-kills">0</strong></div>
+            <div class="survival-chip enemies-chip"><span class="survival-chip-label">WROGOWIE</span><strong id="survival-enemies">0</strong></div>
+          </div>
+        </div>
+        <div class="survival-weapon-rack">
+          <span class="survival-weapon-rack-label">ARSENAŁ</span>
+          <div id="survival-weapons-list" class="survival-weapons-list"><span class="survival-weapon-chip starter">🥊 Broń operatora • start</span></div>
+        </div>
       </div>
 
       <div id="survival-levelup" class="game-modal hidden survival-levelup-modal">
