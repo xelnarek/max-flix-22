@@ -3759,6 +3759,61 @@ export class MaxFlizGameEngine {
   }
 
   private fireSurvivalWeapon(weapon: SurvivalWeaponState, target: EnemyItem) {
+    const definition = SURVIVAL_WEAPON_DEFS[weapon.id];
+    const weaponDamage = 1 + Math.floor((weapon.level - 1) / 3) + (weapon.evolved ? 1 : 0);
+
+    if (weapon.id === 'forklift_horn') {
+      const radius = weapon.evolved ? 10 : 7;
+      let hitCount = 0;
+      for (const enemy of this.enemies) {
+        if (enemy.state === 'defeated' || Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z) > radius) continue;
+        enemy.hp -= weaponDamage;
+        enemy.stunTimer = Math.max(enemy.stunTimer, weapon.evolved ? 1.8 : 1.1);
+        enemy.state = 'stunned';
+        hitCount++;
+        this.spawnParticleRing(enemy.x, enemy.y + 0.55, enemy.z, definition.color);
+        if (enemy.hp <= 0) this.defeatEnemy(enemy, 260, true);
+      }
+      this.spawnParticleRing(this.playerPos.x, 0.18, this.playerPos.z, definition.color);
+      this.triggerScreenShake(weapon.evolved ? 0.46 : 0.28, 0.22);
+      this.triggerBloomPulse(0.32);
+      sound.playBossWarning();
+      this.emitFloatingToast('📣 ALARM CAŁEJ HALI! ' + hitCount + ' CELÓW', this.playerPos.x, this.playerPos.y + 1.5, this.playerPos.z, 'combo');
+      return;
+    }
+
+    if (weapon.id === 'calacatta_shards') {
+      const base = new THREE.Vector3(target.x - this.playerPos.x, 0, target.z - this.playerPos.z);
+      if (base.lengthSq() < 0.001) return;
+      base.normalize();
+      const spread = weapon.evolved ? [-0.44, -0.22, 0, 0.22, 0.44] : [-0.20, 0, 0.20];
+      for (const angle of spread) {
+        const direction = base.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+        const shardMaterial = new THREE.MeshStandardMaterial({
+          color: definition.color, emissive: definition.color, emissiveIntensity: weapon.evolved ? 1.2 : 0.55,
+          roughness: 0.22, metalness: 0.18,
+        });
+        const shard = new THREE.Mesh(new THREE.TetrahedronGeometry(0.22, 0), shardMaterial);
+        shard.position.set(this.playerPos.x, this.playerPos.y + 0.88, this.playerPos.z).addScaledVector(direction, 0.9);
+        shard.rotation.set(0.25, angle * 2, 0.45);
+        shard.castShadow = false;
+        this.levelRoot.add(shard);
+        this.projectiles.push({
+          mesh: shard,
+          vel: direction.multiplyScalar(weapon.evolved ? 15.8 : 13.4),
+          life: weapon.evolved ? 2.6 : 2.2,
+          maxLife: weapon.evolved ? 2.6 : 2.2,
+          damage: weaponDamage,
+          pierce: weapon.evolved ? 3 : 1,
+          weaponProjectile: true,
+          hitIds: new Set<string>(),
+          spinSpeed: weapon.evolved ? 8.5 : 5.5,
+        });
+      }
+      sound.playAttackWhoosh();
+      this.emitFloatingToast(weapon.evolved ? '💎 BURZA CALACATTY!' : '💎 ODPADY WIELKIEGO FORMATU!', this.playerPos.x, this.playerPos.y + 1.35, this.playerPos.z, 'perk');
+      return;
+    }
 
     if (weapon.id === 'orbit_blades') {
       const count = weapon.evolved ? 5 : weapon.level >= 4 ? 4 : 3;
@@ -3796,8 +3851,7 @@ export class MaxFlizGameEngine {
     const direction = new THREE.Vector3(target.x - this.playerPos.x, 0, target.z - this.playerPos.z);
     if (direction.lengthSq() < 0.001) return;
     direction.normalize();
-    const definition = SURVIVAL_WEAPON_DEFS[weapon.id];
-    const damage = 1 + Math.floor((weapon.level - 1) / 3) + (weapon.evolved ? 1 : 0);
+    const damage = weaponDamage;
     const start = new THREE.Vector3(this.playerPos.x, this.playerPos.y + 0.9, this.playerPos.z).addScaledVector(direction, 0.9);
     const material = new THREE.MeshStandardMaterial({
       color: definition.color, emissive: definition.color, emissiveIntensity: weapon.evolved ? 1.8 : 0.9,
@@ -3806,7 +3860,7 @@ export class MaxFlizGameEngine {
     const projectile: {
       mesh: THREE.Object3D; vel: THREE.Vector3; life: number; maxLife: number; damage: number;
       pierce?: number; homing?: boolean; weaponProjectile?: boolean; aoeRadius?: number; slowOnHit?: boolean;
-      igniteOnHit?: boolean; spinSpeed?: number; ricochet?: boolean; hitIds: Set<string>;
+      igniteOnHit?: boolean; spinSpeed?: number; ricochet?: boolean; boomerang?: boolean; hitIds: Set<string>;
     } = {
       mesh: new THREE.Group(),
       vel: direction.clone().multiplyScalar(10.5), life: 2.8, maxLife: 2.8, damage, hitIds: new Set<string>(),
@@ -3873,6 +3927,24 @@ export class MaxFlizGameEngine {
         projectile.pierce = weapon.evolved ? 5 : weapon.level >= 4 ? 3 : 2;
         break;
       }
+      case 'steam_bomb':
+        projectile.mesh = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 10), material);
+        projectile.vel = direction.clone().multiplyScalar(weapon.evolved ? 8.6 : 7.0);
+        projectile.life = projectile.maxLife = 3.3;
+        projectile.aoeRadius = weapon.evolved ? 3.8 : 2.5;
+        projectile.slowOnHit = true;
+        projectile.pierce = weapon.evolved ? 1 : 0;
+        projectile.spinSpeed = 5.2;
+        break;
+      case 'wz_boomerang':
+        projectile.mesh = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.07, 6, 16), material);
+        (projectile.mesh as THREE.Mesh).rotation.x = Math.PI / 2;
+        projectile.vel = direction.clone().multiplyScalar(weapon.evolved ? 13.8 : 11.0);
+        projectile.life = projectile.maxLife = weapon.evolved ? 4.2 : 3.2;
+        projectile.boomerang = true;
+        projectile.pierce = weapon.evolved ? 3 : 1;
+        projectile.spinSpeed = weapon.evolved ? 15 : 10;
+        break;
     }
     projectile.mesh.position.copy(start);
     (projectile.mesh as THREE.Mesh).castShadow = false;
