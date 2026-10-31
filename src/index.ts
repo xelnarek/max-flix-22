@@ -9,9 +9,7 @@ import {
 } from './firebase.ts';
 import { MaxFlizGameEngine, type SurvivalSnapshot, type SurvivalUpgradeOption } from './game.ts';
 import { sound } from './sound.ts';
-import { IntroCutsceneManager } from './introCutscene.ts';
 import { PixelIntroManager } from './pixelIntro.ts';
-import { ComicIntroManager } from './comicIntro.ts';
 import { CharacterId, PerkType } from './types.ts';
 import { AssetItem, assetLoader } from './assets.ts';
 
@@ -29,7 +27,6 @@ window.addEventListener('unhandledrejection', (e) => {
 
 class MaxFlizScene extends xb.Script {
   private engine!: MaxFlizGameEngine;
-  private cutscene: IntroCutsceneManager | null = null;
   private pixelIntro: PixelIntroManager | null = null;
   private selectedCharId: CharacterId = 'marcin';
   private selectedLevelId: number = 1;
@@ -40,7 +37,6 @@ class MaxFlizScene extends xb.Script {
   private camera: THREE.PerspectiveCamera;
   private fallbackScene: THREE.Scene;
   private lastLoopTick: number = performance.now();
-  private launch3dCutsceneFn: ((e?: Event, maxDurationSec?: number) => Promise<void>) | null = null;
   private particleSystem: THREE.Points | null = null;
   private lastFpsTime: number = performance.now();
   private frameCount: number = 0;
@@ -51,12 +47,6 @@ class MaxFlizScene extends xb.Script {
   private lastAdaptiveQualityAt: number = 0;
 
   // Duplicate init() and update() removed from here. Handled at the bottom of the class.
-
-  public async playIntroCutscene(maxDurationSec: number = 5.0): Promise<void> {
-    if (this.launch3dCutsceneFn) {
-      await this.launch3dCutsceneFn(undefined, maxDurationSec);
-    }
-  }
 
   constructor() {
     super();
@@ -263,10 +253,14 @@ class MaxFlizScene extends xb.Script {
         sztaplar_szalony: { name: 'Zdzichu', role: 'Mistrz Sztaplarki', avatar: '🚜' },
         pan_roman: { name: 'Pan Roman', role: 'Dostawa bez awiza', avatar: '📦' },
         serwisant: { name: 'Serwisant', role: 'Zgłoszenie 404', avatar: '🧰' },
+        przedstawiciel_włoski: { name: 'Włoski dostawca', role: 'Mamma mia / armatura', avatar: '🇮🇹' },
+        elite_walczak_guard: { name: 'Strażnik Walczaka', role: 'Ochrona Calacatty', avatar: '🛡️' },
         bosman_krakow: { name: 'Bosman z Krakowa', role: 'Odprawa 3-MSC', avatar: '📋' },
         agv_robot: { name: 'Robot AGV', role: 'Zgubiona trasa', avatar: '🤖' },
         piorun_dron: { name: 'PIORUN', role: 'Dron AI', avatar: '⚡' },
         zombie_pracownik: { name: 'Zombie-Magazynier', role: 'Głód KFC', avatar: '🧟' },
+        pomazaniec: { name: 'Pomazaniec', role: 'Rowerowy rajd / lizaki', avatar: '🚲' },
+        sebix_m: { name: 'Sebix M.', role: 'Taran B4 / cegły', avatar: '🔥' },
       };
       return metaMap[type] || { name: 'Pracownik', role: 'Magazyn', avatar: '👷' };
     };
@@ -296,7 +290,7 @@ class MaxFlizScene extends xb.Script {
       toast.style.willChange = 'transform, opacity';
       popupsLayer.appendChild(toast);
 
-      const duration = 1.6;
+      const duration = type === 'easter-egg' ? 3.6 : type === 'combo' ? 2.0 : 1.6;
 
       activeToasts.push({
         element: toast,
@@ -322,7 +316,7 @@ class MaxFlizScene extends xb.Script {
           continue;
         }
 
-        const floatSpeed = t.type === 'enemy_shout' ? 0.22 : 0.8;
+        const floatSpeed = t.type === 'enemy_shout' ? 0.22 : t.type === 'easter-egg' ? 0.28 : 0.8;
         t.worldPos.y += dt * floatSpeed;
 
         tempVec.copy(t.worldPos);
@@ -677,8 +671,7 @@ class MaxFlizScene extends xb.Script {
       if (this.engine.skipSurvivalUpgrade()) survivalLevelUp?.classList.add('hidden');
     });
 
-    // Lazy instantiation of cutscenes only when needed
-    this.cutscene = null;
+    // Retro Arcade remains optional and is instantiated only when requested.
     this.pixelIntro = null;
 
     const updateCharacterUI = (id: CharacterId) => {
@@ -978,9 +971,6 @@ class MaxFlizScene extends xb.Script {
       if (this.pixelIntro && this.pixelIntro.isRunning()) {
         this.pixelIntro.stop();
       }
-      if (this.cutscene && this.cutscene.isRunning()) {
-        this.cutscene.stop();
-      }
       this.engine.setLevelVisible(true);
 
       const storyModal = document.getElementById('story-intro-modal');
@@ -1014,7 +1004,6 @@ class MaxFlizScene extends xb.Script {
 
       startingGame = true;
       if (this.pixelIntro && this.pixelIntro.isRunning()) this.pixelIntro.stop();
-      if (this.cutscene && this.cutscene.isRunning()) this.cutscene.stop();
       this.engine.setLevelVisible(true);
 
       const storyModal = document.getElementById('story-intro-modal');
@@ -1075,47 +1064,6 @@ class MaxFlizScene extends xb.Script {
       }
     });
 
-    const launch3dCutscene = async (e?: Event, maxDurationSec?: number) => {
-      if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-      assetLoader.show('Przygotowywanie scenki kinowej 3D...', 80);
-      assetLoader.updateProgress(85, 'Ładowanie scenografii i aktorów Showroomu...', 'model', 'SCENA 3D');
-      await assetLoader.waitUntilReady('Scenka 3D');
-      
-      if (!this.cutscene) {
-        this.cutscene = new IntroCutsceneManager(
-          xb.core?.scene || this.fallbackScene,
-          this.camera,
-          (xb.core?.renderer as THREE.WebGLRenderer) || null,
-          {
-            onComplete: () => {
-              this.engine.setLevelVisible(true);
-              if (titleScreen) {
-                titleScreen.classList.remove('hidden');
-                titleScreen.style.setProperty('display', 'flex', 'important');
-              }
-              this.engine.startTitle();
-            },
-            onStartGame: () => {
-              this.engine.setLevelVisible(true);
-              doStartGame();
-            },
-          }
-        );
-      }
-
-      if (titleScreen) {
-        titleScreen.classList.add('hidden');
-        titleScreen.style.setProperty('display', 'none', 'important');
-      }
-      document.getElementById('story-intro-modal')?.classList.add('hidden');
-      this.engine.setLevelVisible(false);
-      this.cutscene.start(maxDurationSec);
-    };
-    this.launch3dCutsceneFn = launch3dCutscene;
-
     const launchPixelIntro = async (e?: Event) => {
       if (e) {
         e.preventDefault();
@@ -1150,12 +1098,6 @@ class MaxFlizScene extends xb.Script {
       this.engine.setLevelVisible(false);
       this.pixelIntro.start();
     };
-
-    document.getElementById('btn-open-3d-cutscene')?.addEventListener('click', launch3dCutscene);
-    document.getElementById('btn-open-3d-cutscene')?.addEventListener('touchend', launch3dCutscene);
-
-    document.getElementById('btn-top-intro-3d')?.addEventListener('click', launch3dCutscene);
-    document.getElementById('btn-top-intro-3d')?.addEventListener('touchend', launch3dCutscene);
 
     document.getElementById('btn-open-pixel-intro')?.addEventListener('click', launchPixelIntro);
     document.getElementById('btn-open-pixel-intro')?.addEventListener('touchend', launchPixelIntro);
@@ -1640,12 +1582,6 @@ class MaxFlizScene extends xb.Script {
       this.engine.setCamera(camera);
     }
 
-    if (this.cutscene) {
-      this.cutscene.setScene(scene);
-      this.cutscene.setCamera(camera);
-      if (renderer) this.cutscene.setRenderer(renderer);
-    }
-
     this.camera = camera;
     this.engine.startTitle();
   }
@@ -1731,8 +1667,6 @@ class MaxFlizScene extends xb.Script {
     try {
       if (this.pixelIntro && this.pixelIntro.isRunning()) {
         // Pixel intro updates internally via its own canvas RAF
-      } else if (this.cutscene && this.cutscene.isRunning()) {
-        this.cutscene.update(dt);
       } else if (this.engine) {
         this.engine.update(dt);
         const minimapCanvas = document.getElementById('minimap-canvas') as HTMLCanvasElement | null;
@@ -1959,18 +1893,6 @@ async function startApp() {
       titleScreen.style.setProperty('z-index', '10000000', 'important');
       console.log('[App:Boot] 🎉 Ekran tytułowy gotowy.');
     }
-
-    // 8. Auto-play fast comic humor intro slide on startup before entering menu (User decision)
-    console.log('[App:Boot] 💥 Auto-start szybkiego slajdu komiksowego z humorem...');
-    const comicIntro = new ComicIntroManager({
-      onComplete: () => {
-        if (titleScreen) {
-          titleScreen.classList.remove('hidden');
-          titleScreen.style.setProperty('display', 'flex', 'important');
-        }
-      },
-    });
-    comicIntro.start();
 
   } catch (err) {
     console.error('[App:Boot] ❌ KRYTYCZNY BŁĄD STARTU:', err);

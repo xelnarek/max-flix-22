@@ -121,19 +121,6 @@ button:focus-visible, [role="button"]:focus-visible, .char-card:focus-visible,
   border-color: rgba(242,184,75,.32) !important;
   color: var(--mf-amber-2) !important;
 }
-.btn-top-intro-pill {
-  min-height: 32px !important;
-  padding: 6px 12px !important;
-  border: 1px solid rgba(98,198,232,.34) !important;
-  border-radius: 7px !important;
-  background: rgba(25, 72, 91, .28) !important;
-  color: #bfeafa !important;
-  font: 800 9px/1 "JetBrains Mono", monospace !important;
-  letter-spacing: .09em !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.04) !important;
-}
-.btn-top-intro-pill:hover { background: rgba(25,72,91,.5) !important; border-color: var(--mf-cyan) !important; }
-
 /* Navigation is a control rail, not a row of unrelated pills. */
 .menu-tabs-bar {
   display: flex !important;
@@ -956,4 +943,199 @@ button:disabled { cursor: not-allowed !important; filter: grayscale(.35); opacit
 }
 @media (prefers-reduced-motion: reduce) {
   .survival-event-announcement.is-visible { animation: none; opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+
+/* Operator insignias: five bespoke vector marks, not unrelated emoji glyphs. */
+.char-card-badge.operator-emblem {
+  width: 58px !important;
+  height: 58px !important;
+  border-radius: 16px !important;
+  padding: 7px !important;
+  filter: drop-shadow(0 4px 9px rgba(0,0,0,.32));
+}
+.char-card-badge.operator-emblem svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.char-card-badge.emblem-marcin { color: #f2c46d !important; }
+.char-card-badge.emblem-grzesiek { color: #65d7a4 !important; }
+.char-card-badge.emblem-dawid { color: #eab26d !important; }
+.char-card-badge.emblem-mateusz { color: #b99bff !important; }
+.char-card-badge.emblem-piotr { color: #ff6b72 !important; }
+.char-card-badge.emblem-piotr svg { filter: drop-shadow(0 0 5px rgba(255,81,93,.48)); }
+
+/* Five-act briefing is a readable dossier, not a malformed nested film storyboard. */
+.story-modal-card {
+  max-width: min(920px, calc(100vw - 28px));
+  width: 100%;
+  max-height: min(790px, calc(100dvh - 28px));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.story-modal-card .story-slides-container {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px clamp(12px, 2.2vw, 22px);
+}
+.story-modal-card .story-slide {
+  min-height: 320px;
+  padding: clamp(14px, 2.5vw, 24px);
+  border: 1px solid rgba(98,198,232,.2);
+  border-radius: 12px;
+  background:
+    linear-gradient(145deg, rgba(16,37,52,.94), rgba(8,17,27,.96)),
+    repeating-linear-gradient(0deg, transparent 0 25px, rgba(255,255,255,.018) 25px 26px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 10px 30px rgba(0,0,0,.2);
+}
+.story-modal-card .story-slide-title {
+  color: #f2f6fa;
+  font: 900 clamp(19px, 3.4vw, 29px)/1.13 "Space Grotesk", sans-serif;
+  letter-spacing: -.025em;
+  text-wrap: balance;
+  margin: 8px 0 12px;
+}
+.story-modal-card .story-slide-text {
+  color: #c1d0da;
+  font: 500 clamp(11px, 1.35vw, 13px)/1.72 "Plus Jakarta Sans", sans-serif;
+  max-width: 780px;
+}
+.story-act-objective {
+  margin-top: 18px;
+  padding: 11px 13px;
+  border-left: 3px solid var(--mf-amber, #f2b84b);
+  border-radius: 0 8px 8px 0;
+  background: rgba(242,184,75,.075);
+  color: #d9e4eb;
+  font: 600 10px/1.55 "JetBrains Mono", monospace;
+}
+.story-act-objective strong { color: #f2c46d; letter-spacing: .07em; }
+.story-modal-card .story-quotes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 15px;
+}
+.story-modal-card .quote-item {
+  padding: 10px 12px;
+  border: 1px solid rgba(158,184,203,.14);
+  border-radius: 8px;
+  background: rgba(4,12,20,.48);
+  color: #c7d5df;
+  font: 500 10px/1.5 "Plus Jakarta Sans", sans-serif;
+}
+.story-modal-card .quote-item strong { color: #f2c46d; }
+.story-modal-card .story-progress-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 0 4px;
+}
+.story-modal-card .story-progress-dots .dot {
+  display: block;
+  width: 26px;
+  height: 7px;
+  border: 0;
+  border-radius: 99px;
+  background: rgba(145,164,181,.24);
+  padding: 0;
+  cursor: pointer;
+}
+.story-modal-card .story-progress-dots .dot.active {
+  background: linear-gradient(90deg, #56b9d8, #f2b84b);
+  box-shadow: 0 0 12px rgba(98,198,232,.25);
+}
+.story-modal-card .story-nav-bar {
+  flex: 0 0 auto;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(158,184,203,.15);
+  background: rgba(5,12,20,.96);
+}
+@media (max-width: 600px) {
+  .char-card-badge.operator-emblem { width: 48px !important; height: 48px !important; }
+  .story-modal-card { max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+  .story-modal-card .story-slide { min-height: 250px; padding: 12px; }
+  .story-modal-card .story-quotes-grid { grid-template-columns: 1fr; }
+  .story-modal-card .story-slide-text { font-size: 10px; line-height: 1.58; }
+  .story-act-objective { margin-top: 12px; font-size: 9px; }
+}
+
+
+/* Easter Egg discovery is a reward moment: keep the exact secret name readable
+   while allowing the world-projected position to remain controlled by the game loop. */
+.floating-score-toast.easter-egg {
+  display: block !important;
+  width: max-content;
+  max-width: min(84vw, 480px);
+  padding: 11px 17px !important;
+  border: 1px solid rgba(244,114,182,.72) !important;
+  border-radius: 12px !important;
+  background:
+    linear-gradient(115deg, rgba(63,18,56,.97), rgba(22,22,43,.97) 64%, rgba(73,44,18,.95)) !important;
+  color: #fff2fb !important;
+  font: 900 clamp(11px, 1.4vw, 16px)/1.35 "Space Grotesk", sans-serif !important;
+  letter-spacing: .015em;
+  white-space: normal !important;
+  text-align: center;
+  text-shadow: 0 2px 10px rgba(0,0,0,.82), 0 0 14px rgba(244,114,182,.34) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.46), 0 0 24px rgba(244,114,182,.22), inset 0 1px 0 rgba(255,255,255,.1) !important;
+  animation: mf-easter-discovery 3.55s ease-out both !important;
+  z-index: 60 !important;
+}
+@keyframes mf-easter-discovery {
+  0% { opacity: 0; filter: brightness(.65); }
+  12% { opacity: 1; filter: brightness(1.2); }
+  24% { opacity: 1; filter: brightness(1); }
+  87% { opacity: 1; filter: brightness(1); }
+  100% { opacity: 0; filter: brightness(.9); }
+}
+@media (max-width: 600px) {
+  .floating-score-toast.easter-egg {
+    max-width: min(88vw, 390px);
+    padding: 9px 12px !important;
+    font-size: 11px !important;
+    line-height: 1.32 !important;
+  }
+}
+
+
+/* The three sector cards now carry legible, differentiated tactical floor plans. */
+.zone-map-schematic {
+  position: absolute;
+  inset: 4px;
+  z-index: 1;
+  display: block;
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
+  overflow: visible;
+  filter: drop-shadow(0 1px 4px rgba(0,0,0,.28));
+  opacity: .96;
+  pointer-events: none;
+}
+.zone-preview-a .zone-map-schematic { filter: drop-shadow(0 0 5px rgba(231,184,91,.13)); }
+.zone-preview-b .zone-map-schematic { filter: drop-shadow(0 0 5px rgba(113,199,223,.16)); }
+.zone-preview-c .zone-map-schematic { filter: drop-shadow(0 0 5px rgba(230,167,93,.16)); }
+.zone-preview-dot {
+  z-index: 2 !important;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.08), 0 0 13px var(--zone-color, var(--mf-cyan)) !important;
+}
+.zone-preview-label {
+  z-index: 3 !important;
+  padding: 3px 6px !important;
+  border-color: color-mix(in srgb, var(--zone-color, var(--mf-cyan)) 34%, transparent) !important;
+  background: rgba(4,11,17,.9) !important;
+  color: #eaf2f7 !important;
+  letter-spacing: .095em !important;
+}
+.zone-card.active .zone-preview {
+  border-color: color-mix(in srgb, var(--zone-color, var(--mf-cyan)) 66%, transparent) !important;
+  box-shadow: inset 0 0 24px rgba(0,0,0,.4), 0 0 0 1px color-mix(in srgb, var(--zone-color, var(--mf-cyan)) 26%, transparent), 0 0 22px color-mix(in srgb, var(--zone-color, var(--mf-cyan)) 12%, transparent) !important;
+}
+@media (max-width: 600px) {
+  .zone-map-schematic { inset: 3px; width: calc(100% - 6px); height: calc(100% - 6px); }
+  .zone-preview-label { font-size: 6px !important; }
 }

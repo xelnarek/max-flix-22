@@ -95,7 +95,7 @@ export interface SurvivalUpgradeOption {
   description: string;
 }
 
-export type SurvivalWeaponId = 'pallet_cannon' | 'diamond_saw' | 'glue_mine' | 'kfc_bomber' | 'piorun_drone' | 'forklift_bolter' | 'scanner_pulse' | 'orbit_blades';
+export type SurvivalWeaponId = 'pallet_cannon' | 'diamond_saw' | 'glue_mine' | 'kfc_bomber' | 'piorun_drone' | 'forklift_bolter' | 'scanner_pulse' | 'orbit_blades' | 'calacatta_shards' | 'steam_bomb' | 'forklift_horn' | 'wz_boomerang';
 export interface SurvivalWeaponState { id: SurvivalWeaponId; level: number; cooldown: number; evolved?: boolean; }
 type SurvivalPassiveId = 'damage' | 'rapid' | 'boots' | 'magnet' | 'reinforced' | 'medkit' | 'range' | 'growth' | 'scavenger' | 'regen' | 'drone' | 'armor';
 const SURVIVAL_WEAPON_DEFS: Record<SurvivalWeaponId, {
@@ -112,6 +112,10 @@ const SURVIVAL_WEAPON_DEFS: Record<SurvivalWeaponId, {
   forklift_bolter: { name: 'Nitownica UDT', evolvedName: 'NITOWNICA OBLĘŻNICZA', icon: '🔩', description: 'Wąski, szybki pocisk przebijający kilka celów.', cooldown: 6.3, unlockAfter: 435, color: 0xfbbf24, evolutionPassive: 'rapid', evolutionPassiveLabel: 'Rytm ataku' },
   scanner_pulse: { name: 'Impuls skanera B4', evolvedName: 'SKANER TOTALNY', icon: '📡', description: 'Namierzający impuls przebijający zwartą formację.', cooldown: 8.1, unlockAfter: 510, color: 0x67e8f9, evolutionPassive: 'range', evolutionPassiveLabel: 'Zasięg audytu' },
   orbit_blades: { name: 'Wirujące tarcze', evolvedName: 'ORBITALNA STREFA BHP', icon: '⚙️', description: 'Ostrza krążące wokół operatora i chroniące bliski dystans.', cooldown: 13.0, unlockAfter: 585, color: 0x86efac, evolutionPassive: 'armor', evolutionPassiveLabel: 'Paleta ochronna' },
+  calacatta_shards: { name: 'Odłamki Calacatty', evolvedName: 'BURZA WIELKIEGO FORMATU', icon: '💎', description: 'Ciężkie odłamki gresu lecące w wachlarzu i przebijające kilka celów.', cooldown: 10.8, unlockAfter: 630, color: 0xe5e7eb, evolutionPassive: 'damage', evolutionPassiveLabel: 'Wzmocniona amunicja' },
+  steam_bomb: { name: 'Bomba Parowa', evolvedName: 'KOCIOŁ B4', icon: '♨️', description: 'Ciśnieniowy pocisk tworzący strefę spowolnienia wśród przeciwników.', cooldown: 12.2, unlockAfter: 675, color: 0x7dd3fc, evolutionPassive: 'regen', evolutionPassiveLabel: 'Przerwa regeneracyjna' },
+  forklift_horn: { name: 'Klakson Sztaplarki', evolvedName: 'ALARM CAŁEJ HALI', icon: '📣', description: 'Fala dźwiękowa odrzuca i ogłusza wrogów wokół operatora.', cooldown: 15.5, unlockAfter: 720, color: 0xfb923c, evolutionPassive: 'armor', evolutionPassiveLabel: 'Paleta ochronna' },
+  wz_boomerang: { name: 'WZ-Bumerang', evolvedName: 'PROTOKÓŁ POWROTU', icon: '📜', description: 'Magiczna WZ-tka przecina linię wrogów i wraca do operatora.', cooldown: 11.8, unlockAfter: 765, color: 0xfbbf24, evolutionPassive: 'growth', evolutionPassiveLabel: 'Premia za normę' },
 };
 export interface SurvivalSnapshot {
   elapsedSeconds: number; wave: number; kills: number; level: number; xp: number; xpToNext: number;
@@ -260,6 +264,14 @@ export class MaxFlizGameEngine {
       "Dzwonek działa, hamulce są opcjonalne!",
       "MAM CZAPKĘ Z WIATRAKIEM, CZYLI JESTEM DOWÓDCĄ!",
       "Dawidzilla! Nadciągamy z prędkością trzech kilometrów na godzinę!",
+    ],
+    sebix_m: [
+      "CO SIĘ GAPISZ?! CEGŁA JEST NAJPIERWOTNIEJSZYM ARGUMENTEM!",
+      "DOPIERO SIĘ ROZGRZEWAM! ZARAZ ZOBACZYSZ TURBO!",
+      "NIE MAM KOSZULKI, BO MIĘŚNIE NIE POTRZEBUJĄ UBRANIA!",
+      "KTO PRZESTAWIŁ MOJĄ PALETĘ?! TERAZ BĘDZIE TARAN!",
+      "ODPALAM TRYB HULK B4! ODSUNĄĆ SIĘ OD ALEJKI!",
+      "TO NIE SĄ OPARZENIA. TO ŚLADY PO MOIM WEJŚCIU!",
     ],
   };
 
@@ -543,7 +555,7 @@ export class MaxFlizGameEngine {
     vel: THREE.Vector3;
     life: number;
     isDyscyplinarka?: boolean;
-    kind?: 'pomazaniec_lollipop';
+    kind?: 'pomazaniec_lollipop' | 'sebix_brick';
     gravity?: number;
     spin?: number;
   }[] = [];
@@ -584,6 +596,7 @@ export class MaxFlizGameEngine {
     grow: number;
     spin: number;
     update?: (dt: number, progress: number) => void;
+    cleanup?: () => void;
   }[] = [];
   private bimberMolotovs: {
     mesh: THREE.Group;
@@ -1657,7 +1670,7 @@ export class MaxFlizGameEngine {
     for (const enemy of this.enemies) this.disposeEnemyModel(enemy);
     // Lollipop meshes own their geometry/materials; release them before the scene is reset.
     for (const projectile of this.enemyProjectiles) {
-      if (projectile.kind === 'pomazaniec_lollipop') this.disposeTemporaryObject(projectile.mesh);
+      if (projectile.kind === 'pomazaniec_lollipop' || projectile.kind === 'sebix_brick') this.disposeTemporaryObject(projectile.mesh);
     }
     if (this.survivalPomazaniecMarker) {
       this.levelRoot.remove(this.survivalPomazaniecMarker);
@@ -1695,6 +1708,7 @@ export class MaxFlizGameEngine {
       if (projectile.weaponProjectile) this.disposeTemporaryObject(projectile.mesh);
     }
     this.projectiles = [];
+    for (const effect of this.specialEffects) effect.cleanup?.();
     this.specialEffects = [];
     this.bimberMolotovs = [];
     this.bimberFirePuddles = [];
@@ -2804,6 +2818,138 @@ export class MaxFlizGameEngine {
     });
   }
 
+  private createSebixEnemyModel(): {
+    group: THREE.Group;
+    legL: THREE.Group;
+    legR: THREE.Group;
+    armL: THREE.Group;
+    armR: THREE.Group;
+  } {
+    const group = new THREE.Group();
+    group.name = 'enemy_sebix_m';
+
+    const skin = new THREE.MeshStandardMaterial({ color: 0xc58b68, roughness: 0.76 });
+    const skinLight = new THREE.MeshStandardMaterial({ color: 0xd6a07c, roughness: 0.72 });
+    const shorts = new THREE.MeshStandardMaterial({ color: 0x172033, roughness: 0.9 });
+    const shoeMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.86 });
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x171717 });
+    const mouthMat = new THREE.MeshBasicMaterial({ color: 0x451a1a });
+    const toothMat = new THREE.MeshBasicMaterial({ color: 0xfff7ed });
+    const addSphere = (parent: THREE.Object3D, material: THREE.Material, position: [number,number,number], scale: [number,number,number]) => {
+      const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 10), material);
+      mesh.position.set(...position);
+      mesh.scale.set(...scale);
+      parent.add(mesh);
+      mesh.castShadow = true;
+      return mesh;
+    };
+    const addLimb = (parent: THREE.Object3D, start: THREE.Vector3, end: THREE.Vector3, radius: number, material: THREE.Material) => {
+      const delta = end.clone().sub(start);
+      const limb = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.82, radius, delta.length(), 9), material);
+      limb.position.copy(start).add(end).multiplyScalar(0.5);
+      limb.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), delta.normalize());
+      parent.add(limb);
+      limb.castShadow = true;
+      return limb;
+    };
+
+    const shortsMesh = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.32, 0.38), shorts);
+    shortsMesh.position.set(0, 0.88, 0);
+    group.add(shortsMesh);
+
+    // Shirtless, broad-chested silhouette. The deliberately overbuilt pecs and shoulders
+    // read clearly at the game's normal camera distance without excessive polygon cost.
+    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.40, 0.88, 12), skin);
+    torso.position.set(0, 1.42, 0);
+    group.add(torso);
+    addSphere(group, skinLight, [-0.18, 1.56, 0.13], [0.26, 0.20, 0.18]);
+    addSphere(group, skinLight, [0.18, 1.56, 0.13], [0.26, 0.20, 0.18]);
+    addSphere(group, skin, [0, 1.22, 0.29], [0.17, 0.22, 0.12]);
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.14,0.20,10), skin);
+    neck.position.set(0,1.92,0);
+    group.add(neck);
+
+    // Bald head and unmistakable crooked grin.
+    addSphere(group, skinLight, [0,2.18,0.04], [0.245,0.285,0.235]);
+    addSphere(group, skin, [0,2.405,0.055], [0.20,0.08,0.205]);
+    for(const side of [-1,1]){
+      addSphere(group, eyeMat, [side*0.085,2.22,0.245], [0.028,0.043,0.018]);
+      addSphere(group, skin, [side*0.092,2.30,0.235], [0.075,0.035,0.04]);
+    }
+    addSphere(group, mouthMat, [0.015,2.075,0.247], [0.13,0.053,0.018]);
+    const grin = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.027,0.018),toothMat);
+    grin.position.set(0.015,2.092,0.263);
+    grin.rotation.z=-0.12;
+    group.add(grin);
+
+    const armL = new THREE.Group();
+    const armR = new THREE.Group();
+    armL.position.set(-0.36,1.69,0);
+    armR.position.set(0.36,1.69,0);
+    group.add(armL,armR);
+    for(const [pivot,side] of [[armL,-1],[armR,1]] as Array<[THREE.Group,number]>){
+      addSphere(pivot,skin,[side*0.07,-0.03,0],[0.20,0.20,0.21]);
+      addLimb(pivot,new THREE.Vector3(side*0.07,-0.08,0),new THREE.Vector3(side*0.13,-0.38,0.05),0.115,skin);
+      addSphere(pivot,skinLight,[side*0.13,-0.40,0.06],[0.14,0.13,0.14]);
+      addLimb(pivot,new THREE.Vector3(side*0.13,-0.41,0.05),new THREE.Vector3(side*0.17,-0.64,0.13),0.095,skinLight);
+      addSphere(pivot,skin,[side*0.17,-0.69,0.15],[0.13,0.12,0.13]);
+    }
+
+    const legL = new THREE.Group();
+    const legR = new THREE.Group();
+    legL.position.set(-0.19,0.78,0);
+    legR.position.set(0.19,0.78,0);
+    group.add(legL,legR);
+    for(const [pivot,side] of [[legL,-1],[legR,1]] as Array<[THREE.Group,number]>){
+      addLimb(pivot,new THREE.Vector3(0,0,0),new THREE.Vector3(0,-0.38,0.02),0.115,skin);
+      addLimb(pivot,new THREE.Vector3(0,-0.36,0.02),new THREE.Vector3(0,-0.68,0.06),0.09,skinLight);
+      const shoe=new THREE.Mesh(new THREE.BoxGeometry(0.18,0.11,0.28),shoeMat);
+      shoe.position.set(0,-0.72,0.13);
+      pivot.add(shoe);
+    }
+    group.traverse((object)=>{
+      const mesh=object as THREE.Mesh;
+      if(mesh.isMesh){mesh.castShadow=true;mesh.receiveShadow=false;}
+    });
+    // Bring his silhouette in line with the normal human-sized warehouse enemies.
+    group.scale.setScalar(0.88);
+    return {group,legL,legR,armL,armR};
+  }
+
+  private addSebixEnemy(id: string, x: number, minZ: number, maxZ: number) {
+    const built=this.createSebixEnemyModel();
+    built.group.position.set(x,0.08,minZ);
+    this.levelRoot.add(built.group);
+    this.enemies.push({
+      id,
+      type:'sebix_m',
+      name:'Sebix M. • Niezatrzymany Taranujący',
+      mesh:built.group,
+      speechMesh:null,
+      x,y:0.08,z:minZ,
+      startX:minZ,
+      endX:maxZ,
+      speed:1.65,
+      dir:1,
+      hp:14,
+      maxHp:14,
+      state:'patrol',
+      stunTimer:0,
+      shoutTimer:1.5,
+      shoutText:'',
+      attackCooldown:0,
+      walkCycle:0,
+      legL:built.legL,
+      legR:built.legR,
+      armL:built.armL,
+      armR:built.armR,
+      specialActionTimer:2.4,
+      rageTime:0,
+      trailTimer:0,
+      dashTimer:0,
+    });
+  }
+
   private addSztaplarEnemy(id: string, x: number, minX: number, maxX: number, name = 'Szalony Operator Paleciaka B4') {
     const built = createSztaplarEnemyModel();
     built.group.position.set(x, 0.5, minX);
@@ -3200,6 +3346,14 @@ export class MaxFlizGameEngine {
     this.addMonterEnemy('monter_l1_south', 10, 8, 16, 'Majster Kafelkarz');
     this.addAgvRobotEnemy('agv_l1_south', -18, 6, 12.0, 'AGV Paletowy Południe');
 
+    // Overhead warehouse light rails break up the long roofline and give the aisles readable pools of light.
+    [-24, 0, 24].forEach((tx, index) => {
+      const rail = createTrackSpotlights(7.8);
+      rail.position.set(tx, 7.35, -3.5);
+      rail.rotation.y = index === 1 ? Math.PI / 2 : 0;
+      this.levelRoot.add(rail);
+    });
+
     // Accent Lighting
     const l1 = new THREE.PointLight(0x38bdf8, 18, 28);
     l1.position.set(-18, 5, 8);
@@ -3212,6 +3366,32 @@ export class MaxFlizGameEngine {
     this.levelRoot.add(l3);
 
     this.addPiorunDronEnemy('dron_2', -10, 22, -4, 2.4, 'Dron Inspekcyjny Sektora B');
+
+    // Perimeter product islands: adds visual landmarks and colour without narrowing the central movement lanes.
+    [-1, 1].forEach((side, index) => {
+      const displayX = side * 31.8;
+      const displayZ = -15.6;
+      const podium = createDisplayPodium(2.4, 1.6, 0.24);
+      podium.position.set(displayX,0,displayZ);
+      this.levelRoot.add(podium);
+      const tile = createLargeTileModel();
+      tile.position.set(displayX,0.29,displayZ);
+      tile.rotation.y = side * 0.10;
+      this.levelRoot.add(tile);
+      const marker = createNeonShowroomSign(index === 0 ? 'CALACATTA • 120×280' : 'MAX-FLIZ • PREMIUM GRES', index === 0 ? '#67e8f9' : '#fbbf24');
+      marker.position.set(displayX,2.6,displayZ-0.7);
+      marker.scale.setScalar(0.30);
+      this.levelRoot.add(marker);
+      const accent = new THREE.PointLight(index === 0 ? 0x38bdf8 : 0xf59e0b, 5.5, 9);
+      accent.position.set(displayX,2.4,displayZ);
+      this.levelRoot.add(accent);
+    });
+
+    const plantA = createShowroomPlant();
+    plantA.position.set(-33.4,0,11.2);
+    const plantB = createShowroomPlant();
+    plantB.position.set(33.4,0,11.2);
+    this.levelRoot.add(plantA,plantB);
 
     // Open Sector A -> Sector B Transition Archway
     const sectorGateAB = createFinishGate();
@@ -3506,9 +3686,40 @@ export class MaxFlizGameEngine {
     scoreboard3.position.set(offsetX + 10, 7.2, -10.0);
     this.levelRoot.add(scoreboard3);
 
+    // Brighter terminal-side visual anchors: illuminated slab kiosks, plant silhouettes and loading signage.
+    [-1,1].forEach((side,index)=>{
+      const displayX=offsetX+side*39;
+      const displayZ=14.4;
+      const podium=createDisplayPodium(2.5,1.75,0.24);
+      podium.position.set(displayX,0,displayZ);
+      this.levelRoot.add(podium);
+      const slab=createLargeTileModel();
+      slab.position.set(displayX,0.29,displayZ);
+      slab.rotation.y=side*0.14;
+      this.levelRoot.add(slab);
+      const sign=createNeonShowroomSign(index===0?'WZ / WYDANIE TOWARU':'RAMPY • TERMINAL C',index===0?'#67e8f9':'#fb7185');
+      sign.position.set(displayX,2.55,displayZ-0.8);
+      sign.scale.setScalar(0.30);
+      this.levelRoot.add(sign);
+      const light=new THREE.PointLight(index===0?0x38bdf8:0xef4444,6.5,10);
+      light.position.set(displayX,2.2,displayZ);
+      this.levelRoot.add(light);
+      const plant=createShowroomPlant();
+      plant.position.set(displayX-side*2.1,0,displayZ-1.1);
+      this.levelRoot.add(plant);
+    });
+
+    // Roof-mounted high-bay rails create a visible terminal ceiling rhythm and light the loading lanes.
+    [-30, -10, 12, 32].forEach((tx, index) => {
+      const rail = createTrackSpotlights(8.6);
+      rail.position.set(offsetX + tx, 7.75, -2.0);
+      rail.rotation.y = index % 2 === 0 ? 0 : Math.PI / 2;
+      this.levelRoot.add(rail);
+    });
+
     // High-Bay Terminal Racks — MOVED STRICTLY TO BACKGROUND (z = -14.0 and -10.5)
     // NEVER blocking the central arena or the delivery dock from the camera!
-    [-26, -6, 14].forEach((rx, idx) => {
+    [-26, -6, 14, 34].forEach((rx, idx) => {
       const worldX = offsetX + rx;
       const rackBack = createWarehouseRack(6.5, 4.4, 1.6);
       rackBack.position.set(worldX, 0, -14.0);
@@ -3535,7 +3746,7 @@ export class MaxFlizGameEngine {
     });
 
     // South Wing (Terminal C-Bis: z = 8 to 17) Pallet Staging Area
-    [-24, -10, 4, 18].forEach((px, idx) => {
+    [-24, -10, 4, 18, 32].forEach((px, idx) => {
       const worldX = offsetX + px;
       const pallet = createTilePallet(1, 'nero');
       pallet.position.set(worldX, 0, 12.5);
@@ -3755,6 +3966,61 @@ export class MaxFlizGameEngine {
   }
 
   private fireSurvivalWeapon(weapon: SurvivalWeaponState, target: EnemyItem) {
+    const definition = SURVIVAL_WEAPON_DEFS[weapon.id];
+    const weaponDamage = 1 + Math.floor((weapon.level - 1) / 3) + (weapon.evolved ? 1 : 0);
+
+    if (weapon.id === 'forklift_horn') {
+      const radius = weapon.evolved ? 10 : 7;
+      let hitCount = 0;
+      for (const enemy of this.enemies) {
+        if (enemy.state === 'defeated' || Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z) > radius) continue;
+        enemy.hp -= weaponDamage;
+        enemy.stunTimer = Math.max(enemy.stunTimer, weapon.evolved ? 1.8 : 1.1);
+        enemy.state = 'stunned';
+        hitCount++;
+        this.spawnParticleRing(enemy.x, enemy.y + 0.55, enemy.z, definition.color);
+        if (enemy.hp <= 0) this.defeatEnemy(enemy, 260, true);
+      }
+      this.spawnParticleRing(this.playerPos.x, 0.18, this.playerPos.z, definition.color);
+      this.triggerScreenShake(weapon.evolved ? 0.46 : 0.28, 0.22);
+      this.triggerBloomPulse(0.32);
+      sound.playBossWarning();
+      this.emitFloatingToast('📣 ALARM CAŁEJ HALI! ' + hitCount + ' CELÓW', this.playerPos.x, this.playerPos.y + 1.5, this.playerPos.z, 'combo');
+      return;
+    }
+
+    if (weapon.id === 'calacatta_shards') {
+      const base = new THREE.Vector3(target.x - this.playerPos.x, 0, target.z - this.playerPos.z);
+      if (base.lengthSq() < 0.001) return;
+      base.normalize();
+      const spread = weapon.evolved ? [-0.44, -0.22, 0, 0.22, 0.44] : [-0.20, 0, 0.20];
+      for (const angle of spread) {
+        const direction = base.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+        const shardMaterial = new THREE.MeshStandardMaterial({
+          color: definition.color, emissive: definition.color, emissiveIntensity: weapon.evolved ? 1.2 : 0.55,
+          roughness: 0.22, metalness: 0.18,
+        });
+        const shard = new THREE.Mesh(new THREE.TetrahedronGeometry(0.22, 0), shardMaterial);
+        shard.position.set(this.playerPos.x, this.playerPos.y + 0.88, this.playerPos.z).addScaledVector(direction, 0.9);
+        shard.rotation.set(0.25, angle * 2, 0.45);
+        shard.castShadow = false;
+        this.levelRoot.add(shard);
+        this.projectiles.push({
+          mesh: shard,
+          vel: direction.multiplyScalar(weapon.evolved ? 15.8 : 13.4),
+          life: weapon.evolved ? 2.6 : 2.2,
+          maxLife: weapon.evolved ? 2.6 : 2.2,
+          damage: weaponDamage,
+          pierce: weapon.evolved ? 3 : 1,
+          weaponProjectile: true,
+          hitIds: new Set<string>(),
+          spinSpeed: weapon.evolved ? 8.5 : 5.5,
+        });
+      }
+      sound.playAttackWhoosh();
+      this.emitFloatingToast(weapon.evolved ? '💎 BURZA CALACATTY!' : '💎 ODPADY WIELKIEGO FORMATU!', this.playerPos.x, this.playerPos.y + 1.35, this.playerPos.z, 'perk');
+      return;
+    }
 
     if (weapon.id === 'orbit_blades') {
       const count = weapon.evolved ? 5 : weapon.level >= 4 ? 4 : 3;
@@ -3792,8 +4058,7 @@ export class MaxFlizGameEngine {
     const direction = new THREE.Vector3(target.x - this.playerPos.x, 0, target.z - this.playerPos.z);
     if (direction.lengthSq() < 0.001) return;
     direction.normalize();
-    const definition = SURVIVAL_WEAPON_DEFS[weapon.id];
-    const damage = 1 + Math.floor((weapon.level - 1) / 3) + (weapon.evolved ? 1 : 0);
+    const damage = weaponDamage;
     const start = new THREE.Vector3(this.playerPos.x, this.playerPos.y + 0.9, this.playerPos.z).addScaledVector(direction, 0.9);
     const material = new THREE.MeshStandardMaterial({
       color: definition.color, emissive: definition.color, emissiveIntensity: weapon.evolved ? 1.8 : 0.9,
@@ -3802,7 +4067,7 @@ export class MaxFlizGameEngine {
     const projectile: {
       mesh: THREE.Object3D; vel: THREE.Vector3; life: number; maxLife: number; damage: number;
       pierce?: number; homing?: boolean; weaponProjectile?: boolean; aoeRadius?: number; slowOnHit?: boolean;
-      igniteOnHit?: boolean; spinSpeed?: number; ricochet?: boolean; hitIds: Set<string>;
+      igniteOnHit?: boolean; spinSpeed?: number; ricochet?: boolean; boomerang?: boolean; hitIds: Set<string>;
     } = {
       mesh: new THREE.Group(),
       vel: direction.clone().multiplyScalar(10.5), life: 2.8, maxLife: 2.8, damage, hitIds: new Set<string>(),
@@ -3869,6 +4134,24 @@ export class MaxFlizGameEngine {
         projectile.pierce = weapon.evolved ? 5 : weapon.level >= 4 ? 3 : 2;
         break;
       }
+      case 'steam_bomb':
+        projectile.mesh = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 10), material);
+        projectile.vel = direction.clone().multiplyScalar(weapon.evolved ? 8.6 : 7.0);
+        projectile.life = projectile.maxLife = 3.3;
+        projectile.aoeRadius = weapon.evolved ? 3.8 : 2.5;
+        projectile.slowOnHit = true;
+        projectile.pierce = weapon.evolved ? 1 : 0;
+        projectile.spinSpeed = 5.2;
+        break;
+      case 'wz_boomerang':
+        projectile.mesh = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.07, 6, 16), material);
+        (projectile.mesh as THREE.Mesh).rotation.x = Math.PI / 2;
+        projectile.vel = direction.clone().multiplyScalar(weapon.evolved ? 13.8 : 11.0);
+        projectile.life = projectile.maxLife = weapon.evolved ? 4.2 : 3.2;
+        projectile.boomerang = true;
+        projectile.pierce = weapon.evolved ? 3 : 1;
+        projectile.spinSpeed = weapon.evolved ? 15 : 10;
+        break;
     }
     projectile.mesh.position.copy(start);
     (projectile.mesh as THREE.Mesh).castShadow = false;
@@ -3890,7 +4173,7 @@ export class MaxFlizGameEngine {
       sound.playAlert();
 
       // Secret objects are deliberately placed away from the centre line.
-      if (!this.survivalSecretSpawned && this.survivalWave >= 4 && Math.random() < 0.34) {
+      if (!this.survivalSecretSpawned && this.survivalWave >= 3 && Math.random() < 0.68) {
         this.survivalSecretSpawned = true;
         const side = Math.random() < 0.5 ? -1 : 1;
         const secretX = THREE.MathUtils.clamp(this.playerPos.x + side * 22, this.levelBounds.minX + 3, this.levelBounds.maxX - 3);
@@ -4417,6 +4700,196 @@ export class MaxFlizGameEngine {
     sound.playLollipopThrow();
   }
 
+  private spawnSebixBrick(x: number, y: number, z: number, targetX: number, targetZ: number) {
+    const group = new THREE.Group();
+    const brickMaterial = new THREE.MeshStandardMaterial({ color: 0x9a3412, roughness: 0.86 });
+    const mortarMaterial = new THREE.MeshStandardMaterial({ color: 0xf5d0a4, roughness: 0.95 });
+    const brick = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.19, 0.22), brickMaterial);
+    group.add(brick);
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.025, 0.225), mortarMaterial);
+    stripe.position.y = 0.045;
+    group.add(stripe);
+    group.position.set(x,y,z);
+    this.levelRoot.add(group);
+    const direction = new THREE.Vector3(targetX-x,0.22,targetZ-z).normalize();
+    this.enemyProjectiles.push({
+      mesh: group as unknown as THREE.Mesh,
+      vel: direction.multiplyScalar(7.2),
+      life: 3.0,
+      kind: 'sebix_brick',
+      gravity: 2.15,
+      spin: 5.2,
+    });
+    sound.playWhistle();
+    this.emitFloatingToast('🧱 SEBIX M. RZUCA CEGŁĄ!', x, y+0.45, z, 'damage');
+  }
+
+  private spawnSebixFireTrail(x: number, z: number, direction: number) {
+    // A short-lived ground scorch with three rising tongues of orange/red flame.
+    // Geometry and materials are unique to this patch and disposed at the end of its life.
+    const group = new THREE.Group();
+    group.position.set(x, 0.035, z);
+    group.rotation.y = direction;
+
+    const groundMaterial = new THREE.MeshBasicMaterial({
+      color: 0xf97316,
+      transparent: true,
+      opacity: 0.62,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 1.5), groundMaterial);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = 0.005;
+    group.add(ground);
+
+    const flameColors = [0xf97316, 0xef4444, 0xfacc15];
+    flameColors.forEach((color, index) => {
+      const flameMaterial = new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0.76 - index * 0.12,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+      const tongue = new THREE.Mesh(new THREE.ConeGeometry(0.12 + index * 0.025, 0.42 + index * 0.08, 6), flameMaterial);
+      tongue.position.set((index - 1) * 0.19, 0.19 + index * 0.025, (index - 1) * 0.27);
+      tongue.rotation.z = (index - 1) * 0.3;
+      tongue.rotation.x = (index - 1) * 0.12;
+      group.add(tongue);
+    });
+
+    this.levelRoot.add(group);
+    this.specialEffects.push({
+      mesh: group,
+      life: 0.58,
+      maxLife: 0.58,
+      grow: 0,
+      spin: 0,
+      update: (_dt, progress) => {
+        const fade = Math.max(0, 1 - progress);
+        group.scale.set(0.86 + progress * 0.24, 0.75 + progress * 0.2, 0.86 + progress * 0.24);
+        group.children.forEach((child) => {
+          const mesh = child as THREE.Mesh;
+          const material = mesh.material as THREE.MeshBasicMaterial;
+          material.opacity = fade * (mesh === ground ? 0.62 : 0.76);
+        });
+      },
+      cleanup: () => {
+        group.traverse((object) => {
+          const mesh = object as THREE.Mesh;
+          if (!mesh.isMesh) return;
+          mesh.geometry.dispose();
+          const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          materials.forEach((material) => material.dispose());
+        });
+      },
+    });
+  }
+
+  private updateSebixBehaviour(enemy: EnemyItem, dt: number, distance: number, dx: number, dz: number) {
+    enemy.rageTime = (enemy.rageTime || 0) + dt;
+    if (enemy.rageTime >= 10 && (enemy.bossPhase || 1) < 2) {
+      enemy.bossPhase = 2;
+      enemy.speed *= 1.34;
+      enemy.maxHp = Math.ceil(enemy.maxHp * 1.12);
+      enemy.hp = Math.min(enemy.maxHp, enemy.hp + 2);
+      this.callbacks.onPerkDropBanner?.(
+        'SEBIX M. • ZACZYNA SIĘ ROZGRZEWKA',
+        '💪',
+        'Cegły lecą szybciej. Sebix przyspiesza i zaczyna zamykać dystans.',
+        '#f97316'
+      );
+      this.triggerScreenShake(0.22,0.14);
+      sound.playBossWarning();
+    }
+    if (enemy.rageTime >= 24 && (enemy.bossPhase || 1) < 3) {
+      enemy.bossPhase = 3;
+      enemy.speed *= 1.42;
+      enemy.specialActionTimer = Math.min(enemy.specialActionTimer || 0, 1.2);
+      this.callbacks.onPerkDropBanner?.(
+        'SEBIX M. • TRYB TARANU HULK B4',
+        '🔥',
+        'Podłoże zaczyna płonąć. Uważaj na czerwono-pomarańczowe ostrzeżenie przed szarżą.',
+        '#ef4444'
+      );
+      sound.playSirens();
+      this.triggerScreenShake(0.48,0.28);
+      this.triggerBloomPulse(0.38);
+    }
+
+    const facePlayer = () => { enemy.mesh.rotation.y = Math.atan2(dx,dz); };
+    if ((enemy.dashTimer || 0) > 0) {
+      enemy.dashTimer = Math.max(0,(enemy.dashTimer || 0)-dt);
+      const dir = enemy.chargeDir ?? Math.atan2(dx,dz);
+      enemy.x += Math.sin(dir) * enemy.speed * 2.45 * dt;
+      enemy.z += Math.cos(dir) * enemy.speed * 2.45 * dt;
+      enemy.mesh.rotation.y = dir;
+      enemy.mesh.position.set(enemy.x,enemy.y,enemy.z);
+      enemy.trailTimer = (enemy.trailTimer || 0)-dt;
+      if ((enemy.trailTimer || 0) <= 0) {
+        enemy.trailTimer = 0.105;
+        this.spawnSebixFireTrail(enemy.x, enemy.z, dir);
+      }
+      if (enemy.dashTimer <= 0) {
+        enemy.state = 'chase';
+        enemy.specialActionTimer = 4.2;
+        enemy.chargeDir = undefined;
+        this.triggerScreenShake(0.32,0.2);
+      }
+      return;
+    }
+
+    if (enemy.chargeTimer !== undefined) {
+      enemy.chargeTimer = Math.max(0,enemy.chargeTimer-dt);
+      enemy.state = 'charging';
+      enemy.mesh.rotation.y = enemy.chargeDir ?? Math.atan2(dx,dz);
+      if (enemy.chargeTimer <= 0) {
+        enemy.chargeTimer = undefined;
+        enemy.dashTimer = 0.78;
+        enemy.state = 'chase';
+        sound.playBossWarning();
+        this.triggerScreenShake(0.26,0.17);
+      }
+      return;
+    }
+
+    const phase = enemy.bossPhase || 1;
+    if (phase >= 3) {
+      enemy.specialActionTimer = (enemy.specialActionTimer ?? 0)-dt;
+      if (distance < 13 && (enemy.specialActionTimer || 0) <= 0) {
+        enemy.chargeTimer = 0.72;
+        enemy.chargeDir = Math.atan2(dx,dz);
+        enemy.state = 'charging';
+        this.spawnParticleRing(enemy.x,0.12,enemy.z,0xef4444);
+        this.emitFloatingToast('🔥 SEBIX ŁADUJE TARAN — ZEJDŹ Z LINII!',enemy.x,enemy.y+2.2,enemy.z,'damage');
+        sound.playBossWarning();
+        return;
+      }
+      enemy.trailTimer = (enemy.trailTimer || 0)-dt;
+      if ((enemy.trailTimer || 0) <= 0) {
+        enemy.trailTimer = 0.24;
+        this.spawnSebixFireTrail(enemy.x, enemy.z, enemy.mesh.rotation.y);
+      }
+    } else {
+      enemy.specialActionTimer = (enemy.specialActionTimer ?? 0)-dt;
+      if (distance < 16 && (enemy.specialActionTimer || 0) <= 0) {
+        enemy.specialActionTimer = phase >= 2 ? 3.1 : 4.5;
+        facePlayer();
+        this.spawnSebixBrick(enemy.x,enemy.y+1.35,enemy.z,this.playerPos.x,this.playerPos.z);
+      }
+    }
+
+    if (distance > 1.7) {
+      const pace = phase === 1 ? 0.78 : 1.0;
+      enemy.x += (dx/Math.max(0.1,distance))*enemy.speed*pace*dt;
+      enemy.z += (dz/Math.max(0.1,distance))*enemy.speed*pace*dt;
+    }
+    facePlayer();
+    enemy.mesh.position.set(enemy.x,enemy.y+Math.sin(enemy.walkCycle*1.7)*0.018,enemy.z);
+  }
+
   private updateSurvivalDrone(dt: number) {
     if (this.gameMode !== 'survival' || (this.activePerks.arcDrone || 0) <= 0) return;
     this.survivalDroneCooldown -= dt;
@@ -4531,20 +5004,25 @@ export class MaxFlizGameEngine {
     const maxZ = THREE.MathUtils.clamp(z + 2.2, this.levelBounds.minZ + 0.5, this.levelBounds.maxZ - 0.5);
     const roll = Math.random();
 
-    if (wave < 3 || roll < 0.16) this.addZombieWorkerEnemy(id, x, minZ, maxZ, 'Zombie-Magazynier — głodny po nocnej zmianie');
-    else if (roll < 0.29) this.addKurierEnemy(id, x, minZ, maxZ, 'Kurier Ekspresowy — paczka bez awiza');
-    else if (roll < 0.41) this.addMonterEnemy(id, x, minZ, maxZ, 'Monter Wiesław — poziomica w dłoni');
-    else if (roll < 0.52) this.addInspectorEnemy(id, x, minZ, maxZ, 'Inspektor BHP — kontrola bez zapowiedzi');
-    else if (roll < 0.63) this.addHandlowiecEnemy(id, x, minZ, maxZ, 'Handlowiec — oferta nie do odrzucenia');
-    else if (wave >= 7 && roll < 0.69) this.addAgvRobotEnemy(id, x, x, z, 'AGV-9 — autonomiczny paleciak w trybie kolizyjnym');
-    else if (wave >= 3 && roll < 0.72) this.addCustomerEnemy(id, x, minZ, maxZ, 'Klient z reklamacją na 17 stron');
-    else if (wave >= 4 && roll < 0.79) this.addArchitectEnemy(id, x, x + 4.5, z, 'Architektka — odcień beżu numer 47');
-    else if (wave >= 5 && roll < 0.85) this.addItalianVendorEnemy(id, x, minZ, maxZ, 'Włoski dostawca armatury — mamma mia');
-    else if (wave >= 6 && roll < 0.90) this.addSerwisanciEnemy(id, x, minZ, maxZ, 'Serwisant — zgłoszenie numer 404');
-    else if (wave >= 7 && roll < 0.94) this.addPanRomanEnemy(id, x, minZ, maxZ, 'Pan Roman — dostawa bez awiza');
-    else if (wave >= 8 && roll < 0.955) this.addSztaplarEnemy(id, x, minZ, maxZ, 'Operator paleciaka — drift w alei B4');
-    else if (wave >= 9 && roll < 0.972) this.addSerwisanciEnemy(id, x, minZ, maxZ, 'Serwisant AGV — awaria protokołu');
-    else if (wave >= 10 && roll < 0.986) this.addPanRomanEnemy(id, x, minZ, maxZ, 'Pan Roman — kontrola rampy');
+    // Keep the classic warehouse roster in rotation: wave gates unlock varieties,
+    // while wider probability bands prevent late-run enemies from becoming effectively invisible.
+    const sebixAlreadyActive = this.enemies.some((enemy) => enemy.type === 'sebix_m' && enemy.state !== 'defeated');
+    if (wave >= 8 && !sebixAlreadyActive && Math.random() < 0.065) this.addSebixEnemy(id,x,minZ,maxZ);
+    else if (wave >= 6 && Math.random() < 0.04) this.addBosmanKrakowBossEnemy(id,x,z);
+    else if (wave < 3 || roll < 0.12) this.addZombieWorkerEnemy(id, x, minZ, maxZ, 'Zombie-Magazynier — głodny po nocnej zmianie');
+    else if (roll < 0.22) this.addKurierEnemy(id, x, minZ, maxZ, 'Kurier Ekspresowy — paczka bez awiza');
+    else if (roll < 0.32) this.addMonterEnemy(id, x, minZ, maxZ, 'Monter Wiesław — poziomica w dłoni');
+    else if (roll < 0.42) this.addInspectorEnemy(id, x, minZ, maxZ, 'Inspektor BHP — kontrola bez zapowiedzi');
+    else if (roll < 0.52) this.addHandlowiecEnemy(id, x, minZ, maxZ, 'Handlowiec — oferta nie do odrzucenia');
+    else if (wave >= 7 && roll < 0.60) this.addAgvRobotEnemy(id, x, x, z, 'AGV-9 — autonomiczny paleciak w trybie kolizyjnym');
+    else if (wave >= 3 && roll < 0.68) this.addCustomerEnemy(id, x, minZ, maxZ, 'Klient z reklamacją na 17 stron');
+    else if (wave >= 4 && roll < 0.75) this.addArchitectEnemy(id, x, x + 4.5, z, 'Architektka — odcień beżu numer 47');
+    else if (wave >= 5 && roll < 0.82) this.addItalianVendorEnemy(id, x, minZ, maxZ, 'Włoski dostawca armatury — mamma mia');
+    else if (wave >= 6 && roll < 0.89) this.addSerwisanciEnemy(id, x, minZ, maxZ, 'Serwisant — zgłoszenie numer 404');
+    else if (wave >= 7 && roll < 0.95) this.addPanRomanEnemy(id, x, minZ, maxZ, 'Pan Roman — dostawa bez awiza');
+    else if (wave >= 8 && roll < 0.975) this.addSztaplarEnemy(id, x, minZ, maxZ, 'Operator paleciaka — drift w alei B4');
+    else if (wave >= 9 && roll < 0.99) this.addSerwisanciEnemy(id, x, minZ, maxZ, 'Serwisant AGV — awaria protokołu');
+    else if (wave >= 10 && roll < 0.998) this.addPanRomanEnemy(id, x, minZ, maxZ, 'Pan Roman — kontrola rampy');
     else this.addEliteGuardEnemy(id, x, minZ, maxZ, 'Elitarny strażnik sektora');
 
     const enemy = this.enemies[this.enemies.length - 1];
@@ -4711,7 +5189,7 @@ export class MaxFlizGameEngine {
     let nearestDist = 36;
     for (const e of this.enemies) {
       if (e.state === 'defeated') continue;
-      if (e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow') {
+      if (e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' || e.type === 'sebix_m') {
         const d = Math.hypot(e.x - this.playerPos.x, e.z - this.playerPos.z);
         if (d < nearestDist) {
           nearestDist = d;
@@ -5144,7 +5622,7 @@ export class MaxFlizGameEngine {
           this.handleMateuszPassive(1);
           sound.playEasterEgg();
           this.sayQuote(`EASTER EGG ODNALEZIONY: ${c.name}! (+${c.points * ptsMult} pkt)`);
-          this.emitFloatingToast(`🎉 EASTER EGG!`, c.x, c.y + 0.5, c.z, 'easter-egg');
+          this.emitFloatingToast(`🎉 ${c.name.toUpperCase()} • +${c.points * ptsMult} PKT!`, c.x, c.y + 0.62, c.z, 'easter-egg');
         }
 
         this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
@@ -5383,114 +5861,12 @@ export class MaxFlizGameEngine {
   }
 
   // Reference to quotes defined at top of class
-  private static readonly _DUPLICATE_ENEMY_QUOTES: Record<string, string[]> = {
-    customer: [
-      "Gdzie moje kafelki?!",
-      "Awantura o rabat 10%!",
-      "Chcę widzieć kierownika!",
-      "Płytki miały być gładkie!"
-    ],
-    architect: [
-      "To ma być ecru czy beż?!",
-      "Brak dylatacji na podłodze!",
-      "Gres niezgodny z projektem!",
-      "Wizualizacja mówiła inaczej!"
-    ],
-    agv_robot: [
-      "BEEP BOOP ZLEW B4!",
-      "Uwaga! Transport palety!",
-      "Błąd czujnika przeszkód!",
-      "Sztaplowanie w toku!"
-    ],
-    inspector: [
-      "Gdzie kask BHP?!",
-      "Brak protokołu odbioru!",
-      "Mandat 500 PLN za bałagan!",
-      "Przekroczenie normy hałasu!"
-    ],
-    handlowiec: [
-      "Mam super ofertę na zlew!",
-      "Rabat 3% tylko dzisiaj!",
-      "A może zestaw baterii?!",
-      "Darmowa dostawa do hotelu!"
-    ],
-    monter: [
-      "Dobiję to gumowym młotkiem!",
-      "Brak poziomu w alei!",
-      "Cięcie po skosie 45°!",
-      "Mieszam klej wysokie wiązanie!"
-    ],
-    piorun_dron: [
-      "BZZZT SKAN KODU B4!",
-      "Niezgodność numeru WZ!",
-      "Skanowanie palety A1!",
-      "Detekcja ruchu w alei!"
-    ],
-    elite_walczak_guard: [
-      "Strefa Walczaka zamknięta!",
-      "Brak przepustki B4!",
-      "Odwrót z magazynu!",
-      "Tarcza BHP w gotowości!"
-    ],
-    kurier: [
-      "Dostawa DPD od Rudego z DPD! Załatwię Johnny Walkera tanio",
-      "Paczka ekspresowa DPD dla VIP! Załatwię Johnny Walkera tanio",
-      "Paczka od Rudego! Załatwię Johnny Walkera tanio",
-      "Johnny Walker Express u drzwi! Załatwię Johnny Walkera tanio"
-    ],
-    przedstawiciel_włoski: [
-      "Mamma mia, armatura de lux!",
-      "Zlatane baterie z Mediolanu!",
-      "Prego, uwaga na marmur!",
-      "Amore, to jest prawdziwy styl!"
-    ],
-    sztaplar_szalony: [
-      "Z drogi, 3 tony ładunku!",
-      "Paleciak bez hamulców!",
-      "Uwaga wyjazd z alei C!",
-      "Czysta moc 300 Nm!"
-    ],
-    walczak: [
-      "Ten magazyn jest MÓJ!",
-      "Anuluję wszystkie faktury!",
-      "Zawiadamiam Centralę!",
-      "Nikt tu nie wygra ze mną!"
-    ],
-    krol_leto: [
-      "ZWALNIAM CIĘ DYSCYPLINARNIE!",
-      "Dyscyplinarka w trybie natychmiastowym!",
-      "Oddawaj kask BHP i przepustkę!",
-      "Moja decyzja o zwolnieniu jest OSTATECZNA!",
-      "Błąd w WZ-tce? To koniec Twojej kariery!"
-    ],
-    pan_roman: [
-      "Panowie spieszę się! To tylko jakieś sanitariaty!",
-      "Dostawa dla Klienta z Kęt! Uwaga na umywalki!",
-      "Proszę zrobić przejście w alei A3!"
-    ],
-    serwisant: [
-      "Przyjaciele! Kto nam pomoże?!",
-      "Serwis Max-Flix na trasie! Szybka naprawa!",
-      "Sprawdzam opór na fugach i zasilaniu!"
-    ],
-    bosman_krakow: [
-      "Odprawa 3-msc w toku! Wyniki albo kara!",
-      "Raport kwartalny do podpisu na cito!",
-      "W Krakowie tak się zamówień nie spóźnia!"
-    ],
-    zombie_pracownik: [
-      "KFC?! Dawid przywiózł kubełek! Z drogi!",
-      "Czuję panierkę z pięciu alejek! Oddawaj stripsa!",
-      "Trzecia zmiana bez obiadu... KUBEŁEK JEST MÓJ!",
-      "Móóózg... znaczy KURCZAAAK z dostawy Dawida!"
-    ]
-  };
 
 
   private getSurvivalEnemyRole(enemy: EnemyItem): 'bruiser' | 'flanker' | 'ranged' | 'support' {
-    if (enemy.type === 'sztaplar_szalony' || enemy.type === 'elite_walczak_guard' || enemy.type === 'agv_robot') return 'bruiser';
+    if (enemy.type === 'sztaplar_szalony' || enemy.type === 'elite_walczak_guard' || enemy.type === 'agv_robot' || enemy.type === 'sebix_m') return 'bruiser';
     if (enemy.type === 'inspector') return 'support';
-    if (enemy.type === 'handlowiec' || enemy.type === 'przedstawiciel_włoski' || enemy.type === 'pan_roman' || enemy.type === 'serwisant' || enemy.type === 'pomazaniec') return 'ranged';
+    if (enemy.type === 'handlowiec' || enemy.type === 'przedstawiciel_włoski' || enemy.type === 'pan_roman' || enemy.type === 'serwisant' || enemy.type === 'pomazaniec' || enemy.type === 'bosman_krakow') return 'ranged';
     if (enemy.type === 'kurier' || enemy.type === 'zombie_pracownik' || enemy.type === 'monter') return 'flanker';
     return 'flanker';
   }
@@ -5630,7 +6006,7 @@ export class MaxFlizGameEngine {
       for (const e of this.enemies) {
         if (e.state === 'defeated' || !e.mesh) continue;
         const d = Math.hypot(this.playerPos.x - e.x, this.playerPos.z - e.z);
-        if (d > 26.0 && e.type !== 'walczak' && e.type !== 'krol_leto') {
+        if (d > 26.0 && e.type !== 'walczak' && e.type !== 'krol_leto' && e.type !== 'sebix_m') {
           if (e.mesh.visible) e.mesh.visible = false;
           continue;
         }
@@ -5663,7 +6039,7 @@ export class MaxFlizGameEngine {
       const distToPlayer = Math.hypot(dx, dz);
 
       // Distance culling: skip heavy updates for distant non-boss enemies
-      if (distToPlayer > 26.0 && e.type !== 'walczak' && e.type !== 'krol_leto') {
+      if (distToPlayer > 26.0 && e.type !== 'walczak' && e.type !== 'krol_leto' && e.type !== 'sebix_m') {
         if (e.mesh.visible) e.mesh.visible = false;
         return;
       }
@@ -5675,7 +6051,7 @@ export class MaxFlizGameEngine {
         const fill = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.08), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
         fill.position.z = 0.01;
         e.hpBar.add(bg, fill);
-        e.hpBar.position.y = e.type === 'walczak' || e.type === 'krol_leto' ? 2.4 : 1.65;
+        e.hpBar.position.y = e.type === 'sebix_m' ? 2.65 : e.type === 'walczak' || e.type === 'krol_leto' ? 2.4 : 1.65;
         e.mesh.add(e.hpBar);
         e.hpFill = fill;
         e.hpBar.visible = false;
@@ -5736,7 +6112,7 @@ export class MaxFlizGameEngine {
       }
 
       // Check whether this enemy is allowed to engage or must hold position in wave
-      const canActivelyChase = e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'pomazaniec' || this.activeChaserIds.has(e.id);
+      const canActivelyChase = e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'pomazaniec' || e.type === 'sebix_m' || this.activeChaserIds.has(e.id);
 
       // SIGHT & DETECTION LOGIC
       const threatAwareness = 1 + this.threatTier * 0.025;
@@ -5772,9 +6148,9 @@ export class MaxFlizGameEngine {
 
       // Global Throttled Shout Quotes (max 1 quote at a time across all enemies with 4.0s minimum gap)
       e.shoutTimer = (e.shoutTimer || 0) - dt;
-      if (e.shoutTimer <= 0 && distToPlayer < 9.0 && this.globalEnemyShoutCooldown <= 0) {
-        e.shoutTimer = 4.5 + Math.random() * 3.0;
-        this.globalEnemyShoutCooldown = 4.0;
+      if (e.shoutTimer <= 0 && distToPlayer < 12.0 && this.globalEnemyShoutCooldown <= 0) {
+        e.shoutTimer = 5.0 + Math.random() * 2.4;
+        this.globalEnemyShoutCooldown = 3.1;
         const quotes = MaxFlizGameEngine.ENEMY_QUOTES[e.type] || ["Z drogi!"];
         const quote = quotes[Math.floor(Math.random() * quotes.length)];
         e.shoutText = quote;
@@ -5889,7 +6265,9 @@ export class MaxFlizGameEngine {
         }
         this.callbacks.onBossUpdate?.(e.name, e.hp, e.maxHp, true, e.bossPhase);
       } else {
-        if (this.gameMode === 'survival') {
+        if (e.type === 'sebix_m') {
+          this.updateSebixBehaviour(e,dt,distToPlayer,dx,dz);
+        } else if (this.gameMode === 'survival') {
           this.updateSurvivalEnemyTactics(e, dt, distToPlayer);
         } else {
           // Dynamic Chase / Tracking AI for ground enemies
@@ -6016,7 +6394,7 @@ export class MaxFlizGameEngine {
         e.mesh.position.y = e.y + Math.sin(e.walkCycle * 1.65) * 0.025;
         e.mesh.rotation.z = Math.sin(e.walkCycle * 1.1) * 0.018;
       }
-      const hitRadius = e.type === 'walczak' || e.type === 'krol_leto' ? 1.5 : e.type === 'elite_walczak_guard' ? 1.3 : 1.1;
+      const hitRadius = e.type === 'sebix_m' ? (e.dashTimer && e.dashTimer > 0 ? 1.85 : 1.35) : e.type === 'walczak' || e.type === 'krol_leto' ? 1.5 : e.type === 'elite_walczak_guard' ? 1.3 : 1.1;
 
       if (dist < hitRadius) {
         // 1. STOMP MECHANIC (Naskok z góry)
@@ -6379,6 +6757,7 @@ export class MaxFlizGameEngine {
         const distBack = toPlayer.length();
         if (distBack < 0.75) {
           this.levelRoot.remove(p.mesh);
+          if (p.weaponProjectile) this.disposeTemporaryObject(p.mesh);
           this.projectiles.splice(i, 1);
           continue;
         }
@@ -6560,18 +6939,25 @@ export class MaxFlizGameEngine {
           this.triggerBloomPulse(0.16);
           sound.playLollipopHit();
           this.emitFloatingToast('🍭 LIZAK PROSTO W CZOŁO!', this.playerPos.x, this.playerPos.y + 1.25, this.playerPos.z, 'damage');
+        } else if (ep.kind === 'sebix_brick') {
+          this.takeDamage('🧱 Sebix M. trafił Cię cegłą z nocnej zmiany!');
+          this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.55, this.playerPos.z, 0xf97316);
+          this.spawnExplosionParticles(this.playerPos.x,0.18,this.playerPos.z,0xff7a18,8);
+          this.triggerScreenShake(0.26,0.16);
+          sound.playSmack();
+          this.emitFloatingToast('🧱 CEGŁA PROSTO W KASK!', this.playerPos.x, this.playerPos.y + 1.25, this.playerPos.z, 'damage');
         } else {
           this.takeDamage('Trafiło Cię wezwanie wyjaśniające od Walczaka!');
         }
         this.levelRoot.remove(ep.mesh);
-        if (ep.kind === 'pomazaniec_lollipop') this.disposeTemporaryObject(ep.mesh);
+        if (ep.kind === 'pomazaniec_lollipop' || ep.kind === 'sebix_brick') this.disposeTemporaryObject(ep.mesh);
         this.enemyProjectiles.splice(i, 1);
         continue;
       }
 
       if (ep.life <= 0) {
         this.levelRoot.remove(ep.mesh);
-        if (ep.kind === 'pomazaniec_lollipop') this.disposeTemporaryObject(ep.mesh);
+        if (ep.kind === 'pomazaniec_lollipop' || ep.kind === 'sebix_brick') this.disposeTemporaryObject(ep.mesh);
         this.enemyProjectiles.splice(i, 1);
       }
     }
@@ -6596,6 +6982,7 @@ export class MaxFlizGameEngine {
 
       if (effect.life <= 0) {
         this.levelRoot.remove(effect.mesh);
+        effect.cleanup?.();
         this.specialEffects.splice(i, 1);
       }
     }
@@ -7473,7 +7860,7 @@ export class MaxFlizGameEngine {
       e.type === 'elite_walczak_guard' || e.maxHp >= 4;
     const isSurvivalEliteReward =
       e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' ||
-      e.type === 'elite_walczak_guard';
+      e.type === 'elite_walczak_guard' || e.type === 'sebix_m';
     const dropChance = this.gameMode === 'survival'
       ? (isSurvivalEliteReward ? 1.0 : 0.18)
       : this.charDef.id === 'piotr'
@@ -7489,17 +7876,25 @@ export class MaxFlizGameEngine {
       this.spawnDroppedPerk(e.x, e.y + 0.1, e.z);
     }
 
-    if (this.gameMode === 'survival' && (e.type === 'walczak' || e.type === 'krol_leto')) {
+    if (this.gameMode === 'survival' && (e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'sebix_m')) {
       this.spawnLootCrate(e.x + 1.2, 0, e.z);
-      this.spawnSurvivalXpGem(e.x, e.y, e.z, 8);
-      this.emitFloatingToast('🏆 SKRZYNIA Z NAGRODĄ BOSS-A!', e.x, e.y + 2.0, e.z, 'combo');
+      this.spawnSurvivalXpGem(e.x, e.y, e.z, e.type === 'sebix_m' ? 5 : 8);
+      this.emitFloatingToast(e.type === 'sebix_m' ? '🔥 SEBIX ROZBROJONY — SKRZYNIA B4!' : '🏆 SKRZYNIA Z NAGRODĄ BOSS-A!', e.x, e.y + 2.0, e.z, 'combo');
     }
 
-    if (e.type === 'walczak' || e.maxHp >= 4) {
+    if (e.type === 'sebix_m') {
       this.callbacks.onBossUpdate?.(e.name, 0, e.maxHp, false);
-      this.sayQuote('BYŁY KIEROWNIK WALCZAK ZANEUTRALIZOWANY! Droga wolna!');
+      this.sayQuote('SEBIX M. ZGASZONY! Cegły wracają na paletę, a B4 odzyskuje spokój.');
+      this.triggerScreenShake(1.05, 0.72);
+      this.triggerBloomPulse(0.48);
+      this.spawnParticleRing(e.x, e.y + 0.7, e.z, 0xf97316);
+      this.spawnParticleRing(e.x, e.y + 1.35, e.z, 0xef4444);
+      this.spawnExplosionParticles(e.x, e.y + 0.8, e.z, 0xff7a18, 20);
+    } else if (e.type === 'walczak' || e.maxHp >= 4) {
+      this.callbacks.onBossUpdate?.(e.name, 0, e.maxHp, false);
+      this.sayQuote(e.type === 'walczak' ? 'BYŁY KIEROWNIK WALCZAK ZANEUTRALIZOWANY! Droga wolna!' : e.name.toUpperCase() + ' — NEUTRALIZACJA ZAKOŃCZONA!');
 
-      // Intense long screen shake for boss defeat!
+      // Intense long screen shake for major enemy defeats.
       this.triggerScreenShake(2.2, 1.25);
 
       this.spawnParticleRing(e.x, e.y + 1.0, e.z, 0xef4444);
@@ -7943,6 +8338,43 @@ export class MaxFlizGameEngine {
       this.activePerks.damageWard = Math.max(this.activePerks.damageWard || 0, duration);
       sound.playShieldBreak();
       this.sayQuote('Paleta EURO klasy A. Wreszcie coś w tym magazynie ma certyfikat.');
+    } else if (perkId === 'forklift_horn') {
+      let affected = 0;
+      for (const enemy of this.enemies) {
+        if (enemy.state === 'defeated' || Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z) > 7) continue;
+        enemy.stunTimer = Math.max(enemy.stunTimer, 1.6);
+        enemy.state = 'stunned';
+        enemy.hp -= 1;
+        affected++;
+        if (enemy.hp <= 0) this.defeatEnemy(enemy, 220, true);
+        this.spawnParticleRing(enemy.x, enemy.y + 0.55, enemy.z, 0xf97316);
+      }
+      sound.playBossWarning();
+      this.triggerScreenShake(0.32, 0.18);
+      this.spawnParticleRing(this.playerPos.x, 0.18, this.playerPos.z, 0xf97316);
+      this.emitFloatingToast('📣 KLAKSON B4! ' + affected + ' WROGÓW OGŁUSZONYCH', this.playerPos.x, this.playerPos.y + 1.6, this.playerPos.z, 'combo');
+    } else if (perkId === 'night_shift_espresso') {
+      this.activePerks.speedBoost = Math.max(this.activePerks.speedBoost, duration);
+      this.activePerks.attackHaste = Math.max(this.activePerks.attackHaste || 0, duration);
+      sound.playPerkPickup();
+      this.sayQuote('NOCNA ZMIANA: PODWÓJNE ESPRESSO! Kto śpi, ten nie wyrabia normy!');
+    } else if (perkId === 'golden_wz') {
+      this.score += 600;
+      this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+      if (this.gameMode === 'survival') {
+        for (let i = 0; i < 8; i++) {
+          const angle = (i / 8) * Math.PI * 2;
+          this.spawnSurvivalXpGem(this.playerPos.x + Math.cos(angle) * 1.5, 0.25, this.playerPos.z + Math.sin(angle) * 1.5, 1);
+        }
+      }
+      sound.playEasterEgg();
+      this.sayQuote('ZŁOTA WZ-TKA! Kadry zatwierdziły premię. Tego dokumentu nie zgub!');
+      this.emitFloatingToast('📜 +600 PKT • 8 XP', this.playerPos.x, this.playerPos.y + 1.5, this.playerPos.z, 'combo');
+    } else if (perkId === 'pallet_guard') {
+      this.activePerks.damageWard = Math.max(this.activePerks.damageWard || 0, duration);
+      this.activePerks.shield = true;
+      sound.playShieldBreak();
+      this.sayQuote('BARYKADA EURO! Teraz nawet reklamacja odbije się od palety!');
     }
 
     this.callbacks.onPerksUpdate?.(this.activePerks);
