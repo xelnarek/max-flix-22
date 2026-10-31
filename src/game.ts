@@ -1,5 +1,14 @@
 import * as THREE from 'three';
 import { clampHorizontalPosition } from './arenaBounds.ts';
+import {
+  getAbilityCooldownSeconds,
+  getBaseAttackCooldownSeconds,
+  getSurvivalWeaponReloadSeconds,
+  getWeaponRecoveryAfterUpgrade,
+  SURVIVAL_WEAPON_DISPATCH_COOLDOWN_SECONDS,
+  SURVIVAL_WEAPON_INITIAL_RELOAD_FACTOR,
+  SURVIVAL_WEAPON_UNLOCK_SECONDS,
+} from './combatBalance.ts';
 import { ParticleMeshPool, type ParticleShape } from './particlePool.ts';
 import { CHARACTERS } from './characters.ts';
 import { sound } from './sound.ts';
@@ -114,20 +123,20 @@ const SURVIVAL_WEAPON_DEFS: Record<SurvivalWeaponId, {
   name: string; evolvedName: string; icon: string; description: string; cooldown: number;
   unlockAfter: number; color: number; evolutionPassive: SurvivalPassiveId; evolutionPassiveLabel: string;
 }> = {
-  // Each weapon has a distinct late-run evolution and a matching passive requirement.
-  // Unlock times are spaced so the arsenal grows over the first ten minutes instead of flooding the first level-ups.
-  pallet_cannon: { name: 'Działo paletowe', evolvedName: 'PALETA GIGA', icon: '🧱', description: 'Precyzyjny pocisk z kontrolowaną falą uderzeniową.', cooldown: 7.8, unlockAfter: 70, color: 0xf59e0b, evolutionPassive: 'damage', evolutionPassiveLabel: 'Wzmocniona amunicja' },
-  diamond_saw: { name: 'Tarcza diamentowa', evolvedName: 'TARCZA RYKOSZETU', icon: '💿', description: 'Ostrze przebija linię przeciwników i może odbić się od granicy areny.', cooldown: 8.8, unlockAfter: 135, color: 0x22d3ee, evolutionPassive: 'range', evolutionPassiveLabel: 'Zasięg audytu' },
-  glue_mine: { name: 'Mina Mapei', evolvedName: 'MAPEI BLACKOUT', icon: '🟣', description: 'Mina obszarowa spowalniająca i rozbijająca szyk wrogów.', cooldown: 10.2, unlockAfter: 210, color: 0xa78bfa, evolutionPassive: 'magnet', evolutionPassiveLabel: 'Magnes XP' },
-  kfc_bomber: { name: 'Kubełek bombowy', evolvedName: 'KUBEŁEK FURII', icon: '🍗', description: 'Pocisk obszarowy z podpaleniem celów.', cooldown: 11.5, unlockAfter: 285, color: 0xef4444, evolutionPassive: 'scavenger', evolutionPassiveLabel: 'Łowca okazji' },
-  piorun_drone: { name: 'Dron Piorun', evolvedName: 'PIORUN CHAIN MK II', icon: '🤖', description: 'Szybki pocisk samonaprowadzający z dodatkowym przebiciem.', cooldown: 9.4, unlockAfter: 360, color: 0x38bdf8, evolutionPassive: 'drone', evolutionPassiveLabel: 'Dron asystujący' },
-  forklift_bolter: { name: 'Nitownica UDT', evolvedName: 'NITOWNICA OBLĘŻNICZA', icon: '🔩', description: 'Wąski, szybki pocisk przebijający kilka celów.', cooldown: 6.3, unlockAfter: 435, color: 0xfbbf24, evolutionPassive: 'rapid', evolutionPassiveLabel: 'Rytm ataku' },
-  scanner_pulse: { name: 'Impuls skanera B4', evolvedName: 'SKANER TOTALNY', icon: '📡', description: 'Namierzający impuls przebijający zwartą formację.', cooldown: 8.1, unlockAfter: 510, color: 0x67e8f9, evolutionPassive: 'range', evolutionPassiveLabel: 'Zasięg audytu' },
-  orbit_blades: { name: 'Wirujące tarcze', evolvedName: 'ORBITALNA STREFA BHP', icon: '⚙️', description: 'Ostrza krążące wokół operatora i chroniące bliski dystans.', cooldown: 13.0, unlockAfter: 585, color: 0x86efac, evolutionPassive: 'armor', evolutionPassiveLabel: 'Paleta ochronna' },
-  calacatta_shards: { name: 'Odłamki Calacatty', evolvedName: 'BURZA WIELKIEGO FORMATU', icon: '💎', description: 'Ciężkie odłamki gresu lecące w wachlarzu i przebijające kilka celów.', cooldown: 10.8, unlockAfter: 630, color: 0xe5e7eb, evolutionPassive: 'damage', evolutionPassiveLabel: 'Wzmocniona amunicja' },
-  steam_bomb: { name: 'Bomba Parowa', evolvedName: 'KOCIOŁ B4', icon: '♨️', description: 'Ciśnieniowy pocisk tworzący strefę spowolnienia wśród przeciwników.', cooldown: 12.2, unlockAfter: 675, color: 0x7dd3fc, evolutionPassive: 'regen', evolutionPassiveLabel: 'Przerwa regeneracyjna' },
-  forklift_horn: { name: 'Klakson Sztaplarki', evolvedName: 'ALARM CAŁEJ HALI', icon: '📣', description: 'Fala dźwiękowa odrzuca i ogłusza wrogów wokół operatora.', cooldown: 15.5, unlockAfter: 720, color: 0xfb923c, evolutionPassive: 'armor', evolutionPassiveLabel: 'Paleta ochronna' },
-  wz_boomerang: { name: 'WZ-Bumerang', evolvedName: 'PROTOKÓŁ POWROTU', icon: '📜', description: 'Magiczna WZ-tka przecina linię wrogów i wraca do operatora.', cooldown: 11.8, unlockAfter: 765, color: 0xfbbf24, evolutionPassive: 'growth', evolutionPassiveLabel: 'Premia za normę' },
+  // First weapon at 2 minutes; one new option unlocks every 90 seconds.
+  // The complete 12-weapon arsenal is a long-run reward, not an early-run power spike.
+  pallet_cannon: { name: 'Działo paletowe', evolvedName: 'PALETA GIGA', icon: '🧱', description: 'Precyzyjny pocisk z kontrolowaną falą uderzeniową.', cooldown: 8.6, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.pallet_cannon, color: 0xf59e0b, evolutionPassive: 'damage', evolutionPassiveLabel: 'Wzmocniona amunicja' },
+  diamond_saw: { name: 'Tarcza diamentowa', evolvedName: 'TARCZA RYKOSZETU', icon: '💿', description: 'Ostrze przebija linię przeciwników i może odbić się od granicy areny.', cooldown: 9.7, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.diamond_saw, color: 0x22d3ee, evolutionPassive: 'range', evolutionPassiveLabel: 'Zasięg audytu' },
+  glue_mine: { name: 'Mina Mapei', evolvedName: 'MAPEI BLACKOUT', icon: '🟣', description: 'Mina obszarowa spowalniająca i rozbijająca szyk wrogów.', cooldown: 11.3, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.glue_mine, color: 0xa78bfa, evolutionPassive: 'magnet', evolutionPassiveLabel: 'Magnes XP' },
+  kfc_bomber: { name: 'Kubełek bombowy', evolvedName: 'KUBEŁEK FURII', icon: '🍗', description: 'Pocisk obszarowy z podpaleniem celów.', cooldown: 12.7, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.kfc_bomber, color: 0xef4444, evolutionPassive: 'scavenger', evolutionPassiveLabel: 'Łowca okazji' },
+  piorun_drone: { name: 'Dron Piorun', evolvedName: 'PIORUN CHAIN MK II', icon: '🤖', description: 'Szybki pocisk samonaprowadzający z dodatkowym przebiciem.', cooldown: 10.4, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.piorun_drone, color: 0x38bdf8, evolutionPassive: 'drone', evolutionPassiveLabel: 'Dron asystujący' },
+  forklift_bolter: { name: 'Nitownica UDT', evolvedName: 'NITOWNICA OBLĘŻNICZA', icon: '🔩', description: 'Wąski, szybki pocisk przebijający kilka celów.', cooldown: 7.0, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.forklift_bolter, color: 0xfbbf24, evolutionPassive: 'rapid', evolutionPassiveLabel: 'Rytm ataku' },
+  scanner_pulse: { name: 'Impuls skanera B4', evolvedName: 'SKANER TOTALNY', icon: '📡', description: 'Namierzający impuls przebijający zwartą formację.', cooldown: 9.0, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.scanner_pulse, color: 0x67e8f9, evolutionPassive: 'range', evolutionPassiveLabel: 'Zasięg audytu' },
+  orbit_blades: { name: 'Wirujące tarcze', evolvedName: 'ORBITALNA STREFA BHP', icon: '⚙️', description: 'Ostrza krążące wokół operatora i chroniące bliski dystans.', cooldown: 14.5, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.orbit_blades, color: 0x86efac, evolutionPassive: 'armor', evolutionPassiveLabel: 'Paleta ochronna' },
+  calacatta_shards: { name: 'Odłamki Calacatty', evolvedName: 'BURZA WIELKIEGO FORMATU', icon: '💎', description: 'Ciężkie odłamki gresu lecące w wachlarzu i przebijające kilka celów.', cooldown: 12.0, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.calacatta_shards, color: 0xe5e7eb, evolutionPassive: 'damage', evolutionPassiveLabel: 'Wzmocniona amunicja' },
+  steam_bomb: { name: 'Bomba Parowa', evolvedName: 'KOCIOŁ B4', icon: '♨️', description: 'Ciśnieniowy pocisk tworzący strefę spowolnienia wśród przeciwników.', cooldown: 13.5, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.steam_bomb, color: 0x7dd3fc, evolutionPassive: 'regen', evolutionPassiveLabel: 'Przerwa regeneracyjna' },
+  forklift_horn: { name: 'Klakson Sztaplarki', evolvedName: 'ALARM CAŁEJ HALI', icon: '📣', description: 'Fala dźwiękowa odrzuca i ogłusza wrogów wokół operatora.', cooldown: 17.0, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.forklift_horn, color: 0xfb923c, evolutionPassive: 'armor', evolutionPassiveLabel: 'Paleta ochronna' },
+  wz_boomerang: { name: 'WZ-Bumerang', evolvedName: 'PROTOKÓŁ POWROTU', icon: '📜', description: 'Magiczna WZ-tka przecina linię wrogów i wraca do operatora.', cooldown: 13.0, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.wz_boomerang, color: 0xfbbf24, evolutionPassive: 'growth', evolutionPassiveLabel: 'Premia za normę' },
 };
 export interface SurvivalSnapshot {
   elapsedSeconds: number; wave: number; kills: number; level: number; xp: number; xpToNext: number;
@@ -1796,7 +1805,7 @@ export class MaxFlizGameEngine {
           id: weaponId,
           level: 1,
           // Let the player see the new weapon before its first shot; avoid an instant unlock volley.
-          cooldown: SURVIVAL_WEAPON_DEFS[weaponId].cooldown * 0.55,
+          cooldown: SURVIVAL_WEAPON_DEFS[weaponId].cooldown * SURVIVAL_WEAPON_INITIAL_RELOAD_FACTOR,
         });
         sound.playAbility(this.currentCharacterId);
       }
@@ -1805,9 +1814,12 @@ export class MaxFlizGameEngine {
       const weapon = this.survivalWeapons.find((entry) => entry.id === weaponId);
       if (weapon && weapon.level < 5) {
         weapon.level++;
-        const upgradedCooldown = SURVIVAL_WEAPON_DEFS[weaponId].cooldown * Math.max(0.78, 1 - (weapon.level - 1) * 0.055);
-        // An upgrade improves the next shot without forcing an immediate extra shot.
-        weapon.cooldown = Math.min(weapon.cooldown, upgradedCooldown);
+        const upgradedCooldown = getSurvivalWeaponReloadSeconds(
+          SURVIVAL_WEAPON_DEFS[weaponId].cooldown, weapon.level, !!weapon.evolved
+        );
+        // Keep the current reload; if it was already ready, add a short recovery
+        // instead of firing immediately as a side effect of the level-up.
+        weapon.cooldown = getWeaponRecoveryAfterUpgrade(weapon.cooldown, upgradedCooldown);
       }
     } else if (choice.id.startsWith('weapon_evolve:')) {
       const weaponId = choice.id.slice('weapon_evolve:'.length) as SurvivalWeaponId;
@@ -1816,9 +1828,9 @@ export class MaxFlizGameEngine {
       const hasPassivePair = (this.survivalUpgradeStacks[definition.evolutionPassive] || 0) > 0;
       if (weapon && weapon.level >= 5 && !weapon.evolved && this.survivalElapsed >= 300 && hasPassivePair) {
         weapon.evolved = true;
-        const evolvedCooldown = definition.cooldown * Math.max(0.78, 1 - (weapon.level - 1) * 0.055) * 0.82;
-        // Preserve the current reload. The evolution changes impact, not the global shot cadence.
-        weapon.cooldown = Math.min(weapon.cooldown, evolvedCooldown);
+        const evolvedCooldown = getSurvivalWeaponReloadSeconds(definition.cooldown, weapon.level, true);
+        // Evolution changes impact and grants only a modest reload improvement.
+        weapon.cooldown = getWeaponRecoveryAfterUpgrade(weapon.cooldown, evolvedCooldown);
         this.triggerBloomPulse(0.7);
         this.triggerScreenShake(0.24, 0.2);
         this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.6, this.playerPos.z, definition.color);
@@ -4448,8 +4460,10 @@ export class MaxFlizGameEngine {
 
     this.fireSurvivalWeapon(readyWeapon, target);
     const levelFactor = Math.max(0.78, 1 - (readyWeapon.level - 1) * 0.055);
-    readyWeapon.cooldown = SURVIVAL_WEAPON_DEFS[readyWeapon.id].cooldown * levelFactor * (readyWeapon.evolved ? 0.82 : 1);
-    this.survivalWeaponDispatchCooldown = 0.72;
+    readyWeapon.cooldown = getSurvivalWeaponReloadSeconds(
+      SURVIVAL_WEAPON_DEFS[readyWeapon.id].cooldown, readyWeapon.level, !!readyWeapon.evolved
+    );
+    this.survivalWeaponDispatchCooldown = SURVIVAL_WEAPON_DISPATCH_COOLDOWN_SECONDS;
   }
 
   private fireSurvivalWeapon(weapon: SurvivalWeaponState, target: EnemyItem) {
@@ -7949,16 +7963,13 @@ export class MaxFlizGameEngine {
     const isThirdCombo = this.attackComboStep === 0;
 
     // Deliberate, readable cadence: these are physical signature attacks, not machine-gun spam.
-    const baseAttackCooldown = this.gameMode === 'survival'
-      ? 3.25
-      : charId === 'piotr' ? 0.64
-        : charId === 'mateusz' ? 0.66
-          : charId === 'dawid' ? 0.70
-            : charId === 'grzesiek' ? 0.78
-              : 0.86;
+    const baseAttackCooldown = getBaseAttackCooldownSeconds(charId, this.gameMode);
+    const attackHasteFactor = (this.activePerks.attackHaste || 0) > 0
+      ? (this.gameMode === 'survival' ? 0.90 : 0.94)
+      : 1;
     this.attackCooldownTimer = baseAttackCooldown *
       (this.gameMode === 'survival' ? this.survivalAttackRateMultiplier : 1) *
-      ((this.activePerks.attackHaste || 0) > 0 ? (this.gameMode === 'survival' ? 0.90 : 0.88) : 1);
+      attackHasteFactor;
     this.attackSwingTimer = 0.26;
 
     sound.playAttackWhoosh();
@@ -8581,7 +8592,7 @@ export class MaxFlizGameEngine {
 
   public triggerAbility() {
     if (this.state !== 'playing' || this.abilityTimer > 0) return;
-    this.abilityTimer = this.charDef.abilityCooldown * (this.gameMode === 'survival' ? 2.0 : 1.25);
+    this.abilityTimer = getAbilityCooldownSeconds(this.charDef.abilityCooldown, this.gameMode);
     const abilityDamageMultiplier = this.gameMode === 'survival'
       ? Math.min(1.2, this.survivalDamageMultiplier * 0.78) : 1;
 
