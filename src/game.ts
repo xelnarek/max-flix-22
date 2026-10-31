@@ -592,6 +592,16 @@ export class MaxFlizGameEngine {
   }[] = [];
   // One bounded pool owns all short-lived combat-fragment geometry/materials.
   private readonly particlePool = new ParticleMeshPool(75);
+  private particlePoolDisposed = false;
+
+  /** Release pooled GPU resources when this engine is permanently torn down. */
+  public dispose(): void {
+    if (this.particlePoolDisposed) return;
+    this.particlePoolDisposed = true;
+    this.clearLevel();
+    this.particlePool.dispose();
+  }
+
   private projectiles: {
     mesh: THREE.Object3D;
     vel: THREE.Vector3;
