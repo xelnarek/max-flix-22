@@ -359,6 +359,10 @@
               </span>
               <span class="tab-label">KRONIKA</span>
             </button>
+            <button class="menu-tab-btn" data-tab="tab-settings" aria-controls="tab-settings">
+              <span class="tab-icon">⚙</span>
+              <span class="tab-label">USTAWIENIA</span>
+            </button>
           </div>
 
           <div class="menu-tab-content-area">
@@ -889,6 +893,49 @@
                     </button>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <div id="tab-settings" class="tab-panel settings-panel" aria-labelledby="settings-panel-title">
+              <section class="settings-hero">
+                <div class="settings-kicker">SYSTEM / AUDIO CONTROL</div>
+                <h2 id="settings-panel-title">USTAWIENIA DŹWIĘKU</h2>
+                <p>Ustaw osobno głośność całej gry, muzyki tła i efektów walki. Zmiany działają od razu i zapisują się lokalnie na tym urządzeniu.</p>
+              </section>
+
+              <section class="audio-mixer-card" aria-label="Mikser dźwięku">
+                <div class="audio-mixer-heading">
+                  <div><strong>MIKSER AUDIO</strong><span>Trzy niezależne poziomy głośności</span></div>
+                  <span class="audio-mixer-status">WEB AUDIO • OFFLINE</span>
+                </div>
+
+                <div class="audio-slider-row">
+                  <label for="audio-master-volume"><span class="audio-slider-icon">◉</span><span><strong>GŁOŚNOŚĆ GŁÓWNA</strong><small>Poziom całego miksu</small></span></label>
+                  <input id="audio-master-volume" type="range" min="0" max="100" step="1" value="82" aria-label="Głośność główna" />
+                  <output id="audio-master-value" for="audio-master-volume">82%</output>
+                </div>
+
+                <div class="audio-slider-row">
+                  <label for="audio-music-volume"><span class="audio-slider-icon">♫</span><span><strong>MUZYKA</strong><small>Ambient i motywy tła</small></span></label>
+                  <input id="audio-music-volume" type="range" min="0" max="100" step="1" value="48" aria-label="Głośność muzyki" />
+                  <output id="audio-music-value" for="audio-music-volume">48%</output>
+                </div>
+
+                <div class="audio-slider-row">
+                  <label for="audio-effects-volume"><span class="audio-slider-icon">✦</span><span><strong>EFEKTY DŹWIĘKOWE</strong><small>Ataki, trafienia, alarmy i interakcje</small></span></label>
+                  <input id="audio-effects-volume" type="range" min="0" max="100" step="1" value="82" aria-label="Głośność efektów dźwiękowych" />
+                  <output id="audio-effects-value" for="audio-effects-volume">82%</output>
+                </div>
+
+                <div class="audio-mixer-footer">
+                  <span>Wyciszenie klawiszem M nadal działa niezależnie od suwaków.</span>
+                  <button id="btn-audio-reset" type="button" class="audio-reset-btn">PRZYWRÓĆ DOMYŚLNE</button>
+                </div>
+              </section>
+
+              <div class="settings-note">
+                <span class="settings-note-icon">ⓘ</span>
+                <p>Ustawienia audio są przechowywane w pamięci przeglądarki. Muzyka uruchamia się dopiero po rozpoczęciu rozgrywki i nie wymaga pobierania zewnętrznych plików.</p>
               </div>
             </div>
           </div>
