@@ -1441,7 +1441,10 @@ export class MaxFlizGameEngine {
       this.levelRoot.add(barricade);
       this.survivalObstacles.push({ x: point.x, z: point.z, halfWidth: 1.32, halfDepth: 0.72 });
     }
-    
+    this.buildSurvivalArenaDressing();
+  }
+
+
   private addSurvivalArenaInstance(instance: THREE.InstancedMesh) {
     instance.castShadow = false;
     instance.receiveShadow = false;
@@ -1488,7 +1491,6 @@ export class MaxFlizGameEngine {
       this.survivalArenaLabelMaterials.set(key, fallback);
       return fallback;
     }
-
     context.fillStyle = '#081521';
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.strokeStyle = accent;
@@ -1523,9 +1525,8 @@ export class MaxFlizGameEngine {
     const cargoMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.84, metalness: 0.06 });
     const dummy = new THREE.Object3D();
 
-    // Repeated roof trusses and service pipes frame the full arena without extra draw calls.
-    const trussGeometry = new THREE.BoxGeometry(0.24, 0.25, 36.5);
-    const trusses = new THREE.InstancedMesh(trussGeometry, steel, 5);
+    // Roof trusses, service pipes and longitudinal rails form a coherent high-bay ceiling.
+    const trusses = new THREE.InstancedMesh(new THREE.BoxGeometry(0.24, 0.25, 36.5), steel, 5);
     for (let i = 0; i < 5; i++) {
       dummy.position.set(-48 + i * 24, 8.78, 0);
       dummy.rotation.set(0, 0, 0);
@@ -1536,8 +1537,7 @@ export class MaxFlizGameEngine {
     trusses.instanceMatrix.needsUpdate = true;
     this.addSurvivalArenaInstance(trusses);
 
-    const roofRailGeometry = new THREE.BoxGeometry(112, 0.16, 0.2);
-    const roofRails = new THREE.InstancedMesh(roofRailGeometry, orange, 2);
+    const roofRails = new THREE.InstancedMesh(new THREE.BoxGeometry(112, 0.16, 0.2), orange, 2);
     for (let i = 0; i < 2; i++) {
       dummy.position.set(0, 8.68, i === 0 ? -18.0 : 18.0);
       dummy.rotation.set(0, 0, 0);
@@ -1548,8 +1548,7 @@ export class MaxFlizGameEngine {
     roofRails.instanceMatrix.needsUpdate = true;
     this.addSurvivalArenaInstance(roofRails);
 
-    const pipeGeometry = new THREE.CylinderGeometry(0.075, 0.075, 112, 8);
-    const servicePipes = new THREE.InstancedMesh(pipeGeometry, steel, 3);
+    const servicePipes = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.075, 0.075, 112, 8), steel, 3);
     for (let i = 0; i < 3; i++) {
       dummy.position.set(0, 7.92, -6 + i * 6);
       dummy.rotation.set(0, 0, Math.PI / 2);
@@ -1560,190 +1559,158 @@ export class MaxFlizGameEngine {
     servicePipes.instanceMatrix.needsUpdate = true;
     this.addSurvivalArenaInstance(servicePipes);
 
-    // Perimeter pallet racks provide a readable warehouse silhouette; the inner lanes stay open.
-    const rackCenters = [-45, -30, -15, 0, 15, 30, 45];
-    const rackSides = [-1, 1];
-    const rackSets = rackCenters.length * rackSides.length;
-    const posts = new THREE.InstancedMesh(new THREE.BoxGeometry(0.17, 4.15, 0.17), orange, rackSets * 4);
+    // Perimeter pallet racks add vertical scale while leaving the main combat lane open.
+    const centers = [-45, -30, -15, 0, 15, 30, 45];
+    const sides = [-1, 1];
+    const rackCount = centers.length * sides.length;
+    const posts = new THREE.InstancedMesh(new THREE.BoxGeometry(0.17, 4.15, 0.17), orange, rackCount * 4);
     let index = 0;
-    for (const side of rackSides) {
-      for (const x of rackCenters) {
-        for (const xOffset of [-4.25, 4.25]) {
-          for (const zOffset of [-0.98, 0.98]) {
-            dummy.position.set(x + xOffset, 2.08, side * 16.15 + zOffset);
-            dummy.rotation.set(0, 0, 0);
-            dummy.scale.set(1, 1, 1);
-            dummy.updateMatrix();
-            posts.setMatrixAt(index++, dummy.matrix);
-          }
-        }
+    for (const side of sides) for (const x of centers) {
+      for (const dx of [-4.25, 4.25]) for (const dz of [-0.98, 0.98]) {
+        dummy.position.set(x + dx, 2.08, side * 16.15 + dz);
+        dummy.rotation.set(0, 0, 0);
+        dummy.scale.set(1, 1, 1);
+        dummy.updateMatrix();
+        posts.setMatrixAt(index++, dummy.matrix);
       }
     }
     posts.instanceMatrix.needsUpdate = true;
     this.addSurvivalArenaInstance(posts);
 
-    const shelves = new THREE.InstancedMesh(new THREE.BoxGeometry(8.72, 0.15, 2.12), deck, rackSets * 3);
+    const shelves = new THREE.InstancedMesh(new THREE.BoxGeometry(8.72, 0.15, 2.12), deck, rackCount * 3);
     index = 0;
-    for (const side of rackSides) {
-      for (const x of rackCenters) {
-        for (const y of [0.48, 1.82, 3.16]) {
-          dummy.position.set(x, y, side * 16.15);
-          dummy.rotation.set(0, 0, 0);
-          dummy.scale.set(1, 1, 1);
-          dummy.updateMatrix();
-          shelves.setMatrixAt(index++, dummy.matrix);
-        }
-      }
+    for (const side of sides) for (const x of centers) for (const y of [0.48, 1.82, 3.16]) {
+      dummy.position.set(x, y, side * 16.15);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      shelves.setMatrixAt(index++, dummy.matrix);
     }
     shelves.instanceMatrix.needsUpdate = true;
     this.addSurvivalArenaInstance(shelves);
 
-    const cargo = new THREE.InstancedMesh(new THREE.BoxGeometry(2.0, 0.88, 1.38), cargoMaterial, rackSets * 6);
-    const cargoPalette = [0x566b7c, 0x8b6845, 0x394c5e, 0xa36b35, 0x6a7480];
+    const cargo = new THREE.InstancedMesh(new THREE.BoxGeometry(2.0, 0.88, 1.38), cargoMaterial, rackCount * 6);
+    const palette = [0x566b7c, 0x8b6845, 0x394c5e, 0xa36b35, 0x6a7480];
     index = 0;
-    for (const side of rackSides) {
-      for (let row = 0; row < rackCenters.length; row++) {
-        const x = rackCenters[row];
-        for (let level = 0; level < 3; level++) {
-          for (let slot = 0; slot < 2; slot++) {
-            dummy.position.set(x + (slot === 0 ? -2.2 : 2.2), 0.98 + level * 1.34, side * 16.15);
-            dummy.rotation.set(0, (row + level + slot) % 2 === 0 ? 0 : Math.PI / 2, 0);
-            dummy.scale.set(1, 1, 1);
-            dummy.updateMatrix();
-            cargo.setMatrixAt(index, dummy.matrix);
-            cargo.setColorAt(index, new THREE.Color(cargoPalette[(row + level * 2 + slot) % cargoPalette.length]));
-            index++;
-          }
-        }
+    for (const side of sides) for (let row = 0; row < centers.length; row++) for (let level = 0; level < 3; level++) {
+      for (let slot = 0; slot < 2; slot++) {
+        dummy.position.set(centers[row] + (slot === 0 ? -2.2 : 2.2), 0.98 + level * 1.34, side * 16.15);
+        dummy.rotation.set(0, (row + level + slot) % 2 === 0 ? 0 : Math.PI / 2, 0);
+        dummy.scale.set(1, 1, 1);
+        dummy.updateMatrix();
+        cargo.setMatrixAt(index, dummy.matrix);
+        cargo.setColorAt(index, new THREE.Color(palette[(row + level * 2 + slot) % palette.length]));
+        index++;
       }
     }
     cargo.instanceMatrix.needsUpdate = true;
     if (cargo.instanceColor) cargo.instanceColor.needsUpdate = true;
     this.addSurvivalArenaInstance(cargo);
 
-    // Loading-bay doors and safety markings give the far ends a clear industrial purpose.
-    const shutterGeometry = new THREE.BoxGeometry(0.22, 6.35, 7.1);
-    const shutters = new THREE.InstancedMesh(shutterGeometry, deck, 6);
+    // Loading-bay shutters, safety frames and approach markings clarify both end wings.
     const dockZ = [-11, 0, 11];
+    const shutters = new THREE.InstancedMesh(new THREE.BoxGeometry(0.22, 6.35, 7.1), deck, 6);
     index = 0;
-    for (const side of [-1, 1]) {
-      for (const z of dockZ) {
-        dummy.position.set(side * 58.78, 3.3, z);
-        dummy.rotation.set(0, 0, 0);
-        dummy.scale.set(1, 1, 1);
-        dummy.updateMatrix();
-        shutters.setMatrixAt(index++, dummy.matrix);
-      }
+    for (const side of sides) for (const z of dockZ) {
+      dummy.position.set(side * 58.78, 3.3, z);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      shutters.setMatrixAt(index++, dummy.matrix);
     }
     shutters.instanceMatrix.needsUpdate = true;
     this.addSurvivalArenaInstance(shutters);
 
-    const doorRibs = new THREE.InstancedMesh(new THREE.BoxGeometry(0.25, 0.07, 7.0), steel, 60);
+    const ribs = new THREE.InstancedMesh(new THREE.BoxGeometry(0.25, 0.07, 7.0), steel, 60);
     index = 0;
-    for (const side of [-1, 1]) {
-      for (const z of dockZ) {
-        for (let rib = 0; rib < 10; rib++) {
-          dummy.position.set(side * 58.64, 0.5 + rib * 0.61, z);
-          dummy.rotation.set(0, 0, 0);
-          dummy.scale.set(1, 1, 1);
-          dummy.updateMatrix();
-          doorRibs.setMatrixAt(index++, dummy.matrix);
-        }
-      }
-    }
-    doorRibs.instanceMatrix.needsUpdate = true;
-    this.addSurvivalArenaInstance(doorRibs);
-
-    const dockFrames = new THREE.InstancedMesh(new THREE.BoxGeometry(0.16, 6.8, 0.16), orange, 12);
-    index = 0;
-    for (const side of [-1, 1]) {
-      for (const z of dockZ) {
-        for (const edge of [-3.62, 3.62]) {
-          dummy.position.set(side * 58.54, 3.4, z + edge);
-          dummy.rotation.set(0, 0, 0);
-          dummy.scale.set(1, 1, 1);
-          dummy.updateMatrix();
-          dockFrames.setMatrixAt(index++, dummy.matrix);
-        }
-      }
-    }
-    dockFrames.instanceMatrix.needsUpdate = true;
-    this.addSurvivalArenaInstance(dockFrames);
-
-    const dockTops = new THREE.InstancedMesh(new THREE.BoxGeometry(0.18, 0.18, 7.35), orange, 6);
-    index = 0;
-    for (const side of [-1, 1]) {
-      for (const z of dockZ) {
-        dummy.position.set(side * 58.54, 6.9, z);
-        dummy.rotation.set(0, 0, 0);
-        dummy.scale.set(1, 1, 1);
-        dummy.updateMatrix();
-        dockTops.setMatrixAt(index++, dummy.matrix);
-      }
-    }
-    dockTops.instanceMatrix.needsUpdate = true;
-    this.addSurvivalArenaInstance(dockTops);
-
-    const floorStripes = new THREE.InstancedMesh(new THREE.BoxGeometry(4.7, 0.024, 0.13), orange, 24);
-    index = 0;
-    for (const side of [-1, 1]) {
-      for (const z of dockZ) {
-        for (let stripe = 0; stripe < 4; stripe++) {
-          dummy.position.set(side * (51.0 + stripe * 1.15), 0.022, z);
-          dummy.rotation.set(0, 0, 0);
-          dummy.scale.set(1, 1, 1);
-          dummy.updateMatrix();
-          floorStripes.setMatrixAt(index++, dummy.matrix);
-        }
-      }
-    }
-    floorStripes.instanceMatrix.needsUpdate = true;
-    this.addSurvivalArenaInstance(floorStripes);
-
-    // Repeating aisle and dock signs work as landmarks when the camera is pulled back.
-    const signConfigs = [
-      { label: 'STREFA 01', accent: '#38bdf8', x: -30, y: 6.4, z: -19.39, rotationY: 0 },
-      { label: 'STREFA 02', accent: '#f59e0b', x: 0, y: 6.4, z: -19.39, rotationY: 0 },
-      { label: 'STREFA 03', accent: '#34d399', x: 30, y: 6.4, z: -19.39, rotationY: 0 },
-      { label: 'STREFA 01', accent: '#38bdf8', x: -30, y: 6.4, z: 19.39, rotationY: Math.PI },
-      { label: 'STREFA 02', accent: '#f59e0b', x: 0, y: 6.4, z: 19.39, rotationY: Math.PI },
-      { label: 'STREFA 03', accent: '#34d399', x: 30, y: 6.4, z: 19.39, rotationY: Math.PI },
-    ];
-    const signBacks = new THREE.InstancedMesh(new THREE.BoxGeometry(3.7, 1.38, 0.16), steel, signConfigs.length);
-    const faces = new THREE.Group();
-    index = 0;
-    for (const config of signConfigs) {
-      dummy.position.set(config.x, config.y, config.z);
-      dummy.rotation.set(0, config.rotationY, 0);
+    for (const side of sides) for (const z of dockZ) for (let rib = 0; rib < 10; rib++) {
+      dummy.position.set(side * 58.64, 0.5 + rib * 0.61, z);
+      dummy.rotation.set(0, 0, 0);
       dummy.scale.set(1, 1, 1);
       dummy.updateMatrix();
-      signBacks.setMatrixAt(index++, dummy.matrix);
+      ribs.setMatrixAt(index++, dummy.matrix);
+    }
+    ribs.instanceMatrix.needsUpdate = true;
+    this.addSurvivalArenaInstance(ribs);
+
+    const frames = new THREE.InstancedMesh(new THREE.BoxGeometry(0.16, 6.8, 0.16), orange, 12);
+    index = 0;
+    for (const side of sides) for (const z of dockZ) for (const edge of [-3.62, 3.62]) {
+      dummy.position.set(side * 58.54, 3.4, z + edge);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      frames.setMatrixAt(index++, dummy.matrix);
+    }
+    frames.instanceMatrix.needsUpdate = true;
+    this.addSurvivalArenaInstance(frames);
+
+    const tops = new THREE.InstancedMesh(new THREE.BoxGeometry(0.18, 0.18, 7.35), orange, 6);
+    index = 0;
+    for (const side of sides) for (const z of dockZ) {
+      dummy.position.set(side * 58.54, 6.9, z);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      tops.setMatrixAt(index++, dummy.matrix);
+    }
+    tops.instanceMatrix.needsUpdate = true;
+    this.addSurvivalArenaInstance(tops);
+
+    const stripes = new THREE.InstancedMesh(new THREE.BoxGeometry(4.7, 0.024, 0.13), orange, 24);
+    index = 0;
+    for (const side of sides) for (const z of dockZ) for (let stripe = 0; stripe < 4; stripe++) {
+      dummy.position.set(side * (51.0 + stripe * 1.15), 0.022, z);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      stripes.setMatrixAt(index++, dummy.matrix);
+    }
+    stripes.instanceMatrix.needsUpdate = true;
+    this.addSurvivalArenaInstance(stripes);
+
+    // Small, repeated aisle identifiers are visible as landmarks rather than HUD clutter.
+    const signs = [
+      { label: 'STREFA 01', accent: '#38bdf8', x: -30, z: -19.39, rotation: 0 },
+      { label: 'STREFA 02', accent: '#f59e0b', x: 0, z: -19.39, rotation: 0 },
+      { label: 'STREFA 03', accent: '#34d399', x: 30, z: -19.39, rotation: 0 },
+      { label: 'STREFA 01', accent: '#38bdf8', x: -30, z: 19.39, rotation: Math.PI },
+      { label: 'STREFA 02', accent: '#f59e0b', x: 0, z: 19.39, rotation: Math.PI },
+      { label: 'STREFA 03', accent: '#34d399', x: 30, z: 19.39, rotation: Math.PI },
+    ];
+    const backboards = new THREE.InstancedMesh(new THREE.BoxGeometry(3.7, 1.38, 0.16), steel, signs.length);
+    const signFaces = new THREE.Group();
+    index = 0;
+    for (const sign of signs) {
+      dummy.position.set(sign.x, 6.4, sign.z);
+      dummy.rotation.set(0, sign.rotation, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      backboards.setMatrixAt(index++, dummy.matrix);
 
       const face = new THREE.Mesh(
         new THREE.PlaneGeometry(3.38, 1.12),
-        this.getSurvivalArenaLabelMaterial(config.label, config.accent)
+        this.getSurvivalArenaLabelMaterial(sign.label, sign.accent)
       );
-      face.position.set(config.x, config.y, config.z + (config.rotationY === 0 ? 0.09 : -0.09));
-      face.rotation.y = config.rotationY;
-      faces.add(face);
+      face.position.set(sign.x, 6.4, sign.z + (sign.rotation === 0 ? 0.09 : -0.09));
+      face.rotation.y = sign.rotation;
+      face.castShadow = false;
+      face.receiveShadow = false;
+      signFaces.add(face);
     }
-    signBacks.instanceMatrix.needsUpdate = true;
-    this.addSurvivalArenaInstance(signBacks);
-    faces.traverse((child) => {
+    backboards.instanceMatrix.needsUpdate = true;
+    this.addSurvivalArenaInstance(backboards);
+    signFaces.traverse((child) => {
       if (child instanceof THREE.Mesh) {
-        child.castShadow = false;
-        child.receiveShadow = false;
         const material = child.material as THREE.Material & { map?: THREE.Texture | null };
         this.survivalArenaInstanceGeometries.add(child.geometry);
         this.survivalArenaInstanceMaterials.add(child.material as THREE.Material);
         if (material.map) this.survivalArenaInstanceTextures.add(material.map);
       }
     });
-    this.levelRoot.add(faces);
+    this.levelRoot.add(signFaces);
   }
 
-this.buildSurvivalArenaDressing();
-  }
 
   public getGameMode(): 'campaign' | 'survival' {
     return this.gameMode;
