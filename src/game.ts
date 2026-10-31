@@ -3717,7 +3717,7 @@ export class MaxFlizGameEngine {
   private fireSurvivalWeapon(weapon: SurvivalWeaponState, target: EnemyItem) {
 
     if (weapon.id === 'orbit_blades') {
-      const count = weapon.level >= 4 ? 4 : 3;
+      const count = weapon.evolved ? 5 : weapon.level >= 4 ? 4 : 3;
       for (let i = 0; i < count; i++) {
         const bladeMaterial = new THREE.MeshStandardMaterial({
           color: SURVIVAL_WEAPON_DEFS[weapon.id].color,
@@ -3762,7 +3762,7 @@ export class MaxFlizGameEngine {
     const projectile: {
       mesh: THREE.Object3D; vel: THREE.Vector3; life: number; maxLife: number; damage: number;
       pierce?: number; homing?: boolean; weaponProjectile?: boolean; aoeRadius?: number; slowOnHit?: boolean;
-      igniteOnHit?: boolean; spinSpeed?: number; hitIds: Set<string>;
+      igniteOnHit?: boolean; spinSpeed?: number; ricochet?: boolean; hitIds: Set<string>;
     } = {
       mesh: new THREE.Group(),
       vel: direction.clone().multiplyScalar(10.5), life: 2.8, maxLife: 2.8, damage, hitIds: new Set<string>(),
@@ -3771,60 +3771,62 @@ export class MaxFlizGameEngine {
     switch (weapon.id) {
       case 'pallet_cannon':
         projectile.mesh = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.13, 0.20), material);
-        projectile.vel = direction.clone().multiplyScalar(10);
-        projectile.aoeRadius = weapon.level >= 3 ? 1.45 : 1.05;
-        projectile.pierce = weapon.level >= 5 ? 1 : 0;
+        projectile.vel = direction.clone().multiplyScalar(weapon.evolved ? 11.2 : 10);
+        projectile.aoeRadius = weapon.evolved ? 2.15 : weapon.level >= 3 ? 1.45 : 1.05;
+        projectile.pierce = weapon.evolved ? 2 : weapon.level >= 5 ? 1 : 0;
         break;
       case 'diamond_saw':
         projectile.mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.075, 12), material);
         (projectile.mesh as THREE.Mesh).rotation.x = Math.PI / 2;
-        projectile.vel = direction.clone().multiplyScalar(13.2);
-        projectile.life = projectile.maxLife = 2.2;
-        projectile.pierce = 1 + (weapon.level >= 4 ? 1 : 0) + (weapon.evolved ? 1 : 0);
-        projectile.spinSpeed = 12;
+        projectile.vel = direction.clone().multiplyScalar(weapon.evolved ? 14.8 : 13.2);
+        projectile.life = projectile.maxLife = weapon.evolved ? 2.8 : 2.2;
+        projectile.pierce = 1 + (weapon.level >= 4 ? 1 : 0) + (weapon.evolved ? 3 : 0);
+        projectile.ricochet = Boolean(weapon.evolved);
+        projectile.spinSpeed = weapon.evolved ? 15 : 12;
         break;
       case 'glue_mine':
         projectile.mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(0.20, 0), material);
         projectile.vel = direction.clone().multiplyScalar(7.2);
         projectile.life = projectile.maxLife = 3.4;
-        projectile.aoeRadius = weapon.level >= 4 ? 2.1 : 1.65;
+        projectile.aoeRadius = weapon.evolved ? 2.85 : weapon.level >= 4 ? 2.1 : 1.65;
         projectile.slowOnHit = true;
-        projectile.pierce = weapon.evolved ? 1 : 0;
+        projectile.pierce = weapon.evolved ? 2 : 0;
         break;
       case 'kfc_bomber':
         projectile.mesh = new THREE.Mesh(new THREE.SphereGeometry(0.20, 10, 8), material);
         projectile.vel = direction.clone().multiplyScalar(8.4);
         projectile.life = projectile.maxLife = 3.1;
-        projectile.aoeRadius = weapon.level >= 4 ? 2.65 : 2.05;
+        projectile.aoeRadius = weapon.evolved ? 3.35 : weapon.level >= 4 ? 2.65 : 2.05;
         projectile.igniteOnHit = weapon.level >= 3 || Boolean(weapon.evolved);
-        projectile.spinSpeed = 8;
+        projectile.pierce = weapon.evolved ? 1 : 0;
+        projectile.spinSpeed = weapon.evolved ? 11 : 8;
         break;
       case 'piorun_drone':
         projectile.mesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.15, 0), material);
         projectile.vel = direction.clone().multiplyScalar(8.8);
-        projectile.life = projectile.maxLife = 4.2;
+        projectile.life = projectile.maxLife = weapon.evolved ? 4.8 : 4.2;
         projectile.homing = true;
-        projectile.pierce = weapon.evolved ? 1 : 0;
+        projectile.pierce = weapon.evolved ? 3 : 0;
         break;
       case 'forklift_bolter': {
         const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.055, 0.28, 6), material);
         bolt.rotation.x = Math.PI / 2;
         bolt.rotation.y = Math.atan2(direction.x, direction.z);
         projectile.mesh = bolt;
-        projectile.vel = direction.clone().multiplyScalar(18.5);
+        projectile.vel = direction.clone().multiplyScalar(weapon.evolved ? 21.5 : 18.5);
         projectile.life = projectile.maxLife = 1.75;
-        projectile.pierce = weapon.level >= 3 ? 2 : 1;
-        projectile.spinSpeed = 2.2;
+        projectile.pierce = weapon.evolved ? 4 : weapon.level >= 3 ? 2 : 1;
+        projectile.spinSpeed = weapon.evolved ? 3.2 : 2.2;
         break;
       }
       case 'scanner_pulse': {
         const pulse = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.08, 0.42), material);
         pulse.rotation.y = Math.atan2(direction.x, direction.z);
         projectile.mesh = pulse;
-        projectile.vel = direction.clone().multiplyScalar(14.8);
+        projectile.vel = direction.clone().multiplyScalar(weapon.evolved ? 16.8 : 14.8);
         projectile.life = projectile.maxLife = 2.0;
         projectile.homing = true;
-        projectile.pierce = weapon.level >= 4 ? 3 : 2;
+        projectile.pierce = weapon.evolved ? 5 : weapon.level >= 4 ? 3 : 2;
         break;
       }
     }
