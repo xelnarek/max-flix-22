@@ -6418,10 +6418,11 @@ export class MaxFlizGameEngine {
       if (e.shoutTimer <= 0 && distToPlayer < 12.0 && this.globalEnemyShoutCooldown <= 0) {
         e.shoutTimer = 5.0 + Math.random() * 2.4;
         this.globalEnemyShoutCooldown = 3.1;
-        const quotes = MaxFlizGameEngine.ENEMY_QUOTES[e.type] || ["Z drogi!"];
+        const quoteType = e.survivalAuditor ? 'inspector' : e.type;
+        const quotes = MaxFlizGameEngine.ENEMY_QUOTES[quoteType] || ["Z drogi!"];
         const quote = quotes[Math.floor(Math.random() * quotes.length)];
         e.shoutText = quote;
-        this.emitFloatingToast(quote, e.x, e.y + 1.25, e.z, 'enemy_shout', { enemyType: e.type, enemyName: e.name });
+        this.emitFloatingToast(quote, e.x, e.y + 1.25, e.z, 'enemy_shout', { enemyType: quoteType, enemyName: e.name });
       }
 
       // Special movement per type
@@ -6446,7 +6447,10 @@ export class MaxFlizGameEngine {
           e.speed *= 1.45;
           sound.playSirens();
           this.triggerScreenShake(0.8, 1.0);
-          this.emitFloatingToast('🚨 WALCZAK: TRYB SZAŁU (FAZA 2)!', e.x, e.y + 1.8, e.z, 'damage');
+          const bossTitle = e.name.includes('Inwentaryzacja Gigant')
+            ? 'INWENTARYZACJA GIGANT'
+            : e.survivalAuditor ? 'AUDYTOR' : 'WALCZAK';
+          this.emitFloatingToast('🚨 ' + bossTitle + ': TRYB SZAŁU (FAZA 2)!', e.x, e.y + 1.8, e.z, 'damage');
         }
 
         if (distToPlayer < 14.0) {
@@ -8587,7 +8591,14 @@ export class MaxFlizGameEngine {
       this.spawnExplosionParticles(e.x, e.y + 0.8, e.z, 0xff7a18, 20);
     } else if (e.type === 'walczak' || e.maxHp >= 4) {
       this.callbacks.onBossUpdate?.(e.name, 0, e.maxHp, false);
-      this.sayQuote(e.type === 'walczak' ? 'BYŁY KIEROWNIK WALCZAK ZANEUTRALIZOWANY! Droga wolna!' : e.name.toUpperCase() + ' — NEUTRALIZACJA ZAKOŃCZONA!');
+      const defeatLine = e.survivalAuditor
+        ? 'AUDYTOR NIEZAPOWIEDZIANY ZNEUTRALIZOWANY! Strefa czerwonej kontroli wygasła!'
+        : e.name.includes('Inwentaryzacja Gigant')
+          ? 'INWENTARYZACJA GIGANT ZAMKNIĘTA! Ostatni protokół podpisany!'
+          : e.type === 'walczak'
+            ? 'BYŁY KIEROWNIK WALCZAK ZANEUTRALIZOWANY! Droga wolna!'
+            : e.name.toUpperCase() + ' — NEUTRALIZACJA ZAKOŃCZONA!';
+      this.sayQuote(defeatLine);
 
       // Intense long screen shake for major enemy defeats.
       this.triggerScreenShake(2.2, 1.25);
