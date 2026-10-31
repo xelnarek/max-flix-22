@@ -1554,6 +1554,50 @@ export class MaxFlizGameEngine {
     insignia.position.set(0, 0.61 * scale, 0.19 * scale);
     insignia.castShadow = false;
     root.add(insignia);
+
+    // Role-specific silhouettes: readable at a distance without enlarging collision bodies.
+    if (isBoss) {
+      const crest = new THREE.Mesh(new THREE.BoxGeometry(0.34 * scale, 0.12 * scale, 0.14 * scale), accentMat);
+      crest.position.set(0, 1.16 * scale, 0.015);
+      crest.castShadow = false;
+      root.add(crest);
+      for (const side of [-1, 1]) {
+        const horn = new THREE.Mesh(new THREE.ConeGeometry(0.075 * scale, 0.24 * scale, 5), accentMat);
+        horn.position.set(side * 0.19 * scale, 1.22 * scale, 0);
+        horn.rotation.z = side * -0.34;
+        horn.castShadow = false;
+        root.add(horn);
+      }
+    } else if (enemy.type === 'kurier' || enemy.type === 'pan_roman') {
+      const pack = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.34, 0.20), accentMat);
+      pack.position.set(0, 0.66, -0.22);
+      pack.castShadow = false;
+      const packBand = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.055, 0.215), armorMat);
+      packBand.position.set(0, 0.69, -0.22);
+      root.add(pack, packBand);
+    } else if (enemy.type === 'inspector') {
+      const visor = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.055, 0.13), accentMat);
+      visor.position.set(0, 1.04, 0.025);
+      visor.castShadow = false;
+      root.add(visor);
+    } else if (enemy.type === 'zombie_pracownik') {
+      const tornBib = new THREE.Mesh(new THREE.BoxGeometry(0.23, 0.17, 0.055), accentMat);
+      tornBib.position.set(-0.045, 0.69, 0.16);
+      tornBib.rotation.z = -0.18;
+      const exposedPatch = new THREE.Mesh(new THREE.DodecahedronGeometry(0.065, 0), darkMat);
+      exposedPatch.position.set(0.16, 0.56, 0.12);
+      root.add(tornBib, exposedPatch);
+    } else if (enemy.type === 'sztaplar_szalony' || enemy.type === 'elite_walczak_guard') {
+      const hazardBar = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.045, 0.075), accentMat);
+      hazardBar.position.set(0, 0.88, 0.13);
+      hazardBar.castShadow = false;
+      root.add(hazardBar);
+    } else if (enemy.type === 'handlowiec' || enemy.type === 'przedstawiciel_włoski' || enemy.type === 'serwisant') {
+      const shoulderBeacon = new THREE.Mesh(new THREE.SphereGeometry(0.075, 7, 6), accentMat);
+      shoulderBeacon.position.set(0.25, 0.82, -0.04);
+      shoulderBeacon.castShadow = false;
+      root.add(shoulderBeacon);
+    }
   }
 
   // Soft, saturated low-poly shading gives the warehouse a readable storybook look
