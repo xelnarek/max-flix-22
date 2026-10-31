@@ -4768,6 +4768,18 @@ export class MaxFlizGameEngine {
     let avoidX = 0;
     let avoidZ = 0;
     for (const obstacle of this.survivalObstacles) {
+      const fromCenterX = enemy.x - obstacle.x;
+      const fromCenterZ = enemy.z - obstacle.z;
+      const insideX = Math.abs(fromCenterX) < obstacle.halfWidth + 0.18;
+      const insideZ = Math.abs(fromCenterZ) < obstacle.halfDepth + 0.18;
+      if (insideX && insideZ) {
+        // Recover if an enemy was spawned or pushed inside the collider instead of freezing there.
+        const exitX = obstacle.halfWidth + 0.3 - Math.abs(fromCenterX);
+        const exitZ = obstacle.halfDepth + 0.3 - Math.abs(fromCenterZ);
+        if (exitX < exitZ) avoidX += Math.sign(fromCenterX || (enemy.aiOrbitSign || 1)) * 2.4;
+        else avoidZ += Math.sign(fromCenterZ || (enemy.aiOrbitSign || 1)) * 2.4;
+        continue;
+      }
       const nearestX = THREE.MathUtils.clamp(enemy.x, obstacle.x - obstacle.halfWidth, obstacle.x + obstacle.halfWidth);
       const nearestZ = THREE.MathUtils.clamp(enemy.z, obstacle.z - obstacle.halfDepth, obstacle.z + obstacle.halfDepth);
       const dx = enemy.x - nearestX;
@@ -4856,20 +4868,15 @@ export class MaxFlizGameEngine {
       }
 
       activeCandidates.sort((a, b) => a.dist - b.dist);
-      const previouslyActive = new Set(this.activeChaserIds);
       this.activeChaserIds.clear();
       const activeCount = Math.min(maxActiveChasers, activeCandidates.length);
-      const firstCandidate = activeCandidates[0]?.enemy;
-      const formationBase = firstCandidate
-        ? Math.atan2(firstCandidate.x - this.playerPos.x, firstCandidate.z - this.playerPos.z)
-        : 0;
+      // Keep the ring anchored to the operator's heading so the encirclement does not jitter as targets reorder.
+      const formationBase = this.playerRot + Math.PI * 0.5;
       for (let i = 0; i < activeCount; i++) {
         const enemy = activeCandidates[i].enemy;
-        if (!previouslyActive.has(enemy.id)) {
-          enemy.aiSlot = i;
-          enemy.aiFlankAngle = formationBase + (i / Math.max(1, activeCount)) * Math.PI * 2;
-          enemy.aiOrbitSign = i % 2 === 0 ? 1 : -1;
-        }
+        enemy.aiSlot = i;
+        enemy.aiFlankAngle = formationBase + (i / Math.max(1, activeCount)) * Math.PI * 2;
+        enemy.aiOrbitSign = i % 2 === 0 ? 1 : -1;
         this.activeChaserIds.add(enemy.id);
       }
     }
