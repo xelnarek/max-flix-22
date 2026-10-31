@@ -456,7 +456,7 @@ export class MaxFlizGameEngine {
   public triggerBloomPulse(durationSec = 0.3) {
     const duration = THREE.MathUtils.clamp(durationSec, 0.08, 1.4);
     this.bloomPulseTimer = Math.max(this.bloomPulseTimer, duration);
-    this.bloomPulseDuration = Math.max(this.bloomPulseDuration, this.bloomPulseTimer);
+    this.bloomPulseDuration = this.bloomPulseTimer;
   }
 
   public zoomInCamera() {
@@ -8638,8 +8638,11 @@ export class MaxFlizGameEngine {
       mesh.position.set(e.x, e.y + 0.5, e.z);
       this.levelRoot.add(mesh);
       this.specialEffects.push({ mesh, life: 1.2, maxLife: 1.2, grow: 12.0, spin: 15.0 });
+      this.spawnExplosionParticles(e.x, e.y + 1.1, e.z, 0xfbbf24, 28);
     } else {
-      // Mild screen shake for regular enemies
+      // A compact shard burst gives ordinary enemies a visible but lightweight hit-confirm.
+      const impactColor = e.type === 'pomazaniec' ? 0xf472b6 : e.type === 'sebix_m' ? 0xf97316 : 0x38bdf8;
+      this.spawnCompactImpact(e.x, e.y + 0.62, e.z, impactColor);
       this.triggerScreenShake(0.35, 0.25);
     }
   }
