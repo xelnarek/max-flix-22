@@ -14,6 +14,7 @@ import { CharacterId, PerkType } from './types.ts';
 import { AssetItem, assetLoader } from './assets.ts';
 import { SelectiveBloomPipeline } from './selectiveBloom.ts';
 import { ThreeClickTrigger } from './menuInteraction.ts';
+import { calculateUiViewport } from './uiViewport.ts';
 
 // warehouseAssets imports moved to assets.ts where they are preloaded
 
@@ -105,8 +106,14 @@ class MaxFlizScene extends xb.Script {
       const aspect = width / height;
       // Use the Poco F6's ~393 CSS-pixel portrait width as the baseline.
       // Avoid shrinking the entire interface on modern 6.6–6.7 inch phones.
-      const uiScale = Math.min(1.12, Math.max(0.90, Math.min(width / 390, height / 780)));
-      document.documentElement.style.setProperty('--ui-scale', uiScale.toFixed(3));
+      const isTouchViewport = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+      const uiProfile = calculateUiViewport(width, height, isTouchViewport);
+      const root = document.documentElement;
+      root.style.setProperty('--ui-scale', uiProfile.scale.toFixed(3));
+      root.style.setProperty('--ui-font-scale', uiProfile.fontScale.toFixed(3));
+      root.style.setProperty('--ui-panel-max', uiProfile.panelMaxWidth + 'px');
+      root.dataset.uiDensity = uiProfile.density;
+      root.dataset.uiLandscapeTouch = String(uiProfile.landscapeTouch);
 
       if (this.camera) {
         // Keep resize-time framing in sync with the in-game camera profile.
