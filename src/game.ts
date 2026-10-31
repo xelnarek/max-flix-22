@@ -5964,8 +5964,12 @@ export class MaxFlizGameEngine {
     camTarget.y += shakeY;
     camTarget.z += shakeZ;
 
-    // Smooth camera position follow
-    this.camera.position.lerp(camTarget, dt * 7.5);
+    // Frame-rate-independent camera follow: avoids the small overshoot/judder
+    // that linear interpolation can produce after mobile frame-time spikes.
+    const cameraFollowDamping = isMobileDevice ? 6.8 : 7.4;
+    this.camera.position.x = THREE.MathUtils.damp(this.camera.position.x, camTarget.x, cameraFollowDamping, dt);
+    this.camera.position.y = THREE.MathUtils.damp(this.camera.position.y, camTarget.y, cameraFollowDamping, dt);
+    this.camera.position.z = THREE.MathUtils.damp(this.camera.position.z, camTarget.z, cameraFollowDamping, dt);
 
     // Look ahead framing for tactical readability
     const lookAheadX = this.cameraMode === 'tpp' ? 1.8 : this.cameraMode === 'close' ? 2.4 : 0.5;
@@ -5977,7 +5981,10 @@ export class MaxFlizGameEngine {
       this.smoothCamY + lookAheadY + shakeY * 0.3,
       this.playerPos.z + lookAheadZ + velLookAheadZ * 0.45 + shakeZ * 0.3
     );
-    this.currentLookAt.lerp(desiredLookAt, dt * 8.5);
+    const lookAtDamping = isMobileDevice ? 7.2 : 8.0;
+    this.currentLookAt.x = THREE.MathUtils.damp(this.currentLookAt.x, desiredLookAt.x, lookAtDamping, dt);
+    this.currentLookAt.y = THREE.MathUtils.damp(this.currentLookAt.y, desiredLookAt.y, lookAtDamping, dt);
+    this.currentLookAt.z = THREE.MathUtils.damp(this.currentLookAt.z, desiredLookAt.z, lookAtDamping, dt);
     this.camera.lookAt(this.currentLookAt);
 
     if (this.dirLight) {
