@@ -1577,6 +1577,14 @@ export class MaxFlizGameEngine {
     posts.instanceMatrix.needsUpdate = true;
     this.addSurvivalArenaInstance(posts);
 
+    // The visible rack footprint is also a real movement/minimap obstacle.
+    // Gaps between the 15 m rack centres remain open as deliberate navigation routes.
+    for (const side of sides) {
+      for (const x of centers) {
+        this.survivalObstacles.push({ x, z: side * 16.15, halfWidth: 4.42, halfDepth: 1.16 });
+      }
+    }
+
     const shelves = new THREE.InstancedMesh(new THREE.BoxGeometry(8.72, 0.15, 2.12), deck, rackCount * 3);
     index = 0;
     for (const side of sides) for (const x of centers) for (const y of [0.48, 1.82, 3.16]) {
