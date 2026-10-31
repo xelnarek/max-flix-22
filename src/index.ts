@@ -1407,8 +1407,7 @@ class MaxFlizScene extends xb.Script {
     };
 
     bindTap(document.getElementById('btn-open-story-modal'), () => {
-      updateStorySlides(0);
-      storyModal?.classList.remove('hidden');
+      openCampaignBriefing();
     });
 
     bindTap(btnCloseStory, () => {
