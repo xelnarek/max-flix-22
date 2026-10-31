@@ -85,9 +85,37 @@ export function getFloorTexture(): THREE.CanvasTexture {
   ctx.fillStyle = baseGrad;
   ctx.fillRect(0, 0, 1024, 1024);
 
+  // Deterministic, low-contrast concrete wear keeps the large floor from reading
+  // as a flat gradient while remaining stable between reloads and inexpensive.
+  for (let i = 0; i < 220; i++) {
+    const x = (i * 73 + 41) % 1024;
+    const y = (i * 151 + 97) % 1024;
+    const radius = 5 + ((i * 17) % 22);
+    const alpha = 0.018 + ((i * 7) % 10) * 0.003;
+    const stain = ctx.createRadialGradient(x, y, 0, x, y, radius);
+    stain.addColorStop(0, `rgba(148, 163, 184, ${alpha})`);
+    stain.addColorStop(1, 'rgba(148, 163, 184, 0)');
+    ctx.fillStyle = stain;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Fine scuff lines catch grazing light without looking like random noise.
+  ctx.strokeStyle = 'rgba(203, 213, 225, 0.045)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 64; i++) {
+    const x = (i * 131 + 23) % 1024;
+    const y = (i * 197 + 71) % 1024;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 18 + (i % 17) * 3, y + ((i % 5) - 2) * 2);
+    ctx.stroke();
+  }
+
   // 2. High-Precision Laser Expansion Joints (256x256 slabs)
   const gridSize = 256;
-  ctx.strokeStyle = '#05070a';
+  ctx.strokeStyle = '#182231';
   ctx.lineWidth = 5;
   for (let x = 0; x <= 1024; x += gridSize) {
     ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 1024); ctx.stroke();
@@ -210,6 +238,19 @@ export function getWallTexture(): THREE.CanvasTexture {
     ctx.fillRect(x, 0, 4, 256);
     ctx.fillStyle = '#465b70';
     ctx.fillRect(x + 4, 0, 4, 256);
+  }
+
+  // Pressed steel cross rails and rivets add scale cues to long warehouse walls.
+  ctx.fillStyle = 'rgba(8, 15, 25, 0.72)';
+  ctx.fillRect(0, 22, 512, 7);
+  ctx.fillRect(0, 226, 512, 7);
+  ctx.fillStyle = 'rgba(186, 203, 220, 0.30)';
+  for (let x = 16; x < 512; x += 32) {
+    for (const y of [17, 238]) {
+      ctx.beginPath();
+      ctx.arc(x, y, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   // Safety sign stencils
