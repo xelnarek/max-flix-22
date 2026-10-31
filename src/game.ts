@@ -303,7 +303,7 @@ export class MaxFlizGameEngine {
   private finishGatePos = new THREE.Vector3(30, 0, 0);
   private smoothCamY = 0.5;
   // Tactical Elevated camera default (~45° isometric/tactical perspective like Hades/Brawl Stars)
-  private currentCamOffset = new THREE.Vector3(-2.6, 8.4, 9.4);
+  private currentCamOffset = new THREE.Vector3(-2.2, 6.9, 8.2);
   private currentLookAt = new THREE.Vector3(0, 1.2, 0);
   private bossCamZoom = 1.0;
   private finishWarningTimer = 0;
@@ -7016,9 +7016,10 @@ export class MaxFlizGameEngine {
     let baseOffsetY = 10.8;
     let baseOffsetZ = 9.2;
     if (this.cameraMode === 'close') {
-      baseOffsetX = -2.6;
-      baseOffsetY = 8.4;
-      baseOffsetZ = 9.4;
+      // Closer, lower over-the-shoulder framing makes faces, props and character silhouettes readable.
+      baseOffsetX = -2.2;
+      baseOffsetY = 6.9;
+      baseOffsetZ = 8.2;
     } else if (this.cameraMode === 'iso') {
       baseOffsetX = 0.0;
       baseOffsetY = 15.8;
