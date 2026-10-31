@@ -8641,7 +8641,7 @@ export class MaxFlizGameEngine {
       this.spawnExplosionParticles(e.x, e.y + 1.1, e.z, 0xfbbf24, 28);
     } else {
       // A compact shard burst gives ordinary enemies a visible but lightweight hit-confirm.
-      const impactColor = e.type === 'pomazaniec' ? 0xf472b6 : e.type === 'sebix_m' ? 0xf97316 : 0x38bdf8;
+      const impactColor = e.type === 'pomazaniec' ? 0xf472b6 : e.id.includes('sebix') ? 0xf97316 : 0x38bdf8;
       this.spawnCompactImpact(e.x, e.y + 0.62, e.z, impactColor);
       this.triggerScreenShake(0.35, 0.25);
     }
