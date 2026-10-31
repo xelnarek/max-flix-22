@@ -460,7 +460,7 @@ body {
 .dialogue-side-container {
   position: fixed;
   top: 66px;
-  width: 200px;
+  width: min(310px, 28vw);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -2693,11 +2693,11 @@ body {
 }
 
 .dialogue-box-role {
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 700;
-  color: #f59e0b;
+  color: rgba(186, 206, 230, 0.82);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.075em;
 }
 
 .dialogue-box-text {
