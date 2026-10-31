@@ -4001,3 +4001,98 @@ button {
     margin: 0;
   }
 }
+
+
+/* Compact Survival HUD: keep the actual arena visible on touch devices. */
+@media (max-width: 900px), (pointer: coarse) {
+  #game-shell.survival-mode .survival-hud {
+    top: calc(42px + env(safe-area-inset-top));
+    left: auto;
+    right: max(8px, env(safe-area-inset-right));
+    width: min(248px, calc(100vw - 138px));
+    min-width: 0;
+    max-width: calc(100vw - 138px);
+    transform: none;
+    gap: 0;
+  }
+
+  #game-shell.survival-mode .survival-hud-main {
+    padding: 5px 6px;
+    border-radius: 9px;
+    background: rgba(4, 13, 26, .70);
+    -webkit-backdrop-filter: blur(8px) saturate(120%);
+    backdrop-filter: blur(8px) saturate(120%);
+  }
+
+  #game-shell.survival-mode .survival-hud-kicker,
+  #game-shell.survival-mode .survival-weapon-rack,
+  #game-shell.survival-mode .level-chip,
+  #game-shell.survival-mode .kills-chip,
+  #game-shell.survival-mode .enemies-chip {
+    display: none !important;
+  }
+
+  #game-shell.survival-mode .survival-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  #game-shell.survival-mode .survival-chip {
+    min-height: 31px;
+    padding: 3px 5px;
+    border-radius: 7px;
+    background: rgba(15, 30, 48, .72);
+  }
+
+  #game-shell.survival-mode .survival-chip-label {
+    font-size: 6px;
+    letter-spacing: .45px;
+  }
+
+  #game-shell.survival-mode .survival-chip strong {
+    font-size: 11px;
+    line-height: 1.05;
+  }
+
+  #game-shell.survival-mode .survival-xp-chip strong {
+    font-size: 9px;
+  }
+
+  #game-shell.survival-mode .survival-xp-track {
+    height: 3px;
+    margin-top: 2px;
+  }
+
+  #game-shell.survival-mode #minimap-container {
+    top: calc(98px + env(safe-area-inset-top));
+    left: max(6px, env(safe-area-inset-left));
+    transform: scale(.78);
+    transform-origin: top left;
+  }
+
+  #game-shell.survival-mode #boss-hud-bar {
+    top: calc(100px + env(safe-area-inset-top));
+    right: max(6px, env(safe-area-inset-right));
+    width: min(168px, 44vw);
+  }
+
+  .cam-zoom-slider-container {
+    display: none !important;
+  }
+}
+
+@media (max-width: 420px), (pointer: coarse) and (max-width: 900px) {
+  #game-shell.survival-mode .survival-hud {
+    width: min(214px, calc(100vw - 126px));
+    max-width: calc(100vw - 126px);
+  }
+
+  #game-shell.survival-mode #minimap-container {
+    top: calc(92px + env(safe-area-inset-top));
+    transform: scale(.70);
+  }
+
+  #game-shell.survival-mode #boss-hud-bar {
+    top: calc(94px + env(safe-area-inset-top));
+  }
+}
