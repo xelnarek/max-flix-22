@@ -318,7 +318,8 @@ export class MaxFlizGameEngine {
   private screenShakeDuration = 0;
   private screenShakeIntensity = 0;
   private screenShakeTimer = 0;
-  private cameraMode: 'tpp' | 'close' | 'iso' = 'close';
+  // Elevated tactical framing is the default so mobile players can read lanes and threats.
+  private cameraMode: 'tpp' | 'close' | 'iso' = 'tpp';
   private camZoomFactor = 0.94;
   private maxUnlockedSector = (() => {
     try {
@@ -334,7 +335,7 @@ export class MaxFlizGameEngine {
   private finishGatePos = new THREE.Vector3(30, 0, 0);
   private smoothCamY = 0.5;
   // Tactical Elevated camera default (~45° isometric/tactical perspective like Hades/Brawl Stars)
-  private currentCamOffset = new THREE.Vector3(-2.2, 6.9, 8.2);
+  private currentCamOffset = new THREE.Vector3(-2.2, 10.8, 9.2);
   private currentLookAt = new THREE.Vector3(0, 1.2, 0);
   // Reused camera scratch vectors: avoid two Vector3 allocations on every frame.
   private readonly cameraTargetPosition = new THREE.Vector3();
@@ -847,10 +848,10 @@ export class MaxFlizGameEngine {
   /** Adjusts the global fill/rim balance when the player enters a new map zone. */
   private applySectorLighting(sector: number) {
     const profiles = {
-      1: { ambient: 0xd9e8ff, hemi: 0x9edcff, ground: 0x253044, rim: 0x62c6e8, fog: 0x091827, ambientPower: 0.92, hemiPower: 1.35, rimPower: 1.15 },
-      2: { ambient: 0xffead1, hemi: 0xffd7a1, ground: 0x38302a, rim: 0xffc078, fog: 0x211a18, ambientPower: 0.94, hemiPower: 1.30, rimPower: 1.35 },
-      3: { ambient: 0xcde9f2, hemi: 0x8bc8df, ground: 0x1c2d38, rim: 0x39b8c8, fog: 0x081a24, ambientPower: 0.88, hemiPower: 1.30, rimPower: 1.45 },
-      4: { ambient: 0xc2d8f2, hemi: 0x7db5de, ground: 0x111d2c, rim: 0x60a5fa, fog: 0x080f1c, ambientPower: 0.86, hemiPower: 1.22, rimPower: 1.30 },
+      1: { ambient: 0xdeefff, hemi: 0xb6e4ff, ground: 0x36475d, rim: 0x7dd3fc, fog: 0x15283a, ambientPower: 0.98, hemiPower: 1.40, rimPower: 1.25 },
+      2: { ambient: 0xfff0de, hemi: 0xffe3bd, ground: 0x514638, rim: 0xffd08a, fog: 0x302a26, ambientPower: 0.98, hemiPower: 1.36, rimPower: 1.35 },
+      3: { ambient: 0xddf5ff, hemi: 0xa2daef, ground: 0x314858, rim: 0x56d5e2, fog: 0x132e3a, ambientPower: 0.96, hemiPower: 1.38, rimPower: 1.40 },
+      4: { ambient: 0xdcebff, hemi: 0xa6cffd, ground: 0x2b3b54, rim: 0x7db7ff, fog: 0x15253c, ambientPower: 0.94, hemiPower: 1.32, rimPower: 1.35 },
     } as const;
     const profile = profiles[sector as keyof typeof profiles] || profiles[1];
     this.ambientLight.color.setHex(profile.ambient);
