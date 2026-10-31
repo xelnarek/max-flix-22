@@ -7233,17 +7233,33 @@ export class MaxFlizGameEngine {
 
     const centerX = w / 2;
     const centerY = h / 2;
-    const scale = this.minimapZoomScale;
+    const isSurvivalMap = this.gameMode === 'survival';
+    const mapCenterX = isSurvivalMap ? (this.levelBounds.minX + this.levelBounds.maxX) * 0.5 : this.playerPos.x;
+    const mapCenterZ = isSurvivalMap ? (this.levelBounds.minZ + this.levelBounds.maxZ) * 0.5 : this.playerPos.z;
+    const scale = isSurvivalMap
+      ? Math.min((w - 18) / (this.levelBounds.maxX - this.levelBounds.minX), (h - 18) / (this.levelBounds.maxZ - this.levelBounds.minZ))
+      : this.minimapZoomScale;
+    const playerMapX = centerX + (this.playerPos.x - mapCenterX) * scale;
+    const playerMapY = centerY + (this.playerPos.z - mapCenterZ) * scale;
 
-    // Concentric grid rings
+    // Survival uses a full-map tactical view; campaign retains the close-range rotating radar.
     ctx.strokeStyle = 'rgba(56, 189, 248, 0.18)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.arc(centerX, centerY, w * 0.22, 0, Math.PI * 2);
-    ctx.arc(centerX, centerY, w * 0.42, 0, Math.PI * 2);
+    if (!isSurvivalMap) {
+      ctx.arc(centerX, centerY, w * 0.22, 0, Math.PI * 2);
+      ctx.arc(centerX, centerY, w * 0.42, 0, Math.PI * 2);
+    }
     ctx.moveTo(centerX, 0); ctx.lineTo(centerX, h);
     ctx.moveTo(0, centerY); ctx.lineTo(w, centerY);
     ctx.stroke();
+    if (isSurvivalMap) {
+      const mapWidth = (this.levelBounds.maxX - this.levelBounds.minX) * scale;
+      const mapDepth = (this.levelBounds.maxZ - this.levelBounds.minZ) * scale;
+      ctx.strokeStyle = 'rgba(125, 211, 252, 0.75)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(centerX - mapWidth / 2, centerY - mapDepth / 2, mapWidth, mapDepth);
+    }
 
     // 1. Level Platforms & Aisle Boundaries
     ctx.fillStyle = 'rgba(30, 41, 59, 0.85)';
@@ -7252,8 +7268,8 @@ export class MaxFlizGameEngine {
 
     for (let i = 0; i < this.platforms.length; i++) {
       const p = this.platforms[i];
-      const dx = (p.x - this.playerPos.x) * scale;
-      const dz = (p.z - this.playerPos.z) * scale;
+      const dx = (p.x - mapCenterX) * scale;
+      const dz = (p.z - mapCenterZ) * scale;
       const pw = Math.max(3, p.width * scale);
       const pd = Math.max(3, p.depth * scale);
 
@@ -7266,12 +7282,27 @@ export class MaxFlizGameEngine {
       }
     }
 
+    if (isSurvivalMap) {
+      // Cargo stacks and racks are drawn as small neutral blocks so routes and cover are visible.
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.88)';
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.75)';
+      ctx.lineWidth = 1;
+      for (const obstacle of this.survivalObstacles) {
+        const ox = centerX + (obstacle.x - mapCenterX) * scale;
+        const oy = centerY + (obstacle.z - mapCenterZ) * scale;
+        const ow = Math.max(3, obstacle.halfWidth * 2 * scale);
+        const oh = Math.max(3, obstacle.halfDepth * 2 * scale);
+        ctx.fillRect(ox - ow / 2, oy - oh / 2, ow, oh);
+        ctx.strokeRect(ox - ow / 2, oy - oh / 2, ow, oh);
+      }
+    }
+
     // 2. Collectibles & VIP Orders
     for (let i = 0; i < this.collectibles.length; i++) {
       const col = this.collectibles[i];
       if (col.collected) continue;
-      const dx = (col.x - this.playerPos.x) * scale;
-      const dz = (col.z - this.playerPos.z) * scale;
+      const dx = (col.x - mapCenterX) * scale;
+      const dz = (col.z - mapCenterZ) * scale;
       const mx = centerX + dx;
       const my = centerY + dz;
 
@@ -7287,8 +7318,8 @@ export class MaxFlizGameEngine {
     for (let i = 0; i < this.droppedPerks.length; i++) {
       const perk = this.droppedPerks[i];
       if (perk.collected) continue;
-      const dx = (perk.x - this.playerPos.x) * scale;
-      const dz = (perk.z - this.playerPos.z) * scale;
+      const dx = (perk.x - mapCenterX) * scale;
+      const dz = (perk.z - mapCenterZ) * scale;
       const mx = centerX + dx;
       const my = centerY + dz;
 
@@ -7301,9 +7332,9 @@ export class MaxFlizGameEngine {
     }
 
     // 4. Exit Gate (WYJŚCIE 🏁)
-    if (this.finishGatePos) {
-      const dx = (this.finishGatePos.x - this.playerPos.x) * scale;
-      const dz = (this.finishGatePos.z - this.playerPos.z) * scale;
+    if (this.finishGatePos && !isSurvivalMap) {
+      const dx = (this.finishGatePos.x - mapCenterX) * scale;
+      const dz = (this.finishGatePos.z - mapCenterZ) * scale;
       const mx = centerX + dx;
       const my = centerY + dz;
 
@@ -7325,8 +7356,8 @@ export class MaxFlizGameEngine {
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i];
       if (e.state === 'defeated') continue;
-      const dx = (e.x - this.playerPos.x) * scale;
-      const dz = (e.z - this.playerPos.z) * scale;
+      const dx = (e.x - mapCenterX) * scale;
+      const dz = (e.z - mapCenterZ) * scale;
       const mx = centerX + dx;
       const my = centerY + dz;
 
@@ -7356,7 +7387,7 @@ export class MaxFlizGameEngine {
 
     // 6. Player Marker (Centered with direction indicator)
     ctx.save();
-    ctx.translate(centerX, centerY);
+    ctx.translate(playerMapX, playerMapY);
     ctx.rotate(this.playerRot);
 
     ctx.fillStyle = '#38bdf8';
