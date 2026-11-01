@@ -6,6 +6,29 @@ export interface PixelIntroCallbacks {
   onStartGame?: () => void;
 }
 
+const INTRO_SUBTITLES = [
+  {
+    speaker: '👔 BYŁY KIEROWNIK WALCZAK',
+    text: '“Tylko ja mogłem kierować tą fabryką! Cała dostawa Calacatta Gold zostaje zablokowana!”',
+  },
+  {
+    speaker: '👷‍♂️ MARCIN – KIEROWNIK LOGISTYKI',
+    text: '“Gdzie jest podpis na dokumencie WZ?! Protokół reklamacji otwarty – zamykam tę aleję na własnych warunkach!”',
+  },
+  {
+    speaker: '🚜 GRZESIEK & 💪 DAWID',
+    text: '“Grzesiek: 44 cm w bicepsie i Ścisk Zagłady! • Dawid: Gres 120x280 leci pod kątem 45° – Ja Wiem Najlepiej!”',
+  },
+  {
+    speaker: '🎮 MATEUSZ & 👨‍🔧 PIOTR',
+    text: '“Mateusz: Laga mają! BSOD i platyna wpada na konto! • Piotr: 70 voltów zza regału B4! Ogień na gresie!”',
+  },
+  {
+    speaker: '⚔️ EKIPA MAX-FLIZ • SURVIVAL SHIFT',
+    text: '“Dostawa to dopiero początek! Fale co 60 sekund, bossowie, pułapki, pięć eventów, 12 modułów rozwoju i cztery ewolucje buildów. Wskakuj na zmianę!”',
+  },
+] as const;
+
 export class PixelIntroManager {
   private callbacks: PixelIntroCallbacks;
   private overlayEl: HTMLElement | null = null;
@@ -18,6 +41,15 @@ export class PixelIntroManager {
   private animFrameId: number | null = null;
   private playedEvents: Set<string> = new Set();
   private lastFrameTime: number = 0;
+  private lastRenderTime: number = 0;
+  private targetFrameIntervalMs = 1000 / 45;
+  private timerElement: HTMLElement | null = null;
+  private progressElement: HTMLElement | null = null;
+  private speakerElement: HTMLElement | null = null;
+  private subtitleElement: HTMLElement | null = null;
+  private sceneStepElements: HTMLElement[] = [];
+  private lastUiSecond = -1;
+  private lastUiScene = -1;
 
   // Particle systems for HD action effects
   private particles: {
@@ -40,27 +72,43 @@ export class PixelIntroManager {
   }
 
   public start() {
+    if (this.animFrameId !== null) {
+      cancelAnimationFrame(this.animFrameId);
+      this.animFrameId = null;
+    }
+
     console.log('%c[PixelIntro] 🕹️ Inicjalizacja Retro Intro 2D/VHS (20s High-Octane Action)...', 'color: #38bdf8; font-weight: bold;');
     this.active = true;
     this.paused = false;
     this.time = 0;
     this.currentScene = 0;
+    this.lastUiSecond = -1;
+    this.lastUiScene = -1;
     this.playedEvents.clear();
     this.particles = [];
 
+    const isMobile = window.innerWidth < 900 || navigator.maxTouchPoints > 0;
+    // A smaller backing canvas and a 30 fps mobile cap preserve the retro look
+    // while avoiding a full 1920x1080 redraw on every handset frame.
+    this.targetFrameIntervalMs = isMobile ? 1000 / 30 : 1000 / 45;
     this.mountOverlay();
+    if (!this.ctx || !this.canvas) {
+      this.active = false;
+      this.unmountOverlay();
+      throw new Error('Przeglądarka nie udostępniła kontekstu Canvas 2D dla intro.');
+    }
+
     try {
       sound.playCinematicBoom();
     } catch (e) {
       console.warn('[PixelIntro] Sound Boom Notice:', e);
     }
 
-    // Immediately render scene 0 and update UI
     this.renderHdScene(0, 0);
     this.updateUI();
 
     this.lastFrameTime = performance.now();
-    assetLoader.updateProgress(100, 'Retro Intro 2D gotowe!', 'engine', 'START');
+    this.lastRenderTime = this.lastFrameTime;
     assetLoader.hide();
     console.log('[PixelIntro] ✅ Retro Intro 2D gotowe i uruchomione.');
     this.loop();
@@ -85,14 +133,20 @@ export class PixelIntroManager {
 
     if (!this.paused) {
       this.time += dt;
-      if (this.time >= 20.0) { // 20s High-Octane Action Intro
+      if (this.time >= 20.0) {
         this.stop();
         return;
       }
-      this.renderHdScene(this.time, dt);
-      this.updateUI();
+
+      const renderElapsedMs = now - this.lastRenderTime;
+      if (renderElapsedMs >= this.targetFrameIntervalMs) {
+        this.renderHdScene(this.time, renderElapsedMs / 1000);
+        this.updateUI();
+        this.lastRenderTime = now;
+      }
     }
 
+    // Keep the loop alive while paused so resume does not create a second RAF chain.
     this.animFrameId = requestAnimationFrame(this.loop);
   };
 
@@ -102,6 +156,14 @@ export class PixelIntroManager {
     const overlay = document.createElement('div');
     overlay.id = 'pixel-intro-overlay';
     overlay.className = 'pixel-intro-overlay';
+    // The game shell/title screen use z-index values in the millions. The intro
+    // is a body-level sibling and must deliberately sit above the entire shell.
+    overlay.style.zIndex = '20000000';
+    overlay.style.pointerEvents = 'auto';
+    overlay.style.isolation = 'isolate';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Intro Max-Fliz — Granica Absurdu');
 
     overlay.innerHTML = `
       <div class="pixel-crt-scanlines"></div>
@@ -147,25 +209,35 @@ export class PixelIntroManager {
     document.body.appendChild(overlay);
     this.overlayEl = overlay;
 
-    this.canvas = document.getElementById('pixel-intro-canvas') as HTMLCanvasElement | null;
+    this.canvas = overlay.querySelector('#pixel-intro-canvas') as HTMLCanvasElement | null;
     if (this.canvas) {
-      this.ctx = this.canvas.getContext('2d');
+      const mobile = window.innerWidth < 900 || navigator.maxTouchPoints > 0;
+      this.canvas.width = mobile ? 960 : 1280;
+      this.canvas.height = mobile ? 540 : 720;
+      this.ctx = this.canvas.getContext('2d', { alpha: false });
       if (this.ctx) {
-        this.ctx.imageSmoothingEnabled = true; // Crisp HD anti-aliased rendering
+        this.ctx.imageSmoothingEnabled = true;
         this.ctx.imageSmoothingQuality = 'high';
       }
     }
 
-    // Attach listeners
+    // Cache DOM nodes once. Querying the overlay and rebuilding scene indicators
+    // on every animation frame caused avoidable layout/GC work.
+    this.timerElement = overlay.querySelector('#pixel-timer-display');
+    this.progressElement = overlay.querySelector('#pixel-progress-fill');
+    this.speakerElement = overlay.querySelector('#pixel-speaker-tag');
+    this.subtitleElement = overlay.querySelector('#pixel-subtitle-text');
+    this.sceneStepElements = Array.from(overlay.querySelectorAll<HTMLElement>('.pixel-step'));
+
+    // Native click already covers mouse, keyboard, and touch. Do not pair it with
+    // touchend: Android synthesizes a click after touchend and would fire actions twice.
     const bindBtn = (id: string, action: () => void) => {
-      const btn = document.getElementById(id);
+      const btn = overlay.querySelector<HTMLElement>('#' + id);
       if (!btn) return;
-      const handler = (e: Event) => {
-        if (e && e.cancelable) e.preventDefault();
+      btn.addEventListener('click', (event) => {
+        if (event.cancelable) event.preventDefault();
         action();
-      };
-      btn.addEventListener('click', handler);
-      btn.addEventListener('touchend', handler, { passive: false });
+      });
     };
 
     bindBtn('btn-pixel-pause', () => {
@@ -187,16 +259,16 @@ export class PixelIntroManager {
       this.callbacks.onStartGame?.();
     });
 
-    overlay.querySelectorAll('.pixel-step').forEach((stepEl) => {
-      const handler = (e: Event) => {
-        if (e && e.cancelable) e.preventDefault();
-        const sc = parseInt(stepEl.getAttribute('data-scene') || '0', 10);
+    this.sceneStepElements.forEach((stepEl) => {
+      stepEl.addEventListener('click', (event) => {
+        if (event.cancelable) event.preventDefault();
+        const sceneIndex = Number.parseInt(stepEl.dataset.scene || '0', 10);
         const sceneTimes = [0, 4.0, 8.0, 12.0, 16.0];
-        this.time = sceneTimes[sc] || 0;
+        this.time = sceneTimes[sceneIndex] ?? 0;
         this.playedEvents.clear();
-      };
-      stepEl.addEventListener('click', handler);
-      stepEl.addEventListener('touchend', handler, { passive: false });
+        this.renderHdScene(this.time, 0);
+        this.updateUI();
+      });
     });
   }
 
@@ -204,9 +276,14 @@ export class PixelIntroManager {
     if (this.overlayEl && this.overlayEl.parentElement) {
       this.overlayEl.parentElement.removeChild(this.overlayEl);
       this.overlayEl = null;
-      this.canvas = null;
-      this.ctx = null;
     }
+    this.canvas = null;
+    this.ctx = null;
+    this.timerElement = null;
+    this.progressElement = null;
+    this.speakerElement = null;
+    this.subtitleElement = null;
+    this.sceneStepElements = [];
   }
 
   private triggerOnce(key: string, timestamp: number, fn: () => void) {
@@ -785,56 +862,26 @@ export class PixelIntroManager {
   private updateUI() {
     if (!this.overlayEl) return;
 
-    // Timer display
-    const curSec = Math.floor(this.time);
-    const timerEl = document.getElementById('pixel-timer-display');
-    if (timerEl) {
-      const s1 = curSec < 10 ? `0${curSec}` : `${curSec}`;
-      timerEl.textContent = `00:${s1} / 00:20`;
+    const currentSecond = Math.floor(this.time);
+    if (this.timerElement && currentSecond !== this.lastUiSecond) {
+      const secondLabel = currentSecond < 10 ? `0${currentSecond}` : String(currentSecond);
+      this.timerElement.textContent = `00:${secondLabel} / 00:20`;
+      this.lastUiSecond = currentSecond;
     }
 
-    // Progress bar fill
-    const fillEl = document.getElementById('pixel-progress-fill');
-    if (fillEl) {
-      fillEl.style.width = `${(this.time / 20.0) * 100}%`;
+    if (this.progressElement) {
+      this.progressElement.style.width = `${Math.min(100, (this.time / 20) * 100)}%`;
     }
 
-    // Update active scene step indicator
-    this.overlayEl.querySelectorAll('.pixel-step').forEach((stepEl) => {
-      const sc = parseInt(stepEl.getAttribute('data-scene') || '0', 10);
-      if (sc === this.currentScene) stepEl.classList.add('active');
-      else stepEl.classList.remove('active');
-    });
-
-    // Subtitle updates
-    const speakerEl = document.getElementById('pixel-speaker-tag');
-    const textEl = document.getElementById('pixel-subtitle-text');
-
-    const subtitles = [
-      {
-        speaker: '👔 BYŁY KIEROWNIK WALCZAK',
-        text: '“Tylko ja mogłem kierować tą fabryką! Cała dostawa Calacatta Gold zostaje zablokowana!”',
-      },
-      {
-        speaker: '👷‍♂️ MARCIN – KIEROWNIK LOGISTYKI',
-        text: '“Gdzie jest podpis na dokumencie WZ?! Protokół reklamacji otwarty – zamykam tę aleję na własnych warunkach!”',
-      },
-      {
-        speaker: '🚜 GRZESIEK & 💪 DAWID',
-        text: '“Grzesiek: 44 cm w bicepsie i Ścisk Zagłady! • Dawid: Gres 120x280 leci pod kątem 45° – Ja Wiem Najlepiej!”',
-      },
-      {
-        speaker: '🎮 MATEUSZ & 👨‍🔧 PIOTR',
-        text: '“Mateusz: Laga mają! BSOD i platyna wpada na konto! • Piotr: 70 voltów zza regału B4! Ogień na gresie!”',
-      },
-      {
-        speaker: '⚔️ EKIPA MAX-FLIZ • SURVIVAL SHIFT',
-        text: '“Dostawa to dopiero początek! Fale co 60 sekund, bossowie, pułapki, pięć eventów, 12 modułów rozwoju i cztery ewolucje buildów. Wskakuj na zmianę!”',
-      },
-    ];
-
-    const currentSub = subtitles[this.currentScene] || subtitles[0];
-    if (speakerEl) speakerEl.textContent = currentSub.speaker;
-    if (textEl) textEl.textContent = currentSub.text;
+    // Scene buttons and subtitles only change at the five scene boundaries.
+    if (this.currentScene !== this.lastUiScene) {
+      for (let i = 0; i < this.sceneStepElements.length; i++) {
+        this.sceneStepElements[i].classList.toggle('active', i === this.currentScene);
+      }
+      const subtitle = INTRO_SUBTITLES[this.currentScene] || INTRO_SUBTITLES[0];
+      if (this.speakerElement) this.speakerElement.textContent = subtitle.speaker;
+      if (this.subtitleElement) this.subtitleElement.textContent = subtitle.text;
+      this.lastUiScene = this.currentScene;
+    }
   }
 }
