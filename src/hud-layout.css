@@ -296,8 +296,8 @@
 
   #game-shell:not(.survival-mode) #hud-top .hud-top-quick-controls {
     display: grid !important;
-    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
-    gap: 3px !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 4px !important;
     width: 100% !important;
     margin-top: 3px !important;
   }
@@ -306,9 +306,9 @@
     display: flex !important;
     width: 100% !important;
     min-width: 0 !important;
-    min-height: 30px !important;
-    height: 30px !important;
-    padding: 2px !important;
+    min-height: 36px !important;
+    height: 36px !important;
+    padding: 3px !important;
     justify-content: center !important;
     border-radius: 7px !important;
   }
@@ -324,11 +324,11 @@
 
   #game-shell:not(.survival-mode) #minimap-container {
     position: fixed !important;
-    top: calc(112px + env(safe-area-inset-top)) !important;
+    top: calc(124px + env(safe-area-inset-top)) !important;
     left: max(6px, env(safe-area-inset-left)) !important;
     right: auto !important;
-    width: clamp(112px, 32vw, 130px) !important;
-    max-width: 34vw !important;
+    width: clamp(104px, 29vw, 118px) !important;
+    max-width: 30vw !important;
     margin: 0 !important;
     padding: 4px !important;
     transform: none !important;
@@ -339,16 +339,16 @@
 
   #game-shell:not(.survival-mode) #minimap-container .minimap-body {
     width: 100% !important;
-    height: clamp(64px, 19vw, 78px) !important;
+    height: clamp(68px, 22vw, 84px) !important;
   }
 
   #game-shell:not(.survival-mode) #hud-top .boss-hud-bar {
     position: fixed !important;
-    top: calc(112px + env(safe-area-inset-top)) !important;
-    left: auto !important;
+    top: calc(124px + env(safe-area-inset-top)) !important;
+    left: calc(max(6px, env(safe-area-inset-left)) + clamp(104px, 29vw, 118px) + 8px) !important;
     right: max(6px, env(safe-area-inset-right)) !important;
-    width: min(188px, 49vw) !important;
-    max-width: min(188px, 49vw) !important;
+    width: auto !important;
+    max-width: none !important;
     min-width: 0 !important;
     margin: 0 !important;
     padding: 5px 8px !important;
@@ -382,7 +382,7 @@
 
   #game-shell.survival-mode #survival-hud {
     position: fixed !important;
-    top: max(6px, env(safe-area-inset-top)) !important;
+    top: calc(42px + env(safe-area-inset-top)) !important;
     left: auto !important;
     right: max(8px, env(safe-area-inset-right)) !important;
     width: min(214px, calc(100vw - 148px)) !important;
@@ -453,10 +453,10 @@
   /* Keep only essential quick controls under the Survival readout. */
   #game-shell.survival-mode #hud-top .hud-top-quick-controls {
     display: flex !important;
-    position: fixed !important;
-    top: calc(49px + env(safe-area-inset-top)) !important;
+    position: relative !important;
+    top: auto !important;
     left: auto !important;
-    right: max(8px, env(safe-area-inset-right)) !important;
+    right: auto !important;
     width: auto !important;
     max-width: none !important;
     min-width: 0 !important;
@@ -473,11 +473,11 @@
   #game-shell.survival-mode #hud-top .cam-zoom-slider-container,
   #game-shell.survival-mode #hud-top #btn-top-zoom-in,
   #game-shell.survival-mode #hud-top #btn-top-zoom-out,
-  #game-shell.survival-mode #hud-top #btn-top-event {
+  #game-shell.survival-mode #hud-top #btn-top-event,
+  #game-shell.survival-mode #hud-top #btn-top-camera {
     display: none !important;
   }
 
-  #game-shell.survival-mode #hud-top #btn-top-camera,
   #game-shell.survival-mode #hud-top #btn-top-sound,
   #game-shell.survival-mode #hud-top #btn-top-pause {
     display: inline-flex !important;
@@ -493,11 +493,11 @@
 
   #game-shell.survival-mode #minimap-container {
     position: fixed !important;
-    top: calc(52px + env(safe-area-inset-top)) !important;
+    top: calc(96px + env(safe-area-inset-top)) !important;
     left: max(6px, env(safe-area-inset-left)) !important;
     right: auto !important;
-    width: clamp(108px, 31vw, 124px) !important;
-    max-width: 33vw !important;
+    width: clamp(104px, 29vw, 118px) !important;
+    max-width: 30vw !important;
     margin: 0 !important;
     padding: 4px !important;
     transform: none !important;
@@ -517,7 +517,7 @@
 
   #game-shell.survival-mode #minimap-container .minimap-body {
     width: 100% !important;
-    height: clamp(66px, 19vw, 76px) !important;
+    height: clamp(64px, 20vw, 78px) !important;
   }
 
   #game-shell.survival-mode #minimap-container .minimap-legend {
@@ -531,16 +531,20 @@
 
   #game-shell.survival-mode #hud-top .boss-hud-bar {
     position: fixed !important;
-    top: calc(92px + env(safe-area-inset-top)) !important;
-    left: auto !important;
-    right: max(8px, env(safe-area-inset-right)) !important;
-    width: min(214px, 54vw) !important;
-    max-width: min(214px, 54vw) !important;
+    top: calc(96px + env(safe-area-inset-top)) !important;
+    left: calc(max(6px, env(safe-area-inset-left)) + clamp(104px, 29vw, 118px) + 8px) !important;
+    right: max(6px, env(safe-area-inset-right)) !important;
+    width: auto !important;
+    max-width: none !important;
     margin: 0 !important;
     padding: 5px 8px !important;
     transform: none !important;
     z-index: 77 !important;
     box-sizing: border-box !important;
+  }
+
+  #game-shell.survival-mode #btn-touch-attack {
+    display: none !important;
   }
 
   #game-shell.survival-mode #hud-perks-row {
@@ -565,7 +569,18 @@
      because it occupied the same bottom-right pixels as the Jump button. */
   #game-shell .dialogue-side-container {
     top: auto !important;
-    bottom: max(100px, calc(env(safe-area-inset-bottom) + 84px)) !important;
+    bottom: max(108px, calc(env(safe-area-inset-bottom) + 94px)) !important;
+    left: 50% !important;
+    right: auto !important;
+    width: min(316px, calc(100vw - 24px)) !important;
+    max-width: min(316px, calc(100vw - 24px)) !important;
+    transform: translateX(-50%) !important;
+    z-index: 95 !important;
+  }
+
+  #game-shell.survival-mode #hud-top .dialogue-side-container {
+    top: auto !important;
+    bottom: max(108px, calc(env(safe-area-inset-bottom) + 94px)) !important;
     left: 50% !important;
     right: auto !important;
     width: min(316px, calc(100vw - 24px)) !important;
@@ -607,13 +622,13 @@
 
 @media (max-width: 360px) {
   #game-shell:not(.survival-mode) #hud-top .hud-top-quick-controls {
-    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
-    gap: 2px !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 3px !important;
   }
 
   #game-shell:not(.survival-mode) #hud-top .hud-top-quick-controls > .top-icon-btn {
-    min-height: 27px !important;
-    height: 27px !important;
+    min-height: 32px !important;
+    height: 32px !important;
   }
 
   #game-shell.survival-mode #survival-hud {
