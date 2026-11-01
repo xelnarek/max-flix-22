@@ -369,6 +369,8 @@ export class MaxFlizGameEngine {
   private readonly cameraOccluderMaterials = new Map<THREE.Mesh, { original: THREE.Material | THREE.Material[]; faded: THREE.Material | THREE.Material[]; originals: THREE.Material[]; fades: THREE.Material[] }>();
   private cameraBossCheckCooldown = 0;
   private cameraBossTargetZoom = 1.0;
+  private bossHudRefreshCooldown = 0;
+  private lastBossHudSignature = '';
   private viewportAspect =
     (window.visualViewport?.width || window.innerWidth) /
     Math.max(1, window.visualViewport?.height || window.innerHeight);
@@ -1129,6 +1131,8 @@ export class MaxFlizGameEngine {
     this.callbacks.onSpeechBubble('');
     this.rebuildPlayerMesh();
     this.playerPos.set(0, 0.5, 0);
+    this.bossHudRefreshCooldown = 0;
+    this.lastBossHudSignature = '';
     this.callbacks.onBossUpdate?.('', 0, 0, false);
     this.setLevelVisible(true);
     
@@ -1306,6 +1310,8 @@ export class MaxFlizGameEngine {
     this.fallingTileSpawnTimer = 0;
     this.randomSpawnTimer = 6;
 
+    this.bossHudRefreshCooldown = 0;
+    this.lastBossHudSignature = '';
     this.callbacks.onBossUpdate?.('', 0, 0, false);
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
     this.emitFloatingToast('SURVIVAL SHIFT — PRZETRWAJ ZMIANĘ!', this.playerPos.x, this.playerPos.y + 1.8, this.playerPos.z, 'combo');
@@ -2404,6 +2410,8 @@ export class MaxFlizGameEngine {
     this.currentLookAt.set(this.playerPos.x, this.playerPos.y + 0.85, this.playerPos.z);
     this.finishWarningTimer = 0;
 
+    this.bossHudRefreshCooldown = 0;
+    this.lastBossHudSignature = '';
     this.callbacks.onBossUpdate?.('', 0, 0, false);
     this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
   }
@@ -4512,7 +4520,7 @@ export class MaxFlizGameEngine {
       if (this.gameMode === 'survival') {
         this.updateSurvivalDirector(simDt);
       } else {
-        this.updateSectorProgression();
+        this.updateSectorProgression(simDt);
       }
       this.updateCoffeeMachines(simDt);
       this.updateCollectibles(simDt);
@@ -6220,7 +6228,7 @@ export class MaxFlizGameEngine {
     sound.playAbility(this.currentCharacterId);
   }
 
-  private updateSectorProgression() {
+  private updateSectorProgression(dt: number) {
     const px = this.playerPos.x;
     const newSector = px < 36 ? 1 : px < 116 ? 2 : 3;
     if (newSector !== this.currentActiveSector) {
@@ -6241,23 +6249,41 @@ export class MaxFlizGameEngine {
       }
     }
 
-    // Dynamic proximity Boss HUD update
-    let nearestBoss: EnemyItem | null = null;
-    let nearestDist = 36;
-    for (const e of this.enemies) {
-      if (e.state === 'defeated') continue;
-      if (e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' || e.type === 'sebix_m') {
-        const d = Math.hypot(e.x - this.playerPos.x, e.z - this.playerPos.z);
-        if (d < nearestDist) {
-          nearestDist = d;
-          nearestBoss = e;
+    // Boss proximity is presentation-only. Scan at ~8 Hz instead of every
+    // simulation frame, and publish only when boss identity/health actually changes.
+    this.bossHudRefreshCooldown = Math.max(0, this.bossHudRefreshCooldown - dt);
+    if (this.bossHudRefreshCooldown <= 0) {
+      this.bossHudRefreshCooldown = 0.12;
+      let nearestBoss: EnemyItem | null = null;
+      let nearestDistanceSq = 36 * 36;
+      for (const enemy of this.enemies) {
+        if (
+          enemy.state === 'defeated' ||
+          (enemy.type !== 'walczak' && enemy.type !== 'krol_leto' &&
+            enemy.type !== 'bosman_krakow' && enemy.type !== 'sebix_m')
+        ) continue;
+        const dx = enemy.x - px;
+        const dz = enemy.z - this.playerPos.z;
+        const distanceSq = dx * dx + dz * dz;
+        if (distanceSq < nearestDistanceSq) {
+          nearestDistanceSq = distanceSq;
+          nearestBoss = enemy;
         }
       }
-    }
-    if (nearestBoss) {
-      this.callbacks.onBossUpdate?.(nearestBoss.name, nearestBoss.hp, nearestBoss.maxHp, true, nearestBoss.bossPhase);
-    } else {
-      this.callbacks.onBossUpdate?.('', 0, 0, false);
+
+      const signature = nearestBoss
+        ? `${nearestBoss.id}|${nearestBoss.name}|${nearestBoss.hp}|${nearestBoss.maxHp}|${nearestBoss.bossPhase}`
+        : '';
+      if (signature !== this.lastBossHudSignature) {
+        this.lastBossHudSignature = signature;
+        if (nearestBoss) {
+          this.callbacks.onBossUpdate?.(
+            nearestBoss.name, nearestBoss.hp, nearestBoss.maxHp, true, nearestBoss.bossPhase
+          );
+        } else {
+          this.callbacks.onBossUpdate?.('', 0, 0, false);
+        }
+      }
     }
   }
 

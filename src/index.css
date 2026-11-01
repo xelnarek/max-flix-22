@@ -4096,3 +4096,27 @@ button {
     top: calc(94px + env(safe-area-inset-top));
   }
 }
+
+
+/* The opening intro is a body-level overlay and must sit above the game shell
+   (which deliberately uses very high z-index values for its modal stack). */
+#pixel-intro-overlay.pixel-intro-overlay {
+  z-index: 20000000 !important;
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  background: #020617 !important;
+  pointer-events: auto !important;
+  isolation: isolate !important;
+}
+#pixel-intro-overlay::before,
+#pixel-intro-overlay::after {
+  pointer-events: none !important;
+}
+#pixel-intro-overlay .pixel-vhs-header,
+#pixel-intro-overlay .pixel-footer-bar,
+#pixel-intro-overlay .pixel-subtitle-box,
+#pixel-intro-overlay .pixel-quick-btns {
+  pointer-events: auto !important;
+}

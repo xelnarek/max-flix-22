@@ -87,6 +87,8 @@ class MaxFlizScene extends xb.Script {
   private resizeObserver: ResizeObserver | null = null;
   private lastAdaptiveQualityAt: number = 0;
   private hasAppliedInitialViewport = false;
+  private minimapCanvasElement: HTMLCanvasElement | null = null;
+  private minimapContainerElement: HTMLElement | null = null;
   private selectiveBloom: SelectiveBloomPipeline | null = null;
   private restoreSelectiveBloomOverride: (() => void) | null = null;
 
@@ -221,6 +223,8 @@ class MaxFlizScene extends xb.Script {
     const perkBulldozerTimer = document.getElementById('perk-bulldozer-timer');
 
     const container = document.getElementById('game-canvas-container');
+    this.minimapCanvasElement = document.getElementById('minimap-canvas') as HTMLCanvasElement | null;
+    this.minimapContainerElement = document.getElementById('minimap-container');
     if (container && typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(scheduleResize);
       this.resizeObserver.observe(container);
@@ -727,7 +731,8 @@ class MaxFlizScene extends xb.Script {
       if (this.engine.skipSurvivalUpgrade()) survivalLevelUp?.classList.add('hidden');
     });
 
-    // Retro Arcade remains optional and is instantiated only when requested.
+    // The 2D intro is created lazily on first use; the boot sequence requests
+    // its first run after the renderer and title UI are fully ready.
     this.pixelIntro = null;
 
     const updateCharacterUI = (id: CharacterId) => {
@@ -1233,40 +1238,51 @@ class MaxFlizScene extends xb.Script {
       }
     });
 
+    let pixelIntroLaunchPending = false;
     const launchPixelIntro = async (e?: Event) => {
-      if (this.pixelIntro?.isRunning()) return;
+      if (this.pixelIntro?.isRunning() || pixelIntroLaunchPending) return;
       if (e) {
         e.preventDefault();
         e.stopPropagation();
       }
-      assetLoader.show('Przygotowywanie Retro Intro 2D...', 85);
-      assetLoader.updateProgress(90, 'Inicjalizacja renderera retro VHS...', 'engine', 'RETRO 2D');
-      await assetLoader.waitUntilReady('Pixel Intro');
-      
-      if (!this.pixelIntro) {
-        this.pixelIntro = new PixelIntroManager({
-          onComplete: () => {
-            this.engine.setLevelVisible(true);
-            if (titleScreen) {
-              titleScreen.classList.remove('hidden');
-              titleScreen.style.display = 'flex';
-            }
-            this.engine.startTitle();
-          },
-          onStartGame: () => {
-            this.engine.setLevelVisible(true);
-            doStartGame();
-          },
-        });
-      }
 
-      if (titleScreen) {
-        titleScreen.classList.add('hidden');
-        titleScreen.style.setProperty('display', 'none', 'important');
+      pixelIntroLaunchPending = true;
+      try {
+        await assetLoader.waitUntilReady('Pixel Intro');
+
+        if (!this.pixelIntro) {
+          this.pixelIntro = new PixelIntroManager({
+            onComplete: () => {
+              this.engine.setLevelVisible(true);
+              if (titleScreen) {
+                titleScreen.classList.remove('hidden');
+                titleScreen.style.setProperty('display', 'flex', 'important');
+              }
+              this.engine.startTitle();
+            },
+            onStartGame: () => {
+              this.engine.setLevelVisible(true);
+              doStartGame();
+            },
+          });
+        }
+
+        if (titleScreen) {
+          titleScreen.classList.add('hidden');
+          titleScreen.style.setProperty('display', 'none', 'important');
+        }
+        document.getElementById('story-intro-modal')?.classList.add('hidden');
+        this.engine.setLevelVisible(false);
+        this.pixelIntro.start();
+      } catch (error) {
+        console.error('[PixelIntro] Nie udało się uruchomić intro:', error);
+        assetLoader.hide();
+        this.engine?.setLevelVisible(true);
+        titleScreen?.classList.remove('hidden');
+        titleScreen?.style.setProperty('display', 'flex', 'important');
+      } finally {
+        pixelIntroLaunchPending = false;
       }
-      document.getElementById('story-intro-modal')?.classList.add('hidden');
-      this.engine.setLevelVisible(false);
-      this.pixelIntro.start();
     };
 
     document.getElementById('btn-open-pixel-intro')?.addEventListener('click', launchPixelIntro);
@@ -1904,21 +1920,24 @@ class MaxFlizScene extends xb.Script {
 
     try {
       if (this.pixelIntro && this.pixelIntro.isRunning()) {
-        // Pixel intro updates internally via its own canvas RAF
+        // Pixel intro owns a throttled Canvas RAF; skip the hidden 3D game update.
       } else if (this.engine) {
         this.engine.update(dt);
-        const minimapCanvas = document.getElementById('minimap-canvas') as HTMLCanvasElement | null;
-        const minimapContainer = document.getElementById('minimap-container');
-        const minimapIsVisible = !!minimapCanvas
-          && !!minimapContainer
-          && !minimapContainer.classList.contains('collapsed')
-          && minimapContainer.getClientRects().length > 0
-          && this.engine.getGameState() === 'playing';
         const now = performance.now();
-        // Do not spend CPU drawing a minimap hidden by the user, outside a run,
-        // or removed from layout. When visible, keep the 10 Hz cap for mobile.
-        if (minimapIsVisible && minimapCanvas && now - this.lastMinimapRenderAt >= 100) {
-          this.engine.renderMinimap(minimapCanvas);
+        // Check layout visibility only at the 10 Hz radar refresh boundary.
+        // getClientRects() can force layout, so do not call it on every game frame.
+        if (now - this.lastMinimapRenderAt >= 100) {
+          const minimapCanvas = this.minimapCanvasElement;
+          const minimapContainer = this.minimapContainerElement;
+          const minimapIsVisible = !!minimapCanvas
+            && !!minimapContainer
+            && minimapContainer.isConnected
+            && !minimapContainer.classList.contains('collapsed')
+            && minimapContainer.getClientRects().length > 0
+            && this.engine.getGameState() === 'playing';
+          if (minimapIsVisible && minimapCanvas) {
+            this.engine.renderMinimap(minimapCanvas);
+          }
           this.lastMinimapRenderAt = now;
         }
       }
@@ -2146,6 +2165,16 @@ async function startApp() {
       titleScreen.style.setProperty('display', 'flex', 'important');
       titleScreen.style.setProperty('z-index', '10000000', 'important');
       console.log('[App:Boot] 🎉 Ekran tytułowy gotowy.');
+    }
+
+    // Let the browser paint the ready menu once, then launch the 20-second
+    // opening sequence automatically. The intro itself is still skippable.
+    const introButton = document.getElementById('btn-open-pixel-intro') as HTMLButtonElement | null;
+    if (introButton && !document.hidden) {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
+      introButton.click();
     }
 
   } catch (err) {
