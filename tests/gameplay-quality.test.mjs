@@ -177,11 +177,11 @@ test('mobile campaign and Survival HUD elements occupy separate touch-screen lan
   ]);
   assert.match(html, /href="\/src\/hud-layout\.css"/);
   assert.match(layout, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
-  assert.match(layout, /#game-shell:not\(\.survival-mode\) #minimap-container[\s\S]*?top: calc\(124px/);
+  assert.match(layout, /#game-shell:not\(\.survival-mode\) #minimap-container[\s\S]*?top: calc\(200px/);
   assert.match(layout, /#game-shell:not\(\.survival-mode\) #hud-top \.boss-hud-bar[\s\S]*?left: calc\(max\(6px/);
   assert.match(layout, /#game-shell\.survival-mode #hud-top \.hud-top-stats-row\s*\{\s*display: none !important/);
   assert.match(layout, /#game-shell\.survival-mode #survival-hud[\s\S]*?top: calc\(42px/);
-  assert.match(layout, /#game-shell\.survival-mode #minimap-container[\s\S]*?top: calc\(96px/);
+  assert.match(layout, /#game-shell\.survival-mode #minimap-container[\s\S]*?top: calc\(166px/);
   assert.match(layout, /#game-shell\.survival-mode #btn-touch-attack\s*\{\s*display: none !important/);
   assert.match(layout, /#fps-badge\s*\{\s*display: none !important/);
   assert.match(layout, /#game-shell \.touch-actions-zone \.touch-action-btn[\s\S]*?width: clamp\(54px/);
