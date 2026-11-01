@@ -186,3 +186,49 @@ test('mobile campaign and Survival HUD elements occupy separate touch-screen lan
   assert.match(layout, /#fps-badge\s*\{\s*display: none !important/);
   assert.match(layout, /#game-shell \.touch-actions-zone \.touch-action-btn[\s\S]*?width: clamp\(54px/);
 });
+
+
+test('opening Retro Intro autoplays after boot and always layers above the game shell', async () => {
+  const [app, css, intro] = await Promise.all([
+    read('../src/index.ts'), read('../src/index.css'), read('../src/pixelIntro.ts')
+  ]);
+  assert.match(app, /const introButton = document\.getElementById\('btn-open-pixel-intro'\)/);
+  assert.match(app, /requestAnimationFrame\(\(\) => requestAnimationFrame\(\(\) => resolve\(\)\)\)/);
+  assert.match(app, /introButton\.click\(\)/);
+  assert.match(intro, /overlay\.style\.zIndex = '20000000'/);
+  assert.match(css, /#pixel-intro-overlay\.pixel-intro-overlay\s*\{[\s\S]*?z-index: 20000000 !important/);
+  assert.match(css, /#pixel-intro-overlay::before,[\s\S]*?pointer-events: none !important/);
+});
+
+test('Retro Intro avoids duplicate touch activation and caps Canvas rendering on mobile', async () => {
+  const intro = await read('../src/pixelIntro.ts');
+  assert.match(intro, /this\.targetFrameIntervalMs = isMobile \? 1000 \/ 30 : 1000 \/ 45/);
+  assert.match(intro, /this\.canvas\.width = mobile \? 960 : 1280/);
+  assert.match(intro, /this\.canvas\.height = mobile \? 540 : 720/);
+  assert.match(intro, /this\.sceneStepElements = Array\.from\(overlay\.querySelectorAll/);
+  assert.match(intro, /INTRO_SUBTITLES\[this\.currentScene\]/);
+  assert.doesNotMatch(intro, /addEventListener\('touchend'/);
+  assert.match(intro, /if \(this\.animFrameId !== null\) \{[\s\S]*?cancelAnimationFrame\(this\.animFrameId\)/);
+});
+
+test('Campaign boss proximity UI is throttled and only updates when its state changes', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /this\.updateSectorProgression\(simDt\)/);
+  assert.match(game, /private updateSectorProgression\(dt: number\)/);
+  assert.match(game, /this\.bossHudRefreshCooldown = 0\.12/);
+  assert.match(game, /const distanceSq = dx \* dx \+ dz \* dz/);
+  assert.match(game, /signature !== this\.lastBossHudSignature/);
+});
+
+test('minimap DOM visibility and layout are checked only at its 10 Hz refresh boundary', async () => {
+  const app = await read('../src/index.ts');
+  const tickStart = app.indexOf('private tick(dt: number)');
+  const tickEnd = app.indexOf('onSelectEnd(', tickStart);
+  assert.ok(tickStart >= 0 && tickEnd > tickStart);
+  const tick = app.slice(tickStart, tickEnd);
+  assert.match(app, /private minimapCanvasElement: HTMLCanvasElement \| null = null/);
+  assert.match(app, /private minimapContainerElement: HTMLElement \| null = null/);
+  assert.match(tick, /if \(now - this\.lastMinimapRenderAt >= 100\)/);
+  assert.match(tick, /minimapContainer\.getClientRects\(\)\.length > 0/);
+  assert.doesNotMatch(tick, /document\.getElementById\('minimap-canvas'\)/);
+});
