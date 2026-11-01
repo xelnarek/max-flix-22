@@ -324,7 +324,7 @@
 
   #game-shell:not(.survival-mode) #minimap-container {
     position: fixed !important;
-    top: calc(124px + env(safe-area-inset-top)) !important;
+    top: calc(200px + env(safe-area-inset-top)) !important;
     left: max(6px, env(safe-area-inset-left)) !important;
     right: auto !important;
     width: clamp(104px, 29vw, 118px) !important;
@@ -344,7 +344,7 @@
 
   #game-shell:not(.survival-mode) #hud-top .boss-hud-bar {
     position: fixed !important;
-    top: calc(124px + env(safe-area-inset-top)) !important;
+    top: calc(200px + env(safe-area-inset-top)) !important;
     left: calc(max(6px, env(safe-area-inset-left)) + clamp(104px, 29vw, 118px) + 8px) !important;
     right: max(6px, env(safe-area-inset-right)) !important;
     width: auto !important;
@@ -493,7 +493,7 @@
 
   #game-shell.survival-mode #minimap-container {
     position: fixed !important;
-    top: calc(96px + env(safe-area-inset-top)) !important;
+    top: calc(166px + env(safe-area-inset-top)) !important;
     left: max(6px, env(safe-area-inset-left)) !important;
     right: auto !important;
     width: clamp(104px, 29vw, 118px) !important;
@@ -531,7 +531,7 @@
 
   #game-shell.survival-mode #hud-top .boss-hud-bar {
     position: fixed !important;
-    top: calc(96px + env(safe-area-inset-top)) !important;
+    top: calc(166px + env(safe-area-inset-top)) !important;
     left: calc(max(6px, env(safe-area-inset-left)) + clamp(104px, 29vw, 118px) + 8px) !important;
     right: max(6px, env(safe-area-inset-right)) !important;
     width: auto !important;
