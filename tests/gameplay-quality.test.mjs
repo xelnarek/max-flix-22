@@ -151,7 +151,7 @@ test('Survival menu copy stays synchronized with the actual 60-second wave clock
 
 test('pixel intro has a single mobile-safe launch path and cannot start twice from touch plus synthetic click', async () => {
   const [app, intro] = await Promise.all([read('../src/index.ts'), read('../src/pixelIntro.ts')]);
-  assert.match(app, /if \(this\.pixelIntro\?\.isRunning\(\)\) return/);
+  assert.match(app, /if \(this\.pixelIntro\?\.isRunning\(\) \|\| pixelIntroLaunchPending\) return/);
   assert.match(app, /btn-open-pixel-intro'\)\?\.addEventListener\('click', launchPixelIntro\)/);
   assert.doesNotMatch(app, /btn-open-pixel-intro'\)\?\.addEventListener\('touchend', launchPixelIntro\)/);
   assert.match(intro, /MAX-FLIX I GRANICA ABSURDU/);
