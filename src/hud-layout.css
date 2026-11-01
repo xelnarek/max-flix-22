@@ -264,3 +264,554 @@
     display: none !important;
   }
 }
+
+
+/*
+ * Mobile HUD composition v3.
+ * This file is the final stylesheet in index.html, so these rules are the
+ * single source of truth over the older, overlapping responsive experiments.
+ * Coordinates are measured from the game viewport, not the browser chrome.
+ */
+@media (max-width: 900px), (pointer: coarse) {
+  /* The FPS badge previously occupied the same lower-right corner as SKOK. */
+  #fps-badge {
+    display: none !important;
+  }
+
+  /* CAMPAIGN: one compact top header, then a separate radar / boss lane. */
+  #game-shell:not(.survival-mode) #hud-top:not(.hidden) {
+    position: fixed !important;
+    inset: 0 0 auto 0 !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, .72fr) minmax(0, 1.28fr) !important;
+    align-items: start !important;
+    gap: 6px !important;
+    padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) 0 max(6px, env(safe-area-inset-left)) !important;
+    z-index: 74 !important;
+    pointer-events: none !important;
+  }
+
+  #game-shell:not(.survival-mode) #hud-top > .hud-cluster {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    gap: 4px !important;
+  }
+
+  #game-shell:not(.survival-mode) #hud-top .hero-badge {
+    width: fit-content !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: 4px 6px !important;
+    gap: 4px !important;
+  }
+
+  #game-shell:not(.survival-mode) #hud-top .hero-avatar {
+    flex: 0 0 26px !important;
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 14px !important;
+  }
+
+  #game-shell:not(.survival-mode) #hud-top .hero-name-row {
+    min-width: 0 !important;
+    flex-wrap: wrap !important;
+    gap: 2px 4px !important;
+  }
+
+  #game-shell:not(.survival-mode) #hud-top .hero-name {
+    font-size: 9px !important;
+    line-height: 1.15 !important;
+  }
+
+  #game-shell:not(.survival-mode) #hud-top .hero-role {
+    font-size: 6px !important;
+    line-height: 1.1 !important;
+  }
+
+  #game-shell:not(.survival-mode) #hud-top .hud-top-stats-row {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    gap: 3px !important;
+  }
+
+  #game-shell:not(.survival-mode) #hud-top .stat-pill {
+    min-width: 0 !important;
+    min-height: 31px !important;
+    padding: 3px 4px !important;
+    gap: 2px !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+  }
+
+  #game-shell:not(.survival-mode) #hud-top .stat-label {
+    display: none !important;
+  }
+
+  #game-shell:not(.survival-mode) #hud-top .stat-value {
+    min-width: 0 !important;
+    font-size: 10px !important;
+    line-height: 1.1 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  #game-shell:not(.survival-mode) #hud-top .stat-icon {
+    font-size: 10px !important;
+  }
+
+  #game-shell:not(.survival-mode) #hud-top .hud-top-quick-controls {
+    display: grid !important;
+    position: relative !important;
+    inset: auto !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    gap: 4px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    pointer-events: auto !important;
+  }
+
+  #game-shell:not(.survival-mode) #hud-top .hud-top-quick-controls > .top-icon-btn {
+    display: inline-flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 32px !important;
+    height: 32px !important;
+    padding: 3px !important;
+    justify-content: center !important;
+    border-radius: 8px !important;
+  }
+
+  #game-shell:not(.survival-mode) #hud-top .btn-ctrl-label {
+    display: none !important;
+  }
+
+  /* Fixed side-by-side lane: radar on the left, boss readout in the free space. */
+  #game-shell:not(.survival-mode) #minimap-container {
+    position: fixed !important;
+    top: calc(124px + env(safe-area-inset-top)) !important;
+    left: max(6px, env(safe-area-inset-left)) !important;
+    right: auto !important;
+    width: clamp(104px, 29vw, 118px) !important;
+    max-width: 30vw !important;
+    margin: 0 !important;
+    padding: 4px !important;
+    transform: none !important;
+    z-index: 71 !important;
+  }
+
+  #game-shell:not(.survival-mode) #minimap-container .minimap-body {
+    width: 100% !important;
+    height: clamp(68px, 22vw, 84px) !important;
+  }
+
+  #game-shell:not(.survival-mode) #boss-hud-bar {
+    position: fixed !important;
+    top: calc(124px + env(safe-area-inset-top)) !important;
+    left: calc(max(6px, env(safe-area-inset-left)) + clamp(104px, 29vw, 118px) + 8px) !important;
+    right: max(6px, env(safe-area-inset-right)) !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 6px 8px !important;
+    transform: none !important;
+    z-index: 72 !important;
+  }
+
+  #game-shell:not(.survival-mode) #boss-hud-bar .boss-label-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+  }
+
+  #game-shell:not(.survival-mode) #boss-hud-bar .boss-name {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+    font-size: 8px !important;
+    line-height: 1.2 !important;
+  }
+
+  #game-shell:not(.survival-mode) #boss-hud-bar #boss-hp-text {
+    flex: 0 0 auto !important;
+    font-size: 8px !important;
+  }
+
+  #game-shell:not(.survival-mode) #boss-hud-bar .boss-hp-track {
+    height: 5px !important;
+    margin-top: 4px !important;
+  }
+
+  /* Use a consistent, safe-area-aware action row in both game modes. */
+  #game-shell .touch-actions-zone {
+    position: fixed !important;
+    right: max(10px, env(safe-area-inset-right)) !important;
+    bottom: max(12px, env(safe-area-inset-bottom)) !important;
+    gap: clamp(6px, 1.8vw, 10px) !important;
+    align-items: flex-end !important;
+    z-index: 84 !important;
+  }
+
+  #game-shell .touch-action-btn {
+    width: clamp(56px, 17vw, 66px) !important;
+    height: clamp(56px, 17vw, 66px) !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    flex: 0 0 auto !important;
+    font-size: clamp(10px, 2.8vw, 12px) !important;
+  }
+
+  #game-shell .ability-touch-btn {
+    width: clamp(62px, 18vw, 70px) !important;
+    height: clamp(62px, 18vw, 70px) !important;
+    margin-bottom: 2px !important;
+  }
+
+  #game-shell .dialogue-side-container {
+    bottom: max(108px, calc(env(safe-area-inset-bottom) + 94px)) !important;
+    max-width: min(316px, calc(100vw - 24px)) !important;
+    z-index: 82 !important;
+  }
+
+  /* SURVIVAL: player identity left, two utility buttons right, run metrics below.
+     The campaign coin/VIP/clock strip is not relevant in this mode. */
+  #game-shell.survival-mode #hud-top {
+    position: fixed !important;
+    inset: 0 0 auto 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    pointer-events: none !important;
+    z-index: 75 !important;
+  }
+
+  #game-shell.survival-mode #hud-top .hud-cluster.top-left {
+    display: flex !important;
+    position: fixed !important;
+    top: max(5px, env(safe-area-inset-top)) !important;
+    left: max(6px, env(safe-area-inset-left)) !important;
+    right: auto !important;
+    width: auto !important;
+    max-width: min(34vw, 132px) !important;
+    min-width: 0 !important;
+    align-items: flex-start !important;
+    z-index: 78 !important;
+  }
+
+  #game-shell.survival-mode #hud-top .hero-badge {
+    display: flex !important;
+    width: fit-content !important;
+    max-width: 100% !important;
+    min-height: 36px !important;
+    padding: 4px 6px !important;
+    gap: 5px !important;
+  }
+
+  #game-shell.survival-mode #hud-top .hero-avatar {
+    flex: 0 0 26px !important;
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 14px !important;
+  }
+
+  #game-shell.survival-mode #hud-top .hero-info {
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  #game-shell.survival-mode #hud-top .hero-name-row {
+    min-width: 0 !important;
+    flex-wrap: wrap !important;
+    gap: 2px 4px !important;
+  }
+
+  #game-shell.survival-mode #hud-top .hero-name {
+    font-size: 9px !important;
+    line-height: 1.1 !important;
+  }
+
+  #game-shell.survival-mode #hud-top .hero-role {
+    font-size: 6px !important;
+    line-height: 1.1 !important;
+  }
+
+  #game-shell.survival-mode #hud-top .hp-mug {
+    font-size: 10px !important;
+  }
+
+  #game-shell.survival-mode #hud-top .hud-cluster.top-right {
+    display: flex !important;
+    position: fixed !important;
+    top: max(5px, env(safe-area-inset-top)) !important;
+    right: max(6px, env(safe-area-inset-right)) !important;
+    left: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    align-items: flex-end !important;
+    z-index: 79 !important;
+  }
+
+  #game-shell.survival-mode #hud-top .hud-top-stats-row,
+  #game-shell.survival-mode #hud-top .cam-zoom-slider-container,
+  #game-shell.survival-mode #hud-top #btn-top-zoom-in,
+  #game-shell.survival-mode #hud-top #btn-top-zoom-out,
+  #game-shell.survival-mode #hud-top #btn-top-event,
+  #game-shell.survival-mode #hud-top #btn-top-camera {
+    display: none !important;
+  }
+
+  #game-shell.survival-mode #hud-top .hud-top-quick-controls {
+    display: flex !important;
+    position: relative !important;
+    inset: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    flex-wrap: nowrap !important;
+    gap: 4px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    pointer-events: auto !important;
+  }
+
+  #game-shell.survival-mode #hud-top #btn-top-sound,
+  #game-shell.survival-mode #hud-top #btn-top-pause {
+    display: inline-flex !important;
+    width: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    height: 34px !important;
+    padding: 3px !important;
+    justify-content: center !important;
+    border-radius: 8px !important;
+  }
+
+  #game-shell.survival-mode #hud-top .top-icon-btn .btn-ctrl-label {
+    display: none !important;
+  }
+
+  #game-shell.survival-mode .survival-hud {
+    position: fixed !important;
+    top: calc(42px + env(safe-area-inset-top)) !important;
+    left: auto !important;
+    right: max(6px, env(safe-area-inset-right)) !important;
+    width: min(248px, calc(100vw - 146px)) !important;
+    min-width: 0 !important;
+    max-width: calc(100vw - 146px) !important;
+    transform: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+    z-index: 73 !important;
+  }
+
+  #game-shell.survival-mode .survival-hud-main {
+    min-width: 0 !important;
+    padding: 5px 6px !important;
+    border-radius: 9px !important;
+  }
+
+  #game-shell.survival-mode .survival-hud-kicker,
+  #game-shell.survival-mode .survival-weapon-rack,
+  #game-shell.survival-mode .level-chip,
+  #game-shell.survival-mode .kills-chip,
+  #game-shell.survival-mode .enemies-chip {
+    display: none !important;
+  }
+
+  #game-shell.survival-mode .survival-metrics {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 4px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  #game-shell.survival-mode .survival-chip {
+    min-width: 0 !important;
+    min-height: 34px !important;
+    padding: 4px 5px !important;
+    border-radius: 7px !important;
+    overflow: hidden !important;
+  }
+
+  #game-shell.survival-mode .survival-chip-label {
+    font-size: 6px !important;
+    letter-spacing: .4px !important;
+  }
+
+  #game-shell.survival-mode .survival-chip strong {
+    min-width: 0 !important;
+    font-size: 10px !important;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
+  }
+
+  #game-shell.survival-mode .survival-xp-chip strong {
+    font-size: 8px !important;
+  }
+
+  #game-shell.survival-mode .survival-xp-track {
+    height: 3px !important;
+    margin-top: 2px !important;
+  }
+
+  /* The radar and live boss bar share a horizontal lane below the run metrics. */
+  #game-shell.survival-mode #minimap-container {
+    position: fixed !important;
+    top: calc(96px + env(safe-area-inset-top)) !important;
+    left: max(6px, env(safe-area-inset-left)) !important;
+    right: auto !important;
+    width: clamp(104px, 29vw, 118px) !important;
+    max-width: 30vw !important;
+    margin: 0 !important;
+    padding: 4px !important;
+    transform: none !important;
+    opacity: .96 !important;
+    z-index: 71 !important;
+  }
+
+  #game-shell.survival-mode #minimap-container .minimap-body {
+    width: 100% !important;
+    height: clamp(64px, 20vw, 78px) !important;
+  }
+
+  #game-shell.survival-mode #minimap-container .minimap-legend {
+    gap: 2px 4px !important;
+    font-size: 6px !important;
+    line-height: 1.15 !important;
+  }
+
+  #game-shell.survival-mode #hud-top .boss-hud-bar {
+    position: fixed !important;
+    top: calc(96px + env(safe-area-inset-top)) !important;
+    left: calc(max(6px, env(safe-area-inset-left)) + clamp(104px, 29vw, 118px) + 8px) !important;
+    right: max(6px, env(safe-area-inset-right)) !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 6px 8px !important;
+    transform: none !important;
+    z-index: 72 !important;
+  }
+
+  #game-shell.survival-mode #hud-top .boss-name {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+    font-size: 8px !important;
+  }
+
+  #game-shell.survival-mode #hud-top #boss-hp-text {
+    flex: 0 0 auto !important;
+    font-size: 8px !important;
+  }
+
+  #game-shell.survival-mode #hud-top .boss-hp-track {
+    height: 5px !important;
+    margin-top: 4px !important;
+  }
+
+  #game-shell.survival-mode #hud-perks-row {
+    top: auto !important;
+    right: max(6px, env(safe-area-inset-right)) !important;
+    bottom: max(166px, calc(env(safe-area-inset-bottom) + 154px)) !important;
+    left: auto !important;
+    max-width: min(44vw, 172px) !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    gap: 3px !important;
+    z-index: 81 !important;
+  }
+
+  #game-shell.survival-mode #hud-perks-row .perk-badge {
+    max-width: 100% !important;
+    padding: 3px 5px !important;
+    font-size: 7px !important;
+  }
+
+  /* Survival is auto-attack: keep MOC and SKOK, not a redundant manual ATAK. */
+  #game-shell.survival-mode #btn-touch-attack {
+    display: none !important;
+  }
+
+  #game-shell.survival-mode .dialogue-side-container {
+    bottom: max(108px, calc(env(safe-area-inset-bottom) + 94px)) !important;
+    top: auto !important;
+    left: 50% !important;
+    right: auto !important;
+    width: min(316px, calc(100vw - 24px)) !important;
+    max-width: min(316px, calc(100vw - 24px)) !important;
+    transform: translateX(-50%) !important;
+    z-index: 82 !important;
+  }
+}
+
+@media (max-width: 420px) {
+  #game-shell:not(.survival-mode) #hud-top:not(.hidden) {
+    grid-template-columns: minmax(0, .70fr) minmax(0, 1.30fr) !important;
+    gap: 4px !important;
+  }
+
+  #game-shell:not(.survival-mode) #boss-hud-bar .boss-name {
+    font-size: 7px !important;
+  }
+
+  #game-shell.survival-mode .survival-hud {
+    width: min(230px, calc(100vw - 142px)) !important;
+    max-width: calc(100vw - 142px) !important;
+  }
+}
+
+@media (max-height: 560px) and (pointer: coarse) {
+  #game-shell .touch-actions-zone {
+    bottom: max(6px, env(safe-area-inset-bottom)) !important;
+    gap: 5px !important;
+  }
+
+  #game-shell .touch-action-btn {
+    width: 52px !important;
+    height: 52px !important;
+  }
+
+  #game-shell .ability-touch-btn {
+    width: 58px !important;
+    height: 58px !important;
+  }
+
+  #game-shell .dialogue-side-container,
+  #game-shell.survival-mode .dialogue-side-container {
+    bottom: max(80px, calc(env(safe-area-inset-bottom) + 66px)) !important;
+  }
+
+  #game-shell:not(.survival-mode) #minimap-container,
+  #game-shell:not(.survival-mode) #boss-hud-bar {
+    top: calc(112px + env(safe-area-inset-top)) !important;
+  }
+
+  #game-shell.survival-mode #minimap-container,
+  #game-shell.survival-mode #hud-top .boss-hud-bar {
+    top: calc(96px + env(safe-area-inset-top)) !important;
+  }
+}
