@@ -169,3 +169,21 @@ test('Survival start locks duplicate taps before awaiting shared asset readiness
   assert.match(handler, /finally \{[\s\S]*?startingGame = false/);
   assert.match(handler, /startButton\.disabled = true/);
 });
+
+
+test('campaign and Survival touch HUDs use separate non-overlapping lanes', async () => {
+  const [layout, html] = await Promise.all([
+    read('../src/hud-layout.css'), read('../index.html')
+  ]);
+  assert.match(layout, /Mobile HUD composition v3/);
+  assert.match(layout, /#game-shell:not\(\.survival-mode\) #hud-top:not\(\.hidden\)[\s\S]*?grid-template-columns: minmax\(0, \.72fr\) minmax\(0, 1\.28fr\)/);
+  assert.match(layout, /#game-shell:not\(\.survival-mode\) #minimap-container[\s\S]*?top: calc\(124px \+ env\(safe-area-inset-top\)\)/);
+  assert.match(layout, /#game-shell:not\(\.survival-mode\) #boss-hud-bar[\s\S]*?text-overflow: ellipsis/);
+  assert.match(layout, /#game-shell\.survival-mode #hud-top \.hud-top-stats-row[\s\S]*?display: none !important/);
+  assert.match(layout, /#game-shell\.survival-mode \.survival-hud[\s\S]*?top: calc\(42px \+ env\(safe-area-inset-top\)\)/);
+  assert.match(layout, /#game-shell\.survival-mode #minimap-container[\s\S]*?top: calc\(96px \+ env\(safe-area-inset-top\)\)/);
+  assert.match(layout, /#game-shell \.touch-actions-zone[\s\S]*?position: fixed !important/);
+  assert.match(layout, /#fps-badge[\s\S]*?display: none !important/);
+  assert.match(html, /id="btn-touch-attack"/);
+  assert.ok(html.indexOf('visual-polish.css') < html.indexOf('hud-layout.css'), 'final HUD owner must load after legacy overrides');
+});
