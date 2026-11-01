@@ -800,8 +800,12 @@
     height: 58px !important;
   }
 
-  #game-shell .dialogue-side-container,
-  #game-shell.survival-mode .dialogue-side-container {
+  #game-shell .dialogue-side-container {
+    bottom: max(80px, calc(env(safe-area-inset-bottom) + 66px)) !important;
+  }
+
+  #game-shell.survival-mode #hud-top .dialogue-side-container {
+    top: auto !important;
     bottom: max(80px, calc(env(safe-area-inset-bottom) + 66px)) !important;
   }
 
