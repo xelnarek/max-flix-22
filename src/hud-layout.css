@@ -235,10 +235,6 @@
     max-width: calc(100vw - 126px) !important;
   }
 
-  #game-shell.survival-mode #minimap-container {
-    transform: scale(.70) !important;
-  }
-
   #game-shell.survival-mode #hud-top .boss-hud-bar {
     top: calc(94px + env(safe-area-inset-top)) !important;
   }
@@ -515,44 +511,6 @@
     padding: 2px !important;
     justify-content: center !important;
     border-radius: 7px !important;
-  }
-
-  #game-shell.survival-mode #minimap-container {
-    position: fixed !important;
-    top: calc(166px + env(safe-area-inset-top)) !important;
-    left: max(6px, env(safe-area-inset-left)) !important;
-    right: auto !important;
-    width: clamp(104px, 29vw, 118px) !important;
-    max-width: 30vw !important;
-    margin: 0 !important;
-    padding: 4px !important;
-    transform: none !important;
-    transform-origin: top left !important;
-    z-index: 74 !important;
-    box-sizing: border-box !important;
-  }
-
-  #game-shell.survival-mode #minimap-container .minimap-header {
-    min-height: 18px !important;
-    padding: 0 1px 3px !important;
-  }
-
-  #game-shell.survival-mode #minimap-container .minimap-title {
-    font-size: 6.5px !important;
-  }
-
-  #game-shell.survival-mode #minimap-container .minimap-body {
-    width: 100% !important;
-    height: clamp(64px, 20vw, 78px) !important;
-  }
-
-  #game-shell.survival-mode #minimap-container .minimap-legend {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    justify-content: space-between !important;
-    gap: 2px 4px !important;
-    font-size: 6px !important;
-    line-height: 1.15 !important;
   }
 
   #game-shell.survival-mode #hud-top .boss-hud-bar {
