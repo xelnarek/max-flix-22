@@ -232,3 +232,31 @@ test('minimap DOM visibility and layout are checked only at its 10 Hz refresh bo
   assert.match(tick, /minimapContainer\.getClientRects\(\)\.length > 0/);
   assert.doesNotMatch(tick, /document\.getElementById\('minimap-canvas'\)/);
 });
+
+
+test('primary attacks use character-specific range-based projectile lifetimes', async () => {
+  const [game, balance] = await Promise.all([read('../src/game.ts'), read('../src/combatBalance.ts')]);
+  assert.match(balance, /PRIMARY_ATTACK_RANGE_METERS/);
+  assert.match(game, /getPrimaryAttackLifetimeSeconds\('marcin', 14\.2\)/);
+  assert.match(game, /getPrimaryAttackLifetimeSeconds\('grzesiek', 14\.6\)/);
+  assert.match(game, /getPrimaryAttackLifetimeSeconds\('dawid', 14\.8\)/);
+  assert.match(game, /getPrimaryAttackLifetimeSeconds\('mateusz', 19\.5\)/);
+  assert.match(game, /getPiotrBoomerangMaxLifeSeconds\(22\.5\)/);
+});
+
+test('projectile collision checks the full movement segment rather than only its endpoint', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /previousProjectileX/);
+  assert.match(game, /segmentLengthSq/);
+  assert.match(game, /const closestX = previousProjectileX \+ segmentX \* projection/);
+  assert.match(game, /Math\.abs\(closestY - e\.y\) < 1\.35/);
+});
+
+test('fullscreen and orientation changes reset touch input and reflow the viewport', async () => {
+  const app = await read('../src/index.ts');
+  assert.match(app, /document\.addEventListener\('fullscreenchange', handleFullscreenChange\)/);
+  assert.match(app, /document\.addEventListener\('webkitfullscreenchange', handleFullscreenChange\)/);
+  assert.match(app, /this\.resetTouchJoystick\?\.\(\)/);
+  assert.match(app, /const getJoystickRadius = \(\) =>/);
+  assert.match(app, /maxRadius = getJoystickRadius\(\)/);
+});
