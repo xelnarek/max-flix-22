@@ -361,8 +361,8 @@ test('AGV-9 and Bosman telegraphs match their committed projectile lanes', async
 
 test('every eighth Survival kill grants a small collectable XP milestone reward', async () => {
   const game = await read('../src/game.ts');
-  const start = game.indexOf('if (this.survivalKills % 8 === 0)');
-  const end = game.indexOf('\n      }', start) + 8;
+  const start = game.indexOf('const isShiftMilestone = this.survivalKills % 8 === 0;');
+  const end = game.indexOf("if (e.type === 'pomazaniec')", start);
   assert.ok(start >= 0 && end > start, 'eight-kill milestone block should exist');
   const milestone = game.slice(start, end);
   assert.match(milestone, /const isShiftMilestone = this\.survivalKills % 8 === 0/);
