@@ -949,9 +949,6 @@ export class MaxFlizGameEngine {
       if (e.code === 'Minus' || e.code === 'NumpadSubtract') {
         this.zoomOutCamera();
       }
-      if (e.code === 'KeyN') {
-        this.toggleMinimap();
-      }
       if (e.code === 'KeyT') {
         if (this.state === 'playing') {
           this.triggerTimedWarehouseEvent();
