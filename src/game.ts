@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { clampHorizontalPosition } from './arenaBounds.ts';
-import { calculateEnemySeparationVector, chooseSpacedSpawnPoint } from './enemySpacing.ts';
+import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoint } from './enemySpacing.ts';
 import { isWithinBossImpactRadius } from './combatTelegraphs.ts';
 import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
 import {
@@ -616,6 +616,7 @@ export class MaxFlizGameEngine {
     exploded: boolean;
   }[] = [];
   private enemies: EnemyItem[] = [];
+  private readonly enemySpatialIndex = new EnemySpatialIndex<EnemyItem>(4.0);
   private enemyProjectiles: {
     mesh: THREE.Mesh;
     vel: THREE.Vector3;
@@ -7073,7 +7074,8 @@ export class MaxFlizGameEngine {
       steerZ = -Math.sin(angle);
     }
 
-    const separation = calculateEnemySeparationVector(enemy, this.enemies, 2.6);
+    const nearbyEnemies = this.enemySpatialIndex.query(enemy.x, enemy.z, 4.1);
+    const separation = calculateEnemySeparationVector(enemy, nearbyEnemies, 2.6);
     const separationX = separation.x;
     const separationZ = separation.z;
 
@@ -7209,6 +7211,9 @@ export class MaxFlizGameEngine {
         this.activeChaserIds.add(enemy.id);
       }
     }
+
+    // Build one broad-phase grid per frame instead of scanning the full crowd for every enemy.
+    this.enemySpatialIndex.rebuild(this.enemies);
 
     this.enemies.forEach((e) => {
       if (e.state === 'defeated' || !e.mesh) return;
@@ -7535,7 +7540,8 @@ export class MaxFlizGameEngine {
             // Keep campaign enemies from converging on a single point. This
             // separation is also applied to coincident actors, so low-FPS frames
             // or simultaneous spawns cannot leave a permanent enemy stack.
-            const separation = calculateEnemySeparationVector(e, this.enemies, 2.5);
+            const nearbyCampaignEnemies = this.enemySpatialIndex.query(e.x, e.z, 4.0);
+            const separation = calculateEnemySeparationVector(e, nearbyCampaignEnemies, 2.5);
             let moveX = dx / Math.max(0.1, distToPlayer) + separation.x * 1.2;
             let moveZ = dz / Math.max(0.1, distToPlayer) + separation.z * 1.2;
             const moveLength = Math.hypot(moveX, moveZ) || 1;
