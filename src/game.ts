@@ -2546,6 +2546,33 @@ export class MaxFlizGameEngine {
     }
     perimeterPosts.instanceMatrix.needsUpdate = true;
     this.addSurvivalArenaInstance(perimeterPosts);
+
+    // Colour-coded floor lane ticks make the full Campaign mega-map easier to
+    // read at the higher camera angle. One instanced batch avoids decal draw calls.
+    const floorGuideMaterial = new THREE.MeshStandardMaterial({
+      color: 0xc48b3e,
+      emissive: 0x4a2d12,
+      emissiveIntensity: 0.12,
+      roughness: 0.76,
+      metalness: 0.08,
+    });
+    const floorGuides = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(3.8, 0.02, 0.07),
+      floorGuideMaterial,
+      bayXs.length * 2,
+    );
+    index = 0;
+    for (const x of bayXs) for (const z of [-12.6, 12.6]) {
+      dummy.position.set(x + 8, 0.012, z);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      floorGuides.setMatrixAt(index++, dummy.matrix);
+    }
+    floorGuides.instanceMatrix.needsUpdate = true;
+    floorGuides.castShadow = false;
+    floorGuides.receiveShadow = false;
+    this.addSurvivalArenaInstance(floorGuides);
   }
 
   private buildSectorGate(x: number, targetSector: 2 | 3) {
