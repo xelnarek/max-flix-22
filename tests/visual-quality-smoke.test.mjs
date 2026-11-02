@@ -78,3 +78,15 @@ test('enemy model accents use smoother curves without adding draw-call objects',
   assert.match(polish, /new THREE\.SphereGeometry\(0\.18 \* scale, 16, 12\)/);
   assert.match(polish, /without adding extra objects or draw calls/);
 });
+
+
+test('playable operator models use refined curved surfaces at close camera range', async () => {
+  const source = await read('../src/warehouseAssets.ts');
+  const start = source.indexOf('export function createCharacterModel(def: CharacterDef)');
+  const end = source.indexOf('\\nexport function ', start + 10);
+  assert.ok(start >= 0 && end > start, 'playable character model factory should exist');
+  const model = source.slice(start, end);
+  assert.match(model, /new THREE\.SphereGeometry\(0\.145, 20, 14\)/);
+  assert.match(model, /new THREE\.CapsuleGeometry\(0\.18, 0\.10, 4, 16\)/);
+  assert.match(model, /new THREE\.SphereGeometry\(0\.105, 16, 10\)/);
+});
