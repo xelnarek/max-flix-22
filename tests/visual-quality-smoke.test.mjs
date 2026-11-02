@@ -56,3 +56,12 @@ test('all five character bios have expanded beyond the short menu summary', asyn
     assert.ok(bio[1].length > 260, 'bio not sufficiently expanded for ' + id);
   }
 });
+
+
+test('warehouse map textures keep bounded high-detail anisotropic filtering on mobile and desktop', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /const targetAnisotropy = Math.max\(1, Math.min\(maxAnisotropy, isMobile \? 10 : 16\)\)/);
+  assert.match(game, /this\.levelRoot\.traverse\(\(object\) =>/);
+  assert.match(game, /texture\.anisotropy = targetAnisotropy/);
+  assert.match(game, /texture\.needsUpdate = true/);
+});
