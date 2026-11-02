@@ -348,6 +348,7 @@ export class MaxFlizGameEngine {
   // Elevated tactical framing is the default so mobile players can read lanes and threats.
   private cameraMode: 'tpp' | 'close' | 'iso' = 'tpp';
   private camZoomFactor = 0.94;
+  private hasManualCameraZoom = false;
   private maxUnlockedSector = (() => {
     try {
       const saved = Number(window.localStorage.getItem('maxFlizUnlockedSector') || '1');
@@ -510,16 +511,28 @@ export class MaxFlizGameEngine {
     this.bloomPulseDuration = this.bloomPulseTimer;
   }
 
+  private syncCameraZoomControl() {
+    const slider = document.getElementById('cam-zoom-slider') as HTMLInputElement | null;
+    if (slider) slider.value = this.camZoomFactor.toFixed(2);
+  }
+
   public zoomInCamera() {
+    this.hasManualCameraZoom = true;
     this.camZoomFactor = Math.max(0.4, this.camZoomFactor - 0.15);
+    this.syncCameraZoomControl();
   }
 
   public zoomOutCamera() {
-    this.camZoomFactor = Math.min(2.8, this.camZoomFactor + 0.15);
+    this.hasManualCameraZoom = true;
+    this.camZoomFactor = Math.min(2.2, this.camZoomFactor + 0.15);
+    this.syncCameraZoomControl();
   }
 
   public setCamZoomFactor(val: number) {
+    if (!Number.isFinite(val)) return;
+    this.hasManualCameraZoom = true;
     this.camZoomFactor = THREE.MathUtils.clamp(val, 0.4, 2.2);
+    this.syncCameraZoomControl();
   }
 
   public getCamZoomFactor(): number {
@@ -538,6 +551,8 @@ export class MaxFlizGameEngine {
     if (this.cameraMode === 'close') {
       this.camZoomFactor = Math.min(this.camZoomFactor, 0.96);
     }
+    this.hasManualCameraZoom = true;
+    this.syncCameraZoomControl();
     return this.cameraMode;
   }
 
@@ -1020,7 +1035,7 @@ export class MaxFlizGameEngine {
     if (!this.threeRenderer) return;
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
     const maxAnisotropy = this.threeRenderer.capabilities.getMaxAnisotropy();
-    const targetAnisotropy = Math.max(1, Math.min(maxAnisotropy, isMobile ? 8 : 16));
+    const targetAnisotropy = Math.max(1, Math.min(maxAnisotropy, isMobile ? 10 : 16));
     const textureSlots = [
       'map', 'alphaMap', 'aoMap', 'bumpMap', 'displacementMap',
       'emissiveMap', 'lightMap', 'metalnessMap', 'normalMap', 'roughnessMap',
@@ -1240,6 +1255,7 @@ export class MaxFlizGameEngine {
     this.attackComboStep = 0;
     this.bulldozerHitCooldowns.clear();
     this.cameraMode = 'iso';
+    this.hasManualCameraZoom = false;
     this.applyAutoCameraScaleForViewport();
 
     this.callbacks.onPerksUpdate?.(this.activePerks);
@@ -2677,17 +2693,20 @@ export class MaxFlizGameEngine {
       this.camera.updateProjectionMatrix();
     }
 
-    // Portrait FOV is already wider vertically. A smaller distance multiplier
-    // keeps the operator readable instead of making the character tiny on phones.
-    if (aspect < 0.65) {
-      this.camZoomFactor = 1.12;
-    } else if (aspect < 1.0) {
-      this.camZoomFactor = 1.07;
-    } else if (w < 920) {
-      this.camZoomFactor = 1.0;
-    } else {
-      this.camZoomFactor = 0.98;
+    // Portrait FOV is already wider vertically. Apply the device default only
+    // until the player changes zoom; rotation/resizing must not erase that choice.
+    if (!this.hasManualCameraZoom) {
+      if (aspect < 0.65) {
+        this.camZoomFactor = 1.12;
+      } else if (aspect < 1.0) {
+        this.camZoomFactor = 1.07;
+      } else if (w < 920) {
+        this.camZoomFactor = 1.0;
+      } else {
+        this.camZoomFactor = 0.98;
+      }
     }
+    this.syncCameraZoomControl();
   }
 
   private addGoldenCutterItem(id: string, x: number, y: number, z: number) {
