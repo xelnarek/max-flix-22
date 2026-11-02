@@ -2297,14 +2297,14 @@ export class MaxFlizGameEngine {
       bosman_krakow: 0x0ea5e9, agv_robot: 0x38bdf8, piorun_dron: 0x22d3ee,
     };
     const accent = palette[enemy.type] || 0x38bdf8;
-    const isBoss = enemy.type === 'walczak' || enemy.type === 'krol_leto'
-      || enemy.type === 'bosman_krakow' || enemy.type === 'sebix_m';
+    const isBoss = enemy.type === 'walczak' || enemy.type === 'krol_leto' || enemy.type === 'bosman_krakow';
+    const canCastShadow = (isBoss || enemy.type === 'sebix_m') && !this.isHandheldViewport;
     // A horde of shadow-casting skinned/part-based models is expensive on mobile.
-    // Preserve boss shadows on desktop; the player and warehouse lighting keep
-    // the operator readable on handheld devices without 100+ shadow casters.
-    root.traverse((child) => {
+    // Keep boss silhouettes elevated on desktop; handhelds use the operator and
+    // warehouse lighting for depth rather than hundreds of moving shadow casters.
+    const applyShadowBudget = () => root.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return;
-      child.castShadow = isBoss && !this.isHandheldViewport;
+      child.castShadow = canCastShadow;
       child.receiveShadow = false;
     });
     const scale = isBoss ? 1.35 : 1;
@@ -2335,6 +2335,7 @@ export class MaxFlizGameEngine {
         sensorEye.position.set(0, 0.51, 0.29);
         root.add(...sidePods, topFin, sensorEye);
       }
+      applyShadowBudget();
       return;
     }
 
@@ -2414,6 +2415,7 @@ export class MaxFlizGameEngine {
       shoulderBeacon.castShadow = false;
       root.add(shoulderBeacon);
     }
+    applyShadowBudget();
   }
 
   // Retain a low-poly industrial look on hard edges, but do not facet the
