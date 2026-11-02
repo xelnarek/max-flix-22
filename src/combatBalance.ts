@@ -11,6 +11,30 @@ export const CAMPAIGN_ATTACK_COOLDOWN_SECONDS: Readonly<Record<CharacterId, numb
 });
 
 export const SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS = 3.25;
+
+// Effective forward reach is measured from the operator's centre to the target.
+// Character variety is retained, but every base attack now has a reliable,
+// readable range rather than expiring after an arbitrary fixed lifetime.
+export const PRIMARY_ATTACK_RANGE_METERS: Readonly<Record<CharacterId, number>> = Object.freeze({
+  marcin: 25,
+  grzesiek: 25,
+  dawid: 26,
+  mateusz: 27,
+  piotr: 25,
+});
+export const PRIMARY_ATTACK_ORIGIN_OFFSET_METERS = 0.65;
+export const PIOTR_BOOMERANG_OUTBOUND_LIFETIME_FRACTION = 0.48;
+
+export function getPrimaryAttackLifetimeSeconds(characterId: CharacterId, projectileSpeed: number): number {
+  const safeSpeed = Number.isFinite(projectileSpeed) ? Math.max(0.1, projectileSpeed) : 0.1;
+  const travelDistance = Math.max(0, PRIMARY_ATTACK_RANGE_METERS[characterId] - PRIMARY_ATTACK_ORIGIN_OFFSET_METERS);
+  return travelDistance / safeSpeed;
+}
+
+export function getPiotrBoomerangMaxLifeSeconds(projectileSpeed: number): number {
+  const outboundLife = getPrimaryAttackLifetimeSeconds('piotr', projectileSpeed);
+  return outboundLife / PIOTR_BOOMERANG_OUTBOUND_LIFETIME_FRACTION;
+}
 export const SURVIVAL_WEAPON_DISPATCH_COOLDOWN_SECONDS = 1.05;
 export const SURVIVAL_WEAPON_INITIAL_RELOAD_FACTOR = 0.75;
 

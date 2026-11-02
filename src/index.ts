@@ -84,6 +84,7 @@ class MaxFlizScene extends xb.Script {
   private currentFps: number = 60;
   private lastMinimapRenderAt: number = 0;
   private pausedForVisibility: boolean = false;
+  private resetTouchJoystick: (() => void) | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private lastAdaptiveQualityAt: number = 0;
   private hasAppliedInitialViewport = false;
@@ -162,8 +163,20 @@ class MaxFlizScene extends xb.Script {
 
     window.addEventListener('resize', scheduleResize, { passive: true });
     window.addEventListener('orientationchange', () => {
-      window.setTimeout(scheduleResize, 180);
+      this.resetTouchJoystick?.();
+      window.setTimeout(() => {
+        this.resetTouchJoystick?.();
+        scheduleResize();
+      }, 180);
     }, { passive: true });
+
+    const handleFullscreenChange = () => {
+      this.resetTouchJoystick?.();
+      scheduleResize();
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    // Older WebKit builds expose the prefixed event alongside the standard one.
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     window.visualViewport?.addEventListener('resize', scheduleResize, { passive: true });
     // Do not call handleResize() immediately here because xb.core.renderer is not ready yet.
     // It will be handled in the init() method below.
@@ -1641,7 +1654,14 @@ class MaxFlizScene extends xb.Script {
     let activePointerId: number | null = null;
     let startX = 0;
     let startY = 0;
-    const maxRadius = 52;
+    let maxRadius = 36;
+    const getJoystickRadius = () => {
+      const baseRect = joystickBase.getBoundingClientRect();
+      const knobRect = joystickKnob.getBoundingClientRect();
+      const baseSize = Math.min(baseRect.width || 112, baseRect.height || 112);
+      const knobSize = Math.min(knobRect.width || 46, knobRect.height || 46);
+      return Math.max(20, Math.min(56, (baseSize - knobSize) * 0.5 - 4));
+    };
 
     const resetJoystick = () => {
       activePointerId = null;
@@ -1649,12 +1669,14 @@ class MaxFlizScene extends xb.Script {
       joystickKnob.style.transform = 'translate(0px, 0px)';
       this.engine.setVirtualInput(0, 0);
     };
+    this.resetTouchJoystick = resetJoystick;
 
     const handleStart = (event: PointerEvent) => {
       if (activePointerId !== null || event.button > 0) return;
       activePointerId = event.pointerId;
       startX = event.clientX;
       startY = event.clientY;
+      maxRadius = getJoystickRadius();
 
       joystickBase.style.left = `${startX}px`;
       joystickBase.style.top = `${startY}px`;

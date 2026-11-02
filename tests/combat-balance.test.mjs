@@ -2,12 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CAMPAIGN_ATTACK_COOLDOWN_SECONDS,
+  PRIMARY_ATTACK_ORIGIN_OFFSET_METERS,
+  PRIMARY_ATTACK_RANGE_METERS,
+  PIOTR_BOOMERANG_OUTBOUND_LIFETIME_FRACTION,
   SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS,
   SURVIVAL_WEAPON_DISPATCH_COOLDOWN_SECONDS,
   SURVIVAL_WEAPON_INITIAL_RELOAD_FACTOR,
   SURVIVAL_WEAPON_UNLOCK_SECONDS,
   getAbilityCooldownSeconds,
   getBaseAttackCooldownSeconds,
+  getPiotrBoomerangMaxLifeSeconds,
+  getPrimaryAttackLifetimeSeconds,
   getSurvivalWeaponReloadSeconds,
   getWeaponRecoveryAfterUpgrade,
 } from '../src/combatBalance.ts';
@@ -55,4 +60,31 @@ test('weapon unlocks start after two minutes and advance in controlled 90-second
   assert.equal(times[times.length - 1], 1110);
   for (let i = 1; i < times.length; i++) assert.equal(times[i] - times[i - 1], 90);
   assert.equal(SURVIVAL_WEAPON_DISPATCH_COOLDOWN_SECONDS, 1.05);
+});
+
+
+test('primary operator attacks have deliberate 25–27 metre effective reach', () => {
+  assert.deepEqual(PRIMARY_ATTACK_RANGE_METERS, {
+    marcin: 25,
+    grzesiek: 25,
+    dawid: 26,
+    mateusz: 27,
+    piotr: 25,
+  });
+  for (const character of characters) {
+    const speed = 14.2;
+    const lifetime = getPrimaryAttackLifetimeSeconds(character, speed);
+    const effectiveReach = lifetime * speed + PRIMARY_ATTACK_ORIGIN_OFFSET_METERS;
+    assert.ok(Math.abs(effectiveReach - PRIMARY_ATTACK_RANGE_METERS[character]) < 1e-9, character);
+  }
+});
+
+test('Piotr boomerang reaches its outbound target before beginning its return', () => {
+  const speed = 22.5;
+  const maxLife = getPiotrBoomerangMaxLifeSeconds(speed);
+  const outboundReach =
+    maxLife * PIOTR_BOOMERANG_OUTBOUND_LIFETIME_FRACTION * speed +
+    PRIMARY_ATTACK_ORIGIN_OFFSET_METERS;
+  assert.ok(Math.abs(outboundReach - PRIMARY_ATTACK_RANGE_METERS.piotr) < 1e-9);
+  assert.ok(maxLife > 1.9);
 });
