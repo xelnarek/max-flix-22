@@ -365,7 +365,9 @@ test('every eighth Survival kill grants a small collectable XP milestone reward'
   const end = game.indexOf('\n      }', start) + 8;
   assert.ok(start >= 0 && end > start, 'eight-kill milestone block should exist');
   const milestone = game.slice(start, end);
-  assert.match(milestone, /spawnSurvivalXpGem\(e\.x, e\.y, e\.z, 2\)/);
+  assert.match(milestone, /const isShiftMilestone = this\.survivalKills % 8 === 0/);
+  assert.match(milestone, /baseXpDrop \+ \(isShiftMilestone \? 2 : 0\)/);
+  assert.doesNotMatch(milestone, /spawnSurvivalXpGem\(e\.x, e\.y, e\.z, 2\)/);
   assert.match(milestone, /NORMA ZMIANY x8 — BONUS \+2 XP DO ZEBRANIA/);
 });
 
