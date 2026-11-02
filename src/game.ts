@@ -2268,7 +2268,7 @@ export class MaxFlizGameEngine {
         sensorRail.position.set(0, 0.56, 0);
         const frontScanner = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.09, 0.055), darkMat);
         frontScanner.position.set(0, 0.48, 0.37);
-        const statusBeacon = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), accentMat);
+        const statusBeacon = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), accentMat);
         statusBeacon.position.set(-0.31, 0.42, -0.2);
         root.add(sensorRail, frontScanner, statusBeacon);
       } else {
@@ -2280,23 +2280,25 @@ export class MaxFlizGameEngine {
         });
         const topFin = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.22, 5), accentMat);
         topFin.position.set(0, 0.78, -0.03);
-        const sensorEye = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), accentMat);
+        const sensorEye = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), accentMat);
         sensorEye.position.set(0, 0.51, 0.29);
         root.add(...sidePods, topFin, sensorEye);
       }
       return;
     }
 
+    // Refined curved accents stay on the existing meshes: smoother close-up silhouettes
+    // without adding extra objects or draw calls to a crowded Survival wave.
     // Rounded shoulder guards and a sculpted chest badge add depth without changing hitboxes.
     for (const side of [-1, 1]) {
-      const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.13 * scale, 12, 8), armorMat);
+      const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.13 * scale, 18, 12), armorMat);
       shoulder.scale.set(1.42, 0.74, 1.0);
       shoulder.position.set(side * 0.235 * scale, 0.73 * scale, 0.015);
       shoulder.rotation.z = side * -0.12;
       shoulder.castShadow = false;
       root.add(shoulder);
     }
-    const chestPlate = new THREE.Mesh(new THREE.SphereGeometry(0.13 * scale, 14, 10), accentMat);
+    const chestPlate = new THREE.Mesh(new THREE.SphereGeometry(0.13 * scale, 18, 12), accentMat);
     chestPlate.scale.set(1.28, 0.76, 0.34);
     chestPlate.position.set(0, 0.59 * scale, 0.155 * scale);
     chestPlate.castShadow = false;
@@ -2312,14 +2314,14 @@ export class MaxFlizGameEngine {
     backModule.position.set(0, 0.57 * scale, -0.15 * scale);
     backModule.castShadow = false;
     root.add(backModule);
-    const insignia = new THREE.Mesh(new THREE.SphereGeometry(0.055 * scale, 7, 6), accentMat);
+    const insignia = new THREE.Mesh(new THREE.SphereGeometry(0.055 * scale, 10, 8), accentMat);
     insignia.position.set(0, 0.61 * scale, 0.19 * scale);
     insignia.castShadow = false;
     root.add(insignia);
 
     // Role-specific silhouettes: readable at a distance without enlarging collision bodies.
     if (isBoss) {
-      const crest = new THREE.Mesh(new THREE.SphereGeometry(0.18 * scale, 12, 8), accentMat);
+      const crest = new THREE.Mesh(new THREE.SphereGeometry(0.18 * scale, 16, 12), accentMat);
       crest.scale.set(1.65, 0.58, 0.72);
       crest.position.set(0, 1.16 * scale, 0.015);
       crest.castShadow = false;
@@ -2356,7 +2358,7 @@ export class MaxFlizGameEngine {
       hazardBar.castShadow = false;
       root.add(hazardBar);
     } else if (enemy.type === 'handlowiec' || enemy.type === 'przedstawiciel_włoski' || enemy.type === 'serwisant') {
-      const shoulderBeacon = new THREE.Mesh(new THREE.SphereGeometry(0.075, 7, 6), accentMat);
+      const shoulderBeacon = new THREE.Mesh(new THREE.SphereGeometry(0.075, 9, 8), accentMat);
       shoulderBeacon.position.set(0.25, 0.82, -0.04);
       shoulderBeacon.castShadow = false;
       root.add(shoulderBeacon);
