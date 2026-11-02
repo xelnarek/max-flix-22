@@ -258,7 +258,8 @@ test('Survival crowd rendering defers distant model attachments and limits shado
   const game = await read('../src/game.ts');
   assert.match(game, /enemy\.mesh\.userData\.enemyVisualPolishPending = true/);
   assert.match(game, /e\.mesh\.userData\.enemyVisualPolishPending[\s\S]*?distToPlayer <= \(this\.isHandheldViewport \? 15 : 20\)/);
-  assert.match(game, /child\.castShadow = isBoss && !this\.isHandheldViewport/);
+  assert.match(game, /const canCastShadow = \(isBoss \|\| enemy\.type === 'sebix_m'\) && !this\.isHandheldViewport/);
+  assert.match(game, /child\.castShadow = canCastShadow/);
   assert.match(game, /this\.dirLight\.shadow\.autoUpdate = !isMobile/);
   assert.match(game, /this\.mobileShadowRefreshCooldown = 1 \/ 24/);
 });
