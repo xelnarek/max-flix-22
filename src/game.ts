@@ -2291,7 +2291,7 @@ export class MaxFlizGameEngine {
     // without adding extra objects or draw calls to a crowded Survival wave.
     // Rounded shoulder guards and a sculpted chest badge add depth without changing hitboxes.
     for (const side of [-1, 1]) {
-      const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.13 * scale, 18, 12), armorMat);
+      const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.13 * scale, 14, 10), armorMat);
       shoulder.scale.set(1.42, 0.74, 1.0);
       shoulder.position.set(side * 0.235 * scale, 0.73 * scale, 0.015);
       shoulder.rotation.z = side * -0.12;
