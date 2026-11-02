@@ -503,7 +503,7 @@
     width: 100% !important;
     min-width: 0 !important;
     accent-color: #55c8ef !important;
-    touch-action: pan-x !important;
+    touch-action: pan-y !important;
   }
 
   #game-shell.survival-mode #hud-top .top-icon-btn,
