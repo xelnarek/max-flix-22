@@ -7642,8 +7642,8 @@ export class MaxFlizGameEngine {
   
         }
 
-        // The Sentinel warns before firing. The projectile aims at the player's position
-        // only after the wind-up, so moving during the warning is a meaningful dodge.
+        // The Sentinel commits to a visible lane before firing. The emitter holds still
+        // through the wind-up so the telegraph and the eventual projectile stay aligned.
         if (this.gameMode === 'survival' && e.name.includes('AGV-9 SENTINEL') && e.specialActionTimer !== undefined) {
           if (e.specialActionTimer > 0) {
             e.specialActionTimer -= dt;
