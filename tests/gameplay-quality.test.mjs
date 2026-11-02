@@ -278,3 +278,16 @@ test('campaign chase and Survival steering both apply enemy separation', async (
   assert.match(game, /moveX = dx \/ Math\.max\(0\.1, distToPlayer\) \+ separation\.x \* 1\.2/);
   assert.match(game, /const separationX = separation\.x/);
 });
+
+
+test('campaign and Survival crowd steering use a reusable spatial broad-phase index', async () => {
+  const [game, spacing] = await Promise.all([
+    read('../src/game.ts'),
+    read('../src/enemySpacing.ts'),
+  ]);
+  assert.match(spacing, /export class EnemySpatialIndex/);
+  assert.match(game, /new EnemySpatialIndex<EnemyItem>\(4\.0\)/);
+  assert.match(game, /this\.enemySpatialIndex\.rebuild\(this\.enemies\)/);
+  assert.match(game, /this\.enemySpatialIndex\.query\(enemy\.x, enemy\.z, 4\.1\)/);
+  assert.match(game, /this\.enemySpatialIndex\.query\(e\.x, e\.z, 4\.0\)/);
+});
