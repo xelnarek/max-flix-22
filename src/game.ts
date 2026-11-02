@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { clampHorizontalPosition } from './arenaBounds.ts';
+import { calculateEnemySeparationVector, chooseSpacedSpawnPoint } from './enemySpacing.ts';
 import { isWithinBossImpactRadius } from './combatTelegraphs.ts';
 import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
 import {
@@ -6034,7 +6035,10 @@ export class MaxFlizGameEngine {
   }
 
   private getSurvivalSpawnPoint(): { x: number; z: number } {
-    // Sample several perimeter positions and reject cargo stacks / racks before accepting a spawn.
+    // Sample the arena perimeter, reject rack/cargo intersections, then prefer
+    // a clear arrival lane. During dense waves, select the least crowded valid
+    // point instead of repeatedly placing new actors on top of one another.
+    const candidates: { x: number; z: number }[] = [];
     for (let attempt = 0; attempt < 12; attempt++) {
       const angle = Math.random() * Math.PI * 2;
       const radius = 18 + Math.random() * 5;
@@ -6052,8 +6056,14 @@ export class MaxFlizGameEngine {
         Math.abs(x - obstacle.x) < obstacle.halfWidth + 1.2 &&
         Math.abs(z - obstacle.z) < obstacle.halfDepth + 1.2
       );
-      if (!blocked) return { x, z };
+      if (!blocked) candidates.push({ x, z });
     }
+
+    const spacedSpawn = chooseSpacedSpawnPoint(candidates, this.enemies, 3.2);
+    if (spacedSpawn) return spacedSpawn;
+
+    // Preserve a safe, bounded fallback when all sampled positions land inside
+    // obstacles or the perimeter is fully congested.
     return {
       x: THREE.MathUtils.clamp(this.playerPos.x - 22, this.levelBounds.minX + 2.5, this.levelBounds.maxX - 2.5),
       z: THREE.MathUtils.clamp(this.playerPos.z + 16, this.levelBounds.minZ + 1.5, this.levelBounds.maxZ - 1.5),
@@ -7063,20 +7073,9 @@ export class MaxFlizGameEngine {
       steerZ = -Math.sin(angle);
     }
 
-    let separationX = 0;
-    let separationZ = 0;
-    for (const other of this.enemies) {
-      if (other.id === enemy.id || other.state === 'defeated') continue;
-      const dx = enemy.x - other.x;
-      const dz = enemy.z - other.z;
-      const d2 = dx * dx + dz * dz;
-      if (d2 > 0.01 && d2 < 6.76) {
-        const d = Math.sqrt(d2);
-        const force = (2.6 - d) / (2.6 * d);
-        separationX += dx * force;
-        separationZ += dz * force;
-      }
-    }
+    const separation = calculateEnemySeparationVector(enemy, this.enemies, 2.6);
+    const separationX = separation.x;
+    const separationZ = separation.z;
 
     let avoidX = 0;
     let avoidZ = 0;
@@ -7533,8 +7532,17 @@ export class MaxFlizGameEngine {
                   ? 1.35
                   : 1.2) *
               (1 + this.threatTier * 0.04);
-            e.x += (dx / Math.max(0.1, distToPlayer)) * chaseSpeed * dt;
-            e.z += (dz / Math.max(0.1, distToPlayer)) * chaseSpeed * dt;
+            // Keep campaign enemies from converging on a single point. This
+            // separation is also applied to coincident actors, so low-FPS frames
+            // or simultaneous spawns cannot leave a permanent enemy stack.
+            const separation = calculateEnemySeparationVector(e, this.enemies, 2.5);
+            let moveX = dx / Math.max(0.1, distToPlayer) + separation.x * 1.2;
+            let moveZ = dz / Math.max(0.1, distToPlayer) + separation.z * 1.2;
+            const moveLength = Math.hypot(moveX, moveZ) || 1;
+            moveX /= moveLength;
+            moveZ /= moveLength;
+            e.x += moveX * chaseSpeed * dt;
+            e.z += moveZ * chaseSpeed * dt;
           } else {
             e.alerted = false;
             e.state = 'patrol';
