@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  EnemySpatialIndex,
   calculateEnemySeparationVector,
   chooseSpacedSpawnPoint,
 } from '../src/enemySpacing.ts';
@@ -57,4 +58,32 @@ test('when every spawn point is crowded, choose the least crowded valid candidat
 
 test('invalid candidate positions are ignored and an empty candidate list returns null', () => {
   assert.equal(chooseSpacedSpawnPoint([{ x: Number.NaN, z: 0 }], [], 3.2), null);
+});
+
+test('spatial index finds actors across positive and negative cell boundaries and filters inactive entries', () => {
+  const actors = [
+    { id: 'center', x: 0, z: 0 },
+    { id: 'near-negative', x: -2.5, z: 1 },
+    { id: 'outside', x: 8, z: 0 },
+    { id: 'defeated', x: 0.2, z: 0, state: 'defeated' },
+    { id: 'invalid', x: Number.NaN, z: 0 },
+  ];
+  const index = new EnemySpatialIndex(4);
+  index.rebuild(actors);
+  assert.deepEqual(index.query(0, 0, 3).map((actor) => actor.id).sort(), ['center', 'near-negative']);
+});
+
+test('spatial index rebuild replaces old cells and query reuses its scratch buffer', () => {
+  const index = new EnemySpatialIndex(4);
+  const first = { id: 'first', x: 0, z: 0 };
+  index.rebuild([first]);
+  const firstResult = index.query(0, 0, 1);
+  assert.deepEqual(firstResult.map((actor) => actor.id), ['first']);
+
+  const second = { id: 'second', x: 12, z: -8 };
+  index.rebuild([second]);
+  const secondResult = index.query(12, -8, 1);
+  assert.equal(firstResult, secondResult);
+  assert.deepEqual(secondResult.map((actor) => actor.id), ['second']);
+  assert.deepEqual(index.query(0, 0, 1), []);
 });
