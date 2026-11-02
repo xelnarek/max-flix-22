@@ -77,6 +77,63 @@ export function calculateEnemySeparationVector(
   return { x, z };
 }
 
+
+/**
+ * Reusable broad-phase index for crowd steering. It reduces each enemy's
+ * separation pass from scanning the full crowd to scanning nearby grid cells.
+ * query() intentionally reuses one scratch array; callers must consume it
+ * synchronously before issuing another query on this index.
+ */
+export class EnemySpatialIndex<T extends EnemySpacingActor = EnemySpacingActor> {
+  private readonly cellSize: number;
+  private readonly cells = new Map<string, T[]>();
+  private readonly queryBuffer: T[] = [];
+
+  constructor(cellSize = 4) {
+    this.cellSize = Number.isFinite(cellSize) ? Math.max(1, cellSize) : 4;
+  }
+
+  rebuild(actors: readonly T[]): void {
+    this.cells.clear();
+    for (const actor of actors) {
+      if (actor.state === "defeated" || !Number.isFinite(actor.x) || !Number.isFinite(actor.z)) continue;
+      const cellX = Math.floor(actor.x / this.cellSize);
+      const cellZ = Math.floor(actor.z / this.cellSize);
+      const key = this.cellKey(cellX, cellZ);
+      let bucket = this.cells.get(key);
+      if (!bucket) {
+        bucket = [];
+        this.cells.set(key, bucket);
+      }
+      bucket.push(actor);
+    }
+  }
+
+  query(x: number, z: number, radius: number): readonly T[] {
+    this.queryBuffer.length = 0;
+    if (![x, z, radius].every(Number.isFinite)) return this.queryBuffer;
+
+    const safeRadius = Math.max(0, radius);
+    const minCellX = Math.floor((x - safeRadius) / this.cellSize);
+    const maxCellX = Math.floor((x + safeRadius) / this.cellSize);
+    const minCellZ = Math.floor((z - safeRadius) / this.cellSize);
+    const maxCellZ = Math.floor((z + safeRadius) / this.cellSize);
+
+    for (let cellX = minCellX; cellX <= maxCellX; cellX++) {
+      for (let cellZ = minCellZ; cellZ <= maxCellZ; cellZ++) {
+        const bucket = this.cells.get(this.cellKey(cellX, cellZ));
+        if (bucket) this.queryBuffer.push(...bucket);
+      }
+    }
+
+    return this.queryBuffer;
+  }
+
+  private cellKey(cellX: number, cellZ: number): string {
+    return cellX + "," + cellZ;
+  }
+}
+
 /**
  * Chooses the first spawn candidate with enough room from live actors. If the
  * sampled perimeter is crowded, returns the candidate with the greatest
