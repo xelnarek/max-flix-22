@@ -120,7 +120,7 @@ test('camera fades only tagged perimeter walls that intersect the camera-to-play
   const game = await read('../src/game.ts');
   assert.match(game, /private registerCameraOccluder\(mesh: THREE\.Mesh\)/);
   assert.match(game, /private updateCameraOcclusion\(dt: number\)/);
-  assert.match(game, /cameraOcclusionRaycaster\.intersectObjects\(this\.cameraOccluders, false\)/);
+  assert.match(game, /cameraOcclusionRaycaster\.intersectObjects\(this\.cameraOccluders, false, hits\)/);
   assert.match(game, /this\.cameraOcclusionCooldown = 0\.075/);
   assert.match(game, /Math\.min\(original\.opacity, 0\.18\)/);
   assert.match(game, /this\.restoreCameraOccluders\(\)/);
