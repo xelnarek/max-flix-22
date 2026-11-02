@@ -260,3 +260,21 @@ test('fullscreen and orientation changes reset touch input and reflow the viewpo
   assert.match(app, /const getJoystickRadius = \(\) =>/);
   assert.match(app, /maxRadius = getJoystickRadius\(\)/);
 });
+
+
+test('Survival spawn candidates prefer clear lanes and fall back to the least crowded point', async () => {
+  const [game, spacing] = await Promise.all([
+    read('../src/game.ts'),
+    read('../src/enemySpacing.ts'),
+  ]);
+  assert.match(game, /chooseSpacedSpawnPoint\(candidates, this\.enemies, 3\.2\)/);
+  assert.match(spacing, /nearestSquared >= minimumSquared/);
+  assert.match(spacing, /nearestSquared > bestNearestSquared/);
+});
+
+test('campaign chase and Survival steering both apply enemy separation', async () => {
+  const game = await read('../src/game.ts');
+  assert.ok((game.match(/calculateEnemySeparationVector\(/g) || []).length >= 2);
+  assert.match(game, /moveX = dx \/ Math\.max\(0\.1, distToPlayer\) \+ separation\.x \* 1\.2/);
+  assert.match(game, /const separationX = separation\.x/);
+});
