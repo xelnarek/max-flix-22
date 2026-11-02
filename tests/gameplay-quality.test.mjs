@@ -358,3 +358,27 @@ test('AGV-9 and Bosman telegraphs match their committed projectile lanes', async
   assert.match(game, /BOSMAN: ODPRAWA PRZYSPIESZONA — FAZA 2/);
   assert.match(game, /spawnBossLaneTelegraph\(e\.x, e\.z, direction, isPhase2 \? 14\.0 : 11\.5/);
 });
+
+test('every eighth Survival kill grants a small collectable XP milestone reward', async () => {
+  const game = await read('../src/game.ts');
+  const start = game.indexOf('const isShiftMilestone = this.survivalKills % 8 === 0;');
+  const end = game.indexOf("if (e.type === 'pomazaniec')", start);
+  assert.ok(start >= 0 && end > start, 'eight-kill milestone block should exist');
+  const milestone = game.slice(start, end);
+  assert.match(milestone, /const isShiftMilestone = this\.survivalKills % 8 === 0/);
+  assert.match(milestone, /baseXpDrop \+ \(isShiftMilestone \? 2 : 0\)/);
+  assert.doesNotMatch(milestone, /spawnSurvivalXpGem\(e\.x, e\.y, e\.z, 2\)/);
+  assert.match(milestone, /NORMA ZMIANY x8 — BONUS \+2 XP DO ZEBRANIA/);
+});
+
+test('the removed minimap has no remaining engine state, renderer or DOM hooks', async () => {
+  const [game, app] = await Promise.all([read('../src/game.ts'), read('../src/index.ts')]);
+  assert.doesNotMatch(game, /minimap|renderMinimap|zoomInMinimap|zoomOutMinimap|toggleMinimap/i);
+  assert.doesNotMatch(app, /minimapCanvasElement|minimapContainerElement|renderMinimap|\.minimap-container/);
+});
+
+test('Survival rapid-upgrade copy matches its conservative three-percent cooldown effect', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /id: 'rapid', icon: '⚡', title: 'RYTM ATAKU', description: 'Skrócenie czasu między atakami o 3%\.'/);
+  assert.match(game, /this\.survivalAttackRateMultiplier = Math\.max\(0\.86, this\.survivalAttackRateMultiplier \* 0\.97\)/);
+});

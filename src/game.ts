@@ -357,9 +357,6 @@ export class MaxFlizGameEngine {
   })();
   private sectorGates: Array<THREE.Group | null> = [null, null, null, null];
   private gateNoticeCooldown = 0;
-  private minimapZoomScale = 3.5;
-  private minimapVisible = true;
-  private minimapFrameCounter = 0;
   private finishGatePos = new THREE.Vector3(30, 0, 0);
   private smoothCamY = 0.5;
   // Tactical Elevated camera default (~45° isometric/tactical perspective like Hades/Brawl Stars)
@@ -556,23 +553,6 @@ export class MaxFlizGameEngine {
     this.hasManualCameraZoom = true;
     this.syncCameraZoomControl();
     return this.cameraMode;
-  }
-
-  public zoomInMinimap() {
-    this.minimapZoomScale = Math.min(7.5, this.minimapZoomScale + 0.8);
-  }
-
-  public zoomOutMinimap() {
-    this.minimapZoomScale = Math.max(1.8, this.minimapZoomScale - 0.8);
-  }
-
-  public toggleMinimap() {
-    this.minimapVisible = !this.minimapVisible;
-    const elem = document.getElementById('minimap-container');
-    if (elem) {
-      if (this.minimapVisible) elem.classList.remove('collapsed');
-      else elem.classList.add('collapsed');
-    }
   }
 
   public setLevelVisible(visible: boolean) {
@@ -1277,9 +1257,6 @@ export class MaxFlizGameEngine {
     this.rebuildPlayerMesh();
     this.sectorGates = [null, null, null, null];
     this.levelBounds = { minX: -58, maxX: 58, minZ: -18.2, maxZ: 18.2 };
-    this.minimapFrameCounter = 0;
-    const minimapTitle = document.querySelector('#minimap-container .minimap-title');
-    if (minimapTitle) minimapTitle.textContent = 'RADAR • ARENA SURVIVAL 120M';
     this.sectorGates.forEach((gate) => { if (gate) gate.visible = false; });
     this.scene.background = new THREE.Color(0x080f1c);
     this.applySectorLighting(4);
@@ -1688,7 +1665,7 @@ export class MaxFlizGameEngine {
     posts.instanceMatrix.needsUpdate = true;
     this.addSurvivalArenaInstance(posts);
 
-    // The visible rack footprint is also a real movement/minimap obstacle.
+    // The visible rack footprint remains a real movement and collision obstacle.
     // Gaps between the 15 m rack centres remain open as deliberate navigation routes.
     for (const side of sides) {
       for (const x of centers) {
@@ -2018,7 +1995,7 @@ export class MaxFlizGameEngine {
   private rollSurvivalUpgradeOptions(excluded: string[] = []): SurvivalUpgradeOption[] {
     const pool: SurvivalUpgradeOption[] = [
       { id: 'damage', icon: '🎯', title: 'WZMOCNIONA AMUNICJA', description: '+12% obrażeń wszystkich ataków operatora.' },
-      { id: 'rapid', icon: '⚡', title: 'RYTM ATAKU', description: 'Skrócenie czasu między atakami o 6%.' },
+      { id: 'rapid', icon: '⚡', title: 'RYTM ATAKU', description: 'Skrócenie czasu między atakami o 3%.' },
       { id: 'boots', icon: '👟', title: 'BUTY SPRINTU', description: '+6% prędkości poruszania się.' },
       { id: 'magnet', icon: '🧲', title: 'MAGNES XP', description: 'Znacznie większy zasięg przyciągania kryształów XP.' },
       { id: 'reinforced', icon: '⛑️', title: 'WZMOCNIONY KASK', description: '+1 maksymalny punkt zdrowia i natychmiastowe uzupełnienie.' },
@@ -6359,15 +6336,10 @@ export class MaxFlizGameEngine {
       this.currentActiveSector = newSector;
       this.currentLevelId = newSector;
       this.applySectorLighting(newSector);
-      const minimapTitle = document.querySelector('#minimap-container .minimap-title');
-      if (newSector === 1) {
-        if (minimapTitle) minimapTitle.textContent = 'SEKTOR A: MAGAZYN B4';
-      } else if (newSector === 2) {
-        if (minimapTitle) minimapTitle.textContent = 'SEKTOR B: SHOWROOM SPA';
+      if (newSector === 2) {
         this.emitFloatingToast('WKROCZONO DO SEKTORA B: SHOWROOM & SPA!', px, this.playerPos.y + 1.5, this.playerPos.z, 'vip');
         this.callbacks.onPerkDropBanner?.('SEKTOR B: SHOWROOM & SPA', '🛁', 'Punkt kontrolny odblokowany! Wykorzystaj wanny jako trampoliny!', '#ec4899');
       } else if (newSector === 3) {
-        if (minimapTitle) minimapTitle.textContent = 'SEKTOR C: TERMINAL VIP';
         this.emitFloatingToast('WKROCZONO DO SEKTORA C: TERMINAL PRZEŁADUNKOWY!', px, this.playerPos.y + 1.5, this.playerPos.z, 'combo');
         this.callbacks.onPerkDropBanner?.('SEKTOR C: TERMINAL PRZEŁADUNKOWY', '🚛', 'Ostatnia prosta do vana dostawczego! Pokonaj Zarząd!', '#f59e0b');
       }
@@ -9716,10 +9688,14 @@ export class MaxFlizGameEngine {
     this.handleMateuszPassive(2);
     if (this.gameMode === 'survival') {
       this.survivalKills++;
-      this.spawnSurvivalXpGem(e.x, e.y, e.z, e.maxHp >= 4 ? 3 : 1);
-      if (this.survivalKills % 8 === 0) {
+      const isShiftMilestone = this.survivalKills % 8 === 0;
+      const baseXpDrop = e.maxHp >= 4 ? 3 : 1;
+      // Merge the small milestone bonus into the normal gem instead of spawning
+      // two overlapping pickups at exactly the same coordinates.
+      this.spawnSurvivalXpGem(e.x, e.y, e.z, baseXpDrop + (isShiftMilestone ? 2 : 0));
+      if (isShiftMilestone) {
         this.spawnParticleRing(e.x, e.y + 0.7, e.z, 0x38bdf8);
-        this.emitFloatingToast('📦 NORMA ZMIANY WYROBIONA x8!', e.x, e.y + 1.8, e.z, 'combo');
+        this.emitFloatingToast('📦 NORMA ZMIANY x8 — BONUS +2 XP DO ZEBRANIA!', e.x, e.y + 1.8, e.z, 'combo');
       }
     }
 
@@ -10363,276 +10339,4 @@ export class MaxFlizGameEngine {
     }
   }
 
-  public renderMinimap(canvas: HTMLCanvasElement | null) {
-    if (!canvas || this.state !== 'playing' || !this.minimapVisible) return;
-    
-    // The caller already caps this renderer at 10 Hz; do not halve it again here.
-    this.minimapFrameCounter++;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const w = canvas.width;
-    const h = canvas.height;
-    ctx.clearRect(0, 0, w, h);
-
-    // Layered tactical map surface with a restrained technical grid.
-    const radarBg = ctx.createLinearGradient(0, 0, w, h);
-    radarBg.addColorStop(0, '#0b1b27');
-    radarBg.addColorStop(1, '#07121d');
-    ctx.fillStyle = radarBg;
-    ctx.fillRect(0, 0, w, h);
-    ctx.save();
-    ctx.strokeStyle = 'rgba(117, 166, 192, 0.09)';
-    ctx.lineWidth = 0.6;
-    for (let x = 10; x < w; x += 12) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
-    }
-    for (let y = 10; y < h; y += 12) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
-    }
-    ctx.restore();
-
-    const centerX = w / 2;
-    const centerY = h / 2;
-    const isSurvivalMap = this.gameMode === 'survival';
-    const mapCenterX = isSurvivalMap ? (this.levelBounds.minX + this.levelBounds.maxX) * 0.5 : this.playerPos.x;
-    const mapCenterZ = isSurvivalMap ? (this.levelBounds.minZ + this.levelBounds.maxZ) * 0.5 : this.playerPos.z;
-    const scale = isSurvivalMap
-      ? Math.min((w - 18) / (this.levelBounds.maxX - this.levelBounds.minX), (h - 18) / (this.levelBounds.maxZ - this.levelBounds.minZ))
-      : this.minimapZoomScale;
-    const playerMapX = centerX + (this.playerPos.x - mapCenterX) * scale;
-    const playerMapY = centerY + (this.playerPos.z - mapCenterZ) * scale;
-
-    // Survival uses a full-map tactical view; campaign retains the close-range rotating radar.
-    ctx.strokeStyle = 'rgba(107, 180, 211, 0.22)';
-    ctx.lineWidth = 0.9;
-    ctx.beginPath();
-    if (!isSurvivalMap) {
-      ctx.arc(centerX, centerY, w * 0.22, 0, Math.PI * 2);
-      ctx.arc(centerX, centerY, w * 0.42, 0, Math.PI * 2);
-    }
-    ctx.moveTo(centerX, 0); ctx.lineTo(centerX, h);
-    ctx.moveTo(0, centerY); ctx.lineTo(w, centerY);
-    ctx.stroke();
-    if (isSurvivalMap) {
-      const mapWidth = (this.levelBounds.maxX - this.levelBounds.minX) * scale;
-      const mapDepth = (this.levelBounds.maxZ - this.levelBounds.minZ) * scale;
-      ctx.strokeStyle = 'rgba(117, 211, 232, 0.85)';
-      ctx.lineWidth = 1.6;
-      ctx.strokeRect(centerX - mapWidth / 2, centerY - mapDepth / 2, mapWidth, mapDepth);
-    }
-
-    // 1. Level Platforms & Aisle Boundaries
-    ctx.fillStyle = 'rgba(37, 59, 73, 0.74)';
-    ctx.strokeStyle = 'rgba(127, 167, 189, 0.48)';
-    ctx.lineWidth = 0.9;
-
-    for (let i = 0; i < this.platforms.length; i++) {
-      const p = this.platforms[i];
-      const dx = (p.x - mapCenterX) * scale;
-      const dz = (p.z - mapCenterZ) * scale;
-      const pw = Math.max(3, p.width * scale);
-      const pd = Math.max(3, p.depth * scale);
-
-      const mx = centerX + dx - pw / 2;
-      const my = centerY + dz - pd / 2;
-
-      if (mx + pw >= 0 && mx <= w && my + pd >= 0 && my <= h) {
-        ctx.fillRect(mx, my, pw, pd);
-        ctx.strokeRect(mx, my, pw, pd);
-      }
-    }
-
-    if (isSurvivalMap) {
-      // Rack and pallet cover use a separate cool metal tone, clearly distinct from floors.
-      ctx.fillStyle = 'rgba(133, 157, 171, 0.88)';
-      ctx.strokeStyle = 'rgba(207, 224, 233, 0.76)';
-      ctx.lineWidth = 0.9;
-      for (const obstacle of this.survivalObstacles) {
-        const ox = centerX + (obstacle.x - mapCenterX) * scale;
-        const oy = centerY + (obstacle.z - mapCenterZ) * scale;
-        const ow = Math.max(3, obstacle.halfWidth * 2 * scale);
-        const oh = Math.max(3, obstacle.halfDepth * 2 * scale);
-        ctx.fillRect(ox - ow / 2, oy - oh / 2, ow, oh);
-        ctx.strokeRect(ox - ow / 2, oy - oh / 2, ow, oh);
-      }
-    }
-
-    if (isSurvivalMap) {
-      // Active hazards are amber markers; the radar gives a route warning before the player reaches them.
-      for (const hazard of this.hazards) {
-        if (!hazard.active) continue;
-        const hx = centerX + (hazard.x - mapCenterX) * scale;
-        const hy = centerY + (hazard.z - mapCenterZ) * scale;
-        if (hx < 0 || hx > w || hy < 0 || hy > h) continue;
-        const hazardColors: Record<HazardItem['type'], string> = {
-          forklift: '#f59e0b',
-          spill: '#eab308',
-          steam_faucet: '#67e8f9',
-          falling_lamp: '#fda4af',
-          conveyor: '#94a3b8',
-          stretch_barrier: '#f59e0b',
-          roller_gate: '#94a3b8',
-          cement_spill: '#cbd5e1',
-          laser_cutter: '#fb7185',
-          steam_geyser: '#67e8f9',
-          hydraulic_press: '#f59e0b',
-        };
-        const markerColor = hazardColors[hazard.type] || '#fbbf24';
-        const radiusX = Math.max(3, hazard.width * scale * 0.5);
-        const radiusY = Math.max(3, hazard.length * scale * 0.5);
-        ctx.fillStyle = markerColor;
-        ctx.globalAlpha = 0.12;
-        ctx.beginPath();
-        ctx.ellipse(hx, hy, Math.min(17, radiusX), Math.min(12, radiusY), 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 0.88;
-        ctx.strokeStyle = markerColor;
-        ctx.lineWidth = 1;
-        ctx.setLineDash([3, 2]);
-        ctx.beginPath();
-        ctx.ellipse(hx, hy, Math.min(17, radiusX), Math.min(12, radiusY), 0, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.beginPath();
-        ctx.moveTo(hx, hy - 3.2);
-        ctx.lineTo(hx + 3.2, hy);
-        ctx.lineTo(hx, hy + 3.2);
-        ctx.lineTo(hx - 3.2, hy);
-        ctx.closePath();
-        ctx.fillStyle = markerColor;
-        ctx.fill();
-        ctx.globalAlpha = 1;
-      }
-    }
-
-    // 2. Collectibles & VIP Orders
-    for (let i = 0; i < this.collectibles.length; i++) {
-      const col = this.collectibles[i];
-      if (col.collected) continue;
-      const dx = (col.x - mapCenterX) * scale;
-      const dz = (col.z - mapCenterZ) * scale;
-      const mx = centerX + dx;
-      const my = centerY + dz;
-
-      if (mx >= 0 && mx <= w && my >= 0 && my <= h) {
-        ctx.fillStyle = col.type === 'vip_item' || col.type === 'golden_cutter' ? '#ffd27b' : '#67d6f0';
-        ctx.beginPath();
-        ctx.arc(mx, my, col.type === 'vip_item' ? 4.5 : 3.0, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
-    // 3. Dropped Perk Crates
-    for (let i = 0; i < this.droppedPerks.length; i++) {
-      const perk = this.droppedPerks[i];
-      if (perk.collected) continue;
-      const dx = (perk.x - mapCenterX) * scale;
-      const dz = (perk.z - mapCenterZ) * scale;
-      const mx = centerX + dx;
-      const my = centerY + dz;
-
-      if (mx >= 0 && mx <= w && my >= 0 && my <= h) {
-        ctx.fillStyle = '#c3a1ff';
-        ctx.beginPath();
-        ctx.arc(mx, my, 4.0, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
-    // 4. Exit Gate (WYJŚCIE 🏁)
-    if (this.finishGatePos && !isSurvivalMap) {
-      const dx = (this.finishGatePos.x - mapCenterX) * scale;
-      const dz = (this.finishGatePos.z - mapCenterZ) * scale;
-      const mx = centerX + dx;
-      const my = centerY + dz;
-
-      ctx.fillStyle = '#64dda7';
-      ctx.beginPath();
-      ctx.arc(mx, my, 6.0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      ctx.fillStyle = '#4ade80';
-      ctx.font = '900 9px Google Sans, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('WYJŚCIE 🏁', mx, my - 8);
-    }
-
-    // 5. Enemies (Red markers / Alert Exclamation)
-    for (let i = 0; i < this.enemies.length; i++) {
-      const e = this.enemies[i];
-      if (e.state === 'defeated') continue;
-      const dx = (e.x - mapCenterX) * scale;
-      const dz = (e.z - mapCenterZ) * scale;
-      const mx = centerX + dx;
-      const my = centerY + dz;
-
-      if (mx >= -10 && mx <= w + 10 && my >= -10 && my <= h + 10) {
-        const isBoss = e.type === 'walczak' || e.type === 'krol_leto';
-        const isAggressive = e.state === 'chase' || e.state === 'charging';
-        const isRanged = e.type === 'handlowiec' || e.type === 'przedstawiciel_włoski' || e.type === 'inspector';
-        ctx.fillStyle = isBoss ? '#fb7185' : isAggressive ? '#ff6573' : isRanged ? '#f5b454' : '#d9829d';
-        const size = isBoss ? 6.5 : 4.0;
-
-        ctx.beginPath();
-        ctx.arc(mx, my, size, 0, Math.PI * 2);
-        ctx.fill();
-
-        if (isBoss) {
-          ctx.strokeStyle = '#ffe1a3';
-          ctx.lineWidth = 2;
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.arc(mx, my, size + 3, 0, Math.PI * 2);
-          ctx.strokeStyle = 'rgba(251,113,133,.36)';
-          ctx.lineWidth = 1;
-          ctx.stroke();
-        }
-
-        if (e.state === 'chase' || e.state === 'charging') {
-          ctx.fillStyle = '#facc15';
-          ctx.font = '900 11px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText('!', mx, my - size - 2);
-        }
-      }
-    }
-
-    // 6. Player Marker (Centered with direction indicator)
-    ctx.save();
-    ctx.translate(playerMapX, playerMapY);
-    ctx.rotate(this.playerRot);
-
-    ctx.shadowColor = 'rgba(98,198,232,.85)';
-    ctx.shadowBlur = 8;
-    ctx.fillStyle = '#74dcf2';
-    ctx.strokeStyle = '#f3fbff';
-    ctx.lineWidth = 1.5;
-
-    ctx.beginPath();
-    ctx.moveTo(0, -9);
-    ctx.lineTo(6, 6);
-    ctx.lineTo(0, 3);
-    ctx.lineTo(-6, 6);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.restore();
-
-    // Radar sweep originates from the operator in both modes.
-    const sweep = (performance.now() * 0.0018) % (Math.PI * 2);
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = 'rgba(98, 198, 232, 0.28)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(playerMapX, playerMapY);
-    ctx.lineTo(playerMapX + Math.cos(sweep) * (isSurvivalMap ? w * 0.42 : w * 0.45),
-      playerMapY + Math.sin(sweep) * (isSurvivalMap ? h * 0.42 : h * 0.45));
-    ctx.stroke();
-  }
 }
