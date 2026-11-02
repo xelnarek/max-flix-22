@@ -369,9 +369,11 @@ export class MaxFlizGameEngine {
   private readonly cameraTargetPosition = new THREE.Vector3();
   private readonly desiredLookAtPosition = new THREE.Vector3();
   private readonly cameraOcclusionRaycaster = new THREE.Raycaster();
+  private readonly cameraOcclusionHits: THREE.Intersection<THREE.Object3D>[] = [];
   private cameraOcclusionCooldown = 0;
+  private mobileShadowRefreshCooldown = 0;
   private readonly cameraOccluders: THREE.Mesh[] = [];
-  private readonly cameraOccluderMaterials = new Map<THREE.Mesh, { original: THREE.Material | THREE.Material[]; faded: THREE.Material | THREE.Material[]; originals: THREE.Material[]; fades: THREE.Material[] }>();
+  private readonly cameraOccluderMaterials = new Map<THREE.Mesh, { original: THREE.Material | THREE.Material[]; faded: THREE.Material | THREE.Material[]; originals: THREE.Material[]; fades: THREE.Material[]; isFaded: boolean }>();
   private cameraBossCheckCooldown = 0;
   private cameraBossTargetZoom = 1.0;
   private bossHudRefreshCooldown = 0;
@@ -839,7 +841,11 @@ export class MaxFlizGameEngine {
     this.dirLight = new THREE.DirectionalLight(0xffe8c9, 3.25);
     this.dirLight.position.set(16, 26, 14);
     this.dirLight.castShadow = true;
-    
+    // Mobile shadow maps are refreshed at a controlled cadence while the
+    // operator and warehouse light follow each other, avoiding a full shadow
+    // render at the display's 60–120 Hz rate during dense Survival waves.
+    this.dirLight.shadow.autoUpdate = !isMobile;
+
     // Sharp contact shadows matter for character readability. Keep mobile at
     // 1024² (Poco F6 class hardware) and reserve 2048² for desktop.
     const shadowMapSize = isMobile ? 1024 : 2048;
@@ -942,9 +948,6 @@ export class MaxFlizGameEngine {
       }
       if (e.code === 'Minus' || e.code === 'NumpadSubtract') {
         this.zoomOutCamera();
-      }
-      if (e.code === 'KeyN') {
-        this.toggleMinimap();
       }
       if (e.code === 'KeyT') {
         if (this.state === 'playing') {
@@ -1400,6 +1403,30 @@ export class MaxFlizGameEngine {
     aisleDashes.castShadow = false;
     aisleDashes.receiveShadow = false;
     this.addSurvivalArenaInstance(aisleDashes);
+
+    const dockGuideMaterial = new THREE.MeshStandardMaterial({
+      color: 0x527f91,
+      emissive: 0x153b4d,
+      emissiveIntensity: 0.18,
+      roughness: 0.66,
+      metalness: 0.16,
+    });
+    const dockGuideGeometry = new THREE.BoxGeometry(1.45, 0.018, 0.075);
+    const dockGuides = new THREE.InstancedMesh(dockGuideGeometry, dockGuideMaterial, 24);
+    let dockGuideIndex = 0;
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < 12; i++) {
+        dashTransform.position.set(-51 + i * 9.25, 0.014, side * 14.4);
+        dashTransform.rotation.set(0, 0, 0);
+        dashTransform.scale.set(1, 1, 1);
+        dashTransform.updateMatrix();
+        dockGuides.setMatrixAt(dockGuideIndex++, dashTransform.matrix);
+      }
+    }
+    dockGuides.instanceMatrix.needsUpdate = true;
+    dockGuides.castShadow = false;
+    dockGuides.receiveShadow = false;
+    this.addSurvivalArenaInstance(dockGuides);
 
     // High-bay ceiling luminaires are one instanced batch, not dozens of separate meshes.
     const fixtureMaterial = new THREE.MeshStandardMaterial({
@@ -2126,7 +2153,7 @@ export class MaxFlizGameEngine {
     mesh.material = faded;
     mesh.userData.cameraOccluder = true;
     this.cameraOccluders.push(mesh);
-    this.cameraOccluderMaterials.set(mesh, { original, faded, originals, fades });
+    this.cameraOccluderMaterials.set(mesh, { original, faded, originals, fades, isFaded: false });
   }
 
   private updateCameraOcclusion(dt: number) {
@@ -2147,21 +2174,35 @@ export class MaxFlizGameEngine {
     this.cameraOcclusionRaycaster.set(this.camera.position, direction);
     this.cameraOcclusionRaycaster.near = 0.05;
     this.cameraOcclusionRaycaster.far = Math.max(0.05, distance - 0.42);
-    const hitMeshes = new Set(
-      this.cameraOcclusionRaycaster.intersectObjects(this.cameraOccluders, false)
-        .map((hit) => hit.object as THREE.Mesh)
-    );
+    const hits = this.cameraOcclusionHits;
+    hits.length = 0;
+    this.cameraOcclusionRaycaster.intersectObjects(this.cameraOccluders, false, hits);
 
     for (const [mesh, state] of this.cameraOccluderMaterials) {
-      const shouldFade = hitMeshes.has(mesh);
-      state.fades.forEach((material, index) => {
+      let shouldFade = false;
+      for (let i = 0; i < hits.length; i++) {
+        if (hits[i].object === mesh) {
+          shouldFade = true;
+          break;
+        }
+      }
+      if (shouldFade === state.isFaded) continue;
+
+      state.isFaded = shouldFade;
+      for (let index = 0; index < state.fades.length; index++) {
+        const material = state.fades[index];
         const original = state.originals[index];
-        material.transparent = shouldFade ? true : original.transparent;
-        material.opacity = shouldFade ? Math.min(original.opacity, 0.18) : original.opacity;
-        material.depthWrite = shouldFade ? false : original.depthWrite;
-        material.needsUpdate = true;
-      });
+        const transparent = shouldFade ? true : original.transparent;
+        const depthWrite = shouldFade ? false : original.depthWrite;
+        const opacity = shouldFade ? Math.min(original.opacity, 0.18) : original.opacity;
+        const shaderVariantChanged = material.transparent !== transparent;
+        material.transparent = transparent;
+        material.opacity = opacity;
+        material.depthWrite = depthWrite;
+        if (shaderVariantChanged) material.needsUpdate = true;
+      }
     }
+    hits.length = 0;
   }
 
   private restoreCameraOccluders() {
@@ -2172,6 +2213,7 @@ export class MaxFlizGameEngine {
     }
     this.cameraOccluderMaterials.clear();
     this.cameraOccluders.length = 0;
+    this.cameraOcclusionHits.length = 0;
     this.cameraOcclusionCooldown = 0;
   }
 
@@ -2256,6 +2298,15 @@ export class MaxFlizGameEngine {
     };
     const accent = palette[enemy.type] || 0x38bdf8;
     const isBoss = enemy.type === 'walczak' || enemy.type === 'krol_leto' || enemy.type === 'bosman_krakow';
+    const canCastShadow = (isBoss || enemy.type === 'sebix_m') && !this.isHandheldViewport;
+    // A horde of shadow-casting skinned/part-based models is expensive on mobile.
+    // Keep boss silhouettes elevated on desktop; handhelds use the operator and
+    // warehouse lighting for depth rather than hundreds of moving shadow casters.
+    const applyShadowBudget = () => root.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return;
+      child.castShadow = canCastShadow;
+      child.receiveShadow = false;
+    });
     const scale = isBoss ? 1.35 : 1;
     const armorMat = new THREE.MeshStandardMaterial({ color: 0x26384b, roughness: 0.68, metalness: 0.42 });
     const accentMat = new THREE.MeshStandardMaterial({ color: accent, roughness: 0.48, metalness: 0.22, emissive: accent, emissiveIntensity: 0.10 });
@@ -2284,6 +2335,7 @@ export class MaxFlizGameEngine {
         sensorEye.position.set(0, 0.51, 0.29);
         root.add(...sidePods, topFin, sensorEye);
       }
+      applyShadowBudget();
       return;
     }
 
@@ -2363,6 +2415,7 @@ export class MaxFlizGameEngine {
       shoulderBeacon.castShadow = false;
       root.add(shoulderBeacon);
     }
+    applyShadowBudget();
   }
 
   // Retain a low-poly industrial look on hard edges, but do not facet the
@@ -2493,6 +2546,33 @@ export class MaxFlizGameEngine {
     }
     perimeterPosts.instanceMatrix.needsUpdate = true;
     this.addSurvivalArenaInstance(perimeterPosts);
+
+    // Colour-coded floor lane ticks make the full Campaign mega-map easier to
+    // read at the higher camera angle. One instanced batch avoids decal draw calls.
+    const floorGuideMaterial = new THREE.MeshStandardMaterial({
+      color: 0xc48b3e,
+      emissive: 0x4a2d12,
+      emissiveIntensity: 0.12,
+      roughness: 0.76,
+      metalness: 0.08,
+    });
+    const floorGuides = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(3.8, 0.02, 0.07),
+      floorGuideMaterial,
+      bayXs.length * 2,
+    );
+    index = 0;
+    for (const x of bayXs) for (const z of [-12.6, 12.6]) {
+      dummy.position.set(x + 8, 0.012, z);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      floorGuides.setMatrixAt(index++, dummy.matrix);
+    }
+    floorGuides.instanceMatrix.needsUpdate = true;
+    floorGuides.castShadow = false;
+    floorGuides.receiveShadow = false;
+    this.addSurvivalArenaInstance(floorGuides);
   }
 
   private buildSectorGate(x: number, targetSector: 2 | 3) {
@@ -4503,7 +4583,6 @@ export class MaxFlizGameEngine {
   }
 
   public update(dt: number) {
-    this.updateLootCrates(dt);
     if (this.state !== 'playing' && this.state !== 'title') return;
 
     let effectiveDt = dt;
@@ -4516,6 +4595,7 @@ export class MaxFlizGameEngine {
     this.updatePerkTimers(simDt);
 
     if (this.state === 'playing') {
+      this.updateLootCrates(simDt);
       if (this.invulnerableTimer > 0) this.invulnerableTimer -= simDt;
       if (this.marcinReclamationTimer > 0) this.marcinReclamationTimer = Math.max(0, this.marcinReclamationTimer - simDt);
       if (this.grzesiekCrushTimer > 0) this.grzesiekCrushTimer = Math.max(0, this.grzesiekCrushTimer - simDt);
@@ -6127,8 +6207,17 @@ export class MaxFlizGameEngine {
     const enemy = this.enemies[this.enemies.length - 1];
     if (!enemy) return;
     if (enemy.mesh) {
-      this.applyEnemyVisualPolish(enemy);
-      this.applyStorybookStyle(enemy.mesh);
+      const majorEnemy = enemy.type === 'walczak' || enemy.type === 'krol_leto'
+        || enemy.type === 'bosman_krakow' || enemy.type === 'sebix_m';
+      const detailDistance = this.isHandheldViewport ? 15 : 20;
+      const nearEnoughForDetail = Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z) <= detailDistance;
+      if (majorEnemy || nearEnoughForDetail) {
+        this.applyEnemyVisualPolish(enemy);
+        this.applyStorybookStyle(enemy.mesh);
+      } else {
+        enemy.mesh.userData.enemyVisualPolishPending = true;
+        this.applyStorybookStyle(enemy.mesh);
+      }
     }
     if (enemy.type !== 'architect') {
       enemy.z = z;
@@ -7318,6 +7407,13 @@ export class MaxFlizGameEngine {
       const dx = this.playerPos.x - e.x;
       const dz = this.playerPos.z - e.z;
       const distToPlayer = Math.hypot(dx, dz);
+
+      if (e.mesh.userData.enemyVisualPolishPending
+        && distToPlayer <= (this.isHandheldViewport ? 15 : 20)) {
+        delete e.mesh.userData.enemyVisualPolishPending;
+        this.applyEnemyVisualPolish(e);
+        this.applyStorybookStyle(e.mesh);
+      }
 
       // Distance culling: skip heavy updates for distant non-boss enemies
       if (distToPlayer > 26.0 && e.type !== 'walczak' && e.type !== 'krol_leto' && e.type !== 'sebix_m') {
@@ -10103,6 +10199,13 @@ export class MaxFlizGameEngine {
       this.dirLight.position.set(this.playerPos.x + 14, 28, this.playerPos.z + 12);
       this.dirLight.target.position.copy(this.playerPos);
       this.dirLight.target.updateMatrixWorld();
+      if (this.isHandheldViewport) {
+        this.mobileShadowRefreshCooldown -= dt;
+        if (this.mobileShadowRefreshCooldown <= 0) {
+          this.dirLight.shadow.needsUpdate = true;
+          this.mobileShadowRefreshCooldown = 1 / 24;
+        }
+      }
     }
 
     // Dynamic Shader Uniform Updates for Depth of Field and Stencil Outline

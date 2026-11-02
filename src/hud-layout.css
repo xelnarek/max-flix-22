@@ -344,8 +344,8 @@
 
   #game-shell:not(.survival-mode) #hud-top .boss-hud-bar {
     position: fixed !important;
-    top: calc(200px + env(safe-area-inset-top)) !important;
-    left: calc(max(6px, env(safe-area-inset-left)) + clamp(104px, 29vw, 118px) + 8px) !important;
+    top: calc(126px + env(safe-area-inset-top)) !important;
+    left: max(6px, env(safe-area-inset-left)) !important;
     right: max(6px, env(safe-area-inset-right)) !important;
     width: auto !important;
     max-width: none !important;
@@ -584,8 +584,8 @@
 
   #game-shell.survival-mode #hud-top .boss-hud-bar {
     position: fixed !important;
-    top: calc(166px + env(safe-area-inset-top)) !important;
-    left: calc(max(6px, env(safe-area-inset-left)) + clamp(104px, 29vw, 118px) + 8px) !important;
+    top: calc(112px + env(safe-area-inset-top)) !important;
+    left: max(6px, env(safe-area-inset-left)) !important;
     right: max(6px, env(safe-area-inset-right)) !important;
     width: auto !important;
     max-width: none !important;
@@ -734,5 +734,127 @@
   }
   #game-shell.survival-mode #hud-top #btn-top-sound {
     display: none !important;
+  }
+}
+
+
+/* The tactical radar was removed from both modes. Keep legacy layout rules inert. */
+#minimap-container,
+.minimap-container {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Final Survival camera rail override: keep every essential control visible on
+   the Poco F6 class portrait width, including the continuous zoom slider. */
+@media (max-width: 900px), (pointer: coarse) {
+  #game-shell.survival-mode #hud-top:not(.hidden) .hud-top-quick-controls {
+    display: flex !important;
+    position: fixed !important;
+    top: max(4px, env(safe-area-inset-top)) !important;
+    left: auto !important;
+    right: max(6px, env(safe-area-inset-right)) !important;
+    width: auto !important;
+    max-width: calc(100vw - 132px) !important;
+    min-width: 0 !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 4px !important;
+    padding: 4px !important;
+    z-index: 120 !important;
+    pointer-events: auto !important;
+  }
+
+  #game-shell.survival-mode #hud-top:not(.hidden) .cam-zoom-slider-container {
+    display: flex !important;
+    flex: 1 1 88px !important;
+    width: clamp(58px, 22vw, 94px) !important;
+    min-width: 58px !important;
+    max-width: 94px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    padding: 0 6px !important;
+    gap: 4px !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+
+  #game-shell.survival-mode #hud-top:not(.hidden) .cam-zoom-slider {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    touch-action: pan-x !important;
+    pointer-events: auto !important;
+  }
+
+  #game-shell.survival-mode #hud-top:not(.hidden) #btn-top-zoom-in,
+  #game-shell.survival-mode #hud-top:not(.hidden) #btn-top-zoom-out {
+    display: none !important;
+  }
+
+  #game-shell.survival-mode #hud-top:not(.hidden) #btn-top-camera {
+    display: inline-flex !important;
+    flex: 0 0 36px !important;
+    width: 36px !important;
+    min-width: 36px !important;
+    min-height: 34px !important;
+    height: 34px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+
+  #game-shell.survival-mode #hud-top:not(.hidden) #btn-top-sound,
+  #game-shell.survival-mode #hud-top:not(.hidden) #btn-top-pause {
+    display: inline-flex !important;
+    flex: 0 0 29px !important;
+    width: 29px !important;
+    min-width: 29px !important;
+    min-height: 32px !important;
+    height: 32px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+
+  #game-shell.survival-mode #hud-top:not(.hidden) .btn-ctrl-label {
+    display: none !important;
+  }
+
+  #game-shell.survival-mode #hud-top .boss-hud-bar {
+    top: calc(112px + env(safe-area-inset-top)) !important;
+    left: max(6px, env(safe-area-inset-left)) !important;
+    right: max(6px, env(safe-area-inset-right)) !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+}
+
+@media (max-width: 350px) {
+  #game-shell.survival-mode #hud-top:not(.hidden) .hud-top-quick-controls {
+    max-width: calc(100vw - 120px) !important;
+    gap: 3px !important;
+  }
+
+  #game-shell.survival-mode #hud-top:not(.hidden) .cam-zoom-slider-container {
+    min-width: 54px !important;
+    width: 58px !important;
+  }
+
+  #game-shell.survival-mode #hud-top:not(.hidden) #btn-top-camera {
+    flex-basis: 32px !important;
+    width: 32px !important;
+    min-width: 32px !important;
+  }
+
+  #game-shell.survival-mode #hud-top:not(.hidden) #btn-top-sound,
+  #game-shell.survival-mode #hud-top:not(.hidden) #btn-top-pause {
+    flex-basis: 26px !important;
+    width: 26px !important;
+    min-width: 26px !important;
   }
 }

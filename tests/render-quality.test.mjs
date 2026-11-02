@@ -31,3 +31,16 @@ test('recovery advances one tier at a time rather than jumping to full resolutio
   assert.equal(getAdaptiveRenderScale(60, true, 0.8, 6000), 0.9);
   assert.equal(getAdaptiveRenderScale(60, true, 0.9, 6000), 1);
 });
+
+
+test('mobile Survival lowers resolution earlier during dense waves', () => {
+  assert.equal(getAdaptiveRenderScale(55, true, 1, 0, true), 0.9);
+  assert.equal(getAdaptiveRenderScale(47, true, 1, 0, true), 0.8);
+  assert.equal(getAdaptiveRenderScale(39, true, 1, 0, true), 0.72);
+});
+
+test('mobile Survival resolution recovers only after eight stable seconds', () => {
+  assert.equal(getAdaptiveRenderScale(60, true, 0.72, 7999, true), 0.72);
+  assert.equal(getAdaptiveRenderScale(60, true, 0.72, 8000, true), 0.8);
+  assert.equal(getAdaptiveRenderScale(60, true, 0.8, 8000, true), 0.9);
+});

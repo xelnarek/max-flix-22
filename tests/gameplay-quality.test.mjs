@@ -120,7 +120,7 @@ test('camera fades only tagged perimeter walls that intersect the camera-to-play
   const game = await read('../src/game.ts');
   assert.match(game, /private registerCameraOccluder\(mesh: THREE\.Mesh\)/);
   assert.match(game, /private updateCameraOcclusion\(dt: number\)/);
-  assert.match(game, /cameraOcclusionRaycaster\.intersectObjects\(this\.cameraOccluders, false\)/);
+  assert.match(game, /cameraOcclusionRaycaster\.intersectObjects\(this\.cameraOccluders, false, hits\)/);
   assert.match(game, /this\.cameraOcclusionCooldown = 0\.075/);
   assert.match(game, /Math\.min\(original\.opacity, 0\.18\)/);
   assert.match(game, /this\.restoreCameraOccluders\(\)/);
@@ -187,17 +187,17 @@ test('Survival start locks duplicate taps before awaiting shared asset readiness
 });
 
 
-test('mobile campaign and Survival HUD elements occupy separate touch-screen lanes', async () => {
+test('Campaign and Survival HUD no longer reserve or render a minimap lane', async () => {
   const [layout, html] = await Promise.all([
     read('../src/hud-layout.css'), read('../index.html')
   ]);
   assert.match(html, /href="\/src\/hud-layout\.css"/);
-  assert.match(layout, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
-  assert.match(layout, /#game-shell:not\(\.survival-mode\) #minimap-container[\s\S]*?top: calc\(200px/);
-  assert.match(layout, /#game-shell:not\(\.survival-mode\) #hud-top \.boss-hud-bar[\s\S]*?left: calc\(max\(6px/);
+  assert.doesNotMatch(html, /id="minimap-container"|id="minimap-canvas"/);
+  assert.match(layout, /#minimap-container,[\s\S]*?\.minimap-container\s*\{[\s\S]*?display: none !important/);
+  assert.match(layout, /#game-shell:not\(\.survival-mode\) #hud-top \.boss-hud-bar[\s\S]*?left: max\(6px/);
+  assert.match(layout, /#game-shell\.survival-mode #hud-top \.boss-hud-bar[\s\S]*?top: calc\(112px/);
   assert.match(layout, /#game-shell\.survival-mode #hud-top \.hud-top-stats-row\s*\{\s*display: none !important/);
   assert.match(layout, /#game-shell\.survival-mode #survival-hud[\s\S]*?top: calc\(42px/);
-  assert.match(layout, /#game-shell\.survival-mode #minimap-container[\s\S]*?top: calc\(166px/);
   assert.match(layout, /#game-shell\.survival-mode #btn-touch-attack\s*\{\s*display: none !important/);
   assert.match(layout, /#fps-badge\s*\{\s*display: none !important/);
   assert.match(layout, /#game-shell \.touch-actions-zone \.touch-action-btn[\s\S]*?width: clamp\(54px/);
@@ -236,19 +236,42 @@ test('Campaign boss proximity UI is throttled and only updates when its state ch
   assert.match(game, /signature !== this\.lastBossHudSignature/);
 });
 
-test('minimap DOM visibility and layout are checked only at its 10 Hz refresh boundary', async () => {
-  const app = await read('../src/index.ts');
+test('minimap is fully removed from the HUD and no longer consumes main-loop time', async () => {
+  const [app, html, game] = await Promise.all([
+    read('../src/index.ts'), read('../index.html'), read('../src/game.ts')
+  ]);
   const tickStart = app.indexOf('private tick(dt: number)');
   const tickEnd = app.indexOf('onSelectEnd(', tickStart);
   assert.ok(tickStart >= 0 && tickEnd > tickStart);
   const tick = app.slice(tickStart, tickEnd);
-  assert.match(app, /private minimapCanvasElement: HTMLCanvasElement \| null = null/);
-  assert.match(app, /private minimapContainerElement: HTMLElement \| null = null/);
-  assert.match(tick, /if \(now - this\.lastMinimapRenderAt >= 100\)/);
-  assert.match(tick, /minimapContainer\.getClientRects\(\)\.length > 0/);
-  assert.doesNotMatch(tick, /document\.getElementById\('minimap-canvas'\)/);
+  assert.doesNotMatch(html, /minimap-container|minimap-canvas/);
+  assert.doesNotMatch(app, /minimapCanvasElement|minimapContainerElement|renderMinimap/);
+  assert.doesNotMatch(tick, /getClientRects\(\)|minimap/);
+  assert.doesNotMatch(game, /e\.code === 'KeyN'/);
 });
 
+
+
+
+
+test('Survival crowd rendering defers distant model attachments and limits shadow casters', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /enemy\.mesh\.userData\.enemyVisualPolishPending = true/);
+  assert.match(game, /e\.mesh\.userData\.enemyVisualPolishPending[\s\S]*?distToPlayer <= \(this\.isHandheldViewport \? 15 : 20\)/);
+  assert.match(game, /const canCastShadow = \(isBoss \|\| enemy\.type === 'sebix_m'\) && !this\.isHandheldViewport/);
+  assert.match(game, /child\.castShadow = canCastShadow/);
+  assert.match(game, /this\.dirLight\.shadow\.autoUpdate = !isMobile/);
+  assert.match(game, /this\.mobileShadowRefreshCooldown = 1 \/ 24/);
+});
+
+test('camera wall fades reuse raycast results and only update materials on state changes', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /cameraOcclusionHits: THREE\.Intersection<THREE\.Object3D>\[\]/);
+  assert.match(game, /intersectObjects\(this\.cameraOccluders, false, hits\)/);
+  assert.match(game, /if \(shouldFade === state\.isFaded\) continue/);
+  assert.match(game, /if \(shaderVariantChanged\) material\.needsUpdate = true/);
+  assert.doesNotMatch(game, /const hitMeshes = new Set\(/);
+});
 
 test('primary attacks use character-specific range-based projectile lifetimes', async () => {
   const [game, balance] = await Promise.all([read('../src/game.ts'), read('../src/combatBalance.ts')]);

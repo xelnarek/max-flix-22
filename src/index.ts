@@ -86,14 +86,11 @@ class MaxFlizScene extends xb.Script {
   private smoothedFps: number = 60;
   private adaptiveRenderScale: number = 1;
   private adaptiveRecoverySince: number = 0;
-  private lastMinimapRenderAt: number = 0;
   private pausedForVisibility: boolean = false;
   private resetTouchJoystick: (() => void) | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private lastAdaptiveQualityAt: number = 0;
   private hasAppliedInitialViewport = false;
-  private minimapCanvasElement: HTMLCanvasElement | null = null;
-  private minimapContainerElement: HTMLElement | null = null;
   private selectiveBloom: SelectiveBloomPipeline | null = null;
   private restoreSelectiveBloomOverride: (() => void) | null = null;
 
@@ -240,8 +237,6 @@ class MaxFlizScene extends xb.Script {
     const perkBulldozerTimer = document.getElementById('perk-bulldozer-timer');
 
     const container = document.getElementById('game-canvas-container');
-    this.minimapCanvasElement = document.getElementById('minimap-canvas') as HTMLCanvasElement | null;
-    this.minimapContainerElement = document.getElementById('minimap-container');
     if (container && typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(scheduleResize);
       this.resizeObserver.observe(container);
@@ -1350,16 +1345,6 @@ class MaxFlizScene extends xb.Script {
       if (zoomSlider) zoomSlider.value = this.engine.getCamZoomFactor().toString();
     });
 
-    bindTap(document.getElementById('btn-minimap-zoom-in'), () => {
-      this.engine.zoomInMinimap();
-    });
-    bindTap(document.getElementById('btn-minimap-zoom-out'), () => {
-      this.engine.zoomOutMinimap();
-    });
-    bindTap(document.getElementById('btn-minimap-toggle'), () => {
-      this.engine.toggleMinimap();
-    });
-
     const topSoundIcon = document.getElementById('top-sound-icon');
     const soundIcon = document.getElementById('sound-icon');
     const updateSoundIcons = () => {
@@ -1822,7 +1807,10 @@ class MaxFlizScene extends xb.Script {
         const previousOverride = core.renderSceneOverride;
         const renderOverride: NonNullable<typeof core.renderSceneOverride> = (activeRenderer, activeScene, activeCamera) => {
           if (this.selectiveBloom === pipeline && activeRenderer instanceof THREE.WebGLRenderer && activeScene === scene) {
-            pipeline.render(activeCamera, this.currentFps, performance.now());
+            // Selective bloom adds a second scene pass. Keep Campaign polish,
+            // but bypass that pass in the crowd-heavy Survival mode.
+            const renderFps = this.engine?.getGameMode() === 'survival' ? 0 : this.currentFps;
+            pipeline.render(activeCamera, renderFps, performance.now());
           } else if (previousOverride) {
             previousOverride(activeRenderer, activeScene, activeCamera);
           } else {
@@ -1910,14 +1898,17 @@ class MaxFlizScene extends xb.Script {
     const width = Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth));
     const height = Math.max(1, Math.round(window.visualViewport?.height || window.innerHeight));
     const isMobile = width < 900 || ('ontouchstart' in window);
+    const isSurvival = this.engine?.getGameMode() === 'survival';
 
-    // Degrade promptly when combat load rises; restore detail only after a
-    // sustained recovery. This prevents visible resolution pumping during waves.
-    const recoveryFloor = this.adaptiveRenderScale < 0.76
-      ? (isMobile ? 37 : 36)
-      : this.adaptiveRenderScale < 0.85
-        ? (isMobile ? 45 : 43)
-        : (isMobile ? 57 : 54);
+    // Survival reaches the heaviest simultaneous crowd/effect load, so mobile
+    // resolution steps down earlier and takes longer to recover between waves.
+    const recoveryFloor = isMobile && isSurvival
+      ? (this.adaptiveRenderScale < 0.76 ? 43 : this.adaptiveRenderScale < 0.85 ? 51 : 59)
+      : this.adaptiveRenderScale < 0.76
+        ? (isMobile ? 37 : 36)
+        : this.adaptiveRenderScale < 0.85
+          ? (isMobile ? 45 : 43)
+          : (isMobile ? 57 : 54);
     if (this.smoothedFps >= recoveryFloor) {
       if (this.adaptiveRecoverySince === 0) this.adaptiveRecoverySince = now;
     } else {
@@ -1929,7 +1920,8 @@ class MaxFlizScene extends xb.Script {
       this.smoothedFps,
       isMobile,
       this.adaptiveRenderScale,
-      stableRecoveryMs
+      stableRecoveryMs,
+      isSurvival
     );
     if (nextScale > this.adaptiveRenderScale) {
       // Each recovery is one tier; the next tier must earn its own stable window.
@@ -1939,7 +1931,7 @@ class MaxFlizScene extends xb.Script {
     }
     this.adaptiveRenderScale = nextScale;
 
-    const deviceCap = isMobile ? 1.65 : 2.0;
+    const deviceCap = isMobile ? (isSurvival ? 1.42 : 1.65) : 2.0;
     const targetDpr = Math.max(0.85, Math.min(window.devicePixelRatio || 1, deviceCap) * nextScale);
 
     // Drawing-buffer changes are deliberately infrequent and only happen at
@@ -1978,23 +1970,6 @@ class MaxFlizScene extends xb.Script {
         // Pixel intro owns a throttled Canvas RAF; skip the hidden 3D game update.
       } else if (this.engine) {
         this.engine.update(dt);
-        const now = performance.now();
-        // Check layout visibility only at the 10 Hz radar refresh boundary.
-        // getClientRects() can force layout, so do not call it on every game frame.
-        if (now - this.lastMinimapRenderAt >= 100) {
-          const minimapCanvas = this.minimapCanvasElement;
-          const minimapContainer = this.minimapContainerElement;
-          const minimapIsVisible = !!minimapCanvas
-            && !!minimapContainer
-            && minimapContainer.isConnected
-            && !minimapContainer.classList.contains('collapsed')
-            && minimapContainer.getClientRects().length > 0
-            && this.engine.getGameState() === 'playing';
-          if (minimapIsVisible && minimapCanvas) {
-            this.engine.renderMinimap(minimapCanvas);
-          }
-          this.lastMinimapRenderAt = now;
-        }
       }
       (this as any)._updateToasts?.(dt);
     } catch (err) {
