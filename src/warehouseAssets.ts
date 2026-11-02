@@ -1002,8 +1002,10 @@ export function createCharacterModel(def: CharacterDef): {
   applyIndustrialPbr(pantsMat, 0.016);
   applyIndustrialPbr(bootMat, 0.012);
 
+  // Smooth the operator's close-up silhouettes with a small segment increase;
+  // no new scene objects are introduced and only one player rig is active.
   // 1. Torso Body
-  const bodyGeo = new THREE.CapsuleGeometry(0.18, 0.10, 4, 12);
+  const bodyGeo = new THREE.CapsuleGeometry(0.18, 0.10, 4, 16);
   const body = new THREE.Mesh(bodyGeo, clothesMat);
   body.scale.z = 0.72;
   body.position.y = 0.54;
@@ -1011,7 +1013,7 @@ export function createCharacterModel(def: CharacterDef): {
   group.add(body);
 
   // High-Vis Safety Vest
-  const vestGeo = new THREE.CapsuleGeometry(0.19, 0.08, 4, 12);
+  const vestGeo = new THREE.CapsuleGeometry(0.19, 0.08, 4, 16);
   const vest = new THREE.Mesh(vestGeo, vestMat);
   vest.scale.z = 0.74;
   vest.position.y = 0.56;
@@ -1063,7 +1065,7 @@ export function createCharacterModel(def: CharacterDef): {
   group.add(stripeH, stripeV1, stripeV2);
 
   // 2. Head with Face Details
-  const headGeo = new THREE.SphereGeometry(0.145, 16, 12);
+  const headGeo = new THREE.SphereGeometry(0.145, 20, 14);
   const head = new THREE.Mesh(headGeo, skinMat);
   head.position.y = 0.94;
   head.castShadow = true;
@@ -1075,10 +1077,10 @@ export function createCharacterModel(def: CharacterDef): {
   const eyePupil = new THREE.MeshBasicMaterial({ color: 0x172033 });
   const browMat = new THREE.MeshStandardMaterial({ color: def.id === 'piotr' ? 0x59616a : 0x34251e, roughness: 0.92 });
   [-0.07, 0.07].forEach((ex, index) => {
-    const ew = new THREE.Mesh(new THREE.SphereGeometry(0.032, 10, 8), eyeWhite);
+    const ew = new THREE.Mesh(new THREE.SphereGeometry(0.032, 12, 10), eyeWhite);
     ew.scale.set(1.0, 0.86, 0.58);
     ew.position.set(ex, 0.96, 0.132);
-    const ep = new THREE.Mesh(new THREE.SphereGeometry(0.015, 8, 6), eyePupil);
+    const ep = new THREE.Mesh(new THREE.SphereGeometry(0.015, 10, 8), eyePupil);
     ep.position.set(ex + (index === 0 ? 0.003 : -0.003), 0.96, 0.153);
     const brow = new THREE.Mesh(new THREE.BoxGeometry(0.072, 0.014, 0.022), browMat);
     brow.position.set(ex, 1.012, 0.132);
@@ -1087,12 +1089,12 @@ export function createCharacterModel(def: CharacterDef): {
   });
 
   [-1, 1].forEach((side) => {
-    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.046, 10, 8), skinMat);
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.046, 12, 10), skinMat);
     ear.scale.set(0.58, 0.9, 0.72);
     ear.position.set(side * 0.137, 0.925, -0.008);
     group.add(ear);
   });
-  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.037, 10, 8), skinMat);
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.037, 12, 10), skinMat);
   nose.scale.set(0.78, 1.05, 0.72);
   nose.position.set(0, 0.925, 0.151);
   group.add(nose);
@@ -1110,7 +1112,7 @@ export function createCharacterModel(def: CharacterDef): {
 
   if (def.id === 'grzesiek' || def.id === 'dawid' || def.id === 'mateusz' || def.id === 'piotr') {
     const beardMat = new THREE.MeshStandardMaterial({ color: beardColors[def.id], roughness: 0.98 });
-    const beard = new THREE.Mesh(new THREE.SphereGeometry(0.105, 12, 8), beardMat);
+    const beard = new THREE.Mesh(new THREE.SphereGeometry(0.105, 16, 10), beardMat);
     const beardHeight = def.id === 'grzesiek' ? 0.42 : def.id === 'dawid' ? 0.20 : 0.32;
     beard.scale.set(0.86, beardHeight, 0.54);
     beard.position.set(0, 0.805, 0.058);
@@ -1123,13 +1125,13 @@ export function createCharacterModel(def: CharacterDef): {
   const addHardHat = (helmetColor: number, badgeColor: number) => {
     const helmetMat = new THREE.MeshStandardMaterial({ color: helmetColor, roughness: 0.34, metalness: 0.08 });
     const dome = new THREE.Mesh(
-      new THREE.SphereGeometry(0.18, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2),
+      new THREE.SphereGeometry(0.18, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2),
       helmetMat
     );
     dome.scale.y = 0.72;
     dome.position.y = 1.045;
     dome.castShadow = true;
-    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.03, 20), helmetMat);
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.03, 24), helmetMat);
     brim.scale.set(1.02, 1, 1.06);
     brim.position.set(0, 1.045, 0.015);
     const badge = new THREE.Mesh(
@@ -1166,7 +1168,7 @@ export function createCharacterModel(def: CharacterDef): {
   } else if (def.id === 'mateusz') {
     // Mateusz Designer Cap backwards
     const capMat = new THREE.MeshStandardMaterial({ color: 0x7c3aed, roughness: 0.5 });
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.17, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), capMat);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.17, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), capMat);
     cap.scale.y = 0.62;
     cap.position.y = 1.045;
     const visor = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.026, 0.15), capMat);
@@ -1185,7 +1187,7 @@ export function createCharacterModel(def: CharacterDef): {
   }
 
   // 3. Legs & Leather Steel-toe Boots
-  const legGeo = new THREE.CapsuleGeometry(0.065, 0.21, 3, 10);
+  const legGeo = new THREE.CapsuleGeometry(0.065, 0.21, 3, 12);
   const leftLeg = new THREE.Mesh(legGeo, pantsMat);
   leftLeg.scale.z = 1.12;
   leftLeg.position.set(-0.1, 0.19, 0);
@@ -1196,7 +1198,7 @@ export function createCharacterModel(def: CharacterDef): {
   rightLeg.position.set(0.1, 0.19, 0);
   rightLeg.castShadow = true;
 
-  const bootGeo = new THREE.SphereGeometry(0.1, 12, 8);
+  const bootGeo = new THREE.SphereGeometry(0.1, 14, 10);
   const leftBoot = new THREE.Mesh(bootGeo, bootMat);
   leftBoot.scale.set(0.86, 0.54, 1.32);
   leftBoot.position.set(0, -0.15, 0.045);
