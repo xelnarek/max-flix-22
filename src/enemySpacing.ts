@@ -87,14 +87,23 @@ export function calculateEnemySeparationVector(
 export class EnemySpatialIndex<T extends EnemySpacingActor = EnemySpacingActor> {
   private readonly cellSize: number;
   private readonly cells = new Map<string, T[]>();
+  private readonly bucketPool: T[][] = [];
   private readonly queryBuffer: T[] = [];
+  private nextReusableBucket = 0;
 
   constructor(cellSize = 4) {
     this.cellSize = Number.isFinite(cellSize) ? Math.max(1, cellSize) : 4;
   }
 
   rebuild(actors: readonly T[]): void {
+    this.bucketPool.length = 0;
+    for (const bucket of this.cells.values()) {
+      bucket.length = 0;
+      this.bucketPool.push(bucket);
+    }
     this.cells.clear();
+    this.nextReusableBucket = 0;
+
     for (const actor of actors) {
       if (actor.state === "defeated" || !Number.isFinite(actor.x) || !Number.isFinite(actor.z)) continue;
       const cellX = Math.floor(actor.x / this.cellSize);
@@ -102,7 +111,7 @@ export class EnemySpatialIndex<T extends EnemySpacingActor = EnemySpacingActor> 
       const key = this.cellKey(cellX, cellZ);
       let bucket = this.cells.get(key);
       if (!bucket) {
-        bucket = [];
+        bucket = this.bucketPool[this.nextReusableBucket++] ?? [];
         this.cells.set(key, bucket);
       }
       bucket.push(actor);
@@ -122,7 +131,9 @@ export class EnemySpatialIndex<T extends EnemySpacingActor = EnemySpacingActor> 
     for (let cellX = minCellX; cellX <= maxCellX; cellX++) {
       for (let cellZ = minCellZ; cellZ <= maxCellZ; cellZ++) {
         const bucket = this.cells.get(this.cellKey(cellX, cellZ));
-        if (bucket) this.queryBuffer.push(...bucket);
+        if (bucket) {
+          for (const actor of bucket) this.queryBuffer.push(actor);
+        }
       }
     }
 
