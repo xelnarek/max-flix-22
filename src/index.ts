@@ -2053,7 +2053,7 @@ const injectThemeStyles = () => {
     .hud-layer {
       pointer-events: none !important;
     }
-    .hud-layer button, .hud-layer .minimap-container, .hud-cluster, .cam-zoom-slider-container, .cam-zoom-slider {
+    .hud-layer button, .hud-cluster, .cam-zoom-slider-container, .cam-zoom-slider {
       pointer-events: auto !important;
     }
     #asset-loader-overlay {
