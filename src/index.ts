@@ -86,14 +86,11 @@ class MaxFlizScene extends xb.Script {
   private smoothedFps: number = 60;
   private adaptiveRenderScale: number = 1;
   private adaptiveRecoverySince: number = 0;
-  private lastMinimapRenderAt: number = 0;
   private pausedForVisibility: boolean = false;
   private resetTouchJoystick: (() => void) | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private lastAdaptiveQualityAt: number = 0;
   private hasAppliedInitialViewport = false;
-  private minimapCanvasElement: HTMLCanvasElement | null = null;
-  private minimapContainerElement: HTMLElement | null = null;
   private selectiveBloom: SelectiveBloomPipeline | null = null;
   private restoreSelectiveBloomOverride: (() => void) | null = null;
 
@@ -240,8 +237,6 @@ class MaxFlizScene extends xb.Script {
     const perkBulldozerTimer = document.getElementById('perk-bulldozer-timer');
 
     const container = document.getElementById('game-canvas-container');
-    this.minimapCanvasElement = document.getElementById('minimap-canvas') as HTMLCanvasElement | null;
-    this.minimapContainerElement = document.getElementById('minimap-container');
     if (container && typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(scheduleResize);
       this.resizeObserver.observe(container);
@@ -1350,15 +1345,6 @@ class MaxFlizScene extends xb.Script {
       if (zoomSlider) zoomSlider.value = this.engine.getCamZoomFactor().toString();
     });
 
-    bindTap(document.getElementById('btn-minimap-zoom-in'), () => {
-      this.engine.zoomInMinimap();
-    });
-    bindTap(document.getElementById('btn-minimap-zoom-out'), () => {
-      this.engine.zoomOutMinimap();
-    });
-    bindTap(document.getElementById('btn-minimap-toggle'), () => {
-      this.engine.toggleMinimap();
-    });
 
     const topSoundIcon = document.getElementById('top-sound-icon');
     const soundIcon = document.getElementById('sound-icon');
@@ -1978,23 +1964,6 @@ class MaxFlizScene extends xb.Script {
         // Pixel intro owns a throttled Canvas RAF; skip the hidden 3D game update.
       } else if (this.engine) {
         this.engine.update(dt);
-        const now = performance.now();
-        // Check layout visibility only at the 10 Hz radar refresh boundary.
-        // getClientRects() can force layout, so do not call it on every game frame.
-        if (now - this.lastMinimapRenderAt >= 100) {
-          const minimapCanvas = this.minimapCanvasElement;
-          const minimapContainer = this.minimapContainerElement;
-          const minimapIsVisible = !!minimapCanvas
-            && !!minimapContainer
-            && minimapContainer.isConnected
-            && !minimapContainer.classList.contains('collapsed')
-            && minimapContainer.getClientRects().length > 0
-            && this.engine.getGameState() === 'playing';
-          if (minimapIsVisible && minimapCanvas) {
-            this.engine.renderMinimap(minimapCanvas);
-          }
-          this.lastMinimapRenderAt = now;
-        }
       }
       (this as any)._updateToasts?.(dt);
     } catch (err) {
@@ -2078,7 +2047,7 @@ const injectThemeStyles = () => {
     .hud-layer {
       pointer-events: none !important;
     }
-    .hud-layer button, .hud-layer .minimap-container, .hud-cluster, .cam-zoom-slider-container, .cam-zoom-slider {
+    .hud-layer button, .hud-cluster, .cam-zoom-slider-container, .cam-zoom-slider {
       pointer-events: auto !important;
     }
     #asset-loader-overlay {
