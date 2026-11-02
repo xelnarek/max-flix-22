@@ -2175,7 +2175,7 @@ async function startApp() {
         const r = xb.core.renderer as THREE.WebGLRenderer;
         const isMobileDevice = window.innerWidth < 900 || ('ontouchstart' in window);
         r.outputColorSpace = THREE.SRGBColorSpace;
-        r.setPixelRatio(Math.max(0.85, Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.65 : 2.0) * this.adaptiveRenderScale));
+        r.setPixelRatio(Math.max(0.85, Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.65 : 2.0)));
         r.toneMapping = THREE.ACESFilmicToneMapping;
         r.toneMappingExposure = 1.08;
         r.shadowMap.enabled = true;
