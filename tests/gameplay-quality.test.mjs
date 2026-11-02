@@ -128,7 +128,7 @@ test('camera fades only tagged perimeter walls that intersect the camera-to-play
   assert.ok((game.match(/this\.registerCameraOccluder\(backWall\)/g) || []).length >= 3);
 });
 
-test('touch Survival HUD wins the final CSS cascade and keeps the camera rail off the playfield', async () => {
+test('touch Survival HUD keeps the zoom slider and 3D camera switch accessible', async () => {
   const [css, finalHudCss, html] = await Promise.all([
     read('../src/index.css'), read('../src/hud-layout.css'), read('../index.html')
   ]);
@@ -138,10 +138,26 @@ test('touch Survival HUD wins the final CSS cascade and keeps the camera rail of
   assert.match(css, /top: calc\(98px \+ env\(safe-area-inset-top\)\)/);
   assert.match(finalHudCss, /Final Survival mobile HUD owner/);
   assert.match(finalHudCss, /#game-shell\.survival-mode \.survival-hud\s*\{[\s\S]*?right: max\(8px, env\(safe-area-inset-right\)\) !important/);
-  assert.match(finalHudCss, /#game-shell\.survival-mode #hud-top \.cam-zoom-slider-container\s*\{\s*display: none !important/);
+  assert.match(finalHudCss, /#game-shell\.survival-mode #hud-top \.hud-top-quick-controls\s*\{[\s\S]*?position: fixed !important/);
+  assert.match(finalHudCss, /#game-shell\.survival-mode #hud-top \.cam-zoom-slider-container,[\s\S]*?#game-shell\.survival-mode #hud-top #btn-top-camera\s*\{\s*display: flex !important/);
+  assert.match(finalHudCss, /#game-shell\.survival-mode #hud-top #btn-top-event\s*\{\s*display: none !important/);
+  const legacyHiddenRuleIndex = finalHudCss.indexOf('display: none !important;', finalHudCss.indexOf('/* The old touch toolbar'));
+  const visibleRailRuleIndex = finalHudCss.indexOf('/* Survival camera rail');
+  assert.ok(legacyHiddenRuleIndex >= 0 && visibleRailRuleIndex > legacyHiddenRuleIndex, 'the camera rail override must come after the legacy hidden rule');
+  assert.match(finalHudCss.slice(visibleRailRuleIndex), /#game-shell\.survival-mode #hud-top \.cam-zoom-slider-container,[\s\S]*?#game-shell\.survival-mode #hud-top #btn-top-camera\s*\{\s*display: flex !important/);
+  assert.match(finalHudCss, /@media \(max-width: 390px\)[\s\S]*?#game-shell\.survival-mode #hud-top #btn-top-camera/);
   assert.ok(html.indexOf('visual-polish.css') < html.indexOf('hud-layout.css'), 'final touch HUD override must load after legacy visual-polish rules');
 });
 
+test('camera zoom controls stay synchronized with manual zoom and viewport defaults', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /private syncCameraZoomControl\(\)/);
+  assert.match(game, /this\.camZoomFactor = Math\.min\(2\.2, this\.camZoomFactor \+ 0\.15\)/);
+  assert.match(game, /if \(!Number\.isFinite\(val\)\) return/);
+  assert.match(game, /this\.hasManualCameraZoom = true/);
+  assert.match(game, /if \(!this\.hasManualCameraZoom\)/);
+  assert.match(game, /this\.syncCameraZoomControl\(\)/);
+});
 test('Survival menu copy stays synchronized with the actual 60-second wave clock', async () => {
   const [game, html] = await Promise.all([read('../src/game.ts'), read('../index.html')]);
   assert.match(game, /const nextWave = 1 \+ Math\.floor\(this\.survivalElapsed \/ 60\)/);

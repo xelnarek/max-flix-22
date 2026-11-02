@@ -56,3 +56,37 @@ test('all five character bios have expanded beyond the short menu summary', asyn
     assert.ok(bio[1].length > 260, 'bio not sufficiently expanded for ' + id);
   }
 });
+
+
+test('warehouse map textures keep bounded high-detail anisotropic filtering on mobile and desktop', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /const targetAnisotropy = Math.max\(1, Math.min\(maxAnisotropy, isMobile \? 10 : 16\)\)/);
+  assert.match(game, /this\.levelRoot\.traverse\(\(object\) =>/);
+  assert.match(game, /texture\.anisotropy = targetAnisotropy/);
+  assert.match(game, /texture\.needsUpdate = true/);
+});
+
+
+test('enemy model accents use smoother curves without adding draw-call objects', async () => {
+  const game = await read('../src/game.ts');
+  const polishStart = game.indexOf('private applyEnemyVisualPolish(enemy: EnemyItem)');
+  const polishEnd = game.indexOf('private applyStorybookStyle(root: THREE.Object3D)', polishStart);
+  assert.ok(polishStart >= 0 && polishEnd > polishStart, 'enemy visual polish method should exist');
+  const polish = game.slice(polishStart, polishEnd);
+  assert.match(polish, /new THREE\.SphereGeometry\(0\.13 \* scale, 14, 10\)/);
+  assert.match(polish, /new THREE\.SphereGeometry\(0\.13 \* scale, 18, 12\)/);
+  assert.match(polish, /new THREE\.SphereGeometry\(0\.18 \* scale, 16, 12\)/);
+  assert.match(polish, /without adding extra objects or draw calls/);
+});
+
+
+test('playable operator models use refined curved surfaces at close camera range', async () => {
+  const source = await read('../src/warehouseAssets.ts');
+  const start = source.indexOf('export function createCharacterModel(def: CharacterDef)');
+  const end = source.indexOf(String.fromCharCode(10) + 'export function ', start + 10);
+  assert.ok(start >= 0 && end > start, 'playable character model factory should exist');
+  const model = source.slice(start, end);
+  assert.match(model, /new THREE\.SphereGeometry\(0\.145, 20, 14\)/);
+  assert.match(model, /new THREE\.CapsuleGeometry\(0\.18, 0\.10, 4, 16\)/);
+  assert.match(model, /new THREE\.SphereGeometry\(0\.105, 16, 10\)/);
+});
