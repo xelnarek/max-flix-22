@@ -5,6 +5,8 @@ import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from 
 import {
   getAbilityCooldownSeconds,
   getBaseAttackCooldownSeconds,
+  getPiotrBoomerangMaxLifeSeconds,
+  getPrimaryAttackLifetimeSeconds,
   getSurvivalWeaponReloadSeconds,
   getWeaponRecoveryAfterUpgrade,
   SURVIVAL_WEAPON_DISPATCH_COOLDOWN_SECONDS,
@@ -8025,6 +8027,10 @@ export class MaxFlizGameEngine {
         }
       }
 
+      const previousProjectileX = p.mesh.position.x;
+      const previousProjectileY = p.mesh.position.y;
+      const previousProjectileZ = p.mesh.position.z;
+
       if (p.orbiting) {
         p.orbitAngle = (p.orbitAngle || 0) + (p.orbitSpeed || 2.5) * dt;
         const orbitAngle = p.orbitAngle;
@@ -8064,13 +8070,33 @@ export class MaxFlizGameEngine {
       let destroyProj = false;
       const berserkMult = (this.activePerks.kfcBerserk || 0) > 0 ? 2 : 1;
       const baseDmg = this.scaleSurvivalDamage(p.damage ?? (this.charDef.id === 'dawid' ? 2 : 1)) * berserkMult;
+      const segmentX = p.mesh.position.x - previousProjectileX;
+      const segmentY = p.mesh.position.y - previousProjectileY;
+      const segmentZ = p.mesh.position.z - previousProjectileZ;
+      const segmentLengthSq = segmentX * segmentX + segmentY * segmentY + segmentZ * segmentZ;
 
       for (const e of this.enemies) {
         if (e.state === 'defeated') continue;
         if (p.hitIds && p.hitIds.has(e.id)) continue;
 
-        const dist = Math.hypot(p.mesh.position.x - e.x, p.mesh.position.z - e.z);
-        if (dist < 1.35 && Math.abs(p.mesh.position.y - e.y) < 1.35) {
+        // Test the closest point on this frame's movement segment, not only
+        // the projectile endpoint. Fast shots remain reliable on lower-FPS phones.
+        const projection = segmentLengthSq > 0.000001
+          ? THREE.MathUtils.clamp(
+              ((e.x - previousProjectileX) * segmentX +
+                (e.y - previousProjectileY) * segmentY +
+                (e.z - previousProjectileZ) * segmentZ) / segmentLengthSq,
+              0,
+              1
+            )
+          : 0;
+        const closestX = previousProjectileX + segmentX * projection;
+        const closestY = previousProjectileY + segmentY * projection;
+        const closestZ = previousProjectileZ + segmentZ * projection;
+        const offsetX = closestX - e.x;
+        const offsetZ = closestZ - e.z;
+        if (offsetX * offsetX + offsetZ * offsetZ < 1.35 * 1.35 &&
+          Math.abs(closestY - e.y) < 1.35) {
           p.hitIds?.add(e.id);
 
           // Check if guard has active shield
@@ -8481,7 +8507,7 @@ export class MaxFlizGameEngine {
       this.projectiles.push({
         mesh: spell,
         vel: forward.clone().multiplyScalar(14.2),
-        life: 1.35,
+        life: getPrimaryAttackLifetimeSeconds('marcin', 14.2),
         damage: isThirdCombo ? 2 : 1,
         pierce: isThirdCombo ? 2 : 1,
         aoeRadius: isThirdCombo ? 1.55 : 1.0,
@@ -8518,7 +8544,7 @@ export class MaxFlizGameEngine {
       this.projectiles.push({
         mesh: dumbbell,
         vel: forward.clone().multiplyScalar(14.6),
-        life: 1.35,
+        life: getPrimaryAttackLifetimeSeconds('grzesiek', 14.6),
         damage: isThirdCombo ? 3 : 2,
         pierce: isThirdCombo ? 3 : 1,
         stunDuration: 0.65,
@@ -8546,7 +8572,7 @@ export class MaxFlizGameEngine {
       this.projectiles.push({
         mesh: wrapRoll,
         vel: forward.clone().multiplyScalar(14.8),
-        life: 1.4,
+        life: getPrimaryAttackLifetimeSeconds('dawid', 14.8),
         damage: isThirdCombo ? 2 : 1,
         pierce: isThirdCombo ? 3 : 2,
         slowOnHit: true,
@@ -8576,7 +8602,7 @@ export class MaxFlizGameEngine {
       this.projectiles.push({
         mesh: taserDart,
         vel: forward.clone().multiplyScalar(19.5),
-        life: 1.15,
+        life: getPrimaryAttackLifetimeSeconds('mateusz', 19.5),
         damage: isThirdCombo ? 2 : 1,
         pierce: 1,
         slowOnHit: true,
@@ -8626,8 +8652,8 @@ export class MaxFlizGameEngine {
       this.projectiles.push({
         mesh: wrench,
         vel: forward.clone().multiplyScalar(22.5),
-        life: 1.9,
-        maxLife: 1.9,
+        life: getPiotrBoomerangMaxLifeSeconds(22.5),
+        maxLife: getPiotrBoomerangMaxLifeSeconds(22.5),
         damage: isThirdCombo ? 3 : 2,
         pierce: isThirdCombo ? 4 : 2,
         boomerang: true,
