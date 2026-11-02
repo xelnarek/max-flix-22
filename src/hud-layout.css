@@ -450,40 +450,93 @@
     font-size: 9px !important;
   }
 
-  /* Keep only essential quick controls under the Survival readout. */
+  /* Survival camera rail: keep zoom and 3D view controls reachable without
+     occupying the operator/arena HUD lane. Event is intentionally campaign-only. */
   #game-shell.survival-mode #hud-top .hud-top-quick-controls {
     display: flex !important;
-    position: relative !important;
-    top: auto !important;
+    position: fixed !important;
+    top: max(5px, env(safe-area-inset-top)) !important;
     left: auto !important;
-    right: auto !important;
+    right: max(6px, env(safe-area-inset-right)) !important;
     width: auto !important;
-    max-width: none !important;
+    max-width: calc(100vw - 136px) !important;
     min-width: 0 !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
     margin: 0 !important;
-    padding: 0 !important;
-    gap: 4px !important;
-    border: 0 !important;
-    border-radius: 0 !important;
-    background: transparent !important;
-    box-shadow: none !important;
+    padding: 4px !important;
+    gap: 3px !important;
+    border: 1px solid rgba(125, 211, 252, .24) !important;
+    border-radius: 9px !important;
+    background: rgba(5, 16, 29, .92) !important;
+    box-shadow: 0 7px 18px rgba(0, 0, 0, .30) !important;
     z-index: 82 !important;
+    pointer-events: auto !important;
   }
 
   #game-shell.survival-mode #hud-top .cam-zoom-slider-container,
   #game-shell.survival-mode #hud-top #btn-top-zoom-in,
   #game-shell.survival-mode #hud-top #btn-top-zoom-out,
-  #game-shell.survival-mode #hud-top #btn-top-event,
   #game-shell.survival-mode #hud-top #btn-top-camera {
+    display: flex !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+
+  #game-shell.survival-mode #hud-top .cam-zoom-slider-container {
+    flex: 1 1 78px !important;
+    width: clamp(62px, 18vw, 82px) !important;
+    min-width: 58px !important;
+    max-width: 82px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    box-sizing: border-box !important;
+    padding: 0 5px !important;
+    gap: 4px !important;
+    border: 1px solid rgba(125, 211, 252, .24) !important;
+    border-radius: 7px !important;
+    background: rgba(8, 25, 39, .98) !important;
+  }
+
+  #game-shell.survival-mode #hud-top .cam-zoom-slider {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    accent-color: #55c8ef !important;
+    touch-action: pan-x !important;
+  }
+
+  #game-shell.survival-mode #hud-top .top-icon-btn,
+  #game-shell.survival-mode #hud-top #btn-top-camera {
+    display: inline-flex !important;
+    flex: 0 0 30px !important;
+    width: 30px !important;
+    min-width: 30px !important;
+    min-height: 32px !important;
+    height: 32px !important;
+    padding: 2px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 7px !important;
+    pointer-events: auto !important;
+  }
+
+  #game-shell.survival-mode #hud-top #btn-top-camera {
+    flex-basis: 34px !important;
+    width: 34px !important;
+    min-width: 34px !important;
+  }
+
+  #game-shell.survival-mode #hud-top #btn-top-event {
     display: none !important;
   }
 
   #game-shell.survival-mode #hud-top #btn-top-sound,
   #game-shell.survival-mode #hud-top #btn-top-pause {
     display: inline-flex !important;
-    flex: 0 0 31px !important;
-    width: 31px !important;
-    min-width: 31px !important;
+    flex: 0 0 28px !important;
+    width: 28px !important;
+    min-width: 28px !important;
     min-height: 30px !important;
     height: 30px !important;
     padding: 2px !important;
@@ -648,5 +701,38 @@
 @media (max-height: 560px) and (pointer: coarse) {
   #game-shell .dialogue-side-container {
     bottom: max(78px, calc(env(safe-area-inset-bottom) + 64px)) !important;
+  }
+}
+
+
+/* Narrow phones: keep the zoom slider and explicit 3D camera switch visible.
+   The +/- step buttons are redundant here and yield room for sound and pause. */
+@media (max-width: 390px) {
+  #game-shell.survival-mode #hud-top .hud-top-quick-controls {
+    max-width: calc(100vw - 128px) !important;
+    gap: 3px !important;
+  }
+  #game-shell.survival-mode #hud-top #btn-top-zoom-in,
+  #game-shell.survival-mode #hud-top #btn-top-zoom-out {
+    display: none !important;
+  }
+  #game-shell.survival-mode #hud-top .cam-zoom-slider-container {
+    flex: 1 1 58px !important;
+    width: 58px !important;
+    min-width: 54px !important;
+  }
+  #game-shell.survival-mode #hud-top #btn-top-camera {
+    flex-basis: 32px !important;
+    width: 32px !important;
+    min-width: 32px !important;
+  }
+}
+
+@media (max-width: 350px) {
+  #game-shell.survival-mode #hud-top .hud-top-quick-controls {
+    max-width: calc(100vw - 112px) !important;
+  }
+  #game-shell.survival-mode #hud-top #btn-top-sound {
+    display: none !important;
   }
 }
