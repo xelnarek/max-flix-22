@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { clampHorizontalPosition } from './arenaBounds.ts';
+import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoint } from './enemySpacing.ts';
+import { createEnemyHitReaction, getEnemyHitPulse } from './enemyCombatFeedback.ts';
 import { isWithinBossImpactRadius } from './combatTelegraphs.ts';
 import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
 import {
@@ -615,6 +617,7 @@ export class MaxFlizGameEngine {
     exploded: boolean;
   }[] = [];
   private enemies: EnemyItem[] = [];
+  private readonly enemySpatialIndex = new EnemySpatialIndex<EnemyItem>(4.0);
   private enemyProjectiles: {
     mesh: THREE.Mesh;
     vel: THREE.Vector3;
@@ -4627,7 +4630,7 @@ export class MaxFlizGameEngine {
       let hitCount = 0;
       for (const enemy of this.enemies) {
         if (enemy.state === 'defeated' || Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z) > radius) continue;
-        enemy.hp -= weaponDamage;
+        this.damageEnemy(enemy, weaponDamage);
         enemy.stunTimer = Math.max(enemy.stunTimer, weapon.evolved ? 1.8 : 1.1);
         enemy.state = 'stunned';
         hitCount++;
@@ -5966,7 +5969,7 @@ export class MaxFlizGameEngine {
       if (distance < nearest) { nearest = distance; target = enemy; }
     }
     if (!target) return;
-    target.hp -= 1;
+    this.damageEnemy(target, 1);
     this.spawnParticleRing(target.x, target.y + 0.6, target.z, 0x22d3ee);
     this.emitFloatingToast('⚡ DRON PIORUN: IMPULS!', target.x, target.y + 1.25, target.z, 'perk');
     sound.playElectricalSparks();
@@ -6034,7 +6037,10 @@ export class MaxFlizGameEngine {
   }
 
   private getSurvivalSpawnPoint(): { x: number; z: number } {
-    // Sample several perimeter positions and reject cargo stacks / racks before accepting a spawn.
+    // Sample the arena perimeter, reject rack/cargo intersections, then prefer
+    // a clear arrival lane. During dense waves, select the least crowded valid
+    // point instead of repeatedly placing new actors on top of one another.
+    const candidates: { x: number; z: number }[] = [];
     for (let attempt = 0; attempt < 12; attempt++) {
       const angle = Math.random() * Math.PI * 2;
       const radius = 18 + Math.random() * 5;
@@ -6052,8 +6058,14 @@ export class MaxFlizGameEngine {
         Math.abs(x - obstacle.x) < obstacle.halfWidth + 1.2 &&
         Math.abs(z - obstacle.z) < obstacle.halfDepth + 1.2
       );
-      if (!blocked) return { x, z };
+      if (!blocked) candidates.push({ x, z });
     }
+
+    const spacedSpawn = chooseSpacedSpawnPoint(candidates, this.enemies, 3.2);
+    if (spacedSpawn) return spacedSpawn;
+
+    // Preserve a safe, bounded fallback when all sampled positions land inside
+    // obstacles or the perimeter is fully congested.
     return {
       x: THREE.MathUtils.clamp(this.playerPos.x - 22, this.levelBounds.minX + 2.5, this.levelBounds.maxX - 2.5),
       z: THREE.MathUtils.clamp(this.playerPos.z + 16, this.levelBounds.minZ + 1.5, this.levelBounds.maxZ - 1.5),
@@ -6826,7 +6838,7 @@ export class MaxFlizGameEngine {
         for (const enemy of this.enemies) {
           if (enemy.state === 'defeated' || enemy.stunTimer > 0) continue;
           if (Math.abs(enemy.x - h.x) < h.width * 0.5 - 0.15 && Math.abs(enemy.z - h.z) < 0.9) {
-            enemy.hp -= 1;
+            this.damageEnemy(enemy, 1, h.x, h.z);
             enemy.stunTimer = 0.95;
             enemy.state = 'stunned';
             this.emitFloatingToast('⚙️ PRASA ROLEK -1 HP!', enemy.x, enemy.y + 1.0, enemy.z, 'damage');
@@ -6851,7 +6863,7 @@ export class MaxFlizGameEngine {
         for (const e of this.enemies) {
           if (e.state === 'defeated' || e.stunTimer > 0) continue;
           if (Math.abs(e.x - h.x) < 0.65 && Math.abs(e.z - (h.z + bladeZ)) < 0.75) {
-            e.hp -= 1;
+            this.damageEnemy(e, 1, h.x, h.z + bladeZ);
             e.stunTimer = 0.8;
             this.emitFloatingToast('⚡ GILOTYNA CNC -1 HP!', e.x, e.y + 1.0, e.z, 'damage');
             if (e.hp <= 0 && e.type !== 'walczak' && e.type !== 'krol_leto') {
@@ -6946,7 +6958,7 @@ export class MaxFlizGameEngine {
           for (const e of this.enemies) {
             if (e.state === 'defeated') continue;
             if (Math.abs(e.x - h.x) < 1.2 && Math.abs(e.z - h.z) < 1.2 && e.stunTimer <= 0) {
-              e.hp -= 3;
+              this.damageEnemy(e, 3, h.x, h.z);
               e.stunTimer = 2.5;
               this.emitFloatingToast('💥 ZMIAŻDŻONY PRASĄ -3 HP!', e.x, e.y + 1.2, e.z, 'damage');
               if (e.hp <= 0 && e.type !== 'walczak' && e.type !== 'krol_leto') {
@@ -6992,7 +7004,7 @@ export class MaxFlizGameEngine {
             if (e.state === 'defeated') return;
             const edist = Math.hypot(e.x - b.x, e.z - b.z);
             if (edist < 5.2) {
-              e.hp = Math.max(0, e.hp - 3);
+              this.damageEnemy(e, 3, b.x, b.z);
               e.stunTimer = 3.5;
               e.state = 'stunned';
               this.emitFloatingToast('💥 -3 HP!', e.x, e.y + 1.2, e.z, 'damage');
@@ -7063,20 +7075,10 @@ export class MaxFlizGameEngine {
       steerZ = -Math.sin(angle);
     }
 
-    let separationX = 0;
-    let separationZ = 0;
-    for (const other of this.enemies) {
-      if (other.id === enemy.id || other.state === 'defeated') continue;
-      const dx = enemy.x - other.x;
-      const dz = enemy.z - other.z;
-      const d2 = dx * dx + dz * dz;
-      if (d2 > 0.01 && d2 < 6.76) {
-        const d = Math.sqrt(d2);
-        const force = (2.6 - d) / (2.6 * d);
-        separationX += dx * force;
-        separationZ += dz * force;
-      }
-    }
+    const nearbyEnemies = this.enemySpatialIndex.query(enemy.x, enemy.z, 4.1);
+    const separation = calculateEnemySeparationVector(enemy, nearbyEnemies, 2.6);
+    const separationX = separation.x;
+    const separationZ = separation.z;
 
     let avoidX = 0;
     let avoidZ = 0;
@@ -7108,6 +7110,13 @@ export class MaxFlizGameEngine {
 
     steerX += separationX * 3.0 + avoidX * 2.2;
     steerZ += separationZ * 3.0 + avoidZ * 2.2;
+    const isTelegraphingRangedBoss = enemy.chargeTimer !== undefined &&
+      (enemy.type === 'bosman_krakow' || (enemy.type === 'agv_robot' && enemy.name.includes('AGV-9 SENTINEL')));
+    if (isTelegraphingRangedBoss) {
+      // Keep the emitter at the origin shown by the locked attack lane.
+      steerX = 0;
+      steerZ = 0;
+    }
     const steerMagnitude = Math.hypot(steerX, steerZ) || 1;
     steerX /= steerMagnitude;
     steerZ /= steerMagnitude;
@@ -7128,6 +7137,71 @@ export class MaxFlizGameEngine {
       this.emitFloatingToast(enemy.type === 'zombie_pracownik' ? '🍗!' : '!', enemy.x, enemy.y + 1.25, enemy.z, 'damage');
     } else if (!engaged) {
       enemy.alerted = false;
+    }
+  }
+
+  private damageEnemy(
+    enemy: EnemyItem,
+    amount: number,
+    sourceX = this.playerPos.x,
+    sourceZ = this.playerPos.z,
+  ): number {
+    if (enemy.state === 'defeated' || !Number.isFinite(amount) || amount <= 0) return enemy.hp;
+    enemy.hp = Math.max(0, enemy.hp - amount);
+    this.triggerEnemyHitReaction(enemy, amount, sourceX, sourceZ);
+    return enemy.hp;
+  }
+
+  private triggerEnemyHitReaction(enemy: EnemyItem, damage: number, sourceX: number, sourceZ: number): void {
+    if (!enemy.mesh?.scale) return;
+    const isBoss = enemy.type === 'walczak' || enemy.type === 'krol_leto' || enemy.type === 'bosman_krakow' || enemy.type === 'sebix_m';
+    const reaction = createEnemyHitReaction(enemy.x, enemy.z, sourceX, sourceZ, damage, isBoss);
+    if (!enemy.hitBaseScale) {
+      enemy.hitBaseScale = {
+        x: enemy.mesh.scale.x,
+        y: enemy.mesh.scale.y,
+        z: enemy.mesh.scale.z,
+      };
+    }
+    enemy.hitReactTimer = Math.max(enemy.hitReactTimer || 0, reaction.duration);
+    enemy.hitReactDuration = reaction.duration;
+    enemy.hitReactStrength = Math.max(enemy.hitReactStrength || 0, reaction.strength);
+    enemy.hitRecoilX = (enemy.hitRecoilX || 0) + reaction.impulseX;
+    enemy.hitRecoilZ = (enemy.hitRecoilZ || 0) + reaction.impulseZ;
+  }
+
+  private updateEnemyHitReaction(enemy: EnemyItem, dt: number): void {
+    if (!enemy.mesh) return;
+
+    const timer = Math.max(0, (enemy.hitReactTimer || 0) - dt);
+    enemy.hitReactTimer = timer;
+    if (timer > 0 && enemy.hitBaseScale) {
+      const pulse = getEnemyHitPulse(timer, enemy.hitReactDuration || 0.21);
+      const squash = pulse * (enemy.hitReactStrength || 0.08);
+      enemy.mesh.scale.set(
+        enemy.hitBaseScale.x * (1 + squash * 0.45),
+        enemy.hitBaseScale.y * (1 - squash),
+        enemy.hitBaseScale.z * (1 + squash * 0.45),
+      );
+    } else if (enemy.hitBaseScale) {
+      enemy.mesh.scale.set(enemy.hitBaseScale.x, enemy.hitBaseScale.y, enemy.hitBaseScale.z);
+      enemy.hitBaseScale = undefined;
+      enemy.hitReactStrength = 0;
+    }
+
+    const recoilX = enemy.hitRecoilX || 0;
+    const recoilZ = enemy.hitRecoilZ || 0;
+    if (Math.abs(recoilX) + Math.abs(recoilZ) > 0.001) {
+      enemy.x += recoilX * dt;
+      enemy.z += recoilZ * dt;
+      const damping = Math.exp(-8.5 * dt);
+      enemy.hitRecoilX = recoilX * damping;
+      enemy.hitRecoilZ = recoilZ * damping;
+      if (Math.abs(enemy.hitRecoilX) + Math.abs(enemy.hitRecoilZ) < 0.025) {
+        enemy.hitRecoilX = 0;
+        enemy.hitRecoilZ = 0;
+      }
+      enemy.mesh.position.set(enemy.x, enemy.y, enemy.z);
     }
   }
 
@@ -7211,6 +7285,9 @@ export class MaxFlizGameEngine {
       }
     }
 
+    // Build one broad-phase grid per frame instead of scanning the full crowd for every enemy.
+    this.enemySpatialIndex.rebuild(this.enemies);
+
     this.enemies.forEach((e) => {
       if (e.state === 'defeated' || !e.mesh) return;
 
@@ -7250,6 +7327,7 @@ export class MaxFlizGameEngine {
       }
 
       e.walkCycle += dt * 8;
+      this.updateEnemyHitReaction(e, dt);
       if (e.shieldRing?.visible) e.shieldRing.rotation.z += dt * 1.25;
       if (e.auraRing) e.auraRing.rotation.z += dt * 0.18;
       if (e.bikeWheels) e.bikeWheels.forEach((wheel) => wheel.rotateX(dt * (e.state === 'chase' ? 8.5 : 3.4)));
@@ -7502,6 +7580,8 @@ export class MaxFlizGameEngine {
       } else {
         if (e.type === 'sebix_m') {
           this.updateSebixBehaviour(e,dt,distToPlayer,dx,dz);
+        } else if (e.type === 'bosman_krakow' && e.chargeTimer !== undefined) {
+          e.mesh.rotation.y = e.chargeDir ?? Math.atan2(dx, dz);
         } else if (this.gameMode === 'survival') {
           this.updateSurvivalEnemyTactics(e, dt, distToPlayer);
         } else {
@@ -7533,8 +7613,18 @@ export class MaxFlizGameEngine {
                   ? 1.35
                   : 1.2) *
               (1 + this.threatTier * 0.04);
-            e.x += (dx / Math.max(0.1, distToPlayer)) * chaseSpeed * dt;
-            e.z += (dz / Math.max(0.1, distToPlayer)) * chaseSpeed * dt;
+            // Keep campaign enemies from converging on a single point. This
+            // separation is also applied to coincident actors, so low-FPS frames
+            // or simultaneous spawns cannot leave a permanent enemy stack.
+            const nearbyCampaignEnemies = this.enemySpatialIndex.query(e.x, e.z, 4.0);
+            const separation = calculateEnemySeparationVector(e, nearbyCampaignEnemies, 2.5);
+            let moveX = dx / Math.max(0.1, distToPlayer) + separation.x * 1.2;
+            let moveZ = dz / Math.max(0.1, distToPlayer) + separation.z * 1.2;
+            const moveLength = Math.hypot(moveX, moveZ) || 1;
+            moveX /= moveLength;
+            moveZ /= moveLength;
+            e.x += moveX * chaseSpeed * dt;
+            e.z += moveZ * chaseSpeed * dt;
           } else {
             e.alerted = false;
             e.state = 'patrol';
@@ -7552,24 +7642,28 @@ export class MaxFlizGameEngine {
   
         }
 
-        // The Sentinel warns before firing. The projectile aims at the player's position
-        // only after the wind-up, so moving during the warning is a meaningful dodge.
+        // The Sentinel commits to a visible lane before firing. The emitter holds still
+        // through the wind-up so the telegraph and the eventual projectile stay aligned.
         if (this.gameMode === 'survival' && e.name.includes('AGV-9 SENTINEL') && e.specialActionTimer !== undefined) {
           if (e.specialActionTimer > 0) {
             e.specialActionTimer -= dt;
           } else if (distToPlayer < 15.0) {
             if (e.chargeTimer === undefined) {
               e.chargeTimer = 0.9;
+              e.chargeDir = Math.atan2(dx, dz);
+              this.spawnBossLaneTelegraph(e.x, e.z, e.chargeDir, 14.0, 1.8, 0xef4444, 0.9);
               this.spawnParticleRing(e.x, 0.24, e.z, 0xef4444);
               this.emitFloatingToast('AGV-9: ŁADOWANIE IMPULSU — ZEJDŹ Z LINII!', e.x, e.y + 1.2, e.z, 'damage');
               sound.playBossWarning();
             } else {
               e.chargeTimer -= dt;
               if (e.chargeTimer <= 0) {
-                this.spawnSparkZapProjectile(e.x, e.y + 0.75, e.z);
+                const lockedDirection = e.chargeDir;
+                this.spawnSparkZapProjectile(e.x, e.y + 0.75, e.z, lockedDirection);
                 this.emitFloatingToast('⚡ AGV-9: IMPULS OCHRONY!', e.x, e.y + 1.3, e.z, 'damage');
                 e.specialActionTimer = 6.4;
                 e.chargeTimer = undefined;
+                e.chargeDir = undefined;
               }
             }
           }
@@ -7614,11 +7708,34 @@ export class MaxFlizGameEngine {
             this.emitFloatingToast('⚡ ISKRA SERWISU!', e.x, e.y + 1.2, e.z, 'damage');
           }
         } else if (e.type === 'bosman_krakow' && e.specialActionTimer !== undefined) {
+          const isPhase2 = e.hp <= e.maxHp * 0.5;
+          if (isPhase2 && e.bossPhase !== 2) {
+            e.bossPhase = 2;
+            e.speed *= 1.18;
+            this.triggerScreenShake(0.28, 0.18);
+            sound.playBossWarning();
+            this.emitFloatingToast('📋 BOSMAN: ODPRAWA PRZYSPIESZONA — FAZA 2!', e.x, e.y + 1.6, e.z, 'damage');
+          }
           e.specialActionTimer -= dt;
-          if (e.specialActionTimer <= 0 && distToPlayer < 12.0) {
-            e.specialActionTimer = 2.4;
-            this.spawnOdprawaClipboardProjectile(e.x, e.y + 1.0, e.z);
-            this.emitFloatingToast('📋 ODPRAWA 3-MSC (FATAL HIT)!', e.x, e.y + 1.4, e.z, 'damage');
+          if (e.chargeTimer !== undefined) {
+            e.chargeTimer = Math.max(0, e.chargeTimer - dt);
+            if (e.chargeTimer <= 0) {
+              const lockedDirection = e.chargeDir;
+              e.chargeTimer = undefined;
+              e.chargeDir = undefined;
+              e.specialActionTimer = isPhase2 ? 1.85 : 2.4;
+              this.spawnOdprawaClipboardProjectile(e.x, e.y + 1.0, e.z, lockedDirection);
+              this.emitFloatingToast('📋 ODPRAWA WYSTRZELONA — ZMIANA LINII!', e.x, e.y + 1.4, e.z, 'damage');
+            }
+          } else if (e.specialActionTimer <= 0 && distToPlayer < 12.0) {
+            const direction = Math.atan2(dx, dz);
+            const warningDuration = isPhase2 ? 0.58 : 0.78;
+            e.chargeTimer = warningDuration;
+            e.chargeDir = direction;
+            e.mesh.rotation.y = direction;
+            this.spawnBossLaneTelegraph(e.x, e.z, direction, isPhase2 ? 14.0 : 11.5, isPhase2 ? 3.0 : 2.35, isPhase2 ? 0xf97316 : 0xf59e0b, warningDuration);
+            this.emitFloatingToast(isPhase2 ? '🚨 BOSMAN: ODPRAWA PREMIUM — ZEJDŹ Z LINII!' : '🚨 BOSMAN: ODPRAWA ZA CHWILĘ — ZEJDŹ Z LINII!', e.x, e.y + 1.4, e.z, 'damage');
+            sound.playBossWarning();
           }
         }
       }
@@ -7645,7 +7762,7 @@ export class MaxFlizGameEngine {
           this.cameraShake = 0.35;
           this.spawnParticleRing(e.x, e.y + 0.8, e.z, 0x38bdf8);
 
-          e.hp -= this.scaleSurvivalDamage(2);
+          this.damageEnemy(e, this.scaleSurvivalDamage(2));
           this.emitFloatingToast('💥 STOMP! +150', e.x, e.y + 1.2, e.z, 'points');
           this.emitFloatingToast('-2 HP', e.x, e.y + 0.7, e.z, 'damage');
 
@@ -7662,7 +7779,7 @@ export class MaxFlizGameEngine {
             const lastHit = this.bulldozerHitCooldowns.get(e.id) || 0;
             if (nowMs - lastHit > 550) {
               this.bulldozerHitCooldowns.set(e.id, nowMs);
-              e.hp -= this.scaleSurvivalDamage(3);
+              this.damageEnemy(e, this.scaleSurvivalDamage(3));
               e.stunTimer = 2.2;
               e.state = 'stunned';
               sound.playSmack();
@@ -7676,7 +7793,7 @@ export class MaxFlizGameEngine {
             e.state = 'stunned';
             this.emitFloatingToast('🛡️ AUDYT BHP!', e.x, e.y + 1, e.z, 'perk');
           } else if (this.grzesiekCrushTimer > 0) {
-            e.hp -= this.scaleSurvivalDamage(3);
+            this.damageEnemy(e, this.scaleSurvivalDamage(3));
             this.emitFloatingToast('-3 HP ŚCISK!', e.x, e.y + 1, e.z, 'damage');
             if (e.hp <= 0) this.defeatEnemy(e, 280, true);
           } else if (e.type === 'krol_leto') {
@@ -7727,21 +7844,25 @@ export class MaxFlizGameEngine {
     sound.playWoosh();
   }
 
-  private spawnSparkZapProjectile(x: number, y: number, z: number) {
+  private spawnSparkZapProjectile(x: number, y: number, z: number, lockedDirection?: number) {
     const mesh = createSparkZapProjectile();
     mesh.position.set(x, y, z);
     this.levelRoot.add(mesh);
-    const dir = new THREE.Vector3(this.playerPos.x - x, 0.1, this.playerPos.z - z).normalize();
-    this.enemyProjectiles.push({ mesh, vel: dir.multiplyScalar(9.5), life: 3.0 });
+    const dir = Number.isFinite(lockedDirection)
+      ? new THREE.Vector3(Math.sin(lockedDirection as number), 0.1, Math.cos(lockedDirection as number))
+      : new THREE.Vector3(this.playerPos.x - x, 0.1, this.playerPos.z - z).normalize();
+    this.enemyProjectiles.push({ mesh, vel: dir.normalize().multiplyScalar(9.5), life: 3.0 });
     sound.playElectricalSparks();
   }
 
-  private spawnOdprawaClipboardProjectile(x: number, y: number, z: number) {
+  private spawnOdprawaClipboardProjectile(x: number, y: number, z: number, lockedDirection?: number) {
     const mesh = createOdprawaClipboardProjectile();
     mesh.position.set(x, y, z);
     this.levelRoot.add(mesh);
-    const dir = new THREE.Vector3(this.playerPos.x - x, 0.1, this.playerPos.z - z).normalize();
-    this.enemyProjectiles.push({ mesh, vel: dir.multiplyScalar(10.0), life: 4.0, isDyscyplinarka: true });
+    const dir = Number.isFinite(lockedDirection)
+      ? new THREE.Vector3(Math.sin(lockedDirection as number), 0.1, Math.cos(lockedDirection as number))
+      : new THREE.Vector3(this.playerPos.x - x, 0.1, this.playerPos.z - z).normalize();
+    this.enemyProjectiles.push({ mesh, vel: dir.normalize().multiplyScalar(10.0), life: 4.0, isDyscyplinarka: true });
     sound.playWhistle();
     this.triggerScreenShake(0.4, 0.3);
   }
@@ -7836,7 +7957,7 @@ export class MaxFlizGameEngine {
             if (enemy.hp <= 0) continue;
             const enemyDist = Math.hypot(enemy.x - tile.x, enemy.z - tile.z);
             if (enemyDist < 2.5) {
-              enemy.hp -= 3;
+              this.damageEnemy(enemy, 3, tile.x, tile.z);
               enemy.stunTimer = 2.5;
               this.emitFloatingToast('💥 TILE CRASH! -3 HP', enemy.x, enemy.y + 1.2, enemy.z, 'damage');
               if (enemy.hp <= 0) {
@@ -8111,7 +8232,7 @@ export class MaxFlizGameEngine {
               e.shieldActive = false;
               if (e.shieldRing) e.shieldRing.visible = false;
             }
-            e.hp -= baseDmg;
+            this.damageEnemy(e, baseDmg);
             sound.playSmack();
             if (p.weaponProjectile) {
               this.spawnCompactImpact(e.x, e.y + 0.72, e.z, 0x7dd3fc);
@@ -8138,7 +8259,7 @@ export class MaxFlizGameEngine {
               for (const other of this.enemies) {
                 if (other.id !== e.id && other.state !== 'defeated') {
                   if (Math.hypot(other.x - e.x, other.z - e.z) <= p.aoeRadius) {
-                    other.hp -= this.scaleSurvivalDamage(1);
+                    this.damageEnemy(other, this.scaleSurvivalDamage(1), e.x, e.z);
                     other.stunTimer = Math.max(other.stunTimer, this.gameMode === 'survival' ? 0.22 : (p.stunDuration || 1.2));
                     if (this.gameMode !== 'survival' || (p.stunDuration || 0) > 0.8) other.state = 'stunned';
                     if (!p.weaponProjectile) this.emitFloatingToast('📑 AUDYT AoE -1 HP!', other.x, other.y + 1.1, other.z, 'damage');
@@ -9082,7 +9203,7 @@ export class MaxFlizGameEngine {
       }
       if (!target) continue;
       const damage = this.scaleSurvivalDamage(1);
-      target.hp -= damage;
+      this.damageEnemy(target, damage, cat.group.position.x, cat.group.position.z);
       target.stunTimer = Math.max(target.stunTimer, 0.28);
       if (target.hp <= 0) this.defeatEnemy(target, 220, false);
       cat.pounceTarget = new THREE.Vector3(target.x, 0.08, target.z);
@@ -9131,7 +9252,7 @@ export class MaxFlizGameEngine {
         if (dist < 5.6 && dirDot > -0.35) {
           e.shieldActive = false;
           const damage = Math.ceil(3 * abilityDamageMultiplier);
-          e.hp -= damage;
+          this.damageEnemy(e, damage);
           e.stunTimer = this.gameMode === 'survival' ? 0.9 : 2.0;
           e.state = 'stunned';
           this.cameraShake = 0.65;
@@ -9348,7 +9469,7 @@ export class MaxFlizGameEngine {
       if (e.state === 'defeated') return;
       const dist = Math.hypot(e.x - x, e.z - z);
       if (dist < 3.2 && Math.abs(e.y - y) < 1.8) {
-        e.hp -= this.scaleSurvivalDamage(2);
+        this.damageEnemy(e, this.scaleSurvivalDamage(2));
         e.stunTimer = 1.5;
         e.state = 'stunned';
         e.onFireTimer = 3.5;
@@ -9426,7 +9547,7 @@ export class MaxFlizGameEngine {
           if (e.state === 'defeated') return;
           const dist = Math.hypot(e.x - p.x, e.z - p.z);
           if (dist < p.radius && Math.abs(e.y - p.y) < 1.5) {
-            e.hp -= this.scaleSurvivalDamage(1);
+            this.damageEnemy(e, this.scaleSurvivalDamage(1), p.x, p.z);
             e.onFireTimer = 2.0;
             e.speed = Math.max(1.0, e.speed * 0.85); // Slowed by burning bimber
             sound.playHit();
@@ -10068,7 +10189,7 @@ export class MaxFlizGameEngine {
         if (enemy.state === 'defeated' || Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z) > 7) continue;
         enemy.stunTimer = Math.max(enemy.stunTimer, 1.6);
         enemy.state = 'stunned';
-        enemy.hp -= 1;
+        this.damageEnemy(enemy, 1);
         affected++;
         if (enemy.hp <= 0) this.defeatEnemy(enemy, 220, true);
         this.spawnParticleRing(enemy.x, enemy.y + 0.55, enemy.z, 0xf97316);

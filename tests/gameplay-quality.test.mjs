@@ -260,3 +260,62 @@ test('fullscreen and orientation changes reset touch input and reflow the viewpo
   assert.match(app, /const getJoystickRadius = \(\) =>/);
   assert.match(app, /maxRadius = getJoystickRadius\(\)/);
 });
+
+
+test('Survival spawn candidates prefer clear lanes and fall back to the least crowded point', async () => {
+  const [game, spacing] = await Promise.all([
+    read('../src/game.ts'),
+    read('../src/enemySpacing.ts'),
+  ]);
+  assert.match(game, /chooseSpacedSpawnPoint\(candidates, this\.enemies, 3\.2\)/);
+  assert.match(spacing, /nearestSquared >= minimumSquared/);
+  assert.match(spacing, /nearestSquared > bestNearestSquared/);
+});
+
+test('campaign chase and Survival steering both apply enemy separation', async () => {
+  const game = await read('../src/game.ts');
+  assert.ok((game.match(/calculateEnemySeparationVector\(/g) || []).length >= 2);
+  assert.match(game, /moveX = dx \/ Math\.max\(0\.1, distToPlayer\) \+ separation\.x \* 1\.2/);
+  assert.match(game, /const separationX = separation\.x/);
+});
+
+
+test('campaign and Survival crowd steering use a reusable spatial broad-phase index', async () => {
+  const [game, spacing] = await Promise.all([
+    read('../src/game.ts'),
+    read('../src/enemySpacing.ts'),
+  ]);
+  assert.match(spacing, /export class EnemySpatialIndex/);
+  assert.match(game, /new EnemySpatialIndex<EnemyItem>\(4\.0\)/);
+  assert.match(game, /this\.enemySpatialIndex\.rebuild\(this\.enemies\)/);
+  assert.match(game, /this\.enemySpatialIndex\.query\(enemy\.x, enemy\.z, 4\.1\)/);
+  assert.match(game, /this\.enemySpatialIndex\.query\(e\.x, e\.z, 4\.0\)/);
+});
+
+
+test('enemy hit feedback creates bounded recoil and a smooth pulse envelope', async () => {
+  const feedback = await read('../src/enemyCombatFeedback.ts');
+  assert.match(feedback, /export function createEnemyHitReaction/);
+  assert.match(feedback, /export function getEnemyHitPulse/);
+  assert.match(feedback, /Math\.min\(0\.48/);
+  assert.match(feedback, /Math\.min\(1\.05/);
+});
+
+test('all damaging systems use the shared enemy hit-response path', async () => {
+  const [game, types] = await Promise.all([read('../src/game.ts'), read('../src/types.ts')]);
+  assert.match(game, /private damageEnemy\(/);
+  assert.match(game, /private triggerEnemyHitReaction\(/);
+  assert.match(game, /private updateEnemyHitReaction\(/);
+  assert.match(game, /this\.updateEnemyHitReaction\(e, dt\)/);
+  assert.match(types, /hitBaseScale\?: \{ x: number; y: number; z: number \}/);
+  assert.doesNotMatch(game, /(?:enemy|target|other|[e])\.hp\s*-=\s*(?:weaponDamage|1|3|baseDmg|damage|this\.scaleSurvivalDamage)/);
+});
+
+test('AGV-9 and Bosman telegraphs match their committed projectile lanes', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /spawnBossLaneTelegraph\(e\.x, e\.z, e\.chargeDir, 14\.0, 1\.8, 0xef4444, 0\.9\)/);
+  assert.match(game, /spawnSparkZapProjectile\(e\.x, e\.y \+ 0\.75, e\.z, lockedDirection\)/);
+  assert.match(game, /spawnOdprawaClipboardProjectile\(e\.x, e\.y \+ 1\.0, e\.z, lockedDirection\)/);
+  assert.match(game, /BOSMAN: ODPRAWA PRZYSPIESZONA — FAZA 2/);
+  assert.match(game, /spawnBossLaneTelegraph\(e\.x, e\.z, direction, isPhase2 \? 14\.0 : 11\.5/);
+});

@@ -123,6 +123,12 @@ export interface EnemyItem {
   survivalAuditor?: boolean;
   auraBuffed?: boolean;
   auraRing?: any;
+  hitReactTimer?: number;
+  hitReactDuration?: number;
+  hitReactStrength?: number;
+  hitRecoilX?: number;
+  hitRecoilZ?: number;
+  hitBaseScale?: { x: number; y: number; z: number };
 }
 
 export interface HazardItem {
