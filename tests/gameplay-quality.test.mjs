@@ -141,10 +141,10 @@ test('touch Survival HUD keeps the zoom slider and 3D camera switch accessible',
   assert.match(finalHudCss, /#game-shell\.survival-mode #hud-top \.hud-top-quick-controls\s*\{[\s\S]*?position: fixed !important/);
   assert.match(finalHudCss, /#game-shell\.survival-mode #hud-top \.cam-zoom-slider-container,[\s\S]*?#game-shell\.survival-mode #hud-top #btn-top-camera\s*\{\s*display: flex !important/);
   assert.match(finalHudCss, /#game-shell\.survival-mode #hud-top #btn-top-event\s*\{\s*display: none !important/);
-  const hiddenRailIndex = finalHudCss.lastIndexOf('#game-shell.survival-mode #hud-top .cam-zoom-slider-container {');
-  const visibleRailIndex = finalHudCss.lastIndexOf('#game-shell.survival-mode #hud-top .cam-zoom-slider-container,');
-  assert.ok(visibleRailIndex > hiddenRailIndex, 'the final Survival camera rule must override the earlier hidden rail');
-  assert.match(finalHudCss.slice(visibleRailIndex), /display: flex !important/);
+  const legacyHiddenRuleIndex = finalHudCss.indexOf('display: none !important;', finalHudCss.indexOf('/* The old touch toolbar'));
+  const visibleRailRuleIndex = finalHudCss.indexOf('/* Survival camera rail');
+  assert.ok(legacyHiddenRuleIndex >= 0 && visibleRailRuleIndex > legacyHiddenRuleIndex, 'the camera rail override must come after the legacy hidden rule');
+  assert.match(finalHudCss.slice(visibleRailRuleIndex), /#game-shell\.survival-mode #hud-top \.cam-zoom-slider-container,[\s\S]*?#game-shell\.survival-mode #hud-top #btn-top-camera\s*\{\s*display: flex !important/);
   assert.match(finalHudCss, /@media \(max-width: 390px\)[\s\S]*?#game-shell\.survival-mode #hud-top #btn-top-camera/);
   assert.ok(html.indexOf('visual-polish.css') < html.indexOf('hud-layout.css'), 'final touch HUD override must load after legacy visual-polish rules');
 });
