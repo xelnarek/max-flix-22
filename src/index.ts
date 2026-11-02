@@ -15,6 +15,7 @@ import { AssetItem, assetLoader } from './assets.ts';
 import { SelectiveBloomPipeline } from './selectiveBloom.ts';
 import { ThreeClickTrigger } from './menuInteraction.ts';
 import { calculateUiViewport } from './uiViewport.ts';
+import { getAdaptiveRenderScale } from './renderQuality.ts';
 
 // warehouseAssets imports moved to assets.ts where they are preloaded
 
@@ -82,6 +83,9 @@ class MaxFlizScene extends xb.Script {
   private lastFpsTime: number = performance.now();
   private frameCount: number = 0;
   private currentFps: number = 60;
+  private smoothedFps: number = 60;
+  private adaptiveRenderScale: number = 1;
+  private adaptiveRecoverySince: number = 0;
   private lastMinimapRenderAt: number = 0;
   private pausedForVisibility: boolean = false;
   private resetTouchJoystick: (() => void) | null = null;
@@ -141,7 +145,7 @@ class MaxFlizScene extends xb.Script {
         const isMobile = width < 900 || ('ontouchstart' in window);
         // High-density mobile rendering: sharper textures and silhouettes on Poco F6.
         // The cap is intentional to prevent fill-rate spikes during dense survival waves.
-        const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.75 : 2.0);
+        const dpr = Math.max(0.85, Math.min(window.devicePixelRatio || 1, isMobile ? 1.65 : 2.0) * this.adaptiveRenderScale);
         renderer.setPixelRatio(dpr);
         renderer.setSize(width, height, false);
         this.selectiveBloom?.resize(width, height, renderer.getPixelRatio());
@@ -1774,7 +1778,7 @@ class MaxFlizScene extends xb.Script {
     const renderer = activeRenderer instanceof THREE.WebGLRenderer ? activeRenderer : null;
     if (renderer) {
       const isMobile = width < 900 || ('ontouchstart' in window);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.75 : 2.0));
+      renderer.setPixelRatio(Math.max(0.85, Math.min(window.devicePixelRatio || 1, isMobile ? 1.65 : 2.0) * this.adaptiveRenderScale));
       renderer.setSize(width, height, false);
     }
 
@@ -1862,7 +1866,7 @@ class MaxFlizScene extends xb.Script {
     const renderer = (xb.core?.renderer as THREE.WebGLRenderer) || null;
     if (renderer) {
       const isMobile = width < 900 || isTouch;
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.75 : 2.0));
+      renderer.setPixelRatio(Math.max(0.85, Math.min(window.devicePixelRatio || 1, isMobile ? 1.65 : 2.0) * this.adaptiveRenderScale));
       renderer.setSize(width, height, false);
       this.selectiveBloom?.resize(width, height, renderer.getPixelRatio());
     }
@@ -1906,12 +1910,40 @@ class MaxFlizScene extends xb.Script {
     const width = Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth));
     const height = Math.max(1, Math.round(window.visualViewport?.height || window.innerHeight));
     const isMobile = width < 900 || ('ontouchstart' in window);
-    const deviceCap = isMobile ? 1.75 : 2.0;
-    const fpsScale = this.currentFps < 34 ? 0.72 : this.currentFps < 44 ? 0.82 : this.currentFps < 52 ? 0.92 : 1;
-    const targetDpr = Math.max(0.85, Math.min(window.devicePixelRatio || 1, deviceCap) * fpsScale);
 
-    // Change drawing-buffer resolution only when the target differs meaningfully.
-    // This avoids reallocating GPU buffers on every frame or on tiny FPS fluctuations.
+    // Degrade promptly when combat load rises; restore detail only after a
+    // sustained recovery. This prevents visible resolution pumping during waves.
+    const recoveryFloor = this.adaptiveRenderScale < 0.76
+      ? (isMobile ? 37 : 36)
+      : this.adaptiveRenderScale < 0.85
+        ? (isMobile ? 45 : 43)
+        : (isMobile ? 57 : 54);
+    if (this.smoothedFps >= recoveryFloor) {
+      if (this.adaptiveRecoverySince === 0) this.adaptiveRecoverySince = now;
+    } else {
+      this.adaptiveRecoverySince = 0;
+    }
+
+    const stableRecoveryMs = this.adaptiveRecoverySince > 0 ? now - this.adaptiveRecoverySince : 0;
+    const nextScale = getAdaptiveRenderScale(
+      this.smoothedFps,
+      isMobile,
+      this.adaptiveRenderScale,
+      stableRecoveryMs
+    );
+    if (nextScale > this.adaptiveRenderScale) {
+      // Each recovery is one tier; the next tier must earn its own stable window.
+      this.adaptiveRecoverySince = now;
+    } else if (nextScale < this.adaptiveRenderScale) {
+      this.adaptiveRecoverySince = 0;
+    }
+    this.adaptiveRenderScale = nextScale;
+
+    const deviceCap = isMobile ? 1.65 : 2.0;
+    const targetDpr = Math.max(0.85, Math.min(window.devicePixelRatio || 1, deviceCap) * nextScale);
+
+    // Drawing-buffer changes are deliberately infrequent and only happen at
+    // meaningful tier transitions, never on individual FPS samples.
     if (Math.abs(renderer.getPixelRatio() - targetDpr) < 0.12) return;
     renderer.setPixelRatio(targetDpr);
     renderer.setSize(width, height, false);
@@ -1923,6 +1955,7 @@ class MaxFlizScene extends xb.Script {
     const now = performance.now();
     if (now - this.lastFpsTime >= 350) {
       this.currentFps = Math.round((this.frameCount * 1000) / Math.max(1, now - this.lastFpsTime));
+      this.smoothedFps = this.smoothedFps * 0.68 + this.currentFps * 0.32;
       this.frameCount = 0;
       this.lastFpsTime = now;
       const fpsValueElem = document.getElementById('fps-value');
@@ -2142,7 +2175,7 @@ async function startApp() {
         const r = xb.core.renderer as THREE.WebGLRenderer;
         const isMobileDevice = window.innerWidth < 900 || ('ontouchstart' in window);
         r.outputColorSpace = THREE.SRGBColorSpace;
-        r.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.75 : 2.0));
+        r.setPixelRatio(Math.max(0.85, Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.65 : 2.0) * this.adaptiveRenderScale));
         r.toneMapping = THREE.ACESFilmicToneMapping;
         r.toneMappingExposure = 1.08;
         r.shadowMap.enabled = true;
