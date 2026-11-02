@@ -38,5 +38,6 @@ export function createEnemyHitReaction(
 export function getEnemyHitPulse(timer: number, duration: number): number {
   if (!Number.isFinite(timer) || !Number.isFinite(duration) || duration <= 0 || timer <= 0) return 0;
   const progress = Math.max(0, Math.min(1, timer / duration));
+  if (progress <= 0 || progress >= 1) return 0;
   return Math.sin(progress * Math.PI);
 }
