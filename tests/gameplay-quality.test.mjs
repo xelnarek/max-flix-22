@@ -376,3 +376,9 @@ test('the removed minimap has no remaining engine state, renderer or DOM hooks',
   assert.doesNotMatch(game, /minimap|renderMinimap|zoomInMinimap|zoomOutMinimap|toggleMinimap/i);
   assert.doesNotMatch(app, /minimapCanvasElement|minimapContainerElement|renderMinimap|\.minimap-container/);
 });
+
+test('Survival rapid-upgrade copy matches its conservative three-percent cooldown effect', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /id: 'rapid', icon: '⚡', title: 'RYTM ATAKU', description: 'Skrócenie czasu między atakami o 3%\.'/);
+  assert.match(game, /this\.survivalAttackRateMultiplier = Math\.max\(0\.86, this\.survivalAttackRateMultiplier \* 0\.97\)/);
+});
