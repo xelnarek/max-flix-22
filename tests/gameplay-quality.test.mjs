@@ -128,6 +128,14 @@ test('camera fades only tagged perimeter walls that intersect the camera-to-play
   assert.ok((game.match(/this\.registerCameraOccluder\(backWall\)/g) || []).length >= 3);
 });
 
+test('camera wall fading reuses raycast storage and updates material flags only on transitions', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /private readonly cameraOcclusionHits: THREE\.Intersection<THREE\.Object3D>\[\] = \[\]/);
+  assert.match(game, /intersectObjects\(this\.cameraOccluders, false, hits\)/);
+  assert.match(game, /if \(state\.isFaded === shouldFade\) continue/);
+  assert.match(game, /isFaded: false/);
+  assert.doesNotMatch(game, /new Set\(\s*this\.cameraOcclusionRaycaster\.intersectObjects/);
+});
 test('touch Survival HUD keeps the zoom slider and 3D camera switch accessible', async () => {
   const [css, finalHudCss, html] = await Promise.all([
     read('../src/index.css'), read('../src/hud-layout.css'), read('../index.html')
@@ -187,17 +195,19 @@ test('Survival start locks duplicate taps before awaiting shared asset readiness
 });
 
 
-test('mobile campaign and Survival HUD elements occupy separate touch-screen lanes', async () => {
+test('Campaign and Survival HUDs use dedicated rows without reserving a minimap slot', async () => {
   const [layout, html] = await Promise.all([
     read('../src/hud-layout.css'), read('../index.html')
   ]);
   assert.match(html, /href="\/src\/hud-layout\.css"/);
+  assert.doesNotMatch(html, /minimap-container|minimap-canvas/i);
+  assert.doesNotMatch(layout, /#minimap-container|minimap-body|minimap-legend/i);
   assert.match(layout, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
-  assert.match(layout, /#game-shell:not\(\.survival-mode\) #minimap-container[\s\S]*?top: calc\(200px/);
-  assert.match(layout, /#game-shell:not\(\.survival-mode\) #hud-top \.boss-hud-bar[\s\S]*?left: calc\(max\(6px/);
+  assert.match(layout, /#game-shell:not\(\.survival-mode\) #hud-top \.boss-hud-bar[\s\S]*?top: calc\(128px/);
+  assert.match(layout, /#game-shell:not\(\.survival-mode\) #hud-top \.boss-hud-bar[\s\S]*?left: max\(6px/);
   assert.match(layout, /#game-shell\.survival-mode #hud-top \.hud-top-stats-row\s*\{\s*display: none !important/);
   assert.match(layout, /#game-shell\.survival-mode #survival-hud[\s\S]*?top: calc\(42px/);
-  assert.match(layout, /#game-shell\.survival-mode #minimap-container[\s\S]*?top: calc\(166px/);
+  assert.match(layout, /#game-shell\.survival-mode #hud-top \.boss-hud-bar[\s\S]*?top: calc\(122px/);
   assert.match(layout, /#game-shell\.survival-mode #btn-touch-attack\s*\{\s*display: none !important/);
   assert.match(layout, /#fps-badge\s*\{\s*display: none !important/);
   assert.match(layout, /#game-shell \.touch-actions-zone \.touch-action-btn[\s\S]*?width: clamp\(54px/);
@@ -236,17 +246,18 @@ test('Campaign boss proximity UI is throttled and only updates when its state ch
   assert.match(game, /signature !== this\.lastBossHudSignature/);
 });
 
-test('minimap DOM visibility and layout are checked only at its 10 Hz refresh boundary', async () => {
-  const app = await read('../src/index.ts');
+test('minimap is removed from both modes, including its DOM, engine and render-loop work', async () => {
+  const [app, game, html] = await Promise.all([
+    read('../src/index.ts'), read('../src/game.ts'), read('../index.html')
+  ]);
+  assert.doesNotMatch(html, /minimap-container|minimap-canvas|btn-minimap-/i);
+  assert.doesNotMatch(app, /minimapCanvasElement|minimapContainerElement|lastMinimapRenderAt|renderMinimap|btn-minimap-/i);
+  assert.doesNotMatch(game, /minimapZoomScale|minimapVisible|minimapFrameCounter|renderMinimap|zoomInMinimap|zoomOutMinimap|toggleMinimap|minimap-container/i);
   const tickStart = app.indexOf('private tick(dt: number)');
   const tickEnd = app.indexOf('onSelectEnd(', tickStart);
   assert.ok(tickStart >= 0 && tickEnd > tickStart);
   const tick = app.slice(tickStart, tickEnd);
-  assert.match(app, /private minimapCanvasElement: HTMLCanvasElement \| null = null/);
-  assert.match(app, /private minimapContainerElement: HTMLElement \| null = null/);
-  assert.match(tick, /if \(now - this\.lastMinimapRenderAt >= 100\)/);
-  assert.match(tick, /minimapContainer\.getClientRects\(\)\.length > 0/);
-  assert.doesNotMatch(tick, /document\.getElementById\('minimap-canvas'\)/);
+  assert.doesNotMatch(tick, /getClientRects\(|renderMinimap|lastMinimapRenderAt/);
 });
 
 
