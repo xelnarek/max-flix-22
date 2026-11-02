@@ -9688,12 +9688,12 @@ export class MaxFlizGameEngine {
     this.handleMateuszPassive(2);
     if (this.gameMode === 'survival') {
       this.survivalKills++;
-      this.spawnSurvivalXpGem(e.x, e.y, e.z, e.maxHp >= 4 ? 3 : 1);
-      if (this.survivalKills % 8 === 0) {
-        // Turn the eight-kill shift target into a real, collectable reward.
-        // Two XP is deliberately modest: it adds a satisfying milestone without
-        // skipping a level-up or flooding the arena with extra power-ups.
-        this.spawnSurvivalXpGem(e.x, e.y, e.z, 2);
+      const isShiftMilestone = this.survivalKills % 8 === 0;
+      const baseXpDrop = e.maxHp >= 4 ? 3 : 1;
+      // Merge the small milestone bonus into the normal gem instead of spawning
+      // two overlapping pickups at exactly the same coordinates.
+      this.spawnSurvivalXpGem(e.x, e.y, e.z, baseXpDrop + (isShiftMilestone ? 2 : 0));
+      if (isShiftMilestone) {
         this.spawnParticleRing(e.x, e.y + 0.7, e.z, 0x38bdf8);
         this.emitFloatingToast('📦 NORMA ZMIANY x8 — BONUS +2 XP DO ZEBRANIA!', e.x, e.y + 1.8, e.z, 'combo');
       }
