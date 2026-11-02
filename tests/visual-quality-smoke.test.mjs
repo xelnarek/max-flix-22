@@ -65,3 +65,16 @@ test('warehouse map textures keep bounded high-detail anisotropic filtering on m
   assert.match(game, /texture\.anisotropy = targetAnisotropy/);
   assert.match(game, /texture\.needsUpdate = true/);
 });
+
+
+test('enemy model accents use smoother curves without adding draw-call objects', async () => {
+  const game = await read('../src/game.ts');
+  const polishStart = game.indexOf('private applyEnemyVisualPolish(enemy: EnemyItem)');
+  const polishEnd = game.indexOf('private applyStorybookStyle(root: THREE.Object3D)', polishStart);
+  assert.ok(polishStart >= 0 && polishEnd > polishStart, 'enemy visual polish method should exist');
+  const polish = game.slice(polishStart, polishEnd);
+  assert.match(polish, /new THREE\.SphereGeometry\(0\.13 \* scale, 14, 10\)/);
+  assert.match(polish, /new THREE\.SphereGeometry\(0\.13 \* scale, 18, 12\)/);
+  assert.match(polish, /new THREE\.SphereGeometry\(0\.18 \* scale, 16, 12\)/);
+  assert.match(polish, /without adding extra objects or draw calls/);
+});
