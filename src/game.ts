@@ -7110,6 +7110,13 @@ export class MaxFlizGameEngine {
 
     steerX += separationX * 3.0 + avoidX * 2.2;
     steerZ += separationZ * 3.0 + avoidZ * 2.2;
+    const isTelegraphingRangedBoss = enemy.chargeTimer !== undefined &&
+      (enemy.type === 'bosman_krakow' || (enemy.type === 'agv_robot' && enemy.name.includes('AGV-9 SENTINEL')));
+    if (isTelegraphingRangedBoss) {
+      // Keep the emitter at the origin shown by the locked attack lane.
+      steerX = 0;
+      steerZ = 0;
+    }
     const steerMagnitude = Math.hypot(steerX, steerZ) || 1;
     steerX /= steerMagnitude;
     steerZ /= steerMagnitude;
@@ -7573,6 +7580,8 @@ export class MaxFlizGameEngine {
       } else {
         if (e.type === 'sebix_m') {
           this.updateSebixBehaviour(e,dt,distToPlayer,dx,dz);
+        } else if (e.type === 'bosman_krakow' && e.chargeTimer !== undefined) {
+          e.mesh.rotation.y = e.chargeDir ?? Math.atan2(dx, dz);
         } else if (this.gameMode === 'survival') {
           this.updateSurvivalEnemyTactics(e, dt, distToPlayer);
         } else {
@@ -10180,7 +10189,7 @@ export class MaxFlizGameEngine {
         if (enemy.state === 'defeated' || Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z) > 7) continue;
         enemy.stunTimer = Math.max(enemy.stunTimer, 1.6);
         enemy.state = 'stunned';
-        this.damageEnemy(enemy, 1, h.x, h.z);
+        this.damageEnemy(enemy, 1);
         affected++;
         if (enemy.hp <= 0) this.defeatEnemy(enemy, 220, true);
         this.spawnParticleRing(enemy.x, enemy.y + 0.55, enemy.z, 0xf97316);
