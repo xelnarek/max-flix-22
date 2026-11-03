@@ -127,3 +127,15 @@ test('operator menu portraits use a balanced centred mobile layout and preserve 
     assert.ok(html.includes('id="' + id + '"'));
   }
 });
+
+
+test('desktop operator selection remains visibly highlighted without hover', async () => {
+  const css = await read('../src/visual-polish.css');
+  const desktopStart = css.lastIndexOf('@media (min-width: 641px)');
+  assert.ok(desktopStart >= 0, 'desktop-only operator selection rule should exist');
+  const desktop = css.slice(desktopStart);
+  assert.match(desktop, /#title-screen \.char-card\[aria-pressed="true"\]/);
+  assert.match(desktop, /border-color: var\(--operator-accent\)/);
+  assert.match(desktop, /radial-gradient\(ellipse at 50% 0%/);
+  assert.match(desktop, /\.char-card\[aria-pressed="true"\] \.operator-emblem/);
+});
