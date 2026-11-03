@@ -475,3 +475,21 @@ test('campaign roaming rewards use the current mega-map sector while Survival st
   const progression = game.slice(game.indexOf('private updateSectorProgress'), game.indexOf('private updateRandomSpawners'));
   assert.match(progression, /this\.currentActiveSector = newSector/);
 });
+
+
+test('collected pickups are removed from the per-frame collection and magnet pulls avoid zero-distance division', async () => {
+  const game = await read('../src/game.ts');
+  const start = game.indexOf('private updateCollectibles(dt: number)');
+  const end = game.indexOf('\n  private ', start + 10);
+  assert.ok(start >= 0 && end > start, 'collectible update method should be present');
+  const update = game.slice(start, end);
+
+  assert.match(update, /for \(let i = this\.collectibles\.length - 1; i >= 0; i--\)/);
+  assert.match(update, /if \(c\.collected \|\| !c\.mesh\) \{\s*this\.collectibles\.splice\(i, 1\);/);
+  assert.match(update, /if \(magDist > 0\.001 && magDist < 8\.5\)/);
+  assert.doesNotMatch(update, /this\.collectibles\.forEach/);
+
+  const scoreUpdate = update.indexOf('this.callbacks.onScoreUpdate');
+  const pickupRemoval = update.indexOf('this.collectibles.splice(i, 1)', scoreUpdate);
+  assert.ok(scoreUpdate >= 0 && pickupRemoval > scoreUpdate, 'a picked-up item should be removed after its reward is applied');
+});
