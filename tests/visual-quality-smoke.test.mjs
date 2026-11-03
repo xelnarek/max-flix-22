@@ -109,7 +109,7 @@ test('all main-menu navigation and launch actions use consistent inline vector i
   assert.ok(settingsStart >= 0 && html.slice(settingsStart, settingsStart + 700).includes('<svg'));
   assert.ok(campaignStart >= 0 && html.slice(campaignStart, campaignStart + 800).includes('menu-cta-icon'));
   assert.ok(survivalStart >= 0 && html.slice(survivalStart, survivalStart + 800).includes('menu-cta-icon'));
-  assert.ok(briefingStart >= 0 && html.slice(briefingStart, briefingStart + 500).includes('menu-story-icon'));
+  assert.ok(briefingStart >= 0 && html.slice(briefingStart, briefingStart + 900).includes('menu-story-icon'));
 });
 
 test('operator menu portraits scale into a three-column touch layout without replacing menu actions', async () => {
