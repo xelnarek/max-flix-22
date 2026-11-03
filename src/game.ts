@@ -6142,12 +6142,43 @@ export class MaxFlizGameEngine {
     const spacedSpawn = chooseSpacedSpawnPoint(candidates, this.enemies, 3.2);
     if (spacedSpawn) return spacedSpawn;
 
-    // Preserve a safe, bounded fallback when all sampled positions land inside
-    // obstacles or the perimeter is fully congested.
-    return {
-      x: THREE.MathUtils.clamp(this.playerPos.x - 22, this.levelBounds.minX + 2.5, this.levelBounds.maxX - 2.5),
-      z: THREE.MathUtils.clamp(this.playerPos.z + 16, this.levelBounds.minZ + 1.5, this.levelBounds.maxZ - 1.5),
-    };
+    // A fixed offset can collapse against an arena boundary and place a new
+    // enemy beside the operator. Search deterministic perimeter fallbacks,
+    // preferring clear points at least 12 units away from the player.
+    const fallbackCandidates: { x: number; z: number }[] = [];
+    const insetX = Math.min(2.5, (this.levelBounds.maxX - this.levelBounds.minX) / 2);
+    const insetZ = Math.min(1.5, (this.levelBounds.maxZ - this.levelBounds.minZ) / 2);
+    const minX = this.levelBounds.minX + insetX;
+    const maxX = this.levelBounds.maxX - insetX;
+    const minZ = this.levelBounds.minZ + insetZ;
+    const maxZ = this.levelBounds.maxZ - insetZ;
+    const midX = (minX + maxX) / 2;
+    const midZ = (minZ + maxZ) / 2;
+    fallbackCandidates.push(
+      { x: minX, z: minZ }, { x: maxX, z: minZ },
+      { x: minX, z: maxZ }, { x: maxX, z: maxZ },
+      { x: minX, z: midZ }, { x: maxX, z: midZ },
+      { x: midX, z: minZ }, { x: midX, z: maxZ },
+    );
+
+    const safeFallbacks = fallbackCandidates
+      .filter((point) => Math.hypot(point.x - this.playerPos.x, point.z - this.playerPos.z) >= 12)
+      .filter((point) => !this.survivalObstacles.some((obstacle) =>
+        Math.abs(point.x - obstacle.x) < obstacle.halfWidth + 1.2 &&
+        Math.abs(point.z - obstacle.z) < obstacle.halfDepth + 1.2
+      ))
+      .sort((a, b) =>
+        Math.hypot(b.x - this.playerPos.x, b.z - this.playerPos.z) -
+        Math.hypot(a.x - this.playerPos.x, a.z - this.playerPos.z)
+      );
+    const fallback = chooseSpacedSpawnPoint(safeFallbacks, this.enemies, 3.2);
+    if (fallback) return fallback;
+
+    // Last-resort bounded point: choose the farthest arena corner from the player.
+    return fallbackCandidates.sort((a, b) =>
+      Math.hypot(b.x - this.playerPos.x, b.z - this.playerPos.z) -
+      Math.hypot(a.x - this.playerPos.x, a.z - this.playerPos.z)
+    )[0] ?? { x: midX, z: midZ };
   }
 
   private spawnSurvivalEnemy(wave: number) {
