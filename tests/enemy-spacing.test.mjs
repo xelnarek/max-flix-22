@@ -149,3 +149,57 @@ test('defeated enemies and invalid positions are never moved by player separatio
   assert.equal(invalid.corrected, false);
   assert.ok(Number.isNaN(invalid.x));
 });
+
+
+test('Pomazaniec event spawn stays clear of the player, scenery and earlier riders', async () => {
+  const { chooseSurvivalEventSpawnPoint } = await import('../src/survivalSpawn.ts');
+  const bounds = { minX: -30, maxX: 30, minZ: -24, maxZ: 24 };
+  const obstacles = [{ x: 0, z: 0, halfWidth: 5, halfDepth: 5 }];
+  const occupied = [];
+  const origin = { x: 0, z: 0 };
+
+  for (let index = 0; index < 5; index++) {
+    const point = chooseSurvivalEventSpawnPoint(
+      origin,
+      (index / 5) * Math.PI * 2,
+      bounds,
+      obstacles,
+      occupied,
+    );
+    assert.ok(point, 'a clear event spawn point should be found');
+    assert.ok(Math.hypot(point.x - origin.x, point.z - origin.z) >= 7.8 - 1e-9);
+    assert.ok(Math.abs(point.x) >= 5.85 || Math.abs(point.z) >= 5.85, 'spawn must clear the central obstacle');
+    assert.ok(occupied.every((enemy) => Math.hypot(enemy.x - point.x, enemy.z - point.z) >= 2.2 - 1e-9));
+    occupied.push({ id: 'rider-' + index, ...point });
+  }
+});
+
+test('Pomazaniec event spawn recovers when the preferred ring is blocked', async () => {
+  const { chooseSurvivalEventSpawnPoint } = await import('../src/survivalSpawn.ts');
+  const point = chooseSurvivalEventSpawnPoint(
+    { x: 0, z: 0 },
+    0,
+    { minX: -20, maxX: 20, minZ: -20, maxZ: 20 },
+    [{ x: 0, z: 0, halfWidth: 20, halfDepth: 20 }],
+    [],
+  );
+  assert.equal(point, null);
+});
+
+test('Pomazaniec event spawn stays inside bounds and rejects invalid inputs', async () => {
+  const { chooseSurvivalEventSpawnPoint } = await import('../src/survivalSpawn.ts');
+  const bounds = { minX: -12, maxX: 12, minZ: -10, maxZ: 10 };
+  const point = chooseSurvivalEventSpawnPoint(
+    { x: -7, z: 0 },
+    Math.PI / 3,
+    bounds,
+    [],
+    [],
+  );
+  assert.ok(point);
+  assert.ok(point.x >= -9.2 && point.x <= 9.2);
+  assert.ok(point.z >= -8.2 && point.z <= 8.2);
+  assert.equal(chooseSurvivalEventSpawnPoint(
+    { x: Number.NaN, z: 0 }, 0, bounds, [], [],
+  ), null);
+});
