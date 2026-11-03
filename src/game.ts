@@ -7625,8 +7625,20 @@ export class MaxFlizGameEngine {
             e.x += ((dx * invDist) * 0.72 + (dz * invDist) * 0.46 * side) * e.speed * dt;
             e.z += ((dz * invDist) * 0.72 - (dx * invDist) * 0.46 * side) * e.speed * dt;
           } else {
-            e.x += (dx / Math.max(0.1, distToPlayer)) * e.speed * 0.95 * dt;
-            e.z += (dz / Math.max(0.1, distToPlayer)) * e.speed * 0.95 * dt;
+            const avoidance = calculateEnemyObstacleAvoidanceVector(
+              e,
+              { x: this.playerPos.x, z: this.playerPos.z },
+              this.campaignEnemyObstacles,
+              5.4,
+              1.25,
+            );
+            let bossMoveX = dx / Math.max(0.1, distToPlayer) + avoidance.x * 1.0;
+            let bossMoveZ = dz / Math.max(0.1, distToPlayer) + avoidance.z * 1.0;
+            const bossMoveLength = Math.hypot(bossMoveX, bossMoveZ) || 1;
+            bossMoveX /= bossMoveLength;
+            bossMoveZ /= bossMoveLength;
+            e.x += bossMoveX * e.speed * 0.95 * dt;
+            e.z += bossMoveZ * e.speed * 0.95 * dt;
           }
         } else {
           e.x += e.speed * e.dir * dt;
@@ -7697,8 +7709,20 @@ export class MaxFlizGameEngine {
             e.x += ((dx * invDist) * 0.68 + (dz * invDist) * 0.52 * side) * e.speed * dt;
             e.z += ((dz * invDist) * 0.68 - (dx * invDist) * 0.52 * side) * e.speed * dt;
           } else {
-            e.x += (dx / Math.max(0.1, distToPlayer)) * e.speed * 1.05 * dt;
-            e.z += (dz / Math.max(0.1, distToPlayer)) * e.speed * 1.05 * dt;
+            const avoidance = calculateEnemyObstacleAvoidanceVector(
+              e,
+              { x: this.playerPos.x, z: this.playerPos.z },
+              this.campaignEnemyObstacles,
+              5.8,
+              1.35,
+            );
+            let bossMoveX = dx / Math.max(0.1, distToPlayer) + avoidance.x * 1.0;
+            let bossMoveZ = dz / Math.max(0.1, distToPlayer) + avoidance.z * 1.0;
+            const bossMoveLength = Math.hypot(bossMoveX, bossMoveZ) || 1;
+            bossMoveX /= bossMoveLength;
+            bossMoveZ /= bossMoveLength;
+            e.x += bossMoveX * e.speed * 1.05 * dt;
+            e.z += bossMoveZ * e.speed * 1.05 * dt;
           }
           if (isPhase2 && Math.random() < 0.05) this.triggerScreenShake(0.1, 0.2);
         } else if (e.state === 'searching' && e.lastKnownPlayerPos) {
