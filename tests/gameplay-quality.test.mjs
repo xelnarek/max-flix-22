@@ -459,3 +459,10 @@ test('Survival crowd steering routes toward its formation target around obstacle
   assert.doesNotMatch(tactics, /for \(const obstacle of this\.survivalObstacles\)/);
   assert.match(tactics, /if \(isTelegraphingRangedBoss\) \{[\s\S]*?steerX = 0;[\s\S]*?steerZ = 0/);
 });
+
+
+test('Survival random boss spawns never stack active Bosman encounters', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /const bosmanAlreadyActive = this\.enemies\.some\(\(enemy\) =>[\s\S]*?enemy\.type === 'bosman_krakow' && enemy\.state !== 'defeated'/);
+  assert.match(game, /shouldSpawnBosmanKrakow\(wave, Math\.random\(\), bosmanAlreadyActive\)/);
+});
