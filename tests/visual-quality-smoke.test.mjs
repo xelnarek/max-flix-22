@@ -11,14 +11,18 @@ test('game identity is consistently renamed in the title screen and engine boot'
   assert.match(app, /setAppTitle\('Max-FliX i granica Absurdu'\)/);
 });
 
-test('the five playable operator cards retain five bespoke SVG emblems', async () => {
+test('the five playable operator cards receive individual hand-drawn vector portraits', async () => {
   const html = await read('../index.html');
   const ids = ['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr'];
   for (const id of ids) {
     assert.match(html, new RegExp('data-char="' + id + '"[\\s\\S]*?operator-emblem emblem-' + id));
   }
   const app = await read('../src/index.ts');
-  assert.doesNotMatch(app, /badge\.innerHTML = operatorPortrait\(cardId\)/);
+  assert.match(app, /const operatorPortrait = \\(id: CharacterId\\): string/);
+  assert.match(app, /const badge = card\\.querySelector<HTMLElement>\\('\\.operator-emblem'\\)/);
+  assert.match(app, /badge\\.innerHTML = operatorPortrait\\(cardId\\)/);
+  assert.match(app, /operatorPortraitRenderCount/);
+  assert.match(app, /aria-label="Portret operatora \\+ CHARACTERS\\[id\\]\\.name/);
 });
 
 test('playable operator face model no longer creates moustache meshes over the face', async () => {
@@ -89,4 +93,31 @@ test('playable operator models use refined curved surfaces at close camera range
   assert.match(model, /new THREE\.SphereGeometry\(0\.145, 20, 14\)/);
   assert.match(model, /new THREE\.CapsuleGeometry\(0\.18, 0\.10, 4, 16\)/);
   assert.match(model, /new THREE\.SphereGeometry\(0\.105, 16, 10\)/);
+});
+
+
+test('all main-menu navigation and launch actions use consistent inline vector icons', async () => {
+  const html = await read('../index.html');
+  const codexStart = html.indexOf('data-tab="tab-field-guide"');
+  const settingsStart = html.indexOf('data-tab="tab-settings"');
+  const campaignStart = html.indexOf('id="btn-start-game"');
+  const survivalStart = html.indexOf('id="btn-start-survival"');
+  const briefingStart = html.indexOf('id="btn-open-story-modal"');
+  assert.ok(codexStart >= 0 && html.slice(codexStart, codexStart + 500).includes('<svg'));
+  assert.ok(settingsStart >= 0 && html.slice(settingsStart, settingsStart + 700).includes('<svg'));
+  assert.ok(campaignStart >= 0 && html.slice(campaignStart, campaignStart + 800).includes('menu-cta-icon'));
+  assert.ok(survivalStart >= 0 && html.slice(survivalStart, survivalStart + 800).includes('menu-cta-icon'));
+  assert.ok(briefingStart >= 0 && html.slice(briefingStart, briefingStart + 500).includes('menu-story-icon'));
+});
+
+test('operator menu portraits scale into a three-column touch layout without replacing menu actions', async () => {
+  const css = await read('../src/visual-polish.css');
+  const html = await read('../index.html');
+  const app = await read('../src/index.ts');
+  assert.match(css, /@media \\(max-width: 640px\\)[\\s\\S]*?#title-screen \\.char-grid \\{[\\s\\S]*?repeat\\(3, minmax\\(0, 1fr\\)\\)/);
+  assert.match(css, /#title-screen \\.char-card-badge\\.operator-emblem \\.operator-portrait/);
+  assert.match(app, /card\\.setAttribute\\('aria-pressed', String\\(cardId === id\\)\\)/);
+  for (const id of ['btn-start-game', 'btn-start-survival', 'btn-open-story-modal']) {
+    assert.ok(html.includes('id="' + id + '"'));
+  }
 });
