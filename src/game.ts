@@ -2220,6 +2220,18 @@ export class MaxFlizGameEngine {
     this.clearSurvivalSurgeRing();
     this.survivalSurgeTargetCount = 0;
     this.disposeSurvivalArenaInstances();
+    // Release pickup-owned GPU resources before clearing the level graph.
+    // These models have per-instance geometries/materials; only explicitly
+    // marked dynamic textures are disposed, never shared asset textures.
+    for (const collectible of this.collectibles) {
+      if (collectible.mesh) this.disposeObjectResources(collectible.mesh);
+    }
+    for (const perk of this.droppedPerks) {
+      if (perk.mesh) this.disposeObjectResources(perk.mesh);
+    }
+    for (const crate of this.lootCrates) {
+      if (crate.mesh) this.disposeObjectResources(crate.mesh);
+    }
     while (this.levelRoot.children.length > 0) {
       this.levelRoot.remove(this.levelRoot.children[0]);
     }
@@ -3672,11 +3684,12 @@ export class MaxFlizGameEngine {
     for (let i = this.lootCrates.length - 1; i >= 0; i--) {
       const crate = this.lootCrates[i];
       crate.mesh.rotation.y += dt * 1.5;
-      
+
       const dist = Math.hypot(crate.x - this.playerPos.x, crate.z - this.playerPos.z);
       if (dist < 1.0) {
         this.spawnDroppedPerk(crate.x, crate.y, crate.z);
         this.levelRoot.remove(crate.mesh);
+        this.disposeObjectResources(crate.mesh);
         this.platforms = this.platforms.filter((platform) => platform.mesh !== crate.mesh);
         this.lootCrates.splice(i, 1);
         this.spawnParticleRing(crate.x, crate.y + 0.4, crate.z, 0xfacc15);
@@ -3684,7 +3697,6 @@ export class MaxFlizGameEngine {
       }
     }
   }
-
   public spawnDroppedPerk(x: number, y: number, z: number, forcedPerkId?: PerkType) {
     const perkDef = forcedPerkId
       ? AVAILABLE_PERKS.find((p) => p.id === forcedPerkId)!
@@ -3707,7 +3719,7 @@ export class MaxFlizGameEngine {
       initialY: y + 0.1,
       mesh,
       collected: false,
-      life: 55, // 55 seconds to collect
+      life: 55,
       duration: perkDef.duration || 20,
     };
 
@@ -3722,11 +3734,19 @@ export class MaxFlizGameEngine {
 
     for (let i = this.droppedPerks.length - 1; i >= 0; i--) {
       const perk = this.droppedPerks[i];
-      if (perk.collected || !perk.mesh) continue;
+      if (perk.collected || !perk.mesh) {
+        if (perk.mesh) {
+          this.levelRoot.remove(perk.mesh);
+          this.disposeObjectResources(perk.mesh);
+        }
+        this.droppedPerks.splice(i, 1);
+        continue;
+      }
 
       perk.life -= dt;
       if (perk.life <= 0) {
         this.levelRoot.remove(perk.mesh);
+        this.disposeObjectResources(perk.mesh);
         this.droppedPerks.splice(i, 1);
         continue;
       }
@@ -3754,6 +3774,7 @@ export class MaxFlizGameEngine {
       if (dist < 1.15 && dy < 1.4) {
         perk.collected = true;
         this.levelRoot.remove(perk.mesh);
+        this.disposeObjectResources(perk.mesh);
         this.droppedPerks.splice(i, 1);
 
         this.activatePerk(perk.perkId, perk.duration);
@@ -3769,7 +3790,6 @@ export class MaxFlizGameEngine {
       }
     }
   }
-
   private emitFloatingToast(
     text: string,
     worldX: number,
@@ -5577,10 +5597,18 @@ export class MaxFlizGameEngine {
     return { group, wheels, propeller };
   }
 
-  private disposePomazaniecObject(object: THREE.Object3D) {
-    const dynamicTextures = (object.userData.dynamicTextures || []) as THREE.Texture[];
+  private disposeObjectResources(object: THREE.Object3D) {
+    const dynamicTextures = new Set<THREE.Texture>();
+    object.traverse((child) => {
+      const textures = child.userData.dynamicTextures as THREE.Texture[] | undefined;
+      if (Array.isArray(textures)) textures.forEach((texture) => dynamicTextures.add(texture));
+    });
     this.disposeTemporaryObject(object);
-    for (const texture of dynamicTextures) texture.dispose();
+    dynamicTextures.forEach((texture) => texture.dispose());
+  }
+
+  private disposePomazaniecObject(object: THREE.Object3D) {
+    this.disposeObjectResources(object);
   }
 
   private spawnSurvivalPomazaniecMarker() {
@@ -6844,6 +6872,7 @@ export class MaxFlizGameEngine {
       if (dist < 0.95 && dy < 1.2) {
         c.collected = true;
         this.levelRoot.remove(c.mesh);
+        this.disposeObjectResources(c.mesh);
 
         const ptsMult = this.doublePointsTimer > 0 ? 2 : 1;
         if (c.type === 'grout') {

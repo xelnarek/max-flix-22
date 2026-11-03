@@ -493,3 +493,62 @@ test('collected pickups are removed from the per-frame collection and magnet pul
   const pickupRemoval = update.indexOf('this.collectibles.splice(i, 1)', scoreUpdate);
   assert.ok(scoreUpdate >= 0 && pickupRemoval > scoreUpdate, 'a picked-up item should be removed after its reward is applied');
 });
+
+
+test('collected pickup models and their owned dynamic textures release GPU resources', async () => {
+  const [game, assets] = await Promise.all([
+    read('../src/game.ts'),
+    read('../src/warehouseAssets.ts'),
+  ]);
+  const updateStart = game.indexOf('private updateCollectibles(dt: number)');
+  const updateEnd = game.indexOf('\n  private ', updateStart + 10);
+  assert.ok(updateStart >= 0 && updateEnd > updateStart);
+  const update = game.slice(updateStart, updateEnd);
+  assert.match(update, /this\.levelRoot\.remove\(c\.mesh\);\s*this\.disposeObjectResources\(c\.mesh\);/);
+
+  assert.match(game, /private disposeObjectResources\(object: THREE\.Object3D\)/);
+  assert.match(game, /object\.traverse\(\(child\) => \{[\s\S]*?child\.userData\.dynamicTextures/);
+  assert.match(game, /this\.disposeTemporaryObject\(object\);\s*dynamicTextures\.forEach\(\(texture\) => texture\.dispose\(\)\)/);
+  assert.match(game, /private disposePomazaniecObject\(object: THREE\.Object3D\) \{\s*this\.disposeObjectResources\(object\);/);
+
+  assert.match(assets, /const bucketTex = new THREE\.CanvasTexture\(canvas\);\s*bucketTex\.colorSpace = THREE\.SRGBColorSpace;\s*group\.userData\.dynamicTextures = \[bucketTex\];/);
+});
+
+
+test('expired and collected dropped-perk crates and opened loot crates dispose their temporary models', async () => {
+  const game = await read('../src/game.ts');
+  const droppedStart = game.indexOf('private updateDroppedPerks(dt: number)');
+  const droppedEnd = game.indexOf('\n  private ', droppedStart + 10);
+  const lootStart = game.indexOf('private updateLootCrates(dt: number)');
+  const lootEnd = game.indexOf('\n  private ', lootStart + 10);
+  assert.ok(droppedStart >= 0 && droppedEnd > droppedStart);
+  assert.ok(lootStart >= 0 && lootEnd > lootStart);
+
+  const dropped = game.slice(droppedStart, droppedEnd);
+  const loot = game.slice(lootStart, lootEnd);
+  assert.ok((dropped.match(/this\.disposeObjectResources\(perk\.mesh\)/g) || []).length >= 3);
+  assert.match(dropped, /if \(perk\.life <= 0\) \{[\s\S]*?this\.disposeObjectResources\(perk\.mesh\)/);
+  assert.match(dropped, /if \(dist < 1\.15 && dy < 1\.4\) \{[\s\S]*?this\.disposeObjectResources\(perk\.mesh\)/);
+  assert.match(loot, /this\.levelRoot\.remove\(crate\.mesh\);\s*this\.disposeObjectResources\(crate\.mesh\);/);
+});
+
+
+test('temporary pickup cleanup preserves the public perk-drop spawn API used by gameplay events', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /public spawnDroppedPerk\(x: number, y: number, z: number, forcedPerkId\?: PerkType\)/);
+  assert.match(game, /const mesh = createDroppedPerkCrate\(perkDef\.id, perkDef\.color\)/);
+  assert.match(game, /this\.droppedPerks\.push\(dropped\)/);
+});
+
+
+test('level reset disposes remaining collectibles, perk drops, and loot crates before clearing the scene', async () => {
+  const game = await read('../src/game.ts');
+  const start = game.indexOf('private clearLevel()');
+  const end = game.indexOf('\n  private ', start + 10);
+  assert.ok(start >= 0 && end > start, 'clearLevel method should be present');
+  const clear = game.slice(start, end);
+  assert.match(clear, /for \(const collectible of this\.collectibles\) \{\s*if \(collectible\.mesh\) this\.disposeObjectResources\(collectible\.mesh\);/);
+  assert.match(clear, /for \(const perk of this\.droppedPerks\) \{\s*if \(perk\.mesh\) this\.disposeObjectResources\(perk\.mesh\);/);
+  assert.match(clear, /for \(const crate of this\.lootCrates\) \{\s*if \(crate\.mesh\) this\.disposeObjectResources\(crate\.mesh\);/);
+  assert.ok(clear.indexOf('this.disposeObjectResources(collectible.mesh)') < clear.indexOf('while (this.levelRoot.children.length > 0)'));
+});
