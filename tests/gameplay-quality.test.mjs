@@ -531,3 +531,11 @@ test('expired and collected dropped-perk crates and opened loot crates dispose t
   assert.match(dropped, /if \(dist < 1\.15 && dy < 1\.4\) \{[\s\S]*?this\.disposeObjectResources\(perk\.mesh\)/);
   assert.match(loot, /this\.levelRoot\.remove\(crate\.mesh\);\s*this\.disposeObjectResources\(crate\.mesh\);/);
 });
+
+
+test('temporary pickup cleanup preserves the public perk-drop spawn API used by gameplay events', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /public spawnDroppedPerk\(x: number, y: number, z: number, forcedPerkId\?: PerkType\)/);
+  assert.match(game, /const mesh = createDroppedPerkCrate\(perkDef\.id, perkDef\.color\)/);
+  assert.match(game, /this\.droppedPerks\.push\(dropped\)/);
+});
