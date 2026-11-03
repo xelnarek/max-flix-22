@@ -139,3 +139,22 @@ test('desktop operator selection remains visibly highlighted without hover', asy
   assert.match(desktop, /radial-gradient\(ellipse at 50% 0%/);
   assert.match(desktop, /\.char-card\[aria-pressed="true"\] \.operator-emblem/);
 });
+
+
+test('operator attack and ability controls use distinct vector SVG icons with role-specific accents', async () => {
+  const [app, css, html] = await Promise.all([
+    read('../src/index.ts'),
+    read('../src/index.css'),
+    read('../index.html'),
+  ]);
+  assert.ok((app.match(/class='operator-action-svg'/g) || []).length >= 10, 'five operators should have separate attack and ability glyphs');
+  assert.match(app, /abilityIcon\.innerHTML = abilityIcons\[id\]/);
+  assert.match(app, /attackIconElem\.innerHTML = attackIcons\[id\]/);
+  assert.match(app, /abilityIcon\.dataset\.operatorIcon = id/);
+  assert.match(app, /attackIconElem\.dataset\.operatorIcon = id/);
+  assert.match(css, /\.operator-action-svg\s*\{[\s\S]*?width: 24px[\s\S]*?height: 24px/);
+  for (const accent of ['#f0c46b', '#f5ca45', '#f5a04c', '#c9a8ff', '#ff777e']) {
+    assert.ok(css.includes(accent), 'every operator should keep an individual icon accent');
+  }
+  assert.ok(html.includes('id="attack-icon"') && html.includes('id="ability-icon"'));
+});

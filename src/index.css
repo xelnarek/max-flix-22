@@ -4120,3 +4120,26 @@ button {
 #pixel-intro-overlay .pixel-quick-btns {
   pointer-events: auto !important;
 }
+
+
+/* Character-specific vector action glyphs keep HUD controls sharp at every scale. */
+.attack-icon,
+.ability-icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  line-height: 0;
+}
+.operator-action-svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+  overflow: visible;
+}
+.attack-icon[data-operator-icon="marcin"], .ability-icon[data-operator-icon="marcin"] { color: #f0c46b; }
+.attack-icon[data-operator-icon="grzesiek"], .ability-icon[data-operator-icon="grzesiek"] { color: #f5ca45; }
+.attack-icon[data-operator-icon="dawid"], .ability-icon[data-operator-icon="dawid"] { color: #f5a04c; }
+.attack-icon[data-operator-icon="mateusz"], .ability-icon[data-operator-icon="mateusz"] { color: #c9a8ff; }
+.attack-icon[data-operator-icon="piotr"], .ability-icon[data-operator-icon="piotr"] { color: #ff777e; }

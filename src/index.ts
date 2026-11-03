@@ -783,7 +783,11 @@ class MaxFlizScene extends xb.Script {
       if (abilityName) abilityName.textContent = def.abilityName;
 
       const abilityIcons: Record<CharacterId, string> = {
-        marcin: '🚜', grzesiek: '💥', dawid: '🧱', mateusz: '🐈', piotr: '🔧',
+        marcin: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='M15 10h18a4 4 0 0 1 4 4v25H11V14a4 4 0 0 1 4-4Z'/><path d='M19 10V7h10v3M17 19h12M17 26l3 3 5-6M29 27h4M17 34h15'/><path d='m33 15 1.6 2.4 2.8.8-2.8.9-1.6 2.4-1.5-2.4-2.8-.9 2.8-.8Z' fill='currentColor' stroke='none'/></svg>",
+        grzesiek: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.7' stroke-linecap='round' stroke-linejoin='round'><path d='M8 19v10M13 15v18M35 15v18M40 19v10M13 24h22'/><path d='M6 14v20M42 14v20'/><path d='m24 8 2.4 5.2 5.7.8-4.1 4 1 5.7-5-2.7-5 2.7 1-5.7-4.1-4 5.7-.8Z' fill='currentColor' stroke='none' opacity='.28'/></svg>",
+        dawid: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M24 6 39 12v11c0 9-6.5 15-15 19C15.5 38 9 32 9 23V12Z'/><path d='M15 17h18M13 23h22M16 29h16M19 35h10'/><path d='m30 12 4 4-4 4M18 27l-4 4 4 4' opacity='.78'/></svg>",
+        mateusz: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='m9 18 3-10 9 7h6l9-7 3 10v11c0 8-7 12-15 12S9 37 9 29Z'/><path d='M17 25h.1M31 25h.1M19 33q5 4 10 0'/><path d='m27 16-5 10h5l-3 8 9-12h-5l3-6Z' fill='currentColor' stroke='none'/></svg>",
+        piotr: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.7' stroke-linecap='round' stroke-linejoin='round'><path d='M27 10a10 10 0 0 0 11 13L24 37a4 4 0 0 1-6-6l15-14A10 10 0 0 0 27 10Z'/><path d='m30 8 5-4 8 8-4 5M18 30l-3-3M14 34l-3-3'/></svg>",
       };
       if (heroAvatar) heroAvatar.innerHTML = operatorPortrait(id);
       // The menu and HUD share the same bespoke portrait; each operator keeps
@@ -799,7 +803,7 @@ class MaxFlizScene extends xb.Script {
         card.setAttribute('aria-label', `${definition.name} — ${definition.role}`);
         if (badge) badge.innerHTML = operatorPortrait(cardId);
       });
-      if (abilityIcon) abilityIcon.textContent = abilityIcons[id] || '⚡';
+      if (abilityIcon) { abilityIcon.innerHTML = abilityIcons[id] || abilityIcons.marcin; abilityIcon.dataset.operatorIcon = id; }
 
       const attackNameElem = document.getElementById('attack-name');
       const attackIconElem = document.getElementById('attack-icon');
@@ -811,7 +815,11 @@ class MaxFlizScene extends xb.Script {
         piotr: 'Klucz Grzechotkowy B4',
       };
       const attackIcons: Record<CharacterId, string> = {
-        marcin: '🔮', grzesiek: '🏋️', dawid: '📦', mateusz: '⚡', piotr: '🔧',
+        marcin: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M12 9h19l6 6v24H12Z'/><path d='M31 9v7h6M18 22h12M18 28h8M18 34h10'/><path d='m34 22 1.7 3 3.3 1-3.3 1-1.7 3-1.7-3-3.3-1 3.3-1Z' fill='currentColor' stroke='none'/></svg>",
+        grzesiek: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.7' stroke-linecap='round' stroke-linejoin='round'><path d='M10 17h7v14h-7zM31 17h7v14h-7zM17 24h14'/><path d='M6 14v20M42 14v20M21 8l3 4 3-4M21 40l3-4 3 4'/><path d='M8 9 4 5M40 9l4-4' opacity='.75'/></svg>",
+        dawid: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M13 11h22v27H13z'/><path d='M13 18h22M13 31h22M19 11v27M29 11v27'/><path d='M18 7h12M21 4h6'/><path d='m34 22 7 2-7 3' /><path d='m14 25-7 2 7 3'/></svg>",
+        mateusz: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.7' stroke-linecap='round' stroke-linejoin='round'><path d='m27 5-16 22h11l-2 16 18-25H27Z' fill='currentColor' stroke='none'/><path d='M7 14 11 17M37 8l-3 5M40 34l-5-2' opacity='.8'/></svg>",
+        piotr: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.7' stroke-linecap='round' stroke-linejoin='round'><path d='M27 9a10 10 0 0 0 11 13L24 36a4.5 4.5 0 0 1-6-6l14-15A10 10 0 0 0 27 9Z'/><path d='m30 8 5-4 8 8-4 5'/><path d='m9 40 4-4m-7 0 4-4' opacity='.8'/></svg>",
       };
       const attackDescriptions: Record<CharacterId, string> = {
         marcin: 'Wysyła świetlny znak-zlecenie z programu Optima. Trafiony cel zostaje ogłuszony, a co trzeci czar tworzy mocniejszą pieczęć audytu.',
@@ -821,7 +829,7 @@ class MaxFlizScene extends xb.Script {
         piotr: 'Miota ciężkim kluczem grzechotkowym B4. Wiruje, przebija kilka celów i wraca przez tłum do Piotra; co trzeci rzut jest mocniejszy i rozgrzany do czerwoności.',
       };
       if (attackNameElem) attackNameElem.textContent = attackNames[id] || 'Atak';
-      if (attackIconElem) attackIconElem.textContent = attackIcons[id] || '🥊';
+      if (attackIconElem) { attackIconElem.innerHTML = attackIcons[id] || attackIcons.marcin; attackIconElem.dataset.operatorIcon = id; }
 
       const detailTitle = document.getElementById('char-detail-title');
       const detailBio = document.getElementById('char-detail-bio');
