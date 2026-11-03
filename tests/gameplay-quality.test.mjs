@@ -695,3 +695,32 @@ test('falling tile, molotov, fire-puddle and explosive-barrel models dispose own
   assert.match(clear, /for \(const puddle of this\.bimberFirePuddles\) this\.disposeTemporaryObject\(puddle\.group\)/);
   assert.match(clear, /for \(const barrel of this\.explosiveBarrels\) this\.disposeTemporaryObject\(barrel\.mesh\)/);
 });
+
+ 
+test('level reset releases every per-level hazard model, not only the newest trap types', async () => {
+  const game = await read('../src/game.ts');
+  const clearStart = game.indexOf('private clearLevel()');
+  const clearEnd = game.indexOf('\n  private ', clearStart + 10);
+  assert.ok(clearStart >= 0 && clearEnd > clearStart);
+  const clear = game.slice(clearStart, clearEnd);
+
+  const hazardStart = clear.indexOf('for (const hazard of this.hazards)');
+  const hazardEnd = clear.indexOf('\n    this.clearSurvivalSurgeRing()', hazardStart);
+  assert.ok(hazardStart >= 0 && hazardEnd > hazardStart);
+  const hazardCleanup = clear.slice(hazardStart, hazardEnd);
+  assert.match(hazardCleanup, /if \(hazard\.mesh\) this\.disposeTemporaryObject\(hazard\.mesh\)/);
+  assert.doesNotMatch(hazardCleanup, /hazard\.type ===/);
+
+  for (const [factory, type] of [
+    ['createForkliftModel', 'forklift'],
+    ['createCementSpillTrapModel', 'cement_spill'],
+    ['createStretchFilmBarrierModel', 'stretch_barrier'],
+    ['createRollerGateTrapModel', 'roller_gate'],
+    ['createLaserCutterTrapModel', 'laser_cutter'],
+    ['createSteamGeyserTrapModel', 'steam_geyser'],
+    ['createHydraulicPressTrapModel', 'hydraulic_press'],
+  ]) {
+    assert.ok(game.includes(factory), factory + ' should remain part of the hazard model system');
+    assert.ok(game.includes("type: '" + type + "'"), type + ' hazard should be covered by the shared cleanup loop');
+  }
+});
