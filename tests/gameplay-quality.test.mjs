@@ -446,3 +446,16 @@ test('campaign bosses use warehouse obstacle-aware pursuit without moving during
   assert.ok(walczak.indexOf('if (isChargingImpact)') < walczak.indexOf('const avoidance = calculateEnemyObstacleAvoidanceVector('));
   assert.ok(leto.indexOf('if (e.chargeTimer !== undefined)') < leto.indexOf('const avoidance = calculateEnemyObstacleAvoidanceVector('));
 });
+
+
+test('Survival crowd steering routes toward its formation target around obstacles', async () => {
+  const game = await read('../src/game.ts');
+  const start = game.indexOf('private updateSurvivalEnemyTactics');
+  const end = game.indexOf('private damageEnemy', start);
+  assert.ok(start >= 0 && end > start, 'Survival tactics method should be present');
+  const tactics = game.slice(start, end);
+  assert.match(tactics, /calculateEnemyObstacleAvoidanceVector\([\s\S]*?\{ x: targetX, z: targetZ \}[\s\S]*?this\.survivalObstacles[\s\S]*?4\.6[\s\S]*?0\.8/);
+  assert.match(tactics, /steerX \+= separationX \* 3\.0 \+ obstacleAvoidance\.x \* 1\.25/);
+  assert.doesNotMatch(tactics, /for \(const obstacle of this\.survivalObstacles\)/);
+  assert.match(tactics, /if \(isTelegraphingRangedBoss\) \{[\s\S]*?steerX = 0;[\s\S]*?steerZ = 0/);
+});
