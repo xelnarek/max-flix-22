@@ -7938,7 +7938,9 @@ export class MaxFlizGameEngine {
       // Contact damage uses the small model-clearance margin above, so enemies
       // can still hit without entering the player's visible body footprint.
       // The stomp keeps its original tighter radius and is intentionally exempt.
-      if (!stompedThisFrame && e.state !== 'defeated') {
+      if (!stompedThisFrame) {
+        // The resolver itself ignores defeated actors; keep this call independent
+        // of TypeScript's earlier per-enemy state narrowing.
         this.resolveEnemyPlayerOverlap(e, contactRadius);
       }
     });
