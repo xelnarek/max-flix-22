@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { clampHorizontalPosition } from './arenaBounds.ts';
-import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoint } from './enemySpacing.ts';
+import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoint, resolveEnemyPlayerSeparation } from './enemySpacing.ts';
 import { createEnemyHitReaction, getEnemyHitPulse } from './enemyCombatFeedback.ts';
 import { isWithinBossImpactRadius } from './combatTelegraphs.ts';
 import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
@@ -7304,6 +7304,37 @@ export class MaxFlizGameEngine {
     enemy.mesh.position.z = bounded.z;
   }
 
+  private resolveEnemyPlayerOverlap(enemy: EnemyItem, minimumDistance: number): void {
+    if (enemy.state === 'defeated' || !enemy.mesh) return;
+    // The player may jump over enemies and land on raised platforms. Only
+    // resolve horizontal model contact when both actors occupy the same floor band.
+    if (Math.abs(enemy.y - this.playerPos.y) >= 1.1) return;
+
+    const zLimit = enemy.x < 36 ? 19.0 : enemy.x < 116 ? 19.0 : 21.0;
+    const bounds = this.gameMode === 'survival'
+      ? this.levelBounds
+      : { minX: -34.5, maxX: 204.5, minZ: -zLimit, maxZ: zLimit };
+    const inset = enemy.type === 'walczak' || enemy.type === 'krol_leto'
+      ? 1.55
+      : enemy.type === 'sebix_m'
+        ? 1.4
+        : 0.8;
+    const resolved = resolveEnemyPlayerSeparation(
+      enemy,
+      { x: this.playerPos.x, z: this.playerPos.z },
+      minimumDistance,
+      bounds,
+      inset,
+    );
+    if (!resolved.corrected) return;
+
+    enemy.x = resolved.x;
+    enemy.z = resolved.z;
+    // Keep the render transform synchronized with the hit-test/collision state.
+    enemy.mesh.position.x = resolved.x;
+    enemy.mesh.position.z = resolved.z;
+  }
+
   private updateEnemies(dt: number) {
     if (this.globalEnemyShoutCooldown > 0) {
       this.globalEnemyShoutCooldown -= dt;
@@ -7841,10 +7872,12 @@ export class MaxFlizGameEngine {
         e.mesh.rotation.z = Math.sin(e.walkCycle * 1.1) * 0.018;
       }
       const hitRadius = e.type === 'sebix_m' ? (e.dashTimer && e.dashTimer > 0 ? 1.85 : 1.35) : e.type === 'walczak' || e.type === 'krol_leto' ? 1.5 : e.type === 'elite_walczak_guard' ? 1.3 : 1.1;
+      let stompedThisFrame = false;
 
       if (dist < hitRadius) {
         // 1. STOMP MECHANIC (Naskok z góry)
         if (this.playerVel.y < -0.8 && this.playerPos.y > e.y + 0.35) {
+          stompedThisFrame = true;
           const bounceForce = e.type === 'agv_robot' ? this.charDef.jumpForce * 1.3 : this.charDef.jumpForce * 0.95;
           this.playerVel.y = bounceForce;
           sound.playBounce();
@@ -7898,6 +7931,13 @@ export class MaxFlizGameEngine {
             this.takeDamage(`Zaatakował Cię: ${e.name}!`);
           }
         }
+      }
+
+      // Contact damage is still evaluated at the original hit radius above.
+      // The extra 0.18 m clearance keeps the rendered models from clipping after
+      // contact, in both Campaign and Survival, without disabling the stomp move.
+      if (!stompedThisFrame && e.state !== 'defeated') {
+        this.resolveEnemyPlayerOverlap(e, hitRadius + 0.18);
       }
     });
   }
