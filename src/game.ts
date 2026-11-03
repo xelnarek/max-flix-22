@@ -5577,10 +5577,18 @@ export class MaxFlizGameEngine {
     return { group, wheels, propeller };
   }
 
-  private disposePomazaniecObject(object: THREE.Object3D) {
-    const dynamicTextures = (object.userData.dynamicTextures || []) as THREE.Texture[];
+  private disposeObjectResources(object: THREE.Object3D) {
+    const dynamicTextures = new Set<THREE.Texture>();
+    object.traverse((child) => {
+      const textures = child.userData.dynamicTextures as THREE.Texture[] | undefined;
+      if (Array.isArray(textures)) textures.forEach((texture) => dynamicTextures.add(texture));
+    });
     this.disposeTemporaryObject(object);
-    for (const texture of dynamicTextures) texture.dispose();
+    dynamicTextures.forEach((texture) => texture.dispose());
+  }
+
+  private disposePomazaniecObject(object: THREE.Object3D) {
+    this.disposeObjectResources(object);
   }
 
   private spawnSurvivalPomazaniecMarker() {
@@ -6844,6 +6852,7 @@ export class MaxFlizGameEngine {
       if (dist < 0.95 && dy < 1.2) {
         c.collected = true;
         this.levelRoot.remove(c.mesh);
+        this.disposeObjectResources(c.mesh);
 
         const ptsMult = this.doublePointsTimer > 0 ? 2 : 1;
         if (c.type === 'grout') {
