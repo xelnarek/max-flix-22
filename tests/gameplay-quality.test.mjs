@@ -601,3 +601,32 @@ test('all transient primary attack projectile models release unique GPU resource
   const clear = game.slice(clearStart, clearEnd);
   assert.match(clear, /projectile\.weaponProjectile \|\| projectile\.disposeOnRemove/);
 });
+
+
+test('all short-lived enemy notice and ranged projectiles dispose their generated meshes on hit, expiry and level reset', async () => {
+  const game = await read('../src/game.ts');
+  const spawnFunctions = [
+    'spawnPenaltyNotice',
+    'spawnDyscyplinarkaNotice',
+    'spawnSanitarywareProjectile',
+    'spawnSparkZapProjectile',
+    'spawnOdprawaClipboardProjectile',
+  ];
+  for (const name of spawnFunctions) {
+    const start = game.indexOf('private ' + name + '(');
+    const end = game.indexOf('\n  private ', start + 10);
+    assert.ok(start >= 0 && end > start, name + ' should exist');
+    assert.match(game.slice(start, end), /enemyProjectiles\.push\(\{[^}]*disposeOnRemove: true/);
+  }
+
+  assert.match(game, /disposeOnRemove\?: boolean/);
+  const updateStart = game.indexOf('private updateProjectiles(dt: number)');
+  const updateEnd = game.indexOf('\n  private ', updateStart + 10);
+  const update = game.slice(updateStart, updateEnd);
+  assert.ok((update.match(/ep\.kind === 'pomazaniec_lollipop' \|\| ep\.kind === 'sebix_brick' \|\| ep\.disposeOnRemove/g) || []).length >= 2);
+
+  const clearStart = game.indexOf('private clearLevel()');
+  const clearEnd = game.indexOf('\n  private ', clearStart + 10);
+  const clear = game.slice(clearStart, clearEnd);
+  assert.match(clear, /projectile\.kind === 'pomazaniec_lollipop' \|\| projectile\.kind === 'sebix_brick' \|\| projectile\.disposeOnRemove/);
+});
