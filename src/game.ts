@@ -7,6 +7,7 @@ import { isWithinBossImpactRadius } from './combatTelegraphs.ts';
 import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
 import { chooseSurvivalEventSpawnPoint } from './survivalSpawn.ts';
 import { shouldSpawnBosmanKrakow } from './survivalEncounters.ts';
+import { chooseCampaignRewardSpawnPoint } from './campaignRewards.ts';
 import {
   getAbilityCooldownSeconds,
   getBaseAttackCooldownSeconds,
@@ -8164,9 +8165,13 @@ export class MaxFlizGameEngine {
     this.randomSpawnTimer += dt;
     if (this.randomSpawnTimer >= (this.gameMode === 'survival' ? 24.0 : 18.0)) {
       this.randomSpawnTimer = 0;
-      // Spawn random Espresso or Nitro Boost pickup in active sector
-      const rx = (Math.random() - 0.5) * 44;
-      const rz = (Math.random() - 0.5) * 14;
+      // Campaign rewards follow the operator across the mega-map. Survival
+      // keeps its original arena-centred reward placement.
+      const rewardPoint = this.gameMode === 'campaign'
+        ? chooseCampaignRewardSpawnPoint(this.currentActiveSector, Math.random(), Math.random())
+        : { x: (Math.random() - 0.5) * 44, z: (Math.random() - 0.5) * 14 };
+      const rx = rewardPoint.x;
+      const rz = rewardPoint.z;
       const isCoffee = Math.random() > 0.4;
       if (isCoffee) {
         this.addEspressoItem(`rand_esp_${Date.now()}`, rx, 0.4, rz);
