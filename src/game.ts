@@ -6813,15 +6813,23 @@ export class MaxFlizGameEngine {
   }
 
   private updateCollectibles(dt: number) {
-    this.collectibles.forEach((c) => {
-      if (c.collected || !c.mesh) return;
+    // Iterate backwards so collected/invalid pickups can be removed in-place
+    // without skipping the next entry. This keeps the hot-loop bounded by
+    // active items instead of every pickup ever collected during the session.
+    for (let i = this.collectibles.length - 1; i >= 0; i--) {
+      const c = this.collectibles[i];
+      if (c.collected || !c.mesh) {
+        this.collectibles.splice(i, 1);
+        continue;
+      }
 
       c.mesh.rotation.y += dt * 2.5;
 
-      // Magnet Perk pull
+      // Magnet Perk pull. A pickup can briefly occupy the player's exact
+      // horizontal position; avoid normalising a zero-length direction.
       if (this.activePerks.magnet > 0) {
         const magDist = Math.hypot(c.x - this.playerPos.x, c.z - this.playerPos.z);
-        if (magDist < 8.5) {
+        if (magDist > 0.001 && magDist < 8.5) {
           const pullSpeed = 9.0 * dt;
           c.x += ((this.playerPos.x - c.x) / magDist) * pullSpeed;
           c.z += ((this.playerPos.z - c.z) / magDist) * pullSpeed;
@@ -6872,10 +6880,10 @@ export class MaxFlizGameEngine {
         }
 
         this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+        this.collectibles.splice(i, 1);
       }
-    });
+    }
   }
-
   private updateHazards(dt: number) {
     const now = performance.now() * 0.001;
     this.hazards.forEach((h) => {
