@@ -7935,9 +7935,9 @@ export class MaxFlizGameEngine {
         }
       }
 
-      // Contact damage is still evaluated at the original hit radius above.
-      // The extra 0.18 m clearance keeps the rendered models from clipping after
-      // contact, in both Campaign and Survival, without disabling the stomp move.
+      // Contact damage uses the small model-clearance margin above, so enemies
+      // can still hit without entering the player's visible body footprint.
+      // The stomp keeps its original tighter radius and is intentionally exempt.
       if (!stompedThisFrame && e.state !== 'defeated') {
         this.resolveEnemyPlayerOverlap(e, contactRadius);
       }
