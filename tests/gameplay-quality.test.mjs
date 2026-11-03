@@ -539,3 +539,16 @@ test('temporary pickup cleanup preserves the public perk-drop spawn API used by 
   assert.match(game, /const mesh = createDroppedPerkCrate\(perkDef\.id, perkDef\.color\)/);
   assert.match(game, /this\.droppedPerks\.push\(dropped\)/);
 });
+
+
+test('level reset disposes remaining collectibles, perk drops, and loot crates before clearing the scene', async () => {
+  const game = await read('../src/game.ts');
+  const start = game.indexOf('private clearLevel()');
+  const end = game.indexOf('\n  private ', start + 10);
+  assert.ok(start >= 0 && end > start, 'clearLevel method should be present');
+  const clear = game.slice(start, end);
+  assert.match(clear, /for \(const collectible of this\.collectibles\) \{\s*if \(collectible\.mesh\) this\.disposeObjectResources\(collectible\.mesh\);/);
+  assert.match(clear, /for \(const perk of this\.droppedPerks\) \{\s*if \(perk\.mesh\) this\.disposeObjectResources\(perk\.mesh\);/);
+  assert.match(clear, /for \(const crate of this\.lootCrates\) \{\s*if \(crate\.mesh\) this\.disposeObjectResources\(crate\.mesh\);/);
+  assert.ok(clear.indexOf('this.disposeObjectResources(collectible.mesh)') < clear.indexOf('while (this.levelRoot.children.length > 0)'));
+});
