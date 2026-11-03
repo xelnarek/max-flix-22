@@ -4,6 +4,7 @@ import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoi
 import { createEnemyHitReaction, getEnemyHitPulse } from './enemyCombatFeedback.ts';
 import { isWithinBossImpactRadius } from './combatTelegraphs.ts';
 import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
+import { chooseSurvivalEventSpawnPoint } from './survivalSpawn.ts';
 import {
   getAbilityCooldownSeconds,
   getBaseAttackCooldownSeconds,
@@ -5618,32 +5619,20 @@ export class MaxFlizGameEngine {
 
   private getPomazaniecSpawnPoint(index: number): { x: number; z: number } {
     const baseAngle = this.playerRot + (index / 5) * Math.PI * 2;
-    for (let attempt = 0; attempt < 10; attempt++) {
-      const angle = baseAngle + attempt * 0.31;
-      const radius = 7.8 + (attempt % 3) * 0.65;
-      const x = THREE.MathUtils.clamp(
-        this.playerPos.x + Math.sin(angle) * radius,
-        this.levelBounds.minX + 2.8,
-        this.levelBounds.maxX - 2.8
-      );
-      const z = THREE.MathUtils.clamp(
-        this.playerPos.z + Math.cos(angle) * radius,
-        this.levelBounds.minZ + 1.8,
-        this.levelBounds.maxZ - 1.8
-      );
-      const blocked = this.survivalObstacles.some((obstacle) =>
-        Math.abs(x - obstacle.x) < obstacle.halfWidth + 0.85 &&
-        Math.abs(z - obstacle.z) < obstacle.halfDepth + 0.85
-      );
-      const overlapsEnemy = this.enemies.some((enemy) =>
-        enemy.state !== 'defeated' && Math.hypot(enemy.x - x, enemy.z - z) < 1.8
-      );
-      if (!blocked && !overlapsEnemy) return { x, z };
-    }
-    const angle = baseAngle;
+    const safePoint = chooseSurvivalEventSpawnPoint(
+      { x: this.playerPos.x, z: this.playerPos.z },
+      baseAngle,
+      this.levelBounds,
+      this.survivalObstacles,
+      this.enemies,
+      { minimumPlayerDistance: 7.8, minimumEnemyDistance: 2.2, obstaclePadding: 0.85 },
+    );
+    if (safePoint) return safePoint;
+
+    // Only reachable if the arena is fully constrained; keep the fallback bounded.
     return {
-      x: THREE.MathUtils.clamp(this.playerPos.x + Math.sin(angle) * 9, this.levelBounds.minX + 2.8, this.levelBounds.maxX - 2.8),
-      z: THREE.MathUtils.clamp(this.playerPos.z + Math.cos(angle) * 9, this.levelBounds.minZ + 1.8, this.levelBounds.maxZ - 1.8),
+      x: THREE.MathUtils.clamp(this.playerPos.x + Math.sin(baseAngle) * 9, this.levelBounds.minX + 2.8, this.levelBounds.maxX - 2.8),
+      z: THREE.MathUtils.clamp(this.playerPos.z + Math.cos(baseAngle) * 9, this.levelBounds.minZ + 1.8, this.levelBounds.maxZ - 1.8),
     };
   }
 
