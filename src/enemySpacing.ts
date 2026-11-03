@@ -42,7 +42,7 @@ export interface PlayerSeparationResult extends HorizontalVector {
 export function resolveEnemyPlayerSeparation(
   enemy: EnemySpacingActor,
   player: HorizontalVector,
-  minimumDistance = 1.25,
+  minimumDistance: number,
   bounds: HorizontalArenaBounds,
   inset = 0,
 ): PlayerSeparationResult {
