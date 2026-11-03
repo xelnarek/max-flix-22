@@ -7196,36 +7196,15 @@ export class MaxFlizGameEngine {
     const separationX = separation.x;
     const separationZ = separation.z;
 
-    let avoidX = 0;
-    let avoidZ = 0;
-    for (const obstacle of this.survivalObstacles) {
-      const fromCenterX = enemy.x - obstacle.x;
-      const fromCenterZ = enemy.z - obstacle.z;
-      const insideX = Math.abs(fromCenterX) < obstacle.halfWidth + 0.18;
-      const insideZ = Math.abs(fromCenterZ) < obstacle.halfDepth + 0.18;
-      if (insideX && insideZ) {
-        // Recover if an enemy was spawned or pushed inside the collider instead of freezing there.
-        const exitX = obstacle.halfWidth + 0.3 - Math.abs(fromCenterX);
-        const exitZ = obstacle.halfDepth + 0.3 - Math.abs(fromCenterZ);
-        if (exitX < exitZ) avoidX += Math.sign(fromCenterX || (enemy.aiOrbitSign || 1)) * 2.4;
-        else avoidZ += Math.sign(fromCenterZ || (enemy.aiOrbitSign || 1)) * 2.4;
-        continue;
-      }
-      const nearestX = THREE.MathUtils.clamp(enemy.x, obstacle.x - obstacle.halfWidth, obstacle.x + obstacle.halfWidth);
-      const nearestZ = THREE.MathUtils.clamp(enemy.z, obstacle.z - obstacle.halfDepth, obstacle.z + obstacle.halfDepth);
-      const dx = enemy.x - nearestX;
-      const dz = enemy.z - nearestZ;
-      const d2 = dx * dx + dz * dz;
-      if (d2 > 0.0025 && d2 < 3.2) {
-        const d = Math.sqrt(d2);
-        const force = (1.8 - d) / (1.8 * d);
-        avoidX += dx * force;
-        avoidZ += dz * force;
-      }
-    }
-
-    steerX += separationX * 3.0 + avoidX * 2.2;
-    steerZ += separationZ * 3.0 + avoidZ * 2.2;
+    const obstacleAvoidance = calculateEnemyObstacleAvoidanceVector(
+      enemy,
+      { x: targetX, z: targetZ },
+      this.survivalObstacles,
+      4.6,
+      0.8,
+    );
+    steerX += separationX * 3.0 + obstacleAvoidance.x * 1.25;
+    steerZ += separationZ * 3.0 + obstacleAvoidance.z * 1.25;
     const isTelegraphingRangedBoss = enemy.chargeTimer !== undefined &&
       (enemy.type === 'bosman_krakow' || (enemy.type === 'agv_robot' && enemy.name.includes('AGV-9 SENTINEL')));
     if (isTelegraphingRangedBoss) {
