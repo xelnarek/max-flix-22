@@ -689,6 +689,7 @@ export class MaxFlizGameEngine {
     spin: number;
     update?: (dt: number, progress: number) => void;
     cleanup?: () => void;
+    disposeOnRemove?: boolean;
   }[] = [];
   private marcinTank: {
     group: THREE.Group;
@@ -2266,7 +2267,10 @@ export class MaxFlizGameEngine {
       if (projectile.weaponProjectile || projectile.disposeOnRemove) this.disposeTemporaryObject(projectile.mesh);
     }
     this.projectiles = [];
-    for (const effect of this.specialEffects) effect.cleanup?.();
+    for (const effect of this.specialEffects) {
+      if (effect.cleanup) effect.cleanup();
+      else if (effect.disposeOnRemove) this.disposeTemporaryObject(effect.mesh);
+    }
     this.specialEffects = [];
     this.bimberMolotovs = [];
     this.bimberFirePuddles = [];
@@ -5846,6 +5850,7 @@ export class MaxFlizGameEngine {
       mesh: group,
       life: 0.58,
       maxLife: 0.58,
+      disposeOnRemove: true,
       grow: 0,
       spin: 0,
       update: (_dt, progress) => {
@@ -8617,7 +8622,8 @@ export class MaxFlizGameEngine {
 
       if (effect.life <= 0) {
         this.levelRoot.remove(effect.mesh);
-        effect.cleanup?.();
+        if (effect.cleanup) effect.cleanup();
+        else if (effect.disposeOnRemove) this.disposeTemporaryObject(effect.mesh);
         this.specialEffects.splice(i, 1);
       }
     }
@@ -8637,7 +8643,7 @@ export class MaxFlizGameEngine {
     mesh.position.set(this.playerPos.x, this.playerPos.y + 0.12, this.playerPos.z);
     mesh.scale.setScalar(0.2);
     this.levelRoot.add(mesh);
-    this.specialEffects.push({ mesh, life: 0.7, maxLife: 0.7, grow: 7.5, spin: 9.0 });
+    this.specialEffects.push({ mesh, life: 0.7, maxLife: 0.7, grow: 7.5, spin: 9.0, disposeOnRemove: true });
 
     const ring2 = new THREE.Mesh(
       new THREE.TorusGeometry(1.2, 0.08, 12, 32),
@@ -8647,7 +8653,7 @@ export class MaxFlizGameEngine {
     ring2.position.set(this.playerPos.x, this.playerPos.y + 0.12, this.playerPos.z);
     ring2.scale.setScalar(0.18);
     this.levelRoot.add(ring2);
-    this.specialEffects.push({ mesh: ring2, life: 0.6, maxLife: 0.6, grow: 8.5, spin: -7.0 });
+    this.specialEffects.push({ mesh: ring2, life: 0.6, maxLife: 0.6, grow: 8.5, spin: -7.0, disposeOnRemove: true });
 
     // 2. GIANT ROTATING & SQUEEZING MECHANICAL CRUSHER ARM (ŚCIŚK ZAGŁADY)
     const armGroup = new THREE.Group();
@@ -8730,6 +8736,7 @@ export class MaxFlizGameEngine {
       mesh: armGroup,
       life: 0.9,
       maxLife: 0.9,
+      disposeOnRemove: true,
       grow: 0,
       spin: 0,
       update: (dt: number, progress: number) => {
@@ -9713,6 +9720,7 @@ export class MaxFlizGameEngine {
       mesh: flash,
       life: 0.45,
       maxLife: 0.45,
+      disposeOnRemove: true,
       grow: 3.5,
       spin: 4.0,
     });
@@ -9967,7 +9975,7 @@ export class MaxFlizGameEngine {
       mesh.rotation.x = Math.PI / 2;
       mesh.position.set(e.x, e.y + 0.5, e.z);
       this.levelRoot.add(mesh);
-      this.specialEffects.push({ mesh, life: 1.2, maxLife: 1.2, grow: 12.0, spin: 15.0 });
+      this.specialEffects.push({ mesh, life: 1.2, maxLife: 1.2, grow: 12.0, spin: 15.0, disposeOnRemove: true });
       this.spawnExplosionParticles(e.x, e.y + 1.1, e.z, 0xfbbf24, 28);
     } else {
       // A compact shard burst gives ordinary enemies a visible but lightweight hit-confirm.
