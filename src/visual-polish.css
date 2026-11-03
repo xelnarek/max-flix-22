@@ -2818,3 +2818,45 @@ html[data-ui-landscape-touch="true"] .story-modal-card .story-slide {
 @media (prefers-reduced-motion: reduce) {
   #title-screen .char-card { transition: none !important; }
 }
+
+/* Five operator cards: keep the bottom pair visually centred on narrow touch screens. */
+@media (max-width: 640px) {
+  #title-screen .char-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+  }
+  #title-screen .char-card {
+    grid-column: span 2;
+    min-height: 142px !important;
+    padding: 9px 6px 10px !important;
+  }
+  #title-screen .char-card:nth-child(4) { grid-column: 2 / span 2; }
+  #title-screen .char-card:nth-child(5) { grid-column: 4 / span 2; }
+  #title-screen .char-card[aria-pressed="true"] {
+    border-color: var(--operator-accent) !important;
+    background:
+      radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--operator-accent) 24%, transparent), transparent 72%),
+      linear-gradient(160deg, color-mix(in srgb, var(--operator-accent) 13%, #142638), #081522) !important;
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--operator-accent) 40%, transparent),
+      0 0 22px color-mix(in srgb, var(--operator-accent) 18%, transparent),
+      inset 0 1px 0 rgba(255,255,255,.07) !important;
+  }
+  #title-screen .char-card[aria-pressed="true"] .operator-emblem {
+    border-color: color-mix(in srgb, var(--operator-accent) 78%, white) !important;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--operator-accent) 20%, transparent),
+      0 0 16px color-mix(in srgb, var(--operator-accent) 34%, transparent);
+  }
+}
+@media (max-width: 360px) {
+  #title-screen .char-grid { gap: 5px !important; }
+  #title-screen .char-card { min-height: 132px !important; padding: 7px 4px 8px !important; }
+  #title-screen .char-card-badge.operator-emblem {
+    width: 54px !important;
+    height: 54px !important;
+    flex-basis: 54px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #title-screen .char-card[aria-pressed="true"] .operator-emblem { transition: none !important; }
+}
