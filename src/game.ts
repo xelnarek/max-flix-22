@@ -1324,7 +1324,6 @@ export class MaxFlizGameEngine {
 
   private buildSurvivalArenaExpansion() {
     this.survivalObstacles = [];
-    this.campaignEnemyObstacles = [];
     const floorTexture = getFloorTexture().clone();
     floorTexture.needsUpdate = true;
     floorTexture.wrapS = THREE.RepeatWrapping;
@@ -2224,6 +2223,7 @@ export class MaxFlizGameEngine {
     }
     this.platforms = [];
     this.survivalObstacles = [];
+    this.campaignEnemyObstacles = [];
     this.collectibles = [];
     this.droppedPerks = [];
     this.lootCrates = [];
