@@ -470,7 +470,7 @@ test('Survival random boss spawns never stack active Bosman encounters', async (
 
 test('campaign roaming rewards use the current mega-map sector while Survival stays arena-centred', async () => {
   const game = await read('../src/game.ts');
-  assert.match(game, /chooseCampaignRewardSpawnPoint\(this\.currentActiveSector, Math\.random\(\), Math\.random\(\)\)/);
+  assert.match(game, /chooseCampaignRewardSpawnPoint\(this\.currentActiveSector, Math\.random\(\), Math\.random\(\), this\.campaignEnemyObstacles\)/);
   assert.match(game, /this\.gameMode === 'campaign'[\s\S]*?chooseCampaignRewardSpawnPoint[\s\S]*?: \{ x: \(Math\.random\(\) - 0\.5\) \* 44, z: \(Math\.random\(\) - 0\.5\) \* 14 \}/);
   const progression = game.slice(game.indexOf('private updateSectorProgress'), game.indexOf('private updateRandomSpawners'));
   assert.match(progression, /this\.currentActiveSector = newSector/);

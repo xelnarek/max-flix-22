@@ -8168,7 +8168,7 @@ export class MaxFlizGameEngine {
       // Campaign rewards follow the operator across the mega-map. Survival
       // keeps its original arena-centred reward placement.
       const rewardPoint = this.gameMode === 'campaign'
-        ? chooseCampaignRewardSpawnPoint(this.currentActiveSector, Math.random(), Math.random())
+        ? chooseCampaignRewardSpawnPoint(this.currentActiveSector, Math.random(), Math.random(), this.campaignEnemyObstacles)
         : { x: (Math.random() - 0.5) * 44, z: (Math.random() - 0.5) * 14 };
       const rx = rewardPoint.x;
       const rz = rewardPoint.z;
