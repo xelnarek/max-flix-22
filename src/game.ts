@@ -2748,6 +2748,9 @@ export class MaxFlizGameEngine {
       mesh,
       collected: false,
       points: 100,
+      // Static showroom espresso stays until collected; roaming drops expire
+      // so unattended rewards cannot accumulate indefinitely.
+      life: id.startsWith('rand_esp_') ? 90 : undefined,
     });
   }
 
@@ -6852,6 +6855,17 @@ export class MaxFlizGameEngine {
       }
 
       c.mesh.rotation.y += dt * 2.5;
+
+      if (c.life !== undefined) {
+        c.life -= Math.max(0, dt);
+        if (c.life <= 0) {
+          c.collected = true;
+          this.levelRoot.remove(c.mesh);
+          this.disposeObjectResources(c.mesh);
+          this.collectibles.splice(i, 1);
+          continue;
+        }
+      }
 
       // Magnet Perk pull. A pickup can briefly occupy the player's exact
       // horizontal position; avoid normalising a zero-length direction.
