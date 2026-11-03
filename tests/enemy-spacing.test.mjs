@@ -4,6 +4,7 @@ import {
   EnemySpatialIndex,
   calculateEnemySeparationVector,
   chooseSpacedSpawnPoint,
+  resolveEnemyPlayerSeparation,
 } from '../src/enemySpacing.ts';
 
 test('coincident enemies receive finite, opposite deterministic separation vectors', () => {
@@ -86,4 +87,65 @@ test('spatial index rebuild replaces old cells and query reuses its scratch buff
   assert.equal(firstResult, secondResult);
   assert.deepEqual(secondResult.map((actor) => actor.id), ['second']);
   assert.deepEqual(index.query(0, 0, 1), []);
+});
+
+
+const testArena = { minX: -10, maxX: 10, minZ: -8, maxZ: 8 };
+
+test('enemy models are moved outside the player clearance without moving the player', () => {
+  const enemy = { id: 'enemy-near-player', x: 0.5, z: 0 };
+  const player = { x: 0, z: 0 };
+  const result = resolveEnemyPlayerSeparation(enemy, player, 1.3, testArena, 0.5);
+
+  assert.equal(result.corrected, true);
+  assert.ok(Math.abs(Math.hypot(result.x - player.x, result.z - player.z) - 1.3) < 1e-9);
+  assert.deepEqual(player, { x: 0, z: 0 });
+  assert.deepEqual(enemy, { id: 'enemy-near-player', x: 0.5, z: 0 });
+});
+
+test('enemy separation leaves actors outside the requested clearance unchanged', () => {
+  const enemy = { id: 'enemy-clear', x: 1.5, z: 0 };
+  assert.deepEqual(
+    resolveEnemyPlayerSeparation(enemy, { x: 0, z: 0 }, 1.25, testArena),
+    { x: 1.5, z: 0, corrected: false },
+  );
+});
+
+test('coincident enemy and player models are separated in a stable direction', () => {
+  const enemy = { id: 'coincident-enemy', x: 0, z: 0 };
+  const player = { x: 0, z: 0 };
+  const first = resolveEnemyPlayerSeparation(enemy, player, 1.4, testArena);
+  const second = resolveEnemyPlayerSeparation(enemy, player, 1.4, testArena);
+
+  assert.deepEqual(first, second);
+  assert.equal(first.corrected, true);
+  assert.ok(Number.isFinite(first.x) && Number.isFinite(first.z));
+  assert.ok(Math.abs(Math.hypot(first.x, first.z) - 1.4) < 1e-9);
+});
+
+test('player separation chooses an in-bounds escape direction near an arena wall', () => {
+  const enemy = { id: 'wall-enemy', x: 4.9, z: 0 };
+  const player = { x: 4.9, z: 0 };
+  const result = resolveEnemyPlayerSeparation(enemy, player, 1.5, {
+    minX: -5, maxX: 5, minZ: -5, maxZ: 5,
+  });
+  assert.equal(result.corrected, true);
+  assert.ok(result.x >= -5 && result.x <= 5 && result.z >= -5 && result.z <= 5);
+  assert.ok(Math.hypot(result.x - player.x, result.z - player.z) >= 1.5 - 1e-9);
+});
+
+test('defeated enemies and invalid positions are never moved by player separation', () => {
+  assert.deepEqual(
+    resolveEnemyPlayerSeparation(
+      { id: 'dead', x: 0, z: 0, state: 'defeated' },
+      { x: 0, z: 0 }, 1.25, testArena,
+    ),
+    { x: 0, z: 0, corrected: false },
+  );
+  const invalid = resolveEnemyPlayerSeparation(
+    { id: 'invalid', x: Number.NaN, z: 0 },
+    { x: 0, z: 0 }, 1.25, testArena,
+  );
+  assert.equal(invalid.corrected, false);
+  assert.ok(Number.isNaN(invalid.x));
 });
