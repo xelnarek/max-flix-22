@@ -3685,6 +3685,38 @@ export class MaxFlizGameEngine {
       }
     }
   }
+  public spawnDroppedPerk(x: number, y: number, z: number, forcedPerkId?: PerkType) {
+    const perkDef = forcedPerkId
+      ? AVAILABLE_PERKS.find((p) => p.id === forcedPerkId)!
+      : AVAILABLE_PERKS[Math.floor(Math.random() * AVAILABLE_PERKS.length)];
+
+    const id = `drop_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+    const mesh = createDroppedPerkCrate(perkDef.id, perkDef.color);
+    mesh.position.set(x, y + 0.1, z);
+    this.levelRoot.add(mesh);
+
+    const dropped: DroppedPerkItem = {
+      id,
+      perkId: perkDef.id,
+      name: perkDef.name,
+      icon: perkDef.icon,
+      color: perkDef.color,
+      x,
+      y: y + 0.1,
+      z,
+      initialY: y + 0.1,
+      mesh,
+      collected: false,
+      life: 55,
+      duration: perkDef.duration || 20,
+    };
+
+    this.droppedPerks.push(dropped);
+    this.spawnParticleRing(x, y + 0.6, z, perkDef.color);
+    this.emitFloatingToast(`📦 ZRZUT: ${perkDef.name}!`, x, y + 1.2, z, 'perk');
+    sound.playPickup(1);
+  }
+
   private updateDroppedPerks(dt: number) {
     const time = performance.now() * 0.003;
 
