@@ -513,3 +513,21 @@ test('collected pickup models and their owned dynamic textures release GPU resou
 
   assert.match(assets, /const bucketTex = new THREE\.CanvasTexture\(canvas\);\s*bucketTex\.colorSpace = THREE\.SRGBColorSpace;\s*group\.userData\.dynamicTextures = \[bucketTex\];/);
 });
+
+
+test('expired and collected dropped-perk crates and opened loot crates dispose their temporary models', async () => {
+  const game = await read('../src/game.ts');
+  const droppedStart = game.indexOf('private updateDroppedPerks(dt: number)');
+  const droppedEnd = game.indexOf('\n  private ', droppedStart + 10);
+  const lootStart = game.indexOf('private updateLootCrates(dt: number)');
+  const lootEnd = game.indexOf('\n  private ', lootStart + 10);
+  assert.ok(droppedStart >= 0 && droppedEnd > droppedStart);
+  assert.ok(lootStart >= 0 && lootEnd > lootStart);
+
+  const dropped = game.slice(droppedStart, droppedEnd);
+  const loot = game.slice(lootStart, lootEnd);
+  assert.ok((dropped.match(/this\.disposeObjectResources\(perk\.mesh\)/g) || []).length >= 3);
+  assert.match(dropped, /if \(perk\.life <= 0\) \{[\s\S]*?this\.disposeObjectResources\(perk\.mesh\)/);
+  assert.match(dropped, /if \(dist < 1\.15 && dy < 1\.4\) \{[\s\S]*?this\.disposeObjectResources\(perk\.mesh\)/);
+  assert.match(loot, /this\.levelRoot\.remove\(crate\.mesh\);\s*this\.disposeObjectResources\(crate\.mesh\);/);
+});
