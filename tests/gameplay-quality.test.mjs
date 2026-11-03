@@ -658,3 +658,40 @@ test('temporary special-effect meshes release generated GPU resources when their
   const clear = game.slice(clearStart, clearEnd);
   assert.match(clear, /if \(effect\.cleanup\) effect\.cleanup\(\);\s*else if \(effect\.disposeOnRemove\) this\.disposeTemporaryObject\(effect\.mesh\)/);
 });
+
+ 
+test('falling tile, molotov, fire-puddle and explosive-barrel models dispose owned resources on removal', async () => {
+  const game = await read('../src/game.ts');
+
+  const fallingStart = game.indexOf('private updateFallingTiles(dt: number)');
+  const fallingEnd = game.indexOf('\n  private ', fallingStart + 10);
+  const falling = game.slice(fallingStart, fallingEnd);
+  assert.ok(fallingStart >= 0 && fallingEnd > fallingStart);
+  assert.match(falling, /this\.levelRoot\.remove\(tile\.mesh\);\s*this\.levelRoot\.remove\(tile\.warningRing\);\s*this\.disposeTemporaryObject\(tile\.mesh\);\s*this\.disposeTemporaryObject\(tile\.warningRing\)/);
+
+  const molotovStart = game.indexOf('private updateBimberMolotovs(dt: number)');
+  const molotovEnd = game.indexOf('\n  private ', molotovStart + 10);
+  const molotov = game.slice(molotovStart, molotovEnd);
+  assert.ok(molotovStart >= 0 && molotovEnd > molotovStart);
+  assert.match(molotov, /this\.levelRoot\.remove\(b\.mesh\);\s*this\.disposeTemporaryObject\(b\.mesh\);\s*this\.bimberMolotovs\.splice/);
+
+  const puddleStart = game.indexOf('private updateBimberFirePuddles(dt: number)');
+  const puddleEnd = game.indexOf('\n  private ', puddleStart + 10);
+  const puddle = game.slice(puddleStart, puddleEnd);
+  assert.ok(puddleStart >= 0 && puddleEnd > puddleStart);
+  assert.match(puddle, /this\.levelRoot\.remove\(p\.group\);\s*this\.disposeTemporaryObject\(p\.group\);\s*this\.bimberFirePuddles\.splice/);
+
+  const barrelStart = game.indexOf('private updateExplosiveBarrels(dt: number)');
+  const barrelEnd = game.indexOf('\n  private ', barrelStart + 10);
+  const barrels = game.slice(barrelStart, barrelEnd);
+  assert.ok(barrelStart >= 0 && barrelEnd > barrelStart);
+  assert.match(barrels, /this\.levelRoot\.remove\(b\.mesh\);\s*this\.disposeTemporaryObject\(b\.mesh\);\s*this\.platforms = this\.platforms\.filter\(\(platform\) => platform\.mesh !== b\.mesh\)/);
+
+  const clearStart = game.indexOf('private clearLevel()');
+  const clearEnd = game.indexOf('\n  private ', clearStart + 10);
+  const clear = game.slice(clearStart, clearEnd);
+  assert.match(clear, /for \(const tile of this\.fallingTiles\)[\s\S]*?disposeTemporaryObject\(tile\.mesh\)[\s\S]*?disposeTemporaryObject\(tile\.warningRing\)/);
+  assert.match(clear, /for \(const molotov of this\.bimberMolotovs\) this\.disposeTemporaryObject\(molotov\.mesh\)/);
+  assert.match(clear, /for \(const puddle of this\.bimberFirePuddles\) this\.disposeTemporaryObject\(puddle\.group\)/);
+  assert.match(clear, /for \(const barrel of this\.explosiveBarrels\) this\.disposeTemporaryObject\(barrel\.mesh\)/);
+});

@@ -2235,6 +2235,15 @@ export class MaxFlizGameEngine {
     for (const crate of this.lootCrates) {
       if (crate.mesh) this.disposeObjectResources(crate.mesh);
     }
+    // These environmental models are built per event/instance and are not
+    // shared map assets. Release them before the scene graph is cleared.
+    for (const tile of this.fallingTiles) {
+      this.disposeTemporaryObject(tile.mesh);
+      this.disposeTemporaryObject(tile.warningRing);
+    }
+    for (const molotov of this.bimberMolotovs) this.disposeTemporaryObject(molotov.mesh);
+    for (const puddle of this.bimberFirePuddles) this.disposeTemporaryObject(puddle.group);
+    for (const barrel of this.explosiveBarrels) this.disposeTemporaryObject(barrel.mesh);
     while (this.levelRoot.children.length > 0) {
       this.levelRoot.remove(this.levelRoot.children[0]);
     }
@@ -7174,6 +7183,8 @@ export class MaxFlizGameEngine {
         if (b.fuseTimer <= 0) {
           b.exploded = true;
           this.levelRoot.remove(b.mesh);
+          this.disposeTemporaryObject(b.mesh);
+          this.platforms = this.platforms.filter((platform) => platform.mesh !== b.mesh);
           sound.playExplosion();
           this.triggerScreenShake(1.2, 0.8);
           this.spawnParticleRing(b.x, b.y + 0.5, b.z, 0xef4444);
@@ -8185,6 +8196,8 @@ export class MaxFlizGameEngine {
           tile.state = 'shattered';
           this.levelRoot.remove(tile.mesh);
           this.levelRoot.remove(tile.warningRing);
+          this.disposeTemporaryObject(tile.mesh);
+          this.disposeTemporaryObject(tile.warningRing);
           this.fallingTiles.splice(i, 1);
 
           // Explosion sound & screen shake
@@ -9679,6 +9692,7 @@ export class MaxFlizGameEngine {
         // DETONATION!
         this.detonateBimberMolotov(b.pos.x, Math.max(floorY, 0), b.pos.z);
         this.levelRoot.remove(b.mesh);
+        this.disposeTemporaryObject(b.mesh);
         this.bimberMolotovs.splice(i, 1);
       }
     }
@@ -9835,6 +9849,7 @@ export class MaxFlizGameEngine {
           this.spawnDust(p.x + (Math.random() - 0.5) * 2, p.y + 0.2, p.z + (Math.random() - 0.5) * 2, 0x64748b);
         }
         this.levelRoot.remove(p.group);
+        this.disposeTemporaryObject(p.group);
         this.bimberFirePuddles.splice(i, 1);
       }
     }
