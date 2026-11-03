@@ -3672,11 +3672,12 @@ export class MaxFlizGameEngine {
     for (let i = this.lootCrates.length - 1; i >= 0; i--) {
       const crate = this.lootCrates[i];
       crate.mesh.rotation.y += dt * 1.5;
-      
+
       const dist = Math.hypot(crate.x - this.playerPos.x, crate.z - this.playerPos.z);
       if (dist < 1.0) {
         this.spawnDroppedPerk(crate.x, crate.y, crate.z);
         this.levelRoot.remove(crate.mesh);
+        this.disposeObjectResources(crate.mesh);
         this.platforms = this.platforms.filter((platform) => platform.mesh !== crate.mesh);
         this.lootCrates.splice(i, 1);
         this.spawnParticleRing(crate.x, crate.y + 0.4, crate.z, 0xfacc15);
@@ -3684,49 +3685,24 @@ export class MaxFlizGameEngine {
       }
     }
   }
-
-  public spawnDroppedPerk(x: number, y: number, z: number, forcedPerkId?: PerkType) {
-    const perkDef = forcedPerkId
-      ? AVAILABLE_PERKS.find((p) => p.id === forcedPerkId)!
-      : AVAILABLE_PERKS[Math.floor(Math.random() * AVAILABLE_PERKS.length)];
-
-    const id = `drop_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
-    const mesh = createDroppedPerkCrate(perkDef.id, perkDef.color);
-    mesh.position.set(x, y + 0.1, z);
-    this.levelRoot.add(mesh);
-
-    const dropped: DroppedPerkItem = {
-      id,
-      perkId: perkDef.id,
-      name: perkDef.name,
-      icon: perkDef.icon,
-      color: perkDef.color,
-      x,
-      y: y + 0.1,
-      z,
-      initialY: y + 0.1,
-      mesh,
-      collected: false,
-      life: 55, // 55 seconds to collect
-      duration: perkDef.duration || 20,
-    };
-
-    this.droppedPerks.push(dropped);
-    this.spawnParticleRing(x, y + 0.6, z, perkDef.color);
-    this.emitFloatingToast(`📦 ZRZUT: ${perkDef.name}!`, x, y + 1.2, z, 'perk');
-    sound.playPickup(1);
-  }
-
   private updateDroppedPerks(dt: number) {
     const time = performance.now() * 0.003;
 
     for (let i = this.droppedPerks.length - 1; i >= 0; i--) {
       const perk = this.droppedPerks[i];
-      if (perk.collected || !perk.mesh) continue;
+      if (perk.collected || !perk.mesh) {
+        if (perk.mesh) {
+          this.levelRoot.remove(perk.mesh);
+          this.disposeObjectResources(perk.mesh);
+        }
+        this.droppedPerks.splice(i, 1);
+        continue;
+      }
 
       perk.life -= dt;
       if (perk.life <= 0) {
         this.levelRoot.remove(perk.mesh);
+        this.disposeObjectResources(perk.mesh);
         this.droppedPerks.splice(i, 1);
         continue;
       }
@@ -3754,6 +3730,7 @@ export class MaxFlizGameEngine {
       if (dist < 1.15 && dy < 1.4) {
         perk.collected = true;
         this.levelRoot.remove(perk.mesh);
+        this.disposeObjectResources(perk.mesh);
         this.droppedPerks.splice(i, 1);
 
         this.activatePerk(perk.perkId, perk.duration);
@@ -3769,7 +3746,6 @@ export class MaxFlizGameEngine {
       }
     }
   }
-
   private emitFloatingToast(
     text: string,
     worldX: number,
