@@ -2220,6 +2220,18 @@ export class MaxFlizGameEngine {
     this.clearSurvivalSurgeRing();
     this.survivalSurgeTargetCount = 0;
     this.disposeSurvivalArenaInstances();
+    // Release pickup-owned GPU resources before clearing the level graph.
+    // These models have per-instance geometries/materials; only explicitly
+    // marked dynamic textures are disposed, never shared asset textures.
+    for (const collectible of this.collectibles) {
+      if (collectible.mesh) this.disposeObjectResources(collectible.mesh);
+    }
+    for (const perk of this.droppedPerks) {
+      if (perk.mesh) this.disposeObjectResources(perk.mesh);
+    }
+    for (const crate of this.lootCrates) {
+      if (crate.mesh) this.disposeObjectResources(crate.mesh);
+    }
     while (this.levelRoot.children.length > 0) {
       this.levelRoot.remove(this.levelRoot.children[0]);
     }
