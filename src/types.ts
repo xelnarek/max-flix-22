@@ -48,6 +48,8 @@ export interface CollectibleItem {
   mesh?: any;
   collected: boolean;
   points: number;
+  /** Optional remaining lifetime for temporary roaming pickups. */
+  life?: number;
 }
 
 export type EnemyType =
