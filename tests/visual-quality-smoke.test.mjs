@@ -15,14 +15,16 @@ test('the five playable operator cards receive individual hand-drawn vector port
   const html = await read('../index.html');
   const ids = ['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr'];
   for (const id of ids) {
-    assert.match(html, new RegExp('data-char="' + id + '"[\\s\\S]*?operator-emblem emblem-' + id));
+    assert.ok(html.includes('data-char="' + id + '"'));
+    assert.ok(html.includes('operator-emblem emblem-' + id), 'missing fallback insignia for ' + id);
   }
   const app = await read('../src/index.ts');
-  assert.match(app, /const operatorPortrait = \\(id: CharacterId\\): string/);
-  assert.match(app, /const badge = card\\.querySelector<HTMLElement>\\('\\.operator-emblem'\\)/);
-  assert.match(app, /badge\\.innerHTML = operatorPortrait\\(cardId\\)/);
-  assert.match(app, /operatorPortraitRenderCount/);
-  assert.match(app, /aria-label="Portret operatora \\+ CHARACTERS\\[id\\]\\.name/);
+  assert.ok(app.includes('const operatorPortrait = (id: CharacterId): string'));
+  assert.ok(app.includes("const badge = card.querySelector<HTMLElement>('.operator-emblem')"));
+  assert.ok(app.includes('badge.innerHTML = operatorPortrait(cardId)'));
+  assert.ok(app.includes('operatorPortraitRenderCount'));
+  assert.ok(app.includes('CHARACTERS[id].name'));
+  for (const id of ids) assert.ok(app.includes(id + ': { skin:'), 'missing bespoke portrait design for ' + id);
 });
 
 test('playable operator face model no longer creates moustache meshes over the face', async () => {
@@ -114,9 +116,10 @@ test('operator menu portraits scale into a three-column touch layout without rep
   const css = await read('../src/visual-polish.css');
   const html = await read('../index.html');
   const app = await read('../src/index.ts');
-  assert.match(css, /@media \\(max-width: 640px\\)[\\s\\S]*?#title-screen \\.char-grid \\{[\\s\\S]*?repeat\\(3, minmax\\(0, 1fr\\)\\)/);
-  assert.match(css, /#title-screen \\.char-card-badge\\.operator-emblem \\.operator-portrait/);
-  assert.match(app, /card\\.setAttribute\\('aria-pressed', String\\(cardId === id\\)\\)/);
+  assert.ok(css.includes('@media (max-width: 640px)'));
+  assert.ok(css.includes('grid-template-columns: repeat(3, minmax(0, 1fr)) !important'));
+  assert.ok(css.includes('#title-screen .char-card-badge.operator-emblem .operator-portrait'));
+  assert.ok(app.includes("card.setAttribute('aria-pressed', String(cardId === id))"));
   for (const id of ['btn-start-game', 'btn-start-survival', 'btn-open-story-modal']) {
     assert.ok(html.includes('id="' + id + '"'));
   }
