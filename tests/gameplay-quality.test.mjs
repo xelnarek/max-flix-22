@@ -397,6 +397,9 @@ test('Campaign and Survival both separate enemy models from the player after con
   const contact = game.slice(contactStart, contactEnd);
   assert.match(contact, /let stompedThisFrame = false/);
   assert.match(contact, /stompedThisFrame = true/);
-  assert.match(contact, /this\.resolveEnemyPlayerOverlap\(e, hitRadius \+ 0\.18\)/);
+  assert.match(contact, /const contactRadius = hitRadius \+ 0\.18/);
+  assert.match(contact, /if \(dist < contactRadius\)/);
+  assert.match(contact, /if \(dist < hitRadius && this\.playerVel\.y < -0\.8/);
+  assert.match(contact, /this\.resolveEnemyPlayerOverlap\(e, contactRadius\)/);
   assert.ok(contact.indexOf('if (dist < hitRadius)') < contact.indexOf('this.resolveEnemyPlayerOverlap(e, hitRadius + 0.18)'));
 });
