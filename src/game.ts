@@ -6,6 +6,7 @@ import { createEnemyHitReaction, getEnemyHitPulse } from './enemyCombatFeedback.
 import { isWithinBossImpactRadius } from './combatTelegraphs.ts';
 import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
 import { chooseSurvivalEventSpawnPoint } from './survivalSpawn.ts';
+import { shouldSpawnBosmanKrakow } from './survivalEncounters.ts';
 import {
   getAbilityCooldownSeconds,
   getBaseAttackCooldownSeconds,
@@ -6191,10 +6192,14 @@ export class MaxFlizGameEngine {
     const maxZ = THREE.MathUtils.clamp(z + 2.2, this.levelBounds.minZ + 0.5, this.levelBounds.maxZ - 0.5);
     const roll = Math.random();
 
-    // Early Survival rotates Kurier, the reckless B4 operator and a smaller zombie group.
+    // Rare special encounters are capped at one active instance each so that
+    // the normal spawn pack cannot accidentally turn into overlapping bosses.
     const sebixAlreadyActive = this.enemies.some((enemy) => enemy.type === 'sebix_m' && enemy.state !== 'defeated');
+    const bosmanAlreadyActive = this.enemies.some((enemy) =>
+      enemy.type === 'bosman_krakow' && enemy.state !== 'defeated'
+    );
     if (wave >= 8 && !sebixAlreadyActive && Math.random() < 0.065) this.addSebixEnemy(id,x,minZ,maxZ);
-    else if (wave >= 6 && Math.random() < 0.04) this.addBosmanKrakowBossEnemy(id,x,z);
+    else if (shouldSpawnBosmanKrakow(wave, Math.random(), bosmanAlreadyActive)) this.addBosmanKrakowBossEnemy(id,x,z);
     else if (this.survivalElapsed < 90 && roll < 0.52) this.addKurierEnemy(id, x, minZ, maxZ, 'Kurier Ekspresowy — pilna dostawa');
     else if (this.survivalElapsed < 90 && roll < 0.82) this.addSztaplarEnemy(id, x, minZ, maxZ, 'Szalony Operator B4 — paleciak bez hamulców');
     else if (this.survivalElapsed >= 90 && this.survivalElapsed < 180 && roll < 0.28) this.addItalianVendorEnemy(id, x, minZ, maxZ, 'Włoski Dostawca Armatury — mamma mia');
