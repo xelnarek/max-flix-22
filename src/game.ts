@@ -667,6 +667,7 @@ export class MaxFlizGameEngine {
     returning?: boolean;
     homing?: boolean;
     weaponProjectile?: boolean;
+    disposeOnRemove?: boolean;
     aoeRadius?: number;
     stunDuration?: number;
     slowOnHit?: boolean;
@@ -2261,7 +2262,7 @@ export class MaxFlizGameEngine {
     this.threatTier = 0;
     this.enemyProjectiles = [];
     for (const projectile of this.projectiles) {
-      if (projectile.weaponProjectile) this.disposeTemporaryObject(projectile.mesh);
+      if (projectile.weaponProjectile || projectile.disposeOnRemove) this.disposeTemporaryObject(projectile.mesh);
     }
     this.projectiles = [];
     for (const effect of this.specialEffects) effect.cleanup?.();
@@ -8366,7 +8367,7 @@ export class MaxFlizGameEngine {
         const distBack = toPlayer.length();
         if (distBack < 0.75) {
           this.levelRoot.remove(p.mesh);
-          if (p.weaponProjectile) this.disposeTemporaryObject(p.mesh);
+          if (p.weaponProjectile || p.disposeOnRemove) this.disposeTemporaryObject(p.mesh);
           this.projectiles.splice(i, 1);
           continue;
         }
@@ -8539,7 +8540,7 @@ export class MaxFlizGameEngine {
 
       if (destroyProj || p.life <= 0) {
         this.levelRoot.remove(p.mesh);
-        if (p.weaponProjectile) this.disposeTemporaryObject(p.mesh);
+        if (p.weaponProjectile || p.disposeOnRemove) this.disposeTemporaryObject(p.mesh);
         this.projectiles.splice(i, 1);
       }
     }
@@ -8873,6 +8874,7 @@ export class MaxFlizGameEngine {
       this.levelRoot.add(spell);
       this.projectiles.push({
         mesh: spell,
+        disposeOnRemove: true,
         vel: forward.clone().multiplyScalar(14.2),
         life: getPrimaryAttackLifetimeSeconds('marcin', 14.2),
         damage: isThirdCombo ? 2 : 1,
@@ -8910,6 +8912,7 @@ export class MaxFlizGameEngine {
       this.levelRoot.add(dumbbell);
       this.projectiles.push({
         mesh: dumbbell,
+        disposeOnRemove: true,
         vel: forward.clone().multiplyScalar(14.6),
         life: getPrimaryAttackLifetimeSeconds('grzesiek', 14.6),
         damage: isThirdCombo ? 3 : 2,
@@ -8938,6 +8941,7 @@ export class MaxFlizGameEngine {
       this.levelRoot.add(wrapRoll);
       this.projectiles.push({
         mesh: wrapRoll,
+        disposeOnRemove: true,
         vel: forward.clone().multiplyScalar(14.8),
         life: getPrimaryAttackLifetimeSeconds('dawid', 14.8),
         damage: isThirdCombo ? 2 : 1,
@@ -8968,6 +8972,7 @@ export class MaxFlizGameEngine {
       this.levelRoot.add(taserDart);
       this.projectiles.push({
         mesh: taserDart,
+        disposeOnRemove: true,
         vel: forward.clone().multiplyScalar(19.5),
         life: getPrimaryAttackLifetimeSeconds('mateusz', 19.5),
         damage: isThirdCombo ? 2 : 1,
@@ -9538,6 +9543,7 @@ export class MaxFlizGameEngine {
         this.levelRoot.add(tile);
         this.projectiles.push({
           mesh: tile,
+          disposeOnRemove: true,
           vel: forward.multiplyScalar(17.5),
           life: 1.45,
           damage: this.gameMode === 'survival' ? 1 : 2,
