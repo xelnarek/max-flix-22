@@ -7872,11 +7872,13 @@ export class MaxFlizGameEngine {
         e.mesh.rotation.z = Math.sin(e.walkCycle * 1.1) * 0.018;
       }
       const hitRadius = e.type === 'sebix_m' ? (e.dashTimer && e.dashTimer > 0 ? 1.85 : 1.35) : e.type === 'walczak' || e.type === 'krol_leto' ? 1.5 : e.type === 'elite_walczak_guard' ? 1.3 : 1.1;
+      const contactRadius = hitRadius + 0.18;
       let stompedThisFrame = false;
 
-      if (dist < hitRadius) {
-        // 1. STOMP MECHANIC (Naskok z góry)
-        if (this.playerVel.y < -0.8 && this.playerPos.y > e.y + 0.35) {
+      if (dist < contactRadius) {
+        // 1. STOMP MECHANIC (Naskok z góry). Preserve the original stomp radius;
+        // the slightly wider contact radius only compensates for model clearance.
+        if (dist < hitRadius && this.playerVel.y < -0.8 && this.playerPos.y > e.y + 0.35) {
           stompedThisFrame = true;
           const bounceForce = e.type === 'agv_robot' ? this.charDef.jumpForce * 1.3 : this.charDef.jumpForce * 0.95;
           this.playerVel.y = bounceForce;
@@ -7937,7 +7939,7 @@ export class MaxFlizGameEngine {
       // The extra 0.18 m clearance keeps the rendered models from clipping after
       // contact, in both Campaign and Survival, without disabling the stomp move.
       if (!stompedThisFrame && e.state !== 'defeated') {
-        this.resolveEnemyPlayerOverlap(e, hitRadius + 0.18);
+        this.resolveEnemyPlayerOverlap(e, contactRadius);
       }
     });
   }
