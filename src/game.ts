@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { clampHorizontalPosition } from './arenaBounds.ts';
 import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoint, resolveEnemyPlayerSeparation } from './enemySpacing.ts';
+import { calculateEnemyObstacleAvoidanceVector } from './enemyNavigation.ts';
 import { createEnemyHitReaction, getEnemyHitPulse } from './enemyCombatFeedback.ts';
 import { isWithinBossImpactRadius } from './combatTelegraphs.ts';
 import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
@@ -602,6 +603,7 @@ export class MaxFlizGameEngine {
   private levelRoot = new THREE.Group();
   private platforms: PlatformBlock[] = [];
   private survivalObstacles: { x: number; z: number; halfWidth: number; halfDepth: number }[] = [];
+  private campaignEnemyObstacles: { x: number; z: number; halfWidth: number; halfDepth: number }[] = [];
   private collectibles: CollectibleItem[] = [];
   private droppedPerks: DroppedPerkItem[] = [];
   private hazards: HazardItem[] = [];
@@ -2221,6 +2223,7 @@ export class MaxFlizGameEngine {
     }
     this.platforms = [];
     this.survivalObstacles = [];
+    this.campaignEnemyObstacles = [];
     this.collectibles = [];
     this.droppedPerks = [];
     this.lootCrates = [];
@@ -2439,6 +2442,17 @@ export class MaxFlizGameEngine {
     this.buildLevel2(76);
     this.buildLevel3(161);
     this.buildCampaignHighBayDressing();
+    this.campaignEnemyObstacles = this.platforms
+      .filter((platform) =>
+        (platform.type === 'shelf' || platform.type === 'pallet' || platform.type === 'bathtub' || platform.type === 'conveyor') &&
+        platform.y <= 1.65
+      )
+      .map((platform) => ({
+        x: platform.x,
+        z: platform.z,
+        halfWidth: Math.max(0.45, platform.width * 0.5),
+        halfDepth: Math.max(0.45, platform.depth * 0.5),
+      }));
     for (const enemy of this.enemies) this.applyEnemyVisualPolish(enemy);
     this.applyStorybookStyle(this.levelRoot);
     this.sectorGates = [null, null, null, null];
@@ -7544,8 +7558,16 @@ export class MaxFlizGameEngine {
           const sdz = e.lastKnownPlayerPos.z - e.z;
           const sdist = Math.hypot(sdx, sdz);
           if (sdist > 0.5) {
-            e.x += (sdx / sdist) * e.speed * 0.7 * dt;
-            e.z += (sdz / sdist) * e.speed * 0.7 * dt;
+            const avoidance = this.gameMode === 'campaign'
+              ? calculateEnemyObstacleAvoidanceVector(e, e.lastKnownPlayerPos, this.campaignEnemyObstacles, 3.8, 0.75)
+              : { x: 0, z: 0 };
+            let searchX = sdx / sdist + avoidance.x * 0.9;
+            let searchZ = sdz / sdist + avoidance.z * 0.9;
+            const searchLength = Math.hypot(searchX, searchZ) || 1;
+            searchX /= searchLength;
+            searchZ /= searchLength;
+            e.x += searchX * e.speed * 0.7 * dt;
+            e.z += searchZ * e.speed * 0.7 * dt;
           }
         }
       }
@@ -7758,8 +7780,15 @@ export class MaxFlizGameEngine {
             // or simultaneous spawns cannot leave a permanent enemy stack.
             const nearbyCampaignEnemies = this.enemySpatialIndex.query(e.x, e.z, 4.0);
             const separation = calculateEnemySeparationVector(e, nearbyCampaignEnemies, 2.5);
-            let moveX = dx / Math.max(0.1, distToPlayer) + separation.x * 1.2;
-            let moveZ = dz / Math.max(0.1, distToPlayer) + separation.z * 1.2;
+            const avoidance = calculateEnemyObstacleAvoidanceVector(
+              e,
+              { x: this.playerPos.x, z: this.playerPos.z },
+              this.campaignEnemyObstacles,
+              4.6,
+              0.8,
+            );
+            let moveX = dx / Math.max(0.1, distToPlayer) + separation.x * 1.2 + avoidance.x * 1.05;
+            let moveZ = dz / Math.max(0.1, distToPlayer) + separation.z * 1.2 + avoidance.z * 1.05;
             const moveLength = Math.hypot(moveX, moveZ) || 1;
             moveX /= moveLength;
             moveZ /= moveLength;

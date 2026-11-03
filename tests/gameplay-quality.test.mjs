@@ -412,3 +412,18 @@ test('Survival spawn fallback searches distant arena edges instead of a clamped 
   assert.match(game, /const fallback = chooseSpacedSpawnPoint\(safeFallbacks, this\.enemies, 3\.2\)/);
   assert.match(game, /Last-resort bounded point: choose the farthest arena corner from the player/);
 });
+
+
+test('campaign ground enemies cache warehouse obstacle footprints for navigation', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /private campaignEnemyObstacles: \{ x: number; z: number; halfWidth: number; halfDepth: number \}\[\] = \[\]/);
+  assert.match(game, /this\.campaignEnemyObstacles = this\.platforms[\s\S]*?platform\.type === 'shelf'[\s\S]*?platform\.y <= 1\.65/);
+  assert.match(game, /this\.campaignEnemyObstacles = \[\]/);
+});
+
+test('campaign chase and lost-target search both use obstacle-aware steering', async () => {
+  const game = await read('../src/game.ts');
+  assert.ok((game.match(/calculateEnemyObstacleAvoidanceVector\(/g) || []).length >= 2);
+  assert.match(game, /calculateEnemyObstacleAvoidanceVector\(e, e\.lastKnownPlayerPos, this\.campaignEnemyObstacles/);
+  assert.match(game, /this\.campaignEnemyObstacles,[\s\S]*?4\.6,[\s\S]*?0\.8/);
+});
