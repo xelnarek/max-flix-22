@@ -626,6 +626,7 @@ export class MaxFlizGameEngine {
     life: number;
     isDyscyplinarka?: boolean;
     kind?: 'pomazaniec_lollipop' | 'sebix_brick';
+    disposeOnRemove?: boolean;
     gravity?: number;
     spin?: number;
   }[] = [];
@@ -667,6 +668,7 @@ export class MaxFlizGameEngine {
     returning?: boolean;
     homing?: boolean;
     weaponProjectile?: boolean;
+    disposeOnRemove?: boolean;
     aoeRadius?: number;
     stunDuration?: number;
     slowOnHit?: boolean;
@@ -2205,7 +2207,7 @@ export class MaxFlizGameEngine {
     this.clearOperatorCompanions();
     // Lollipop meshes own their geometry/materials; release them before the scene is reset.
     for (const projectile of this.enemyProjectiles) {
-      if (projectile.kind === 'pomazaniec_lollipop' || projectile.kind === 'sebix_brick') this.disposeTemporaryObject(projectile.mesh);
+      if (projectile.kind === 'pomazaniec_lollipop' || projectile.kind === 'sebix_brick' || projectile.disposeOnRemove) this.disposeTemporaryObject(projectile.mesh);
     }
     if (this.survivalPomazaniecMarker) {
       this.levelRoot.remove(this.survivalPomazaniecMarker);
@@ -2261,7 +2263,7 @@ export class MaxFlizGameEngine {
     this.threatTier = 0;
     this.enemyProjectiles = [];
     for (const projectile of this.projectiles) {
-      if (projectile.weaponProjectile) this.disposeTemporaryObject(projectile.mesh);
+      if (projectile.weaponProjectile || projectile.disposeOnRemove) this.disposeTemporaryObject(projectile.mesh);
     }
     this.projectiles = [];
     for (const effect of this.specialEffects) effect.cleanup?.();
@@ -8060,7 +8062,7 @@ export class MaxFlizGameEngine {
     mesh.position.set(x, y, z);
     this.levelRoot.add(mesh);
     const dir = new THREE.Vector3(this.playerPos.x - x, 0, this.playerPos.z - z).normalize();
-    this.enemyProjectiles.push({ mesh, vel: dir.multiplyScalar(7.5), life: 3.5 });
+    this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.multiplyScalar(7.5), life: 3.5 });
     sound.playWhistle();
   }
 
@@ -8073,7 +8075,7 @@ export class MaxFlizGameEngine {
     const dir = Number.isFinite(lockedDirection)
       ? new THREE.Vector3(Math.sin(lockedDirection as number), 0, Math.cos(lockedDirection as number))
       : new THREE.Vector3(this.playerPos.x - x, 0, this.playerPos.z - z).normalize();
-    this.enemyProjectiles.push({ mesh, vel: dir.multiplyScalar(10.0), life: 3.5, isDyscyplinarka: true });
+    this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.multiplyScalar(10.0), life: 3.5, isDyscyplinarka: true });
     sound.playWhistle();
   }
 
@@ -8082,7 +8084,7 @@ export class MaxFlizGameEngine {
     mesh.position.set(x, y, z);
     this.levelRoot.add(mesh);
     const dir = new THREE.Vector3(this.playerPos.x - x, 0.2, this.playerPos.z - z).normalize();
-    this.enemyProjectiles.push({ mesh, vel: dir.multiplyScalar(8.2), life: 3.5 });
+    this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.multiplyScalar(8.2), life: 3.5 });
     sound.playWoosh();
   }
 
@@ -8093,7 +8095,7 @@ export class MaxFlizGameEngine {
     const dir = Number.isFinite(lockedDirection)
       ? new THREE.Vector3(Math.sin(lockedDirection as number), 0.1, Math.cos(lockedDirection as number))
       : new THREE.Vector3(this.playerPos.x - x, 0.1, this.playerPos.z - z).normalize();
-    this.enemyProjectiles.push({ mesh, vel: dir.normalize().multiplyScalar(9.5), life: 3.0 });
+    this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.normalize().multiplyScalar(9.5), life: 3.0 });
     sound.playElectricalSparks();
   }
 
@@ -8104,7 +8106,7 @@ export class MaxFlizGameEngine {
     const dir = Number.isFinite(lockedDirection)
       ? new THREE.Vector3(Math.sin(lockedDirection as number), 0.1, Math.cos(lockedDirection as number))
       : new THREE.Vector3(this.playerPos.x - x, 0.1, this.playerPos.z - z).normalize();
-    this.enemyProjectiles.push({ mesh, vel: dir.normalize().multiplyScalar(10.0), life: 4.0, isDyscyplinarka: true });
+    this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.normalize().multiplyScalar(10.0), life: 4.0, isDyscyplinarka: true });
     sound.playWhistle();
     this.triggerScreenShake(0.4, 0.3);
   }
@@ -8366,7 +8368,7 @@ export class MaxFlizGameEngine {
         const distBack = toPlayer.length();
         if (distBack < 0.75) {
           this.levelRoot.remove(p.mesh);
-          if (p.weaponProjectile) this.disposeTemporaryObject(p.mesh);
+          if (p.weaponProjectile || p.disposeOnRemove) this.disposeTemporaryObject(p.mesh);
           this.projectiles.splice(i, 1);
           continue;
         }
@@ -8539,7 +8541,7 @@ export class MaxFlizGameEngine {
 
       if (destroyProj || p.life <= 0) {
         this.levelRoot.remove(p.mesh);
-        if (p.weaponProjectile) this.disposeTemporaryObject(p.mesh);
+        if (p.weaponProjectile || p.disposeOnRemove) this.disposeTemporaryObject(p.mesh);
         this.projectiles.splice(i, 1);
       }
     }
@@ -8583,14 +8585,14 @@ export class MaxFlizGameEngine {
           this.takeDamage('Trafiło Cię wezwanie wyjaśniające od Walczaka!');
         }
         this.levelRoot.remove(ep.mesh);
-        if (ep.kind === 'pomazaniec_lollipop' || ep.kind === 'sebix_brick') this.disposeTemporaryObject(ep.mesh);
+        if (ep.kind === 'pomazaniec_lollipop' || ep.kind === 'sebix_brick' || ep.disposeOnRemove) this.disposeTemporaryObject(ep.mesh);
         this.enemyProjectiles.splice(i, 1);
         continue;
       }
 
       if (ep.life <= 0) {
         this.levelRoot.remove(ep.mesh);
-        if (ep.kind === 'pomazaniec_lollipop' || ep.kind === 'sebix_brick') this.disposeTemporaryObject(ep.mesh);
+        if (ep.kind === 'pomazaniec_lollipop' || ep.kind === 'sebix_brick' || ep.disposeOnRemove) this.disposeTemporaryObject(ep.mesh);
         this.enemyProjectiles.splice(i, 1);
       }
     }
@@ -8873,6 +8875,7 @@ export class MaxFlizGameEngine {
       this.levelRoot.add(spell);
       this.projectiles.push({
         mesh: spell,
+        disposeOnRemove: true,
         vel: forward.clone().multiplyScalar(14.2),
         life: getPrimaryAttackLifetimeSeconds('marcin', 14.2),
         damage: isThirdCombo ? 2 : 1,
@@ -8910,6 +8913,7 @@ export class MaxFlizGameEngine {
       this.levelRoot.add(dumbbell);
       this.projectiles.push({
         mesh: dumbbell,
+        disposeOnRemove: true,
         vel: forward.clone().multiplyScalar(14.6),
         life: getPrimaryAttackLifetimeSeconds('grzesiek', 14.6),
         damage: isThirdCombo ? 3 : 2,
@@ -8938,6 +8942,7 @@ export class MaxFlizGameEngine {
       this.levelRoot.add(wrapRoll);
       this.projectiles.push({
         mesh: wrapRoll,
+        disposeOnRemove: true,
         vel: forward.clone().multiplyScalar(14.8),
         life: getPrimaryAttackLifetimeSeconds('dawid', 14.8),
         damage: isThirdCombo ? 2 : 1,
@@ -8968,6 +8973,7 @@ export class MaxFlizGameEngine {
       this.levelRoot.add(taserDart);
       this.projectiles.push({
         mesh: taserDart,
+        disposeOnRemove: true,
         vel: forward.clone().multiplyScalar(19.5),
         life: getPrimaryAttackLifetimeSeconds('mateusz', 19.5),
         damage: isThirdCombo ? 2 : 1,
@@ -9538,6 +9544,7 @@ export class MaxFlizGameEngine {
         this.levelRoot.add(tile);
         this.projectiles.push({
           mesh: tile,
+          disposeOnRemove: true,
           vel: forward.multiplyScalar(17.5),
           life: 1.45,
           damage: this.gameMode === 'survival' ? 1 : 2,

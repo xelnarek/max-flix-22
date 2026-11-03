@@ -575,3 +575,58 @@ test('uncollected roaming espresso expires while fixed map espresso remains pers
   assert.match(update, /if \(c\.life <= 0\) \{[\s\S]*?this\.disposeObjectResources\(c\.mesh\);[\s\S]*?this\.collectibles\.splice\(i, 1\)/);
   assert.match(game, /addEspressoItem\('esp_l1_1'/);
 });
+
+
+test('all transient primary attack projectile models release unique GPU resources on removal and level reset', async () => {
+  const game = await read('../src/game.ts');
+  const attackMeshes = ['spell', 'dumbbell', 'wrapRoll', 'taserDart', 'tile'];
+  for (const mesh of attackMeshes) {
+    const start = game.indexOf('mesh: ' + mesh + ',');
+    const end = game.indexOf('});', start);
+    assert.ok(start >= 0 && end > start, mesh + ' projectile should exist');
+    const projectile = game.slice(start, end);
+    assert.match(projectile, /disposeOnRemove: true/, mesh + ' projectile should own its disposal lifecycle');
+  }
+
+  assert.match(game, /disposeOnRemove\?: boolean/);
+  const updateStart = game.indexOf('private updateProjectiles(dt: number)');
+  const updateEnd = game.indexOf('\n  private ', updateStart + 10);
+  assert.ok(updateStart >= 0 && updateEnd > updateStart);
+  const update = game.slice(updateStart, updateEnd);
+  assert.ok((update.match(/p\.weaponProjectile \|\| p\.disposeOnRemove/g) || []).length >= 2);
+
+  const clearStart = game.indexOf('private clearLevel()');
+  const clearEnd = game.indexOf('\n  private ', clearStart + 10);
+  assert.ok(clearStart >= 0 && clearEnd > clearStart);
+  const clear = game.slice(clearStart, clearEnd);
+  assert.match(clear, /projectile\.weaponProjectile \|\| projectile\.disposeOnRemove/);
+});
+
+
+test('all short-lived enemy notice and ranged projectiles dispose their generated meshes on hit, expiry and level reset', async () => {
+  const game = await read('../src/game.ts');
+  const spawnFunctions = [
+    'spawnPenaltyNotice',
+    'spawnDyscyplinarkaNotice',
+    'spawnSanitarywareProjectile',
+    'spawnSparkZapProjectile',
+    'spawnOdprawaClipboardProjectile',
+  ];
+  for (const name of spawnFunctions) {
+    const start = game.indexOf('private ' + name + '(');
+    const end = game.indexOf('\n  private ', start + 10);
+    assert.ok(start >= 0 && end > start, name + ' should exist');
+    assert.match(game.slice(start, end), /enemyProjectiles\.push\(\{[^}]*disposeOnRemove: true/);
+  }
+
+  assert.match(game, /disposeOnRemove\?: boolean/);
+  const updateStart = game.indexOf('private updateProjectiles(dt: number)');
+  const updateEnd = game.indexOf('\n  private ', updateStart + 10);
+  const update = game.slice(updateStart, updateEnd);
+  assert.ok((update.match(/ep\.kind === 'pomazaniec_lollipop' \|\| ep\.kind === 'sebix_brick' \|\| ep\.disposeOnRemove/g) || []).length >= 2);
+
+  const clearStart = game.indexOf('private clearLevel()');
+  const clearEnd = game.indexOf('\n  private ', clearStart + 10);
+  const clear = game.slice(clearStart, clearEnd);
+  assert.match(clear, /projectile\.kind === 'pomazaniec_lollipop' \|\| projectile\.kind === 'sebix_brick' \|\| projectile\.disposeOnRemove/);
+});
