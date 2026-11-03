@@ -626,6 +626,7 @@ export class MaxFlizGameEngine {
     life: number;
     isDyscyplinarka?: boolean;
     kind?: 'pomazaniec_lollipop' | 'sebix_brick';
+    disposeOnRemove?: boolean;
     gravity?: number;
     spin?: number;
   }[] = [];
@@ -2206,7 +2207,7 @@ export class MaxFlizGameEngine {
     this.clearOperatorCompanions();
     // Lollipop meshes own their geometry/materials; release them before the scene is reset.
     for (const projectile of this.enemyProjectiles) {
-      if (projectile.kind === 'pomazaniec_lollipop' || projectile.kind === 'sebix_brick') this.disposeTemporaryObject(projectile.mesh);
+      if (projectile.kind === 'pomazaniec_lollipop' || projectile.kind === 'sebix_brick' || projectile.disposeOnRemove) this.disposeTemporaryObject(projectile.mesh);
     }
     if (this.survivalPomazaniecMarker) {
       this.levelRoot.remove(this.survivalPomazaniecMarker);
@@ -8061,7 +8062,7 @@ export class MaxFlizGameEngine {
     mesh.position.set(x, y, z);
     this.levelRoot.add(mesh);
     const dir = new THREE.Vector3(this.playerPos.x - x, 0, this.playerPos.z - z).normalize();
-    this.enemyProjectiles.push({ mesh, vel: dir.multiplyScalar(7.5), life: 3.5 });
+    this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.multiplyScalar(7.5), life: 3.5 });
     sound.playWhistle();
   }
 
@@ -8074,7 +8075,7 @@ export class MaxFlizGameEngine {
     const dir = Number.isFinite(lockedDirection)
       ? new THREE.Vector3(Math.sin(lockedDirection as number), 0, Math.cos(lockedDirection as number))
       : new THREE.Vector3(this.playerPos.x - x, 0, this.playerPos.z - z).normalize();
-    this.enemyProjectiles.push({ mesh, vel: dir.multiplyScalar(10.0), life: 3.5, isDyscyplinarka: true });
+    this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.multiplyScalar(10.0), life: 3.5, isDyscyplinarka: true });
     sound.playWhistle();
   }
 
@@ -8083,7 +8084,7 @@ export class MaxFlizGameEngine {
     mesh.position.set(x, y, z);
     this.levelRoot.add(mesh);
     const dir = new THREE.Vector3(this.playerPos.x - x, 0.2, this.playerPos.z - z).normalize();
-    this.enemyProjectiles.push({ mesh, vel: dir.multiplyScalar(8.2), life: 3.5 });
+    this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.multiplyScalar(8.2), life: 3.5 });
     sound.playWoosh();
   }
 
@@ -8094,7 +8095,7 @@ export class MaxFlizGameEngine {
     const dir = Number.isFinite(lockedDirection)
       ? new THREE.Vector3(Math.sin(lockedDirection as number), 0.1, Math.cos(lockedDirection as number))
       : new THREE.Vector3(this.playerPos.x - x, 0.1, this.playerPos.z - z).normalize();
-    this.enemyProjectiles.push({ mesh, vel: dir.normalize().multiplyScalar(9.5), life: 3.0 });
+    this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.normalize().multiplyScalar(9.5), life: 3.0 });
     sound.playElectricalSparks();
   }
 
@@ -8105,7 +8106,7 @@ export class MaxFlizGameEngine {
     const dir = Number.isFinite(lockedDirection)
       ? new THREE.Vector3(Math.sin(lockedDirection as number), 0.1, Math.cos(lockedDirection as number))
       : new THREE.Vector3(this.playerPos.x - x, 0.1, this.playerPos.z - z).normalize();
-    this.enemyProjectiles.push({ mesh, vel: dir.normalize().multiplyScalar(10.0), life: 4.0, isDyscyplinarka: true });
+    this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.normalize().multiplyScalar(10.0), life: 4.0, isDyscyplinarka: true });
     sound.playWhistle();
     this.triggerScreenShake(0.4, 0.3);
   }
@@ -8584,14 +8585,14 @@ export class MaxFlizGameEngine {
           this.takeDamage('Trafiło Cię wezwanie wyjaśniające od Walczaka!');
         }
         this.levelRoot.remove(ep.mesh);
-        if (ep.kind === 'pomazaniec_lollipop' || ep.kind === 'sebix_brick') this.disposeTemporaryObject(ep.mesh);
+        if (ep.kind === 'pomazaniec_lollipop' || ep.kind === 'sebix_brick' || ep.disposeOnRemove) this.disposeTemporaryObject(ep.mesh);
         this.enemyProjectiles.splice(i, 1);
         continue;
       }
 
       if (ep.life <= 0) {
         this.levelRoot.remove(ep.mesh);
-        if (ep.kind === 'pomazaniec_lollipop' || ep.kind === 'sebix_brick') this.disposeTemporaryObject(ep.mesh);
+        if (ep.kind === 'pomazaniec_lollipop' || ep.kind === 'sebix_brick' || ep.disposeOnRemove) this.disposeTemporaryObject(ep.mesh);
         this.enemyProjectiles.splice(i, 1);
       }
     }
