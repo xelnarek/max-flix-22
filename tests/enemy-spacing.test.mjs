@@ -174,16 +174,20 @@ test('Pomazaniec event spawn stays clear of the player, scenery and earlier ride
   }
 });
 
-test('Pomazaniec event spawn recovers when the preferred ring is blocked', async () => {
+test('Pomazaniec event spawn falls back to clear arena edges when the preferred ring is blocked', async () => {
   const { chooseSurvivalEventSpawnPoint } = await import('../src/survivalSpawn.ts');
+  const bounds = { minX: -30, maxX: 30, minZ: -24, maxZ: 24 };
   const point = chooseSurvivalEventSpawnPoint(
     { x: 0, z: 0 },
     0,
-    { minX: -20, maxX: 20, minZ: -20, maxZ: 20 },
-    [{ x: 0, z: 0, halfWidth: 20, halfDepth: 20 }],
+    bounds,
+    [{ x: 0, z: 0, halfWidth: 14, halfDepth: 14 }],
     [],
   );
-  assert.equal(point, null);
+  assert.ok(point);
+  assert.ok(point.x >= -27.2 && point.x <= 27.2);
+  assert.ok(point.z >= -22.2 && point.z <= 22.2);
+  assert.ok(Math.abs(point.x) >= 14.85 || Math.abs(point.z) >= 14.85);
 });
 
 test('Pomazaniec event spawn stays inside bounds and rejects invalid inputs', async () => {
@@ -201,5 +205,17 @@ test('Pomazaniec event spawn stays inside bounds and rejects invalid inputs', as
   assert.ok(point.z >= -8.2 && point.z <= 8.2);
   assert.equal(chooseSurvivalEventSpawnPoint(
     { x: Number.NaN, z: 0 }, 0, bounds, [], [],
+  ), null);
+});
+
+
+test('Pomazaniec event spawn declines to choose a point when the whole arena is obstructed', async () => {
+  const { chooseSurvivalEventSpawnPoint } = await import('../src/survivalSpawn.ts');
+  assert.equal(chooseSurvivalEventSpawnPoint(
+    { x: 0, z: 0 },
+    0,
+    { minX: -20, maxX: 20, minZ: -20, maxZ: 20 },
+    [{ x: 0, z: 0, halfWidth: 20, halfDepth: 20 }],
+    [],
   ), null);
 });
