@@ -27,46 +27,74 @@ window.addEventListener('unhandledrejection', (e) => {
   console.warn('Unhandled Rejection Captured:', e.reason);
 });
 
-// Portraits are hand-authored vector caricatures: real faces and workwear, not generic role emoji.
+// Operator portraits are role-specific vector character art, not reused emoji or generic busts.
+let operatorPortraitRenderCount = 0;
 const operatorPortrait = (id: CharacterId): string => {
-  const people: Record<CharacterId, { skin: string; hair: string; shirt: string; accent: string; helmet: string; beard: string; brows: string; cap?: boolean }> = {
-    marcin: { skin: '#e9b995', hair: '#49342a', shirt: '#1e3a8a', accent: '#f0f4f8', helmet: '#f8fafc', beard: '', brows: '#49342a' },
-    grzesiek: { skin: '#d9a27f', hair: '#2c211c', shirt: '#166534', accent: '#facc15', helmet: '#facc15', beard: '#29201d', brows: '#29201d' },
-    dawid: { skin: '#e4b18d', hair: '#4a2c20', shirt: '#b45309', accent: '#fb923c', helmet: '#f97316', beard: '#4b2d22', brows: '#382219' },
-    mateusz: { skin: '#e7b99c', hair: '#362820', shirt: '#5b21b6', accent: '#c4b5fd', helmet: '#7c3aed', beard: '#45362f', brows: '#362820', cap: true },
-    piotr: { skin: '#d4a585', hair: '#77736d', shirt: '#7f1d1d', accent: '#ef4444', helmet: '#dc2626', beard: '#77736d', brows: '#66615c' },
+  const looks: Record<CharacterId, { skin: string; hair: string; beard: string; shirt: string; accent: string; brows: string; hairShape: string; headgear: string; beardShape: string; shoulderDetail: string; badgeShape: string }> = {
+    marcin: { skin:'#e9b995', hair:'#3d2b24', beard:'none', shirt:'#173b72', accent:'#f0c46b', brows:'#39291f',
+      hairShape:'<path d="M31 48Q25 25 42 20Q60 14 73 30L78 46Q66 37 57 36Q45 42 31 48Z" fill="#3d2b24"/><path d="M37 27Q50 19 64 26" fill="none" stroke="#80604b" stroke-width="2.4" stroke-linecap="round"/>',
+      headgear:'<path d="M23 34Q25 11 56 10Q86 10 89 34L82 37Q55 31 29 39Z" fill="#f8fafc" stroke="#334155" stroke-width="2.2"/><path d="M19 33Q55 27 92 34L90 41Q55 36 20 42Z" fill="#dbe7f0" stroke="#94a3b8" stroke-width="1.5"/><path d="M45 17h22" stroke="#94a3b8" stroke-width="2.3" stroke-linecap="round"/>',
+      beardShape:'', shoulderDetail:'<path d="M24 93L36 76L47 88L59 76L85 96" fill="none" stroke="#d9e6f0" stroke-width="3"/><path d="M48 89h17" stroke="#f0c46b" stroke-width="4" stroke-linecap="round"/>',
+      badgeShape:'<path d="M-7 -4h9l7 7H-2ZM-5 2h13" fill="none" stroke="#f8e3a8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' },
+    grzesiek: { skin:'#d9a27f', hair:'#211a17', beard:'#211a17', shirt:'#14583d', accent:'#f5ca45', brows:'#241a15',
+      hairShape:'<path d="M29 49Q24 22 49 18Q76 14 82 45L75 51Q66 37 57 37Q43 43 29 49Z" fill="#211a17"/><path d="M37 26Q54 17 69 27" fill="none" stroke="#564238" stroke-width="2.5" stroke-linecap="round"/>',
+      headgear:'<path d="M20 35Q23 9 55 8Q87 10 90 35L83 39Q55 33 28 40Z" fill="#f5ca45" stroke="#523f15" stroke-width="2.3"/><path d="M16 34Q55 27 94 35L91 43Q55 37 18 44Z" fill="#d89c22" stroke="#523f15" stroke-width="1.6"/><path d="M27 20L32 15M78 16l6 7" stroke="#fff1b6" stroke-width="2.5" stroke-linecap="round"/>',
+      beardShape:'<path d="M31 62Q40 70 55 68Q68 65 77 60L73 81Q65 94 52 94Q37 92 30 80Z" fill="#211a17"/><path d="M38 77Q53 86 69 75" fill="none" stroke="#594137" stroke-width="2.4" stroke-linecap="round"/>',
+      shoulderDetail:'<path d="M19 96L31 78L43 91L55 82L73 96" fill="none" stroke="#f5ca45" stroke-width="4"/><path d="M16 78h9M82 78h9" stroke="#f5ca45" stroke-width="5" stroke-linecap="round"/>',
+      badgeShape:'<path d="M-9 0h5m18 0h5M-5 -6v12m10-12v12M-5 0h10" stroke="#fff0a6" stroke-width="2.6" stroke-linecap="round"/>' },
+    dawid: { skin:'#e4b18d', hair:'#49291d', beard:'#573323', shirt:'#9a4b16', accent:'#f5a04c', brows:'#382219',
+      hairShape:'<path d="M30 48Q28 25 47 19Q69 14 79 39L76 49Q65 35 56 36Q45 42 30 48Z" fill="#49291d"/><path d="M40 27Q53 18 67 27" fill="none" stroke="#84513a" stroke-width="2.4" stroke-linecap="round"/>',
+      headgear:'<path d="M22 35Q26 10 55 10Q83 12 88 35L80 39Q53 32 29 41Z" fill="#f47b32" stroke="#7c3415" stroke-width="2.2"/><path d="M18 34Q55 27 92 35L88 43Q54 37 20 44Z" fill="#ffb05e" stroke="#7c3415" stroke-width="1.5"/><path d="M34 17l7-4M68 14l8 4" stroke="#ffe1bd" stroke-width="2" stroke-linecap="round"/>',
+      beardShape:'<path d="M35 64Q48 72 63 65L70 72Q65 88 52 90Q39 89 34 76Z" fill="#573323"/><path d="M42 78Q53 83 64 76" fill="none" stroke="#9a6244" stroke-width="2.2" stroke-linecap="round"/>',
+      shoulderDetail:'<path d="M27 82L38 93L53 83L67 94L82 83" fill="none" stroke="#f5a04c" stroke-width="4"/><path d="M40 85l7 8 7-8" fill="none" stroke="#fff0d8" stroke-width="2"/>',
+      badgeShape:'<path d="M-7 -7L7 7M7 -7L-7 7M-9 0h18" stroke="#ffe1b7" stroke-width="2.4" stroke-linecap="round"/>' },
+    mateusz: { skin:'#e7b99c', hair:'#30241f', beard:'#47352d', shirt:'#51249a', accent:'#c9a8ff', brows:'#30241f',
+      hairShape:'<path d="M29 47Q27 25 47 20Q72 15 79 43L74 48Q62 34 54 36Q41 41 29 47Z" fill="#30241f"/><path d="M39 27Q54 18 68 27" fill="none" stroke="#685247" stroke-width="2.4" stroke-linecap="round"/>',
+      headgear:'<path d="M25 34Q27 10 54 10Q79 11 85 31L75 35Q55 29 31 40Z" fill="#6d3ab8" stroke="#251443" stroke-width="2.3"/><path d="M21 34Q52 25 87 33L91 39Q55 34 22 43Z" fill="#a78bfa" stroke="#251443" stroke-width="1.6"/><path d="M31 19Q54 12 73 22" fill="none" stroke="#e9d5ff" stroke-width="2.5" stroke-linecap="round"/><path d="M21 37Q12 43 17 57M86 36Q97 43 91 56" fill="none" stroke="#2c1a55" stroke-width="4" stroke-linecap="round"/><circle cx="16" cy="58" r="5" fill="#c4b5fd"/><circle cx="92" cy="57" r="5" fill="#c4b5fd"/>',
+      beardShape:'<path d="M37 65Q51 71 65 64L68 73Q63 84 52 85Q41 84 36 74Z" fill="#47352d"/>',
+      shoulderDetail:'<path d="M30 84L41 94L53 84L66 94L78 83" fill="none" stroke="#c9a8ff" stroke-width="3.5"/><path d="M47 84l5-8 5 8-5 7Z" fill="#f0abfc"/>',
+      badgeShape:'<path d="M1 -10L4 -3L11 -2L5 3L7 10L1 6L-6 10L-4 3L-10 -2L-3 -3Z" fill="#e9d5ff" stroke="#7c3aed" stroke-width="1.2"/>' },
+    piotr: { skin:'#d4a585', hair:'#77736d', beard:'#77736d', shirt:'#7f1d1d', accent:'#ef5b5b', brows:'#66615c',
+      hairShape:'<path d="M28 49Q24 25 46 19Q72 14 81 42L77 52Q66 34 56 37Q42 44 28 49Z" fill="#77736d"/><path d="M38 27Q54 18 70 27" fill="none" stroke="#bbb5ad" stroke-width="2.4" stroke-linecap="round"/>',
+      headgear:'<path d="M21 35Q25 10 55 9Q84 10 89 35L81 39Q55 31 28 41Z" fill="#b91c1c" stroke="#4c1118" stroke-width="2.3"/><path d="M17 34Q55 27 92 35L89 43Q55 36 19 44Z" fill="#ef5b5b" stroke="#4c1118" stroke-width="1.6"/><path d="M47 15h16" stroke="#fecaca" stroke-width="2.5" stroke-linecap="round"/>',
+      beardShape:'<path d="M30 62Q49 72 70 61L74 78Q67 94 52 96Q36 93 29 78Z" fill="#77736d"/><path d="M36 75Q52 85 68 75" fill="none" stroke="#c2beb7" stroke-width="2.5" stroke-linecap="round"/>',
+      shoulderDetail:'<path d="M23 94L35 80L47 91L60 80L83 95" fill="none" stroke="#fecaca" stroke-width="3"/><path d="M48 83l6 10" stroke="#ef5b5b" stroke-width="4" stroke-linecap="round"/>',
+      badgeShape:'<path d="M-8 -7L7 8M7 -8L-8 7M-10 0h20" stroke="#fecaca" stroke-width="2.6" stroke-linecap="round"/>' },
   };
-  const p = people[id];
-  const helmet = p.cap
-    ? `<path d="M22 27 Q26 8 50 12 Q68 15 67 31 L54 29 Q41 25 22 32Z" fill="${p.helmet}" stroke="#111827" stroke-opacity=".5" stroke-width="2"/><path d="M54 26 Q70 25 75 33 Q62 38 49 32Z" fill="${p.accent}"/><path d="M27 17 Q19 6 15 15" fill="none" stroke="#111827" stroke-width="4" stroke-linecap="round"/>`
-    : `<path d="M17 31 Q18 9 48 8 Q77 9 79 31 L75 34 Q49 25 21 35Z" fill="${p.helmet}" stroke="#172033" stroke-opacity=".62" stroke-width="2"/><path d="M15 29 Q48 22 81 30 L82 36 Q47 31 14 38Z" fill="${p.accent}" stroke="#172033" stroke-opacity=".45" stroke-width="1.5"/><path d="M33 20 L61 20" stroke="#64748b" stroke-width="2" stroke-linecap="round"/>`;
-  const beard = p.beard
-    ? `<path d="M28 60 Q48 70 68 60 L65 76 Q58 87 48 87 Q36 86 30 75Z" fill="${p.beard}"/>`
+  const p = looks[id];
+  const instance = ++operatorPortraitRenderCount;
+  const bgId = 'operator-bg-' + id + '-' + instance;
+  const faceId = 'operator-face-' + id + '-' + instance;
+  const clipId = 'operator-clip-' + id + '-' + instance;
+  const goggles = id === 'dawid'
+    ? '<path d="M34 48h14m7 0h14" stroke="#7c3415" stroke-width="2.8" stroke-linecap="round"/><rect x="31" y="43" width="17" height="11" rx="4" fill="none" stroke="#f8d6b6" stroke-width="2"/><rect x="53" y="43" width="17" height="11" rx="4" fill="none" stroke="#f8d6b6" stroke-width="2"/>'
     : '';
-  const capExtra = p.cap
-    ? `<path d="M25 22 Q45 17 64 25" fill="none" stroke="#e9d5ff" stroke-width="2.5"/><circle cx="68" cy="30" r="3" fill="#f472b6"/>`
-    : `<rect x="39" y="29" width="18" height="5" rx="2.5" fill="${p.accent}" opacity=".95"/>`;
-  return `<svg class="operator-portrait" viewBox="0 0 96 96" role="img" aria-label="Portret operatora ${id}" xmlns="http://www.w3.org/2000/svg">
-    <defs><linearGradient id="op-bg-${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${p.shirt}"/><stop offset="1" stop-color="#0b1420"/></linearGradient><linearGradient id="op-face-${id}" x1="0" y1="0" x2=".2" y2="1"><stop offset="0" stop-color="#f4d0ae"/><stop offset="1" stop-color="${p.skin}"/></linearGradient></defs>
-    <rect x="2" y="2" width="92" height="92" rx="19" fill="url(#op-bg-${id})"/>
-    <path d="M8 96 Q10 74 30 69 L66 69 Q87 75 89 96Z" fill="${p.shirt}"/>
-    <path d="M27 75 L38 65 L58 65 L70 76 L64 96 L32 96Z" fill="${p.accent}" opacity=".82"/>
-    <path d="M40 61 L56 61 L59 73 L48 81 L37 73Z" fill="${p.skin}"/>
-    <ellipse cx="48" cy="45" rx="24" ry="27" fill="url(#op-face-${id})"/>
-    <path d="M24 43 Q20 16 47 16 Q75 16 72 44 Q66 32 58 30 Q43 34 28 29Z" fill="${p.hair}"/>
-    <ellipse cx="23" cy="47" rx="4.2" ry="7" fill="${p.skin}"/><ellipse cx="73" cy="47" rx="4.2" ry="7" fill="${p.skin}"/>
-    <path d="M32 43 Q38 39 43 43 M54 43 Q60 39 65 43" fill="none" stroke="${p.brows}" stroke-width="3.4" stroke-linecap="round"/>
-    <ellipse cx="38" cy="48" rx="2.8" ry="3.3" fill="#152033"/><ellipse cx="59" cy="48" rx="2.8" ry="3.3" fill="#152033"/>
-    <path d="M48 48 L45 57 Q48 60 51 57" fill="none" stroke="#a86f58" stroke-width="2" stroke-linecap="round"/>
-    <path d="M39 63 Q48 68 58 62" fill="none" stroke="#713d36" stroke-width="2.5" stroke-linecap="round"/>
-    ${beard}
-    ${helmet}
-    ${capExtra}
-    <path d="M9 85 L28 77 M87 85 L68 77" stroke="#e2e8f0" stroke-opacity=".45" stroke-width="2"/>
-    <circle cx="78" cy="77" r="4" fill="${p.accent}" stroke="#f8fafc" stroke-opacity=".7" stroke-width="1"/>
-  </svg>`;
+  const clipboard = id === 'marcin'
+    ? '<path d="M43 84h25v17H43z" fill="#dbeafe" stroke="#183b70" stroke-width="1.6"/><path d="M48 89h15M48 94h10" stroke="#315b88" stroke-width="1.6" stroke-linecap="round"/>'
+    : '';
+  return [
+    '<svg class="operator-portrait" viewBox="0 0 112 112" role="img" aria-label="Portret operatora ' + CHARACTERS[id].name + '" xmlns="http://www.w3.org/2000/svg">',
+    '<defs><linearGradient id="' + bgId + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + p.shirt + '"/><stop offset="1" stop-color="#081321"/></linearGradient>',
+    '<linearGradient id="' + faceId + '" x1="0" y1="0" x2=".2" y2="1"><stop offset="0" stop-color="#f4d0ae"/><stop offset="1" stop-color="' + p.skin + '"/></linearGradient>',
+    '<clipPath id="' + clipId + '"><rect x="2" y="2" width="108" height="108" rx="24"/></clipPath></defs>',
+    '<rect x="2" y="2" width="108" height="108" rx="24" fill="#07111e" stroke="' + p.accent + '" stroke-opacity=".8" stroke-width="2"/>',
+    '<g clip-path="url(#' + clipId + ')"><path d="M0 0h112v112H0z" fill="url(#' + bgId + ')"/>',
+    '<circle cx="88" cy="19" r="36" fill="' + p.accent + '" opacity=".12"/><path d="M5 102 27 78 42 88 57 75 82 91 108 72v40H5Z" fill="#07111d" opacity=".42"/>',
+    '<path d="M10 114Q13 80 34 76L45 72H67L79 77Q100 83 103 114Z" fill="' + p.shirt + '"/>',
+    '<path d="M25 112 39 80 55 94 71 80 88 112Z" fill="' + p.accent + '" opacity=".72"/>' + p.shoulderDetail + clipboard,
+    '<path d="M43 66h26l4 17-17 13-17-13Z" fill="' + p.skin + '"/>',
+    '<path d="M27 48Q26 24 54 21Q82 22 85 51L78 69Q71 81 56 82Q39 79 31 66Z" fill="url(#' + faceId + ')" stroke="#573c31" stroke-opacity=".16" stroke-width="1.5"/>',
+    '<ellipse cx="29" cy="54" rx="5" ry="8" fill="' + p.skin + '"/><ellipse cx="83" cy="54" rx="5" ry="8" fill="' + p.skin + '"/>',
+    p.hairShape,
+    '<path d="M36 48Q43 43 49 47M63 47Q70 43 77 48" fill="none" stroke="' + p.brows + '" stroke-width="3.1" stroke-linecap="round"/>',
+    '<ellipse cx="43" cy="54" rx="3.1" ry="3.8" fill="#172235"/><ellipse cx="69" cy="54" rx="3.1" ry="3.8" fill="#172235"/><circle cx="44" cy="53" r="1" fill="#fff"/><circle cx="70" cy="53" r="1" fill="#fff"/>',
+    '<path d="M56 54 52 64Q56 67 60 64" fill="none" stroke="#a86f58" stroke-width="2" stroke-linecap="round"/><path d="M47 72Q56 77 65 71" fill="none" stroke="#814b42" stroke-width="2.4" stroke-linecap="round"/>',
+    p.beardShape, goggles, p.headgear,
+    '<path d="M9 95h20M84 95h19" stroke="#fff" stroke-opacity=".22" stroke-width="1.4"/><path d="M9 16h12M15 10v12" stroke="' + p.accent + '" stroke-opacity=".5" stroke-width="1.5"/>',
+    '</g><circle cx="88" cy="86" r="14" fill="#08111d" stroke="' + p.accent + '" stroke-width="2"/><g transform="translate(88 86)" stroke-linecap="round" stroke-linejoin="round">' + p.badgeShape + '</g>',
+    '<path d="M11 9h12M9 11v12M101 89v12M89 103h12" stroke="#fff" stroke-opacity=".38" stroke-width="1.4" fill="none"/></svg>'
+  ].join('');
 };
-
 class MaxFlizScene extends xb.Script {
   private engine!: MaxFlizGameEngine;
   private pixelIntro: PixelIntroManager | null = null;
@@ -758,14 +786,18 @@ class MaxFlizScene extends xb.Script {
         marcin: '🚜', grzesiek: '💥', dawid: '🧱', mateusz: '🐈', piotr: '🔧',
       };
       if (heroAvatar) heroAvatar.innerHTML = operatorPortrait(id);
-      // The menu has five hand-drawn, role-specific insignias. Keep those marks
-      // intact instead of replacing every one with the same generic face portrait.
+      // The menu and HUD share the same bespoke portrait; each operator keeps
+      // an individual accent and an accessible selected-card state.
       document.querySelectorAll<HTMLElement>('.char-card[data-char]').forEach((card) => {
         const cardId = card.dataset.char as CharacterId | undefined;
-        if (!cardId) return;
-        const accent = CHARACTERS[cardId].color.toString(16).padStart(6, '0');
+        if (!cardId || !CHARACTERS[cardId]) return;
+        const definition = CHARACTERS[cardId];
+        const accent = definition.color.toString(16).padStart(6, '0');
+        const badge = card.querySelector<HTMLElement>('.operator-emblem');
         card.style.setProperty('--operator-accent', `#${accent}`);
         card.setAttribute('aria-pressed', String(cardId === id));
+        card.setAttribute('aria-label', `${definition.name} — ${definition.role}`);
+        if (badge) badge.innerHTML = operatorPortrait(cardId);
       });
       if (abilityIcon) abilityIcon.textContent = abilityIcons[id] || '⚡';
 
