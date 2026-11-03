@@ -552,3 +552,26 @@ test('level reset disposes remaining collectibles, perk drops, and loot crates b
   assert.match(clear, /for \(const crate of this\.lootCrates\) \{\s*if \(crate\.mesh\) this\.disposeObjectResources\(crate\.mesh\);/);
   assert.ok(clear.indexOf('this.disposeObjectResources(collectible.mesh)') < clear.indexOf('while (this.levelRoot.children.length > 0)'));
 });
+
+
+test('uncollected roaming espresso expires while fixed map espresso remains persistent', async () => {
+  const [game, types] = await Promise.all([
+    read('../src/game.ts'),
+    read('../src/types.ts'),
+  ]);
+  assert.match(types, /life\?: number/);
+
+  const addStart = game.indexOf('private addEspressoItem(');
+  const addEnd = game.indexOf('\n  private ', addStart + 10);
+  assert.ok(addStart >= 0 && addEnd > addStart);
+  const addEspresso = game.slice(addStart, addEnd);
+  assert.match(addEspresso, /life: id\.startsWith\('rand_esp_'\) \? 90 : undefined/);
+
+  const updateStart = game.indexOf('private updateCollectibles(dt: number)');
+  const updateEnd = game.indexOf('\n  private ', updateStart + 10);
+  assert.ok(updateStart >= 0 && updateEnd > updateStart);
+  const update = game.slice(updateStart, updateEnd);
+  assert.match(update, /if \(c\.life !== undefined\) \{[\s\S]*?c\.life -= Math\.max\(0, dt\)/);
+  assert.match(update, /if \(c\.life <= 0\) \{[\s\S]*?this\.disposeObjectResources\(c\.mesh\);[\s\S]*?this\.collectibles\.splice\(i, 1\)/);
+  assert.match(game, /addEspressoItem\('esp_l1_1'/);
+});
