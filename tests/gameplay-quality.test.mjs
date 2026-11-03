@@ -427,3 +427,22 @@ test('campaign chase and lost-target search both use obstacle-aware steering', a
   assert.match(game, /calculateEnemyObstacleAvoidanceVector\(e, e\.lastKnownPlayerPos, this\.campaignEnemyObstacles/);
   assert.match(game, /this\.campaignEnemyObstacles,[\s\S]*?4\.6,[\s\S]*?0\.8/);
 });
+
+
+test('campaign bosses use warehouse obstacle-aware pursuit without moving during committed telegraphs', async () => {
+  const game = await read('../src/game.ts');
+  const walczakStart = game.indexOf("} else if (e.type === 'walczak')");
+  const letoStart = game.indexOf("} else if (e.type === 'krol_leto')", walczakStart);
+  const genericStart = game.indexOf("      } else {\n        if (e.type === 'sebix_m')", letoStart);
+  assert.ok(walczakStart >= 0 && letoStart > walczakStart && genericStart > letoStart);
+  const walczak = game.slice(walczakStart, letoStart);
+  const leto = game.slice(letoStart, genericStart);
+  assert.ok(walczak.includes('calculateEnemyObstacleAvoidanceVector('));
+  assert.ok(walczak.includes('this.campaignEnemyObstacles'));
+  assert.ok(walczak.includes('5.4,\n              1.25'));
+  assert.ok(leto.includes('calculateEnemyObstacleAvoidanceVector('));
+  assert.ok(leto.includes('this.campaignEnemyObstacles'));
+  assert.ok(leto.includes('5.8,\n              1.35'));
+  assert.ok(walczak.indexOf('if (isChargingImpact)') < walczak.indexOf('const avoidance = calculateEnemyObstacleAvoidanceVector('));
+  assert.ok(leto.indexOf('if (e.chargeTimer !== undefined)') < leto.indexOf('const avoidance = calculateEnemyObstacleAvoidanceVector('));
+});
