@@ -382,3 +382,21 @@ test('Survival rapid-upgrade copy matches its conservative three-percent cooldow
   assert.match(game, /id: 'rapid', icon: '⚡', title: 'RYTM ATAKU', description: 'Skrócenie czasu między atakami o 3%\.'/);
   assert.match(game, /this\.survivalAttackRateMultiplier = Math\.max\(0\.86, this\.survivalAttackRateMultiplier \* 0\.97\)/);
 });
+
+
+test('Campaign and Survival both separate enemy models from the player after contact handling', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /private resolveEnemyPlayerOverlap\(enemy: EnemyItem, minimumDistance: number\)/);
+  assert.match(game, /resolveEnemyPlayerSeparation\(/);
+  assert.match(game, /Math\.abs\(enemy\.y - this\.playerPos\.y\) >= 1\.1/);
+  assert.match(game, /enemy\.mesh\.position\.x = resolved\.x/);
+  assert.match(game, /enemy\.mesh\.position\.z = resolved\.z/);
+  const contactStart = game.indexOf('// Check collision with player');
+  const contactEnd = game.indexOf('private spawnPenaltyNotice', contactStart);
+  assert.ok(contactStart >= 0 && contactEnd > contactStart, 'shared contact handler should exist');
+  const contact = game.slice(contactStart, contactEnd);
+  assert.match(contact, /let stompedThisFrame = false/);
+  assert.match(contact, /stompedThisFrame = true/);
+  assert.match(contact, /this\.resolveEnemyPlayerOverlap\(e, hitRadius \+ 0\.18\)/);
+  assert.ok(contact.indexOf('if (dist < hitRadius)') < contact.indexOf('this.resolveEnemyPlayerOverlap(e, hitRadius + 0.18)'));
+});
