@@ -403,3 +403,12 @@ test('Campaign and Survival both separate enemy models from the player after con
   assert.match(contact, /this\.resolveEnemyPlayerOverlap\(e, contactRadius\)/);
   assert.ok(contact.indexOf('if (dist < contactRadius)') < contact.indexOf('this.resolveEnemyPlayerOverlap(e, contactRadius)'));
 });
+
+
+test('Survival spawn fallback searches distant arena edges instead of a clamped player-relative offset', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /const fallbackCandidates: \{ x: number; z: number \}\[\] = \[\]/);
+  assert.match(game, /Math\.hypot\(point\.x - this\.playerPos\.x, point\.z - this\.playerPos\.z\) >= 12/);
+  assert.match(game, /const fallback = chooseSpacedSpawnPoint\(safeFallbacks, this\.enemies, 3\.2\)/);
+  assert.match(game, /Last-resort bounded point: choose the farthest arena corner from the player/);
+});
