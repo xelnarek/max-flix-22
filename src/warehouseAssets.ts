@@ -4624,6 +4624,7 @@ export function createKfcBucketCollectible(): THREE.Group {
 
   const bucketTex = new THREE.CanvasTexture(canvas);
   bucketTex.colorSpace = THREE.SRGBColorSpace;
+  group.userData.dynamicTextures = [bucketTex];
 
   const bucketMat = new THREE.MeshStandardMaterial({
     map: bucketTex,
