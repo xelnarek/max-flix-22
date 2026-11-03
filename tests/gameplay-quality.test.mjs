@@ -493,3 +493,23 @@ test('collected pickups are removed from the per-frame collection and magnet pul
   const pickupRemoval = update.indexOf('this.collectibles.splice(i, 1)', scoreUpdate);
   assert.ok(scoreUpdate >= 0 && pickupRemoval > scoreUpdate, 'a picked-up item should be removed after its reward is applied');
 });
+
+
+test('collected pickup models and their owned dynamic textures release GPU resources', async () => {
+  const [game, assets] = await Promise.all([
+    read('../src/game.ts'),
+    read('../src/warehouseAssets.ts'),
+  ]);
+  const updateStart = game.indexOf('private updateCollectibles(dt: number)');
+  const updateEnd = game.indexOf('\n  private ', updateStart + 10);
+  assert.ok(updateStart >= 0 && updateEnd > updateStart);
+  const update = game.slice(updateStart, updateEnd);
+  assert.match(update, /this\.levelRoot\.remove\(c\.mesh\);\s*this\.disposeObjectResources\(c\.mesh\);/);
+
+  assert.match(game, /private disposeObjectResources\(object: THREE\.Object3D\)/);
+  assert.match(game, /object\.traverse\(\(child\) => \{[\s\S]*?child\.userData\.dynamicTextures/);
+  assert.match(game, /this\.disposeTemporaryObject\(object\);\s*dynamicTextures\.forEach\(\(texture\) => texture\.dispose\(\)\)/);
+  assert.match(game, /private disposePomazaniecObject\(object: THREE\.Object3D\) \{\s*this\.disposeObjectResources\(object\);/);
+
+  assert.match(assets, /const bucketTex = new THREE\.CanvasTexture\(canvas\);\s*bucketTex\.colorSpace = THREE\.SRGBColorSpace;\s*group\.userData\.dynamicTextures = \[bucketTex\];/);
+});
