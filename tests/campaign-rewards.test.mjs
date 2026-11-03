@@ -23,3 +23,24 @@ test('invalid sector and random samples are normalised to safe values', () => {
   assert.deepEqual(chooseCampaignRewardSpawnPoint(99, Number.NaN, Number.POSITIVE_INFINITY), { x: 0, z: 0 });
   assert.deepEqual(chooseCampaignRewardSpawnPoint(2, -2, 2), { x: 43, z: 10 });
 });
+
+test('campaign rewards are rerouted to a clear floor point when the sampled point intersects an obstacle', () => {
+  const obstacles = [{ x: 76, z: 0, halfWidth: 7, halfDepth: 4 }];
+  const point = chooseCampaignRewardSpawnPoint(2, 0.5, 0.5, obstacles);
+
+  assert.notDeepEqual(point, { x: 76, z: 0 });
+  assert.ok(Math.abs(point.x - 76) > 8.15 || Math.abs(point.z) > 5.15);
+  assert.ok(point.x >= 43 && point.x <= 109);
+  assert.ok(point.z >= -10 && point.z <= 10);
+});
+
+test('obstacle-aware reward placement is deterministic for the same rolls and map geometry', () => {
+  const obstacles = [
+    { x: 76, z: 0, halfWidth: 7, halfDepth: 4 },
+    { x: 62, z: -6, halfWidth: 3, halfDepth: 2 },
+  ];
+  assert.deepEqual(
+    chooseCampaignRewardSpawnPoint(2, 0.5, 0.5, obstacles),
+    chooseCampaignRewardSpawnPoint(2, 0.5, 0.5, obstacles),
+  );
+});
