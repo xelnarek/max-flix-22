@@ -2215,10 +2215,11 @@ export class MaxFlizGameEngine {
       this.disposePomazaniecObject(this.survivalPomazaniecMarker);
       this.survivalPomazaniecMarker = null;
     }
+    // Every hazard mesh is a per-level instance produced by its own model
+    // factory. Dispose all of them before clearing the map; shared textures
+    // remain owned by the asset layer and are not released here.
     for (const hazard of this.hazards) {
-      if ((hazard.type === 'stretch_barrier' || hazard.type === 'roller_gate') && hazard.mesh) {
-        this.disposeTemporaryObject(hazard.mesh);
-      }
+      if (hazard.mesh) this.disposeTemporaryObject(hazard.mesh);
     }
     this.clearSurvivalSurgeRing();
     this.survivalSurgeTargetCount = 0;
