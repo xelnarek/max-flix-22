@@ -112,12 +112,15 @@ test('all main-menu navigation and launch actions use consistent inline vector i
   assert.ok(briefingStart >= 0 && html.includes('class="menu-story-icon"'));
 });
 
-test('operator menu portraits scale into a three-column touch layout without replacing menu actions', async () => {
+test('operator menu portraits use a balanced centred mobile layout and preserve menu actions', async () => {
   const css = await read('../src/visual-polish.css');
   const html = await read('../index.html');
   const app = await read('../src/index.ts');
   assert.ok(css.includes('@media (max-width: 640px)'));
-  assert.ok(css.includes('grid-template-columns: repeat(3, minmax(0, 1fr)) !important'));
+  assert.ok(css.includes('grid-template-columns: repeat(6, minmax(0, 1fr)) !important'));
+  assert.ok(css.includes('#title-screen .char-card:nth-child(4) { grid-column: 2 / span 2; }'));
+  assert.ok(css.includes('#title-screen .char-card:nth-child(5) { grid-column: 4 / span 2; }'));
+  assert.ok(css.includes('#title-screen .char-card[aria-pressed="true"]'));
   assert.ok(css.includes('#title-screen .char-card-badge.operator-emblem .operator-portrait'));
   assert.ok(app.includes("card.setAttribute('aria-pressed', String(cardId === id))"));
   for (const id of ['btn-start-game', 'btn-start-survival', 'btn-open-story-modal']) {
