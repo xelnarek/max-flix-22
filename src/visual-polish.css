@@ -2860,3 +2860,30 @@ html[data-ui-landscape-touch="true"] .story-modal-card .story-slide {
 @media (prefers-reduced-motion: reduce) {
   #title-screen .char-card[aria-pressed="true"] .operator-emblem { transition: none !important; }
 }
+
+
+/* Desktop operator selection: the active portrait must remain unmistakable without hover. */
+@media (min-width: 641px) {
+  #title-screen .char-card[aria-pressed="true"] {
+    border-color: var(--operator-accent) !important;
+    background:
+      radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--operator-accent) 23%, transparent), transparent 72%),
+      linear-gradient(160deg, color-mix(in srgb, var(--operator-accent) 12%, #142638), #081522) !important;
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--operator-accent) 42%, transparent),
+      0 0 24px color-mix(in srgb, var(--operator-accent) 17%, transparent),
+      0 10px 24px rgba(0,0,0,.25),
+      inset 0 1px 0 rgba(255,255,255,.08) !important;
+    transform: translateY(-2px);
+  }
+  #title-screen .char-card[aria-pressed="true"]::before {
+    height: 3px;
+    opacity: 1;
+  }
+  #title-screen .char-card[aria-pressed="true"] .operator-emblem {
+    border-color: color-mix(in srgb, var(--operator-accent) 78%, white) !important;
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--operator-accent) 20%, transparent),
+      0 0 17px color-mix(in srgb, var(--operator-accent) 32%, transparent);
+  }
+}
