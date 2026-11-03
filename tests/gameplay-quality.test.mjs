@@ -630,3 +630,31 @@ test('all short-lived enemy notice and ranged projectiles dispose their generate
   const clear = game.slice(clearStart, clearEnd);
   assert.match(clear, /projectile\.kind === 'pomazaniec_lollipop' \|\| projectile\.kind === 'sebix_brick' \|\| projectile\.disposeOnRemove/);
 });
+
+ 
+test('temporary special-effect meshes release generated GPU resources when their animation ends or the level resets', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /disposeOnRemove\?: boolean/);
+
+  const checks = [
+    { label: 'fire patch', marker: 'life: 0.58,\n      maxLife: 0.58,\n      disposeOnRemove: true,' },
+    { label: 'first shockwave ring', marker: 'this.specialEffects.push({ mesh, life: 0.7, maxLife: 0.7, grow: 7.5, spin: 9.0, disposeOnRemove: true });' },
+    { label: 'second shockwave ring', marker: 'this.specialEffects.push({ mesh: ring2, life: 0.6, maxLife: 0.6, grow: 8.5, spin: -7.0, disposeOnRemove: true });' },
+    { label: 'Grzesiek claw', marker: 'mesh: armGroup,\n      life: 0.9,\n      maxLife: 0.9,\n      disposeOnRemove: true,' },
+    { label: 'fireball flash', marker: 'mesh: flash,\n      life: 0.45,\n      maxLife: 0.45,\n      disposeOnRemove: true,' },
+    { label: 'boss defeat ring', marker: 'this.specialEffects.push({ mesh, life: 1.2, maxLife: 1.2, grow: 12.0, spin: 15.0, disposeOnRemove: true });' },
+  ];
+  for (const item of checks) assert.ok(game.includes(item.marker), item.label + ' should opt into resource disposal');
+
+  const updateStart = game.indexOf('private updateSpecialEffects(dt: number)');
+  const updateEnd = game.indexOf('\n  private ', updateStart + 10);
+  assert.ok(updateStart >= 0 && updateEnd > updateStart);
+  const update = game.slice(updateStart, updateEnd);
+  assert.match(update, /if \(effect\.cleanup\) effect\.cleanup\(\);\s*else if \(effect\.disposeOnRemove\) this\.disposeTemporaryObject\(effect\.mesh\)/);
+
+  const clearStart = game.indexOf('private clearLevel()');
+  const clearEnd = game.indexOf('\n  private ', clearStart + 10);
+  assert.ok(clearStart >= 0 && clearEnd > clearStart);
+  const clear = game.slice(clearStart, clearEnd);
+  assert.match(clear, /if \(effect\.cleanup\) effect\.cleanup\(\);\s*else if \(effect\.disposeOnRemove\) this\.disposeTemporaryObject\(effect\.mesh\)/);
+});
