@@ -7088,7 +7088,7 @@ export class MaxFlizGameEngine {
         } else if (c.type === 'kfc_bucket') {
           this.score += c.points * ptsMult;
           this.activatePerk('kfc_bucket', 16);
-          this.emitFloatingToast(`🍗 KUBEŁEK Kubełek Mocy! +2 KAWY & FURIA!`, c.x, c.y + 0.7, c.z, 'perk');
+          this.emitFloatingToast(`⚡ KUBEŁEK MOCY! +2 KAWY & FURIA!`, c.x, c.y + 0.7, c.z, 'perk');
         } else if (c.type === 'easter_egg') {
           this.score += c.points * ptsMult;
           this.handleMateuszPassive(1);
@@ -8426,12 +8426,12 @@ export class MaxFlizGameEngine {
       sound.playSirenAlert();
       this.triggerScreenShake(0.75, 0.7);
       this.callbacks.onPerkDropBanner?.(
-        '🍗 VECTOR PRZYWIÓZŁ JEDZENIE Z Kubełek Mocy!',
+        '⚡ DOSTAWA ENERGETYCZNYCH ZAPASÓW!',
         '🧟‍♂️',
-        'Fala wygłodniałych magazynierów-zombie szarżuje po kubełki! Zbierz Kubełek Mocy pierwszy (+2 Kawy i Furia 2x Obrażeń)!',
+        'Fala magazynierów-zombie szarżuje po zapasy! Zbierz pakiet pierwszy (+2 Kawy i Furia 2x Obrażeń)!',
         '#ef4444'
       );
-      this.sayQuote('VECTOR PRZYWIÓZŁ KUBEŁKI Z Kubełek Mocy! Cała zmiana biegnie jak horda zombie – bierz stripsy zanim zjedzą!');
+      this.sayQuote('VECTOR PRZYWIÓZŁ ZAPASY ENERGII! Cała zmiana biegnie jak horda zombie — zbierz pakiet, zanim zniknie!');
 
       // Drop 2 KFC buckets + 1 KFC Perk Crate around the player
       this.addKfcBucketItem(`event_kfc_${Date.now()}_1`, px + 4.5, 0.45, THREE.MathUtils.clamp(pz - 2.2, -14, 14));
@@ -8449,7 +8449,7 @@ export class MaxFlizGameEngine {
       offsets.forEach((off, idx) => {
         const zx = THREE.MathUtils.clamp(px + off.dx, this.levelBounds.minX + 3, this.levelBounds.maxX - 3);
         const zz = THREE.MathUtils.clamp(pz + off.dz, -14, 14);
-        this.addZombieWorkerEnemy(`zombie_wave_${Date.now()}_${idx}`, zx, zz - 5, zz + 5, 'Wygłodniały Zombie-Magazynier (Kubełek Mocy!)');
+        this.addZombieWorkerEnemy(`zombie_wave_${Date.now()}_${idx}`, zx, zz - 5, zz + 5, 'Zombie-Magazynier (Zapas Energii!)');
       });
     } else if (eventIdx === 1) {
       // EVENT 2: SZARŻA SZALONYCH SZTAPLAREK & ZŁOTY PALECIAK!
@@ -9907,7 +9907,7 @@ export class MaxFlizGameEngine {
       this.callbacks.onHpUpdate(this.hp, this.maxHp);
       this.activatePerk('order_magnet', 8);
       this.spawnMarcinTank();
-      this.sayQuote('KONWÓJ WZ-404! DO BOJU! To nie jest samouczek — artyleria wjeżdża na halę!');
+      this.sayQuote('KONWÓJ WZ-404! DO BOJU! To nie jest samouczek — wsparcie ciężkie wjeżdża na halę!');
     } else if (this.currentCharacterId === 'grzesiek') {
       this.grzesiekCrushTimer = 0.9;
       this.grzesiekCrushPulse = 1.0;
@@ -10152,14 +10152,14 @@ export class MaxFlizGameEngine {
         e.stunTimer = 1.5;
         e.state = 'stunned';
         e.onFireTimer = 3.5;
-        this.emitFloatingToast('💥 -2 HP KOKTAJL!', e.x, e.y + 0.9, e.z, 'damage');
+        this.emitFloatingToast('💥 -2 HP • PŁONĄCA MIESZANKA!', e.x, e.y + 0.9, e.z, 'damage');
         if (e.hp <= 0) {
           this.defeatEnemy(e, 280, false);
         }
       }
     });
 
-    this.emitFloatingToast('🔥 MORZE OGNIA 70%!', x, y + 1.3, z, 'combo');
+    this.emitFloatingToast('🔥 MORZE OGNIA!', x, y + 1.3, z, 'combo');
 
     // 4. Create persistent burning fire puddle
     const puddle = createMolotovFirePuddle(3.8);
