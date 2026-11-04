@@ -3,7 +3,7 @@
 ## Przygotowanie techniczne wykonane w repozytorium
 
 - Publiczna nazwa, opis i metadane produktu: **Paleciaki! Magazyn Chaosu**.
-- Publiczny odczyt i zapis rankingu są obecnie dostępne na podstawie reguł Firestore; klient próbuje użyć anonimowego Firebase Authentication, ale kod ma również ścieżkę gościa. Reguła `leaderboard` nie wymaga obecnie `isSignedIn()`, więc nie wolno traktować wpisów jako uwierzytelnionych ani odpornych na fałszowanie.
+- Odczyt rankingu jest publiczny, a tworzenie wpisów wymaga aktywnej sesji Firebase Authentication (w tej aplikacji anonimowej) i ścisłego schematu Firestore. Gdy logowanie nie działa, wynik pozostaje w lokalnej kolejce. To blokuje całkowicie nieuwierzytelnione zapisy, ale **nie jest ochroną anty-cheat**: klient może zmodyfikować wynik przed wysłaniem.
 - Nowe 11,8-sekundowe intro Canvas 2D: dynamiczny najazd, alarm, wózek, nadciągająca horda, prezentacja operatorów i plansza tytułowa. Bez zewnętrznego pliku wideo.
 - Manifest PWA, kolor motywu, ikona SVG i strona awaryjna offline z nowym brandingiem.
 - Link do polityki prywatności umieszczony w ustawieniach gry.
@@ -58,6 +58,6 @@ Po pobraniu artefaktów z workflow zainstaluj APK debug na urządzeniu Android i
 
 ## Co nadal blokuje publikację
 
-**Krytyczny bloker bezpieczeństwa rankingu:** aktualna reguła `firestore.rules` pozwala tworzyć dokumenty `leaderboard` bez zalogowania. Aplikacja próbuje rozpocząć anonimową sesję Firebase, ale przy jej niedostępności przechodzi w tryb gościa; obecna reguła nadal pozwala wtedy zapisać wynik. Publiczny klient może więc wysyłać zmyślone wyniki lub spamować ranking. Przed publikacją należy potwierdzić w Firebase Console, że Anonymous Authentication jest włączone, a następnie zaprojektować i przetestować regułę wymagającą uwierzytelnienia oraz powiązania wpisu z UID. Samo uwierzytelnienie nie chroni wyniku przed manipulacją po stronie klienta — ranking konkurencyjny wymaga dodatkowej walidacji serwerowej i ograniczania nadużyć.
+**Pozostały bloker bezpieczeństwa rankingu:** reguła Firestore wymaga już `request.auth != null`, a kod nie próbuje wysyłać wyniku bez uzyskanej sesji. Ponieważ logowanie jest anonimowe, każdy może jednak utworzyć własną sesję Firebase i wysłać spreparowany wynik z podrobioną liczbą punktów. Zakresy pól i niezmienność dokumentu ograniczają błędne dane, ale nie dowodzą, że wynik pochodzi z prawdziwej rozgrywki. Przed traktowaniem rankingu jako konkurencyjnego należy przenieść zapis do backendu (np. callable Cloud Function), który waliduje podpisany/serwerowo potwierdzony przebieg, wprowadza limity i zapisuje UID. App Check może ograniczyć część automatycznego nadużycia, ale sam nie weryfikuje wyniku gry.
 
 To nie jest jeszcze zatwierdzona aplikacja Google Play. Właściciel musi uzupełnić dane wydawcy, skonfigurować i zabezpieczyć klucz podpisujący, zweryfikować politykę oraz Data safety, potwierdzić licencje assetów i wykonać testy na urządzeniach. W nowych kontach osobistych może być wymagany zamknięty test z 12 testerami przez nieprzerwane 14 dni przed wnioskiem o dostęp do produkcji. Wymagania Play Console sprawdź ponownie bezpośrednio przed wysłaniem wersji.

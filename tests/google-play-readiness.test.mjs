@@ -39,3 +39,28 @@ test('mobile lifecycle pauses active gameplay when the document is hidden', asyn
   assert.match(app, /document\.hidden && this\.engine\.getGameState\(\) === 'playing'/);
   assert.match(app, /navigator\.serviceWorker\.register\('\.\/sw\.js'/);
 });
+
+test('leaderboard reads stay public while writes and profile access require authentication', async () => {
+  const rules = await read('../firestore.rules');
+  assert.match(rules, /match \/leaderboard\/\{scoreId\}\s*\{\s*allow read: if true;/);
+  assert.match(rules, /allow create: if isSignedIn\(\) && isValidId\(scoreId\) && isValidLeaderboardEntry\(request\.resource\.data\);/);
+  assert.match(rules, /allow update, delete: if false;/);
+  assert.match(rules, /allow read: if isSignedIn\(\) && request\.auth\.uid == userId;/);
+});
+
+test('score submission never attempts Firestore writes without a Firebase session', async () => {
+  const firebase = await read('../src/firebase.ts');
+  assert.match(firebase, /const user = await initAuth\(\);\s*if \(!user\?\.uid\)\s*\{[\s\S]*?throw new Error\('Firebase authentication unavailable/);
+  assert.match(firebase, /if \(!user\?\.uid\)\s*\{[\s\S]*?return 0;[\s\S]*?\}\s*\n\s*const remaining:/);
+  assert.match(firebase, /if \(!user && retryOnFailure\) authPromise = null;/);
+  assert.match(firebase, /if \(!currentUser\?\.uid\)[\s\S]*?return false;/);
+});
+
+test('npm only runs the reviewed dependency install scripts required by the build', async () => {
+  const pkg = JSON.parse(await read('../package.json'));
+  assert.deepEqual(pkg.allowScripts, {
+    '@firebase/util@1.15.3': true,
+    'esbuild@0.25.12': true,
+    'protobufjs@7.6.6': true,
+  });
+});

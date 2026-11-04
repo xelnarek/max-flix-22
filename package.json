@@ -15,6 +15,11 @@
     "android:open": "npx cap open android",
     "android:prepare-release": "node scripts/prepare-android-release.mjs"
   },
+  "allowScripts": {
+    "@firebase/util@1.15.3": true,
+    "esbuild@0.25.12": true,
+    "protobufjs@7.6.6": true
+  },
   "dependencies": {
     "@pmndrs/uikit": "^1.0.64",
     "@preact/signals-core": "^1.14.0",

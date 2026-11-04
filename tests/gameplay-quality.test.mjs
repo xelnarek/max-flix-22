@@ -220,7 +220,7 @@ test('cinematic intro autoplays after boot and is layered above the game shell',
 
 test('cinematic intro throttles its Canvas rendering on mobile and cleans up RAF', async () => {
   const intro = await read('../src/cinematicIntro.ts');
-  assert.match(intro, /this\.frameInterval = mobile \? 1000 \/ 30 : 1000 \/ 45/);
+  assert.match(intro, /this\.frameInterval = mobile \? 1000 \/ 30 : 1000 \/ 48/);
   assert.match(intro, /const dpr = Math\.min\(1\.5/);
   assert.match(intro, /cancelAnimationFrame\(this\.rafId\)/);
   assert.doesNotMatch(intro, /addEventListener\('touchend'/);
@@ -929,7 +929,7 @@ test('new cinematic intro replaces the old pixel/VHS intro and launches at boot'
   assert.match(intro, /prefers-reduced-motion/);
   assert.match(intro, /drawWarehouse/);
   assert.match(html, /btn-open-cinematic-intro/);
-  assert.match(html, /PALECIAKI! MAGAZYN CHAOSU/);
+  assert.match(html, /PALECIAKI! <span>MAGAZYN<\/span><em>CHAOSU<\/em>/);
   assert.match(css, /\.cinematic-intro-overlay/);
   assert.doesNotMatch(css, /pixel-intro-overlay|pixel-vhs-header/);
 });

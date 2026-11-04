@@ -36,6 +36,7 @@ test('Android release preparation keeps upload signing secrets out of committed 
 
 test('Android CI builds API 36 AAB and a debug APK without embedding credentials', async () => {
   const workflow = await read('../.github/workflows/android-release.yml');
+  assert.match(workflow, /uses: android-actions\/setup-android@v4\s+with:\s+packages: 'platform-tools'/);
   assert.match(workflow, /platforms;android-36/);
   assert.match(workflow, /bundleRelease/);
   assert.match(workflow, /assembleDebug/);
