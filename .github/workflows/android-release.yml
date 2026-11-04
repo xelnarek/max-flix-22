@@ -126,6 +126,32 @@ jobs:
       - name: Verify Android package signatures and SDK metadata
         run: node scripts/verify-android-release.mjs
 
+      - name: Validate Google Play internal-track credentials
+        if: vars.GOOGLE_PLAY_UPLOAD_ENABLED == 'true'
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          ANDROID_SIGNING_ENABLED: ${{ env.ANDROID_SIGNING_ENABLED }}
+        run: |
+          if [ "$ANDROID_SIGNING_ENABLED" != "true" ]; then
+            echo "Google Play upload requires a verified upload-signed AAB." >&2
+            exit 1
+          fi
+          if [ -z "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is missing. Configure the Play Developer API service account secret." >&2
+            exit 1
+          fi
+
+      - name: Upload signed AAB to Google Play internal testing
+        if: vars.GOOGLE_PLAY_UPLOAD_ENABLED == 'true'
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: pl.paleciaki.magazynchaosu
+          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+          tracks: internal
+          status: completed
+          releaseName: ${{ env.ANDROID_VERSION_NAME }}-${{ env.ANDROID_VERSION_CODE }}
+
       - name: Upload Android QA and release artifacts
         uses: actions/upload-artifact@v4
         if: always()
