@@ -1714,6 +1714,9 @@ class MaxFlizScene extends xb.Script {
 
     ensureLeaderboardServices().catch(console.warn);
     renderLeaderboard();
+    window.addEventListener('online', () => {
+      ensureLeaderboardServices().then(() => renderLeaderboard()).catch(console.warn);
+    });
 
     // Do not let a backgrounded mobile browser continue a live run invisibly.
     // Resume only when this handler itself caused the pause; manual pauses stay paused.
