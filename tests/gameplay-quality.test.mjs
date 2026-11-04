@@ -105,10 +105,10 @@ test('campaign entry points are retired; only Survival can be started from the a
   ]);
   assert.doesNotMatch(html, /id="btn-start-game"|data-tab="tab-zones"|data-tab="tab-story"/);
   assert.match(html, /id="btn-start-survival"/);
-  assert.doesNotMatch(app, /this\\.engine\\.startGame\\(/);
-  assert.match(app, /this\\.engine\\.startSurvival\\(\\)/);
-  assert.match(game, /private resetSurvivalRun\\(\\)/);
-  assert.doesNotMatch(game, /public startGame\\(/);
+  assert.doesNotMatch(app, /this\.engine\.startGame\(/);
+  assert.match(app, /this\.engine\.startSurvival\(\)/);
+  assert.match(game, /private resetSurvivalRun\(\)/);
+  assert.doesNotMatch(game, /public startGame\(/);
 });
 test('camera fades only tagged perimeter walls that intersect the camera-to-player ray', async () => {
   const game = await read('../src/game.ts');
