@@ -10406,7 +10406,7 @@ export class MaxFlizGameEngine {
       sound.stopMusic();
       sound.playGameOver();
       const finalReason = this.gameMode === 'survival'
-        ? reason + ' | Fala ' + this.survivalWave + ' • ' + this.survivalKills + ' eliminacji • ' + Math.floor(this.survivalElapsed) + ' s'
+        ? reason + ' | Fala ' + this.survivalWave + ' • ' + this.survivalKills + ' eliminacji • ' + this.survivalPerfectDodges + ' perfekcyjnych uników • ' + Math.floor(this.survivalElapsed) + ' s'
         : reason;
       this.callbacks.onGameOver(finalReason);
     }
