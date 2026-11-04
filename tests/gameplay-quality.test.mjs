@@ -934,3 +934,17 @@ test('new cinematic intro replaces the old pixel/VHS intro and launches at boot'
   assert.doesNotMatch(css, /pixel-intro-overlay|pixel-vhs-header/);
   assert.doesNotMatch(app, /PixelIntroManager|pixelIntro/i);
 });
+
+
+test('record date and time are rendered on every leaderboard row', async () => {
+  const [app, formatter, css, cloud] = await Promise.all([
+    read('../src/index.ts'), read('../src/leaderboard.ts'),
+    read('../src/index.css'), read('../src/firebase.ts')
+  ]);
+  assert.match(app, /formatLeaderboardTimestamp\(entry\.createdAt\)/);
+  assert.match(app, /leaderboard-record-time/);
+  assert.match(formatter, /timeZone: 'Europe\/Warsaw'/);
+  assert.match(formatter, /hour: '2-digit'[\s\S]*?minute: '2-digit'/);
+  assert.match(css, /\.leaderboard-record-time/);
+  assert.match(cloud, /createdAt: new Date\(\)\.toISOString\(\)/);
+});
