@@ -3,7 +3,7 @@ import { clampHorizontalPosition } from './arenaBounds.ts';
 import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoint, resolveEnemyPlayerSeparation } from './enemySpacing.ts';
 import { calculateEnemyObstacleAvoidanceVector } from './enemyNavigation.ts';
 import { createEnemyHitReaction, getEnemyHitPulse } from './enemyCombatFeedback.ts';
-import { isWithinBossImpactRadius } from './combatTelegraphs.ts';
+import { isEffectiveBossLaneDodge, isInsideBossAttackLane, isWithinBossImpactRadius } from './combatTelegraphs.ts';
 import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
 import { chooseSurvivalEventSpawnPoint } from './survivalSpawn.ts';
 import { shouldSpawnBosmanKrakow } from './survivalEncounters.ts';
@@ -160,7 +160,7 @@ const SURVIVAL_WEAPON_DEFS: Record<SurvivalWeaponId, {
   wz_boomerang: { name: 'WZ-Bumerang', evolvedName: 'PROTOKÓŁ POWROTU', icon: '📜', description: 'Magiczna WZ-tka przecina linię wrogów i wraca do operatora.', cooldown: 13.0, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.wz_boomerang, color: 0xfbbf24, evolutionPassive: 'growth', evolutionPassiveLabel: 'Premia za normę' },
 };
 export interface SurvivalSnapshot {
-  elapsedSeconds: number; wave: number; kills: number; level: number; xp: number; xpToNext: number;
+  elapsedSeconds: number; wave: number; kills: number; perfectDodges: number; level: number; xp: number; xpToNext: number;
   aliveEnemies: number; rerolls: number; skips: number; activeHazards: number;
   weapons: Array<{ id: SurvivalWeaponId; name: string; icon: string; level: number; evolved: boolean }>;
 }
@@ -448,6 +448,7 @@ export class MaxFlizGameEngine {
   private survivalUiTimer = 0;
   private survivalWave = 1;
   private survivalKills = 0;
+  private survivalPerfectDodges = 0;
   private survivalWaveStartKills = 0;
   private survivalLevel = 1;
   private survivalXp = 0;
@@ -1216,6 +1217,7 @@ export class MaxFlizGameEngine {
     this.survivalUiTimer = 0;
     this.survivalWave = 1;
     this.survivalKills = 0;
+    this.survivalPerfectDodges = 0;
     this.survivalWaveStartKills = 0;
     this.survivalLevel = 1;
     this.survivalXp = 0;
@@ -1878,6 +1880,7 @@ export class MaxFlizGameEngine {
       elapsedSeconds: Math.floor(this.survivalElapsed),
       wave: this.survivalWave,
       kills: this.survivalKills,
+      perfectDodges: this.survivalPerfectDodges,
       level: this.survivalLevel,
       xp: this.survivalXp,
       xpToNext: this.survivalXpToNext,
@@ -6011,10 +6014,15 @@ export class MaxFlizGameEngine {
     length: number,
     width: number,
     color: number,
-    duration: number
+    duration: number,
+    owner?: EnemyItem
   ) {
     const safeLength = Math.max(1, Number.isFinite(length) ? length : 1);
     const safeWidth = Math.max(0.5, Number.isFinite(width) ? width : 0.5);
+    if (owner) {
+      owner.chargeLaneLength = safeLength;
+      owner.chargeLaneWidth = safeWidth;
+    }
     const life = THREE.MathUtils.clamp(Number.isFinite(duration) ? duration : 0.6, 0.2, 1.5);
     const group = new THREE.Group();
     group.position.set(x, 0.065, z);
@@ -6174,7 +6182,7 @@ export class MaxFlizGameEngine {
         enemy.chargeTimer = 0.72;
         enemy.chargeDir = Math.atan2(dx,dz);
         enemy.state = 'charging';
-        this.spawnBossLaneTelegraph(enemy.x, enemy.z, enemy.chargeDir, 12.5, 2.6, 0xef4444, 0.72);
+        this.spawnBossLaneTelegraph(enemy.x, enemy.z, enemy.chargeDir, 12.5, 2.6, 0xef4444, 0.72, enemy);
         this.spawnParticleRing(enemy.x,0.12,enemy.z,0xef4444);
         this.emitFloatingToast('🔥 SEBIX ŁADUJE TARAN — ZEJDŹ Z LINII!',enemy.x,enemy.y+2.2,enemy.z,'damage');
         sound.playBossWarning();
@@ -7933,7 +7941,7 @@ export class MaxFlizGameEngine {
           } else if (e.specialActionTimer <= 0 && distToPlayer < 12.0) {
             e.chargeTimer = 0.68;
             e.chargeDir = Math.atan2(dx, dz);
-            this.spawnBossLaneTelegraph(e.x, e.z, e.chargeDir, 13.5, 2.2, isPhase2 ? 0xf97316 : 0xef4444, 0.68);
+            this.spawnBossLaneTelegraph(e.x, e.z, e.chargeDir, 13.5, 2.2, isPhase2 ? 0xf97316 : 0xef4444, 0.68, e);
             this.emitFloatingToast('🚨 DYSCYPLINARKA — ZEJDŹ Z ZAZNACZONEJ LINII!', e.x, e.y + 1.5, e.z, 'damage');
             sound.playBossWarning();
             this.triggerScreenShake(0.12, 0.12);
@@ -8021,7 +8029,7 @@ export class MaxFlizGameEngine {
             if (e.chargeTimer === undefined) {
               e.chargeTimer = 0.9;
               e.chargeDir = Math.atan2(dx, dz);
-              this.spawnBossLaneTelegraph(e.x, e.z, e.chargeDir, 14.0, 1.8, 0xef4444, 0.9);
+              this.spawnBossLaneTelegraph(e.x, e.z, e.chargeDir, 14.0, 1.8, 0xef4444, 0.9, e);
               this.spawnParticleRing(e.x, 0.24, e.z, 0xef4444);
               this.emitFloatingToast('AGV-9: ŁADOWANIE IMPULSU — ZEJDŹ Z LINII!', e.x, e.y + 1.2, e.z, 'damage');
               sound.playBossWarning();
@@ -8103,7 +8111,7 @@ export class MaxFlizGameEngine {
             e.chargeTimer = warningDuration;
             e.chargeDir = direction;
             e.mesh.rotation.y = direction;
-            this.spawnBossLaneTelegraph(e.x, e.z, direction, isPhase2 ? 14.0 : 11.5, isPhase2 ? 3.0 : 2.35, isPhase2 ? 0xf97316 : 0xf59e0b, warningDuration);
+            this.spawnBossLaneTelegraph(e.x, e.z, direction, isPhase2 ? 14.0 : 11.5, isPhase2 ? 3.0 : 2.35, isPhase2 ? 0xf97316 : 0xf59e0b, warningDuration, e);
             this.emitFloatingToast(isPhase2 ? '🚨 BOSMAN: ODPRAWA PREMIUM — ZEJDŹ Z LINII!' : '🚨 BOSMAN: ODPRAWA ZA CHWILĘ — ZEJDŹ Z LINII!', e.x, e.y + 1.4, e.z, 'damage');
             sound.playBossWarning();
           }
