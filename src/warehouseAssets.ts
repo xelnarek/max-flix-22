@@ -4597,7 +4597,7 @@ export function createBhpDigitalScoreboard(title = 'BHP CENTRUM B4 • DNI BEZ P
 }
 
 /**
- * 42. NEW COLLECTIBLE / POWER-UP: Pakiet Energii dla Vectora ("WTORKOWY B4 POWER!")
+ * 42. NEW COLLECTIBLE / POWER-UP: Pakiet Energii dla Operatora 03 ("WTORKOWY B4 POWER!")
  */
 export function createKfcBucketCollectible(): THREE.Group {
   const group = new THREE.Group();
@@ -4688,7 +4688,7 @@ export function createKfcBucketCollectible(): THREE.Group {
 }
 
 /**
- * 43. NEW ENEMY: Głodny Zombie-Pracownik ("VECTOR PRZYWIÓZŁ ZAPASY!")
+ * 43. NEW ENEMY: Głodny Zombie-Pracownik ("DOSTAWA PRZYWIÓZŁA ZAPASY!")
  */
 export function createZombieWorkerEnemyModel(): {
   group: THREE.Group;
