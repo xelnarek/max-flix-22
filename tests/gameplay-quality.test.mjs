@@ -814,7 +814,7 @@ test('each boss warning stores its owner-specific lane dimensions for dodge vali
   const game = await read('../src/game.ts');
   assert.match(game, /owner\.chargeLaneLength = safeLength/);
   assert.match(game, /owner\.chargeLaneWidth = safeWidth/);
-  const calls = game.match(/spawnBossLaneTelegraph\([^;]+\);/g) || [];
+  const calls = game.match(/this\.spawnBossLaneTelegraph\([^;]+\);/g) || [];
   assert.ok(calls.length >= 4, 'expected multiple boss lane telegraphs');
   for (const call of calls) {
     assert.match(call, /, (?:enemy|e)\);$/, 'each lane warning must attach its enemy owner');
