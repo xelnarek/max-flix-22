@@ -107,3 +107,23 @@ export function formatLeaderboardTimestamp(createdAt: string): string {
     hourCycle: 'h23',
   }).format(new Date(timestamp));
 }
+
+
+/** Formats a saved record time in the player's local timezone. */
+export function formatLeaderboardTimestamp(value: unknown, locale = 'pl-PL'): string {
+  if (typeof value !== 'string' || value.length === 0) return 'DATA NIEZNANA';
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return 'DATA NIEZNANA';
+  try {
+    return new Intl.DateTimeFormat(locale, {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).format(new Date(timestamp));
+  } catch {
+    return 'DATA NIEZNANA';
+  }
+}
