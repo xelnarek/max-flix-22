@@ -1366,7 +1366,7 @@ export function createCharacterModel(def: CharacterDef): {
     ratchetInset.position.set(0, 0.39, 0.052);
     ratchetInset.rotation.x = Math.PI / 2;
     wrench.add(ratchetInset);
-    const redMark = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.10, 0.018), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+    const redMark = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.10, 0.018), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
     redMark.position.set(0, -0.26, 0.055);
     wrench.add(redMark);
     accessory.add(wrench);
@@ -4597,30 +4597,30 @@ export function createBhpDigitalScoreboard(title = 'BHP CENTRUM B4 • DNI BEZ P
 }
 
 /**
- * 42. NEW COLLECTIBLE / POWER-UP: Kubełek Mocy dla Vectora ("WTORKOWY KUBEŁEK MOCY!")
+ * 42. NEW COLLECTIBLE / POWER-UP: Pakiet Energii dla Vectora ("WTORKOWY B4 POWER!")
  */
 export function createKfcBucketCollectible(): THREE.Group {
   const group = new THREE.Group();
   group.name = 'kfc_bucket_collectible';
 
-  // Red & White Striped Bucket Texture
+  // Neutral industrial power-up container texture
   const canvas = document.createElement('canvas');
   canvas.width = 256;
   canvas.height = 128;
   const ctx = canvas.getContext('2d')!;
   for (let i = 0; i < 8; i++) {
-    ctx.fillStyle = i % 2 === 0 ? '#dc2626' : '#ffffff';
+    ctx.fillStyle = i % 2 === 0 ? '#173b52' : '#d7e5e8';
     ctx.fillRect(i * 32, 0, 32, 128);
   }
   ctx.fillStyle = '#111827';
   ctx.fillRect(48, 34, 160, 56);
-  ctx.strokeStyle = '#facc15';
+  ctx.strokeStyle = '#67e8f9';
   ctx.lineWidth = 4;
   ctx.strokeRect(48, 34, 160, 56);
   ctx.fillStyle = '#ffffff';
   ctx.font = '900 26px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('KUBEŁEK MOCY', 128, 70);
+  ctx.fillText('B4 POWER', 128, 70);
 
   const bucketTex = new THREE.CanvasTexture(canvas);
   bucketTex.colorSpace = THREE.SRGBColorSpace;
@@ -4647,12 +4647,12 @@ export function createKfcBucketCollectible(): THREE.Group {
 
   // Crispy Golden Fried Chicken Drumsticks sticking out the top!
   const chickenMat = new THREE.MeshStandardMaterial({
-    color: 0xd97706,
-    emissive: 0x92400e,
+    color: 0x38bdf8,
+    emissive: 0x0e7490,
     emissiveIntensity: 0.35,
     roughness: 0.45,
   });
-  const boneMat = new THREE.MeshStandardMaterial({ color: 0xfef3c7, roughness: 0.3 });
+  const boneMat = new THREE.MeshStandardMaterial({ color: 0xdbeafe, metalness: 0.65, roughness: 0.28 });
 
   for (let i = 0; i < 4; i++) {
     const angle = (i / 4) * Math.PI * 2 + 0.3;
@@ -4695,7 +4695,7 @@ export function createZombieWorkerEnemyModel(): {
   group.name = 'enemy_zombie_worker';
 
   const zombieSkinMat = new THREE.MeshStandardMaterial({ color: 0x84cc16, roughness: 0.55 });
-  const vestMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.5 }); // KFC Red / Tattered Vest
+  const vestMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.5 }); // Deep red / Tattered Vest
   const pantsMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
   const eyeGlowMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
 
@@ -4743,7 +4743,7 @@ export function createZombieWorkerEnemyModel(): {
   legR.castShadow = true;
   group.add(legL, legR);
 
-  // Outstretched Zombie Arms reaching for KFC!
+  // Outstretched Zombie Arms reaching for supplies!
   const armGeo = new THREE.BoxGeometry(0.11, 0.4, 0.11);
   const armL = new THREE.Mesh(armGeo, zombieSkinMat);
   armL.position.set(-0.25, 0.68, 0.16);
