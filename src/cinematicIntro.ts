@@ -22,6 +22,7 @@ export class CinematicIntroManager {
   private active = false;
   private startedAt = 0;
   private lastFrameAt = 0;
+  private lastRenderAt = 0;
   private elapsed = 0;
   private readonly duration = 13.5;
   private frameInterval = 1000 / 30;
@@ -48,6 +49,7 @@ export class CinematicIntroManager {
     this.elapsed = 0;
     this.startedAt = performance.now();
     this.lastFrameAt = this.startedAt;
+    this.lastRenderAt = this.startedAt;
     this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     const mobile = window.innerWidth < 760 || navigator.maxTouchPoints > 0;
     this.frameInterval = mobile ? 1000 / 30 : 1000 / 45;
@@ -147,8 +149,9 @@ export class CinematicIntroManager {
     this.elapsed = this.reducedMotion
       ? Math.min(this.duration, this.elapsed + dt * 2.4)
       : Math.min(this.duration, (now - this.startedAt) / 1000);
-    if (now - this.lastFrameAt + dt * 1000 >= this.frameInterval || this.reducedMotion) {
+    if (now - this.lastRenderAt >= this.frameInterval || this.reducedMotion) {
       this.render(this.elapsed);
+      this.lastRenderAt = now;
     }
     if (this.elapsed >= this.duration) {
       this.stop();
