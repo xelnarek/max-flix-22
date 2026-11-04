@@ -44,11 +44,20 @@ if (signingEnabled) {
   if (!existsSync(keystorePath)) {
     throw new Error('Upload keystore file is missing at ANDROID_UPLOAD_KEYSTORE_PATH.');
   }
-  const signingBlock = '\n    signingConfigs {\n        release {\n            storeFile file(System.getenv(\\'ANDROID_UPLOAD_KEYSTORE_PATH\\'))\n            storePassword System.getenv(\\'ANDROID_KEYSTORE_PASSWORD\\')\n            keyAlias System.getenv(\\'ANDROID_KEY_ALIAS\\')\n            keyPassword System.getenv(\\'ANDROID_KEY_PASSWORD\\')\n        }\n    }\n';
+  const signingBlock = [
+    '    signingConfigs {',
+    '        release {',
+    "            storeFile file(System.getenv('ANDROID_UPLOAD_KEYSTORE_PATH'))",
+    "            storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')",
+    "            keyAlias System.getenv('ANDROID_KEY_ALIAS')",
+    "            keyPassword System.getenv('ANDROID_KEY_PASSWORD')",
+    '        }',
+    '    }',
+  ].join('\n');
   if (!/buildTypes\s*\{\s*release\s*\{/.test(gradle)) {
     throw new Error('Android Gradle template does not contain the expected release build type.');
   }
-  gradle = gradle.replace(/\n\s*buildTypes\s*\{/, '\n' + signingBlock + '\n    buildTypes {');
+  gradle = gradle.replace(/\n\s*buildTypes\s*\{/, '\n' + signingBlock + '\n\n    buildTypes {');
   gradle = gradle.replace(
     /(buildTypes\s*\{\s*release\s*\{)/,
     '$1\n            signingConfig signingConfigs.release',
