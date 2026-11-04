@@ -363,7 +363,7 @@ class MaxFlizScene extends xb.Script {
         pan_roman: { name: 'Dostawca Sanitarny', role: 'Dostawa bez awiza', avatar: '📦' },
         serwisant: { name: 'Serwisant', role: 'Zgłoszenie 404', avatar: '🧰' },
         przedstawiciel_włoski: { name: 'Włoski dostawca', role: 'Mamma mia / armatura', avatar: '🇮🇹' },
-        elite_walczak_guard: { name: 'Strażnik Nadzorcy Zero', role: 'Ochrona Calacatty', avatar: '🛡️' },
+        elite_walczak_guard: { name: 'Strażnik Nadzorcy Zero', role: 'Ochrona sektora VIP', avatar: '🛡️' },
         bosman_krakow: { name: 'Inspektor Zmiany', role: 'Odprawa 3-MSC', avatar: '📋' },
         agv_robot: { name: 'Robot AGV', role: 'Zgubiona trasa', avatar: '🤖' },
         piorun_dron: { name: 'PIORUN', role: 'Dron AI', avatar: '⚡' },
@@ -1003,7 +1003,7 @@ class MaxFlizScene extends xb.Script {
             };
             const heroId = heroIds[entry.hero];
             const heroIcon = heroId ? operatorPortrait(heroId) : '👷‍♂️';
-            const bossBadge = entry.bossDefeated ? '<span title="Były Kierownik Walczak skasowany!">👔💥</span>' : '';
+            const bossBadge = entry.bossDefeated ? '<span title="Nadzorca Zero pokonany!">👔💥</span>' : '';
             const safePlayerName = escapeLeaderboardText(entry.playerName);
             const safeHeroName = escapeLeaderboardText(entry.hero);
             const modeLabel = entry.mode === 'survival' ? 'SURVIVAL' : 'KAMPANIA';
@@ -1125,7 +1125,7 @@ class MaxFlizScene extends xb.Script {
         const pill = card.querySelector<HTMLElement>('.zone-checkpoint-pill');
         if (!pill) return;
         if (locked && level === 2) pill.textContent = 'ZAMKNIĘTY • POKONAJ BOSMANA';
-        else if (locked && level === 3) pill.textContent = 'ZAMKNIĘTY • POKONAJ KRÓLA-LETO';
+        else if (locked && level === 3) pill.textContent = 'ZAMKNIĘTY • POKONAJ DYREKTORA WIDMO';
         else if (level === 1) pill.textContent = 'START GŁÓWNY';
         else pill.textContent = 'CHECKPOINT ODBLOKOWANY';
       });
@@ -1139,7 +1139,7 @@ class MaxFlizScene extends xb.Script {
           if (pill) {
             pill.textContent = level === 2
               ? 'WYMAGANE: POKONAJ BOSMANA W SEKTORZE A'
-              : 'WYMAGANE: POKONAJ KRÓLA-LETO W SEKTORZE B';
+              : 'WYMAGANE: POKONAJ DYREKTORA WIDMO W SEKTORZE B';
           }
           return;
         }
