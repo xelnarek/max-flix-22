@@ -17,6 +17,8 @@ test('AdMob is Android-only and UMP consent precedes Google Mobile Ads initializ
   assert.match(ads, /AdMob\.showConsentForm\(\)/);
   assert.match(ads, /consent\.canRequestAds/);
   assert.match(ads, /AdMob\.initialize\(\)/);
+  assert.match(ads, /let adsAllowed = false/);
+  assert.match(ads, /void Promise\.all\(\[loadRewarded\(\), loadInterstitial\(\)\]\)/);
   assert.ok(ads.indexOf('AdMob.requestConsentInfo()') < ads.indexOf('AdMob.initialize()'));
   assert.match(vite, /__PALIECIAKI_ADS__/);
   for (const variable of ['ADMOB_APP_ID', 'VITE_ADMOB_REWARDED_ID', 'VITE_ADMOB_INTERSTITIAL_ID']) {
@@ -56,5 +58,8 @@ test('UMP privacy-options screen is exposed in settings', async () => {
   ]);
   assert.match(html, /id="btn-ad-privacy-options" class="ad-privacy-options-btn hidden"/);
   assert.match(app, /btn-ad-privacy-options/);
+  assert.match(app, /UMP must refresh consent on every native app launch/);
+  assert.match(app, /showAdPrivacyOptions\(\)\.then\(syncAdMobSettings\)/);
   assert.match(ads, /AdMob\.showPrivacyOptionsForm\(\)/);
+  assert.match(ads, /adsAllowed = consent\.canRequestAds/);
 });
