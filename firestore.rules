@@ -36,7 +36,7 @@ service cloud.firestore {
       allow read: if true;
     }
 
-    // Max-Fliz public shift leaderboard
+    // Public game leaderboard. Entries are immutable after submission.
     match /leaderboard/{scoreId} {
       allow read: if true;
       allow create: if isValidId(scoreId) && isValidLeaderboardEntry(request.resource.data);
