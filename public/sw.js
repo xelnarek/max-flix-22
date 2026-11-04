@@ -1,5 +1,5 @@
 /* Conservative app-shell cache. Remote services and game data are never cached. */
-const CACHE_NAME = 'operacja-b4-shell-v1';
+const CACHE_NAME = 'paleciaki-magazyn-chaosu-shell-v1';
 const OFFLINE_URL = './offline.html';
 const MAX_CACHEABLE_BYTES = 6 * 1024 * 1024;
 
