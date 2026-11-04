@@ -29,6 +29,7 @@ import {
   SURVIVAL_WEAPON_UNLOCK_SECONDS,
 } from './combatBalance.ts';
 import { ParticleMeshPool, type ParticleShape } from './particlePool.ts';
+import { getSurvivalDashCooldownSeconds, getSurvivalDashProgress, rollSurvivalCriticalDamage } from './archeroMechanics.ts';
 import { CHARACTERS } from './characters.ts';
 import { sound } from './sound.ts';
 import {
@@ -178,6 +179,7 @@ export interface GameCallbacks {
   onSurvivalAnnouncement?: (title: string, subtitle: string, detail: string) => void;
   onSurvivalUpdate?: (snapshot: SurvivalSnapshot) => void;
   onSurvivalLevelUp?: (options: SurvivalUpgradeOption[]) => void;
+  onSurvivalDashUpdate?: (progress: number, ready: boolean, remainingSeconds: number) => void;
 }
 
 export class MaxFlizGameEngine {
@@ -463,6 +465,16 @@ export class MaxFlizGameEngine {
   private survivalAbilityKillRechargeMultiplier = 1;
   private survivalAbilityKillRechargeCapRatio = 0.22;
   private survivalAttackRateMultiplier = 1;
+  private survivalCriticalChance = 0.05;
+  private survivalCriticalDamageMultiplier = 1.75;
+  private survivalDashCooldownMultiplier = 1;
+  private survivalDashCooldownRemaining = 0;
+  private survivalDashCooldownDuration = 5.2;
+  private survivalDashDurationRemaining = 0;
+  private survivalDashDirection = new THREE.Vector3(0, 0, 1);
+  private survivalDashUiTimer = 0;
+  private survivalDashLastProgress = -1;
+  private survivalDashLastReady: boolean | null = null;
   private survivalMoveMultiplier = 1;
   private survivalMagnetMultiplier = 1;
   private survivalRangeMultiplier = 1;
@@ -938,6 +950,9 @@ export class MaxFlizGameEngine {
       if (e.code === 'KeyE' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
         this.triggerAbility();
       }
+      if (e.code === 'KeyQ') {
+        this.triggerDash();
+      }
       if (e.code === 'KeyF' || e.code === 'KeyJ' || e.code === 'KeyX' || e.code === 'Numpad0') {
         this.triggerAttack();
       }
@@ -1213,6 +1228,16 @@ export class MaxFlizGameEngine {
     this.survivalAbilityKillRechargeMultiplier = 1;
     this.survivalAbilityKillRechargeCapRatio = 0.22;
     this.survivalAttackRateMultiplier = 1;
+    this.survivalCriticalChance = 0.05;
+    this.survivalCriticalDamageMultiplier = 1.75;
+    this.survivalDashCooldownMultiplier = 1;
+    this.survivalDashCooldownRemaining = 0;
+    this.survivalDashCooldownDuration = 5.2;
+    this.survivalDashDurationRemaining = 0;
+    this.survivalDashDirection.set(0, 0, 1);
+    this.survivalDashUiTimer = 0;
+    this.survivalDashLastProgress = -1;
+    this.survivalDashLastReady = null;
     this.survivalMoveMultiplier = 1;
     this.survivalMagnetMultiplier = 1;
     this.survivalRangeMultiplier = 1;
@@ -1344,6 +1369,7 @@ export class MaxFlizGameEngine {
     this.bossHudRefreshCooldown = 0;
     this.lastBossHudSignature = '';
     this.callbacks.onBossUpdate?.('', 0, 0, false);
+    this.callbacks.onSurvivalDashUpdate?.(1, true, 0);
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
     this.emitFloatingToast('SURVIVAL SHIFT — PRZETRWAJ ZMIANĘ!', this.playerPos.x, this.playerPos.y + 1.8, this.playerPos.z, 'combo');
   }
@@ -1928,6 +1954,15 @@ export class MaxFlizGameEngine {
         // Attack-speed upgrades remain useful without turning the run into a screen-filling machine gun.
         this.survivalAttackRateMultiplier = Math.max(0.86, this.survivalAttackRateMultiplier * 0.97);
         break;
+      case 'critical':
+        this.survivalCriticalChance = Math.min(0.25, this.survivalCriticalChance + 0.04);
+        break;
+      case 'critical_damage':
+        this.survivalCriticalDamageMultiplier = Math.min(2.45, this.survivalCriticalDamageMultiplier + 0.20);
+        break;
+      case 'dash':
+        this.survivalDashCooldownMultiplier = Math.max(0.55, this.survivalDashCooldownMultiplier * 0.88);
+        break;
       case 'ability': {
         const previousMultiplier = this.survivalAbilityCooldownMultiplier;
         this.survivalAbilityCooldownMultiplier = Math.max(0.78, previousMultiplier * 0.92);
@@ -2008,6 +2043,18 @@ export class MaxFlizGameEngine {
         this.survivalAbilityKillRechargeCapRatio = 0.30;
       });
     }
+    if ((stacks.critical || 0) >= 3 && (stacks.critical_damage || 0) >= 2) {
+      unlock('critical_protocol', 'PROTOKÓŁ KRYTYCZNY', 'Precyzyjny operator: dodatkowe +5 punktów procentowych szansy na trafienie krytyczne i mnożnik obrażeń krytycznych ×2,5.', () => {
+        this.survivalCriticalChance = Math.min(0.30, this.survivalCriticalChance + 0.05);
+        this.survivalCriticalDamageMultiplier = Math.max(this.survivalCriticalDamageMultiplier, 2.5);
+      });
+    }
+    if ((stacks.dash || 0) >= 3 && (stacks.boots || 0) >= 2) {
+      unlock('ghost_protocol', 'KROK WIDMA', 'Połączony trening mobilności: unik odnawia się szybciej, a operator zyskuje dodatkową prędkość ruchu.', () => {
+        this.survivalDashCooldownMultiplier = Math.max(0.50, this.survivalDashCooldownMultiplier * 0.88);
+        this.survivalMoveMultiplier = Math.min(1.30, this.survivalMoveMultiplier * 1.08);
+      });
+    }
     if ((stacks.damage || 0) >= 3 && (stacks.rapid || 0) >= 2) {
       unlock('overdrive', 'OVERDRIVE: LINIA OGNIA', '+22% obrażeń i umiarkowane przyspieszenie ataku.', () => {
         this.survivalDamageMultiplier *= 1.22; this.survivalAttackRateMultiplier *= 0.94;
@@ -2040,6 +2087,9 @@ export class MaxFlizGameEngine {
     const pool: SurvivalUpgradeOption[] = [
       { id: 'damage', icon: '🎯', title: 'WZMOCNIONA AMUNICJA', description: '+12% obrażeń wszystkich ataków operatora.' },
       { id: 'rapid', icon: '⚡', title: 'RYTM ATAKU', description: 'Skrócenie czasu między atakami o 3%.' },
+      { id: 'critical', icon: '🎯', title: 'PRECYZYJNE TRAFIENIE', description: '+4 punkty procentowe szansy na trafienie krytyczne. Maksymalnie 5 poziomów.' },
+      { id: 'critical_damage', icon: '✦', title: 'MOC KRYTYCZNA', description: '+0,20× do mnożnika obrażeń krytycznych. Maksymalnie 3 poziomy.' },
+      { id: 'dash', icon: '↗', title: 'TRENING UNIKU', description: 'Skraca czas odnowienia uniku taktycznego o 12%. Maksymalnie 4 poziomy.' },
       { id: 'ability', icon: '✦', title: 'AKUMULATOR MOCY', description: 'Superumiejętność ładuje się o 8% szybciej. Maksymalnie 3 poziomy.' },
       { id: 'boots', icon: '👟', title: 'BUTY SPRINTU', description: '+6% prędkości poruszania się.' },
       { id: 'magnet', icon: '🧲', title: 'MAGNES XP', description: 'Znacznie większy zasięg przyciągania kryształów XP.' },
@@ -2052,7 +2102,10 @@ export class MaxFlizGameEngine {
       { id: 'drone', icon: '🤖', title: 'DRON ASYSTUJĄCY', description: 'Dron przez 32 sekundy razi najbliższego wroga impulsem.' },
       { id: 'armor', icon: '🪵', title: 'PALETA OCHRONNA', description: 'Otrzymujesz 24 sekundy okresowej osłony.' },
     ].filter((option) => !excluded.includes(option.id) &&
-      (option.id !== 'ability' || (this.survivalUpgradeStacks.ability || 0) < 3));
+      (option.id !== 'ability' || (this.survivalUpgradeStacks.ability || 0) < 3) &&
+      (option.id !== 'critical' || (this.survivalUpgradeStacks.critical || 0) < 5) &&
+      (option.id !== 'critical_damage' || (this.survivalUpgradeStacks.critical_damage || 0) < 3) &&
+      (option.id !== 'dash' || (this.survivalUpgradeStacks.dash || 0) < 4));
     for (const [weaponId, definition] of Object.entries(SURVIVAL_WEAPON_DEFS) as Array<[SurvivalWeaponId, typeof SURVIVAL_WEAPON_DEFS[SurvivalWeaponId]]>) {
       const owned = this.survivalWeapons.find((weapon) => weapon.id === weaponId);
       if (!owned) {
@@ -4668,6 +4721,7 @@ export class MaxFlizGameEngine {
     if (this.state === 'playing') {
       this.activeElapsedSeconds += simDt;
       this.updateAbilityCooldown(simDt);
+      if (this.gameMode === 'survival') this.updateSurvivalDashCooldown(simDt);
       this.updateLootCrates(simDt);
       if (this.invulnerableTimer > 0) this.invulnerableTimer -= simDt;
       if (this.marcinReclamationTimer > 0) this.marcinReclamationTimer = Math.max(0, this.marcinReclamationTimer - simDt);
@@ -4797,7 +4851,15 @@ export class MaxFlizGameEngine {
 
   private fireSurvivalWeapon(weapon: SurvivalWeaponState, target: EnemyItem) {
     const definition = SURVIVAL_WEAPON_DEFS[weapon.id];
-    const weaponDamage = 1 + Math.floor((weapon.level - 1) / 3) + (weapon.evolved ? 1 : 0);
+    const baseWeaponDamage = weapon.id === 'orbit_blades'
+      ? 1 + (weapon.level >= 3 ? 1 : 0) + (weapon.evolved ? 1 : 0)
+      : 1 + Math.floor((weapon.level - 1) / 3) + (weapon.evolved ? 1 : 0);
+    const criticalRoll = rollSurvivalCriticalDamage(baseWeaponDamage, this.survivalCriticalChance, this.survivalCriticalDamageMultiplier, Math.random());
+    const weaponDamage = criticalRoll.damage;
+    if (criticalRoll.critical) {
+      this.emitFloatingToast('✦ TRAFIENIE KRYTYCZNE!', this.playerPos.x, this.playerPos.y + 1.35, this.playerPos.z, 'combo');
+      this.triggerHitStop(0.035);
+    }
 
     if (weapon.id === 'forklift_horn') {
       const radius = weapon.evolved ? 10 : 7;
@@ -4871,7 +4933,7 @@ export class MaxFlizGameEngine {
           vel: new THREE.Vector3(),
           life: weapon.evolved ? 5.8 : 4.8,
           maxLife: weapon.evolved ? 5.8 : 4.8,
-          damage: 1 + (weapon.level >= 3 ? 1 : 0) + (weapon.evolved ? 1 : 0),
+          damage: weaponDamage,
           pierce: 40,
           weaponProjectile: true,
           hitIds: new Set<string>(),
@@ -6641,7 +6703,13 @@ export class MaxFlizGameEngine {
       speed *= 0.72;
     }
 
-    if (inputLen > 0.08) {
+    const isSurvivalDashing = this.gameMode === 'survival' && this.survivalDashDurationRemaining > 0;
+    if (isSurvivalDashing) {
+      this.survivalDashDurationRemaining = Math.max(0, this.survivalDashDurationRemaining - dt);
+      this.playerVel.x = this.survivalDashDirection.x * 18;
+      this.playerVel.z = this.survivalDashDirection.z * 18;
+      this.playerRot = Math.atan2(this.survivalDashDirection.x, this.survivalDashDirection.z);
+    } else if (inputLen > 0.08) {
       const targetX = inputX * speed;
       const targetZ = inputZ * speed;
       this.playerVel.x = THREE.MathUtils.damp(this.playerVel.x, targetX, 14, dt);
@@ -9592,6 +9660,65 @@ export class MaxFlizGameEngine {
         'combo'
       );
     }
+  }
+
+  private updateSurvivalDashCooldown(dt: number, force = false) {
+    this.survivalDashCooldownRemaining = Math.max(0, this.survivalDashCooldownRemaining - Math.max(0, dt));
+    this.survivalDashUiTimer = Math.max(0, this.survivalDashUiTimer - Math.max(0, dt));
+    const progress = getSurvivalDashProgress(this.survivalDashCooldownRemaining, this.survivalDashCooldownDuration);
+    const ready = this.survivalDashCooldownRemaining <= 0.0001;
+    const shouldNotify = force ||
+      this.survivalDashUiTimer <= 0 ||
+      ready !== this.survivalDashLastReady ||
+      Math.abs(progress - this.survivalDashLastProgress) >= 0.02;
+    if (!shouldNotify) return;
+    this.callbacks.onSurvivalDashUpdate?.(progress, ready, this.survivalDashCooldownRemaining);
+    this.survivalDashLastProgress = progress;
+    this.survivalDashLastReady = ready;
+    this.survivalDashUiTimer = 0.08;
+  }
+
+  public triggerDash(): boolean {
+    if (
+      this.gameMode !== 'survival' ||
+      this.state !== 'playing' ||
+      this.survivalDashCooldownRemaining > 0.0001 ||
+      this.survivalDashDurationRemaining > 0
+    ) return false;
+
+    let directionX = 0;
+    let directionZ = 0;
+    if (this.keys['KeyD'] || this.keys['ArrowRight']) directionX += 1;
+    if (this.keys['KeyA'] || this.keys['ArrowLeft']) directionX -= 1;
+    if (this.keys['KeyW'] || this.keys['ArrowUp']) directionZ -= 1;
+    if (this.keys['KeyS'] || this.keys['ArrowDown']) directionZ += 1;
+
+    if (Math.abs(this.virtualJoystick.x) > 0.08 || Math.abs(this.virtualJoystick.y) > 0.08) {
+      directionX = this.virtualJoystick.x;
+      directionZ = this.virtualJoystick.y;
+    }
+    const directionLength = Math.hypot(directionX, directionZ);
+    if (directionLength > 0.08) {
+      directionX /= directionLength;
+      directionZ /= directionLength;
+    } else {
+      directionX = Math.sin(this.playerRot);
+      directionZ = Math.cos(this.playerRot);
+    }
+
+    this.survivalDashDirection.set(directionX, 0, directionZ).normalize();
+    this.survivalDashDurationRemaining = 0.22;
+    this.survivalDashCooldownDuration = getSurvivalDashCooldownSeconds(this.survivalDashCooldownMultiplier);
+    this.survivalDashCooldownRemaining = this.survivalDashCooldownDuration;
+    // Invulnerability covers the dodge and a short exit window, not a full defensive shield.
+    this.invulnerableTimer = Math.max(this.invulnerableTimer, 0.32);
+    this.playerRot = Math.atan2(directionX, directionZ);
+    this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.28, this.playerPos.z, 0x67e8f9);
+    this.triggerScreenShake(0.10, 0.09);
+    sound.playAttackWhoosh();
+    this.emitFloatingToast('↗ UNIK TAKTYCZNY!', this.playerPos.x, this.playerPos.y + 1.15, this.playerPos.z, 'perk');
+    this.updateSurvivalDashCooldown(0, true);
+    return true;
   }
 
   public triggerAbility() {
