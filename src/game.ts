@@ -7137,7 +7137,7 @@ export class PaleciakiGameEngine {
         const dist = Math.hypot(h.x - this.playerPos.x, h.z - this.playerPos.z);
         if (dist < 1.4 && Math.abs(h.y - this.playerPos.y) < 1.2) {
           if (this.charDef.id === 'marcin') {
-            // Marcin passive: immune to forklift knockbacks
+            // Operator 01 passive: immune to forklift knockbacks
             this.emitFloatingToast('🛡️ AUTORYTET BHP: STOP SZTAPLARKI!', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
           } else {
             this.takeDamage('Zostałeś potrącony przez wózek widłowy!');
@@ -8525,12 +8525,12 @@ export class PaleciakiGameEngine {
       this.callbacks.onPerkDropBanner?.(
         '🎮 ATLAS PRZEGRYWA SYMULACJĘ CZOŁGÓW!',
         '💢',
-        'Atlas przegrał symulację czołgów B4 i szuka winnego w alejkach! "Znajdę Ci zajęcie, wesołku..." (-30% szybkości na 6s)',
+        'Operator 01 przegrał symulację czołgów B4 i szuka winnego w alejkach! "Znajdę Ci zajęcie, wesołku..." (-30% szybkości na 6s)',
         '#f97316'
       );
-      this.sayQuote('Kierownik Atlas przegrał bitwę w symulator czołgów B4! "Znajdę Ci zaraz zajęcie, wesołku..."');
+      this.sayQuote('Operator 01 przegrał bitwę w symulator czołgów B4! "Znajdę Ci zaraz zajęcie, wesołku..."');
       this.spawnDroppedPerk(px + 2.8, 0.5, pz, 'espresso_boost');
-      this.addHandlowiecEnemy(`event_marcin_wot_${Date.now()}`, px + 11, Math.max(-12, pz - 4), Math.min(12, pz + 4), 'Zirytowany Kierownik Atlas');
+      this.addHandlowiecEnemy(`event_marcin_wot_${Date.now()}`, px + 11, Math.max(-12, pz - 4), Math.min(12, pz + 4), 'Zirytowany Operator 01');
     }
   }
 
@@ -8546,7 +8546,7 @@ export class PaleciakiGameEngine {
       const p = this.projectiles[i];
       p.life -= dt;
 
-      // Boomerang return logic (Piotr's Pipe Wrench)
+      // Boomerang return logic (Operator 05's Pipe Wrench)
       if (p.boomerang && !p.returning && p.maxLife && p.life < p.maxLife * 0.52) {
         p.returning = true;
         p.hitIds?.clear(); // Can hit enemies again on return!
@@ -8568,7 +8568,7 @@ export class PaleciakiGameEngine {
         p.vel.lerp(toPlayer, dt * 9.0);
       }
 
-      // Homing logic (Mateusz's DualSense RGB discs)
+      // Homing logic (Operator 04's DualSense RGB discs)
       if (p.homing) {
         let nearest: EnemyItem | null = null;
         let minDist = 11.0;
@@ -8608,14 +8608,14 @@ export class PaleciakiGameEngine {
         p.mesh.rotation.y += p.spinSpeed * dt;
       }
 
-      // Ricochet off Z corridor walls (Dawid's 45-degree diamond blade & tiles)
+      // Ricochet off Z corridor walls (Operator 03's 45-degree diamond blade & tiles)
       if (p.ricochet && Math.abs(p.mesh.position.z) > 17.5) {
         p.vel.z *= -1;
         p.mesh.position.z = Math.sign(p.mesh.position.z) * 17.4;
         this.spawnParticleRing(p.mesh.position.x, p.mesh.position.y, p.mesh.position.z, 0xd97706);
       }
 
-      // Dawid passive: projectiles collect grouts & items along their path!
+      // Operator 03 passive: projectiles collect grouts & items along their path!
       if (p.collectItems) {
         for (const c of this.collectibles) {
           if (c.collected || !c.mesh) continue;
@@ -8692,7 +8692,7 @@ export class PaleciakiGameEngine {
               if (!p.weaponProjectile) this.spawnParticleRing(e.x, e.y + 0.5, e.z, 0xff5500);
             }
 
-            // AoE shockwave on hit (Marcin's WZ Binder Stamp)
+            // AoE shockwave on hit (Operator 01's WZ Binder Stamp)
             if (p.aoeRadius && p.aoeRadius > 0) {
               if (p.weaponProjectile) this.spawnCompactImpact(e.x, e.y + 0.36, e.z, 0xf59e0b);
               else this.spawnParticleRing(e.x, e.y + 0.4, e.z, 0xf59e0b);
@@ -9049,7 +9049,7 @@ export class PaleciakiGameEngine {
     const startOrigin = new THREE.Vector3(this.playerPos.x, this.playerPos.y + 0.82, this.playerPos.z).addScaledVector(forward, 0.65);
 
     if (charId === 'marcin') {
-      // Atlas casts a compact B4 ERP spell: a holographic work-order rune.
+      // Operator 01 casts a compact B4 ERP spell: a holographic work-order rune.
       const spell = new THREE.Group();
       const coreMat = new THREE.MeshStandardMaterial({
         color: isThirdCombo ? 0x67e8f9 : 0x38bdf8,
@@ -9088,7 +9088,7 @@ export class PaleciakiGameEngine {
         this.emitFloatingToast('🟦 B4 ERP: ZLECENIE ZATWIERDZONE!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'perk');
       }
     } else if (charId === 'grzesiek') {
-      // Grzesiek throws a steel dumbbell; every third throw is the heavy 44 cm special.
+      // Operator 02 throws a steel dumbbell; every third throw is the heavy 44 cm special.
       const dumbbell = new THREE.Group();
       const steel = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.9, roughness: 0.2 });
       const collarMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, metalness: 0.55, roughness: 0.25 });
@@ -9123,7 +9123,7 @@ export class PaleciakiGameEngine {
       });
       if (isThirdCombo) this.emitFloatingToast('💪 HANTLA 44 CM — CIĘŻKI RZUT!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'combo');
     } else if (charId === 'dawid') {
-      // Dawid launches a roll of stretch wrap; a hit briefly binds/slows the target.
+      // Operator 03 launches a roll of stretch wrap; a hit briefly binds/slows the target.
       const wrapRoll = new THREE.Group();
       const filmMat = new THREE.MeshStandardMaterial({ color: 0xdbeafe, metalness: 0.16, roughness: 0.12, transparent: true, opacity: 0.84 });
       const coreMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.8 });
@@ -9153,7 +9153,7 @@ export class PaleciakiGameEngine {
       });
       if (isThirdCombo) this.emitFloatingToast('📦 STRETCH VIP — ZAWIJAMY TEMAT!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'combo');
     } else if (charId === 'mateusz') {
-      // Mateusz uses a taser: a single fast, readable electric dart, not a screen-filling triple burst.
+      // Operator 04 uses a taser: a single fast, readable electric dart, not a screen-filling triple burst.
       const taserDart = new THREE.Group();
       const body = new THREE.Mesh(
         new THREE.BoxGeometry(0.16, 0.10, 0.34),
@@ -9185,8 +9185,8 @@ export class PaleciakiGameEngine {
       sound.playElectricalSparks();
       if (isThirdCombo) this.emitFloatingToast('⚡ TASER: PODWÓJNY IMPULS!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'combo');
     } else if (charId === 'piotr') {
-      // Piotr fires small steel BBs. A short-lived laser line makes the firing direction readable.
-      // Piotr throws a heavy ratchet wrench. It cuts through a line of enemies,
+      // Operator 05 fires small steel BBs. A short-lived laser line makes the firing direction readable.
+      // Operator 05 throws a heavy ratchet wrench. It cuts through a line of enemies,
       // then returns through the crowd for a second pass like a seasoned B4 boomerang.
       const wrench = new THREE.Group();
       const chrome = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.92, roughness: 0.17 });
@@ -9931,7 +9931,7 @@ export class PaleciakiGameEngine {
       const forward = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
       this.playerPos.x += forward.x * 1.8;
       this.playerPos.z += forward.z * 1.8;
-      this.sayQuote('ŚCIŚK ZAGŁADY 44CM + TRYB TARANA! Z drogi śledzie, Forge jedzie!');
+      this.sayQuote('ŚCIŚK ZAGŁADY 44CM + TRYB TARANA! Z drogi śledzie, Operator 02 jedzie!');
       sound.playSciskCrush();
       this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.5, this.playerPos.z, 0x4ade80);
       this.enemies.forEach((e) => {
@@ -9956,7 +9956,7 @@ export class PaleciakiGameEngine {
       });
     } else if (this.currentCharacterId === 'dawid') {
       this.activatePerk('hardhat', this.gameMode === 'survival' ? 4.5 : 15);
-      // Dawid also drops a fresh KFC bucket right in front of him!
+      // Operator 03 also drops a fresh KFC bucket right in front of him!
       const fwd = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
       this.addKfcBucketItem(
         `dawid_kfc_${Date.now()}`,
