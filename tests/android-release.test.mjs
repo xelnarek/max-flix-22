@@ -86,6 +86,17 @@ test('Android artifact verifier blocks unsigned Play uploads and records hashes'
   assert.match(script, /android-build-report\.json/);
 });
 
+test('Google Play upload is opt-in, credential-gated and limited to internal testing', async () => {
+  const workflow = await read('../.github/workflows/android-release.yml');
+  assert.match(workflow, /vars\\.GOOGLE_PLAY_UPLOAD_ENABLED == 'true'/);
+  assert.match(workflow, /secrets\\.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON/);
+  assert.match(workflow, /ANDROID_SIGNING_ENABLED.*true/);
+  assert.match(workflow, /r0adkll\\/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5/);
+  assert.match(workflow, /tracks: internal/);
+  assert.match(workflow, /status: completed/);
+  assert.doesNotMatch(workflow, /tracks: production/);
+});
+
 test('Play Store artwork sources and CI exports meet the listing image dimensions', async () => {
   const [iconSvg, iconBackgroundSvg, featureSvg, artworkScript, workflow, listingText] = await Promise.all([
     read('../resources/icon-only.svg'),
