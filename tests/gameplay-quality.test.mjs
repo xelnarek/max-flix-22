@@ -218,11 +218,14 @@ test('cinematic intro autoplays after boot and is layered above the game shell',
   assert.match(css, /\.cinematic-intro-overlay\s*\{[\s\S]*?z-index: 20000000 !important/);
 });
 
-test('cinematic intro throttles its Canvas rendering on mobile and cleans up RAF', async () => {
+test('cinematic intro throttles Canvas rendering and uses a static poster for reduced motion', async () => {
   const intro = await read('../src/cinematicIntro.ts');
   assert.match(intro, /this\.frameInterval = mobile \? 1000 \/ 30 : 1000 \/ 48/);
   assert.match(intro, /const dpr = Math\.min\(1\.5/);
   assert.match(intro, /cancelAnimationFrame\(this\.rafId\)/);
+  assert.match(intro, /if \(this\.reducedMotion\) \{[\s\S]*?this\.elapsed = this\.duration;[\s\S]*?this\.render\(this\.elapsed\);\s*return;/);
+  assert.doesNotMatch(intro, /this\.elapsed = this\.reducedMotion/);
+  assert.doesNotMatch(intro, /\|\| this\.reducedMotion/);
   assert.doesNotMatch(intro, /addEventListener\('touchend'/);
 });
 
