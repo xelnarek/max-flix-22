@@ -39,11 +39,11 @@ export KEYSTORE_PASSWORD KEY_PASSWORD
 CERT_OUTPUT="$(keytool -list -v -keystore "$KEYSTORE_PATH" -storepass:env KEYSTORE_PASSWORD \
   -keypass:env KEY_PASSWORD -alias "$KEY_ALIAS" 2>/dev/null)" \
   || fail "Nie można otworzyć keystore lub wskazany alias/hasła są nieprawidłowe."
-CERT_SHA256="$(printf '%s\\n' "$CERT_OUTPUT" | awk -F': ' '/SHA256:/ { print toupper($2); exit }')"
+CERT_SHA256="$(printf '%s' "$CERT_OUTPUT" | awk -F': ' '/SHA256:/ { print toupper($2); exit }')"
 EXPECTED_UPLOAD_CERT_SHA256="BB:20:5B:E4:50:72:29:BD:E2:92:A8:7B:18:54:66:83:AE:E1:53:06:A5:87:97:7A:A8:58:07:6F:F5:23:0D:45"
 [[ "$CERT_SHA256" == "$EXPECTED_UPLOAD_CERT_SHA256" ]] \
   || fail "Wybrany JKS nie odpowiada zapisanej konfiguracji upload key projektu. Przerwano przed zmianą sekretów."
-printf 'Zweryfikowano właściwy upload certificate SHA-256: %s\\n' "$CERT_SHA256"
+printf 'Zweryfikowano właściwy upload certificate SHA-256: %s' "$CERT_SHA256"; printf '\n'
 unset CERT_OUTPUT
 
 printf '\nWysyłam cztery sekrety bez wypisywania ich wartości...\n'
