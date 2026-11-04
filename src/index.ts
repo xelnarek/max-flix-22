@@ -17,6 +17,7 @@ import { SelectiveBloomPipeline } from './selectiveBloom.ts';
 import { ThreeClickTrigger } from './menuInteraction.ts';
 import { calculateUiViewport } from './uiViewport.ts';
 import { getAdaptiveRenderScale } from './renderQuality.ts';
+import { calculateVirtualJoystickInput } from './virtualJoystick.ts';
 
 // warehouseAssets imports moved to assets.ts where they are preloaded
 
@@ -1805,30 +1806,40 @@ class MaxFlizScene extends xb.Script {
     const joystickKnob = document.getElementById('joystick-knob');
     if (!joystickZone || !joystickBase || !joystickKnob) return;
 
-    // Pointer Events unify touch, pen and mouse. Mixing Touch + Pointer listeners
-    // caused duplicate starts and occasional stuck movement on Android browsers.
+    // A floating, radial joystick. Pointer capture keeps the stick attached to the
+    // original finger even when it moves outside the activation zone.
     let activePointerId: number | null = null;
     let startX = 0;
     let startY = 0;
-    let maxRadius = 36;
+    let maxRadius = 38;
     const getJoystickRadius = () => {
       const baseRect = joystickBase.getBoundingClientRect();
       const knobRect = joystickKnob.getBoundingClientRect();
-      const baseSize = Math.min(baseRect.width || 112, baseRect.height || 112);
-      const knobSize = Math.min(knobRect.width || 46, knobRect.height || 46);
-      return Math.max(20, Math.min(56, (baseSize - knobSize) * 0.5 - 4));
+      const baseSize = Math.min(baseRect.width || 148, baseRect.height || 148);
+      const knobSize = Math.min(knobRect.width || 60, knobRect.height || 60);
+      return Math.max(24, Math.min(64, (baseSize - knobSize) * 0.5 - 7));
     };
 
     const resetJoystick = () => {
+      const pointerId = activePointerId;
       activePointerId = null;
       joystickBase.classList.remove('active');
-      joystickKnob.style.transform = 'translate(0px, 0px)';
+      joystickKnob.style.transform = 'translate(-50%, -50%)';
       this.engine.setVirtualInput(0, 0);
+      if (pointerId !== null) {
+        try {
+          if (joystickZone.hasPointerCapture(pointerId)) joystickZone.releasePointerCapture(pointerId);
+        } catch {
+          // Capture may already have been released by pointerup/pointercancel.
+        }
+      }
     };
     this.resetTouchJoystick = resetJoystick;
 
     const handleStart = (event: PointerEvent) => {
-      if (activePointerId !== null || event.button > 0) return;
+      if (activePointerId !== null || event.isPrimary === false) return;
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+
       activePointerId = event.pointerId;
       startX = event.clientX;
       startY = event.clientY;
@@ -1837,13 +1848,13 @@ class MaxFlizScene extends xb.Script {
       joystickBase.style.left = `${startX}px`;
       joystickBase.style.top = `${startY}px`;
       joystickBase.classList.add('active');
-      joystickKnob.style.transform = 'translate(0px, 0px)';
+      joystickKnob.style.transform = 'translate(-50%, -50%)';
       this.engine.setVirtualInput(0, 0);
 
       try {
         joystickZone.setPointerCapture(event.pointerId);
       } catch {
-        // Pointer capture is optional; window listeners remain as a fallback.
+        // Pointer capture is optional; the window listeners remain as a fallback.
       }
       if (event.cancelable) event.preventDefault();
     };
@@ -1852,14 +1863,16 @@ class MaxFlizScene extends xb.Script {
       if (activePointerId !== event.pointerId) return;
       const dx = event.clientX - startX;
       const dy = event.clientY - startY;
-      const dist = Math.hypot(dx, dy);
-      const clampedDist = Math.min(dist, maxRadius);
-      const angle = Math.atan2(dy, dx);
-      const nx = Math.cos(angle) * clampedDist;
-      const ny = Math.sin(angle) * clampedDist;
+      const distance = Math.hypot(dx, dy);
+      const visualDistance = Math.min(distance, maxRadius);
+      const visualScale = distance > 0 ? visualDistance / distance : 0;
+      const knobX = dx * visualScale;
+      const knobY = dy * visualScale;
 
-      joystickKnob.style.transform = `translate(${nx.toFixed(1)}px, ${ny.toFixed(1)}px)`;
-      this.engine.setVirtualInput(nx / maxRadius, ny / maxRadius);
+      joystickKnob.style.transform =
+        `translate(calc(-50% + ${knobX.toFixed(1)}px), calc(-50% + ${knobY.toFixed(1)}px))`;
+      const input = calculateVirtualJoystickInput(dx, dy, maxRadius);
+      this.engine.setVirtualInput(input.x, input.y);
       if (event.cancelable) event.preventDefault();
     };
 
@@ -1876,6 +1889,7 @@ class MaxFlizScene extends xb.Script {
     window.addEventListener('pointerup', handleEnd, { passive: true });
     window.addEventListener('pointercancel', handleEnd, { passive: true });
     window.addEventListener('blur', resetJoystick);
+    window.addEventListener('pagehide', resetJoystick);
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) resetJoystick();
     });

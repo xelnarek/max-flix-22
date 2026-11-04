@@ -663,13 +663,13 @@
   }
 
   #game-shell .joystick-base {
-    width: 112px !important;
-    height: 112px !important;
+    width: 128px !important;
+    height: 128px !important;
   }
 
   #game-shell .joystick-knob {
-    width: 46px !important;
-    height: 46px !important;
+    width: 52px !important;
+    height: 52px !important;
   }
 }
 
