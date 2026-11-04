@@ -5895,7 +5895,7 @@ export class MaxFlizGameEngine {
       'RAJD NA ROWERKACH • PIĘCIU POMAZAŃCÓW',
       'Pięciu maluchów rusza do szturmu. Uważaj na salwy lizaków i nie daj się dogonić kolumnie rowerków!'
     );
-    this.emitFloatingToast('🍭 LIZAKI W DŁOŃ! GODZILLA DAWIDA CZEKA!', this.playerPos.x, this.playerPos.y + 1.9, this.playerPos.z, 'combo');
+    this.emitFloatingToast('🍭 LIZAKI W DŁOŃ! GODZILLA VECTORA CZEKA!', this.playerPos.x, this.playerPos.y + 1.9, this.playerPos.z, 'combo');
     sound.playPomazaniecEntrance();
     this.triggerScreenShake(0.36, 0.28);
     this.triggerHitStop(0.07);
@@ -5963,7 +5963,7 @@ export class MaxFlizGameEngine {
       spin: 5.2,
     });
     sound.playWhistle();
-    this.emitFloatingToast('🧱 SEBIX M. RZUCA CEGŁĄ!', x, y+0.45, z, 'damage');
+    this.emitFloatingToast('🧱 OPERATOR TURBO RZUCA CEGŁĄ!', x, y+0.45, z, 'damage');
   }
 
   private spawnSebixFireTrail(x: number, z: number, direction: number) {
@@ -6144,9 +6144,9 @@ export class MaxFlizGameEngine {
       enemy.maxHp = Math.ceil(enemy.maxHp * 1.12);
       enemy.hp = Math.min(enemy.maxHp, enemy.hp + 2);
       this.callbacks.onPerkDropBanner?.(
-        'SEBIX M. • ZACZYNA SIĘ ROZGRZEWKA',
+        'OPERATOR TURBO • ZACZYNA SIĘ ROZGRZEWKA',
         '💪',
-        'Cegły lecą szybciej. Sebix przyspiesza i zaczyna zamykać dystans.',
+        'Cegły lecą szybciej. Operator Turbo przyspiesza i zaczyna zamykać dystans.',
         '#f97316'
       );
       this.triggerScreenShake(0.22,0.14);
@@ -6157,7 +6157,7 @@ export class MaxFlizGameEngine {
       enemy.speed *= 1.42;
       enemy.specialActionTimer = Math.min(enemy.specialActionTimer || 0, 1.2);
       this.callbacks.onPerkDropBanner?.(
-        'SEBIX M. • TRYB TARANU HULK B4',
+        'OPERATOR TURBO • TRYB TARANU HULK B4',
         '🔥',
         'Podłoże zaczyna płonąć. Uważaj na czerwono-pomarańczowe ostrzeżenie przed szarżą.',
         '#ef4444'
@@ -6501,7 +6501,7 @@ export class MaxFlizGameEngine {
     this.triggerBloomPulse(0.7);
     this.spawnParticleRing(x, 0.6, z, 0xf59e0b);
     this.callbacks.onPerkDropBanner?.(
-      wave % 10 === 0 ? 'KRÓL-LETO WRACA DO MAGAZYNU!' : wave === 5 ? 'INWENTARYZACJA GIGANT WJEŻDŻA NA HALĘ!' : 'WALCZAK WJEŻDŻA NA ZMIANĘ!',
+      wave % 10 === 0 ? 'DYREKTOR WIDMO WRACA DO MAGAZYNU!' : wave === 5 ? 'INWENTARYZACJA GIGANT WJEŻDŻA NA HALĘ!' : 'NADZORCA ZERO WJEŻDŻA NA ZMIANĘ!',
       wave % 10 === 0 ? '👑' : '👔',
       'Boss fali ' + wave + ' — pokonaj go, aby zdobyć dodatkowe doświadczenie',
       '#ef4444'
@@ -7084,7 +7084,7 @@ export class MaxFlizGameEngine {
           this.emitFloatingToast(`🧲 RADIOMAGNES!`, c.x, c.y + 0.5, c.z, 'points');
         } else if (c.type === 'golden_cutter') {
           this.activatePerk('vibram_boots', 25);
-          this.emitFloatingToast(`👟 VIBRAM BOOTS!`, c.x, c.y + 0.5, c.z, 'points');
+          this.emitFloatingToast(`👟 BUTY ANTYPOŚLIZGOWE!`, c.x, c.y + 0.5, c.z, 'points');
         } else if (c.type === 'kfc_bucket') {
           this.score += c.points * ptsMult;
           this.activatePerk('kfc_bucket', 16);
@@ -7821,7 +7821,7 @@ export class MaxFlizGameEngine {
           this.triggerScreenShake(0.8, 1.0);
           const bossTitle = e.name.includes('Inwentaryzacja Gigant')
             ? 'INWENTARYZACJA GIGANT'
-            : e.survivalAuditor ? 'AUDYTOR' : 'WALCZAK';
+            : e.survivalAuditor ? 'AUDYTOR' : 'NADZORCA ZERO';
           this.emitFloatingToast('🚨 ' + bossTitle + ': TRYB SZAŁU (FAZA 2)!', e.x, e.y + 1.8, e.z, 'damage');
         }
 
@@ -7907,7 +7907,7 @@ export class MaxFlizGameEngine {
           e.speed *= 1.5;
           sound.playEvilLaugh();
           this.triggerScreenShake(1.2, 1.5);
-          this.emitFloatingToast('🔥 KRÓL-LETO: OSTATECZNE ZWOLNIENIE!', e.x, e.y + 1.8, e.z, 'damage');
+          this.emitFloatingToast('🔥 DYREKTOR WIDMO: OSTATECZNE ZWOLNIENIE!', e.x, e.y + 1.8, e.z, 'damage');
         }
 
         if (e.chargeTimer !== undefined) {
@@ -8426,12 +8426,12 @@ export class MaxFlizGameEngine {
       sound.playSirenAlert();
       this.triggerScreenShake(0.75, 0.7);
       this.callbacks.onPerkDropBanner?.(
-        '🍗 DAWID PRZYWIÓZŁ JEDZENIE Z Kubełek Mocy!',
+        '🍗 VECTOR PRZYWIÓZŁ JEDZENIE Z Kubełek Mocy!',
         '🧟‍♂️',
         'Fala wygłodniałych magazynierów-zombie szarżuje po kubełki! Zbierz Kubełek Mocy pierwszy (+2 Kawy i Furia 2x Obrażeń)!',
         '#ef4444'
       );
-      this.sayQuote('DAWID PRZYWIÓZŁ KUBEŁKI Z Kubełek Mocy! Cała zmiana biegnie jak horda zombie – bierz stripsy zanim zjedzą!');
+      this.sayQuote('VECTOR PRZYWIÓZŁ KUBEŁKI Z Kubełek Mocy! Cała zmiana biegnie jak horda zombie – bierz stripsy zanim zjedzą!');
 
       // Drop 2 KFC buckets + 1 KFC Perk Crate around the player
       this.addKfcBucketItem(`event_kfc_${Date.now()}_1`, px + 4.5, 0.45, THREE.MathUtils.clamp(pz - 2.2, -14, 14));
@@ -10312,7 +10312,7 @@ export class MaxFlizGameEngine {
         // Each of the five defeated riders already drops 3 XP. Keep the bonus at
         // 15 XP total instead of spawning a second, duplicate set of XP gems.
         this.callbacks.onSurvivalAnnouncement?.(
-          'GODZILLA DAWIDA: OCALONA (CHWILOWO)',
+          'GODZILLA VECTORA: OCALONA (CHWILOWO)',
           'RAJD POMAZAŃCÓW ROZBITY!',
           'Pięć rowerków, zero hamulców. Premia za obronę hali: +1 500 punktów i 15 XP do zebrania.'
         );
@@ -10372,7 +10372,7 @@ export class MaxFlizGameEngine {
 
     if (e.type === 'sebix_m') {
       this.callbacks.onBossUpdate?.(e.name, 0, e.maxHp, false);
-      this.sayQuote('SEBIX M. ZGASZONY! Cegły wracają na paletę, a B4 odzyskuje spokój.');
+      this.sayQuote('OPERATOR TURBO ZGASZONY! Cegły wracają na paletę, a B4 odzyskuje spokój.');
       this.triggerScreenShake(1.05, 0.72);
       this.triggerBloomPulse(0.48);
       this.spawnParticleRing(e.x, e.y + 0.7, e.z, 0xf97316);
@@ -10385,7 +10385,7 @@ export class MaxFlizGameEngine {
         : e.name.includes('Inwentaryzacja Gigant')
           ? 'INWENTARYZACJA GIGANT ZAMKNIĘTA! Ostatni protokół podpisany!'
           : e.type === 'walczak'
-            ? 'BYŁY KIEROWNIK WALCZAK ZANEUTRALIZOWANY! Droga wolna!'
+            ? 'BYŁY KIEROWNIK NADZORCA ZERO ZANEUTRALIZOWANY! Droga wolna!'
             : e.name.toUpperCase() + ' — NEUTRALIZACJA ZAKOŃCZONA!';
       this.sayQuote(defeatLine);
 
@@ -10858,7 +10858,7 @@ export class MaxFlizGameEngine {
       this.callbacks.onHpUpdate(this.hp, this.maxHp);
       this.activePerks.kfcBerserk = Math.max(this.activePerks.kfcBerserk || 0, duration);
       sound.playPerkPickup();
-      this.sayQuote('KUBEŁEK Kubełek Mocy OD DAWIDA! +2 Kawy, podwójne obrażenia i odporność na klej!');
+      this.sayQuote('KUBEŁEK Kubełek Mocy OD VECTORA! +2 Kawy, podwójne obrażenia i odporność na klej!');
     } else if (perkId === 'golden_paleciak') {
       this.activePerks.bulldozer = Math.max(this.activePerks.bulldozer || 0, duration);
       sound.playPerkPickup();
