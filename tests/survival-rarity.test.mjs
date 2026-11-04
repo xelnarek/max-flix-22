@@ -21,7 +21,7 @@ test('better rarities become modestly more likely later in a run', () => {
   assert.equal(rollSurvivalUpgradeRarity(0.09, 1), 'rare');
   assert.equal(rollSurvivalUpgradeRarity(0.09, 40), 'epic');
   assert.equal(rollSurvivalUpgradeRarity(0.02, 1), 'epic');
-  assert.equal(rollSurvivalUpgradeRarity(0.02, 40), 'epic');
+  assert.equal(rollSurvivalUpgradeRarity(0.02, 40), 'legendary');
 });
 
 test('rarity strength increases monotonically without changing base choices', () => {
