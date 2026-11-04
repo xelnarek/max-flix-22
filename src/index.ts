@@ -2135,7 +2135,7 @@ class MaxFlizScene extends xb.Script {
 
     try {
       if (this.cinematicIntro && this.cinematicIntro.isRunning()) {
-        // Pixel intro owns a throttled Canvas RAF; skip the hidden 3D game update.
+        // Cinematic intro owns a throttled Canvas RAF; skip the hidden 3D game update.
       } else if (this.engine) {
         this.engine.update(dt);
       }
