@@ -2409,6 +2409,13 @@ async function startApp() {
   }
 }
 
+// Progressive Web App support for secure mobile browsers.
+if ('serviceWorker' in navigator && window.isSecureContext) {
+  void navigator.serviceWorker.register('./sw.js', { scope: './' }).catch((error: unknown) => {
+    console.warn('[App:PWA] Registration unavailable:', error);
+  });
+}
+
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => void startApp());
 } else {
