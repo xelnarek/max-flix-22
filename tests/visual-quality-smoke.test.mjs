@@ -6,7 +6,7 @@ const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
 test('game identity is consistently renamed in the title screen and engine boot', async () => {
   const [html, app] = await Promise.all([read('../index.html'), read('../src/index.ts')]);
-  assert.match(html, /<title>Operacja B4: Strefa Chaosu<\/title>/);
+  assert.match(html, /<title>Paleciaki! Magazyn Chaosu<\/title>/);
   assert.match(html, /PALECIAKI![\s\S]*MAGAZYN[\s\S]*CHAOSU/);
   assert.match(app, /setAppTitle\('Operacja B4: Strefa Chaosu'\)/);
 });
