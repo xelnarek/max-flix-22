@@ -80,8 +80,8 @@ export class CinematicIntroManager {
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('resize', this.onResize);
     this.cleanup();
-    if (returnToMenu) this.callbacks.onComplete();
     if (startGame) this.callbacks.onStartGame?.();
+    else if (returnToMenu) this.callbacks.onComplete();
   }
 
   private mount(): void {
