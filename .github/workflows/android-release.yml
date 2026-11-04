@@ -19,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: android-release-\${{ github.ref }}
+  group: android-release-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -83,13 +83,13 @@ jobs:
 
       - name: Configure Android package, version and optional signing
         env:
-          ANDROID_UPLOAD_KEYSTORE_BASE64: \${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: \${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: \${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: \${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_VERSION_NAME: '0.1.0'
         run: |
-          if [ -n "\${ANDROID_UPLOAD_KEYSTORE_BASE64:-}" ]; then
+          if [ -n "${ANDROID_UPLOAD_KEYSTORE_BASE64:-}" ]; then
             if [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
               echo "Android signing secrets are incomplete." >&2
               exit 1
@@ -105,9 +105,9 @@ jobs:
 
       - name: Build Android packages
         env:
-          ANDROID_KEYSTORE_PASSWORD: \${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: \${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: \${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           chmod +x android/gradlew
           cd android
@@ -117,7 +117,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: paleciaki-android-\${{ github.run_number }}-\${{ github.sha }}
+          name: paleciaki-android-${{ github.run_number }}-${{ github.sha }}
           path: |
             android/app/build/outputs/bundle/release/*.aab
             android/app/build/outputs/apk/debug/*.apk
