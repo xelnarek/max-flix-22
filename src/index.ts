@@ -1398,7 +1398,7 @@ class MaxFlizScene extends xb.Script {
         this.engine.setLevelVisible(false);
         this.cinematicIntro.start();
       } catch (error) {
-        console.error('[PixelIntro] Nie udało się uruchomić intro:', error);
+        console.error('[CinematicIntro] Nie udało się uruchomić intro:', error);
         assetLoader.hide();
         this.engine?.setLevelVisible(true);
         titleScreen?.classList.remove('hidden');
