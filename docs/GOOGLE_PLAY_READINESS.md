@@ -1,33 +1,59 @@
-# Operacja B4 — przygotowanie do Google Play
+# Google Play — gotowość wydawnicza: Paleciaki! Magazyn Chaosu
 
-## Stan po tym etapie
+## Przygotowanie techniczne wykonane w repozytorium
 
-- [x] Neutralna nazwa produktu i fikcyjne nazwy postaci w publicznym interfejsie.
-- [x] Metadane mobilne: theme color, standalone display, manifest i ikona SVG.
-- [x] Rejestracja service workera w zakresie katalogu aplikacji.
-- [x] Awaryjna strona offline dla nawigacji bez sieci.
-- [x] Cache ograniczony do zasobów statycznych samego originu; brak cache dla Firebase i innych usług zewnętrznych.
-- [ ] Natywny projekt Android (Capacitor lub Trusted Web Activity) i stabilny applicationId.
-- [ ] Podpisany Android App Bundle (.aab) i test na urządzeniu fizycznym.
-- [ ] Zweryfikowana polityka prywatności z danymi administratora i opisem faktycznych przepływów Firebase.
-- [ ] Formularz Data safety, klasyfikacja treści, docelowa grupa wiekowa i deklaracje reklam.
-- [ ] Zasoby sklepu: ikona 512×512 PNG, grafiki promocyjne, zrzuty ekranu i opis.
-- [ ] Testy stabilności, wydajności, cyklu życia aplikacji, trybu offline i powrotu z tła.
+- Publiczna nazwa, opis i metadane produktu: **Paleciaki! Magazyn Chaosu**.
+- Nowe 11,8-sekundowe intro Canvas 2D: dynamiczny najazd, alarm, wózek, nadciągająca horda, prezentacja operatorów i plansza tytułowa. Bez zewnętrznego pliku wideo.
+- Manifest PWA, kolor motywu, ikona SVG i strona awaryjna offline z nowym brandingiem.
+- Link do polityki prywatności umieszczony w ustawieniach gry.
+- Konfiguracja Capacitor 8.6.0: `pl.paleciaki.magazynchaosu`, `dist` jako webDir.
+- Workflow Android QA/release przygotowuje natywny projekt od zera, testuje kod, buduje APK debug i AAB. AAB jest podpisywany wyłącznie po skonfigurowaniu sekretów klucza uploadowego.
+- Wspólne ID operatorów i lokalne klucze starych zapisów pozostają zachowane, aby nie niszczyć danych użytkownika.
 
-## Ważne ograniczenia
+## Wymagane środowisko dla Androida
 
-To repozytorium jest obecnie aplikacją webową Vite/Three.js. Manifest PWA i service worker nie tworzą aplikacji Android i nie generują pliku AAB. Nie wolno przedstawiać tego etapu jako gotowej publikacji w Google Play.
+- Node.js 24 i JDK 21.
+- Android SDK 36 / Android 16 oraz aktualne Android Build Tools.
+- Capacitor 8.6.0; target i compile SDK 36; minimalny SDK 24.
+- Do wydania produkcyjnego: Android App Bundle (.aab) podpisany własnym kluczem uploadowym.
 
-Service worker buforuje wyłącznie małe zasoby statyczne z własnej domeny. Nie buforuje zapytań Firebase, wyników rankingu ani odpowiedzi z usług zewnętrznych. Strona offline informuje o ograniczeniu; nie deklaruje pełnej rozgrywki offline.
+## GitHub Actions — podpisywanie
 
-## Blokery przed publikacją
+W repozytorium dodaj sekrety Actions:
+- `ANDROID_UPLOAD_KEYSTORE_BASE64` — plik keystore zakodowany Base64.
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
 
-1. Ustalić docelowy identyfikator pakietu Android (applicationId) i właściciela podpisywania.
-2. Ustalić publiczny adres polityki prywatności oraz prawdziwy kontakt administratora. Nie wpisywać fikcyjnych danych.
-3. Przejrzeć konfigurację Firebase, logowanie, reguły Firestore i zakres przechowywanych danych.
-4. Zweryfikować, czy wszystkie modele, grafiki, fonty, dźwięki i biblioteki mają licencje pozwalające na dystrybucję komercyjną.
-5. Zbudować natywny wrapper, skonfigurować Android lifecycle/back button/status bar/immersive mode i wykonać testy na urządzeniach.
+Bez tych sekretów workflow buduje APK debug i niepodpisany AAB do kontroli technicznej. Taki AAB nie nadaje się do wysłania jako produkcyjne wydanie w Play Console. Klucz uploadowy przechowuj także w bezpiecznej kopii poza GitHubem.
 
-## Testy tego etapu
+## Polityka prywatności — bloker do uzupełnienia
 
-Uruchomić npm test, npm run lint i npm run build. Po deployu sprawdzić manifest i service worker pod adresem projektu, a następnie instalację PWA na Androidzie. PWA nie zastępuje testów natywnego AAB.
+Plik `public/privacy.html` jest przygotowany jako szkic i wyjaśnia obecne wykorzystanie pseudonimu, wyników, anonimowej sesji Firebase Authentication, Firestore oraz lokalnej pamięci. Zawiera celowe placeholdery:
+- pełna nazwa prawna wydawcy / administratora;
+- działający adres e-mail do żądań prywatności i usuwania danych.
+
+Nie wolno publikować tej strony z placeholderami. Właściciel gry musi potwierdzić, że konfiguracja Firebase, reguły Firestore i faktyczne SDK odpowiadają treści polityki. W formularzu Data safety trzeba zadeklarować prawdziwe przepływy i publiczny ranking. Pseudonim i statystyki rankingu są publicznie widoczne.
+
+## Listing i grafiki sklepu
+
+Propozycja polskiej karty sklepu: `play-store/listing-pl.json`. Przed publikacją potrzebne są:
+- ikona sklepu PNG 512×512;
+- feature graphic 1024×500;
+- aktualne zrzuty ekranu gry z urządzenia fizycznego;
+- zweryfikowana kategoria, rating treści, grupa docelowa, reklamy i opis funkcji sieciowych.
+
+Ikona SVG w `public/icons/b4-icon.svg` jest ikoną aplikacji webowej. Android adaptive icons generuje workflow Android z osobnych źródeł w `resources/`.
+
+## Testy przed produkcją
+
+Po pobraniu artefaktów z workflow zainstaluj APK debug na urządzeniu Android i sprawdź:
+- zimny start, animację intro, skip i przejście do menu;
+- WebGL/Three.js, rozgrywkę Kampanii i Survivalu przez dłuższą sesję;
+- dotykowy joystick, atak, atak specjalny, pauzę i wznowienie;
+- powrót aplikacji z tła, obrót ekranu, utratę sieci, kolejkowanie i synchronizację rankingu;
+- uprawnienia, pasek systemowy, tryb immersyjny, dźwięk i stan aplikacji po ubiciu procesu.
+
+## Co nadal blokuje publikację
+
+To nie jest jeszcze zatwierdzona aplikacja Google Play. Właściciel musi uzupełnić dane wydawcy, skonfigurować i zabezpieczyć klucz podpisujący, zweryfikować politykę oraz Data safety, potwierdzić licencje assetów i wykonać testy na urządzeniach. W nowych kontach osobistych może być wymagany zamknięty test z 12 testerami przez nieprzerwane 14 dni przed wnioskiem o dostęp do produkcji. Wymagania Play Console sprawdź ponownie bezpośrednio przed wysłaniem wersji.
