@@ -756,3 +756,38 @@ test('Survival earns additional points for harder eliminations and active wave c
   assert.match(game, /this\.survivalWaveStartKills = this\.survivalKills/);
   assert.match(game, /return Math\.max\(1, Math\.round\(this\.activeElapsedSeconds\)\)/);
 });
+
+
+test('Survival tactical dodge is directional, invulnerable only for a short window, and cooldown-gated', async () => {
+  const [game, app, html, css] = await Promise.all([
+    read('../src/game.ts'), read('../src/index.ts'), read('../index.html'), read('../src/index.css')
+  ]);
+  assert.match(game, /if \(e\.code === 'KeyQ'\) \{\s*this\.triggerDash\(\);\s*\}/);
+  assert.match(game, /public triggerDash\(\): boolean/);
+  assert.match(game, /this\.survivalDashCooldownRemaining > 0\.0001/);
+  assert.match(game, /this\.survivalDashDurationRemaining = 0\.22/);
+  assert.match(game, /this\.invulnerableTimer = Math\.max\(this\.invulnerableTimer, 0\.32\)/);
+  assert.match(game, /this\.playerVel\.x = this\.survivalDashDirection\.x \* 18/);
+  assert.match(game, /this\.updateSurvivalDashCooldown\(simDt\)/);
+  assert.match(app, /onSurvivalDashUpdate: \(progress, ready, remainingSeconds\)/);
+  assert.match(app, /bindTouchAction\('btn-touch-dash', \(\) => this\.engine\.triggerDash\(\)\)/);
+  assert.match(html, /id="btn-touch-dash"/);
+  assert.match(css, /#game-shell\.survival-mode \.dash-touch-btn\s*\{\s*display: flex !important/);
+});
+
+test('critical upgrades are capped, roll once per weapon volley, and can unlock a paired build synergy', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /this\.survivalCriticalChance = Math\.min\(0\.25, this\.survivalCriticalChance \+ 0\.04\)/);
+  assert.match(game, /this\.survivalCriticalDamageMultiplier = Math\.min\(2\.45, this\.survivalCriticalDamageMultiplier \+ 0\.20\)/);
+  assert.match(game, /this\.survivalDashCooldownMultiplier = Math\.max\(0\.55, this\.survivalDashCooldownMultiplier \* 0\.88\)/);
+  assert.match(game, /critical_protocol/);
+  assert.match(game, /ghost_protocol/);
+  const start = game.indexOf('private fireSurvivalWeapon(weapon: SurvivalWeaponState');
+  const end = game.indexOf('\n  private ', start + 20);
+  assert.ok(start >= 0 && end > start);
+  const weaponFire = game.slice(start, end);
+  assert.equal((weaponFire.match(/rollSurvivalCriticalDamage\(/g) || []).length, 1,
+    'one roll per volley keeps spread shots and orbit blades consistent');
+  assert.match(weaponFire, /const weaponDamage = criticalRoll\.damage/);
+  assert.match(weaponFire, /damage: weaponDamage/);
+});
