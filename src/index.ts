@@ -11,7 +11,6 @@ import { MaxFlizGameEngine, type SurvivalSnapshot, type SurvivalUpgradeOption } 
 import { sound } from './sound.ts';
 import { CinematicIntroManager } from './cinematicIntro.ts';
 import { formatLeaderboardTimestamp } from './leaderboard.ts';
-import { getScaledSimulationDelta } from './gameSpeed.ts';
 import { CharacterId, PerkType } from './types.ts';
 import { AssetItem, assetLoader } from './assets.ts';
 import { SelectiveBloomPipeline } from './selectiveBloom.ts';
@@ -110,7 +109,6 @@ const escapeLeaderboardText = (value: string): string => value.replace(/[&<>"']/
 class MaxFlizScene extends xb.Script {
   private engine!: MaxFlizGameEngine;
   private cinematicIntro: CinematicIntroManager | null = null;
-  private gameSpeed: 1 | 2 = 1;
   private selectedCharId: CharacterId = 'marcin';
   private selectedLevelId: number = 1;
   private lastScore: number = 0;
@@ -1759,18 +1757,18 @@ class MaxFlizScene extends xb.Script {
       for (const [id, value] of [['btn-speed-1x', 1], ['btn-speed-2x', 2]] as const) {
         const button = document.getElementById(id) as HTMLButtonElement | null;
         if (!button) continue;
-        const active = this.gameSpeed === value;
+        const active = this.engine.getTimeScale() === value;
         button.classList.toggle('is-active', active);
         button.setAttribute('aria-pressed', String(active));
         button.setAttribute('aria-label', active ? `Szybkość ${value}x aktywna` : `Ustaw szybkość ${value}x`);
       }
     };
     document.getElementById('btn-speed-1x')?.addEventListener('click', () => {
-      this.gameSpeed = 1;
+      this.engine.setTimeScale(1);
       syncGameSpeedButtons();
     });
     document.getElementById('btn-speed-2x')?.addEventListener('click', () => {
-      this.gameSpeed = 2;
+      this.engine.setTimeScale(2);
       syncGameSpeedButtons();
     });
     syncGameSpeedButtons();
@@ -2139,7 +2137,7 @@ class MaxFlizScene extends xb.Script {
       if (this.cinematicIntro && this.cinematicIntro.isRunning()) {
         // Pixel intro owns a throttled Canvas RAF; skip the hidden 3D game update.
       } else if (this.engine) {
-        this.engine.update(getScaledSimulationDelta(dt, this.gameSpeed));
+        this.engine.update(dt);
       }
       (this as any)._updateToasts?.(dt);
     } catch (err) {
