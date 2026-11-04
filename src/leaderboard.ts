@@ -88,34 +88,14 @@ export function getLeaderboardSlice(
 }
 
 
-/**
- * Format the immutable record timestamp for the Polish global leaderboard.
- * Legacy rows without a trustworthy timestamp are explicitly marked unknown.
- */
-export function formatLeaderboardTimestamp(createdAt: string): string {
-  const timestamp = Date.parse(createdAt);
-  if (!Number.isFinite(timestamp) || timestamp <= Date.UTC(2000, 0, 1)) {
-    return 'Data nieznana';
-  }
-  return new Intl.DateTimeFormat('pl-PL', {
-    timeZone: 'Europe/Warsaw',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  }).format(new Date(timestamp));
-}
-
-
 /** Formats a saved record time in the player's local timezone. */
 export function formatLeaderboardTimestamp(value: unknown, locale = 'pl-PL'): string {
-  if (typeof value !== 'string' || value.length === 0) return 'DATA NIEZNANA';
+  if (typeof value !== 'string' || value.length === 0) return 'Data nieznana';
   const timestamp = Date.parse(value);
-  if (!Number.isFinite(timestamp) || timestamp <= 0) return 'DATA NIEZNANA';
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return 'Data nieznana';
   try {
     return new Intl.DateTimeFormat(locale, {
+      timeZone: 'Europe/Warsaw',
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -124,6 +104,6 @@ export function formatLeaderboardTimestamp(value: unknown, locale = 'pl-PL'): st
       hourCycle: 'h23',
     }).format(new Date(timestamp));
   } catch {
-    return 'DATA NIEZNANA';
+    return 'Data nieznana';
   }
 }
