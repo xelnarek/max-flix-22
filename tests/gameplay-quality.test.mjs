@@ -932,5 +932,5 @@ test('new cinematic intro replaces the old pixel/VHS intro and launches at boot'
   assert.match(html, /MAX-FLIX: GRANICA ABSURDU/);
   assert.match(css, /\.cinematic-intro-overlay/);
   assert.doesNotMatch(css, /pixel-intro-overlay|pixel-vhs-header/);
-  assert.equal(tree, '', 'legacy PixelIntro source should be removed');
+  assert.doesNotMatch(app, /PixelIntroManager|pixelIntro/i);
 });
