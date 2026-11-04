@@ -6,7 +6,7 @@ let floorTexture: THREE.CanvasTexture | null = null;
 let showroomMarbleTexture: THREE.CanvasTexture | null = null;
 let showroomWallTexture: THREE.CanvasTexture | null = null;
 let terminalGraniteTexture: THREE.CanvasTexture | null = null;
-let maxFlizSignTexture: THREE.CanvasTexture | null = null;
+let b4SignTexture: THREE.CanvasTexture | null = null;
 let tileBoxTexture: THREE.CanvasTexture | null = null;
 let marbleTextures: Record<string, THREE.CanvasTexture> = {};
 let hazardStripeTexture: THREE.CanvasTexture | null = null;
@@ -740,8 +740,8 @@ export function createTrackSpotlights(length = 6.0): THREE.Group {
 /**
  * 3. B4 Logistics Signboard
  */
-export function getMaxFlizLogoTexture(): THREE.CanvasTexture {
-  if (maxFlizSignTexture) return maxFlizSignTexture;
+export function getB4LogoTexture(): THREE.CanvasTexture {
+  if (b4SignTexture) return b4SignTexture;
   const canvas = document.createElement('canvas');
   canvas.width = 512;
   canvas.height = 160;
@@ -783,9 +783,9 @@ export function getMaxFlizLogoTexture(): THREE.CanvasTexture {
   ctx.letterSpacing = '2px';
   ctx.fillText('GRESY WIELKOFORMATOWE • ARMATURA • DESIGN', 256, 134);
 
-  maxFlizSignTexture = new THREE.CanvasTexture(canvas);
-  maxFlizSignTexture.colorSpace = THREE.SRGBColorSpace;
-  return maxFlizSignTexture;
+  b4SignTexture = new THREE.CanvasTexture(canvas);
+  b4SignTexture.colorSpace = THREE.SRGBColorSpace;
+  return b4SignTexture;
 }
 
 /**
@@ -1857,7 +1857,7 @@ export function createDeliveryVan(): THREE.Group {
 
   const bodyMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.3 });
   const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.9 });
-  const signMat = new THREE.MeshStandardMaterial({ map: getMaxFlizLogoTexture(), roughness: 0.35 });
+  const signMat = new THREE.MeshStandardMaterial({ map: getB4LogoTexture(), roughness: 0.35 });
   const chromeMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.15, metalness: 0.9 });
 
   // Main Cargo Box
