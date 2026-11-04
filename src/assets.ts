@@ -320,7 +320,7 @@ export class MaxFlizAssetLoader {
         { id: 'models/character_dawid.mesh', name: 'Vector (Arcymistrz Gresu)', category: 'model', execute: () => createCharacterModel(CHARACTERS.dawid) },
         { id: 'models/character_mateusz.mesh', name: 'Volt (Gejmer & PS Maniak)', category: 'model', execute: () => createCharacterModel(CHARACTERS.mateusz) },
         { id: 'models/character_piotr.mesh', name: 'Rook (Weteran & Mistrz Płonących Mieszanek)', category: 'model', execute: () => createCharacterModel(CHARACTERS.piotr) },
-        { id: 'models/boss_walczak.mesh', name: 'Boss Nadzorca Zero (Były Kierownik)', category: 'model', execute: () => createWalczakBossModel() },
+        { id: 'models/boss_walczak.mesh', name: 'Boss Nadzorca Zero', category: 'model', execute: () => createWalczakBossModel() },
         { id: 'models/showroom_podium.mesh', name: 'Podest Ekspozycyjny Showroomu', category: 'model', execute: () => createDisplayPodium(2.8, 2.2, 0.25) },
         { id: 'models/showroom_plant.mesh', name: 'Złota Donica z Roślinnością Showroomu', category: 'model', execute: () => createShowroomPlant() },
 
