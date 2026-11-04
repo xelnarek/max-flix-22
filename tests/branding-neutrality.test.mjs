@@ -12,12 +12,12 @@ test('public game identity uses the neutral Operacja B4 title', async () => {
     read('../metadata.json'),
   ]);
 
-  assert.match(html, /<title>Operacja B4: Strefa Chaosu<\/title>/);
-  assert.match(html, /OPERACJA B4 <span>STREFA<\/span><em>CHAOSU<\/em>/);
-  assert.match(app, /setAppTitle\('Operacja B4: Strefa Chaosu'\)/);
-  assert.match(intro, /<h1>OPERACJA B4<\/h1>/);
+  assert.match(html, /<title>Paleciaki! Magazyn Chaosu<\/title>/);
+  assert.match(html, /PALECIAKI! <span>STREFA<\/span><em>CHAOSU<\/em>/);
+  assert.match(app, /setAppTitle\('Paleciaki! Magazyn Chaosu'\)/);
+  assert.match(intro, /<h1>PALECIAKI!<\/h1>/);
   assert.match(intro, /STREFA <span>CHAOSU<\/span>/);
-  assert.match(metadata, /"name": "Operacja B4: Strefa Chaosu"/);
+  assert.match(metadata, /"name": "Paleciaki! Magazyn Chaosu"/);
 });
 
 test('operator cards use fictional call signs while retaining stable internal IDs', async () => {
