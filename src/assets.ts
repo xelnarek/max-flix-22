@@ -8,7 +8,7 @@ import {
   getShowroomMarbleFloorTexture,
   getShowroomWallTexture,
   getTerminalGraniteFloorTexture,
-  getMaxFlizLogoTexture,
+  getB4LogoTexture,
   getMarbleTexture,
   getTileBoxTexture,
   getHazardStripeTexture,
@@ -27,16 +27,16 @@ export interface AssetItem {
 
 const WAREHOUSE_TIPS = [
   'Wskazówka: Zbieraj worki z fugą i złote palety, by zdobywać punkty i odblokować premie zmiany!',
-  'Wózek widłowy Zdzicha nie wybacza błędów BHP — przeskakuj go w odpowiednim momencie!',
+  'Wózek widłowy z sektora B4 nie wybacza błędów BHP — przeskakuj go w odpowiednim momencie!',
   'Pieczęć WZ Atlasa ogłusza wrogów i zatrzymuje pojazdy w promieniu 4 metrów.',
-  'Łata brukarska Forge'a z łatwością rozbija palety z towarem i przeszkody.',
+  'Forge z łatwością rozbija palety z towarem i przeszkody.',
   'Kawa espresso z ekspresu Volta natychmiast odnawia punkty BHP bohatera.',
-  'Uważaj na Byłego Kierownika Nadzorcy Zero w Sektorze 3 — w drugiej fazie wpada w szał!',
+  'Uważaj na Nadzorcę Zero w Sektorze 3 — w drugiej fazie wpada w szał!',
   'Spieki wielkoformatowe Marmur B4 120x280 w Showroomie wymagają podwójnej ostrożności.',
   'Przycisk C przełącza dynamiczną kamerę 3D: rzut izometryczny lub akcję zza pleców.'
 ];
 
-export class MaxFlizAssetLoader {
+export class B4AssetLoader {
   private isLoaded = false;
   private isLoading = false;
   private preloadPromise: Promise<void> | null = null;
@@ -306,7 +306,7 @@ export class MaxFlizAssetLoader {
         { id: 'textures/showroom_marble_calacatta.canvas', name: 'Spiek Biały Marmur (Showroom)', category: 'texture', execute: () => getShowroomMarbleFloorTexture() },
         { id: 'textures/showroom_oak_slat_wall.canvas', name: 'Ściany Lamele Dębowe', category: 'texture', execute: () => getShowroomWallTexture() },
         { id: 'textures/terminal_granite_floor.canvas', name: 'Granit Przemysłowy Rampy B1', category: 'texture', execute: () => getTerminalGraniteFloorTexture() },
-        { id: 'textures/maxfliz_neon_sign.canvas', name: 'Neon Logotypu Kompleks B4', category: 'texture', execute: () => getMaxFlizLogoTexture() },
+        { id: 'textures/b4_neon_sign.canvas', name: 'Neon Logotypu Kompleks B4', category: 'texture', execute: () => getB4LogoTexture() },
         { id: 'textures/marble_slab_calacatta.canvas', name: 'Płyta Gresowa Marmur B4 120x280', category: 'texture', execute: () => getMarbleTexture('calacatta') },
         { id: 'textures/marble_slab_nero.canvas', name: 'Marmur Nero Marquina', category: 'texture', execute: () => getMarbleTexture('nero') },
         { id: 'textures/marble_wood_chevron.canvas', name: 'Gres Drewnopodobny Chevron', category: 'texture', execute: () => getMarbleTexture('wood') },
@@ -420,4 +420,4 @@ export class MaxFlizAssetLoader {
   }
 }
 
-export const assetLoader = new MaxFlizAssetLoader();
+export const assetLoader = new B4AssetLoader();
