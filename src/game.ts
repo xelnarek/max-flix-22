@@ -206,7 +206,7 @@ export class PaleciakiGameEngine {
     pan_roman: [
       "Panowie spieszę się, na pace mam 8 wanien wolnostojących!",
       "Gdzie mam zrzucić te kible?! Byle nie na deszczu!",
-      "Kurier Rudi znowu zajął moją rampę rozładunkową!",
+      "Kurier Ekspresowy znowu zajął moją rampę rozładunkową!",
       "Panie kierowniku, pieczątka na WZ-tce i mnie nie ma!",
       "Uwaga na paleciak, hamulce skończyły się w 2018 roku!",
       "Rzucam umywalką, łap pan albo będzie po premii!",
@@ -3590,7 +3590,7 @@ export class PaleciakiGameEngine {
     });
   }
 
-  private addKurierEnemy(id: string, x: number, minX: number, maxX: number, name = 'Kurier Rudi od Kurier Express') {
+  private addKurierEnemy(id: string, x: number, minX: number, maxX: number, name = 'Kurier Ekspresowy') {
     const built = createKurierEnemyModel();
     built.group.position.set(x, 0.4, minX);
     this.levelRoot.add(built.group);
@@ -4218,7 +4218,7 @@ export class PaleciakiGameEngine {
     this.addPanRomanEnemy('pan_roman_l1', -8, -6, 6, 'Dostawca Sanitarny z Dostawą Sanitariatów');
     this.addSerwisanciEnemy('serwisant_l1', -15, -6, 6, 'Serwisant Operacja B4u');
     this.addBosmanKrakowBossEnemy('bosman_l1', 0, 0);
-    this.addKurierEnemy('kurier_l1_1', -10, -6, 6, 'Kurier Rudi (Kurier Express)');
+    this.addKurierEnemy('kurier_l1_1', -10, -6, 6, 'Kurier Ekspresowy');
     this.addItalianVendorEnemy('ital_l1_1', 8, -5, 5, 'Włoski Dostawca Armatury z Mediolanu');
     this.addSztaplarEnemy('sztaplar_l1_1', -2, -6, 6, 'Szalony Operator Paleciaka B4');
     this.addEliteGuardEnemy('guard_l1_1', -22, -4, 4, 'Strażnik Sektora A');
@@ -4504,7 +4504,7 @@ export class PaleciakiGameEngine {
     this.addPanRomanEnemy('pan_roman_l2', offsetX, -6, 6, 'Dostawca Sanitarny z Dostawą Sanitariatów');
     this.addSerwisanciEnemy('serwisant_l2', offsetX + 5, -6, 6, 'Serwisant Operacja B4u');
     this.addBosmanKrakowBossEnemy('bosman_l2', offsetX + 20, 0);
-    this.addKurierEnemy('kurier_l2_1', offsetX - 16, -6, 6, 'Kurier Rudi (Kurier Express)');
+    this.addKurierEnemy('kurier_l2_1', offsetX - 16, -6, 6, 'Kurier Ekspresowy');
     this.addItalianVendorEnemy('ital_l2_1', offsetX + 2, -6, 6, 'Przedstawiciel Fabryki z Bolonii');
     this.addSztaplarEnemy('sztaplar_l2_1', offsetX + 18, -6, 6, 'Kierowca Sztaplarki Showroomu');
     this.addArchitectEnemy('arch_l2_1', offsetX - 12, offsetX - 2, -4, 'Główny Projektant Wnętrz z Warszawy');
@@ -5906,7 +5906,7 @@ export class PaleciakiGameEngine {
     }
 
     this.callbacks.onSurvivalAnnouncement?.(
-      'Pomazańceeee idziemy zbić Godzillę Vectora , razem mamy w 7 więcej lat !',
+      'Pomazańceeee idziemy zbić rowerowego bossa , razem mamy w 7 więcej lat !',
       'RAJD NA ROWERKACH • PIĘCIU POMAZAŃCÓW',
       'Pięciu maluchów rusza do szturmu. Uważaj na salwy lizaków i nie daj się dogonić kolumnie rowerków!'
     );
@@ -6227,7 +6227,7 @@ export class PaleciakiGameEngine {
         enemy.state = 'charging';
         this.spawnBossLaneTelegraph(enemy.x, enemy.z, enemy.chargeDir, 12.5, 2.6, 0xef4444, 0.72, enemy);
         this.spawnParticleRing(enemy.x,0.12,enemy.z,0xef4444);
-        this.emitFloatingToast('🔥 SEBIX ŁADUJE TARAN — ZEJDŹ Z LINII!',enemy.x,enemy.y+2.2,enemy.z,'damage');
+        this.emitFloatingToast('🔥 OPERATOR TURBO ŁADUJE TARAN — ZEJDŹ Z LINII!',enemy.x,enemy.y+2.2,enemy.z,'damage');
         sound.playBossWarning();
         return;
       }
@@ -8437,7 +8437,7 @@ export class PaleciakiGameEngine {
     const pz = this.playerPos.z;
 
     if (eventIdx === 0) {
-      // EVENT 1: DAWID PRZYWIÓZŁ JEDZENIE Z KFC! FALA GŁODNYCH ZOMBIE!
+      // EVENT 1: DOSTAWA ENERGETYCZNYCH ZAPASÓW! FALA GŁODNYCH ZOMBIE!
       sound.playSirenAlert();
       this.triggerScreenShake(0.75, 0.7);
       this.callbacks.onPerkDropBanner?.(
@@ -8446,7 +8446,7 @@ export class PaleciakiGameEngine {
         'Fala magazynierów-zombie szarżuje po zapasy! Zbierz pakiet pierwszy (+2 Kawy i Furia 2x Obrażeń)!',
         '#ef4444'
       );
-      this.sayQuote('VECTOR PRZYWIÓZŁ ZAPASY ENERGII! Cała zmiana biegnie jak horda zombie — zbierz pakiet, zanim zniknie!');
+      this.sayQuote('DOSTAWA PRZYWIÓZŁA ZAPASY ENERGII! Cała zmiana biegnie jak horda zombie — zbierz pakiet, zanim zniknie!');
 
       // Drop 2 energy packs + 1 power-up crate around the player
       this.addKfcBucketItem(`event_kfc_${Date.now()}_1`, px + 4.5, 0.45, THREE.MathUtils.clamp(pz - 2.2, -14, 14));
@@ -8518,12 +8518,12 @@ export class PaleciakiGameEngine {
       this.addCustomerEnemy(`event_cust_${Date.now()}_1`, px + 10, Math.max(-12, pz - 5), Math.min(12, pz + 5), 'Łowca Promocji -80%');
       this.addArchitectEnemy(`event_arch_${Date.now()}_2`, px + 12, px + 18, pz, 'Architektka na Wyprzedaży');
     } else {
-      // EVENT 5: ATLAS PRZEGRYWA SYMULACJĘ CZOŁGÓW!
+      // EVENT 5: OPERATOR 01 PRZEGRYWA SYMULACJĘ CZOŁGÓW!
       sound.playSirenAlert();
       this.triggerScreenShake(0.75, 0.65);
       this.marcinWoTPenaltyTimer = 6.0;
       this.callbacks.onPerkDropBanner?.(
-        '🎮 ATLAS PRZEGRYWA SYMULACJĘ CZOŁGÓW!',
+        '🎮 OPERATOR 01 PRZEGRYWA SYMULACJĘ CZOŁGÓW!',
         '💢',
         'Operator 01 przegrał symulację czołgów B4 i szuka winnego w alejkach! "Znajdę Ci zajęcie, wesołku..." (-30% szybkości na 6s)',
         '#f97316'
