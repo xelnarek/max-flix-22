@@ -14,7 +14,6 @@ import { formatLeaderboardTimestamp } from './leaderboard.ts';
 import {
   initializeGameAds,
   areGameAdsReady,
-  hasAdPrivacyOptions,
   showAdPrivacyOptions,
   showRewardedRerollAd,
   showInterstitialAfterRun,
@@ -28,6 +27,12 @@ import { getAdaptiveRenderScale } from './renderQuality.ts';
 import { calculateVirtualJoystickInput } from './virtualJoystick.ts';
 
 // warehouseAssets imports moved to assets.ts where they are preloaded
+
+// Keep ad actions and privacy controls in sync with the latest UMP decision.
+const syncAdMobSettings = (consent: { enabled: boolean; privacyOptionsRequired: boolean }) => {
+  document.getElementById('btn-survival-ad-reroll')?.classList.toggle('hidden', !consent.enabled);
+  document.getElementById('btn-ad-privacy-options')?.classList.toggle('hidden', !consent.privacyOptionsRequired);
+};
 
 // Global Unhandled Error Logger
 window.addEventListener('error', (e) => {
@@ -889,7 +894,7 @@ class PaleciakiScene extends xb.Script {
     });
 
     document.getElementById('btn-ad-privacy-options')?.addEventListener('click', () => {
-      void showAdPrivacyOptions();
+      void showAdPrivacyOptions().then(syncAdMobSettings);
     });
     survivalSkipBtn?.addEventListener('click', () => {
       if (this.engine.skipSurvivalUpgrade()) survivalLevelUp?.classList.add('hidden');
@@ -1234,8 +1239,7 @@ class PaleciakiScene extends xb.Script {
       try {
         await assetLoader.waitUntilReady('Gra 3D');
         const ads = await initializeGameAds();
-        document.getElementById('btn-survival-ad-reroll')?.classList.toggle('hidden', !ads.enabled);
-        document.getElementById('btn-ad-privacy-options')?.classList.toggle('hidden', !hasAdPrivacyOptions());
+        syncAdMobSettings(ads);
 
         if (!this.engine || typeof this.engine.startGame !== 'function') {
           throw new Error('Silnik gry nie jest jeszcze gotowy.');
@@ -2443,6 +2447,14 @@ async function startApp() {
 
     clearTimeout(safetyTimeout);
     assetLoader.hide();
+
+    // UMP must refresh consent on every native app launch, before any ad request.
+    // It runs in parallel with the final UI reveal; the game itself is never gated by ads.
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+      void initializeGameAds()
+        .then(syncAdMobSettings)
+        .catch((error: unknown) => console.warn('[AdMob] Launch consent check skipped:', error));
+    }
 
     // 7. Reveal UI with high priority
     if (shell) {
