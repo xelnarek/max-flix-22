@@ -1511,11 +1511,18 @@ class MaxFlizScene extends xb.Script {
     });
     syncAudioSettingsUI();
 
+    const pauseModal = document.getElementById('pause-modal');
     const handlePause = () => {
+      if (this.engine.getGameState() !== 'playing') return;
       this.engine.togglePause();
-      const pauseModal = document.getElementById('pause-modal');
       pauseModal?.classList.remove('hidden');
     };
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && this.engine.getGameState() === 'playing') {
+        this.engine.togglePause();
+        pauseModal?.classList.remove('hidden');
+      }
+    });
     bindTap(document.getElementById('btn-top-pause'), handlePause);
     bindTap(document.getElementById('btn-pause'), handlePause);
 
