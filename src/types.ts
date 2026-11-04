@@ -288,7 +288,7 @@ export const AVAILABLE_PERKS: PerkDef[] = [
     id: 'kfc_bucket',
     name: 'Pakiet Energii od Vectora',
     description: 'Pakiet awaryjny B4. Przywraca 2 punkty zdrowia i aktywuje Furię Energetyczną: podwójne obrażenia oraz odporność na spowolnienie klejem.',
-    icon: '🍗',
+    icon: '⚡',
     color: 0xef4444,
     duration: 16,
   },
