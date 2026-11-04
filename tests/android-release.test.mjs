@@ -66,6 +66,7 @@ test('Play Store artwork sources and CI exports meet the listing image dimension
   assert.match(artworkScript, /colorType !== 6/);
   assert.match(artworkScript, /validateJpeg/);
   assert.match(workflow, /sudo apt-get install -y librsvg2-bin imagemagick/);
+  assert.match(workflow, /scripts\/prepare-play-store-artwork\.mjs/);
   assert.match(workflow, /node scripts\/prepare-play-store-artwork\.mjs/);
   assert.match(workflow, /play-store\/generated\/app-icon-512\.png/);
   assert.match(workflow, /play-store\/generated\/feature-graphic-1024x500\.jpg/);

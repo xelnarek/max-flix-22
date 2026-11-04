@@ -13,6 +13,7 @@ on:
       - 'capacitor.config.json'
       - 'resources/**'
       - 'scripts/prepare-android-release.mjs'
+      - 'scripts/prepare-play-store-artwork.mjs'
       - '.github/workflows/android-release.yml'
 
 permissions:
