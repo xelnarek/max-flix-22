@@ -10,8 +10,8 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     secondaryColor: 0xf59e0b, // Amber / Gold
     speed: 7.5,
     jumpForce: 8.8,
-    passiveName: 'Mistrz Zaklęć system ERP',
-    passiveDescription: 'Podstawowy atak przywołuje cyfrowe zaklęcia z programu system ERP: błękitne runy, zlecenia i pieczęcie. Co trzeci czar tworzy mocniejszą pieczęć audytu. Zasięg przyciągania VIP +100%.',
+    passiveName: 'Mistrz Zaklęć ERP',
+    passiveDescription: 'Podstawowy atak przywołuje cyfrowe zaklęcia z systemu ERP: błękitne runy, zlecenia i pieczęcie. Co trzeci czar tworzy mocniejszą pieczęć audytu. Zasięg przyciągania VIP +100%.',
     abilityName: 'WORLD OF TAAAAANKS! NOOBIE!',
     abilityDescription: 'Przywołuje opancerzony czołg WZ-404, który przez 8 sekund podąża za Atlasem, obraca wieżyczką i automatycznie ostrzeliwuje najbliższych przeciwników pociskami wybuchowymi. W Survival działa 6 sekund. Załoga melduje: „Cel zatwierdzony przez system ERP!”.',
     abilityCooldown: 17.0,
@@ -67,7 +67,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
   dawid: {
     id: 'dawid',
     name: 'Vector',
-    role: 'Arcymistrz Gresu & Dostawca Kubełek Mocy',
+    role: 'Arcymistrz Gresu & Mistrz Wielkiego Formatu',
     title: 'Siłacz Wielkiego Formatu ("Ja Wiem Lepiej!")',
     color: 0xd97706, // Amber / Terracotta
     secondaryColor: 0xb45309,
@@ -75,12 +75,12 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     jumpForce: 10.2,
     passiveName: 'Rolka Stretch — Owinięcie Problemu',
     passiveDescription: 'Podstawowy atak wyrzuca rolkę folii stretch. Trafiony przeciwnik zostaje spowolniony i na krótko owinięty folią; co trzeci rzut rozrzuca dodatkowe pasma.',
-    abilityName: 'Salwa Marmur B4 120x280 & Dostawa Kubełka Kubełek Mocy',
+    abilityName: 'Salwa Marmurowa Wielkiego Formatu',
     abilityDescription: 'Wyrzuca 5 gigantycznych rykoszetujących płyt gresowych, aktywuje Kask BHP oraz zrzuca gorący Kubełek Mocy (+HP i Furia Energetyczna)!',
     abilityCooldown: 13.0,
     voiceLines: [
       'Ja wiem lepiej, jak kłaść ten gres! Nadzorca Zero nie ma zielonego pojęcia!',
-      'Przywiozłem świeży kubełek z Kubełek Mocy! Kto pierwszy ten lepszy, reszta robi dylatację!',
+      'Przywiozłem świeży Kubełek Mocy! Kto pierwszy ten lepszy, reszta robi dylatację!',
       'Zemsta za wyszczerbione płytki będzie cięta diamentem pod kątem 45 stopni!',
       'Format 120x280 cm? Dajcie mi dwie sztuki na raz pod pachę!',
       'Dla Kompleks B4 i dla mnie fizyka budowlana nie ma żadnych tajemnic!',
@@ -88,7 +88,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
       'Ja tu rządzę formatem, ty zajmij się fugą!',
       '45 stopni to nie tylko kąt, to moja życiowa filozofia montażu!'
     ],
-    bio: 'Arcymistrz wielkiego formatu, samozwańczy ekspert od ceramiki premium i dostawca Kubełek Mocy na zmianie nocnej. Jego ulubione zdanie „Ja wiem lepiej!” potrafi zakończyć dyskusję szybciej niż komunikat o zamknięciu magazynu. Format 120×280 nosi z dumą, a rolką stretchu potrafi opakować problem, którego nie rozwiązałby cały dział reklamacji. W walce wykorzystuje zasięg, spowalnianie przeciwników i potężne skoki. Twierdzi, że każda płytka ma właściwą stronę — po prostu inni jeszcze jej nie odkryli.',
+    bio: 'Arcymistrz wielkiego formatu, samozwańczy ekspert od ceramiki premium i nocny dostawca energetycznych przekąsek. Jego ulubione zdanie „Ja wiem lepiej!” potrafi zakończyć dyskusję szybciej niż komunikat o zamknięciu magazynu. Format 120×280 nosi z dumą, a rolką stretchu potrafi opakować problem, którego nie rozwiązałby cały dział reklamacji. W walce wykorzystuje zasięg, spowalnianie przeciwników i potężne skoki. Twierdzi, że każda płytka ma właściwą stronę — po prostu inni jeszcze jej nie odkryli.',
     stats: {
       speed: 4,
       jump: 5,
@@ -99,7 +99,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
   mateusz: {
     id: 'mateusz',
     name: 'Volt',
-    role: 'Gejmer & Maniak konsola (9 mies. kontraktu)',
+    role: 'Entuzjasta Technologii i Gier',
     title: 'Zdobywca Platyn i Pogromca Lagów',
     color: 0x7c3aed, // Purple / Indigo
     secondaryColor: 0xec4899,
