@@ -8211,7 +8211,7 @@ export class MaxFlizGameEngine {
               this.activePerks.shield = false;
               this.invulnerableTimer = 1.2;
               sound.playShieldBreak();
-              this.sayQuote('Kask BHP zamortyzował atak Króla-Leto!');
+              this.sayQuote('Kask BHP zamortyzował atak Dyrektora Widmo!');
             } else {
               this.takeDamage('🚨 ZWOLNIENIE DYSCYPLINARNE NA HITA OD KRÓLA-LETO!');
             }
@@ -8503,17 +8503,17 @@ export class MaxFlizGameEngine {
       this.addCustomerEnemy(`event_cust_${Date.now()}_1`, px + 10, Math.max(-12, pz - 5), Math.min(12, pz + 5), 'Łowca Promocji -80%');
       this.addArchitectEnemy(`event_arch_${Date.now()}_2`, px + 12, px + 18, pz, 'Architektka na Wyprzedaży');
     } else {
-      // EVENT 5: KIEROWNIK MARCIN PRZEGRYWA W WORLD OF TANKS!
+      // EVENT 5: ATLAS PRZEGRYWA SYMULACJĘ CZOŁGÓW!
       sound.playSirenAlert();
       this.triggerScreenShake(0.75, 0.65);
       this.marcinWoTPenaltyTimer = 6.0;
       this.callbacks.onPerkDropBanner?.(
-        '🎮 KIEROWNIK MARCIN PRZEGRYWA W WORLD OF TANKS!',
+        '🎮 KIEROWNIK MARCIN PRZEGRYWA W SYMULATOR CZOŁGÓW B4!',
         '💢',
-        'Kierownik stracił czołg w Lidze WoT i szuka winnego w alejkach! "Znajdę Ci zajęcie, wesołku..." (-30% szybkości na 6s)',
+        'Kierownik stracił czołg w symulatorze czołgów B4 i szuka winnego w alejkach! "Znajdę Ci zajęcie, wesołku..." (-30% szybkości na 6s)',
         '#f97316'
       );
-      this.sayQuote('Kierownik Atlas przegrał bitwę w World of Tanks! "Znajdę Ci zaraz zajęcie, wesołku..."');
+      this.sayQuote('Kierownik Atlas przegrał bitwę w symulator czołgów B4! "Znajdę Ci zaraz zajęcie, wesołku..."');
       this.spawnDroppedPerk(px + 2.8, 0.5, pz, 'espresso_boost');
       this.addHandlowiecEnemy(`event_marcin_wot_${Date.now()}`, px + 11, Math.max(-12, pz - 4), Math.min(12, pz + 4), 'Zirytowany Kierownik Atlas');
     }
@@ -8740,7 +8740,7 @@ export class MaxFlizGameEngine {
             this.activePerks.shield = false;
             this.invulnerableTimer = 1.2;
             sound.playShieldBreak();
-            this.sayQuote('Kask BHP zamortyzował DYSCYPLINARKĘ Króla-Leto!');
+            this.sayQuote('Kask BHP zamortyzował DYSCYPLINARKĘ Dyrektora Widmo!');
             this.emitFloatingToast('🛡️ BLOK DYSCYPLINARKI!', this.playerPos.x, this.playerPos.y + 1, this.playerPos.z, 'perk');
           } else {
             this.takeDamage('🚨 ZWOLNIENIE DYSCYPLINARNE NA HITA OD KRÓLA-LETO!', 99);
@@ -9369,9 +9369,9 @@ export class MaxFlizGameEngine {
       cooldown: 0.45,
       dustTimer: 0,
     };
-    this.sayQuote('WORLD OF TAAAAANKS! NOOBIE! Zajmijcie pozycje, artyleria system ERP wjeżdża!');
+    this.sayQuote('KONWÓJ WZ-404! DO BOJU! Zajmijcie pozycje, artyleria system ERP wjeżdża!');
     this.callbacks.onPerkDropBanner?.(
-      'WORLD OF TAAAAANKS! NOOBIE!',
+      'KONWÓJ WZ-404! DO BOJU!',
       '🚜',
       'Czołg WZ-404 melduje gotowość. Przez kilka sekund sam namierza i ostrzeliwuje przeciwników.',
       '#8ca34b'
@@ -9907,7 +9907,7 @@ export class MaxFlizGameEngine {
       this.callbacks.onHpUpdate(this.hp, this.maxHp);
       this.activatePerk('order_magnet', 8);
       this.spawnMarcinTank();
-      this.sayQuote('WORLD OF TAAAAANKS! NOOBIE! To nie jest WoT tutorial — artyleria wjeżdża na halę!');
+      this.sayQuote('KONWÓJ WZ-404! DO BOJU! To nie jest WoT tutorial — artyleria wjeżdża na halę!');
     } else if (this.currentCharacterId === 'grzesiek') {
       this.grzesiekCrushTimer = 0.9;
       this.grzesiekCrushPulse = 1.0;
@@ -9985,7 +9985,7 @@ export class MaxFlizGameEngine {
       this.activatePerk('vibram_boots', this.gameMode === 'survival' ? 3.5 : 8);
       this.spawnMateuszCats();
     } else if (this.currentCharacterId === 'piotr') {
-      this.sayQuote('POTRÓJNA FLASZKA ZE SKARBCZYKA! 3x 70% bimbru zza regału B4 – ściana ognia na gresie!');
+      this.sayQuote('POTRÓJNA SALWA PŁONĄCYCH BUTLI! Trzy kapsuły zapalające — ściana ognia na gresie!');
       this.throwBimberMolotov(0);
       if (this.gameMode !== 'survival') {
         this.throwBimberMolotov(-0.28);
