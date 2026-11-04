@@ -7,6 +7,10 @@
 - Nowe 11,8-sekundowe intro Canvas 2D: dynamiczny najazd, alarm, wózek, nadciągająca horda, prezentacja operatorów i plansza tytułowa. Bez zewnętrznego pliku wideo.
 - Manifest PWA, kolor motywu, ikona SVG i strona awaryjna offline z nowym brandingiem.
 - Link do polityki prywatności umieszczony w ustawieniach gry.
+- Integracja AdMob przez `@capacitor-community/admob@8.2.1` (Capacitor 8) z Google UMP consent flow przed inicjalizacją SDK i żądaniami reklamowymi.
+- Dobrowolna reklama rewarded daje jeden dodatkowy przerzut w Survival na run; interstitial pojawia się wyłącznie przy świadomym powrocie do menu po co trzeciej rundzie i z czterominutową przerwą.
+- Brak reklam podczas walki; wersja web/PWA nie wyświetla reklam i nie symuluje nagród.
+- Bez kompletu identyfikatorów wydawcy build używa oficjalnych Google demo ad units oraz `isTesting=true`.
 - Konfiguracja Capacitor 8.6.0: `pl.paleciaki.magazynchaosu`, `dist` jako webDir.
 - Workflow Android QA/release przygotowuje natywny projekt od zera, testuje kod, buduje APK debug i AAB. AAB jest podpisywany wyłącznie po skonfigurowaniu sekretów klucza uploadowego.
 - Wspólne ID operatorów i lokalne klucze starych zapisów pozostają zachowane, aby nie niszczyć danych użytkownika.
@@ -30,6 +34,24 @@ Sekrety używane przez workflow:
 - `ANDROID_KEY_PASSWORD`
 
 Bez tych sekretów workflow buduje APK debug i niepodpisany AAB do kontroli technicznej. Taki AAB nie nadaje się do wysłania jako wydanie w Play Console. Klucz uploadowy przechowuj także w bezpiecznej kopii poza GitHubem; nigdy nie dodawaj go do repozytorium.
+
+## AdMob — konfiguracja przed reklamami produkcyjnymi
+
+Repozytorium odczytuje trzy GitHub Actions Repository Variables (Settings → Secrets and variables → Actions → Variables):
+- `ADMOB_APP_ID` — AdMob App ID dla pakietu `pl.paleciaki.magazynchaosu`;
+- `VITE_ADMOB_REWARDED_ID` — jednostka Rewarded;
+- `VITE_ADMOB_INTERSTITIAL_ID` — jednostka Interstitial.
+
+To identyfikatory konfiguracyjne, nie hasła. Wszystkie trzy muszą być poprawnie ustawione, aby build użył reklam produkcyjnych. Gdy brakuje któregokolwiek, aplikacja używa identyfikatorów demonstracyjnych Google i oznacza żądania `isTesting=true`; nie jest to tryb zarabiania. Android Manifest otrzymuje właściwy App ID w czasie generowania projektu natywnego.
+
+Przed produkcją:
+- utwórz aplikację Android w AdMob z dokładnym identyfikatorem pakietu i jednostki Rewarded oraz Interstitial;
+- skonfiguruj i opublikuj komunikat prywatności EEA/UK, a następnie przetestuj UMP i ekran ponownego zarządzania zgodą;
+- dodaj do witryny wpis `app-ads.txt` z dokładną linią podaną przez AdMob (nie używaj przykładowego Publisher ID);
+- uzupełnij politykę prywatności i formularz Google Play Data safety zgodnie z faktycznym użyciem SDK oraz ustawieniami konta;
+- nie klikaj reklam produkcyjnych; testuj oficjalne jednostki demo lub zarejestrowane urządzenia testowe.
+
+Google Mobile Ads SDK może automatycznie zbierać i udostępniać m.in. adres IP, interakcje z aplikacją, diagnostykę i identyfikatory urządzenia/konta. Ostateczna deklaracja Data safety należy do wydawcy i musi uwzględniać faktyczną wersję SDK oraz konfigurację. Samo dodanie SDK nie uzupełnia formularza Play Console.
 
 ## Polityka prywatności — bloker do uzupełnienia
 
