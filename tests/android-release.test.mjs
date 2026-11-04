@@ -63,7 +63,7 @@ test('Android upload signing helper validates a keystore, stores four GitHub sec
   }
   assert.match(script, /keytool -list/);
   assert.match(script, /gh secret set/);
-  assert.match(script, /gh workflow run android-release\\.yml --ref main/);
+  assert.match(script, /gh workflow run android-release\.yml --ref main/);
   assert.match(script, /gh run watch/);
   assert.doesNotMatch(script, /set -x/);
   assert.match(docs, /bash scripts\/configure-github-android-signing\.sh/);
