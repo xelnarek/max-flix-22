@@ -13,10 +13,10 @@ test('public game identity uses the Paleciaki store title', async () => {
   ]);
 
   assert.match(html, /<title>Paleciaki! Magazyn Chaosu<\/title>/);
-  assert.match(html, /PALECIAKI! <span>STREFA<\/span><em>CHAOSU<\/em>/);
+  assert.match(html, /PALECIAKI! <span>MAGAZYN<\/span><em>CHAOSU<\/em>/);
   assert.match(app, /setAppTitle\('Paleciaki! Magazyn Chaosu'\)/);
   assert.match(intro, /<h1>PALECIAKI!<\/h1>/);
-  assert.match(intro, /STREFA <span>CHAOSU<\/span>/);
+  assert.match(intro, /MAGAZYN <span>CHAOSU<\/span>/);
   assert.match(metadata, /"name": "Paleciaki! Magazyn Chaosu"/);
 });
 
