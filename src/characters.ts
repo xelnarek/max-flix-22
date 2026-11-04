@@ -140,17 +140,17 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     passiveName: 'Weteran B4 — Droga Powrotna',
     passiveDescription: 'Rook ma stały podwójny skok i 100% szansy na drop perków. Klucz grzechotkowy wraca po rzucie, więc dobrze ustawiony tor pozwala przeciąć linię wrogów również podczas powrotu.',
     abilityName: 'Potrójna Salwa Płonących Butli (3 kapsuły zapalające)',
-    abilityDescription: 'Rook wyjmuje zza regału B4 aż 3 płonące butelki specjalna mieszanka zapalająca jednocześnie i miota nimi przed siebie, zamieniając cały korytarz w ścianę żywego ognia!',
+    abilityDescription: 'Rook miota przed siebie trzy kapsuły z mieszanką zapalającą, tworząc krótkotrwałą ścianę ognia w korytarzu!',
     abilityCooldown: 13.5,
     voiceLines: [
       'Zapas płonącej mieszanki! Trzy kapsuły gotowe do użycia!',
       'Z drogi, bo rzucam butlą! To stary przepis magazynowy – pali się lepiej niż napalm!',
-      'Nadzorca Zero myślał, że znalazł wszystkie moje ukryte zapasy? Ta butelka leżakowała od 2012 roku!',
+      'Nadzorca Zero myślał, że znalazł wszystkie moje ukryte zapasy? Ten sprzęt czekał w magazynie od 2012 roku!',
       'Płonąca butla kończy każdy spór o przejazd!',
       'Za moich czasów zimą ogrzewaliśmy się tylko tym koktajlem!',
       'Jeden rzut i w korytarzu robi się ciepło! Ogień na gresie!',
       'Pamiętam jak tu szczere pole było, a Nadzorca Zero jeszcze w pieluchy dzwonił!',
-      'To nie dym, to aromat tradycji z rocznika 2012!'
+      'To tylko dym z urządzenia treningowego!'
     ],
     bio: 'Weteran Kompleks B4, człowiek-instytucja i żywe archiwum każdej reorganizacji, przeprowadzki oraz tajemniczego zniknięcia palety. Zna skróty za regałami, pamięta stare oznaczenia sektorów i wie, które drzwi otwierają się dopiero po mocniejszym pociągnięciu. W zanadrzu trzyma klucz grzechotkowy B4 oraz legendarny zapas płonącej mieszanki, którego pochodzenie pozostaje przedmiotem wewnętrznego dochodzenia. W walce jest wszechstronny, odporny i nie odpuszcza nawet wtedy, gdy reszta zmiany dawno odbiła kartę. Jego motto: „Za moich czasów palety same się nie przesuwały”.',
     stats: {
