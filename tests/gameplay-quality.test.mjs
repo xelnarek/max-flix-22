@@ -146,10 +146,10 @@ test('touch Survival HUD keeps the zoom slider and 3D camera switch accessible',
   const visibleRailRuleIndex = finalHudCss.indexOf('/* Survival camera rail');
   assert.ok(legacyHiddenRuleIndex >= 0 && visibleRailRuleIndex > legacyHiddenRuleIndex, 'the camera rail override must come after the legacy hidden rule');
   assert.match(finalHudCss.slice(visibleRailRuleIndex), /#game-shell\.survival-mode #hud-top \.cam-zoom-slider-container,[\s\S]*?#game-shell\.survival-mode #hud-top #btn-top-camera\s*\{\s*display: flex !important/);
-  assert.match(finalHudCss, /@media \\(max-width: 390px\\)[\\s\\S]*?#game-shell\\.survival-mode #hud-top #btn-top-camera/);
-  assert.match(finalHudCss, /#game-shell\\.survival-mode #hud-top:not\\(\\.hidden\\) #game-speed-control[\\s\\S]*?display: inline-flex !important/);
-  assert.match(finalHudCss, /@media \\(max-width: 390px\\)[\\s\\S]*?\\.game-speed-btn[\\s\\S]*?min-width: 25px !important/);
-  assert.match(finalHudCss, /@media \\(max-width: 350px\\)[\\s\\S]*?#btn-top-sound[\\s\\S]*?display: none !important/);
+  assert.match(finalHudCss, /@media \(max-width: 390px\)[\s\S]*?#game-shell\.survival-mode #hud-top #btn-top-camera/);
+  assert.match(finalHudCss, /#game-shell\.survival-mode #hud-top:not\(\.hidden\) #game-speed-control[\s\S]*?display: inline-flex !important/);
+  assert.match(finalHudCss, /@media \(max-width: 390px\)[\s\S]*?\.game-speed-btn[\s\S]*?min-width: 25px !important/);
+  assert.match(finalHudCss, /@media \(max-width: 350px\)[\s\S]*?#btn-top-sound[\s\S]*?display: none !important/);
   assert.ok(html.indexOf('visual-polish.css') < html.indexOf('hud-layout.css'), 'final touch HUD override must load after legacy visual-polish rules');
 });
 
