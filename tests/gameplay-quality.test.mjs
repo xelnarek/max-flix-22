@@ -193,13 +193,16 @@ test('Survival start locks duplicate taps before awaiting shared asset readiness
 
 
 test('Campaign and Survival HUD no longer reserve or render a minimap lane', async () => {
-  const [layout, baseCss, html] = await Promise.all([
-    read('../src/hud-layout.css'), read('../src/index.css'), read('../index.html')
+  const [layout, baseCss, themeCss, visualCss, html] = await Promise.all([
+    read('../src/hud-layout.css'), read('../src/index.css'),
+    read('../src/theme-enhancements.css'), read('../src/visual-polish.css'), read('../index.html')
   ]);
   assert.match(html, /href="\/src\/hud-layout\.css"/);
   assert.doesNotMatch(html, /id="minimap-container"|id="minimap-canvas"/);
   assert.doesNotMatch(layout, /minimap|radar/i);
   assert.doesNotMatch(baseCss, /minimap|radar/i);
+  assert.doesNotMatch(themeCss, /minimap|radar/i);
+  assert.doesNotMatch(visualCss, /minimap|radar/i);
   assert.match(layout, /#game-shell:not\(\.survival-mode\) #hud-top \.boss-hud-bar[\s\S]*?left: max\(6px/);
   assert.match(layout, /#game-shell\.survival-mode #hud-top \.boss-hud-bar[\s\S]*?top: calc\(112px/);
   assert.match(layout, /#game-shell\.survival-mode #hud-top \.hud-top-stats-row\s*\{\s*display: none !important/);
