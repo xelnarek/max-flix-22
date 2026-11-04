@@ -820,3 +820,19 @@ test('each boss warning stores its owner-specific lane dimensions for dodge vali
     assert.match(call, /, (?:enemy|e)\);$/, 'each lane warning must attach its enemy owner');
   }
 });
+
+
+test('a perfect dodge charges one weapon volley and the Survival HUD exposes the charge', async () => {
+  const [game, mechanics, app] = await Promise.all([
+    read('../src/game.ts'), read('../src/archeroMechanics.ts'), read('../src/index.ts')
+  ]);
+  assert.match(game, /private survivalCounterattackReady = false/);
+  assert.match(game, /this\.survivalCounterattackReady = true/);
+  assert.match(game, /counterattackReady: this\.survivalCounterattackReady/);
+  assert.match(game, /const counterattackReady = this\.survivalCounterattackReady;[\s\S]*?this\.survivalCounterattackReady = false/);
+  assert.match(game, /applyPerfectDodgeCounterattack\(baseWeaponDamage, counterattackReady\)/);
+  assert.match(game, /SALWA \+1/);
+  assert.match(mechanics, /return counterattackReady \? safeDamage \+ 1 : safeDamage/);
+  assert.match(app, /snapshot\.counterattackReady \? ' ✦' : ''/);
+  assert.match(app, /Kontratak naładowany/);
+});
