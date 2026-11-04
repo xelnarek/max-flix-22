@@ -40,7 +40,7 @@ Nie wolno publikować tej strony z placeholderami. Właściciel gry musi potwier
 ## Listing i grafiki sklepu
 
 Propozycja polskiej karty sklepu: `play-store/listing-pl.json`. Workflow Android generuje automatycznie dwa materiały do karty sklepu i dołącza je do artefaktu Actions:
-- `app-icon-512.png` — 512×512, 8-bit RGBA PNG, limit 1 MiB;
+- `app-icon-512.png` — 512×512, 8-bit RGBA PNG z w pełni nieprzezroczystym tłem (alpha 255), limit 1 MiB;
 - `feature-graphic-1024x500.jpg` — 1024×500, JPEG bez kanału alfa.
 
 Pliki trafiają do katalogu `play-store/generated/` wewnątrz artefaktu `paleciaki-android-...`; nie są commitowane do repozytorium. Przed publikacją pobierz artefakt Android QA/release i wgraj oba pliki do sekcji Graphics w Play Console.
