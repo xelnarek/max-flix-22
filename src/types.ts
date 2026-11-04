@@ -262,7 +262,7 @@ export const AVAILABLE_PERKS: PerkDef[] = [
   },
   {
     id: 'vibram_boots',
-    name: 'Buty Magazynowe antypoślizgowe',
+    name: 'Buty Magazynowe Antypoślizgowe',
     description: 'Umożliwia podwójny skok w powietrzu, pozwalając wspinać się na najwyższe regały wysokiego składu.',
     icon: '👟',
     color: 0x10b981,
