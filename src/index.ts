@@ -563,7 +563,7 @@ class MaxFlizScene extends xb.Script {
           dashButton.disabled = !ready;
           dashButton.textContent = ready ? '↗ UNIK' : Math.ceil(remainingSeconds) + 's';
           dashButton.style.opacity = ready ? '1' : '0.72';
-          dashButton.style.setProperty('--dash-progress', String(Math.max(0, Math.min(1, progress))));
+          dashButton.style.setProperty('--dash-progress', (Math.max(0, Math.min(1, progress)) * 100) + '%');
           dashButton.setAttribute('aria-label', ready
             ? 'Unik taktyczny gotowy. Naciśnij Q lub przycisk.'
             : 'Unik taktyczny ładuje się przez ' + Math.ceil(remainingSeconds) + ' sekund.');
