@@ -9765,12 +9765,18 @@ export class MaxFlizGameEngine {
       // sidestep. Pick the side with more free arena space instead of dashing into the lane.
       const sideX = Math.cos(warningDirection);
       const sideZ = -Math.sin(warningDirection);
+      // The connected Campaign map has sector-specific playable depth; do not
+      // use Survival's arena bounds or a stale single-sector rectangle here.
+      const campaignHalfDepth = this.playerPos.x < 116 ? 19 : 21;
+      const dashBounds = this.gameMode === 'campaign'
+        ? { ...this.levelBounds, minZ: -campaignHalfDepth, maxZ: campaignHalfDepth }
+        : this.levelBounds;
       const clearance = (x: number, z: number): number => {
         let available = Number.POSITIVE_INFINITY;
-        if (x > 0.0001) available = Math.min(available, (this.levelBounds.maxX - this.playerPos.x) / x);
-        else if (x < -0.0001) available = Math.min(available, (this.levelBounds.minX - this.playerPos.x) / x);
-        if (z > 0.0001) available = Math.min(available, (this.levelBounds.maxZ - this.playerPos.z) / z);
-        else if (z < -0.0001) available = Math.min(available, (this.levelBounds.minZ - this.playerPos.z) / z);
+        if (x > 0.0001) available = Math.min(available, (dashBounds.maxX - this.playerPos.x) / x);
+        else if (x < -0.0001) available = Math.min(available, (dashBounds.minX - this.playerPos.x) / x);
+        if (z > 0.0001) available = Math.min(available, (dashBounds.maxZ - this.playerPos.z) / z);
+        else if (z < -0.0001) available = Math.min(available, (dashBounds.minZ - this.playerPos.z) / z);
         return Math.max(0, available);
       };
       const leftClearance = clearance(sideX, sideZ);
