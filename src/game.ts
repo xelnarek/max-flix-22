@@ -2170,7 +2170,47 @@ export class PaleciakiGameEngine {
       const rarity = option.id.startsWith('weapon_evolve:')
         ? 'legendary'
         : rollSurvivalUpgradeRarity(Math.random(), this.survivalLevel);
-      return { ...option, ...getSurvivalUpgradeRarityMeta(rarity) };
+      const meta = getSurvivalUpgradeRarityMeta(rarity);
+
+      if (option.id.startsWith('weapon_unlock:')) {
+        const weaponId = option.id.slice('weapon_unlock:'.length) as SurvivalWeaponId;
+        const definition = SURVIVAL_WEAPON_DEFS[weaponId];
+        const initialLevel = getSurvivalWeaponInitialLevel(rarity);
+        return {
+          ...option,
+          description: definition.description + ' Poziom startowy tej karty: ' + initialLevel + '/5.',
+          ...meta,
+        };
+      }
+
+      if (option.id.startsWith('weapon_upgrade:')) {
+        const weaponId = option.id.slice('weapon_upgrade:'.length) as SurvivalWeaponId;
+        const definition = SURVIVAL_WEAPON_DEFS[weaponId];
+        const weapon = this.survivalWeapons.find((entry) => entry.id === weaponId);
+        const currentLevel = weapon?.level || 1;
+        const targetLevel = Math.min(5, currentLevel + getSurvivalWeaponUpgradeSteps(rarity));
+        return {
+          ...option,
+          title: definition.name.toUpperCase() + ' • POZIOM ' + targetLevel,
+          description: 'Rozwijasz broń z poziomu ' + currentLevel + ' do ' + targetLevel + '/5.' +
+            (rarity === 'legendary' ? ' Legendarna karta podnosi poziom o dwa stopnie.' : ''),
+          ...meta,
+        };
+      }
+
+      if (option.id.startsWith('weapon_evolve:')) {
+        return {
+          ...option,
+          description: option.description + ' Rzadkość ewolucji: LEGENDARNA.',
+          ...meta,
+        };
+      }
+
+      return {
+        ...option,
+        description: option.description + ' Siła modułu: ×' + meta.strengthMultiplier.toFixed(2).replace('.', ',') + '.',
+        ...meta,
+      };
     });
     // Guaranteed new-weapon offer while the arsenal is still incomplete.
     // This avoids a long string of stat-only level-ups before the player gets a build identity.
