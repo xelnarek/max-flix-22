@@ -6,9 +6,9 @@ const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
 test('game identity is consistently renamed in the title screen and engine boot', async () => {
   const [html, app] = await Promise.all([read('../index.html'), read('../src/index.ts')]);
-  assert.match(html, /<title>Max-FliX i granica Absurdu<\/title>/);
-  assert.match(html, /MAX-FLIX[\s\S]*granica[\s\S]*Absurdu/);
-  assert.match(app, /setAppTitle\('Max-FliX i granica Absurdu'\)/);
+  assert.match(html, /<title>Operacja B4: Strefa Chaosu<\/title>/);
+  assert.match(html, /OPERACJA B4[\s\S]*STREFA[\s\S]*CHAOSU/);
+  assert.match(app, /setAppTitle\('Operacja B4: Strefa Chaosu'\)/);
 });
 
 test('the five playable operator cards receive individual hand-drawn vector portraits', async () => {
@@ -45,7 +45,7 @@ test('the title easter egg requires a three-click sequence and includes a dismis
 
 test('codex contains the previously missing enemy families', async () => {
   const html = await read('../index.html');
-  for (const name of ['Wózek Widłowy', 'Robot AGV', 'Przedstawiciel Włoski', 'Zdzichu', 'Pomazaniec', 'Sebix M.']) {
+  for (const name of ['Wózek Widłowy', 'Robot AGV', 'Przedstawiciel Włoski', 'Sztaplarz Turbo', 'Pomazaniec', 'Operator Turbo']) {
     assert.ok(html.includes(name), 'missing codex entry: ' + name);
   }
 });
