@@ -82,7 +82,7 @@ const iconPath = resolve(outputDirectory, 'app-icon-512.png');
 writeFileSync(iconPath, iconPng);
 
 const featurePng = run('rsvg-convert', ['--width', '1024', '--height', '500', featureSource]);
-const featureJpeg = run('magick', [
+const featureJpeg = run('convert', [
   'png:-', '-alpha', 'off', '-depth', '8', '-strip', '-quality', '92', 'jpg:-',
 ], featurePng);
 const featureInfo = validateJpeg(featureJpeg, 1024, 500);

@@ -60,6 +60,8 @@ test('Play Store artwork sources and CI exports meet the listing image dimension
   assert.match(artworkScript, /rsvg-convert/);
   assert.match(artworkScript, /--width', '512'[\s\S]*?--height', '512'/);
   assert.match(artworkScript, /--width', '1024'[\s\S]*?--height', '500'/);
+  assert.match(artworkScript, /run\('convert',/);
+  assert.doesNotMatch(artworkScript, /run\('magick',/);
   assert.match(artworkScript, /-alpha', 'off'[\s\S]*?-depth', '8'/);
   assert.match(artworkScript, /colorType !== 6/);
   assert.match(artworkScript, /validateJpeg/);
