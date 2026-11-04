@@ -450,6 +450,7 @@ export class MaxFlizGameEngine {
   private survivalKills = 0;
   private survivalPerfectDodges = 0;
   private survivalCounterattackReady = false;
+  private campaignCounterattackReady = false;
   private survivalWaveStartKills = 0;
   private survivalLevel = 1;
   private survivalXp = 0;
@@ -1220,6 +1221,7 @@ export class MaxFlizGameEngine {
     this.survivalKills = 0;
     this.survivalPerfectDodges = 0;
     this.survivalCounterattackReady = false;
+    this.campaignCounterattackReady = false;
     this.survivalWaveStartKills = 0;
     this.survivalLevel = 1;
     this.survivalXp = 0;
@@ -1242,6 +1244,7 @@ export class MaxFlizGameEngine {
     this.survivalDashUiTimer = 0;
     this.survivalDashLastProgress = -1;
     this.survivalDashLastReady = null;
+    this.updateSurvivalDashCooldown(0, true);
     this.survivalMoveMultiplier = 1;
     this.survivalMagnetMultiplier = 1;
     this.survivalRangeMultiplier = 1;
@@ -4727,7 +4730,7 @@ export class MaxFlizGameEngine {
     if (this.state === 'playing') {
       this.activeElapsedSeconds += simDt;
       this.updateAbilityCooldown(simDt);
-      if (this.gameMode === 'survival') this.updateSurvivalDashCooldown(simDt);
+      this.updateSurvivalDashCooldown(simDt);
       this.updateLootCrates(simDt);
       if (this.invulnerableTimer > 0) this.invulnerableTimer -= simDt;
       if (this.marcinReclamationTimer > 0) this.marcinReclamationTimer = Math.max(0, this.marcinReclamationTimer - simDt);
@@ -6721,8 +6724,8 @@ export class MaxFlizGameEngine {
       speed *= 0.72;
     }
 
-    const isSurvivalDashing = this.gameMode === 'survival' && this.survivalDashDurationRemaining > 0;
-    if (isSurvivalDashing) {
+    const isTacticalDashing = this.survivalDashDurationRemaining > 0;
+    if (isTacticalDashing) {
       this.survivalDashDurationRemaining = Math.max(0, this.survivalDashDurationRemaining - dt);
       this.playerVel.x = this.survivalDashDirection.x * 18;
       this.playerVel.z = this.survivalDashDirection.z * 18;
@@ -8992,6 +8995,11 @@ export class MaxFlizGameEngine {
   public triggerAttack() {
     if (this.state !== 'playing' || this.attackCooldownTimer > 0) return;
 
+    const campaignCounterattackReady = this.gameMode === 'campaign' && this.campaignCounterattackReady;
+    if (campaignCounterattackReady) {
+      this.campaignCounterattackReady = false;
+      this.emitFloatingToast('✦ KONTRATAK! NASTĘPNY ATAK +1 OBRAŻENIE', this.playerPos.x, this.playerPos.y + 1.25, this.playerPos.z, 'combo');
+    }
     const charId = this.currentCharacterId;
     this.attackComboStep = (this.attackComboStep + 1) % 3;
     const isThirdCombo = this.attackComboStep === 0;
@@ -9039,7 +9047,7 @@ export class MaxFlizGameEngine {
         disposeOnRemove: true,
         vel: forward.clone().multiplyScalar(14.2),
         life: getPrimaryAttackLifetimeSeconds('marcin', 14.2),
-        damage: isThirdCombo ? 2 : 1,
+        damage: (isThirdCombo ? 2 : 1) + (campaignCounterattackReady ? 1 : 0),
         pierce: isThirdCombo ? 2 : 1,
         aoeRadius: isThirdCombo ? 1.55 : 1.0,
         stunDuration: isThirdCombo ? 1.15 : 0.55,
@@ -9077,7 +9085,7 @@ export class MaxFlizGameEngine {
         disposeOnRemove: true,
         vel: forward.clone().multiplyScalar(14.6),
         life: getPrimaryAttackLifetimeSeconds('grzesiek', 14.6),
-        damage: isThirdCombo ? 3 : 2,
+        damage: (isThirdCombo ? 3 : 2) + (campaignCounterattackReady ? 1 : 0),
         pierce: isThirdCombo ? 3 : 1,
         stunDuration: 0.65,
         spinSpeed: 13.0,
@@ -9106,7 +9114,7 @@ export class MaxFlizGameEngine {
         disposeOnRemove: true,
         vel: forward.clone().multiplyScalar(14.8),
         life: getPrimaryAttackLifetimeSeconds('dawid', 14.8),
-        damage: isThirdCombo ? 2 : 1,
+        damage: (isThirdCombo ? 2 : 1) + (campaignCounterattackReady ? 1 : 0),
         pierce: isThirdCombo ? 3 : 2,
         slowOnHit: true,
         stunDuration: isThirdCombo ? 1.2 : 0.7,
@@ -9137,7 +9145,7 @@ export class MaxFlizGameEngine {
         disposeOnRemove: true,
         vel: forward.clone().multiplyScalar(19.5),
         life: getPrimaryAttackLifetimeSeconds('mateusz', 19.5),
-        damage: isThirdCombo ? 2 : 1,
+        damage: (isThirdCombo ? 2 : 1) + (campaignCounterattackReady ? 1 : 0),
         pierce: 1,
         slowOnHit: true,
         stunDuration: isThirdCombo ? 1.65 : 1.0,
@@ -9188,7 +9196,7 @@ export class MaxFlizGameEngine {
         vel: forward.clone().multiplyScalar(22.5),
         life: getPiotrBoomerangMaxLifeSeconds(22.5),
         maxLife: getPiotrBoomerangMaxLifeSeconds(22.5),
-        damage: isThirdCombo ? 3 : 2,
+        damage: (isThirdCombo ? 3 : 2) + (campaignCounterattackReady ? 1 : 0),
         pierce: isThirdCombo ? 4 : 2,
         boomerang: true,
         stunDuration: 0.48,
@@ -9698,7 +9706,6 @@ export class MaxFlizGameEngine {
 
   public triggerDash(): boolean {
     if (
-      this.gameMode !== 'survival' ||
       this.state !== 'playing' ||
       this.survivalDashCooldownRemaining > 0.0001 ||
       this.survivalDashDurationRemaining > 0
@@ -9797,7 +9804,9 @@ export class MaxFlizGameEngine {
 
     this.survivalDashDirection.set(directionX, 0, directionZ).normalize();
     this.survivalDashDurationRemaining = dashDuration;
-    this.survivalDashCooldownDuration = getSurvivalDashCooldownSeconds(this.survivalDashCooldownMultiplier);
+    this.survivalDashCooldownDuration = this.gameMode === 'survival'
+      ? getSurvivalDashCooldownSeconds(this.survivalDashCooldownMultiplier)
+      : 7.0;
     this.survivalDashCooldownRemaining = this.survivalDashCooldownDuration;
     // Invulnerability covers the dodge and a short exit window, not a full defensive shield.
     this.invulnerableTimer = Math.max(this.invulnerableTimer, 0.32);
@@ -9807,28 +9816,38 @@ export class MaxFlizGameEngine {
     sound.playAttackWhoosh();
 
     if (isPerfectDodge) {
-      this.survivalPerfectDodges++;
-      // One perfect dodge charges exactly one subsequent weapon volley; charges do not stack.
-      this.survivalCounterattackReady = true;
+      if (this.gameMode === 'survival') {
+        this.survivalPerfectDodges++;
+        // One perfect dodge charges exactly one subsequent weapon volley; charges do not stack.
+        this.survivalCounterattackReady = true;
+      } else {
+        // Campaign has character-specific primary attacks instead of Survival weapons.
+        // Charge one +1 damage hit and consume it on the next valid primary attack.
+        this.campaignCounterattackReady = true;
+      }
       this.score += 100;
       this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
 
-      // A clean last-moment sidestep shortens both the next dodge and the operator's
-      // special recharge. The fixed reward is deliberately smaller than a full reset.
-      this.survivalDashCooldownRemaining = Math.max(1.6, this.survivalDashCooldownRemaining - 1.35);
+      // A clean last-moment sidestep shortens the next dodge and special recharge.
+      this.survivalDashCooldownRemaining = Math.max(
+        this.gameMode === 'survival' ? 1.6 : 2.2,
+        this.survivalDashCooldownRemaining - 1.35
+      );
       this.abilityCooldownState = advanceAbilityCooldown(this.abilityCooldownState, 0.65);
       this.updateAbilityCooldown(0, true);
       this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.65, this.playerPos.z, 0xfacc15);
       this.triggerBloomPulse(0.32);
       this.emitFloatingToast(
-        '✦ PERFECT DODGE! +100 PKT • SALWA +1 • SUPER +0,65 s',
+        this.gameMode === 'survival'
+          ? '✦ PERFECT DODGE! +100 PKT • SALWA +1 • SUPER +0,65 s'
+          : '✦ IDEALNY UNIK BOSSA! +100 PKT • KONTRATAK +1 • SUPER +0,65 s',
         this.playerPos.x,
         this.playerPos.y + 1.35,
         this.playerPos.z,
         'combo'
       );
       sound.playPickup();
-      this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+      if (this.gameMode === 'survival') this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
     } else {
       this.emitFloatingToast('↗ UNIK TAKTYCZNY!', this.playerPos.x, this.playerPos.y + 1.15, this.playerPos.z, 'perk');
     }
