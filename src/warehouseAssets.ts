@@ -738,7 +738,7 @@ export function createTrackSpotlights(length = 6.0): THREE.Group {
 }
 
 /**
- * 3. Max-Fliz Brand Showroom Signboard
+ * 3. B4 Logistics Signboard
  */
 export function getMaxFlizLogoTexture(): THREE.CanvasTexture {
   if (maxFlizSignTexture) return maxFlizSignTexture;
@@ -885,7 +885,7 @@ export function getMarbleTexture(type: 'calacatta' | 'nero' | 'wood' | 'gold_mos
 }
 
 /**
- * 5. Realistic Cardboard Box with Max-Fliz Branding Tape
+ * 5. Realistic Cardboard Box with B4 Branding Tape
  */
 export function getTileBoxTexture(): THREE.CanvasTexture {
   if (tileBoxTexture) return tileBoxTexture;
@@ -1849,7 +1849,7 @@ export function createGroutCollectible(): THREE.Group {
 }
 
 /**
- * 12. Max-Fliz VIP Delivery Van (Sprinter Style Finish Goal)
+ * 12. B4 VIP Delivery Van (Sprinter Style Finish Goal)
  */
 export function createDeliveryVan(): THREE.Group {
   const group = new THREE.Group();
@@ -3142,7 +3142,7 @@ export function createEliteGuardEnemyModel(): {
   const armR = new THREE.Mesh(armGeo, armorMat);
   armR.position.set(0.28, 0.7, 0);
 
-  // Heavy Riot Shield (Tarcza BHP Max-Fliz) in Left Arm
+  // Heavy Riot Shield (Tarcza BHP B4) in Left Arm
   const shield = new THREE.Group();
   const shieldPlate = new THREE.Mesh(
     new THREE.BoxGeometry(0.5, 0.85, 0.05),
@@ -3377,8 +3377,8 @@ export function createHighBayCatwalk(width: number, depth: number): THREE.Group 
 }
 
 /**
- * 38. Piotr's Signature Hidden Bimber Moonshine Bottle (Koktajl Mołotowa)
- * An authentic vintage glass moonshine bottle with a burning rag wick!
+ * 38. Rook's Signature Flame Canister (Koktajl Mołotowa)
+ * A fictional sealed glass canister with a controlled ignition wick.
  */
 export function createBimberBottleMolotov(): {
   group: THREE.Group;
@@ -3399,7 +3399,7 @@ export function createBimberBottleMolotov(): {
   bottleBody.position.y = 0.21;
   bottleBody.castShadow = true;
 
-  // Bimber moonshine liquid inside (golden amber 70%)
+  // Neutral amber ignition compound inside
   const liquidMat = new THREE.MeshStandardMaterial({
     color: 0xf59e0b,
     roughness: 0.1,
@@ -3428,7 +3428,7 @@ export function createBimberBottleMolotov(): {
   const cork = new THREE.Mesh(new THREE.CylinderGeometry(0.046, 0.04, 0.06, 12), corkMat);
   cork.position.y = 0.73;
 
-  // Burning Cloth Wick (Rag soaked in bimber)
+  // Burning Cloth Wick (Ignition cloth)
   const ragMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.8 });
   const rag = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 0.14, 8), ragMat);
   rag.position.set(0.01, 0.8, 0);
@@ -3458,7 +3458,7 @@ export function createBimberBottleMolotov(): {
 }
 
 /**
- * 39. Lingering Burning Pool of Bimber (Morze Ognia Koktajlu Mołotowa)
+ * 39. Lingering Burning Pool (Morze Ognia Koktajlu Mołotowa)
  * Raging flaming ground puddle with animated flickering fire spires!
  */
 export function createMolotovFirePuddle(radius = 3.8): {
@@ -4137,7 +4137,7 @@ export function createLargeTileModel(): THREE.Group {
   const edgeFrame = new THREE.Mesh(edgeGeo, edgeMat);
   group.add(edgeFrame);
 
-  // "MAX-FLIZ GRES 120x280" Stamp
+  // "B4 GRES 120x280" Stamp
   const stampGeo = new THREE.BoxGeometry(0.8, 0.1, 0.4);
   const stampMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
   const stamp = new THREE.Mesh(stampGeo, stampMat);
@@ -4361,7 +4361,7 @@ export function createBosmanKrakowBossModel(): {
 
   const navySuitMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.3 }); // Navy Suit
   const shirtMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
-  const goldBadgeMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.9, roughness: 0.1 }); // KRAKÓW HQ Badge
+  const goldBadgeMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.9, roughness: 0.1 }); // B4 HQ Badge
   const skinMat = new THREE.MeshStandardMaterial({ color: 0xfbd0b0, roughness: 0.4 });
   const redFolderMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.3 }); // Odprawa 3-msc
 
@@ -4500,7 +4500,7 @@ export function createCoffeeVendingMachineModel(): THREE.Group {
   cabinet.castShadow = true;
   group.add(cabinet);
 
-  // Red Accent Header Strip with Max-Fliz Cafe Branding
+  // Red Accent Header Strip with B4 Cafe Branding
   const header = new THREE.Mesh(new THREE.BoxGeometry(0.87, 0.22, 0.67), redTrimMat);
   header.position.y = 1.68;
   group.add(header);
