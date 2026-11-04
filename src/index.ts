@@ -1325,8 +1325,7 @@ class PaleciakiScene extends xb.Script {
       try {
         await assetLoader.waitUntilReady('Gra 3D');
         const ads = await initializeGameAds();
-        document.getElementById('btn-survival-ad-reroll')?.classList.toggle('hidden', !ads.enabled);
-        document.getElementById('btn-ad-privacy-options')?.classList.toggle('hidden', !hasAdPrivacyOptions());
+        syncAdMobSettings(ads);
 
         if (!this.engine || typeof this.engine.startSurvival !== 'function') {
           throw new Error('Silnik Survival Shift nie jest jeszcze gotowy.');
