@@ -558,6 +558,31 @@ class PaleciakiScene extends xb.Script {
                 ? `ŁADOWANIE ${Math.ceil(remainingSeconds)}s • ELIMINACJE ŁADUJĄ`
                 : `ŁADOWANIE ${Math.ceil(remainingSeconds)}s`;
           }
+
+          // Mirror the exact cooldown state on the mobile special-action button.
+          // This prevents blind taps and makes kill-based recharge visible in both
+          // desktop and touch layouts instead of hiding the only useful feedback.
+          const touchAbilityButton = document.getElementById('btn-touch-ability') as HTMLButtonElement | null;
+          if (touchAbilityButton) {
+            const secondsLeft = Math.ceil(Math.max(0, remainingSeconds));
+            const accessibilityLabel = ready
+              ? 'Umiejętność specjalna gotowa. Naciśnij, aby użyć.'
+              : `Umiejętność specjalna ładuje się przez ${secondsLeft} sekund.${killRechargeEnabled ? ' Eliminacje skracają czas ładowania.' : ''}`;
+            touchAbilityButton.disabled = !ready;
+            touchAbilityButton.classList.toggle('is-ready', ready);
+            touchAbilityButton.classList.toggle('is-charging', !ready);
+            touchAbilityButton.style.setProperty(
+              '--ability-cooldown-progress',
+              `${Math.round(Math.max(0, Math.min(1, progress)) * 100)}%`
+            );
+            touchAbilityButton.textContent = ready ? '⚡ MOC' : `⚡ ${secondsLeft}s`;
+            touchAbilityButton.setAttribute('aria-label', accessibilityLabel);
+            touchAbilityButton.title = ready
+              ? 'Superumiejętność gotowa'
+              : killRechargeEnabled
+                ? `Ładowanie: ${secondsLeft}s. Eliminacje skracają czas ładowania.`
+                : `Ładowanie: ${secondsLeft}s`;
+          }
         },
         onSurvivalDashUpdate: (progress, ready, remainingSeconds) => {
           const dashButton = document.getElementById('btn-touch-dash') as HTMLButtonElement | null;

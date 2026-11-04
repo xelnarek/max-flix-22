@@ -4205,3 +4205,33 @@ button {
   cursor: default !important;
   filter: saturate(0.65) !important;
 }
+
+
+/* Special-action cooldown feedback is shared by desktop and touch controls. */
+.ability-touch-btn {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  --ability-cooldown-progress: 100%;
+}
+
+.ability-touch-btn::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from -90deg,
+    rgba(219, 234, 254, .96) var(--ability-cooldown-progress),
+    rgba(15, 23, 42, .12) 0
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  pointer-events: none;
+}
+
+.ability-touch-btn:disabled {
+  cursor: default;
+  filter: saturate(.76);
+  opacity: .9;
+}
