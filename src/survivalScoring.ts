@@ -20,7 +20,7 @@ export function getSurvivalWaveClearBonus(wave: number, killsThisWave: number): 
   const safeKills = safeWholeNumber(killsThisWave, 0);
   if (safeKills < 3) return 0;
 
-  const waveProgress = Math.min(15, safeWave - 1);
+  const waveProgress = Math.min(20, safeWave - 1);
   const killContribution = Math.min(15, safeKills);
   return Math.min(420, 60 + waveProgress * 12 + killContribution * 8);
 }
