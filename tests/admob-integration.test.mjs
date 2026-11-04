@@ -40,14 +40,14 @@ test('Rewarded ad grants Survival reroll only after positive SDK reward', async 
   assert.match(html, /id="btn-survival-ad-reroll"/);
 });
 
-test('Interstitial is limited to chosen result-to-menu transitions', async () => {
+test('Interstitial is limited to the Survival game-over-to-menu transition', async () => {
   const [ads, app] = await Promise.all([
     read('../src/ads.ts'),
     read('../src/index.ts'),
   ]);
   assert.match(ads, /returns % 3 !== 0/);
   assert.match(ads, /4 \* 60 \* 1000/);
-  assert.equal((app.match(/void showInterstitialAfterRun\(\)/g) || []).length, 2);
+  assert.equal((app.match(/void showInterstitialAfterRun\(\)/g) || []).length, 1);
 });
 
 test('UMP privacy-options screen is exposed in settings', async () => {
