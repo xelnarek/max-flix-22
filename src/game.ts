@@ -184,7 +184,7 @@ export interface GameCallbacks {
   onSurvivalDashUpdate?: (progress: number, ready: boolean, remainingSeconds: number) => void;
 }
 
-export class MaxFlizGameEngine {
+export class PaleciakiGameEngine {
   public static readonly ENEMY_QUOTES: Record<string, string[]> = {
     customer: [
       "Gdzie moja faktura proforma?! Czekam od rana!",
@@ -7791,7 +7791,7 @@ export class MaxFlizGameEngine {
         e.shoutTimer = 5.0 + Math.random() * 2.4;
         this.globalEnemyShoutCooldown = 3.1;
         const quoteType = e.survivalAuditor ? 'inspector' : e.type;
-        const quotes = MaxFlizGameEngine.ENEMY_QUOTES[quoteType] || ["Z drogi!"];
+        const quotes = PaleciakiGameEngine.ENEMY_QUOTES[quoteType] || ["Z drogi!"];
         const quote = quotes[Math.floor(Math.random() * quotes.length)];
         e.shoutText = quote;
         this.emitFloatingToast(quote, e.x, e.y + 1.25, e.z, 'enemy_shout', { enemyType: quoteType, enemyName: e.name });
