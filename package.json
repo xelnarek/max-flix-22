@@ -10,9 +10,10 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
-    "android:setup": "npm install --no-save --package-lock=false @capacitor/core@8.6.0 @capacitor/cli@8.6.0 @capacitor/android@8.6.0 && npx cap add android",
-    "android:sync": "npm install --no-save --package-lock=false @capacitor/core@8.6.0 @capacitor/cli@8.6.0 @capacitor/android@8.6.0 && npm run build && npx cap sync android",
-    "android:open": "npx cap open android"
+    "android:setup": "npm install --no-save --package-lock=false @capacitor/core@8.6.0 @capacitor/cli@8.6.0 @capacitor/android@8.6.0 @capacitor/assets@3.0.5 && npx cap add android",
+    "android:sync": "npm install --no-save --package-lock=false @capacitor/core@8.6.0 @capacitor/cli@8.6.0 @capacitor/android@8.6.0 @capacitor/assets@3.0.5 && npm run build && npx cap sync android && npx capacitor-assets generate --android",
+    "android:open": "npx cap open android",
+    "android:prepare-release": "node scripts/prepare-android-release.mjs"
   },
   "dependencies": {
     "@pmndrs/uikit": "^1.0.64",
