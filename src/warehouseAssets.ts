@@ -4645,27 +4645,34 @@ export function createKfcBucketCollectible(): THREE.Group {
   rim.position.y = 0.39;
   group.add(rim);
 
-  // Crispy Golden Fried Chicken Drumsticks sticking out the top!
-  const chickenMat = new THREE.MeshStandardMaterial({
+  // Three glowing energy cartridges rise from the neutral B4 supply container.
+  const cartridgeMat = new THREE.MeshStandardMaterial({
     color: 0x38bdf8,
     emissive: 0x0e7490,
-    emissiveIntensity: 0.35,
-    roughness: 0.45,
+    emissiveIntensity: 0.72,
+    metalness: 0.35,
+    roughness: 0.28,
   });
-  const boneMat = new THREE.MeshStandardMaterial({ color: 0xdbeafe, metalness: 0.65, roughness: 0.28 });
+  const capMat = new THREE.MeshStandardMaterial({
+    color: 0xdbeafe,
+    metalness: 0.72,
+    roughness: 0.22,
+    emissive: 0x1d4ed8,
+    emissiveIntensity: 0.18,
+  });
 
-  for (let i = 0; i < 4; i++) {
-    const angle = (i / 4) * Math.PI * 2 + 0.3;
-    const drumstick = new THREE.Group();
-    const meat = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 10), chickenMat);
-    meat.scale.set(1.2, 0.9, 0.9);
-    const bone = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.12, 8), boneMat);
-    bone.position.set(0.09, 0.05, 0);
-    bone.rotation.z = -0.6;
-    drumstick.add(meat, bone);
-    drumstick.position.set(Math.cos(angle) * 0.09, 0.43, Math.sin(angle) * 0.09);
-    drumstick.rotation.y = angle;
-    group.add(drumstick);
+  for (let i = 0; i < 3; i++) {
+    const angle = (i / 3) * Math.PI * 2;
+    const cartridge = new THREE.Group();
+    const cell = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.055, 0.22, 10), cartridgeMat);
+    cell.castShadow = true;
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.035, 10), capMat);
+    cap.position.y = 0.12;
+    cartridge.add(cell, cap);
+    cartridge.position.set(Math.cos(angle) * 0.09, 0.45, Math.sin(angle) * 0.09);
+    cartridge.rotation.z = (i - 1) * 0.16;
+    cartridge.rotation.x = Math.cos(angle) * 0.11;
+    group.add(cartridge);
   }
 
   // Glowing Aura Ring
