@@ -6858,7 +6858,7 @@ export class MaxFlizGameEngine {
         if (this.gateNoticeCooldown <= 0) {
           const message = campaignGateBoundary < 100
             ? 'BRAMA B ZAMKNIĘTA — POKONAJ BOSMANA W SEKTORZE A'
-            : 'BRAMA C ZAMKNIĘTA — POKONAJ KRÓLA-LETO W SEKTORZE B';
+            : 'BRAMA C ZAMKNIĘTA — POKONAJ DYREKTORA WIDMO W SEKTORZE B';
           this.emitFloatingToast(message, this.playerPos.x, this.playerPos.y + 1.7, this.playerPos.z, 'vip');
           sound.playAlert();
           this.gateNoticeCooldown = 2.4;
@@ -8213,7 +8213,7 @@ export class MaxFlizGameEngine {
               sound.playShieldBreak();
               this.sayQuote('Kask BHP zamortyzował atak Dyrektora Widmo!');
             } else {
-              this.takeDamage('🚨 ZWOLNIENIE DYSCYPLINARNE NA HITA OD KRÓLA-LETO!');
+              this.takeDamage('🚨 ZWOLNIENIE DYSCYPLINARNE NA HITA OD DYREKTORA WIDMO!');
             }
           } else {
             this.takeDamage(`Zaatakował Cię: ${e.name}!`);
@@ -8508,9 +8508,9 @@ export class MaxFlizGameEngine {
       this.triggerScreenShake(0.75, 0.65);
       this.marcinWoTPenaltyTimer = 6.0;
       this.callbacks.onPerkDropBanner?.(
-        '🎮 KIEROWNIK MARCIN PRZEGRYWA W SYMULATOR CZOŁGÓW B4!',
+        '🎮 ATLAS PRZEGRYWA SYMULACJĘ CZOŁGÓW!',
         '💢',
-        'Kierownik stracił czołg w symulatorze czołgów B4 i szuka winnego w alejkach! "Znajdę Ci zajęcie, wesołku..." (-30% szybkości na 6s)',
+        'Atlas przegrał symulację czołgów B4 i szuka winnego w alejkach! "Znajdę Ci zajęcie, wesołku..." (-30% szybkości na 6s)',
         '#f97316'
       );
       this.sayQuote('Kierownik Atlas przegrał bitwę w symulator czołgów B4! "Znajdę Ci zaraz zajęcie, wesołku..."');
@@ -8743,7 +8743,7 @@ export class MaxFlizGameEngine {
             this.sayQuote('Kask BHP zamortyzował DYSCYPLINARKĘ Dyrektora Widmo!');
             this.emitFloatingToast('🛡️ BLOK DYSCYPLINARKI!', this.playerPos.x, this.playerPos.y + 1, this.playerPos.z, 'perk');
           } else {
-            this.takeDamage('🚨 ZWOLNIENIE DYSCYPLINARNE NA HITA OD KRÓLA-LETO!', 99);
+            this.takeDamage('🚨 ZWOLNIENIE DYSCYPLINARNE NA HITA OD DYREKTORA WIDMO!', 99);
           }
         } else if (ep.kind === 'pomazaniec_lollipop') {
           this.takeDamage('🍭 Trafił Cię lizak wystrzelony przez Pomazańca!');
@@ -9907,7 +9907,7 @@ export class MaxFlizGameEngine {
       this.callbacks.onHpUpdate(this.hp, this.maxHp);
       this.activatePerk('order_magnet', 8);
       this.spawnMarcinTank();
-      this.sayQuote('KONWÓJ WZ-404! DO BOJU! To nie jest WoT tutorial — artyleria wjeżdża na halę!');
+      this.sayQuote('KONWÓJ WZ-404! DO BOJU! To nie jest samouczek — artyleria wjeżdża na halę!');
     } else if (this.currentCharacterId === 'grzesiek') {
       this.grzesiekCrushTimer = 0.9;
       this.grzesiekCrushPulse = 1.0;
