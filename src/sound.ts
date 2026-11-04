@@ -1,5 +1,5 @@
 /**
- * Advanced Web Audio procedural sound synthesizer for Max-Fliz 3D.
+ * Advanced Web Audio procedural sound synthesizer for Operacja B4.
  * 100% procedural with zero external audio assets.
  */
 export interface AudioSettings {
