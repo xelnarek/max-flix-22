@@ -24,7 +24,7 @@ export class CinematicIntroManager {
   private lastFrameAt = 0;
   private lastRenderAt = 0;
   private elapsed = 0;
-  private readonly duration = 13.5;
+  private readonly duration = 11.8;
   private frameInterval = 1000 / 30;
   private reducedMotion = false;
   private readonly onResize = () => this.resizeCanvas();
@@ -53,7 +53,7 @@ export class CinematicIntroManager {
     this.lastRenderAt = this.startedAt;
     this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     const mobile = window.innerWidth < 760 || navigator.maxTouchPoints > 0;
-    this.frameInterval = mobile ? 1000 / 30 : 1000 / 45;
+    this.frameInterval = mobile ? 1000 / 30 : 1000 / 48;
     this.mount();
     if (!this.ctx || !this.canvas) {
       this.active = false;
@@ -90,27 +90,27 @@ export class CinematicIntroManager {
     overlay.className = 'cinematic-intro-overlay';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute('aria-label', 'Cinematic opening — Operacja B4: Granica Absurdu');
+    overlay.setAttribute('aria-label', 'Paleciaki! Magazyn Chaosu — animowana odprawa przed grą');
     overlay.innerHTML = `
       <canvas class="cinematic-intro-canvas" aria-hidden="true"></canvas>
       <div class="cinematic-intro-vignette" aria-hidden="true"></div>
       <div class="cinematic-intro-top">
-        <div class="cinematic-intro-brand"><span class="cinematic-live-dot"></span> KOMPLEKS B4 <span>•</span> OPERACJA SPECJALNA</div>
+        <div class="cinematic-intro-brand"><span class="cinematic-live-dot"></span> PALECIAKI! <span>•</span> ZMIANA 03</div>
         <div class="cinematic-intro-status"><span id="cinematic-intro-scene">SYSTEM ONLINE</span><span id="cinematic-intro-time">00:00</span></div>
-        <button id="cinematic-intro-skip" class="cinematic-intro-skip" type="button">POMIŃ INTRO <span aria-hidden="true">↗</span></button>
+        <button id="cinematic-intro-skip" class="cinematic-intro-skip" type="button">POMIŃ ODPRAWĘ <span aria-hidden="true">↗</span></button>
       </div>
       <div class="cinematic-intro-copy">
-        <div class="cinematic-intro-kicker">CENTRUM B4 • OPERACJA SPECJALNA</div>
-        <h1>OPERACJA B4</h1>
-        <div class="cinematic-intro-subtitle">STREFA <span>CHAOSU</span></div>
-        <p>Jedna hala. Pięciu operatorów. Dostawa, której nikt nie zamierza oddać bez walki.</p>
-        <div class="cinematic-intro-tags"><span>KAMPANIA • MEGA-MAPA</span><span>SURVIVAL SHIFT</span><span>BOSSOWIE • EWOLUCJE</span></div>
+        <div class="cinematic-intro-kicker">3D ARCADE • MAGAZYNOWA ROZWAŁKA</div>
+        <h1>PALECIAKI!</h1>
+        <div class="cinematic-intro-subtitle">MAGAZYN <span>CHAOSU</span></div>
+        <p>Za dnia palety. Po godzinach — hordy. Zbieraj perki, rozwijaj broń i przetrwaj zmianę. BHP? Dzisiaj ma wolne.</p>
+        <div class="cinematic-intro-tags"><span>KAMPANIA 3D</span><span>SURVIVAL • HORDY</span><span>PERKI • EWOLUCJE</span></div>
       </div>
       <div class="cinematic-intro-bottom">
         <div class="cinematic-intro-progress"><span id="cinematic-intro-progress"></span></div>
         <div class="cinematic-intro-bottom-row">
-          <span>SEKTOR B4 <b> / </b> STATUS: ZAGROŻENIE</span>
-          <button id="cinematic-intro-play" type="button">WEJDŹ NA ZMIANĘ <span aria-hidden="true">→</span></button>
+          <span>SEKTOR B4 <b> / </b> BHP: NIE ODBIERA</span>
+          <button id="cinematic-intro-play" type="button">ODPAL ZMIANĘ <span aria-hidden="true">→</span></button>
         </div>
       </div>`;
     document.body.appendChild(overlay);
@@ -175,63 +175,71 @@ export class CinematicIntroManager {
     const ctx = this.ctx;
     const canvas = this.canvas;
     if (!ctx || !canvas) return;
+
     const w = canvas.width;
     const h = canvas.height;
-    const p = Math.max(0, Math.min(1, seconds / this.duration));
-    const threat = Math.max(0, 1 - Math.abs(seconds - 5.2) / 2.1);
-    const reveal = Math.max(0, Math.min(1, (seconds - 7.0) / 2.5));
-    const titleIn = Math.max(0, Math.min(1, (seconds - 9.2) / 1.8));
+    const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
+    const progress = clamp01(seconds / this.duration);
+    const alarm = clamp01((seconds - 2.7) / 0.55) * (1 - clamp01((seconds - 7.1) / 0.7));
+    const horde = clamp01((seconds - 3.5) / 1.2) * (1 - clamp01((seconds - 7.4) / 0.9));
+    const teamReveal = clamp01((seconds - 6.1) / 1.8);
+    const titleReveal = clamp01((seconds - 8.0) / 1.15);
+    const impact = Math.max(0, 1 - Math.abs(seconds - 3.55) / 0.26);
 
     const bg = ctx.createLinearGradient(0, 0, w, h);
-    bg.addColorStop(0, '#071322');
-    bg.addColorStop(0.55, '#101c2b');
+    bg.addColorStop(0, '#091b2b');
+    bg.addColorStop(0.48, '#142b3a');
     bg.addColorStop(1, '#050a12');
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, w, h);
 
-    const glow = ctx.createRadialGradient(w * 0.5, h * 0.42, 0, w * 0.5, h * 0.42, w * 0.62);
-    glow.addColorStop(0, 'rgba(31,121,153,0.28)');
-    glow.addColorStop(0.48, 'rgba(18,48,72,0.16)');
-    glow.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = glow;
+    const warehouseGlow = ctx.createRadialGradient(w * 0.52, h * 0.38, 0, w * 0.52, h * 0.38, w * 0.72);
+    warehouseGlow.addColorStop(0, 'rgba(70,154,179,0.30)');
+    warehouseGlow.addColorStop(0.45, 'rgba(20,57,78,0.19)');
+    warehouseGlow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = warehouseGlow;
     ctx.fillRect(0, 0, w, h);
 
-    // A slow cinematic push-in gives the warehouse depth without a video asset.
-    const dolly = 1 + Math.min(0.045, seconds * 0.0032);
-    const forkliftFadeIn = Math.max(0, Math.min(1, (seconds - 1.25) / 0.85));
-    const forkliftFadeOut = 1 - Math.max(0, Math.min(1, (seconds - 7.4) / 1.1));
+    // A short, stepped dolly and one impact beat replace the previous slow, static reveal.
+    const dolly = 1 + Math.min(0.105, seconds * 0.008);
+    const shakeX = impact * Math.sin(seconds * 83) * w * 0.004;
+    const shakeY = impact * Math.cos(seconds * 71) * h * 0.003;
+    const forkliftFadeIn = clamp01((seconds - 0.55) / 0.75);
+    const forkliftFadeOut = 1 - clamp01((seconds - 7.0) / 0.85);
     const forkliftAmount = forkliftFadeIn * forkliftFadeOut;
+
     ctx.save();
-    ctx.translate((w - w * dolly) * 0.5, (h - h * dolly) * 0.5);
+    ctx.translate((w - w * dolly) * 0.5 + shakeX, (h - h * dolly) * 0.5 + shakeY);
     ctx.scale(dolly, dolly);
     this.drawWarehouse(ctx, w, h, seconds);
     this.drawPalletStacks(ctx, w, h, seconds);
     this.drawAtmosphere(ctx, w, h, seconds);
     this.drawForklift(ctx, w, h, seconds, forkliftAmount);
-    this.drawThreat(ctx, w, h, threat, seconds);
-    this.drawOperators(ctx, w, h, reveal, seconds);
-    if (titleIn > 0) this.drawTitleLight(ctx, w, h, titleIn, seconds);
+    this.drawHorde(ctx, w, h, horde, seconds);
+    this.drawThreat(ctx, w, h, alarm, seconds);
+    this.drawOperators(ctx, w, h, teamReveal, seconds);
+    if (titleReveal > 0) this.drawTitleLight(ctx, w, h, titleReveal, seconds);
     ctx.restore();
 
-    const phase = seconds < 3.5 ? 'approach'
-      : seconds < 6.8 ? 'alert'
-      : seconds < 9.5 ? 'team'
+    const phase = seconds < 2.7 ? 'dispatch'
+      : seconds < 6.1 ? 'warning'
+      : seconds < 8.1 ? 'team'
       : 'title';
     if (this.overlay && this.overlay.dataset.phase !== phase) this.overlay.dataset.phase = phase;
-    this.overlay?.classList.toggle('is-alert', phase === 'alert');
+    this.overlay?.classList.toggle('is-alert', phase === 'warning');
     this.overlay?.classList.toggle('is-team-reveal', phase === 'team');
-    this.overlay?.classList.toggle('is-title-reveal', titleIn > 0.04);
+    this.overlay?.classList.toggle('is-title-reveal', titleReveal > 0.04);
 
-    if (this.progress) this.progress.style.width = `${p * 100}%`;
+    if (this.progress) this.progress.style.width = (progress * 100).toFixed(1) + '%';
     if (this.timeLabel) {
       const current = Math.floor(seconds);
-      this.timeLabel.textContent = `00:${String(current).padStart(2, '0')}`;
+      this.timeLabel.textContent = '00:' + String(current).padStart(2, '0');
     }
     if (this.sceneLabel) {
-      this.sceneLabel.textContent = seconds < 3.5 ? 'OBIEKT: CENTRUM LOGISTYCZNE'
-        : seconds < 6.8 ? 'ALERT: SABOTAŻ DOSTAWY'
-        : seconds < 9.5 ? 'OPERATORZY: GOTOWI'
-        : 'PROTOKÓŁ: GRANICA ABSURDU';
+      this.sceneLabel.textContent = seconds < 2.7 ? 'ODPRAWA: ZMIANA ROZPOCZĘTA'
+        : seconds < 6.1 ? 'ALARM: PALETA POSZŁA W RUCH'
+        : seconds < 8.1 ? 'ZAŁOGA: PIĘCIU DO ROZWAŁKI'
+        : 'PROGNOZA: BRAK SPOKOJNEJ ZMIANY';
     }
   }
 
@@ -350,27 +358,119 @@ export class CinematicIntroManager {
   }
 
   private drawThreat(ctx: CanvasRenderingContext2D, w: number, h: number, amount: number, t: number): void {
-    if (amount <= 0) return;
+    if (amount <= 0.01) return;
     ctx.save();
-    const alpha = amount * 0.75;
-    const y = h * (0.48 + Math.sin(t * 4) * 0.025);
-    ctx.fillStyle = `rgba(239,68,68,${alpha * 0.12})`;
-    ctx.fillRect(0, y - h * 0.1, w, h * 0.2);
-    ctx.strokeStyle = `rgba(248,113,113,${alpha})`;
-    ctx.lineWidth = Math.max(2, w / 420);
+    const alpha = amount;
+    const y = h * (0.445 + Math.sin(t * 3.8) * 0.018);
+    const pulse = 0.78 + Math.sin(t * 11) * 0.16;
+
+    // Emergency strobes sweep across the loading lane.
+    ctx.fillStyle = 'rgba(239,68,68,' + (alpha * 0.12) + ')';
+    ctx.fillRect(0, y - h * 0.11, w, h * 0.22);
+    ctx.strokeStyle = 'rgba(255,100,85,' + (alpha * pulse) + ')';
+    ctx.lineWidth = Math.max(2, w / 360);
     ctx.shadowColor = '#ef4444';
-    ctx.shadowBlur = w * 0.018;
+    ctx.shadowBlur = w * 0.022;
     ctx.beginPath();
-    ctx.moveTo(w * 0.12, y);
-    ctx.lineTo(w * 0.88, y);
+    ctx.moveTo(w * 0.06, y);
+    ctx.lineTo(w * 0.94, y);
     ctx.stroke();
     ctx.shadowBlur = 0;
-    ctx.fillStyle = `rgba(239,68,68,${alpha})`;
-    for (let i = 0; i < 7; i++) {
-      const x = w * (0.17 + i * 0.11);
+
+    for (let i = 0; i < 8; i++) {
+      const x = w * (0.1 + i * 0.115);
+      const blink = 0.35 + (Math.sin(t * 16 + i * 1.8) + 1) * 0.32;
+      ctx.fillStyle = 'rgba(255,90,75,' + (alpha * blink) + ')';
       ctx.beginPath();
-      ctx.arc(x, y, w * (0.003 + (i % 2) * 0.002), 0, Math.PI * 2);
+      ctx.arc(x, y, w * 0.0045, 0, Math.PI * 2);
       ctx.fill();
+    }
+
+    // A battered warning placard gives the sequence its punchline.
+    const bannerY = h * 0.31 + Math.sin(t * 5) * h * 0.008;
+    const bannerW = w * 0.62;
+    const bannerH = h * 0.074;
+    ctx.translate(w * 0.5, bannerY);
+    ctx.rotate(-0.025);
+    ctx.fillStyle = 'rgba(8,16,24,' + (alpha * 0.82) + ')';
+    ctx.fillRect(-bannerW * 0.5 - 5, -bannerH * 0.5 - 5, bannerW + 10, bannerH + 10);
+    ctx.fillStyle = 'rgba(190,51,42,' + (alpha * 0.92) + ')';
+    ctx.fillRect(-bannerW * 0.5, -bannerH * 0.5, bannerW, bannerH);
+    ctx.strokeStyle = 'rgba(255,218,176,' + (alpha * 0.82) + ')';
+    ctx.lineWidth = Math.max(1.5, w / 850);
+    ctx.strokeRect(-bannerW * 0.5, -bannerH * 0.5, bannerW, bannerH);
+    ctx.fillStyle = 'rgba(255,245,229,' + alpha + ')';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '1000 ' + Math.max(12, Math.round(w * 0.025)) + 'px system-ui, sans-serif';
+    ctx.fillText('UWAGA: ZMIANA WYMKNĘŁA SIĘ SPOD KONTROLI', 0, 0, bannerW - 24);
+    ctx.restore();
+  }
+
+  private drawHorde(ctx: CanvasRenderingContext2D, w: number, h: number, amount: number, t: number): void {
+    if (amount <= 0.01) return;
+    ctx.save();
+    const count = 6;
+    for (let i = 0; i < count; i++) {
+      const phase = (t * 0.16 + i * 0.145) % 1;
+      const scale = 0.25 + phase * 0.78;
+      const x = w * (0.16 + i * 0.135) + Math.sin(t * 4.4 + i * 2) * w * 0.012;
+      const y = h * (0.49 + phase * 0.28);
+      ctx.save();
+      ctx.globalAlpha = amount * (0.42 + phase * 0.58);
+      ctx.translate(x, y);
+      ctx.scale(scale, scale);
+      const bob = Math.sin(t * 10 + i * 1.7) * 5;
+      ctx.fillStyle = 'rgba(0,0,0,0.36)';
+      ctx.beginPath();
+      ctx.ellipse(0, 63, 42, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Small helmeted silhouettes make the incoming crowd readable as a comic horde.
+      ctx.fillStyle = '#111d27';
+      ctx.beginPath();
+      ctx.arc(0, -22 + bob, 17, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = i % 2 === 0 ? '#e2a84c' : '#83b6bf';
+      ctx.fillRect(-18, -39 + bob, 36, 8);
+      ctx.fillStyle = '#253a47';
+      ctx.beginPath();
+      ctx.moveTo(-22, 0 + bob);
+      ctx.lineTo(22, 0 + bob);
+      ctx.lineTo(30, 44 + bob);
+      ctx.lineTo(-30, 44 + bob);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = i % 2 === 0 ? '#e9a83f' : '#427b89';
+      ctx.beginPath();
+      ctx.moveTo(-18, 8 + bob);
+      ctx.lineTo(17, 8 + bob);
+      ctx.lineTo(13, 29 + bob);
+      ctx.lineTo(-14, 29 + bob);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = '#17232d';
+      ctx.lineWidth = 12;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-18, 7 + bob);
+      ctx.lineTo(-34 + Math.sin(t * 8 + i) * 8, 31 + bob);
+      ctx.moveTo(18, 7 + bob);
+      ctx.lineTo(34 + Math.cos(t * 8 + i) * 8, 28 + bob);
+      ctx.moveTo(-12, 41 + bob);
+      ctx.lineTo(-22 + Math.sin(t * 9 + i) * 7, 61 + bob);
+      ctx.moveTo(12, 41 + bob);
+      ctx.lineTo(23 + Math.cos(t * 9 + i) * 7, 60 + bob);
+      ctx.stroke();
+
+      ctx.fillStyle = '#f1d7b3';
+      ctx.beginPath();
+      ctx.arc(-6, -23 + bob, 2.2, 0, Math.PI * 2);
+      ctx.arc(6, -23 + bob, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     }
     ctx.restore();
   }
@@ -586,16 +686,39 @@ export class CinematicIntroManager {
   }
 
   private drawTitleLight(ctx: CanvasRenderingContext2D, w: number, h: number, amount: number, t: number): void {
-    const light = ctx.createRadialGradient(w * 0.5, h * 0.4, 0, w * 0.5, h * 0.4, w * 0.48);
-    light.addColorStop(0, `rgba(39,139,173,${0.28 * amount})`);
+    const centerX = w * 0.5;
+    const centerY = h * 0.49;
+    const radius = w * (0.13 + amount * 0.43);
+    const light = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+    light.addColorStop(0, 'rgba(255,190,83,' + (0.3 * amount) + ')');
+    light.addColorStop(0.42, 'rgba(48,163,190,' + (0.16 * amount) + ')');
     light.addColorStop(1, 'rgba(39,139,173,0)');
     ctx.fillStyle = light;
     ctx.fillRect(0, 0, w, h);
+
     ctx.save();
-    ctx.globalAlpha = amount * (0.48 + Math.sin(t * 6) * 0.07);
-    ctx.strokeStyle = '#f3b64b';
-    ctx.lineWidth = Math.max(1, w / 1200);
-    ctx.strokeRect(w * 0.12, h * 0.16, w * 0.76, h * 0.62);
+    ctx.globalAlpha = amount * 0.74;
+    ctx.translate(centerX, centerY);
+    ctx.rotate(-0.08 + Math.sin(t * 1.8) * 0.018);
+    ctx.strokeStyle = '#f7bf65';
+    ctx.lineWidth = Math.max(2, w / 650);
+    ctx.shadowColor = '#f5a623';
+    ctx.shadowBlur = w * 0.025;
+    ctx.strokeRect(-w * 0.41, -h * 0.27, w * 0.82, h * 0.54);
+    ctx.shadowBlur = 0;
+
+    // Moving hazard chevrons act as a bold transition into the title card.
+    ctx.strokeStyle = 'rgba(255,215,145,' + (0.35 + amount * 0.42) + ')';
+    ctx.lineWidth = Math.max(2, w / 720);
+    for (let i = -4; i <= 4; i++) {
+      const x = i * w * 0.075 + Math.sin(t * 1.2) * w * 0.012;
+      ctx.beginPath();
+      ctx.moveTo(x - w * 0.026, -h * 0.32);
+      ctx.lineTo(x + w * 0.026, -h * 0.27);
+      ctx.lineTo(x - w * 0.026, -h * 0.22);
+      ctx.stroke();
+    }
     ctx.restore();
   }
+
 }
