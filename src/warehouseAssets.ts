@@ -1260,7 +1260,7 @@ export function createCharacterModel(def: CharacterDef): {
   // 5. Unique signature equipment: the five operators should be readable at a glance.
   const accessory = new THREE.Group();
   if (def.id === 'marcin') {
-    // Optima spell-console: a compact company-software tablet with a glowing work-order screen.
+    // B4 logistics spell-console: a compact company-software tablet with a glowing work-order screen.
     const consoleBody = new THREE.Mesh(
       new THREE.BoxGeometry(0.32, 0.23, 0.055),
       new THREE.MeshStandardMaterial({ color: 0x172554, metalness: 0.55, roughness: 0.3 })
@@ -1270,7 +1270,7 @@ export function createCharacterModel(def: CharacterDef): {
     const screenCtx = screenCanvas.getContext('2d')!;
     screenCtx.fillStyle = '#071426'; screenCtx.fillRect(0, 0, 256, 160);
     screenCtx.fillStyle = '#38bdf8'; screenCtx.font = '900 34px sans-serif';
-    screenCtx.fillText('OPTIMA', 18, 54);
+    screenCtx.fillText('B4 ERP', 18, 54);
     screenCtx.fillStyle = '#86efac'; screenCtx.font = '700 22px monospace';
     screenCtx.fillText('WZ  ✓  404', 18, 96);
     screenCtx.fillStyle = '#fbbf24'; screenCtx.fillRect(18, 118, 184, 8);
@@ -3943,7 +3943,7 @@ export function createCrimeSceneBodyOutlineDecal(label: string = 'RUDY ŚMIERDZI
 }
 
 /**
- * 28. ADDITIONAL BOSS: Król-Leto (Dyrektor Generalny)
+ * 28. ADDITIONAL BOSS: Dyrektor Widmo
  * Imposing Boss with royal crown, suit, and lethal Disciplinary Discharge folder!
  */
 export function createKrolLetoBossModel(): {
@@ -4347,7 +4347,7 @@ export function createSparkZapProjectile(): THREE.Mesh {
 }
 
 /**
- * 34. Mini Boss Bosman z Krakowa (Odprawa 3-msc)
+ * 34. Mini Boss Inspektor Zmiany (Odprawa 3-msc)
  */
 export function createBosmanKrakowBossModel(): {
   group: THREE.Group;
@@ -4439,7 +4439,7 @@ export function createBosmanKrakowBossModel(): {
 }
 
 /**
- * 35. Odprawa 3-msc Clipboard Shockwave Projectile (Bosman z Krakowa)
+ * 35. Odprawa 3-msc Clipboard Shockwave Projectile (Inspektor Zmiany)
  */
 export function createOdprawaClipboardProjectile(): THREE.Mesh {
   const geo = new THREE.BoxGeometry(0.5, 0.65, 0.08);
