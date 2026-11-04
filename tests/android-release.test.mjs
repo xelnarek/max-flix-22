@@ -66,7 +66,7 @@ test('Android upload signing helper validates a keystore, stores four GitHub sec
   assert.match(script, /gh workflow run android-release\\.yml --ref main/);
   assert.match(script, /gh run watch/);
   assert.doesNotMatch(script, /set -x/);
-  assert.match(docs, /bash scripts\\/configure-github-android-signing\\.sh/);
+  assert.match(docs, /bash scripts\/configure-github-android-signing\.sh/);
 });
 
 test('Play Store artwork sources and CI exports meet the listing image dimensions', async () => {
