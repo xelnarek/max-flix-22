@@ -1,0 +1,9 @@
+{
+  "appId": "pl.paleciaki.magazynchaosu",
+  "appName": "Paleciaki! Magazyn Chaosu",
+  "webDir": "dist",
+  "backgroundColor": "#07131d",
+  "android": {
+    "allowMixedContent": false
+  }
+}
