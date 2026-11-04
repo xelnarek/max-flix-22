@@ -2450,11 +2450,9 @@ async function startApp() {
 
     // UMP must refresh consent on every native app launch, before any ad request.
     // It runs in parallel with the final UI reveal; the game itself is never gated by ads.
-    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
-      void initializeGameAds()
-        .then(syncAdMobSettings)
-        .catch((error: unknown) => console.warn('[AdMob] Launch consent check skipped:', error));
-    }
+    void initializeGameAds()
+      .then(syncAdMobSettings)
+      .catch((error: unknown) => console.warn('[AdMob] Launch consent check skipped:', error));
 
     // 7. Reveal UI with high priority
     if (shell) {
