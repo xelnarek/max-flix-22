@@ -4151,7 +4151,7 @@ export class MaxFlizGameEngine {
     this.spawnDroppedPerk(22, 0.5, 6.0, 'golden_paleciak');
     this.spawnDroppedPerk(-28, 0.5, 5.5, 'stretch_armor');
 
-    // Bonus Collectibles, KFC Buckets & Espresso
+    // Bonus Collectibles, Energy Packs & Espresso
     this.addEspressoItem('esp_l1_1', -20, 0.4, 3.5);
     this.addEspressoItem('esp_l1_2', 8, 0.4, -3.5);
     this.addKfcBucketItem('kfc_l1_1', -12, 0.45, 0);
@@ -8433,7 +8433,7 @@ export class MaxFlizGameEngine {
       );
       this.sayQuote('VECTOR PRZYWIÓZŁ ZAPASY ENERGII! Cała zmiana biegnie jak horda zombie — zbierz pakiet, zanim zniknie!');
 
-      // Drop 2 KFC buckets + 1 KFC Perk Crate around the player
+      // Drop 2 energy packs + 1 power-up crate around the player
       this.addKfcBucketItem(`event_kfc_${Date.now()}_1`, px + 4.5, 0.45, THREE.MathUtils.clamp(pz - 2.2, -14, 14));
       this.addKfcBucketItem(`event_kfc_${Date.now()}_2`, px + 6.5, 0.45, THREE.MathUtils.clamp(pz + 2.2, -14, 14));
       this.spawnDroppedPerk(px + 2.8, 0.5, pz, 'kfc_bucket');
@@ -10858,7 +10858,7 @@ export class MaxFlizGameEngine {
       this.callbacks.onHpUpdate(this.hp, this.maxHp);
       this.activePerks.kfcBerserk = Math.max(this.activePerks.kfcBerserk || 0, duration);
       sound.playPerkPickup();
-      this.sayQuote('KUBEŁEK Kubełek Mocy OD VECTORA! +2 Kawy, podwójne obrażenia i odporność na klej!');
+      this.sayQuote('PAKIET ENERGII OD VECTORA! +2 Kawy, podwójne obrażenia i odporność na klej!');
     } else if (perkId === 'golden_paleciak') {
       this.activePerks.bulldozer = Math.max(this.activePerks.bulldozer || 0, duration);
       sound.playPerkPickup();
