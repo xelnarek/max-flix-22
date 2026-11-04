@@ -74,8 +74,13 @@ test('local pending entries are replaced by acknowledged cloud records with the 
 });
 
 
-test('leaderboard record timestamps are displayed in Polish local time', () => {
-  assert.equal(formatLeaderboardTimestamp('2026-11-04T16:30:00.000Z'), '04.11.2026, 17:30');
+test('leaderboard record timestamps use device local time and support deterministic timezone overrides', () => {
+  const value = '2026-11-04T16:30:00.000Z';
+  const expectedLocal = new Intl.DateTimeFormat('pl-PL', {
+    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).format(new Date(value));
+  assert.equal(formatLeaderboardTimestamp(value), expectedLocal);
+  assert.equal(formatLeaderboardTimestamp(value, 'pl-PL', 'Europe/Warsaw'), '04.11.2026, 17:30');
   assert.equal(formatLeaderboardTimestamp('1970-01-01T00:00:00.000Z'), 'DATA NIEZNANA');
   assert.equal(formatLeaderboardTimestamp('not-a-date'), 'DATA NIEZNANA');
 });
