@@ -212,9 +212,8 @@ test('cinematic intro autoplays after boot and is layered above the game shell',
   const [app, css, intro] = await Promise.all([
     read('../src/index.ts'), read('../src/index.css'), read('../src/cinematicIntro.ts')
   ]);
-  assert.match(app, /const introButton = document\.getElementById\('btn-open-cinematic-intro'\)/);
-  assert.match(app, /requestAnimationFrame\(\(\) => requestAnimationFrame\(\(\) => resolve\(\)\)\)/);
-  assert.match(app, /introButton\.click\(\)/);
+  assert.match(app, /this\.engine\.startTitle\(\)[\s\S]*?window\.setTimeout\(\(\) => \{ void launchCinematicIntro\(\); \}, 220\)/);
+  assert.match(app, /new CinematicIntroManager/);
   assert.match(intro, /overlay\.className = 'cinematic-intro-overlay'/);
   assert.match(css, /\.cinematic-intro-overlay\s*\{[\s\S]*?z-index: 20000000 !important/);
 });
