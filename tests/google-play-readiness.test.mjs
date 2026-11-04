@@ -55,3 +55,12 @@ test('score submission never attempts Firestore writes without a Firebase sessio
   assert.match(firebase, /if \(!user && retryOnFailure\) authPromise = null;/);
   assert.match(firebase, /if \(!currentUser\?\.uid\)[\s\S]*?return false;/);
 });
+
+test('npm only runs the reviewed dependency install scripts required by the build', async () => {
+  const pkg = JSON.parse(await read('../package.json'));
+  assert.deepEqual(pkg.allowScripts, {
+    '@firebase/util@1.15.3': true,
+    'esbuild@0.25.12': true,
+    'protobufjs@7.6.6': true,
+  });
+});
