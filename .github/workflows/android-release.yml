@@ -133,5 +133,6 @@ jobs:
             android/app/build/outputs/apk/release/*.apk
             play-store/generated/app-icon-512.png
             play-store/generated/feature-graphic-1024x500.jpg
+            package-lock.json
           if-no-files-found: warn
           retention-days: 21
