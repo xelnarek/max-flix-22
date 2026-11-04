@@ -165,13 +165,17 @@ test('Survival menu copy stays synchronized with the actual 60-second wave clock
   assert.doesNotMatch(html, /FALE CO 42 S/);
 });
 
-test('pixel intro has a single mobile-safe launch path and cannot start twice from touch plus synthetic click', async () => {
-  const [app, intro] = await Promise.all([read('../src/index.ts'), read('../src/pixelIntro.ts')]);
-  assert.match(app, /if \(this\.pixelIntro\?\.isRunning\(\) \|\| pixelIntroLaunchPending\) return/);
-  assert.match(app, /btn-open-pixel-intro'\)\?\.addEventListener\('click', launchPixelIntro\)/);
-  assert.doesNotMatch(app, /btn-open-pixel-intro'\)\?\.addEventListener\('touchend', launchPixelIntro\)/);
-  assert.match(intro, /MAX-FLIX I GRANICA ABSURDU/);
-  assert.match(intro, /INWENTARYZACJA: 0 BŁĘDÓW/);
+test('cinematic intro has one mobile-safe launch path and cannot start twice from touch', async () => {
+  const [app, intro, html] = await Promise.all([
+    read('../src/index.ts'), read('../src/cinematicIntro.ts'), read('../index.html')
+  ]);
+  assert.match(app, /if \(this\.cinematicIntro\?\.isRunning\(\) \|\| cinematicIntroLaunchPending\) return/);
+  assert.match(app, /btn-open-cinematic-intro'\)\?\.addEventListener\('click', launchCinematicIntro\)/);
+  assert.doesNotMatch(app, /btn-open-cinematic-intro'\)\?\.addEventListener\('touchend'/);
+  assert.match(app, /new CinematicIntroManager/);
+  assert.match(intro, /drawWarehouse/);
+  assert.match(html, /id="btn-open-cinematic-intro"/);
+  assert.doesNotMatch(app, /PixelIntroManager|pixelIntro/i);
 });
 
 test('Survival start locks duplicate taps before awaiting shared asset readiness', async () => {
@@ -204,27 +208,23 @@ test('Campaign and Survival HUD no longer reserve or render a minimap lane', asy
 });
 
 
-test('opening Retro Intro autoplays after boot and always layers above the game shell', async () => {
+test('cinematic intro autoplays after boot and is layered above the game shell', async () => {
   const [app, css, intro] = await Promise.all([
-    read('../src/index.ts'), read('../src/index.css'), read('../src/pixelIntro.ts')
+    read('../src/index.ts'), read('../src/index.css'), read('../src/cinematicIntro.ts')
   ]);
-  assert.match(app, /const introButton = document\.getElementById\('btn-open-pixel-intro'\)/);
+  assert.match(app, /const introButton = document\.getElementById\('btn-open-cinematic-intro'\)/);
   assert.match(app, /requestAnimationFrame\(\(\) => requestAnimationFrame\(\(\) => resolve\(\)\)\)/);
   assert.match(app, /introButton\.click\(\)/);
-  assert.match(intro, /overlay\.style\.zIndex = '20000000'/);
-  assert.match(css, /#pixel-intro-overlay\.pixel-intro-overlay\s*\{[\s\S]*?z-index: 20000000 !important/);
-  assert.match(css, /#pixel-intro-overlay::before,[\s\S]*?pointer-events: none !important/);
+  assert.match(intro, /overlay\.className = 'cinematic-intro-overlay'/);
+  assert.match(css, /\.cinematic-intro-overlay\s*\{[\s\S]*?z-index: 20000000 !important/);
 });
 
-test('Retro Intro avoids duplicate touch activation and caps Canvas rendering on mobile', async () => {
-  const intro = await read('../src/pixelIntro.ts');
-  assert.match(intro, /this\.targetFrameIntervalMs = isMobile \? 1000 \/ 30 : 1000 \/ 45/);
-  assert.match(intro, /this\.canvas\.width = mobile \? 960 : 1280/);
-  assert.match(intro, /this\.canvas\.height = mobile \? 540 : 720/);
-  assert.match(intro, /this\.sceneStepElements = Array\.from\(overlay\.querySelectorAll/);
-  assert.match(intro, /INTRO_SUBTITLES\[this\.currentScene\]/);
+test('cinematic intro throttles its Canvas rendering on mobile and cleans up RAF', async () => {
+  const intro = await read('../src/cinematicIntro.ts');
+  assert.match(intro, /this\.frameInterval = mobile \? 1000 \/ 30 : 1000 \/ 45/);
+  assert.match(intro, /const dpr = Math\.min\(1\.5/);
+  assert.match(intro, /cancelAnimationFrame\(this\.rafId\)/);
   assert.doesNotMatch(intro, /addEventListener\('touchend'/);
-  assert.match(intro, /if \(this\.animFrameId !== null\) \{[\s\S]*?cancelAnimationFrame\(this\.animFrameId\)/);
 });
 
 test('Campaign boss proximity UI is throttled and only updates when its state changes', async () => {
@@ -726,13 +726,16 @@ test('level reset releases every per-level hazard model, not only the newest tra
 });
 
 
-test('special ability cooldown has a single authoritative timer and Survival-only kill recharge', async () => {
+test('special ability has one authoritative timer and capped recharge in both modes', async () => {
   const game = await read('../src/game.ts');
   const app = await read('../src/index.ts');
   assert.match(game, /private abilityCooldownState: AbilityCooldownState = createAbilityCooldown\(0\)/);
   assert.match(game, /this\.updateAbilityCooldown\(simDt\)/);
-  assert.match(game, /this\.rechargeAbilityFromSurvivalKill\(isAbilityRechargeElite\)/);
-  assert.doesNotMatch(game, /abilityTimer/);
+  assert.match(game, /this\.rechargeAbilityFromKill\(isAbilityRechargeElite, isAbilityRechargeBoss\)/);
+  assert.match(game, /getAbilityKillRechargeSeconds\(mode, isElite, isBoss\)/);
+  assert.match(game, /getAbilityKillRechargeCapRatio\('campaign'\)/);
+  assert.match(game, /this\.survivalAbilityKillRechargeCapRatio/);
+  assert.doesNotMatch(game, /abilityTimer|rechargeAbilityFromSurvivalKill/);
   assert.match(app, /onAbilityCooldown: \(progress, ready, remainingSeconds, killRechargeEnabled\)/);
   assert.match(app, /GOTOWA \[E\]/);
 });
@@ -772,7 +775,7 @@ test('Survival tactical dodge is directional, invulnerable only for a short wind
   assert.match(app, /onSurvivalDashUpdate: \(progress, ready, remainingSeconds\)/);
   assert.match(app, /bindTouchAction\('btn-touch-dash', \(\) => this\.engine\.triggerDash\(\)\)/);
   assert.match(html, /id="btn-touch-dash"/);
-  assert.match(css, /#game-shell\.survival-mode \.dash-touch-btn\s*\{\s*display: flex !important/);
+  assert.match(css, /\.touch-actions-zone \.dash-touch-btn\s*\{\s*display: flex !important/);
 });
 
 test('critical upgrades are capped, roll once per weapon volley, and can unlock a paired build synergy', async () => {
@@ -915,9 +918,9 @@ test('Campaign special recharge rewards regular kills, elite chains and bosses w
 });
 
 test('new cinematic intro replaces the old pixel/VHS intro and launches at boot', async () => {
-  const [app, intro, html, css, tree] = await Promise.all([
+  const [app, intro, html, css] = await Promise.all([
     read('../src/index.ts'), read('../src/cinematicIntro.ts'),
-    read('../index.html'), read('../src/index.css'), read('../src/pixelIntro.ts').catch(() => '')
+    read('../index.html'), read('../src/index.css')
   ]);
   assert.match(app, /new CinematicIntroManager/);
   assert.match(app, /launchCinematicIntro\(\)/);
