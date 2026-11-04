@@ -11,6 +11,14 @@ import { PaleciakiGameEngine, type SurvivalSnapshot, type SurvivalUpgradeOption 
 import { sound } from './sound.ts';
 import { CinematicIntroManager } from './cinematicIntro.ts';
 import { formatLeaderboardTimestamp } from './leaderboard.ts';
+import {
+  initializeGameAds,
+  areGameAdsReady,
+  hasAdPrivacyOptions,
+  showAdPrivacyOptions,
+  showRewardedRerollAd,
+  showInterstitialAfterRun,
+} from './ads.ts';
 import { CharacterId, PerkType } from './types.ts';
 import { AssetItem, assetLoader } from './assets.ts';
 import { SelectiveBloomPipeline } from './selectiveBloom.ts';
@@ -854,6 +862,35 @@ class PaleciakiScene extends xb.Script {
     );
 
     survivalRerollBtn?.addEventListener('click', () => this.engine.rerollSurvivalUpgrades());
+
+    const rewardedRerollButton = document.getElementById('btn-survival-ad-reroll') as HTMLButtonElement | null;
+    rewardedRerollButton?.addEventListener('click', async () => {
+      if (!areGameAdsReady() || rewardedRerollButton.disabled) return;
+      rewardedRerollButton.disabled = true;
+      const originalLabel = rewardedRerollButton.textContent || '🎬 OGLĄDAJ REKLAMĘ • +1 PRZERZUT';
+      rewardedRerollButton.textContent = 'ŁADOWANIE NAGRODY...';
+      try {
+        const earned = await showRewardedRerollAd();
+        if (earned && this.engine.grantSurvivalRerollFromAd()) {
+          rewardedRerollButton.textContent = '✅ DODATKOWY PRZERZUT ODEBRANY';
+          rewardedRerollButton.setAttribute('aria-label', 'Dodatkowy przerzut za reklamę odebrany');
+        } else {
+          rewardedRerollButton.textContent = 'BRAK NAGRODY — SPRÓBUJ PONOWNIE';
+        }
+      } finally {
+        rewardedRerollButton.disabled = false;
+        window.setTimeout(() => {
+          if (rewardedRerollButton.isConnected) {
+            rewardedRerollButton.textContent = originalLabel;
+            rewardedRerollButton.removeAttribute('aria-label');
+          }
+        }, 2400);
+      }
+    });
+
+    document.getElementById('btn-ad-privacy-options')?.addEventListener('click', () => {
+      void showAdPrivacyOptions();
+    });
     survivalSkipBtn?.addEventListener('click', () => {
       if (this.engine.skipSurvivalUpgrade()) survivalLevelUp?.classList.add('hidden');
     });
@@ -1196,6 +1233,9 @@ class PaleciakiScene extends xb.Script {
 
       try {
         await assetLoader.waitUntilReady('Gra 3D');
+        const ads = await initializeGameAds();
+        document.getElementById('btn-survival-ad-reroll')?.classList.toggle('hidden', !ads.enabled);
+        document.getElementById('btn-ad-privacy-options')?.classList.toggle('hidden', !hasAdPrivacyOptions());
 
         if (!this.engine || typeof this.engine.startGame !== 'function') {
           throw new Error('Silnik gry nie jest jeszcze gotowy.');
@@ -1280,6 +1320,9 @@ class PaleciakiScene extends xb.Script {
 
       try {
         await assetLoader.waitUntilReady('Gra 3D');
+        const ads = await initializeGameAds();
+        document.getElementById('btn-survival-ad-reroll')?.classList.toggle('hidden', !ads.enabled);
+        document.getElementById('btn-ad-privacy-options')?.classList.toggle('hidden', !hasAdPrivacyOptions());
 
         if (!this.engine || typeof this.engine.startSurvival !== 'function') {
           throw new Error('Silnik Survival Shift nie jest jeszcze gotowy.');
@@ -1680,6 +1723,7 @@ class PaleciakiScene extends xb.Script {
       }
       refreshZoneLocks();
       this.engine.startTitle();
+      void showInterstitialAfterRun();
     });
 
     bindTap(document.getElementById('btn-retry'), () => {
@@ -1706,6 +1750,7 @@ class PaleciakiScene extends xb.Script {
       }
       refreshZoneLocks();
       this.engine.startTitle();
+      void showInterstitialAfterRun();
     });
 
     const bindScoreSubmission = (buttonId: string, inputId: string, feedbackId: string) => {
