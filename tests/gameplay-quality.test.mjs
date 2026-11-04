@@ -929,7 +929,7 @@ test('new cinematic intro replaces the old pixel/VHS intro and launches at boot'
   assert.match(intro, /prefers-reduced-motion/);
   assert.match(intro, /drawWarehouse/);
   assert.match(html, /btn-open-cinematic-intro/);
-  assert.match(html, /OPERACJA B4: STREFA CHAOSU/);
+  assert.match(html, /PALECIAKI! MAGAZYN CHAOSU/);
   assert.match(css, /\.cinematic-intro-overlay/);
   assert.doesNotMatch(css, /pixel-intro-overlay|pixel-vhs-header/);
 });
