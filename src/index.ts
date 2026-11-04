@@ -951,7 +951,7 @@ class PaleciakiScene extends xb.Script {
         grzesiek: 'Miota ciężkim stalowym hantlem. Co trzeci rzut jest większy, mocniej odrzuca i przebija kilku przeciwników.',
         dawid: 'Rzuca rolką folii stretch, która owija i spowalnia przeciwników. Co trzeci rzut mocniej wiąże cel.',
         mateusz: 'Strzela pojedynczym impulsem paralizatora. Trafiony przeciwnik dostaje elektryczny stun; co trzeci impuls jest mocniejszy.',
-        piotr: 'Miota ciężkim kluczem grzechotkowym B4. Wiruje, przebija kilka celów i wraca przez tłum do Rooka; co trzeci rzut jest mocniejszy i rozgrzany do czerwoności.',
+        piotr: 'Miota ciężkim kluczem grzechotkowym B4. Wiruje, przebija kilka celów i wraca przez tłum do operatora; co trzeci rzut jest mocniejszy i rozgrzany do czerwoności.',
       };
       if (attackNameElem) attackNameElem.textContent = attackNames[id] || 'Atak';
       if (attackIconElem) { attackIconElem.innerHTML = attackIcons[id] || attackIcons.marcin; attackIconElem.dataset.operatorIcon = id; }
@@ -1061,9 +1061,6 @@ class PaleciakiScene extends xb.Script {
             const rankDisplay = idx < 3 ? rankIcons[idx] : `${idx + 1}.`;
             const heroIds: Record<string, CharacterId> = {
               'Operator 01': 'marcin', 'Operator 02': 'grzesiek', 'Operator 03': 'dawid', 'Operator 04': 'mateusz', 'Operator 05': 'piotr',
-              // Legacy cloud records are mapped to anonymized labels; their old names are never shown.
-              Atlas: 'marcin', Forge: 'grzesiek', Vector: 'dawid', Volt: 'mateusz', Rook: 'piotr',
-              Marcin: 'marcin', Grzesiek: 'grzesiek', Dawid: 'dawid', Mateusz: 'mateusz', Piotr: 'piotr',
             };
             const heroId = heroIds[entry.hero];
             const heroIcon = heroId ? operatorPortrait(heroId) : '👷‍♂️';
