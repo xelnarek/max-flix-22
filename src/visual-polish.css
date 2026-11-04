@@ -2801,3 +2801,12 @@ html[data-ui-landscape-touch="true"] .story-modal-card .story-slide {
       0 0 17px color-mix(in srgb, var(--operator-accent) 32%, transparent);
   }
 }
+
+/* Keep skill rarity accents visible above the shared glass-card border reset. */
+#game-shell .survival-upgrade-card.rarity-common { border-color: rgba(169,184,200,.42) !important; }
+#game-shell .survival-upgrade-card.rarity-rare { border-color: rgba(81,184,238,.62) !important; }
+#game-shell .survival-upgrade-card.rarity-epic { border-color: rgba(179,138,255,.72) !important; }
+#game-shell .survival-upgrade-card.rarity-legendary {
+  border-color: rgba(244,191,85,.9) !important;
+  box-shadow: inset 0 0 0 1px rgba(244,191,85,.20), 0 0 18px rgba(244,191,85,.13) !important;
+}
