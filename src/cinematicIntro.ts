@@ -115,11 +115,11 @@ export class CinematicIntroManager {
       </div>`;
     document.body.appendChild(overlay);
     this.overlay = overlay;
-    this.canvas = overlay.querySelector('.cinematic-intro-canvas');
+    this.canvas = overlay.querySelector<HTMLCanvasElement>('.cinematic-intro-canvas');
     this.ctx = this.canvas?.getContext('2d', { alpha: false }) ?? null;
-    this.progress = overlay.querySelector('#cinematic-intro-progress');
-    this.timeLabel = overlay.querySelector('#cinematic-intro-time');
-    this.sceneLabel = overlay.querySelector('#cinematic-intro-scene');
+    this.progress = overlay.querySelector<HTMLElement>('#cinematic-intro-progress');
+    this.timeLabel = overlay.querySelector<HTMLElement>('#cinematic-intro-time');
+    this.sceneLabel = overlay.querySelector<HTMLElement>('#cinematic-intro-scene');
 
     this.resizeCanvas();
     overlay.querySelector('#cinematic-intro-skip')?.addEventListener('click', () => this.stop());
