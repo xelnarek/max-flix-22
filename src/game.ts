@@ -1188,8 +1188,8 @@ export class PaleciakiGameEngine {
     // The title screen uses its own UI backdrop. Do not construct a hidden campaign world at boot.
   }
 
-  public startGame(levelId = 1, buildCampaignLevel = true) {
-    this.gameMode = buildCampaignLevel ? 'campaign' : 'survival';
+  private resetSurvivalRun() {
+    this.gameMode = 'survival';
     this.state = 'playing';
     sound.startMusic();
     this.maxHp = 3;
@@ -1306,8 +1306,7 @@ export class PaleciakiGameEngine {
 
     this.callbacks.onPerksUpdate?.(this.activePerks);
     this.callbacks.onSpeechBubble('');
-    if (buildCampaignLevel) this.loadLevel(levelId);
-    else this.clearLevel();
+    this.clearLevel();
     this.callbacks.onHpUpdate(this.hp, this.maxHp);
     this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
     this.sayRandomVoiceLine();
@@ -1315,7 +1314,7 @@ export class PaleciakiGameEngine {
 
   public startSurvival() {
     // Reset shared combat state without constructing a campaign level, then build the dedicated Survival arena.
-    this.startGame(1, false);
+    this.resetSurvivalRun();
     this.gameMode = 'survival';
     this.updateAbilityCooldown(0, true);
     this.rebuildPlayerMesh();
