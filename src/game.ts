@@ -326,6 +326,7 @@ export class MaxFlizGameEngine {
   public threeRenderer: THREE.WebGLRenderer | null = null;
 
   private state: GameState = 'title';
+  private timeScale: 1 | 2 = 1;
   private currentCharacterId: CharacterId = 'marcin';
   private charDef: CharacterDef;
   private coffeeMachines: { mesh: THREE.Group; x: number; y: number; z: number; cooldown: number }[] = [];
@@ -1878,6 +1879,16 @@ export class MaxFlizGameEngine {
 
   public getGameMode(): 'campaign' | 'survival' {
     return this.gameMode;
+  }
+
+  /** Game simulation speed; rendering remains controlled by the display refresh rate. */
+  public getTimeScale(): 1 | 2 {
+    return this.timeScale;
+  }
+
+  public setTimeScale(scale: number): 1 | 2 {
+    this.timeScale = scale >= 1.5 ? 2 : 1;
+    return this.timeScale;
   }
 
   public getSurvivalSnapshot(): SurvivalSnapshot {
@@ -4718,6 +4729,8 @@ export class MaxFlizGameEngine {
   public update(dt: number) {
     if (this.state !== 'playing' && this.state !== 'title') return;
 
+    const frameDt = Number.isFinite(dt) ? Math.max(0, dt) : 0.016;
+    dt = Math.min(0.12, frameDt * (this.state === 'playing' ? this.timeScale : 1));
     let effectiveDt = dt;
     if (this.hitStopTimer > 0) {
       this.hitStopTimer = Math.max(0, this.hitStopTimer - dt);
@@ -9668,18 +9681,27 @@ export class MaxFlizGameEngine {
     this.abilityCooldownUiTimer = 0.08;
   }
 
-  private rechargeAbilityFromSurvivalKill(isElite: boolean) {
-    if (this.gameMode !== 'survival' || this.abilityCooldownState.remainingSeconds <= 0.0001) return;
-    const requestedSeconds = (isElite ? 0.78 : 0.16) * this.survivalAbilityKillRechargeMultiplier;
-    const rechargeLimit = this.abilityCooldownState.durationSeconds * this.survivalAbilityKillRechargeCapRatio;
+  private rechargeAbilityFromKill(isElite: boolean) {
+    if (this.abilityCooldownState.remainingSeconds <= 0.0001) return;
+    const isSurvival = this.gameMode === 'survival';
+    const baseRechargeSeconds = isSurvival
+      ? (isElite ? 0.78 : 0.16)
+      : (isElite ? 0.82 : 0.20);
+    // Archero-style kill chains reward active play without allowing instant ability loops.
+    const chainMultiplier = 1 + Math.min(0.35, Math.max(0, this.comboStreak - 1) * 0.04);
+    const modeMultiplier = isSurvival ? this.survivalAbilityKillRechargeMultiplier : 1;
+    const requestedSeconds = baseRechargeSeconds * modeMultiplier * chainMultiplier;
+    const capRatio = isSurvival ? this.survivalAbilityKillRechargeCapRatio : 0.28;
+    const rechargeLimit = this.abilityCooldownState.durationSeconds * capRatio;
     const result = applyAbilityKillRecharge(this.abilityCooldownState, requestedSeconds, rechargeLimit);
     if (result.rechargedSeconds <= 0) return;
 
     this.abilityCooldownState = result.state;
     this.updateAbilityCooldown(0, true);
-    if (isElite) {
+    if (isElite || this.comboStreak % 5 === 0) {
+      const chainLabel = this.comboStreak >= 5 ? ' • SERIA x' + this.comboStreak : '';
       this.emitFloatingToast(
-        '⚡ ELITARNY ŁADUNEK +' + result.rechargedSeconds.toFixed(1) + ' s',
+        '⚡ ŁADUNEK SPECJALNY +' + result.rechargedSeconds.toFixed(1) + ' s' + chainLabel,
         this.playerPos.x,
         this.playerPos.y + 1.55,
         this.playerPos.z,
@@ -10254,12 +10276,12 @@ export class MaxFlizGameEngine {
     const finalPoints = Math.round(points * comboMultiplier * survivalDifficultyMultiplier);
     this.score += finalPoints;
     this.handleMateuszPassive(2);
+    const isAbilityRechargeElite =
+      e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' ||
+      e.type === 'elite_walczak_guard' || e.type === 'sebix_m' || e.maxHp >= 4;
+    this.rechargeAbilityFromKill(isAbilityRechargeElite);
     if (this.gameMode === 'survival') {
       this.survivalKills++;
-      const isAbilityRechargeElite =
-        e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' ||
-        e.type === 'elite_walczak_guard' || e.type === 'sebix_m' || e.maxHp >= 4;
-      this.rechargeAbilityFromSurvivalKill(isAbilityRechargeElite);
       const isShiftMilestone = this.survivalKills % 8 === 0;
       const baseXpDrop = e.maxHp >= 4 ? 3 : 1;
       // Merge the small milestone bonus into the normal gem instead of spawning
