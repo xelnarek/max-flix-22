@@ -44,3 +44,28 @@ test('Android CI builds API 36 AAB and a debug APK without embedding credentials
   assert.match(workflow, /upload-artifact@v4/);
   assert.doesNotMatch(workflow, /-----BEGIN (?:RSA )?PRIVATE KEY-----/);
 });
+
+test('Play Store artwork sources and CI exports meet the listing image dimensions', async () => {
+  const [iconSvg, featureSvg, artworkScript, workflow, listingText] = await Promise.all([
+    read('../resources/icon-only.svg'),
+    read('../play-store/feature-graphic.svg'),
+    read('../scripts/prepare-play-store-artwork.mjs'),
+    read('../.github/workflows/android-release.yml'),
+    read('../play-store/listing-pl.json'),
+  ]);
+  const listing = JSON.parse(listingText);
+
+  assert.match(iconSvg, /width="1024" height="1024"/);
+  assert.match(featureSvg, /width="1024" height="500"/);
+  assert.match(artworkScript, /rsvg-convert/);
+  assert.match(artworkScript, /--width', '512'[\s\S]*?--height', '512'/);
+  assert.match(artworkScript, /--width', '1024'[\s\S]*?--height', '500'/);
+  assert.match(artworkScript, /-alpha', 'off'[\s\S]*?-depth', '8'/);
+  assert.match(artworkScript, /colorType !== 6/);
+  assert.match(artworkScript, /validateJpeg/);
+  assert.match(workflow, /sudo apt-get install -y librsvg2-bin imagemagick/);
+  assert.match(workflow, /node scripts\/prepare-play-store-artwork\.mjs/);
+  assert.match(workflow, /play-store\/generated\/app-icon-512\.png/);
+  assert.match(workflow, /play-store\/generated\/feature-graphic-1024x500\.jpg/);
+  assert.ok(listing.shortDescription.length <= 80, 'Google Play short description must be at most 80 characters');
+});
