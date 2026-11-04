@@ -25,7 +25,7 @@
 
 ## GitHub Actions — podpisywanie
 
-Do automatycznego ustawienia wszystkich czterech sekretów i uruchomienia podpisanego builda służy skrypt `bash scripts/configure-github-android-signing.sh`. Wymaga GitHub CLI (`gh auth login`) oraz JDK z `keytool`. Skrypt pyta o ścieżkę do pliku JKS, alias i hasła; weryfikuje keystore, zapisuje sekrety bez wyświetlania ich wartości, a następnie uruchamia workflow Android na `main` i czeka na wynik.
+Do automatycznego ustawienia wszystkich czterech sekretów i uruchomienia podpisanego builda służy skrypt `bash scripts/configure-github-android-signing.sh`. Wymaga GitHub CLI (`gh auth login`) oraz JDK z `keytool`. Skrypt pyta o ścieżkę do pliku JKS, alias i hasła; domyślny alias to `paleciaki-upload`, a certyfikat jest porównywany z oczekiwanym fingerprintem upload key projektu przed zmianą sekretów. Sekrety są zapisywane bez wyświetlania ich wartości, po czym skrypt uruchamia workflow Android na `main` i czeka na wynik.
 
 Sekrety używane przez workflow:
 - `ANDROID_UPLOAD_KEYSTORE_BASE64` — plik keystore zakodowany Base64.
@@ -47,6 +47,8 @@ Wymagana konfiguracja GitHub:
 - Konto usługi musi mieć włączone Google Play Android Developer API, być zaproszone w Play Console i mieć uprawnienia do tej aplikacji.
 
 Krok uploadu jest przypięty do konkretnego commitu akcji `r0adkll/upload-google-play`. Przed wywołaniem weryfikowane są podpis AAB i poziomy SDK. Brak podpisu lub brak JSON konta usługi zatrzyma zadanie. Wysyłany jest wyłącznie AAB na ścieżkę `internal` ze statusem `completed`; nie ma kroku publikacji na `production`.
+
+Do ustawienia brakującego sekretu konta usługi i włączenia zmiennej uploadu służy `bash scripts/configure-google-play-upload.sh`. Skrypt najpierw sprawdza obecność czterech sekretów podpisywania Androida, waliduje lokalny plik JSON (bez wypisywania klucza prywatnego), zapisuje `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`, ustawia `GOOGLE_PLAY_UPLOAD_ENABLED=true` i uruchamia workflow. Nie przełącza ścieżki na produkcyjną.
 
 Po przesłaniu wersji testerzy muszą zostać dodani do listy testerów / grupy w Play Console. Dostępność testu i link do dołączenia należy pobrać z Play Console.
 
