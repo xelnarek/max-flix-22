@@ -45,6 +45,30 @@ test('Android CI builds API 36 AAB and a debug APK without embedding credentials
   assert.doesNotMatch(workflow, /-----BEGIN (?:RSA )?PRIVATE KEY-----/);
 });
 
+
+test('Android upload signing helper validates a keystore, stores four GitHub secrets and dispatches a signed build', async () => {
+  const [script, workflow, docs] = await Promise.all([
+    read('../scripts/configure-github-android-signing.sh'),
+    read('../.github/workflows/android-release.yml'),
+    read('../docs/GOOGLE_PLAY_READINESS.md'),
+  ]);
+  for (const secret of [
+    'ANDROID_UPLOAD_KEYSTORE_BASE64',
+    'ANDROID_KEYSTORE_PASSWORD',
+    'ANDROID_KEY_ALIAS',
+    'ANDROID_KEY_PASSWORD',
+  ]) {
+    assert.match(script, new RegExp(secret));
+    assert.match(workflow, new RegExp('secrets\\.' + secret));
+  }
+  assert.match(script, /keytool -list/);
+  assert.match(script, /gh secret set/);
+  assert.match(script, /gh workflow run android-release\.yml --ref main/);
+  assert.match(script, /gh run watch/);
+  assert.doesNotMatch(script, /set -x/);
+  assert.match(docs, /bash scripts\/configure-github-android-signing\.sh/);
+});
+
 test('Play Store artwork sources and CI exports meet the listing image dimensions', async () => {
   const [iconSvg, iconBackgroundSvg, featureSvg, artworkScript, workflow, listingText] = await Promise.all([
     read('../resources/icon-only.svg'),

@@ -21,13 +21,15 @@
 
 ## GitHub Actions — podpisywanie
 
-W repozytorium dodaj sekrety Actions:
+Do automatycznego ustawienia wszystkich czterech sekretów i uruchomienia podpisanego builda służy skrypt `bash scripts/configure-github-android-signing.sh`. Wymaga GitHub CLI (`gh auth login`) oraz JDK z `keytool`. Skrypt pyta o ścieżkę do pliku JKS, alias i hasła; weryfikuje keystore, zapisuje sekrety bez wyświetlania ich wartości, a następnie uruchamia workflow Android na `main` i czeka na wynik.
+
+Sekrety używane przez workflow:
 - `ANDROID_UPLOAD_KEYSTORE_BASE64` — plik keystore zakodowany Base64.
 - `ANDROID_KEYSTORE_PASSWORD`
 - `ANDROID_KEY_ALIAS`
 - `ANDROID_KEY_PASSWORD`
 
-Bez tych sekretów workflow buduje APK debug i niepodpisany AAB do kontroli technicznej. Taki AAB nie nadaje się do wysłania jako produkcyjne wydanie w Play Console. Klucz uploadowy przechowuj także w bezpiecznej kopii poza GitHubem.
+Bez tych sekretów workflow buduje APK debug i niepodpisany AAB do kontroli technicznej. Taki AAB nie nadaje się do wysłania jako wydanie w Play Console. Klucz uploadowy przechowuj także w bezpiecznej kopii poza GitHubem; nigdy nie dodawaj go do repozytorium.
 
 ## Polityka prywatności — bloker do uzupełnienia
 
