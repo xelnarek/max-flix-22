@@ -910,7 +910,7 @@ test('Campaign special recharge rewards regular kills, elite chains and bosses w
   assert.match(game, /getAbilityKillRechargeSeconds\(mode, isElite, isBoss\)/);
   assert.match(game, /getAbilityKillRechargeCapRatio\('campaign'\)/);
   assert.match(game, /this\.rechargeAbilityFromKill\(isAbilityRechargeElite, isAbilityRechargeBoss\)/);
-  assert.match(game, /this\.gameMode === 'survival'[\s\S]{0,200}this\.survivalAbilityKillRechargeCapRatio/);
+  assert.match(game, /const capRatio = mode === 'survival'[\s\S]{0,80}this\.survivalAbilityKillRechargeCapRatio/);
   assert.match(game, /this\.abilityCooldownState\.remainingSeconds,\s*true\s*\)/);
 });
 
