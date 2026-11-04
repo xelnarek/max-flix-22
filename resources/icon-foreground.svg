@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs><linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#ffe3a3"/><stop offset=".55" stop-color="#f0b052"/><stop offset="1" stop-color="#a95c22"/></linearGradient><linearGradient id="cyan" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#a4f2ff"/><stop offset="1" stop-color="#168fb3"/></linearGradient><filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="22"/></filter></defs>
+<ellipse cx="520" cy="824" rx="315" ry="58" fill="#000" opacity=".42" filter="url(#shadow)"/>
+<!-- Parcel stack -->
+<path d="M276 348 492 225 718 350 498 480Z" fill="url(#gold)" stroke="#fff0cd" stroke-width="18" stroke-linejoin="round"/>
+<path d="M276 348V600L498 732V480Z" fill="#a9612d" stroke="#f2c477" stroke-width="16" stroke-linejoin="round"/>
+<path d="M498 480 718 350V606L498 732Z" fill="#75451f" stroke="#e3aa60" stroke-width="16" stroke-linejoin="round"/>
+<path d="M382 287 598 412M382 287V540" stroke="#fff1d2" stroke-opacity=".55" stroke-width="18"/>
+<!-- Secondary blue parcel -->
+<path d="M484 424 657 326 812 414 634 519Z" fill="#a9e3ea" stroke="#e4fdff" stroke-width="16" stroke-linejoin="round"/>
+<path d="M484 424V608L634 699V519Z" fill="#2c7d92" stroke="#c5f6fb" stroke-width="14" stroke-linejoin="round"/>
+<path d="M634 519 812 414V597L634 699Z" fill="#16586c" stroke="#bceff5" stroke-width="14" stroke-linejoin="round"/>
+<!-- Pallet deck -->
+<path d="M180 686 634 686 855 558 402 558Z" fill="#f0bb69" stroke="#ffe2a5" stroke-width="16" stroke-linejoin="round"/>
+<path d="M180 686V758L634 758V686Z" fill="#a95f29"/>
+<path d="M634 686V758L855 630V558Z" fill="#75421e"/>
+<path d="M267 704V770M425 704V770M581 704V770" stroke="#ffe3ac" stroke-width="26"/>
+<!-- Pallet-jack handle -->
+<path d="M237 666 183 298Q177 255 220 247L292 236" fill="none" stroke="url(#cyan)" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M255 666 331 710H431" fill="none" stroke="url(#cyan)" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M250 674 223 716V754" fill="none" stroke="#e8fbff" stroke-width="20" stroke-linecap="round"/>
+<circle cx="273" cy="788" r="58" fill="#061522" stroke="#8deaff" stroke-width="20"/><circle cx="273" cy="788" r="20" fill="#f5c36f"/>
+<circle cx="681" cy="788" r="58" fill="#061522" stroke="#8deaff" stroke-width="20"/><circle cx="681" cy="788" r="20" fill="#f5c36f"/>
+<!-- Electric punch -->
+<path d="m750 136-136 219h104l-81 193 236-280H760Z" fill="#fff0aa" stroke="#f5b84f" stroke-width="18" stroke-linejoin="round"/>
+</svg>

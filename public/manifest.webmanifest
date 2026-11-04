@@ -1,0 +1,29 @@
+{
+  "id": "./",
+  "name": "Paleciaki! Magazyn Chaosu",
+  "short_name": "Paleciaki!",
+  "description": "3D magazynowa gra akcji. Kampania, hordy, perki, bossowie i ewolucje broni.",
+  "lang": "pl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#07131d",
+  "theme_color": "#07131d",
+  "categories": [
+    "games",
+    "action"
+  ],
+  "icons": [
+    {
+      "src": "./icons/b4-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

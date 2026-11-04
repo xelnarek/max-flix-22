@@ -1,8 +1,6 @@
 {
-  "name": "Operacja B4: Strefa Chaosu",
-  "description": "Mobilna gra akcji 3D w fikcyjnym kompleksie logistycznym B4.",
+  "name": "Paleciaki! Magazyn Chaosu",
+  "description": "Trójwymiarowa gra akcji w magazynowym świecie. Kampania, Survival, hordy przeciwników, perki i ewolucje broni.",
   "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
+  "majorCapabilities": []
 }

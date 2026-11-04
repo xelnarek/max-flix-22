@@ -7,7 +7,7 @@ import {
   getTopLeaderboard,
   testFirestoreConnection,
 } from './firebase.ts';
-import { MaxFlizGameEngine, type SurvivalSnapshot, type SurvivalUpgradeOption } from './game.ts';
+import { PaleciakiGameEngine, type SurvivalSnapshot, type SurvivalUpgradeOption } from './game.ts';
 import { sound } from './sound.ts';
 import { CinematicIntroManager } from './cinematicIntro.ts';
 import { formatLeaderboardTimestamp } from './leaderboard.ts';
@@ -107,8 +107,8 @@ const escapeLeaderboardText = (value: string): string => value.replace(/[&<>"']/
     default: return character;
   }
 });
-class MaxFlizScene extends xb.Script {
-  private engine!: MaxFlizGameEngine;
+class PaleciakiScene extends xb.Script {
+  private engine!: PaleciakiGameEngine;
   private cinematicIntro: CinematicIntroManager | null = null;
   private selectedCharId: CharacterId = 'marcin';
   private selectedLevelId: number = 1;
@@ -509,7 +509,7 @@ class MaxFlizScene extends xb.Script {
       }, 6100);
     };
 
-    this.engine = new MaxFlizGameEngine(
+    this.engine = new PaleciakiGameEngine(
       this as unknown as THREE.Scene,
       this.camera,
       (container || document.body) as HTMLElement,
@@ -1511,11 +1511,18 @@ class MaxFlizScene extends xb.Script {
     });
     syncAudioSettingsUI();
 
+    const pauseModal = document.getElementById('pause-modal');
     const handlePause = () => {
+      if (this.engine.getGameState() !== 'playing') return;
       this.engine.togglePause();
-      const pauseModal = document.getElementById('pause-modal');
       pauseModal?.classList.remove('hidden');
     };
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && this.engine.getGameState() === 'playing') {
+        this.engine.togglePause();
+        pauseModal?.classList.remove('hidden');
+      }
+    });
     bindTap(document.getElementById('btn-top-pause'), handlePause);
     bindTap(document.getElementById('btn-pause'), handlePause);
 
@@ -2178,7 +2185,7 @@ class MaxFlizScene extends xb.Script {
 
 // Visual Polish / Theme Injections (Integrated to ensure execution)
 const injectThemeStyles = () => {
-  if (document.getElementById('maxfliz-inline-theme')) return;
+  if (document.getElementById('paleciaki-inline-theme')) return;
   
   // Set theme variables
   const root = document.documentElement;
@@ -2188,7 +2195,7 @@ const injectThemeStyles = () => {
   root.style.setProperty('--maxfliz-blue', '#38bdf8');
 
   const style = document.createElement('style');
-  style.id = 'maxfliz-inline-theme';
+  style.id = 'paleciaki-inline-theme';
   style.textContent = `
     #game-canvas-container {
       z-index: 1 !important;
@@ -2249,7 +2256,7 @@ const injectThemeStyles = () => {
 };
 
 async function startApp() {
-  console.log('%c[App:Boot] 🚀 Rozpoczynanie sekwencji startowej Kompleks B4 3D...', 'color: #38bdf8; font-weight: bold;');
+  console.log('%c[App:Boot] 🚀 Start gry Paleciaki! Magazyn Chaosu...', 'color: #38bdf8; font-weight: bold;');
   injectThemeStyles();
 
   const titleScreen = document.getElementById('title-screen');
@@ -2290,7 +2297,7 @@ async function startApp() {
     let canvas = canvasContainer?.querySelector('canvas') as HTMLCanvasElement | null;
     if (!canvas && canvasContainer) {
       canvas = document.createElement('canvas');
-      canvas.id = 'maxfliz-3d-canvas';
+      canvas.id = 'paleciaki-3d-canvas';
       canvas.style.width = '100%';
       canvas.style.height = '100%';
       canvas.style.display = 'block';
@@ -2304,7 +2311,7 @@ async function startApp() {
 
     console.log('[App:Boot] 🛠️ Inicjalizacja silnika 3D (XR Blocks Core)...');
     const options = new xb.Options();
-    options.setAppTitle('Operacja B4: Strefa Chaosu');
+    options.setAppTitle('Paleciaki! Magazyn Chaosu');
     
     // Explicitly disable all AR/XR features for desktop-only gameplay
     options.reticles.enabled = false;
@@ -2319,7 +2326,7 @@ async function startApp() {
     assetLoader.updateCategory('engine', 3, 4);
     await new Promise(r => setTimeout(r, 40));
 
-    const sceneScript = new MaxFlizScene();
+    const sceneScript = new PaleciakiScene();
     xb.add(sceneScript);
 
     // 6. Init Engine
@@ -2361,7 +2368,7 @@ async function startApp() {
     assetLoader.updateCategory('engine', 4, 4);
     await new Promise(r => setTimeout(r, 40));
 
-    assetLoader.updateProgress(100, 'Zasoby gotowe! Witamy na magazynie Kompleks B4!', 'engine', 'GOTOWE!');
+    assetLoader.updateProgress(100, 'Zasoby gotowe! Witamy w Magazynie Chaosu!', 'engine', 'GOTOWE!');
     await new Promise(r => setTimeout(r, 320));
 
     clearTimeout(safetyTimeout);
@@ -2400,6 +2407,13 @@ async function startApp() {
       titleScreen.style.setProperty('display', 'flex', 'important');
     }
   }
+}
+
+// Progressive Web App support for secure mobile browsers.
+if ('serviceWorker' in navigator && window.isSecureContext) {
+  void navigator.serviceWorker.register('./sw.js', { scope: './' }).catch((error: unknown) => {
+    console.warn('[App:PWA] Registration unavailable:', error);
+  });
 }
 
 if (document.readyState === 'loading') {

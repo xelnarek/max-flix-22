@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#14384b"/><stop offset=".56" stop-color="#091b2b"/><stop offset="1" stop-color="#040b13"/></linearGradient><radialGradient id="light" cx=".5" cy=".34" r=".62"><stop stop-color="#236d80" stop-opacity=".62"/><stop offset="1" stop-color="#07131d" stop-opacity="0"/></radialGradient><linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#ffe3a3"/><stop offset="1" stop-color="#ba702c"/></linearGradient></defs>
+<rect width="1024" height="1024" fill="url(#bg)"/><rect width="1024" height="1024" fill="url(#light)"/>
+<g stroke="#83d4e1" stroke-opacity=".12" stroke-width="5"><path d="M0 190H1024M0 512H1024M0 834H1024M190 0V1024M512 0V1024M834 0V1024"/></g>
+<g transform="translate(512 360)">
+ <path d="M-210 45 0-75 210 45 0 165Z" fill="url(#gold)" stroke="#ffedc6" stroke-width="12" stroke-linejoin="round"/>
+ <path d="M-210 45v180L0 345V165Z" fill="#a45f2f" stroke="#e7ba77" stroke-width="10" stroke-linejoin="round"/>
+ <path d="M0 165V345L210 225V45Z" fill="#704322" stroke="#dca45e" stroke-width="10" stroke-linejoin="round"/>
+ <path d="M-260 65-315-265Q-322-300-280-308l48-8" fill="none" stroke="#78dcef" stroke-width="28" stroke-linecap="round"/>
+ <path d="M-245 72-165 120-70 120" fill="none" stroke="#78dcef" stroke-width="30" stroke-linecap="round"/>
+ <circle cx="-220" cy="170" r="42" fill="#071522" stroke="#8deaff" stroke-width="14"/><circle cx="-220" cy="170" r="14" fill="#f5c36f"/>
+ <circle cx="120" cy="282" r="42" fill="#071522" stroke="#8deaff" stroke-width="14"/><circle cx="120" cy="282" r="14" fill="#f5c36f"/>
+ <path d="m188-280-76 124h65l-48 115 165-201h-73z" fill="#fff0aa" stroke="#f5b84f" stroke-width="12" stroke-linejoin="round"/>
+</g>
+<g font-family="system-ui, sans-serif" text-anchor="middle">
+ <text x="512" y="782" fill="#fff4dc" font-size="96" font-weight="1000" letter-spacing="-5">PALECIAKI!</text>
+ <text x="512" y="866" fill="#f5bd64" font-size="43" font-weight="900" letter-spacing="9">MAGAZYN CHAOSU</text>
+ <text x="512" y="925" fill="#a7c7d1" font-size="22" font-weight="800" letter-spacing="6">KAMPANIA • SURVIVAL • HORDY</text>
+</g>
+</svg>

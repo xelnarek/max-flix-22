@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp, setLogLevel } from 'firebase/app';
-setLogLevel('debug');
+setLogLevel('error');
 import {
   initializeFirestore,
   getFirestore,
@@ -224,7 +224,7 @@ export function initAuth(): Promise<User | null> {
       currentUser = user;
       isAuthInitialized = true;
       if (user) {
-        console.log(`[Firebase:Auth] 🟢 Zalogowano użytkownika Firestore (UID: ${user.uid}, Anonimowy: ${user.isAnonymous}).`);
+        console.log('[Firebase:Auth] 🟢 Sesja anonimowa gotowa.');
       } else {
         console.warn('[Firebase:Auth] ⚠️ Rejestracja anonimowa pominięta - aktywny tryb gościa.');
       }
@@ -361,7 +361,7 @@ export async function syncPendingLeaderboardScores(): Promise<number> {
   const pending = parsePendingLeaderboardWrites();
   if (!pending.length) return 0;
 
-  // Anonymous auth is attempted, but leaderboard creation rules also allow a guest session.
+  // Live leaderboard writes require the anonymous Firebase session; if auth is unavailable, submissions stay queued locally.
   await initAuth();
 
   const remaining: PendingLeaderboardWrite[] = [];

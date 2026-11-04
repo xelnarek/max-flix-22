@@ -4,7 +4,7 @@ import test from 'node:test';
 
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
-test('public game identity uses the neutral Operacja B4 title', async () => {
+test('public game identity uses the Paleciaki store title', async () => {
   const [html, app, intro, metadata] = await Promise.all([
     read('../index.html'),
     read('../src/index.ts'),
@@ -12,12 +12,12 @@ test('public game identity uses the neutral Operacja B4 title', async () => {
     read('../metadata.json'),
   ]);
 
-  assert.match(html, /<title>Operacja B4: Strefa Chaosu<\/title>/);
-  assert.match(html, /OPERACJA B4 <span>STREFA<\/span><em>CHAOSU<\/em>/);
-  assert.match(app, /setAppTitle\('Operacja B4: Strefa Chaosu'\)/);
-  assert.match(intro, /<h1>OPERACJA B4<\/h1>/);
-  assert.match(intro, /STREFA <span>CHAOSU<\/span>/);
-  assert.match(metadata, /"name": "Operacja B4: Strefa Chaosu"/);
+  assert.match(html, /<title>Paleciaki! Magazyn Chaosu<\/title>/);
+  assert.match(html, /PALECIAKI! <span>MAGAZYN<\/span><em>CHAOSU<\/em>/);
+  assert.match(app, /setAppTitle\('Paleciaki! Magazyn Chaosu'\)/);
+  assert.match(intro, /<h1>PALECIAKI!<\/h1>/);
+  assert.match(intro, /MAGAZYN <span>CHAOSU<\/span>/);
+  assert.match(metadata, /"name": "Paleciaki! Magazyn Chaosu"/);
 });
 
 test('operator cards use fictional call signs while retaining stable internal IDs', async () => {
