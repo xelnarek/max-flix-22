@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MAX-FLIZ / VISUAL SYSTEM 2.0
+   CENTRUM B4 / VISUAL SYSTEM 2.0
    Single last-loaded visual layer. Consolidates the look without rewriting
    gameplay layout or changing the meaning of existing controls.
    ========================================================================== */
@@ -2035,7 +2035,7 @@ button:disabled { cursor: not-allowed !important; filter: grayscale(.35); opacit
 
 
 /* ==========================================================================
-   MAX-FLIX / GRANICA ABSURDU — premium title-screen pass
+   OPERACJA B4 / STREFA CHAOSU — premium title-screen pass
    High-contrast industrial glass, restrained light bloom and responsive cards.
    ========================================================================== */
 #title-screen.game-screen {

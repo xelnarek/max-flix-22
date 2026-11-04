@@ -6,7 +6,7 @@ let floorTexture: THREE.CanvasTexture | null = null;
 let showroomMarbleTexture: THREE.CanvasTexture | null = null;
 let showroomWallTexture: THREE.CanvasTexture | null = null;
 let terminalGraniteTexture: THREE.CanvasTexture | null = null;
-let maxFlizSignTexture: THREE.CanvasTexture | null = null;
+let b4SignTexture: THREE.CanvasTexture | null = null;
 let tileBoxTexture: THREE.CanvasTexture | null = null;
 let marbleTextures: Record<string, THREE.CanvasTexture> = {};
 let hazardStripeTexture: THREE.CanvasTexture | null = null;
@@ -209,7 +209,7 @@ export function getFloorTexture(): THREE.CanvasTexture {
   ctx.fillStyle = 'rgba(245, 158, 11, 0.5)';
   ctx.font = '700 24px monospace';
   ctx.fillText('SEKTOR B4-ALFA', 720, 100);
-  ctx.fillText('MAX-FLIZ 3D', 720, 920);
+  ctx.fillText('CENTRUM B4 3D', 720, 920);
 
   floorTexture = new THREE.CanvasTexture(canvas);
   floorTexture.colorSpace = THREE.SRGBColorSpace;
@@ -259,7 +259,7 @@ export function getWallTexture(): THREE.CanvasTexture {
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 14px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('BHP MAX-FLIZ', 256, 105);
+  ctx.fillText('BHP CENTRUM B4', 256, 105);
 
   wallTexture = new THREE.CanvasTexture(canvas);
   wallTexture.colorSpace = THREE.SRGBColorSpace;
@@ -377,7 +377,7 @@ export function getShowroomMarbleFloorTexture(): THREE.CanvasTexture {
   ctx.save();
   ctx.translate(512, 512);
   ctx.rotate(-Math.PI / 2);
-  ctx.fillText('MAX-FLIZ SHOWROOM • STREFA WANNY & SPA', 0, -4);
+  ctx.fillText('CENTRUM B4 SHOWROOM • STREFA WANNY & SPA', 0, -4);
   ctx.fillStyle = '#f59e0b';
   ctx.font = 'bold 16px "Segoe UI", Roboto, sans-serif';
   ctx.fillText('COLLEZIONE ITALIANA • NERO MARQUINA & ORO', 0, 22);
@@ -458,7 +458,7 @@ export function getShowroomWallTexture(): THREE.CanvasTexture {
   ctx.fillStyle = '#d4af37';
   ctx.font = 'bold 16px "Segoe UI", Roboto, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('MAX-FLIZ SHOWROOM', 256, 115);
+  ctx.fillText('CENTRUM B4 SHOWROOM', 256, 115);
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 11px sans-serif';
   ctx.fillText('GALERIA WNĘTRZ & ŁAZIENEK', 256, 132);
@@ -738,10 +738,10 @@ export function createTrackSpotlights(length = 6.0): THREE.Group {
 }
 
 /**
- * 3. Max-Fliz Brand Showroom Signboard
+ * 3. B4 Logistics Signboard
  */
-export function getMaxFlizLogoTexture(): THREE.CanvasTexture {
-  if (maxFlizSignTexture) return maxFlizSignTexture;
+export function getB4LogoTexture(): THREE.CanvasTexture {
+  if (b4SignTexture) return b4SignTexture;
   const canvas = document.createElement('canvas');
   canvas.width = 512;
   canvas.height = 160;
@@ -783,9 +783,9 @@ export function getMaxFlizLogoTexture(): THREE.CanvasTexture {
   ctx.letterSpacing = '2px';
   ctx.fillText('GRESY WIELKOFORMATOWE • ARMATURA • DESIGN', 256, 134);
 
-  maxFlizSignTexture = new THREE.CanvasTexture(canvas);
-  maxFlizSignTexture.colorSpace = THREE.SRGBColorSpace;
-  return maxFlizSignTexture;
+  b4SignTexture = new THREE.CanvasTexture(canvas);
+  b4SignTexture.colorSpace = THREE.SRGBColorSpace;
+  return b4SignTexture;
 }
 
 /**
@@ -885,7 +885,7 @@ export function getMarbleTexture(type: 'calacatta' | 'nero' | 'wood' | 'gold_mos
 }
 
 /**
- * 5. Realistic Cardboard Box with Max-Fliz Branding Tape
+ * 5. Realistic Cardboard Box with B4 Branding Tape
  */
 export function getTileBoxTexture(): THREE.CanvasTexture {
   if (tileBoxTexture) return tileBoxTexture;
@@ -913,7 +913,7 @@ export function getTileBoxTexture(): THREE.CanvasTexture {
   ctx.fillStyle = '#fbbf24';
   ctx.font = 'bold 20px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('MAX-FLIZ GRES', 128, 124);
+  ctx.fillText('CENTRUM B4 GRES', 128, 124);
 
   // Fragile symbol
   ctx.strokeStyle = '#dc2626';
@@ -1260,7 +1260,7 @@ export function createCharacterModel(def: CharacterDef): {
   // 5. Unique signature equipment: the five operators should be readable at a glance.
   const accessory = new THREE.Group();
   if (def.id === 'marcin') {
-    // Optima spell-console: a compact company-software tablet with a glowing work-order screen.
+    // B4 logistics spell-console: a compact company-software tablet with a glowing work-order screen.
     const consoleBody = new THREE.Mesh(
       new THREE.BoxGeometry(0.32, 0.23, 0.055),
       new THREE.MeshStandardMaterial({ color: 0x172554, metalness: 0.55, roughness: 0.3 })
@@ -1270,7 +1270,7 @@ export function createCharacterModel(def: CharacterDef): {
     const screenCtx = screenCanvas.getContext('2d')!;
     screenCtx.fillStyle = '#071426'; screenCtx.fillRect(0, 0, 256, 160);
     screenCtx.fillStyle = '#38bdf8'; screenCtx.font = '900 34px sans-serif';
-    screenCtx.fillText('OPTIMA', 18, 54);
+    screenCtx.fillText('B4 ERP', 18, 54);
     screenCtx.fillStyle = '#86efac'; screenCtx.font = '700 22px monospace';
     screenCtx.fillText('WZ  ✓  404', 18, 96);
     screenCtx.fillStyle = '#fbbf24'; screenCtx.fillRect(18, 118, 184, 8);
@@ -1366,7 +1366,7 @@ export function createCharacterModel(def: CharacterDef): {
     ratchetInset.position.set(0, 0.39, 0.052);
     ratchetInset.rotation.x = Math.PI / 2;
     wrench.add(ratchetInset);
-    const redMark = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.10, 0.018), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+    const redMark = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.10, 0.018), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
     redMark.position.set(0, -0.26, 0.055);
     wrench.add(redMark);
     accessory.add(wrench);
@@ -1849,7 +1849,7 @@ export function createGroutCollectible(): THREE.Group {
 }
 
 /**
- * 12. Max-Fliz VIP Delivery Van (Sprinter Style Finish Goal)
+ * 12. B4 VIP Delivery Van (Sprinter Style Finish Goal)
  */
 export function createDeliveryVan(): THREE.Group {
   const group = new THREE.Group();
@@ -1857,7 +1857,7 @@ export function createDeliveryVan(): THREE.Group {
 
   const bodyMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.3 });
   const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.9 });
-  const signMat = new THREE.MeshStandardMaterial({ map: getMaxFlizLogoTexture(), roughness: 0.35 });
+  const signMat = new THREE.MeshStandardMaterial({ map: getB4LogoTexture(), roughness: 0.35 });
   const chromeMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.15, metalness: 0.9 });
 
   // Main Cargo Box
@@ -2054,7 +2054,7 @@ export function createCustomerEnemyModel(): {
 }
 
 /**
- * 15. Former Showroom Manager Walczak Boss (Były Kierownik Salonu Walczak)
+ * 15. Former Showroom Manager Boss (Nadzorca Zero)
  */
 export function createWalczakBossModel(): {
   group: THREE.Group;
@@ -2157,14 +2157,14 @@ export function createWalczakBossModel(): {
   armR.castShadow = true;
   group.add(armL, armR);
 
-  // Right Hand Megaphone ("SZCZEKACZKA WALCZAKA")
+  // Right Hand Megaphone ("SZCZEKACZKA NADZORCY ZERO")
   const megaMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.3, metalness: 0.6 });
   const megaphone = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.28, 16), megaMat);
   megaphone.rotation.x = -Math.PI / 2;
   megaphone.position.set(0, -0.2, 0.16);
   armR.add(megaphone);
 
-  // Left Hand Giant Golden Clipboard with "AUDYT WALCZAKA"
+  // Left Hand Giant Golden Clipboard with "AUDYT NADZORCY ZERO"
   const clipMat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.5 });
   const clipboard = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.34, 0.02), clipMat);
   const auditPaper = new THREE.Mesh(
@@ -2197,7 +2197,7 @@ export function createWalczakBossModel(): {
 }
 
 /**
- * 16. Flying Penalty Invoice Projectile ("KARA UMOWNA WALCZAKA")
+ * 16. Flying Penalty Invoice Projectile ("KARA UMOWNA NADZORCY ZERO")
  */
 export function createPenaltyNoticeProjectile(): THREE.Mesh {
   const geo = new THREE.BoxGeometry(0.3, 0.4, 0.02);
@@ -2497,7 +2497,7 @@ export function createAgvRobotModel(): {
 }
 
 /**
- * 20. NEW COLLECTIBLE: Podwójne Espresso Max-Fliz (Restores HP + Speed)
+ * 20. NEW COLLECTIBLE: Podwójne Espresso Kompleks B4 (Restores HP + Speed)
  */
 export function createEspressoCollectible(): THREE.Group {
   const group = new THREE.Group();
@@ -3093,7 +3093,7 @@ export function createPiorunDronModel(): {
 }
 
 /**
- * 33. NEW ENEMY: Elitarny Ochroniarz Walczaka (z Tarczą BHP i Pałką Kierowania Ruchem)
+ * 33. NEW ENEMY: Elitarny Strażnik Nadzorcy (z Tarczą BHP i Pałką Kierowania Ruchem)
  */
 export function createEliteGuardEnemyModel(): {
   group: THREE.Group;
@@ -3142,7 +3142,7 @@ export function createEliteGuardEnemyModel(): {
   const armR = new THREE.Mesh(armGeo, armorMat);
   armR.position.set(0.28, 0.7, 0);
 
-  // Heavy Riot Shield (Tarcza BHP Max-Fliz) in Left Arm
+  // Heavy Riot Shield (Tarcza BHP B4) in Left Arm
   const shield = new THREE.Group();
   const shieldPlate = new THREE.Mesh(
     new THREE.BoxGeometry(0.5, 0.85, 0.05),
@@ -3377,8 +3377,8 @@ export function createHighBayCatwalk(width: number, depth: number): THREE.Group 
 }
 
 /**
- * 38. Piotr's Signature Hidden Bimber Moonshine Bottle (Koktajl Mołotowa)
- * An authentic vintage glass moonshine bottle with a burning rag wick!
+ * 38. Rook's Signature Flame Canister (Koktajl Mołotowa)
+ * A fictional sealed glass canister with a controlled ignition wick.
  */
 export function createBimberBottleMolotov(): {
   group: THREE.Group;
@@ -3399,7 +3399,7 @@ export function createBimberBottleMolotov(): {
   bottleBody.position.y = 0.21;
   bottleBody.castShadow = true;
 
-  // Bimber moonshine liquid inside (golden amber 70%)
+  // Neutral amber ignition compound inside
   const liquidMat = new THREE.MeshStandardMaterial({
     color: 0xf59e0b,
     roughness: 0.1,
@@ -3428,7 +3428,7 @@ export function createBimberBottleMolotov(): {
   const cork = new THREE.Mesh(new THREE.CylinderGeometry(0.046, 0.04, 0.06, 12), corkMat);
   cork.position.y = 0.73;
 
-  // Burning Cloth Wick (Rag soaked in bimber)
+  // Burning Cloth Wick (Ignition cloth)
   const ragMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.8 });
   const rag = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 0.14, 8), ragMat);
   rag.position.set(0.01, 0.8, 0);
@@ -3458,7 +3458,7 @@ export function createBimberBottleMolotov(): {
 }
 
 /**
- * 39. Lingering Burning Pool of Bimber (Morze Ognia Koktajlu Mołotowa)
+ * 39. Lingering Burning Pool (Morze Ognia Koktajlu Mołotowa)
  * Raging flaming ground puddle with animated flickering fire spires!
  */
 export function createMolotovFirePuddle(radius = 3.8): {
@@ -3943,7 +3943,7 @@ export function createCrimeSceneBodyOutlineDecal(label: string = 'RUDY ŚMIERDZI
 }
 
 /**
- * 28. ADDITIONAL BOSS: Król-Leto (Dyrektor Generalny)
+ * 28. ADDITIONAL BOSS: Dyrektor Widmo
  * Imposing Boss with royal crown, suit, and lethal Disciplinary Discharge folder!
  */
 export function createKrolLetoBossModel(): {
@@ -4137,7 +4137,7 @@ export function createLargeTileModel(): THREE.Group {
   const edgeFrame = new THREE.Mesh(edgeGeo, edgeMat);
   group.add(edgeFrame);
 
-  // "MAX-FLIZ GRES 120x280" Stamp
+  // "B4 GRES 120x280" Stamp
   const stampGeo = new THREE.BoxGeometry(0.8, 0.1, 0.4);
   const stampMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
   const stamp = new THREE.Mesh(stampGeo, stampMat);
@@ -4148,7 +4148,7 @@ export function createLargeTileModel(): THREE.Group {
 }
 
 /**
- * 30. Pan Roman z Dostawą ("Panowie spieszę się! To tylko jakieś sanitariaty")
+ * 30. Dostawca Sanitarny ("Panowie spieszę się! To tylko jakieś sanitariaty")
  */
 export function createPanRomanEnemyModel(): {
   group: THREE.Group;
@@ -4243,7 +4243,7 @@ export function createPanRomanEnemyModel(): {
 }
 
 /**
- * 31. Sanitaryware Projectile (Latająca Umywalka Pan Romana)
+ * 31. Sanitaryware Projectile (Latająca Umywalka Dostawcy Sanitarnego)
  */
 export function createSanitarywareProjectile(): THREE.Mesh {
   const geo = new THREE.BoxGeometry(0.45, 0.22, 0.35);
@@ -4260,7 +4260,7 @@ export function createSanitarywareProjectile(): THREE.Mesh {
 }
 
 /**
- * 32. Serwisanci Max-Flixu ("Przyjaciele! Kto nam pomoże?!")
+ * 32. Serwisanci Kompleksu B4 ("Przyjaciele! Kto nam pomoże?!")
  */
 export function createSerwisanciEnemyModel(): {
   group: THREE.Group;
@@ -4347,7 +4347,7 @@ export function createSparkZapProjectile(): THREE.Mesh {
 }
 
 /**
- * 34. Mini Boss Bosman z Krakowa (Odprawa 3-msc)
+ * 34. Mini Boss Inspektor Zmiany (Odprawa 3-msc)
  */
 export function createBosmanKrakowBossModel(): {
   group: THREE.Group;
@@ -4361,7 +4361,7 @@ export function createBosmanKrakowBossModel(): {
 
   const navySuitMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.3 }); // Navy Suit
   const shirtMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
-  const goldBadgeMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.9, roughness: 0.1 }); // KRAKÓW HQ Badge
+  const goldBadgeMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.9, roughness: 0.1 }); // B4 HQ Badge
   const skinMat = new THREE.MeshStandardMaterial({ color: 0xfbd0b0, roughness: 0.4 });
   const redFolderMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.3 }); // Odprawa 3-msc
 
@@ -4371,7 +4371,7 @@ export function createBosmanKrakowBossModel(): {
   body.castShadow = true;
   group.add(body);
 
-  // White Shirt & Gold KRAKÓW HQ Badge
+  // White Shirt & Gold B4 HQ Badge
   const shirt = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.62, 0.02), shirtMat);
   shirt.position.set(0, 0.85, 0.161);
   const badge = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.03), goldBadgeMat);
@@ -4439,7 +4439,7 @@ export function createBosmanKrakowBossModel(): {
 }
 
 /**
- * 35. Odprawa 3-msc Clipboard Shockwave Projectile (Bosman z Krakowa)
+ * 35. Odprawa 3-msc Clipboard Shockwave Projectile (Inspektor Zmiany)
  */
 export function createOdprawaClipboardProjectile(): THREE.Mesh {
   const geo = new THREE.BoxGeometry(0.5, 0.65, 0.08);
@@ -4500,7 +4500,7 @@ export function createCoffeeVendingMachineModel(): THREE.Group {
   cabinet.castShadow = true;
   group.add(cabinet);
 
-  // Red Accent Header Strip with Max-Fliz Cafe Branding
+  // Red Accent Header Strip with B4 Cafe Branding
   const header = new THREE.Mesh(new THREE.BoxGeometry(0.87, 0.22, 0.67), redTrimMat);
   header.position.y = 1.68;
   group.add(header);
@@ -4540,7 +4540,7 @@ export function createCoffeeVendingMachineModel(): THREE.Group {
 /**
  * 41. Overhead Digital Industrial LED Scoreboard ("DNI BEZ WYPADKU NA GRESIE: 0")
  */
-export function createBhpDigitalScoreboard(title = 'BHP MAX-FLIZ • DNI BEZ POTŁUCZONEJ WANNY: 0'): THREE.Group {
+export function createBhpDigitalScoreboard(title = 'BHP CENTRUM B4 • DNI BEZ POTŁUCZONEJ WANNY: 0'): THREE.Group {
   const group = new THREE.Group();
   group.name = 'bhp_scoreboard';
 
@@ -4597,30 +4597,30 @@ export function createBhpDigitalScoreboard(title = 'BHP MAX-FLIZ • DNI BEZ POT
 }
 
 /**
- * 42. NEW COLLECTIBLE / POWER-UP: Kubełek Kurczaka z KFC od Dawida ("WTORKOWY KUBEŁEK MOCY!")
+ * 42. NEW COLLECTIBLE / POWER-UP: Pakiet Energii dla Vectora ("WTORKOWY B4 POWER!")
  */
 export function createKfcBucketCollectible(): THREE.Group {
   const group = new THREE.Group();
   group.name = 'kfc_bucket_collectible';
 
-  // Red & White Striped Bucket Texture
+  // Neutral industrial power-up container texture
   const canvas = document.createElement('canvas');
   canvas.width = 256;
   canvas.height = 128;
   const ctx = canvas.getContext('2d')!;
   for (let i = 0; i < 8; i++) {
-    ctx.fillStyle = i % 2 === 0 ? '#dc2626' : '#ffffff';
+    ctx.fillStyle = i % 2 === 0 ? '#173b52' : '#d7e5e8';
     ctx.fillRect(i * 32, 0, 32, 128);
   }
   ctx.fillStyle = '#111827';
   ctx.fillRect(48, 34, 160, 56);
-  ctx.strokeStyle = '#facc15';
+  ctx.strokeStyle = '#67e8f9';
   ctx.lineWidth = 4;
   ctx.strokeRect(48, 34, 160, 56);
   ctx.fillStyle = '#ffffff';
   ctx.font = '900 26px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('KFC DAWID', 128, 70);
+  ctx.fillText('B4 POWER', 128, 70);
 
   const bucketTex = new THREE.CanvasTexture(canvas);
   bucketTex.colorSpace = THREE.SRGBColorSpace;
@@ -4645,27 +4645,34 @@ export function createKfcBucketCollectible(): THREE.Group {
   rim.position.y = 0.39;
   group.add(rim);
 
-  // Crispy Golden Fried Chicken Drumsticks sticking out the top!
-  const chickenMat = new THREE.MeshStandardMaterial({
-    color: 0xd97706,
-    emissive: 0x92400e,
-    emissiveIntensity: 0.35,
-    roughness: 0.45,
+  // Three glowing energy cartridges rise from the neutral B4 supply container.
+  const cartridgeMat = new THREE.MeshStandardMaterial({
+    color: 0x38bdf8,
+    emissive: 0x0e7490,
+    emissiveIntensity: 0.72,
+    metalness: 0.35,
+    roughness: 0.28,
   });
-  const boneMat = new THREE.MeshStandardMaterial({ color: 0xfef3c7, roughness: 0.3 });
+  const capMat = new THREE.MeshStandardMaterial({
+    color: 0xdbeafe,
+    metalness: 0.72,
+    roughness: 0.22,
+    emissive: 0x1d4ed8,
+    emissiveIntensity: 0.18,
+  });
 
-  for (let i = 0; i < 4; i++) {
-    const angle = (i / 4) * Math.PI * 2 + 0.3;
-    const drumstick = new THREE.Group();
-    const meat = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 10), chickenMat);
-    meat.scale.set(1.2, 0.9, 0.9);
-    const bone = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.12, 8), boneMat);
-    bone.position.set(0.09, 0.05, 0);
-    bone.rotation.z = -0.6;
-    drumstick.add(meat, bone);
-    drumstick.position.set(Math.cos(angle) * 0.09, 0.43, Math.sin(angle) * 0.09);
-    drumstick.rotation.y = angle;
-    group.add(drumstick);
+  for (let i = 0; i < 3; i++) {
+    const angle = (i / 3) * Math.PI * 2;
+    const cartridge = new THREE.Group();
+    const cell = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.055, 0.22, 10), cartridgeMat);
+    cell.castShadow = true;
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.035, 10), capMat);
+    cap.position.y = 0.12;
+    cartridge.add(cell, cap);
+    cartridge.position.set(Math.cos(angle) * 0.09, 0.45, Math.sin(angle) * 0.09);
+    cartridge.rotation.z = (i - 1) * 0.16;
+    cartridge.rotation.x = Math.cos(angle) * 0.11;
+    group.add(cartridge);
   }
 
   // Glowing Aura Ring
@@ -4681,7 +4688,7 @@ export function createKfcBucketCollectible(): THREE.Group {
 }
 
 /**
- * 43. NEW ENEMY: Głodny Zombie-Pracownik ("DAWID PRZYWIÓZŁ KFC! DAJ STRIPSA!")
+ * 43. NEW ENEMY: Głodny Zombie-Pracownik ("VECTOR PRZYWIÓZŁ ZAPASY!")
  */
 export function createZombieWorkerEnemyModel(): {
   group: THREE.Group;
@@ -4695,7 +4702,7 @@ export function createZombieWorkerEnemyModel(): {
   group.name = 'enemy_zombie_worker';
 
   const zombieSkinMat = new THREE.MeshStandardMaterial({ color: 0x84cc16, roughness: 0.55 });
-  const vestMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.5 }); // KFC Red / Tattered Vest
+  const vestMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.5 }); // Deep red / Tattered Vest
   const pantsMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
   const eyeGlowMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
 
@@ -4743,7 +4750,7 @@ export function createZombieWorkerEnemyModel(): {
   legR.castShadow = true;
   group.add(legL, legR);
 
-  // Outstretched Zombie Arms reaching for KFC!
+  // Outstretched Zombie Arms reaching for supplies!
   const armGeo = new THREE.BoxGeometry(0.11, 0.4, 0.11);
   const armL = new THREE.Mesh(armGeo, zombieSkinMat);
   armL.position.set(-0.25, 0.68, 0.16);

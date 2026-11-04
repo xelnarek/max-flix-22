@@ -3,7 +3,7 @@
     "LeaderboardEntry": {
       "title": "LeaderboardEntry",
       "type": "object",
-      "description": "Max-Fliz Warehouse shift high score and achievements entry",
+      "description": "Kompleks B4 shift high score and achievements entry",
       "properties": {
         "playerName": {
           "type": "string",
@@ -11,7 +11,7 @@
         },
         "hero": {
           "type": "string",
-          "description": "Selected warehouse hero (Marcin, Grzesiek, Dawid, Mateusz)"
+          "description": "Selected operator (Atlas, Forge, Vector, Volt or Rook)"
         },
         "mode": {
           "type": "string",
@@ -32,7 +32,7 @@
         },
         "bossDefeated": {
           "type": "boolean",
-          "description": "Whether Kierownik Walczak was stomped"
+          "description": "Whether Nadzorca Zero was defeated"
         },
         "createdAt": {
           "type": "string",
@@ -70,7 +70,7 @@
   "firestore": {
     "/leaderboard/{scoreId}": {
       "schema": "LeaderboardEntry",
-      "description": "Public high score board of Max-Fliz warehouse staff and players"
+      "description": "Public high score board of Kompleks B4 operators and players"
     },
     "/users/{userId}": {
       "schema": "PlayerProfile",

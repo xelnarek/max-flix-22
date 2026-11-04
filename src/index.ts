@@ -351,25 +351,25 @@ class MaxFlizScene extends xb.Script {
 
     const getEnemyMeta = (type: string) => {
       const metaMap: Record<string, { name: string; role: string; avatar: string }> = {
-        kurier: { name: 'Rudy z DPD', role: 'Johnny Walker Express', avatar: '🚚' },
-        walczak: { name: 'Walczak', role: 'Były Kierownik', avatar: '👔' },
-        krol_leto: { name: 'Król-Leto', role: 'Dyrektor Generalny', avatar: '👑' },
+        kurier: { name: 'Kurier Rudi', role: 'Kurier Express', avatar: '🚚' },
+        walczak: { name: 'Nadzorca Zero', role: 'Zbuntowany Nadzorca', avatar: '👔' },
+        krol_leto: { name: 'Dyrektor Widmo', role: 'Dyrektor Generalny', avatar: '👑' },
         architect: { name: 'Architektka', role: 'Design & Beż', avatar: '🎨' },
         customer: { name: 'Klient', role: 'Awantura o Fugi', avatar: '📑' },
         handlowiec: { name: 'Handlowiec', role: 'Rabat 3%', avatar: '💼' },
         monter: { name: 'Monter', role: 'Glazurnik Pro', avatar: '🪚' },
         inspector: { name: 'Inspektor', role: 'BHP / PIP', avatar: '📋' },
-        sztaplar_szalony: { name: 'Zdzichu', role: 'Mistrz Sztaplarki', avatar: '🚜' },
-        pan_roman: { name: 'Pan Roman', role: 'Dostawa bez awiza', avatar: '📦' },
+        sztaplar_szalony: { name: 'Sztaplarz Turbo', role: 'Mistrz Sztaplarki', avatar: '🚜' },
+        pan_roman: { name: 'Dostawca Sanitarny', role: 'Dostawa bez awiza', avatar: '📦' },
         serwisant: { name: 'Serwisant', role: 'Zgłoszenie 404', avatar: '🧰' },
         przedstawiciel_włoski: { name: 'Włoski dostawca', role: 'Mamma mia / armatura', avatar: '🇮🇹' },
-        elite_walczak_guard: { name: 'Strażnik Walczaka', role: 'Ochrona Calacatty', avatar: '🛡️' },
-        bosman_krakow: { name: 'Bosman z Krakowa', role: 'Odprawa 3-MSC', avatar: '📋' },
+        elite_walczak_guard: { name: 'Strażnik Nadzorcy Zero', role: 'Ochrona sektora VIP', avatar: '🛡️' },
+        bosman_krakow: { name: 'Inspektor Zmiany', role: 'Odprawa 3-MSC', avatar: '📋' },
         agv_robot: { name: 'Robot AGV', role: 'Zgubiona trasa', avatar: '🤖' },
         piorun_dron: { name: 'PIORUN', role: 'Dron AI', avatar: '⚡' },
-        zombie_pracownik: { name: 'Zombie-Magazynier', role: 'Głód KFC', avatar: '🧟' },
+        zombie_pracownik: { name: 'Zombie-Magazynier', role: 'Głód Przekąsek', avatar: '🧟' },
         pomazaniec: { name: 'Pomazaniec', role: 'Rowerowy rajd / lizaki', avatar: '🚲' },
-        sebix_m: { name: 'Sebix M.', role: 'Taran B4 / cegły', avatar: '🔥' },
+        sebix_m: { name: 'Operator Turbo', role: 'Taran B4 / cegły', avatar: '🔥' },
       };
       return metaMap[type] || { name: 'Pracownik', role: 'Magazyn', avatar: '👷' };
     };
@@ -870,7 +870,7 @@ class MaxFlizScene extends xb.Script {
       const attackNameElem = document.getElementById('attack-name');
       const attackIconElem = document.getElementById('attack-icon');
       const attackNames: Record<CharacterId, string> = {
-        marcin: 'Zaklęcia Optima',
+        marcin: 'Zaklęcia system ERP',
         grzesiek: 'Rzut hantlem 44 cm',
         dawid: 'Rzut rolką stretchu',
         mateusz: 'Paralizator',
@@ -884,11 +884,11 @@ class MaxFlizScene extends xb.Script {
         piotr: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.7' stroke-linecap='round' stroke-linejoin='round'><path d='M27 9a10 10 0 0 0 11 13L24 36a4.5 4.5 0 0 1-6-6l14-15A10 10 0 0 0 27 9Z'/><path d='m30 8 5-4 8 8-4 5'/><path d='m9 40 4-4m-7 0 4-4' opacity='.8'/></svg>",
       };
       const attackDescriptions: Record<CharacterId, string> = {
-        marcin: 'Wysyła świetlny znak-zlecenie z programu Optima. Trafiony cel zostaje ogłuszony, a co trzeci czar tworzy mocniejszą pieczęć audytu.',
+        marcin: 'Wysyła świetlny znak-zlecenie z systemu ERP. Trafiony cel zostaje ogłuszony, a co trzeci czar tworzy mocniejszą pieczęć audytu.',
         grzesiek: 'Miota ciężkim stalowym hantlem. Co trzeci rzut jest większy, mocniej odrzuca i przebija kilku przeciwników.',
         dawid: 'Rzuca rolką folii stretch, która owija i spowalnia przeciwników. Co trzeci rzut mocniej wiąże cel.',
         mateusz: 'Strzela pojedynczym impulsem paralizatora. Trafiony przeciwnik dostaje elektryczny stun; co trzeci impuls jest mocniejszy.',
-        piotr: 'Miota ciężkim kluczem grzechotkowym B4. Wiruje, przebija kilka celów i wraca przez tłum do Piotra; co trzeci rzut jest mocniejszy i rozgrzany do czerwoności.',
+        piotr: 'Miota ciężkim kluczem grzechotkowym B4. Wiruje, przebija kilka celów i wraca przez tłum do Rooka; co trzeci rzut jest mocniejszy i rozgrzany do czerwoności.',
       };
       if (attackNameElem) attackNameElem.textContent = attackNames[id] || 'Atak';
       if (attackIconElem) { attackIconElem.innerHTML = attackIcons[id] || attackIcons.marcin; attackIconElem.dataset.operatorIcon = id; }
@@ -997,11 +997,13 @@ class MaxFlizScene extends xb.Script {
             const rankIcons = ['🥇', '🥈', '🥉'];
             const rankDisplay = idx < 3 ? rankIcons[idx] : `${idx + 1}.`;
             const heroIds: Record<string, CharacterId> = {
+              Atlas: 'marcin', Forge: 'grzesiek', Vector: 'dawid', Volt: 'mateusz', Rook: 'piotr',
+              // Preserve support for scores created before the public call-sign update.
               Marcin: 'marcin', Grzesiek: 'grzesiek', Dawid: 'dawid', Mateusz: 'mateusz', Piotr: 'piotr',
             };
             const heroId = heroIds[entry.hero];
             const heroIcon = heroId ? operatorPortrait(heroId) : '👷‍♂️';
-            const bossBadge = entry.bossDefeated ? '<span title="Były Kierownik Walczak skasowany!">👔💥</span>' : '';
+            const bossBadge = entry.bossDefeated ? '<span title="Nadzorca Zero pokonany!">👔💥</span>' : '';
             const safePlayerName = escapeLeaderboardText(entry.playerName);
             const safeHeroName = escapeLeaderboardText(entry.hero);
             const modeLabel = entry.mode === 'survival' ? 'SURVIVAL' : 'KAMPANIA';
@@ -1123,7 +1125,7 @@ class MaxFlizScene extends xb.Script {
         const pill = card.querySelector<HTMLElement>('.zone-checkpoint-pill');
         if (!pill) return;
         if (locked && level === 2) pill.textContent = 'ZAMKNIĘTY • POKONAJ BOSMANA';
-        else if (locked && level === 3) pill.textContent = 'ZAMKNIĘTY • POKONAJ KRÓLA-LETO';
+        else if (locked && level === 3) pill.textContent = 'ZAMKNIĘTY • POKONAJ DYREKTORA WIDMO';
         else if (level === 1) pill.textContent = 'START GŁÓWNY';
         else pill.textContent = 'CHECKPOINT ODBLOKOWANY';
       });
@@ -1137,7 +1139,7 @@ class MaxFlizScene extends xb.Script {
           if (pill) {
             pill.textContent = level === 2
               ? 'WYMAGANE: POKONAJ BOSMANA W SEKTORZE A'
-              : 'WYMAGANE: POKONAJ KRÓLA-LETO W SEKTORZE B';
+              : 'WYMAGANE: POKONAJ DYREKTORA WIDMO W SEKTORZE B';
           }
           return;
         }
@@ -2247,7 +2249,7 @@ const injectThemeStyles = () => {
 };
 
 async function startApp() {
-  console.log('%c[App:Boot] 🚀 Rozpoczynanie sekwencji startowej Max-Fliz 3D...', 'color: #38bdf8; font-weight: bold;');
+  console.log('%c[App:Boot] 🚀 Rozpoczynanie sekwencji startowej Kompleks B4 3D...', 'color: #38bdf8; font-weight: bold;');
   injectThemeStyles();
 
   const titleScreen = document.getElementById('title-screen');
@@ -2302,7 +2304,7 @@ async function startApp() {
 
     console.log('[App:Boot] 🛠️ Inicjalizacja silnika 3D (XR Blocks Core)...');
     const options = new xb.Options();
-    options.setAppTitle('Max-FliX i granica Absurdu');
+    options.setAppTitle('Operacja B4: Strefa Chaosu');
     
     // Explicitly disable all AR/XR features for desktop-only gameplay
     options.reticles.enabled = false;
@@ -2359,7 +2361,7 @@ async function startApp() {
     assetLoader.updateCategory('engine', 4, 4);
     await new Promise(r => setTimeout(r, 40));
 
-    assetLoader.updateProgress(100, 'Zasoby gotowe! Witamy na magazynie Max-Fliz!', 'engine', 'GOTOWE!');
+    assetLoader.updateProgress(100, 'Zasoby gotowe! Witamy na magazynie Kompleks B4!', 'engine', 'GOTOWE!');
     await new Promise(r => setTimeout(r, 320));
 
     clearTimeout(safetyTimeout);

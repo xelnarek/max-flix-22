@@ -90,19 +90,19 @@ export class CinematicIntroManager {
     overlay.className = 'cinematic-intro-overlay';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute('aria-label', 'Cinematic opening — Max-Flix: Granica Absurdu');
+    overlay.setAttribute('aria-label', 'Cinematic opening — Operacja B4: Granica Absurdu');
     overlay.innerHTML = `
       <canvas class="cinematic-intro-canvas" aria-hidden="true"></canvas>
       <div class="cinematic-intro-vignette" aria-hidden="true"></div>
       <div class="cinematic-intro-top">
-        <div class="cinematic-intro-brand"><span class="cinematic-live-dot"></span> MAX-FLIX <span>•</span> OPERACJA B4</div>
+        <div class="cinematic-intro-brand"><span class="cinematic-live-dot"></span> KOMPLEKS B4 <span>•</span> OPERACJA SPECJALNA</div>
         <div class="cinematic-intro-status"><span id="cinematic-intro-scene">SYSTEM ONLINE</span><span id="cinematic-intro-time">00:00</span></div>
         <button id="cinematic-intro-skip" class="cinematic-intro-skip" type="button">POMIŃ INTRO <span aria-hidden="true">↗</span></button>
       </div>
       <div class="cinematic-intro-copy">
-        <div class="cinematic-intro-kicker">MAGAZYN SHOWDOWN • 2026</div>
-        <h1>MAX-FLIX</h1>
-        <div class="cinematic-intro-subtitle">GRANICA <span>ABSURDU</span></div>
+        <div class="cinematic-intro-kicker">CENTRUM B4 • OPERACJA SPECJALNA</div>
+        <h1>OPERACJA B4</h1>
+        <div class="cinematic-intro-subtitle">STREFA <span>CHAOSU</span></div>
         <p>Jedna hala. Pięciu operatorów. Dostawa, której nikt nie zamierza oddać bez walki.</p>
         <div class="cinematic-intro-tags"><span>KAMPANIA • MEGA-MAPA</span><span>SURVIVAL SHIFT</span><span>BOSSOWIE • EWOLUCJE</span></div>
       </div>
