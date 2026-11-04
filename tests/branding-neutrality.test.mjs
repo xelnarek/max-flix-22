@@ -35,13 +35,16 @@ test('operator cards use fictional call signs while retaining stable internal ID
   ];
 
   for (const [id, callSign] of roster) {
-    assert.match(characters, new RegExp(id + ': \\{[\\s\\S]*?name: \' ' + callSign + '\''));
+    const start = characters.indexOf(id + ': {');
+    const end = characters.indexOf('\n  },', start);
+    assert.ok(start >= 0 && end > start, 'missing operator definition: ' + id);
+    assert.ok(characters.slice(start, end).includes("name: '" + callSign + "'"), 'missing fictional call sign: ' + callSign);
     assert.ok(html.includes('data-char="' + id + '"'), 'stable character ID was changed: ' + id);
   }
 
-  assert.match(app, /Atlas: 'marcin'.*Forge: 'grzesiek'.*Vector: 'dawid'.*Volt: 'mateusz'.*Rook: 'piotr'/);
+  assert.ok(app.includes("Atlas: 'marcin', Forge: 'grzesiek', Vector: 'dawid', Volt: 'mateusz', Rook: 'piotr'"));
   // Old leaderboard hero labels remain readable for historical entries.
-  assert.match(app, /Marcin: 'marcin'.*Grzesiek: 'grzesiek'.*Dawid: 'dawid'.*Mateusz: 'mateusz'.*Piotr: 'piotr'/);
+  assert.ok(app.includes("Marcin: 'marcin', Grzesiek: 'grzesiek', Dawid: 'dawid', Mateusz: 'mateusz', Piotr: 'piotr'"));
 });
 
 test('old company and personal names are absent from the public title and intro copy', async () => {
