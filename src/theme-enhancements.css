@@ -1614,7 +1614,7 @@ h1, h2, h3, .menu-game-title, .hero-name, .dialogue-box-name, .title-brand, .bos
   letter-spacing: -0.015em !important;
 }
 
-.stat-value, .perk-timer, .minimap-title, .badge-label, .score-number, .char-code-tag, .stat-num, .brand-badge-pill, .zone-checkpoint-pill {
+.stat-value, .perk-timer, .badge-label, .score-number, .char-code-tag, .stat-num, .brand-badge-pill, .zone-checkpoint-pill {
   font-family: 'JetBrains Mono', 'Space Grotesk', monospace !important;
 }
 
