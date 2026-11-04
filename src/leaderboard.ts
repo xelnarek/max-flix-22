@@ -86,3 +86,24 @@ export function getLeaderboardSlice(
   const limit = Number.isFinite(maxEntries) ? Math.max(0, Math.floor(maxEntries)) : 15;
   return [...entries].sort(compareLeaderboardEntries).slice(0, limit);
 }
+
+
+/**
+ * Format the immutable record timestamp for the Polish global leaderboard.
+ * Legacy rows without a trustworthy timestamp are explicitly marked unknown.
+ */
+export function formatLeaderboardTimestamp(createdAt: string): string {
+  const timestamp = Date.parse(createdAt);
+  if (!Number.isFinite(timestamp) || timestamp <= Date.UTC(2000, 0, 1)) {
+    return 'Data nieznana';
+  }
+  return new Intl.DateTimeFormat('pl-PL', {
+    timeZone: 'Europe/Warsaw',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(new Date(timestamp));
+}
