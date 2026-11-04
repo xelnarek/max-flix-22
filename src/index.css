@@ -4350,7 +4350,7 @@ button {
   min-width: 54px !important;
   min-height: 54px !important;
   border: 2px solid rgba(103, 232, 249, 0.95) !important;
-  background: linear-gradient(135deg, rgba(8, 145, 178, 0.98), rgba(15, 23, 42, 0.96)) !important;
+  background: conic-gradient(from -90deg, rgba(34, 211, 238, 0.98) 0 var(--dash-progress, 100%), rgba(15, 23, 42, 0.96) var(--dash-progress, 100%) 100%) !important;
   box-shadow: 0 0 16px rgba(34, 211, 238, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.36) !important;
   color: #f0fdff !important;
   font-size: 10px !important;
