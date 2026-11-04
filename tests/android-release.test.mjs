@@ -91,7 +91,7 @@ test('Google Play upload is opt-in, credential-gated and limited to internal tes
   assert.match(workflow, /vars\\.GOOGLE_PLAY_UPLOAD_ENABLED == 'true'/);
   assert.match(workflow, /secrets\\.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON/);
   assert.match(workflow, /ANDROID_SIGNING_ENABLED.*true/);
-  assert.match(workflow, /r0adkll\\/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5/);
+  assert.ok(workflow.includes('r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5'));
   assert.match(workflow, /tracks: internal/);
   assert.match(workflow, /status: completed/);
   assert.doesNotMatch(workflow, /tracks: production/);
