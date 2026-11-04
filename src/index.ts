@@ -1310,7 +1310,6 @@ class PaleciakiScene extends xb.Script {
       }
     };
 
-    document.getElementById('btn-open-cinematic-intro')?.addEventListener('click', launchCinematicIntro);
 
     document.getElementById('btn-attack')?.addEventListener('click', () => {
       this.engine.triggerAttack();
@@ -2193,15 +2192,12 @@ async function startApp() {
       console.log('[App:Boot] 🎉 Ekran tytułowy gotowy.');
     }
 
-    // Let the browser paint the ready menu once, then launch the 20-second
-    // opening sequence automatically. The intro itself is still skippable.
-    const introButton = document.getElementById('btn-open-cinematic-intro') as HTMLButtonElement | null;
-    if (introButton && !document.hidden) {
-      await new Promise<void>((resolve) => {
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-      });
-      introButton.click();
-    }
+    // Paint the ready menu once, then run the opening sequence automatically.
+    // It no longer depends on a retired Campaign/story button existing in the DOM.
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    });
+    if (!document.hidden) void launchCinematicIntro();
 
   } catch (err) {
     console.error('[App:Boot] ❌ KRYTYCZNY BŁĄD STARTU:', err);
