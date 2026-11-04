@@ -950,6 +950,9 @@ export class MaxFlizGameEngine {
       if (e.code === 'KeyE' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
         this.triggerAbility();
       }
+      if (e.code === 'KeyQ') {
+        this.triggerDash();
+      }
       if (e.code === 'KeyF' || e.code === 'KeyJ' || e.code === 'KeyX' || e.code === 'Numpad0') {
         this.triggerAttack();
       }
@@ -4848,7 +4851,9 @@ export class MaxFlizGameEngine {
 
   private fireSurvivalWeapon(weapon: SurvivalWeaponState, target: EnemyItem) {
     const definition = SURVIVAL_WEAPON_DEFS[weapon.id];
-    const baseWeaponDamage = 1 + Math.floor((weapon.level - 1) / 3) + (weapon.evolved ? 1 : 0);
+    const baseWeaponDamage = weapon.id === 'orbit_blades'
+      ? 1 + (weapon.level >= 3 ? 1 : 0) + (weapon.evolved ? 1 : 0)
+      : 1 + Math.floor((weapon.level - 1) / 3) + (weapon.evolved ? 1 : 0);
     const criticalRoll = rollSurvivalCriticalDamage(baseWeaponDamage, this.survivalCriticalChance, this.survivalCriticalDamageMultiplier, Math.random());
     const weaponDamage = criticalRoll.damage;
     if (criticalRoll.critical) {
@@ -4911,11 +4916,6 @@ export class MaxFlizGameEngine {
 
     if (weapon.id === 'orbit_blades') {
       const count = weapon.evolved ? 5 : weapon.level >= 4 ? 4 : 3;
-      const orbitBaseDamage = 1 + (weapon.level >= 3 ? 1 : 0) + (weapon.evolved ? 1 : 0);
-      const orbitCritical = rollSurvivalCriticalDamage(orbitBaseDamage, this.survivalCriticalChance, this.survivalCriticalDamageMultiplier, Math.random());
-      if (orbitCritical.critical) {
-        this.emitFloatingToast('✦ TARCZE KRYTYCZNE!', this.playerPos.x, this.playerPos.y + 1.35, this.playerPos.z, 'combo');
-      }
       for (let i = 0; i < count; i++) {
         const bladeMaterial = new THREE.MeshStandardMaterial({
           color: SURVIVAL_WEAPON_DEFS[weapon.id].color,
@@ -4933,7 +4933,7 @@ export class MaxFlizGameEngine {
           vel: new THREE.Vector3(),
           life: weapon.evolved ? 5.8 : 4.8,
           maxLife: weapon.evolved ? 5.8 : 4.8,
-          damage: orbitCritical.damage,
+          damage: weaponDamage,
           pierce: 40,
           weaponProjectile: true,
           hitIds: new Set<string>(),
