@@ -4253,7 +4253,7 @@ export class MaxFlizGameEngine {
       tile.position.set(displayX,0.29,displayZ);
       tile.rotation.y = side * 0.10;
       this.levelRoot.add(tile);
-      const marker = createNeonShowroomSign(index === 0 ? 'CALACATTA • 120×280' : 'CENTRUM B4 • PREMIUM GRES', index === 0 ? '#67e8f9' : '#fbbf24');
+      const marker = createNeonShowroomSign(index === 0 ? 'MARMUR B4 • 120×280' : 'CENTRUM B4 • PREMIUM GRES', index === 0 ? '#67e8f9' : '#fbbf24');
       marker.position.set(displayX,2.6,displayZ-0.7);
       marker.scale.setScalar(0.30);
       this.levelRoot.add(marker);
