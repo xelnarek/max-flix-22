@@ -974,7 +974,7 @@
             <div id="tab-leaderboard" class="tab-panel">
               <div class="leaderboard-container">
                 <div class="leaderboard-header-row">
-                  <div class="leaderboard-title">ZMIANOWY RANKING OPERATORÓW MAX-FLIZ</div>
+                  <div class="leaderboard-title">RANKING GLOBALNY • KAMPANIA + SURVIVAL</div>
                   <div id="firestore-status-badge" class="firestore-status-badge checking" title="Status połączenia z chmurą Firebase Firestore">
                     <span class="status-dot"></span>
                     <span id="firestore-status-text">Sprawdzanie bazy...</span>
@@ -1212,6 +1212,32 @@
           <div class="modal-badge">⚠️</div>
           <div class="modal-title">AWARIA NA MAGAZYNIE!</div>
           <p id="gameover-reason" class="modal-desc">Klient z fakturą zablokował cię awanturą!</p>
+
+          <div class="stats-summary-grid gameover-stats-summary">
+            <div class="summary-item">
+              <span class="summary-label">Zdobyte punkty</span>
+              <span id="gameover-score" class="summary-value">0</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Aktywny czas</span>
+              <span id="gameover-time" class="summary-value">0:00</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Tryb</span>
+              <span id="gameover-mode-summary" class="summary-value">SURVIVAL SHIFT</span>
+            </div>
+          </div>
+          <p id="gameover-run-detail" class="gameover-run-detail">FALA 1 • 0 ELIMINACJI</p>
+
+          <div class="victory-submit-box gameover-submit-box">
+            <div class="submit-box-title">RANKING GLOBALNY • KAMPANIA + SURVIVAL</div>
+            <div class="submit-input-row">
+              <input type="text" id="player-nickname-gameover" class="nickname-input" placeholder="Wpisz imię / ksywkę" maxlength="32" value="Kierownik Marcin" />
+              <button id="btn-submit-score-gameover" class="btn-submit-score">ZAPISZ</button>
+            </div>
+            <div id="submit-feedback-gameover" class="submit-feedback hidden"></div>
+          </div>
+
           <div class="modal-actions">
             <button id="btn-retry" class="btn-modal btn-primary">SPRÓBUJ PONOWNIE</button>
             <button id="btn-menu-gameover" class="btn-modal">MENU GŁÓWNE</button>
