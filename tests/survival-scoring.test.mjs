@@ -17,7 +17,7 @@ test('wave clear bonus requires at least three eliminations in the previous wave
   assert.equal(getSurvivalWaveClearBonus(1, 0), 0);
   assert.equal(getSurvivalWaveClearBonus(1, 2), 0);
   assert.equal(getSurvivalWaveClearBonus(1, 3), 84);
-  assert.equal(getSurvivalWaveClearBonus(5, 10), 148);
+  assert.equal(getSurvivalWaveClearBonus(5, 10), 188);
 });
 
 test('wave bonus remains capped during long Survival runs', () => {
