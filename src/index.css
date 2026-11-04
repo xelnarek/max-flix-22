@@ -4235,3 +4235,56 @@ button {
   filter: saturate(.76);
   opacity: .9;
 }
+
+
+/* Archero-style Survival draft: rarity is visible without hiding the upgrade effect. */
+.survival-upgrade-card {
+  position: relative;
+  overflow: hidden;
+}
+.survival-upgrade-card.rarity-common { --survival-rarity: #a9b8c8; }
+.survival-upgrade-card.rarity-rare { --survival-rarity: #51b8ee; }
+.survival-upgrade-card.rarity-epic { --survival-rarity: #b38aff; }
+.survival-upgrade-card.rarity-legendary {
+  --survival-rarity: #f4bf55;
+  box-shadow: inset 0 0 0 1px rgba(244,191,85,.20), 0 0 18px rgba(244,191,85,.10);
+}
+.survival-upgrade-card[class*="rarity-"] {
+  border-color: color-mix(in srgb, var(--survival-rarity) 54%, transparent);
+}
+.survival-upgrade-rarity {
+  align-self: flex-start;
+  padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--survival-rarity, #a9b8c8) 52%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--survival-rarity, #a9b8c8) 10%, transparent);
+  color: var(--survival-rarity, #a9b8c8);
+  font-size: 8px;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: .8px;
+}
+@media (max-width: 720px) {
+  .survival-upgrade-card {
+    grid-template-columns: 34px minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    row-gap: 4px;
+  }
+  .survival-upgrade-icon {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+  }
+  .survival-upgrade-rarity {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: start;
+  }
+  .survival-upgrade-title {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .survival-upgrade-description {
+    grid-column: 2;
+    grid-row: 3;
+  }
+}

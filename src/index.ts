@@ -523,6 +523,8 @@ class PaleciakiScene extends xb.Script {
       this.camera,
       (container || document.body) as HTMLElement,
       {
+        // Legacy engine callback contract: Survival never completes a sector.
+        onLevelComplete: () => {},
         onFloatingText: (text, x, y, z, type, metadata) => {
           spawnFloatingToast(text, x, y, z, type, metadata);
         },
@@ -769,7 +771,12 @@ class PaleciakiScene extends xb.Script {
           for (const option of options) {
             const card = document.createElement('button');
             card.type = 'button';
-            card.className = 'survival-upgrade-card';
+            card.className = 'survival-upgrade-card rarity-' + option.rarity;
+            card.dataset.rarity = option.rarity;
+            card.setAttribute('aria-label', option.rarityLabel + ': ' + option.title + '. ' + option.description);
+            const rarityBadge = document.createElement('span');
+            rarityBadge.className = 'survival-upgrade-rarity';
+            rarityBadge.textContent = option.rarityLabel;
             const icon = document.createElement('span');
             icon.className = 'survival-upgrade-icon';
             icon.textContent = option.icon;
@@ -779,7 +786,7 @@ class PaleciakiScene extends xb.Script {
             const description = document.createElement('span');
             description.className = 'survival-upgrade-description';
             description.textContent = option.description;
-            card.append(icon, title, description);
+            card.append(rarityBadge, icon, title, description);
             card.addEventListener('click', () => {
               survivalLevelUp.classList.add('hidden');
               if (!this.engine.chooseSurvivalUpgrade(option.id)) {
@@ -1305,7 +1312,9 @@ class PaleciakiScene extends xb.Script {
       }
     };
 
-    document.getElementById('btn-open-cinematic-intro')?.addEventListener('click', launchCinematicIntro);
+    // The boot sequence is in a different method scope; bridge it with a private DOM event.
+    document.addEventListener('paleciaki:launch-intro', () => { void launchCinematicIntro(); }, { once: true });
+
 
     document.getElementById('btn-attack')?.addEventListener('click', () => {
       this.engine.triggerAttack();
@@ -2188,15 +2197,12 @@ async function startApp() {
       console.log('[App:Boot] 🎉 Ekran tytułowy gotowy.');
     }
 
-    // Let the browser paint the ready menu once, then launch the 20-second
-    // opening sequence automatically. The intro itself is still skippable.
-    const introButton = document.getElementById('btn-open-cinematic-intro') as HTMLButtonElement | null;
-    if (introButton && !document.hidden) {
-      await new Promise<void>((resolve) => {
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-      });
-      introButton.click();
-    }
+    // Paint the ready menu once, then run the opening sequence automatically.
+    // It no longer depends on a retired Campaign/story button existing in the DOM.
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    });
+    if (!document.hidden) document.dispatchEvent(new Event('paleciaki:launch-intro'));
 
   } catch (err) {
     console.error('[App:Boot] ❌ KRYTYCZNY BŁĄD STARTU:', err);

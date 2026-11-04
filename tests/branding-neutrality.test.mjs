@@ -24,7 +24,7 @@ test('public identity and operator labels are generic', async () => {
     .replace(/<[^>]+>/g, ' ');
   const publicCopy = [publicHtml, intro, characters].join('\n');
   assert.doesNotMatch(publicCopy,
-    /Max-Flix|Max-Fliz|Palczak|Kuleto|Walczak|Króla-Leto|Zdzich|\bAtlas\b|\bForge\b|\bVector\b|\bVolt\b|\bRook\b|\bMarcin\b|\bGrzesiek\b|\bDawid\b|\bMateusz\b|\bPiotr\b|\bSebix\b|\bRudi\b/i);
+    /Max-Flix|Max-Fliz|MAX-FLIX|MAX-FLIZ|Palczak|Kuleto|Walczak|Króla-Leto|Zdzich|\bAtlas\b|\bForge\b|\bVector\b|\bVECTOR\b|\bVolt\b|\bRook\b|\bMarcin\b|\bGrzesiek\b|\bDawid\b|\bMateusz\b|\bPiotr\b|\bSebix\b|\bRudi\b/);
   assert.match(characters, /name: 'Operator 01'/);
   assert.match(characters, /name: 'Operator 05'/);
   assert.doesNotMatch(app, /launchCampaignGame|doStartGame|id="btn-start-game"|story-intro-modal/);
@@ -34,7 +34,7 @@ test('the public UI exposes Survival only', async () => {
   const html = await read('../index.html');
   const app = await read('../src/index.ts');
   assert.match(html, /id="btn-start-survival"/);
-  assert.doesNotMatch(html, /id="btn-start-game"|data-tab="tab-zones"|data-tab="tab-story"|id="story-intro-modal"|KAMPANIA|kampania/i);
+  assert.doesNotMatch(html, /id="btn-start-game"|data-tab="tab-zones"|data-tab="tab-story"|id="story-intro-modal"|KAMPANIA|kampania|kampanię|btn-open-cinematic-intro/i);
   assert.match(html, /RANKING GLOBALNY • SURVIVAL/);
   assert.doesNotMatch(html, /RANKING GLOBALNY • .*KAMPANIA/i);
   assert.doesNotMatch(app, /launchCampaignGame|doStartGame|id="btn-start-game"|story-intro-modal/);

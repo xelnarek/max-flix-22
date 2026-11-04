@@ -98,18 +98,15 @@ test('playable operator models use refined curved surfaces at close camera range
 });
 
 
-test('all main-menu navigation and launch actions use consistent inline vector icons', async () => {
+test('main-menu navigation and the single Survival launch action use consistent inline vector icons', async () => {
   const html = await read('../index.html');
   const codexStart = html.indexOf('data-tab="tab-field-guide"');
   const settingsStart = html.indexOf('data-tab="tab-settings"');
-  const campaignStart = html.indexOf('id="btn-start-game"');
   const survivalStart = html.indexOf('id="btn-start-survival"');
-  const briefingStart = html.indexOf('id="btn-open-story-modal"');
   assert.ok(codexStart >= 0 && html.slice(codexStart, codexStart + 500).includes('<svg'));
   assert.ok(settingsStart >= 0 && html.slice(settingsStart, settingsStart + 700).includes('<svg'));
-  assert.ok(campaignStart >= 0 && html.slice(campaignStart, campaignStart + 800).includes('menu-cta-icon'));
   assert.ok(survivalStart >= 0 && html.slice(survivalStart, survivalStart + 800).includes('menu-cta-icon'));
-  assert.ok(briefingStart >= 0 && html.includes('class="menu-story-icon"'));
+  assert.doesNotMatch(html, /btn-start-game|btn-open-story-modal|btn-open-cinematic-intro/);
 });
 
 test('operator menu portraits use a balanced centred mobile layout and preserve menu actions', async () => {
@@ -123,9 +120,10 @@ test('operator menu portraits use a balanced centred mobile layout and preserve 
   assert.ok(css.includes('#title-screen .char-card[aria-pressed="true"]'));
   assert.ok(css.includes('#title-screen .char-card-badge.operator-emblem .operator-portrait'));
   assert.ok(app.includes("card.setAttribute('aria-pressed', String(cardId === id))"));
-  for (const id of ['btn-start-game', 'btn-start-survival', 'btn-open-story-modal']) {
+  for (const id of ['btn-start-survival']) {
     assert.ok(html.includes('id="' + id + '"'));
   }
+  assert.doesNotMatch(html, /btn-start-game|btn-open-story-modal/);
 });
 
 
