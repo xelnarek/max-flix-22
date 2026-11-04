@@ -3,7 +3,7 @@
 ## Przygotowanie techniczne wykonane w repozytorium
 
 - Publiczna nazwa, opis i metadane produktu: **Paleciaki! Magazyn Chaosu**.
-- Publiczny odczyt rankingu pozostaje dostępny, ale tworzenie wpisów wymaga już zalogowanej anonimowej sesji Firebase; bez logowania wyniki pozostają w lokalnej kolejce i nie udają zapisu online.
+- Publiczny odczyt i zapis rankingu są obecnie dostępne na podstawie reguł Firestore; klient próbuje użyć anonimowego Firebase Authentication, ale kod ma również ścieżkę gościa. Reguła `leaderboard` nie wymaga obecnie `isSignedIn()`, więc nie wolno traktować wpisów jako uwierzytelnionych ani odpornych na fałszowanie.
 - Nowe 11,8-sekundowe intro Canvas 2D: dynamiczny najazd, alarm, wózek, nadciągająca horda, prezentacja operatorów i plansza tytułowa. Bez zewnętrznego pliku wideo.
 - Manifest PWA, kolor motywu, ikona SVG i strona awaryjna offline z nowym brandingiem.
 - Link do polityki prywatności umieszczony w ustawieniach gry.
@@ -57,5 +57,7 @@ Po pobraniu artefaktów z workflow zainstaluj APK debug na urządzeniu Android i
 - uprawnienia, pasek systemowy, tryb immersyjny, dźwięk i stan aplikacji po ubiciu procesu.
 
 ## Co nadal blokuje publikację
+
+**Krytyczny bloker bezpieczeństwa rankingu:** aktualna reguła `firestore.rules` pozwala tworzyć dokumenty `leaderboard` bez zalogowania. Aplikacja próbuje rozpocząć anonimową sesję Firebase, ale przy jej niedostępności przechodzi w tryb gościa; obecna reguła nadal pozwala wtedy zapisać wynik. Publiczny klient może więc wysyłać zmyślone wyniki lub spamować ranking. Przed publikacją należy potwierdzić w Firebase Console, że Anonymous Authentication jest włączone, a następnie zaprojektować i przetestować regułę wymagającą uwierzytelnienia oraz powiązania wpisu z UID. Samo uwierzytelnienie nie chroni wyniku przed manipulacją po stronie klienta — ranking konkurencyjny wymaga dodatkowej walidacji serwerowej i ograniczania nadużyć.
 
 To nie jest jeszcze zatwierdzona aplikacja Google Play. Właściciel musi uzupełnić dane wydawcy, skonfigurować i zabezpieczyć klucz podpisujący, zweryfikować politykę oraz Data safety, potwierdzić licencje assetów i wykonać testy na urządzeniach. W nowych kontach osobistych może być wymagany zamknięty test z 12 testerami przez nieprzerwane 14 dni przed wnioskiem o dostęp do produkcji. Wymagania Play Console sprawdź ponownie bezpośrednio przed wysłaniem wersji.
