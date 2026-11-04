@@ -8,7 +8,7 @@ self.addEventListener('install', (event) => {
 });
 self.addEventListener('activate', (event) => {
   event.waitUntil(caches.keys().then((keys) => Promise.all(
-    keys.filter((key) => key.startsWith('operacja-b4-') && key !== CACHE_NAME).map((key) => caches.delete(key))
+    keys.filter((key) => (key.startsWith('operacja-b4-') || key.startsWith('paleciaki-magazyn-chaosu-shell-')) && key !== CACHE_NAME).map((key) => caches.delete(key))
   )).then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', (event) => {
