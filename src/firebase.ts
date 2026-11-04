@@ -138,16 +138,6 @@ export const getFirebaseInstance = () => FirebaseServicesSingleton.getInstance()
 
 
 
-export interface LeaderboardEntry {
-  id?: string;
-  playerName: string;
-  hero: string;
-  score: number;
-  coins: number;
-  timeSeconds: number;
-  bossDefeated: boolean;
-  createdAt: string;
-}
 
 export enum OperationType {
   CREATE = 'create',
