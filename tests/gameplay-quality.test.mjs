@@ -163,17 +163,34 @@ test('Survival menu copy stays synchronized with the actual 60-second wave clock
   assert.doesNotMatch(html, /FALE CO 42 S/);
 });
 
-test('cinematic intro has one mobile-safe launch path and cannot start twice from touch', async () => {
+test('cinematic intro launches once at boot and no longer depends on a removed menu control', async () => {
   const [app, intro, html] = await Promise.all([
     read('../src/index.ts'), read('../src/cinematicIntro.ts'), read('../index.html')
   ]);
   assert.match(app, /if \(this\.cinematicIntro\?\.isRunning\(\) \|\| cinematicIntroLaunchPending\) return/);
-  assert.match(app, /btn-open-cinematic-intro'\)\?\.addEventListener\('click', launchCinematicIntro\)/);
-  assert.doesNotMatch(app, /btn-open-cinematic-intro'\)\?\.addEventListener\('touchend'/);
   assert.match(app, /new CinematicIntroManager/);
+  assert.match(app, /if \(!document\.hidden\) void launchCinematicIntro\(\)/);
+  assert.match(app, /onStartGame: \(\) => \{[\s\S]*?doStartSurvival\(\)/);
+  assert.doesNotMatch(app, /btn-open-cinematic-intro|btn-open-story-modal/);
+  assert.doesNotMatch(html, /btn-open-cinematic-intro|btn-open-story-modal/);
   assert.match(intro, /drawWarehouse/);
-  assert.match(html, /id="btn-open-cinematic-intro"/);
+  assert.match(intro, /prefers-reduced-motion/);
   assert.doesNotMatch(app, /PixelIntroManager|pixelIntro/i);
+});
+
+test('Survival upgrade draft has visible rarity tiers with stronger higher-tier effects', async () => {
+  const [game, app, html] = await Promise.all([
+    read('../src/game.ts'), read('../src/index.ts'), read('../index.html')
+  ]);
+  assert.match(game, /rollSurvivalUpgradeRarity\(Math\.random\(\), this\.survivalLevel\)/);
+  assert.match(game, /weapon_evolve:[\s\S]*?rarity = option\.id\.startsWith\('weapon_evolve:'\)[\s\S]*?'legendary'/);
+  assert.match(game, /const strength = choice\.strengthMultiplier/);
+  assert.match(game, /this\.survivalDamageMultiplier = Math\.min\(2\.05, this\.survivalDamageMultiplier \* \(1 \+ 0\.12 \* strength\)\)/);
+  assert.match(game, /getSurvivalWeaponInitialLevel\(choice\.rarity\)/);
+  assert.match(game, /getSurvivalWeaponUpgradeSteps\(choice\.rarity\)/);
+  assert.match(app, /rarityBadge\.textContent = option\.rarityLabel/);
+  assert.match(app, /card\.className = 'survival-upgrade-card rarity-' \+ option\.rarity/);
+  assert.match(html, /rzadkie, epickie i legendarne wersje wzmacniają ten sam efekt/i);
 });
 
 test('Survival start locks duplicate taps before awaiting shared asset readiness', async () => {
@@ -744,15 +761,17 @@ test('special ability has one authoritative timer and capped recharge in both mo
   assert.match(app, /GOTOWA \[E\]/);
 });
 
-test('both Campaign completion and Survival/Campaign defeat can submit a mode-labelled score', async () => {
+test('Survival defeat submits a mode-labelled score and uses the Survival summary', async () => {
   const app = await read('../src/index.ts');
   const html = await read('../index.html');
-  assert.match(app, /onLevelComplete: \(levelId, score, timeStr\) => \{[\s\S]*?this\.lastMode = this\.engine\.getGameMode\(\)/);
-  assert.match(app, /onGameOver: \(reason\) => \{[\s\S]*?this\.lastScore = this\.engine\.getScore\(\)[\s\S]*?this\.lastMode = this\.engine\.getGameMode\(\)/);
-  assert.match(app, /bindScoreSubmission\('btn-submit-score-gameover'/);
+  assert.match(app, /onGameOver: \(reason\) => \{[\s\S]*?this\.lastMode = this\.engine\.getGameMode\(\)/);
+  assert.match(app, /this\.lastMode = this\.engine\.getGameMode\(\)/);
   assert.match(app, /mode: this\.lastMode/);
-  assert.ok(html.includes('id="btn-submit-score-gameover"'));
-  assert.ok(html.includes('id="gameover-score"'));
+  assert.match(app, /bindScoreSubmission\('btn-submit-score-gameover'/);
+  assert.match(html, /id="btn-submit-score-gameover"/);
+  assert.match(html, /id="gameover-score"/);
+  assert.match(html, /SURVIVAL SHIFT/);
+  assert.doesNotMatch(html, /victory-modal|btn-next-level|btn-replay-level/);
 });
 
 test('Survival earns additional points for harder eliminations and active wave clears, not idle waiting', async () => {
@@ -940,24 +959,24 @@ test('Campaign special recharge rewards regular kills, elite chains and bosses w
   assert.match(game, /this\.abilityCooldownState\.remainingSeconds,\s*true\s*\)/);
 });
 
-test('new cinematic intro replaces the old pixel/VHS intro and launches at boot', async () => {
+test('cinematic intro is a real Canvas 2D boot sequence and returns to the Survival menu', async () => {
   const [app, intro, html, css] = await Promise.all([
     read('../src/index.ts'), read('../src/cinematicIntro.ts'),
     read('../index.html'), read('../src/index.css')
   ]);
   assert.match(app, /new CinematicIntroManager/);
-  assert.match(app, /launchCinematicIntro\(\)/);
+  assert.match(app, /if \(!document\.hidden\) void launchCinematicIntro\(\)/);
   assert.match(app, /this\.cinematicIntro\.stop\(false, false\)/);
-  assert.doesNotMatch(app, /PixelIntroManager|pixelIntro/i);
+  assert.match(app, /doStartSurvival\(\)/);
+  assert.doesNotMatch(app, /btn-open-cinematic-intro|PixelIntroManager|pixelIntro/i);
   assert.match(intro, /Canvas 2D/);
   assert.match(intro, /prefers-reduced-motion/);
   assert.match(intro, /drawWarehouse/);
-  assert.match(html, /btn-open-cinematic-intro/);
+  assert.doesNotMatch(html, /btn-open-cinematic-intro|btn-open-story-modal/);
   assert.match(html, /PALECIAKI! <span>MAGAZYN<\/span><em>CHAOSU<\/em>/);
   assert.match(css, /\.cinematic-intro-overlay/);
   assert.doesNotMatch(css, /pixel-intro-overlay|pixel-vhs-header/);
 });
-
 
 test('record date and time are rendered on every leaderboard row', async () => {
   const [app, formatter, css, cloud] = await Promise.all([
