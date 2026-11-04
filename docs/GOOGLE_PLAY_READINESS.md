@@ -3,6 +3,7 @@
 ## Przygotowanie techniczne wykonane w repozytorium
 
 - Publiczna nazwa, opis i metadane produktu: **Paleciaki! Magazyn Chaosu**.
+- Publiczny odczyt rankingu pozostaje dostępny, ale tworzenie wpisów wymaga już zalogowanej anonimowej sesji Firebase; bez logowania wyniki pozostają w lokalnej kolejce i nie udają zapisu online.
 - Nowe 11,8-sekundowe intro Canvas 2D: dynamiczny najazd, alarm, wózek, nadciągająca horda, prezentacja operatorów i plansza tytułowa. Bez zewnętrznego pliku wideo.
 - Manifest PWA, kolor motywu, ikona SVG i strona awaryjna offline z nowym brandingiem.
 - Link do polityki prywatności umieszczony w ustawieniach gry.
@@ -13,6 +14,7 @@
 ## Wymagane środowisko dla Androida
 
 - Node.js 24 i JDK 21.
+- Workflow generuje natywny projekt Android na czystym runnerze; lokalnie `npm run android:setup` tworzy katalog `android/`.
 - Android SDK 36 / Android 16 oraz aktualne Android Build Tools.
 - Capacitor 8.6.0; target i compile SDK 36; minimalny SDK 24.
 - Do wydania produkcyjnego: Android App Bundle (.aab) podpisany własnym kluczem uploadowym.
