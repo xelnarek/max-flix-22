@@ -298,19 +298,19 @@ export class PaleciakiGameEngine {
       "Żaden magazynier nie opuści tego terminala żywy!",
     ],
     zombie_pracownik: [
-      "Kubełek Mocy?! Vector przywiózł kubełek! Z drogi!",
+      "Kubełek Mocy?! Dostawa dotarła! Z drogi!",
       "STRIIIaaPSY... czuję gorącą panierkę z pięciu alejek!",
       "Trzecia zmiana bez obiadu... oddawaj skrzydełka!",
       "Kubełek jest MÓJ! Nie dzielę się frytkami!",
-      "Móóózg... znaczy KURCZAAAK z dostawy Vectora!",
+      "Móóózg... znaczy KURCZAAAK z dostawy!",
     ],
     pomazaniec: [
       "POMAZAŃCEEEE! KTO MA JESZCZE DWA KÓŁKA?!",
       "Razem mamy w siedmiu więcej lat niż rozumu!",
-      "Lizak w dłoń! Godzilla Vectora nie ucieknie!",
+      "Lizak w dłoń! Rowerowy boss nam nie ucieknie!",
       "Dzwonek działa, hamulce są opcjonalne!",
       "MAM CZAPKĘ Z WIATRAKIEM, CZYLI JESTEM DOWÓDCĄ!",
-      "Vectorzilla! Nadciągamy z prędkością trzech kilometrów na godzinę!",
+      "Rowerowy boss! Nadciągamy z prędkością trzech kilometrów na godzinę!",
     ],
     sebix_m: [
       "CO SIĘ GAPISZ?! CEGŁA JEST NAJPIERWOTNIEJSZYM ARGUMENTEM!",
@@ -429,8 +429,8 @@ export class PaleciakiGameEngine {
   private activeChaserIds = new Set<string>();
   private threatTier = 0;
 
-  // Survival Shift is an independent mode. Campaign state and progression remain unchanged.
-  private gameMode: 'campaign' | 'survival' = 'campaign';
+  // Survival is the sole public game mode.
+  private gameMode: 'campaign' | 'survival' = 'survival';
   private survivalElapsed = 0;
   private survivalSpawnTimer = 0;
   private survivalSurgeTimeLeft = 0;
@@ -1160,7 +1160,7 @@ export class PaleciakiGameEngine {
   public startTitle() {
     sound.stopMusic();
     this.clearOperatorCompanions();
-    this.gameMode = 'campaign';
+    this.gameMode = 'survival';
     this.maxHp = 3;
     this.state = 'title';
     this.hp = this.maxHp;
@@ -1185,14 +1185,11 @@ export class PaleciakiGameEngine {
     this.callbacks.onBossUpdate?.('', 0, 0, false);
     this.setLevelVisible(true);
     
-    // Build initial level for title visual if not already built
-    if (this.platforms.length === 0) {
-      this.loadLevel(1);
-    }
+    // The title screen uses its own UI backdrop. Do not construct a hidden campaign world at boot.
   }
 
-  public startGame(levelId = 1) {
-    this.gameMode = 'campaign';
+  public startGame(levelId = 1, buildCampaignLevel = true) {
+    this.gameMode = buildCampaignLevel ? 'campaign' : 'survival';
     this.state = 'playing';
     sound.startMusic();
     this.maxHp = 3;
@@ -1309,18 +1306,18 @@ export class PaleciakiGameEngine {
 
     this.callbacks.onPerksUpdate?.(this.activePerks);
     this.callbacks.onSpeechBubble('');
-    this.loadLevel(levelId);
+    if (buildCampaignLevel) this.loadLevel(levelId);
+    else this.clearLevel();
     this.callbacks.onHpUpdate(this.hp, this.maxHp);
     this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
     this.sayRandomVoiceLine();
   }
 
   public startSurvival() {
-    // Reuse campaign initialization for the selected operator, then build a clean, dedicated Survival arena.
-    this.startGame(1);
+    // Reset shared combat state without constructing a campaign level, then build the dedicated Survival arena.
+    this.startGame(1, false);
     this.gameMode = 'survival';
     this.updateAbilityCooldown(0, true);
-    this.clearLevel();
     this.rebuildPlayerMesh();
     this.sectorGates = [null, null, null, null];
     this.levelBounds = { minX: -58, maxX: 58, minZ: -18.2, maxZ: 18.2 };
@@ -2971,7 +2968,7 @@ export class PaleciakiGameEngine {
     this.collectibles.push({
       id,
       type: 'kfc_bucket',
-      name: 'Kubełek Mocy od Vectora (+2 Kawy & Furia Energetyczna!)',
+      name: 'Kubełek Mocy (+2 HP & Furia Energetyczna!)',
       x,
       y,
       z,
@@ -4179,7 +4176,7 @@ export class PaleciakiGameEngine {
     this.addMagnetItem('mag_l1_1', -6, 1.0, 2.5);
 
     // Easter Eggs
-    this.addEasterEgg('egg_coffee_1', -24, 0.05, -15.5, 'Ukryty Kącik Kawowy Zdzicha', 'coffee', 400);
+    this.addEasterEgg('egg_coffee_1', -24, 0.05, -15.5, 'Ukryta Strefa Kawowa', 'coffee', 400);
     this.addEasterEgg('egg_wz_1', 12, 1.85, 10.5, 'Zaginiona WZ-tka z 2012 Roku', 'folder', 450);
     
     // Loot Crates
@@ -5913,7 +5910,7 @@ export class PaleciakiGameEngine {
       'RAJD NA ROWERKACH • PIĘCIU POMAZAŃCÓW',
       'Pięciu maluchów rusza do szturmu. Uważaj na salwy lizaków i nie daj się dogonić kolumnie rowerków!'
     );
-    this.emitFloatingToast('🍭 LIZAKI W DŁOŃ! GODZILLA VECTORA CZEKA!', this.playerPos.x, this.playerPos.y + 1.9, this.playerPos.z, 'combo');
+    this.emitFloatingToast('🍭 LIZAKI W DŁOŃ! ROWEROWY BOSS CZEKA!', this.playerPos.x, this.playerPos.y + 1.9, this.playerPos.z, 'combo');
     sound.playPomazaniecEntrance();
     this.triggerScreenShake(0.36, 0.28);
     this.triggerHitStop(0.07);
@@ -6287,7 +6284,7 @@ export class PaleciakiGameEngine {
     if (eventIndex === 0) {
       sound.playSirens();
       this.callbacks.onPerkDropBanner?.('⚡ DOSTAWA SPECJALNA — ALARM GŁODOWY!', '🧟', 'Trzech magazynierów-zombie wyczuło stripsy. Złap kubełek, zanim zrobią inwentaryzację Twojego lunchu.', '#ef4444');
-      this.sayQuote('Vector otworzył kubełek na rampie. Teraz cała hala ma jeden cel: panierka.');
+      this.sayQuote('Ktoś otworzył kubełek na rampie. Teraz cała hala ma jeden cel: panierka.');
       for (let i = 0; i < 3; i++) {
         const ex = THREE.MathUtils.clamp(px + (i - 1) * 8, this.levelBounds.minX + 3, this.levelBounds.maxX - 3);
         const ez = THREE.MathUtils.clamp(pz + (i % 2 === 0 ? -8 : 8), this.levelBounds.minZ + 2, this.levelBounds.maxZ - 2);
@@ -10330,7 +10327,7 @@ export class PaleciakiGameEngine {
         // Each of the five defeated riders already drops 3 XP. Keep the bonus at
         // 15 XP total instead of spawning a second, duplicate set of XP gems.
         this.callbacks.onSurvivalAnnouncement?.(
-          'GODZILLA VECTORA: OCALONA (CHWILOWO)',
+          'ROWEROWY BOSS: OCALONA (CHWILOWO)',
           'RAJD POMAZAŃCÓW ROZBITY!',
           'Pięć rowerków, zero hamulców. Premia za obronę hali: +1 500 punktów i 15 XP do zebrania.'
         );
