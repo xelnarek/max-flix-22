@@ -10385,7 +10385,7 @@ export class MaxFlizGameEngine {
         : e.name.includes('Inwentaryzacja Gigant')
           ? 'INWENTARYZACJA GIGANT ZAMKNIĘTA! Ostatni protokół podpisany!'
           : e.type === 'walczak'
-            ? 'BYŁY KIEROWNIK NADZORCA ZERO ZANEUTRALIZOWANY! Droga wolna!'
+            ? 'NADZORCA ZERO POKONANY! Droga wolna!'
             : e.name.toUpperCase() + ' — NEUTRALIZACJA ZAKOŃCZONA!';
       this.sayQuote(defeatLine);
 
