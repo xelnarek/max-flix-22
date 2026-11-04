@@ -81,9 +81,9 @@ test('Survival is the only public start path and boots without building a campai
   assert.doesNotMatch(html, /id="btn-start-game"|id="story-intro-modal"|data-tab="tab-zones"/);
   assert.match(app, /bindTap\(document\.getElementById\('btn-start-survival'\), doStartSurvival\)/);
   assert.match(app, /doStartSurvival\(\);/);
-  assert.match(game, /public startGame\(levelId = 1, buildCampaignLevel = true\)/);
-  assert.match(game, /this\.startGame\(1, false\)/);
-  assert.match(game, /if \(buildCampaignLevel\) this\.loadLevel\(levelId\);/);
+  assert.match(game, /private resetSurvivalRun\(\)/);
+  assert.match(game, /this\.resetSurvivalRun\(\)/);
+  assert.match(game, /this\.clearLevel\(\)/);
 });
 test('device-aware viewport profile is applied immediately after the renderer becomes available', async () => {
   const [app, css, viewport] = await Promise.all([
@@ -867,7 +867,7 @@ test('Campaign mega-map shares the tactical dodge cooldown, movement and touch c
     'all five Campaign operator attacks can consume the bonus');
   assert.match(app, /onSurvivalDashUpdate: \(progress, ready, remainingSeconds\)/);
   assert.match(app, /bindTouchAction\('btn-touch-dash', \(\) => this\.engine\.triggerDash\(\)\)/);
-  assert.match(html, /Unik taktyczny \(Q\) • Kampania i Survival/);
+  assert.match(html, /Unik taktyczny \(Q\) • Survival/);
   assert.match(css, /\.touch-actions-zone \.dash-touch-btn\s*\{\s*display: flex !important/);
 });
 
