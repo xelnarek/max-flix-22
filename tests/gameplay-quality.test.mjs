@@ -836,3 +836,44 @@ test('a perfect dodge charges one weapon volley and the Survival HUD exposes the
   assert.match(app, /snapshot\.counterattackReady \? ' ✦' : ''/);
   assert.match(app, /Kontratak naładowany/);
 });
+
+
+test('Campaign mega-map shares the tactical dodge cooldown, movement and touch control', async () => {
+  const [game, app, html, css] = await Promise.all([
+    read('../src/game.ts'), read('../src/index.ts'), read('../index.html'), read('../src/index.css')
+  ]);
+  const dashStart = game.indexOf('public triggerDash(): boolean');
+  const dashEnd = game.indexOf('public triggerAbility()', dashStart);
+  assert.ok(dashStart >= 0 && dashEnd > dashStart);
+  const dash = game.slice(dashStart, dashEnd);
+  assert.doesNotMatch(dash, /this\.gameMode !== 'survival'/);
+  assert.match(dash, /this\.gameMode === 'survival'[\s\S]*?getSurvivalDashCooldownSeconds\(this\.survivalDashCooldownMultiplier\)[\s\S]*?: 7\.0/);
+  assert.match(dash, /this\.gameMode === 'campaign'[\s\S]*?campaignHalfDepth/);
+  assert.match(game, /this\.updateSurvivalDashCooldown\(simDt\)/);
+  assert.match(game, /const isTacticalDashing = this\.survivalDashDurationRemaining > 0/);
+  assert.match(game, /this\.campaignCounterattackReady = false/);
+  assert.match(game, /this\.campaignCounterattackReady = true/);
+  assert.match(game, /campaignCounterattackReady \? 1 : 0/);
+  assert.equal((game.match(/campaignCounterattackReady \? 1 : 0/g) || []).length, 5,
+    'all five Campaign operator attacks can consume the bonus');
+  assert.match(app, /onSurvivalDashUpdate: \(progress, ready, remainingSeconds\)/);
+  assert.match(app, /bindTouchAction\('btn-touch-dash', \(\) => this\.engine\.triggerDash\(\)\)/);
+  assert.match(html, /Unik taktyczny \(Q\) • Kampania i Survival/);
+  assert.match(css, /\.touch-actions-zone \.dash-touch-btn\s*\{\s*display: flex !important/);
+});
+
+test('Campaign boss-lane perfect dodge charges one primary attack and does not touch Survival weapon state', async () => {
+  const game = await read('../src/game.ts');
+  const dashStart = game.indexOf('public triggerDash(): boolean');
+  const dashEnd = game.indexOf('public triggerAbility()', dashStart);
+  const dash = game.slice(dashStart, dashEnd);
+  assert.match(dash, /if \(this\.gameMode === 'survival'\)[\s\S]*?this\.survivalCounterattackReady = true[\s\S]*?\} else \{[\s\S]*?this\.campaignCounterattackReady = true/);
+  assert.match(dash, /this\.abilityCooldownState = advanceAbilityCooldown\(this\.abilityCooldownState, 0\.65\)/);
+  assert.match(dash, /IDEALNY UNIK BOSSA! \+100 PKT • KONTRATAK \+1/);
+  const attackStart = game.indexOf('public triggerAttack()');
+  const attackEnd = game.indexOf('\n  private ', attackStart + 20);
+  const attack = game.slice(attackStart, attackEnd);
+  assert.match(attack, /const campaignCounterattackReady = this\.gameMode === 'campaign' && this\.campaignCounterattackReady/);
+  assert.match(attack, /if \(campaignCounterattackReady\) \{\s*this\.campaignCounterattackReady = false/);
+  assert.equal((attack.match(/campaignCounterattackReady \? 1 : 0/g) || []).length, 5);
+});
