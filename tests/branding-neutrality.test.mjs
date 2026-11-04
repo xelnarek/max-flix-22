@@ -59,7 +59,8 @@ test('old company and personal names are absent from the public title and intro 
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<style[\s\S]*?<\/style>/gi, '')
     .replace(/<!--([\s\S]*?)-->/g, '')
-    .replace(/\s(?:id|class|data-[\w:-]+|aria-[\w:-]+|title)="[^"]*"/gi, '');
+    .replace(/\s(?:id|class|data-[\w:-]+|aria-[\w:-]+|title)="[^"]*"/gi, '')
+    .normalize('NFC');
 
   assert.doesNotMatch(publicHtml, /Max-Flix|Max-Fliz|Palczak|Kuleto|Walczak|Króla-Leto|Inspektor Zmiany Kraków|Były kierownik|DPD|Johnny Walker|KFC|Vibram|Optima|Calacatta|World of Tanks|Netflix|PlayStation|Dark Souls|Elden Ring/i);
   assert.doesNotMatch(intro, /Max-Flix|Max-Fliz|Palczak|Kuleto|Walczak/i);
