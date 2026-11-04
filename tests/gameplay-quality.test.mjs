@@ -99,19 +99,17 @@ test('device-aware viewport profile is applied immediately after the renderer be
   assert.match(viewport, /export function calculateUiViewport/);
 });
 
-test('campaign mega-map always assembles all three connected sectors from every campaign start', async () => {
-  const game = await read('../src/game.ts');
-  assert.match(game, /public startGame\(levelId = 1\)/);
-  assert.match(game, /this\.loadLevel\(levelId\)/);
-  const loadLevel = game.slice(game.indexOf('public loadLevel(levelId: number)'), game.indexOf('private buildCampaignHighBayDressing'));
-  assert.match(loadLevel, /this\.buildLevel1\(\)/);
-  assert.match(loadLevel, /this\.buildLevel2\(76\)/);
-  assert.match(loadLevel, /this\.buildLevel3\(161\)/);
-  assert.match(loadLevel, /minX: -36, maxX: 206/);
-  assert.match(loadLevel, /this\.buildSectorGate\(36, 2\)/);
-  assert.match(loadLevel, /this\.buildSectorGate\(116, 3\)/);
+test('campaign entry points are retired; only Survival can be started from the app', async () => {
+  const [app, html, game] = await Promise.all([
+    read('../src/index.ts'), read('../index.html'), read('../src/game.ts')
+  ]);
+  assert.doesNotMatch(html, /id="btn-start-game"|data-tab="tab-zones"|data-tab="tab-story"/);
+  assert.match(html, /id="btn-start-survival"/);
+  assert.doesNotMatch(app, /this\\.engine\\.startGame\\(/);
+  assert.match(app, /this\\.engine\\.startSurvival\\(\\)/);
+  assert.match(game, /private resetSurvivalRun\\(\\)/);
+  assert.doesNotMatch(game, /public startGame\\(/);
 });
-
 test('camera fades only tagged perimeter walls that intersect the camera-to-player ray', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /private registerCameraOccluder\(mesh: THREE\.Mesh\)/);
