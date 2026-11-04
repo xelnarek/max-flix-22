@@ -333,7 +333,7 @@ export async function submitScore(
   const payload: Omit<LeaderboardEntry, 'id' | 'syncStatus'> = {
     mode: (entry.mode === 'survival' ? 'survival' : 'campaign') as LeaderboardGameMode,
     playerName: String(entry.playerName || 'Pracownik Magazynu').trim().slice(0, 32) || 'Pracownik Magazynu',
-    hero: String(entry.hero || 'Marcin').slice(0, 20),
+    hero: String(entry.hero || 'Operator 01').slice(0, 20),
     score: Math.min(10_000_000, Math.max(0, Math.floor(Number.isFinite(entry.score) ? entry.score : 0))),
     coins: Math.min(100_000, Math.max(0, Math.floor(Number.isFinite(entry.coins) ? entry.coins : 0))),
     timeSeconds: Math.max(0, Math.floor(Number.isFinite(entry.timeSeconds) ? entry.timeSeconds : 0)),
