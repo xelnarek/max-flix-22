@@ -352,7 +352,7 @@ class MaxFlizScene extends xb.Script {
     const getEnemyMeta = (type: string) => {
       const metaMap: Record<string, { name: string; role: string; avatar: string }> = {
         kurier: { name: 'Kurier Rudi', role: 'Kurier Express', avatar: '🚚' },
-        walczak: { name: 'Nadzorca Zero', role: 'Były Kierownik', avatar: '👔' },
+        walczak: { name: 'Nadzorca Zero', role: 'Zbuntowany Nadzorca', avatar: '👔' },
         krol_leto: { name: 'Dyrektor Widmo', role: 'Dyrektor Generalny', avatar: '👑' },
         architect: { name: 'Architektka', role: 'Design & Beż', avatar: '🎨' },
         customer: { name: 'Klient', role: 'Awantura o Fugi', avatar: '📑' },
@@ -367,7 +367,7 @@ class MaxFlizScene extends xb.Script {
         bosman_krakow: { name: 'Inspektor Zmiany', role: 'Odprawa 3-MSC', avatar: '📋' },
         agv_robot: { name: 'Robot AGV', role: 'Zgubiona trasa', avatar: '🤖' },
         piorun_dron: { name: 'PIORUN', role: 'Dron AI', avatar: '⚡' },
-        zombie_pracownik: { name: 'Zombie-Magazynier', role: 'Głód Kubełek Mocy', avatar: '🧟' },
+        zombie_pracownik: { name: 'Zombie-Magazynier', role: 'Głód Przekąsek', avatar: '🧟' },
         pomazaniec: { name: 'Pomazaniec', role: 'Rowerowy rajd / lizaki', avatar: '🚲' },
         sebix_m: { name: 'Operator Turbo', role: 'Taran B4 / cegły', avatar: '🔥' },
       };
@@ -884,7 +884,7 @@ class MaxFlizScene extends xb.Script {
         piotr: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.7' stroke-linecap='round' stroke-linejoin='round'><path d='M27 9a10 10 0 0 0 11 13L24 36a4.5 4.5 0 0 1-6-6l14-15A10 10 0 0 0 27 9Z'/><path d='m30 8 5-4 8 8-4 5'/><path d='m9 40 4-4m-7 0 4-4' opacity='.8'/></svg>",
       };
       const attackDescriptions: Record<CharacterId, string> = {
-        marcin: 'Wysyła świetlny znak-zlecenie z programu system ERP. Trafiony cel zostaje ogłuszony, a co trzeci czar tworzy mocniejszą pieczęć audytu.',
+        marcin: 'Wysyła świetlny znak-zlecenie z systemu ERP. Trafiony cel zostaje ogłuszony, a co trzeci czar tworzy mocniejszą pieczęć audytu.',
         grzesiek: 'Miota ciężkim stalowym hantlem. Co trzeci rzut jest większy, mocniej odrzuca i przebija kilku przeciwników.',
         dawid: 'Rzuca rolką folii stretch, która owija i spowalnia przeciwników. Co trzeci rzut mocniej wiąże cel.',
         mateusz: 'Strzela pojedynczym impulsem paralizatora. Trafiony przeciwnik dostaje elektryczny stun; co trzeci impuls jest mocniejszy.',
@@ -998,6 +998,8 @@ class MaxFlizScene extends xb.Script {
             const rankDisplay = idx < 3 ? rankIcons[idx] : `${idx + 1}.`;
             const heroIds: Record<string, CharacterId> = {
               Atlas: 'marcin', Forge: 'grzesiek', Vector: 'dawid', Volt: 'mateusz', Rook: 'piotr',
+              // Preserve support for scores created before the public call-sign update.
+              Marcin: 'marcin', Grzesiek: 'grzesiek', Dawid: 'dawid', Mateusz: 'mateusz', Piotr: 'piotr',
             };
             const heroId = heroIds[entry.hero];
             const heroIcon = heroId ? operatorPortrait(heroId) : '👷‍♂️';
