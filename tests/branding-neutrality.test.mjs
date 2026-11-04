@@ -24,7 +24,7 @@ test('public identity and operator labels are generic', async () => {
     .replace(/<[^>]+>/g, ' ');
   const publicCopy = [publicHtml, intro, characters].join('\n');
   assert.doesNotMatch(publicCopy,
-    /Max-Flix|Max-Fliz|Palczak|Kuleto|Walczak|Króla-Leto|Zdzich|\bAtlas\b|\bForge\b|\bVector\b|\bVolt\b|\bRook\b|\bMarcin\b|\bGrzesiek\b|\bDawid\b|\bMateusz\b|\bPiotr\b|\bSebix\b|\bRudi\b/i);
+    /Max-Flix|Max-Fliz|MAX-FLIX|MAX-FLIZ|Palczak|Kuleto|Walczak|Króla-Leto|Zdzich|\bAtlas\b|\bForge\b|\bVector\b|\bVECTOR\b|\bVolt\b|\bRook\b|\bMarcin\b|\bGrzesiek\b|\bDawid\b|\bMateusz\b|\bPiotr\b|\bSebix\b|\bRudi\b/);
   assert.match(characters, /name: 'Operator 01'/);
   assert.match(characters, /name: 'Operator 05'/);
   assert.doesNotMatch(app, /launchCampaignGame|doStartGame|id="btn-start-game"|story-intro-modal/);
