@@ -437,7 +437,7 @@
   text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
-/* Speaker Specific Accents */
+/* Fictional enemy call-sign accents */
 .dialogue-box-card.border-kurier { border-left-color: #f59e0b; }
 .dialogue-box-card.border-walczak { border-left-color: #ef4444; }
 .dialogue-box-card.border-krol_leto { border-left-color: #fca5a5; }
@@ -1696,7 +1696,7 @@ h1, h2, h3, .menu-game-title, .hero-name, .dialogue-box-name, .title-brand, .bos
   box-shadow: 0 0 16px rgba(245, 158, 11, 0.45) !important;
 }
 
-/* New HUD Badges for Power Bucket & Golden Pallet Jack Bulldozer */
+/* New HUD Badges for Energy Supply & Golden Pallet Jack Bulldozer */
 .perk-badge.perk-kfc {
   background: linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(185, 28, 28, 0.95)) !important;
   border: 1px solid rgba(254, 202, 202, 0.6) !important;
@@ -1706,7 +1706,7 @@ h1, h2, h3, .menu-game-title, .hero-name, .dialogue-box-name, .title-brand, .bos
   animation: pulse-energy 1.5s infinite alternate ease-in-out;
 }
 
-@keyframes pulse-kfc {
+@keyframes pulse-energy {
   0% { transform: scale(1); box-shadow: 0 4px 14px rgba(239, 68, 68, 0.5); }
   100% { transform: scale(1.05); box-shadow: 0 6px 20px rgba(239, 68, 68, 0.85); }
 }
