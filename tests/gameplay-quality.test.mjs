@@ -791,3 +791,32 @@ test('critical upgrades are capped, roll once per weapon volley, and can unlock 
   assert.match(weaponFire, /const weaponDamage = criticalRoll\.damage/);
   assert.match(weaponFire, /damage: weaponDamage/);
 });
+
+
+test('perfect Survival dodges require the late boss warning window and a lateral exit', async () => {
+  const [game, geometry, types, app, html] = await Promise.all([
+    read('../src/game.ts'), read('../src/combatTelegraphs.ts'), read('../src/types.ts'),
+    read('../src/index.ts'), read('../index.html')
+  ]);
+  assert.match(game, /remaining > 0\.30/);
+  assert.match(game, /isInsideBossAttackLane\(/);
+  assert.match(game, /isEffectiveBossLaneDodge\(/);
+  assert.match(game, /this\.survivalDashCooldownRemaining - 1\.35/);
+  assert.match(game, /advanceAbilityCooldown\(this\.abilityCooldownState, 0\.65\)/);
+  assert.match(game, /this\.survivalPerfectDodges\+\+/);
+  assert.match(geometry, /lateralTravel < requiredTravel/);
+  assert.match(types, /chargeLaneLength\?: number;\s*chargeLaneWidth\?: number;/);
+  assert.match(app, /String\(snapshot\.kills\) \+ ' \/ ' \+ String\(snapshot\.perfectDodges\)/);
+  assert.match(html, /ELIMINACJE \/ UNIKI/);
+});
+
+test('each boss warning stores its owner-specific lane dimensions for dodge validation', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /owner\.chargeLaneLength = safeLength/);
+  assert.match(game, /owner\.chargeLaneWidth = safeWidth/);
+  const calls = game.match(/spawnBossLaneTelegraph\([^;]+\);/g) || [];
+  assert.ok(calls.length >= 4, 'expected multiple boss lane telegraphs');
+  for (const call of calls) {
+    assert.match(call, /, (?:enemy|e)\);$/, 'each lane warning must attach its enemy owner');
+  }
+});
