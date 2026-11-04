@@ -124,7 +124,6 @@ class PaleciakiScene extends xb.Script {
   private engine!: PaleciakiGameEngine;
   private cinematicIntro: CinematicIntroManager | null = null;
   private selectedCharId: CharacterId = 'marcin';
-  private selectedLevelId: number = 1;
   private lastScore: number = 0;
   private lastCoins: number = 0;
   private lastTimeSeconds: number = 0;
@@ -254,7 +253,6 @@ class PaleciakiScene extends xb.Script {
     const hudPerksRow = document.getElementById('hud-perks-row');
     const touchControls = document.getElementById('touch-controls');
     const pauseModal = document.getElementById('pause-modal');
-    const victoryModal = document.getElementById('victory-modal');
     const gameoverModal = document.getElementById('gameover-modal');
     const survivalHud = document.getElementById('survival-hud');
     const survivalLevelUp = document.getElementById('survival-levelup');
@@ -269,8 +267,6 @@ class PaleciakiScene extends xb.Script {
     const survivalRerollBtn = document.getElementById('btn-survival-reroll') as HTMLButtonElement | null;
     const survivalSkipBtn = document.getElementById('btn-survival-skip') as HTMLButtonElement | null;
 
-    const victoryScore = document.getElementById('victory-score');
-    const victoryTime = document.getElementById('victory-time');
     const gameoverReason = document.getElementById('gameover-reason');
 
     const bossHudBar = document.getElementById('boss-hud-bar');
@@ -678,6 +674,7 @@ class PaleciakiScene extends xb.Script {
         onGameOver: (reason) => {
           hideSurvivalAnnouncement();
           this.lastScore = this.engine.getScore();
+          this.lastCoins = this.engine.getCollectedVipCount();
                     this.lastTimeSeconds = this.engine.getElapsedSeconds();
           this.lastBossDefeated = this.engine.isBossDefeated();
           this.lastMode = this.engine.getGameMode();
@@ -1123,44 +1120,6 @@ class PaleciakiScene extends xb.Script {
       });
     });
 
-    const refreshZoneLocks = () => {
-      const unlocked = this.engine.getUnlockedSector();
-      document.querySelectorAll<HTMLElement>('.zone-card').forEach((card) => {
-        const level = Number(card.getAttribute('data-level') || '1');
-        const locked = level > unlocked;
-        card.classList.toggle('locked', locked);
-        card.setAttribute('aria-disabled', locked ? 'true' : 'false');
-        const pill = card.querySelector<HTMLElement>('.zone-checkpoint-pill');
-        if (!pill) return;
-        if (locked && level === 2) pill.textContent = 'ZAMKNIĘTY • POKONAJ BOSMANA';
-        else if (locked && level === 3) pill.textContent = 'ZAMKNIĘTY • POKONAJ DYREKTORA WIDMO';
-        else if (level === 1) pill.textContent = 'START GŁÓWNY';
-        else pill.textContent = 'CHECKPOINT ODBLOKOWANY';
-      });
-    };
-    document.querySelectorAll('.zone-card').forEach((card) => {
-      const selectZone = (e?: Event) => {
-        if (e) { e.preventDefault(); e.stopPropagation(); }
-        const level = parseInt(card.getAttribute('data-level') || '1', 10);
-        if (level > this.engine.getUnlockedSector()) {
-          const pill = card.querySelector<HTMLElement>('.zone-checkpoint-pill');
-          if (pill) {
-            pill.textContent = level === 2
-              ? 'WYMAGANE: POKONAJ BOSMANA W SEKTORZE A'
-              : 'WYMAGANE: POKONAJ DYREKTORA WIDMO W SEKTORZE B';
-          }
-          return;
-        }
-        document.querySelectorAll('.zone-card').forEach((c) => c.classList.remove('active'));
-        card.classList.add('active');
-        this.selectedLevelId = level;
-      };
-      card.addEventListener('click', selectZone);
-      card.addEventListener('touchend', selectZone);
-    });
-    refreshZoneLocks();
-
-    let startingGame = false;
     let startingGame = false;
     const doStartSurvival = async (e?: Event) => {
       if (startingGame) return;
@@ -1169,9 +1128,8 @@ class PaleciakiScene extends xb.Script {
         e.stopPropagation();
       }
 
-      // Lock before waiting for assets, just like the campaign route. Without
-      // this, two taps separated by more than the tap debounce can both resume
-      // here and construct duplicate Survival arenas.
+      // Lock before waiting for assets. This prevents two rapid taps from
+      // constructing duplicate Survival arenas.
       startingGame = true;
       const startButton = document.getElementById('btn-start-survival') as HTMLButtonElement | null;
       if (startButton) {
@@ -1196,7 +1154,6 @@ class PaleciakiScene extends xb.Script {
           titleScreen.style.setProperty('display', 'none', 'important');
         }
         pauseModal?.classList.add('hidden');
-        victoryModal?.classList.add('hidden');
         gameoverModal?.classList.add('hidden');
         survivalLevelUp?.classList.add('hidden');
 
@@ -1516,7 +1473,6 @@ class PaleciakiScene extends xb.Script {
         titleScreen.classList.remove('hidden');
         titleScreen.style.setProperty('display', 'flex', 'important');
       }
-      refreshZoneLocks();
       this.engine.startTitle();
       void showInterstitialAfterRun();
     });
