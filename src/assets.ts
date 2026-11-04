@@ -28,11 +28,11 @@ export interface AssetItem {
 const WAREHOUSE_TIPS = [
   'Wskazówka: Zbieraj worki z fugą i złote palety, by zdobywać punkty i odblokować premie zmiany!',
   'Wózek widłowy Zdzicha nie wybacza błędów BHP — przeskakuj go w odpowiednim momencie!',
-  'Pieczęć WZ Marcina ogłusza wrogów i zatrzymuje pojazdy w promieniu 4 metrów.',
-  'Łata brukarska Grześka z łatwością rozbija palety z towarem i przeszkody.',
-  'Kawa espresso z ekspresu Mateusza natychmiast odnawia punkty BHP bohatera.',
-  'Uważaj na Byłego Kierownika Walczaka w Sektorze 3 — w drugiej fazie wpada w szał!',
-  'Spieki wielkoformatowe Calacatta 120x280 w Showroomie wymagają podwójnej ostrożności.',
+  'Pieczęć WZ Atlasa ogłusza wrogów i zatrzymuje pojazdy w promieniu 4 metrów.',
+  'Łata brukarska Forge'a z łatwością rozbija palety z towarem i przeszkody.',
+  'Kawa espresso z ekspresu Volta natychmiast odnawia punkty BHP bohatera.',
+  'Uważaj na Byłego Kierownika Nadzorcy Zero w Sektorze 3 — w drugiej fazie wpada w szał!',
+  'Spieki wielkoformatowe Marmur B4 120x280 w Showroomie wymagają podwójnej ostrożności.',
   'Przycisk C przełącza dynamiczną kamerę 3D: rzut izometryczny lub akcję zza pleców.'
 ];
 
@@ -102,7 +102,7 @@ export class MaxFlizAssetLoader {
       overlay.innerHTML = `
         <div class="loader-modal-card">
           <div class="loader-icon-spinner" id="loader-spinner-icon">🏗️</div>
-          <div class="loader-header">MAX-FLIZ 3D LOGISTICS ENGINE</div>
+          <div class="loader-header">CENTRUM B4 3D LOGISTICS ENGINE</div>
           <div class="loader-subtitle" id="loader-subtitle">Inicjalizacja zasobów 3D, tekstur i silnika fizyki...</div>
           
           <div class="loader-categories-grid">
@@ -303,11 +303,11 @@ export class MaxFlizAssetLoader {
         // --- Tekstury proceduralne Three.js (12 sztuk) ---
         { id: 'textures/floor_epoxy_warehouse.canvas', name: 'Polerowana Posadzka Epoksydowa (Sektor 1)', category: 'texture', execute: () => getFloorTexture() },
         { id: 'textures/wall_corrugated_metal.canvas', name: 'Blacha Przemysłowa Magazynu', category: 'texture', execute: () => getWallTexture() },
-        { id: 'textures/showroom_marble_calacatta.canvas', name: 'Spiek Calacatta Gold (Showroom)', category: 'texture', execute: () => getShowroomMarbleFloorTexture() },
+        { id: 'textures/showroom_marble_calacatta.canvas', name: 'Spiek Biały Marmur (Showroom)', category: 'texture', execute: () => getShowroomMarbleFloorTexture() },
         { id: 'textures/showroom_oak_slat_wall.canvas', name: 'Ściany Lamele Dębowe', category: 'texture', execute: () => getShowroomWallTexture() },
         { id: 'textures/terminal_granite_floor.canvas', name: 'Granit Przemysłowy Rampy B1', category: 'texture', execute: () => getTerminalGraniteFloorTexture() },
-        { id: 'textures/maxfliz_neon_sign.canvas', name: 'Neon Logotypu Max-Fliz', category: 'texture', execute: () => getMaxFlizLogoTexture() },
-        { id: 'textures/marble_slab_calacatta.canvas', name: 'Płyta Gresowa Calacatta 120x280', category: 'texture', execute: () => getMarbleTexture('calacatta') },
+        { id: 'textures/maxfliz_neon_sign.canvas', name: 'Neon Logotypu Kompleks B4', category: 'texture', execute: () => getMaxFlizLogoTexture() },
+        { id: 'textures/marble_slab_calacatta.canvas', name: 'Płyta Gresowa Marmur B4 120x280', category: 'texture', execute: () => getMarbleTexture('calacatta') },
         { id: 'textures/marble_slab_nero.canvas', name: 'Marmur Nero Marquina', category: 'texture', execute: () => getMarbleTexture('nero') },
         { id: 'textures/marble_wood_chevron.canvas', name: 'Gres Drewnopodobny Chevron', category: 'texture', execute: () => getMarbleTexture('wood') },
         { id: 'textures/marble_gold_mosaic.canvas', name: 'Mozaika Złota Gresowa', category: 'texture', execute: () => getMarbleTexture('gold_mosaic') },
@@ -315,12 +315,12 @@ export class MaxFlizAssetLoader {
         { id: 'textures/hazard_warning_stripes.canvas', name: 'Pasy Ostrzegawcze BHP Żółto-Czarne', category: 'texture', execute: () => getHazardStripeTexture() },
 
         // --- Modele 3D (8 sztuk) ---
-        { id: 'models/character_marcin.mesh', name: 'Marcin (Kierownik Logistyki)', category: 'model', execute: () => createCharacterModel(CHARACTERS.marcin) },
-        { id: 'models/character_grzesiek.mesh', name: 'Grzesiek (Ściskacz 44cm)', category: 'model', execute: () => createCharacterModel(CHARACTERS.grzesiek) },
-        { id: 'models/character_dawid.mesh', name: 'Dawid (Arcymistrz Gresu)', category: 'model', execute: () => createCharacterModel(CHARACTERS.dawid) },
-        { id: 'models/character_mateusz.mesh', name: 'Mateusz (Gejmer & PS Maniak)', category: 'model', execute: () => createCharacterModel(CHARACTERS.mateusz) },
-        { id: 'models/character_piotr.mesh', name: 'Piotr (Weteran & Mistrz Bimbru)', category: 'model', execute: () => createCharacterModel(CHARACTERS.piotr) },
-        { id: 'models/boss_walczak.mesh', name: 'Boss Walczak (Były Kierownik)', category: 'model', execute: () => createWalczakBossModel() },
+        { id: 'models/character_marcin.mesh', name: 'Atlas (Kierownik Logistyki)', category: 'model', execute: () => createCharacterModel(CHARACTERS.marcin) },
+        { id: 'models/character_grzesiek.mesh', name: 'Forge (Ściskacz 44cm)', category: 'model', execute: () => createCharacterModel(CHARACTERS.grzesiek) },
+        { id: 'models/character_dawid.mesh', name: 'Vector (Arcymistrz Gresu)', category: 'model', execute: () => createCharacterModel(CHARACTERS.dawid) },
+        { id: 'models/character_mateusz.mesh', name: 'Volt (Gejmer & PS Maniak)', category: 'model', execute: () => createCharacterModel(CHARACTERS.mateusz) },
+        { id: 'models/character_piotr.mesh', name: 'Rook (Weteran & Mistrz Bimbru)', category: 'model', execute: () => createCharacterModel(CHARACTERS.piotr) },
+        { id: 'models/boss_walczak.mesh', name: 'Boss Nadzorca Zero (Były Kierownik)', category: 'model', execute: () => createWalczakBossModel() },
         { id: 'models/showroom_podium.mesh', name: 'Podest Ekspozycyjny Showroomu', category: 'model', execute: () => createDisplayPodium(2.8, 2.2, 0.25) },
         { id: 'models/showroom_plant.mesh', name: 'Złota Donica z Roślinnością Showroomu', category: 'model', execute: () => createShowroomPlant() },
 
