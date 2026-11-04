@@ -1,7 +1,7 @@
 {
-  "name": "operacja-b4",
+  "name": "paleciaki-magazyn-chaosu",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
@@ -9,7 +9,10 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/*.test.mjs"
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "android:setup": "npm install --no-save --package-lock=false @capacitor/core@8.6.0 @capacitor/cli@8.6.0 @capacitor/android@8.6.0 && npx cap add android",
+    "android:sync": "npm install --no-save --package-lock=false @capacitor/core@8.6.0 @capacitor/cli@8.6.0 @capacitor/android@8.6.0 && npm run build && npx cap sync android",
+    "android:open": "npx cap open android"
   },
   "dependencies": {
     "@pmndrs/uikit": "^1.0.64",
