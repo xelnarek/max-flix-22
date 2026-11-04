@@ -401,7 +401,7 @@ test('the removed minimap has no remaining engine state, renderer or DOM hooks',
 test('Survival rapid-upgrade copy matches its conservative three-percent cooldown effect', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /id: 'rapid', icon: '⚡', title: 'RYTM ATAKU', description: 'Skrócenie czasu między atakami o 3%\.'/);
-  assert.match(game, /this\.survivalAttackRateMultiplier = Math\.max\(0\.86, this\.survivalAttackRateMultiplier \* 0\.97\)/);
+  assert.match(game, /this\.survivalAttackRateMultiplier = Math\.max\(0\.78, this\.survivalAttackRateMultiplier \* \(1 - 0\.03 \* strength\)\)/);
 });
 
 
@@ -803,9 +803,9 @@ test('Survival tactical dodge is directional, invulnerable only for a short wind
 
 test('critical upgrades are capped, roll once per weapon volley, and can unlock a paired build synergy', async () => {
   const game = await read('../src/game.ts');
-  assert.match(game, /this\.survivalCriticalChance = Math\.min\(0\.25, this\.survivalCriticalChance \+ 0\.04\)/);
-  assert.match(game, /this\.survivalCriticalDamageMultiplier = Math\.min\(2\.45, this\.survivalCriticalDamageMultiplier \+ 0\.20\)/);
-  assert.match(game, /this\.survivalDashCooldownMultiplier = Math\.max\(0\.55, this\.survivalDashCooldownMultiplier \* 0\.88\)/);
+  assert.match(game, /this\.survivalCriticalChance = Math\.min\(0\.30, this\.survivalCriticalChance \+ 0\.04 \* strength\)/);
+  assert.match(game, /this\.survivalCriticalDamageMultiplier = Math\.min\(2\.85, this\.survivalCriticalDamageMultiplier \+ 0\.20 \* strength\)/);
+  assert.match(game, /this\.survivalDashCooldownMultiplier = Math\.max\(0\.48, this\.survivalDashCooldownMultiplier \* \(1 - 0\.12 \* strength\)\)/);
   assert.match(game, /critical_protocol/);
   assert.match(game, /ghost_protocol/);
   const start = game.indexOf('private fireSurvivalWeapon(weapon: SurvivalWeaponState');
