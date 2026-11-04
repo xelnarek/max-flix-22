@@ -67,7 +67,7 @@ test('Play Store artwork sources and CI exports meet the listing image dimension
   assert.match(artworkScript, /-alpha', 'off'[\s\S]*?-depth', '8'/);
   assert.match(artworkScript, /iconBackgroundSource = resolve\('resources\/icon-background\.svg'\)/);
   assert.match(artworkScript, /-compose', 'over'[\s\S]*?'-composite'/);
-  assert.match(artworkScript, /identify', \['-format', '%\\[opaque\\]'/);
+  assert.match(artworkScript, /identify', \['-format', '%\[opaque\]'/);
   assert.match(artworkScript, /opacity !== 'true'/);
   assert.match(artworkScript, /colorType !== 6/);
   assert.match(artworkScript, /validateJpeg/);
