@@ -5906,7 +5906,7 @@ export class PaleciakiGameEngine {
     }
 
     this.callbacks.onSurvivalAnnouncement?.(
-      'Pomazańceeee idziemy zbić rowerowego bossa , razem mamy w 7 więcej lat !',
+      'Pomazańceeee, razem ruszamy na rowerowy rajd!',
       'RAJD NA ROWERKACH • PIĘCIU POMAZAŃCÓW',
       'Pięciu maluchów rusza do szturmu. Uważaj na salwy lizaków i nie daj się dogonić kolumnie rowerków!'
     );
