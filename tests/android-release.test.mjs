@@ -83,7 +83,7 @@ test('Android artifact verifier blocks unsigned Play uploads and records hashes'
   assert.match(script, /targetSdk !== 36/);
   assert.match(script, /playStoreUploadReady/);
   assert.match(script, /sha256/);
-  assert.match(script, /android-build-report\\.json/);
+  assert.match(script, /android-build-report\.json/);
 });
 
 test('Play Store artwork sources and CI exports meet the listing image dimensions', async () => {
