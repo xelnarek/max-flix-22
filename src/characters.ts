@@ -140,14 +140,14 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     passiveName: 'Weteran B4 — Droga Powrotna',
     passiveDescription: 'Rook ma stały podwójny skok i 100% szansy na drop perków. Klucz grzechotkowy wraca po rzucie, więc dobrze ustawiony tor pozwala przeciąć linię wrogów również podczas powrotu.',
     abilityName: 'Potrójna Salwa Płonących Butli (3 kapsuły zapalające)',
-    abilityDescription: 'Rook miota przed siebie trzy kapsuły z mieszanką zapalającą, tworząc krótkotrwałą ścianę ognia w korytarzu!',
+    abilityDescription: 'Rook miota trzy specjalistyczne kapsuły, które tworzą krótkotrwałą strefę ognia i blokują przejście.',
     abilityCooldown: 13.5,
     voiceLines: [
       'Zapas płonącej mieszanki! Trzy kapsuły gotowe do użycia!',
-      'Z drogi, bo rzucam butlą! To stary przepis magazynowy – pali się lepiej niż napalm!',
+      'Z drogi, lecą kapsuły! To specjalistyczny sprzęt magazynowy!',
       'Nadzorca Zero myślał, że znalazł wszystkie moje ukryte zapasy? Ten sprzęt czekał w magazynie od 2012 roku!',
       'Płonąca butla kończy każdy spór o przejazd!',
-      'Za moich czasów zimą ogrzewaliśmy się tylko tym koktajlem!',
+      'Za moich czasów każda awaria miała własną procedurę!',
       'Jeden rzut i w korytarzu robi się ciepło! Ogień na gresie!',
       'Pamiętam jak tu szczere pole było, a Nadzorca Zero jeszcze w pieluchy dzwonił!',
       'To tylko dym z urządzenia treningowego!'
