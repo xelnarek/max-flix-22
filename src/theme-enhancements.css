@@ -2340,3 +2340,34 @@ h1, h2, h3, .menu-game-title, .hero-name, .dialogue-box-name, .title-brand, .bos
 #title-screen .story-archive-row .field-guide-launch:hover {
   border-color:rgba(103,232,249,.68); box-shadow:0 10px 24px rgba(8,145,178,.17);
 }
+
+
+/* Play Store privacy disclosure entry in the settings panel. */
+.settings-legal-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(119, 172, 194, .18);
+  border-radius: 12px;
+  background: rgba(6, 18, 29, .72);
+  color: #91a9b7;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .09em;
+}
+.settings-legal-link a {
+  color: #f5c36f;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .02em;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.settings-legal-link a:focus-visible {
+  outline: 2px solid #67e8f9;
+  outline-offset: 4px;
+}
