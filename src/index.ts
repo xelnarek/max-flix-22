@@ -523,6 +523,8 @@ class PaleciakiScene extends xb.Script {
       this.camera,
       (container || document.body) as HTMLElement,
       {
+        // Legacy engine callback contract: Survival never completes a sector.
+        onLevelComplete: () => {},
         onFloatingText: (text, x, y, z, type, metadata) => {
           spawnFloatingToast(text, x, y, z, type, metadata);
         },
@@ -1309,6 +1311,9 @@ class PaleciakiScene extends xb.Script {
         cinematicIntroLaunchPending = false;
       }
     };
+
+    // The boot sequence is in a different method scope; bridge it with a private DOM event.
+    document.addEventListener('paleciaki:launch-intro', () => { void launchCinematicIntro(); }, { once: true });
 
 
     document.getElementById('btn-attack')?.addEventListener('click', () => {
@@ -2197,7 +2202,7 @@ async function startApp() {
     await new Promise<void>((resolve) => {
       requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
     });
-    if (!document.hidden) void launchCinematicIntro();
+    if (!document.hidden) document.dispatchEvent(new Event('paleciaki:launch-intro'));
 
   } catch (err) {
     console.error('[App:Boot] ❌ KRYTYCZNY BŁĄD STARTU:', err);
