@@ -3,9 +3,9 @@ import { CharacterDef, CharacterId } from './types.ts';
 export const CHARACTERS: Record<CharacterId, CharacterDef> = {
   marcin: {
     id: 'marcin',
-    name: 'Atlas',
-    role: 'Kierownik Zmiany & Główny Audytor Logistyki',
-    title: 'Dowódca Logistyki B4',
+    name: 'Operator 01',
+    role: 'Specjalista logistyki',
+    title: 'Kontrola pola walki',
     color: 0x1e3a8a, // Navy / Royal Blue
     secondaryColor: 0xf59e0b, // Amber / Gold
     speed: 7.5,
@@ -13,7 +13,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     passiveName: 'Mistrz Zaklęć ERP',
     passiveDescription: 'Podstawowy atak przywołuje cyfrowe zaklęcia z systemu ERP: błękitne runy, zlecenia i pieczęcie. Co trzeci czar tworzy mocniejszą pieczęć audytu. Zasięg przyciągania VIP +100%.',
     abilityName: 'KONWÓJ WZ-404! DO BOJU!',
-    abilityDescription: 'Przywołuje opancerzony czołg WZ-404, który przez 8 sekund podąża za Atlasem, obraca wieżyczką i automatycznie ostrzeliwuje najbliższych przeciwników pociskami wybuchowymi. W Survival działa 6 sekund. Załoga melduje: „Cel zatwierdzony przez system ERP!”.',
+    abilityDescription: 'Przywołuje opancerzony czołg WZ-404, który przez 8 sekund podąża za Operator 01em, obraca wieżyczką i automatycznie ostrzeliwuje najbliższych przeciwników pociskami wybuchowymi. W Survival działa 6 sekund. Załoga melduje: „Cel zatwierdzony przez system ERP!”.',
     abilityCooldown: 17.0,
     voiceLines: [
       'Gdzie jest podpis na dokumencie WZ?! Bez podpisu paleta nie wyjedzie!',
@@ -34,9 +34,9 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
   },
   grzesiek: {
     id: 'grzesiek',
-    name: 'Forge',
-    role: 'Ściskacz & Taran Magazynowy',
-    title: 'Mistrz 44 cm w Obwodzie Ramienia',
+    name: 'Operator 02',
+    role: 'Specjalista walki wręcz',
+    title: 'Ekspert ciężkiego uderzenia',
     color: 0x16a34a, // Emerald Green
     secondaryColor: 0x22c55e,
     speed: 8.9,
@@ -66,9 +66,9 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
   },
   dawid: {
     id: 'dawid',
-    name: 'Vector',
-    role: 'Operator Wielkiego Formatu',
-    title: 'Siłacz Wielkiego Formatu ("Ja Wiem Lepiej!")',
+    name: 'Operator 03',
+    role: 'Specjalista kontroli obszaru',
+    title: 'Ekspert kontroli dystansu',
     color: 0xd97706, // Amber / Terracotta
     secondaryColor: 0xb45309,
     speed: 7.2,
@@ -98,9 +98,9 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
   },
   mateusz: {
     id: 'mateusz',
-    name: 'Volt',
-    role: 'Entuzjasta Technologii i Gier',
-    title: 'Zdobywca Platyn i Pogromca Lagów',
+    name: 'Operator 04',
+    role: 'Specjalista systemów elektrycznych',
+    title: 'Ekspert szybkości i precyzji',
     color: 0x7c3aed, // Purple / Indigo
     secondaryColor: 0xec4899,
     speed: 8.7,
@@ -108,7 +108,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     passiveName: 'Paralizator — Impuls Trzech Elektrod',
     passiveDescription: 'Podstawowy atak wystrzeliwuje impuls paralizatora. Trafienie elektryzuje i spowalnia cel; co dziewiąte trafienie uruchamia Speedrun (+Sprint i Nietykalność)!',
     abilityName: 'KOCIA ARMIA ONLINE • 3× MIAU-CRITICAL',
-    abilityDescription: 'Volt przywołuje dokładnie trzy bojowe koty w gamingowych obrożach. Przez 9,5 sekundy (6,5 w Survival) krążą wokół niego, doskakują do przeciwników i zadają im obrażenia. Każdy pounce kończy się błyskiem pazurów i komunikatem MIAU-CRITICAL.',
+    abilityDescription: 'Operator 04 przywołuje dokładnie trzy bojowe koty w gamingowych obrożach. Przez 9,5 sekundy (6,5 w Survival) krążą wokół niego, doskakują do przeciwników i zadają im obrażenia. Każdy pounce kończy się błyskiem pazurów i komunikatem MIAU-CRITICAL.',
     abilityCooldown: 16.0,
     voiceLines: [
       'Pad mi się rozładował! Kto zajumał kabel USB-C z salonu?!',
@@ -130,17 +130,17 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
   },
   piotr: {
     id: 'piotr',
-    name: 'Rook',
-    role: 'Senior Magazynier & Weteran Rezerw',
-    title: 'Weteran Kompleks B4 i Mistrz Płonących Mieszanek',
+    name: 'Operator 05',
+    role: 'Specjalista wsparcia taktycznego',
+    title: 'Ekspert broni obszarowej',
     color: 0xef4444, // Crimson Red
     secondaryColor: 0xfacc15, // Bright Yellow
     speed: 9.0,
     jumpForce: 9.4,
     passiveName: 'Weteran B4 — Droga Powrotna',
-    passiveDescription: 'Rook ma stały podwójny skok i 100% szansy na drop perków. Klucz grzechotkowy wraca po rzucie, więc dobrze ustawiony tor pozwala przeciąć linię wrogów również podczas powrotu.',
+    passiveDescription: 'Operator 05 ma stały podwójny skok i 100% szansy na drop perków. Klucz grzechotkowy wraca po rzucie, więc dobrze ustawiony tor pozwala przeciąć linię wrogów również podczas powrotu.',
     abilityName: 'Potrójna Salwa Płonących Butli (3 kapsuły zapalające)',
-    abilityDescription: 'Rook miota trzy specjalistyczne kapsuły, które tworzą krótkotrwałą strefę ognia i blokują przejście.',
+    abilityDescription: 'Operator 05 miota trzy specjalistyczne kapsuły, które tworzą krótkotrwałą strefę ognia i blokują przejście.',
     abilityCooldown: 13.5,
     voiceLines: [
       'Zapas płonącej mieszanki! Trzy kapsuły gotowe do użycia!',
