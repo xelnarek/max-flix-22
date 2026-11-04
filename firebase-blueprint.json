@@ -11,11 +11,11 @@
         },
         "hero": {
           "type": "string",
-          "description": "Selected operator (Atlas, Forge, Vector, Volt or Rook)"
+          "description": "Selected anonymized operator (Operator 01–05)"
         },
         "mode": {
           "type": "string",
-          "enum": ["campaign", "survival"],
+          "enum": ["survival"],
           "description": "Game mode for this score entry"
         },
         "score": {
