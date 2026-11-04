@@ -18,6 +18,10 @@ test('mobile install metadata is complete and points to project-relative assets'
   assert.ok(manifest.icons.some((icon) => icon.src === './icons/b4-icon.svg'));
   assert.match(html, /rel="manifest" href="\.\/manifest\.webmanifest"/);
   assert.match(html, /theme-color/);
+  assert.match(html, /<meta name="application-name" content="Paleciaki! Magazyn Chaosu" \/>/);
+  assert.match(html, /<meta name="apple-mobile-web-app-title" content="Paleciaki! Magazyn Chaosu" \/>/);
+  assert.equal((html.match(/<meta name="theme-color"/g) || []).length, 1);
+  assert.doesNotMatch(html, /content="Operacja B4"/);
 });
 
 test('service worker keeps remote services and API data outside its cache', async () => {
