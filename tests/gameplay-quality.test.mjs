@@ -135,7 +135,8 @@ test('touch Survival HUD keeps the zoom slider and 3D camera switch accessible',
   assert.match(css, /Compact Survival HUD: keep the actual arena visible/);
   assert.match(css, /width: min\(248px, calc\(100vw - 138px\)\)/);
   assert.match(css, /\.survival-weapon-rack,[\s\S]*?display: none !important/);
-  assert.match(css, /top: calc\(98px \+ env\(safe-area-inset-top\)\)/);
+  assert.doesNotMatch(css, /minimap|radar/i);
+  assert.doesNotMatch(finalHudCss, /minimap|radar/i);
   assert.match(finalHudCss, /Final Survival mobile HUD owner/);
   assert.match(finalHudCss, /#game-shell\.survival-mode \.survival-hud\s*\{[\s\S]*?right: max\(8px, env\(safe-area-inset-right\)\) !important/);
   assert.match(finalHudCss, /#game-shell\.survival-mode #hud-top \.hud-top-quick-controls\s*\{[\s\S]*?position: fixed !important/);
