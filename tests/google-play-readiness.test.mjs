@@ -10,7 +10,8 @@ test('mobile install metadata is complete and points to project-relative assets'
     read('../index.html'),
   ]);
   const manifest = JSON.parse(manifestText);
-  assert.equal(manifest.name, 'Operacja B4: Strefa Chaosu');
+  assert.equal(manifest.name, 'Paleciaki! Magazyn Chaosu');
+  assert.equal(manifest.short_name, 'Paleciaki!');
   assert.equal(manifest.display, 'standalone');
   assert.equal(manifest.start_url, './');
   assert.equal(manifest.scope, './');
