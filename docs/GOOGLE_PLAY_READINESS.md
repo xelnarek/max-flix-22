@@ -39,13 +39,13 @@ Nie wolno publikować tej strony z placeholderami. Właściciel gry musi potwier
 
 ## Listing i grafiki sklepu
 
-Propozycja polskiej karty sklepu: `play-store/listing-pl.json`. Przed publikacją potrzebne są:
-- ikona sklepu PNG 512×512;
-- feature graphic 1024×500;
-- aktualne zrzuty ekranu gry z urządzenia fizycznego;
-- zweryfikowana kategoria, rating treści, grupa docelowa, reklamy i opis funkcji sieciowych.
+Propozycja polskiej karty sklepu: `play-store/listing-pl.json`. Workflow Android generuje automatycznie dwa materiały do karty sklepu i dołącza je do artefaktu Actions:
+- `app-icon-512.png` — 512×512, 8-bit RGBA PNG, limit 1 MiB;
+- `feature-graphic-1024x500.jpg` — 1024×500, JPEG bez kanału alfa.
 
-Ikona SVG w `public/icons/b4-icon.svg` jest ikoną aplikacji webowej. Android adaptive icons generuje workflow Android z osobnych źródeł w `resources/`.
+Pliki trafiają do katalogu `play-store/generated/` wewnątrz artefaktu `paleciaki-android-...`; nie są commitowane do repozytorium. Przed publikacją pobierz artefakt Android QA/release i wgraj oba pliki do sekcji Graphics w Play Console.
+
+Nadal potrzebne są aktualne zrzuty ekranu gry z urządzenia fizycznego oraz weryfikacja kategorii, ratingu treści, grupy docelowej, reklam i opisu funkcji sieciowych. Ikona SVG w `public/icons/b4-icon.svg` jest ikoną aplikacji webowej. Android adaptive icons generuje workflow Android z osobnych źródeł w `resources/`.
 
 ## Testy przed produkcją
 

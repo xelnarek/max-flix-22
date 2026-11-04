@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#173d51"/><stop offset=".52" stop-color="#0b1d2c"/><stop offset="1" stop-color="#06101a"/></linearGradient>
+  <radialGradient id="light" cx=".78" cy=".46" r=".72"><stop stop-color="#28778a" stop-opacity=".58"/><stop offset="1" stop-color="#07131d" stop-opacity="0"/></radialGradient>
+  <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#ffe5a8"/><stop offset=".55" stop-color="#e9a84e"/><stop offset="1" stop-color="#985522"/></linearGradient>
+  <linearGradient id="cyan" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b5f4ff"/><stop offset="1" stop-color="#168eae"/></linearGradient>
+  <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#284b5d" stop-opacity=".12"/><stop offset="1" stop-color="#02080f" stop-opacity=".86"/></linearGradient>
+  <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="13"/></filter>
+  <filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="9"/></filter>
+</defs>
+<rect width="1024" height="500" fill="url(#bg)"/>
+<rect width="1024" height="500" fill="url(#light)"/>
+<g fill="none" stroke="#75cbdc" stroke-opacity=".18" stroke-width="7">
+  <path d="M485 0H1024M485 78H1024M485 156H1024M485 234H1024M485 312H1024"/>
+  <path d="M560 0 515 330M700 0 660 330M840 0 805 330M980 0 950 330"/>
+  <path d="M500 28 1024 28M500 188 1024 188" stroke="#e3af65" stroke-opacity=".22" stroke-width="3"/>
+</g>
+<path d="M430 285 1024 228V500H365Z" fill="url(#floor)"/>
+<g stroke="#62bfd0" stroke-opacity=".17" stroke-width="3" fill="none">
+  <path d="M610 500 755 285M795 500 850 278M980 500 946 270"/>
+  <path d="M430 390 1024 330M400 448 1024 410"/>
+</g>
+<g opacity=".78"><circle cx="830" cy="91" r="23" fill="#ed6d45" opacity=".18" filter="url(#glow)"/><circle cx="830" cy="91" r="7" fill="#ff9a5d"/><circle cx="948" cy="151" r="18" fill="#e66d46" opacity=".16" filter="url(#glow)"/><circle cx="948" cy="151" r="5" fill="#ff9a5d"/></g>
+<ellipse cx="768" cy="415" rx="225" ry="32" fill="#000" opacity=".46" filter="url(#shadow)"/>
+<g transform="translate(585 72) scale(.74)">
+  <path d="M95 172 230 94 377 178 240 259Z" fill="url(#gold)" stroke="#fff0ce" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M95 172V318L240 403V259Z" fill="#aa642f" stroke="#f3c579" stroke-width="9" stroke-linejoin="round"/>
+  <path d="M240 259 377 178V324L240 403Z" fill="#75441f" stroke="#dfa65d" stroke-width="9" stroke-linejoin="round"/>
+  <path d="M154 138 290 217M154 138V283" stroke="#fff2d5" stroke-opacity=".6" stroke-width="11"/>
+  <path d="M250 126 355 66 470 132 363 194Z" fill="#b9eaf0" stroke="#eaffff" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M250 126V242L363 308V194Z" fill="#317e91" stroke="#d0f8fc" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M363 194 470 132V248L363 308Z" fill="#16566a" stroke="#b6edf5" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M48 310 359 310 500 228 188 228Z" fill="#f1be6e" stroke="#ffe5ad" stroke-width="9" stroke-linejoin="round"/>
+  <path d="M48 310V359L359 359V310Z" fill="#a65e29"/>
+  <path d="M359 310V359L500 277V228Z" fill="#75421e"/>
+  <path d="M105 322V371M213 322V371M320 322V371" stroke="#ffe2a2" stroke-width="17"/>
+  <path d="M82 301 34 57Q28 27 61 19L113 11" fill="none" stroke="url(#cyan)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M91 303 155 335H235" fill="none" stroke="url(#cyan)" stroke-width="24" stroke-linecap="round"/>
+  <circle cx="112" cy="382" r="34" fill="#061522" stroke="#83e5f6" stroke-width="12"/><circle cx="112" cy="382" r="11" fill="#f4c16e"/>
+  <circle cx="392" cy="382" r="34" fill="#061522" stroke="#83e5f6" stroke-width="12"/><circle cx="392" cy="382" r="11" fill="#f4c16e"/>
+  <path d="m455 5-80 130h62l-48 115 148-188h-74z" fill="#fff0ad" stroke="#f4b84e" stroke-width="10" stroke-linejoin="round"/>
+</g>
+<g font-family="DejaVu Sans, sans-serif">
+  <rect x="50" y="54" width="360" height="34" rx="17" fill="#163c4d" stroke="#5bb9c8" stroke-opacity=".55"/>
+  <circle cx="72" cy="71" r="5" fill="#efb45d"/>
+  <text x="88" y="77" fill="#a9dce5" font-size="13" font-weight="700" letter-spacing="2.2">3D ARCADE • MAGAZYNOWY CHAOS</text>
+  <text x="48" y="190" fill="#fff2d8" font-size="82" font-weight="900" letter-spacing="-5">PALECIAKI!</text>
+  <text x="52" y="251" fill="#f4bf6b" font-size="40" font-weight="900" letter-spacing="3">MAGAZYN CHAOSU</text>
+  <path d="M52 281H410" stroke="#75c8d8" stroke-opacity=".55" stroke-width="3"/>
+  <text x="54" y="322" fill="#e1edf0" font-size="22" font-weight="700">Kampania 3D. Survival. Ewolucje broni.</text>
+  <text x="54" y="359" fill="#a8c6ce" font-size="17" font-weight="500">Zbieraj perki, unikaj hord i przetrwaj zmianę.</text>
+  <g transform="translate(52 400)">
+    <rect width="105" height="35" rx="17" fill="#173c4e" stroke="#5dbacb" stroke-opacity=".45"/><text x="52" y="23" text-anchor="middle" fill="#d4f6fb" font-size="12" font-weight="800" letter-spacing="1.3">KAMPANIA</text>
+    <rect x="116" width="104" height="35" rx="17" fill="#173c4e" stroke="#5dbacb" stroke-opacity=".45"/><text x="168" y="23" text-anchor="middle" fill="#d4f6fb" font-size="12" font-weight="800" letter-spacing="1.3">SURVIVAL</text>
+    <rect x="231" width="126" height="35" rx="17" fill="#49331f" stroke="#d9a85f" stroke-opacity=".7"/><text x="294" y="23" text-anchor="middle" fill="#ffe1a8" font-size="12" font-weight="800" letter-spacing="1.3">ULEPSZENIA</text>
+  </g>
+</g>
+<rect x="0" y="0" width="7" height="500" fill="#eeb566" opacity=".8"/>
+</svg>

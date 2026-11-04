@@ -69,11 +69,12 @@ jobs:
       - name: Prepare Android source artwork
         run: |
           sudo apt-get update
-          sudo apt-get install -y librsvg2-bin
+          sudo apt-get install -y librsvg2-bin imagemagick
           rsvg-convert -w 1024 -h 1024 resources/icon-only.svg > resources/icon-only.png
           rsvg-convert -w 1024 -h 1024 resources/icon-foreground.svg > resources/icon-foreground.png
           rsvg-convert -w 1024 -h 1024 resources/icon-background.svg > resources/icon-background.png
           rsvg-convert -w 2732 -h 2732 resources/splash.svg > resources/splash.png
+          node scripts/prepare-play-store-artwork.mjs
 
       - name: Create and sync native Android project
         run: |
@@ -124,5 +125,7 @@ jobs:
             android/app/build/outputs/bundle/release/*.aab
             android/app/build/outputs/apk/debug/*.apk
             android/app/build/outputs/apk/release/*.apk
+            play-store/generated/app-icon-512.png
+            play-store/generated/feature-graphic-1024x500.jpg
           if-no-files-found: warn
           retention-days: 21
