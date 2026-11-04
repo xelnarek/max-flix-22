@@ -1,0 +1,16 @@
+{
+  "id": "./",
+  "name": "Operacja B4: Strefa Chaosu",
+  "short_name": "Operacja B4",
+  "description": "Mobilna gra akcji 3D w fikcyjnym kompleksie logistycznym B4.",
+  "lang": "pl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#091321",
+  "theme_color": "#091321",
+  "categories": ["games", "entertainment"],
+  "icons": [{"src":"./icons/b4-icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
