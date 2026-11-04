@@ -411,7 +411,9 @@ export class CinematicIntroManager {
 
   private drawPalletStacks(ctx: CanvasRenderingContext2D, w: number, h: number, t: number): void {
     ctx.save();
+    const inspectionPulse = 0.94 + Math.sin(t * 1.7) * 0.025;
     const drawStack = (x: number, y: number, scale: number, tone: number) => {
+      ctx.globalAlpha = inspectionPulse;
       ctx.save();
       ctx.translate(x, y);
       ctx.scale(scale, scale);
