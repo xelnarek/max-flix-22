@@ -34,7 +34,7 @@ test('the public UI exposes Survival only', async () => {
   const html = await read('../index.html');
   const app = await read('../src/index.ts');
   assert.match(html, /id="btn-start-survival"/);
-  assert.doesNotMatch(html, /id="btn-start-game"|data-tab="tab-zones"|data-tab="tab-story"|id="story-intro-modal"|KAMPANIA|kampania/i);
+  assert.doesNotMatch(html, /id="btn-start-game"|data-tab="tab-zones"|data-tab="tab-story"|id="story-intro-modal"|KAMPANIA|kampania|kampanię|btn-open-cinematic-intro/i);
   assert.match(html, /RANKING GLOBALNY • SURVIVAL/);
   assert.doesNotMatch(html, /RANKING GLOBALNY • .*KAMPANIA/i);
   assert.doesNotMatch(app, /launchCampaignGame|doStartGame|id="btn-start-game"|story-intro-modal/);
