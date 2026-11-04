@@ -13,6 +13,8 @@ import {
   advanceAbilityCooldown,
   applyAbilityKillRecharge,
   createAbilityCooldown,
+  getAbilityKillRechargeCapRatio,
+  getAbilityKillRechargeSeconds,
   getAbilityCooldownProgress,
   scaleAbilityCooldown,
   type AbilityCooldownState,
@@ -9681,27 +9683,29 @@ export class MaxFlizGameEngine {
     this.abilityCooldownUiTimer = 0.08;
   }
 
-  private rechargeAbilityFromKill(isElite: boolean) {
+  private rechargeAbilityFromKill(isElite: boolean, isBoss = false) {
     if (this.abilityCooldownState.remainingSeconds <= 0.0001) return;
-    const isSurvival = this.gameMode === 'survival';
-    const baseRechargeSeconds = isSurvival
-      ? (isElite ? 0.78 : 0.16)
-      : (isElite ? 0.82 : 0.20);
-    // Archero-style kill chains reward active play without allowing instant ability loops.
+    const mode = this.gameMode;
+    const modeMultiplier = mode === 'survival' ? this.survivalAbilityKillRechargeMultiplier : 1;
+    // Bosses provide a clear tactical payoff; ordinary kills still build the
+    // Archero-style chain but are bounded by a per-use recharge budget.
+    const baseRechargeSeconds = getAbilityKillRechargeSeconds(mode, isElite, isBoss);
     const chainMultiplier = 1 + Math.min(0.35, Math.max(0, this.comboStreak - 1) * 0.04);
-    const modeMultiplier = isSurvival ? this.survivalAbilityKillRechargeMultiplier : 1;
     const requestedSeconds = baseRechargeSeconds * modeMultiplier * chainMultiplier;
-    const capRatio = isSurvival ? this.survivalAbilityKillRechargeCapRatio : 0.28;
+    const capRatio = mode === 'survival'
+      ? this.survivalAbilityKillRechargeCapRatio
+      : getAbilityKillRechargeCapRatio('campaign');
     const rechargeLimit = this.abilityCooldownState.durationSeconds * capRatio;
     const result = applyAbilityKillRecharge(this.abilityCooldownState, requestedSeconds, rechargeLimit);
     if (result.rechargedSeconds <= 0) return;
 
     this.abilityCooldownState = result.state;
     this.updateAbilityCooldown(0, true);
-    if (isElite || this.comboStreak % 5 === 0) {
+    if (isElite || isBoss || this.comboStreak % 5 === 0) {
       const chainLabel = this.comboStreak >= 5 ? ' • SERIA x' + this.comboStreak : '';
+      const targetLabel = isBoss ? 'BOSS' : 'ELITA';
       this.emitFloatingToast(
-        '⚡ ŁADUNEK SPECJALNY +' + result.rechargedSeconds.toFixed(1) + ' s' + chainLabel,
+        '⚡ ' + targetLabel + ' • ŁADUNEK +' + result.rechargedSeconds.toFixed(1) + ' s' + chainLabel,
         this.playerPos.x,
         this.playerPos.y + 1.55,
         this.playerPos.z,
@@ -10276,10 +10280,11 @@ export class MaxFlizGameEngine {
     const finalPoints = Math.round(points * comboMultiplier * survivalDifficultyMultiplier);
     this.score += finalPoints;
     this.handleMateuszPassive(2);
-    const isAbilityRechargeElite =
-      e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' ||
+    const isAbilityRechargeBoss =
+      e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow';
+    const isAbilityRechargeElite = isAbilityRechargeBoss ||
       e.type === 'elite_walczak_guard' || e.type === 'sebix_m' || e.maxHp >= 4;
-    this.rechargeAbilityFromKill(isAbilityRechargeElite);
+    this.rechargeAbilityFromKill(isAbilityRechargeElite, isAbilityRechargeBoss);
     if (this.gameMode === 'survival') {
       this.survivalKills++;
       const isShiftMilestone = this.survivalKills % 8 === 0;
