@@ -109,5 +109,5 @@ test('Campaign and Survival kills use bounded Archero-style special recharge', (
     gained += result.rechargedSeconds;
   }
   assert.ok(Math.abs(gained - 6.8) < 1e-9);
-  assert.equal(state.remainingSeconds, 13.2);
+  assert.ok(Math.abs(state.remainingSeconds - 13.2) < 1e-9);
 });
