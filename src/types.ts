@@ -105,6 +105,8 @@ export interface EnemyItem {
   bossPhase?: number;
   chargeDir?: number;
   chargeTimer?: number;
+  chargeLaneLength?: number;
+  chargeLaneWidth?: number;
   shieldActive?: boolean;
   onFireTimer?: number;
   alerted?: boolean;

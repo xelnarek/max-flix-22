@@ -3,7 +3,7 @@ import { clampHorizontalPosition } from './arenaBounds.ts';
 import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoint, resolveEnemyPlayerSeparation } from './enemySpacing.ts';
 import { calculateEnemyObstacleAvoidanceVector } from './enemyNavigation.ts';
 import { createEnemyHitReaction, getEnemyHitPulse } from './enemyCombatFeedback.ts';
-import { isWithinBossImpactRadius } from './combatTelegraphs.ts';
+import { isEffectiveBossLaneDodge, isInsideBossAttackLane, isWithinBossImpactRadius } from './combatTelegraphs.ts';
 import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
 import { chooseSurvivalEventSpawnPoint } from './survivalSpawn.ts';
 import { shouldSpawnBosmanKrakow } from './survivalEncounters.ts';
@@ -160,7 +160,7 @@ const SURVIVAL_WEAPON_DEFS: Record<SurvivalWeaponId, {
   wz_boomerang: { name: 'WZ-Bumerang', evolvedName: 'PROTOKÓŁ POWROTU', icon: '📜', description: 'Magiczna WZ-tka przecina linię wrogów i wraca do operatora.', cooldown: 13.0, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.wz_boomerang, color: 0xfbbf24, evolutionPassive: 'growth', evolutionPassiveLabel: 'Premia za normę' },
 };
 export interface SurvivalSnapshot {
-  elapsedSeconds: number; wave: number; kills: number; level: number; xp: number; xpToNext: number;
+  elapsedSeconds: number; wave: number; kills: number; perfectDodges: number; level: number; xp: number; xpToNext: number;
   aliveEnemies: number; rerolls: number; skips: number; activeHazards: number;
   weapons: Array<{ id: SurvivalWeaponId; name: string; icon: string; level: number; evolved: boolean }>;
 }
@@ -448,6 +448,7 @@ export class MaxFlizGameEngine {
   private survivalUiTimer = 0;
   private survivalWave = 1;
   private survivalKills = 0;
+  private survivalPerfectDodges = 0;
   private survivalWaveStartKills = 0;
   private survivalLevel = 1;
   private survivalXp = 0;
@@ -1216,6 +1217,7 @@ export class MaxFlizGameEngine {
     this.survivalUiTimer = 0;
     this.survivalWave = 1;
     this.survivalKills = 0;
+    this.survivalPerfectDodges = 0;
     this.survivalWaveStartKills = 0;
     this.survivalLevel = 1;
     this.survivalXp = 0;
@@ -1878,6 +1880,7 @@ export class MaxFlizGameEngine {
       elapsedSeconds: Math.floor(this.survivalElapsed),
       wave: this.survivalWave,
       kills: this.survivalKills,
+      perfectDodges: this.survivalPerfectDodges,
       level: this.survivalLevel,
       xp: this.survivalXp,
       xpToNext: this.survivalXpToNext,
@@ -6011,10 +6014,15 @@ export class MaxFlizGameEngine {
     length: number,
     width: number,
     color: number,
-    duration: number
+    duration: number,
+    owner?: EnemyItem
   ) {
     const safeLength = Math.max(1, Number.isFinite(length) ? length : 1);
     const safeWidth = Math.max(0.5, Number.isFinite(width) ? width : 0.5);
+    if (owner) {
+      owner.chargeLaneLength = safeLength;
+      owner.chargeLaneWidth = safeWidth;
+    }
     const life = THREE.MathUtils.clamp(Number.isFinite(duration) ? duration : 0.6, 0.2, 1.5);
     const group = new THREE.Group();
     group.position.set(x, 0.065, z);
@@ -6174,7 +6182,7 @@ export class MaxFlizGameEngine {
         enemy.chargeTimer = 0.72;
         enemy.chargeDir = Math.atan2(dx,dz);
         enemy.state = 'charging';
-        this.spawnBossLaneTelegraph(enemy.x, enemy.z, enemy.chargeDir, 12.5, 2.6, 0xef4444, 0.72);
+        this.spawnBossLaneTelegraph(enemy.x, enemy.z, enemy.chargeDir, 12.5, 2.6, 0xef4444, 0.72, enemy);
         this.spawnParticleRing(enemy.x,0.12,enemy.z,0xef4444);
         this.emitFloatingToast('🔥 SEBIX ŁADUJE TARAN — ZEJDŹ Z LINII!',enemy.x,enemy.y+2.2,enemy.z,'damage');
         sound.playBossWarning();
@@ -7933,7 +7941,7 @@ export class MaxFlizGameEngine {
           } else if (e.specialActionTimer <= 0 && distToPlayer < 12.0) {
             e.chargeTimer = 0.68;
             e.chargeDir = Math.atan2(dx, dz);
-            this.spawnBossLaneTelegraph(e.x, e.z, e.chargeDir, 13.5, 2.2, isPhase2 ? 0xf97316 : 0xef4444, 0.68);
+            this.spawnBossLaneTelegraph(e.x, e.z, e.chargeDir, 13.5, 2.2, isPhase2 ? 0xf97316 : 0xef4444, 0.68, e);
             this.emitFloatingToast('🚨 DYSCYPLINARKA — ZEJDŹ Z ZAZNACZONEJ LINII!', e.x, e.y + 1.5, e.z, 'damage');
             sound.playBossWarning();
             this.triggerScreenShake(0.12, 0.12);
@@ -8021,7 +8029,7 @@ export class MaxFlizGameEngine {
             if (e.chargeTimer === undefined) {
               e.chargeTimer = 0.9;
               e.chargeDir = Math.atan2(dx, dz);
-              this.spawnBossLaneTelegraph(e.x, e.z, e.chargeDir, 14.0, 1.8, 0xef4444, 0.9);
+              this.spawnBossLaneTelegraph(e.x, e.z, e.chargeDir, 14.0, 1.8, 0xef4444, 0.9, e);
               this.spawnParticleRing(e.x, 0.24, e.z, 0xef4444);
               this.emitFloatingToast('AGV-9: ŁADOWANIE IMPULSU — ZEJDŹ Z LINII!', e.x, e.y + 1.2, e.z, 'damage');
               sound.playBossWarning();
@@ -8103,7 +8111,7 @@ export class MaxFlizGameEngine {
             e.chargeTimer = warningDuration;
             e.chargeDir = direction;
             e.mesh.rotation.y = direction;
-            this.spawnBossLaneTelegraph(e.x, e.z, direction, isPhase2 ? 14.0 : 11.5, isPhase2 ? 3.0 : 2.35, isPhase2 ? 0xf97316 : 0xf59e0b, warningDuration);
+            this.spawnBossLaneTelegraph(e.x, e.z, direction, isPhase2 ? 14.0 : 11.5, isPhase2 ? 3.0 : 2.35, isPhase2 ? 0xf97316 : 0xf59e0b, warningDuration, e);
             this.emitFloatingToast(isPhase2 ? '🚨 BOSMAN: ODPRAWA PREMIUM — ZEJDŹ Z LINII!' : '🚨 BOSMAN: ODPRAWA ZA CHWILĘ — ZEJDŹ Z LINII!', e.x, e.y + 1.4, e.z, 'damage');
             sound.playBossWarning();
           }
@@ -9686,6 +9694,42 @@ export class MaxFlizGameEngine {
       this.survivalDashDurationRemaining > 0
     ) return false;
 
+    const dashDuration = 0.22;
+    const dashSpeed = 18;
+    const dashDistance = dashDuration * dashSpeed;
+    let warningEnemy: EnemyItem | null = null;
+    let warningDirection = 0;
+
+    // Only the final 0.30 seconds of a visible, committed boss lane qualify.
+    // This prevents an ordinary dash through a harmless warning from farming rewards.
+    for (const enemy of this.enemies) {
+      const remaining = enemy.chargeTimer;
+      if (
+        enemy.state === 'defeated' ||
+        remaining === undefined ||
+        remaining <= 0.001 ||
+        remaining > 0.30 ||
+        !Number.isFinite(enemy.chargeDir) ||
+        !Number.isFinite(enemy.chargeLaneLength) ||
+        !Number.isFinite(enemy.chargeLaneWidth)
+      ) continue;
+
+      const laneDirection = enemy.chargeDir as number;
+      if (!isInsideBossAttackLane(
+        this.playerPos.x,
+        this.playerPos.z,
+        enemy.x,
+        enemy.z,
+        laneDirection,
+        enemy.chargeLaneLength as number,
+        enemy.chargeLaneWidth as number
+      )) continue;
+
+      warningEnemy = enemy;
+      warningDirection = laneDirection;
+      break;
+    }
+
     let directionX = 0;
     let directionZ = 0;
     if (this.keys['KeyD'] || this.keys['ArrowRight']) directionX += 1;
@@ -9697,7 +9741,29 @@ export class MaxFlizGameEngine {
       directionX = this.virtualJoystick.x;
       directionZ = this.virtualJoystick.y;
     }
-    const directionLength = Math.hypot(directionX, directionZ);
+
+    let directionLength = Math.hypot(directionX, directionZ);
+    if (directionLength <= 0.08 && warningEnemy) {
+      // On a last-moment boss warning, a no-direction input becomes an automatic
+      // sidestep. Pick the side with more free arena space instead of dashing into the lane.
+      const sideX = Math.cos(warningDirection);
+      const sideZ = -Math.sin(warningDirection);
+      const clearance = (x: number, z: number): number => {
+        let available = Number.POSITIVE_INFINITY;
+        if (x > 0.0001) available = Math.min(available, (this.levelBounds.maxX - this.playerPos.x) / x);
+        else if (x < -0.0001) available = Math.min(available, (this.levelBounds.minX - this.playerPos.x) / x);
+        if (z > 0.0001) available = Math.min(available, (this.levelBounds.maxZ - this.playerPos.z) / z);
+        else if (z < -0.0001) available = Math.min(available, (this.levelBounds.minZ - this.playerPos.z) / z);
+        return Math.max(0, available);
+      };
+      const leftClearance = clearance(sideX, sideZ);
+      const rightClearance = clearance(-sideX, -sideZ);
+      const preferredSide = leftClearance >= rightClearance ? 1 : -1;
+      directionX = sideX * preferredSide;
+      directionZ = sideZ * preferredSide;
+      directionLength = 1;
+    }
+
     if (directionLength > 0.08) {
       directionX /= directionLength;
       directionZ /= directionLength;
@@ -9706,17 +9772,55 @@ export class MaxFlizGameEngine {
       directionZ = Math.cos(this.playerRot);
     }
 
+    const isPerfectDodge = warningEnemy !== null && isEffectiveBossLaneDodge(
+      this.playerPos.x,
+      this.playerPos.z,
+      directionX,
+      directionZ,
+      dashDistance,
+      warningEnemy.x,
+      warningEnemy.z,
+      warningDirection,
+      warningEnemy.chargeLaneLength as number,
+      warningEnemy.chargeLaneWidth as number
+    );
+
     this.survivalDashDirection.set(directionX, 0, directionZ).normalize();
-    this.survivalDashDurationRemaining = 0.22;
+    this.survivalDashDurationRemaining = dashDuration;
     this.survivalDashCooldownDuration = getSurvivalDashCooldownSeconds(this.survivalDashCooldownMultiplier);
     this.survivalDashCooldownRemaining = this.survivalDashCooldownDuration;
     // Invulnerability covers the dodge and a short exit window, not a full defensive shield.
     this.invulnerableTimer = Math.max(this.invulnerableTimer, 0.32);
     this.playerRot = Math.atan2(directionX, directionZ);
-    this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.28, this.playerPos.z, 0x67e8f9);
-    this.triggerScreenShake(0.10, 0.09);
+    this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.28, this.playerPos.z, isPerfectDodge ? 0xfacc15 : 0x67e8f9);
+    this.triggerScreenShake(isPerfectDodge ? 0.20 : 0.10, isPerfectDodge ? 0.14 : 0.09);
     sound.playAttackWhoosh();
-    this.emitFloatingToast('↗ UNIK TAKTYCZNY!', this.playerPos.x, this.playerPos.y + 1.15, this.playerPos.z, 'perk');
+
+    if (isPerfectDodge) {
+      this.survivalPerfectDodges++;
+      this.score += 100;
+      this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+
+      // A clean last-moment sidestep shortens both the next dodge and the operator's
+      // special recharge. The fixed reward is deliberately smaller than a full reset.
+      this.survivalDashCooldownRemaining = Math.max(1.6, this.survivalDashCooldownRemaining - 1.35);
+      this.abilityCooldownState = advanceAbilityCooldown(this.abilityCooldownState, 0.65);
+      this.updateAbilityCooldown(0, true);
+      this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.65, this.playerPos.z, 0xfacc15);
+      this.triggerBloomPulse(0.32);
+      this.emitFloatingToast(
+        '✦ PERFECT DODGE! +100 PKT • SUPER +0,65 s',
+        this.playerPos.x,
+        this.playerPos.y + 1.35,
+        this.playerPos.z,
+        'combo'
+      );
+      sound.playPickup();
+      this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+    } else {
+      this.emitFloatingToast('↗ UNIK TAKTYCZNY!', this.playerPos.x, this.playerPos.y + 1.15, this.playerPos.z, 'perk');
+    }
+
     this.updateSurvivalDashCooldown(0, true);
     return true;
   }
@@ -10302,7 +10406,7 @@ export class MaxFlizGameEngine {
       sound.stopMusic();
       sound.playGameOver();
       const finalReason = this.gameMode === 'survival'
-        ? reason + ' | Fala ' + this.survivalWave + ' • ' + this.survivalKills + ' eliminacji • ' + Math.floor(this.survivalElapsed) + ' s'
+        ? reason + ' | Fala ' + this.survivalWave + ' • ' + this.survivalKills + ' eliminacji • ' + this.survivalPerfectDodges + ' perfekcyjnych uników • ' + Math.floor(this.survivalElapsed) + ' s'
         : reason;
       this.callbacks.onGameOver(finalReason);
     }
