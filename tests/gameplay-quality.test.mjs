@@ -232,8 +232,8 @@ test('cinematic intro autoplays after boot and is layered above the game shell',
   const [app, css, intro] = await Promise.all([
     read('../src/index.ts'), read('../src/index.css'), read('../src/cinematicIntro.ts')
   ]);
-  assert.match(app, /this\.engine\.startTitle\(\)[\s\S]*?window\.setTimeout\(\(\) => \{ void launchCinematicIntro\(\); \}, 220\)/);
-  assert.match(app, /new CinematicIntroManager/);
+  assert.match(app, /document\.dispatchEvent\(new Event\('paleciaki:launch-intro'\)\)/);
+  assert.match(app, /document\.addEventListener\('paleciaki:launch-intro', \(\) => \{ void launchCinematicIntro\(\); \}, \{ once: true \}\)/);
   assert.match(intro, /overlay\.className = 'cinematic-intro-overlay'/);
   assert.match(css, /\.cinematic-intro-overlay\s*\{[\s\S]*?z-index: 20000000 !important/);
 });
@@ -966,7 +966,7 @@ test('cinematic intro is a real Canvas 2D boot sequence and returns to the Survi
     read('../index.html'), read('../src/index.css')
   ]);
   assert.match(app, /new CinematicIntroManager/);
-  assert.match(app, /if \(!document\.hidden\) void launchCinematicIntro\(\)/);
+  assert.match(app, /if \(!document\.hidden\) document\.dispatchEvent\(new Event\('paleciaki:launch-intro'\)\)/);
   assert.match(app, /this\.cinematicIntro\.stop\(false, false\)/);
   assert.match(app, /doStartSurvival\(\)/);
   assert.doesNotMatch(app, /btn-open-cinematic-intro|PixelIntroManager|pixelIntro/i);
