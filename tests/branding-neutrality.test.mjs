@@ -36,7 +36,9 @@ test('operator cards use fictional call signs while retaining stable internal ID
 
   for (const [id, callSign] of roster) {
     const start = characters.indexOf(id + ': {');
-    const end = characters.indexOf('\n  },', start);
+    const commaEnd = characters.indexOf('\n  },', start);
+    const finalEnd = characters.indexOf('\n};', start);
+    const end = commaEnd >= 0 ? commaEnd : finalEnd;
     assert.ok(start >= 0 && end > start, 'missing operator definition: ' + id);
     assert.ok(characters.slice(start, end).includes("name: '" + callSign + "'"), 'missing fictional call sign: ' + callSign);
     assert.ok(html.includes('data-char="' + id + '"'), 'stable character ID was changed: ' + id);
