@@ -124,12 +124,11 @@ class PaleciakiScene extends xb.Script {
   private engine!: PaleciakiGameEngine;
   private cinematicIntro: CinematicIntroManager | null = null;
   private selectedCharId: CharacterId = 'marcin';
-  private selectedLevelId: number = 1;
   private lastScore: number = 0;
   private lastCoins: number = 0;
   private lastTimeSeconds: number = 0;
   private lastBossDefeated: boolean = false;
-  private lastMode: 'campaign' | 'survival' = 'campaign';
+  private lastMode: 'campaign' | 'survival' = 'survival';
   private camera: THREE.PerspectiveCamera;
   private fallbackScene: THREE.Scene;
   private lastLoopTick: number = performance.now();
@@ -254,7 +253,6 @@ class PaleciakiScene extends xb.Script {
     const hudPerksRow = document.getElementById('hud-perks-row');
     const touchControls = document.getElementById('touch-controls');
     const pauseModal = document.getElementById('pause-modal');
-    const victoryModal = document.getElementById('victory-modal');
     const gameoverModal = document.getElementById('gameover-modal');
     const survivalHud = document.getElementById('survival-hud');
     const survivalLevelUp = document.getElementById('survival-levelup');
@@ -269,8 +267,6 @@ class PaleciakiScene extends xb.Script {
     const survivalRerollBtn = document.getElementById('btn-survival-reroll') as HTMLButtonElement | null;
     const survivalSkipBtn = document.getElementById('btn-survival-skip') as HTMLButtonElement | null;
 
-    const victoryScore = document.getElementById('victory-score');
-    const victoryTime = document.getElementById('victory-time');
     const gameoverReason = document.getElementById('gameover-reason');
 
     const bossHudBar = document.getElementById('boss-hud-bar');
@@ -364,7 +360,7 @@ class PaleciakiScene extends xb.Script {
 
     const getEnemyMeta = (type: string) => {
       const metaMap: Record<string, { name: string; role: string; avatar: string }> = {
-        kurier: { name: 'Kurier Rudi', role: 'Kurier Express', avatar: '🚚' },
+        kurier: { name: 'Kurier Ekspresowy', role: 'Kurier Express', avatar: '🚚' },
         walczak: { name: 'Nadzorca Zero', role: 'Zbuntowany Nadzorca', avatar: '👔' },
         krol_leto: { name: 'Dyrektor Widmo', role: 'Dyrektor Generalny', avatar: '👑' },
         architect: { name: 'Architektka', role: 'Design & Beż', avatar: '🎨' },
@@ -675,63 +671,11 @@ class PaleciakiScene extends xb.Script {
           const hasVisiblePerk = Boolean(hudPerksRow && hudPerksRow.querySelector('.perk-badge:not(.hidden)'));
           hudPerksRow?.classList.toggle('hidden', !hasVisiblePerk);
         },
-        onLevelComplete: (levelId, score, timeStr) => {
-          this.lastScore = score;
-          this.lastCoins = this.engine.getCollectedVipCount();
-          this.lastTimeSeconds = this.engine.getElapsedSeconds();
-          this.lastBossDefeated = this.engine.isBossDefeated();
-          this.lastMode = this.engine.getGameMode();
-
-          const victoryTitle = document.getElementById('victory-title');
-          if (victoryTitle) {
-            victoryTitle.textContent = levelId < 3 ? `SEKTOR ${levelId} ZALICZONY!` : 'MAGAZYN OPANOWANY!';
-          }
-
-          const btnNext = document.getElementById('btn-next-level');
-          if (btnNext) {
-            if (levelId < 3) {
-              btnNext.classList.remove('hidden');
-              btnNext.textContent = `WEJDŹ DO SEKTORA ${levelId + 1} ➡️`;
-            } else {
-              btnNext.classList.add('hidden');
-            }
-          }
-
-          if (victoryScore) victoryScore.textContent = score.toString();
-          if (victoryTime) victoryTime.textContent = timeStr;
-          victoryModal?.classList.remove('hidden');
-          hudTop?.classList.add('hidden');
-          hudBottom?.classList.add('hidden');
-          touchControls?.classList.add('hidden');
-          bossHudBar?.classList.add('hidden');
-          hudPerksRow?.classList.add('hidden');
-          survivalHud?.classList.add('hidden');
-          survivalLevelUp?.classList.add('hidden');
-
-          this.prepareScoreSubmissionForm(
-            'player-nickname-input',
-            'btn-submit-score',
-            'submit-feedback-msg'
-          );
-
-          if (levelId < 3) {
-            setTimeout(() => {
-              if (victoryModal && !victoryModal.classList.contains('hidden')) {
-                this.selectedLevelId = levelId + 1;
-                this.engine.startGame(this.selectedLevelId);
-                victoryModal.classList.add('hidden');
-                hudTop?.classList.remove('hidden');
-                hudBottom?.classList.remove('hidden');
-                touchControls?.classList.remove('hidden');
-              }
-            }, 6500);
-          }
-        },
         onGameOver: (reason) => {
           hideSurvivalAnnouncement();
           this.lastScore = this.engine.getScore();
           this.lastCoins = this.engine.getCollectedVipCount();
-          this.lastTimeSeconds = this.engine.getElapsedSeconds();
+                    this.lastTimeSeconds = this.engine.getElapsedSeconds();
           this.lastBossDefeated = this.engine.isBossDefeated();
           this.lastMode = this.engine.getGameMode();
 
@@ -745,13 +689,9 @@ class PaleciakiScene extends xb.Script {
             const seconds = this.lastTimeSeconds % 60;
             finalTime.textContent = minutes + ':' + String(seconds).padStart(2, '0');
           }
-          if (finalMode) finalMode.textContent = this.lastMode === 'survival' ? 'SURVIVAL SHIFT' : 'KAMPANIA';
-          if (this.lastMode === 'survival') {
-            const snapshot = this.engine.getSurvivalSnapshot();
-            if (runDetail) runDetail.textContent = `FALA ${snapshot.wave} • ${snapshot.kills} ELIMINACJI • POZIOM ${snapshot.level}`;
-          } else if (runDetail) {
-            runDetail.textContent = `SEKTOR ${this.selectedLevelId} • ŁADUNEK VIP: ${this.lastCoins}`;
-          }
+          if (finalMode) finalMode.textContent = 'SURVIVAL SHIFT';
+          const snapshot = this.engine.getSurvivalSnapshot();
+          if (runDetail) runDetail.textContent = `FALA ${snapshot.wave} • ${snapshot.kills} ELIMINACJI • POZIOM ${snapshot.level}`;
           this.prepareScoreSubmissionForm(
             'player-nickname-gameover',
             'btn-submit-score-gameover',
@@ -955,7 +895,7 @@ class PaleciakiScene extends xb.Script {
         grzesiek: 'Miota ciężkim stalowym hantlem. Co trzeci rzut jest większy, mocniej odrzuca i przebija kilku przeciwników.',
         dawid: 'Rzuca rolką folii stretch, która owija i spowalnia przeciwników. Co trzeci rzut mocniej wiąże cel.',
         mateusz: 'Strzela pojedynczym impulsem paralizatora. Trafiony przeciwnik dostaje elektryczny stun; co trzeci impuls jest mocniejszy.',
-        piotr: 'Miota ciężkim kluczem grzechotkowym B4. Wiruje, przebija kilka celów i wraca przez tłum do Rooka; co trzeci rzut jest mocniejszy i rozgrzany do czerwoności.',
+        piotr: 'Miota ciężkim kluczem grzechotkowym B4. Wiruje, przebija kilka celów i wraca przez tłum do operatora; co trzeci rzut jest mocniejszy i rozgrzany do czerwoności.',
       };
       if (attackNameElem) attackNameElem.textContent = attackNames[id] || 'Atak';
       if (attackIconElem) { attackIconElem.innerHTML = attackIcons[id] || attackIcons.marcin; attackIconElem.dataset.operatorIcon = id; }
@@ -1049,14 +989,14 @@ class PaleciakiScene extends xb.Script {
           updateFirestoreStatusUI('offline', 'Baza Firestore: Tryb Offline');
         }
 
-        const topScores = await getTopLeaderboard(15);
+        const topScores = (await getTopLeaderboard(100)).filter((entry) => entry.mode === 'survival').slice(0, 15);
         leaderboardLoading.classList.add('hidden');
         leaderboardList.classList.remove('hidden');
 
         if (topScores.length === 0) {
           leaderboardList.innerHTML = `
             <div class="leaderboard-status-msg">
-              Brak jeszcze wyników na tej zmianie! Bądź pierwszym magazynierem, który załaduje zamówienie VIP i zapisze wynik.
+              Brak rekordów Survival. Rozpocznij zmianę i zapisz pierwszy wynik.
             </div>
           `;
         } else {
@@ -1064,17 +1004,15 @@ class PaleciakiScene extends xb.Script {
             const rankIcons = ['🥇', '🥈', '🥉'];
             const rankDisplay = idx < 3 ? rankIcons[idx] : `${idx + 1}.`;
             const heroIds: Record<string, CharacterId> = {
-              Atlas: 'marcin', Forge: 'grzesiek', Vector: 'dawid', Volt: 'mateusz', Rook: 'piotr',
-              // Preserve support for scores created before the public call-sign update.
-              Marcin: 'marcin', Grzesiek: 'grzesiek', Dawid: 'dawid', Mateusz: 'mateusz', Piotr: 'piotr',
+              'Operator 01': 'marcin', 'Operator 02': 'grzesiek', 'Operator 03': 'dawid', 'Operator 04': 'mateusz', 'Operator 05': 'piotr',
             };
             const heroId = heroIds[entry.hero];
             const heroIcon = heroId ? operatorPortrait(heroId) : '👷‍♂️';
             const bossBadge = entry.bossDefeated ? '<span title="Nadzorca Zero pokonany!">👔💥</span>' : '';
             const safePlayerName = escapeLeaderboardText(entry.playerName);
-            const safeHeroName = escapeLeaderboardText(entry.hero);
-            const modeLabel = entry.mode === 'survival' ? 'SURVIVAL' : 'KAMPANIA';
-            const modeClass = entry.mode === 'survival' ? 'survival' : 'campaign';
+            const safeHeroName = escapeLeaderboardText(heroId ? CHARACTERS[heroId].name : 'Operator');
+            const modeLabel = 'SURVIVAL';
+            const modeClass = 'survival';
             const syncBadge = entry.syncStatus === 'pending' ? '<span class="leaderboard-sync-pill pending">OCZEKUJE ONLINE</span>' : '';
             const mins = Math.floor(entry.timeSeconds / 60);
             const secs = entry.timeSeconds % 60;
@@ -1182,129 +1120,7 @@ class PaleciakiScene extends xb.Script {
       });
     });
 
-    const refreshZoneLocks = () => {
-      const unlocked = this.engine.getUnlockedSector();
-      document.querySelectorAll<HTMLElement>('.zone-card').forEach((card) => {
-        const level = Number(card.getAttribute('data-level') || '1');
-        const locked = level > unlocked;
-        card.classList.toggle('locked', locked);
-        card.setAttribute('aria-disabled', locked ? 'true' : 'false');
-        const pill = card.querySelector<HTMLElement>('.zone-checkpoint-pill');
-        if (!pill) return;
-        if (locked && level === 2) pill.textContent = 'ZAMKNIĘTY • POKONAJ BOSMANA';
-        else if (locked && level === 3) pill.textContent = 'ZAMKNIĘTY • POKONAJ DYREKTORA WIDMO';
-        else if (level === 1) pill.textContent = 'START GŁÓWNY';
-        else pill.textContent = 'CHECKPOINT ODBLOKOWANY';
-      });
-    };
-    document.querySelectorAll('.zone-card').forEach((card) => {
-      const selectZone = (e?: Event) => {
-        if (e) { e.preventDefault(); e.stopPropagation(); }
-        const level = parseInt(card.getAttribute('data-level') || '1', 10);
-        if (level > this.engine.getUnlockedSector()) {
-          const pill = card.querySelector<HTMLElement>('.zone-checkpoint-pill');
-          if (pill) {
-            pill.textContent = level === 2
-              ? 'WYMAGANE: POKONAJ BOSMANA W SEKTORZE A'
-              : 'WYMAGANE: POKONAJ DYREKTORA WIDMO W SEKTORZE B';
-          }
-          return;
-        }
-        document.querySelectorAll('.zone-card').forEach((c) => c.classList.remove('active'));
-        card.classList.add('active');
-        this.selectedLevelId = level;
-      };
-      card.addEventListener('click', selectZone);
-      card.addEventListener('touchend', selectZone);
-    });
-    refreshZoneLocks();
-
     let startingGame = false;
-    const launchCampaignGame = async (e?: Event) => {
-      if (startingGame) return;
-      if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-
-      // Lock immediately, before awaiting asset readiness. This prevents two
-      // quick taps from starting two independent campaign transitions.
-      startingGame = true;
-      const startButton = document.getElementById('btn-start-game') as HTMLButtonElement | null;
-      if (startButton) {
-        startButton.disabled = true;
-        startButton.setAttribute('aria-busy', 'true');
-      }
-
-      try {
-        await assetLoader.waitUntilReady('Gra 3D');
-        const ads = await initializeGameAds();
-        syncAdMobSettings(ads);
-
-        if (!this.engine || typeof this.engine.startGame !== 'function') {
-          throw new Error('Silnik gry nie jest jeszcze gotowy.');
-        }
-
-        if (this.cinematicIntro?.isRunning()) this.cinematicIntro.stop(false, false);
-        this.engine.setLevelVisible(true);
-        // Start the engine before dismissing the menu. If initialization fails,
-        // the player remains on the menu and can retry instead of seeing a dead screen.
-        this.engine.startGame(this.selectedLevelId);
-
-        document.getElementById('story-intro-modal')?.classList.add('hidden');
-        if (titleScreen) {
-          titleScreen.classList.add('hidden');
-          titleScreen.style.setProperty('display', 'none', 'important');
-        }
-        pauseModal?.classList.add('hidden');
-        victoryModal?.classList.add('hidden');
-        gameoverModal?.classList.add('hidden');
-        survivalLevelUp?.classList.add('hidden');
-        survivalHud?.classList.add('hidden');
-        hudTop?.classList.remove('hidden');
-        hudBottom?.classList.remove('hidden');
-        touchControls?.classList.remove('hidden');
-        gameShell?.classList.remove('survival-mode');
-
-        document.getElementById('campaign-start-error')?.remove();
-      } catch (error) {
-        console.error('[Campaign] Nie udało się uruchomić kampanii:', error);
-        document.getElementById('story-intro-modal')?.classList.add('hidden');
-        titleScreen?.classList.remove('hidden');
-        titleScreen?.style.setProperty('display', 'flex', 'important');
-        hudTop?.classList.add('hidden');
-        hudBottom?.classList.add('hidden');
-        touchControls?.classList.add('hidden');
-
-        let errorBanner = document.getElementById('campaign-start-error');
-        if (!errorBanner && titleScreen) {
-          errorBanner = document.createElement('div');
-          errorBanner.id = 'campaign-start-error';
-          errorBanner.setAttribute('role', 'alert');
-          errorBanner.style.cssText = 'position:relative;z-index:10000002;max-width:min(92vw,620px);margin:12px auto;padding:12px 16px;border:1px solid rgba(248,113,113,.65);border-radius:12px;background:rgba(69,10,10,.94);color:#fee2e2;font:600 13px/1.45 system-ui,sans-serif;text-align:center;';
-          titleScreen.appendChild(errorBanner);
-        }
-        if (errorBanner) {
-          errorBanner.textContent = 'Kampania nie wystartowała. Silnik zgłosił błąd — sprawdź połączenie i spróbuj ponownie.';
-        }
-      } finally {
-        startingGame = false;
-        if (startButton) {
-          startButton.disabled = false;
-          startButton.removeAttribute('aria-busy');
-        }
-      }
-    };
-
-    // The primary CTA starts the campaign immediately. The briefing remains
-    // available as an optional archive so it can never block entry to the game.
-    let openCampaignBriefing = () => {
-      document.getElementById('story-intro-modal')?.classList.remove('hidden');
-    };
-    const doStartGame = (e?: Event) => {
-      void launchCampaignGame(e);
-    };
-
     const doStartSurvival = async (e?: Event) => {
       if (startingGame) return;
       if (e) {
@@ -1312,9 +1128,8 @@ class PaleciakiScene extends xb.Script {
         e.stopPropagation();
       }
 
-      // Lock before waiting for assets, just like the campaign route. Without
-      // this, two taps separated by more than the tap debounce can both resume
-      // here and construct duplicate Survival arenas.
+      // Lock before waiting for assets. This prevents two rapid taps from
+      // constructing duplicate Survival arenas.
       startingGame = true;
       const startButton = document.getElementById('btn-start-survival') as HTMLButtonElement | null;
       if (startButton) {
@@ -1334,14 +1149,11 @@ class PaleciakiScene extends xb.Script {
         if (this.cinematicIntro?.isRunning()) this.cinematicIntro.stop(false, false);
         this.engine.setLevelVisible(true);
 
-        const storyModal = document.getElementById('story-intro-modal');
-        storyModal?.classList.add('hidden');
         if (titleScreen) {
           titleScreen.classList.add('hidden');
           titleScreen.style.setProperty('display', 'none', 'important');
         }
         pauseModal?.classList.add('hidden');
-        victoryModal?.classList.add('hidden');
         gameoverModal?.classList.add('hidden');
         survivalLevelUp?.classList.add('hidden');
 
@@ -1352,6 +1164,24 @@ class PaleciakiScene extends xb.Script {
         gameShell?.classList.add('survival-mode');
 
         this.engine.startSurvival();
+      } catch (error) {
+        console.error('[Survival] Nie udało się uruchomić rozgrywki:', error);
+        titleScreen?.classList.remove('hidden');
+        titleScreen?.style.setProperty('display', 'flex', 'important');
+        hudTop?.classList.add('hidden');
+        hudBottom?.classList.add('hidden');
+        touchControls?.classList.add('hidden');
+        survivalHud?.classList.add('hidden');
+        gameShell?.classList.remove('survival-mode');
+        let errorBanner = document.getElementById('survival-start-error');
+        if (!errorBanner && titleScreen) {
+          errorBanner = document.createElement('div');
+          errorBanner.id = 'survival-start-error';
+          errorBanner.setAttribute('role', 'alert');
+          errorBanner.style.cssText = 'position:relative;z-index:10000002;max-width:min(92vw,620px);margin:12px auto;padding:12px 16px;border:1px solid rgba(248,113,113,.65);border-radius:12px;background:rgba(69,10,10,.94);color:#fee2e2;font:600 13px/1.45 system-ui,sans-serif;text-align:center;';
+          titleScreen.appendChild(errorBanner);
+        }
+        if (errorBanner) errorBanner.textContent = 'Nie udało się uruchomić Survival. Spróbuj ponownie.';
       } finally {
         // Keep the lock briefly after the synchronous scene swap so late touch
         // and synthetic click events cannot immediately start another arena.
@@ -1418,16 +1248,12 @@ class PaleciakiScene extends xb.Script {
       }
     });
 
-    const startBtn = document.getElementById('btn-start-game');
-    bindTap(startBtn, doStartGame);
     bindTap(document.getElementById('btn-start-survival'), doStartSurvival);
 
     window.addEventListener('keydown', (e) => {
-      const storyModal = document.getElementById('story-intro-modal');
-      const modalVisible = storyModal && !storyModal.classList.contains('hidden');
       if (titleScreen && !titleScreen.classList.contains('hidden')) {
-        if ((e.code === 'Enter' || e.code === 'Space') && !modalVisible) {
-          doStartGame();
+        if (e.code === 'Enter' || e.code === 'Space') {
+          doStartSurvival();
           e.preventDefault();
         }
       }
@@ -1457,7 +1283,7 @@ class PaleciakiScene extends xb.Script {
             },
             onStartGame: () => {
               this.engine.setLevelVisible(true);
-              doStartGame();
+              doStartSurvival();
             },
           });
         }
@@ -1466,7 +1292,6 @@ class PaleciakiScene extends xb.Script {
           titleScreen.classList.add('hidden');
           titleScreen.style.setProperty('display', 'none', 'important');
         }
-        document.getElementById('story-intro-modal')?.classList.add('hidden');
         this.engine.setLevelVisible(false);
         this.cinematicIntro.start();
       } catch (error) {
@@ -1597,74 +1422,7 @@ class PaleciakiScene extends xb.Script {
     bindTap(document.getElementById('btn-top-pause'), handlePause);
     bindTap(document.getElementById('btn-pause'), handlePause);
 
-    const storyModal = document.getElementById('story-intro-modal');
-    const btnCloseStory = document.getElementById('btn-close-story');
-    const btnStoryPrev = document.getElementById('btn-story-prev') as HTMLButtonElement | null;
-    const btnStoryNext = document.getElementById('btn-story-next') as HTMLButtonElement | null;
-    const btnStoryPlay = document.getElementById('btn-story-play');
-    const storySlides = document.querySelectorAll('.story-slide');
-    const storyDots = document.querySelectorAll('.story-progress-dots .dot');
-    let currentSlide = 0;
-
-    const updateStorySlides = (index: number) => {
-      currentSlide = Math.max(0, Math.min(index, storySlides.length - 1));
-      storySlides.forEach((slide, i) => {
-        if (i === currentSlide) {
-          slide.classList.remove('hidden');
-          slide.classList.add('active');
-        } else {
-          slide.classList.add('hidden');
-          slide.classList.remove('active');
-        }
-      });
-      storyDots.forEach((dot, i) => {
-        dot.classList.toggle('active', i === currentSlide);
-      });
-
-      if (btnStoryPrev) btnStoryPrev.disabled = currentSlide === 0;
-      if (btnStoryNext && btnStoryPlay) {
-        if (currentSlide === storySlides.length - 1) {
-          btnStoryNext.classList.add('hidden');
-          btnStoryPlay.classList.remove('hidden');
-        } else {
-          btnStoryNext.classList.remove('hidden');
-          btnStoryPlay.classList.add('hidden');
-        }
-      }
-    };
-
-    openCampaignBriefing = () => {
-      updateStorySlides(0);
-      storyModal?.classList.remove('hidden');
-      storyModal?.querySelector<HTMLButtonElement>('#btn-close-story')?.focus();
-    };
-
-    bindTap(document.getElementById('btn-open-story-modal'), () => {
-      openCampaignBriefing();
-    });
-
-    bindTap(btnCloseStory, () => {
-      storyModal?.classList.add('hidden');
-    });
-
-    bindTap(btnStoryPrev, () => {
-      updateStorySlides(currentSlide - 1);
-    });
-
-    bindTap(btnStoryNext, () => {
-      updateStorySlides(currentSlide + 1);
-    });
-
-    bindTap(btnStoryPlay, (event) => {
-      void launchCampaignGame(event);
-    });
-
-    storyDots.forEach((dot) => {
-      bindTap(dot as HTMLElement, () => {
-        const slideIdx = parseInt(dot.getAttribute('data-slide') || '0', 10);
-        updateStorySlides(slideIdx);
-      });
-    });
+    // Campaign briefing UI has been retired; Survival is the only playable mode.
 
     bindTap(document.getElementById('btn-resume'), () => {
       pauseModal?.classList.add('hidden');
@@ -1672,13 +1430,11 @@ class PaleciakiScene extends xb.Script {
     });
 
     bindTap(document.getElementById('btn-restart-pause'), () => {
-      const restartSurvival = this.engine.getGameMode() === 'survival';
       pauseModal?.classList.add('hidden');
       survivalLevelUp?.classList.add('hidden');
-      survivalHud?.classList.toggle('hidden', !restartSurvival);
-      gameShell?.classList.toggle('survival-mode', restartSurvival);
-      if (restartSurvival) this.engine.startSurvival();
-      else this.engine.startGame(this.selectedLevelId);
+      survivalHud?.classList.remove('hidden');
+      gameShell?.classList.add('survival-mode');
+      this.engine.startSurvival();
     });
 
     bindTap(document.getElementById('btn-menu-pause'), () => {
@@ -1694,52 +1450,18 @@ class PaleciakiScene extends xb.Script {
         titleScreen.classList.remove('hidden');
         titleScreen.style.setProperty('display', 'flex', 'important');
       }
-      refreshZoneLocks();
       this.engine.startTitle();
-    });
-
-    bindTap(document.getElementById('btn-next-level'), () => {
-      victoryModal?.classList.add('hidden');
-      hudTop?.classList.remove('hidden');
-      hudBottom?.classList.remove('hidden');
-      touchControls?.classList.remove('hidden');
-      this.selectedLevelId = (this.selectedLevelId % 3) + 1;
-      this.engine.startGame(this.selectedLevelId);
-    });
-
-    bindTap(document.getElementById('btn-replay-level'), () => {
-      victoryModal?.classList.add('hidden');
-      hudTop?.classList.remove('hidden');
-      hudBottom?.classList.remove('hidden');
-      touchControls?.classList.remove('hidden');
-      this.engine.startGame(this.selectedLevelId);
-    });
-
-    bindTap(document.getElementById('btn-menu-victory'), () => {
-      victoryModal?.classList.add('hidden');
-      survivalHud?.classList.add('hidden');
-      survivalLevelUp?.classList.add('hidden');
-      gameShell?.classList.remove('survival-mode');
-      if (titleScreen) {
-        titleScreen.classList.remove('hidden');
-        titleScreen.style.setProperty('display', 'flex', 'important');
-      }
-      refreshZoneLocks();
-      this.engine.startTitle();
-      void showInterstitialAfterRun();
     });
 
     bindTap(document.getElementById('btn-retry'), () => {
-      const retrySurvival = this.engine.getGameMode() === 'survival';
       gameoverModal?.classList.add('hidden');
       survivalLevelUp?.classList.add('hidden');
       hudTop?.classList.remove('hidden');
       hudBottom?.classList.remove('hidden');
       touchControls?.classList.remove('hidden');
-      survivalHud?.classList.toggle('hidden', !retrySurvival);
-      gameShell?.classList.toggle('survival-mode', retrySurvival);
-      if (retrySurvival) this.engine.startSurvival();
-      else this.engine.startGame(this.selectedLevelId);
+      survivalHud?.classList.remove('hidden');
+      gameShell?.classList.add('survival-mode');
+      this.engine.startSurvival();
     });
 
     bindTap(document.getElementById('btn-menu-gameover'), () => {
@@ -1751,7 +1473,6 @@ class PaleciakiScene extends xb.Script {
         titleScreen.classList.remove('hidden');
         titleScreen.style.setProperty('display', 'flex', 'important');
       }
-      refreshZoneLocks();
       this.engine.startTitle();
       void showInterstitialAfterRun();
     });

@@ -111,7 +111,7 @@ export class CinematicIntroManager {
         <h1>PALECIAKI!</h1>
         <div class="cinematic-intro-subtitle">MAGAZYN <span>CHAOSU</span></div>
         <p>Za dnia palety. Po godzinach — hordy. Zbieraj perki, rozwijaj broń i przetrwaj zmianę. BHP? Dzisiaj ma wolne.</p>
-        <div class="cinematic-intro-tags"><span>KAMPANIA 3D</span><span>SURVIVAL • HORDY</span><span>PERKI • EWOLUCJE</span></div>
+        <div class="cinematic-intro-tags"><span>SURVIVAL 3D</span><span>SURVIVAL • HORDY</span><span>PERKI • EWOLUCJE</span></div>
       </div>
       <div class="cinematic-intro-bottom">
         <div class="cinematic-intro-progress"><span id="cinematic-intro-progress"></span></div>

@@ -75,20 +75,16 @@ test('campaign map receives instanced warehouse structure without per-frame crea
   assert.match(game, /private disposeSurvivalArenaInstances\(\)/);
 });
 
-test('primary campaign CTA starts immediately while briefing stays optional and touch-operable', async () => {
-  const [app, html] = await Promise.all([read('../src/index.ts'), read('../index.html')]);
-  assert.match(html, /id="story-intro-modal"/);
-  assert.match(html, /id="btn-open-story-modal"/);
-  assert.match(app, /const launchCampaignGame = async/);
-  assert.match(app, /startingGame = true;[\s\S]*?await assetLoader\.waitUntilReady\('Gra 3D'\)/);
-  assert.match(app, /this\.engine\.startGame\(this\.selectedLevelId\)/);
-  assert.match(app, /const doStartGame = \(e\?: Event\) => \{\s*void launchCampaignGame\(e\);/);
-  assert.match(app, /bindTap\(startBtn, doStartGame\)/);
-  assert.match(app, /openCampaignBriefing = \(\) => \{/);
-  assert.match(app, /bindTap\(btnStoryPlay,[\s\S]*?launchCampaignGame\(event\)/);
-  assert.match(app, /campaign-start-error/);
+test('Survival is the only public start path and boots without building a campaign level', async () => {
+  const [app, html, game] = await Promise.all([read('../src/index.ts'), read('../index.html'), read('../src/game.ts')]);
+  assert.match(html, /id="btn-start-survival"/);
+  assert.doesNotMatch(html, /id="btn-start-game"|id="story-intro-modal"|data-tab="tab-zones"/);
+  assert.match(app, /bindTap\(document\.getElementById\('btn-start-survival'\), doStartSurvival\)/);
+  assert.match(app, /doStartSurvival\(\);/);
+  assert.match(game, /private resetSurvivalRun\(\)/);
+  assert.match(game, /this\.resetSurvivalRun\(\)/);
+  assert.match(game, /this\.clearLevel\(\)/);
 });
-
 test('device-aware viewport profile is applied immediately after the renderer becomes available', async () => {
   const [app, css, viewport] = await Promise.all([
     read('../src/index.ts'), read('../src/visual-polish.css'), read('../src/uiViewport.ts')
@@ -103,19 +99,17 @@ test('device-aware viewport profile is applied immediately after the renderer be
   assert.match(viewport, /export function calculateUiViewport/);
 });
 
-test('campaign mega-map always assembles all three connected sectors from every campaign start', async () => {
-  const game = await read('../src/game.ts');
-  assert.match(game, /public startGame\(levelId = 1\)/);
-  assert.match(game, /this\.loadLevel\(levelId\)/);
-  const loadLevel = game.slice(game.indexOf('public loadLevel(levelId: number)'), game.indexOf('private buildCampaignHighBayDressing'));
-  assert.match(loadLevel, /this\.buildLevel1\(\)/);
-  assert.match(loadLevel, /this\.buildLevel2\(76\)/);
-  assert.match(loadLevel, /this\.buildLevel3\(161\)/);
-  assert.match(loadLevel, /minX: -36, maxX: 206/);
-  assert.match(loadLevel, /this\.buildSectorGate\(36, 2\)/);
-  assert.match(loadLevel, /this\.buildSectorGate\(116, 3\)/);
+test('campaign entry points are retired; only Survival can be started from the app', async () => {
+  const [app, html, game] = await Promise.all([
+    read('../src/index.ts'), read('../index.html'), read('../src/game.ts')
+  ]);
+  assert.doesNotMatch(html, /id="btn-start-game"|data-tab="tab-zones"|data-tab="tab-story"/);
+  assert.match(html, /id="btn-start-survival"/);
+  assert.doesNotMatch(app, /this\\.engine\\.startGame\\(/);
+  assert.match(app, /this\\.engine\\.startSurvival\\(\\)/);
+  assert.match(game, /private resetSurvivalRun\\(\\)/);
+  assert.doesNotMatch(game, /public startGame\\(/);
 });
-
 test('camera fades only tagged perimeter walls that intersect the camera-to-player ray', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /private registerCameraOccluder\(mesh: THREE\.Mesh\)/);
@@ -871,7 +865,7 @@ test('Campaign mega-map shares the tactical dodge cooldown, movement and touch c
     'all five Campaign operator attacks can consume the bonus');
   assert.match(app, /onSurvivalDashUpdate: \(progress, ready, remainingSeconds\)/);
   assert.match(app, /bindTouchAction\('btn-touch-dash', \(\) => this\.engine\.triggerDash\(\)\)/);
-  assert.match(html, /Unik taktyczny \(Q\) • Kampania i Survival/);
+  assert.match(html, /Unik taktyczny \(Q\) • Survival/);
   assert.match(css, /\.touch-actions-zone \.dash-touch-btn\s*\{\s*display: flex !important/);
 });
 

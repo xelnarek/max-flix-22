@@ -206,7 +206,7 @@ export class PaleciakiGameEngine {
     pan_roman: [
       "Panowie spieszę się, na pace mam 8 wanien wolnostojących!",
       "Gdzie mam zrzucić te kible?! Byle nie na deszczu!",
-      "Kurier Rudi znowu zajął moją rampę rozładunkową!",
+      "Kurier Ekspresowy znowu zajął moją rampę rozładunkową!",
       "Panie kierowniku, pieczątka na WZ-tce i mnie nie ma!",
       "Uwaga na paleciak, hamulce skończyły się w 2018 roku!",
       "Rzucam umywalką, łap pan albo będzie po premii!",
@@ -298,19 +298,19 @@ export class PaleciakiGameEngine {
       "Żaden magazynier nie opuści tego terminala żywy!",
     ],
     zombie_pracownik: [
-      "Kubełek Mocy?! Vector przywiózł kubełek! Z drogi!",
+      "Kubełek Mocy?! Dostawa dotarła! Z drogi!",
       "STRIIIaaPSY... czuję gorącą panierkę z pięciu alejek!",
       "Trzecia zmiana bez obiadu... oddawaj skrzydełka!",
       "Kubełek jest MÓJ! Nie dzielę się frytkami!",
-      "Móóózg... znaczy KURCZAAAK z dostawy Vectora!",
+      "Móóózg... znaczy KURCZAAAK z dostawy!",
     ],
     pomazaniec: [
       "POMAZAŃCEEEE! KTO MA JESZCZE DWA KÓŁKA?!",
       "Razem mamy w siedmiu więcej lat niż rozumu!",
-      "Lizak w dłoń! Godzilla Vectora nie ucieknie!",
+      "Lizak w dłoń! Rowerowy boss nam nie ucieknie!",
       "Dzwonek działa, hamulce są opcjonalne!",
       "MAM CZAPKĘ Z WIATRAKIEM, CZYLI JESTEM DOWÓDCĄ!",
-      "Vectorzilla! Nadciągamy z prędkością trzech kilometrów na godzinę!",
+      "Rowerowy boss! Nadciągamy z prędkością trzech kilometrów na godzinę!",
     ],
     sebix_m: [
       "CO SIĘ GAPISZ?! CEGŁA JEST NAJPIERWOTNIEJSZYM ARGUMENTEM!",
@@ -429,8 +429,8 @@ export class PaleciakiGameEngine {
   private activeChaserIds = new Set<string>();
   private threatTier = 0;
 
-  // Survival Shift is an independent mode. Campaign state and progression remain unchanged.
-  private gameMode: 'campaign' | 'survival' = 'campaign';
+  // Survival is the sole public game mode.
+  private gameMode: 'campaign' | 'survival' = 'survival';
   private survivalElapsed = 0;
   private survivalSpawnTimer = 0;
   private survivalSurgeTimeLeft = 0;
@@ -1160,7 +1160,7 @@ export class PaleciakiGameEngine {
   public startTitle() {
     sound.stopMusic();
     this.clearOperatorCompanions();
-    this.gameMode = 'campaign';
+    this.gameMode = 'survival';
     this.maxHp = 3;
     this.state = 'title';
     this.hp = this.maxHp;
@@ -1185,14 +1185,11 @@ export class PaleciakiGameEngine {
     this.callbacks.onBossUpdate?.('', 0, 0, false);
     this.setLevelVisible(true);
     
-    // Build initial level for title visual if not already built
-    if (this.platforms.length === 0) {
-      this.loadLevel(1);
-    }
+    // The title screen uses its own UI backdrop. Do not construct a hidden campaign world at boot.
   }
 
-  public startGame(levelId = 1) {
-    this.gameMode = 'campaign';
+  private resetSurvivalRun() {
+    this.gameMode = 'survival';
     this.state = 'playing';
     sound.startMusic();
     this.maxHp = 3;
@@ -1309,18 +1306,17 @@ export class PaleciakiGameEngine {
 
     this.callbacks.onPerksUpdate?.(this.activePerks);
     this.callbacks.onSpeechBubble('');
-    this.loadLevel(levelId);
+    this.clearLevel();
     this.callbacks.onHpUpdate(this.hp, this.maxHp);
     this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
     this.sayRandomVoiceLine();
   }
 
   public startSurvival() {
-    // Reuse campaign initialization for the selected operator, then build a clean, dedicated Survival arena.
-    this.startGame(1);
+    // Reset shared combat state without constructing a campaign level, then build the dedicated Survival arena.
+    this.resetSurvivalRun();
     this.gameMode = 'survival';
     this.updateAbilityCooldown(0, true);
-    this.clearLevel();
     this.rebuildPlayerMesh();
     this.sectorGates = [null, null, null, null];
     this.levelBounds = { minX: -58, maxX: 58, minZ: -18.2, maxZ: 18.2 };
@@ -2971,7 +2967,7 @@ export class PaleciakiGameEngine {
     this.collectibles.push({
       id,
       type: 'kfc_bucket',
-      name: 'Kubełek Mocy od Vectora (+2 Kawy & Furia Energetyczna!)',
+      name: 'Kubełek Mocy (+2 HP & Furia Energetyczna!)',
       x,
       y,
       z,
@@ -3593,7 +3589,7 @@ export class PaleciakiGameEngine {
     });
   }
 
-  private addKurierEnemy(id: string, x: number, minX: number, maxX: number, name = 'Kurier Rudi od Kurier Express') {
+  private addKurierEnemy(id: string, x: number, minX: number, maxX: number, name = 'Kurier Ekspresowy') {
     const built = createKurierEnemyModel();
     built.group.position.set(x, 0.4, minX);
     this.levelRoot.add(built.group);
@@ -4179,7 +4175,7 @@ export class PaleciakiGameEngine {
     this.addMagnetItem('mag_l1_1', -6, 1.0, 2.5);
 
     // Easter Eggs
-    this.addEasterEgg('egg_coffee_1', -24, 0.05, -15.5, 'Ukryty Kącik Kawowy Zdzicha', 'coffee', 400);
+    this.addEasterEgg('egg_coffee_1', -24, 0.05, -15.5, 'Ukryta Strefa Kawowa', 'coffee', 400);
     this.addEasterEgg('egg_wz_1', 12, 1.85, 10.5, 'Zaginiona WZ-tka z 2012 Roku', 'folder', 450);
     
     // Loot Crates
@@ -4221,7 +4217,7 @@ export class PaleciakiGameEngine {
     this.addPanRomanEnemy('pan_roman_l1', -8, -6, 6, 'Dostawca Sanitarny z Dostawą Sanitariatów');
     this.addSerwisanciEnemy('serwisant_l1', -15, -6, 6, 'Serwisant Operacja B4u');
     this.addBosmanKrakowBossEnemy('bosman_l1', 0, 0);
-    this.addKurierEnemy('kurier_l1_1', -10, -6, 6, 'Kurier Rudi (Kurier Express)');
+    this.addKurierEnemy('kurier_l1_1', -10, -6, 6, 'Kurier Ekspresowy');
     this.addItalianVendorEnemy('ital_l1_1', 8, -5, 5, 'Włoski Dostawca Armatury z Mediolanu');
     this.addSztaplarEnemy('sztaplar_l1_1', -2, -6, 6, 'Szalony Operator Paleciaka B4');
     this.addEliteGuardEnemy('guard_l1_1', -22, -4, 4, 'Strażnik Sektora A');
@@ -4507,7 +4503,7 @@ export class PaleciakiGameEngine {
     this.addPanRomanEnemy('pan_roman_l2', offsetX, -6, 6, 'Dostawca Sanitarny z Dostawą Sanitariatów');
     this.addSerwisanciEnemy('serwisant_l2', offsetX + 5, -6, 6, 'Serwisant Operacja B4u');
     this.addBosmanKrakowBossEnemy('bosman_l2', offsetX + 20, 0);
-    this.addKurierEnemy('kurier_l2_1', offsetX - 16, -6, 6, 'Kurier Rudi (Kurier Express)');
+    this.addKurierEnemy('kurier_l2_1', offsetX - 16, -6, 6, 'Kurier Ekspresowy');
     this.addItalianVendorEnemy('ital_l2_1', offsetX + 2, -6, 6, 'Przedstawiciel Fabryki z Bolonii');
     this.addSztaplarEnemy('sztaplar_l2_1', offsetX + 18, -6, 6, 'Kierowca Sztaplarki Showroomu');
     this.addArchitectEnemy('arch_l2_1', offsetX - 12, offsetX - 2, -4, 'Główny Projektant Wnętrz z Warszawy');
@@ -5909,11 +5905,11 @@ export class PaleciakiGameEngine {
     }
 
     this.callbacks.onSurvivalAnnouncement?.(
-      'Pomazańceeee idziemy zbić Godzillę Vectora , razem mamy w 7 więcej lat !',
+      'Pomazańceeee, razem ruszamy na rowerowy rajd!',
       'RAJD NA ROWERKACH • PIĘCIU POMAZAŃCÓW',
       'Pięciu maluchów rusza do szturmu. Uważaj na salwy lizaków i nie daj się dogonić kolumnie rowerków!'
     );
-    this.emitFloatingToast('🍭 LIZAKI W DŁOŃ! GODZILLA VECTORA CZEKA!', this.playerPos.x, this.playerPos.y + 1.9, this.playerPos.z, 'combo');
+    this.emitFloatingToast('🍭 LIZAKI W DŁOŃ! ROWEROWY BOSS CZEKA!', this.playerPos.x, this.playerPos.y + 1.9, this.playerPos.z, 'combo');
     sound.playPomazaniecEntrance();
     this.triggerScreenShake(0.36, 0.28);
     this.triggerHitStop(0.07);
@@ -6230,7 +6226,7 @@ export class PaleciakiGameEngine {
         enemy.state = 'charging';
         this.spawnBossLaneTelegraph(enemy.x, enemy.z, enemy.chargeDir, 12.5, 2.6, 0xef4444, 0.72, enemy);
         this.spawnParticleRing(enemy.x,0.12,enemy.z,0xef4444);
-        this.emitFloatingToast('🔥 SEBIX ŁADUJE TARAN — ZEJDŹ Z LINII!',enemy.x,enemy.y+2.2,enemy.z,'damage');
+        this.emitFloatingToast('🔥 OPERATOR TURBO ŁADUJE TARAN — ZEJDŹ Z LINII!',enemy.x,enemy.y+2.2,enemy.z,'damage');
         sound.playBossWarning();
         return;
       }
@@ -6287,7 +6283,7 @@ export class PaleciakiGameEngine {
     if (eventIndex === 0) {
       sound.playSirens();
       this.callbacks.onPerkDropBanner?.('⚡ DOSTAWA SPECJALNA — ALARM GŁODOWY!', '🧟', 'Trzech magazynierów-zombie wyczuło stripsy. Złap kubełek, zanim zrobią inwentaryzację Twojego lunchu.', '#ef4444');
-      this.sayQuote('Vector otworzył kubełek na rampie. Teraz cała hala ma jeden cel: panierka.');
+      this.sayQuote('Ktoś otworzył kubełek na rampie. Teraz cała hala ma jeden cel: panierka.');
       for (let i = 0; i < 3; i++) {
         const ex = THREE.MathUtils.clamp(px + (i - 1) * 8, this.levelBounds.minX + 3, this.levelBounds.maxX - 3);
         const ez = THREE.MathUtils.clamp(pz + (i % 2 === 0 ? -8 : 8), this.levelBounds.minZ + 2, this.levelBounds.maxZ - 2);
@@ -7140,7 +7136,7 @@ export class PaleciakiGameEngine {
         const dist = Math.hypot(h.x - this.playerPos.x, h.z - this.playerPos.z);
         if (dist < 1.4 && Math.abs(h.y - this.playerPos.y) < 1.2) {
           if (this.charDef.id === 'marcin') {
-            // Marcin passive: immune to forklift knockbacks
+            // Operator 01 passive: immune to forklift knockbacks
             this.emitFloatingToast('🛡️ AUTORYTET BHP: STOP SZTAPLARKI!', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
           } else {
             this.takeDamage('Zostałeś potrącony przez wózek widłowy!');
@@ -8440,7 +8436,7 @@ export class PaleciakiGameEngine {
     const pz = this.playerPos.z;
 
     if (eventIdx === 0) {
-      // EVENT 1: DAWID PRZYWIÓZŁ JEDZENIE Z KFC! FALA GŁODNYCH ZOMBIE!
+      // EVENT 1: DOSTAWA ENERGETYCZNYCH ZAPASÓW! FALA GŁODNYCH ZOMBIE!
       sound.playSirenAlert();
       this.triggerScreenShake(0.75, 0.7);
       this.callbacks.onPerkDropBanner?.(
@@ -8449,7 +8445,7 @@ export class PaleciakiGameEngine {
         'Fala magazynierów-zombie szarżuje po zapasy! Zbierz pakiet pierwszy (+2 Kawy i Furia 2x Obrażeń)!',
         '#ef4444'
       );
-      this.sayQuote('VECTOR PRZYWIÓZŁ ZAPASY ENERGII! Cała zmiana biegnie jak horda zombie — zbierz pakiet, zanim zniknie!');
+      this.sayQuote('DOSTAWA PRZYWIÓZŁA ZAPASY ENERGII! Cała zmiana biegnie jak horda zombie — zbierz pakiet, zanim zniknie!');
 
       // Drop 2 energy packs + 1 power-up crate around the player
       this.addKfcBucketItem(`event_kfc_${Date.now()}_1`, px + 4.5, 0.45, THREE.MathUtils.clamp(pz - 2.2, -14, 14));
@@ -8521,19 +8517,19 @@ export class PaleciakiGameEngine {
       this.addCustomerEnemy(`event_cust_${Date.now()}_1`, px + 10, Math.max(-12, pz - 5), Math.min(12, pz + 5), 'Łowca Promocji -80%');
       this.addArchitectEnemy(`event_arch_${Date.now()}_2`, px + 12, px + 18, pz, 'Architektka na Wyprzedaży');
     } else {
-      // EVENT 5: ATLAS PRZEGRYWA SYMULACJĘ CZOŁGÓW!
+      // EVENT 5: OPERATOR 01 PRZEGRYWA SYMULACJĘ CZOŁGÓW!
       sound.playSirenAlert();
       this.triggerScreenShake(0.75, 0.65);
       this.marcinWoTPenaltyTimer = 6.0;
       this.callbacks.onPerkDropBanner?.(
-        '🎮 ATLAS PRZEGRYWA SYMULACJĘ CZOŁGÓW!',
+        '🎮 OPERATOR 01 PRZEGRYWA SYMULACJĘ CZOŁGÓW!',
         '💢',
-        'Atlas przegrał symulację czołgów B4 i szuka winnego w alejkach! "Znajdę Ci zajęcie, wesołku..." (-30% szybkości na 6s)',
+        'Operator 01 przegrał symulację czołgów B4 i szuka winnego w alejkach! "Znajdę Ci zajęcie, wesołku..." (-30% szybkości na 6s)',
         '#f97316'
       );
-      this.sayQuote('Kierownik Atlas przegrał bitwę w symulator czołgów B4! "Znajdę Ci zaraz zajęcie, wesołku..."');
+      this.sayQuote('Operator 01 przegrał bitwę w symulator czołgów B4! "Znajdę Ci zaraz zajęcie, wesołku..."');
       this.spawnDroppedPerk(px + 2.8, 0.5, pz, 'espresso_boost');
-      this.addHandlowiecEnemy(`event_marcin_wot_${Date.now()}`, px + 11, Math.max(-12, pz - 4), Math.min(12, pz + 4), 'Zirytowany Kierownik Atlas');
+      this.addHandlowiecEnemy(`event_marcin_wot_${Date.now()}`, px + 11, Math.max(-12, pz - 4), Math.min(12, pz + 4), 'Zirytowany Operator 01');
     }
   }
 
@@ -8549,7 +8545,7 @@ export class PaleciakiGameEngine {
       const p = this.projectiles[i];
       p.life -= dt;
 
-      // Boomerang return logic (Piotr's Pipe Wrench)
+      // Boomerang return logic (Operator 05's Pipe Wrench)
       if (p.boomerang && !p.returning && p.maxLife && p.life < p.maxLife * 0.52) {
         p.returning = true;
         p.hitIds?.clear(); // Can hit enemies again on return!
@@ -8571,7 +8567,7 @@ export class PaleciakiGameEngine {
         p.vel.lerp(toPlayer, dt * 9.0);
       }
 
-      // Homing logic (Mateusz's DualSense RGB discs)
+      // Homing logic (Operator 04's DualSense RGB discs)
       if (p.homing) {
         let nearest: EnemyItem | null = null;
         let minDist = 11.0;
@@ -8611,14 +8607,14 @@ export class PaleciakiGameEngine {
         p.mesh.rotation.y += p.spinSpeed * dt;
       }
 
-      // Ricochet off Z corridor walls (Dawid's 45-degree diamond blade & tiles)
+      // Ricochet off Z corridor walls (Operator 03's 45-degree diamond blade & tiles)
       if (p.ricochet && Math.abs(p.mesh.position.z) > 17.5) {
         p.vel.z *= -1;
         p.mesh.position.z = Math.sign(p.mesh.position.z) * 17.4;
         this.spawnParticleRing(p.mesh.position.x, p.mesh.position.y, p.mesh.position.z, 0xd97706);
       }
 
-      // Dawid passive: projectiles collect grouts & items along their path!
+      // Operator 03 passive: projectiles collect grouts & items along their path!
       if (p.collectItems) {
         for (const c of this.collectibles) {
           if (c.collected || !c.mesh) continue;
@@ -8695,7 +8691,7 @@ export class PaleciakiGameEngine {
               if (!p.weaponProjectile) this.spawnParticleRing(e.x, e.y + 0.5, e.z, 0xff5500);
             }
 
-            // AoE shockwave on hit (Marcin's WZ Binder Stamp)
+            // AoE shockwave on hit (Operator 01's WZ Binder Stamp)
             if (p.aoeRadius && p.aoeRadius > 0) {
               if (p.weaponProjectile) this.spawnCompactImpact(e.x, e.y + 0.36, e.z, 0xf59e0b);
               else this.spawnParticleRing(e.x, e.y + 0.4, e.z, 0xf59e0b);
@@ -9052,7 +9048,7 @@ export class PaleciakiGameEngine {
     const startOrigin = new THREE.Vector3(this.playerPos.x, this.playerPos.y + 0.82, this.playerPos.z).addScaledVector(forward, 0.65);
 
     if (charId === 'marcin') {
-      // Atlas casts a compact B4 ERP spell: a holographic work-order rune.
+      // Operator 01 casts a compact B4 ERP spell: a holographic work-order rune.
       const spell = new THREE.Group();
       const coreMat = new THREE.MeshStandardMaterial({
         color: isThirdCombo ? 0x67e8f9 : 0x38bdf8,
@@ -9091,7 +9087,7 @@ export class PaleciakiGameEngine {
         this.emitFloatingToast('🟦 B4 ERP: ZLECENIE ZATWIERDZONE!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'perk');
       }
     } else if (charId === 'grzesiek') {
-      // Grzesiek throws a steel dumbbell; every third throw is the heavy 44 cm special.
+      // Operator 02 throws a steel dumbbell; every third throw is the heavy 44 cm special.
       const dumbbell = new THREE.Group();
       const steel = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.9, roughness: 0.2 });
       const collarMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, metalness: 0.55, roughness: 0.25 });
@@ -9126,7 +9122,7 @@ export class PaleciakiGameEngine {
       });
       if (isThirdCombo) this.emitFloatingToast('💪 HANTLA 44 CM — CIĘŻKI RZUT!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'combo');
     } else if (charId === 'dawid') {
-      // Dawid launches a roll of stretch wrap; a hit briefly binds/slows the target.
+      // Operator 03 launches a roll of stretch wrap; a hit briefly binds/slows the target.
       const wrapRoll = new THREE.Group();
       const filmMat = new THREE.MeshStandardMaterial({ color: 0xdbeafe, metalness: 0.16, roughness: 0.12, transparent: true, opacity: 0.84 });
       const coreMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.8 });
@@ -9156,7 +9152,7 @@ export class PaleciakiGameEngine {
       });
       if (isThirdCombo) this.emitFloatingToast('📦 STRETCH VIP — ZAWIJAMY TEMAT!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'combo');
     } else if (charId === 'mateusz') {
-      // Mateusz uses a taser: a single fast, readable electric dart, not a screen-filling triple burst.
+      // Operator 04 uses a taser: a single fast, readable electric dart, not a screen-filling triple burst.
       const taserDart = new THREE.Group();
       const body = new THREE.Mesh(
         new THREE.BoxGeometry(0.16, 0.10, 0.34),
@@ -9188,8 +9184,8 @@ export class PaleciakiGameEngine {
       sound.playElectricalSparks();
       if (isThirdCombo) this.emitFloatingToast('⚡ TASER: PODWÓJNY IMPULS!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'combo');
     } else if (charId === 'piotr') {
-      // Piotr fires small steel BBs. A short-lived laser line makes the firing direction readable.
-      // Piotr throws a heavy ratchet wrench. It cuts through a line of enemies,
+      // Operator 05 fires small steel BBs. A short-lived laser line makes the firing direction readable.
+      // Operator 05 throws a heavy ratchet wrench. It cuts through a line of enemies,
       // then returns through the crowd for a second pass like a seasoned B4 boomerang.
       const wrench = new THREE.Group();
       const chrome = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.92, roughness: 0.17 });
@@ -9934,7 +9930,7 @@ export class PaleciakiGameEngine {
       const forward = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
       this.playerPos.x += forward.x * 1.8;
       this.playerPos.z += forward.z * 1.8;
-      this.sayQuote('ŚCIŚK ZAGŁADY 44CM + TRYB TARANA! Z drogi śledzie, Forge jedzie!');
+      this.sayQuote('ŚCIŚK ZAGŁADY 44CM + TRYB TARANA! Z drogi śledzie, Operator 02 jedzie!');
       sound.playSciskCrush();
       this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.5, this.playerPos.z, 0x4ade80);
       this.enemies.forEach((e) => {
@@ -9959,7 +9955,7 @@ export class PaleciakiGameEngine {
       });
     } else if (this.currentCharacterId === 'dawid') {
       this.activatePerk('hardhat', this.gameMode === 'survival' ? 4.5 : 15);
-      // Dawid also drops a fresh KFC bucket right in front of him!
+      // Operator 03 also drops a fresh KFC bucket right in front of him!
       const fwd = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
       this.addKfcBucketItem(
         `dawid_kfc_${Date.now()}`,
@@ -10330,7 +10326,7 @@ export class PaleciakiGameEngine {
         // Each of the five defeated riders already drops 3 XP. Keep the bonus at
         // 15 XP total instead of spawning a second, duplicate set of XP gems.
         this.callbacks.onSurvivalAnnouncement?.(
-          'GODZILLA VECTORA: OCALONA (CHWILOWO)',
+          'ROWEROWY BOSS: OCALONA (CHWILOWO)',
           'RAJD POMAZAŃCÓW ROZBITY!',
           'Pięć rowerków, zero hamulców. Premia za obronę hali: +1 500 punktów i 15 XP do zebrania.'
         );

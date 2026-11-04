@@ -1166,7 +1166,7 @@ export function createCharacterModel(def: CharacterDef): {
     // Orange/Red Heavy Duty Hardhat with chin strap
     addHardHat(0xea580c, 0x7c2d12);
   } else if (def.id === 'mateusz') {
-    // Mateusz Designer Cap backwards
+    // Operator 04 designer cap backwards
     const capMat = new THREE.MeshStandardMaterial({ color: 0x7c3aed, roughness: 0.5 });
     const cap = new THREE.Mesh(new THREE.SphereGeometry(0.17, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), capMat);
     cap.scale.y = 0.62;
@@ -1175,7 +1175,7 @@ export function createCharacterModel(def: CharacterDef): {
     visor.position.set(0, 1.035, -0.16);
     group.add(cap, visor);
   } else {
-    // Piotr Senior Foreman Crimson Hardhat with Tactical LED Headlamp & Laser Visor
+    // Operator 05 crimson hardhat with Tactical LED Headlamp & Laser Visor
     addHardHat(0xef4444, 0xfacc15);
     // Tactical LED Headlamp
     const lampMount = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.07, 0.05), new THREE.MeshStandardMaterial({ color: 0x18181b }));
@@ -1337,7 +1337,7 @@ export function createCharacterModel(def: CharacterDef): {
     accessory.position.set(0.28, 0.51, 0.18);
     accessory.rotation.x = 0.18;
   } else {
-    // Piotr's signature heavy ratchet wrench: recognisable open jaw, chrome shaft and red grip.
+    // Signature heavy ratchet wrench: recognisable open jaw, chrome shaft and red grip.
     const chrome = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.92, roughness: 0.18 });
     const darkSteel = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.86, roughness: 0.24 });
     const redRubber = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.68 });
@@ -1410,7 +1410,7 @@ export function createCharacterModel(def: CharacterDef): {
 }
 
 /**
- * 7. Industrial Forklift (Sztaplarka Zdzicha) with Working Headlights & Blinking Strobe Beacon
+ * 7. Industrial Forklift (Sztaplarka magazynowa) with Working Headlights & Blinking Strobe Beacon
  */
 export function createForkliftModel(color = 0xf59e0b): {
   group: THREE.Group;
@@ -2777,7 +2777,7 @@ export function createGoldenThroneEasterEgg(): THREE.Group {
 }
 
 /**
- * 28. EASTER EGG: Ukryty Kącik Kawowy Zdzicha (Vintage Espresso Machine)
+ * 28. EASTER EGG: Ukryta strefa kawowa (Vintage Espresso Machine)
  */
 export function createVintageCoffeeCornerEasterEgg(): THREE.Group {
   const group = new THREE.Group();
@@ -3377,7 +3377,7 @@ export function createHighBayCatwalk(width: number, depth: number): THREE.Group 
 }
 
 /**
- * 38. Rook's Signature Flame Canister (Koktajl Mołotowa)
+ * 38. Tactical Flame Canister (Koktajl Mołotowa)
  * A fictional sealed glass canister with a controlled ignition wick.
  */
 export function createBimberBottleMolotov(): {
@@ -4597,7 +4597,7 @@ export function createBhpDigitalScoreboard(title = 'BHP CENTRUM B4 • DNI BEZ P
 }
 
 /**
- * 42. NEW COLLECTIBLE / POWER-UP: Pakiet Energii dla Vectora ("WTORKOWY B4 POWER!")
+ * 42. NEW COLLECTIBLE / POWER-UP: Pakiet Energii dla Operatora 03 ("WTORKOWY B4 POWER!")
  */
 export function createKfcBucketCollectible(): THREE.Group {
   const group = new THREE.Group();
@@ -4688,7 +4688,7 @@ export function createKfcBucketCollectible(): THREE.Group {
 }
 
 /**
- * 43. NEW ENEMY: Głodny Zombie-Pracownik ("VECTOR PRZYWIÓZŁ ZAPASY!")
+ * 43. NEW ENEMY: Głodny Zombie-Pracownik ("DOSTAWA PRZYWIÓZŁA ZAPASY!")
  */
 export function createZombieWorkerEnemyModel(): {
   group: THREE.Group;

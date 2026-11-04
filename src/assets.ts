@@ -28,9 +28,9 @@ export interface AssetItem {
 const WAREHOUSE_TIPS = [
   'Wskazówka: Zbieraj worki z fugą i złote palety, by zdobywać punkty i odblokować premie zmiany!',
   'Wózek widłowy z sektora B4 nie wybacza błędów BHP — przeskakuj go w odpowiednim momencie!',
-  'Pieczęć WZ Atlasa ogłusza wrogów i zatrzymuje pojazdy w promieniu 4 metrów.',
-  'Forge z łatwością rozbija palety z towarem i przeszkody.',
-  'Kawa espresso z ekspresu Volta natychmiast odnawia punkty BHP bohatera.',
+  'Impuls audytu ogłusza wrogów i zatrzymuje pojazdy w promieniu 4 metrów.',
+  'Operator 02 z łatwością rozbija palety z towarem i przeszkody.',
+  'Energetyczny napój natychmiast odnawia punkty BHP bohatera.',
   'Uważaj na Nadzorcę Zero w Sektorze 3 — w drugiej fazie wpada w szał!',
   'Spieki wielkoformatowe Marmur B4 120x280 w Showroomie wymagają podwójnej ostrożności.',
   'Przycisk C przełącza dynamiczną kamerę 3D: rzut izometryczny lub akcję zza pleców.'
@@ -315,11 +315,11 @@ export class B4AssetLoader {
         { id: 'textures/hazard_warning_stripes.canvas', name: 'Pasy Ostrzegawcze BHP Żółto-Czarne', category: 'texture', execute: () => getHazardStripeTexture() },
 
         // --- Modele 3D (8 sztuk) ---
-        { id: 'models/character_marcin.mesh', name: 'Atlas (Kierownik Logistyki)', category: 'model', execute: () => createCharacterModel(CHARACTERS.marcin) },
-        { id: 'models/character_grzesiek.mesh', name: 'Forge (Ściskacz 44cm)', category: 'model', execute: () => createCharacterModel(CHARACTERS.grzesiek) },
-        { id: 'models/character_dawid.mesh', name: 'Vector (Arcymistrz Gresu)', category: 'model', execute: () => createCharacterModel(CHARACTERS.dawid) },
-        { id: 'models/character_mateusz.mesh', name: 'Volt (Gejmer & PS Maniak)', category: 'model', execute: () => createCharacterModel(CHARACTERS.mateusz) },
-        { id: 'models/character_piotr.mesh', name: 'Rook (Weteran & Mistrz Płonących Mieszanek)', category: 'model', execute: () => createCharacterModel(CHARACTERS.piotr) },
+        { id: 'models/character_marcin.mesh', name: 'Operator 01 (Kontrola logistyki)', category: 'model', execute: () => createCharacterModel(CHARACTERS.marcin) },
+        { id: 'models/character_grzesiek.mesh', name: 'Operator 02 (Siła)', category: 'model', execute: () => createCharacterModel(CHARACTERS.grzesiek) },
+        { id: 'models/character_dawid.mesh', name: 'Operator 03 (Kontrola dystansu)', category: 'model', execute: () => createCharacterModel(CHARACTERS.dawid) },
+        { id: 'models/character_mateusz.mesh', name: 'Operator 04 (Technologia)', category: 'model', execute: () => createCharacterModel(CHARACTERS.mateusz) },
+        { id: 'models/character_piotr.mesh', name: 'Operator 05 (Wsparcie taktyczne)', category: 'model', execute: () => createCharacterModel(CHARACTERS.piotr) },
         { id: 'models/boss_walczak.mesh', name: 'Boss Nadzorca Zero', category: 'model', execute: () => createWalczakBossModel() },
         { id: 'models/showroom_podium.mesh', name: 'Podest Ekspozycyjny Showroomu', category: 'model', execute: () => createDisplayPodium(2.8, 2.2, 0.25) },
         { id: 'models/showroom_plant.mesh', name: 'Złota Donica z Roślinnością Showroomu', category: 'model', execute: () => createShowroomPlant() },
