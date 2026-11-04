@@ -130,7 +130,6 @@ jobs:
         if: vars.GOOGLE_PLAY_UPLOAD_ENABLED == 'true'
         env:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
-          ANDROID_SIGNING_ENABLED: ${{ env.ANDROID_SIGNING_ENABLED }}
         run: |
           if [ "$ANDROID_SIGNING_ENABLED" != "true" ]; then
             echo "Google Play upload requires a verified upload-signed AAB." >&2
@@ -150,7 +149,7 @@ jobs:
           releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
           tracks: internal
           status: completed
-          releaseName: ${{ env.ANDROID_VERSION_NAME }}-${{ env.ANDROID_VERSION_CODE }}
+          releaseName: Paleciaki-0.1.0-${{ github.run_number }}
 
       - name: Upload Android QA and release artifacts
         uses: actions/upload-artifact@v4
