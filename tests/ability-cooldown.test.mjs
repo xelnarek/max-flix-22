@@ -46,9 +46,9 @@ test('cooldown efficiency shortens an active recharge without changing its fill 
     killRechargeUsedSeconds: 2,
   };
   const improved = scaleAbilityCooldown(active, 0.92);
-  assert.equal(improved.remainingSeconds, 13.8);
-  assert.equal(improved.durationSeconds, 18.4);
-  assert.equal(improved.killRechargeUsedSeconds, 1.84);
+  assert.ok(Math.abs(improved.remainingSeconds - 13.8) < 1e-9);
+  assert.ok(Math.abs(improved.durationSeconds - 18.4) < 1e-9);
+  assert.ok(Math.abs(improved.killRechargeUsedSeconds - 1.84) < 1e-9);
   assert.ok(Math.abs(getAbilityCooldownProgress(improved) - 0.25) < 1e-9);
 });
 
