@@ -4,7 +4,7 @@ import test from 'node:test';
 
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
-test('public game identity uses the neutral Operacja B4 title', async () => {
+test('public game identity uses the Paleciaki store title', async () => {
   const [html, app, intro, metadata] = await Promise.all([
     read('../index.html'),
     read('../src/index.ts'),
