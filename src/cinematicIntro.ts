@@ -196,10 +196,31 @@ export class CinematicIntroManager {
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, w, h);
 
+    // A slow cinematic push-in gives the warehouse depth without a video asset.
+    const dolly = 1 + Math.min(0.045, seconds * 0.0032);
+    const forkliftFadeIn = Math.max(0, Math.min(1, (seconds - 1.25) / 0.85));
+    const forkliftFadeOut = 1 - Math.max(0, Math.min(1, (seconds - 7.4) / 1.1));
+    const forkliftAmount = forkliftFadeIn * forkliftFadeOut;
+    ctx.save();
+    ctx.translate((w - w * dolly) * 0.5, (h - h * dolly) * 0.5);
+    ctx.scale(dolly, dolly);
     this.drawWarehouse(ctx, w, h, seconds);
+    this.drawPalletStacks(ctx, w, h, seconds);
+    this.drawAtmosphere(ctx, w, h, seconds);
+    this.drawForklift(ctx, w, h, seconds, forkliftAmount);
     this.drawThreat(ctx, w, h, threat, seconds);
     this.drawOperators(ctx, w, h, reveal, seconds);
     if (titleIn > 0) this.drawTitleLight(ctx, w, h, titleIn, seconds);
+    ctx.restore();
+
+    const phase = seconds < 3.5 ? 'approach'
+      : seconds < 6.8 ? 'alert'
+      : seconds < 9.5 ? 'team'
+      : 'title';
+    if (this.overlay && this.overlay.dataset.phase !== phase) this.overlay.dataset.phase = phase;
+    this.overlay?.classList.toggle('is-alert', phase === 'alert');
+    this.overlay?.classList.toggle('is-team-reveal', phase === 'team');
+    this.overlay?.classList.toggle('is-title-reveal', titleIn > 0.04);
 
     if (this.progress) this.progress.style.width = `${p * 100}%`;
     if (this.timeLabel) {
@@ -217,6 +238,52 @@ export class CinematicIntroManager {
   private drawWarehouse(ctx: CanvasRenderingContext2D, w: number, h: number, t: number): void {
     const horizon = h * 0.49;
     ctx.save();
+
+    // Loading dock, roof trusses and inspection lights establish a real warehouse silhouette.
+    const dockGradient = ctx.createLinearGradient(w * 0.34, horizon * 0.08, w * 0.66, horizon);
+    dockGradient.addColorStop(0, 'rgba(40,83,105,0.22)');
+    dockGradient.addColorStop(0.5, 'rgba(9,24,36,0.78)');
+    dockGradient.addColorStop(1, 'rgba(40,83,105,0.22)');
+    ctx.fillStyle = dockGradient;
+    ctx.beginPath();
+    ctx.moveTo(w * 0.35, horizon * 0.18);
+    ctx.lineTo(w * 0.65, horizon * 0.18);
+    ctx.lineTo(w * 0.68, horizon * 0.96);
+    ctx.lineTo(w * 0.32, horizon * 0.96);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(153,190,207,0.28)';
+    ctx.lineWidth = Math.max(1.2, w / 950);
+    ctx.stroke();
+
+    for (let beam = 0; beam < 7; beam++) {
+      const bx = w * (0.08 + beam * 0.14);
+      const by = h * (0.06 + Math.abs(beam - 3) * 0.026);
+      ctx.strokeStyle = 'rgba(144,181,198,0.16)';
+      ctx.lineWidth = Math.max(1, w / 1500);
+      ctx.beginPath();
+      ctx.moveTo(bx, by);
+      ctx.lineTo(w * 0.5 + (bx - w * 0.5) * 0.48, horizon * 0.52);
+      ctx.stroke();
+    }
+
+    for (let light = 0; light < 5; light++) {
+      const lx = w * (0.18 + light * 0.16);
+      const pulse = 0.55 + Math.sin(t * 2.6 + light) * 0.12;
+      ctx.fillStyle = `rgba(245,190,104,${pulse * 0.7})`;
+      ctx.beginPath();
+      ctx.ellipse(lx, h * 0.12, w * 0.013, h * 0.004, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = `rgba(245,190,104,${pulse * 0.06})`;
+      ctx.beginPath();
+      ctx.moveTo(lx - w * 0.015, h * 0.12);
+      ctx.lineTo(lx + w * 0.015, h * 0.12);
+      ctx.lineTo(lx + w * 0.08, horizon);
+      ctx.lineTo(lx - w * 0.08, horizon);
+      ctx.closePath();
+      ctx.fill();
+    }
+
     ctx.lineWidth = Math.max(1, w / 1100);
     for (let side of [-1, 1]) {
       const xEdge = side < 0 ? w * 0.03 : w * 0.97;
@@ -340,6 +407,180 @@ export class CinematicIntroManager {
       ctx.fillText(labels[i], x, y + r * 2.1);
       ctx.restore();
     }
+  }
+
+  private drawPalletStacks(ctx: CanvasRenderingContext2D, w: number, h: number, t: number): void {
+    ctx.save();
+    const drawStack = (x: number, y: number, scale: number, tone: number) => {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(scale, scale);
+      ctx.fillStyle = 'rgba(0,0,0,0.32)';
+      ctx.beginPath();
+      ctx.ellipse(0, 8, 102, 18, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#76502e';
+      ctx.fillRect(-88, -5, 176, 12);
+      ctx.fillStyle = '#c28b4c';
+      for (let slat = 0; slat < 5; slat++) ctx.fillRect(-80 + slat * 40, -4, 27, 10);
+      ctx.fillStyle = '#4b3525';
+      ctx.fillRect(-88, 7, 176, 8);
+
+      for (let row = 0; row < 2; row++) {
+        for (let col = 0; col < 2; col++) {
+          const bx = -78 + col * 79 + row * 5;
+          const by = -60 + row * 29;
+          const bw = 72;
+          const bh = 27;
+          const gradient = ctx.createLinearGradient(bx, by, bx + bw, by + bh);
+          gradient.addColorStop(0, tone === 0 ? '#bd8750' : '#6e8793');
+          gradient.addColorStop(1, tone === 0 ? '#765034' : '#344e60');
+          ctx.fillStyle = gradient;
+          ctx.fillRect(bx, by, bw, bh);
+          ctx.strokeStyle = 'rgba(240,224,197,0.35)';
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(bx + 1, by + 1, bw - 2, bh - 2);
+          ctx.fillStyle = 'rgba(235,240,241,0.68)';
+          ctx.fillRect(bx + 12, by + 8, 18, 8);
+          ctx.fillStyle = 'rgba(24,34,42,0.55)';
+          ctx.fillRect(bx + 34, by + 9, 27, 5);
+        }
+      }
+      ctx.restore();
+    };
+
+    drawStack(w * 0.075, h * 0.87, Math.max(0.55, Math.min(1.0, w / 900)), 0);
+    drawStack(w * 0.91, h * 0.89, Math.max(0.48, Math.min(0.88, w / 1050)), 1);
+    ctx.restore();
+  }
+
+  private drawForklift(ctx: CanvasRenderingContext2D, w: number, h: number, t: number, amount: number): void {
+    if (amount <= 0.01) return;
+    const travel = Math.max(0, Math.min(1, (t - 1.25) / 6.1));
+    const x = w * (-0.24 + travel * 0.66);
+    const y = h * 0.79 + Math.sin(t * 2.5) * h * 0.002;
+    const scale = w * 0.00112;
+
+    ctx.save();
+    ctx.globalAlpha = amount;
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.beginPath();
+    ctx.ellipse(8, 62, 154, 24, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Forklift mast and cargo rise above the chassis.
+    ctx.fillStyle = '#273744';
+    ctx.fillRect(105, -148, 10, 190);
+    ctx.fillRect(121, -140, 7, 182);
+    ctx.strokeStyle = '#90a4ae';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(105, -148, 10, 190);
+    ctx.strokeRect(121, -140, 7, 182);
+    ctx.fillStyle = '#d69a3c';
+    ctx.fillRect(129, -126, 70, 70);
+    ctx.fillStyle = '#9b6a32';
+    ctx.fillRect(137, -118, 55, 54);
+    ctx.strokeStyle = 'rgba(255,225,170,0.42)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(137, -118, 55, 54);
+    ctx.fillStyle = '#e7b56c';
+    ctx.fillRect(118, 24, 135, 6);
+    ctx.fillRect(118, 30, 12, 5);
+
+    // Rear engine housing and front counterweight.
+    const chassis = ctx.createLinearGradient(-105, -25, 106, 48);
+    chassis.addColorStop(0, '#f8c65d');
+    chassis.addColorStop(0.52, '#d98a21');
+    chassis.addColorStop(1, '#965318');
+    ctx.fillStyle = chassis;
+    ctx.beginPath();
+    ctx.roundRect(-118, -34, 235, 85, 18);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,226,162,0.62)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Driver cab, dark glass and protective roof.
+    ctx.fillStyle = '#1a2d3b';
+    ctx.beginPath();
+    ctx.roundRect(-53, -132, 94, 106, 12);
+    ctx.fill();
+    ctx.strokeStyle = '#e7b354';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(-53, -132); ctx.lineTo(43, -132);
+    ctx.moveTo(-44, -132); ctx.lineTo(-44, -28);
+    ctx.moveTo(34, -132); ctx.lineTo(34, -28);
+    ctx.stroke();
+    const glass = ctx.createLinearGradient(-35, -124, 28, -40);
+    glass.addColorStop(0, 'rgba(88,179,205,0.72)');
+    glass.addColorStop(1, 'rgba(15,42,61,0.9)');
+    ctx.fillStyle = glass;
+    ctx.fillRect(-35, -119, 63, 78);
+    ctx.fillStyle = '#172330';
+    ctx.beginPath();
+    ctx.arc(-3, -83, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(-10, -74, 24, 28);
+    ctx.strokeStyle = '#f1c05c';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-4, -48); ctx.lineTo(8, -29);
+    ctx.stroke();
+
+    // Tyres and hub highlights.
+    for (const wheelX of [-76, 78]) {
+      ctx.fillStyle = '#101923';
+      ctx.beginPath();
+      ctx.arc(wheelX, 48, 29, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#667987';
+      ctx.lineWidth = 5;
+      ctx.stroke();
+      ctx.fillStyle = '#c4d0d7';
+      ctx.beginPath();
+      ctx.arc(wheelX, 48, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#566b79';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(wheelX - 16, 48); ctx.lineTo(wheelX + 16, 48);
+      ctx.moveTo(wheelX, 32); ctx.lineTo(wheelX, 64);
+      ctx.stroke();
+    }
+
+    // Amber work lights and a short, moving beam.
+    const lamp = ctx.createRadialGradient(112, -7, 1, 112, -7, 76);
+    lamp.addColorStop(0, 'rgba(255,225,138,0.58)');
+    lamp.addColorStop(1, 'rgba(255,190,70,0)');
+    ctx.fillStyle = lamp;
+    ctx.fillRect(75, -85, 170, 150);
+    ctx.fillStyle = '#fff0b0';
+    ctx.beginPath();
+    ctx.arc(112, -7, 7 + Math.sin(t * 8) * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  private drawAtmosphere(ctx: CanvasRenderingContext2D, w: number, h: number, t: number): void {
+    ctx.save();
+    for (let i = 0; i < 34; i++) {
+      const seed = i * 0.6180339887;
+      const x = ((seed + t * (0.012 + (i % 4) * 0.002)) % 1) * w;
+      const y = h * (0.16 + ((i * 0.137 + Math.sin(t * 0.42 + i) * 0.025) % 0.76));
+      const pulse = 0.18 + (Math.sin(t * 2.2 + i * 1.7) + 1) * 0.12;
+      ctx.globalAlpha = pulse;
+      ctx.fillStyle = i % 5 === 0 ? '#f6bd61' : '#9ed4e7';
+      ctx.beginPath();
+      ctx.arc(x, y, 0.8 + (i % 3) * 0.45, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   private drawTitleLight(ctx: CanvasRenderingContext2D, w: number, h: number, amount: number, t: number): void {
