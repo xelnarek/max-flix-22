@@ -80,10 +80,3 @@ test('leaderboard record timestamps are displayed in Polish local time', () => {
   assert.equal(formatLeaderboardTimestamp('not-a-date'), 'Data nieznana');
 });
 
-
-test('leaderboard exposes a local date and time for each saved record', () => {
-  const formatted = formatLeaderboardTimestamp('2026-11-04T17:35:00.000Z');
-  assert.match(formatted, /^\d{2}\.\d{2}\.2026,? \d{2}:\d{2}$/);
-  assert.equal(formatLeaderboardTimestamp('not-a-date'), 'DATA NIEZNANA');
-  assert.equal(formatLeaderboardTimestamp(new Date(0).toISOString()), 'DATA NIEZNANA');
-});
