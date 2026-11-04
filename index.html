@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="/src/design-tokens.css" />
     <link rel="stylesheet" href="/src/visual-polish.css" />
     <link rel="stylesheet" href="/src/hud-layout.css" />
+    <link rel="stylesheet" href="/src/ads.css" />
     <meta name="application-name" content="Paleciaki! Magazyn Chaosu" />
     <meta name="color-scheme" content="dark" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -237,6 +238,7 @@
           <div class="survival-upgrade-actions">
             <button id="btn-survival-reroll" type="button">🔄 PRZELOSUJ (1)</button>
             <button id="btn-survival-skip" type="button">⏭ POMIŃ (1)</button>
+            <button id="btn-survival-ad-reroll" class="survival-ad-reward-btn hidden" type="button">🎬 OGLĄDAJ REKLAMĘ • +1 PRZERZUT</button>
           </div>
           <p class="survival-levelup-hint">Wybór zatrzymuje akcję. Przelosowanie zmienia trzy propozycje, a pominięcie zachowuje token.</p>
         </div>
@@ -1066,6 +1068,7 @@
               <div class="settings-legal-link">
                 <span>INFORMACJE DLA GRACZA</span>
                 <a href="./privacy.html" target="_blank" rel="noopener noreferrer">Polityka prywatności i dane</a>
+                <button id="btn-ad-privacy-options" class="ad-privacy-options-btn hidden" type="button">ZARZĄDZAJ ZGODĄ NA REKLAMY</button>
               </div>
             </div>
           </div>

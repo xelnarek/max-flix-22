@@ -45,20 +45,24 @@
   <p>Dane rankingowe służą wyświetlaniu wspólnej tabeli wyników Kampanii i Survivalu oraz synchronizacji wyników po odzyskaniu połączenia z internetem. Ustawienia dźwięku i pamięć podręczna są wykorzystywane do zapamiętania preferencji oraz zapewnienia ciągłości gry.</p>
 
   <h2>4. Usługi zewnętrzne</h2>
-  <p>Gra korzysta z Google Firebase Authentication i Cloud Firestore do anonimowej sesji oraz rankingu online. Usługi Google mogą przetwarzać standardowe dane techniczne, sieciowe i diagnostyczne zgodnie z własną dokumentacją i politykami prywatności. Szczegóły należy zweryfikować dla faktycznej konfiguracji projektu Firebase używanego przez wydawcę.</p>
-  <p>Aktualny kod gry nie zawiera modułu reklamowego ani modułu Firebase Analytics. Lista używanych bibliotek i ich praktyki danych powinna być ponownie sprawdzona przed każdym wydaniem.</p>
+  <p>Gra korzysta z Google Firebase Authentication i Cloud Firestore do anonimowej sesji oraz rankingu online. Usługi Google mogą przetwarzać standardowe dane techniczne, sieciowe i diagnostyczne zgodnie z własną dokumentacją i politykami prywatności. Natywna wersja Android korzysta również z Google Mobile Ads SDK (AdMob) oraz jego modułu zgody UMP. Przed publikacją należy zweryfikować konfigurację Firebase, identyfikatory AdMob i opublikowane komunikaty zgody.</p>
 
-  <h2>5. Gdzie dane są przechowywane i jak długo</h2>
+  <h2>5. Reklamy Google AdMob</h2>
+  <p>W natywnej wersji Android gra może wyświetlać reklamy dostarczane przez Google Mobile Ads SDK (AdMob). Reklama z nagrodą jest dobrowolna i może przyznać jeden dodatkowy przerzut wyboru w trybie Survival wyłącznie po potwierdzeniu nagrody przez SDK. Reklama pełnoekranowa może pojawić się wyłącznie po świadomym zakończeniu rundy i powrocie do menu. Gra nie wyświetla reklam podczas aktywnej walki. Wersja przeglądarkowa nie inicjuje AdMob.</p>
+  <p>Google Mobile Ads SDK może automatycznie przetwarzać i udostępniać Google dane takie jak adres IP (mogący posłużyć do oszacowania przybliżonej lokalizacji), interakcje z aplikacją i reklamami, dane diagnostyczne oraz identyfikatory urządzenia lub konta. Dane te mogą być używane do dostarczania reklam, pomiaru ich skuteczności, analityki i zapobiegania nadużyciom. Identyfikatory reklamowe Androida podlegają ustawieniom i ograniczeniom systemu. Zakres przetwarzania zależy od regionu, zgód użytkownika i konfiguracji wydawcy.</p>
+  <p>W Europejskim Obszarze Gospodarczym aplikacja korzysta z Google User Messaging Platform (UMP) do wyświetlenia formularza zgody przed inicjalizacją i wysyłaniem żądań reklamowych. Ustawienia zgody można ponownie otworzyć w sekcji Ustawienia, gdy Google wymaga udostępnienia takiej opcji. Dostępność i rodzaj reklam zależą od zgody, regionu i dostępności jednostek reklamowych.</p>
+
+  <h2>6. Gdzie dane są przechowywane i jak długo</h2>
   <p>Ustawienia, lokalna kopia rankingu i oczekujące wyniki są przechowywane na urządzeniu w pamięci aplikacji/przeglądarki. Wyniki wysłane do rankingu są przechowywane w bazie Firestore wydawcy tak długo, jak są potrzebne do prowadzenia rankingu lub do czasu obsługi prawidłowego żądania usunięcia.</p>
 
-  <h2>6. Usunięcie danych</h2>
+  <h2>7. Usunięcie danych</h2>
   <p>Gra nie udostępnia rejestracji konta użytkownika ani logowania e-mail. Sesja Firebase jest anonimowa. Aby poprosić o usunięcie pseudonimu i powiązanego wpisu rankingowego, skontaktuj się z wydawcą pod adresem wskazanym w sekcji 1. Wydawca zweryfikuje żądanie i usunie dane, do których ma dostęp i które można powiązać z żądaniem.</p>
   <p>Ustawienia i lokalną pamięć gry można usunąć przez wyczyszczenie danych aplikacji lub odinstalowanie aplikacji.</p>
 
-  <h2>7. Dzieci i dobór odbiorców</h2>
+  <h2>8. Dzieci i dobór odbiorców</h2>
   <p>Gra nie prosi o imię i nazwisko, adres, lokalizację ani dane kontaktowe. Wydawca musi samodzielnie określić docelową grupę odbiorców i odpowiedzieć zgodnie z prawdą na pytania dotyczące wieku oraz treści w formularzu oceny treści Google Play.</p>
 
-  <h2>8. Zmiany polityki</h2>
+  <h2>9. Zmiany polityki</h2>
   <p>Polityka może być aktualizowana wraz ze zmianami gry, usług zewnętrznych lub wymagań prawnych. Aktualna wersja będzie publikowana pod tym samym adresem.</p>
 
   <div class="meta">

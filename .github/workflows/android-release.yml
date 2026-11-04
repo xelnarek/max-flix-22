@@ -62,6 +62,10 @@ jobs:
         run: npm run lint
 
       - name: Build web game
+        env:
+          ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID }}
+          VITE_ADMOB_REWARDED_ID: ${{ vars.VITE_ADMOB_REWARDED_ID }}
+          VITE_ADMOB_INTERSTITIAL_ID: ${{ vars.VITE_ADMOB_INTERSTITIAL_ID }}
         run: npm run build
 
       - name: Install pinned Capacitor toolchain
@@ -92,6 +96,7 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_VERSION_NAME: '0.1.0'
+          ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID }}
         run: |
           if [ -n "${ANDROID_UPLOAD_KEYSTORE_BASE64:-}" ]; then
             if [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then

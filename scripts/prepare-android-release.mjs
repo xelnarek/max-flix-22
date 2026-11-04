@@ -3,6 +3,12 @@ import { resolve } from 'node:path';
 
 const applicationId = 'pl.paleciaki.magazynchaosu';
 const gradlePath = resolve('android/app/build.gradle');
+const manifestPath = resolve('android/app/src/main/AndroidManifest.xml');
+const demoAdMobAppId = 'ca-app-pub-3940256099942544~3347511713';
+const configuredAdMobAppId = process.env.ADMOB_APP_ID?.trim() || '';
+const adMobAppId = /^ca-app-pub-\d+~\d+$/.test(configuredAdMobAppId)
+  ? configuredAdMobAppId
+  : demoAdMobAppId;
 const packageJson = JSON.parse(readFileSync(resolve('package.json'), 'utf8'));
 const versionName = process.env.ANDROID_VERSION_NAME || packageJson.version || '0.1.0';
 const runNumber = Number.parseInt(process.env.GITHUB_RUN_NUMBER || '1', 10);
@@ -63,6 +69,26 @@ if (signingEnabled) {
     '$1\n            signingConfig signingConfigs.release',
   );
 }
+
+if (!existsSync(manifestPath)) {
+  throw new Error('Android manifest not found. Run npx cap add android before preparing the release.');
+}
+
+let manifest = readFileSync(manifestPath, 'utf8');
+const appIdAttribute = 'android:name="com.google.android.gms.ads.APPLICATION_ID"';
+const admobMetaData = '        <meta-data ' + appIdAttribute + ' android:value="' + adMobAppId + '" />';
+const existingAppIdStart = manifest.indexOf(appIdAttribute);
+if (existingAppIdStart >= 0) {
+  const tagStart = manifest.lastIndexOf('<meta-data', existingAppIdStart);
+  const tagEnd = manifest.indexOf('/>', existingAppIdStart);
+  if (tagStart < 0 || tagEnd < 0) throw new Error('Malformed existing AdMob manifest metadata.');
+  manifest = manifest.slice(0, tagStart) + admobMetaData + manifest.slice(tagEnd + 2);
+} else if (manifest.includes('</application>')) {
+  manifest = manifest.replace('</application>', admobMetaData + '\n    </application>');
+} else {
+  throw new Error('Android manifest does not contain a valid application element.');
+}
+writeFileSync(manifestPath, manifest);
 
 writeFileSync(gradlePath, gradle);
 console.log(JSON.stringify({
