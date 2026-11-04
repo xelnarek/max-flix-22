@@ -4339,7 +4339,7 @@ button {
 }
 
 
-/* Archero-style Survival dodge: compact cooldown button above the movement cluster. */
+/* Shared tactical dodge: compact cooldown button above the movement cluster in both modes. */
 .dash-touch-btn {
   display: none !important;
   position: absolute !important;
@@ -4358,7 +4358,7 @@ button {
   z-index: 86 !important;
 }
 
-#game-shell.survival-mode .dash-touch-btn {
+.touch-actions-zone .dash-touch-btn {
   display: flex !important;
 }
 
