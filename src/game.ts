@@ -9,6 +9,14 @@ import { chooseSurvivalEventSpawnPoint } from './survivalSpawn.ts';
 import { shouldSpawnBosmanKrakow } from './survivalEncounters.ts';
 import { chooseCampaignRewardSpawnPoint } from './campaignRewards.ts';
 import {
+  advanceAbilityCooldown,
+  applyAbilityKillRecharge,
+  createAbilityCooldown,
+  getAbilityCooldownProgress,
+  scaleAbilityCooldown,
+  type AbilityCooldownState,
+} from './abilityCooldown.ts';
+import {
   getAbilityCooldownSeconds,
   getBaseAttackCooldownSeconds,
   getPiotrBoomerangMaxLifeSeconds,
@@ -129,7 +137,7 @@ export interface SurvivalUpgradeOption {
 
 export type SurvivalWeaponId = 'pallet_cannon' | 'diamond_saw' | 'glue_mine' | 'kfc_bomber' | 'piorun_drone' | 'forklift_bolter' | 'scanner_pulse' | 'orbit_blades' | 'calacatta_shards' | 'steam_bomb' | 'forklift_horn' | 'wz_boomerang';
 export interface SurvivalWeaponState { id: SurvivalWeaponId; level: number; cooldown: number; evolved?: boolean; }
-type SurvivalPassiveId = 'damage' | 'rapid' | 'boots' | 'magnet' | 'reinforced' | 'medkit' | 'range' | 'growth' | 'scavenger' | 'regen' | 'drone' | 'armor';
+type SurvivalPassiveId = 'damage' | 'rapid' | 'boots' | 'magnet' | 'reinforced' | 'medkit' | 'range' | 'growth' | 'scavenger' | 'regen' | 'drone' | 'armor' | 'ability';
 const SURVIVAL_WEAPON_DEFS: Record<SurvivalWeaponId, {
   name: string; evolvedName: string; icon: string; description: string; cooldown: number;
   unlockAfter: number; color: number; evolutionPassive: SurvivalPassiveId; evolutionPassiveLabel: string;
@@ -158,7 +166,7 @@ export interface SurvivalSnapshot {
 export interface GameCallbacks {
   onScoreUpdate: (score: number, collectedVip: number, totalVip: number) => void;
   onHpUpdate: (hp: number, maxHp: number) => void;
-  onAbilityCooldown: (progress: number, ready: boolean) => void;
+  onAbilityCooldown: (progress: number, ready: boolean, remainingSeconds: number, killRechargeEnabled: boolean) => void;
   onSpeechBubble: (text: string) => void;
   onLevelComplete: (levelId: number, score: number, timeStr: string) => void;
   onGameOver: (reason: string) => void;
@@ -338,8 +346,10 @@ export class MaxFlizGameEngine {
   private collectedVipCount = 0;
   private totalVipCount = 0;
   private invulnerableTimer = 0;
-  private abilityTimer = 0;
-  private abilityActiveDuration = 0;
+  private abilityCooldownState: AbilityCooldownState = createAbilityCooldown(0);
+  private abilityCooldownUiTimer = 0;
+  private abilityCooldownLastProgress = -1;
+  private abilityCooldownLastReady: boolean | null = null;
   private attackCooldownTimer = 0;
   private attackSwingTimer = 0;
   private walkCycle = 0;
@@ -446,6 +456,9 @@ export class MaxFlizGameEngine {
   // Serializes ready weapon shots so a full cooldown queue never empties in one frame.
   private survivalWeaponDispatchCooldown = 0;
   private survivalDamageMultiplier = 1;
+  private survivalAbilityCooldownMultiplier = 1;
+  private survivalAbilityKillRechargeMultiplier = 1;
+  private survivalAbilityKillRechargeCapRatio = 0.22;
   private survivalAttackRateMultiplier = 1;
   private survivalMoveMultiplier = 1;
   private survivalMagnetMultiplier = 1;
@@ -1128,7 +1141,7 @@ export class MaxFlizGameEngine {
     this.hp = this.maxHp;
     this.score = 0;
     this.collectedVipCount = 0;
-    this.abilityTimer = 0;
+    this.resetAbilityCooldown();
     this.activePerks = {
       doubleJump: 0,
       shield: false,
@@ -1163,7 +1176,7 @@ export class MaxFlizGameEngine {
     this.score = 0;
     this.comboStreak = 0;
     this.collectedVipCount = 0;
-    this.abilityTimer = 0;
+    this.resetAbilityCooldown();
     this.levelStartTime = performance.now();
     this.waveDirectorCooldown = 0;
     this.activeChaserIds.clear();
@@ -1191,6 +1204,9 @@ export class MaxFlizGameEngine {
     this.survivalBossWarningTimer = 0;
     this.survivalPendingBossWave = 0;
     this.survivalDamageMultiplier = 1;
+    this.survivalAbilityCooldownMultiplier = 1;
+    this.survivalAbilityKillRechargeMultiplier = 1;
+    this.survivalAbilityKillRechargeCapRatio = 0.22;
     this.survivalAttackRateMultiplier = 1;
     this.survivalMoveMultiplier = 1;
     this.survivalMagnetMultiplier = 1;
@@ -1261,6 +1277,7 @@ export class MaxFlizGameEngine {
     // Reuse campaign initialization for the selected operator, then build a clean, dedicated Survival arena.
     this.startGame(1);
     this.gameMode = 'survival';
+    this.updateAbilityCooldown(0, true);
     this.clearLevel();
     this.rebuildPlayerMesh();
     this.sectorGates = [null, null, null, null];
@@ -1906,6 +1923,14 @@ export class MaxFlizGameEngine {
         // Attack-speed upgrades remain useful without turning the run into a screen-filling machine gun.
         this.survivalAttackRateMultiplier = Math.max(0.86, this.survivalAttackRateMultiplier * 0.97);
         break;
+      case 'ability': {
+        const previousMultiplier = this.survivalAbilityCooldownMultiplier;
+        this.survivalAbilityCooldownMultiplier = Math.max(0.78, previousMultiplier * 0.92);
+        const efficiencyFactor = this.survivalAbilityCooldownMultiplier / previousMultiplier;
+        this.abilityCooldownState = scaleAbilityCooldown(this.abilityCooldownState, efficiencyFactor);
+        this.updateAbilityCooldown(0, true);
+        break;
+      }
       case 'boots':
         this.survivalMoveMultiplier = Math.min(1.24, this.survivalMoveMultiplier * 1.06);
         break;
@@ -1972,6 +1997,12 @@ export class MaxFlizGameEngine {
       this.callbacks.onPerkDropBanner?.(title, '✨', description, '#fbbf24');
       sound.playAbility(this.currentCharacterId);
     };
+    if ((stacks.ability || 0) >= 3 && (stacks.rapid || 0) >= 2) {
+      unlock('ultimate_charge_chain', 'ŁAŃCUCH MOCY', 'Eliminacje ładują superumiejętność o 25% szybciej, a łączny bonus z eliminacji może skrócić jej ładowanie maksymalnie o 30%.', () => {
+        this.survivalAbilityKillRechargeMultiplier = 1.25;
+        this.survivalAbilityKillRechargeCapRatio = 0.30;
+      });
+    }
     if ((stacks.damage || 0) >= 3 && (stacks.rapid || 0) >= 2) {
       unlock('overdrive', 'OVERDRIVE: LINIA OGNIA', '+22% obrażeń i umiarkowane przyspieszenie ataku.', () => {
         this.survivalDamageMultiplier *= 1.22; this.survivalAttackRateMultiplier *= 0.94;
@@ -2004,6 +2035,7 @@ export class MaxFlizGameEngine {
     const pool: SurvivalUpgradeOption[] = [
       { id: 'damage', icon: '🎯', title: 'WZMOCNIONA AMUNICJA', description: '+12% obrażeń wszystkich ataków operatora.' },
       { id: 'rapid', icon: '⚡', title: 'RYTM ATAKU', description: 'Skrócenie czasu między atakami o 3%.' },
+      { id: 'ability', icon: '✦', title: 'AKUMULATOR MOCY', description: 'Superumiejętność ładuje się o 8% szybciej. Maksymalnie 3 poziomy.' },
       { id: 'boots', icon: '👟', title: 'BUTY SPRINTU', description: '+6% prędkości poruszania się.' },
       { id: 'magnet', icon: '🧲', title: 'MAGNES XP', description: 'Znacznie większy zasięg przyciągania kryształów XP.' },
       { id: 'reinforced', icon: '⛑️', title: 'WZMOCNIONY KASK', description: '+1 maksymalny punkt zdrowia i natychmiastowe uzupełnienie.' },
@@ -2014,7 +2046,8 @@ export class MaxFlizGameEngine {
       { id: 'regen', icon: '🩹', title: 'PRZERWA REGENERACYJNA', description: 'Co pewien czas odzyskujesz 1 punkt zdrowia.' },
       { id: 'drone', icon: '🤖', title: 'DRON ASYSTUJĄCY', description: 'Dron przez 32 sekundy razi najbliższego wroga impulsem.' },
       { id: 'armor', icon: '🪵', title: 'PALETA OCHRONNA', description: 'Otrzymujesz 24 sekundy okresowej osłony.' },
-    ].filter((option) => !excluded.includes(option.id));
+    ].filter((option) => !excluded.includes(option.id) &&
+      (option.id !== 'ability' || (this.survivalUpgradeStacks.ability || 0) < 3));
     for (const [weaponId, definition] of Object.entries(SURVIVAL_WEAPON_DEFS) as Array<[SurvivalWeaponId, typeof SURVIVAL_WEAPON_DEFS[SurvivalWeaponId]]>) {
       const owned = this.survivalWeapons.find((weapon) => weapon.id === weaponId);
       if (!owned) {
@@ -4628,6 +4661,7 @@ export class MaxFlizGameEngine {
     this.updatePerkTimers(simDt);
 
     if (this.state === 'playing') {
+      this.updateAbilityCooldown(simDt);
       this.updateLootCrates(simDt);
       if (this.invulnerableTimer > 0) this.invulnerableTimer -= simDt;
       if (this.marcinReclamationTimer > 0) this.marcinReclamationTimer = Math.max(0, this.marcinReclamationTimer - simDt);
@@ -9488,9 +9522,64 @@ export class MaxFlizGameEngine {
     }
   }
 
+  private resetAbilityCooldown() {
+    this.abilityCooldownState = createAbilityCooldown(0);
+    this.abilityCooldownUiTimer = 0;
+    this.abilityCooldownLastProgress = -1;
+    this.abilityCooldownLastReady = null;
+    this.updateAbilityCooldown(0, true);
+  }
+
+  private updateAbilityCooldown(dt: number, force = false) {
+    this.abilityCooldownState = advanceAbilityCooldown(this.abilityCooldownState, dt);
+    this.abilityCooldownUiTimer = Math.max(0, this.abilityCooldownUiTimer - (Number.isFinite(dt) ? Math.max(0, dt) : 0));
+
+    const progress = getAbilityCooldownProgress(this.abilityCooldownState);
+    const ready = this.abilityCooldownState.remainingSeconds <= 0.0001;
+    const shouldNotify = force ||
+      this.abilityCooldownUiTimer <= 0 ||
+      ready !== this.abilityCooldownLastReady ||
+      Math.abs(progress - this.abilityCooldownLastProgress) >= 0.008;
+
+    if (!shouldNotify) return;
+    this.callbacks.onAbilityCooldown(
+      progress,
+      ready,
+      this.abilityCooldownState.remainingSeconds,
+      this.gameMode === 'survival'
+    );
+    this.abilityCooldownLastProgress = progress;
+    this.abilityCooldownLastReady = ready;
+    // 12.5 Hz is enough for the visible recharge bar without writing to the DOM every frame.
+    this.abilityCooldownUiTimer = 0.08;
+  }
+
+  private rechargeAbilityFromSurvivalKill(isElite: boolean) {
+    if (this.gameMode !== 'survival' || this.abilityCooldownState.remainingSeconds <= 0.0001) return;
+    const requestedSeconds = (isElite ? 0.78 : 0.16) * this.survivalAbilityKillRechargeMultiplier;
+    const rechargeLimit = this.abilityCooldownState.durationSeconds * this.survivalAbilityKillRechargeCapRatio;
+    const result = applyAbilityKillRecharge(this.abilityCooldownState, requestedSeconds, rechargeLimit);
+    if (result.rechargedSeconds <= 0) return;
+
+    this.abilityCooldownState = result.state;
+    this.updateAbilityCooldown(0, true);
+    if (isElite) {
+      this.emitFloatingToast(
+        '⚡ ELITARNY ŁADUNEK +' + result.rechargedSeconds.toFixed(1) + ' s',
+        this.playerPos.x,
+        this.playerPos.y + 1.55,
+        this.playerPos.z,
+        'combo'
+      );
+    }
+  }
+
   public triggerAbility() {
-    if (this.state !== 'playing' || this.abilityTimer > 0) return;
-    this.abilityTimer = getAbilityCooldownSeconds(this.charDef.abilityCooldown, this.gameMode);
+    if (this.state !== 'playing' || this.abilityCooldownState.remainingSeconds > 0.0001) return;
+    const cooldownSeconds = getAbilityCooldownSeconds(this.charDef.abilityCooldown, this.gameMode) *
+      (this.gameMode === 'survival' ? this.survivalAbilityCooldownMultiplier : 1);
+    this.abilityCooldownState = createAbilityCooldown(cooldownSeconds);
+    this.updateAbilityCooldown(0, true);
     const abilityDamageMultiplier = this.gameMode === 'survival'
       ? Math.min(1.2, this.survivalDamageMultiplier * 0.78) : 1;
 
@@ -9876,6 +9965,10 @@ export class MaxFlizGameEngine {
     this.handleMateuszPassive(2);
     if (this.gameMode === 'survival') {
       this.survivalKills++;
+      const isAbilityRechargeElite =
+        e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' ||
+        e.type === 'elite_walczak_guard' || e.type === 'sebix_m' || e.maxHp >= 4;
+      this.rechargeAbilityFromSurvivalKill(isAbilityRechargeElite);
       const isShiftMilestone = this.survivalKills % 8 === 0;
       const baseXpDrop = e.maxHp >= 4 ? 3 : 1;
       // Merge the small milestone bonus into the normal gem instead of spawning
