@@ -10399,7 +10399,7 @@ export class PaleciakiGameEngine {
     if (this.gameMode === 'survival' && (e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'sebix_m')) {
       this.spawnLootCrate(e.x + 1.2, 0, e.z);
       this.spawnSurvivalXpGem(e.x, e.y, e.z, e.type === 'sebix_m' ? 5 : 8);
-      this.emitFloatingToast(e.type === 'sebix_m' ? '🔥 SEBIX ROZBROJONY — SKRZYNIA B4!' : '🏆 SKRZYNIA Z NAGRODĄ BOSS-A!', e.x, e.y + 2.0, e.z, 'combo');
+      this.emitFloatingToast(e.type === 'sebix_m' ? '🔥 OPERATOR TURBO ROZBROJONY — SKRZYNIA B4!' : '🏆 SKRZYNIA Z NAGRODĄ BOSS-A!', e.x, e.y + 2.0, e.z, 'combo');
     }
 
     if (e.type === 'sebix_m') {
