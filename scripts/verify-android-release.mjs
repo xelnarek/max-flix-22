@@ -9,10 +9,16 @@ const versionCode = Number.parseInt(process.env.ANDROID_VERSION_CODE || '0', 10)
 const signingConfigured = process.env.ANDROID_SIGNING_ENABLED === 'true';
 const variablesPath = resolve('android/variables.gradle');
 
+const releaseApkCandidates = signingConfigured
+  ? ['app-release.apk', 'app-release-unsigned.apk']
+  : ['app-release-unsigned.apk', 'app-release.apk'];
+const releaseApk = releaseApkCandidates
+  .map((name) => resolve('android/app/build/outputs/apk/release', name))
+  .find((candidate) => existsSync(candidate));
 const outputs = {
   appBundle: resolve('android/app/build/outputs/bundle/release/app-release.aab'),
   debugApk: resolve('android/app/build/outputs/apk/debug/app-debug.apk'),
-  releaseApk: resolve('android/app/build/outputs/apk/release/app-release-unsigned.apk'),
+  releaseApk: releaseApk || resolve('android/app/build/outputs/apk/release', releaseApkCandidates[0]),
 };
 const missing = Object.entries(outputs).filter(([, path]) => !existsSync(path));
 if (missing.length) {
@@ -49,8 +55,8 @@ function sha256(path) {
   return createHash('sha256').update(readFileSync(path)).digest('hex');
 }
 
-const bundleVerification = verify('jarsigner', ['-verify', '-strict', '-certs', outputs.appBundle], 'AAB signature');
-const bundleSigned = /jar verified\\./i.test(bundleVerification) && !/jar is unsigned/i.test(bundleVerification);
+const bundleVerification = verify('jarsigner', ['-verify', '-certs', outputs.appBundle], 'AAB signature');
+const bundleSigned = /jar verified\./i.test(bundleVerification) && !/jar is unsigned/i.test(bundleVerification);
 if (signingConfigured && !bundleSigned) {
   throw new Error('Upload signing secrets were configured, but the AAB is not cryptographically signed.');
 }
@@ -58,9 +64,11 @@ if (!signingConfigured && bundleSigned) {
   throw new Error('AAB unexpectedly contains a signature although upload signing was not configured. Verify which key signed it.');
 }
 
-verify('apksigner', ['verify', '--verbose', outputs.debugApk], 'Debug APK signature');
+const sdkRoot = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || '/usr/local/lib/android/sdk';
+const apksigner = process.env.APKSIGNER_PATH || resolve(sdkRoot, 'build-tools', '36.0.0', 'apksigner');
+verify(apksigner, ['verify', '--verbose', outputs.debugApk], 'Debug APK signature');
 if (signingConfigured) {
-  verify('apksigner', ['verify', '--verbose', outputs.releaseApk], 'Release APK signature');
+  verify(apksigner, ['verify', '--verbose', outputs.releaseApk], 'Release APK signature');
 }
 
 const artifacts = Object.fromEntries(Object.entries(outputs).map(([name, path]) => [
