@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const applicationId = 'pl.paleciaki.magazynchaosu';
@@ -91,6 +91,15 @@ if (existingAppIdStart >= 0) {
 writeFileSync(manifestPath, manifest);
 
 writeFileSync(gradlePath, gradle);
+if (process.env.GITHUB_ENV) {
+  appendFileSync(process.env.GITHUB_ENV, [
+    'ANDROID_SIGNING_ENABLED=' + String(signingEnabled),
+    'ANDROID_APPLICATION_ID=' + applicationId,
+    'ANDROID_VERSION_NAME=' + versionName,
+    'ANDROID_VERSION_CODE=' + versionCode,
+    '',
+  ].join('\n'));
+}
 console.log(JSON.stringify({
   applicationId,
   versionName,
