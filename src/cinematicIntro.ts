@@ -21,7 +21,6 @@ export class CinematicIntroManager {
   private rafId: number | null = null;
   private active = false;
   private startedAt = 0;
-  private lastFrameAt = 0;
   private lastRenderAt = 0;
   private elapsed = 0;
   private readonly duration = 11.8;
@@ -49,7 +48,6 @@ export class CinematicIntroManager {
     this.active = true;
     this.elapsed = 0;
     this.startedAt = performance.now();
-    this.lastFrameAt = this.startedAt;
     this.lastRenderAt = this.startedAt;
     this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     const mobile = window.innerWidth < 760 || navigator.maxTouchPoints > 0;
@@ -62,9 +60,18 @@ export class CinematicIntroManager {
       return;
     }
     try { sound.playCinematicBoom(); } catch { /* Audio is optional; the intro must still play. */ }
-    this.render(0);
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('resize', this.onResize);
+
+    if (this.reducedMotion) {
+      // Show the finished composition as a still poster. Do not animate the
+      // scene or force users to wait for the normal 11.8-second intro.
+      this.elapsed = this.duration;
+      this.render(this.elapsed);
+      return;
+    }
+
+    this.render(0);
     this.rafId = requestAnimationFrame(this.loop);
   }
 
@@ -155,12 +162,8 @@ export class CinematicIntroManager {
 
   private loop = (now: number): void => {
     if (!this.active) return;
-    const dt = Math.min(0.08, Math.max(0, (now - this.lastFrameAt) / 1000));
-    this.lastFrameAt = now;
-    this.elapsed = this.reducedMotion
-      ? Math.min(this.duration, this.elapsed + dt * 2.4)
-      : Math.min(this.duration, (now - this.startedAt) / 1000);
-    if (now - this.lastRenderAt >= this.frameInterval || this.reducedMotion) {
+    this.elapsed = Math.min(this.duration, (now - this.startedAt) / 1000);
+    if (now - this.lastRenderAt >= this.frameInterval) {
       this.render(this.elapsed);
       this.lastRenderAt = now;
     }
