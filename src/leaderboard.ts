@@ -22,7 +22,7 @@ function finiteNonNegative(value: unknown): number {
   return Number.isFinite(numeric) ? Math.max(0, Math.floor(numeric)) : 0;
 }
 
-/** Old cloud rows did not store a mode; keep them visible as Campaign legacy rows. */
+/** Historic rows without a mode remain classified as non-Survival legacy data. */
 export function normalizeLeaderboardEntry(
   data: LeaderboardEntryInput,
   fallbackId?: string,
@@ -30,7 +30,7 @@ export function normalizeLeaderboardEntry(
   return {
     id: data.id || fallbackId,
     playerName: String(data.playerName || 'Magazynier').trim().slice(0, 32) || 'Magazynier',
-    hero: String(data.hero || 'Marcin').slice(0, 20),
+    hero: String(data.hero || 'Operator 01').slice(0, 20),
     mode: data.mode === 'survival' ? 'survival' : 'campaign',
     score: Math.min(10_000_000, finiteNonNegative(data.score)),
     coins: Math.min(100_000, finiteNonNegative(data.coins)),
