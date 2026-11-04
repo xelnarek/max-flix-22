@@ -35,6 +35,21 @@ Sekrety używane przez workflow:
 
 Bez tych sekretów workflow buduje APK debug i niepodpisany AAB do kontroli technicznej. Taki AAB nie nadaje się do wysłania jako wydanie w Play Console. Klucz uploadowy przechowuj także w bezpiecznej kopii poza GitHubem; nigdy nie dodawaj go do repozytorium.
 
+## Google Play — automatyczne wysłanie do testów wewnętrznych
+
+Workflow Android ma opcjonalny krok wysyłania podpisanego AAB do ścieżki **Internal testing**. Nie publikuje automatycznie aplikacji na ścieżce produkcyjnej.
+
+Aby go uruchomić, konto wydawcy musi najpierw utworzyć aplikację w Play Console z identyfikatorem `pl.paleciaki.magazynchaosu` i wykonać wymagane wstępne czynności. Samo wysłanie przez API nie tworzy aplikacji ani nie wypełnia deklaracji w Play Console.
+
+Wymagana konfiguracja GitHub:
+- Repository Variable `GOOGLE_PLAY_UPLOAD_ENABLED=true` — przełącznik świadomie włączający przesyłanie.
+- Repository Secret `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` — pełny JSON klucza konta usługi Google Cloud.
+- Konto usługi musi mieć włączone Google Play Android Developer API, być zaproszone w Play Console i mieć uprawnienia do tej aplikacji.
+
+Krok uploadu jest przypięty do konkretnego commitu akcji `r0adkll/upload-google-play`. Przed wywołaniem weryfikowane są podpis AAB i poziomy SDK. Brak podpisu lub brak JSON konta usługi zatrzyma zadanie. Wysyłany jest wyłącznie AAB na ścieżkę `internal` ze statusem `completed`; nie ma kroku publikacji na `production`.
+
+Po przesłaniu wersji testerzy muszą zostać dodani do listy testerów / grupy w Play Console. Dostępność testu i link do dołączenia należy pobrać z Play Console.
+
 ## AdMob — konfiguracja przed reklamami produkcyjnymi
 
 Repozytorium odczytuje trzy GitHub Actions Repository Variables (Settings → Secrets and variables → Actions → Variables):
