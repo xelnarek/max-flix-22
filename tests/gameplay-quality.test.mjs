@@ -910,6 +910,25 @@ test('1x and 2x speed controls use the engine time scale without double scaling 
   assert.match(css, /flex-wrap: wrap/);
 });
 
+
+test('touch special button mirrors the special cooldown, kill recharge and ready state', async () => {
+  const [app, css] = await Promise.all([
+    read('../src/index.ts'), read('../src/index.css')
+  ]);
+  const start = app.indexOf('onAbilityCooldown: (progress, ready, remainingSeconds, killRechargeEnabled) =>');
+  const end = app.indexOf('onSurvivalDashUpdate:', start);
+  assert.ok(start >= 0 && end > start, 'special cooldown callback should exist');
+  const callback = app.slice(start, end);
+  assert.match(callback, /getElementById\('btn-touch-ability'\)/);
+  assert.match(callback, /touchAbilityButton\.disabled = !ready/);
+  assert.match(callback, /touchAbilityButton\.classList\.toggle\('is-charging', !ready\)/);
+  assert.match(callback, /touchAbilityButton\.textContent = ready \? '⚡ MOC' : `⚡ \$\{secondsLeft\}s`/);
+  assert.match(callback, /Eliminacje skracają czas ładowania/);
+  assert.match(callback, /--ability-cooldown-progress/);
+  assert.match(css, /\.ability-touch-btn::after[\s\S]*?conic-gradient/);
+  assert.match(css, /\.ability-touch-btn:disabled[\s\S]*?filter: saturate\(\.76\)/);
+});
+
 test('Campaign special recharge rewards regular kills, elite chains and bosses with a cap', async () => {
   const [game, cooldown] = await Promise.all([
     read('../src/game.ts'), read('../src/abilityCooldown.ts')
