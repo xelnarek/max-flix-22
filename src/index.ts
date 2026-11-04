@@ -994,7 +994,7 @@ class MaxFlizScene extends xb.Script {
             const timeFormatted = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 
             const row = document.createElement('div');
-            row.className = `leaderboard-item ${idx === 0 ? 'top-1' : ''}`;
+            row.className = `leaderboard-item ${idx < 3 ? 'top-' + (idx + 1) : ''}`;
             row.innerHTML = `
               <div class="leaderboard-rank">${rankDisplay}</div>
               <div class="leaderboard-hero-tag">${heroIcon}</div>
