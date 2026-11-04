@@ -5,14 +5,14 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     id: 'marcin',
     name: 'Atlas',
     role: 'Kierownik Zmiany & Główny Audytor Logistyki',
-    title: 'Władca WZ-tek, Harmonogramu i Strefy Bezpieczeństwa',
+    title: 'Dowódca Logistyki B4',
     color: 0x1e3a8a, // Navy / Royal Blue
     secondaryColor: 0xf59e0b, // Amber / Gold
     speed: 7.5,
     jumpForce: 8.8,
     passiveName: 'Mistrz Zaklęć ERP',
     passiveDescription: 'Podstawowy atak przywołuje cyfrowe zaklęcia z systemu ERP: błękitne runy, zlecenia i pieczęcie. Co trzeci czar tworzy mocniejszą pieczęć audytu. Zasięg przyciągania VIP +100%.',
-    abilityName: 'WORLD OF TAAAAANKS! NOOBIE!',
+    abilityName: 'KONWÓJ WZ-404! DO BOJU!',
     abilityDescription: 'Przywołuje opancerzony czołg WZ-404, który przez 8 sekund podąża za Atlasem, obraca wieżyczką i automatycznie ostrzeliwuje najbliższych przeciwników pociskami wybuchowymi. W Survival działa 6 sekund. Załoga melduje: „Cel zatwierdzony przez system ERP!”.',
     abilityCooldown: 17.0,
     voiceLines: [
@@ -24,7 +24,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
       'Kto przestawił gres Biały Marmur bez mojej autoryzacji?!',
       'Protokół reklamacji otwarty – zamykam tę aleję na własnych warunkach!'
     ],
-    bio: 'Legenda krakowskiej logistyki Kompleks B4 i człowiek, który potrafi rozpoznać błędnie wystawioną WZ-tkę po samym dźwięku drukarki. Na zmianę przynosi pancerny tablet, aluminiową podkładkę i minę człowieka, który już wie, że ktoś pomylił sektor. Pamięta kody produktów, układ regałów i wszystkie obietnice dostawców, których nikt nigdy nie potwierdził na piśmie. W walce stawia na kontrolę sytuacji, precyzję i autorytet kierownika. Jego najgroźniejszy okrzyk brzmi: „KTO TO PODPISAŁ?!”. Nawet sztaplarka wtedy przechodzi na luz.',
+    bio: 'Legenda nocnej logistyki Kompleks B4 i człowiek, który potrafi rozpoznać błędnie wystawioną WZ-tkę po samym dźwięku drukarki. Na zmianę przynosi pancerny tablet, aluminiową podkładkę i minę człowieka, który już wie, że ktoś pomylił sektor. Pamięta kody produktów, układ regałów i wszystkie obietnice dostawców, których nikt nigdy nie potwierdził na piśmie. W walce stawia na kontrolę sytuacji, precyzję i autorytet kierownika. Jego najgroźniejszy okrzyk brzmi: „KTO TO PODPISAŁ?!”. Nawet sztaplarka wtedy przechodzi na luz.',
     stats: {
       speed: 4,
       jump: 3,
@@ -67,7 +67,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
   dawid: {
     id: 'dawid',
     name: 'Vector',
-    role: 'Arcymistrz Gresu & Mistrz Wielkiego Formatu',
+    role: 'Operator Wielkiego Formatu',
     title: 'Siłacz Wielkiego Formatu ("Ja Wiem Lepiej!")',
     color: 0xd97706, // Amber / Terracotta
     secondaryColor: 0xb45309,
@@ -132,27 +132,27 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     id: 'piotr',
     name: 'Rook',
     role: 'Senior Magazynier & Weteran Rezerw',
-    title: 'Weteran Kompleks B4 i Mistrz Ukrytej Flaszki Bimbru 70%',
+    title: 'Weteran Kompleks B4 i Mistrz Płonących Mieszanek',
     color: 0xef4444, // Crimson Red
     secondaryColor: 0xfacc15, // Bright Yellow
     speed: 9.0,
     jumpForce: 9.4,
     passiveName: 'Weteran B4 — Droga Powrotna',
     passiveDescription: 'Rook ma stały podwójny skok i 100% szansy na drop perków. Klucz grzechotkowy wraca po rzucie, więc dobrze ustawiony tor pozwala przeciąć linię wrogów również podczas powrotu.',
-    abilityName: 'Potrójna Salwa Flaszek z Bimbrem 70% (Mołotow x3)',
-    abilityDescription: 'Rook wyjmuje zza regału B4 aż 3 płonące butelki 70% bimbru jednocześnie i miota nimi przed siebie, zamieniając cały korytarz w ścianę żywego ognia!',
+    abilityName: 'Potrójna Salwa Płonących Butli (3 kapsuły zapalające)',
+    abilityDescription: 'Rook wyjmuje zza regału B4 aż 3 płonące butelki specjalna mieszanka zapalająca jednocześnie i miota nimi przed siebie, zamieniając cały korytarz w ścianę żywego ognia!',
     abilityCooldown: 13.5,
     voiceLines: [
-      'Bimber ze skarbczyka! 70 voltów zrobionych na drożdżach szlachetnych zza regału B4!',
-      'Z drogi, bo rzucam flaszką! To stary przepis magazynowy – pali się lepiej niż napalm!',
+      'Zapas płonącej mieszanki! Trzy kapsuły gotowe do użycia!',
+      'Z drogi, bo rzucam butlą! To stary przepis magazynowy – pali się lepiej niż napalm!',
       'Nadzorca Zero myślał, że znalazł wszystkie moje ukryte zapasy? Ta butelka leżakowała od 2012 roku!',
-      'Płonąca flaszka rozwiązuje każdy problem logistyczny w trzy sekundy!',
+      'Płonąca butla kończy każdy spór o przejazd!',
       'Za moich czasów zimą ogrzewaliśmy się tylko tym koktajlem!',
       'Jeden rzut i w korytarzu robi się ciepło! Ogień na gresie!',
       'Pamiętam jak tu szczere pole było, a Nadzorca Zero jeszcze w pieluchy dzwonił!',
       'To nie dym, to aromat tradycji z rocznika 2012!'
     ],
-    bio: 'Weteran Kompleks B4, człowiek-instytucja i żywe archiwum każdej reorganizacji, przeprowadzki oraz tajemniczego zniknięcia palety. Zna skróty za regałami, pamięta stare oznaczenia sektorów i wie, które drzwi otwierają się dopiero po mocniejszym pociągnięciu. W zanadrzu trzyma klucz grzechotkowy B4 oraz legendarny zapas domowego bimbru, którego pochodzenie pozostaje przedmiotem wewnętrznego dochodzenia. W walce jest wszechstronny, odporny i nie odpuszcza nawet wtedy, gdy reszta zmiany dawno odbiła kartę. Jego motto: „Za moich czasów palety same się nie przesuwały”.',
+    bio: 'Weteran Kompleks B4, człowiek-instytucja i żywe archiwum każdej reorganizacji, przeprowadzki oraz tajemniczego zniknięcia palety. Zna skróty za regałami, pamięta stare oznaczenia sektorów i wie, które drzwi otwierają się dopiero po mocniejszym pociągnięciu. W zanadrzu trzyma klucz grzechotkowy B4 oraz legendarny zapas płonącej mieszanki, którego pochodzenie pozostaje przedmiotem wewnętrznego dochodzenia. W walce jest wszechstronny, odporny i nie odpuszcza nawet wtedy, gdy reszta zmiany dawno odbiła kartę. Jego motto: „Za moich czasów palety same się nie przesuwały”.',
     stats: {
       speed: 5,
       jump: 4,
