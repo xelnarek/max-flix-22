@@ -371,8 +371,8 @@ export async function syncPendingLeaderboardScores(): Promise<number> {
   const pending = parsePendingLeaderboardWrites();
   if (!pending.length) return 0;
 
-  const user = await initAuth();
-  if (!user) return 0;
+  // Anonymous auth is attempted, but leaderboard creation rules also allow a guest session.
+  await initAuth();
 
   const remaining: PendingLeaderboardWrite[] = [];
   const acknowledged: LeaderboardEntry[] = [];
