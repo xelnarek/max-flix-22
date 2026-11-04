@@ -151,7 +151,7 @@ const SURVIVAL_WEAPON_DEFS: Record<SurvivalWeaponId, {
   pallet_cannon: { name: 'Działo paletowe', evolvedName: 'PALETA GIGA', icon: '🧱', description: 'Precyzyjny pocisk z kontrolowaną falą uderzeniową.', cooldown: 8.6, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.pallet_cannon, color: 0xf59e0b, evolutionPassive: 'damage', evolutionPassiveLabel: 'Wzmocniona amunicja' },
   diamond_saw: { name: 'Tarcza diamentowa', evolvedName: 'TARCZA RYKOSZETU', icon: '💿', description: 'Ostrze przebija linię przeciwników i może odbić się od granicy areny.', cooldown: 9.7, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.diamond_saw, color: 0x22d3ee, evolutionPassive: 'range', evolutionPassiveLabel: 'Zasięg audytu' },
   glue_mine: { name: 'Mina Mapei', evolvedName: 'MAPEI BLACKOUT', icon: '🟣', description: 'Mina obszarowa spowalniająca i rozbijająca szyk wrogów.', cooldown: 11.3, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.glue_mine, color: 0xa78bfa, evolutionPassive: 'magnet', evolutionPassiveLabel: 'Magnes XP' },
-  kfc_bomber: { name: 'Kubełek bombowy', evolvedName: 'KUBEŁEK FURII', icon: '🍗', description: 'Pocisk obszarowy z podpaleniem celów.', cooldown: 12.7, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.kfc_bomber, color: 0xef4444, evolutionPassive: 'scavenger', evolutionPassiveLabel: 'Łowca okazji' },
+  kfc_bomber: { name: 'Kubełek bombowy', evolvedName: 'KUBEŁEK FURII', icon: '⚡', description: 'Pocisk obszarowy z podpaleniem celów.', cooldown: 12.7, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.kfc_bomber, color: 0xef4444, evolutionPassive: 'scavenger', evolutionPassiveLabel: 'Łowca okazji' },
   piorun_drone: { name: 'Dron Piorun', evolvedName: 'PIORUN CHAIN MK II', icon: '🤖', description: 'Szybki pocisk samonaprowadzający z dodatkowym przebiciem.', cooldown: 10.4, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.piorun_drone, color: 0x38bdf8, evolutionPassive: 'drone', evolutionPassiveLabel: 'Dron asystujący' },
   forklift_bolter: { name: 'Nitownica UDT', evolvedName: 'NITOWNICA OBLĘŻNICZA', icon: '🔩', description: 'Wąski, szybki pocisk przebijający kilka celów.', cooldown: 7.0, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.forklift_bolter, color: 0xfbbf24, evolutionPassive: 'rapid', evolutionPassiveLabel: 'Rytm ataku' },
   scanner_pulse: { name: 'Impuls skanera B4', evolvedName: 'SKANER TOTALNY', icon: '📡', description: 'Namierzający impuls przebijający zwartą formację.', cooldown: 9.0, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.scanner_pulse, color: 0x67e8f9, evolutionPassive: 'range', evolutionPassiveLabel: 'Zasięg audytu' },
@@ -6268,7 +6268,7 @@ export class MaxFlizGameEngine {
 
     if (eventIndex === 0) {
       sound.playSirens();
-      this.callbacks.onPerkDropBanner?.('🍗 DOSTAWA SPECJALNA — ALARM GŁODOWY!', '🧟', 'Trzech magazynierów-zombie wyczuło stripsy. Złap kubełek, zanim zrobią inwentaryzację Twojego lunchu.', '#ef4444');
+      this.callbacks.onPerkDropBanner?.('⚡ DOSTAWA SPECJALNA — ALARM GŁODOWY!', '🧟', 'Trzech magazynierów-zombie wyczuło stripsy. Złap kubełek, zanim zrobią inwentaryzację Twojego lunchu.', '#ef4444');
       this.sayQuote('Vector otworzył kubełek na rampie. Teraz cała hala ma jeden cel: panierka.');
       for (let i = 0; i < 3; i++) {
         const ex = THREE.MathUtils.clamp(px + (i - 1) * 8, this.levelBounds.minX + 3, this.levelBounds.maxX - 3);
@@ -6307,7 +6307,7 @@ export class MaxFlizGameEngine {
       this.spawnLootCrate(THREE.MathUtils.clamp(px + 5, this.levelBounds.minX + 3, this.levelBounds.maxX - 3), 0, THREE.MathUtils.clamp(pz + 3, this.levelBounds.minZ + 2, this.levelBounds.maxZ - 2));
     } else {
       sound.playSirens();
-      this.callbacks.onPerkDropBanner?.('🟦 PILNE ZLECENIE OPTIMA: SKAN 3 PALET!', '📦', 'Na hali pojawiły się trzy złote etykiety. Zbierz je, zanim kontroler zamknie zlecenie.', '#38bdf8');
+      this.callbacks.onPerkDropBanner?.('🟦 PILNE ZLECENIE B4 ERP: SKAN 3 PALET!', '📦', 'Na hali pojawiły się trzy złote etykiety. Zbierz je, zanim kontroler zamknie zlecenie.', '#38bdf8');
       this.sayQuote('system ERP wrzuciła trzy pilne zlecenia na tę samą minutę. Klasyka. Zbieraj etykiety, ja spróbuję dodzwonić się do IT.');
       for (let i = 0; i < 3; i++) {
         const taskX = THREE.MathUtils.clamp(x + (i - 1) * 3.4, this.levelBounds.minX + 3, this.levelBounds.maxX - 3);
@@ -7463,7 +7463,7 @@ export class MaxFlizGameEngine {
 
     if (engaged && !enemy.alerted) {
       enemy.alerted = true;
-      this.emitFloatingToast(enemy.type === 'zombie_pracownik' ? '🍗!' : '!', enemy.x, enemy.y + 1.25, enemy.z, 'damage');
+      this.emitFloatingToast(enemy.type === 'zombie_pracownik' ? '⚡!' : '!', enemy.x, enemy.y + 1.25, enemy.z, 'damage');
     } else if (!engaged) {
       enemy.alerted = false;
     }
@@ -7997,7 +7997,7 @@ export class MaxFlizGameEngine {
           if (distToPlayer < chaseRadius) {
             if (e.state === 'patrol' && !e.alerted) {
               e.alerted = true;
-              this.emitFloatingToast(e.type === 'zombie_pracownik' ? '🍗!' : '!', e.x, e.y + 1.35, e.z, 'damage');
+              this.emitFloatingToast(e.type === 'zombie_pracownik' ? '⚡!' : '!', e.x, e.y + 1.35, e.z, 'damage');
               sound.playAlert();
             }
             e.state = 'chase';
@@ -9034,7 +9034,7 @@ export class MaxFlizGameEngine {
     const startOrigin = new THREE.Vector3(this.playerPos.x, this.playerPos.y + 0.82, this.playerPos.z).addScaledVector(forward, 0.65);
 
     if (charId === 'marcin') {
-      // Marcin casts a compact Optima software spell: a holographic work-order rune.
+      // Atlas casts a compact B4 ERP spell: a holographic work-order rune.
       const spell = new THREE.Group();
       const coreMat = new THREE.MeshStandardMaterial({
         color: isThirdCombo ? 0x67e8f9 : 0x38bdf8,
@@ -9070,7 +9070,7 @@ export class MaxFlizGameEngine {
         hitIds: new Set(),
       });
       if (isThirdCombo) {
-        this.emitFloatingToast('🟦 OPTIMA: ZLECENIE ZATWIERDZONE!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'perk');
+        this.emitFloatingToast('🟦 B4 ERP: ZLECENIE ZATWIERDZONE!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'perk');
       }
     } else if (charId === 'grzesiek') {
       // Grzesiek throws a steel dumbbell; every third throw is the heavy 44 cm special.
@@ -9376,7 +9376,7 @@ export class MaxFlizGameEngine {
       'Czołg WZ-404 melduje gotowość. Przez kilka sekund sam namierza i ostrzeliwuje przeciwników.',
       '#8ca34b'
     );
-    this.emitFloatingToast('🚜 WZ-404 • ARTYLERIA OPTIMA ONLINE!', this.playerPos.x, this.playerPos.y + 1.55, this.playerPos.z, 'combo');
+    this.emitFloatingToast('🚜 WZ-404 • ARTYLERIA B4 ERP ONLINE!', this.playerPos.x, this.playerPos.y + 1.55, this.playerPos.z, 'combo');
     this.triggerScreenShake(0.30, 0.18);
     this.triggerBloomPulse(0.30);
     this.spawnParticleRing(this.playerPos.x, 0.22, this.playerPos.z, 0x8ca34b);
@@ -9979,7 +9979,7 @@ export class MaxFlizGameEngine {
           hitIds: new Set(),
         });
       });
-      this.emitFloatingToast('🧱 SALWA GRESU 120x280 + 🍗 Kubełek Mocy!', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
+      this.emitFloatingToast('🧱 SALWA GRESU 120x280 + ⚡ Kubełek Mocy!', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
     } else if (this.currentCharacterId === 'mateusz') {
       this.activatePerk('espresso_boost', this.gameMode === 'survival' ? 3.5 : 7);
       this.activatePerk('vibram_boots', this.gameMode === 'survival' ? 3.5 : 8);
