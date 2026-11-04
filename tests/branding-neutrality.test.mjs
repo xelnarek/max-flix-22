@@ -4,65 +4,27 @@ import test from 'node:test';
 
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
-test('public game identity uses the Paleciaki store title', async () => {
-  const [html, app, intro, metadata] = await Promise.all([
+test('public identity and operator labels are generic and contain no Max-Flix references', async () => {
+  const [html, app, intro, characters, metadata, assets] = await Promise.all([
     read('../index.html'),
     read('../src/index.ts'),
     read('../src/cinematicIntro.ts'),
+    read('../src/characters.ts'),
     read('../metadata.json'),
+    read('../src/assets.ts'),
   ]);
-
-  assert.match(html, /<title>Paleciaki! Magazyn Chaosu<\/title>/);
-  assert.match(html, /PALECIAKI! <span>MAGAZYN<\/span><em>CHAOSU<\/em>/);
-  assert.match(app, /setAppTitle\('Paleciaki! Magazyn Chaosu'\)/);
-  assert.match(intro, /<h1>PALECIAKI!<\/h1>/);
-  assert.match(intro, /MAGAZYN <span>CHAOSU<\/span>/);
+  assert.match(html, /<title>Paleciaki! Magazyn Chaosu<\\/title>/);
+  assert.match(html, /SURVIVAL • FALE • HORDY I EWOLUCJE/);
   assert.match(metadata, /"name": "Paleciaki! Magazyn Chaosu"/);
+  assert.doesNotMatch([html, app, intro, characters, assets].join('\\n'), /Max-Flix|Max-Fliz|Palczak|Kuleto|Walczak|Króla-Leto|Zdzich|\\bAtlas\\b|\\bForge\\b|\\bVector\\b|\\bVolt\\b|\\bRook\\b|\\bMarcin\\b|\\bGrzesiek\\b|\\bDawid\\b|\\bMateusz\\b|\\bPiotr\\b/i);
+  assert.match(characters, /name: 'Operator 01'/);
+  assert.match(characters, /name: 'Operator 05'/);
 });
 
-test('operator cards use fictional call signs while retaining stable internal IDs', async () => {
-  const [characters, html, app] = await Promise.all([
-    read('../src/characters.ts'),
-    read('../index.html'),
-    read('../src/index.ts'),
-  ]);
-  const roster = [
-    ['marcin', 'Atlas'],
-    ['grzesiek', 'Forge'],
-    ['dawid', 'Vector'],
-    ['mateusz', 'Volt'],
-    ['piotr', 'Rook'],
-  ];
-
-  for (const [id, callSign] of roster) {
-    const start = characters.indexOf(id + ': {');
-    const commaEnd = characters.indexOf('\n  },', start);
-    const finalEnd = characters.indexOf('\n};', start);
-    const end = commaEnd >= 0 ? commaEnd : finalEnd;
-    assert.ok(start >= 0 && end > start, 'missing operator definition: ' + id);
-    assert.ok(characters.slice(start, end).includes("name: '" + callSign + "'"), 'missing fictional call sign: ' + callSign);
-    assert.ok(html.includes('data-char="' + id + '"'), 'stable character ID was changed: ' + id);
-  }
-
-  assert.ok(app.includes("Atlas: 'marcin', Forge: 'grzesiek', Vector: 'dawid', Volt: 'mateusz', Rook: 'piotr'"));
-  // Old leaderboard hero labels remain readable for historical entries.
-  assert.ok(app.includes("Marcin: 'marcin', Grzesiek: 'grzesiek', Dawid: 'dawid', Mateusz: 'mateusz', Piotr: 'piotr'"));
-});
-
-test('old company and personal names are absent from the public title and intro copy', async () => {
-  const [html, intro, characters] = await Promise.all([
-    read('../index.html'),
-    read('../src/cinematicIntro.ts'),
-    read('../src/characters.ts'),
-  ]);
-  const publicHtml = html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<!--([\s\S]*?)-->/g, '')
-    .replace(/\s(?:id|class|data-[\w:-]+|aria-[\w:-]+|title)="[^"]*"/gi, '')
-    .normalize('NFC');
-
-  assert.doesNotMatch(publicHtml, /Max-Flix|Max-Fliz|Palczak|Kuleto|Walczak|Króla-Leto|Kraków|Były kierownik|DPD|Johnny Walker|KFC|Vibram|Optima|Calacatta|World of Tanks|Netflix|PlayStation|Dark Souls|Elden Ring/i);
-  assert.doesNotMatch(intro, /Max-Flix|Max-Fliz|Palczak|Kuleto|Walczak/i);
-  assert.doesNotMatch(characters, /name: '(?:Marcin|Grzesiek|Dawid|Mateusz|Piotr)'/);
+test('the public UI exposes Survival only', async () => {
+  const html = await read('../index.html');
+  assert.match(html, /id="btn-start-survival"/);
+  assert.doesNotMatch(html, /id="btn-start-game"|data-tab="tab-zones"|data-tab="tab-story"|id="story-intro-modal"|KAMPANIA|kampania/i);
+  assert.match(html, /RANKING GLOBALNY • SURVIVAL/);
+  assert.doesNotMatch(html, /RANKING GLOBALNY • .*KAMPANIA/i);
 });
