@@ -95,6 +95,16 @@ const operatorPortrait = (id: CharacterId): string => {
     '<path d="M11 9h12M9 11v12M101 89v12M89 103h12" stroke="#fff" stroke-opacity=".38" stroke-width="1.4" fill="none"/></svg>'
   ].join('');
 };
+const escapeLeaderboardText = (value: string): string => value.replace(/[&<>"']/g, (character) => {
+  switch (character) {
+    case '&': return '&amp;';
+    case '<': return '&lt;';
+    case '>': return '&gt;';
+    case '"': return '&quot;';
+    case "'": return '&#39;';
+    default: return character;
+  }
+});
 class MaxFlizScene extends xb.Script {
   private engine!: MaxFlizGameEngine;
   private pixelIntro: PixelIntroManager | null = null;
@@ -104,6 +114,7 @@ class MaxFlizScene extends xb.Script {
   private lastCoins: number = 0;
   private lastTimeSeconds: number = 0;
   private lastBossDefeated: boolean = false;
+  private lastMode: 'campaign' | 'survival' = 'campaign';
   private camera: THREE.PerspectiveCamera;
   private fallbackScene: THREE.Scene;
   private lastLoopTick: number = performance.now();
@@ -524,13 +535,26 @@ class MaxFlizScene extends xb.Script {
             hudHpRow.appendChild(span);
           }
         },
-        onAbilityCooldown: (progress, ready) => {
+        onAbilityCooldown: (progress, ready, remainingSeconds, killRechargeEnabled) => {
           if (abilityCooldownOverlay) {
             abilityCooldownOverlay.style.width = `${(1 - progress) * 100}%`;
           }
-          const btn = document.getElementById('btn-ability');
+          const btn = document.getElementById('btn-ability') as HTMLButtonElement | null;
+          const hint = btn?.querySelector<HTMLElement>('.ability-hint');
           if (btn) {
-            btn.style.opacity = ready ? '1' : '0.6';
+            btn.disabled = !ready;
+            btn.style.opacity = ready ? '1' : '0.72';
+            btn.classList.toggle('is-ready', ready);
+            btn.setAttribute('aria-label', ready
+              ? 'Umiejętność specjalna gotowa'
+              : `Umiejętność ładuje się przez ${Math.ceil(remainingSeconds)} sekund`);
+          }
+          if (hint) {
+            hint.textContent = ready
+              ? 'GOTOWA [E]'
+              : killRechargeEnabled
+                ? `ŁADOWANIE ${Math.ceil(remainingSeconds)}s • ELIMINACJE ŁADUJĄ`
+                : `ŁADOWANIE ${Math.ceil(remainingSeconds)}s`;
           }
         },
         onSpeechBubble: (text) => {
@@ -605,6 +629,7 @@ class MaxFlizScene extends xb.Script {
           this.lastCoins = this.engine.getCollectedVipCount();
           this.lastTimeSeconds = this.engine.getElapsedSeconds();
           this.lastBossDefeated = this.engine.isBossDefeated();
+          this.lastMode = this.engine.getGameMode();
 
           const victoryTitle = document.getElementById('victory-title');
           if (victoryTitle) {
@@ -632,21 +657,11 @@ class MaxFlizScene extends xb.Script {
           survivalHud?.classList.add('hidden');
           survivalLevelUp?.classList.add('hidden');
 
-          const nickInput = document.getElementById('player-nickname-input') as HTMLInputElement | null;
-          const submitBtn = document.getElementById('btn-submit-score') as HTMLButtonElement | null;
-          const feedbackMsg = document.getElementById('submit-feedback-msg');
-          if (nickInput) {
-            const savedNick = localStorage.getItem('maxfliz_player_nick');
-            nickInput.value = savedNick || `Kierownik ${CHARACTERS[this.selectedCharId].name}`;
-          }
-          if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = '💾 ZAPISZ W RANKINGU';
-          }
-          if (feedbackMsg) {
-            feedbackMsg.className = 'submit-feedback hidden';
-            feedbackMsg.textContent = '';
-          }
+          this.prepareScoreSubmissionForm(
+            'player-nickname-input',
+            'btn-submit-score',
+            'submit-feedback-msg'
+          );
 
           if (levelId < 3) {
             setTimeout(() => {
@@ -663,6 +678,35 @@ class MaxFlizScene extends xb.Script {
         },
         onGameOver: (reason) => {
           hideSurvivalAnnouncement();
+          this.lastScore = this.engine.getScore();
+          this.lastCoins = this.engine.getCollectedVipCount();
+          this.lastTimeSeconds = this.engine.getElapsedSeconds();
+          this.lastBossDefeated = this.engine.isBossDefeated();
+          this.lastMode = this.engine.getGameMode();
+
+          const finalScore = document.getElementById('gameover-score');
+          const finalTime = document.getElementById('gameover-time');
+          const finalMode = document.getElementById('gameover-mode-summary');
+          const runDetail = document.getElementById('gameover-run-detail');
+          if (finalScore) finalScore.textContent = this.lastScore.toLocaleString('pl-PL');
+          if (finalTime) {
+            const minutes = Math.floor(this.lastTimeSeconds / 60);
+            const seconds = this.lastTimeSeconds % 60;
+            finalTime.textContent = minutes + ':' + String(seconds).padStart(2, '0');
+          }
+          if (finalMode) finalMode.textContent = this.lastMode === 'survival' ? 'SURVIVAL SHIFT' : 'KAMPANIA';
+          if (this.lastMode === 'survival') {
+            const snapshot = this.engine.getSurvivalSnapshot();
+            if (runDetail) runDetail.textContent = `FALA ${snapshot.wave} • ${snapshot.kills} ELIMINACJI • POZIOM ${snapshot.level}`;
+          } else if (runDetail) {
+            runDetail.textContent = `SEKTOR ${this.selectedLevelId} • ŁADUNEK VIP: ${this.lastCoins}`;
+          }
+          this.prepareScoreSubmissionForm(
+            'player-nickname-gameover',
+            'btn-submit-score-gameover',
+            'submit-feedback-gameover'
+          );
+
           if (gameoverReason) gameoverReason.textContent = reason;
           const container = document.getElementById('game-canvas-container');
           if (container) container.style.transform = '';
@@ -940,21 +984,27 @@ class MaxFlizScene extends xb.Script {
             const heroId = heroIds[entry.hero];
             const heroIcon = heroId ? operatorPortrait(heroId) : '👷‍♂️';
             const bossBadge = entry.bossDefeated ? '<span title="Były Kierownik Walczak skasowany!">👔💥</span>' : '';
+            const safePlayerName = escapeLeaderboardText(entry.playerName);
+            const safeHeroName = escapeLeaderboardText(entry.hero);
+            const modeLabel = entry.mode === 'survival' ? 'SURVIVAL' : 'KAMPANIA';
+            const modeClass = entry.mode === 'survival' ? 'survival' : 'campaign';
+            const syncBadge = entry.syncStatus === 'pending' ? '<span class="leaderboard-sync-pill pending">OCZEKUJE ONLINE</span>' : '';
             const mins = Math.floor(entry.timeSeconds / 60);
             const secs = entry.timeSeconds % 60;
             const timeFormatted = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 
             const row = document.createElement('div');
-            row.className = `leaderboard-item ${idx === 0 ? 'top-1' : ''}`;
+            row.className = `leaderboard-item ${idx < 3 ? 'top-' + (idx + 1) : ''}`;
             row.innerHTML = `
               <div class="leaderboard-rank">${rankDisplay}</div>
               <div class="leaderboard-hero-tag">${heroIcon}</div>
               <div class="leaderboard-player-info">
-                <div class="leaderboard-player-name">${entry.playerName} ${bossBadge}</div>
-                <div class="leaderboard-player-meta">${entry.hero} • Czas: ${timeFormatted} • VIP: ${entry.coins}</div>
+                <div class="leaderboard-player-name">${safePlayerName} ${bossBadge}</div>
+                <div class="leaderboard-player-subline"><span class="leaderboard-mode-pill ${modeClass}">${modeLabel}</span>${syncBadge}</div>
+                <div class="leaderboard-player-meta">${safeHeroName} • Czas: ${timeFormatted} • VIP: ${entry.coins}</div>
               </div>
               <div class="leaderboard-score-cluster">
-                <div class="leaderboard-score-val">${entry.score} pkt</div>
+                <div class="leaderboard-score-val">${entry.score.toLocaleString('pl-PL')} pkt</div>
               </div>
             `;
             leaderboardList.appendChild(row);
@@ -1604,50 +1654,69 @@ class MaxFlizScene extends xb.Script {
       this.engine.startTitle();
     });
 
-    const submitBtn = document.getElementById('btn-submit-score') as HTMLButtonElement | null;
-    const nickInput = document.getElementById('player-nickname-input') as HTMLInputElement | null;
-    const feedbackMsg = document.getElementById('submit-feedback-msg');
+    const bindScoreSubmission = (buttonId: string, inputId: string, feedbackId: string) => {
+      const submitBtn = document.getElementById(buttonId) as HTMLButtonElement | null;
+      const nickInput = document.getElementById(inputId) as HTMLInputElement | null;
+      const feedbackMsg = document.getElementById(feedbackId);
 
-    submitBtn?.addEventListener('click', async () => {
-      const playerName = nickInput?.value.trim() || `Kierownik ${CHARACTERS[this.selectedCharId].name}`;
-      localStorage.setItem('maxfliz_player_nick', playerName);
+      submitBtn?.addEventListener('click', async () => {
+        const playerName = nickInput?.value.trim().slice(0, 32) ||
+          `Kierownik ${CHARACTERS[this.selectedCharId].name}`;
+        try { localStorage.setItem('maxfliz_player_nick', playerName); } catch { /* private browsing */ }
 
-      submitBtn.disabled = true;
-      submitBtn.textContent = '⏳ ZAPISYWANIE...';
-      if (feedbackMsg) {
-        feedbackMsg.className = 'submit-feedback';
-        feedbackMsg.textContent = 'Wysyłanie wyniku do Firebase Firestore...';
-        feedbackMsg.classList.remove('hidden');
-      }
-
-      try {
-        await submitScore({
-          playerName,
-          hero: CHARACTERS[this.selectedCharId].name,
-          score: this.lastScore,
-          coins: this.lastCoins,
-          timeSeconds: this.lastTimeSeconds,
-          bossDefeated: this.lastBossDefeated,
-        });
-
-        submitBtn.textContent = '✅ ZAPISANO!';
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ ZAPISYWANIE...';
         if (feedbackMsg) {
-          feedbackMsg.className = 'submit-feedback success';
-          feedbackMsg.textContent = '🎉 Sukces! Wynik pomyślnie zapisany w rankingu Firebase!';
+          feedbackMsg.className = 'submit-feedback';
+          feedbackMsg.textContent = 'Wysyłanie wyniku do rankingu globalnego...';
+          feedbackMsg.classList.remove('hidden');
         }
-        renderLeaderboard();
-      } catch (error) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'RETRY 💾';
-        if (feedbackMsg) {
-          feedbackMsg.className = 'submit-feedback error';
-          feedbackMsg.textContent = 'Błąd zapisu w Firebase. Spróbuj ponownie!';
+
+        try {
+          const result = await submitScore({
+            playerName,
+            hero: CHARACTERS[this.selectedCharId].name,
+            mode: this.lastMode,
+            score: this.lastScore,
+            coins: this.lastCoins,
+            timeSeconds: this.lastTimeSeconds,
+            bossDefeated: this.lastBossDefeated,
+          });
+
+          if (result.status === 'online') {
+            submitBtn.textContent = '✅ ZAPISANO ONLINE';
+            if (feedbackMsg) {
+              feedbackMsg.className = 'submit-feedback success';
+              feedbackMsg.textContent = 'Wynik jest już w globalnym rankingu online.';
+            }
+          } else {
+            submitBtn.textContent = '⏳ W KOLEJCE';
+            if (feedbackMsg) {
+              feedbackMsg.className = 'submit-feedback';
+              feedbackMsg.textContent = 'Wynik zabezpieczono lokalnie. Zostanie wysłany do rankingu, gdy połączenie wróci.';
+            }
+          }
+          renderLeaderboard();
+        } catch (error) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'RETRY 💾';
+          if (feedbackMsg) {
+            feedbackMsg.className = 'submit-feedback error';
+            feedbackMsg.textContent = 'Nie udało się zapisać wyniku. Spróbuj ponownie.';
+          }
+          console.warn('Score submission failed:', error);
         }
-      }
-    });
+      });
+    };
+
+    bindScoreSubmission('btn-submit-score', 'player-nickname-input', 'submit-feedback-msg');
+    bindScoreSubmission('btn-submit-score-gameover', 'player-nickname-gameover', 'submit-feedback-gameover');
 
     ensureLeaderboardServices().catch(console.warn);
     renderLeaderboard();
+    window.addEventListener('online', () => {
+      ensureLeaderboardServices().then(() => renderLeaderboard()).catch(console.warn);
+    });
 
     // Do not let a backgrounded mobile browser continue a live run invisibly.
     // Resume only when this handler itself caused the pause; manual pauses stay paused.
@@ -1672,6 +1741,23 @@ class MaxFlizScene extends xb.Script {
     this.engine.startTitle();
   }
 
+  private prepareScoreSubmissionForm(inputId: string, buttonId: string, feedbackId: string) {
+    const nickInput = document.getElementById(inputId) as HTMLInputElement | null;
+    const submitBtn = document.getElementById(buttonId) as HTMLButtonElement | null;
+    const feedbackMsg = document.getElementById(feedbackId);
+    let savedNick = '';
+    try { savedNick = localStorage.getItem('maxfliz_player_nick') || ''; } catch { /* private browsing */ }
+
+    if (nickInput) nickInput.value = savedNick || `Kierownik ${CHARACTERS[this.selectedCharId].name}`;
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '💾 ZAPISZ W RANKINGU';
+    }
+    if (feedbackMsg) {
+      feedbackMsg.className = 'submit-feedback hidden';
+      feedbackMsg.textContent = '';
+    }
+  }
   private setupTouchControls() {
     const joystickZone = document.getElementById('touch-joystick-zone');
     const joystickBase = document.getElementById('joystick-base');

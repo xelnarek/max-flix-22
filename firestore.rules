@@ -15,6 +15,7 @@ service cloud.firestore {
       return data.keys().hasAll(['playerName', 'hero', 'score', 'coins', 'timeSeconds', 'bossDefeated', 'createdAt']) &&
         data.playerName is string && data.playerName.size() >= 1 && data.playerName.size() <= 32 &&
         data.hero is string && data.hero.size() <= 20 &&
+        (!('mode' in data) || data.mode in ['campaign', 'survival']) &&
         data.score is number && data.score >= 0 && data.score <= 10000000 &&
         data.coins is number && data.coins >= 0 && data.coins <= 100000 &&
         data.timeSeconds is number && data.timeSeconds >= 0 &&

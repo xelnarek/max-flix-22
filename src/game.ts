@@ -8,6 +8,7 @@ import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from 
 import { chooseSurvivalEventSpawnPoint } from './survivalSpawn.ts';
 import { shouldSpawnBosmanKrakow } from './survivalEncounters.ts';
 import { chooseCampaignRewardSpawnPoint } from './campaignRewards.ts';
+import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
 import {
   advanceAbilityCooldown,
   applyAbilityKillRecharge,
@@ -355,6 +356,7 @@ export class MaxFlizGameEngine {
   private walkCycle = 0;
   private speechBubbleTimer = 0;
   private levelStartTime = 0;
+  private activeElapsedSeconds = 0;
   private cameraShake = 0;
   private screenShakeDuration = 0;
   private screenShakeIntensity = 0;
@@ -444,6 +446,7 @@ export class MaxFlizGameEngine {
   private survivalUiTimer = 0;
   private survivalWave = 1;
   private survivalKills = 0;
+  private survivalWaveStartKills = 0;
   private survivalLevel = 1;
   private survivalXp = 0;
   private survivalXpToNext = 6;
@@ -1178,6 +1181,7 @@ export class MaxFlizGameEngine {
     this.collectedVipCount = 0;
     this.resetAbilityCooldown();
     this.levelStartTime = performance.now();
+    this.activeElapsedSeconds = 0;
     this.waveDirectorCooldown = 0;
     this.activeChaserIds.clear();
     this.threatTier = 0;
@@ -1197,6 +1201,7 @@ export class MaxFlizGameEngine {
     this.survivalUiTimer = 0;
     this.survivalWave = 1;
     this.survivalKills = 0;
+    this.survivalWaveStartKills = 0;
     this.survivalLevel = 1;
     this.survivalXp = 0;
     this.survivalXpToNext = 9;
@@ -4661,6 +4666,7 @@ export class MaxFlizGameEngine {
     this.updatePerkTimers(simDt);
 
     if (this.state === 'playing') {
+      this.activeElapsedSeconds += simDt;
       this.updateAbilityCooldown(simDt);
       this.updateLootCrates(simDt);
       if (this.invulnerableTimer > 0) this.invulnerableTimer -= simDt;
@@ -5008,7 +5014,21 @@ export class MaxFlizGameEngine {
     this.updateSurvivalAuditorAura(dt);
     const nextWave = 1 + Math.floor(this.survivalElapsed / 60);
     if (nextWave > this.survivalWave) {
+      const previousWaveKills = Math.max(0, this.survivalKills - this.survivalWaveStartKills);
+      const waveClearBonus = getSurvivalWaveClearBonus(this.survivalWave, previousWaveKills);
+      if (waveClearBonus > 0) {
+        this.score += waveClearBonus;
+        this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+        this.emitFloatingToast(
+          'ZMIANA ZALICZONA: +' + waveClearBonus + ' PKT • ' + previousWaveKills + ' ELIMINACJE',
+          this.playerPos.x,
+          this.playerPos.y + 1.55,
+          this.playerPos.z,
+          'combo'
+        );
+      }
       this.survivalWave = nextWave;
+      this.survivalWaveStartKills = this.survivalKills;
       this.emitFloatingToast('FALA ' + this.survivalWave + ' — KOLEJNA ZMIANA WCHODZI NA HALĘ!', this.playerPos.x, this.playerPos.y + 1.7, this.playerPos.z, 'combo');
       sound.playAlert();
 
@@ -9960,7 +9980,10 @@ export class MaxFlizGameEngine {
     this.comboStreak++;
     this.comboTimer = this.charDef.id === 'mateusz' ? 5.5 : 3.8;
     const comboMultiplier = 1 + (this.comboStreak - 1) * 0.25;
-    const finalPoints = Math.round(points * comboMultiplier);
+    const survivalDifficultyMultiplier = this.gameMode === 'survival'
+      ? getSurvivalKillScoreMultiplier(this.survivalWave)
+      : 1;
+    const finalPoints = Math.round(points * comboMultiplier * survivalDifficultyMultiplier);
     this.score += finalPoints;
     this.handleMateuszPassive(2);
     if (this.gameMode === 'survival') {
@@ -10505,11 +10528,13 @@ export class MaxFlizGameEngine {
   }
 
   public getElapsedSeconds(): number {
-    return Math.max(1, Math.round((performance.now() - this.levelStartTime) / 1000));
+    // Count simulated active play, not real time spent paused or choosing upgrades.
+    return Math.max(1, Math.round(this.activeElapsedSeconds));
   }
 
   public isBossDefeated(): boolean {
-    return this.enemies.some((e) => e.type === 'walczak' && e.state === 'defeated');
+    const bossTypes = new Set(['walczak', 'krol_leto', 'bosman_krakow', 'sebix_m']);
+    return this.enemies.some((enemy) => bossTypes.has(enemy.type) && enemy.state === 'defeated');
   }
 
   public getActivePerks(): ActivePerks {

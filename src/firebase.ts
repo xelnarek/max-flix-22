@@ -15,6 +15,13 @@ import {
 } from 'firebase/firestore';
 import { getAuth, signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
 import firebaseConfig from '../firebase-applet-config.json';
+import {
+  getLeaderboardSlice,
+  mergeLeaderboardEntries,
+  normalizeLeaderboardEntry,
+  type LeaderboardEntry,
+  type LeaderboardGameMode,
+} from './leaderboard.ts';
 
 const isBrowser = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
 
@@ -37,30 +44,56 @@ const safeStorage = {
   },
 };
 
+const LEADERBOARD_CACHE_KEY = 'maxfliz_cached_leaderboard';
+const PENDING_LEADERBOARD_KEY = 'maxfliz_pending_score_submissions';
+
+interface PendingLeaderboardWrite {
+  id: string;
+  payload: Omit<LeaderboardEntry, 'id' | 'syncStatus'>;
+}
+
 const parseCachedLeaderboard = (): LeaderboardEntry[] => {
   try {
-    const raw = safeStorage.getItem('maxfliz_cached_leaderboard');
+    const raw = safeStorage.getItem(LEADERBOARD_CACHE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    return Array.isArray(parsed)
+      ? parsed.filter(Boolean).map((item: Partial<LeaderboardEntry>) =>
+          normalizeLeaderboardEntry(item, item.id)
+        )
+      : [];
   } catch {
     return [];
   }
 };
 
-const normalizeLeaderboardEntry = (
-  data: Partial<LeaderboardEntry> & { id?: string },
-  fallbackId?: string
-): LeaderboardEntry => ({
-  id: data.id || fallbackId,
-  playerName: String(data.playerName || 'Magazynier').slice(0, 32),
-  hero: String(data.hero || 'Marcin'),
-  score: Number(data.score) || 0,
-  coins: Number(data.coins) || 0,
-  timeSeconds: Number(data.timeSeconds) || 0,
-  bossDefeated: Boolean(data.bossDefeated),
-  createdAt: String(data.createdAt || new Date().toISOString()),
-});
+const parsePendingLeaderboardWrites = (): PendingLeaderboardWrite[] => {
+  try {
+    const raw = safeStorage.getItem(PENDING_LEADERBOARD_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is PendingLeaderboardWrite =>
+      Boolean(item && typeof item.id === 'string' && item.payload && typeof item.payload === 'object')
+    );
+  } catch {
+    return [];
+  }
+};
+
+const persistPendingLeaderboardWrites = (writes: PendingLeaderboardWrite[]): void => {
+  safeStorage.setItem(PENDING_LEADERBOARD_KEY, JSON.stringify(writes));
+};
+
+const cacheLeaderboardEntries = (entries: readonly LeaderboardEntry[]): void => {
+  const merged = mergeLeaderboardEntries(entries, parseCachedLeaderboard());
+  safeStorage.setItem(LEADERBOARD_CACHE_KEY, JSON.stringify(getLeaderboardSlice(merged, 30)));
+};
+
+export type LeaderboardSubmitResult = {
+  id: string;
+  status: 'online' | 'queued';
+};
 
 // Singleton Pattern for Firebase Services
 class FirebaseServicesSingleton {
@@ -105,16 +138,6 @@ export const getFirebaseInstance = () => FirebaseServicesSingleton.getInstance()
 
 
 
-export interface LeaderboardEntry {
-  id?: string;
-  playerName: string;
-  hero: string;
-  score: number;
-  coins: number;
-  timeSeconds: number;
-  bossDefeated: boolean;
-  createdAt: string;
-}
 
 export enum OperationType {
   CREATE = 'create',
@@ -236,7 +259,8 @@ export function initAuth(): Promise<User | null> {
 export async function ensureLeaderboardServices(): Promise<void> {
   try {
     await initAuth();
-    await testFirestoreConnection();
+    const connected = await testFirestoreConnection();
+    if (connected) await syncPendingLeaderboardScores();
   } catch (error) {
     console.warn('[Firebase:Init] ⚠️ Podgrzewanie połączenia pominięte:', error);
   }
@@ -277,93 +301,153 @@ export async function testFirestoreConnection(): Promise<boolean> {
 }
 
 /**
- * Submit high score to Max-Fliz public leaderboard
+ * Persist one finished run. Offline runs enter a durable local outbox and are
+ * retried with the same document ID so reconnects cannot create duplicate rows.
  */
-export async function submitScore(entry: Omit<LeaderboardEntry, 'createdAt'>): Promise<string> {
+export async function submitScore(
+  entry: Omit<LeaderboardEntry, 'createdAt' | 'id' | 'syncStatus'>,
+): Promise<LeaderboardSubmitResult> {
   const collectionPath = 'leaderboard';
   const cleanId = `mf_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
-  const payload: LeaderboardEntry = {
+  const payload: Omit<LeaderboardEntry, 'id' | 'syncStatus'> = {
+    mode: (entry.mode === 'survival' ? 'survival' : 'campaign') as LeaderboardGameMode,
     playerName: String(entry.playerName || 'Pracownik Magazynu').trim().slice(0, 32) || 'Pracownik Magazynu',
-    hero: String(entry.hero || 'Marcin'),
-    score: Math.max(0, Math.floor(entry.score)),
-    coins: Math.max(0, Math.floor(entry.coins)),
-    timeSeconds: Math.max(0, Math.floor(entry.timeSeconds)),
+    hero: String(entry.hero || 'Marcin').slice(0, 20),
+    score: Math.min(10_000_000, Math.max(0, Math.floor(Number.isFinite(entry.score) ? entry.score : 0))),
+    coins: Math.min(100_000, Math.max(0, Math.floor(Number.isFinite(entry.coins) ? entry.coins : 0))),
+    timeSeconds: Math.max(0, Math.floor(Number.isFinite(entry.timeSeconds) ? entry.timeSeconds : 0)),
     bossDefeated: Boolean(entry.bossDefeated),
     createdAt: new Date().toISOString(),
   };
 
-  console.log(`[Firebase:Leaderboard] 📤 Wysyłanie wyniku '${payload.playerName}' (${payload.score} pkt) do '${collectionPath}/${cleanId}'...`);
+  console.log(`[Firebase:Leaderboard] 📤 Wynik ${payload.mode} '${payload.playerName}' (${payload.score} pkt) → ${collectionPath}/${cleanId}`);
+
+  const pending = parsePendingLeaderboardWrites();
+  const pendingWrite: PendingLeaderboardWrite = { id: cleanId, payload };
 
   try {
-    const cached = parseCachedLeaderboard();
-    const nextList = [...cached, { ...payload, id: cleanId }]
-      .sort((a, b) => Number(b.score) - Number(a.score))
-      .slice(0, 20);
+    await initAuth();
+    await setDoc(doc(db, collectionPath, cleanId), payload);
+    persistPendingLeaderboardWrites(pending.filter((item) => item.id !== cleanId));
+    cacheLeaderboardEntries([
+      normalizeLeaderboardEntry({ ...payload, id: cleanId, syncStatus: 'online' }),
+    ]);
+    return { id: cleanId, status: 'online' };
+  } catch (error) {
+    console.warn('[Firebase:Leaderboard] ⚠️ Brak potwierdzenia zapisu online; wynik trafia do kolejki synchronizacji.');
+    handleFirestoreError(error, OperationType.WRITE, `${collectionPath}/${cleanId}`);
 
-    safeStorage.setItem('maxfliz_cached_leaderboard', JSON.stringify(nextList));
-  } catch (err) {
-    console.warn('[Firebase:Cache] ⚠️ Błąd buforowania wyniku lokalnego:', err);
+    const nextPending = [...pending.filter((item) => item.id !== cleanId), pendingWrite];
+    persistPendingLeaderboardWrites(nextPending);
+    const wasQueued = parsePendingLeaderboardWrites().some((item) => item.id === cleanId);
+    if (!wasQueued) {
+      throw new Error('Nie udało się zapisać wyniku online ani utrwalić lokalnej kolejki.');
+    }
+
+    cacheLeaderboardEntries([
+      normalizeLeaderboardEntry({ ...payload, id: cleanId, syncStatus: 'pending' }),
+    ]);
+    return { id: cleanId, status: 'queued' };
+  }
+}
+
+/**
+ * Retry offline submissions using their original IDs. If a previous request
+ * reached Firestore but its acknowledgement was lost, verify the document
+ * instead of attempting to overwrite it (leaderboard documents are immutable).
+ */
+export async function syncPendingLeaderboardScores(): Promise<number> {
+  const pending = parsePendingLeaderboardWrites();
+  if (!pending.length) return 0;
+
+  // Anonymous auth is attempted, but leaderboard creation rules also allow a guest session.
+  await initAuth();
+
+  const remaining: PendingLeaderboardWrite[] = [];
+  const acknowledged: LeaderboardEntry[] = [];
+
+  for (const item of pending) {
+    const ref = doc(db, 'leaderboard', item.id);
+    try {
+      await setDoc(ref, item.payload);
+      acknowledged.push(normalizeLeaderboardEntry({
+        ...item.payload, id: item.id, syncStatus: 'online',
+      }));
+      continue;
+    } catch (error) {
+      try {
+        const existing = await getDocFromServer(ref);
+        const data = existing.exists() ? existing.data() as DocumentData : null;
+        const matches = Boolean(data &&
+          data.score === item.payload.score &&
+          data.mode === item.payload.mode &&
+          data.playerName === item.payload.playerName &&
+          data.hero === item.payload.hero &&
+          data.createdAt === item.payload.createdAt);
+        if (matches) {
+          acknowledged.push(normalizeLeaderboardEntry({
+            ...item.payload, id: item.id, syncStatus: 'online',
+          }));
+          continue;
+        }
+      } catch {
+        // Still offline or unreadable; retain the item for the next retry.
+      }
+      remaining.push(item);
+      console.warn(`[Firebase:Leaderboard] ⏳ Wynik ${item.id} nadal czeka na synchronizację.`, error);
+    }
   }
 
-  try {
-    const docRef = doc(db, collectionPath, cleanId);
-    await setDoc(docRef, payload);
-    console.log(`[Firebase:Leaderboard] ✅ Wynik gracza '${payload.playerName}' zapisan pomyślnie w Firestore!`);
-    return cleanId;
-  } catch (err) {
-    console.error(`[Firebase:Leaderboard] ❌ Nie udało się zapisać wyniku w Firestore. Logowanie diagnostyczne...`);
-    handleFirestoreError(err, OperationType.WRITE, `${collectionPath}/${cleanId}`);
-    return `local_${Date.now()}`;
-  }
+  persistPendingLeaderboardWrites(remaining);
+  if (acknowledged.length) cacheLeaderboardEntries(acknowledged);
+  return acknowledged.length;
 }
 
 /**
  * Fetch top shift high scores from Firebase with graceful local cache fallback
  */
-export async function getTopLeaderboard(maxEntries = 10): Promise<LeaderboardEntry[]> {
+export async function getTopLeaderboard(maxEntries = 15): Promise<LeaderboardEntry[]> {
   const collectionPath = 'leaderboard';
-  console.log(`[Firebase:Leaderboard] 📥 Pobieranie TOP ${maxEntries} wyników z kolekcji '${collectionPath}'...`);
+  console.log(`[Firebase:Leaderboard] 📥 Pobieranie rankingu wszystkich trybów z kolekcji '${collectionPath}'...`);
 
   try {
-    const q = query(collection(db, collectionPath), orderBy('score', 'desc'), limit(maxEntries));
+    await syncPendingLeaderboardScores();
+    // Fetch a wider global window, then merge offline entries and apply one shared
+    // cross-mode comparator. Mode labels do not split the default global ranking.
+    const q = query(collection(db, collectionPath), orderBy('score', 'desc'), limit(Math.max(100, maxEntries)));
     const snapshot = await getDocs(q);
-    const results = snapshot.docs.map((d) => {
+    const cloudEntries = snapshot.docs.map((d) => {
       const data = d.data() as DocumentData;
-      return normalizeLeaderboardEntry(
-        {
-          id: d.id,
-          playerName: data.playerName,
-          hero: data.hero,
-          score: data.score,
-          coins: data.coins,
-          timeSeconds: data.timeSeconds,
-          bossDefeated: data.bossDefeated,
-          createdAt: data.createdAt,
-        },
-        d.id
-      );
+      return normalizeLeaderboardEntry({
+        id: d.id,
+        playerName: data.playerName,
+        hero: data.hero,
+        mode: data.mode,
+        score: data.score,
+        coins: data.coins,
+        timeSeconds: data.timeSeconds,
+        bossDefeated: data.bossDefeated,
+        createdAt: data.createdAt,
+        syncStatus: 'online',
+      }, d.id);
     });
+    const pendingEntries = parsePendingLeaderboardWrites().map((item) =>
+      normalizeLeaderboardEntry({ ...item.payload, id: item.id, syncStatus: 'pending' })
+    );
+    const merged = mergeLeaderboardEntries(cloudEntries, pendingEntries);
+    cacheLeaderboardEntries(merged);
 
-    console.log(`[Firebase:Leaderboard] ✅ Pobrano ${results.length} wyników bezpośrednio z Firestore.`);
+    console.log(`[Firebase:Leaderboard] ✅ Ranking globalny: ${cloudEntries.length} online + ${pendingEntries.length} oczekujących.`);
+    return getLeaderboardSlice(merged, maxEntries);
+  } catch (error) {
+    console.error('[Firebase:Leaderboard] ⚠️ Brak dostępu do Firestore — używam ostatniego lokalnego rankingu.');
+    handleFirestoreError(error, OperationType.LIST, collectionPath);
 
-    if (results.length > 0) {
-      safeStorage.setItem('maxfliz_cached_leaderboard', JSON.stringify(results));
-      return results;
-    }
-  } catch (err) {
-    console.error(`[Firebase:Leaderboard] ❌ Błąd pobierania rankingu z Firestore (przełączanie na lokalny bufor)...`);
-    handleFirestoreError(err, OperationType.LIST, collectionPath);
+    const cached = parseCachedLeaderboard();
+    const pendingEntries = parsePendingLeaderboardWrites().map((item) =>
+      normalizeLeaderboardEntry({ ...item.payload, id: item.id, syncStatus: 'pending' })
+    );
+    return getLeaderboardSlice(mergeLeaderboardEntries(cached, pendingEntries), maxEntries);
   }
-
-  const cached = parseCachedLeaderboard();
-  if (cached.length > 0) {
-    console.log(`[Firebase:Leaderboard] ℹ️ Odczytano ${cached.length} zapamiętanych wyników z lokalnej pamięci (offline mode).`);
-    return cached
-      .map((item) => normalizeLeaderboardEntry(item, item.id))
-      .sort((a, b) => Number(b.score) - Number(a.score))
-      .slice(0, maxEntries);
-  }
-
-  return [];
 }

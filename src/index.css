@@ -4143,3 +4143,197 @@ button {
 .attack-icon[data-operator-icon="dawid"], .ability-icon[data-operator-icon="dawid"] { color: #f5a04c; }
 .attack-icon[data-operator-icon="mateusz"], .ability-icon[data-operator-icon="mateusz"] { color: #c9a8ff; }
 .attack-icon[data-operator-icon="piotr"], .ability-icon[data-operator-icon="piotr"] { color: #ff777e; }
+
+
+/* Global leaderboard: Campaign and Survival share one score ladder, with mode visible per row. */
+.leaderboard-container {
+  gap: 12px;
+  padding: 14px;
+  background: linear-gradient(155deg, rgba(16, 31, 46, .96), rgba(7, 15, 25, .98));
+  border-color: rgba(111, 170, 198, .22);
+}
+.leaderboard-header-row {
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.leaderboard-title {
+  flex: 1 1 220px;
+  min-width: 0;
+  line-height: 1.35;
+  letter-spacing: .065em;
+}
+.leaderboard-list {
+  gap: 7px;
+  max-height: min(64vh, 610px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 3px 3px 1px;
+}
+.leaderboard-item {
+  display: grid;
+  grid-template-columns: 28px 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  border-radius: 12px;
+  padding: 9px 10px;
+  background: linear-gradient(120deg, rgba(27, 45, 63, .98), rgba(14, 27, 41, .98));
+  border: 1px solid rgba(137, 167, 190, .16);
+}
+.leaderboard-item.top-1 {
+  background: linear-gradient(105deg, rgba(245, 158, 11, .19), rgba(19, 33, 48, .98) 58%);
+  border-color: rgba(245, 190, 90, .62);
+  box-shadow: inset 3px 0 0 rgba(245, 190, 90, .78);
+}
+.leaderboard-item.top-2 {
+  border-color: rgba(203, 213, 225, .34);
+  box-shadow: inset 3px 0 0 rgba(203, 213, 225, .52);
+}
+.leaderboard-item.top-3 {
+  border-color: rgba(180, 120, 82, .40);
+  box-shadow: inset 3px 0 0 rgba(180, 120, 82, .55);
+}
+.leaderboard-rank {
+  width: auto;
+  font-variant-numeric: tabular-nums;
+}
+.leaderboard-hero-tag {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, .25);
+  border-radius: 11px;
+  background: #0b1420;
+}
+.leaderboard-hero-tag .operator-portrait {
+  width: 100%;
+  height: 100%;
+}
+.leaderboard-player-info {
+  min-width: 0;
+  gap: 3px;
+}
+.leaderboard-player-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+}
+.leaderboard-player-subline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+.leaderboard-mode-pill,
+.leaderboard-sync-pill {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 2px 7px;
+  border: 1px solid rgba(148, 163, 184, .26);
+  font-size: 8px;
+  line-height: 1.35;
+  font-weight: 900;
+  letter-spacing: .075em;
+  white-space: nowrap;
+}
+.leaderboard-mode-pill.campaign {
+  color: #9bdcf5;
+  background: rgba(14, 116, 144, .15);
+  border-color: rgba(56, 189, 248, .28);
+}
+.leaderboard-mode-pill.survival {
+  color: #d6c5ff;
+  background: rgba(109, 40, 217, .18);
+  border-color: rgba(167, 139, 250, .36);
+}
+.leaderboard-sync-pill.pending {
+  color: #fcd38d;
+  background: rgba(146, 64, 14, .18);
+  border-color: rgba(245, 158, 11, .36);
+}
+.leaderboard-player-meta {
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.leaderboard-score-cluster {
+  min-width: 74px;
+}
+.leaderboard-score-val {
+  font-size: 13px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The defeat summary is also a valid result screen: both modes can save a run. */
+.gameover-card {
+  width: min(540px, calc(100vw - 24px));
+  max-height: calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.gameover-stats-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 7px;
+  margin: 12px 0 6px;
+}
+.gameover-stats-summary .summary-item {
+  min-width: 0;
+  padding: 9px 6px;
+}
+.gameover-stats-summary .summary-value {
+  font-size: clamp(15px, 4vw, 21px);
+  overflow-wrap: anywhere;
+}
+.gameover-run-detail {
+  margin: 2px 0 12px;
+  color: #a7c3d5;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-align: center;
+}
+.gameover-submit-box {
+  margin: 0 0 12px;
+  border-color: rgba(56, 189, 248, .3);
+}
+.gameover-submit-box .submit-box-title {
+  color: #9bdcf5;
+}
+@media (max-width: 520px) {
+  .leaderboard-container { padding: 9px 8px; }
+  .leaderboard-header-row { align-items: flex-start; }
+  .leaderboard-title { flex-basis: 100%; font-size: 11px; }
+  .leaderboard-item {
+    grid-template-columns: 23px 32px minmax(0, 1fr) auto;
+    gap: 6px;
+    padding: 7px 6px;
+  }
+  .leaderboard-hero-tag { width: 32px; height: 32px; border-radius: 9px; }
+  .leaderboard-player-name { font-size: 11px; }
+  .leaderboard-player-meta { font-size: 9px; }
+  .leaderboard-score-cluster { min-width: 58px; }
+  .leaderboard-score-val { font-size: 11px; }
+  .gameover-card { padding: 14px 12px; }
+  .gameover-stats-summary { gap: 5px; }
+  .gameover-stats-summary .summary-label { font-size: 8px; }
+  .gameover-submit-box .submit-input-row { flex-direction: column; }
+  .gameover-submit-box .nickname-input,
+  .gameover-submit-box .btn-submit-score { width: 100%; }
+}
+@media (max-width: 360px) {
+  .leaderboard-item {
+    grid-template-columns: 20px 29px minmax(0, 1fr);
+  }
+  .leaderboard-score-cluster {
+    grid-column: 3;
+    align-items: flex-start;
+    min-width: 0;
+    margin-top: 1px;
+  }
+  .leaderboard-score-val { font-size: 11px; }
+  .gameover-stats-summary .summary-value { font-size: 14px; }
+}
