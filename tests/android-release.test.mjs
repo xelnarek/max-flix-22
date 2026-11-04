@@ -69,6 +69,23 @@ test('Android upload signing helper validates a keystore, stores four GitHub sec
   assert.match(docs, /bash scripts\/configure-github-android-signing\.sh/);
 });
 
+test('Android artifact verifier blocks unsigned Play uploads and records hashes', async () => {
+  const [script, pkg, prepare] = await Promise.all([
+    read('../scripts/verify-android-release.mjs'),
+    read('../package.json').then(JSON.parse),
+    read('../scripts/prepare-android-release.mjs'),
+  ]);
+  assert.equal(pkg.scripts['android:verify-release'], 'node scripts/verify-android-release.mjs');
+  assert.match(prepare, /ANDROID_SIGNING_ENABLED=/);
+  assert.match(script, /jarsigner/);
+  assert.match(script, /apksigner/);
+  assert.match(script, /signingConfigured && !bundleSigned/);
+  assert.match(script, /targetSdk !== 36/);
+  assert.match(script, /playStoreUploadReady/);
+  assert.match(script, /sha256/);
+  assert.match(script, /android-build-report\\.json/);
+});
+
 test('Play Store artwork sources and CI exports meet the listing image dimensions', async () => {
   const [iconSvg, iconBackgroundSvg, featureSvg, artworkScript, workflow, listingText] = await Promise.all([
     read('../resources/icon-only.svg'),
