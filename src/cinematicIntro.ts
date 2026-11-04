@@ -21,7 +21,6 @@ export class CinematicIntroManager {
   private rafId: number | null = null;
   private active = false;
   private startedAt = 0;
-  private lastFrameAt = 0;
   private lastRenderAt = 0;
   private elapsed = 0;
   private readonly duration = 11.8;
@@ -49,7 +48,6 @@ export class CinematicIntroManager {
     this.active = true;
     this.elapsed = 0;
     this.startedAt = performance.now();
-    this.lastFrameAt = this.startedAt;
     this.lastRenderAt = this.startedAt;
     this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     const mobile = window.innerWidth < 760 || navigator.maxTouchPoints > 0;
