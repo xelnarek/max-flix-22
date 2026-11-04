@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  applyPerfectDodgeCounterattack,
   getSurvivalDashCooldownSeconds,
   getSurvivalDashProgress,
   rollSurvivalCriticalDamage,
@@ -51,4 +52,16 @@ test('dash cooldown progress is clamped to the HUD range', () => {
   assert.equal(getSurvivalDashProgress(-1, 5.2), 1);
   assert.equal(getSurvivalDashProgress(10, 5.2), 0);
   assert.equal(getSurvivalDashProgress(0, 0), 1);
+});
+
+
+test('a perfect dodge grants one flat damage point to the next volley only', () => {
+  assert.equal(applyPerfectDodgeCounterattack(1, true), 2);
+  assert.equal(applyPerfectDodgeCounterattack(3, true), 4);
+  assert.equal(applyPerfectDodgeCounterattack(3, false), 3);
+});
+
+test('counterattack damage remains safe for invalid base values', () => {
+  assert.equal(applyPerfectDodgeCounterattack(Number.NaN, true), 2);
+  assert.equal(applyPerfectDodgeCounterattack(Number.POSITIVE_INFINITY, false), 1);
 });
