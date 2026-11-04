@@ -1,4 +1,4 @@
-name: Deploy Max-Fliz Magazyn Showdown to GitHub Pages
+name: Deploy Paleciaki! Magazyn Chaosu to GitHub Pages
 
 on:
   push:
