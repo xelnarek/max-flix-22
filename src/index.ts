@@ -769,7 +769,12 @@ class PaleciakiScene extends xb.Script {
           for (const option of options) {
             const card = document.createElement('button');
             card.type = 'button';
-            card.className = 'survival-upgrade-card';
+            card.className = 'survival-upgrade-card rarity-' + option.rarity;
+            card.dataset.rarity = option.rarity;
+            card.setAttribute('aria-label', option.rarityLabel + ': ' + option.title + '. ' + option.description);
+            const rarityBadge = document.createElement('span');
+            rarityBadge.className = 'survival-upgrade-rarity';
+            rarityBadge.textContent = option.rarityLabel;
             const icon = document.createElement('span');
             icon.className = 'survival-upgrade-icon';
             icon.textContent = option.icon;
@@ -779,7 +784,7 @@ class PaleciakiScene extends xb.Script {
             const description = document.createElement('span');
             description.className = 'survival-upgrade-description';
             description.textContent = option.description;
-            card.append(icon, title, description);
+            card.append(rarityBadge, icon, title, description);
             card.addEventListener('click', () => {
               survivalLevelUp.classList.add('hidden');
               if (!this.engine.chooseSurvivalUpgrade(option.id)) {
