@@ -256,13 +256,13 @@ export const AVAILABLE_PERKS: PerkDef[] = [
   {
     id: 'hardhat',
     name: 'Atestowany Kask BHP',
-    description: 'Tarcza ochronna na 1 bezpośrednie trafienie od wściekłego klienta, inspektora lub kary Walczaka.',
+    description: 'Tarcza ochronna na 1 bezpośrednie trafienie od wściekłego klienta, inspektora lub kary Nadzorcy Zero.',
     icon: '⛑️',
     color: 0x3b82f6,
   },
   {
     id: 'vibram_boots',
-    name: 'Buty Magazynowe Vibram',
+    name: 'Buty Magazynowe antypoślizgowe',
     description: 'Umożliwia podwójny skok w powietrzu, pozwalając wspinać się na najwyższe regały wysokiego składu.',
     icon: '👟',
     color: 0x10b981,
@@ -286,8 +286,8 @@ export const AVAILABLE_PERKS: PerkDef[] = [
   },
   {
     id: 'kfc_bucket',
-    name: 'Kubełek KFC od Dawida',
-    description: 'Gorące stripsy i skrzydełka! Leczy +2 Kawy BHP, daje Furię KFC (podwójne obrażenia i odporność na klej)!',
+    name: 'Kubełek Mocy od Vectora',
+    description: 'Gorące stripsy i skrzydełka! Leczy +2 Kawy BHP, daje Furię Kubełek Mocy (podwójne obrażenia i odporność na klej)!',
     icon: '🍗',
     color: 0xef4444,
     duration: 16,
