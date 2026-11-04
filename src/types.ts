@@ -201,7 +201,7 @@ export interface ActivePerks {
   shield: boolean;      // Foreman hardhat 1-hit invulnerability
   magnet: number;       // remaining duration in seconds
   speedBoost: number;   // remaining duration in seconds
-  kfcBerserk?: number;  // KFC chicken feast: 2x damage + speed + slow immunity
+  kfcBerserk?: number;  // Energy ration perk: 2x damage + speed + slow immunity
   bulldozer?: number;   // Golden Pallet Jack: ram enemies on contact
   attackHaste?: number;
   arcDrone?: number;
