@@ -209,7 +209,7 @@ export function getFloorTexture(): THREE.CanvasTexture {
   ctx.fillStyle = 'rgba(245, 158, 11, 0.5)';
   ctx.font = '700 24px monospace';
   ctx.fillText('SEKTOR B4-ALFA', 720, 100);
-  ctx.fillText('MAX-FLIZ 3D', 720, 920);
+  ctx.fillText('CENTRUM B4 3D', 720, 920);
 
   floorTexture = new THREE.CanvasTexture(canvas);
   floorTexture.colorSpace = THREE.SRGBColorSpace;
@@ -259,7 +259,7 @@ export function getWallTexture(): THREE.CanvasTexture {
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 14px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('BHP MAX-FLIZ', 256, 105);
+  ctx.fillText('BHP CENTRUM B4', 256, 105);
 
   wallTexture = new THREE.CanvasTexture(canvas);
   wallTexture.colorSpace = THREE.SRGBColorSpace;
@@ -377,7 +377,7 @@ export function getShowroomMarbleFloorTexture(): THREE.CanvasTexture {
   ctx.save();
   ctx.translate(512, 512);
   ctx.rotate(-Math.PI / 2);
-  ctx.fillText('MAX-FLIZ SHOWROOM • STREFA WANNY & SPA', 0, -4);
+  ctx.fillText('CENTRUM B4 SHOWROOM • STREFA WANNY & SPA', 0, -4);
   ctx.fillStyle = '#f59e0b';
   ctx.font = 'bold 16px "Segoe UI", Roboto, sans-serif';
   ctx.fillText('COLLEZIONE ITALIANA • NERO MARQUINA & ORO', 0, 22);
@@ -458,7 +458,7 @@ export function getShowroomWallTexture(): THREE.CanvasTexture {
   ctx.fillStyle = '#d4af37';
   ctx.font = 'bold 16px "Segoe UI", Roboto, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('MAX-FLIZ SHOWROOM', 256, 115);
+  ctx.fillText('CENTRUM B4 SHOWROOM', 256, 115);
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 11px sans-serif';
   ctx.fillText('GALERIA WNĘTRZ & ŁAZIENEK', 256, 132);
@@ -913,7 +913,7 @@ export function getTileBoxTexture(): THREE.CanvasTexture {
   ctx.fillStyle = '#fbbf24';
   ctx.font = 'bold 20px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('MAX-FLIZ GRES', 128, 124);
+  ctx.fillText('CENTRUM B4 GRES', 128, 124);
 
   // Fragile symbol
   ctx.strokeStyle = '#dc2626';
@@ -4540,7 +4540,7 @@ export function createCoffeeVendingMachineModel(): THREE.Group {
 /**
  * 41. Overhead Digital Industrial LED Scoreboard ("DNI BEZ WYPADKU NA GRESIE: 0")
  */
-export function createBhpDigitalScoreboard(title = 'BHP MAX-FLIZ • DNI BEZ POTŁUCZONEJ WANNY: 0'): THREE.Group {
+export function createBhpDigitalScoreboard(title = 'BHP CENTRUM B4 • DNI BEZ POTŁUCZONEJ WANNY: 0'): THREE.Group {
   const group = new THREE.Group();
   group.name = 'bhp_scoreboard';
 
@@ -4620,7 +4620,7 @@ export function createKfcBucketCollectible(): THREE.Group {
   ctx.fillStyle = '#ffffff';
   ctx.font = '900 26px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('KFC DAWID', 128, 70);
+  ctx.fillText('KUBEŁEK MOCY', 128, 70);
 
   const bucketTex = new THREE.CanvasTexture(canvas);
   bucketTex.colorSpace = THREE.SRGBColorSpace;
