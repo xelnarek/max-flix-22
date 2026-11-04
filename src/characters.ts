@@ -13,7 +13,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     passiveName: 'Mistrz Zaklęć ERP',
     passiveDescription: 'Podstawowy atak przywołuje cyfrowe zaklęcia z systemu ERP: błękitne runy, zlecenia i pieczęcie. Co trzeci czar tworzy mocniejszą pieczęć audytu. Zasięg przyciągania VIP +100%.',
     abilityName: 'KONWÓJ WZ-404! DO BOJU!',
-    abilityDescription: 'Przywołuje opancerzony czołg WZ-404, który przez 8 sekund podąża za Operator 01em, obraca wieżyczką i automatycznie ostrzeliwuje najbliższych przeciwników pociskami wybuchowymi. W Survival działa 6 sekund. Załoga melduje: „Cel zatwierdzony przez system ERP!”.',
+    abilityDescription: 'Przywołuje opancerzony czołg WZ-404, który przez 8 sekund podąża za operatorem 01, obraca wieżyczką i automatycznie ostrzeliwuje najbliższych przeciwników pociskami wybuchowymi. W Survival działa 6 sekund. Załoga melduje: „Cel zatwierdzony przez system ERP!”.',
     abilityCooldown: 17.0,
     voiceLines: [
       'Gdzie jest podpis na dokumencie WZ?! Bez podpisu paleta nie wyjedzie!',
