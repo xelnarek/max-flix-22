@@ -13,6 +13,11 @@
           "type": "string",
           "description": "Selected warehouse hero (Marcin, Grzesiek, Dawid, Mateusz)"
         },
+        "mode": {
+          "type": "string",
+          "enum": ["campaign", "survival"],
+          "description": "Game mode for this score entry"
+        },
         "score": {
           "type": "number",
           "description": "Final score earned in shift"
@@ -35,7 +40,7 @@
           "description": "Submission timestamp"
         }
       },
-      "required": ["playerName", "hero", "score", "coins", "timeSeconds", "createdAt"]
+      "required": ["playerName", "hero", "mode", "score", "coins", "timeSeconds", "createdAt"]
     },
     "PlayerProfile": {
       "title": "PlayerProfile",
