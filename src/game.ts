@@ -9694,6 +9694,42 @@ export class MaxFlizGameEngine {
       this.survivalDashDurationRemaining > 0
     ) return false;
 
+    const dashDuration = 0.22;
+    const dashSpeed = 18;
+    const dashDistance = dashDuration * dashSpeed;
+    let warningEnemy: EnemyItem | null = null;
+    let warningDirection = 0;
+
+    // Only the final 0.30 seconds of a visible, committed boss lane qualify.
+    // This prevents an ordinary dash through a harmless warning from farming rewards.
+    for (const enemy of this.enemies) {
+      const remaining = enemy.chargeTimer;
+      if (
+        enemy.state === 'defeated' ||
+        remaining === undefined ||
+        remaining <= 0.001 ||
+        remaining > 0.30 ||
+        !Number.isFinite(enemy.chargeDir) ||
+        !Number.isFinite(enemy.chargeLaneLength) ||
+        !Number.isFinite(enemy.chargeLaneWidth)
+      ) continue;
+
+      const laneDirection = enemy.chargeDir as number;
+      if (!isInsideBossAttackLane(
+        this.playerPos.x,
+        this.playerPos.z,
+        enemy.x,
+        enemy.z,
+        laneDirection,
+        enemy.chargeLaneLength as number,
+        enemy.chargeLaneWidth as number
+      )) continue;
+
+      warningEnemy = enemy;
+      warningDirection = laneDirection;
+      break;
+    }
+
     let directionX = 0;
     let directionZ = 0;
     if (this.keys['KeyD'] || this.keys['ArrowRight']) directionX += 1;
@@ -9705,7 +9741,29 @@ export class MaxFlizGameEngine {
       directionX = this.virtualJoystick.x;
       directionZ = this.virtualJoystick.y;
     }
-    const directionLength = Math.hypot(directionX, directionZ);
+
+    let directionLength = Math.hypot(directionX, directionZ);
+    if (directionLength <= 0.08 && warningEnemy) {
+      // On a last-moment boss warning, a no-direction input becomes an automatic
+      // sidestep. Pick the side with more free arena space instead of dashing into the lane.
+      const sideX = Math.cos(warningDirection);
+      const sideZ = -Math.sin(warningDirection);
+      const clearance = (x: number, z: number): number => {
+        let available = Number.POSITIVE_INFINITY;
+        if (x > 0.0001) available = Math.min(available, (this.levelBounds.maxX - this.playerPos.x) / x);
+        else if (x < -0.0001) available = Math.min(available, (this.levelBounds.minX - this.playerPos.x) / x);
+        if (z > 0.0001) available = Math.min(available, (this.levelBounds.maxZ - this.playerPos.z) / z);
+        else if (z < -0.0001) available = Math.min(available, (this.levelBounds.minZ - this.playerPos.z) / z);
+        return Math.max(0, available);
+      };
+      const leftClearance = clearance(sideX, sideZ);
+      const rightClearance = clearance(-sideX, -sideZ);
+      const preferredSide = leftClearance >= rightClearance ? 1 : -1;
+      directionX = sideX * preferredSide;
+      directionZ = sideZ * preferredSide;
+      directionLength = 1;
+    }
+
     if (directionLength > 0.08) {
       directionX /= directionLength;
       directionZ /= directionLength;
@@ -9714,17 +9772,55 @@ export class MaxFlizGameEngine {
       directionZ = Math.cos(this.playerRot);
     }
 
+    const isPerfectDodge = warningEnemy !== null && isEffectiveBossLaneDodge(
+      this.playerPos.x,
+      this.playerPos.z,
+      directionX,
+      directionZ,
+      dashDistance,
+      warningEnemy.x,
+      warningEnemy.z,
+      warningDirection,
+      warningEnemy.chargeLaneLength as number,
+      warningEnemy.chargeLaneWidth as number
+    );
+
     this.survivalDashDirection.set(directionX, 0, directionZ).normalize();
-    this.survivalDashDurationRemaining = 0.22;
+    this.survivalDashDurationRemaining = dashDuration;
     this.survivalDashCooldownDuration = getSurvivalDashCooldownSeconds(this.survivalDashCooldownMultiplier);
     this.survivalDashCooldownRemaining = this.survivalDashCooldownDuration;
     // Invulnerability covers the dodge and a short exit window, not a full defensive shield.
     this.invulnerableTimer = Math.max(this.invulnerableTimer, 0.32);
     this.playerRot = Math.atan2(directionX, directionZ);
-    this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.28, this.playerPos.z, 0x67e8f9);
-    this.triggerScreenShake(0.10, 0.09);
+    this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.28, this.playerPos.z, isPerfectDodge ? 0xfacc15 : 0x67e8f9);
+    this.triggerScreenShake(isPerfectDodge ? 0.20 : 0.10, isPerfectDodge ? 0.14 : 0.09);
     sound.playAttackWhoosh();
-    this.emitFloatingToast('↗ UNIK TAKTYCZNY!', this.playerPos.x, this.playerPos.y + 1.15, this.playerPos.z, 'perk');
+
+    if (isPerfectDodge) {
+      this.survivalPerfectDodges++;
+      this.score += 100;
+      this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+
+      // A clean last-moment sidestep shortens both the next dodge and the operator's
+      // special recharge. The fixed reward is deliberately smaller than a full reset.
+      this.survivalDashCooldownRemaining = Math.max(1.6, this.survivalDashCooldownRemaining - 1.35);
+      this.abilityCooldownState = advanceAbilityCooldown(this.abilityCooldownState, 0.65);
+      this.updateAbilityCooldown(0, true);
+      this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.65, this.playerPos.z, 0xfacc15);
+      this.triggerBloomPulse(0.32);
+      this.emitFloatingToast(
+        '✦ PERFECT DODGE! +100 PKT • SUPER +0,65 s',
+        this.playerPos.x,
+        this.playerPos.y + 1.35,
+        this.playerPos.z,
+        'combo'
+      );
+      sound.playPickup();
+      this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+    } else {
+      this.emitFloatingToast('↗ UNIK TAKTYCZNY!', this.playerPos.x, this.playerPos.y + 1.15, this.playerPos.z, 'perk');
+    }
+
     this.updateSurvivalDashCooldown(0, true);
     return true;
   }
