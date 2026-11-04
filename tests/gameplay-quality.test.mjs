@@ -877,3 +877,58 @@ test('Campaign boss-lane perfect dodge charges one primary attack and does not t
   assert.match(attack, /if \(campaignCounterattackReady\) \{\s*this\.campaignCounterattackReady = false/);
   assert.equal((attack.match(/campaignCounterattackReady \? 1 : 0/g) || []).length, 5);
 });
+
+
+test('1x and 2x speed controls use the engine time scale without double scaling RAF delta', async () => {
+  const [game, app, html, css] = await Promise.all([
+    read('../src/game.ts'), read('../src/index.ts'), read('../index.html'), read('../src/index.css')
+  ]);
+  assert.match(game, /private timeScale: 1 \| 2 = 1/);
+  assert.match(game, /public getTimeScale\(\): 1 \| 2/);
+  assert.match(game, /public setTimeScale\(scale: number\): 1 \| 2/);
+  assert.match(game, /frameDt \* \(this\.state === 'playing' \? this\.timeScale : 1\)/);
+  assert.match(app, /this\.engine\.setTimeScale\(2\)/);
+  assert.match(app, /this\.engine\.setTimeScale\(1\)/);
+  assert.match(app, /this\.engine\.update\(dt\)/);
+  assert.doesNotMatch(app, /getScaledSimulationDelta/);
+  assert.match(html, /id="btn-speed-1x"/);
+  assert.match(html, /id="btn-speed-2x"/);
+  assert.match(css, /\.game-speed-control/);
+  assert.match(css, /flex-wrap: wrap/);
+});
+
+test('Campaign special recharge rewards regular kills, elite chains and bosses with a cap', async () => {
+  const [game, cooldown] = await Promise.all([
+    read('../src/game.ts'), read('../src/abilityCooldown.ts')
+  ]);
+  assert.match(cooldown, /getAbilityKillRechargeSeconds/);
+  assert.match(cooldown, /if \(isBoss\) return 1\.65/);
+  assert.match(cooldown, /return isElite \? 0\.82 : 0\.24/);
+  assert.match(cooldown, /mode === 'survival' \? 0\.22 : 0\.34/);
+  assert.match(game, /private rechargeAbilityFromKill\(isElite: boolean, isBoss = false\)/);
+  assert.match(game, /const chainMultiplier = 1 \+ Math\.min\(0\.35/);
+  assert.match(game, /getAbilityKillRechargeSeconds\(mode, isElite, isBoss\)/);
+  assert.match(game, /getAbilityKillRechargeCapRatio\('campaign'\)/);
+  assert.match(game, /this\.rechargeAbilityFromKill\(isAbilityRechargeElite, isAbilityRechargeBoss\)/);
+  assert.match(game, /this\.gameMode === 'survival'[\s\S]{0,200}this\.survivalAbilityKillRechargeCapRatio/);
+  assert.match(game, /this\.abilityCooldownState\.remainingSeconds,\s*true\s*\)/);
+});
+
+test('new cinematic intro replaces the old pixel/VHS intro and launches at boot', async () => {
+  const [app, intro, html, css, tree] = await Promise.all([
+    read('../src/index.ts'), read('../src/cinematicIntro.ts'),
+    read('../index.html'), read('../src/index.css'), read('../src/pixelIntro.ts').catch(() => '')
+  ]);
+  assert.match(app, /new CinematicIntroManager/);
+  assert.match(app, /launchCinematicIntro\(\)/);
+  assert.match(app, /this\.cinematicIntro\.stop\(false, false\)/);
+  assert.doesNotMatch(app, /PixelIntroManager|pixelIntro/i);
+  assert.match(intro, /Canvas 2D/);
+  assert.match(intro, /prefers-reduced-motion/);
+  assert.match(intro, /drawWarehouse/);
+  assert.match(html, /btn-open-cinematic-intro/);
+  assert.match(html, /MAX-FLIX: GRANICA ABSURDU/);
+  assert.match(css, /\.cinematic-intro-overlay/);
+  assert.doesNotMatch(css, /pixel-intro-overlay|pixel-vhs-header/);
+  assert.equal(tree, '', 'legacy PixelIntro source should be removed');
+});
