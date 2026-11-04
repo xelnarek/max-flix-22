@@ -29,7 +29,7 @@ import {
   SURVIVAL_WEAPON_UNLOCK_SECONDS,
 } from './combatBalance.ts';
 import { ParticleMeshPool, type ParticleShape } from './particlePool.ts';
-import { getSurvivalDashCooldownSeconds, getSurvivalDashProgress, rollSurvivalCriticalDamage } from './archeroMechanics.ts';
+import { applyPerfectDodgeCounterattack, getSurvivalDashCooldownSeconds, getSurvivalDashProgress, rollSurvivalCriticalDamage } from './archeroMechanics.ts';
 import { CHARACTERS } from './characters.ts';
 import { sound } from './sound.ts';
 import {
@@ -160,7 +160,7 @@ const SURVIVAL_WEAPON_DEFS: Record<SurvivalWeaponId, {
   wz_boomerang: { name: 'WZ-Bumerang', evolvedName: 'PROTOKÓŁ POWROTU', icon: '📜', description: 'Magiczna WZ-tka przecina linię wrogów i wraca do operatora.', cooldown: 13.0, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.wz_boomerang, color: 0xfbbf24, evolutionPassive: 'growth', evolutionPassiveLabel: 'Premia za normę' },
 };
 export interface SurvivalSnapshot {
-  elapsedSeconds: number; wave: number; kills: number; perfectDodges: number; level: number; xp: number; xpToNext: number;
+  elapsedSeconds: number; wave: number; kills: number; perfectDodges: number; counterattackReady: boolean; level: number; xp: number; xpToNext: number;
   aliveEnemies: number; rerolls: number; skips: number; activeHazards: number;
   weapons: Array<{ id: SurvivalWeaponId; name: string; icon: string; level: number; evolved: boolean }>;
 }
@@ -449,6 +449,7 @@ export class MaxFlizGameEngine {
   private survivalWave = 1;
   private survivalKills = 0;
   private survivalPerfectDodges = 0;
+  private survivalCounterattackReady = false;
   private survivalWaveStartKills = 0;
   private survivalLevel = 1;
   private survivalXp = 0;
@@ -1218,6 +1219,7 @@ export class MaxFlizGameEngine {
     this.survivalWave = 1;
     this.survivalKills = 0;
     this.survivalPerfectDodges = 0;
+    this.survivalCounterattackReady = false;
     this.survivalWaveStartKills = 0;
     this.survivalLevel = 1;
     this.survivalXp = 0;
@@ -1881,6 +1883,7 @@ export class MaxFlizGameEngine {
       wave: this.survivalWave,
       kills: this.survivalKills,
       perfectDodges: this.survivalPerfectDodges,
+      counterattackReady: this.survivalCounterattackReady,
       level: this.survivalLevel,
       xp: this.survivalXp,
       xpToNext: this.survivalXpToNext,
@@ -4857,8 +4860,15 @@ export class MaxFlizGameEngine {
     const baseWeaponDamage = weapon.id === 'orbit_blades'
       ? 1 + (weapon.level >= 3 ? 1 : 0) + (weapon.evolved ? 1 : 0)
       : 1 + Math.floor((weapon.level - 1) / 3) + (weapon.evolved ? 1 : 0);
-    const criticalRoll = rollSurvivalCriticalDamage(baseWeaponDamage, this.survivalCriticalChance, this.survivalCriticalDamageMultiplier, Math.random());
+    const counterattackReady = this.survivalCounterattackReady;
+    this.survivalCounterattackReady = false;
+    const volleyBaseDamage = applyPerfectDodgeCounterattack(baseWeaponDamage, counterattackReady);
+    const criticalRoll = rollSurvivalCriticalDamage(volleyBaseDamage, this.survivalCriticalChance, this.survivalCriticalDamageMultiplier, Math.random());
     const weaponDamage = criticalRoll.damage;
+    if (counterattackReady) {
+      this.emitFloatingToast('✦ KONTRATAK! SALWA +1', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'combo');
+      this.triggerBloomPulse(0.20);
+    }
     if (criticalRoll.critical) {
       this.emitFloatingToast('✦ TRAFIENIE KRYTYCZNE!', this.playerPos.x, this.playerPos.y + 1.35, this.playerPos.z, 'combo');
       this.triggerHitStop(0.035);
@@ -9798,6 +9808,8 @@ export class MaxFlizGameEngine {
 
     if (isPerfectDodge) {
       this.survivalPerfectDodges++;
+      // One perfect dodge charges exactly one subsequent weapon volley; charges do not stack.
+      this.survivalCounterattackReady = true;
       this.score += 100;
       this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
 
@@ -9809,7 +9821,7 @@ export class MaxFlizGameEngine {
       this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.65, this.playerPos.z, 0xfacc15);
       this.triggerBloomPulse(0.32);
       this.emitFloatingToast(
-        '✦ PERFECT DODGE! +100 PKT • SUPER +0,65 s',
+        '✦ PERFECT DODGE! +100 PKT • SALWA +1 • SUPER +0,65 s',
         this.playerPos.x,
         this.playerPos.y + 1.35,
         this.playerPos.z,

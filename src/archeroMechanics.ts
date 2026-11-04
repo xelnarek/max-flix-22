@@ -34,6 +34,15 @@ export function rollSurvivalCriticalDamage(
   };
 }
 
+/**
+ * Adds a single, non-stacking +1 damage charge earned by a perfect boss-lane dodge.
+ * The bonus is applied to one complete weapon volley, before its shared critical roll.
+ */
+export function applyPerfectDodgeCounterattack(baseDamage: number, counterattackReady: boolean): number {
+  const safeDamage = Number.isFinite(baseDamage) ? Math.max(1, Math.round(baseDamage)) : 1;
+  return counterattackReady ? safeDamage + 1 : safeDamage;
+}
+
 /** Returns a bounded Survival dash cooldown; upgrades cannot make the dodge spammy. */
 export function getSurvivalDashCooldownSeconds(cooldownMultiplier: number): number {
   const safeMultiplier = Number.isFinite(cooldownMultiplier) && cooldownMultiplier > 0

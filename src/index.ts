@@ -742,7 +742,12 @@ class MaxFlizScene extends xb.Script {
           if (survivalLevelElem) survivalLevelElem.textContent = String(snapshot.level);
           if (survivalXpElem) survivalXpElem.textContent = snapshot.xp + ' / ' + snapshot.xpToNext + ' XP';
           if (survivalXpFill) survivalXpFill.style.width = Math.min(100, (snapshot.xp / Math.max(1, snapshot.xpToNext)) * 100) + '%';
-          if (survivalKillsElem) survivalKillsElem.textContent = String(snapshot.kills) + ' / ' + String(snapshot.perfectDodges);
+          if (survivalKillsElem) {
+            survivalKillsElem.textContent = String(snapshot.kills) + ' / ' + String(snapshot.perfectDodges) + (snapshot.counterattackReady ? ' ✦' : '');
+            survivalKillsElem.title = snapshot.counterattackReady
+              ? 'Kontratak naładowany: następna salwa broni zada +1 obrażenie.'
+              : 'Eliminacje / idealne uniki';
+          }
           if (survivalEnemiesElem) survivalEnemiesElem.textContent = String(snapshot.aliveEnemies);
           const weaponRack = document.getElementById('survival-weapons-list');
           if (weaponRack) {

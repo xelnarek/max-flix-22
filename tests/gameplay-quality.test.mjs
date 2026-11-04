@@ -352,7 +352,7 @@ test('all damaging systems use the shared enemy hit-response path', async () => 
 
 test('AGV-9 and Bosman telegraphs match their committed projectile lanes', async () => {
   const game = await read('../src/game.ts');
-  assert.match(game, /spawnBossLaneTelegraph\(e\.x, e\.z, e\.chargeDir, 14\.0, 1\.8, 0xef4444, 0\.9\)/);
+  assert.match(game, /spawnBossLaneTelegraph\(e\.x, e\.z, e\.chargeDir, 14\.0, 1\.8, 0xef4444, 0\.9, e\)/);
   assert.match(game, /spawnSparkZapProjectile\(e\.x, e\.y \+ 0\.75, e\.z, lockedDirection\)/);
   assert.match(game, /spawnOdprawaClipboardProjectile\(e\.x, e\.y \+ 1\.0, e\.z, lockedDirection\)/);
   assert.match(game, /BOSMAN: ODPRAWA PRZYSPIESZONA — FAZA 2/);
@@ -765,7 +765,7 @@ test('Survival tactical dodge is directional, invulnerable only for a short wind
   assert.match(game, /if \(e\.code === 'KeyQ'\) \{\s*this\.triggerDash\(\);\s*\}/);
   assert.match(game, /public triggerDash\(\): boolean/);
   assert.match(game, /this\.survivalDashCooldownRemaining > 0\.0001/);
-  assert.match(game, /this\.survivalDashDurationRemaining = 0\.22/);
+  assert.match(game, /const dashDuration = 0\.22;[\s\S]*?this\.survivalDashDurationRemaining = dashDuration/);
   assert.match(game, /this\.invulnerableTimer = Math\.max\(this\.invulnerableTimer, 0\.32\)/);
   assert.match(game, /this\.playerVel\.x = this\.survivalDashDirection\.x \* 18/);
   assert.match(game, /this\.updateSurvivalDashCooldown\(simDt\)/);
@@ -819,4 +819,20 @@ test('each boss warning stores its owner-specific lane dimensions for dodge vali
   for (const call of calls) {
     assert.match(call, /, (?:enemy|e)\);$/, 'each lane warning must attach its enemy owner');
   }
+});
+
+
+test('a perfect dodge charges one weapon volley and the Survival HUD exposes the charge', async () => {
+  const [game, mechanics, app] = await Promise.all([
+    read('../src/game.ts'), read('../src/archeroMechanics.ts'), read('../src/index.ts')
+  ]);
+  assert.match(game, /private survivalCounterattackReady = false/);
+  assert.match(game, /this\.survivalCounterattackReady = true/);
+  assert.match(game, /counterattackReady: this\.survivalCounterattackReady/);
+  assert.match(game, /const counterattackReady = this\.survivalCounterattackReady;[\s\S]*?this\.survivalCounterattackReady = false/);
+  assert.match(game, /applyPerfectDodgeCounterattack\(baseWeaponDamage, counterattackReady\)/);
+  assert.match(game, /SALWA \+1/);
+  assert.match(mechanics, /return counterattackReady \? safeDamage \+ 1 : safeDamage/);
+  assert.match(app, /snapshot\.counterattackReady \? ' ✦' : ''/);
+  assert.match(app, /Kontratak naładowany/);
 });
