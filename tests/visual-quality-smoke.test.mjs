@@ -8,7 +8,7 @@ test('game identity is consistently renamed in the title screen and engine boot'
   const [html, app] = await Promise.all([read('../index.html'), read('../src/index.ts')]);
   assert.match(html, /<title>Paleciaki! Magazyn Chaosu<\/title>/);
   assert.match(html, /PALECIAKI![\s\S]*MAGAZYN[\s\S]*CHAOSU/);
-  assert.match(app, /setAppTitle\('Operacja B4: Strefa Chaosu'\)/);
+  assert.match(app, /setAppTitle\('Paleciaki! Magazyn Chaosu'\)/);
 });
 
 test('the five playable operator cards receive individual hand-drawn vector portraits', async () => {
