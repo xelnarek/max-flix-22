@@ -352,7 +352,7 @@ test('all damaging systems use the shared enemy hit-response path', async () => 
 
 test('AGV-9 and Bosman telegraphs match their committed projectile lanes', async () => {
   const game = await read('../src/game.ts');
-  assert.match(game, /spawnBossLaneTelegraph\(e\.x, e\.z, e\.chargeDir, 14\.0, 1\.8, 0xef4444, 0\.9\)/);
+  assert.match(game, /spawnBossLaneTelegraph\(e\.x, e\.z, e\.chargeDir, 14\.0, 1\.8, 0xef4444, 0\.9, e\)/);
   assert.match(game, /spawnSparkZapProjectile\(e\.x, e\.y \+ 0\.75, e\.z, lockedDirection\)/);
   assert.match(game, /spawnOdprawaClipboardProjectile\(e\.x, e\.y \+ 1\.0, e\.z, lockedDirection\)/);
   assert.match(game, /BOSMAN: ODPRAWA PRZYSPIESZONA — FAZA 2/);
@@ -765,7 +765,7 @@ test('Survival tactical dodge is directional, invulnerable only for a short wind
   assert.match(game, /if \(e\.code === 'KeyQ'\) \{\s*this\.triggerDash\(\);\s*\}/);
   assert.match(game, /public triggerDash\(\): boolean/);
   assert.match(game, /this\.survivalDashCooldownRemaining > 0\.0001/);
-  assert.match(game, /this\.survivalDashDurationRemaining = 0\.22/);
+  assert.match(game, /const dashDuration = 0\.22;[\s\S]*?this\.survivalDashDurationRemaining = dashDuration/);
   assert.match(game, /this\.invulnerableTimer = Math\.max\(this\.invulnerableTimer, 0\.32\)/);
   assert.match(game, /this\.playerVel\.x = this\.survivalDashDirection\.x \* 18/);
   assert.match(game, /this\.updateSurvivalDashCooldown\(simDt\)/);
