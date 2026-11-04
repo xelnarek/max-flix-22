@@ -192,7 +192,7 @@ export class MaxFlizGameEngine {
       "Żądam natychmiastowej rozmowy z kierownikiem!",
       "Panie, w Castoramie mieli to 30% taniej!",
       "Dlaczego ten gres jest krzywy o pół milimetra?!",
-      "Kierownik Walczak obiecał mi rabat 40% na płytki!",
+      "Kierownik Nadzorca Zero obiecał mi rabat 40% na płytki!",
       "Kto mi zapłaci za przestój ekipy kafelkarzy?!",
     ],
     architect: [
@@ -206,14 +206,14 @@ export class MaxFlizGameEngine {
     pan_roman: [
       "Panowie spieszę się, na pace mam 8 wanien wolnostojących!",
       "Gdzie mam zrzucić te kible?! Byle nie na deszczu!",
-      "Rudy z DPD znowu zajął moją rampę rozładunkową!",
+      "Kurier Rudi znowu zajął moją rampę rozładunkową!",
       "Panie kierowniku, pieczątka na WZ-tce i mnie nie ma!",
       "Uwaga na paleciak, hamulce skończyły się w 2018 roku!",
       "Rzucam umywalką, łap pan albo będzie po premii!",
     ],
     kurier: [
       "Awizo zostawione w gaśnicy BHP na trzecim piętrze!",
-      "Dostawa Johnny Walker Express dla prezesa!",
+      "Dostawa Kurier Express dla prezesa!",
       "Mam 40 paczek i 12 minut do końca zmiany!",
       "Podpisz pan cokolwiek palcem po brudnym ekranie!",
       "Paczka lekko obita, ale w środku na bank nic nie pękło!",
@@ -230,7 +230,7 @@ export class MaxFlizGameEngine {
     ],
     sztaplar_szalony: [
       "Z drogi, paleciak nie ma ABS-u ani litości!",
-      "Drift na mokrym gresie Calacatta to moja jedyna pasja!",
+      "Drift na mokrym gresie Marmur B4 to moja jedyna pasja!",
       "Kto zostawił puste kartony w alei głównej?!",
       "Paleta 800 kilo leci z góry, klakson zepsuty!",
       "Kierownik mówił 'ostrożnie', ale ja mam normę do wyrobienia!",
@@ -265,13 +265,13 @@ export class MaxFlizGameEngine {
     piorun_dron: [
       "SKAN KODU KRESKOWEGO: Błąd sumy kontrolnej!",
       "ALERT DRONA: Wykryto operatora bez uprawnień UDT kat. II!",
-      "PROMIENIOWANIE WI-FI: Sygnał z centrali Max-Fliz 100%.",
+      "PROMIENIOWANIE WI-FI: Sygnał z centrali Kompleks B4 100%.",
       "RADAR LASEROWY: Paleta krzywo ustawiona o 3 stopnie!",
     ],
     elite_walczak_guard: [
       "Wstęp do Sektora VIP tylko z przepustką dyrektorską!",
-      "Chronimy ostatnią paletę Calacatta Gold przed spekulantami!",
-      "Stój! Walczak nie przyjmuje już żadnych reklamacji!",
+      "Chronimy ostatnią paletę Biały Marmur przed spekulantami!",
+      "Stój! Nadzorca Zero nie przyjmuje już żadnych reklamacji!",
       "Tylko przez mój trup dotkniesz tej armatury z 24k złota!",
     ],
     bosman_krakow: [
@@ -285,12 +285,12 @@ export class MaxFlizGameEngine {
       "Ja tu byłem kierownikiem zanim wybudowano ten salon!",
       "Na mojej zmianie nie ma przerw na papierosa ani kawę!",
       "Karę umowną 50 000 zł wyślę ci poleconym za potwierdzeniem!",
-      "Szczekaczka Walczaka zagłuszy twoje żałosne prośby o premię!",
+      "Szczekaczka Nadzorcy Zero zagłuszy twoje żałosne prośby o premię!",
       "TRYB SZAŁU: Cały magazyn zostaje na bezpłatne nadgodziny!",
       "Zafuguję cię w tym regale wysokiego składowania!",
     ],
     krol_leto: [
-      "Jam jest Król-Leto, Pan na Spiekach i Władca Wszystkich Salonów!",
+      "Jam jest Dyrektor Widmo, Pan na Spiekach i Władca Wszystkich Salonów!",
       "Twoja umowa na czas określony właśnie dobiegła końca!",
       "Na kolana przed majestatem włoskiego gresu 120x280!",
       "Dyscyplinarka ze skutkiem natychmiastowym bez prawa do odprawy!",
@@ -298,19 +298,19 @@ export class MaxFlizGameEngine {
       "Żaden magazynier nie opuści tego terminala żywy!",
     ],
     zombie_pracownik: [
-      "KFC?! Dawid przywiózł kubełek! Z drogi!",
+      "Kubełek Mocy?! Vector przywiózł kubełek! Z drogi!",
       "STRIIIaaPSY... czuję gorącą panierkę z pięciu alejek!",
       "Trzecia zmiana bez obiadu... oddawaj skrzydełka!",
       "Kubełek jest MÓJ! Nie dzielę się frytkami!",
-      "Móóózg... znaczy KURCZAAAK z dostawy Dawida!",
+      "Móóózg... znaczy KURCZAAAK z dostawy Vectora!",
     ],
     pomazaniec: [
       "POMAZAŃCEEEE! KTO MA JESZCZE DWA KÓŁKA?!",
       "Razem mamy w siedmiu więcej lat niż rozumu!",
-      "Lizak w dłoń! Godzilla Dawida nie ucieknie!",
+      "Lizak w dłoń! Godzilla Vectora nie ucieknie!",
       "Dzwonek działa, hamulce są opcjonalne!",
       "MAM CZAPKĘ Z WIATRAKIEM, CZYLI JESTEM DOWÓDCĄ!",
-      "Dawidzilla! Nadciągamy z prędkością trzech kilometrów na godzinę!",
+      "Vectorzilla! Nadciągamy z prędkością trzech kilometrów na godzinę!",
     ],
     sebix_m: [
       "CO SIĘ GAPISZ?! CEGŁA JEST NAJPIERWOTNIEJSZYM ARGUMENTEM!",
@@ -528,8 +528,8 @@ export class MaxFlizGameEngine {
     if (gate) gate.visible = false;
     const title = sector === 2 ? 'SEKTOR B ODBLOKOWANY' : 'SEKTOR C ODBLOKOWANY';
     const detail = sector === 2
-      ? 'Bosman pokonany. Brama do showroomu SPA jest otwarta.'
-      : 'Król-Leto pokonany. Terminal VIP jest dostępny.';
+      ? 'Inspektor pokonany. Brama do showroomu SPA jest otwarta.'
+      : 'Dyrektor Widmo pokonany. Terminal VIP jest dostępny.';
     this.emitFloatingToast(title, this.playerPos.x, this.playerPos.y + 2, this.playerPos.z, 'combo');
     this.callbacks.onPerkDropBanner?.(title, sector === 2 ? '🚪' : '🏁', detail, '#f59e0b');
   }
@@ -1659,7 +1659,7 @@ export class MaxFlizGameEngine {
     context.fillText(label, 276, 65, 420);
     context.fillStyle = '#a9bdce';
     context.font = '700 17px Arial, sans-serif';
-    context.fillText('MAX-FLIZ  •  LOGISTYKA', 276, 112, 420);
+    context.fillText('CENTRUM B4  •  LOGISTYKA', 276, 112, 420);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
@@ -2835,7 +2835,7 @@ export class MaxFlizGameEngine {
     this.collectibles.push({
       id,
       type: 'grout',
-      name: 'Puszka Fugi Max-Fliz',
+      name: 'Puszka Fugi Kompleks B4',
       x,
       y,
       z,
@@ -2953,7 +2953,7 @@ export class MaxFlizGameEngine {
     this.collectibles.push({
       id,
       type: 'kfc_bucket',
-      name: 'Kubełek KFC od Dawida (+2 Kawy & Furia KFC!)',
+      name: 'Kubełek Mocy od Vectora (+2 Kawy & Furia Energetyczna!)',
       x,
       y,
       z,
@@ -2963,7 +2963,7 @@ export class MaxFlizGameEngine {
     });
   }
 
-  private addZombieWorkerEnemy(id: string, x: number, minZ: number, maxZ: number, name = 'Głodny Magazynier-Zombie (Węszy KFC)') {
+  private addZombieWorkerEnemy(id: string, x: number, minZ: number, maxZ: number, name = 'Głodny Magazynier-Zombie (Węszy Kubełek Mocy)') {
     const built = createZombieWorkerEnemyModel();
     built.group.position.set(x, 0.4, minZ);
     this.levelRoot.add(built.group);
@@ -3252,7 +3252,7 @@ export class MaxFlizGameEngine {
     this.enemies.push({
       id,
       type: 'walczak',
-      name: 'Były Kierownik Walczak',
+      name: 'Nadzorca Zero',
       mesh: built.group,
       speechMesh: null,
       x,
@@ -3286,7 +3286,7 @@ export class MaxFlizGameEngine {
     this.enemies.push({
       id,
       type: 'krol_leto',
-      name: 'Król-Leto (Dyrektor Generalny)',
+      name: 'Dyrektor Widmo (Dyrektor Generalny)',
       mesh: built.group,
       speechMesh: null,
       x,
@@ -3412,7 +3412,7 @@ export class MaxFlizGameEngine {
     });
   }
 
-  private addPanRomanEnemy(id: string, x: number, minX: number, maxX: number, name = 'Pan Roman z Dostawą') {
+  private addPanRomanEnemy(id: string, x: number, minX: number, maxX: number, name = 'Dostawca Sanitarny z Dostawą') {
     const built = createPanRomanEnemyModel();
     built.group.position.set(x, 0.4, minX);
     this.levelRoot.add(built.group);
@@ -3445,7 +3445,7 @@ export class MaxFlizGameEngine {
     });
   }
 
-  private addSerwisanciEnemy(id: string, x: number, minX: number, maxX: number, name = 'Serwisant Max-Flixu') {
+  private addSerwisanciEnemy(id: string, x: number, minX: number, maxX: number, name = 'Serwisant Operacja B4u') {
     const built = createSerwisanciEnemyModel();
     built.group.position.set(x, 0.4, minX);
     this.levelRoot.add(built.group);
@@ -3485,7 +3485,7 @@ export class MaxFlizGameEngine {
     this.enemies.push({
       id,
       type: 'bosman_krakow',
-      name: 'Bosman z Krakowa (Mini-Boss)',
+      name: 'Inspektor Zmiany (Mini-Boss)',
       mesh: built.group,
       speechMesh: null,
       x,
@@ -3575,7 +3575,7 @@ export class MaxFlizGameEngine {
     });
   }
 
-  private addKurierEnemy(id: string, x: number, minX: number, maxX: number, name = 'Rudy z DPD od Johnny Walker') {
+  private addKurierEnemy(id: string, x: number, minX: number, maxX: number, name = 'Kurier Rudi od Kurier Express') {
     const built = createKurierEnemyModel();
     built.group.position.set(x, 0.4, minX);
     this.levelRoot.add(built.group);
@@ -3745,7 +3745,7 @@ export class MaxFlizGameEngine {
     this.enemies.push({
       id,
       type:'sebix_m',
-      name:'Sebix M. • Niezatrzymany Taranujący',
+      name:'Operator Turbo • Niezatrzymany Taranujący',
       mesh:built.group,
       speechMesh:null,
       x,y:0.08,z:minZ,
@@ -4011,7 +4011,7 @@ export class MaxFlizGameEngine {
     this.levelRoot.add(backWall);
 
     // Glowing Neon Showroom & Logistics Overhead Banner
-    const neonSign = createNeonShowroomSign('MAX-FLIZ • SEKTOR A: LOGISTYKA B4', '#38bdf8');
+    const neonSign = createNeonShowroomSign('CENTRUM B4 • SEKTOR A: LOGISTYKA B4', '#38bdf8');
     neonSign.position.set(0, 6.8, -19.2);
     this.levelRoot.add(neonSign);
 
@@ -4136,8 +4136,8 @@ export class MaxFlizGameEngine {
     this.addExplosiveBarrel('barrel_l1_3', -2, 0, 15.0);
 
     // VIP Collectibles
-    this.addVipItem('vip_tile1', -18, 1.8, -12.5, 'Gres Hiszpański Calacatta Gold 120x60');
-    this.addVipItem('vip_tile2', 0, 1.8, -12.5, 'Złota Mozaika Ceramiczna Max-Fliz');
+    this.addVipItem('vip_tile1', -18, 1.8, -12.5, 'Gres Hiszpański Biały Marmur 120x60');
+    this.addVipItem('vip_tile2', 0, 1.8, -12.5, 'Złota Mozaika Ceramiczna Kompleks B4');
     this.addVipItem('vip_tile3', 18, 1.8, -12.5, 'Klej do Wielkiego Formatu Pro Flex');
     this.addVipItem('vip_tile4', -9, 3.8, -12.5, 'Specyfikacja Projektowa dla Hotelu 5*');
     this.addVipItem('vip_tile5', 20, 1.4, 13.0, 'Złota Próbka Spieku z Mediolanu (Bok B4)');
@@ -4200,10 +4200,10 @@ export class MaxFlizGameEngine {
     this.addCustomerEnemy('cust_1', -16, -6, 6, 'Klient z Reklamacją na Fugi');
     this.addCustomerEnemy('cust_2', 4, -6, 6, 'Pan Janusz (Gdzie moja faktura?!)');
     this.addCustomerEnemy('cust_3', -8, -6, 6, 'Awanturujący się Klient po Rabaty');
-    this.addPanRomanEnemy('pan_roman_l1', -8, -6, 6, 'Pan Roman z Dostawą Sanitariatów');
-    this.addSerwisanciEnemy('serwisant_l1', -15, -6, 6, 'Serwisant Max-Flixu');
+    this.addPanRomanEnemy('pan_roman_l1', -8, -6, 6, 'Dostawca Sanitarny z Dostawą Sanitariatów');
+    this.addSerwisanciEnemy('serwisant_l1', -15, -6, 6, 'Serwisant Operacja B4u');
     this.addBosmanKrakowBossEnemy('bosman_l1', 0, 0);
-    this.addKurierEnemy('kurier_l1_1', -10, -6, 6, 'Rudy z DPD (Johnny Walker Express)');
+    this.addKurierEnemy('kurier_l1_1', -10, -6, 6, 'Kurier Rudi (Kurier Express)');
     this.addItalianVendorEnemy('ital_l1_1', 8, -5, 5, 'Włoski Dostawca Armatury z Mediolanu');
     this.addSztaplarEnemy('sztaplar_l1_1', -2, -6, 6, 'Szalony Operator Paleciaka B4');
     this.addEliteGuardEnemy('guard_l1_1', -22, -4, 4, 'Strażnik Sektora A');
@@ -4213,7 +4213,7 @@ export class MaxFlizGameEngine {
     this.addAgvRobotEnemy('agv_1', -4, 12, 2.8, 'Autonomiczny AGV ze zlewami');
     this.addAgvRobotEnemy('agv_2', 8, -12, -2.8, 'Szalony Sztaplar AGV B4');
     this.addPiorunDronEnemy('dron_1', -18, 16, 0, 2.2, 'Piorun Dron Skaner Kodów B4');
-    this.addEliteGuardEnemy('guard_l1_2', 20, -5, 5, 'Warta Honorowa Calacatta');
+    this.addEliteGuardEnemy('guard_l1_2', 20, -5, 5, 'Warta Honorowa Marmur B4');
     this.addHandlowiecEnemy('handl_l1_2', -12, -4, 4, 'Dyrektor Handlowy (Rabat 5%!)');
 
     // Enemies in South Wing
@@ -4253,7 +4253,7 @@ export class MaxFlizGameEngine {
       tile.position.set(displayX,0.29,displayZ);
       tile.rotation.y = side * 0.10;
       this.levelRoot.add(tile);
-      const marker = createNeonShowroomSign(index === 0 ? 'CALACATTA • 120×280' : 'MAX-FLIZ • PREMIUM GRES', index === 0 ? '#67e8f9' : '#fbbf24');
+      const marker = createNeonShowroomSign(index === 0 ? 'CALACATTA • 120×280' : 'CENTRUM B4 • PREMIUM GRES', index === 0 ? '#67e8f9' : '#fbbf24');
       marker.position.set(displayX,2.6,displayZ-0.7);
       marker.scale.setScalar(0.30);
       this.levelRoot.add(marker);
@@ -4321,7 +4321,7 @@ export class MaxFlizGameEngine {
     this.levelRoot.add(backWall);
 
     // Showroom Neon Sign
-    const neonSign = createNeonShowroomSign('MAX-FLIZ SHOWROOM • SEKTOR B: WANNY & SPA', '#ec4899');
+    const neonSign = createNeonShowroomSign('CENTRUM B4 SHOWROOM • SEKTOR B: WANNY & SPA', '#ec4899');
     neonSign.position.set(offsetX, 6.8, -20.2);
     this.levelRoot.add(neonSign);
 
@@ -4486,10 +4486,10 @@ export class MaxFlizGameEngine {
     // Dense Enemies in Showroom
     this.addCustomerEnemy('cust_l2_1', offsetX - 22, -6, 6, 'Zdezorientowany Klient Szukający Syfonu');
     this.addCustomerEnemy('cust_l2_2', offsetX + 10, -6, 6, 'Klient z Projektantką Wnętrz');
-    this.addPanRomanEnemy('pan_roman_l2', offsetX, -6, 6, 'Pan Roman z Dostawą Sanitariatów');
-    this.addSerwisanciEnemy('serwisant_l2', offsetX + 5, -6, 6, 'Serwisant Max-Flixu');
+    this.addPanRomanEnemy('pan_roman_l2', offsetX, -6, 6, 'Dostawca Sanitarny z Dostawą Sanitariatów');
+    this.addSerwisanciEnemy('serwisant_l2', offsetX + 5, -6, 6, 'Serwisant Operacja B4u');
     this.addBosmanKrakowBossEnemy('bosman_l2', offsetX + 20, 0);
-    this.addKurierEnemy('kurier_l2_1', offsetX - 16, -6, 6, 'Rudy z DPD (Johnny Walker Express)');
+    this.addKurierEnemy('kurier_l2_1', offsetX - 16, -6, 6, 'Kurier Rudi (Kurier Express)');
     this.addItalianVendorEnemy('ital_l2_1', offsetX + 2, -6, 6, 'Przedstawiciel Fabryki z Bolonii');
     this.addSztaplarEnemy('sztaplar_l2_1', offsetX + 18, -6, 6, 'Kierowca Sztaplarki Showroomu');
     this.addArchitectEnemy('arch_l2_1', offsetX - 12, offsetX - 2, -4, 'Główny Projektant Wnętrz z Warszawy');
@@ -4498,7 +4498,7 @@ export class MaxFlizGameEngine {
     this.addHandlowiecEnemy('handl_l2_1', offsetX + 14, -6, 6, 'Kierownik Sprzedaży Salonu');
     this.addMonterEnemy('monter_l2_1', offsetX - 14, -6, 6, 'Hydraulik z Kluczem Nastawnym');
     this.addPiorunDronEnemy('dron_l2_1', offsetX - 20, offsetX + 20, 0, 2.4, 'Dron Multimedialny Showroomu');
-    this.addEliteGuardEnemy('guard_l2_1', offsetX - 30, -5, 5, 'Strażnik Calacatta Gold');
+    this.addEliteGuardEnemy('guard_l2_1', offsetX - 30, -5, 5, 'Strażnik Biały Marmur');
     this.addAgvRobotEnemy('agv_l2_1', offsetX, offsetX + 15, -8.0, 'AGV Salonowy (Lustra)');
 
     // South Spa Lounge Enemies
@@ -4557,7 +4557,7 @@ export class MaxFlizGameEngine {
     this.registerCameraOccluder(backWall);
     this.levelRoot.add(backWall);
 
-    const neonSign = createNeonShowroomSign('MAX-FLIZ TERMINAL • SEKTOR C: STREFA ZAŁADUNKU VIP', '#f59e0b');
+    const neonSign = createNeonShowroomSign('CENTRUM B4 TERMINAL • SEKTOR C: STREFA ZAŁADUNKU VIP', '#f59e0b');
     neonSign.position.set(offsetX, 7.2, -21.2);
     this.levelRoot.add(neonSign);
 
@@ -4656,7 +4656,7 @@ export class MaxFlizGameEngine {
     // VIP Collectibles in Sector C
     this.addVipItem('vip_term1', offsetX - 26, 4.0, -14.0, 'Paleta Eksportowa Spieków Kwarcowych 300x100');
     this.addVipItem('vip_term2', offsetX - 6, 4.0, -14.0, 'Złoty Zestaw Podtynkowy Penthouse VIP');
-    this.addVipItem('vip_term3', offsetX + 14, 4.0, -14.0, 'Główny List Przewozowy Konwoju Max-Fliz');
+    this.addVipItem('vip_term3', offsetX + 14, 4.0, -14.0, 'Główny List Przewozowy Konwoju Kompleks B4');
     this.addVipItem('vip_term4', offsetX + 28, 1.2, 0, 'Kluczyki do Floty Dostawczej Prezesa');
     this.addVipItem('vip_term5', offsetX + 18, 1.2, 12.5, 'Pieczęć Notarialna Odbioru Towaru');
 
@@ -4700,8 +4700,8 @@ export class MaxFlizGameEngine {
     this.addPiorunDronEnemy('dron_l3_1', offsetX - 20, offsetX + 20, 0, 2.5, 'Dron Bitewny');
 
     // South Wing Enemies
-    this.addPanRomanEnemy('pan_roman_l3_south', offsetX - 12, 8, 17, 'Pan Roman na Rampie C');
-    this.addKurierEnemy('kurier_l3_south', offsetX + 8, 8, 17, 'Kurier z Płytkami (Johnny Walker)');
+    this.addPanRomanEnemy('pan_roman_l3_south', offsetX - 12, 8, 17, 'Dostawca Sanitarny na Rampie C');
+    this.addKurierEnemy('kurier_l3_south', offsetX + 8, 8, 17, 'Kurier z Płytkami (Kurier Express)');
 
     // Loot Crates
     this.spawnLootCrate(offsetX - 30, 0, 5);
@@ -5133,7 +5133,7 @@ export class MaxFlizGameEngine {
         const secretZ = THREE.MathUtils.clamp(this.playerPos.z + (Math.random() - 0.5) * 18, this.levelBounds.minZ + 2, this.levelBounds.maxZ - 2);
         const secretRoll = Math.random();
         const secretType = secretRoll < 0.34 ? 'folder' : secretRoll < 0.67 ? 'coffee' : 'throne';
-        const secretName = secretType === 'folder' ? 'Teczka z premią Walczaka' : secretType === 'coffee' ? 'Zapomniany automat z 1998 roku' : 'Złoty tron kierownika';
+        const secretName = secretType === 'folder' ? 'Teczka z premią Nadzorcy Zero' : secretType === 'coffee' ? 'Zapomniany automat z 1998 roku' : 'Złoty tron kierownika';
         this.addEasterEgg('survival_secret_' + this.survivalWave, secretX, 0.2, secretZ, secretName, secretType, 1800);
         this.callbacks.onPerkDropBanner?.('TAJNY ŁADUNEK NAMIERZONY', '🔎', 'Radar wykrył nietypowy obiekt poza głównym korytarzem. Sprawdź obrzeża hali.', '#a78bfa');
       }
@@ -5891,7 +5891,7 @@ export class MaxFlizGameEngine {
     }
 
     this.callbacks.onSurvivalAnnouncement?.(
-      'Pomazańceeee idziemy zbić Godzillę Dawida , razem mamy w 7 więcej lat !',
+      'Pomazańceeee idziemy zbić Godzillę Vectora , razem mamy w 7 więcej lat !',
       'RAJD NA ROWERKACH • PIĘCIU POMAZAŃCÓW',
       'Pięciu maluchów rusza do szturmu. Uważaj na salwy lizaków i nie daj się dogonić kolumnie rowerków!'
     );
@@ -6268,8 +6268,8 @@ export class MaxFlizGameEngine {
 
     if (eventIndex === 0) {
       sound.playSirens();
-      this.callbacks.onPerkDropBanner?.('🍗 DOSTAWA KFC — ALARM GŁODOWY!', '🧟', 'Trzech magazynierów-zombie wyczuło stripsy. Złap kubełek, zanim zrobią inwentaryzację Twojego lunchu.', '#ef4444');
-      this.sayQuote('Dawid otworzył kubełek na rampie. Teraz cała hala ma jeden cel: panierka.');
+      this.callbacks.onPerkDropBanner?.('🍗 DOSTAWA SPECJALNA — ALARM GŁODOWY!', '🧟', 'Trzech magazynierów-zombie wyczuło stripsy. Złap kubełek, zanim zrobią inwentaryzację Twojego lunchu.', '#ef4444');
+      this.sayQuote('Vector otworzył kubełek na rampie. Teraz cała hala ma jeden cel: panierka.');
       for (let i = 0; i < 3; i++) {
         const ex = THREE.MathUtils.clamp(px + (i - 1) * 8, this.levelBounds.minX + 3, this.levelBounds.maxX - 3);
         const ez = THREE.MathUtils.clamp(pz + (i % 2 === 0 ? -8 : 8), this.levelBounds.minZ + 2, this.levelBounds.maxZ - 2);
@@ -6301,14 +6301,14 @@ export class MaxFlizGameEngine {
       this.spawnDroppedPerk(x + 2, 0.5, z, 'arc_drone');
     } else if (eventIndex === 4) {
       sound.playPickup(2);
-      this.callbacks.onPerkDropBanner?.('📦 ZAGINIONA PALETA PREMIUM!', '🔎', 'Pan Roman zostawił tajemniczy ładunek. Skrzynia zawiera losowy moduł.', '#f59e0b');
-      this.sayQuote('Pan Roman przyjechał z dostawą. Dokument WZ ma cztery strony, ale żadnej strony tytułowej.');
-      this.addPanRomanEnemy('survival_roman_' + stamp, x, Math.max(this.levelBounds.minZ + 1, z - 4), Math.min(this.levelBounds.maxZ - 1, z + 4), 'Pan Roman — dostawa bez awiza');
+      this.callbacks.onPerkDropBanner?.('📦 ZAGINIONA PALETA PREMIUM!', '🔎', 'Dostawca Sanitarny zostawił tajemniczy ładunek. Skrzynia zawiera losowy moduł.', '#f59e0b');
+      this.sayQuote('Dostawca Sanitarny przyjechał z dostawą. Dokument WZ ma cztery strony, ale żadnej strony tytułowej.');
+      this.addPanRomanEnemy('survival_roman_' + stamp, x, Math.max(this.levelBounds.minZ + 1, z - 4), Math.min(this.levelBounds.maxZ - 1, z + 4), 'Dostawca Sanitarny — dostawa bez awiza');
       this.spawnLootCrate(THREE.MathUtils.clamp(px + 5, this.levelBounds.minX + 3, this.levelBounds.maxX - 3), 0, THREE.MathUtils.clamp(pz + 3, this.levelBounds.minZ + 2, this.levelBounds.maxZ - 2));
     } else {
       sound.playSirens();
       this.callbacks.onPerkDropBanner?.('🟦 PILNE ZLECENIE OPTIMA: SKAN 3 PALET!', '📦', 'Na hali pojawiły się trzy złote etykiety. Zbierz je, zanim kontroler zamknie zlecenie.', '#38bdf8');
-      this.sayQuote('Optima wrzuciła trzy pilne zlecenia na tę samą minutę. Klasyka. Zbieraj etykiety, ja spróbuję dodzwonić się do IT.');
+      this.sayQuote('system ERP wrzuciła trzy pilne zlecenia na tę samą minutę. Klasyka. Zbieraj etykiety, ja spróbuję dodzwonić się do IT.');
       for (let i = 0; i < 3; i++) {
         const taskX = THREE.MathUtils.clamp(x + (i - 1) * 3.4, this.levelBounds.minX + 3, this.levelBounds.maxX - 3);
         const taskZ = THREE.MathUtils.clamp(z + (i % 2 === 0 ? -2.2 : 2.2), this.levelBounds.minZ + 2, this.levelBounds.maxZ - 2);
@@ -6415,10 +6415,10 @@ export class MaxFlizGameEngine {
     else if (wave >= 4 && roll < 0.75) this.addArchitectEnemy(id, x, x + 4.5, z, 'Architektka — odcień beżu numer 47');
     else if (wave >= 5 && roll < 0.82) this.addItalianVendorEnemy(id, x, minZ, maxZ, 'Włoski dostawca armatury — mamma mia');
     else if (wave >= 6 && roll < 0.89) this.addSerwisanciEnemy(id, x, minZ, maxZ, 'Serwisant — zgłoszenie numer 404');
-    else if (wave >= 7 && roll < 0.95) this.addPanRomanEnemy(id, x, minZ, maxZ, 'Pan Roman — dostawa bez awiza');
+    else if (wave >= 7 && roll < 0.95) this.addPanRomanEnemy(id, x, minZ, maxZ, 'Dostawca Sanitarny — dostawa bez awiza');
     else if (wave >= 8 && roll < 0.975) this.addSztaplarEnemy(id, x, minZ, maxZ, 'Operator paleciaka — drift w alei B4');
     else if (wave >= 9 && roll < 0.99) this.addSerwisanciEnemy(id, x, minZ, maxZ, 'Serwisant AGV — awaria protokołu');
-    else if (wave >= 10 && roll < 0.998) this.addPanRomanEnemy(id, x, minZ, maxZ, 'Pan Roman — kontrola rampy');
+    else if (wave >= 10 && roll < 0.998) this.addPanRomanEnemy(id, x, minZ, maxZ, 'Dostawca Sanitarny — kontrola rampy');
     else this.addEliteGuardEnemy(id, x, minZ, maxZ, 'Elitarny strażnik sektora');
 
     const enemy = this.enemies[this.enemies.length - 1];
@@ -6825,7 +6825,7 @@ export class MaxFlizGameEngine {
         this.jumpBufferTimer = 0;
         sound.playDoubleJump();
         this.spawnParticleRing(this.playerPos.x, this.playerPos.y, this.playerPos.z, 0x38bdf8);
-        this.sayQuote(this.charDef.id === 'piotr' ? 'SKOK WETERANA B4! Hopsa nad paletami!' : 'PODWÓJNY SKOK! Sprężyste odbicie Vibram!');
+        this.sayQuote(this.charDef.id === 'piotr' ? 'SKOK WETERANA B4! Hopsa nad paletami!' : 'PODWÓJNY SKOK! Sprężyste odbicie antypoślizgowe!');
         if (this.playerGroup) this.playerGroup.scale.set(0.8, 1.3, 0.8);
       }
     }
@@ -7088,7 +7088,7 @@ export class MaxFlizGameEngine {
         } else if (c.type === 'kfc_bucket') {
           this.score += c.points * ptsMult;
           this.activatePerk('kfc_bucket', 16);
-          this.emitFloatingToast(`🍗 KUBEŁEK KFC! +2 KAWY & FURIA!`, c.x, c.y + 0.7, c.z, 'perk');
+          this.emitFloatingToast(`🍗 KUBEŁEK Kubełek Mocy! +2 KAWY & FURIA!`, c.x, c.y + 0.7, c.z, 'perk');
         } else if (c.type === 'easter_egg') {
           this.score += c.points * ptsMult;
           this.handleMateuszPassive(1);
@@ -8370,7 +8370,7 @@ export class MaxFlizGameEngine {
           // AoE Damage to Player
           const playerDist = Math.hypot(this.playerPos.x - tile.x, this.playerPos.z - tile.z);
           if (playerDist < 2.2 && Math.abs(this.playerPos.y - tile.targetY) < 1.5) {
-            this.takeDamage('Spadający Wielki Format Gresu Calacatta 120x280!');
+            this.takeDamage('Spadający Wielki Format Gresu Marmur B4 120x280!');
           }
 
           // Damage or stun nearby enemies
@@ -8426,12 +8426,12 @@ export class MaxFlizGameEngine {
       sound.playSirenAlert();
       this.triggerScreenShake(0.75, 0.7);
       this.callbacks.onPerkDropBanner?.(
-        '🍗 DAWID PRZYWIÓZŁ JEDZENIE Z KFC!',
+        '🍗 DAWID PRZYWIÓZŁ JEDZENIE Z Kubełek Mocy!',
         '🧟‍♂️',
-        'Fala wygłodniałych magazynierów-zombie szarżuje po kubełki! Zbierz KFC pierwszy (+2 Kawy i Furia 2x Obrażeń)!',
+        'Fala wygłodniałych magazynierów-zombie szarżuje po kubełki! Zbierz Kubełek Mocy pierwszy (+2 Kawy i Furia 2x Obrażeń)!',
         '#ef4444'
       );
-      this.sayQuote('DAWID PRZYWIÓZŁ KUBEŁKI Z KFC! Cała zmiana biegnie jak horda zombie – bierz stripsy zanim zjedzą!');
+      this.sayQuote('DAWID PRZYWIÓZŁ KUBEŁKI Z Kubełek Mocy! Cała zmiana biegnie jak horda zombie – bierz stripsy zanim zjedzą!');
 
       // Drop 2 KFC buckets + 1 KFC Perk Crate around the player
       this.addKfcBucketItem(`event_kfc_${Date.now()}_1`, px + 4.5, 0.45, THREE.MathUtils.clamp(pz - 2.2, -14, 14));
@@ -8449,7 +8449,7 @@ export class MaxFlizGameEngine {
       offsets.forEach((off, idx) => {
         const zx = THREE.MathUtils.clamp(px + off.dx, this.levelBounds.minX + 3, this.levelBounds.maxX - 3);
         const zz = THREE.MathUtils.clamp(pz + off.dz, -14, 14);
-        this.addZombieWorkerEnemy(`zombie_wave_${Date.now()}_${idx}`, zx, zz - 5, zz + 5, 'Wygłodniały Zombie-Magazynier (KFC!)');
+        this.addZombieWorkerEnemy(`zombie_wave_${Date.now()}_${idx}`, zx, zz - 5, zz + 5, 'Wygłodniały Zombie-Magazynier (Kubełek Mocy!)');
       });
     } else if (eventIdx === 1) {
       // EVENT 2: SZARŻA SZALONYCH SZTAPLAREK & ZŁOTY PALECIAK!
@@ -8458,7 +8458,7 @@ export class MaxFlizGameEngine {
       this.callbacks.onPerkDropBanner?.(
         '🚜 EVENT: SZARŻA SZTAPLAREK B4!',
         '⚡',
-        'Zdzichu spuścił wózki ze smyczy! Złap Złoty Paleciak Turbo i taranuj wszystko na drodze!',
+        'Sztaplarz Turbo spuścił wózki ze smyczy! Złap Złoty Paleciak Turbo i taranuj wszystko na drodze!',
         '#eab308'
       );
       this.sayQuote('UWAGA NA KORYTARZ! Szarża sztaplarek! Łap Złoty Paleciak i jedziesz z nimi jak taran!');
@@ -8473,7 +8473,7 @@ export class MaxFlizGameEngine {
       this.callbacks.onPerkDropBanner?.(
         '🚨 EVENT: NALOT INSPEKCJI BHP & DESZCZ GRESU!',
         '⛑️',
-        'Z sufitu lecą płyty Calacatta 120x280! Zbierz Atestowany Kask BHP oraz Podwójne Espresso!',
+        'Z sufitu lecą płyty Marmur B4 120x280! Zbierz Atestowany Kask BHP oraz Podwójne Espresso!',
         '#38bdf8'
       );
       this.sayQuote('NALOT INSPEKCJI BHP! Z góry sypie się wielki format 120x280 – zakładaj kask!');
@@ -8513,9 +8513,9 @@ export class MaxFlizGameEngine {
         'Kierownik stracił czołg w Lidze WoT i szuka winnego w alejkach! "Znajdę Ci zajęcie, wesołku..." (-30% szybkości na 6s)',
         '#f97316'
       );
-      this.sayQuote('Kierownik Marcin przegrał bitwę w World of Tanks! "Znajdę Ci zaraz zajęcie, wesołku..."');
+      this.sayQuote('Kierownik Atlas przegrał bitwę w World of Tanks! "Znajdę Ci zaraz zajęcie, wesołku..."');
       this.spawnDroppedPerk(px + 2.8, 0.5, pz, 'espresso_boost');
-      this.addHandlowiecEnemy(`event_marcin_wot_${Date.now()}`, px + 11, Math.max(-12, pz - 4), Math.min(12, pz + 4), 'Zirytowany Kierownik Marcin');
+      this.addHandlowiecEnemy(`event_marcin_wot_${Date.now()}`, px + 11, Math.max(-12, pz - 4), Math.min(12, pz + 4), 'Zirytowany Kierownik Atlas');
     }
   }
 
@@ -8752,14 +8752,14 @@ export class MaxFlizGameEngine {
           sound.playLollipopHit();
           this.emitFloatingToast('🍭 LIZAK PROSTO W CZOŁO!', this.playerPos.x, this.playerPos.y + 1.25, this.playerPos.z, 'damage');
         } else if (ep.kind === 'sebix_brick') {
-          this.takeDamage('🧱 Sebix M. trafił Cię cegłą z nocnej zmiany!');
+          this.takeDamage('🧱 Operator Turbo trafił Cię cegłą z nocnej zmiany!');
           this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.55, this.playerPos.z, 0xf97316);
           this.spawnExplosionParticles(this.playerPos.x,0.18,this.playerPos.z,0xff7a18,8);
           this.triggerScreenShake(0.26,0.16);
           sound.playSmack();
           this.emitFloatingToast('🧱 CEGŁA PROSTO W KASK!', this.playerPos.x, this.playerPos.y + 1.25, this.playerPos.z, 'damage');
         } else {
-          this.takeDamage('Trafiło Cię wezwanie wyjaśniające od Walczaka!');
+          this.takeDamage('Trafiło Cię wezwanie wyjaśniające od Nadzorcy Zero!');
         }
         this.levelRoot.remove(ep.mesh);
         if (ep.kind === 'pomazaniec_lollipop' || ep.kind === 'sebix_brick' || ep.disposeOnRemove) this.disposeTemporaryObject(ep.mesh);
@@ -9369,7 +9369,7 @@ export class MaxFlizGameEngine {
       cooldown: 0.45,
       dustTimer: 0,
     };
-    this.sayQuote('WORLD OF TAAAAANKS! NOOBIE! Zajmijcie pozycje, artyleria Optima wjeżdża!');
+    this.sayQuote('WORLD OF TAAAAANKS! NOOBIE! Zajmijcie pozycje, artyleria system ERP wjeżdża!');
     this.callbacks.onPerkDropBanner?.(
       'WORLD OF TAAAAANKS! NOOBIE!',
       '🚜',
@@ -9579,7 +9579,7 @@ export class MaxFlizGameEngine {
     this.callbacks.onPerkDropBanner?.(
       'KOCIA ARMIA ONLINE • 3× MIAU-CRITICAL',
       '🐈',
-      'Trzy koty orbitują wokół Mateusza, doskakują do przeciwników i zadają obrażenia przez kilka sekund.',
+      'Trzy koty orbitują wokół Volta, doskakują do przeciwników i zadają obrażenia przez kilka sekund.',
       '#67e8f9'
     );
     this.emitFloatingToast('🐈🐈🐈 TRZY KOTY • MIAU-CRITICAL!', this.playerPos.x, this.playerPos.y + 1.55, this.playerPos.z, 'combo');
@@ -9916,7 +9916,7 @@ export class MaxFlizGameEngine {
       const forward = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
       this.playerPos.x += forward.x * 1.8;
       this.playerPos.z += forward.z * 1.8;
-      this.sayQuote('ŚCIŚK ZAGŁADY 44CM + TRYB TARANA! Z drogi śledzie, Grzesiek jedzie!');
+      this.sayQuote('ŚCIŚK ZAGŁADY 44CM + TRYB TARANA! Z drogi śledzie, Forge jedzie!');
       sound.playSciskCrush();
       this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.5, this.playerPos.z, 0x4ade80);
       this.enemies.forEach((e) => {
@@ -9949,7 +9949,7 @@ export class MaxFlizGameEngine {
         0.45,
         THREE.MathUtils.clamp(this.playerPos.z + fwd.z * 2.2, -15, 15)
       );
-      this.sayQuote('JA WIEM LEPIEJ! Salwa 5 płyt Calacatta 120x280 pod kątem 45° + świeży Kubełek KFC!');
+      this.sayQuote('JA WIEM LEPIEJ! Salwa 5 płyt Marmur B4 120x280 pod kątem 45° + świeży Kubełek Mocy!');
       sound.playAttackWhoosh();
       const angles = this.gameMode === 'survival' ? [-0.22, 0, 0.22] : [-0.5, -0.25, 0, 0.25, 0.5];
       angles.forEach((offsetAngle) => {
@@ -9979,7 +9979,7 @@ export class MaxFlizGameEngine {
           hitIds: new Set(),
         });
       });
-      this.emitFloatingToast('🧱 SALWA GRESU 120x280 + 🍗 KFC!', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
+      this.emitFloatingToast('🧱 SALWA GRESU 120x280 + 🍗 Kubełek Mocy!', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
     } else if (this.currentCharacterId === 'mateusz') {
       this.activatePerk('espresso_boost', this.gameMode === 'survival' ? 3.5 : 7);
       this.activatePerk('vibram_boots', this.gameMode === 'survival' ? 3.5 : 8);
@@ -10844,7 +10844,7 @@ export class MaxFlizGameEngine {
     } else if (perkId === 'vibram_boots') {
       this.activePerks.doubleJump = Math.max(this.activePerks.doubleJump, duration);
       sound.playDoubleJump();
-      this.sayQuote('Buty robocze Vibram: podwójny skok w powietrzu aktywny!');
+      this.sayQuote('Buty robocze antypoślizgowe: podwójny skok w powietrzu aktywny!');
     } else if (perkId === 'order_magnet') {
       this.activePerks.magnet = Math.max(this.activePerks.magnet, duration);
       sound.playMagnetHum();
@@ -10858,7 +10858,7 @@ export class MaxFlizGameEngine {
       this.callbacks.onHpUpdate(this.hp, this.maxHp);
       this.activePerks.kfcBerserk = Math.max(this.activePerks.kfcBerserk || 0, duration);
       sound.playPerkPickup();
-      this.sayQuote('KUBEŁEK KFC OD DAWIDA! +2 Kawy, podwójne obrażenia i odporność na klej!');
+      this.sayQuote('KUBEŁEK Kubełek Mocy OD DAWIDA! +2 Kawy, podwójne obrażenia i odporność na klej!');
     } else if (perkId === 'golden_paleciak') {
       this.activePerks.bulldozer = Math.max(this.activePerks.bulldozer || 0, duration);
       sound.playPerkPickup();
