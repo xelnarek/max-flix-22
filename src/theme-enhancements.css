@@ -1703,7 +1703,7 @@ h1, h2, h3, .menu-game-title, .hero-name, .dialogue-box-name, .title-brand, .bos
   box-shadow: 0 4px 14px rgba(239, 68, 68, 0.5) !important;
   color: #ffffff !important;
   font-weight: 800 !important;
-  animation: pulse-kfc 1.5s infinite alternate ease-in-out;
+  animation: pulse-energy 1.5s infinite alternate ease-in-out;
 }
 
 @keyframes pulse-kfc {
