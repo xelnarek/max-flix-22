@@ -2054,7 +2054,7 @@ export function createCustomerEnemyModel(): {
 }
 
 /**
- * 15. Former Showroom Manager Walczak Boss (Były Kierownik Salonu Walczak)
+ * 15. Former Showroom Manager Boss (Nadzorca Zero)
  */
 export function createWalczakBossModel(): {
   group: THREE.Group;
@@ -2157,14 +2157,14 @@ export function createWalczakBossModel(): {
   armR.castShadow = true;
   group.add(armL, armR);
 
-  // Right Hand Megaphone ("SZCZEKACZKA WALCZAKA")
+  // Right Hand Megaphone ("SZCZEKACZKA NADZORCY ZERO")
   const megaMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.3, metalness: 0.6 });
   const megaphone = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.28, 16), megaMat);
   megaphone.rotation.x = -Math.PI / 2;
   megaphone.position.set(0, -0.2, 0.16);
   armR.add(megaphone);
 
-  // Left Hand Giant Golden Clipboard with "AUDYT WALCZAKA"
+  // Left Hand Giant Golden Clipboard with "AUDYT NADZORCY ZERO"
   const clipMat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.5 });
   const clipboard = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.34, 0.02), clipMat);
   const auditPaper = new THREE.Mesh(
@@ -2197,7 +2197,7 @@ export function createWalczakBossModel(): {
 }
 
 /**
- * 16. Flying Penalty Invoice Projectile ("KARA UMOWNA WALCZAKA")
+ * 16. Flying Penalty Invoice Projectile ("KARA UMOWNA NADZORCY ZERO")
  */
 export function createPenaltyNoticeProjectile(): THREE.Mesh {
   const geo = new THREE.BoxGeometry(0.3, 0.4, 0.02);
@@ -2497,7 +2497,7 @@ export function createAgvRobotModel(): {
 }
 
 /**
- * 20. NEW COLLECTIBLE: Podwójne Espresso Max-Fliz (Restores HP + Speed)
+ * 20. NEW COLLECTIBLE: Podwójne Espresso Kompleks B4 (Restores HP + Speed)
  */
 export function createEspressoCollectible(): THREE.Group {
   const group = new THREE.Group();
@@ -3093,7 +3093,7 @@ export function createPiorunDronModel(): {
 }
 
 /**
- * 33. NEW ENEMY: Elitarny Ochroniarz Walczaka (z Tarczą BHP i Pałką Kierowania Ruchem)
+ * 33. NEW ENEMY: Elitarny Strażnik Nadzorcy (z Tarczą BHP i Pałką Kierowania Ruchem)
  */
 export function createEliteGuardEnemyModel(): {
   group: THREE.Group;
@@ -4148,7 +4148,7 @@ export function createLargeTileModel(): THREE.Group {
 }
 
 /**
- * 30. Pan Roman z Dostawą ("Panowie spieszę się! To tylko jakieś sanitariaty")
+ * 30. Dostawca Sanitarny ("Panowie spieszę się! To tylko jakieś sanitariaty")
  */
 export function createPanRomanEnemyModel(): {
   group: THREE.Group;
@@ -4243,7 +4243,7 @@ export function createPanRomanEnemyModel(): {
 }
 
 /**
- * 31. Sanitaryware Projectile (Latająca Umywalka Pan Romana)
+ * 31. Sanitaryware Projectile (Latająca Umywalka Dostawcy Sanitarnego)
  */
 export function createSanitarywareProjectile(): THREE.Mesh {
   const geo = new THREE.BoxGeometry(0.45, 0.22, 0.35);
@@ -4260,7 +4260,7 @@ export function createSanitarywareProjectile(): THREE.Mesh {
 }
 
 /**
- * 32. Serwisanci Max-Flixu ("Przyjaciele! Kto nam pomoże?!")
+ * 32. Serwisanci Kompleksu B4 ("Przyjaciele! Kto nam pomoże?!")
  */
 export function createSerwisanciEnemyModel(): {
   group: THREE.Group;
@@ -4371,7 +4371,7 @@ export function createBosmanKrakowBossModel(): {
   body.castShadow = true;
   group.add(body);
 
-  // White Shirt & Gold KRAKÓW HQ Badge
+  // White Shirt & Gold B4 HQ Badge
   const shirt = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.62, 0.02), shirtMat);
   shirt.position.set(0, 0.85, 0.161);
   const badge = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.03), goldBadgeMat);
@@ -4597,7 +4597,7 @@ export function createBhpDigitalScoreboard(title = 'BHP CENTRUM B4 • DNI BEZ P
 }
 
 /**
- * 42. NEW COLLECTIBLE / POWER-UP: Kubełek Kurczaka z KFC od Dawida ("WTORKOWY KUBEŁEK MOCY!")
+ * 42. NEW COLLECTIBLE / POWER-UP: Kubełek Mocy dla Vectora ("WTORKOWY KUBEŁEK MOCY!")
  */
 export function createKfcBucketCollectible(): THREE.Group {
   const group = new THREE.Group();
@@ -4681,7 +4681,7 @@ export function createKfcBucketCollectible(): THREE.Group {
 }
 
 /**
- * 43. NEW ENEMY: Głodny Zombie-Pracownik ("DAWID PRZYWIÓZŁ KFC! DAJ STRIPSA!")
+ * 43. NEW ENEMY: Głodny Zombie-Pracownik ("VECTOR PRZYWIÓZŁ ZAPASY!")
  */
 export function createZombieWorkerEnemyModel(): {
   group: THREE.Group;
