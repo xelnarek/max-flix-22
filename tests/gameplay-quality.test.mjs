@@ -75,20 +75,16 @@ test('campaign map receives instanced warehouse structure without per-frame crea
   assert.match(game, /private disposeSurvivalArenaInstances\(\)/);
 });
 
-test('primary campaign CTA starts immediately while briefing stays optional and touch-operable', async () => {
-  const [app, html] = await Promise.all([read('../src/index.ts'), read('../index.html')]);
-  assert.match(html, /id="story-intro-modal"/);
-  assert.match(html, /id="btn-open-story-modal"/);
-  assert.match(app, /const launchCampaignGame = async/);
-  assert.match(app, /startingGame = true;[\s\S]*?await assetLoader\.waitUntilReady\('Gra 3D'\)/);
-  assert.match(app, /this\.engine\.startGame\(this\.selectedLevelId\)/);
-  assert.match(app, /const doStartGame = \(e\?: Event\) => \{\s*void launchCampaignGame\(e\);/);
-  assert.match(app, /bindTap\(startBtn, doStartGame\)/);
-  assert.match(app, /openCampaignBriefing = \(\) => \{/);
-  assert.match(app, /bindTap\(btnStoryPlay,[\s\S]*?launchCampaignGame\(event\)/);
-  assert.match(app, /campaign-start-error/);
+test('Survival is the only public start path and boots without building a campaign level', async () => {
+  const [app, html, game] = await Promise.all([read('../src/index.ts'), read('../index.html'), read('../src/game.ts')]);
+  assert.match(html, /id="btn-start-survival"/);
+  assert.doesNotMatch(html, /id="btn-start-game"|id="story-intro-modal"|data-tab="tab-zones"/);
+  assert.match(app, /bindTap\(document\.getElementById\('btn-start-survival'\), doStartSurvival\)/);
+  assert.match(app, /doStartSurvival\(\);/);
+  assert.match(game, /public startGame\(levelId = 1, buildCampaignLevel = true\)/);
+  assert.match(game, /this\.startGame\(1, false\)/);
+  assert.match(game, /if \(buildCampaignLevel\) this\.loadLevel\(levelId\);/);
 });
-
 test('device-aware viewport profile is applied immediately after the renderer becomes available', async () => {
   const [app, css, viewport] = await Promise.all([
     read('../src/index.ts'), read('../src/visual-polish.css'), read('../src/uiViewport.ts')
