@@ -9,8 +9,29 @@ export default defineConfig(({ mode }) => {
       process.env.VITEST
   );
 
+  const demoAppId = 'ca-app-pub-3940256099942544~3347511713';
+  const demoRewardedId = 'ca-app-pub-3940256099942544/5224354917';
+  const demoInterstitialId = 'ca-app-pub-3940256099942544/1033173712';
+  const configuredAppId = process.env.ADMOB_APP_ID?.trim() ?? '';
+  const configuredRewardedId = process.env.VITE_ADMOB_REWARDED_ID?.trim() ?? '';
+  const configuredInterstitialId = process.env.VITE_ADMOB_INTERSTITIAL_ID?.trim() ?? '';
+  const hasProductionAdMobConfig =
+    /^ca-app-pub-\d+~\d+$/.test(configuredAppId) &&
+    /^ca-app-pub-\d+\/\d+$/.test(configuredRewardedId) &&
+    /^ca-app-pub-\d+\/\d+$/.test(configuredInterstitialId);
+
+  const admobConfig = {
+    appId: hasProductionAdMobConfig ? configuredAppId : demoAppId,
+    rewardedId: hasProductionAdMobConfig ? configuredRewardedId : demoRewardedId,
+    interstitialId: hasProductionAdMobConfig ? configuredInterstitialId : demoInterstitialId,
+    isTesting: !hasProductionAdMobConfig,
+  };
+
   return {
     base: './',
+    define: {
+      __PALIECIAKI_ADS__: JSON.stringify(admobConfig),
+    },
     server: {
       host: '0.0.0.0',
       port: 3000,
