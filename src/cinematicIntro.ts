@@ -95,7 +95,7 @@ export class CinematicIntroManager {
       <canvas class="cinematic-intro-canvas" aria-hidden="true"></canvas>
       <div class="cinematic-intro-vignette" aria-hidden="true"></div>
       <div class="cinematic-intro-top">
-        <div class="cinematic-intro-brand"><span class="cinematic-live-dot"></span> OPERACJA B4 <span>•</span> OPERACJA B4</div>
+        <div class="cinematic-intro-brand"><span class="cinematic-live-dot"></span> KOMPLEKS B4 <span>•</span> OPERACJA SPECJALNA</div>
         <div class="cinematic-intro-status"><span id="cinematic-intro-scene">SYSTEM ONLINE</span><span id="cinematic-intro-time">00:00</span></div>
         <button id="cinematic-intro-skip" class="cinematic-intro-skip" type="button">POMIŃ INTRO <span aria-hidden="true">↗</span></button>
       </div>
