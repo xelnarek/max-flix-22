@@ -10533,7 +10533,8 @@ export class MaxFlizGameEngine {
   }
 
   public isBossDefeated(): boolean {
-    return this.enemies.some((e) => e.type === 'walczak' && e.state === 'defeated');
+    const bossTypes = new Set(['walczak', 'krol_leto', 'bosman_krakow', 'sebix_m']);
+    return this.enemies.some((enemy) => bossTypes.has(enemy.type) && enemy.state === 'defeated');
   }
 
   public getActivePerks(): ActivePerks {
