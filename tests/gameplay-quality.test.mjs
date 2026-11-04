@@ -807,7 +807,7 @@ test('perfect Survival dodges require the late boss warning window and a lateral
   assert.match(geometry, /lateralTravel < requiredTravel/);
   assert.match(types, /chargeLaneLength\?: number;\s*chargeLaneWidth\?: number;/);
   assert.match(app, /String\(snapshot\.kills\) \+ ' \/ ' \+ String\(snapshot\.perfectDodges\)/);
-  assert.match(html, /ELIMINACJE \/ UNIKI/);
+  assert.match(html, /ELIM\. \/ UNIKI/);
 });
 
 test('each boss warning stores its owner-specific lane dimensions for dodge validation', async () => {
