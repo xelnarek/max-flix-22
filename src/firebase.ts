@@ -361,7 +361,7 @@ export async function syncPendingLeaderboardScores(): Promise<number> {
   const pending = parsePendingLeaderboardWrites();
   if (!pending.length) return 0;
 
-  // Anonymous auth is attempted, but leaderboard creation rules also allow a guest session.
+  // Live leaderboard writes require the anonymous Firebase session; if auth is unavailable, submissions stay queued locally.
   await initAuth();
 
   const remaining: PendingLeaderboardWrite[] = [];
