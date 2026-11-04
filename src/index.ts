@@ -557,6 +557,17 @@ class MaxFlizScene extends xb.Script {
                 : `ŁADOWANIE ${Math.ceil(remainingSeconds)}s`;
           }
         },
+        onSurvivalDashUpdate: (progress, ready, remainingSeconds) => {
+          const dashButton = document.getElementById('btn-touch-dash') as HTMLButtonElement | null;
+          if (!dashButton) return;
+          dashButton.disabled = !ready;
+          dashButton.textContent = ready ? '↗ UNIK' : Math.ceil(remainingSeconds) + 's';
+          dashButton.style.opacity = ready ? '1' : '0.72';
+          dashButton.style.setProperty('--dash-progress', String(Math.max(0, Math.min(1, progress))));
+          dashButton.setAttribute('aria-label', ready
+            ? 'Unik taktyczny gotowy. Naciśnij Q lub przycisk.'
+            : 'Unik taktyczny ładuje się przez ' + Math.ceil(remainingSeconds) + ' sekund.');
+        },
         onSpeechBubble: (text) => {
           if (text) {
             createDialogueCard(text, 'hero', 'left');
@@ -1867,6 +1878,7 @@ class MaxFlizScene extends xb.Script {
     bindTouchAction('btn-touch-attack', () => this.engine.triggerAttack());
     bindTouchAction('btn-touch-jump', () => this.engine.triggerJump());
     bindTouchAction('btn-touch-ability', () => this.engine.triggerAbility());
+    bindTouchAction('btn-touch-dash', () => this.engine.triggerDash());
   }
 
   init() {
