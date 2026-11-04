@@ -951,7 +951,7 @@ test('record date and time are rendered on every leaderboard row', async () => {
   assert.match(app, /formatLeaderboardTimestamp\(entry\.createdAt\)/);
   assert.match(app, /leaderboard-record-time/);
   assert.match(formatter, /if \(timeZone\) options\.timeZone = timeZone/);
-  assert.doesNotMatch(formatter, /timeZone: 'Europe\\/Warsaw'/);
+  assert.doesNotMatch(formatter, /timeZone: 'Europe\/Warsaw'/);
   assert.match(formatter, /hour: '2-digit'[\s\S]*?minute: '2-digit'/);
   assert.match(css, /\.leaderboard-record-time/);
   assert.match(cloud, /createdAt: new Date\(\)\.toISOString\(\)/);
