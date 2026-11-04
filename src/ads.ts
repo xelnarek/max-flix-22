@@ -7,6 +7,7 @@ const isNativeAndroid = () => Capacitor.isNativePlatform() && Capacitor.getPlatf
 
 let initialization: Promise<ConsentResult> | null = null;
 let sdkReady = false;
+let adsAllowed = false;
 let rewardedReady = false;
 let interstitialReady = false;
 let privacyOptionsRequired = false;
@@ -50,13 +51,19 @@ export function initializeGameAds(): Promise<ConsentResult> {
         consent = await AdMob.showConsentForm();
         privacyOptionsRequired = String(consent.privacyOptionsRequirementStatus).toLowerCase() === 'required';
       }
-      if (!consent.canRequestAds) return { enabled: false, privacyOptionsRequired };
+      if (!consent.canRequestAds) {
+        adsAllowed = false;
+        return { enabled: false, privacyOptionsRequired };
+      }
 
       if (!sdkReady) {
         await AdMob.initialize();
         sdkReady = true;
       }
-      await Promise.all([loadRewarded(), loadInterstitial()]);
+      adsAllowed = true;
+      // Consent is complete; start preloading in the background so ad network
+      // latency never delays the player's transition into a run.
+      void Promise.all([loadRewarded(), loadInterstitial()]);
       return { enabled: true, privacyOptionsRequired };
     } catch (error) {
       console.warn('[AdMob] Consent/initialization unavailable; gameplay continues without ads:', error);
@@ -67,19 +74,36 @@ export function initializeGameAds(): Promise<ConsentResult> {
 }
 
 export function areGameAdsReady(): boolean {
-  return sdkReady && isNativeAndroid();
+  return sdkReady && adsAllowed && isNativeAndroid();
 }
 export function hasAdPrivacyOptions(): boolean {
   return privacyOptionsRequired && isNativeAndroid();
 }
-export async function showAdPrivacyOptions(): Promise<void> {
-  if (!areGameAdsReady() || !privacyOptionsRequired) return;
+export async function showAdPrivacyOptions(): Promise<ConsentResult> {
+  if (!isNativeAndroid() || !privacyOptionsRequired) {
+    return { enabled: areGameAdsReady(), privacyOptionsRequired };
+  }
   try {
     await AdMob.showPrivacyOptionsForm();
     const consent = await AdMob.requestConsentInfo();
     privacyOptionsRequired = String(consent.privacyOptionsRequirementStatus).toLowerCase() === 'required';
+    adsAllowed = consent.canRequestAds;
+
+    if (adsAllowed && !sdkReady) {
+      await AdMob.initialize();
+      sdkReady = true;
+    }
+    if (adsAllowed) {
+      void Promise.all([loadRewarded(), loadInterstitial()]);
+    }
+
+    const result = { enabled: areGameAdsReady(), privacyOptionsRequired };
+    // Keep the shared consent promise aligned with the user's latest choice.
+    initialization = Promise.resolve(result);
+    return result;
   } catch (error) {
     console.warn('[AdMob] Privacy options form is unavailable:', error);
+    return { enabled: areGameAdsReady(), privacyOptionsRequired };
   }
 }
 
