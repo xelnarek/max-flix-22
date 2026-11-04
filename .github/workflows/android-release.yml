@@ -1,0 +1,124 @@
+name: Android QA and Google Play bundle
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'capacitor.config.json'
+      - 'resources/**'
+      - 'scripts/prepare-android-release.mjs'
+      - '.github/workflows/android-release.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    name: Build Android APK and AAB
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android API 36
+        run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install web dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Run automated tests
+        run: npm test
+
+      - name: TypeScript validation
+        run: npm run lint
+
+      - name: Build web game
+        run: npm run build
+
+      - name: Install pinned Capacitor toolchain
+        run: npm install --no-save --package-lock=false @capacitor/core@8.6.0 @capacitor/cli@8.6.0 @capacitor/android@8.6.0 @capacitor/assets@3.0.5
+
+      - name: Prepare Android icon and splash source PNGs
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-bin
+          rsvg-convert -w 1024 -h 1024 resources/icon-only.svg > resources/icon-only.png
+          rsvg-convert -w 1024 -h 1024 resources/icon-foreground.svg > resources/icon-foreground.png
+          rsvg-convert -w 1024 -h 1024 resources/icon-background.svg > resources/icon-background.png
+          rsvg-convert -w 2732 -h 2732 resources/splash.svg > resources/splash.png
+
+      - name: Create the native Android project
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Configure Android package, version and optional signing
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "${ANDROID_UPLOAD_KEYSTORE_BASE64:-}" ]; then
+            if [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
+              echo "Android signing secrets are incomplete." >&2
+              exit 1
+            fi
+            printf '%s' "$ANDROID_UPLOAD_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/paleciaki-upload-key.jks"
+            echo "ANDROID_UPLOAD_KEYSTORE_PATH=$RUNNER_TEMP/paleciaki-upload-key.jks" >> "$GITHUB_ENV"
+          elif [ -n "$ANDROID_KEYSTORE_PASSWORD$ANDROID_KEY_ALIAS$ANDROID_KEY_PASSWORD" ]; then
+            echo "Set all four Android upload signing secrets, including ANDROID_UPLOAD_KEYSTORE_BASE64." >&2
+            exit 1
+          fi
+          node scripts/prepare-android-release.mjs
+        env:
+          ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          ANDROID_VERSION_NAME: '0.1.0'
+
+      - name: Build Android packages
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x android/gradlew
+          cd android
+          ./gradlew --no-daemon bundleRelease assembleDebug assembleRelease
+
+      - name: Upload Android QA and release artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: paleciaki-android-${{ github.run_number }}-${{ github.sha }}
+          path: |
+            android/app/build/outputs/bundle/release/*.aab
+            android/app/build/outputs/apk/debug/*.apk
+            android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: warn
+          retention-days: 21
