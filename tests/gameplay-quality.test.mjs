@@ -189,6 +189,11 @@ test('Survival upgrade draft has visible rarity tiers with stronger higher-tier 
   assert.match(game, /this\.survivalDamageMultiplier = Math\.min\(2\.05, this\.survivalDamageMultiplier \* \(1 \+ 0\.12 \* strength\)\)/);
   assert.match(game, /getSurvivalWeaponInitialLevel\(choice\.rarity\)/);
   assert.match(game, /getSurvivalWeaponUpgradeSteps\(choice\.rarity\)/);
+  assert.match(game, /Poziom startowy tej karty: ' \+ initialLevel \+ '\/5\.'/);
+  assert.match(game, /title: definition\.name\.toUpperCase\(\) \+ ' • POZIOM ' \+ targetLevel/);
+  assert.match(game, /Legendarna karta podnosi poziom o dwa stopnie/);
+  assert.match(game, /Siła modułu: ×' \+ meta\.strengthMultiplier\.toFixed\(2\)/);
+  assert.match(game, /Rzadkość ewolucji: LEGENDARNA/);
   assert.match(app, /rarityBadge\.textContent = option\.rarityLabel/);
   assert.match(app, /card\.className = 'survival-upgrade-card rarity-' \+ option\.rarity/);
   assert.match(html, /rzadkie, epickie i legendarne wersje wzmacniają ten sam efekt/i);
