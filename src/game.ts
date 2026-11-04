@@ -108,7 +108,7 @@ import {
   getShowroomWallTexture,
   getTerminalGraniteFloorTexture,
   getHazardStripeTexture,
-  getMaxFlizLogoTexture,
+  getB4LogoTexture,
   getWallTexture,
   createKfcBucketCollectible,
   createZombieWorkerEnemyModel,
