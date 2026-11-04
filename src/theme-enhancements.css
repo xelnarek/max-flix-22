@@ -1696,7 +1696,7 @@ h1, h2, h3, .menu-game-title, .hero-name, .dialogue-box-name, .title-brand, .bos
   box-shadow: 0 0 16px rgba(245, 158, 11, 0.45) !important;
 }
 
-/* New HUD Badges for KFC Bucket & Golden Pallet Jack Bulldozer */
+/* New HUD Badges for Power Bucket & Golden Pallet Jack Bulldozer */
 .perk-badge.perk-kfc {
   background: linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(185, 28, 28, 0.95)) !important;
   border: 1px solid rgba(254, 202, 202, 0.6) !important;
@@ -1727,7 +1727,7 @@ h1, h2, h3, .menu-game-title, .hero-name, .dialogue-box-name, .title-brand, .bos
 
 
 /* ==========================================================
-   MAX-FLIZ VISUAL PASS — adaptive layout + premium menu
+   CENTRUM B4 VISUAL PASS — adaptive layout + premium menu
    ========================================================== */
 :root {
   --ui-scale: 1;
@@ -2123,7 +2123,7 @@ h1, h2, h3, .menu-game-title, .hero-name, .dialogue-box-name, .title-brand, .bos
 
 
 /* ==========================================================
-   MAX-FLIZ INTEL UPDATE — tactical menu, codex and story pass
+   OPERACJA B4 INTEL UPDATE — tactical menu, codex and story pass
    ========================================================== */
 #title-screen .menu-top-header { gap: 5px !important; }
 #title-screen .menu-release-strip {
