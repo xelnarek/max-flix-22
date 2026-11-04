@@ -724,3 +724,35 @@ test('level reset releases every per-level hazard model, not only the newest tra
     assert.ok(game.includes("type: '" + type + "'"), type + ' hazard should be covered by the shared cleanup loop');
   }
 });
+
+
+test('special ability cooldown has a single authoritative timer and Survival-only kill recharge', async () => {
+  const game = await read('../src/game.ts');
+  const app = await read('../src/index.ts');
+  assert.match(game, /private abilityCooldownState: AbilityCooldownState = createAbilityCooldown\(0\)/);
+  assert.match(game, /this\.updateAbilityCooldown\(simDt\)/);
+  assert.match(game, /this\.rechargeAbilityFromSurvivalKill\(isAbilityRechargeElite\)/);
+  assert.doesNotMatch(game, /abilityTimer/);
+  assert.match(app, /onAbilityCooldown: \(progress, ready, remainingSeconds, killRechargeEnabled\)/);
+  assert.match(app, /GOTOWA \[E\]/);
+});
+
+test('both Campaign completion and Survival/Campaign defeat can submit a mode-labelled score', async () => {
+  const app = await read('../src/index.ts');
+  const html = await read('../index.html');
+  assert.match(app, /onLevelComplete: \(levelId, score, timeStr\) => \{[\s\S]*?this\.lastMode = this\.engine\.getGameMode\(\)/);
+  assert.match(app, /onGameOver: \(reason\) => \{[\s\S]*?this\.lastScore = this\.engine\.getScore\(\)[\s\S]*?this\.lastMode = this\.engine\.getGameMode\(\)/);
+  assert.match(app, /bindScoreSubmission\('btn-submit-score-gameover'/);
+  assert.match(app, /mode: this\.lastMode/);
+  assert.ok(html.includes('id="btn-submit-score-gameover"'));
+  assert.ok(html.includes('id="gameover-score"'));
+});
+
+test('Survival earns additional points for harder eliminations and active wave clears, not idle waiting', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /getSurvivalKillScoreMultiplier\(this\.survivalWave\)/);
+  assert.match(game, /getSurvivalWaveClearBonus\(this\.survivalWave, previousWaveKills\)/);
+  assert.match(game, /if \(waveClearBonus > 0\)[\s\S]*?this\.callbacks\.onScoreUpdate/);
+  assert.match(game, /this\.survivalWaveStartKills = this\.survivalKills/);
+  assert.match(game, /return Math\.max\(1, Math\.round\(this\.activeElapsedSeconds\)\)/);
+});
