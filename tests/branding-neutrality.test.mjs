@@ -59,7 +59,7 @@ test('old company and personal names are absent from the public title and intro 
     .replace(/<!--([\s\S]*?)-->/g, '')
     .replace(/\s(?:id|class|data-[\w:-]+|aria-[\w:-]+|title)="[^"]*"/gi, '');
 
-  assert.doesNotMatch(publicHtml, /Max-Flix|Max-Fliz|Palczak|Kuleto|Walczak|Króla-Leto|Inspektor Zmiany Kraków|DPD|Johnny Walker|World of Tanks|Netflix|PlayStation|Dark Souls|Elden Ring/i);
+  assert.doesNotMatch(publicHtml, /Max-Flix|Max-Fliz|Palczak|Kuleto|Walczak|Króla-Leto|Inspektor Zmiany Kraków|Były kierownik|DPD|Johnny Walker|KFC|Vibram|Optima|Calacatta|World of Tanks|Netflix|PlayStation|Dark Souls|Elden Ring/i);
   assert.doesNotMatch(intro, /Max-Flix|Max-Fliz|Palczak|Kuleto|Walczak/i);
   assert.doesNotMatch(characters, /name: '(?:Marcin|Grzesiek|Dawid|Mateusz|Piotr)'/);
 });
