@@ -1511,7 +1511,7 @@ class PaleciakiScene extends xb.Script {
     });
     syncAudioSettingsUI();
 
-    const pauseModal = document.getElementById('pause-modal');
+
     const handlePause = () => {
       if (this.engine.getGameState() !== 'playing') return;
       this.engine.togglePause();
