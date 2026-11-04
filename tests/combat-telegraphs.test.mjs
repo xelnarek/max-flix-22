@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isWithinBossImpactRadius } from '../src/combatTelegraphs.ts';
+import {
+  isWithinBossImpactRadius,
+  isEffectiveBossLaneDodge,
+  isInsideBossAttackLane,
+} from '../src/combatTelegraphs.ts';
 
 test('detects players inside a boss impact radius', () => {
   assert.equal(isWithinBossImpactRadius(3, 4, 0, 0, 5), true);
@@ -21,10 +25,6 @@ test('invalid coordinates cannot create false boss hits', () => {
   assert.equal(isWithinBossImpactRadius(0, Number.POSITIVE_INFINITY, 0, 0, 8), false);
 });
 
-import {
-  isEffectiveBossLaneDodge,
-  isInsideBossAttackLane,
-} from '../src/combatTelegraphs.ts';
 
 test('a warning lane uses the same forward axis as the rendered boss telegraph', () => {
   assert.equal(isInsideBossAttackLane(0, 6, 0, 0, 0, 12, 2), true);
