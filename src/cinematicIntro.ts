@@ -27,6 +27,7 @@ export class CinematicIntroManager {
   private readonly duration = 13.5;
   private frameInterval = 1000 / 30;
   private reducedMotion = false;
+  private readonly onResize = () => this.resizeCanvas();
   private readonly onKeyDown = (event: KeyboardEvent) => {
     if (event.key === 'Escape' && this.active) {
       event.preventDefault();
@@ -63,6 +64,7 @@ export class CinematicIntroManager {
     try { sound.playCinematicBoom(); } catch { /* Audio is optional; the intro must still play. */ }
     this.render(0);
     window.addEventListener('keydown', this.onKeyDown);
+    window.addEventListener('resize', this.onResize);
     this.rafId = requestAnimationFrame(this.loop);
   }
 
@@ -76,6 +78,7 @@ export class CinematicIntroManager {
     if (this.rafId !== null) cancelAnimationFrame(this.rafId);
     this.rafId = null;
     window.removeEventListener('keydown', this.onKeyDown);
+    window.removeEventListener('resize', this.onResize);
     this.cleanup();
     if (returnToMenu) this.callbacks.onComplete();
     if (startGame) this.callbacks.onStartGame?.();
@@ -118,18 +121,26 @@ export class CinematicIntroManager {
     this.timeLabel = overlay.querySelector('#cinematic-intro-time');
     this.sceneLabel = overlay.querySelector('#cinematic-intro-scene');
 
-    const dpr = Math.min(1.5, Math.max(1, window.devicePixelRatio || 1));
-    if (this.canvas) {
-      const width = Math.max(720, Math.min(1600, Math.round(window.innerWidth * dpr)));
-      const height = Math.round(width * 9 / 16);
-      this.canvas.width = width;
-      this.canvas.height = height;
-    }
+    this.resizeCanvas();
     overlay.querySelector('#cinematic-intro-skip')?.addEventListener('click', () => this.stop());
     overlay.querySelector('#cinematic-intro-play')?.addEventListener('click', () => this.stop(true));
     overlay.addEventListener('click', (event) => {
       if (event.target === overlay) this.stop();
     });
+  }
+
+  private resizeCanvas(): void {
+    if (!this.canvas) return;
+    const dpr = Math.min(1.5, Math.max(1, window.devicePixelRatio || 1));
+    const ratio = Math.max(0.32, Math.min(2.4, window.innerWidth / Math.max(1, window.innerHeight)));
+    const longEdge = Math.min(1600, Math.max(720, Math.round(Math.max(window.innerWidth, window.innerHeight) * dpr)));
+    if (ratio >= 1) {
+      this.canvas.width = longEdge;
+      this.canvas.height = Math.max(540, Math.round(longEdge / ratio));
+    } else {
+      this.canvas.height = longEdge;
+      this.canvas.width = Math.max(420, Math.round(longEdge * ratio));
+    }
   }
 
   private cleanup(): void {
