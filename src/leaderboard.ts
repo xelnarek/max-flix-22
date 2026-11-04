@@ -90,9 +90,9 @@ export function getLeaderboardSlice(
 
 /** Formats a saved record time in the player's local timezone. */
 export function formatLeaderboardTimestamp(value: unknown, locale = 'pl-PL'): string {
-  if (typeof value !== 'string' || value.length === 0) return 'Data nieznana';
+  if (typeof value !== 'string' || value.length === 0) return 'DATA NIEZNANA';
   const timestamp = Date.parse(value);
-  if (!Number.isFinite(timestamp) || timestamp <= 0) return 'Data nieznana';
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return 'DATA NIEZNANA';
   try {
     return new Intl.DateTimeFormat(locale, {
       timeZone: 'Europe/Warsaw',
@@ -104,6 +104,6 @@ export function formatLeaderboardTimestamp(value: unknown, locale = 'pl-PL'): st
       hourCycle: 'h23',
     }).format(new Date(timestamp));
   } catch {
-    return 'Data nieznana';
+    return 'DATA NIEZNANA';
   }
 }
