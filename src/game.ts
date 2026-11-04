@@ -6,6 +6,7 @@ import { createEnemyHitReaction, getEnemyHitPulse } from './enemyCombatFeedback.
 import { isEffectiveBossLaneDodge, isInsideBossAttackLane, isWithinBossImpactRadius } from './combatTelegraphs.ts';
 import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
 import { chooseSurvivalEventSpawnPoint } from './survivalSpawn.ts';
+import { getSurvivalUpgradeRarityMeta, getSurvivalWeaponInitialLevel, getSurvivalWeaponUpgradeSteps, rollSurvivalUpgradeRarity, type SurvivalUpgradeRarity } from './survivalRarity.ts';
 import { shouldSpawnBosmanKrakow } from './survivalEncounters.ts';
 import { chooseCampaignRewardSpawnPoint } from './campaignRewards.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
@@ -137,6 +138,9 @@ export interface SurvivalUpgradeOption {
   icon: string;
   title: string;
   description: string;
+  rarity: SurvivalUpgradeRarity;
+  rarityLabel: string;
+  strengthMultiplier: number;
 }
 
 export type SurvivalWeaponId = 'pallet_cannon' | 'diamond_saw' | 'glue_mine' | 'kfc_bomber' | 'piorun_drone' | 'forklift_bolter' | 'scanner_pulse' | 'orbit_blades' | 'calacatta_shards' | 'steam_bomb' | 'forklift_horn' | 'wz_boomerang';
@@ -1923,11 +1927,12 @@ export class PaleciakiGameEngine {
     if (choice.id.startsWith('weapon_unlock:')) {
       const weaponId = choice.id.slice('weapon_unlock:'.length) as SurvivalWeaponId;
       if (!this.survivalWeapons.some((weapon) => weapon.id === weaponId)) {
+        const initialLevel = getSurvivalWeaponInitialLevel(choice.rarity);
         this.survivalWeapons.push({
           id: weaponId,
-          level: 1,
-          // Let the player see the new weapon before its first shot; avoid an instant unlock volley.
-          cooldown: SURVIVAL_WEAPON_DEFS[weaponId].cooldown * SURVIVAL_WEAPON_INITIAL_RELOAD_FACTOR,
+          level: initialLevel,
+          // Preserve a readable first reload while rewarding higher-rarity unlocks with a head start.
+          cooldown: getSurvivalWeaponReloadSeconds(SURVIVAL_WEAPON_DEFS[weaponId].cooldown, initialLevel, false) * SURVIVAL_WEAPON_INITIAL_RELOAD_FACTOR,
         });
         sound.playAbility(this.currentCharacterId);
       }
@@ -1935,7 +1940,7 @@ export class PaleciakiGameEngine {
       const weaponId = choice.id.slice('weapon_upgrade:'.length) as SurvivalWeaponId;
       const weapon = this.survivalWeapons.find((entry) => entry.id === weaponId);
       if (weapon && weapon.level < 5) {
-        weapon.level++;
+        weapon.level = Math.min(5, weapon.level + getSurvivalWeaponUpgradeSteps(choice.rarity));
         const upgradedCooldown = getSurvivalWeaponReloadSeconds(
           SURVIVAL_WEAPON_DEFS[weaponId].cooldown, weapon.level, !!weapon.evolved
         );
@@ -1965,67 +1970,72 @@ export class PaleciakiGameEngine {
         sound.playAbility(this.currentCharacterId);
       }
     } else {
+      const strength = choice.strengthMultiplier;
       this.survivalUpgradeStacks[choice.id] = (this.survivalUpgradeStacks[choice.id] || 0) + 1;
       switch (choice.id) {
       case 'damage':
-        this.survivalDamageMultiplier = Math.min(1.85, this.survivalDamageMultiplier * 1.12);
+        this.survivalDamageMultiplier = Math.min(2.05, this.survivalDamageMultiplier * (1 + 0.12 * strength));
         break;
       case 'rapid':
         // Attack-speed upgrades remain useful without turning the run into a screen-filling machine gun.
-        this.survivalAttackRateMultiplier = Math.max(0.86, this.survivalAttackRateMultiplier * 0.97);
+        this.survivalAttackRateMultiplier = Math.max(0.78, this.survivalAttackRateMultiplier * (1 - 0.03 * strength));
         break;
       case 'critical':
-        this.survivalCriticalChance = Math.min(0.25, this.survivalCriticalChance + 0.04);
+        this.survivalCriticalChance = Math.min(0.30, this.survivalCriticalChance + 0.04 * strength);
         break;
       case 'critical_damage':
-        this.survivalCriticalDamageMultiplier = Math.min(2.45, this.survivalCriticalDamageMultiplier + 0.20);
+        this.survivalCriticalDamageMultiplier = Math.min(2.85, this.survivalCriticalDamageMultiplier + 0.20 * strength);
         break;
       case 'dash':
-        this.survivalDashCooldownMultiplier = Math.max(0.55, this.survivalDashCooldownMultiplier * 0.88);
+        this.survivalDashCooldownMultiplier = Math.max(0.48, this.survivalDashCooldownMultiplier * (1 - 0.12 * strength));
         break;
       case 'ability': {
         const previousMultiplier = this.survivalAbilityCooldownMultiplier;
-        this.survivalAbilityCooldownMultiplier = Math.max(0.78, previousMultiplier * 0.92);
+        this.survivalAbilityCooldownMultiplier = Math.max(0.68, previousMultiplier * (1 - 0.08 * strength));
         const efficiencyFactor = this.survivalAbilityCooldownMultiplier / previousMultiplier;
         this.abilityCooldownState = scaleAbilityCooldown(this.abilityCooldownState, efficiencyFactor);
         this.updateAbilityCooldown(0, true);
         break;
       }
       case 'boots':
-        this.survivalMoveMultiplier = Math.min(1.24, this.survivalMoveMultiplier * 1.06);
+        this.survivalMoveMultiplier = Math.min(1.38, this.survivalMoveMultiplier * (1 + 0.06 * strength));
         break;
       case 'magnet':
-        this.survivalMagnetMultiplier *= 1.65;
+        this.survivalMagnetMultiplier = Math.min(4.2, this.survivalMagnetMultiplier * (1 + 0.65 * strength));
         break;
-      case 'reinforced':
-        this.maxHp += 1;
-        this.hp = Math.min(this.maxHp, this.hp + 1);
+      case 'reinforced': {
+        const bonusHp = Math.max(1, Math.round(strength));
+        this.maxHp += bonusHp;
+        this.hp = Math.min(this.maxHp, this.hp + bonusHp);
         this.callbacks.onHpUpdate(this.hp, this.maxHp);
         break;
-      case 'medkit':
-        this.hp = Math.min(this.maxHp, this.hp + 1);
+      }
+      case 'medkit': {
+        const healedHp = Math.max(1, Math.round(strength));
+        this.hp = Math.min(this.maxHp, this.hp + healedHp);
         this.activePerks.shield = true;
         this.callbacks.onHpUpdate(this.hp, this.maxHp);
         this.callbacks.onPerksUpdate?.(this.activePerks);
         break;
+      }
       case 'range':
-        this.survivalRangeMultiplier = Math.min(1.55, this.survivalRangeMultiplier * 1.08);
+        this.survivalRangeMultiplier = Math.min(1.75, this.survivalRangeMultiplier * (1 + 0.08 * strength));
         break;
       case 'growth':
-        this.survivalXpMultiplier = Math.min(2.5, this.survivalXpMultiplier * 1.18);
+        this.survivalXpMultiplier = Math.min(3.2, this.survivalXpMultiplier * (1 + 0.18 * strength));
         break;
       case 'scavenger':
-        this.survivalDropMultiplier = Math.min(2.8, this.survivalDropMultiplier * 1.25);
+        this.survivalDropMultiplier = Math.min(3.2, this.survivalDropMultiplier * (1 + 0.25 * strength));
         break;
       case 'regen':
-        this.survivalRegenMultiplier = Math.min(2.0, this.survivalRegenMultiplier + 0.35);
+        this.survivalRegenMultiplier = Math.min(2.8, this.survivalRegenMultiplier + 0.35 * strength);
         break;
       case 'drone':
-        this.activePerks.arcDrone = Math.max(this.activePerks.arcDrone || 0, 32);
+        this.activePerks.arcDrone = Math.max(this.activePerks.arcDrone || 0, Math.round(32 * strength));
         this.callbacks.onPerksUpdate?.(this.activePerks);
         break;
       case 'armor':
-        this.activePerks.damageWard = Math.max(this.activePerks.damageWard || 0, 24);
+        this.activePerks.damageWard = Math.max(this.activePerks.damageWard || 0, Math.round(24 * strength));
         this.callbacks.onPerksUpdate?.(this.activePerks);
         break;
       }
@@ -2035,7 +2045,7 @@ export class PaleciakiGameEngine {
     this.survivalPendingOptions = [];
     this.state = 'playing';
     sound.startMusic();
-    this.emitFloatingToast('ULEPSZENIE: ' + choice.title, this.playerPos.x, this.playerPos.y + 1.6, this.playerPos.z, 'perk');
+    this.emitFloatingToast(choice.rarityLabel + ' MODUŁ: ' + choice.title, this.playerPos.x, this.playerPos.y + 1.6, this.playerPos.z, 'perk');
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
 
     if (this.survivalXp >= this.survivalXpToNext) {
@@ -2104,7 +2114,8 @@ export class PaleciakiGameEngine {
   }
 
   private rollSurvivalUpgradeOptions(excluded: string[] = []): SurvivalUpgradeOption[] {
-    const pool: SurvivalUpgradeOption[] = [
+    type BaseOption = Omit<SurvivalUpgradeOption, 'rarity' | 'rarityLabel' | 'strengthMultiplier'>;
+    const pool: BaseOption[] = [
       { id: 'damage', icon: '🎯', title: 'WZMOCNIONA AMUNICJA', description: '+12% obrażeń wszystkich ataków operatora.' },
       { id: 'rapid', icon: '⚡', title: 'RYTM ATAKU', description: 'Skrócenie czasu między atakami o 3%.' },
       { id: 'critical', icon: '🎯', title: 'PRECYZYJNE TRAFIENIE', description: '+4 punkty procentowe szansy na trafienie krytyczne. Maksymalnie 5 poziomów.' },
@@ -2154,6 +2165,13 @@ export class PaleciakiGameEngine {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
+    const withRarity = (options: BaseOption[]): SurvivalUpgradeOption[] => options.map((option) => {
+      // Weapon evolutions are milestone rewards and are always Legendary.
+      const rarity = option.id.startsWith('weapon_evolve:')
+        ? 'legendary'
+        : rollSurvivalUpgradeRarity(Math.random(), this.survivalLevel);
+      return { ...option, ...getSurvivalUpgradeRarityMeta(rarity) };
+    });
     // Guaranteed new-weapon offer while the arsenal is still incomplete.
     // This avoids a long string of stat-only level-ups before the player gets a build identity.
     const newWeaponOffer = pool.find((option) => option.id.startsWith('weapon_unlock:'));
@@ -2163,7 +2181,7 @@ export class PaleciakiGameEngine {
       const remaining = pool.filter((option) =>
         option.id !== newWeaponOffer.id && !option.id.startsWith('weapon_unlock:')
       );
-      return [newWeaponOffer, ...remaining.slice(0, 2)];
+      return withRarity([newWeaponOffer, ...remaining.slice(0, 2)]);
     }
     const weaponProgressOffer = pool.find((option) => option.id.startsWith('weapon_'));
     if (weaponProgressOffer) {
@@ -2171,9 +2189,9 @@ export class PaleciakiGameEngine {
       const remaining = pool.filter((option) =>
         option.id !== weaponProgressOffer.id && !option.id.startsWith('weapon_')
       );
-      return [weaponProgressOffer, ...remaining.slice(0, 2)];
+      return withRarity([weaponProgressOffer, ...remaining.slice(0, 2)]);
     }
-    return pool.slice(0, 3);
+    return withRarity(pool.slice(0, 3));
   }
 
   public rerollSurvivalUpgrades(): boolean {
