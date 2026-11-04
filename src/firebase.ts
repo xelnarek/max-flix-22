@@ -13,7 +13,7 @@ import {
   getDocFromServer,
   DocumentData,
 } from 'firebase/firestore';
-import { getAuth, signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
+import { getAuth, signInAnonymously, onAuthStateChanged, type User, type Unsubscribe } from 'firebase/auth';
 import firebaseConfig from '../firebase-applet-config.json';
 import {
   getLeaderboardSlice,
@@ -220,37 +220,53 @@ export function initAuth(): Promise<User | null> {
       return;
     }
 
-    const finish = (user: User | null) => {
+    let unsubscribe: Unsubscribe | null = null;
+    let settled = false;
+    let signInAttempted = false;
+
+    const finish = (user: User | null, retryOnFailure = false) => {
+      if (settled) return;
+      settled = true;
       currentUser = user;
       isAuthInitialized = true;
       if (user) {
         console.log('[Firebase:Auth] 🟢 Sesja anonimowa gotowa.');
       } else {
-        console.warn('[Firebase:Auth] ⚠️ Rejestracja anonimowa pominięta - aktywny tryb gościa.');
+        console.warn('[Firebase:Auth] ⚠️ Brak sesji Firebase. Wyniki pozostaną lokalne do czasu ponownej próby logowania.');
       }
+
+      // A transient sign-in failure must not permanently cache a resolved null
+      // promise. The next score submission or foreground sync may retry safely.
+      if (!user && retryOnFailure) authPromise = null;
+      unsubscribe?.();
       resolve(user);
     };
 
-    onAuthStateChanged(auth, (user) => {
+    const subscription = onAuthStateChanged(auth, (user) => {
       if (user) {
         finish(user);
         return;
       }
 
+      if (signInAttempted) return;
+      signInAttempted = true;
+
       signInAnonymously(auth)
         .then((cred) => finish(cred.user))
         .catch((err) => {
           if (err?.code === 'auth/admin-restricted-operation') {
-            console.warn(
-              '[Firebase:Auth] ⚠️ UWAGA: Logowanie anonimowe jest wyłączone w Twoim projekcie Firebase (auth/admin-restricted-operation). ' +
-              'Aktywowano płynny tryb gościa.'
-            );
+            console.warn('[Firebase:Auth] ⚠️ Logowanie anonimowe jest wyłączone w projekcie Firebase.');
           } else {
-            console.warn('[Firebase:Auth] ⚠️ Błąd logowania anonimowego:', err);
+            console.warn('[Firebase:Auth] ⚠️ Nie udało się utworzyć sesji Firebase:', err);
           }
-          finish(null);
+          finish(null, true);
         });
     });
+
+    unsubscribe = subscription;
+    // Be defensive if an SDK implementation invokes the initial observer
+    // synchronously before onAuthStateChanged returns its unsubscribe handle.
+    if (settled) unsubscribe();
   });
 
   return authPromise;
@@ -269,6 +285,10 @@ export async function ensureLeaderboardServices(): Promise<void> {
 // Test connection on boot per guidelines
 export async function testFirestoreConnection(): Promise<boolean> {
   const targetDoc = 'test/connection';
+  if (!currentUser?.uid) {
+    console.warn('[Firebase:Firestore] ⚠️ Brak aktywnej sesji; połączenie nie może zostać potwierdzone.');
+    return false;
+  }
   const startTime = performance.now();
 
   try {
@@ -286,7 +306,7 @@ export async function testFirestoreConnection(): Promise<boolean> {
       console.warn(`[Firebase:Firestore] ⚠️ Klient jest offline (${duration} ms). Brak odpowiedzi od serwera.`);
       return false;
     }
-    if (errCode === 'not-found' || errCode === 'permission-denied') {
+    if (errCode === 'not-found') {
       console.log(`[Firebase:Firestore] 🟢 Odpowiedź serwera Firestore odebrana ('${errCode}', ${duration} ms) -> Połączenie aktywne.`);
       return true;
     }
@@ -327,7 +347,10 @@ export async function submitScore(
   const pendingWrite: PendingLeaderboardWrite = { id: cleanId, payload };
 
   try {
-    await initAuth();
+    const user = await initAuth();
+    if (!user?.uid) {
+      throw new Error('Firebase authentication unavailable; score kept in the local queue.');
+    }
     await setDoc(doc(db, collectionPath, cleanId), payload);
     persistPendingLeaderboardWrites(pending.filter((item) => item.id !== cleanId));
     cacheLeaderboardEntries([
@@ -361,8 +384,12 @@ export async function syncPendingLeaderboardScores(): Promise<number> {
   const pending = parsePendingLeaderboardWrites();
   if (!pending.length) return 0;
 
-  // Live leaderboard writes require the anonymous Firebase session; if auth is unavailable, submissions stay queued locally.
-  await initAuth();
+  // Do not send writes until the anonymous Firebase session is confirmed.
+  const user = await initAuth();
+  if (!user?.uid) {
+    console.warn('[Firebase:Leaderboard] ⏳ Brak sesji Firebase; kolejka pozostaje lokalna.');
+    return 0;
+  }
 
   const remaining: PendingLeaderboardWrite[] = [];
   const acknowledged: LeaderboardEntry[] = [];
