@@ -494,6 +494,7 @@ export class PaleciakiGameEngine {
   private survivalDroneCooldown = 1.2;
   private survivalRerolls = 1;
   private survivalSkips = 1;
+  private survivalAdRerollGranted = false;
   private survivalSecretSpawned = false;
   private survivalPomazaniecSpawned = false;
   private survivalPomazaniecTriggered = false;
@@ -1261,6 +1262,7 @@ export class PaleciakiGameEngine {
     this.survivalDroneCooldown = 1.2;
     this.survivalRerolls = 1;
     this.survivalSkips = 1;
+    this.survivalAdRerollGranted = false;
     this.survivalSecretSpawned = false;
     this.survivalPomazaniecSpawned = false;
     this.survivalPomazaniecTriggered = false;
@@ -2184,6 +2186,22 @@ export class PaleciakiGameEngine {
     this.survivalPendingOptions = this.rollSurvivalUpgradeOptions(this.survivalPendingOptions.map((option) => option.id));
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
     this.callbacks.onSurvivalLevelUp?.([...this.survivalPendingOptions]);
+    sound.playPickup();
+    return true;
+  }
+
+  /** Adds one reroll only after the native AdMob SDK confirms a completed reward. */
+  public grantSurvivalRerollFromAd(): boolean {
+    if (
+      this.gameMode !== 'survival' ||
+      this.state !== 'levelup' ||
+      this.survivalAdRerollGranted
+    ) return false;
+
+    this.survivalAdRerollGranted = true;
+    this.survivalRerolls++;
+    this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+    this.emitFloatingToast('REKLAMA ZAKOŃCZONA — +1 PRZERZUT', this.playerPos.x, this.playerPos.y + 1.5, this.playerPos.z, 'perk');
     sound.playPickup();
     return true;
   }
