@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
 const outputDirectory = resolve('play-store/generated');
@@ -67,13 +67,45 @@ function validateJpeg(buffer, expectedWidth, expectedHeight) {
 }
 
 const iconSource = resolve('resources/icon-only.svg');
+const iconBackgroundSource = resolve('resources/icon-background.svg');
 const featureSource = resolve('play-store/feature-graphic.svg');
+const iconBackgroundMarkup = readFileSync(iconBackgroundSource, 'utf8');
 const featureMarkup = readFileSync(featureSource, 'utf8');
+if (!/width="1024"\s+height="1024"/.test(iconBackgroundMarkup)) {
+  throw new Error('App icon background SVG must define a 1024x1024 canvas.');
+}
 if (!/width="1024"\s+height="500"/.test(featureMarkup)) {
   throw new Error('Feature graphic SVG must define a 1024x500 canvas.');
 }
 
-const iconPng = run('rsvg-convert', ['--width', '512', '--height', '512', iconSource]);
+// Google Play applies its own rounded mask and expects a full, opaque artwork
+// background. Composite the transparent foreground artwork over the same dark
+// warehouse background used by the Android adaptive launcher icon.
+const iconBackgroundPng = run('rsvg-convert', ['--width', '512', '--height', '512', iconBackgroundSource]);
+const iconForegroundPng = run('rsvg-convert', ['--width', '512', '--height', '512', iconSource]);
+const iconBackgroundPath = resolve(outputDirectory, '.app-icon-background.tmp.png');
+const iconForegroundPath = resolve(outputDirectory, '.app-icon-foreground.tmp.png');
+let iconPng;
+try {
+  writeFileSync(iconBackgroundPath, iconBackgroundPng);
+  writeFileSync(iconForegroundPath, iconForegroundPng);
+  iconPng = run('convert', [
+    iconBackgroundPath,
+    iconForegroundPath,
+    '-compose', 'over',
+    '-composite',
+    '-define', 'png:color-type=6',
+    '-depth', '8',
+    'png:-',
+  ]);
+} finally {
+  try { unlinkSync(iconBackgroundPath); } catch { /* No temp file was created. */ }
+  try { unlinkSync(iconForegroundPath); } catch { /* No temp file was created. */ }
+}
+const opacity = run('identify', ['-format', '%[opaque]', 'png:-'], iconPng).toString('utf8').trim().toLowerCase();
+if (opacity !== 'true') {
+  throw new Error('Google Play app icon must have a fully opaque background (no transparent pixels).');
+}
 const iconInfo = validatePng(iconPng, 512, 512);
 if (iconInfo.bytes > 1024 * 1024) {
   throw new Error('Google Play app icon must not exceed 1 MiB.');

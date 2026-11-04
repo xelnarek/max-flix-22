@@ -46,8 +46,9 @@ test('Android CI builds API 36 AAB and a debug APK without embedding credentials
 });
 
 test('Play Store artwork sources and CI exports meet the listing image dimensions', async () => {
-  const [iconSvg, featureSvg, artworkScript, workflow, listingText] = await Promise.all([
+  const [iconSvg, iconBackgroundSvg, featureSvg, artworkScript, workflow, listingText] = await Promise.all([
     read('../resources/icon-only.svg'),
+    read('../resources/icon-background.svg'),
     read('../play-store/feature-graphic.svg'),
     read('../scripts/prepare-play-store-artwork.mjs'),
     read('../.github/workflows/android-release.yml'),
@@ -56,6 +57,7 @@ test('Play Store artwork sources and CI exports meet the listing image dimension
   const listing = JSON.parse(listingText);
 
   assert.match(iconSvg, /width="1024" height="1024"/);
+  assert.match(iconBackgroundSvg, /<rect width="1024" height="1024" fill="url\(#bg\)"/);
   assert.match(featureSvg, /width="1024" height="500"/);
   assert.match(artworkScript, /rsvg-convert/);
   assert.match(artworkScript, /--width', '512'[\s\S]*?--height', '512'/);
@@ -63,6 +65,10 @@ test('Play Store artwork sources and CI exports meet the listing image dimension
   assert.match(artworkScript, /run\('convert',/);
   assert.doesNotMatch(artworkScript, /run\('magick',/);
   assert.match(artworkScript, /-alpha', 'off'[\s\S]*?-depth', '8'/);
+  assert.match(artworkScript, /iconBackgroundSource = resolve\('resources\/icon-background\.svg'\)/);
+  assert.match(artworkScript, /-compose', 'over'[\s\S]*?'-composite'/);
+  assert.match(artworkScript, /identify', \['-format', '%\[opaque\]'/);
+  assert.match(artworkScript, /opacity !== 'true'/);
   assert.match(artworkScript, /colorType !== 6/);
   assert.match(artworkScript, /validateJpeg/);
   assert.match(workflow, /sudo apt-get install -y librsvg2-bin imagemagick/);
