@@ -71,7 +71,7 @@ const iconBackgroundSource = resolve('resources/icon-background.svg');
 const featureSource = resolve('play-store/feature-graphic.svg');
 const iconBackgroundMarkup = readFileSync(iconBackgroundSource, 'utf8');
 const featureMarkup = readFileSync(featureSource, 'utf8');
-if (!/width="1024"\\s+height="1024"/.test(iconBackgroundMarkup)) {
+if (!/width="1024"\s+height="1024"/.test(iconBackgroundMarkup)) {
   throw new Error('App icon background SVG must define a 1024x1024 canvas.');
 }
 if (!/width="1024"\s+height="500"/.test(featureMarkup)) {
