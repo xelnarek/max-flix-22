@@ -9675,7 +9675,7 @@ export class MaxFlizGameEngine {
       progress,
       ready,
       this.abilityCooldownState.remainingSeconds,
-      this.gameMode === 'survival'
+      true
     );
     this.abilityCooldownLastProgress = progress;
     this.abilityCooldownLastReady = ready;
