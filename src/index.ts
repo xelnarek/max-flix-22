@@ -9,7 +9,8 @@ import {
 } from './firebase.ts';
 import { MaxFlizGameEngine, type SurvivalSnapshot, type SurvivalUpgradeOption } from './game.ts';
 import { sound } from './sound.ts';
-import { PixelIntroManager } from './pixelIntro.ts';
+import { CinematicIntroManager } from './cinematicIntro.ts';
+import { formatLeaderboardTimestamp } from './leaderboard.ts';
 import { CharacterId, PerkType } from './types.ts';
 import { AssetItem, assetLoader } from './assets.ts';
 import { SelectiveBloomPipeline } from './selectiveBloom.ts';
@@ -107,7 +108,7 @@ const escapeLeaderboardText = (value: string): string => value.replace(/[&<>"']/
 });
 class MaxFlizScene extends xb.Script {
   private engine!: MaxFlizGameEngine;
-  private pixelIntro: PixelIntroManager | null = null;
+  private cinematicIntro: CinematicIntroManager | null = null;
   private selectedCharId: CharacterId = 'marcin';
   private selectedLevelId: number = 1;
   private lastScore: number = 0;
@@ -833,7 +834,7 @@ class MaxFlizScene extends xb.Script {
 
     // The 2D intro is created lazily on first use; the boot sequence requests
     // its first run after the renderer and title UI are fully ready.
-    this.pixelIntro = null;
+    this.cinematicIntro = null;
 
     const updateCharacterUI = (id: CharacterId) => {
       this.selectedCharId = id;
@@ -1008,6 +1009,7 @@ class MaxFlizScene extends xb.Script {
             const mins = Math.floor(entry.timeSeconds / 60);
             const secs = entry.timeSeconds % 60;
             const timeFormatted = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            const recordTimestamp = formatLeaderboardTimestamp(entry.createdAt);
 
             const row = document.createElement('div');
             row.className = `leaderboard-item ${idx < 3 ? 'top-' + (idx + 1) : ''}`;
@@ -1018,6 +1020,7 @@ class MaxFlizScene extends xb.Script {
                 <div class="leaderboard-player-name">${safePlayerName} ${bossBadge}</div>
                 <div class="leaderboard-player-subline"><span class="leaderboard-mode-pill ${modeClass}">${modeLabel}</span>${syncBadge}</div>
                 <div class="leaderboard-player-meta">${safeHeroName} • Czas: ${timeFormatted} • VIP: ${entry.coins}</div>
+                <div class="leaderboard-record-time">REKORD: ${recordTimestamp}</div>
               </div>
               <div class="leaderboard-score-cluster">
                 <div class="leaderboard-score-val">${entry.score.toLocaleString('pl-PL')} pkt</div>
@@ -1170,7 +1173,7 @@ class MaxFlizScene extends xb.Script {
           throw new Error('Silnik gry nie jest jeszcze gotowy.');
         }
 
-        if (this.pixelIntro?.isRunning()) this.pixelIntro.stop();
+        if (this.cinematicIntro?.isRunning()) this.cinematicIntro.stop(false, false);
         this.engine.setLevelVisible(true);
         // Start the engine before dismissing the menu. If initialization fails,
         // the player remains on the menu and can retry instead of seeing a dead screen.
@@ -1254,7 +1257,7 @@ class MaxFlizScene extends xb.Script {
           throw new Error('Silnik Survival Shift nie jest jeszcze gotowy.');
         }
 
-        if (this.pixelIntro?.isRunning()) this.pixelIntro.stop();
+        if (this.cinematicIntro?.isRunning()) this.cinematicIntro.stop(false, false);
         this.engine.setLevelVisible(true);
 
         const storyModal = document.getElementById('story-intro-modal');
@@ -1356,20 +1359,20 @@ class MaxFlizScene extends xb.Script {
       }
     });
 
-    let pixelIntroLaunchPending = false;
-    const launchPixelIntro = async (e?: Event) => {
-      if (this.pixelIntro?.isRunning() || pixelIntroLaunchPending) return;
+    let cinematicIntroLaunchPending = false;
+    const launchCinematicIntro = async (e?: Event) => {
+      if (this.cinematicIntro?.isRunning() || cinematicIntroLaunchPending) return;
       if (e) {
         e.preventDefault();
         e.stopPropagation();
       }
 
-      pixelIntroLaunchPending = true;
+      cinematicIntroLaunchPending = true;
       try {
-        await assetLoader.waitUntilReady('Pixel Intro');
+        await assetLoader.waitUntilReady('Cinematic Intro');
 
-        if (!this.pixelIntro) {
-          this.pixelIntro = new PixelIntroManager({
+        if (!this.cinematicIntro) {
+          this.cinematicIntro = new CinematicIntroManager({
             onComplete: () => {
               this.engine.setLevelVisible(true);
               if (titleScreen) {
@@ -1391,19 +1394,19 @@ class MaxFlizScene extends xb.Script {
         }
         document.getElementById('story-intro-modal')?.classList.add('hidden');
         this.engine.setLevelVisible(false);
-        this.pixelIntro.start();
+        this.cinematicIntro.start();
       } catch (error) {
-        console.error('[PixelIntro] Nie udało się uruchomić intro:', error);
+        console.error('[CinematicIntro] Nie udało się uruchomić intro:', error);
         assetLoader.hide();
         this.engine?.setLevelVisible(true);
         titleScreen?.classList.remove('hidden');
         titleScreen?.style.setProperty('display', 'flex', 'important');
       } finally {
-        pixelIntroLaunchPending = false;
+        cinematicIntroLaunchPending = false;
       }
     };
 
-    document.getElementById('btn-open-pixel-intro')?.addEventListener('click', launchPixelIntro);
+    document.getElementById('btn-open-cinematic-intro')?.addEventListener('click', launchCinematicIntro);
 
     document.getElementById('btn-attack')?.addEventListener('click', () => {
       this.engine.triggerAttack();
@@ -1750,11 +1753,33 @@ class MaxFlizScene extends xb.Script {
 
     this.setupTouchControls();
 
+    const syncGameSpeedButtons = () => {
+      for (const [id, value] of [['btn-speed-1x', 1], ['btn-speed-2x', 2]] as const) {
+        const button = document.getElementById(id) as HTMLButtonElement | null;
+        if (!button) continue;
+        const active = this.engine.getTimeScale() === value;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-pressed', String(active));
+        button.setAttribute('aria-label', active ? `Szybkość ${value}x aktywna` : `Ustaw szybkość ${value}x`);
+      }
+    };
+    document.getElementById('btn-speed-1x')?.addEventListener('click', () => {
+      this.engine.setTimeScale(1);
+      syncGameSpeedButtons();
+    });
+    document.getElementById('btn-speed-2x')?.addEventListener('click', () => {
+      this.engine.setTimeScale(2);
+      syncGameSpeedButtons();
+    });
+    syncGameSpeedButtons();
+
     if (titleScreen) {
       titleScreen.classList.remove('hidden');
       titleScreen.style.display = 'flex';
     }
     this.engine.startTitle();
+    // The intro is the actual opening beat now, not an obsolete menu demo.
+    window.setTimeout(() => { void launchCinematicIntro(); }, 220);
   }
 
   private prepareScoreSubmissionForm(inputId: string, buttonId: string, feedbackId: string) {
@@ -2109,8 +2134,8 @@ class MaxFlizScene extends xb.Script {
     this.updateAdaptiveRenderQuality(now);
 
     try {
-      if (this.pixelIntro && this.pixelIntro.isRunning()) {
-        // Pixel intro owns a throttled Canvas RAF; skip the hidden 3D game update.
+      if (this.cinematicIntro && this.cinematicIntro.isRunning()) {
+        // Cinematic intro owns a throttled Canvas RAF; skip the hidden 3D game update.
       } else if (this.engine) {
         this.engine.update(dt);
       }
@@ -2342,7 +2367,7 @@ async function startApp() {
 
     // Let the browser paint the ready menu once, then launch the 20-second
     // opening sequence automatically. The intro itself is still skippable.
-    const introButton = document.getElementById('btn-open-pixel-intro') as HTMLButtonElement | null;
+    const introButton = document.getElementById('btn-open-cinematic-intro') as HTMLButtonElement | null;
     if (introButton && !document.hidden) {
       await new Promise<void>((resolve) => {
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()));

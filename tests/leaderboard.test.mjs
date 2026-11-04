@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  formatLeaderboardTimestamp,
   getLeaderboardSlice,
   mergeLeaderboardEntries,
   normalizeLeaderboardEntry,
@@ -71,3 +72,11 @@ test('local pending entries are replaced by acknowledged cloud records with the 
   assert.equal(merged[0].syncStatus, 'online');
   assert.equal(merged[0].id, 'queued');
 });
+
+
+test('leaderboard record timestamps are displayed in Polish local time', () => {
+  assert.equal(formatLeaderboardTimestamp('2026-11-04T16:30:00.000Z'), '04.11.2026, 17:30');
+  assert.equal(formatLeaderboardTimestamp('1970-01-01T00:00:00.000Z'), 'DATA NIEZNANA');
+  assert.equal(formatLeaderboardTimestamp('not-a-date'), 'DATA NIEZNANA');
+});
+

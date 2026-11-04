@@ -71,9 +71,8 @@ export function scaleAbilityCooldown(
 }
 
 /**
- * Defeated enemies can refill part of a Survival cooldown, but only up to a
- * per-use cap. The cap is supplied by the caller so a rare build evolution can
- * increase it without changing campaign behaviour.
+ * Defeated enemies can refill part of a special cooldown, bounded by a per-use
+ * budget so repeated weak kills cannot instantly reset the ability.
  */
 export function applyAbilityKillRecharge(
   state: AbilityCooldownState,
@@ -94,4 +93,22 @@ export function applyAbilityKillRecharge(
     },
     rechargedSeconds,
   };
+}
+
+
+export type AbilityRechargeMode = 'campaign' | 'survival';
+
+/** Per-kill special recharge tuned as a capped Archero-style reward loop. */
+export function getAbilityKillRechargeSeconds(
+  mode: AbilityRechargeMode,
+  isElite: boolean,
+  isBoss = false,
+): number {
+  if (mode === 'survival') return isElite ? 0.78 : 0.16;
+  if (isBoss) return 1.65;
+  return isElite ? 0.82 : 0.24;
+}
+
+export function getAbilityKillRechargeCapRatio(mode: AbilityRechargeMode): number {
+  return mode === 'survival' ? 0.22 : 0.34;
 }

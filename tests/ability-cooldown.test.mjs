@@ -5,6 +5,8 @@ import {
   applyAbilityKillRecharge,
   createAbilityCooldown,
   getAbilityCooldownProgress,
+  getAbilityKillRechargeCapRatio,
+  getAbilityKillRechargeSeconds,
   scaleAbilityCooldown,
 } from '../src/abilityCooldown.ts';
 
@@ -86,4 +88,26 @@ test('elite kill recharge cannot exceed remaining cooldown or the per-use cap', 
   }, 2, 4.4);
   assert.equal(exhaustedBudget.rechargedSeconds, 0);
   assert.equal(exhaustedBudget.state.remainingSeconds, 10);
+});
+
+
+test('Campaign and Survival kills use bounded Archero-style special recharge', () => {
+  assert.equal(getAbilityKillRechargeSeconds('campaign', false), 0.24);
+  assert.equal(getAbilityKillRechargeSeconds('campaign', true), 0.82);
+  assert.equal(getAbilityKillRechargeSeconds('campaign', true, true), 1.65);
+  assert.equal(getAbilityKillRechargeSeconds('survival', false), 0.16);
+  assert.equal(getAbilityKillRechargeSeconds('survival', true), 0.78);
+  assert.equal(getAbilityKillRechargeCapRatio('campaign'), 0.34);
+  assert.equal(getAbilityKillRechargeCapRatio('survival'), 0.22);
+
+  let state = createAbilityCooldown(20);
+  const budget = state.durationSeconds * getAbilityKillRechargeCapRatio('campaign');
+  let gained = 0;
+  for (let index = 0; index < 40; index++) {
+    const result = applyAbilityKillRecharge(state, getAbilityKillRechargeSeconds('campaign', false), budget);
+    state = result.state;
+    gained += result.rechargedSeconds;
+  }
+  assert.ok(Math.abs(gained - 6.8) < 1e-9);
+  assert.ok(Math.abs(state.remainingSeconds - 13.2) < 1e-9);
 });

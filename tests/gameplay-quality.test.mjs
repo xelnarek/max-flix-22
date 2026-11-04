@@ -165,13 +165,17 @@ test('Survival menu copy stays synchronized with the actual 60-second wave clock
   assert.doesNotMatch(html, /FALE CO 42 S/);
 });
 
-test('pixel intro has a single mobile-safe launch path and cannot start twice from touch plus synthetic click', async () => {
-  const [app, intro] = await Promise.all([read('../src/index.ts'), read('../src/pixelIntro.ts')]);
-  assert.match(app, /if \(this\.pixelIntro\?\.isRunning\(\) \|\| pixelIntroLaunchPending\) return/);
-  assert.match(app, /btn-open-pixel-intro'\)\?\.addEventListener\('click', launchPixelIntro\)/);
-  assert.doesNotMatch(app, /btn-open-pixel-intro'\)\?\.addEventListener\('touchend', launchPixelIntro\)/);
-  assert.match(intro, /MAX-FLIX I GRANICA ABSURDU/);
-  assert.match(intro, /INWENTARYZACJA: 0 BŁĘDÓW/);
+test('cinematic intro has one mobile-safe launch path and cannot start twice from touch', async () => {
+  const [app, intro, html] = await Promise.all([
+    read('../src/index.ts'), read('../src/cinematicIntro.ts'), read('../index.html')
+  ]);
+  assert.match(app, /if \(this\.cinematicIntro\?\.isRunning\(\) \|\| cinematicIntroLaunchPending\) return/);
+  assert.match(app, /btn-open-cinematic-intro'\)\?\.addEventListener\('click', launchCinematicIntro\)/);
+  assert.doesNotMatch(app, /btn-open-cinematic-intro'\)\?\.addEventListener\('touchend'/);
+  assert.match(app, /new CinematicIntroManager/);
+  assert.match(intro, /drawWarehouse/);
+  assert.match(html, /id="btn-open-cinematic-intro"/);
+  assert.doesNotMatch(app, /PixelIntroManager|pixelIntro/i);
 });
 
 test('Survival start locks duplicate taps before awaiting shared asset readiness', async () => {
@@ -204,27 +208,22 @@ test('Campaign and Survival HUD no longer reserve or render a minimap lane', asy
 });
 
 
-test('opening Retro Intro autoplays after boot and always layers above the game shell', async () => {
+test('cinematic intro autoplays after boot and is layered above the game shell', async () => {
   const [app, css, intro] = await Promise.all([
-    read('../src/index.ts'), read('../src/index.css'), read('../src/pixelIntro.ts')
+    read('../src/index.ts'), read('../src/index.css'), read('../src/cinematicIntro.ts')
   ]);
-  assert.match(app, /const introButton = document\.getElementById\('btn-open-pixel-intro'\)/);
-  assert.match(app, /requestAnimationFrame\(\(\) => requestAnimationFrame\(\(\) => resolve\(\)\)\)/);
-  assert.match(app, /introButton\.click\(\)/);
-  assert.match(intro, /overlay\.style\.zIndex = '20000000'/);
-  assert.match(css, /#pixel-intro-overlay\.pixel-intro-overlay\s*\{[\s\S]*?z-index: 20000000 !important/);
-  assert.match(css, /#pixel-intro-overlay::before,[\s\S]*?pointer-events: none !important/);
+  assert.match(app, /this\.engine\.startTitle\(\)[\s\S]*?window\.setTimeout\(\(\) => \{ void launchCinematicIntro\(\); \}, 220\)/);
+  assert.match(app, /new CinematicIntroManager/);
+  assert.match(intro, /overlay\.className = 'cinematic-intro-overlay'/);
+  assert.match(css, /\.cinematic-intro-overlay\s*\{[\s\S]*?z-index: 20000000 !important/);
 });
 
-test('Retro Intro avoids duplicate touch activation and caps Canvas rendering on mobile', async () => {
-  const intro = await read('../src/pixelIntro.ts');
-  assert.match(intro, /this\.targetFrameIntervalMs = isMobile \? 1000 \/ 30 : 1000 \/ 45/);
-  assert.match(intro, /this\.canvas\.width = mobile \? 960 : 1280/);
-  assert.match(intro, /this\.canvas\.height = mobile \? 540 : 720/);
-  assert.match(intro, /this\.sceneStepElements = Array\.from\(overlay\.querySelectorAll/);
-  assert.match(intro, /INTRO_SUBTITLES\[this\.currentScene\]/);
+test('cinematic intro throttles its Canvas rendering on mobile and cleans up RAF', async () => {
+  const intro = await read('../src/cinematicIntro.ts');
+  assert.match(intro, /this\.frameInterval = mobile \? 1000 \/ 30 : 1000 \/ 45/);
+  assert.match(intro, /const dpr = Math\.min\(1\.5/);
+  assert.match(intro, /cancelAnimationFrame\(this\.rafId\)/);
   assert.doesNotMatch(intro, /addEventListener\('touchend'/);
-  assert.match(intro, /if \(this\.animFrameId !== null\) \{[\s\S]*?cancelAnimationFrame\(this\.animFrameId\)/);
 });
 
 test('Campaign boss proximity UI is throttled and only updates when its state changes', async () => {
@@ -726,13 +725,16 @@ test('level reset releases every per-level hazard model, not only the newest tra
 });
 
 
-test('special ability cooldown has a single authoritative timer and Survival-only kill recharge', async () => {
+test('special ability has one authoritative timer and capped recharge in both modes', async () => {
   const game = await read('../src/game.ts');
   const app = await read('../src/index.ts');
   assert.match(game, /private abilityCooldownState: AbilityCooldownState = createAbilityCooldown\(0\)/);
   assert.match(game, /this\.updateAbilityCooldown\(simDt\)/);
-  assert.match(game, /this\.rechargeAbilityFromSurvivalKill\(isAbilityRechargeElite\)/);
-  assert.doesNotMatch(game, /abilityTimer/);
+  assert.match(game, /this\.rechargeAbilityFromKill\(isAbilityRechargeElite, isAbilityRechargeBoss\)/);
+  assert.match(game, /getAbilityKillRechargeSeconds\(mode, isElite, isBoss\)/);
+  assert.match(game, /getAbilityKillRechargeCapRatio\('campaign'\)/);
+  assert.match(game, /this\.survivalAbilityKillRechargeCapRatio/);
+  assert.doesNotMatch(game, /abilityTimer|rechargeAbilityFromSurvivalKill/);
   assert.match(app, /onAbilityCooldown: \(progress, ready, remainingSeconds, killRechargeEnabled\)/);
   assert.match(app, /GOTOWA \[E\]/);
 });
@@ -772,7 +774,7 @@ test('Survival tactical dodge is directional, invulnerable only for a short wind
   assert.match(app, /onSurvivalDashUpdate: \(progress, ready, remainingSeconds\)/);
   assert.match(app, /bindTouchAction\('btn-touch-dash', \(\) => this\.engine\.triggerDash\(\)\)/);
   assert.match(html, /id="btn-touch-dash"/);
-  assert.match(css, /#game-shell\.survival-mode \.dash-touch-btn\s*\{\s*display: flex !important/);
+  assert.match(css, /\.touch-actions-zone \.dash-touch-btn\s*\{\s*display: flex !important/);
 });
 
 test('critical upgrades are capped, roll once per weapon volley, and can unlock a paired build synergy', async () => {
@@ -835,4 +837,113 @@ test('a perfect dodge charges one weapon volley and the Survival HUD exposes the
   assert.match(mechanics, /return counterattackReady \? safeDamage \+ 1 : safeDamage/);
   assert.match(app, /snapshot\.counterattackReady \? ' ✦' : ''/);
   assert.match(app, /Kontratak naładowany/);
+});
+
+
+test('Campaign mega-map shares the tactical dodge cooldown, movement and touch control', async () => {
+  const [game, app, html, css] = await Promise.all([
+    read('../src/game.ts'), read('../src/index.ts'), read('../index.html'), read('../src/index.css')
+  ]);
+  const dashStart = game.indexOf('public triggerDash(): boolean');
+  const dashEnd = game.indexOf('public triggerAbility()', dashStart);
+  assert.ok(dashStart >= 0 && dashEnd > dashStart);
+  const dash = game.slice(dashStart, dashEnd);
+  assert.doesNotMatch(dash, /this\.gameMode !== 'survival'/);
+  assert.match(dash, /this\.gameMode === 'survival'[\s\S]*?getSurvivalDashCooldownSeconds\(this\.survivalDashCooldownMultiplier\)[\s\S]*?: 7\.0/);
+  assert.match(dash, /this\.gameMode === 'campaign'[\s\S]*?campaignHalfDepth/);
+  assert.match(game, /this\.updateSurvivalDashCooldown\(simDt\)/);
+  assert.match(game, /const isTacticalDashing = this\.survivalDashDurationRemaining > 0/);
+  assert.match(game, /this\.campaignCounterattackReady = false/);
+  assert.match(game, /this\.campaignCounterattackReady = true/);
+  assert.match(game, /campaignCounterattackReady \? 1 : 0/);
+  assert.equal((game.match(/campaignCounterattackReady \? 1 : 0/g) || []).length, 5,
+    'all five Campaign operator attacks can consume the bonus');
+  assert.match(app, /onSurvivalDashUpdate: \(progress, ready, remainingSeconds\)/);
+  assert.match(app, /bindTouchAction\('btn-touch-dash', \(\) => this\.engine\.triggerDash\(\)\)/);
+  assert.match(html, /Unik taktyczny \(Q\) • Kampania i Survival/);
+  assert.match(css, /\.touch-actions-zone \.dash-touch-btn\s*\{\s*display: flex !important/);
+});
+
+test('Campaign boss-lane perfect dodge charges one primary attack and does not touch Survival weapon state', async () => {
+  const game = await read('../src/game.ts');
+  const dashStart = game.indexOf('public triggerDash(): boolean');
+  const dashEnd = game.indexOf('public triggerAbility()', dashStart);
+  const dash = game.slice(dashStart, dashEnd);
+  assert.match(dash, /if \(this\.gameMode === 'survival'\)[\s\S]*?this\.survivalCounterattackReady = true[\s\S]*?\} else \{[\s\S]*?this\.campaignCounterattackReady = true/);
+  assert.match(dash, /this\.abilityCooldownState = advanceAbilityCooldown\(this\.abilityCooldownState, 0\.65\)/);
+  assert.match(dash, /IDEALNY UNIK BOSSA! \+100 PKT • KONTRATAK \+1/);
+  const attackStart = game.indexOf('public triggerAttack()');
+  const attackEnd = game.indexOf('\n  private ', attackStart + 20);
+  const attack = game.slice(attackStart, attackEnd);
+  assert.match(attack, /const campaignCounterattackReady = this\.gameMode === 'campaign' && this\.campaignCounterattackReady/);
+  assert.match(attack, /if \(campaignCounterattackReady\) \{\s*this\.campaignCounterattackReady = false/);
+  assert.equal((attack.match(/campaignCounterattackReady \? 1 : 0/g) || []).length, 5);
+});
+
+
+test('1x and 2x speed controls use the engine time scale without double scaling RAF delta', async () => {
+  const [game, app, html, css] = await Promise.all([
+    read('../src/game.ts'), read('../src/index.ts'), read('../index.html'), read('../src/index.css')
+  ]);
+  assert.match(game, /private timeScale: 1 \| 2 = 1/);
+  assert.match(game, /public getTimeScale\(\): 1 \| 2/);
+  assert.match(game, /public setTimeScale\(scale: number\): 1 \| 2/);
+  assert.match(game, /frameDt \* \(this\.state === 'playing' \? this\.timeScale : 1\)/);
+  assert.match(app, /this\.engine\.setTimeScale\(2\)/);
+  assert.match(app, /this\.engine\.setTimeScale\(1\)/);
+  assert.match(app, /this\.engine\.update\(dt\)/);
+  assert.doesNotMatch(app, /getScaledSimulationDelta/);
+  assert.match(html, /id="btn-speed-1x"/);
+  assert.match(html, /id="btn-speed-2x"/);
+  assert.match(css, /\.game-speed-control/);
+  assert.match(css, /flex-wrap: wrap/);
+});
+
+test('Campaign special recharge rewards regular kills, elite chains and bosses with a cap', async () => {
+  const [game, cooldown] = await Promise.all([
+    read('../src/game.ts'), read('../src/abilityCooldown.ts')
+  ]);
+  assert.match(cooldown, /getAbilityKillRechargeSeconds/);
+  assert.match(cooldown, /if \(isBoss\) return 1\.65/);
+  assert.match(cooldown, /return isElite \? 0\.82 : 0\.24/);
+  assert.match(cooldown, /mode === 'survival' \? 0\.22 : 0\.34/);
+  assert.match(game, /private rechargeAbilityFromKill\(isElite: boolean, isBoss = false\)/);
+  assert.match(game, /const chainMultiplier = 1 \+ Math\.min\(0\.35/);
+  assert.match(game, /getAbilityKillRechargeSeconds\(mode, isElite, isBoss\)/);
+  assert.match(game, /getAbilityKillRechargeCapRatio\('campaign'\)/);
+  assert.match(game, /this\.rechargeAbilityFromKill\(isAbilityRechargeElite, isAbilityRechargeBoss\)/);
+  assert.match(game, /const capRatio = mode === 'survival'[\s\S]{0,80}this\.survivalAbilityKillRechargeCapRatio/);
+  assert.match(game, /this\.abilityCooldownState\.remainingSeconds,\s*true\s*\)/);
+});
+
+test('new cinematic intro replaces the old pixel/VHS intro and launches at boot', async () => {
+  const [app, intro, html, css] = await Promise.all([
+    read('../src/index.ts'), read('../src/cinematicIntro.ts'),
+    read('../index.html'), read('../src/index.css')
+  ]);
+  assert.match(app, /new CinematicIntroManager/);
+  assert.match(app, /launchCinematicIntro\(\)/);
+  assert.match(app, /this\.cinematicIntro\.stop\(false, false\)/);
+  assert.doesNotMatch(app, /PixelIntroManager|pixelIntro/i);
+  assert.match(intro, /Canvas 2D/);
+  assert.match(intro, /prefers-reduced-motion/);
+  assert.match(intro, /drawWarehouse/);
+  assert.match(html, /btn-open-cinematic-intro/);
+  assert.match(html, /MAX-FLIX: GRANICA ABSURDU/);
+  assert.match(css, /\.cinematic-intro-overlay/);
+  assert.doesNotMatch(css, /pixel-intro-overlay|pixel-vhs-header/);
+});
+
+
+test('record date and time are rendered on every leaderboard row', async () => {
+  const [app, formatter, css, cloud] = await Promise.all([
+    read('../src/index.ts'), read('../src/leaderboard.ts'),
+    read('../src/index.css'), read('../src/firebase.ts')
+  ]);
+  assert.match(app, /formatLeaderboardTimestamp\(entry\.createdAt\)/);
+  assert.match(app, /leaderboard-record-time/);
+  assert.match(formatter, /timeZone: 'Europe\/Warsaw'/);
+  assert.match(formatter, /hour: '2-digit'[\s\S]*?minute: '2-digit'/);
+  assert.match(css, /\.leaderboard-record-time/);
+  assert.match(cloud, /createdAt: new Date\(\)\.toISOString\(\)/);
 });

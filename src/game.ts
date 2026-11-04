@@ -13,6 +13,8 @@ import {
   advanceAbilityCooldown,
   applyAbilityKillRecharge,
   createAbilityCooldown,
+  getAbilityKillRechargeCapRatio,
+  getAbilityKillRechargeSeconds,
   getAbilityCooldownProgress,
   scaleAbilityCooldown,
   type AbilityCooldownState,
@@ -326,6 +328,7 @@ export class MaxFlizGameEngine {
   public threeRenderer: THREE.WebGLRenderer | null = null;
 
   private state: GameState = 'title';
+  private timeScale: 1 | 2 = 1;
   private currentCharacterId: CharacterId = 'marcin';
   private charDef: CharacterDef;
   private coffeeMachines: { mesh: THREE.Group; x: number; y: number; z: number; cooldown: number }[] = [];
@@ -450,6 +453,7 @@ export class MaxFlizGameEngine {
   private survivalKills = 0;
   private survivalPerfectDodges = 0;
   private survivalCounterattackReady = false;
+  private campaignCounterattackReady = false;
   private survivalWaveStartKills = 0;
   private survivalLevel = 1;
   private survivalXp = 0;
@@ -1220,6 +1224,7 @@ export class MaxFlizGameEngine {
     this.survivalKills = 0;
     this.survivalPerfectDodges = 0;
     this.survivalCounterattackReady = false;
+    this.campaignCounterattackReady = false;
     this.survivalWaveStartKills = 0;
     this.survivalLevel = 1;
     this.survivalXp = 0;
@@ -1242,6 +1247,7 @@ export class MaxFlizGameEngine {
     this.survivalDashUiTimer = 0;
     this.survivalDashLastProgress = -1;
     this.survivalDashLastReady = null;
+    this.updateSurvivalDashCooldown(0, true);
     this.survivalMoveMultiplier = 1;
     this.survivalMagnetMultiplier = 1;
     this.survivalRangeMultiplier = 1;
@@ -1875,6 +1881,16 @@ export class MaxFlizGameEngine {
 
   public getGameMode(): 'campaign' | 'survival' {
     return this.gameMode;
+  }
+
+  /** Game simulation speed; rendering remains controlled by the display refresh rate. */
+  public getTimeScale(): 1 | 2 {
+    return this.timeScale;
+  }
+
+  public setTimeScale(scale: number): 1 | 2 {
+    this.timeScale = scale >= 1.5 ? 2 : 1;
+    return this.timeScale;
   }
 
   public getSurvivalSnapshot(): SurvivalSnapshot {
@@ -4715,6 +4731,8 @@ export class MaxFlizGameEngine {
   public update(dt: number) {
     if (this.state !== 'playing' && this.state !== 'title') return;
 
+    const frameDt = Number.isFinite(dt) ? Math.max(0, dt) : 0.016;
+    dt = Math.min(0.12, frameDt * (this.state === 'playing' ? this.timeScale : 1));
     let effectiveDt = dt;
     if (this.hitStopTimer > 0) {
       this.hitStopTimer = Math.max(0, this.hitStopTimer - dt);
@@ -4727,7 +4745,7 @@ export class MaxFlizGameEngine {
     if (this.state === 'playing') {
       this.activeElapsedSeconds += simDt;
       this.updateAbilityCooldown(simDt);
-      if (this.gameMode === 'survival') this.updateSurvivalDashCooldown(simDt);
+      this.updateSurvivalDashCooldown(simDt);
       this.updateLootCrates(simDt);
       if (this.invulnerableTimer > 0) this.invulnerableTimer -= simDt;
       if (this.marcinReclamationTimer > 0) this.marcinReclamationTimer = Math.max(0, this.marcinReclamationTimer - simDt);
@@ -6721,8 +6739,8 @@ export class MaxFlizGameEngine {
       speed *= 0.72;
     }
 
-    const isSurvivalDashing = this.gameMode === 'survival' && this.survivalDashDurationRemaining > 0;
-    if (isSurvivalDashing) {
+    const isTacticalDashing = this.survivalDashDurationRemaining > 0;
+    if (isTacticalDashing) {
       this.survivalDashDurationRemaining = Math.max(0, this.survivalDashDurationRemaining - dt);
       this.playerVel.x = this.survivalDashDirection.x * 18;
       this.playerVel.z = this.survivalDashDirection.z * 18;
@@ -8992,6 +9010,11 @@ export class MaxFlizGameEngine {
   public triggerAttack() {
     if (this.state !== 'playing' || this.attackCooldownTimer > 0) return;
 
+    const campaignCounterattackReady = this.gameMode === 'campaign' && this.campaignCounterattackReady;
+    if (campaignCounterattackReady) {
+      this.campaignCounterattackReady = false;
+      this.emitFloatingToast('✦ KONTRATAK! NASTĘPNY ATAK +1 OBRAŻENIE', this.playerPos.x, this.playerPos.y + 1.25, this.playerPos.z, 'combo');
+    }
     const charId = this.currentCharacterId;
     this.attackComboStep = (this.attackComboStep + 1) % 3;
     const isThirdCombo = this.attackComboStep === 0;
@@ -9039,7 +9062,7 @@ export class MaxFlizGameEngine {
         disposeOnRemove: true,
         vel: forward.clone().multiplyScalar(14.2),
         life: getPrimaryAttackLifetimeSeconds('marcin', 14.2),
-        damage: isThirdCombo ? 2 : 1,
+        damage: (isThirdCombo ? 2 : 1) + (campaignCounterattackReady ? 1 : 0),
         pierce: isThirdCombo ? 2 : 1,
         aoeRadius: isThirdCombo ? 1.55 : 1.0,
         stunDuration: isThirdCombo ? 1.15 : 0.55,
@@ -9077,7 +9100,7 @@ export class MaxFlizGameEngine {
         disposeOnRemove: true,
         vel: forward.clone().multiplyScalar(14.6),
         life: getPrimaryAttackLifetimeSeconds('grzesiek', 14.6),
-        damage: isThirdCombo ? 3 : 2,
+        damage: (isThirdCombo ? 3 : 2) + (campaignCounterattackReady ? 1 : 0),
         pierce: isThirdCombo ? 3 : 1,
         stunDuration: 0.65,
         spinSpeed: 13.0,
@@ -9106,7 +9129,7 @@ export class MaxFlizGameEngine {
         disposeOnRemove: true,
         vel: forward.clone().multiplyScalar(14.8),
         life: getPrimaryAttackLifetimeSeconds('dawid', 14.8),
-        damage: isThirdCombo ? 2 : 1,
+        damage: (isThirdCombo ? 2 : 1) + (campaignCounterattackReady ? 1 : 0),
         pierce: isThirdCombo ? 3 : 2,
         slowOnHit: true,
         stunDuration: isThirdCombo ? 1.2 : 0.7,
@@ -9137,7 +9160,7 @@ export class MaxFlizGameEngine {
         disposeOnRemove: true,
         vel: forward.clone().multiplyScalar(19.5),
         life: getPrimaryAttackLifetimeSeconds('mateusz', 19.5),
-        damage: isThirdCombo ? 2 : 1,
+        damage: (isThirdCombo ? 2 : 1) + (campaignCounterattackReady ? 1 : 0),
         pierce: 1,
         slowOnHit: true,
         stunDuration: isThirdCombo ? 1.65 : 1.0,
@@ -9188,7 +9211,7 @@ export class MaxFlizGameEngine {
         vel: forward.clone().multiplyScalar(22.5),
         life: getPiotrBoomerangMaxLifeSeconds(22.5),
         maxLife: getPiotrBoomerangMaxLifeSeconds(22.5),
-        damage: isThirdCombo ? 3 : 2,
+        damage: (isThirdCombo ? 3 : 2) + (campaignCounterattackReady ? 1 : 0),
         pierce: isThirdCombo ? 4 : 2,
         boomerang: true,
         stunDuration: 0.48,
@@ -9652,7 +9675,7 @@ export class MaxFlizGameEngine {
       progress,
       ready,
       this.abilityCooldownState.remainingSeconds,
-      this.gameMode === 'survival'
+      true
     );
     this.abilityCooldownLastProgress = progress;
     this.abilityCooldownLastReady = ready;
@@ -9660,18 +9683,29 @@ export class MaxFlizGameEngine {
     this.abilityCooldownUiTimer = 0.08;
   }
 
-  private rechargeAbilityFromSurvivalKill(isElite: boolean) {
-    if (this.gameMode !== 'survival' || this.abilityCooldownState.remainingSeconds <= 0.0001) return;
-    const requestedSeconds = (isElite ? 0.78 : 0.16) * this.survivalAbilityKillRechargeMultiplier;
-    const rechargeLimit = this.abilityCooldownState.durationSeconds * this.survivalAbilityKillRechargeCapRatio;
+  private rechargeAbilityFromKill(isElite: boolean, isBoss = false) {
+    if (this.abilityCooldownState.remainingSeconds <= 0.0001) return;
+    const mode = this.gameMode;
+    const modeMultiplier = mode === 'survival' ? this.survivalAbilityKillRechargeMultiplier : 1;
+    // Bosses provide a clear tactical payoff; ordinary kills still build the
+    // Archero-style chain but are bounded by a per-use recharge budget.
+    const baseRechargeSeconds = getAbilityKillRechargeSeconds(mode, isElite, isBoss);
+    const chainMultiplier = 1 + Math.min(0.35, Math.max(0, this.comboStreak - 1) * 0.04);
+    const requestedSeconds = baseRechargeSeconds * modeMultiplier * chainMultiplier;
+    const capRatio = mode === 'survival'
+      ? this.survivalAbilityKillRechargeCapRatio
+      : getAbilityKillRechargeCapRatio('campaign');
+    const rechargeLimit = this.abilityCooldownState.durationSeconds * capRatio;
     const result = applyAbilityKillRecharge(this.abilityCooldownState, requestedSeconds, rechargeLimit);
     if (result.rechargedSeconds <= 0) return;
 
     this.abilityCooldownState = result.state;
     this.updateAbilityCooldown(0, true);
-    if (isElite) {
+    if (isElite || isBoss || this.comboStreak % 5 === 0) {
+      const chainLabel = this.comboStreak >= 5 ? ' • SERIA x' + this.comboStreak : '';
+      const targetLabel = isBoss ? 'BOSS' : 'ELITA';
       this.emitFloatingToast(
-        '⚡ ELITARNY ŁADUNEK +' + result.rechargedSeconds.toFixed(1) + ' s',
+        '⚡ ' + targetLabel + ' • ŁADUNEK +' + result.rechargedSeconds.toFixed(1) + ' s' + chainLabel,
         this.playerPos.x,
         this.playerPos.y + 1.55,
         this.playerPos.z,
@@ -9698,7 +9732,6 @@ export class MaxFlizGameEngine {
 
   public triggerDash(): boolean {
     if (
-      this.gameMode !== 'survival' ||
       this.state !== 'playing' ||
       this.survivalDashCooldownRemaining > 0.0001 ||
       this.survivalDashDurationRemaining > 0
@@ -9758,12 +9791,18 @@ export class MaxFlizGameEngine {
       // sidestep. Pick the side with more free arena space instead of dashing into the lane.
       const sideX = Math.cos(warningDirection);
       const sideZ = -Math.sin(warningDirection);
+      // The connected Campaign map has sector-specific playable depth; do not
+      // use Survival's arena bounds or a stale single-sector rectangle here.
+      const campaignHalfDepth = this.playerPos.x < 116 ? 19 : 21;
+      const dashBounds = this.gameMode === 'campaign'
+        ? { ...this.levelBounds, minZ: -campaignHalfDepth, maxZ: campaignHalfDepth }
+        : this.levelBounds;
       const clearance = (x: number, z: number): number => {
         let available = Number.POSITIVE_INFINITY;
-        if (x > 0.0001) available = Math.min(available, (this.levelBounds.maxX - this.playerPos.x) / x);
-        else if (x < -0.0001) available = Math.min(available, (this.levelBounds.minX - this.playerPos.x) / x);
-        if (z > 0.0001) available = Math.min(available, (this.levelBounds.maxZ - this.playerPos.z) / z);
-        else if (z < -0.0001) available = Math.min(available, (this.levelBounds.minZ - this.playerPos.z) / z);
+        if (x > 0.0001) available = Math.min(available, (dashBounds.maxX - this.playerPos.x) / x);
+        else if (x < -0.0001) available = Math.min(available, (dashBounds.minX - this.playerPos.x) / x);
+        if (z > 0.0001) available = Math.min(available, (dashBounds.maxZ - this.playerPos.z) / z);
+        else if (z < -0.0001) available = Math.min(available, (dashBounds.minZ - this.playerPos.z) / z);
         return Math.max(0, available);
       };
       const leftClearance = clearance(sideX, sideZ);
@@ -9797,7 +9836,9 @@ export class MaxFlizGameEngine {
 
     this.survivalDashDirection.set(directionX, 0, directionZ).normalize();
     this.survivalDashDurationRemaining = dashDuration;
-    this.survivalDashCooldownDuration = getSurvivalDashCooldownSeconds(this.survivalDashCooldownMultiplier);
+    this.survivalDashCooldownDuration = this.gameMode === 'survival'
+      ? getSurvivalDashCooldownSeconds(this.survivalDashCooldownMultiplier)
+      : 7.0;
     this.survivalDashCooldownRemaining = this.survivalDashCooldownDuration;
     // Invulnerability covers the dodge and a short exit window, not a full defensive shield.
     this.invulnerableTimer = Math.max(this.invulnerableTimer, 0.32);
@@ -9807,28 +9848,38 @@ export class MaxFlizGameEngine {
     sound.playAttackWhoosh();
 
     if (isPerfectDodge) {
-      this.survivalPerfectDodges++;
-      // One perfect dodge charges exactly one subsequent weapon volley; charges do not stack.
-      this.survivalCounterattackReady = true;
+      if (this.gameMode === 'survival') {
+        this.survivalPerfectDodges++;
+        // One perfect dodge charges exactly one subsequent weapon volley; charges do not stack.
+        this.survivalCounterattackReady = true;
+      } else {
+        // Campaign has character-specific primary attacks instead of Survival weapons.
+        // Charge one +1 damage hit and consume it on the next valid primary attack.
+        this.campaignCounterattackReady = true;
+      }
       this.score += 100;
       this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
 
-      // A clean last-moment sidestep shortens both the next dodge and the operator's
-      // special recharge. The fixed reward is deliberately smaller than a full reset.
-      this.survivalDashCooldownRemaining = Math.max(1.6, this.survivalDashCooldownRemaining - 1.35);
+      // A clean last-moment sidestep shortens the next dodge and special recharge.
+      this.survivalDashCooldownRemaining = Math.max(
+        this.gameMode === 'survival' ? 1.6 : 2.2,
+        this.survivalDashCooldownRemaining - 1.35
+      );
       this.abilityCooldownState = advanceAbilityCooldown(this.abilityCooldownState, 0.65);
       this.updateAbilityCooldown(0, true);
       this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.65, this.playerPos.z, 0xfacc15);
       this.triggerBloomPulse(0.32);
       this.emitFloatingToast(
-        '✦ PERFECT DODGE! +100 PKT • SALWA +1 • SUPER +0,65 s',
+        this.gameMode === 'survival'
+          ? '✦ PERFECT DODGE! +100 PKT • SALWA +1 • SUPER +0,65 s'
+          : '✦ IDEALNY UNIK BOSSA! +100 PKT • KONTRATAK +1 • SUPER +0,65 s',
         this.playerPos.x,
         this.playerPos.y + 1.35,
         this.playerPos.z,
         'combo'
       );
       sound.playPickup();
-      this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+      if (this.gameMode === 'survival') this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
     } else {
       this.emitFloatingToast('↗ UNIK TAKTYCZNY!', this.playerPos.x, this.playerPos.y + 1.15, this.playerPos.z, 'perk');
     }
@@ -10229,12 +10280,13 @@ export class MaxFlizGameEngine {
     const finalPoints = Math.round(points * comboMultiplier * survivalDifficultyMultiplier);
     this.score += finalPoints;
     this.handleMateuszPassive(2);
+    const isAbilityRechargeBoss =
+      e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow';
+    const isAbilityRechargeElite = isAbilityRechargeBoss ||
+      e.type === 'elite_walczak_guard' || e.type === 'sebix_m' || e.maxHp >= 4;
+    this.rechargeAbilityFromKill(isAbilityRechargeElite, isAbilityRechargeBoss);
     if (this.gameMode === 'survival') {
       this.survivalKills++;
-      const isAbilityRechargeElite =
-        e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' ||
-        e.type === 'elite_walczak_guard' || e.type === 'sebix_m' || e.maxHp >= 4;
-      this.rechargeAbilityFromSurvivalKill(isAbilityRechargeElite);
       const isShiftMilestone = this.survivalKills % 8 === 0;
       const baseXpDrop = e.maxHp >= 4 ? 3 : 1;
       // Merge the small milestone bonus into the normal gem instead of spawning
