@@ -68,4 +68,9 @@ test('Play Store artwork sources and CI exports meet the listing image dimension
   assert.match(workflow, /play-store\/generated\/app-icon-512\.png/);
   assert.match(workflow, /play-store\/generated\/feature-graphic-1024x500\.jpg/);
   assert.ok(listing.shortDescription.length <= 80, 'Google Play short description must be at most 80 characters');
+
+  const readiness = await read('../docs/GOOGLE_PLAY_READINESS.md');
+  assert.match(readiness, /app-icon-512\.png/);
+  assert.match(readiness, /feature-graphic-1024x500\.jpg/);
+  assert.match(readiness, /nie są commitowane do repozytorium/);
 });
