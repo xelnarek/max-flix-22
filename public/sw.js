@@ -23,13 +23,15 @@ self.addEventListener('fetch', (event) => {
   if (!/\.(?:js|css|woff2?|png|jpe?g|webp|avif|svg|glb|gltf|mp3|ogg|wav)$/i.test(url.pathname)) return;
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_NAME);
-    const cached = await cache.match(request);
-    const network = fetch(request).then(async (response) => {
+    try {
+      const response = await fetch(request);
       const length = Number(response.headers.get('content-length') || 0);
-      if (response.ok && response.type === 'basic' && (!length || length <= MAX_CACHEABLE_BYTES)) await cache.put(request, response.clone());
+      if (response.ok && response.type === 'basic' && (!length || length <= MAX_CACHEABLE_BYTES)) {
+        await cache.put(request, response.clone());
+      }
       return response;
-    });
-    if (cached) { event.waitUntil(network.catch(() => undefined)); return cached; }
-    try { return await network; } catch { return Response.error(); }
+    } catch {
+      return (await cache.match(request)) || Response.error();
+    }
   })());
 });
