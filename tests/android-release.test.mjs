@@ -62,6 +62,8 @@ test('Android upload signing helper validates a keystore, stores four GitHub sec
     assert.match(workflow, new RegExp('secrets\\.' + secret));
   }
   assert.match(script, /keytool -list/);
+  assert.match(script, /EXPECTED_UPLOAD_CERT_SHA256/);
+  assert.match(script, /paleciaki-upload/);
   assert.match(script, /gh secret set/);
   assert.match(script, /gh workflow run android-release\.yml --ref main/);
   assert.match(script, /gh run watch/);
@@ -95,6 +97,23 @@ test('Google Play upload is opt-in, credential-gated and limited to internal tes
   assert.match(workflow, /tracks: internal/);
   assert.match(workflow, /status: completed/);
   assert.doesNotMatch(workflow, /tracks: production/);
+});
+
+test('Google Play service-account helper validates credentials and enables internal-track uploads safely', async () => {
+  const [script, workflow, docs] = await Promise.all([
+    read('../scripts/configure-google-play-upload.sh'),
+    read('../.github/workflows/android-release.yml'),
+    read('../docs/GOOGLE_PLAY_READINESS.md'),
+  ]);
+  assert.match(script, /GOOGLE_PLAY_SERVICE_ACCOUNT_JSON/);
+  assert.match(script, /GOOGLE_PLAY_UPLOAD_ENABLED/);
+  assert.match(script, /data\.type === 'service_account'/);
+  assert.match(script, /BEGIN PRIVATE KEY/);
+  assert.match(script, /gh secret set/);
+  assert.match(script, /gh variable set/);
+  assert.match(script, /gh workflow run android-release\.yml --ref main/);
+  assert.doesNotMatch(script, /set -x/);
+  assert.match(docs, /bash scripts\/configure-google-play-upload\.sh/);
 });
 
 test('Play Store artwork sources and CI exports meet the listing image dimensions', async () => {
