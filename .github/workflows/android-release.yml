@@ -19,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: android-release-${{ github.ref }}
+  group: android-release-\${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -42,7 +42,6 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-          cache: gradle
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
@@ -65,7 +64,7 @@ jobs:
       - name: Install pinned Capacitor toolchain
         run: npm install --no-save --package-lock=false @capacitor/core@8.6.0 @capacitor/cli@8.6.0 @capacitor/android@8.6.0 @capacitor/assets@3.0.5
 
-      - name: Prepare Android icon and splash source PNGs
+      - name: Prepare Android source artwork
         run: |
           sudo apt-get update
           sudo apt-get install -y librsvg2-bin
@@ -74,38 +73,41 @@ jobs:
           rsvg-convert -w 1024 -h 1024 resources/icon-background.svg > resources/icon-background.png
           rsvg-convert -w 2732 -h 2732 resources/splash.svg > resources/splash.png
 
-      - name: Create the native Android project
+      - name: Create and sync native Android project
         run: |
           npx cap add android
           npx cap sync android
 
+      - name: Generate Android launcher and splash assets
+        run: npx capacitor-assets generate --android
+
       - name: Configure Android package, version and optional signing
         env:
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_UPLOAD_KEYSTORE_BASE64: \${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: \${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: \${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: \${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_VERSION_NAME: '0.1.0'
         run: |
-          if [ -n "${ANDROID_UPLOAD_KEYSTORE_BASE64:-}" ]; then
+          if [ -n "\${ANDROID_UPLOAD_KEYSTORE_BASE64:-}" ]; then
             if [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
               echo "Android signing secrets are incomplete." >&2
               exit 1
             fi
-            printf '%s' "$ANDROID_UPLOAD_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/paleciaki-upload-key.jks"
-            echo "ANDROID_UPLOAD_KEYSTORE_PATH=$RUNNER_TEMP/paleciaki-upload-key.jks" >> "$GITHUB_ENV"
+            export ANDROID_UPLOAD_KEYSTORE_PATH="$RUNNER_TEMP/paleciaki-upload-key.jks"
+            printf '%s' "$ANDROID_UPLOAD_KEYSTORE_BASE64" | base64 --decode > "$ANDROID_UPLOAD_KEYSTORE_PATH"
+            echo "ANDROID_UPLOAD_KEYSTORE_PATH=$ANDROID_UPLOAD_KEYSTORE_PATH" >> "$GITHUB_ENV"
           elif [ -n "$ANDROID_KEYSTORE_PASSWORD$ANDROID_KEY_ALIAS$ANDROID_KEY_PASSWORD" ]; then
             echo "Set all four Android upload signing secrets, including ANDROID_UPLOAD_KEYSTORE_BASE64." >&2
             exit 1
           fi
           node scripts/prepare-android-release.mjs
-        env:
-          ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
-          ANDROID_VERSION_NAME: '0.1.0'
 
       - name: Build Android packages
         env:
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEYSTORE_PASSWORD: \${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: \${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: \${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           chmod +x android/gradlew
           cd android
@@ -115,7 +117,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: paleciaki-android-${{ github.run_number }}-${{ github.sha }}
+          name: paleciaki-android-\${{ github.run_number }}-\${{ github.sha }}
           path: |
             android/app/build/outputs/bundle/release/*.aab
             android/app/build/outputs/apk/debug/*.apk
