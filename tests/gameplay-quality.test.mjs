@@ -1265,3 +1265,27 @@ test('Survival arena modifiers produce distinct, bounded combat trade-offs and c
   assert.match(maps, /title: 'ZMIANA -18°C'/);
   assert.match(maps, /export function applySurvivalMapCombatModifier/);
 });
+
+
+test('Survival wave director assigns enemy coalitions with a leader, pincer lanes and role-specific spacing', async () => {
+  const [game, types, coalition] = await Promise.all([
+    read('../src/game.ts'),
+    read('../src/types.ts'),
+    read('../src/survivalCoalition.ts'),
+  ]);
+  assert.match(game, /buildSurvivalCoalitionOrders\(/);
+  assert.match(game, /enemy\.aiCoalitionLeaderId = order\.leaderId/);
+  assert.match(game, /enemy\.aiCoalitionRole = order\.role/);
+  assert.match(game, /enemy\.aiFormationRadius = order\.preferredRadius/);
+  assert.match(game, /enemy\.aiFormationRadius as number/);
+  assert.match(game, /activeCandidates[\s\S]*?filter\(\(\{ enemy \}\) => !enemy\.surgeRunner \|\| this\.survivalSurgeTimeLeft <= 0\)/);
+  assert.match(game, /const isCoalitionLeader = e\.aiCoalitionLeaderId === e\.id/);
+  assert.match(game, /isCoalitionLeader \? 0xfbbf24/);
+  assert.match(types, /aiCoalitionId\?: number/);
+  assert.match(types, /aiCoalitionLeaderId\?: string/);
+  assert.match(types, /aiCoalitionRole\?: 'bruiser' \| 'flanker' \| 'ranged' \| 'support'/);
+  assert.match(coalition, /export function buildSurvivalCoalitionOrders/);
+  assert.match(coalition, /role === 'flanker'/);
+  assert.match(coalition, /role === 'ranged'/);
+  assert.match(coalition, /role === 'support'/);
+});
