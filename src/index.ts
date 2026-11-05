@@ -22,7 +22,7 @@ import { AssetItem, assetLoader } from './assets.ts';
 import { SelectiveBloomPipeline } from './selectiveBloom.ts';
 import { ThreeClickTrigger } from './menuInteraction.ts';
 import { calculateUiViewport } from './uiViewport.ts';
-import { getAdaptiveRenderScale } from './renderQuality.ts';
+import { getAdaptiveEffectsTier, getAdaptiveRenderScale, type AdaptiveEffectsTier } from './renderQuality.ts';
 import { calculateVirtualJoystickInput } from './virtualJoystick.ts';
 
 // warehouseAssets imports moved to assets.ts where they are preloaded
@@ -138,6 +138,8 @@ class PaleciakiScene extends xb.Script {
   private smoothedFps: number = 60;
   private adaptiveRenderScale: number = 1;
   private adaptiveRecoverySince: number = 0;
+  private adaptiveEffectsTier: AdaptiveEffectsTier = 0;
+  private adaptiveEffectsRecoverySince: number = 0;
   private pausedForVisibility: boolean = false;
   private resetTouchJoystick: (() => void) | null = null;
   private resizeObserver: ResizeObserver | null = null;
@@ -1930,6 +1932,30 @@ class PaleciakiScene extends xb.Script {
     }
 
     const stableRecoveryMs = this.adaptiveRecoverySince > 0 ? now - this.adaptiveRecoverySince : 0;
+
+    // Crowd and particle load are throttled separately from resolution. This
+    // helps mobile CPUs during packed waves without blurring the whole image.
+    const effectsRecoveryFloor = this.adaptiveEffectsTier >= 2 ? 47 : 54;
+    if (this.adaptiveEffectsTier > 0 && this.smoothedFps >= effectsRecoveryFloor) {
+      if (this.adaptiveEffectsRecoverySince === 0) this.adaptiveEffectsRecoverySince = now;
+    } else {
+      this.adaptiveEffectsRecoverySince = 0;
+    }
+    const effectsStableMs = this.adaptiveEffectsRecoverySince > 0
+      ? now - this.adaptiveEffectsRecoverySince
+      : 0;
+    const nextEffectsTier = getAdaptiveEffectsTier(
+      this.smoothedFps,
+      isMobile,
+      this.adaptiveEffectsTier,
+      effectsStableMs
+    );
+    if (nextEffectsTier !== this.adaptiveEffectsTier) {
+      this.adaptiveEffectsTier = nextEffectsTier;
+      this.adaptiveEffectsRecoverySince = 0;
+      this.engine?.setAdaptivePerformanceTier(nextEffectsTier);
+    }
+
     const nextScale = getAdaptiveRenderScale(
       this.smoothedFps,
       isMobile,
