@@ -1458,6 +1458,83 @@ body {
   color: #cbd5e1;
 }
 
+/* Fixed bottom map picker: arenas are selectable before every Survival run. */
+.survival-map-picker {
+  width: min(100%, 620px);
+  padding: 8px 10px 7px;
+  border: 1px solid rgba(103, 232, 249, .22);
+  border-radius: 15px;
+  background: linear-gradient(145deg, rgba(8, 23, 38, .96), rgba(11, 18, 32, .94));
+  box-shadow: 0 8px 24px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.035);
+}
+.survival-map-picker-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 2px 6px;
+  color: #cbd5e1;
+  font: 900 9px/1.2 system-ui, sans-serif;
+  letter-spacing: .12em;
+}
+.survival-map-picker-heading span { color: #64748b; font-size: 8px; }
+.survival-map-picker-options {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+.survival-map-choice {
+  min-width: 0;
+  min-height: 62px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 5px 3px;
+  border: 1px solid rgba(148,163,184,.2);
+  border-radius: 10px;
+  background: rgba(15, 30, 46, .82);
+  color: #e2e8f0;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .14s ease, border-color .14s ease, transform .14s ease;
+}
+.survival-map-choice > span { font-size: 17px; line-height: 1; }
+.survival-map-choice strong {
+  max-width: 100%;
+  overflow: hidden;
+  color: #e2e8f0;
+  font: 900 clamp(7px, 1vw, 9px)/1.15 system-ui, sans-serif;
+  letter-spacing: .025em;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.survival-map-choice small {
+  color: #94a3b8;
+  font: 600 7px/1.15 system-ui, sans-serif;
+  text-align: center;
+  white-space: nowrap;
+}
+.survival-map-choice.is-selected {
+  border-color: #67e8f9;
+  background: linear-gradient(145deg, rgba(8,145,178,.34), rgba(15,30,46,.95));
+  box-shadow: 0 0 0 1px rgba(103,232,249,.18), 0 0 16px rgba(34,211,238,.12);
+  transform: translateY(-1px);
+}
+.survival-map-choice.map-port-choice.is-selected { border-color: #fb923c; box-shadow: 0 0 14px rgba(251,146,60,.14); }
+.survival-map-choice.map-cold-choice.is-selected { border-color: #67e8f9; box-shadow: 0 0 14px rgba(103,232,249,.15); }
+.survival-map-choice.map-night-choice.is-selected { border-color: #f0abfc; box-shadow: 0 0 14px rgba(240,171,252,.16); }
+.survival-map-picker-hint {
+  min-height: 12px;
+  margin: 6px 3px 0;
+  color: #91a7bb;
+  font: 600 8px/1.35 system-ui, sans-serif;
+  text-align: center;
+}
+
 /* FIXED BOTTOM START BAR */
 .menu-fixed-bottom-bar {
   display: flex;
@@ -4580,12 +4657,11 @@ button {
    The canvas is rendered into a quarter-size CSS surface and blown back up;
    the HUD remains crisp because this treatment is scoped to the WebGL canvas. */
 #game-canvas-container.oniric-dream-active canvas {
-  width: 24% !important;
-  height: 24% !important;
-  transform: scale(4.166667) !important;
-  transform-origin: top left !important;
+  width: 100% !important;
+  height: 100% !important;
+  transform: none !important;
   image-rendering: pixelated !important;
-  filter: saturate(3.4) contrast(1.55) hue-rotate(57deg) !important;
+  filter: saturate(2.4) contrast(1.28) hue-rotate(27deg) !important;
 }
 
 #game-canvas-container.oniric-dream-active::after {
