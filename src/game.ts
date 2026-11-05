@@ -6038,7 +6038,10 @@ export class PaleciakiGameEngine {
 
   private updateSurvivalDirector(dt: number) {
     this.survivalElapsed += dt;
-    this.oniricDreamRemainingSeconds = Math.max(0, this.oniricDreamRemainingSeconds - dt);
+    // Director dt is simulation-scaled (the player may select 2x speed).
+    // The Easter egg is advertised as 15 real seconds, so keep its lifetime
+    // aligned with the visual overlay regardless of the selected game speed.
+    this.oniricDreamRemainingSeconds = Math.max(0, this.oniricDreamRemainingSeconds - dt / this.timeScale);
     if (!this.survivalPomazaniecSpawned && this.survivalElapsed >= 135) {
       this.spawnSurvivalPomazaniecMarker();
     }
