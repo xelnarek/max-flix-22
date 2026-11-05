@@ -37,3 +37,74 @@ export function getAdaptiveRenderScale(
   const nextTier = current < 0.76 ? 0.8 : current < 0.85 ? 0.9 : 1;
   return Math.min(desired, nextTier);
 }
+
+
+export type DeviceRenderTier = 'desktop' | 'mobile-low' | 'mobile-balanced' | 'mobile-high';
+
+export interface DeviceRenderProfile {
+  tier: DeviceRenderTier;
+  pixelRatioCap: number;
+  survivalPixelRatioCap: number;
+  shadowsEnabled: boolean;
+  softShadows: boolean;
+  bloomEnabled: boolean;
+}
+
+/**
+ * Conservative GPU profile for phones. Chrome's deviceMemory is deliberately
+ * treated as a hint: missing values never force the low tier on their own.
+ */
+export function getDeviceRenderProfile(
+  isMobile: boolean,
+  deviceMemory?: number | null,
+  hardwareConcurrency?: number | null
+): DeviceRenderProfile {
+  if (!isMobile) {
+    return {
+      tier: 'desktop',
+      pixelRatioCap: 2,
+      survivalPixelRatioCap: 2,
+      shadowsEnabled: true,
+      softShadows: true,
+      bloomEnabled: true,
+    };
+  }
+
+  const memoryKnown = Number.isFinite(deviceMemory) && (deviceMemory as number) > 0;
+  const coresKnown = Number.isFinite(hardwareConcurrency) && (hardwareConcurrency as number) > 0;
+  const lowMemory = memoryKnown && (deviceMemory as number) <= 4;
+  const lowCpu = coresKnown && (hardwareConcurrency as number) <= 4;
+
+  if (lowMemory || lowCpu) {
+    return {
+      tier: 'mobile-low',
+      pixelRatioCap: 1.22,
+      survivalPixelRatioCap: 1.08,
+      shadowsEnabled: false,
+      softShadows: false,
+      bloomEnabled: false,
+    };
+  }
+
+  const highMemory = memoryKnown && (deviceMemory as number) >= 8;
+  const highCpu = coresKnown && (hardwareConcurrency as number) >= 8;
+  if (highMemory && highCpu) {
+    return {
+      tier: 'mobile-high',
+      pixelRatioCap: 1.65,
+      survivalPixelRatioCap: 1.42,
+      shadowsEnabled: true,
+      softShadows: false,
+      bloomEnabled: true,
+    };
+  }
+
+  return {
+    tier: 'mobile-balanced',
+    pixelRatioCap: 1.42,
+    survivalPixelRatioCap: 1.24,
+    shadowsEnabled: true,
+    softShadows: false,
+    bloomEnabled: true,
+  };
+}
