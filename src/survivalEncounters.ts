@@ -30,3 +30,9 @@ export function getSurvivalBossVariant(wave: number): SurvivalBossVariant {
   if (cycle === 2) return 'bosman_krakow';
   return 'walczak';
 }
+
+
+/** Shared classification for the three rotating major Survival boss rigs. */
+export function isMajorSurvivalBossType(type: string): boolean {
+  return type === 'walczak' || type === 'krol_leto' || type === 'bosman_krakow';
+}
