@@ -8088,6 +8088,7 @@ export class PaleciakiGameEngine {
         coalitionId: support.aiCoalitionId,
         x: support.x,
         z: support.z,
+        state: support.state,
       },
       this.enemies.map((ally) => ({
         id: ally.id,
