@@ -1229,3 +1229,26 @@ test('Survival main boss victories are tracked separately from ordinary enemy el
   assert.match(game, /if \(this\.gameMode === 'survival' && isAbilityRechargeBoss\) this\.survivalBossesDefeated\+\+/);
   assert.match(game, /bossesDefeated: this\.survivalBossesDefeated/);
 });
+
+test('Survival achievements persist across runs and unlock the full map and secret archive', async () => {
+  const module = await read('../src/survivalAchievements.ts');
+  assert.match(module, /SURVIVAL_ACHIEVEMENTS/);
+  assert.match(module, /updateSurvivalAchievementProgress/);
+  assert.match(module, /recordSurvivalSecretDiscovery/);
+  assert.match(module, /map_explorer/);
+  assert.match(module, /secret_archive/);
+  assert.match(module, /sanitizeSurvivalAchievementProgress/);
+});
+
+test('the menu exposes a readable achievement archive and selected map/secret HUD counters', async () => {
+  const [html, app, css] = await Promise.all([read('../index.html'), read('../src/index.ts'), read('../src/index.css')]);
+  assert.match(html, /data-tab="tab-achievements"/);
+  assert.match(html, /id="tab-achievements"/);
+  assert.match(html, /id="survival-achievement-list"/);
+  assert.match(html, /id="survival-map-name"/);
+  assert.match(html, /id="survival-secret-count"/);
+  assert.match(app, /trackSurvivalAchievementSnapshot\(snapshot\)/);
+  assert.match(app, /trackSurvivalSecretAchievement\(mapId, secretId\)/);
+  assert.match(css, /\.survival-achievement-grid/);
+  assert.match(css, /\.achievement-unlock-toast/);
+});
