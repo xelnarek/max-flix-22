@@ -22,7 +22,7 @@ test('container terminal trades a little enemy durability for faster pressure an
 test('cold storage trades enemy speed for extra durability and the same XP bonus', () => {
   const result = applySurvivalMapCombatModifier({ maxHp: 20, speed: 3 }, 'cold_storage');
   assert.deepEqual(result, { maxHp: 23, speed: 2.7, xpMultiplier: 1.12 });
-  assert.match(getSurvivalMapDefinition('cold_storage').combatModifier.description, /10% wolniej/);
+  assert.match(getSurvivalMapDefinition('cold_storage').combatModifier.description, /spowalnia przeciwników o 10%/);
 });
 
 test('every map defines a complete combat modifier and invalid stats remain finite', () => {
