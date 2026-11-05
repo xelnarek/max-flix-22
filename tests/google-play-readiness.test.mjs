@@ -53,7 +53,9 @@ test('score submission never attempts Firestore writes without a Firebase sessio
   assert.match(firebase, /const user = await initAuth\(\);\s*if \(!user\?\.uid\)\s*\{[\s\S]*?throw new Error\('Firebase authentication unavailable/);
   assert.match(firebase, /if \(!user\?\.uid\)\s*\{[\s\S]*?return 0;[\s\S]*?\}\s*\n\s*const remaining:/);
   assert.match(firebase, /if \(!user && retryOnFailure\) authPromise = null;/);
-  assert.match(firebase, /if \(!currentUser\?\.uid\)[\s\S]*?return false;/);
+  assert.match(firebase, /void initAuth\(\)\.catch/);
+  assert.match(firebase, /query\(collection\(db, 'leaderboard'\), limit\(1\)\)/);
+  assert.doesNotMatch(firebase, /if \(!currentUser\?\.uid\)[\s\S]*?return false;/);
 });
 
 test('npm only runs the reviewed dependency install scripts required by the build', async () => {
