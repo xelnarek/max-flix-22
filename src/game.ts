@@ -16,6 +16,7 @@ import { chooseCampaignRewardSpawnPoint } from './campaignRewards.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
 import { chooseSurvivalRicochetTarget, getSurvivalRadiationProfile, getSurvivalRicochetProfile } from './survivalCombatDraft.ts';
 import { buildSurvivalCoalitionOrders, getSurvivalCoalitionRole } from './survivalCoalition.ts';
+import { getSurvivalXpRequirement } from './survivalProgression.ts';
 import {
   advanceAbilityCooldown,
   applyAbilityKillRecharge,
@@ -1281,7 +1282,7 @@ export class PaleciakiGameEngine {
     this.survivalWaveStartKills = 0;
     this.survivalLevel = 1;
     this.survivalXp = 0;
-    this.survivalXpToNext = 9;
+    this.survivalXpToNext = getSurvivalXpRequirement(1);
     this.survivalBossWave = 0;
     this.survivalBossWarningTimer = 0;
     this.survivalPendingBossWave = 0;
@@ -7190,7 +7191,7 @@ export class PaleciakiGameEngine {
     if (this.gameMode !== 'survival' || this.state !== 'playing') return;
     this.survivalXp -= this.survivalXpToNext;
     this.survivalLevel++;
-    this.survivalXpToNext = Math.round(10 + this.survivalLevel * 3.0);
+    this.survivalXpToNext = getSurvivalXpRequirement(this.survivalLevel);
     this.survivalPendingOptions = this.rollSurvivalUpgradeOptions();
     this.state = 'levelup';
     sound.stopMusic();
