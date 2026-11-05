@@ -15,6 +15,7 @@ import { applySurvivalMapCombatModifier, chooseRandomSurvivalMap, getSurvivalMap
 import { chooseCampaignRewardSpawnPoint } from './campaignRewards.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
 import { chooseSurvivalRicochetTarget, getSurvivalRadiationProfile, getSurvivalRicochetProfile } from './survivalCombatDraft.ts';
+import { getSurvivalShrapnelProfile } from './survivalShrapnel.ts';
 import { buildSurvivalCoalitionOrders, getSurvivalCoalitionRole } from './survivalCoalition.ts';
 import { getSurvivalCommanderProfile, selectSurvivalCommanderTargets } from './survivalCommander.ts';
 import { advanceSurvivalCommanderTiming } from './survivalCommanderTiming.ts';
@@ -506,6 +507,7 @@ export class PaleciakiGameEngine {
   private survivalCriticalDamageMultiplier = 1.75;
   private survivalRicochetStrength = 1;
   private survivalRadiationStrength = 1;
+  private survivalShrapnelStrength = 1;
   private survivalRadiationTimer = 1.4;
   private survivalDashCooldownMultiplier = 1;
   private survivalDashCooldownRemaining = 0;
@@ -765,6 +767,7 @@ export class PaleciakiGameEngine {
     chainMaxDistance?: number;
     chainDamageRetention?: number;
     chainDamageMultiplier?: number;
+    criticalBurstState?: { consumed: boolean };
   }[] = [];
   private specialEffects: {
     mesh: THREE.Mesh | THREE.Group;
@@ -1302,6 +1305,7 @@ export class PaleciakiGameEngine {
     this.survivalWeaponReloadMultiplier = 1;
     this.survivalCriticalChance = 0.05;
     this.survivalCriticalDamageMultiplier = 1.75;
+    this.survivalShrapnelStrength = 1;
     this.survivalDashCooldownMultiplier = 1;
     this.survivalDashCooldownRemaining = 0;
     this.survivalDashCooldownDuration = 5.2;
@@ -1406,6 +1410,7 @@ export class PaleciakiGameEngine {
     this.survivalDamageMultiplier = 1;
     this.survivalRicochetStrength = 1;
     this.survivalRadiationStrength = 1;
+    this.survivalShrapnelStrength = 1;
     this.survivalRadiationTimer = 1.4;
     this.survivalAttackRateMultiplier = 1;
     this.survivalWeaponReloadMultiplier = 1;
@@ -2363,6 +2368,9 @@ export class PaleciakiGameEngine {
         this.survivalRadiationStrength = Math.min(1.75, this.survivalRadiationStrength * (1 + 0.12 * strength));
         this.survivalRadiationTimer = Math.min(this.survivalRadiationTimer, 0.35);
         break;
+      case 'shrapnel':
+        this.survivalShrapnelStrength = Math.min(1.65, this.survivalShrapnelStrength * (1 + 0.10 * strength));
+        break;
       }
     }
 
@@ -2444,6 +2452,11 @@ export class PaleciakiGameEngine {
         this.survivalRadiationTimer = Math.min(this.survivalRadiationTimer, 0.4);
       });
     }
+    if ((stacks.shrapnel || 0) >= 2 && (stacks.ricochet || 0) >= 2) {
+      unlock('crystal_cascade', 'KRYSZTAŁOWA KASKADA', 'Krytyczne trafienie rozrzuca większy wachlarz odłamków. Wybucha przy celu, może trafić do trzech pobliskich przeciwników i nadal aktywuje się tylko raz na salwę.', () => {
+        this.survivalShrapnelStrength = Math.min(1.65, this.survivalShrapnelStrength * 1.12);
+      });
+    }
   }
 
   private rollSurvivalUpgradeOptions(excluded: string[] = []): SurvivalUpgradeOption[] {
@@ -2467,13 +2480,15 @@ export class PaleciakiGameEngine {
       { id: 'armor', icon: '🪵', title: 'PALETA OCHRONNA', description: 'Otrzymujesz 24 sekundy okresowej osłony.' },
       { id: 'ricochet', icon: '↗', title: 'RYKOSZET B4 • POZIOM ' + ((this.survivalUpgradeStacks.ricochet || 0) + 1) + '/3', description: '+1 odbicie pocisku operatora do kolejnego nie trafionego wroga. Kolejne odbicia zadają stopniowo mniej obrażeń. Maksymalnie 3 poziomy.' },
       { id: 'radiation', icon: '☢️', title: 'POLE RADIACYJNE B4 • POZIOM ' + ((this.survivalUpgradeStacks.radiation || 0) + 1) + '/3', description: 'Co kilka sekund emituje impuls wokół operatora i rani pobliskich wrogów. Zasięg, siła i liczba celów rosną z poziomem. Maksymalnie 3 poziomy.' },
+      { id: 'shrapnel', icon: '✹', title: 'AMUNICJA ODŁAMKOWA • POZIOM ' + ((this.survivalUpgradeStacks.shrapnel || 0) + 1) + '/3', description: 'Krytyczne trafienie pociskiem rozrzuca odłamki, które ranią najbliższego dodatkowego wroga przy celu. Jeden wybuch na salwę; do 3 poziomów.' },
     ].filter((option) => !excluded.includes(option.id) &&
       (option.id !== 'ability' || (this.survivalUpgradeStacks.ability || 0) < 3) &&
       (option.id !== 'critical' || (this.survivalUpgradeStacks.critical || 0) < 5) &&
       (option.id !== 'critical_damage' || (this.survivalUpgradeStacks.critical_damage || 0) < 3) &&
       (option.id !== 'dash' || (this.survivalUpgradeStacks.dash || 0) < 4) &&
       (option.id !== 'ricochet' || (this.survivalUpgradeStacks.ricochet || 0) < 3) &&
-      (option.id !== 'radiation' || (this.survivalUpgradeStacks.radiation || 0) < 3));
+      (option.id !== 'radiation' || (this.survivalUpgradeStacks.radiation || 0) < 3) &&
+      (option.id !== 'shrapnel' || (this.survivalUpgradeStacks.shrapnel || 0) < 3));
     for (const [weaponId, definition] of Object.entries(SURVIVAL_WEAPON_DEFS) as Array<[SurvivalWeaponId, typeof SURVIVAL_WEAPON_DEFS[SurvivalWeaponId]]>) {
       const owned = this.survivalWeapons.find((weapon) => weapon.id === weaponId);
       if (!owned) {
@@ -5316,6 +5331,11 @@ export class PaleciakiGameEngine {
     const volleyBaseDamage = applyPerfectDodgeCounterattack(baseWeaponDamage, counterattackReady);
     const criticalRoll = rollSurvivalCriticalDamage(volleyBaseDamage, this.survivalCriticalChance, this.survivalCriticalDamageMultiplier, Math.random());
     const weaponDamage = criticalRoll.damage;
+    // All pellets/blades from this single critical volley share one token, so the
+    // fragment burst can only fire once even when the volley has several projectiles.
+    const criticalBurstState = criticalRoll.critical && (this.survivalUpgradeStacks.shrapnel || 0) > 0
+      ? { consumed: false }
+      : undefined;
     if (counterattackReady) {
       this.emitFloatingToast('✦ KONTRATAK! SALWA +1', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'combo');
       this.triggerBloomPulse(0.20);
@@ -5370,6 +5390,7 @@ export class PaleciakiGameEngine {
           pierce: weapon.evolved ? 3 : 1,
           weaponProjectile: true,
           hitIds: new Set<string>(),
+          criticalBurstState,
           spinSpeed: weapon.evolved ? 8.5 : 5.5,
         });
       }
@@ -5401,6 +5422,7 @@ export class PaleciakiGameEngine {
           pierce: 40,
           weaponProjectile: true,
           hitIds: new Set<string>(),
+          criticalBurstState,
           orbiting: true,
           orbitAngle: (i / count) * Math.PI * 2,
           orbitRadius: weapon.evolved ? 1.9 : 1.55,
@@ -5424,10 +5446,12 @@ export class PaleciakiGameEngine {
       mesh: THREE.Object3D; vel: THREE.Vector3; life: number; maxLife: number; damage: number;
       pierce?: number; homing?: boolean; weaponProjectile?: boolean; aoeRadius?: number; slowOnHit?: boolean;
       igniteOnHit?: boolean; spinSpeed?: number; ricochet?: boolean; boomerang?: boolean; hitIds: Set<string>;
+      criticalBurstState?: { consumed: boolean };
     } = {
       mesh: new THREE.Group(),
       vel: direction.clone().multiplyScalar(10.5), life: 2.8, maxLife: 2.8, damage, hitIds: new Set<string>(),
       weaponProjectile: true,
+      criticalBurstState,
     };
     switch (weapon.id) {
       case 'pallet_cannon':
@@ -6719,6 +6743,55 @@ export class PaleciakiGameEngine {
   }
 
 
+
+  private applySurvivalCriticalShrapnel(primaryTarget: EnemyItem, directDamage: number) {
+    const rank = this.survivalUpgradeStacks.shrapnel || 0;
+    if (this.gameMode !== 'survival' || rank <= 0 || primaryTarget.state === 'defeated') return;
+
+    const profile = getSurvivalShrapnelProfile(
+      rank,
+      this.survivalEvolutions.has('crystal_cascade'),
+      this.survivalShrapnelStrength,
+    );
+    const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
+    const targetBudget = isMobile
+      ? Math.min(profile.maxTargets, this.adaptivePerformanceTier >= 2 ? 1 : 2)
+      : profile.maxTargets;
+    const targets = this.enemies
+      .filter((enemy) => enemy.id !== primaryTarget.id && enemy.state !== 'defeated' && enemy.mesh?.visible &&
+        Math.hypot(enemy.x - primaryTarget.x, enemy.z - primaryTarget.z) <= profile.radius)
+      .sort((a, b) =>
+        Math.hypot(a.x - primaryTarget.x, a.z - primaryTarget.z) -
+        Math.hypot(b.x - primaryTarget.x, b.z - primaryTarget.z)
+      )
+      .slice(0, targetBudget);
+
+    this.spawnParticleRing(primaryTarget.x, primaryTarget.y + 0.42, primaryTarget.z, 0xfbbf24);
+    if (targets.length === 0) return;
+
+    const fragmentDamage = Math.max(1, Math.round(Math.max(1, directDamage) * profile.damageMultiplier));
+    let damagedTargets = 0;
+    for (const enemy of targets) {
+      const previousHp = enemy.hp;
+      this.damageEnemy(enemy, fragmentDamage, primaryTarget.x, primaryTarget.z);
+      if (enemy.hp < previousHp) {
+        damagedTargets++;
+        this.spawnCompactImpact(enemy.x, enemy.y + 0.52, enemy.z, 0xfbbf24);
+        if (enemy.hp <= 0) this.defeatEnemy(enemy, 150, false);
+      }
+    }
+
+    if (damagedTargets > 0) {
+      this.triggerBloomPulse(0.12);
+      this.emitFloatingToast(
+        '✹ ODŁAMKI KRYTYCZNE • ' + damagedTargets + ' DODATKOWE CELE',
+        primaryTarget.x,
+        primaryTarget.y + 1.35,
+        primaryTarget.z,
+        'combo',
+      );
+    }
+  }
 
   private updateSurvivalRadiation(dt: number) {
     if (this.gameMode !== 'survival') return;
@@ -9612,6 +9685,10 @@ export class PaleciakiGameEngine {
               if (e.shieldRing) e.shieldRing.visible = false;
             }
             this.damageEnemy(e, baseDmg);
+            if (this.gameMode === 'survival' && p.criticalBurstState && !p.criticalBurstState.consumed) {
+              p.criticalBurstState.consumed = true;
+              this.applySurvivalCriticalShrapnel(e, baseDmg);
+            }
             sound.playSmack();
             if (p.weaponProjectile) {
               this.spawnCompactImpact(e.x, e.y + 0.72, e.z, 0x7dd3fc);
