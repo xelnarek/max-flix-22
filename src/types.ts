@@ -124,6 +124,8 @@ export interface EnemyItem {
   aiFlankAngle?: number;
   aiOrbitSign?: number;
   surgeRunner?: boolean;
+  /** XP multiplier granted by the active Survival wave modifier. */
+  survivalXpMultiplier?: number;
   survivalAuditor?: boolean;
   auraBuffed?: boolean;
   auraRing?: any;
