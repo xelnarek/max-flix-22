@@ -193,7 +193,7 @@ export function launchOniricPlatformer(options: {
   onComplete: (result: OniricPlatformerResult) => void;
 }): void {
   const root = document.createElement('section');
-  root.className = 'oniric-platformer-overlay';
+  root.className = 'oniric-platformer-overlay oniric-pixel-chaos';
   root.setAttribute('role', 'dialog');
   root.setAttribute('aria-modal', 'true');
   root.setAttribute('aria-labelledby', 'oniric-platformer-title');
@@ -216,6 +216,13 @@ export function launchOniricPlatformer(options: {
     '</div>',
   ].join('');
   document.body.appendChild(root);
+
+  // The rabbit-hole secret corrupts the picture for exactly 15 wall-clock
+  // seconds. It is intentionally independent from the paused 3D simulation
+  // and the selected 1x/2x Survival speed.
+  const pixelChaosTimer = window.setTimeout(() => {
+    root.classList.remove('oniric-pixel-chaos');
+  }, 15_000);
 
   const canvas = root.querySelector<HTMLCanvasElement>('.oniric-platformer-canvas');
   const context = canvas?.getContext('2d', { alpha: false });
@@ -520,6 +527,7 @@ export function launchOniricPlatformer(options: {
     if (completedCallback) return;
     completedCallback = true;
     window.cancelAnimationFrame(rafId);
+    window.clearTimeout(pixelChaosTimer);
     window.removeEventListener('resize', resize);
     document.removeEventListener('keydown', onKeyDown, true);
     document.removeEventListener('keyup', onKeyUp, true);
