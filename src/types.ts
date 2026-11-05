@@ -123,6 +123,12 @@ export interface EnemyItem {
   aiSlot?: number;
   aiFlankAngle?: number;
   aiOrbitSign?: number;
+  /** Low-frequency Survival coalition assignment from the wave director. */
+  aiCoalitionId?: number;
+  aiCoalitionLeaderId?: string;
+  aiCoalitionRole?: 'bruiser' | 'flanker' | 'ranged' | 'support';
+  aiFormationRadius?: number;
+  aiCoalitionSize?: number;
   surgeRunner?: boolean;
   /** XP multiplier granted by the active Survival wave modifier. */
   survivalXpMultiplier?: number;
