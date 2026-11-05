@@ -87,6 +87,17 @@ export function getLeaderboardSlice(
   return [...entries].sort(compareLeaderboardEntries).slice(0, limit);
 }
 
+/**
+ * Survival-only board. Filter before ranking/limiting so historical Campaign
+ * scores cannot occupy the window and hide newer Survival records.
+ */
+export function getSurvivalLeaderboardSlice(
+  entries: readonly LeaderboardEntry[],
+  maxEntries = 15,
+): LeaderboardEntry[] {
+  return getLeaderboardSlice(entries.filter((entry) => entry.mode === 'survival'), maxEntries);
+}
+
 
 /** Formats a saved record time in the player's local timezone. */
 export function formatLeaderboardTimestamp(value: unknown, locale = 'pl-PL', timeZone?: string): string {
