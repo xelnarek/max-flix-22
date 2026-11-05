@@ -35,6 +35,19 @@ test('the operator can jump from a grounded platform and land on the next ledge'
   assert.equal(state.player.onGround, true, 'player should land instead of falling through the platform');
 });
 
+test('pocket watches are collected by touching their world positions', () => {
+  const state = createOniricPlatformerState();
+  ONIRIC_COLLECTIBLES.forEach((item, index) => {
+    state.player.x = item.x - 12;
+    state.player.y = item.y - 22;
+    state.player.vx = 0;
+    state.player.vy = 0;
+    state.player.onGround = false;
+    stepOniricPlatformer(state, {}, 1 / 60);
+    assert.equal(state.collected[index], true, 'watch ' + (index + 1) + ' should be collectible');
+  });
+});
+
 test('the rabbit-hole exit stays locked until all three pocket watches are collected', () => {
   const state = createOniricPlatformerState();
   state.player.x = ONIRIC_GOAL_X;
