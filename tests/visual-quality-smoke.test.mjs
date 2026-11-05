@@ -257,3 +257,14 @@ test('Oniric Dream builds a rabbit-hole landmark and triggers a 15-second pixel-
   assert.match(css, /image-rendering: pixelated/);
   assert.match(css, /oniric-dream-active/);
 });
+
+
+test('the Survival archive directory exposes all four arenas and the sixteen-secret total', async () => {
+  const [html, css] = await Promise.all([read('../index.html'), read('../src/index.css')]);
+  for (const mapId of ['warehouse_b4', 'container_terminal', 'cold_storage', 'night_sorting']) {
+    assert.ok(html.includes('data-map-visited="' + mapId + '"'), 'missing map directory entry: ' + mapId);
+  }
+  assert.match(html, /SEKRETY 0 \/ 16/);
+  assert.match(css, /\.map-night\s*\{/);
+  assert.match(css, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+});
