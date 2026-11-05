@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import {
   createOniricPlatformerState,
   ONIRIC_COLLECTIBLES,
@@ -79,4 +80,16 @@ test('the course ends safely when time expires or all lives are lost', () => {
   exhausted.player.y = 900;
   stepOniricPlatformer(exhausted, {}, 1 / 60);
   assert.equal(exhausted.finished, true);
+});
+
+
+test('opening the rabbit hole starts a bounded 15-second pixel-chaos sequence', async () => {
+  const source = await readFile(new URL('../src/oniricPlatformer.ts', import.meta.url), 'utf8');
+  const css = await readFile(new URL('../src/index.css', import.meta.url), 'utf8');
+  assert.match(source, /oniric-platformer-overlay oniric-pixel-chaos/);
+  assert.match(source, /window\.setTimeout\([\s\S]*?oniric-pixel-chaos[\s\S]*?15_000/);
+  assert.match(source, /window\.clearTimeout\(pixelChaosTimer\)/);
+  assert.match(css, /\.oniric-platformer-overlay\.oniric-pixel-chaos \.oniric-platformer-canvas/);
+  assert.match(css, /@keyframes oniric-scanline-chaos/);
+  assert.match(css, /@keyframes oniric-error-banner/);
 });
