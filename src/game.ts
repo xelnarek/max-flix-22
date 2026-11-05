@@ -35,6 +35,8 @@ import {
 } from './combatBalance.ts';
 import { ParticleMeshPool, type ParticleShape } from './particlePool.ts';
 import { applyPerfectDodgeCounterattack, getSurvivalDashCooldownSeconds, getSurvivalDashProgress, rollSurvivalCriticalDamage } from './archeroMechanics.ts';
+import { advanceSurvivalMomentum, createSurvivalMomentumState, getSurvivalMomentumDamageMultiplier, getSurvivalMomentumMoveMultiplier, getSurvivalMomentumRateMultiplier, registerSurvivalKill, type SurvivalMomentumState } from './survivalMomentum.ts';
+import { selectSurvivalAutoTarget } from './survivalTargeting.ts';
 import { CHARACTERS } from './characters.ts';
 import { sound } from './sound.ts';
 import {
@@ -170,6 +172,7 @@ const SURVIVAL_WEAPON_DEFS: Record<SurvivalWeaponId, {
 export interface SurvivalSnapshot {
   elapsedSeconds: number; wave: number; kills: number; perfectDodges: number; counterattackReady: boolean; level: number; xp: number; xpToNext: number;
   aliveEnemies: number; rerolls: number; skips: number; activeHazards: number;
+  killStreak: number; overdriveRemainingSeconds: number;
   weapons: Array<{ id: SurvivalWeaponId; name: string; icon: string; level: number; evolved: boolean }>;
 }
 
@@ -472,6 +475,7 @@ export class PaleciakiGameEngine {
   private survivalUpgradeStacks: Record<string, number> = {};
   private survivalEvolutions = new Set<string>();
   private survivalWeapons: SurvivalWeaponState[] = [];
+  private survivalMomentum: SurvivalMomentumState = createSurvivalMomentumState();
   // Serializes ready weapon shots so a full cooldown queue never empties in one frame.
   private survivalWeaponDispatchCooldown = 0;
   private survivalDamageMultiplier = 1;
@@ -556,7 +560,7 @@ export class PaleciakiGameEngine {
     // Rounded integer damage avoids fractional HP while allowing damage upgrades
     // to cross a meaningful breakpoint for one-damage weapons after several stacks.
     return this.gameMode === 'survival'
-      ? Math.max(1, Math.round(baseDamage * this.survivalDamageMultiplier))
+      ? Math.max(1, Math.round(baseDamage * this.survivalDamageMultiplier * getSurvivalMomentumDamageMultiplier(this.survivalMomentum.overdriveRemainingSeconds)))
       : baseDamage;
   }
 
@@ -1250,6 +1254,7 @@ export class PaleciakiGameEngine {
     this.survivalPerfectDodges = 0;
     this.survivalCounterattackReady = false;
     this.campaignCounterattackReady = false;
+    this.survivalMomentum = createSurvivalMomentumState();
     this.survivalWaveStartKills = 0;
     this.survivalLevel = 1;
     this.survivalXp = 0;
@@ -1936,6 +1941,8 @@ export class PaleciakiGameEngine {
       kills: this.survivalKills,
       perfectDodges: this.survivalPerfectDodges,
       counterattackReady: this.survivalCounterattackReady,
+      killStreak: this.survivalMomentum.killStreak,
+      overdriveRemainingSeconds: this.survivalMomentum.overdriveRemainingSeconds,
       level: this.survivalLevel,
       xp: this.survivalXp,
       xpToNext: this.survivalXpToNext,
@@ -4896,6 +4903,9 @@ export class PaleciakiGameEngine {
           this.comboStreak = 0;
         }
       }
+      if (this.gameMode === 'survival') {
+        this.survivalMomentum = advanceSurvivalMomentum(this.survivalMomentum, simDt);
+      }
 
       this.updatePlayerMovement(simDt);
       if (this.gameMode === 'survival') {
@@ -4962,15 +4972,19 @@ export class PaleciakiGameEngine {
   private updateSurvivalAutoCombat(dt: number) {
     if (this.state !== 'playing' || this.gameMode !== 'survival') return;
 
-    this.survivalWeaponDispatchCooldown = Math.max(0, this.survivalWeaponDispatchCooldown - dt);
+    const momentumRate = getSurvivalMomentumRateMultiplier(this.survivalMomentum.overdriveRemainingSeconds);
+    this.survivalWeaponDispatchCooldown = Math.max(0, this.survivalWeaponDispatchCooldown - dt * momentumRate);
 
-    let target: EnemyItem | null = null;
-    let nearest = 18 * this.survivalRangeMultiplier;
-    for (const enemy of this.enemies) {
-      if (enemy.state === 'defeated' || !enemy.mesh || !enemy.mesh.visible) continue;
-      const distance = Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z);
-      if (distance < nearest) { nearest = distance; target = enemy; }
-    }
+    // Tactical aim: a nearby elite, boss or committed charging threat can be
+    // more valuable than the closest low-risk grunt. A distant boss never
+    // overrides a threat already in the operator's face.
+    const selection = selectSurvivalAutoTarget(
+      this.enemies,
+      this.playerPos.x,
+      this.playerPos.z,
+      18 * this.survivalRangeMultiplier
+    );
+    const target = selection?.target ?? null;
 
     if (target) {
       this.playerRot = Math.atan2(target.x - this.playerPos.x, target.z - this.playerPos.z);
@@ -4979,8 +4993,9 @@ export class PaleciakiGameEngine {
     }
 
     // All reloads progress independently, even while no target is in range.
+    // Overdrive raises reload tempo without bypassing the one-volley dispatch gate.
     for (const weapon of this.survivalWeapons) {
-      weapon.cooldown = Math.max(0, weapon.cooldown - dt);
+      weapon.cooldown = Math.max(0, weapon.cooldown - dt * momentumRate);
     }
 
     // Fire at most one weapon per dispatch window. If several reloads finish together,
@@ -7012,7 +7027,9 @@ export class PaleciakiGameEngine {
     }
 
     let speed = this.charDef.speed * this.getPacingFactor();
-    if (this.gameMode === 'survival') speed *= this.survivalMoveMultiplier;
+    if (this.gameMode === 'survival') {
+      speed *= this.survivalMoveMultiplier * getSurvivalMomentumMoveMultiplier(this.survivalMomentum.overdriveRemainingSeconds);
+    }
     if (this.marcinWoTPenaltyTimer > 0) {
       this.marcinWoTPenaltyTimer = Math.max(0, this.marcinWoTPenaltyTimer - dt);
       speed *= 0.70; // 30% speed penalty during Kierownik WoT event
@@ -7094,7 +7111,12 @@ export class PaleciakiGameEngine {
       this.playerGroup.scale.set(pulse, 1.08, pulse);
     }
 
-    if (this.attackCooldownTimer > 0) this.attackCooldownTimer -= dt;
+    if (this.attackCooldownTimer > 0) {
+      const attackRecoveryRate = this.gameMode === 'survival'
+        ? getSurvivalMomentumRateMultiplier(this.survivalMomentum.overdriveRemainingSeconds)
+        : 1;
+      this.attackCooldownTimer = Math.max(0, this.attackCooldownTimer - dt * attackRecoveryRate);
+    }
     if (this.attackSwingTimer > 0) {
       this.attackSwingTimer -= dt;
       if (this.rightArm) {
@@ -11205,6 +11227,16 @@ export class PaleciakiGameEngine {
     this.rechargeAbilityFromKill(isAbilityRechargeElite, isAbilityRechargeBoss);
     if (this.gameMode === 'survival') {
       this.survivalKills++;
+      const momentumResult = registerSurvivalKill(this.survivalMomentum);
+      this.survivalMomentum = momentumResult.state;
+      if (momentumResult.overdriveStarted) {
+        this.emitFloatingToast('⚡ OVERDRIVE B4! SERIA 6 ELIMINACJI', this.playerPos.x, this.playerPos.y + 1.85, this.playerPos.z, 'combo');
+        this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.35, this.playerPos.z, 0xfbbf24);
+        this.triggerBloomPulse(0.42);
+        this.triggerScreenShake(0.20, 0.13);
+        sound.playPickup(3);
+        this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+      }
       const isShiftMilestone = this.survivalKills % 8 === 0;
       const rawXpMultiplier = e.survivalXpMultiplier;
       const waveXpMultiplier = Number.isFinite(rawXpMultiplier)
