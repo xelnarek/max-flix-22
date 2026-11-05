@@ -217,13 +217,6 @@ export function launchOniricPlatformer(options: {
   ].join('');
   document.body.appendChild(root);
 
-  // The rabbit-hole secret corrupts the picture for exactly 15 wall-clock
-  // seconds. It is intentionally independent from the paused 3D simulation
-  // and the selected 1x/2x Survival speed.
-  const pixelChaosTimer = window.setTimeout(() => {
-    root.classList.remove('oniric-pixel-chaos');
-  }, 15_000);
-
   const canvas = root.querySelector<HTMLCanvasElement>('.oniric-platformer-canvas');
   const context = canvas?.getContext('2d', { alpha: false });
   const watchCount = root.querySelector<HTMLElement>('[data-watch-count]');
@@ -240,6 +233,13 @@ export function launchOniricPlatformer(options: {
     options.onComplete({ won: false, collected: 0, lives: 0 });
     return;
   }
+
+  // The rabbit-hole secret corrupts the picture for exactly 15 wall-clock
+  // seconds. It is intentionally independent from the paused 3D simulation
+  // and the selected 1x/2x Survival speed.
+  const pixelChaosTimer = window.setTimeout(() => {
+    root.classList.remove('oniric-pixel-chaos');
+  }, 15_000);
 
   let state = createOniricPlatformerState();
   let rafId = 0;
