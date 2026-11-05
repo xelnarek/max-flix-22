@@ -17,6 +17,7 @@ import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './sur
 import { chooseSurvivalRicochetTarget, getSurvivalRadiationProfile, getSurvivalRicochetProfile } from './survivalCombatDraft.ts';
 import { buildSurvivalCoalitionOrders, getSurvivalCoalitionRole } from './survivalCoalition.ts';
 import { getSurvivalCommanderProfile, selectSurvivalCommanderTargets } from './survivalCommander.ts';
+import { advanceSurvivalCommanderTiming } from './survivalCommanderTiming.ts';
 import { getSurvivalLeaderLossTargets, getSurvivalMoraleBreakMultiplier, SURVIVAL_LEADER_LOSS_BREAK_SECONDS } from './survivalMorale.ts';
 import { selectSurvivalSupportPulseTargets, SURVIVAL_SUPPORT_PULSE_RADIUS, SURVIVAL_SUPPORT_PULSE_INTERVAL_SECONDS, SURVIVAL_SUPPORT_SHIELD_SECONDS } from './survivalSupport.ts';
 import { getSurvivalXpRequirement } from './survivalProgression.ts';
@@ -8083,9 +8084,41 @@ export class PaleciakiGameEngine {
     const profile = getSurvivalCommanderProfile(boss.type, boss.bossPhase ?? 1);
     if (!profile) return;
 
-    boss.aiCommanderPulseTimer = Math.max(0, (boss.aiCommanderPulseTimer ?? 5.0) - dt);
-    if (boss.aiCommanderPulseTimer > 0) return;
-    boss.aiCommanderPulseTimer = profile.cooldownSeconds;
+    const timing = advanceSurvivalCommanderTiming(
+      boss.aiCommanderPulseTimer ?? 5.0,
+      boss.aiCommanderWindupTimer ?? 0,
+      dt,
+      (boss.stunTimer ?? 0) > 0,
+      profile.cooldownSeconds,
+    );
+    boss.aiCommanderPulseTimer = timing.cooldownRemaining;
+    boss.aiCommanderWindupTimer = timing.windupRemaining;
+
+    if (timing.phase === 'cooldown' || timing.phase === 'windup') return;
+    if (timing.phase === 'windup-started') {
+      this.spawnParticleRing(boss.x, boss.y + 0.42, boss.z, 0xfbbf24);
+      this.emitFloatingToast(
+        '⚠️ ' + profile.title + ': ' + profile.callout + ' • PRZYGOTOWUJE ROZKAZ — OGŁUSZ GO, ABY PRZERWAĆ!',
+        boss.x,
+        boss.y + 2.0,
+        boss.z,
+        'damage',
+      );
+      sound.playBossWarning();
+      return;
+    }
+    if (timing.phase === 'interrupted') {
+      this.spawnParticleRing(boss.x, boss.y + 0.42, boss.z, 0x38bdf8);
+      this.emitFloatingToast(
+        '🛑 ' + profile.title + ': ROZKAZ PRZERWANY!',
+        boss.x,
+        boss.y + 2.0,
+        boss.z,
+        'damage',
+      );
+      sound.playShieldBreak();
+      return;
+    }
 
     const targets = selectSurvivalCommanderTargets(
       {
@@ -8645,6 +8678,9 @@ export class PaleciakiGameEngine {
       }
 
       if (e.stunTimer > 0) {
+        // Let the commander inspect the stun before the early return so the
+        // player can interrupt a boss order during its visible wind-up.
+        if (this.gameMode === 'survival') this.updateSurvivalCommanderPulse(e, dt);
         e.stunTimer -= dt;
         if (e.stunTimer <= 0) {
           e.state = 'searching';
@@ -8653,7 +8689,6 @@ export class PaleciakiGameEngine {
         return;
       }
 
-      // Boss command pulses are Survival-only; stunned bosses cannot issue orders.
       if (this.gameMode === 'survival') this.updateSurvivalCommanderPulse(e, dt);
 
       // Check whether this enemy is allowed to engage or must hold position in wave
