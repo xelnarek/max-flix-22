@@ -15,7 +15,7 @@ test('support pulse shields only nearby living members of the same coalition', (
     { id: 'other-squad', coalitionId: 3, x: 0.5, z: 0, state: 'chase', type: 'kurier' },
     { id: 'ally-defeated', coalitionId: 2, x: 1, z: 0, state: 'defeated', type: 'kurier' },
     { id: 'ally-far', coalitionId: 2, x: 10, z: 0, state: 'chase', type: 'kurier' },
-    { id: 'self', coalitionId: 2, x: 0, z: 0, state: 'chase', type: 'inspector' },
+    { id: 'inspector-1', coalitionId: 2, x: 0, z: 0, state: 'chase', type: 'inspector' },
     { id: 'boss', coalitionId: 2, x: 1, z: 0, state: 'chase', type: 'sebix_m' },
     { id: 'ally-second', coalitionId: 2, x: 3, z: 0, state: 'chase', type: 'monter' },
   ]);
