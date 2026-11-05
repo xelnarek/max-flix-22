@@ -140,7 +140,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     passiveName: 'Weteran B4 — Droga Powrotna',
     passiveDescription: 'Operator 05 ma stały podwójny skok i 100% szansy na drop perków. Klucz grzechotkowy wraca po rzucie, więc dobrze ustawiony tor pozwala przeciąć linię wrogów również podczas powrotu.',
     abilityName: 'Rytuał MafiKapibar — Pentagram B4',
-    abilityDescription: 'Operator 05 rozświetla podłoże wielkim pentagramem, którego wybuch odrzuca i ogłusza pobliskich wrogów. Z kręgu wychodzą trzy większe MafiKapibary w garniturach. Don i hybrydowy ochroniarz ostrzeliwują cele świecącymi pociskami z ciężkich, stylizowanych karabinów, a środkowy egzekutor doskakuje z dwiema pałkami; hybryda używa pałki w zwarciu. Cała trójka przez kilkanaście sekund eskortuje operatora.',
+    abilityDescription: 'Operator 05 rozświetla podłoże wielkim pentagramem, którego wybuch odrzuca i ogłusza pobliskich wrogów. Trzy większe MafiKapibary trzymają szyk V za operatorem: Don i hybrydowy ochroniarz kryją lewe i prawe skrzydło karabinami, a środkowy egzekutor z dwiema pałkami pilnuje odwrotu. Cała trójka priorytetowo przechwytuje wrogów zagrażających operatorowi.',
     abilityCooldown: 16.5,
     voiceLines: [
       'Rytuał B4! MafiKapibary, przejmijcie tę zmianę!',
