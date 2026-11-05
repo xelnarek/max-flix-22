@@ -8333,7 +8333,9 @@ export class PaleciakiGameEngine {
         }
 
         const orders = buildSurvivalCoalitionOrders(
-          activeCandidates.map(({ enemy }) => enemy),
+          activeCandidates
+            .filter(({ enemy }) => !enemy.surgeRunner || this.survivalSurgeTimeLeft <= 0)
+            .map(({ enemy }) => enemy),
           this.playerPos.x,
           this.playerPos.z,
           formationBase,
@@ -8440,22 +8442,32 @@ export class PaleciakiGameEngine {
 
       // Ground Threat Ring for actively chasing enemies
       if (!e.threatRing && e.type !== 'piorun_dron') {
+        const isCoalitionLeader = e.aiCoalitionLeaderId === e.id;
+        const baseRingColor = e.surgeRunner ? 0xf59e0b : e.type === 'pomazaniec' ? 0xec4899 : 0xef4444;
         const ringMesh = new THREE.Mesh(
           new THREE.RingGeometry(0.42, 0.54, 20),
           new THREE.MeshBasicMaterial({
-            color: e.surgeRunner ? 0xf59e0b : e.type === 'pomazaniec' ? 0xec4899 : 0xef4444,
+            color: isCoalitionLeader ? 0xfbbf24 : baseRingColor,
             transparent: true,
-            opacity: 0.65,
+            opacity: isCoalitionLeader ? 0.82 : 0.65,
             side: THREE.DoubleSide,
             depthWrite: false,
           })
         );
         ringMesh.rotation.x = -Math.PI / 2;
         ringMesh.position.y = 0.04;
+        ringMesh.userData.coalitionLeader = isCoalitionLeader;
         e.threatRing = ringMesh;
         e.mesh.add(ringMesh);
       }
       if (e.threatRing) {
+        const isCoalitionLeader = e.aiCoalitionLeaderId === e.id;
+        if (e.threatRing.userData.coalitionLeader !== isCoalitionLeader) {
+          const ringMaterial = e.threatRing.material as THREE.MeshBasicMaterial;
+          ringMaterial.color.setHex(isCoalitionLeader ? 0xfbbf24 : e.surgeRunner ? 0xf59e0b : e.type === 'pomazaniec' ? 0xec4899 : 0xef4444);
+          ringMaterial.opacity = isCoalitionLeader ? 0.82 : 0.65;
+          e.threatRing.userData.coalitionLeader = isCoalitionLeader;
+        }
         e.threatRing.visible = (e.state === 'chase' || e.state === 'charging') && distToPlayer < 14;
       }
 
