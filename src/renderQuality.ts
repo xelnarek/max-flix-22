@@ -1,4 +1,19 @@
 /**
+ * Avoid rebuilding the WebGL drawing buffer for insignificant float noise,
+ * but allow every intentional 0.1 quality tier to take effect. The previous
+ * 0.12 threshold silently skipped the 0.9 tier on common mobile DPR caps.
+ */
+export function shouldApplyPixelRatioChange(
+  currentPixelRatio: number,
+  targetPixelRatio: number,
+  minDifference = 0.035
+): boolean {
+  if (!Number.isFinite(currentPixelRatio) || !Number.isFinite(targetPixelRatio)) return false;
+  const threshold = Number.isFinite(minDifference) ? Math.max(0, minDifference) : 0.035;
+  return Math.abs(currentPixelRatio - targetPixelRatio) >= threshold;
+}
+
+/**
  * Small, monotonic quality tiers for adaptive WebGL drawing-buffer resolution.
  * Lowering resolution is immediate; recovering quality is deliberately slower
  * so a busy horde does not make the image pulse between sharp and soft.
@@ -124,7 +139,8 @@ export function getDeviceRenderProfile(
       survivalPixelRatioCap: 1.22,
       shadowsEnabled: false,
       softShadows: false,
-      bloomEnabled: false,
+      // Reserve selective bloom for phones with strong CPU/GPU headroom.
+      bloomEnabled: true,
     };
   }
 

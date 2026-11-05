@@ -22,7 +22,7 @@ import { AssetItem, assetLoader } from './assets.ts';
 import { SelectiveBloomPipeline } from './selectiveBloom.ts';
 import { ThreeClickTrigger } from './menuInteraction.ts';
 import { calculateUiViewport } from './uiViewport.ts';
-import { getAdaptiveEffectsTier, getAdaptiveRenderScale, getDeviceRenderProfile, type AdaptiveEffectsTier } from './renderQuality.ts';
+import { getAdaptiveEffectsTier, getAdaptiveRenderScale, getDeviceRenderProfile, shouldApplyPixelRatioChange, type AdaptiveEffectsTier } from './renderQuality.ts';
 import { calculateVirtualJoystickInput } from './virtualJoystick.ts';
 import {
   createInitialSurvivalAchievementProgress,
@@ -2113,10 +2113,10 @@ class PaleciakiScene extends xb.Script {
         const previousOverride = core.renderSceneOverride;
         const renderOverride: NonNullable<typeof core.renderSceneOverride> = (activeRenderer, activeScene, activeCamera) => {
           if (this.selectiveBloom === pipeline && activeRenderer instanceof THREE.WebGLRenderer && activeScene === scene) {
-            // Selective bloom adds a second scene pass. Keep Campaign polish,
-            // but bypass that pass in the crowd-heavy Survival mode.
-            const renderFps = this.engine?.getGameMode() === 'survival' ? 0 : this.currentFps;
-            pipeline.render(activeCamera, renderFps, performance.now());
+            // Selective bloom adds a second scene pass; Survival uses a stricter FPS gate.
+            const isSurvival = this.engine?.getGameMode() === 'survival';
+            // Survival keeps its glow only while measured frame rate has enough headroom.
+            pipeline.render(activeCamera, this.currentFps, performance.now(), isSurvival);
           } else if (previousOverride) {
             previousOverride(activeRenderer, activeScene, activeCamera);
           } else {
@@ -2198,7 +2198,7 @@ class PaleciakiScene extends xb.Script {
   }
 
   private updateAdaptiveRenderQuality(now: number) {
-    if (now - this.lastAdaptiveQualityAt < 2500) return;
+    if (now - this.lastAdaptiveQualityAt < 1000) return;
     this.lastAdaptiveQualityAt = now;
 
     const renderer = (xb.core?.renderer as THREE.WebGLRenderer) || null;
@@ -2273,7 +2273,7 @@ class PaleciakiScene extends xb.Script {
 
     // Drawing-buffer changes are deliberately infrequent and only happen at
     // meaningful tier transitions, never on individual FPS samples.
-    if (Math.abs(renderer.getPixelRatio() - targetDpr) < 0.12) return;
+    if (!shouldApplyPixelRatioChange(renderer.getPixelRatio(), targetDpr)) return;
     renderer.setPixelRatio(targetDpr);
     renderer.setSize(width, height, false);
     this.selectiveBloom?.resize(width, height, renderer.getPixelRatio());
