@@ -10392,10 +10392,22 @@ export class PaleciakiGameEngine {
 
       let target: EnemyItem | null = null;
       let nearest = 13.5;
+      let targetScore = Number.POSITIVE_INFINITY;
       for (const enemy of this.enemies) {
         if (enemy.state === 'defeated' || !enemy.mesh?.visible) continue;
         const distance = Math.hypot(enemy.x - capybara.group.position.x, enemy.z - capybara.group.position.z);
-        if (distance < nearest) {
+        if (distance >= 13.5) continue;
+
+        // Don is the tactician: he prefers a major boss or elite over a nearby
+        // grunt, so the summoned squad naturally divides battlefield duties.
+        const isMajorBoss = enemy.type === 'walczak' || enemy.type === 'krol_leto' || enemy.type === 'bosman_krakow';
+        const isElite = enemy.type === 'elite_walczak_guard' || enemy.type === 'sztaplar_szalony';
+        const roleWeight = capybara.index === 0
+          ? (isMajorBoss ? 0.56 : isElite ? 0.82 : 1)
+          : 1;
+        const candidateScore = distance * roleWeight;
+        if (candidateScore < targetScore) {
+          targetScore = candidateScore;
           nearest = distance;
           target = enemy;
         }
@@ -10419,28 +10431,25 @@ export class PaleciakiGameEngine {
         if (direction.lengthSq() < 0.001) continue;
         direction.normalize();
 
-        // Bright arcade tracer gives the compact carbine a readable firing cue.
-        const tracer = new THREE.Group();
-        const tracerCore = new THREE.Mesh(
-          new THREE.SphereGeometry(0.085, 8, 6),
+        // One stretched low-poly tracer replaces a two-mesh glow assembly.
+        // It stays readable while cutting geometry, material and draw-call cost.
+        const tracer = new THREE.Mesh(
+          new THREE.SphereGeometry(0.075, 7, 5),
           new THREE.MeshBasicMaterial({ color: 0xffd166, toneMapped: false })
         );
-        const tracerHalo = new THREE.Mesh(
-          new THREE.TorusGeometry(0.105, 0.018, 5, 10),
-          new THREE.MeshBasicMaterial({ color: 0xf97316, toneMapped: false })
-        );
-        tracerHalo.rotation.x = Math.PI / 2;
-        tracer.add(tracerCore, tracerHalo);
+        tracer.name = 'mafi_carbine_tracer';
+        tracer.scale.set(0.9, 0.9, 1.8);
         tracer.position.copy(muzzlePosition);
         this.levelRoot.add(tracer);
 
+        const targetIsMajorBoss = target.type === 'walczak' || target.type === 'krol_leto' || target.type === 'bosman_krakow';
         this.projectiles.push({
           mesh: tracer,
           vel: direction.multiplyScalar(27),
           life: 1.05,
           maxLife: 1.05,
-          damage: 2,
-          pierce: 0,
+          damage: capybara.index === 0 && targetIsMajorBoss ? 3 : 2,
+          pierce: capybara.index === 0 ? 1 : 0,
           weaponProjectile: true,
           disposeOnRemove: true,
           stunDuration: 0.22,
@@ -10461,7 +10470,8 @@ export class PaleciakiGameEngine {
 
       // The dual-baton enforcer and close-range hybrid use a heavy baton rush.
       target.shieldActive = false;
-      const damage = this.scaleSurvivalDamage(capybara.index === 1 ? 3 : 2);
+      const targetIsMajorBoss = target.type === 'walczak' || target.type === 'krol_leto' || target.type === 'bosman_krakow';
+      const damage = this.scaleSurvivalDamage(capybara.index === 1 ? (targetIsMajorBoss ? 4 : 3) : targetIsMajorBoss ? 3 : 2);
       this.damageEnemy(target, damage, capybara.group.position.x, capybara.group.position.z);
       if (target.hp <= 0) {
         this.defeatEnemy(target, 300, false);
@@ -10471,7 +10481,7 @@ export class PaleciakiGameEngine {
       }
       capybara.pounceTarget = new THREE.Vector3(target.x, groundY, target.z);
       capybara.pounceTimer = 0.52;
-      capybara.attackCooldown = capybara.index === 1 ? 1.02 : 1.24;
+      capybara.attackCooldown = capybara.index === 1 ? (targetIsMajorBoss ? 1.28 : 1.02) : 1.24;
       this.spawnParticleRing(target.x, target.y + 0.42, target.z, capybara.index === 1 ? 0xef4444 : 0xfbbf24);
       this.emitFloatingToast(
         capybara.index === 1 ? '🥊 PODWÓJNA PAŁKA MAFII! -' + damage + ' HP' : '🕶️ MAFIA INTERWENCJA! -' + damage + ' HP',
