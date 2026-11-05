@@ -13,6 +13,7 @@ import { applySurvivalWaveMutator, getSurvivalWaveMutator } from './survivalWave
 import { getSurvivalConvoyHazardCount } from './survivalConvoy.ts';
 import { chooseCampaignRewardSpawnPoint } from './campaignRewards.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
+import { chooseSurvivalRicochetTarget, getSurvivalRadiationProfile, getSurvivalRicochetProfile } from './survivalCombatDraft.ts';
 import {
   advanceAbilityCooldown,
   applyAbilityKillRecharge,
@@ -483,6 +484,9 @@ export class PaleciakiGameEngine {
   private survivalWeaponReloadMultiplier = 1;
   private survivalCriticalChance = 0.05;
   private survivalCriticalDamageMultiplier = 1.75;
+  private survivalRicochetStrength = 1;
+  private survivalRadiationStrength = 1;
+  private survivalRadiationTimer = 1.4;
   private survivalDashCooldownMultiplier = 1;
   private survivalDashCooldownRemaining = 0;
   private survivalDashCooldownDuration = 5.2;
@@ -733,6 +737,11 @@ export class PaleciakiGameEngine {
     orbitAngle?: number;
     orbitRadius?: number;
     orbitSpeed?: number;
+    chainable?: boolean;
+    bouncesRemaining?: number;
+    chainMaxDistance?: number;
+    chainDamageRetention?: number;
+    chainDamageMultiplier?: number;
   }[] = [];
   private specialEffects: {
     mesh: THREE.Mesh | THREE.Group;
@@ -1366,6 +1375,9 @@ export class PaleciakiGameEngine {
     this.survivalWeapons = [];
     this.survivalWeaponDispatchCooldown = 0;
     this.survivalDamageMultiplier = 1;
+    this.survivalRicochetStrength = 1;
+    this.survivalRadiationStrength = 1;
+    this.survivalRadiationTimer = 1.4;
     this.survivalAttackRateMultiplier = 1;
     this.survivalWeaponReloadMultiplier = 1;
     this.survivalMoveMultiplier = 1;
@@ -2084,6 +2096,13 @@ export class PaleciakiGameEngine {
         this.activePerks.damageWard = Math.max(this.activePerks.damageWard || 0, Math.round(24 * strength));
         this.callbacks.onPerksUpdate?.(this.activePerks);
         break;
+      case 'ricochet':
+        this.survivalRicochetStrength = Math.min(1.55, this.survivalRicochetStrength * (1 + 0.08 * strength));
+        break;
+      case 'radiation':
+        this.survivalRadiationStrength = Math.min(1.75, this.survivalRadiationStrength * (1 + 0.12 * strength));
+        this.survivalRadiationTimer = Math.min(this.survivalRadiationTimer, 0.35);
+        break;
       }
     }
 
@@ -2158,6 +2177,13 @@ export class PaleciakiGameEngine {
         this.callbacks.onPerksUpdate?.(this.activePerks);
       });
     }
+    if ((stacks.ricochet || 0) >= 2 && (stacks.radiation || 0) >= 2) {
+      unlock('chain_reactor', 'REAKTOR ŁAŃCUCHOWY', 'Rykoszety zachowują więcej mocy, a pole radiacyjne pulsuje szybciej, szerzej i mocniej.', () => {
+        this.survivalRicochetStrength = Math.min(1.7, this.survivalRicochetStrength * 1.18);
+        this.survivalRadiationStrength = Math.min(1.9, this.survivalRadiationStrength * 1.18);
+        this.survivalRadiationTimer = Math.min(this.survivalRadiationTimer, 0.4);
+      });
+    }
   }
 
   private rollSurvivalUpgradeOptions(excluded: string[] = []): SurvivalUpgradeOption[] {
@@ -2179,11 +2205,15 @@ export class PaleciakiGameEngine {
       { id: 'regen', icon: '🩹', title: 'PRZERWA REGENERACYJNA', description: 'Co pewien czas odzyskujesz 1 punkt zdrowia.' },
       { id: 'drone', icon: '🤖', title: 'DRON ASYSTUJĄCY', description: 'Dron przez 32 sekundy razi najbliższego wroga impulsem.' },
       { id: 'armor', icon: '🪵', title: 'PALETA OCHRONNA', description: 'Otrzymujesz 24 sekundy okresowej osłony.' },
+      { id: 'ricochet', icon: '↗', title: 'RYKOSZET B4 • POZIOM ' + ((this.survivalUpgradeStacks.ricochet || 0) + 1) + '/3', description: '+1 odbicie pocisku operatora do kolejnego nie trafionego wroga. Kolejne odbicia zadają stopniowo mniej obrażeń. Maksymalnie 3 poziomy.' },
+      { id: 'radiation', icon: '☢️', title: 'POLE RADIACYJNE B4 • POZIOM ' + ((this.survivalUpgradeStacks.radiation || 0) + 1) + '/3', description: 'Co kilka sekund emituje impuls wokół operatora i rani pobliskich wrogów. Zasięg, siła i liczba celów rosną z poziomem. Maksymalnie 3 poziomy.' },
     ].filter((option) => !excluded.includes(option.id) &&
       (option.id !== 'ability' || (this.survivalUpgradeStacks.ability || 0) < 3) &&
       (option.id !== 'critical' || (this.survivalUpgradeStacks.critical || 0) < 5) &&
       (option.id !== 'critical_damage' || (this.survivalUpgradeStacks.critical_damage || 0) < 3) &&
-      (option.id !== 'dash' || (this.survivalUpgradeStacks.dash || 0) < 4));
+      (option.id !== 'dash' || (this.survivalUpgradeStacks.dash || 0) < 4) &&
+      (option.id !== 'ricochet' || (this.survivalUpgradeStacks.ricochet || 0) < 3) &&
+      (option.id !== 'radiation' || (this.survivalUpgradeStacks.radiation || 0) < 3));
     for (const [weaponId, definition] of Object.entries(SURVIVAL_WEAPON_DEFS) as Array<[SurvivalWeaponId, typeof SURVIVAL_WEAPON_DEFS[SurvivalWeaponId]]>) {
       const owned = this.survivalWeapons.find((weapon) => weapon.id === weaponId);
       if (!owned) {
@@ -5375,6 +5405,7 @@ export class PaleciakiGameEngine {
 
     this.updateSurvivalEvents(dt);
     this.updateSurvivalDrone(dt);
+    this.updateSurvivalRadiation(dt);
 
     if (this.survivalRegenMultiplier > 0) {
       this.survivalRegenTimer -= dt;
@@ -6406,6 +6437,55 @@ export class PaleciakiGameEngine {
     this.emitFloatingToast('⚡ DRON PIORUN: IMPULS!', target.x, target.y + 1.25, target.z, 'perk');
     sound.playElectricalSparks();
     if (target.hp <= 0) this.defeatEnemy(target, 180, true);
+  }
+
+
+
+  private updateSurvivalRadiation(dt: number) {
+    if (this.gameMode !== 'survival') return;
+    const rank = this.survivalUpgradeStacks.radiation || 0;
+    if (rank <= 0) return;
+
+    const evolved = this.survivalEvolutions.has('chain_reactor');
+    const profile = getSurvivalRadiationProfile(rank, evolved);
+    this.survivalRadiationTimer -= dt;
+    if (this.survivalRadiationTimer > 0) return;
+    this.survivalRadiationTimer = profile.intervalSeconds;
+
+    const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
+    const targetBudget = isMobile
+      ? Math.min(profile.maxTargets, this.adaptivePerformanceTier >= 2 ? 4 : this.adaptivePerformanceTier === 1 ? 6 : 8)
+      : profile.maxTargets;
+    const targets = this.enemies
+      .filter((enemy) => enemy.state !== 'defeated' && enemy.mesh?.visible &&
+        Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z) <= profile.radius)
+      .sort((a, b) =>
+        Math.hypot(a.x - this.playerPos.x, a.z - this.playerPos.z) -
+        Math.hypot(b.x - this.playerPos.x, b.z - this.playerPos.z)
+      )
+      .slice(0, targetBudget);
+
+    if (targets.length === 0) return;
+    const damage = Math.max(1, Math.round(this.scaleSurvivalDamage(profile.damage) * this.survivalRadiationStrength));
+    let affected = 0;
+    for (const enemy of targets) {
+      if (enemy.shieldActive) {
+        enemy.shieldActive = false;
+        if (enemy.shieldRing) enemy.shieldRing.visible = false;
+        sound.playShieldBreak();
+        affected++;
+        continue;
+      }
+      this.damageEnemy(enemy, damage, this.playerPos.x, this.playerPos.z);
+      affected++;
+      if (enemy.hp <= 0) this.defeatEnemy(enemy, 190, false);
+    }
+
+    if (affected > 0) {
+      this.spawnParticleRing(this.playerPos.x, 0.18, this.playerPos.z, 0x84cc16);
+      this.emitFloatingToast('☢️ PROMIENIOWANIE B4 • ' + affected + ' CELI', this.playerPos.x, this.playerPos.y + 1.45, this.playerPos.z, 'perk');
+      sound.playElectricalSparks();
+    }
   }
 
   private triggerSurvivalWarehouseEvent() {
@@ -8931,7 +9011,10 @@ export class PaleciakiGameEngine {
 
       let destroyProj = false;
       const berserkMult = (this.activePerks.kfcBerserk || 0) > 0 ? 2 : 1;
-      const baseDmg = this.scaleSurvivalDamage(p.damage ?? (this.charDef.id === 'dawid' ? 2 : 1)) * berserkMult;
+      const baseDmg = Math.max(1, Math.round(
+        this.scaleSurvivalDamage(p.damage ?? (this.charDef.id === 'dawid' ? 2 : 1)) *
+        berserkMult * (p.chainDamageMultiplier || 1)
+      ));
       const segmentX = p.mesh.position.x - previousProjectileX;
       const segmentY = p.mesh.position.y - previousProjectileY;
       const segmentZ = p.mesh.position.z - previousProjectileZ;
@@ -9017,6 +9100,29 @@ export class PaleciakiGameEngine {
             } else {
               e.stunTimer = Math.max(e.stunTimer, this.gameMode === 'survival' ? 0.14 : (p.stunDuration || 0.65));
               if (this.gameMode !== 'survival' || (p.stunDuration || 0) > 0.8) e.state = 'stunned';
+            }
+          }
+
+          if (p.chainable && (p.bouncesRemaining || 0) > 0 && p.hitIds) {
+            const nextTarget = chooseSurvivalRicochetTarget(
+              { x: e.x, z: e.z },
+              this.enemies,
+              p.hitIds,
+              p.chainMaxDistance || 7,
+            );
+            if (nextTarget) {
+              const directionX = nextTarget.x - e.x;
+              const directionZ = nextTarget.z - e.z;
+              const projectileSpeed = Math.max(6, p.vel.length());
+              p.vel.set(directionX, 0, directionZ).normalize().multiplyScalar(projectileSpeed);
+              p.mesh.position.set(e.x, e.y + 0.72, e.z);
+              p.bouncesRemaining--;
+              p.chainDamageMultiplier = (p.chainDamageMultiplier || 1) * (p.chainDamageRetention || 0.7);
+              p.pierce = 0;
+              p.life = Math.max(p.life, 0.72);
+              this.spawnCompactImpact(e.x, e.y + 0.72, e.z, 0xa78bfa);
+              sound.playElectricalSparks();
+              break;
             }
           }
 
@@ -9344,6 +9450,7 @@ export class PaleciakiGameEngine {
       (this.gameMode === 'survival' ? this.survivalAttackRateMultiplier : 1) *
       attackHasteFactor;
     this.attackSwingTimer = 0.26;
+    const firstPrimaryProjectile = this.projectiles.length;
 
     sound.playAttackWhoosh();
     const forward = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
@@ -9536,6 +9643,22 @@ export class PaleciakiGameEngine {
         hitIds: new Set(),
       });
       if (isThirdCombo) this.emitFloatingToast('🔧 GRZECHOTKA B4 — GWINT ZAGŁADY!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'combo');
+    }
+
+    if (this.gameMode === 'survival' && (this.survivalUpgradeStacks.ricochet || 0) > 0) {
+      const profile = getSurvivalRicochetProfile(
+        this.survivalUpgradeStacks.ricochet || 0,
+        this.survivalEvolutions.has('chain_reactor'),
+      );
+      for (let index = firstPrimaryProjectile; index < this.projectiles.length; index++) {
+        const projectile = this.projectiles[index];
+        projectile.chainable = profile.bounceCount > 0;
+        projectile.bouncesRemaining = profile.bounceCount;
+        projectile.chainMaxDistance = profile.maxDistance;
+        projectile.chainDamageRetention = Math.min(0.94, profile.damageRetention * this.survivalRicochetStrength);
+        projectile.chainDamageMultiplier = 1;
+        projectile.hitIds ||= new Set<string>();
+      }
     }
 
     // Small dodge reactions remain readable and do not drown the operator's projectile.
