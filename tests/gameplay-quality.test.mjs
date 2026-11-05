@@ -1075,3 +1075,35 @@ test('MafiKapibar companions update during gameplay and are disposed when the wo
   assert.match(game, /capybara\.attackCooldown = 1\.18 \+ capybara\.index \* 0\.14/);
   assert.match(game, /life: duration,[\s\S]*?maxLife: duration/);
 });
+
+
+test('MafiKapibar summons large armoured enforcers with readable carbine and baton roles', async () => {
+  const game = await read('../src/game.ts');
+  const start = game.indexOf('private createMafiCapybaraModel');
+  const end = game.indexOf('private spawnMafiPentagramEffect', start);
+  assert.ok(start >= 0 && end > start, 'MafiKapibar 3D model builder should exist');
+  const model = game.slice(start, end);
+  assert.match(model, /body\.scale\.set\(1\.18, 0\.92, 1\.38\)/);
+  assert.match(model, /mafi_rifle_rig/);
+  assert.match(model, /const barrel = new THREE\.Mesh/);
+  assert.match(model, /const magazine = new THREE\.Mesh/);
+  assert.match(model, /mafi_baton_rig/);
+  assert.match(model, /const batonCount = index === 1 \? 2 : index === 2 \? 1 : 1/);
+  assert.match(model, /DON • CARBINE/);
+  assert.match(model, /ENFORCER • DUAL BATONS/);
+  assert.match(model, /HYBRID • CARBINE \+ BATON/);
+  assert.match(game, /setScalar\(1\.34 \* fadeIn \* fadeOut\)/);
+});
+
+test('MafiKapibar enforcers fire arcade tracers and retain heavy baton melee combat', async () => {
+  const game = await read('../src/game.ts');
+  const start = game.indexOf('private updateMafiCapybaras');
+  const end = game.indexOf('private resetAbilityCooldown', start);
+  assert.ok(start >= 0 && end > start, 'MafiKapibar combat update should exist');
+  const update = game.slice(start, end);
+  assert.match(update, /capybara\.group\.rotation\.y = Math\.atan2/);
+  assert.match(update, /const rifleGuard = capybara\.index !== 1 && nearest > 4\.0/);
+  assert.match(update, /this\.projectiles\.push\(\{[\s\S]*?damage: 2,[\s\S]*?weaponProjectile: true/);
+  assert.match(update, /scaleSurvivalDamage\(capybara\.index === 1 \? 3 : 2\)/);
+  assert.match(update, /PODWÓJNA PAŁKA MAFII/);
+});
