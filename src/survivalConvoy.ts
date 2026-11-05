@@ -7,7 +7,11 @@ export function getSurvivalConvoyHazardCount(
   performanceTier: number,
   laneGap: number,
 ): 0 | 1 | 2 {
-  const active = Number.isFinite(activeHazards) ? Math.max(0, Math.floor(activeHazards)) : 0;
+  const active = activeHazards === Number.POSITIVE_INFINITY
+    ? 3
+    : Number.isFinite(activeHazards)
+      ? Math.max(0, Math.floor(activeHazards))
+      : 0;
   const tier = Number.isFinite(performanceTier) ? Math.max(0, Math.floor(performanceTier)) : 0;
   const gap = Number.isFinite(laneGap) ? Math.max(0, laneGap) : 0;
   const availableSlots = Math.max(0, 3 - active);
