@@ -7014,6 +7014,7 @@ export class PaleciakiGameEngine {
       enemy.maxHp = tuned.maxHp;
       enemy.hp = tuned.maxHp;
       enemy.speed = tuned.speed;
+      enemy.survivalXpMultiplier = tuned.xpMultiplier;
       waveXpMultiplier = tuned.xpMultiplier;
 
       // The Armored Shift promotes only a small subset to visible shield duty.
