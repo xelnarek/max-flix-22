@@ -8,7 +8,7 @@ import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from 
 import { chooseSurvivalEventSpawnPoint } from './survivalSpawn.ts';
 import { getSurvivalUpgradeRarityMeta, getSurvivalWeaponInitialLevel, getSurvivalWeaponUpgradeSteps, rollSurvivalUpgradeRarity, type SurvivalUpgradeRarity } from './survivalRarity.ts';
 import { createSurvivalBossRewardOptions } from './survivalBossRewards.ts';
-import { shouldSpawnBosmanKrakow } from './survivalEncounters.ts';
+import { getSurvivalBossVariant, shouldSpawnBosmanKrakow } from './survivalEncounters.ts';
 import { chooseCampaignRewardSpawnPoint } from './campaignRewards.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
 import {
@@ -5242,8 +5242,11 @@ export class PaleciakiGameEngine {
     // First major boss at 05:00; later boss cycles recur every five minutes.
     const majorBossWave = Math.floor(this.survivalElapsed / 300) * 5;
     const activeSurvivalBoss = this.enemies.some((enemy) =>
-      (enemy.type === 'walczak' || enemy.type === 'krol_leto') && enemy.state !== 'defeated'
+      (enemy.type === 'walczak' || enemy.type === 'krol_leto' ||
+        enemy.type === 'bosman_krakow' || enemy.type === 'sebix_m') &&
+      enemy.state !== 'defeated'
     );
+    const upcomingBossVariant = getSurvivalBossVariant(majorBossWave);
     if (
       this.survivalElapsed >= 300 &&
       this.survivalBossWave !== majorBossWave &&
@@ -5253,15 +5256,23 @@ export class PaleciakiGameEngine {
       this.survivalPendingBossWave = majorBossWave;
       this.survivalBossWarningTimer = 6.0;
       this.emitFloatingToast(
-        majorBossWave === 5 ? 'INWENTARYZACJA GIGANT — ZA 6 SEKUND!' : 'ALARM BOSS — PRZYGOTUJ SIĘ!',
+        majorBossWave === 5 ? 'INWENTARYZACJA GIGANT — ZA 6 SEKUND!' :
+          upcomingBossVariant === 'bosman_krakow' ? 'BOSMAN KRAKÓW — ZA 6 SEKUND!' :
+          upcomingBossVariant === 'krol_leto' ? 'DYREKTOR WIDMO — ZA 6 SEKUND!' : 'NADZORCA ZERO — ZA 6 SEKUND!',
         this.playerPos.x, this.playerPos.y + 2.0, this.playerPos.z, 'damage'
       );
       this.callbacks.onPerkDropBanner?.(
-        majorBossWave === 5 ? 'INWENTARYZACJA GIGANT • 6 SEKUND' : 'NADCHODZI BOSS • 6 SEKUND',
-        '🚨',
+        majorBossWave === 5 ? 'INWENTARYZACJA GIGANT • 6 SEKUND' :
+          upcomingBossVariant === 'bosman_krakow' ? 'BOSMAN KRAKÓW • 6 SEKUND' :
+          upcomingBossVariant === 'krol_leto' ? 'DYREKTOR WIDMO • 6 SEKUND' : 'NADZORCA ZERO • 6 SEKUND',
+        upcomingBossVariant === 'bosman_krakow' ? '⚓' : upcomingBossVariant === 'krol_leto' ? '👑' : '👔',
         majorBossWave === 5
           ? 'Nadchodzi Inwentaryzacja Gigant. Przygotuj się na szarżę i szeroką falę uderzeniową.'
-          : 'Zbliża się kolejny kierownik zmiany. Zbierz kryształy XP i przygotuj się do starcia.',
+          : upcomingBossVariant === 'bosman_krakow'
+            ? 'Dowódca rampy używa falowych odpraw i ostrzału z dystansu. Wykorzystaj przerwy między salwami.'
+            : upcomingBossVariant === 'krol_leto'
+              ? 'Dyrektor Widmo miesza ataki obszarowe z presją dystansową. Nie stój w czerwonych polach.'
+              : 'Nadzorca Zero naciska z bliska i przyspiesza po utracie połowy zdrowia. Zbieraj XP i przygotuj unik.',
         '#ef4444'
       );
       sound.playBossWarning();
@@ -6577,33 +6588,60 @@ export class PaleciakiGameEngine {
   private spawnSurvivalBoss(wave: number) {
     const { x, z } = this.getSurvivalSpawnPoint();
     const id = 'survival_boss_' + wave + '_' + Math.floor(performance.now());
-    if (wave % 10 === 0) {
+    const variant = getSurvivalBossVariant(wave);
+
+    if (variant === 'bosman_krakow') {
+      this.addBosmanKrakowBossEnemy(id, x, z);
+    } else if (variant === 'krol_leto') {
       this.addKrolLetoBossEnemy(id, x, z);
     } else {
       this.addWalczakBossEnemy(id, x, z);
     }
+
     const boss = this.enemies[this.enemies.length - 1];
     if (boss) {
       this.applyEnemyVisualPolish(boss);
       if (boss.mesh) this.applyStorybookStyle(boss.mesh);
       boss.aiOrbitSign = wave % 2 === 0 ? 1 : -1;
-      if (wave === 5) boss.name = 'Kierownik Logistyki • Inwentaryzacja Gigant';
-      boss.maxHp = wave === 5 ? 78 : Math.round(46 + wave * 3.1);
+      if (wave === 5) boss.name = 'Inwentaryzacja Gigant • Nadzorca Zero';
+      else if (variant === 'bosman_krakow') boss.name = 'Bosman Kraków • Dowódca rampy';
+      else if (variant === 'krol_leto') boss.name = 'Dyrektor Widmo • Kontroler terminala';
+
+      const baseHp = wave === 5
+        ? 78
+        : variant === 'bosman_krakow'
+          ? Math.round(58 + wave * 3.2)
+          : Math.round(46 + wave * 3.1);
+      boss.maxHp = baseHp;
       boss.hp = boss.maxHp;
-      boss.speed *= 0.86 * (1 + Math.min(0.38, wave * 0.012));
+      boss.speed *= (variant === 'bosman_krakow' ? 0.82 : 0.86) * (1 + Math.min(0.38, wave * 0.012));
       boss.startX = this.levelBounds.minX + 2.5;
       boss.endX = this.levelBounds.maxX - 2.5;
-      boss.specialActionTimer = 2.0;
+      boss.specialActionTimer = variant === 'bosman_krakow' ? 2.3 : 2.0;
+      boss.bossPhase = 1;
     }
+
     sound.playSirens();
     this.triggerScreenShake(0.9, 0.65);
     this.triggerHitStop(0.14);
     this.triggerBloomPulse(0.7);
     this.spawnParticleRing(x, 0.6, z, 0xf59e0b);
+    const bossTitle = wave === 5
+      ? 'INWENTARYZACJA GIGANT WJEŻDŻA NA HALĘ!'
+      : variant === 'bosman_krakow'
+        ? 'BOSMAN KRAKÓW PRZEJMUJE RAMPĘ!'
+        : variant === 'krol_leto'
+          ? 'DYREKTOR WIDMO WRACA DO MAGAZYNU!'
+          : 'NADZORCA ZERO WJEŻDŻA NA ZMIANĘ!';
+    const bossIcon = variant === 'bosman_krakow' ? '⚓' : variant === 'krol_leto' ? '👑' : '👔';
     this.callbacks.onPerkDropBanner?.(
-      wave % 10 === 0 ? 'DYREKTOR WIDMO WRACA DO MAGAZYNU!' : wave === 5 ? 'INWENTARYZACJA GIGANT WJEŻDŻA NA HALĘ!' : 'NADZORCA ZERO WJEŻDŻA NA ZMIANĘ!',
-      wave % 10 === 0 ? '👑' : '👔',
-      'Boss fali ' + wave + ' — pokonaj go, aby zdobyć dodatkowe doświadczenie',
+      bossTitle,
+      bossIcon,
+      variant === 'bosman_krakow'
+        ? 'Boss fali ' + wave + ' — wyczekaj odprawy, omiń wachlarz pocisków i kontratakuj po salwie.'
+        : variant === 'krol_leto'
+          ? 'Boss fali ' + wave + ' — unikaj oznaczonych stref i wykorzystuj przerwy w atakach dystansowych.'
+          : 'Boss fali ' + wave + ' — obserwuj szarżę, odskocz z linii uderzenia i atakuj po przejściu.',
       '#ef4444'
     );
   }
@@ -7889,13 +7927,13 @@ export class PaleciakiGameEngine {
       }
 
       // Check whether this enemy is allowed to engage or must hold position in wave
-      const canActivelyChase = e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'pomazaniec' || e.type === 'sebix_m' || !!e.surgeRunner || this.activeChaserIds.has(e.id);
+      const canActivelyChase = e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' || e.type === 'pomazaniec' || e.type === 'sebix_m' || !!e.surgeRunner || this.activeChaserIds.has(e.id);
 
       // SIGHT & DETECTION LOGIC
       const threatAwareness = 1 + this.threatTier * 0.025;
       const detectionRange = e.surgeRunner
         ? 40.0
-        : (e.type === 'walczak' || e.type === 'krol_leto')
+        : (e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow')
           ? 16.0
           : (e.state === 'chase' ? 12.0 : 8.5) * threatAwareness;
       const canSeePlayer = distToPlayer < detectionRange && canActivelyChase;
@@ -10512,7 +10550,7 @@ export class PaleciakiGameEngine {
       this.spawnDroppedPerk(e.x, e.y + 0.1, e.z);
     }
 
-    if (this.gameMode === 'survival' && (e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'sebix_m')) {
+    if (this.gameMode === 'survival' && (e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' || e.type === 'sebix_m')) {
       this.spawnLootCrate(e.x + 1.2, 0, e.z);
       this.spawnSurvivalXpGem(e.x, e.y, e.z, e.type === 'sebix_m' ? 5 : 8);
       this.emitFloatingToast(e.type === 'sebix_m' ? '🔥 OPERATOR TURBO ROZBROJONY — SKRZYNIA B4!' : '🏆 SKRZYNIA Z NAGRODĄ BOSS-A!', e.x, e.y + 2.0, e.z, 'combo');
