@@ -194,6 +194,8 @@ function loseOniricLife(state: OniricPlatformerState) {
 export function launchOniricPlatformer(options: {
   onComplete: (result: OniricPlatformerResult) => void;
 }): void {
+  const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const previousBodyOverflow = document.body.style.overflow;
   const root = document.createElement('section');
   root.className = 'oniric-platformer-overlay oniric-pixel-chaos';
   root.setAttribute('role', 'dialog');
@@ -260,6 +262,10 @@ export function launchOniricPlatformer(options: {
       root.classList.remove('oniric-pixel-chaos');
     }, ONIRIC_PIXEL_GLITCH_DURATION_MS);
   };
+
+  document.body.style.overflow = 'hidden';
+  const firstFocusTarget = root.querySelector<HTMLButtonElement>('[data-action="exit"]');
+  firstFocusTarget?.focus();
 
   let state = createOniricPlatformerState();
   let rafId = 0;
@@ -538,9 +544,11 @@ export function launchOniricPlatformer(options: {
     held.left = false;
     held.right = false;
     jumpQueued = false;
+    lastFrame = 0;
     resultPanel.hidden = true;
     updateHud();
     drawScene();
+    if (!rafId && !completedCallback) rafId = window.requestAnimationFrame(frame);
   };
 
   let lastHudSecond = -1;
@@ -558,7 +566,25 @@ export function launchOniricPlatformer(options: {
       if (state.finished) showResult();
     }
     drawScene();
-    if (!completedCallback) rafId = window.requestAnimationFrame(frame);
+    // Stop rendering once the result panel is shown. A retry explicitly
+    // starts a fresh frame loop, avoiding a 60 FPS idle render on phones.
+    if (!completedCallback && !state.finished) rafId = window.requestAnimationFrame(frame);
+    else rafId = 0;
+  };
+
+  const clearHeldInput = () => {
+    held.left = false;
+    held.right = false;
+    jumpQueued = false;
+  };
+
+  const onWindowBlur = () => {
+    clearHeldInput();
+    lastFrame = 0;
+  };
+
+  const onVisibilityChange = () => {
+    if (document.hidden) onWindowBlur();
   };
 
   const finish = () => {
@@ -567,9 +593,13 @@ export function launchOniricPlatformer(options: {
     window.cancelAnimationFrame(rafId);
     window.clearTimeout(pixelChaosTimer);
     window.removeEventListener('resize', resize);
+    window.removeEventListener('blur', onWindowBlur);
+    document.removeEventListener('visibilitychange', onVisibilityChange);
     document.removeEventListener('keydown', onKeyDown, true);
     document.removeEventListener('keyup', onKeyUp, true);
+    document.body.style.overflow = previousBodyOverflow;
     root.remove();
+    if (previousFocus?.isConnected) previousFocus.focus();
     options.onComplete({
       won: state.won,
       collected: state.collected.filter(Boolean).length,
@@ -578,6 +608,23 @@ export function launchOniricPlatformer(options: {
   };
 
   const onKeyDown = (event: KeyboardEvent) => {
+    if (event.code === 'Tab') {
+      const focusable = Array.from(root.querySelectorAll<HTMLElement>(
+        'button:not([disabled]):not([hidden])',
+      ));
+      if (focusable.length > 0) {
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+      return;
+    }
     if (['ArrowLeft', 'KeyA'].includes(event.code)) held.left = true;
     if (['ArrowRight', 'KeyD'].includes(event.code)) held.right = true;
     if (['Space', 'ArrowUp', 'KeyW'].includes(event.code) && !event.repeat) jumpQueued = true;
@@ -622,6 +669,8 @@ export function launchOniricPlatformer(options: {
   retryButton.addEventListener('click', resetRun);
   document.addEventListener('keydown', onKeyDown, true);
   document.addEventListener('keyup', onKeyUp, true);
+  window.addEventListener('blur', onWindowBlur);
+  document.addEventListener('visibilitychange', onVisibilityChange);
   window.addEventListener('resize', resize, { passive: true });
   resize();
   updateHud();
