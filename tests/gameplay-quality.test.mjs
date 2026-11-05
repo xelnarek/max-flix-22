@@ -288,7 +288,8 @@ test('Survival crowd rendering defers distant model attachments and limits shado
   assert.match(game, /const canCastShadow = \(isBoss \|\| enemy\.type === 'sebix_m'\) && !this\.isHandheldViewport/);
   assert.match(game, /child\.castShadow = canCastShadow/);
   assert.match(game, /this\.dirLight\.shadow\.autoUpdate = !isMobile/);
-  assert.match(game, /this\.mobileShadowRefreshCooldown = 1 \/ 24/);
+  assert.match(game, /this\.mobileShadowRefreshCooldown -= dt \/ this\.timeScale/);
+  assert.match(game, /const shadowHz = this\.adaptivePerformanceTier >= 2 \? 12 : this\.adaptivePerformanceTier === 1 \? 18 : 24/);
 });
 
 test('camera wall fades reuse raycast results and only update materials on state changes', async () => {
