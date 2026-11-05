@@ -19,5 +19,5 @@ test('map picker has a dedicated live preview and accurate route labels', async 
   assert.match(app, /survivalMapPreviewTitle.textContent = map.name.toUpperCase()/);
   assert.match(app, /survivalMapPreviewDetail.textContent = map.description/);
   assert.match(css, /survival-map-preview/);
-  assert.match(css, /grid-template-columns:\\s*repeat(2,\\s*minmax(0,\\s*1fr))/);
+  assert.match(css, /grid-template-columns:\s*repeat(2,\s*minmax(0,\s*1fr))/);
 });
