@@ -48,3 +48,35 @@ test('boss reward has a useful fallback when every weapon is maxed', () => {
   assert.equal(options[1].id, 'boss_weapon_overdrive');
   assert.match(options[1].description, /8% szybciej/);
 });
+
+test('boss rewards pause Survival, trigger on boss defeat and cannot be bypassed', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
+  const [game, app, html, css] = await Promise.all([
+    read('../src/game.ts'),
+    read('../src/index.ts'),
+    read('../index.html'),
+    read('../src/visual-polish.css'),
+  ]);
+
+  assert.ok(game.includes("this.callbacks.onSurvivalLevelUp?.([...this.survivalPendingOptions], 'boss-reward')"));
+  assert.ok(game.includes("this.beginSurvivalBossReward(e.name)"));
+  assert.ok(game.includes("this.survivalBossRewardPending = true"));
+  assert.ok(game.includes("this.survivalBossRewardPending || this.survivalRerolls <= 0"));
+  assert.ok(game.includes("this.survivalBossRewardPending || this.survivalSkips <= 0"));
+  assert.ok(game.includes("this.survivalBossRewardPending ||"));
+  assert.ok(app.includes("context: 'levelup' | 'boss-reward' = 'levelup'"));
+  assert.ok(app.includes("survivalRerollBtn?.classList.toggle('hidden', isBossReward)"));
+  assert.ok(app.includes("survivalSkipBtn?.classList.toggle('hidden', isBossReward)"));
+  assert.ok(html.includes('id="survival-levelup-title"'));
+  assert.ok(css.includes('#survival-levelup[data-mode="boss-reward"] .survival-upgrade-actions'));
+});
+
+test('boss weapon overdrive improves melee and weapon reload cadence and resets each run', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
+  assert.ok(game.includes('this.survivalWeaponReloadMultiplier = Math.max(0.72, this.survivalWeaponReloadMultiplier * 0.92)'));
+  assert.ok(game.includes('this.survivalAttackRateMultiplier = Math.max(0.78, this.survivalAttackRateMultiplier * 0.92)'));
+  assert.ok(game.includes('getScaledSurvivalWeaponReloadSeconds(readyWeapon.id, readyWeapon.level, !!readyWeapon.evolved)'));
+  assert.ok(game.includes('this.survivalWeaponReloadMultiplier = 1;'));
+});
