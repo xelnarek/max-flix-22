@@ -23,6 +23,7 @@ import { advanceSurvivalCommanderTiming } from './survivalCommanderTiming.ts';
 import { getSurvivalLeaderLossTargets, getSurvivalMoraleBreakMultiplier, SURVIVAL_LEADER_LOSS_BREAK_SECONDS } from './survivalMorale.ts';
 import { selectSurvivalSupportPulseTargets, SURVIVAL_SUPPORT_PULSE_RADIUS, SURVIVAL_SUPPORT_PULSE_INTERVAL_SECONDS, SURVIVAL_SUPPORT_SHIELD_SECONDS } from './survivalSupport.ts';
 import { getSurvivalXpRequirement } from './survivalProgression.ts';
+import { advanceSurvivalContract, createSurvivalContract, registerSurvivalContractAction, type SurvivalContractAction, type SurvivalContractState } from './survivalContracts.ts';
 import {
   advanceAbilityCooldown,
   applyAbilityKillRecharge,
@@ -186,6 +187,7 @@ export interface SurvivalSnapshot {
   killStreak: number; overdriveRemainingSeconds: number;
   mapId: SurvivalMapId; mapName: string; mapSubtitle: string;
   secretsFound: number; totalSecrets: number; bossesDefeated: number;
+  contract: SurvivalContractState;
   weapons: Array<{ id: SurvivalWeaponId; name: string; icon: string; level: number; evolved: boolean }>;
 }
 
@@ -489,6 +491,7 @@ export class PaleciakiGameEngine {
   private survivalUiTimer = 0;
   private survivalWave = 1;
   private survivalKills = 0;
+  private survivalContract: SurvivalContractState = createSurvivalContract(1);
   private survivalMapId: SurvivalMapId = 'warehouse_b4';
   private lastSurvivalMapId: SurvivalMapId | null = null;
   private survivalSecretsFound = 0;
@@ -1306,6 +1309,7 @@ export class PaleciakiGameEngine {
     this.survivalUiTimer = 0;
     this.survivalWave = 1;
     this.survivalKills = 0;
+    this.survivalContract = createSurvivalContract(1);
     this.survivalSecretsFound = 0;
     this.survivalBossesDefeated = 0;
     this.survivalPerfectDodges = 0;
@@ -1496,6 +1500,7 @@ export class PaleciakiGameEngine {
       mapModifier.description,
     );
     this.emitFloatingToast('LOSOWA MAPA: ' + survivalMap.name.toUpperCase() + ' • ' + mapModifier.title, this.playerPos.x, this.playerPos.y + 1.8, this.playerPos.z, 'combo');
+    this.emitFloatingToast('KONTRAKT: ' + this.survivalContract.title + ' • ' + this.survivalContract.description, this.playerPos.x, this.playerPos.y + 1.35, this.playerPos.z, 'perk');
   }
 
 
@@ -2728,6 +2733,39 @@ export class PaleciakiGameEngine {
   }
 
 
+  private registerSurvivalContractAction(action: SurvivalContractAction, amount = 1): void {
+    if (this.gameMode !== 'survival' || this.survivalContract.completed || this.survivalContract.expired) return;
+    const result = registerSurvivalContractAction(this.survivalContract, action, amount);
+    this.survivalContract = result.state;
+    if (!result.completedNow) return;
+
+    const payout = 220 + this.survivalWave * 45;
+    const bonusXp = Math.min(8, 3 + Math.floor((this.survivalWave - 1) / 3));
+    this.score += payout;
+    this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+    this.spawnSurvivalXpGem(
+      this.playerPos.x + 1.15,
+      this.playerPos.y,
+      this.playerPos.z + 0.7,
+      bonusXp
+    );
+    this.emitFloatingToast(
+      'KONTRAKT ZALICZONY • +' + payout + ' PKT • +' + bonusXp + ' XP',
+      this.playerPos.x, this.playerPos.y + 1.85, this.playerPos.z, 'combo'
+    );
+    this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.42, this.playerPos.z, 0x34d399);
+    this.triggerHitStop(0.09);
+    this.triggerScreenShake(0.16, 0.12);
+    this.triggerBloomPulse(0.28);
+    sound.playPickup(2);
+    this.callbacks.onSurvivalAnnouncement?.(
+      'KONTRAKT ZALICZONY',
+      this.survivalContract.title + ' • PREMIA ' + payout + ' PKT',
+      'Premia doświadczenia (' + bonusXp + ' XP) pojawiła się obok operatora. Następny cel pojawi się wraz z kolejną falą.'
+    );
+    this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+  }
+
   public getSurvivalSnapshot(): SurvivalSnapshot {
     return {
       elapsedSeconds: Math.floor(this.survivalElapsed),
@@ -2743,6 +2781,7 @@ export class PaleciakiGameEngine {
       secretsFound: this.survivalSecretsFound,
       totalSecrets: getSurvivalMapDefinition(this.survivalMapId).secretLocations.length,
       bossesDefeated: this.survivalBossesDefeated,
+      contract: { ...this.survivalContract },
       level: this.survivalLevel,
       xp: this.survivalXp,
       xpToNext: this.survivalXpToNext,
@@ -6141,6 +6180,11 @@ export class PaleciakiGameEngine {
 
   private updateSurvivalDirector(dt: number) {
     this.survivalElapsed += dt;
+    const contractClock = advanceSurvivalContract(this.survivalContract, dt);
+    this.survivalContract = contractClock.state;
+    if (contractClock.expiredNow) {
+      this.emitFloatingToast('KONTRAKT NIEZALICZONY • NASTĘPNA ZMIANA', this.playerPos.x, this.playerPos.y + 1.6, this.playerPos.z, 'damage');
+    }
     // Director dt is simulation-scaled (the player may select 2x speed).
     // The Easter egg is advertised as 15 real seconds, so keep its lifetime
     // aligned with the visual overlay regardless of the selected game speed.
@@ -6182,6 +6226,11 @@ export class PaleciakiGameEngine {
       }
       this.survivalWave = nextWave;
       this.survivalWaveStartKills = this.survivalKills;
+      this.survivalContract = createSurvivalContract(this.survivalWave);
+      this.emitFloatingToast(
+        'KONTRAKT FALI ' + this.survivalWave + ': ' + this.survivalContract.title,
+        this.playerPos.x, this.playerPos.y + 1.75, this.playerPos.z, 'perk'
+      );
       this.emitFloatingToast('FALA ' + this.survivalWave + ' — KOLEJNA ZMIANA WCHODZI NA HALĘ!', this.playerPos.x, this.playerPos.y + 1.7, this.playerPos.z, 'combo');
       sound.playAlert();
 
@@ -7855,6 +7904,7 @@ export class PaleciakiGameEngine {
       if (distance < 1.25) {
         const xpValue = Math.max(1, Math.round(gem.value * this.survivalXpMultiplier * ((this.activePerks.xpSurge || 0) > 0 ? 1.5 : 1)));
         this.survivalXp += xpValue;
+        this.registerSurvivalContractAction('xp', xpValue);
         this.score += xpValue * 12;
         this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
         sound.playPickup();
@@ -12577,6 +12627,8 @@ export class PaleciakiGameEngine {
     this.rechargeAbilityFromKill(isAbilityRechargeElite, isAbilityRechargeBoss);
     if (this.gameMode === 'survival') {
       this.survivalKills++;
+      this.registerSurvivalContractAction('eliminations', 1);
+      this.registerSurvivalContractAction('combo', this.comboStreak);
       const momentumResult = registerSurvivalKill(this.survivalMomentum);
       this.survivalMomentum = momentumResult.state;
       if (momentumResult.overdriveStarted) {
