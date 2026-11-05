@@ -32,7 +32,7 @@ import {
   sanitizeSurvivalAchievementProgress,
   updateSurvivalAchievementProgress,
 } from './survivalAchievements.ts';
-import { SURVIVAL_MAPS, SURVIVAL_MAP_IDS } from './survivalMaps.ts';
+import { SURVIVAL_MAPS } from './survivalMaps.ts';
 
 // warehouseAssets imports moved to assets.ts where they are preloaded
 
