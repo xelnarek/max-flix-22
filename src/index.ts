@@ -2113,8 +2113,7 @@ class PaleciakiScene extends xb.Script {
         const previousOverride = core.renderSceneOverride;
         const renderOverride: NonNullable<typeof core.renderSceneOverride> = (activeRenderer, activeScene, activeCamera) => {
           if (this.selectiveBloom === pipeline && activeRenderer instanceof THREE.WebGLRenderer && activeScene === scene) {
-            // Selective bloom adds a second scene pass. Keep Campaign polish,
-            // but bypass that pass in the crowd-heavy Survival mode.
+            // Selective bloom adds a second scene pass; Survival uses a stricter FPS gate.
             const isSurvival = this.engine?.getGameMode() === 'survival';
             // Survival keeps its glow only while measured frame rate has enough headroom.
             pipeline.render(activeCamera, this.currentFps, performance.now(), isSurvival);
