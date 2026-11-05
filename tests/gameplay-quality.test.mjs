@@ -145,17 +145,20 @@ test('camera fades perimeter walls by ray intersection and individual Survival l
   assert.ok((game.match(/this\.registerCameraOccluder\(backWall\)/g) || []).length >= 3);
 });
 
-test('the three random Survival maps have separate readable landmarks without filling the main lanes', async () => {
+test('the four random Survival maps have separate readable landmarks without filling the main lanes', async () => {
   const [game, maps] = await Promise.all([read('../src/game.ts'), read('../src/survivalMaps.ts')]);
   assert.match(maps, /warehouse_b4/);
   assert.match(maps, /container_terminal/);
   assert.match(maps, /cold_storage/);
+  assert.match(maps, /night_sorting/);
   assert.match(game, /mapId === 'container_terminal'/);
   assert.match(game, /mapId === 'cold_storage'/);
   assert.match(game, /shutterPanels = new THREE\.InstancedMesh/);
   assert.match(game, /portChevrons/);
   assert.match(game, /panelScreens = new THREE\.InstancedMesh/);
   assert.match(game, /frostCrystals = new THREE\.InstancedMesh/);
+  assert.match(game, /mapId === 'night_sorting'/);
+  assert.match(game, /night-sorter-scan-gate/);
 });
 
 test('Survival voice lines use one bottom radio caption outside the top-left HUD', async () => {
@@ -1254,12 +1257,12 @@ test('Survival draft adds Crimsonland radiation and Archero ricochet builds with
   assert.match(combat, /export function getSurvivalRadiationProfile/);
 });
 
-test('Survival chooses among three playable map identities and does not immediately repeat a map', async () => {
+test('Survival chooses among four playable map identities and does not immediately repeat a map', async () => {
   const [game, maps] = await Promise.all([read('../src/game.ts'), read('../src/survivalMaps.ts')]);
   assert.match(game, /chooseRandomSurvivalMap\(this\.lastSurvivalMapId, Math\.random\(\)\)/);
   assert.match(game, /buildSurvivalArenaExpansion\(this\.survivalMapId\)/);
   assert.match(game, /private buildSurvivalMapLandmarks\(mapId: SurvivalMapId\)/);
-  assert.match(game, /mapId === 'container_terminal'[\s\S]*?mapId === 'cold_storage'/);
+  assert.match(game, /mapId === 'container_terminal'[\s\S]*?mapId === 'cold_storage'[\s\S]*?mapId === 'night_sorting'/);
   assert.match(game, /this\.survivalObstacles\.push\(\{ x: position\.x, z: position\.z/);
   assert.match(game, /private spawnSurvivalSecrets\(mapId: SurvivalMapId\)/);
   assert.match(game, /private updateSurvivalSecrets\(dt: number\)/);
