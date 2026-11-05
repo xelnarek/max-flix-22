@@ -2289,18 +2289,18 @@ export class PaleciakiGameEngine {
     }
   }
 
-  private beginOniricDream(durationSeconds = 15) {
-    this.oniricDreamRemainingSeconds = Math.max(
-      this.oniricDreamRemainingSeconds,
-      Number.isFinite(durationSeconds) ? Math.max(1, durationSeconds) : 15,
-    );
-    this.oniricDreamCameraActive = true;
+  private beginOniricDream() {
+    // The collected landmark now opens a real side-scrolling 2D platformer.
+    // The main Survival simulation is paused by the UI callback until the
+    // player returns from the rabbit-hole stage.
+    this.oniricDreamRemainingSeconds = 0;
+    this.oniricDreamCameraActive = false;
     this.callbacks.onSurvivalAnnouncement?.(
       'ONIRYCZNY SEN',
-      'TRYB 2D • KRÓLICZA NORMA',
-      'Widok przechodzi na płaską mapę z góry. Operator porusza się szybciej, broń przeładowuje się o 30% szybciej, a kryształy XP dają 50% więcej. Przetrwaj 15 sekund zakrzywionej rzeczywistości.',
+      'NORKA KRÓLIKA • PLATFORMÓWKA 2D',
+      'Królik zostawił trzy kieszonkowe zegarki po drugiej stronie lustra. Zbierz je, omiń filiżanki i dotrzyj do portalu, zanim skończy się czas.',
     );
-    this.emitFloatingToast('🐇 KRÓLICZA NORMA: TRYB 2D!', this.playerPos.x, this.playerPos.y + 1.85, this.playerPos.z, 'easter-egg');
+    this.emitFloatingToast('🐇 KRÓLIK OTWIERA NORKĘ — ZA NIM!', this.playerPos.x, this.playerPos.y + 1.85, this.playerPos.z, 'easter-egg');
     this.triggerBloomPulse(0.42);
     this.triggerScreenShake(0.22, 0.16);
     sound.playEasterEgg();
@@ -2321,7 +2321,7 @@ export class PaleciakiGameEngine {
       this.disposeObjectResources(secret.mesh);
       secret.mesh.clear();
       this.survivalSecretsFound++;
-      if (secret.id === 'oniric_dream') this.beginOniricDream(15);
+      if (secret.id === 'oniric_dream') this.beginOniricDream();
       this.score += 750;
       this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
       this.callbacks.onSurvivalSecretFound?.(this.survivalMapId, secret.id, secret.name);
@@ -3059,6 +3059,18 @@ export class PaleciakiGameEngine {
     this.emitFloatingToast('POMINIĘTO WYBÓR — ZACHOWANO TEMPO ZMIANY', this.playerPos.x, this.playerPos.y + 1.5, this.playerPos.z, 'perk');
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
     return true;
+  }
+
+  public grantOniricDreamReward(points = 1500) {
+    if (this.gameMode !== 'survival') return;
+    const bonus = THREE.MathUtils.clamp(Math.round(Number.isFinite(points) ? points : 0), 0, 5000);
+    this.score += bonus;
+    this.hp = Math.min(this.maxHp, this.hp + 1);
+    this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+    this.callbacks.onHpUpdate(this.hp, this.maxHp);
+    this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+    this.emitFloatingToast('⌚ NAGRODA Z NORKI: +' + bonus + ' PKT • +1 ŻYCIE', this.playerPos.x, this.playerPos.y + 1.6, this.playerPos.z, 'easter-egg');
+    sound.playEasterEgg();
   }
 
   public togglePause() {

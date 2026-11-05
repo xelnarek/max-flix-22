@@ -4735,3 +4735,361 @@ button {
     animation-duration: .01ms;
   }
 }
+
+
+/* Mobile map picker: keep every arena visible without requiring a hidden horizontal swipe. */
+.menu-fixed-bottom-bar {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 640px) {
+  #title-screen .title-sheet {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #title-screen .menu-tab-content-area {
+    flex: 1 1 0;
+    min-height: 116px;
+    max-height: min(34dvh, 300px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  #title-screen .menu-fixed-bottom-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    width: 100%;
+    flex: 0 0 auto;
+    padding: 8px 0 max(7px, env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, rgba(7, 12, 23, 0), rgba(7, 12, 23, .97) 16%);
+  }
+
+  #title-screen .survival-map-picker {
+    width: 100%;
+    min-width: 0;
+    padding: 7px 8px;
+  }
+
+  #title-screen .survival-map-picker-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    overflow: visible;
+    overscroll-behavior: auto;
+    padding: 1px 0;
+  }
+
+  #title-screen .survival-map-choice {
+    flex: initial;
+    width: auto;
+    min-width: 0;
+    min-height: 58px;
+    padding: 7px 5px;
+  }
+
+  #title-screen .survival-map-choice[data-survival-map="random"] {
+    grid-column: 1 / -1;
+    min-height: 42px;
+  }
+
+  #title-screen .survival-map-choice strong {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    font-size: 9px;
+    line-height: 1.15;
+  }
+
+  #title-screen .survival-map-choice small {
+    white-space: normal;
+    font-size: 8px;
+    line-height: 1.15;
+  }
+
+  #title-screen .survival-map-picker-hint {
+    margin-top: 4px;
+    font-size: 8px;
+  }
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+  #title-screen .menu-top-header {
+    gap: 0;
+  }
+
+  #title-screen .brand-badge-pill {
+    padding: 2px 10px;
+    font-size: 8px;
+  }
+
+  #title-screen .menu-game-title {
+    font-size: clamp(17px, 3.6vw, 24px);
+  }
+
+  #title-screen .menu-game-subtitle,
+  #title-screen .menu-release-strip {
+    display: none;
+  }
+
+  #title-screen .menu-tab-content-area {
+    max-height: 20dvh;
+    min-height: 70px;
+  }
+
+  #title-screen .survival-map-picker-heading {
+    margin-bottom: 4px;
+  }
+
+  #title-screen .survival-map-choice {
+    min-height: 42px;
+    padding: 3px;
+  }
+
+  #title-screen .survival-map-choice[data-survival-map="random"] {
+    min-height: 34px;
+  }
+
+  #title-screen .survival-map-choice > span {
+    font-size: 13px;
+  }
+
+  #title-screen .survival-map-choice small,
+  #title-screen .survival-map-picker-hint {
+    display: none;
+  }
+
+  #title-screen .btn-survival-start {
+    padding: 7px 14px;
+    font-size: 12px;
+  }
+
+  #title-screen .menu-controls-hint {
+    display: none;
+  }
+}
+
+/* Oniric Dream is a real side-scrolling 2D mini-game, separate from the 3D arena. */
+.oniric-platformer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000002;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+  overflow-y: auto;
+  background:
+    radial-gradient(circle at 78% 12%, rgba(168,85,247,.28), transparent 30%),
+    radial-gradient(circle at 12% 85%, rgba(236,72,153,.16), transparent 32%),
+    rgba(5, 7, 18, .96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  touch-action: pan-y;
+}
+
+.oniric-platformer-card {
+  width: min(100%, 980px);
+  max-height: calc(100dvh - 20px);
+  display: grid;
+  grid-template-rows: auto auto minmax(190px, 1fr) auto auto;
+  gap: 10px;
+  padding: clamp(10px, 2vw, 18px);
+  overflow-y: auto;
+  border: 1px solid rgba(240,171,252,.38);
+  border-radius: 22px;
+  background: linear-gradient(155deg, rgba(35,18,55,.98), rgba(10,16,34,.98));
+  box-shadow: 0 24px 80px rgba(0,0,0,.58), inset 0 1px 0 rgba(255,255,255,.09);
+  color: #fdf4ff;
+}
+
+.oniric-platformer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.oniric-platformer-header h2 {
+  margin: 2px 0;
+  color: #f5d0fe;
+  font-size: clamp(19px, 4vw, 30px);
+  font-weight: 1000;
+  letter-spacing: .08em;
+}
+
+.oniric-platformer-header p {
+  margin: 0;
+  color: #c4b5fd;
+  font-size: clamp(10px, 2vw, 13px);
+}
+
+.oniric-platformer-kicker {
+  color: #f9a8d4;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .16em;
+}
+
+.oniric-exit-button,
+.oniric-platformer-controls button,
+.oniric-result-panel button {
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid rgba(240,171,252,.42);
+  border-radius: 12px;
+  background: rgba(88,28,135,.72);
+  color: #fff7ff;
+  font: 900 11px/1.2 system-ui, sans-serif;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.oniric-platformer-hud {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.oniric-platformer-hud span {
+  min-width: 100px;
+  padding: 7px 10px;
+  border: 1px solid rgba(196,181,253,.19);
+  border-radius: 10px;
+  background: rgba(15,23,42,.72);
+  color: #cbd5e1;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.oniric-platformer-hud strong { color: #fde68a; font-size: 13px; }
+
+.oniric-platformer-stage {
+  position: relative;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border: 2px solid rgba(240,171,252,.55);
+  border-radius: 16px;
+  background: #160d2c;
+  box-shadow: inset 0 0 32px rgba(192,132,252,.15), 0 8px 28px rgba(0,0,0,.28);
+}
+
+.oniric-platformer-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  max-height: 55dvh;
+  image-rendering: pixelated;
+  touch-action: none;
+}
+
+.oniric-platformer-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: min(100%, 420px);
+  margin: 0 auto;
+}
+
+.oniric-direction-pad {
+  display: flex;
+  gap: 10px;
+}
+
+.oniric-direction-pad button {
+  width: 62px;
+  min-height: 54px;
+  font-size: 20px;
+}
+
+.oniric-jump-button {
+  min-width: 116px;
+  min-height: 58px !important;
+  border-color: rgba(251,191,36,.7) !important;
+  background: linear-gradient(145deg, #f59e0b, #b45309) !important;
+  color: #1c1917 !important;
+  font-size: 14px !important;
+}
+
+.oniric-platformer-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 12px;
+  color: #a78bfa;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.oniric-result-panel[hidden] { display: none !important; }
+.oniric-result-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px;
+  background: rgba(13, 10, 30, .88);
+  text-align: center;
+}
+.oniric-result-panel strong {
+  color: #fde68a;
+  font-size: clamp(17px, 4vw, 26px);
+  font-weight: 1000;
+}
+.oniric-result-panel span {
+  max-width: 520px;
+  color: #e9d5ff;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.oniric-result-panel > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.oniric-result-panel button[data-action="return"] {
+  border-color: rgba(34,197,94,.75);
+  background: linear-gradient(135deg, #16a34a, #047857);
+}
+
+@media (max-width: 600px) {
+  .oniric-platformer-overlay { align-items: stretch; padding: max(5px, env(safe-area-inset-top)) 5px max(5px, env(safe-area-inset-bottom)); }
+  .oniric-platformer-card { max-height: 100%; min-height: 0; gap: 7px; padding: 9px; border-radius: 16px; }
+  .oniric-platformer-header { align-items: flex-start; }
+  .oniric-platformer-header p { max-width: 230px; }
+  .oniric-exit-button { min-height: 38px; padding: 6px 8px; font-size: 9px; }
+  .oniric-platformer-hud { gap: 5px; }
+  .oniric-platformer-hud span { flex: 1 1 28%; min-width: 0; padding: 6px 4px; font-size: 8px; }
+  .oniric-platformer-hud strong { font-size: 11px; }
+  .oniric-platformer-canvas { max-height: 48dvh; }
+  .oniric-platformer-controls { width: 100%; }
+  .oniric-direction-pad { gap: 8px; }
+  .oniric-direction-pad button { width: 58px; min-height: 52px; }
+  .oniric-jump-button { min-width: 112px; }
+  .oniric-platformer-footer { font-size: 8px; }
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .oniric-platformer-card { grid-template-rows: auto auto minmax(150px, 1fr) auto auto; gap: 5px; padding: 7px; }
+  .oniric-platformer-header p { display: none; }
+  .oniric-platformer-canvas { max-height: 48dvh; }
+  .oniric-platformer-controls button { min-height: 40px; }
+  .oniric-direction-pad button { width: 52px; min-height: 42px; }
+  .oniric-jump-button { min-height: 44px !important; }
+  .oniric-platformer-footer { display: none; }
+}

@@ -33,6 +33,7 @@ import {
   updateSurvivalAchievementProgress,
 } from './survivalAchievements.ts';
 import { SURVIVAL_MAPS, type SurvivalMapId } from './survivalMaps.ts';
+import { launchOniricPlatformer } from './oniricPlatformer.ts';
 
 // warehouseAssets imports moved to assets.ts where they are preloaded
 
@@ -672,8 +673,6 @@ class PaleciakiScene extends xb.Script {
       }, 6100);
     };
 
-    let oniricDreamTimeout: number | null = null;
-    let oniricDreamBannerTimeout: number | null = null;
 
     this.engine = new PaleciakiGameEngine(
       this as unknown as THREE.Scene,
@@ -992,31 +991,31 @@ class PaleciakiScene extends xb.Script {
           console.info('[Secrets] Odkryto:', secretName, mapId + ':' + secretId);
 
           if (secretId === 'oniric_dream') {
-            const canvasContainer = document.getElementById('game-canvas-container');
-            canvasContainer?.classList.remove('oniric-dream-active');
-            if (canvasContainer) {
-              // Restart the visual state if the easter egg is collected again in a later run.
-              void canvasContainer.offsetWidth;
-              canvasContainer.classList.add('oniric-dream-active');
-            }
-            if (oniricDreamTimeout !== null) window.clearTimeout(oniricDreamTimeout);
-            oniricDreamTimeout = window.setTimeout(() => {
-              canvasContainer?.classList.remove('oniric-dream-active');
-              oniricDreamTimeout = null;
-            }, 15000);
+            const engine = this.engine;
+            if (engine?.getGameState() === 'playing') engine.togglePause();
 
-            const gameShell = document.getElementById('game-shell');
-            gameShell?.querySelector('.oniric-dream-banner')?.remove();
-            if (oniricDreamBannerTimeout !== null) window.clearTimeout(oniricDreamBannerTimeout);
-            const banner = document.createElement('div');
-            banner.className = 'oniric-dream-banner';
-            banner.setAttribute('role', 'status');
-            banner.textContent = 'ONIRYCZNY SEN // TRYB 2D • +20% RUCH • +30% OGNIA • +50% XP • 15 SEKUND';
-            gameShell?.appendChild(banner);
-            oniricDreamBannerTimeout = window.setTimeout(() => {
-              banner.remove();
-              oniricDreamBannerTimeout = null;
-            }, 3600);
+            launchOniricPlatformer({
+              onComplete: (result) => {
+                const activeEngine = this.engine;
+                if (!activeEngine) return;
+                if (result.won) {
+                  const bonus = 1200 + result.collected * 250;
+                  activeEngine.grantOniricDreamReward(bonus);
+                  showSurvivalAnnouncement(
+                    'NORKA ZDOBYTA',
+                    'KRÓLIK ZWRACA ZEGAREK',
+                    'Udało się przejść sekret. Odebrano ' + bonus + ' punktów oraz dodatkowe życie.',
+                  );
+                } else {
+                  showSurvivalAnnouncement(
+                    'POWRÓT Z NORKI',
+                    'SEKRET ODKRYTY',
+                    'Nie udało się zebrać wszystkich zegarków. Rozgrywka magazynowa jest gotowa do wznowienia.',
+                  );
+                }
+                if (activeEngine.getGameState() === 'paused') activeEngine.togglePause();
+              },
+            });
           }
         },
         onBossUpdate: (name, hp, maxHp, visible, phase) => {
