@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import { getAuth, signInAnonymously, onAuthStateChanged, type User, type Unsubscribe } from 'firebase/auth';
 import firebaseConfig from '../firebase-applet-config.json';
+import { withTimeout } from './asyncTimeout.ts';
 import {
   getLeaderboardSlice,
   getSurvivalLeaderboardSlice,
@@ -213,32 +214,6 @@ const FIRESTORE_PROBE_TIMEOUT_MS = 7_000;
 const FIRESTORE_QUERY_TIMEOUT_MS = 12_000;
 const FIRESTORE_WRITE_TIMEOUT_MS = 12_000;
 const LEADERBOARD_SYNC_TIMEOUT_MS = 6_000;
-
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    let settled = false;
-    const timeoutId = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      reject(new Error(operation + ' timed out after ' + timeoutMs + ' ms'));
-    }, timeoutMs);
-
-    promise.then(
-      (value) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timeoutId);
-        resolve(value);
-      },
-      (error: unknown) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timeoutId);
-        reject(error);
-      },
-    );
-  });
-}
 
 let currentUser: User | null = null;
 let isAuthInitialized = false;
