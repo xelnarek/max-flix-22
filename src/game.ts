@@ -16,6 +16,7 @@ import { chooseCampaignRewardSpawnPoint } from './campaignRewards.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
 import { chooseSurvivalRicochetTarget, getSurvivalRadiationProfile, getSurvivalRicochetProfile } from './survivalCombatDraft.ts';
 import { buildSurvivalCoalitionOrders, getSurvivalCoalitionRole } from './survivalCoalition.ts';
+import { getSurvivalCommanderProfile, selectSurvivalCommanderTargets } from './survivalCommander.ts';
 import { selectSurvivalSupportPulseTargets, SURVIVAL_SUPPORT_PULSE_RADIUS, SURVIVAL_SUPPORT_PULSE_INTERVAL_SECONDS, SURVIVAL_SUPPORT_SHIELD_SECONDS } from './survivalSupport.ts';
 import { getSurvivalXpRequirement } from './survivalProgression.ts';
 import {
@@ -7116,6 +7117,7 @@ export class PaleciakiGameEngine {
       boss.endX = this.levelBounds.maxX - 2.5;
       boss.specialActionTimer = variant === 'bosman_krakow' ? 2.3 : 2.0;
       boss.bossPhase = 1;
+      boss.aiCommanderPulseTimer = 5.0;
     }
 
     sound.playSirens();
@@ -8075,6 +8077,57 @@ export class PaleciakiGameEngine {
     return enemy.aiCoalitionRole ?? getSurvivalCoalitionRole(enemy.type);
   }
 
+  private updateSurvivalCommanderPulse(boss: EnemyItem, dt: number): void {
+    if (this.gameMode !== 'survival' || boss.state === 'defeated') return;
+    const profile = getSurvivalCommanderProfile(boss.type, boss.bossPhase ?? 1);
+    if (!profile) return;
+
+    boss.aiCommanderPulseTimer = Math.max(0, (boss.aiCommanderPulseTimer ?? 5.0) - dt);
+    if (boss.aiCommanderPulseTimer > 0) return;
+    boss.aiCommanderPulseTimer = profile.cooldownSeconds;
+
+    const targets = selectSurvivalCommanderTargets(
+      {
+        id: boss.id,
+        type: boss.type,
+        x: boss.x,
+        z: boss.z,
+        state: boss.state,
+      },
+      this.enemies.map((enemy) => ({
+        id: enemy.id,
+        type: enemy.type,
+        x: enemy.x,
+        z: enemy.z,
+        state: enemy.state,
+        role: enemy.aiCoalitionRole ?? getSurvivalCoalitionRole(enemy.type),
+      })),
+      profile,
+    );
+    if (targets.length === 0) return;
+
+    const targetIds = new Set(targets);
+    for (const ally of this.enemies) {
+      if (!targetIds.has(ally.id) || ally.state === 'defeated') continue;
+      ally.aiCommandBoostTimer = Math.max(ally.aiCommandBoostTimer ?? 0, profile.durationSeconds);
+      ally.aiCommandBoostMultiplier = Math.max(
+        ally.aiCommandBoostMultiplier ?? 1,
+        profile.moveSpeedMultiplier,
+      );
+      this.spawnParticleRing(ally.x, ally.y + 0.38, ally.z, 0xfbbf24);
+    }
+
+    this.spawnParticleRing(boss.x, boss.y + 0.42, boss.z, 0xf59e0b);
+    this.emitFloatingToast(
+      '🚨 ' + profile.title + ': ' + profile.callout + ' • ' + targets.length + ' JEDNOSTKI W RUCHU!',
+      boss.x,
+      boss.y + 2.0,
+      boss.z,
+      'damage',
+    );
+    sound.playBossWarning();
+  }
+
   private updateSurvivalSupportPulse(support: EnemyItem, dt: number): void {
     if (support.aiCoalitionId === undefined || support.state === 'defeated') return;
 
@@ -8205,7 +8258,10 @@ export class PaleciakiGameEngine {
     const roleSpeed = role === 'bruiser' ? 0.82 : role === 'flanker' ? 1.12 : role === 'support' ? 0.88 : 0.94;
     const waveSpeed = 1 + Math.min(0.18, Math.max(0, this.survivalWave - 1) * 0.009);
     const pressureSpeed = engaged ? 1 : 0.48;
-    const speed = enemy.speed * roleSpeed * waveSpeed * pressureSpeed;
+    const commandBoost = enemy.aiCommandBoostTimer && enemy.aiCommandBoostTimer > 0
+      ? THREE.MathUtils.clamp(enemy.aiCommandBoostMultiplier ?? 1, 1, 1.25)
+      : 1;
+    const speed = enemy.speed * roleSpeed * waveSpeed * pressureSpeed * commandBoost;
 
     enemy.x = THREE.MathUtils.clamp(enemy.x + steerX * speed * dt, this.levelBounds.minX + 1.2, this.levelBounds.maxX - 1.2);
     enemy.z = THREE.MathUtils.clamp(enemy.z + steerZ * speed * dt, this.levelBounds.minZ + 1.0, this.levelBounds.maxZ - 1.0);
@@ -8454,6 +8510,11 @@ export class PaleciakiGameEngine {
     this.enemies.forEach((e) => {
       if (e.state === 'defeated' || !e.mesh) return;
 
+      if ((e.aiCommandBoostTimer ?? 0) > 0) {
+        e.aiCommandBoostTimer = Math.max(0, (e.aiCommandBoostTimer ?? 0) - dt);
+        if (e.aiCommandBoostTimer <= 0) e.aiCommandBoostMultiplier = 1;
+      }
+
       // Clamp before culling/AI so even actors displaced by hazards or a prior
       // special move cannot remain outside the playable arena while off-screen.
       this.clampEnemyToArena(e);
@@ -8556,6 +8617,9 @@ export class PaleciakiGameEngine {
         }
         return;
       }
+
+      // Boss command pulses are Survival-only; stunned bosses cannot issue orders.
+      if (this.gameMode === 'survival') this.updateSurvivalCommanderPulse(e, dt);
 
       // Check whether this enemy is allowed to engage or must hold position in wave
       const canActivelyChase = e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' || e.type === 'pomazaniec' || e.type === 'sebix_m' || !!e.surgeRunner || this.activeChaserIds.has(e.id);

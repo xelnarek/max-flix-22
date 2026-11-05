@@ -133,6 +133,12 @@ export interface EnemyItem {
   aiSupportPulseTimer?: number;
   /** Remaining lifetime of a one-hit shield granted by coalition support. */
   supportShieldTimer?: number;
+  /** Cooldown for a Survival boss command pulse. */
+  aiCommanderPulseTimer?: number;
+  /** Remaining time of a temporary movement command from a Survival boss. */
+  aiCommandBoostTimer?: number;
+  /** Bounded movement multiplier granted by a boss command. */
+  aiCommandBoostMultiplier?: number;
   surgeRunner?: boolean;
   /** XP multiplier granted by the active Survival wave modifier. */
   survivalXpMultiplier?: number;
