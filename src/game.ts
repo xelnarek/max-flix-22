@@ -184,7 +184,7 @@ const SURVIVAL_WEAPON_DEFS: Record<SurvivalWeaponId, {
   wz_boomerang: { name: 'WZ-Bumerang', evolvedName: 'PROTOKÓŁ POWROTU', icon: '📜', description: 'Magiczna WZ-tka przecina linię wrogów i wraca do operatora.', cooldown: 13.0, unlockAfter: SURVIVAL_WEAPON_UNLOCK_SECONDS.wz_boomerang, color: 0xfbbf24, evolutionPassive: 'growth', evolutionPassiveLabel: 'Premia za normę' },
 };
 export interface SurvivalSnapshot {
-  elapsedSeconds: number; wave: number; kills: number; perfectDodges: number; counterattackReady: boolean; level: number; xp: number; xpToNext: number;
+  elapsedSeconds: number; wave: number; kills: number; perfectDodges: number; counterattackReady: boolean; level: number; xp: number; xpToNext: number; xpStreak: number;
   aliveEnemies: number; rerolls: number; skips: number; activeHazards: number;
   killStreak: number; overdriveRemainingSeconds: number;
   mapId: SurvivalMapId; mapName: string; mapSubtitle: string;
