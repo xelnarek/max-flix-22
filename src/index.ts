@@ -1027,9 +1027,11 @@ class PaleciakiScene extends xb.Script {
             const rankDisplay = idx < 3 ? rankIcons[idx] : `${idx + 1}.`;
             const heroIds: Record<string, CharacterId> = {
               'Operator 01': 'marcin', 'Operator 02': 'grzesiek', 'Operator 03': 'dawid', 'Operator 04': 'mateusz', 'Operator 05': 'piotr',
-              // Historical records stored internal character IDs; keep their avatars resolvable
-              // without ever exposing the old personal labels in the public ranking.
+              // Legacy values are resolved internally only; the public label always comes
+              // from the neutral CharacterDef name below, never from the stored old string.
               marcin: 'marcin', grzesiek: 'grzesiek', dawid: 'dawid', mateusz: 'mateusz', piotr: 'piotr',
+              Marcin: 'marcin', Grzesiek: 'grzesiek', Dawid: 'dawid', Mateusz: 'mateusz', Piotr: 'piotr',
+              Atlas: 'marcin', Forge: 'grzesiek', Vector: 'dawid', Volt: 'mateusz', Rook: 'piotr',
             };
             const heroId = heroIds[entry.hero];
             const heroIcon = heroId ? operatorPortrait(heroId) : '👷‍♂️';
