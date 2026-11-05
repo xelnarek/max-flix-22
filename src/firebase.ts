@@ -491,14 +491,16 @@ export async function getTopLeaderboard(maxEntries = 15): Promise<LeaderboardEnt
 export async function getTopSurvivalLeaderboard(maxEntries = 15): Promise<LeaderboardEntry[]> {
   const collectionPath = 'leaderboard';
   const safeMaxEntries = Number.isFinite(maxEntries) ? Math.max(0, Math.floor(maxEntries)) : 15;
-  const fetchLimit = Math.max(300, Math.min(2000, safeMaxEntries * 50));
 
   try {
     await syncPendingLeaderboardScores();
+    // This equality-only query uses Firestore's automatic single-field index.
+    // Fetch all Survival rows before sorting locally; a fixed page could hide a
+    // high score when the collection grows, while orderBy would need a composite
+    // index to be deployed separately.
     const survivalQuery = query(
       collection(db, collectionPath),
       where('mode', '==', 'survival'),
-      limit(fetchLimit),
     );
     const snapshot = await getDocs(survivalQuery);
     const cloudEntries = snapshot.docs.map((document) => {
