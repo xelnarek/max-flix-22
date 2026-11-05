@@ -17,6 +17,7 @@ import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './sur
 import { chooseSurvivalRicochetTarget, getSurvivalRadiationProfile, getSurvivalRicochetProfile } from './survivalCombatDraft.ts';
 import { buildSurvivalCoalitionOrders, getSurvivalCoalitionRole } from './survivalCoalition.ts';
 import { getSurvivalCommanderProfile, selectSurvivalCommanderTargets } from './survivalCommander.ts';
+import { getSurvivalLeaderLossTargets, getSurvivalMoraleBreakMultiplier, SURVIVAL_LEADER_LOSS_BREAK_SECONDS } from './survivalMorale.ts';
 import { selectSurvivalSupportPulseTargets, SURVIVAL_SUPPORT_PULSE_RADIUS, SURVIVAL_SUPPORT_PULSE_INTERVAL_SECONDS, SURVIVAL_SUPPORT_SHIELD_SECONDS } from './survivalSupport.ts';
 import { getSurvivalXpRequirement } from './survivalProgression.ts';
 import {
@@ -8261,7 +8262,8 @@ export class PaleciakiGameEngine {
     const commandBoost = enemy.aiCommandBoostTimer && enemy.aiCommandBoostTimer > 0
       ? THREE.MathUtils.clamp(enemy.aiCommandBoostMultiplier ?? 1, 1, 1.25)
       : 1;
-    const speed = enemy.speed * roleSpeed * waveSpeed * pressureSpeed * commandBoost;
+    const moraleBreak = getSurvivalMoraleBreakMultiplier(enemy.aiMoraleBreakTimer ?? 0);
+    const speed = enemy.speed * roleSpeed * waveSpeed * pressureSpeed * commandBoost * moraleBreak;
 
     enemy.x = THREE.MathUtils.clamp(enemy.x + steerX * speed * dt, this.levelBounds.minX + 1.2, this.levelBounds.maxX - 1.2);
     enemy.z = THREE.MathUtils.clamp(enemy.z + steerZ * speed * dt, this.levelBounds.minZ + 1.0, this.levelBounds.maxZ - 1.0);
@@ -8451,6 +8453,26 @@ export class PaleciakiGameEngine {
       const formationBase = this.playerRot + Math.PI * 0.5;
 
       if (survivalMode) {
+        // Before rebuilding assignments, detect any living members whose previous
+        // coordinator has fallen. The response is short and deliberately mild.
+        const leaderLossTargets = new Set(getSurvivalLeaderLossTargets(
+          this.enemies.map((enemy) => ({
+            id: enemy.id,
+            state: enemy.state,
+            coalitionId: enemy.aiCoalitionId,
+            leaderId: enemy.aiCoalitionLeaderId,
+          })),
+        ));
+        if (leaderLossTargets.size > 0) {
+          for (const enemy of this.enemies) {
+            if (!leaderLossTargets.has(enemy.id)) continue;
+            enemy.aiMoraleBreakTimer = Math.max(
+              enemy.aiMoraleBreakTimer ?? 0,
+              SURVIVAL_LEADER_LOSS_BREAK_SECONDS,
+            );
+          }
+        }
+
         // Rebuild compact squad orders every 0.18s, not in the per-frame enemy loop.
         // Clearing stale assignments here lets enemies fall back to patrol roles cleanly.
         for (const enemy of this.enemies) {
@@ -8513,6 +8535,9 @@ export class PaleciakiGameEngine {
       if ((e.aiCommandBoostTimer ?? 0) > 0) {
         e.aiCommandBoostTimer = Math.max(0, (e.aiCommandBoostTimer ?? 0) - dt);
         if (e.aiCommandBoostTimer <= 0) e.aiCommandBoostMultiplier = 1;
+      }
+      if ((e.aiMoraleBreakTimer ?? 0) > 0) {
+        e.aiMoraleBreakTimer = Math.max(0, (e.aiMoraleBreakTimer ?? 0) - dt);
       }
 
       // Clamp before culling/AI so even actors displaced by hazards or a prior
@@ -8581,13 +8606,14 @@ export class PaleciakiGameEngine {
       // Ground Threat Ring for actively chasing enemies
       if (!e.threatRing && e.type !== 'piorun_dron') {
         const isCoalitionLeader = e.aiCoalitionLeaderId === e.id;
+        const isMoraleBroken = (e.aiMoraleBreakTimer ?? 0) > 0;
         const baseRingColor = e.surgeRunner ? 0xf59e0b : e.type === 'pomazaniec' ? 0xec4899 : 0xef4444;
         const ringMesh = new THREE.Mesh(
           new THREE.RingGeometry(0.42, 0.54, 20),
           new THREE.MeshBasicMaterial({
-            color: isCoalitionLeader ? 0xfbbf24 : baseRingColor,
+            color: isMoraleBroken ? 0xfb923c : isCoalitionLeader ? 0xfbbf24 : baseRingColor,
             transparent: true,
-            opacity: isCoalitionLeader ? 0.82 : 0.65,
+            opacity: isMoraleBroken ? 0.9 : isCoalitionLeader ? 0.82 : 0.65,
             side: THREE.DoubleSide,
             depthWrite: false,
           })
@@ -8595,16 +8621,25 @@ export class PaleciakiGameEngine {
         ringMesh.rotation.x = -Math.PI / 2;
         ringMesh.position.y = 0.04;
         ringMesh.userData.coalitionLeader = isCoalitionLeader;
+        ringMesh.userData.coalitionMoraleBroken = isMoraleBroken;
         e.threatRing = ringMesh;
         e.mesh.add(ringMesh);
       }
       if (e.threatRing) {
         const isCoalitionLeader = e.aiCoalitionLeaderId === e.id;
-        if (e.threatRing.userData.coalitionLeader !== isCoalitionLeader) {
+        const isMoraleBroken = (e.aiMoraleBreakTimer ?? 0) > 0;
+        if (
+          e.threatRing.userData.coalitionLeader !== isCoalitionLeader ||
+          e.threatRing.userData.coalitionMoraleBroken !== isMoraleBroken
+        ) {
           const ringMaterial = e.threatRing.material as THREE.MeshBasicMaterial;
-          ringMaterial.color.setHex(isCoalitionLeader ? 0xfbbf24 : e.surgeRunner ? 0xf59e0b : e.type === 'pomazaniec' ? 0xec4899 : 0xef4444);
-          ringMaterial.opacity = isCoalitionLeader ? 0.82 : 0.65;
+          const baseRingColor = e.surgeRunner ? 0xf59e0b : e.type === 'pomazaniec' ? 0xec4899 : 0xef4444;
+          ringMaterial.color.setHex(
+            isMoraleBroken ? 0xfb923c : isCoalitionLeader ? 0xfbbf24 : baseRingColor,
+          );
+          ringMaterial.opacity = isMoraleBroken ? 0.9 : isCoalitionLeader ? 0.82 : 0.65;
           e.threatRing.userData.coalitionLeader = isCoalitionLeader;
+          e.threatRing.userData.coalitionMoraleBroken = isMoraleBroken;
         }
         e.threatRing.visible = (e.state === 'chase' || e.state === 'charging') && distToPlayer < 14;
       }
