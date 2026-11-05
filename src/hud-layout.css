@@ -1103,3 +1103,27 @@
     top: calc(116px + env(safe-area-inset-top)) !important;
   }
 }
+
+
+/* Timed side-event tracker reuses the compact contract frame and adds a clear secondary accent. */
+#game-shell.survival-mode .survival-event {
+  border-color: rgba(167, 139, 250, .38);
+  background: linear-gradient(100deg, rgba(38, 22, 61, .88), rgba(10, 20, 36, .88));
+}
+#game-shell.survival-mode .survival-event .survival-contract-heading strong {
+  color: #ddd6fe;
+}
+#game-shell.survival-mode .survival-event .survival-contract-track span {
+  background: linear-gradient(90deg, #8b5cf6, #c4b5fd);
+  box-shadow: 0 0 8px rgba(167, 139, 250, .4);
+}
+@media (max-width: 900px), (pointer: coarse) {
+  #game-shell.survival-mode #hud-top .boss-hud-bar {
+    top: calc(176px + env(safe-area-inset-top)) !important;
+  }
+}
+@media (max-height: 560px) and (pointer: coarse) {
+  #game-shell.survival-mode #hud-top .boss-hud-bar {
+    top: calc(132px + env(safe-area-inset-top)) !important;
+  }
+}
