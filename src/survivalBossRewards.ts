@@ -27,7 +27,7 @@ export interface SurvivalBossRewardOption {
 export function createSurvivalBossRewardOptions(
   weaponOffer?: SurvivalBossWeaponOffer,
 ): SurvivalBossRewardOption[] {
-  const legendary = getSurvivalUpgradeRarityMeta('legendary');
+  const legendary = { ...getSurvivalUpgradeRarityMeta('legendary'), rarity: 'legendary' as const };
   let weaponReward: Omit<SurvivalBossRewardOption, 'rarity' | 'rarityLabel' | 'strengthMultiplier'>;
 
   if (weaponOffer?.kind === 'unlock') {
