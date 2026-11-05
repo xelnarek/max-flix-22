@@ -6483,7 +6483,6 @@ export class PaleciakiGameEngine {
 
     if (affected > 0) {
       this.spawnParticleRing(this.playerPos.x, 0.18, this.playerPos.z, 0x84cc16);
-      this.emitFloatingToast('☢️ PROMIENIOWANIE B4 • ' + affected + ' CELI', this.playerPos.x, this.playerPos.y + 1.45, this.playerPos.z, 'perk');
       sound.playElectricalSparks();
     }
   }
