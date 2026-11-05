@@ -30,18 +30,18 @@ check(typeof listing.fullDescription === 'string' && listing.fullDescription.len
 check(listing.appName === capacitor.appName, 'Nazwa w listing-pl.json nie zgadza się z capacitor.config.json.');
 check(manifest.name === capacitor.appName, 'Nazwa PWA nie zgadza się z nazwą aplikacji Android.');
 check(capacitor.appId === 'pl.paleciaki.magazynchaosu', 'Identyfikator pakietu zmienił się — sprawdź ciągłość aplikacji i podpisywania.');
-check(/^\\d+\\.\\d+\\.\\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(packageJson.version), 'package.json version musi mieć poprawny format semver.');
+check(/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(packageJson.version), 'package.json version musi mieć poprawny format semver.');
 
-const privacyPlaceholders = privacy.match(/\\[(?:UZUPEŁNIĆ|DO UZUPEŁNIENIA)[^\\]]*\\]/gi) || [];
+const privacyPlaceholders = privacy.match(/\[(?:UZUPEŁNIĆ|DO UZUPEŁNIENIA)[^\]]*\]/gi) || [];
 check(privacyPlaceholders.length === 0, 'Polityka prywatności nadal zawiera pola do uzupełnienia: nazwa prawna wydawcy i działający e-mail kontaktowy.');
 
 const configuredAppId = process.env.ADMOB_APP_ID?.trim() || '';
 const rewardedId = process.env.VITE_ADMOB_REWARDED_ID?.trim() || '';
 const interstitialId = process.env.VITE_ADMOB_INTERSTITIAL_ID?.trim() || '';
 const productionAdsConfigured =
-  /^ca-app-pub-\\d+~\\d+$/.test(configuredAppId) &&
-  /^ca-app-pub-\\d+\\/\\d+$/.test(rewardedId) &&
-  /^ca-app-pub-\\d+\\/\\d+$/.test(interstitialId);
+  /^ca-app-pub-\d+~\d+$/.test(configuredAppId) &&
+  /^ca-app-pub-\d+\/\d+$/.test(rewardedId) &&
+  /^ca-app-pub-\d+\/\d+$/.test(interstitialId);
 
 if (!productionAdsConfigured) {
   warnings.push('Brak kompletu trzech produkcyjnych identyfikatorów AdMob. Build użyje bezpiecznych jednostek demo i isTesting=true — nie zarabia na reklamach.');
@@ -56,7 +56,7 @@ if (!existsSync(appAdsPath)) {
 
 const screenshotsDirectory = resolve('play-store/screenshots');
 const screenshots = existsSync(screenshotsDirectory)
-  ? readdirSync(screenshotsDirectory).filter((name) => /\\.(png|jpe?g|webp)$/i.test(name))
+  ? readdirSync(screenshotsDirectory).filter((name) => /\.(png|jpe?g|webp)$/i.test(name))
   : [];
 if (screenshots.length < 2) {
   warnings.push('Brak co najmniej dwóch zrzutów ekranu z prawdziwego urządzenia w play-store/screenshots/.');
@@ -87,7 +87,7 @@ const report = {
 
 const outputPath = resolve('play-store/generated/release-readiness-report.json');
 mkdirSync(dirname(outputPath), { recursive: true });
-writeFileSync(outputPath, JSON.stringify(report, null, 2) + '\\n');
+writeFileSync(outputPath, JSON.stringify(report, null, 2) + '\n');
 
 const summary = [
   '## Google Play release preflight',
@@ -103,6 +103,6 @@ const summary = [
   ...warnings.map((item) => '- **ACTION:** ' + item),
   '',
   'Full report: `play-store/generated/release-readiness-report.json`',
-].join('\\n') + '\\n';
+].join('\n') + '\n';
 if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
 console.log(JSON.stringify(report, null, 2));
