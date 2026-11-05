@@ -1535,6 +1535,18 @@ body {
   text-align: center;
 }
 
+@media (max-width: 640px) {
+  .survival-map-picker { width: 100%; padding: 7px 8px 6px; }
+  .survival-map-picker-options {
+    display: flex;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    padding: 1px 0 5px;
+  }
+  .survival-map-choice { flex: 0 0 102px; min-height: 58px; }
+  .survival-map-picker-hint { text-align: left; }
+}
 /* FIXED BOTTOM START BAR */
 .menu-fixed-bottom-bar {
   display: flex;
