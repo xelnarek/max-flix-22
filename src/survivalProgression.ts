@@ -7,8 +7,9 @@ export function getSurvivalXpRequirement(level: number): number {
     ? Math.max(1, Math.floor(level))
     : 1;
 
-  // Level one remains unchanged (9 XP). From level two onward, ask for about
-  // 8% less XP than the previous linear curve, with a small floor for stability.
+  // Preserve the first two onboarding thresholds. From level three onward,
+  // shave 10% off the old curve so later upgrades arrive often enough to matter.
   if (safeLevel === 1) return 9;
-  return Math.max(12, Math.round((10 + safeLevel * 3) * 0.92));
+  if (safeLevel === 2) return 15;
+  return Math.max(12, Math.round((10 + safeLevel * 3) * 0.90));
 }
