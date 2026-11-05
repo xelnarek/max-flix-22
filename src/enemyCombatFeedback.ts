@@ -21,13 +21,13 @@ export function createEnemyHitReaction(
   const directionZ = distance > 0.0001 ? dz / distance : 0;
   const safeDamage = Number.isFinite(damage) ? Math.max(0, damage) : 0;
   const damageScale = Math.min(1.4, 0.8 + safeDamage * 0.12);
-  const strength = Math.min(isBoss ? 0.09 : 0.16, (isBoss ? 0.065 : 0.085) * damageScale);
+  const strength = Math.min(isBoss ? 0.105 : 0.18, (isBoss ? 0.073 : 0.095) * damageScale);
   const impulse = isBoss
-    ? Math.min(0.48, 0.28 + safeDamage * 0.035)
-    : Math.min(1.05, 0.52 + safeDamage * 0.12);
+    ? Math.min(0.56, 0.32 + safeDamage * 0.04)
+    : Math.min(1.2, 0.58 + safeDamage * 0.14);
 
   return {
-    duration: isBoss ? 0.15 : 0.21,
+    duration: isBoss ? 0.18 : 0.24,
     strength,
     impulseX: directionX * impulse,
     impulseZ: directionZ * impulse,
