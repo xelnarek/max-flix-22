@@ -997,3 +997,30 @@ test('record date and time are rendered on every leaderboard row', async () => {
   assert.match(css, /\.leaderboard-record-time/);
   assert.match(cloud, /createdAt: new Date\(\)\.toISOString\(\)/);
 });
+
+
+test('Survival boss cycle uses three distinct models and all mini-boss variants are registered', async () => {
+  const [game, encounters, types] = await Promise.all([
+    read('../src/game.ts'), read('../src/survivalEncounters.ts'), read('../src/types.ts')
+  ]);
+  assert.match(encounters, /getSurvivalBossVariant/);
+  assert.match(game, /if \(variant === 'bosman_krakow'\) \{[\s\S]*?addBosmanKrakowBossEnemy/);
+  assert.match(game, /else if \(variant === 'krol_leto'\) \{[\s\S]*?addKrolLetoBossEnemy/);
+  assert.match(game, /addWalczakBossEnemy\(id, x, z\)/);
+  assert.match(game, /private spawnSurvivalAuditor\(\)/);
+  assert.match(game, /private addSebixEnemy\(/);
+  assert.match(game, /shouldSpawnBosmanKrakow\(/);
+  assert.match(game, /AGV-9 SENTINEL/);
+  for (const type of ['walczak', 'krol_leto', 'bosman_krakow', 'sebix_m', 'inspector', 'agv_robot']) {
+    assert.match(types, new RegExp("'" + type + "'"));
+  }
+});
+
+test('major Bosman boss is allowed to chase, show a boss bar and drop its boss rewards', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /e\.type === 'bosman_krakow' \|\| e\.type === 'pomazaniec'/);
+  assert.match(game, /nearestBoss\.type !== 'bosman_krakow'/);
+  assert.match(game, /e\.type === 'walczak' \|\| e\.type === 'krol_leto' \|\| e\.type === 'bosman_krakow' \|\| e\.type === 'sebix_m'/);
+  assert.match(game, /beginSurvivalBossReward\(e\.name\)/);
+  assert.match(game, /spawnLootCrate\(e\.x \+ 1\.2, 0, e\.z\)/);
+});
