@@ -5093,3 +5093,77 @@ button {
   .oniric-jump-button { min-height: 44px !important; }
   .oniric-platformer-footer { display: none; }
 }
+
+
+/* ONIRIC SECRET: fifteen seconds of gloriously broken 8-bit reality. */
+.oniric-platformer-stage {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.oniric-platformer-overlay.oniric-pixel-chaos .oniric-platformer-canvas {
+  image-rendering: pixelated;
+  filter: saturate(3.1) contrast(1.35) hue-rotate(42deg);
+  animation: oniric-canvas-glitch 0.23s steps(2, end) infinite;
+}
+.oniric-platformer-overlay.oniric-pixel-chaos .oniric-platformer-stage::before {
+  content: "BŁĄD MATRYCY • REALNOŚĆ 8-BIT • KRÓLIK PRZEJĄŁ STEROWANIE";
+  position: absolute;
+  z-index: 3;
+  top: 12px;
+  left: 50%;
+  width: max-content;
+  max-width: calc(100% - 20px);
+  padding: 7px 10px;
+  transform: translateX(-50%);
+  border: 2px solid #f0abfc;
+  background: rgba(24, 8, 43, .94);
+  color: #fff7ff;
+  box-shadow: 4px 4px 0 #7e22ce;
+  font: 900 clamp(8px, 1.5vw, 13px)/1.25 monospace;
+  letter-spacing: .07em;
+  text-align: center;
+  pointer-events: none;
+  animation: oniric-error-banner 15s steps(4, end) both;
+}
+.oniric-platformer-overlay.oniric-pixel-chaos .oniric-platformer-stage::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.16) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(90deg, rgba(244,114,182,.18) 0 3px, transparent 3px 11px),
+    linear-gradient(115deg, transparent 0 38%, rgba(34,211,238,.20) 42% 46%, transparent 50% 100%);
+  background-size: 100% 5px, 13px 100%, 180% 100%;
+  mix-blend-mode: screen;
+  animation: oniric-scanline-chaos .16s steps(2, end) infinite;
+}
+@keyframes oniric-canvas-glitch {
+  0% { filter: saturate(3.1) contrast(1.35) hue-rotate(42deg); transform: translate(0,0) scale(1); }
+  25% { filter: saturate(4) contrast(1.7) hue-rotate(112deg); transform: translate(2px,-1px) scale(1.003); }
+  50% { filter: saturate(2.6) contrast(1.5) hue-rotate(220deg); transform: translate(-2px,1px) scale(.998); }
+  75% { filter: saturate(3.8) contrast(1.8) hue-rotate(305deg); transform: translate(1px,2px) scale(1.002); }
+  100% { filter: saturate(3.1) contrast(1.35) hue-rotate(42deg); transform: translate(0,0) scale(1); }
+}
+@keyframes oniric-scanline-chaos {
+  0% { opacity: .35; background-position: 0 0, 0 0, 0 0; }
+  50% { opacity: .82; background-position: 0 3px, 7px 0, 35% 0; }
+  100% { opacity: .46; background-position: 0 1px, -5px 0, 100% 0; }
+}
+@keyframes oniric-error-banner {
+  0%, 4% { opacity: 0; }
+  7%, 84% { opacity: 1; }
+  88%, 100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .oniric-platformer-overlay.oniric-pixel-chaos .oniric-platformer-canvas,
+  .oniric-platformer-overlay.oniric-pixel-chaos .oniric-platformer-stage::after {
+    animation: none;
+  }
+  .oniric-platformer-overlay.oniric-pixel-chaos .oniric-platformer-stage::before {
+    animation: none;
+    opacity: 1;
+  }
+}
