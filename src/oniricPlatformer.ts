@@ -616,9 +616,9 @@ export function launchOniricPlatformer(options: {
 
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.code === 'Tab') {
-      const focusable = Array.from(root.querySelectorAll<HTMLElement>(
-        'button:not([disabled]):not([hidden])',
-      ));
+      const focusable = Array.from(root.querySelectorAll<HTMLButtonElement>(
+        'button:not([disabled])',
+      )).filter((button) => !button.closest('[hidden]'));
       if (focusable.length > 0) {
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
