@@ -71,7 +71,6 @@ function uniqueValidStrings(values: unknown, allowed: readonly string[]): string
 export function sanitizeSurvivalAchievementProgress(value: unknown): SurvivalAchievementProgress {
   if (!value || typeof value !== 'object') return createInitialSurvivalAchievementProgress();
   const raw = value as Partial<SurvivalAchievementProgress>;
-  const initial = createInitialSurvivalAchievementProgress();
   const allowedAchievements = SURVIVAL_ACHIEVEMENTS.map((achievement) => achievement.id);
   return {
     unlocked: uniqueValidStrings(raw.unlocked, allowedAchievements),
