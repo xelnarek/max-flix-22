@@ -1851,69 +1851,100 @@ export class PaleciakiGameEngine {
         root.add(coldLight);
       }
 
-      // Condenser status panels and frosted service cabinets give the cold room
-      // its own readable industrial rhythm; all remain outside the central lanes.
+      // Condenser panels and frost stacks use instancing so map identity costs
+      // only three static draw calls instead of dozens of separate meshes.
       const statusMaterial = new THREE.MeshBasicMaterial({ color: 0x67e8f9, toneMapped: false });
       const darkPanelMaterial = new THREE.MeshStandardMaterial({ color: 0x123447, metalness: 0.62, roughness: 0.34 });
+      const panelPositions: Array<{ x: number; side: number }> = [];
       for (const side of [-1, 1]) {
-        for (const x of [-50, -17, 17, 50]) {
-          const panel = new THREE.Group();
-          panel.name = 'cold-storage-control-panel';
-          const housing = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.15, 0.22), darkPanelMaterial);
-          housing.position.y = 3.65;
-          const screen = new THREE.Mesh(new THREE.BoxGeometry(1.52, 0.62, 0.035), statusMaterial);
-          screen.position.set(0, 3.7, 0.135);
-          panel.add(housing, screen);
-          panel.position.set(x, 0, side * 18.7);
-          root.add(panel);
-        }
+        for (const x of [-50, -17, 17, 50]) panelPositions.push({ x, side });
       }
+      const panelHousing = new THREE.InstancedMesh(new THREE.BoxGeometry(1.9, 1.15, 0.22), darkPanelMaterial, panelPositions.length);
+      const panelScreens = new THREE.InstancedMesh(new THREE.BoxGeometry(1.52, 0.62, 0.035), statusMaterial, panelPositions.length);
+      const panelTransform = new THREE.Object3D();
+      panelPositions.forEach((position, index) => {
+        panelTransform.position.set(position.x, 3.65, position.side * 18.7);
+        panelTransform.rotation.set(0, 0, 0);
+        panelTransform.scale.set(1, 1, 1);
+        panelTransform.updateMatrix();
+        panelHousing.setMatrixAt(index, panelTransform.matrix);
+        panelTransform.position.set(position.x, 3.7, position.side * 18.835);
+        panelTransform.updateMatrix();
+        panelScreens.setMatrixAt(index, panelTransform.matrix);
+      });
+      panelHousing.instanceMatrix.needsUpdate = true;
+      panelScreens.instanceMatrix.needsUpdate = true;
+      panelHousing.castShadow = false;
+      panelScreens.castShadow = false;
+      root.add(panelHousing, panelScreens);
+
       const iceMaterial = new THREE.MeshStandardMaterial({ color: 0xa5efff, metalness: 0.12, roughness: 0.22, transparent: true, opacity: 0.66, depthWrite: false, emissive: 0x2b9cb8, emissiveIntensity: 0.12 });
-      for (const position of [
+      const frostPositions = [
         { x: -54, z: -11 }, { x: -54, z: 11 },
         { x: 54, z: -11 }, { x: 54, z: 11 },
-      ]) {
-        const frostStack = new THREE.Group();
-        frostStack.name = 'cold-storage-frost-stack';
+      ];
+      const frostCrystals = new THREE.InstancedMesh(new THREE.ConeGeometry(0.38, 1.0, 5), iceMaterial, frostPositions.length * 3);
+      const frostTransform = new THREE.Object3D();
+      let frostIndex = 0;
+      for (const position of frostPositions) {
         for (let shard = 0; shard < 3; shard++) {
-          const crystal = new THREE.Mesh(new THREE.ConeGeometry(0.34 + shard * 0.05, 1.25 + shard * 0.18, 5), iceMaterial);
-          crystal.position.set((shard - 1) * 0.42, 0.62 + shard * 0.09, (shard % 2) * 0.25);
-          crystal.rotation.z = (shard - 1) * 0.16;
-          crystal.castShadow = false;
-          frostStack.add(crystal);
+          frostTransform.position.set(
+            position.x + (shard - 1) * 0.42,
+            0.62 + shard * 0.09,
+            position.z + (shard % 2) * 0.25,
+          );
+          frostTransform.rotation.set(0, 0, (shard - 1) * 0.16);
+          frostTransform.scale.set(0.9 + shard * 0.13, 1.25 + shard * 0.18, 0.9 + shard * 0.1);
+          frostTransform.updateMatrix();
+          frostCrystals.setMatrixAt(frostIndex++, frostTransform.matrix);
         }
-        frostStack.position.set(position.x, 0, position.z);
-        root.add(frostStack);
       }
+      frostCrystals.instanceMatrix.needsUpdate = true;
+      frostCrystals.castShadow = false;
+      frostCrystals.receiveShadow = false;
+      root.add(frostCrystals);
     } else {
       // Warehouse B4: numbered dock shutters, pallet staging lights and yellow
       // pedestrian rails distinguish the original hall from the port/chiller.
       const dockSteel = new THREE.MeshStandardMaterial({ color: 0x354b5d, metalness: 0.68, roughness: 0.42 });
       const shutterMaterial = new THREE.MeshStandardMaterial({ color: 0x718292, metalness: 0.52, roughness: 0.56 });
       const amber = new THREE.MeshStandardMaterial({ color: 0xf4b544, metalness: 0.34, roughness: 0.48, emissive: 0x8a4c13, emissiveIntensity: 0.18 });
-      for (const side of [-1, 1]) {
-        for (let dock = 0; dock < 3; dock++) {
-          const x = -34 + dock * 34;
-          const shutter = new THREE.Group();
-          shutter.name = 'warehouse-b4-loading-shutter-' + side + '-' + dock;
-          const panel = new THREE.Mesh(new THREE.BoxGeometry(8.6, 4.4, 0.18), shutterMaterial);
-          panel.position.y = 2.45;
-          shutter.add(panel);
-          for (let slat = 0; slat < 7; slat++) {
-            const line = new THREE.Mesh(new THREE.BoxGeometry(8.3, 0.055, 0.22), dockSteel);
-            line.position.set(0, 0.65 + slat * 0.56, 0.13);
-            shutter.add(line);
-          }
-          const header = new THREE.Mesh(new THREE.BoxGeometry(8.9, 0.22, 0.25), amber);
-          header.position.set(0, 4.75, 0.04);
-          shutter.add(header);
-          shutter.position.set(x, 0, side * 19.05);
-          root.add(shutter);
-          const dockLamp = new THREE.PointLight(0xf59e0b, 0.85, 10);
-          dockLamp.position.set(x, 5.4, side * 16.8);
-          root.add(dockLamp);
-        }
+      const dockPositions: Array<{ x: number; side: number }> = [];
+      for (const side of [-1, 1]) for (let dock = 0; dock < 3; dock++) {
+        dockPositions.push({ x: -34 + dock * 34, side });
       }
+      const shutterPanels = new THREE.InstancedMesh(new THREE.BoxGeometry(8.6, 4.4, 0.18), shutterMaterial, dockPositions.length);
+      const shutterSlats = new THREE.InstancedMesh(new THREE.BoxGeometry(8.3, 0.055, 0.22), dockSteel, dockPositions.length * 7);
+      const shutterHeaders = new THREE.InstancedMesh(new THREE.BoxGeometry(8.9, 0.22, 0.25), amber, dockPositions.length);
+      const dockTransform = new THREE.Object3D();
+      let slatIndex = 0;
+      dockPositions.forEach((position, index) => {
+        dockTransform.position.set(position.x, 2.45, position.side * 19.05);
+        dockTransform.rotation.set(0, 0, 0);
+        dockTransform.scale.set(1, 1, 1);
+        dockTransform.updateMatrix();
+        shutterPanels.setMatrixAt(index, dockTransform.matrix);
+        dockTransform.position.set(position.x, 4.75, position.side * 19.01);
+        dockTransform.updateMatrix();
+        shutterHeaders.setMatrixAt(index, dockTransform.matrix);
+        for (let slat = 0; slat < 7; slat++) {
+          dockTransform.position.set(position.x, 0.65 + slat * 0.56, position.side * 18.92);
+          dockTransform.updateMatrix();
+          shutterSlats.setMatrixAt(slatIndex++, dockTransform.matrix);
+        }
+        const dockLamp = new THREE.PointLight(0xf59e0b, 0.85, 10);
+        dockLamp.position.set(position.x, 5.4, position.side * 16.8);
+        root.add(dockLamp);
+      });
+      shutterPanels.instanceMatrix.needsUpdate = true;
+      shutterSlats.instanceMatrix.needsUpdate = true;
+      shutterHeaders.instanceMatrix.needsUpdate = true;
+      shutterPanels.castShadow = false;
+      shutterSlats.castShadow = false;
+      shutterHeaders.castShadow = false;
+      root.add(shutterPanels, shutterSlats, shutterHeaders);
+      root.name += '-loading-docks';
+      root.userData.loadingDockLandmarks = true;
       const safetyLineMaterial = new THREE.MeshBasicMaterial({ color: 0xfbbf24, toneMapped: false });
       const safetyLineGeometry = new THREE.BoxGeometry(2.0, 0.025, 0.12);
       const safetyLines = new THREE.InstancedMesh(safetyLineGeometry, safetyLineMaterial, 18);
