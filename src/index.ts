@@ -1011,7 +1011,7 @@ class PaleciakiScene extends xb.Script {
             const banner = document.createElement('div');
             banner.className = 'oniric-dream-banner';
             banner.setAttribute('role', 'status');
-            banner.textContent = 'ONIRYCZNY SEN // 15 SEKUND W BŁĘDZIE RZECZYWISTOŚCI';
+            banner.textContent = 'ONIRYCZNY SEN // TRYB 2D • +20% RUCH • +30% OGNIA • +50% XP • 15 SEKUND';
             gameShell?.appendChild(banner);
             oniricDreamBannerTimeout = window.setTimeout(() => {
               banner.remove();
