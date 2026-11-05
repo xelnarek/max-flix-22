@@ -89,7 +89,7 @@ test('opening the rabbit hole starts a bounded 15-second pixel-chaos sequence', 
   const source = await readFile(new URL('../src/oniricPlatformer.ts', import.meta.url), 'utf8');
   const css = await readFile(new URL('../src/index.css', import.meta.url), 'utf8');
   assert.match(source, /oniric-platformer-overlay oniric-pixel-chaos/);
-  assert.match(source, /window\.setTimeout\([\s\S]*?oniric-pixel-chaos[\s\S]*?15_000/);
+  assert.match(source, /window\.setTimeout\([\s\S]*?oniric-pixel-chaos[\s\S]*?ONIRIC_PIXEL_GLITCH_DURATION_MS/);
   assert.match(source, /window\.clearTimeout\(pixelChaosTimer\)/);
   assert.match(css, /\.oniric-platformer-overlay\.oniric-pixel-chaos \.oniric-platformer-canvas/);
   assert.match(css, /@keyframes oniric-scanline-chaos/);
