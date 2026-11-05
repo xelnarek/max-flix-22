@@ -5167,3 +5167,42 @@ button {
     opacity: 1;
   }
 }
+
+
+/* Distinct visual identities in the pre-run arena selector. */
+.survival-map-choice[data-survival-map="warehouse_b4"] {
+  border-color: rgba(245, 158, 11, .34);
+  background: linear-gradient(145deg, rgba(120, 67, 18, .38), rgba(19, 30, 43, .94));
+}
+.survival-map-choice[data-survival-map="container_terminal"] {
+  border-color: rgba(251, 146, 60, .34);
+  background: linear-gradient(145deg, rgba(154, 66, 32, .42), rgba(24, 38, 52, .94));
+}
+.survival-map-choice[data-survival-map="cold_storage"] {
+  border-color: rgba(103, 232, 249, .34);
+  background: linear-gradient(145deg, rgba(14, 116, 144, .38), rgba(13, 34, 50, .95));
+}
+.survival-map-choice[data-survival-map="night_sorting"] {
+  border-color: rgba(232, 121, 249, .36);
+  background: linear-gradient(145deg, rgba(107, 33, 168, .40), rgba(27, 18, 46, .96));
+}
+.survival-map-choice[data-survival-map="warehouse_b4"].is-selected {
+  border-color: #fbbf24;
+  box-shadow: 0 0 0 1px rgba(251,191,36,.18), 0 0 17px rgba(245,158,11,.22);
+}
+.survival-map-choice[data-survival-map="container_terminal"].is-selected {
+  border-color: #fb923c;
+  box-shadow: 0 0 0 1px rgba(251,146,60,.2), 0 0 17px rgba(249,115,22,.24);
+}
+.survival-map-choice[data-survival-map="cold_storage"].is-selected {
+  border-color: #67e8f9;
+  box-shadow: 0 0 0 1px rgba(103,232,249,.2), 0 0 17px rgba(34,211,238,.24);
+}
+.survival-map-choice[data-survival-map="night_sorting"].is-selected {
+  border-color: #e879f9;
+  box-shadow: 0 0 0 1px rgba(232,121,249,.2), 0 0 17px rgba(192,38,211,.26);
+}
+.survival-map-choice[data-survival-map="warehouse_b4"] > span { color: #fbbf24; }
+.survival-map-choice[data-survival-map="container_terminal"] > span { color: #fdba74; }
+.survival-map-choice[data-survival-map="cold_storage"] > span { color: #a5f3fc; }
+.survival-map-choice[data-survival-map="night_sorting"] > span { color: #f0abfc; }
