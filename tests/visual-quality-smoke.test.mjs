@@ -198,3 +198,43 @@ test('Piotr ability badge uses the pentagram icon and the character description 
   assert.match(characters, /Rytuał MafiKapibar — Pentagram B4/);
   assert.doesNotMatch(characters, /Potrójna Salwa Płonących Butli/);
 });
+
+
+test('menu portraits give each operator a different face outline and signature detail', async () => {
+  const app = await read('../src/index.ts');
+  assert.match(app, /const faceShapes: Record<CharacterId, string>/);
+  assert.match(app, /const faceSignatures: Record<CharacterId, string>/);
+  assert.match(app, /marcin: '<path/);
+  assert.match(app, /grzesiek: '<path/);
+  assert.match(app, /dawid: '<path/);
+  assert.match(app, /mateusz: '<path/);
+  assert.match(app, /piotr: '<path/);
+  assert.match(app, /faceShapes\[id\]/);
+  assert.match(app, /faceSignatures\[id\]/);
+  assert.match(app, /if \(heroAvatar\) heroAvatar\.innerHTML = operatorPortrait\(id\)/);
+  assert.match(app, /badge\.innerHTML = operatorPortrait\(cardId\)/);
+});
+
+test('the 3D player models use distinct face proportions, expressions and signature details', async () => {
+  const source = await read('../src/warehouseAssets.ts');
+  assert.match(source, /const faceProfile: Record<CharacterId/);
+  assert.match(source, /eyeSpacing: 0\.069/);
+  assert.match(source, /eyeSpacing: 0\.078/);
+  assert.match(source, /glassesMat/);
+  assert.match(source, /frecklesMat/);
+  assert.match(source, /micStem/);
+  assert.match(source, /creaseMat/);
+  assert.match(source, /const beardScale: Record/);
+  assert.match(source, /headWidth: 1\.12/);
+  assert.match(source, /headWidth: 0\.90/);
+});
+
+test('cinematic team reveal draws five recognizable operator busts instead of acronym badges', async () => {
+  const intro = await read('../src/cinematicIntro.ts');
+  assert.match(intro, /private drawOperatorPortrait\(/);
+  assert.match(intro, /const labels = \['DOWÓDCA', 'SIŁACZ', 'FORMAT', 'GAMER', 'WETERAN'\]/);
+  assert.match(intro, /const codes = \['LOG-01', 'HYD-44', 'GRS-28', 'SYS-99', 'WET-70'\]/);
+  assert.match(intro, /this\.drawOperatorPortrait\(ctx, x, y - cardHeight \* 0\.08, portraitSize \* 0\.94, i, t\)/);
+  assert.match(intro, /const portraitMode = w \/ Math\.max\(1, h\) < 0\.85/);
+  assert.doesNotMatch(intro, /const symbols = \['WZ', '44', 'XL'/);
+});
