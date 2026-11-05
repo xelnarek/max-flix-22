@@ -240,12 +240,13 @@ test('cinematic team reveal draws five recognizable operator busts instead of ac
 });
 
 
-test('Oniric Dream builds a rabbit-hole landmark and triggers a 15-second pixel-art corruption', async () => {
-  const [app, game, css, maps] = await Promise.all([
+test('Oniric Dream rabbit-hole secret launches a playable side-scrolling platformer', async () => {
+  const [app, game, css, maps, platformer] = await Promise.all([
     read('../src/index.ts'),
     read('../src/game.ts'),
     read('../src/index.css'),
     read('../src/survivalMaps.ts'),
+    read('../src/oniricPlatformer.ts'),
   ]);
   assert.match(maps, /name: 'Oniryczny sen'/);
   assert.match(maps, /style: 'rabbit_hole'/);
@@ -253,37 +254,30 @@ test('Oniric Dream builds a rabbit-hole landmark and triggers a 15-second pixel-
   assert.match(game, /ZA KRÓLIKIEM/);
   assert.match(game, /WEJDŹ DO NORKI/);
   assert.match(app, /secretId === 'oniric_dream'/);
-  assert.match(app, /}, 15000\)/);
+  assert.match(app, /launchOniricPlatformer/);
+  assert.match(app, /engine\.togglePause\(\)/);
+  assert.match(platformer, /NORKA KRÓLIKA/);
+  assert.match(platformer, /stepOniricPlatformer/);
+  assert.match(platformer, /ONIRIC_COLLECTIBLES/);
   assert.match(css, /image-rendering: pixelated/);
-  assert.match(css, /oniric-dream-active/);
+  assert.match(css, /\.oniric-platformer-overlay/);
 });
 
-
-test('Oniric Dream is a playable 2D orthographic phase, not only a colour filter', async () => {
-  const [app, game, css, maps] = await Promise.all([
+test('Oniric Dream pauses the 3D run, rewards a completed platformer and resumes cleanly', async () => {
+  const [app, game, platformer] = await Promise.all([
     read('../src/index.ts'),
     read('../src/game.ts'),
-    read('../src/index.css'),
-    read('../src/survivalMaps.ts'),
+    read('../src/oniricPlatformer.ts'),
   ]);
-  assert.match(maps, /name: 'Oniryczny sen'/);
-  assert.match(maps, /style: 'rabbit_hole'/);
-  assert.match(game, /this\.beginOniricDream\(15\)/);
-  assert.match(game, /private beginOniricDream\(durationSeconds = 15\)/);
-  assert.match(game, /makeOrthographic\(/);
-  assert.match(game, /this\.camera\.up\.set\(0, 0, -1\)/);
-  assert.match(game, /speed \*= 1\.20/);
-  assert.match(game, /const oniricRate = this\.oniricDreamRemainingSeconds > 0 \? 1\.30 : 1/);
-  assert.match(game, /dreamXpMultiplier = this\.oniricDreamRemainingSeconds > 0 \? 1\.5 : 1/);
-  assert.match(game, /if \(this\.oniricDreamCameraActive\)[\s\S]*?this\.camera\.updateProjectionMatrix\(\)/);
-  assert.match(app, /secretId === 'oniric_dream'/);
-  assert.match(app, /}, 15000\)/);
-  assert.match(css, /image-rendering: pixelated/);
-  assert.match(css, /oniric-dream-active/);
-  assert.match(css, /width: 100% !important/);
-  assert.doesNotMatch(css, /width: 24% !important/);
+  assert.match(game, /private beginOniricDream\(\)/);
+  assert.match(game, /public grantOniricDreamReward/);
+  assert.match(app, /if \(engine\?\.getGameState\(\) === 'playing'\) engine\.togglePause\(\)/);
+  assert.match(app, /if \(result\.won\)/);
+  assert.match(app, /if \(activeEngine\.getGameState\(\) === 'paused'\) activeEngine\.togglePause\(\)/);
+  assert.match(platformer, /data-action="retry"/);
+  assert.match(platformer, /data-action="return"/);
 });
-
+ 
 test('the Survival archive directory exposes all four arenas and the sixteen-secret total', async () => {
   const [html, css] = await Promise.all([read('../index.html'), read('../src/index.css')]);
   for (const mapId of ['warehouse_b4', 'container_terminal', 'cold_storage', 'night_sorting']) {
