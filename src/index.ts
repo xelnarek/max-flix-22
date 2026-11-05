@@ -24,8 +24,133 @@ import { ThreeClickTrigger } from './menuInteraction.ts';
 import { calculateUiViewport } from './uiViewport.ts';
 import { getAdaptiveEffectsTier, getAdaptiveRenderScale, getDeviceRenderProfile, type AdaptiveEffectsTier } from './renderQuality.ts';
 import { calculateVirtualJoystickInput } from './virtualJoystick.ts';
+import {
+  createInitialSurvivalAchievementProgress,
+  getSurvivalAchievementCards,
+  getSurvivalAchievementSummary,
+  recordSurvivalSecretDiscovery,
+  sanitizeSurvivalAchievementProgress,
+  updateSurvivalAchievementProgress,
+} from './survivalAchievements.ts';
+import { SURVIVAL_MAPS, SURVIVAL_MAP_IDS } from './survivalMaps.ts';
 
 // warehouseAssets imports moved to assets.ts where they are preloaded
+
+
+const SURVIVAL_ACHIEVEMENTS_STORAGE_KEY = 'paleciaki.survival.achievements.v1';
+
+const loadSurvivalAchievementProgress = () => {
+  try {
+    const saved = localStorage.getItem(SURVIVAL_ACHIEVEMENTS_STORAGE_KEY);
+    return saved
+      ? sanitizeSurvivalAchievementProgress(JSON.parse(saved))
+      : createInitialSurvivalAchievementProgress();
+  } catch {
+    return createInitialSurvivalAchievementProgress();
+  }
+};
+
+let survivalAchievementProgress = loadSurvivalAchievementProgress();
+
+const showAchievementUnlockToast = (achievementId: string) => {
+  const achievement = getSurvivalAchievementCards(survivalAchievementProgress)
+    .find((item) => item.id === achievementId);
+  if (!achievement) return;
+  const toast = document.createElement('div');
+  toast.className = 'achievement-unlock-toast';
+  const icon = document.createElement('span');
+  icon.className = 'achievement-unlock-icon';
+  icon.textContent = achievement.icon;
+  const copy = document.createElement('div');
+  copy.className = 'achievement-unlock-copy';
+  const label = document.createElement('strong');
+  label.textContent = 'OSIĄGNIĘCIE ODBLOKOWANE';
+  const title = document.createElement('span');
+  title.textContent = achievement.title;
+  copy.append(label, title);
+  toast.append(icon, copy);
+  document.body.appendChild(toast);
+  window.setTimeout(() => toast.remove(), 3600);
+};
+
+const renderSurvivalAchievements = () => {
+  const list = document.getElementById('survival-achievement-list');
+  const count = document.getElementById('survival-achievements-count');
+  const fill = document.getElementById('survival-achievements-fill') as HTMLElement | null;
+  const secretCount = document.getElementById('survival-secret-archive-count');
+  if (!list) return;
+
+  const summary = getSurvivalAchievementSummary(survivalAchievementProgress);
+  if (count) count.textContent = summary.unlocked + ' / ' + summary.total;
+  if (fill) fill.style.width = (summary.unlocked / Math.max(1, summary.total) * 100) + '%';
+  if (secretCount) secretCount.textContent = 'SEKRETY ' + summary.discoveredSecrets + ' / ' + summary.totalSecrets;
+
+  const visited = new Set(survivalAchievementProgress.mapsVisited);
+  document.querySelectorAll<HTMLElement>('[data-map-visited]').forEach((element) => {
+    const mapId = element.dataset.mapVisited;
+    const isVisited = Boolean(mapId && visited.has(mapId as keyof typeof SURVIVAL_MAPS));
+    element.textContent = isVisited ? 'ODWIEDZONA' : 'NIEODKRYTA';
+    element.classList.toggle('is-visited', isVisited);
+  });
+
+  list.replaceChildren();
+  for (const achievement of getSurvivalAchievementCards(survivalAchievementProgress)) {
+    const card = document.createElement('article');
+    card.className = 'survival-achievement-card' + (achievement.unlocked ? ' is-unlocked' : '');
+    const top = document.createElement('div');
+    top.className = 'survival-achievement-top';
+    const icon = document.createElement('span');
+    icon.className = 'survival-achievement-icon';
+    icon.textContent = achievement.unlocked ? achievement.icon : '🔒';
+    const title = document.createElement('strong');
+    title.textContent = achievement.title;
+    const status = document.createElement('span');
+    status.className = 'survival-achievement-status';
+    status.textContent = achievement.unlocked ? 'ZDOBYTE' : 'W TOKU';
+    top.append(icon, title, status);
+    const description = document.createElement('p');
+    description.textContent = achievement.description;
+    const progress = document.createElement('div');
+    progress.className = 'survival-achievement-progress';
+    const progressLabel = document.createElement('span');
+    progressLabel.textContent = achievement.progressLabel;
+    const track = document.createElement('span');
+    track.className = 'survival-achievement-track';
+    const bar = document.createElement('span');
+    bar.style.width = (achievement.current / Math.max(1, achievement.target) * 100) + '%';
+    track.appendChild(bar);
+    progress.append(progressLabel, track);
+    card.append(top, description, progress);
+    list.appendChild(card);
+  }
+};
+
+const persistSurvivalAchievementResult = (result: { progress: typeof survivalAchievementProgress; newlyUnlocked: string[] }) => {
+  const changed = JSON.stringify(result.progress) !== JSON.stringify(survivalAchievementProgress);
+  if (!changed) return;
+  survivalAchievementProgress = result.progress;
+  try {
+    localStorage.setItem(SURVIVAL_ACHIEVEMENTS_STORAGE_KEY, JSON.stringify(survivalAchievementProgress));
+  } catch (error) {
+    console.warn('[Achievements] Local save unavailable:', error);
+  }
+  renderSurvivalAchievements();
+  for (const achievementId of result.newlyUnlocked) showAchievementUnlockToast(achievementId);
+};
+
+const trackSurvivalAchievementSnapshot = (snapshot: SurvivalSnapshot) => {
+  persistSurvivalAchievementResult(updateSurvivalAchievementProgress(survivalAchievementProgress, {
+    mapId: snapshot.mapId,
+    kills: snapshot.kills,
+    elapsedSeconds: snapshot.elapsedSeconds,
+    bossesDefeated: snapshot.bossesDefeated,
+  }));
+};
+
+const trackSurvivalSecretAchievement = (mapId: keyof typeof SURVIVAL_MAPS, secretId: string) => {
+  const result = recordSurvivalSecretDiscovery(survivalAchievementProgress, mapId, secretId);
+  if (result.added) persistSurvivalAchievementResult(result);
+};
 
 // Keep ad actions and privacy controls in sync with the latest UMP decision.
 const syncAdMobSettings = (consent: { enabled: boolean; privacyOptionsRequired: boolean }) => {
@@ -730,6 +855,14 @@ class PaleciakiScene extends xb.Script {
           survivalLevelUp?.classList.add('hidden');
         },
         onSurvivalUpdate: (snapshot: SurvivalSnapshot) => {
+          trackSurvivalAchievementSnapshot(snapshot);
+          const mapNameElem = document.getElementById('survival-map-name');
+          if (mapNameElem) {
+            mapNameElem.textContent = snapshot.mapName.toUpperCase();
+            mapNameElem.setAttribute('title', snapshot.mapSubtitle);
+          }
+          const secretCountElem = document.getElementById('survival-secret-count');
+          if (secretCountElem) secretCountElem.textContent = 'SEKRETY ' + snapshot.secretsFound + '/' + snapshot.totalSecrets;
           const minutes = Math.floor(snapshot.elapsedSeconds / 60);
           const seconds = snapshot.elapsedSeconds % 60;
           if (survivalTimeElem) survivalTimeElem.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
@@ -834,6 +967,10 @@ class PaleciakiScene extends xb.Script {
             survivalUpgradeOptions.appendChild(card);
           }
           survivalLevelUp.classList.remove('hidden');
+        },
+        onSurvivalSecretFound: (mapId, secretId, secretName) => {
+          trackSurvivalSecretAchievement(mapId, secretId);
+          console.info('[Secrets] Odkryto:', secretName, mapId + ':' + secretId);
         },
         onBossUpdate: (name, hp, maxHp, visible, phase) => {
           if (!bossHudBar || !bossNameElem || !bossHpTextElem || !bossHpFillElem) return;
@@ -1124,6 +1261,8 @@ class PaleciakiScene extends xb.Script {
           if (targetId === 'tab-leaderboard') {
             renderLeaderboard();
             ensureLeaderboardServices().catch(console.warn);
+          } else if (targetId === 'tab-achievements') {
+            renderSurvivalAchievements();
           }
         }
       };
@@ -2135,6 +2274,7 @@ const injectThemeStyles = () => {
 async function startApp() {
   console.log('%c[App:Boot] 🚀 Start gry Paleciaki! Magazyn Chaosu...', 'color: #38bdf8; font-weight: bold;');
   injectThemeStyles();
+  renderSurvivalAchievements();
 
   const titleScreen = document.getElementById('title-screen');
   const shell = document.getElementById('game-shell');
