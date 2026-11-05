@@ -1289,3 +1289,27 @@ test('Survival wave director assigns enemy coalitions with a leader, pincer lane
   assert.match(coalition, /role === 'ranged'/);
   assert.match(coalition, /role === 'support'/);
 });
+
+
+test('critical shrapnel is limited to one secondary burst per critical Survival volley', async () => {
+  const [game, shrapnel] = await Promise.all([
+    read('../src/game.ts'),
+    read('../src/survivalShrapnel.ts'),
+  ]);
+  assert.match(game, /const criticalBurstState = criticalRoll\.critical && \(this\.survivalUpgradeStacks\.shrapnel \|\| 0\) > 0/);
+  assert.ok((game.match(/criticalBurstState,/g) || []).length >= 2, 'multi-projectile weapons must share the volley token');
+  assert.match(game, /criticalBurstState\?: \{ consumed: boolean \}/);
+  assert.match(game, /p\.criticalBurstState && !p\.criticalBurstState\.consumed/);
+  assert.match(game, /p\.criticalBurstState\.consumed = true/);
+  assert.match(game, /this\.applySurvivalCriticalShrapnel\(e, baseDmg\)/);
+  assert.match(game, /private applySurvivalCriticalShrapnel\(primaryTarget: EnemyItem, directDamage: number\)/);
+  assert.match(game, /const targetBudget = isMobile[\s\S]*?this\.adaptivePerformanceTier >= 2 \? 1 : 2/);
+  assert.match(game, /\.slice\(0, targetBudget\)/);
+  assert.match(game, /if \(enemy\.hp < previousHp\)[\s\S]*?this\.defeatEnemy\(enemy, 150, false\)/);
+  assert.match(game, /id: 'shrapnel'[\s\S]*?Krytyczne trafienie pociskiem rozrzuca odłamki/);
+  assert.match(game, /case 'shrapnel':[\s\S]*?survivalShrapnelStrength/);
+  assert.match(game, /\(option\.id !== 'shrapnel' \|\| \(this\.survivalUpgradeStacks\.shrapnel \|\| 0\) < 3\)/);
+  assert.match(game, /unlock\('crystal_cascade', 'KRYSZTAŁOWA KASKADA'/);
+  assert.match(shrapnel, /maxTargets: Math\.min\(3/);
+});
+
