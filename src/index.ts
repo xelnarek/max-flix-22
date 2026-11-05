@@ -4,8 +4,7 @@ import { CHARACTERS } from './characters.ts';
 import {
   ensureLeaderboardServices,
   submitScore,
-  getTopLeaderboard,
-  testFirestoreConnection,
+  getTopSurvivalLeaderboard,
 } from './firebase.ts';
 import { PaleciakiGameEngine, type SurvivalSnapshot, type SurvivalUpgradeOption } from './game.ts';
 import { sound } from './sound.ts';
@@ -1005,14 +1004,14 @@ class PaleciakiScene extends xb.Script {
 
       try {
         // Direct connectivity check against singleton db instance
-        const isConnected = await testFirestoreConnection();
+        const isConnected = await ensureLeaderboardServices();
         if (isConnected) {
           updateFirestoreStatusUI('online', 'Baza Firestore: Online');
         } else {
           updateFirestoreStatusUI('offline', 'Baza Firestore: Tryb Offline');
         }
 
-        const topScores = (await getTopLeaderboard(100)).filter((entry) => entry.mode === 'survival').slice(0, 15);
+        const topScores = await getTopSurvivalLeaderboard(15);
         leaderboardLoading.classList.add('hidden');
         leaderboardList.classList.remove('hidden');
 
@@ -1028,6 +1027,9 @@ class PaleciakiScene extends xb.Script {
             const rankDisplay = idx < 3 ? rankIcons[idx] : `${idx + 1}.`;
             const heroIds: Record<string, CharacterId> = {
               'Operator 01': 'marcin', 'Operator 02': 'grzesiek', 'Operator 03': 'dawid', 'Operator 04': 'mateusz', 'Operator 05': 'piotr',
+              // Historical records stored internal character IDs; keep their avatars resolvable
+              // without ever exposing the old personal labels in the public ranking.
+              marcin: 'marcin', grzesiek: 'grzesiek', dawid: 'dawid', mateusz: 'mateusz', piotr: 'piotr',
             };
             const heroId = heroIds[entry.hero];
             const heroIcon = heroId ? operatorPortrait(heroId) : '👷‍♂️';
