@@ -11,13 +11,13 @@ test('map picker has a dedicated live preview and accurate route labels', async 
   for (const id of ['survival-map-preview-title', 'survival-map-preview-detail']) {
     assert.equal((html.match(new RegExp('id="' + id + '"', 'g')) || []).length, 1);
   }
-  assert.match(html, /4 ARENY • RÓŻNE TRASY/);
-  assert.match(html, /Palety i regały/);
-  assert.match(html, /Kontenery i slalom/);
-  assert.match(html, /Agregaty i lód/);
-  assert.match(html, /Taśmy i neony/);
-  assert.match(app, /survivalMapPreviewTitle.textContent = map.name.toUpperCase()/);
-  assert.match(app, /survivalMapPreviewDetail.textContent = map.description/);
+  assert.ok(html.includes('4 ARENY • RÓŻNE TRASY'));
+  assert.ok(html.includes('Palety i regały'));
+  assert.ok(html.includes('Kontenery i slalom'));
+  assert.ok(html.includes('Agregaty i lód'));
+  assert.ok(html.includes('Taśmy i neony'));
+  assert.ok(app.includes('survivalMapPreviewTitle.textContent = map.name.toUpperCase()'));
+  assert.ok(app.includes('survivalMapPreviewDetail.textContent = map.description'));
+  assert.ok(css.includes('survival-map-preview'));
   assert.ok(css.includes('grid-template-columns: repeat(2, minmax(0, 1fr))'));
-  assert.match(css, /grid-template-columns:\s*repeat(2,\s*minmax(0,\s*1fr))/);
 });
