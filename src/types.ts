@@ -137,6 +137,8 @@ export interface EnemyItem {
   supportShieldTimer?: number;
   /** Cooldown for a Survival boss command pulse. */
   aiCommanderPulseTimer?: number;
+  /** Visible, interruptible wind-up before a Survival boss command pulse. */
+  aiCommanderWindupTimer?: number;
   /** Remaining time of a temporary movement command from a Survival boss. */
   aiCommandBoostTimer?: number;
   /** Bounded movement multiplier granted by a boss command. */
