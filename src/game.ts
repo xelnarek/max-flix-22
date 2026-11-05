@@ -10,6 +10,7 @@ import { getSurvivalUpgradeRarityMeta, getSurvivalWeaponInitialLevel, getSurviva
 import { createSurvivalBossRewardOptions } from './survivalBossRewards.ts';
 import { getSurvivalBossVariant, shouldSpawnBosmanKrakow } from './survivalEncounters.ts';
 import { applySurvivalWaveMutator, getSurvivalWaveMutator } from './survivalWaveMutators.ts';
+import { getSurvivalConvoyHazardCount } from './survivalConvoy.ts';
 import { chooseCampaignRewardSpawnPoint } from './campaignRewards.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
 import {
@@ -6472,19 +6473,28 @@ export class PaleciakiGameEngine {
       const upperLane = THREE.MathUtils.clamp(pz - 5.4, this.levelBounds.minZ + 1.8, this.levelBounds.maxZ - 1.8);
       const lowerLane = THREE.MathUtils.clamp(pz + 5.4, this.levelBounds.minZ + 1.8, this.levelBounds.maxZ - 1.8);
       const activeHazards = this.hazards.filter((hazard) => hazard.active).length;
-      const convoySize = this.adaptivePerformanceTier >= 2 || activeHazards >= 2 ||
-        Math.abs(lowerLane - upperLane) < 3.8 ? 1 : 2;
+      const convoySize = getSurvivalConvoyHazardCount(
+        activeHazards,
+        this.adaptivePerformanceTier,
+        Math.abs(lowerLane - upperLane)
+      );
 
       sound.playSirens();
       this.callbacks.onPerkDropBanner?.(
-        'KONWÓJ SZTAPLAREK • ALEJKI ZAMKNIĘTE',
+        convoySize > 0 ? 'KONWÓJ SZTAPLAREK • ALEJKI ZAMKNIĘTE' : 'KONWÓJ WSTRZYMANY • ALEJKI ZAJĘTE',
         '🚧',
         convoySize === 2
           ? 'Dwa wózki przecinają halę w przeciwnych kierunkach. Przeskakuj przez trasę albo zmień alejkę; po przejeździe zbierz premię BHP.'
-          : 'Wózek patroluje jedną aleję. Nie stój na trasie i wykorzystaj wolny korytarz, aby zebrać premię BHP.',
+          : convoySize === 1
+            ? 'Wózek patroluje jedną aleję. Nie stój na trasie i wykorzystaj wolny korytarz, aby zebrać premię BHP.'
+            : 'Wszystkie trzy miejsca zagrożeń są już zajęte. Konwój wstrzymany — wykorzystaj okno na zebranie premii BHP.',
         '#f59e0b'
       );
-      this.sayQuote('Dwa wózki, jedna hala i zero koordynacji. Klasyczna logistyka. Nie testuj zderzaków własnym czołem.');
+      this.sayQuote(
+        convoySize === 0
+          ? 'Aleje są już zajęte. Nawet konwój musi czasem poczekać na wolny slot.'
+          : 'Dwa wózki, jedna hala i zero koordynacji. Klasyczna logistyka. Nie testuj zderzaków własnym czołem.'
+      );
 
       for (let i = 0; i < convoySize; i++) {
         const laneZ = i === 0 ? upperLane : lowerLane;
