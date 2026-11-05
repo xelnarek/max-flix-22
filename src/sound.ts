@@ -359,7 +359,40 @@ class SoundEngine {
       osc.start(t);
       osc.stop(t + 0.3);
     } else if (charId === 'piotr') {
-      this.playMolotovThrow();
+      // Ominous low ritual swell followed by three sharp family-call chimes.
+      const drone = this.ctx.createOscillator();
+      const droneGain = this.ctx.createGain();
+      const filter = this.ctx.createBiquadFilter();
+      drone.type = 'sawtooth';
+      drone.frequency.setValueAtTime(96, t);
+      drone.frequency.exponentialRampToValueAtTime(48, t + 0.62);
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(520, t);
+      filter.frequency.exponentialRampToValueAtTime(180, t + 0.72);
+      droneGain.gain.setValueAtTime(0.0001, t);
+      droneGain.gain.exponentialRampToValueAtTime(0.2, t + 0.09);
+      droneGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.78);
+      drone.connect(filter);
+      filter.connect(droneGain);
+      droneGain.connect(this.effectsBus ?? this.ctx.destination);
+      drone.start(t);
+      drone.stop(t + 0.8);
+
+      [196, 246.9, 293.7].forEach((frequency, index) => {
+        const start = t + 0.18 + index * 0.13;
+        const chime = this.ctx!.createOscillator();
+        const chimeGain = this.ctx!.createGain();
+        chime.type = 'triangle';
+        chime.frequency.setValueAtTime(frequency, start);
+        chime.frequency.exponentialRampToValueAtTime(frequency * 1.5, start + 0.16);
+        chimeGain.gain.setValueAtTime(0.0001, start);
+        chimeGain.gain.exponentialRampToValueAtTime(0.14, start + 0.025);
+        chimeGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.42);
+        chime.connect(chimeGain);
+        chimeGain.connect(this.effectsBus ?? this.ctx!.destination);
+        chime.start(start);
+        chime.stop(start + 0.44);
+      });
     } else {
       // Three tiny, distinct meow-like notes announce the incoming cat squad.
       [620, 760, 920].forEach((frequency, index) => {
