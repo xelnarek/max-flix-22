@@ -53,6 +53,11 @@
   box-sizing: border-box;
 }
 
+#title-screen .menu-map-picker-frame.survival-map-picker {
+  width: min(100%, 980px);
+  max-width: 980px;
+}
+
 #title-screen .survival-map-picker-heading {
   min-width: 0;
   margin-bottom: 7px;
