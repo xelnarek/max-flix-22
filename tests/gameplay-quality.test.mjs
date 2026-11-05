@@ -1024,3 +1024,19 @@ test('major Bosman boss is allowed to chase, show a boss bar and drop its boss r
   assert.match(game, /beginSurvivalBossReward\(e\.name\)/);
   assert.match(game, /spawnLootCrate\(e\.x \+ 1\.2, 0, e\.z\)/);
 });
+
+
+test('Survival leaderboard authenticates, queries only Survival rows and filters before ranking', async () => {
+  const [app, firebase, ranking] = await Promise.all([
+    read('../src/index.ts'), read('../src/firebase.ts'), read('../src/leaderboard.ts')
+  ]);
+  assert.match(app, /getTopSurvivalLeaderboard\(15\)/);
+  assert.doesNotMatch(app, /getTopLeaderboard\(100\)/);
+  assert.match(firebase, /export async function getTopSurvivalLeaderboard/);
+  assert.match(firebase, /where\('mode', '==', 'survival'\)/);
+  assert.match(firebase, /parseCachedLeaderboard\(\)\.filter\(\(entry\) => entry\.mode === 'survival'\)/);
+  assert.match(firebase, /pendingEntries[\s\S]*?filter\(\(entry\) => entry\.mode === 'survival'\)/);
+  assert.match(firebase, /export async function ensureLeaderboardServices\(\): Promise<boolean>/);
+  assert.match(firebase, /await initAuth\(\);[\s\S]*?const connected = await testFirestoreConnection\(\)/);
+  assert.match(ranking, /getSurvivalLeaderboardSlice\([\s\S]*?entry\.mode === 'survival'/);
+});
