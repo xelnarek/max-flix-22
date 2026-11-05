@@ -700,12 +700,13 @@ export class CinematicIntroManager {
     const colors = ['#f0c46b', '#65d7a4', '#f5a04c', '#a78bfa', '#ff777e'];
     const labels = ['DOWÓDCA', 'SIŁACZ', 'FORMAT', 'GAMER', 'WETERAN'];
     const codes = ['LOG-01', 'HYD-44', 'GRS-28', 'SYS-99', 'WET-70'];
-    const gap = Math.min(w * 0.115, 132);
+    const portraitMode = w / Math.max(1, h) < 0.85;
+    const gap = Math.min(w * (portraitMode ? 0.17 : 0.115), 132);
     const rise = (1 - reveal) * h * 0.18;
     for (let i = 0; i < 5; i++) {
       const x = w * 0.5 + (i - 2) * gap;
       const y = h * 0.635 + rise + Math.sin(t * 2 + i) * h * 0.005;
-      const cardWidth = Math.max(32, Math.min(gap * 0.84, w * 0.104));
+      const cardWidth = Math.max(48, Math.min(gap * (portraitMode ? 0.95 : 0.84), w * 0.18));
       const cardHeight = cardWidth * 1.32;
       const portraitSize = cardWidth * 0.82;
 
