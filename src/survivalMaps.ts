@@ -148,7 +148,7 @@ export function getSurvivalMapDefinition(mapId: SurvivalMapId): SurvivalMapDefin
 
 /**
  * Pick a uniform map for the next run. Immediate repeats are excluded while
- * keeping all three arenas equally likely across a longer sequence.
+ * keeping all four arenas equally likely across a longer sequence.
  */
 export function chooseRandomSurvivalMap(
   previousMapId: SurvivalMapId | null,
