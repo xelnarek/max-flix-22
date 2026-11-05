@@ -760,6 +760,17 @@ export class PaleciakiGameEngine {
     pounceTimer: number;
     pounceTarget: THREE.Vector3 | null;
   }[] = [];
+  private mafiCapybaras: {
+    group: THREE.Group;
+    life: number;
+    maxLife: number;
+    age: number;
+    attackCooldown: number;
+    orbitAngle: number;
+    pounceTimer: number;
+    pounceTarget: THREE.Vector3 | null;
+    index: number;
+  }[] = [];
   private bimberMolotovs: {
     mesh: THREE.Group;
     pos: THREE.Vector3;
@@ -2457,6 +2468,11 @@ export class PaleciakiGameEngine {
     }
     for (const molotov of this.bimberMolotovs) this.disposeTemporaryObject(molotov.mesh);
     for (const puddle of this.bimberFirePuddles) this.disposeTemporaryObject(puddle.group);
+    for (const capybara of this.mafiCapybaras) {
+      this.levelRoot.remove(capybara.group);
+      this.disposeTemporaryObject(capybara.group);
+    }
+    this.mafiCapybaras = [];
     for (const barrel of this.explosiveBarrels) this.disposeTemporaryObject(barrel.mesh);
     while (this.levelRoot.children.length > 0) {
       this.levelRoot.remove(this.levelRoot.children[0]);
@@ -4892,11 +4908,10 @@ export class PaleciakiGameEngine {
       this.updateEnemies(simDt);
       this.updateMarcinTank(simDt);
       this.updateMateuszCats(simDt);
+      this.updateMafiCapybaras(simDt);
       if (this.gameMode === 'survival') this.updateSurvivalAutoCombat(simDt);
       this.updateProjectiles(simDt);
       if (this.gameMode === 'survival') this.updateSurvivalXpGems(simDt);
-      this.updateBimberMolotovs(simDt);
-      this.updateBimberFirePuddles(simDt);
       this.updateSpecialEffects(simDt);
       this.updateParticles(simDt);
     }
@@ -9837,6 +9852,361 @@ export class PaleciakiGameEngine {
     }
   }
 
+
+  private createMafiCapybaraModel(index: number): THREE.Group {
+    const group = new THREE.Group();
+    group.name = 'mafi_kapibara_companion_' + (index + 1);
+
+    const furColors = [0x98704b, 0x825b3e, 0xa98259];
+    const suitColors = [0x111827, 0x312e3d, 0x1f3b33];
+    const furMat = new THREE.MeshStandardMaterial({ color: furColors[index % furColors.length], roughness: 0.88 });
+    const muzzleMat = new THREE.MeshStandardMaterial({ color: 0xc49b75, roughness: 0.84 });
+    const suitMat = new THREE.MeshStandardMaterial({ color: suitColors[index % suitColors.length], roughness: 0.52, metalness: 0.12 });
+    const shirtMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.62 });
+    const blackMat = new THREE.MeshStandardMaterial({ color: 0x070b12, roughness: 0.28, metalness: 0.22 });
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.24, metalness: 0.82, emissive: 0x854d0e, emissiveIntensity: 0.12 });
+    const hatMat = new THREE.MeshStandardMaterial({ color: index === 1 ? 0x3b1d27 : 0x101820, roughness: 0.42, metalness: 0.1 });
+    const soleMat = new THREE.MeshStandardMaterial({ color: 0x171717, roughness: 0.9 });
+
+    // Low-poly capybara body in a tailored dark suit.
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), suitMat);
+    body.scale.set(1.0, 0.83, 1.28);
+    body.position.set(0, 0.37, -0.015);
+    group.add(body);
+
+    const shirt = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.23, 0.085), shirtMat);
+    shirt.position.set(0, 0.43, 0.245);
+    group.add(shirt);
+
+    const tie = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.22, 4), index === 1
+      ? new THREE.MeshStandardMaterial({ color: 0xfbbf24, roughness: 0.38, metalness: 0.22 })
+      : new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.48 }));
+    tie.position.set(0, 0.39, 0.31);
+    tie.rotation.x = -Math.PI / 2;
+    group.add(tie);
+
+    // Broad capybara head, muzzle and ears.
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.245, 14, 11), furMat);
+    head.scale.set(1.02, 0.94, 0.96);
+    head.position.set(0, 0.66, 0.31);
+    group.add(head);
+
+    const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.135, 12, 9), muzzleMat);
+    muzzle.scale.set(1.12, 0.72, 1.0);
+    muzzle.position.set(0, 0.56, 0.51);
+    group.add(muzzle);
+
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.047, 10, 8), blackMat);
+    nose.scale.set(1.0, 0.72, 0.64);
+    nose.position.set(0, 0.59, 0.625);
+    group.add(nose);
+
+    for (const side of [-1, 1]) {
+      const ear = new THREE.Mesh(new THREE.SphereGeometry(0.072, 9, 7), furMat);
+      ear.scale.set(0.72, 1.08, 0.55);
+      ear.position.set(side * 0.17, 0.84, 0.27);
+      group.add(ear);
+
+      const lens = new THREE.Mesh(new THREE.SphereGeometry(0.078, 10, 8), blackMat);
+      lens.scale.set(1.05, 0.72, 0.34);
+      lens.position.set(side * 0.087, 0.69, 0.524);
+      group.add(lens);
+
+      const temple = new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.024, 0.025), blackMat);
+      temple.position.set(side * 0.19, 0.69, 0.48);
+      group.add(temple);
+    }
+
+    const glassesBridge = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.025, 0.025), goldMat);
+    glassesBridge.position.set(0, 0.69, 0.548);
+    group.add(glassesBridge);
+
+    // Fedora: brim, crown and a bright family pin.
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.045, 18), hatMat);
+    brim.position.set(0, 0.87, 0.29);
+    brim.scale.z = 0.9;
+    group.add(brim);
+
+    const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.19, 0.19, 14), hatMat);
+    crown.position.set(0, 0.97, 0.29);
+    group.add(crown);
+
+    const hatBand = new THREE.Mesh(new THREE.CylinderGeometry(0.193, 0.193, 0.035, 14), goldMat);
+    hatBand.position.set(0, 0.915, 0.29);
+    group.add(hatBand);
+
+    const familyPin = new THREE.Mesh(new THREE.OctahedronGeometry(0.055, 0), goldMat);
+    familyPin.position.set(0.12, 0.92, 0.455);
+    group.add(familyPin);
+
+    // Gold chain and a compact briefcase make the mafia theme readable at gameplay scale.
+    const chain = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.018, 6, 18), goldMat);
+    chain.position.set(0, 0.49, 0.23);
+    chain.rotation.x = Math.PI / 2;
+    group.add(chain);
+
+    const briefcase = new THREE.Group();
+    const caseBody = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.14, 0.075), hatMat);
+    const caseHandle = new THREE.Mesh(new THREE.TorusGeometry(0.052, 0.012, 5, 10, Math.PI), goldMat);
+    caseHandle.position.y = 0.095;
+    briefcase.add(caseBody, caseHandle);
+    briefcase.position.set(0.29, 0.38, 0.08);
+    briefcase.rotation.z = -0.12;
+    group.add(briefcase);
+
+    for (const side of [-1, 1]) {
+      for (const z of [-0.22, 0.22]) {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.065, 0.22, 7), suitMat);
+        leg.position.set(side * 0.18, 0.145, z);
+        const shoe = new THREE.Mesh(new THREE.SphereGeometry(0.078, 8, 6), soleMat);
+        shoe.scale.set(1.0, 0.48, 1.25);
+        shoe.position.set(side * 0.18, 0.035, z + 0.025);
+        group.add(leg, shoe);
+      }
+    }
+
+    group.traverse((object) => {
+      const mesh = object as THREE.Mesh;
+      if (mesh.isMesh) {
+        mesh.castShadow = false;
+        mesh.receiveShadow = false;
+      }
+    });
+    return group;
+  }
+
+  private spawnMafiPentagramEffect(groundY: number) {
+    const ritual = new THREE.Group();
+    ritual.name = 'MafiKapibar_Pentagram_B4';
+    const crimson = new THREE.MeshBasicMaterial({
+      color: 0xf43f5e, transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide,
+    });
+    const gold = new THREE.MeshBasicMaterial({
+      color: 0xfbbf24, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide,
+    });
+    const aura = new THREE.MeshBasicMaterial({
+      color: 0x7e22ce, transparent: true, opacity: 0.24, depthWrite: false, side: THREE.DoubleSide,
+    });
+
+    const outerRing = new THREE.Mesh(new THREE.TorusGeometry(3.75, 0.075, 8, 72), crimson);
+    outerRing.rotation.x = Math.PI / 2;
+    outerRing.position.y = 0.055;
+    ritual.add(outerRing);
+
+    const innerRing = new THREE.Mesh(new THREE.TorusGeometry(3.2, 0.026, 6, 72), gold);
+    innerRing.rotation.x = Math.PI / 2;
+    innerRing.position.y = 0.07;
+    ritual.add(innerRing);
+
+    const glowDisc = new THREE.Mesh(new THREE.CircleGeometry(3.15, 48), aura);
+    glowDisc.rotation.x = -Math.PI / 2;
+    glowDisc.position.y = 0.025;
+    ritual.add(glowDisc);
+
+    const starPoints: THREE.Vector3[] = [];
+    const vertices = Array.from({ length: 5 }, (_, index) => {
+      const angle = -Math.PI / 2 + index * Math.PI * 2 / 5;
+      return new THREE.Vector3(Math.cos(angle) * 3.05, 0.095, Math.sin(angle) * 3.05);
+    });
+    for (const index of [0, 2, 4, 1, 3, 0]) starPoints.push(vertices[index].clone());
+    const starGeometry = new THREE.BufferGeometry().setFromPoints(starPoints);
+    const star = new THREE.Line(starGeometry, crimson);
+    ritual.add(star);
+
+    for (const point of vertices) {
+      const seal = new THREE.Mesh(new THREE.OctahedronGeometry(0.13, 0), gold);
+      seal.position.copy(point);
+      seal.position.y = 0.13;
+      ritual.add(seal);
+    }
+
+    const centralSigil = new THREE.Mesh(new THREE.TorusGeometry(0.52, 0.045, 7, 32), gold);
+    centralSigil.rotation.x = Math.PI / 2;
+    centralSigil.position.y = 0.12;
+    ritual.add(centralSigil);
+
+    const summoningColumn = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.12, 0.82, 3.25, 12, 1, true),
+      new THREE.MeshBasicMaterial({ color: 0xd946ef, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false })
+    );
+    summoningColumn.position.y = 1.68;
+    ritual.add(summoningColumn);
+
+    ritual.position.set(this.playerPos.x, groundY, this.playerPos.z);
+    this.levelRoot.add(ritual);
+
+    this.specialEffects.push({
+      mesh: ritual,
+      life: 1.25,
+      maxLife: 1.25,
+      grow: 0,
+      spin: 0,
+      update: (dt, progress) => {
+        const pulse = 0.78 + Math.sin(progress * Math.PI) * 0.24;
+        ritual.scale.setScalar(pulse);
+        ritual.rotation.y += dt * 0.42;
+        crimson.opacity = 0.95 * (1 - progress * 0.58);
+        gold.opacity = 0.9 * (1 - progress * 0.42);
+        aura.opacity = 0.24 * (1 - progress);
+        const columnMaterial = summoningColumn.material as THREE.MeshBasicMaterial;
+        columnMaterial.opacity = 0.2 * (1 - progress);
+      },
+      cleanup: () => this.disposeTemporaryObject(ritual),
+    });
+  }
+
+  private spawnMafiCapybaras(abilityDamageMultiplier: number) {
+    for (const capybara of this.mafiCapybaras) {
+      this.levelRoot.remove(capybara.group);
+      this.disposeTemporaryObject(capybara.group);
+    }
+    this.mafiCapybaras = [];
+
+    const groundY = Math.max(0.04, this.playerPos.y - 0.48);
+    this.spawnMafiPentagramEffect(groundY);
+    sound.playAttackWhoosh();
+    this.triggerScreenShake(0.38, 0.28);
+    this.triggerBloomPulse(0.58);
+
+    // The pentagram itself has a real combat payoff: it breaks shields,
+    // damages the whole nearby pack and briefly interrupts their attacks.
+    const ritualRadius = this.gameMode === 'survival' ? 5.7 : 6.2;
+    const burstDamage = Math.max(2, Math.ceil(3 * abilityDamageMultiplier));
+    for (const enemy of this.enemies) {
+      if (enemy.state === 'defeated') continue;
+      const distance = Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z);
+      if (distance > ritualRadius || Math.abs(enemy.y - this.playerPos.y) > 2.0) continue;
+
+      enemy.shieldActive = false;
+      this.damageEnemy(enemy, burstDamage, this.playerPos.x, this.playerPos.z);
+      if (enemy.hp <= 0) {
+        this.defeatEnemy(enemy, 320, false);
+      } else {
+        enemy.stunTimer = Math.max(enemy.stunTimer, this.gameMode === 'survival' ? 0.85 : 1.15);
+        enemy.state = 'stunned';
+      }
+      this.spawnParticleRing(enemy.x, enemy.y + 0.65, enemy.z, 0xd946ef);
+      this.emitFloatingToast('✦ PENTAGRAM B4 • -' + burstDamage + ' HP', enemy.x, enemy.y + 1.0, enemy.z, 'damage');
+    }
+
+    const duration = this.gameMode === 'survival' ? 12.0 : 15.0;
+    for (let index = 0; index < 3; index++) {
+      const group = this.createMafiCapybaraModel(index);
+      const angle = this.playerRot + index * Math.PI * 2 / 3;
+      group.position.set(
+        this.playerPos.x + Math.sin(angle) * 2.15,
+        groundY - 0.28,
+        this.playerPos.z + Math.cos(angle) * 2.15
+      );
+      group.rotation.y = angle + Math.PI;
+      this.levelRoot.add(group);
+      this.mafiCapybaras.push({
+        group,
+        life: duration,
+        maxLife: duration,
+        age: 0,
+        attackCooldown: 0.22 + index * 0.2,
+        orbitAngle: index * Math.PI * 2 / 3,
+        pounceTimer: 0,
+        pounceTarget: null,
+        index,
+      });
+    }
+
+    this.sayQuote('MAFIKAPIBARY WEZWANE! Trzy garnitury, jeden interes — porządek na hali.');
+    this.callbacks.onPerkDropBanner?.(
+      'MAFIKAPIBAR • RYTUAŁ B4',
+      '🐾🕶️',
+      'Pentagram zadaje obrażenia i ogłusza pobliskich wrogów. Trzy MafiKapibary przez 12–15 sekund oskrzydlają cele i uderzają kluczami rodzinnych interesów.',
+      '#d946ef'
+    );
+    this.emitFloatingToast('🕶️ MAFIKAPIBARY PRZEJMUJĄ MAGAZYN!', this.playerPos.x, this.playerPos.y + 1.55, this.playerPos.z, 'combo');
+    this.spawnParticleRing(this.playerPos.x, groundY + 0.2, this.playerPos.z, 0xd946ef);
+  }
+
+  private updateMafiCapybaras(dt: number) {
+    for (let index = this.mafiCapybaras.length - 1; index >= 0; index--) {
+      const capybara = this.mafiCapybaras[index];
+      capybara.age += dt;
+      capybara.life -= dt;
+
+      if (capybara.life <= 0) {
+        const position = capybara.group.position.clone();
+        this.levelRoot.remove(capybara.group);
+        this.disposeTemporaryObject(capybara.group);
+        this.mafiCapybaras.splice(index, 1);
+        this.spawnParticleRing(position.x, 0.18, position.z, 0xfbbf24);
+        if (this.mafiCapybaras.length === 0) {
+          this.emitFloatingToast('MAFIKAPIBARY WRACAJĄ NA ODPRAWĘ.', this.playerPos.x, this.playerPos.y + 1.1, this.playerPos.z, 'perk');
+        }
+        continue;
+      }
+
+      capybara.orbitAngle += dt * (capybara.pounceTimer > 0 ? 0.48 : 0.82);
+      const angle = this.playerRot + capybara.orbitAngle;
+      const orbitRadius = 2.15 + capybara.index * 0.12;
+      const baseX = this.playerPos.x + Math.sin(angle) * orbitRadius;
+      const baseZ = this.playerPos.z + Math.cos(angle) * orbitRadius;
+      let targetX = baseX;
+      let targetZ = baseZ;
+      let jumpHeight = 0;
+
+      if (capybara.pounceTimer > 0 && capybara.pounceTarget) {
+        capybara.pounceTimer = Math.max(0, capybara.pounceTimer - dt);
+        const progress = 1 - capybara.pounceTimer / 0.52;
+        const reach = progress < 0.5 ? progress / 0.5 : (1 - progress) / 0.5;
+        const weight = THREE.MathUtils.clamp(reach, 0, 1);
+        targetX = THREE.MathUtils.lerp(baseX, capybara.pounceTarget.x, weight);
+        targetZ = THREE.MathUtils.lerp(baseZ, capybara.pounceTarget.z, weight);
+        jumpHeight = Math.sin(Math.PI * THREE.MathUtils.clamp(progress, 0, 1)) * 0.72;
+        if (capybara.pounceTimer <= 0) capybara.pounceTarget = null;
+      }
+
+      const groundY = Math.max(0.04, this.playerPos.y - 0.48);
+      const fadeIn = THREE.MathUtils.clamp(capybara.age / 0.42, 0, 1);
+      const fadeOut = THREE.MathUtils.clamp(capybara.life / 0.85, 0, 1);
+      capybara.group.scale.setScalar(0.92 * fadeIn * fadeOut);
+      capybara.group.position.x = THREE.MathUtils.lerp(capybara.group.position.x, targetX, Math.min(1, dt * 8.5));
+      capybara.group.position.z = THREE.MathUtils.lerp(capybara.group.position.z, targetZ, Math.min(1, dt * 8.5));
+      capybara.group.position.y = groundY - (1 - fadeIn) * 0.28 +
+        jumpHeight + Math.sin(performance.now() * 0.006 + capybara.index * 2.1) * 0.025;
+      capybara.group.rotation.y = capybara.pounceTimer > 0 && capybara.pounceTarget
+        ? Math.atan2(capybara.pounceTarget.x - capybara.group.position.x, capybara.pounceTarget.z - capybara.group.position.z)
+        : angle + Math.PI;
+
+      capybara.attackCooldown -= dt;
+      if (capybara.attackCooldown > 0 || capybara.pounceTimer > 0) continue;
+
+      let target: EnemyItem | null = null;
+      let nearest = 13.5;
+      for (const enemy of this.enemies) {
+        if (enemy.state === 'defeated' || !enemy.mesh?.visible) continue;
+        const distance = Math.hypot(enemy.x - capybara.group.position.x, enemy.z - capybara.group.position.z);
+        if (distance < nearest) {
+          nearest = distance;
+          target = enemy;
+        }
+      }
+      if (!target) continue;
+
+      target.shieldActive = false;
+      const damage = this.scaleSurvivalDamage(2);
+      this.damageEnemy(target, damage, capybara.group.position.x, capybara.group.position.z);
+      if (target.hp <= 0) {
+        this.defeatEnemy(target, 280, false);
+      } else {
+        target.stunTimer = Math.max(target.stunTimer, 0.42);
+        target.state = 'stunned';
+      }
+      capybara.pounceTarget = new THREE.Vector3(target.x, groundY, target.z);
+      capybara.pounceTimer = 0.52;
+      capybara.attackCooldown = 1.18 + capybara.index * 0.14;
+      this.spawnParticleRing(target.x, target.y + 0.36, target.z, 0xfbbf24);
+      this.emitFloatingToast('🕶️ MAFIA INTERWENCJA! -' + damage + ' HP', target.x, target.y + 1.1, target.z, 'damage');
+      sound.playAttackWhoosh();
+    }
+  }
+
   private resetAbilityCooldown() {
     this.abilityCooldownState = createAbilityCooldown(0);
     this.abilityCooldownUiTimer = 0;
@@ -10171,12 +10541,10 @@ export class PaleciakiGameEngine {
       this.activatePerk('vibram_boots', this.gameMode === 'survival' ? 3.5 : 8);
       this.spawnMateuszCats();
     } else if (this.currentCharacterId === 'piotr') {
-      this.sayQuote('POTRÓJNA SALWA PŁONĄCYCH BUTLI! Trzy kapsuły zapalające — ściana ognia na gresie!');
-      this.throwBimberMolotov(0);
-      if (this.gameMode !== 'survival') {
-        this.throwBimberMolotov(-0.28);
-        this.throwBimberMolotov(0.28);
-      }
+      this.attackSwingTimer = 0.3;
+      if (this.rightArm) this.rightArm.rotation.x = -1.15;
+      this.sayQuote('RYTUAŁ MAFIKAPIBAR! Pentagram B4 otwiera przejście. Rodzina, do roboty!');
+      this.spawnMafiCapybaras(abilityDamageMultiplier);
     }
   }
 
