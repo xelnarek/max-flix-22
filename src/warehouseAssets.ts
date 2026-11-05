@@ -1209,6 +1209,64 @@ export function createCharacterModel(def: CharacterDef): {
     group.add(lampMount, ledLens);
   }
 
+  // Extra silhouette pieces make the three most visually similar head profiles unmistakable.
+  if (def.id === 'dawid') {
+    // Wide protective goggles over the orange helmet: two glass lenses and one bridge.
+    const goggleFrame = new THREE.MeshStandardMaterial({ color: 0x7c3415, roughness: 0.34, metalness: 0.28 });
+    const goggleGlass = new THREE.MeshStandardMaterial({ color: 0x7dd3fc, roughness: 0.12, metalness: 0.18, transparent: true, opacity: 0.58 });
+    for (const side of [-1, 1]) {
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.041, 0.009, 6, 14), goggleFrame);
+      rim.position.set(side * 0.052, 0.965, 0.133);
+      group.add(rim);
+      const lens = new THREE.Mesh(new THREE.CircleGeometry(0.034, 12), goggleGlass);
+      lens.position.set(side * 0.052, 0.965, 0.135);
+      group.add(lens);
+    }
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.014, 0.018), goggleFrame);
+    bridge.position.set(0, 0.965, 0.137);
+    group.add(bridge);
+    const chinStrap = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.18, 0.018), rubberMat);
+    chinStrap.position.set(0.13, 0.885, 0.015);
+    chinStrap.rotation.z = -0.22;
+    group.add(chinStrap);
+  } else if (def.id === 'mateusz') {
+    // Purple over-ear headset with a cyan top band; it remains visible below the cap.
+    const headsetMat = new THREE.MeshStandardMaterial({ color: 0x21123f, roughness: 0.42, metalness: 0.22 });
+    const headsetAccent = new THREE.MeshStandardMaterial({ color: 0x67e8f9, emissive: 0x0891b2, emissiveIntensity: 0.22, roughness: 0.28 });
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.151, 0.017, 6, 18, Math.PI), headsetMat);
+    band.position.set(0, 1.005, -0.015);
+    group.add(band);
+    [-1, 1].forEach((side) => {
+      const cup = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.095, 0.105), headsetMat);
+      cup.position.set(side * 0.151, 0.955, 0.015);
+      const light = new THREE.Mesh(new THREE.CircleGeometry(0.025, 10), headsetAccent);
+      light.position.set(side * 0.181, 0.955, 0.02);
+      light.rotation.y = side * Math.PI / 2;
+      group.add(cup, light);
+    });
+  } else if (def.id === 'piotr') {
+    // Two red fire-suppression canisters create a broad, recognisable backpack silhouette.
+    const cylinderMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.42, metalness: 0.18 });
+    const capMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.35, metalness: 0.25 });
+    const pack = new THREE.Mesh(new THREE.BoxGeometry(0.39, 0.35, 0.13), armorMat);
+    pack.position.set(0, 0.61, -0.205);
+    group.add(pack);
+    [-0.115, 0.115].forEach((side) => {
+      const canister = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.072, 0.34, 8), cylinderMat);
+      canister.position.set(side, 0.63, -0.29);
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.034, 0.055, 8), capMat);
+      cap.position.set(side, 0.825, -0.29);
+      const hose = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.22, 6), rubberMat);
+      hose.position.set(side * 1.45, 0.61, -0.205);
+      hose.rotation.z = Math.PI / 2;
+      group.add(canister, cap, hose);
+    });
+    const pressureGauge = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.02, 10), silverReflectMat);
+    pressureGauge.position.set(0, 0.72, -0.115);
+    pressureGauge.rotation.x = Math.PI / 2;
+    group.add(pressureGauge);
+  }
+
   // 3. Legs & Leather Steel-toe Boots
   const legGeo = new THREE.CapsuleGeometry(0.065, 0.21, 3, 12);
   const leftLeg = new THREE.Mesh(legGeo, pantsMat);
