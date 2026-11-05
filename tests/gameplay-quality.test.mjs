@@ -1158,7 +1158,9 @@ test('Survival can trigger a temporary forklift convoy event with a mobile-safe 
   assert.match(game, /const eventIndex = Math\.floor\(Math\.random\(\) \* 7\)/);
   assert.match(game, /KONWÓJ SZTAPLAREK • ALEJKI ZAMKNIĘTE/);
   assert.match(game, /survival_convoy_/);
-  assert.match(game, /const convoySize = this\.adaptivePerformanceTier >= 2 \|\| activeHazards >= 2/);
+  assert.match(game, /getSurvivalConvoyHazardCount\([\s\S]*?activeHazards,[\s\S]*?this\.adaptivePerformanceTier,[\s\S]*?Math\.abs\(lowerLane - upperLane\)/);
+  assert.match(game, /convoySize > 0 \? 'KONWÓJ SZTAPLAREK • ALEJKI ZAMKNIĘTE'/);
+  assert.match(game, /KONWÓJ WSTRZYMANY • ALEJKI ZAJĘTE/);
   assert.match(game, /convoyTruck\.life = 16/);
   assert.match(game, /convoyTruck\.dir = -1/);
   assert.match(game, /spawnDroppedPerk\(x, 0\.5, z, 'hardhat'\)/);
