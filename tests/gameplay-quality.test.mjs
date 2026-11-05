@@ -1040,3 +1040,38 @@ test('Survival leaderboard authenticates, queries only Survival rows and filters
   assert.match(firebase, /await initAuth\(\);[\s\S]*?const connected = await testFirestoreConnection\(\)/);
   assert.match(ranking, /getSurvivalLeaderboardSlice\([\s\S]*?entry\.mode === 'survival'/);
 });
+
+
+test('Piotr ultimate is a pentagram MafiKapibar summon, not a Molotov throw', async () => {
+  const [game, characters, sound] = await Promise.all([
+    read('../src/game.ts'), read('../src/characters.ts'), read('../src/sound.ts')
+  ]);
+  const abilityStart = game.indexOf('public triggerAbility()');
+  const abilityEnd = game.indexOf('private throwBimberMolotov', abilityStart);
+  assert.ok(abilityStart >= 0 && abilityEnd > abilityStart, 'character ability dispatcher should exist');
+  const ability = game.slice(abilityStart, abilityEnd);
+  assert.match(ability, /this\.spawnMafiCapybaras\(abilityDamageMultiplier\)/);
+  assert.doesNotMatch(ability, /throwBimberMolotov/);
+  assert.match(game, /private spawnMafiPentagramEffect\(groundY: number\)/);
+  assert.match(game, /new THREE\.Line\(starGeometry, starLineMaterial\)/);
+  assert.match(game, /private createMafiCapybaraModel\(index: number\)/);
+  assert.match(game, /private updateMafiCapybaras\(dt: number\)/);
+  assert.match(game, /const ritualRadius = this\.gameMode === 'survival' \? 5\.7 : 6\.2/);
+  assert.match(game, /const burstDamage = Math\.max\(2, Math\.ceil\(3 \* abilityDamageMultiplier\)\)/);
+  assert.match(game, /const damage = this\.scaleSurvivalDamage\(2\)/);
+  assert.match(game, /for \(let index = 0; index < 3; index\+\+\)/);
+  assert.match(characters, /abilityName: 'Rytuał MafiKapibar — Pentagram B4'/);
+  assert.match(characters, /MafiKapibary przez kilkanaście sekund orbitują wokół operatora/);
+  assert.match(sound, /else if \(charId === 'piotr'\) \{[\s\S]*?Ominous low ritual swell/);
+  assert.doesNotMatch(sound.slice(sound.indexOf("else if (charId === 'piotr')"), sound.indexOf('} else {', sound.indexOf("else if (charId === 'piotr')"))), /playMolotovThrow/);
+});
+
+test('MafiKapibar companions update during gameplay and are disposed when the world is cleared', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /this\.updateMafiCapybaras\(simDt\)/);
+  assert.match(game, /for \(const capybara of this\.mafiCapybaras\)/);
+  assert.match(game, /this\.disposeTemporaryObject\(capybara\.group\)/);
+  assert.match(game, /this\.mafiCapybaras = \[\]/);
+  assert.match(game, /capybara\.attackCooldown = 1\.18 \+ capybara\.index \* 0\.14/);
+  assert.match(game, /capybara\.life =/);
+});
