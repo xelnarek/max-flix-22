@@ -97,7 +97,7 @@ test('command pulses are wired to Survival movement and remain isolated from Cam
   ]);
   assert.ok(game.includes('this.updateSurvivalCommanderPulse(e, dt)'));
   assert.ok(game.includes('enemy.aiCommandBoostMultiplier ?? 1'));
-  assert.ok(game.includes('this.survivalCommanderPulseTimer'));
+  assert.ok(game.includes('boss.aiCommanderPulseTimer'));
   assert.ok(types.includes('aiCommanderPulseTimer?: number'));
   assert.ok(types.includes('aiCommandBoostTimer?: number'));
   assert.ok(types.includes('aiCommandBoostMultiplier?: number'));
