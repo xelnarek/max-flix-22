@@ -7,6 +7,7 @@ import { isEffectiveBossLaneDodge, isInsideBossAttackLane, isWithinBossImpactRad
 import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
 import { chooseSurvivalEventSpawnPoint } from './survivalSpawn.ts';
 import { getSurvivalUpgradeRarityMeta, getSurvivalWeaponInitialLevel, getSurvivalWeaponUpgradeSteps, rollSurvivalUpgradeRarity, type SurvivalUpgradeRarity } from './survivalRarity.ts';
+import { createSurvivalBossRewardOptions } from './survivalBossRewards.ts';
 import { shouldSpawnBosmanKrakow } from './survivalEncounters.ts';
 import { chooseCampaignRewardSpawnPoint } from './campaignRewards.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
@@ -184,7 +185,7 @@ export interface GameCallbacks {
   onPerkDropBanner?: (name: string, icon: string, desc: string, color: string) => void;
   onSurvivalAnnouncement?: (title: string, subtitle: string, detail: string) => void;
   onSurvivalUpdate?: (snapshot: SurvivalSnapshot) => void;
-  onSurvivalLevelUp?: (options: SurvivalUpgradeOption[]) => void;
+  onSurvivalLevelUp?: (options: SurvivalUpgradeOption[], context?: 'levelup' | 'boss-reward') => void;
   onSurvivalDashUpdate?: (progress: number, ready: boolean, remainingSeconds: number) => void;
 }
 
@@ -465,6 +466,7 @@ export class PaleciakiGameEngine {
   private survivalBossWave = 0;
   private survivalBossWarningTimer = 0;
   private survivalPendingBossWave = 0;
+  private survivalBossRewardPending = false;
   private survivalUpgradeStacks: Record<string, number> = {};
   private survivalEvolutions = new Set<string>();
   private survivalWeapons: SurvivalWeaponState[] = [];
@@ -475,6 +477,7 @@ export class PaleciakiGameEngine {
   private survivalAbilityKillRechargeMultiplier = 1;
   private survivalAbilityKillRechargeCapRatio = 0.22;
   private survivalAttackRateMultiplier = 1;
+  private survivalWeaponReloadMultiplier = 1;
   private survivalCriticalChance = 0.05;
   private survivalCriticalDamageMultiplier = 1.75;
   private survivalDashCooldownMultiplier = 1;
@@ -537,6 +540,14 @@ export class PaleciakiGameEngine {
       : 'Dyrektor Widmo pokonany. Terminal VIP jest dostępny.';
     this.emitFloatingToast(title, this.playerPos.x, this.playerPos.y + 2, this.playerPos.z, 'combo');
     this.callbacks.onPerkDropBanner?.(title, sector === 2 ? '🚪' : '🏁', detail, '#f59e0b');
+  }
+
+  private getScaledSurvivalWeaponReloadSeconds(weaponId: SurvivalWeaponId, level: number, evolved: boolean): number {
+    return getSurvivalWeaponReloadSeconds(
+      SURVIVAL_WEAPON_DEFS[weaponId].cooldown,
+      level,
+      evolved,
+    ) * this.survivalWeaponReloadMultiplier;
   }
 
   private scaleSurvivalDamage(baseDamage: number): number {
@@ -1234,11 +1245,13 @@ export class PaleciakiGameEngine {
     this.survivalBossWave = 0;
     this.survivalBossWarningTimer = 0;
     this.survivalPendingBossWave = 0;
+    this.survivalBossRewardPending = false;
     this.survivalDamageMultiplier = 1;
     this.survivalAbilityCooldownMultiplier = 1;
     this.survivalAbilityKillRechargeMultiplier = 1;
     this.survivalAbilityKillRechargeCapRatio = 0.22;
     this.survivalAttackRateMultiplier = 1;
+    this.survivalWeaponReloadMultiplier = 1;
     this.survivalCriticalChance = 0.05;
     this.survivalCriticalDamageMultiplier = 1.75;
     this.survivalDashCooldownMultiplier = 1;
@@ -1271,6 +1284,7 @@ export class PaleciakiGameEngine {
     this.survivalPomazaniecMarkerPulse = 0;
     this.armorBlockCooldown = 0;
     this.survivalPendingOptions = [];
+    this.survivalBossRewardPending = false;
     this.marcinReclamationTimer = 0;
     this.grzesiekCrushTimer = 0;
     this.grzesiekCrushPulse = 0;
@@ -1340,6 +1354,7 @@ export class PaleciakiGameEngine {
     this.survivalWeaponDispatchCooldown = 0;
     this.survivalDamageMultiplier = 1;
     this.survivalAttackRateMultiplier = 1;
+    this.survivalWeaponReloadMultiplier = 1;
     this.survivalMoveMultiplier = 1;
     this.survivalMagnetMultiplier = 1;
     this.survivalRangeMultiplier = 1;
@@ -1932,7 +1947,7 @@ export class PaleciakiGameEngine {
           id: weaponId,
           level: initialLevel,
           // Preserve a readable first reload while rewarding higher-rarity unlocks with a head start.
-          cooldown: getSurvivalWeaponReloadSeconds(SURVIVAL_WEAPON_DEFS[weaponId].cooldown, initialLevel, false) * SURVIVAL_WEAPON_INITIAL_RELOAD_FACTOR,
+          cooldown: this.getScaledSurvivalWeaponReloadSeconds(weaponId, initialLevel, false) * SURVIVAL_WEAPON_INITIAL_RELOAD_FACTOR,
         });
         sound.playAbility(this.currentCharacterId);
       }
@@ -1941,8 +1956,8 @@ export class PaleciakiGameEngine {
       const weapon = this.survivalWeapons.find((entry) => entry.id === weaponId);
       if (weapon && weapon.level < 5) {
         weapon.level = Math.min(5, weapon.level + getSurvivalWeaponUpgradeSteps(choice.rarity));
-        const upgradedCooldown = getSurvivalWeaponReloadSeconds(
-          SURVIVAL_WEAPON_DEFS[weaponId].cooldown, weapon.level, !!weapon.evolved
+        const upgradedCooldown = this.getScaledSurvivalWeaponReloadSeconds(
+          weaponId, weapon.level, !!weapon.evolved
         );
         // Keep the current reload; if it was already ready, add a short recovery
         // instead of firing immediately as a side effect of the level-up.
@@ -1955,7 +1970,7 @@ export class PaleciakiGameEngine {
       const hasPassivePair = (this.survivalUpgradeStacks[definition.evolutionPassive] || 0) > 0;
       if (weapon && weapon.level >= 5 && !weapon.evolved && this.survivalElapsed >= 300 && hasPassivePair) {
         weapon.evolved = true;
-        const evolvedCooldown = getSurvivalWeaponReloadSeconds(definition.cooldown, weapon.level, true);
+        const evolvedCooldown = this.getScaledSurvivalWeaponReloadSeconds(weaponId, weapon.level, true);
         // Evolution changes impact and grants only a modest reload improvement.
         weapon.cooldown = getWeaponRecoveryAfterUpgrade(weapon.cooldown, evolvedCooldown);
         this.triggerBloomPulse(0.7);
@@ -1969,6 +1984,17 @@ export class PaleciakiGameEngine {
         );
         sound.playAbility(this.currentCharacterId);
       }
+    } else if (choice.id === 'boss_damage_core') {
+      this.survivalDamageMultiplier = Math.min(2.05, this.survivalDamageMultiplier * 1.24);
+    } else if (choice.id === 'boss_weapon_overdrive') {
+      this.survivalAttackRateMultiplier = Math.max(0.78, this.survivalAttackRateMultiplier * 0.92);
+      this.survivalWeaponReloadMultiplier = Math.max(0.72, this.survivalWeaponReloadMultiplier * 0.92);
+    } else if (choice.id === 'boss_bulwark') {
+      this.maxHp += 2;
+      this.hp = Math.min(this.maxHp, this.hp + 2);
+      this.activePerks.shield = true;
+      this.callbacks.onHpUpdate(this.hp, this.maxHp);
+      this.callbacks.onPerksUpdate?.(this.activePerks);
     } else {
       const strength = choice.strengthMultiplier;
       this.survivalUpgradeStacks[choice.id] = (this.survivalUpgradeStacks[choice.id] || 0) + 1;
@@ -2043,6 +2069,7 @@ export class PaleciakiGameEngine {
 
     this.checkSurvivalEvolutions();
     this.survivalPendingOptions = [];
+    this.survivalBossRewardPending = false;
     this.state = 'playing';
     sound.startMusic();
     this.emitFloatingToast(choice.rarityLabel + ' MODUŁ: ' + choice.title, this.playerPos.x, this.playerPos.y + 1.6, this.playerPos.z, 'perk');
@@ -2235,7 +2262,7 @@ export class PaleciakiGameEngine {
   }
 
   public rerollSurvivalUpgrades(): boolean {
-    if (this.gameMode !== 'survival' || this.state !== 'levelup' || this.survivalRerolls <= 0) return false;
+    if (this.gameMode !== 'survival' || this.state !== 'levelup' || this.survivalBossRewardPending || this.survivalRerolls <= 0) return false;
     this.survivalRerolls--;
     this.survivalPendingOptions = this.rollSurvivalUpgradeOptions(this.survivalPendingOptions.map((option) => option.id));
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
@@ -2249,6 +2276,7 @@ export class PaleciakiGameEngine {
     if (
       this.gameMode !== 'survival' ||
       this.state !== 'levelup' ||
+      this.survivalBossRewardPending ||
       this.survivalAdRerollGranted
     ) return false;
 
@@ -2261,7 +2289,7 @@ export class PaleciakiGameEngine {
   }
 
   public skipSurvivalUpgrade(): boolean {
-    if (this.gameMode !== 'survival' || this.state !== 'levelup' || this.survivalSkips <= 0) return false;
+    if (this.gameMode !== 'survival' || this.state !== 'levelup' || this.survivalBossRewardPending || this.survivalSkips <= 0) return false;
     this.survivalSkips--;
     this.state = 'playing';
     sound.startMusic();
@@ -4939,8 +4967,8 @@ export class PaleciakiGameEngine {
     if (!readyWeapon) return;
 
     this.fireSurvivalWeapon(readyWeapon, target);
-    readyWeapon.cooldown = getSurvivalWeaponReloadSeconds(
-      SURVIVAL_WEAPON_DEFS[readyWeapon.id].cooldown, readyWeapon.level, !!readyWeapon.evolved
+    readyWeapon.cooldown = this.getScaledSurvivalWeaponReloadSeconds(
+      readyWeapon.id, readyWeapon.level, !!readyWeapon.evolved
     );
     this.survivalWeaponDispatchCooldown = SURVIVAL_WEAPON_DISPATCH_COOLDOWN_SECONDS;
   }
@@ -6638,6 +6666,54 @@ export class PaleciakiGameEngine {
     sound.stopMusic();
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
     this.callbacks.onSurvivalLevelUp?.([...this.survivalPendingOptions]);
+    sound.playAbility(this.currentCharacterId);
+  }
+
+  private beginSurvivalBossReward(bossName: string) {
+    if (
+      this.gameMode !== 'survival' ||
+      this.state !== 'playing' ||
+      this.survivalBossRewardPending
+    ) return;
+
+    const ownedWeaponIds = new Set(this.survivalWeapons.map((weapon) => weapon.id));
+    let weaponOffer:
+      | { kind: 'unlock'; id: string; name: string; icon: string }
+      | { kind: 'upgrade'; id: string; name: string; icon: string; currentLevel: number }
+      | undefined;
+
+    // Prefer a new weapon whose time gate has already opened. If the arsenal is
+    // complete, advance the least-developed owned weapon by two legendary levels.
+    for (const [weaponId, definition] of Object.entries(SURVIVAL_WEAPON_DEFS) as Array<[SurvivalWeaponId, typeof SURVIVAL_WEAPON_DEFS[SurvivalWeaponId]]>) {
+      if (!ownedWeaponIds.has(weaponId) && this.survivalElapsed >= definition.unlockAfter) {
+        weaponOffer = { kind: 'unlock', id: weaponId, name: definition.name, icon: definition.icon };
+        break;
+      }
+    }
+
+    if (!weaponOffer) {
+      const nextWeapon = this.survivalWeapons
+        .filter((weapon) => weapon.level < 5)
+        .sort((a, b) => a.level - b.level || a.id.localeCompare(b.id))[0];
+      if (nextWeapon) {
+        const definition = SURVIVAL_WEAPON_DEFS[nextWeapon.id];
+        weaponOffer = {
+          kind: 'upgrade',
+          id: nextWeapon.id,
+          name: definition.name,
+          icon: definition.icon,
+          currentLevel: nextWeapon.level,
+        };
+      }
+    }
+
+    this.survivalPendingOptions = createSurvivalBossRewardOptions(weaponOffer);
+    this.survivalBossRewardPending = true;
+    this.state = 'levelup';
+    sound.stopMusic();
+    this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+    this.callbacks.onSurvivalLevelUp?.([...this.survivalPendingOptions], 'boss-reward');
+    this.emitFloatingToast('🏆 ' + bossName.toUpperCase() + ' POKONANY — WYBIERZ LEGENDARNĄ NAGRODĘ', this.playerPos.x, this.playerPos.y + 1.8, this.playerPos.z, 'combo');
     sound.playAbility(this.currentCharacterId);
   }
 
@@ -10481,6 +10557,13 @@ export class PaleciakiGameEngine {
       const impactColor = e.type === 'pomazaniec' ? 0xf472b6 : e.id.includes('sebix') ? 0xf97316 : 0x38bdf8;
       this.spawnCompactImpact(e.x, e.y + 0.62, e.z, impactColor);
       this.triggerScreenShake(0.35, 0.25);
+    }
+
+    if (
+      this.gameMode === 'survival' &&
+      (e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' || e.type === 'sebix_m')
+    ) {
+      this.beginSurvivalBossReward(e.name);
     }
   }
 

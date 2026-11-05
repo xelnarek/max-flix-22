@@ -2810,3 +2810,30 @@ html[data-ui-landscape-touch="true"] .story-modal-card .story-slide {
   border-color: rgba(244,191,85,.9) !important;
   box-shadow: inset 0 0 0 1px rgba(244,191,85,.20), 0 0 18px rgba(244,191,85,.13) !important;
 }
+
+
+/* Major boss rewards are a separate, mandatory draft: no reroll, skip or ad actions. */
+#survival-levelup[data-mode="boss-reward"] .survival-levelup-card {
+  border-color: rgba(250, 204, 21, .72) !important;
+  box-shadow: 0 28px 80px rgba(0,0,0,.62), 0 0 36px rgba(245,158,11,.16), inset 0 1px 0 rgba(255,255,255,.06) !important;
+}
+#survival-levelup[data-mode="boss-reward"] .survival-levelup-icon {
+  color: #fff7cc !important;
+  background: linear-gradient(145deg, #92400e, #b45309) !important;
+  box-shadow: 0 0 28px rgba(245,158,11,.28) !important;
+}
+#survival-levelup[data-mode="boss-reward"] .survival-levelup-card .modal-title {
+  color: #fcd34d !important;
+}
+#survival-levelup[data-mode="boss-reward"] .survival-upgrade-card.rarity-legendary {
+  border-color: rgba(250,204,21,.5) !important;
+  background: linear-gradient(145deg, rgba(69,45,16,.72), rgba(21,27,37,.98)) !important;
+}
+#survival-levelup[data-mode="boss-reward"] .survival-upgrade-card.rarity-legendary:hover,
+#survival-levelup[data-mode="boss-reward"] .survival-upgrade-card.rarity-legendary:focus-visible {
+  border-color: #facc15 !important;
+  background: linear-gradient(145deg, rgba(120,72,12,.48), rgba(21,27,37,.98)) !important;
+}
+#survival-levelup[data-mode="boss-reward"] .survival-upgrade-actions {
+  display: none !important;
+}

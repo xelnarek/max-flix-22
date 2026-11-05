@@ -765,8 +765,24 @@ class PaleciakiScene extends xb.Script {
             survivalSkipBtn.disabled = snapshot.skips <= 0;
           }
         },
-        onSurvivalLevelUp: (options: SurvivalUpgradeOption[]) => {
+        onSurvivalLevelUp: (options: SurvivalUpgradeOption[], context: 'levelup' | 'boss-reward' = 'levelup') => {
           if (!survivalUpgradeOptions || !survivalLevelUp) return;
+          const isBossReward = context === 'boss-reward';
+          survivalLevelUp.dataset.mode = context;
+          const titleElement = document.getElementById('survival-levelup-title');
+          const descriptionElement = document.getElementById('survival-levelup-desc');
+          const iconElement = document.getElementById('survival-levelup-icon');
+          const hintElement = document.getElementById('survival-levelup-hint');
+          if (titleElement) titleElement.textContent = isBossReward ? 'NAGRODA ZA POKONANIE BOSS-A' : 'AWANS OPERATORA';
+          if (descriptionElement) descriptionElement.textContent = isBossReward
+            ? 'Boss pokonany. Wybierz jedno z trzech legendarnych wzmocnień: moc, rozwój broni albo obronę.'
+            : 'Wybierz jeden z trzech modułów. Rzadkie, epickie i legendarne wersje wzmacniają ten sam efekt.';
+          if (iconElement) iconElement.textContent = isBossReward ? '🏆' : '⬆';
+          if (hintElement) hintElement.textContent = isBossReward
+            ? 'Nagroda jest obowiązkowa i nie podlega przerzuceniu ani pominięciu. Akcja pozostaje wstrzymana do wyboru.'
+            : 'Wybór zatrzymuje akcję. Rzadkość wzmacnia efekt; legendarna broń może odblokować się na wyższym poziomie.';
+          survivalRerollBtn?.classList.toggle('hidden', isBossReward);
+          survivalSkipBtn?.classList.toggle('hidden', isBossReward);
           survivalUpgradeOptions.replaceChildren();
           for (const option of options) {
             const card = document.createElement('button');
