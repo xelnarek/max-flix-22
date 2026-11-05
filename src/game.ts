@@ -1454,7 +1454,7 @@ export class PaleciakiGameEngine {
     this.survivalRegenMultiplier = 0;
     this.survivalRegenTimer = 60;
     this.survivalDroneCooldown = 1.2;
-    this.survivalSpawnTimer = 10.5;
+    this.survivalSpawnTimer = 2.8;
     this.survivalEventTimer = 24;
     this.survivalHazardTimer = 12;
     this.currentActiveSector = 1;
@@ -6305,7 +6305,7 @@ export class PaleciakiGameEngine {
         const groupLimit = isMobile ? (this.adaptivePerformanceTier >= 2 ? 3 : this.adaptivePerformanceTier === 1 ? 4 : 5) : 7;
         const groupSize = Math.min(groupLimit, 2 + Math.floor(this.survivalWave * 0.32), enemyCap - aliveCount);
         for (let i = 0; i < groupSize; i++) this.spawnSurvivalEnemy(this.survivalWave);
-        this.survivalSpawnTimer = Math.max(8.2, 13.5 - this.survivalWave * 0.16);
+        this.survivalSpawnTimer = Math.max(6.5, 10.5 - this.survivalWave * 0.18);
       }
     }
 
