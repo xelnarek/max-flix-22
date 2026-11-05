@@ -489,14 +489,16 @@ export async function getTopLeaderboard(maxEntries = 15): Promise<LeaderboardEnt
   console.log(`[Firebase:Leaderboard] 📥 Pobieranie rankingu wszystkich trybów z kolekcji '${collectionPath}'...`);
 
   try {
-    try {
-      await withTimeout(
-        syncPendingLeaderboardScores(),
-        LEADERBOARD_SYNC_TIMEOUT_MS,
-        'Global leaderboard queue sync',
-      );
-    } catch (error) {
-      console.warn('[Firebase:Leaderboard] ⏱️ Pomijam wolną synchronizację kolejki i pobieram ranking.', error);
+    if (currentUser?.uid) {
+      try {
+        await withTimeout(
+          syncPendingLeaderboardScores(),
+          LEADERBOARD_SYNC_TIMEOUT_MS,
+          'Global leaderboard queue sync',
+        );
+      } catch (error) {
+        console.warn('[Firebase:Leaderboard] ⏱️ Pomijam wolną synchronizację kolejki i pobieram ranking.', error);
+      }
     }
     // Fetch a wider global window, then merge offline entries and apply one shared
     // cross-mode comparator. Mode labels do not split the default global ranking.
@@ -551,14 +553,19 @@ export async function getTopSurvivalLeaderboard(maxEntries = 15): Promise<Leader
   const safeMaxEntries = Number.isFinite(maxEntries) ? Math.max(0, Math.floor(maxEntries)) : 15;
 
   try {
-    try {
-      await withTimeout(
-        syncPendingLeaderboardScores(),
-        LEADERBOARD_SYNC_TIMEOUT_MS,
-        'Survival leaderboard queue sync',
-      );
-    } catch (error) {
-      console.warn('[Firebase:Leaderboard] ⏱️ Pomijam wolną synchronizację kolejki; pobieram ranking Survival.', error);
+    // Public leaderboard reads do not require an authenticated session. Avoid
+    // starting a second anonymous-auth timeout after the boot probe has failed;
+    // the cached/pending queue is merged below while the public read proceeds.
+    if (currentUser?.uid) {
+      try {
+        await withTimeout(
+          syncPendingLeaderboardScores(),
+          LEADERBOARD_SYNC_TIMEOUT_MS,
+          'Survival leaderboard queue sync',
+        );
+      } catch (error) {
+        console.warn('[Firebase:Leaderboard] ⏱️ Pomijam wolną synchronizację kolejki; pobieram ranking Survival.', error);
+      }
     }
     // This equality-only query uses Firestore's automatic single-field index.
     // Fetch all Survival rows before sorting locally; a fixed page could hide a
