@@ -7,7 +7,7 @@ test('the opening level remains quick and unchanged', () => {
   assert.equal(getSurvivalXpRequirement(2), 15);
 });
 
-test('later Survival levels need modestly less XP than the previous curve', () => {
+test('later Survival levels need less XP than the previous curve while remaining progressive', () => {
   for (let level = 2; level <= 60; level++) {
     const tuned = getSurvivalXpRequirement(level);
     const previous = Math.round(10 + level * 3);
