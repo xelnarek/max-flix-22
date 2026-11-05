@@ -194,7 +194,7 @@ test('Piotr ability badge uses the pentagram icon and the character description 
   assert.ok(iconStart >= 0, 'Piotr ability icon should be present');
   const icon = app.slice(iconStart, app.indexOf('",', iconStart));
   assert.match(icon, /circle cx='24' cy='24' r='19'/);
-  assert.match(icon, /M24 5 L35 38 6 18/);
+  assert.match(icon, /M24 5 35 38 6 18h36/);
   assert.match(characters, /Rytuał MafiKapibar — Pentagram B4/);
   assert.doesNotMatch(characters, /Potrójna Salwa Płonących Butli/);
 });
