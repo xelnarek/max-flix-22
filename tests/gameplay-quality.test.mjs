@@ -1062,7 +1062,7 @@ test('Piotr ultimate is a pentagram MafiKapibar summon, not a Molotov throw', as
   assert.match(game, /const damage = this\.scaleSurvivalDamage\(capybara\.index === 1 \? 3 : 2\)/);
   assert.match(game, /for \(let index = 0; index < 3; index\+\+\)/);
   assert.match(characters, /abilityName: 'Rytuał MafiKapibar — Pentagram B4'/);
-  assert.match(characters, /Don i hybrydowy ochroniarz ostrzeliwują cele świecącymi pociskami z ciężkich, stylizowanych karabinów/);
+  assert.match(characters, /trzymają szyk V za operatorem/);
   assert.match(sound, /else if \(charId === 'piotr'\) \{[\s\S]*?Ominous low ritual swell/);
   assert.doesNotMatch(sound.slice(sound.indexOf("else if (charId === 'piotr')"), sound.indexOf('} else {', sound.indexOf("else if (charId === 'piotr')"))), /playMolotovThrow/);
 });
@@ -1107,7 +1107,7 @@ test('MafiKapibar enforcers fire arcade tracers and retain heavy baton melee com
   assert.match(update, /const rifleGuard = capybara\.index !== 1 && nearest > 4\.0/);
   assert.match(update, /this\.projectiles\.push\(\{[\s\S]*?damage: 2,[\s\S]*?weaponProjectile: true/);
   assert.match(update, /scaleSurvivalDamage\(capybara\.index === 1 \? 3 : 2\)/);
-  assert.match(update, /PODWÓJNA PAŁKA MAFII/);
+  assert.match(update, /MAFIA OCHRANIA OPERATORA/);
 });
 
 test('mobile performance tiers limit crowd, particles and shadow refresh under load', async () => {
