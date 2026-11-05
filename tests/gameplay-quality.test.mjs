@@ -114,17 +114,34 @@ test('camera fades perimeter walls by ray intersection and individual Survival l
   const game = await read('../src/game.ts');
   assert.match(game, /private registerCameraOccluder\(mesh: THREE\.Mesh, fadeOpacity = 0\.18, fadeRadius = 0\)/);
   assert.match(game, /private updateCameraOcclusion\(dt: number\)/);
+  assert.match(game, /private updateCameraOcclusionFade\(dt: number\)/);
   assert.match(game, /cameraOcclusionRaycaster\.intersectObjects\(this\.cameraOccluders, false, hits\)/);
   assert.match(game, /this\.cameraOcclusionCooldown = 0\.075/);
   assert.match(game, /mesh\.getWorldPosition\(this\.cameraOcclusionWorldPosition\)/);
   assert.match(game, /operatorUnderFixture = overhead && dx \* dx \+ dz \* dz <= state\.fadeRadius \* state\.fadeRadius/);
   assert.match(game, /const shouldFade = rayBlocked \|\| operatorUnderFixture/);
-  assert.match(game, /Math\.min\(original\.opacity, state\.fadeOpacity\)/);
+  assert.match(game, /currentFade: 0,[\s\S]*?targetFade: 0/);
+  assert.match(game, /THREE\.MathUtils\.damp\(state\.currentFade, state\.targetFade, 16, frameDt\)/);
+  assert.match(game, /THREE\.MathUtils\.lerp\([\s\S]*?Math\.min\(original\.opacity, state\.fadeOpacity\)/);
+  assert.match(game, /private registerSurvivalArenaOccluders\(\)/);
+  assert.match(game, /private registerCameraOccludersInGroup\(root: THREE\.Object3D, fadeOpacity = 0\.14\)/);
+  assert.match(game, /this\.registerSurvivalArenaOccluders\(\)/);
+  assert.match(game, /this\.registerCameraOccludersInGroup\(root, 0\.14\)/);
+  assert.match(game, /private createSurvivalSightlineMarker\(\)/);
+  assert.match(game, /survival-sightline-player-marker/);
+  assert.match(game, /cameraOcclusionHitSet\.has\(mesh\)/);
+  assert.match(game, /this\.cameraOcclusionHitSet\.clear\(\)/);
   assert.match(game, /this\.registerCameraOccluder\(fixture, 0\.07, 3\.15\)/);
   assert.match(game, /fixture\.name = 'survival-ceiling-light-'/);
   assert.match(game, /for \(const fixture of this\.survivalCeilingFixtures\)[\s\S]*?this\.disposeTemporaryObject\(fixture\)[\s\S]*?this\.survivalCeilingFixtures = \[\]/);
   assert.match(game, /this\.restoreCameraOccluders\(\)/);
   assert.match(game, /this\.updateCameraOcclusion\(dt\)/);
+  assert.match(game, /this\.registerCameraOccluder\(column, 0\.13\)/);
+  assert.match(game, /this\.registerCameraOccluder\(lower, 0\.13\)/);
+  assert.match(game, /this\.registerCameraOccluder\(post, 0\.13\)/);
+  assert.match(game, /this\.registerCameraOccluder\(shelf, 0\.13\)/);
+  assert.match(game, /this\.registerCameraOccluder\(crate, 0\.13\)/);
+  assert.match(game, /this\.survivalSightlineMarker = null/);
   assert.ok((game.match(/this\.registerCameraOccluder\(backWall\)/g) || []).length >= 3);
 });
 
@@ -325,12 +342,14 @@ test('Survival crowd rendering defers distant model attachments and limits shado
   assert.match(game, /const shadowHz = this\.adaptivePerformanceTier >= 2 \? 12 : this\.adaptivePerformanceTier === 1 \? 18 : 24/);
 });
 
-test('camera wall fades reuse raycast results and only update materials on state changes', async () => {
+test('camera visibility reuses one throttled raycast result and updates fade targets only on state changes', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /cameraOcclusionHits: THREE\.Intersection<THREE\.Object3D>\[\]/);
   assert.match(game, /intersectObjects\(this\.cameraOccluders, false, hits\)/);
-  assert.match(game, /if \(shouldFade === state\.isFaded\) continue/);
-  assert.match(game, /if \(shaderVariantChanged\) material\.needsUpdate = true/);
+  assert.match(game, /cameraOcclusionHitSet\.has\(mesh\)/);
+  assert.match(game, /if \(shouldFade !== state\.isFaded\) \{/);
+  assert.match(game, /state\.targetFade = shouldFade \? 1 : 0/);
+  assert.match(game, /if \(material\.transparent !== transparent\)[\s\S]*?material\.needsUpdate = true/);
   assert.doesNotMatch(game, /const hitMeshes = new Set\(/);
 });
 
