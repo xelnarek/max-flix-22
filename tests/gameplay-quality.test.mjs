@@ -135,10 +135,10 @@ test('the three random Survival maps have separate readable landmarks without fi
   assert.match(maps, /cold_storage/);
   assert.match(game, /mapId === 'container_terminal'/);
   assert.match(game, /mapId === 'cold_storage'/);
-  assert.match(game, /warehouse-b4-loading-shutter/);
+  assert.match(game, /shutterPanels = new THREE\\.InstancedMesh/);
   assert.match(game, /portChevrons/);
-  assert.match(game, /cold-storage-control-panel/);
-  assert.match(game, /cold-storage-frost-stack/);
+  assert.match(game, /panelScreens = new THREE\\.InstancedMesh/);
+  assert.match(game, /frostCrystals = new THREE\\.InstancedMesh/);
 });
 
 test('Survival voice lines use one bottom radio caption outside the top-left HUD', async () => {
