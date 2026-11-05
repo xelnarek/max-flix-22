@@ -1151,3 +1151,16 @@ test('MafiKapibara hold a rear V bodyguard formation and intercept enemies threa
   assert.match(characters, /trzymają szyk V za operatorem/);
   assert.match(characters, /priorytetowo przechwytuje wrogów zagrażających operatorowi/);
 });
+
+
+test('Survival can trigger a temporary forklift convoy event with a mobile-safe hazard cap', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /const eventIndex = Math\.floor\(Math\.random\(\) \* 7\)/);
+  assert.match(game, /KONWÓJ SZTAPLAREK • ALEJKI ZAMKNIĘTE/);
+  assert.match(game, /survival_convoy_/);
+  assert.match(game, /const convoySize = this\.adaptivePerformanceTier >= 2 \|\| activeHazards >= 2/);
+  assert.match(game, /convoyTruck\.life = 16/);
+  assert.match(game, /convoyTruck\.dir = -1/);
+  assert.match(game, /spawnDroppedPerk\(x, 0\.5, z, 'hardhat'\)/);
+  assert.match(game, /this\.hazards\.filter\(\(hazard\) => hazard\.active\)/);
+});
