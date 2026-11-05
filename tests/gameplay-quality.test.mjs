@@ -1135,3 +1135,17 @@ test('Survival wave modifiers announce a tactical shift and change enemy stats a
   assert.match(game, /waveMutator\.id === 'armored'[\s\S]*?enemy\.shieldActive = true[\s\S]*?enemy\.shieldRing = shieldRing/);
   assert.match(types, /survivalXpMultiplier\?: number/);
 });
+
+
+test('MafiKapibara hold a rear V bodyguard formation and intercept enemies threatening the operator', async () => {
+  const [game, characters] = await Promise.all([read('../src/game.ts'), read('../src/characters.ts')]);
+  assert.match(game, /const formationSlots = \[[\s\S]*?lateral: -2\.05, forward: -0\.55[\s\S]*?lateral: 0, forward: -2\.45[\s\S]*?lateral: 2\.05, forward: -0\.55/);
+  assert.match(game, /this\.playerPos\.x \+ rightX \* slot\.lateral \+ forwardX \* slot\.forward/);
+  assert.match(game, /const threatensPlayer = playerDistance <= 6\.25/);
+  assert.match(game, /const threatScore =[\s\S]*?playerDistance \* 0\.48[\s\S]*?guardDistance \* 0\.28/);
+  assert.match(game, /const interceptingPlayer = playerThreatDistance <= 5\.2/);
+  assert.match(game, /MAFIA OCHRANIA OPERATORA/);
+  assert.doesNotMatch(game, /capybara\.orbitAngle/);
+  assert.match(characters, /trzymają szyk V za operatorem/);
+  assert.match(characters, /priorytetowo przechwytuje wrogów zagrażających operatorowi/);
+});
