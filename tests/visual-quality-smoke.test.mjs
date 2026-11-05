@@ -156,3 +156,31 @@ test('operator attack and ability controls use distinct vector SVG icons with ro
   }
   assert.ok(html.includes('id="attack-icon"') && html.includes('id="ability-icon"'));
 });
+
+
+test('every operator 3D model has a distinct silhouette, skin tone and role-specific gear', async () => {
+  const source = await read('../src/warehouseAssets.ts');
+  assert.match(source, /const silhouette: Record<CharacterId/);
+  for (const id of ['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr']) {
+    assert.match(source, new RegExp(id + ':\\s*\\{ torsoWidth:'));
+  }
+  assert.match(source, /skinColors: Record<CharacterId/);
+  assert.match(source, /goggleFrame/);
+  assert.match(source, /headsetAccent/);
+  assert.match(source, /cylinderMat/);
+  assert.match(source, /profile\.shoulderSize/);
+  assert.match(source, /profile\.torsoWidth/);
+});
+
+test('operator selector populates five unique face portraits instead of static shared badges', async () => {
+  const [app, html] = await Promise.all([read('../src/index.ts'), read('../index.html')]);
+  assert.match(app, /const operatorPortrait = \(id: CharacterId\): string/);
+  assert.match(app, /document\.querySelectorAll<HTMLElement>\('\.char-card\[data-char\]'\)/);
+  assert.match(app, /badge\.innerHTML = operatorPortrait\(cardId\)/);
+  assert.match(app, /if \(heroAvatar\) heroAvatar\.innerHTML = operatorPortrait\(id\)/);
+  assert.match(html, /data-char="marcin"/);
+  assert.match(html, /data-char="grzesiek"/);
+  assert.match(html, /data-char="dawid"/);
+  assert.match(html, /data-char="mateusz"/);
+  assert.match(html, /data-char="piotr"/);
+});
