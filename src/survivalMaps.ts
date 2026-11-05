@@ -1,5 +1,5 @@
-export type SurvivalMapId = 'warehouse_b4' | 'container_terminal' | 'cold_storage';
-export type SurvivalSecretStyle = 'wz' | 'cassette' | 'capybara';
+export type SurvivalMapId = 'warehouse_b4' | 'container_terminal' | 'cold_storage' | 'night_sorting';
+export type SurvivalSecretStyle = 'wz' | 'cassette' | 'capybara' | 'rabbit_hole';
 
 export interface SurvivalSecretDefinition {
   id: string;
@@ -36,6 +36,7 @@ export const SURVIVAL_MAP_IDS: readonly SurvivalMapId[] = [
   'warehouse_b4',
   'container_terminal',
   'cold_storage',
+  'night_sorting',
 ];
 
 export const SURVIVAL_MAPS: Readonly<Record<SurvivalMapId, SurvivalMapDefinition>> = {
@@ -61,6 +62,7 @@ export const SURVIVAL_MAPS: Readonly<Record<SurvivalMapId, SurvivalMapDefinition
       { id: 'golden_wz', name: 'Złota WZ-tka', x: -48, z: 6.5, style: 'wz' },
       { id: 'b4_archive', name: 'Tajna kaseta B4', x: 1.5, z: -13.2, style: 'cassette' },
       { id: 'bronze_capybara', name: 'Kapibara z brązu', x: 48, z: -6.5, style: 'capybara' },
+      { id: 'oniric_dream', name: 'Oniryczny sen', x: -27, z: 2.4, style: 'rabbit_hole' },
     ],
   },
   container_terminal: {
@@ -85,6 +87,7 @@ export const SURVIVAL_MAPS: Readonly<Record<SurvivalMapId, SurvivalMapDefinition
       { id: 'manifest_17', name: 'Tajny manifest 17', x: -50, z: 5.2, style: 'wz' },
       { id: 'captains_tape', name: 'Kaseta kapitana portu', x: 0, z: 15.2, style: 'cassette' },
       { id: 'dock_capybara', name: 'Kapibara dokerów', x: 50, z: -5.2, style: 'capybara' },
+      { id: 'oniric_dream', name: 'Oniryczny sen', x: 28, z: -1.8, style: 'rabbit_hole' },
     ],
   },
   cold_storage: {
@@ -109,6 +112,32 @@ export const SURVIVAL_MAPS: Readonly<Record<SurvivalMapId, SurvivalMapDefinition
       { id: 'frozen_wz', name: 'Zamarznięta WZ-tka', x: -50, z: -5.2, style: 'wz' },
       { id: 'cold_archive', name: 'Kaseta z komory -18°C', x: 0, z: -15.2, style: 'cassette' },
       { id: 'ice_capybara', name: 'Lodowa kapibara', x: 50, z: 5.2, style: 'capybara' },
+      { id: 'oniric_dream', name: 'Oniryczny sen', x: -28, z: -1.5, style: 'rabbit_hole' },
+    ],
+  },
+  night_sorting: {
+    id: 'night_sorting',
+    name: 'Sortownia Widmowa',
+    subtitle: 'Nocna strefa skanerów',
+    description: 'Fioletowa sortownia pod neonowymi bramkami. Pulsujące pasy świetlne i skanery rozbijają monotonię hali. Przeciwnicy poruszają się o 4% szybciej, a eliminacje dają +15% XP.',
+    combatModifier: {
+      title: 'NOCNY PRZERZUT',
+      subtitle: 'Neonowa sortownia • tempo +4%',
+      description: 'Skanery pobudzają przeciwników: poruszają się o 4% szybciej, ale eliminacje dają +15% XP.',
+      healthMultiplier: 0.98,
+      speedMultiplier: 1.04,
+      xpMultiplier: 1.15,
+    },
+    backgroundColor: 0x090817,
+    fogColor: 0x17132b,
+    floorColor: 0x30223d,
+    wallColor: 0x362047,
+    accentColor: 0xf472b6,
+    secretLocations: [
+      { id: 'night_manifest', name: 'Manifest po północy', x: -50, z: 5.2, style: 'wz' },
+      { id: 'ghost_cassette', name: 'Kaseta z nocnej zmiany', x: 0, z: 15.2, style: 'cassette' },
+      { id: 'neon_capybara', name: 'Kapibara neonów', x: 50, z: -5.2, style: 'capybara' },
+      { id: 'oniric_dream', name: 'Oniryczny sen', x: 27, z: 2.0, style: 'rabbit_hole' },
     ],
   },
 };
