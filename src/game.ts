@@ -23,6 +23,7 @@ import { advanceSurvivalCommanderTiming } from './survivalCommanderTiming.ts';
 import { getSurvivalLeaderLossTargets, getSurvivalMoraleBreakMultiplier, SURVIVAL_LEADER_LOSS_BREAK_SECONDS } from './survivalMorale.ts';
 import { selectSurvivalSupportPulseTargets, SURVIVAL_SUPPORT_PULSE_RADIUS, SURVIVAL_SUPPORT_PULSE_INTERVAL_SECONDS, SURVIVAL_SUPPORT_SHIELD_SECONDS } from './survivalSupport.ts';
 import { getSurvivalXpRequirement } from './survivalProgression.ts';
+import { createSurvivalXpStreakState, registerSurvivalXpPickup, type SurvivalXpStreakState } from './survivalXpStreak.ts';
 import { advanceSurvivalShiftEvent, createSurvivalShiftEventState, registerSurvivalShiftEventAction, type SurvivalShiftEvent, type SurvivalShiftEventAction, type SurvivalShiftEventState } from './survivalShiftEvents.ts';
 import { advanceSurvivalContract, createSurvivalContract, registerSurvivalContractAction, type SurvivalContractAction, type SurvivalContractState } from './survivalContracts.ts';
 import {
@@ -511,6 +512,7 @@ export class PaleciakiGameEngine {
   private survivalLevel = 1;
   private survivalXp = 0;
   private survivalXpToNext = 6;
+  private survivalXpStreak: SurvivalXpStreakState = createSurvivalXpStreakState();
   private survivalBossWave = 0;
   private survivalBossWarningTimer = 0;
   private survivalPendingBossWave = 0;
@@ -1326,6 +1328,7 @@ export class PaleciakiGameEngine {
     this.survivalLevel = 1;
     this.survivalXp = 0;
     this.survivalXpToNext = getSurvivalXpRequirement(1);
+    this.survivalXpStreak = createSurvivalXpStreakState();
     this.survivalBossWave = 0;
     this.survivalBossWarningTimer = 0;
     this.survivalPendingBossWave = 0;
@@ -2828,6 +2831,7 @@ export class PaleciakiGameEngine {
       level: this.survivalLevel,
       xp: this.survivalXp,
       xpToNext: this.survivalXpToNext,
+      xpStreak: this.survivalXpStreak.count,
       aliveEnemies: this.enemies.reduce((count, enemy) => count + (enemy.state === 'defeated' ? 0 : 1), 0),
       rerolls: this.survivalRerolls,
       skips: this.survivalSkips,
@@ -2876,7 +2880,7 @@ export class PaleciakiGameEngine {
       const weapon = this.survivalWeapons.find((entry) => entry.id === weaponId);
       const definition = SURVIVAL_WEAPON_DEFS[weaponId];
       const hasPassivePair = (this.survivalUpgradeStacks[definition.evolutionPassive] || 0) > 0;
-      if (weapon && weapon.level >= 5 && !weapon.evolved && this.survivalElapsed >= 300 && hasPassivePair) {
+      if (weapon && weapon.level >= 5 && !weapon.evolved && this.survivalElapsed >= 210 && hasPassivePair) {
         weapon.evolved = true;
         const evolvedCooldown = this.getScaledSurvivalWeaponReloadSeconds(weaponId, weapon.level, true);
         // Evolution changes impact and grants only a modest reload improvement.
@@ -3116,12 +3120,12 @@ export class PaleciakiGameEngine {
       } else if (
         !owned.evolved &&
         owned.level >= 5 &&
-        this.survivalElapsed >= 300 &&
+        this.survivalElapsed >= 210 &&
         (this.survivalUpgradeStacks[definition.evolutionPassive] || 0) > 0
       ) {
         pool.push({ id: 'weapon_evolve:' + weaponId, icon: '✦',
           title: 'EWOLUCJA: ' + definition.evolvedName,
-          description: 'Wymagania: broń poziom 5, 5 minut Survival i moduł „' + definition.evolutionPassiveLabel + '”. Otrzymasz unikalną wersję tej broni.' });
+          description: 'Wymagania: broń poziom 5, 3,5 minuty Survival i moduł „' + definition.evolutionPassiveLabel + '”. Otrzymasz unikalną wersję tej broni.' });
       }
     }
     for (let i = pool.length - 1; i > 0; i--) {
@@ -7952,7 +7956,9 @@ export class PaleciakiGameEngine {
       }
 
       if (distance < 1.25) {
-        const xpValue = Math.max(1, Math.round(gem.value * this.survivalXpMultiplier * ((this.activePerks.xpSurge || 0) > 0 ? 1.5 : 1)));
+        const streak = registerSurvivalXpPickup(this.survivalXpStreak, this.survivalElapsed);
+        this.survivalXpStreak = streak.state;
+        const xpValue = Math.max(1, Math.round(gem.value * this.survivalXpMultiplier * ((this.activePerks.xpSurge || 0) > 0 ? 1.5 : 1) * streak.multiplier));
         this.survivalXp += xpValue;
         this.registerSurvivalContractAction('xp', xpValue);
         this.registerSurvivalShiftEventAction('xp', xpValue);
@@ -7961,7 +7967,7 @@ export class PaleciakiGameEngine {
         sound.playPickup();
         this.levelRoot.remove(gem.mesh);
         this.survivalXpGems.splice(i, 1);
-        this.emitFloatingToast('+' + xpValue + ' XP', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
+        this.emitFloatingToast('+' + xpValue + ' XP' + (streak.tier >= 3 ? ' • ŁAŃCUCH XP ×' + streak.multiplier.toFixed(2) : ''), this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
         if (this.survivalXp >= this.survivalXpToNext && this.state === 'playing') {
           this.beginSurvivalLevelUp();
           break;
