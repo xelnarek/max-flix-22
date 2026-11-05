@@ -1366,6 +1366,8 @@ class PaleciakiScene extends xb.Script {
     let selectedSurvivalMapId: SurvivalMapId | null = null;
     const survivalMapPicker = document.getElementById('survival-map-picker');
     const survivalMapPickerHint = document.getElementById('survival-map-picker-hint');
+    const survivalMapPreviewTitle = document.getElementById('survival-map-preview-title');
+    const survivalMapPreviewDetail = document.getElementById('survival-map-preview-detail');
     survivalMapPicker?.addEventListener('click', (event) => {
       const button = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>('[data-survival-map]');
       if (!button || !survivalMapPicker.contains(button)) return;
@@ -1373,11 +1375,15 @@ class PaleciakiScene extends xb.Script {
       const choice = button.dataset.survivalMap;
       if (choice === 'random') {
         selectedSurvivalMapId = null;
-        if (survivalMapPickerHint) survivalMapPickerHint.textContent = 'Losowanie bez powtórzenia poprzedniej areny.';
+        if (survivalMapPreviewTitle) survivalMapPreviewTitle.textContent = 'ROTACJA AREN';
+        if (survivalMapPreviewDetail) survivalMapPreviewDetail.textContent = 'Losowanie bez powtórzenia poprzedniej mapy. Każda arena ma własny układ osłon i tras.';
+        if (survivalMapPickerHint) survivalMapPickerHint.textContent = 'Losowanie wybierze jedną z czterech aren.';
       } else if (choice && Object.prototype.hasOwnProperty.call(SURVIVAL_MAPS, choice)) {
         selectedSurvivalMapId = choice as SurvivalMapId;
         const map = SURVIVAL_MAPS[selectedSurvivalMapId];
-        if (survivalMapPickerHint) survivalMapPickerHint.textContent = map.name.toUpperCase() + ' • ' + map.combatModifier.description;
+        if (survivalMapPreviewTitle) survivalMapPreviewTitle.textContent = map.name.toUpperCase() + ' • ' + map.subtitle;
+        if (survivalMapPreviewDetail) survivalMapPreviewDetail.textContent = map.description;
+        if (survivalMapPickerHint) survivalMapPickerHint.textContent = map.combatModifier.title + ' • ' + map.combatModifier.description;
       } else {
         return;
       }
