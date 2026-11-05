@@ -229,7 +229,7 @@ export function launchOniricPlatformer(options: {
   pixelCanvas.height = Math.round(ONIRIC_PIXEL_GLITCH_WIDTH * ONIRIC_VIEW_HEIGHT / ONIRIC_VIEW_WIDTH);
   const pixelContext = pixelCanvas.getContext('2d', { alpha: false });
   let activeContext: CanvasRenderingContext2D | null = null;
-  const pixelChaosEndsAt = performance.now() + ONIRIC_PIXEL_GLITCH_DURATION_MS;
+  let pixelChaosEndsAt = performance.now() + ONIRIC_PIXEL_GLITCH_DURATION_MS;
   const watchCount = root.querySelector<HTMLElement>('[data-watch-count]');
   const livesNode = root.querySelector<HTMLElement>('[data-lives]');
   const timeNode = root.querySelector<HTMLElement>('[data-time]');
@@ -248,9 +248,18 @@ export function launchOniricPlatformer(options: {
   // The rabbit-hole secret corrupts the picture for exactly 15 wall-clock
   // seconds. It is intentionally independent from the paused 3D simulation
   // and the selected 1x/2x Survival speed.
-  const pixelChaosTimer = window.setTimeout(() => {
+  let pixelChaosTimer = window.setTimeout(() => {
     root.classList.remove('oniric-pixel-chaos');
   }, ONIRIC_PIXEL_GLITCH_DURATION_MS);
+
+  const restartPixelChaos = () => {
+    window.clearTimeout(pixelChaosTimer);
+    pixelChaosEndsAt = performance.now() + ONIRIC_PIXEL_GLITCH_DURATION_MS;
+    root.classList.add('oniric-pixel-chaos');
+    pixelChaosTimer = window.setTimeout(() => {
+      root.classList.remove('oniric-pixel-chaos');
+    }, ONIRIC_PIXEL_GLITCH_DURATION_MS);
+  };
 
   let state = createOniricPlatformerState();
   let rafId = 0;
@@ -524,6 +533,7 @@ export function launchOniricPlatformer(options: {
   };
 
   const resetRun = () => {
+    restartPixelChaos();
     state = createOniricPlatformerState();
     held.left = false;
     held.right = false;
