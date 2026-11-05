@@ -221,6 +221,22 @@ const operatorPortrait = (id: CharacterId): string => {
   const clipboard = id === 'marcin'
     ? '<path d="M43 84h25v17H43z" fill="#dbeafe" stroke="#183b70" stroke-width="1.6"/><path d="M48 89h15M48 94h10" stroke="#315b88" stroke-width="1.6" stroke-linecap="round"/>'
     : '';
+
+  // Each operator has an individual face outline, not just a different helmet colour.
+  const faceShapes: Record<CharacterId, string> = {
+    marcin: '<path d="M31 47Q30 24 55 21Q80 22 82 48L76 68Q69 80 56 82Q42 80 35 68Z" fill="url(#' + faceId + ')" stroke="#573c31" stroke-opacity=".2" stroke-width="1.5"/>',
+    grzesiek: '<path d="M22 47Q23 21 55 19Q87 20 90 47L85 71Q74 88 56 89Q36 87 27 71Z" fill="url(#' + faceId + ')" stroke="#573c31" stroke-opacity=".2" stroke-width="1.5"/>',
+    dawid: '<path d="M32 46Q31 22 55 20Q78 21 80 47L74 71Q67 84 56 85Q44 82 37 69Z" fill="url(#' + faceId + ')" stroke="#573c31" stroke-opacity=".2" stroke-width="1.5"/>',
+    mateusz: '<path d="M33 47Q32 23 56 21Q77 22 79 47L73 68Q67 79 56 80Q44 78 38 68Z" fill="url(#' + faceId + ')" stroke="#573c31" stroke-opacity=".18" stroke-width="1.5"/>',
+    piotr: '<path d="M25 47Q25 20 56 19Q86 20 87 47L81 70Q73 86 56 86Q38 84 30 70Z" fill="url(#' + faceId + ')" stroke="#573c31" stroke-opacity=".24" stroke-width="1.5"/>',
+  };
+  const faceSignatures: Record<CharacterId, string> = {
+    marcin: '<g fill="none" stroke="#cbdcf0" stroke-width="2.2" stroke-linecap="round"><rect x="31" y="46" width="18" height="12" rx="3"/><rect x="58" y="46" width="18" height="12" rx="3"/><path d="M49 51h9"/></g><path d="M47 73Q56 76 65 72" fill="none" stroke="#875848" stroke-width="2"/>',
+    grzesiek: '<path d="M34 68Q43 62 52 68Q56 72 60 68Q68 62 78 68L75 76Q65 81 56 77Q46 82 37 76Z" fill="#211a17" opacity=".96"/><path d="M30 45Q40 40 49 45M63 45Q73 40 82 45" fill="none" stroke="#241a15" stroke-width="4.2" stroke-linecap="round"/>',
+    dawid: '<g fill="#8b5132" opacity=".8"><circle cx="38" cy="65" r="1.4"/><circle cx="44" cy="69" r="1.2"/><circle cx="69" cy="68" r="1.3"/><circle cx="75" cy="64" r="1.2"/><circle cx="55" cy="69" r="1.1"/></g><path d="M47 76Q56 80 65 75" fill="none" stroke="#92573f" stroke-width="2" stroke-linecap="round"/>',
+    mateusz: '<path d="M78 57Q91 62 88 76L78 79" fill="none" stroke="#201a34" stroke-width="2.7" stroke-linecap="round"/><circle cx="77" cy="80" r="3.2" fill="#67e8f9" stroke="#21123f" stroke-width="1.2"/><path d="M48 73Q56 77 64 72" fill="none" stroke="#875c52" stroke-width="1.8" stroke-linecap="round"/>',
+    piotr: '<g fill="none" stroke="#b3aaa0" stroke-width="1.6" stroke-linecap="round" opacity=".9"><path d="M35 61q6-3 11 0M66 60q6-3 11 0M43 36q6-3 12-1M59 35q6-2 11 1"/></g><path d="M38 70Q45 64 53 68Q56 72 60 68Q68 64 75 70L72 76Q65 82 56 77Q47 82 40 76Z" fill="#77736d"/>',
+  };
   return [
     '<svg class="operator-portrait" viewBox="0 0 112 112" role="img" aria-label="Portret operatora ' + CHARACTERS[id].name + '" xmlns="http://www.w3.org/2000/svg">',
     '<defs><linearGradient id="' + bgId + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + p.shirt + '"/><stop offset="1" stop-color="#081321"/></linearGradient>',
@@ -232,13 +248,13 @@ const operatorPortrait = (id: CharacterId): string => {
     '<path d="M10 114Q13 80 34 76L45 72H67L79 77Q100 83 103 114Z" fill="' + p.shirt + '"/>',
     '<path d="M25 112 39 80 55 94 71 80 88 112Z" fill="' + p.accent + '" opacity=".72"/>' + p.shoulderDetail + clipboard,
     '<path d="M43 66h26l4 17-17 13-17-13Z" fill="' + p.skin + '"/>',
-    '<path d="M27 48Q26 24 54 21Q82 22 85 51L78 69Q71 81 56 82Q39 79 31 66Z" fill="url(#' + faceId + ')" stroke="#573c31" stroke-opacity=".16" stroke-width="1.5"/>',
+    faceShapes[id],
     '<ellipse cx="29" cy="54" rx="5" ry="8" fill="' + p.skin + '"/><ellipse cx="83" cy="54" rx="5" ry="8" fill="' + p.skin + '"/>',
     p.hairShape,
     '<path d="M36 48Q43 43 49 47M63 47Q70 43 77 48" fill="none" stroke="' + p.brows + '" stroke-width="3.1" stroke-linecap="round"/>',
     '<ellipse cx="43" cy="54" rx="3.1" ry="3.8" fill="#172235"/><ellipse cx="69" cy="54" rx="3.1" ry="3.8" fill="#172235"/><circle cx="44" cy="53" r="1" fill="#fff"/><circle cx="70" cy="53" r="1" fill="#fff"/>',
     '<path d="M56 54 52 64Q56 67 60 64" fill="none" stroke="#a86f58" stroke-width="2" stroke-linecap="round"/><path d="M47 72Q56 77 65 71" fill="none" stroke="#814b42" stroke-width="2.4" stroke-linecap="round"/>',
-    p.beardShape, goggles, p.headgear,
+    p.beardShape, faceSignatures[id], goggles, p.headgear,
     '<path d="M9 95h20M84 95h19" stroke="#fff" stroke-opacity=".22" stroke-width="1.4"/><path d="M9 16h12M15 10v12" stroke="' + p.accent + '" stroke-opacity=".5" stroke-width="1.5"/>',
     '</g><circle cx="88" cy="86" r="14" fill="#08111d" stroke="' + p.accent + '" stroke-width="2"/><g transform="translate(88 86)" stroke-linecap="round" stroke-linejoin="round">' + p.badgeShape + '</g>',
     '<path d="M11 9h12M9 11v12M101 89v12M89 103h12" stroke="#fff" stroke-opacity=".38" stroke-width="1.4" fill="none"/></svg>'

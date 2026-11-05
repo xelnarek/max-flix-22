@@ -2602,7 +2602,12 @@ html[data-ui-landscape-touch="true"] .story-modal-card .story-slide {
   display: block;
   border-radius: 23px;
   object-fit: cover;
-  filter: saturate(1.08) contrast(1.04);
+  filter: saturate(1.14) contrast(1.08) drop-shadow(0 4px 7px rgba(0,0,0,.24));
+  transition: filter .2s ease, transform .2s ease;
+}
+#title-screen .char-card[aria-pressed="true"] .char-card-badge.operator-emblem .operator-portrait {
+  filter: saturate(1.18) contrast(1.1) drop-shadow(0 5px 9px color-mix(in srgb, var(--operator-accent) 22%, transparent));
+  transform: translateY(-1px);
 }
 #title-screen .char-card-name {
   color: #f3f7fb !important;
