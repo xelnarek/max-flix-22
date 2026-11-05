@@ -11732,6 +11732,7 @@ export class PaleciakiGameEngine {
 
   private defeatEnemy(e: EnemyItem, points: number, showToast: boolean = true) {
     if (e.state === 'defeated') return;
+    this.clearSurvivalSupportShield(e);
     e.state = 'defeated';
     e.mesh.visible = false;
     if (this.gameMode === 'campaign') {
