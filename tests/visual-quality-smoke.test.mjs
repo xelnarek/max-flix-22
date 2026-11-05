@@ -238,3 +238,22 @@ test('cinematic team reveal draws five recognizable operator busts instead of ac
   assert.match(intro, /const portraitMode = w \/ Math\.max\(1, h\) < 0\.85/);
   assert.doesNotMatch(intro, /const symbols = \['WZ', '44', 'XL'/);
 });
+
+
+test('Oniric Dream builds a rabbit-hole landmark and triggers a 15-second pixel-art corruption', async () => {
+  const [app, game, css, maps] = await Promise.all([
+    read('../src/index.ts'),
+    read('../src/game.ts'),
+    read('../src/index.css'),
+    read('../src/survivalMaps.ts'),
+  ]);
+  assert.match(maps, /name: 'Oniryczny sen'/);
+  assert.match(maps, /style: 'rabbit_hole'/);
+  assert.match(game, /white-rabbit-guide/);
+  assert.match(game, /ZA KRÓLIKIEM/);
+  assert.match(game, /WEJDŹ DO NORKI/);
+  assert.match(app, /secretId === 'oniric_dream'/);
+  assert.match(app, /}, 15000\)/);
+  assert.match(css, /image-rendering: pixelated/);
+  assert.match(css, /oniric-dream-active/);
+});
