@@ -9115,7 +9115,7 @@ export class PaleciakiGameEngine {
               const projectileSpeed = Math.max(6, p.vel.length());
               p.vel.set(directionX, 0, directionZ).normalize().multiplyScalar(projectileSpeed);
               p.mesh.position.set(e.x, e.y + 0.72, e.z);
-              p.bouncesRemaining--;
+              p.bouncesRemaining = Math.max(0, (p.bouncesRemaining ?? 0) - 1);
               p.chainDamageMultiplier = (p.chainDamageMultiplier || 1) * (p.chainDamageRetention || 0.7);
               p.pierce = 0;
               p.life = Math.max(p.life, 0.72);
