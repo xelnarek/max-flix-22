@@ -1061,7 +1061,7 @@ test('Piotr ultimate is a pentagram MafiKapibar summon, not a Molotov throw', as
   assert.match(game, /const damage = this\.scaleSurvivalDamage\(2\)/);
   assert.match(game, /for \(let index = 0; index < 3; index\+\+\)/);
   assert.match(characters, /abilityName: 'Rytuał MafiKapibar — Pentagram B4'/);
-  assert.match(characters, /MafiKapibary przez kilkanaście sekund orbitują wokół operatora/);
+  assert.match(characters, /trzy MafiKapibary w garniturach, które przez kilkanaście sekund orbitują wokół operatora/);
   assert.match(sound, /else if \(charId === 'piotr'\) \{[\s\S]*?Ominous low ritual swell/);
   assert.doesNotMatch(sound.slice(sound.indexOf("else if (charId === 'piotr')"), sound.indexOf('} else {', sound.indexOf("else if (charId === 'piotr')"))), /playMolotovThrow/);
 });
