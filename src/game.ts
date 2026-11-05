@@ -189,6 +189,7 @@ export interface SurvivalSnapshot {
   mapId: SurvivalMapId; mapName: string; mapSubtitle: string;
   secretsFound: number; totalSecrets: number; bossesDefeated: number;
   contract: SurvivalContractState;
+  event: SurvivalShiftEvent | null;
   weapons: Array<{ id: SurvivalWeaponId; name: string; icon: string; level: number; evolved: boolean }>;
 }
 
@@ -2739,8 +2740,12 @@ export class PaleciakiGameEngine {
 
   private registerSurvivalShiftEventAction(action: SurvivalShiftEventAction, amount = 1): void {
     if (this.gameMode !== 'survival' || !this.survivalShiftEvent.active) return;
+    const previousProgress = this.survivalShiftEvent.active.progress;
     const result = registerSurvivalShiftEventAction(this.survivalShiftEvent, action, amount, this.survivalElapsed);
     this.survivalShiftEvent = result.state;
+    if (result.state.active && result.state.active.progress !== previousProgress) {
+      this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+    }
     if (!result.completed) return;
 
     const payout = 420 + this.survivalWave * 35;
@@ -2819,6 +2824,7 @@ export class PaleciakiGameEngine {
       totalSecrets: getSurvivalMapDefinition(this.survivalMapId).secretLocations.length,
       bossesDefeated: this.survivalBossesDefeated,
       contract: { ...this.survivalContract },
+      event: this.survivalShiftEvent.active ? { ...this.survivalShiftEvent.active } : null,
       level: this.survivalLevel,
       xp: this.survivalXp,
       xpToNext: this.survivalXpToNext,
