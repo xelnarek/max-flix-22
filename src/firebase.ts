@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import { getAuth, signInAnonymously, onAuthStateChanged, type User, type Unsubscribe } from 'firebase/auth';
 import firebaseConfig from '../firebase-applet-config.json';
+import { withTimeout } from './asyncTimeout.ts';
 import {
   getLeaderboardSlice,
   getSurvivalLeaderboardSlice,
@@ -208,6 +209,12 @@ export function handleFirestoreError(
   return errInfo;
 }
 
+const AUTH_INIT_TIMEOUT_MS = 10_000;
+const FIRESTORE_PROBE_TIMEOUT_MS = 7_000;
+const FIRESTORE_QUERY_TIMEOUT_MS = 12_000;
+const FIRESTORE_WRITE_TIMEOUT_MS = 12_000;
+const LEADERBOARD_SYNC_TIMEOUT_MS = 6_000;
+
 let currentUser: User | null = null;
 let isAuthInitialized = false;
 let authPromise: Promise<User | null> | null = null;
@@ -223,12 +230,17 @@ export function initAuth(): Promise<User | null> {
     }
 
     let unsubscribe: Unsubscribe | null = null;
+    let authTimeout: ReturnType<typeof setTimeout> | null = null;
     let settled = false;
     let signInAttempted = false;
 
     const finish = (user: User | null, retryOnFailure = false) => {
       if (settled) return;
       settled = true;
+      if (authTimeout !== null) {
+        clearTimeout(authTimeout);
+        authTimeout = null;
+      }
       currentUser = user;
       isAuthInitialized = true;
       if (user) {
@@ -268,7 +280,14 @@ export function initAuth(): Promise<User | null> {
     unsubscribe = subscription;
     // Be defensive if an SDK implementation invokes the initial observer
     // synchronously before onAuthStateChanged returns its unsubscribe handle.
-    if (settled) unsubscribe();
+    if (settled) {
+      unsubscribe();
+    } else {
+      authTimeout = setTimeout(() => {
+        console.warn('[Firebase:Auth] ⏱️ Przekroczono limit czasu inicjalizacji sesji. Wynik pozostanie lokalny; kolejna próba ponowi logowanie.');
+        finish(null, true);
+      }, AUTH_INIT_TIMEOUT_MS);
+    }
   });
 
   return authPromise;
@@ -278,7 +297,18 @@ export async function ensureLeaderboardServices(): Promise<boolean> {
   try {
     await initAuth();
     const connected = await testFirestoreConnection();
-    if (connected) await syncPendingLeaderboardScores();
+    if (connected) {
+      try {
+        await withTimeout(
+          syncPendingLeaderboardScores(),
+          LEADERBOARD_SYNC_TIMEOUT_MS,
+          'Leaderboard queue sync',
+        );
+      } catch (error) {
+        // A slow offline queue must not keep the ranking screen in a spinner.
+        console.warn('[Firebase:Leaderboard] ⏱️ Synchronizacja kolejki trwa zbyt długo; pobieranie rankingu będzie kontynuowane.', error);
+      }
+    }
     return connected;
   } catch (error) {
     console.warn('[Firebase:Init] ⚠️ Podgrzewanie połączenia pominięte:', error);
@@ -297,7 +327,11 @@ export async function testFirestoreConnection(): Promise<boolean> {
 
   try {
     const probeDoc = doc(db, 'test', 'connection');
-    await getDocFromServer(probeDoc);
+    await withTimeout(
+      getDocFromServer(probeDoc),
+      FIRESTORE_PROBE_TIMEOUT_MS,
+      'Firestore connection probe',
+    );
     const duration = Math.round(performance.now() - startTime);
     console.log(`[Firebase:Firestore] 🟢 Próba połączenia z bazą zakończona sukcesem (${duration} ms). Target: '${targetDoc}'.`);
     return true;
@@ -355,7 +389,11 @@ export async function submitScore(
     if (!user?.uid) {
       throw new Error('Firebase authentication unavailable; score kept in the local queue.');
     }
-    await setDoc(doc(db, collectionPath, cleanId), payload);
+    await withTimeout(
+      setDoc(doc(db, collectionPath, cleanId), payload),
+      FIRESTORE_WRITE_TIMEOUT_MS,
+      'Leaderboard score write',
+    );
     persistPendingLeaderboardWrites(pending.filter((item) => item.id !== cleanId));
     cacheLeaderboardEntries([
       normalizeLeaderboardEntry({ ...payload, id: cleanId, syncStatus: 'online' }),
@@ -401,14 +439,22 @@ export async function syncPendingLeaderboardScores(): Promise<number> {
   for (const item of pending) {
     const ref = doc(db, 'leaderboard', item.id);
     try {
-      await setDoc(ref, item.payload);
+      await withTimeout(
+        setDoc(ref, item.payload),
+        FIRESTORE_WRITE_TIMEOUT_MS,
+        'Queued leaderboard score write',
+      );
       acknowledged.push(normalizeLeaderboardEntry({
         ...item.payload, id: item.id, syncStatus: 'online',
       }));
       continue;
     } catch (error) {
       try {
-        const existing = await getDocFromServer(ref);
+        const existing = await withTimeout(
+          getDocFromServer(ref),
+          FIRESTORE_PROBE_TIMEOUT_MS,
+          'Queued leaderboard acknowledgement check',
+        );
         const data = existing.exists() ? existing.data() as DocumentData : null;
         const matches = Boolean(data &&
           data.score === item.payload.score &&
@@ -443,11 +489,25 @@ export async function getTopLeaderboard(maxEntries = 15): Promise<LeaderboardEnt
   console.log(`[Firebase:Leaderboard] 📥 Pobieranie rankingu wszystkich trybów z kolekcji '${collectionPath}'...`);
 
   try {
-    await syncPendingLeaderboardScores();
+    if (currentUser?.uid) {
+      try {
+        await withTimeout(
+          syncPendingLeaderboardScores(),
+          LEADERBOARD_SYNC_TIMEOUT_MS,
+          'Global leaderboard queue sync',
+        );
+      } catch (error) {
+        console.warn('[Firebase:Leaderboard] ⏱️ Pomijam wolną synchronizację kolejki i pobieram ranking.', error);
+      }
+    }
     // Fetch a wider global window, then merge offline entries and apply one shared
     // cross-mode comparator. Mode labels do not split the default global ranking.
     const q = query(collection(db, collectionPath), orderBy('score', 'desc'), limit(Math.max(100, maxEntries)));
-    const snapshot = await getDocs(q);
+    const snapshot = await withTimeout(
+      getDocs(q),
+      FIRESTORE_QUERY_TIMEOUT_MS,
+      'Global leaderboard query',
+    );
     const cloudEntries = snapshot.docs.map((d) => {
       const data = d.data() as DocumentData;
       return normalizeLeaderboardEntry({
@@ -493,7 +553,20 @@ export async function getTopSurvivalLeaderboard(maxEntries = 15): Promise<Leader
   const safeMaxEntries = Number.isFinite(maxEntries) ? Math.max(0, Math.floor(maxEntries)) : 15;
 
   try {
-    await syncPendingLeaderboardScores();
+    // Public leaderboard reads do not require an authenticated session. Avoid
+    // starting a second anonymous-auth timeout after the boot probe has failed;
+    // the cached/pending queue is merged below while the public read proceeds.
+    if (currentUser?.uid) {
+      try {
+        await withTimeout(
+          syncPendingLeaderboardScores(),
+          LEADERBOARD_SYNC_TIMEOUT_MS,
+          'Survival leaderboard queue sync',
+        );
+      } catch (error) {
+        console.warn('[Firebase:Leaderboard] ⏱️ Pomijam wolną synchronizację kolejki; pobieram ranking Survival.', error);
+      }
+    }
     // This equality-only query uses Firestore's automatic single-field index.
     // Fetch all Survival rows before sorting locally; a fixed page could hide a
     // high score when the collection grows, while orderBy would need a composite
@@ -502,7 +575,11 @@ export async function getTopSurvivalLeaderboard(maxEntries = 15): Promise<Leader
       collection(db, collectionPath),
       where('mode', '==', 'survival'),
     );
-    const snapshot = await getDocs(survivalQuery);
+    const snapshot = await withTimeout(
+      getDocs(survivalQuery),
+      FIRESTORE_QUERY_TIMEOUT_MS,
+      'Survival leaderboard query',
+    );
     const cloudEntries = snapshot.docs.map((document) => {
       const data = document.data() as DocumentData;
       return normalizeLeaderboardEntry({

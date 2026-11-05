@@ -1183,6 +1183,8 @@ class PaleciakiScene extends xb.Script {
     const firestoreStatusBadge = document.getElementById('firestore-status-badge');
     const firestoreStatusText = document.getElementById('firestore-status-text');
 
+    let leaderboardRenderInFlight = false;
+
     const updateFirestoreStatusUI = (status: 'checking' | 'online' | 'offline', customMsg?: string) => {
       if (!firestoreStatusBadge || !firestoreStatusText) return;
       firestoreStatusBadge.className = `firestore-status-badge ${status}`;
@@ -1196,7 +1198,8 @@ class PaleciakiScene extends xb.Script {
     };
 
     const renderLeaderboard = async () => {
-      if (!leaderboardLoading || !leaderboardList) return;
+      if (!leaderboardLoading || !leaderboardList || leaderboardRenderInFlight) return;
+      leaderboardRenderInFlight = true;
 
       if (btnRefreshLeaderboard) {
         btnRefreshLeaderboard.disabled = true;
@@ -1223,11 +1226,13 @@ class PaleciakiScene extends xb.Script {
         leaderboardList.classList.remove('hidden');
 
         if (topScores.length === 0) {
-          leaderboardList.innerHTML = `
-            <div class="leaderboard-status-msg">
-              Brak rekordów Survival. Rozpocznij zmianę i zapisz pierwszy wynik.
-            </div>
-          `;
+          const emptyState = isConnected
+            ? 'Brak rekordów Survival. Rozpocznij zmianę i zapisz pierwszy wynik.'
+            : 'Nie udało się połączyć z rankingiem online. Nie ma jeszcze lokalnych rekordów do wyświetlenia; spróbuj odświeżyć po powrocie połączenia.';
+          const message = document.createElement('div');
+          message.className = 'leaderboard-status-msg';
+          message.textContent = emptyState;
+          leaderboardList.replaceChildren(message);
         } else {
           topScores.forEach((entry, idx) => {
             const rankIcons = ['🥇', '🥈', '🥉'];
@@ -1286,6 +1291,8 @@ class PaleciakiScene extends xb.Script {
           btnRefreshLeaderboard.disabled = false;
           btnRefreshLeaderboard.textContent = '🔄 Spróbuj ponownie';
         }
+      } finally {
+        leaderboardRenderInFlight = false;
       }
     };
 
@@ -1729,7 +1736,7 @@ class PaleciakiScene extends xb.Script {
         submitBtn.textContent = '⏳ ZAPISYWANIE...';
         if (feedbackMsg) {
           feedbackMsg.className = 'submit-feedback';
-          feedbackMsg.textContent = 'Wysyłanie wyniku do rankingu globalnego...';
+          feedbackMsg.textContent = 'Wysyłanie wyniku do rankingu Survival...';
           feedbackMsg.classList.remove('hidden');
         }
 
@@ -1748,7 +1755,7 @@ class PaleciakiScene extends xb.Script {
             submitBtn.textContent = '✅ ZAPISANO ONLINE';
             if (feedbackMsg) {
               feedbackMsg.className = 'submit-feedback success';
-              feedbackMsg.textContent = 'Wynik jest już w globalnym rankingu online.';
+              feedbackMsg.textContent = 'Wynik jest już w rankingu Survival online.';
             }
           } else {
             submitBtn.textContent = '⏳ W KOLEJCE';
