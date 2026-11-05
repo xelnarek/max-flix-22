@@ -4,6 +4,7 @@ import {
   createOniricPlatformerState,
   ONIRIC_COLLECTIBLES,
   ONIRIC_GOAL_X,
+  ONIRIC_WORLD_WIDTH,
   ONIRIC_PLATFORMS,
   stepOniricPlatformer,
 } from '../src/oniricPlatformer.ts';
