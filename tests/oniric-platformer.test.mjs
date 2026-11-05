@@ -162,3 +162,10 @@ test('Oniric checkpoints activate only after landing and protect the first hazar
   assert.equal(state.checkpointX, 930, 'the first safe checkpoint should be enabled after landing');
   assert.equal(state.checkpointTop, 440);
 });
+
+
+test('Oniric focus trapping skips controls hidden inside the result panel', async () => {
+  const source = await readFile(new URL('../src/oniricPlatformer.ts', import.meta.url), 'utf8');
+  assert.match(source, /querySelectorAll<HTMLButtonElement>\([\s\S]*?button:not\(\[disabled\]\)/);
+  assert.match(source, /filter\(\(button\) => !button\.closest\('\[hidden\]'\)\)/);
+});
