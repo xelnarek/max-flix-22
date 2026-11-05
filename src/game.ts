@@ -758,7 +758,6 @@ export class PaleciakiGameEngine {
     life: number;
     maxLife: number;
     attackCooldown: number;
-    orbitAngle: number;
     pounceTimer: number;
     pounceTarget: THREE.Vector3 | null;
   }[] = [];
@@ -10303,15 +10302,26 @@ export class PaleciakiGameEngine {
     }
 
     const duration = this.gameMode === 'survival' ? 12.0 : 15.0;
-    for (let index = 0; index < 3; index++) {
+    const formationForwardX = Math.sin(this.playerRot);
+    const formationForwardZ = Math.cos(this.playerRot);
+    const formationRightX = Math.cos(this.playerRot);
+    const formationRightZ = -Math.sin(this.playerRot);
+    // A stable rear V keeps both rifle guards on the flanks and the baton
+    // enforcer in the centre lane. They move with the operator, not in circles.
+    const formationSlots = [
+      { lateral: -2.05, forward: -0.55 },
+      { lateral: 0, forward: -2.45 },
+      { lateral: 2.05, forward: -0.55 },
+    ] as const;
+    for (let index = 0; index < formationSlots.length; index++) {
       const group = this.createMafiCapybaraModel(index);
-      const angle = this.playerRot + index * Math.PI * 2 / 3;
+      const slot = formationSlots[index];
       group.position.set(
-        this.playerPos.x + Math.sin(angle) * 2.15,
+        this.playerPos.x + formationRightX * slot.lateral + formationForwardX * slot.forward,
         groundY,
-        this.playerPos.z + Math.cos(angle) * 2.15
+        this.playerPos.z + formationRightZ * slot.lateral + formationForwardZ * slot.forward
       );
-      group.rotation.y = angle + Math.PI;
+      group.rotation.y = this.playerRot + Math.PI;
       this.levelRoot.add(group);
       this.mafiCapybaras.push({
         group,
@@ -10319,7 +10329,6 @@ export class PaleciakiGameEngine {
         maxLife: duration,
         age: 0,
         attackCooldown: 0.22 + index * 0.2,
-        orbitAngle: index * Math.PI * 2 / 3,
         pounceTimer: 0,
         pounceTarget: null,
         index,
@@ -10338,6 +10347,20 @@ export class PaleciakiGameEngine {
   }
 
   private updateMafiCapybaras(dt: number) {
+    if (this.mafiCapybaras.length === 0) return;
+
+    const forwardX = Math.sin(this.playerRot);
+    const forwardZ = Math.cos(this.playerRot);
+    const rightX = Math.cos(this.playerRot);
+    const rightZ = -Math.sin(this.playerRot);
+    // Stable bodyguard V: two ranged flankers cover the sides while the
+    // dual-baton enforcer protects the rear approach. No idle orbiting.
+    const formationSlots = [
+      { lateral: -2.05, forward: -0.55 },
+      { lateral: 0, forward: -2.45 },
+      { lateral: 2.05, forward: -0.55 },
+    ] as const;
+
     for (let index = this.mafiCapybaras.length - 1; index >= 0; index--) {
       const capybara = this.mafiCapybaras[index];
       capybara.age += dt;
@@ -10355,11 +10378,9 @@ export class PaleciakiGameEngine {
         continue;
       }
 
-      capybara.orbitAngle += dt * (capybara.pounceTimer > 0 ? 0.48 : 0.82);
-      const angle = this.playerRot + capybara.orbitAngle;
-      const orbitRadius = 2.15 + capybara.index * 0.12;
-      const baseX = this.playerPos.x + Math.sin(angle) * orbitRadius;
-      const baseZ = this.playerPos.z + Math.cos(angle) * orbitRadius;
+      const slot = formationSlots[capybara.index] || formationSlots[1];
+      const baseX = this.playerPos.x + rightX * slot.lateral + forwardX * slot.forward;
+      const baseZ = this.playerPos.z + rightZ * slot.lateral + forwardZ * slot.forward;
       let targetX = baseX;
       let targetZ = baseZ;
       let jumpHeight = 0;
@@ -10379,31 +10400,50 @@ export class PaleciakiGameEngine {
       const fadeIn = THREE.MathUtils.clamp(capybara.age / 0.42, 0, 1);
       const fadeOut = THREE.MathUtils.clamp(capybara.life / 0.85, 0, 1);
       capybara.group.scale.setScalar(1.34 * fadeIn * fadeOut);
-      capybara.group.position.x = THREE.MathUtils.lerp(capybara.group.position.x, targetX, Math.min(1, dt * 8.5));
-      capybara.group.position.z = THREE.MathUtils.lerp(capybara.group.position.z, targetZ, Math.min(1, dt * 8.5));
+      const followLerp = Math.min(1, dt * (capybara.pounceTimer > 0 ? 5.5 : 9.5));
+      capybara.group.position.x = THREE.MathUtils.lerp(capybara.group.position.x, targetX, followLerp);
+      capybara.group.position.z = THREE.MathUtils.lerp(capybara.group.position.z, targetZ, followLerp);
       capybara.group.position.y = groundY - (1 - fadeIn) * 0.18 +
         jumpHeight + Math.sin(performance.now() * 0.006 + capybara.index * 2.1) * 0.025;
       capybara.group.rotation.y = capybara.pounceTimer > 0 && capybara.pounceTarget
         ? Math.atan2(capybara.pounceTarget.x - capybara.group.position.x, capybara.pounceTarget.z - capybara.group.position.z)
-        : angle + Math.PI;
+        : this.playerRot + Math.PI;
 
       capybara.attackCooldown -= dt;
       if (capybara.attackCooldown > 0 || capybara.pounceTimer > 0) continue;
 
+      // Select the most dangerous nearby enemy, not simply the closest model
+      // to this companion. Enemies threatening the player get first priority.
       let target: EnemyItem | null = null;
-      let nearest = 13.5;
+      let nearest = 15.5;
+      let bestThreatScore = Number.POSITIVE_INFINITY;
       for (const enemy of this.enemies) {
         if (enemy.state === 'defeated' || !enemy.mesh?.visible) continue;
-        const distance = Math.hypot(enemy.x - capybara.group.position.x, enemy.z - capybara.group.position.z);
-        if (distance < nearest) {
-          nearest = distance;
+        const guardDistance = Math.hypot(enemy.x - capybara.group.position.x, enemy.z - capybara.group.position.z);
+        if (guardDistance > 15.5) continue;
+        const playerDistance = Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z);
+        const threatensPlayer = playerDistance <= 6.25;
+        const isElite = enemy.maxHp >= 12 || enemy.type === 'walczak' ||
+          enemy.type === 'krol_leto' || enemy.type === 'bosman_krakow' || enemy.type === 'sebix_m';
+        const flankBias = capybara.index === 0 && enemy.x < this.playerPos.x
+          ? -0.65
+          : capybara.index === 2 && enemy.x > this.playerPos.x
+            ? -0.65
+            : 0;
+        const threatScore =
+          (threatensPlayer ? -8 : 0) +
+          playerDistance * 0.48 +
+          guardDistance * 0.28 +
+          (isElite ? -1.2 : 0) +
+          flankBias;
+        if (threatScore < bestThreatScore) {
+          bestThreatScore = threatScore;
+          nearest = guardDistance;
           target = enemy;
         }
       }
       if (!target) continue;
 
-      // Turn the whole companion toward its target before resolving the muzzle in world space.
-      // This keeps the carbine pointed at enemies rather than toward the player during orbit.
       capybara.group.rotation.y = Math.atan2(
         target.x - capybara.group.position.x,
         target.z - capybara.group.position.z
@@ -10419,7 +10459,7 @@ export class PaleciakiGameEngine {
         if (direction.lengthSq() < 0.001) continue;
         direction.normalize();
 
-        // Bright arcade tracer gives the compact carbine a readable firing cue.
+        // Compact arcade tracers are intentionally short-lived and low-poly.
         const tracer = new THREE.Group();
         const tracerCore = new THREE.Mesh(
           new THREE.SphereGeometry(0.085, 8, 6),
@@ -10448,38 +10488,36 @@ export class PaleciakiGameEngine {
         });
         capybara.attackCooldown = capybara.index === 0 ? 0.72 : 0.88;
         this.spawnParticleRing(muzzlePosition.x, muzzlePosition.y, muzzlePosition.z, 0xfbbf24);
-        this.emitFloatingToast(
-          capybara.index === 0 ? '🔫 DON • SALWA OCHRONY' : '🔫 OCHRONA MAFII • OGNIEŃ',
-          muzzlePosition.x,
-          muzzlePosition.y + 0.25,
-          muzzlePosition.z,
-          'damage'
-        );
         sound.playAttackWhoosh();
         continue;
       }
 
-      // The dual-baton enforcer and close-range hybrid use a heavy baton rush.
+      // The baton unit intercepts threats close to the player; ranged guards
+      // switch to a close protection strike if an enemy breaks through the V.
+      const playerThreatDistance = Math.hypot(target.x - this.playerPos.x, target.z - this.playerPos.z);
+      const interceptingPlayer = playerThreatDistance <= 5.2;
       target.shieldActive = false;
       const damage = this.scaleSurvivalDamage(capybara.index === 1 ? 3 : 2);
       this.damageEnemy(target, damage, capybara.group.position.x, capybara.group.position.z);
       if (target.hp <= 0) {
         this.defeatEnemy(target, 300, false);
       } else {
-        target.stunTimer = Math.max(target.stunTimer, this.gameMode === 'survival' ? 0.58 : 0.72);
+        target.stunTimer = Math.max(target.stunTimer, interceptingPlayer ? 0.82 : this.gameMode === 'survival' ? 0.58 : 0.72);
         target.state = 'stunned';
       }
       capybara.pounceTarget = new THREE.Vector3(target.x, groundY, target.z);
       capybara.pounceTimer = 0.52;
       capybara.attackCooldown = capybara.index === 1 ? 1.02 : 1.24;
       this.spawnParticleRing(target.x, target.y + 0.42, target.z, capybara.index === 1 ? 0xef4444 : 0xfbbf24);
-      this.emitFloatingToast(
-        capybara.index === 1 ? '🥊 PODWÓJNA PAŁKA MAFII! -' + damage + ' HP' : '🕶️ MAFIA INTERWENCJA! -' + damage + ' HP',
-        target.x,
-        target.y + 1.1,
-        target.z,
-        'damage'
-      );
+      if (interceptingPlayer || target.maxHp >= 12) {
+        this.emitFloatingToast(
+          interceptingPlayer ? '🕶️ MAFIA OCHRANIA OPERATORA!' : '🥊 ODPRAWA MAFII • CEL PRIORYTETOWY!',
+          target.x,
+          target.y + 1.1,
+          target.z,
+          'damage'
+        );
+      }
       const batonRig = capybara.group.userData.mafiBatonRig as THREE.Group | undefined;
       if (batonRig) batonRig.rotation.z = (capybara.index % 2 === 0 ? 1 : -1) * 0.34;
       sound.playSmack();
