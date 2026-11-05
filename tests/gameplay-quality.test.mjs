@@ -1072,7 +1072,11 @@ test('MafiKapibar companions update during gameplay and are disposed when the wo
   assert.match(game, /for \(const capybara of this\.mafiCapybaras\)/);
   assert.match(game, /this\.disposeTemporaryObject\(capybara\.group\)/);
   assert.match(game, /this\.mafiCapybaras = \[\]/);
-  assert.match(game, /capybara\.attackCooldown = capybara\.index === 0 \? 0\.72 : 0\.88/);
+  assert.match(game, /const targetScore = Number\.POSITIVE_INFINITY|let targetScore = Number\.POSITIVE_INFINITY/);
+  assert.match(game, /roleWeight = capybara\.index === 0/);
+  assert.match(game, /mafi_carbine_tracer/);
+  assert.match(game, /pierce: capybara\.index === 0 \? 1 : 0/);
+  assert.match(game, /targetIsMajorBoss \? 4 : 3/);
   assert.match(game, /capybara\.attackCooldown = capybara\.index === 1 \? 1\.02 : 1\.24/);
   assert.match(game, /life: duration,[\s\S]*?maxLife: duration/);
 });
