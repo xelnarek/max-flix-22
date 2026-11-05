@@ -1076,3 +1076,30 @@
     transition: none;
   }
 }
+
+
+/* The added contract card makes the Survival HUD taller; reserve a separate
+   lane for the boss bar on touch devices rather than letting the two panels collide. */
+@media (max-width: 900px), (pointer: coarse) {
+  #game-shell.survival-mode #hud-top .boss-hud-bar {
+    top: calc(138px + env(safe-area-inset-top)) !important;
+  }
+}
+@media (max-width: 420px) {
+  #game-shell.survival-mode #hud-top .boss-hud-bar {
+    top: calc(138px + env(safe-area-inset-top)) !important;
+  }
+}
+@media (max-height: 560px) and (pointer: coarse) {
+  #game-shell.survival-mode .survival-contract p {
+    display: none;
+  }
+  #game-shell.survival-mode .survival-contract {
+    grid-template-columns: minmax(0, 1fr) auto;
+    margin-top: 3px;
+    padding: 4px 6px;
+  }
+  #game-shell.survival-mode #hud-top .boss-hud-bar {
+    top: calc(116px + env(safe-area-inset-top)) !important;
+  }
+}
