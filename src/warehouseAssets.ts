@@ -4493,7 +4493,9 @@ export function createSparkZapProjectile(): THREE.Mesh {
 }
 
 /**
- * 34. Mini Boss Inspektor Zmiany (Odprawa 3-msc)
+ * 34. Bosman Kraków — captain of the night loading dock.
+ * His peaked cap, gold anchor and dockmaster epaulettes distinguish him from
+ * the executive Walczak and the royal Dyrektor Widmo at a glance.
  */
 export function createBosmanKrakowBossModel(): {
   group: THREE.Group;
@@ -4504,6 +4506,7 @@ export function createBosmanKrakowBossModel(): {
   head: THREE.Mesh;
 } {
   const group = new THREE.Group();
+  group.name = 'boss_bosman_krakow';
 
   const navySuitMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.3 }); // Navy Suit
   const shirtMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
@@ -4529,6 +4532,44 @@ export function createBosmanKrakowBossModel(): {
   head.position.y = 1.35;
   head.castShadow = true;
   group.add(head);
+
+  // Dockmaster peaked cap with a brass anchor plate.
+  const captainCapMat = new THREE.MeshStandardMaterial({ color: 0x172554, roughness: 0.42, metalness: 0.16 });
+  const capCrown = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.19, 0.12, 12), captainCapMat);
+  capCrown.position.set(0, 1.52, -0.015);
+  const capBand = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.035, 12), goldBadgeMat);
+  capBand.position.set(0, 1.48, -0.015);
+  const capPeak = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.045, 0.18), captainCapMat);
+  capPeak.position.set(0, 1.47, 0.13);
+  const anchorRing = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.009, 6, 12), goldBadgeMat);
+  anchorRing.position.set(0, 1.53, 0.185);
+  const anchorStem = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.09, 0.018), goldBadgeMat);
+  anchorStem.position.set(0, 1.53, 0.19);
+  const anchorBar = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.018, 0.018), goldBadgeMat);
+  anchorBar.position.set(0, 1.515, 0.19);
+  const anchorFoot = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.018, 0.018), goldBadgeMat);
+  anchorFoot.position.set(0, 1.49, 0.19);
+  group.add(capCrown, capBand, capPeak, anchorRing, anchorStem, anchorBar, anchorFoot);
+
+  // Dockmaster shoulder epaulettes and signal whistle.
+  const epauletteMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.86, roughness: 0.22 });
+  for (const side of [-1, 1]) {
+    const epaulette = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.065, 0.20), epauletteMat);
+    epaulette.position.set(side * 0.31, 1.14, 0.01);
+    group.add(epaulette);
+    for (let stripe = 0; stripe < 2; stripe++) {
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.018, 0.205), goldBadgeMat);
+      bar.position.set(side * 0.31, 1.16 + stripe * 0.025, 0.01);
+      group.add(bar);
+    }
+  }
+  const whistle = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.13, 8), goldBadgeMat);
+  whistle.rotation.x = Math.PI / 2;
+  whistle.position.set(0.08, 1.04, 0.19);
+  group.add(whistle);
+  const whistleCord = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.009, 5, 14), goldBadgeMat);
+  whistleCord.position.set(0.08, 1.12, 0.18);
+  group.add(whistleCord);
 
   // Sleek Boss Glasses
   const glasses = new THREE.Mesh(
@@ -4585,7 +4626,125 @@ export function createBosmanKrakowBossModel(): {
 }
 
 /**
- * 35. Odprawa 3-msc Clipboard Shockwave Projectile (Inspektor Zmiany)
+ * 35. Audytor Niezapowiedziany — dedicated Survival mini-boss rig.
+ * High-visibility BHP jacket, white safety helmet and red inspection baton
+ * intentionally separate this silhouette from the normal inspector and the
+ * executive Nadzorca Zero.
+ */
+export function createAudytorMiniBossModel(): {
+  group: THREE.Group;
+  legL: THREE.Mesh;
+  legR: THREE.Mesh;
+  armL: THREE.Mesh;
+  armR: THREE.Mesh;
+  head: THREE.Mesh;
+} {
+  const group = new THREE.Group();
+  group.name = 'boss_audytor_niezapowiedziany';
+
+  const skinMat = new THREE.MeshStandardMaterial({ color: 0xd6a17d, roughness: 0.72 });
+  const jacketMat = new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.54 });
+  const navyMat = new THREE.MeshStandardMaterial({ color: 0x172554, roughness: 0.76 });
+  const reflectiveMat = new THREE.MeshStandardMaterial({ color: 0xfde047, emissive: 0x9a7400, emissiveIntensity: 0.22, metalness: 0.24, roughness: 0.34 });
+  const helmetMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3 });
+  const redMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, emissive: 0x7f1d1d, emissiveIntensity: 0.34, roughness: 0.32 });
+  const darkMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.58 });
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.68, 0.34), jacketMat);
+  body.position.y = 0.82;
+  body.castShadow = true;
+  group.add(body);
+
+  const vestPanel = new THREE.Mesh(new THREE.BoxGeometry(0.23, 0.58, 0.025), reflectiveMat);
+  vestPanel.position.set(0, 0.82, 0.183);
+  const vestZip = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.56, 0.03), darkMat);
+  vestZip.position.set(0, 0.82, 0.205);
+  const belt = new THREE.Mesh(new THREE.BoxGeometry(0.61, 0.10, 0.36), navyMat);
+  belt.position.y = 0.51;
+  const badge = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 0.045), redMat);
+  badge.position.set(-0.20, 0.94, 0.20);
+  group.add(vestPanel, vestZip, belt, badge);
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.19, 14, 12), skinMat);
+  head.position.y = 1.34;
+  head.castShadow = true;
+  group.add(head);
+
+  const helmetShell = new THREE.Mesh(new THREE.SphereGeometry(0.225, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), helmetMat);
+  helmetShell.scale.y = 0.72;
+  helmetShell.position.y = 1.49;
+  const helmetRim = new THREE.Mesh(new THREE.CylinderGeometry(0.235, 0.235, 0.045, 14), helmetMat);
+  helmetRim.position.y = 1.48;
+  const helmetStripe = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.11, 0.018), redMat);
+  helmetStripe.position.set(0, 1.51, 0.218);
+  const helmetStripeCross = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.035, 0.018), redMat);
+  helmetStripeCross.position.set(0, 1.52, 0.22);
+  group.add(helmetShell, helmetRim, helmetStripe, helmetStripeCross);
+
+  const visor = new THREE.Mesh(new THREE.BoxGeometry(0.29, 0.075, 0.045), darkMat);
+  visor.position.set(0, 1.35, 0.17);
+  const lensL = new THREE.Mesh(new THREE.BoxGeometry(0.105, 0.045, 0.018), redMat);
+  const lensR = lensL.clone();
+  lensL.position.set(-0.075, 1.35, 0.20);
+  lensR.position.set(0.075, 1.35, 0.20);
+  group.add(visor, lensL, lensR);
+
+  const legGeo = new THREE.BoxGeometry(0.17, 0.50, 0.19);
+  const legL = new THREE.Mesh(legGeo, navyMat);
+  const legR = new THREE.Mesh(legGeo, navyMat);
+  legL.position.set(-0.15, 0.25, 0);
+  legR.position.set(0.15, 0.25, 0);
+  legL.castShadow = true;
+  legR.castShadow = true;
+  const bootGeo = new THREE.BoxGeometry(0.19, 0.09, 0.26);
+  const bootL = new THREE.Mesh(bootGeo, darkMat);
+  const bootR = bootL.clone();
+  bootL.position.set(0, -0.19, 0.045);
+  bootR.position.set(0, -0.19, 0.045);
+  legL.add(bootL);
+  legR.add(bootR);
+  group.add(legL, legR);
+
+  const armGeo = new THREE.BoxGeometry(0.15, 0.52, 0.16);
+  const armL = new THREE.Mesh(armGeo, jacketMat);
+  const armR = new THREE.Mesh(armGeo, jacketMat);
+  armL.position.set(-0.37, 0.83, 0);
+  armR.position.set(0.37, 0.83, 0);
+  armL.castShadow = true;
+  armR.castShadow = true;
+  group.add(armL, armR);
+
+  const inspectionTablet = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.38, 0.045), navyMat);
+  inspectionTablet.position.set(0, -0.20, 0.14);
+  inspectionTablet.rotation.y = -0.22;
+  const tabletScreen = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.24, 0.018), redMat);
+  tabletScreen.position.z = 0.032;
+  inspectionTablet.add(tabletScreen);
+  armL.add(inspectionTablet);
+
+  const inspectionBaton = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.46, 8), redMat);
+  inspectionBaton.position.set(0, -0.16, 0.15);
+  inspectionBaton.rotation.z = -0.32;
+  armR.add(inspectionBaton);
+
+  const shoulderLamp = new THREE.Mesh(new THREE.SphereGeometry(0.065, 8, 6), reflectiveMat);
+  shoulderLamp.position.set(0.34, 1.12, 0.10);
+  group.add(shoulderLamp);
+
+  const shadow = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.94, 0.94),
+    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.46, depthWrite: false })
+  );
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.y = 0.012;
+  group.add(shadow);
+
+  group.scale.setScalar(1.24);
+  return { group, legL, legR, armL, armR, head };
+}
+
+/**
+ * 36. Odprawa 3-msc Clipboard Shockwave Projectile (Inspektor Zmiany)
  */
 export function createOdprawaClipboardProjectile(): THREE.Mesh {
   const geo = new THREE.BoxGeometry(0.5, 0.65, 0.08);
