@@ -4406,7 +4406,7 @@ button {
 }
 .survival-map-directory {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
 .survival-map-directory-card {
@@ -4456,6 +4456,10 @@ button {
 .map-warehouse { border-top: 2px solid #f59e0b; }
 .map-port { border-top: 2px solid #fb923c; }
 .map-cold { border-top: 2px solid #67e8f9; }
+.map-night {
+  border-top: 2px solid #f472b6;
+  background: linear-gradient(145deg, rgba(55, 25, 73, .94), rgba(15, 19, 40, .9));
+}
 .survival-achievement-section {
   padding: 12px;
   border: 1px solid rgba(148, 163, 184, .14);
@@ -4554,6 +4558,9 @@ button {
 @keyframes achievement-toast-in {
   from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 900px) {
+  .survival-map-directory { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 640px) {
   .survival-map-directory { grid-template-columns: 1fr; }
