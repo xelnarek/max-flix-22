@@ -1058,7 +1058,7 @@ test('Piotr ultimate is a pentagram MafiKapibar summon, not a Molotov throw', as
   assert.match(game, /private updateMafiCapybaras\(dt: number\)/);
   assert.match(game, /const ritualRadius = this\.gameMode === 'survival' \? 5\.7 : 6\.2/);
   assert.match(game, /const burstDamage = Math\.max\(2, Math\.ceil\(3 \* abilityDamageMultiplier\)\)/);
-  assert.match(game, /const damage = this\.scaleSurvivalDamage\(2\)/);
+  assert.match(game, /const damage = this\.scaleSurvivalDamage\(capybara\.index === 1 \? 3 : 2\)/);
   assert.match(game, /for \(let index = 0; index < 3; index\+\+\)/);
   assert.match(characters, /abilityName: 'Rytuał MafiKapibar — Pentagram B4'/);
   assert.match(characters, /Don i hybrydowy ochroniarz ostrzeliwują cele świecącymi pociskami z ciężkich, stylizowanych karabinów/);
