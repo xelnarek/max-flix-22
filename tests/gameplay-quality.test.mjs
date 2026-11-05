@@ -1164,3 +1164,14 @@ test('Survival can trigger a temporary forklift convoy event with a mobile-safe 
   assert.match(game, /spawnDroppedPerk\(x, 0\.5, z, 'hardhat'\)/);
   assert.match(game, /this\.hazards\.filter\(\(hazard\) => hazard\.active\)/);
 });
+
+
+test('Survival field guide lists all seven live warehouse events and the actual event cadence', async () => {
+  const [html, game] = await Promise.all([read('../index.html'), read('../src/game.ts')]);
+  assert.match(html, /WYDARZENIA MAGAZYNOWE • 7 SCENARIUSZY/);
+  assert.match(html, /PILNE ZLECENIE B4 ERP/);
+  assert.match(html, /KONWÓJ SZTAPLAREK/);
+  assert.match(html, /pierwszy event pojawia się po około 36 sekundach\. Kolejne są losowane co 43–57 sekund/);
+  assert.match(game, /private survivalEventTimer = 36/);
+  assert.match(game, /survivalEventTimer = 43 \+ Math\.random\(\) \* 14/);
+});
