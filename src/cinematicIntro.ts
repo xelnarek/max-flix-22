@@ -478,36 +478,264 @@ export class CinematicIntroManager {
     ctx.restore();
   }
 
+  private drawOperatorPortrait(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    size: number,
+    operatorIndex: number,
+    t: number,
+  ): void {
+    const palette = [
+      { skin: '#e9b995', hair: '#3d2b24', shirt: '#173b72', trim: '#f0c46b', helmet: '#f8fafc' },
+      { skin: '#d9a27f', hair: '#211a17', shirt: '#14583d', trim: '#f5ca45', helmet: '#facc15' },
+      { skin: '#e4b18d', hair: '#49291d', shirt: '#9a4b16', trim: '#f5a04c', helmet: '#f47b32' },
+      { skin: '#e7b99c', hair: '#30241f', shirt: '#51249a', trim: '#67e8f9', helmet: '#6d3ab8' },
+      { skin: '#d4a585', hair: '#77736d', shirt: '#7f1d1d', trim: '#facc15', helmet: '#b91c1c' },
+    ][operatorIndex];
+    const shoulderWidth = [39, 48, 42, 35, 46][operatorIndex];
+    const headWidth = [29, 34, 28, 27, 32][operatorIndex];
+    const headHeight = [36, 35, 39, 35, 38][operatorIndex];
+    const bob = Math.sin(t * 2.8 + operatorIndex * 0.9) * 1.4;
+
+    ctx.save();
+    ctx.translate(x, y + bob);
+    ctx.scale(size / 100, size / 100);
+
+    // Jacket and shoulders are part of the portrait, not a floating logo.
+    ctx.fillStyle = '#101c2a';
+    ctx.beginPath();
+    ctx.moveTo(-shoulderWidth - 7, 52);
+    ctx.quadraticCurveTo(-shoulderWidth - 4, 23, -20, 19);
+    ctx.lineTo(-11, 13);
+    ctx.lineTo(11, 13);
+    ctx.lineTo(20, 19);
+    ctx.quadraticCurveTo(shoulderWidth + 4, 23, shoulderWidth + 7, 52);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = palette.shirt;
+    ctx.beginPath();
+    ctx.moveTo(-shoulderWidth, 51);
+    ctx.quadraticCurveTo(-shoulderWidth + 2, 25, -18, 22);
+    ctx.lineTo(-10, 17);
+    ctx.lineTo(10, 17);
+    ctx.lineTo(18, 22);
+    ctx.quadraticCurveTo(shoulderWidth - 2, 25, shoulderWidth, 51);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = palette.trim;
+    ctx.fillRect(-shoulderWidth * 0.68, 34, shoulderWidth * 1.36, 3.4);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(-shoulderWidth * 0.48, 41, shoulderWidth * 0.96, 2.2);
+
+    ctx.fillStyle = palette.skin;
+    ctx.fillRect(-8, 7, 16, 17);
+    ctx.fillStyle = 'rgba(0,0,0,.20)';
+    ctx.fillRect(-8, 18, 16, 5);
+
+    // Face shape changes with the operator so the team is recognizable in silhouette.
+    ctx.fillStyle = palette.hair;
+    ctx.beginPath();
+    ctx.ellipse(0, -12, headWidth + 2, headHeight + 2, 0, Math.PI, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = palette.skin;
+    ctx.beginPath();
+    if (operatorIndex === 1) {
+      ctx.moveTo(-headWidth, -18);
+      ctx.quadraticCurveTo(-headWidth - 3, -43, 0, -47);
+      ctx.quadraticCurveTo(headWidth + 3, -43, headWidth, -18);
+      ctx.lineTo(headWidth - 3, 1);
+      ctx.quadraticCurveTo(0, 18, -headWidth + 3, 1);
+    } else {
+      ctx.ellipse(0, -16, headWidth, headHeight, 0, 0, Math.PI * 2);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = palette.hair;
+    if (operatorIndex === 0 || operatorIndex === 2 || operatorIndex === 4) {
+      ctx.beginPath();
+      ctx.ellipse(0, -43, headWidth * 0.92, 11, 0, Math.PI, Math.PI * 2);
+      ctx.fill();
+    }
+    if (operatorIndex === 1) {
+      ctx.beginPath();
+      ctx.ellipse(-headWidth + 3, -22, 5, 13, 0, 0, Math.PI * 2);
+      ctx.ellipse(headWidth - 3, -22, 5, 13, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Expression, beard and signature details.
+    ctx.strokeStyle = palette.hair;
+    ctx.lineCap = 'round';
+    ctx.lineWidth = operatorIndex === 1 ? 4.2 : operatorIndex === 4 ? 3.2 : 2.3;
+    ctx.beginPath();
+    ctx.moveTo(-13, -19); ctx.lineTo(-5, -20);
+    ctx.moveTo(5, -20); ctx.lineTo(13, -19);
+    ctx.stroke();
+    ctx.fillStyle = '#172235';
+    ctx.beginPath();
+    ctx.arc(-9, -13, 2.1, 0, Math.PI * 2);
+    ctx.arc(9, -13, 2.1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#a86f58';
+    ctx.lineWidth = 1.7;
+    ctx.beginPath();
+    ctx.moveTo(0, -10); ctx.lineTo(-2, -3); ctx.lineTo(2, -2);
+    ctx.stroke();
+
+    if (operatorIndex === 1) {
+      ctx.fillStyle = '#211a17';
+      ctx.beginPath();
+      ctx.moveTo(-headWidth + 3, -2);
+      ctx.quadraticCurveTo(0, 26, headWidth - 3, -2);
+      ctx.lineTo(headWidth - 6, 10);
+      ctx.quadraticCurveTo(0, 29, -headWidth + 6, 10);
+      ctx.closePath();
+      ctx.fill();
+    } else if (operatorIndex === 2) {
+      ctx.fillStyle = '#573323';
+      ctx.beginPath();
+      ctx.moveTo(-17, 0);
+      ctx.quadraticCurveTo(0, 12, 17, 0);
+      ctx.lineTo(11, 11);
+      ctx.quadraticCurveTo(0, 17, -11, 11);
+      ctx.closePath();
+      ctx.fill();
+    } else if (operatorIndex === 4) {
+      ctx.fillStyle = '#77736d';
+      ctx.beginPath();
+      ctx.moveTo(-19, -1);
+      ctx.quadraticCurveTo(0, 11, 19, -1);
+      ctx.lineTo(12, 19);
+      ctx.quadraticCurveTo(0, 26, -12, 19);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#c2beb7';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(-11, 7); ctx.quadraticCurveTo(0, 13, 11, 7); ctx.stroke();
+    } else if (operatorIndex === 3) {
+      ctx.fillStyle = 'rgba(71,53,45,.48)';
+      ctx.beginPath();
+      ctx.arc(-5, 5, 1.2, 0, Math.PI * 2);
+      ctx.arc(5, 5, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (operatorIndex === 0) {
+      // Marcin: white manager's helmet and slim blue-rim glasses.
+      ctx.strokeStyle = '#cbdcf0';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-19, -17, 15, 10);
+      ctx.strokeRect(4, -17, 15, 10);
+      ctx.beginPath(); ctx.moveTo(-4, -13); ctx.lineTo(4, -13); ctx.stroke();
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath(); ctx.ellipse(0, -46, 31, 9, 0, Math.PI, Math.PI * 2); ctx.fill();
+      ctx.fillRect(-33, -47, 66, 5);
+      ctx.fillStyle = '#2563eb'; ctx.fillRect(-5, -49, 10, 3);
+    } else if (operatorIndex === 1) {
+      // Grzesiek: broad yellow hardhat and dark industrial ear defenders.
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath(); ctx.ellipse(0, -45, 34, 10, 0, Math.PI, Math.PI * 2); ctx.fill();
+      ctx.fillRect(-36, -46, 72, 6);
+      ctx.fillStyle = '#111827';
+      ctx.fillRect(-40, -31, 7, 17); ctx.fillRect(33, -31, 7, 17);
+      ctx.fillStyle = '#f5ca45'; ctx.fillRect(-7, -48, 14, 3);
+    } else if (operatorIndex === 2) {
+      // Dawid: orange helmet, chin strap and wide protective goggles.
+      ctx.fillStyle = '#f47b32';
+      ctx.beginPath(); ctx.ellipse(0, -46, 31, 9, 0, Math.PI, Math.PI * 2); ctx.fill();
+      ctx.fillRect(-34, -47, 68, 6);
+      ctx.strokeStyle = '#7dd3fc';
+      ctx.fillStyle = 'rgba(125,211,252,.42)';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.roundRect(-20, -18, 17, 11, 4); ctx.roundRect(3, -18, 17, 11, 4); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-3, -13); ctx.lineTo(3, -13); ctx.stroke();
+    } else if (operatorIndex === 3) {
+      // Mateusz: backward cap, illuminated over-ear headset and a boom mic.
+      ctx.fillStyle = '#6d3ab8';
+      ctx.beginPath(); ctx.ellipse(0, -44, 29, 8, 0, Math.PI, Math.PI * 2); ctx.fill();
+      ctx.fillRect(-31, -43, 62, 4);
+      ctx.fillStyle = '#21123f';
+      ctx.fillRect(-34, -25, 6, 14); ctx.fillRect(28, -25, 6, 14);
+      ctx.fillStyle = '#67e8f9';
+      ctx.beginPath(); ctx.arc(-31, -18, 4, 0, Math.PI * 2); ctx.arc(31, -18, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#21123f'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(31, -14); ctx.quadraticCurveTo(39, -2, 18, 4); ctx.stroke();
+      ctx.fillStyle = '#67e8f9'; ctx.beginPath(); ctx.arc(18, 4, 2.5, 0, Math.PI * 2); ctx.fill();
+    } else {
+      // Piotr: crimson hardhat, yellow lamp, grey hair and a heavy veteran beard.
+      ctx.fillStyle = '#b91c1c';
+      ctx.beginPath(); ctx.ellipse(0, -46, 33, 10, 0, Math.PI, Math.PI * 2); ctx.fill();
+      ctx.fillRect(-36, -47, 72, 6);
+      ctx.fillStyle = '#facc15'; ctx.fillRect(-6, -51, 12, 5);
+      ctx.fillStyle = '#fff2b8'; ctx.beginPath(); ctx.arc(0, -48, 2.4, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#c2beb7'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(-13, -29); ctx.lineTo(-18, -23); ctx.moveTo(13, -29); ctx.lineTo(18, -23); ctx.stroke();
+    }
+
+    // Small signature tool silhouettes below the collar reinforce class identity.
+    ctx.fillStyle = palette.trim;
+    ctx.beginPath();
+    if (operatorIndex === 0) {
+      ctx.roundRect(18, 24, 15, 20, 2);
+      ctx.fill();
+      ctx.fillStyle = '#172554'; ctx.fillRect(20, 27, 11, 13);
+    } else if (operatorIndex === 1) {
+      ctx.arc(0, 33, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.fillRect(-18, 30, 36, 5);
+    } else if (operatorIndex === 2) {
+      ctx.roundRect(16, 25, 14, 18, 3); ctx.fill();
+      ctx.fillStyle = '#dbeafe'; ctx.fillRect(19, 28, 8, 12);
+    } else if (operatorIndex === 3) {
+      ctx.moveTo(24, 24); ctx.lineTo(14, 37); ctx.lineTo(23, 37); ctx.lineTo(17, 47); ctx.lineTo(34, 29); ctx.lineTo(25, 29); ctx.closePath(); ctx.fill();
+    } else {
+      ctx.fillRect(21, 24, 5, 25); ctx.fillRect(15, 22, 17, 5);
+    }
+    ctx.restore();
+  }
+
   private drawOperators(ctx: CanvasRenderingContext2D, w: number, h: number, reveal: number, t: number): void {
     if (reveal <= 0) return;
-    const colors = ['#f59e0b', '#d6a84f', '#38bdf8', '#a78bfa', '#fb7185'];
-    const symbols = ['WZ', '44', 'XL', '⚡', 'B4'];
-    const labels = ['DOWODZENIE', 'SIŁA', 'WIELKI FORMAT', 'IMPULS', 'PRECYZJA'];
-    const gap = w * 0.115;
+    const colors = ['#f0c46b', '#65d7a4', '#f5a04c', '#a78bfa', '#ff777e'];
+    const labels = ['DOWÓDCA', 'SIŁACZ', 'FORMAT', 'GAMER', 'WETERAN'];
+    const codes = ['LOG-01', 'HYD-44', 'GRS-28', 'SYS-99', 'WET-70'];
+    const gap = Math.min(w * 0.115, 132);
+    const rise = (1 - reveal) * h * 0.18;
     for (let i = 0; i < 5; i++) {
       const x = w * 0.5 + (i - 2) * gap;
-      const rise = (1 - reveal) * h * 0.24;
-      const y = h * 0.63 + rise + Math.sin(t * 2 + i) * h * 0.007;
-      const r = w * 0.027;
+      const y = h * 0.635 + rise + Math.sin(t * 2 + i) * h * 0.005;
+      const cardWidth = Math.max(32, Math.min(gap * 0.84, w * 0.104));
+      const cardHeight = cardWidth * 1.32;
+      const portraitSize = cardWidth * 0.82;
+
       ctx.save();
       ctx.globalAlpha = reveal;
       ctx.shadowColor = colors[i];
-      ctx.shadowBlur = r * 0.8;
-      ctx.fillStyle = 'rgba(9,21,34,0.9)';
+      ctx.shadowBlur = cardWidth * 0.22;
+      ctx.fillStyle = 'rgba(7,17,28,.93)';
       ctx.strokeStyle = colors[i];
-      ctx.lineWidth = Math.max(2, w / 700);
+      ctx.lineWidth = Math.max(1.2, w / 1100);
       ctx.beginPath();
-      ctx.roundRect(x - r * 1.1, y - r * 1.25, r * 2.2, r * 2.8, r * 0.35);
+      ctx.roundRect(x - cardWidth / 2, y - cardHeight * 0.52, cardWidth, cardHeight, cardWidth * 0.16);
       ctx.fill();
       ctx.stroke();
       ctx.shadowBlur = 0;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(x - portraitSize / 2, y - cardHeight * 0.43, portraitSize, portraitSize * 0.88, cardWidth * 0.12);
+      ctx.clip();
+      this.drawOperatorPortrait(ctx, x, y - cardHeight * 0.08, portraitSize * 0.94, i, t);
+      ctx.restore();
+
       ctx.fillStyle = colors[i];
-      ctx.font = `900 ${Math.round(r * 0.72)}px system-ui, sans-serif`;
+      ctx.font = `900 ${Math.max(5, Math.round(cardWidth * 0.105))}px system-ui, sans-serif`;
       ctx.textAlign = 'center';
-      ctx.fillText(symbols[i], x, y + r * 0.15);
-      ctx.fillStyle = '#dce7ef';
-      ctx.font = `800 ${Math.max(8, Math.round(w * 0.009))}px system-ui, sans-serif`;
-      ctx.fillText(labels[i], x, y + r * 2.1);
+      ctx.fillText(codes[i], x, y + cardHeight * 0.31);
+      ctx.fillStyle = '#e6eef4';
+      ctx.font = `800 ${Math.max(5, Math.round(cardWidth * 0.10))}px system-ui, sans-serif`;
+      ctx.fillText(labels[i], x, y + cardHeight * 0.43);
       ctx.restore();
     }
   }
