@@ -43,7 +43,7 @@ test('Firebase ranking operations have finite auth, probe, query and write limit
 test('ranking UI prevents overlapping refreshes and differentiates offline cache from an empty online board', async () => {
   const app = await read('../src/index.ts');
   assert.match(app, /let leaderboardRenderInFlight = false/);
-  assert.match(app, /!leaderboardRenderInFlight/);
+  assert.match(app, /!leaderboardList \|\| leaderboardRenderInFlight\) return/);
   assert.match(app, /finally \{\s*leaderboardRenderInFlight = false/);
   assert.match(app, /Nie udało się połączyć z rankingiem online/);
   assert.match(app, /Wysyłanie wyniku do rankingu Survival/);
