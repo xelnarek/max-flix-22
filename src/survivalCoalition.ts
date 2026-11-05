@@ -152,7 +152,7 @@ export function buildSurvivalCoalitionOrders(
         // Ranged units hold the back arc and do not all run into melee range.
         angularOffset = Math.PI + (roleIndex - (squad.filter((item) => item.role === 'ranged').length - 1) / 2) * 0.34;
         preferredRadius = 7.35 + Math.abs(roleIndex) * 0.36;
-      } else {
+      } else if (member.role === 'support') {
         // Support remains behind the squad with room to keep its allies grouped.
         angularOffset = Math.PI * 0.78 + roleIndex * 0.28;
         preferredRadius = 5.65 + roleIndex * 0.42;
