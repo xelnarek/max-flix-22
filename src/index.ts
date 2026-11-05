@@ -738,10 +738,19 @@ class PaleciakiScene extends xb.Script {
           if (survivalXpElem) survivalXpElem.textContent = snapshot.xp + ' / ' + snapshot.xpToNext + ' XP';
           if (survivalXpFill) survivalXpFill.style.width = Math.min(100, (snapshot.xp / Math.max(1, snapshot.xpToNext)) * 100) + '%';
           if (survivalKillsElem) {
-            survivalKillsElem.textContent = String(snapshot.kills) + ' / ' + String(snapshot.perfectDodges) + (snapshot.counterattackReady ? ' ✦' : '');
-            survivalKillsElem.title = snapshot.counterattackReady
-              ? 'Kontratak naładowany: następna salwa broni zada +1 obrażenie.'
-              : 'Eliminacje / idealne uniki';
+            const chainLabel = snapshot.killStreak >= 2 ? ' • ×' + snapshot.killStreak : '';
+            const overdriveLabel = snapshot.overdriveRemainingSeconds > 0
+              ? ' ⚡' + Math.ceil(snapshot.overdriveRemainingSeconds) + 's'
+              : '';
+            survivalKillsElem.textContent = String(snapshot.kills) + ' / ' + String(snapshot.perfectDodges) +
+              chainLabel + overdriveLabel + (snapshot.counterattackReady ? ' ✦' : '');
+            survivalKillsElem.title = snapshot.overdriveRemainingSeconds > 0
+              ? 'OVERDRIVE B4: +12% obrażeń, +18% tempa ataku i +7% prędkości przez ' + Math.ceil(snapshot.overdriveRemainingSeconds) + ' s.'
+              : snapshot.counterattackReady
+                ? 'Kontratak naładowany: następna salwa broni zada +1 obrażenie.'
+                : snapshot.killStreak > 0
+                  ? 'Seria eliminacji: ' + snapshot.killStreak + '/6. Utrzymaj tempo, zanim licznik serii wygaśnie.'
+                  : 'Eliminacje / idealne uniki. Sześć szybkich eliminacji uruchamia krótki Overdrive.';
           }
           if (survivalEnemiesElem) survivalEnemiesElem.textContent = String(snapshot.aliveEnemies);
           const weaponRack = document.getElementById('survival-weapons-list');
