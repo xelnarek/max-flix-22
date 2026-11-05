@@ -106,7 +106,7 @@ test('campaign entry points are retired; only Survival can be started from the a
   assert.doesNotMatch(html, /id="btn-start-game"|data-tab="tab-zones"|data-tab="tab-story"/);
   assert.match(html, /id="btn-start-survival"/);
   assert.doesNotMatch(app, /this\.engine\.startGame\(/);
-  assert.match(app, /this\.engine\.startSurvival\(\)/);
+  assert.match(app, /this\.engine\.startSurvival\(selectedSurvivalMapId\)/);
   assert.match(game, /private resetSurvivalRun\(\)/);
   assert.doesNotMatch(game, /public startGame\(/);
 });
@@ -1175,7 +1175,7 @@ test('mobile performance tiers limit crowd, particles and shadow refresh under l
   assert.match(app, /getAdaptiveEffectsTier/);
   assert.match(app, /setAdaptivePerformanceTier\(nextEffectsTier\)/);
   assert.match(game, /public setAdaptivePerformanceTier\(tier: number\)/);
-  assert.match(game, /mobileEnemyCap = this\.adaptivePerformanceTier >= 2 \? 16 : this\.adaptivePerformanceTier === 1 \? 19 : 22/);
+  assert.match(game, /mobileEnemyCap = this\.adaptivePerformanceTier >= 2 \? 13 : this\.adaptivePerformanceTier === 1 \? 16 : 18/);
   assert.match(game, /const groupLimit = isMobile \? \(this\.adaptivePerformanceTier >= 2 \? 3 : this\.adaptivePerformanceTier === 1 \? 4 : 5\) : 7/);
   assert.match(game, /const maxBudget = isMobile \? \(this\.adaptivePerformanceTier >= 2 \? 14 : this\.adaptivePerformanceTier === 1 \? 24 : 36\) : 75/);
   assert.match(game, /const num = isMobile \? \(this\.adaptivePerformanceTier >= 2 \? 4 : this\.adaptivePerformanceTier === 1 \? 6 : 8\) : 14/);
