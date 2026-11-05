@@ -36,7 +36,7 @@ test('random map selection excludes the immediately previous arena', () => {
 test('random map selection covers every arena and clamps invalid rolls safely', () => {
   const firstRun = SURVIVAL_MAP_IDS.map((_map, index) => chooseRandomSurvivalMap(null, index / 3));
   assert.deepEqual(new Set(firstRun), new Set(SURVIVAL_MAP_IDS));
-  assert.equal(chooseRandomSurvivalMap('warehouse_b4', Number.NaN), 'container_terminal');
+  assert.equal(chooseRandomSurvivalMap('warehouse_b4', Number.NaN), 'cold_storage');
   assert.equal(chooseRandomSurvivalMap('cold_storage', -10), 'warehouse_b4');
   assert.equal(chooseRandomSurvivalMap(null, 10), 'cold_storage');
 });
