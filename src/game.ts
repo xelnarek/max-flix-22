@@ -408,13 +408,14 @@ export class PaleciakiGameEngine {
   // Reused camera scratch vectors: avoid two Vector3 allocations on every frame.
   private readonly cameraTargetPosition = new THREE.Vector3();
   private readonly desiredLookAtPosition = new THREE.Vector3();
+  private readonly cameraOcclusionWorldPosition = new THREE.Vector3();
   private readonly cameraOcclusionRaycaster = new THREE.Raycaster();
   private readonly cameraOcclusionHits: THREE.Intersection<THREE.Object3D>[] = [];
   private cameraOcclusionCooldown = 0;
   private mobileShadowRefreshCooldown = 0;
   private adaptivePerformanceTier: 0 | 1 | 2 = 0;
   private readonly cameraOccluders: THREE.Mesh[] = [];
-  private readonly cameraOccluderMaterials = new Map<THREE.Mesh, { original: THREE.Material | THREE.Material[]; faded: THREE.Material | THREE.Material[]; originals: THREE.Material[]; fades: THREE.Material[]; isFaded: boolean }>();
+  private readonly cameraOccluderMaterials = new Map<THREE.Mesh, { original: THREE.Material | THREE.Material[]; faded: THREE.Material | THREE.Material[]; originals: THREE.Material[]; fades: THREE.Material[]; isFaded: boolean; fadeOpacity: number; fadeRadius: number }>();
   private cameraBossCheckCooldown = 0;
   private cameraBossTargetZoom = 1.0;
   private bossHudRefreshCooldown = 0;
@@ -480,6 +481,7 @@ export class PaleciakiGameEngine {
   private survivalBossesDefeated = 0;
   private survivalSecrets: { id: string; name: string; mesh: THREE.Group; age: number; collected: boolean }[] = [];
   private survivalMapLandmarks: THREE.Group | null = null;
+  private survivalCeilingFixtures: THREE.Mesh[] = [];
   private survivalPerfectDodges = 0;
   private survivalCounterattackReady = false;
   private campaignCounterattackReady = false;
@@ -1554,25 +1556,26 @@ export class PaleciakiGameEngine {
     dockGuides.receiveShadow = false;
     this.addSurvivalArenaInstance(dockGuides);
 
-    // High-bay ceiling luminaires are one instanced batch, not dozens of separate meshes.
-    const fixtureMaterial = new THREE.MeshStandardMaterial({
-      color: 0xc5d9e2,
-      emissive: 0x4c91a9,
-      emissiveIntensity: 0.32,
-      roughness: 0.28,
-      metalness: 0.42,
-    });
-    const fixtureGeometry = new THREE.BoxGeometry(3.6, 0.12, 0.38);
-    const fixtures = new THREE.InstancedMesh(fixtureGeometry, fixtureMaterial, 8);
+    // Individual ceiling lights can fade independently when the operator passes
+    // directly below them or when a lamp crosses the camera-to-player sightline.
+    // The small fixed count costs a few draw calls, but removes the biggest mobile occluder.
     for (let i = 0; i < 8; i++) {
-      dashTransform.position.set(-49 + i * 14, 8.35, 0);
-      dashTransform.updateMatrix();
-      fixtures.setMatrixAt(i, dashTransform.matrix);
+      const fixtureMaterial = new THREE.MeshStandardMaterial({
+        color: 0xc5d9e2,
+        emissive: 0x4c91a9,
+        emissiveIntensity: 0.48,
+        roughness: 0.28,
+        metalness: 0.42,
+      });
+      const fixture = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.12, 0.38), fixtureMaterial);
+      fixture.name = 'survival-ceiling-light-' + (i + 1);
+      fixture.position.set(-49 + i * 14, 8.35, 0);
+      fixture.castShadow = false;
+      fixture.receiveShadow = false;
+      this.registerCameraOccluder(fixture, 0.07, 3.15);
+      this.survivalCeilingFixtures.push(fixture);
+      this.levelRoot.add(fixture);
     }
-    fixtures.instanceMatrix.needsUpdate = true;
-    fixtures.castShadow = false;
-    fixtures.receiveShadow = false;
-    this.addSurvivalArenaInstance(fixtures);
 
     // Continuous side walls frame the complete 120 x 40 m arena.
     for (const zSide of [-1, 1]) {
@@ -1750,6 +1753,39 @@ export class PaleciakiGameEngine {
       const beacon = new THREE.PointLight(0xfb923c, 3.2, 25);
       beacon.position.set(0, 6.5, 0);
       root.add(beacon);
+
+      // Two portal frames, dock bumpers and high-contrast lane chevrons make
+      // the port unmistakable from the tactical camera without blocking routes.
+      const gantryLegMaterial = new THREE.MeshStandardMaterial({ color: 0xf2a23b, metalness: 0.64, roughness: 0.38 });
+      for (const side of [-1, 1]) {
+        for (const z of [-16.2, 16.2]) {
+          const leg = new THREE.Mesh(new THREE.BoxGeometry(0.48, 6.7, 0.48), gantryLegMaterial);
+          leg.position.set(side * 53.6, 3.35, z);
+          leg.castShadow = false;
+          root.add(leg);
+          const shoe = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.2, 1.05), craneMaterial);
+          shoe.position.set(side * 53.6, 0.12, z);
+          root.add(shoe);
+        }
+      }
+      const lanePaint = new THREE.MeshBasicMaterial({ color: 0xf59e0b, toneMapped: false });
+      const portChevronGeometry = new THREE.BoxGeometry(3.2, 0.025, 0.13);
+      const portChevrons = new THREE.InstancedMesh(portChevronGeometry, lanePaint, 16);
+      const chevronTransform = new THREE.Object3D();
+      let chevronIndex = 0;
+      for (const side of [-1, 1]) {
+        for (let mark = 0; mark < 8; mark++) {
+          chevronTransform.position.set(side * (47.0 + (mark % 2) * 2.2), 0.026, -12.5 + mark * 3.55);
+          chevronTransform.rotation.set(0, side * 0.35, 0);
+          chevronTransform.scale.set(1, 1, 1);
+          chevronTransform.updateMatrix();
+          portChevrons.setMatrixAt(chevronIndex++, chevronTransform.matrix);
+        }
+      }
+      portChevrons.instanceMatrix.needsUpdate = true;
+      portChevrons.castShadow = false;
+      portChevrons.receiveShadow = false;
+      root.add(portChevrons);
     } else if (mapId === 'cold_storage') {
       const shellMaterial = new THREE.MeshStandardMaterial({ color: 0x8bb6c8, metalness: 0.38, roughness: 0.34 });
       const panelMaterial = new THREE.MeshStandardMaterial({ color: 0xd9f5ff, metalness: 0.28, roughness: 0.3, emissive: 0x1c596f, emissiveIntensity: 0.16 });
@@ -1814,6 +1850,88 @@ export class PaleciakiGameEngine {
         coldLight.position.set(x, 6.3, 0);
         root.add(coldLight);
       }
+
+      // Condenser status panels and frosted service cabinets give the cold room
+      // its own readable industrial rhythm; all remain outside the central lanes.
+      const statusMaterial = new THREE.MeshBasicMaterial({ color: 0x67e8f9, toneMapped: false });
+      const darkPanelMaterial = new THREE.MeshStandardMaterial({ color: 0x123447, metalness: 0.62, roughness: 0.34 });
+      for (const side of [-1, 1]) {
+        for (const x of [-50, -17, 17, 50]) {
+          const panel = new THREE.Group();
+          panel.name = 'cold-storage-control-panel';
+          const housing = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.15, 0.22), darkPanelMaterial);
+          housing.position.y = 3.65;
+          const screen = new THREE.Mesh(new THREE.BoxGeometry(1.52, 0.62, 0.035), statusMaterial);
+          screen.position.set(0, 3.7, 0.135);
+          panel.add(housing, screen);
+          panel.position.set(x, 0, side * 18.7);
+          root.add(panel);
+        }
+      }
+      const iceMaterial = new THREE.MeshStandardMaterial({ color: 0xa5efff, metalness: 0.12, roughness: 0.22, transparent: true, opacity: 0.66, depthWrite: false, emissive: 0x2b9cb8, emissiveIntensity: 0.12 });
+      for (const position of [
+        { x: -54, z: -11 }, { x: -54, z: 11 },
+        { x: 54, z: -11 }, { x: 54, z: 11 },
+      ]) {
+        const frostStack = new THREE.Group();
+        frostStack.name = 'cold-storage-frost-stack';
+        for (let shard = 0; shard < 3; shard++) {
+          const crystal = new THREE.Mesh(new THREE.ConeGeometry(0.34 + shard * 0.05, 1.25 + shard * 0.18, 5), iceMaterial);
+          crystal.position.set((shard - 1) * 0.42, 0.62 + shard * 0.09, (shard % 2) * 0.25);
+          crystal.rotation.z = (shard - 1) * 0.16;
+          crystal.castShadow = false;
+          frostStack.add(crystal);
+        }
+        frostStack.position.set(position.x, 0, position.z);
+        root.add(frostStack);
+      }
+    } else {
+      // Warehouse B4: numbered dock shutters, pallet staging lights and yellow
+      // pedestrian rails distinguish the original hall from the port/chiller.
+      const dockSteel = new THREE.MeshStandardMaterial({ color: 0x354b5d, metalness: 0.68, roughness: 0.42 });
+      const shutterMaterial = new THREE.MeshStandardMaterial({ color: 0x718292, metalness: 0.52, roughness: 0.56 });
+      const amber = new THREE.MeshStandardMaterial({ color: 0xf4b544, metalness: 0.34, roughness: 0.48, emissive: 0x8a4c13, emissiveIntensity: 0.18 });
+      for (const side of [-1, 1]) {
+        for (let dock = 0; dock < 3; dock++) {
+          const x = -34 + dock * 34;
+          const shutter = new THREE.Group();
+          shutter.name = 'warehouse-b4-loading-shutter-' + side + '-' + dock;
+          const panel = new THREE.Mesh(new THREE.BoxGeometry(8.6, 4.4, 0.18), shutterMaterial);
+          panel.position.y = 2.45;
+          shutter.add(panel);
+          for (let slat = 0; slat < 7; slat++) {
+            const line = new THREE.Mesh(new THREE.BoxGeometry(8.3, 0.055, 0.22), dockSteel);
+            line.position.set(0, 0.65 + slat * 0.56, 0.13);
+            shutter.add(line);
+          }
+          const header = new THREE.Mesh(new THREE.BoxGeometry(8.9, 0.22, 0.25), amber);
+          header.position.set(0, 4.75, 0.04);
+          shutter.add(header);
+          shutter.position.set(x, 0, side * 19.05);
+          root.add(shutter);
+          const dockLamp = new THREE.PointLight(0xf59e0b, 0.85, 10);
+          dockLamp.position.set(x, 5.4, side * 16.8);
+          root.add(dockLamp);
+        }
+      }
+      const safetyLineMaterial = new THREE.MeshBasicMaterial({ color: 0xfbbf24, toneMapped: false });
+      const safetyLineGeometry = new THREE.BoxGeometry(2.0, 0.025, 0.12);
+      const safetyLines = new THREE.InstancedMesh(safetyLineGeometry, safetyLineMaterial, 18);
+      const lineTransform = new THREE.Object3D();
+      let lineIndex = 0;
+      for (const side of [-1, 1]) {
+        for (let index = 0; index < 9; index++) {
+          lineTransform.position.set(-38 + index * 9.5, 0.025, side * 11.6);
+          lineTransform.rotation.set(0, 0, 0);
+          lineTransform.scale.set(1, 1, 1);
+          lineTransform.updateMatrix();
+          safetyLines.setMatrixAt(lineIndex++, lineTransform.matrix);
+        }
+      }
+      safetyLines.instanceMatrix.needsUpdate = true;
+      safetyLines.castShadow = false;
+      safetyLines.receiveShadow = false;
+      root.add(safetyLines);
     }
   }
 
@@ -2667,7 +2785,7 @@ export class PaleciakiGameEngine {
     this.mateuszCats = [];
   }
 
-  private registerCameraOccluder(mesh: THREE.Mesh) {
+  private registerCameraOccluder(mesh: THREE.Mesh, fadeOpacity = 0.18, fadeRadius = 0) {
     if (this.cameraOccluderMaterials.has(mesh)) return;
     const original = mesh.material;
     const originals = Array.isArray(original) ? original : [original];
@@ -2676,7 +2794,15 @@ export class PaleciakiGameEngine {
     mesh.material = faded;
     mesh.userData.cameraOccluder = true;
     this.cameraOccluders.push(mesh);
-    this.cameraOccluderMaterials.set(mesh, { original, faded, originals, fades, isFaded: false });
+    this.cameraOccluderMaterials.set(mesh, {
+      original,
+      faded,
+      originals,
+      fades,
+      isFaded: false,
+      fadeOpacity: THREE.MathUtils.clamp(Number.isFinite(fadeOpacity) ? fadeOpacity : 0.18, 0.04, 1),
+      fadeRadius: THREE.MathUtils.clamp(Number.isFinite(fadeRadius) ? fadeRadius : 0, 0, 8),
+    });
   }
 
   private updateCameraOcclusion(dt: number) {
@@ -2702,13 +2828,22 @@ export class PaleciakiGameEngine {
     this.cameraOcclusionRaycaster.intersectObjects(this.cameraOccluders, false, hits);
 
     for (const [mesh, state] of this.cameraOccluderMaterials) {
-      let shouldFade = false;
+      let rayBlocked = false;
       for (let i = 0; i < hits.length; i++) {
         if (hits[i].object === mesh) {
-          shouldFade = true;
+          rayBlocked = true;
           break;
         }
       }
+      let operatorUnderFixture = false;
+      if (state.fadeRadius > 0) {
+        mesh.getWorldPosition(this.cameraOcclusionWorldPosition);
+        const dx = this.cameraOcclusionWorldPosition.x - this.playerPos.x;
+        const dz = this.cameraOcclusionWorldPosition.z - this.playerPos.z;
+        const overhead = this.cameraOcclusionWorldPosition.y > this.playerPos.y + 1.6;
+        operatorUnderFixture = overhead && dx * dx + dz * dz <= state.fadeRadius * state.fadeRadius;
+      }
+      const shouldFade = rayBlocked || operatorUnderFixture;
       if (shouldFade === state.isFaded) continue;
 
       state.isFaded = shouldFade;
@@ -2717,7 +2852,7 @@ export class PaleciakiGameEngine {
         const original = state.originals[index];
         const transparent = shouldFade ? true : original.transparent;
         const depthWrite = shouldFade ? false : original.depthWrite;
-        const opacity = shouldFade ? Math.min(original.opacity, 0.18) : original.opacity;
+        const opacity = shouldFade ? Math.min(original.opacity, state.fadeOpacity) : original.opacity;
         const shaderVariantChanged = material.transparent !== transparent;
         material.transparent = transparent;
         material.opacity = opacity;
@@ -2761,6 +2896,13 @@ export class PaleciakiGameEngine {
     }
     this.clearSurvivalSurgeRing();
     this.survivalSurgeTargetCount = 0;
+    // Camera fade clones were restored above; now release each lamp's own
+    // geometry/material before the scene graph is cleared for the next arena.
+    for (const fixture of this.survivalCeilingFixtures) {
+      this.levelRoot.remove(fixture);
+      this.disposeTemporaryObject(fixture);
+    }
+    this.survivalCeilingFixtures = [];
     this.disposeSurvivalArenaInstances();
     for (const secret of this.survivalSecrets) {
       this.levelRoot.remove(secret.mesh);
