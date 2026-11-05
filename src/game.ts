@@ -7959,6 +7959,18 @@ export class PaleciakiGameEngine {
         const streak = registerSurvivalXpPickup(this.survivalXpStreak, this.survivalElapsed);
         this.survivalXpStreak = streak.state;
         const xpValue = Math.max(1, Math.round(gem.value * this.survivalXpMultiplier * ((this.activePerks.xpSurge || 0) > 0 ? 1.5 : 1) * streak.multiplier));
+        if (streak.perfectChainNow) {
+          const chainBonus = 350 + this.survivalWave * 25;
+          this.score += chainBonus;
+          this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+          this.spawnSurvivalXpGem(this.playerPos.x + 1.35, this.playerPos.y, this.playerPos.z - 0.9, 3);
+          this.emitFloatingToast('ŁAŃCUCH PERFEKCYJNY • +' + chainBonus + ' PKT • BONUS 3 XP', this.playerPos.x, this.playerPos.y + 2.0, this.playerPos.z, 'easter-egg');
+          this.callbacks.onSurvivalAnnouncement?.('ŁAŃCUCH XP PERFEKCYJNY', '6 KRYSZTAŁÓW BEZ PRZERWY • PREMIA ' + chainBonus + ' PKT', 'Doskonała trasa zbierania! Dodatkowy kryształ doświadczenia pojawił się obok operatora.');
+          this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.55, this.playerPos.z, 0xfbbf24);
+          this.triggerHitStop(0.07);
+          this.triggerBloomPulse(0.42);
+          sound.playEasterEgg();
+        }
         this.survivalXp += xpValue;
         this.registerSurvivalContractAction('xp', xpValue);
         this.registerSurvivalShiftEventAction('xp', xpValue);

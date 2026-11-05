@@ -48,3 +48,35 @@ test('streak display expires after the pickup window', () => {
   assert.equal(getSurvivalXpStreakTier(second.state, 16.25), 2);
   assert.equal(getSurvivalXpStreakTier(second.state, 16.26), 0);
 });
+
+test('the sixth consecutive pickup triggers one perfect-chain reward only once', () => {
+  let state = createSurvivalXpStreakState();
+  let perfect = null;
+  for (let index = 0; index < 8; index++) {
+    const result = registerSurvivalXpPickup(state, 20 + index * 1.1);
+    state = result.state;
+    if (result.perfectChainNow) perfect = result;
+  }
+  assert.ok(perfect);
+  assert.equal(perfect.tier, 6);
+  assert.equal(perfect.perfectChainNow, true);
+  assert.equal(state.perfectRewardClaimed, true);
+  const continued = registerSurvivalXpPickup(state, 29.0);
+  assert.equal(continued.perfectChainNow, false);
+  assert.equal(continued.state.perfectRewardClaimed, true);
+});
+
+test('a broken XP chain can earn the perfect-chain reward again after rebuilding six pickups', () => {
+  let state = createSurvivalXpStreakState();
+  for (let index = 0; index < 6; index++) state = registerSurvivalXpPickup(state, 30 + index).state;
+  assert.equal(state.perfectRewardClaimed, true);
+  state = registerSurvivalXpPickup(state, 50).state;
+  assert.equal(state.count, 1);
+  assert.equal(state.perfectRewardClaimed, false);
+  let result;
+  for (let index = 1; index < 6; index++) {
+    result = registerSurvivalXpPickup(state, 50 + index);
+    state = result.state;
+  }
+  assert.equal(result.perfectChainNow, true);
+});
