@@ -1489,7 +1489,7 @@ export class PaleciakiGameEngine {
     floorTexture.wrapS = THREE.RepeatWrapping;
     floorTexture.wrapT = THREE.RepeatWrapping;
     floorTexture.repeat.set(3, 4);
-    const floorMaterial = new THREE.MeshStandardMaterial({ map: floorTexture, color: mapDefinition.floorColor, roughness: mapId === 'cold_storage' ? 0.42 : 0.62, metalness: mapId === 'container_terminal' ? 0.24 : 0.12 });
+    const floorMaterial = new THREE.MeshStandardMaterial({ map: floorTexture, color: mapDefinition.floorColor, roughness: mapId === 'cold_storage' ? 0.42 : mapId === 'night_sorting' ? 0.34 : 0.62, metalness: mapId === 'container_terminal' ? 0.24 : mapId === 'night_sorting' ? 0.36 : 0.12 });
     applyIndustrialPbr(floorMaterial, 0.018);
     const wallMaterial = new THREE.MeshStandardMaterial({ color: mapDefinition.wallColor, roughness: 0.72, metalness: mapId === 'container_terminal' ? 0.42 : 0.32 });
     const trimMaterial = new THREE.MeshStandardMaterial({ color: mapDefinition.accentColor, roughness: 0.48, metalness: 0.24, emissive: mapDefinition.accentColor, emissiveIntensity: 0.10 });
@@ -1924,6 +1924,68 @@ export class PaleciakiGameEngine {
       frostCrystals.castShadow = false;
       frostCrystals.receiveShadow = false;
       root.add(frostCrystals);
+    } else if (mapId === 'night_sorting') {
+      // Night sorting facility: four neon scanner gates, illuminated routing strips
+      // and a suspended status sign create a silhouette unlike the warehouse, port or chiller.
+      const frameMaterial = new THREE.MeshStandardMaterial({ color: 0x50315f, metalness: 0.62, roughness: 0.34, emissive: 0x3d1757, emissiveIntensity: 0.24 });
+      const pinkNeon = new THREE.MeshBasicMaterial({ color: 0xf472b6, toneMapped: false });
+      const cyanNeon = new THREE.MeshBasicMaterial({ color: 0x67e8f9, toneMapped: false });
+      const gatePositions = [-36, -12, 12, 36];
+      for (let gateIndex = 0; gateIndex < gatePositions.length; gateIndex++) {
+        const x = gatePositions[gateIndex];
+        const gate = new THREE.Group();
+        gate.name = 'night-sorter-scan-gate-' + (gateIndex + 1);
+        const postL = new THREE.Mesh(new THREE.BoxGeometry(0.48, 4.15, 0.48), frameMaterial);
+        const postR = postL.clone();
+        postL.position.set(0, 2.05, -5.1);
+        postR.position.set(0, 2.05, 5.1);
+        const crossbar = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.48, 10.55), frameMaterial);
+        crossbar.position.y = 4.1;
+        const scanBar = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.10, 9.9), gateIndex % 2 === 0 ? pinkNeon : cyanNeon);
+        scanBar.position.set(0.29, 3.83, 0);
+        const footL = new THREE.Mesh(new THREE.BoxGeometry(0.96, 0.18, 0.95), gateIndex % 2 === 0 ? pinkNeon : cyanNeon);
+        const footR = footL.clone();
+        footL.position.set(0, 0.11, -5.1);
+        footR.position.set(0, 0.11, 5.1);
+        gate.add(postL, postR, crossbar, scanBar, footL, footR);
+        gate.position.x = x;
+        root.add(gate);
+        const scanGlow = new THREE.PointLight(gateIndex % 2 === 0 ? 0xf472b6 : 0x67e8f9, 2.0, 18);
+        scanGlow.position.set(x, 3.1, 0);
+        root.add(scanGlow);
+      }
+
+      const routingMaterial = new THREE.MeshBasicMaterial({ color: 0xf0abfc, toneMapped: false });
+      const routingMarks = new THREE.InstancedMesh(new THREE.BoxGeometry(1.65, 0.025, 0.15), routingMaterial, 24);
+      const routingTransform = new THREE.Object3D();
+      let routingIndex = 0;
+      for (const side of [-1, 1]) {
+        for (let mark = 0; mark < 12; mark++) {
+          routingTransform.position.set(-51 + mark * 9.25, 0.028, side * 12.9);
+          routingTransform.rotation.set(0, side * 0.12, 0);
+          routingTransform.scale.set(1, 1, 1);
+          routingTransform.updateMatrix();
+          routingMarks.setMatrixAt(routingIndex++, routingTransform.matrix);
+        }
+      }
+      routingMarks.instanceMatrix.needsUpdate = true;
+      routingMarks.castShadow = false;
+      routingMarks.receiveShadow = false;
+      root.add(routingMarks);
+
+      const statusSign = new THREE.Mesh(
+        new THREE.PlaneGeometry(8.6, 1.55),
+        this.getSurvivalArenaLabelMaterial('SORTOWNIA WIDMOWA  //  ZMIANA 03', '#f0abfc'),
+      );
+      statusSign.position.set(0, 6.3, -19.36);
+      statusSign.castShadow = false;
+      statusSign.receiveShadow = false;
+      root.add(statusSign);
+      for (const x of [-42, -14, 14, 42]) {
+        const beacon = new THREE.PointLight(0xa855f7, 1.15, 15);
+        beacon.position.set(x, 6.0, 16.8);
+        root.add(beacon);
+      }
     } else {
       // Warehouse B4: numbered dock shutters, pallet staging lights and yellow
       // pedestrian rails distinguish the original hall from the port/chiller.
@@ -2062,40 +2124,144 @@ export class PaleciakiGameEngine {
       const gold = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.78, roughness: 0.22, emissive: 0x854d0e, emissiveIntensity: 0.58 });
       const dark = new THREE.MeshStandardMaterial({ color: 0x27384b, metalness: 0.65, roughness: 0.34 });
       const glow = new THREE.MeshBasicMaterial({ color: 0xfde68a, transparent: true, opacity: 0.48, depthWrite: false });
-      const coreGeometry = secret.style === 'wz'
-        ? new THREE.BoxGeometry(0.48, 0.34, 0.12)
-        : secret.style === 'cassette'
-          ? new THREE.BoxGeometry(0.38, 0.26, 0.22)
-          : new THREE.IcosahedronGeometry(0.29, 1);
-      const core = new THREE.Mesh(coreGeometry, gold);
-      core.position.y = 0.76;
-      group.add(core);
-      if (secret.style === 'wz') {
-        const folded = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.11, 0.15), dark);
-        folded.position.set(0.12, 0.78, 0.02);
-        group.add(folded);
-      } else if (secret.style === 'cassette') {
-        const reelA = new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.018, 5, 10), dark);
-        const reelB = reelA.clone();
-        reelA.position.set(-0.09, 0.76, 0.12);
-        reelB.position.set(0.09, 0.76, 0.12);
-        group.add(reelA, reelB);
+
+      if (secret.style === 'rabbit_hole') {
+        // An absurdly inviting rabbit, a real dark burrow and a sign that points
+        // straight into trouble. This is one compact prop cluster, not a new scene.
+        const holeMaterial = new THREE.MeshBasicMaterial({ color: 0x080514, toneMapped: false });
+        const hole = new THREE.Mesh(new THREE.CircleGeometry(0.62, 28), holeMaterial);
+        hole.rotation.x = -Math.PI / 2;
+        hole.position.set(0, 0.045, 0.18);
+        group.add(hole);
+        const rimMaterial = new THREE.MeshStandardMaterial({ color: 0xf0abfc, metalness: 0.36, roughness: 0.28, emissive: 0xa21caf, emissiveIntensity: 0.52 });
+        const rim = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.095, 8, 28), rimMaterial);
+        rim.rotation.x = Math.PI / 2;
+        rim.position.set(0, 0.10, 0.18);
+        group.add(rim);
+        const innerRim = new THREE.Mesh(new THREE.TorusGeometry(0.39, 0.025, 5, 24), glow);
+        innerRim.rotation.x = Math.PI / 2;
+        innerRim.position.set(0, 0.075, 0.18);
+        group.add(innerRim);
+
+        const rabbit = new THREE.Group();
+        rabbit.name = 'white-rabbit-guide';
+        rabbit.position.set(-0.88, 0.07, 0.46);
+        const fur = new THREE.MeshStandardMaterial({ color: 0xf7f3ff, roughness: 0.9 });
+        const earInner = new THREE.MeshStandardMaterial({ color: 0xf9a8d4, roughness: 0.84 });
+        const eye = new THREE.MeshBasicMaterial({ color: 0x20142f });
+        const nose = new THREE.MeshBasicMaterial({ color: 0xff6fae });
+        const body = new THREE.Mesh(new THREE.SphereGeometry(0.23, 12, 10), fur);
+        body.position.set(0, 0.34, 0);
+        body.scale.set(1.05, 1.0, 1.18);
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 10), fur);
+        head.position.set(0, 0.64, 0.055);
+        const leftEar = new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.22, 3, 7), fur);
+        const rightEar = leftEar.clone();
+        leftEar.position.set(-0.095, 0.91, 0.015);
+        rightEar.position.set(0.095, 0.93, -0.005);
+        leftEar.rotation.z = -0.16;
+        rightEar.rotation.z = 0.13;
+        const leftInner = new THREE.Mesh(new THREE.CapsuleGeometry(0.022, 0.17, 3, 6), earInner);
+        const rightInner = leftInner.clone();
+        leftInner.position.set(-0.095, 0.92, 0.064);
+        rightInner.position.set(0.095, 0.94, 0.044);
+        leftInner.rotation.z = -0.16;
+        rightInner.rotation.z = 0.13;
+        const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 6), eye);
+        const eyeR = eyeL.clone();
+        eyeL.position.set(-0.075, 0.67, 0.205);
+        eyeR.position.set(0.075, 0.67, 0.205);
+        const rabbitNose = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), nose);
+        rabbitNose.position.set(0, 0.60, 0.225);
+        const tail = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), fur);
+        tail.position.set(-0.23, 0.38, -0.12);
+        rabbit.add(body, head, leftEar, rightEar, leftInner, rightInner, eyeL, eyeR, rabbitNose, tail);
+        group.add(rabbit);
+
+        const signPost = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.92, 6), dark);
+        signPost.position.set(1.02, 0.49, -0.18);
+        group.add(signPost);
+        const signBoard = new THREE.Mesh(
+          new THREE.BoxGeometry(1.55, 0.62, 0.09),
+          new THREE.MeshStandardMaterial({ color: 0x20112f, metalness: 0.28, roughness: 0.46, emissive: 0x581c87, emissiveIntensity: 0.22 }),
+        );
+        signBoard.position.set(1.02, 1.15, -0.18);
+        group.add(signBoard);
+        const signCanvas = document.createElement('canvas');
+        signCanvas.width = 320;
+        signCanvas.height = 128;
+        const signContext = signCanvas.getContext('2d');
+        if (signContext) {
+          signContext.fillStyle = '#20112f';
+          signContext.fillRect(0, 0, signCanvas.width, signCanvas.height);
+          signContext.strokeStyle = '#f0abfc';
+          signContext.lineWidth = 5;
+          signContext.strokeRect(4, 4, signCanvas.width - 8, signCanvas.height - 8);
+          signContext.textAlign = 'center';
+          signContext.fillStyle = '#fff7ff';
+          signContext.font = 'bold 27px sans-serif';
+          signContext.fillText('ZA KRÓLIKIEM', 160, 52);
+          signContext.fillStyle = '#f9a8d4';
+          signContext.font = 'bold 21px sans-serif';
+          signContext.fillText('WEJDŹ DO NORKI', 160, 91);
+        }
+        const signTexture = new THREE.CanvasTexture(signCanvas);
+        signTexture.colorSpace = THREE.SRGBColorSpace;
+        signTexture.anisotropy = 2;
+        group.userData.dynamicTextures = [signTexture];
+        const signFace = new THREE.Mesh(
+          new THREE.PlaneGeometry(1.42, 0.54),
+          new THREE.MeshBasicMaterial({ map: signTexture, toneMapped: false, side: THREE.DoubleSide }),
+        );
+        signFace.position.set(1.02, 1.15, -0.125);
+        group.add(signFace);
+
+        const arrowShaft = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.075, 0.10), new THREE.MeshBasicMaterial({ color: 0xfbbf24, toneMapped: false }));
+        arrowShaft.position.set(0.52, 1.15, -0.11);
+        const arrowHead = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.28, 4), new THREE.MeshBasicMaterial({ color: 0xfbbf24, toneMapped: false }));
+        arrowHead.rotation.z = Math.PI / 2;
+        arrowHead.position.set(0.29, 1.15, -0.11);
+        group.add(arrowShaft, arrowHead);
+        const beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 1.35, 5), glow);
+        beacon.position.set(0, 0.78, 0.18);
+        group.add(beacon);
       } else {
-        const earA = new THREE.Mesh(new THREE.ConeGeometry(0.10, 0.20, 5), gold);
-        const earB = earA.clone();
-        earA.position.set(-0.16, 1.02, 0);
-        earB.position.set(0.16, 1.02, 0);
-        group.add(earA, earB);
+        const coreGeometry = secret.style === 'wz'
+          ? new THREE.BoxGeometry(0.48, 0.34, 0.12)
+          : secret.style === 'cassette'
+            ? new THREE.BoxGeometry(0.38, 0.26, 0.22)
+            : new THREE.IcosahedronGeometry(0.29, 1);
+        const core = new THREE.Mesh(coreGeometry, gold);
+        core.position.y = 0.76;
+        group.add(core);
+        if (secret.style === 'wz') {
+          const folded = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.11, 0.15), dark);
+          folded.position.set(0.12, 0.78, 0.02);
+          group.add(folded);
+        } else if (secret.style === 'cassette') {
+          const reelA = new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.018, 5, 10), dark);
+          const reelB = reelA.clone();
+          reelA.position.set(-0.09, 0.76, 0.12);
+          reelB.position.set(0.09, 0.76, 0.12);
+          group.add(reelA, reelB);
+        } else {
+          const earA = new THREE.Mesh(new THREE.ConeGeometry(0.10, 0.20, 5), gold);
+          const earB = earA.clone();
+          earA.position.set(-0.16, 1.02, 0);
+          earB.position.set(0.16, 1.02, 0);
+          group.add(earA, earB);
+        }
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.56, 0.035, 6, 18), glow);
+        ring.rotation.x = Math.PI / 2;
+        ring.position.y = 0.12;
+        group.add(ring);
+        const beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 1.1, 5), glow);
+        beacon.position.y = 1.22;
+        group.add(beacon);
       }
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.56, 0.035, 6, 18), glow);
-      ring.rotation.x = Math.PI / 2;
-      ring.position.y = 0.12;
-      group.add(ring);
-      const beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 1.1, 5), glow);
-      beacon.position.y = 1.22;
-      group.add(beacon);
+
       group.position.set(secret.x, 0.08, secret.z);
-      group.scale.setScalar(index === 2 ? 0.94 : 1);
+      group.scale.setScalar(secret.style === 'rabbit_hole' ? 1.12 : index === 2 ? 0.94 : 1);
       group.traverse((object) => {
         const mesh = object as THREE.Mesh;
         mesh.castShadow = false;
@@ -2111,14 +2277,14 @@ export class PaleciakiGameEngine {
     for (const secret of this.survivalSecrets) {
       if (secret.collected) continue;
       secret.age += dt;
-      secret.mesh.rotation.y += dt * (0.65 + (secret.id.length % 3) * 0.12);
+      secret.mesh.rotation.y += dt * (secret.id === 'oniric_dream' ? 0.16 : 0.65 + (secret.id.length % 3) * 0.12);
       secret.mesh.position.y = 0.08 + Math.sin(secret.age * 2.1) * 0.10;
       const distance = Math.hypot(secret.mesh.position.x - this.playerPos.x, secret.mesh.position.z - this.playerPos.z);
       if (distance > 1.35 || Math.abs(secret.mesh.position.y + 0.65 - this.playerPos.y) > 1.45) continue;
 
       secret.collected = true;
       this.levelRoot.remove(secret.mesh);
-      this.disposeTemporaryObject(secret.mesh);
+      this.disposeObjectResources(secret.mesh);
       secret.mesh.clear();
       this.survivalSecretsFound++;
       this.score += 750;
@@ -2205,7 +2371,7 @@ export class PaleciakiGameEngine {
 
   private buildSurvivalArenaDressing(mapId: SurvivalMapId = this.survivalMapId) {
     const mapDefinition = getSurvivalMapDefinition(mapId);
-    const steel = new THREE.MeshStandardMaterial({ color: mapId === 'cold_storage' ? 0x8bb9c9 : 0x3b4f60, metalness: 0.72, roughness: 0.42 });
+    const steel = new THREE.MeshStandardMaterial({ color: mapId === 'cold_storage' ? 0x8bb9c9 : mapId === 'night_sorting' ? 0x54365e : 0x3b4f60, metalness: 0.72, roughness: 0.42 });
     const orange = new THREE.MeshStandardMaterial({
       color: mapDefinition.accentColor, metalness: 0.38, roughness: 0.54,
       emissive: mapDefinition.accentColor, emissiveIntensity: 0.12,
@@ -3057,7 +3223,7 @@ export class PaleciakiGameEngine {
     this.disposeSurvivalArenaInstances();
     for (const secret of this.survivalSecrets) {
       this.levelRoot.remove(secret.mesh);
-      this.disposeTemporaryObject(secret.mesh);
+      this.disposeObjectResources(secret.mesh);
     }
     this.survivalSecrets = [];
     if (this.survivalMapLandmarks) {
