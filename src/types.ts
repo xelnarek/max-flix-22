@@ -129,6 +129,8 @@ export interface EnemyItem {
   aiCoalitionRole?: 'bruiser' | 'flanker' | 'ranged' | 'support';
   aiFormationRadius?: number;
   aiCoalitionSize?: number;
+  /** Brief movement disruption after a Survival squad loses its leader. */
+  aiMoraleBreakTimer?: number;
   /** Cooldown for an Inspector support pulse in Survival coalitions. */
   aiSupportPulseTimer?: number;
   /** Remaining lifetime of a one-hit shield granted by coalition support. */
