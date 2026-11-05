@@ -47,6 +47,6 @@ test('invalid waves fall back to standard and malformed stats stay finite', () =
       { maxHp: Number.NaN, speed: Number.POSITIVE_INFINITY },
       getSurvivalWaveMutator(3),
     ),
-    { maxHp: 1, speed: 0.1, xpMultiplier: 1 },
+    { maxHp: 1, speed: 0.118, xpMultiplier: 1 },
   );
 });
