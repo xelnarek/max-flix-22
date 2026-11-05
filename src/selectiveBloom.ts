@@ -119,10 +119,10 @@ export class SelectiveBloomPipeline {
     this.composer.setSize(Math.max(1, width), Math.max(1, height));
   }
 
-  render(camera: THREE.Camera, fps: number, now: number): void {
+  render(camera: THREE.Camera, fps: number, now: number, isSurvival = false): void {
     if (this.disposed) return;
 
-    this.enabled = shouldEnableSelectiveBloom(fps, this.isMobile, this.enabled);
+    this.enabled = shouldEnableSelectiveBloom(fps, this.isMobile, this.enabled, isSurvival);
     this.renderPass.camera = camera;
     if (!this.enabled || this.renderer.xr.isPresenting || camera instanceof THREE.ArrayCamera) {
       this.renderer.render(this.scene, camera);

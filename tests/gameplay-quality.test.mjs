@@ -1384,3 +1384,21 @@ test('critical shrapnel is limited to one secondary burst per critical Survival 
   assert.match(shrapnel, /maxTargets: Math\.min\(3/);
 });
 
+
+test('adaptive graphics react within one second and apply meaningful DPR steps', async () => {
+  const [app, renderQuality] = await Promise.all([
+    read('../src/index.ts'), read('../src/renderQuality.ts')
+  ]);
+  assert.match(app, /now - this\\.lastAdaptiveQualityAt < 1000/);
+  assert.match(app, /shouldApplyPixelRatioChange\\(renderer\\.getPixelRatio\\(\\), targetDpr\\)/);
+  assert.match(renderQuality, /Math\\.abs\\(currentPixelRatio - targetPixelRatio\\) >= threshold/);
+});
+
+test('high-end mobile keeps selective glow, while Survival gates it on frame headroom', async () => {
+  const [app, quality, bloom] = await Promise.all([
+    read('../src/index.ts'), read('../src/renderQuality.ts'), read('../src/selectiveBloom.ts')
+  ]);
+  assert.match(quality, /tier: 'mobile-high',[\\s\\S]*?bloomEnabled: true/);
+  assert.match(app, /pipeline\\.render\\(activeCamera, this\\.currentFps, performance\\.now\\(\\), isSurvival\\)/);
+  assert.match(bloom, /shouldEnableSelectiveBloom\\(fps, this\\.isMobile, this\\.enabled, isSurvival\\)/);
+});

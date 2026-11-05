@@ -7,7 +7,6 @@ test('mobile bloom uses a conservative enable threshold and hysteresis', () => {
   assert.equal(shouldEnableSelectiveBloom(55, true, false), true);
   assert.equal(shouldEnableSelectiveBloom(50, true, true), true);
   assert.equal(shouldEnableSelectiveBloom(46, true, true), false);
-  assert.equal(shouldEnableSelectiveBloom(54, true, false), false);
 });
 
 test('desktop bloom has a separate frame-rate budget', () => {
@@ -21,4 +20,13 @@ test('invalid or unavailable FPS data disables bloom safely', () => {
   assert.equal(shouldEnableSelectiveBloom(0, false, true), false);
   assert.equal(shouldEnableSelectiveBloom(Number.NaN, true, true), false);
   assert.equal(shouldEnableSelectiveBloom(Number.POSITIVE_INFINITY, true, false), false);
+});
+
+test('Survival bloom requires extra FPS headroom on mobile and desktop', () => {
+  assert.equal(shouldEnableSelectiveBloom(57, true, false, true), false);
+  assert.equal(shouldEnableSelectiveBloom(58, true, false, true), true);
+  assert.equal(shouldEnableSelectiveBloom(53, true, true, true), true);
+  assert.equal(shouldEnableSelectiveBloom(50, true, true, true), false);
+  assert.equal(shouldEnableSelectiveBloom(53, false, false, true), false);
+  assert.equal(shouldEnableSelectiveBloom(54, false, false, true), true);
 });

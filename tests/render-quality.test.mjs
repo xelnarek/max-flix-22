@@ -86,7 +86,7 @@ test('device render profiles cap mobile GPU work and preserve desktop quality', 
   assert.equal(high.pixelRatioCap, 1.45);
   assert.equal(high.survivalPixelRatioCap, 1.22);
   assert.equal(high.shadowsEnabled, false);
-  assert.equal(high.bloomEnabled, false);
+  assert.equal(high.bloomEnabled, true);
 
   const desktop = getDeviceRenderProfile(false, 4, 4);
   assert.equal(desktop.tier, 'desktop');
@@ -98,4 +98,12 @@ test('unknown device metrics remain balanced rather than forcing the low graphic
   const { getDeviceRenderProfile } = await import('../src/renderQuality.ts');
   assert.equal(getDeviceRenderProfile(true, undefined, undefined).tier, 'mobile-balanced');
   assert.equal(getDeviceRenderProfile(true, 8, undefined).tier, 'mobile-balanced');
+});
+
+test('pixel ratio transitions apply the 0.9 and 0.8 tiers without reacting to tiny noise', async () => {
+  const { shouldApplyPixelRatioChange } = await import('../src/renderQuality.ts');
+  assert.equal(shouldApplyPixelRatioChange(1, 0.9), true);
+  assert.equal(shouldApplyPixelRatioChange(0.9, 0.8), true);
+  assert.equal(shouldApplyPixelRatioChange(1, 0.98), false);
+  assert.equal(shouldApplyPixelRatioChange(Number.NaN, 0.9), false);
 });
