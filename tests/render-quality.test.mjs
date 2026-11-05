@@ -65,25 +65,28 @@ test('mobile effects tier recovery is hysteretic and advances one tier at a time
 });
 
 
-test('device render profiles cap low-end mobile GPU work and preserve high-end quality', async () => {
+test('device render profiles cap mobile GPU work and preserve desktop quality', async () => {
   const { getDeviceRenderProfile } = await import('../src/renderQuality.ts');
   const low = getDeviceRenderProfile(true, 4, 4);
   assert.equal(low.tier, 'mobile-low');
   assert.equal(low.shadowsEnabled, false);
   assert.equal(low.bloomEnabled, false);
-  assert.equal(low.pixelRatioCap, 1.22);
-  assert.equal(low.survivalPixelRatioCap, 1.08);
+  assert.equal(low.pixelRatioCap, 1.08);
+  assert.equal(low.survivalPixelRatioCap, 0.94);
 
   const balanced = getDeviceRenderProfile(true, 6, 6);
   assert.equal(balanced.tier, 'mobile-balanced');
-  assert.equal(balanced.shadowsEnabled, true);
+  assert.equal(balanced.shadowsEnabled, false);
   assert.equal(balanced.softShadows, false);
-  assert.equal(balanced.survivalPixelRatioCap, 1.24);
+  assert.equal(balanced.bloomEnabled, false);
+  assert.equal(balanced.survivalPixelRatioCap, 1.08);
 
   const high = getDeviceRenderProfile(true, 8, 8);
   assert.equal(high.tier, 'mobile-high');
-  assert.equal(high.pixelRatioCap, 1.65);
-  assert.equal(high.bloomEnabled, true);
+  assert.equal(high.pixelRatioCap, 1.45);
+  assert.equal(high.survivalPixelRatioCap, 1.22);
+  assert.equal(high.shadowsEnabled, false);
+  assert.equal(high.bloomEnabled, false);
 
   const desktop = getDeviceRenderProfile(false, 4, 4);
   assert.equal(desktop.tier, 'desktop');

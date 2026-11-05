@@ -107,8 +107,8 @@ export function getDeviceRenderProfile(
   if (lowMemory || lowCpu) {
     return {
       tier: 'mobile-low',
-      pixelRatioCap: 1.22,
-      survivalPixelRatioCap: 1.08,
+      pixelRatioCap: 1.08,
+      survivalPixelRatioCap: 0.94,
       shadowsEnabled: false,
       softShadows: false,
       bloomEnabled: false,
@@ -120,20 +120,20 @@ export function getDeviceRenderProfile(
   if (highMemory && highCpu) {
     return {
       tier: 'mobile-high',
-      pixelRatioCap: 1.65,
-      survivalPixelRatioCap: 1.42,
-      shadowsEnabled: true,
+      pixelRatioCap: 1.45,
+      survivalPixelRatioCap: 1.22,
+      shadowsEnabled: false,
       softShadows: false,
-      bloomEnabled: true,
+      bloomEnabled: false,
     };
   }
 
   return {
     tier: 'mobile-balanced',
-    pixelRatioCap: 1.42,
-    survivalPixelRatioCap: 1.24,
-    shadowsEnabled: true,
+    pixelRatioCap: 1.26,
+    survivalPixelRatioCap: 1.08,
+    shadowsEnabled: false,
     softShadows: false,
-    bloomEnabled: true,
+    bloomEnabled: false,
   };
 }

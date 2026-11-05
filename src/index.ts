@@ -32,7 +32,7 @@ import {
   sanitizeSurvivalAchievementProgress,
   updateSurvivalAchievementProgress,
 } from './survivalAchievements.ts';
-import { SURVIVAL_MAPS } from './survivalMaps.ts';
+import { SURVIVAL_MAPS, type SurvivalMapId } from './survivalMaps.ts';
 
 // warehouseAssets imports moved to assets.ts where they are preloaded
 
@@ -1011,7 +1011,7 @@ class PaleciakiScene extends xb.Script {
             const banner = document.createElement('div');
             banner.className = 'oniric-dream-banner';
             banner.setAttribute('role', 'status');
-            banner.textContent = 'ONIRYCZNY SEN // 15 SEKUND W BŁĘDZIE RZECZYWISTOŚCI';
+            banner.textContent = 'ONIRYCZNY SEN // TRYB 2D • +20% RUCH • +30% OGNIA • +50% XP • 15 SEKUND';
             gameShell?.appendChild(banner);
             oniricDreamBannerTimeout = window.setTimeout(() => {
               banner.remove();
@@ -1364,6 +1364,32 @@ class PaleciakiScene extends xb.Script {
     });
 
     let startingGame = false;
+    let selectedSurvivalMapId: SurvivalMapId | null = null;
+    const survivalMapPicker = document.getElementById('survival-map-picker');
+    const survivalMapPickerHint = document.getElementById('survival-map-picker-hint');
+    survivalMapPicker?.addEventListener('click', (event) => {
+      const button = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>('[data-survival-map]');
+      if (!button || !survivalMapPicker.contains(button)) return;
+
+      const choice = button.dataset.survivalMap;
+      if (choice === 'random') {
+        selectedSurvivalMapId = null;
+        if (survivalMapPickerHint) survivalMapPickerHint.textContent = 'Losowanie bez powtórzenia poprzedniej areny.';
+      } else if (choice && Object.prototype.hasOwnProperty.call(SURVIVAL_MAPS, choice)) {
+        selectedSurvivalMapId = choice as SurvivalMapId;
+        const map = SURVIVAL_MAPS[selectedSurvivalMapId];
+        if (survivalMapPickerHint) survivalMapPickerHint.textContent = map.name.toUpperCase() + ' • ' + map.combatModifier.description;
+      } else {
+        return;
+      }
+
+      survivalMapPicker.querySelectorAll<HTMLButtonElement>('[data-survival-map]').forEach((option) => {
+        const active = option === button;
+        option.classList.toggle('is-selected', active);
+        option.setAttribute('aria-pressed', String(active));
+      });
+    });
+
     const doStartSurvival = async (e?: Event) => {
       if (startingGame) return;
       if (e) {
@@ -1406,7 +1432,7 @@ class PaleciakiScene extends xb.Script {
         survivalHud?.classList.remove('hidden');
         gameShell?.classList.add('survival-mode');
 
-        this.engine.startSurvival();
+        this.engine.startSurvival(selectedSurvivalMapId);
       } catch (error) {
         console.error('[Survival] Nie udało się uruchomić rozgrywki:', error);
         titleScreen?.classList.remove('hidden');
@@ -1679,7 +1705,7 @@ class PaleciakiScene extends xb.Script {
       survivalLevelUp?.classList.add('hidden');
       survivalHud?.classList.remove('hidden');
       gameShell?.classList.add('survival-mode');
-      this.engine.startSurvival();
+      this.engine.startSurvival(selectedSurvivalMapId);
     });
 
     bindTap(document.getElementById('btn-menu-pause'), () => {
@@ -1706,7 +1732,7 @@ class PaleciakiScene extends xb.Script {
       touchControls?.classList.remove('hidden');
       survivalHud?.classList.remove('hidden');
       gameShell?.classList.add('survival-mode');
-      this.engine.startSurvival();
+      this.engine.startSurvival(selectedSurvivalMapId);
     });
 
     bindTap(document.getElementById('btn-menu-gameover'), () => {

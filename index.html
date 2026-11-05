@@ -976,7 +976,21 @@
           </div>
 
           <div class="menu-fixed-bottom-bar">
-            
+            <section id="survival-map-picker" class="survival-map-picker" aria-label="Wybór mapy Survival">
+              <div class="survival-map-picker-heading">
+                <strong>WYBIERZ ARENĘ</strong>
+                <span>4 MAPY • 4 ZESTAWY ZASAD</span>
+              </div>
+              <div class="survival-map-picker-options" role="group" aria-label="Dostępne areny">
+                <button type="button" class="survival-map-choice is-selected" data-survival-map="random" aria-pressed="true"><span>🎲</span><strong>LOSOWA</strong><small>Nowa zmiana</small></button>
+                <button type="button" class="survival-map-choice" data-survival-map="warehouse_b4" aria-pressed="false"><span>🏭</span><strong>MAGAZYN B4</strong><small>Równe warunki</small></button>
+                <button type="button" class="survival-map-choice map-port-choice" data-survival-map="container_terminal" aria-pressed="false"><span>🚢</span><strong>PORT 17</strong><small>Szybcy, słabsi</small></button>
+                <button type="button" class="survival-map-choice map-cold-choice" data-survival-map="cold_storage" aria-pressed="false"><span>❄️</span><strong>CHŁODNIA ZERO</strong><small>Wolni, wytrzymali</small></button>
+                <button type="button" class="survival-map-choice map-night-choice" data-survival-map="night_sorting" aria-pressed="false"><span>🌙</span><strong>SORTOWNIA WIDMOWA</strong><small>Bonus XP +15%</small></button>
+              </div>
+              <p id="survival-map-picker-hint" class="survival-map-picker-hint">Losowanie bez powtórzenia poprzedniej areny.</p>
+            </section>
+
             <button id="btn-start-survival" class="btn-primary-start btn-survival-start" aria-label="Rozpocznij Survival">
               <span class="menu-cta-icon" aria-hidden="true">
                 <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="16" r="11"/><circle cx="16" cy="16" r="4"/><path d="M16 2v5M16 25v5M2 16h5M25 16h5M23.5 8.5l-3 3M11.5 20.5l-3 3M23.5 23.5l-3-3M11.5 11.5l-3-3"/></svg>

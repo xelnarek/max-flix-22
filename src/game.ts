@@ -391,6 +391,8 @@ export class PaleciakiGameEngine {
   // Elevated tactical framing is the default so mobile players can read lanes and threats.
   private cameraMode: 'tpp' | 'close' | 'iso' = 'tpp';
   private camZoomFactor = 0.94;
+  private oniricDreamRemainingSeconds = 0;
+  private oniricDreamCameraActive = false;
   private hasManualCameraZoom = false;
   private maxUnlockedSector = (() => {
     try {
@@ -1236,6 +1238,12 @@ export class PaleciakiGameEngine {
 
   public startTitle() {
     sound.stopMusic();
+    this.oniricDreamRemainingSeconds = 0;
+    if (this.oniricDreamCameraActive) {
+      this.oniricDreamCameraActive = false;
+      this.camera.up.set(0, 1, 0);
+      this.camera.updateProjectionMatrix();
+    }
     this.clearOperatorCompanions();
     this.gameMode = 'survival';
     this.maxHp = 3;
@@ -1396,19 +1404,28 @@ export class PaleciakiGameEngine {
     this.sayRandomVoiceLine();
   }
 
-  public startSurvival() {
+  public startSurvival(mapOverride: SurvivalMapId | null = null) {
     // Reset shared combat state without constructing a campaign level, then build the dedicated Survival arena.
     this.resetSurvivalRun();
+    this.oniricDreamRemainingSeconds = 0;
+    this.oniricDreamCameraActive = false;
+    this.camera.up.set(0, 1, 0);
+    this.camera.updateProjectionMatrix();
     this.gameMode = 'survival';
     this.updateAbilityCooldown(0, true);
     this.rebuildPlayerMesh();
     this.sectorGates = [null, null, null, null];
-    this.survivalMapId = chooseRandomSurvivalMap(this.lastSurvivalMapId, Math.random());
+    this.survivalMapId = mapOverride || chooseRandomSurvivalMap(this.lastSurvivalMapId, Math.random());
     this.lastSurvivalMapId = this.survivalMapId;
     const survivalMap = getSurvivalMapDefinition(this.survivalMapId);
     this.levelBounds = { minX: -58, maxX: 58, minZ: -18.2, maxZ: 18.2 };
     this.sectorGates.forEach((gate) => { if (gate) gate.visible = false; });
     this.scene.background = new THREE.Color(survivalMap.backgroundColor);
+    if (this.isHandheldViewport && this.threeRenderer) {
+      // Dynamic horde combat benefits more from a stable frame budget than
+      // from soft shadow maps on a phone-sized render target.
+      this.threeRenderer.shadowMap.enabled = false;
+    }
     this.applySectorLighting(4);
     this.buildSurvivalArenaExpansion(this.survivalMapId);
     this.applySceneTextureQuality();
@@ -2272,6 +2289,23 @@ export class PaleciakiGameEngine {
     }
   }
 
+  private beginOniricDream(durationSeconds = 15) {
+    this.oniricDreamRemainingSeconds = Math.max(
+      this.oniricDreamRemainingSeconds,
+      Number.isFinite(durationSeconds) ? Math.max(1, durationSeconds) : 15,
+    );
+    this.oniricDreamCameraActive = true;
+    this.callbacks.onSurvivalAnnouncement?.(
+      'ONIRYCZNY SEN',
+      'TRYB 2D • KRÓLICZA NORMA',
+      'Widok przechodzi na płaską mapę z góry. Operator porusza się szybciej, broń przeładowuje się o 30% szybciej, a kryształy XP dają 50% więcej. Przetrwaj 15 sekund zakrzywionej rzeczywistości.',
+    );
+    this.emitFloatingToast('🐇 KRÓLICZA NORMA: TRYB 2D!', this.playerPos.x, this.playerPos.y + 1.85, this.playerPos.z, 'easter-egg');
+    this.triggerBloomPulse(0.42);
+    this.triggerScreenShake(0.22, 0.16);
+    sound.playEasterEgg();
+  }
+
   private updateSurvivalSecrets(dt: number) {
     if (this.gameMode !== 'survival' || this.survivalSecrets.length === 0) return;
     for (const secret of this.survivalSecrets) {
@@ -2287,6 +2321,7 @@ export class PaleciakiGameEngine {
       this.disposeObjectResources(secret.mesh);
       secret.mesh.clear();
       this.survivalSecretsFound++;
+      if (secret.id === 'oniric_dream') this.beginOniricDream(15);
       this.score += 750;
       this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
       this.callbacks.onSurvivalSecretFound?.(this.survivalMapId, secret.id, secret.name);
@@ -3811,6 +3846,7 @@ export class PaleciakiGameEngine {
       this.camera.fov = targetFov;
       this.camera.updateProjectionMatrix();
     }
+    if (this.oniricDreamRemainingSeconds > 0) this.applyOniricDreamProjection();
 
     // Portrait FOV is already wider vertically. Apply the device default only
     // until the player changes zoom; rotation/resizing must not erase that choice.
@@ -5742,7 +5778,8 @@ export class PaleciakiGameEngine {
     if (this.state !== 'playing' || this.gameMode !== 'survival') return;
 
     const momentumRate = getSurvivalMomentumRateMultiplier(this.survivalMomentum.overdriveRemainingSeconds);
-    this.survivalWeaponDispatchCooldown = Math.max(0, this.survivalWeaponDispatchCooldown - dt * momentumRate);
+    const oniricRate = this.oniricDreamRemainingSeconds > 0 ? 1.30 : 1;
+    this.survivalWeaponDispatchCooldown = Math.max(0, this.survivalWeaponDispatchCooldown - dt * momentumRate * oniricRate);
 
     // Tactical aim: a nearby elite, boss or committed charging threat can be
     // more valuable than the closest low-risk grunt. A distant boss never
@@ -5751,7 +5788,7 @@ export class PaleciakiGameEngine {
       this.enemies,
       this.playerPos.x,
       this.playerPos.z,
-      18 * this.survivalRangeMultiplier
+      18 * this.survivalRangeMultiplier * (this.oniricDreamRemainingSeconds > 0 ? 1.22 : 1)
     );
     const target = selection?.target ?? null;
 
@@ -5764,7 +5801,7 @@ export class PaleciakiGameEngine {
     // All reloads progress independently, even while no target is in range.
     // Overdrive raises reload tempo without bypassing the one-volley dispatch gate.
     for (const weapon of this.survivalWeapons) {
-      weapon.cooldown = Math.max(0, weapon.cooldown - dt * momentumRate);
+      weapon.cooldown = Math.max(0, weapon.cooldown - dt * momentumRate * oniricRate);
     }
 
     // Fire at most one weapon per dispatch window. If several reloads finish together,
@@ -5777,7 +5814,7 @@ export class PaleciakiGameEngine {
     readyWeapon.cooldown = this.getScaledSurvivalWeaponReloadSeconds(
       readyWeapon.id, readyWeapon.level, !!readyWeapon.evolved
     );
-    this.survivalWeaponDispatchCooldown = SURVIVAL_WEAPON_DISPATCH_COOLDOWN_SECONDS;
+    this.survivalWeaponDispatchCooldown = SURVIVAL_WEAPON_DISPATCH_COOLDOWN_SECONDS / oniricRate;
   }
 
   private fireSurvivalWeapon(weapon: SurvivalWeaponState, target: EnemyItem) {
@@ -6001,6 +6038,10 @@ export class PaleciakiGameEngine {
 
   private updateSurvivalDirector(dt: number) {
     this.survivalElapsed += dt;
+    // Director dt is simulation-scaled (the player may select 2x speed).
+    // The Easter egg is advertised as 15 real seconds, so keep its lifetime
+    // aligned with the visual overlay regardless of the selected game speed.
+    this.oniricDreamRemainingSeconds = Math.max(0, this.oniricDreamRemainingSeconds - dt / this.timeScale);
     if (!this.survivalPomazaniecSpawned && this.survivalElapsed >= 135) {
       this.spawnSurvivalPomazaniecMarker();
     }
@@ -6119,7 +6160,7 @@ export class PaleciakiGameEngine {
     const hordeSettings = getSurvivalHordeSettings(isMobile);
     const pomazaniecRaidActive = this.survivalPomazaniecTriggered && !this.survivalPomazaniecCompleted;
     const surgeActive = this.survivalSurgeTimeLeft > 0;
-    const mobileEnemyCap = this.adaptivePerformanceTier >= 2 ? 16 : this.adaptivePerformanceTier === 1 ? 19 : 22;
+    const mobileEnemyCap = this.adaptivePerformanceTier >= 2 ? 13 : this.adaptivePerformanceTier === 1 ? 16 : 18;
     const enemyCap = (isMobile ? mobileEnemyCap : 34) +
       (pomazaniecRaidActive ? (isMobile ? 3 : 5) : 0) +
       (surgeActive ? (isMobile ? (this.adaptivePerformanceTier >= 2 ? 2 : this.adaptivePerformanceTier === 1 ? 3 : 4) : 6) : 0);
@@ -7685,7 +7726,8 @@ export class PaleciakiGameEngine {
     mesh.castShadow = false;
     mesh.receiveShadow = false;
     this.levelRoot.add(mesh);
-    this.survivalXpGems.push({ mesh, value, life: 32, phase: Math.random() * Math.PI * 2 });
+    const dreamXpMultiplier = this.oniricDreamRemainingSeconds > 0 ? 1.5 : 1;
+    this.survivalXpGems.push({ mesh, value: Math.max(1, Math.round(value * dreamXpMultiplier)), life: 32, phase: Math.random() * Math.PI * 2 });
   }
 
   private updateSurvivalXpGems(dt: number) {
@@ -7927,6 +7969,7 @@ export class PaleciakiGameEngine {
     let speed = this.charDef.speed * this.getPacingFactor();
     if (this.gameMode === 'survival') {
       speed *= this.survivalMoveMultiplier * getSurvivalMomentumMoveMultiplier(this.survivalMomentum.overdriveRemainingSeconds);
+      if (this.oniricDreamRemainingSeconds > 0) speed *= 1.20;
     }
     if (this.marcinWoTPenaltyTimer > 0) {
       this.marcinWoTPenaltyTimer = Math.max(0, this.marcinWoTPenaltyTimer - dt);
@@ -12782,6 +12825,18 @@ export class PaleciakiGameEngine {
     }
   }
 
+  private applyOniricDreamProjection() {
+    const width = Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth || 390));
+    const height = Math.max(1, Math.round(window.visualViewport?.height || window.innerHeight || 844));
+    const aspect = width / height;
+    const halfHeight = this.isHandheldViewport ? 16.5 : 13.5;
+    const halfWidth = halfHeight * aspect;
+    this.camera.projectionMatrix.makeOrthographic(
+      -halfWidth, halfWidth, halfHeight, -halfHeight, 0.1, 160,
+    );
+    this.camera.projectionMatrixInverse.copy(this.camera.projectionMatrix).invert();
+  }
+
   private updateCamera(dt: number) {
     const now = performance.now();
     if (this.state === 'title') {
@@ -12801,6 +12856,22 @@ export class PaleciakiGameEngine {
         this.playerGroup.rotation.y = Math.sin(t * 0.8) * 0.35;
       }
       return;
+    }
+
+    if (this.gameMode === 'survival' && this.oniricDreamRemainingSeconds > 0) {
+      this.oniricDreamCameraActive = true;
+      this.camera.up.set(0, 0, -1);
+      this.camera.position.set(this.playerPos.x, 38, this.playerPos.z);
+      this.camera.lookAt(this.playerPos.x, 0, this.playerPos.z);
+      this.applyOniricDreamProjection();
+      if (this.dofBlurPassMesh) this.dofBlurPassMesh.visible = false;
+      return;
+    }
+
+    if (this.oniricDreamCameraActive) {
+      this.oniricDreamCameraActive = false;
+      this.camera.up.set(0, 1, 0);
+      this.camera.updateProjectionMatrix();
     }
 
     // Determine target positions with smooth velocity look-ahead
