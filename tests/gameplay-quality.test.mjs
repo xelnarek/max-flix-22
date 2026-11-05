@@ -1252,3 +1252,16 @@ test('the menu exposes a readable achievement archive and selected map/secret HU
   assert.match(css, /\.survival-achievement-grid/);
   assert.match(css, /\.achievement-unlock-toast/);
 });
+
+
+test('Survival arena modifiers produce distinct, bounded combat trade-offs and compose with wave rules', async () => {
+  const [game, maps] = await Promise.all([read('../src/game.ts'), read('../src/survivalMaps.ts')]);
+  assert.match(game, /applySurvivalMapCombatModifier/);
+  assert.match(game, /const mapModifier = survivalMap\.combatModifier/);
+  assert.match(game, /this\.callbacks\.onSurvivalAnnouncement\?\.\([\s\S]*?mapModifier\.title[\s\S]*?mapModifier\.description/);
+  assert.match(game, /enemy\.survivalXpMultiplier = Math\.min\(1\.8, mapTuned\.xpMultiplier \* waveXpMultiplier\)/);
+  assert.match(game, /bosses receive the map trade-off as well/);
+  assert.match(maps, /title: 'SZYBKI PRZEŁADUNEK'/);
+  assert.match(maps, /title: 'ZMIANA -18°C'/);
+  assert.match(maps, /export function applySurvivalMapCombatModifier/);
+});

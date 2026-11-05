@@ -11,7 +11,7 @@ import { createSurvivalBossRewardOptions } from './survivalBossRewards.ts';
 import { getSurvivalBossVariant, shouldSpawnBosmanKrakow } from './survivalEncounters.ts';
 import { applySurvivalWaveMutator, getSurvivalWaveMutator } from './survivalWaveMutators.ts';
 import { getSurvivalConvoyHazardCount } from './survivalConvoy.ts';
-import { chooseRandomSurvivalMap, getSurvivalMapDefinition, type SurvivalMapId } from './survivalMaps.ts';
+import { applySurvivalMapCombatModifier, chooseRandomSurvivalMap, getSurvivalMapDefinition, type SurvivalMapId } from './survivalMaps.ts';
 import { chooseCampaignRewardSpawnPoint } from './campaignRewards.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
 import { chooseSurvivalRicochetTarget, getSurvivalRadiationProfile, getSurvivalRicochetProfile } from './survivalCombatDraft.ts';
@@ -1443,7 +1443,13 @@ export class PaleciakiGameEngine {
     this.callbacks.onBossUpdate?.('', 0, 0, false);
     this.callbacks.onSurvivalDashUpdate?.(1, true, 0);
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
-    this.emitFloatingToast('LOSOWA MAPA: ' + survivalMap.name.toUpperCase(), this.playerPos.x, this.playerPos.y + 1.8, this.playerPos.z, 'combo');
+    const mapModifier = survivalMap.combatModifier;
+    this.callbacks.onSurvivalAnnouncement?.(
+      mapModifier.title,
+      mapModifier.subtitle,
+      mapModifier.description,
+    );
+    this.emitFloatingToast('LOSOWA MAPA: ' + survivalMap.name.toUpperCase() + ' • ' + mapModifier.title, this.playerPos.x, this.playerPos.y + 1.8, this.playerPos.z, 'combo');
   }
 
 
@@ -6999,6 +7005,7 @@ export class PaleciakiGameEngine {
     const waveMutator = getSurvivalWaveMutator(wave);
     const majorBoss = enemy.type === 'walczak' || enemy.type === 'krol_leto' ||
       enemy.type === 'bosman_krakow';
+    let waveXpMultiplier = 1;
     if (!majorBoss && waveMutator.id !== 'standard') {
       const tuned = applySurvivalWaveMutator(
         { maxHp: enemy.maxHp, speed: enemy.speed },
@@ -7008,6 +7015,7 @@ export class PaleciakiGameEngine {
       enemy.hp = tuned.maxHp;
       enemy.speed = tuned.speed;
       enemy.survivalXpMultiplier = tuned.xpMultiplier;
+      waveXpMultiplier = tuned.xpMultiplier;
 
       // The Armored Shift promotes only a small subset to visible shield duty.
       // A stricter mobile chance keeps extra transparent objects off weaker GPUs.
@@ -7029,6 +7037,17 @@ export class PaleciakiGameEngine {
         enemy.shieldRing = shieldRing;
       }
     }
+
+    // Map identities are gameplay modifiers, not only scenery palettes. Compose
+    // them after the timed wave rule; bosses receive the map trade-off as well.
+    const mapTuned = applySurvivalMapCombatModifier(
+      { maxHp: enemy.maxHp, speed: enemy.speed },
+      this.survivalMapId
+    );
+    enemy.maxHp = mapTuned.maxHp;
+    enemy.hp = mapTuned.maxHp;
+    enemy.speed = mapTuned.speed;
+    enemy.survivalXpMultiplier = Math.min(1.8, mapTuned.xpMultiplier * waveXpMultiplier);
 
     // Rare late-run variant: an armored AGV with a visible shield and a telegraphed pulse.
     // It reuses the existing AGV rig and only allocates its shield ring when promoted.
