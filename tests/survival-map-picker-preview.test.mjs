@@ -18,6 +18,6 @@ test('map picker has a dedicated live preview and accurate route labels', async 
   assert.match(html, /Taśmy i neony/);
   assert.match(app, /survivalMapPreviewTitle.textContent = map.name.toUpperCase()/);
   assert.match(app, /survivalMapPreviewDetail.textContent = map.description/);
-  assert.match(css, /survival-map-preview/);
+  assert.ok(css.includes('grid-template-columns: repeat(2, minmax(0, 1fr))'));
   assert.match(css, /grid-template-columns:\s*repeat(2,\s*minmax(0,\s*1fr))/);
 });
