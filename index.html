@@ -213,7 +213,7 @@
 
       <div id="survival-hud" class="survival-hud hidden" aria-live="polite">
         <div class="survival-hud-main">
-          <div class="survival-hud-kicker"><span class="survival-live-dot"></span> SURVIVAL SHIFT <span class="survival-hud-divider">/</span> STREFA OPERACYJNA</div>
+          <div class="survival-hud-kicker"><span class="survival-live-dot"></span> SURVIVAL SHIFT <span class="survival-hud-divider">/</span> STREFA OPERACYJNA <span id="survival-map-name" class="survival-map-name" title="Wybrana losowo arena">MAGAZYN B4</span><span id="survival-secret-count" class="survival-secret-count">SEKRETY 0/3</span></div>
           <div class="survival-metrics">
             <div class="survival-chip time-chip"><span class="survival-chip-label">CZAS</span><strong id="survival-time">00:00</strong></div>
             <div class="survival-chip wave-chip"><span class="survival-chip-label">FALA</span><strong id="survival-wave">1</strong></div>
@@ -349,6 +349,12 @@
                 <svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
               </span>
               <span class="tab-label">RANKING</span>
+            </button>
+            <button class="menu-tab-btn" data-tab="tab-achievements" aria-controls="tab-achievements" aria-label="Osiągnięcia i sekrety">
+              <span class="tab-icon" aria-hidden="true">
+                <svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 6H4v2a4 4 0 0 0 4 4M17 6h3v2a4 4 0 0 1-4 4"/></svg>
+              </span>
+              <span class="tab-label">OSIĄGNIĘCIA</span>
             </button>
             <button class="menu-tab-btn" data-tab="tab-settings" aria-controls="tab-settings" aria-label="Ustawienia">
               <span class="tab-icon" aria-hidden="true">
@@ -891,6 +897,32 @@
             </div>
 
             
+
+
+
+            <div id="tab-achievements" class="tab-panel survival-achievements-panel" aria-labelledby="survival-achievements-title">
+              <section class="survival-achievements-hero">
+                <div class="survival-achievements-kicker">ARCHIWUM OPERACYJNE / POSTĘPY</div>
+                <div class="survival-achievements-heading">
+                  <div><h2 id="survival-achievements-title">OSIĄGNIĘCIA I SEKRETY</h2><p>Postęp zapisuje się lokalnie na tym urządzeniu. Odkrywaj mapy, szukaj ukrytych przedmiotów i kończ kolejne zmiany.</p></div>
+                  <div class="survival-achievements-total"><strong id="survival-achievements-count">0 / 8</strong><span>ZDOBYTE</span></div>
+                </div>
+                <div class="survival-achievements-summary-track"><span id="survival-achievements-fill"></span></div>
+                <div id="survival-secret-archive-count" class="survival-secret-archive-count">SEKRETY 0 / 9</div>
+              </section>
+
+              <section class="survival-map-directory" aria-label="Mapy Survival">
+                <article class="survival-map-directory-card map-warehouse"><span>01 / SKŁAD</span><strong>MAGAZYN B4</strong><small>Wielka hala paletowa</small><em data-map-visited="warehouse_b4">NIEODKRYTA</em></article>
+                <article class="survival-map-directory-card map-port"><span>02 / PORT</span><strong>PORT KONTENEROWY 17</strong><small>Slalom kontenerów i suwnica</small><em data-map-visited="container_terminal">NIEODKRYTA</em></article>
+                <article class="survival-map-directory-card map-cold"><span>03 / CHŁODNIA</span><strong>CHŁODNIA ZERO</strong><small>Agregaty i rury chłodnicze</small><em data-map-visited="cold_storage">NIEODKRYTA</em></article>
+              </section>
+
+              <section class="survival-achievement-section">
+                <div class="survival-achievement-section-heading"><strong>REJESTR ODZNACZEŃ</strong><span>8 ZADAŃ</span></div>
+                <div id="survival-achievement-list" class="survival-achievement-grid"></div>
+              </section>
+            </div>
+
 
             <div id="tab-settings" class="tab-panel settings-panel" aria-labelledby="settings-panel-title">
               <section class="settings-hero">

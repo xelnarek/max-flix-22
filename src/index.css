@@ -4315,3 +4315,255 @@ button {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* Survival map directory, local achievement archive and secret collection UI */
+.survival-map-name,
+.survival-secret-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 16px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, .25);
+  background: rgba(8, 30, 48, .82);
+  color: #bae6fd;
+  letter-spacing: .55px;
+  font-size: 7px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.survival-secret-count {
+  border-color: rgba(251, 191, 36, .28);
+  color: #fcd34d;
+}
+.survival-achievements-panel { gap: 12px; }
+.survival-achievements-hero {
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, .18);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(17, 39, 62, .94), rgba(9, 20, 34, .96));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+.survival-achievements-kicker {
+  color: #67e8f9;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+}
+.survival-achievements-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 5px;
+}
+.survival-achievements-heading h2 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: clamp(17px, 3vw, 22px);
+  font-weight: 900;
+}
+.survival-achievements-heading p {
+  max-width: 660px;
+  margin: 5px 0 0;
+  color: #9fb3c7;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.survival-achievements-total {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  color: #fbbf24;
+}
+.survival-achievements-total strong { font-size: 23px; line-height: 1; }
+.survival-achievements-total span { margin-top: 4px; font-size: 8px; letter-spacing: 1px; font-weight: 900; }
+.survival-achievements-summary-track,
+.survival-achievement-track {
+  display: block;
+  overflow: hidden;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, .18);
+}
+.survival-achievements-summary-track { margin-top: 13px; }
+.survival-achievements-summary-track span,
+.survival-achievement-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #38bdf8, #fbbf24);
+  transition: width .25s ease;
+}
+.survival-secret-archive-count {
+  margin-top: 8px;
+  color: #fcd34d;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+.survival-map-directory {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.survival-map-directory-card {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, .16);
+  border-radius: 13px;
+  background: rgba(15, 30, 48, .86);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.survival-map-directory-card span {
+  color: #94a3b8;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+.survival-map-directory-card strong {
+  color: #f8fafc;
+  font-size: 11px;
+  line-height: 1.25;
+  letter-spacing: .35px;
+}
+.survival-map-directory-card small {
+  min-height: 24px;
+  color: #9fb3c7;
+  font-size: 9px;
+  line-height: 1.35;
+}
+.survival-map-directory-card em {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, .12);
+  color: #94a3b8;
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: .65px;
+}
+.survival-map-directory-card em.is-visited {
+  background: rgba(52, 211, 153, .12);
+  color: #6ee7b7;
+}
+.map-warehouse { border-top: 2px solid #f59e0b; }
+.map-port { border-top: 2px solid #fb923c; }
+.map-cold { border-top: 2px solid #67e8f9; }
+.survival-achievement-section {
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, .14);
+  border-radius: 15px;
+  background: rgba(8, 18, 31, .72);
+}
+.survival-achievement-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 9px;
+  color: #e2e8f0;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+.survival-achievement-section-heading span {
+  color: #94a3b8;
+  font-size: 8px;
+}
+.survival-achievement-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.survival-achievement-card {
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid rgba(148, 163, 184, .16);
+  border-radius: 12px;
+  background: rgba(15, 30, 48, .8);
+}
+.survival-achievement-card.is-unlocked {
+  border-color: rgba(251, 191, 36, .42);
+  background: rgba(77, 56, 18, .22);
+}
+.survival-achievement-top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.survival-achievement-top strong {
+  min-width: 0;
+  flex: 1;
+  color: #e2e8f0;
+  font-size: 11px;
+  line-height: 1.25;
+}
+.survival-achievement-icon { font-size: 17px; flex: 0 0 auto; }
+.survival-achievement-status {
+  flex: 0 0 auto;
+  color: #94a3b8;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: .55px;
+}
+.survival-achievement-card.is-unlocked .survival-achievement-status { color: #fbbf24; }
+.survival-achievement-card p {
+  min-height: 29px;
+  margin: 7px 0;
+  color: #9fb3c7;
+  font-size: 9px;
+  line-height: 1.4;
+}
+.survival-achievement-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #cbd5e1;
+  font-size: 8px;
+  font-weight: 800;
+}
+.survival-achievement-track { width: 44%; height: 5px; }
+.achievement-unlock-toast {
+  position: fixed;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  right: 12px;
+  z-index: 20000001;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(360px, calc(100vw - 24px));
+  padding: 11px 14px;
+  border: 1px solid rgba(251, 191, 36, .5);
+  border-radius: 13px;
+  background: rgba(11, 23, 38, .96);
+  color: #f8fafc;
+  box-shadow: 0 12px 38px rgba(0,0,0,.42);
+  animation: achievement-toast-in .24s ease-out;
+  pointer-events: none;
+}
+.achievement-unlock-icon { font-size: 24px; }
+.achievement-unlock-copy { display: flex; flex-direction: column; gap: 3px; }
+.achievement-unlock-copy strong { color: #fbbf24; font-size: 8px; letter-spacing: 1px; }
+.achievement-unlock-copy span { font-size: 12px; font-weight: 900; }
+@keyframes achievement-toast-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 640px) {
+  .survival-map-directory { grid-template-columns: 1fr; }
+  .survival-map-directory-card { display: grid; grid-template-columns: 1fr auto; align-items: center; }
+  .survival-map-directory-card span,
+  .survival-map-directory-card strong,
+  .survival-map-directory-card small { grid-column: 1; }
+  .survival-map-directory-card em { grid-column: 2; grid-row: 1 / span 3; }
+  .survival-achievement-grid { grid-template-columns: 1fr; }
+  .survival-achievements-heading { align-items: flex-start; }
+  .survival-achievements-heading p { font-size: 10px; }
+  .survival-hud-kicker { flex-wrap: wrap; line-height: 1.35; }
+}

@@ -11,6 +11,7 @@ import { createSurvivalBossRewardOptions } from './survivalBossRewards.ts';
 import { getSurvivalBossVariant, shouldSpawnBosmanKrakow } from './survivalEncounters.ts';
 import { applySurvivalWaveMutator, getSurvivalWaveMutator } from './survivalWaveMutators.ts';
 import { getSurvivalConvoyHazardCount } from './survivalConvoy.ts';
+import { chooseRandomSurvivalMap, getSurvivalMapDefinition, type SurvivalMapId } from './survivalMaps.ts';
 import { chooseCampaignRewardSpawnPoint } from './campaignRewards.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
 import { chooseSurvivalRicochetTarget, getSurvivalRadiationProfile, getSurvivalRicochetProfile } from './survivalCombatDraft.ts';
@@ -175,6 +176,8 @@ export interface SurvivalSnapshot {
   elapsedSeconds: number; wave: number; kills: number; perfectDodges: number; counterattackReady: boolean; level: number; xp: number; xpToNext: number;
   aliveEnemies: number; rerolls: number; skips: number; activeHazards: number;
   killStreak: number; overdriveRemainingSeconds: number;
+  mapId: SurvivalMapId; mapName: string; mapSubtitle: string;
+  secretsFound: number; totalSecrets: number; bossesDefeated: number;
   weapons: Array<{ id: SurvivalWeaponId; name: string; icon: string; level: number; evolved: boolean }>;
 }
 
@@ -191,6 +194,7 @@ export interface GameCallbacks {
   onPerkDropBanner?: (name: string, icon: string, desc: string, color: string) => void;
   onSurvivalAnnouncement?: (title: string, subtitle: string, detail: string) => void;
   onSurvivalUpdate?: (snapshot: SurvivalSnapshot) => void;
+  onSurvivalSecretFound?: (mapId: SurvivalMapId, secretId: string, secretName: string) => void;
   onSurvivalLevelUp?: (options: SurvivalUpgradeOption[], context?: 'levelup' | 'boss-reward') => void;
   onSurvivalDashUpdate?: (progress: number, ready: boolean, remainingSeconds: number) => void;
 }
@@ -463,6 +467,12 @@ export class PaleciakiGameEngine {
   private survivalUiTimer = 0;
   private survivalWave = 1;
   private survivalKills = 0;
+  private survivalMapId: SurvivalMapId = 'warehouse_b4';
+  private lastSurvivalMapId: SurvivalMapId | null = null;
+  private survivalSecretsFound = 0;
+  private survivalBossesDefeated = 0;
+  private survivalSecrets: { id: string; name: string; mesh: THREE.Group; age: number; collected: boolean }[] = [];
+  private survivalMapLandmarks: THREE.Group | null = null;
   private survivalPerfectDodges = 0;
   private survivalCounterattackReady = false;
   private campaignCounterattackReady = false;
@@ -1261,6 +1271,8 @@ export class PaleciakiGameEngine {
     this.survivalUiTimer = 0;
     this.survivalWave = 1;
     this.survivalKills = 0;
+    this.survivalSecretsFound = 0;
+    this.survivalBossesDefeated = 0;
     this.survivalPerfectDodges = 0;
     this.survivalCounterattackReady = false;
     this.campaignCounterattackReady = false;
@@ -1364,14 +1376,17 @@ export class PaleciakiGameEngine {
     this.updateAbilityCooldown(0, true);
     this.rebuildPlayerMesh();
     this.sectorGates = [null, null, null, null];
+    this.survivalMapId = chooseRandomSurvivalMap(this.lastSurvivalMapId, Math.random());
+    this.lastSurvivalMapId = this.survivalMapId;
+    const survivalMap = getSurvivalMapDefinition(this.survivalMapId);
     this.levelBounds = { minX: -58, maxX: 58, minZ: -18.2, maxZ: 18.2 };
     this.sectorGates.forEach((gate) => { if (gate) gate.visible = false; });
-    this.scene.background = new THREE.Color(0x080f1c);
+    this.scene.background = new THREE.Color(survivalMap.backgroundColor);
     this.applySectorLighting(4);
-    this.buildSurvivalArenaExpansion();
+    this.buildSurvivalArenaExpansion(this.survivalMapId);
     this.applySceneTextureQuality();
     if (this.scene.fog instanceof THREE.Fog) {
-      this.scene.fog.color.setHex(0x080f1c);
+      this.scene.fog.color.setHex(survivalMap.fogColor);
       this.scene.fog.near = 42;
       this.scene.fog.far = 112;
     }
@@ -1428,21 +1443,22 @@ export class PaleciakiGameEngine {
     this.callbacks.onBossUpdate?.('', 0, 0, false);
     this.callbacks.onSurvivalDashUpdate?.(1, true, 0);
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
-    this.emitFloatingToast('SURVIVAL SHIFT — PRZETRWAJ ZMIANĘ!', this.playerPos.x, this.playerPos.y + 1.8, this.playerPos.z, 'combo');
+    this.emitFloatingToast('LOSOWA MAPA: ' + survivalMap.name.toUpperCase(), this.playerPos.x, this.playerPos.y + 1.8, this.playerPos.z, 'combo');
   }
 
 
-  private buildSurvivalArenaExpansion() {
+  private buildSurvivalArenaExpansion(mapId: SurvivalMapId) {
+    const mapDefinition = getSurvivalMapDefinition(mapId);
     this.survivalObstacles = [];
     const floorTexture = getFloorTexture().clone();
     floorTexture.needsUpdate = true;
     floorTexture.wrapS = THREE.RepeatWrapping;
     floorTexture.wrapT = THREE.RepeatWrapping;
     floorTexture.repeat.set(3, 4);
-    const floorMaterial = new THREE.MeshStandardMaterial({ map: floorTexture, roughness: 0.62, metalness: 0.12 });
+    const floorMaterial = new THREE.MeshStandardMaterial({ map: floorTexture, color: mapDefinition.floorColor, roughness: mapId === 'cold_storage' ? 0.42 : 0.62, metalness: mapId === 'container_terminal' ? 0.24 : 0.12 });
     applyIndustrialPbr(floorMaterial, 0.018);
-    const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x1c2c3d, roughness: 0.72, metalness: 0.32 });
-    const trimMaterial = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.48, metalness: 0.24, emissive: 0x7c2d12, emissiveIntensity: 0.12 });
+    const wallMaterial = new THREE.MeshStandardMaterial({ color: mapDefinition.wallColor, roughness: 0.72, metalness: mapId === 'container_terminal' ? 0.42 : 0.32 });
+    const trimMaterial = new THREE.MeshStandardMaterial({ color: mapDefinition.accentColor, roughness: 0.48, metalness: 0.24, emissive: mapDefinition.accentColor, emissiveIntensity: 0.10 });
     const palletMaterial = new THREE.MeshStandardMaterial({ color: 0x76513a, roughness: 0.88 });
     const crateMaterials = [
       new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.82 }),
@@ -1642,7 +1658,222 @@ export class PaleciakiGameEngine {
       this.levelRoot.add(barricade);
       this.survivalObstacles.push({ x: point.x, z: point.z, halfWidth: 1.32, halfDepth: 0.72 });
     }
-    this.buildSurvivalArenaDressing();
+    this.buildSurvivalArenaDressing(mapId);
+    this.buildSurvivalMapLandmarks(mapId);
+    this.spawnSurvivalSecrets(mapId);
+  }
+
+
+  private buildSurvivalMapLandmarks(mapId: SurvivalMapId) {
+    const root = new THREE.Group();
+    root.name = 'survival-map-landmarks-' + mapId;
+    this.survivalMapLandmarks = root;
+    this.levelRoot.add(root);
+
+    if (mapId === 'container_terminal') {
+      const containerColors = [0xb4533f, 0x256b89, 0x9b6b28, 0x355b4e];
+      const positions = [
+        { x: -36, z: -6.2 }, { x: -18, z: 6.2 },
+        { x: 18, z: -6.2 }, { x: 36, z: 6.2 },
+      ];
+      const ribGeometry = new THREE.BoxGeometry(0.055, 2.82, 4.18);
+      positions.forEach((position, index) => {
+        const color = containerColors[index % containerColors.length];
+        const bodyMaterial = new THREE.MeshStandardMaterial({ color, metalness: 0.42, roughness: 0.62 });
+        const frameMaterial = new THREE.MeshStandardMaterial({ color: 0xd5dde4, metalness: 0.8, roughness: 0.32 });
+        const group = new THREE.Group();
+        group.name = 'port-container-' + index;
+        const body = new THREE.Mesh(new THREE.BoxGeometry(8.15, 3.0, 4.15), bodyMaterial);
+        body.position.y = 1.52;
+        body.castShadow = false;
+        body.receiveShadow = true;
+        group.add(body);
+        const topRail = new THREE.Mesh(new THREE.BoxGeometry(8.32, 0.12, 4.3), frameMaterial);
+        topRail.position.y = 3.06;
+        group.add(topRail);
+        const door = new THREE.Mesh(new THREE.BoxGeometry(0.10, 2.55, 3.65), frameMaterial);
+        door.position.set(4.12, 1.52, 0);
+        group.add(door);
+        const ribs = new THREE.InstancedMesh(ribGeometry, frameMaterial, 9);
+        const transform = new THREE.Object3D();
+        for (let rib = 0; rib < 9; rib++) {
+          transform.position.set(-3.75 + rib * 0.92, 1.52, 0);
+          transform.rotation.set(0, 0, 0);
+          transform.scale.set(1, 1, 1);
+          transform.updateMatrix();
+          ribs.setMatrixAt(rib, transform.matrix);
+        }
+        ribs.instanceMatrix.needsUpdate = true;
+        ribs.castShadow = false;
+        ribs.receiveShadow = false;
+        group.add(ribs);
+        group.position.set(position.x, 0, position.z);
+        root.add(group);
+        this.survivalObstacles.push({ x: position.x, z: position.z, halfWidth: 4.25, halfDepth: 2.28 });
+      });
+
+      // The suspended gantry gives the yard a distinct port silhouette without closing the fighting lane.
+      const craneMaterial = new THREE.MeshStandardMaterial({ color: 0xe38b32, metalness: 0.66, roughness: 0.42 });
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.46, 34), craneMaterial);
+      rail.position.set(0, 7.15, 0);
+      root.add(rail);
+      const trolley = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.42, 3.8), new THREE.MeshStandardMaterial({ color: 0x263b50, metalness: 0.72, roughness: 0.34 }));
+      trolley.position.set(0, 6.72, 0);
+      root.add(trolley);
+      const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 2.6, 6), new THREE.MeshStandardMaterial({ color: 0xd5dde4, metalness: 0.8, roughness: 0.32 }));
+      cable.position.set(0, 5.25, 0);
+      root.add(cable);
+      const hook = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.075, 6, 12, Math.PI * 1.5), craneMaterial);
+      hook.position.set(0, 3.85, 0);
+      hook.rotation.x = Math.PI / 2;
+      root.add(hook);
+      const beacon = new THREE.PointLight(0xfb923c, 3.2, 25);
+      beacon.position.set(0, 6.5, 0);
+      root.add(beacon);
+    } else if (mapId === 'cold_storage') {
+      const shellMaterial = new THREE.MeshStandardMaterial({ color: 0x8bb6c8, metalness: 0.38, roughness: 0.34 });
+      const panelMaterial = new THREE.MeshStandardMaterial({ color: 0xd9f5ff, metalness: 0.28, roughness: 0.3, emissive: 0x1c596f, emissiveIntensity: 0.16 });
+      const darkMaterial = new THREE.MeshStandardMaterial({ color: 0x1f4355, metalness: 0.72, roughness: 0.35 });
+      const fanMaterial = new THREE.MeshStandardMaterial({ color: 0x67e8f9, metalness: 0.62, roughness: 0.28, emissive: 0x0891b2, emissiveIntensity: 0.5 });
+      const freezerPositions = [
+        { x: -39, z: -7.2 }, { x: -21, z: 7.2 },
+        { x: 21, z: -7.2 }, { x: 39, z: 7.2 },
+      ];
+      freezerPositions.forEach((position, index) => {
+        const group = new THREE.Group();
+        group.name = 'cold-storage-unit-' + index;
+        const shell = new THREE.Mesh(new THREE.BoxGeometry(6.2, 4.7, 4.2), shellMaterial);
+        shell.position.y = 2.36;
+        shell.castShadow = false;
+        group.add(shell);
+        const front = new THREE.Mesh(new THREE.BoxGeometry(0.14, 3.95, 3.55), panelMaterial);
+        front.position.set(3.16, 2.36, 0);
+        group.add(front);
+        const fanHousing = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.78, 0.20, 12), darkMaterial);
+        fanHousing.rotation.z = Math.PI / 2;
+        fanHousing.position.set(3.30, 3.05, 0);
+        group.add(fanHousing);
+        const fanHub = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.25, 8), fanMaterial);
+        fanHub.rotation.z = Math.PI / 2;
+        fanHub.position.set(3.45, 3.05, 0);
+        group.add(fanHub);
+        for (let slat = 0; slat < 4; slat++) {
+          const vent = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 1.5), darkMaterial);
+          vent.position.set(3.30, 1.55 + slat * 0.27, 0);
+          group.add(vent);
+        }
+        group.position.set(position.x, 0, position.z);
+        root.add(group);
+        this.survivalObstacles.push({ x: position.x, z: position.z, halfWidth: 3.22, halfDepth: 2.2 });
+      });
+
+      // Refrigerant mains are instanced to keep their draw-call cost low on phones.
+      const pipeMaterial = new THREE.MeshStandardMaterial({ color: 0x5fd7e8, metalness: 0.72, roughness: 0.26, emissive: 0x0e7490, emissiveIntensity: 0.22 });
+      const pipes = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.105, 0.105, 108, 8), pipeMaterial, 3);
+      const pipeTransform = new THREE.Object3D();
+      for (let index = 0; index < 3; index++) {
+        pipeTransform.position.set(0, 7.15, -12 + index * 12);
+        pipeTransform.rotation.set(0, 0, Math.PI / 2);
+        pipeTransform.scale.set(1, 1, 1);
+        pipeTransform.updateMatrix();
+        pipes.setMatrixAt(index, pipeTransform.matrix);
+      }
+      pipes.instanceMatrix.needsUpdate = true;
+      pipes.castShadow = false;
+      pipes.receiveShadow = false;
+      root.add(pipes);
+
+      const frostMaterial = new THREE.MeshBasicMaterial({ color: 0x73d9ed, transparent: true, opacity: 0.16, depthWrite: false });
+      for (const laneX of [-30, -10, 10, 30]) {
+        const frostStrip = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.018, 8.5), frostMaterial);
+        frostStrip.position.set(laneX, 0.018, 0);
+        root.add(frostStrip);
+      }
+      for (const x of [-34, 0, 34]) {
+        const coldLight = new THREE.PointLight(0x67e8f9, 2.2, 24);
+        coldLight.position.set(x, 6.3, 0);
+        root.add(coldLight);
+      }
+    }
+  }
+
+  private spawnSurvivalSecrets(mapId: SurvivalMapId) {
+    const definition = getSurvivalMapDefinition(mapId);
+    this.survivalSecretsFound = 0;
+    for (const [index, secret] of definition.secretLocations.entries()) {
+      const group = new THREE.Group();
+      group.name = 'survival-secret-' + secret.id;
+      const gold = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.78, roughness: 0.22, emissive: 0x854d0e, emissiveIntensity: 0.58 });
+      const dark = new THREE.MeshStandardMaterial({ color: 0x27384b, metalness: 0.65, roughness: 0.34 });
+      const glow = new THREE.MeshBasicMaterial({ color: 0xfde68a, transparent: true, opacity: 0.48, depthWrite: false });
+      const coreGeometry = secret.style === 'wz'
+        ? new THREE.BoxGeometry(0.48, 0.34, 0.12)
+        : secret.style === 'cassette'
+          ? new THREE.BoxGeometry(0.38, 0.26, 0.22)
+          : new THREE.IcosahedronGeometry(0.29, 1);
+      const core = new THREE.Mesh(coreGeometry, gold);
+      core.position.y = 0.76;
+      group.add(core);
+      if (secret.style === 'wz') {
+        const folded = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.11, 0.15), dark);
+        folded.position.set(0.12, 0.78, 0.02);
+        group.add(folded);
+      } else if (secret.style === 'cassette') {
+        const reelA = new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.018, 5, 10), dark);
+        const reelB = reelA.clone();
+        reelA.position.set(-0.09, 0.76, 0.12);
+        reelB.position.set(0.09, 0.76, 0.12);
+        group.add(reelA, reelB);
+      } else {
+        const earA = new THREE.Mesh(new THREE.ConeGeometry(0.10, 0.20, 5), gold);
+        const earB = earA.clone();
+        earA.position.set(-0.16, 1.02, 0);
+        earB.position.set(0.16, 1.02, 0);
+        group.add(earA, earB);
+      }
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.56, 0.035, 6, 18), glow);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.y = 0.12;
+      group.add(ring);
+      const beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 1.1, 5), glow);
+      beacon.position.y = 1.22;
+      group.add(beacon);
+      group.position.set(secret.x, 0.08, secret.z);
+      group.scale.setScalar(index === 2 ? 0.94 : 1);
+      group.traverse((object) => {
+        const mesh = object as THREE.Mesh;
+        mesh.castShadow = false;
+        mesh.receiveShadow = false;
+      });
+      this.levelRoot.add(group);
+      this.survivalSecrets.push({ id: secret.id, name: secret.name, mesh: group, age: 0, collected: false });
+    }
+  }
+
+  private updateSurvivalSecrets(dt: number) {
+    if (this.gameMode !== 'survival' || this.survivalSecrets.length === 0) return;
+    for (const secret of this.survivalSecrets) {
+      if (secret.collected) continue;
+      secret.age += dt;
+      secret.mesh.rotation.y += dt * (0.65 + (secret.id.length % 3) * 0.12);
+      secret.mesh.position.y = 0.08 + Math.sin(secret.age * 2.1) * 0.10;
+      const distance = Math.hypot(secret.mesh.position.x - this.playerPos.x, secret.mesh.position.z - this.playerPos.z);
+      if (distance > 1.35 || Math.abs(secret.mesh.position.y + 0.65 - this.playerPos.y) > 1.45) continue;
+
+      secret.collected = true;
+      this.levelRoot.remove(secret.mesh);
+      this.disposeTemporaryObject(secret.mesh);
+      secret.mesh.clear();
+      this.survivalSecretsFound++;
+      this.score += 750;
+      this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+      this.callbacks.onSurvivalSecretFound?.(this.survivalMapId, secret.id, secret.name);
+      this.emitFloatingToast('✦ SEKRET ODKRYTY: ' + secret.name.toUpperCase() + ' • +750 PKT', this.playerPos.x, this.playerPos.y + 1.65, this.playerPos.z, 'easter-egg');
+      this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.25, this.playerPos.z, 0xfbbf24);
+      this.triggerBloomPulse(0.28);
+      sound.playEasterEgg();
+      this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+    }
   }
 
 
@@ -1716,11 +1947,12 @@ export class PaleciakiGameEngine {
     return material;
   }
 
-  private buildSurvivalArenaDressing() {
-    const steel = new THREE.MeshStandardMaterial({ color: 0x3b4f60, metalness: 0.72, roughness: 0.42 });
+  private buildSurvivalArenaDressing(mapId: SurvivalMapId = this.survivalMapId) {
+    const mapDefinition = getSurvivalMapDefinition(mapId);
+    const steel = new THREE.MeshStandardMaterial({ color: mapId === 'cold_storage' ? 0x8bb9c9 : 0x3b4f60, metalness: 0.72, roughness: 0.42 });
     const orange = new THREE.MeshStandardMaterial({
-      color: 0xe99a32, metalness: 0.38, roughness: 0.54,
-      emissive: 0x693a0d, emissiveIntensity: 0.16,
+      color: mapDefinition.accentColor, metalness: 0.38, roughness: 0.54,
+      emissive: mapDefinition.accentColor, emissiveIntensity: 0.12,
     });
     const deck = new THREE.MeshStandardMaterial({ color: 0x647383, metalness: 0.58, roughness: 0.58 });
     const cargoMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.84, metalness: 0.06 });
@@ -1956,6 +2188,12 @@ export class PaleciakiGameEngine {
       counterattackReady: this.survivalCounterattackReady,
       killStreak: this.survivalMomentum.killStreak,
       overdriveRemainingSeconds: this.survivalMomentum.overdriveRemainingSeconds,
+      mapId: this.survivalMapId,
+      mapName: getSurvivalMapDefinition(this.survivalMapId).name,
+      mapSubtitle: getSurvivalMapDefinition(this.survivalMapId).subtitle,
+      secretsFound: this.survivalSecretsFound,
+      totalSecrets: getSurvivalMapDefinition(this.survivalMapId).secretLocations.length,
+      bossesDefeated: this.survivalBossesDefeated,
       level: this.survivalLevel,
       xp: this.survivalXp,
       xpToNext: this.survivalXpToNext,
@@ -2494,6 +2732,16 @@ export class PaleciakiGameEngine {
     this.clearSurvivalSurgeRing();
     this.survivalSurgeTargetCount = 0;
     this.disposeSurvivalArenaInstances();
+    for (const secret of this.survivalSecrets) {
+      this.levelRoot.remove(secret.mesh);
+      this.disposeTemporaryObject(secret.mesh);
+    }
+    this.survivalSecrets = [];
+    if (this.survivalMapLandmarks) {
+      this.levelRoot.remove(this.survivalMapLandmarks);
+      this.disposeTemporaryObject(this.survivalMapLandmarks);
+      this.survivalMapLandmarks = null;
+    }
     // Release pickup-owned GPU resources before clearing the level graph.
     // These models have per-instance geometries/materials; only explicitly
     // marked dynamic textures are disposed, never shared asset textures.
@@ -4946,6 +5194,7 @@ export class PaleciakiGameEngine {
       }
       this.updateCoffeeMachines(simDt);
       this.updateCollectibles(simDt);
+      if (this.gameMode === 'survival') this.updateSurvivalSecrets(simDt);
       this.updateDroppedPerks(simDt);
       this.updateHazards(simDt);
       if (this.gameMode !== 'survival') {
@@ -11353,6 +11602,7 @@ export class PaleciakiGameEngine {
     this.handleMateuszPassive(2);
     const isAbilityRechargeBoss =
       e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow';
+    if (this.gameMode === 'survival' && isAbilityRechargeBoss) this.survivalBossesDefeated++;
     const isAbilityRechargeElite = isAbilityRechargeBoss ||
       e.type === 'elite_walczak_guard' || e.type === 'sebix_m' || e.maxHp >= 4;
     this.rechargeAbilityFromKill(isAbilityRechargeElite, isAbilityRechargeBoss);

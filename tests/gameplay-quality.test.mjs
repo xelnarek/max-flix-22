@@ -1198,3 +1198,57 @@ test('Survival draft adds Crimsonland radiation and Archero ricochet builds with
   assert.match(combat, /export function getSurvivalRicochetProfile/);
   assert.match(combat, /export function getSurvivalRadiationProfile/);
 });
+
+test('Survival chooses among three playable map identities and does not immediately repeat a map', async () => {
+  const [game, maps] = await Promise.all([read('../src/game.ts'), read('../src/survivalMaps.ts')]);
+  assert.match(game, /chooseRandomSurvivalMap\(this\.lastSurvivalMapId, Math\.random\(\)\)/);
+  assert.match(game, /buildSurvivalArenaExpansion\(this\.survivalMapId\)/);
+  assert.match(game, /private buildSurvivalMapLandmarks\(mapId: SurvivalMapId\)/);
+  assert.match(game, /mapId === 'container_terminal'[\s\S]*?mapId === 'cold_storage'/);
+  assert.match(game, /this\.survivalObstacles\.push\(\{ x: position\.x, z: position\.z/);
+  assert.match(game, /private spawnSurvivalSecrets\(mapId: SurvivalMapId\)/);
+  assert.match(game, /private updateSurvivalSecrets\(dt: number\)/);
+  assert.match(game, /onSurvivalSecretFound\?\./);
+  assert.match(maps, /'warehouse_b4' \| 'container_terminal' \| 'cold_storage'/);
+  assert.match(maps, /export function chooseRandomSurvivalMap/);
+  assert.match(maps, /secretLocations:/);
+});
+
+test('Survival secrets are collectible, score-bearing and released during map cleanup', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /this\.updateSurvivalSecrets\(simDt\)/);
+  assert.match(game, /distance > 1\.35/);
+  assert.match(game, /this\.survivalSecretsFound\+\+/);
+  assert.match(game, /this\.score \+= 750/);
+  assert.match(game, /this\.disposeTemporaryObject\(secret\.mesh\)/);
+  assert.match(game, /totalSecrets: getSurvivalMapDefinition\(this\.survivalMapId\)\.secretLocations\.length/);
+});
+
+test('Survival main boss victories are tracked separately from ordinary enemy eliminations', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /if \(this\.gameMode === 'survival' && isAbilityRechargeBoss\) this\.survivalBossesDefeated\+\+/);
+  assert.match(game, /bossesDefeated: this\.survivalBossesDefeated/);
+});
+
+test('Survival achievements persist across runs and unlock the full map and secret archive', async () => {
+  const module = await read('../src/survivalAchievements.ts');
+  assert.match(module, /SURVIVAL_ACHIEVEMENTS/);
+  assert.match(module, /updateSurvivalAchievementProgress/);
+  assert.match(module, /recordSurvivalSecretDiscovery/);
+  assert.match(module, /map_explorer/);
+  assert.match(module, /secret_archive/);
+  assert.match(module, /sanitizeSurvivalAchievementProgress/);
+});
+
+test('the menu exposes a readable achievement archive and selected map/secret HUD counters', async () => {
+  const [html, app, css] = await Promise.all([read('../index.html'), read('../src/index.ts'), read('../src/index.css')]);
+  assert.match(html, /data-tab="tab-achievements"/);
+  assert.match(html, /id="tab-achievements"/);
+  assert.match(html, /id="survival-achievement-list"/);
+  assert.match(html, /id="survival-map-name"/);
+  assert.match(html, /id="survival-secret-count"/);
+  assert.match(app, /trackSurvivalAchievementSnapshot\(snapshot\)/);
+  assert.match(app, /trackSurvivalSecretAchievement\(mapId, secretId\)/);
+  assert.match(css, /\.survival-achievement-grid/);
+  assert.match(css, /\.achievement-unlock-toast/);
+});
