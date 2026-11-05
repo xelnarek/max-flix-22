@@ -106,3 +106,13 @@ test('the opening 15-second Oniric glitch uses a real low-resolution pixel buffe
   assert.match(source, /outputContext!\.imageSmoothingEnabled = false/);
   assert.match(source, /drawImage\(pixelCanvas, 0, 0, canvas\.width, canvas\.height\)/);
 });
+
+
+test('retrying the secret restarts the full 15-second pixel-chaos window', async () => {
+  const source = await readFile(new URL('../src/oniricPlatformer.ts', import.meta.url), 'utf8');
+  assert.match(source, /let pixelChaosEndsAt = performance\.now\(\) \+ ONIRIC_PIXEL_GLITCH_DURATION_MS/);
+  assert.match(source, /const restartPixelChaos = \(\) => \{/);
+  assert.match(source, /pixelChaosEndsAt = performance\.now\(\) \+ ONIRIC_PIXEL_GLITCH_DURATION_MS/);
+  assert.match(source, /root\.classList\.add\('oniric-pixel-chaos'\)/);
+  assert.match(source, /const resetRun = \(\) => \{\s*restartPixelChaos\(\);/);
+});
