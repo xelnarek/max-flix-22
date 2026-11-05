@@ -10323,6 +10323,12 @@ export class PaleciakiGameEngine {
       }
       if (!target) continue;
 
+      // Turn the whole companion toward its target before resolving the muzzle in world space.
+      // This keeps the carbine pointed at enemies rather than toward the player during orbit.
+      capybara.group.rotation.y = Math.atan2(
+        target.x - capybara.group.position.x,
+        target.z - capybara.group.position.z
+      );
       const rifleGuard = capybara.index !== 1 && nearest > 4.0;
       if (rifleGuard) {
         const muzzleLocal = capybara.group.userData.mafiMuzzleLocal as THREE.Vector3 | undefined;
