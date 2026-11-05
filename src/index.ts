@@ -33,6 +33,16 @@ const syncAdMobSettings = (consent: { enabled: boolean; privacyOptionsRequired: 
   document.getElementById('btn-ad-privacy-options')?.classList.toggle('hidden', !consent.privacyOptionsRequired);
 };
 
+const currentDeviceRenderProfile = (viewportWidth = window.innerWidth) => {
+  const device = navigator as Navigator & { deviceMemory?: number };
+  const isTouch = navigator.maxTouchPoints > 0 || ('ontouchstart' in window);
+  return getDeviceRenderProfile(
+    viewportWidth < 900 || isTouch,
+    device.deviceMemory,
+    navigator.hardwareConcurrency
+  );
+};
+
 // Global Unhandled Error Logger
 window.addEventListener('error', (e) => {
   console.warn('Global Error Captured:', e.error || e.message);
@@ -193,10 +203,13 @@ class PaleciakiScene extends xb.Script {
       const renderer = (xb.core?.renderer as THREE.WebGLRenderer) || null;
       if (renderer) {
         // Set DPR before dimensions so Three.js recreates the drawing buffer at the final scale.
-        const isMobile = width < 900 || ('ontouchstart' in window);
-        // High-density mobile rendering: sharper textures and silhouettes on Poco F6.
-        // The cap is intentional to prevent fill-rate spikes during dense survival waves.
-        const dpr = Math.max(0.85, Math.min(window.devicePixelRatio || 1, isMobile ? 1.65 : 2.0) * this.adaptiveRenderScale);
+        const renderProfile = currentDeviceRenderProfile(width);
+        root.dataset.renderTier = renderProfile.tier;
+        const isSurvival = this.engine?.getGameMode() === 'survival';
+        const dprCap = isSurvival ? renderProfile.survivalPixelRatioCap : renderProfile.pixelRatioCap;
+        // High-density phones keep the sharper profile; low-memory devices spend
+        // fewer pixels on dense waves and avoid preventable GPU fill-rate spikes.
+        const dpr = Math.max(0.78, Math.min(window.devicePixelRatio || 1, dprCap) * this.adaptiveRenderScale);
         renderer.setPixelRatio(dpr);
         renderer.setSize(width, height, false);
         this.selectiveBloom?.resize(width, height, renderer.getPixelRatio());
@@ -1810,7 +1823,7 @@ class PaleciakiScene extends xb.Script {
     // The selective bloom hook uses XR Blocks' supported scene-render override.
     // Non-WebGL backends retain their normal render path.
     const core = xb.core;
-    if (renderer && core && scene && renderer.extensions.has('EXT_color_buffer_float')) {
+    if (renderer && core && scene && currentDeviceRenderProfile(width).bloomEnabled && renderer.extensions.has('EXT_color_buffer_float')) {
       this.restoreSelectiveBloomOverride?.();
       this.restoreSelectiveBloomOverride = null;
       this.selectiveBloom?.dispose();
@@ -1869,8 +1882,11 @@ class PaleciakiScene extends xb.Script {
 
     const renderer = (xb.core?.renderer as THREE.WebGLRenderer) || null;
     if (renderer) {
-      const isMobile = width < 900 || isTouch;
-      renderer.setPixelRatio(Math.max(0.85, Math.min(window.devicePixelRatio || 1, isMobile ? 1.65 : 2.0) * this.adaptiveRenderScale));
+      const renderProfile = currentDeviceRenderProfile(width);
+      root.dataset.renderTier = renderProfile.tier;
+      const isSurvival = this.engine?.getGameMode() === 'survival';
+      const dprCap = isSurvival ? renderProfile.survivalPixelRatioCap : renderProfile.pixelRatioCap;
+      renderer.setPixelRatio(Math.max(0.78, Math.min(window.devicePixelRatio || 1, dprCap) * this.adaptiveRenderScale));
       renderer.setSize(width, height, false);
       this.selectiveBloom?.resize(width, height, renderer.getPixelRatio());
     }
@@ -1913,6 +1929,8 @@ class PaleciakiScene extends xb.Script {
 
     const width = Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth));
     const height = Math.max(1, Math.round(window.visualViewport?.height || window.innerHeight));
+    const renderProfile = currentDeviceRenderProfile(width);
+    document.documentElement.dataset.renderTier = renderProfile.tier;
     const isMobile = width < 900 || ('ontouchstart' in window);
     const isSurvival = this.engine?.getGameMode() === 'survival';
 
@@ -1971,8 +1989,10 @@ class PaleciakiScene extends xb.Script {
     }
     this.adaptiveRenderScale = nextScale;
 
-    const deviceCap = isMobile ? (isSurvival ? 1.42 : 1.65) : 2.0;
-    const targetDpr = Math.max(0.85, Math.min(window.devicePixelRatio || 1, deviceCap) * nextScale);
+    const deviceCap = isMobile
+      ? (isSurvival ? renderProfile.survivalPixelRatioCap : renderProfile.pixelRatioCap)
+      : renderProfile.pixelRatioCap;
+    const targetDpr = Math.max(0.78, Math.min(window.devicePixelRatio || 1, deviceCap) * nextScale);
 
     // Drawing-buffer changes are deliberately infrequent and only happen at
     // meaningful tier transitions, never on individual FPS samples.
@@ -2188,13 +2208,14 @@ async function startApp() {
       // High fidelity rendering configuration
       if (xb.core.renderer) {
         const r = xb.core.renderer as THREE.WebGLRenderer;
-        const isMobileDevice = window.innerWidth < 900 || ('ontouchstart' in window);
+          const renderProfile = currentDeviceRenderProfile();
+        document.documentElement.dataset.renderTier = renderProfile.tier;
         r.outputColorSpace = THREE.SRGBColorSpace;
-        r.setPixelRatio(Math.max(0.85, Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.65 : 2.0)));
+        r.setPixelRatio(Math.max(0.78, Math.min(window.devicePixelRatio || 1, renderProfile.pixelRatioCap)));
         r.toneMapping = THREE.ACESFilmicToneMapping;
         r.toneMappingExposure = 1.08;
-        r.shadowMap.enabled = true;
-        r.shadowMap.type = isMobileDevice ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+        r.shadowMap.enabled = renderProfile.shadowsEnabled;
+        r.shadowMap.type = renderProfile.softShadows ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
       }
 
       // Keep the simulator environment out of view without replacing the
