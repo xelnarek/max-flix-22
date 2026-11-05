@@ -110,18 +110,51 @@ test('campaign entry points are retired; only Survival can be started from the a
   assert.match(game, /private resetSurvivalRun\(\)/);
   assert.doesNotMatch(game, /public startGame\(/);
 });
-test('camera fades only tagged perimeter walls that intersect the camera-to-player ray', async () => {
+test('camera fades perimeter walls by ray intersection and individual Survival lamps when the operator stands below', async () => {
   const game = await read('../src/game.ts');
-  assert.match(game, /private registerCameraOccluder\(mesh: THREE\.Mesh\)/);
+  assert.match(game, /private registerCameraOccluder\(mesh: THREE\.Mesh, fadeOpacity = 0\.18, fadeRadius = 0\)/);
   assert.match(game, /private updateCameraOcclusion\(dt: number\)/);
   assert.match(game, /cameraOcclusionRaycaster\.intersectObjects\(this\.cameraOccluders, false, hits\)/);
   assert.match(game, /this\.cameraOcclusionCooldown = 0\.075/);
-  assert.match(game, /Math\.min\(original\.opacity, 0\.18\)/);
+  assert.match(game, /mesh\.getWorldPosition\(this\.cameraOcclusionWorldPosition\)/);
+  assert.match(game, /operatorUnderFixture = overhead && dx \* dx \+ dz \* dz <= state\.fadeRadius \* state\.fadeRadius/);
+  assert.match(game, /const shouldFade = rayBlocked \|\| operatorUnderFixture/);
+  assert.match(game, /Math\.min\(original\.opacity, state\.fadeOpacity\)/);
+  assert.match(game, /this\.registerCameraOccluder\(fixture, 0\.07, 3\.15\)/);
+  assert.match(game, /fixture\.name = 'survival-ceiling-light-'/);
+  assert.match(game, /for \(const fixture of this\.survivalCeilingFixtures\)[\s\S]*?this\.disposeTemporaryObject\(fixture\)[\s\S]*?this\.survivalCeilingFixtures = \[\]/);
   assert.match(game, /this\.restoreCameraOccluders\(\)/);
   assert.match(game, /this\.updateCameraOcclusion\(dt\)/);
   assert.ok((game.match(/this\.registerCameraOccluder\(backWall\)/g) || []).length >= 3);
 });
 
+test('the three random Survival maps have separate readable landmarks without filling the main lanes', async () => {
+  const [game, maps] = await Promise.all([read('../src/game.ts'), read('../src/survivalMaps.ts')]);
+  assert.match(maps, /warehouse_b4/);
+  assert.match(maps, /container_terminal/);
+  assert.match(maps, /cold_storage/);
+  assert.match(game, /mapId === 'container_terminal'/);
+  assert.match(game, /mapId === 'cold_storage'/);
+  assert.match(game, /shutterPanels = new THREE\.InstancedMesh/);
+  assert.match(game, /portChevrons/);
+  assert.match(game, /panelScreens = new THREE\.InstancedMesh/);
+  assert.match(game, /frostCrystals = new THREE\.InstancedMesh/);
+});
+
+test('Survival voice lines use one bottom radio caption outside the top-left HUD', async () => {
+  const [html, css, app] = await Promise.all([
+    read('../index.html'), read('../src/hud-layout.css'), read('../src/index.ts')
+  ]);
+  assert.equal((html.match(/id="dialogue-container"/g) || []).length, 1);
+  assert.match(html, /<div id="hud-top"[\s\S]*?<\/div>\s*<\/div>\s*<!-- Single radio-style caption lane:[\s\S]*?id="dialogue-container"/);
+  assert.ok(html.indexOf('id="dialogue-container"') < html.indexOf('<!-- RIGHT SIDE ACTIVE PERKS PANEL -->'));
+  assert.match(html, /id="survival-event-announcement"/);
+  assert.match(app, /if \(type === 'enemy_shout'\)[\s\S]*?createDialogueCard/);
+  assert.match(app, /onSpeechBubble: \(text\) => \{[\s\S]*?createDialogueCard/);
+  assert.match(css, /#game-shell\.survival-mode #dialogue-container\s*\{[\s\S]*?top: auto !important[\s\S]*?left: 50% !important[\s\S]*?bottom: max\(/);
+  assert.match(css, /#game-shell\.survival-mode #dialogue-container:empty\s*\{\s*display: none !important/);
+  assert.match(css, /#game-shell\.survival-mode #dialogue-container \.dialogue-box-card\s*\{[\s\S]*?flex-direction: row !important/);
+});
 test('touch Survival HUD keeps the zoom slider and 3D camera switch accessible', async () => {
   const [css, finalHudCss, html] = await Promise.all([
     read('../src/index.css'), read('../src/hud-layout.css'), read('../index.html')
