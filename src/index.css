@@ -4567,3 +4567,76 @@ button {
   .survival-achievements-heading p { font-size: 10px; }
   .survival-hud-kicker { flex-wrap: wrap; line-height: 1.35; }
 }
+
+
+/* ONIRIC DREAM — intentionally ridiculous low-resolution dream corruption.
+   The canvas is rendered into a quarter-size CSS surface and blown back up;
+   the HUD remains crisp because this treatment is scoped to the WebGL canvas. */
+#game-canvas-container.oniric-dream-active canvas {
+  width: 24% !important;
+  height: 24% !important;
+  transform: scale(4.166667) !important;
+  transform-origin: top left !important;
+  image-rendering: pixelated !important;
+  filter: saturate(3.4) contrast(1.55) hue-rotate(57deg) !important;
+}
+
+#game-canvas-container.oniric-dream-active::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.13) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.11) 1px, transparent 1px),
+    repeating-linear-gradient(135deg, rgba(244,114,182,.16) 0 4px, transparent 4px 12px);
+  background-size: 6px 6px, 6px 6px, 19px 19px;
+  mix-blend-mode: screen;
+  animation: oniric-pixel-chaos .19s steps(2, end) infinite;
+}
+
+@keyframes oniric-pixel-chaos {
+  0% { opacity: .35; filter: hue-rotate(0deg); }
+  50% { opacity: .72; filter: hue-rotate(85deg); }
+  100% { opacity: .42; filter: hue-rotate(180deg); }
+}
+
+.oniric-dream-banner {
+  position: fixed;
+  z-index: 95;
+  left: 50%;
+  top: 46%;
+  transform: translate(-50%,-50%);
+  width: max-content;
+  max-width: min(90vw,620px);
+  padding: 14px 18px;
+  border: 3px solid #f0abfc;
+  border-radius: 0;
+  background: #170c2b;
+  color: #fff7ff;
+  box-shadow: 7px 7px 0 #5b21b6, 0 0 35px rgba(244,114,182,.7);
+  font: 900 clamp(12px,2.4vw,22px)/1.35 monospace;
+  letter-spacing: .08em;
+  text-align: center;
+  pointer-events: none;
+  animation: oniric-banner-glitch 3.5s steps(3,end) both;
+}
+
+@keyframes oniric-banner-glitch {
+  0% { opacity:0; transform:translate(-50%,-50%) scale(.5) rotate(-4deg); }
+  12% { opacity:1; transform:translate(-50%,-50%) scale(1.08) rotate(2deg); }
+  35% { transform:translate(calc(-50% + 7px),-50%) skewX(-7deg); }
+  62% { transform:translate(calc(-50% - 5px),-50%) skewX(5deg); }
+  100% { opacity:0; transform:translate(-50%,-50%) scale(.92); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #game-canvas-container.oniric-dream-active::after {
+    animation: none;
+    opacity: .48;
+  }
+  .oniric-dream-banner {
+    animation-duration: .01ms;
+  }
+}
