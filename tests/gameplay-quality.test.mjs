@@ -1105,8 +1105,11 @@ test('MafiKapibar enforcers fire arcade tracers and retain heavy baton melee com
   const update = game.slice(start, end);
   assert.match(update, /capybara\.group\.rotation\.y = Math\.atan2/);
   assert.match(update, /const rifleGuard = capybara\.index !== 1 && nearest > 4\.0/);
-  assert.match(update, /this\.projectiles\.push\(\{[\s\S]*?damage: 2,[\s\S]*?weaponProjectile: true/);
-  assert.match(update, /scaleSurvivalDamage\(capybara\.index === 1 \? 3 : 2\)/);
+  assert.match(update, /mafi_carbine_tracer/);
+  assert.match(update, /damage: capybara\.index === 0 && targetIsMajorBoss \? 3 : 2/);
+  assert.match(update, /pierce: capybara\.index === 0 \? 1 : 0/);
+  assert.match(update, /scaleSurvivalDamage\(capybara\.index === 1 \? \(targetIsMajorBoss \? 4 : 3\) : targetIsMajorBoss \? 3 : 2\)/);
+  assert.match(update, /roleWeight = capybara\.index === 0/);
   assert.match(update, /PODWÓJNA PAŁKA MAFII/);
 });
 
