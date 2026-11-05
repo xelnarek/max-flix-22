@@ -4288,3 +4288,33 @@ button {
     grid-row: 3;
   }
 }
+
+
+/* Device-tier rendering trims UI compositing cost on entry-level phones. */
+@media (max-width: 900px), (pointer: coarse) {
+  html[data-render-tier="mobile-low"] .top-icon-btn,
+  html[data-render-tier="mobile-low"] .stat-pill,
+  html[data-render-tier="mobile-low"] .dialogue-box-card,
+  html[data-render-tier="mobile-low"] .survival-chip,
+  html[data-render-tier="mobile-low"] .perk-drop-banner {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28) !important;
+    transition: none !important;
+  }
+
+  html[data-render-tier="mobile-low"] .top-icon-btn:hover {
+    transform: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
