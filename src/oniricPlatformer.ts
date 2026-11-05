@@ -68,6 +68,9 @@ const HAZARDS = [
 ];
 
 const CHECKPOINTS = [
+  // Place the first checkpoint before the first cup hazard so an early
+  // mistake does not force the player to replay the opening jumps.
+  { x: 930, top: 440 },
   { x: 1320, top: 370 },
   { x: 1800, top: 430 },
   { x: 2090, top: 358 },
@@ -160,10 +163,14 @@ export function stepOniricPlatformer(
     }
   }
 
-  for (const checkpoint of CHECKPOINTS) {
-    if (player.x >= checkpoint.x && checkpoint.x > state.checkpointX) {
-      state.checkpointX = checkpoint.x;
-      state.checkpointTop = checkpoint.top;
+  // Activate checkpoints only after landing. Crossing an X threshold
+  // mid-jump must not create a respawn point floating above the level.
+  if (player.onGround) {
+    for (const checkpoint of CHECKPOINTS) {
+      if (player.x >= checkpoint.x && checkpoint.x > state.checkpointX) {
+        state.checkpointX = checkpoint.x;
+        state.checkpointTop = checkpoint.top;
+      }
     }
   }
 
