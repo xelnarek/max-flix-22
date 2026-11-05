@@ -758,6 +758,7 @@ export class PaleciakiGameEngine {
     life: number;
     maxLife: number;
     attackCooldown: number;
+    orbitAngle: number;
     pounceTimer: number;
     pounceTarget: THREE.Vector3 | null;
   }[] = [];
@@ -767,7 +768,6 @@ export class PaleciakiGameEngine {
     maxLife: number;
     age: number;
     attackCooldown: number;
-    orbitAngle: number;
     pounceTimer: number;
     pounceTarget: THREE.Vector3 | null;
     index: number;
@@ -10339,7 +10339,7 @@ export class PaleciakiGameEngine {
     this.callbacks.onPerkDropBanner?.(
       'MAFIKAPIBAR • RYTUAŁ B4',
       '🐾🕶️',
-      'Pentagram zadaje obrażenia i ogłusza pobliskich wrogów. Don i hybryda ostrzeliwują cele świetlnymi pociskami, a egzekutor z dwiema pałkami rozbija szyk w zwarciu. Trójka eskortuje operatora przez 12–15 sekund.',
+      'Trzy większe MafiKapibary trzymają szyk V za operatorem: karabinowi ochroniarze kryją lewe i prawe skrzydło, a egzekutor z podwójną pałką pilnuje odwrotu. Cała trójka priorytetowo przechwytuje wrogów zagrażających operatorowi przez 12–15 sekund.',
       '#d946ef'
     );
     this.emitFloatingToast('🕶️ MAFIKAPIBARY PRZEJMUJĄ MAGAZYN!', this.playerPos.x, this.playerPos.y + 1.55, this.playerPos.z, 'combo');
