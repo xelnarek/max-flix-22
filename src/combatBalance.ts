@@ -10,7 +10,7 @@ export const CAMPAIGN_ATTACK_COOLDOWN_SECONDS: Readonly<Record<CharacterId, numb
   piotr: 1.25,
 });
 
-export const SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS = 3.25;
+export const SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS = 2.65;
 
 // Effective forward reach is measured from the operator's centre to the target.
 // Character variety is retained, but every base attack now has a reliable,
@@ -39,18 +39,18 @@ export const SURVIVAL_WEAPON_DISPATCH_COOLDOWN_SECONDS = 1.05;
 export const SURVIVAL_WEAPON_INITIAL_RELOAD_FACTOR = 0.75;
 
 export const SURVIVAL_WEAPON_UNLOCK_SECONDS = Object.freeze({
-  pallet_cannon: 120,
-  diamond_saw: 210,
-  glue_mine: 300,
-  kfc_bomber: 390,
-  piorun_drone: 480,
-  forklift_bolter: 570,
-  scanner_pulse: 660,
-  orbit_blades: 750,
-  calacatta_shards: 840,
-  steam_bomb: 930,
-  forklift_horn: 1020,
-  wz_boomerang: 1110,
+  pallet_cannon: 35,
+  diamond_saw: 80,
+  glue_mine: 125,
+  kfc_bomber: 170,
+  piorun_drone: 215,
+  forklift_bolter: 260,
+  scanner_pulse: 305,
+  orbit_blades: 350,
+  calacatta_shards: 395,
+  steam_bomb: 440,
+  forklift_horn: 485,
+  wz_boomerang: 530,
 });
 
 export function getBaseAttackCooldownSeconds(characterId: CharacterId, mode: CombatGameMode): number {
