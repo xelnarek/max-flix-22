@@ -1073,5 +1073,5 @@ test('MafiKapibar companions update during gameplay and are disposed when the wo
   assert.match(game, /this\.disposeTemporaryObject\(capybara\.group\)/);
   assert.match(game, /this\.mafiCapybaras = \[\]/);
   assert.match(game, /capybara\.attackCooldown = 1\.18 \+ capybara\.index \* 0\.14/);
-  assert.match(game, /capybara\.life =/);
+  assert.match(game, /life: duration,[\s\S]*?maxLife: duration/);
 });
