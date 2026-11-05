@@ -11,7 +11,7 @@ test('forklift convoy never exceeds the global three-active-hazard ceiling', () 
 
   for (let active = 0; active <= 8; active++) {
     const count = getSurvivalConvoyHazardCount(active, 0, 10);
-    assert.ok(active + count <= 3, 'active hazard ceiling exceeded at ' + active);
+    assert.ok(active > 3 ? count === 0 : active + count <= 3, 'convoy must not add hazards beyond the three-slot budget at ' + active);
   }
 });
 
