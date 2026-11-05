@@ -9857,113 +9857,265 @@ export class PaleciakiGameEngine {
     const group = new THREE.Group();
     group.name = 'mafi_kapibara_companion_' + (index + 1);
 
+    // Three visibly different, oversized enforcers: Don, the dual-baton bruiser,
+    // and the hybrid guard. The props are stylised arcade-game shapes, not realistic
+    // weapon replicas; all geometry remains deliberately low-poly for mobile.
     const furColors = [0x98704b, 0x825b3e, 0xa98259];
-    const suitColors = [0x111827, 0x312e3d, 0x1f3b33];
-    const furMat = new THREE.MeshStandardMaterial({ color: furColors[index % furColors.length], roughness: 0.88 });
-    const muzzleMat = new THREE.MeshStandardMaterial({ color: 0xc49b75, roughness: 0.84 });
-    const suitMat = new THREE.MeshStandardMaterial({ color: suitColors[index % suitColors.length], roughness: 0.52, metalness: 0.12 });
+    const suitColors = [0x101722, 0x302733, 0x17342f];
+    const furMat = new THREE.MeshStandardMaterial({ color: furColors[index % furColors.length], roughness: 0.9 });
+    const muzzleMat = new THREE.MeshStandardMaterial({ color: 0xc49b75, roughness: 0.86 });
+    const suitMat = new THREE.MeshStandardMaterial({ color: suitColors[index % suitColors.length], roughness: 0.55, metalness: 0.14 });
+    const armorMat = new THREE.MeshStandardMaterial({ color: 0x202b39, roughness: 0.38, metalness: 0.62 });
     const shirtMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.62 });
-    const blackMat = new THREE.MeshStandardMaterial({ color: 0x070b12, roughness: 0.28, metalness: 0.22 });
-    const goldMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.24, metalness: 0.82, emissive: 0x854d0e, emissiveIntensity: 0.12 });
-    const hatMat = new THREE.MeshStandardMaterial({ color: index === 1 ? 0x3b1d27 : 0x101820, roughness: 0.42, metalness: 0.1 });
+    const blackMat = new THREE.MeshStandardMaterial({ color: 0x070b12, roughness: 0.24, metalness: 0.24 });
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.24, metalness: 0.82, emissive: 0x854d0e, emissiveIntensity: 0.16 });
+    const redMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.32, metalness: 0.28, emissive: 0x7f1d1d, emissiveIntensity: 0.7 });
+    const hatMat = new THREE.MeshStandardMaterial({ color: index === 1 ? 0x3b1d27 : 0x101820, roughness: 0.42, metalness: 0.12 });
     const soleMat = new THREE.MeshStandardMaterial({ color: 0x171717, roughness: 0.9 });
 
-    // Low-poly capybara body in a tailored dark suit.
-    const body = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), suitMat);
-    body.scale.set(1.0, 0.83, 1.28);
-    body.position.set(0, 0.37, -0.015);
+    // Heavy, broad silhouette with a larger head and reinforced shoulders.
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.34, 12, 9), suitMat);
+    body.scale.set(1.18, 0.92, 1.38);
+    body.position.set(0, 0.42, -0.015);
     group.add(body);
 
-    const shirt = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.23, 0.085), shirtMat);
-    shirt.position.set(0, 0.43, 0.245);
+    const vest = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.34, 0.15), armorMat);
+    vest.position.set(0, 0.47, 0.235);
+    group.add(vest);
+
+    const shirt = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.23, 0.045), shirtMat);
+    shirt.position.set(0, 0.47, 0.323);
     group.add(shirt);
 
-    const tie = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.22, 4), index === 1
+    const tieMat = index === 1
       ? new THREE.MeshStandardMaterial({ color: 0xfbbf24, roughness: 0.38, metalness: 0.22 })
-      : new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.48 }));
-    tie.position.set(0, 0.39, 0.31);
+      : new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.48 });
+    const tie = new THREE.Mesh(new THREE.ConeGeometry(0.058, 0.23, 4), tieMat);
+    tie.position.set(0, 0.42, 0.36);
     tie.rotation.x = -Math.PI / 2;
     group.add(tie);
 
-    // Broad capybara head, muzzle and ears.
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.245, 14, 11), furMat);
-    head.scale.set(1.02, 0.94, 0.96);
-    head.position.set(0, 0.66, 0.31);
+    // Thick shoulder guards make the silhouettes read clearly at camera distance.
+    for (const side of [-1, 1]) {
+      const shoulder = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.18, 0.25), armorMat);
+      shoulder.position.set(side * 0.31, 0.62, 0.075);
+      shoulder.rotation.z = side * -0.12;
+      group.add(shoulder);
+
+      const shoulderMark = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.035, 0.03), redMat);
+      shoulderMark.position.set(side * 0.31, 0.69, 0.205);
+      group.add(shoulderMark);
+
+      const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.075, 0.38, 7), suitMat);
+      sleeve.position.set(side * 0.34, 0.43, 0.19);
+      sleeve.rotation.z = side * 0.3;
+      group.add(sleeve);
+
+      const cuff = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.018, 5, 10), goldMat);
+      cuff.position.set(side * 0.39, 0.27, 0.27);
+      cuff.rotation.x = Math.PI / 2;
+      group.add(cuff);
+
+      const hand = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), muzzleMat);
+      hand.position.set(side * 0.39, 0.23, 0.31);
+      group.add(hand);
+    }
+
+    // A stern capybara face, dark shades and red eye glints.
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.27, 12, 9), furMat);
+    head.scale.set(1.08, 0.98, 1.02);
+    head.position.set(0, 0.79, 0.31);
     group.add(head);
 
-    const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.135, 12, 9), muzzleMat);
-    muzzle.scale.set(1.12, 0.72, 1.0);
-    muzzle.position.set(0, 0.56, 0.51);
+    const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 8), muzzleMat);
+    muzzle.scale.set(1.15, 0.7, 1.0);
+    muzzle.position.set(0, 0.67, 0.535);
     group.add(muzzle);
 
-    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.047, 10, 8), blackMat);
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), blackMat);
     nose.scale.set(1.0, 0.72, 0.64);
-    nose.position.set(0, 0.59, 0.625);
+    nose.position.set(0, 0.70, 0.655);
     group.add(nose);
 
     for (const side of [-1, 1]) {
-      const ear = new THREE.Mesh(new THREE.SphereGeometry(0.072, 9, 7), furMat);
+      const ear = new THREE.Mesh(new THREE.SphereGeometry(0.078, 8, 6), furMat);
       ear.scale.set(0.72, 1.08, 0.55);
-      ear.position.set(side * 0.17, 0.84, 0.27);
+      ear.position.set(side * 0.19, 0.98, 0.265);
       group.add(ear);
 
-      const lens = new THREE.Mesh(new THREE.SphereGeometry(0.078, 10, 8), blackMat);
-      lens.scale.set(1.05, 0.72, 0.34);
-      lens.position.set(side * 0.087, 0.69, 0.524);
+      const lens = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.085, 0.045), blackMat);
+      lens.position.set(side * 0.088, 0.80, 0.548);
+      lens.rotation.z = side * -0.08;
       group.add(lens);
 
-      const temple = new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.024, 0.025), blackMat);
-      temple.position.set(side * 0.19, 0.69, 0.48);
+      const eyeGlow = new THREE.Mesh(new THREE.SphereGeometry(0.022, 7, 5), redMat);
+      eyeGlow.position.set(side * 0.088, 0.80, 0.576);
+      group.add(eyeGlow);
+
+      const temple = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.025, 0.035), blackMat);
+      temple.position.set(side * 0.22, 0.80, 0.48);
       group.add(temple);
     }
 
-    const glassesBridge = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.025, 0.025), goldMat);
-    glassesBridge.position.set(0, 0.69, 0.548);
+    const glassesBridge = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.026, 0.035), goldMat);
+    glassesBridge.position.set(0, 0.80, 0.565);
     group.add(glassesBridge);
 
-    // Fedora: brim, crown and a bright family pin.
-    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.045, 18), hatMat);
-    brim.position.set(0, 0.87, 0.29);
-    brim.scale.z = 0.9;
+    // Fedora with a stronger crown, band and prominent family insignia.
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.30, 0.05, 16), hatMat);
+    brim.position.set(0, 1.04, 0.29);
+    brim.scale.z = 0.92;
     group.add(brim);
 
-    const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.19, 0.19, 14), hatMat);
-    crown.position.set(0, 0.97, 0.29);
+    const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.21, 0.22, 12), hatMat);
+    crown.position.set(0, 1.17, 0.29);
     group.add(crown);
 
-    const hatBand = new THREE.Mesh(new THREE.CylinderGeometry(0.193, 0.193, 0.035, 14), goldMat);
-    hatBand.position.set(0, 0.915, 0.29);
+    const hatBand = new THREE.Mesh(new THREE.CylinderGeometry(0.205, 0.205, 0.04, 12), goldMat);
+    hatBand.position.set(0, 1.105, 0.29);
     group.add(hatBand);
 
-    const familyPin = new THREE.Mesh(new THREE.OctahedronGeometry(0.055, 0), goldMat);
-    familyPin.position.set(0.12, 0.92, 0.455);
+    const familyPin = new THREE.Mesh(new THREE.OctahedronGeometry(0.065, 0), goldMat);
+    familyPin.position.set(0.13, 1.12, 0.47);
     group.add(familyPin);
 
-    // Gold chain and a compact briefcase make the mafia theme readable at gameplay scale.
-    const chain = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.018, 6, 18), goldMat);
-    chain.position.set(0, 0.49, 0.23);
+    // Gold chain, signet and reinforced belt.
+    const chain = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.022, 6, 16), goldMat);
+    chain.position.set(0, 0.53, 0.31);
     chain.rotation.x = Math.PI / 2;
     group.add(chain);
 
+    const signet = new THREE.Mesh(new THREE.OctahedronGeometry(0.065, 0), goldMat);
+    signet.position.set(0, 0.40, 0.43);
+    group.add(signet);
+
+    const belt = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.07, 0.13), blackMat);
+    belt.position.set(0, 0.25, 0.16);
+    group.add(belt);
+
+    const beltBuckle = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.085, 0.035), goldMat);
+    beltBuckle.position.set(0, 0.25, 0.24);
+    group.add(beltBuckle);
+
+    // Briefcase on the hip; the hybrid guard carries it on the opposite side.
     const briefcase = new THREE.Group();
-    const caseBody = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.14, 0.075), hatMat);
-    const caseHandle = new THREE.Mesh(new THREE.TorusGeometry(0.052, 0.012, 5, 10, Math.PI), goldMat);
-    caseHandle.position.y = 0.095;
+    const caseBody = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.16, 0.09), hatMat);
+    const caseHandle = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.014, 5, 10, Math.PI), goldMat);
+    caseHandle.position.y = 0.105;
     briefcase.add(caseBody, caseHandle);
-    briefcase.position.set(0.29, 0.38, 0.08);
-    briefcase.rotation.z = -0.12;
+    briefcase.position.set(index === 2 ? -0.34 : 0.34, 0.39, 0.08);
+    briefcase.rotation.z = index === 2 ? 0.12 : -0.12;
     group.add(briefcase);
 
+    // A stylised compact arcade carbine: chunky stock, receiver, oversized
+    // barrel and glowing muzzle. It is intentionally a fictional prop silhouette.
+    // The rifle guards visibly shoulder and grip the prop instead of letting it float.
+    if (index !== 1) {
+      const grips = [
+        { start: new THREE.Vector3(-0.30, 0.62, 0.10), end: new THREE.Vector3(-0.15, 0.43, 0.50) },
+        { start: new THREE.Vector3(0.30, 0.62, 0.10), end: new THREE.Vector3(0.13, 0.39, 0.69) },
+      ];
+      for (const grip of grips) {
+        const armVector = grip.end.clone().sub(grip.start);
+        const forearm = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.072, 0.082, armVector.length(), 7),
+          suitMat
+        );
+        forearm.position.copy(grip.start).add(grip.end).multiplyScalar(0.5);
+        forearm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), armVector.normalize());
+        group.add(forearm);
+
+        const glove = new THREE.Mesh(new THREE.SphereGeometry(0.078, 8, 6), muzzleMat);
+        glove.position.copy(grip.end);
+        group.add(glove);
+      }
+    }
+
+    const weaponRig = new THREE.Group();
+    weaponRig.name = 'mafi_rifle_rig';
+    const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.14, 0.38), blackMat);
+    receiver.position.set(-0.035, 0.43, 0.48);
+    weaponRig.add(receiver);
+
+    const stock = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.12, 0.22), armorMat);
+    stock.position.set(-0.035, 0.44, 0.17);
+    weaponRig.add(stock);
+
+    const handguard = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.115, 0.29), armorMat);
+    handguard.position.set(-0.035, 0.44, 0.77);
+    weaponRig.add(handguard);
+
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.027, 0.032, 0.42, 7), blackMat);
+    barrel.rotation.x = Math.PI / 2;
+    barrel.position.set(-0.035, 0.455, 1.10);
+    weaponRig.add(barrel);
+
+    const muzzleBrake = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.055, 8), redMat);
+    muzzleBrake.rotation.x = Math.PI / 2;
+    muzzleBrake.position.set(-0.035, 0.455, 1.32);
+    weaponRig.add(muzzleBrake);
+
+    const magazine = new THREE.Mesh(new THREE.BoxGeometry(0.105, 0.20, 0.12), blackMat);
+    magazine.position.set(-0.015, 0.27, 0.52);
+    magazine.rotation.x = -0.10;
+    weaponRig.add(magazine);
+
+    const optic = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.065, 0.11), goldMat);
+    optic.position.set(-0.035, 0.535, 0.58);
+    weaponRig.add(optic);
+
+    const opticGlass = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.035, 0.018), redMat);
+    opticGlass.position.set(-0.035, 0.54, 0.64);
+    weaponRig.add(opticGlass);
+
+    // The Don and hybrid guard carry carbines; the middle enforcer is a
+    // dedicated dual-baton bruiser. The hybrid also keeps a visible side baton.
+    if (index !== 1) {
+      group.add(weaponRig);
+      group.userData.mafiMuzzleLocal = new THREE.Vector3(-0.035, 0.455, 1.35);
+    }
+
+    const batonRig = new THREE.Group();
+    batonRig.name = 'mafi_baton_rig';
+    const batonMat = new THREE.MeshStandardMaterial({
+      color: 0x111827, roughness: 0.28, metalness: 0.72, emissive: 0x7f1d1d, emissiveIntensity: 0.18,
+    });
+    const batonGripMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.55, metalness: 0.22 });
+    const batonCount = index === 1 ? 2 : index === 2 ? 1 : 1;
+    for (let batonIndex = 0; batonIndex < batonCount; batonIndex++) {
+      const side = index === 1 ? (batonIndex === 0 ? -1 : 1) : 1;
+      const baton = new THREE.Group();
+      baton.name = 'mafi_baton_' + batonIndex;
+
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.045, 0.58, 7), batonMat);
+      const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.048, 0.18, 7), batonGripMat);
+      grip.position.y = -0.20;
+      const pommel = new THREE.Mesh(new THREE.SphereGeometry(0.052, 7, 5), goldMat);
+      pommel.position.y = -0.31;
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.055, 7), goldMat);
+      cap.position.y = 0.30;
+      baton.add(shaft, grip, pommel, cap);
+      baton.position.set(side * 0.39, 0.33, 0.39);
+      baton.rotation.z = side * -0.48;
+      baton.rotation.x = index === 1 ? -0.12 : 0.18;
+      batonRig.add(baton);
+    }
+    group.add(batonRig);
+
     for (const side of [-1, 1]) {
-      for (const z of [-0.22, 0.22]) {
-        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.065, 0.22, 7), suitMat);
-        leg.position.set(side * 0.18, 0.145, z);
-        const shoe = new THREE.Mesh(new THREE.SphereGeometry(0.078, 8, 6), soleMat);
-        shoe.scale.set(1.0, 0.48, 1.25);
-        shoe.position.set(side * 0.18, 0.035, z + 0.025);
+      for (const z of [-0.24, 0.24]) {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.066, 0.073, 0.25, 7), suitMat);
+        leg.position.set(side * 0.21, 0.16, z);
+        const shoe = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), soleMat);
+        shoe.scale.set(1.0, 0.48, 1.3);
+        shoe.position.set(side * 0.21, 0.035, z + 0.035);
         group.add(leg, shoe);
       }
     }
+
+    group.userData.mafiRole = index === 0 ? 'DON • CARBINE' : index === 1 ? 'ENFORCER • DUAL BATONS' : 'HYBRID • CARBINE + BATON';
+    group.userData.mafiWeaponRig = weaponRig;
+    group.userData.mafiBatonRig = batonRig;
 
     group.traverse((object) => {
       const mesh = object as THREE.Mesh;
@@ -10099,7 +10251,7 @@ export class PaleciakiGameEngine {
       const angle = this.playerRot + index * Math.PI * 2 / 3;
       group.position.set(
         this.playerPos.x + Math.sin(angle) * 2.15,
-        groundY - 0.28,
+        groundY,
         this.playerPos.z + Math.cos(angle) * 2.15
       );
       group.rotation.y = angle + Math.PI;
@@ -10121,7 +10273,7 @@ export class PaleciakiGameEngine {
     this.callbacks.onPerkDropBanner?.(
       'MAFIKAPIBAR • RYTUAŁ B4',
       '🐾🕶️',
-      'Pentagram zadaje obrażenia i ogłusza pobliskich wrogów. Trzy MafiKapibary przez 12–15 sekund oskrzydlają cele i uderzają kluczami rodzinnych interesów.',
+      'Pentagram zadaje obrażenia i ogłusza pobliskich wrogów. Don i hybryda ostrzeliwują cele świetlnymi pociskami, a egzekutor z dwiema pałkami rozbija szyk w zwarciu. Trójka eskortuje operatora przez 12–15 sekund.',
       '#d946ef'
     );
     this.emitFloatingToast('🕶️ MAFIKAPIBARY PRZEJMUJĄ MAGAZYN!', this.playerPos.x, this.playerPos.y + 1.55, this.playerPos.z, 'combo');
@@ -10169,10 +10321,10 @@ export class PaleciakiGameEngine {
       const groundY = Math.max(0.04, this.playerPos.y - 0.48);
       const fadeIn = THREE.MathUtils.clamp(capybara.age / 0.42, 0, 1);
       const fadeOut = THREE.MathUtils.clamp(capybara.life / 0.85, 0, 1);
-      capybara.group.scale.setScalar(0.92 * fadeIn * fadeOut);
+      capybara.group.scale.setScalar(1.34 * fadeIn * fadeOut);
       capybara.group.position.x = THREE.MathUtils.lerp(capybara.group.position.x, targetX, Math.min(1, dt * 8.5));
       capybara.group.position.z = THREE.MathUtils.lerp(capybara.group.position.z, targetZ, Math.min(1, dt * 8.5));
-      capybara.group.position.y = groundY - (1 - fadeIn) * 0.28 +
+      capybara.group.position.y = groundY - (1 - fadeIn) * 0.18 +
         jumpHeight + Math.sin(performance.now() * 0.006 + capybara.index * 2.1) * 0.025;
       capybara.group.rotation.y = capybara.pounceTimer > 0 && capybara.pounceTarget
         ? Math.atan2(capybara.pounceTarget.x - capybara.group.position.x, capybara.pounceTarget.z - capybara.group.position.z)
@@ -10193,21 +10345,87 @@ export class PaleciakiGameEngine {
       }
       if (!target) continue;
 
+      // Turn the whole companion toward its target before resolving the muzzle in world space.
+      // This keeps the carbine pointed at enemies rather than toward the player during orbit.
+      capybara.group.rotation.y = Math.atan2(
+        target.x - capybara.group.position.x,
+        target.z - capybara.group.position.z
+      );
+      const rifleGuard = capybara.index !== 1 && nearest > 4.0;
+      if (rifleGuard) {
+        const muzzleLocal = capybara.group.userData.mafiMuzzleLocal as THREE.Vector3 | undefined;
+        const muzzlePosition = capybara.group.localToWorld(
+          (muzzleLocal || new THREE.Vector3(-0.035, 0.455, 1.35)).clone()
+        );
+        const targetPosition = new THREE.Vector3(target.x, target.y + 0.62, target.z);
+        const direction = targetPosition.sub(muzzlePosition);
+        if (direction.lengthSq() < 0.001) continue;
+        direction.normalize();
+
+        // Bright arcade tracer gives the compact carbine a readable firing cue.
+        const tracer = new THREE.Group();
+        const tracerCore = new THREE.Mesh(
+          new THREE.SphereGeometry(0.085, 8, 6),
+          new THREE.MeshBasicMaterial({ color: 0xffd166, toneMapped: false })
+        );
+        const tracerHalo = new THREE.Mesh(
+          new THREE.TorusGeometry(0.105, 0.018, 5, 10),
+          new THREE.MeshBasicMaterial({ color: 0xf97316, toneMapped: false })
+        );
+        tracerHalo.rotation.x = Math.PI / 2;
+        tracer.add(tracerCore, tracerHalo);
+        tracer.position.copy(muzzlePosition);
+        this.levelRoot.add(tracer);
+
+        this.projectiles.push({
+          mesh: tracer,
+          vel: direction.multiplyScalar(27),
+          life: 1.05,
+          maxLife: 1.05,
+          damage: 2,
+          pierce: 0,
+          weaponProjectile: true,
+          disposeOnRemove: true,
+          stunDuration: 0.22,
+          hitIds: new Set<string>(),
+        });
+        capybara.attackCooldown = capybara.index === 0 ? 0.72 : 0.88;
+        this.spawnParticleRing(muzzlePosition.x, muzzlePosition.y, muzzlePosition.z, 0xfbbf24);
+        this.emitFloatingToast(
+          capybara.index === 0 ? '🔫 DON • SALWA OCHRONY' : '🔫 OCHRONA MAFII • OGNIEŃ',
+          muzzlePosition.x,
+          muzzlePosition.y + 0.25,
+          muzzlePosition.z,
+          'damage'
+        );
+        sound.playAttackWhoosh();
+        continue;
+      }
+
+      // The dual-baton enforcer and close-range hybrid use a heavy baton rush.
       target.shieldActive = false;
-      const damage = this.scaleSurvivalDamage(2);
+      const damage = this.scaleSurvivalDamage(capybara.index === 1 ? 3 : 2);
       this.damageEnemy(target, damage, capybara.group.position.x, capybara.group.position.z);
       if (target.hp <= 0) {
-        this.defeatEnemy(target, 280, false);
+        this.defeatEnemy(target, 300, false);
       } else {
-        target.stunTimer = Math.max(target.stunTimer, 0.42);
+        target.stunTimer = Math.max(target.stunTimer, this.gameMode === 'survival' ? 0.58 : 0.72);
         target.state = 'stunned';
       }
       capybara.pounceTarget = new THREE.Vector3(target.x, groundY, target.z);
       capybara.pounceTimer = 0.52;
-      capybara.attackCooldown = 1.18 + capybara.index * 0.14;
-      this.spawnParticleRing(target.x, target.y + 0.36, target.z, 0xfbbf24);
-      this.emitFloatingToast('🕶️ MAFIA INTERWENCJA! -' + damage + ' HP', target.x, target.y + 1.1, target.z, 'damage');
-      sound.playAttackWhoosh();
+      capybara.attackCooldown = capybara.index === 1 ? 1.02 : 1.24;
+      this.spawnParticleRing(target.x, target.y + 0.42, target.z, capybara.index === 1 ? 0xef4444 : 0xfbbf24);
+      this.emitFloatingToast(
+        capybara.index === 1 ? '🥊 PODWÓJNA PAŁKA MAFII! -' + damage + ' HP' : '🕶️ MAFIA INTERWENCJA! -' + damage + ' HP',
+        target.x,
+        target.y + 1.1,
+        target.z,
+        'damage'
+      );
+      const batonRig = capybara.group.userData.mafiBatonRig as THREE.Group | undefined;
+      if (batonRig) batonRig.rotation.z = (capybara.index % 2 === 0 ? 1 : -1) * 0.34;
+      sound.playSmack();
     }
   }
 

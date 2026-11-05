@@ -1058,10 +1058,10 @@ test('Piotr ultimate is a pentagram MafiKapibar summon, not a Molotov throw', as
   assert.match(game, /private updateMafiCapybaras\(dt: number\)/);
   assert.match(game, /const ritualRadius = this\.gameMode === 'survival' \? 5\.7 : 6\.2/);
   assert.match(game, /const burstDamage = Math\.max\(2, Math\.ceil\(3 \* abilityDamageMultiplier\)\)/);
-  assert.match(game, /const damage = this\.scaleSurvivalDamage\(2\)/);
+  assert.match(game, /const damage = this\.scaleSurvivalDamage\(capybara\.index === 1 \? 3 : 2\)/);
   assert.match(game, /for \(let index = 0; index < 3; index\+\+\)/);
   assert.match(characters, /abilityName: 'Rytuał MafiKapibar — Pentagram B4'/);
-  assert.match(characters, /trzy MafiKapibary w garniturach, które przez kilkanaście sekund orbitują wokół operatora/);
+  assert.match(characters, /Don i hybrydowy ochroniarz ostrzeliwują cele świecącymi pociskami z ciężkich, stylizowanych karabinów/);
   assert.match(sound, /else if \(charId === 'piotr'\) \{[\s\S]*?Ominous low ritual swell/);
   assert.doesNotMatch(sound.slice(sound.indexOf("else if (charId === 'piotr')"), sound.indexOf('} else {', sound.indexOf("else if (charId === 'piotr')"))), /playMolotovThrow/);
 });
@@ -1072,6 +1072,39 @@ test('MafiKapibar companions update during gameplay and are disposed when the wo
   assert.match(game, /for \(const capybara of this\.mafiCapybaras\)/);
   assert.match(game, /this\.disposeTemporaryObject\(capybara\.group\)/);
   assert.match(game, /this\.mafiCapybaras = \[\]/);
-  assert.match(game, /capybara\.attackCooldown = 1\.18 \+ capybara\.index \* 0\.14/);
+  assert.match(game, /capybara\.attackCooldown = capybara\.index === 0 \? 0\.72 : 0\.88/);
+  assert.match(game, /capybara\.attackCooldown = capybara\.index === 1 \? 1\.02 : 1\.24/);
   assert.match(game, /life: duration,[\s\S]*?maxLife: duration/);
+});
+
+
+test('MafiKapibar summons large armoured enforcers with readable carbine and baton roles', async () => {
+  const game = await read('../src/game.ts');
+  const start = game.indexOf('private createMafiCapybaraModel');
+  const end = game.indexOf('private spawnMafiPentagramEffect', start);
+  assert.ok(start >= 0 && end > start, 'MafiKapibar 3D model builder should exist');
+  const model = game.slice(start, end);
+  assert.match(model, /body\.scale\.set\(1\.18, 0\.92, 1\.38\)/);
+  assert.match(model, /mafi_rifle_rig/);
+  assert.match(model, /const barrel = new THREE\.Mesh/);
+  assert.match(model, /const magazine = new THREE\.Mesh/);
+  assert.match(model, /mafi_baton_rig/);
+  assert.match(model, /const batonCount = index === 1 \? 2 : index === 2 \? 1 : 1/);
+  assert.match(model, /DON • CARBINE/);
+  assert.match(model, /ENFORCER • DUAL BATONS/);
+  assert.match(model, /HYBRID • CARBINE \+ BATON/);
+  assert.match(game, /setScalar\(1\.34 \* fadeIn \* fadeOut\)/);
+});
+
+test('MafiKapibar enforcers fire arcade tracers and retain heavy baton melee combat', async () => {
+  const game = await read('../src/game.ts');
+  const start = game.indexOf('private updateMafiCapybaras');
+  const end = game.indexOf('private resetAbilityCooldown', start);
+  assert.ok(start >= 0 && end > start, 'MafiKapibar combat update should exist');
+  const update = game.slice(start, end);
+  assert.match(update, /capybara\.group\.rotation\.y = Math\.atan2/);
+  assert.match(update, /const rifleGuard = capybara\.index !== 1 && nearest > 4\.0/);
+  assert.match(update, /this\.projectiles\.push\(\{[\s\S]*?damage: 2,[\s\S]*?weaponProjectile: true/);
+  assert.match(update, /scaleSurvivalDamage\(capybara\.index === 1 \? 3 : 2\)/);
+  assert.match(update, /PODWÓJNA PAŁKA MAFII/);
 });
