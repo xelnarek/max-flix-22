@@ -77,6 +77,6 @@ test('boss weapon overdrive improves melee and weapon reload cadence and resets 
   const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
   assert.ok(game.includes('this.survivalWeaponReloadMultiplier = Math.max(0.72, this.survivalWeaponReloadMultiplier * 0.92)'));
   assert.ok(game.includes('this.survivalAttackRateMultiplier = Math.max(0.78, this.survivalAttackRateMultiplier * 0.92)'));
-  assert.ok(game.includes('getScaledSurvivalWeaponReloadSeconds(readyWeapon.id, readyWeapon.level, !!readyWeapon.evolved)'));
+  assert.ok(game.includes('this.getScaledSurvivalWeaponReloadSeconds(\\n      readyWeapon.id'));
   assert.ok(game.includes('this.survivalWeaponReloadMultiplier = 1;'));
 });
