@@ -10423,18 +10423,24 @@ export class PaleciakiGameEngine {
         if (guardDistance > 15.5) continue;
         const playerDistance = Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z);
         const threatensPlayer = playerDistance <= 6.25;
-        const isElite = enemy.maxHp >= 12 || enemy.type === 'walczak' ||
-          enemy.type === 'krol_leto' || enemy.type === 'bosman_krakow' || enemy.type === 'sebix_m';
+        const isMajorBoss = enemy.type === 'walczak' || enemy.type === 'krol_leto' || enemy.type === 'bosman_krakow';
+        const isElite = enemy.maxHp >= 12 || isMajorBoss || enemy.type === 'sebix_m';
         const flankBias = capybara.index === 0 && enemy.x < this.playerPos.x
           ? -0.65
           : capybara.index === 2 && enemy.x > this.playerPos.x
             ? -0.65
             : 0;
+        // Don is the tactician: he sacrifices some distance to keep pressure
+        // on major bosses, while the other guards stay focused on escort safety.
+        const donPriority = capybara.index === 0
+          ? (isMajorBoss ? -4.0 : isElite ? -1.5 : 0)
+          : 0;
         const threatScore =
           (threatensPlayer ? -8 : 0) +
           playerDistance * 0.48 +
           guardDistance * 0.28 +
           (isElite ? -1.2 : 0) +
+          donPriority +
           flankBias;
         if (threatScore < bestThreatScore) {
           bestThreatScore = threatScore;
@@ -10459,28 +10465,26 @@ export class PaleciakiGameEngine {
         if (direction.lengthSq() < 0.001) continue;
         direction.normalize();
 
-        // Compact arcade tracers are intentionally short-lived and low-poly.
-        const tracer = new THREE.Group();
-        const tracerCore = new THREE.Mesh(
-          new THREE.SphereGeometry(0.085, 8, 6),
+        // One stretched low-poly tracer replaces a two-mesh glow assembly.
+        // This cuts geometry/material allocations and draw calls on mobile.
+        const tracer = new THREE.Mesh(
+          new THREE.SphereGeometry(0.075, 7, 5),
           new THREE.MeshBasicMaterial({ color: 0xffd166, toneMapped: false })
         );
-        const tracerHalo = new THREE.Mesh(
-          new THREE.TorusGeometry(0.105, 0.018, 5, 10),
-          new THREE.MeshBasicMaterial({ color: 0xf97316, toneMapped: false })
-        );
-        tracerHalo.rotation.x = Math.PI / 2;
-        tracer.add(tracerCore, tracerHalo);
+        tracer.name = 'mafi_carbine_tracer';
+        tracer.scale.set(0.9, 0.9, 1.8);
+        tracer.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction);
         tracer.position.copy(muzzlePosition);
         this.levelRoot.add(tracer);
 
+        const targetIsMajorBoss = target.type === 'walczak' || target.type === 'krol_leto' || target.type === 'bosman_krakow';
         this.projectiles.push({
           mesh: tracer,
           vel: direction.multiplyScalar(27),
           life: 1.05,
           maxLife: 1.05,
-          damage: 2,
-          pierce: 0,
+          damage: capybara.index === 0 && targetIsMajorBoss ? 3 : 2,
+          pierce: capybara.index === 0 ? 1 : 0,
           weaponProjectile: true,
           disposeOnRemove: true,
           stunDuration: 0.22,
@@ -10497,7 +10501,12 @@ export class PaleciakiGameEngine {
       const playerThreatDistance = Math.hypot(target.x - this.playerPos.x, target.z - this.playerPos.z);
       const interceptingPlayer = playerThreatDistance <= 5.2;
       target.shieldActive = false;
-      const damage = this.scaleSurvivalDamage(capybara.index === 1 ? 3 : 2);
+      const targetIsMajorBoss = target.type === 'walczak' || target.type === 'krol_leto' || target.type === 'bosman_krakow';
+      const damage = this.scaleSurvivalDamage(
+        capybara.index === 1
+          ? (targetIsMajorBoss ? 4 : 3)
+          : (targetIsMajorBoss ? 3 : 2)
+      );
       this.damageEnemy(target, damage, capybara.group.position.x, capybara.group.position.z);
       if (target.hp <= 0) {
         this.defeatEnemy(target, 300, false);
@@ -10507,7 +10516,7 @@ export class PaleciakiGameEngine {
       }
       capybara.pounceTarget = new THREE.Vector3(target.x, groundY, target.z);
       capybara.pounceTimer = 0.52;
-      capybara.attackCooldown = capybara.index === 1 ? 1.02 : 1.24;
+      capybara.attackCooldown = capybara.index === 1 ? (targetIsMajorBoss ? 1.28 : 1.02) : 1.24;
       this.spawnParticleRing(target.x, target.y + 0.42, target.z, capybara.index === 1 ? 0xef4444 : 0xfbbf24);
       if (interceptingPlayer || target.maxHp >= 12) {
         this.emitFloatingToast(
