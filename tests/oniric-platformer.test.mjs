@@ -143,3 +143,22 @@ test('Oniric dialog locks background scroll and restores focus and scroll state 
   assert.match(source, /if \(previousFocus\?\.isConnected\) previousFocus\.focus\(\)/);
   assert.match(source, /if \(event\.code === 'Tab'\)/);
 });
+
+
+test('Oniric checkpoints activate only after landing and protect the first hazard section', () => {
+  const state = createOniricPlatformerState();
+  state.player.x = 940;
+  state.player.y = 100;
+  state.player.vy = 0;
+  state.player.onGround = false;
+  stepOniricPlatformer(state, {}, 1 / 60);
+  assert.equal(state.checkpointX, 76, 'an airborne pass must not create a floating checkpoint');
+
+  state.player.y = 394;
+  state.player.vy = 0;
+  state.player.onGround = false;
+  stepOniricPlatformer(state, {}, 1 / 60);
+  assert.equal(state.player.onGround, true, 'the operator must land on the first platform');
+  assert.equal(state.checkpointX, 930, 'the first safe checkpoint should be enabled after landing');
+  assert.equal(state.checkpointTop, 440);
+});
