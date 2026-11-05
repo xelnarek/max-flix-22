@@ -2,6 +2,8 @@ export const ONIRIC_VIEW_WIDTH = 960;
 export const ONIRIC_VIEW_HEIGHT = 540;
 export const ONIRIC_WORLD_WIDTH = 2720;
 export const ONIRIC_GOAL_X = 2580;
+export const ONIRIC_PIXEL_GLITCH_SECONDS = 15;
+export const ONIRIC_PIXEL_GLITCH_WIDTH = 160;
 
 export interface OniricPlatform {
   x: number;
@@ -223,12 +225,11 @@ export function launchOniricPlatformer(options: {
   // Nearest-neighbour upscaling creates a deliberately ridiculous 8-bit dream
   // without changing the physics, HUD resolution or the main Three.js renderer.
   const pixelCanvas = document.createElement('canvas');
-  pixelCanvas.width = 160;
-  pixelCanvas.height = 90;
+  pixelCanvas.width = ONIRIC_PIXEL_GLITCH_WIDTH;
+  pixelCanvas.height = Math.round(ONIRIC_PIXEL_GLITCH_WIDTH * ONIRIC_VIEW_HEIGHT / ONIRIC_VIEW_WIDTH);
   const pixelContext = pixelCanvas.getContext('2d', { alpha: false });
   let activeContext: CanvasRenderingContext2D | null = null;
-  let pixelGlitchRemaining = 15;
-  const pixelGlitchDuration = 15;
+  let pixelGlitchRemaining = ONIRIC_PIXEL_GLITCH_SECONDS;
   const watchCount = root.querySelector<HTMLElement>('[data-watch-count]');
   const livesNode = root.querySelector<HTMLElement>('[data-lives]');
   const timeNode = root.querySelector<HTMLElement>('[data-time]');
@@ -493,12 +494,13 @@ export function launchOniricPlatformer(options: {
       outputContext!.fillRect(0, (glitchPhase * 37) % canvas.height, canvas.width, Math.max(3, canvas.height * 0.018));
       outputContext!.fillStyle = 'rgba(0, 255, 255, 0.10)';
       outputContext!.fillRect(0, (glitchPhase * 61 + 23) % canvas.height, canvas.width, Math.max(2, canvas.height * 0.009));
-      outputContext!.fillStyle = 'rgba(8, 5, 20, 0.72)';
-      outputContext!.fillRect(10, 10, Math.min(canvas.width - 20, 310 * ratio), 34 * ratio);
+      const outputScale = canvas.width / ONIRIC_VIEW_WIDTH;
+      outputContext!.fillStyle = 'rgba(8, 5, 20, 0.82)';
+      outputContext!.fillRect(10 * outputScale, 10 * outputScale, Math.min(canvas.width - 20 * outputScale, 310 * outputScale), 34 * outputScale);
       outputContext!.fillStyle = '#f0abfc';
-      outputContext!.font = '900 ' + Math.max(9, 15 * ratio) + 'px monospace';
+      outputContext!.font = '900 ' + Math.max(9, 15 * outputScale) + 'px monospace';
       outputContext!.textAlign = 'left';
-      outputContext!.fillText('ALICE.EXE // 8-BIT CHAOS ' + Math.ceil(pixelGlitchRemaining) + 's', 18 * ratio, 32 * ratio);
+      outputContext!.fillText('ALICE.EXE // 8-BIT CHAOS ' + Math.ceil(pixelGlitchRemaining) + 's', 18 * outputScale, 32 * outputScale);
     }
   };
 
@@ -523,7 +525,7 @@ export function launchOniricPlatformer(options: {
 
   const resetRun = () => {
     state = createOniricPlatformerState();
-    pixelGlitchRemaining = pixelGlitchDuration;
+    pixelGlitchRemaining = ONIRIC_PIXEL_GLITCH_SECONDS;
     held.left = false;
     held.right = false;
     jumpQueued = false;
