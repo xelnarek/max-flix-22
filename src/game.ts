@@ -23,7 +23,7 @@ import { advanceSurvivalCommanderTiming } from './survivalCommanderTiming.ts';
 import { getSurvivalLeaderLossTargets, getSurvivalMoraleBreakMultiplier, SURVIVAL_LEADER_LOSS_BREAK_SECONDS } from './survivalMorale.ts';
 import { selectSurvivalSupportPulseTargets, SURVIVAL_SUPPORT_PULSE_RADIUS, SURVIVAL_SUPPORT_PULSE_INTERVAL_SECONDS, SURVIVAL_SUPPORT_SHIELD_SECONDS } from './survivalSupport.ts';
 import { getSurvivalXpRequirement } from './survivalProgression.ts';
-import { advanceSurvivalShiftEvent, createSurvivalShiftEventState, registerSurvivalShiftEventAction, type SurvivalShiftEventAction, type SurvivalShiftEventState } from './survivalShiftEvents.ts';
+import { advanceSurvivalShiftEvent, createSurvivalShiftEventState, registerSurvivalShiftEventAction, type SurvivalShiftEvent, type SurvivalShiftEventAction, type SurvivalShiftEventState } from './survivalShiftEvents.ts';
 import { advanceSurvivalContract, createSurvivalContract, registerSurvivalContractAction, type SurvivalContractAction, type SurvivalContractState } from './survivalContracts.ts';
 import {
   advanceAbilityCooldown,
