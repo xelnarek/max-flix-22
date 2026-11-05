@@ -1159,7 +1159,7 @@ export function createCharacterModel(def: CharacterDef): {
     for (const side of [-1, 1]) {
       for (let dot = 0; dot < 3; dot++) {
         const freckle = new THREE.Mesh(new THREE.SphereGeometry(0.0055, 6, 5), frecklesMat);
-        freckle.position.set(side * (0.078 + dot * 0.009), 0.884 + (dot % 2) * 0.012, 0.129);
+        freckle.position.set(side * (0.078 + dot * 0.009), 0.884 + (dot % 2) * 0.012, 0.116);
         group.add(freckle);
       }
     }
@@ -1175,7 +1175,7 @@ export function createCharacterModel(def: CharacterDef): {
     const creaseMat = new THREE.MeshBasicMaterial({ color: 0x927262, transparent: true, opacity: 0.78 });
     [-1, 1].forEach((side) => {
       const crease = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.004, 0.004), creaseMat);
-      crease.position.set(side * 0.105, 0.904, 0.135);
+      crease.position.set(side * 0.105, 0.904, 0.105);
       crease.rotation.z = side * 0.28;
       group.add(crease);
     });
