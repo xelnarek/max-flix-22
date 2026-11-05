@@ -1182,3 +1182,19 @@ test('Crimsonland-style Survival Overdrive is chained, timed and surfaced in the
   assert.match(app, /snapshot\.overdriveRemainingSeconds > 0/);
   assert.match(app, /OVERDRIVE B4/);
 });
+
+test('Survival draft adds Crimsonland radiation and Archero ricochet builds with a combined Chain Reactor evolution', async () => {
+  const [game, combat] = await Promise.all([read('../src/game.ts'), read('../src/survivalCombatDraft.ts')]);
+  assert.match(game, /id: 'ricochet'[\s\S]*?POZIOM '[\s\S]*?odbicie pocisku operatora/);
+  assert.match(game, /id: 'radiation'[\s\S]*?POZIOM '[\s\S]*?impuls wokół operatora/);
+  assert.match(game, /chooseSurvivalRicochetTarget\([\s\S]*?p\.hitIds[\s\S]*?p\.chainMaxDistance/);
+  assert.match(game, /p\.chainDamageMultiplier = \(p\.chainDamageMultiplier \|\| 1\) \* \(p\.chainDamageRetention \|\| 0\.7\)/);
+  assert.match(game, /private updateSurvivalRadiation\(dt: number\)/);
+  assert.match(game, /this\.updateSurvivalRadiation\(dt\)/);
+  assert.match(game, /case 'ricochet':[\s\S]*?survivalRicochetStrength/);
+  assert.match(game, /case 'radiation':[\s\S]*?survivalRadiationStrength/);
+  assert.match(game, /unlock\('chain_reactor', 'REAKTOR ŁAŃCUCHOWY'/);
+  assert.match(combat, /export function chooseSurvivalRicochetTarget/);
+  assert.match(combat, /export function getSurvivalRicochetProfile/);
+  assert.match(combat, /export function getSurvivalRadiationProfile/);
+});
