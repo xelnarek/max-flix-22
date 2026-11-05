@@ -1238,6 +1238,12 @@ export class PaleciakiGameEngine {
 
   public startTitle() {
     sound.stopMusic();
+    this.oniricDreamRemainingSeconds = 0;
+    if (this.oniricDreamCameraActive) {
+      this.oniricDreamCameraActive = false;
+      this.camera.up.set(0, 1, 0);
+      this.camera.updateProjectionMatrix();
+    }
     this.clearOperatorCompanions();
     this.gameMode = 'survival';
     this.maxHp = 3;
