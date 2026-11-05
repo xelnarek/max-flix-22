@@ -259,6 +259,31 @@ test('Oniric Dream builds a rabbit-hole landmark and triggers a 15-second pixel-
 });
 
 
+test('Oniric Dream is a playable 2D orthographic phase, not only a colour filter', async () => {
+  const [app, game, css, maps] = await Promise.all([
+    read('../src/index.ts'),
+    read('../src/game.ts'),
+    read('../src/index.css'),
+    read('../src/survivalMaps.ts'),
+  ]);
+  assert.match(maps, /name: 'Oniryczny sen'/);
+  assert.match(maps, /style: 'rabbit_hole'/);
+  assert.match(game, /this\.beginOniricDream\(15\)/);
+  assert.match(game, /private beginOniricDream\(durationSeconds = 15\)/);
+  assert.match(game, /makeOrthographic\(/);
+  assert.match(game, /this\.camera\.up\.set\(0, 0, -1\)/);
+  assert.match(game, /speed \*= 1\.20/);
+  assert.match(game, /const oniricRate = this\.oniricDreamRemainingSeconds > 0 \? 1\.30 : 1/);
+  assert.match(game, /dreamXpMultiplier = this\.oniricDreamRemainingSeconds > 0 \? 1\.5 : 1/);
+  assert.match(game, /if \(this\.oniricDreamCameraActive\)[\s\S]*?this\.camera\.updateProjectionMatrix\(\)/);
+  assert.match(app, /secretId === 'oniric_dream'/);
+  assert.match(app, /}, 15000\)/);
+  assert.match(css, /image-rendering: pixelated/);
+  assert.match(css, /oniric-dream-active/);
+  assert.match(css, /width: 100% !important/);
+  assert.doesNotMatch(css, /width: 24% !important/);
+});
+
 test('the Survival archive directory exposes all four arenas and the sixteen-secret total', async () => {
   const [html, css] = await Promise.all([read('../index.html'), read('../src/index.css')]);
   for (const mapId of ['warehouse_b4', 'container_terminal', 'cold_storage', 'night_sorting']) {
