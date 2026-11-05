@@ -1272,6 +1272,19 @@ test('Survival chooses among four playable map identities and does not immediate
   assert.match(maps, /secretLocations:/);
 });
 
+test('Survival menu lets players explicitly choose one of the four actual arenas', async () => {
+  const [html, app, game] = await Promise.all([
+    read('../index.html'), read('../src/index.ts'), read('../src/game.ts')
+  ]);
+  for (const mapId of ['random', 'warehouse_b4', 'container_terminal', 'cold_storage', 'night_sorting']) {
+    assert.ok(html.includes('data-survival-map="' + mapId + '"'), 'missing map selector option: ' + mapId);
+  }
+  assert.match(app, /let selectedSurvivalMapId: SurvivalMapId \| null = null/);
+  assert.match(app, /this\.engine\.startSurvival\(selectedSurvivalMapId\)/);
+  assert.match(game, /public startSurvival\(mapOverride: SurvivalMapId \| null = null\)/);
+  assert.match(game, /this\.survivalMapId = mapOverride \|\| chooseRandomSurvivalMap/);
+});
+
 test('Survival secrets are collectible, score-bearing and released during map cleanup', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /this\.updateSurvivalSecrets\(simDt\)/);
