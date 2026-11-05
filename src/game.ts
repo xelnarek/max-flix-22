@@ -10009,6 +10009,28 @@ export class PaleciakiGameEngine {
 
     // A stylised compact arcade carbine: chunky stock, receiver, oversized
     // barrel and glowing muzzle. It is intentionally a fictional prop silhouette.
+    // The rifle guards visibly shoulder and grip the prop instead of letting it float.
+    if (index !== 1) {
+      const grips = [
+        { start: new THREE.Vector3(-0.30, 0.62, 0.10), end: new THREE.Vector3(-0.15, 0.43, 0.50) },
+        { start: new THREE.Vector3(0.30, 0.62, 0.10), end: new THREE.Vector3(0.13, 0.39, 0.69) },
+      ];
+      for (const grip of grips) {
+        const armVector = grip.end.clone().sub(grip.start);
+        const forearm = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.072, 0.082, armVector.length(), 7),
+          suitMat
+        );
+        forearm.position.copy(grip.start).add(grip.end).multiplyScalar(0.5);
+        forearm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), armVector.normalize());
+        group.add(forearm);
+
+        const glove = new THREE.Mesh(new THREE.SphereGeometry(0.078, 8, 6), muzzleMat);
+        glove.position.copy(grip.end);
+        group.add(glove);
+      }
+    }
+
     const weaponRig = new THREE.Group();
     weaponRig.name = 'mafi_rifle_rig';
     const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.14, 0.38), blackMat);
