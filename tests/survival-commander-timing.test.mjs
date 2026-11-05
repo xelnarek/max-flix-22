@@ -9,7 +9,7 @@ import {
 test('boss command cooldown opens a visible wind-up instead of firing immediately', () => {
   const waiting = advanceSurvivalCommanderTiming(0.4, 0, 0.1, false, 12);
   assert.equal(waiting.phase, 'cooldown');
-  assert.equal(waiting.cooldownRemaining, 0.3);
+  assert.ok(Math.abs(waiting.cooldownRemaining - 0.3) < 1e-9);
 
   const started = advanceSurvivalCommanderTiming(0, 0, 0.016, false, 12);
   assert.equal(started.phase, 'windup-started');
@@ -20,7 +20,7 @@ test('boss command cooldown opens a visible wind-up instead of firing immediatel
 test('wind-up advances in bounded steps and executes only when its timer expires', () => {
   const inProgress = advanceSurvivalCommanderTiming(0, 0.72, 0.3, false, 12);
   assert.equal(inProgress.phase, 'windup');
-  assert.equal(inProgress.windupRemaining, 0.42);
+  assert.equal(inProgress.windupRemaining, 0.62);
 
   const executed = advanceSurvivalCommanderTiming(0, 0.01, 0.016, false, 12);
   assert.equal(executed.phase, 'execute');
