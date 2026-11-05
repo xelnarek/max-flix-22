@@ -9,6 +9,7 @@ import { chooseSurvivalEventSpawnPoint } from './survivalSpawn.ts';
 import { getSurvivalUpgradeRarityMeta, getSurvivalWeaponInitialLevel, getSurvivalWeaponUpgradeSteps, rollSurvivalUpgradeRarity, type SurvivalUpgradeRarity } from './survivalRarity.ts';
 import { createSurvivalBossRewardOptions } from './survivalBossRewards.ts';
 import { getSurvivalBossVariant, shouldSpawnBosmanKrakow } from './survivalEncounters.ts';
+import { applySurvivalWaveMutator, getSurvivalWaveMutator } from './survivalWaveMutators.ts';
 import { chooseCampaignRewardSpawnPoint } from './campaignRewards.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
 import {
@@ -395,6 +396,7 @@ export class PaleciakiGameEngine {
   private readonly cameraOcclusionHits: THREE.Intersection<THREE.Object3D>[] = [];
   private cameraOcclusionCooldown = 0;
   private mobileShadowRefreshCooldown = 0;
+  private adaptivePerformanceTier: 0 | 1 | 2 = 0;
   private readonly cameraOccluders: THREE.Mesh[] = [];
   private readonly cameraOccluderMaterials = new Map<THREE.Mesh, { original: THREE.Material | THREE.Material[]; faded: THREE.Material | THREE.Material[]; originals: THREE.Material[]; fades: THREE.Material[]; isFaded: boolean }>();
   private cameraBossCheckCooldown = 0;
@@ -1920,6 +1922,13 @@ export class PaleciakiGameEngine {
     this.timeScale = scale >= 1.5 ? 2 : 1;
     return this.timeScale;
   }
+
+  /** Mobile-only CPU fallback tier controlled by the measured renderer FPS. */
+  public setAdaptivePerformanceTier(tier: number): 0 | 1 | 2 {
+    this.adaptivePerformanceTier = tier >= 2 ? 2 : tier >= 1 ? 1 : 0;
+    return this.adaptivePerformanceTier;
+  }
+
 
   public getSurvivalSnapshot(): SurvivalSnapshot {
     return {
@@ -5240,6 +5249,17 @@ export class PaleciakiGameEngine {
       this.emitFloatingToast('FALA ' + this.survivalWave + ' — KOLEJNA ZMIANA WCHODZI NA HALĘ!', this.playerPos.x, this.playerPos.y + 1.7, this.playerPos.z, 'combo');
       sound.playAlert();
 
+      // A rotating shift rule changes the tactical shape of every third wave.
+      // It is announced once at the transition and never interrupts gameplay.
+      const waveMutator = getSurvivalWaveMutator(this.survivalWave);
+      if (waveMutator.id !== 'standard') {
+        this.callbacks.onSurvivalAnnouncement?.(
+          waveMutator.title,
+          waveMutator.label,
+          waveMutator.description
+        );
+      }
+
       // Secret objects are deliberately placed away from the centre line.
       if (!this.survivalSecretSpawned && this.survivalWave >= 3 && Math.random() < 0.68) {
         this.survivalSecretSpawned = true;
@@ -5307,7 +5327,10 @@ export class PaleciakiGameEngine {
     const hordeSettings = getSurvivalHordeSettings(isMobile);
     const pomazaniecRaidActive = this.survivalPomazaniecTriggered && !this.survivalPomazaniecCompleted;
     const surgeActive = this.survivalSurgeTimeLeft > 0;
-    const enemyCap = (isMobile ? 22 : 34) + (pomazaniecRaidActive ? 5 : 0) + (surgeActive ? (isMobile ? 4 : 6) : 0);
+    const mobileEnemyCap = this.adaptivePerformanceTier >= 2 ? 16 : this.adaptivePerformanceTier === 1 ? 19 : 22;
+    const enemyCap = (isMobile ? mobileEnemyCap : 34) +
+      (pomazaniecRaidActive ? (isMobile ? 3 : 5) : 0) +
+      (surgeActive ? (isMobile ? (this.adaptivePerformanceTier >= 2 ? 2 : this.adaptivePerformanceTier === 1 ? 3 : 4) : 6) : 0);
     const aliveCount = this.enemies.reduce((count, enemy) => count + (enemy.state === 'defeated' ? 0 : 1), 0);
     if (surgeActive) {
       this.survivalSurgeTimeLeft = Math.max(0, this.survivalSurgeTimeLeft - dt);
@@ -5343,7 +5366,7 @@ export class PaleciakiGameEngine {
     } else {
       this.survivalSpawnTimer -= dt;
       if (this.survivalSpawnTimer <= 0 && aliveCount < enemyCap) {
-        const groupLimit = isMobile ? 5 : 7;
+        const groupLimit = isMobile ? (this.adaptivePerformanceTier >= 2 ? 3 : this.adaptivePerformanceTier === 1 ? 4 : 5) : 7;
         const groupSize = Math.min(groupLimit, 2 + Math.floor(this.survivalWave * 0.32), enemyCap - aliveCount);
         for (let i = 0; i < groupSize; i++) this.spawnSurvivalEnemy(this.survivalWave);
         this.survivalSpawnTimer = Math.max(8.2, 13.5 - this.survivalWave * 0.16);
@@ -6572,6 +6595,40 @@ export class PaleciakiGameEngine {
     enemy.maxHp = Math.max(1, Math.ceil(enemy.maxHp * scaling));
     enemy.hp = enemy.maxHp;
     enemy.speed *= 0.66 * (1 + Math.min(0.26, Math.max(0, wave - 1) * 0.010));
+
+    const waveMutator = getSurvivalWaveMutator(wave);
+    const majorBoss = enemy.type === 'walczak' || enemy.type === 'krol_leto' ||
+      enemy.type === 'bosman_krakow';
+    if (!majorBoss && waveMutator.id !== 'standard') {
+      const tuned = applySurvivalWaveMutator(
+        { maxHp: enemy.maxHp, speed: enemy.speed },
+        waveMutator
+      );
+      enemy.maxHp = tuned.maxHp;
+      enemy.hp = tuned.maxHp;
+      enemy.speed = tuned.speed;
+      enemy.survivalXpMultiplier = tuned.xpMultiplier;
+
+      // The Armored Shift promotes only a small subset to visible shield duty.
+      // A stricter mobile chance keeps extra transparent objects off weaker GPUs.
+      if (
+        waveMutator.id === 'armored' &&
+        enemy.mesh &&
+        Math.random() < (this.isHandheldViewport
+          ? (this.adaptivePerformanceTier >= 2 ? 0.08 : this.adaptivePerformanceTier === 1 ? 0.11 : 0.14)
+          : 0.22)
+      ) {
+        enemy.shieldActive = true;
+        const shieldRing = new THREE.Mesh(
+          new THREE.TorusGeometry(0.72, 0.055, 7, 24),
+          new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.76, depthWrite: false })
+        );
+        shieldRing.rotation.x = Math.PI / 2;
+        shieldRing.position.y = 0.72;
+        enemy.mesh.add(shieldRing);
+        enemy.shieldRing = shieldRing;
+      }
+    }
 
     // Rare late-run variant: an armored AGV with a visible shield and a telegraphed pulse.
     // It reuses the existing AGV rig and only allocates its shield ring when promoted.
@@ -9175,7 +9232,7 @@ export class PaleciakiGameEngine {
 
   private updateParticles(dt: number) {
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
-    const maxBudget = isMobile ? 36 : 75;
+    const maxBudget = isMobile ? (this.adaptivePerformanceTier >= 2 ? 14 : this.adaptivePerformanceTier === 1 ? 24 : 36) : 75;
     if (this.particles.length > maxBudget) {
       const excess = this.particles.splice(0, this.particles.length - maxBudget);
       excess.forEach((particle) => this.particlePool.release(particle.mesh));
@@ -11064,7 +11121,11 @@ export class PaleciakiGameEngine {
     if (this.gameMode === 'survival') {
       this.survivalKills++;
       const isShiftMilestone = this.survivalKills % 8 === 0;
-      const baseXpDrop = e.maxHp >= 4 ? 3 : 1;
+      const rawXpMultiplier = e.survivalXpMultiplier;
+      const waveXpMultiplier = Number.isFinite(rawXpMultiplier)
+        ? THREE.MathUtils.clamp(rawXpMultiplier as number, 1, 1.75)
+        : 1;
+      const baseXpDrop = Math.max(1, Math.round((e.maxHp >= 4 ? 3 : 1) * waveXpMultiplier));
       // Merge the small milestone bonus into the normal gem instead of spawning
       // two overlapping pickups at exactly the same coordinates.
       this.spawnSurvivalXpGem(e.x, e.y, e.z, baseXpDrop + (isShiftMilestone ? 2 : 0));
@@ -11310,7 +11371,7 @@ export class PaleciakiGameEngine {
 
   private spawnParticleRing(x: number, y: number, z: number, color = 0x38bdf8) {
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
-    const num = isMobile ? 8 : 14;
+    const num = isMobile ? (this.adaptivePerformanceTier >= 2 ? 4 : this.adaptivePerformanceTier === 1 ? 6 : 8) : 14;
     const lightColor = new THREE.Color(color);
     for (let i = 0; i < num; i++) {
       const angle = (i / num) * Math.PI * 2;
@@ -11346,7 +11407,8 @@ export class PaleciakiGameEngine {
 
   private spawnExplosionParticles(x: number, y: number, z: number, color = 0xf3f4f6, count = 20) {
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
-    const actualCount = isMobile ? Math.min(10, count) : Math.min(28, count);
+    const mobileBurstCap = this.adaptivePerformanceTier >= 2 ? 4 : this.adaptivePerformanceTier === 1 ? 7 : 10;
+    const actualCount = isMobile ? Math.min(mobileBurstCap, count) : Math.min(28, count);
     const baseColor = new THREE.Color(color);
     for (let i = 0; i < actualCount; i++) {
       const size = 0.075 + Math.random() * 0.105;
@@ -11558,10 +11620,13 @@ export class PaleciakiGameEngine {
       this.dirLight.target.position.copy(this.playerPos);
       this.dirLight.target.updateMatrixWorld();
       if (this.isHandheldViewport) {
-        this.mobileShadowRefreshCooldown -= dt;
+        // Shadow refresh is wall-clock paced: a 2x simulation must not double
+        // the GPU shadow workload. Under load, reduce refresh cadence smoothly.
+        this.mobileShadowRefreshCooldown -= dt / this.timeScale;
         if (this.mobileShadowRefreshCooldown <= 0) {
           this.dirLight.shadow.needsUpdate = true;
-          this.mobileShadowRefreshCooldown = 1 / 24;
+          const shadowHz = this.adaptivePerformanceTier >= 2 ? 12 : this.adaptivePerformanceTier === 1 ? 18 : 24;
+          this.mobileShadowRefreshCooldown = 1 / shadowHz;
         }
       }
     }
