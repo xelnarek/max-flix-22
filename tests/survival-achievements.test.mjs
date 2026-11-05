@@ -38,9 +38,9 @@ test('first kill and single-run milestones unlock achievement progress monotonic
   assert.equal(worseRun.progress.bestBossesDefeated, 3);
 });
 
-test('map explorer unlocks only after all three different arenas have been visited', () => {
+test('map explorer unlocks only after all four different arenas have been visited', () => {
   let progress = createInitialSurvivalAchievementProgress();
-  for (const mapId of SURVIVAL_MAP_IDS.slice(0, 2)) {
+  for (const mapId of SURVIVAL_MAP_IDS.slice(0, 3)) {
     const result = updateSurvivalAchievementProgress(progress, {
       mapId, kills: 0, elapsedSeconds: 0, bossesDefeated: 0,
     });
@@ -48,10 +48,10 @@ test('map explorer unlocks only after all three different arenas have been visit
     assert.ok(!progress.unlocked.includes('map_explorer'));
   }
   const result = updateSurvivalAchievementProgress(progress, {
-    mapId: SURVIVAL_MAP_IDS[2], kills: 0, elapsedSeconds: 0, bossesDefeated: 0,
+    mapId: SURVIVAL_MAP_IDS[3], kills: 0, elapsedSeconds: 0, bossesDefeated: 0,
   });
   assert.ok(result.progress.unlocked.includes('map_explorer'));
-  assert.equal(result.progress.mapsVisited.length, 3);
+  assert.equal(result.progress.mapsVisited.length, 4);
 });
 
 test('secret discovery is unique across maps and unlocks hunter and full archive awards', () => {
@@ -76,7 +76,7 @@ test('secret discovery is unique across maps and unlocks hunter and full archive
     progress = recordSurvivalSecretDiscovery(progress, secret.mapId, secret.secretId).progress;
   }
   assert.ok(progress.unlocked.includes('secret_archive'));
-  assert.equal(progress.discoveredSecrets.length, 9);
+  assert.equal(progress.discoveredSecrets.length, 16);
 });
 
 test('progress sanitization rejects corrupt IDs, duplicates and invalid counters', () => {
@@ -108,5 +108,5 @@ test('achievement cards and archive summary expose accurate progress counts', ()
   const summary = getSurvivalAchievementSummary(progress);
   assert.equal(summary.total, 8);
   assert.equal(summary.unlocked, 1);
-  assert.equal(summary.totalSecrets, 9);
+  assert.equal(summary.totalSecrets, 16);
 });

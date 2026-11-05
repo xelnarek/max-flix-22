@@ -40,3 +40,10 @@ test('every map defines a complete combat modifier and invalid stats remain fini
     assert.ok(Number.isFinite(result.xpMultiplier) && result.xpMultiplier >= 1);
   }
 });
+
+
+test('night sorting trades a small speed increase for extra XP', () => {
+  const result = applySurvivalMapCombatModifier({ maxHp: 20, speed: 3 }, 'night_sorting');
+  assert.deepEqual(result, { maxHp: 20, speed: 3.12, xpMultiplier: 1.15 });
+  assert.match(getSurvivalMapDefinition('night_sorting').combatModifier.description, /4% szybciej/);
+});

@@ -43,9 +43,9 @@ export const SURVIVAL_ACHIEVEMENTS: readonly AchievementDefinition[] = [
   { id: 'long_shift', title: 'Długa zmiana', description: 'Przetrwaj co najmniej 5 minut w jednej rozgrywce.', icon: '⏱️', target: 300, unit: 's', measure: 'bestSurvivalSeconds' },
   { id: 'night_shift', title: 'Nocna zmiana', description: 'Przetrwaj co najmniej 10 minut w jednej rozgrywce.', icon: '🌙', target: 600, unit: 's', measure: 'bestSurvivalSeconds' },
   { id: 'boss_breaker', title: 'Inspektor do odstrzału', description: 'Pokonaj trzech głównych bossów podczas jednej rozgrywki.', icon: '👔', target: 3, unit: 'bossów', measure: 'bestBossesDefeated' },
-  { id: 'map_explorer', title: 'Kartograf zmiany', description: 'Rozegraj mecz na każdej z trzech map.', icon: '🗺️', target: 3, unit: 'mapy', measure: 'mapsVisited' },
+  { id: 'map_explorer', title: 'Kartograf zmiany', description: 'Rozegraj mecz na każdej z czterech map.', icon: '🗺️', target: 4, unit: 'mapy', measure: 'mapsVisited' },
   { id: 'secret_hunter', title: 'Łowca sekretów', description: 'Odkryj trzy różne sekrety na dowolnych mapach.', icon: '🔎', target: 3, unit: 'sekrety', measure: 'discoveredSecrets' },
-  { id: 'secret_archive', title: 'Archiwum B4', description: 'Zbierz wszystkie dziewięć sekretów ukrytych na trzech mapach.', icon: '🏆', target: 9, unit: 'sekretów', measure: 'discoveredSecrets' },
+  { id: 'secret_archive', title: 'Archiwum snów', description: 'Zbierz wszystkie szesnaście sekretów ukrytych na czterech mapach.', icon: '🏆', target: 16, unit: 'sekretów', measure: 'discoveredSecrets' },
 ] as const;
 
 export function createInitialSurvivalAchievementProgress(): SurvivalAchievementProgress {

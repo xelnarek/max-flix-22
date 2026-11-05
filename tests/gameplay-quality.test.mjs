@@ -1261,7 +1261,7 @@ test('Survival chooses among three playable map identities and does not immediat
   assert.match(game, /private spawnSurvivalSecrets\(mapId: SurvivalMapId\)/);
   assert.match(game, /private updateSurvivalSecrets\(dt: number\)/);
   assert.match(game, /onSurvivalSecretFound\?\./);
-  assert.match(maps, /'warehouse_b4' \| 'container_terminal' \| 'cold_storage'/);
+  assert.match(maps, /'warehouse_b4' \| 'container_terminal' \| 'cold_storage' \| 'night_sorting'/);
   assert.match(maps, /export function chooseRandomSurvivalMap/);
   assert.match(maps, /secretLocations:/);
 });
@@ -1272,7 +1272,7 @@ test('Survival secrets are collectible, score-bearing and released during map cl
   assert.match(game, /distance > 1\.35/);
   assert.match(game, /this\.survivalSecretsFound\+\+/);
   assert.match(game, /this\.score \+= 750/);
-  assert.match(game, /this\.disposeTemporaryObject\(secret\.mesh\)/);
+  assert.match(game, /this\.disposeObjectResources\(secret\.mesh\)/);
   assert.match(game, /totalSecrets: getSurvivalMapDefinition\(this\.survivalMapId\)\.secretLocations\.length/);
 });
 
