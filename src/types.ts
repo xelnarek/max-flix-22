@@ -129,6 +129,10 @@ export interface EnemyItem {
   aiCoalitionRole?: 'bruiser' | 'flanker' | 'ranged' | 'support';
   aiFormationRadius?: number;
   aiCoalitionSize?: number;
+  /** Cooldown for an Inspector support pulse in Survival coalitions. */
+  aiSupportPulseTimer?: number;
+  /** Remaining lifetime of a one-hit shield granted by coalition support. */
+  supportShieldTimer?: number;
   surgeRunner?: boolean;
   /** XP multiplier granted by the active Survival wave modifier. */
   survivalXpMultiplier?: number;
