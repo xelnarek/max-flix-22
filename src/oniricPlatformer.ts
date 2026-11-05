@@ -68,6 +68,9 @@ const HAZARDS = [
 ];
 
 const CHECKPOINTS = [
+  // Place the first checkpoint before the first cup hazard so an early
+  // mistake does not force the player to replay the opening jumps.
+  { x: 930, top: 440 },
   { x: 1320, top: 370 },
   { x: 1800, top: 430 },
   { x: 2090, top: 358 },
@@ -160,10 +163,14 @@ export function stepOniricPlatformer(
     }
   }
 
-  for (const checkpoint of CHECKPOINTS) {
-    if (player.x >= checkpoint.x && checkpoint.x > state.checkpointX) {
-      state.checkpointX = checkpoint.x;
-      state.checkpointTop = checkpoint.top;
+  // Activate checkpoints only after landing. Crossing an X threshold
+  // mid-jump must not create a respawn point floating above the level.
+  if (player.onGround) {
+    for (const checkpoint of CHECKPOINTS) {
+      if (player.x >= checkpoint.x && checkpoint.x > state.checkpointX) {
+        state.checkpointX = checkpoint.x;
+        state.checkpointTop = checkpoint.top;
+      }
     }
   }
 
@@ -194,6 +201,8 @@ function loseOniricLife(state: OniricPlatformerState) {
 export function launchOniricPlatformer(options: {
   onComplete: (result: OniricPlatformerResult) => void;
 }): void {
+  const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const previousBodyOverflow = document.body.style.overflow;
   const root = document.createElement('section');
   root.className = 'oniric-platformer-overlay oniric-pixel-chaos';
   root.setAttribute('role', 'dialog');
@@ -229,7 +238,7 @@ export function launchOniricPlatformer(options: {
   pixelCanvas.height = Math.round(ONIRIC_PIXEL_GLITCH_WIDTH * ONIRIC_VIEW_HEIGHT / ONIRIC_VIEW_WIDTH);
   const pixelContext = pixelCanvas.getContext('2d', { alpha: false });
   let activeContext: CanvasRenderingContext2D | null = null;
-  const pixelChaosEndsAt = performance.now() + ONIRIC_PIXEL_GLITCH_DURATION_MS;
+  let pixelChaosEndsAt = performance.now() + ONIRIC_PIXEL_GLITCH_DURATION_MS;
   const watchCount = root.querySelector<HTMLElement>('[data-watch-count]');
   const livesNode = root.querySelector<HTMLElement>('[data-lives]');
   const timeNode = root.querySelector<HTMLElement>('[data-time]');
@@ -248,9 +257,22 @@ export function launchOniricPlatformer(options: {
   // The rabbit-hole secret corrupts the picture for exactly 15 wall-clock
   // seconds. It is intentionally independent from the paused 3D simulation
   // and the selected 1x/2x Survival speed.
-  const pixelChaosTimer = window.setTimeout(() => {
+  let pixelChaosTimer = window.setTimeout(() => {
     root.classList.remove('oniric-pixel-chaos');
   }, ONIRIC_PIXEL_GLITCH_DURATION_MS);
+
+  const restartPixelChaos = () => {
+    window.clearTimeout(pixelChaosTimer);
+    pixelChaosEndsAt = performance.now() + ONIRIC_PIXEL_GLITCH_DURATION_MS;
+    root.classList.add('oniric-pixel-chaos');
+    pixelChaosTimer = window.setTimeout(() => {
+      root.classList.remove('oniric-pixel-chaos');
+    }, ONIRIC_PIXEL_GLITCH_DURATION_MS);
+  };
+
+  document.body.style.overflow = 'hidden';
+  const firstFocusTarget = root.querySelector<HTMLButtonElement>('[data-action="exit"]');
+  firstFocusTarget?.focus();
 
   let state = createOniricPlatformerState();
   let rafId = 0;
@@ -524,13 +546,16 @@ export function launchOniricPlatformer(options: {
   };
 
   const resetRun = () => {
+    restartPixelChaos();
     state = createOniricPlatformerState();
     held.left = false;
     held.right = false;
     jumpQueued = false;
+    lastFrame = 0;
     resultPanel.hidden = true;
     updateHud();
     drawScene();
+    if (!rafId && !completedCallback) rafId = window.requestAnimationFrame(frame);
   };
 
   let lastHudSecond = -1;
@@ -548,7 +573,25 @@ export function launchOniricPlatformer(options: {
       if (state.finished) showResult();
     }
     drawScene();
-    if (!completedCallback) rafId = window.requestAnimationFrame(frame);
+    // Stop rendering once the result panel is shown. A retry explicitly
+    // starts a fresh frame loop, avoiding a 60 FPS idle render on phones.
+    if (!completedCallback && !state.finished) rafId = window.requestAnimationFrame(frame);
+    else rafId = 0;
+  };
+
+  const clearHeldInput = () => {
+    held.left = false;
+    held.right = false;
+    jumpQueued = false;
+  };
+
+  const onWindowBlur = () => {
+    clearHeldInput();
+    lastFrame = 0;
+  };
+
+  const onVisibilityChange = () => {
+    if (document.hidden) onWindowBlur();
   };
 
   const finish = () => {
@@ -557,9 +600,13 @@ export function launchOniricPlatformer(options: {
     window.cancelAnimationFrame(rafId);
     window.clearTimeout(pixelChaosTimer);
     window.removeEventListener('resize', resize);
+    window.removeEventListener('blur', onWindowBlur);
+    document.removeEventListener('visibilitychange', onVisibilityChange);
     document.removeEventListener('keydown', onKeyDown, true);
     document.removeEventListener('keyup', onKeyUp, true);
+    document.body.style.overflow = previousBodyOverflow;
     root.remove();
+    if (previousFocus?.isConnected) previousFocus.focus();
     options.onComplete({
       won: state.won,
       collected: state.collected.filter(Boolean).length,
@@ -568,6 +615,23 @@ export function launchOniricPlatformer(options: {
   };
 
   const onKeyDown = (event: KeyboardEvent) => {
+    if (event.code === 'Tab') {
+      const focusable = Array.from(root.querySelectorAll<HTMLButtonElement>(
+        'button:not([disabled])',
+      )).filter((button) => !button.closest('[hidden]'));
+      if (focusable.length > 0) {
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+      return;
+    }
     if (['ArrowLeft', 'KeyA'].includes(event.code)) held.left = true;
     if (['ArrowRight', 'KeyD'].includes(event.code)) held.right = true;
     if (['Space', 'ArrowUp', 'KeyW'].includes(event.code) && !event.repeat) jumpQueued = true;
@@ -612,6 +676,8 @@ export function launchOniricPlatformer(options: {
   retryButton.addEventListener('click', resetRun);
   document.addEventListener('keydown', onKeyDown, true);
   document.addEventListener('keyup', onKeyUp, true);
+  window.addEventListener('blur', onWindowBlur);
+  document.addEventListener('visibilitychange', onVisibilityChange);
   window.addEventListener('resize', resize, { passive: true });
   resize();
   updateHud();

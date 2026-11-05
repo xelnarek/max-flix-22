@@ -106,3 +106,66 @@ test('the opening 15-second Oniric glitch uses a real low-resolution pixel buffe
   assert.match(source, /outputContext!\.imageSmoothingEnabled = false/);
   assert.match(source, /drawImage\(pixelCanvas, 0, 0, canvas\.width, canvas\.height\)/);
 });
+
+
+test('retrying the secret restarts the full 15-second pixel-chaos window', async () => {
+  const source = await readFile(new URL('../src/oniricPlatformer.ts', import.meta.url), 'utf8');
+  assert.match(source, /let pixelChaosEndsAt = performance\.now\(\) \+ ONIRIC_PIXEL_GLITCH_DURATION_MS/);
+  assert.match(source, /const restartPixelChaos = \(\) => \{/);
+  assert.match(source, /pixelChaosEndsAt = performance\.now\(\) \+ ONIRIC_PIXEL_GLITCH_DURATION_MS/);
+  assert.match(source, /root\.classList\.add\('oniric-pixel-chaos'\)/);
+  assert.match(source, /const resetRun = \(\) => \{\s*restartPixelChaos\(\);/);
+});
+
+
+test('the finished Oniric level stops its animation loop until retry', async () => {
+  const source = await readFile(new URL('../src/oniricPlatformer.ts', import.meta.url), 'utf8');
+  assert.match(source, /if \(!completedCallback && !state\.finished\) rafId = window\.requestAnimationFrame\(frame\)/);
+  assert.match(source, /if \(!rafId && !completedCallback\) rafId = window\.requestAnimationFrame\(frame\)/);
+  assert.match(source, /lastFrame = 0;[\s\S]*?resultPanel\.hidden = true/);
+});
+
+test('Oniric releases held controls on focus loss and app backgrounding', async () => {
+  const source = await readFile(new URL('../src/oniricPlatformer.ts', import.meta.url), 'utf8');
+  assert.match(source, /const clearHeldInput = \(\) => \{[\s\S]*?held\.left = false;[\s\S]*?held\.right = false;[\s\S]*?jumpQueued = false;/);
+  assert.match(source, /window\.addEventListener\('blur', onWindowBlur\)/);
+  assert.match(source, /document\.addEventListener\('visibilitychange', onVisibilityChange\)/);
+  assert.match(source, /window\.removeEventListener\('blur', onWindowBlur\)/);
+  assert.match(source, /document\.removeEventListener\('visibilitychange', onVisibilityChange\)/);
+});
+
+test('Oniric dialog locks background scroll and restores focus and scroll state on exit', async () => {
+  const source = await readFile(new URL('../src/oniricPlatformer.ts', import.meta.url), 'utf8');
+  assert.match(source, /const previousFocus = document\.activeElement instanceof HTMLElement/);
+  assert.match(source, /const previousBodyOverflow = document\.body\.style\.overflow/);
+  assert.match(source, /document\.body\.style\.overflow = 'hidden'/);
+  assert.match(source, /document\.body\.style\.overflow = previousBodyOverflow/);
+  assert.match(source, /if \(previousFocus\?\.isConnected\) previousFocus\.focus\(\)/);
+  assert.match(source, /if \(event\.code === 'Tab'\)/);
+});
+
+
+test('Oniric checkpoints activate only after landing and protect the first hazard section', () => {
+  const state = createOniricPlatformerState();
+  state.player.x = 940;
+  state.player.y = 100;
+  state.player.vy = 0;
+  state.player.onGround = false;
+  stepOniricPlatformer(state, {}, 1 / 60);
+  assert.equal(state.checkpointX, 76, 'an airborne pass must not create a floating checkpoint');
+
+  state.player.y = 394;
+  state.player.vy = 0;
+  state.player.onGround = false;
+  stepOniricPlatformer(state, {}, 1 / 60);
+  assert.equal(state.player.onGround, true, 'the operator must land on the first platform');
+  assert.equal(state.checkpointX, 930, 'the first safe checkpoint should be enabled after landing');
+  assert.equal(state.checkpointTop, 440);
+});
+
+
+test('Oniric focus trapping skips controls hidden inside the result panel', async () => {
+  const source = await readFile(new URL('../src/oniricPlatformer.ts', import.meta.url), 'utf8');
+  assert.match(source, /querySelectorAll<HTMLButtonElement>\([\s\S]*?button:not\(\[disabled\]\)/);
+  assert.match(source, /filter\(\(button\) => !button\.closest\('\[hidden\]'\)\)/);
+});
