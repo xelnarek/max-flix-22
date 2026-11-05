@@ -1019,7 +1019,7 @@ test('Survival boss cycle uses three distinct models and all mini-boss variants 
 test('major Bosman boss is allowed to chase, show a boss bar and drop its boss rewards', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /e\.type === 'bosman_krakow' \|\| e\.type === 'pomazaniec'/);
-  assert.match(game, /nearestBoss\.type !== 'bosman_krakow'/);
+  assert.match(game, /enemy\.type !== 'bosman_krakow'/);
   assert.match(game, /e\.type === 'walczak' \|\| e\.type === 'krol_leto' \|\| e\.type === 'bosman_krakow' \|\| e\.type === 'sebix_m'/);
   assert.match(game, /beginSurvivalBossReward\(e\.name\)/);
   assert.match(game, /spawnLootCrate\(e\.x \+ 1\.2, 0, e\.z\)/);
