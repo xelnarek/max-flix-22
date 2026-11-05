@@ -54,11 +54,11 @@ test('weapon upgrades and evolution cannot instantly discharge a ready weapon', 
   assert.equal(getWeaponRecoveryAfterUpgrade(6, 10), 6);
 });
 
-test('weapon unlocks start after two minutes and advance in controlled 90-second steps', () => {
+test('weapon unlocks arrive early and advance in controlled 45-second steps', () => {
   const times = Object.values(SURVIVAL_WEAPON_UNLOCK_SECONDS);
-  assert.equal(times[0], 120);
-  assert.equal(times[times.length - 1], 1110);
-  for (let i = 1; i < times.length; i++) assert.equal(times[i] - times[i - 1], 90);
+  assert.equal(times[0], 35);
+  assert.equal(times[times.length - 1], 530);
+  for (let i = 1; i < times.length; i++) assert.equal(times[i] - times[i - 1], 45);
   assert.equal(SURVIVAL_WEAPON_DISPATCH_COOLDOWN_SECONDS, 1.05);
 });
 

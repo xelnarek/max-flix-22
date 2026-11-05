@@ -12,6 +12,7 @@ import { getSurvivalBossVariant, isMajorSurvivalBossType, shouldSpawnBosmanKrako
 import { applySurvivalWaveMutator, getSurvivalWaveMutator } from './survivalWaveMutators.ts';
 import { getSurvivalConvoyHazardCount } from './survivalConvoy.ts';
 import { applySurvivalMapCombatModifier, chooseRandomSurvivalMap, getSurvivalMapDefinition, type SurvivalMapId } from './survivalMaps.ts';
+import { getSurvivalMapRouteFeatures } from './survivalMapLayouts.ts';
 import { chooseCampaignRewardSpawnPoint } from './campaignRewards.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
 import { chooseSurvivalRicochetTarget, getSurvivalRadiationProfile, getSurvivalRicochetProfile } from './survivalCombatDraft.ts';
@@ -1453,7 +1454,7 @@ export class PaleciakiGameEngine {
     this.survivalRegenMultiplier = 0;
     this.survivalRegenTimer = 60;
     this.survivalDroneCooldown = 1.2;
-    this.survivalSpawnTimer = 10.5;
+    this.survivalSpawnTimer = 2.8;
     this.survivalEventTimer = 24;
     this.survivalHazardTimer = 12;
     this.currentActiveSector = 1;
@@ -1719,11 +1720,101 @@ export class PaleciakiGameEngine {
     }
     this.buildSurvivalArenaDressing(mapId);
     this.buildSurvivalMapLandmarks(mapId);
+    this.buildSurvivalMapRouteFeatures(mapId);
     this.registerSurvivalArenaOccluders();
     this.createSurvivalSightlineMarker();
     this.spawnSurvivalSecrets(mapId);
   }
 
+
+  /** Build map-specific cover and traversal landmarks; these change routes, not just colors. */
+  private buildSurvivalMapRouteFeatures(mapId: SurvivalMapId) {
+    const features = getSurvivalMapRouteFeatures(mapId);
+    const sharedMetal = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.62, roughness: 0.48 });
+    const wood = new THREE.MeshStandardMaterial({ color: 0x8b6545, roughness: 0.86 });
+    const dummy = new THREE.Object3D();
+
+    for (const feature of features) {
+      const accent = new THREE.MeshStandardMaterial({
+        color: feature.accent,
+        emissive: feature.accent,
+        emissiveIntensity: mapId === 'night_sorting' ? 0.48 : mapId === 'cold_storage' ? 0.24 : 0.12,
+        metalness: 0.42,
+        roughness: 0.4,
+      });
+      const root = new THREE.Group();
+      root.name = 'survival-route-feature-' + feature.id;
+      const baseMaterial = feature.kind === 'pallet_stack' ? wood : sharedMetal;
+      const body = new THREE.Mesh(
+        new THREE.BoxGeometry(feature.width, feature.height, feature.depth),
+        baseMaterial
+      );
+      body.position.y = feature.height / 2;
+      body.castShadow = false;
+      body.receiveShadow = true;
+      root.add(body);
+
+      if (feature.kind === 'sorter_belt') {
+        const belt = new THREE.Mesh(
+          new THREE.BoxGeometry(feature.width * 0.92, 0.09, feature.depth * 0.82),
+          new THREE.MeshStandardMaterial({ color: 0x111827, metalness: 0.35, roughness: 0.72 })
+        );
+        belt.position.y = feature.height + 0.05;
+        root.add(belt);
+        const rollers = new THREE.InstancedMesh(
+          new THREE.CylinderGeometry(0.10, 0.10, feature.depth * 0.78, 8),
+          accent,
+          5
+        );
+        for (let i = 0; i < 5; i++) {
+          dummy.position.set(-feature.width * 0.38 + i * feature.width * 0.19, feature.height + 0.11, 0);
+          dummy.rotation.set(Math.PI / 2, 0, 0);
+          dummy.scale.set(1, 1, 1);
+          dummy.updateMatrix();
+          rollers.setMatrixAt(i, dummy.matrix);
+        }
+        rollers.instanceMatrix.needsUpdate = true;
+        root.add(rollers);
+      } else if (feature.kind === 'cold_compressor') {
+        const fanHousing = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.42, 0.42, 0.12, 12),
+          accent
+        );
+        fanHousing.rotation.z = Math.PI / 2;
+        fanHousing.position.set(feature.width / 2 + 0.07, feature.height * 0.62, 0);
+        root.add(fanHousing);
+        const vent = new THREE.Mesh(new THREE.BoxGeometry(0.12, feature.height * 0.62, feature.depth * 0.64), accent);
+        vent.position.set(feature.width / 2 + 0.08, feature.height * 0.3, 0);
+        root.add(vent);
+      } else if (feature.kind === 'container_stack') {
+        const corner = new THREE.Mesh(new THREE.BoxGeometry(0.12, feature.height * 0.92, 0.12), accent);
+        for (const x of [-1, 1]) for (const z of [-1, 1]) {
+          const post = corner.clone();
+          post.position.set(x * (feature.width / 2 - 0.12), feature.height / 2, z * (feature.depth / 2 - 0.12));
+          root.add(post);
+        }
+        const top = new THREE.Mesh(new THREE.BoxGeometry(feature.width + 0.12, 0.10, feature.depth + 0.12), accent);
+        top.position.y = feature.height + 0.05;
+        root.add(top);
+      } else {
+        for (const y of [0.34, 0.78]) {
+          const slat = new THREE.Mesh(new THREE.BoxGeometry(feature.width * 0.92, 0.07, feature.depth * 1.02), accent);
+          slat.position.y = y;
+          root.add(slat);
+        }
+      }
+
+      root.position.set(feature.x, 0, feature.z);
+      this.levelRoot.add(root);
+      this.survivalObstacles.push({
+        x: feature.x,
+        z: feature.z,
+        halfWidth: feature.width * 0.56,
+        halfDepth: feature.depth * 0.56,
+      });
+      this.registerCameraOccludersInGroup(root, 0.18);
+    }
+  }
 
   private buildSurvivalMapLandmarks(mapId: SurvivalMapId) {
     const root = new THREE.Group();
@@ -6214,7 +6305,7 @@ export class PaleciakiGameEngine {
         const groupLimit = isMobile ? (this.adaptivePerformanceTier >= 2 ? 3 : this.adaptivePerformanceTier === 1 ? 4 : 5) : 7;
         const groupSize = Math.min(groupLimit, 2 + Math.floor(this.survivalWave * 0.32), enemyCap - aliveCount);
         for (let i = 0; i < groupSize; i++) this.spawnSurvivalEnemy(this.survivalWave);
-        this.survivalSpawnTimer = Math.max(8.2, 13.5 - this.survivalWave * 0.16);
+        this.survivalSpawnTimer = Math.max(6.5, 10.5 - this.survivalWave * 0.18);
       }
     }
 
