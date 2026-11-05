@@ -16,6 +16,7 @@ import { chooseCampaignRewardSpawnPoint } from './campaignRewards.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
 import { chooseSurvivalRicochetTarget, getSurvivalRadiationProfile, getSurvivalRicochetProfile } from './survivalCombatDraft.ts';
 import { buildSurvivalCoalitionOrders, getSurvivalCoalitionRole } from './survivalCoalition.ts';
+import { selectSurvivalSupportPulseTargets, SURVIVAL_SUPPORT_PULSE_RADIUS, SURVIVAL_SUPPORT_PULSE_INTERVAL_SECONDS, SURVIVAL_SUPPORT_SHIELD_SECONDS } from './survivalSupport.ts';
 import { getSurvivalXpRequirement } from './survivalProgression.ts';
 import {
   advanceAbilityCooldown,
@@ -536,6 +537,9 @@ export class PaleciakiGameEngine {
   private survivalXpGems: { mesh: THREE.Mesh; value: number; life: number; phase: number }[] = [];
   // Every XP pickup shares these GPU resources instead of allocating a geometry/material per kill.
   private readonly survivalXpGemGeometry = new THREE.OctahedronGeometry(0.20, 0);
+  // Shared lightweight shield ring for temporary coalition support pulses.
+  private readonly survivalShieldRingGeometry = new THREE.TorusGeometry(0.60, 0.045, 6, 20);
+  private readonly survivalShieldRingMaterial = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.78, depthWrite: false });
   private readonly survivalXpGemMaterial = new THREE.MeshStandardMaterial({
     color: 0x38bdf8,
     emissive: 0x0284c7,
@@ -8071,8 +8075,69 @@ export class PaleciakiGameEngine {
     return enemy.aiCoalitionRole ?? getSurvivalCoalitionRole(enemy.type);
   }
 
+  private updateSurvivalSupportPulse(support: EnemyItem, dt: number): void {
+    if (support.aiCoalitionId === undefined || support.state === 'defeated') return;
+
+    support.aiSupportPulseTimer = Math.max(0, (support.aiSupportPulseTimer ?? 2.8) - dt);
+    if (support.aiSupportPulseTimer > 0) return;
+    support.aiSupportPulseTimer = SURVIVAL_SUPPORT_PULSE_INTERVAL_SECONDS;
+
+    const targets = selectSurvivalSupportPulseTargets(
+      {
+        id: support.id,
+        coalitionId: support.aiCoalitionId,
+        x: support.x,
+        z: support.z,
+      },
+      this.enemies.map((ally) => ({
+        id: ally.id,
+        coalitionId: ally.aiCoalitionId,
+        x: ally.x,
+        z: ally.z,
+        state: ally.state,
+        type: ally.type,
+      })),
+      SURVIVAL_SUPPORT_PULSE_RADIUS,
+      3,
+    );
+
+    let shielded = 0;
+    for (const targetId of targets) {
+      const ally = this.enemies.find((candidate) => candidate.id === targetId);
+      if (!ally || ally.state === 'defeated' || ally.shieldActive || !ally.mesh) continue;
+
+      ally.shieldActive = true;
+      ally.supportShieldTimer = SURVIVAL_SUPPORT_SHIELD_SECONDS;
+      if (!ally.shieldRing) {
+        const ring = new THREE.Mesh(this.survivalShieldRingGeometry, this.survivalShieldRingMaterial);
+        ring.position.y = 0.82;
+        ring.renderOrder = 4;
+        ally.mesh.add(ring);
+        ally.shieldRing = ring;
+      } else {
+        ally.shieldRing.visible = true;
+      }
+      this.spawnParticleRing(ally.x, ally.y + 0.55, ally.z, 0x38bdf8);
+      shielded++;
+    }
+
+    if (shielded > 0) {
+      this.spawnParticleRing(support.x, support.y + 0.7, support.z, 0x7dd3fc);
+    }
+  }
+
+  private clearSurvivalSupportShield(enemy: EnemyItem): void {
+    enemy.shieldActive = false;
+    enemy.supportShieldTimer = undefined;
+    if (enemy.shieldRing) {
+      enemy.mesh?.remove(enemy.shieldRing);
+      enemy.shieldRing = undefined;
+    }
+  }
+
   private updateSurvivalEnemyTactics(enemy: EnemyItem, dt: number, distanceToPlayer: number) {
     const role = this.getSurvivalEnemyRole(enemy);
+    if (role === 'support') this.updateSurvivalSupportPulse(enemy, dt);
     const engaged = this.activeChaserIds.has(enemy.id) || enemy.type === 'pomazaniec' || !!enemy.surgeRunner;
     const slot = enemy.aiSlot || 0;
     const inHordeRing = !!enemy.surgeRunner && this.survivalSurgeTimeLeft > 0;
@@ -8162,6 +8227,12 @@ export class PaleciakiGameEngine {
     sourceZ = this.playerPos.z,
   ): number {
     if (enemy.state === 'defeated' || !Number.isFinite(amount) || amount <= 0) return enemy.hp;
+    if (enemy.shieldActive) {
+      this.clearSurvivalSupportShield(enemy);
+      this.spawnParticleRing(enemy.x, enemy.y + 0.65, enemy.z, 0x38bdf8);
+      sound.playShieldBreak();
+      return enemy.hp;
+    }
     enemy.hp = Math.max(0, enemy.hp - amount);
     this.triggerEnemyHitReaction(enemy, amount, sourceX, sourceZ);
     return enemy.hp;
@@ -8426,6 +8497,10 @@ export class PaleciakiGameEngine {
 
       e.walkCycle += dt * 8;
       this.updateEnemyHitReaction(e, dt);
+      if (e.shieldActive) {
+        e.supportShieldTimer = Math.max(0, (e.supportShieldTimer ?? 0) - dt);
+        if (e.supportShieldTimer <= 0) this.clearSurvivalSupportShield(e);
+      }
       if (e.shieldRing?.visible) e.shieldRing.rotation.z += dt * 1.25;
       if (e.auraRing) e.auraRing.rotation.z += dt * 0.18;
       if (e.bikeWheels) e.bikeWheels.forEach((wheel) => wheel.rotateX(dt * (e.state === 'chase' ? 8.5 : 3.4)));
