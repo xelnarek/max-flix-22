@@ -23,6 +23,7 @@ import { advanceSurvivalCommanderTiming } from './survivalCommanderTiming.ts';
 import { getSurvivalLeaderLossTargets, getSurvivalMoraleBreakMultiplier, SURVIVAL_LEADER_LOSS_BREAK_SECONDS } from './survivalMorale.ts';
 import { selectSurvivalSupportPulseTargets, SURVIVAL_SUPPORT_PULSE_RADIUS, SURVIVAL_SUPPORT_PULSE_INTERVAL_SECONDS, SURVIVAL_SUPPORT_SHIELD_SECONDS } from './survivalSupport.ts';
 import { getSurvivalXpRequirement } from './survivalProgression.ts';
+import { advanceSurvivalShiftEvent, createSurvivalShiftEventState, registerSurvivalShiftEventAction, type SurvivalShiftEvent, type SurvivalShiftEventAction, type SurvivalShiftEventState } from './survivalShiftEvents.ts';
 import { advanceSurvivalContract, createSurvivalContract, registerSurvivalContractAction, type SurvivalContractAction, type SurvivalContractState } from './survivalContracts.ts';
 import {
   advanceAbilityCooldown,
@@ -188,6 +189,7 @@ export interface SurvivalSnapshot {
   mapId: SurvivalMapId; mapName: string; mapSubtitle: string;
   secretsFound: number; totalSecrets: number; bossesDefeated: number;
   contract: SurvivalContractState;
+  event: SurvivalShiftEvent | null;
   weapons: Array<{ id: SurvivalWeaponId; name: string; icon: string; level: number; evolved: boolean }>;
 }
 
@@ -492,6 +494,8 @@ export class PaleciakiGameEngine {
   private survivalWave = 1;
   private survivalKills = 0;
   private survivalContract: SurvivalContractState = createSurvivalContract(1);
+  private survivalShiftEvent: SurvivalShiftEventState = createSurvivalShiftEventState();
+  private survivalGoldenPalletFound = false;
   private survivalMapId: SurvivalMapId = 'warehouse_b4';
   private lastSurvivalMapId: SurvivalMapId | null = null;
   private survivalSecretsFound = 0;
@@ -1310,6 +1314,8 @@ export class PaleciakiGameEngine {
     this.survivalWave = 1;
     this.survivalKills = 0;
     this.survivalContract = createSurvivalContract(1);
+    this.survivalShiftEvent = createSurvivalShiftEventState();
+    this.survivalGoldenPalletFound = false;
     this.survivalSecretsFound = 0;
     this.survivalBossesDefeated = 0;
     this.survivalPerfectDodges = 0;
@@ -2732,6 +2738,43 @@ export class PaleciakiGameEngine {
   }
 
 
+  private registerSurvivalShiftEventAction(action: SurvivalShiftEventAction, amount = 1): void {
+    if (this.gameMode !== 'survival' || !this.survivalShiftEvent.active) return;
+    const previousProgress = this.survivalShiftEvent.active.progress;
+    const result = registerSurvivalShiftEventAction(this.survivalShiftEvent, action, amount, this.survivalElapsed);
+    this.survivalShiftEvent = result.state;
+    if (result.state.active && result.state.active.progress !== previousProgress) {
+      this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+    }
+    if (!result.completed) return;
+
+    const payout = 420 + this.survivalWave * 35;
+    const bonusXp = Math.min(10, 5 + Math.floor(this.survivalWave / 4));
+    this.score += payout;
+    this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+    this.spawnSurvivalXpGem(this.playerPos.x + 1.25, this.playerPos.y, this.playerPos.z + 0.8, bonusXp);
+    this.emitFloatingToast('EVENT ZALICZONY • +' + payout + ' PKT • +' + bonusXp + ' XP', this.playerPos.x, this.playerPos.y + 1.9, this.playerPos.z, 'combo');
+    this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.45, this.playerPos.z, 0x38bdf8);
+    this.triggerHitStop(0.10);
+    this.triggerScreenShake(0.18, 0.12);
+    this.triggerBloomPulse(0.34);
+    sound.playPickup(3);
+    this.callbacks.onSurvivalAnnouncement?.('EVENT ZALICZONY', result.completed.title + ' • +' + payout + ' PKT', 'Dodatkowy kryształ doświadczenia pojawił się obok operatora.');
+
+    if (this.survivalShiftEvent.successStreak >= 3 && !this.survivalGoldenPalletFound) {
+      this.survivalGoldenPalletFound = true;
+      this.score += 1200;
+      this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+      this.spawnSurvivalXpGem(this.playerPos.x - 1.4, this.playerPos.y, this.playerPos.z - 0.9, 12);
+      this.emitFloatingToast('✦ SEKRET: ZŁOTA PALETA LEGENDY • +1200 PKT', this.playerPos.x, this.playerPos.y + 2.2, this.playerPos.z, 'easter-egg');
+      this.callbacks.onSurvivalAnnouncement?.('ZŁOTA PALETA LEGENDY', 'TRZY EVENTY Z RZĘDU • SEKRET ODKRYTY', 'Stara paleta z pierwszej zmiany wróciła do magazynu. Zgarnij legendarny ładunek XP.');
+      this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.6, this.playerPos.z, 0xfbbf24);
+      this.triggerBloomPulse(0.55);
+      sound.playEasterEgg();
+    }
+    this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+  }
+
   private registerSurvivalContractAction(action: SurvivalContractAction, amount = 1): void {
     if (this.gameMode !== 'survival' || this.survivalContract.completed || this.survivalContract.expired) return;
     const result = registerSurvivalContractAction(this.survivalContract, action, amount);
@@ -2781,6 +2824,7 @@ export class PaleciakiGameEngine {
       totalSecrets: getSurvivalMapDefinition(this.survivalMapId).secretLocations.length,
       bossesDefeated: this.survivalBossesDefeated,
       contract: { ...this.survivalContract },
+      event: this.survivalShiftEvent.active ? { ...this.survivalShiftEvent.active } : null,
       level: this.survivalLevel,
       xp: this.survivalXp,
       xpToNext: this.survivalXpToNext,
@@ -6181,6 +6225,14 @@ export class PaleciakiGameEngine {
     this.survivalElapsed += dt;
     const contractClock = advanceSurvivalContract(this.survivalContract, dt);
     this.survivalContract = contractClock.state;
+    const eventClock = advanceSurvivalShiftEvent(this.survivalShiftEvent, this.survivalElapsed, dt);
+    this.survivalShiftEvent = eventClock.state;
+    if (eventClock.started) {
+      this.callbacks.onSurvivalAnnouncement?.('EVENT MAGAZYNOWY', eventClock.started.title, eventClock.started.description + ' Masz 34 sekundy.');
+      this.emitFloatingToast('EVENT: ' + eventClock.started.title, this.playerPos.x, this.playerPos.y + 1.85, this.playerPos.z, 'combo');
+      sound.playAlert();
+    }
+    if (eventClock.expired) this.emitFloatingToast('EVENT NIEZALICZONY • KOLEJNA SZANSA ZA CHWILĘ', this.playerPos.x, this.playerPos.y + 1.6, this.playerPos.z, 'damage');
     if (contractClock.expiredNow) {
       this.emitFloatingToast('KONTRAKT NIEZALICZONY • NASTĘPNA ZMIANA', this.playerPos.x, this.playerPos.y + 1.6, this.playerPos.z, 'damage');
     }
@@ -7903,6 +7955,7 @@ export class PaleciakiGameEngine {
         const xpValue = Math.max(1, Math.round(gem.value * this.survivalXpMultiplier * ((this.activePerks.xpSurge || 0) > 0 ? 1.5 : 1)));
         this.survivalXp += xpValue;
         this.registerSurvivalContractAction('xp', xpValue);
+        this.registerSurvivalShiftEventAction('xp', xpValue);
         this.score += xpValue * 12;
         this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
         sound.playPickup();
@@ -12627,6 +12680,8 @@ export class PaleciakiGameEngine {
       this.survivalKills++;
       this.registerSurvivalContractAction('eliminations', 1);
       this.registerSurvivalContractAction('combo', this.comboStreak);
+      this.registerSurvivalShiftEventAction('kills', 1);
+      this.registerSurvivalShiftEventAction('combo', this.comboStreak);
       const momentumResult = registerSurvivalKill(this.survivalMomentum);
       this.survivalMomentum = momentumResult.state;
       if (momentumResult.overdriveStarted) {
