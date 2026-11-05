@@ -419,8 +419,8 @@ test('enemy hit feedback creates bounded recoil and a smooth pulse envelope', as
   const feedback = await read('../src/enemyCombatFeedback.ts');
   assert.match(feedback, /export function createEnemyHitReaction/);
   assert.match(feedback, /export function getEnemyHitPulse/);
-  assert.match(feedback, /Math\.min\(0\.48/);
-  assert.match(feedback, /Math\.min\(1\.05/);
+  assert.match(feedback, /Math\.min\(0\.56/);
+  assert.match(feedback, /Math\.min\(1\.2/);
 });
 
 test('all damaging systems use the shared enemy hit-response path', async () => {

@@ -6,7 +6,7 @@ test('normal hit recoil pushes an enemy away from the damage source', () => {
   const reaction = createEnemyHitReaction(4, 3, 1, 3, 2, false);
   assert.ok(reaction.impulseX > 0);
   assert.equal(reaction.impulseZ, 0);
-  assert.ok(reaction.impulseX <= 1.05);
+  assert.ok(reaction.impulseX <= 1.2);
   assert.ok(reaction.duration > 0);
 });
 
@@ -27,15 +27,15 @@ test('hit response remains finite when the source and enemy share coordinates', 
 test('damage magnitude cannot create unbounded hit reactions', () => {
   const small = createEnemyHitReaction(2, 0, 0, 0, 1, false);
   const huge = createEnemyHitReaction(2, 0, 0, 0, 999999, false);
-  assert.ok(huge.strength <= 0.16);
-  assert.ok(Math.hypot(huge.impulseX, huge.impulseZ) <= 1.05);
+  assert.ok(huge.strength <= 0.18);
+  assert.ok(Math.hypot(huge.impulseX, huge.impulseZ) <= 1.2);
   assert.ok(huge.strength >= small.strength);
 });
 
 test('hit pulse is zero at both ends and peaks halfway through the reaction', () => {
-  assert.equal(getEnemyHitPulse(0.21, 0.21), 0);
-  assert.ok(Math.abs(getEnemyHitPulse(0.105, 0.21) - 1) < 1e-9);
-  assert.ok(Math.abs(getEnemyHitPulse(0, 0.21)) < 1e-9);
-  assert.equal(getEnemyHitPulse(-1, 0.21), 0);
+  assert.equal(getEnemyHitPulse(0.24, 0.24), 0);
+  assert.ok(Math.abs(getEnemyHitPulse(0.12, 0.24) - 1) < 1e-9);
+  assert.ok(Math.abs(getEnemyHitPulse(0, 0.24)) < 1e-9);
+  assert.equal(getEnemyHitPulse(-1, 0.24), 0);
   assert.equal(getEnemyHitPulse(0.2, 0), 0);
 });

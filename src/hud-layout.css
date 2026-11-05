@@ -970,3 +970,136 @@
     width: min(280px, calc(100vw - 22px)) !important;
   }
 }
+
+
+/* Survival contracts: a compact objective gives every wave a concrete purpose. */
+#game-shell.survival-mode .survival-contract {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 10px;
+  min-width: 0;
+  margin-top: 6px;
+  padding: 6px 8px 7px;
+  border: 1px solid rgba(56, 189, 248, .24);
+  border-radius: 9px;
+  background: linear-gradient(100deg, rgba(7, 24, 39, .88), rgba(8, 17, 31, .84));
+  transition: border-color .16s ease, background .16s ease;
+}
+#game-shell.survival-mode .survival-contract-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+#game-shell.survival-mode .survival-contract-heading strong {
+  min-width: 0;
+  color: #bae6fd;
+  font: 900 8px/1.2 'Outfit', system-ui, sans-serif;
+  letter-spacing: .075em;
+  text-transform: uppercase;
+}
+#game-shell.survival-mode .survival-contract-heading span {
+  flex: 0 0 auto;
+  color: #cbd5e1;
+  font: 800 8px/1.2 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+#game-shell.survival-mode .survival-contract p {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin: 0;
+  color: #a9bfd1;
+  font: 600 8px/1.35 'Plus Jakarta Sans', system-ui, sans-serif;
+  overflow-wrap: anywhere;
+}
+#game-shell.survival-mode .survival-contract-track {
+  grid-column: 1 / -1;
+  display: block;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(100, 116, 139, .3);
+}
+#game-shell.survival-mode .survival-contract-track span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #38bdf8, #67e8f9);
+  box-shadow: 0 0 8px rgba(56, 189, 248, .35);
+  transition: width .18s ease;
+}
+#game-shell.survival-mode .survival-contract.is-complete {
+  border-color: rgba(52, 211, 153, .48);
+  background: linear-gradient(100deg, rgba(6, 45, 37, .9), rgba(8, 24, 31, .88));
+}
+#game-shell.survival-mode .survival-contract.is-complete .survival-contract-heading strong {
+  color: #6ee7b7;
+}
+#game-shell.survival-mode .survival-contract.is-complete .survival-contract-track span {
+  background: linear-gradient(90deg, #10b981, #6ee7b7);
+}
+#game-shell.survival-mode .survival-contract.is-expired {
+  border-color: rgba(148, 163, 184, .2);
+  opacity: .76;
+}
+#game-shell.survival-mode .survival-contract.is-expired .survival-contract-track span {
+  background: #64748b;
+}
+@media (max-width: 900px), (pointer: coarse) {
+  #game-shell.survival-mode .survival-contract {
+    gap: 3px 6px;
+    margin-top: 5px;
+    padding: 5px 6px 6px;
+    border-radius: 7px;
+  }
+  #game-shell.survival-mode .survival-contract-heading strong {
+    font-size: 7px;
+    letter-spacing: .045em;
+  }
+  #game-shell.survival-mode .survival-contract-heading span {
+    font-size: 7px;
+  }
+  #game-shell.survival-mode .survival-contract p {
+    font-size: 7px;
+    line-height: 1.25;
+  }
+  #game-shell.survival-mode .survival-contract-track {
+    height: 3px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #game-shell.survival-mode .survival-contract,
+  #game-shell.survival-mode .survival-contract-track span {
+    transition: none;
+  }
+}
+
+
+/* The added contract card makes the Survival HUD taller; reserve a separate
+   lane for the boss bar on touch devices rather than letting the two panels collide. */
+@media (max-width: 900px), (pointer: coarse) {
+  #game-shell.survival-mode #hud-top .boss-hud-bar {
+    top: calc(138px + env(safe-area-inset-top)) !important;
+  }
+}
+@media (max-width: 420px) {
+  #game-shell.survival-mode #hud-top .boss-hud-bar {
+    top: calc(138px + env(safe-area-inset-top)) !important;
+  }
+}
+@media (max-height: 560px) and (pointer: coarse) {
+  #game-shell.survival-mode .survival-contract p {
+    display: none;
+  }
+  #game-shell.survival-mode .survival-contract {
+    grid-template-columns: minmax(0, 1fr) auto;
+    margin-top: 3px;
+    padding: 4px 6px;
+  }
+  #game-shell.survival-mode #hud-top .boss-hud-bar {
+    top: calc(116px + env(safe-area-inset-top)) !important;
+  }
+}
