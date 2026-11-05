@@ -10,6 +10,7 @@ import {
 test('Survival has four distinct playable map definitions with four secrets each', () => {
   assert.equal(SURVIVAL_MAP_IDS.length, 4);
   const names = new Set();
+  const palettes = new Set();
   for (const mapId of SURVIVAL_MAP_IDS) {
     const map = getSurvivalMapDefinition(mapId);
     assert.equal(map.id, mapId);
@@ -17,10 +18,12 @@ test('Survival has four distinct playable map definitions with four secrets each
     assert.ok(map.subtitle.length > 3);
     assert.equal(map.secretLocations.length, 4);
     names.add(map.name);
+    palettes.add([map.backgroundColor, map.floorColor, map.wallColor, map.accentColor].join(':'));
   }
-  assert.equal(names.size, 3);
+  assert.equal(names.size, 4);
+  assert.equal(palettes.size, 4, 'each arena must have its own visual color signature');
   assert.equal(getSurvivalSecretKeys().length, 16);
-  assert.equal(new Set(getSurvivalSecretKeys()).size, 9);
+  assert.equal(new Set(getSurvivalSecretKeys()).size, 16);
 });
 
 test('random map selection excludes the immediately previous arena', () => {
