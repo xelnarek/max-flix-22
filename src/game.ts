@@ -8,7 +8,7 @@ import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from 
 import { chooseSurvivalEventSpawnPoint } from './survivalSpawn.ts';
 import { getSurvivalUpgradeRarityMeta, getSurvivalWeaponInitialLevel, getSurvivalWeaponUpgradeSteps, rollSurvivalUpgradeRarity, type SurvivalUpgradeRarity } from './survivalRarity.ts';
 import { createSurvivalBossRewardOptions } from './survivalBossRewards.ts';
-import { getSurvivalBossVariant, shouldSpawnBosmanKrakow } from './survivalEncounters.ts';
+import { getSurvivalBossVariant, isMajorSurvivalBossType, shouldSpawnBosmanKrakow } from './survivalEncounters.ts';
 import { applySurvivalWaveMutator, getSurvivalWaveMutator } from './survivalWaveMutators.ts';
 import { getSurvivalConvoyHazardCount } from './survivalConvoy.ts';
 import { applySurvivalMapCombatModifier, chooseRandomSurvivalMap, getSurvivalMapDefinition, type SurvivalMapId } from './survivalMaps.ts';
@@ -3367,7 +3367,7 @@ export class PaleciakiGameEngine {
       bosman_krakow: 0x0ea5e9, agv_robot: 0x38bdf8, piorun_dron: 0x22d3ee,
     };
     const accent = palette[enemy.type] || 0x38bdf8;
-    const isBoss = enemy.type === 'walczak' || enemy.type === 'krol_leto' || enemy.type === 'bosman_krakow';
+    const isBoss = isMajorSurvivalBossType(enemy.type);
     const canCastShadow = (isBoss || enemy.type === 'sebix_m') && !this.isHandheldViewport;
     // A horde of shadow-casting skinned/part-based models is expensive on mobile.
     // Keep boss silhouettes elevated on desktop; handhelds use the operator and
@@ -8975,7 +8975,7 @@ export class PaleciakiGameEngine {
     const bounds = this.gameMode === 'survival'
       ? this.levelBounds
       : { minX: -34.5, maxX: 204.5, minZ: -zLimit, maxZ: zLimit };
-    const inset = enemy.type === 'walczak' || enemy.type === 'krol_leto'
+    const inset = isMajorSurvivalBossType(enemy.type)
       ? 1.55
       : enemy.type === 'sebix_m'
         ? 1.4
@@ -8997,7 +8997,7 @@ export class PaleciakiGameEngine {
     const bounds = this.gameMode === 'survival'
       ? this.levelBounds
       : { minX: -34.5, maxX: 204.5, minZ: -zLimit, maxZ: zLimit };
-    const inset = enemy.type === 'walczak' || enemy.type === 'krol_leto'
+    const inset = isMajorSurvivalBossType(enemy.type)
       ? 1.55
       : enemy.type === 'sebix_m'
         ? 1.4
@@ -9056,7 +9056,7 @@ export class PaleciakiGameEngine {
       for (const e of this.enemies) {
         if (e.state === 'defeated' || !e.mesh) continue;
         const d = Math.hypot(this.playerPos.x - e.x, this.playerPos.z - e.z);
-        if (d > 26.0 && e.type !== 'walczak' && e.type !== 'krol_leto' && e.type !== 'sebix_m') {
+        if (d > 26.0 && !isMajorSurvivalBossType(e.type) && e.type !== 'sebix_m') {
           if (e.mesh.visible) e.mesh.visible = false;
           continue;
         }
@@ -9175,7 +9175,7 @@ export class PaleciakiGameEngine {
       }
 
       // Distance culling: skip heavy updates for distant non-boss enemies
-      if (distToPlayer > 26.0 && e.type !== 'walczak' && e.type !== 'krol_leto' && e.type !== 'sebix_m') {
+      if (distToPlayer > 26.0 && !isMajorSurvivalBossType(e.type) && e.type !== 'sebix_m') {
         if (e.mesh.visible) e.mesh.visible = false;
         return;
       }
@@ -9187,7 +9187,7 @@ export class PaleciakiGameEngine {
         const fill = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.08), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
         fill.position.z = 0.01;
         e.hpBar.add(bg, fill);
-        e.hpBar.position.y = e.type === 'sebix_m' ? 2.65 : e.type === 'walczak' || e.type === 'krol_leto' ? 2.4 : 1.65;
+        e.hpBar.position.y = e.type === 'sebix_m' ? 2.65 : isMajorSurvivalBossType(e.type) ? 2.4 : 1.65;
         e.mesh.add(e.hpBar);
         e.hpFill = fill;
         e.hpBar.visible = false;
@@ -9695,7 +9695,7 @@ export class PaleciakiGameEngine {
         e.mesh.position.y = e.y + Math.sin(e.walkCycle * 1.65) * 0.025;
         e.mesh.rotation.z = Math.sin(e.walkCycle * 1.1) * 0.018;
       }
-      const hitRadius = e.type === 'sebix_m' ? (e.dashTimer && e.dashTimer > 0 ? 1.85 : 1.35) : e.type === 'walczak' || e.type === 'krol_leto' ? 1.5 : e.type === 'elite_walczak_guard' ? 1.3 : 1.1;
+      const hitRadius = e.type === 'sebix_m' ? (e.dashTimer && e.dashTimer > 0 ? 1.85 : 1.35) : isMajorSurvivalBossType(e.type) ? 1.5 : e.type === 'elite_walczak_guard' ? 1.3 : 1.1;
       const contactRadius = hitRadius + 0.18;
       let stompedThisFrame = false;
 
@@ -12905,7 +12905,7 @@ export class PaleciakiGameEngine {
     if (this.cameraBossCheckCooldown <= 0) {
       this.cameraBossTargetZoom = 1.0;
       for (const enemy of this.enemies) {
-        if ((enemy.type !== 'walczak' && enemy.type !== 'krol_leto') || enemy.state === 'defeated') continue;
+        if (!isMajorSurvivalBossType(enemy.type) || enemy.state === 'defeated') continue;
         const bossDist = Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z);
         if (bossDist < 22) {
           this.cameraBossTargetZoom = 1.14;

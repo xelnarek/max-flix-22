@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getSurvivalBossVariant, shouldSpawnBosmanKrakow } from '../src/survivalEncounters.ts';
+import { getSurvivalBossVariant, isMajorSurvivalBossType, shouldSpawnBosmanKrakow } from '../src/survivalEncounters.ts';
 
 test('Bosman Krakow only enters Survival from wave six and at its rare spawn roll', () => {
   assert.equal(shouldSpawnBosmanKrakow(5, 0.001, false), false);
@@ -34,4 +34,13 @@ test('major Survival bosses rotate through three distinct visual and combat iden
 test('major Survival boss rotation safely handles invalid wave values', () => {
   assert.equal(getSurvivalBossVariant(Number.NaN), 'walczak');
   assert.equal(getSurvivalBossVariant(0), 'walczak');
+});
+
+
+test('all three rotating major bosses share the same boss classification', () => {
+  assert.equal(isMajorSurvivalBossType('walczak'), true);
+  assert.equal(isMajorSurvivalBossType('krol_leto'), true);
+  assert.equal(isMajorSurvivalBossType('bosman_krakow'), true);
+  assert.equal(isMajorSurvivalBossType('inspector'), false);
+  assert.equal(isMajorSurvivalBossType('sebix_m'), false);
 });
