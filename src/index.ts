@@ -424,6 +424,11 @@ class PaleciakiScene extends xb.Script {
     const survivalContractDetailElem = document.getElementById('survival-contract-detail');
     const survivalContractMetaElem = document.getElementById('survival-contract-meta');
     const survivalContractFillElem = document.getElementById('survival-contract-fill');
+    const survivalEventElem = document.getElementById('survival-event');
+    const survivalEventTitleElem = document.getElementById('survival-event-title');
+    const survivalEventDetailElem = document.getElementById('survival-event-detail');
+    const survivalEventMetaElem = document.getElementById('survival-event-meta');
+    const survivalEventFillElem = document.getElementById('survival-event-fill');
     const survivalRerollBtn = document.getElementById('btn-survival-reroll') as HTMLButtonElement | null;
     const survivalSkipBtn = document.getElementById('btn-survival-skip') as HTMLButtonElement | null;
 
@@ -934,6 +939,15 @@ class PaleciakiScene extends xb.Script {
             survivalContractElem.setAttribute('aria-label',
               contract.title + ': ' + contract.progress + ' z ' + contract.target +
               ', pozostało ' + Math.ceil(contract.remainingSeconds) + ' sekund.');
+          }
+          const event = snapshot.event;
+          if (survivalEventElem) survivalEventElem.classList.toggle('hidden', !event);
+          if (event) {
+            if (survivalEventTitleElem) survivalEventTitleElem.textContent = event.title;
+            if (survivalEventDetailElem) survivalEventDetailElem.textContent = event.description;
+            if (survivalEventMetaElem) survivalEventMetaElem.textContent = event.progress + ' / ' + event.target + ' • ' + Math.ceil(event.remainingSeconds) + ' s';
+            if (survivalEventFillElem) survivalEventFillElem.style.width = Math.min(100, (event.progress / Math.max(1, event.target)) * 100) + '%';
+            if (survivalEventElem) survivalEventElem.setAttribute('aria-label', event.title + ': ' + event.progress + ' z ' + event.target + ', pozostało ' + Math.ceil(event.remainingSeconds) + ' sekund.');
           }
           const weaponRack = document.getElementById('survival-weapons-list');
           if (weaponRack) {
