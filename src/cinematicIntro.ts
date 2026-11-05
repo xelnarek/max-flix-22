@@ -623,7 +623,7 @@ export class CinematicIntroManager {
     }
 
     if (operatorIndex === 0) {
-      // Marcin: white manager's helmet and slim blue-rim glasses.
+      // Shift lead: white manager's helmet and slim blue-rim glasses.
       ctx.strokeStyle = '#cbdcf0';
       ctx.lineWidth = 2;
       ctx.strokeRect(-19, -17, 15, 10);
@@ -634,7 +634,7 @@ export class CinematicIntroManager {
       ctx.fillRect(-33, -47, 66, 5);
       ctx.fillStyle = '#2563eb'; ctx.fillRect(-5, -49, 10, 3);
     } else if (operatorIndex === 1) {
-      // Grzesiek: broad yellow hardhat and dark industrial ear defenders.
+      // Heavy lifter: broad yellow hardhat and dark industrial ear defenders.
       ctx.fillStyle = '#facc15';
       ctx.beginPath(); ctx.ellipse(0, -45, 34, 10, 0, Math.PI, Math.PI * 2); ctx.fill();
       ctx.fillRect(-36, -46, 72, 6);
@@ -642,7 +642,7 @@ export class CinematicIntroManager {
       ctx.fillRect(-40, -31, 7, 17); ctx.fillRect(33, -31, 7, 17);
       ctx.fillStyle = '#f5ca45'; ctx.fillRect(-7, -48, 14, 3);
     } else if (operatorIndex === 2) {
-      // Dawid: orange helmet, chin strap and wide protective goggles.
+      // Cargo specialist: orange helmet, chin strap and wide protective goggles.
       ctx.fillStyle = '#f47b32';
       ctx.beginPath(); ctx.ellipse(0, -46, 31, 9, 0, Math.PI, Math.PI * 2); ctx.fill();
       ctx.fillRect(-34, -47, 68, 6);
@@ -652,7 +652,7 @@ export class CinematicIntroManager {
       ctx.beginPath(); ctx.roundRect(-20, -18, 17, 11, 4); ctx.roundRect(3, -18, 17, 11, 4); ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(-3, -13); ctx.lineTo(3, -13); ctx.stroke();
     } else if (operatorIndex === 3) {
-      // Mateusz: backward cap, illuminated over-ear headset and a boom mic.
+      // Systems specialist: backward cap, illuminated over-ear headset and a boom mic.
       ctx.fillStyle = '#6d3ab8';
       ctx.beginPath(); ctx.ellipse(0, -44, 29, 8, 0, Math.PI, Math.PI * 2); ctx.fill();
       ctx.fillRect(-31, -43, 62, 4);
@@ -664,7 +664,7 @@ export class CinematicIntroManager {
       ctx.beginPath(); ctx.moveTo(31, -14); ctx.quadraticCurveTo(39, -2, 18, 4); ctx.stroke();
       ctx.fillStyle = '#67e8f9'; ctx.beginPath(); ctx.arc(18, 4, 2.5, 0, Math.PI * 2); ctx.fill();
     } else {
-      // Piotr: crimson hardhat, yellow lamp, grey hair and a heavy veteran beard.
+      // Veteran operator: crimson hardhat, yellow lamp, grey hair and a heavy beard.
       ctx.fillStyle = '#b91c1c';
       ctx.beginPath(); ctx.ellipse(0, -46, 33, 10, 0, Math.PI, Math.PI * 2); ctx.fill();
       ctx.fillRect(-36, -47, 72, 6);
