@@ -35,7 +35,7 @@ test('Firebase ranking operations have finite auth, probe, query and write limit
   assert.match(firebase, /const FIRESTORE_QUERY_TIMEOUT_MS = 12_000/);
   assert.match(firebase, /const FIRESTORE_WRITE_TIMEOUT_MS = 12_000/);
   assert.match(firebase, /authTimeout = setTimeout\(/);
-  assert.match(firebase, /withTimeout\([\s\S]*?getDocFromServer\(probeDoc\)/);
+  assert.match(firebase, /withTimeout\([\s\S]*?getDocs\(probeQuery\)/);
   assert.match(firebase, /withTimeout\([\s\S]*?getDocs\(survivalQuery\)/);
   assert.match(firebase, /withTimeout\([\s\S]*?setDoc\(doc\(db, collectionPath, cleanId\), payload\)/);
 });
