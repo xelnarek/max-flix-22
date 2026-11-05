@@ -9984,6 +9984,9 @@ export class PaleciakiGameEngine {
     const gold = new THREE.MeshBasicMaterial({
       color: 0xfbbf24, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide,
     });
+    const starLineMaterial = new THREE.LineBasicMaterial({
+      color: 0xf43f5e, transparent: true, opacity: 0.95, depthWrite: false,
+    });
     const aura = new THREE.MeshBasicMaterial({
       color: 0x7e22ce, transparent: true, opacity: 0.24, depthWrite: false, side: THREE.DoubleSide,
     });
@@ -10010,7 +10013,7 @@ export class PaleciakiGameEngine {
     });
     for (const index of [0, 2, 4, 1, 3, 0]) starPoints.push(vertices[index].clone());
     const starGeometry = new THREE.BufferGeometry().setFromPoints(starPoints);
-    const star = new THREE.Line(starGeometry, crimson);
+    const star = new THREE.Line(starGeometry, starLineMaterial);
     ritual.add(star);
 
     for (const point of vertices) {
@@ -10046,6 +10049,7 @@ export class PaleciakiGameEngine {
         ritual.scale.setScalar(pulse);
         ritual.rotation.y += dt * 0.42;
         crimson.opacity = 0.95 * (1 - progress * 0.58);
+        starLineMaterial.opacity = 0.95 * (1 - progress * 0.58);
         gold.opacity = 0.9 * (1 - progress * 0.42);
         aura.opacity = 0.24 * (1 - progress);
         const columnMaterial = summoningColumn.material as THREE.MeshBasicMaterial;
