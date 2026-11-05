@@ -66,8 +66,9 @@ const HAZARDS = [
 ];
 
 const CHECKPOINTS = [
-  { x: 1180, top: 440 },
-  { x: 1980, top: 430 },
+  { x: 1320, top: 370 },
+  { x: 1800, top: 430 },
+  { x: 2090, top: 358 },
 ];
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
