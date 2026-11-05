@@ -342,12 +342,14 @@ test('Survival crowd rendering defers distant model attachments and limits shado
   assert.match(game, /const shadowHz = this\.adaptivePerformanceTier >= 2 \? 12 : this\.adaptivePerformanceTier === 1 \? 18 : 24/);
 });
 
-test('camera wall fades reuse raycast results and only update materials on state changes', async () => {
+test('camera visibility reuses one throttled raycast result and updates fade targets only on state changes', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /cameraOcclusionHits: THREE\.Intersection<THREE\.Object3D>\[\]/);
   assert.match(game, /intersectObjects\(this\.cameraOccluders, false, hits\)/);
-  assert.match(game, /if \(shouldFade === state\.isFaded\) continue/);
-  assert.match(game, /if \(shaderVariantChanged\) material\.needsUpdate = true/);
+  assert.match(game, /cameraOcclusionHitSet\.has\(mesh\)/);
+  assert.match(game, /if \(shouldFade !== state\.isFaded\) \{/);
+  assert.match(game, /state\.targetFade = shouldFade \? 1 : 0/);
+  assert.match(game, /if \(material\.transparent !== transparent\)[\s\S]*?material\.needsUpdate = true/);
   assert.doesNotMatch(game, /const hitMeshes = new Set\(/);
 });
 
