@@ -1090,7 +1090,10 @@ test('Survival leaderboard authenticates, queries only Survival rows and filters
   assert.match(firebase, /parseCachedLeaderboard\(\)\.filter\(\(entry\) => entry\.mode === 'survival'\)/);
   assert.match(firebase, /pendingEntries[\s\S]*?filter\(\(entry\) => entry\.mode === 'survival'\)/);
   assert.match(firebase, /export async function ensureLeaderboardServices\(\): Promise<boolean>/);
-  assert.match(firebase, /await initAuth\(\);[\s\S]*?const connected = await testFirestoreConnection\(\)/);
+  assert.match(firebase, /void initAuth\(\)\.catch/);
+  assert.match(firebase, /const connected = await testFirestoreConnection\(\)/);
+  assert.match(firebase, /query\(collection\(db, 'leaderboard'\), limit\(1\)\)/);
+  assert.match(firebase, /withTimeout\([\s\S]*?getDocs\(probeQuery\)/);
   assert.match(ranking, /getSurvivalLeaderboardSlice\([\s\S]*?entry\.mode === 'survival'/);
 });
 
