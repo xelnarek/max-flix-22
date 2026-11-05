@@ -294,10 +294,16 @@ export function initAuth(): Promise<User | null> {
 }
 
 export async function ensureLeaderboardServices(): Promise<boolean> {
+  // The leaderboard is publicly readable. Do not make a slow anonymous-auth
+  // attempt block the public read; authentication continues in the background
+  // for future score submissions and offline queue synchronization.
+  void initAuth().catch((error) => {
+    console.warn('[Firebase:Auth] ⚠️ Inicjalizacja sesji trwa dalej w tle lub wymaga ponowienia:', error);
+  });
+
   try {
-    await initAuth();
     const connected = await testFirestoreConnection();
-    if (connected) {
+    if (connected && currentUser?.uid) {
       try {
         await withTimeout(
           syncPendingLeaderboardScores(),
@@ -318,19 +324,18 @@ export async function ensureLeaderboardServices(): Promise<boolean> {
 
 // Test connection on boot per guidelines
 export async function testFirestoreConnection(): Promise<boolean> {
-  const targetDoc = 'test/connection';
-  if (!currentUser?.uid) {
-    console.warn('[Firebase:Firestore] ⚠️ Brak aktywnej sesji; połączenie nie może zostać potwierdzone.');
-    return false;
-  }
+  const targetDoc = 'leaderboard (public read probe)';
   const startTime = performance.now();
 
   try {
-    const probeDoc = doc(db, 'test', 'connection');
+    // Probe the same public collection used by the ranking instead of a
+    // separate authenticated test document. An empty collection is still a
+    // successful connection and does not require anonymous sign-in.
+    const probeQuery = query(collection(db, 'leaderboard'), limit(1));
     await withTimeout(
-      getDocFromServer(probeDoc),
+      getDocs(probeQuery),
       FIRESTORE_PROBE_TIMEOUT_MS,
-      'Firestore connection probe',
+      'Public Firestore leaderboard probe',
     );
     const duration = Math.round(performance.now() - startTime);
     console.log(`[Firebase:Firestore] 🟢 Próba połączenia z bazą zakończona sukcesem (${duration} ms). Target: '${targetDoc}'.`);
