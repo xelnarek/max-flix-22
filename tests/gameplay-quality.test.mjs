@@ -997,3 +997,81 @@ test('record date and time are rendered on every leaderboard row', async () => {
   assert.match(css, /\.leaderboard-record-time/);
   assert.match(cloud, /createdAt: new Date\(\)\.toISOString\(\)/);
 });
+
+
+test('Survival boss cycle uses three distinct models and all mini-boss variants are registered', async () => {
+  const [game, encounters, types] = await Promise.all([
+    read('../src/game.ts'), read('../src/survivalEncounters.ts'), read('../src/types.ts')
+  ]);
+  assert.match(encounters, /getSurvivalBossVariant/);
+  assert.match(game, /if \(variant === 'bosman_krakow'\) \{[\s\S]*?addBosmanKrakowBossEnemy/);
+  assert.match(game, /else if \(variant === 'krol_leto'\) \{[\s\S]*?addKrolLetoBossEnemy/);
+  assert.match(game, /addWalczakBossEnemy\(id, x, z\)/);
+  assert.match(game, /private spawnSurvivalAuditor\(\)/);
+  assert.match(game, /private addSebixEnemy\(/);
+  assert.match(game, /shouldSpawnBosmanKrakow\(/);
+  assert.match(game, /AGV-9 SENTINEL/);
+  for (const type of ['walczak', 'krol_leto', 'bosman_krakow', 'sebix_m', 'inspector', 'agv_robot']) {
+    assert.match(types, new RegExp("'" + type + "'"));
+  }
+});
+
+test('major Bosman boss is allowed to chase, show a boss bar and drop its boss rewards', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /e\.type === 'bosman_krakow' \|\| e\.type === 'pomazaniec'/);
+  assert.match(game, /enemy\.type !== 'bosman_krakow'/);
+  assert.match(game, /e\.type === 'walczak' \|\| e\.type === 'krol_leto' \|\| e\.type === 'bosman_krakow' \|\| e\.type === 'sebix_m'/);
+  assert.match(game, /beginSurvivalBossReward\(e\.name\)/);
+  assert.match(game, /spawnLootCrate\(e\.x \+ 1\.2, 0, e\.z\)/);
+});
+
+
+test('Survival leaderboard authenticates, queries only Survival rows and filters before ranking', async () => {
+  const [app, firebase, ranking] = await Promise.all([
+    read('../src/index.ts'), read('../src/firebase.ts'), read('../src/leaderboard.ts')
+  ]);
+  assert.match(app, /getTopSurvivalLeaderboard\(15\)/);
+  assert.doesNotMatch(app, /getTopLeaderboard\(100\)/);
+  assert.match(firebase, /export async function getTopSurvivalLeaderboard/);
+  assert.match(firebase, /where\('mode', '==', 'survival'\)/);
+  assert.match(firebase, /parseCachedLeaderboard\(\)\.filter\(\(entry\) => entry\.mode === 'survival'\)/);
+  assert.match(firebase, /pendingEntries[\s\S]*?filter\(\(entry\) => entry\.mode === 'survival'\)/);
+  assert.match(firebase, /export async function ensureLeaderboardServices\(\): Promise<boolean>/);
+  assert.match(firebase, /await initAuth\(\);[\s\S]*?const connected = await testFirestoreConnection\(\)/);
+  assert.match(ranking, /getSurvivalLeaderboardSlice\([\s\S]*?entry\.mode === 'survival'/);
+});
+
+
+test('Piotr ultimate is a pentagram MafiKapibar summon, not a Molotov throw', async () => {
+  const [game, characters, sound] = await Promise.all([
+    read('../src/game.ts'), read('../src/characters.ts'), read('../src/sound.ts')
+  ]);
+  const abilityStart = game.indexOf('public triggerAbility()');
+  const abilityEnd = game.indexOf('private throwBimberMolotov', abilityStart);
+  assert.ok(abilityStart >= 0 && abilityEnd > abilityStart, 'character ability dispatcher should exist');
+  const ability = game.slice(abilityStart, abilityEnd);
+  assert.match(ability, /this\.spawnMafiCapybaras\(abilityDamageMultiplier\)/);
+  assert.doesNotMatch(ability, /throwBimberMolotov/);
+  assert.match(game, /private spawnMafiPentagramEffect\(groundY: number\)/);
+  assert.match(game, /new THREE\.Line\(starGeometry, starLineMaterial\)/);
+  assert.match(game, /private createMafiCapybaraModel\(index: number\)/);
+  assert.match(game, /private updateMafiCapybaras\(dt: number\)/);
+  assert.match(game, /const ritualRadius = this\.gameMode === 'survival' \? 5\.7 : 6\.2/);
+  assert.match(game, /const burstDamage = Math\.max\(2, Math\.ceil\(3 \* abilityDamageMultiplier\)\)/);
+  assert.match(game, /const damage = this\.scaleSurvivalDamage\(2\)/);
+  assert.match(game, /for \(let index = 0; index < 3; index\+\+\)/);
+  assert.match(characters, /abilityName: 'Rytuał MafiKapibar — Pentagram B4'/);
+  assert.match(characters, /trzy MafiKapibary w garniturach, które przez kilkanaście sekund orbitują wokół operatora/);
+  assert.match(sound, /else if \(charId === 'piotr'\) \{[\s\S]*?Ominous low ritual swell/);
+  assert.doesNotMatch(sound.slice(sound.indexOf("else if (charId === 'piotr')"), sound.indexOf('} else {', sound.indexOf("else if (charId === 'piotr')"))), /playMolotovThrow/);
+});
+
+test('MafiKapibar companions update during gameplay and are disposed when the world is cleared', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /this\.updateMafiCapybaras\(simDt\)/);
+  assert.match(game, /for \(const capybara of this\.mafiCapybaras\)/);
+  assert.match(game, /this\.disposeTemporaryObject\(capybara\.group\)/);
+  assert.match(game, /this\.mafiCapybaras = \[\]/);
+  assert.match(game, /capybara\.attackCooldown = 1\.18 \+ capybara\.index \* 0\.14/);
+  assert.match(game, /life: duration,[\s\S]*?maxLife: duration/);
+});

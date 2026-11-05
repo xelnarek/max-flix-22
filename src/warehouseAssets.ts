@@ -987,7 +987,27 @@ export function createCharacterModel(def: CharacterDef): {
   const group = new THREE.Group();
   group.name = `character_${def.id}`;
 
-  const skinMat = new THREE.MeshStandardMaterial({ color: 0xffdbac, roughness: 0.55 });
+  // Five readable silhouettes at gameplay camera distance. These are visual-only
+  // proportions: movement speed, attack hitboxes and collision capsules stay unchanged.
+  const silhouette: Record<CharacterId, {
+    torsoWidth: number; torsoHeight: number; armWidth: number;
+    legWidth: number; shoulderSize: number; headWidth: number; headHeight: number;
+  }> = {
+    marcin:   { torsoWidth: 0.94, torsoHeight: 1.00, armWidth: 0.94, legWidth: 0.98, shoulderSize: 0.94, headWidth: 1.00, headHeight: 1.02 },
+    grzesiek: { torsoWidth: 1.25, torsoHeight: 1.06, armWidth: 1.24, legWidth: 1.18, shoulderSize: 1.32, headWidth: 1.04, headHeight: 0.98 },
+    dawid:    { torsoWidth: 1.08, torsoHeight: 1.00, armWidth: 1.08, legWidth: 1.05, shoulderSize: 1.12, headWidth: 1.00, headHeight: 1.00 },
+    mateusz:  { torsoWidth: 0.90, torsoHeight: 0.96, armWidth: 0.90, legWidth: 0.94, shoulderSize: 0.90, headWidth: 0.96, headHeight: 0.98 },
+    piotr:    { torsoWidth: 1.16, torsoHeight: 1.04, armWidth: 1.12, legWidth: 1.10, shoulderSize: 1.18, headWidth: 1.03, headHeight: 0.98 },
+  };
+  const profile = silhouette[def.id];
+  const skinColors: Record<CharacterId, number> = {
+    marcin: 0xe8bd9c,
+    grzesiek: 0xd69a75,
+    dawid: 0xe7b28e,
+    mateusz: 0xe6b89d,
+    piotr: 0xc99575,
+  };
+  const skinMat = new THREE.MeshStandardMaterial({ color: skinColors[def.id], roughness: 0.55 });
   const clothesMat = new THREE.MeshStandardMaterial({ color: def.color, roughness: 0.5 });
   const vestMat = new THREE.MeshStandardMaterial({ color: def.secondaryColor, roughness: 0.3 });
   const armorMat = new THREE.MeshStandardMaterial({ color: 0x253447, roughness: 0.62, metalness: 0.36 });
@@ -1007,7 +1027,7 @@ export function createCharacterModel(def: CharacterDef): {
   // 1. Torso Body
   const bodyGeo = new THREE.CapsuleGeometry(0.18, 0.10, 4, 16);
   const body = new THREE.Mesh(bodyGeo, clothesMat);
-  body.scale.z = 0.72;
+  body.scale.set(profile.torsoWidth, profile.torsoHeight, 0.72);
   body.position.y = 0.54;
   body.castShadow = true;
   group.add(body);
@@ -1015,13 +1035,14 @@ export function createCharacterModel(def: CharacterDef): {
   // High-Vis Safety Vest
   const vestGeo = new THREE.CapsuleGeometry(0.19, 0.08, 4, 16);
   const vest = new THREE.Mesh(vestGeo, vestMat);
-  vest.scale.z = 0.74;
+  vest.scale.set(profile.torsoWidth * 1.02, profile.torsoHeight, 0.74);
   vest.position.y = 0.56;
   group.add(vest);
 
   // Functional silhouette upgrades: padded shoulders, harness, radio, belt and ID plate.
   const harness = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.34, 0.30), armorMat);
   harness.position.set(0, 0.56, 0.015);
+  harness.scale.x = profile.torsoWidth;
   harness.rotation.z = 0.08;
   group.add(harness);
 
@@ -1045,19 +1066,20 @@ export function createCharacterModel(def: CharacterDef): {
   const shoulderGeometry = new THREE.DodecahedronGeometry(0.12, 0);
   for (const side of [-1, 1]) {
     const pad = new THREE.Mesh(shoulderGeometry, armorMat);
-    pad.scale.set(1.15, 0.68, 1.0);
-    pad.position.set(side * 0.245, 0.72, 0);
+    pad.scale.set(1.15 * profile.shoulderSize, 0.68 * profile.shoulderSize, 1.0);
+    pad.position.set(side * 0.245 * profile.torsoWidth, 0.72, 0);
     pad.rotation.z = side * -0.16;
     group.add(pad);
 
     const shoulderStripe = new THREE.Mesh(new THREE.BoxGeometry(0.105, 0.025, 0.17), trimMat);
-    shoulderStripe.position.set(side * 0.245, 0.735, 0.078);
+    shoulderStripe.position.set(side * 0.245 * profile.torsoWidth, 0.735, 0.078);
     group.add(shoulderStripe);
   }
 
   // Silver Retro-Reflective Stripes on Vest
   const stripeH = new THREE.Mesh(new THREE.BoxGeometry(0.39, 0.04, 0.29), silverReflectMat);
   stripeH.position.y = 0.54;
+  stripeH.scale.x = profile.torsoWidth;
   const stripeV1 = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.28, 0.29), silverReflectMat);
   stripeV1.position.set(-0.1, 0.56, 0);
   const stripeV2 = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.28, 0.29), silverReflectMat);
@@ -1067,6 +1089,7 @@ export function createCharacterModel(def: CharacterDef): {
   // 2. Head with Face Details
   const headGeo = new THREE.SphereGeometry(0.145, 20, 14);
   const head = new THREE.Mesh(headGeo, skinMat);
+  head.scale.set(profile.headWidth, profile.headHeight, 1);
   head.position.y = 0.94;
   head.castShadow = true;
   group.add(head);
@@ -1186,16 +1209,74 @@ export function createCharacterModel(def: CharacterDef): {
     group.add(lampMount, ledLens);
   }
 
+  // Extra silhouette pieces make the three most visually similar head profiles unmistakable.
+  if (def.id === 'dawid') {
+    // Wide protective goggles over the orange helmet: two glass lenses and one bridge.
+    const goggleFrame = new THREE.MeshStandardMaterial({ color: 0x7c3415, roughness: 0.34, metalness: 0.28 });
+    const goggleGlass = new THREE.MeshStandardMaterial({ color: 0x7dd3fc, roughness: 0.12, metalness: 0.18, transparent: true, opacity: 0.58 });
+    for (const side of [-1, 1]) {
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.041, 0.009, 6, 14), goggleFrame);
+      rim.position.set(side * 0.052, 0.965, 0.133);
+      group.add(rim);
+      const lens = new THREE.Mesh(new THREE.CircleGeometry(0.034, 12), goggleGlass);
+      lens.position.set(side * 0.052, 0.965, 0.135);
+      group.add(lens);
+    }
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.014, 0.018), goggleFrame);
+    bridge.position.set(0, 0.965, 0.137);
+    group.add(bridge);
+    const chinStrap = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.18, 0.018), rubberMat);
+    chinStrap.position.set(0.13, 0.885, 0.015);
+    chinStrap.rotation.z = -0.22;
+    group.add(chinStrap);
+  } else if (def.id === 'mateusz') {
+    // Purple over-ear headset with a cyan top band; it remains visible below the cap.
+    const headsetMat = new THREE.MeshStandardMaterial({ color: 0x21123f, roughness: 0.42, metalness: 0.22 });
+    const headsetAccent = new THREE.MeshStandardMaterial({ color: 0x67e8f9, emissive: 0x0891b2, emissiveIntensity: 0.22, roughness: 0.28 });
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.151, 0.017, 6, 18, Math.PI), headsetMat);
+    band.position.set(0, 1.005, -0.015);
+    group.add(band);
+    [-1, 1].forEach((side) => {
+      const cup = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.095, 0.105), headsetMat);
+      cup.position.set(side * 0.151, 0.955, 0.015);
+      const light = new THREE.Mesh(new THREE.CircleGeometry(0.025, 10), headsetAccent);
+      light.position.set(side * 0.181, 0.955, 0.02);
+      light.rotation.y = side * Math.PI / 2;
+      group.add(cup, light);
+    });
+  } else if (def.id === 'piotr') {
+    // Two red fire-suppression canisters create a broad, recognisable backpack silhouette.
+    const cylinderMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.42, metalness: 0.18 });
+    const capMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.35, metalness: 0.25 });
+    const pack = new THREE.Mesh(new THREE.BoxGeometry(0.39, 0.35, 0.13), armorMat);
+    pack.position.set(0, 0.61, -0.205);
+    group.add(pack);
+    [-0.115, 0.115].forEach((side) => {
+      const canister = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.072, 0.34, 8), cylinderMat);
+      canister.position.set(side, 0.63, -0.29);
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.034, 0.055, 8), capMat);
+      cap.position.set(side, 0.825, -0.29);
+      const hose = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.22, 6), rubberMat);
+      hose.position.set(side * 1.45, 0.61, -0.205);
+      hose.rotation.z = Math.PI / 2;
+      group.add(canister, cap, hose);
+    });
+    const pressureGauge = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.02, 10), silverReflectMat);
+    pressureGauge.position.set(0, 0.72, -0.115);
+    pressureGauge.rotation.x = Math.PI / 2;
+    group.add(pressureGauge);
+  }
+
   // 3. Legs & Leather Steel-toe Boots
   const legGeo = new THREE.CapsuleGeometry(0.065, 0.21, 3, 12);
   const leftLeg = new THREE.Mesh(legGeo, pantsMat);
-  leftLeg.scale.z = 1.12;
-  leftLeg.position.set(-0.1, 0.19, 0);
+  leftLeg.scale.set(profile.legWidth, 1, 1.12);
+  leftLeg.position.set(-0.1 * profile.torsoWidth, 0.19, 0);
   leftLeg.castShadow = true;
 
   const rightLeg = new THREE.Mesh(legGeo, pantsMat);
-  rightLeg.scale.z = 1.12;
-  rightLeg.position.set(0.1, 0.19, 0);
+  rightLeg.scale.set(profile.legWidth, 1, 1.12);
+  rightLeg.position.set(0.1 * profile.torsoWidth, 0.19, 0);
   rightLeg.castShadow = true;
 
   const bootGeo = new THREE.SphereGeometry(0.1, 14, 10);
@@ -1225,13 +1306,13 @@ export function createCharacterModel(def: CharacterDef): {
   // 4. Arms & Hands
   const armGeo = new THREE.CapsuleGeometry(0.05, 0.24, 3, 10);
   const leftArm = new THREE.Mesh(armGeo, clothesMat);
-  leftArm.scale.z = 1.05;
-  leftArm.position.set(-0.25, 0.54, 0);
+  leftArm.scale.set(profile.armWidth, 1, 1.05);
+  leftArm.position.set(-0.25 * profile.torsoWidth, 0.54, 0);
   leftArm.castShadow = true;
 
   const rightArm = new THREE.Mesh(armGeo, clothesMat);
-  rightArm.scale.z = 1.05;
-  rightArm.position.set(0.25, 0.54, 0);
+  rightArm.scale.set(profile.armWidth, 1, 1.05);
+  rightArm.position.set(0.25 * profile.torsoWidth, 0.54, 0);
   rightArm.castShadow = true;
 
   // Hands

@@ -156,3 +156,45 @@ test('operator attack and ability controls use distinct vector SVG icons with ro
   }
   assert.ok(html.includes('id="attack-icon"') && html.includes('id="ability-icon"'));
 });
+
+
+test('every operator 3D model has a distinct silhouette, skin tone and role-specific gear', async () => {
+  const source = await read('../src/warehouseAssets.ts');
+  assert.match(source, /const silhouette: Record<CharacterId/);
+  for (const id of ['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr']) {
+    assert.match(source, new RegExp(id + ':\\s*\\{ torsoWidth:'));
+  }
+  assert.match(source, /skinColors: Record<CharacterId/);
+  assert.match(source, /goggleFrame/);
+  assert.match(source, /headsetAccent/);
+  assert.match(source, /cylinderMat/);
+  assert.match(source, /profile\.shoulderSize/);
+  assert.match(source, /profile\.torsoWidth/);
+});
+
+test('operator selector populates five unique face portraits instead of static shared badges', async () => {
+  const [app, html] = await Promise.all([read('../src/index.ts'), read('../index.html')]);
+  assert.match(app, /const operatorPortrait = \(id: CharacterId\): string/);
+  assert.match(app, /document\.querySelectorAll<HTMLElement>\('\.char-card\[data-char\]'\)/);
+  assert.match(app, /badge\.innerHTML = operatorPortrait\(cardId\)/);
+  assert.match(app, /if \(heroAvatar\) heroAvatar\.innerHTML = operatorPortrait\(id\)/);
+  assert.match(html, /data-char="marcin"/);
+  assert.match(html, /data-char="grzesiek"/);
+  assert.match(html, /data-char="dawid"/);
+  assert.match(html, /data-char="mateusz"/);
+  assert.match(html, /data-char="piotr"/);
+});
+
+
+test('Piotr ability badge uses the pentagram icon and the character description names MafiKapibar', async () => {
+  const [app, characters] = await Promise.all([
+    read('../src/index.ts'), read('../src/characters.ts')
+  ]);
+  const iconStart = app.indexOf("piotr: \"<svg class='operator-action-svg'");
+  assert.ok(iconStart >= 0, 'Piotr ability icon should be present');
+  const icon = app.slice(iconStart, app.indexOf('",', iconStart));
+  assert.match(icon, /circle cx='24' cy='24' r='19'/);
+  assert.match(icon, /M24 5 35 38 6 18h36/);
+  assert.match(characters, /Rytuał MafiKapibar — Pentagram B4/);
+  assert.doesNotMatch(characters, /Potrójna Salwa Płonących Butli/);
+});

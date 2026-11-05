@@ -9,6 +9,7 @@ import {
   getDocs,
   query,
   orderBy,
+  where,
   limit,
   getDocFromServer,
   DocumentData,
@@ -17,6 +18,7 @@ import { getAuth, signInAnonymously, onAuthStateChanged, type User, type Unsubsc
 import firebaseConfig from '../firebase-applet-config.json';
 import {
   getLeaderboardSlice,
+  getSurvivalLeaderboardSlice,
   mergeLeaderboardEntries,
   normalizeLeaderboardEntry,
   type LeaderboardEntry,
@@ -272,13 +274,15 @@ export function initAuth(): Promise<User | null> {
   return authPromise;
 }
 
-export async function ensureLeaderboardServices(): Promise<void> {
+export async function ensureLeaderboardServices(): Promise<boolean> {
   try {
     await initAuth();
     const connected = await testFirestoreConnection();
     if (connected) await syncPendingLeaderboardScores();
+    return connected;
   } catch (error) {
     console.warn('[Firebase:Init] ⚠️ Podgrzewanie połączenia pominięte:', error);
+    return false;
   }
 }
 
@@ -478,3 +482,63 @@ export async function getTopLeaderboard(maxEntries = 15): Promise<LeaderboardEnt
     return getLeaderboardSlice(mergeLeaderboardEntries(cached, pendingEntries), maxEntries);
   }
 }
+
+/**
+ * Fetch only Survival records from Firestore. Filtering on the server before
+ * applying a limit prevents older high Campaign scores from crowding the
+ * Survival board out of the first page. No compound index is required.
+ */
+export async function getTopSurvivalLeaderboard(maxEntries = 15): Promise<LeaderboardEntry[]> {
+  const collectionPath = 'leaderboard';
+  const safeMaxEntries = Number.isFinite(maxEntries) ? Math.max(0, Math.floor(maxEntries)) : 15;
+
+  try {
+    await syncPendingLeaderboardScores();
+    // This equality-only query uses Firestore's automatic single-field index.
+    // Fetch all Survival rows before sorting locally; a fixed page could hide a
+    // high score when the collection grows, while orderBy would need a composite
+    // index to be deployed separately.
+    const survivalQuery = query(
+      collection(db, collectionPath),
+      where('mode', '==', 'survival'),
+    );
+    const snapshot = await getDocs(survivalQuery);
+    const cloudEntries = snapshot.docs.map((document) => {
+      const data = document.data() as DocumentData;
+      return normalizeLeaderboardEntry({
+        id: document.id,
+        playerName: data.playerName,
+        hero: data.hero,
+        mode: data.mode,
+        score: data.score,
+        coins: data.coins,
+        timeSeconds: data.timeSeconds,
+        bossDefeated: data.bossDefeated,
+        createdAt: data.createdAt,
+        syncStatus: 'online',
+      }, document.id);
+    }).filter((entry) => entry.mode === 'survival');
+
+    const pendingEntries = parsePendingLeaderboardWrites()
+      .map((item) => normalizeLeaderboardEntry({ ...item.payload, id: item.id, syncStatus: 'pending' }))
+      .filter((entry) => entry.mode === 'survival');
+    const merged = mergeLeaderboardEntries(cloudEntries, pendingEntries);
+    const survivalEntries = getSurvivalLeaderboardSlice(merged, Math.max(30, safeMaxEntries));
+
+    // This key is the offline fallback for the single public Survival mode.
+    // Store its own slice instead of allowing legacy Campaign rows to crowd it.
+    safeStorage.setItem(LEADERBOARD_CACHE_KEY, JSON.stringify(getLeaderboardSlice(survivalEntries, 30)));
+    console.log(`[Firebase:Leaderboard] ✅ Survival: ${cloudEntries.length} online + ${pendingEntries.length} oczekujących.`);
+    return getSurvivalLeaderboardSlice(survivalEntries, safeMaxEntries);
+  } catch (error) {
+    console.error('[Firebase:Leaderboard] ⚠️ Nie udało się pobrać Survival — używam lokalnego cache.');
+    handleFirestoreError(error, OperationType.LIST, collectionPath);
+
+    const cachedEntries = parseCachedLeaderboard().filter((entry) => entry.mode === 'survival');
+    const pendingEntries = parsePendingLeaderboardWrites()
+      .map((item) => normalizeLeaderboardEntry({ ...item.payload, id: item.id, syncStatus: 'pending' }))
+      .filter((entry) => entry.mode === 'survival');
+    return getSurvivalLeaderboardSlice(mergeLeaderboardEntries(cachedEntries, pendingEntries), safeMaxEntries);
+  }
+}
+

@@ -4,8 +4,7 @@ import { CHARACTERS } from './characters.ts';
 import {
   ensureLeaderboardServices,
   submitScore,
-  getTopLeaderboard,
-  testFirestoreConnection,
+  getTopSurvivalLeaderboard,
 } from './firebase.ts';
 import { PaleciakiGameEngine, type SurvivalSnapshot, type SurvivalUpgradeOption } from './game.ts';
 import { sound } from './sound.ts';
@@ -879,7 +878,7 @@ class PaleciakiScene extends xb.Script {
         grzesiek: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.7' stroke-linecap='round' stroke-linejoin='round'><path d='M8 19v10M13 15v18M35 15v18M40 19v10M13 24h22'/><path d='M6 14v20M42 14v20'/><path d='m24 8 2.4 5.2 5.7.8-4.1 4 1 5.7-5-2.7-5 2.7 1-5.7-4.1-4 5.7-.8Z' fill='currentColor' stroke='none' opacity='.28'/></svg>",
         dawid: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M24 6 39 12v11c0 9-6.5 15-15 19C15.5 38 9 32 9 23V12Z'/><path d='M15 17h18M13 23h22M16 29h16M19 35h10'/><path d='m30 12 4 4-4 4M18 27l-4 4 4 4' opacity='.78'/></svg>",
         mateusz: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='m9 18 3-10 9 7h6l9-7 3 10v11c0 8-7 12-15 12S9 37 9 29Z'/><path d='M17 25h.1M31 25h.1M19 33q5 4 10 0'/><path d='m27 16-5 10h5l-3 8 9-12h-5l3-6Z' fill='currentColor' stroke='none'/></svg>",
-        piotr: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.7' stroke-linecap='round' stroke-linejoin='round'><path d='M27 10a10 10 0 0 0 11 13L24 37a4 4 0 0 1-6-6l15-14A10 10 0 0 0 27 10Z'/><path d='m30 8 5-4 8 8-4 5M18 30l-3-3M14 34l-3-3'/></svg>",
+        piotr: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round'><circle cx='24' cy='24' r='19' opacity='.7'/><path d='M24 5 35 38 6 18h36L13 38 24 5Z' stroke-width='2.8'/><path d='M24 17v14M17 24h14' opacity='.9'/><circle cx='24' cy='24' r='3.2' fill='currentColor' stroke='none'/><path d='M9 9l3 2M39 9l-3 2M9 39l3-2M39 39l-3-2' opacity='.8'/></svg>",
       };
       if (heroAvatar) heroAvatar.innerHTML = operatorPortrait(id);
       // The menu and HUD share the same bespoke portrait; each operator keeps
@@ -1005,14 +1004,14 @@ class PaleciakiScene extends xb.Script {
 
       try {
         // Direct connectivity check against singleton db instance
-        const isConnected = await testFirestoreConnection();
+        const isConnected = await ensureLeaderboardServices();
         if (isConnected) {
           updateFirestoreStatusUI('online', 'Baza Firestore: Online');
         } else {
           updateFirestoreStatusUI('offline', 'Baza Firestore: Tryb Offline');
         }
 
-        const topScores = (await getTopLeaderboard(100)).filter((entry) => entry.mode === 'survival').slice(0, 15);
+        const topScores = await getTopSurvivalLeaderboard(15);
         leaderboardLoading.classList.add('hidden');
         leaderboardList.classList.remove('hidden');
 
@@ -1028,6 +1027,11 @@ class PaleciakiScene extends xb.Script {
             const rankDisplay = idx < 3 ? rankIcons[idx] : `${idx + 1}.`;
             const heroIds: Record<string, CharacterId> = {
               'Operator 01': 'marcin', 'Operator 02': 'grzesiek', 'Operator 03': 'dawid', 'Operator 04': 'mateusz', 'Operator 05': 'piotr',
+              // Legacy values are resolved internally only; the public label always comes
+              // from the neutral CharacterDef name below, never from the stored old string.
+              marcin: 'marcin', grzesiek: 'grzesiek', dawid: 'dawid', mateusz: 'mateusz', piotr: 'piotr',
+              Marcin: 'marcin', Grzesiek: 'grzesiek', Dawid: 'dawid', Mateusz: 'mateusz', Piotr: 'piotr',
+              Atlas: 'marcin', Forge: 'grzesiek', Vector: 'dawid', Volt: 'mateusz', Rook: 'piotr',
             };
             const heroId = heroIds[entry.hero];
             const heroIcon = heroId ? operatorPortrait(heroId) : '👷‍♂️';

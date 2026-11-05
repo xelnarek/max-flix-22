@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   formatLeaderboardTimestamp,
   getLeaderboardSlice,
+  getSurvivalLeaderboardSlice,
   mergeLeaderboardEntries,
   normalizeLeaderboardEntry,
 } from '../src/leaderboard.ts';
@@ -51,6 +52,27 @@ test('global ranking orders Campaign and Survival by the same score rule', () =>
     ['campaign', 'campaign'],
     ['lower', 'survival'],
   ]);
+});
+
+test('Survival ranking filters before sorting and limiting, regardless of old Campaign scores', () => {
+  const entries = [
+    entry({ id: 'old-campaign-1', mode: 'campaign', score: 10000000 }),
+    entry({ id: 'old-campaign-2', mode: 'campaign', score: 9000000 }),
+    entry({ id: 'survival-2', mode: 'survival', score: 2500 }),
+    entry({ id: 'survival-1', mode: 'survival', score: 4200 }),
+    entry({ id: 'survival-3', mode: 'survival', score: 1300 }),
+  ];
+  const ranked = getSurvivalLeaderboardSlice(entries, 2);
+  assert.deepEqual(ranked.map((item) => item.id), ['survival-1', 'survival-2']);
+  assert.ok(ranked.every((item) => item.mode === 'survival'));
+});
+
+test('Survival leaderboard returns an empty list when the cache only contains legacy Campaign rows', () => {
+  const ranked = getSurvivalLeaderboardSlice([
+    entry({ id: 'legacy-1', mode: 'campaign', score: 500000 }),
+    entry({ id: 'legacy-2', mode: undefined, score: 400000 }),
+  ]);
+  assert.deepEqual(ranked, []);
 });
 
 test('ranking ties are deterministic: boss clear, VIP cargo, then first submission', () => {
