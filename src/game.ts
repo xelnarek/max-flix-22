@@ -10050,10 +10050,10 @@ export class PaleciakiGameEngine {
     barrel.position.set(-0.035, 0.455, 1.10);
     weaponRig.add(barrel);
 
-    const muzzle = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.055, 8), redMat);
-    muzzle.rotation.x = Math.PI / 2;
-    muzzle.position.set(-0.035, 0.455, 1.32);
-    weaponRig.add(muzzle);
+    const muzzleBrake = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.055, 8), redMat);
+    muzzleBrake.rotation.x = Math.PI / 2;
+    muzzleBrake.position.set(-0.035, 0.455, 1.32);
+    weaponRig.add(muzzleBrake);
 
     const magazine = new THREE.Mesh(new THREE.BoxGeometry(0.105, 0.20, 0.12), blackMat);
     magazine.position.set(-0.015, 0.27, 0.52);
