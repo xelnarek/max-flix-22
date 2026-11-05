@@ -1108,3 +1108,29 @@ test('MafiKapibar enforcers fire arcade tracers and retain heavy baton melee com
   assert.match(update, /scaleSurvivalDamage\(capybara\.index === 1 \? 3 : 2\)/);
   assert.match(update, /PODWÓJNA PAŁKA MAFII/);
 });
+
+test('mobile performance tiers limit crowd, particles and shadow refresh under load', async () => {
+  const [game, app] = await Promise.all([read('../src/game.ts'), read('../src/index.ts')]);
+  assert.match(app, /getAdaptiveEffectsTier/);
+  assert.match(app, /setAdaptivePerformanceTier\(nextEffectsTier\)/);
+  assert.match(game, /public setAdaptivePerformanceTier\(tier: number\)/);
+  assert.match(game, /mobileEnemyCap = this\.adaptivePerformanceTier >= 2 \? 16 : this\.adaptivePerformanceTier === 1 \? 19 : 22/);
+  assert.match(game, /const groupLimit = isMobile \? \(this\.adaptivePerformanceTier >= 2 \? 3 : this\.adaptivePerformanceTier === 1 \? 4 : 5\) : 7/);
+  assert.match(game, /const maxBudget = isMobile \? \(this\.adaptivePerformanceTier >= 2 \? 14 : this\.adaptivePerformanceTier === 1 \? 24 : 36\) : 75/);
+  assert.match(game, /const num = isMobile \? \(this\.adaptivePerformanceTier >= 2 \? 4 : this\.adaptivePerformanceTier === 1 \? 6 : 8\) : 14/);
+  assert.match(game, /const mobileBurstCap = this\.adaptivePerformanceTier >= 2 \? 4 : this\.adaptivePerformanceTier === 1 \? 7 : 10/);
+  assert.match(game, /this\.mobileShadowRefreshCooldown -= dt \/ this\.timeScale/);
+  assert.match(game, /const shadowHz = this\.adaptivePerformanceTier >= 2 \? 12 : this\.adaptivePerformanceTier === 1 \? 18 : 24/);
+});
+
+test('Survival wave modifiers announce a tactical shift and change enemy stats and XP', async () => {
+  const [game, types] = await Promise.all([read('../src/game.ts'), read('../src/types.ts')]);
+  assert.match(game, /getSurvivalWaveMutator\(this\.survivalWave\)/);
+  assert.match(game, /onSurvivalAnnouncement\?\.\([\s\S]*?waveMutator\.title[\s\S]*?waveMutator\.label[\s\S]*?waveMutator\.description/);
+  assert.match(game, /applySurvivalWaveMutator\([\s\S]*?maxHp: enemy\.maxHp,[\s\S]*?speed: enemy\.speed/);
+  assert.match(game, /enemy\.survivalXpMultiplier = tuned\.xpMultiplier/);
+  assert.match(game, /const waveXpMultiplier = Number\.isFinite\(rawXpMultiplier\)/);
+  assert.match(game, /baseXpDrop = Math\.max\(1, Math\.round\(\(e\.maxHp >= 4 \? 3 : 1\) \* waveXpMultiplier\)\)/);
+  assert.match(game, /waveMutator\.id === 'armored'[\s\S]*?enemy\.shieldActive = true[\s\S]*?enemy\.shieldRing = shieldRing/);
+  assert.match(types, /survivalXpMultiplier\?: number/);
+});
