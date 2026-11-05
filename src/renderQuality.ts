@@ -37,3 +37,36 @@ export function getAdaptiveRenderScale(
   const nextTier = current < 0.76 ? 0.8 : current < 0.85 ? 0.9 : 1;
   return Math.min(desired, nextTier);
 }
+
+export type AdaptiveEffectsTier = 0 | 1 | 2;
+
+/**
+ * CPU-side mobile fallback tiers.
+ * Tier 1 trims crowd/particle pressure; tier 2 is a stronger rescue profile.
+ * Performance drops take effect immediately, while recovery requires a stable
+ * window and happens one tier at a time to avoid visual and spawn-rate pulsing.
+ */
+export function getAdaptiveEffectsTier(
+  fps: number,
+  isMobile: boolean,
+  currentTier: AdaptiveEffectsTier = 0,
+  stableRecoveryMs = 0,
+): AdaptiveEffectsTier {
+  const current: AdaptiveEffectsTier = currentTier === 2 ? 2 : currentTier === 1 ? 1 : 0;
+  if (!isMobile) return 0;
+  if (!Number.isFinite(fps) || fps <= 0) return current;
+
+  if (fps < 32) return 2;
+  if (fps < 43) return current === 2 ? 2 : 1;
+
+  if (current === 2) {
+    if (fps < 47 || stableRecoveryMs < 10000) return 2;
+    return 1;
+  }
+  if (current === 1) {
+    if (fps < 54 || stableRecoveryMs < 8000) return 1;
+    return 0;
+  }
+  return 0;
+}
+
