@@ -672,6 +672,9 @@ class PaleciakiScene extends xb.Script {
       }, 6100);
     };
 
+    let oniricDreamTimeout: number | null = null;
+    let oniricDreamBannerTimeout: number | null = null;
+
     this.engine = new PaleciakiGameEngine(
       this as unknown as THREE.Scene,
       this.camera,
@@ -987,6 +990,34 @@ class PaleciakiScene extends xb.Script {
         onSurvivalSecretFound: (mapId, secretId, secretName) => {
           trackSurvivalSecretAchievement(mapId, secretId);
           console.info('[Secrets] Odkryto:', secretName, mapId + ':' + secretId);
+
+          if (secretId === 'oniric_dream') {
+            const canvasContainer = document.getElementById('game-canvas-container');
+            canvasContainer?.classList.remove('oniric-dream-active');
+            if (canvasContainer) {
+              // Restart the visual state if the easter egg is collected again in a later run.
+              void canvasContainer.offsetWidth;
+              canvasContainer.classList.add('oniric-dream-active');
+            }
+            if (oniricDreamTimeout !== null) window.clearTimeout(oniricDreamTimeout);
+            oniricDreamTimeout = window.setTimeout(() => {
+              canvasContainer?.classList.remove('oniric-dream-active');
+              oniricDreamTimeout = null;
+            }, 15000);
+
+            const gameShell = document.getElementById('game-shell');
+            gameShell?.querySelector('.oniric-dream-banner')?.remove();
+            if (oniricDreamBannerTimeout !== null) window.clearTimeout(oniricDreamBannerTimeout);
+            const banner = document.createElement('div');
+            banner.className = 'oniric-dream-banner';
+            banner.setAttribute('role', 'status');
+            banner.textContent = 'ONIRYCZNY SEN // 15 SEKUND W BŁĘDZIE RZECZYWISTOŚCI';
+            gameShell?.appendChild(banner);
+            oniricDreamBannerTimeout = window.setTimeout(() => {
+              banner.remove();
+              oniricDreamBannerTimeout = null;
+            }, 3600);
+          }
         },
         onBossUpdate: (name, hp, maxHp, visible, phase) => {
           if (!bossHudBar || !bossNameElem || !bossHpTextElem || !bossHpFillElem) return;
