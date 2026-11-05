@@ -1198,3 +1198,34 @@ test('Survival draft adds Crimsonland radiation and Archero ricochet builds with
   assert.match(combat, /export function getSurvivalRicochetProfile/);
   assert.match(combat, /export function getSurvivalRadiationProfile/);
 });
+
+test('Survival chooses among three playable map identities and does not immediately repeat a map', async () => {
+  const [game, maps] = await Promise.all([read('../src/game.ts'), read('../src/survivalMaps.ts')]);
+  assert.match(game, /chooseRandomSurvivalMap\(this\.lastSurvivalMapId, Math\.random\(\)\)/);
+  assert.match(game, /buildSurvivalArenaExpansion\(this\.survivalMapId\)/);
+  assert.match(game, /private buildSurvivalMapLandmarks\(mapId: SurvivalMapId\)/);
+  assert.match(game, /mapId === 'container_terminal'[\s\S]*?mapId === 'cold_storage'/);
+  assert.match(game, /this\.survivalObstacles\.push\(\{ x: position\.x, z: position\.z/);
+  assert.match(game, /private spawnSurvivalSecrets\(mapId: SurvivalMapId\)/);
+  assert.match(game, /private updateSurvivalSecrets\(dt: number\)/);
+  assert.match(game, /onSurvivalSecretFound\?\./);
+  assert.match(maps, /'warehouse_b4' \| 'container_terminal' \| 'cold_storage'/);
+  assert.match(maps, /export function chooseRandomSurvivalMap/);
+  assert.match(maps, /secretLocations:/);
+});
+
+test('Survival secrets are collectible, score-bearing and released during map cleanup', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /this\.updateSurvivalSecrets\(simDt\)/);
+  assert.match(game, /distance > 1\.35/);
+  assert.match(game, /this\.survivalSecretsFound\+\+/);
+  assert.match(game, /this\.score \+= 750/);
+  assert.match(game, /this\.disposeTemporaryObject\(secret\.mesh\)/);
+  assert.match(game, /totalSecrets: getSurvivalMapDefinition\(this\.survivalMapId\)\.secretLocations\.length/);
+});
+
+test('Survival main boss victories are tracked separately from ordinary enemy eliminations', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /if \(this\.gameMode === 'survival' && isAbilityRechargeBoss\) this\.survivalBossesDefeated\+\+/);
+  assert.match(game, /bossesDefeated: this\.survivalBossesDefeated/);
+});
