@@ -116,3 +116,30 @@ test('retrying the secret restarts the full 15-second pixel-chaos window', async
   assert.match(source, /root\.classList\.add\('oniric-pixel-chaos'\)/);
   assert.match(source, /const resetRun = \(\) => \{\s*restartPixelChaos\(\);/);
 });
+
+
+test('the finished Oniric level stops its animation loop until retry', async () => {
+  const source = await readFile(new URL('../src/oniricPlatformer.ts', import.meta.url), 'utf8');
+  assert.match(source, /if \(!completedCallback && !state\.finished\) rafId = window\.requestAnimationFrame\(frame\)/);
+  assert.match(source, /if \(!rafId && !completedCallback\) rafId = window\.requestAnimationFrame\(frame\)/);
+  assert.match(source, /lastFrame = 0;[\s\S]*?resultPanel\.hidden = true/);
+});
+
+test('Oniric releases held controls on focus loss and app backgrounding', async () => {
+  const source = await readFile(new URL('../src/oniricPlatformer.ts', import.meta.url), 'utf8');
+  assert.match(source, /const clearHeldInput = \(\) => \{[\s\S]*?held\.left = false;[\s\S]*?held\.right = false;[\s\S]*?jumpQueued = false;/);
+  assert.match(source, /window\.addEventListener\('blur', onWindowBlur\)/);
+  assert.match(source, /document\.addEventListener\('visibilitychange', onVisibilityChange\)/);
+  assert.match(source, /window\.removeEventListener\('blur', onWindowBlur\)/);
+  assert.match(source, /document\.removeEventListener\('visibilitychange', onVisibilityChange\)/);
+});
+
+test('Oniric dialog locks background scroll and restores focus and scroll state on exit', async () => {
+  const source = await readFile(new URL('../src/oniricPlatformer.ts', import.meta.url), 'utf8');
+  assert.match(source, /const previousFocus = document\.activeElement instanceof HTMLElement/);
+  assert.match(source, /const previousBodyOverflow = document\.body\.style\.overflow/);
+  assert.match(source, /document\.body\.style\.overflow = 'hidden'/);
+  assert.match(source, /document\.body\.style\.overflow = previousBodyOverflow/);
+  assert.match(source, /if \(previousFocus\?\.isConnected\) previousFocus\.focus\(\)/);
+  assert.match(source, /if \(event\.code === 'Tab'\)/);
+});
