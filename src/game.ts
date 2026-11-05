@@ -3585,7 +3585,7 @@ export class PaleciakiGameEngine {
     this.enemies.push({
       id,
       type: 'bosman_krakow',
-      name: 'Inspektor Zmiany (Mini-Boss)',
+      name: 'Bosman Kraków (Mini-Boss)',
       mesh: built.group,
       speechMesh: null,
       x,
