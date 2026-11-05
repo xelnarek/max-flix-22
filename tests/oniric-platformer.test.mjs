@@ -23,6 +23,8 @@ test('the rabbit-hole level is a bounded side-scrolling platform course', () => 
 test('the operator can jump from a grounded platform and land on the next ledge', () => {
   const state = createOniricPlatformerState();
   assert.equal(state.player.onGround, true);
+  // Begin near the edge so the first jump clears the opening gap.
+  state.player.x = 300;
   stepOniricPlatformer(state, { right: true, jumpPressed: true }, 1 / 60);
   assert.ok(state.player.vy < 0, 'jump must apply upward velocity');
   assert.equal(state.player.onGround, false);
