@@ -15,6 +15,7 @@ import { applySurvivalMapCombatModifier, chooseRandomSurvivalMap, getSurvivalMap
 import { chooseCampaignRewardSpawnPoint } from './campaignRewards.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
 import { chooseSurvivalRicochetTarget, getSurvivalRadiationProfile, getSurvivalRicochetProfile } from './survivalCombatDraft.ts';
+import { buildSurvivalCoalitionOrders, getSurvivalCoalitionRole } from './survivalCoalition.ts';
 import {
   advanceAbilityCooldown,
   applyAbilityKillRecharge,
@@ -8066,11 +8067,7 @@ export class PaleciakiGameEngine {
 
 
   private getSurvivalEnemyRole(enemy: EnemyItem): 'bruiser' | 'flanker' | 'ranged' | 'support' {
-    if (enemy.type === 'sztaplar_szalony' || enemy.type === 'elite_walczak_guard' || enemy.type === 'agv_robot' || enemy.type === 'sebix_m') return 'bruiser';
-    if (enemy.type === 'inspector') return 'support';
-    if (enemy.type === 'handlowiec' || enemy.type === 'przedstawiciel_włoski' || enemy.type === 'pan_roman' || enemy.type === 'serwisant' || enemy.type === 'pomazaniec' || enemy.type === 'bosman_krakow') return 'ranged';
-    if (enemy.type === 'kurier' || enemy.type === 'zombie_pracownik' || enemy.type === 'monter') return 'flanker';
-    return 'flanker';
+    return enemy.aiCoalitionRole ?? getSurvivalCoalitionRole(enemy.type);
   }
 
   private updateSurvivalEnemyTactics(enemy: EnemyItem, dt: number, distanceToPlayer: number) {
@@ -8086,10 +8083,14 @@ export class PaleciakiGameEngine {
 
     // Ring members follow the visible contracting perimeter instead of all
     // selecting the same close-range target and collapsing onto the player.
+    const defaultEngageRadius = role === 'support' ? 5.5 : role === 'ranged' ? 7.7 : role === 'bruiser' ? 2.25 : 3.0;
+    const assignedFormationRadius = Number.isFinite(enemy.aiFormationRadius)
+      ? THREE.MathUtils.clamp(enemy.aiFormationRadius as number, 2.0, 8.2)
+      : defaultEngageRadius;
     let preferredRadius = inHordeRing
       ? this.survivalSurgeCurrentRadius
       : engaged
-        ? role === 'support' ? 5.5 : role === 'ranged' ? 7.7 : role === 'bruiser' ? 2.25 : 3.0
+        ? assignedFormationRadius
         : role === 'support' ? 15.0 : role === 'ranged' ? 14.0 : 12.6;
 
     // Ranged attackers try to hold a useful firing lane instead of walking into melee range.
@@ -8315,17 +8316,62 @@ export class PaleciakiGameEngine {
         }
       }
 
-      activeCandidates.sort((a, b) => a.dist - b.dist);
+      activeCandidates.sort((a, b) => a.dist - b.dist || a.enemy.id.localeCompare(b.enemy.id));
       this.activeChaserIds.clear();
       const activeCount = Math.min(maxActiveChasers, activeCandidates.length);
-      // Keep the ring anchored to the operator's heading so the encirclement does not jitter as targets reorder.
       const formationBase = this.playerRot + Math.PI * 0.5;
-      for (let i = 0; i < activeCount; i++) {
-        const enemy = activeCandidates[i].enemy;
-        enemy.aiSlot = i;
-        enemy.aiFlankAngle = formationBase + (i / Math.max(1, activeCount)) * Math.PI * 2;
-        enemy.aiOrbitSign = i % 2 === 0 ? 1 : -1;
-        this.activeChaserIds.add(enemy.id);
+
+      if (survivalMode) {
+        // Rebuild compact squad orders every 0.18s, not in the per-frame enemy loop.
+        // Clearing stale assignments here lets enemies fall back to patrol roles cleanly.
+        for (const enemy of this.enemies) {
+          enemy.aiCoalitionId = undefined;
+          enemy.aiCoalitionLeaderId = undefined;
+          enemy.aiCoalitionRole = undefined;
+          enemy.aiFormationRadius = undefined;
+          enemy.aiCoalitionSize = undefined;
+        }
+
+        const orders = buildSurvivalCoalitionOrders(
+          activeCandidates
+            .filter(({ enemy }) => !enemy.surgeRunner || this.survivalSurgeTimeLeft <= 0)
+            .map(({ enemy }) => enemy),
+          this.playerPos.x,
+          this.playerPos.z,
+          formationBase,
+          maxActiveChasers,
+          4,
+        );
+        const activeById = new Map(activeCandidates.map(({ enemy }) => [enemy.id, enemy] as const));
+        for (const order of orders) {
+          const enemy = activeById.get(order.enemyId);
+          if (!enemy) continue;
+          enemy.aiSlot = order.slot;
+          enemy.aiFlankAngle = order.flankAngle;
+          enemy.aiOrbitSign = order.orbitSign;
+          enemy.aiCoalitionId = order.squadId;
+          enemy.aiCoalitionLeaderId = order.leaderId;
+          enemy.aiCoalitionRole = order.role;
+          enemy.aiFormationRadius = order.preferredRadius;
+          enemy.aiCoalitionSize = order.squadSize;
+          this.activeChaserIds.add(enemy.id);
+        }
+      } else {
+        // Campaign keeps its original ring pressure; coalition squads are a Survival feature.
+        for (const candidate of activeCandidates) {
+          candidate.enemy.aiCoalitionId = undefined;
+          candidate.enemy.aiCoalitionLeaderId = undefined;
+          candidate.enemy.aiCoalitionRole = undefined;
+          candidate.enemy.aiFormationRadius = undefined;
+          candidate.enemy.aiCoalitionSize = undefined;
+        }
+        for (let i = 0; i < activeCount; i++) {
+          const enemy = activeCandidates[i].enemy;
+          enemy.aiSlot = i;
+          enemy.aiFlankAngle = formationBase + (i / Math.max(1, activeCount)) * Math.PI * 2;
+          enemy.aiOrbitSign = i % 2 === 0 ? 1 : -1;
+          this.activeChaserIds.add(enemy.id);
+        }
       }
     }
 
@@ -8396,22 +8442,32 @@ export class PaleciakiGameEngine {
 
       // Ground Threat Ring for actively chasing enemies
       if (!e.threatRing && e.type !== 'piorun_dron') {
+        const isCoalitionLeader = e.aiCoalitionLeaderId === e.id;
+        const baseRingColor = e.surgeRunner ? 0xf59e0b : e.type === 'pomazaniec' ? 0xec4899 : 0xef4444;
         const ringMesh = new THREE.Mesh(
           new THREE.RingGeometry(0.42, 0.54, 20),
           new THREE.MeshBasicMaterial({
-            color: e.surgeRunner ? 0xf59e0b : e.type === 'pomazaniec' ? 0xec4899 : 0xef4444,
+            color: isCoalitionLeader ? 0xfbbf24 : baseRingColor,
             transparent: true,
-            opacity: 0.65,
+            opacity: isCoalitionLeader ? 0.82 : 0.65,
             side: THREE.DoubleSide,
             depthWrite: false,
           })
         );
         ringMesh.rotation.x = -Math.PI / 2;
         ringMesh.position.y = 0.04;
+        ringMesh.userData.coalitionLeader = isCoalitionLeader;
         e.threatRing = ringMesh;
         e.mesh.add(ringMesh);
       }
       if (e.threatRing) {
+        const isCoalitionLeader = e.aiCoalitionLeaderId === e.id;
+        if (e.threatRing.userData.coalitionLeader !== isCoalitionLeader) {
+          const ringMaterial = e.threatRing.material as THREE.MeshBasicMaterial;
+          ringMaterial.color.setHex(isCoalitionLeader ? 0xfbbf24 : e.surgeRunner ? 0xf59e0b : e.type === 'pomazaniec' ? 0xec4899 : 0xef4444);
+          ringMaterial.opacity = isCoalitionLeader ? 0.82 : 0.65;
+          e.threatRing.userData.coalitionLeader = isCoalitionLeader;
+        }
         e.threatRing.visible = (e.state === 'chase' || e.state === 'charging') && distToPlayer < 14;
       }
 
