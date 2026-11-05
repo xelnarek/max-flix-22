@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="/src/visual-polish.css" />
     <link rel="stylesheet" href="/src/hud-layout.css" />
     <link rel="stylesheet" href="/src/ads.css" />
+    <link rel="stylesheet" href="/src/menu-layout-fixes.css" />
     <meta name="application-name" content="Paleciaki! Magazyn Chaosu" />
     <meta name="color-scheme" content="dark" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -927,6 +928,7 @@
 
 
             <div id="tab-settings" class="tab-panel settings-panel" aria-labelledby="settings-panel-title">
+              <section class="audio-settings-frame" aria-label="Ustawienia dźwięku">
               <section class="settings-hero">
                 <div class="settings-kicker">SYSTEM / AUDIO CONTROL</div>
                 <h2 id="settings-panel-title">USTAWIENIA DŹWIĘKU</h2>
@@ -972,10 +974,11 @@
                 <a href="./privacy.html" target="_blank" rel="noopener noreferrer">Polityka prywatności i dane</a>
                 <button id="btn-ad-privacy-options" class="ad-privacy-options-btn hidden" type="button">ZARZĄDZAJ ZGODĄ NA REKLAMY</button>
               </div>
+              </section>
             </div>
           </div>
 
-          <div class="menu-fixed-bottom-bar">
+          <section id="survival-map-picker" class="survival-map-picker menu-map-picker-frame" aria-label="Wybór mapy Survival">
             <section id="survival-map-picker" class="survival-map-picker" aria-label="Wybór mapy Survival">
               <div class="survival-map-picker-heading">
                 <strong>WYBIERZ ARENĘ</strong>
@@ -989,8 +992,9 @@
                 <button type="button" class="survival-map-choice map-night-choice" data-survival-map="night_sorting" aria-pressed="false"><span>🌙</span><strong>SORTOWNIA WIDMOWA</strong><small>Bonus XP +15%</small></button>
               </div>
               <p id="survival-map-picker-hint" class="survival-map-picker-hint">Losowanie bez powtórzenia poprzedniej areny.</p>
-            </section>
+          </section>
 
+          <div class="menu-fixed-bottom-bar">
             <button id="btn-start-survival" class="btn-primary-start btn-survival-start" aria-label="Rozpocznij Survival">
               <span class="menu-cta-icon" aria-hidden="true">
                 <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="16" r="11"/><circle cx="16" cy="16" r="4"/><path d="M16 2v5M16 25v5M2 16h5M25 16h5M23.5 8.5l-3 3M11.5 20.5l-3 3M23.5 23.5l-3-3M11.5 11.5l-3-3"/></svg>
