@@ -10273,7 +10273,7 @@ export class PaleciakiGameEngine {
     this.callbacks.onPerkDropBanner?.(
       'MAFIKAPIBAR • RYTUAŁ B4',
       '🐾🕶️',
-      'Pentagram zadaje obrażenia i ogłusza pobliskich wrogów. Trzy MafiKapibary przez 12–15 sekund oskrzydlają cele i uderzają kluczami rodzinnych interesów.',
+      'Pentagram zadaje obrażenia i ogłusza pobliskich wrogów. Don i hybryda ostrzeliwują cele świetlnymi pociskami, a egzekutor z dwiema pałkami rozbija szyk w zwarciu. Trójka eskortuje operatora przez 12–15 sekund.',
       '#d946ef'
     );
     this.emitFloatingToast('🕶️ MAFIKAPIBARY PRZEJMUJĄ MAGAZYN!', this.playerPos.x, this.playerPos.y + 1.55, this.playerPos.z, 'combo');
