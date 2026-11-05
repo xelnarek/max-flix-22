@@ -1500,7 +1500,6 @@ export class PaleciakiGameEngine {
       mapModifier.description,
     );
     this.emitFloatingToast('LOSOWA MAPA: ' + survivalMap.name.toUpperCase() + ' • ' + mapModifier.title, this.playerPos.x, this.playerPos.y + 1.8, this.playerPos.z, 'combo');
-    this.emitFloatingToast('KONTRAKT: ' + this.survivalContract.title + ' • ' + this.survivalContract.description, this.playerPos.x, this.playerPos.y + 1.35, this.playerPos.z, 'perk');
   }
 
 
@@ -6228,10 +6227,9 @@ export class PaleciakiGameEngine {
       this.survivalWaveStartKills = this.survivalKills;
       this.survivalContract = createSurvivalContract(this.survivalWave);
       this.emitFloatingToast(
-        'KONTRAKT FALI ' + this.survivalWave + ': ' + this.survivalContract.title,
-        this.playerPos.x, this.playerPos.y + 1.75, this.playerPos.z, 'perk'
+        'FALA ' + this.survivalWave + ' • KONTRAKT: ' + this.survivalContract.title,
+        this.playerPos.x, this.playerPos.y + 1.75, this.playerPos.z, 'combo'
       );
-      this.emitFloatingToast('FALA ' + this.survivalWave + ' — KOLEJNA ZMIANA WCHODZI NA HALĘ!', this.playerPos.x, this.playerPos.y + 1.7, this.playerPos.z, 'combo');
       sound.playAlert();
 
       // A rotating shift rule changes the tactical shape of every third wave.
