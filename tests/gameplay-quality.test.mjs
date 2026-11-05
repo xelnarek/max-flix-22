@@ -1059,7 +1059,7 @@ test('Piotr ultimate is a pentagram MafiKapibar summon, not a Molotov throw', as
   assert.match(game, /private updateMafiCapybaras\(dt: number\)/);
   assert.match(game, /const ritualRadius = this\.gameMode === 'survival' \? 5\.7 : 6\.2/);
   assert.match(game, /const burstDamage = Math\.max\(2, Math\.ceil\(3 \* abilityDamageMultiplier\)\)/);
-  assert.match(game, /const damage = this\.scaleSurvivalDamage\(capybara\.index === 1 \? 3 : 2\)/);
+  assert.match(game, /const damage = this\.scaleSurvivalDamage\([\s\S]*?targetIsMajorBoss \? 4 : 3[\s\S]*?targetIsMajorBoss \? 3 : 2/);
   assert.match(game, /for \(let index = 0; index < 3; index\+\+\)/);
   assert.match(characters, /abilityName: 'Rytuał MafiKapibar — Pentagram B4'/);
   assert.match(characters, /trzymają szyk V za operatorem/);
@@ -1074,7 +1074,7 @@ test('MafiKapibar companions update during gameplay and are disposed when the wo
   assert.match(game, /this\.disposeTemporaryObject\(capybara\.group\)/);
   assert.match(game, /this\.mafiCapybaras = \[\]/);
   assert.match(game, /capybara\.attackCooldown = capybara\.index === 0 \? 0\.72 : 0\.88/);
-  assert.match(game, /capybara\.attackCooldown = capybara\.index === 1 \? 1\.02 : 1\.24/);
+  assert.match(game, /capybara\.attackCooldown = capybara\.index === 1 \? \(targetIsMajorBoss \? 1\.28 : 1\.02\) : 1\.24/);
   assert.match(game, /life: duration,[\s\S]*?maxLife: duration/);
 });
 
@@ -1105,8 +1105,13 @@ test('MafiKapibar enforcers fire arcade tracers and retain heavy baton melee com
   const update = game.slice(start, end);
   assert.match(update, /capybara\.group\.rotation\.y = Math\.atan2/);
   assert.match(update, /const rifleGuard = capybara\.index !== 1 && nearest > 4\.0/);
-  assert.match(update, /this\.projectiles\.push\(\{[\s\S]*?damage: 2,[\s\S]*?weaponProjectile: true/);
-  assert.match(update, /scaleSurvivalDamage\(capybara\.index === 1 \? 3 : 2\)/);
+  assert.match(update, /mafi_carbine_tracer/);
+  assert.match(update, /const tracer = new THREE\.Mesh/);
+  assert.doesNotMatch(update, /const tracer = new THREE\.Group/);
+  assert.match(update, /damage: capybara\.index === 0 && targetIsMajorBoss \? 3 : 2/);
+  assert.match(update, /pierce: capybara\.index === 0 \? 1 : 0/);
+  assert.match(update, /scaleSurvivalDamage\([\s\S]*?targetIsMajorBoss \? 4 : 3[\s\S]*?targetIsMajorBoss \? 3 : 2/);
+  assert.match(update, /donPriority/);
   assert.match(update, /MAFIA OCHRANIA OPERATORA/);
 });
 
