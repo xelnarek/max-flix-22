@@ -1,0 +1,621 @@
+/*
+ * Menu layout repair: keep the arena picker, settings mixer and launch action
+ * in separate flow rows. The tab content is the only independently scrollable
+ * region, so these controls never sit on top of each other.
+ */
+#title-screen .title-sheet {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  min-height: 0 !important;
+  box-sizing: border-box;
+  overflow: hidden !important;
+  gap: clamp(5px, 0.8vh, 10px);
+}
+
+#title-screen .menu-top-header {
+  flex: 0 0 auto;
+  transform: none !important;
+  margin-bottom: 0 !important;
+}
+
+#title-screen .menu-tabs-bar {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+#title-screen .menu-tab-content-area {
+  flex: 1 1 0 !important;
+  min-height: 88px !important;
+  max-height: none !important;
+  min-width: 0;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+#title-screen .menu-map-picker-frame {
+  display: block;
+  flex: 0 0 auto;
+  align-self: center;
+  width: min(100%, 980px);
+  min-width: 0;
+  max-width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+#title-screen .survival-map-picker {
+  width: 100%;
+  min-width: 0;
+  padding: clamp(7px, 0.9vh, 11px) clamp(8px, 1vw, 14px);
+  box-sizing: border-box;
+}
+
+#title-screen .menu-map-picker-frame.survival-map-picker {
+  width: min(100%, 980px);
+  max-width: 980px;
+}
+
+#title-screen .survival-map-picker-heading {
+  min-width: 0;
+  margin-bottom: 7px;
+}
+
+#title-screen .survival-map-picker-options {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: clamp(5px, 0.65vw, 8px);
+  min-width: 0;
+  overflow: visible;
+  padding: 1px 0;
+}
+
+#title-screen .survival-map-choice {
+  width: auto;
+  min-width: 0;
+  min-height: clamp(48px, 6.2vh, 66px);
+  padding: 5px 4px;
+}
+
+#title-screen .survival-map-choice strong,
+#title-screen .survival-map-choice small {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+#title-screen .survival-map-picker-hint {
+  margin: 5px 2px 0;
+  min-height: 0;
+  line-height: 1.3;
+}
+
+#title-screen .menu-fixed-bottom-bar {
+  position: static !important;
+  z-index: auto !important;
+  display: flex !important;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: min(100%, 680px);
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#title-screen .btn-survival-start {
+  width: 100%;
+  max-width: 620px;
+  min-width: 0;
+  min-height: clamp(46px, 6.6vh, 62px);
+  padding: clamp(7px, 1vh, 12px) 14px;
+  box-sizing: border-box;
+}
+
+#title-screen .menu-controls-hint {
+  max-width: 100%;
+  margin: 0;
+  font-size: clamp(7px, 0.72vw, 9px);
+  line-height: 1.25;
+  text-align: center;
+}
+
+/* Audio settings: one outer frame, with the former nested cards flattened. */
+#title-screen #tab-settings {
+  display: none;
+  width: 100%;
+  min-width: 0;
+  margin: 0 auto;
+  gap: 0;
+}
+
+#title-screen #tab-settings.active {
+  display: flex;
+}
+
+#title-screen .audio-settings-frame {
+  display: grid;
+  align-content: start;
+  gap: clamp(7px, 0.9vh, 11px);
+  width: min(100%, 920px);
+  min-width: 0;
+  margin: 0 auto;
+  padding: clamp(10px, 1.25vw, 17px);
+  box-sizing: border-box;
+  border: 1px solid rgba(103, 190, 220, 0.28);
+  border-radius: 16px;
+  background:
+    radial-gradient(ellipse at 90% 0%, rgba(34, 132, 164, 0.12), transparent 40%),
+    linear-gradient(145deg, rgba(13, 29, 43, 0.97), rgba(5, 13, 23, 0.98));
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+
+#title-screen .audio-settings-frame .settings-hero {
+  padding: 0 0 10px;
+  border: 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 0;
+  background: transparent;
+}
+
+#title-screen .audio-settings-frame .settings-hero h2 {
+  margin: 5px 0;
+  font-size: clamp(18px, 2.4vw, 25px);
+}
+
+#title-screen .audio-settings-frame .settings-hero p {
+  max-width: 720px;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+#title-screen .audio-settings-frame .audio-mixer-card {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+#title-screen .audio-settings-frame .audio-mixer-heading {
+  padding: 1px 0 8px;
+  border: 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.13);
+  background: transparent;
+}
+
+#title-screen .audio-settings-frame .audio-slider-row {
+  grid-template-columns: minmax(0, 1.1fr) minmax(110px, 1fr) 44px;
+  gap: 12px;
+  min-height: 58px;
+  padding: 7px 0;
+  box-sizing: border-box;
+}
+
+#title-screen .audio-settings-frame .audio-slider-icon {
+  flex-basis: 30px;
+  width: 30px;
+  height: 30px;
+}
+
+#title-screen .audio-settings-frame .audio-slider-row label strong {
+  font-size: 8px;
+}
+
+#title-screen .audio-settings-frame .audio-slider-row label small {
+  font-size: 8px;
+}
+
+#title-screen .audio-settings-frame .audio-slider-row input[type="range"] {
+  min-height: 32px;
+}
+
+#title-screen .audio-settings-frame .audio-mixer-footer {
+  gap: 10px;
+  padding: 8px 0 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.13);
+  background: transparent;
+}
+
+#title-screen .audio-settings-frame .settings-note {
+  gap: 8px;
+  padding: 6px 0 0;
+  border: 0;
+  border-radius: 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.13);
+  background: transparent;
+}
+
+#title-screen .audio-settings-frame .settings-legal-link {
+  gap: 7px 12px;
+  margin: 0;
+  padding: 8px 0 0;
+  border: 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.13);
+  border-radius: 0;
+  background: transparent;
+}
+
+/* Phones: all maps stay visible in the separate panel, without a swipe strip. */
+@media (max-width: 640px) {
+  #title-screen .title-sheet {
+    width: 100% !important;
+    max-height: 100dvh !important;
+    padding: max(7px, env(safe-area-inset-top)) 8px max(7px, env(safe-area-inset-bottom)) !important;
+    gap: 6px;
+  }
+
+  #title-screen .menu-top-header {
+    gap: 2px !important;
+    padding: 5px 6px 6px !important;
+  }
+
+  #title-screen .menu-game-title {
+    font-size: clamp(19px, 5.4vw, 29px) !important;
+    line-height: 1.02;
+  }
+
+  #title-screen .menu-game-subtitle {
+    font-size: 7px !important;
+    line-height: 1.2;
+  }
+
+  #title-screen .menu-release-strip {
+    gap: 3px !important;
+    margin-top: 2px;
+  }
+
+  #title-screen .menu-release-strip > span {
+    min-height: 16px;
+    padding: 2px 4px !important;
+    font-size: 6px !important;
+  }
+
+  #title-screen .menu-tabs-bar {
+    width: 100%;
+    margin: 0;
+    gap: 4px !important;
+    padding: 4px !important;
+  }
+
+  #title-screen .menu-tab-btn {
+    min-width: 0 !important;
+    min-height: 34px !important;
+    padding: 4px 3px !important;
+  }
+
+  #title-screen .menu-tab-btn .tab-icon {
+    font-size: 12px !important;
+    line-height: 1;
+  }
+
+  #title-screen .menu-tab-btn .tab-label {
+    font-size: 7px !important;
+    line-height: 1.05;
+  }
+
+  #title-screen .menu-tab-content-area {
+    min-height: 74px !important;
+    max-height: none !important;
+    padding: 5px 5px 7px !important;
+  }
+
+  #title-screen .survival-map-picker {
+    padding: 7px;
+    border-radius: 12px;
+  }
+
+  #title-screen .survival-map-picker-heading {
+    margin: 0 1px 5px;
+    font-size: 8px;
+  }
+
+  #title-screen .survival-map-picker-heading span {
+    font-size: 7px;
+  }
+
+  #title-screen .survival-map-picker-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  #title-screen .survival-map-choice {
+    min-height: 49px;
+    gap: 2px;
+    padding: 4px 3px;
+    border-radius: 8px;
+  }
+
+  #title-screen .survival-map-choice[data-survival-map="random"] {
+    grid-column: 1 / -1;
+    min-height: 35px;
+  }
+
+  #title-screen .survival-map-choice > span {
+    font-size: 14px;
+  }
+
+  #title-screen .survival-map-choice strong {
+    font-size: 8px;
+    line-height: 1.08;
+  }
+
+  #title-screen .survival-map-choice small {
+    font-size: 7px;
+    line-height: 1.05;
+  }
+
+  #title-screen .survival-map-picker-hint {
+    margin-top: 4px;
+    font-size: 7px;
+    text-align: left;
+  }
+
+  #title-screen .menu-fixed-bottom-bar {
+    width: 100%;
+    gap: 4px;
+    padding: 0 !important;
+  }
+
+  #title-screen .btn-survival-start {
+    min-height: 46px;
+    padding: 6px 10px;
+    border-radius: 10px !important;
+  }
+
+  #title-screen .menu-cta-icon svg {
+    width: 23px;
+    height: 23px;
+  }
+
+  #title-screen .survival-start-title {
+    font-size: 12px;
+  }
+
+  #title-screen .survival-start-subtitle {
+    font-size: 7px;
+    line-height: 1.15;
+  }
+
+  #title-screen .menu-controls-hint {
+    display: none;
+  }
+
+  #title-screen .audio-settings-frame {
+    padding: 10px;
+    gap: 7px;
+    border-radius: 12px;
+  }
+
+  #title-screen .audio-settings-frame .settings-hero {
+    padding-bottom: 8px;
+  }
+
+  #title-screen .audio-settings-frame .settings-hero h2 {
+    font-size: 18px;
+  }
+
+  #title-screen .audio-settings-frame .settings-hero p {
+    font-size: 9px;
+  }
+
+  #title-screen .audio-settings-frame .audio-mixer-heading {
+    align-items: flex-start;
+    gap: 7px;
+  }
+
+  #title-screen .audio-settings-frame .audio-mixer-status {
+    padding: 4px 5px;
+    font-size: 6px;
+  }
+
+  #title-screen .audio-settings-frame .audio-slider-row {
+    grid-template-columns: minmax(0, 1fr) minmax(74px, 0.92fr) 38px;
+    gap: 6px;
+    min-height: 52px;
+    padding: 6px 0;
+  }
+
+  #title-screen .audio-settings-frame .audio-slider-icon {
+    flex-basis: 25px;
+    width: 25px;
+    height: 25px;
+    font-size: 14px;
+  }
+
+  #title-screen .audio-settings-frame .audio-slider-row label {
+    gap: 6px;
+  }
+
+  #title-screen .audio-settings-frame .audio-slider-row label strong {
+    font-size: 7px;
+    letter-spacing: 0.015em;
+  }
+
+  #title-screen .audio-settings-frame .audio-slider-row label small {
+    font-size: 7px;
+    line-height: 1.1;
+  }
+
+  #title-screen .audio-settings-frame .audio-slider-row output {
+    font-size: 9px;
+  }
+
+  #title-screen .audio-settings-frame .audio-mixer-footer {
+    align-items: flex-start;
+    flex-direction: column;
+    padding-top: 7px;
+  }
+
+  #title-screen .audio-settings-frame .audio-reset-btn {
+    width: 100%;
+    min-height: 34px;
+  }
+
+  #title-screen .audio-settings-frame .settings-note,
+  #title-screen .audio-settings-frame .settings-legal-link {
+    font-size: 8px;
+  }
+}
+
+/* Short landscape screens: reduce vertical cost instead of shrinking via transforms. */
+@media (max-height: 560px) and (orientation: landscape) {
+  #title-screen .title-sheet {
+    gap: 4px;
+    padding-top: max(4px, env(safe-area-inset-top)) !important;
+    padding-bottom: max(4px, env(safe-area-inset-bottom)) !important;
+  }
+
+  #title-screen .menu-top-header {
+    gap: 0 !important;
+    padding: 2px 6px 3px !important;
+  }
+
+  #title-screen .brand-badge-pill,
+  #title-screen .menu-game-subtitle,
+  #title-screen .menu-release-strip {
+    display: none !important;
+  }
+
+  #title-screen .menu-game-title {
+    font-size: clamp(17px, 3.3vw, 24px) !important;
+  }
+
+  #title-screen .menu-tab-btn {
+    min-height: 31px !important;
+    padding: 3px !important;
+  }
+
+  #title-screen .menu-tab-content-area {
+    min-height: 54px !important;
+    max-height: none !important;
+    padding: 3px 4px 5px !important;
+  }
+
+  #title-screen .menu-map-picker-frame {
+    width: 100%;
+  }
+
+  #title-screen .survival-map-picker {
+    padding: 5px 7px;
+  }
+
+  #title-screen .survival-map-picker-heading,
+  #title-screen .survival-map-picker-hint {
+    display: none;
+  }
+
+  #title-screen .survival-map-picker-options {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  #title-screen .survival-map-choice,
+  #title-screen .survival-map-choice[data-survival-map="random"] {
+    min-height: 37px;
+    padding: 3px 2px;
+  }
+
+  #title-screen .survival-map-choice > span {
+    font-size: 12px;
+  }
+
+  #title-screen .survival-map-choice strong {
+    font-size: 7px;
+  }
+
+  #title-screen .survival-map-choice small {
+    display: none;
+  }
+
+  #title-screen .btn-survival-start {
+    min-height: 39px;
+    padding: 4px 9px;
+  }
+
+  #title-screen .menu-cta-icon svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  #title-screen .survival-start-title {
+    font-size: 10px;
+  }
+
+  #title-screen .survival-start-subtitle {
+    display: none;
+  }
+
+  #title-screen .audio-settings-frame {
+    padding: 8px;
+    gap: 5px;
+  }
+
+  #title-screen .audio-settings-frame .settings-hero h2 {
+    margin: 2px 0;
+    font-size: 15px;
+  }
+
+  #title-screen .audio-settings-frame .settings-hero p {
+    display: none;
+  }
+
+  #title-screen .audio-settings-frame .audio-mixer-heading {
+    padding-bottom: 4px;
+  }
+
+  #title-screen .audio-settings-frame .audio-slider-row {
+    min-height: 42px;
+    padding: 3px 0;
+  }
+
+  #title-screen .audio-settings-frame .audio-slider-row label small {
+    display: none;
+  }
+
+  #title-screen .audio-settings-frame .audio-mixer-footer {
+    padding-top: 4px;
+  }
+
+  #title-screen .audio-settings-frame .settings-note {
+    display: none;
+  }
+
+  #title-screen .audio-settings-frame .settings-legal-link {
+    padding-top: 5px;
+  }
+}
+
+/* Very narrow handsets: keep labels readable and prevent horizontal overflow. */
+@media (max-width: 360px) {
+  #title-screen .audio-settings-frame {
+    padding: 8px;
+  }
+
+  #title-screen .audio-settings-frame .audio-slider-row {
+    grid-template-columns: minmax(0, 1fr) minmax(68px, 0.8fr) 34px;
+    gap: 4px;
+  }
+
+  #title-screen .audio-settings-frame .audio-slider-icon {
+    display: none;
+  }
+
+  #title-screen .survival-map-choice strong {
+    font-size: 7px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #title-screen .survival-map-choice,
+  #title-screen .btn-survival-start {
+    transition: none !important;
+  }
+}
