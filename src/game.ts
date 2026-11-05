@@ -6411,7 +6411,7 @@ export class PaleciakiGameEngine {
     const point = this.getSurvivalSpawnPoint();
     const px = this.playerPos.x, pz = this.playerPos.z;
     const x = point.x, z = point.z;
-    const eventIndex = Math.floor(Math.random() * 6);
+    const eventIndex = Math.floor(Math.random() * 7);
     const stamp = Math.floor(performance.now());
 
     if (eventIndex === 0) {
@@ -6453,7 +6453,7 @@ export class PaleciakiGameEngine {
       this.sayQuote('Dostawca Sanitarny przyjechał z dostawą. Dokument WZ ma cztery strony, ale żadnej strony tytułowej.');
       this.addPanRomanEnemy('survival_roman_' + stamp, x, Math.max(this.levelBounds.minZ + 1, z - 4), Math.min(this.levelBounds.maxZ - 1, z + 4), 'Dostawca Sanitarny — dostawa bez awiza');
       this.spawnLootCrate(THREE.MathUtils.clamp(px + 5, this.levelBounds.minX + 3, this.levelBounds.maxX - 3), 0, THREE.MathUtils.clamp(pz + 3, this.levelBounds.minZ + 2, this.levelBounds.maxZ - 2));
-    } else {
+    } else if (eventIndex === 5) {
       sound.playSirens();
       this.callbacks.onPerkDropBanner?.('🟦 PILNE ZLECENIE B4 ERP: SKAN 3 PALET!', '📦', 'Na hali pojawiły się trzy złote etykiety. Zbierz je, zanim kontroler zamknie zlecenie.', '#38bdf8');
       this.sayQuote('system ERP wrzuciła trzy pilne zlecenia na tę samą minutę. Klasyka. Zbieraj etykiety, ja spróbuję dodzwonić się do IT.');
@@ -6464,6 +6464,55 @@ export class PaleciakiGameEngine {
       }
       this.spawnDroppedPerk(x + 3.5, 0.5, z, 'xp_surge');
       this.addInspectorEnemy('survival_task_inspector_' + stamp, x - 8, Math.max(this.levelBounds.minZ + 1, z - 3), Math.min(this.levelBounds.maxZ - 1, z + 3), 'Kontroler zlecenia — podpis albo blokada');
+    } else {
+      // Two forklifts cross the warehouse in opposite directions. Keep the
+      // event at three active hazards maximum and halve the convoy on weak phones.
+      const minX = this.levelBounds.minX + 2.8;
+      const maxX = this.levelBounds.maxX - 2.8;
+      const upperLane = THREE.MathUtils.clamp(pz - 5.4, this.levelBounds.minZ + 1.8, this.levelBounds.maxZ - 1.8);
+      const lowerLane = THREE.MathUtils.clamp(pz + 5.4, this.levelBounds.minZ + 1.8, this.levelBounds.maxZ - 1.8);
+      const activeHazards = this.hazards.filter((hazard) => hazard.active).length;
+      const convoySize = this.adaptivePerformanceTier >= 2 || activeHazards >= 2 ||
+        Math.abs(lowerLane - upperLane) < 3.8 ? 1 : 2;
+
+      sound.playSirens();
+      this.callbacks.onPerkDropBanner?.(
+        'KONWÓJ SZTAPLAREK • ALEJKI ZAMKNIĘTE',
+        '🚧',
+        convoySize === 2
+          ? 'Dwa wózki przecinają halę w przeciwnych kierunkach. Przeskakuj przez trasę albo zmień alejkę; po przejeździe zbierz premię BHP.'
+          : 'Wózek patroluje jedną aleję. Nie stój na trasie i wykorzystaj wolny korytarz, aby zebrać premię BHP.',
+        '#f59e0b'
+      );
+      this.sayQuote('Dwa wózki, jedna hala i zero koordynacji. Klasyczna logistyka. Nie testuj zderzaków własnym czołem.');
+
+      for (let i = 0; i < convoySize; i++) {
+        const laneZ = i === 0 ? upperLane : lowerLane;
+        this.addForkliftHazard(
+          'survival_convoy_' + stamp + '_' + i,
+          minX,
+          maxX,
+          laneZ,
+          i === 0 ? 4.0 : 4.4,
+          i === 0 ? 0xf59e0b : 0x38bdf8
+        );
+        const convoyTruck = this.hazards[this.hazards.length - 1];
+        if (convoyTruck) {
+          convoyTruck.life = 16;
+          if (i === 1) {
+            convoyTruck.x = maxX;
+            convoyTruck.mesh?.position.set(maxX, 0, laneZ);
+            convoyTruck.dir = -1;
+            if (convoyTruck.mesh) convoyTruck.mesh.rotation.y = Math.PI;
+          }
+        }
+      }
+
+      this.spawnSurvivalXpGem(x - 1.2, 0.45, z, 2);
+      this.spawnSurvivalXpGem(x + 1.2, 0.45, z, 2);
+      this.spawnDroppedPerk(x, 0.5, z, 'hardhat');
+      this.spawnParticleRing(x, 0.25, z, 0xf59e0b);
+      sound.playBossWarning();
     }
   }
 
