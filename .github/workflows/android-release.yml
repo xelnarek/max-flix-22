@@ -14,6 +14,12 @@ on:
       - 'resources/**'
       - 'scripts/prepare-android-release.mjs'
       - 'scripts/verify-android-release.mjs'
+      - 'scripts/check-play-store-readiness.mjs'
+      - 'tests/play-store-preflight.test.mjs'
+      - 'docs/GOOGLE_PLAY_READINESS.md'
+      - 'docs/GOOGLE_PLAY_NEXT_STEPS_PL.md'
+      - 'play-store/listing-pl.json'
+      - 'public/manifest.webmanifest'
       - 'scripts/prepare-play-store-artwork.mjs'
       - '.github/workflows/android-release.yml'
 
@@ -58,6 +64,13 @@ jobs:
 
       - name: Run automated tests
         run: npm test
+
+      - name: Google Play metadata preflight
+        env:
+          ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID }}
+          VITE_ADMOB_REWARDED_ID: ${{ vars.VITE_ADMOB_REWARDED_ID }}
+          VITE_ADMOB_INTERSTITIAL_ID: ${{ vars.VITE_ADMOB_INTERSTITIAL_ID }}
+        run: npm run play:preflight
 
       - name: TypeScript validation
         run: npm run lint
@@ -163,6 +176,7 @@ jobs:
             play-store/generated/app-icon-512.png
             play-store/generated/feature-graphic-1024x500.jpg
             play-store/generated/android-build-report.json
+            play-store/generated/release-readiness-report.json
             package-lock.json
           if-no-files-found: warn
           retention-days: 21
