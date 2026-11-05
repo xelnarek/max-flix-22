@@ -419,6 +419,11 @@ class PaleciakiScene extends xb.Script {
     const survivalXpFill = document.getElementById('survival-xp-fill');
     const survivalKillsElem = document.getElementById('survival-kills');
     const survivalEnemiesElem = document.getElementById('survival-enemies');
+    const survivalContractElem = document.getElementById('survival-contract');
+    const survivalContractTitleElem = document.getElementById('survival-contract-title');
+    const survivalContractDetailElem = document.getElementById('survival-contract-detail');
+    const survivalContractMetaElem = document.getElementById('survival-contract-meta');
+    const survivalContractFillElem = document.getElementById('survival-contract-fill');
     const survivalRerollBtn = document.getElementById('btn-survival-reroll') as HTMLButtonElement | null;
     const survivalSkipBtn = document.getElementById('btn-survival-skip') as HTMLButtonElement | null;
 
@@ -904,6 +909,32 @@ class PaleciakiScene extends xb.Script {
                   : 'Eliminacje / idealne uniki. Sześć szybkich eliminacji uruchamia krótki Overdrive.';
           }
           if (survivalEnemiesElem) survivalEnemiesElem.textContent = String(snapshot.aliveEnemies);
+          const contract = snapshot.contract;
+          if (survivalContractTitleElem) {
+            survivalContractTitleElem.textContent = (contract.completed ? '✓ ' : contract.expired ? '× ' : 'KONTRAKT • ') + contract.title;
+          }
+          if (survivalContractDetailElem) {
+            survivalContractDetailElem.textContent = contract.completed
+              ? 'Zaliczone. Premia XP czeka przy operatorze.'
+              : contract.expired
+                ? 'Czas minął. Nowy kontrakt pojawi się w kolejnej fali.'
+                : contract.description;
+          }
+          if (survivalContractMetaElem) {
+            survivalContractMetaElem.textContent = contract.progress + ' / ' + contract.target + ' • ' +
+              Math.ceil(contract.remainingSeconds) + ' s';
+          }
+          if (survivalContractFillElem) {
+            survivalContractFillElem.style.width =
+              Math.min(100, (contract.progress / Math.max(1, contract.target)) * 100) + '%';
+          }
+          if (survivalContractElem) {
+            survivalContractElem.classList.toggle('is-complete', contract.completed);
+            survivalContractElem.classList.toggle('is-expired', contract.expired);
+            survivalContractElem.setAttribute('aria-label',
+              contract.title + ': ' + contract.progress + ' z ' + contract.target +
+              ', pozostało ' + Math.ceil(contract.remainingSeconds) + ' sekund.');
+          }
           const weaponRack = document.getElementById('survival-weapons-list');
           if (weaponRack) {
             // The Survival snapshot refreshes four times per second; rebuild chips only when the arsenal changes.
