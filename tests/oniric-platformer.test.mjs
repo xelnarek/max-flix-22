@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   createOniricPlatformerState,
   ONIRIC_COLLECTIBLES,
@@ -87,7 +88,7 @@ test('the course ends safely when time expires or all lives are lost', () => {
 test('the rabbit-hole opens with a deliberately low-resolution 15-second 8-bit effect', () => {
   assert.equal(ONIRIC_PIXEL_GLITCH_SECONDS, 15);
   assert.equal(ONIRIC_PIXEL_GLITCH_WIDTH, 160);
-  const source = require('node:fs').readFileSync(new URL('../src/oniricPlatformer.ts', import.meta.url), 'utf8');
+  const source = readFileSync(new URL('../src/oniricPlatformer.ts', import.meta.url), 'utf8');
   assert.match(source, /pixelGlitchRemaining = ONIRIC_PIXEL_GLITCH_SECONDS/);
   assert.match(source, /pixelGlitchRemaining = Math\.max\(0, pixelGlitchRemaining - dt\)/);
   assert.match(source, /imageSmoothingEnabled = false/);
