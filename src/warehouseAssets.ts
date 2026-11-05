@@ -993,11 +993,11 @@ export function createCharacterModel(def: CharacterDef): {
     torsoWidth: number; torsoHeight: number; armWidth: number;
     legWidth: number; shoulderSize: number; headWidth: number; headHeight: number;
   }> = {
-    marcin:   { torsoWidth: 0.94, torsoHeight: 1.00, armWidth: 0.94, legWidth: 0.98, shoulderSize: 0.94, headWidth: 1.00, headHeight: 1.02 },
-    grzesiek: { torsoWidth: 1.25, torsoHeight: 1.06, armWidth: 1.24, legWidth: 1.18, shoulderSize: 1.32, headWidth: 1.04, headHeight: 0.98 },
-    dawid:    { torsoWidth: 1.08, torsoHeight: 1.00, armWidth: 1.08, legWidth: 1.05, shoulderSize: 1.12, headWidth: 1.00, headHeight: 1.00 },
-    mateusz:  { torsoWidth: 0.90, torsoHeight: 0.96, armWidth: 0.90, legWidth: 0.94, shoulderSize: 0.90, headWidth: 0.96, headHeight: 0.98 },
-    piotr:    { torsoWidth: 1.16, torsoHeight: 1.04, armWidth: 1.12, legWidth: 1.10, shoulderSize: 1.18, headWidth: 1.03, headHeight: 0.98 },
+    marcin:   { torsoWidth: 0.94, torsoHeight: 1.00, armWidth: 0.94, legWidth: 0.98, shoulderSize: 0.94, headWidth: 0.94, headHeight: 1.06 },
+    grzesiek: { torsoWidth: 1.25, torsoHeight: 1.06, armWidth: 1.24, legWidth: 1.18, shoulderSize: 1.32, headWidth: 1.12, headHeight: 0.96 },
+    dawid:    { torsoWidth: 1.08, torsoHeight: 1.00, armWidth: 1.08, legWidth: 1.05, shoulderSize: 1.12, headWidth: 0.96, headHeight: 1.08 },
+    mateusz:  { torsoWidth: 0.90, torsoHeight: 0.96, armWidth: 0.90, legWidth: 0.94, shoulderSize: 0.90, headWidth: 0.90, headHeight: 1.04 },
+    piotr:    { torsoWidth: 1.16, torsoHeight: 1.04, armWidth: 1.12, legWidth: 1.10, shoulderSize: 1.18, headWidth: 1.08, headHeight: 1.00 },
   };
   const profile = silhouette[def.id];
   const skinColors: Record<CharacterId, number> = {
@@ -1094,33 +1094,92 @@ export function createCharacterModel(def: CharacterDef): {
   head.castShadow = true;
   group.add(head);
 
-  // Rounded, better-readable facial features. These are stylized game caricatures,
-  // not a claim of photogrammetric likeness.
+  // Five deliberate face profiles: different eye spacing, brow weight and jaw width
+  // remain readable even when the character is seen from the normal gameplay camera.
+  const faceProfile: Record<CharacterId, {
+    eyeSpacing: number; eyeScale: number; eyeY: number;
+    browWidth: number; browHeight: number; browY: number; browTilt: number;
+    noseWidth: number; noseDepth: number;
+  }> = {
+    marcin:   { eyeSpacing: 0.069, eyeScale: 0.92, eyeY: 0.963, browWidth: 0.066, browHeight: 0.012, browY: 1.014, browTilt: 0.06, noseWidth: 0.72, noseDepth: 0.69 },
+    grzesiek: { eyeSpacing: 0.078, eyeScale: 1.12, eyeY: 0.963, browWidth: 0.082, browHeight: 0.022, browY: 1.012, browTilt: 0.16, noseWidth: 0.94, noseDepth: 0.88 },
+    dawid:    { eyeSpacing: 0.068, eyeScale: 0.96, eyeY: 0.967, browWidth: 0.068, browHeight: 0.014, browY: 1.016, browTilt: 0.02, noseWidth: 0.78, noseDepth: 0.66 },
+    mateusz:  { eyeSpacing: 0.065, eyeScale: 0.90, eyeY: 0.966, browWidth: 0.063, browHeight: 0.011, browY: 1.014, browTilt: -0.08, noseWidth: 0.68, noseDepth: 0.66 },
+    piotr:    { eyeSpacing: 0.074, eyeScale: 1.02, eyeY: 0.961, browWidth: 0.078, browHeight: 0.016, browY: 1.010, browTilt: 0.04, noseWidth: 0.90, noseDepth: 0.82 },
+  };
+  const face = faceProfile[def.id];
   const eyeWhite = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.32 });
-  const eyePupil = new THREE.MeshBasicMaterial({ color: 0x172033 });
-  const browMat = new THREE.MeshStandardMaterial({ color: def.id === 'piotr' ? 0x59616a : 0x34251e, roughness: 0.92 });
-  [-0.07, 0.07].forEach((ex, index) => {
+  const eyePupil = new THREE.MeshBasicMaterial({ color: 0x172235 });
+  const browColors: Record<CharacterId, number> = {
+    marcin: 0x39291f, grzesiek: 0x211a17, dawid: 0x382219, mateusz: 0x30241f, piotr: 0x77716a,
+  };
+  const browMat = new THREE.MeshStandardMaterial({ color: browColors[def.id], roughness: 0.92 });
+  [-1, 1].forEach((side) => {
+    const ex = side * face.eyeSpacing;
     const ew = new THREE.Mesh(new THREE.SphereGeometry(0.032, 12, 10), eyeWhite);
-    ew.scale.set(1.0, 0.86, 0.58);
-    ew.position.set(ex, 0.96, 0.132);
+    ew.scale.set(face.eyeScale, 0.86 * face.eyeScale, 0.58);
+    ew.position.set(ex, face.eyeY, 0.132);
     const ep = new THREE.Mesh(new THREE.SphereGeometry(0.015, 10, 8), eyePupil);
-    ep.position.set(ex + (index === 0 ? 0.003 : -0.003), 0.96, 0.153);
-    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.072, 0.014, 0.022), browMat);
-    brow.position.set(ex, 1.012, 0.132);
-    brow.rotation.z = index === 0 ? 0.10 : -0.10;
+    ep.position.set(ex + side * -0.003, face.eyeY, 0.153);
+    const brow = new THREE.Mesh(
+      new THREE.BoxGeometry(face.browWidth, face.browHeight, 0.022),
+      browMat,
+    );
+    brow.position.set(ex, face.browY, 0.132);
+    brow.rotation.z = side * -face.browTilt;
     group.add(ew, ep, brow);
   });
 
   [-1, 1].forEach((side) => {
     const ear = new THREE.Mesh(new THREE.SphereGeometry(0.046, 12, 10), skinMat);
-    ear.scale.set(0.58, 0.9, 0.72);
-    ear.position.set(side * 0.137, 0.925, -0.008);
+    ear.scale.set(def.id === 'grzesiek' || def.id === 'piotr' ? 0.68 : 0.58, 0.9, 0.72);
+    ear.position.set(side * (def.id === 'grzesiek' ? 0.15 : 0.137), 0.925, -0.008);
     group.add(ear);
   });
   const nose = new THREE.Mesh(new THREE.SphereGeometry(0.037, 12, 10), skinMat);
-  nose.scale.set(0.78, 1.05, 0.72);
+  nose.scale.set(face.noseWidth, 1.05, face.noseDepth);
   nose.position.set(0, 0.925, 0.151);
   group.add(nose);
+
+  // Face signatures are restrained and character-specific, never large enough to
+  // become floating moustache-like geometry or obscure the eyes.
+  if (def.id === 'marcin') {
+    const glassesMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, metalness: 0.62, roughness: 0.28 });
+    const glassRim = new THREE.TorusGeometry(0.043, 0.006, 5, 14);
+    [-1, 1].forEach((side) => {
+      const lens = new THREE.Mesh(glassRim, glassesMat);
+      lens.position.set(side * 0.069, 0.963, 0.137);
+      group.add(lens);
+    });
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.034, 0.007, 0.008), glassesMat);
+    bridge.position.set(0, 0.963, 0.142);
+    group.add(bridge);
+  } else if (def.id === 'dawid') {
+    const frecklesMat = new THREE.MeshBasicMaterial({ color: 0x9b6044 });
+    for (const side of [-1, 1]) {
+      for (let dot = 0; dot < 3; dot++) {
+        const freckle = new THREE.Mesh(new THREE.SphereGeometry(0.0055, 6, 5), frecklesMat);
+        freckle.position.set(side * (0.078 + dot * 0.009), 0.884 + (dot % 2) * 0.012, 0.129);
+        group.add(freckle);
+      }
+    }
+  } else if (def.id === 'mateusz') {
+    const micMat = new THREE.MeshStandardMaterial({ color: 0x21123f, metalness: 0.18, roughness: 0.55 });
+    const micStem = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.008, 0.105, 6), micMat);
+    micStem.position.set(0.105, 0.91, 0.104);
+    micStem.rotation.z = -0.82;
+    const micTip = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), new THREE.MeshBasicMaterial({ color: 0x67e8f9 }));
+    micTip.position.set(0.145, 0.87, 0.127);
+    group.add(micStem, micTip);
+  } else if (def.id === 'piotr') {
+    const creaseMat = new THREE.MeshBasicMaterial({ color: 0x927262, transparent: true, opacity: 0.78 });
+    [-1, 1].forEach((side) => {
+      const crease = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.004, 0.004), creaseMat);
+      crease.position.set(side * 0.105, 0.904, 0.135);
+      crease.rotation.z = side * 0.28;
+      group.add(crease);
+    });
+  }
 
   // Distinct hair/beard silhouettes help identify the five operators from gameplay distance.
   const hairColors: Record<CharacterId, number> = { marcin: 0x35271f, grzesiek: 0x241b18, dawid: 0x58331f, mateusz: 0x392b25, piotr: 0x77716a };
@@ -1136,8 +1195,14 @@ export function createCharacterModel(def: CharacterDef): {
   if (def.id === 'grzesiek' || def.id === 'dawid' || def.id === 'mateusz' || def.id === 'piotr') {
     const beardMat = new THREE.MeshStandardMaterial({ color: beardColors[def.id], roughness: 0.98 });
     const beard = new THREE.Mesh(new THREE.SphereGeometry(0.105, 16, 10), beardMat);
-    const beardHeight = def.id === 'grzesiek' ? 0.42 : def.id === 'dawid' ? 0.20 : 0.32;
-    beard.scale.set(0.86, beardHeight, 0.54);
+    const beardScale: Record<'grzesiek' | 'dawid' | 'mateusz' | 'piotr', { x: number; y: number; z: number }> = {
+      grzesiek: { x: 0.96, y: 0.78, z: 0.72 },
+      dawid: { x: 0.78, y: 0.38, z: 0.50 },
+      mateusz: { x: 0.76, y: 0.24, z: 0.48 },
+      piotr: { x: 0.94, y: 0.82, z: 0.68 },
+    };
+    const beardShape = beardScale[def.id as 'grzesiek' | 'dawid' | 'mateusz' | 'piotr'];
+    beard.scale.set(beardShape.x, beardShape.y, beardShape.z);
     beard.position.set(0, 0.805, 0.058);
     group.add(beard);
 
