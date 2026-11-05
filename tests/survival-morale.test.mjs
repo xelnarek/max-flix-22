@@ -7,7 +7,7 @@ import {
   SURVIVAL_LEADER_LOSS_SPEED_MULTIPLIER,
 } from '../src/survivalMorale.ts';
 
-test('leader loss briefly affects only living members of the leaderless coalition', () => {
+test('leader loss briefly affects only living members of leaderless coalitions', () => {
   const targets = getSurvivalLeaderLossTargets([
     { id: 'fallen-leader', state: 'defeated', coalitionId: 4, leaderId: 'fallen-leader' },
     { id: 'bruiser', state: 'chase', coalitionId: 4, leaderId: 'fallen-leader' },
