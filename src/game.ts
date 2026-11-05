@@ -411,11 +411,22 @@ export class PaleciakiGameEngine {
   private readonly cameraOcclusionWorldPosition = new THREE.Vector3();
   private readonly cameraOcclusionRaycaster = new THREE.Raycaster();
   private readonly cameraOcclusionHits: THREE.Intersection<THREE.Object3D>[] = [];
+  private readonly cameraOcclusionHitSet = new Set<THREE.Object3D>();
   private cameraOcclusionCooldown = 0;
   private mobileShadowRefreshCooldown = 0;
   private adaptivePerformanceTier: 0 | 1 | 2 = 0;
   private readonly cameraOccluders: THREE.Mesh[] = [];
-  private readonly cameraOccluderMaterials = new Map<THREE.Mesh, { original: THREE.Material | THREE.Material[]; faded: THREE.Material | THREE.Material[]; originals: THREE.Material[]; fades: THREE.Material[]; isFaded: boolean; fadeOpacity: number; fadeRadius: number }>();
+  private readonly cameraOccluderMaterials = new Map<THREE.Mesh, {
+    original: THREE.Material | THREE.Material[];
+    faded: THREE.Material | THREE.Material[];
+    originals: THREE.Material[];
+    fades: THREE.Material[];
+    isFaded: boolean;
+    currentFade: number;
+    targetFade: number;
+    fadeOpacity: number;
+    fadeRadius: number;
+  }>();
   private cameraBossCheckCooldown = 0;
   private cameraBossTargetZoom = 1.0;
   private bossHudRefreshCooldown = 0;
@@ -482,6 +493,7 @@ export class PaleciakiGameEngine {
   private survivalSecrets: { id: string; name: string; mesh: THREE.Group; age: number; collected: boolean }[] = [];
   private survivalMapLandmarks: THREE.Group | null = null;
   private survivalCeilingFixtures: THREE.Mesh[] = [];
+  private survivalSightlineMarker: THREE.Mesh | null = null;
   private survivalPerfectDodges = 0;
   private survivalCounterattackReady = false;
   private campaignCounterattackReady = false;
@@ -1606,6 +1618,7 @@ export class PaleciakiGameEngine {
         for (const z of [-17.0, 17.0]) {
           const column = new THREE.Mesh(new THREE.BoxGeometry(0.42, 8.3, 0.42), wallMaterial);
           column.position.set(side * localX, 4.15, z);
+          this.registerCameraOccluder(column, 0.13);
           this.levelRoot.add(column);
           const foot = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.22, 0.82), trimMaterial);
           foot.position.set(side * localX, 0.12, z);
@@ -1627,9 +1640,11 @@ export class PaleciakiGameEngine {
         const lower = new THREE.Mesh(new THREE.BoxGeometry(1.28, 1.02, 1.58), crateMaterials[point.variant]);
         lower.position.set(-0.28, 0.75, 0);
         lower.castShadow = false;
+        this.registerCameraOccluder(lower, 0.13);
         const upper = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.78, 1.2), crateMaterials[(point.variant + 1) % crateMaterials.length]);
         upper.position.set(0.62, 1.62, 0.08);
         upper.castShadow = false;
+        this.registerCameraOccluder(upper, 0.13);
         const band = new THREE.Mesh(new THREE.BoxGeometry(1.32, 0.075, 1.62), trimMaterial);
         band.position.set(-0.28, 1.06, 0);
         group.add(lower, upper, band);
@@ -1645,12 +1660,14 @@ export class PaleciakiGameEngine {
         for (const zOffset of [-0.9, 0.9]) {
           const post = new THREE.Mesh(rackPostGeometry, trimMaterial);
           post.position.set(xOffset, 1.7, zOffset);
+          this.registerCameraOccluder(post, 0.13);
           rack.add(post);
         }
       }
       for (const y of [0.45, 1.6, 2.75]) {
         const shelf = new THREE.Mesh(new THREE.BoxGeometry(3.7, 0.13, 2.0), wallMaterial);
         shelf.position.y = y;
+        this.registerCameraOccluder(shelf, 0.13);
         rack.add(shelf);
       }
       rack.position.set(side * 51.5, 0, 0);
@@ -1662,6 +1679,7 @@ export class PaleciakiGameEngine {
       this.levelRoot.add(beacon);
       const overhead = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.12, 0.22), trimMaterial);
       overhead.position.set(side * 48.0, 8.5, 0);
+      this.registerCameraOccluder(overhead, 0.10);
       this.levelRoot.add(overhead);
     }
 
@@ -1674,6 +1692,7 @@ export class PaleciakiGameEngine {
       base.position.y = 0.11;
       const crate = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.88, 1.05), crateMaterials[1]);
       crate.position.y = 0.66;
+      this.registerCameraOccluder(crate, 0.13);
       const stripe = new THREE.Mesh(new THREE.BoxGeometry(2.12, 0.09, 1.08), trimMaterial);
       stripe.position.y = 0.9;
       barricade.add(base, crate, stripe);
@@ -1683,6 +1702,8 @@ export class PaleciakiGameEngine {
     }
     this.buildSurvivalArenaDressing(mapId);
     this.buildSurvivalMapLandmarks(mapId);
+    this.registerSurvivalArenaOccluders();
+    this.createSurvivalSightlineMarker();
     this.spawnSurvivalSecrets(mapId);
   }
 
@@ -1964,6 +1985,72 @@ export class PaleciakiGameEngine {
       safetyLines.receiveShadow = false;
       root.add(safetyLines);
     }
+
+    // Containers, cold-room shells, gantry beams and loading shutters are
+    // discovered by their real bounds; decorative floor strips stay untouched.
+    this.registerCameraOccludersInGroup(root, 0.14);
+  }
+
+  private registerCameraOccludersInGroup(root: THREE.Object3D, fadeOpacity = 0.14) {
+    root.updateMatrixWorld(true);
+    root.traverse((object) => {
+      if (!(object instanceof THREE.Mesh) || this.cameraOccluderMaterials.has(object)) return;
+
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      if (materials.length === 0 || materials.every((material) => material.transparent && material.opacity <= 0.72)) return;
+
+      let bounds: THREE.Box3 | null;
+      if (object instanceof THREE.InstancedMesh) {
+        if (!object.boundingBox) object.computeBoundingBox();
+        bounds = object.boundingBox;
+      } else {
+        if (!object.geometry.boundingBox) object.geometry.computeBoundingBox();
+        bounds = object.geometry.boundingBox;
+      }
+      if (!bounds) return;
+
+      const dimensions = bounds.getSize(new THREE.Vector3());
+      const localCenter = bounds.getCenter(new THREE.Vector3());
+      const worldCenter = object.localToWorld(localCenter);
+      const worldScale = object.getWorldScale(new THREE.Vector3());
+      const height = dimensions.y * Math.abs(worldScale.y);
+      const horizontalSpan = Math.max(dimensions.x * Math.abs(worldScale.x), dimensions.z * Math.abs(worldScale.z));
+      const blocksSightline = height >= 1.05 || (worldCenter.y >= 2.55 && horizontalSpan >= 1.2);
+      if (blocksSightline) this.registerCameraOccluder(object, fadeOpacity);
+    });
+  }
+
+  private registerSurvivalArenaOccluders() {
+    for (const instance of this.survivalArenaInstances) {
+      if (!instance.boundingBox) instance.computeBoundingBox();
+      const bounds = instance.boundingBox;
+      if (!bounds) continue;
+      const dimensions = bounds.getSize(new THREE.Vector3());
+      const center = bounds.getCenter(new THREE.Vector3());
+      const height = dimensions.y * Math.abs(instance.scale.y);
+      const horizontalSpan = Math.max(dimensions.x * Math.abs(instance.scale.x), dimensions.z * Math.abs(instance.scale.z));
+      const blocksSightline = height >= 1.05 || (center.y + instance.position.y >= 2.55 && horizontalSpan >= 1.2);
+      if (blocksSightline) this.registerCameraOccluder(instance, 0.14);
+    }
+  }
+
+  private createSurvivalSightlineMarker() {
+    if (this.survivalSightlineMarker) {
+      this.levelRoot.remove(this.survivalSightlineMarker);
+      this.disposeTemporaryObject(this.survivalSightlineMarker);
+    }
+    const marker = new THREE.Mesh(
+      new THREE.TorusGeometry(0.74, 0.026, 5, 32),
+      new THREE.MeshBasicMaterial({ color: 0x67e8f9, transparent: true, opacity: 0.46, depthTest: false, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }),
+    );
+    marker.name = 'survival-sightline-player-marker';
+    marker.rotation.x = Math.PI / 2;
+    marker.position.set(this.playerPos.x, 0.055, this.playerPos.z);
+    marker.renderOrder = 40;
+    marker.frustumCulled = false;
+    marker.visible = false;
+    this.survivalSightlineMarker = marker;
+    this.levelRoot.add(marker);
   }
 
   private spawnSurvivalSecrets(mapId: SurvivalMapId) {
@@ -2323,6 +2410,7 @@ export class PaleciakiGameEngine {
         if (material.map) this.survivalArenaInstanceTextures.add(material.map);
       }
     });
+    this.registerCameraOccludersInGroup(signFaces, 0.12);
     this.levelRoot.add(signFaces);
   }
 
@@ -2831,12 +2919,51 @@ export class PaleciakiGameEngine {
       originals,
       fades,
       isFaded: false,
+      currentFade: 0,
+      targetFade: 0,
       fadeOpacity: THREE.MathUtils.clamp(Number.isFinite(fadeOpacity) ? fadeOpacity : 0.18, 0.04, 1),
       fadeRadius: THREE.MathUtils.clamp(Number.isFinite(fadeRadius) ? fadeRadius : 0, 0, 8),
     });
   }
 
+  private updateCameraOcclusionFade(dt: number) {
+    const frameDt = THREE.MathUtils.clamp(Number.isFinite(dt) ? dt : 0, 0, 0.1);
+    let showPlayerMarker = false;
+
+    for (const state of this.cameraOccluderMaterials.values()) {
+      state.currentFade = THREE.MathUtils.damp(state.currentFade, state.targetFade, 16, frameDt);
+      if (Math.abs(state.currentFade - state.targetFade) < 0.004) state.currentFade = state.targetFade;
+      if (state.currentFade > 0.07 || state.targetFade > 0.01) showPlayerMarker = true;
+
+      for (let index = 0; index < state.fades.length; index++) {
+        const material = state.fades[index];
+        const original = state.originals[index];
+        const opacity = THREE.MathUtils.lerp(
+          original.opacity,
+          Math.min(original.opacity, state.fadeOpacity),
+          state.currentFade,
+        );
+        const transparent = original.transparent || state.currentFade > 0.006;
+        const depthWrite = state.currentFade > 0.006 ? false : original.depthWrite;
+
+        if (material.transparent !== transparent) {
+          material.transparent = transparent;
+          material.needsUpdate = true;
+        }
+        if (Math.abs(material.opacity - opacity) > 0.002) material.opacity = opacity;
+        if (material.depthWrite !== depthWrite) material.depthWrite = depthWrite;
+      }
+    }
+
+    if (this.survivalSightlineMarker) {
+      this.survivalSightlineMarker.position.set(this.playerPos.x, 0.055, this.playerPos.z);
+      this.survivalSightlineMarker.visible = showPlayerMarker;
+    }
+  }
+
   private updateCameraOcclusion(dt: number) {
+    // The visual interpolation runs at render cadence; raycasts remain capped at ~13 Hz.
+    this.updateCameraOcclusionFade(dt);
     this.cameraOcclusionCooldown -= dt;
     if (this.cameraOcclusionCooldown > 0) return;
     this.cameraOcclusionCooldown = 0.075;
@@ -2857,15 +2984,11 @@ export class PaleciakiGameEngine {
     const hits = this.cameraOcclusionHits;
     hits.length = 0;
     this.cameraOcclusionRaycaster.intersectObjects(this.cameraOccluders, false, hits);
+    this.cameraOcclusionHitSet.clear();
+    for (const hit of hits) this.cameraOcclusionHitSet.add(hit.object);
 
     for (const [mesh, state] of this.cameraOccluderMaterials) {
-      let rayBlocked = false;
-      for (let i = 0; i < hits.length; i++) {
-        if (hits[i].object === mesh) {
-          rayBlocked = true;
-          break;
-        }
-      }
+      const rayBlocked = this.cameraOcclusionHitSet.has(mesh);
       let operatorUnderFixture = false;
       if (state.fadeRadius > 0) {
         mesh.getWorldPosition(this.cameraOcclusionWorldPosition);
@@ -2875,23 +2998,13 @@ export class PaleciakiGameEngine {
         operatorUnderFixture = overhead && dx * dx + dz * dz <= state.fadeRadius * state.fadeRadius;
       }
       const shouldFade = rayBlocked || operatorUnderFixture;
-      if (shouldFade === state.isFaded) continue;
-
-      state.isFaded = shouldFade;
-      for (let index = 0; index < state.fades.length; index++) {
-        const material = state.fades[index];
-        const original = state.originals[index];
-        const transparent = shouldFade ? true : original.transparent;
-        const depthWrite = shouldFade ? false : original.depthWrite;
-        const opacity = shouldFade ? Math.min(original.opacity, state.fadeOpacity) : original.opacity;
-        const shaderVariantChanged = material.transparent !== transparent;
-        material.transparent = transparent;
-        material.opacity = opacity;
-        material.depthWrite = depthWrite;
-        if (shaderVariantChanged) material.needsUpdate = true;
+      if (shouldFade !== state.isFaded) {
+        state.isFaded = shouldFade;
+        state.targetFade = shouldFade ? 1 : 0;
       }
     }
     hits.length = 0;
+    this.cameraOcclusionHitSet.clear();
   }
 
   private restoreCameraOccluders() {
@@ -2903,11 +3016,18 @@ export class PaleciakiGameEngine {
     this.cameraOccluderMaterials.clear();
     this.cameraOccluders.length = 0;
     this.cameraOcclusionHits.length = 0;
+    this.cameraOcclusionHitSet.clear();
     this.cameraOcclusionCooldown = 0;
+    if (this.survivalSightlineMarker) this.survivalSightlineMarker.visible = false;
   }
 
   private clearLevel() {
     this.restoreCameraOccluders();
+    if (this.survivalSightlineMarker) {
+      this.levelRoot.remove(this.survivalSightlineMarker);
+      this.disposeTemporaryObject(this.survivalSightlineMarker);
+      this.survivalSightlineMarker = null;
+    }
     for (const enemy of this.enemies) this.disposeEnemyModel(enemy);
     this.clearOperatorCompanions();
     // Lollipop meshes own their geometry/materials; release them before the scene is reset.
