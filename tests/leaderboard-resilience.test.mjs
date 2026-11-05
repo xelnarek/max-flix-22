@@ -35,7 +35,7 @@ test('Firebase ranking operations have finite auth, probe, query and write limit
   assert.match(firebase, /const FIRESTORE_QUERY_TIMEOUT_MS = 12_000/);
   assert.match(firebase, /const FIRESTORE_WRITE_TIMEOUT_MS = 12_000/);
   assert.match(firebase, /authTimeout = setTimeout\(/);
-  assert.match(firebase, /withTimeout\([\s\S]*?getDocFromServer\(probeDoc\)/);
+  assert.match(firebase, /withTimeout\([\s\S]*?getDocs\(probeQuery\)/);
   assert.match(firebase, /withTimeout\([\s\S]*?getDocs\(survivalQuery\)/);
   assert.match(firebase, /withTimeout\([\s\S]*?setDoc\(doc\(db, collectionPath, cleanId\), payload\)/);
 });
@@ -48,4 +48,21 @@ test('ranking UI prevents overlapping refreshes and differentiates offline cache
   assert.match(app, /Nie udało się połączyć z rankingiem online/);
   assert.match(app, /Wysyłanie wyniku do rankingu Survival/);
   assert.match(app, /Wynik jest już w rankingu Survival online/);
+});
+
+
+test('leaderboard connectivity probe checks the public Survival collection independently of anonymous auth', async () => {
+  const firebase = await read('../src/firebase.ts');
+  const start = firebase.indexOf('export async function ensureLeaderboardServices');
+  const end = firebase.indexOf('// Test connection on boot per guidelines', start);
+  const ensure = firebase.slice(start, end);
+  assert.match(ensure, /void initAuth\(\)\.catch/);
+  assert.match(ensure, /const connected = await testFirestoreConnection\(\)/);
+  assert.doesNotMatch(ensure, /await initAuth\(\)/);
+  const probeStart = firebase.indexOf('export async function testFirestoreConnection');
+  const probeEnd = firebase.indexOf('export async function submitScore', probeStart);
+  const probe = firebase.slice(probeStart, probeEnd);
+  assert.match(probe, /query\(collection\(db, 'leaderboard'\), limit\(1\)\)/);
+  assert.match(probe, /getDocs\(probeQuery\)/);
+  assert.doesNotMatch(probe, /if \(!currentUser\?\.uid\)/);
 });
