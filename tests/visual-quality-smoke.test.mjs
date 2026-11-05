@@ -265,6 +265,7 @@ test('the Survival archive directory exposes all four arenas and the sixteen-sec
     assert.ok(html.includes('data-map-visited="' + mapId + '"'), 'missing map directory entry: ' + mapId);
   }
   assert.match(html, /SEKRETY 0 \/ 16/);
+  assert.match(html, /SEKRETY 0\/4/, 'the in-game HUD must start with four secrets per map');
   assert.match(css, /\.map-night\s*\{/);
   assert.match(css, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
 });
