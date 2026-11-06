@@ -551,10 +551,12 @@ test('Survival random boss spawns never stack active Bosman encounters', async (
 });
 
 
-test('campaign roaming rewards use the current mega-map sector while Survival stays arena-centred', async () => {
+test('campaign and Survival roaming rewards spawn near the operator instead of the map origin', async () => {
   const game = await read('../src/game.ts');
-  assert.match(game, /chooseCampaignRewardSpawnPoint\(this\.currentActiveSector, Math\.random\(\), Math\.random\(\), this\.campaignEnemyObstacles\)/);
-  assert.match(game, /this\.gameMode === 'campaign'[\s\S]*?chooseCampaignRewardSpawnPoint[\s\S]*?: \{ x: \(Math\.random\(\) - 0\.5\) \* 44, z: \(Math\.random\(\) - 0\.5\) \* 14 \}/);
+  const spawner = game.slice(game.indexOf('private updateRandomSpawners'), game.indexOf('public triggerTimedWarehouseEvent'));
+  assert.match(spawner, /chooseCampaignNearbyRewardSpawnPoint\([\s\S]*?this\.playerPos/);
+  assert.match(spawner, /chooseNearbySpawnPoint\([\s\S]*?this\.playerPos[\s\S]*?this\.levelBounds[\s\S]*?this\.survivalObstacles/);
+  assert.doesNotMatch(spawner, /\(Math\.random\(\) - 0\.5\) \* 44/);
   const progression = game.slice(game.indexOf('private updateSectorProgress'), game.indexOf('private updateRandomSpawners'));
   assert.match(progression, /this\.currentActiveSector = newSector/);
 });
@@ -1233,7 +1235,7 @@ test('Crimsonland-style Survival Overdrive is chained, timed and surfaced in the
   assert.match(game, /getSurvivalMomentumDamageMultiplier\(this\.survivalMomentum\.overdriveRemainingSeconds\)/);
   assert.match(game, /getSurvivalMomentumMoveMultiplier\(this\.survivalMomentum\.overdriveRemainingSeconds\)/);
   assert.match(game, /getSurvivalMomentumRateMultiplier\(this\.survivalMomentum\.overdriveRemainingSeconds\)/);
-  assert.match(game, /selectSurvivalAutoTarget\([\s\S]*?this\.enemies[\s\S]*?18 \* this\.survivalRangeMultiplier/);
+  assert.match(game, /selectSurvivalAutoTarget\([\s\S]*?this\.enemies[\s\S]*?SURVIVAL_AUTO_AIM_RANGE_METERS \* this\.survivalRangeMultiplier/);
   assert.match(game, /killStreak: this\.survivalMomentum\.killStreak/);
   assert.match(game, /overdriveRemainingSeconds: this\.survivalMomentum\.overdriveRemainingSeconds/);
   assert.match(app, /snapshot\.killStreak >= 2/);
@@ -1403,4 +1405,40 @@ test('high-end mobile keeps selective glow, while Survival gates it on frame hea
   assert.ok(quality.includes('bloomEnabled: true'));
   assert.ok(app.includes('pipeline.render(activeCamera, this.currentFps, performance.now(), isSurvival);'));
   assert.ok(bloom.includes('shouldEnableSelectiveBloom(fps, this.isMobile, this.enabled, isSurvival)'));
+});
+
+
+test('Survival random enemy roster makes every regular archetype selectable after its wave unlock', async () => {
+  const [game, roster, targeting] = await Promise.all([
+    read('../src/game.ts'), read('../src/survivalEnemySpawns.ts'), read('../src/survivalTargeting.ts')
+  ]);
+  assert.match(game, /chooseSurvivalEnemySpawnType\(wave, this\.survivalElapsed, Math\.random\(\)\)/);
+  for (const type of ['zombie_pracownik', 'kurier', 'sztaplar_szalony', 'monter', 'inspector', 'handlowiec', 'customer', 'architect', 'przedstawiciel_włoski', 'serwisant', 'agv_robot', 'pan_roman', 'piorun_dron', 'elite_walczak_guard']) {
+    assert.ok(game.includes("case '" + type + "':"), 'missing Survival spawn constructor mapping: ' + type);
+  }
+  assert.match(game, /enemy\.type !== 'architect' && enemy\.type !== 'piorun_dron'/);
+  assert.doesNotMatch(game, /this\.survivalElapsed < 90 && roll < 0\.52/);
+  assert.match(roster, /type: 'piorun_dron', minWave: 6/);
+  assert.match(roster, /type: 'elite_walczak_guard', minWave: 8/);
+  assert.match(targeting, /'piorun_dron'/);
+});
+
+test('random pickups spawn around the operator and use multiple collectible types', async () => {
+  const game = await read('../src/game.ts');
+  const spawner = game.slice(game.indexOf('private updateRandomSpawners'), game.indexOf('public triggerTimedWarehouseEvent'));
+  assert.match(spawner, /chooseNearbySpawnPoint\([\s\S]*?this\.playerPos[\s\S]*?this\.levelBounds[\s\S]*?this\.survivalObstacles/);
+  assert.match(spawner, /chooseCampaignNearbyRewardSpawnPoint/);
+  assert.match(spawner, /rand_magnet_/);
+  assert.match(spawner, /rand_grout_/);
+  assert.match(spawner, /rand_kfc_/);
+  assert.doesNotMatch(spawner, /\(Math\.random\(\) - 0\.5\) \* 44/);
+});
+
+test('Survival weapon fire uses round-robin selection when several reloads are ready', async () => {
+  const [game, dispatch] = await Promise.all([
+    read('../src/game.ts'), read('../src/survivalWeaponDispatch.ts')
+  ]);
+  assert.match(game, /findNextReadyWeaponIndex\(/);
+  assert.match(game, /this\.survivalWeaponDispatchCursor = getNextWeaponDispatchCursor/);
+  assert.match(dispatch, /for \(let offset = 0; offset < count; offset\+\+\)/);
 });

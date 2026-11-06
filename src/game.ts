@@ -13,7 +13,10 @@ import { applySurvivalWaveMutator, getSurvivalWaveMutator } from './survivalWave
 import { getSurvivalConvoyHazardCount } from './survivalConvoy.ts';
 import { applySurvivalMapCombatModifier, chooseRandomSurvivalMap, getSurvivalMapDefinition, type SurvivalMapId } from './survivalMaps.ts';
 import { getSurvivalMapRouteFeatures } from './survivalMapLayouts.ts';
-import { chooseCampaignRewardSpawnPoint } from './campaignRewards.ts';
+import { chooseCampaignNearbyRewardSpawnPoint } from './campaignRewards.ts';
+import { chooseNearbySpawnPoint } from './arenaSpawn.ts';
+import { chooseSurvivalEnemySpawnType } from './survivalEnemySpawns.ts';
+import { findNextReadyWeaponIndex, getNextWeaponDispatchCursor } from './survivalWeaponDispatch.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
 import { chooseSurvivalRicochetTarget, getSurvivalRadiationProfile, getSurvivalRicochetProfile } from './survivalCombatDraft.ts';
 import { getSurvivalShrapnelProfile } from './survivalShrapnel.ts';
@@ -46,6 +49,7 @@ import {
   SURVIVAL_WEAPON_DISPATCH_COOLDOWN_SECONDS,
   SURVIVAL_WEAPON_INITIAL_RELOAD_FACTOR,
   SURVIVAL_WEAPON_UNLOCK_SECONDS,
+  SURVIVAL_AUTO_AIM_RANGE_METERS,
 } from './combatBalance.ts';
 import { ParticleMeshPool, type ParticleShape } from './particlePool.ts';
 import { applyPerfectDodgeCounterattack, getSurvivalDashCooldownSeconds, getSurvivalDashProgress, rollSurvivalCriticalDamage } from './archeroMechanics.ts';
@@ -523,6 +527,7 @@ export class PaleciakiGameEngine {
   private survivalMomentum: SurvivalMomentumState = createSurvivalMomentumState();
   // Serializes ready weapon shots so a full cooldown queue never empties in one frame.
   private survivalWeaponDispatchCooldown = 0;
+  private survivalWeaponDispatchCursor = 0;
   private survivalDamageMultiplier = 1;
   private survivalAbilityCooldownMultiplier = 1;
   private survivalAbilityKillRechargeMultiplier = 1;
@@ -1452,6 +1457,7 @@ export class PaleciakiGameEngine {
     this.survivalEvolutions.clear();
     this.survivalWeapons = [];
     this.survivalWeaponDispatchCooldown = 0;
+    this.survivalWeaponDispatchCursor = 0;
     this.survivalDamageMultiplier = 1;
     this.survivalRicochetStrength = 1;
     this.survivalRadiationStrength = 1;
@@ -3965,6 +3971,7 @@ export class PaleciakiGameEngine {
       mesh,
       collected: false,
       points,
+      life: id.startsWith('rand_') ? 90 : undefined,
     });
   }
 
@@ -4020,6 +4027,7 @@ export class PaleciakiGameEngine {
       mesh,
       collected: false,
       points: 120,
+      life: id.startsWith('rand_') ? 90 : undefined,
     });
   }
 
@@ -4084,6 +4092,7 @@ export class PaleciakiGameEngine {
       mesh,
       collected: false,
       points: 220,
+      life: id.startsWith('rand_') ? 90 : undefined,
     });
   }
 
@@ -5977,7 +5986,7 @@ export class PaleciakiGameEngine {
       this.enemies,
       this.playerPos.x,
       this.playerPos.z,
-      18 * this.survivalRangeMultiplier * (this.oniricDreamRemainingSeconds > 0 ? 1.22 : 1)
+      SURVIVAL_AUTO_AIM_RANGE_METERS * this.survivalRangeMultiplier * (this.oniricDreamRemainingSeconds > 0 ? 1.22 : 1)
     );
     const target = selection?.target ?? null;
 
@@ -5996,13 +6005,18 @@ export class PaleciakiGameEngine {
     // Fire at most one weapon per dispatch window. If several reloads finish together,
     // their shots are spaced out instead of landing as one screen-filling burst.
     if (!target || this.survivalWeaponDispatchCooldown > 0) return;
-    const readyWeapon = this.survivalWeapons.find((weapon) => weapon.cooldown <= 0);
-    if (!readyWeapon) return;
+    const readyWeaponIndex = findNextReadyWeaponIndex(
+      this.survivalWeapons.map((weapon) => weapon.cooldown),
+      this.survivalWeaponDispatchCursor,
+    );
+    if (readyWeaponIndex < 0) return;
+    const readyWeapon = this.survivalWeapons[readyWeaponIndex];
 
     this.fireSurvivalWeapon(readyWeapon, target);
     readyWeapon.cooldown = this.getScaledSurvivalWeaponReloadSeconds(
       readyWeapon.id, readyWeapon.level, !!readyWeapon.evolved
     );
+    this.survivalWeaponDispatchCursor = getNextWeaponDispatchCursor(readyWeaponIndex, this.survivalWeapons.length);
     this.survivalWeaponDispatchCooldown = SURVIVAL_WEAPON_DISPATCH_COOLDOWN_SECONDS / oniricRate;
   }
 
@@ -7734,35 +7748,67 @@ export class PaleciakiGameEngine {
     const id = 'survival_enemy_' + Math.floor(performance.now()) + '_' + Math.floor(Math.random() * 100000);
     const minZ = THREE.MathUtils.clamp(z - 2.2, this.levelBounds.minZ + 0.5, this.levelBounds.maxZ - 0.5);
     const maxZ = THREE.MathUtils.clamp(z + 2.2, this.levelBounds.minZ + 0.5, this.levelBounds.maxZ - 0.5);
-    const roll = Math.random();
-
-    // Rare special encounters are capped at one active instance each so that
-    // the normal spawn pack cannot accidentally turn into overlapping bosses.
+    // Rare specials remain independent of the regular weighted roster and are
+    // still limited to one live instance each.
     const sebixAlreadyActive = this.enemies.some((enemy) => enemy.type === 'sebix_m' && enemy.state !== 'defeated');
     const bosmanAlreadyActive = this.enemies.some((enemy) =>
       enemy.type === 'bosman_krakow' && enemy.state !== 'defeated'
     );
-    if (wave >= 8 && !sebixAlreadyActive && Math.random() < 0.065) this.addSebixEnemy(id,x,minZ,maxZ);
-    else if (shouldSpawnBosmanKrakow(wave, Math.random(), bosmanAlreadyActive)) this.addBosmanKrakowBossEnemy(id,x,z);
-    else if (this.survivalElapsed < 90 && roll < 0.52) this.addKurierEnemy(id, x, minZ, maxZ, 'Kurier Ekspresowy — pilna dostawa');
-    else if (this.survivalElapsed < 90 && roll < 0.82) this.addSztaplarEnemy(id, x, minZ, maxZ, 'Szalony Operator B4 — paleciak bez hamulców');
-    else if (this.survivalElapsed >= 90 && this.survivalElapsed < 180 && roll < 0.28) this.addItalianVendorEnemy(id, x, minZ, maxZ, 'Włoski Dostawca Armatury — mamma mia');
-    else if (this.survivalElapsed >= 90 && this.survivalElapsed < 180 && roll < 0.45) this.addSztaplarEnemy(id, x, minZ, maxZ, 'Paleciak Ciężki — dostawa z Mediolanu');
-    else if (wave < 3 || roll < 0.12) this.addZombieWorkerEnemy(id, x, minZ, maxZ, 'Zombie-Magazynier — głodny po nocnej zmianie');
-    else if (roll < 0.22) this.addKurierEnemy(id, x, minZ, maxZ, 'Kurier Ekspresowy — paczka bez awiza');
-    else if (roll < 0.32) this.addMonterEnemy(id, x, minZ, maxZ, 'Monter Wiesław — poziomica w dłoni');
-    else if (roll < 0.42) this.addInspectorEnemy(id, x, minZ, maxZ, 'Inspektor BHP — kontrola bez zapowiedzi');
-    else if (roll < 0.52) this.addHandlowiecEnemy(id, x, minZ, maxZ, 'Handlowiec — oferta nie do odrzucenia');
-    else if (wave >= 7 && roll < 0.60) this.addAgvRobotEnemy(id, x, x, z, 'AGV-9 — autonomiczny paleciak w trybie kolizyjnym');
-    else if (wave >= 3 && roll < 0.68) this.addCustomerEnemy(id, x, minZ, maxZ, 'Klient z reklamacją na 17 stron');
-    else if (wave >= 4 && roll < 0.75) this.addArchitectEnemy(id, x, x + 4.5, z, 'Architektka — odcień beżu numer 47');
-    else if (wave >= 5 && roll < 0.82) this.addItalianVendorEnemy(id, x, minZ, maxZ, 'Włoski dostawca armatury — mamma mia');
-    else if (wave >= 6 && roll < 0.89) this.addSerwisanciEnemy(id, x, minZ, maxZ, 'Serwisant — zgłoszenie numer 404');
-    else if (wave >= 7 && roll < 0.95) this.addPanRomanEnemy(id, x, minZ, maxZ, 'Dostawca Sanitarny — dostawa bez awiza');
-    else if (wave >= 8 && roll < 0.975) this.addSztaplarEnemy(id, x, minZ, maxZ, 'Operator paleciaka — drift w alei B4');
-    else if (wave >= 9 && roll < 0.99) this.addSerwisanciEnemy(id, x, minZ, maxZ, 'Serwisant AGV — awaria protokołu');
-    else if (wave >= 10 && roll < 0.998) this.addPanRomanEnemy(id, x, minZ, maxZ, 'Dostawca Sanitarny — kontrola rampy');
-    else this.addEliteGuardEnemy(id, x, minZ, maxZ, 'Elitarny strażnik sektora');
+    if (wave >= 8 && !sebixAlreadyActive && Math.random() < 0.065) {
+      this.addSebixEnemy(id, x, minZ, maxZ);
+    } else if (shouldSpawnBosmanKrakow(wave, Math.random(), bosmanAlreadyActive)) {
+      this.addBosmanKrakowBossEnemy(id, x, z);
+    } else {
+      const spawnType = chooseSurvivalEnemySpawnType(wave, this.survivalElapsed, Math.random());
+      switch (spawnType) {
+        case 'zombie_pracownik':
+          this.addZombieWorkerEnemy(id, x, minZ, maxZ, 'Zombie-Magazynier — głodny po nocnej zmianie');
+          break;
+        case 'kurier':
+          this.addKurierEnemy(id, x, minZ, maxZ, 'Kurier Ekspresowy — paczka bez awiza');
+          break;
+        case 'sztaplar_szalony':
+          this.addSztaplarEnemy(id, x, minZ, maxZ, 'Operator paleciaka — drift w alei B4');
+          break;
+        case 'monter':
+          this.addMonterEnemy(id, x, minZ, maxZ, 'Monter Wiesław — poziomica w dłoni');
+          break;
+        case 'inspector':
+          this.addInspectorEnemy(id, x, minZ, maxZ, 'Inspektor BHP — kontrola bez zapowiedzi');
+          break;
+        case 'handlowiec':
+          this.addHandlowiecEnemy(id, x, minZ, maxZ, 'Handlowiec — oferta nie do odrzucenia');
+          break;
+        case 'customer':
+          this.addCustomerEnemy(id, x, minZ, maxZ, 'Klient z reklamacją na 17 stron');
+          break;
+        case 'architect':
+          this.addArchitectEnemy(id, x, x + 4.5, z, 'Architektka — odcień beżu numer 47');
+          break;
+        case 'przedstawiciel_włoski':
+          this.addItalianVendorEnemy(id, x, minZ, maxZ, 'Włoski dostawca armatury — mamma mia');
+          break;
+        case 'serwisant':
+          this.addSerwisanciEnemy(id, x, minZ, maxZ, 'Serwisant — zgłoszenie numer 404');
+          break;
+        case 'agv_robot':
+          this.addAgvRobotEnemy(id, x, x, z, 'AGV-9 — autonomiczny paleciak w trybie kolizyjnym');
+          break;
+        case 'pan_roman':
+          this.addPanRomanEnemy(id, x, minZ, maxZ, 'Dostawca Sanitarny — dostawa bez awiza');
+          break;
+        case 'piorun_dron': {
+          const minX = THREE.MathUtils.clamp(x - 4.5, this.levelBounds.minX + 2.5, this.levelBounds.maxX - 2.5);
+          const maxX = THREE.MathUtils.clamp(x + 4.5, this.levelBounds.minX + 2.5, this.levelBounds.maxX - 2.5);
+          this.addPiorunDronEnemy(id, minX, maxX, z, 1.9, 'Piorun Dron — patrol elektryczny B4');
+          break;
+        }
+        case 'elite_walczak_guard':
+        default:
+          this.addEliteGuardEnemy(id, x, minZ, maxZ, 'Elitarny strażnik sektora');
+          break;
+      }
+    }
 
     const enemy = this.enemies[this.enemies.length - 1];
     if (!enemy) return;
@@ -7779,7 +7825,7 @@ export class PaleciakiGameEngine {
         this.applyStorybookStyle(enemy.mesh);
       }
     }
-    if (enemy.type !== 'architect') {
+    if (enemy.type !== 'architect' && enemy.type !== 'piorun_dron') {
       enemy.z = z;
       enemy.startX = minZ;
       enemy.endX = maxZ;
@@ -10140,23 +10186,67 @@ export class PaleciakiGameEngine {
   }
 
   private updateRandomSpawners(dt: number) {
+    const interval = this.gameMode === 'survival' ? 24.0 : 18.0;
     this.randomSpawnTimer += dt;
-    if (this.randomSpawnTimer >= (this.gameMode === 'survival' ? 24.0 : 18.0)) {
-      this.randomSpawnTimer = 0;
-      // Campaign rewards follow the operator across the mega-map. Survival
-      // keeps its original arena-centred reward placement.
-      const rewardPoint = this.gameMode === 'campaign'
-        ? chooseCampaignRewardSpawnPoint(this.currentActiveSector, Math.random(), Math.random(), this.campaignEnemyObstacles)
-        : { x: (Math.random() - 0.5) * 44, z: (Math.random() - 0.5) * 14 };
-      const rx = rewardPoint.x;
-      const rz = rewardPoint.z;
-      const isCoffee = Math.random() > 0.4;
-      if (isCoffee) {
-        this.addEspressoItem(`rand_esp_${Date.now()}`, rx, 0.4, rz);
-        this.emitFloatingToast('☕ DOKIEROWANE ESPRESSO Z AUTOMATU!', rx, 1.2, rz, 'perk');
-      } else {
-        this.spawnDroppedPerk(rx, 0.5, rz, 'espresso_boost');
-      }
+    if (this.randomSpawnTimer < interval) return;
+    this.randomSpawnTimer = 0;
+
+    // Build one shared occupancy snapshot so rewards do not appear inside an
+    // enemy, another pickup, or a warehouse obstacle.
+    const occupied = [
+      ...this.enemies.filter((enemy) => enemy.state !== 'defeated'),
+      ...this.collectibles.filter((item) => !item.collected),
+      ...this.droppedPerks.filter((item) => !item.collected),
+      ...this.survivalXpGems.map((gem, index) => ({
+        id: 'xp-gem-' + index,
+        x: gem.mesh.position.x,
+        z: gem.mesh.position.z,
+      })),
+    ];
+    const rewardPoint = this.gameMode === 'campaign'
+      ? chooseCampaignNearbyRewardSpawnPoint(
+        this.currentActiveSector,
+        this.playerPos,
+        Math.random(),
+        Math.random(),
+        this.campaignEnemyObstacles,
+        occupied,
+        { minimumPlayerDistance: 5.0, maximumPlayerDistance: 11.5, minimumOccupiedDistance: 2.8 },
+      )
+      : chooseNearbySpawnPoint(
+        this.playerPos,
+        this.levelBounds,
+        this.survivalObstacles,
+        occupied,
+        Math.random(),
+        Math.random(),
+        { minimumPlayerDistance: 5.5, maximumPlayerDistance: 10.5, minimumOccupiedDistance: 2.8 },
+      );
+
+    if (!rewardPoint) {
+      // A crowded/blocked arena should delay a find, not force it into scenery.
+      this.randomSpawnTimer = interval - 5.0;
+      return;
+    }
+
+    const rx = rewardPoint.x;
+    const rz = rewardPoint.z;
+    const id = 'rand_pickup_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+    const rewardRoll = Math.random();
+    if (rewardRoll < 0.28) {
+      this.addEspressoItem('rand_esp_' + id, rx, 0.4, rz);
+      this.emitFloatingToast('DOKIEROWANE ESPRESSO Z AUTOMATU!', rx, 1.2, rz, 'perk');
+    } else if (rewardRoll < 0.48) {
+      this.addMagnetItem('rand_magnet_' + id, rx, 0.42, rz);
+      this.emitFloatingToast('SKANER RADIOWY — ZNAJDŹKA!', rx, 1.2, rz, 'perk');
+    } else if (rewardRoll < 0.66) {
+      this.addGroutItem('rand_grout_' + id, rx, 0.6, rz, 140);
+      this.emitFloatingToast('RZADKA PUSZKA FUGI B4!', rx, 1.2, rz, 'points');
+    } else if (rewardRoll < 0.84) {
+      this.addKfcBucketItem('rand_kfc_' + id, rx, 0.45, rz);
+      this.emitFloatingToast('KUBEŁEK MOCY POJAWIŁ SIĘ NA HALI!', rx, 1.25, rz, 'perk');
+    } else {
+      this.spawnDroppedPerk(rx, 0.5, rz);
     }
   }
 

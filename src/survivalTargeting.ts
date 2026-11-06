@@ -17,7 +17,7 @@ export interface SurvivalTargetSelection<T extends SurvivalTargetCandidate> {
 }
 
 const MAJOR_BOSS_TYPES = new Set(['walczak', 'krol_leto', 'bosman_krakow', 'sebix_m']);
-const ELITE_TYPES = new Set(['elite_walczak_guard', 'sztaplar_szalony', 'pan_roman', 'agv_robot']);
+const ELITE_TYPES = new Set(['elite_walczak_guard', 'sztaplar_szalony', 'pan_roman', 'agv_robot', 'piorun_dron']);
 
 function finite(value: number): boolean {
   return Number.isFinite(value);

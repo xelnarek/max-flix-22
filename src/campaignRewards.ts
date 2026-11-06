@@ -1,3 +1,6 @@
+import { chooseNearbySpawnPoint, type NearbySpawnOptions } from './arenaSpawn.ts';
+import type { EnemySpacingActor, HorizontalVector } from './enemySpacing.ts';
+
 export interface CampaignSectorRewardBounds {
   minX: number;
   maxX: number;
@@ -109,4 +112,31 @@ export function chooseCampaignRewardSpawnPoint(
     }
   }
   return { x: safest.x, z: safest.z };
+}
+
+
+/**
+ * Places a roaming campaign reward beside the operator in the active sector.
+ * This avoids the old full-sector random position that could put a pickup
+ * hundreds of metres away from the player on the mega-map.
+ */
+export function chooseCampaignNearbyRewardSpawnPoint(
+  sector: number,
+  origin: HorizontalVector,
+  angleRoll: number,
+  radiusRoll: number,
+  obstacles: readonly CampaignRewardObstacle[] = [],
+  occupied: readonly EnemySpacingActor[] = [],
+  options: NearbySpawnOptions = {},
+): { x: number; z: number } | null {
+  const safeSector = sector === 2 ? 2 : sector === 3 ? 3 : 1;
+  return chooseNearbySpawnPoint(
+    origin,
+    CAMPAIGN_REWARD_BOUNDS[safeSector],
+    obstacles,
+    occupied,
+    angleRoll,
+    radiusRoll,
+    { minimumPlayerDistance: 5.0, maximumPlayerDistance: 11.5, ...options },
+  );
 }

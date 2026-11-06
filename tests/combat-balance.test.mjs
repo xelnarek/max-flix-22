@@ -6,6 +6,7 @@ import {
   PRIMARY_ATTACK_RANGE_METERS,
   PIOTR_BOOMERANG_OUTBOUND_LIFETIME_FRACTION,
   SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS,
+  SURVIVAL_AUTO_AIM_RANGE_METERS,
   SURVIVAL_WEAPON_DISPATCH_COOLDOWN_SECONDS,
   SURVIVAL_WEAPON_INITIAL_RELOAD_FACTOR,
   SURVIVAL_WEAPON_UNLOCK_SECONDS,
@@ -27,10 +28,15 @@ test('campaign basic attacks use deliberate character-specific recovery windows'
   assert.equal(new Set(Object.values(CAMPAIGN_ATTACK_COOLDOWN_SECONDS)).size, 5);
 });
 
-test('Survival basic attack timing remains separate from campaign balancing', () => {
+test('Survival basic attacks recover quickly while preserving role-based cadence', () => {
+  const cooldowns = characters.map((character) => getBaseAttackCooldownSeconds(character, 'survival'));
   for (const character of characters) {
-    assert.equal(getBaseAttackCooldownSeconds(character, 'survival'), SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS);
+    assert.equal(getBaseAttackCooldownSeconds(character, 'survival'), SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS[character]);
+    assert.ok(SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS[character] >= 1.9);
+    assert.ok(SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS[character] <= 2.4);
   }
+  assert.equal(new Set(cooldowns).size, characters.length);
+  assert.equal(SURVIVAL_AUTO_AIM_RANGE_METERS, 22);
 });
 
 test('ability cooldown scaling is consistent across both game modes', () => {
@@ -54,11 +60,12 @@ test('weapon upgrades and evolution cannot instantly discharge a ready weapon', 
   assert.equal(getWeaponRecoveryAfterUpgrade(6, 10), 6);
 });
 
-test('weapon unlocks arrive early and advance in controlled 45-second steps', () => {
+test('all twelve Survival weapons become draft-eligible in five minutes', () => {
   const times = Object.values(SURVIVAL_WEAPON_UNLOCK_SECONDS);
-  assert.equal(times[0], 35);
-  assert.equal(times[times.length - 1], 530);
-  for (let i = 1; i < times.length; i++) assert.equal(times[i] - times[i - 1], 45);
+  assert.equal(times.length, 12);
+  assert.equal(times[0], 30);
+  assert.equal(times[times.length - 1], 305);
+  for (let i = 1; i < times.length; i++) assert.equal(times[i] - times[i - 1], 25);
   assert.equal(SURVIVAL_WEAPON_DISPATCH_COOLDOWN_SECONDS, 1.05);
 });
 
