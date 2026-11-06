@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getSurvivalXpRequirement } from '../src/survivalProgression.ts';
 import {
   getSurvivalProgressionInfo,
   getSurvivalPromotionRarityFloor,
+  getSurvivalXpRequirement,
 } from '../src/survivalProgression.ts';
 
 test('Survival promotions give the operator a visible rank path every five levels', () => {
