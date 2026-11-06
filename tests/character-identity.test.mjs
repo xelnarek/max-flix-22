@@ -16,6 +16,7 @@ test('every operator has an explicit class identity and a one-line combat role',
   assert.match(CHARACTERS.dawid.combatIdentity, /skok/);
   assert.match(CHARACTERS.mateusz.combatIdentity, /najszybszy/);
   assert.match(CHARACTERS.piotr.combatIdentity, /podwójny skok/);
+  for (const id of ids) assert.ok(CHARACTERS[id].movementIdentity.length >= 24, id + ' needs a movement description');
 });
 
 test('locomotion profiles create measurably different gait, posture and jump signatures', () => {
@@ -30,6 +31,20 @@ test('locomotion profiles create measurably different gait, posture and jump sig
   assert.ok(CHARACTER_MOTION_PROFILES.grzesiek.bodyBob > CHARACTER_MOTION_PROFILES.mateusz.bodyBob);
   assert.ok(CHARACTER_MOTION_PROFILES.mateusz.runLean > CHARACTER_MOTION_PROFILES.marcin.runLean);
   assert.equal(getCharacterMotionProfile('piotr'), CHARACTER_MOTION_PROFILES.piotr);
+  assert.ok(CHARACTER_MOTION_PROFILES.mateusz.groundAcceleration > CHARACTER_MOTION_PROFILES.grzesiek.groundAcceleration);
+  assert.ok(CHARACTER_MOTION_PROFILES.dawid.airControl > CHARACTER_MOTION_PROFILES.marcin.airControl);
+  assert.ok(CHARACTER_MOTION_PROFILES.dawid.riseGravityMultiplier < CHARACTER_MOTION_PROFILES.grzesiek.riseGravityMultiplier);
+  assert.ok(CHARACTER_MOTION_PROFILES.grzesiek.landingSquashY < CHARACTER_MOTION_PROFILES.dawid.landingSquashY);
+  for (const id of ids) {
+    const profile = CHARACTER_MOTION_PROFILES[id];
+    assert.ok(profile.groundAcceleration >= 8 && profile.groundAcceleration <= 22);
+    assert.ok(profile.groundBraking >= 9 && profile.groundBraking <= 23);
+    assert.ok(profile.airControl >= 5 && profile.airControl <= 20);
+    assert.ok(profile.riseGravityMultiplier >= 0.8 && profile.riseGravityMultiplier <= 1.2);
+    assert.ok(profile.fallGravityMultiplier >= 0.85 && profile.fallGravityMultiplier <= 1.25);
+    assert.ok(profile.jumpStretchY >= 1.1 && profile.jumpStretchY <= 1.4);
+    assert.ok(profile.landingSquashY >= 0.7 && profile.landingSquashY <= 0.95);
+  }
 });
 
 test('procedural models have large class-specific silhouette equipment and movement is wired to profiles', async () => {
@@ -44,6 +59,15 @@ test('procedural models have large class-specific silhouette equipment and movem
   assert.match(game, /motionProfile\.jumpKneeTuck/);
   assert.match(game, /playerAccessory\.rotation\.x/);
   assert.match(game, /new THREE\.Color\(this\.charDef\.color\)/);
+  assert.match(game, /motionProfile\.groundAcceleration/);
+  assert.match(game, /motionProfile\.groundBraking/);
+  assert.match(game, /motionProfile\.airControl/);
+  assert.match(game, /motionProfile\.airBraking/);
+  assert.match(game, /motionProfile\.riseGravityMultiplier/);
+  assert.match(game, /motionProfile\.fallGravityMultiplier/);
+  assert.match(game, /motionProfile\.landingSquashY/);
+  assert.match(app, /def\.movementIdentity/);
+  assert.match(html, /id="char-detail-movement"/);
   assert.match(app, /definition\.className/);
   assert.match(app, /definition\.combatIdentity/);
   assert.match(html, /id="char-detail-class"/);

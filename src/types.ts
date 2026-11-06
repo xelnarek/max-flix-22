@@ -19,6 +19,7 @@ export interface CharacterDef {
   maxHp: number;
   className: string;
   combatIdentity: string;
+  movementIdentity: string;
   basicAttackDamageMultiplier: number;
   damageTakenMultiplier: number;
   abilityName: string;

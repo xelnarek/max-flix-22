@@ -8324,6 +8324,7 @@ export class PaleciakiGameEngine {
   }
 
   private updatePlayerMovement(dt: number) {
+    const motionProfile = getCharacterMotionProfile(this.currentCharacterId);
     let screenX = 0;
     let screenY = 0;
 
@@ -8393,13 +8394,13 @@ export class PaleciakiGameEngine {
     } else if (inputLen > 0.08) {
       const targetX = inputX * speed;
       const targetZ = inputZ * speed;
-      this.playerVel.x = THREE.MathUtils.damp(this.playerVel.x, targetX, 14, dt);
-      this.playerVel.z = THREE.MathUtils.damp(this.playerVel.z, targetZ, 14, dt);
+      const steering = this.isGrounded ? motionProfile.groundAcceleration : motionProfile.airControl;
+      this.playerVel.x = THREE.MathUtils.damp(this.playerVel.x, targetX, steering, dt);
+      this.playerVel.z = THREE.MathUtils.damp(this.playerVel.z, targetZ, steering, dt);
       this.playerVel.x = THREE.MathUtils.clamp(this.playerVel.x, -speed * 1.08, speed * 1.08);
       this.playerVel.z = THREE.MathUtils.clamp(this.playerVel.z, -speed * 1.08, speed * 1.08);
       this.playerRot = Math.atan2(inputX, inputZ);
 
-      const motionProfile = getCharacterMotionProfile(this.currentCharacterId);
       this.walkCycle += dt * motionProfile.gaitFrequency;
       if (this.leftLeg && this.rightLeg && this.leftArm && this.rightArm) {
         const gait = Math.sin(this.walkCycle);
@@ -8412,8 +8413,9 @@ export class PaleciakiGameEngine {
         this.rightArm.rotation.z = -armSpread;
       }
     } else {
-      this.playerVel.x = THREE.MathUtils.damp(this.playerVel.x, 0, 16, dt);
-      this.playerVel.z = THREE.MathUtils.damp(this.playerVel.z, 0, 16, dt);
+      const braking = this.isGrounded ? motionProfile.groundBraking : motionProfile.airBraking;
+      this.playerVel.x = THREE.MathUtils.damp(this.playerVel.x, 0, braking, dt);
+      this.playerVel.z = THREE.MathUtils.damp(this.playerVel.z, 0, braking, dt);
       if (this.leftLeg && this.rightLeg && this.leftArm && this.rightArm) {
         this.leftLeg.rotation.x = 0;
         this.rightLeg.rotation.x = 0;
@@ -8456,8 +8458,10 @@ export class PaleciakiGameEngine {
       this.rightArm.rotation.z = 0;
     }
 
-    const gravity = 22.0;
-    this.playerVel.y -= gravity * dt;
+    const gravityMultiplier = this.playerVel.y > 0
+      ? motionProfile.riseGravityMultiplier
+      : motionProfile.fallGravityMultiplier;
+    this.playerVel.y -= 22.0 * gravityMultiplier * dt;
 
     if (this.isGrounded) {
       this.coyoteTimer = 0.12;
@@ -8475,7 +8479,10 @@ export class PaleciakiGameEngine {
         this.jumpBufferTimer = 0;
         sound.playJump();
         this.spawnDust(this.playerPos.x, this.playerPos.y, this.playerPos.z);
-        if (this.playerGroup) this.playerGroup.scale.set(0.82, 1.25, 0.82);
+        if (this.playerGroup) {
+          const stretchXZ = 1 / Math.sqrt(motionProfile.jumpStretchY);
+          this.playerGroup.scale.set(stretchXZ, motionProfile.jumpStretchY, stretchXZ);
+        }
       } else if ((this.activePerks.doubleJump > 0 || this.charDef.id === 'piotr') && !this.hasDoubleJumped) {
         this.playerVel.y = this.charDef.jumpForce * 1.05;
         this.hasDoubleJumped = true;
@@ -8483,7 +8490,10 @@ export class PaleciakiGameEngine {
         sound.playDoubleJump();
         this.spawnParticleRing(this.playerPos.x, this.playerPos.y, this.playerPos.z, 0x38bdf8);
         this.sayQuote(this.charDef.id === 'piotr' ? 'SKOK WETERANA B4! Hopsa nad paletami!' : 'PODWÓJNY SKOK! Sprężyste odbicie antypoślizgowe!');
-        if (this.playerGroup) this.playerGroup.scale.set(0.8, 1.3, 0.8);
+        if (this.playerGroup) {
+          const stretchXZ = 1 / Math.sqrt(motionProfile.doubleJumpStretchY);
+          this.playerGroup.scale.set(stretchXZ, motionProfile.doubleJumpStretchY, stretchXZ);
+        }
       }
     }
 
@@ -8633,7 +8643,9 @@ export class PaleciakiGameEngine {
     }
 
     if (!wasGrounded && landed && this.playerGroup) {
-      this.playerGroup.scale.set(1.2, 0.82, 1.2);
+      const squashY = motionProfile.landingSquashY;
+      const squashXZ = 1 / Math.sqrt(squashY);
+      this.playerGroup.scale.set(squashXZ, squashY, squashXZ);
     }
 
     if (this.playerPos.y < -4.5) {
@@ -8656,7 +8668,6 @@ export class PaleciakiGameEngine {
     this.playerPos.z = boundedPlayerPosition.z;
 
     if (this.playerGroup) {
-      const motionProfile = getCharacterMotionProfile(this.currentCharacterId);
       const motionRatio = Math.min(1, Math.hypot(this.playerVel.x, this.playerVel.z) / Math.max(0.1, this.charDef.speed));
       const now = performance.now() * 0.001;
       const idlePhase = now * motionProfile.idleRate;
