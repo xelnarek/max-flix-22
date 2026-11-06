@@ -1450,9 +1450,16 @@ test('game-over screen reports actual Survival HP damage by weapon, basic attack
   ]);
   assert.match(game, /recordSurvivalDamage\(this\.survivalDamageStats, damageSource, actualDamage\)/);
   assert.match(game, /previousHp > 0 && enemy\.hp <= 0\)[\s\S]*?recordSurvivalKill\(this\.survivalDamageStats, damageSource\)/);
+  assert.match(game, /getSurvivalPromotionRarityFloor\(this\.survivalLevel\)/);
+  assert.match(game, /this\.survivalRankUpPending = progression\.isPromotion/);
+  assert.match(game, /this\.survivalRerolls = Math\.min\(3, this\.survivalRerolls \+ 1\)/);
+  assert.match(game, /this\.survivalXp >= this\.survivalXpToNext\) this\.beginSurvivalLevelUp\(\)/);
   assert.match(game, /public getSurvivalDamageReport\(\): SurvivalDamageReport/);
   assert.match(game, /this\.damageEnemy\(enemy, weaponDamage, this\.playerPos\.x, this\.playerPos\.z, weaponDamageSource\)/);
   assert.match(game, /damageSource: 'basic_attack'/);
+  assert.match(app, /snapshot\.rankName/);
+  assert.match(app, /context: 'levelup' \| 'rank-up' \| 'boss-reward'/);
+  assert.match(app, /AWANS RANGI:/);
   assert.match(app, /this\.engine\.getSurvivalDamageReport\(\)/);
   assert.match(app, /entry\.percentage\.toLocaleString\('pl-PL'/);
   assert.match(app, /entry\.hits\.toLocaleString\('pl-PL'/);
