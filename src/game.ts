@@ -6,7 +6,7 @@ import { createEnemyHitReaction, getEnemyHitPulse } from './enemyCombatFeedback.
 import { isEffectiveBossLaneDodge, isInsideBossAttackLane, isWithinBossImpactRadius } from './combatTelegraphs.ts';
 import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
 import { chooseSurvivalEventSpawnPoint } from './survivalSpawn.ts';
-import { getSurvivalUpgradeRarityMeta, getSurvivalWeaponInitialLevel, getSurvivalWeaponUpgradeSteps, rollSurvivalUpgradeRarity, type SurvivalUpgradeRarity } from './survivalRarity.ts';
+import { getSurvivalUpgradeRarityMeta, getSurvivalWeaponInitialLevel, getSurvivalWeaponUpgradeSteps, promoteSurvivalUpgradeRarity, rollSurvivalUpgradeRarity, type SurvivalUpgradeRarity } from './survivalRarity.ts';
 import { createSurvivalBossRewardOptions } from './survivalBossRewards.ts';
 import { getSurvivalBossVariant, isMajorSurvivalBossType, shouldSpawnBosmanKrakow } from './survivalEncounters.ts';
 import { applySurvivalWaveMutator, getSurvivalWaveMutator } from './survivalWaveMutators.ts';
@@ -27,7 +27,7 @@ import { getSurvivalCommanderProfile, selectSurvivalCommanderTargets } from './s
 import { advanceSurvivalCommanderTiming } from './survivalCommanderTiming.ts';
 import { getSurvivalLeaderLossTargets, getSurvivalMoraleBreakMultiplier, SURVIVAL_LEADER_LOSS_BREAK_SECONDS } from './survivalMorale.ts';
 import { selectSurvivalSupportPulseTargets, SURVIVAL_SUPPORT_PULSE_RADIUS, SURVIVAL_SUPPORT_PULSE_INTERVAL_SECONDS, SURVIVAL_SUPPORT_SHIELD_SECONDS } from './survivalSupport.ts';
-import { getSurvivalXpRequirement } from './survivalProgression.ts';
+import { getSurvivalProgressionInfo, getSurvivalPromotionRarityFloor, getSurvivalXpRequirement } from './survivalProgression.ts';
 import { createSurvivalXpStreakState, registerSurvivalXpPickup, type SurvivalXpStreakState } from './survivalXpStreak.ts';
 import { advanceSurvivalShiftEvent, createSurvivalShiftEventState, registerSurvivalShiftEventAction, type SurvivalShiftEvent, type SurvivalShiftEventAction, type SurvivalShiftEventState } from './survivalShiftEvents.ts';
 import { advanceSurvivalContract, createSurvivalContract, registerSurvivalContractAction, type SurvivalContractAction, type SurvivalContractState } from './survivalContracts.ts';
@@ -194,6 +194,7 @@ const SURVIVAL_WEAPON_DEFS: Record<SurvivalWeaponId, {
 };
 export interface SurvivalSnapshot {
   elapsedSeconds: number; wave: number; kills: number; perfectDodges: number; counterattackReady: boolean; level: number; xp: number; xpToNext: number; xpStreak: number;
+  rankName: string; nextRankName: string; nextRankLevel: number;
   aliveEnemies: number; rerolls: number; skips: number; activeHazards: number;
   killStreak: number; overdriveRemainingSeconds: number;
   mapId: SurvivalMapId; mapName: string; mapSubtitle: string;
@@ -217,7 +218,7 @@ export interface GameCallbacks {
   onSurvivalAnnouncement?: (title: string, subtitle: string, detail: string) => void;
   onSurvivalUpdate?: (snapshot: SurvivalSnapshot) => void;
   onSurvivalSecretFound?: (mapId: SurvivalMapId, secretId: string, secretName: string) => void;
-  onSurvivalLevelUp?: (options: SurvivalUpgradeOption[], context?: 'levelup' | 'boss-reward') => void;
+  onSurvivalLevelUp?: (options: SurvivalUpgradeOption[], context?: 'levelup' | 'rank-up' | 'boss-reward') => void;
   onSurvivalDashUpdate?: (progress: number, ready: boolean, remainingSeconds: number) => void;
 }
 
@@ -522,6 +523,7 @@ export class PaleciakiGameEngine {
   private campaignCounterattackReady = false;
   private survivalWaveStartKills = 0;
   private survivalLevel = 1;
+  private survivalRankUpPending = false;
   private survivalXp = 0;
   private survivalXpToNext = 6;
   private survivalXpStreak: SurvivalXpStreakState = createSurvivalXpStreakState();
@@ -1358,6 +1360,7 @@ export class PaleciakiGameEngine {
     this.survivalMomentum = createSurvivalMomentumState();
     this.survivalWaveStartKills = 0;
     this.survivalLevel = 1;
+    this.survivalRankUpPending = false;
     this.survivalXp = 0;
     this.survivalXpToNext = getSurvivalXpRequirement(1);
     this.survivalXpStreak = createSurvivalXpStreakState();
@@ -2846,6 +2849,7 @@ export class PaleciakiGameEngine {
   }
 
   public getSurvivalSnapshot(): SurvivalSnapshot {
+    const progression = getSurvivalProgressionInfo(this.survivalLevel);
     return {
       elapsedSeconds: Math.floor(this.survivalElapsed),
       wave: this.survivalWave,
@@ -2863,6 +2867,9 @@ export class PaleciakiGameEngine {
       contract: { ...this.survivalContract },
       event: this.survivalShiftEvent.active ? { ...this.survivalShiftEvent.active } : null,
       level: this.survivalLevel,
+      rankName: progression.rankName,
+      nextRankName: progression.nextRankName,
+      nextRankLevel: progression.nextRankLevel,
       xp: this.survivalXp,
       xpToNext: this.survivalXpToNext,
       xpStreak: this.survivalXpStreak.count,
@@ -3031,6 +3038,7 @@ export class PaleciakiGameEngine {
     this.checkSurvivalEvolutions();
     this.survivalPendingOptions = [];
     this.survivalBossRewardPending = false;
+    this.survivalRankUpPending = false;
     this.state = 'playing';
     sound.startMusic();
     this.emitFloatingToast(choice.rarityLabel + ' MODUŁ: ' + choice.title, this.playerPos.x, this.playerPos.y + 1.6, this.playerPos.z, 'perk');
@@ -3171,11 +3179,21 @@ export class PaleciakiGameEngine {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
+    const promotionRarityFloor = getSurvivalPromotionRarityFloor(this.survivalLevel);
+    let promotionCardAssigned = false;
     const withRarity = (options: BaseOption[]): SurvivalUpgradeOption[] => options.map((option) => {
-      // Weapon evolutions are milestone rewards and are always Legendary.
-      const rarity = option.id.startsWith('weapon_evolve:')
+      // Weapon evolutions are always Legendary; at promotions one card is
+      // guaranteed to meet the rank's rarity floor even after a reroll.
+      const isEvolution = option.id.startsWith('weapon_evolve:');
+      let rarity: SurvivalUpgradeRarity = isEvolution
         ? 'legendary'
         : rollSurvivalUpgradeRarity(Math.random(), this.survivalLevel);
+      if (promotionRarityFloor && !promotionCardAssigned) {
+        rarity = isEvolution
+          ? 'legendary'
+          : promoteSurvivalUpgradeRarity(rarity, promotionRarityFloor);
+        promotionCardAssigned = true;
+      }
       const meta = getSurvivalUpgradeRarityMeta(rarity);
 
       if (option.id.startsWith('weapon_unlock:')) {
@@ -3245,7 +3263,10 @@ export class PaleciakiGameEngine {
     this.survivalRerolls--;
     this.survivalPendingOptions = this.rollSurvivalUpgradeOptions(this.survivalPendingOptions.map((option) => option.id));
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
-    this.callbacks.onSurvivalLevelUp?.([...this.survivalPendingOptions]);
+    this.callbacks.onSurvivalLevelUp?.(
+      [...this.survivalPendingOptions],
+      this.survivalRankUpPending ? 'rank-up' : 'levelup',
+    );
     sound.playPickup();
     return true;
   }
@@ -3270,10 +3291,14 @@ export class PaleciakiGameEngine {
   public skipSurvivalUpgrade(): boolean {
     if (this.gameMode !== 'survival' || this.state !== 'levelup' || this.survivalBossRewardPending || this.survivalSkips <= 0) return false;
     this.survivalSkips--;
+    this.survivalRankUpPending = false;
     this.state = 'playing';
     sound.startMusic();
     this.emitFloatingToast('POMINIĘTO WYBÓR — ZACHOWANO TEMPO ZMIANY', this.playerPos.x, this.playerPos.y + 1.5, this.playerPos.z, 'perk');
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+    // A high-value crystal or reward may have crossed more than one threshold.
+    // Skipping a draft must not strand banked XP that is already sufficient.
+    if (this.survivalXp >= this.survivalXpToNext) this.beginSurvivalLevelUp();
     return true;
   }
 
@@ -8155,14 +8180,26 @@ export class PaleciakiGameEngine {
 
   private beginSurvivalLevelUp() {
     if (this.gameMode !== 'survival' || this.state !== 'playing') return;
-    this.survivalXp -= this.survivalXpToNext;
+    this.survivalXp = Math.max(0, this.survivalXp - this.survivalXpToNext);
     this.survivalLevel++;
     this.survivalXpToNext = getSurvivalXpRequirement(this.survivalLevel);
+    const progression = getSurvivalProgressionInfo(this.survivalLevel);
+    this.survivalRankUpPending = progression.isPromotion;
+    if (this.survivalRankUpPending) {
+      // Promotions grant one tactical reroll, capped so the inventory cannot snowball.
+      this.survivalRerolls = Math.min(3, this.survivalRerolls + 1);
+    }
     this.survivalPendingOptions = this.rollSurvivalUpgradeOptions();
     this.state = 'levelup';
     sound.stopMusic();
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
-    this.callbacks.onSurvivalLevelUp?.([...this.survivalPendingOptions]);
+    if (this.survivalRankUpPending) {
+      this.emitFloatingToast('AWANS RANGI: ' + progression.rankName + ' • +1 PRZERZUT', this.playerPos.x, this.playerPos.y + 1.8, this.playerPos.z, 'combo');
+    }
+    this.callbacks.onSurvivalLevelUp?.(
+      [...this.survivalPendingOptions],
+      this.survivalRankUpPending ? 'rank-up' : 'levelup',
+    );
     sound.playAbility(this.currentCharacterId);
   }
 
@@ -8205,6 +8242,7 @@ export class PaleciakiGameEngine {
     }
 
     this.survivalPendingOptions = createSurvivalBossRewardOptions(weaponOffer);
+    this.survivalRankUpPending = false;
     this.survivalBossRewardPending = true;
     this.state = 'levelup';
     sound.stopMusic();
