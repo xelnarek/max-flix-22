@@ -33,6 +33,17 @@ export function rollSurvivalUpgradeRarity(randomValue: number, survivalLevel: nu
   return 'common';
 }
 
+/** Raise one promotion draft card to the guaranteed minimum rarity. */
+export function promoteSurvivalUpgradeRarity(
+  rarity: SurvivalUpgradeRarity,
+  minimum: SurvivalUpgradeRarity,
+): SurvivalUpgradeRarity {
+  const order: SurvivalUpgradeRarity[] = ['common', 'rare', 'epic', 'legendary'];
+  const currentIndex = order.indexOf(rarity);
+  const minimumIndex = order.indexOf(minimum);
+  return order[Math.max(0, currentIndex, minimumIndex)] || 'common';
+}
+
 export function getSurvivalUpgradeRarityMeta(rarity: SurvivalUpgradeRarity): SurvivalUpgradeRarityMeta {
   return RARITY_META[rarity] || RARITY_META.common;
 }
