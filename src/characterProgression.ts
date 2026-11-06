@@ -55,27 +55,27 @@ export interface CharacterMasterySummary {
 }
 
 export const CHARACTER_TALENTS: Readonly<Record<CharacterId, readonly CharacterTalentDefinition[]>> = Object.freeze({
-  marcin: Object.freeze([
+  marcin: Object.freeze<CharacterTalentDefinition[]>([
     { id: 'audit_protocol', name: 'Protokół audytu', icon: '📑', description: 'Każde zatwierdzone uderzenie jest precyzyjniejsze.', effect: 'attack', perRank: 0.02, maxRank: 3 },
     { id: 'wz_armour', name: 'Pancerz WZ-404', icon: '🛡️', description: 'Dodatkowa redukcja otrzymywanych obrażeń.', effect: 'defense', perRank: 0.02, maxRank: 3 },
     { id: 'dispatch_network', name: 'Sieć dyspozytorska', icon: '📡', description: 'Szybsze ponowne wezwanie konwoju WZ-404.', effect: 'cooldown', perRank: 0.025, maxRank: 3 },
   ]),
-  grzesiek: Object.freeze([
+  grzesiek: Object.freeze<CharacterTalentDefinition[]>([
     { id: 'hydraulic_impact', name: 'Uderzenie hydrauliczne', icon: '🔩', description: 'Wzmacnia ciężki rzut hantlem i podstawowe trafienia.', effect: 'attack', perRank: 0.025, maxRank: 3 },
     { id: 'reinforced_grip', name: 'Wzmocniony chwyt', icon: '💪', description: 'Lepsza kontrola impetu zmniejsza otrzymywane obrażenia.', effect: 'defense', perRank: 0.015, maxRank: 3 },
     { id: 'heavy_footwork', name: 'Praca nóg siłacza', icon: '🥾', description: 'Krótsza strata tempa po zmianie kierunku.', effect: 'speed', perRank: 0.015, maxRank: 3 },
   ]),
-  dawid: Object.freeze([
+  dawid: Object.freeze<CharacterTalentDefinition[]>([
     { id: 'stretch_tension', name: 'Napięcie stretchu', icon: '🧵', description: 'Wzmacnia ofensywę rolki i kontrolę trafionego celu.', effect: 'attack', perRank: 0.02, maxRank: 3 },
     { id: 'aerial_installation', name: 'Montaż powietrzny', icon: '🪂', description: 'Większa siła wybicia i pewniejszy drugi etap skoku.', effect: 'jump', perRank: 0.02, maxRank: 3 },
     { id: 'agile_layout', name: 'Zwinny układ alejki', icon: '🌀', description: 'Szybsze przenoszenie ciężaru przy unikach i nawrotach.', effect: 'speed', perRank: 0.015, maxRank: 3 },
   ]),
-  mateusz: Object.freeze([
+  mateusz: Object.freeze<CharacterTalentDefinition[]>([
     { id: 'overclock_drive', name: 'Overclock napędu', icon: '⚡', description: 'Jeszcze szybsze przyspieszenie i przemieszczanie operatora.', effect: 'speed', perRank: 0.02, maxRank: 3 },
     { id: 'capacitor_cycle', name: 'Cykl kondensatora', icon: '🔋', description: 'Skraca czas ładowania Kociej Armii.', effect: 'cooldown', perRank: 0.025, maxRank: 3 },
     { id: 'shock_calibration', name: 'Kalibracja paralizatora', icon: '🎯', description: 'Zwiększa siłę impulsów elektrycznych.', effect: 'attack', perRank: 0.02, maxRank: 3 },
   ]),
-  piotr: Object.freeze([
+  piotr: Object.freeze<CharacterTalentDefinition[]>([
     { id: 'veteran_grip', name: 'Chwyt weterana B4', icon: '🔧', description: 'Mocniejszy rzut kluczem i skuteczniejszy powrót przez tłum.', effect: 'attack', perRank: 0.02, maxRank: 3 },
     { id: 'veteran_stance', name: 'Postawa weterana', icon: '🪵', description: 'Doświadczenie z hali poprawia odporność operatora.', effect: 'defense', perRank: 0.02, maxRank: 3 },
     { id: 'mafia_protocol', name: 'Protokół MafiKapibar', icon: '🐾', description: 'Rodzina szybciej odpowiada na wezwanie.', effect: 'cooldown', perRank: 0.025, maxRank: 3 },
