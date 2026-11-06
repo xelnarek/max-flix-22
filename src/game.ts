@@ -17,7 +17,7 @@ import { chooseCampaignNearbyRewardSpawnPoint } from './campaignRewards.ts';
 import { chooseNearbySpawnPoint } from './arenaSpawn.ts';
 import { chooseSurvivalEnemySpawnType } from './survivalEnemySpawns.ts';
 import { findNextReadyWeaponIndex, getNextWeaponDispatchCursor } from './survivalWeaponDispatch.ts';
-import { buildSurvivalDamageReport, createSurvivalDamageStats, getSurvivalWeaponDamageSource, recordSurvivalDamage, SURVIVAL_DAMAGE_WEAPONS, type SurvivalDamageReport, type SurvivalDamageSource, type SurvivalDamageWeaponId, type SurvivalDamageStats } from './survivalDamageStats.ts';
+import { buildSurvivalDamageReport, createSurvivalDamageStats, getSurvivalWeaponDamageSource, recordSurvivalDamage, recordSurvivalKill, SURVIVAL_DAMAGE_WEAPONS, type SurvivalDamageReport, type SurvivalDamageSource, type SurvivalDamageWeaponId, type SurvivalDamageStats } from './survivalDamageStats.ts';
 import { getSurvivalDifficultyProfile } from './survivalDifficulty.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
 import { chooseSurvivalRicochetTarget, getSurvivalRadiationProfile, getSurvivalRicochetProfile } from './survivalCombatDraft.ts';
@@ -9369,6 +9369,9 @@ export class PaleciakiGameEngine {
     const actualDamage = Math.max(0, previousHp - enemy.hp);
     if (this.gameMode === 'survival' && actualDamage > 0) {
       recordSurvivalDamage(this.survivalDamageStats, damageSource, actualDamage);
+      if (previousHp > 0 && enemy.hp <= 0) {
+        recordSurvivalKill(this.survivalDamageStats, damageSource);
+      }
     }
     this.triggerEnemyHitReaction(enemy, actualDamage, sourceX, sourceZ);
     return enemy.hp;
