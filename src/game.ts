@@ -59,6 +59,7 @@ import { advanceSurvivalMomentum, createSurvivalMomentumState, getSurvivalMoment
 import { selectSurvivalAutoTarget } from './survivalTargeting.ts';
 import { CHARACTERS } from './characters.ts';
 import { getCharacterMotionProfile } from './characterMotion.ts';
+import { getAttackPoseStrength, getCharacterAttackMotionProfile } from './characterAttackMotion.ts';
 import { resolveCharacterIncomingDamage, scaleCharacterBasicAttackDamage } from './characterBalance.ts';
 import { sound } from './sound.ts';
 import {
@@ -395,6 +396,8 @@ export class PaleciakiGameEngine {
   private abilityCooldownLastReady: boolean | null = null;
   private attackCooldownTimer = 0;
   private attackSwingTimer = 0;
+  private attackSwingDuration = 0.26;
+  private characterFootstepTimer = 0;
   private walkCycle = 0;
   private speechBubbleTimer = 0;
   private levelStartTime = 0;
@@ -8343,6 +8346,29 @@ export class PaleciakiGameEngine {
     let inputZ = -screenY;
 
     const inputLen = Math.hypot(inputX, inputZ);
+
+    // Character-coloured footfalls are emitted at a controlled cadence into the existing particle pool.
+    if (inputLen > 0.08 && this.isGrounded) {
+      this.characterFootstepTimer = Math.max(0, this.characterFootstepTimer - dt);
+      if (this.characterFootstepTimer <= 0) {
+        const stepProfile = getCharacterMotionProfile(this.currentCharacterId);
+        const sideX = -inputZ * 0.14;
+        const sideZ = inputX * 0.14;
+        for (let step = 0; step < stepProfile.footstepCount; step++) {
+          const side = stepProfile.footstepCount === 1 ? 0 : (step === 0 ? -1 : 1);
+          this.spawnDust(
+            this.playerPos.x - inputX * 0.16 + sideX * side,
+            this.playerPos.y,
+            this.playerPos.z - inputZ * 0.16 + sideZ * side,
+            stepProfile.footstepColor,
+          );
+        }
+        this.characterFootstepTimer = stepProfile.footstepInterval;
+      }
+    } else {
+      this.characterFootstepTimer = Math.min(this.characterFootstepTimer, 0.07);
+    }
+
     if (inputLen > 1) {
       inputX /= inputLen;
       inputZ /= inputLen;
@@ -8449,13 +8475,7 @@ export class PaleciakiGameEngine {
       this.attackCooldownTimer = Math.max(0, this.attackCooldownTimer - dt * attackRecoveryRate);
     }
     if (this.attackSwingTimer > 0) {
-      this.attackSwingTimer -= dt;
-      if (this.rightArm) {
-        this.rightArm.rotation.x = -1.8 + (this.attackSwingTimer / 0.25) * 1.5;
-        this.rightArm.rotation.z = -0.4;
-      }
-    } else if (this.rightArm) {
-      this.rightArm.rotation.z = 0;
+      this.attackSwingTimer = Math.max(0, this.attackSwingTimer - dt);
     }
 
     const gravityMultiplier = this.playerVel.y > 0
@@ -8646,6 +8666,9 @@ export class PaleciakiGameEngine {
       const squashY = motionProfile.landingSquashY;
       const squashXZ = 1 / Math.sqrt(squashY);
       this.playerGroup.scale.set(squashXZ, squashY, squashXZ);
+      const landingColor = motionProfile.footstepColor;
+      this.spawnDust(this.playerPos.x - 0.16, this.playerPos.y, this.playerPos.z, landingColor);
+      this.spawnDust(this.playerPos.x + 0.16, this.playerPos.y, this.playerPos.z, landingColor);
     }
 
     if (this.playerPos.y < -4.5) {
@@ -8695,6 +8718,25 @@ export class PaleciakiGameEngine {
         this.rightArm.rotation.x = -motionProfile.jumpArmLift * 0.84;
         this.leftArm.rotation.z = motionProfile.jumpArmLift * 0.32;
         this.rightArm.rotation.z = -motionProfile.jumpArmLift * 0.32;
+      }
+
+      if (this.attackSwingTimer > 0 && this.attackSwingDuration > 0) {
+        const attackProfile = getCharacterAttackMotionProfile(this.currentCharacterId);
+        const progress = THREE.MathUtils.clamp(1 - this.attackSwingTimer / this.attackSwingDuration, 0, 1);
+        const strike = getAttackPoseStrength(progress);
+        if (this.rightArm && this.leftArm) {
+          this.rightArm.rotation.x += attackProfile.rightArmX * strike;
+          this.leftArm.rotation.x += attackProfile.leftArmX * strike;
+          this.rightArm.rotation.z += attackProfile.rightArmZ * strike;
+          this.leftArm.rotation.z += attackProfile.leftArmZ * strike;
+        }
+        this.playerGroup.rotation.x += attackProfile.torsoPitch * strike;
+        this.playerGroup.rotation.z += attackProfile.torsoTwist * strike;
+        if (this.playerHead) this.playerHead.rotation.x += attackProfile.headDip * strike;
+        if (this.playerAccessory) {
+          this.playerAccessory.rotation.x += attackProfile.toolPitch * strike;
+          this.playerAccessory.rotation.z += attackProfile.toolRoll * strike;
+        }
       }
     }
 
@@ -11081,7 +11123,8 @@ export class PaleciakiGameEngine {
     this.attackCooldownTimer = baseAttackCooldown *
       (this.gameMode === 'survival' ? this.survivalAttackRateMultiplier : 1) *
       attackHasteFactor;
-    this.attackSwingTimer = 0.26;
+    this.attackSwingDuration = getCharacterAttackMotionProfile(charId).durationSeconds;
+    this.attackSwingTimer = this.attackSwingDuration;
     const firstPrimaryProjectile = this.projectiles.length;
 
     sound.playAttackWhoosh();
@@ -12675,7 +12718,8 @@ export class PaleciakiGameEngine {
       this.activatePerk('vibram_boots', this.gameMode === 'survival' ? 3.5 : 8);
       this.spawnMateuszCats();
     } else if (this.currentCharacterId === 'piotr') {
-      this.attackSwingTimer = 0.3;
+      this.attackSwingDuration = 0.3;
+      this.attackSwingTimer = this.attackSwingDuration;
       if (this.rightArm) this.rightArm.rotation.x = -1.15;
       this.sayQuote('RYTUAŁ MAFIKAPIBAR! Pentagram B4 otwiera przejście. Rodzina, do roboty!');
       this.spawnMafiCapybaras(abilityDamageMultiplier);
@@ -12684,7 +12728,8 @@ export class PaleciakiGameEngine {
 
   private throwBimberMolotov(angleOffset = 0) {
     sound.playMolotovThrow();
-    this.attackSwingTimer = 0.35;
+    this.attackSwingDuration = 0.35;
+    this.attackSwingTimer = this.attackSwingDuration;
     if (this.rightArm) {
       this.rightArm.rotation.x = -2.2;
     }
