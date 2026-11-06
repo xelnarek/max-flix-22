@@ -1460,7 +1460,7 @@ test('game-over screen reports actual Survival HP damage by weapon, basic attack
   assert.match(html, /Dobicia przypisano źródłu ostatniego, śmiertelnego trafienia/);
   assert.match(html, /id="gameover-damage-breakdown"/);
   assert.match(html, /UDZIAŁ W ZADANYCH OBRAŻENIACH/);
-  assert.match(stats, /percentage: total > 0 \? Math\.round\(\(entry\.damage \/ total\) \* 1000\) \/ 10 : 0/);
+  assert.match(stats, /percentage: totalDamage > 0 \? Math\.round\(\(entry\.damage \/ totalDamage\) \* 1000\) \/ 10 : 0/);
 });
 
 test('Survival weapon attacks have distinct pooled muzzle signatures, colored trails and impacts', async () => {
