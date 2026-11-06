@@ -137,3 +137,31 @@ test('mastery progression preserves XP overflow when several thresholds are cros
   assert.ok(update.levelsGained >= 5);
   assert.equal(getCharacterMasterySummary(update.profile, 'grzesiek').xp, 12);
 });
+
+test('talent bonuses are connected to live movement, attacks, defence and super ability cooldown', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const [game, app, html] = await Promise.all([
+    readFile(new URL('../src/game.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../index.html', import.meta.url), 'utf8'),
+  ]);
+  assert.match(game, /masteryBonuses\.attackMultiplier/);
+  assert.match(game, /masteryBonuses\.damageTakenMultiplier/);
+  assert.match(game, /masteryBonuses\.speedMultiplier/);
+  assert.match(game, /masteryBonuses\.jumpMultiplier/);
+  assert.match(game, /masteryBonuses\.abilityCooldownMultiplier/);
+  assert.match(game, /this\.characterMasteryBonuses\.damageTakenMultiplier/);
+  assert.match(app, /recordCharacterRunResult\(characterMasteryProfile/);
+  assert.match(app, /getCharacterTalentBonuses\(characterMasteryProfile, id\)/);
+  assert.match(app, /spendCharacterTalentPoint\(characterMasteryProfile, id, talent\.id\)/);
+  assert.match(html, /id="character-talent-list"/);
+  assert.match(html, /id="character-mastery-fill"/);
+});
+
+test('a single ended Survival run is awarded once and all retry paths open a fresh award window', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
+  assert.match(app, /if \(this\.lastMode === 'survival' && !this\.masteryAwardedForRun\)/);
+  assert.match(app, /this\.masteryAwardedForRun = true/);
+  assert.equal((app.match(/this\.masteryAwardedForRun = false;/g) || []).length, 3);
+});
