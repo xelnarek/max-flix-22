@@ -58,7 +58,7 @@ import { applyPerfectDodgeCounterattack, getSurvivalDashCooldownSeconds, getSurv
 import { advanceSurvivalMomentum, createSurvivalMomentumState, getSurvivalMomentumDamageMultiplier, getSurvivalMomentumMoveMultiplier, getSurvivalMomentumRateMultiplier, registerSurvivalKill, type SurvivalMomentumState } from './survivalMomentum.ts';
 import { selectSurvivalAutoTarget } from './survivalTargeting.ts';
 import { CHARACTERS } from './characters.ts';
-import { getCharacterVisualStyle } from './characterVisualStyle.ts';
+import { getCharacterVisualAccentColor, getCharacterVisualStyle } from './characterVisualStyle.ts';
 import { resolveCharacterIncomingDamage, scaleCharacterBasicAttackDamage } from './characterBalance.ts';
 import { sound } from './sound.ts';
 import {
@@ -1221,7 +1221,7 @@ export class PaleciakiGameEngine {
     // 2. Create inverted normal stencil outline material & shell
     const outlineMat = new THREE.ShaderMaterial({
       uniforms: {
-        uColor: { value: new THREE.Color(({ marcin: 0x60a5fa, grzesiek: 0x4ade80, dawid: 0xfb923c, mateusz: 0xe879f9, piotr: 0xef4444 } as const)[this.charDef.id]) },
+        uColor: { value: new THREE.Color(getCharacterVisualAccentColor(this.charDef.id)) },
         uOutlineThickness: { value: this.charDef.id === 'grzesiek' ? 0.052 : this.charDef.id === 'mateusz' ? 0.034 : 0.043 },
         uTime: { value: 0 },
       },

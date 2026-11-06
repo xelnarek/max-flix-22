@@ -1269,7 +1269,7 @@ body {
   background: rgba(15, 23, 42, 0.65);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  border: 1.5px solid color-mix(in srgb, var(--operator-accent, #64748b) 46%, transparent);
   border-radius: 14px;
   padding: 10px 8px;
   cursor: pointer;

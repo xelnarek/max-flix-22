@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import * as xb from 'xrblocks';
 import { CHARACTERS } from './characters.ts';
+import { getCharacterVisualAccentColor } from './characterVisualStyle.ts';
 import {
   ensureLeaderboardServices,
   submitScore,
@@ -1191,7 +1192,7 @@ class PaleciakiScene extends xb.Script {
         const cardId = card.dataset.char as CharacterId | undefined;
         if (!cardId || !CHARACTERS[cardId]) return;
         const definition = CHARACTERS[cardId];
-        const accent = definition.secondaryColor.toString(16).padStart(6, '0');
+        const accent = getCharacterVisualAccentColor(cardId).toString(16).padStart(6, '0');
         const badge = card.querySelector<HTMLElement>('.operator-emblem');
         card.style.setProperty('--operator-accent', `#${accent}`);
         card.setAttribute('aria-pressed', String(cardId === id));

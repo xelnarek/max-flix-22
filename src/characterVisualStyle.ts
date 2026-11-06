@@ -30,3 +30,15 @@ export const CHARACTER_VISUAL_STYLES: Readonly<Record<CharacterId, CharacterVisu
 export function getCharacterVisualStyle(id: CharacterId): CharacterVisualStyle {
   return CHARACTER_VISUAL_STYLES[id] ?? CHARACTER_VISUAL_STYLES.marcin;
 }
+
+export const CHARACTER_VISUAL_ACCENT_COLORS: Readonly<Record<CharacterId, number>> = Object.freeze({
+  marcin: 0x60a5fa,
+  grzesiek: 0x4ade80,
+  dawid: 0xfb923c,
+  mateusz: 0xe879f9,
+  piotr: 0xef4444,
+});
+
+export function getCharacterVisualAccentColor(id: CharacterId): number {
+  return CHARACTER_VISUAL_ACCENT_COLORS[id] ?? CHARACTER_VISUAL_ACCENT_COLORS.marcin;
+}

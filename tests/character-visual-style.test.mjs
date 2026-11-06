@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CHARACTER_VISUAL_STYLES, getCharacterVisualStyle } from '../src/characterVisualStyle.ts';
+import { CHARACTER_VISUAL_ACCENT_COLORS, CHARACTER_VISUAL_STYLES, getCharacterVisualStyle } from '../src/characterVisualStyle.ts';
 
 test('each operator has a distinct gait, stance, lean and attack animation', () => {
   const styles = Object.values(CHARACTER_VISUAL_STYLES);
   assert.equal(styles.length, 5);
+  assert.equal(new Set(Object.values(CHARACTER_VISUAL_ACCENT_COLORS)).size, 5, 'every operator outline must have a unique high-contrast colour');
   for (const key of ['gaitRate', 'strideAmplitude', 'armSwingAmplitude', 'forwardLean', 'verticalBob', 'attackArmX']) {
     assert.equal(new Set(styles.map(style => style[key])).size, 5, key + ' should differ for all five operators');
   }
@@ -38,6 +39,8 @@ test('3D rig and menu expose a strong visual silhouette for every class', async 
   assert.match(game, /uColor: \{ value: new THREE\.Color\(\(\{ marcin: 0x60a5fa, grzesiek: 0x4ade80, dawid: 0xfb923c, mateusz: 0xe879f9, piotr: 0xef4444 \}/);
   assert.match(game, /getCharacterVisualStyle\(this\.charDef\.id\)/);
   assert.match(app, /card\.dataset\.archetype =/);
+  assert.match(app, /getCharacterVisualAccentColor\(cardId\)/);
+  assert.match(game, /getCharacterVisualAccentColor\(this\.charDef\.id\)/);
   for (const tag of ['TANK • 5 HP • PANCERZ','BRUISER • CIĘŻKI ATAK','SKOCZEK • KONTROLA','RUNNER • NAJSZYBSZY','WETERAN • PODWÓJNY SKOK']) {
     assert.ok(html.includes(tag), 'missing visible class tag: ' + tag);
   }
