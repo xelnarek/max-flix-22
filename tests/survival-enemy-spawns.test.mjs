@@ -45,5 +45,5 @@ test('bosses and one-time event enemies are kept out of the standard random pool
   for (const type of ['walczak', 'krol_leto', 'bosman_krakow', 'sebix_m', 'pomazaniec', 'forklift']) {
     assert.equal(eligible.includes(type), false, type);
   }
-  assert.equal(chooseSurvivalEnemySpawnType(1, 0, Number.NaN), 'zombie_pracownik');
+  assert.equal(chooseSurvivalEnemySpawnType(1, 0, Number.NaN), 'sztaplar_szalony');
 });

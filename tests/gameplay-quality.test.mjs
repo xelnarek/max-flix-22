@@ -1411,7 +1411,9 @@ test('Survival random enemy roster makes every regular archetype selectable afte
     read('../src/game.ts'), read('../src/survivalEnemySpawns.ts'), read('../src/survivalTargeting.ts')
   ]);
   assert.match(game, /chooseSurvivalEnemySpawnType\(wave, this\.survivalElapsed, Math\.random\(\)\)/);
-  assert.match(game, /case 'piorun_dron':/);
+  for (const type of ['zombie_pracownik', 'kurier', 'sztaplar_szalony', 'monter', 'inspector', 'handlowiec', 'customer', 'architect', 'przedstawiciel_włoski', 'serwisant', 'agv_robot', 'pan_roman', 'piorun_dron', 'elite_walczak_guard']) {
+    assert.ok(game.includes("case '" + type + "':"), 'missing Survival spawn constructor mapping: ' + type);
+  }
   assert.match(game, /enemy\.type !== 'architect' && enemy\.type !== 'piorun_dron'/);
   assert.doesNotMatch(game, /this\.survivalElapsed < 90 && roll < 0\.52/);
   assert.match(roster, /type: 'piorun_dron', minWave: 6/);
