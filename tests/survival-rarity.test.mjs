@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   getSurvivalUpgradeRarityMeta,
+  promoteSurvivalUpgradeRarity,
   getSurvivalWeaponInitialLevel,
   getSurvivalWeaponUpgradeSteps,
   rollSurvivalUpgradeRarity,
@@ -42,4 +43,11 @@ test('high-rarity weapon offers grant bounded head starts', () => {
   assert.equal(getSurvivalWeaponInitialLevel('legendary'), 3);
   assert.equal(getSurvivalWeaponUpgradeSteps('legendary'), 2);
   assert.equal(getSurvivalWeaponUpgradeSteps('epic'), 1);
+});
+
+test('promotion rarity floors never downgrade an already better card', () => {
+  assert.equal(promoteSurvivalUpgradeRarity('common', 'rare'), 'rare');
+  assert.equal(promoteSurvivalUpgradeRarity('rare', 'epic'), 'epic');
+  assert.equal(promoteSurvivalUpgradeRarity('legendary', 'rare'), 'legendary');
+  assert.equal(promoteSurvivalUpgradeRarity('common', 'legendary'), 'legendary');
 });
