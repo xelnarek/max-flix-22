@@ -551,10 +551,12 @@ test('Survival random boss spawns never stack active Bosman encounters', async (
 });
 
 
-test('campaign roaming rewards use the current mega-map sector while Survival stays arena-centred', async () => {
+test('campaign and Survival roaming rewards spawn near the operator instead of the map origin', async () => {
   const game = await read('../src/game.ts');
-  assert.match(game, /chooseCampaignRewardSpawnPoint\(this\.currentActiveSector, Math\.random\(\), Math\.random\(\), this\.campaignEnemyObstacles\)/);
-  assert.match(game, /this\.gameMode === 'campaign'[\s\S]*?chooseCampaignRewardSpawnPoint[\s\S]*?: \{ x: \(Math\.random\(\) - 0\.5\) \* 44, z: \(Math\.random\(\) - 0\.5\) \* 14 \}/);
+  const spawner = game.slice(game.indexOf('private updateRandomSpawners'), game.indexOf('public triggerTimedWarehouseEvent'));
+  assert.match(spawner, /chooseCampaignNearbyRewardSpawnPoint\([\s\S]*?this\.playerPos/);
+  assert.match(spawner, /chooseNearbySpawnPoint\([\s\S]*?this\.playerPos[\s\S]*?this\.levelBounds[\s\S]*?this\.survivalObstacles/);
+  assert.doesNotMatch(spawner, /\(Math\.random\(\) - 0\.5\) \* 44/);
   const progression = game.slice(game.indexOf('private updateSectorProgress'), game.indexOf('private updateRandomSpawners'));
   assert.match(progression, /this\.currentActiveSector = newSector/);
 });
