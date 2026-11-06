@@ -862,6 +862,57 @@ class PaleciakiScene extends xb.Script {
           if (finalMode) finalMode.textContent = 'SURVIVAL SHIFT';
           const snapshot = this.engine.getSurvivalSnapshot();
           if (runDetail) runDetail.textContent = `FALA ${snapshot.wave} • ${snapshot.kills} ELIMINACJI • POZIOM ${snapshot.level}`;
+
+          // The damage table is derived from actual enemy HP removed, not projectile counts.
+          const damageReport = this.engine.getSurvivalDamageReport();
+          const damageTotal = document.getElementById('gameover-total-damage');
+          const damageList = document.getElementById('gameover-damage-breakdown');
+          if (damageTotal) damageTotal.textContent = damageReport.totalDamage.toLocaleString('pl-PL', { maximumFractionDigits: 1 }) + ' HP';
+          if (damageList) {
+            damageList.replaceChildren();
+            if (damageReport.entries.length === 0) {
+              const empty = document.createElement('p');
+              empty.className = 'gameover-damage-empty';
+              empty.textContent = 'Brak zarejestrowanych obrażeń zadanych przeciwnikom.';
+              damageList.appendChild(empty);
+            } else {
+              for (const entry of damageReport.entries) {
+                const row = document.createElement('div');
+                row.className = 'gameover-damage-row';
+                row.style.setProperty('--damage-accent', '#' + entry.color.toString(16).padStart(6, '0'));
+
+                const top = document.createElement('div');
+                top.className = 'gameover-damage-row-top';
+                const identity = document.createElement('div');
+                identity.className = 'gameover-damage-identity';
+                const category = document.createElement('span');
+                category.className = 'gameover-damage-category';
+                category.textContent = entry.category;
+                const label = document.createElement('strong');
+                label.className = 'gameover-damage-name';
+                label.textContent = entry.label;
+                identity.append(category, label);
+
+                const values = document.createElement('div');
+                values.className = 'gameover-damage-values';
+                const amount = document.createElement('strong');
+                amount.textContent = entry.damage.toLocaleString('pl-PL', { maximumFractionDigits: 1 }) + ' HP';
+                const percentage = document.createElement('span');
+                percentage.textContent = entry.percentage.toLocaleString('pl-PL', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+                values.append(amount, percentage);
+                top.append(identity, values);
+
+                const track = document.createElement('div');
+                track.className = 'gameover-damage-track';
+                const fill = document.createElement('div');
+                fill.className = 'gameover-damage-fill';
+                fill.style.width = Math.max(0, Math.min(100, entry.percentage)) + '%';
+                track.appendChild(fill);
+                row.append(top, track);
+                damageList.appendChild(row);
+              }
+            }
+          }
           this.prepareScoreSubmissionForm(
             'player-nickname-gameover',
             'btn-submit-score-gameover',
