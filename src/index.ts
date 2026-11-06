@@ -36,11 +36,42 @@ import { SURVIVAL_MAPS, type SurvivalMapId } from './survivalMaps.ts';
 import { launchOniricPlatformer } from './oniricPlatformer.ts';
 import { getMenuTabIndexForKey } from './menuTabNavigation.ts';
 import { readSurvivalMapPreference, writeSurvivalMapPreference } from './survivalMapPreference.ts';
+import {
+  CHARACTER_TALENTS,
+  createInitialCharacterMasteryProfile,
+  getCharacterMasterySummary,
+  getCharacterTalentBonuses,
+  recordCharacterRunResult,
+  sanitizeCharacterMasteryProfile,
+  spendCharacterTalentPoint,
+} from './characterProgression.ts';
 
 // warehouseAssets imports moved to assets.ts where they are preloaded
 
 
 const SURVIVAL_ACHIEVEMENTS_STORAGE_KEY = 'paleciaki.survival.achievements.v1';
+const CHARACTER_MASTERY_STORAGE_KEY = 'paleciaki.character.mastery.v1';
+
+const loadCharacterMasteryProfile = () => {
+  try {
+    const saved = localStorage.getItem(CHARACTER_MASTERY_STORAGE_KEY);
+    return saved
+      ? sanitizeCharacterMasteryProfile(JSON.parse(saved))
+      : createInitialCharacterMasteryProfile();
+  } catch {
+    return createInitialCharacterMasteryProfile();
+  }
+};
+
+let characterMasteryProfile = loadCharacterMasteryProfile();
+
+const persistCharacterMasteryProfile = () => {
+  try {
+    localStorage.setItem(CHARACTER_MASTERY_STORAGE_KEY, JSON.stringify(characterMasteryProfile));
+  } catch (error) {
+    console.warn('[Mastery] Local save unavailable:', error);
+  }
+};
 
 const loadSurvivalAchievementProgress = () => {
   try {
@@ -282,6 +313,7 @@ class PaleciakiScene extends xb.Script {
   private lastTimeSeconds: number = 0;
   private lastBossDefeated: boolean = false;
   private lastMode: 'campaign' | 'survival' = 'survival';
+  private masteryAwardedForRun = false;
   private camera: THREE.PerspectiveCamera;
   private fallbackScene: THREE.Scene;
   private lastLoopTick: number = performance.now();
@@ -312,6 +344,7 @@ class PaleciakiScene extends xb.Script {
   }
 
   private setupUIAndEngine() {
+    let renderCharacterMasteryPanel: (id: CharacterId) => void = () => {};
     const handleResize = () => {
       // visualViewport reflects the usable viewport on mobile browsers when browser chrome changes size.
       const width = Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth));
@@ -864,6 +897,30 @@ class PaleciakiScene extends xb.Script {
           const snapshot = this.engine.getSurvivalSnapshot();
           if (runDetail) runDetail.textContent = `FALA ${snapshot.wave} • ${snapshot.kills} ELIMINACJI • POZIOM ${snapshot.level}`;
 
+          // Award mastery exactly once when a Survival run ends. A retry starts a fresh award window.
+          if (this.lastMode === 'survival' && !this.masteryAwardedForRun) {
+            this.masteryAwardedForRun = true;
+            const operatorId = this.engine.getCharacterDef().id;
+            const masteryResult = recordCharacterRunResult(characterMasteryProfile, operatorId, {
+              kills: snapshot.kills,
+              elapsedSeconds: snapshot.elapsedSeconds,
+              bossesDefeated: snapshot.bossesDefeated,
+              secretsFound: snapshot.secretsFound,
+            });
+            characterMasteryProfile = masteryResult.profile;
+            persistCharacterMasteryProfile();
+            renderCharacterMasteryPanel(operatorId);
+            if (masteryResult.xpEarned > 0) {
+              const masteryToast = document.createElement('div');
+              masteryToast.className = 'achievement-unlock-toast';
+              masteryToast.textContent = '🎖️ ' + CHARACTERS[operatorId].name +
+                ' • +' + masteryResult.xpEarned + ' MASTERY XP' +
+                (masteryResult.levelsGained > 0 ? ' • AWANS MISTRZOSTWA: +' + masteryResult.levelsGained : '');
+              document.body.appendChild(masteryToast);
+              window.setTimeout(() => masteryToast.remove(), 3900);
+            }
+          }
+
           // The damage table is derived from actual enemy HP removed, not projectile counts.
           const damageReport = this.engine.getSurvivalDamageReport();
           const damageTotal = document.getElementById('gameover-total-damage');
@@ -1188,6 +1245,112 @@ class PaleciakiScene extends xb.Script {
     // its first run after the renderer and title UI are fully ready.
     this.cinematicIntro = null;
 
+    renderCharacterMasteryPanel = (id: CharacterId) => {
+      const summary = getCharacterMasterySummary(characterMasteryProfile, id);
+      const state = characterMasteryProfile.characters[id];
+      const title = document.getElementById('character-mastery-title');
+      const level = document.getElementById('character-mastery-level');
+      const xp = document.getElementById('character-mastery-xp');
+      const points = document.getElementById('character-mastery-points');
+      const fill = document.getElementById('character-mastery-fill') as HTMLElement | null;
+      const record = document.getElementById('character-mastery-record');
+      const list = document.getElementById('character-talent-list');
+
+      if (title) title.textContent = summary.isMaxLevel
+        ? 'MISTRZOSTWO • MAKSIMUM'
+        : 'MISTRZOSTWO • ' + CHARACTERS[id].className.toUpperCase();
+      if (level) level.textContent = String(summary.level);
+      if (xp) xp.textContent = summary.isMaxLevel
+        ? 'MAKSYMALNE MISTRZOSTWO'
+        : summary.xp + ' / ' + summary.xpToNext + ' MASTERY XP';
+      if (points) {
+        const pointLabel = summary.availableTalentPoints === 1 ? 'PUNKT TALENTU' : 'PUNKTY TALENTU';
+        points.textContent = summary.availableTalentPoints + ' ' + pointLabel;
+      }
+      if (fill) fill.style.width = summary.progressPercent + '%';
+      if (record) record.textContent =
+        state.totalRuns + ' zmian • ' + state.totalKills.toLocaleString('pl-PL') +
+        ' eliminacji • ' + state.totalBosses + ' bossów';
+
+      // Show mastery on all five selection cards, not only the currently selected operator.
+      document.querySelectorAll<HTMLElement>('.char-card[data-char]').forEach((card) => {
+        const cardId = card.dataset.char as CharacterId | undefined;
+        if (!cardId || !CHARACTERS[cardId]) return;
+        let badge = card.querySelector<HTMLElement>('.char-card-mastery');
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'char-card-mastery';
+          card.appendChild(badge);
+        }
+        badge.textContent = 'M' + characterMasteryProfile.characters[cardId].level;
+        badge.title = 'Mistrzostwo: poziom ' + characterMasteryProfile.characters[cardId].level + ' / 15';
+      });
+
+      if (!list) return;
+      list.replaceChildren();
+      const effectLabels: Record<string, string> = {
+        attack: 'SIŁA ATAKU',
+        defense: 'ODPORNOŚĆ',
+        speed: 'SZYBKOŚĆ',
+        jump: 'SIŁA SKOKU',
+        cooldown: 'CZAS SUPERUMIEJĘTNOŚCI',
+      };
+      for (const talent of CHARACTER_TALENTS[id]) {
+        const rank = state.talentRanks[talent.id] || 0;
+        const card = document.createElement('article');
+        card.className = 'character-talent-card' + (rank >= talent.maxRank ? ' is-maxed' : '');
+        const heading = document.createElement('div');
+        heading.className = 'character-talent-heading';
+        const icon = document.createElement('span');
+        icon.className = 'character-talent-icon';
+        icon.textContent = talent.icon;
+        const name = document.createElement('strong');
+        name.textContent = talent.name;
+        heading.append(icon, name);
+        const rankLabel = document.createElement('span');
+        rankLabel.className = 'character-talent-rank';
+        rankLabel.textContent = rank + ' / ' + talent.maxRank;
+        const description = document.createElement('p');
+        description.className = 'character-talent-description';
+        description.textContent = talent.description;
+        const effect = document.createElement('span');
+        effect.className = 'character-talent-effect';
+        const bonusPercent = (talent.perRank * 100 * rank).toLocaleString('pl-PL', { maximumFractionDigits: 1 });
+        const sign = talent.effect === 'defense' || talent.effect === 'cooldown' ? '−' : '+';
+        effect.textContent = effectLabels[talent.effect] + ' ' + sign + bonusPercent + '%';
+        const pips = document.createElement('div');
+        pips.className = 'character-talent-pips';
+        for (let index = 0; index < talent.maxRank; index++) {
+          const pip = document.createElement('span');
+          pip.classList.toggle('is-filled', index < rank);
+          pips.appendChild(pip);
+        }
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'character-talent-upgrade';
+        button.disabled = rank >= talent.maxRank || summary.availableTalentPoints <= 0;
+        button.textContent = rank >= talent.maxRank
+          ? 'MAKSIMUM'
+          : summary.availableTalentPoints > 0 ? 'ROZWIŃ • 1 PUNKT' : 'BRAK PUNKTÓW';
+        button.setAttribute('aria-label', 'Rozwiń talent ' + talent.name + ', aktualny poziom ' + rank + ' z ' + talent.maxRank);
+        button.addEventListener('click', () => {
+          const result = spendCharacterTalentPoint(characterMasteryProfile, id, talent.id);
+          if (!result.purchased) return;
+          characterMasteryProfile = result.profile;
+          persistCharacterMasteryProfile();
+          this.engine.selectCharacter(id, getCharacterTalentBonuses(characterMasteryProfile, id));
+          renderCharacterMasteryPanel(id);
+          const toast = document.createElement('div');
+          toast.className = 'achievement-unlock-toast';
+          toast.textContent = talent.icon + ' TALENT ROZWINIĘTY • ' + talent.name + ' ' + (rank + 1) + '/' + talent.maxRank;
+          document.body.appendChild(toast);
+          window.setTimeout(() => toast.remove(), 2600);
+        });
+        card.append(heading, rankLabel, description, effect, pips, button);
+        list.appendChild(card);
+      }
+    };
+
     const updateCharacterUI = (id: CharacterId) => {
       this.selectedCharId = id;
       const def = CHARACTERS[id];
@@ -1304,7 +1467,8 @@ class PaleciakiScene extends xb.Script {
         statValHealth.textContent = `${def.maxHp} HP`;
       }
 
-      this.engine.selectCharacter(id);
+      renderCharacterMasteryPanel(id);
+      this.engine.selectCharacter(id, getCharacterTalentBonuses(characterMasteryProfile, id));
     };
 
     updateCharacterUI('marcin');
@@ -1638,7 +1802,9 @@ class PaleciakiScene extends xb.Script {
         survivalHud?.classList.remove('hidden');
         gameShell?.classList.add('survival-mode');
 
-        this.engine.startSurvival(selectedSurvivalMapId);
+        this.masteryAwardedForRun = false;
+      this.masteryAwardedForRun = false;
+      this.engine.startSurvival(selectedSurvivalMapId);
       } catch (error) {
         console.error('[Survival] Nie udało się uruchomić rozgrywki:', error);
         titleScreen?.classList.remove('hidden');
@@ -1911,6 +2077,7 @@ class PaleciakiScene extends xb.Script {
       survivalLevelUp?.classList.add('hidden');
       survivalHud?.classList.remove('hidden');
       gameShell?.classList.add('survival-mode');
+      this.masteryAwardedForRun = false;
       this.engine.startSurvival(selectedSurvivalMapId);
     });
 
