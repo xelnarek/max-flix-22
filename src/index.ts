@@ -36,11 +36,42 @@ import { SURVIVAL_MAPS, type SurvivalMapId } from './survivalMaps.ts';
 import { launchOniricPlatformer } from './oniricPlatformer.ts';
 import { getMenuTabIndexForKey } from './menuTabNavigation.ts';
 import { readSurvivalMapPreference, writeSurvivalMapPreference } from './survivalMapPreference.ts';
+import {
+  CHARACTER_TALENTS,
+  createInitialCharacterMasteryProfile,
+  getCharacterMasterySummary,
+  getCharacterTalentBonuses,
+  recordCharacterRunResult,
+  sanitizeCharacterMasteryProfile,
+  spendCharacterTalentPoint,
+} from './characterProgression.ts';
 
 // warehouseAssets imports moved to assets.ts where they are preloaded
 
 
 const SURVIVAL_ACHIEVEMENTS_STORAGE_KEY = 'paleciaki.survival.achievements.v1';
+const CHARACTER_MASTERY_STORAGE_KEY = 'paleciaki.character.mastery.v1';
+
+const loadCharacterMasteryProfile = () => {
+  try {
+    const saved = localStorage.getItem(CHARACTER_MASTERY_STORAGE_KEY);
+    return saved
+      ? sanitizeCharacterMasteryProfile(JSON.parse(saved))
+      : createInitialCharacterMasteryProfile();
+  } catch {
+    return createInitialCharacterMasteryProfile();
+  }
+};
+
+let characterMasteryProfile = loadCharacterMasteryProfile();
+
+const persistCharacterMasteryProfile = () => {
+  try {
+    localStorage.setItem(CHARACTER_MASTERY_STORAGE_KEY, JSON.stringify(characterMasteryProfile));
+  } catch (error) {
+    console.warn('[Mastery] Local save unavailable:', error);
+  }
+};
 
 const loadSurvivalAchievementProgress = () => {
   try {
@@ -282,6 +313,7 @@ class PaleciakiScene extends xb.Script {
   private lastTimeSeconds: number = 0;
   private lastBossDefeated: boolean = false;
   private lastMode: 'campaign' | 'survival' = 'survival';
+  private masteryAwardedForRun = false;
   private camera: THREE.PerspectiveCamera;
   private fallbackScene: THREE.Scene;
   private lastLoopTick: number = performance.now();
