@@ -60,12 +60,13 @@ test('boss rewards pause Survival, trigger on boss defeat and cannot be bypassed
   ]);
 
   assert.ok(game.includes("this.callbacks.onSurvivalLevelUp?.([...this.survivalPendingOptions], 'boss-reward')"));
+  assert.ok(game.includes('this.survivalRankUpPending = false;'));
   assert.ok(game.includes("this.beginSurvivalBossReward(e.name)"));
   assert.ok(game.includes("this.survivalBossRewardPending = true"));
   assert.ok(game.includes("this.survivalBossRewardPending || this.survivalRerolls <= 0"));
   assert.ok(game.includes("this.survivalBossRewardPending || this.survivalSkips <= 0"));
   assert.ok(game.includes("this.survivalBossRewardPending ||"));
-  assert.ok(app.includes("context: 'levelup' | 'boss-reward' = 'levelup'"));
+  assert.ok(app.includes("context: 'levelup' | 'rank-up' | 'boss-reward' = 'levelup'"));
   assert.ok(app.includes("survivalRerollBtn?.classList.toggle('hidden', isBossReward)"));
   assert.ok(app.includes("survivalSkipBtn?.classList.toggle('hidden', isBossReward)"));
   assert.ok(html.includes('id="survival-levelup-title"'));
