@@ -3082,6 +3082,18 @@ button {
   font-weight: 800;
   white-space: nowrap;
 }
+.survival-rank-label {
+  color: #fbbf24;
+  font: 800 7px/1.15 "JetBrains Mono", monospace;
+  letter-spacing: .055em;
+  white-space: nowrap;
+  text-shadow: 0 0 8px rgba(245, 158, 11, .22);
+}
+.survival-levelup-modal[data-mode="rank-up"] .survival-levelup-icon {
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, .52);
+  box-shadow: 0 0 22px rgba(245, 158, 11, .18);
+}
 .survival-xp-chip { min-width: 126px; }
 .survival-xp-chip strong { font-size: 12px; }
 .survival-xp-track {

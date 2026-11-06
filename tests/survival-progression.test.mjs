@@ -1,6 +1,36 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getSurvivalXpRequirement } from '../src/survivalProgression.ts';
+import {
+  getSurvivalProgressionInfo,
+  getSurvivalPromotionRarityFloor,
+  getSurvivalXpRequirement,
+} from '../src/survivalProgression.ts';
+
+test('Survival promotions give the operator a visible rank path every five levels', () => {
+  assert.deepEqual(getSurvivalProgressionInfo(1), {
+    rankName: 'NOWICJUSZ', nextRankName: 'OPERATOR', nextRankLevel: 5, isPromotion: false,
+  });
+  assert.deepEqual(getSurvivalProgressionInfo(5), {
+    rankName: 'OPERATOR', nextRankName: 'SPECJALISTA', nextRankLevel: 10, isPromotion: true,
+  });
+  assert.equal(getSurvivalProgressionInfo(14).rankName, 'SPECJALISTA');
+  assert.equal(getSurvivalProgressionInfo(15).rankName, 'BRYGADZISTA');
+  assert.equal(getSurvivalProgressionInfo(24).rankName, 'KIEROWNIK');
+  assert.equal(getSurvivalProgressionInfo(25).rankName, 'LEGENDA B4');
+  assert.equal(getSurvivalProgressionInfo(30).nextRankLevel, 35);
+});
+
+test('promotion checkpoints progressively raise the guaranteed draft rarity', () => {
+  assert.equal(getSurvivalPromotionRarityFloor(4), null);
+  assert.equal(getSurvivalPromotionRarityFloor(5), 'rare');
+  assert.equal(getSurvivalPromotionRarityFloor(10), 'epic');
+  assert.equal(getSurvivalPromotionRarityFloor(15), 'epic');
+  assert.equal(getSurvivalPromotionRarityFloor(20), 'legendary');
+  assert.equal(getSurvivalPromotionRarityFloor(25), 'legendary');
+  assert.equal(getSurvivalPromotionRarityFloor(30), 'legendary');
+  assert.equal(getSurvivalPromotionRarityFloor(Number.NaN), null);
+});
+
 
 test('the opening level remains quick and unchanged', () => {
   assert.equal(getSurvivalXpRequirement(1), 9);
