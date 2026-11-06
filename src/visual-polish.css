@@ -2972,6 +2972,20 @@ html[data-ui-landscape-touch="true"] .story-modal-card .story-slide {
   box-shadow: 0 0 10px color-mix(in srgb, var(--damage-accent) 42%, transparent);
   transition: width .25s ease-out;
 }
+.gameover-damage-meta {
+  display: block;
+  margin-top: 3px;
+  color: #91a8b8;
+  font: 700 8px/1.35 "JetBrains Mono", monospace;
+  letter-spacing: .01em;
+  font-variant-numeric: tabular-nums;
+}
+.gameover-damage-note {
+  margin: 7px 0 0;
+  color: #8298a9;
+  font-size: 8px;
+  line-height: 1.45;
+}
 .gameover-damage-empty {
   padding: 12px 2px;
   color: #92a8b8;
