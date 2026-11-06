@@ -83,6 +83,8 @@ export const CHARACTER_TALENTS: Readonly<Record<CharacterId, readonly CharacterT
 });
 
 export const CHARACTER_MASTERY_MAX_LEVEL = 15;
+// Three talents per operator, each capped at rank three: no points can be wasted.
+export const CHARACTER_MASTERY_TALENT_POINT_CAP = 9;
 
 export const NEUTRAL_CHARACTER_COMBAT_BONUSES: Readonly<CharacterCombatBonuses> = Object.freeze({
   attackMultiplier: 1,
@@ -146,7 +148,7 @@ function sanitizeCharacterState(id: CharacterId, value: unknown): CharacterMaste
   const xpToNext = getCharacterMasteryXpRequirement(level);
   const xp = level >= CHARACTER_MASTERY_MAX_LEVEL ? 0 : safeInt(raw.xp, 0, xpToNext - 1);
   const spent = Object.values(talentRanks).reduce((sum, rank) => sum + rank, 0);
-  const availableBudget = Math.max(0, level - 1);
+  const availableBudget = Math.min(CHARACTER_MASTERY_TALENT_POINT_CAP, Math.max(0, level - 1));
   if (spent > availableBudget) {
     let remaining = availableBudget;
     for (const talent of CHARACTER_TALENTS[id]) {
@@ -237,7 +239,7 @@ export function getCharacterMasterySummary(
     xp: state.xp,
     xpToNext,
     progressPercent: xpToNext > 0 ? Math.min(100, state.xp / xpToNext * 100) : 100,
-    availableTalentPoints: Math.max(0, state.level - 1 - spentTalentPoints),
+    availableTalentPoints: Math.max(0, Math.min(CHARACTER_MASTERY_TALENT_POINT_CAP, state.level - 1) - spentTalentPoints),
     spentTalentPoints,
     totalRuns: state.totalRuns,
     totalKills: state.totalKills,
