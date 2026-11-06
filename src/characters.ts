@@ -1,4 +1,4 @@
-import { CharacterDef, CharacterId } from './types.ts';
+import type { CharacterDef, CharacterId } from './types.ts';
 
 export const CHARACTERS: Record<CharacterId, CharacterDef> = {
   marcin: {
@@ -8,8 +8,11 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     title: 'Kontrola pola walki',
     color: 0x1e3a8a, // Navy / Royal Blue
     secondaryColor: 0xf59e0b, // Amber / Gold
-    speed: 7.5,
-    jumpForce: 8.8,
+    speed: 6.9,
+    jumpForce: 8.4,
+    maxHp: 5,
+    basicAttackDamageMultiplier: 1.05,
+    damageTakenMultiplier: 0.82,
     passiveName: 'Mistrz Zaklęć ERP',
     passiveDescription: 'Podstawowy atak przywołuje cyfrowe zaklęcia z systemu ERP: błękitne runy, zlecenia i pieczęcie. Co trzeci czar tworzy mocniejszą pieczęć audytu. Zasięg przyciągania VIP +100%.',
     abilityName: 'KONWÓJ WZ-404! DO BOJU!',
@@ -26,9 +29,9 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     ],
     bio: 'Legenda nocnej logistyki Kompleks B4 i człowiek, który potrafi rozpoznać błędnie wystawioną WZ-tkę po samym dźwięku drukarki. Na zmianę przynosi pancerny tablet, aluminiową podkładkę i minę człowieka, który już wie, że ktoś pomylił sektor. Pamięta kody produktów, układ regałów i wszystkie obietnice dostawców, których nikt nigdy nie potwierdził na piśmie. W walce stawia na kontrolę sytuacji, precyzję i autorytet kierownika. Jego najgroźniejszy okrzyk brzmi: „KTO TO PODPISAŁ?!”. Nawet sztaplarka wtedy przechodzi na luz.',
     stats: {
-      speed: 4,
+      speed: 2,
       jump: 3,
-      power: 4,
+      power: 3,
       defense: 5
     }
   },
@@ -39,8 +42,11 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     title: 'Ekspert ciężkiego uderzenia',
     color: 0x16a34a, // Emerald Green
     secondaryColor: 0x22c55e,
-    speed: 8.9,
-    jumpForce: 8.5,
+    speed: 7.5,
+    jumpForce: 7.8,
+    maxHp: 4,
+    basicAttackDamageMultiplier: 1.28,
+    damageTakenMultiplier: 0.92,
     passiveName: 'Hantla 44 cm — Rzut Siłacza',
     passiveDescription: 'Podstawowy atak to ciężki rzut hantlem. Co trzeci rzut jest mocniejszy, przebija kilku przeciwników i odrzuca ich na boki.',
     abilityName: 'Ścisk Zagłady 44cm + Tryb Tarana',
@@ -58,8 +64,8 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     ],
     bio: 'Gladiator korytarza C, legenda siłowni i jedyny człowiek, który patrzy na paletę kleju jak na rozgrzewkę. Słynne 44 centymetry w ramieniu nie są jednostką miary, tylko ostrzeżeniem dla wszystkich, którzy zastawiają przejazd. Potrafi zrobić nawrót wózkiem na monecie pięciozłotowej, a ciężar hantla ocenia po tym, jak głośno jęknie regał. W walce stawia na brutalną siłę i przebijanie się przez tłum. Nie zna pojęcia „za ciężkie” — zna tylko „podaj drugą stronę”.',
     stats: {
-      speed: 5,
-      jump: 3,
+      speed: 3,
+      jump: 2,
       power: 5,
       defense: 4
     }
@@ -71,8 +77,11 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     title: 'Ekspert kontroli dystansu',
     color: 0xd97706, // Amber / Terracotta
     secondaryColor: 0xb45309,
-    speed: 7.2,
-    jumpForce: 10.2,
+    speed: 7.9,
+    jumpForce: 10.5,
+    maxHp: 4,
+    basicAttackDamageMultiplier: 1.12,
+    damageTakenMultiplier: 1.00,
     passiveName: 'Rolka Stretch — Owinięcie Problemu',
     passiveDescription: 'Podstawowy atak wyrzuca rolkę folii stretch. Trafiony przeciwnik zostaje spowolniony i na krótko owinięty folią; co trzeci rzut rozrzuca dodatkowe pasma.',
     abilityName: 'Salwa Marmurowa Wielkiego Formatu',
@@ -92,8 +101,8 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     stats: {
       speed: 4,
       jump: 5,
-      power: 5,
-      defense: 4
+      power: 4,
+      defense: 3
     }
   },
   mateusz: {
@@ -103,8 +112,11 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     title: 'Ekspert szybkości i precyzji',
     color: 0x7c3aed, // Purple / Indigo
     secondaryColor: 0xec4899,
-    speed: 8.7,
+    speed: 9.6,
     jumpForce: 9.5,
+    maxHp: 3,
+    basicAttackDamageMultiplier: 0.88,
+    damageTakenMultiplier: 1.08,
     passiveName: 'Paralizator — Impuls Trzech Elektrod',
     passiveDescription: 'Podstawowy atak wystrzeliwuje impuls paralizatora. Trafienie elektryzuje i spowalnia cel; co dziewiąte trafienie uruchamia Speedrun (+Sprint i Nietykalność)!',
     abilityName: 'KOCIA ARMIA ONLINE • 3× MIAU-CRITICAL',
@@ -124,8 +136,8 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     stats: {
       speed: 5,
       jump: 4,
-      power: 4,
-      defense: 4
+      power: 3,
+      defense: 2
     }
   },
   piotr: {
@@ -135,8 +147,11 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     title: 'Ekspert broni obszarowej',
     color: 0xef4444, // Crimson Red
     secondaryColor: 0xfacc15, // Bright Yellow
-    speed: 9.0,
-    jumpForce: 9.4,
+    speed: 8.5,
+    jumpForce: 9.2,
+    maxHp: 4,
+    basicAttackDamageMultiplier: 1.18,
+    damageTakenMultiplier: 0.95,
     passiveName: 'Weteran B4 — Droga Powrotna',
     passiveDescription: 'Operator 05 ma stały podwójny skok i 100% szansy na drop perków. Klucz grzechotkowy wraca po rzucie, więc dobrze ustawiony tor pozwala przeciąć linię wrogów również podczas powrotu.',
     abilityName: 'Rytuał MafiKapibar — Pentagram B4',
@@ -154,10 +169,10 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     ],
     bio: 'Weteran Kompleks B4, człowiek-instytucja i żywe archiwum każdej reorganizacji, przeprowadzki oraz tajemniczego zniknięcia palety. Zna skróty za regałami, pamięta stare oznaczenia sektorów i wie, które drzwi otwierają się dopiero po mocniejszym pociągnięciu. W zanadrzu trzyma klucz grzechotkowy B4 oraz sekretny rytuał przywołujący MafiKapibary — trzy eleganckie, bezwzględne gryzonie, które pilnują interesów rodziny i porządku na hali. W walce jest wszechstronny, odporny i nie odpuszcza nawet wtedy, gdy reszta zmiany dawno odbiła kartę. Jego motto: „Za moich czasów palety same się nie przesuwały”.',
     stats: {
-      speed: 5,
+      speed: 4,
       jump: 4,
       power: 5,
-      defense: 5
+      defense: 4
     }
   }
 };

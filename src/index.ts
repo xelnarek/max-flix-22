@@ -1251,22 +1251,31 @@ class PaleciakiScene extends xb.Script {
       const statValPower = document.getElementById('stat-val-power');
       const statBarDefense = document.getElementById('stat-bar-defense');
       const statValDefense = document.getElementById('stat-val-defense');
+      const statBarHealth = document.getElementById('stat-bar-health');
+      const statValHealth = document.getElementById('stat-val-health');
 
       if (statBarSpeed && statValSpeed) {
         statBarSpeed.style.width = `${(def.stats.speed / 5) * 100}%`;
-        statValSpeed.textContent = `${def.stats.speed} / 5`;
+        statValSpeed.textContent = `${def.speed.toFixed(1)}`;
       }
       if (statBarJump && statValJump) {
         statBarJump.style.width = `${(def.stats.jump / 5) * 100}%`;
-        statValJump.textContent = `${def.stats.jump} / 5`;
+        statValJump.textContent = `${def.jumpForce.toFixed(1)}`;
       }
       if (statBarPower && statValPower) {
         statBarPower.style.width = `${(def.stats.power / 5) * 100}%`;
-        statValPower.textContent = `${def.stats.power} / 5`;
+        statValPower.textContent = `×${def.basicAttackDamageMultiplier.toFixed(2)}`;
       }
       if (statBarDefense && statValDefense) {
         statBarDefense.style.width = `${(def.stats.defense / 5) * 100}%`;
-        statValDefense.textContent = `${def.stats.defense} / 5`;
+        const mitigationPercent = Math.round((1 - def.damageTakenMultiplier) * 100);
+        statValDefense.textContent = mitigationPercent > 0
+          ? `−${mitigationPercent}%`
+          : mitigationPercent < 0 ? `+${Math.abs(mitigationPercent)}%` : '0%';
+      }
+      if (statBarHealth && statValHealth) {
+        statBarHealth.style.width = `${(def.maxHp / 5) * 100}%`;
+        statValHealth.textContent = `${def.maxHp} HP`;
       }
 
       this.engine.selectCharacter(id);

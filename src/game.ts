@@ -58,6 +58,7 @@ import { applyPerfectDodgeCounterattack, getSurvivalDashCooldownSeconds, getSurv
 import { advanceSurvivalMomentum, createSurvivalMomentumState, getSurvivalMomentumDamageMultiplier, getSurvivalMomentumMoveMultiplier, getSurvivalMomentumRateMultiplier, registerSurvivalKill, type SurvivalMomentumState } from './survivalMomentum.ts';
 import { selectSurvivalAutoTarget } from './survivalTargeting.ts';
 import { CHARACTERS } from './characters.ts';
+import { resolveCharacterIncomingDamage, scaleCharacterBasicAttackDamage } from './characterBalance.ts';
 import { sound } from './sound.ts';
 import {
   ActivePerks,
@@ -380,6 +381,7 @@ export class PaleciakiGameEngine {
   private jumpBufferTimer = 0;
   private hp = 3;
   private maxHp = 3;
+  private characterDamageRemainder = 0;
   private score = 0;
   private comboStreak = 0;
   private comboTimer = 0;
@@ -899,6 +901,8 @@ export class PaleciakiGameEngine {
     this.container = container;
     this.callbacks = callbacks;
     this.charDef = CHARACTERS[this.currentCharacterId];
+    this.maxHp = this.charDef.maxHp;
+    this.hp = this.maxHp;
 
     this.camera.far = 160;
     this.scene.background = new THREE.Color(0x07131d);
@@ -1127,7 +1131,11 @@ export class PaleciakiGameEngine {
   public selectCharacter(id: CharacterId) {
     this.currentCharacterId = id;
     this.charDef = CHARACTERS[id];
+    this.maxHp = this.charDef.maxHp;
+    this.hp = this.maxHp;
+    this.characterDamageRemainder = 0;
     this.rebuildPlayerMesh();
+    this.callbacks.onHpUpdate(this.hp, this.maxHp);
     this.sayRandomVoiceLine();
   }
 
@@ -1267,9 +1275,10 @@ export class PaleciakiGameEngine {
     }
     this.clearOperatorCompanions();
     this.gameMode = 'survival';
-    this.maxHp = 3;
+    this.maxHp = this.charDef.maxHp;
     this.state = 'title';
     this.hp = this.maxHp;
+    this.characterDamageRemainder = 0;
     this.score = 0;
     this.collectedVipCount = 0;
     this.resetAbilityCooldown();
@@ -1283,6 +1292,7 @@ export class PaleciakiGameEngine {
     this.grzesiekCrushTimer = 0;
     this.grzesiekCrushPulse = 0;
     this.callbacks.onPerksUpdate?.(this.activePerks);
+    this.callbacks.onHpUpdate(this.hp, this.maxHp);
     this.callbacks.onSpeechBubble('');
     this.rebuildPlayerMesh();
     this.playerPos.set(0, 0.5, 0);
@@ -1298,8 +1308,9 @@ export class PaleciakiGameEngine {
     this.gameMode = 'survival';
     this.state = 'playing';
     sound.startMusic();
-    this.maxHp = 3;
+    this.maxHp = this.charDef.maxHp;
     this.hp = this.maxHp;
+    this.characterDamageRemainder = 0;
     this.gateNoticeCooldown = 0;
     this.score = 0;
     this.comboStreak = 0;
@@ -10565,10 +10576,17 @@ export class PaleciakiGameEngine {
 
       let destroyProj = false;
       const berserkMult = (this.activePerks.kfcBerserk || 0) > 0 ? 2 : 1;
-      const baseDmg = Math.max(1, Math.round(
+      // Untagged projectiles belong to abilities; weapon damage remains independent
+      // from the operator's primary-attack class multiplier.
+      const projectileDamageSource: SurvivalDamageSource = p.damageSource ?? (p.weaponId
+        ? getSurvivalWeaponDamageSource(p.weaponId)
+        : 'ability');
+      const adjustedProjectileDamage =
         this.scaleSurvivalDamage(p.damage ?? (this.charDef.id === 'dawid' ? 2 : 1)) *
-        berserkMult * (p.chainDamageMultiplier || 1)
-      ));
+        berserkMult * (p.chainDamageMultiplier || 1);
+      const baseDmg = projectileDamageSource === 'basic_attack'
+        ? scaleCharacterBasicAttackDamage(adjustedProjectileDamage, this.charDef.basicAttackDamageMultiplier)
+        : Math.max(1, Math.round(adjustedProjectileDamage));
       const segmentX = p.mesh.position.x - previousProjectileX;
       const segmentY = p.mesh.position.y - previousProjectileY;
       const segmentZ = p.mesh.position.z - previousProjectileZ;
@@ -10580,12 +10598,6 @@ export class PaleciakiGameEngine {
       const collisionCandidates = this.enemies.length >= 12
         ? this.enemySpatialIndex.query(segmentMidX, segmentMidZ, broadphaseRadius)
         : this.enemies;
-      // Untagged projectiles come from abilities/enemy-independent effects;
-      // all five operator basic-attack projectiles are explicitly tagged.
-      const projectileDamageSource: SurvivalDamageSource = p.damageSource ?? (p.weaponId
-        ? getSurvivalWeaponDamageSource(p.weaponId)
-        : 'ability');
-
       for (const e of collisionCandidates) {
         if (e.state === 'defeated') continue;
         if (p.hitIds && p.hitIds.has(e.id)) continue;
@@ -10653,7 +10665,10 @@ export class PaleciakiGameEngine {
               for (const other of this.enemies) {
                 if (other.id !== e.id && other.state !== 'defeated') {
                   if (Math.hypot(other.x - e.x, other.z - e.z) <= p.aoeRadius) {
-                    this.damageEnemy(other, this.scaleSurvivalDamage(1), e.x, e.z, projectileDamageSource);
+                    const splashDamage = projectileDamageSource === 'basic_attack'
+                      ? scaleCharacterBasicAttackDamage(this.scaleSurvivalDamage(1), this.charDef.basicAttackDamageMultiplier)
+                      : this.scaleSurvivalDamage(1);
+                    this.damageEnemy(other, splashDamage, e.x, e.z, projectileDamageSource);
                     other.stunTimer = Math.max(other.stunTimer, this.gameMode === 'survival' ? 0.22 : (p.stunDuration || 1.2));
                     if (this.gameMode !== 'survival' || (p.stunDuration || 0) > 0.8) other.state = 'stunned';
                     if (!p.weaponProjectile) this.emitFloatingToast('📑 AUDYT AoE -1 HP!', other.x, other.y + 1.1, other.z, 'damage');
@@ -13093,8 +13108,20 @@ export class PaleciakiGameEngine {
       return;
     }
 
-    this.hp = Math.max(0, this.hp - amount);
+    const damageResolution = resolveCharacterIncomingDamage(
+      amount,
+      this.charDef.damageTakenMultiplier,
+      this.characterDamageRemainder,
+    );
+    this.characterDamageRemainder = damageResolution.remainder;
     this.invulnerableTimer = 1.8;
+    if (damageResolution.damage <= 0) {
+      sound.playShieldBreak();
+      this.emitFloatingToast('🛡️ REDUKCJA OBRAŻEŃ • PANCERZ OPERATORA', this.playerPos.x, this.playerPos.y + 1.25, this.playerPos.z, 'perk');
+      this.triggerScreenShake(0.2, 0.15);
+      return;
+    }
+    this.hp = Math.max(0, this.hp - damageResolution.damage);
     sound.playHit();
     this.triggerBloomPulse(0.45);
     this.callbacks.onHpUpdate(this.hp, this.maxHp);
