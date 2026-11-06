@@ -417,6 +417,7 @@ class PaleciakiScene extends xb.Script {
     const survivalTimeElem = document.getElementById('survival-time');
     const survivalWaveElem = document.getElementById('survival-wave');
     const survivalLevelElem = document.getElementById('survival-level');
+    const survivalRankElem = document.getElementById('survival-rank');
     const survivalXpElem = document.getElementById('survival-xp');
     const survivalXpFill = document.getElementById('survival-xp-fill');
     const survivalKillsElem = document.getElementById('survival-kills');
@@ -954,6 +955,10 @@ class PaleciakiScene extends xb.Script {
           if (survivalTimeElem) survivalTimeElem.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
           if (survivalWaveElem) survivalWaveElem.textContent = String(snapshot.wave);
           if (survivalLevelElem) survivalLevelElem.textContent = String(snapshot.level);
+           if (survivalRankElem) {
+             survivalRankElem.textContent = snapshot.rankName;
+             survivalRankElem.title = 'Następna ranga: ' + snapshot.nextRankName + ' • poziom ' + snapshot.nextRankLevel;
+           }
           if (survivalXpElem) survivalXpElem.textContent = snapshot.xp + ' / ' + snapshot.xpToNext + ' XP';
           if (survivalXpFill) survivalXpFill.style.width = Math.min(100, (snapshot.xp / Math.max(1, snapshot.xpToNext)) * 100) + '%';
           if (survivalKillsElem) {
@@ -1041,22 +1046,30 @@ class PaleciakiScene extends xb.Script {
             survivalSkipBtn.disabled = snapshot.skips <= 0;
           }
         },
-        onSurvivalLevelUp: (options: SurvivalUpgradeOption[], context: 'levelup' | 'boss-reward' = 'levelup') => {
+        onSurvivalLevelUp: (options: SurvivalUpgradeOption[], context: 'levelup' | 'rank-up' | 'boss-reward' = 'levelup') => {
           if (!survivalUpgradeOptions || !survivalLevelUp) return;
           const isBossReward = context === 'boss-reward';
+          const isRankUp = context === 'rank-up';
+          const currentRank = survivalRankElem?.textContent || 'OPERATOR';
           survivalLevelUp.dataset.mode = context;
           const titleElement = document.getElementById('survival-levelup-title');
           const descriptionElement = document.getElementById('survival-levelup-desc');
           const iconElement = document.getElementById('survival-levelup-icon');
           const hintElement = document.getElementById('survival-levelup-hint');
-          if (titleElement) titleElement.textContent = isBossReward ? 'NAGRODA ZA POKONANIE BOSS-A' : 'AWANS OPERATORA';
+          if (titleElement) titleElement.textContent = isBossReward
+            ? 'NAGRODA ZA POKONANIE BOSS-A'
+            : isRankUp ? 'AWANS RANGI: ' + currentRank : 'AWANS OPERATORA';
           if (descriptionElement) descriptionElement.textContent = isBossReward
             ? 'Boss pokonany. Wybierz jedno z trzech legendarnych wzmocnień: moc, rozwój broni albo obronę.'
-            : 'Wybierz jeden z trzech modułów. Rzadkie, epickie i legendarne wersje wzmacniają ten sam efekt.';
-          if (iconElement) iconElement.textContent = isBossReward ? '🏆' : '⬆';
+            : isRankUp
+              ? 'Awansujesz do rangi ' + currentRank + '. Jedna karta ma gwarantowaną wyższą rzadkość, a zapas przerzutów zwiększono o 1.'
+              : 'Wybierz jeden z trzech modułów. Rzadkie, epickie i legendarne wersje wzmacniają ten sam efekt.';
+          if (iconElement) iconElement.textContent = isBossReward ? '🏆' : isRankUp ? '🎖️' : '⬆';
           if (hintElement) hintElement.textContent = isBossReward
             ? 'Nagroda jest obowiązkowa i nie podlega przerzuceniu ani pominięciu. Akcja pozostaje wstrzymana do wyboru.'
-            : 'Wybór zatrzymuje akcję. Rzadkość wzmacnia efekt; legendarna broń może odblokować się na wyższym poziomie.';
+            : isRankUp
+              ? 'Awans co 5 poziomów: karta ma co najmniej Rare, Epic lub Legendary zależnie od rangi. Dodatkowy przerzut jest ograniczony do 3.'
+              : 'Wybór zatrzymuje akcję. Rzadkość wzmacnia efekt; legendarna broń może odblokować się na wyższym poziomie.';
           survivalRerollBtn?.classList.toggle('hidden', isBossReward);
           survivalSkipBtn?.classList.toggle('hidden', isBossReward);
           survivalUpgradeOptions.replaceChildren();
