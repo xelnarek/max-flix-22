@@ -1191,11 +1191,12 @@ class PaleciakiScene extends xb.Script {
         const cardId = card.dataset.char as CharacterId | undefined;
         if (!cardId || !CHARACTERS[cardId]) return;
         const definition = CHARACTERS[cardId];
-        const accent = definition.color.toString(16).padStart(6, '0');
+        const accent = definition.secondaryColor.toString(16).padStart(6, '0');
         const badge = card.querySelector<HTMLElement>('.operator-emblem');
         card.style.setProperty('--operator-accent', `#${accent}`);
         card.setAttribute('aria-pressed', String(cardId === id));
         card.setAttribute('aria-label', `${definition.name} — ${definition.role}`);
+        card.dataset.archetype = ({ marcin: 'tank', grzesiek: 'bruiser', dawid: 'jumper', mateusz: 'runner', piotr: 'veteran' } as const)[cardId];
         if (badge) badge.innerHTML = operatorPortrait(cardId);
       });
       if (abilityIcon) { abilityIcon.innerHTML = abilityIcons[id] || abilityIcons.marcin; abilityIcon.dataset.operatorIcon = id; }
@@ -1255,19 +1256,19 @@ class PaleciakiScene extends xb.Script {
       const statValHealth = document.getElementById('stat-val-health');
 
       if (statBarSpeed && statValSpeed) {
-        statBarSpeed.style.width = `${(def.stats.speed / 5) * 100}%`;
+        statBarSpeed.style.width = `${Math.min(100, Math.max(0, def.speed / 10 * 100))}%`;
         statValSpeed.textContent = `${def.speed.toFixed(1)}`;
       }
       if (statBarJump && statValJump) {
-        statBarJump.style.width = `${(def.stats.jump / 5) * 100}%`;
+        statBarJump.style.width = `${Math.min(100, Math.max(0, def.jumpForce / 11 * 100))}%`;
         statValJump.textContent = `${def.jumpForce.toFixed(1)}`;
       }
       if (statBarPower && statValPower) {
-        statBarPower.style.width = `${(def.stats.power / 5) * 100}%`;
+        statBarPower.style.width = `${Math.min(100, Math.max(0, (def.basicAttackDamageMultiplier - 0.75) / 0.6 * 100))}%`;
         statValPower.textContent = `×${def.basicAttackDamageMultiplier.toFixed(2)}`;
       }
       if (statBarDefense && statValDefense) {
-        statBarDefense.style.width = `${(def.stats.defense / 5) * 100}%`;
+        statBarDefense.style.width = `${Math.min(100, Math.max(0, (1.1 - def.damageTakenMultiplier) / 0.3 * 100))}%`;
         const mitigationPercent = Math.round((1 - def.damageTakenMultiplier) * 100);
         statValDefense.textContent = mitigationPercent > 0
           ? `−${mitigationPercent}%`

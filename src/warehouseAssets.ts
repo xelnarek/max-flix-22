@@ -990,14 +990,15 @@ export function createCharacterModel(def: CharacterDef): {
   // Five readable silhouettes at gameplay camera distance. These are visual-only
   // proportions: movement speed, attack hitboxes and collision capsules stay unchanged.
   const silhouette: Record<CharacterId, {
-    torsoWidth: number; torsoHeight: number; armWidth: number;
-    legWidth: number; shoulderSize: number; headWidth: number; headHeight: number;
+    torsoWidth: number; torsoHeight: number; torsoDepth: number; armWidth: number;
+    legWidth: number; legHeight: number; stanceWidth: number; shoulderSize: number; headWidth: number; headHeight: number;
   }> = {
-    marcin:   { torsoWidth: 0.94, torsoHeight: 1.00, armWidth: 0.94, legWidth: 0.98, shoulderSize: 0.94, headWidth: 0.94, headHeight: 1.06 },
-    grzesiek: { torsoWidth: 1.25, torsoHeight: 1.06, armWidth: 1.24, legWidth: 1.18, shoulderSize: 1.32, headWidth: 1.12, headHeight: 0.96 },
-    dawid:    { torsoWidth: 1.08, torsoHeight: 1.00, armWidth: 1.08, legWidth: 1.05, shoulderSize: 1.12, headWidth: 0.96, headHeight: 1.08 },
-    mateusz:  { torsoWidth: 0.90, torsoHeight: 0.96, armWidth: 0.90, legWidth: 0.94, shoulderSize: 0.90, headWidth: 0.90, headHeight: 1.04 },
-    piotr:    { torsoWidth: 1.16, torsoHeight: 1.04, armWidth: 1.12, legWidth: 1.10, shoulderSize: 1.18, headWidth: 1.08, headHeight: 1.00 },
+    // Distances between profiles are deliberately exaggerated so the class reads at Survival camera zoom.
+    marcin:   { torsoWidth: 1.02, torsoHeight: 1.04, torsoDepth: 0.76, armWidth: 1.00, legWidth: 1.00, legHeight: 1.00, stanceWidth: 1.00, shoulderSize: 1.08, headWidth: 1.00, headHeight: 1.04 },
+    grzesiek: { torsoWidth: 1.42, torsoHeight: 1.12, torsoDepth: 0.82, armWidth: 1.46, legWidth: 1.30, legHeight: 0.96, stanceWidth: 1.34, shoulderSize: 1.52, headWidth: 1.12, headHeight: 0.96 },
+    dawid:    { torsoWidth: 1.02, torsoHeight: 1.14, torsoDepth: 0.70, armWidth: 0.98, legWidth: 1.04, legHeight: 1.10, stanceWidth: 0.98, shoulderSize: 1.00, headWidth: 0.94, headHeight: 1.12 },
+    mateusz:  { torsoWidth: 0.82, torsoHeight: 0.96, torsoDepth: 0.66, armWidth: 0.82, legWidth: 0.86, legHeight: 1.04, stanceWidth: 0.90, shoulderSize: 0.84, headWidth: 0.92, headHeight: 1.04 },
+    piotr:    { torsoWidth: 1.18, torsoHeight: 1.08, torsoDepth: 0.78, armWidth: 1.18, legWidth: 1.14, legHeight: 1.02, stanceWidth: 1.12, shoulderSize: 1.26, headWidth: 1.08, headHeight: 0.98 },
   };
   const profile = silhouette[def.id];
   const skinColors: Record<CharacterId, number> = {
@@ -1027,7 +1028,7 @@ export function createCharacterModel(def: CharacterDef): {
   // 1. Torso Body
   const bodyGeo = new THREE.CapsuleGeometry(0.18, 0.10, 4, 16);
   const body = new THREE.Mesh(bodyGeo, clothesMat);
-  body.scale.set(profile.torsoWidth, profile.torsoHeight, 0.72);
+  body.scale.set(profile.torsoWidth, profile.torsoHeight, profile.torsoDepth);
   body.position.y = 0.54;
   body.castShadow = true;
   group.add(body);
@@ -1035,7 +1036,7 @@ export function createCharacterModel(def: CharacterDef): {
   // High-Vis Safety Vest
   const vestGeo = new THREE.CapsuleGeometry(0.19, 0.08, 4, 16);
   const vest = new THREE.Mesh(vestGeo, vestMat);
-  vest.scale.set(profile.torsoWidth * 1.02, profile.torsoHeight, 0.74);
+  vest.scale.set(profile.torsoWidth * 1.04, profile.torsoHeight, profile.torsoDepth * 1.04);
   vest.position.y = 0.56;
   group.add(vest);
 
@@ -1335,13 +1336,13 @@ export function createCharacterModel(def: CharacterDef): {
   // 3. Legs & Leather Steel-toe Boots
   const legGeo = new THREE.CapsuleGeometry(0.065, 0.21, 3, 12);
   const leftLeg = new THREE.Mesh(legGeo, pantsMat);
-  leftLeg.scale.set(profile.legWidth, 1, 1.12);
-  leftLeg.position.set(-0.1 * profile.torsoWidth, 0.19, 0);
+  leftLeg.scale.set(profile.legWidth, profile.legHeight, 1.12);
+  leftLeg.position.set(-0.1 * profile.stanceWidth, 0.19, 0);
   leftLeg.castShadow = true;
 
   const rightLeg = new THREE.Mesh(legGeo, pantsMat);
-  rightLeg.scale.set(profile.legWidth, 1, 1.12);
-  rightLeg.position.set(0.1 * profile.torsoWidth, 0.19, 0);
+  rightLeg.scale.set(profile.legWidth, profile.legHeight, 1.12);
+  rightLeg.position.set(0.1 * profile.stanceWidth, 0.19, 0);
   rightLeg.castShadow = true;
 
   const bootGeo = new THREE.SphereGeometry(0.1, 14, 10);
@@ -1372,12 +1373,12 @@ export function createCharacterModel(def: CharacterDef): {
   const armGeo = new THREE.CapsuleGeometry(0.05, 0.24, 3, 10);
   const leftArm = new THREE.Mesh(armGeo, clothesMat);
   leftArm.scale.set(profile.armWidth, 1, 1.05);
-  leftArm.position.set(-0.25 * profile.torsoWidth, 0.54, 0);
+  leftArm.position.set(-0.25 * profile.shoulderSize, 0.54, 0);
   leftArm.castShadow = true;
 
   const rightArm = new THREE.Mesh(armGeo, clothesMat);
   rightArm.scale.set(profile.armWidth, 1, 1.05);
-  rightArm.position.set(0.25 * profile.torsoWidth, 0.54, 0);
+  rightArm.position.set(0.25 * profile.shoulderSize, 0.54, 0);
   rightArm.castShadow = true;
 
   // Hands
@@ -1447,7 +1448,8 @@ export function createCharacterModel(def: CharacterDef): {
       collar.position.z = z > 0 ? z - 0.085 : z + 0.085;
       accessory.add(collar);
     });
-    accessory.position.set(0.27, 0.50, 0.18);
+    accessory.scale.setScalar(1.22);
+    accessory.position.set(0.29, 0.50, 0.18);
     accessory.rotation.x = 0.38;
   } else if (def.id === 'dawid') {
     // A clearly visible roll of stretch film, with a dark cardboard core and glossy wrapping.
@@ -1521,6 +1523,85 @@ export function createCharacterModel(def: CharacterDef): {
     accessory.rotation.x = 0.18;
   }
   group.add(accessory);
+
+  // High-contrast class silhouettes: oversized shapes deliberately survive the normal phone camera distance.
+  if (def.id === 'marcin') {
+    const rankMetal = new THREE.MeshStandardMaterial({ color: 0xf8fafc, metalness: 0.38, roughness: 0.32 });
+    const rankGold = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.65, roughness: 0.24, emissive: 0x854d0e, emissiveIntensity: 0.12 });
+    for (const side of [-1, 1]) {
+      const board = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.075, 0.25), rankMetal);
+      board.position.set(side * 0.29, 0.79, 0.015);
+      board.rotation.z = side * -0.12;
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.025, 0.265), rankGold);
+      stripe.position.set(side * 0.29, 0.80, 0.02);
+      group.add(board, stripe);
+    }
+    const managerLanyard = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.012, 5, 20, Math.PI), rankGold);
+    managerLanyard.position.set(0, 0.73, 0.17);
+    managerLanyard.rotation.x = Math.PI / 2;
+    group.add(managerLanyard);
+  } else if (def.id === 'grzesiek') {
+    const hydraulicSteel = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.88, roughness: 0.2 });
+    const powerGreen = new THREE.MeshStandardMaterial({ color: 0x22c55e, metalness: 0.42, roughness: 0.26, emissive: 0x14532d, emissiveIntensity: 0.28 });
+    for (const arm of [leftArm, rightArm]) {
+      const bracer = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.092, 0.18, 10), hydraulicSteel);
+      bracer.position.set(0, -0.105, 0.008);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.10, 0.018, 6, 12), powerGreen);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.set(0, -0.105, 0.008);
+      arm.add(bracer, ring);
+    }
+    const waistPlate = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.14, 0.33), hydraulicSteel);
+    waistPlate.position.set(0, 0.34, 0.035);
+    const powerCore = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.085, 0.035), powerGreen);
+    powerCore.position.set(0, 0.34, 0.205);
+    group.add(waistPlate, powerCore);
+  } else if (def.id === 'dawid') {
+    const slabRig = new THREE.Group();
+    const orangeEdge = new THREE.MeshStandardMaterial({ color: 0xea580c, metalness: 0.32, roughness: 0.38 });
+    const porcelain = new THREE.MeshStandardMaterial({ color: 0xf8fafc, metalness: 0.16, roughness: 0.24 });
+    const slabFrame = new THREE.Mesh(new THREE.BoxGeometry(0.39, 0.76, 0.10), orangeEdge);
+    const slabFace = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.68, 0.035), porcelain);
+    slabFace.position.z = 0.065;
+    const veinA = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.48, 0.008), new THREE.MeshBasicMaterial({ color: 0xd97706 }));
+    veinA.position.set(-0.045, 0.01, 0.086);
+    veinA.rotation.z = -0.24;
+    const veinB = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.32, 0.008), new THREE.MeshBasicMaterial({ color: 0x94a3b8 }));
+    veinB.position.set(0.06, -0.08, 0.087);
+    veinB.rotation.z = 0.28;
+    slabRig.add(slabFrame, slabFace, veinA, veinB);
+    slabRig.position.set(-0.25, 0.79, -0.19);
+    slabRig.rotation.set(-0.14, 0, -0.20);
+    group.add(slabRig);
+  } else if (def.id === 'mateusz') {
+    const battery = new THREE.MeshStandardMaterial({ color: 0x21123f, metalness: 0.46, roughness: 0.3 });
+    const cyan = new THREE.MeshStandardMaterial({ color: 0x67e8f9, emissive: 0x0891b2, emissiveIntensity: 0.72, roughness: 0.22 });
+    const pack = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.35, 0.13), battery);
+    pack.position.set(0, 0.61, -0.22);
+    const spine = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.29, 0.025), cyan);
+    spine.position.set(0, 0.62, -0.145);
+    const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.015, 0.22, 6), cyan);
+    antenna.position.set(0.11, 0.89, -0.20);
+    antenna.rotation.z = -0.12;
+    group.add(pack, spine, antenna);
+    for (const leg of [leftLeg, rightLeg]) {
+      const lightSole = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.035, 0.22), cyan);
+      lightSole.position.set(0, -0.155, 0.075);
+      leg.add(lightSole);
+    }
+  } else if (def.id === 'piotr') {
+    const crimson = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.52, metalness: 0.12 });
+    const brass = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.72, roughness: 0.22 });
+    const sash = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.48, 0.31), crimson);
+    sash.position.set(-0.12, 0.59, 0.06);
+    sash.rotation.z = -0.34;
+    const buckle = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.11, 0.04), brass);
+    buckle.position.set(0.12, 0.38, 0.18);
+    const badge = new THREE.Mesh(new THREE.OctahedronGeometry(0.095, 0), brass);
+    badge.position.set(0.28, 0.76, 0.025);
+    group.add(sash, buckle, badge);
+  }
+  group.userData.characterVisualSignature = def.id;
 
   // Subtle cargo tags and pockets give each operator a more finished logistics silhouette.
   const sidePocket = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.13, 0.10), armorMat);

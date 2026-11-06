@@ -16,9 +16,6 @@ export interface CharacterDef {
   secondaryColor: number;
   speed: number;
   jumpForce: number;
-  maxHp: number;
-  basicAttackDamageMultiplier: number;
-  damageTakenMultiplier: number;
   abilityName: string;
   abilityDescription: string;
   abilityCooldown: number; // in seconds

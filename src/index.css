@@ -1263,6 +1263,9 @@ body {
 }
 
 .char-card {
+  position: relative;
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--operator-accent, #64748b) 46%, transparent);
   background: rgba(15, 23, 42, 0.65);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
@@ -1288,10 +1291,22 @@ body {
   border-color: #f59e0b;
 }
 
+.char-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 3px;
+  border-radius: 0 0 6px 6px;
+  background: var(--operator-accent, #64748b);
+  opacity: 0.82;
+}
+
 .char-card.active {
-  border-color: #f59e0b;
-  background: linear-gradient(180deg, rgba(30, 58, 138, 0.75) 0%, rgba(15, 23, 42, 0.85) 100%);
-  box-shadow: 0 0 20px rgba(245, 158, 11, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  border-color: var(--operator-accent, #f59e0b);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--operator-accent, #f59e0b) 21%, rgba(15, 23, 42, 0.92)) 0%, rgba(15, 23, 42, 0.90) 100%);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--operator-accent, #f59e0b) 36%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .char-card-badge {
@@ -1306,7 +1321,7 @@ body {
 
 .char-card-role {
   font-size: 10px;
-  color: #f59e0b;
+  color: var(--operator-accent, #f59e0b);
   font-weight: 600;
 }
 
@@ -1314,6 +1329,20 @@ body {
   font-size: 9px;
   color: #94a3b8;
   margin-top: 2px;
+}
+
+.char-card-class {
+  margin-top: 3px;
+  padding: 3px 5px;
+  border: 1px solid color-mix(in srgb, var(--operator-accent, #64748b) 50%, transparent);
+  border-radius: 999px;
+  color: var(--operator-accent, #cbd5e1);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.035em;
+  line-height: 1.2;
+  white-space: normal;
+  text-wrap: balance;
 }
 
 .char-details-box {

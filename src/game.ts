@@ -58,6 +58,7 @@ import { applyPerfectDodgeCounterattack, getSurvivalDashCooldownSeconds, getSurv
 import { advanceSurvivalMomentum, createSurvivalMomentumState, getSurvivalMomentumDamageMultiplier, getSurvivalMomentumMoveMultiplier, getSurvivalMomentumRateMultiplier, registerSurvivalKill, type SurvivalMomentumState } from './survivalMomentum.ts';
 import { selectSurvivalAutoTarget } from './survivalTargeting.ts';
 import { CHARACTERS } from './characters.ts';
+import { getCharacterVisualStyle } from './characterVisualStyle.ts';
 import { resolveCharacterIncomingDamage, scaleCharacterBasicAttackDamage } from './characterBalance.ts';
 import { sound } from './sound.ts';
 import {
@@ -1220,8 +1221,8 @@ export class PaleciakiGameEngine {
     // 2. Create inverted normal stencil outline material & shell
     const outlineMat = new THREE.ShaderMaterial({
       uniforms: {
-        uColor: { value: new THREE.Color(0x38bdf8) },
-        uOutlineThickness: { value: 0.038 },
+        uColor: { value: new THREE.Color(({ marcin: 0x60a5fa, grzesiek: 0x4ade80, dawid: 0xfb923c, mateusz: 0xe879f9, piotr: 0xef4444 } as const)[this.charDef.id]) },
+        uOutlineThickness: { value: this.charDef.id === 'grzesiek' ? 0.052 : this.charDef.id === 'mateusz' ? 0.034 : 0.043 },
         uTime: { value: 0 },
       },
       vertexShader: `
@@ -8392,21 +8393,23 @@ export class PaleciakiGameEngine {
       this.playerVel.z = THREE.MathUtils.clamp(this.playerVel.z, -speed * 1.08, speed * 1.08);
       this.playerRot = Math.atan2(inputX, inputZ);
 
-      this.walkCycle += dt * 15;
+      const visualStyle = getCharacterVisualStyle(this.charDef.id);
+      this.walkCycle += dt * visualStyle.gaitRate * (isTacticalDashing ? 1.12 : 1);
       if (this.leftLeg && this.rightLeg && this.leftArm && this.rightArm) {
-        this.leftLeg.rotation.x = Math.sin(this.walkCycle) * 0.6;
-        this.rightLeg.rotation.x = -Math.sin(this.walkCycle) * 0.6;
-        this.leftArm.rotation.x = -Math.sin(this.walkCycle) * 0.6;
-        this.rightArm.rotation.x = Math.sin(this.walkCycle) * 0.6;
+        const step = Math.sin(this.walkCycle);
+        this.leftLeg.rotation.x = step * visualStyle.strideAmplitude;
+        this.rightLeg.rotation.x = -step * visualStyle.strideAmplitude;
+        this.leftArm.rotation.x = -step * visualStyle.armSwingAmplitude;
+        this.rightArm.rotation.x = step * visualStyle.armSwingAmplitude;
       }
     } else {
       this.playerVel.x = THREE.MathUtils.damp(this.playerVel.x, 0, 16, dt);
       this.playerVel.z = THREE.MathUtils.damp(this.playerVel.z, 0, 16, dt);
       if (this.leftLeg && this.rightLeg && this.leftArm && this.rightArm) {
-        this.leftLeg.rotation.x = 0;
-        this.rightLeg.rotation.x = 0;
-        this.leftArm.rotation.x = 0;
-        this.rightArm.rotation.x = 0;
+        this.leftLeg.rotation.x = THREE.MathUtils.damp(this.leftLeg.rotation.x, 0, 13, dt);
+        this.rightLeg.rotation.x = THREE.MathUtils.damp(this.rightLeg.rotation.x, 0, 13, dt);
+        this.leftArm.rotation.x = THREE.MathUtils.damp(this.leftArm.rotation.x, 0, 13, dt);
+        this.rightArm.rotation.x = THREE.MathUtils.damp(this.rightArm.rotation.x, 0, 13, dt);
       }
     }
 
@@ -8434,12 +8437,18 @@ export class PaleciakiGameEngine {
     }
     if (this.attackSwingTimer > 0) {
       this.attackSwingTimer -= dt;
+      const visualStyle = getCharacterVisualStyle(this.charDef.id);
+      const attackProgress = THREE.MathUtils.clamp(this.attackSwingTimer / 0.30, 0, 1);
       if (this.rightArm) {
-        this.rightArm.rotation.x = -1.8 + (this.attackSwingTimer / 0.25) * 1.5;
-        this.rightArm.rotation.z = -0.4;
+        this.rightArm.rotation.x = visualStyle.attackArmX + attackProgress * 1.5;
+        this.rightArm.rotation.z = visualStyle.attackArmZ * (0.55 + attackProgress * 0.45);
+      }
+      if (this.charDef.id === 'grzesiek' && this.leftArm) {
+        this.leftArm.rotation.x = visualStyle.offhandAttackX + attackProgress * 1.05;
+        this.leftArm.rotation.z = 0.22;
       }
     } else if (this.rightArm) {
-      this.rightArm.rotation.z = 0;
+      this.rightArm.rotation.z = THREE.MathUtils.damp(this.rightArm.rotation.z, 0, 14, dt);
     }
 
     const gravity = 22.0;
@@ -8642,13 +8651,24 @@ export class PaleciakiGameEngine {
     this.playerPos.z = boundedPlayerPosition.z;
 
     if (this.playerGroup) {
+      const visualStyle = getCharacterVisualStyle(this.charDef.id);
       this.playerGroup.position.copy(this.playerPos);
       this.playerGroup.rotation.y = this.playerRot;
       this.playerGroup.scale.lerp(PLAYER_UNIT_SCALE, dt * 8);
-      const motionRatio = Math.min(1, Math.hypot(this.playerVel.x, this.playerVel.z) / Math.max(0.1, this.charDef.speed));
-      const idleBreath = Math.sin(performance.now() * 0.0021) * 0.006 * (1 - motionRatio);
-      this.playerGroup.position.y += idleBreath;
-      this.playerGroup.rotation.z = Math.sin(performance.now() * 0.0017) * 0.006 * (1 - motionRatio);
+      const motionRatio = THREE.MathUtils.clamp(
+        Math.hypot(this.playerVel.x, this.playerVel.z) / Math.max(0.1, this.charDef.speed),
+        0,
+        1,
+      );
+      const movingRatio = inputLen > 0.08 || isTacticalDashing ? Math.max(0.45, motionRatio) : motionRatio;
+      const idleBreath = Math.sin(performance.now() * 0.0021) * visualStyle.idleBob * (1 - movingRatio);
+      const runBounce = Math.sin(this.walkCycle * 2) * visualStyle.verticalBob * movingRatio;
+      const idleSway = Math.sin(performance.now() * 0.0017) * visualStyle.idleSway * (1 - movingRatio);
+      const sideLean = -inputX * visualStyle.sideLean * movingRatio;
+      const forwardLean = visualStyle.forwardLean * movingRatio;
+      this.playerGroup.position.y += idleBreath + runBounce;
+      this.playerGroup.rotation.x = THREE.MathUtils.damp(this.playerGroup.rotation.x, forwardLean, 8, dt);
+      this.playerGroup.rotation.z = THREE.MathUtils.damp(this.playerGroup.rotation.z, sideLean + idleSway, 8, dt);
     }
 
     if (this.targetRing) {
