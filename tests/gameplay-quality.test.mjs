@@ -237,7 +237,10 @@ test('Survival upgrade draft has visible rarity tiers with stronger higher-tier 
     read('../src/game.ts'), read('../src/index.ts'), read('../index.html')
   ]);
   assert.match(game, /rollSurvivalUpgradeRarity\(Math\.random\(\), this\.survivalLevel\)/);
-  assert.match(game, /weapon_evolve:[\s\S]*?rarity = option\.id\.startsWith\('weapon_evolve:'\)[\s\S]*?'legendary'/);
+  assert.match(game, /const isEvolution = option\.id\.startsWith\('weapon_evolve:'\)/);
+  assert.match(game, /let rarity: SurvivalUpgradeRarity = isEvolution[\s\S]*?'legendary'/);
+  assert.match(game, /promotionCardAssigned/);
+  assert.match(game, /promoteSurvivalUpgradeRarity\(rarity, promotionRarityFloor\)/);
   assert.match(game, /const strength = choice\.strengthMultiplier/);
   assert.match(game, /this\.survivalDamageMultiplier = Math\.min\(2\.05, this\.survivalDamageMultiplier \* \(1 \+ 0\.12 \* strength\)\)/);
   assert.match(game, /getSurvivalWeaponInitialLevel\(choice\.rarity\)/);
