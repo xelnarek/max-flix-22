@@ -121,21 +121,13 @@ test('mastery level and XP are capped safely and cannot create free talent point
   assert.deepEqual(Object.keys(clean.characters.piotr.talentRanks).sort(), ['mafia_protocol', 'veteran_grip']);
 });
 
-test('mastery progression preserves XP overflow when several thresholds are crossed', () => {
-  let profile = createInitialCharacterMasteryProfile();
-  const enoughXp = Array.from({ length: 5 }, (_, i) => getCharacterMasteryXpRequirement(i + 1)).reduce((sum, value) => sum + value, 0) + 12;
-  profile = {
-    ...profile,
-    characters: {
-      ...profile.characters,
-      grzesiek: { ...profile.characters.grzesiek, xp: enoughXp },
-    },
-  };
+test('mastery progression preserves earned XP overflow when several thresholds are crossed', () => {
+  const profile = createInitialCharacterMasteryProfile();
   const update = recordCharacterRunResult(profile, 'grzesiek', {
-    kills: 0, elapsedSeconds: 0, bossesDefeated: 0, secretsFound: 0,
+    kills: 900, elapsedSeconds: 0, bossesDefeated: 0, secretsFound: 0,
   });
-  assert.ok(update.levelsGained >= 5);
-  assert.equal(getCharacterMasterySummary(update.profile, 'grzesiek').xp, 12);
+  assert.ok(update.levelsGained >= 6);
+  assert.equal(getCharacterMasterySummary(update.profile, 'grzesiek').xp, 60);
 });
 
 test('talent bonuses are connected to live movement, attacks, defence and super ability cooldown', async () => {
