@@ -1279,7 +1279,8 @@ test('Survival menu lets players explicitly choose one of the four actual arenas
   for (const mapId of ['random', 'warehouse_b4', 'container_terminal', 'cold_storage', 'night_sorting']) {
     assert.ok(html.includes('data-survival-map="' + mapId + '"'), 'missing map selector option: ' + mapId);
   }
-  assert.match(app, /let selectedSurvivalMapId: SurvivalMapId \| null = null/);
+  assert.match(app, /let selectedSurvivalMapId: SurvivalMapId \| null = \(\(\) => \{/);
+  assert.match(app, /readSurvivalMapPreference\(window\.localStorage\)/);
   assert.match(app, /this\.engine\.startSurvival\(selectedSurvivalMapId\)/);
   assert.match(game, /public startSurvival\(mapOverride: SurvivalMapId \| null = null\)/);
   assert.match(game, /this\.survivalMapId = mapOverride \|\| chooseRandomSurvivalMap/);
