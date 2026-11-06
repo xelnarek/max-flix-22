@@ -34,6 +34,8 @@ import {
 } from './survivalAchievements.ts';
 import { SURVIVAL_MAPS, type SurvivalMapId } from './survivalMaps.ts';
 import { launchOniricPlatformer } from './oniricPlatformer.ts';
+import { getMenuTabIndexForKey } from './menuTabNavigation.ts';
+import { readSurvivalMapPreference, writeSurvivalMapPreference } from './survivalMapPreference.ts';
 
 // warehouseAssets imports moved to assets.ts where they are preloaded
 
@@ -1344,28 +1346,65 @@ class PaleciakiScene extends xb.Script {
       renderLeaderboard();
     });
 
-    document.querySelectorAll('.menu-tab-btn').forEach((tabBtn) => {
-      const activateTab = (e?: Event) => {
-        if (e) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-        document.querySelectorAll('.menu-tab-btn').forEach((b) => b.classList.remove('active'));
-        document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
-        tabBtn.classList.add('active');
-        const targetId = tabBtn.getAttribute('data-tab');
-        if (targetId) {
-          document.getElementById(targetId)?.classList.add('active');
-          if (targetId === 'tab-leaderboard') {
-            renderLeaderboard();
-            ensureLeaderboardServices().catch(console.warn);
-          } else if (targetId === 'tab-achievements') {
-            renderSurvivalAchievements();
-          }
-        }
-      };
-      tabBtn.addEventListener('click', activateTab);
-      tabBtn.addEventListener('touchend', activateTab);
+    const menuTabList = document.querySelector<HTMLElement>('.menu-tabs-bar');
+    menuTabList?.setAttribute('role', 'tablist');
+    menuTabList?.setAttribute('aria-label', 'Sekcje menu głównego');
+    const menuTabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.menu-tab-btn'));
+
+    const activateMenuTab = (selectedTab: HTMLButtonElement) => {
+      const targetId = selectedTab.getAttribute('data-tab');
+      if (!targetId) return;
+
+      menuTabButtons.forEach((button) => {
+        const active = button === selectedTab;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-selected', String(active));
+        button.tabIndex = active ? 0 : -1;
+      });
+
+      document.querySelectorAll<HTMLElement>('.tab-panel').forEach((panel) => {
+        const active = panel.id === targetId;
+        panel.classList.toggle('active', active);
+        panel.setAttribute('aria-hidden', String(!active));
+        if (active) panel.setAttribute('aria-labelledby', selectedTab.id);
+      });
+
+      if (targetId === 'tab-leaderboard') {
+        renderLeaderboard();
+        ensureLeaderboardServices().catch(console.warn);
+      } else if (targetId === 'tab-achievements') {
+        renderSurvivalAchievements();
+      }
+    };
+
+    menuTabButtons.forEach((tabBtn, index) => {
+      const targetId = tabBtn.getAttribute('data-tab');
+      tabBtn.id = tabBtn.id || (targetId ? 'menu-' + targetId : 'menu-tab-' + index);
+      tabBtn.setAttribute('role', 'tab');
+      if (targetId) {
+        tabBtn.setAttribute('aria-controls', targetId);
+        const panel = document.getElementById(targetId);
+        panel?.setAttribute('role', 'tabpanel');
+        panel?.setAttribute('aria-labelledby', tabBtn.id);
+        panel?.setAttribute('tabindex', '0');
+        panel?.setAttribute('aria-hidden', String(!panel.classList.contains('active')));
+      }
+      const initiallyActive = tabBtn.classList.contains('active');
+      tabBtn.setAttribute('aria-selected', String(initiallyActive));
+      tabBtn.tabIndex = initiallyActive ? 0 : -1;
+
+      // A native click is generated for touch input; a second touchend handler
+      // caused the same selection and lazy panel work to run twice on phones.
+      tabBtn.addEventListener('click', () => activateMenuTab(tabBtn));
+      tabBtn.addEventListener('keydown', (event: KeyboardEvent) => {
+        const nextIndex = getMenuTabIndexForKey(event.key, index, menuTabButtons.length);
+        if (nextIndex === null) return;
+        event.preventDefault();
+        const nextTab = menuTabButtons[nextIndex];
+        if (!nextTab) return;
+        activateMenuTab(nextTab);
+        nextTab.focus();
+      });
     });
 
     document.querySelectorAll<HTMLElement>('.char-card').forEach((card) => {
@@ -1376,15 +1415,22 @@ class PaleciakiScene extends xb.Script {
           e.preventDefault();
           e.stopPropagation();
         }
-        document.querySelectorAll('.char-card').forEach((c) => c.classList.remove('active'));
+        document.querySelectorAll<HTMLElement>('.char-card').forEach((item) => {
+          item.classList.remove('active');
+          item.setAttribute('aria-pressed', 'false');
+        });
         card.classList.add('active');
+        card.setAttribute('aria-pressed', 'true');
         const charId = card.getAttribute('data-char') as CharacterId;
         if (charId) updateCharacterUI(charId);
       };
+      card.setAttribute('aria-pressed', String(card.classList.contains('active')));
       card.addEventListener('click', selectChar);
-      card.addEventListener('touchend', selectChar);
       card.addEventListener('keydown', (event: KeyboardEvent) => {
-        if (event.key === 'Enter' || event.key === ' ') selectChar(event);
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          selectChar(event);
+        }
       });
     });
 
@@ -1408,22 +1454,30 @@ class PaleciakiScene extends xb.Script {
     });
 
     let startingGame = false;
-    let selectedSurvivalMapId: SurvivalMapId | null = null;
+    let selectedSurvivalMapId: SurvivalMapId | null = (() => {
+      try {
+        return readSurvivalMapPreference(window.localStorage);
+      } catch {
+        return null;
+      }
+    })();
     const survivalMapPicker = document.getElementById('survival-map-picker');
     const survivalMapPickerHint = document.getElementById('survival-map-picker-hint');
     const survivalMapPreviewTitle = document.getElementById('survival-map-preview-title');
     const survivalMapPreviewDetail = document.getElementById('survival-map-preview-detail');
-    survivalMapPicker?.addEventListener('click', (event) => {
-      const button = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>('[data-survival-map]');
-      if (!button || !survivalMapPicker.contains(button)) return;
 
-      const choice = button.dataset.survivalMap;
+    const applySurvivalMapChoice = (choice: string, persist: boolean) => {
+      const mapButton = Array.from(
+        survivalMapPicker?.querySelectorAll<HTMLButtonElement>('[data-survival-map]') || []
+      ).find((option) => option.dataset.survivalMap === choice);
+      if (!mapButton) return;
+
       if (choice === 'random') {
         selectedSurvivalMapId = null;
         if (survivalMapPreviewTitle) survivalMapPreviewTitle.textContent = 'ROTACJA AREN';
         if (survivalMapPreviewDetail) survivalMapPreviewDetail.textContent = 'Losowanie bez powtórzenia poprzedniej mapy. Każda arena ma własny układ osłon i tras.';
         if (survivalMapPickerHint) survivalMapPickerHint.textContent = 'Losowanie wybierze jedną z czterech aren.';
-      } else if (choice && Object.prototype.hasOwnProperty.call(SURVIVAL_MAPS, choice)) {
+      } else if (Object.prototype.hasOwnProperty.call(SURVIVAL_MAPS, choice)) {
         selectedSurvivalMapId = choice as SurvivalMapId;
         const map = SURVIVAL_MAPS[selectedSurvivalMapId];
         if (survivalMapPreviewTitle) survivalMapPreviewTitle.textContent = map.name.toUpperCase() + ' • ' + map.subtitle;
@@ -1433,11 +1487,27 @@ class PaleciakiScene extends xb.Script {
         return;
       }
 
-      survivalMapPicker.querySelectorAll<HTMLButtonElement>('[data-survival-map]').forEach((option) => {
-        const active = option === button;
+      survivalMapPicker?.querySelectorAll<HTMLButtonElement>('[data-survival-map]').forEach((option) => {
+        const active = option === mapButton;
         option.classList.toggle('is-selected', active);
         option.setAttribute('aria-pressed', String(active));
       });
+
+      if (persist) {
+        try {
+          writeSurvivalMapPreference(window.localStorage, selectedSurvivalMapId);
+        } catch {
+          // The menu remains usable when browser storage is restricted.
+        }
+      }
+    };
+
+    // Restore the last arena on return to the menu; first launch still defaults to rotation.
+    applySurvivalMapChoice(selectedSurvivalMapId || 'random', false);
+    survivalMapPicker?.addEventListener('click', (event) => {
+      const button = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>('[data-survival-map]');
+      if (!button || !survivalMapPicker.contains(button)) return;
+      applySurvivalMapChoice(button.dataset.survivalMap || 'random', true);
     });
 
     const doStartSurvival = async (e?: Event) => {

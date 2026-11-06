@@ -32,3 +32,28 @@ test('the active content panel scrolls independently while the map selector and 
   const launch = html.indexOf('<div class="menu-fixed-bottom-bar">', picker);
   assert.ok(picker >= 0 && launch > picker);
 });
+
+
+test('menu tabs expose tab semantics and runtime keyboard navigation without duplicate touch handlers', async () => {
+  const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
+  const navigation = await readFile(new URL('../src/menuTabNavigation.ts', import.meta.url), 'utf8');
+  assert.match(app, /setAttribute\('role', 'tablist'\)/);
+  assert.match(app, /setAttribute\('role', 'tab'\)/);
+  assert.match(app, /setAttribute\('aria-selected', String\(active\)\)/);
+  assert.match(app, /setAttribute\('role', 'tabpanel'\)/);
+  assert.match(app, /getMenuTabIndexForKey\(event\.key, index, menuTabButtons\.length\)/);
+  assert.doesNotMatch(app.slice(app.indexOf('const menuTabButtons'), app.indexOf("document.querySelectorAll<HTMLElement>('.char-card')")), /addEventListener\('touchend'/);
+  assert.match(navigation, /ArrowRight/);
+  assert.match(navigation, /ArrowLeft/);
+  assert.match(navigation, /Home/);
+  assert.match(navigation, /End/);
+});
+
+test('selected Survival arena is restored from browser storage and persisted after manual selection', async () => {
+  const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
+  const preference = await readFile(new URL('../src/survivalMapPreference.ts', import.meta.url), 'utf8');
+  assert.match(app, /readSurvivalMapPreference\(window\.localStorage\)/);
+  assert.match(app, /writeSurvivalMapPreference\(window\.localStorage, selectedSurvivalMapId\)/);
+  assert.match(app, /applySurvivalMapChoice\(selectedSurvivalMapId \|\| 'random', false\)/);
+  assert.match(preference, /paleciaki\.menu\.survivalMap\.v1/);
+});
