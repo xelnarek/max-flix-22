@@ -994,7 +994,7 @@ export function createCharacterModel(def: CharacterDef): {
     legWidth: number; legLength: number; shoulderSize: number; headWidth: number; headHeight: number;
   }> = {
     marcin:   { torsoWidth: 0.94, torsoHeight: 1.08, armWidth: 0.96, armLength: 1.00, legWidth: 0.98, legLength: 1.00, shoulderSize: 1.02, headWidth: 0.94, headHeight: 1.06 },
-    grzesiek: { torsoWidth: 1.43, torsoHeight: 1.08, armWidth: 1.38, armLength: 1.08, legWidth: 1.26, legLength: 1.08, shoulderSize: 1.55, headWidth: 1.04, headHeight: 0.94 },
+    grzesiek: { torsoWidth: 1.43, torsoHeight: 1.08, armWidth: 1.38, armLength: 1.08, legWidth: 1.26, legLength: 1.08, shoulderSize: 1.55, headWidth: 1.12, headHeight: 0.94 },
     dawid:    { torsoWidth: 0.92, torsoHeight: 1.16, armWidth: 0.92, armLength: 1.04, legWidth: 0.94, legLength: 1.14, shoulderSize: 0.98, headWidth: 0.94, headHeight: 1.12 },
     mateusz:  { torsoWidth: 0.82, torsoHeight: 0.96, armWidth: 0.82, armLength: 0.96, legWidth: 0.88, legLength: 1.08, shoulderSize: 0.84, headWidth: 0.90, headHeight: 1.08 },
     piotr:    { torsoWidth: 1.24, torsoHeight: 1.08, armWidth: 1.16, armLength: 1.02, legWidth: 1.16, legLength: 1.02, shoulderSize: 1.30, headWidth: 1.08, headHeight: 1.00 },
