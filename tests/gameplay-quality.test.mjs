@@ -1450,10 +1450,6 @@ test('game-over screen reports actual Survival HP damage by weapon, basic attack
   ]);
   assert.match(game, /recordSurvivalDamage\(this\.survivalDamageStats, damageSource, actualDamage\)/);
   assert.match(game, /previousHp > 0 && enemy\.hp <= 0\)[\s\S]*?recordSurvivalKill\(this\.survivalDamageStats, damageSource\)/);
-  assert.match(game, /getSurvivalPromotionRarityFloor\(this\.survivalLevel\)/);
-  assert.match(game, /this\.survivalRankUpPending = progression\.isPromotion/);
-  assert.match(game, /this\.survivalRerolls = Math\.min\(3, this\.survivalRerolls \+ 1\)/);
-  assert.match(game, /this\.survivalXp >= this\.survivalXpToNext\) this\.beginSurvivalLevelUp\(\)/);
   assert.match(game, /public getSurvivalDamageReport\(\): SurvivalDamageReport/);
   assert.match(game, /this\.damageEnemy\(enemy, weaponDamage, this\.playerPos\.x, this\.playerPos\.z, weaponDamageSource\)/);
   assert.match(game, /damageSource: 'basic_attack'/);
@@ -1468,6 +1464,18 @@ test('game-over screen reports actual Survival HP damage by weapon, basic attack
   assert.match(html, /id="gameover-damage-breakdown"/);
   assert.match(html, /UDZIAŁ W ZADANYCH OBRAŻENIACH/);
   assert.match(stats, /percentage: totalDamage > 0 \? Math\.round\(\(entry\.damage \/ totalDamage\) \* 1000\) \/ 10 : 0/);
+});
+
+test('Survival levels promote operators every five levels and preserve banked XP across skipped drafts', async () => {
+  const [game, app] = await Promise.all([read('../src/game.ts'), read('../src/index.ts')]);
+  assert.match(game, /getSurvivalPromotionRarityFloor\(this\.survivalLevel\)/);
+  assert.match(game, /this\.survivalRankUpPending = progression\.isPromotion/);
+  assert.match(game, /this\.survivalRerolls = Math\.min\(3, this\.survivalRerolls \+ 1\)/);
+  assert.match(game, /this\.survivalXp >= this\.survivalXpToNext\) this\.beginSurvivalLevelUp\(\)/);
+  assert.match(game, /this\.survivalRankUpPending \? 'rank-up' : 'levelup'/);
+  assert.match(app, /snapshot\.rankName/);
+  assert.match(app, /context: 'levelup' \\| 'rank-up' \\| 'boss-reward'/);
+  assert.match(app, /AWANS RANGI:/);
 });
 
 test('Survival weapon attacks have distinct pooled muzzle signatures, colored trails and impacts', async () => {
