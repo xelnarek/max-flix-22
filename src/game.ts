@@ -58,6 +58,7 @@ import { applyPerfectDodgeCounterattack, getSurvivalDashCooldownSeconds, getSurv
 import { advanceSurvivalMomentum, createSurvivalMomentumState, getSurvivalMomentumDamageMultiplier, getSurvivalMomentumMoveMultiplier, getSurvivalMomentumRateMultiplier, registerSurvivalKill, type SurvivalMomentumState } from './survivalMomentum.ts';
 import { selectSurvivalAutoTarget } from './survivalTargeting.ts';
 import { CHARACTERS } from './characters.ts';
+import { NEUTRAL_CHARACTER_COMBAT_BONUSES, type CharacterCombatBonuses } from './characterProgression.ts';
 import { getCharacterMotionProfile } from './characterMotion.ts';
 import { getAttackPoseStrength, getCharacterAttackMotionProfile } from './characterAttackMotion.ts';
 import { resolveCharacterIncomingDamage, scaleCharacterBasicAttackDamage } from './characterBalance.ts';
@@ -369,6 +370,7 @@ export class PaleciakiGameEngine {
   private timeScale: 1 | 2 = 1;
   private currentCharacterId: CharacterId = 'marcin';
   private charDef: CharacterDef;
+  private characterMasteryBonuses: CharacterCombatBonuses = { ...NEUTRAL_CHARACTER_COMBAT_BONUSES };
   private coffeeMachines: { mesh: THREE.Group; x: number; y: number; z: number; cooldown: number }[] = [];
 
   public getGameState(): GameState {
@@ -1137,9 +1139,19 @@ export class PaleciakiGameEngine {
     this.virtualJoystick.y = y;
   }
 
-  public selectCharacter(id: CharacterId) {
+  public selectCharacter(
+    id: CharacterId,
+    masteryBonuses: CharacterCombatBonuses = NEUTRAL_CHARACTER_COMBAT_BONUSES,
+  ) {
     this.currentCharacterId = id;
     this.charDef = CHARACTERS[id];
+    this.characterMasteryBonuses = {
+      attackMultiplier: Number.isFinite(masteryBonuses.attackMultiplier) ? THREE.MathUtils.clamp(masteryBonuses.attackMultiplier, 1, 1.08) : 1,
+      damageTakenMultiplier: Number.isFinite(masteryBonuses.damageTakenMultiplier) ? THREE.MathUtils.clamp(masteryBonuses.damageTakenMultiplier, 0.90, 1) : 1,
+      speedMultiplier: Number.isFinite(masteryBonuses.speedMultiplier) ? THREE.MathUtils.clamp(masteryBonuses.speedMultiplier, 1, 1.08) : 1,
+      jumpMultiplier: Number.isFinite(masteryBonuses.jumpMultiplier) ? THREE.MathUtils.clamp(masteryBonuses.jumpMultiplier, 1, 1.08) : 1,
+      abilityCooldownMultiplier: Number.isFinite(masteryBonuses.abilityCooldownMultiplier) ? THREE.MathUtils.clamp(masteryBonuses.abilityCooldownMultiplier, 0.90, 1) : 1,
+    };
     this.maxHp = this.charDef.maxHp;
     this.hp = this.maxHp;
     this.characterDamageRemainder = 0;
@@ -8412,7 +8424,7 @@ export class PaleciakiGameEngine {
       inputZ /= inputLen;
     }
 
-    let speed = this.charDef.speed * this.getPacingFactor();
+    let speed = this.charDef.speed * this.characterMasteryBonuses.speedMultiplier * this.getPacingFactor();
     if (this.gameMode === 'survival') {
       speed *= this.survivalMoveMultiplier * getSurvivalMomentumMoveMultiplier(this.survivalMomentum.overdriveRemainingSeconds);
       if (this.oniricDreamRemainingSeconds > 0) speed *= 1.20;
@@ -8531,7 +8543,7 @@ export class PaleciakiGameEngine {
     if (this.jumpBufferTimer > 0) {
       this.jumpBufferTimer -= dt;
       if (this.coyoteTimer > 0) {
-        this.playerVel.y = this.charDef.jumpForce;
+        this.playerVel.y = this.charDef.jumpForce * this.characterMasteryBonuses.jumpMultiplier;
         this.isGrounded = false;
         this.coyoteTimer = 0;
         this.jumpBufferTimer = 0;
@@ -8542,7 +8554,7 @@ export class PaleciakiGameEngine {
           this.playerGroup.scale.set(stretchXZ, motionProfile.jumpStretchY, stretchXZ);
         }
       } else if ((this.activePerks.doubleJump > 0 || this.charDef.id === 'piotr') && !this.hasDoubleJumped) {
-        this.playerVel.y = this.charDef.jumpForce * 1.05;
+        this.playerVel.y = this.charDef.jumpForce * 1.05 * this.characterMasteryBonuses.jumpMultiplier;
         this.hasDoubleJumped = true;
         this.jumpBufferTimer = 0;
         sound.playDoubleJump();
@@ -10715,7 +10727,7 @@ export class PaleciakiGameEngine {
         this.scaleSurvivalDamage(p.damage ?? (this.charDef.id === 'dawid' ? 2 : 1)) *
         berserkMult * (p.chainDamageMultiplier || 1);
       const baseDmg = projectileDamageSource === 'basic_attack'
-        ? scaleCharacterBasicAttackDamage(adjustedProjectileDamage, this.charDef.basicAttackDamageMultiplier)
+        ? scaleCharacterBasicAttackDamage(adjustedProjectileDamage, this.charDef.basicAttackDamageMultiplier * this.characterMasteryBonuses.attackMultiplier)
         : Math.max(1, Math.round(adjustedProjectileDamage));
       const segmentX = p.mesh.position.x - previousProjectileX;
       const segmentY = p.mesh.position.y - previousProjectileY;
@@ -10796,7 +10808,7 @@ export class PaleciakiGameEngine {
                 if (other.id !== e.id && other.state !== 'defeated') {
                   if (Math.hypot(other.x - e.x, other.z - e.z) <= p.aoeRadius) {
                     const splashDamage = projectileDamageSource === 'basic_attack'
-                      ? scaleCharacterBasicAttackDamage(this.scaleSurvivalDamage(1), this.charDef.basicAttackDamageMultiplier)
+                      ? scaleCharacterBasicAttackDamage(this.scaleSurvivalDamage(1), this.charDef.basicAttackDamageMultiplier * this.characterMasteryBonuses.attackMultiplier)
                       : this.scaleSurvivalDamage(1);
                     this.damageEnemy(other, splashDamage, e.x, e.z, projectileDamageSource);
                     other.stunTimer = Math.max(other.stunTimer, this.gameMode === 'survival' ? 0.22 : (p.stunDuration || 1.2));
@@ -12665,6 +12677,7 @@ export class PaleciakiGameEngine {
   public triggerAbility() {
     if (this.state !== 'playing' || this.abilityCooldownState.remainingSeconds > 0.0001) return;
     const cooldownSeconds = getAbilityCooldownSeconds(this.charDef.abilityCooldown, this.gameMode) *
+      this.characterMasteryBonuses.abilityCooldownMultiplier *
       (this.gameMode === 'survival' ? this.survivalAbilityCooldownMultiplier : 1);
     this.abilityCooldownState = createAbilityCooldown(cooldownSeconds);
     this.updateAbilityCooldown(0, true);
@@ -13243,7 +13256,7 @@ export class PaleciakiGameEngine {
 
     const damageResolution = resolveCharacterIncomingDamage(
       amount,
-      this.charDef.damageTakenMultiplier,
+      this.charDef.damageTakenMultiplier * this.characterMasteryBonuses.damageTakenMultiplier,
       this.characterDamageRemainder,
     );
     this.characterDamageRemainder = damageResolution.remainder;
