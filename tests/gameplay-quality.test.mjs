@@ -1449,14 +1449,18 @@ test('game-over screen reports actual Survival HP damage by weapon, basic attack
     read('../src/game.ts'), read('../src/index.ts'), read('../index.html'), read('../src/survivalDamageStats.ts')
   ]);
   assert.match(game, /recordSurvivalDamage\(this\.survivalDamageStats, damageSource, actualDamage\)/);
+  assert.match(game, /previousHp > 0 && enemy\.hp <= 0\)[\s\S]*?recordSurvivalKill\(this\.survivalDamageStats, damageSource\)/);
   assert.match(game, /public getSurvivalDamageReport\(\): SurvivalDamageReport/);
   assert.match(game, /this\.damageEnemy\(enemy, weaponDamage, this\.playerPos\.x, this\.playerPos\.z, weaponDamageSource\)/);
   assert.match(game, /damageSource: 'basic_attack'/);
   assert.match(app, /this\.engine\.getSurvivalDamageReport\(\)/);
   assert.match(app, /entry\.percentage\.toLocaleString\('pl-PL'/);
+  assert.match(app, /entry\.hits\.toLocaleString\('pl-PL'/);
+  assert.match(app, /entry\.eliminations\.toLocaleString\('pl-PL'/);
+  assert.match(html, /Dobicia przypisano źródłu ostatniego, śmiertelnego trafienia/);
   assert.match(html, /id="gameover-damage-breakdown"/);
   assert.match(html, /UDZIAŁ W ZADANYCH OBRAŻENIACH/);
-  assert.match(stats, /percentage: total > 0 \? Math\.round\(\(entry\.damage \/ total\) \* 1000\) \/ 10 : 0/);
+  assert.match(stats, /percentage: totalDamage > 0 \? Math\.round\(\(entry\.damage \/ totalDamage\) \* 1000\) \/ 10 : 0/);
 });
 
 test('Survival weapon attacks have distinct pooled muzzle signatures, colored trails and impacts', async () => {
