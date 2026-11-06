@@ -28,6 +28,7 @@ export function getCharacterAttackMotionProfile(id: CharacterId): CharacterAttac
 
 export function getAttackPoseStrength(progress: number): number {
   const t = Number.isFinite(progress) ? Math.max(0, Math.min(1, progress)) : 0;
+  if (t <= 0 || t >= 1) return 0;
   const anticipation = t < 0.22 ? Math.sin((t / 0.22) * Math.PI * 0.5) * 0.16 : 0;
   return Math.min(1, anticipation + Math.pow(Math.sin(t * Math.PI), 0.9));
 }
