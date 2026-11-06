@@ -2076,6 +2076,7 @@ class PaleciakiScene extends xb.Script {
       survivalLevelUp?.classList.add('hidden');
       survivalHud?.classList.remove('hidden');
       gameShell?.classList.add('survival-mode');
+      this.masteryAwardedForRun = false;
       this.engine.startSurvival(selectedSurvivalMapId);
     });
 
