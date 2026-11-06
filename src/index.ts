@@ -908,7 +908,12 @@ class PaleciakiScene extends xb.Script {
                 fill.className = 'gameover-damage-fill';
                 fill.style.width = Math.max(0, Math.min(100, entry.percentage)) + '%';
                 track.appendChild(fill);
-                row.append(top, track);
+                const activity = document.createElement('small');
+                activity.className = 'gameover-damage-meta';
+                activity.textContent =
+                  entry.hits.toLocaleString('pl-PL') + ' skut. trafień • ' +
+                  entry.eliminations.toLocaleString('pl-PL') + ' dobicia';
+                row.append(top, track, activity);
                 damageList.appendChild(row);
               }
             }
