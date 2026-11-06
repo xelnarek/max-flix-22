@@ -38,7 +38,7 @@ export function getSurvivalXpRequirement(level: number): number {
 /** The player's current named rank and the next promotion checkpoint. */
 export function getSurvivalProgressionInfo(level: number): SurvivalProgressionInfo {
   const current = safeLevel(level);
-  let activeRank = SURVIVAL_RANKS[0];
+  let activeRank: typeof SURVIVAL_RANKS[number] = SURVIVAL_RANKS[0];
   let nextRank: typeof SURVIVAL_RANKS[number] | null = null;
 
   for (const rank of SURVIVAL_RANKS) {
