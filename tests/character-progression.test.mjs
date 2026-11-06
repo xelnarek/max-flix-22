@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CHARACTER_MASTERY_MAX_LEVEL,
+  CHARACTER_MASTERY_TALENT_POINT_CAP,
   CHARACTER_TALENTS,
   calculateCharacterMasteryXp,
   createInitialCharacterMasteryProfile,
@@ -116,7 +117,7 @@ test('mastery level and XP are capped safely and cannot create free talent point
   const summary = getCharacterMasterySummary(clean, 'piotr');
   assert.equal(summary.level, CHARACTER_MASTERY_MAX_LEVEL);
   assert.equal(summary.xp, 0);
-  assert.equal(summary.availableTalentPoints, CHARACTER_MASTERY_MAX_LEVEL - 1 - 6);
+  assert.equal(summary.availableTalentPoints, CHARACTER_MASTERY_TALENT_POINT_CAP - 6);
   assert.equal(clean.characters.piotr.totalRuns, 0);
   assert.deepEqual(Object.keys(clean.characters.piotr.talentRanks).sort(), ['mafia_protocol', 'veteran_grip']);
 });
@@ -156,4 +157,26 @@ test('a single ended Survival run is awarded once and all retry paths open a fre
   assert.match(app, /if \(this\.lastMode === 'survival' && !this\.masteryAwardedForRun\)/);
   assert.match(app, /this\.masteryAwardedForRun = true/);
   assert.equal((app.match(/this\.masteryAwardedForRun = false;/g) || []).length, 3);
+});
+
+test('mastery never grants more points than the nine available talent ranks', () => {
+  let profile = createInitialCharacterMasteryProfile();
+  profile = {
+    ...profile,
+    characters: {
+      ...profile.characters,
+      piotr: { ...profile.characters.piotr, level: CHARACTER_MASTERY_MAX_LEVEL },
+    },
+  };
+  assert.equal(getCharacterMasterySummary(profile, 'piotr').availableTalentPoints, CHARACTER_MASTERY_TALENT_POINT_CAP);
+  for (const talent of CHARACTER_TALENTS.piotr) {
+    for (let rank = 0; rank < talent.maxRank; rank++) {
+      const result = spendCharacterTalentPoint(profile, 'piotr', talent.id);
+      assert.equal(result.purchased, true);
+      profile = result.profile;
+    }
+  }
+  const completed = getCharacterMasterySummary(profile, 'piotr');
+  assert.equal(completed.availableTalentPoints, 0);
+  assert.equal(completed.spentTalentPoints, CHARACTER_MASTERY_TALENT_POINT_CAP);
 });
