@@ -990,14 +990,14 @@ export function createCharacterModel(def: CharacterDef): {
   // Five readable silhouettes at gameplay camera distance. These are visual-only
   // proportions: movement speed, attack hitboxes and collision capsules stay unchanged.
   const silhouette: Record<CharacterId, {
-    torsoWidth: number; torsoHeight: number; armWidth: number;
-    legWidth: number; shoulderSize: number; headWidth: number; headHeight: number;
+    torsoWidth: number; torsoHeight: number; armWidth: number; armLength: number;
+    legWidth: number; legLength: number; shoulderSize: number; headWidth: number; headHeight: number;
   }> = {
-    marcin:   { torsoWidth: 0.94, torsoHeight: 1.00, armWidth: 0.94, legWidth: 0.98, shoulderSize: 0.94, headWidth: 0.94, headHeight: 1.06 },
-    grzesiek: { torsoWidth: 1.25, torsoHeight: 1.06, armWidth: 1.24, legWidth: 1.18, shoulderSize: 1.32, headWidth: 1.12, headHeight: 0.96 },
-    dawid:    { torsoWidth: 1.08, torsoHeight: 1.00, armWidth: 1.08, legWidth: 1.05, shoulderSize: 1.12, headWidth: 0.96, headHeight: 1.08 },
-    mateusz:  { torsoWidth: 0.90, torsoHeight: 0.96, armWidth: 0.90, legWidth: 0.94, shoulderSize: 0.90, headWidth: 0.90, headHeight: 1.04 },
-    piotr:    { torsoWidth: 1.16, torsoHeight: 1.04, armWidth: 1.12, legWidth: 1.10, shoulderSize: 1.18, headWidth: 1.08, headHeight: 1.00 },
+    marcin:   { torsoWidth: 0.94, torsoHeight: 1.08, armWidth: 0.96, armLength: 1.00, legWidth: 0.98, legLength: 1.00, shoulderSize: 1.02, headWidth: 0.94, headHeight: 1.06 },
+    grzesiek: { torsoWidth: 1.43, torsoHeight: 1.08, armWidth: 1.38, armLength: 1.08, legWidth: 1.26, legLength: 1.08, shoulderSize: 1.55, headWidth: 1.04, headHeight: 0.94 },
+    dawid:    { torsoWidth: 0.92, torsoHeight: 1.16, armWidth: 0.92, armLength: 1.04, legWidth: 0.94, legLength: 1.14, shoulderSize: 0.98, headWidth: 0.94, headHeight: 1.12 },
+    mateusz:  { torsoWidth: 0.82, torsoHeight: 0.96, armWidth: 0.82, armLength: 0.96, legWidth: 0.88, legLength: 1.08, shoulderSize: 0.84, headWidth: 0.90, headHeight: 1.08 },
+    piotr:    { torsoWidth: 1.24, torsoHeight: 1.08, armWidth: 1.16, armLength: 1.02, legWidth: 1.16, legLength: 1.02, shoulderSize: 1.30, headWidth: 1.08, headHeight: 1.00 },
   };
   const profile = silhouette[def.id];
   const skinColors: Record<CharacterId, number> = {
@@ -1335,12 +1335,12 @@ export function createCharacterModel(def: CharacterDef): {
   // 3. Legs & Leather Steel-toe Boots
   const legGeo = new THREE.CapsuleGeometry(0.065, 0.21, 3, 12);
   const leftLeg = new THREE.Mesh(legGeo, pantsMat);
-  leftLeg.scale.set(profile.legWidth, 1, 1.12);
+  leftLeg.scale.set(profile.legWidth, profile.legLength, 1.12);
   leftLeg.position.set(-0.1 * profile.torsoWidth, 0.19, 0);
   leftLeg.castShadow = true;
 
   const rightLeg = new THREE.Mesh(legGeo, pantsMat);
-  rightLeg.scale.set(profile.legWidth, 1, 1.12);
+  rightLeg.scale.set(profile.legWidth, profile.legLength, 1.12);
   rightLeg.position.set(0.1 * profile.torsoWidth, 0.19, 0);
   rightLeg.castShadow = true;
 
@@ -1371,12 +1371,12 @@ export function createCharacterModel(def: CharacterDef): {
   // 4. Arms & Hands
   const armGeo = new THREE.CapsuleGeometry(0.05, 0.24, 3, 10);
   const leftArm = new THREE.Mesh(armGeo, clothesMat);
-  leftArm.scale.set(profile.armWidth, 1, 1.05);
+  leftArm.scale.set(profile.armWidth, profile.armLength, 1.05);
   leftArm.position.set(-0.25 * profile.torsoWidth, 0.54, 0);
   leftArm.castShadow = true;
 
   const rightArm = new THREE.Mesh(armGeo, clothesMat);
-  rightArm.scale.set(profile.armWidth, 1, 1.05);
+  rightArm.scale.set(profile.armWidth, profile.armLength, 1.05);
   rightArm.position.set(0.25 * profile.torsoWidth, 0.54, 0);
   rightArm.castShadow = true;
 
@@ -1521,6 +1521,64 @@ export function createCharacterModel(def: CharacterDef): {
     accessory.rotation.x = 0.18;
   }
   group.add(accessory);
+  // High-readability class gear: broad forms are visible from behind and at
+  // the standard Survival camera distance, not just in close-up portraits.
+  if (def.id === 'marcin') {
+    const managerBlue = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.42, metalness: 0.18 });
+    const sash = new THREE.Mesh(new THREE.BoxGeometry(0.082, 0.62, 0.035), managerBlue);
+    sash.position.set(-0.085, 0.57, 0.165); sash.rotation.z = -0.34;
+    const shoulderBoard = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.12, 0.07), silverReflectMat);
+    shoulderBoard.position.set(-0.24, 0.78, -0.015); shoulderBoard.rotation.z = -0.12;
+    const boardStripe = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.025, 0.012), managerBlue);
+    boardStripe.position.set(-0.24, 0.78, 0.025);
+    group.add(sash, shoulderBoard, boardStripe);
+  } else if (def.id === 'grzesiek') {
+    const liftingBelt = new THREE.Mesh(new THREE.BoxGeometry(0.59, 0.13, 0.36), new THREE.MeshStandardMaterial({ color: 0x14532d, roughness: 0.8 }));
+    liftingBelt.position.set(0, 0.355, 0.01);
+    const beltPlate = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.095, 0.035), trimMat);
+    beltPlate.position.set(0, 0.355, 0.196);
+    group.add(liftingBelt, beltPlate);
+    for (const arm of [leftArm, rightArm]) {
+      const forearmGuard = new THREE.Mesh(new THREE.BoxGeometry(0.145, 0.19, 0.14), armorMat);
+      forearmGuard.position.set(0, -0.045, 0.035);
+      const greenRib = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.035, 0.15), trimMat);
+      greenRib.position.set(0, -0.035, 0.11);
+      arm.add(forearmGuard, greenRib);
+    }
+  } else if (def.id === 'dawid') {
+    const tileEdge = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.45, metalness: 0.24 });
+    const tileFace = new THREE.MeshStandardMaterial({ color: 0xe8e5dc, roughness: 0.28, metalness: 0.12 });
+    const sampleSlab = new THREE.Mesh(new THREE.BoxGeometry(0.60, 0.68, 0.085), tileFace);
+    sampleSlab.position.set(0, 0.66, -0.245); sampleSlab.rotation.z = -0.09; sampleSlab.castShadow = true;
+    const topEdge = new THREE.Mesh(new THREE.BoxGeometry(0.63, 0.045, 0.11), tileEdge);
+    topEdge.position.set(0, 1.015, -0.235); topEdge.rotation.z = -0.09;
+    const lowerEdge = topEdge.clone(); lowerEdge.position.y = 0.305;
+    const diagonalVein = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.56, 0.012), new THREE.MeshBasicMaterial({ color: 0x9ca3af }));
+    diagonalVein.position.set(0.08, 0.66, -0.196); diagonalVein.rotation.z = -0.48;
+    const retainingStrap = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.055, 0.13), rubberMat);
+    retainingStrap.position.set(0, 0.65, -0.17);
+    group.add(sampleSlab, topEdge, lowerEdge, diagonalVein, retainingStrap);
+  } else if (def.id === 'mateusz') {
+    const techPack = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.40, 0.16), new THREE.MeshStandardMaterial({ color: 0x2e1065, roughness: 0.42, metalness: 0.34 }));
+    techPack.position.set(0, 0.64, -0.22);
+    const cyanPackStrip = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.045, 0.018), new THREE.MeshBasicMaterial({ color: 0x67e8f9 }));
+    cyanPackStrip.position.set(0, 0.68, -0.132);
+    group.add(techPack, cyanPackStrip);
+    for (const side of [-1, 1]) {
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.40, 0.095), new THREE.MeshStandardMaterial({ color: 0x7c3aed, emissive: 0x4c1d95, emissiveIntensity: 0.18, roughness: 0.36 }));
+      fin.position.set(side * 0.215, 0.74, -0.22); fin.rotation.z = side * -0.24;
+      const tip = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), new THREE.MeshBasicMaterial({ color: 0x67e8f9 }));
+      tip.position.set(side * 0.262, 0.95, -0.22);
+      group.add(fin, tip);
+    }
+  } else {
+    const veteranStrap = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.63, 0.035), new THREE.MeshStandardMaterial({ color: 0x7f1d1d, roughness: 0.76 }));
+    veteranStrap.position.set(0.09, 0.58, 0.165); veteranStrap.rotation.z = 0.32;
+    const toolPlate = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.12, 0.07), armorMat);
+    toolPlate.position.set(0.235, 0.46, -0.14);
+    group.add(veteranStrap, toolPlate);
+  }
+
 
   // Subtle cargo tags and pockets give each operator a more finished logistics silhouette.
   const sidePocket = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.13, 0.10), armorMat);
