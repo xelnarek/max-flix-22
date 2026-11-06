@@ -8346,7 +8346,6 @@ export class PaleciakiGameEngine {
     let inputZ = -screenY;
 
     const inputLen = Math.hypot(inputX, inputZ);
-    if (inputLen > 1) {
 
     // Character-coloured footfalls are emitted at a controlled cadence into the existing particle pool.
     if (inputLen > 0.08 && this.isGrounded) {
@@ -8369,6 +8368,8 @@ export class PaleciakiGameEngine {
     } else {
       this.characterFootstepTimer = Math.min(this.characterFootstepTimer, 0.07);
     }
+
+    if (inputLen > 1) {
       inputX /= inputLen;
       inputZ /= inputLen;
     }
