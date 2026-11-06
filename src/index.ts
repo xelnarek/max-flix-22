@@ -896,6 +896,30 @@ class PaleciakiScene extends xb.Script {
           const snapshot = this.engine.getSurvivalSnapshot();
           if (runDetail) runDetail.textContent = `FALA ${snapshot.wave} • ${snapshot.kills} ELIMINACJI • POZIOM ${snapshot.level}`;
 
+          // Award mastery exactly once when a Survival run ends. A retry starts a fresh award window.
+          if (this.lastMode === 'survival' && !this.masteryAwardedForRun) {
+            this.masteryAwardedForRun = true;
+            const operatorId = this.engine.getCharacterDef().id;
+            const masteryResult = recordCharacterRunResult(characterMasteryProfile, operatorId, {
+              kills: snapshot.kills,
+              elapsedSeconds: snapshot.elapsedSeconds,
+              bossesDefeated: snapshot.bossesDefeated,
+              secretsFound: snapshot.secretsFound,
+            });
+            characterMasteryProfile = masteryResult.profile;
+            persistCharacterMasteryProfile();
+            renderCharacterMasteryPanel(operatorId);
+            if (masteryResult.xpEarned > 0) {
+              const masteryToast = document.createElement('div');
+              masteryToast.className = 'achievement-unlock-toast';
+              masteryToast.textContent = '🎖️ ' + CHARACTERS[operatorId].name +
+                ' • +' + masteryResult.xpEarned + ' MASTERY XP' +
+                (masteryResult.levelsGained > 0 ? ' • AWANS MISTRZOSTWA: +' + masteryResult.levelsGained : '');
+              document.body.appendChild(masteryToast);
+              window.setTimeout(() => masteryToast.remove(), 3900);
+            }
+          }
+
           // The damage table is derived from actual enemy HP removed, not projectile counts.
           const damageReport = this.engine.getSurvivalDamageReport();
           const damageTotal = document.getElementById('gameover-total-damage');
@@ -1777,7 +1801,9 @@ class PaleciakiScene extends xb.Script {
         survivalHud?.classList.remove('hidden');
         gameShell?.classList.add('survival-mode');
 
-        this.engine.startSurvival(selectedSurvivalMapId);
+        this.masteryAwardedForRun = false;
+      this.masteryAwardedForRun = false;
+      this.engine.startSurvival(selectedSurvivalMapId);
       } catch (error) {
         console.error('[Survival] Nie udało się uruchomić rozgrywki:', error);
         titleScreen?.classList.remove('hidden');
