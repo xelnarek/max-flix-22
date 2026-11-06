@@ -1174,7 +1174,7 @@ class PaleciakiScene extends xb.Script {
       this.selectedCharId = id;
       const def = CHARACTERS[id];
       if (hudHeroName) hudHeroName.textContent = def.name;
-      if (hudHeroRole) hudHeroRole.textContent = def.role;
+      if (hudHeroRole) hudHeroRole.textContent = def.className;
       if (abilityName) abilityName.textContent = def.abilityName;
 
       const abilityIcons: Record<CharacterId, string> = {
@@ -1193,7 +1193,11 @@ class PaleciakiScene extends xb.Script {
         const definition = CHARACTERS[cardId];
         const accent = definition.color.toString(16).padStart(6, '0');
         const badge = card.querySelector<HTMLElement>('.operator-emblem');
+        const roleLabel = card.querySelector<HTMLElement>('.char-card-role');
+        const identityLabel = card.querySelector<HTMLElement>('.char-card-ability');
         card.style.setProperty('--operator-accent', `#${accent}`);
+        if (roleLabel) roleLabel.textContent = definition.className;
+        if (identityLabel) identityLabel.textContent = definition.combatIdentity;
         card.setAttribute('aria-pressed', String(cardId === id));
         card.setAttribute('aria-label', `${definition.name} — ${definition.role}`);
         if (badge) badge.innerHTML = operatorPortrait(cardId);
@@ -1227,12 +1231,14 @@ class PaleciakiScene extends xb.Script {
       if (attackIconElem) { attackIconElem.innerHTML = attackIcons[id] || attackIcons.marcin; attackIconElem.dataset.operatorIcon = id; }
 
       const detailTitle = document.getElementById('char-detail-title');
+      const detailClass = document.getElementById('char-detail-class');
       const detailBio = document.getElementById('char-detail-bio');
       const detailAttack = document.getElementById('char-detail-attack');
       const detailSkill = document.getElementById('char-detail-skill');
       const detailPassive = document.getElementById('char-detail-passive');
       if (detailTitle && detailBio && detailSkill) {
         detailTitle.textContent = `${def.name} – ${def.title}`;
+        if (detailClass) detailClass.textContent = def.combatIdentity;
         detailBio.textContent = def.bio;
         if (detailAttack) {
           detailAttack.innerHTML = `<strong>🥊 Atak Podstawowy [F / Klik]:</strong> ${attackNames[id]} – ${attackDescriptions[id]}`;

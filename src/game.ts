@@ -58,6 +58,7 @@ import { applyPerfectDodgeCounterattack, getSurvivalDashCooldownSeconds, getSurv
 import { advanceSurvivalMomentum, createSurvivalMomentumState, getSurvivalMomentumDamageMultiplier, getSurvivalMomentumMoveMultiplier, getSurvivalMomentumRateMultiplier, registerSurvivalKill, type SurvivalMomentumState } from './survivalMomentum.ts';
 import { selectSurvivalAutoTarget } from './survivalTargeting.ts';
 import { CHARACTERS } from './characters.ts';
+import { getCharacterMotionProfile } from './characterMotion.ts';
 import { resolveCharacterIncomingDamage, scaleCharacterBasicAttackDamage } from './characterBalance.ts';
 import { sound } from './sound.ts';
 import {
@@ -717,6 +718,9 @@ export class PaleciakiGameEngine {
   private rightArm: THREE.Mesh | null = null;
   private playerHead: THREE.Mesh | null = null;
   private playerBody: THREE.Mesh | null = null;
+  private playerAccessory: THREE.Group | null = null;
+  private playerAccessoryRestX = 0;
+  private playerAccessoryRestZ = 0;
 
   // Level geometry & entities
   private currentLevelId = 1;
@@ -1204,6 +1208,9 @@ export class PaleciakiGameEngine {
     this.rightArm = built.rightArm;
     this.playerHead = built.head;
     this.playerBody = built.body;
+    this.playerAccessory = built.accessory;
+    this.playerAccessoryRestX = built.accessory.rotation.x;
+    this.playerAccessoryRestZ = built.accessory.rotation.z;
 
     // STENCIL BUFFER OUTLINE SHADER FOR HIGH VISIBILITY
     // 1. Configure stencil writing on player primary geometry
@@ -1220,7 +1227,7 @@ export class PaleciakiGameEngine {
     // 2. Create inverted normal stencil outline material & shell
     const outlineMat = new THREE.ShaderMaterial({
       uniforms: {
-        uColor: { value: new THREE.Color(0x38bdf8) },
+        uColor: { value: new THREE.Color(this.charDef.color) },
         uOutlineThickness: { value: 0.038 },
         uTime: { value: 0 },
       },
@@ -8392,12 +8399,17 @@ export class PaleciakiGameEngine {
       this.playerVel.z = THREE.MathUtils.clamp(this.playerVel.z, -speed * 1.08, speed * 1.08);
       this.playerRot = Math.atan2(inputX, inputZ);
 
-      this.walkCycle += dt * 15;
+      const motionProfile = getCharacterMotionProfile(this.currentCharacterId);
+      this.walkCycle += dt * motionProfile.gaitFrequency;
       if (this.leftLeg && this.rightLeg && this.leftArm && this.rightArm) {
-        this.leftLeg.rotation.x = Math.sin(this.walkCycle) * 0.6;
-        this.rightLeg.rotation.x = -Math.sin(this.walkCycle) * 0.6;
-        this.leftArm.rotation.x = -Math.sin(this.walkCycle) * 0.6;
-        this.rightArm.rotation.x = Math.sin(this.walkCycle) * 0.6;
+        const gait = Math.sin(this.walkCycle);
+        this.leftLeg.rotation.x = gait * motionProfile.stride;
+        this.rightLeg.rotation.x = -gait * motionProfile.stride;
+        this.leftArm.rotation.x = -gait * motionProfile.armSwing;
+        this.rightArm.rotation.x = gait * motionProfile.armSwing;
+        const armSpread = motionProfile.lateralSway * 2.4;
+        this.leftArm.rotation.z = armSpread;
+        this.rightArm.rotation.z = -armSpread;
       }
     } else {
       this.playerVel.x = THREE.MathUtils.damp(this.playerVel.x, 0, 16, dt);
@@ -8407,6 +8419,8 @@ export class PaleciakiGameEngine {
         this.rightLeg.rotation.x = 0;
         this.leftArm.rotation.x = 0;
         this.rightArm.rotation.x = 0;
+        this.leftArm.rotation.z = 0;
+        this.rightArm.rotation.z = 0;
       }
     }
 
@@ -8642,13 +8656,35 @@ export class PaleciakiGameEngine {
     this.playerPos.z = boundedPlayerPosition.z;
 
     if (this.playerGroup) {
+      const motionProfile = getCharacterMotionProfile(this.currentCharacterId);
+      const motionRatio = Math.min(1, Math.hypot(this.playerVel.x, this.playerVel.z) / Math.max(0.1, this.charDef.speed));
+      const now = performance.now() * 0.001;
+      const idlePhase = now * motionProfile.idleRate;
+      const airborne = !landed && this.playerPos.y > 0.18;
+      const gait = Math.sin(this.walkCycle);
       this.playerGroup.position.copy(this.playerPos);
       this.playerGroup.rotation.y = this.playerRot;
+      this.playerGroup.rotation.x = airborne ? motionProfile.jumpLean : -motionProfile.runLean * motionRatio;
+      this.playerGroup.rotation.z = Math.sin(idlePhase) * motionProfile.idleSway * (1 - motionRatio) + gait * motionProfile.lateralSway * motionRatio;
+      const walkBob = Math.abs(Math.sin(this.walkCycle * 2)) * motionProfile.bodyBob * motionRatio;
+      const idleBob = Math.sin(idlePhase * 2) * motionProfile.idleBob * (1 - motionRatio);
+      this.playerGroup.position.y += walkBob + idleBob;
       this.playerGroup.scale.lerp(PLAYER_UNIT_SCALE, dt * 8);
-      const motionRatio = Math.min(1, Math.hypot(this.playerVel.x, this.playerVel.z) / Math.max(0.1, this.charDef.speed));
-      const idleBreath = Math.sin(performance.now() * 0.0021) * 0.006 * (1 - motionRatio);
-      this.playerGroup.position.y += idleBreath;
-      this.playerGroup.rotation.z = Math.sin(performance.now() * 0.0017) * 0.006 * (1 - motionRatio);
+      if (this.playerHead) {
+        this.playerHead.rotation.x = airborne ? motionProfile.jumpLean * -0.35 : Math.sin(idlePhase * 0.5) * 0.018 * (1 - motionRatio);
+      }
+      if (this.playerAccessory) {
+        this.playerAccessory.rotation.x = this.playerAccessoryRestX + gait * motionProfile.toolSwing * motionRatio;
+        this.playerAccessory.rotation.z = this.playerAccessoryRestZ + Math.cos(this.walkCycle) * motionProfile.toolRoll * motionRatio;
+      }
+      if (airborne && this.leftLeg && this.rightLeg && this.leftArm && this.rightArm) {
+        this.leftLeg.rotation.x = -motionProfile.jumpKneeTuck;
+        this.rightLeg.rotation.x = -motionProfile.jumpKneeTuck * 0.78;
+        this.leftArm.rotation.x = -motionProfile.jumpArmLift;
+        this.rightArm.rotation.x = -motionProfile.jumpArmLift * 0.84;
+        this.leftArm.rotation.z = motionProfile.jumpArmLift * 0.32;
+        this.rightArm.rotation.z = -motionProfile.jumpArmLift * 0.32;
+      }
     }
 
     if (this.targetRing) {

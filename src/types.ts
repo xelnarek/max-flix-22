@@ -17,6 +17,8 @@ export interface CharacterDef {
   speed: number;
   jumpForce: number;
   maxHp: number;
+  className: string;
+  combatIdentity: string;
   basicAttackDamageMultiplier: number;
   damageTakenMultiplier: number;
   abilityName: string;
