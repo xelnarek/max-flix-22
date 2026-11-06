@@ -38,21 +38,32 @@ export const SURVIVAL_DAMAGE_WEAPONS: Readonly<Record<SurvivalDamageWeaponId, Su
   wz_boomerang: { label: 'Bumerang WZ', color: 0x34d399, category: 'BROŃ' },
 });
 
+export interface SurvivalDamageStatValue {
+  damage: number;
+  hits: number;
+  eliminations: number;
+}
+
 export interface SurvivalDamageEntry {
   readonly source: SurvivalDamageSource;
   readonly label: string;
   readonly category: 'BROŃ' | 'OPERATOR' | 'UMIEJĘTNOŚĆ';
   readonly damage: number;
   readonly percentage: number;
+  /** Successful damage applications that removed at least some enemy HP. */
+  readonly hits: number;
+  /** Eliminations credited to the source that delivered the lethal hit. */
+  readonly eliminations: number;
   readonly color: number;
 }
 
 export interface SurvivalDamageReport {
   readonly totalDamage: number;
+  readonly totalEliminations: number;
   readonly entries: readonly SurvivalDamageEntry[];
 }
 
-export type SurvivalDamageStats = Record<string, number>;
+export type SurvivalDamageStats = Record<string, SurvivalDamageStatValue>;
 
 const BASIC_ATTACK_META: SurvivalDamageSourceMeta = {
   label: 'Atak podstawowy operatora',
@@ -64,6 +75,23 @@ const ABILITY_META: SurvivalDamageSourceMeta = {
   color: 0xc084fc,
   category: 'UMIEJĘTNOŚĆ',
 };
+
+function getSafeCount(value: number): number {
+  return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+}
+
+function getOrCreateStat(stats: SurvivalDamageStats, source: SurvivalDamageSource): SurvivalDamageStatValue {
+  const current = stats[source];
+  if (!current || typeof current !== 'object') {
+    const created = { damage: 0, hits: 0, eliminations: 0 };
+    stats[source] = created;
+    return created;
+  }
+  current.damage = Number.isFinite(current.damage) ? Math.max(0, current.damage) : 0;
+  current.hits = getSafeCount(current.hits);
+  current.eliminations = getSafeCount(current.eliminations);
+  return current;
+}
 
 export function createSurvivalDamageStats(): SurvivalDamageStats {
   return {};
@@ -80,16 +108,30 @@ export function recordSurvivalDamage(
   actualDamage: number,
 ): void {
   if (!Number.isFinite(actualDamage) || actualDamage <= 0) return;
-  stats[source] = Math.max(0, Number.isFinite(stats[source]) ? stats[source] : 0) + actualDamage;
+  const entry = getOrCreateStat(stats, source);
+  entry.damage += actualDamage;
+  entry.hits += 1;
+}
+
+/** Credit the lethal blow, not every weapon that previously damaged the target. */
+export function recordSurvivalKill(stats: SurvivalDamageStats, source: SurvivalDamageSource): void {
+  const entry = getOrCreateStat(stats, source);
+  entry.eliminations += 1;
 }
 
 /** Build a compact, sorted breakdown for the end-of-run report. */
-export function buildSurvivalDamageReport(stats: Readonly<Record<string, number>>): SurvivalDamageReport {
+export function buildSurvivalDamageReport(stats: Readonly<Record<string, SurvivalDamageStatValue>>): SurvivalDamageReport {
   const entries: SurvivalDamageEntry[] = [];
-  let total = 0;
+  let totalDamage = 0;
+  let totalEliminations = 0;
 
-  for (const [sourceKey, rawDamage] of Object.entries(stats)) {
-    if (!Number.isFinite(rawDamage) || rawDamage <= 0) continue;
+  for (const [sourceKey, rawStat] of Object.entries(stats)) {
+    if (!rawStat || typeof rawStat !== 'object') continue;
+    const rawDamage = Number.isFinite(rawStat.damage) ? Math.max(0, rawStat.damage) : 0;
+    const hits = getSafeCount(rawStat.hits);
+    const eliminations = getSafeCount(rawStat.eliminations);
+    if (rawDamage <= 0 && hits <= 0 && eliminations <= 0) continue;
+
     const source = sourceKey as SurvivalDamageSource;
     const weaponId = source.startsWith('weapon:') ? source.slice('weapon:'.length) as SurvivalDamageWeaponId : null;
     const meta = weaponId && Object.prototype.hasOwnProperty.call(SURVIVAL_DAMAGE_WEAPONS, weaponId)
@@ -103,18 +145,22 @@ export function buildSurvivalDamageReport(stats: Readonly<Record<string, number>
       category: meta.category,
       damage: Math.round(rawDamage * 10) / 10,
       percentage: 0,
+      hits,
+      eliminations,
       color: meta.color,
     });
-    total += rawDamage;
+    totalDamage += rawDamage;
+    totalEliminations += eliminations;
   }
 
-  entries.sort((a, b) => b.damage - a.damage || a.label.localeCompare(b.label, 'pl'));
-  const safeTotal = Math.round(total * 10) / 10;
+  entries.sort((a, b) => b.damage - a.damage || b.eliminations - a.eliminations || a.label.localeCompare(b.label, 'pl'));
+  const safeTotal = Math.round(totalDamage * 10) / 10;
   return {
     totalDamage: safeTotal,
+    totalEliminations,
     entries: entries.map((entry) => ({
       ...entry,
-      percentage: total > 0 ? Math.round((entry.damage / total) * 1000) / 10 : 0,
+      percentage: totalDamage > 0 ? Math.round((entry.damage / totalDamage) * 1000) / 10 : 0,
     })),
   };
 }
