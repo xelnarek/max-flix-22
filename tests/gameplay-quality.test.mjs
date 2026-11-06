@@ -1375,8 +1375,8 @@ test('critical shrapnel is limited to one secondary burst per critical Survival 
   assert.match(game, /criticalBurstState\?: \{ consumed: boolean \}/);
   assert.match(game, /p\.criticalBurstState && !p\.criticalBurstState\.consumed/);
   assert.match(game, /p\.criticalBurstState\.consumed = true/);
-  assert.match(game, /this\.applySurvivalCriticalShrapnel\(e, baseDmg\)/);
-  assert.match(game, /private applySurvivalCriticalShrapnel\(primaryTarget: EnemyItem, directDamage: number\)/);
+  assert.match(game, /this\.applySurvivalCriticalShrapnel\(e, baseDmg, projectileDamageSource\)/);
+  assert.match(game, /private applySurvivalCriticalShrapnel\(primaryTarget: EnemyItem, directDamage: number, damageSource: SurvivalDamageSource = 'ability'\)/);
   assert.match(game, /const targetBudget = isMobile[\s\S]*?this\.adaptivePerformanceTier >= 2 \? 1 : 2/);
   assert.match(game, /\.slice\(0, targetBudget\)/);
   assert.match(game, /if \(enemy\.hp < previousHp\)[\s\S]*?this\.defeatEnemy\(enemy, 150, false\)/);
@@ -1441,4 +1441,59 @@ test('Survival weapon fire uses round-robin selection when several reloads are r
   assert.match(game, /findNextReadyWeaponIndex\(/);
   assert.match(game, /this\.survivalWeaponDispatchCursor = getNextWeaponDispatchCursor/);
   assert.match(dispatch, /for \(let offset = 0; offset < count; offset\+\+\)/);
+});
+
+
+test('game-over screen reports actual Survival HP damage by weapon, basic attack and abilities', async () => {
+  const [game, app, html, stats] = await Promise.all([
+    read('../src/game.ts'), read('../src/index.ts'), read('../index.html'), read('../src/survivalDamageStats.ts')
+  ]);
+  assert.match(game, /recordSurvivalDamage\(this\.survivalDamageStats, damageSource, actualDamage\)/);
+  assert.match(game, /public getSurvivalDamageReport\(\): SurvivalDamageReport/);
+  assert.match(game, /this\.damageEnemy\(enemy, weaponDamage, this\.playerPos\.x, this\.playerPos\.z, weaponDamageSource\)/);
+  assert.match(game, /damageSource: 'basic_attack'/);
+  assert.match(app, /this\.engine\.getSurvivalDamageReport\(\)/);
+  assert.match(app, /entry\.percentage\.toLocaleString\('pl-PL'/);
+  assert.match(html, /id="gameover-damage-breakdown"/);
+  assert.match(html, /UDZIAŁ W ZADANYCH OBRAŻENIACH/);
+  assert.match(stats, /percentage: total > 0 \? Math\.round\(\(entry\.damage \/ total\) \* 1000\) \/ 10 : 0/);
+});
+
+test('Survival weapon attacks have distinct pooled muzzle signatures, colored trails and impacts', async () => {
+  const game = await read('../src/game.ts');
+  const weaponStats = await read('../src/survivalDamageStats.ts');
+  assert.match(game, /private spawnSurvivalWeaponMuzzleFx\(weapon: SurvivalWeaponState, target: EnemyItem\)/);
+  assert.match(game, /private spawnSurvivalWeaponTrail\(/);
+  assert.match(game, /const trailInterval = this\.adaptivePerformanceTier >= 2 \? 0\.34/);
+  assert.match(game, /SURVIVAL_DAMAGE_WEAPONS\[p\.weaponId\]\.color/);
+  for (const weaponId of ['pallet_cannon', 'diamond_saw', 'glue_mine', 'kfc_bomber', 'piorun_drone', 'forklift_bolter', 'scanner_pulse', 'orbit_blades', 'calacatta_shards', 'steam_bomb', 'forklift_horn', 'wz_boomerang']) {
+    assert.ok(weaponStats.includes(weaponId + ': { label:'), 'missing damage/visual identity for ' + weaponId);
+  }
+});
+
+test('Survival raises enemy pressure gradually and keeps mobile horde caps as a separate FPS guardrail', async () => {
+  const [game, difficulty] = await Promise.all([read('../src/game.ts'), read('../src/survivalDifficulty.ts')]);
+  assert.match(game, /enemy\.maxHp \* difficultyProfile\.enemyHealthMultiplier/);
+  assert.match(game, /enemy\.speed \*= difficultyProfile\.enemySpeedMultiplier/);
+  assert.match(game, /this\.survivalSpawnTimer = difficultyProfile\.spawnIntervalSeconds/);
+  assert.match(game, /e\.specialActionTimer -= dt \* survivalAbilityRate/);
+  assert.match(game, /const mobileEnemyCap = this\.adaptivePerformanceTier >= 2 \? 13/);
+  assert.match(difficulty, /spawnIntervalSeconds: Math\.max\(5\.2/);
+  assert.match(difficulty, /enemyAbilityRateMultiplier: 1 \+ Math\.min\(0\.28/);
+});
+
+test('high-density projectile collision uses a broad-phase grid and retains swept-segment hit checks', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /this\.enemySpatialIndex\.query\(segmentMidX, segmentMidZ, broadphaseRadius\)/);
+  assert.match(game, /const broadphaseRadius = Math\.sqrt\(segmentLengthSq\) \* 0\.5 \+ 3\.0/);
+  assert.match(game, /const closestX = previousProjectileX \+ segmentX \* projection/);
+  assert.match(game, /const closestZ = previousProjectileZ \+ segmentZ \* projection/);
+});
+
+
+test('untagged projectiles are attributed to abilities while primary operator attacks are explicitly tagged', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /const projectileDamageSource: SurvivalDamageSource = p\.damageSource \?\? \(p\.weaponId[\s\S]*?: 'ability'\);/);
+  assert.doesNotMatch(game, /p\.weaponProjectile \? 'ability' : 'basic_attack'/);
+  assert.match(game, /damageSource: 'basic_attack'/);
 });

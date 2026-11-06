@@ -2842,3 +2842,152 @@ html[data-ui-landscape-touch="true"] .story-modal-card .story-slide {
 #survival-levelup[data-mode="boss-reward"] .survival-upgrade-actions {
   display: none !important;
 }
+
+
+/* Post-run damage report: readable source attribution without a heavy chart dependency. */
+.gameover-card {
+  width: min(620px, calc(100vw - 24px)) !important;
+  max-height: calc(100dvh - 18px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+}
+.gameover-damage-panel {
+  width: 100%;
+  min-width: 0;
+  margin: 10px 0 14px;
+  padding: 13px 14px 11px;
+  border: 1px solid rgba(124, 170, 198, .23);
+  border-radius: 13px;
+  background: linear-gradient(145deg, rgba(10, 25, 38, .94), rgba(8, 17, 27, .96));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 8px 24px rgba(0,0,0,.16);
+  text-align: left;
+}
+.gameover-damage-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(148, 163, 184, .15);
+}
+.gameover-damage-kicker,
+.gameover-damage-total-wrap > span {
+  display: block;
+  color: #8aa6ba;
+  font: 800 8px/1.3 "JetBrains Mono", monospace;
+  letter-spacing: .12em;
+}
+.gameover-damage-heading h3 {
+  margin: 3px 0 0;
+  color: #e7f3fa;
+  font: 800 11px/1.3 "Space Grotesk", sans-serif;
+  letter-spacing: .045em;
+}
+.gameover-damage-total-wrap {
+  flex: 0 0 auto;
+  text-align: right;
+}
+.gameover-damage-total-wrap strong {
+  display: block;
+  margin-top: 3px;
+  color: #f8fafc;
+  font: 900 17px/1.15 "Space Grotesk", sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.gameover-damage-breakdown {
+  display: grid;
+  gap: 9px;
+  max-height: 218px;
+  overflow-y: auto;
+  padding-right: 3px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(106, 165, 194, .38) transparent;
+}
+.gameover-damage-row { min-width: 0; }
+.gameover-damage-row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  min-width: 0;
+  margin-bottom: 5px;
+}
+.gameover-damage-identity {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+.gameover-damage-category {
+  flex: 0 0 auto;
+  padding: 2px 5px;
+  border: 1px solid color-mix(in srgb, var(--damage-accent) 36%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--damage-accent) 10%, transparent);
+  color: var(--damage-accent);
+  font: 800 7px/1.3 "JetBrains Mono", monospace;
+  letter-spacing: .055em;
+}
+.gameover-damage-name {
+  overflow-wrap: anywhere;
+  color: #dbe8ef;
+  font: 700 10px/1.3 "Plus Jakarta Sans", sans-serif;
+}
+.gameover-damage-values {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.gameover-damage-values strong {
+  color: #e8f1f6;
+  font: 800 9px/1.3 "JetBrains Mono", monospace;
+}
+.gameover-damage-values span {
+  min-width: 43px;
+  color: var(--damage-accent);
+  text-align: right;
+  font: 900 10px/1.3 "JetBrains Mono", monospace;
+}
+.gameover-damage-track {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, .13);
+}
+.gameover-damage-fill {
+  height: 100%;
+  min-width: 2px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--damage-accent) 70%, #fff), var(--damage-accent));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--damage-accent) 42%, transparent);
+  transition: width .25s ease-out;
+}
+.gameover-damage-empty {
+  padding: 12px 2px;
+  color: #92a8b8;
+  font-size: 10px;
+  line-height: 1.5;
+  text-align: center;
+}
+@media (max-width: 600px) {
+  .gameover-card {
+    width: min(480px, calc(100vw - 14px)) !important;
+    max-height: calc(100dvh - 10px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+    padding: 14px 13px max(13px, env(safe-area-inset-bottom)) !important;
+  }
+  .gameover-damage-panel { padding: 10px 9px 9px; margin: 8px 0 11px; }
+  .gameover-damage-breakdown { max-height: 190px; gap: 8px; }
+  .gameover-damage-heading h3 { font-size: 9px; }
+  .gameover-damage-total-wrap strong { font-size: 15px; }
+  .gameover-damage-name { font-size: 9px; }
+  .gameover-damage-values { gap: 5px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gameover-damage-fill { transition: none; }
+}

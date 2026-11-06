@@ -17,6 +17,8 @@ import { chooseCampaignNearbyRewardSpawnPoint } from './campaignRewards.ts';
 import { chooseNearbySpawnPoint } from './arenaSpawn.ts';
 import { chooseSurvivalEnemySpawnType } from './survivalEnemySpawns.ts';
 import { findNextReadyWeaponIndex, getNextWeaponDispatchCursor } from './survivalWeaponDispatch.ts';
+import { buildSurvivalDamageReport, createSurvivalDamageStats, getSurvivalWeaponDamageSource, recordSurvivalDamage, SURVIVAL_DAMAGE_WEAPONS, type SurvivalDamageReport, type SurvivalDamageSource, type SurvivalDamageWeaponId, type SurvivalDamageStats } from './survivalDamageStats.ts';
+import { getSurvivalDifficultyProfile } from './survivalDifficulty.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
 import { chooseSurvivalRicochetTarget, getSurvivalRadiationProfile, getSurvivalRicochetProfile } from './survivalCombatDraft.ts';
 import { getSurvivalShrapnelProfile } from './survivalShrapnel.ts';
@@ -529,6 +531,7 @@ export class PaleciakiGameEngine {
   private survivalWeaponDispatchCooldown = 0;
   private survivalWeaponDispatchCursor = 0;
   private survivalDamageMultiplier = 1;
+  private survivalDamageStats: SurvivalDamageStats = createSurvivalDamageStats();
   private survivalAbilityCooldownMultiplier = 1;
   private survivalAbilityKillRechargeMultiplier = 1;
   private survivalAbilityKillRechargeCapRatio = 0.22;
@@ -799,6 +802,9 @@ export class PaleciakiGameEngine {
     chainDamageRetention?: number;
     chainDamageMultiplier?: number;
     criticalBurstState?: { consumed: boolean };
+    weaponId?: SurvivalDamageWeaponId;
+    damageSource?: SurvivalDamageSource;
+    trailTimer?: number;
   }[] = [];
   private specialEffects: {
     mesh: THREE.Mesh | THREE.Group;
@@ -1339,6 +1345,7 @@ export class PaleciakiGameEngine {
     this.survivalPendingBossWave = 0;
     this.survivalBossRewardPending = false;
     this.survivalDamageMultiplier = 1;
+    this.survivalDamageStats = createSurvivalDamageStats();
     this.survivalAbilityCooldownMultiplier = 1;
     this.survivalAbilityKillRechargeMultiplier = 1;
     this.survivalAbilityKillRechargeCapRatio = 0.22;
@@ -2850,6 +2857,11 @@ export class PaleciakiGameEngine {
         evolved: Boolean(weapon.evolved),
       })),
     };
+  }
+
+  /** Final per-source HP contribution shown on the post-run screen. */
+  public getSurvivalDamageReport(): SurvivalDamageReport {
+    return buildSurvivalDamageReport(this.survivalDamageStats);
   }
 
   public chooseSurvivalUpgrade(id: string): boolean {
@@ -6020,6 +6032,80 @@ export class PaleciakiGameEngine {
     this.survivalWeaponDispatchCooldown = SURVIVAL_WEAPON_DISPATCH_COOLDOWN_SECONDS / oniricRate;
   }
 
+  private spawnSurvivalWeaponMuzzleFx(weapon: SurvivalWeaponState, target: EnemyItem): void {
+    const weaponId = weapon.id as SurvivalDamageWeaponId;
+    const meta = SURVIVAL_DAMAGE_WEAPONS[weaponId];
+    const pattern: Record<SurvivalDamageWeaponId, { shape: ParticleShape; count: number; size: number; speed: number; spread: number }> = {
+      pallet_cannon: { shape: 'flat-box', count: 5, size: 0.115, speed: 4.8, spread: 0.22 },
+      diamond_saw: { shape: 'octahedron', count: 4, size: 0.095, speed: 5.8, spread: 0.62 },
+      glue_mine: { shape: 'sphere', count: 3, size: 0.14, speed: 2.6, spread: 0.34 },
+      kfc_bomber: { shape: 'tetrahedron', count: 4, size: 0.12, speed: 5.0, spread: 0.46 },
+      piorun_drone: { shape: 'octahedron', count: 3, size: 0.10, speed: 4.7, spread: 0.18 },
+      forklift_bolter: { shape: 'flat-box', count: 3, size: 0.075, speed: 8.0, spread: 0.16 },
+      scanner_pulse: { shape: 'box', count: 3, size: 0.075, speed: 7.2, spread: 0.24 },
+      orbit_blades: { shape: 'tetrahedron', count: 4, size: 0.085, speed: 3.0, spread: 0.95 },
+      calacatta_shards: { shape: 'tetrahedron', count: 5, size: 0.105, speed: 6.0, spread: 0.82 },
+      steam_bomb: { shape: 'sphere', count: 4, size: 0.13, speed: 3.4, spread: 0.38 },
+      forklift_horn: { shape: 'flat-box', count: 6, size: 0.095, speed: 3.6, spread: Math.PI * 2 },
+      wz_boomerang: { shape: 'octahedron', count: 4, size: 0.105, speed: 5.5, spread: 0.7 },
+    };
+    const visual = pattern[weaponId];
+    const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
+    const count = Math.min(visual.count, isMobile ? (this.adaptivePerformanceTier >= 2 ? 2 : this.adaptivePerformanceTier === 1 ? 3 : visual.count) : visual.count);
+    const forward = new THREE.Vector3(target.x - this.playerPos.x, 0, target.z - this.playerPos.z);
+    if (forward.lengthSq() < 0.001) forward.set(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
+    forward.normalize();
+    const right = new THREE.Vector3(forward.z, 0, -forward.x);
+
+    for (let index = 0; index < count; index++) {
+      const lane = count <= 1 ? 0 : (index / (count - 1)) * 2 - 1;
+      const mesh = this.particlePool.acquire(visual.shape, meta.color, visual.size, 0.92);
+      if (!mesh) break;
+      mesh.position.set(this.playerPos.x, this.playerPos.y + 0.88, this.playerPos.z);
+      mesh.rotation.set(index * 0.55, index * 0.8, index * 0.35);
+      this.levelRoot.add(mesh);
+
+      let velocity: THREE.Vector3;
+      if (weaponId === 'forklift_horn') {
+        const angle = (index / count) * Math.PI * 2;
+        velocity = new THREE.Vector3(Math.cos(angle) * visual.speed, 0.75, Math.sin(angle) * visual.speed);
+      } else {
+        velocity = forward.clone().multiplyScalar(visual.speed)
+          .addScaledVector(right, lane * visual.spread)
+          .add(new THREE.Vector3(0, 0.75 + (index % 2) * 0.45, 0));
+      }
+      this.particles.push({
+        mesh,
+        vel: velocity,
+        life: weapon.evolved ? 0.48 : 0.38,
+        maxLife: weapon.evolved ? 0.48 : 0.38,
+        gravity: 1.2,
+        baseScale: visual.size,
+        rotVel: new THREE.Vector3(4 + index, 5 + index * 0.6, 3 + index * 0.4),
+      });
+    }
+  }
+
+  private spawnSurvivalWeaponTrail(projectile: { mesh: THREE.Object3D; vel: THREE.Vector3; weaponId?: SurvivalDamageWeaponId }): void {
+    if (!projectile.weaponId) return;
+    const meta = SURVIVAL_DAMAGE_WEAPONS[projectile.weaponId];
+    const shape: ParticleShape = projectile.weaponId === 'pallet_cannon' || projectile.weaponId === 'forklift_bolter' || projectile.weaponId === 'scanner_pulse'
+      ? 'flat-box'
+      : projectile.weaponId === 'glue_mine' || projectile.weaponId === 'steam_bomb'
+        ? 'sphere'
+        : 'octahedron';
+    const size = projectile.weaponId === 'forklift_bolter' || projectile.weaponId === 'scanner_pulse' ? 0.052 : 0.068;
+    const mesh = this.particlePool.acquire(shape, meta.color, size, 0.76);
+    if (!mesh) return;
+    mesh.position.copy(projectile.mesh.position);
+    mesh.rotation.set(0.25, 0.5, 0.15);
+    this.levelRoot.add(mesh);
+    const velocity = projectile.vel.lengthSq() > 0.01
+      ? projectile.vel.clone().normalize().multiplyScalar(-0.48)
+      : new THREE.Vector3(0, 0.18, 0);
+    this.particles.push({ mesh, vel: velocity, life: 0.22, maxLife: 0.22, baseScale: size });
+  }
+
   private fireSurvivalWeapon(weapon: SurvivalWeaponState, target: EnemyItem) {
     const definition = SURVIVAL_WEAPON_DEFS[weapon.id];
     const baseWeaponDamage = weapon.id === 'orbit_blades'
@@ -6030,6 +6116,8 @@ export class PaleciakiGameEngine {
     const volleyBaseDamage = applyPerfectDodgeCounterattack(baseWeaponDamage, counterattackReady);
     const criticalRoll = rollSurvivalCriticalDamage(volleyBaseDamage, this.survivalCriticalChance, this.survivalCriticalDamageMultiplier, Math.random());
     const weaponDamage = criticalRoll.damage;
+    const weaponDamageSource = getSurvivalWeaponDamageSource(weapon.id);
+    this.spawnSurvivalWeaponMuzzleFx(weapon, target);
     // All pellets/blades from this single critical volley share one token, so the
     // fragment burst can only fire once even when the volley has several projectiles.
     const criticalBurstState = criticalRoll.critical && (this.survivalUpgradeStacks.shrapnel || 0) > 0
@@ -6049,7 +6137,7 @@ export class PaleciakiGameEngine {
       let hitCount = 0;
       for (const enemy of this.enemies) {
         if (enemy.state === 'defeated' || Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z) > radius) continue;
-        this.damageEnemy(enemy, weaponDamage);
+        this.damageEnemy(enemy, weaponDamage, this.playerPos.x, this.playerPos.z, weaponDamageSource);
         enemy.stunTimer = Math.max(enemy.stunTimer, weapon.evolved ? 1.8 : 1.1);
         enemy.state = 'stunned';
         hitCount++;
@@ -6088,6 +6176,8 @@ export class PaleciakiGameEngine {
           damage: weaponDamage,
           pierce: weapon.evolved ? 3 : 1,
           weaponProjectile: true,
+          weaponId: weapon.id,
+          damageSource: weaponDamageSource,
           hitIds: new Set<string>(),
           criticalBurstState,
           spinSpeed: weapon.evolved ? 8.5 : 5.5,
@@ -6120,6 +6210,8 @@ export class PaleciakiGameEngine {
           damage: weaponDamage,
           pierce: 40,
           weaponProjectile: true,
+          weaponId: weapon.id,
+          damageSource: weaponDamageSource,
           hitIds: new Set<string>(),
           criticalBurstState,
           orbiting: true,
@@ -6143,13 +6235,15 @@ export class PaleciakiGameEngine {
     });
     const projectile: {
       mesh: THREE.Object3D; vel: THREE.Vector3; life: number; maxLife: number; damage: number;
-      pierce?: number; homing?: boolean; weaponProjectile?: boolean; aoeRadius?: number; slowOnHit?: boolean;
+      pierce?: number; homing?: boolean; weaponProjectile?: boolean; weaponId?: SurvivalDamageWeaponId; damageSource?: SurvivalDamageSource; aoeRadius?: number; slowOnHit?: boolean;
       igniteOnHit?: boolean; spinSpeed?: number; ricochet?: boolean; boomerang?: boolean; hitIds: Set<string>;
       criticalBurstState?: { consumed: boolean };
     } = {
       mesh: new THREE.Group(),
       vel: direction.clone().multiplyScalar(10.5), life: 2.8, maxLife: 2.8, damage, hitIds: new Set<string>(),
       weaponProjectile: true,
+      weaponId: weapon.id,
+      damageSource: weaponDamageSource,
       criticalBurstState,
     };
     switch (weapon.id) {
@@ -6378,6 +6472,7 @@ export class PaleciakiGameEngine {
 
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
     const hordeSettings = getSurvivalHordeSettings(isMobile);
+    const difficultyProfile = getSurvivalDifficultyProfile(this.survivalWave);
     const pomazaniecRaidActive = this.survivalPomazaniecTriggered && !this.survivalPomazaniecCompleted;
     const surgeActive = this.survivalSurgeTimeLeft > 0;
     const mobileEnemyCap = this.adaptivePerformanceTier >= 2 ? 13 : this.adaptivePerformanceTier === 1 ? 16 : 18;
@@ -6420,9 +6515,9 @@ export class PaleciakiGameEngine {
       this.survivalSpawnTimer -= dt;
       if (this.survivalSpawnTimer <= 0 && aliveCount < enemyCap) {
         const groupLimit = isMobile ? (this.adaptivePerformanceTier >= 2 ? 3 : this.adaptivePerformanceTier === 1 ? 4 : 5) : 7;
-        const groupSize = Math.min(groupLimit, 2 + Math.floor(this.survivalWave * 0.32), enemyCap - aliveCount);
+        const groupSize = Math.min(groupLimit, 2 + Math.floor(this.survivalWave * 0.34) + difficultyProfile.extraGroupSize, enemyCap - aliveCount);
         for (let i = 0; i < groupSize; i++) this.spawnSurvivalEnemy(this.survivalWave);
-        this.survivalSpawnTimer = Math.max(6.5, 10.5 - this.survivalWave * 0.18);
+        this.survivalSpawnTimer = difficultyProfile.spawnIntervalSeconds;
       }
     }
 
@@ -7464,7 +7559,7 @@ export class PaleciakiGameEngine {
 
 
 
-  private applySurvivalCriticalShrapnel(primaryTarget: EnemyItem, directDamage: number) {
+  private applySurvivalCriticalShrapnel(primaryTarget: EnemyItem, directDamage: number, damageSource: SurvivalDamageSource = 'ability') {
     const rank = this.survivalUpgradeStacks.shrapnel || 0;
     if (this.gameMode !== 'survival' || rank <= 0 || primaryTarget.state === 'defeated') return;
 
@@ -7493,7 +7588,7 @@ export class PaleciakiGameEngine {
     let damagedTargets = 0;
     for (const enemy of targets) {
       const previousHp = enemy.hp;
-      this.damageEnemy(enemy, fragmentDamage, primaryTarget.x, primaryTarget.z);
+      this.damageEnemy(enemy, fragmentDamage, primaryTarget.x, primaryTarget.z, damageSource);
       if (enemy.hp < previousHp) {
         damagedTargets++;
         this.spawnCompactImpact(enemy.x, enemy.y + 0.52, enemy.z, 0xfbbf24);
@@ -7831,10 +7926,10 @@ export class PaleciakiGameEngine {
       enemy.endX = maxZ;
       enemy.mesh.position.set(x, enemy.y, z);
     }
-    const scaling = 1 + Math.min(2.2, Math.max(0, wave - 1) * 0.085);
-    enemy.maxHp = Math.max(1, Math.ceil(enemy.maxHp * scaling));
+    const difficultyProfile = getSurvivalDifficultyProfile(wave);
+    enemy.maxHp = Math.max(1, Math.ceil(enemy.maxHp * difficultyProfile.enemyHealthMultiplier));
     enemy.hp = enemy.maxHp;
-    enemy.speed *= 0.66 * (1 + Math.min(0.26, Math.max(0, wave - 1) * 0.010));
+    enemy.speed *= difficultyProfile.enemySpeedMultiplier;
 
     const waveMutator = getSurvivalWaveMutator(wave);
     const majorBoss = enemy.type === 'walczak' || enemy.type === 'krol_leto' ||
@@ -9160,6 +9255,7 @@ export class PaleciakiGameEngine {
     amount: number,
     sourceX = this.playerPos.x,
     sourceZ = this.playerPos.z,
+    damageSource: SurvivalDamageSource = 'ability',
   ): number {
     if (enemy.state === 'defeated' || !Number.isFinite(amount) || amount <= 0) return enemy.hp;
     if (enemy.shieldActive) {
@@ -9168,8 +9264,13 @@ export class PaleciakiGameEngine {
       sound.playShieldBreak();
       return enemy.hp;
     }
+    const previousHp = enemy.hp;
     enemy.hp = Math.max(0, enemy.hp - amount);
-    this.triggerEnemyHitReaction(enemy, amount, sourceX, sourceZ);
+    const actualDamage = Math.max(0, previousHp - enemy.hp);
+    if (this.gameMode === 'survival' && actualDamage > 0) {
+      recordSurvivalDamage(this.survivalDamageStats, damageSource, actualDamage);
+    }
+    this.triggerEnemyHitReaction(enemy, actualDamage, sourceX, sourceZ);
     return enemy.hp;
   }
 
@@ -9275,6 +9376,9 @@ export class PaleciakiGameEngine {
   }
 
   private updateEnemies(dt: number) {
+    const survivalAbilityRate = this.gameMode === 'survival'
+      ? getSurvivalDifficultyProfile(this.survivalWave).enemyAbilityRateMultiplier
+      : 1;
     if (this.globalEnemyShoutCooldown > 0) {
       this.globalEnemyShoutCooldown -= dt;
     }
@@ -9660,7 +9764,7 @@ export class PaleciakiGameEngine {
         e.mesh.position.set(e.x, e.y, e.z);
 
         if (e.specialActionTimer !== undefined) {
-          e.specialActionTimer -= dt;
+          e.specialActionTimer -= dt * survivalAbilityRate;
           const cooldown = isPhase2 ? 1.8 : 3.0;
           if (e.specialActionTimer <= 0) {
             if (e.name.includes('Inwentaryzacja Gigant')) {
@@ -9748,7 +9852,7 @@ export class PaleciakiGameEngine {
         e.mesh.position.set(e.x, e.y, e.z);
 
         if (e.specialActionTimer !== undefined) {
-          e.specialActionTimer -= dt;
+          e.specialActionTimer -= dt * survivalAbilityRate;
           const cooldown = isPhase2 ? 2.7 : 3.8;
           if (e.chargeTimer !== undefined) {
             e.chargeTimer = Math.max(0, e.chargeTimer - dt);
@@ -9846,7 +9950,7 @@ export class PaleciakiGameEngine {
         // through the wind-up so the telegraph and the eventual projectile stay aligned.
         if (this.gameMode === 'survival' && e.name.includes('AGV-9 SENTINEL') && e.specialActionTimer !== undefined) {
           if (e.specialActionTimer > 0) {
-            e.specialActionTimer -= dt;
+            e.specialActionTimer -= dt * survivalAbilityRate;
           } else if (distToPlayer < 15.0) {
             if (e.chargeTimer === undefined) {
               e.chargeTimer = 0.9;
@@ -9871,7 +9975,7 @@ export class PaleciakiGameEngine {
 
         // The tiny riders keep their distance and throw visible, arcing lollipops.
         if (e.type === 'pomazaniec' && e.specialActionTimer !== undefined) {
-          e.specialActionTimer -= dt;
+          e.specialActionTimer -= dt * survivalAbilityRate;
           if (e.specialActionTimer <= 0 && distToPlayer < 13.0) {
             e.specialActionTimer = 4.35 + Math.random() * 1.25;
             e.mesh.rotation.y = Math.atan2(dx, dz);
@@ -9879,7 +9983,7 @@ export class PaleciakiGameEngine {
             this.spawnPomazaniecLollipop(e.x, e.y + 1.03, e.z, this.playerPos.x, this.playerPos.z, e.aiSlot || 0);
           }
         } else if ((e.type === 'handlowiec' || e.type === 'przedstawiciel_włoski') && e.specialActionTimer !== undefined) {
-          e.specialActionTimer -= dt;
+          e.specialActionTimer -= dt * survivalAbilityRate;
           if (e.specialActionTimer <= 0 && distToPlayer < 9.0) {
             e.specialActionTimer = 2.8;
             this.spawnPenaltyNotice(e.x, e.y + 0.8, e.z);
@@ -9887,21 +9991,21 @@ export class PaleciakiGameEngine {
             this.emitFloatingToast(msg, e.x, e.y + 1.2, e.z, 'damage');
           }
         } else if (e.type === 'inspector' && e.specialActionTimer !== undefined) {
-          e.specialActionTimer -= dt;
+          e.specialActionTimer -= dt * survivalAbilityRate;
           if (e.specialActionTimer <= 0 && distToPlayer < 6.5) {
             e.specialActionTimer = 2.8;
             sound.playWhistle();
             this.emitFloatingToast('🚨 KONTROLA BHP!', e.x, e.y + 1.2, e.z, 'damage');
           }
         } else if (e.type === 'pan_roman' && e.specialActionTimer !== undefined) {
-          e.specialActionTimer -= dt;
+          e.specialActionTimer -= dt * survivalAbilityRate;
           if (e.specialActionTimer <= 0 && distToPlayer < 10.0) {
             e.specialActionTimer = 2.5;
             this.spawnSanitarywareProjectile(e.x, e.y + 0.8, e.z);
             this.emitFloatingToast('📦 UMYWALKA W DRODZE!', e.x, e.y + 1.2, e.z, 'damage');
           }
         } else if (e.type === 'serwisant' && e.specialActionTimer !== undefined) {
-          e.specialActionTimer -= dt;
+          e.specialActionTimer -= dt * survivalAbilityRate;
           if (e.specialActionTimer <= 0 && distToPlayer < 8.5) {
             e.specialActionTimer = 2.2;
             this.spawnSparkZapProjectile(e.x, e.y + 0.8, e.z);
@@ -9916,7 +10020,7 @@ export class PaleciakiGameEngine {
             sound.playBossWarning();
             this.emitFloatingToast('📋 BOSMAN: ODPRAWA PRZYSPIESZONA — FAZA 2!', e.x, e.y + 1.6, e.z, 'damage');
           }
-          e.specialActionTimer -= dt;
+          e.specialActionTimer -= dt * survivalAbilityRate;
           if (e.chargeTimer !== undefined) {
             e.chargeTimer = Math.max(0, e.chargeTimer - dt);
             if (e.chargeTimer <= 0) {
@@ -10430,6 +10534,14 @@ export class PaleciakiGameEngine {
       if (p.spinSpeed) {
         p.mesh.rotation.y += p.spinSpeed * dt;
       }
+      if (p.weaponId) {
+        p.trailTimer = (p.trailTimer ?? 0) - dt;
+        const trailInterval = this.adaptivePerformanceTier >= 2 ? 0.34 : this.adaptivePerformanceTier === 1 ? 0.24 : 0.15;
+        if (p.trailTimer <= 0) {
+          this.spawnSurvivalWeaponTrail(p);
+          p.trailTimer = trailInterval * (p.orbiting ? 1.6 : 1);
+        }
+      }
 
       // Ricochet off Z corridor walls (Operator 03's 45-degree diamond blade & tiles)
       if (p.ricochet && Math.abs(p.mesh.position.z) > 17.5) {
@@ -10462,7 +10574,19 @@ export class PaleciakiGameEngine {
       const segmentZ = p.mesh.position.z - previousProjectileZ;
       const segmentLengthSq = segmentX * segmentX + segmentY * segmentY + segmentZ * segmentZ;
 
-      for (const e of this.enemies) {
+      const segmentMidX = (previousProjectileX + p.mesh.position.x) * 0.5;
+      const segmentMidZ = (previousProjectileZ + p.mesh.position.z) * 0.5;
+      const broadphaseRadius = Math.sqrt(segmentLengthSq) * 0.5 + 3.0;
+      const collisionCandidates = this.enemies.length >= 12
+        ? this.enemySpatialIndex.query(segmentMidX, segmentMidZ, broadphaseRadius)
+        : this.enemies;
+      // Untagged projectiles come from abilities/enemy-independent effects;
+      // all five operator basic-attack projectiles are explicitly tagged.
+      const projectileDamageSource: SurvivalDamageSource = p.damageSource ?? (p.weaponId
+        ? getSurvivalWeaponDamageSource(p.weaponId)
+        : 'ability');
+
+      for (const e of collisionCandidates) {
         if (e.state === 'defeated') continue;
         if (p.hitIds && p.hitIds.has(e.id)) continue;
 
@@ -10498,14 +10622,14 @@ export class PaleciakiGameEngine {
               e.shieldActive = false;
               if (e.shieldRing) e.shieldRing.visible = false;
             }
-            this.damageEnemy(e, baseDmg);
+            this.damageEnemy(e, baseDmg, p.mesh.position.x, p.mesh.position.z, projectileDamageSource);
             if (this.gameMode === 'survival' && p.criticalBurstState && !p.criticalBurstState.consumed) {
               p.criticalBurstState.consumed = true;
-              this.applySurvivalCriticalShrapnel(e, baseDmg);
+              this.applySurvivalCriticalShrapnel(e, baseDmg, projectileDamageSource);
             }
             sound.playSmack();
             if (p.weaponProjectile) {
-              this.spawnCompactImpact(e.x, e.y + 0.72, e.z, 0x7dd3fc);
+              this.spawnCompactImpact(e.x, e.y + 0.72, e.z, p.weaponId ? SURVIVAL_DAMAGE_WEAPONS[p.weaponId].color : 0x7dd3fc);
             } else {
               this.triggerBloomPulse(0.1);
               this.cameraShake = 0.25;
@@ -10524,12 +10648,12 @@ export class PaleciakiGameEngine {
 
             // AoE shockwave on hit (Operator 01's WZ Binder Stamp)
             if (p.aoeRadius && p.aoeRadius > 0) {
-              if (p.weaponProjectile) this.spawnCompactImpact(e.x, e.y + 0.36, e.z, 0xf59e0b);
+              if (p.weaponProjectile) this.spawnCompactImpact(e.x, e.y + 0.36, e.z, p.weaponId ? SURVIVAL_DAMAGE_WEAPONS[p.weaponId].color : 0xf59e0b);
               else this.spawnParticleRing(e.x, e.y + 0.4, e.z, 0xf59e0b);
               for (const other of this.enemies) {
                 if (other.id !== e.id && other.state !== 'defeated') {
                   if (Math.hypot(other.x - e.x, other.z - e.z) <= p.aoeRadius) {
-                    this.damageEnemy(other, this.scaleSurvivalDamage(1), e.x, e.z);
+                    this.damageEnemy(other, this.scaleSurvivalDamage(1), e.x, e.z, projectileDamageSource);
                     other.stunTimer = Math.max(other.stunTimer, this.gameMode === 'survival' ? 0.22 : (p.stunDuration || 1.2));
                     if (this.gameMode !== 'survival' || (p.stunDuration || 0) > 0.8) other.state = 'stunned';
                     if (!p.weaponProjectile) this.emitFloatingToast('📑 AUDYT AoE -1 HP!', other.x, other.y + 1.1, other.z, 'damage');
@@ -10936,6 +11060,7 @@ export class PaleciakiGameEngine {
         aoeRadius: isThirdCombo ? 1.55 : 1.0,
         stunDuration: isThirdCombo ? 1.15 : 0.55,
         spinSpeed: 8.0,
+        damageSource: 'basic_attack',
         hitIds: new Set(),
       });
       if (isThirdCombo) {
@@ -10973,6 +11098,7 @@ export class PaleciakiGameEngine {
         pierce: isThirdCombo ? 3 : 1,
         stunDuration: 0.65,
         spinSpeed: 13.0,
+        damageSource: 'basic_attack',
         hitIds: new Set(),
       });
       if (isThirdCombo) this.emitFloatingToast('💪 HANTLA 44 CM — CIĘŻKI RZUT!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'combo');
@@ -11003,6 +11129,7 @@ export class PaleciakiGameEngine {
         slowOnHit: true,
         stunDuration: isThirdCombo ? 1.2 : 0.7,
         spinSpeed: 18.0,
+        damageSource: 'basic_attack',
         hitIds: new Set(),
       });
       if (isThirdCombo) this.emitFloatingToast('📦 STRETCH VIP — ZAWIJAMY TEMAT!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'combo');
@@ -11034,6 +11161,7 @@ export class PaleciakiGameEngine {
         slowOnHit: true,
         stunDuration: isThirdCombo ? 1.65 : 1.0,
         spinSpeed: 2.0,
+        damageSource: 'basic_attack',
         hitIds: new Set(),
       });
       sound.playElectricalSparks();
@@ -11086,6 +11214,7 @@ export class PaleciakiGameEngine {
         stunDuration: 0.48,
         spinSpeed: 20,
         weaponProjectile: true,
+        damageSource: 'basic_attack',
         hitIds: new Set(),
       });
       if (isThirdCombo) this.emitFloatingToast('🔧 GRZECHOTKA B4 — GWINT ZAGŁADY!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'combo');
