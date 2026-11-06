@@ -1489,3 +1489,11 @@ test('high-density projectile collision uses a broad-phase grid and retains swep
   assert.match(game, /const closestX = previousProjectileX \+ segmentX \* projection/);
   assert.match(game, /const closestZ = previousProjectileZ \+ segmentZ \* projection/);
 });
+
+
+test('untagged projectiles are attributed to abilities while primary operator attacks are explicitly tagged', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /const projectileDamageSource: SurvivalDamageSource = p\.damageSource \?\? \(p\.weaponId[\s\S]*?: 'ability'\);/);
+  assert.doesNotMatch(game, /p\.weaponProjectile \? 'ability' : 'basic_attack'/);
+  assert.match(game, /damageSource: 'basic_attack'/);
+});

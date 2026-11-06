@@ -10580,9 +10580,11 @@ export class PaleciakiGameEngine {
       const collisionCandidates = this.enemies.length >= 12
         ? this.enemySpatialIndex.query(segmentMidX, segmentMidZ, broadphaseRadius)
         : this.enemies;
+      // Untagged projectiles come from abilities/enemy-independent effects;
+      // all five operator basic-attack projectiles are explicitly tagged.
       const projectileDamageSource: SurvivalDamageSource = p.damageSource ?? (p.weaponId
         ? getSurvivalWeaponDamageSource(p.weaponId)
-        : p.weaponProjectile ? 'ability' : 'basic_attack');
+        : 'ability');
 
       for (const e of collisionCandidates) {
         if (e.state === 'defeated') continue;
