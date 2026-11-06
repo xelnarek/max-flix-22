@@ -10,7 +10,16 @@ export const CAMPAIGN_ATTACK_COOLDOWN_SECONDS: Readonly<Record<CharacterId, numb
   piotr: 1.25,
 });
 
-export const SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS = 2.65;
+// Faster control weapons recover slightly sooner; the heavy dumbbell and
+// returning wrench trade cadence for stronger hits and multi-pass coverage.
+export const SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS: Readonly<Record<CharacterId, number>> = Object.freeze({
+  marcin: 2.10,
+  grzesiek: 2.28,
+  dawid: 2.08,
+  mateusz: 2.00,
+  piotr: 2.34,
+});
+export const SURVIVAL_AUTO_AIM_RANGE_METERS = 22;
 
 // Effective forward reach is measured from the operator's centre to the target.
 // Character variety is retained, but every base attack now has a reliable,
@@ -39,23 +48,23 @@ export const SURVIVAL_WEAPON_DISPATCH_COOLDOWN_SECONDS = 1.05;
 export const SURVIVAL_WEAPON_INITIAL_RELOAD_FACTOR = 0.75;
 
 export const SURVIVAL_WEAPON_UNLOCK_SECONDS = Object.freeze({
-  pallet_cannon: 35,
-  diamond_saw: 80,
-  glue_mine: 125,
-  kfc_bomber: 170,
-  piorun_drone: 215,
-  forklift_bolter: 260,
-  scanner_pulse: 305,
-  orbit_blades: 350,
-  calacatta_shards: 395,
-  steam_bomb: 440,
-  forklift_horn: 485,
-  wz_boomerang: 530,
+  pallet_cannon: 30,
+  diamond_saw: 55,
+  glue_mine: 80,
+  kfc_bomber: 105,
+  piorun_drone: 130,
+  forklift_bolter: 155,
+  scanner_pulse: 180,
+  orbit_blades: 205,
+  calacatta_shards: 230,
+  steam_bomb: 255,
+  forklift_horn: 280,
+  wz_boomerang: 305,
 });
 
 export function getBaseAttackCooldownSeconds(characterId: CharacterId, mode: CombatGameMode): number {
   return mode === 'survival'
-    ? SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS
+    ? SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS[characterId]
     : CAMPAIGN_ATTACK_COOLDOWN_SECONDS[characterId];
 }
 
