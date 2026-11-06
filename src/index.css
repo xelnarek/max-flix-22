@@ -5218,3 +5218,199 @@ button {
 .survival-map-choice[data-survival-map="container_terminal"] > span { color: #fdba74; }
 .survival-map-choice[data-survival-map="cold_storage"] > span { color: #a5f3fc; }
 .survival-map-choice[data-survival-map="night_sorting"] > span { color: #f0abfc; }
+
+
+/* Persistent per-operator progression: compact enough for the portrait menu and touch screens. */
+.character-mastery-panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid rgba(125, 211, 252, .20);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(11, 27, 44, .94), rgba(7, 16, 29, .96));
+  color: #e5eef8;
+}
+.character-mastery-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.character-mastery-kicker {
+  display: block;
+  margin-bottom: 5px;
+  color: #7dd3fc;
+  font: 800 8px/1.3 'JetBrains Mono', monospace;
+  letter-spacing: .11em;
+}
+.character-mastery-heading h3 {
+  margin: 0;
+  color: #f8fafc;
+  font: 900 14px/1.2 'Outfit', sans-serif;
+}
+.character-mastery-heading p {
+  margin: 6px 0 0;
+  color: #9fb2c6;
+  font-size: 10px;
+  line-height: 1.45;
+}
+.character-mastery-level {
+  display: grid;
+  flex: 0 0 54px;
+  width: 54px;
+  min-height: 54px;
+  place-content: center;
+  border: 1px solid rgba(251, 191, 36, .42);
+  border-radius: 13px;
+  background: rgba(120, 76, 12, .18);
+  text-align: center;
+}
+.character-mastery-level strong {
+  color: #fde68a;
+  font: 900 23px/1 'JetBrains Mono', monospace;
+}
+.character-mastery-level span {
+  margin-top: 3px;
+  color: #d6bd82;
+  font: 800 7px/1 'JetBrains Mono', monospace;
+}
+.character-mastery-progress { display: grid; gap: 7px; }
+.character-mastery-progress-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.character-mastery-progress-meta strong {
+  color: #dbeafe;
+  font: 800 9px/1.2 'JetBrains Mono', monospace;
+}
+.character-mastery-progress-meta span {
+  color: #fbbf24;
+  font: 800 8px/1.2 'JetBrains Mono', monospace;
+}
+.character-mastery-track {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(148, 163, 184, .17);
+}
+.character-mastery-track > span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #0ea5e9, #38bdf8, #fbbf24);
+  box-shadow: 0 0 10px rgba(56, 189, 248, .25);
+  transition: width .24s ease;
+}
+.character-mastery-record {
+  color: #94a3b8;
+  font: 700 8px/1.4 'JetBrains Mono', monospace;
+}
+.character-talent-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.character-talent-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid rgba(148, 163, 184, .20);
+  border-radius: 12px;
+  background: rgba(15, 30, 48, .82);
+}
+.character-talent-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.character-talent-icon { font-size: 17px; line-height: 1; }
+.character-talent-heading strong {
+  min-width: 0;
+  color: #eaf4ff;
+  font: 800 9px/1.2 'Outfit', sans-serif;
+}
+.character-talent-rank {
+  color: #fbbf24;
+  font: 800 8px/1.2 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+.character-talent-description {
+  min-height: 46px;
+  margin: 0;
+  color: #9fb2c6;
+  font-size: 9px;
+  line-height: 1.4;
+}
+.character-talent-effect {
+  color: #7dd3fc;
+  font: 800 8px/1.2 'JetBrains Mono', monospace;
+}
+.character-talent-pips {
+  display: flex;
+  gap: 4px;
+}
+.character-talent-pips span {
+  height: 4px;
+  flex: 1;
+  border-radius: 99px;
+  background: rgba(148, 163, 184, .22);
+}
+.character-talent-pips span.is-filled { background: #38bdf8; }
+.character-talent-upgrade {
+  width: 100%;
+  min-height: 31px;
+  margin-top: auto;
+  padding: 6px 7px;
+  border: 1px solid rgba(56, 189, 248, .38);
+  border-radius: 8px;
+  background: rgba(14, 116, 144, .20);
+  color: #bae6fd;
+  font: 800 8px/1.2 'JetBrains Mono', monospace;
+  cursor: pointer;
+}
+.character-talent-upgrade:disabled {
+  border-color: rgba(148, 163, 184, .15);
+  background: rgba(71, 85, 105, .12);
+  color: #64748b;
+  cursor: not-allowed;
+}
+.character-mastery-footnote {
+  margin: 0;
+  color: #71869b;
+  font-size: 8px;
+  line-height: 1.4;
+}
+.char-card-mastery {
+  display: inline-flex;
+  align-self: flex-start;
+  margin-top: 5px;
+  padding: 3px 6px;
+  border: 1px solid rgba(251, 191, 36, .24);
+  border-radius: 99px;
+  background: rgba(120, 76, 12, .16);
+  color: #fde68a;
+  font: 800 8px/1 'JetBrains Mono', monospace;
+}
+@media (max-width: 720px) {
+  .character-mastery-panel { padding: 11px; gap: 10px; }
+  .character-talent-grid { grid-template-columns: 1fr; }
+  .character-talent-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 10px;
+  }
+  .character-talent-heading { grid-column: 1; }
+  .character-talent-rank { grid-column: 2; grid-row: 1; }
+  .character-talent-description,
+  .character-talent-effect,
+  .character-talent-pips { grid-column: 1 / -1; min-height: 0; }
+  .character-talent-upgrade { grid-column: 1 / -1; }
+}
