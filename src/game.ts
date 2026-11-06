@@ -7754,11 +7754,9 @@ export class PaleciakiGameEngine {
     const bosmanAlreadyActive = this.enemies.some((enemy) =>
       enemy.type === 'bosman_krakow' && enemy.state !== 'defeated'
     );
-    const sebixRoll = Math.random();
-    const bosmanRoll = Math.random();
-    if (wave >= 8 && !sebixAlreadyActive && sebixRoll < 0.065) {
+    if (wave >= 8 && !sebixAlreadyActive && Math.random() < 0.065) {
       this.addSebixEnemy(id, x, minZ, maxZ);
-    } else if (shouldSpawnBosmanKrakow(wave, bosmanRoll, bosmanAlreadyActive)) {
+    } else if (shouldSpawnBosmanKrakow(wave, Math.random(), bosmanAlreadyActive)) {
       this.addBosmanKrakowBossEnemy(id, x, z);
     } else {
       const spawnType = chooseSurvivalEnemySpawnType(wave, this.survivalElapsed, Math.random());
