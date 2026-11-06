@@ -1375,8 +1375,8 @@ test('critical shrapnel is limited to one secondary burst per critical Survival 
   assert.match(game, /criticalBurstState\?: \{ consumed: boolean \}/);
   assert.match(game, /p\.criticalBurstState && !p\.criticalBurstState\.consumed/);
   assert.match(game, /p\.criticalBurstState\.consumed = true/);
-  assert.match(game, /this\.applySurvivalCriticalShrapnel\(e, baseDmg\)/);
-  assert.match(game, /private applySurvivalCriticalShrapnel\(primaryTarget: EnemyItem, directDamage: number\)/);
+  assert.match(game, /this\.applySurvivalCriticalShrapnel\(e, baseDmg, projectileDamageSource\)/);
+  assert.match(game, /private applySurvivalCriticalShrapnel\(primaryTarget: EnemyItem, directDamage: number, damageSource: SurvivalDamageSource = 'ability'\)/);
   assert.match(game, /const targetBudget = isMobile[\s\S]*?this\.adaptivePerformanceTier >= 2 \? 1 : 2/);
   assert.match(game, /\.slice\(0, targetBudget\)/);
   assert.match(game, /if \(enemy\.hp < previousHp\)[\s\S]*?this\.defeatEnemy\(enemy, 150, false\)/);
@@ -1456,7 +1456,7 @@ test('game-over screen reports actual Survival HP damage by weapon, basic attack
   assert.match(app, /entry\.percentage\.toLocaleString\('pl-PL'/);
   assert.match(html, /id="gameover-damage-breakdown"/);
   assert.match(html, /UDZIAŁ W ZADANYCH OBRAŻENIACH/);
-  assert.match(stats, /percentage: Math\.round\(\(entry\.damage \/ total\) \* 1000\) \/ 10/);
+  assert.match(stats, /percentage: total > 0 \? Math\.round\(\(entry\.damage \/ total\) \* 1000\) \/ 10 : 0/);
 });
 
 test('Survival weapon attacks have distinct pooled muzzle signatures, colored trails and impacts', async () => {
