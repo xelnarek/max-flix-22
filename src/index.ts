@@ -344,6 +344,7 @@ class PaleciakiScene extends xb.Script {
   }
 
   private setupUIAndEngine() {
+    let renderCharacterMasteryPanel: (id: CharacterId) => void = () => {};
     const handleResize = () => {
       // visualViewport reflects the usable viewport on mobile browsers when browser chrome changes size.
       const width = Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth));
@@ -1244,7 +1245,7 @@ class PaleciakiScene extends xb.Script {
     // its first run after the renderer and title UI are fully ready.
     this.cinematicIntro = null;
 
-    const renderCharacterMasteryPanel = (id: CharacterId) => {
+    renderCharacterMasteryPanel = (id: CharacterId) => {
       const summary = getCharacterMasterySummary(characterMasteryProfile, id);
       const state = characterMasteryProfile.characters[id];
       const title = document.getElementById('character-mastery-title');
