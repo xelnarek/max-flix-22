@@ -1220,6 +1220,112 @@ class PaleciakiScene extends xb.Script {
     // its first run after the renderer and title UI are fully ready.
     this.cinematicIntro = null;
 
+    const renderCharacterMasteryPanel = (id: CharacterId) => {
+      const summary = getCharacterMasterySummary(characterMasteryProfile, id);
+      const state = characterMasteryProfile.characters[id];
+      const title = document.getElementById('character-mastery-title');
+      const level = document.getElementById('character-mastery-level');
+      const xp = document.getElementById('character-mastery-xp');
+      const points = document.getElementById('character-mastery-points');
+      const fill = document.getElementById('character-mastery-fill') as HTMLElement | null;
+      const record = document.getElementById('character-mastery-record');
+      const list = document.getElementById('character-talent-list');
+
+      if (title) title.textContent = summary.isMaxLevel
+        ? 'MISTRZOSTWO • MAKSIMUM'
+        : 'MISTRZOSTWO • ' + CHARACTERS[id].className.toUpperCase();
+      if (level) level.textContent = String(summary.level);
+      if (xp) xp.textContent = summary.isMaxLevel
+        ? 'MAKSYMALNE MISTRZOSTWO'
+        : summary.xp + ' / ' + summary.xpToNext + ' MASTERY XP';
+      if (points) {
+        const pointLabel = summary.availableTalentPoints === 1 ? 'PUNKT TALENTU' : 'PUNKTY TALENTU';
+        points.textContent = summary.availableTalentPoints + ' ' + pointLabel;
+      }
+      if (fill) fill.style.width = summary.progressPercent + '%';
+      if (record) record.textContent =
+        state.totalRuns + ' zmian • ' + state.totalKills.toLocaleString('pl-PL') +
+        ' eliminacji • ' + state.totalBosses + ' bossów';
+
+      // Show mastery on all five selection cards, not only the currently selected operator.
+      document.querySelectorAll<HTMLElement>('.char-card[data-char]').forEach((card) => {
+        const cardId = card.dataset.char as CharacterId | undefined;
+        if (!cardId || !CHARACTERS[cardId]) return;
+        let badge = card.querySelector<HTMLElement>('.char-card-mastery');
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'char-card-mastery';
+          card.appendChild(badge);
+        }
+        badge.textContent = 'M' + characterMasteryProfile.characters[cardId].level;
+        badge.title = 'Mistrzostwo: poziom ' + characterMasteryProfile.characters[cardId].level + ' / 15';
+      });
+
+      if (!list) return;
+      list.replaceChildren();
+      const effectLabels: Record<string, string> = {
+        attack: 'SIŁA ATAKU',
+        defense: 'ODPORNOŚĆ',
+        speed: 'SZYBKOŚĆ',
+        jump: 'SIŁA SKOKU',
+        cooldown: 'CZAS SUPERUMIEJĘTNOŚCI',
+      };
+      for (const talent of CHARACTER_TALENTS[id]) {
+        const rank = state.talentRanks[talent.id] || 0;
+        const card = document.createElement('article');
+        card.className = 'character-talent-card' + (rank >= talent.maxRank ? ' is-maxed' : '');
+        const heading = document.createElement('div');
+        heading.className = 'character-talent-heading';
+        const icon = document.createElement('span');
+        icon.className = 'character-talent-icon';
+        icon.textContent = talent.icon;
+        const name = document.createElement('strong');
+        name.textContent = talent.name;
+        heading.append(icon, name);
+        const rankLabel = document.createElement('span');
+        rankLabel.className = 'character-talent-rank';
+        rankLabel.textContent = rank + ' / ' + talent.maxRank;
+        const description = document.createElement('p');
+        description.className = 'character-talent-description';
+        description.textContent = talent.description;
+        const effect = document.createElement('span');
+        effect.className = 'character-talent-effect';
+        const bonusPercent = (talent.perRank * 100 * rank).toLocaleString('pl-PL', { maximumFractionDigits: 1 });
+        const sign = talent.effect === 'defense' || talent.effect === 'cooldown' ? '−' : '+';
+        effect.textContent = effectLabels[talent.effect] + ' ' + sign + bonusPercent + '%';
+        const pips = document.createElement('div');
+        pips.className = 'character-talent-pips';
+        for (let index = 0; index < talent.maxRank; index++) {
+          const pip = document.createElement('span');
+          pip.classList.toggle('is-filled', index < rank);
+          pips.appendChild(pip);
+        }
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'character-talent-upgrade';
+        button.disabled = rank >= talent.maxRank || summary.availableTalentPoints <= 0;
+        button.textContent = rank >= talent.maxRank
+          ? 'MAKSIMUM'
+          : summary.availableTalentPoints > 0 ? 'ROZWIŃ • 1 PUNKT' : 'BRAK PUNKTÓW';
+        button.setAttribute('aria-label', 'Rozwiń talent ' + talent.name + ', aktualny poziom ' + rank + ' z ' + talent.maxRank);
+        button.addEventListener('click', () => {
+          const result = spendCharacterTalentPoint(characterMasteryProfile, id, talent.id);
+          if (!result.purchased) return;
+          characterMasteryProfile = result.profile;
+          persistCharacterMasteryProfile();
+          this.engine.selectCharacter(id, getCharacterTalentBonuses(characterMasteryProfile, id));
+          renderCharacterMasteryPanel(id);
+          const toast = document.createElement('div');
+          toast.className = 'achievement-unlock-toast';
+          toast.textContent = talent.icon + ' TALENT ROZWINIĘTY • ' + talent.name + ' ' + (rank + 1) + '/' + talent.maxRank;
+          document.body.appendChild(toast);
+          window.setTimeout(() => toast.remove(), 2600);
+        });
+        card.append(heading, rankLabel, description, effect, pips, button);
+        list.appendChild(card);
+      }
+    };
+
     const updateCharacterUI = (id: CharacterId) => {
       this.selectedCharId = id;
       const def = CHARACTERS[id];
@@ -1336,7 +1442,8 @@ class PaleciakiScene extends xb.Script {
         statValHealth.textContent = `${def.maxHp} HP`;
       }
 
-      this.engine.selectCharacter(id);
+      renderCharacterMasteryPanel(id);
+      this.engine.selectCharacter(id, getCharacterTalentBonuses(characterMasteryProfile, id));
     };
 
     updateCharacterUI('marcin');
