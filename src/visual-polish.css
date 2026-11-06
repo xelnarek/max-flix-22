@@ -256,6 +256,7 @@ button:focus-visible, [role="button"]:focus-visible, .char-card:focus-visible,
 }
 .char-details-title { color: var(--mf-amber-2) !important; font: 800 16px/1.25 "Space Grotesk", sans-serif !important; }
 .char-details-class { color: var(--mf-cyan) !important; font: 800 9px/1.35 "JetBrains Mono", monospace !important; letter-spacing: .035em; text-transform: uppercase; padding: 5px 8px; border-left: 2px solid var(--operator-accent, var(--mf-cyan)); background: rgba(5,14,22,.62); border-radius: 0 6px 6px 0; }
+.char-details-movement { color: #e2c99a !important; font: 700 9px/1.4 "JetBrains Mono", monospace !important; letter-spacing: .015em; padding: 5px 8px; border-left: 2px solid #c89b55; background: rgba(30,24,15,.42); border-radius: 0 6px 6px 0; }
 .char-card-ability { min-height: 2.7em; }
 .char-card-role { min-height: 1.3em; }
 .char-details-bio, .char-details-attack, .char-details-skill, .char-details-passive { color: #b6c6d3 !important; font-size: 11px !important; line-height: 1.55 !important; }

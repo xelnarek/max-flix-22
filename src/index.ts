@@ -1232,6 +1232,7 @@ class PaleciakiScene extends xb.Script {
 
       const detailTitle = document.getElementById('char-detail-title');
       const detailClass = document.getElementById('char-detail-class');
+      const detailMovement = document.getElementById('char-detail-movement');
       const detailBio = document.getElementById('char-detail-bio');
       const detailAttack = document.getElementById('char-detail-attack');
       const detailSkill = document.getElementById('char-detail-skill');
@@ -1239,6 +1240,7 @@ class PaleciakiScene extends xb.Script {
       if (detailTitle && detailBio && detailSkill) {
         detailTitle.textContent = `${def.name} – ${def.title}`;
         if (detailClass) detailClass.textContent = def.combatIdentity;
+        if (detailMovement) detailMovement.textContent = def.movementIdentity;
         detailBio.textContent = def.bio;
         if (detailAttack) {
           detailAttack.innerHTML = `<strong>🥊 Atak Podstawowy [F / Klik]:</strong> ${attackNames[id]} – ${attackDescriptions[id]}`;
