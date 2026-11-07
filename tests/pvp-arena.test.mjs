@@ -535,7 +535,7 @@ test('PvP match stats count actual medkit healing and accepted dashes', () => {
   state.p2.z = 9;
 
   stepPvpArena(state, 0.05, {
-    moveX: 0, moveZ: 0, aimAngle: 0,
+    moveX: 0, moveZ: 0, aimAngle: Math.PI / 2,
     isFiring: false, wantDash: true,
   });
 
