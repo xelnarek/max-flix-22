@@ -129,6 +129,32 @@ test('PvP room server validates invite codes, waits for both ready signals and h
   assert.ok(moved.state.p1.x - beforeX < 1.2, 'one validated input packet must not teleport the player');
   assert.ok(Number.isFinite(moved.state.p1.rot));
 
+  // A tab can be suspended without immediately closing its WebSocket. The
+  // authoritative server must release movement and continuous fire on timeout.
+  const firingUpdate = waitForMessage(p1, (message) =>
+    message.type === 'room_update' && message.state?.status === 'in_round' && message.state.p1.isFiring === true
+  );
+  p1.send(JSON.stringify({
+    type: 'input',
+    moveX: 1,
+    moveZ: 0,
+    aimAngle: Math.PI / 2,
+    isFiring: true,
+    wantDash: false,
+    wantAbility: false,
+  }));
+  await firingUpdate;
+  const staleStop = await waitForMessage(p1, (message) =>
+    message.type === 'room_update' && message.state?.status === 'in_round' && message.state.p1.isFiring === false,
+    1800
+  );
+  const settled = await waitForMessage(p1, (message) =>
+    message.type === 'room_update' && message.state?.status === 'in_round' && message.state.p1.isFiring === false,
+    1000
+  );
+  assert.ok(Math.abs(settled.state.p1.x - staleStop.state.p1.x) < 0.02,
+    'stale movement must settle to zero instead of continuing from the last packet');
+
   const earlyRematchError = waitForMessage(p1, (message) => message.type === 'error');
   p1.send(JSON.stringify({ type: 'rematch' }));
   assert.match((await earlyRematchError).message, /po zakończeniu meczu/);
