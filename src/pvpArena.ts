@@ -223,7 +223,7 @@ function applyPvpAbilityDamage(
   state.hitEventSequence++;
   state.lastHitEvent = {
     id: state.hitEventSequence,
-    targetSlot: target.slot;
+    targetSlot: target.slot,
     damage: actualDamage,
     sourceSlot: source.slot,
     x: target.x,
@@ -645,7 +645,7 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
       state.hitEventSequence++;
       state.lastHitEvent = {
         id: state.hitEventSequence,
-        targetSlot: targetPlayer.slot;
+        targetSlot: targetPlayer.slot,
         damage: actualDamage,
         sourceSlot: shooterPlayer.slot,
         x: targetPlayer.x,
