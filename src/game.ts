@@ -529,6 +529,8 @@ export class PaleciakiGameEngine {
   private remotePlayerDef: CharacterDef | null = null;
   private remotePlayerMeshBuilt: any = null;
   private remotePlayerHpBar: any = null;
+  private remotePlayerOutline: any = null;
+  private prevPvpLocalHp = -1;
   private pvpObstacleMeshes: THREE.Object3D[] = [];
   private pvpMedkitMesh: THREE.Group | null = null;
   private pvpProjectileMeshes = new Map<string, THREE.Mesh>();
@@ -1693,6 +1695,7 @@ export class PaleciakiGameEngine {
     this.charDef = CHARACTERS[localOperatorId];
     this.maxHp = PVP_NORMALIZED_HP;
     this.hp = PVP_NORMALIZED_HP;
+    this.prevPvpLocalHp = PVP_NORMALIZED_HP;
 
     this.rebuildPlayerMesh();
     this.buildPvpArena();
@@ -1730,6 +1733,16 @@ export class PaleciakiGameEngine {
   }
 
   public exitPvp() {
+    if (this.remotePlayerOutline) {
+      if (this.remotePlayerOutline.material) this.remotePlayerOutline.material.dispose();
+      if (this.remotePlayerOutline.groundRingMat) this.remotePlayerOutline.groundRingMat.dispose();
+      if (this.remotePlayerOutline.badgeTex) this.remotePlayerOutline.badgeTex.dispose();
+      if (this.remotePlayerOutline.badgeMesh) {
+        this.remotePlayerOutline.badgeMesh.geometry.dispose();
+        (this.remotePlayerOutline.badgeMesh.material as THREE.Material).dispose();
+      }
+      this.remotePlayerOutline = null;
+    }
     if (this.pvpArenaRoot) {
       this.levelRoot.remove(this.pvpArenaRoot);
       this.pvpArenaRoot = null;
@@ -1745,11 +1758,22 @@ export class PaleciakiGameEngine {
       this.pvpSession = null;
     }
     this.lastPvpState = null;
+    this.prevPvpLocalHp = -1;
     this.gameMode = 'survival';
     this.setManualAimMode(false);
   }
 
   private buildRemotePlayer(remoteOperatorId: CharacterId) {
+    if (this.remotePlayerOutline) {
+      if (this.remotePlayerOutline.material) this.remotePlayerOutline.material.dispose();
+      if (this.remotePlayerOutline.groundRingMat) this.remotePlayerOutline.groundRingMat.dispose();
+      if (this.remotePlayerOutline.badgeTex) this.remotePlayerOutline.badgeTex.dispose();
+      if (this.remotePlayerOutline.badgeMesh) {
+        this.remotePlayerOutline.badgeMesh.geometry.dispose();
+        (this.remotePlayerOutline.badgeMesh.material as THREE.Material).dispose();
+      }
+      this.remotePlayerOutline = null;
+    }
     if (this.remotePlayerGroup) {
       this.levelRoot.remove(this.remotePlayerGroup);
       this.remotePlayerGroup = null;
@@ -1785,6 +1809,67 @@ export class PaleciakiGameEngine {
 
     this.remotePlayerHpBar = { group: hpBarGroup, fill };
     this.remotePlayerGroup.add(hpBarGroup);
+
+    const outlineGroup = new THREE.Group();
+    const outlineMat = new THREE.MeshBasicMaterial({
+      color: 0xef4444,
+      side: THREE.BackSide,
+      transparent: true,
+      opacity: 0.85,
+      depthWrite: false,
+    });
+
+    this.remotePlayerGroup.traverse((child) => {
+      if (child instanceof THREE.Mesh && child !== marker && child.parent !== hpBarGroup) {
+        const cloneGeo = child.geometry.clone();
+        const outlineMesh = new THREE.Mesh(cloneGeo, outlineMat);
+        outlineMesh.position.copy(child.position);
+        outlineMesh.rotation.copy(child.rotation);
+        outlineMesh.scale.copy(child.scale).multiplyScalar(1.12);
+        outlineGroup.add(outlineMesh);
+      }
+    });
+
+    const groundRingGeo = new THREE.RingGeometry(0.65, 0.88, 32);
+    groundRingGeo.rotateX(-Math.PI / 2);
+    const groundRingMat = new THREE.MeshBasicMaterial({
+      color: 0xef4444,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.7,
+    });
+    const groundRing = new THREE.Mesh(groundRingGeo, groundRingMat);
+    groundRing.position.set(0, 0.04, 0);
+    outlineGroup.add(groundRing);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    const badgeTex = new THREE.CanvasTexture(canvas);
+    const badgeGeo = new THREE.PlaneGeometry(1.4, 0.35);
+    const badgeMat = new THREE.MeshBasicMaterial({
+      map: badgeTex,
+      transparent: true,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    const badgeMesh = new THREE.Mesh(badgeGeo, badgeMat);
+    badgeMesh.position.set(0, 3.1, 0);
+    this.remotePlayerGroup.add(badgeMesh);
+
+    this.remotePlayerGroup.add(outlineGroup);
+
+    this.remotePlayerOutline = {
+      group: outlineGroup,
+      material: outlineMat,
+      groundRingMat,
+      badgeMesh,
+      badgeTex,
+      canvas,
+      ctx,
+      lastStatusText: '',
+    };
 
     const remoteSpawn = this.pvpSlot === 'p1' ? PVP_SPAWN_P2 : PVP_SPAWN_P1;
     this.remotePlayerGroup.position.set(remoteSpawn.x, remoteSpawn.y, remoteSpawn.z);
@@ -2015,6 +2100,47 @@ export class PaleciakiGameEngine {
         this.remotePlayerHpBar.group.lookAt(this.camera.position);
       }
 
+      if (this.remotePlayerOutline) {
+        const isReady = remote.abilityCooldownTimer <= 0;
+        const targetColor = isReady ? 0xfacc15 : 0xef4444;
+        const pulse = isReady ? (0.75 + 0.25 * Math.sin(performance.now() * 0.008)) : 0.85;
+
+        this.remotePlayerOutline.material.color.setHex(targetColor);
+        this.remotePlayerOutline.material.opacity = pulse;
+        this.remotePlayerOutline.groundRingMat.color.setHex(targetColor);
+        this.remotePlayerOutline.groundRingMat.opacity = isReady ? pulse * 0.8 : 0.5;
+
+        this.remotePlayerOutline.badgeMesh.lookAt(this.camera.position);
+
+        const statusText = isReady
+          ? '⚡ MOC GOTOWA!'
+          : `⚡ MOC: ${Math.ceil(remote.abilityCooldownTimer)}s`;
+
+        if (statusText !== this.remotePlayerOutline.lastStatusText && this.remotePlayerOutline.ctx) {
+          this.remotePlayerOutline.lastStatusText = statusText;
+          const ctx = this.remotePlayerOutline.ctx;
+          ctx.clearRect(0, 0, 256, 64);
+
+          ctx.fillStyle = isReady ? 'rgba(234, 179, 8, 0.88)' : 'rgba(239, 68, 68, 0.78)';
+          ctx.beginPath();
+          ctx.roundRect(8, 8, 240, 48, 12);
+          ctx.fill();
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 22px system-ui, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.shadowColor = '#000000';
+          ctx.shadowBlur = 4;
+          ctx.fillText(statusText, 128, 32);
+
+          this.remotePlayerOutline.badgeTex.needsUpdate = true;
+        }
+      }
+
       if (this.remotePlayerMeshBuilt?.leftLeg && this.remotePlayerMeshBuilt?.rightLeg) {
         if (remote.isFiring || Math.hypot(remote.x - this.remotePlayerGroup.position.x, remote.z - this.remotePlayerGroup.position.z) > 0.05) {
           const cycle = (performance.now() / 150) % (Math.PI * 2);
@@ -2051,14 +2177,29 @@ export class PaleciakiGameEngine {
     }
 
     if (this.pvpMedkitMesh) {
+      if (this.pvpMedkitMesh.visible && !state.pickup.active) {
+        sound.playPickup();
+        this.spawnParticleRing(state.pickup.x, 0.5, state.pickup.z, 0x10b981);
+      }
       this.pvpMedkitMesh.visible = state.pickup.active;
       this.pvpMedkitMesh.rotation.y += dt * 1.8;
     }
+
+    if (this.prevPvpLocalHp >= 0 && local.hp < this.prevPvpLocalHp) {
+      this.triggerScreenShake(0.12, 0.16);
+    }
+    this.prevPvpLocalHp = local.hp;
 
     if (state.lastHitEvent) {
       const hit = state.lastHitEvent;
       const hitText = `-${hit.damage}`;
       this.callbacks.onFloatingText?.(hitText, hit.x, 1.8, hit.z, 'damage');
+      sound.playSmack();
+      this.spawnParticleRing(hit.x, 1.2, hit.z, 0xef4444);
+
+      if (hit.targetSlot === this.pvpSlot) {
+        this.triggerScreenShake(0.12, 0.16);
+      }
     }
 
     const midX = (local.x + remote.x) * 0.5;

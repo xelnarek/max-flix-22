@@ -741,7 +741,7 @@ class PaleciakiScene extends xb.Script {
       toast.style.willChange = 'transform, opacity';
       popupsLayer.appendChild(toast);
 
-      const duration = type === 'easter-egg' ? 3.6 : type === 'combo' ? 2.0 : 1.6;
+      const duration = type === 'damage' ? 0.7 : type === 'easter-egg' ? 3.6 : type === 'combo' ? 2.0 : 1.6;
 
       activeToasts.push({
         element: toast,
@@ -767,7 +767,7 @@ class PaleciakiScene extends xb.Script {
           continue;
         }
 
-        const floatSpeed = t.type === 'easter-egg' ? 0.28 : 0.8;
+        const floatSpeed = t.type === 'damage' ? 0.35 : t.type === 'easter-egg' ? 0.28 : 0.8;
         t.worldPos.y += dt * floatSpeed;
 
         tempVec.copy(t.worldPos);

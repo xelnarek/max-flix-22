@@ -163,6 +163,7 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
             room.clients.set('p2', ws);
             room.state.p2.operatorId = operatorId;
             room.state.p2.name = playerName;
+            room.state.p2.nickname = playerName;
             room.state.p2.connected = true;
             room.state.status = 'ready';
 
@@ -176,6 +177,15 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
               state: room.state,
             }));
 
+            // Notify P1 that P2 has joined
+            const p1Client = room.clients.get('p1');
+            if (p1Client && p1Client.readyState === WebSocket.OPEN) {
+              p1Client.send(JSON.stringify({
+                type: 'player_joined',
+                player: { nickname: playerName, slot: 'p2', operatorId },
+              }));
+            }
+
             broadcastRoomState(room);
             break;
           }
@@ -185,7 +195,19 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
             const room = activeRooms.get(currentRoomCode);
             if (!room) return;
 
-            room.state[playerSlot].isReady = Boolean(msg.ready);
+            const isReady = Boolean(msg.ready);
+            room.state[playerSlot].isReady = isReady;
+
+            // Notify the other player
+            const otherSlot = playerSlot === 'p1' ? 'p2' : 'p1';
+            const otherClient = room.clients.get(otherSlot);
+            if (otherClient && otherClient.readyState === WebSocket.OPEN) {
+              otherClient.send(JSON.stringify({
+                type: 'player_ready',
+                slot: playerSlot,
+                ready: isReady,
+              }));
+            }
 
             // If both players are ready and 2 players connected, start countdown
             if (room.state.p1.isReady && room.state.p2.isReady && room.state.p2.connected) {
