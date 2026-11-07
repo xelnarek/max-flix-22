@@ -62,6 +62,7 @@ import { NEUTRAL_CHARACTER_COMBAT_BONUSES, type CharacterCombatBonuses } from '.
 import { getCharacterMotionProfile } from './characterMotion.ts';
 import { getAttackPoseStrength, getCharacterAttackMotionProfile } from './characterAttackMotion.ts';
 import { resolveCharacterIncomingDamage, scaleCharacterBasicAttackDamage } from './characterBalance.ts';
+import { getPvpAimAngle, isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle, type PvpAimDirection } from './pvpAim.ts';
 import { sound } from './sound.ts';
 import {
   ActivePerks,
@@ -898,6 +899,10 @@ export class PaleciakiGameEngine {
   // Input state
   private keys: Record<string, boolean> = {};
   private virtualJoystick = { x: 0, y: 0 };
+  // PvP uses a separate human-controlled aim vector; movement never silently retargets it.
+  private manualAimEnabled = false;
+  private manualAimFiring = false;
+  private manualAimDirection: PvpAimDirection = { x: 0, z: 1 };
   private callbacks: GameCallbacks;
 
   // Lighting
@@ -1137,6 +1142,35 @@ export class PaleciakiGameEngine {
   public setVirtualInput(x: number, y: number) {
     this.virtualJoystick.x = x;
     this.virtualJoystick.y = y;
+  }
+
+  /** Enable the PvP twin-stick path. Survival keeps its existing autonomous targeting. */
+  public setManualAimMode(enabled: boolean) {
+    this.manualAimEnabled = enabled;
+    this.manualAimFiring = false;
+    if (enabled) this.manualAimDirection = pvpAimDirectionFromAngle(this.playerRot);
+    const shell = document.getElementById('game-shell');
+    shell?.classList.toggle('manual-aim-mode', enabled);
+  }
+
+  /** Update aim from a right-hand touch stick. The last valid direction is retained on release. */
+  public setManualAimInput(x: number, z: number) {
+    if (!this.manualAimEnabled) return;
+    const active = isPvpAimInputActive(x, z);
+    this.manualAimDirection = normalizePvpAimDirection(x, z, this.manualAimDirection);
+    this.manualAimFiring = active;
+    if (active) {
+      this.playerRot = getPvpAimAngle(this.manualAimDirection);
+      if (this.playerGroup) this.playerGroup.rotation.y = this.playerRot;
+    }
+  }
+
+  public stopManualAimFiring() {
+    this.manualAimFiring = false;
+  }
+
+  public isManualAimEnabled(): boolean {
+    return this.manualAimEnabled;
   }
 
   public selectCharacter(
@@ -1473,6 +1507,7 @@ export class PaleciakiGameEngine {
     this.oniricDreamCameraActive = false;
     this.camera.up.set(0, 1, 0);
     this.camera.updateProjectionMatrix();
+    this.setManualAimMode(false);
     this.gameMode = 'survival';
     this.updateAbilityCooldown(0, true);
     this.rebuildPlayerMesh();
@@ -6000,7 +6035,13 @@ export class PaleciakiGameEngine {
       this.updateMarcinTank(simDt);
       this.updateMateuszCats(simDt);
       this.updateMafiCapybaras(simDt);
-      if (this.gameMode === 'survival') this.updateSurvivalAutoCombat(simDt);
+      if (this.manualAimEnabled) {
+        // Twin-stick PvP: a held right-stick direction fires on normal weapon cadence,
+        // but never asks the engine to choose or snap to an opponent.
+        if (this.manualAimFiring && this.attackCooldownTimer <= 0) this.triggerAttack();
+      } else if (this.gameMode === 'survival') {
+        this.updateSurvivalAutoCombat(simDt);
+      }
       this.updateProjectiles(simDt);
       if (this.gameMode === 'survival') this.updateSurvivalXpGems(simDt);
       this.updateSpecialEffects(simDt);
@@ -6043,7 +6084,7 @@ export class PaleciakiGameEngine {
   }
 
   private updateSurvivalAutoCombat(dt: number) {
-    if (this.state !== 'playing' || this.gameMode !== 'survival') return;
+    if (this.state !== 'playing' || this.gameMode !== 'survival' || this.manualAimEnabled) return;
 
     const momentumRate = getSurvivalMomentumRateMultiplier(this.survivalMomentum.overdriveRemainingSeconds);
     const oniricRate = this.oniricDreamRemainingSeconds > 0 ? 1.30 : 1;
@@ -8475,7 +8516,7 @@ export class PaleciakiGameEngine {
       this.playerVel.z = THREE.MathUtils.damp(this.playerVel.z, targetZ, steering, dt);
       this.playerVel.x = THREE.MathUtils.clamp(this.playerVel.x, -speed * 1.08, speed * 1.08);
       this.playerVel.z = THREE.MathUtils.clamp(this.playerVel.z, -speed * 1.08, speed * 1.08);
-      this.playerRot = Math.atan2(inputX, inputZ);
+      if (!this.manualAimEnabled) this.playerRot = Math.atan2(inputX, inputZ);
 
       this.walkCycle += dt * motionProfile.gaitFrequency;
       if (this.leftLeg && this.rightLeg && this.leftArm && this.rightArm) {
@@ -11181,7 +11222,9 @@ export class PaleciakiGameEngine {
     const firstPrimaryProjectile = this.projectiles.length;
 
     sound.playAttackWhoosh();
-    const forward = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
+    const forward = this.manualAimEnabled
+      ? new THREE.Vector3(this.manualAimDirection.x, 0, this.manualAimDirection.z)
+      : new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
     const startOrigin = new THREE.Vector3(this.playerPos.x, this.playerPos.y + 0.82, this.playerPos.z).addScaledVector(forward, 0.65);
 
     if (charId === 'marcin') {
