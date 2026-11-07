@@ -307,3 +307,94 @@ test('exactly tied medkit claims alternate priority by round parity', () => {
   assert.equal(state.p1.hp, 800);
   assert.equal(state.p2.hp, 1000);
 });
+
+test('Grzesiek forklift ability only hits opponents inside its forward cone', () => {
+  const behind = createInitialPvpArenaState('grzesiek', 'P1', 'marcin', 'P2');
+  resetPvpRound(behind);
+  advanceArena(behind, 3.0);
+  behind.pickup.active = false;
+  behind.p1.x = -2;
+  behind.p1.z = 0;
+  behind.p2.x = 0;
+  behind.p2.z = 0;
+  const initialHp = behind.p2.hp;
+
+  stepPvpArena(behind, 0.05, {
+    moveX: 0, moveZ: 0, aimAngle: -Math.PI / 2, isFiring: false, wantAbility: true,
+  });
+
+  assert.equal(behind.p2.hp, initialHp);
+  assert.equal(behind.p1.damageDealt, 0);
+});
+
+test('Grzesiek frontal forklift ability applies credited damage and a visible hit event', () => {
+  const state = createInitialPvpArenaState('grzesiek', 'P1', 'marcin', 'P2');
+  resetPvpRound(state);
+  advanceArena(state, 3.0);
+  state.pickup.active = false;
+  state.p1.x = -2;
+  state.p1.z = 0;
+  state.p2.x = 0;
+  state.p2.z = 0;
+  const initialHp = state.p2.hp;
+
+  stepPvpArena(state, 0.05, {
+    moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantAbility: true,
+  });
+
+  assert.equal(state.p2.hp, initialHp - 180);
+  assert.equal(state.p1.damageDealt, 180);
+  assert.equal(state.lastHitEvent?.damage, 180);
+  assert.equal(state.lastHitEvent?.sourceSlot, 'p1');
+});
+
+test('Mateusz shockwave cannot damage a player hidden behind full pallet cover', () => {
+  const state = createInitialPvpArenaState('mateusz', 'P1', 'piotr', 'P2');
+  resetPvpRound(state);
+  advanceArena(state, 3.0);
+  state.pickup.active = false;
+  state.obstacles = [{
+    id: 'test_wall',
+    x: 0,
+    z: 0,
+    width: 1.6,
+    depth: 4.0,
+    height: 2.0,
+    type: 'barrier',
+  }];
+  state.p1.x = -2.4;
+  state.p1.z = 0;
+  state.p2.x = 2.4;
+  state.p2.z = 0;
+  const initialHp = state.p2.hp;
+
+  stepPvpArena(state, 0.05, {
+    moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantAbility: true,
+  });
+
+  assert.equal(state.p2.hp, initialHp);
+  assert.equal(state.p1.damageDealt, 0);
+});
+
+test('direct PvP ability damage is clipped to remaining shield and HP', () => {
+  const state = createInitialPvpArenaState('mateusz', 'P1', 'piotr', 'P2');
+  resetPvpRound(state);
+  advanceArena(state, 3.0);
+  state.pickup.active = false;
+  state.p1.x = -2;
+  state.p1.z = 0;
+  state.p2.x = 2;
+  state.p2.z = 0;
+  state.p2.hp = 40;
+  state.p2.shieldHp = 50;
+
+  stepPvpArena(state, 0.05, {
+    moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantAbility: true,
+  });
+
+  assert.equal(state.p2.hp, 0);
+  assert.equal(state.p2.shieldHp, 0);
+  assert.equal(state.p1.damageDealt, 90);
+  assert.equal(state.lastHitEvent?.damage, 90);
+  assert.equal(state.status, 'round_end');
+});
