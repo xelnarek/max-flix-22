@@ -330,7 +330,7 @@ test('Grzesiek forklift ability only hits opponents inside its forward cone', ()
 test('Grzesiek frontal forklift ability applies credited damage and a visible hit event', () => {
   const state = createInitialPvpArenaState('grzesiek', 'P1', 'marcin', 'P2');
   resetPvpRound(state);
-  advanceArena(state, 3.0);
+  advanceArena(state, 3.1);
   state.pickup.active = false;
   state.p1.x = -2;
   state.p1.z = 0;
