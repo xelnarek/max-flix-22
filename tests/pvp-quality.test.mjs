@@ -106,3 +106,15 @@ test('PvP result panel compares authoritative combat breakdown for both players'
   assert.match(css, /\.pvp-end-comparison-row/);
   assert.match(css, /max-height: min\(90dvh, 820px\)/);
 });
+
+test('both online and local PvP rematches reset all match-wide statistics through the shared helper', async () => {
+  const [client, server, arena] = await Promise.all([
+    readFile(new URL('../src/pvpClient.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/server/pvpServer.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pvpArena.ts', import.meta.url), 'utf8'),
+  ]);
+  assert.match(client, /resetPvpMatchStats\(this\.state\)/);
+  assert.match(server, /resetPvpMatchStats\(room\.state\)/);
+  assert.match(arena, /export function resetPvpMatchStats/);
+  assert.match(arena, /syncPvpMatchStats\(state\)/);
+});
