@@ -38,11 +38,27 @@ export interface PvpProjectile {
   life: number;
   pierce: number;
   color: number;
+  /** Missing on legacy/test fixtures; omitted kind is treated as a standard primary shot. */
+  kind?: 'primary' | 'ability';
 }
 
 export type PvpSlot = 'p1' | 'p2';
 
-export interface PvpPlayerState {
+export interface PvpCombatStats {
+  damageDealt: number;
+  damageTaken: number;
+  primaryDamageDealt: number;
+  abilityDamageDealt: number;
+  shotsFired: number;
+  shotsHit: number;
+  abilityUses: number;
+  abilityHits: number;
+  healingDone: number;
+  dashesUsed: number;
+  knockouts: number;
+}
+
+export interface PvpPlayerState extends PvpCombatStats {
   slot: PvpSlot;
   operatorId: CharacterId;
   name: string;
@@ -65,10 +81,6 @@ export interface PvpPlayerState {
   aimAngle: number;
   isFiring: boolean;
   stunTimer: number;
-  // stats for match summary
-  damageDealt: number;
-  shotsFired: number;
-  shotsHit: number;
 }
 
 export type PvpMatchStatus = 'waiting' | 'ready' | 'countdown' | 'in_round' | 'round_end' | 'match_end';
@@ -95,8 +107,8 @@ export interface PvpArenaState {
   winner: PvpSlot | null;
   score: { p1: number; p2: number };
   stats: {
-    p1: { damageDealt: number; shotsFired: number; shotsHit: number };
-    p2: { damageDealt: number; shotsFired: number; shotsHit: number };
+    p1: PvpCombatStats;
+    p2: PvpCombatStats;
   };
   p1: PvpPlayerState;
   p2: PvpPlayerState;
@@ -137,6 +149,29 @@ export function sanitizePvpInputIntent(input: Partial<PvpInputIntent> | null | u
     isFiring: input?.isFiring === true,
     wantDash: input?.wantDash === true,
     wantAbility: input?.wantAbility === true,
+  };
+}
+
+function snapshotPvpCombatStats(player: PvpPlayerState): PvpCombatStats {
+  return {
+    damageDealt: player.damageDealt,
+    damageTaken: player.damageTaken,
+    primaryDamageDealt: player.primaryDamageDealt,
+    abilityDamageDealt: player.abilityDamageDealt,
+    shotsFired: player.shotsFired,
+    shotsHit: player.shotsHit,
+    abilityUses: player.abilityUses,
+    abilityHits: player.abilityHits,
+    healingDone: player.healingDone,
+    dashesUsed: player.dashesUsed,
+    knockouts: player.knockouts,
+  };
+}
+
+function syncPvpMatchStats(state: PvpArenaState): void {
+  state.stats = {
+    p1: snapshotPvpCombatStats(state.p1),
+    p2: snapshotPvpCombatStats(state.p2),
   };
 }
 
@@ -222,6 +257,9 @@ function applyPvpAbilityDamage(
   if (remaining > 0) target.hp = Math.max(0, target.hp - remaining);
 
   source.damageDealt += actualDamage;
+  source.abilityDamageDealt += actualDamage;
+  source.abilityHits += 1;
+  target.damageTaken += actualDamage;
   if (stunSeconds > 0 && target.hp > 0) target.stunTimer = Math.max(target.stunTimer, stunSeconds);
   const hitEvent: PvpHitEvent = {
     id: ++state.hitEventSequence,
@@ -392,8 +430,16 @@ export function createInitialPvpPlayer(slot: 'p1' | 'p2', operatorId: CharacterI
     isFiring: false,
     stunTimer: 0,
     damageDealt: 0,
+    damageTaken: 0,
+    primaryDamageDealt: 0,
+    abilityDamageDealt: 0,
     shotsFired: 0,
     shotsHit: 0,
+    abilityUses: 0,
+    abilityHits: 0,
+    healingDone: 0,
+    dashesUsed: 0,
+    knockouts: 0,
   };
 }
 
@@ -418,8 +464,8 @@ export function createInitialPvpArenaState(
     winner: null,
     score: { p1: 0, p2: 0 },
     stats: {
-      p1: { damageDealt: 0, shotsFired: 0, shotsHit: 0 },
-      p2: { damageDealt: 0, shotsFired: 0, shotsHit: 0 },
+      p1: snapshotPvpCombatStats(p1),
+      p2: snapshotPvpCombatStats(p2),
     },
     p1,
     p2,
@@ -536,10 +582,7 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
   state.currentRound = state.round;
   state.winner = state.matchWinner;
   state.score = { p1: state.p1.score, p2: state.p2.score };
-  state.stats = {
-    p1: { damageDealt: state.p1.damageDealt, shotsFired: state.p1.shotsFired, shotsHit: state.p1.shotsHit },
-    p2: { damageDealt: state.p2.damageDealt, shotsFired: state.p2.shotsFired, shotsHit: state.p2.shotsHit },
-  };
+  syncPvpMatchStats(state);
 
   // Handle countdown
   if (state.status === 'countdown') {
@@ -604,7 +647,9 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
       );
     const winner = candidates[0]?.player;
     if (winner) {
-      winner.hp = Math.min(winner.maxHp, winner.hp + state.pickup.healAmount);
+      const healed = Math.max(0, Math.min(winner.maxHp - winner.hp, state.pickup.healAmount));
+      winner.hp += healed;
+      winner.healingDone += healed;
       state.pickup.active = false;
       state.pickup.respawnTimer = state.pickup.respawnTimeSeconds;
     }
@@ -640,7 +685,14 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
       let damageRemaining = Math.max(0, Number.isFinite(proj.damage) ? proj.damage : 0);
       const actualDamage = Math.min(damageRemaining, targetPlayer.shieldHp + targetPlayer.hp);
       shooterPlayer.damageDealt += actualDamage;
-      shooterPlayer.shotsHit += 1;
+      targetPlayer.damageTaken += actualDamage;
+      if (proj.kind === 'ability') {
+        shooterPlayer.abilityDamageDealt += actualDamage;
+        if (actualDamage > 0) shooterPlayer.abilityHits += 1;
+      } else {
+        shooterPlayer.primaryDamageDealt += actualDamage;
+        if (actualDamage > 0) shooterPlayer.shotsHit += 1;
+      }
 
       if (targetPlayer.shieldHp > 0) {
         const absorb = Math.min(targetPlayer.shieldHp, damageRemaining);
@@ -682,6 +734,8 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
 }
 
 function handleKnockout(state: PvpArenaState, winningSlot: 'p1' | 'p2') {
+  const winner = winningSlot === 'p1' ? state.p1 : state.p2;
+  winner.knockouts += 1;
   state.status = 'round_end';
   state.roundWinner = winningSlot;
   state.roundEndTimer = 2.4;
@@ -728,6 +782,7 @@ function stepPlayer(player: PvpPlayerState, input: PvpInputIntent | undefined, s
 
   // Dash initiation
   if (safeInput.wantDash && !player.isDashing && player.dashCooldownTimer <= 0) {
+    player.dashesUsed += 1;
     player.isDashing = true;
     player.dashTimer = PVP_DASH_DURATION;
     player.dashCooldownTimer = PVP_DASH_COOLDOWN;
@@ -820,10 +875,12 @@ function firePlayerPrimary(player: PvpPlayerState, state: PvpArenaState) {
     life: 2.2,
     pierce: 1,
     color: profile.color,
+    kind: 'primary',
   });
 }
 
 function triggerPlayerAbility(player: PvpPlayerState, state: PvpArenaState) {
+  player.abilityUses += 1;
   player.abilityCooldownTimer = PVP_ABILITY_COOLDOWN;
   const opponent = player.slot === 'p1' ? state.p2 : state.p1;
   const angle = player.aimAngle;
@@ -879,6 +936,7 @@ function triggerPlayerAbility(player: PvpPlayerState, state: PvpArenaState) {
           life: 1.8,
           pierce: 1,
           color: 0x10b981,
+          kind: 'ability',
         });
       }
       break;
