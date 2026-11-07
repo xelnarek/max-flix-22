@@ -121,11 +121,30 @@ function cleanRoom(code: string) {
 }
 
 export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
+  const allowedOrigins = new Set(
+    (process.env.PVP_ALLOWED_ORIGINS || '')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+  );
+  const isProduction = process.env.NODE_ENV === 'production';
   const wss = new WebSocketServer({
     server,
     path: '/pvp-ws',
     maxPayload: 4096,
     perMessageDeflate: false,
+    verifyClient: (info, callback) => {
+      if (!isProduction) {
+        callback(true);
+        return;
+      }
+      const origin = info.origin;
+      if (!origin || !allowedOrigins.has(origin)) {
+        callback(false, 403, 'PvP origin is not allowed.');
+        return;
+      }
+      callback(true);
+    },
   });
 
   wss.on('connection', (ws: WebSocket) => {
