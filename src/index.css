@@ -5421,9 +5421,10 @@ button {
   display: none;
   position: absolute !important;
   top: 12% !important;
+  left: min(50vw, 340px) !important;
   right: 0 !important;
   bottom: 108px !important;
-  width: min(54vw, 440px) !important;
+  width: auto !important;
   pointer-events: auto !important;
   touch-action: none !important;
   overscroll-behavior: contain !important;
@@ -5473,8 +5474,9 @@ button {
   will-change: transform;
 }
 #game-shell.manual-aim-mode .pvp-aim-zone { display: block !important; }
+#game-shell.manual-aim-mode .joystick-zone { width: min(50vw, 340px) !important; }
 #game-shell.manual-aim-mode #btn-touch-attack { display: none !important; }
 @media (max-width: 390px) {
-  #game-shell.manual-aim-mode .pvp-aim-zone { width: 56vw !important; bottom: 98px !important; }
+  #game-shell.manual-aim-mode .pvp-aim-zone { bottom: 98px !important; }
   #game-shell.manual-aim-mode .touch-actions-zone { gap: 6px !important; }
 }
