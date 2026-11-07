@@ -436,11 +436,11 @@ test('simultaneous PvP hits in one server tick are all retained with unique orde
   state.projectiles = [
     {
       id: 'sim-hit-1', ownerSlot: 'p1', x: -1.5, y: 0.6, z: 0,
-      vx: 12, vz: 0, radius: 0.2, damage: 50, life: 1, pierce: 1, color: 0x3b82f6,
+      vx: 20, vz: 0, radius: 0.2, damage: 50, life: 1, pierce: 1, color: 0x3b82f6,
     },
     {
       id: 'sim-hit-2', ownerSlot: 'p1', x: -1.25, y: 0.6, z: 0,
-      vx: 12, vz: 0, radius: 0.2, damage: 50, life: 1, pierce: 1, color: 0x3b82f6,
+      vx: 20, vz: 0, radius: 0.2, damage: 50, life: 1, pierce: 1, color: 0x3b82f6,
     },
   ];
 
