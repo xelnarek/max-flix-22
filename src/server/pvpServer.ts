@@ -1,4 +1,5 @@
 import type { Server as HttpServer } from 'node:http';
+import { randomInt } from 'node:crypto';
 import { WebSocket, WebSocketServer } from 'ws';
 import type {
   CharacterId,
@@ -7,6 +8,7 @@ import {
   createInitialPvpArenaState,
   resetPvpRound,
   stepPvpArena,
+  sanitizePvpInputIntent,
 } from '../pvpArena.ts';
 import type {
   PvpArenaState,
@@ -24,17 +26,41 @@ interface PvpRoom {
   tickInterval: NodeJS.Timeout | null;
   lastTickTime: number;
   emptyTimeout: NodeJS.Timeout | null;
+  rematchVotes: Set<'p1' | 'p2'>;
 }
 
 const activeRooms = new Map<string, PvpRoom>();
+const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const MAX_ACTIVE_ROOMS = 256;
+const MAX_MESSAGES_PER_SECOND = 120;
+const VALID_OPERATOR_IDS = new Set<CharacterId>(['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr']);
 
 function generateRoomCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let code = '';
-  for (let i = 0; i < 4; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  for (let attempt = 0; attempt < 32; attempt++) {
+    let code = '';
+    for (let i = 0; i < 4; i++) code += ROOM_CODE_ALPHABET[randomInt(ROOM_CODE_ALPHABET.length)];
+    if (!activeRooms.has(code)) return code;
   }
-  return activeRooms.has(code) ? generateRoomCode() : code;
+  throw new Error('Nie udało się przydzielić wolnego kodu pokoju.');
+}
+
+function sendError(ws: WebSocket, message: string): void {
+  if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'error', message }));
+}
+
+function sanitizePlayerName(value: unknown, fallback: string): string {
+  if (typeof value !== 'string') return fallback;
+  const cleaned = value.replace(/[\\u0000-\\u001f\\u007f]/g, '').trim().slice(0, 16);
+  return cleaned || fallback;
+}
+
+function isCharacterId(value: unknown): value is CharacterId {
+  return typeof value === 'string' && VALID_OPERATOR_IDS.has(value as CharacterId);
+}
+
+function clearRoomInputs(room: PvpRoom): void {
+  room.inputs.p1 = { moveX: 0, moveZ: 0, aimAngle: room.state.p1.aimAngle, isFiring: false };
+  room.inputs.p2 = { moveX: 0, moveZ: 0, aimAngle: room.state.p2.aimAngle, isFiring: false };
 }
 
 function broadcastRoomState(room: PvpRoom) {
@@ -72,8 +98,8 @@ function startRoomLoop(room: PvpRoom) {
 
     broadcastRoomState(room);
 
-    // If both players disconnected, stop loop
-    if (!room.state.p1.connected && !room.state.p2.connected) {
+    // Do not keep broadcasting a finished match at 30 Hz.
+    if (room.state.status === 'match_end' || (!room.state.p1.connected && !room.state.p2.connected)) {
       stopRoomLoop(room);
     }
   }, TICK_RATE_MS);
@@ -98,20 +124,47 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
   const wss = new WebSocketServer({
     server,
     path: '/pvp-ws',
+    maxPayload: 4096,
+    perMessageDeflate: false,
   });
 
   wss.on('connection', (ws: WebSocket) => {
     let currentRoomCode: string | null = null;
     let playerSlot: 'p1' | 'p2' | null = null;
+    let messageWindowStartedAt = Date.now();
+    let messagesInWindow = 0;
 
     ws.on('message', (data: Buffer | string) => {
       try {
+        const now = Date.now();
+        if (now - messageWindowStartedAt >= 1000) {
+          messageWindowStartedAt = now;
+          messagesInWindow = 0;
+        }
+        messagesInWindow++;
+        if (messagesInWindow > MAX_MESSAGES_PER_SECOND) {
+          ws.close(1008, 'Za dużo komunikatów PvP.');
+          return;
+        }
+
         const msg = JSON.parse(data.toString());
+        if (!msg || typeof msg !== 'object' || Array.isArray(msg) || typeof msg.type !== 'string') {
+          sendError(ws, 'Nieprawidłowy komunikat PvP.');
+          return;
+        }
 
         switch (msg.type) {
           case 'create_room': {
-            const operatorId: CharacterId = msg.operatorId || 'marcin';
-            const playerName: string = (msg.playerName || 'Gracz 1').slice(0, 16);
+            if (currentRoomCode || playerSlot) {
+              sendError(ws, 'To połączenie jest już przypisane do pokoju.');
+              return;
+            }
+            if (activeRooms.size >= MAX_ACTIVE_ROOMS) {
+              sendError(ws, 'Serwer osiągnął limit aktywnych pokoi. Spróbuj później.');
+              return;
+            }
+            const operatorId: CharacterId = isCharacterId(msg.operatorId) ? msg.operatorId : 'marcin';
+            const playerName = sanitizePlayerName(msg.playerName, 'Gracz 1');
             const code = generateRoomCode();
 
             const state = createInitialPvpArenaState(operatorId, playerName, 'grzesiek', 'Oczekiwanie...');
@@ -129,6 +182,7 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
               tickInterval: null,
               lastTickTime: Date.now(),
               emptyTimeout: null,
+              rematchVotes: new Set(),
             };
 
             activeRooms.set(code, room);
@@ -145,9 +199,17 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
           }
 
           case 'join_room': {
-            const code = (msg.code || '').trim().toUpperCase();
-            const operatorId: CharacterId = msg.operatorId || 'grzesiek';
-            const playerName: string = (msg.playerName || 'Gracz 2').slice(0, 16);
+            if (currentRoomCode || playerSlot) {
+              sendError(ws, 'To połączenie jest już przypisane do pokoju.');
+              return;
+            }
+            const code = typeof msg.code === 'string' ? msg.code.trim().toUpperCase() : '';
+            if (!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}$/.test(code)) {
+              sendError(ws, 'Kod pokoju musi mieć dokładnie 4 znaki.');
+              return;
+            }
+            const operatorId: CharacterId = isCharacterId(msg.operatorId) ? msg.operatorId : 'grzesiek';
+            const playerName = sanitizePlayerName(msg.playerName, 'Gracz 2');
 
             const room = activeRooms.get(code);
             if (!room) {
@@ -155,6 +217,10 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
               return;
             }
 
+            if (room.state.status === 'in_round' || room.state.status === 'countdown' || room.state.status === 'match_end') {
+              sendError(ws, 'Ten pokój nie przyjmuje teraz graczy.');
+              return;
+            }
             if (room.clients.has('p2') && room.state.p2.connected) {
               ws.send(JSON.stringify({ type: 'error', message: 'Pokój jest już pełny (2/2 graczy).' }));
               return;
@@ -165,7 +231,13 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
             room.state.p2.name = playerName;
             room.state.p2.nickname = playerName;
             room.state.p2.connected = true;
+            room.state.p2.isReady = false;
             room.state.status = 'ready';
+            room.rematchVotes.clear();
+            if (room.emptyTimeout) {
+              clearTimeout(room.emptyTimeout);
+              room.emptyTimeout = null;
+            }
 
             currentRoomCode = code;
             playerSlot = 'p2';
@@ -194,8 +266,16 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
             if (!currentRoomCode || !playerSlot) return;
             const room = activeRooms.get(currentRoomCode);
             if (!room) return;
+            if (room.state.status !== 'waiting' && room.state.status !== 'ready') {
+              sendError(ws, 'Gotowość można zmienić tylko w lobby.');
+              return;
+            }
+            if (!room.state.p1.connected || !room.state.p2.connected) {
+              sendError(ws, 'Poczekaj, aż dołączy drugi gracz.');
+              return;
+            }
 
-            const isReady = Boolean(msg.ready);
+            const isReady = msg.ready === true;
             room.state[playerSlot].isReady = isReady;
 
             // Notify the other player
@@ -210,7 +290,14 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
             }
 
             // If both players are ready and 2 players connected, start countdown
-            if (room.state.p1.isReady && room.state.p2.isReady && room.state.p2.connected) {
+            if (room.state.p1.isReady && room.state.p2.isReady && room.state.p2.connected && room.state.status === 'ready') {
+              room.state.round = 1;
+              room.state.p1.score = 0;
+              room.state.p2.score = 0;
+              room.state.matchWinner = null;
+              room.state.winner = null;
+              room.rematchVotes.clear();
+              clearRoomInputs(room);
               resetPvpRound(room.state);
               startRoomLoop(room);
             }
@@ -224,35 +311,58 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
             const room = activeRooms.get(currentRoomCode);
             if (!room) return;
 
+            if (room.state.status !== 'countdown' && room.state.status !== 'in_round') return;
             const intent = room.inputs[playerSlot];
-            intent.moveX = Number(msg.moveX) || 0;
-            intent.moveZ = Number(msg.moveZ) || 0;
-            intent.aimAngle = Number(msg.aimAngle) || 0;
-            intent.isFiring = Boolean(msg.isFiring);
-            if (msg.wantDash) intent.wantDash = true;
-            if (msg.wantAbility) intent.wantAbility = true;
+            const sanitized = sanitizePvpInputIntent(msg as Partial<PvpInputIntent>);
+            // Latch one-shot controls until consumed by the authoritative simulation tick.
+            room.inputs[playerSlot] = {
+              ...sanitized,
+              wantDash: intent.wantDash === true || sanitized.wantDash === true,
+              wantAbility: intent.wantAbility === true || sanitized.wantAbility === true,
+            };
             break;
           }
 
           case 'rematch': {
-            if (!currentRoomCode) return;
+            if (!currentRoomCode || !playerSlot) return;
             const room = activeRooms.get(currentRoomCode);
-            if (!room) return;
-
-            room.state.round = 1;
-            room.state.p1.score = 0;
-            room.state.p2.score = 0;
-            room.state.p1.damageDealt = 0;
-            room.state.p2.damageDealt = 0;
-            room.state.p1.shotsFired = 0;
-            room.state.p2.shotsFired = 0;
-            room.state.p1.shotsHit = 0;
-            room.state.p2.shotsHit = 0;
-            room.state.p1.isReady = false;
-            room.state.p2.isReady = false;
-            room.state.matchWinner = null;
-            resetPvpRound(room.state);
-            room.state.status = 'ready';
+            if (!room || room.state.status !== 'match_end') {
+              sendError(ws, 'Rewanż można zgłosić po zakończeniu meczu.');
+              return;
+            }
+            if (!room.state.p1.connected || !room.state.p2.connected) {
+              sendError(ws, 'Rewanż wymaga obecności obu graczy.');
+              return;
+            }
+            room.rematchVotes.add(playerSlot);
+            const waitingClient = room.clients.get(playerSlot);
+            if (waitingClient?.readyState === WebSocket.OPEN) {
+              waitingClient.send(JSON.stringify({
+                type: 'rematch_waiting',
+                votes: room.rematchVotes.size,
+                required: 2,
+              }));
+            }
+            if (room.rematchVotes.size === 2) {
+              room.state.round = 1;
+              room.state.currentRound = 1;
+              room.state.p1.score = 0;
+              room.state.p2.score = 0;
+              room.state.p1.damageDealt = 0;
+              room.state.p2.damageDealt = 0;
+              room.state.p1.shotsFired = 0;
+              room.state.p2.shotsFired = 0;
+              room.state.p1.shotsHit = 0;
+              room.state.p2.shotsHit = 0;
+              room.state.p1.isReady = true;
+              room.state.p2.isReady = true;
+              room.state.matchWinner = null;
+              room.state.winner = null;
+              room.rematchVotes.clear();
+              clearRoomInputs(room);
+              resetPvpRound(room.state);
+              startRoomLoop(room);
+            }
             broadcastRoomState(room);
             break;
           }
@@ -261,31 +371,60 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
             break;
         }
       } catch (err) {
-        console.error('[PVP-WS] Error handling message:', err);
+        sendError(ws, 'Nie udało się przetworzyć komunikatu PvP.');
+        console.warn('[PVP-WS] Rejected malformed message:', err);
       }
     });
 
     ws.on('close', () => {
-      if (currentRoomCode && playerSlot) {
-        const room = activeRooms.get(currentRoomCode);
-        if (room) {
-          room.clients.delete(playerSlot);
-          room.state[playerSlot].connected = false;
-          room.state[playerSlot].isReady = false;
+      if (!currentRoomCode || !playerSlot) return;
+      const room = activeRooms.get(currentRoomCode);
+      if (!room || room.clients.get(playerSlot) !== ws) return;
+      room.clients.delete(playerSlot);
+      room.state[playerSlot].connected = false;
+      room.state[playerSlot].isReady = false;
+      room.rematchVotes.clear();
+      room.inputs[playerSlot] = {
+        moveX: 0,
+        moveZ: 0,
+        aimAngle: room.state[playerSlot].aimAngle,
+        isFiring: false,
+      };
 
-          if (room.state.status === 'in_round' || room.state.status === 'countdown') {
-            room.state.status = 'match_end';
-            room.state.matchWinner = playerSlot === 'p1' ? 'p2' : 'p1';
-          }
-
-          broadcastRoomState(room);
-
-          if (room.clients.size === 0) {
-            room.emptyTimeout = setTimeout(() => {
-              cleanRoom(currentRoomCode!);
-            }, 30000);
-          }
+      const otherSlot = playerSlot === 'p1' ? 'p2' : 'p1';
+      const otherClient = room.clients.get(otherSlot);
+      if (room.state.status === 'in_round' || room.state.status === 'countdown') {
+        room.state.status = 'match_end';
+        room.state.matchWinner = otherSlot;
+        room.state.winner = otherSlot;
+        stopRoomLoop(room);
+        broadcastRoomState(room);
+        if (otherClient?.readyState === WebSocket.OPEN) {
+          otherClient.send(JSON.stringify({ type: 'room_closed', message: 'Rywal rozłączył się. Mecz zakończony.' }));
+          otherClient.close(1000, 'Rywal rozłączony');
         }
+        cleanRoom(currentRoomCode);
+        return;
+      }
+
+      if (playerSlot === 'p1' && otherClient?.readyState === WebSocket.OPEN) {
+        otherClient.send(JSON.stringify({ type: 'room_closed', message: 'Host opuścił pokój.' }));
+        otherClient.close(1000, 'Host opuścił pokój');
+        cleanRoom(currentRoomCode);
+        return;
+      }
+
+      room.state.status = 'waiting';
+      room.state.p2.name = 'Oczekiwanie...';
+      room.state.p2.nickname = 'Oczekiwanie...';
+      room.state.p2.connected = false;
+      room.state.p2.isReady = false;
+      room.state.p1.isReady = false;
+      room.state.p1.connected = room.clients.has('p1');
+      clearRoomInputs(room);
+      broadcastRoomState(room);
+      if (room.clients.size === 0) {
+        room.emptyTimeout = setTimeout(() => cleanRoom(room.code), 30000);
       }
     });
   });
