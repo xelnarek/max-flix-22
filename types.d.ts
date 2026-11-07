@@ -8,3 +8,11 @@ declare const __PALIECIAKI_ADS__: Readonly<{
   interstitialId: string;
   isTesting: boolean;
 }>;
+
+interface ImportMetaEnv {
+  readonly VITE_PVP_WS_URL?: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
