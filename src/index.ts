@@ -2988,6 +2988,7 @@ class PaleciakiScene extends xb.Script {
     btnCreateRoom?.addEventListener('click', () => {
       const playerNick = nickInput?.value.trim() || 'Operator B4';
       const netSession = new PvpNetworkSession();
+      if (readyBtn) readyBtn.disabled = true;
       this.pvpSession = netSession;
       this.pvpLocalSlot = 'p1';
       this.pvpIsHost = true;
@@ -3005,6 +3006,7 @@ class PaleciakiScene extends xb.Script {
         if (hostStatus) hostStatus.textContent = message;
       };
       netSession.onRoomJoined = (roomCode, slot, roomState) => {
+        if (readyBtn) readyBtn.disabled = false;
         this.pvpRoomCode = roomCode;
         this.pvpLocalSlot = slot;
         if (displayRoomCode) displayRoomCode.textContent = roomCode;
@@ -3015,6 +3017,7 @@ class PaleciakiScene extends xb.Script {
       };
 
       netSession.onPlayerJoined = (player) => {
+        if (readyBtn) readyBtn.disabled = false;
         if (hostStatus) hostStatus.textContent = `Gracz ${player.nickname} dołączył! Kliknij 'ZGŁOŚ GOTOWOŚĆ'.`;
         if (lobbyPlayersStatus) lobbyPlayersStatus.textContent = `Gracz 1: Ty • Gracz 2: ${player.nickname}`;
         sound.playPickup();
@@ -3034,6 +3037,11 @@ class PaleciakiScene extends xb.Script {
 
       netSession.onState = (state) => {
         this.engine.setLastPvpState(state);
+        if (readyBtn && state.status === 'waiting') {
+          readyBtn.disabled = true;
+          this.pvpLocalReady = false;
+          readyBtn.textContent = 'ZGŁOŚ GOTOWOŚĆ';
+        }
         if (state.status === 'countdown') {
           matchEndModal?.classList.add('hidden');
           if (btnRematch) {
@@ -3054,16 +3062,17 @@ class PaleciakiScene extends xb.Script {
     // Online WebSocket Join
     btnJoinRoom?.addEventListener('click', () => {
       const code = joinCodeInput?.value.trim().toUpperCase();
-      if (!code || code.length < 4) {
+      if (!code || code.length !== 6) {
         if (joinStatus) {
           joinStatus.classList.remove('hidden');
-          joinStatus.textContent = 'Wpisz poprawny 4-literowy kod pokoju!';
+          joinStatus.textContent = 'Wpisz poprawny 6-znakowy kod pokoju!';
         }
         return;
       }
 
       const playerNick = nickInput?.value.trim() || 'Operator B4';
       const netSession = new PvpNetworkSession();
+      if (readyBtn) readyBtn.disabled = true;
       this.pvpSession = netSession;
       this.pvpLocalSlot = 'p2';
       this.pvpIsHost = false;
@@ -3087,6 +3096,7 @@ class PaleciakiScene extends xb.Script {
         }
       };
       netSession.onRoomJoined = (roomCode, slot, roomState) => {
+        if (readyBtn) readyBtn.disabled = false;
         this.pvpRoomCode = roomCode;
         this.pvpLocalSlot = slot;
         readyBar?.classList.remove('hidden');
