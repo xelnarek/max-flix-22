@@ -2,6 +2,7 @@ import type { CharacterId } from './types.ts';
 import {
   createInitialPvpArenaState,
   resetPvpRound,
+  resetPvpMatchStats,
   sanitizePvpInputIntent,
   stepPvpArena,
 } from './pvpArena.ts';
@@ -500,12 +501,7 @@ export class PvpLocalBotSession implements IPvpSession {
     this.state.currentRound = 1;
     this.state.p1.score = 0;
     this.state.p2.score = 0;
-    this.state.p1.damageDealt = 0;
-    this.state.p2.damageDealt = 0;
-    this.state.p1.shotsFired = 0;
-    this.state.p2.shotsFired = 0;
-    this.state.p1.shotsHit = 0;
-    this.state.p2.shotsHit = 0;
+    resetPvpMatchStats(this.state);
     this.state.matchWinner = null;
     this.state.winner = null;
     resetPvpRound(this.state);

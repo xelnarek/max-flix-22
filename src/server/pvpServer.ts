@@ -7,6 +7,7 @@ import type {
 import {
   createInitialPvpArenaState,
   resetPvpRound,
+  resetPvpMatchStats,
   stepPvpArena,
   sanitizePvpInputIntent,
 } from '../pvpArena.ts';
@@ -397,12 +398,7 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
               room.state.currentRound = 1;
               room.state.p1.score = 0;
               room.state.p2.score = 0;
-              room.state.p1.damageDealt = 0;
-              room.state.p2.damageDealt = 0;
-              room.state.p1.shotsFired = 0;
-              room.state.p2.shotsFired = 0;
-              room.state.p1.shotsHit = 0;
-              room.state.p2.shotsHit = 0;
+              resetPvpMatchStats(room.state);
               room.state.p1.isReady = true;
               room.state.p2.isReady = true;
               room.state.matchWinner = null;

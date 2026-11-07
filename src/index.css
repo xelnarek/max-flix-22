@@ -5965,3 +5965,82 @@ button {
     animation-duration: 120ms;
   }
 }
+
+/* Post-match PvP breakdown: comparable stats stay readable on narrow phones. */
+.pvp-match-end-card {
+  width: min(94vw, 640px) !important;
+  max-width: 640px !important;
+  max-height: min(90dvh, 820px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.pvp-end-comparison {
+  display: grid;
+  gap: 0;
+  margin: 14px 0 18px;
+  padding: 8px 10px;
+  border: 1px solid rgba(148, 163, 184, .2);
+  border-radius: 13px;
+  background: rgba(15, 23, 42, .58);
+  text-align: left;
+}
+.pvp-end-comparison-header,
+.pvp-end-comparison-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(82px, .62fr) minmax(82px, .62fr);
+  align-items: center;
+  column-gap: 8px;
+}
+.pvp-end-comparison-header {
+  padding: 4px 4px 8px;
+  color: rgba(203, 213, 225, .76);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+.pvp-end-comparison-header span:not(:first-child) {
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pvp-end-comparison-row {
+  min-height: 34px;
+  padding: 6px 4px;
+  border-top: 1px solid rgba(148, 163, 184, .12);
+  color: rgba(226, 232, 240, .9);
+  font-size: 11px;
+}
+.pvp-end-comparison-row > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.pvp-end-comparison-row strong {
+  color: #f8fafc;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+@media (max-width: 420px) {
+  .pvp-match-end-card {
+    width: 96vw !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+  .pvp-end-comparison {
+    padding: 6px 7px;
+  }
+  .pvp-end-comparison-header,
+  .pvp-end-comparison-row {
+    grid-template-columns: minmax(0, 1fr) minmax(68px, .55fr) minmax(68px, .55fr);
+    column-gap: 5px;
+  }
+  .pvp-end-comparison-row {
+    font-size: 10px;
+  }
+  .pvp-end-comparison-row strong {
+    font-size: 10px;
+  }
+}

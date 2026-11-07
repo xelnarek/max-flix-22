@@ -3279,10 +3279,34 @@ class PaleciakiScene extends xb.Script {
     if (roundsScore) roundsScore.textContent = `${state.score.p1} - ${state.score.p2}`;
 
     const myStats = localSlot === 'p1' ? state.stats.p1 : state.stats.p2;
+    const opponentStats = localSlot === 'p1' ? state.stats.p2 : state.stats.p1;
+    const myPlayer = localSlot === 'p1' ? state.p1 : state.p2;
+    const opponentPlayer = localSlot === 'p1' ? state.p2 : state.p1;
     if (damageDealt) damageDealt.textContent = `${Math.round(myStats.damageDealt)} HP`;
     if (shotsFired) shotsFired.textContent = `${myStats.shotsFired}`;
     const acc = myStats.shotsFired > 0 ? Math.round((myStats.shotsHit / myStats.shotsFired) * 100) : 0;
     if (accuracy) accuracy.textContent = `${acc}%`;
+
+    const selfName = document.getElementById('pvp-end-self-name');
+    const opponentName = document.getElementById('pvp-end-opponent-name');
+    if (selfName) selfName.textContent = myPlayer.nickname || 'TY';
+    if (opponentName) opponentName.textContent = opponentPlayer.nickname || 'RYWAL';
+
+    const comparisonRows: Array<[string, (stats: typeof myStats) => string]> = [
+      ['primary-damage', (stats) => `${Math.round(stats.primaryDamageDealt)} HP`],
+      ['ability-damage', (stats) => `${Math.round(stats.abilityDamageDealt)} HP`],
+      ['damage-taken', (stats) => `${Math.round(stats.damageTaken)} HP`],
+      ['healing', (stats) => `${Math.round(stats.healingDone)} HP`],
+      ['abilities', (stats) => `${stats.abilityUses} • ${stats.abilityHits}`],
+      ['dashes', (stats) => `${stats.dashesUsed}`],
+      ['knockouts', (stats) => `${stats.knockouts}`],
+    ];
+    for (const [key, format] of comparisonRows) {
+      const selfValue = document.getElementById(`pvp-end-self-${key}`);
+      const opponentValue = document.getElementById(`pvp-end-opponent-${key}`);
+      if (selfValue) selfValue.textContent = format(myStats);
+      if (opponentValue) opponentValue.textContent = format(opponentStats);
+    }
 
     const rematchButton = document.getElementById('btn-pvp-rematch') as HTMLButtonElement | null;
     if (rematchButton) {
