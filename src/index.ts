@@ -1612,8 +1612,6 @@ class PaleciakiScene extends xb.Script {
       if (showcasePortrait) {
         showcasePortrait.innerHTML = operatorPortrait(id);
       }
-
-      this.engine.selectCharacter(id);
     };
 
     updateCharacterUI('marcin');
