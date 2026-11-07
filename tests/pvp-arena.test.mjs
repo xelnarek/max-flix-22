@@ -421,3 +421,49 @@ test('direct PvP ability damage is clipped to remaining shield and HP', () => {
   assert.equal(state.lastHitEvent?.damage, 90);
   assert.equal(state.status, 'round_end');
 });
+
+test('simultaneous PvP hits in one server tick are all retained with unique ordered event IDs', () => {
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  resetPvpRound(state);
+  state.status = 'in_round';
+  state.obstacles = [];
+  state.pickup.active = false;
+  state.pickup.respawnTimer = 30;
+  state.p1.x = -3;
+  state.p1.z = 0;
+  state.p2.x = 0;
+  state.p2.z = 0;
+  state.projectiles = [
+    {
+      id: 'sim-hit-1', ownerSlot: 'p1', x: -1.5, y: 0.6, z: 0,
+      vx: 20, vz: 0, radius: 0.2, damage: 50, life: 1, pierce: 1, color: 0x3b82f6,
+    },
+    {
+      id: 'sim-hit-2', ownerSlot: 'p1', x: -1.25, y: 0.6, z: 0,
+      vx: 20, vz: 0, radius: 0.2, damage: 50, life: 1, pierce: 1, color: 0x3b82f6,
+    },
+  ];
+
+  stepPvpArena(state, 0.05);
+
+  assert.equal(state.hitEvents.length, 2);
+  assert.deepEqual(state.hitEvents.map((event) => event.id), [1, 2]);
+  assert.equal(state.lastHitEvent?.id, 2);
+  assert.equal(state.p1.damageDealt, 100);
+  assert.equal(state.p2.hp, 900);
+});
+
+test('PvP round reset clears transient hit notifications but keeps event IDs monotonic', () => {
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  state.hitEventSequence = 17;
+  state.hitEvents = [{
+    id: 17, sourceSlot: 'p1', targetSlot: 'p2', damage: 25, x: 0, z: 0,
+  }];
+  state.lastHitEvent = state.hitEvents[0];
+
+  resetPvpRound(state);
+
+  assert.equal(state.hitEvents.length, 0);
+  assert.equal(state.lastHitEvent, undefined);
+  assert.equal(state.hitEventSequence, 17);
+});

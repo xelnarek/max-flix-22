@@ -73,6 +73,15 @@ export interface PvpPlayerState {
 
 export type PvpMatchStatus = 'waiting' | 'ready' | 'countdown' | 'in_round' | 'round_end' | 'match_end';
 
+export interface PvpHitEvent {
+  id: number;
+  targetSlot: PvpSlot;
+  damage: number;
+  sourceSlot: PvpSlot;
+  x: number;
+  z: number;
+}
+
 export interface PvpArenaState {
   status: PvpMatchStatus;
   round: number;
@@ -95,14 +104,8 @@ export interface PvpArenaState {
   pickup: PvpPickup;
   projectiles: PvpProjectile[];
   hitEventSequence: number;
-  lastHitEvent?: {
-    id: number;
-    targetSlot: PvpSlot;
-    damage: number;
-    sourceSlot: PvpSlot;
-    x: number;
-    z: number;
-  };
+  hitEvents: PvpHitEvent[];
+  lastHitEvent?: PvpHitEvent;
 }
 
 export interface PvpInputIntent {
@@ -220,15 +223,16 @@ function applyPvpAbilityDamage(
 
   source.damageDealt += actualDamage;
   if (stunSeconds > 0 && target.hp > 0) target.stunTimer = Math.max(target.stunTimer, stunSeconds);
-  state.hitEventSequence++;
-  state.lastHitEvent = {
-    id: state.hitEventSequence,
+  const hitEvent: PvpHitEvent = {
+    id: ++state.hitEventSequence,
     targetSlot: target.slot,
     damage: actualDamage,
     sourceSlot: source.slot,
     x: target.x,
     z: target.z,
   };
+  state.lastHitEvent = hitEvent;
+  state.hitEvents.push(hitEvent);
   return actualDamage;
 }
 
@@ -431,6 +435,7 @@ export function createInitialPvpArenaState(
     },
     projectiles: [],
     hitEventSequence: 0,
+    hitEvents: [],
   };
 }
 
@@ -471,6 +476,7 @@ export function resetPvpRound(state: PvpArenaState) {
   state.roundWinner = null;
   state.roundEndTimer = 0;
   state.lastHitEvent = undefined;
+  state.hitEvents = [];
   state.countdownTimer = 3.0;
   state.status = 'countdown';
 }
@@ -522,8 +528,9 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
   const safeP1Input = p1Input ? sanitizePvpInputIntent(p1Input) : undefined;
   const safeP2Input = p2Input ? sanitizePvpInputIntent(p2Input) : undefined;
 
-  // Clear transient hit events from previous frame
+  // Keep every hit from this simulation tick, including simultaneous shots.
   state.lastHitEvent = undefined;
+  state.hitEvents = [];
 
   // Sync helpers for external consumers
   state.currentRound = state.round;
@@ -642,15 +649,16 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
       }
       if (damageRemaining > 0) targetPlayer.hp = Math.max(0, targetPlayer.hp - damageRemaining);
 
-      state.hitEventSequence++;
-      state.lastHitEvent = {
-        id: state.hitEventSequence,
+      const hitEvent: PvpHitEvent = {
+        id: ++state.hitEventSequence,
         targetSlot: targetPlayer.slot,
         damage: actualDamage,
         sourceSlot: shooterPlayer.slot,
         x: targetPlayer.x,
         z: targetPlayer.z,
       };
+      state.lastHitEvent = hitEvent;
+      state.hitEvents.push(hitEvent);
 
       proj.pierce--;
       if (proj.pierce <= 0) state.projectiles.splice(i, 1);
