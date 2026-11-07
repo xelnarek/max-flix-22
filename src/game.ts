@@ -8,6 +8,7 @@ import {
   PVP_SPAWN_P1,
   PVP_SPAWN_P2,
   type PvpArenaState,
+  type PvpHitEvent,
 } from './pvpArena.ts';
 import { clampHorizontalPosition } from './arenaBounds.ts';
 import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoint, resolveEnemyPlayerSeparation } from './enemySpacing.ts';
@@ -540,6 +541,7 @@ export class PaleciakiGameEngine {
   private pvpInputSendAccumulator = 0;
   private pvpMatchEndHandled = false;
   private lastPvpHitEventId = 0;
+  private pendingPvpHitEvents: PvpHitEvent[] = [];
   private survivalElapsed = 0;
   private survivalSpawnTimer = 0;
   private survivalSurgeTimeLeft = 0;
@@ -1694,6 +1696,7 @@ export class PaleciakiGameEngine {
     this.pvpInputSendAccumulator = 0;
     this.pvpMatchEndHandled = false;
     this.lastPvpHitEventId = 0;
+    this.pendingPvpHitEvents = [];
     this.pvpWantDash = false;
     this.pvpWantAbility = false;
     this.setManualAimMode(true);
@@ -1730,6 +1733,18 @@ export class PaleciakiGameEngine {
 
   public setLastPvpState(state: PvpArenaState) {
     this.lastPvpState = state;
+    const incomingEvents = state.hitEvents?.length
+      ? state.hitEvents
+      : (state.lastHitEvent ? [state.lastHitEvent] : []);
+    for (const event of incomingEvents) {
+      if (event.id <= this.lastPvpHitEventId) continue;
+      if (this.pendingPvpHitEvents.some((pending) => pending.id === event.id)) continue;
+      this.pendingPvpHitEvents.push(event);
+    }
+    // A stalled tab must not retain an unbounded list of cosmetic events.
+    if (this.pendingPvpHitEvents.length > 32) {
+      this.pendingPvpHitEvents.splice(0, this.pendingPvpHitEvents.length - 32);
+    }
   }
 
   public triggerPvpDash() {
@@ -1769,6 +1784,7 @@ export class PaleciakiGameEngine {
     this.pvpInputSendAccumulator = 0;
     this.pvpMatchEndHandled = false;
     this.lastPvpHitEventId = 0;
+    this.pendingPvpHitEvents = [];
     this.pvpWantDash = false;
     this.pvpWantAbility = false;
     this.prevPvpLocalHp = -1;
@@ -2022,6 +2038,16 @@ export class PaleciakiGameEngine {
     this.levelRoot.add(this.pvpArenaRoot);
   }
 
+  private pulsePvpFeedback(elementId: 'pvp-hit-vignette' | 'pvp-hit-confirm') {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    element.classList.remove('active');
+    // Restart a short CSS animation even when hits arrive in consecutive frames.
+    void (element as HTMLElement).offsetWidth;
+    element.classList.add('active');
+    element.addEventListener('animationend', () => element.classList.remove('active'), { once: true });
+  }
+
   private updatePvpMode(dt: number) {
     if (!this.pvpSession) return;
 
@@ -2174,20 +2200,47 @@ export class PaleciakiGameEngine {
       activeIds.add(proj.id);
       let mesh = this.pvpProjectileMeshes.get(proj.id);
       if (!mesh) {
-        const geo = new THREE.SphereGeometry(proj.radius, 12, 12);
-        const mat = new THREE.MeshBasicMaterial({ color: proj.color });
+        const geo = new THREE.SphereGeometry(proj.radius, 14, 12);
+        const mat = new THREE.MeshBasicMaterial({ color: proj.color, toneMapped: false });
         mesh = new THREE.Mesh(geo, mat);
+        mesh.renderOrder = 4;
+
+        // A tapered, color-matched streak makes incoming fire readable on
+        // small phone screens without requiring expensive particle emitters.
+        const speed = Math.hypot(proj.vx, proj.vz);
+        const trailLength = THREE.MathUtils.clamp(speed * 0.035, 0.5, 1.15);
+        const trailGeo = new THREE.CylinderGeometry(0.018, 0.075, trailLength, 7, 1, true);
+        const trailMat = new THREE.MeshBasicMaterial({
+          color: proj.color,
+          transparent: true,
+          opacity: 0.58,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+          side: THREE.DoubleSide,
+          toneMapped: false,
+        });
+        const trail = new THREE.Mesh(trailGeo, trailMat);
+        trail.rotation.x = Math.PI / 2;
+        trail.position.z = -trailLength * 0.42;
+        trail.renderOrder = 3;
+        mesh.add(trail);
+
         this.levelRoot.add(mesh);
         this.pvpProjectileMeshes.set(proj.id, mesh);
       }
       mesh.position.set(proj.x, proj.y, proj.z);
+      mesh.rotation.y = Math.atan2(proj.vx, proj.vz);
     }
 
     for (const [id, mesh] of this.pvpProjectileMeshes.entries()) {
       if (!activeIds.has(id)) {
         this.levelRoot.remove(mesh);
-        mesh.geometry.dispose();
-        (mesh.material as THREE.Material).dispose();
+        mesh.traverse((object) => {
+          if (!(object instanceof THREE.Mesh)) return;
+          object.geometry.dispose();
+          const materials = Array.isArray(object.material) ? object.material : [object.material];
+          materials.forEach((material) => material.dispose());
+        });
         this.pvpProjectileMeshes.delete(id);
       }
     }
@@ -2206,16 +2259,25 @@ export class PaleciakiGameEngine {
     }
     this.prevPvpLocalHp = local.hp;
 
-    if (state.lastHitEvent && state.lastHitEvent.id !== this.lastPvpHitEventId) {
-      const hit = state.lastHitEvent;
+    let playedHitSound = false;
+    const hitEvents = this.pendingPvpHitEvents.splice(0);
+    for (const hit of hitEvents) {
+      if (hit.id <= this.lastPvpHitEventId) continue;
       this.lastPvpHitEventId = hit.id;
       const hitText = `-${Math.ceil(hit.damage)} HP`;
       this.callbacks.onFloatingText?.(hitText, hit.x, 1.8, hit.z, 'damage');
-      sound.playSmack();
+      if (!playedHitSound) {
+        sound.playSmack();
+        playedHitSound = true;
+      }
       this.spawnParticleRing(hit.x, 1.2, hit.z, 0xef4444);
 
       if (hit.targetSlot === this.pvpSlot) {
-        this.triggerScreenShake(0.12, 0.16);
+        this.triggerScreenShake(0.16, 0.2);
+        this.pulsePvpFeedback('pvp-hit-vignette');
+      }
+      if (hit.sourceSlot === this.pvpSlot) {
+        this.pulsePvpFeedback('pvp-hit-confirm');
       }
     }
 
