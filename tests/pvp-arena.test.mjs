@@ -10,6 +10,7 @@ import {
   PVP_SPAWN_P1,
   PVP_SPAWN_P2,
   resetPvpRound,
+  resetPvpMatchStats,
   sanitizePvpInputIntent,
   stepPvpArena,
 } from '../src/pvpArena.ts';
@@ -610,4 +611,39 @@ test('PvP round-ending knockout prevents the opponent from firing or dashing lat
   assert.equal(state.p2.shotsFired, 0);
   assert.equal(state.p2.dashesUsed, 0);
   assert.equal(state.stats.p1.knockouts, 1);
+});
+
+test('starting a rematch resets every match-wide statistic and its published snapshot', () => {
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  for (const player of [state.p1, state.p2]) {
+    player.damageDealt = 420;
+    player.damageTaken = 300;
+    player.primaryDamageDealt = 250;
+    player.abilityDamageDealt = 170;
+    player.shotsFired = 20;
+    player.shotsHit = 8;
+    player.abilityUses = 4;
+    player.abilityHits = 3;
+    player.healingDone = 220;
+    player.dashesUsed = 5;
+    player.knockouts = 1;
+  }
+
+  resetPvpMatchStats(state);
+
+  for (const slot of ['p1', 'p2']) {
+    assert.deepEqual(state.stats[slot], {
+      damageDealt: 0,
+      damageTaken: 0,
+      primaryDamageDealt: 0,
+      abilityDamageDealt: 0,
+      shotsFired: 0,
+      shotsHit: 0,
+      abilityUses: 0,
+      abilityHits: 0,
+      healingDone: 0,
+      dashesUsed: 0,
+      knockouts: 0,
+    });
+  }
 });
