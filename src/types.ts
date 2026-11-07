@@ -78,7 +78,10 @@ export type EnemyType =
   | 'bosman_krakow'
   | 'zombie_pracownik'
   | 'pomazaniec'
-  | 'sebix_m';
+  | 'sebix_m'
+  | 'mutant_gamma_forklift'
+  | 'radioactive_pip'
+  | 'cyber_salesman';
 
 export interface EnemyItem {
   id: string;
@@ -107,6 +110,7 @@ export interface EnemyItem {
   legR?: any;
   armL?: any;
   armR?: any;
+  head?: any;
   specialActionTimer?: number;
   bossPhase?: number;
   chargeDir?: number;

@@ -1,6 +1,6 @@
 {
-  "summary":  "Plan przebudowy widoku kamery na wzór Vampire Survivors, spowolnienia tempa do 50% oraz gruntownej reorganizacji interfejsu UI na telefonach.",
-  "updatedAt":  "2026-10-30T08:14:42.748912497Z",
-  "requestFeedback":  true,
-  "userFacing":  true
+  "summary": "Plan aktualizacji gry Max-Fliz vol 2:\n- Wdrożenie retro-arkadowych portretów pixel art dla wszystkich 5 operatorów w menu\n- Przebudowa układu menu głównego z centralnym stanowiskiem selekcji operatora w stylu arcade\n- Mocno kontrastowa, komiksowa oprawa wizualna 3D: wyraziste obrysy, komiksowe dymki trafień (POW!, WZ-CRIT!), pop-artowe cyfry obrażeń i neonowe oznaczenia stref\n- Nowe hybrydowe ewolucje broni i zmutowane elitarne warianty wrogów z unikalnymi aurami i atakami\n- Optymalizacja responsywności HUD i sterowania dotykowego/myszkowego",
+  "updatedAt": "2026-11-06T19:01:23.691633156Z",
+  "requestFeedback": true,
+  "userFacing": true
 }

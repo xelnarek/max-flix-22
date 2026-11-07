@@ -15,6 +15,9 @@ export type SurvivalEnemySpawnType = Extract<EnemyType,
   | 'pan_roman'
   | 'piorun_dron'
   | 'elite_walczak_guard'
+  | 'mutant_gamma_forklift'
+  | 'radioactive_pip'
+  | 'cyber_salesman'
 >;
 
 export interface SurvivalEnemySpawnWeight {
@@ -42,6 +45,9 @@ const SURVIVAL_ENEMY_ROSTER: readonly SurvivalEnemySpawnWeight[] = [
   { type: 'agv_robot', minWave: 7, minElapsedSeconds: 0, weight: 6 },
   { type: 'pan_roman', minWave: 7, minElapsedSeconds: 0, weight: 6 },
   { type: 'elite_walczak_guard', minWave: 8, minElapsedSeconds: 0, weight: 5 },
+  { type: 'mutant_gamma_forklift', minWave: 2, minElapsedSeconds: 90, weight: 4 },
+  { type: 'radioactive_pip', minWave: 3, minElapsedSeconds: 150, weight: 4 },
+  { type: 'cyber_salesman', minWave: 4, minElapsedSeconds: 210, weight: 3 },
 ];
 
 function safeWave(wave: number): number {

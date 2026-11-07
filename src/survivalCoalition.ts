@@ -36,10 +36,11 @@ export function getSurvivalCoalitionRole(type: string): SurvivalCoalitionRole {
     type === 'sztaplar_szalony' ||
     type === 'elite_walczak_guard' ||
     type === 'agv_robot' ||
-    type === 'sebix_m'
+    type === 'sebix_m' ||
+    type === 'mutant_gamma_forklift'
   ) return 'bruiser';
 
-  if (type === 'inspector') return 'support';
+  if (type === 'inspector' || type === 'radioactive_pip') return 'support';
 
   if (
     type === 'handlowiec' ||
@@ -47,7 +48,8 @@ export function getSurvivalCoalitionRole(type: string): SurvivalCoalitionRole {
     type === 'pan_roman' ||
     type === 'serwisant' ||
     type === 'pomazaniec' ||
-    type === 'bosman_krakow'
+    type === 'bosman_krakow' ||
+    type === 'cyber_salesman'
   ) return 'ranged';
 
   return 'flanker';

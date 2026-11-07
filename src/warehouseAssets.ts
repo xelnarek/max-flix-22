@@ -5346,3 +5346,310 @@ export function createRollerGateTrapModel(width = 4.8): {
   group.add(rollers);
   return { group, rollers };
 }
+
+/**
+ * 26. MUTATED ELITE ENEMY: Mutant Gamma-Wózek Widłowy
+ * Mutated heavy industrial forklift with glowing toxic green canisters and radioactive forks.
+ */
+export function createMutantGammaForkliftModel(): {
+  group: THREE.Group;
+  legL: THREE.Mesh;
+  legR: THREE.Mesh;
+  armL: THREE.Mesh;
+  armR: THREE.Mesh;
+  head: THREE.Mesh;
+} {
+  const group = new THREE.Group();
+
+  const chassisMat = new THREE.MeshStandardMaterial({
+    color: 0x15803d,
+    roughness: 0.45,
+    metalness: 0.35,
+  });
+  const toxicGlowMat = new THREE.MeshStandardMaterial({
+    color: 0x4ade80,
+    emissive: 0x22c55e,
+    emissiveIntensity: 0.9,
+    roughness: 0.2,
+  });
+  const metalMat = new THREE.MeshStandardMaterial({
+    color: 0x1e293b,
+    metalness: 0.85,
+    roughness: 0.25,
+  });
+  const hazardStripeMat = new THREE.MeshStandardMaterial({
+    color: 0xfacc15,
+    roughness: 0.4,
+  });
+
+  // Heavy Chassis Body
+  const chassis = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.42, 0.82), chassisMat);
+  chassis.position.y = 0.32;
+  chassis.castShadow = true;
+  group.add(chassis);
+
+  // Toxic Core / Gamma Barrel mounted on rear
+  const gammaBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.48, 14), toxicGlowMat);
+  gammaBarrel.position.set(0, 0.62, -0.22);
+  gammaBarrel.castShadow = true;
+  group.add(gammaBarrel);
+
+  // Warning Cage & Overhead Guard
+  const cagePillars = [-0.22, 0.22];
+  for (const cx of cagePillars) {
+    for (const cz of [-0.2, 0.18]) {
+      const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.64, 8), metalMat);
+      pillar.position.set(cx, 0.64, cz);
+      group.add(pillar);
+    }
+  }
+  const cageRoof = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.05, 0.46), hazardStripeMat);
+  cageRoof.position.set(0, 0.98, -0.01);
+  group.add(cageRoof);
+
+  // Warning Strobe on roof
+  const strobe = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.09, 10), toxicGlowMat);
+  strobe.position.set(0, 1.05, 0);
+  group.add(strobe);
+
+  // Mutant Fork Mast & Dual Glowing Steel Spikes
+  const mast = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.88, 0.08), metalMat);
+  mast.position.set(0, 0.65, 0.42);
+  group.add(mast);
+
+  const forkL = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.04, 0.58), toxicGlowMat);
+  forkL.position.set(-0.16, 0.12, 0.68);
+  const forkR = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.04, 0.58), toxicGlowMat);
+  forkR.position.set(0.16, 0.12, 0.68);
+  group.add(forkL, forkR);
+
+  // 4 Industrial Wheels
+  const wheelGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.11, 14);
+  const wheelPositions = [
+    [-0.31, 0.15, -0.26],
+    [0.31, 0.15, -0.26],
+    [-0.31, 0.15, 0.26],
+    [0.31, 0.15, 0.26],
+  ];
+  for (const [wx, wy, wz] of wheelPositions) {
+    const wheel = new THREE.Mesh(wheelGeo, metalMat);
+    wheel.rotation.z = Math.PI / 2;
+    wheel.position.set(wx, wy, wz);
+    wheel.castShadow = true;
+    group.add(wheel);
+  }
+
+  // Dummy joints for standard limb animator
+  const dummyMat = new THREE.MeshBasicMaterial({ visible: false });
+  const dummyGeo = new THREE.BoxGeometry(0.05, 0.05, 0.05);
+  const legL = new THREE.Mesh(dummyGeo, dummyMat);
+  const legR = new THREE.Mesh(dummyGeo, dummyMat);
+  const armL = new THREE.Mesh(dummyGeo, dummyMat);
+  const armR = new THREE.Mesh(dummyGeo, dummyMat);
+  const head = strobe;
+
+  group.add(legL, legR, armL, armR);
+  return { group, legL, legR, armL, armR, head };
+}
+
+/**
+ * 27. MUTATED ELITE ENEMY: Radioaktywny Inspektor PIP
+ * High-ranking auditor in a glowing hazmat suit with a geiger-counter clipboard and gas mask.
+ */
+export function createRadioactivePipModel(): {
+  group: THREE.Group;
+  legL: THREE.Mesh;
+  legR: THREE.Mesh;
+  armL: THREE.Mesh;
+  armR: THREE.Mesh;
+  head: THREE.Mesh;
+} {
+  const group = new THREE.Group();
+
+  const hazmatMat = new THREE.MeshStandardMaterial({
+    color: 0x84cc16, // Toxic lime-yellow hazmat fabric
+    roughness: 0.35,
+    metalness: 0.1,
+  });
+  const darkSealMat = new THREE.MeshStandardMaterial({
+    color: 0x1e293b,
+    roughness: 0.7,
+  });
+  const emeraldVisorMat = new THREE.MeshStandardMaterial({
+    color: 0x10b981,
+    emissive: 0x059669,
+    emissiveIntensity: 0.95,
+    roughness: 0.1,
+    metalness: 0.8,
+  });
+  const glowingScreenMat = new THREE.MeshStandardMaterial({
+    color: 0x4ade80,
+    emissive: 0x22c55e,
+    emissiveIntensity: 0.85,
+    roughness: 0.2,
+  });
+
+  // Torso / Sealed Hazmat Suit
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.52, 0.26), hazmatMat);
+  body.position.y = 0.62;
+  body.castShadow = true;
+  group.add(body);
+
+  // Oxygen / Filtration Tank on back
+  const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.44, 12), darkSealMat);
+  tank.position.set(0, 0.66, -0.18);
+  tank.castShadow = true;
+  group.add(tank);
+
+  // Sealed Hood / Helmet
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), hazmatMat);
+  head.position.y = 1.02;
+  head.castShadow = true;
+  group.add(head);
+
+  // Glowing Emerald Gas Mask Visor
+  const visor = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.11, 0.1), emeraldVisorMat);
+  visor.position.set(0, 1.03, 0.14);
+  group.add(visor);
+
+  // Dual Respiratory Filter Cartridges
+  const filterL = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.08, 10), darkSealMat);
+  filterL.rotation.x = Math.PI / 2;
+  filterL.position.set(-0.09, 0.94, 0.16);
+  const filterR = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.08, 10), darkSealMat);
+  filterR.rotation.x = Math.PI / 2;
+  filterR.position.set(0.09, 0.94, 0.16);
+  group.add(filterL, filterR);
+
+  // Arms
+  const armGeo = new THREE.BoxGeometry(0.12, 0.42, 0.12);
+  const armL = new THREE.Mesh(armGeo, hazmatMat);
+  armL.position.set(-0.28, 0.58, 0);
+  armL.castShadow = true;
+  const armR = new THREE.Mesh(armGeo, hazmatMat);
+  armR.position.set(0.28, 0.58, 0);
+  armR.castShadow = true;
+  group.add(armL, armR);
+
+  // Active Geiger Counter Clipboard in Right Hand
+  const clipboard = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.28, 0.03), darkSealMat);
+  clipboard.position.set(0.32, 0.42, 0.16);
+  clipboard.rotation.x = -0.35;
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 0.2), glowingScreenMat);
+  screen.position.set(0, 0, 0.02);
+  clipboard.add(screen);
+  group.add(clipboard);
+
+  // Heavy Sealed Legs
+  const legGeo = new THREE.BoxGeometry(0.16, 0.42, 0.16);
+  const legL = new THREE.Mesh(legGeo, hazmatMat);
+  legL.position.set(-0.12, 0.21, 0);
+  legL.castShadow = true;
+  const legR = new THREE.Mesh(legGeo, hazmatMat);
+  legR.position.set(0.12, 0.21, 0);
+  legR.castShadow = true;
+  group.add(legL, legR);
+
+  return { group, legL, legR, armL, armR, head };
+}
+
+/**
+ * 28. MUTATED ELITE ENEMY: Cyber-Handlowiec 3.0
+ * High-tech aggressive corporate salesman with glowing neon-cyan suit, LED visor, and hologram projector briefcase.
+ */
+export function createCyberSalesmanModel(): {
+  group: THREE.Group;
+  legL: THREE.Mesh;
+  legR: THREE.Mesh;
+  armL: THREE.Mesh;
+  armR: THREE.Mesh;
+  head: THREE.Mesh;
+} {
+  const group = new THREE.Group();
+
+  const cyberSuitMat = new THREE.MeshStandardMaterial({
+    color: 0x0f172a,
+    metalness: 0.7,
+    roughness: 0.25,
+  });
+  const neonCyanMat = new THREE.MeshStandardMaterial({
+    color: 0x38bdf8,
+    emissive: 0x0ea5e9,
+    emissiveIntensity: 0.85,
+    roughness: 0.15,
+  });
+  const neonMagentaMat = new THREE.MeshStandardMaterial({
+    color: 0xf43f5e,
+    emissive: 0xe11d48,
+    emissiveIntensity: 0.9,
+    roughness: 0.15,
+  });
+  const skinMat = new THREE.MeshStandardMaterial({
+    color: 0xfbd0b0,
+    roughness: 0.4,
+  });
+
+  // Cyber Jacket & LED Lapels
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.54, 0.24), cyberSuitMat);
+  body.position.y = 0.62;
+  body.castShadow = true;
+  group.add(body);
+
+  const neonTie = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.28, 0.03), neonMagentaMat);
+  neonTie.position.set(0, 0.66, 0.13);
+  group.add(neonTie);
+
+  const lapelL = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.36, 0.02), neonCyanMat);
+  lapelL.position.set(-0.11, 0.65, 0.13);
+  const lapelR = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.36, 0.02), neonCyanMat);
+  lapelR.position.set(0.11, 0.65, 0.13);
+  group.add(lapelL, lapelR);
+
+  // Head with Cyber Visor
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), skinMat);
+  head.position.y = 1.02;
+  head.castShadow = true;
+  group.add(head);
+
+  // Cybernetic Visor Shades
+  const visor = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.07, 0.08), neonCyanMat);
+  visor.position.set(0, 1.04, 0.12);
+  group.add(visor);
+
+  // Arms
+  const armGeo = new THREE.BoxGeometry(0.12, 0.44, 0.12);
+  const armL = new THREE.Mesh(armGeo, cyberSuitMat);
+  armL.position.set(-0.28, 0.58, 0);
+  armL.castShadow = true;
+  const armR = new THREE.Mesh(armGeo, cyberSuitMat);
+  armR.position.set(0.28, 0.58, 0);
+  armR.castShadow = true;
+  group.add(armL, armR);
+
+  // Hologram Projector Briefcase in Left Hand
+  const briefcase = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.32, 0.38), cyberSuitMat);
+  briefcase.position.set(-0.36, 0.36, 0.1);
+  const projectorBeam = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.28, 12), neonCyanMat);
+  projectorBeam.rotation.x = Math.PI / 2;
+  projectorBeam.position.set(0, 0.18, 0.14);
+  briefcase.add(projectorBeam);
+  group.add(briefcase);
+
+  // Legs with Cyber-Booster Soles
+  const legGeo = new THREE.BoxGeometry(0.15, 0.44, 0.15);
+  const legL = new THREE.Mesh(legGeo, cyberSuitMat);
+  legL.position.set(-0.11, 0.22, 0);
+  legL.castShadow = true;
+  const legR = new THREE.Mesh(legGeo, cyberSuitMat);
+  legR.position.set(0.11, 0.22, 0);
+  legR.castShadow = true;
+  group.add(legL, legR);
+
+  const boosterL = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.04, 0.18), neonMagentaMat);
+  boosterL.position.set(-0.11, 0.02, 0.02);
+  const boosterR = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.04, 0.18), neonMagentaMat);
+  boosterR.position.set(0.11, 0.02, 0.02);
+  group.add(boosterL, boosterR);
+
+  return { group, legL, legR, armL, armR, head };
+}

@@ -116,6 +116,9 @@ import {
   createKurierEnemyModel,
   createItalianVendorEnemyModel,
   createSztaplarEnemyModel,
+  createMutantGammaForkliftModel,
+  createRadioactivePipModel,
+  createCyberSalesmanModel,
   createSprayGraffitiDecal,
   createCrimeSceneBodyOutlineDecal,
   createKrolLetoBossModel,
@@ -312,6 +315,24 @@ export class PaleciakiGameEngine {
       "Chronimy ostatnią paletę Biały Marmur przed spekulantami!",
       "Stój! Nadzorca Zero nie przyjmuje już żadnych reklamacji!",
       "Tylko przez mój trup dotkniesz tej armatury z 24k złota!",
+    ],
+    mutant_gamma_forklift: [
+      "PROMIENIUJĘ SZYBCIEJ NIŻ KUCHENKA MIKROFALOWA W POKOJU SOCJALNYM!",
+      "UDT NIE MA JURYSDYKCJI W STREFIE SKAŻENIA GAMMA B4!",
+      "Z DROGI ŚLEDZIE, WÓZEK PO TRZECH AWARIACH REAKTORA JEDZIE!",
+      "TA PALETA WAŻY 14 TON I ŚWIECI ZIELONYM NEONEM!",
+    ],
+    radioactive_pip: [
+      "MANDAT 50 000 ZŁ ZA NARUSZENIE DYLATACJI CZASOPRZESTRZENNEJ!",
+      "MOJE KARTOTEKI MAJĄ POŁOWICZNY ROZPAD 400 LAT!",
+      "LICZNIK GEIGERA WSKAZUJE KOMPLETNY BRAK PROTOKOŁU ODBIORU!",
+      "PROSZĘ ZAŁOŻYĆ OŁOWIANY KASK BHP LUB ZAMYKAM TĘ HALĘ NA ZAWSZE!",
+    ],
+    cyber_salesman: [
+      "CYBER-OFERTA 3.0: PŁYTKI Z METAWERSUM Z RABATEM 99%!",
+      "POBIERAM FAKTURĘ PROFORMA BEZPOŚREDNIO DO TWOJEGO NEURO-ZŁĄCZA!",
+      "MOJE PREZENTACJE POWERPOINT ZADAJĄ REALNE OBRAŻENIA OBSZAROWE!",
+      "CYBER-CERAMIKA: ZERO FUGI, 100% MIESIĘCZNEJ SUBKRYPCJI!",
     ],
     bosman_krakow: [
       "Odprawa 3-miesięczna czeka na każdego marudera!",
@@ -969,14 +990,14 @@ export class PaleciakiGameEngine {
   }
 
   private setupLighting() {
-    this.ambientLight = new THREE.AmbientLight(0xd9e8ff, 0.92);
+    this.ambientLight = new THREE.AmbientLight(0xddeeff, 1.05);
     this.scene.add(this.ambientLight);
 
-    this.hemiLight = new THREE.HemisphereLight(0x9edcff, 0x253044, 1.35);
+    this.hemiLight = new THREE.HemisphereLight(0x93c5fd, 0x1e293b, 1.45);
     this.scene.add(this.hemiLight);
 
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
-    this.dirLight = new THREE.DirectionalLight(0xffe8c9, 3.25);
+    this.dirLight = new THREE.DirectionalLight(0xffedd5, 3.65);
     this.dirLight.position.set(16, 26, 14);
     this.dirLight.castShadow = true;
     // Mobile shadow maps are refreshed at a controlled cadence while the
@@ -1002,7 +1023,7 @@ export class PaleciakiGameEngine {
     this.dirLight.shadow.radius = isMobile ? 1 : 2;
     this.scene.add(this.dirLight);
 
-    this.rimLight = new THREE.DirectionalLight(0x7dd3fc, 1.25);
+    this.rimLight = new THREE.DirectionalLight(0x38bdf8, 2.15);
     this.rimLight.position.set(-16, 10, -14);
     this.scene.add(this.rimLight);
 
@@ -5007,6 +5028,108 @@ export class PaleciakiGameEngine {
     });
   }
 
+  private addMutantGammaForkliftEnemy(id: string, x: number, minZ: number, maxZ: number, name = 'Mutant Gamma-Sztaplarka — radioaktywny taran') {
+    const built = createMutantGammaForkliftModel();
+    built.group.position.set(x, 0.45, minZ);
+    this.levelRoot.add(built.group);
+    this.enemies.push({
+      id,
+      type: 'mutant_gamma_forklift',
+      name,
+      mesh: built.group,
+      speechMesh: null,
+      x,
+      y: 0.45,
+      z: minZ,
+      startX: minZ,
+      endX: maxZ,
+      speed: 3.6,
+      dir: 1,
+      hp: 7,
+      maxHp: 7,
+      state: 'patrol',
+      stunTimer: 0,
+      shoutTimer: 0,
+      shoutText: '',
+      attackCooldown: 0,
+      walkCycle: 0,
+      legL: built.legL,
+      legR: built.legR,
+      armL: built.armL,
+      armR: built.armR,
+      head: built.head,
+      specialActionTimer: 2.5,
+    });
+  }
+
+  private addRadioactivePipEnemy(id: string, x: number, minZ: number, maxZ: number, name = 'Radioaktywny Inspektor PIP — protokół skażenia') {
+    const built = createRadioactivePipModel();
+    built.group.position.set(x, 0.4, minZ);
+    this.levelRoot.add(built.group);
+    this.enemies.push({
+      id,
+      type: 'radioactive_pip',
+      name,
+      mesh: built.group,
+      speechMesh: null,
+      x,
+      y: 0.4,
+      z: minZ,
+      startX: minZ,
+      endX: maxZ,
+      speed: 3.2,
+      dir: 1,
+      hp: 6,
+      maxHp: 6,
+      state: 'patrol',
+      stunTimer: 0,
+      shoutTimer: 0,
+      shoutText: '',
+      attackCooldown: 0,
+      walkCycle: 0,
+      legL: built.legL,
+      legR: built.legR,
+      armL: built.armL,
+      armR: built.armR,
+      head: built.head,
+      specialActionTimer: 3.2,
+    });
+  }
+
+  private addCyberSalesmanEnemy(id: string, x: number, minZ: number, maxZ: number, name = 'Cyber-Handlowiec 3.0 — oferta hologramowa') {
+    const built = createCyberSalesmanModel();
+    built.group.position.set(x, 0.4, minZ);
+    this.levelRoot.add(built.group);
+    this.enemies.push({
+      id,
+      type: 'cyber_salesman',
+      name,
+      mesh: built.group,
+      speechMesh: null,
+      x,
+      y: 0.4,
+      z: minZ,
+      startX: minZ,
+      endX: maxZ,
+      speed: 4.5,
+      dir: 1,
+      hp: 5,
+      maxHp: 5,
+      state: 'patrol',
+      stunTimer: 0,
+      shoutTimer: 0,
+      shoutText: '',
+      attackCooldown: 0,
+      walkCycle: 0,
+      legL: built.legL,
+      legR: built.legR,
+      armL: built.armL,
+      armR: built.armR,
+      head: built.head,
+      specialActionTimer: 2.2,
+    });
+  }
+
   private spawnLootCrate(x: number, y: number, z: number) {
     const mesh = createLootCrateModel();
     mesh.position.set(x, y + 0.25, z);
@@ -7956,6 +8079,15 @@ export class PaleciakiGameEngine {
           this.addPiorunDronEnemy(id, minX, maxX, z, 1.9, 'Piorun Dron — patrol elektryczny B4');
           break;
         }
+        case 'mutant_gamma_forklift':
+          this.addMutantGammaForkliftEnemy(id, x, minZ, maxZ);
+          break;
+        case 'radioactive_pip':
+          this.addRadioactivePipEnemy(id, x, minZ, maxZ);
+          break;
+        case 'cyber_salesman':
+          this.addCyberSalesmanEnemy(id, x, minZ, maxZ);
+          break;
         case 'elite_walczak_guard':
         default:
           this.addEliteGuardEnemy(id, x, minZ, maxZ, 'Elitarny strażnik sektora');
@@ -9424,6 +9556,16 @@ export class PaleciakiGameEngine {
       }
     }
     this.triggerEnemyHitReaction(enemy, actualDamage, sourceX, sourceZ);
+    if (actualDamage > 0) {
+      const isCrit = actualDamage >= 4 || Math.random() < 0.28;
+      const comicWords = ['POW!', 'BUM!', 'KRACH!', 'WZ-CRIT!', '44 TON!', 'FAKTURA!', 'DYLATACJA!'];
+      const chosenWord = comicWords[Math.floor(Math.random() * comicWords.length)];
+      if (isCrit) {
+        this.emitFloatingToast(`💥 ${chosenWord} -${actualDamage}`, enemy.x, enemy.y + 1.25, enemy.z, 'combo');
+      } else {
+        this.emitFloatingToast(`-${actualDamage}`, enemy.x, enemy.y + 1.05, enemy.z, 'damage');
+      }
+    }
     return enemy.hp;
   }
 
@@ -10163,6 +10305,30 @@ export class PaleciakiGameEngine {
             e.specialActionTimer = 2.2;
             this.spawnSparkZapProjectile(e.x, e.y + 0.8, e.z);
             this.emitFloatingToast('⚡ ISKRA SERWISU!', e.x, e.y + 1.2, e.z, 'damage');
+          }
+        } else if (e.type === 'mutant_gamma_forklift' && e.specialActionTimer !== undefined) {
+          e.specialActionTimer -= dt * survivalAbilityRate;
+          if (e.specialActionTimer <= 0) {
+            e.specialActionTimer = 2.8;
+            this.spawnParticleRing(e.x, 0.15, e.z, 0x4ade80);
+            this.emitFloatingToast('☣️ SKAŻENIE GAMMA!', e.x, e.y + 1.2, e.z, 'damage');
+            sound.playElectricalSparks();
+          }
+        } else if (e.type === 'radioactive_pip' && e.specialActionTimer !== undefined) {
+          e.specialActionTimer -= dt * survivalAbilityRate;
+          if (e.specialActionTimer <= 0 && distToPlayer < 9.5) {
+            e.specialActionTimer = 3.4;
+            this.spawnParticleRing(e.x, 0.25, e.z, 0x84cc16);
+            this.emitFloatingToast('☢️ PROTOKÓŁ SKAŻENIA PIP!', e.x, e.y + 1.2, e.z, 'damage');
+            sound.playSirens();
+          }
+        } else if (e.type === 'cyber_salesman' && e.specialActionTimer !== undefined) {
+          e.specialActionTimer -= dt * survivalAbilityRate;
+          if (e.specialActionTimer <= 0 && distToPlayer < 10.0) {
+            e.specialActionTimer = 2.4;
+            this.spawnPenaltyNotice(e.x, e.y + 0.8, e.z);
+            this.emitFloatingToast('💻 CYBER-KATALOG 3.0!', e.x, e.y + 1.2, e.z, 'damage');
+            sound.playAttackWhoosh();
           }
         } else if (e.type === 'bosman_krakow' && e.specialActionTimer !== undefined) {
           const isPhase2 = e.hp <= e.maxHp * 0.5;
@@ -13155,7 +13321,8 @@ export class PaleciakiGameEngine {
       e.type === 'elite_walczak_guard' || e.maxHp >= 4;
     const isSurvivalEliteReward =
       e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' ||
-      e.type === 'elite_walczak_guard' || e.type === 'sebix_m';
+      e.type === 'elite_walczak_guard' || e.type === 'sebix_m' ||
+      e.type === 'mutant_gamma_forklift' || e.type === 'radioactive_pip' || e.type === 'cyber_salesman';
     const dropChance = this.gameMode === 'survival'
       ? (isSurvivalEliteReward ? 1.0 : 0.18)
       : this.charDef.id === 'piotr'
@@ -13175,6 +13342,14 @@ export class PaleciakiGameEngine {
       this.spawnLootCrate(e.x + 1.2, 0, e.z);
       this.spawnSurvivalXpGem(e.x, e.y, e.z, e.type === 'sebix_m' ? 5 : 8);
       this.emitFloatingToast(e.type === 'sebix_m' ? '🔥 OPERATOR TURBO ROZBROJONY — SKRZYNIA B4!' : '🏆 SKRZYNIA Z NAGRODĄ BOSS-A!', e.x, e.y + 2.0, e.z, 'combo');
+    }
+
+    if (this.gameMode === 'survival' && (e.type === 'mutant_gamma_forklift' || e.type === 'radioactive_pip' || e.type === 'cyber_salesman')) {
+      this.spawnLootCrate(e.x + 0.8, 0, e.z);
+      this.spawnSurvivalXpGem(e.x, e.y, e.z, 6);
+      this.spawnParticleRing(e.x, e.y + 0.5, e.z, e.type === 'cyber_salesman' ? 0x38bdf8 : 0x4ade80);
+      this.emitFloatingToast('☣️ ZMUTOWANY ELITARIUSZ POKONANY — ZŁOTA SKRZYNIA!', e.x, e.y + 1.8, e.z, 'combo');
+      sound.playEasterEgg();
     }
 
     if (e.type === 'sebix_m') {

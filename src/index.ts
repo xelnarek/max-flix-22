@@ -36,42 +36,11 @@ import { SURVIVAL_MAPS, type SurvivalMapId } from './survivalMaps.ts';
 import { launchOniricPlatformer } from './oniricPlatformer.ts';
 import { getMenuTabIndexForKey } from './menuTabNavigation.ts';
 import { readSurvivalMapPreference, writeSurvivalMapPreference } from './survivalMapPreference.ts';
-import {
-  CHARACTER_TALENTS,
-  createInitialCharacterMasteryProfile,
-  getCharacterMasterySummary,
-  getCharacterTalentBonuses,
-  recordCharacterRunResult,
-  sanitizeCharacterMasteryProfile,
-  spendCharacterTalentPoint,
-} from './characterProgression.ts';
 
 // warehouseAssets imports moved to assets.ts where they are preloaded
 
 
 const SURVIVAL_ACHIEVEMENTS_STORAGE_KEY = 'paleciaki.survival.achievements.v1';
-const CHARACTER_MASTERY_STORAGE_KEY = 'paleciaki.character.mastery.v1';
-
-const loadCharacterMasteryProfile = () => {
-  try {
-    const saved = localStorage.getItem(CHARACTER_MASTERY_STORAGE_KEY);
-    return saved
-      ? sanitizeCharacterMasteryProfile(JSON.parse(saved))
-      : createInitialCharacterMasteryProfile();
-  } catch {
-    return createInitialCharacterMasteryProfile();
-  }
-};
-
-let characterMasteryProfile = loadCharacterMasteryProfile();
-
-const persistCharacterMasteryProfile = () => {
-  try {
-    localStorage.setItem(CHARACTER_MASTERY_STORAGE_KEY, JSON.stringify(characterMasteryProfile));
-  } catch (error) {
-    console.warn('[Mastery] Local save unavailable:', error);
-  }
-};
 
 const loadSurvivalAchievementProgress = () => {
   try {
@@ -210,88 +179,208 @@ window.addEventListener('unhandledrejection', (e) => {
   console.warn('Unhandled Rejection Captured:', e.reason);
 });
 
-// Operator portraits are role-specific vector character art, not reused emoji or generic busts.
+// Operator portraits are authentic retro-arcade pixel-art character portraits (32x32 crisp matrix).
 let operatorPortraitRenderCount = 0;
 const operatorPortrait = (id: CharacterId): string => {
-  const looks: Record<CharacterId, { skin: string; hair: string; beard: string; shirt: string; accent: string; brows: string; hairShape: string; headgear: string; beardShape: string; shoulderDetail: string; badgeShape: string }> = {
-    marcin: { skin:'#e9b995', hair:'#3d2b24', beard:'none', shirt:'#173b72', accent:'#f0c46b', brows:'#39291f',
-      hairShape:'<path d="M31 48Q25 25 42 20Q60 14 73 30L78 46Q66 37 57 36Q45 42 31 48Z" fill="#3d2b24"/><path d="M37 27Q50 19 64 26" fill="none" stroke="#80604b" stroke-width="2.4" stroke-linecap="round"/>',
-      headgear:'<path d="M23 34Q25 11 56 10Q86 10 89 34L82 37Q55 31 29 39Z" fill="#f8fafc" stroke="#334155" stroke-width="2.2"/><path d="M19 33Q55 27 92 34L90 41Q55 36 20 42Z" fill="#dbe7f0" stroke="#94a3b8" stroke-width="1.5"/><path d="M45 17h22" stroke="#94a3b8" stroke-width="2.3" stroke-linecap="round"/>',
-      beardShape:'', shoulderDetail:'<path d="M24 93L36 76L47 88L59 76L85 96" fill="none" stroke="#d9e6f0" stroke-width="3"/><path d="M48 89h17" stroke="#f0c46b" stroke-width="4" stroke-linecap="round"/>',
-      badgeShape:'<path d="M-7 -4h9l7 7H-2ZM-5 2h13" fill="none" stroke="#f8e3a8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' },
-    grzesiek: { skin:'#d9a27f', hair:'#211a17', beard:'#211a17', shirt:'#14583d', accent:'#f5ca45', brows:'#241a15',
-      hairShape:'<path d="M29 49Q24 22 49 18Q76 14 82 45L75 51Q66 37 57 37Q43 43 29 49Z" fill="#211a17"/><path d="M37 26Q54 17 69 27" fill="none" stroke="#564238" stroke-width="2.5" stroke-linecap="round"/>',
-      headgear:'<path d="M20 35Q23 9 55 8Q87 10 90 35L83 39Q55 33 28 40Z" fill="#f5ca45" stroke="#523f15" stroke-width="2.3"/><path d="M16 34Q55 27 94 35L91 43Q55 37 18 44Z" fill="#d89c22" stroke="#523f15" stroke-width="1.6"/><path d="M27 20L32 15M78 16l6 7" stroke="#fff1b6" stroke-width="2.5" stroke-linecap="round"/>',
-      beardShape:'<path d="M31 62Q40 70 55 68Q68 65 77 60L73 81Q65 94 52 94Q37 92 30 80Z" fill="#211a17"/><path d="M38 77Q53 86 69 75" fill="none" stroke="#594137" stroke-width="2.4" stroke-linecap="round"/>',
-      shoulderDetail:'<path d="M19 96L31 78L43 91L55 82L73 96" fill="none" stroke="#f5ca45" stroke-width="4"/><path d="M16 78h9M82 78h9" stroke="#f5ca45" stroke-width="5" stroke-linecap="round"/>',
-      badgeShape:'<path d="M-9 0h5m18 0h5M-5 -6v12m10-12v12M-5 0h10" stroke="#fff0a6" stroke-width="2.6" stroke-linecap="round"/>' },
-    dawid: { skin:'#e4b18d', hair:'#49291d', beard:'#573323', shirt:'#9a4b16', accent:'#f5a04c', brows:'#382219',
-      hairShape:'<path d="M30 48Q28 25 47 19Q69 14 79 39L76 49Q65 35 56 36Q45 42 30 48Z" fill="#49291d"/><path d="M40 27Q53 18 67 27" fill="none" stroke="#84513a" stroke-width="2.4" stroke-linecap="round"/>',
-      headgear:'<path d="M22 35Q26 10 55 10Q83 12 88 35L80 39Q53 32 29 41Z" fill="#f47b32" stroke="#7c3415" stroke-width="2.2"/><path d="M18 34Q55 27 92 35L88 43Q54 37 20 44Z" fill="#ffb05e" stroke="#7c3415" stroke-width="1.5"/><path d="M34 17l7-4M68 14l8 4" stroke="#ffe1bd" stroke-width="2" stroke-linecap="round"/>',
-      beardShape:'<path d="M35 64Q48 72 63 65L70 72Q65 88 52 90Q39 89 34 76Z" fill="#573323"/><path d="M42 78Q53 83 64 76" fill="none" stroke="#9a6244" stroke-width="2.2" stroke-linecap="round"/>',
-      shoulderDetail:'<path d="M27 82L38 93L53 83L67 94L82 83" fill="none" stroke="#f5a04c" stroke-width="4"/><path d="M40 85l7 8 7-8" fill="none" stroke="#fff0d8" stroke-width="2"/>',
-      badgeShape:'<path d="M-7 -7L7 7M7 -7L-7 7M-9 0h18" stroke="#ffe1b7" stroke-width="2.4" stroke-linecap="round"/>' },
-    mateusz: { skin:'#e7b99c', hair:'#30241f', beard:'#47352d', shirt:'#51249a', accent:'#c9a8ff', brows:'#30241f',
-      hairShape:'<path d="M29 47Q27 25 47 20Q72 15 79 43L74 48Q62 34 54 36Q41 41 29 47Z" fill="#30241f"/><path d="M39 27Q54 18 68 27" fill="none" stroke="#685247" stroke-width="2.4" stroke-linecap="round"/>',
-      headgear:'<path d="M25 34Q27 10 54 10Q79 11 85 31L75 35Q55 29 31 40Z" fill="#6d3ab8" stroke="#251443" stroke-width="2.3"/><path d="M21 34Q52 25 87 33L91 39Q55 34 22 43Z" fill="#a78bfa" stroke="#251443" stroke-width="1.6"/><path d="M31 19Q54 12 73 22" fill="none" stroke="#e9d5ff" stroke-width="2.5" stroke-linecap="round"/><path d="M21 37Q12 43 17 57M86 36Q97 43 91 56" fill="none" stroke="#2c1a55" stroke-width="4" stroke-linecap="round"/><circle cx="16" cy="58" r="5" fill="#c4b5fd"/><circle cx="92" cy="57" r="5" fill="#c4b5fd"/>',
-      beardShape:'<path d="M37 65Q51 71 65 64L68 73Q63 84 52 85Q41 84 36 74Z" fill="#47352d"/>',
-      shoulderDetail:'<path d="M30 84L41 94L53 84L66 94L78 83" fill="none" stroke="#c9a8ff" stroke-width="3.5"/><path d="M47 84l5-8 5 8-5 7Z" fill="#f0abfc"/>',
-      badgeShape:'<path d="M1 -10L4 -3L11 -2L5 3L7 10L1 6L-6 10L-4 3L-10 -2L-3 -3Z" fill="#e9d5ff" stroke="#7c3aed" stroke-width="1.2"/>' },
-    piotr: { skin:'#d4a585', hair:'#77736d', beard:'#77736d', shirt:'#7f1d1d', accent:'#ef5b5b', brows:'#66615c',
-      hairShape:'<path d="M28 49Q24 25 46 19Q72 14 81 42L77 52Q66 34 56 37Q42 44 28 49Z" fill="#77736d"/><path d="M38 27Q54 18 70 27" fill="none" stroke="#bbb5ad" stroke-width="2.4" stroke-linecap="round"/>',
-      headgear:'<path d="M21 35Q25 10 55 9Q84 10 89 35L81 39Q55 31 28 41Z" fill="#b91c1c" stroke="#4c1118" stroke-width="2.3"/><path d="M17 34Q55 27 92 35L89 43Q55 36 19 44Z" fill="#ef5b5b" stroke="#4c1118" stroke-width="1.6"/><path d="M47 15h16" stroke="#fecaca" stroke-width="2.5" stroke-linecap="round"/>',
-      beardShape:'<path d="M30 62Q49 72 70 61L74 78Q67 94 52 96Q36 93 29 78Z" fill="#77736d"/><path d="M36 75Q52 85 68 75" fill="none" stroke="#c2beb7" stroke-width="2.5" stroke-linecap="round"/>',
-      shoulderDetail:'<path d="M23 94L35 80L47 91L60 80L83 95" fill="none" stroke="#fecaca" stroke-width="3"/><path d="M48 83l6 10" stroke="#ef5b5b" stroke-width="4" stroke-linecap="round"/>',
-      badgeShape:'<path d="M-8 -7L7 8M7 -8L-8 7M-10 0h20" stroke="#fecaca" stroke-width="2.6" stroke-linecap="round"/>' },
+  const meta: Record<CharacterId, { name: string; accent: string; secondary: string }> = {
+    marcin: { name: 'Operator 01 (Marcin)', accent: '#62c6e8', secondary: '#f59e0b' },
+    grzesiek: { name: 'Operator 02 (Grzesiek)', accent: '#5bd59a', secondary: '#22c55e' },
+    dawid: { name: 'Operator 03 (Dawid)', accent: '#e9a65b', secondary: '#f97316' },
+    mateusz: { name: 'Operator 04 (Mateusz)', accent: '#b49af5', secondary: '#ec4899' },
+    piotr: { name: 'Operator 05 (Piotr)', accent: '#f07178', secondary: '#ef4444' },
   };
-  const p = looks[id];
+  const m = meta[id] || meta.marcin;
   const instance = ++operatorPortraitRenderCount;
-  const bgId = 'operator-bg-' + id + '-' + instance;
-  const faceId = 'operator-face-' + id + '-' + instance;
-  const clipId = 'operator-clip-' + id + '-' + instance;
-  const goggles = id === 'dawid'
-    ? '<path d="M34 48h14m7 0h14" stroke="#7c3415" stroke-width="2.8" stroke-linecap="round"/><rect x="31" y="43" width="17" height="11" rx="4" fill="none" stroke="#f8d6b6" stroke-width="2"/><rect x="53" y="43" width="17" height="11" rx="4" fill="none" stroke="#f8d6b6" stroke-width="2"/>'
-    : '';
-  const clipboard = id === 'marcin'
-    ? '<path d="M43 84h25v17H43z" fill="#dbeafe" stroke="#183b70" stroke-width="1.6"/><path d="M48 89h15M48 94h10" stroke="#315b88" stroke-width="1.6" stroke-linecap="round"/>'
-    : '';
+  const clipId = `pixel-clip-${id}-${instance}`;
 
-  // Each operator has an individual face outline, not just a different helmet colour.
-  const faceShapes: Record<CharacterId, string> = {
-    marcin: '<path d="M31 47Q30 24 55 21Q80 22 82 48L76 68Q69 80 56 82Q42 80 35 68Z" fill="url(#' + faceId + ')" stroke="#573c31" stroke-opacity=".2" stroke-width="1.5"/>',
-    grzesiek: '<path d="M22 47Q23 21 55 19Q87 20 90 47L85 71Q74 88 56 89Q36 87 27 71Z" fill="url(#' + faceId + ')" stroke="#573c31" stroke-opacity=".2" stroke-width="1.5"/>',
-    dawid: '<path d="M32 46Q31 22 55 20Q78 21 80 47L74 71Q67 84 56 85Q44 82 37 69Z" fill="url(#' + faceId + ')" stroke="#573c31" stroke-opacity=".2" stroke-width="1.5"/>',
-    mateusz: '<path d="M33 47Q32 23 56 21Q77 22 79 47L73 68Q67 79 56 80Q44 78 38 68Z" fill="url(#' + faceId + ')" stroke="#573c31" stroke-opacity=".18" stroke-width="1.5"/>',
-    piotr: '<path d="M25 47Q25 20 56 19Q86 20 87 47L81 70Q73 86 56 86Q38 84 30 70Z" fill="url(#' + faceId + ')" stroke="#573c31" stroke-opacity=".24" stroke-width="1.5"/>',
-  };
-  const faceSignatures: Record<CharacterId, string> = {
-    marcin: '<g fill="none" stroke="#cbdcf0" stroke-width="2.2" stroke-linecap="round"><rect x="31" y="46" width="18" height="12" rx="3"/><rect x="58" y="46" width="18" height="12" rx="3"/><path d="M49 51h9"/></g><path d="M47 73Q56 76 65 72" fill="none" stroke="#875848" stroke-width="2"/>',
-    grzesiek: '<path d="M34 68Q43 62 52 68Q56 72 60 68Q68 62 78 68L75 76Q65 81 56 77Q46 82 37 76Z" fill="#211a17" opacity=".96"/><path d="M30 45Q40 40 49 45M63 45Q73 40 82 45" fill="none" stroke="#241a15" stroke-width="4.2" stroke-linecap="round"/>',
-    dawid: '<g fill="#8b5132" opacity=".8"><circle cx="38" cy="65" r="1.4"/><circle cx="44" cy="69" r="1.2"/><circle cx="69" cy="68" r="1.3"/><circle cx="75" cy="64" r="1.2"/><circle cx="55" cy="69" r="1.1"/></g><path d="M47 76Q56 80 65 75" fill="none" stroke="#92573f" stroke-width="2" stroke-linecap="round"/>',
-    mateusz: '<path d="M78 57Q91 62 88 76L78 79" fill="none" stroke="#201a34" stroke-width="2.7" stroke-linecap="round"/><circle cx="77" cy="80" r="3.2" fill="#67e8f9" stroke="#21123f" stroke-width="1.2"/><path d="M48 73Q56 77 64 72" fill="none" stroke="#875c52" stroke-width="1.8" stroke-linecap="round"/>',
-    piotr: '<g fill="none" stroke="#b3aaa0" stroke-width="1.6" stroke-linecap="round" opacity=".9"><path d="M35 61q6-3 11 0M66 60q6-3 11 0M43 36q6-3 12-1M59 35q6-2 11 1"/></g><path d="M38 70Q45 64 53 68Q56 72 60 68Q68 64 75 70L72 76Q65 82 56 77Q47 82 40 76Z" fill="#77736d"/>',
-  };
+  // Pixel art pixel blocks crafted on a 32x32 arcade canvas
+  let pixelLayers = '';
+
+  if (id === 'marcin') {
+    // Marcin: Safety helmet with visor, spectacles, navy collar, tie, and WZ document
+    pixelLayers = `
+      <!-- Helmet -->
+      <rect x="8" y="3" width="16" height="3" fill="#f59e0b"/>
+      <rect x="6" y="6" width="20" height="4" fill="#fbbf24"/>
+      <rect x="4" y="9" width="24" height="2" fill="#d97706"/>
+      <!-- Face & Hair -->
+      <rect x="5" y="11" width="3" height="4" fill="#3e2723"/>
+      <rect x="24" y="11" width="3" height="4" fill="#3e2723"/>
+      <rect x="8" y="11" width="16" height="9" fill="#fcd34d"/>
+      <!-- Glasses (Cyan Wireframe) -->
+      <rect x="9" y="13" width="5" height="4" fill="#075985"/>
+      <rect x="10" y="14" width="3" height="2" fill="#38bdf8"/>
+      <rect x="14" y="14" width="4" height="1" fill="#0284c7"/>
+      <rect x="18" y="13" width="5" height="4" fill="#075985"/>
+      <rect x="19" y="14" width="3" height="2" fill="#38bdf8"/>
+      <!-- Eyes & Brows -->
+      <rect x="9" y="12" width="5" height="1" fill="#1e293b"/>
+      <rect x="18" y="12" width="5" height="1" fill="#1e293b"/>
+      <rect x="11" y="15" width="1" height="1" fill="#0f172a"/>
+      <rect x="20" y="15" width="1" height="1" fill="#0f172a"/>
+      <!-- Mouth -->
+      <rect x="13" y="18" width="6" height="1" fill="#b45309"/>
+      <!-- Suit & Tie -->
+      <rect x="6" y="20" width="20" height="11" fill="#1e3a8a"/>
+      <rect x="12" y="20" width="8" height="5" fill="#f8fafc"/>
+      <rect x="15" y="21" width="2" height="10" fill="#f59e0b"/>
+      <rect x="14" y="23" width="4" height="3" fill="#d97706"/>
+      <!-- WZ Document in Hand -->
+      <rect x="22" y="19" width="8" height="12" fill="#ffffff"/>
+      <rect x="23" y="20" width="6" height="10" fill="#f1f5f9"/>
+      <rect x="24" y="21" width="4" height="1" fill="#94a3b8"/>
+      <rect x="24" y="23" width="4" height="1" fill="#94a3b8"/>
+      <rect x="24" y="25" width="4" height="1" fill="#94a3b8"/>
+      <rect x="25" y="27" width="3" height="3" fill="#ef4444"/>
+    `;
+  } else if (id === 'grzesiek') {
+    // Grzesiek: Green sweatband, square jaw, stubble, massive 44cm flexed bicep & dumbbell
+    pixelLayers = `
+      <!-- Hair & Buzzcut -->
+      <rect x="9" y="3" width="14" height="3" fill="#1c1917"/>
+      <!-- Green Sweatband -->
+      <rect x="7" y="6" width="18" height="3" fill="#22c55e"/>
+      <rect x="9" y="7" width="14" height="1" fill="#86efac"/>
+      <!-- Face & Stubble Jaw -->
+      <rect x="8" y="9" width="16" height="11" fill="#fcd34d"/>
+      <rect x="8" y="16" width="16" height="4" fill="#d97706" opacity="0.4"/>
+      <!-- Eyes & Heavy Brows -->
+      <rect x="9" y="11" width="5" height="2" fill="#1c1917"/>
+      <rect x="18" y="11" width="5" height="2" fill="#1c1917"/>
+      <rect x="10" y="13" width="3" height="2" fill="#0f172a"/>
+      <rect x="19" y="13" width="3" height="2" fill="#0f172a"/>
+      <rect x="11" y="13" width="1" height="1" fill="#ffffff"/>
+      <rect x="20" y="13" width="1" height="1" fill="#ffffff"/>
+      <rect x="13" y="17" width="6" height="1" fill="#78350f"/>
+      <!-- Tank Top & Body -->
+      <rect x="6" y="20" width="20" height="11" fill="#15803d"/>
+      <rect x="12" y="20" width="8" height="4" fill="#fcd34d"/>
+      <!-- Massive Flexed 44cm Bicep -->
+      <rect x="22" y="14" width="7" height="6" fill="#f59e0b"/>
+      <rect x="24" y="13" width="5" height="8" fill="#fbbf24"/>
+      <rect x="25" y="16" width="3" height="1" fill="#ef4444" opacity="0.6"/> <!-- Vein -->
+      <!-- Dumbbell -->
+      <rect x="26" y="8" width="4" height="3" fill="#64748b"/>
+      <rect x="27" y="11" width="2" height="3" fill="#94a3b8"/>
+      <rect x="26" y="14" width="4" height="3" fill="#64748b"/>
+    `;
+  } else if (id === 'dawid') {
+    // Dawid: Orange cap backwards, panoramic yellow goggles, massive 120x280 marble tile
+    pixelLayers = `
+      <!-- Backwards Orange Cap -->
+      <rect x="8" y="4" width="16" height="4" fill="#ea580c"/>
+      <rect x="6" y="7" width="20" height="3" fill="#f97316"/>
+      <rect x="4" y="9" width="5" height="2" fill="#c2410c"/> <!-- Cap Strap -->
+      <!-- Face -->
+      <rect x="8" y="10" width="16" height="10" fill="#fcd34d"/>
+      <!-- Yellow Safety Goggles -->
+      <rect x="7" y="11" width="18" height="5" fill="#ca8a04"/>
+      <rect x="8" y="12" width="7" height="3" fill="#fef08a"/>
+      <rect x="17" y="12" width="7" height="3" fill="#fef08a"/>
+      <rect x="10" y="13" width="3" height="1" fill="#ffffff"/>
+      <rect x="19" y="13" width="3" height="1" fill="#ffffff"/>
+      <!-- Beard & Smile -->
+      <rect x="10" y="17" width="12" height="3" fill="#9a3412" opacity="0.45"/>
+      <rect x="13" y="18" width="6" height="1" fill="#78350f"/>
+      <!-- Vest -->
+      <rect x="6" y="20" width="20" height="11" fill="#c2410c"/>
+      <rect x="11" y="20" width="10" height="11" fill="#e2e8f0"/>
+      <!-- Massive 120x280 Marble Slab on Shoulder -->
+      <rect x="21" y="4" width="9" height="26" fill="#f8fafc"/>
+      <rect x="22" y="5" width="7" height="24" fill="#e2e8f0"/>
+      <rect x="23" y="8" width="5" height="1" fill="#94a3b8"/>
+      <rect x="24" y="14" width="4" height="1" fill="#cbd5e1"/>
+      <rect x="23" y="20" width="5" height="1" fill="#94a3b8"/>
+      <rect x="20" y="2" width="3" height="3" fill="#38bdf8"/> <!-- Sparkle -->
+    `;
+  } else if (id === 'mateusz') {
+    // Mateusz: Cyber-purple hoodie, RGB glowing gamer headset, electric lightning & gamepad
+    pixelLayers = `
+      <!-- Purple Gamer Hoodie -->
+      <rect x="8" y="3" width="16" height="5" fill="#6b21a8"/>
+      <rect x="6" y="6" width="20" height="5" fill="#7c3aed"/>
+      <!-- RGB Headset Band -->
+      <rect x="9" y="3" width="14" height="2" fill="#ec4899"/>
+      <!-- Face & Bangs -->
+      <rect x="9" y="10" width="14" height="9" fill="#fcd34d"/>
+      <rect x="10" y="9" width="4" height="3" fill="#3b0764"/>
+      <rect x="18" y="9" width="4" height="2" fill="#3b0764"/>
+      <!-- RGB Earcups & Mic Boom -->
+      <rect x="4" y="10" width="4" height="7" fill="#06b6d4"/>
+      <rect x="5" y="11" width="2" height="5" fill="#a5f3fc"/>
+      <rect x="24" y="10" width="4" height="7" fill="#ec4899"/>
+      <rect x="25" y="11" width="2" height="5" fill="#fbcfe8"/>
+      <rect x="6" y="17" width="5" height="1" fill="#0891b2"/> <!-- Mic wire -->
+      <rect x="11" y="17" width="2" height="2" fill="#06b6d4"/> <!-- Mic capsule -->
+      <!-- Eyes & Gamer Stare -->
+      <rect x="10" y="13" width="4" height="2" fill="#1e1b4b"/>
+      <rect x="18" y="13" width="4" height="2" fill="#1e1b4b"/>
+      <rect x="12" y="13" width="1" height="1" fill="#67e8f9"/>
+      <rect x="20" y="13" width="1" height="1" fill="#67e8f9"/>
+      <!-- Hoodie Body -->
+      <rect x="6" y="19" width="20" height="12" fill="#581c87"/>
+      <rect x="13" y="19" width="6" height="12" fill="#7c3aed"/>
+      <!-- Lightning bolt accent -->
+      <rect x="2" y="5" width="2" height="3" fill="#facc15"/>
+      <rect x="1" y="8" width="2" height="3" fill="#facc15"/>
+      <rect x="3" y="7" width="2" height="1" fill="#ffffff"/>
+    `;
+  } else {
+    // Piotr: Crimson tactical beret, golden B4 pin, veteran mustache, ratchet wrench & capybara
+    pixelLayers = `
+      <!-- Crimson Tactical Beret -->
+      <rect x="8" y="4" width="18" height="4" fill="#b91c1c"/>
+      <rect x="6" y="7" width="20" height="3" fill="#dc2626"/>
+      <rect x="10" y="6" width="3" height="3" fill="#facc15"/> <!-- Golden B4 Pin -->
+      <!-- Face & Grizzled Hair -->
+      <rect x="7" y="10" width="3" height="4" fill="#78716c"/>
+      <rect x="22" y="10" width="3" height="4" fill="#78716c"/>
+      <rect x="9" y="10" width="14" height="10" fill="#fcd34d"/>
+      <!-- Stern Eyes & Brows -->
+      <rect x="10" y="12" width="4" height="1" fill="#44403c"/>
+      <rect x="18" y="12" width="4" height="1" fill="#44403c"/>
+      <rect x="11" y="13" width="2" height="2" fill="#1c1917"/>
+      <rect x="19" y="13" width="2" height="2" fill="#1c1917"/>
+      <rect x="12" y="13" width="1" height="1" fill="#ffffff"/>
+      <rect x="20" y="13" width="1" height="1" fill="#ffffff"/>
+      <!-- Thick Veteran Mustache -->
+      <rect x="10" y="16" width="12" height="3" fill="#57534e"/>
+      <rect x="9" y="17" width="14" height="2" fill="#78716c"/>
+      <!-- Tactical Jacket -->
+      <rect x="6" y="20" width="20" height="11" fill="#292524"/>
+      <rect x="13" y="20" width="6" height="11" fill="#991b1b"/>
+      <!-- Ratchet Wrench B4 -->
+      <rect x="22" y="12" width="4" height="4" fill="#94a3b8"/>
+      <rect x="23" y="16" width="2" height="14" fill="#cbd5e1"/>
+      <rect x="22" y="28" width="4" height="3" fill="#dc2626"/> <!-- Handle grip -->
+      <!-- Golden Capybara Silhouette Pin -->
+      <rect x="8" y="22" width="4" height="3" fill="#facc15"/>
+      <rect x="7" y="23" width="2" height="2" fill="#facc15"/>
+    `;
+  }
+
   return [
-    '<svg class="operator-portrait" viewBox="0 0 112 112" role="img" aria-label="Portret operatora ' + CHARACTERS[id].name + '" xmlns="http://www.w3.org/2000/svg">',
-    '<defs><linearGradient id="' + bgId + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + p.shirt + '"/><stop offset="1" stop-color="#081321"/></linearGradient>',
-    '<linearGradient id="' + faceId + '" x1="0" y1="0" x2=".2" y2="1"><stop offset="0" stop-color="#f4d0ae"/><stop offset="1" stop-color="' + p.skin + '"/></linearGradient>',
-    '<clipPath id="' + clipId + '"><rect x="2" y="2" width="108" height="108" rx="24"/></clipPath></defs>',
-    '<rect x="2" y="2" width="108" height="108" rx="24" fill="#07111e" stroke="' + p.accent + '" stroke-opacity=".8" stroke-width="2"/>',
-    '<g clip-path="url(#' + clipId + ')"><path d="M0 0h112v112H0z" fill="url(#' + bgId + ')"/>',
-    '<circle cx="88" cy="19" r="36" fill="' + p.accent + '" opacity=".12"/><path d="M5 102 27 78 42 88 57 75 82 91 108 72v40H5Z" fill="#07111d" opacity=".42"/>',
-    '<path d="M10 114Q13 80 34 76L45 72H67L79 77Q100 83 103 114Z" fill="' + p.shirt + '"/>',
-    '<path d="M25 112 39 80 55 94 71 80 88 112Z" fill="' + p.accent + '" opacity=".72"/>' + p.shoulderDetail + clipboard,
-    '<path d="M43 66h26l4 17-17 13-17-13Z" fill="' + p.skin + '"/>',
-    faceShapes[id],
-    '<ellipse cx="29" cy="54" rx="5" ry="8" fill="' + p.skin + '"/><ellipse cx="83" cy="54" rx="5" ry="8" fill="' + p.skin + '"/>',
-    p.hairShape,
-    '<path d="M36 48Q43 43 49 47M63 47Q70 43 77 48" fill="none" stroke="' + p.brows + '" stroke-width="3.1" stroke-linecap="round"/>',
-    '<ellipse cx="43" cy="54" rx="3.1" ry="3.8" fill="#172235"/><ellipse cx="69" cy="54" rx="3.1" ry="3.8" fill="#172235"/><circle cx="44" cy="53" r="1" fill="#fff"/><circle cx="70" cy="53" r="1" fill="#fff"/>',
-    '<path d="M56 54 52 64Q56 67 60 64" fill="none" stroke="#a86f58" stroke-width="2" stroke-linecap="round"/><path d="M47 72Q56 77 65 71" fill="none" stroke="#814b42" stroke-width="2.4" stroke-linecap="round"/>',
-    p.beardShape, faceSignatures[id], goggles, p.headgear,
-    '<path d="M9 95h20M84 95h19" stroke="#fff" stroke-opacity=".22" stroke-width="1.4"/><path d="M9 16h12M15 10v12" stroke="' + p.accent + '" stroke-opacity=".5" stroke-width="1.5"/>',
-    '</g><circle cx="88" cy="86" r="14" fill="#08111d" stroke="' + p.accent + '" stroke-width="2"/><g transform="translate(88 86)" stroke-linecap="round" stroke-linejoin="round">' + p.badgeShape + '</g>',
-    '<path d="M11 9h12M9 11v12M101 89v12M89 103h12" stroke="#fff" stroke-opacity=".38" stroke-width="1.4" fill="none"/></svg>'
+    '<svg class="operator-portrait pixel-art-portrait" viewBox="0 0 32 32" role="img" aria-label="Portret pixel art ' + m.name + '" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">',
+    '<defs>',
+    '<clipPath id="' + clipId + '"><rect x="1" y="1" width="30" height="30" rx="4"/></clipPath>',
+    '</defs>',
+    '<!-- CRT Arcade Background & Neon Frame -->',
+    '<rect x="0" y="0" width="32" height="32" rx="5" fill="#07111e" stroke="' + m.accent + '" stroke-width="1.5"/>',
+    '<g clip-path="url(#' + clipId + ')">',
+    '<rect x="0" y="0" width="32" height="32" fill="#050c17"/>',
+    '<!-- Arcade Scanline Texture -->',
+    '<line x1="0" y1="4" x2="32" y2="4" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1"/>',
+    '<line x1="0" y1="8" x2="32" y2="8" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1"/>',
+    '<line x1="0" y1="12" x2="32" y2="12" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1"/>',
+    '<line x1="0" y1="16" x2="32" y2="16" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1"/>',
+    '<line x1="0" y1="20" x2="32" y2="20" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1"/>',
+    '<line x1="0" y1="24" x2="32" y2="24" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1"/>',
+    '<line x1="0" y1="28" x2="32" y2="28" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1"/>',
+    pixelLayers,
+    '</g>',
+    '<!-- Arcade Neon Corner Accents -->',
+    '<path d="M2 5V2H5M27 2H30V5M30 27V30H27M5 30H2V27" fill="none" stroke="' + m.secondary + '" stroke-width="1.2" shape-rendering="crispEdges"/>',
+    '</svg>'
   ].join('');
 };
 const escapeLeaderboardText = (value: string): string => value.replace(/[&<>"']/g, (character) => {
@@ -313,7 +402,6 @@ class PaleciakiScene extends xb.Script {
   private lastTimeSeconds: number = 0;
   private lastBossDefeated: boolean = false;
   private lastMode: 'campaign' | 'survival' = 'survival';
-  private masteryAwardedForRun = false;
   private camera: THREE.PerspectiveCamera;
   private fallbackScene: THREE.Scene;
   private lastLoopTick: number = performance.now();
@@ -344,7 +432,6 @@ class PaleciakiScene extends xb.Script {
   }
 
   private setupUIAndEngine() {
-    let renderCharacterMasteryPanel: (id: CharacterId) => void = () => {};
     const handleResize = () => {
       // visualViewport reflects the usable viewport on mobile browsers when browser chrome changes size.
       const width = Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth));
@@ -580,6 +667,9 @@ class PaleciakiScene extends xb.Script {
         zombie_pracownik: { name: 'Zombie-Magazynier', role: 'Głód Przekąsek', avatar: '🧟' },
         pomazaniec: { name: 'Pomazaniec', role: 'Rowerowy rajd / lizaki', avatar: '🚲' },
         sebix_m: { name: 'Operator Turbo', role: 'Taran B4 / cegły', avatar: '🔥' },
+        mutant_gamma_forklift: { name: 'Mutant Gamma-Sztaplarka', role: 'Radioaktywny Taran B4', avatar: '☣️' },
+        radioactive_pip: { name: 'Radioaktywny Inspektor PIP', role: 'Protokół Skażenia', avatar: '☢️' },
+        cyber_salesman: { name: 'Cyber-Handlowiec 3.0', role: 'Oferta z Metawersum', avatar: '💻' },
       };
       return metaMap[type] || { name: 'Pracownik', role: 'Magazyn', avatar: '👷' };
     };
@@ -896,30 +986,6 @@ class PaleciakiScene extends xb.Script {
           if (finalMode) finalMode.textContent = 'SURVIVAL SHIFT';
           const snapshot = this.engine.getSurvivalSnapshot();
           if (runDetail) runDetail.textContent = `FALA ${snapshot.wave} • ${snapshot.kills} ELIMINACJI • POZIOM ${snapshot.level}`;
-
-          // Award mastery exactly once when a Survival run ends. A retry starts a fresh award window.
-          if (this.lastMode === 'survival' && !this.masteryAwardedForRun) {
-            this.masteryAwardedForRun = true;
-            const operatorId = this.engine.getCharacterDef().id;
-            const masteryResult = recordCharacterRunResult(characterMasteryProfile, operatorId, {
-              kills: snapshot.kills,
-              elapsedSeconds: snapshot.elapsedSeconds,
-              bossesDefeated: snapshot.bossesDefeated,
-              secretsFound: snapshot.secretsFound,
-            });
-            characterMasteryProfile = masteryResult.profile;
-            persistCharacterMasteryProfile();
-            renderCharacterMasteryPanel(operatorId);
-            if (masteryResult.xpEarned > 0) {
-              const masteryToast = document.createElement('div');
-              masteryToast.className = 'achievement-unlock-toast';
-              masteryToast.textContent = '🎖️ ' + CHARACTERS[operatorId].name +
-                ' • +' + masteryResult.xpEarned + ' MASTERY XP' +
-                (masteryResult.levelsGained > 0 ? ' • AWANS MISTRZOSTWA: +' + masteryResult.levelsGained : '');
-              document.body.appendChild(masteryToast);
-              window.setTimeout(() => masteryToast.remove(), 3900);
-            }
-          }
 
           // The damage table is derived from actual enemy HP removed, not projectile counts.
           const damageReport = this.engine.getSurvivalDamageReport();
@@ -1245,112 +1311,6 @@ class PaleciakiScene extends xb.Script {
     // its first run after the renderer and title UI are fully ready.
     this.cinematicIntro = null;
 
-    renderCharacterMasteryPanel = (id: CharacterId) => {
-      const summary = getCharacterMasterySummary(characterMasteryProfile, id);
-      const state = characterMasteryProfile.characters[id];
-      const title = document.getElementById('character-mastery-title');
-      const level = document.getElementById('character-mastery-level');
-      const xp = document.getElementById('character-mastery-xp');
-      const points = document.getElementById('character-mastery-points');
-      const fill = document.getElementById('character-mastery-fill') as HTMLElement | null;
-      const record = document.getElementById('character-mastery-record');
-      const list = document.getElementById('character-talent-list');
-
-      if (title) title.textContent = summary.isMaxLevel
-        ? 'MISTRZOSTWO • MAKSIMUM'
-        : 'MISTRZOSTWO • ' + CHARACTERS[id].className.toUpperCase();
-      if (level) level.textContent = String(summary.level);
-      if (xp) xp.textContent = summary.isMaxLevel
-        ? 'MAKSYMALNE MISTRZOSTWO'
-        : summary.xp + ' / ' + summary.xpToNext + ' MASTERY XP';
-      if (points) {
-        const pointLabel = summary.availableTalentPoints === 1 ? 'PUNKT TALENTU' : 'PUNKTY TALENTU';
-        points.textContent = summary.availableTalentPoints + ' ' + pointLabel;
-      }
-      if (fill) fill.style.width = summary.progressPercent + '%';
-      if (record) record.textContent =
-        state.totalRuns + ' zmian • ' + state.totalKills.toLocaleString('pl-PL') +
-        ' eliminacji • ' + state.totalBosses + ' bossów';
-
-      // Show mastery on all five selection cards, not only the currently selected operator.
-      document.querySelectorAll<HTMLElement>('.char-card[data-char]').forEach((card) => {
-        const cardId = card.dataset.char as CharacterId | undefined;
-        if (!cardId || !CHARACTERS[cardId]) return;
-        let badge = card.querySelector<HTMLElement>('.char-card-mastery');
-        if (!badge) {
-          badge = document.createElement('span');
-          badge.className = 'char-card-mastery';
-          card.appendChild(badge);
-        }
-        badge.textContent = 'M' + characterMasteryProfile.characters[cardId].level;
-        badge.title = 'Mistrzostwo: poziom ' + characterMasteryProfile.characters[cardId].level + ' / 15';
-      });
-
-      if (!list) return;
-      list.replaceChildren();
-      const effectLabels: Record<string, string> = {
-        attack: 'SIŁA ATAKU',
-        defense: 'ODPORNOŚĆ',
-        speed: 'SZYBKOŚĆ',
-        jump: 'SIŁA SKOKU',
-        cooldown: 'CZAS SUPERUMIEJĘTNOŚCI',
-      };
-      for (const talent of CHARACTER_TALENTS[id]) {
-        const rank = state.talentRanks[talent.id] || 0;
-        const card = document.createElement('article');
-        card.className = 'character-talent-card' + (rank >= talent.maxRank ? ' is-maxed' : '');
-        const heading = document.createElement('div');
-        heading.className = 'character-talent-heading';
-        const icon = document.createElement('span');
-        icon.className = 'character-talent-icon';
-        icon.textContent = talent.icon;
-        const name = document.createElement('strong');
-        name.textContent = talent.name;
-        heading.append(icon, name);
-        const rankLabel = document.createElement('span');
-        rankLabel.className = 'character-talent-rank';
-        rankLabel.textContent = rank + ' / ' + talent.maxRank;
-        const description = document.createElement('p');
-        description.className = 'character-talent-description';
-        description.textContent = talent.description;
-        const effect = document.createElement('span');
-        effect.className = 'character-talent-effect';
-        const bonusPercent = (talent.perRank * 100 * rank).toLocaleString('pl-PL', { maximumFractionDigits: 1 });
-        const sign = talent.effect === 'defense' || talent.effect === 'cooldown' ? '−' : '+';
-        effect.textContent = effectLabels[talent.effect] + ' ' + sign + bonusPercent + '%';
-        const pips = document.createElement('div');
-        pips.className = 'character-talent-pips';
-        for (let index = 0; index < talent.maxRank; index++) {
-          const pip = document.createElement('span');
-          pip.classList.toggle('is-filled', index < rank);
-          pips.appendChild(pip);
-        }
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'character-talent-upgrade';
-        button.disabled = rank >= talent.maxRank || summary.availableTalentPoints <= 0;
-        button.textContent = rank >= talent.maxRank
-          ? 'MAKSIMUM'
-          : summary.availableTalentPoints > 0 ? 'ROZWIŃ • 1 PUNKT' : 'BRAK PUNKTÓW';
-        button.setAttribute('aria-label', 'Rozwiń talent ' + talent.name + ', aktualny poziom ' + rank + ' z ' + talent.maxRank);
-        button.addEventListener('click', () => {
-          const result = spendCharacterTalentPoint(characterMasteryProfile, id, talent.id);
-          if (!result.purchased) return;
-          characterMasteryProfile = result.profile;
-          persistCharacterMasteryProfile();
-          this.engine.selectCharacter(id, getCharacterTalentBonuses(characterMasteryProfile, id));
-          renderCharacterMasteryPanel(id);
-          const toast = document.createElement('div');
-          toast.className = 'achievement-unlock-toast';
-          toast.textContent = talent.icon + ' TALENT ROZWINIĘTY • ' + talent.name + ' ' + (rank + 1) + '/' + talent.maxRank;
-          document.body.appendChild(toast);
-          window.setTimeout(() => toast.remove(), 2600);
-        });
-        card.append(heading, rankLabel, description, effect, pips, button);
-        list.appendChild(card);
-      }
-    };
-
     const updateCharacterUI = (id: CharacterId) => {
       this.selectedCharId = id;
       const def = CHARACTERS[id];
@@ -1467,11 +1427,32 @@ class PaleciakiScene extends xb.Script {
         statValHealth.textContent = `${def.maxHp} HP`;
       }
 
-      renderCharacterMasteryPanel(id);
-      this.engine.selectCharacter(id, getCharacterTalentBonuses(characterMasteryProfile, id));
+      const showcasePortrait = document.getElementById('char-showcase-portrait');
+      if (showcasePortrait) {
+        showcasePortrait.innerHTML = operatorPortrait(id);
+      }
+
+      this.engine.selectCharacter(id);
     };
 
     updateCharacterUI('marcin');
+
+    const btnPreviewVoiceline = document.getElementById('btn-preview-voiceline');
+    if (btnPreviewVoiceline) {
+      btnPreviewVoiceline.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const charDef = CHARACTERS[this.selectedCharId];
+        if (!charDef || !charDef.voiceLines || charDef.voiceLines.length === 0) return;
+        const randomQuote = charDef.voiceLines[Math.floor(Math.random() * charDef.voiceLines.length)];
+        globalLastDialogueTime = 0;
+        sound.playAbility(this.selectedCharId);
+        createDialogueCard(randomQuote, 'hero', 'left', `${charDef.name} [Okrzyk]`);
+
+        btnPreviewVoiceline.classList.add('playing');
+        setTimeout(() => btnPreviewVoiceline.classList.remove('playing'), 650);
+      });
+    }
 
     const leaderboardLoading = document.getElementById('leaderboard-loading');
     const leaderboardList = document.getElementById('leaderboard-list');
@@ -1802,9 +1783,7 @@ class PaleciakiScene extends xb.Script {
         survivalHud?.classList.remove('hidden');
         gameShell?.classList.add('survival-mode');
 
-        this.masteryAwardedForRun = false;
-      this.masteryAwardedForRun = false;
-      this.engine.startSurvival(selectedSurvivalMapId);
+        this.engine.startSurvival(selectedSurvivalMapId);
       } catch (error) {
         console.error('[Survival] Nie udało się uruchomić rozgrywki:', error);
         titleScreen?.classList.remove('hidden');
@@ -2077,7 +2056,6 @@ class PaleciakiScene extends xb.Script {
       survivalLevelUp?.classList.add('hidden');
       survivalHud?.classList.remove('hidden');
       gameShell?.classList.add('survival-mode');
-      this.masteryAwardedForRun = false;
       this.engine.startSurvival(selectedSurvivalMapId);
     });
 
