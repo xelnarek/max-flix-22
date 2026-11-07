@@ -5900,3 +5900,68 @@ button {
   margin: 16px 0;
 }
 
+/* PvP feedback overlays: clear damage confirmation without blocking twin-stick input. */
+.pvp-hit-vignette,
+.pvp-hit-confirm {
+  position: absolute;
+  inset: 0;
+  z-index: 96;
+  pointer-events: none;
+  opacity: 0;
+}
+.pvp-hit-vignette {
+  background:
+    radial-gradient(ellipse at center, transparent 38%, rgba(239, 68, 68, .12) 68%, rgba(239, 68, 68, .5) 100%);
+  mix-blend-mode: screen;
+}
+.pvp-hit-vignette.active {
+  animation: pvp-damage-flash 260ms ease-out both;
+}
+.pvp-hit-confirm {
+  inset: auto;
+  left: 50%;
+  top: 47%;
+  z-index: 97;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: max-content;
+  color: #fef3c7;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, .95), 0 0 16px rgba(251, 191, 36, .75);
+  transform: translate(-50%, -50%);
+}
+.pvp-hit-confirm.active {
+  animation: pvp-hit-confirmation 310ms cubic-bezier(.16,.8,.28,1) both;
+}
+.pvp-hit-confirm-cross {
+  font-size: clamp(30px, 5vw, 48px);
+  line-height: .9;
+  font-weight: 1000;
+}
+.pvp-hit-confirm-label {
+  padding: 3px 7px;
+  border: 1px solid rgba(253, 230, 138, .72);
+  border-radius: 5px;
+  background: rgba(69, 26, 3, .74);
+  font-size: 9px;
+  font-weight: 1000;
+  letter-spacing: .16em;
+}
+@keyframes pvp-damage-flash {
+  0% { opacity: 0; }
+  22% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes pvp-hit-confirmation {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.55); }
+  22% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+  65% { opacity: 1; transform: translate(-50%, -58%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -68%) scale(.94); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pvp-hit-vignette.active,
+  .pvp-hit-confirm.active {
+    animation-duration: 120ms;
+  }
+}
