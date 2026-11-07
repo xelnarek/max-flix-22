@@ -2,6 +2,7 @@ import type { CharacterId } from './types.ts';
 import {
   createInitialPvpArenaState,
   resetPvpRound,
+  sanitizePvpInputIntent,
   stepPvpArena,
 } from './pvpArena.ts';
 import type {
@@ -52,6 +53,7 @@ export class PvpNetworkSession implements IPvpSession {
   private isDisposed = false;
   private isUnavailable = false;
   private hasJoinedRoom = false;
+  private hasStartedMatch = false;
   private reconnectAttempts = 0;
   private pendingCreate?: { operatorId: CharacterId; playerName: string };
   private pendingJoin?: { code: string; operatorId: CharacterId; playerName: string };
@@ -178,7 +180,11 @@ export class PvpNetworkSession implements IPvpSession {
               if (!msg.state) return;
               this.callbacks.onStateUpdate?.(msg.state);
               this.onState?.(msg.state);
-              if (msg.state.status === 'in_round' || msg.state.status === 'countdown') {
+              if (
+                !this.hasStartedMatch &&
+                (msg.state.status === 'in_round' || msg.state.status === 'countdown')
+              ) {
+                this.hasStartedMatch = true;
                 this.onMatchStart?.(msg.state);
               }
               break;
