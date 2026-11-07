@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { getPvpAimAngle, isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle, type PvpAimDirection } from './pvpAim.ts';
 import { clampHorizontalPosition } from './arenaBounds.ts';
 import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoint, resolveEnemyPlayerSeparation } from './enemySpacing.ts';
 import { calculateEnemyObstacleAvoidanceVector } from './enemyNavigation.ts';
@@ -919,6 +920,10 @@ export class PaleciakiGameEngine {
   // Input state
   private keys: Record<string, boolean> = {};
   private virtualJoystick = { x: 0, y: 0 };
+  // Separate PvP aim state: movement input must never snap the attack direction.
+  private manualAimEnabled = false;
+  private manualAimFiring = false;
+  private manualAimDirection: PvpAimDirection = { x: 0, z: 1 };
   private callbacks: GameCallbacks;
 
   // Lighting
@@ -1158,6 +1163,34 @@ export class PaleciakiGameEngine {
   public setVirtualInput(x: number, y: number) {
     this.virtualJoystick.x = x;
     this.virtualJoystick.y = y;
+  }
+
+  /** Dedicated PvP twin-stick path. The existing PvE Survival auto-aim is unaffected while disabled. */
+  public setManualAimMode(enabled: boolean) {
+    this.manualAimEnabled = enabled;
+    this.manualAimFiring = false;
+    if (enabled) this.manualAimDirection = pvpAimDirectionFromAngle(this.playerRot);
+    document.getElementById('game-shell')?.classList.toggle('manual-aim-mode', enabled);
+  }
+
+  /** Update world-space aim from the right-hand touch stick; neutral input preserves direction. */
+  public setManualAimInput(x: number, z: number) {
+    if (!this.manualAimEnabled) return;
+    const active = isPvpAimInputActive(x, z);
+    this.manualAimDirection = normalizePvpAimDirection(x, z, this.manualAimDirection);
+    this.manualAimFiring = active;
+    if (active) {
+      this.playerRot = getPvpAimAngle(this.manualAimDirection);
+      if (this.playerGroup) this.playerGroup.rotation.y = this.playerRot;
+    }
+  }
+
+  public stopManualAimFiring() {
+    this.manualAimFiring = false;
+  }
+
+  public isManualAimEnabled(): boolean {
+    return this.manualAimEnabled;
   }
 
   public selectCharacter(
@@ -1494,6 +1527,7 @@ export class PaleciakiGameEngine {
     this.oniricDreamCameraActive = false;
     this.camera.up.set(0, 1, 0);
     this.camera.updateProjectionMatrix();
+    this.setManualAimMode(false);
     this.gameMode = 'survival';
     this.updateAbilityCooldown(0, true);
     this.rebuildPlayerMesh();
@@ -3351,6 +3385,7 @@ export class PaleciakiGameEngine {
     if (this.gameMode === 'survival' && this.state === 'levelup') return;
     if (this.state === 'playing') {
       this.state = 'paused';
+      this.stopManualAimFiring();
       sound.stopMusic();
     } else if (this.state === 'paused') {
       this.state = 'playing';
@@ -6123,7 +6158,12 @@ export class PaleciakiGameEngine {
       this.updateMarcinTank(simDt);
       this.updateMateuszCats(simDt);
       this.updateMafiCapybaras(simDt);
-      if (this.gameMode === 'survival') this.updateSurvivalAutoCombat(simDt);
+      if (this.manualAimEnabled) {
+        // Hold the right stick beyond its deadzone to fire along the manually chosen direction.
+        if (this.manualAimFiring && this.attackCooldownTimer <= 0) this.triggerAttack();
+      } else if (this.gameMode === 'survival') {
+        this.updateSurvivalAutoCombat(simDt);
+      }
       this.updateProjectiles(simDt);
       if (this.gameMode === 'survival') this.updateSurvivalXpGems(simDt);
       this.updateSpecialEffects(simDt);
@@ -6166,7 +6206,7 @@ export class PaleciakiGameEngine {
   }
 
   private updateSurvivalAutoCombat(dt: number) {
-    if (this.state !== 'playing' || this.gameMode !== 'survival') return;
+    if (this.state !== 'playing' || this.gameMode !== 'survival' || this.manualAimEnabled) return;
 
     const momentumRate = getSurvivalMomentumRateMultiplier(this.survivalMomentum.overdriveRemainingSeconds);
     const oniricRate = this.oniricDreamRemainingSeconds > 0 ? 1.30 : 1;
@@ -8607,7 +8647,7 @@ export class PaleciakiGameEngine {
       this.playerVel.z = THREE.MathUtils.damp(this.playerVel.z, targetZ, steering, dt);
       this.playerVel.x = THREE.MathUtils.clamp(this.playerVel.x, -speed * 1.08, speed * 1.08);
       this.playerVel.z = THREE.MathUtils.clamp(this.playerVel.z, -speed * 1.08, speed * 1.08);
-      this.playerRot = Math.atan2(inputX, inputZ);
+      if (!this.manualAimEnabled) this.playerRot = Math.atan2(inputX, inputZ);
 
       this.walkCycle += dt * motionProfile.gaitFrequency;
       if (this.leftLeg && this.rightLeg && this.leftArm && this.rightArm) {
@@ -11347,7 +11387,9 @@ export class PaleciakiGameEngine {
     const firstPrimaryProjectile = this.projectiles.length;
 
     sound.playAttackWhoosh();
-    const forward = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
+    const forward = this.manualAimEnabled
+      ? new THREE.Vector3(this.manualAimDirection.x, 0, this.manualAimDirection.z)
+      : new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
     const startOrigin = new THREE.Vector3(this.playerPos.x, this.playerPos.y + 0.82, this.playerPos.z).addScaledVector(forward, 0.65);
 
     if (charId === 'marcin') {
@@ -12794,7 +12836,7 @@ export class PaleciakiGameEngine {
     this.survivalDashCooldownRemaining = this.survivalDashCooldownDuration;
     // Invulnerability covers the dodge and a short exit window, not a full defensive shield.
     this.invulnerableTimer = Math.max(this.invulnerableTimer, 0.32);
-    this.playerRot = Math.atan2(directionX, directionZ);
+    if (!this.manualAimEnabled) this.playerRot = Math.atan2(directionX, directionZ);
     this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.28, this.playerPos.z, isPerfectDodge ? 0xfacc15 : 0x67e8f9);
     this.triggerScreenShake(isPerfectDodge ? 0.20 : 0.10, isPerfectDodge ? 0.14 : 0.09);
     sound.playAttackWhoosh();
