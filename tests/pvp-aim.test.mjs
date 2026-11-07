@@ -42,3 +42,26 @@ test('angle and direction conversions use the game forward-axis convention', () 
   assert.ok(Math.abs(getPvpAimAngle(direction) - Math.PI / 2) < 1e-10);
   assert.ok(Math.abs(getPvpAimAngle({ x: 0, z: -1 }) - Math.PI) < 1e-10);
 });
+
+
+test('PvP twin-stick wiring supports two simultaneous touch pointers without target snapping', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const [app, game, html, css] = await Promise.all([
+    readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/game.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
+  ]);
+  assert.match(app, /activeAimPointerId/);
+  assert.match(app, /activePointerId = event\.pointerId/);
+  assert.match(app, /activeAimPointerId = event\.pointerId/);
+  assert.doesNotMatch(app, /activePointerId !== null \|\| event\.isPrimary === false/);
+  assert.doesNotMatch(app, /activeAimPointerId !== null \|\| event\.isPrimary === false/);
+  assert.match(app, /this\.engine\.setManualAimInput\(input\.x, input\.y\)/);
+  assert.match(app, /this\.engine\.stopManualAimFiring\(\)/);
+  assert.match(game, /if \(this\.manualAimEnabled\) \{/);
+  assert.match(game, /this\.manualAimFiring && this\.attackCooldownTimer <= 0/);
+  assert.match(game, /if \(this\.state !== 'playing' \|\| this\.gameMode !== 'survival' \|\| this\.manualAimEnabled\) return/);
+  assert.match(html, /id="pvp-aim-zone"/);
+  assert.match(css, /#game-shell\.manual-aim-mode \.pvp-aim-zone \{ display: block !important; \}/);
+});
