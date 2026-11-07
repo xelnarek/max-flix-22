@@ -1774,7 +1774,15 @@ export class PaleciakiGameEngine {
       this.levelRoot.remove(this.remotePlayerGroup);
       this.remotePlayerGroup = null;
     }
-    this.pvpProjectileMeshes.forEach((mesh) => this.levelRoot.remove(mesh));
+    this.pvpProjectileMeshes.forEach((mesh) => {
+      this.levelRoot.remove(mesh);
+      mesh.traverse((object) => {
+        if (!(object instanceof THREE.Mesh)) return;
+        object.geometry.dispose();
+        const materials = Array.isArray(object.material) ? object.material : [object.material];
+        materials.forEach((material) => material.dispose());
+      });
+    });
     this.pvpProjectileMeshes.clear();
     if (this.pvpSession) {
       this.pvpSession.dispose();
