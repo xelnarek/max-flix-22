@@ -3365,6 +3365,7 @@ export class PaleciakiGameEngine {
     if (this.gameMode === 'survival' && this.state === 'levelup') return;
     if (this.state === 'playing') {
       this.state = 'paused';
+      this.stopManualAimFiring();
       sound.stopMusic();
     } else if (this.state === 'paused') {
       this.state = 'playing';
@@ -12671,7 +12672,7 @@ export class PaleciakiGameEngine {
     this.survivalDashCooldownRemaining = this.survivalDashCooldownDuration;
     // Invulnerability covers the dodge and a short exit window, not a full defensive shield.
     this.invulnerableTimer = Math.max(this.invulnerableTimer, 0.32);
-    this.playerRot = Math.atan2(directionX, directionZ);
+    if (!this.manualAimEnabled) this.playerRot = Math.atan2(directionX, directionZ);
     this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.28, this.playerPos.z, isPerfectDodge ? 0xfacc15 : 0x67e8f9);
     this.triggerScreenShake(isPerfectDodge ? 0.20 : 0.10, isPerfectDodge ? 0.14 : 0.09);
     sound.playAttackWhoosh();
