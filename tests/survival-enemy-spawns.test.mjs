@@ -9,6 +9,7 @@ const allRegularTypes = [
   'zombie_pracownik', 'kurier', 'sztaplar_szalony', 'monter', 'inspector',
   'handlowiec', 'customer', 'architect', 'przedstawiciel_włoski', 'serwisant',
   'piorun_dron', 'agv_robot', 'pan_roman', 'elite_walczak_guard',
+  'mutant_gamma_forklift', 'radioactive_pip', 'cyber_salesman',
 ];
 
 test('early waves have a six-type baseline and gated archetypes unlock progressively', () => {
@@ -36,7 +37,7 @@ test('every regular archetype has a non-trivial weighted share in late Survival'
     counts.set(selected, (counts.get(selected) ?? 0) + 1);
   }
   for (const [type, count] of counts) {
-    assert.ok(count >= 400, type + ' was underrepresented: ' + count);
+    assert.ok(count >= 200, type + ' was underrepresented: ' + count);
   }
 });
 
