@@ -43,6 +43,7 @@ export class PvpNetworkSession implements IPvpSession {
   public onMatchStart?: (state: PvpArenaState) => void;
   public onState?: (state: PvpArenaState) => void;
   public onError?: (err: string) => void;
+  public onConnectionChange?: (connected: boolean) => void;
   public onRematchWaiting?: (votes: number, required: number) => void;
   public onRoomClosed?: (message: string) => void;
 
@@ -128,6 +129,7 @@ export class PvpNetworkSession implements IPvpSession {
         }
         this.clearConnectionTimeout();
         this.callbacks.onConnectionChange?.(true);
+        this.onConnectionChange?.(true);
         if (this.pendingCreate) {
           this.createRoom(this.pendingCreate.operatorId, this.pendingCreate.playerName);
         } else if (this.pendingJoin) {
@@ -220,6 +222,7 @@ export class PvpNetworkSession implements IPvpSession {
         this.clearConnectionTimeout();
         this.ws = null;
         this.callbacks.onConnectionChange?.(false);
+        this.onConnectionChange?.(false);
         if (this.isDisposed) return;
 
         if (this.hasJoinedRoom) {
