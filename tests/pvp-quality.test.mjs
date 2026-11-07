@@ -58,3 +58,23 @@ test('static Pages deployment receives only the public WebSocket endpoint settin
   assert.match(deploymentGuide, /pvp:server/);
   assert.match(deploymentGuide, /wss:\/\//);
 });
+
+test('PvP combat feedback keeps simultaneous hits and renders lightweight projectile trails and feedback overlays', async () => {
+  const [arena, game, html, css] = await Promise.all([
+    readFile(new URL('../src/pvpArena.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/game.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
+  ]);
+  assert.match(arena, /hitEvents: PvpHitEvent\[\]/);
+  assert.match(arena, /state\.hitEvents\.push\(hitEvent\)/);
+  assert.match(game, /pendingPvpHitEvents/);
+  assert.match(game, /new THREE\.CylinderGeometry\(0\.018, 0\.075/);
+  assert.match(game, /mesh\.rotation\.y = Math\.atan2\(proj\.vx, proj\.vz\)/);
+  assert.match(game, /pulsePvpFeedback\('pvp-hit-vignette'\)/);
+  assert.match(game, /pulsePvpFeedback\('pvp-hit-confirm'\)/);
+  assert.match(html, /id="pvp-hit-vignette"/);
+  assert.match(html, /id="pvp-hit-confirm"/);
+  assert.match(css, /@keyframes pvp-damage-flash/);
+  assert.match(css, /@keyframes pvp-hit-confirmation/);
+});
