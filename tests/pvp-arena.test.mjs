@@ -346,6 +346,8 @@ test('Grzesiek frontal forklift ability applies credited damage and a visible hi
     moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantAbility: true,
   });
 
+  assert.ok(state.p1.abilityCooldownTimer > 0, 'the Grzesiek ability input should be consumed');
+  assert.equal(state.p1.isDashing, true, 'the frontal charge should start its dash');
   assert.equal(state.p2.hp, initialHp - 180);
   assert.equal(state.p1.damageDealt, 180);
   assert.equal(state.lastHitEvent?.damage, 180);
