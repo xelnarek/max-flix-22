@@ -588,3 +588,26 @@ test('PvP match statistics survive round resets instead of starting over each ro
     knockouts: 1,
   });
 });
+
+test('PvP round-ending knockout prevents the opponent from firing or dashing later in the same tick', () => {
+  const state = createInitialPvpArenaState('mateusz', 'P1', 'grzesiek', 'P2');
+  resetPvpRound(state);
+  advanceArena(state, 3.0);
+  state.obstacles = [];
+  state.p1.x = -2;
+  state.p1.z = 0;
+  state.p2.x = 2;
+  state.p2.z = 0;
+  state.p2.hp = 10;
+
+  stepPvpArena(state, 0.05,
+    { moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantAbility: true },
+    { moveX: 1, moveZ: 0, aimAngle: -Math.PI / 2, isFiring: true, wantDash: true },
+  );
+
+  assert.equal(state.status, 'round_end');
+  assert.equal(state.p1.knockouts, 1);
+  assert.equal(state.p2.shotsFired, 0);
+  assert.equal(state.p2.dashesUsed, 0);
+  assert.equal(state.stats.p1.knockouts, 1);
+});
