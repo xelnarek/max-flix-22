@@ -5414,3 +5414,67 @@ button {
   .character-talent-pips { grid-column: 1 / -1; min-height: 0; }
   .character-talent-upgrade { grid-column: 1 / -1; }
 }
+
+
+/* PvP manual twin-stick aim: inactive in normal Survival/PvE. */
+.pvp-aim-zone {
+  display: none;
+  position: absolute !important;
+  top: 12% !important;
+  right: 0 !important;
+  bottom: 108px !important;
+  width: min(54vw, 440px) !important;
+  pointer-events: auto !important;
+  touch-action: none !important;
+  overscroll-behavior: contain !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  z-index: 83 !important;
+}
+.pvp-aim-base {
+  position: fixed;
+  left: 76%;
+  top: 58%;
+  width: 142px;
+  height: 142px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(103,232,249,.9);
+  border-radius: 50%;
+  transform: translate(-50%,-50%);
+  background: radial-gradient(circle at 34% 28%,rgba(28,67,84,.94),rgba(5,19,31,.96) 72%);
+  box-shadow: 0 0 26px rgba(34,211,238,.24), inset 0 0 20px rgba(255,255,255,.08);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s ease;
+  z-index: 84;
+}
+.pvp-aim-base::before {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border: 1px dashed rgba(207,250,254,.28);
+  border-radius: 50%;
+}
+.pvp-aim-base.active { opacity: 1; }
+.pvp-aim-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 58px;
+  height: 58px;
+  border: 2px solid #cffafe;
+  border-radius: 50%;
+  transform: translate(-50%,-50%);
+  background: radial-gradient(circle at 34% 28%,#ecfeff,#22d3ee 42%,#0e7490 100%);
+  box-shadow: 0 5px 18px rgba(0,0,0,.62), inset 0 2px 5px rgba(255,255,255,.6), 0 0 16px rgba(34,211,238,.25);
+  pointer-events: none;
+  will-change: transform;
+}
+#game-shell.manual-aim-mode .pvp-aim-zone { display: block !important; }
+#game-shell.manual-aim-mode #btn-touch-attack { display: none !important; }
+@media (max-width: 390px) {
+  #game-shell.manual-aim-mode .pvp-aim-zone { width: 56vw !important; bottom: 98px !important; }
+  #game-shell.manual-aim-mode .touch-actions-zone { gap: 6px !important; }
+}
