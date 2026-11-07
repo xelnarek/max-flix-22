@@ -161,6 +161,23 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
   });
 
   wss.on('connection', (ws: WebSocket) => {
+    let isAlive = true;
+    const heartbeat = setInterval(() => {
+      if (ws.readyState !== WebSocket.OPEN) return;
+      if (!isAlive) {
+        ws.terminate();
+        return;
+      }
+      isAlive = false;
+      try {
+        ws.ping();
+      } catch {
+        ws.terminate();
+      }
+    }, 15000);
+    heartbeat.unref();
+    ws.on('pong', () => { isAlive = true; });
+
     let currentRoomCode: string | null = null;
     let playerSlot: 'p1' | 'p2' | null = null;
     let messageWindowStartedAt = Date.now();
@@ -409,6 +426,7 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
     });
 
     ws.on('close', () => {
+      clearInterval(heartbeat);
       if (!currentRoomCode || !playerSlot) return;
       const room = activeRooms.get(currentRoomCode);
       if (!room || room.clients.get(playerSlot) !== ws) return;
