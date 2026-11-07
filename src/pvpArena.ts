@@ -112,6 +112,107 @@ export interface PvpInputIntent {
   wantAbility?: boolean;
 }
 
+/** Normalize untrusted client input at both the network and simulation boundaries. */
+export function sanitizePvpInputIntent(input: Partial<PvpInputIntent> | null | undefined): PvpInputIntent {
+  const finiteOrZero = (value: unknown): number =>
+    typeof value === 'number' && Number.isFinite(value) ? value : 0;
+  let moveX = Math.max(-1, Math.min(1, finiteOrZero(input?.moveX)));
+  let moveZ = Math.max(-1, Math.min(1, finiteOrZero(input?.moveZ)));
+  const magnitude = Math.hypot(moveX, moveZ);
+  if (magnitude > 1) {
+    moveX /= magnitude;
+    moveZ /= magnitude;
+  }
+  const rawAngle = finiteOrZero(input?.aimAngle);
+  const aimAngle = Math.atan2(Math.sin(rawAngle), Math.cos(rawAngle));
+  return {
+    moveX,
+    moveZ,
+    aimAngle,
+    isFiring: input?.isFiring === true,
+    wantDash: input?.wantDash === true,
+    wantAbility: input?.wantAbility === true,
+  };
+}
+
+function clampPvpPosition(player: PvpPlayerState): void {
+  player.x = Math.max(PVP_ARENA_BOUNDS.minX + PVP_PLAYER_RADIUS, Math.min(PVP_ARENA_BOUNDS.maxX - PVP_PLAYER_RADIUS, player.x));
+  player.z = Math.max(PVP_ARENA_BOUNDS.minZ + PVP_PLAYER_RADIUS, Math.min(PVP_ARENA_BOUNDS.maxZ - PVP_PLAYER_RADIUS, player.z));
+}
+
+/** Distance from a point to a finite segment, used to prevent fast projectiles tunnelling. */
+function pointSegmentDistanceSq(
+  pointX: number,
+  pointZ: number,
+  startX: number,
+  startZ: number,
+  endX: number,
+  endZ: number,
+): { distanceSq: number; t: number } {
+  const dx = endX - startX;
+  const dz = endZ - startZ;
+  const lengthSq = dx * dx + dz * dz;
+  const t = lengthSq > 1e-9
+    ? Math.max(0, Math.min(1, ((pointX - startX) * dx + (pointZ - startZ) * dz) / lengthSq))
+    : 0;
+  const nearestX = startX + dx * t;
+  const nearestZ = startZ + dz * t;
+  const ox = pointX - nearestX;
+  const oz = pointZ - nearestZ;
+  return { distanceSq: ox * ox + oz * oz, t };
+}
+
+/** Returns the first swept collision point along a projectile segment, if any. */
+function firstProjectileObstacleHit(
+  startX: number,
+  startZ: number,
+  endX: number,
+  endZ: number,
+  radius: number,
+  obstacles: PvpObstacle[],
+): number | null {
+  const distance = Math.hypot(endX - startX, endZ - startZ);
+  const steps = Math.max(1, Math.ceil(distance / Math.max(0.08, radius * 0.45)));
+  for (let step = 1; step <= steps; step++) {
+    const t = step / steps;
+    const x = startX + (endX - startX) * t;
+    const z = startZ + (endZ - startZ) * t;
+    if (checkObstacleCollision(x, z, radius, obstacles).hit) return t;
+  }
+  return null;
+}
+
+function separatePvpPlayers(state: PvpArenaState): void {
+  const p1 = state.p1;
+  const p2 = state.p2;
+  const dx = p2.x - p1.x;
+  const dz = p2.z - p1.z;
+  const distance = Math.hypot(dx, dz);
+  const minimumDistance = PVP_PLAYER_RADIUS * 2;
+  if (distance >= minimumDistance) return;
+
+  const safeDistance = distance > 1e-5 ? distance : 1e-5;
+  const directionX = distance > 1e-5 ? dx / safeDistance : 1;
+  const directionZ = distance > 1e-5 ? dz / safeDistance : 0;
+  const overlap = minimumDistance - distance;
+  const halfPush = overlap * 0.5;
+  p1.x -= directionX * halfPush;
+  p1.z -= directionZ * halfPush;
+  p2.x += directionX * halfPush;
+  p2.z += directionZ * halfPush;
+
+  for (const player of [p1, p2]) {
+    clampPvpPosition(player);
+    const collision = checkObstacleCollision(player.x, player.z, PVP_PLAYER_RADIUS, state.obstacles);
+    if (collision.hit) {
+      player.x += collision.pushX;
+      player.z += collision.pushZ;
+      clampPvpPosition(player);
+    }
+  }
+}
+
+
 export const PVP_ARENA_BOUNDS = {
   minX: -22,
   maxX: 22,
@@ -296,6 +397,7 @@ export function resetPvpRound(state: PvpArenaState) {
   state.p1.attackCooldownTimer = 0;
   state.p1.abilityCooldownTimer = 0;
   state.p1.stunTimer = 0;
+  state.p1.isFiring = false;
 
   state.p2.x = PVP_SPAWN_P2.x;
   state.p2.y = PVP_SPAWN_P2.y;
@@ -310,11 +412,14 @@ export function resetPvpRound(state: PvpArenaState) {
   state.p2.attackCooldownTimer = 0;
   state.p2.abilityCooldownTimer = 0;
   state.p2.stunTimer = 0;
+  state.p2.isFiring = false;
 
   state.projectiles = [];
   state.pickup.active = true;
   state.pickup.respawnTimer = 0;
   state.roundWinner = null;
+  state.roundEndTimer = 0;
+  state.lastHitEvent = undefined;
   state.countdownTimer = 3.0;
   state.status = 'countdown';
 }
@@ -360,6 +465,12 @@ export function checkObstacleCollision(x: number, z: number, radius: number, obs
 }
 
 export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInputIntent, p2Input?: PvpInputIntent): void {
+  // Keep a delayed or malformed frame from teleporting entities or skipping cooldowns.
+  const safeDt = Number.isFinite(dt) ? Math.max(0, Math.min(0.1, dt)) : 0;
+  if (safeDt <= 0) return;
+  const safeP1Input = p1Input ? sanitizePvpInputIntent(p1Input) : undefined;
+  const safeP2Input = p2Input ? sanitizePvpInputIntent(p2Input) : undefined;
+
   // Clear transient hit events from previous frame
   state.lastHitEvent = undefined;
 
@@ -374,7 +485,7 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
 
   // Handle countdown
   if (state.status === 'countdown') {
-    state.countdownTimer -= dt;
+    state.countdownTimer -= safeDt;
     if (state.countdownTimer <= 0) {
       state.countdownTimer = 0;
       state.status = 'in_round';
@@ -384,7 +495,7 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
 
   // Handle round end delay
   if (state.status === 'round_end') {
-    state.roundEndTimer -= dt;
+    state.roundEndTimer -= safeDt;
     if (state.roundEndTimer <= 0) {
       if (state.p1.score >= state.roundsToWin || state.p2.score >= state.roundsToWin) {
         state.status = 'match_end';
@@ -405,7 +516,7 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
 
   // Update pickup respawn
   if (!state.pickup.active) {
-    state.pickup.respawnTimer -= dt;
+    state.pickup.respawnTimer -= safeDt;
     if (state.pickup.respawnTimer <= 0) {
       state.pickup.active = true;
       state.pickup.respawnTimer = 0;
@@ -413,91 +524,98 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
   }
 
   // Step players
-  stepPlayer(state.p1, p1Input, state, dt);
-  stepPlayer(state.p2, p2Input, state, dt);
+  stepPlayer(state.p1, safeP1Input, state, safeDt);
+  stepPlayer(state.p2, safeP2Input, state, safeDt);
+  separatePvpPlayers(state);
 
-  // Check pickup collection
+  // One fair medkit claim per spawn: nearest eligible player wins. Exact ties
+  // alternate by round, so P1 never receives a permanent update-order advantage.
   if (state.pickup.active) {
-    const p1Dist = Math.hypot(state.p1.x - state.pickup.x, state.p1.z - state.pickup.z);
-    if (p1Dist < PVP_PLAYER_RADIUS + 0.8 && state.p1.hp < state.p1.maxHp) {
-      state.p1.hp = Math.min(state.p1.maxHp, state.p1.hp + state.pickup.healAmount);
+    const pickupRadius = PVP_PLAYER_RADIUS + 0.8;
+    const candidates = ([state.p1, state.p2] as const)
+      .map((player) => ({
+        player,
+        distance: Math.hypot(player.x - state.pickup.x, player.z - state.pickup.z),
+        missingHpRatio: player.maxHp > 0 ? (player.maxHp - player.hp) / player.maxHp : 0,
+      }))
+      .filter(({ player, distance }) => distance < pickupRadius && player.hp < player.maxHp)
+      .sort((a, b) =>
+        a.distance - b.distance ||
+        b.missingHpRatio - a.missingHpRatio ||
+        (state.round % 2 === 1 ? (a.player.slot === 'p1' ? -1 : 1) : (a.player.slot === 'p2' ? -1 : 1))
+      );
+    const winner = candidates[0]?.player;
+    if (winner) {
+      winner.hp = Math.min(winner.maxHp, winner.hp + state.pickup.healAmount);
       state.pickup.active = false;
       state.pickup.respawnTimer = state.pickup.respawnTimeSeconds;
-    } else {
-      const p2Dist = Math.hypot(state.p2.x - state.pickup.x, state.p2.z - state.pickup.z);
-      if (p2Dist < PVP_PLAYER_RADIUS + 0.8 && state.p2.hp < state.p2.maxHp) {
-        state.p2.hp = Math.min(state.p2.maxHp, state.p2.hp + state.pickup.healAmount);
-        state.pickup.active = false;
-        state.pickup.respawnTimer = state.pickup.respawnTimeSeconds;
-      }
     }
   }
 
-  // Step projectiles
+  // Swept projectile collision prevents fast shots or a delayed server tick from skipping cover.
   for (let i = state.projectiles.length - 1; i >= 0; i--) {
     const proj = state.projectiles[i];
-    proj.x += proj.vx * dt;
-    proj.z += proj.vz * dt;
-    proj.life -= dt;
+    const startX = proj.x;
+    const startZ = proj.z;
+    const travelX = proj.vx * safeDt;
+    const travelZ = proj.vz * safeDt;
+    const endX = startX + travelX;
+    const endZ = startZ + travelZ;
+    proj.life -= safeDt;
 
-    if (
-      proj.life <= 0 ||
-      proj.x < PVP_ARENA_BOUNDS.minX - 2 ||
-      proj.x > PVP_ARENA_BOUNDS.maxX + 2 ||
-      proj.z < PVP_ARENA_BOUNDS.minZ - 2 ||
-      proj.z > PVP_ARENA_BOUNDS.maxZ + 2
-    ) {
+    if (proj.life <= 0) {
       state.projectiles.splice(i, 1);
       continue;
     }
 
-    // Obstacle collision
-    const obsCol = checkObstacleCollision(proj.x, proj.z, proj.radius, state.obstacles);
-    if (obsCol.hit) {
-      state.projectiles.splice(i, 1);
-      continue;
-    }
-
-    // Player collision
+    const obstacleT = firstProjectileObstacleHit(startX, startZ, endX, endZ, proj.radius, state.obstacles);
     const targetPlayer = proj.ownerSlot === 'p1' ? state.p2 : state.p1;
     const shooterPlayer = proj.ownerSlot === 'p1' ? state.p1 : state.p2;
+    const targetHit = pointSegmentDistanceSq(targetPlayer.x, targetPlayer.z, startX, startZ, endX, endZ);
+    const playerHitRadius = PVP_PLAYER_RADIUS + proj.radius;
+    const hitPlayer = targetHit.distanceSq <= playerHitRadius * playerHitRadius;
+    const playerT = hitPlayer ? targetHit.t : Number.POSITIVE_INFINITY;
 
-    const distToTarget = Math.hypot(targetPlayer.x - proj.x, targetPlayer.z - proj.z);
-    if (distToTarget < PVP_PLAYER_RADIUS + proj.radius) {
-      // Hit target!
-      let damageRemaining = proj.damage;
-      shooterPlayer.damageDealt += damageRemaining;
+    if (hitPlayer && (obstacleT === null || playerT <= obstacleT)) {
+      proj.x = startX + travelX * playerT;
+      proj.z = startZ + travelZ * playerT;
+      let damageRemaining = Math.max(0, Number.isFinite(proj.damage) ? proj.damage : 0);
+      const actualDamage = Math.min(damageRemaining, targetPlayer.shieldHp + targetPlayer.hp);
+      shooterPlayer.damageDealt += actualDamage;
       shooterPlayer.shotsHit += 1;
 
-      // Shield absorb
       if (targetPlayer.shieldHp > 0) {
         const absorb = Math.min(targetPlayer.shieldHp, damageRemaining);
         targetPlayer.shieldHp -= absorb;
         damageRemaining -= absorb;
       }
-
-      if (damageRemaining > 0) {
-        targetPlayer.hp = Math.max(0, targetPlayer.hp - damageRemaining);
-      }
+      if (damageRemaining > 0) targetPlayer.hp = Math.max(0, targetPlayer.hp - damageRemaining);
 
       state.lastHitEvent = {
         targetSlot: targetPlayer.slot,
-        damage: proj.damage,
+        damage: actualDamage,
         sourceSlot: shooterPlayer.slot,
         x: targetPlayer.x,
         z: targetPlayer.z,
       };
 
       proj.pierce--;
-      if (proj.pierce <= 0) {
-        state.projectiles.splice(i, 1);
-      }
-
-      // Check knockout
+      if (proj.pierce <= 0) state.projectiles.splice(i, 1);
       if (targetPlayer.hp <= 0) {
         handleKnockout(state, shooterPlayer.slot);
         break;
       }
+    } else if (obstacleT !== null) {
+      state.projectiles.splice(i, 1);
+    } else {
+      proj.x = endX;
+      proj.z = endZ;
+      if (
+        proj.x < PVP_ARENA_BOUNDS.minX - 2 ||
+        proj.x > PVP_ARENA_BOUNDS.maxX + 2 ||
+        proj.z < PVP_ARENA_BOUNDS.minZ - 2 ||
+        proj.z > PVP_ARENA_BOUNDS.maxZ + 2
+      ) state.projectiles.splice(i, 1);
     }
   }
 }
@@ -540,28 +658,29 @@ function stepPlayer(player: PvpPlayerState, input: PvpInputIntent | undefined, s
   }
 
   if (!input) return;
+  const safeInput = sanitizePvpInputIntent(input);
 
   // Aim update
-  player.aimAngle = input.aimAngle;
-  player.rot = input.aimAngle;
-  player.isFiring = Boolean(input.isFiring);
+  player.aimAngle = safeInput.aimAngle;
+  player.rot = safeInput.aimAngle;
+  player.isFiring = safeInput.isFiring;
 
   // Dash initiation
-  if (input.wantDash && !player.isDashing && player.dashCooldownTimer <= 0) {
+  if (safeInput.wantDash && !player.isDashing && player.dashCooldownTimer <= 0) {
     player.isDashing = true;
     player.dashTimer = PVP_DASH_DURATION;
     player.dashCooldownTimer = PVP_DASH_COOLDOWN;
   }
 
   // Ability initiation
-  if (input.wantAbility && player.abilityCooldownTimer <= 0) {
+  if (safeInput.wantAbility && player.abilityCooldownTimer <= 0) {
     triggerPlayerAbility(player, state);
   }
 
   // Movement
   let speed = player.isDashing ? PVP_DASH_SPEED : PVP_BASE_SPEED;
-  let moveDirX = input.moveX;
-  let moveDirZ = input.moveZ;
+  let moveDirX = safeInput.moveX;
+  let moveDirZ = safeInput.moveZ;
   const moveLen = Math.hypot(moveDirX, moveDirZ);
   if (moveLen > 1) {
     moveDirX /= moveLen;
@@ -575,20 +694,38 @@ function stepPlayer(player: PvpPlayerState, input: PvpInputIntent | undefined, s
   }
 
   if (Math.abs(moveDirX) > 0.001 || Math.abs(moveDirZ) > 0.001) {
-    player.x += moveDirX * speed * dt;
-    player.z += moveDirZ * speed * dt;
-  }
+    // Substep fast dash motion so the player cannot tunnel through pallet barriers.
+    const totalX = moveDirX * speed * dt;
+    const totalZ = moveDirZ * speed * dt;
+    const distance = Math.hypot(totalX, totalZ);
+    const steps = Math.max(1, Math.ceil(distance / 0.24));
+    const stepX = totalX / steps;
+    const stepZ = totalZ / steps;
 
-  // Arena bounds clamping
-  player.x = Math.max(PVP_ARENA_BOUNDS.minX + PVP_PLAYER_RADIUS, Math.min(PVP_ARENA_BOUNDS.maxX - PVP_PLAYER_RADIUS, player.x));
-  player.z = Math.max(PVP_ARENA_BOUNDS.minZ + PVP_PLAYER_RADIUS, Math.min(PVP_ARENA_BOUNDS.maxZ - PVP_PLAYER_RADIUS, player.z));
-
-  // Obstacle collision resolution
-  const obsCollision = checkObstacleCollision(player.x, player.z, PVP_PLAYER_RADIUS, state.obstacles);
-  if (obsCollision.hit) {
-    player.x += obsCollision.pushX;
-    player.z += obsCollision.pushZ;
+    for (let step = 0; step < steps; step++) {
+      const oldX = player.x;
+      const oldZ = player.z;
+      const candidateX = Math.max(PVP_ARENA_BOUNDS.minX + PVP_PLAYER_RADIUS, Math.min(PVP_ARENA_BOUNDS.maxX - PVP_PLAYER_RADIUS, oldX + stepX));
+      const candidateZ = Math.max(PVP_ARENA_BOUNDS.minZ + PVP_PLAYER_RADIUS, Math.min(PVP_ARENA_BOUNDS.maxZ - PVP_PLAYER_RADIUS, oldZ + stepZ));
+      const fullCollision = checkObstacleCollision(candidateX, candidateZ, PVP_PLAYER_RADIUS, state.obstacles);
+      if (!fullCollision.hit) {
+        player.x = candidateX;
+        player.z = candidateZ;
+      } else {
+        // Slide along a blocked face instead of sticking or teleporting through it.
+        const xOnly = checkObstacleCollision(candidateX, oldZ, PVP_PLAYER_RADIUS, state.obstacles);
+        const zOnly = checkObstacleCollision(oldX, candidateZ, PVP_PLAYER_RADIUS, state.obstacles);
+        if (!xOnly.hit) player.x = candidateX;
+        if (!zOnly.hit) player.z = candidateZ;
+        if (xOnly.hit && zOnly.hit) {
+          player.x += fullCollision.pushX;
+          player.z += fullCollision.pushZ;
+        }
+        clampPvpPosition(player);
+      }
+    }
   }
+  clampPvpPosition(player);
 
   // Firing primary attack
   if (player.isFiring && player.attackCooldownTimer <= 0) {
