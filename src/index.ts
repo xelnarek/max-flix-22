@@ -2993,6 +2993,17 @@ class PaleciakiScene extends xb.Script {
       this.pvpIsHost = true;
       this.pvpLocalReady = false;
 
+      netSession.onConnectionChange = (connected) => {
+        if (hostStatus) hostStatus.textContent = connected
+          ? 'Połączono z serwerem PvP. Tworzenie pokoju...'
+          : 'Połączenie z serwerem PvP zostało przerwane.';
+      };
+      netSession.onRematchWaiting = (votes, required) => {
+        if (btnRematch) btnRematch.textContent = `REWANŻ • ${votes}/${required} GOTOWYCH`;
+      };
+      netSession.onRoomClosed = (message) => {
+        if (hostStatus) hostStatus.textContent = message;
+      };
       netSession.onRoomJoined = (roomCode, slot, roomState) => {
         this.pvpRoomCode = roomCode;
         this.pvpLocalSlot = slot;
@@ -3023,6 +3034,13 @@ class PaleciakiScene extends xb.Script {
 
       netSession.onState = (state) => {
         this.engine.setLastPvpState(state);
+        if (state.status === 'countdown') {
+          matchEndModal?.classList.add('hidden');
+          if (btnRematch) {
+            btnRematch.disabled = false;
+            btnRematch.textContent = 'ZAGRAJ PONOWNIE';
+          }
+        }
       };
 
       netSession.onError = (err) => {
@@ -3051,6 +3069,23 @@ class PaleciakiScene extends xb.Script {
       this.pvpIsHost = false;
       this.pvpLocalReady = false;
 
+      netSession.onConnectionChange = (connected) => {
+        if (joinStatus) {
+          joinStatus.classList.remove('hidden');
+          joinStatus.textContent = connected
+            ? 'Połączono z serwerem PvP. Dołączanie do pokoju...'
+            : 'Połączenie z serwerem PvP zostało przerwane.';
+        }
+      };
+      netSession.onRematchWaiting = (votes, required) => {
+        if (btnRematch) btnRematch.textContent = `REWANŻ • ${votes}/${required} GOTOWYCH`;
+      };
+      netSession.onRoomClosed = (message) => {
+        if (joinStatus) {
+          joinStatus.classList.remove('hidden');
+          joinStatus.textContent = message;
+        }
+      };
       netSession.onRoomJoined = (roomCode, slot, roomState) => {
         this.pvpRoomCode = roomCode;
         this.pvpLocalSlot = slot;
@@ -3079,6 +3114,13 @@ class PaleciakiScene extends xb.Script {
 
       netSession.onState = (state) => {
         this.engine.setLastPvpState(state);
+        if (state.status === 'countdown') {
+          matchEndModal?.classList.add('hidden');
+          if (btnRematch) {
+            btnRematch.disabled = false;
+            btnRematch.textContent = 'ZAGRAJ PONOWNIE';
+          }
+        }
       };
 
       netSession.onError = (err) => {
@@ -3101,11 +3143,15 @@ class PaleciakiScene extends xb.Script {
     });
 
     btnRematch?.addEventListener('click', () => {
-      matchEndModal?.classList.add('hidden');
-      if (this.pvpSession) {
-        this.pvpSession.requestRematch?.();
-        sound.playSmack();
+      if (!this.pvpSession) return;
+      this.pvpSession.requestRematch?.();
+      if (this.pvpSession.isLocalBot) {
+        matchEndModal?.classList.add('hidden');
+      } else if (btnRematch) {
+        btnRematch.textContent = 'REWANŻ ZGŁOSZONY • CZEKAJ NA RYWALA';
+        btnRematch.disabled = true;
       }
+      sound.playSmack();
     });
 
     btnExitToMenu?.addEventListener('click', () => {
@@ -3119,6 +3165,10 @@ class PaleciakiScene extends xb.Script {
         this.pvpSession = null;
       }
       this.pvpLocalReady = false;
+      if (btnRematch) {
+        btnRematch.disabled = false;
+        btnRematch.textContent = 'ZAGRAJ PONOWNIE';
+      }
       if (titleScreen) {
         titleScreen.classList.remove('hidden');
         titleScreen.style.setProperty('display', 'flex', 'important');
@@ -3224,6 +3274,11 @@ class PaleciakiScene extends xb.Script {
     const acc = myStats.shotsFired > 0 ? Math.round((myStats.shotsHit / myStats.shotsFired) * 100) : 0;
     if (accuracy) accuracy.textContent = `${acc}%`;
 
+    const rematchButton = document.getElementById('btn-pvp-rematch') as HTMLButtonElement | null;
+    if (rematchButton) {
+      rematchButton.disabled = false;
+      rematchButton.textContent = 'ZAGRAJ PONOWNIE';
+    }
     matchEndModal.classList.remove('hidden');
   }
 
