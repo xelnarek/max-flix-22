@@ -18,6 +18,8 @@ concurrency:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      VITE_PVP_WS_URL: ${{ vars.VITE_PVP_WS_URL }}
     timeout-minutes: 20
     environment:
       name: github-pages
