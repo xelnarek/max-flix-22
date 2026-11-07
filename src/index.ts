@@ -2901,11 +2901,11 @@ class PaleciakiScene extends xb.Script {
     const displayRoomCode = document.getElementById('pvp-display-room-code');
     const hostStatus = document.getElementById('pvp-host-status');
     const readyBar = document.getElementById('pvp-ready-bar');
-    const readyBtn = document.getElementById('btn-pvp-toggle-ready');
+    const readyBtn = document.getElementById('btn-pvp-toggle-ready') as HTMLButtonElement | null;
     const lobbyPlayersStatus = document.getElementById('pvp-lobby-players-status');
 
     const matchEndModal = document.getElementById('pvp-match-end-modal');
-    const btnRematch = document.getElementById('btn-pvp-rematch');
+    const btnRematch = document.getElementById('btn-pvp-rematch') as HTMLButtonElement | null;
     const btnExitToMenu = document.getElementById('btn-pvp-exit-to-menu');
 
     opPicker?.querySelectorAll<HTMLButtonElement>('.pvp-operator-btn').forEach((btn) => {
