@@ -33,7 +33,7 @@ test('manual touch aim, server-origin checks, six-character invite codes and mut
   ]);
   assert.match(game, /this\.manualAimFiring && this\.attackCooldownTimer <= 0/);
   assert.match(game, /this\.pvpInputSendAccumulator %= inputInterval/);
-  assert.match(app, /id="pvp-aim-zone"/);
+  assert.match(app, /getElementById\('pvp-aim-zone'\)/);
   assert.match(app, /REWANŻ ZGŁOSZONY • CZEKAJ NA RYWALA/);
   assert.match(html, /maxlength="6"/);
   assert.match(server, /maxPayload: 4096/);
@@ -53,6 +53,6 @@ test('static Pages deployment receives only the public WebSocket endpoint settin
   ]);
   assert.match(workflow, /VITE_PVP_WS_URL: \$\{\{ vars\.VITE_PVP_WS_URL \}\}/);
   assert.match(deploymentGuide, /PVP_ALLOWED_ORIGINS/);
-  assert.match(deploymentGuide, /PVP_SERVER/);
+  assert.match(deploymentGuide, /pvp:server/);
   assert.match(deploymentGuide, /wss:\/\//);
 });
