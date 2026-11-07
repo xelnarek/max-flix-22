@@ -1,39 +1,63 @@
-# PvP Arena — technical review and manual touch aim foundation
+# PvP Arena — current technical review
 
-## Current state of main
+## Current implementation status
 
-The repository currently has no playable PvP mode, room lobby, matchmaking, remote-player replication, or PvP result type. The active engine modes are Campaign and Survival; the arena currently means the Survival PvE arena. The autonomous targeting/auto-fire path is `updateSurvivalAutoCombat()`, which selects an enemy, rotates the operator toward it, triggers the basic attack, then dispatches Survival weapons.
+The repository now contains a playable 1v1 PvP arena, a local bot session, a room lobby, a WebSocket client/server implementation, a best-of-three match loop, and a separate manual-aim control path. The arena and manual aiming are separate from the existing Survival PvE auto-combat path.
 
-The current Firebase/Firestore integration stores leaderboard entries and player profiles. It is not a real-time combat transport and must not receive player position/HP writes every frame. Its leaderboard rules only accept Campaign and Survival results.
+The browser version is published on GitHub Pages. Online human-vs-human matches still require a separately hosted Node WebSocket service and the public `VITE_PVP_WS_URL` build variable. Without that service, local bot practice remains available but online rooms cannot be treated as operational.
 
-## Touch controls for a fair PvP arena
+## Combat and controls
 
-Use a twin-stick layout on phones:
+- Phones use twin-stick controls: left stick moves, right stick aims and fires. Keyboard/mouse use the manual aim path as well.
+- The aiming direction has its own low deadzone. Firing has separate start/stop thresholds, which reduces accidental shots and trigger flicker from thumb jitter.
+- Releasing the right stick stops firing but preserves the last deliberate direction.
+- No opponent snap-aim or nearest-target selection is used in PvP.
+- Survival auto-targeting remains enabled when manual PvP aim mode is off.
+- Standard shots and operator abilities are tracked separately. Ability projectiles must not be counted as primary-weapon shots when calculating weapon accuracy.
+- Projectile collisions are swept across their movement segment and respect arena cover. Player movement and dash use substeps to reduce tunnelling through pallets and barriers.
+- Hit events have unique monotonic IDs. Every hit from the same authoritative simulation tick is retained and buffered by clients so simultaneous damage feedback is not dropped.
 
-- Left floating stick controls movement only.
-- Right floating stick determines world-space attack direction. Holding it beyond a 0.16 radial deadzone fires on the operator's normal attack cadence.
-- Release stops firing but retains the last aim direction. Movement, dash and camera changes must not retarget the opponent.
-- No nearest-target selection, snap aim, homing correction or auto-turning is allowed in PvP.
-- Ability, jump and dash remain explicit action buttons. The old attack button is hidden only while manual-aim mode is active.
+## Match results and combat statistics
 
-The right stick must accept a second simultaneous pointer while the left stick is already held. That is why the left stick's old `isPrimary` rejection has been removed: each control locks only its own pointer ID and both pointers can be tracked independently. Pointer cancel, lost capture, blur, page hide and backgrounding all release firing/movement safely.
+The authoritative arena tracks, for each player across the full match:
 
-The new `src/pvpAim.ts` normalizes direction, handles malformed input and preserves the previous aim when the stick returns to neutral. The game engine exposes a manual-aim API, suppresses Survival auto-combat only when that mode is enabled, and keeps normal Survival behaviour unchanged when disabled.
+- total damage dealt and damage received;
+- damage dealt by the primary attack;
+- damage dealt by the operator ability;
+- primary shots fired, primary shots hit and primary-weapon accuracy;
+- ability uses and damaging ability hits;
+- actual HP restored by arena medkits;
+- tactical dashes used;
+- round knockouts.
 
-## PvP MVP scope
+The results panel compares both players side by side. Stats persist between rounds and are reset only when a new match is created. Accuracy uses primary projectiles only; Dawid's three-beam ability is deliberately counted as ability damage, not as three extra primary shots.
 
-Begin with unranked 1v1 duels on one compact symmetric warehouse arena, mirrored spawn points, low cover and best-of-three rounds. Use a short countdown and clear round-end/result states. Disable Survival's auto-weapons, XP gems, random events, boss mechanics and run-only perk drafts. Normalize HP, baseline damage, movement envelope and cooldowns; operator identity should come from a distinctive manual primary pattern and one deliberate ability, not stacked Survival bonuses.
+## Online room service
 
-## Online multiplayer architecture
+The dedicated WebSocket service:
+- validates room codes, operator IDs, player names and input packets;
+- performs the arena simulation on the server rather than accepting client-reported damage or HP;
+- clamps movement and aim input and enforces cooldowns through the authoritative simulation;
+- limits payload size and message rate, checks allowed origins, and uses ping/pong heartbeats;
+- waits for both connected players to join and confirm readiness;
+- requires both players to request a rematch;
+- closes the match when a player disconnects.
 
-For online PvP, add a dedicated real-time room service (WebSocket or another low-latency, authenticated transport). Clients send movement/aim/button intent, not hit claims or opponent HP. Server validates arena bounds, speed, cooldowns, projectiles, collisions, damage, round transitions, stale input sequence numbers, disconnect grace and final results. Use interpolation plus local prediction/reconciliation. Store only validated match results and persistent profiles in Firestore.
+**Known limitation:** active-match reconnection/resume is not implemented. A player disconnect ends the current match rather than attempting a risky partial state restore. This behaviour is surfaced to the remaining player.
 
-## Release gates
+## Release and test gates
 
-1. Add a real PvP menu entry, arena scene, mirrored spawns and remote-player entity.
-2. Add room creation/join/ready/countdown/rematch/leave flows.
-3. Add server-authoritative hit resolution and anti-cheat validation.
-4. Test latency, disconnect/reconnect, simultaneous knockout, spawn protection, cooldown abuse and forged inputs.
-5. Run two- or three-device playtests. CI/build alone does not establish fair PvP latency or touch usability.
+Automated test coverage currently includes arena geometry, input sanitization, collision/cover, projectile tunnelling, simultaneous hit events, damage clipping, medkit fairness, rematch flow, disconnect handling, aim thresholds, match statistics and post-match UI wiring. CI also checks TypeScript and builds the production website.
 
-This PR only contributes the isolated manual-aim input foundation. It does not claim online PvP is already playable.
+Passing CI does not prove touch comfort, frame pacing on a physical phone, fairness under real internet latency, or a successful two-device online match. Those still require:
+1. Deploying the standalone WebSocket service with TLS/WSS.
+2. Setting `VITE_PVP_WS_URL` in GitHub Actions variables and rebuilding Pages.
+3. Testing two physical devices, including the target Android phone, at different network conditions.
+4. Checking room creation/join, simultaneous attacks, medkit claims, round transitions, rematches and disconnect behaviour.
+
+## Follow-up priorities
+
+1. Complete and verify external WSS hosting before claiming online PvP is live.
+2. Playtest operator-specific damage, cooldowns and movement to tune matchup balance from measured results.
+3. Add a controlled reconnect grace period only after session identity and state restoration are designed and tested.
+4. Tune mobile touch-zone placement and visual feedback on-device, not solely through browser emulation.
