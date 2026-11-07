@@ -19,6 +19,7 @@ export class CinematicIntroManager {
   private timeLabel: HTMLElement | null = null;
   private sceneLabel: HTMLElement | null = null;
   private rafId: number | null = null;
+  private completionTimeout: number | null = null;
   private active = false;
   private startedAt = 0;
   private lastRenderAt = 0;
@@ -51,7 +52,8 @@ export class CinematicIntroManager {
     this.lastRenderAt = this.startedAt;
     this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     const mobile = window.innerWidth < 760 || navigator.maxTouchPoints > 0;
-    this.frameInterval = mobile ? 1000 / 30 : 1000 / 48;
+    // Keep the animated character turntable lightweight on phones.
+    this.frameInterval = mobile ? 1000 / 24 : 1000 / 48;
     this.mount();
     if (!this.ctx || !this.canvas) {
       this.active = false;
@@ -68,6 +70,8 @@ export class CinematicIntroManager {
       // scene or force users to wait for the normal 11.8-second intro.
       this.elapsed = this.duration;
       this.render(this.elapsed);
+      // Reduced-motion users get a short still-card pause, never a stuck intro.
+      this.completionTimeout = window.setTimeout(() => this.stop(), 1800);
       return;
     }
 
@@ -84,6 +88,8 @@ export class CinematicIntroManager {
     this.active = false;
     if (this.rafId !== null) cancelAnimationFrame(this.rafId);
     this.rafId = null;
+    if (this.completionTimeout !== null) window.clearTimeout(this.completionTimeout);
+    this.completionTimeout = null;
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('resize', this.onResize);
     this.cleanup();
@@ -138,9 +144,14 @@ export class CinematicIntroManager {
 
   private resizeCanvas(): void {
     if (!this.canvas) return;
-    const dpr = Math.min(1.5, Math.max(1, window.devicePixelRatio || 1));
+    const mobile = window.innerWidth < 760 || navigator.maxTouchPoints > 0;
+    const dpr = mobile ? 1 : Math.min(1.5, Math.max(1, window.devicePixelRatio || 1));
     const ratio = Math.max(0.32, Math.min(2.4, window.innerWidth / Math.max(1, window.innerHeight)));
-    const longEdge = Math.min(1600, Math.max(720, Math.round(Math.max(window.innerWidth, window.innerHeight) * dpr)));
+    // The five animated operator portraits are decorative; cap their backing
+    // canvas on mobile to avoid GPU/CPU stalls during the opening sequence.
+    const longEdge = mobile
+      ? Math.min(960, Math.max(540, Math.round(Math.max(window.innerWidth, window.innerHeight) * dpr)))
+      : Math.min(1600, Math.max(720, Math.round(Math.max(window.innerWidth, window.innerHeight) * dpr)));
     if (ratio >= 1) {
       this.canvas.width = longEdge;
       this.canvas.height = Math.max(540, Math.round(longEdge / ratio));
