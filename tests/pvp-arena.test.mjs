@@ -133,6 +133,11 @@ test('firing creates projectile that damages opponent upon collision', () => {
   assert.ok(state.p2.hp < initialHp);
   assert.ok(state.p1.damageDealt > 0);
   assert.equal(state.p1.shotsHit, 1);
+  assert.ok(state.p1.primaryDamageDealt > 0);
+  assert.equal(state.p1.abilityDamageDealt, 0);
+  assert.ok(state.p2.damageTaken > 0);
+  assert.equal(state.stats.p1.damageDealt, state.p1.damageDealt);
+  assert.equal(state.stats.p2.damageTaken, state.p2.damageTaken);
 });
 
 test('knockout awards round win and triggers round reset or match victory', () => {
@@ -159,6 +164,7 @@ test('knockout awards round win and triggers round reset or match victory', () =
   assert.equal(state.roundWinner, 'p1');
   assert.equal(state.p1.score, 1);
   assert.equal(state.p2.score, 0);
+  assert.equal(state.p1.knockouts, 1);
 
   // Advance through round_end delay
   advanceArena(state, 2.5);
@@ -466,4 +472,76 @@ test('PvP round reset clears transient hit notifications but keeps event IDs mon
   assert.equal(state.hitEvents.length, 0);
   assert.equal(state.lastHitEvent, undefined);
   assert.equal(state.hitEventSequence, 17);
+});
+
+test('direct PvP ability damage is separated from primary weapon accuracy', () => {
+  const state = createInitialPvpArenaState('mateusz', 'P1', 'grzesiek', 'P2');
+  resetPvpRound(state);
+  advanceArena(state, 3.0);
+  state.obstacles = [];
+  state.p1.x = -2;
+  state.p1.z = 0;
+  state.p2.x = 2;
+  state.p2.z = 0;
+
+  stepPvpArena(state, 0.05, {
+    moveX: 0, moveZ: 0, aimAngle: Math.PI / 2,
+    isFiring: false, wantAbility: true,
+  });
+
+  assert.equal(state.p1.abilityUses, 1);
+  assert.equal(state.p1.abilityHits, 1);
+  assert.equal(state.p1.abilityDamageDealt, 150);
+  assert.equal(state.p1.primaryDamageDealt, 0);
+  assert.equal(state.p1.shotsFired, 0);
+  assert.equal(state.p1.shotsHit, 0);
+  assert.equal(state.p2.damageTaken, 150);
+  assert.equal(state.stats.p1.abilityDamageDealt, 150);
+});
+
+test('Dawid ability beams do not inflate primary-weapon accuracy', () => {
+  const state = createInitialPvpArenaState('dawid', 'P1', 'grzesiek', 'P2');
+  resetPvpRound(state);
+  advanceArena(state, 3.0);
+  state.obstacles = [];
+  state.p1.x = -6;
+  state.p1.z = 0;
+  state.p2.x = 6;
+  state.p2.z = 0;
+
+  stepPvpArena(state, 0.05, {
+    moveX: 0, moveZ: 0, aimAngle: Math.PI / 2,
+    isFiring: false, wantAbility: true,
+  });
+  assert.ok(state.projectiles.some((projectile) => projectile.kind === 'ability'));
+
+  for (let i = 0; i < 10 && state.p1.abilityHits === 0; i++) stepPvpArena(state, 0.05);
+
+  assert.ok(state.p1.abilityHits > 0);
+  assert.ok(state.p1.abilityDamageDealt > 0);
+  assert.equal(state.p1.shotsFired, 0);
+  assert.equal(state.p1.shotsHit, 0);
+});
+
+test('PvP match stats count actual medkit healing and accepted dashes', () => {
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  resetPvpRound(state);
+  advanceArena(state, 3.0);
+  state.p1.x = -1;
+  state.p1.z = 0;
+  state.p1.hp = 500;
+  state.p2.x = 12;
+  state.p2.z = 9;
+
+  stepPvpArena(state, 0.05, {
+    moveX: 0, moveZ: 0, aimAngle: 0,
+    isFiring: false, wantDash: true,
+  });
+
+  assert.equal(state.p1.healingDone, 220);
+  assert.equal(state.p1.hp, 720);
+  assert.equal(state.p1.dashesUsed, 1);
+  assert.equal(state.stats.p1.healingDone, 220);
+  assert.equal(state.stats.p1.dashesUsed, 1);
+  assert.equal(state.p2.healingDone, 0);
 });
