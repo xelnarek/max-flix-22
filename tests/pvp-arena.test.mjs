@@ -175,7 +175,7 @@ test('sanitizes malformed and over-length player input before simulation', () =>
     isFiring: 'yes',
     wantDash: 1,
     wantAbility: true,
-  } as any);
+  });
   assert.ok(Math.abs(Math.hypot(input.moveX, input.moveZ) - 1) < 1e-10);
   assert.equal(input.aimAngle, 0);
   assert.equal(input.isFiring, false);
