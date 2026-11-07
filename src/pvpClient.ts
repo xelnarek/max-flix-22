@@ -274,8 +274,8 @@ export class PvpNetworkSession implements IPvpSession {
       return;
     }
     const normalizedCode = code.trim().toUpperCase();
-    if (!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}$/.test(normalizedCode)) {
-      this.emitError('Kod pokoju musi zawierać dokładnie 4 znaki.');
+    if (!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(normalizedCode)) {
+      this.emitError('Kod pokoju musi zawierać dokładnie 6 znaków.');
       return;
     }
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
