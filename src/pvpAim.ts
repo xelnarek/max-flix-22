@@ -4,6 +4,11 @@ export interface PvpAimDirection {
 }
 
 export const PVP_AIM_DEADZONE = 0.16;
+/** Direction can be adjusted gently before the player crosses the fire threshold. */
+export const PVP_AIM_DIRECTION_DEADZONE = 0.06;
+/** Separate press/release thresholds prevent firing from flickering around the stick centre. */
+export const PVP_AIM_FIRE_START_DEADZONE = 0.16;
+export const PVP_AIM_FIRE_STOP_DEADZONE = 0.09;
 export const DEFAULT_PVP_AIM_DIRECTION: Readonly<PvpAimDirection> = Object.freeze({ x: 0, z: 1 });
 
 function finite(value: number): boolean { return Number.isFinite(value); }
@@ -17,6 +22,12 @@ function safePreviousDirection(previous: PvpAimDirection): PvpAimDirection {
 
 export function isPvpAimInputActive(x: number, z: number, deadzone = PVP_AIM_DEADZONE): boolean {
   return finite(x) && finite(z) && finite(deadzone) && Math.hypot(x, z) >= Math.max(0, deadzone);
+}
+
+/** Hysteresis keeps the right-stick trigger stable while the thumb jitters near centre. */
+export function shouldPvpAimFire(x: number, z: number, currentlyFiring: boolean): boolean {
+  const threshold = currentlyFiring ? PVP_AIM_FIRE_STOP_DEADZONE : PVP_AIM_FIRE_START_DEADZONE;
+  return isPvpAimInputActive(x, z, threshold);
 }
 
 export function normalizePvpAimDirection(
