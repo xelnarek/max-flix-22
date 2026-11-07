@@ -8,6 +8,8 @@ test('PvP client sends at the room tick rate and only shows match-end once', asy
   assert.match(game, /const inputInterval = 1 \/ 30/);
   assert.match(game, /this\.pvpWantDash = false/);
   assert.match(game, /this\.pvpMatchEndHandled/);
+  assert.match(game, /lastPvpHitEventId/);
+  assert.match(game, /state\.lastHitEvent\.id !== this\.lastPvpHitEventId/);
   assert.match(game, /if \(!this\.pvpMatchEndHandled\)/);
 });
 
