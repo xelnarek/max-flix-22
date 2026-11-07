@@ -4,6 +4,7 @@ import {
   checkObstacleCollision,
   createDefaultPvpObstacles,
   createInitialPvpArenaState,
+  hasPvpLineOfSight,
   PVP_ARENA_BOUNDS,
   PVP_NORMALIZED_HP,
   PVP_SPAWN_P1,
@@ -340,6 +341,9 @@ test('Grzesiek frontal forklift ability applies credited damage and a visible hi
   state.p2.x = 0;
   state.p2.z = 0;
   assert.equal(state.status, 'in_round');
+  assert.equal(state.p1.operatorId, 'grzesiek');
+  assert.ok(Math.hypot(state.p2.x - state.p1.x, state.p2.z - state.p1.z) < 3.8);
+  assert.ok(hasPvpLineOfSight(state.p1, state.p2, state.obstacles), 'clear centre lane should allow line of sight');
   const initialHp = state.p2.hp;
 
   stepPvpArena(state, 0.05, {
