@@ -14,7 +14,7 @@ test('PvP client sends at the room tick rate and only shows match-end once', asy
 test('online session handles static hosting, bounded retries and does not restart the arena on every snapshot', async () => {
   const client = await readFile(new URL('../src/pvpClient.ts', import.meta.url), 'utf8');
   assert.match(client, /VITE_PVP_WS_URL/);
-  assert.ok(client.includes('github.io'));
+  assert.match(client, /isGitHubPages/);
   assert.match(client, /MAX_CONNECT_ATTEMPTS = 3/);
   assert.match(client, /CONNECT_TIMEOUT_MS = 7000/);
   assert.match(client, /hasStartedMatch/);
