@@ -22,14 +22,16 @@
     "protobufjs@7.6.6": true
   },
   "dependencies": {
+    "@capacitor-community/admob": "8.2.1",
     "@pmndrs/uikit": "^1.0.64",
     "@preact/signals-core": "^1.14.0",
+    "@types/ws": "^8.18.2",
     "firebase": "^13.1.0",
     "lit": "^3.3.1",
     "three": "~0.186.0",
     "tslib": "^2.8.1",
-    "xrblocks": "~0.24.0",
-    "@capacitor-community/admob": "8.2.1"
+    "ws": "^8.22.1",
+    "xrblocks": "~0.24.0"
   },
   "devDependencies": {
     "@types/dom-speech-recognition": "^0.0.7",

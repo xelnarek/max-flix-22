@@ -96,7 +96,7 @@ export function applyAbilityKillRecharge(
 }
 
 
-export type AbilityRechargeMode = 'campaign' | 'survival';
+export type AbilityRechargeMode = 'campaign' | 'survival' | 'pvp';
 
 /** Per-kill special recharge tuned as a capped Archero-style reward loop. */
 export function getAbilityKillRechargeSeconds(

@@ -1,6 +1,6 @@
 import type { CharacterId } from './types.ts';
 
-export type CombatGameMode = 'campaign' | 'survival';
+export type CombatGameMode = 'campaign' | 'survival' | 'pvp';
 
 export const CAMPAIGN_ATTACK_COOLDOWN_SECONDS: Readonly<Record<CharacterId, number>> = Object.freeze({
   marcin: 1.05,

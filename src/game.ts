@@ -1,5 +1,14 @@
 import * as THREE from 'three';
 import { getPvpAimAngle, isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle, type PvpAimDirection } from './pvpAim.ts';
+import type { IPvpSession } from './pvpClient.ts';
+import {
+  createDefaultPvpObstacles,
+  PVP_ARENA_BOUNDS,
+  PVP_NORMALIZED_HP,
+  PVP_SPAWN_P1,
+  PVP_SPAWN_P2,
+  type PvpArenaState,
+} from './pvpArena.ts';
 import { clampHorizontalPosition } from './arenaBounds.ts';
 import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoint, resolveEnemyPlayerSeparation } from './enemySpacing.ts';
 import { calculateEnemyObstacleAvoidanceVector } from './enemyNavigation.ts';
@@ -225,6 +234,8 @@ export interface GameCallbacks {
   onSurvivalSecretFound?: (mapId: SurvivalMapId, secretId: string, secretName: string) => void;
   onSurvivalLevelUp?: (options: SurvivalUpgradeOption[], context?: 'levelup' | 'rank-up' | 'boss-reward') => void;
   onSurvivalDashUpdate?: (progress: number, ready: boolean, remainingSeconds: number) => void;
+  onPvpUpdate?: (state: PvpArenaState, localSlot: 'p1' | 'p2') => void;
+  onPvpMatchEnd?: (state: PvpArenaState, localSlot: 'p1' | 'p2') => void;
 }
 
 export class PaleciakiGameEngine {
@@ -509,8 +520,21 @@ export class PaleciakiGameEngine {
   private activeChaserIds = new Set<string>();
   private threatTier = 0;
 
-  // Survival is the sole public game mode.
-  private gameMode: 'campaign' | 'survival' = 'survival';
+  // Survival is the default game mode, PvP Arena is the 1v1 multiplayer mode.
+  private gameMode: 'campaign' | 'survival' | 'pvp' = 'survival';
+  private pvpSession: IPvpSession | null = null;
+  private pvpSlot: 'p1' | 'p2' = 'p1';
+  private lastPvpState: PvpArenaState | null = null;
+  private remotePlayerGroup: THREE.Group | null = null;
+  private remotePlayerDef: CharacterDef | null = null;
+  private remotePlayerMeshBuilt: any = null;
+  private remotePlayerHpBar: any = null;
+  private pvpObstacleMeshes: THREE.Object3D[] = [];
+  private pvpMedkitMesh: THREE.Group | null = null;
+  private pvpProjectileMeshes = new Map<string, THREE.Mesh>();
+  private pvpArenaRoot: THREE.Group | null = null;
+  private pvpWantDash = false;
+  private pvpWantAbility = false;
   private survivalElapsed = 0;
   private survivalSpawnTimer = 0;
   private survivalSurgeTimeLeft = 0;
@@ -1102,7 +1126,11 @@ export class PaleciakiGameEngine {
         this.triggerDash();
       }
       if (e.code === 'KeyF' || e.code === 'KeyJ' || e.code === 'KeyX' || e.code === 'Numpad0') {
-        this.triggerAttack();
+        if (this.gameMode === 'pvp') {
+          this.manualAimFiring = true;
+        } else {
+          this.triggerAttack();
+        }
       }
       if (e.code === 'Escape' || e.code === 'KeyP') {
         this.togglePause();
@@ -1141,6 +1169,11 @@ export class PaleciakiGameEngine {
           this.playerVel.y *= 0.52;
         }
       }
+      if (e.code === 'KeyF' || e.code === 'KeyJ' || e.code === 'KeyX' || e.code === 'Numpad0') {
+        if (this.gameMode === 'pvp') {
+          this.manualAimFiring = false;
+        }
+      }
     });
 
     const canvasContainer = document.getElementById('game-canvas-container');
@@ -1150,13 +1183,45 @@ export class PaleciakiGameEngine {
         if (target && (target.closest('.hud-layer') || target.closest('.touch-layer') || target.closest('.game-modal') || target.closest('.game-screen'))) {
           return;
         }
-        this.triggerAttack();
+        if (this.gameMode === 'pvp') {
+          this.manualAimFiring = true;
+        } else {
+          this.triggerAttack();
+        }
+      }
+    });
+
+    window.addEventListener('pointerup', (e) => {
+      if (this.gameMode === 'pvp' && e.button === 0) {
+        this.manualAimFiring = false;
+      }
+    });
+
+    const pvpRaycaster = new THREE.Raycaster();
+    const pvpGroundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.5);
+    const pvpIntersection = new THREE.Vector3();
+    const mouseNd = new THREE.Vector2();
+
+    window.addEventListener('pointermove', (e) => {
+      if (this.gameMode !== 'pvp' || !this.manualAimEnabled) return;
+      if (e.pointerType === 'touch') return;
+      mouseNd.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouseNd.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      pvpRaycaster.setFromCamera(mouseNd, this.camera);
+      if (pvpRaycaster.ray.intersectPlane(pvpGroundPlane, pvpIntersection)) {
+        const dx = pvpIntersection.x - this.playerPos.x;
+        const dz = pvpIntersection.z - this.playerPos.z;
+        this.setManualAimInput(dx, dz);
+        this.manualAimFiring = (e.buttons & 1) === 1;
       }
     });
 
     window.addEventListener('blur', () => {
       this.keys = {};
       this.virtualJoystick = { x: 0, y: 0 };
+      if (this.gameMode === 'pvp') {
+        this.manualAimFiring = false;
+      }
     });
   }
 
@@ -1613,6 +1678,408 @@ export class PaleciakiGameEngine {
       mapModifier.description,
     );
     this.emitFloatingToast('LOSOWA MAPA: ' + survivalMap.name.toUpperCase() + ' • ' + mapModifier.title, this.playerPos.x, this.playerPos.y + 1.8, this.playerPos.z, 'combo');
+  }
+
+  public startPvp(session: IPvpSession, localOperatorId: CharacterId, remoteOperatorId: CharacterId) {
+    this.clearLevel();
+    this.gameMode = 'pvp';
+    this.pvpSession = session;
+    this.pvpSlot = session.slot;
+    this.lastPvpState = null;
+    this.setManualAimMode(true);
+    this.state = 'playing';
+
+    this.currentCharacterId = localOperatorId;
+    this.charDef = CHARACTERS[localOperatorId];
+    this.maxHp = PVP_NORMALIZED_HP;
+    this.hp = PVP_NORMALIZED_HP;
+
+    this.rebuildPlayerMesh();
+    this.buildPvpArena();
+    this.buildRemotePlayer(remoteOperatorId);
+
+    const spawn = this.pvpSlot === 'p1' ? PVP_SPAWN_P1 : PVP_SPAWN_P2;
+    this.playerPos.set(spawn.x, spawn.y, spawn.z);
+    this.playerRot = spawn.rot;
+    this.manualAimDirection = pvpAimDirectionFromAngle(spawn.rot);
+    if (this.playerGroup) {
+      this.playerGroup.position.copy(this.playerPos);
+      this.playerGroup.rotation.y = this.playerRot;
+    }
+
+    this.cameraMode = 'iso';
+    this.hasManualCameraZoom = false;
+    this.camera.position.set(0, 24, 18);
+    this.camera.lookAt(0, 0.5, 0);
+
+    this.callbacks.onHpUpdate(this.hp, this.maxHp);
+    this.callbacks.onAbilityCooldown(1, true, 0, false);
+    this.callbacks.onSurvivalDashUpdate?.(1, true, 0);
+  }
+
+  public setLastPvpState(state: PvpArenaState) {
+    this.lastPvpState = state;
+  }
+
+  public triggerPvpDash() {
+    this.pvpWantDash = true;
+  }
+
+  public triggerPvpAbility() {
+    this.pvpWantAbility = true;
+  }
+
+  public exitPvp() {
+    if (this.pvpArenaRoot) {
+      this.levelRoot.remove(this.pvpArenaRoot);
+      this.pvpArenaRoot = null;
+    }
+    if (this.remotePlayerGroup) {
+      this.levelRoot.remove(this.remotePlayerGroup);
+      this.remotePlayerGroup = null;
+    }
+    this.pvpProjectileMeshes.forEach((mesh) => this.levelRoot.remove(mesh));
+    this.pvpProjectileMeshes.clear();
+    if (this.pvpSession) {
+      this.pvpSession.dispose();
+      this.pvpSession = null;
+    }
+    this.lastPvpState = null;
+    this.gameMode = 'survival';
+    this.setManualAimMode(false);
+  }
+
+  private buildRemotePlayer(remoteOperatorId: CharacterId) {
+    if (this.remotePlayerGroup) {
+      this.levelRoot.remove(this.remotePlayerGroup);
+      this.remotePlayerGroup = null;
+    }
+
+    const def = CHARACTERS[remoteOperatorId] || CHARACTERS.grzesiek;
+    this.remotePlayerDef = def;
+    const built = createCharacterModel(def);
+    this.remotePlayerMeshBuilt = built;
+    this.remotePlayerGroup = built.group;
+
+    const markerGeo = new THREE.ConeGeometry(0.24, 0.48, 4);
+    markerGeo.rotateX(Math.PI);
+    const markerMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+    const marker = new THREE.Mesh(markerGeo, markerMat);
+    marker.position.set(0, 2.3, 0);
+    this.remotePlayerGroup.add(marker);
+
+    const hpBarGroup = new THREE.Group();
+    hpBarGroup.position.set(0, 2.7, 0);
+    const bg = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.2, 0.16),
+      new THREE.MeshBasicMaterial({ color: 0x111827, side: THREE.DoubleSide })
+    );
+    const fillGeo = new THREE.PlaneGeometry(1.16, 0.12);
+    fillGeo.translate(0.58, 0, 0);
+    const fill = new THREE.Mesh(
+      fillGeo,
+      new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide })
+    );
+    fill.position.set(-0.58, 0, 0.01);
+    hpBarGroup.add(bg, fill);
+
+    this.remotePlayerHpBar = { group: hpBarGroup, fill };
+    this.remotePlayerGroup.add(hpBarGroup);
+
+    const remoteSpawn = this.pvpSlot === 'p1' ? PVP_SPAWN_P2 : PVP_SPAWN_P1;
+    this.remotePlayerGroup.position.set(remoteSpawn.x, remoteSpawn.y, remoteSpawn.z);
+    this.remotePlayerGroup.rotation.y = remoteSpawn.rot;
+
+    this.levelRoot.add(this.remotePlayerGroup);
+  }
+
+  private buildPvpArena() {
+    if (this.pvpArenaRoot) {
+      this.levelRoot.remove(this.pvpArenaRoot);
+      this.pvpArenaRoot = null;
+    }
+
+    this.pvpArenaRoot = new THREE.Group();
+    this.pvpObstacleMeshes = [];
+    this.pvpProjectileMeshes.forEach((mesh) => this.levelRoot.remove(mesh));
+    this.pvpProjectileMeshes.clear();
+
+    const bounds = PVP_ARENA_BOUNDS;
+    const width = bounds.maxX - bounds.minX;
+    const depth = bounds.maxZ - bounds.minZ;
+
+    const floorGeo = new THREE.BoxGeometry(width + 4, 1.0, depth + 4);
+    const floorMat = new THREE.MeshStandardMaterial({
+      color: 0x0f172a,
+      roughness: 0.5,
+      metalness: 0.2,
+    });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.position.set(0, -0.5, 0);
+    floor.receiveShadow = true;
+    this.pvpArenaRoot.add(floor);
+
+    const borderMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+    const borderThickness = 0.35;
+    const bTop = new THREE.Mesh(new THREE.BoxGeometry(width, 0.05, borderThickness), borderMat);
+    bTop.position.set(0, 0.02, bounds.minZ);
+    const bBottom = new THREE.Mesh(new THREE.BoxGeometry(width, 0.05, borderThickness), borderMat);
+    bBottom.position.set(0, 0.02, bounds.maxZ);
+    const bLeft = new THREE.Mesh(new THREE.BoxGeometry(borderThickness, 0.05, depth), borderMat);
+    bLeft.position.set(bounds.minX, 0.02, 0);
+    const bRight = new THREE.Mesh(new THREE.BoxGeometry(borderThickness, 0.05, depth), borderMat);
+    bRight.position.set(bounds.maxX, 0.02, 0);
+
+    const centerLine = new THREE.Mesh(
+      new THREE.BoxGeometry(0.25, 0.05, depth * 0.85),
+      new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.65 })
+    );
+    centerLine.position.set(0, 0.02, 0);
+
+    this.pvpArenaRoot.add(bTop, bBottom, bLeft, bRight, centerLine);
+
+    const ringGeo = new THREE.RingGeometry(1.6, 1.9, 32);
+    ringGeo.rotateX(-Math.PI / 2);
+    const p1Ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0x3b82f6, side: THREE.DoubleSide }));
+    p1Ring.position.set(PVP_SPAWN_P1.x, 0.03, PVP_SPAWN_P1.z);
+    const p2Ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xf59e0b, side: THREE.DoubleSide }));
+    p2Ring.position.set(PVP_SPAWN_P2.x, 0.03, PVP_SPAWN_P2.z);
+    this.pvpArenaRoot.add(p1Ring, p2Ring);
+
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7 });
+    const wN = new THREE.Mesh(new THREE.BoxGeometry(width + 4, 3.2, 1.2), wallMat);
+    wN.position.set(0, 1.6, bounds.minZ - 1.2);
+    const wS = new THREE.Mesh(new THREE.BoxGeometry(width + 4, 3.2, 1.2), wallMat);
+    wS.position.set(0, 1.6, bounds.maxZ + 1.2);
+    const wW = new THREE.Mesh(new THREE.BoxGeometry(1.2, 3.2, depth + 4), wallMat);
+    wW.position.set(bounds.minX - 1.2, 1.6, 0);
+    const wE = new THREE.Mesh(new THREE.BoxGeometry(1.2, 3.2, depth + 4), wallMat);
+    wE.position.set(bounds.maxX + 1.2, 1.6, 0);
+    this.pvpArenaRoot.add(wN, wS, wW, wE);
+
+    const obstacles = createDefaultPvpObstacles();
+    for (const obs of obstacles) {
+      const group = new THREE.Group();
+      group.position.set(obs.x, 0, obs.z);
+
+      if (obs.type === 'pallet') {
+        const palletMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.8 });
+        const stackMesh = new THREE.Mesh(new THREE.BoxGeometry(obs.width, obs.height, obs.depth), palletMat);
+        stackMesh.position.y = obs.height / 2;
+        stackMesh.castShadow = true;
+        group.add(stackMesh);
+
+        const band = new THREE.Mesh(new THREE.BoxGeometry(obs.width + 0.04, 0.3, obs.depth + 0.04), new THREE.MeshBasicMaterial({ color: 0xfacc15 }));
+        band.position.y = obs.height - 0.2;
+        group.add(band);
+      } else if (obs.type === 'barrier') {
+        const barrierMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.6 });
+        const barMesh = new THREE.Mesh(new THREE.BoxGeometry(obs.width, obs.height, obs.depth), barrierMat);
+        barMesh.position.y = obs.height / 2;
+        barMesh.castShadow = true;
+        group.add(barMesh);
+
+        const stripe = new THREE.Mesh(new THREE.BoxGeometry(obs.width + 0.05, 0.25, obs.depth * 0.7), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+        stripe.position.y = obs.height * 0.6;
+        group.add(stripe);
+      } else {
+        const pillarMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.5, metalness: 0.4 });
+        const pilMesh = new THREE.Mesh(new THREE.BoxGeometry(obs.width, obs.height, obs.depth), pillarMat);
+        pilMesh.position.y = obs.height / 2;
+        group.add(pilMesh);
+
+        const light = new THREE.PointLight(0x38bdf8, 5, 8);
+        light.position.set(0, obs.height - 0.5, 0);
+        group.add(light);
+      }
+
+      this.pvpArenaRoot.add(group);
+      this.pvpObstacleMeshes.push(group);
+    }
+
+    const medGroup = new THREE.Group();
+    medGroup.position.set(0, 0, 0);
+
+    const pad = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.4, 0.15, 16), new THREE.MeshStandardMaterial({ color: 0x064e3b }));
+    pad.position.y = 0.08;
+    medGroup.add(pad);
+
+    const crateGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+    const crateMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+    const crate = new THREE.Mesh(crateGeo, crateMat);
+    crate.position.y = 0.8;
+
+    const crossH = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.18, 0.82), new THREE.MeshBasicMaterial({ color: 0x10b981 }));
+    crossH.position.y = 0.8;
+    const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.6, 0.82), new THREE.MeshBasicMaterial({ color: 0x10b981 }));
+    crossV.position.y = 0.8;
+
+    const medBeacon = new THREE.PointLight(0x10b981, 6, 6);
+    medBeacon.position.set(0, 1.2, 0);
+
+    medGroup.add(crate, crossH, crossV, medBeacon);
+    this.pvpMedkitMesh = medGroup;
+    this.pvpArenaRoot.add(medGroup);
+
+    this.levelRoot.add(this.pvpArenaRoot);
+  }
+
+  private updatePvpMode(dt: number) {
+    if (!this.pvpSession) return;
+
+    let screenX = 0;
+    let screenY = 0;
+    if (this.keys['KeyD'] || this.keys['ArrowRight']) screenX += 1;
+    if (this.keys['KeyA'] || this.keys['ArrowLeft']) screenX -= 1;
+    if (this.keys['KeyW'] || this.keys['ArrowUp']) screenY += 1;
+    if (this.keys['KeyS'] || this.keys['ArrowDown']) screenY -= 1;
+
+    if (Math.abs(this.virtualJoystick.x) > 0.08 || Math.abs(this.virtualJoystick.y) > 0.08) {
+      screenX = this.virtualJoystick.x;
+      screenY = -this.virtualJoystick.y;
+    }
+
+    const moveX = screenX;
+    const moveZ = -screenY;
+    const aimAngle = getPvpAimAngle(this.manualAimDirection);
+    const isFiring = this.manualAimFiring;
+    const wantDash = this.pvpWantDash;
+    const wantAbility = this.pvpWantAbility;
+
+    this.pvpWantDash = false;
+    this.pvpWantAbility = false;
+
+    this.pvpSession.sendInput({
+      moveX,
+      moveZ,
+      aimAngle,
+      isFiring,
+      wantDash,
+      wantAbility,
+    });
+
+    if (!this.lastPvpState) return;
+
+    const state = this.lastPvpState;
+    const local = this.pvpSlot === 'p1' ? state.p1 : state.p2;
+    const remote = this.pvpSlot === 'p1' ? state.p2 : state.p1;
+
+    this.playerPos.x = THREE.MathUtils.lerp(this.playerPos.x, local.x, Math.min(1, dt * 18));
+    this.playerPos.z = THREE.MathUtils.lerp(this.playerPos.z, local.z, Math.min(1, dt * 18));
+    this.playerPos.y = local.y;
+    this.playerRot = local.rot;
+
+    if (this.playerGroup) {
+      this.playerGroup.position.copy(this.playerPos);
+      this.playerGroup.rotation.y = this.playerRot;
+
+      const isMoving = Math.hypot(moveX, moveZ) > 0.1 || local.isDashing;
+      if (isMoving && this.leftLeg && this.rightLeg) {
+        const cycle = (performance.now() / 150) % (Math.PI * 2);
+        this.leftLeg.rotation.x = Math.sin(cycle) * 0.45;
+        this.rightLeg.rotation.x = -Math.sin(cycle) * 0.45;
+      } else if (this.leftLeg && this.rightLeg) {
+        this.leftLeg.rotation.x = 0;
+        this.rightLeg.rotation.x = 0;
+      }
+    }
+
+    this.hp = local.hp;
+    this.maxHp = local.maxHp;
+    this.callbacks.onHpUpdate(this.hp, this.maxHp);
+
+    const abilityCdProgress = local.abilityCooldownTimer <= 0 ? 1 : 1 - (local.abilityCooldownTimer / 9.0);
+    this.callbacks.onAbilityCooldown(
+      abilityCdProgress,
+      local.abilityCooldownTimer <= 0,
+      Math.ceil(local.abilityCooldownTimer),
+      false
+    );
+
+    const dashCdProgress = local.dashCooldownTimer <= 0 ? 1 : 1 - (local.dashCooldownTimer / 3.2);
+    this.callbacks.onSurvivalDashUpdate?.(
+      dashCdProgress,
+      local.dashCooldownTimer <= 0,
+      Math.ceil(local.dashCooldownTimer)
+    );
+
+    if (this.remotePlayerGroup) {
+      this.remotePlayerGroup.position.x = THREE.MathUtils.lerp(this.remotePlayerGroup.position.x, remote.x, Math.min(1, dt * 18));
+      this.remotePlayerGroup.position.z = THREE.MathUtils.lerp(this.remotePlayerGroup.position.z, remote.z, Math.min(1, dt * 18));
+      this.remotePlayerGroup.position.y = remote.y;
+      this.remotePlayerGroup.rotation.y = remote.rot;
+
+      if (this.remotePlayerHpBar) {
+        const hpPct = Math.max(0, Math.min(1, remote.hp / remote.maxHp));
+        this.remotePlayerHpBar.fill.scale.x = hpPct;
+        this.remotePlayerHpBar.group.lookAt(this.camera.position);
+      }
+
+      if (this.remotePlayerMeshBuilt?.leftLeg && this.remotePlayerMeshBuilt?.rightLeg) {
+        if (remote.isFiring || Math.hypot(remote.x - this.remotePlayerGroup.position.x, remote.z - this.remotePlayerGroup.position.z) > 0.05) {
+          const cycle = (performance.now() / 150) % (Math.PI * 2);
+          this.remotePlayerMeshBuilt.leftLeg.rotation.x = Math.sin(cycle) * 0.45;
+          this.remotePlayerMeshBuilt.rightLeg.rotation.x = -Math.sin(cycle) * 0.45;
+        } else {
+          this.remotePlayerMeshBuilt.leftLeg.rotation.x = 0;
+          this.remotePlayerMeshBuilt.rightLeg.rotation.x = 0;
+        }
+      }
+    }
+
+    const activeIds = new Set<string>();
+    for (const proj of state.projectiles) {
+      activeIds.add(proj.id);
+      let mesh = this.pvpProjectileMeshes.get(proj.id);
+      if (!mesh) {
+        const geo = new THREE.SphereGeometry(proj.radius, 12, 12);
+        const mat = new THREE.MeshBasicMaterial({ color: proj.color });
+        mesh = new THREE.Mesh(geo, mat);
+        this.levelRoot.add(mesh);
+        this.pvpProjectileMeshes.set(proj.id, mesh);
+      }
+      mesh.position.set(proj.x, proj.y, proj.z);
+    }
+
+    for (const [id, mesh] of this.pvpProjectileMeshes.entries()) {
+      if (!activeIds.has(id)) {
+        this.levelRoot.remove(mesh);
+        mesh.geometry.dispose();
+        (mesh.material as THREE.Material).dispose();
+        this.pvpProjectileMeshes.delete(id);
+      }
+    }
+
+    if (this.pvpMedkitMesh) {
+      this.pvpMedkitMesh.visible = state.pickup.active;
+      this.pvpMedkitMesh.rotation.y += dt * 1.8;
+    }
+
+    if (state.lastHitEvent) {
+      const hit = state.lastHitEvent;
+      const hitText = `-${hit.damage}`;
+      this.callbacks.onFloatingText?.(hitText, hit.x, 1.8, hit.z, 'damage');
+    }
+
+    const midX = (local.x + remote.x) * 0.5;
+    const midZ = (local.z + remote.z) * 0.5;
+    const targetCamX = midX * 0.45;
+    const targetCamZ = midZ * 0.45 + 19.0;
+    const targetCamY = 24.0;
+
+    this.camera.position.x = THREE.MathUtils.lerp(this.camera.position.x, targetCamX, Math.min(1, dt * 5.0));
+    this.camera.position.y = THREE.MathUtils.lerp(this.camera.position.y, targetCamY, Math.min(1, dt * 5.0));
+    this.camera.position.z = THREE.MathUtils.lerp(this.camera.position.z, targetCamZ, Math.min(1, dt * 5.0));
+    this.currentLookAt.x = THREE.MathUtils.lerp(this.currentLookAt.x, midX * 0.45, Math.min(1, dt * 5.0));
+    this.currentLookAt.y = THREE.MathUtils.lerp(this.currentLookAt.y, 0.5, Math.min(1, dt * 5.0));
+    this.currentLookAt.z = THREE.MathUtils.lerp(this.currentLookAt.z, midZ * 0.45, Math.min(1, dt * 5.0));
+    this.camera.lookAt(this.currentLookAt);
+
+    this.callbacks.onPvpUpdate?.(state, this.pvpSlot);
+
+    if (state.status === 'match_end') {
+      this.callbacks.onPvpMatchEnd?.(state, this.pvpSlot);
+    }
   }
 
 
@@ -2824,7 +3291,7 @@ export class PaleciakiGameEngine {
   }
 
 
-  public getGameMode(): 'campaign' | 'survival' {
+  public getGameMode(): 'campaign' | 'survival' | 'pvp' {
     return this.gameMode;
   }
 
@@ -6104,6 +6571,10 @@ export class PaleciakiGameEngine {
     this.updatePerkTimers(simDt);
 
     if (this.state === 'playing') {
+      if (this.gameMode === 'pvp') {
+        this.updatePvpMode(simDt);
+        return;
+      }
       this.activeElapsedSeconds += simDt;
       this.updateAbilityCooldown(simDt);
       this.updateSurvivalDashCooldown(simDt);
@@ -12725,6 +13196,10 @@ export class PaleciakiGameEngine {
   }
 
   public triggerDash(): boolean {
+    if (this.gameMode === 'pvp') {
+      this.triggerPvpDash();
+      return true;
+    }
     if (
       this.state !== 'playing' ||
       this.survivalDashCooldownRemaining > 0.0001 ||
@@ -12883,6 +13358,10 @@ export class PaleciakiGameEngine {
   }
 
   public triggerAbility() {
+    if (this.gameMode === 'pvp') {
+      this.triggerPvpAbility();
+      return;
+    }
     if (this.state !== 'playing' || this.abilityCooldownState.remainingSeconds > 0.0001) return;
     const cooldownSeconds = getAbilityCooldownSeconds(this.charDef.abilityCooldown, this.gameMode) *
       this.characterMasteryBonuses.abilityCooldownMultiplier *

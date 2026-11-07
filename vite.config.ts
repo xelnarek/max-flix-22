@@ -1,5 +1,7 @@
 import { defineConfig } from 'vite';
 
+import { attachPvpWebSocketServer } from './src/server/pvpServer.ts';
+
 export default defineConfig(({ mode }) => {
   const isDev = mode === 'development';
   const isAiStudio = Boolean(
@@ -32,6 +34,21 @@ export default defineConfig(({ mode }) => {
     define: {
       __PALIECIAKI_ADS__: JSON.stringify(admobConfig),
     },
+    plugins: [
+      {
+        name: 'pvp-websocket-server',
+        configureServer(server) {
+          if (server.httpServer) {
+            attachPvpWebSocketServer(server.httpServer);
+          }
+        },
+        configurePreviewServer(server) {
+          if (server.httpServer) {
+            attachPvpWebSocketServer(server.httpServer);
+          }
+        },
+      },
+    ],
     server: {
       host: '0.0.0.0',
       port: 3000,

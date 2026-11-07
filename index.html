@@ -260,6 +260,54 @@
           </div>
           <p id="survival-levelup-hint" class="survival-levelup-hint">Wybór zatrzymuje akcję. Rzadkość wzmacnia efekt; legendarna broń może odblokować się na wyższym poziomie.</p>
         </div>
+      <!-- PVP 1V1 IN-GAME SCOREBOARD & STATUS -->
+      <div id="pvp-hud" class="pvp-hud hidden" aria-live="polite">
+        <div class="pvp-hud-main">
+          <!-- Player 1 Blue Side -->
+          <div class="pvp-player-box pvp-p1-box">
+            <div class="pvp-player-avatar" id="pvp-p1-avatar">👷‍♂️</div>
+            <div class="pvp-player-details">
+              <div class="pvp-player-name-row">
+                <span id="pvp-p1-name" class="pvp-name">Gracz 1</span>
+                <span id="pvp-p1-role" class="pvp-role">KIEROWNIK</span>
+              </div>
+              <div class="pvp-hp-track">
+                <div id="pvp-p1-hp-fill" class="pvp-hp-fill pvp-blue-fill" style="width: 100%;"></div>
+                <span id="pvp-p1-hp-text" class="pvp-hp-text">1000 / 1000</span>
+              </div>
+              <div id="pvp-p1-scores" class="pvp-score-dots" title="Wygrane rundy (do 2)">
+                <span class="pvp-dot" id="p1-dot-0"></span>
+                <span class="pvp-dot" id="p1-dot-1"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Center Round and Announcement Indicator -->
+          <div class="pvp-center-box">
+            <div class="pvp-center-badge">ARENA 1v1</div>
+            <div id="pvp-round-indicator" class="pvp-round-text">RUNDA 1 / 3</div>
+            <div id="pvp-status-banner" class="pvp-status-banner">ODLICZANIE: 3...</div>
+          </div>
+
+          <!-- Player 2 Amber Side -->
+          <div class="pvp-player-box pvp-p2-box">
+            <div class="pvp-player-details text-right">
+              <div class="pvp-player-name-row justify-end">
+                <span id="pvp-p2-role" class="pvp-role">MONTER</span>
+                <span id="pvp-p2-name" class="pvp-name">Gracz 2</span>
+              </div>
+              <div class="pvp-hp-track">
+                <div id="pvp-p2-hp-fill" class="pvp-hp-fill pvp-amber-fill" style="width: 100%;"></div>
+                <span id="pvp-p2-hp-text" class="pvp-hp-text">1000 / 1000</span>
+              </div>
+              <div id="pvp-p2-scores" class="pvp-score-dots justify-end" title="Wygrane rundy (do 2)">
+                <span class="pvp-dot" id="p2-dot-0"></span>
+                <span class="pvp-dot" id="p2-dot-1"></span>
+              </div>
+            </div>
+            <div class="pvp-player-avatar" id="pvp-p2-avatar">🔧</div>
+          </div>
+        </div>
       </div>
 
       <div id="hud-bottom" class="hud-layer hidden">
@@ -1050,18 +1098,30 @@
           </section>
 
           <div class="menu-fixed-bottom-bar">
-            <button id="btn-start-survival" class="btn-primary-start btn-survival-start" aria-label="Rozpocznij Survival">
-              <span class="menu-cta-icon" aria-hidden="true">
-                <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="16" r="11"/><circle cx="16" cy="16" r="4"/><path d="M16 2v5M16 25v5M2 16h5M25 16h5M23.5 8.5l-3 3M11.5 20.5l-3 3M23.5 23.5l-3-3M11.5 11.5l-3-3"/></svg>
-              </span>
-              <span class="menu-cta-copy">
-                <span class="survival-start-title">SURVIVAL SHIFT</span>
-                <span class="survival-start-subtitle">AUTO-ATAK • FALE CO 60 S • EVENTY • PERKI • EWOLUCJE</span>
-              </span>
-            </button>
+            <div class="menu-cta-row">
+              <button id="btn-start-survival" class="btn-primary-start btn-survival-start" aria-label="Rozpocznij Survival">
+                <span class="menu-cta-icon" aria-hidden="true">
+                  <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="16" r="11"/><circle cx="16" cy="16" r="4"/><path d="M16 2v5M16 25v5M2 16h5M25 16h5M23.5 8.5l-3 3M11.5 20.5l-3 3M23.5 23.5l-3-3M11.5 11.5l-3-3"/></svg>
+                </span>
+                <span class="menu-cta-copy">
+                  <span class="survival-start-title">SURVIVAL SHIFT</span>
+                  <span class="survival-start-subtitle">AUTO-ATAK • FALE CO 60 S • EVENTY • EWOLUCJE</span>
+                </span>
+              </button>
+
+              <button id="btn-open-pvp" class="btn-primary-start btn-pvp-start" aria-label="Arena PvP 1v1">
+                <span class="menu-cta-icon" aria-hidden="true">
+                  <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l8 8M14 6l-8 8M26 6l-8 8M18 6l8 8M16 16v10M12 26h8"/></svg>
+                </span>
+                <span class="menu-cta-copy">
+                  <span class="survival-start-title">ARENA PVP 1v1</span>
+                  <span class="survival-start-subtitle">POJEDYNKI SIECIOWE • TWIN-STICK • BOT TRENING</span>
+                </span>
+              </button>
+            </div>
             
             <div class="menu-controls-hint">
-              <span>Sterowanie: WSAD / Strzałki / Joystick • SPACJA = Skok • F / Klik = Atak • E / Shift = Super Moc</span>
+              <span>Sterowanie: WSAD / Strzałki / Joystick • SPACJA = Skok • Prawy stick / Klik = Manualny cel PvP • E / Shift = Super Moc</span>
             </div>
           </div>
         </div>
@@ -1134,6 +1194,138 @@
           <div class="modal-actions">
             <button id="btn-retry" class="btn-modal btn-primary">SPRÓBUJ PONOWNIE</button>
             <button id="btn-menu-gameover" class="btn-modal">MENU GŁÓWNE</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PVP 1V1 LOBBY MODAL -->
+      <div id="pvp-lobby-modal" class="game-modal hidden" aria-modal="true" role="dialog" aria-labelledby="pvp-lobby-title">
+        <div class="modal-card pvp-lobby-card">
+          <div class="modal-badge">⚔️</div>
+          <h2 id="pvp-lobby-title" class="modal-title">ARENA PVP 1v1</h2>
+          <p class="modal-desc">Magazynowe pojedynki 1 na 1. Zbalansowane 1000 HP, symetryczna arena, manualny cel i unikalne zdolności operatorów.</p>
+
+          <div class="pvp-nick-row">
+            <label for="pvp-nickname-input" class="pvp-field-label">TWÓJ NICK:</label>
+            <input type="text" id="pvp-nickname-input" class="nickname-input pvp-input" placeholder="Wpisz nick" maxlength="16" value="Operator B4" />
+          </div>
+
+          <div class="pvp-operator-section">
+            <span class="pvp-field-label">WYBIERZ OPERATORA NA POJEDYNEK:</span>
+            <div id="pvp-operator-picker" class="pvp-operator-grid">
+              <button type="button" class="pvp-operator-btn selected" data-op="marcin">
+                <span class="pvp-op-icon">👷‍♂️</span>
+                <strong>MARCIN</strong>
+                <small>Pieczęć WZ (Tarcza 250)</small>
+              </button>
+              <button type="button" class="pvp-operator-btn" data-op="grzesiek">
+                <span class="pvp-op-icon">🔧</span>
+                <strong>GRZESIEK</strong>
+                <small>Szarża (Taran + Stun)</small>
+              </button>
+              <button type="button" class="pvp-operator-btn" data-op="dawid">
+                <span class="pvp-op-icon">💼</span>
+                <strong>DAWID</strong>
+                <small>Laser Strat (3x Wiązka)</small>
+              </button>
+              <button type="button" class="pvp-operator-btn" data-op="mateusz">
+                <span class="pvp-op-icon">⚡</span>
+                <strong>MATEUSZ</strong>
+                <small>Młot Hydrauliczny (AoE)</small>
+              </button>
+              <button type="button" class="pvp-operator-btn" data-op="piotr">
+                <span class="pvp-op-icon">☕</span>
+                <strong>PIOTR</strong>
+                <small>Impuls Zwarcia (Paraliż)</small>
+              </button>
+            </div>
+          </div>
+
+          <div class="pvp-network-box">
+            <div class="pvp-box-header">
+              <span class="pvp-badge-online">ONLINE WEBSOCKET</span>
+              <span>POJEDYNEK SIECIOWY</span>
+            </div>
+            
+            <div class="pvp-room-actions">
+              <div class="pvp-action-col">
+                <button id="btn-pvp-create-room" class="btn-modal btn-primary pvp-action-btn" type="button">
+                  🏠 STWÓRZ POKÓJ (HOST)
+                </button>
+                <div id="pvp-created-room-info" class="pvp-room-code-display hidden">
+                  <span>KOD TWOJEGO POKOJU:</span>
+                  <strong id="pvp-display-room-code" class="pvp-code-tag">----</strong>
+                  <small id="pvp-host-status">Oczekiwanie na dołączenie drugiego gracza...</small>
+                </div>
+              </div>
+
+              <div class="pvp-divider-or">LUB</div>
+
+              <div class="pvp-action-col">
+                <div class="pvp-join-input-wrap">
+                  <input type="text" id="pvp-join-code-input" class="nickname-input pvp-input pvp-code-input" placeholder="KOD (np. B4XP)" maxlength="6" />
+                  <button id="btn-pvp-join-room" class="btn-modal pvp-action-btn" type="button">
+                    🚪 DOŁĄCZ
+                  </button>
+                </div>
+                <div id="pvp-join-status" class="pvp-status-feedback hidden"></div>
+              </div>
+            </div>
+
+            <div id="pvp-ready-bar" class="pvp-ready-bar hidden">
+              <div id="pvp-lobby-players-status" class="pvp-players-status">Gracz 1: Gotowy • Gracz 2: Czeka</div>
+              <button id="btn-pvp-toggle-ready" class="btn-modal btn-primary pvp-ready-btn" type="button">
+                ✅ JESTEM GOTOWY!
+              </button>
+            </div>
+          </div>
+
+          <div class="pvp-practice-box">
+            <div class="pvp-box-header">
+              <span class="pvp-badge-bot">TRYB TRENINGU</span>
+              <span>NATYCHMIASTOWY POJEDYNEK 1v1</span>
+            </div>
+            <p class="pvp-box-desc">Graj bez czekania na drugiego gracza. Zmierz się z taktycznym botem magazynowym z pełną symulacją aren i manualnym celowaniem.</p>
+            <button id="btn-pvp-start-bot" class="btn-modal pvp-bot-btn" type="button">
+              🤖 URUCHOM TRENING Z BOTEM 1v1
+            </button>
+          </div>
+
+          <div class="modal-actions">
+            <button id="btn-close-pvp-lobby" class="btn-modal" type="button">POWRÓT DO MENU</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PVP MATCH END MODAL -->
+      <div id="pvp-match-end-modal" class="game-modal hidden" aria-modal="true" role="dialog" aria-labelledby="pvp-end-title">
+        <div class="modal-card pvp-match-end-card">
+          <div id="pvp-end-badge" class="modal-badge">🏆</div>
+          <h2 id="pvp-end-title" class="modal-title">ZWYCIĘSTWO!</h2>
+          <p id="pvp-end-subtitle" class="modal-desc">Wygrałeś pojedynek magazynowy wynikiem 2 - 1!</p>
+
+          <div class="stats-summary-grid pvp-end-stats-grid">
+            <div class="summary-item">
+              <span class="summary-label">Wygrane rundy</span>
+              <span id="pvp-end-rounds-score" class="summary-value">2 - 1</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Zadane obrażenia</span>
+              <span id="pvp-end-damage-dealt" class="summary-value">1850 HP</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Wystrzelone pociski</span>
+              <span id="pvp-end-shots-fired" class="summary-value">42</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Celność</span>
+              <span id="pvp-end-accuracy" class="summary-value">64%</span>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button id="btn-pvp-rematch" class="btn-modal btn-primary" type="button">⚔️ REWANŻ</button>
+            <button id="btn-pvp-exit-to-menu" class="btn-modal" type="button">MENU GŁÓWNE</button>
           </div>
         </div>
       </div>

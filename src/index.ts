@@ -18,6 +18,8 @@ import {
   showInterstitialAfterRun,
 } from './ads.ts';
 import { CharacterId, PerkType } from './types.ts';
+import { PvpNetworkSession, PvpLocalBotSession, type IPvpSession } from './pvpClient.ts';
+import type { PvpArenaState, PvpSlot } from './pvpArena.ts';
 import { AssetItem, assetLoader } from './assets.ts';
 import { SelectiveBloomPipeline } from './selectiveBloom.ts';
 import { ThreeClickTrigger } from './menuInteraction.ts';
@@ -433,8 +435,14 @@ class PaleciakiScene extends xb.Script {
   private lastCoins: number = 0;
   private lastTimeSeconds: number = 0;
   private lastBossDefeated: boolean = false;
-  private lastMode: 'campaign' | 'survival' = 'survival';
+  private lastMode: 'campaign' | 'survival' | 'pvp' = 'survival';
   private masteryAwardedForRun = false;
+  private pvpSession: IPvpSession | null = null;
+  private selectedPvpOperator: CharacterId = 'marcin';
+  private pvpRoomCode: string = '';
+  private pvpLocalSlot: PvpSlot = 'p1';
+  private pvpIsHost: boolean = false;
+  private pvpLocalReady: boolean = false;
   private camera: THREE.PerspectiveCamera;
   private fallbackScene: THREE.Scene;
   private lastLoopTick: number = performance.now();
@@ -1329,6 +1337,12 @@ class PaleciakiScene extends xb.Script {
             bossHudBar.classList.remove('phase-2');
           }
         },
+        onPvpUpdate: (state, slot) => {
+          this.updatePvpScoreboard(state, slot);
+        },
+        onPvpMatchEnd: (state, slot) => {
+          this.handlePvpMatchEnd(state, slot);
+        },
       }
     );
 
@@ -2102,7 +2116,11 @@ class PaleciakiScene extends xb.Script {
     });
 
     document.getElementById('btn-ability')?.addEventListener('click', () => {
-      this.engine.triggerAbility();
+      if (this.engine.getGameMode() === 'pvp') {
+        this.engine.triggerPvpAbility();
+      } else {
+        this.engine.triggerAbility();
+      }
     });
 
     const zoomSlider = document.getElementById('cam-zoom-slider') as HTMLInputElement | null;
@@ -2291,7 +2309,7 @@ class PaleciakiScene extends xb.Script {
           const result = await submitScore({
             playerName,
             hero: CHARACTERS[this.selectedCharId].name,
-            mode: this.lastMode,
+            mode: this.lastMode === 'pvp' ? 'survival' : this.lastMode,
             score: this.lastScore,
             coins: this.lastCoins,
             timeSeconds: this.lastTimeSeconds,
@@ -2589,6 +2607,7 @@ class PaleciakiScene extends xb.Script {
     bindTouchAction('btn-touch-jump', () => this.engine.triggerJump());
     bindTouchAction('btn-touch-ability', () => this.engine.triggerAbility());
     bindTouchAction('btn-touch-dash', () => this.engine.triggerDash());
+    this.setupPvpLobby();
   }
 
   init() {
@@ -2854,6 +2873,358 @@ class PaleciakiScene extends xb.Script {
     } catch (err) {
       console.warn('Loop Error:', err);
     }
+  }
+
+  private setupPvpLobby() {
+    const btnOpenPvp = document.getElementById('btn-open-pvp');
+    const pvpLobbyModal = document.getElementById('pvp-lobby-modal');
+    const btnClosePvpLobby = document.getElementById('btn-close-pvp-lobby');
+    const titleScreen = document.getElementById('title-screen');
+    const hudTop = document.getElementById('hud-top');
+    const hudBottom = document.getElementById('hud-bottom');
+    const survivalHud = document.getElementById('survival-hud');
+    const bossHudBar = document.getElementById('boss-hud-bar');
+    const hudPerksRow = document.getElementById('hud-perks-row');
+    const pvpHud = document.getElementById('pvp-hud');
+    const touchControls = document.getElementById('touch-controls');
+    const gameShell = document.getElementById('game-shell');
+
+    const opPicker = document.getElementById('pvp-operator-picker');
+    const nickInput = document.getElementById('pvp-nickname-input') as HTMLInputElement | null;
+
+    const btnStartBot = document.getElementById('btn-pvp-start-bot');
+    const btnCreateRoom = document.getElementById('btn-pvp-create-room');
+    const btnJoinRoom = document.getElementById('btn-pvp-join-room');
+    const joinCodeInput = document.getElementById('pvp-join-code-input') as HTMLInputElement | null;
+    const joinStatus = document.getElementById('pvp-join-status');
+    const createdRoomInfo = document.getElementById('pvp-created-room-info');
+    const displayRoomCode = document.getElementById('pvp-display-room-code');
+    const hostStatus = document.getElementById('pvp-host-status');
+    const readyBar = document.getElementById('pvp-ready-bar');
+    const readyBtn = document.getElementById('btn-pvp-toggle-ready');
+    const lobbyPlayersStatus = document.getElementById('pvp-lobby-players-status');
+
+    const matchEndModal = document.getElementById('pvp-match-end-modal');
+    const btnRematch = document.getElementById('btn-pvp-rematch');
+    const btnExitToMenu = document.getElementById('btn-pvp-exit-to-menu');
+
+    opPicker?.querySelectorAll<HTMLButtonElement>('.pvp-operator-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        opPicker.querySelectorAll('.pvp-operator-btn').forEach((b) => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        const opId = btn.dataset.op as CharacterId;
+        if (opId && CHARACTERS[opId]) {
+          this.selectedPvpOperator = opId;
+          sound.playSmack();
+        }
+      });
+    });
+
+    const openLobby = () => {
+      pvpLobbyModal?.classList.remove('hidden');
+      sound.playSmack();
+    };
+
+    const closeLobby = () => {
+      pvpLobbyModal?.classList.add('hidden');
+      if (this.pvpSession) {
+        this.pvpSession.leaveRoom?.();
+        this.pvpSession = null;
+      }
+      this.pvpLocalReady = false;
+      if (readyBar) readyBar.classList.add('hidden');
+      if (createdRoomInfo) createdRoomInfo.classList.add('hidden');
+      if (joinStatus) joinStatus.classList.add('hidden');
+    };
+
+    btnOpenPvp?.addEventListener('click', openLobby);
+    btnClosePvpLobby?.addEventListener('click', closeLobby);
+
+    const startPvpMatchUI = (session: IPvpSession, localOp: CharacterId, remoteOp: CharacterId) => {
+      if (this.cinematicIntro?.isRunning()) this.cinematicIntro.stop(false, false);
+      this.engine.setLevelVisible(true);
+
+      if (titleScreen) {
+        titleScreen.classList.add('hidden');
+        titleScreen.style.setProperty('display', 'none', 'important');
+      }
+      pvpLobbyModal?.classList.add('hidden');
+      matchEndModal?.classList.add('hidden');
+
+      hudTop?.classList.add('hidden');
+      survivalHud?.classList.add('hidden');
+      bossHudBar?.classList.add('hidden');
+      hudPerksRow?.classList.add('hidden');
+
+      pvpHud?.classList.remove('hidden');
+      hudBottom?.classList.remove('hidden');
+      touchControls?.classList.remove('hidden');
+
+      gameShell?.classList.add('pvp-mode');
+      this.engine.setManualAimMode(true);
+
+      this.engine.startPvp(session, localOp, remoteOp);
+      sound.playBossWarning();
+    };
+
+    // Practice Bot Mode
+    btnStartBot?.addEventListener('click', () => {
+      const localOp = this.selectedPvpOperator;
+      const botOp: CharacterId = localOp === 'marcin' ? 'grzesiek' : localOp === 'grzesiek' ? 'dawid' : 'marcin';
+      const playerNick = nickInput?.value.trim() || 'Operator B4';
+
+      const botSession = new PvpLocalBotSession(localOp, botOp, playerNick, 'Grzesiek [BOT SI]');
+      this.pvpSession = botSession;
+      this.pvpLocalSlot = 'p1';
+
+      botSession.onState = (state) => {
+        this.engine.setLastPvpState(state);
+      };
+
+      startPvpMatchUI(botSession, localOp, botOp);
+    });
+
+    // Online WebSocket Host
+    btnCreateRoom?.addEventListener('click', () => {
+      const playerNick = nickInput?.value.trim() || 'Operator B4';
+      const netSession = new PvpNetworkSession();
+      this.pvpSession = netSession;
+      this.pvpLocalSlot = 'p1';
+      this.pvpIsHost = true;
+      this.pvpLocalReady = false;
+
+      netSession.onRoomJoined = (roomCode, slot, roomState) => {
+        this.pvpRoomCode = roomCode;
+        this.pvpLocalSlot = slot;
+        if (displayRoomCode) displayRoomCode.textContent = roomCode;
+        createdRoomInfo?.classList.remove('hidden');
+        readyBar?.classList.remove('hidden');
+        if (hostStatus) hostStatus.textContent = 'Kod pokoju aktywny! Podaj go drugiemu graczowi.';
+        if (lobbyPlayersStatus) lobbyPlayersStatus.textContent = `Gracz 1: ${roomState.p1.nickname || playerNick} (Ty)`;
+      };
+
+      netSession.onPlayerJoined = (player) => {
+        if (hostStatus) hostStatus.textContent = `Gracz ${player.nickname} dołączył! Kliknij 'ZGŁOŚ GOTOWOŚĆ'.`;
+        if (lobbyPlayersStatus) lobbyPlayersStatus.textContent = `Gracz 1: Ty • Gracz 2: ${player.nickname}`;
+        sound.playPickup();
+      };
+
+      netSession.onPlayerReady = (slot, ready) => {
+        if (lobbyPlayersStatus) {
+          lobbyPlayersStatus.textContent = `Status: ${slot === this.pvpLocalSlot ? 'Ty' : 'Rywal'} ${ready ? 'GOTOWY' : 'CZEKA'}`;
+        }
+      };
+
+      netSession.onMatchStart = (state) => {
+        const localOp = this.pvpLocalSlot === 'p1' ? state.p1.operatorId : state.p2.operatorId;
+        const remoteOp = this.pvpLocalSlot === 'p1' ? state.p2.operatorId : state.p1.operatorId;
+        startPvpMatchUI(netSession, localOp, remoteOp);
+      };
+
+      netSession.onState = (state) => {
+        this.engine.setLastPvpState(state);
+      };
+
+      netSession.onError = (err) => {
+        if (hostStatus) hostStatus.textContent = `Błąd: ${err}`;
+      };
+
+      netSession.createRoom(this.selectedPvpOperator, playerNick);
+      sound.playSmack();
+    });
+
+    // Online WebSocket Join
+    btnJoinRoom?.addEventListener('click', () => {
+      const code = joinCodeInput?.value.trim().toUpperCase();
+      if (!code || code.length < 4) {
+        if (joinStatus) {
+          joinStatus.classList.remove('hidden');
+          joinStatus.textContent = 'Wpisz poprawny 4-literowy kod pokoju!';
+        }
+        return;
+      }
+
+      const playerNick = nickInput?.value.trim() || 'Operator B4';
+      const netSession = new PvpNetworkSession();
+      this.pvpSession = netSession;
+      this.pvpLocalSlot = 'p2';
+      this.pvpIsHost = false;
+      this.pvpLocalReady = false;
+
+      netSession.onRoomJoined = (roomCode, slot, roomState) => {
+        this.pvpRoomCode = roomCode;
+        this.pvpLocalSlot = slot;
+        readyBar?.classList.remove('hidden');
+        if (joinStatus) {
+          joinStatus.classList.remove('hidden');
+          joinStatus.textContent = `Dołączono do pokoju ${roomCode}!`;
+        }
+        if (lobbyPlayersStatus) {
+          lobbyPlayersStatus.textContent = `Połączono! Gracz 1: ${roomState.p1.nickname || 'Host'} • Gracz 2: ${playerNick} (Ty)`;
+        }
+        sound.playPickup();
+      };
+
+      netSession.onPlayerReady = (slot, ready) => {
+        if (lobbyPlayersStatus) {
+          lobbyPlayersStatus.textContent = `Status: ${slot === this.pvpLocalSlot ? 'Ty' : 'Rywal'} ${ready ? 'GOTOWY' : 'CZEKA'}`;
+        }
+      };
+
+      netSession.onMatchStart = (state) => {
+        const localOp = this.pvpLocalSlot === 'p1' ? state.p1.operatorId : state.p2.operatorId;
+        const remoteOp = this.pvpLocalSlot === 'p1' ? state.p2.operatorId : state.p1.operatorId;
+        startPvpMatchUI(netSession, localOp, remoteOp);
+      };
+
+      netSession.onState = (state) => {
+        this.engine.setLastPvpState(state);
+      };
+
+      netSession.onError = (err) => {
+        if (joinStatus) {
+          joinStatus.classList.remove('hidden');
+          joinStatus.textContent = `Błąd dołączania: ${err}`;
+        }
+      };
+
+      netSession.joinRoom(code, this.selectedPvpOperator, playerNick);
+      sound.playSmack();
+    });
+
+    readyBtn?.addEventListener('click', () => {
+      if (!this.pvpSession) return;
+      this.pvpLocalReady = !this.pvpLocalReady;
+      this.pvpSession.setReady?.(this.pvpLocalReady);
+      if (readyBtn) readyBtn.textContent = this.pvpLocalReady ? '✓ JESTEŚ GOTOWY' : 'ZGŁOŚ GOTOWOŚĆ';
+      sound.playSmack();
+    });
+
+    btnRematch?.addEventListener('click', () => {
+      matchEndModal?.classList.add('hidden');
+      if (this.pvpSession) {
+        this.pvpSession.requestRematch?.();
+        sound.playSmack();
+      }
+    });
+
+    btnExitToMenu?.addEventListener('click', () => {
+      matchEndModal?.classList.add('hidden');
+      pvpHud?.classList.add('hidden');
+      gameShell?.classList.remove('pvp-mode');
+      this.engine.setManualAimMode(false);
+      this.engine.exitPvp();
+      if (this.pvpSession) {
+        this.pvpSession.leaveRoom?.();
+        this.pvpSession = null;
+      }
+      this.pvpLocalReady = false;
+      if (titleScreen) {
+        titleScreen.classList.remove('hidden');
+        titleScreen.style.setProperty('display', 'flex', 'important');
+      }
+      sound.playSmack();
+    });
+  }
+
+  private updatePvpScoreboard(state: PvpArenaState, localSlot: PvpSlot) {
+    const p1Fill = document.getElementById('pvp-p1-hp-fill');
+    const p1Text = document.getElementById('pvp-p1-hp-text');
+    const p1Name = document.getElementById('pvp-p1-name');
+    const p1Role = document.getElementById('pvp-p1-role');
+    const p1Avatar = document.getElementById('pvp-p1-avatar');
+    if (p1Fill) p1Fill.style.width = `${Math.max(0, Math.min(100, (state.p1.hp / state.p1.maxHp) * 100))}%`;
+    if (p1Text) p1Text.textContent = `${Math.max(0, Math.ceil(state.p1.hp))} / ${state.p1.maxHp}`;
+    if (p1Name) p1Name.textContent = state.p1.nickname + (localSlot === 'p1' ? ' (TY)' : '');
+    if (p1Role) p1Role.textContent = CHARACTERS[state.p1.operatorId]?.role.toUpperCase() || 'OPERATOR';
+    if (p1Avatar) p1Avatar.textContent = (CHARACTERS[state.p1.operatorId] as any)?.icon || '👷‍♂️';
+
+    const p1Dot0 = document.getElementById('p1-dot-0');
+    const p1Dot1 = document.getElementById('p1-dot-1');
+    if (p1Dot0) p1Dot0.classList.toggle('scored', state.score.p1 >= 1);
+    if (p1Dot1) p1Dot1.classList.toggle('scored', state.score.p1 >= 2);
+
+    const p2Fill = document.getElementById('pvp-p2-hp-fill');
+    const p2Text = document.getElementById('pvp-p2-hp-text');
+    const p2Name = document.getElementById('pvp-p2-name');
+    const p2Role = document.getElementById('pvp-p2-role');
+    const p2Avatar = document.getElementById('pvp-p2-avatar');
+    if (p2Fill) p2Fill.style.width = `${Math.max(0, Math.min(100, (state.p2.hp / state.p2.maxHp) * 100))}%`;
+    if (p2Text) p2Text.textContent = `${Math.max(0, Math.ceil(state.p2.hp))} / ${state.p2.maxHp}`;
+    if (p2Name) p2Name.textContent = (localSlot === 'p2' ? '(TY) ' : '') + state.p2.nickname;
+    if (p2Role) p2Role.textContent = CHARACTERS[state.p2.operatorId]?.role.toUpperCase() || 'OPERATOR';
+    if (p2Avatar) p2Avatar.textContent = (CHARACTERS[state.p2.operatorId] as any)?.icon || '🔧';
+
+    const p2Dot0 = document.getElementById('p2-dot-0');
+    const p2Dot1 = document.getElementById('p2-dot-1');
+    if (p2Dot0) p2Dot0.classList.toggle('scored', state.score.p2 >= 1);
+    if (p2Dot1) p2Dot1.classList.toggle('scored', state.score.p2 >= 2);
+
+    const roundIndicator = document.getElementById('pvp-round-indicator');
+    if (roundIndicator) roundIndicator.textContent = `RUNDA ${state.currentRound} / ${state.maxRounds}`;
+
+    const banner = document.getElementById('pvp-status-banner');
+    if (banner) {
+      if (state.status === 'countdown') {
+        banner.textContent = `ODLICZANIE: ${Math.ceil(state.countdownTimer)}...`;
+        banner.className = 'pvp-status-banner countdown';
+      } else if (state.status === 'in_round') {
+        if (state.pickup.respawnTimer > 0) {
+          banner.textContent = `APTECZKA ZA ${Math.ceil(state.pickup.respawnTimer)}s`;
+          banner.className = 'pvp-status-banner';
+        } else {
+          banner.textContent = `WALKA! APTECZKA DOSTĘPNA NA ŚRODKU!`;
+          banner.className = 'pvp-status-banner active';
+        }
+      } else if (state.status === 'round_end') {
+        const winnerNick = state.roundWinner === 'p1' ? state.p1.nickname : state.p2.nickname;
+        banner.textContent = `RUNDĘ WYGRYWA: ${winnerNick}!`;
+        banner.className = 'pvp-status-banner winner';
+      } else if (state.status === 'match_end') {
+        banner.textContent = `MECZ ZAKOŃCZONY!`;
+        banner.className = 'pvp-status-banner winner';
+      }
+    }
+  }
+
+  private handlePvpMatchEnd(state: PvpArenaState, localSlot: PvpSlot) {
+    const matchEndModal = document.getElementById('pvp-match-end-modal');
+    if (!matchEndModal) return;
+
+    const isWinner = state.winner === localSlot;
+    if (isWinner) {
+      sound.playWin();
+    } else {
+      sound.playGameOver();
+    }
+
+    const endBadge = document.getElementById('pvp-end-badge');
+    const endTitle = document.getElementById('pvp-end-title');
+    const endSubtitle = document.getElementById('pvp-end-subtitle');
+    const roundsScore = document.getElementById('pvp-end-rounds-score');
+    const damageDealt = document.getElementById('pvp-end-damage-dealt');
+    const shotsFired = document.getElementById('pvp-end-shots-fired');
+    const accuracy = document.getElementById('pvp-end-accuracy');
+
+    if (endBadge) endBadge.textContent = isWinner ? '🏆' : '💀';
+    if (endTitle) endTitle.textContent = isWinner ? 'ZWYCIĘSTWO!' : 'PORAŻKA';
+    if (endSubtitle) {
+      const myNick = localSlot === 'p1' ? state.p1.nickname : state.p2.nickname;
+      const opNick = localSlot === 'p1' ? state.p2.nickname : state.p1.nickname;
+      endSubtitle.textContent = isWinner
+        ? `Świetna robota, ${myNick}! Wygrałeś pojedynek z ${opNick} na arenie magazynu.`
+        : `Tym razem ${opNick} okazał się szybszy na paleciaku. Spróbuj rewanżu!`;
+    }
+
+    if (roundsScore) roundsScore.textContent = `${state.score.p1} - ${state.score.p2}`;
+
+    const myStats = localSlot === 'p1' ? state.stats.p1 : state.stats.p2;
+    if (damageDealt) damageDealt.textContent = `${Math.round(myStats.damageDealt)} HP`;
+    if (shotsFired) shotsFired.textContent = `${myStats.shotsFired}`;
+    const acc = myStats.shotsFired > 0 ? Math.round((myStats.shotsHit / myStats.shotsFired) * 100) : 0;
+    if (accuracy) accuracy.textContent = `${acc}%`;
+
+    matchEndModal.classList.remove('hidden');
   }
 
   onSelectEnd(event: xb.SelectEvent) {

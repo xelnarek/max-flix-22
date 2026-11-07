@@ -5480,3 +5480,403 @@ button {
   #game-shell.manual-aim-mode .pvp-aim-zone { bottom: 98px !important; }
   #game-shell.manual-aim-mode .touch-actions-zone { gap: 6px !important; }
 }
+
+/* ==========================================================================
+   PVP 1v1 ARENA STYLES
+   ========================================================================== */
+
+.menu-cta-row {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  width: 100%;
+}
+@media (max-width: 680px) {
+  .menu-cta-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+.btn-pvp-start {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(185, 28, 28, 0.95)) !important;
+  border-color: rgba(252, 165, 165, 0.6) !important;
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+.btn-pvp-start:hover {
+  background: linear-gradient(135deg, #f87171, #dc2626) !important;
+  box-shadow: 0 6px 24px rgba(239, 68, 68, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+  transform: translateY(-2px);
+}
+
+/* In-game PvP Scoreboard HUD */
+.pvp-hud {
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(94vw, 780px);
+  z-index: 100;
+  pointer-events: none;
+}
+.pvp-hud-main {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  background: rgba(11, 15, 25, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.pvp-player-box {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+.pvp-p2-box {
+  justify-content: flex-end;
+}
+
+.pvp-player-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.pvp-player-details {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+.pvp-player-details.text-right {
+  text-align: right;
+}
+
+.pvp-player-name-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.pvp-player-name-row.justify-end {
+  justify-content: flex-end;
+}
+
+.pvp-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: #f8fafc;
+}
+.pvp-role {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+}
+
+.pvp-hp-track {
+  position: relative;
+  height: 12px;
+  border-radius: 6px;
+  background: #0f172a;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+.pvp-hp-fill {
+  height: 100%;
+  transition: width 0.12s ease-out;
+}
+.pvp-blue-fill {
+  background: linear-gradient(90deg, #38bdf8, #2563eb);
+}
+.pvp-amber-fill {
+  background: linear-gradient(90deg, #f59e0b, #ef4444);
+}
+.pvp-hp-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 800;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.pvp-score-dots {
+  display: flex;
+  flex-direction: row;
+  gap: 5px;
+}
+.pvp-score-dots.justify-end {
+  justify-content: flex-end;
+}
+.pvp-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid #94a3b8;
+  background: transparent;
+}
+.pvp-dot.active {
+  background: #facc15;
+  border-color: #facc15;
+  box-shadow: 0 0 8px #facc15;
+}
+
+.pvp-center-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 12px;
+  min-width: 130px;
+}
+.pvp-center-badge {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #38bdf8;
+}
+.pvp-round-text {
+  font-size: 16px;
+  font-weight: 900;
+  color: #f8fafc;
+}
+.pvp-status-banner {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fbbf24;
+  white-space: nowrap;
+}
+
+/* PVP Lobby Modal */
+.pvp-lobby-card {
+  max-width: 660px !important;
+  max-height: 92vh !important;
+  overflow-y: auto !important;
+}
+
+.pvp-nick-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.pvp-field-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+.pvp-input {
+  flex: 1;
+  padding: 8px 12px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pvp-operator-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.pvp-operator-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+}
+.pvp-operator-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  padding: 10px 6px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.pvp-operator-btn:hover {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.pvp-operator-btn.selected {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
+}
+.pvp-op-icon {
+  font-size: 24px;
+}
+.pvp-operator-btn strong {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+.pvp-operator-btn small {
+  font-size: 9px;
+  color: #94a3b8;
+  line-height: 1.2;
+}
+
+.pvp-network-box,
+.pvp-practice-box {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+.pvp-box-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  margin-bottom: 10px;
+  color: #f8fafc;
+}
+.pvp-badge-online {
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+.pvp-badge-bot {
+  background: #10b981;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+.pvp-box-desc {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.pvp-room-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+@media (max-width: 580px) {
+  .pvp-room-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+.pvp-action-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pvp-divider-or {
+  font-size: 11px;
+  font-weight: 800;
+  color: #64748b;
+  padding: 4px;
+}
+.pvp-action-btn {
+  padding: 10px 14px !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+}
+.pvp-room-code-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px dashed rgba(250, 204, 21, 0.4);
+  border-radius: 8px;
+}
+.pvp-code-tag {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  color: #facc15;
+}
+.pvp-join-input-wrap {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+}
+.pvp-code-input {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-align: center;
+}
+.pvp-ready-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.pvp-players-status {
+  font-size: 12px;
+  font-weight: 700;
+  color: #38bdf8;
+}
+.pvp-ready-btn {
+  background: #10b981 !important;
+  padding: 8px 16px !important;
+  font-size: 13px !important;
+}
+.pvp-bot-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #059669, #047857) !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  padding: 12px !important;
+}
+
+/* Match End Modal */
+.pvp-match-end-card {
+  max-width: 520px !important;
+}
+.pvp-end-stats-grid {
+  margin: 16px 0;
+}
+
