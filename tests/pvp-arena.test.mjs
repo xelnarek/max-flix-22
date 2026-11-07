@@ -137,7 +137,7 @@ test('firing creates projectile that damages opponent upon collision', () => {
 test('knockout awards round win and triggers round reset or match victory', () => {
   const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
   resetPvpRound(state);
-  stepPvpArena(state, 3.0); // in_round
+  advanceArena(state, 3.0); // in_round
 
   // Set P2 to 10 HP, disable pickup for isolated test, and hit with projectile
   state.pickup.active = false;
