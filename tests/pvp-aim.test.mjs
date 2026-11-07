@@ -26,7 +26,7 @@ test('invalid samples never inject NaN into combat direction', () => {
   const previous = { x: 0, z: -1 };
   assert.deepEqual(normalizePvpAimDirection(Number.NaN, 1, previous), previous);
   assert.deepEqual(normalizePvpAimDirection(1, Number.POSITIVE_INFINITY, previous), previous);
-  assert.deepEqual(normalizePvpAimDirection(1, 0, { x: Number.NaN, z: 0 }), DEFAULT_PVP_AIM_DIRECTION);
+  assert.deepEqual(normalizePvpAimDirection(0, 0, { x: Number.NaN, z: 0 }), DEFAULT_PVP_AIM_DIRECTION);
 });
 
 test('aim activation respects deadzone and rejects non-finite values', () => {
