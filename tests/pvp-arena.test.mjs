@@ -335,6 +335,7 @@ test('Grzesiek frontal forklift ability applies credited damage and a visible hi
   state.status = 'in_round';
   state.countdownTimer = 0;
   state.pickup.active = false;
+  state.pickup.respawnTimer = 30; // keep the medkit unavailable during the isolated damage test
   state.obstacles = []; // isolate direct ability damage from cover checks
   state.p1.x = -2;
   state.p1.z = 0;
@@ -401,6 +402,7 @@ test('direct PvP ability damage is clipped to remaining shield and HP', () => {
   state.status = 'in_round';
   state.countdownTimer = 0;
   state.pickup.active = false;
+  state.pickup.respawnTimer = 30; // keep the medkit unavailable during the isolated damage test
   state.obstacles = []; // isolate direct ability damage from cover checks
   state.p1.x = -2;
   state.p1.z = 0;
