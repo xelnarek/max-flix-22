@@ -8638,7 +8638,7 @@ export class PaleciakiGameEngine {
       this.survivalDashDurationRemaining = Math.max(0, this.survivalDashDurationRemaining - dt);
       this.playerVel.x = this.survivalDashDirection.x * 18;
       this.playerVel.z = this.survivalDashDirection.z * 18;
-      this.playerRot = Math.atan2(this.survivalDashDirection.x, this.survivalDashDirection.z);
+      if (!this.manualAimEnabled) this.playerRot = Math.atan2(this.survivalDashDirection.x, this.survivalDashDirection.z);
     } else if (inputLen > 0.08) {
       const targetX = inputX * speed;
       const targetZ = inputZ * speed;
