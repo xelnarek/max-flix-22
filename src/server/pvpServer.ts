@@ -50,7 +50,7 @@ function sendError(ws: WebSocket, message: string): void {
 
 function sanitizePlayerName(value: unknown, fallback: string): string {
   if (typeof value !== 'string') return fallback;
-  const cleaned = value.replace(/[\\u0000-\\u001f\\u007f]/g, '').trim().slice(0, 16);
+  const cleaned = value.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 16);
   return cleaned || fallback;
 }
 
@@ -335,13 +335,13 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
               return;
             }
             room.rematchVotes.add(playerSlot);
-            const waitingClient = room.clients.get(playerSlot);
-            if (waitingClient?.readyState === WebSocket.OPEN) {
-              waitingClient.send(JSON.stringify({
-                type: 'rematch_waiting',
-                votes: room.rematchVotes.size,
-                required: 2,
-              }));
+            const voteMessage = JSON.stringify({
+              type: 'rematch_waiting',
+              votes: room.rematchVotes.size,
+              required: 2,
+            });
+            for (const client of room.clients.values()) {
+              if (client.readyState === WebSocket.OPEN) client.send(voteMessage);
             }
             if (room.rematchVotes.size === 2) {
               room.state.round = 1;
