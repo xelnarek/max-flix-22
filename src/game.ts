@@ -1346,9 +1346,60 @@ export class PaleciakiGameEngine {
     });
   }
 
+  /**
+   * Dispose the previous procedural operator rig when the selection changes.
+   * Character meshes own their geometries/materials (including the generated
+   * tablet canvas texture); the outline shell shares those geometries, so Sets
+   * ensure each GPU resource is released exactly once.
+   */
+  private disposeCharacterModel(root: THREE.Group): void {
+    const geometries = new Set<THREE.BufferGeometry>();
+    const materials = new Set<THREE.Material>();
+    const textures = new Set<THREE.Texture>();
+
+    const collectMaterial = (material: THREE.Material): void => {
+      if (materials.has(material)) return;
+      materials.add(material);
+      for (const value of Object.values(material)) {
+        if (value instanceof THREE.Texture) textures.add(value);
+        else if (Array.isArray(value)) {
+          for (const entry of value) {
+            if (entry instanceof THREE.Texture) textures.add(entry);
+          }
+        }
+      }
+      if (material instanceof THREE.ShaderMaterial) {
+        for (const uniform of Object.values(material.uniforms)) {
+          const value = uniform?.value;
+          if (value instanceof THREE.Texture) textures.add(value);
+          else if (Array.isArray(value)) {
+            for (const entry of value) {
+              if (entry instanceof THREE.Texture) textures.add(entry);
+            }
+          }
+        }
+      }
+    };
+
+    root.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+      if (object.geometry) geometries.add(object.geometry);
+      const meshMaterials = Array.isArray(object.material) ? object.material : [object.material];
+      for (const material of meshMaterials) collectMaterial(material);
+    });
+
+    for (const texture of textures) texture.dispose();
+    for (const geometry of geometries) geometry.dispose();
+    for (const material of materials) material.dispose();
+  }
+
   private rebuildPlayerMesh() {
     if (this.playerGroup) {
-      this.levelRoot.remove(this.playerGroup);
+      const previousPlayerGroup = this.playerGroup;
+      this.levelRoot.remove(previousPlayerGroup);
+      this.disposeCharacterModel(previousPlayerGroup);
+      this.playerGroup = null;
+      this.outlineMaterial = null;
     }
     const built = createCharacterModel(this.charDef);
     this.playerGroup = built.group;
@@ -1365,12 +1416,15 @@ export class PaleciakiGameEngine {
     // STENCIL BUFFER OUTLINE SHADER FOR HIGH VISIBILITY
     // 1. Configure stencil writing on player primary geometry
     this.playerGroup.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        child.material = child.material.clone();
-        child.material.stencilWrite = true;
-        child.material.stencilRef = 1;
-        child.material.stencilFunc = THREE.AlwaysStencilFunc;
-        child.material.stencilZPass = THREE.ReplaceStencilOp;
+      if (!(child instanceof THREE.Mesh)) return;
+      // createCharacterModel returns a fresh, privately-owned material set for
+      // each rig. Configure it in place instead of cloning every material.
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      for (const material of materials) {
+        material.stencilWrite = true;
+        material.stencilRef = 1;
+        material.stencilFunc = THREE.AlwaysStencilFunc;
+        material.stencilZPass = THREE.ReplaceStencilOp;
       }
     });
 
