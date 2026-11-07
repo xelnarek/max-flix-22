@@ -38,7 +38,7 @@ const VALID_OPERATOR_IDS = new Set<CharacterId>(['marcin', 'grzesiek', 'dawid', 
 function generateRoomCode(): string {
   for (let attempt = 0; attempt < 32; attempt++) {
     let code = '';
-    for (let i = 0; i < 4; i++) code += ROOM_CODE_ALPHABET[randomInt(ROOM_CODE_ALPHABET.length)];
+    for (let i = 0; i < 6; i++) code += ROOM_CODE_ALPHABET[randomInt(ROOM_CODE_ALPHABET.length)];
     if (!activeRooms.has(code)) return code;
   }
   throw new Error('Nie udało się przydzielić wolnego kodu pokoju.');
@@ -204,8 +204,8 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
               return;
             }
             const code = typeof msg.code === 'string' ? msg.code.trim().toUpperCase() : '';
-            if (!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}$/.test(code)) {
-              sendError(ws, 'Kod pokoju musi mieć dokładnie 4 znaki.');
+            if (!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(code)) {
+              sendError(ws, 'Kod pokoju musi mieć dokładnie 6 znaków.');
               return;
             }
             const operatorId: CharacterId = isCharacterId(msg.operatorId) ? msg.operatorId : 'grzesiek';
