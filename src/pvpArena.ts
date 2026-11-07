@@ -182,6 +182,52 @@ function firstProjectileObstacleHit(
   return null;
 }
 
+function hasPvpLineOfSight(
+  source: PvpPlayerState,
+  target: PvpPlayerState,
+  obstacles: PvpObstacle[],
+): boolean {
+  return firstProjectileObstacleHit(
+    source.x,
+    source.z,
+    target.x,
+    target.z,
+    0.12,
+    obstacles,
+  ) === null;
+}
+
+function applyPvpAbilityDamage(
+  source: PvpPlayerState,
+  target: PvpPlayerState,
+  state: PvpArenaState,
+  requestedDamage: number,
+  stunSeconds = 0,
+): number {
+  const safeDamage = Number.isFinite(requestedDamage) ? Math.max(0, requestedDamage) : 0;
+  const actualDamage = Math.min(safeDamage, Math.max(0, target.hp) + Math.max(0, target.shieldHp));
+  if (actualDamage <= 0) return 0;
+
+  let remaining = actualDamage;
+  if (target.shieldHp > 0) {
+    const absorbed = Math.min(target.shieldHp, remaining);
+    target.shieldHp -= absorbed;
+    remaining -= absorbed;
+  }
+  if (remaining > 0) target.hp = Math.max(0, target.hp - remaining);
+
+  source.damageDealt += actualDamage;
+  if (stunSeconds > 0 && target.hp > 0) target.stunTimer = Math.max(target.stunTimer, stunSeconds);
+  state.lastHitEvent = {
+    targetSlot: target.slot,
+    damage: actualDamage,
+    sourceSlot: source.slot,
+    x: target.x,
+    z: target.z,
+  };
+  return actualDamage;
+}
+
 function separatePvpPlayers(state: PvpArenaState): void {
   const p1 = state.p1;
   const p2 = state.p2;
@@ -766,43 +812,51 @@ function triggerPlayerAbility(player: PvpPlayerState, state: PvpArenaState) {
   player.abilityCooldownTimer = PVP_ABILITY_COOLDOWN;
   const opponent = player.slot === 'p1' ? state.p2 : state.p1;
   const angle = player.aimAngle;
+  const dx = opponent.x - player.x;
+  const dz = opponent.z - player.z;
+  const distance = Math.hypot(dx, dz);
+  const hasLineOfSight = hasPvpLineOfSight(player, opponent, state.obstacles);
 
   switch (player.operatorId) {
     case 'marcin': {
-      // Shield 250 HP + small push
+      // The defensive shield always protects Marcin; its push requires visible proximity.
       player.shieldHp = 250;
-      const dist = Math.hypot(opponent.x - player.x, opponent.z - player.z);
-      if (dist < 4.5) {
-        const dx = (opponent.x - player.x) / (dist || 1);
-        const dz = (opponent.z - player.z) / (dist || 1);
-        opponent.x += dx * 3.5;
-        opponent.z += dz * 3.5;
+      if (distance < 4.5 && hasLineOfSight) {
+        const pushX = dx / (distance || 1) * 3.5;
+        const pushZ = dz / (distance || 1) * 3.5;
+        const nextX = Math.max(PVP_ARENA_BOUNDS.minX + PVP_PLAYER_RADIUS, Math.min(PVP_ARENA_BOUNDS.maxX - PVP_PLAYER_RADIUS, opponent.x + pushX));
+        const nextZ = Math.max(PVP_ARENA_BOUNDS.minZ + PVP_PLAYER_RADIUS, Math.min(PVP_ARENA_BOUNDS.maxZ - PVP_PLAYER_RADIUS, opponent.z + pushZ));
+        if (!checkObstacleCollision(nextX, nextZ, PVP_PLAYER_RADIUS, state.obstacles).hit) {
+          opponent.x = nextX;
+          opponent.z = nextZ;
+        }
       }
       break;
     }
     case 'grzesiek': {
-      // Forklift charge
+      // A genuine frontal forklift charge: an opponent behind or beside Grzesiek is not hit.
       player.isDashing = true;
       player.dashTimer = PVP_DASH_DURATION * 1.8;
-      const dist = Math.hypot(opponent.x - player.x, opponent.z - player.z);
-      if (dist < 3.2) {
-        opponent.hp = Math.max(0, opponent.hp - 180);
-        opponent.stunTimer = 0.8;
-        player.damageDealt += 180;
+      player.dashCooldownTimer = Math.max(player.dashCooldownTimer, PVP_DASH_COOLDOWN);
+      const forwardX = Math.sin(angle);
+      const forwardZ = Math.cos(angle);
+      const alignment = distance > 1e-5 ? (dx * forwardX + dz * forwardZ) / distance : 1;
+      if (distance < 3.8 && alignment >= Math.cos(Math.PI / 4) && hasLineOfSight) {
+        applyPvpAbilityDamage(player, opponent, state, 180, 0.8);
       }
       break;
     }
     case 'dawid': {
-      // Tri-beam laser spread
+      // Tri-beam laser spread; swept collision later resolves cover and hit ordering.
       const fanAngles = [-0.18, 0, 0.18];
       for (const offset of fanAngles) {
         const currentAngle = angle + offset;
         state.projectiles.push({
-          id: `proj_ability_${player.slot}_${Math.random()}`,
+          id: `ability_${player.slot}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
           ownerSlot: player.slot,
-          x: player.x,
+          x: player.x + Math.sin(currentAngle) * (PVP_PLAYER_RADIUS + 0.2),
           y: 0.6,
-          z: player.z,
+          z: player.z + Math.cos(currentAngle) * (PVP_PLAYER_RADIUS + 0.2),
           vx: Math.sin(currentAngle) * 32,
           vz: Math.cos(currentAngle) * 32,
           radius: 0.28,
@@ -815,28 +869,22 @@ function triggerPlayerAbility(player: PvpPlayerState, state: PvpArenaState) {
       break;
     }
     case 'mateusz': {
-      // Hydraulic ground slam AoE
-      const dist = Math.hypot(opponent.x - player.x, opponent.z - player.z);
-      if (dist < 5.2) {
-        opponent.hp = Math.max(0, opponent.hp - 150);
-        player.damageDealt += 150;
-        opponent.stunTimer = 0.5;
+      // Hydraulic shockwave is stopped by full pallet cover.
+      if (distance < 5.2 && hasLineOfSight) {
+        applyPvpAbilityDamage(player, opponent, state, 150, 0.5);
       }
       break;
     }
     case 'piotr': {
-      // Diagnostic shock burst
-      const dist = Math.hypot(opponent.x - player.x, opponent.z - player.z);
-      if (dist < 7.0) {
-        opponent.hp = Math.max(0, opponent.hp - 110);
-        opponent.stunTimer = 1.1;
-        player.damageDealt += 110;
+      // Diagnostic shock needs line of sight; cover blocks the electrical burst.
+      if (distance < 7.0 && hasLineOfSight) {
+        applyPvpAbilityDamage(player, opponent, state, 110, 1.1);
       }
       break;
     }
   }
 
-  // Check knockout from direct ability hit
+  // Check knockout from direct ability hit.
   if (opponent.hp <= 0 && state.status === 'in_round') {
     handleKnockout(state, player.slot);
   }
