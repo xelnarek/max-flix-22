@@ -81,3 +81,28 @@ test('PvP combat feedback keeps simultaneous hits and renders lightweight projec
   assert.match(css, /@keyframes pvp-damage-flash/);
   assert.match(css, /@keyframes pvp-hit-confirmation/);
 });
+
+test('PvP result panel compares authoritative combat breakdown for both players', async () => {
+  const [arena, app, html, css] = await Promise.all([
+    readFile(new URL('../src/pvpArena.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
+  ]);
+  for (const field of [
+    'damageTaken', 'primaryDamageDealt', 'abilityDamageDealt',
+    'abilityUses', 'abilityHits', 'healingDone', 'dashesUsed', 'knockouts',
+  ]) {
+    assert.match(arena, new RegExp(field));
+  }
+  assert.match(arena, /proj\.kind === 'ability'/);
+  assert.match(arena, /shooterPlayer\.shotsHit \+= 1/);
+  assert.match(app, /pvp-end-self-primary-damage/);
+  assert.match(app, /pvp-end-opponent-primary-damage/);
+  assert.match(html, /id="pvp-end-self-ability-damage"/);
+  assert.match(html, /id="pvp-end-opponent-ability-damage"/);
+  assert.match(html, /id="pvp-end-self-healing"/);
+  assert.match(html, /id="pvp-end-opponent-knockouts"/);
+  assert.match(css, /\.pvp-end-comparison-row/);
+  assert.match(css, /max-height: min\(90dvh, 820px\)/);
+});
