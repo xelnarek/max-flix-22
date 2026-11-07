@@ -97,8 +97,9 @@ test('PvP result panel compares authoritative combat breakdown for both players'
   }
   assert.match(arena, /proj\.kind === 'ability'/);
   assert.match(arena, /shooterPlayer\.shotsHit \+= 1/);
-  assert.match(app, /pvp-end-self-primary-damage/);
-  assert.match(app, /pvp-end-opponent-primary-damage/);
+  assert.match(app, /const comparisonRows/);
+  assert.match(app, /pvp-end-self-\$\{key\}/);
+  assert.match(app, /pvp-end-opponent-\$\{key\}/);
   assert.match(html, /id="pvp-end-self-ability-damage"/);
   assert.match(html, /id="pvp-end-opponent-ability-damage"/);
   assert.match(html, /id="pvp-end-self-healing"/);
