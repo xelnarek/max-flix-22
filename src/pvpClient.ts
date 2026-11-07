@@ -129,13 +129,9 @@ export class PvpNetworkSession implements IPvpSession {
         this.clearConnectionTimeout();
         this.callbacks.onConnectionChange?.(true);
         if (this.pendingCreate) {
-          const pending = this.pendingCreate;
-          this.pendingCreate = undefined;
-          this.createRoom(pending.operatorId, pending.playerName);
+          this.createRoom(this.pendingCreate.operatorId, this.pendingCreate.playerName);
         } else if (this.pendingJoin) {
-          const pending = this.pendingJoin;
-          this.pendingJoin = undefined;
-          this.joinRoom(pending.code, pending.operatorId, pending.playerName);
+          this.joinRoom(this.pendingJoin.code, this.pendingJoin.operatorId, this.pendingJoin.playerName);
         }
       };
 
@@ -155,6 +151,8 @@ export class PvpNetworkSession implements IPvpSession {
               this.slot = msg.slot;
               this.hasJoinedRoom = true;
               this.reconnectAttempts = 0;
+              this.pendingCreate = undefined;
+              this.pendingJoin = undefined;
               if (msg.type === 'room_created') {
                 this.callbacks.onRoomCreated?.(msg.code, msg.slot, msg.state);
               } else {
@@ -203,6 +201,8 @@ export class PvpNetworkSession implements IPvpSession {
               break;
             }
             case 'error':
+              this.pendingCreate = undefined;
+              this.pendingJoin = undefined;
               this.emitError(typeof msg.message === 'string' ? msg.message : 'Błąd serwera PvP.');
               break;
           }
@@ -269,10 +269,7 @@ export class PvpNetworkSession implements IPvpSession {
   }
 
   public joinRoom(code: string, operatorId: CharacterId, playerName: string) {
-    if (this.isUnavailable || this.isDisposed) {
-      this.emitError('Serwer PvP online nie jest skonfigurowany. Wybierz trening z botem.');
-      return;
-    }
+    if (this.isUnavailable || this.isDisposed) return;
     const normalizedCode = code.trim().toUpperCase();
     if (!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(normalizedCode)) {
       this.emitError('Kod pokoju musi zawierać dokładnie 6 znaków.');
