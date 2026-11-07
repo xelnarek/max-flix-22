@@ -2284,7 +2284,7 @@ class PaleciakiScene extends xb.Script {
     this.resetTouchJoystick = resetJoystick;
 
     const handleStart = (event: PointerEvent) => {
-      if (activePointerId !== null || event.isPrimary === false) return;
+      if (activePointerId !== null) return;
       if (event.pointerType === 'mouse' && event.button !== 0) return;
 
       activePointerId = event.pointerId;
@@ -2381,7 +2381,7 @@ class PaleciakiScene extends xb.Script {
         this.engine.setManualAimInput(input.x, input.y);
       };
       aimZone.addEventListener('pointerdown', (event) => {
-        if (!this.engine.isManualAimEnabled() || activeAimPointerId !== null || event.isPrimary === false) return;
+        if (!this.engine.isManualAimEnabled() || activeAimPointerId !== null) return;
         if (event.pointerType === 'mouse' && event.button !== 0) return;
         activeAimPointerId = event.pointerId;
         aimStartX = event.clientX;
