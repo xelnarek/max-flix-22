@@ -352,6 +352,8 @@ test('Grzesiek frontal forklift ability applies credited damage and a visible hi
   assert.equal(state.p1.damageDealt, 180);
   assert.equal(state.lastHitEvent?.damage, 180);
   assert.equal(state.lastHitEvent?.sourceSlot, 'p1');
+  assert.equal(state.lastHitEvent?.id, 1);
+  assert.equal(state.hitEventSequence, 1);
 });
 
 test('Mateusz shockwave cannot damage a player hidden behind full pallet cover', () => {
