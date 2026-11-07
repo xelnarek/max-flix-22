@@ -9,8 +9,18 @@ import {
   PVP_SPAWN_P1,
   PVP_SPAWN_P2,
   resetPvpRound,
+  sanitizePvpInputIntent,
   stepPvpArena,
 } from '../src/pvpArena.ts';
+
+function advanceArena(state, seconds, p1Input, p2Input) {
+  let remaining = seconds;
+  while (remaining > 1e-9) {
+    const dt = Math.min(0.1, remaining);
+    stepPvpArena(state, dt, p1Input, p2Input);
+    remaining -= dt;
+  }
+}
 
 test('initializes symmetric 1v1 arena with mirrored spawns and normalized HP', () => {
   const state = createInitialPvpArenaState('marcin', 'Gracz 1', 'grzesiek', 'Gracz 2');
@@ -71,7 +81,7 @@ test('round countdown transitions to in_round', () => {
   assert.equal(state.countdownTimer, 3.0);
 
   // Advance by 3.1s
-  stepPvpArena(state, 3.1);
+  advanceArena(state, 3.1);
   assert.equal(state.status, 'in_round');
   assert.equal(state.countdownTimer, 0);
 });
@@ -79,7 +89,7 @@ test('round countdown transitions to in_round', () => {
 test('player movement is strictly clamped within arena bounds', () => {
   const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
   resetPvpRound(state);
-  stepPvpArena(state, 3.0); // countdown finished
+  advanceArena(state, 3.0); // countdown finished
 
   // Try to move P1 past minX boundary
   for (let i = 0; i < 30; i++) {
@@ -95,7 +105,7 @@ test('player movement is strictly clamped within arena bounds', () => {
 test('firing creates projectile that damages opponent upon collision', () => {
   const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
   resetPvpRound(state);
-  stepPvpArena(state, 3.0); // in_round
+  advanceArena(state, 3.0); // in_round
 
   // Place P1 and P2 close on X line
   state.p1.x = -2.0;
@@ -150,9 +160,150 @@ test('knockout awards round win and triggers round reset or match victory', () =
   assert.equal(state.p2.score, 0);
 
   // Advance through round_end delay
-  stepPvpArena(state, 2.5);
+  advanceArena(state, 2.5);
   assert.equal(state.round, 2);
   assert.equal(state.status, 'countdown');
   assert.equal(state.p1.hp, PVP_NORMALIZED_HP);
   assert.equal(state.p2.hp, PVP_NORMALIZED_HP);
+});
+
+test('sanitizes malformed and over-length player input before simulation', () => {
+  const input = sanitizePvpInputIntent({
+    moveX: 4,
+    moveZ: 4,
+    aimAngle: Number.POSITIVE_INFINITY,
+    isFiring: 'yes',
+    wantDash: 1,
+    wantAbility: true,
+  } as any);
+  assert.ok(Math.abs(Math.hypot(input.moveX, input.moveZ) - 1) < 1e-10);
+  assert.equal(input.aimAngle, 0);
+  assert.equal(input.isFiring, false);
+  assert.equal(input.wantDash, false);
+  assert.equal(input.wantAbility, true);
+});
+
+test('fast projectile cannot tunnel through an opponent during a single server tick', () => {
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  resetPvpRound(state);
+  advanceArena(state, 3.0);
+  state.pickup.active = false;
+  state.p1.x = -3;
+  state.p1.z = 0;
+  state.p2.x = 0;
+  state.p2.z = 0;
+  const initialHp = state.p2.hp;
+
+  stepPvpArena(state, 0.1, {
+    moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: true,
+  });
+
+  assert.ok(state.p2.hp < initialHp);
+  assert.equal(state.p1.shotsHit, 1);
+  assert.ok(state.p1.damageDealt > 0);
+});
+
+test('fast projectile is stopped by warehouse cover even when one tick crosses the whole pallet', () => {
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  resetPvpRound(state);
+  advanceArena(state, 3.0);
+  state.pickup.active = false;
+  state.p1.x = -4;
+  state.p1.z = 5;
+  state.p2.x = 12;
+  state.p2.z = 5;
+  const initialHp = state.p2.hp;
+
+  stepPvpArena(state, 0.1, {
+    moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: true,
+  });
+
+  assert.equal(state.p2.hp, initialHp);
+  assert.equal(state.p1.shotsHit, 0);
+  assert.equal(state.projectiles.length, 0);
+});
+
+test('players cannot occupy the same point after collision resolution', () => {
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  resetPvpRound(state);
+  advanceArena(state, 3.0);
+  state.pickup.active = false;
+  state.p1.x = -0.2;
+  state.p1.z = 0;
+  state.p2.x = 0.2;
+  state.p2.z = 0;
+
+  stepPvpArena(state, 0.05, {
+    moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false,
+  }, {
+    moveX: 0, moveZ: 0, aimAngle: -Math.PI / 2, isFiring: false,
+  });
+
+  assert.ok(Math.hypot(state.p2.x - state.p1.x, state.p2.z - state.p1.z) >= 1.3 - 1e-6);
+});
+
+test('dash substeps prevent moving through a pallet barrier', () => {
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  resetPvpRound(state);
+  advanceArena(state, 3.0);
+  state.pickup.active = false;
+  state.p1.x = -11.5;
+  state.p1.z = 0;
+  state.p2.x = 15;
+  state.p2.z = 0;
+
+  stepPvpArena(state, 0.1, {
+    moveX: 1, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantDash: true,
+  });
+  stepPvpArena(state, 0.1, {
+    moveX: 1, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false,
+  });
+
+  assert.ok(state.p1.x <= -9.55 + 1e-6, 'dash should remain outside the west pallet barrier');
+});
+
+test('the nearest player wins a medkit claim instead of P1 winning by update order', () => {
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  resetPvpRound(state);
+  advanceArena(state, 3.0);
+  state.p1.x = -1.2;
+  state.p1.z = 0;
+  state.p2.x = 0.2;
+  state.p2.z = 0;
+  state.p1.hp = 800;
+  state.p2.hp = 800;
+
+  stepPvpArena(state, 0.05, {
+    moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false,
+  });
+
+  assert.equal(state.pickup.active, false);
+  assert.equal(state.p2.hp, 1000);
+  assert.equal(state.p1.hp, 800);
+});
+
+test('exactly tied medkit claims alternate priority by round parity', () => {
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  resetPvpRound(state);
+  advanceArena(state, 3.0);
+  state.p1.x = -0.65;
+  state.p1.z = 0;
+  state.p2.x = 0.65;
+  state.p2.z = 0;
+  state.p1.hp = 800;
+  state.p2.hp = 800;
+  state.round = 1;
+
+  stepPvpArena(state, 0.05);
+  assert.equal(state.p1.hp, 1000);
+  assert.equal(state.p2.hp, 800);
+
+  state.pickup.active = true;
+  state.pickup.respawnTimer = 0;
+  state.p1.hp = 800;
+  state.p2.hp = 800;
+  state.round = 2;
+  stepPvpArena(state, 0.05);
+  assert.equal(state.p1.hp, 800);
+  assert.equal(state.p2.hp, 1000);
 });
