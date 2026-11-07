@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  DEFAULT_PVP_AIM_DIRECTION, PVP_AIM_DEADZONE, getPvpAimAngle,
-  isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle,
+  DEFAULT_PVP_AIM_DIRECTION, PVP_AIM_DEADZONE, PVP_AIM_DIRECTION_DEADZONE,
+  PVP_AIM_FIRE_START_DEADZONE, PVP_AIM_FIRE_STOP_DEADZONE, getPvpAimAngle,
+  isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle, shouldPvpAimFire,
 } from '../src/pvpAim.ts';
 
 test('normalizes diagonal touch aim without amplifying stick length', () => {
@@ -59,4 +60,22 @@ test('PvP wiring supports two separate touch pointers and does not snap to a tar
   assert.match(game, /if \(this\.state !== 'playing' \|\| this\.gameMode !== 'survival' \|\| this\.manualAimEnabled\) return/);
   assert.match(html, /id="pvp-aim-zone"/);
   assert.match(css, /#game-shell\.manual-aim-mode \.pvp-aim-zone \{ display: block !important; \}/);
+});
+
+test('right-stick aim can adjust direction before firing starts', () => {
+  const previous = { x: 0, z: 1 };
+  const gentleInput = PVP_AIM_DIRECTION_DEADZONE + 0.02;
+  assert.equal(isPvpAimInputActive(gentleInput, 0, PVP_AIM_DIRECTION_DEADZONE), true);
+  assert.equal(shouldPvpAimFire(gentleInput, 0, false), false);
+  const direction = normalizePvpAimDirection(gentleInput, 0, previous, PVP_AIM_DIRECTION_DEADZONE);
+  assert.ok(direction.x > 0.99);
+});
+
+test('PvP fire trigger uses hysteresis so thumb jitter does not rapidly toggle shots', () => {
+  assert.ok(PVP_AIM_DIRECTION_DEADZONE < PVP_AIM_FIRE_STOP_DEADZONE);
+  assert.ok(PVP_AIM_FIRE_STOP_DEADZONE < PVP_AIM_FIRE_START_DEADZONE);
+  assert.equal(shouldPvpAimFire(PVP_AIM_FIRE_START_DEADZONE, 0, false), true);
+  assert.equal(shouldPvpAimFire(PVP_AIM_FIRE_STOP_DEADZONE + 0.01, 0, true), true);
+  assert.equal(shouldPvpAimFire(PVP_AIM_FIRE_STOP_DEADZONE - 0.01, 0, true), false);
+  assert.equal(shouldPvpAimFire(0, 0, false), false);
 });
