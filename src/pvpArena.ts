@@ -175,6 +175,24 @@ function syncPvpMatchStats(state: PvpArenaState): void {
   };
 }
 
+/** Reset match-wide totals only when a fresh match or rematch begins. */
+export function resetPvpMatchStats(state: PvpArenaState): void {
+  for (const player of [state.p1, state.p2]) {
+    player.damageDealt = 0;
+    player.damageTaken = 0;
+    player.primaryDamageDealt = 0;
+    player.abilityDamageDealt = 0;
+    player.shotsFired = 0;
+    player.shotsHit = 0;
+    player.abilityUses = 0;
+    player.abilityHits = 0;
+    player.healingDone = 0;
+    player.dashesUsed = 0;
+    player.knockouts = 0;
+  }
+  syncPvpMatchStats(state);
+}
+
 function clampPvpPosition(player: PvpPlayerState): void {
   player.x = Math.max(PVP_ARENA_BOUNDS.minX + PVP_PLAYER_RADIUS, Math.min(PVP_ARENA_BOUNDS.maxX - PVP_PLAYER_RADIUS, player.x));
   player.z = Math.max(PVP_ARENA_BOUNDS.minZ + PVP_PLAYER_RADIUS, Math.min(PVP_ARENA_BOUNDS.maxZ - PVP_PLAYER_RADIUS, player.z));
