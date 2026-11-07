@@ -184,7 +184,7 @@ function firstProjectileObstacleHit(
   return null;
 }
 
-function hasPvpLineOfSight(
+export function hasPvpLineOfSight(
   source: PvpPlayerState,
   target: PvpPlayerState,
   obstacles: PvpObstacle[],
