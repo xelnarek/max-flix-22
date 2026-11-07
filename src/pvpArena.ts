@@ -624,9 +624,14 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
     }
   }
 
-  // Step players
+  // Step players in a deterministic order. If the first action ends the round,
+  // do not let the second player execute a late attack into the result.
   stepPlayer(state.p1, safeP1Input, state, safeDt);
   stepPlayer(state.p2, safeP2Input, state, safeDt);
+  if (state.status !== 'in_round') {
+    syncPvpMatchStats(state);
+    return;
+  }
   separatePvpPlayers(state);
 
   // One fair medkit claim per spawn: nearest eligible player wins. Exact ties
@@ -754,6 +759,7 @@ function handleKnockout(state: PvpArenaState, winningSlot: 'p1' | 'p2') {
 }
 
 function stepPlayer(player: PvpPlayerState, input: PvpInputIntent | undefined, state: PvpArenaState, dt: number) {
+  if (state.status !== 'in_round') return;
   // Cooldown updates
   if (player.dashCooldownTimer > 0) player.dashCooldownTimer = Math.max(0, player.dashCooldownTimer - dt);
   if (player.attackCooldownTimer > 0) player.attackCooldownTimer = Math.max(0, player.attackCooldownTimer - dt);
