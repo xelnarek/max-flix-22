@@ -119,3 +119,12 @@ test('both online and local PvP rematches reset all match-wide statistics throug
   assert.match(arena, /export function resetPvpMatchStats/);
   assert.match(arena, /syncPvpMatchStats\(state\)/);
 });
+
+test('PvP WebSocket server expires stale movement and firing intents', async () => {
+  const server = await readFile(new URL('../src/server/pvpServer.ts', import.meta.url), 'utf8');
+  assert.match(server, /PVP_INPUT_STALE_TIMEOUT_MS = 220/);
+  assert.match(server, /function expireStaleRoomInputs/);
+  assert.match(server, /expireStaleRoomInputs\(room, now\)/);
+  assert.match(server, /room\.lastInputAt\[playerSlot\] = Date\.now\(\)/);
+  assert.match(server, /isFiring: false/);
+});
