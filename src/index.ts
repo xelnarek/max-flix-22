@@ -3006,7 +3006,7 @@ class PaleciakiScene extends xb.Script {
         if (hostStatus) hostStatus.textContent = message;
       };
       netSession.onRoomJoined = (roomCode, slot, roomState) => {
-        if (readyBtn) readyBtn.disabled = false;
+        if (readyBtn) readyBtn.disabled = true;
         this.pvpRoomCode = roomCode;
         this.pvpLocalSlot = slot;
         if (displayRoomCode) displayRoomCode.textContent = roomCode;
