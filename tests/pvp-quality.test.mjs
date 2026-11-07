@@ -35,6 +35,8 @@ test('manual touch aim, server-origin checks, six-character invite codes and mut
     readFile(new URL('../src/pvpArena.ts', import.meta.url), 'utf8'),
   ]);
   assert.match(game, /this\.manualAimFiring && this\.attackCooldownTimer <= 0/);
+  assert.match(game, /shouldPvpAimFire\(x, z, this\.manualAimFiring\)/);
+  assert.match(game, /PVP_AIM_DIRECTION_DEADZONE/);
   assert.match(game, /this\.pvpInputSendAccumulator %= inputInterval/);
   assert.match(app, /getElementById\('pvp-aim-zone'\)/);
   assert.match(app, /REWANŻ ZGŁOSZONY • CZEKAJ NA RYWALA/);
