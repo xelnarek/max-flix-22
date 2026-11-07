@@ -11,7 +11,7 @@ test('game identity is consistently renamed in the title screen and engine boot'
   assert.match(app, /setAppTitle\('Paleciaki! Magazyn Chaosu'\)/);
 });
 
-test('the five playable operator cards receive individual hand-drawn vector portraits', async () => {
+test('the five playable operator cards receive individual retro pixel-art portraits', async () => {
   const html = await read('../index.html');
   const ids = ['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr'];
   for (const id of ids) {
@@ -20,11 +20,13 @@ test('the five playable operator cards receive individual hand-drawn vector port
   }
   const app = await read('../src/index.ts');
   assert.ok(app.includes('const operatorPortrait = (id: CharacterId): string'));
+  assert.ok(app.includes('const meta: Record<CharacterId'));
   assert.ok(app.includes("const badge = card.querySelector<HTMLElement>('.operator-emblem')"));
   assert.ok(app.includes('badge.innerHTML = operatorPortrait(cardId)'));
   assert.ok(app.includes('operatorPortraitRenderCount'));
-  assert.ok(app.includes('CHARACTERS[id].name'));
-  for (const id of ids) assert.ok(app.includes(id + ': { skin:'), 'missing bespoke portrait design for ' + id);
+  assert.ok(app.includes('pixel-art-portrait'));
+  assert.ok(app.includes('Arcade Scanline Texture'));
+  for (const id of ids) assert.ok(app.includes("id === '" + id + "'"), 'missing bespoke pixel-art portrait for ' + id);
 });
 
 test('playable operator face model no longer creates moustache meshes over the face', async () => {
@@ -200,17 +202,13 @@ test('Piotr ability badge uses the pentagram icon and the character description 
 });
 
 
-test('menu portraits give each operator a different face outline and signature detail', async () => {
+test('pixel-art portraits give each operator a different visual signature', async () => {
   const app = await read('../src/index.ts');
-  assert.match(app, /const faceShapes: Record<CharacterId, string>/);
-  assert.match(app, /const faceSignatures: Record<CharacterId, string>/);
-  assert.match(app, /marcin: '<path/);
-  assert.match(app, /grzesiek: '<path/);
-  assert.match(app, /dawid: '<path/);
-  assert.match(app, /mateusz: '<path/);
-  assert.match(app, /piotr: '<path/);
-  assert.match(app, /faceShapes\[id\]/);
-  assert.match(app, /faceSignatures\[id\]/);
+  assert.match(app, /if \(id === 'marcin'\)[\s\S]*Safety helmet with visor/);
+  assert.match(app, /id === 'grzesiek'[\s\S]*Green sweatband[\s\S]*Dumbbell/);
+  assert.match(app, /id === 'dawid'[\s\S]*Orange Cap backwards[\s\S]*Marble Slab/);
+  assert.match(app, /id === 'mateusz'[\s\S]*RGB glowing gamer headset[\s\S]*lightning/);
+  assert.match(app, /Piotr: Crimson tactical beret[\s\S]*Ratchet Wrench B4/);
   assert.match(app, /if \(heroAvatar\) heroAvatar\.innerHTML = operatorPortrait\(id\)/);
   assert.match(app, /badge\.innerHTML = operatorPortrait\(cardId\)/);
 });
