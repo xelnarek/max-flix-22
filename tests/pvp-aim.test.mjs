@@ -54,6 +54,8 @@ test('PvP wiring supports two separate touch pointers and does not snap to a tar
   assert.match(app, /this\.engine\.setManualAimInput\(input\.x, input\.y\)/);
   assert.match(app, /this\.engine\.stopManualAimFiring\(\)/);
   assert.match(game, /this\.manualAimFiring && this\.attackCooldownTimer <= 0/);
+  assert.match(game, /if \(!this\.manualAimEnabled\) this\.playerRot = Math\.atan2\(this\.survivalDashDirection\.x, this\.survivalDashDirection\.z\)/);
+  assert.match(game, /this\.setManualAimMode\(false\);[\s\S]*this\.gameMode = 'survival'/);
   assert.match(game, /if \(this\.state !== 'playing' \|\| this\.gameMode !== 'survival' \|\| this\.manualAimEnabled\) return/);
   assert.match(html, /id="pvp-aim-zone"/);
   assert.match(css, /#game-shell\.manual-aim-mode \.pvp-aim-zone \{ display: block !important; \}/);
