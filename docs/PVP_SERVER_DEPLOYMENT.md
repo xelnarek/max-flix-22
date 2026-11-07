@@ -5,6 +5,22 @@ The public GitHub Pages site is static. It cannot host the `/pvp-ws` WebSocket e
 ## Runtime
 
 - Node.js 24 or newer.
+
+## Container deployment
+
+The repository includes a minimal production `Dockerfile` for hosts that deploy containers:
+
+```bash
+docker build -t paleciaki-pvp .
+docker run --rm -p 8080:8080 \
+  -e NODE_ENV=production \
+  -e PVP_ALLOWED_ORIGINS=https://xelnarek.github.io \
+  paleciaki-pvp
+```
+
+The platform should expose the container's HTTP port and terminate TLS so the public browser client can connect using `wss://`. Configure the public WebSocket URL in the GitHub Actions variable described below. The HTTP health probe is `/healthz`.
+
+
 - Install the repository dependencies with `npm ci`.
 - Start the service with `npm run pvp:server`.
 - The host supplies `PORT`; locally the server uses `PVP_PORT` or 8080.
