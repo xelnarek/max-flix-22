@@ -2262,7 +2262,7 @@ class PaleciakiScene extends xb.Script {
     this.resetTouchJoystick = resetJoystick;
 
     const handleStart = (event: PointerEvent) => {
-      if (activePointerId !== null || event.isPrimary === false) return;
+      if (activePointerId !== null) return;
       if (event.pointerType === 'mouse' && event.button !== 0) return;
 
       activePointerId = event.pointerId;
@@ -2318,6 +2318,77 @@ class PaleciakiScene extends xb.Script {
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) resetJoystick();
     });
+
+
+    // Independent second pointer for PvP: left stick remains movement; right stick aims/fires.
+    const aimZone = document.getElementById('pvp-aim-zone');
+    const aimBase = document.getElementById('pvp-aim-base');
+    const aimKnob = document.getElementById('pvp-aim-knob');
+    if (aimZone && aimBase && aimKnob) {
+      let activeAimPointerId: number | null = null;
+      let aimStartX = 0;
+      let aimStartY = 0;
+      let aimMaxRadius = 38;
+      const getAimRadius = () => {
+        const rect = aimBase.getBoundingClientRect();
+        const size = Math.min(rect.width || 142, rect.height || 142);
+        return Math.max(24, Math.min(64, size * 0.5 - 36));
+      };
+      const resetAim = () => {
+        const pointerId = activeAimPointerId;
+        activeAimPointerId = null;
+        aimBase.classList.remove('active');
+        aimKnob.style.transform = 'translate(-50%, -50%)';
+        this.engine.stopManualAimFiring();
+        if (pointerId !== null) {
+          try {
+            if (aimZone.hasPointerCapture(pointerId)) aimZone.releasePointerCapture(pointerId);
+          } catch {
+            // Pointer capture may already have been released.
+          }
+        }
+      };
+      const updateAim = (event: PointerEvent) => {
+        const dx = event.clientX - aimStartX;
+        const dy = event.clientY - aimStartY;
+        const distance = Math.hypot(dx, dy);
+        const scale = distance > aimMaxRadius ? aimMaxRadius / distance : 1;
+        aimKnob.style.transform = `translate(calc(-50% + ${(dx * scale).toFixed(1)}px), calc(-50% + ${(dy * scale).toFixed(1)}px))`;
+        const input = calculateVirtualJoystickInput(dx, dy, aimMaxRadius);
+        this.engine.setManualAimInput(input.x, input.y);
+      };
+      aimZone.addEventListener('pointerdown', (event) => {
+        if (!this.engine.isManualAimEnabled() || activeAimPointerId !== null) return;
+        if (event.pointerType === 'mouse' && event.button !== 0) return;
+        activeAimPointerId = event.pointerId;
+        aimStartX = event.clientX;
+        aimStartY = event.clientY;
+        aimMaxRadius = getAimRadius();
+        aimBase.style.left = `${aimStartX}px`;
+        aimBase.style.top = `${aimStartY}px`;
+        aimBase.classList.add('active');
+        aimKnob.style.transform = 'translate(-50%, -50%)';
+        try { aimZone.setPointerCapture(event.pointerId); } catch { /* window handlers are the fallback */ }
+        if (event.cancelable) event.preventDefault();
+      }, { passive: false });
+      window.addEventListener('pointermove', (event) => {
+        if (activeAimPointerId !== event.pointerId) return;
+        updateAim(event);
+        if (event.cancelable) event.preventDefault();
+      }, { passive: false });
+      const endAim = (event: PointerEvent) => {
+        if (activeAimPointerId !== event.pointerId) return;
+        resetAim();
+      };
+      aimZone.addEventListener('lostpointercapture', (event) => {
+        if (activeAimPointerId === event.pointerId) resetAim();
+      });
+      window.addEventListener('pointerup', endAim, { passive: true });
+      window.addEventListener('pointercancel', endAim, { passive: true });
+      window.addEventListener('blur', resetAim);
+      window.addEventListener('pagehide', resetAim);
+      document.addEventListener('visibilitychange', () => { if (document.hidden) resetAim(); });
+    }
 
     const bindTouchAction = (id: string, action: () => void) => {
       const btn = document.getElementById(id);
