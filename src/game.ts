@@ -538,6 +538,7 @@ export class PaleciakiGameEngine {
   private pvpWantDash = false;
   private pvpWantAbility = false;
   private pvpInputSendAccumulator = 0;
+  private pvpMatchEndHandled = false;
   private survivalElapsed = 0;
   private survivalSpawnTimer = 0;
   private survivalSurgeTimeLeft = 0;
@@ -1690,6 +1691,7 @@ export class PaleciakiGameEngine {
     this.pvpSlot = session.slot;
     this.lastPvpState = null;
     this.pvpInputSendAccumulator = 0;
+    this.pvpMatchEndHandled = false;
     this.pvpWantDash = false;
     this.pvpWantAbility = false;
     this.setManualAimMode(true);
@@ -1763,6 +1765,7 @@ export class PaleciakiGameEngine {
     }
     this.lastPvpState = null;
     this.pvpInputSendAccumulator = 0;
+    this.pvpMatchEndHandled = false;
     this.pvpWantDash = false;
     this.pvpWantAbility = false;
     this.prevPvpLocalHp = -1;
@@ -2229,7 +2232,12 @@ export class PaleciakiGameEngine {
     this.callbacks.onPvpUpdate?.(state, this.pvpSlot);
 
     if (state.status === 'match_end') {
-      this.callbacks.onPvpMatchEnd?.(state, this.pvpSlot);
+      if (!this.pvpMatchEndHandled) {
+        this.pvpMatchEndHandled = true;
+        this.callbacks.onPvpMatchEnd?.(state, this.pvpSlot);
+      }
+    } else {
+      this.pvpMatchEndHandled = false;
     }
   }
 
