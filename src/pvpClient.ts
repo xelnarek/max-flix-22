@@ -80,7 +80,7 @@ export class PvpNetworkSession implements IPvpSession {
 
   private getSocketUrl(): string | null {
     const configuredUrl = import.meta.env.VITE_PVP_WS_URL?.trim();
-    const isGitHubPages = /(^|\\.)github\\.io$/i.test(window.location.hostname);
+    const isGitHubPages = /\.github\.io$/i.test(window.location.hostname);
     if (!configuredUrl && isGitHubPages) {
       this.isUnavailable = true;
       return null;
@@ -103,6 +103,7 @@ export class PvpNetworkSession implements IPvpSession {
 
     const url = this.getSocketUrl();
     if (!url) {
+      this.isUnavailable = true;
       const message = this.isUnavailable
         ? 'PvP online wymaga osobnego serwera WebSocket. Na GitHub Pages możesz trenować z botem; online uruchomimy po skonfigurowaniu hostingu.'
         : 'Nieprawidłowy adres serwera PvP. Wymagany jest adres ws:// lub wss:// (na HTTPS wyłącznie wss://).';
@@ -126,7 +127,6 @@ export class PvpNetworkSession implements IPvpSession {
           return;
         }
         this.clearConnectionTimeout();
-        this.reconnectAttempts = 0;
         this.callbacks.onConnectionChange?.(true);
         if (this.pendingCreate) {
           const pending = this.pendingCreate;
@@ -154,6 +154,7 @@ export class PvpNetworkSession implements IPvpSession {
               this.roomCode = msg.code;
               this.slot = msg.slot;
               this.hasJoinedRoom = true;
+              this.reconnectAttempts = 0;
               if (msg.type === 'room_created') {
                 this.callbacks.onRoomCreated?.(msg.code, msg.slot, msg.state);
               } else {
@@ -259,10 +260,7 @@ export class PvpNetworkSession implements IPvpSession {
   }
 
   public createRoom(operatorId: CharacterId, playerName: string) {
-    if (this.isUnavailable || this.isDisposed) {
-      this.emitError('Serwer PvP online nie jest skonfigurowany. Wybierz trening z botem.');
-      return;
-    }
+    if (this.isUnavailable || this.isDisposed) return;
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       this.pendingCreate = { operatorId, playerName };
       return;
