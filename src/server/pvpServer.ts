@@ -129,22 +129,35 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
   );
   const isProduction = process.env.NODE_ENV === 'production';
   const wss = new WebSocketServer({
-    server,
-    path: '/pvp-ws',
+    noServer: true,
     maxPayload: 4096,
     perMessageDeflate: false,
-    verifyClient: (info, callback) => {
-      if (!isProduction) {
-        callback(true);
-        return;
-      }
-      const origin = info.origin;
+  });
+
+  // Validate the path and browser Origin during HTTP upgrade. The ws package
+  // recommends this pattern over its legacy verifyClient callback.
+  server.on('upgrade', (request, socket, head) => {
+    let pathname = '';
+    try {
+      pathname = new URL(request.url || '/', 'http://localhost').pathname;
+    } catch {
+      socket.destroy();
+      return;
+    }
+    if (pathname !== '/pvp-ws') return;
+
+    if (isProduction) {
+      const origin = request.headers.origin;
       if (!origin || !allowedOrigins.has(origin)) {
-        callback(false, 403, 'PvP origin is not allowed.');
+        socket.write('HTTP/1.1 403 Forbidden\\r\\nConnection: close\\r\\n\\r\\n');
+        socket.destroy();
         return;
       }
-      callback(true);
-    },
+    }
+
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit('connection', ws, request);
+    });
   });
 
   wss.on('connection', (ws: WebSocket) => {
