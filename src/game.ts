@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { getPvpAimAngle, isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle, type PvpAimDirection } from './pvpAim.ts';
+import { getPvpAimAngle, isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle, shouldPvpAimFire, PVP_AIM_DIRECTION_DEADZONE, type PvpAimDirection } from './pvpAim.ts';
 import type { IPvpSession } from './pvpClient.ts';
 import {
   createDefaultPvpObstacles,
@@ -1248,10 +1248,17 @@ export class PaleciakiGameEngine {
   /** Update world-space aim from the right-hand touch stick; neutral input preserves direction. */
   public setManualAimInput(x: number, z: number) {
     if (!this.manualAimEnabled) return;
-    const active = isPvpAimInputActive(x, z);
-    this.manualAimDirection = normalizePvpAimDirection(x, z, this.manualAimDirection);
-    this.manualAimFiring = active;
-    if (active) {
+    const directionActive = isPvpAimInputActive(x, z, PVP_AIM_DIRECTION_DEADZONE);
+    this.manualAimDirection = normalizePvpAimDirection(
+      x,
+      z,
+      this.manualAimDirection,
+      PVP_AIM_DIRECTION_DEADZONE,
+    );
+    // A lower release threshold stops the trigger from flickering when a thumb
+    // naturally jitters around the edge of the firing deadzone.
+    this.manualAimFiring = shouldPvpAimFire(x, z, this.manualAimFiring);
+    if (directionActive) {
       this.playerRot = getPvpAimAngle(this.manualAimDirection);
       if (this.playerGroup) this.playerGroup.rotation.y = this.playerRot;
     }
