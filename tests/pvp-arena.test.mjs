@@ -311,7 +311,8 @@ test('exactly tied medkit claims alternate priority by round parity', () => {
 test('Grzesiek forklift ability only hits opponents inside its forward cone', () => {
   const behind = createInitialPvpArenaState('grzesiek', 'P1', 'marcin', 'P2');
   resetPvpRound(behind);
-  advanceArena(behind, 3.0);
+  behind.status = 'in_round';
+  behind.countdownTimer = 0;
   behind.pickup.active = false;
   behind.p1.x = -2;
   behind.p1.z = 0;
@@ -333,6 +334,7 @@ test('Grzesiek frontal forklift ability applies credited damage and a visible hi
   state.status = 'in_round';
   state.countdownTimer = 0;
   state.pickup.active = false;
+  state.obstacles = []; // isolate direct ability damage from cover checks
   state.p1.x = -2;
   state.p1.z = 0;
   state.p2.x = 0;
@@ -353,7 +355,8 @@ test('Grzesiek frontal forklift ability applies credited damage and a visible hi
 test('Mateusz shockwave cannot damage a player hidden behind full pallet cover', () => {
   const state = createInitialPvpArenaState('mateusz', 'P1', 'piotr', 'P2');
   resetPvpRound(state);
-  advanceArena(state, 3.0);
+  state.status = 'in_round';
+  state.countdownTimer = 0;
   state.pickup.active = false;
   state.obstacles = [{
     id: 'test_wall',
@@ -381,8 +384,10 @@ test('Mateusz shockwave cannot damage a player hidden behind full pallet cover',
 test('direct PvP ability damage is clipped to remaining shield and HP', () => {
   const state = createInitialPvpArenaState('mateusz', 'P1', 'piotr', 'P2');
   resetPvpRound(state);
-  advanceArena(state, 3.0);
+  state.status = 'in_round';
+  state.countdownTimer = 0;
   state.pickup.active = false;
+  state.obstacles = []; // isolate direct ability damage from cover checks
   state.p1.x = -2;
   state.p1.z = 0;
   state.p2.x = 2;
