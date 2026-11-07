@@ -342,7 +342,12 @@ test('Grzesiek frontal forklift ability applies credited damage and a visible hi
   state.p2.z = 0;
   assert.equal(state.status, 'in_round');
   assert.equal(state.p1.operatorId, 'grzesiek');
-  assert.ok(Math.hypot(state.p2.x - state.p1.x, state.p2.z - state.p1.z) < 3.8);
+  const dx = state.p2.x - state.p1.x;
+  const dz = state.p2.z - state.p1.z;
+  const distance = Math.hypot(dx, dz);
+  const forwardAlignment = (dx * Math.sin(Math.PI / 2) + dz * Math.cos(Math.PI / 2)) / distance;
+  assert.ok(distance < 3.8);
+  assert.ok(forwardAlignment >= Math.cos(Math.PI / 4), 'the test opponent is directly in the aim cone');
   assert.ok(hasPvpLineOfSight(state.p1, state.p2, state.obstacles), 'clear centre lane should allow line of sight');
   const initialHp = state.p2.hp;
 
@@ -352,6 +357,7 @@ test('Grzesiek frontal forklift ability applies credited damage and a visible hi
 
   assert.ok(state.p1.abilityCooldownTimer > 0, 'the Grzesiek ability input should be consumed');
   assert.equal(state.p1.isDashing, true, 'the frontal charge should start its dash');
+  assert.equal(state.p1.aimAngle, Math.PI / 2, 'the charge must use the explicit player aim angle');
   assert.equal(state.p2.hp, initialHp - 180);
   assert.equal(state.p1.damageDealt, 180);
   assert.equal(state.lastHitEvent?.damage, 180);
