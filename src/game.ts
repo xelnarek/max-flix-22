@@ -539,6 +539,7 @@ export class PaleciakiGameEngine {
   private pvpWantAbility = false;
   private pvpInputSendAccumulator = 0;
   private pvpMatchEndHandled = false;
+  private lastPvpHitEventId = 0;
   private survivalElapsed = 0;
   private survivalSpawnTimer = 0;
   private survivalSurgeTimeLeft = 0;
@@ -1692,6 +1693,7 @@ export class PaleciakiGameEngine {
     this.lastPvpState = null;
     this.pvpInputSendAccumulator = 0;
     this.pvpMatchEndHandled = false;
+    this.lastPvpHitEventId = 0;
     this.pvpWantDash = false;
     this.pvpWantAbility = false;
     this.setManualAimMode(true);
@@ -1766,6 +1768,7 @@ export class PaleciakiGameEngine {
     this.lastPvpState = null;
     this.pvpInputSendAccumulator = 0;
     this.pvpMatchEndHandled = false;
+    this.lastPvpHitEventId = 0;
     this.pvpWantDash = false;
     this.pvpWantAbility = false;
     this.prevPvpLocalHp = -1;
@@ -2203,9 +2206,10 @@ export class PaleciakiGameEngine {
     }
     this.prevPvpLocalHp = local.hp;
 
-    if (state.lastHitEvent) {
+    if (state.lastHitEvent && state.lastHitEvent.id !== this.lastPvpHitEventId) {
       const hit = state.lastHitEvent;
-      const hitText = `-${hit.damage}`;
+      this.lastPvpHitEventId = hit.id;
+      const hitText = `-${Math.ceil(hit.damage)} HP`;
       this.callbacks.onFloatingText?.(hitText, hit.x, 1.8, hit.z, 'damage');
       sound.playSmack();
       this.spawnParticleRing(hit.x, 1.2, hit.z, 0xef4444);
