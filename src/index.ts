@@ -2901,11 +2901,11 @@ class PaleciakiScene extends xb.Script {
     const displayRoomCode = document.getElementById('pvp-display-room-code');
     const hostStatus = document.getElementById('pvp-host-status');
     const readyBar = document.getElementById('pvp-ready-bar');
-    const readyBtn = document.getElementById('btn-pvp-toggle-ready');
+    const readyBtn = document.getElementById('btn-pvp-toggle-ready') as HTMLButtonElement | null;
     const lobbyPlayersStatus = document.getElementById('pvp-lobby-players-status');
 
     const matchEndModal = document.getElementById('pvp-match-end-modal');
-    const btnRematch = document.getElementById('btn-pvp-rematch');
+    const btnRematch = document.getElementById('btn-pvp-rematch') as HTMLButtonElement | null;
     const btnExitToMenu = document.getElementById('btn-pvp-exit-to-menu');
 
     opPicker?.querySelectorAll<HTMLButtonElement>('.pvp-operator-btn').forEach((btn) => {
@@ -2988,12 +2988,25 @@ class PaleciakiScene extends xb.Script {
     btnCreateRoom?.addEventListener('click', () => {
       const playerNick = nickInput?.value.trim() || 'Operator B4';
       const netSession = new PvpNetworkSession();
+      if (readyBtn) readyBtn.disabled = true;
       this.pvpSession = netSession;
       this.pvpLocalSlot = 'p1';
       this.pvpIsHost = true;
       this.pvpLocalReady = false;
 
+      netSession.onConnectionChange = (connected) => {
+        if (hostStatus) hostStatus.textContent = connected
+          ? 'Połączono z serwerem PvP. Tworzenie pokoju...'
+          : 'Połączenie z serwerem PvP zostało przerwane.';
+      };
+      netSession.onRematchWaiting = (votes, required) => {
+        if (btnRematch) btnRematch.textContent = `REWANŻ • ${votes}/${required} GOTOWYCH`;
+      };
+      netSession.onRoomClosed = (message) => {
+        if (hostStatus) hostStatus.textContent = message;
+      };
       netSession.onRoomJoined = (roomCode, slot, roomState) => {
+        if (readyBtn) readyBtn.disabled = true;
         this.pvpRoomCode = roomCode;
         this.pvpLocalSlot = slot;
         if (displayRoomCode) displayRoomCode.textContent = roomCode;
@@ -3004,6 +3017,7 @@ class PaleciakiScene extends xb.Script {
       };
 
       netSession.onPlayerJoined = (player) => {
+        if (readyBtn) readyBtn.disabled = false;
         if (hostStatus) hostStatus.textContent = `Gracz ${player.nickname} dołączył! Kliknij 'ZGŁOŚ GOTOWOŚĆ'.`;
         if (lobbyPlayersStatus) lobbyPlayersStatus.textContent = `Gracz 1: Ty • Gracz 2: ${player.nickname}`;
         sound.playPickup();
@@ -3023,6 +3037,18 @@ class PaleciakiScene extends xb.Script {
 
       netSession.onState = (state) => {
         this.engine.setLastPvpState(state);
+        if (readyBtn && state.status === 'waiting') {
+          readyBtn.disabled = true;
+          this.pvpLocalReady = false;
+          readyBtn.textContent = 'ZGŁOŚ GOTOWOŚĆ';
+        }
+        if (state.status === 'countdown') {
+          matchEndModal?.classList.add('hidden');
+          if (btnRematch) {
+            btnRematch.disabled = false;
+            btnRematch.textContent = 'ZAGRAJ PONOWNIE';
+          }
+        }
       };
 
       netSession.onError = (err) => {
@@ -3036,22 +3062,41 @@ class PaleciakiScene extends xb.Script {
     // Online WebSocket Join
     btnJoinRoom?.addEventListener('click', () => {
       const code = joinCodeInput?.value.trim().toUpperCase();
-      if (!code || code.length < 4) {
+      if (!code || code.length !== 6) {
         if (joinStatus) {
           joinStatus.classList.remove('hidden');
-          joinStatus.textContent = 'Wpisz poprawny 4-literowy kod pokoju!';
+          joinStatus.textContent = 'Wpisz poprawny 6-znakowy kod pokoju!';
         }
         return;
       }
 
       const playerNick = nickInput?.value.trim() || 'Operator B4';
       const netSession = new PvpNetworkSession();
+      if (readyBtn) readyBtn.disabled = true;
       this.pvpSession = netSession;
       this.pvpLocalSlot = 'p2';
       this.pvpIsHost = false;
       this.pvpLocalReady = false;
 
+      netSession.onConnectionChange = (connected) => {
+        if (joinStatus) {
+          joinStatus.classList.remove('hidden');
+          joinStatus.textContent = connected
+            ? 'Połączono z serwerem PvP. Dołączanie do pokoju...'
+            : 'Połączenie z serwerem PvP zostało przerwane.';
+        }
+      };
+      netSession.onRematchWaiting = (votes, required) => {
+        if (btnRematch) btnRematch.textContent = `REWANŻ • ${votes}/${required} GOTOWYCH`;
+      };
+      netSession.onRoomClosed = (message) => {
+        if (joinStatus) {
+          joinStatus.classList.remove('hidden');
+          joinStatus.textContent = message;
+        }
+      };
       netSession.onRoomJoined = (roomCode, slot, roomState) => {
+        if (readyBtn) readyBtn.disabled = false;
         this.pvpRoomCode = roomCode;
         this.pvpLocalSlot = slot;
         readyBar?.classList.remove('hidden');
@@ -3079,6 +3124,13 @@ class PaleciakiScene extends xb.Script {
 
       netSession.onState = (state) => {
         this.engine.setLastPvpState(state);
+        if (state.status === 'countdown') {
+          matchEndModal?.classList.add('hidden');
+          if (btnRematch) {
+            btnRematch.disabled = false;
+            btnRematch.textContent = 'ZAGRAJ PONOWNIE';
+          }
+        }
       };
 
       netSession.onError = (err) => {
@@ -3101,11 +3153,15 @@ class PaleciakiScene extends xb.Script {
     });
 
     btnRematch?.addEventListener('click', () => {
-      matchEndModal?.classList.add('hidden');
-      if (this.pvpSession) {
-        this.pvpSession.requestRematch?.();
-        sound.playSmack();
+      if (!this.pvpSession) return;
+      this.pvpSession.requestRematch?.();
+      if (this.pvpSession.isLocalBot) {
+        matchEndModal?.classList.add('hidden');
+      } else if (btnRematch) {
+        btnRematch.textContent = 'REWANŻ ZGŁOSZONY • CZEKAJ NA RYWALA';
+        btnRematch.disabled = true;
       }
+      sound.playSmack();
     });
 
     btnExitToMenu?.addEventListener('click', () => {
@@ -3119,6 +3175,10 @@ class PaleciakiScene extends xb.Script {
         this.pvpSession = null;
       }
       this.pvpLocalReady = false;
+      if (btnRematch) {
+        btnRematch.disabled = false;
+        btnRematch.textContent = 'ZAGRAJ PONOWNIE';
+      }
       if (titleScreen) {
         titleScreen.classList.remove('hidden');
         titleScreen.style.setProperty('display', 'flex', 'important');
@@ -3224,6 +3284,11 @@ class PaleciakiScene extends xb.Script {
     const acc = myStats.shotsFired > 0 ? Math.round((myStats.shotsHit / myStats.shotsFired) * 100) : 0;
     if (accuracy) accuracy.textContent = `${acc}%`;
 
+    const rematchButton = document.getElementById('btn-pvp-rematch') as HTMLButtonElement | null;
+    if (rematchButton) {
+      rematchButton.disabled = false;
+      rematchButton.textContent = 'ZAGRAJ PONOWNIE';
+    }
     matchEndModal.classList.remove('hidden');
   }
 

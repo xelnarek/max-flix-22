@@ -537,6 +537,9 @@ export class PaleciakiGameEngine {
   private pvpArenaRoot: THREE.Group | null = null;
   private pvpWantDash = false;
   private pvpWantAbility = false;
+  private pvpInputSendAccumulator = 0;
+  private pvpMatchEndHandled = false;
+  private lastPvpHitEventId = 0;
   private survivalElapsed = 0;
   private survivalSpawnTimer = 0;
   private survivalSurgeTimeLeft = 0;
@@ -1688,6 +1691,11 @@ export class PaleciakiGameEngine {
     this.pvpSession = session;
     this.pvpSlot = session.slot;
     this.lastPvpState = null;
+    this.pvpInputSendAccumulator = 0;
+    this.pvpMatchEndHandled = false;
+    this.lastPvpHitEventId = 0;
+    this.pvpWantDash = false;
+    this.pvpWantAbility = false;
     this.setManualAimMode(true);
     this.state = 'playing';
 
@@ -1758,6 +1766,11 @@ export class PaleciakiGameEngine {
       this.pvpSession = null;
     }
     this.lastPvpState = null;
+    this.pvpInputSendAccumulator = 0;
+    this.pvpMatchEndHandled = false;
+    this.lastPvpHitEventId = 0;
+    this.pvpWantDash = false;
+    this.pvpWantAbility = false;
     this.prevPvpLocalHp = -1;
     this.gameMode = 'survival';
     this.setManualAimMode(false);
@@ -2026,22 +2039,25 @@ export class PaleciakiGameEngine {
 
     const moveX = screenX;
     const moveZ = -screenY;
-    const aimAngle = getPvpAimAngle(this.manualAimDirection);
-    const isFiring = this.manualAimFiring;
-    const wantDash = this.pvpWantDash;
-    const wantAbility = this.pvpWantAbility;
 
-    this.pvpWantDash = false;
-    this.pvpWantAbility = false;
-
-    this.pvpSession.sendInput({
-      moveX,
-      moveZ,
-      aimAngle,
-      isFiring,
-      wantDash,
-      wantAbility,
-    });
+    // The authoritative room simulates at 30 Hz. Throttle inputs to the same cadence
+    // instead of flooding the socket at the device's render rate (60–120 Hz).
+    this.pvpInputSendAccumulator += Number.isFinite(dt) ? Math.max(0, Math.min(dt, 0.1)) : 0;
+    const inputInterval = 1 / 30;
+    if (this.pvpInputSendAccumulator >= inputInterval) {
+      this.pvpInputSendAccumulator %= inputInterval;
+      this.pvpSession.sendInput({
+        moveX,
+        moveZ,
+        aimAngle: getPvpAimAngle(this.manualAimDirection),
+        isFiring: this.manualAimFiring,
+        wantDash: this.pvpWantDash,
+        wantAbility: this.pvpWantAbility,
+      });
+      // One-shot actions remain latched until an input packet has actually been emitted.
+      this.pvpWantDash = false;
+      this.pvpWantAbility = false;
+    }
 
     if (!this.lastPvpState) return;
 
@@ -2190,9 +2206,10 @@ export class PaleciakiGameEngine {
     }
     this.prevPvpLocalHp = local.hp;
 
-    if (state.lastHitEvent) {
+    if (state.lastHitEvent && state.lastHitEvent.id !== this.lastPvpHitEventId) {
       const hit = state.lastHitEvent;
-      const hitText = `-${hit.damage}`;
+      this.lastPvpHitEventId = hit.id;
+      const hitText = `-${Math.ceil(hit.damage)} HP`;
       this.callbacks.onFloatingText?.(hitText, hit.x, 1.8, hit.z, 'damage');
       sound.playSmack();
       this.spawnParticleRing(hit.x, 1.2, hit.z, 0xef4444);
@@ -2219,7 +2236,12 @@ export class PaleciakiGameEngine {
     this.callbacks.onPvpUpdate?.(state, this.pvpSlot);
 
     if (state.status === 'match_end') {
-      this.callbacks.onPvpMatchEnd?.(state, this.pvpSlot);
+      if (!this.pvpMatchEndHandled) {
+        this.pvpMatchEndHandled = true;
+        this.callbacks.onPvpMatchEnd?.(state, this.pvpSlot);
+      }
+    } else {
+      this.pvpMatchEndHandled = false;
     }
   }
 

@@ -2,6 +2,7 @@ import type { CharacterId } from './types.ts';
 import {
   createInitialPvpArenaState,
   resetPvpRound,
+  sanitizePvpInputIntent,
   stepPvpArena,
 } from './pvpArena.ts';
 import type {
@@ -42,151 +43,259 @@ export class PvpNetworkSession implements IPvpSession {
   public onMatchStart?: (state: PvpArenaState) => void;
   public onState?: (state: PvpArenaState) => void;
   public onError?: (err: string) => void;
+  public onConnectionChange?: (connected: boolean) => void;
+  public onRematchWaiting?: (votes: number, required: number) => void;
+  public onRoomClosed?: (message: string) => void;
 
   private ws: WebSocket | null = null;
   private callbacks: PvpSessionCallbacks;
-  private reconnectTimer: any = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private connectionTimeout: ReturnType<typeof setTimeout> | null = null;
   private isDisposed = false;
+  private isUnavailable = false;
+  private hasJoinedRoom = false;
+  private hasStartedMatch = false;
+  private reconnectAttempts = 0;
   private pendingCreate?: { operatorId: CharacterId; playerName: string };
   private pendingJoin?: { code: string; operatorId: CharacterId; playerName: string };
+
+  private static readonly MAX_CONNECT_ATTEMPTS = 3;
+  private static readonly CONNECT_TIMEOUT_MS = 7000;
 
   constructor(callbacks: PvpSessionCallbacks = {}) {
     this.callbacks = callbacks;
     this.connect();
   }
 
-  private connect() {
-    if (this.isDisposed) return;
-    try {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const url = `${protocol}//${window.location.host}/pvp-ws`;
-      this.ws = new WebSocket(url);
+  private clearConnectionTimeout() {
+    if (this.connectionTimeout) {
+      clearTimeout(this.connectionTimeout);
+      this.connectionTimeout = null;
+    }
+  }
 
-      this.ws.onopen = () => {
+  private emitError(message: string) {
+    this.callbacks.onError?.(message);
+    this.onError?.(message);
+  }
+
+  private getSocketUrl(): string | null {
+    const configuredUrl = import.meta.env.VITE_PVP_WS_URL?.trim();
+    const isGitHubPages = /\.github\.io$/i.test(window.location.hostname);
+    if (!configuredUrl && isGitHubPages) {
+      this.isUnavailable = true;
+      return null;
+    }
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const url = configuredUrl || `${protocol}//${window.location.host}/pvp-ws`;
+    try {
+      const parsed = new URL(url, window.location.href);
+      if (parsed.protocol !== 'ws:' && parsed.protocol !== 'wss:') return null;
+      if (window.location.protocol === 'https:' && parsed.protocol !== 'wss:') return null;
+      return parsed.toString();
+    } catch {
+      return null;
+    }
+  }
+
+  private connect() {
+    if (this.isDisposed || this.isUnavailable) return;
+
+    const url = this.getSocketUrl();
+    if (!url) {
+      this.isUnavailable = true;
+      const message = this.isUnavailable
+        ? 'PvP online wymaga osobnego serwera WebSocket. Na GitHub Pages możesz trenować z botem; online uruchomimy po skonfigurowaniu hostingu.'
+        : 'Nieprawidłowy adres serwera PvP. Wymagany jest adres ws:// lub wss:// (na HTTPS wyłącznie wss://).';
+      // Defer so callers can attach onError immediately after constructing this session.
+      window.setTimeout(() => this.emitError(message), 0);
+      return;
+    }
+
+    try {
+      const socket = new WebSocket(url);
+      this.ws = socket;
+      this.connectionTimeout = setTimeout(() => {
+        if (socket.readyState === WebSocket.CONNECTING) {
+          socket.close();
+        }
+      }, PvpNetworkSession.CONNECT_TIMEOUT_MS);
+
+      socket.onopen = () => {
+        if (this.isDisposed || socket !== this.ws) {
+          socket.close();
+          return;
+        }
+        this.clearConnectionTimeout();
         this.callbacks.onConnectionChange?.(true);
+        this.onConnectionChange?.(true);
         if (this.pendingCreate) {
           this.createRoom(this.pendingCreate.operatorId, this.pendingCreate.playerName);
-          this.pendingCreate = undefined;
         } else if (this.pendingJoin) {
           this.joinRoom(this.pendingJoin.code, this.pendingJoin.operatorId, this.pendingJoin.playerName);
-          this.pendingJoin = undefined;
         }
       };
 
-      this.ws.onmessage = (event) => {
+      socket.onmessage = (event) => {
+        if (this.isDisposed || socket !== this.ws) return;
         try {
-          const msg = JSON.parse(event.data);
+          const msg = JSON.parse(String(event.data));
+          if (!msg || typeof msg !== 'object' || Array.isArray(msg)) return;
           switch (msg.type) {
             case 'room_created':
+            case 'room_joined': {
+              if (typeof msg.code !== 'string' || (msg.slot !== 'p1' && msg.slot !== 'p2') || !msg.state) {
+                this.emitError('Serwer zwrócił nieprawidłowe dane pokoju.');
+                return;
+              }
               this.roomCode = msg.code;
               this.slot = msg.slot;
-              this.callbacks.onRoomCreated?.(msg.code, msg.slot, msg.state);
+              this.hasJoinedRoom = true;
+              this.reconnectAttempts = 0;
+              this.pendingCreate = undefined;
+              this.pendingJoin = undefined;
+              if (msg.type === 'room_created') {
+                this.callbacks.onRoomCreated?.(msg.code, msg.slot, msg.state);
+              } else {
+                this.callbacks.onRoomJoined?.(msg.code, msg.slot, msg.state);
+              }
               this.callbacks.onStateUpdate?.(msg.state);
               this.onRoomJoined?.(msg.code, msg.slot, msg.state);
               this.onState?.(msg.state);
               break;
-
-            case 'room_joined':
-              this.roomCode = msg.code;
-              this.slot = msg.slot;
-              this.callbacks.onRoomJoined?.(msg.code, msg.slot, msg.state);
-              this.callbacks.onStateUpdate?.(msg.state);
-              this.onRoomJoined?.(msg.code, msg.slot, msg.state);
-              this.onState?.(msg.state);
-              break;
-
+            }
             case 'player_joined':
               this.onPlayerJoined?.(msg.player || { nickname: msg.nickname || 'Player', slot: msg.slot || 'p2' });
               break;
-
             case 'player_ready':
-              this.onPlayerReady?.(msg.slot, msg.ready);
+              if (msg.slot === 'p1' || msg.slot === 'p2') this.onPlayerReady?.(msg.slot, msg.ready === true);
               break;
-
             case 'match_start':
-              this.onMatchStart?.(msg.state);
-              this.onState?.(msg.state);
+              if (msg.state) {
+                this.onMatchStart?.(msg.state);
+                this.onState?.(msg.state);
+              }
               break;
-
             case 'room_update':
+              if (!msg.state) return;
               this.callbacks.onStateUpdate?.(msg.state);
               this.onState?.(msg.state);
-              if (msg.state?.status === 'in_round' || msg.state?.status === 'countdown') {
+              if (
+                !this.hasStartedMatch &&
+                (msg.state.status === 'in_round' || msg.state.status === 'countdown')
+              ) {
+                this.hasStartedMatch = true;
                 this.onMatchStart?.(msg.state);
               }
               break;
-
+            case 'rematch_waiting':
+              this.onRematchWaiting?.(
+                Number.isFinite(msg.votes) ? msg.votes : 1,
+                Number.isFinite(msg.required) ? msg.required : 2,
+              );
+              break;
+            case 'room_closed': {
+              const message = typeof msg.message === 'string' ? msg.message : 'Pokój został zamknięty.';
+              this.onRoomClosed?.(message);
+              this.emitError(message);
+              this.dispose();
+              break;
+            }
             case 'error':
-              this.callbacks.onError?.(msg.message || 'Błąd serwera PvP');
-              this.onError?.(msg.message || 'Błąd serwera PvP');
+              this.pendingCreate = undefined;
+              this.pendingJoin = undefined;
+              this.emitError(typeof msg.message === 'string' ? msg.message : 'Błąd serwera PvP.');
               break;
           }
-        } catch (e) {
-          console.error('[PVP-CLIENT] Error parsing server message:', e);
+        } catch {
+          this.emitError('Serwer przesłał uszkodzony komunikat PvP.');
         }
       };
 
-      this.ws.onerror = (e) => {
-        console.warn('[PVP-CLIENT] WebSocket error:', e);
+      socket.onerror = () => {
+        // The close handler owns retries and the user-facing timeout message.
       };
 
-      this.ws.onclose = () => {
+      socket.onclose = (event) => {
+        if (socket !== this.ws) return;
+        this.clearConnectionTimeout();
+        this.ws = null;
         this.callbacks.onConnectionChange?.(false);
-        if (!this.isDisposed) {
-          this.reconnectTimer = setTimeout(() => this.connect(), 2000);
+        this.onConnectionChange?.(false);
+        if (this.isDisposed) return;
+
+        if (this.hasJoinedRoom) {
+          this.emitError('Połączenie PvP zostało przerwane. Bieżący pokój nie obsługuje jeszcze wznowienia sesji.');
+          this.dispose();
+          return;
+        }
+
+        if (this.reconnectAttempts < PvpNetworkSession.MAX_CONNECT_ATTEMPTS) {
+          const delay = 500 * (2 ** this.reconnectAttempts);
+          this.reconnectAttempts++;
+          this.reconnectTimer = setTimeout(() => {
+            this.reconnectTimer = null;
+            this.connect();
+          }, delay);
+        } else {
+          const reason = event.reason || 'Serwer PvP jest niedostępny.';
+          this.pendingCreate = undefined;
+          this.pendingJoin = undefined;
+          this.emitError(reason + ' Sprawdź adres hostingu i spróbuj ponownie.');
+          this.dispose();
         }
       };
-    } catch (err) {
-      console.error('[PVP-CLIENT] Connection initiation failed:', err);
+    } catch {
+      this.emitError('Nie udało się uruchomić połączenia WebSocket PvP.');
+    }
+  }
+
+  private send(message: Record<string, unknown>): boolean {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return false;
+    try {
+      this.ws.send(JSON.stringify(message));
+      return true;
+    } catch {
+      this.emitError('Nie udało się wysłać komunikatu PvP.');
+      return false;
     }
   }
 
   public createRoom(operatorId: CharacterId, playerName: string) {
+    if (this.isUnavailable || this.isDisposed) return;
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       this.pendingCreate = { operatorId, playerName };
       return;
     }
-    this.ws.send(JSON.stringify({
-      type: 'create_room',
-      operatorId,
-      playerName,
-    }));
+    this.send({ type: 'create_room', operatorId, playerName });
   }
 
   public joinRoom(code: string, operatorId: CharacterId, playerName: string) {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      this.pendingJoin = { code, operatorId, playerName };
+    if (this.isUnavailable || this.isDisposed) return;
+    const normalizedCode = code.trim().toUpperCase();
+    if (!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(normalizedCode)) {
+      this.emitError('Kod pokoju musi zawierać dokładnie 6 znaków.');
       return;
     }
-    this.ws.send(JSON.stringify({
-      type: 'join_room',
-      code,
-      operatorId,
-      playerName,
-    }));
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      this.pendingJoin = { code: normalizedCode, operatorId, playerName };
+      return;
+    }
+    this.send({ type: 'join_room', code: normalizedCode, operatorId, playerName });
   }
 
   public setReady(ready: boolean) {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-    this.ws.send(JSON.stringify({
-      type: 'set_ready',
-      ready,
-    }));
+    this.send({ type: 'set_ready', ready });
   }
 
   public sendInput(intent: PvpInputIntent) {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-    this.ws.send(JSON.stringify({
-      type: 'input',
-      ...intent,
-    }));
+    if (!this.hasJoinedRoom && !this.isLocalBot) return;
+    this.send({ type: 'input', ...sanitizePvpInputIntent(intent) });
   }
 
   public requestRematch() {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-    this.ws.send(JSON.stringify({
-      type: 'rematch',
-    }));
+    this.send({ type: 'rematch' });
   }
 
   public leaveRoom() {
@@ -194,11 +303,17 @@ export class PvpNetworkSession implements IPvpSession {
   }
 
   public dispose() {
+    if (this.isDisposed) return;
     this.isDisposed = true;
-    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.clearConnectionTimeout();
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     if (this.ws) {
-      this.ws.close();
+      const socket = this.ws;
       this.ws = null;
+      socket.close(1000, 'Client closed room');
     }
   }
 }
