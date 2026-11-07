@@ -545,3 +545,46 @@ test('PvP match stats count actual medkit healing and accepted dashes', () => {
   assert.equal(state.stats.p1.dashesUsed, 1);
   assert.equal(state.p2.healingDone, 0);
 });
+
+test('PvP match statistics survive round resets instead of starting over each round', () => {
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  state.p1.damageDealt = 320;
+  state.p1.damageTaken = 180;
+  state.p1.primaryDamageDealt = 200;
+  state.p1.abilityDamageDealt = 120;
+  state.p1.shotsFired = 10;
+  state.p1.shotsHit = 4;
+  state.p1.abilityUses = 2;
+  state.p1.abilityHits = 1;
+  state.p1.healingDone = 220;
+  state.p1.dashesUsed = 3;
+  state.p1.knockouts = 1;
+
+  resetPvpRound(state);
+
+  assert.deepEqual({
+    damageDealt: state.p1.damageDealt,
+    damageTaken: state.p1.damageTaken,
+    primaryDamageDealt: state.p1.primaryDamageDealt,
+    abilityDamageDealt: state.p1.abilityDamageDealt,
+    shotsFired: state.p1.shotsFired,
+    shotsHit: state.p1.shotsHit,
+    abilityUses: state.p1.abilityUses,
+    abilityHits: state.p1.abilityHits,
+    healingDone: state.p1.healingDone,
+    dashesUsed: state.p1.dashesUsed,
+    knockouts: state.p1.knockouts,
+  }, {
+    damageDealt: 320,
+    damageTaken: 180,
+    primaryDamageDealt: 200,
+    abilityDamageDealt: 120,
+    shotsFired: 10,
+    shotsHit: 4,
+    abilityUses: 2,
+    abilityHits: 1,
+    healingDone: 220,
+    dashesUsed: 3,
+    knockouts: 1,
+  });
+});
