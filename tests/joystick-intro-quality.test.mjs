@@ -30,13 +30,15 @@ test('virtual joystick handles invalid dimensions and clamps travel beyond the r
   assert.equal(beyondRim.y, 0);
 });
 
-test('touch joystick captures a single pointer and resets on cancellation', async () => {
+test('movement and PvP aim sticks capture separate pointers for simultaneous touch', async () => {
   const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
   const css = await readFile(new URL('../src/index.css', import.meta.url), 'utf8');
-  assert.match(app, /event\.isPrimary === false/);
+  assert.match(app, /activePointerId !== null/);
   assert.match(app, /joystickZone\.setPointerCapture\(event\.pointerId\)/);
   assert.match(app, /window\.addEventListener\('pointercancel', handleEnd/);
   assert.match(app, /calculateVirtualJoystickInput\(dx, dy, maxRadius\)/);
+  assert.match(app, /activeAimPointerId !== null/);
+  assert.doesNotMatch(app, /event\.isPrimary === false/);
   assert.match(css, /touch-action: none !important/);
   assert.match(css, /\.joystick-base::before/);
 });
