@@ -381,8 +381,10 @@ export class B4AssetLoader {
           await new Promise(r => setTimeout(r, 20));
         }
 
-        // Additional animation frame yield between batches
-        await new Promise(r => requestAnimationFrame(r));
+        // Do not gate boot on requestAnimationFrame: browsers pause RAF when
+        // a mobile tab/app is backgrounded, which can leave the loader frozen
+        // forever after returning to the game. A short task yield is reliable.
+        await new Promise<void>(resolve => setTimeout(resolve, 16));
       }
 
       const totalTime = Math.round(performance.now() - overallStartTime);
