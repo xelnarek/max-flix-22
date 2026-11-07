@@ -94,7 +94,9 @@ export interface PvpArenaState {
   obstacles: PvpObstacle[];
   pickup: PvpPickup;
   projectiles: PvpProjectile[];
+  hitEventSequence: number;
   lastHitEvent?: {
+    id: number;
     targetSlot: PvpSlot;
     damage: number;
     sourceSlot: PvpSlot;
@@ -218,8 +220,10 @@ function applyPvpAbilityDamage(
 
   source.damageDealt += actualDamage;
   if (stunSeconds > 0 && target.hp > 0) target.stunTimer = Math.max(target.stunTimer, stunSeconds);
+  state.hitEventSequence++;
   state.lastHitEvent = {
-    targetSlot: target.slot,
+    id: state.hitEventSequence,
+    targetSlot: target.slot;
     damage: actualDamage,
     sourceSlot: source.slot,
     x: target.x,
@@ -426,6 +430,7 @@ export function createInitialPvpArenaState(
       respawnTimer: 0,
     },
     projectiles: [],
+    hitEventSequence: 0,
   };
 }
 
@@ -637,8 +642,10 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
       }
       if (damageRemaining > 0) targetPlayer.hp = Math.max(0, targetPlayer.hp - damageRemaining);
 
+      state.hitEventSequence++;
       state.lastHitEvent = {
-        targetSlot: targetPlayer.slot,
+        id: state.hitEventSequence,
+        targetSlot: targetPlayer.slot;
         damage: actualDamage,
         sourceSlot: shooterPlayer.slot,
         x: targetPlayer.x,
