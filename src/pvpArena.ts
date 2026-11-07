@@ -731,6 +731,8 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
       ) state.projectiles.splice(i, 1);
     }
   }
+  // Publish the results of this tick before a room snapshot or match-end panel is emitted.
+  syncPvpMatchStats(state);
 }
 
 function handleKnockout(state: PvpArenaState, winningSlot: 'p1' | 'p2') {
