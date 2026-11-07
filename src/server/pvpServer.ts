@@ -24,6 +24,11 @@ interface PvpRoom {
     p1: PvpInputIntent;
     p2: PvpInputIntent;
   };
+  /** Last authenticated-by-room input timestamp; null means neutral/no active intent. */
+  lastInputAt: {
+    p1: number | null;
+    p2: number | null;
+  };
   tickInterval: NodeJS.Timeout | null;
   lastTickTime: number;
   emptyTimeout: NodeJS.Timeout | null;
@@ -34,6 +39,7 @@ const activeRooms = new Map<string, PvpRoom>();
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const MAX_ACTIVE_ROOMS = 256;
 const MAX_MESSAGES_PER_SECOND = 120;
+const PVP_INPUT_STALE_TIMEOUT_MS = 220;
 const VALID_OPERATOR_IDS = new Set<CharacterId>(['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr']);
 
 function generateRoomCode(): string {
@@ -62,6 +68,27 @@ function isCharacterId(value: unknown): value is CharacterId {
 function clearRoomInputs(room: PvpRoom): void {
   room.inputs.p1 = { moveX: 0, moveZ: 0, aimAngle: room.state.p1.aimAngle, isFiring: false };
   room.inputs.p2 = { moveX: 0, moveZ: 0, aimAngle: room.state.p2.aimAngle, isFiring: false };
+  room.lastInputAt.p1 = null;
+  room.lastInputAt.p2 = null;
+}
+
+/**
+ * A frozen/backgrounded tab must not keep walking or firing indefinitely with
+ * its final packet. Expire controls after a short input heartbeat timeout.
+ */
+function expireStaleRoomInputs(room: PvpRoom, now: number): void {
+  for (const slot of ['p1', 'p2'] as const) {
+    const lastInputAt = room.lastInputAt[slot];
+    if (lastInputAt === null || now - lastInputAt <= PVP_INPUT_STALE_TIMEOUT_MS) continue;
+    const current = room.inputs[slot];
+    room.inputs[slot] = {
+      moveX: 0,
+      moveZ: 0,
+      aimAngle: Number.isFinite(current.aimAngle) ? current.aimAngle : room.state[slot].aimAngle,
+      isFiring: false,
+    };
+    room.lastInputAt[slot] = null;
+  }
 }
 
 function broadcastRoomState(room: PvpRoom) {
@@ -87,6 +114,7 @@ function startRoomLoop(room: PvpRoom) {
     const now = Date.now();
     const dt = Math.min((now - room.lastTickTime) / 1000, 0.1);
     room.lastTickTime = now;
+    expireStaleRoomInputs(room, now);
 
     // Step simulation
     stepPvpArena(room.state, dt, room.inputs.p1, room.inputs.p2);
@@ -229,6 +257,7 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
                 p1: { moveX: 0, moveZ: 0, aimAngle: state.p1.rot, isFiring: false },
                 p2: { moveX: 0, moveZ: 0, aimAngle: state.p2.rot, isFiring: false },
               },
+              lastInputAt: { p1: null, p2: null },
               tickInterval: null,
               lastTickTime: Date.now(),
               emptyTimeout: null,
@@ -370,6 +399,7 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
               wantDash: intent.wantDash === true || sanitized.wantDash === true,
               wantAbility: intent.wantAbility === true || sanitized.wantAbility === true,
             };
+            room.lastInputAt[playerSlot] = Date.now();
             break;
           }
 
@@ -436,6 +466,7 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
         aimAngle: room.state[playerSlot].aimAngle,
         isFiring: false,
       };
+      room.lastInputAt[playerSlot] = null;
 
       const otherSlot = playerSlot === 'p1' ? 'p2' : 'p1';
       const otherClient = room.clients.get(otherSlot);
