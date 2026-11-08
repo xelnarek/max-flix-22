@@ -115,6 +115,7 @@ test('engine drives class-specific attack poses and low-cost footprint effects',
 
 
 test('operator models include finished uniform, reflective arm bands and steel-toe boot details', async () => {
+  const { readFile } = await import('node:fs/promises');
   const assets = await readFile(new URL('../src/warehouseAssets.ts', import.meta.url), 'utf8');
   for (const feature of [
     'frontZip',
