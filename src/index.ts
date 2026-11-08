@@ -27,6 +27,7 @@ import { ThreeClickTrigger } from './menuInteraction.ts';
 import { calculateUiViewport } from './uiViewport.ts';
 import { getAdaptiveEffectsTier, getAdaptiveRenderScale, getDeviceRenderProfile, shouldApplyPixelRatioChange, type AdaptiveEffectsTier } from './renderQuality.ts';
 import { calculateVirtualJoystickInput } from './virtualJoystick.ts';
+import { calculatePvpFireControlPosition } from './pvpTouchLayout.ts';
 import {
   createInitialSurvivalAchievementProgress,
   getSurvivalAchievementCards,
@@ -81,6 +82,15 @@ function setTouchControlsVisibility(visible: boolean): void {
   }
 }
 
+/** Restore the CSS default anchor after leaving PvP or changing viewport geometry. */
+function resetPvpFireControlPosition(): void {
+  const control = document.getElementById('pvp-fire-control') as HTMLElement | null;
+  if (!control) return;
+  for (const property of ['left', 'right', 'top', 'bottom', 'transform']) {
+    control.style.removeProperty(property);
+  }
+}
+
 type TouchControlsMode = 'survival' | 'pvp' | 'hidden';
 
 /**
@@ -105,6 +115,7 @@ function setTouchControlsMode(mode: TouchControlsMode): void {
   document.getElementById('survival-hud')?.classList.toggle('hidden', !activeSurvival);
 
   if (!activePvp) {
+    resetPvpFireControlPosition();
     const fireButton = document.getElementById('btn-pvp-fire') as HTMLButtonElement | null;
     fireButton?.classList.add('hidden');
     if (fireButton) {
@@ -2574,14 +2585,22 @@ class PaleciakiScene extends xb.Script {
       if (touchLayer?.classList.contains('manual-aim-mode') && pvpFireControl) {
         const baseRect = joystickBase.getBoundingClientRect();
         const joystickRadius = Math.min(baseRect.width || 148, baseRect.height || 148) * 0.5;
-        const gap = 10;
-        pvpFireControl.style.setProperty('left', `${startX}px`, 'important');
+        const viewportWidth = Math.max(1, window.visualViewport?.width || window.innerWidth);
+        const viewportHeight = Math.max(1, window.visualViewport?.height || window.innerHeight);
+        const position = calculatePvpFireControlPosition({
+          viewportWidth,
+          viewportHeight,
+          touchX: startX,
+          touchY: startY,
+          joystickRadius,
+          fireControlSize: 78,
+          gap: 10,
+          safeMargin: 12,
+        });
+        pvpFireControl.style.setProperty('left', `${position.left}px`, 'important');
         pvpFireControl.style.setProperty('right', 'auto', 'important');
-        pvpFireControl.style.setProperty(
-          'bottom',
-          `${Math.max(8, window.innerHeight - startY + joystickRadius + gap)}px`,
-          'important',
-        );
+        pvpFireControl.style.setProperty('top', 'auto', 'important');
+        pvpFireControl.style.setProperty('bottom', `${position.bottom}px`, 'important');
         pvpFireControl.style.setProperty('transform', 'translateX(-50%)', 'important');
       }
 
@@ -2632,11 +2651,15 @@ class PaleciakiScene extends xb.Script {
     window.addEventListener('pagehide', resetJoystick);
     // Android fullscreen and orientation changes can resize the visual viewport
     // without reliably delivering pointercancel; never leave movement stuck.
-    window.addEventListener('resize', resetJoystick, { passive: true });
-    window.addEventListener('orientationchange', resetJoystick);
-    window.visualViewport?.addEventListener('resize', resetJoystick, { passive: true });
+    const resetTouchViewportLayout = () => {
+      resetJoystick();
+      resetPvpFireControlPosition();
+    };
+    window.addEventListener('resize', resetTouchViewportLayout, { passive: true });
+    window.addEventListener('orientationchange', resetTouchViewportLayout);
+    window.visualViewport?.addEventListener('resize', resetTouchViewportLayout, { passive: true });
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) resetJoystick();
+      if (document.hidden) resetTouchViewportLayout();
     });
 
 
