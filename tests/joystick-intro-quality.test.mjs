@@ -168,6 +168,15 @@ test('joystick resting anchor does not override live pointer position while acti
 
 test('each Survival start path reasserts touch controls after changing the scene', async () => {
   const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
-  const survivalStarts = app.match(/this\.engine\.startSurvival\(selectedSurvivalMapId\);[\\s\\S]{0,220}?setTouchControlsVisibility\(true\);/g) ?? [];
-  assert.equal(survivalStarts.length, 3);
+  const needle = 'this.engine.startSurvival(selectedSurvivalMapId);';
+  const positions = [];
+  let offset = 0;
+  while ((offset = app.indexOf(needle, offset)) !== -1) {
+    positions.push(offset);
+    offset += needle.length;
+  }
+  assert.equal(positions.length, 3);
+  for (const position of positions) {
+    assert.ok(app.slice(position, position + 220).includes('setTouchControlsVisibility(true);'));
+  }
 });
