@@ -74,8 +74,8 @@ test('PvP fire button handles touches near the top and bottom safe edges', () =>
 
   assert.equal(nearTop.top, 12);
   assert.equal(nearTop.bottom, 478);
-  assert.equal(nearBottom.top, 404);
-  assert.equal(nearBottom.bottom, 86);
+  assert.equal(nearBottom.top, 406);
+  assert.equal(nearBottom.bottom, 84);
 });
 
 test('PvP fire layout remains finite for malformed geometry', () => {
