@@ -892,8 +892,7 @@ body {
   pointer-events: none !important;
 }
 #touch-controls .joystick-zone,
-#touch-controls .touch-actions-zone,
-#touch-controls .pvp-aim-zone {
+#touch-controls .touch-actions-zone {
   pointer-events: auto !important;
 }
 
@@ -5491,75 +5490,6 @@ button {
 }
 
 
-/* PvP manual twin-stick aim: inactive in normal Survival/PvE. */
-.pvp-aim-zone {
-  display: none;
-  position: absolute !important;
-  top: 12% !important;
-  left: min(50vw, 340px) !important;
-  right: 0 !important;
-  bottom: 108px !important;
-  width: auto !important;
-  pointer-events: auto !important;
-  touch-action: none !important;
-  overscroll-behavior: contain !important;
-  user-select: none !important;
-  -webkit-user-select: none !important;
-  z-index: 83 !important;
-}
-.pvp-aim-base {
-  position: fixed;
-  left: 76%;
-  top: 58%;
-  width: 142px;
-  height: 142px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid rgba(103,232,249,.9);
-  border-radius: 50%;
-  transform: translate(-50%,-50%);
-  background: radial-gradient(circle at 34% 28%,rgba(28,67,84,.94),rgba(5,19,31,.96) 72%);
-  box-shadow: 0 0 26px rgba(34,211,238,.24), inset 0 0 20px rgba(255,255,255,.08);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .12s ease;
-  z-index: 84;
-}
-.pvp-aim-base::before {
-  content: "";
-  position: absolute;
-  inset: 10px;
-  border: 1px dashed rgba(207,250,254,.28);
-  border-radius: 50%;
-}
-.pvp-aim-base.active { opacity: 1; }
-.pvp-aim-knob {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 58px;
-  height: 58px;
-  border: 2px solid #cffafe;
-  border-radius: 50%;
-  transform: translate(-50%,-50%);
-  background: radial-gradient(circle at 34% 28%,#ecfeff,#22d3ee 42%,#0e7490 100%);
-  box-shadow: 0 5px 18px rgba(0,0,0,.62), inset 0 2px 5px rgba(255,255,255,.6), 0 0 16px rgba(34,211,238,.25);
-  pointer-events: none;
-  will-change: transform;
-}
-/* The controls are portaled to body; show the right stick from the controls layer, not #game-shell. */
-#touch-controls.manual-aim-mode .pvp-aim-zone { display: block !important; }
-:is(#game-shell, #touch-controls).manual-aim-mode .joystick-zone { width: min(50vw, 340px) !important; }
-:is(#game-shell, #touch-controls).manual-aim-mode #btn-touch-attack,
-#touch-controls.manual-aim-mode #btn-touch-jump { display: none !important; }
-#touch-controls.manual-aim-mode .pvp-aim-base:not(.active) { opacity: .48 !important; }
-@media (max-width: 390px) {
-  /* The touch layer is portaled to body, so include it alongside the game shell. */
-  :is(#game-shell, #touch-controls).manual-aim-mode .pvp-aim-zone { bottom: 98px !important; }
-  :is(#game-shell, #touch-controls).manual-aim-mode .touch-actions-zone { gap: 6px !important; }
-}
-
 /* ==========================================================================
    PVP 1v1 ARENA STYLES
    ========================================================================== */
@@ -6512,10 +6442,6 @@ button {
   font-size: 10px !important;
   flex: 0 0 auto !important;
 }
-#touch-controls.manual-aim-mode .pvp-aim-zone { top: 11% !important; bottom: 116px !important; }
-#touch-controls.manual-aim-mode .pvp-aim-base:not(.active) { opacity: .24 !important; border-style: dashed; }
-#touch-controls.manual-aim-mode .pvp-aim-base.active { opacity: .92 !important; }
-
 @media (max-width: 390px), (pointer: coarse) and (max-width: 430px) {
   #touch-controls.manual-aim-mode .touch-actions-zone {
     gap: 5px !important;
