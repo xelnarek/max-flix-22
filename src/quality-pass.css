@@ -1,0 +1,742 @@
+/* ==========================================================================
+   QUALITY PASS — unified presentation for every game segment.
+   Visual-only layer: no gameplay state, controls logic, or canvas pipeline.
+   ========================================================================== */
+
+:root {
+  --mf-panel: rgba(11, 22, 33, .96);
+  --mf-panel-raised: rgba(17, 32, 46, .96);
+  --mf-panel-soft: rgba(17, 32, 46, .72);
+  --mf-border-soft: rgba(160, 190, 212, .16);
+  --mf-border-bright: rgba(98, 198, 232, .34);
+  --mf-shadow-panel: 0 12px 30px rgba(0, 0, 0, .28), inset 0 1px 0 rgba(255,255,255,.045);
+  --mf-shadow-hover: 0 16px 34px rgba(0, 0, 0, .34), 0 0 0 1px rgba(98,198,232,.12);
+  --mf-ease: cubic-bezier(.2,.72,.2,1);
+}
+
+html {
+  accent-color: var(--mf-cyan);
+  scrollbar-color: rgba(98,198,232,.34) rgba(7,13,21,.45);
+  scrollbar-width: thin;
+}
+
+body {
+  overscroll-behavior: none;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.field-guide-card:focus-visible,
+.enemy-guide-card:focus-visible,
+.perk-card:focus-visible,
+.survival-map-choice:focus-visible,
+.survival-map-directory-card:focus-visible,
+.survival-achievement-section:focus-visible {
+  outline: 2px solid var(--mf-cyan) !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgba(98,198,232,.13) !important;
+}
+
+/* Shared card grammar: controlled borders, deeper surfaces, quieter shadows. */
+#title-screen .field-guide-card,
+#title-screen .enemy-guide-card,
+#title-screen .boss-guide-card,
+#title-screen .perk-card,
+#title-screen .survival-map-choice,
+#title-screen .survival-map-directory-card,
+#title-screen .survival-achievement-section,
+#title-screen .character-mastery-panel,
+#title-screen .account-progression-panel,
+#title-screen .account-ranks-panel,
+#title-screen .leaderboard-container,
+#title-screen .arcade-hero-showcase,
+#pvp-lobby-modal .pvp-lobby-card,
+#pvp-lobby-modal .pvp-network-box,
+#pvp-lobby-modal .pvp-practice-box,
+#pvp-match-end-modal .pvp-match-end-card,
+#gameover-modal .gameover-card {
+  border-color: var(--mf-border-soft);
+  box-shadow: var(--mf-shadow-panel);
+}
+
+#title-screen .field-guide-card,
+#title-screen .enemy-guide-card,
+#title-screen .boss-guide-card,
+#title-screen .perk-card,
+#title-screen .survival-map-choice,
+#title-screen .survival-map-directory-card,
+#title-screen .pvp-operator-btn {
+  min-width: 0;
+  transition:
+    border-color .18s var(--mf-ease),
+    box-shadow .18s var(--mf-ease),
+    background-color .18s var(--mf-ease),
+    transform .18s var(--mf-ease);
+}
+
+#title-screen .field-guide-card,
+#title-screen .enemy-guide-card,
+#title-screen .boss-guide-card,
+#title-screen .perk-card {
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+#title-screen .field-guide-card .field-guide-icon,
+#title-screen .enemy-guide-badge,
+#title-screen .perk-card-icon {
+  flex-shrink: 0;
+}
+
+#title-screen .field-guide-section,
+#title-screen .survival-achievement-section,
+#title-screen .account-rank-section {
+  min-width: 0;
+}
+
+#title-screen .field-guide-section-head,
+#title-screen .account-rank-section-heading,
+#title-screen .survival-achievement-section-heading {
+  gap: 8px;
+  align-items: center;
+}
+
+#title-screen .field-guide-section-head,
+#title-screen .account-rank-section-heading {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--mf-border-soft);
+}
+
+#title-screen .field-guide-heading-row,
+#title-screen .leaderboard-header-row,
+#title-screen .survival-achievements-heading,
+#title-screen .character-mastery-heading {
+  min-width: 0;
+}
+
+/* Menu navigation and map selection. */
+#title-screen .menu-tabs-bar {
+  border-color: var(--mf-border-soft) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
+}
+
+#title-screen .menu-tab-btn {
+  min-height: 42px !important;
+  border-radius: 9px !important;
+  letter-spacing: .055em !important;
+}
+
+#title-screen .menu-tab-btn.active {
+  background:
+    linear-gradient(180deg, rgba(45,111,136,.25), rgba(17,47,62,.24)) !important;
+  border-color: rgba(98,198,232,.28) !important;
+  box-shadow: inset 0 -2px 0 var(--mf-cyan), 0 5px 15px rgba(0,0,0,.2) !important;
+}
+
+#title-screen .menu-tab-btn .tab-icon {
+  flex: 0 0 19px;
+}
+
+#title-screen .menu-tab-content-area {
+  scrollbar-gutter: stable;
+}
+
+#title-screen .map-selection-panel {
+  width: 100%;
+  min-width: 0;
+}
+
+#title-screen .menu-map-picker-frame {
+  border: 1px solid var(--mf-border-soft);
+  border-radius: 15px;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(98,198,232,.075), transparent 58%),
+    linear-gradient(145deg, rgba(13,28,42,.98), rgba(7,15,24,.98));
+  box-shadow: var(--mf-shadow-panel);
+}
+
+#title-screen .survival-map-choice {
+  border: 1px solid var(--mf-border-soft);
+  background: linear-gradient(160deg, rgba(21,39,55,.94), rgba(10,19,29,.98));
+}
+
+#title-screen .survival-map-choice[aria-pressed="true"],
+#title-screen .survival-map-choice.selected,
+#title-screen .survival-map-choice.active {
+  border-color: var(--mf-amber) !important;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(242,184,75,.16), transparent 70%),
+    linear-gradient(160deg, rgba(30,46,59,.98), rgba(10,19,29,.99)) !important;
+  box-shadow: 0 0 0 1px rgba(242,184,75,.18), 0 10px 24px rgba(0,0,0,.27) !important;
+}
+
+#title-screen .survival-map-preview {
+  border-top: 1px solid var(--mf-border-soft);
+}
+
+#title-screen .char-details-box,
+#title-screen .character-mastery-panel,
+#title-screen .account-progression-panel,
+#title-screen .account-ranks-panel,
+#title-screen .survival-achievements-panel,
+#title-screen .field-guide-panel {
+  min-width: 0;
+  border-radius: 14px;
+}
+
+/* Codex, perks and achievements: clear hierarchy and predictable hover state. */
+#title-screen .field-guide-card,
+#title-screen .enemy-guide-card,
+#title-screen .boss-guide-card,
+#title-screen .perk-card,
+#title-screen .survival-map-directory-card {
+  background:
+    linear-gradient(155deg, rgba(20,37,52,.96), rgba(9,18,28,.98));
+}
+
+#title-screen .field-guide-card .field-guide-index,
+#title-screen .field-guide-card .field-guide-section-head,
+#title-screen .field-guide-card .field-guide-callout {
+  min-width: 0;
+}
+
+#title-screen .field-guide-card p,
+#title-screen .enemy-guide-desc,
+#title-screen .perk-card-desc,
+#title-screen .field-guide-callout,
+#title-screen .account-progression-footnote,
+#title-screen .character-mastery-footnote {
+  color: #aebfcd;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+#title-screen .enemy-guide-title,
+#title-screen .perk-card-title,
+#title-screen .field-guide-card h3 {
+  text-wrap: balance;
+}
+
+#title-screen .perk-card-top,
+#title-screen .perk-card-head-info {
+  min-width: 0;
+}
+
+#title-screen .btn-perk-activate {
+  min-height: 36px;
+  border-radius: 8px;
+}
+
+#title-screen .survival-achievements-summary-track,
+#title-screen .account-progression-track,
+#title-screen .character-mastery-track,
+#title-screen .account-rank-track,
+#title-screen .stat-bar-track {
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+#title-screen .survival-achievements-summary-track > *,
+#title-screen .account-progression-track > *,
+#title-screen .character-mastery-track > *,
+#title-screen .account-rank-track > *,
+#title-screen .stat-bar-fill {
+  border-radius: inherit;
+}
+
+#title-screen .survival-achievement-grid,
+#title-screen .account-tree-grid,
+#title-screen .character-talent-grid {
+  align-items: stretch;
+}
+
+#title-screen .survival-achievement-grid > *,
+#title-screen .account-tree-grid > *,
+#title-screen .character-talent-grid > * {
+  min-width: 0;
+}
+
+/* Progression, mastery and leaderboard screens. */
+#title-screen .account-progression-hero,
+#title-screen .account-ranks-hero,
+#title-screen .survival-achievements-hero,
+#title-screen .field-guide-hero {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--mf-border-soft);
+  border-radius: 15px;
+  background:
+    radial-gradient(ellipse at 95% 0%, rgba(98,198,232,.11), transparent 45%),
+    linear-gradient(145deg, rgba(17,36,51,.98), rgba(8,17,27,.98));
+}
+
+#title-screen .account-current-rank-card,
+#title-screen .account-level-transponder,
+#title-screen .account-rank-bonuses,
+#title-screen .character-mastery-record,
+#title-screen .character-mastery-progress {
+  min-width: 0;
+  border-color: var(--mf-border-soft);
+  border-radius: 11px;
+}
+
+#title-screen .account-cloud-sync-button,
+#title-screen .account-google-connect-button {
+  min-height: 42px;
+  border-radius: 9px;
+}
+
+#title-screen .leaderboard-container {
+  overflow: hidden;
+  border-radius: 14px;
+  background: linear-gradient(160deg, rgba(15,29,43,.96), rgba(8,16,26,.98));
+}
+
+#title-screen .leaderboard-header-row {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--mf-border-soft);
+}
+
+#title-screen .leaderboard-item {
+  min-width: 0;
+  border-color: rgba(160,190,212,.12);
+  background: linear-gradient(90deg, rgba(20,36,51,.9), rgba(10,20,31,.96));
+}
+
+#title-screen .leaderboard-item.top-1 {
+  border-color: rgba(242,184,75,.42);
+  background: linear-gradient(90deg, rgba(75,53,21,.32), rgba(12,22,32,.96));
+}
+
+#title-screen .firestore-status-badge {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+/* Shared in-game HUD surface language; layout and mode visibility stay intact. */
+#hud-top .hero-badge,
+#hud-top .stat-pill,
+#hud-top .top-icon-btn,
+#hud-bottom .bottom-dock,
+#hud-bottom .dock-btn,
+#hud-perks-row .perk-badge {
+  border: 1px solid rgba(179,202,220,.2);
+  background-color: rgba(7,16,26,.9);
+  box-shadow: 0 8px 22px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.045);
+}
+
+#hud-top .hero-badge {
+  border-radius: 12px;
+}
+
+#hud-top .hero-name,
+#hud-top .hero-role,
+#hud-top .stat-label,
+#hud-top .stat-value {
+  text-shadow: 0 1px 2px rgba(0,0,0,.5);
+}
+
+#hud-top .stat-pill {
+  min-height: 38px;
+  border-radius: 9px;
+}
+
+#hud-top .top-icon-btn {
+  min-height: 38px;
+  border-radius: 9px;
+  transition: transform .16s var(--mf-ease), border-color .16s ease, filter .16s ease;
+}
+
+#hud-top .top-icon-btn:active,
+#hud-bottom .dock-btn:active,
+#hud-bottom .touch-action-btn:active {
+  transform: scale(.96);
+}
+
+#hud-bottom .bottom-dock {
+  border-radius: 15px;
+}
+
+#hud-bottom .dock-btn,
+#hud-bottom .touch-action-btn {
+  border-radius: 12px;
+}
+
+#hud-bottom .attack-button,
+#hud-bottom .ability-button {
+  box-shadow: 0 8px 20px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.13);
+}
+
+#hud-perks-row .perk-badge {
+  border-radius: 8px;
+  font-weight: 800;
+  letter-spacing: .035em;
+}
+
+/* Survival has its own tactical HUD, deliberately independent of PvP. */
+#survival-hud {
+  border: 1px solid rgba(98,198,232,.2);
+  border-radius: 13px;
+  background:
+    linear-gradient(145deg, rgba(7,17,27,.95), rgba(7,14,22,.89));
+  box-shadow: 0 12px 28px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.045);
+}
+
+#survival-hud .survival-hud-kicker {
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+#survival-hud .survival-map-name {
+  color: #e6f4fb;
+  letter-spacing: .09em;
+}
+
+#survival-hud .survival-secret-count {
+  color: var(--mf-amber-2);
+}
+
+#survival-hud .survival-chip {
+  min-width: 0;
+  border: 1px solid rgba(160,190,212,.13);
+  border-radius: 8px;
+  background: linear-gradient(160deg, rgba(18,34,48,.95), rgba(9,19,29,.98));
+}
+
+#survival-hud .survival-chip-label {
+  color: #91a7b8;
+  letter-spacing: .075em;
+}
+
+#survival-hud .survival-chip strong {
+  color: #f3f7fa;
+  font-variant-numeric: tabular-nums;
+}
+
+#survival-hud .survival-xp-track,
+#survival-hud .survival-contract-track {
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+#survival-hud .survival-contract {
+  border: 1px solid rgba(242,184,75,.2);
+  border-radius: 9px;
+  background: rgba(30,25,15,.42);
+}
+
+#survival-hud .survival-weapon-rack {
+  border-top: 1px solid rgba(160,190,212,.13);
+}
+
+#survival-hud .survival-weapon-chip {
+  border: 1px solid rgba(98,198,232,.2);
+  border-radius: 7px;
+  background: rgba(12,31,44,.9);
+}
+
+/* PvP: blue/amber sides remain distinct; the centre round callout is neutral. */
+#pvp-hud .pvp-player-box {
+  min-width: 0;
+  border: 1px solid rgba(160,190,212,.22);
+  border-radius: 12px;
+  background: linear-gradient(150deg, rgba(10,27,43,.96), rgba(6,15,25,.96));
+  box-shadow: 0 10px 25px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.045);
+}
+
+#pvp-hud .pvp-p1-box {
+  border-color: rgba(98,198,232,.34);
+}
+
+#pvp-hud .pvp-p2-box {
+  border-color: rgba(242,184,75,.34);
+}
+
+#pvp-hud .pvp-player-details,
+#pvp-hud .pvp-player-name-row {
+  min-width: 0;
+}
+
+#pvp-hud .pvp-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#pvp-hud .pvp-hp-track {
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.13);
+  border-radius: 999px;
+  background: rgba(0,0,0,.38);
+}
+
+#pvp-hud .pvp-center-box {
+  border: 1px solid rgba(160,190,212,.2);
+  border-radius: 11px;
+  background: rgba(8,17,27,.94);
+  box-shadow: 0 10px 24px rgba(0,0,0,.28);
+}
+
+#pvp-hud .pvp-center-badge {
+  letter-spacing: .13em;
+}
+
+#pvp-hud .pvp-status-banner {
+  border: 1px solid rgba(98,198,232,.22);
+  border-radius: 7px;
+  background: rgba(16,44,58,.8);
+}
+
+#pvp-fire-control .pvp-fire-btn,
+#btn-pvp-fire {
+  border: 2px solid rgba(255,255,255,.62);
+  box-shadow: 0 10px 24px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.22);
+}
+
+#pvp-lobby-modal .pvp-lobby-card,
+#pvp-match-end-modal .pvp-match-end-card {
+  border-radius: 16px;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(98,198,232,.08), transparent 48%),
+    linear-gradient(155deg, rgba(13,27,40,.99), rgba(6,13,22,.99));
+}
+
+#pvp-lobby-modal .pvp-input,
+#pvp-lobby-modal .pvp-code-input,
+#pvp-lobby-modal .nickname-input {
+  min-width: 0;
+  border: 1px solid rgba(160,190,212,.24);
+  border-radius: 9px;
+  background: rgba(4,12,21,.88);
+  color: var(--mf-text);
+}
+
+#pvp-lobby-modal .pvp-operator-btn {
+  border-radius: 10px;
+}
+
+#pvp-lobby-modal .pvp-operator-btn[aria-pressed="true"],
+#pvp-lobby-modal .pvp-operator-btn.selected,
+#pvp-lobby-modal .pvp-operator-btn.active {
+  border-color: var(--mf-cyan);
+  box-shadow: 0 0 0 1px rgba(98,198,232,.24), 0 8px 18px rgba(0,0,0,.28);
+}
+
+/* Pause, level-up, end-of-run and secret-reveal surfaces. */
+.game-modal .modal-card,
+#pause-modal .modal-card,
+#gameover-modal .gameover-card,
+#survival-levelup .survival-levelup-card,
+#capybara-mafia-easter-egg .capybara-easter-dialog {
+  border: 1px solid rgba(160,190,212,.22);
+  border-radius: 16px;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(98,198,232,.07), transparent 52%),
+    linear-gradient(155deg, rgba(13,27,40,.99), rgba(6,13,22,.99));
+  box-shadow: 0 24px 60px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.055);
+}
+
+.game-modal .modal-title,
+.game-modal .modal-badge {
+  letter-spacing: .07em;
+}
+
+.game-modal .modal-desc {
+  color: #b4c3cf;
+  line-height: 1.55;
+}
+
+#survival-levelup .survival-upgrade-grid {
+  align-items: stretch;
+}
+
+#survival-levelup .survival-upgrade-grid > * {
+  min-width: 0;
+}
+
+#gameover-modal .gameover-damage-panel {
+  border: 1px solid rgba(160,190,212,.17);
+  border-radius: 12px;
+  background: rgba(5,13,22,.62);
+}
+
+#gameover-modal .gameover-damage-breakdown {
+  scrollbar-width: thin;
+}
+
+#gameover-modal .gameover-damage-fill {
+  border-radius: 999px;
+}
+
+/* Buttons and form fields: consistent response without changing their actions. */
+.btn-primary,
+.btn-modal,
+.btn-submit-score,
+.btn-refresh-pill,
+.btn-story-nav,
+.btn-perk-activate,
+.btn-voiceline-preview,
+.btn-survival-start,
+.pvp-action-btn,
+.pvp-ready-btn,
+.pvp-bot-btn,
+.account-cloud-sync-button,
+.account-google-connect-button {
+  transition:
+    transform .16s var(--mf-ease),
+    filter .16s ease,
+    border-color .16s ease,
+    box-shadow .16s ease;
+}
+
+.btn-primary,
+.btn-modal,
+.btn-submit-score,
+.btn-refresh-pill,
+.pvp-action-btn,
+.pvp-ready-btn,
+.pvp-bot-btn {
+  border-radius: 9px;
+}
+
+#title-screen input,
+#title-screen select,
+#title-screen textarea,
+#pvp-lobby-modal input {
+  min-width: 0;
+  color: var(--mf-text);
+}
+
+#title-screen input:not([type="range"]),
+#title-screen select,
+#title-screen textarea,
+#pvp-lobby-modal input:not([type="checkbox"]):not([type="radio"]) {
+  border-color: rgba(160,190,212,.22);
+  border-radius: 8px;
+  background-color: rgba(4,12,21,.78);
+}
+
+#title-screen input::placeholder,
+#title-screen textarea::placeholder,
+#pvp-lobby-modal input::placeholder {
+  color: #73889a;
+  opacity: 1;
+}
+
+#title-screen input[type="range"],
+#title-screen input[type="checkbox"],
+#title-screen input[type="radio"] {
+  accent-color: var(--mf-cyan);
+}
+
+/* Short phone and compact landscape: preserve clarity, not tiny decorative text. */
+@media (max-width: 640px) {
+  #title-screen .field-guide-card,
+  #title-screen .enemy-guide-card,
+  #title-screen .boss-guide-card,
+  #title-screen .perk-card,
+  #title-screen .survival-map-directory-card {
+    border-radius: 10px;
+  }
+
+  #title-screen .field-guide-card p,
+  #title-screen .enemy-guide-desc,
+  #title-screen .perk-card-desc,
+  #title-screen .field-guide-callout {
+    line-height: 1.42;
+  }
+
+  #title-screen .menu-tab-btn {
+    min-height: 38px !important;
+  }
+
+  #survival-hud .survival-chip {
+    border-radius: 7px;
+  }
+
+  #pvp-hud .pvp-player-box {
+    border-radius: 9px;
+  }
+
+  .game-modal .modal-card,
+  #pvp-lobby-modal .pvp-lobby-card,
+  #pvp-match-end-modal .pvp-match-end-card {
+    border-radius: 13px;
+  }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  #title-screen .title-sheet {
+    border-radius: 12px !important;
+  }
+
+  #title-screen .menu-tab-content-area {
+    scrollbar-gutter: auto;
+  }
+
+  #survival-hud .survival-chip-label {
+    letter-spacing: .035em;
+  }
+}
+
+/* Motion stays subtle and respects the system accessibility preference. */
+@media (hover: hover) and (pointer: fine) {
+  #title-screen .field-guide-card:hover,
+  #title-screen .enemy-guide-card:hover,
+  #title-screen .boss-guide-card:hover,
+  #title-screen .perk-card:hover,
+  #title-screen .survival-map-directory-card:hover,
+  #title-screen .pvp-operator-btn:hover {
+    transform: translateY(-2px);
+    border-color: var(--mf-border-bright);
+    box-shadow: var(--mf-shadow-hover);
+  }
+
+  #title-screen .survival-map-choice:hover {
+    border-color: rgba(242,184,75,.4);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:hover,
+  .btn-modal:hover,
+  .btn-submit-score:hover,
+  .btn-refresh-pill:hover,
+  .pvp-action-btn:hover,
+  .pvp-ready-btn:hover,
+  .pvp-bot-btn:hover,
+  .account-cloud-sync-button:hover,
+  .account-google-connect-button:hover {
+    filter: brightness(1.08);
+    box-shadow: 0 10px 22px rgba(0,0,0,.26);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #title-screen .field-guide-card,
+  #title-screen .enemy-guide-card,
+  #title-screen .boss-guide-card,
+  #title-screen .perk-card,
+  #title-screen .survival-map-choice,
+  #title-screen .survival-map-directory-card,
+  #title-screen .pvp-operator-btn,
+  .btn-primary,
+  .btn-modal,
+  .btn-submit-score,
+  .btn-refresh-pill,
+  .pvp-action-btn,
+  .pvp-ready-btn,
+  .pvp-bot-btn {
+    transition: none !important;
+  }
+}
