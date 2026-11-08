@@ -6,6 +6,7 @@ import {
   pvpScreenMovementToWorld,
   calculatePvpAimPreview,
   getPvpSweepAimAngle,
+  getPvpAimSweepCenterAngle,
   PVP_AIM_SWEEP_HALF_ARC,
   PVP_AIM_SWEEP_PERIOD_SECONDS,
 } from '../src/pvpAim.ts';
@@ -30,6 +31,20 @@ test('Archero timing cursor sweeps left-to-right and returns across the full arc
   assert.ok(Math.abs(farEdge - PVP_AIM_SWEEP_HALF_ARC) < 1e-9);
   assert.ok(Math.abs(returnMiddle) < 1e-9);
   assert.ok(Math.abs(loop - start) < 1e-9);
+});
+
+test('PvP sweep direction follows player movement and never tracks the opponent', () => {
+  const initialFacing = Math.PI / 2;
+  const unchanged = getPvpAimSweepCenterAngle(0, 0, initialFacing);
+  const turnedEast = getPvpAimSweepCenterAngle(1, 0, initialFacing);
+  const turnedNorth = getPvpAimSweepCenterAngle(0, -1, initialFacing);
+  const smallThumbNoise = getPvpAimSweepCenterAngle(0.08, 0.04, initialFacing);
+  const malformed = getPvpAimSweepCenterAngle(Number.NaN, 1, initialFacing);
+  assert.equal(unchanged, initialFacing);
+  assert.ok(Math.abs(turnedEast - Math.PI / 2) < 1e-12);
+  assert.ok(Math.abs(turnedNorth - Math.PI) < 1e-12);
+  assert.equal(smallThumbNoise, initialFacing);
+  assert.equal(malformed, initialFacing);
 });
 
 test('timing cursor handles invalid values, wrapped angles and custom arc limits', () => {
@@ -57,6 +72,9 @@ test('PvP timing sweep drives the 3D cursor while movement and firing stay separ
   assert.ok(app.includes('bindPvpTap(pvpFireButton'));
   assert.ok(app.includes('bindPvpTap(desktopPvpFireButton, triggerPrimaryPvpShot)'));
   assert.ok(game.includes('getPvpSweepAimAngle('));
+  assert.ok(game.includes('getPvpAimSweepCenterAngle('));
+  assert.ok(game.includes('this.pvpAimSweepCenterAngle - PVP_AIM_SWEEP_HALF_ARC'));
+  assert.ok(!/getPvpSweepAimAngle\([\s\S]{0,180}opponentBearing/.test(game));
   assert.ok(game.includes('this.pvpAimArc'));
   assert.ok(game.includes('this.pvpAimSweepPointer'));
   assert.ok(game.includes('wantFire: this.pvpWantFire'));
