@@ -163,3 +163,95 @@ test('PvP room server validates invite codes, waits for both ready signals and h
   p1.close(1000, 'leave test match');
   assert.match((await closedForP2).message, /rozłączył się|opuścił pokój/);
 });
+
+
+test('PvP public matchmaking pairs the oldest waiting players and supports reliable cancellation', async (t) => {
+  const originalNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'test';
+  const httpServer = createServer();
+  const websocketServer = attachPvpWebSocketServer(httpServer);
+  const sockets = [];
+
+  await new Promise((resolve, reject) => {
+    httpServer.once('error', reject);
+    httpServer.listen(0, '127.0.0.1', resolve);
+  });
+  const address = httpServer.address();
+  assert.ok(address && typeof address === 'object');
+  const url = `ws://127.0.0.1:${address.port}/pvp-ws`;
+
+  t.after(async () => {
+    for (const socket of sockets) await closeSocket(socket);
+    await new Promise((resolve) => websocketServer.close(resolve));
+    await new Promise((resolve) => httpServer.close(() => resolve()));
+    if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = originalNodeEnv;
+  });
+
+  const connect = async () => {
+    const socket = new WebSocket(url);
+    sockets.push(socket);
+    await waitForOpen(socket);
+    return socket;
+  };
+
+  const first = await connect();
+  const second = await connect();
+  const third = await connect();
+
+  const firstQueued = waitForMessage(first, (message) =>
+    message.type === 'matchmaking_status' && message.status === 'searching' && message.position === 1
+  );
+  first.send(JSON.stringify({ type: 'find_match', operatorId: 'marcin', playerName: 'Pierwszy' }));
+  await firstQueued;
+
+  const secondPosition = waitForMessage(second, (message) =>
+    message.type === 'matchmaking_status' && message.status === 'searching' && message.position === 2
+  );
+  const firstQueueUpdate = waitForMessage(first, (message) =>
+    message.type === 'matchmaking_status' && message.status === 'searching' && message.waitingPlayers === 2
+  );
+  second.send(JSON.stringify({ type: 'find_match', operatorId: 'grzesiek', playerName: 'Anulujący' }));
+  await Promise.all([secondPosition, firstQueueUpdate]);
+
+  const cancelled = waitForMessage(second, (message) => message.type === 'matchmaking_cancelled');
+  const firstAfterCancel = waitForMessage(first, (message) =>
+    message.type === 'matchmaking_status' && message.status === 'searching' && message.waitingPlayers === 1
+  );
+  second.send(JSON.stringify({ type: 'cancel_matchmaking' }));
+  await Promise.all([cancelled, firstAfterCancel]);
+
+  const firstFound = waitForMessage(first, (message) => message.type === 'match_found');
+  const thirdFound = waitForMessage(third, (message) => message.type === 'match_found');
+  const firstRoom = waitForMessage(first, (message) => message.type === 'room_created');
+  const thirdRoom = waitForMessage(third, (message) => message.type === 'room_joined');
+  third.send(JSON.stringify({ type: 'find_match', operatorId: 'dawid', playerName: 'Trzeci' }));
+
+  const [firstMatch, thirdMatch, firstCreated, thirdJoined] = await Promise.all([
+    firstFound, thirdFound, firstRoom, thirdRoom,
+  ]);
+  assert.equal(firstMatch.code, thirdMatch.code);
+  assert.equal(firstCreated.code, thirdJoined.code);
+  assert.equal(firstCreated.code, thirdCreatedCode(firstCreated.code));
+  assert.equal(firstCreated.slot, 'p1');
+  assert.equal(thirdJoined.slot, 'p2');
+  assert.equal(firstCreated.state.p1.nickname, 'Pierwszy');
+  assert.equal(firstCreated.state.p2.nickname, 'Trzeci');
+  assert.equal(firstCreated.state.p1.connected, true);
+  assert.equal(firstCreated.state.p2.connected, true);
+  assert.equal(firstCreated.state.status, 'ready');
+
+  const firstCountdown = waitForMessage(first, (message) =>
+    message.type === 'room_update' && message.state?.status === 'countdown'
+  );
+  const thirdCountdown = waitForMessage(third, (message) =>
+    message.type === 'room_update' && message.state?.status === 'countdown'
+  );
+  first.send(JSON.stringify({ type: 'set_ready', ready: true }));
+  third.send(JSON.stringify({ type: 'set_ready', ready: true }));
+  const [firstState, thirdState] = await Promise.all([firstCountdown, thirdCountdown]);
+  assert.equal(firstState.state.status, 'countdown');
+  assert.equal(thirdState.state.status, 'countdown');
+});
+
+function thirdCreatedCode(code) { return code; }
