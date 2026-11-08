@@ -82,6 +82,7 @@ test('PvP timing sweep drives the 3D cursor while movement and firing stay separ
   assert.ok(!arena.includes('getPvpAimAssistAngle'));
   assert.ok(html.includes('id="pvp-fire-control"'));
   assert.ok(html.includes('id="btn-pvp-fire"'));
+  assert.ok(html.includes('RUCH USTAWIA KIERUNEK'));
   assert.ok(!html.includes('id="pvp-aim-zone"'));
   assert.ok(!html.includes('id="pvp-aim-base"'));
   assert.ok(!css.includes('pvp-aim-zone'));
