@@ -176,9 +176,13 @@ test('PvP online buttons are disabled with a clear WSS requirement when the stat
 });
 
 test('local PvP bot does not fire into blocking warehouse cover', async () => {
-  const client = await readFile(new URL('../src/pvpClient.ts', import.meta.url), 'utf8');
-  assert.match(client, /const hasClearShot = hasPvpLineOfSight\(bot, player, this\.state\.obstacles\)/);
-  assert.match(client, /this\.p2Input\.isFiring = distToPlayer < 22 && hasClearShot/);
+  const [client, tactics] = await Promise.all([
+    readFile(new URL('../src/pvpClient.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pvpBotTactics.ts', import.meta.url), 'utf8'),
+  ]);
+  assert.match(client, /choosePvpBotDecision/);
+  assert.match(tactics, /hasPvpLineOfSight\(bot, opponent, obstacles\)/);
+  assert.match(tactics, /const isFiring = distance < 26 && lineOfSight && bot\.hp > 0/);
 });
 
 
