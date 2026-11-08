@@ -2908,11 +2908,15 @@ export class PaleciakiGameEngine {
       const root = new THREE.Group();
       root.name = 'survival-route-feature-' + feature.id;
       const baseMaterial = feature.kind === 'pallet_stack' ? wood : sharedMetal;
+      // Lift the palletised cargo block above its visible pallet deck. Other
+      // cover families keep their original solid body and collision dimensions.
+      const bodyBaseY = feature.kind === 'pallet_stack' ? 0.26 : 0;
+      const bodyHeight = Math.max(0.25, feature.height - bodyBaseY);
       const body = new THREE.Mesh(
-        new THREE.BoxGeometry(feature.width, feature.height, feature.depth),
+        new THREE.BoxGeometry(feature.width, bodyHeight, feature.depth),
         baseMaterial
       );
-      body.position.y = feature.height / 2;
+      body.position.y = bodyBaseY + bodyHeight / 2;
       body.castShadow = false;
       body.receiveShadow = true;
       root.add(body);
