@@ -128,3 +128,34 @@ test('PvP WebSocket server expires stale movement and firing intents', async () 
   assert.match(server, /room\.lastInputAt\[playerSlot\] = Date\.now\(\)/);
   assert.match(server, /isFiring: false/);
 });
+
+
+test('PvP right-stick is revealed on the portaled touch-controls layer, not the WebGL shell', async () => {
+  const [app, css] = await Promise.all([
+    readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
+  ]);
+  assert.match(app, /touchControls\?\.classList\.add\('pvp-mode', 'manual-aim-mode'\)/);
+  assert.match(app, /touchControls\?\.classList\.remove\('pvp-mode', 'manual-aim-mode'\)/);
+  assert.match(css, /#touch-controls\.manual-aim-mode \.pvp-aim-zone \{ display: block !important; \}/);
+  assert.doesNotMatch(css, /#game-shell\.manual-aim-mode \.pvp-aim-zone \{ display: block !important; \}/);
+  assert.match(css, /#touch-controls\.manual-aim-mode \.pvp-aim-base:not\(\.active\) \{ opacity: \.48 !important; \}/);
+});
+
+test('PvP online buttons are disabled with a clear WSS requirement when the static client has no server URL', async () => {
+  const [app, html] = await Promise.all([
+    readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../index.html', import.meta.url), 'utf8'),
+  ]);
+  assert.match(app, /const onlineReady = Boolean\(import\.meta\.env\.VITE_PVP_WS_URL\?\.trim\(\)\)/);
+  assert.match(app, /createRoomButton\.disabled = !onlineReady/);
+  assert.match(app, /joinRoomButton\.disabled = !onlineReady/);
+  assert.match(html, /id="pvp-online-hint"/);
+  assert.match(app, /strona GitHub Pages nie hostuje serwera WSS/);
+});
+
+test('local PvP bot does not fire into blocking warehouse cover', async () => {
+  const client = await readFile(new URL('../src/pvpClient.ts', import.meta.url), 'utf8');
+  assert.match(client, /const hasClearShot = hasPvpLineOfSight\(bot, player, this\.state\.obstacles\)/);
+  assert.match(client, /this\.p2Input\.isFiring = distToPlayer < 22 && hasClearShot/);
+});
