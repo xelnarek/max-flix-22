@@ -275,3 +275,19 @@ test('Survival is harder to trivialize, combat HUD stops covering the arena, and
   assert.match(css, /#game-shell\.survival-mode #survival-event/);
   assert.match(css, /#pause-modal \.pause-exit-button/);
 });
+
+
+test('PvP lobby and match result dialogs render above the full-screen title menu and remain tappable', async () => {
+  const [app, html, css] = await Promise.all([
+    readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
+  ]);
+  assert.match(html, /id="btn-open-pvp"/);
+  assert.match(html, /id="pvp-lobby-modal"[^>]*aria-hidden="true"/);
+  assert.match(app, /btnOpenPvp\?\.addEventListener\('click', openLobby\)/);
+  assert.match(app, /pvpLobbyModal\.classList\.remove\('hidden'\)/);
+  assert.match(app, /pvpLobbyModal\.setAttribute\('aria-hidden', 'false'\)/);
+  assert.match(css, /#pvp-lobby-modal,[\s\n]*#pvp-match-end-modal\s*\{[\s\S]*?z-index:\s*1000005\s*!important/);
+  assert.match(css, /#pvp-lobby-modal button,[\s\n]*#pvp-lobby-modal input/);
+});
