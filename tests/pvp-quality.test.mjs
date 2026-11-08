@@ -194,3 +194,22 @@ test('PvP deployment uses a minimal runtime Docker image and a Frankfurt Render 
   assert.match(server, /request\.url === '\/healthz'/);
   assert.match(server, /process\.env\.PORT/);
 });
+
+
+test('PvP lobby shows accessible live connection, waiting-room and opponent status', async () => {
+  const [app, html, css] = await Promise.all([
+    readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
+  ]);
+  assert.match(html, /id="pvp-connection-status" class="pvp-connection-status is-idle" role="status" aria-live="polite"/);
+  assert.match(html, /id="pvp-connection-title"/);
+  assert.match(html, /id="pvp-connection-detail"/);
+  assert.match(app, /setPvpConnectionStatus\('connecting', 'ŁĄCZENIE Z SERWEREM'/);
+  assert.match(app, /setPvpConnectionStatus\('waiting', 'POKÓJ UTWORZONY • OCZEKIWANIE'/);
+  assert.match(app, /setPvpConnectionStatus\('matched', 'PRZECIWNIK DOŁĄCZYŁ'/);
+  assert.match(app, /setPvpConnectionStatus\('error', 'NIE UDAŁO SIĘ POŁĄCZYĆ'/);
+  assert.match(app, /setPvpConnectionStatus\('error', 'NIE UDAŁO SIĘ DOŁĄCZYĆ'/);
+  assert.match(css, /\.pvp-connection-status\.is-connecting/);
+  assert.match(css, /prefers-reduced-motion: reduce/);
+});
