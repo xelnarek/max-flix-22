@@ -96,3 +96,40 @@ export function createPvpObstacleTexture(kind: ObstacleTextureKind): THREE.Canva
     }
   });
 }
+
+
+/**
+ * Shared floor footprint for warehouse cover in both PvP and Survival.
+ * Dimensions are the same world-space collision dimensions used by the arena.
+ */
+export function createArenaObstacleFootprint(
+  width: number,
+  depth: number,
+  color: number,
+  padding = 0.12,
+): THREE.LineLoop {
+  const safeWidth = Number.isFinite(width) ? Math.max(0.25, width) : 1;
+  const safeDepth = Number.isFinite(depth) ? Math.max(0.25, depth) : 1;
+  const safePadding = Number.isFinite(padding) ? Math.max(0, Math.min(0.5, padding)) : 0.12;
+  const halfWidth = safeWidth * 0.5 + safePadding;
+  const halfDepth = safeDepth * 0.5 + safePadding;
+  const geometry = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-halfWidth, 0, -halfDepth),
+    new THREE.Vector3(halfWidth, 0, -halfDepth),
+    new THREE.Vector3(halfWidth, 0, halfDepth),
+    new THREE.Vector3(-halfWidth, 0, halfDepth),
+  ]);
+  const footprint = new THREE.LineLoop(
+    geometry,
+    new THREE.LineBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.72,
+      depthWrite: false,
+    }),
+  );
+  footprint.position.y = 0.045;
+  footprint.renderOrder = 3;
+  footprint.frustumCulled = false;
+  return footprint;
+}
