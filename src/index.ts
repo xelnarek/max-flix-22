@@ -1632,9 +1632,197 @@ class PaleciakiScene extends xb.Script {
       }
     };
 
+    renderAccountProgressionPanels = () => {
+      const summary = getAccountProgressionSummary(accountProgressionProfile);
+      const rankInfo = getAccountRankInfo(accountProgressionProfile.level);
+      const bonuses = getAccountProgressionBonuses(accountProgressionProfile);
+      const level = document.getElementById('account-progress-level');
+      const rank = document.getElementById('account-progress-rank');
+      const xp = document.getElementById('account-progress-xp');
+      const points = document.getElementById('account-progress-points');
+      const fill = document.getElementById('account-progress-fill') as HTMLElement | null;
+      const statline = document.getElementById('account-progress-statline');
+      const tree = document.getElementById('account-tree-grid');
+      const currentRank = document.getElementById('account-rank-current');
+      const nextRank = document.getElementById('account-rank-next');
+      const rankTrack = document.getElementById('account-rank-track');
+      const bonusList = document.getElementById('account-rank-bonuses');
+
+      if (level) level.textContent = String(summary.level);
+      if (rank) rank.textContent = rankInfo.rankName;
+      if (xp) xp.textContent = summary.isMaxLevel
+        ? 'MAKSYMALNY POZIOM • 37 / 37'
+        : summary.xp.toLocaleString('pl-PL') + ' / ' + summary.xpToNext.toLocaleString('pl-PL') + ' XP';
+      if (points) points.textContent = summary.availableSkillPoints + ' / ' + ACCOUNT_PROGRESS_MAX_LEVEL - 1 + ' DOSTĘPNYCH PUNKTÓW';
+      if (fill) fill.style.width = summary.progressPercent + '%';
+      if (statline) statline.textContent =
+        summary.stats.survivalRuns + ' zmian Survival • ' +
+        summary.stats.pvpMatches + ' pojedynków PvP • ' +
+        summary.stats.pvpWins + ' zwycięstw';
+
+      if (tree) {
+        tree.replaceChildren();
+        for (const branchId of Object.keys(ACCOUNT_TALENT_BRANCHES) as Array<keyof typeof ACCOUNT_TALENT_BRANCHES>) {
+          const branch = ACCOUNT_TALENT_BRANCHES[branchId];
+          const section = document.createElement('section');
+          section.className = 'account-tree-branch branch-' + branchId;
+          const header = document.createElement('div');
+          header.className = 'account-branch-heading';
+          const icon = document.createElement('span');
+          icon.className = 'account-branch-icon';
+          icon.textContent = branch.icon;
+          const copy = document.createElement('div');
+          copy.className = 'account-branch-copy';
+          const title = document.createElement('strong');
+          title.textContent = branch.name;
+          const description = document.createElement('p');
+          description.textContent = branch.description;
+          copy.append(title, description);
+          header.append(icon, copy);
+          const nodes = document.createElement('div');
+          nodes.className = 'account-branch-nodes';
+
+          for (const talent of ACCOUNT_TALENTS.filter((entry) => entry.branch === branchId)) {
+            const currentRank = accountProgressionProfile.talentRanks[talent.id] || 0;
+            const prerequisite = talent.prerequisiteId
+              ? ACCOUNT_TALENTS.find((entry) => entry.id === talent.prerequisiteId)
+              : undefined;
+            const prerequisiteRank = prerequisite
+              ? accountProgressionProfile.talentRanks[prerequisite.id] || 0
+              : 0;
+            const isLocked = Boolean(prerequisite && prerequisiteRank < prerequisite.maxRank);
+            const canPurchase = canSpendAccountTalentPoint(accountProgressionProfile, talent.id);
+            const node = document.createElement('article');
+            node.className = 'account-talent-node' +
+              (isLocked ? ' is-locked' : '') +
+              (currentRank >= talent.maxRank ? ' is-maxed' : '');
+            const top = document.createElement('div');
+            top.className = 'account-talent-node-top';
+            const nodeIcon = document.createElement('span');
+            nodeIcon.className = 'account-talent-icon';
+            nodeIcon.textContent = talent.icon;
+            const tier = document.createElement('span');
+            tier.className = 'account-talent-tier';
+            tier.textContent = 'POZIOM ' + talent.tier;
+            top.append(nodeIcon, tier);
+            const name = document.createElement('strong');
+            name.className = 'account-talent-name';
+            name.textContent = talent.name;
+            const detail = document.createElement('p');
+            detail.className = 'account-talent-description';
+            detail.textContent = talent.description;
+            const percent = talent.perRank * currentRank * 100;
+            const sign = talent.effect === 'damageTaken' || talent.effect === 'cooldown' ? '−' : '+';
+            const effect = document.createElement('span');
+            effect.className = 'account-talent-effect';
+            effect.textContent = sign + percent.toLocaleString('pl-PL', { maximumFractionDigits: 1 }) + '% • NA RANGĘ ' +
+              (talent.perRank * 100).toLocaleString('pl-PL', { maximumFractionDigits: 1 }) + '%';
+            const progress = document.createElement('div');
+            progress.className = 'account-talent-pips';
+            for (let index = 0; index < talent.maxRank; index++) {
+              const pip = document.createElement('span');
+              pip.classList.toggle('is-filled', index < currentRank);
+              progress.appendChild(pip);
+            }
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'account-talent-upgrade';
+            button.disabled = !canPurchase;
+            button.textContent = currentRank >= talent.maxRank
+              ? 'MAKSIMUM'
+              : isLocked
+                ? 'WYMAGANY POPRZEDNI WĘZEŁ'
+                : summary.availableSkillPoints > 0
+                  ? (currentRank > 0 ? 'ROZWIŃ • 1 PUNKT' : 'ODKRYJ • 1 PUNKT')
+                  : 'BRAK PUNKTÓW';
+            button.addEventListener('click', () => {
+              const result = spendAccountTalentPoint(accountProgressionProfile, talent.id);
+              if (!result.purchased) return;
+              accountProgressionProfile = result.profile;
+              persistAccountProgressionProfile();
+              this.engine.selectCharacter(
+                this.selectedCharId,
+                combineAccountAndCharacterBonuses(
+                  getCharacterTalentBonuses(characterMasteryProfile, this.selectedCharId),
+                  getAccountProgressionBonuses(accountProgressionProfile),
+                ),
+              );
+              renderCharacterMasteryPanel(this.selectedCharId);
+              renderAccountProgressionPanels();
+              const toast = document.createElement('div');
+              toast.className = 'achievement-unlock-toast';
+              toast.textContent = talent.icon + ' ROZWÓJ KONTA • ' + talent.name + ' ' + (currentRank + 1) + '/' + talent.maxRank;
+              document.body.appendChild(toast);
+              window.setTimeout(() => toast.remove(), 3000);
+            });
+            node.append(top, name, detail, effect, progress, button);
+            nodes.appendChild(node);
+          }
+          section.append(header, nodes);
+          tree.appendChild(section);
+        }
+      }
+
+      if (currentRank) currentRank.textContent = rankInfo.rankIcon + ' ' + rankInfo.rankName + ' • POZIOM ' + summary.level;
+      if (nextRank) nextRank.textContent = summary.isMaxLevel
+        ? 'Osiągnięto najwyższą rangę konta.'
+        : 'Następna ranga: ' + rankInfo.nextRankName + ' • poziom ' + rankInfo.nextRankLevel + ' • ' +
+          (rankInfo.nextRankLevel - summary.level) + ' poziomów do awansu';
+      if (rankTrack) {
+        rankTrack.replaceChildren();
+        for (const rankEntry of ACCOUNT_RANKS) {
+          const card = document.createElement('article');
+          const unlocked = summary.level >= rankEntry.level;
+          const active = rankInfo.rankName === rankEntry.name;
+          card.className = 'account-rank-card' + (unlocked ? ' is-unlocked' : '') + (active ? ' is-current' : '');
+          const top = document.createElement('div');
+          top.className = 'account-rank-card-top';
+          const emblem = document.createElement('span');
+          emblem.className = 'account-rank-icon';
+          emblem.textContent = unlocked ? rankEntry.icon : '🔒';
+          const levelTag = document.createElement('small');
+          levelTag.textContent = 'POZIOM ' + rankEntry.level;
+          top.append(emblem, levelTag);
+          const title = document.createElement('strong');
+          title.textContent = rankEntry.name;
+          const subtitle = document.createElement('p');
+          subtitle.textContent = rankEntry.subtitle;
+          const reward = document.createElement('span');
+          reward.className = 'account-rank-reward';
+          reward.textContent = (unlocked ? 'ODblokowano • ' : 'NAGRODA • ') + rankEntry.reward;
+          card.append(top, title, subtitle, reward);
+          rankTrack.appendChild(card);
+        }
+      }
+      if (bonusList) {
+        bonusList.replaceChildren();
+        const entries: Array<[string, string]> = [
+          ['Obrażenia', '+' + ((bonuses.damageMultiplier - 1) * 100).toFixed(1) + '%'],
+          ['Redukcja obrażeń', ((1 - bonuses.damageTakenMultiplier) * 100).toFixed(1) + '%'],
+          ['Szybkość ruchu', '+' + ((bonuses.speedMultiplier - 1) * 100).toFixed(1) + '%'],
+          ['Siła skoku • Survival', '+' + ((bonuses.jumpMultiplier - 1) * 100).toFixed(1) + '%'],
+          ['Czas odnowienia', ((1 - bonuses.abilityCooldownMultiplier) * 100).toFixed(1) + '% szybciej'],
+          ['Zdobywane doświadczenie', '+' + ((bonuses.xpMultiplier - 1) * 100).toFixed(1) + '%'],
+        ];
+        for (const [labelText, valueText] of entries) {
+          const item = document.createElement('div');
+          item.className = 'account-bonus-row';
+          const label = document.createElement('span');
+          label.textContent = labelText;
+          const value = document.createElement('strong');
+          value.textContent = valueText;
+          item.append(label, value);
+          bonusList.appendChild(item);
+        }
+      }
+    };
+
     const updateCharacterUI = (id: CharacterId) => {
       this.selectedCharId = id;
-      this.engine.selectCharacter(id, getCharacterTalentBonuses(characterMasteryProfile, id));
+      this.engine.selectCharacter(id, combineAccountAndCharacterBonuses(
+        getCharacterTalentBonuses(characterMasteryProfile, id),
+        getAccountProgressionBonuses(accountProgressionProfile),
+      ));
       renderCharacterMasteryPanel(id);
       const def = CHARACTERS[id];
       if (hudHeroName) hudHeroName.textContent = def.name;
@@ -1794,6 +1982,8 @@ class PaleciakiScene extends xb.Script {
         firestoreStatusText.textContent = customMsg || 'Baza Firestore: Offline';
       }
     };
+
+    renderAccountProgressionPanels();
 
     const renderLeaderboard = async () => {
       if (!leaderboardLoading || !leaderboardList || leaderboardRenderInFlight) return;
