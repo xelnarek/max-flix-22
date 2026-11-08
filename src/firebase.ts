@@ -16,7 +16,16 @@ import {
   runTransaction,
   DocumentData,
 } from 'firebase/firestore';
-import { getAuth, signInAnonymously, onAuthStateChanged, type User, type Unsubscribe } from 'firebase/auth';
+import {
+  getAuth,
+  signInAnonymously,
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  linkWithPopup,
+  signInWithPopup,
+  type User,
+  type Unsubscribe,
+} from 'firebase/auth';
 import firebaseConfig from '../firebase-applet-config.json';
 import { withTimeout } from './asyncTimeout.ts';
 import {
@@ -299,6 +308,40 @@ export function initAuth(): Promise<User | null> {
   });
 
   return authPromise;
+}
+
+
+/** Link the current anonymous profile to Google, or sign into an existing
+ * Google-linked account on another device. The caller must invoke this from a
+ * direct user gesture because Firebase popup auth is browser-mediated. */
+export async function connectAccountWithGoogle(): Promise<{ uid: string; isAnonymous: boolean }> {
+  const user = await withTimeout(initAuth(), AUTH_INIT_TIMEOUT_MS + 1_000, 'Google account authentication');
+  if (!user) throw new Error('Nie ma aktywnej sesji Firebase do połączenia z Google.');
+
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+
+  let credential;
+  if (user.isAnonymous) {
+    try {
+      credential = await linkWithPopup(user, provider);
+    } catch (error) {
+      const code = (error as { code?: string })?.code;
+      if (code !== 'auth/credential-already-in-use' && code !== 'auth/email-already-in-use') {
+        throw error;
+      }
+      // The Google identity already belongs to an account from another device.
+      // Sign into it; the caller merges the local profile with the cloud profile.
+      credential = await signInWithPopup(auth, provider);
+    }
+  } else {
+    credential = await signInWithPopup(auth, provider);
+  }
+
+  currentUser = credential.user;
+  isAuthInitialized = true;
+  authPromise = Promise.resolve(credential.user);
+  return { uid: credential.user.uid, isAnonymous: credential.user.isAnonymous };
 }
 
 export async function ensureLeaderboardServices(): Promise<boolean> {
