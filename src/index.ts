@@ -1938,8 +1938,12 @@ class PaleciakiScene extends xb.Script {
 
       try {
         await assetLoader.waitUntilReady('Gra 3D');
-        const ads = await initializeGameAds();
-        syncAdMobSettings(ads);
+
+        // Ads and consent are optional services. Never hold the Play action,
+        // the scene transition or touch-control activation while a provider responds.
+        void initializeGameAds()
+          .then(syncAdMobSettings)
+          .catch((error: unknown) => console.warn('[AdMob] Nie blokuje startu rozgrywki:', error));
 
         if (!this.engine || typeof this.engine.startSurvival !== 'function') {
           throw new Error('Silnik Survival Shift nie jest jeszcze gotowy.');
@@ -3643,10 +3647,10 @@ async function startApp() {
       console.log('[App:Boot] 🎉 Ekran tytułowy gotowy.');
     }
 
-    // The menu is already visible; a short task yield is enough before intro.
-    // Do not wait for requestAnimationFrame here: mobile browsers pause RAF in background.
+    // Reveal the playable menu immediately. The cinematic intro remains available
+    // from the dedicated ODPRAWA button; it must never cover the first menu interaction
+    // or prevent the player from starting a run on a touch device.
     await new Promise<void>((resolve) => window.setTimeout(resolve, 50));
-    if (!document.hidden) document.dispatchEvent(new Event('paleciaki:launch-intro'));
 
   } catch (err) {
     console.error('[App:Boot] ❌ KRYTYCZNY BŁĄD STARTU:', err);
