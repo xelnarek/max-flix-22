@@ -161,3 +161,16 @@ test('account bonuses combine with the existing operator mastery without unbound
   assert.equal(combined.jumpMultiplier, 1.08);
   assert.equal(combined.abilityCooldownMultiplier, 0.90);
 });
+
+test('PvP adapter maps account cooldown bonuses to the server profile contract', async () => {
+  const { getAccountPvpProgressionBonuses } = await import('../src/accountProgression.ts');
+  const profile = createInitialAccountProgressionProfile();
+  profile.level = 7;
+  profile.talentRanks = { weapon_training: 3, ability_calibration: 3, rapid_protocol: 1 };
+  const bonuses = getAccountPvpProgressionBonuses(profile);
+  assert.equal(bonuses.damageMultiplier, getAccountProgressionBonuses(profile).damageMultiplier);
+  assert.equal(bonuses.damageTakenMultiplier, getAccountProgressionBonuses(profile).damageTakenMultiplier);
+  assert.equal(bonuses.speedMultiplier, getAccountProgressionBonuses(profile).speedMultiplier);
+  assert.equal(bonuses.cooldownMultiplier, getAccountProgressionBonuses(profile).abilityCooldownMultiplier);
+  assert.ok(bonuses.cooldownMultiplier < 1);
+});
