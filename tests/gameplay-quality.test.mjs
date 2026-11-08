@@ -222,7 +222,8 @@ test('cinematic intro launches once at boot and no longer depends on a removed m
   ]);
   assert.match(app, /if \(this\.cinematicIntro\?\.isRunning\(\) \|\| cinematicIntroLaunchPending\) return/);
   assert.match(app, /new CinematicIntroManager/);
-  assert.match(app, /if \(!document\.hidden\) document\.dispatchEvent\(new Event\('paleciaki:launch-intro'\)\)/);
+  assert.match(app, /btn-open-intro/);
+  assert.doesNotMatch(app.slice(app.indexOf('async function startApp()')), /dispatchEvent\(new Event\('paleciaki:launch-intro'\)\)/);
   assert.match(app, /onStartGame: \(\) => \{[\s\S]*?doStartSurvival\(\)/);
   assert.match(app, /paleciaki:launch-intro/);
   assert.doesNotMatch(app, /btn-open-cinematic-intro|btn-open-story-modal/);
