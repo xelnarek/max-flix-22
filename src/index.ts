@@ -50,6 +50,7 @@ import {
   combineAccountAndCharacterBonuses,
   createInitialAccountProgressionProfile,
   getAccountProgressionBonuses,
+  getAccountPvpProgressionBonuses,
   getAccountProgressionSummary,
   getAccountRankInfo,
   recordAccountPvpMatch,
@@ -3537,7 +3538,7 @@ class PaleciakiScene extends xb.Script {
         playerNick,
         `${CHARACTERS[botOp].name} [BOT SI]`,
         {},
-        getAccountProgressionBonuses(accountProgressionProfile),
+        getAccountPvpProgressionBonuses(accountProgressionProfile),
       );
       this.pvpSession = botSession;
       this.pvpLocalSlot = 'p1';
@@ -3629,7 +3630,7 @@ class PaleciakiScene extends xb.Script {
         setMatchmakingUiPhase('idle');
         setPvpConnectionStatus('error', 'WYSZUKIWANIE NIEUDANE', error);
       };
-      session.findMatch(this.selectedPvpOperator, playerNick, getAccountProgressionBonuses(accountProgressionProfile));
+      session.findMatch(this.selectedPvpOperator, playerNick, getAccountPvpProgressionBonuses(accountProgressionProfile));
       sound.playSmack();
     });
 
@@ -3739,7 +3740,7 @@ class PaleciakiScene extends xb.Script {
         setPvpConnectionStatus('error', 'NIE UDAŁO SIĘ POŁĄCZYĆ', err);
       };
 
-      netSession.createRoom(this.selectedPvpOperator, playerNick, getAccountProgressionBonuses(accountProgressionProfile));
+      netSession.createRoom(this.selectedPvpOperator, playerNick, getAccountPvpProgressionBonuses(accountProgressionProfile));
       sound.playSmack();
     });
 
@@ -3834,7 +3835,7 @@ class PaleciakiScene extends xb.Script {
         setPvpConnectionStatus('error', 'NIE UDAŁO SIĘ DOŁĄCZYĆ', err);
       };
 
-      netSession.joinRoom(code, this.selectedPvpOperator, playerNick, getAccountProgressionBonuses(accountProgressionProfile));
+      netSession.joinRoom(code, this.selectedPvpOperator, playerNick, getAccountPvpProgressionBonuses(accountProgressionProfile));
       sound.playSmack();
     });
 
