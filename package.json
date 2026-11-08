@@ -15,7 +15,8 @@
     "android:open": "npx cap open android",
     "android:prepare-release": "node scripts/prepare-android-release.mjs",
     "android:verify-release": "node scripts/verify-android-release.mjs",
-    "pvp:server": "node --experimental-strip-types src/server/standalone.ts"
+    "pvp:server": "node --experimental-strip-types src/server/standalone.ts",
+    "firebase:deploy-rules": "npx firebase-tools deploy --only firestore:ai-studio-maxflixvol2-938de3b7-0d7d-4164-9dae-7d99b2e46560"
   },
   "allowScripts": {
     "@firebase/util@1.15.3": true,
