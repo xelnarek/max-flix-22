@@ -3074,6 +3074,10 @@ class PaleciakiScene extends xb.Script {
     // Online WebSocket Host
     btnCreateRoom?.addEventListener('click', () => {
       const playerNick = nickInput?.value.trim() || 'Operator B4';
+      // Keep connection feedback visible before the WebSocket handshake finishes.
+      createdRoomInfo?.classList.remove('hidden');
+      if (displayRoomCode) displayRoomCode.textContent = 'ŁĄCZENIE…';
+      if (hostStatus) hostStatus.textContent = 'Łączenie z serwerem PvP…';
       const netSession = new PvpNetworkSession();
       if (readyBtn) readyBtn.disabled = true;
       this.pvpSession = netSession;
@@ -3082,6 +3086,7 @@ class PaleciakiScene extends xb.Script {
       this.pvpLocalReady = false;
 
       netSession.onConnectionChange = (connected) => {
+        createdRoomInfo?.classList.remove('hidden');
         if (hostStatus) hostStatus.textContent = connected
           ? 'Połączono z serwerem PvP. Tworzenie pokoju...'
           : 'Połączenie z serwerem PvP zostało przerwane.';
@@ -3139,7 +3144,11 @@ class PaleciakiScene extends xb.Script {
       };
 
       netSession.onError = (err) => {
-        if (hostStatus) hostStatus.textContent = `Błąd: ${err}`;
+        createdRoomInfo?.classList.remove('hidden');
+        if (hostStatus) {
+          hostStatus.textContent = `Błąd: ${err}`;
+          hostStatus.setAttribute('role', 'alert');
+        }
       };
 
       netSession.createRoom(this.selectedPvpOperator, playerNick);
