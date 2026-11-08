@@ -724,12 +724,12 @@ test('one-shot fire intent shoots once, respects operator recovery, and can be t
   state.p2.z = -9;
   const input = { moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantFire: true };
   stepPvpArena(state, 0.03, input);
-  assert.equal(state.projectiles.filter(projectile => projectile.ownerSlot === 'p1').length, 1);
+  assert.equal(state.p1.shotsFired, 1);
   stepPvpArena(state, 0.05, { ...input, wantFire: false });
-  assert.equal(state.projectiles.filter(projectile => projectile.ownerSlot === 'p1').length, 1, 'neutral input must not auto-fire');
+  assert.equal(state.p1.shotsFired, 1, 'neutral input must not auto-fire');
   advanceArena(state, 2.90, { ...input, wantFire: false });
   stepPvpArena(state, 0.03, input);
-  assert.equal(state.projectiles.filter(projectile => projectile.ownerSlot === 'p1').length, 1, 'a tap before the 3-second recovery must be rejected');
+  assert.equal(state.p1.shotsFired, 1, 'a tap before the 3-second recovery must be rejected');
   stepPvpArena(state, 0.03, input);
-  assert.equal(state.projectiles.filter(projectile => projectile.ownerSlot === 'p1').length, 2, 'a fresh tap after recovery fires again');
+  assert.equal(state.p1.shotsFired, 2, 'a fresh tap after recovery fires again');
 });
