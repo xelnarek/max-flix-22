@@ -105,3 +105,53 @@ export function calculateTouchControlGeometry(input: {
     fireGapToActions: fireRight === null ? null : actionDock.left - fireRight,
   };
 }
+
+/** Keep the live stick footprint inside its left-side touch lane. In PvP the
+ * extra vertical clearance reserves the full fire-button circle below the HUD. */
+export function clampTouchJoystickOrigin(input: {
+  viewportWidth: number;
+  viewportHeight: number;
+  mode: TouchControlMode;
+  touchX: number;
+  touchY: number;
+  safeLeft?: number;
+  safeBottom?: number;
+  joystickSize?: number;
+  fireButtonSize?: number;
+  fireGap?: number;
+  topHudClearance?: number;
+}): { x: number; y: number } {
+  const geometry = calculateTouchControlGeometry(input);
+  const width = Math.max(1, finiteOr(input.viewportWidth, 1));
+  const height = Math.max(1, finiteOr(input.viewportHeight, 1));
+  const safeLeft = Math.max(0, finiteOr(input.safeLeft, 0));
+  const safeBottom = Math.max(0, finiteOr(input.safeBottom, 12));
+  const joystickSize = clamp(finiteOr(input.joystickSize, width * 0.36), 126, 148);
+  const radius = joystickSize * 0.5;
+  const fireButtonSize = clamp(finiteOr(input.fireButtonSize, height <= 430 ? 68 : 78), 60, 88);
+  const fireGap = Math.max(0, finiteOr(input.fireGap, 10));
+  const topHudClearance = Math.max(0, finiteOr(input.topHudClearance, 84));
+  const minimumCenterY = input.mode === 'pvp'
+    ? Math.max(
+        geometry.joystickZone.top + radius,
+        topHudClearance + fireButtonSize + fireGap + radius,
+      )
+    : geometry.joystickZone.top + radius;
+  const maximumCenterY = Math.max(
+    minimumCenterY,
+    height - safeBottom - radius - 18,
+  );
+
+  return {
+    x: clamp(
+      finiteOr(input.touchX, geometry.joystickZone.left),
+      geometry.joystickZone.left,
+      geometry.joystickZone.right,
+    ),
+    y: clamp(
+      finiteOr(input.touchY, minimumCenterY),
+      minimumCenterY,
+      maximumCenterY,
+    ),
+  };
+}
