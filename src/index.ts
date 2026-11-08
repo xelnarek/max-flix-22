@@ -2083,7 +2083,7 @@ class PaleciakiScene extends xb.Script {
                 titleScreen.classList.remove('hidden');
                 titleScreen.style.removeProperty('display');
                 titleScreen.style.setProperty('display', 'flex', 'important');
-                titleScreen.style.setProperty('z-index', '10000000', 'important');
+                titleScreen.style.setProperty('z-index', '1000000', 'important');
               }
               this.engine.startTitle();
             },
@@ -2111,7 +2111,7 @@ class PaleciakiScene extends xb.Script {
           titleScreen.classList.remove('hidden');
           titleScreen.style.removeProperty('display');
           titleScreen.style.setProperty('display', 'flex', 'important');
-          titleScreen.style.setProperty('z-index', '10000000', 'important');
+          titleScreen.style.setProperty('z-index', '1000000', 'important');
         }
       } finally {
         cinematicIntroLaunchPending = false;
@@ -2403,7 +2403,7 @@ class PaleciakiScene extends xb.Script {
       titleScreen.classList.remove('hidden');
       titleScreen.style.removeProperty('display');
       titleScreen.style.setProperty('display', 'flex', 'important');
-      titleScreen.style.setProperty('z-index', '10000000', 'important');
+      titleScreen.style.setProperty('z-index', '1000000', 'important');
     }
     this.engine.startTitle();
   }
@@ -3434,7 +3434,7 @@ async function startApp() {
   if (titleScreen) {
     titleScreen.style.setProperty('position', 'fixed', 'important');
     titleScreen.style.setProperty('inset', '0', 'important');
-    titleScreen.style.setProperty('z-index', '10000000', 'important');
+    titleScreen.style.setProperty('z-index', '1000000', 'important');
     titleScreen.style.setProperty('pointer-events', 'auto', 'important');
   }
 
@@ -3450,7 +3450,7 @@ async function startApp() {
       titleScreen.classList.remove('hidden');
       titleScreen.style.removeProperty('display');
       titleScreen.style.setProperty('display', 'flex', 'important');
-      titleScreen.style.setProperty('z-index', '10000000', 'important');
+      titleScreen.style.setProperty('z-index', '1000000', 'important');
     }
   };
 
@@ -3658,7 +3658,7 @@ async function startApp() {
       titleScreen.classList.remove('hidden');
       titleScreen.style.removeProperty('display');
       titleScreen.style.setProperty('display', 'flex', 'important');
-      titleScreen.style.setProperty('z-index', '10000000', 'important');
+      titleScreen.style.setProperty('z-index', '1000000', 'important');
       console.log('[App:Boot] 🎉 Ekran tytułowy gotowy.');
     }
 
