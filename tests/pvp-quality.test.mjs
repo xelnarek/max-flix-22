@@ -159,3 +159,13 @@ test('local PvP bot does not fire into blocking warehouse cover', async () => {
   assert.match(client, /const hasClearShot = hasPvpLineOfSight\(bot, player, this\.state\.obstacles\)/);
   assert.match(client, /this\.p2Input\.isFiring = distToPlayer < 22 && hasClearShot/);
 });
+
+
+test('PvP host lobby exposes connection progress and server errors before a room is created', async () => {
+  const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
+  const host = app.slice(app.indexOf("btnCreateRoom?.addEventListener"), app.indexOf("// Online WebSocket Join"));
+  assert.ok(host.includes("createdRoomInfo?.classList.remove('hidden')"));
+  assert.ok(host.includes('Łączenie z serwerem PvP'));
+  assert.ok(host.includes("hostStatus.setAttribute('role', 'alert')"));
+  assert.ok(host.includes('hostStatus.textContent = ' + String.fromCharCode(96) + 'Błąd: ${err}' + String.fromCharCode(96)));
+});
