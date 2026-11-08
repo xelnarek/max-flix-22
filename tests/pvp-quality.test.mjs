@@ -57,7 +57,7 @@ test('manual touch aim, server-origin checks, six-character invite codes and mut
   assert.match(server, /\{6\}/);
   assert.match(arena, /sanitizePvpInputIntent/);
   assert.match(arena, /firstProjectileObstacleHit/);
-  assert.match(arena, /getPvpAimAssistAngle/);
+  assert.doesNotMatch(arena, /getPvpAimAssistAngle|aim assist|magneti[sz]/i);
   assert.match(arena, /updatePvpPerkDrop/);
   assert.match(arena, /perkDrop: \{ active: false/);
   assert.match(game, /applyPvpCameraFraming/);
