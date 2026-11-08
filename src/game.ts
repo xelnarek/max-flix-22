@@ -1840,6 +1840,8 @@ export class PaleciakiGameEngine {
       this.state !== 'playing' ||
       this.lastPvpState?.status !== 'in_round'
     ) return false;
+    const localPvpPlayer = this.pvpSlot === 'p1' ? this.lastPvpState.p1 : this.lastPvpState.p2;
+    if (localPvpPlayer.attackCooldownTimer > 0.08) return false;
     this.pvpWantFire = true;
     return true;
   }

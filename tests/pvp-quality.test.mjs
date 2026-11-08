@@ -319,3 +319,9 @@ test('PvP lobby and match result dialogs render above the full-screen title menu
   assert.match(css, /#pvp-lobby-modal,[\s\n]*#pvp-match-end-modal,[\s\n]*#pause-modal\s*\{[\s\S]*?z-index:\s*2147483100\s*!important/);
   assert.match(css, /#pvp-lobby-modal button,[\s\n]*#pvp-lobby-modal input/);
 });
+
+
+test('manual PvP fire input cannot bypass the authoritative reload timer', async () => {
+  const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
+  assert.match(game, /localPvpPlayer\.attackCooldownTimer > 0\.08/);
+});

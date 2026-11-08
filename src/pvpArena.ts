@@ -343,12 +343,14 @@ export const PVP_SPAWN_P1 = { x: -16, y: 0.5, z: 0, rot: Math.PI / 2 };
 export const PVP_SPAWN_P2 = { x: 16, y: 0.5, z: 0, rot: -Math.PI / 2 };
 
 export const PVP_NORMALIZED_HP = 1000;
-export const PVP_BASE_SPEED = 9.5;
-export const PVP_DASH_SPEED = 24.0;
+export const PVP_BASE_SPEED = 6.2;
+export const PVP_DASH_SPEED = 16.0;
 export const PVP_DASH_DURATION = 0.22;
-export const PVP_DASH_COOLDOWN = 3.2;
+export const PVP_DASH_COOLDOWN = 3.8;
 export const PVP_ABILITY_COOLDOWN = 9.0;
 export const PVP_PLAYER_RADIUS = 0.65;
+export const PVP_SPRINT_SPEED_MULTIPLIER = 1.16;
+export const PVP_RAPID_FIRE_COOLDOWN_MULTIPLIER = 0.82;
 
 export interface OperatorPvpProfile {
   name: string;
@@ -364,9 +366,9 @@ export interface OperatorPvpProfile {
 export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
   marcin: {
     name: 'Audytor Marcin',
-    projectileSpeed: 18,
+    projectileSpeed: 15.5,
     projectileDamage: 100,
-    attackCooldown: 0.62,
+    attackCooldown: 3.0,
     projectileRadius: 0.28,
     color: 0x3b82f6,
     abilityName: 'Pieczęć WZ (Tarcza BHP)',
@@ -374,9 +376,9 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
   },
   grzesiek: {
     name: 'Grzesiek Monter',
-    projectileSpeed: 15,
+    projectileSpeed: 13.5,
     projectileDamage: 150,
-    attackCooldown: 0.78,
+    attackCooldown: 3.2,
     projectileRadius: 0.42,
     color: 0xf59e0b,
     abilityName: 'Szarża Paleciaka',
@@ -384,9 +386,9 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
   },
   dawid: {
     name: 'Dawid Handlowiec',
-    projectileSpeed: 21,
+    projectileSpeed: 18,
     projectileDamage: 78,
-    attackCooldown: 0.56,
+    attackCooldown: 2.8,
     projectileRadius: 0.22,
     color: 0x10b981,
     abilityName: 'Laserowy Protokół Strat',
@@ -394,9 +396,9 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
   },
   mateusz: {
     name: 'Mateusz Kierownik',
-    projectileSpeed: 17,
+    projectileSpeed: 14.5,
     projectileDamage: 125,
-    attackCooldown: 0.70,
+    attackCooldown: 3.1,
     projectileRadius: 0.35,
     color: 0xef4444,
     abilityName: 'Hydrauliczne Przełamanie',
@@ -404,9 +406,9 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
   },
   piotr: {
     name: 'Piotr Serwisant',
-    projectileSpeed: 18,
+    projectileSpeed: 16.5,
     projectileDamage: 105,
-    attackCooldown: 0.66,
+    attackCooldown: 2.9,
     projectileRadius: 0.32,
     color: 0x8b5cf6,
     abilityName: 'Impuls Zwarcia B4',
@@ -417,7 +419,7 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
 /** Authoritative primary-shot recovery shared by simulation and touch UI. */
 export function getPvpOperatorAttackCooldown(operatorId: CharacterId): number {
   const cooldown = PVP_OPERATOR_PROFILES[operatorId]?.attackCooldown;
-  return Number.isFinite(cooldown) ? Math.max(0.12, cooldown) : 0.36;
+  return Number.isFinite(cooldown) ? Math.max(0.12, cooldown) : PVP_OPERATOR_PROFILES.marcin.attackCooldown;
 }
 
 export function createDefaultPvpObstacles(): PvpObstacle[] {
@@ -853,7 +855,7 @@ function stepPlayer(player: PvpPlayerState, input: PvpInputIntent | undefined, s
 
   // Movement
   let speed = player.isDashing ? PVP_DASH_SPEED : PVP_BASE_SPEED;
-  if (player.activePerk === 'sprint' && player.perkTimer > 0) speed *= 1.18;
+  if (player.activePerk === 'sprint' && player.perkTimer > 0) speed *= PVP_SPRINT_SPEED_MULTIPLIER;
   let moveDirX = safeInput.moveX;
   let moveDirZ = safeInput.moveZ;
   const moveLen = Math.hypot(moveDirX, moveDirZ);
@@ -960,7 +962,7 @@ function updatePvpPerkDrop(state: PvpArenaState, dt: number): void {
 
 function firePlayerPrimary(player: PvpPlayerState, state: PvpArenaState) {
   const profile = PVP_OPERATOR_PROFILES[player.operatorId] || PVP_OPERATOR_PROFILES.marcin;
-  const rapidMultiplier = player.activePerk === 'rapid' && player.perkTimer > 0 ? 0.78 : 1;
+  const rapidMultiplier = player.activePerk === 'rapid' && player.perkTimer > 0 ? PVP_RAPID_FIRE_COOLDOWN_MULTIPLIER : 1;
   player.attackCooldownTimer = profile.attackCooldown * rapidMultiplier;
   player.shotsFired++;
 
