@@ -31,6 +31,6 @@ export function getSurvivalDifficultyProfile(wave: number): SurvivalDifficultyPr
     enemySpeedMultiplier: 1 + Math.min(0.55, waveIndex * 0.018),
     spawnIntervalSeconds: Math.max(3.0, 5.5 - waveIndex * 0.11),
     extraGroupSize: Math.min(6, Math.floor(waveIndex / 3)),
-    enemyAbilityRateMultiplier: 1.10 + Math.min(0.60, waveIndex * 0.02),
+    enemyAbilityRateMultiplier: Number((1.10 + Math.min(0.60, waveIndex * 0.02)).toFixed(2)),
   };
 }

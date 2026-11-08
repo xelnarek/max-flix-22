@@ -166,7 +166,8 @@ test('local PvP bot does not fire into blocking warehouse cover', async () => {
 
 test('PvP host lobby exposes connection progress and server errors before a room is created', async () => {
   const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
-  const host = app.slice(app.indexOf("btnCreateRoom?.addEventListener"), app.indexOf("// Online WebSocket Join"));
+  const hostStart = app.indexOf("bindPvpTap(btnCreateRoom");
+  const host = app.slice(hostStart, app.indexOf("// Online WebSocket Join", hostStart));
   assert.ok(host.includes("createdRoomInfo?.classList.remove('hidden')"));
   assert.ok(host.includes('Łączenie z serwerem PvP'));
   assert.ok(host.includes("hostStatus.setAttribute('role', 'alert')"));
@@ -271,8 +272,10 @@ test('Survival is harder to trivialize, combat HUD stops covering the arena, and
   assert.match(html, /aria-modal="true"/);
   assert.match(app, /const exitPausedRunToMenu = \(\) =>/);
   assert.match(app, /bindTap\(document\.getElementById\('btn-menu-pause'\), exitPausedRunToMenu\)/);
-  assert.match(css, /#game-shell\.survival-mode #survival-contract/);
-  assert.match(css, /#game-shell\.survival-mode #survival-event/);
+  assert.match(css, /#game-shell\.survival-mode #survival-hud #survival-contract/);
+  assert.match(css, /#game-shell\.survival-mode #survival-hud #survival-event/);
+  assert.match(css, /#game-shell\.survival-mode #survival-hud \.survival-chip:not\(\.time-chip\):not\(\.wave-chip\)/);
+  assert.match(app, /document\.body\.appendChild\(dialog\)/);
   assert.match(css, /#pause-modal \.pause-exit-button/);
 });
 
