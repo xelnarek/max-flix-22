@@ -11,6 +11,10 @@ export default defineConfig(({ mode }) => {
       process.env.VITEST
   );
 
+  const buildId = (process.env.GITHUB_SHA || `local-${Date.now().toString(36)}`)
+    .replace(/[^a-zA-Z0-9_-]/g, '')
+    .slice(0, 64) || 'local';
+
   const demoAppId = 'ca-app-pub-3940256099942544~3347511713';
   const demoRewardedId = 'ca-app-pub-3940256099942544/5224354917';
   const demoInterstitialId = 'ca-app-pub-3940256099942544/1033173712';
@@ -32,6 +36,7 @@ export default defineConfig(({ mode }) => {
   return {
     base: './',
     define: {
+      __PALIECIAKI_BUILD_ID__: JSON.stringify(buildId),
       __PALIECIAKI_ADS__: JSON.stringify(admobConfig),
     },
     plugins: [

@@ -18,3 +18,4 @@ interface ImportMeta {
 }
 
 declare module '*.css';
+declare const __PALIECIAKI_BUILD_ID__: string;

@@ -4558,7 +4558,7 @@ if ('serviceWorker' in navigator && window.isSecureContext) {
     host.appendChild(notice);
   });
 
-  void navigator.serviceWorker.register('./sw.js', { scope: './' }).then((registration) => {
+  void navigator.serviceWorker.register(`./sw.js?build=${__PALIECIAKI_BUILD_ID__}`, { scope: './' }).then((registration) => {
     // Re-check when the player returns to the app. The browser throttles
     // update checks internally; failures must never block gameplay.
     document.addEventListener('visibilitychange', () => {

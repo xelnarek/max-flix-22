@@ -31,13 +31,15 @@ test('service worker keeps remote services and API data outside its cache', asyn
   assert.match(worker, /request\.method !== 'GET'/);
   assert.match(worker, /MAX_CACHEABLE_BYTES/);
   assert.match(worker, /offline\.html/);
+  assert.match(worker, /searchParams\.get\('build'\)/);
+  assert.match(worker, /paleciaki-magazyn-chaosu-shell-\$\{BUILD_ID\}/);
 });
 
 test('mobile lifecycle pauses active gameplay when the document is hidden', async () => {
   const app = await read('../src/index.ts');
   assert.match(app, /document\.addEventListener\('visibilitychange'/);
   assert.match(app, /document\.hidden && this\.engine\.getGameState\(\) === 'playing'/);
-  assert.match(app, /navigator\.serviceWorker\.register\('\.\/sw\.js'/);
+  assert.match(app, /navigator\.serviceWorker\.register\(`\.\/sw\.js\?build=\$\{__PALIECIAKI_BUILD_ID__\}`/);
 });
 
 test('leaderboard reads stay public while writes and profile access require authentication', async () => {
