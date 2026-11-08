@@ -42,3 +42,19 @@ export function calculateUiViewport(
 
   return { scale, fontScale, panelMaxWidth, density, landscapeTouch };
 }
+
+/**
+ * Avoid showing touch-only controls in a narrow desktop window when a mouse
+ * is the active pointer. Touch hardware and coarse-pointer devices still get
+ * the controls at every viewport width.
+ */
+export function shouldShowTouchControls(
+  visible: boolean,
+  viewportWidth: number,
+  touchCapable: boolean,
+  finePointer: boolean,
+): boolean {
+  if (!visible) return false;
+  const width = Math.max(1, Number.isFinite(viewportWidth) ? viewportWidth : 1);
+  return touchCapable || (width <= 900 && !finePointer);
+}
