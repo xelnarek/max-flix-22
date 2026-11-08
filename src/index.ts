@@ -3423,6 +3423,21 @@ async function startApp() {
   const titleScreen = document.getElementById('title-screen');
   const shell = document.getElementById('game-shell');
 
+  // Keep the menu outside the WebGL shell's stacking context. Some mobile
+  // WebViews promote the renderer canvas to its own compositor layer; a menu
+  // nested under the game shell can then disappear behind the live 3D scene.
+  // The same DOM node is moved, so all existing menu references and handlers
+  // remain valid.
+  if (titleScreen && titleScreen.parentElement !== document.body) {
+    document.body.appendChild(titleScreen);
+  }
+  if (titleScreen) {
+    titleScreen.style.setProperty('position', 'fixed', 'important');
+    titleScreen.style.setProperty('inset', '0', 'important');
+    titleScreen.style.setProperty('z-index', '10000000', 'important');
+    titleScreen.style.setProperty('pointer-events', 'auto', 'important');
+  }
+
   const revealStartupUi = () => {
     assetLoader.hide();
     if (shell) {
