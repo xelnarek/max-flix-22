@@ -232,7 +232,7 @@ test('PvP public matchmaking pairs the oldest waiting players and supports relia
   ]);
   assert.equal(firstMatch.code, thirdMatch.code);
   assert.equal(firstCreated.code, thirdJoined.code);
-  assert.equal(firstCreated.code, thirdCreatedCode(firstCreated.code));
+  assert.match(firstCreated.code, /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/);
   assert.equal(firstCreated.slot, 'p1');
   assert.equal(thirdJoined.slot, 'p2');
   assert.equal(firstCreated.state.p1.nickname, 'Pierwszy');
@@ -253,5 +253,3 @@ test('PvP public matchmaking pairs the oldest waiting players and supports relia
   assert.equal(firstState.state.status, 'countdown');
   assert.equal(thirdState.state.status, 'countdown');
 });
-
-function thirdCreatedCode(code) { return code; }
