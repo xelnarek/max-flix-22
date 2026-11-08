@@ -24,6 +24,7 @@ import {
   linkWithPopup,
   signInWithPopup,
   type User,
+  type UserCredential,
   type Unsubscribe,
 } from 'firebase/auth';
 import firebaseConfig from '../firebase-applet-config.json';
@@ -321,7 +322,7 @@ export async function connectAccountWithGoogle(): Promise<{ uid: string; isAnony
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
 
-  let credential;
+  let credential: UserCredential;
   if (user.isAnonymous) {
     try {
       credential = await linkWithPopup(user, provider);
