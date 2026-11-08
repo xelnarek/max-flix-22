@@ -4,12 +4,15 @@ import {
   resetPvpRound,
   resetPvpMatchStats,
   sanitizePvpInputIntent,
+  sanitizePvpProgressionBonuses,
+  NEUTRAL_PVP_PROGRESSION_BONUSES,
   stepPvpArena,
 } from './pvpArena.ts';
 import { choosePvpBotDecision } from './pvpBotTactics.ts';
 import type {
   PvpArenaState,
   PvpInputIntent,
+  PvpProgressionBonuses,
   PvpSlot,
 } from './pvpArena.ts';
 
@@ -29,8 +32,8 @@ export interface IPvpSession {
   readonly isLocalBot: boolean;
   readonly slot: PvpSlot;
   readonly roomCode: string;
-  createRoom?(operatorId: CharacterId, playerName: string): void;
-  joinRoom?(code: string, operatorId: CharacterId, playerName: string): void;
+  createRoom?(operatorId: CharacterId, playerName: string, progressionBonuses?: PvpProgressionBonuses): void;
+  joinRoom?(code: string, operatorId: CharacterId, playerName: string, progressionBonuses?: PvpProgressionBonuses): void;
   setReady?(ready: boolean): void;
   sendInput(intent: PvpInputIntent): void;
   requestRematch?(): void;
@@ -64,9 +67,9 @@ export class PvpNetworkSession implements IPvpSession {
   private hasJoinedRoom = false;
   private hasStartedMatch = false;
   private reconnectAttempts = 0;
-  private pendingCreate?: { operatorId: CharacterId; playerName: string };
-  private pendingJoin?: { code: string; operatorId: CharacterId; playerName: string };
-  private pendingMatchmaking?: { operatorId: CharacterId; playerName: string };
+  private pendingCreate?: { operatorId: CharacterId; playerName: string; progressionBonuses: PvpProgressionBonuses };
+  private pendingJoin?: { code: string; operatorId: CharacterId; playerName: string; progressionBonuses: PvpProgressionBonuses };
+  private pendingMatchmaking?: { operatorId: CharacterId; playerName: string; progressionBonuses: PvpProgressionBonuses };
   private matchmakingRequested = false;
 
   private static readonly MAX_CONNECT_ATTEMPTS = 3;
@@ -146,13 +149,13 @@ export class PvpNetworkSession implements IPvpSession {
         this.callbacks.onConnectionChange?.(true);
         this.onConnectionChange?.(true);
         if (this.pendingCreate) {
-          this.createRoom(this.pendingCreate.operatorId, this.pendingCreate.playerName);
+          this.createRoom(this.pendingCreate.operatorId, this.pendingCreate.playerName, this.pendingCreate.progressionBonuses);
         } else if (this.pendingJoin) {
-          this.joinRoom(this.pendingJoin.code, this.pendingJoin.operatorId, this.pendingJoin.playerName);
+          this.joinRoom(this.pendingJoin.code, this.pendingJoin.operatorId, this.pendingJoin.playerName, this.pendingJoin.progressionBonuses);
         } else if (this.pendingMatchmaking) {
           // Keep the request until matched/cancelled so reconnects can re-enter the FIFO queue.
           const request = this.pendingMatchmaking;
-          this.send({ type: 'find_match', operatorId: request.operatorId, playerName: request.playerName });
+          this.send({ type: 'find_match', operatorId: request.operatorId, playerName: request.playerName, progressionBonuses: request.progressionBonuses });
         }
       };
 
@@ -313,39 +316,54 @@ export class PvpNetworkSession implements IPvpSession {
     }
   }
 
-  public createRoom(operatorId: CharacterId, playerName: string) {
+  public createRoom(
+    operatorId: CharacterId,
+    playerName: string,
+    progressionBonuses: PvpProgressionBonuses = NEUTRAL_PVP_PROGRESSION_BONUSES,
+  ) {
     if (this.isUnavailable || this.isDisposed) return;
+    const safeBonuses = sanitizePvpProgressionBonuses(progressionBonuses);
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      this.pendingCreate = { operatorId, playerName };
+      this.pendingCreate = { operatorId, playerName, progressionBonuses: safeBonuses };
       return;
     }
-    this.send({ type: 'create_room', operatorId, playerName });
+    this.send({ type: 'create_room', operatorId, playerName, progressionBonuses: safeBonuses });
   }
 
-  public joinRoom(code: string, operatorId: CharacterId, playerName: string) {
+  public joinRoom(
+    code: string,
+    operatorId: CharacterId,
+    playerName: string,
+    progressionBonuses: PvpProgressionBonuses = NEUTRAL_PVP_PROGRESSION_BONUSES,
+  ) {
     if (this.isUnavailable || this.isDisposed) return;
     const normalizedCode = code.trim().toUpperCase();
     if (!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(normalizedCode)) {
       this.emitError('Kod pokoju musi zawierać dokładnie 6 znaków.');
       return;
     }
+    const safeBonuses = sanitizePvpProgressionBonuses(progressionBonuses);
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      this.pendingJoin = { code: normalizedCode, operatorId, playerName };
+      this.pendingJoin = { code: normalizedCode, operatorId, playerName, progressionBonuses: safeBonuses };
       return;
     }
-    this.send({ type: 'join_room', code: normalizedCode, operatorId, playerName });
+    this.send({ type: 'join_room', code: normalizedCode, operatorId, playerName, progressionBonuses: safeBonuses });
   }
 
   /** Join the FIFO public queue; the server assigns the first available opponent. */
-  public findMatch(operatorId: CharacterId, playerName: string) {
+  public findMatch(
+    operatorId: CharacterId,
+    playerName: string,
+    progressionBonuses: PvpProgressionBonuses = NEUTRAL_PVP_PROGRESSION_BONUSES,
+  ) {
     if (this.isUnavailable || this.isDisposed || this.hasJoinedRoom) return;
     this.matchmakingRequested = true;
-    this.pendingMatchmaking = { operatorId, playerName };
+    this.pendingMatchmaking = { operatorId, playerName, progressionBonuses: sanitizePvpProgressionBonuses(progressionBonuses) };
     this.pendingCreate = undefined;
     this.pendingJoin = undefined;
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
     const request = this.pendingMatchmaking;
-    this.send({ type: 'find_match', operatorId: request.operatorId, playerName: request.playerName });
+    this.send({ type: 'find_match', operatorId: request.operatorId, playerName: request.playerName, progressionBonuses: request.progressionBonuses });
   }
 
   /** Cancel search safely; closing the socket also removes the player if the cancel packet races. */
@@ -422,7 +440,8 @@ export class PvpLocalBotSession implements IPvpSession {
     botOperatorId: CharacterId,
     playerName: string,
     botNameOrCallbacks?: string | PvpSessionCallbacks,
-    callbacks: PvpSessionCallbacks = {}
+    callbacks: PvpSessionCallbacks = {},
+    progressionBonuses: PvpProgressionBonuses = NEUTRAL_PVP_PROGRESSION_BONUSES,
   ) {
     if (typeof botNameOrCallbacks === 'object') {
       this.callbacks = botNameOrCallbacks;
@@ -430,7 +449,7 @@ export class PvpLocalBotSession implements IPvpSession {
       this.callbacks = callbacks;
     }
     const botName = typeof botNameOrCallbacks === 'string' ? botNameOrCallbacks : `BOT ${botOperatorId.toUpperCase()}`;
-    this.state = createInitialPvpArenaState(operatorId, playerName, botOperatorId, botName);
+    this.state = createInitialPvpArenaState(operatorId, playerName, botOperatorId, botName, progressionBonuses);
     this.state.p1.isReady = true;
     this.state.p2.isReady = true;
     this.state.p2.connected = true;
