@@ -37,16 +37,22 @@ test('manual touch aim, server-origin checks, six-character invite codes and mut
     readFile(new URL('../src/server/pvpServer.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/pvpArena.ts', import.meta.url), 'utf8'),
   ]);
-  assert.match(game, /this\.manualAimFiring && this\.attackCooldownTimer <= 0/);
-  assert.match(game, /shouldPvpAimFire\(x, z, this\.manualAimFiring\)/);
+  assert.match(game, /wantFire: this\.pvpWantFire/);
+  assert.match(game, /public triggerPvpFire\(\): boolean/);
+  assert.doesNotMatch(game, /shouldPvpAimFire\(x, z, this\.manualAimFiring\)/);
   assert.match(game, /PVP_AIM_DIRECTION_DEADZONE/);
   assert.match(game, /this\.pvpInputSendAccumulator %= inputInterval/);
   assert.match(app, /getElementById\('pvp-aim-zone'\)/);
+  assert.match(app, /getPvpOperatorAttackCooldown\(operatorId\)/);
+  assert.match(app, /startPvpFireCooldown\(/);
+  assert.match(app, /fireButton\.dataset\.roundActive = String\(roundActive\)/);
   assert.match(app, /REWANŻ ZGŁOSZONY • CZEKAJ NA RYWALA/);
   assert.match(html, /maxlength="6"/);
   assert.match(server, /maxPayload: 4096/);
   assert.match(server, /MAX_MESSAGES_PER_SECOND = 120/);
   assert.match(server, /PVP_ALLOWED_ORIGINS/);
+  assert.match(server, /wantFire: intent\.wantFire === true \|\| sanitized\.wantFire === true/);
+  assert.match(server, /if \(room\.inputs\.p1\.wantFire\) room\.inputs\.p1\.wantFire = false/);
   assert.match(server, /rematchVotes\.size === 2/);
   assert.match(server, /\{6\}/);
   assert.match(arena, /sanitizePvpInputIntent/);

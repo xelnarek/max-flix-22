@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { getPvpAimAngle, isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle, shouldPvpAimFire, PVP_AIM_DIRECTION_DEADZONE, type PvpAimDirection } from './pvpAim.ts';
+import { getPvpAimAngle, isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle, PVP_AIM_DIRECTION_DEADZONE, type PvpAimDirection } from './pvpAim.ts';
 import type { IPvpSession } from './pvpClient.ts';
 import {
   createDefaultPvpObstacles,
@@ -536,6 +536,7 @@ export class PaleciakiGameEngine {
   private pvpMedkitMesh: THREE.Group | null = null;
   private pvpProjectileMeshes = new Map<string, THREE.Mesh>();
   private pvpArenaRoot: THREE.Group | null = null;
+  private pvpWantFire = false;
   private pvpWantDash = false;
   private pvpWantAbility = false;
   private pvpInputSendAccumulator = 0;
@@ -1134,7 +1135,7 @@ export class PaleciakiGameEngine {
       }
       if (e.code === 'KeyF' || e.code === 'KeyJ' || e.code === 'KeyX' || e.code === 'Numpad0') {
         if (this.gameMode === 'pvp') {
-          this.manualAimFiring = true;
+          if (!e.repeat) this.triggerPvpFire();
         } else {
           this.triggerAttack();
         }
@@ -1191,7 +1192,7 @@ export class PaleciakiGameEngine {
           return;
         }
         if (this.gameMode === 'pvp') {
-          this.manualAimFiring = true;
+          this.triggerPvpFire();
         } else {
           this.triggerAttack();
         }
@@ -1219,7 +1220,7 @@ export class PaleciakiGameEngine {
         const dx = pvpIntersection.x - this.playerPos.x;
         const dz = pvpIntersection.z - this.playerPos.z;
         this.setManualAimInput(dx, dz);
-        this.manualAimFiring = (e.buttons & 1) === 1;
+        // Pointer movement only changes direction; fire happens on a discrete press.
       }
     });
 
@@ -1241,6 +1242,7 @@ export class PaleciakiGameEngine {
   public setManualAimMode(enabled: boolean) {
     this.manualAimEnabled = enabled;
     this.manualAimFiring = false;
+    this.pvpWantFire = false;
     if (enabled) this.manualAimDirection = pvpAimDirectionFromAngle(this.playerRot);
     document.getElementById('game-shell')?.classList.toggle('manual-aim-mode', enabled);
   }
@@ -1255,9 +1257,7 @@ export class PaleciakiGameEngine {
       this.manualAimDirection,
       PVP_AIM_DIRECTION_DEADZONE,
     );
-    // A lower release threshold stops the trigger from flickering when a thumb
-    // naturally jitters around the edge of the firing deadzone.
-    this.manualAimFiring = shouldPvpAimFire(x, z, this.manualAimFiring);
+    // Aiming is independent from firing: moving this stick never sends a shot.
     if (directionActive) {
       this.playerRot = getPvpAimAngle(this.manualAimDirection);
       if (this.playerGroup) this.playerGroup.rotation.y = this.playerRot;
@@ -1758,6 +1758,7 @@ export class PaleciakiGameEngine {
     this.pvpMatchEndHandled = false;
     this.lastPvpHitEventId = 0;
     this.pendingPvpHitEvents = [];
+    this.pvpWantFire = false;
     this.pvpWantDash = false;
     this.pvpWantAbility = false;
     this.setManualAimMode(true);
@@ -1816,6 +1817,18 @@ export class PaleciakiGameEngine {
     this.pvpWantAbility = true;
   }
 
+  /** Queue exactly one primary shot; the room simulation enforces weapon recovery. */
+  public triggerPvpFire(): boolean {
+    if (
+      this.gameMode !== 'pvp' ||
+      !this.manualAimEnabled ||
+      this.state !== 'playing' ||
+      this.lastPvpState?.status !== 'in_round'
+    ) return false;
+    this.pvpWantFire = true;
+    return true;
+  }
+
   public exitPvp() {
     if (this.remotePlayerOutline) {
       if (this.remotePlayerOutline.material) this.remotePlayerOutline.material.dispose();
@@ -1854,6 +1867,7 @@ export class PaleciakiGameEngine {
     this.pvpMatchEndHandled = false;
     this.lastPvpHitEventId = 0;
     this.pendingPvpHitEvents = [];
+    this.pvpWantFire = false;
     this.pvpWantDash = false;
     this.pvpWantAbility = false;
     this.prevPvpLocalHp = -1;
@@ -2145,11 +2159,13 @@ export class PaleciakiGameEngine {
         moveX,
         moveZ,
         aimAngle: getPvpAimAngle(this.manualAimDirection),
-        isFiring: this.manualAimFiring,
+        isFiring: false,
+        wantFire: this.pvpWantFire,
         wantDash: this.pvpWantDash,
         wantAbility: this.pvpWantAbility,
       });
       // One-shot actions remain latched until an input packet has actually been emitted.
+      this.pvpWantFire = false;
       this.pvpWantDash = false;
       this.pvpWantAbility = false;
     }
@@ -6924,8 +6940,7 @@ export class PaleciakiGameEngine {
       this.updateMateuszCats(simDt);
       this.updateMafiCapybaras(simDt);
       if (this.manualAimEnabled) {
-        // Hold the right stick beyond its deadzone to fire along the manually chosen direction.
-        if (this.manualAimFiring && this.attackCooldownTimer <= 0) this.triggerAttack();
+        // PvP shots are spawned by the authoritative room after one explicit tap.
       } else if (this.gameMode === 'survival') {
         this.updateSurvivalAutoCombat(simDt);
       }

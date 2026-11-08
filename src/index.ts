@@ -19,6 +19,7 @@ import {
 } from './ads.ts';
 import { CharacterId, PerkType } from './types.ts';
 import { PvpNetworkSession, PvpLocalBotSession, type IPvpSession } from './pvpClient.ts';
+import { getPvpOperatorAttackCooldown } from './pvpArena.ts';
 import type { PvpArenaState, PvpSlot } from './pvpArena.ts';
 import { AssetItem, assetLoader } from './assets.ts';
 import { SelectiveBloomPipeline } from './selectiveBloom.ts';
@@ -3044,6 +3045,46 @@ class PaleciakiScene extends xb.Script {
     const btnRematch = document.getElementById('btn-pvp-rematch') as HTMLButtonElement | null;
     const btnExitToMenu = document.getElementById('btn-pvp-exit-to-menu');
     const pauseModal = document.getElementById('pause-modal');
+    const pvpFireButton = document.getElementById('btn-pvp-fire') as HTMLButtonElement | null;
+    const pvpFireLabel = pvpFireButton?.querySelector<HTMLElement>('.pvp-fire-label') || null;
+    const pvpFireState = pvpFireButton?.querySelector<HTMLElement>('.pvp-fire-state') || null;
+    let pvpFireCooldownFrame = 0;
+    const resetPvpFireButton = () => {
+      if (pvpFireCooldownFrame) cancelAnimationFrame(pvpFireCooldownFrame);
+      pvpFireCooldownFrame = 0;
+      if (!pvpFireButton) return;
+      pvpFireButton.classList.remove('is-reloading');
+      pvpFireButton.style.setProperty('--pvp-fire-progress', '0%');
+      if (pvpFireLabel) pvpFireLabel.textContent = 'STRZAŁ';
+      if (pvpFireState) pvpFireState.textContent = 'GOTOWY';
+      pvpFireButton.disabled = pvpFireButton.dataset.roundActive !== 'true';
+    };
+    const startPvpFireCooldown = (cooldownSeconds: number) => {
+      if (!pvpFireButton) return;
+      if (pvpFireCooldownFrame) cancelAnimationFrame(pvpFireCooldownFrame);
+      const durationMs = Math.max(120, cooldownSeconds * 1000);
+      const startedAt = performance.now();
+      pvpFireButton.disabled = true;
+      pvpFireButton.classList.add('is-reloading');
+      if (pvpFireLabel) pvpFireLabel.textContent = 'ŁADOWANIE';
+      const update = (now: number) => {
+        const elapsed = Math.max(0, now - startedAt);
+        const remaining = Math.max(0, durationMs - elapsed);
+        const progress = Math.min(1, elapsed / durationMs);
+        pvpFireButton.style.setProperty('--pvp-fire-progress', (progress * 100).toFixed(1) + '%');
+        if (pvpFireState) pvpFireState.textContent = remaining > 0 ? (remaining / 1000).toFixed(1) + ' s' : 'GOTOWY';
+        if (remaining <= 0) {
+          pvpFireCooldownFrame = 0;
+          pvpFireButton.classList.remove('is-reloading');
+          pvpFireButton.disabled = pvpFireButton.dataset.roundActive !== 'true';
+          if (pvpFireLabel) pvpFireLabel.textContent = 'STRZAŁ';
+          pvpFireButton.style.setProperty('--pvp-fire-progress', '0%');
+          return;
+        }
+        pvpFireCooldownFrame = requestAnimationFrame(update);
+      };
+      pvpFireCooldownFrame = requestAnimationFrame(update);
+    };
 
     // Move critical dialogs out of the game shell's stacking context. The
     // mobile controls are portaled to <body> at a very high z-index; keeping
@@ -3069,6 +3110,13 @@ class PaleciakiScene extends xb.Script {
       element.addEventListener('touchend', activate, { passive: false });
       element.addEventListener('click', activate);
     };
+
+    bindPvpTap(pvpFireButton, () => {
+      if (!this.engine.triggerPvpFire()) return;
+      const operatorId = (pvpFireButton?.dataset.operator as CharacterId | undefined) || this.selectedPvpOperator;
+      startPvpFireCooldown(getPvpOperatorAttackCooldown(operatorId));
+      sound.playAttackWhoosh();
+    });
 
     opPicker?.querySelectorAll<HTMLButtonElement>('.pvp-operator-btn').forEach((btn) => {
       bindPvpTap(btn, () => {
@@ -3147,6 +3195,13 @@ class PaleciakiScene extends xb.Script {
       // touch-controls is portaled to body, so it needs its own mode classes.
       // Classes on #game-shell do not cascade into this detached control layer.
       touchControls?.classList.add('pvp-mode', 'manual-aim-mode');
+      resetPvpFireButton();
+      if (pvpFireButton) {
+        pvpFireButton.classList.remove('hidden');
+        pvpFireButton.dataset.operator = localOp;
+        pvpFireButton.dataset.roundActive = 'false';
+        pvpFireButton.disabled = true;
+      }
 
       gameShell?.classList.add('pvp-mode');
       this.engine.setManualAimMode(true);
@@ -3484,6 +3539,12 @@ class PaleciakiScene extends xb.Script {
     bindPvpTap(btnExitToMenu, () => {
       matchEndModal?.classList.add('hidden');
       pvpHud?.classList.add('hidden');
+      resetPvpFireButton();
+      pvpFireButton?.classList.add('hidden');
+      if (pvpFireButton) {
+        pvpFireButton.dataset.roundActive = 'false';
+        pvpFireButton.dataset.operator = '';
+      }
       gameShell?.classList.remove('pvp-mode');
       touchControls?.classList.remove('pvp-mode', 'manual-aim-mode');
       setTouchControlsVisibility(false);
@@ -3511,6 +3572,13 @@ class PaleciakiScene extends xb.Script {
   }
 
   private updatePvpScoreboard(state: PvpArenaState, localSlot: PvpSlot) {
+    const fireButton = document.getElementById('btn-pvp-fire') as HTMLButtonElement | null;
+    if (fireButton) {
+      const roundActive = state.status === 'in_round';
+      fireButton.dataset.roundActive = String(roundActive);
+      if (!roundActive) fireButton.disabled = true;
+      else if (!fireButton.classList.contains('is-reloading')) fireButton.disabled = false;
+    }
     const p1Fill = document.getElementById('pvp-p1-hp-fill');
     const p1Text = document.getElementById('pvp-p1-hp-text');
     const p1Name = document.getElementById('pvp-p1-name');
@@ -3571,6 +3639,11 @@ class PaleciakiScene extends xb.Script {
   }
 
   private handlePvpMatchEnd(state: PvpArenaState, localSlot: PvpSlot) {
+    const fireButton = document.getElementById('btn-pvp-fire') as HTMLButtonElement | null;
+    if (fireButton) {
+      fireButton.dataset.roundActive = 'false';
+      fireButton.disabled = true;
+    }
     const matchEndModal = document.getElementById('pvp-match-end-modal');
     if (!matchEndModal) return;
 

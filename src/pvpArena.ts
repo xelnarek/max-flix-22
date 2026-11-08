@@ -125,6 +125,8 @@ export interface PvpInputIntent {
   moveZ: number;
   aimAngle: number;
   isFiring: boolean;
+  /** A single tap/press request, consumed by the next authoritative tick. */
+  wantFire?: boolean;
   wantDash?: boolean;
   wantAbility?: boolean;
 }
@@ -147,6 +149,7 @@ export function sanitizePvpInputIntent(input: Partial<PvpInputIntent> | null | u
     moveZ,
     aimAngle,
     isFiring: input?.isFiring === true,
+    wantFire: input?.wantFire === true,
     wantDash: input?.wantDash === true,
     wantAbility: input?.wantAbility === true,
   };
@@ -404,6 +407,12 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
     abilityDesc: 'Wyładowanie elektryczne paraliżujące przeciwnika na 1.1s i zadające 110 dmg.',
   },
 };
+
+/** Authoritative primary-shot recovery shared by simulation and touch UI. */
+export function getPvpOperatorAttackCooldown(operatorId: CharacterId): number {
+  const cooldown = PVP_OPERATOR_PROFILES[operatorId]?.attackCooldown;
+  return Number.isFinite(cooldown) ? Math.max(0.12, cooldown) : 0.36;
+}
 
 export function createDefaultPvpObstacles(): PvpObstacle[] {
   return [
@@ -870,7 +879,7 @@ function stepPlayer(player: PvpPlayerState, input: PvpInputIntent | undefined, s
   clampPvpPosition(player);
 
   // Firing primary attack
-  if (player.isFiring && player.attackCooldownTimer <= 0) {
+  if ((safeInput.wantFire || player.isFiring) && player.attackCooldownTimer <= 0) {
     firePlayerPrimary(player, state);
   }
 }

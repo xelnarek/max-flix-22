@@ -54,11 +54,16 @@ test('PvP wiring supports two separate touch pointers and does not snap to a tar
   assert.doesNotMatch(app, /activeAimPointerId !== null \|\| event\.isPrimary === false/);
   assert.match(app, /this\.engine\.setManualAimInput\(input\.x, input\.y\)/);
   assert.match(app, /this\.engine\.stopManualAimFiring\(\)/);
-  assert.match(game, /this\.manualAimFiring && this\.attackCooldownTimer <= 0/);
+  assert.match(app, /bindPvpTap\(pvpFireButton/);
+  assert.match(game, /this\.pvpWantFire = true/);
+  assert.match(game, /wantFire: this\.pvpWantFire/);
+  assert.doesNotMatch(game, /shouldPvpAimFire\(x, z, this\.manualAimFiring\)/);
   assert.match(game, /if \(!this\.manualAimEnabled\) this\.playerRot = Math\.atan2\(this\.survivalDashDirection\.x, this\.survivalDashDirection\.z\)/);
   assert.match(game, /this\.setManualAimMode\(false\);[\s\S]*this\.gameMode = 'survival'/);
   assert.match(game, /if \(this\.state !== 'playing' \|\| this\.gameMode !== 'survival' \|\| this\.manualAimEnabled\) return/);
   assert.match(html, /id="pvp-aim-zone"/);
+  assert.match(html, /id="btn-pvp-fire"/);
+  assert.match(css, /#touch-controls\.manual-aim-mode \.pvp-fire-btn/);
   assert.match(css, /#touch-controls\.manual-aim-mode \.pvp-aim-zone \{ display: block !important; \}/);
 });
 

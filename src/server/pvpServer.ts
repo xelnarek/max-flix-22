@@ -76,8 +76,8 @@ function isCharacterId(value: unknown): value is CharacterId {
 }
 
 function clearRoomInputs(room: PvpRoom): void {
-  room.inputs.p1 = { moveX: 0, moveZ: 0, aimAngle: room.state.p1.aimAngle, isFiring: false };
-  room.inputs.p2 = { moveX: 0, moveZ: 0, aimAngle: room.state.p2.aimAngle, isFiring: false };
+  room.inputs.p1 = { moveX: 0, moveZ: 0, aimAngle: room.state.p1.aimAngle, isFiring: false, wantFire: false };
+  room.inputs.p2 = { moveX: 0, moveZ: 0, aimAngle: room.state.p2.aimAngle, isFiring: false, wantFire: false };
   room.lastInputAt.p1 = null;
   room.lastInputAt.p2 = null;
 }
@@ -96,6 +96,7 @@ function expireStaleRoomInputs(room: PvpRoom, now: number): void {
       moveZ: 0,
       aimAngle: Number.isFinite(current.aimAngle) ? current.aimAngle : room.state[slot].aimAngle,
       isFiring: false,
+      wantFire: false,
     };
     room.lastInputAt[slot] = null;
   }
@@ -129,9 +130,11 @@ function startRoomLoop(room: PvpRoom) {
     // Step simulation
     stepPvpArena(room.state, dt, room.inputs.p1, room.inputs.p2);
 
-    // Consume transient button intents
+    // Consume transient button intents only after the authoritative tick.
+    if (room.inputs.p1.wantFire) room.inputs.p1.wantFire = false;
     if (room.inputs.p1.wantDash) room.inputs.p1.wantDash = false;
     if (room.inputs.p1.wantAbility) room.inputs.p1.wantAbility = false;
+    if (room.inputs.p2.wantFire) room.inputs.p2.wantFire = false;
     if (room.inputs.p2.wantDash) room.inputs.p2.wantDash = false;
     if (room.inputs.p2.wantAbility) room.inputs.p2.wantAbility = false;
 
@@ -536,6 +539,7 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
             // Latch one-shot controls until consumed by the authoritative simulation tick.
             room.inputs[playerSlot] = {
               ...sanitized,
+              wantFire: intent.wantFire === true || sanitized.wantFire === true,
               wantDash: intent.wantDash === true || sanitized.wantDash === true,
               wantAbility: intent.wantAbility === true || sanitized.wantAbility === true,
             };
@@ -611,6 +615,7 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
         moveZ: 0,
         aimAngle: room.state[playerSlot].aimAngle,
         isFiring: false,
+        wantFire: false,
       };
       room.lastInputAt[playerSlot] = null;
 

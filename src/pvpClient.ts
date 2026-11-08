@@ -458,9 +458,11 @@ export class PvpLocalBotSession implements IPvpSession {
       // Step simulation
       stepPvpArena(this.state, dt, this.p1Input, this.p2Input);
 
-      // Clear single-frame intents
+      // Clear single-frame intents after the local authoritative tick.
+      if (this.p1Input.wantFire) this.p1Input.wantFire = false;
       if (this.p1Input.wantDash) this.p1Input.wantDash = false;
       if (this.p1Input.wantAbility) this.p1Input.wantAbility = false;
+      if (this.p2Input.wantFire) this.p2Input.wantFire = false;
       if (this.p2Input.wantDash) this.p2Input.wantDash = false;
       if (this.p2Input.wantAbility) this.p2Input.wantAbility = false;
 

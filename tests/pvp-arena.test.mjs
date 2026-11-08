@@ -187,6 +187,7 @@ test('sanitizes malformed and over-length player input before simulation', () =>
   assert.ok(Math.abs(Math.hypot(input.moveX, input.moveZ) - 1) < 1e-10);
   assert.equal(input.aimAngle, 0);
   assert.equal(input.isFiring, false);
+  assert.equal(input.wantFire, false);
   assert.equal(input.wantDash, false);
   assert.equal(input.wantAbility, true);
 });
@@ -646,4 +647,23 @@ test('starting a rematch resets every match-wide statistic and its published sna
       knockouts: 0,
     });
   }
+});
+
+
+test('one-shot fire intent shoots once, respects operator recovery, and can be tapped again', () => {
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  resetPvpRound(state);
+  advanceArena(state, 3.0);
+  state.p1.x = -8;
+  state.p1.z = 0;
+  state.p2.x = 8;
+  state.p2.z = 0;
+  const input = { moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantFire: true };
+  stepPvpArena(state, 0.03, input);
+  assert.equal(state.projectiles.filter(projectile => projectile.ownerSlot === 'p1').length, 1);
+  stepPvpArena(state, 0.05, { ...input, wantFire: false });
+  assert.equal(state.projectiles.filter(projectile => projectile.ownerSlot === 'p1').length, 1, 'neutral input must not auto-fire');
+  advanceArena(state, 0.30);
+  stepPvpArena(state, 0.03, input);
+  assert.equal(state.projectiles.filter(projectile => projectile.ownerSlot === 'p1').length, 2, 'a fresh tap after recovery fires again');
 });
