@@ -3140,9 +3140,11 @@ class PaleciakiScene extends xb.Script {
       };
 
       netSession.onPlayerReady = (slot, ready) => {
+        const playerLabel = slot === this.pvpLocalSlot ? 'Ty' : 'Rywal';
         if (lobbyPlayersStatus) {
-          lobbyPlayersStatus.textContent = `Status: ${slot === this.pvpLocalSlot ? 'Ty' : 'Rywal'} ${ready ? 'GOTOWY' : 'CZEKA'}`;
+          lobbyPlayersStatus.textContent = `Status: ${playerLabel} ${ready ? 'GOTOWY' : 'CZEKA'}`;
         }
+        setPvpConnectionStatus('matched', ready ? `${playerLabel.toUpperCase()} • GOTOWY` : `${playerLabel.toUpperCase()} • OCZEKIWANIE`, ready ? 'Potwierdzono gotowość. Mecz rozpocznie się, gdy obaj gracze będą gotowi.' : 'Pokój pozostaje aktywny. Oczekiwanie na potwierdzenie gotowości.');
       };
 
       netSession.onMatchStart = (state) => {
@@ -3236,9 +3238,11 @@ class PaleciakiScene extends xb.Script {
       };
 
       netSession.onPlayerReady = (slot, ready) => {
+        const playerLabel = slot === this.pvpLocalSlot ? 'Ty' : 'Rywal';
         if (lobbyPlayersStatus) {
-          lobbyPlayersStatus.textContent = `Status: ${slot === this.pvpLocalSlot ? 'Ty' : 'Rywal'} ${ready ? 'GOTOWY' : 'CZEKA'}`;
+          lobbyPlayersStatus.textContent = `Status: ${playerLabel} ${ready ? 'GOTOWY' : 'CZEKA'}`;
         }
+        setPvpConnectionStatus('matched', ready ? `${playerLabel.toUpperCase()} • GOTOWY` : `${playerLabel.toUpperCase()} • OCZEKIWANIE`, ready ? 'Potwierdzono gotowość. Mecz rozpocznie się, gdy obaj gracze będą gotowi.' : 'Pokój pozostaje aktywny. Oczekiwanie na potwierdzenie gotowości.');
       };
 
       netSession.onMatchStart = (state) => {
