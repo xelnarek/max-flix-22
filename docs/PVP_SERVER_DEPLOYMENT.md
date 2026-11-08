@@ -23,6 +23,10 @@ The Blueprint sets `NODE_ENV=production` and `PVP_ALLOWED_ORIGINS=https://xelnar
    `{"ok":true,"service":"paleciaki-pvp","websocketPath":"/pvp-ws"}`
 5. Copy the hostname Render assigned to the service. The browser endpoint is the same hostname with `wss://` and path `/pvp-ws`.
 
+- The public matchmaking queue uses FIFO order: the two longest-waiting connected players are paired into a private 1v1 room.
+- The matchmaker validates operator IDs and player names, reports queue position, and supports cancellation or automatic queue cleanup on disconnect.
+- Randomly paired players are both marked ready automatically; the countdown starts without needing an invite code or a second manual ready action.
+
 ## Free-plan limitations
 
 This is deliberately configured for a free test, not production. Render Free web services spin down after 15 minutes without inbound traffic, including WebSocket traffic. The first connection after sleeping can take about a minute. Free instances have 0.1 CPU and 512 MB RAM, may restart, and have no persistent disk. Active match state is therefore temporary and can be lost during sleep or restart. This is suitable for testing the connection flow, not reliable competitive matchmaking. Sources: [Render Free instance limits](https://render.com/docs/free) and [Render compute plans](https://render.com/docs/compute-plans).
