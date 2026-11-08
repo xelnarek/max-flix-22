@@ -3057,16 +3057,20 @@ class PaleciakiScene extends xb.Script {
     });
 
     const openLobby = () => {
-      pvpLobbyModal?.classList.remove('hidden');
+      if (!pvpLobbyModal) return;
+      pvpLobbyModal.classList.remove('hidden');
+      pvpLobbyModal.setAttribute('aria-hidden', 'false');
       if (!matchmakingSession && !this.pvpSession) {
         setMatchmakingUiPhase('idle');
         setPvpConnectionStatus('idle', 'ONLINE GOTOWE', 'Wybierz „Szukaj przeciwnika” albo utwórz pokój i udostępnij kod.');
       }
+      (document.getElementById('btn-pvp-find-match') as HTMLButtonElement | null)?.focus();
       sound.playSmack();
     };
 
     const closeLobby = () => {
       pvpLobbyModal?.classList.add('hidden');
+      pvpLobbyModal?.setAttribute('aria-hidden', 'true');
       if (matchmakingSession) {
         matchmakingSession.cancelMatchmaking();
         matchmakingSession = null;
