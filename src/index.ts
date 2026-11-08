@@ -2945,7 +2945,7 @@ class PaleciakiScene extends xb.Script {
     const pvpLobbyModal = document.getElementById('pvp-lobby-modal');
     const btnClosePvpLobby = document.getElementById('btn-close-pvp-lobby');
     const onlineHint = document.getElementById('pvp-online-hint');
-    const onlineReady = Boolean(import.meta.env.VITE_PVP_WS_URL?.trim());
+    const onlineReady = Boolean(import.meta.env.VITE_PVP_WS_URL?.trim() || 'wss://paleciaki-pvp.onrender.com/pvp-ws');
     const createRoomButton = document.getElementById('btn-pvp-create-room') as HTMLButtonElement | null;
     const joinRoomButton = document.getElementById('btn-pvp-join-room') as HTMLButtonElement | null;
     if (onlineHint) {
