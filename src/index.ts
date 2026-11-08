@@ -38,6 +38,29 @@ import { SURVIVAL_MAPS, type SurvivalMapId } from './survivalMaps.ts';
 import { launchOniricPlatformer } from './oniricPlatformer.ts';
 import { getMenuTabIndexForKey } from './menuTabNavigation.ts';
 import { readSurvivalMapPreference, writeSurvivalMapPreference } from './survivalMapPreference.ts';
+
+// Set the mobile control layer as a single, explicit UI state. Removing the
+// class alone is insufficient in some Android WebViews after the DOM portal
+// move, so restore the inline presentation state whenever gameplay begins.
+function setTouchControlsVisibility(visible: boolean): void {
+  const layer = document.getElementById('touch-controls');
+  if (!layer) return;
+
+  if (visible) {
+    layer.classList.remove('hidden');
+    layer.style.setProperty('display', 'block', 'important');
+    layer.style.setProperty('visibility', 'visible', 'important');
+    layer.style.setProperty('opacity', '1', 'important');
+    layer.style.setProperty('pointer-events', 'none', 'important');
+  } else {
+    layer.classList.add('hidden');
+    layer.style.removeProperty('display');
+    layer.style.removeProperty('visibility');
+    layer.style.removeProperty('opacity');
+    layer.style.setProperty('pointer-events', 'none', 'important');
+  }
+}
+
 import {
   CHARACTER_TALENTS,
   createInitialCharacterMasteryProfile,
@@ -1125,7 +1148,7 @@ class PaleciakiScene extends xb.Script {
           }
           hudTop?.classList.add('hidden');
           hudBottom?.classList.add('hidden');
-          touchControls?.classList.add('hidden');
+          setTouchControlsVisibility(false);
           bossHudBar?.classList.add('hidden');
           hudPerksRow?.classList.add('hidden');
           survivalHud?.classList.add('hidden');
@@ -1962,7 +1985,7 @@ class PaleciakiScene extends xb.Script {
 
         hudTop?.classList.remove('hidden');
         hudBottom?.classList.remove('hidden');
-        touchControls?.classList.remove('hidden');
+        setTouchControlsVisibility(true);
         survivalHud?.classList.remove('hidden');
         gameShell?.classList.add('survival-mode');
         touchControls?.classList.add('survival-mode');
@@ -1975,7 +1998,7 @@ class PaleciakiScene extends xb.Script {
         titleScreen?.style.setProperty('display', 'flex', 'important');
         hudTop?.classList.add('hidden');
         hudBottom?.classList.add('hidden');
-        touchControls?.classList.add('hidden');
+        setTouchControlsVisibility(false);
         survivalHud?.classList.add('hidden');
         gameShell?.classList.remove('survival-mode');
         touchControls?.classList.remove('survival-mode');
@@ -2270,7 +2293,7 @@ class PaleciakiScene extends xb.Script {
         touchControls?.classList.remove('survival-mode');
       hudTop?.classList.add('hidden');
       hudBottom?.classList.add('hidden');
-      touchControls?.classList.add('hidden');
+      setTouchControlsVisibility(false);
       if (titleScreen) {
         titleScreen.classList.remove('hidden');
         titleScreen.style.setProperty('display', 'flex', 'important');
@@ -2283,7 +2306,7 @@ class PaleciakiScene extends xb.Script {
       survivalLevelUp?.classList.add('hidden');
       hudTop?.classList.remove('hidden');
       hudBottom?.classList.remove('hidden');
-      touchControls?.classList.remove('hidden');
+      setTouchControlsVisibility(true);
       survivalHud?.classList.remove('hidden');
       gameShell?.classList.add('survival-mode');
         touchControls?.classList.add('survival-mode');
@@ -2976,7 +2999,7 @@ class PaleciakiScene extends xb.Script {
 
       pvpHud?.classList.remove('hidden');
       hudBottom?.classList.remove('hidden');
-      touchControls?.classList.remove('hidden');
+      setTouchControlsVisibility(true);
 
       gameShell?.classList.add('pvp-mode');
       this.engine.setManualAimMode(true);
