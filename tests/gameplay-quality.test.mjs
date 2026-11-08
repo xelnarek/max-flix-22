@@ -216,14 +216,14 @@ test('Survival menu copy stays synchronized with the actual 60-second wave clock
   assert.doesNotMatch(html, /FALE CO 42 S/);
 });
 
-test('cinematic intro launches once at boot and no longer depends on a removed menu control', async () => {
+test('cinematic intro is launched deliberately from the menu, not automatically at boot', async () => {
   const [app, intro, html] = await Promise.all([
     read('../src/index.ts'), read('../src/cinematicIntro.ts'), read('../index.html')
   ]);
   assert.match(app, /if \(this\.cinematicIntro\?\.isRunning\(\) \|\| cinematicIntroLaunchPending\) return/);
   assert.match(app, /new CinematicIntroManager/);
   assert.match(app, /btn-open-intro/);
-  assert.doesNotMatch(app.slice(app.indexOf('async function startApp()')), /dispatchEvent\(new Event\('paleciaki:launch-intro'\)\)/);
+  assert.doesNotMatch(app, /document\.dispatchEvent\(new Event\('paleciaki:launch-intro'\)\)/);
   assert.match(app, /onStartGame: \(\) => \{[\s\S]*?doStartSurvival\(\)/);
   assert.match(app, /paleciaki:launch-intro/);
   assert.doesNotMatch(app, /btn-open-cinematic-intro|btn-open-story-modal/);
@@ -290,11 +290,12 @@ test('Campaign and Survival HUD no longer reserve or render a minimap lane', asy
 });
 
 
-test('cinematic intro autoplays after boot and is layered above the game shell', async () => {
+test('cinematic intro remains available from the menu and is layered above the game shell', async () => {
   const [app, css, intro] = await Promise.all([
     read('../src/index.ts'), read('../src/index.css'), read('../src/cinematicIntro.ts')
   ]);
-  assert.match(app, /document\.dispatchEvent\(new Event\('paleciaki:launch-intro'\)\)/);
+  assert.match(app, /btn-open-intro/);
+  assert.doesNotMatch(app.slice(app.indexOf('async function startApp()')), /dispatchEvent\(new Event\('paleciaki:launch-intro'\)\)/);
   assert.match(app, /document\.addEventListener\('paleciaki:launch-intro', \(\) => \{ void launchCinematicIntro\(\); \}, \{ once: true \}\)/);
   assert.match(intro, /overlay\.className = 'cinematic-intro-overlay'/);
   assert.match(css, /\.cinematic-intro-overlay\s*\{[\s\S]*?z-index: 20000000 !important/);
@@ -1033,7 +1034,8 @@ test('cinematic intro is a real Canvas 2D boot sequence and returns to the Survi
     read('../index.html'), read('../src/index.css')
   ]);
   assert.match(app, /new CinematicIntroManager/);
-  assert.match(app, /if \(!document\.hidden\) document\.dispatchEvent\(new Event\('paleciaki:launch-intro'\)\)/);
+  assert.match(app, /btn-open-intro/);
+  assert.doesNotMatch(app.slice(app.indexOf('async function startApp()')), /dispatchEvent\(new Event\('paleciaki:launch-intro'\)\)/);
   assert.match(app, /this\.cinematicIntro\.stop\(false, false\)/);
   assert.match(app, /doStartSurvival\(\)/);
   assert.doesNotMatch(app, /btn-open-cinematic-intro|PixelIntroManager|pixelIntro/i);
