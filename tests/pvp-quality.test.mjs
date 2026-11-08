@@ -258,15 +258,15 @@ test('Survival is harder to trivialize, combat HUD stops covering the arena, and
     readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
   ]);
-  assert.match(balance, /SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER = 0\.76/);
-  assert.match(balance, /SURVIVAL_INCOMING_DAMAGE_MULTIPLIER = 1\.15/);
-  assert.match(balance, /SURVIVAL_HIT_INVULNERABILITY_SECONDS = 1\.15/);
+  assert.match(balance, /SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER = 0\.62/);
+  assert.match(balance, /SURVIVAL_INCOMING_DAMAGE_MULTIPLIER = 1\.30/);
+  assert.match(balance, /SURVIVAL_HIT_INVULNERABILITY_SECONDS = 0\.78/);
   assert.match(game, /scaleSurvivalOutgoingDamage\(amount\)/);
   assert.match(game, /scaleSurvivalIncomingDamage\(amount\)/);
   assert.match(game, /SURVIVAL_HIT_INVULNERABILITY_SECONDS/);
   assert.match(game, /const groupSize = Math\.min\(groupLimit, 3 \+/);
-  assert.match(difficulty, /spawnIntervalSeconds: Math\.max\(4\.2/);
-  assert.match(difficulty, /enemySpeedMultiplier: 0\.90/);
+  assert.match(difficulty, /spawnIntervalSeconds: Math\.max\(3\.0/);
+  assert.match(difficulty, /enemySpeedMultiplier: 1 \+/);
   assert.match(html, /id="btn-menu-pause" class="btn-modal pause-exit-button"[^>]*>WYJDŹ DO MENU/);
   assert.match(html, /aria-modal="true"/);
   assert.match(app, /const exitPausedRunToMenu = \(\) =>/);
@@ -285,9 +285,11 @@ test('PvP lobby and match result dialogs render above the full-screen title menu
   ]);
   assert.match(html, /id="btn-open-pvp"/);
   assert.match(html, /id="pvp-lobby-modal"[^>]*aria-hidden="true"/);
-  assert.match(app, /btnOpenPvp\?\.addEventListener\('click', openLobby\)/);
+  assert.match(app, /bindPvpTap\(btnOpenPvp, openLobby\)/);
+  assert.match(app, /document\.body\.appendChild\(dialog\)/);
+  assert.match(app, /element\.addEventListener\('pointerup', activate\)/);
   assert.match(app, /pvpLobbyModal\.classList\.remove\('hidden'\)/);
   assert.match(app, /pvpLobbyModal\.setAttribute\('aria-hidden', 'false'\)/);
-  assert.match(css, /#pvp-lobby-modal,[\s\n]*#pvp-match-end-modal\s*\{[\s\S]*?z-index:\s*1000005\s*!important/);
+  assert.match(css, /#pvp-lobby-modal,[\s\n]*#pvp-match-end-modal,[\s\n]*#pause-modal\s*\{[\s\S]*?z-index:\s*2147483100\s*!important/);
   assert.match(css, /#pvp-lobby-modal button,[\s\n]*#pvp-lobby-modal input/);
 });

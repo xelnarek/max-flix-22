@@ -3043,9 +3043,35 @@ class PaleciakiScene extends xb.Script {
     const matchEndModal = document.getElementById('pvp-match-end-modal');
     const btnRematch = document.getElementById('btn-pvp-rematch') as HTMLButtonElement | null;
     const btnExitToMenu = document.getElementById('btn-pvp-exit-to-menu');
+    const pauseModal = document.getElementById('pause-modal');
+
+    // Move critical dialogs out of the game shell's stacking context. The
+    // mobile controls are portaled to <body> at a very high z-index; keeping
+    // dialogs inside #game-shell can put visible buttons underneath that layer.
+    for (const dialog of [pvpLobbyModal, matchEndModal, pauseModal]) {
+      if (dialog && dialog.parentElement !== document.body) document.body.appendChild(dialog);
+    }
+
+    // Pointer, touch and keyboard activation share one debounced action. This
+    // avoids relying on synthetic click delivery in Android WebViews.
+    const bindPvpTap = (element: HTMLElement | null, action: () => void) => {
+      if (!element) return;
+      let lastActivation = 0;
+      const activate = (event: Event) => {
+        const now = Date.now();
+        if (now - lastActivation < 350) return;
+        lastActivation = now;
+        if (event.cancelable && event.type !== 'click') event.preventDefault();
+        event.stopPropagation();
+        action();
+      };
+      element.addEventListener('pointerup', activate);
+      element.addEventListener('touchend', activate, { passive: false });
+      element.addEventListener('click', activate);
+    };
 
     opPicker?.querySelectorAll<HTMLButtonElement>('.pvp-operator-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
+      bindPvpTap(btn, () => {
         opPicker.querySelectorAll('.pvp-operator-btn').forEach((b) => b.classList.remove('selected'));
         btn.classList.add('selected');
         const opId = btn.dataset.op as CharacterId;
@@ -3058,6 +3084,7 @@ class PaleciakiScene extends xb.Script {
 
     const openLobby = () => {
       if (!pvpLobbyModal) return;
+      setTouchControlsVisibility(false);
       pvpLobbyModal.classList.remove('hidden');
       pvpLobbyModal.setAttribute('aria-hidden', 'false');
       if (!matchmakingSession && !this.pvpSession) {
@@ -3071,6 +3098,7 @@ class PaleciakiScene extends xb.Script {
     const closeLobby = () => {
       pvpLobbyModal?.classList.add('hidden');
       pvpLobbyModal?.setAttribute('aria-hidden', 'true');
+      setTouchControlsVisibility(false);
       if (matchmakingSession) {
         matchmakingSession.cancelMatchmaking();
         matchmakingSession = null;
@@ -3094,8 +3122,8 @@ class PaleciakiScene extends xb.Script {
       if (joinStatus) joinStatus.classList.add('hidden');
     };
 
-    btnOpenPvp?.addEventListener('click', openLobby);
-    btnClosePvpLobby?.addEventListener('click', closeLobby);
+    bindPvpTap(btnOpenPvp, openLobby);
+    bindPvpTap(btnClosePvpLobby, closeLobby);
 
     const startPvpMatchUI = (session: IPvpSession, localOp: CharacterId, remoteOp: CharacterId) => {
       if (this.cinematicIntro?.isRunning()) this.cinematicIntro.stop(false, false);
@@ -3128,7 +3156,7 @@ class PaleciakiScene extends xb.Script {
     };
 
     // Practice Bot Mode
-    btnStartBot?.addEventListener('click', () => {
+    bindPvpTap(btnStartBot, () => {
       const localOp = this.selectedPvpOperator;
       const botOp: CharacterId = localOp === 'marcin' ? 'grzesiek' : localOp === 'grzesiek' ? 'dawid' : 'marcin';
       const playerNick = nickInput?.value.trim() || 'Operator B4';
@@ -3145,7 +3173,7 @@ class PaleciakiScene extends xb.Script {
     });
 
     // Public FIFO matchmaking: the server pairs the oldest two available players.
-    btnFindMatch?.addEventListener('click', () => {
+    bindPvpTap(btnFindMatch, () => {
       if (matchmakingSession || this.pvpSession) return;
       const playerNick = nickInput?.value.trim() || 'Operator B4';
       setMatchmakingUiPhase('searching');
@@ -3228,7 +3256,7 @@ class PaleciakiScene extends xb.Script {
       sound.playSmack();
     });
 
-    btnCancelMatch?.addEventListener('click', () => {
+    bindPvpTap(btnCancelMatch, () => {
       const session = matchmakingSession;
       if (!session) return;
       if (!session.cancelMatchmaking()) {
@@ -3245,7 +3273,7 @@ class PaleciakiScene extends xb.Script {
     });
 
     // Online WebSocket Host
-    btnCreateRoom?.addEventListener('click', () => {
+    bindPvpTap(btnCreateRoom, () => {
       const playerNick = nickInput?.value.trim() || 'Operator B4';
       setMatchmakingUiPhase('busy');
       // Keep connection feedback visible before the WebSocket handshake finishes.
@@ -3339,7 +3367,7 @@ class PaleciakiScene extends xb.Script {
     });
 
     // Online WebSocket Join
-    btnJoinRoom?.addEventListener('click', () => {
+    bindPvpTap(btnJoinRoom, () => {
       const code = joinCodeInput?.value.trim().toUpperCase();
       if (!code || code.length !== 6) {
         if (joinStatus) {
@@ -3433,7 +3461,7 @@ class PaleciakiScene extends xb.Script {
       sound.playSmack();
     });
 
-    readyBtn?.addEventListener('click', () => {
+    bindPvpTap(readyBtn, () => {
       if (!this.pvpSession) return;
       this.pvpLocalReady = !this.pvpLocalReady;
       this.pvpSession.setReady?.(this.pvpLocalReady);
@@ -3441,7 +3469,7 @@ class PaleciakiScene extends xb.Script {
       sound.playSmack();
     });
 
-    btnRematch?.addEventListener('click', () => {
+    bindPvpTap(btnRematch, () => {
       if (!this.pvpSession) return;
       this.pvpSession.requestRematch?.();
       if (this.pvpSession.isLocalBot) {
@@ -3453,7 +3481,7 @@ class PaleciakiScene extends xb.Script {
       sound.playSmack();
     });
 
-    btnExitToMenu?.addEventListener('click', () => {
+    bindPvpTap(btnExitToMenu, () => {
       matchEndModal?.classList.add('hidden');
       pvpHud?.classList.add('hidden');
       gameShell?.classList.remove('pvp-mode');

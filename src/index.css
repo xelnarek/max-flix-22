@@ -6303,123 +6303,88 @@ button {
 }
 
 
-/* Strip the nonessential "operational zone" layer from live combat. */
-#game-shell.survival-mode .survival-hud-kicker,
-#game-shell.survival-mode #survival-contract,
-#game-shell.survival-mode #survival-event {
+/* Survival combat HUD: only two small telemetry chips remain visible. */
+#game-shell.survival-mode #survival-hud {
+  position: fixed !important;
+  top: calc(50px + env(safe-area-inset-top)) !important;
+  right: max(10px, env(safe-area-inset-right)) !important;
+  left: auto !important;
+  transform: none !important;
+  width: 142px !important;
+  min-width: 0 !important;
+  max-width: 142px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  pointer-events: none !important;
+}
+#game-shell.survival-mode #survival-hud .survival-hud-kicker,
+#game-shell.survival-mode #survival-hud #survival-contract,
+#game-shell.survival-mode #survival-hud #survival-event,
+#game-shell.survival-mode #survival-hud .survival-chip:not(.time-chip):not(.wave-chip),
+#game-shell.survival-mode #survival-hud .survival-weapon-rack {
   display: none !important;
 }
-
-/* On touch screens keep only time and wave in a small, non-obstructive chip. */
-@media (max-width: 900px), (pointer: coarse) {
-  #game-shell.survival-mode .survival-hud {
-    top: calc(42px + env(safe-area-inset-top));
-    left: auto;
-    right: max(8px, env(safe-area-inset-right));
-    width: min(150px, calc(100vw - 150px));
-    min-width: 0;
-    max-width: min(150px, calc(100vw - 150px));
-    transform: none;
-    gap: 0;
-  }
-  #game-shell.survival-mode .survival-hud-main {
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-  #game-shell.survival-mode .survival-metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 4px;
-  }
-  #game-shell.survival-mode .survival-xp-chip,
-  #game-shell.survival-mode .level-chip,
-  #game-shell.survival-mode .kills-chip,
-  #game-shell.survival-mode .enemies-chip,
-  #game-shell.survival-mode .survival-weapon-rack {
-    display: none !important;
-  }
-  #game-shell.survival-mode .survival-chip {
-    min-height: 29px;
-    padding: 4px 5px;
-    border: 1px solid rgba(148, 163, 184, .14);
-    border-radius: 7px;
-    background: rgba(4, 13, 26, .58);
-    box-shadow: none;
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-  #game-shell.survival-mode .survival-chip-label {
-    font-size: 6px;
-    letter-spacing: .35px;
-  }
-  #game-shell.survival-mode .survival-chip strong {
-    font-size: 11px;
-    line-height: 1.05;
-  }
-}
-
-/* Pause actions remain fully visible and the exit route is unmistakable. */
-#pause-modal {
-  z-index: 1000002 !important;
-}
-#pause-modal .modal-card {
-  width: min(92vw, 420px);
+#game-shell.survival-mode #survival-hud .survival-hud-main {
   min-width: 0;
-  max-height: min(78dvh, 480px);
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
-#pause-modal .modal-actions {
-  display: flex !important;
-  flex-direction: column;
-  gap: 9px;
+#game-shell.survival-mode #survival-hud .survival-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  align-items: stretch;
 }
-#pause-modal .pause-exit-button {
-  display: flex !important;
-  visibility: visible !important;
-  width: 100%;
-  min-height: 50px;
-  order: 2;
-  border: 1px solid rgba(248, 113, 113, .66);
-  background: linear-gradient(135deg, rgba(153, 27, 27, .98), rgba(127, 29, 29, .98));
-  color: #fff;
-  box-shadow: 0 5px 18px rgba(127, 29, 29, .3);
+#game-shell.survival-mode #survival-hud .survival-chip {
+  min-width: 0;
+  min-height: 31px;
+  padding: 4px 6px;
+  border: 1px solid rgba(148, 163, 184, .18);
+  border-radius: 8px;
+  background: rgba(4, 13, 26, .62);
+  box-shadow: none;
+  text-align: center;
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
 }
-#pause-modal #btn-restart-pause { order: 3; }
-@media (max-width: 600px) {
-  #pause-modal .modal-card {
-    width: min(94vw, 380px);
-    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);
-    padding: 18px 16px;
-    gap: 10px;
-  }
-  #pause-modal .modal-actions button {
-    min-height: 48px;
-  }
+#game-shell.survival-mode #survival-hud .survival-chip-label {
+  font-size: 6px;
+  letter-spacing: .45px;
 }
+#game-shell.survival-mode #survival-hud .survival-chip strong {
+  font-size: 11px;
+  line-height: 1.05;
+}
+#game-shell.survival-mode #survival-hud .time-chip strong { color: #e2e8f0; }
+#game-shell.survival-mode #survival-hud .wave-chip strong { color: #fbbf24; }
 
-
-/* The title screen has z-index 1,000,000. PvP dialogs must sit above it,
-   otherwise the lobby opens underneath the menu and appears unclickable. */
+/* Dialogs are portaled to body so they render and receive taps above the
+   Android touch-control layer as well as the menu/WebGL stacking contexts. */
 #pvp-lobby-modal,
-#pvp-match-end-modal {
-  z-index: 1000005 !important;
+#pvp-match-end-modal,
+#pause-modal {
+  z-index: 2147483100 !important;
+  isolation: isolate;
   pointer-events: auto !important;
 }
 #pvp-lobby-modal .pvp-lobby-card,
-#pvp-match-end-modal .pvp-match-end-card {
+#pvp-match-end-modal .pvp-match-end-card,
+#pause-modal .modal-card {
   position: relative;
   z-index: 1;
   pointer-events: auto !important;
 }
 #pvp-lobby-modal button,
 #pvp-lobby-modal input,
-#pvp-match-end-modal button {
-  pointer-events: auto !important;
+#pvp-match-end-modal button,
+#pause-modal button {
   position: relative;
+  pointer-events: auto !important;
+  touch-action: manipulation;
 }
