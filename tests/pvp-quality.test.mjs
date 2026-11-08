@@ -42,7 +42,7 @@ test('manual touch aim, server-origin checks, six-character invite codes and mut
   assert.doesNotMatch(game, /shouldPvpAimFire\(x, z, this\.manualAimFiring\)/);
   assert.match(game, /PVP_AIM_DIRECTION_DEADZONE/);
   assert.match(game, /this\.pvpInputSendAccumulator %= inputInterval/);
-  assert.match(app, /getElementById\('pvp-aim-zone'\)/);
+  assert.doesNotMatch(app, /pvp-aim-zone|pvp-aim-base/);
   assert.match(app, /getPvpOperatorAttackCooldown\(operatorId\)/);
   assert.match(app, /startPvpFireCooldown\(/);
   assert.match(app, /button\.dataset\.roundActive = String\(roundActive\)/);
