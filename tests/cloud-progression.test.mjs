@@ -10,6 +10,9 @@ const progression = await readFile(new URL('../src/accountProgression.ts', impor
 test('account progression cloud storage requires a Firebase-authenticated user and a transaction', () => {
   assert.match(firebase, /export async function loadAccountProgressionProfileFromCloud/);
   assert.match(firebase, /export async function saveAccountProgressionProfileToCloud/);
+  assert.match(firebase, /export async function connectAccountWithGoogle/);
+  assert.match(firebase, /linkWithPopup\(user, provider\)/);
+  assert.match(firebase, /signInWithPopup\(auth, provider\)/);
   assert.match(firebase, /await withTimeout\(initAuth\(\)/);
   assert.match(firebase, /runTransaction\(db, async \(transaction\)/);
   assert.match(firebase, /mergeAccountProgressionProfiles\(localProfile, cloudProfile\)/);
@@ -28,6 +31,8 @@ test('Firestore rules restrict progression reads and writes to the owning UID an
 
 test('account menu exposes a user-triggered cloud sync and sync runs on progression panels', () => {
   assert.match(app, /btn-account-cloud-sync/);
+  assert.match(app, /btn-account-google-connect/);
+  assert.match(app, /connectAccountWithGoogle\(\)/);
   assert.match(app, /account-cloud-sync-status/);
   assert.match(app, /loadAccountProgressionProfileFromCloud\(\)/);
   assert.match(app, /saveAccountProgressionProfileToCloud\(accountProgressionProfile\)/);
