@@ -62,7 +62,10 @@ export class PvpNetworkSession implements IPvpSession {
   private pendingJoin?: { code: string; operatorId: CharacterId; playerName: string };
 
   private static readonly MAX_CONNECT_ATTEMPTS = 3;
-  private static readonly CONNECT_TIMEOUT_MS = 7000;
+  // Render Free can take about a minute to wake after inactivity. Give the
+  // first handshake enough time, then use shorter bounded retries.
+  private static readonly CONNECT_TIMEOUT_MS = 75_000;
+  private static readonly RETRY_CONNECT_TIMEOUT_MS = 12_000;
 
   constructor(callbacks: PvpSessionCallbacks = {}) {
     this.callbacks = callbacks;
@@ -106,10 +109,10 @@ export class PvpNetworkSession implements IPvpSession {
 
     const url = this.getSocketUrl();
     if (!url) {
-      this.isUnavailable = true;
       const message = this.isUnavailable
         ? 'PvP online wymaga osobnego serwera WebSocket. Na GitHub Pages możesz trenować z botem; online uruchomimy po skonfigurowaniu hostingu.'
         : 'Nieprawidłowy adres serwera PvP. Wymagany jest adres ws:// lub wss:// (na HTTPS wyłącznie wss://).';
+      this.isUnavailable = true;
       // Defer so callers can attach onError immediately after constructing this session.
       window.setTimeout(() => this.emitError(message), 0);
       return;
@@ -118,11 +121,14 @@ export class PvpNetworkSession implements IPvpSession {
     try {
       const socket = new WebSocket(url);
       this.ws = socket;
+      const timeoutMs = this.reconnectAttempts === 0
+        ? PvpNetworkSession.CONNECT_TIMEOUT_MS
+        : PvpNetworkSession.RETRY_CONNECT_TIMEOUT_MS;
       this.connectionTimeout = setTimeout(() => {
         if (socket.readyState === WebSocket.CONNECTING) {
           socket.close();
         }
-      }, PvpNetworkSession.CONNECT_TIMEOUT_MS);
+      }, timeoutMs);
 
       socket.onopen = () => {
         if (this.isDisposed || socket !== this.ws) {
@@ -244,7 +250,10 @@ export class PvpNetworkSession implements IPvpSession {
           const reason = event.reason || 'Serwer PvP jest niedostępny.';
           this.pendingCreate = undefined;
           this.pendingJoin = undefined;
-          this.emitError(reason + ' Sprawdź adres hostingu i spróbuj ponownie.');
+          this.emitError(
+            reason +
+            ' Sprawdź adres hostingu i spróbuj ponownie. Na darmowym Render wybudzenie po bezczynności może trwać około minuty; pierwsza próba połączenia ma wydłużony limit.'
+          );
           this.dispose();
         }
       };
