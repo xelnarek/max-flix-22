@@ -385,8 +385,11 @@ test('PvP fire sits directly above the touch movement joystick and desktop dock 
     readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
     readFile(new URL('../index.html', import.meta.url), 'utf8'),
   ]);
-  assert.match(app, /pvpFireControl\.style\.setProperty\('left', `\$\{startX\}px`/);
-  assert.match(app, /window\.innerHeight - startY \+ joystickRadius \+ gap/);
+  assert.match(app, /calculatePvpFireControlPosition\(\{/);
+  assert.match(app, /window\.visualViewport\?\.width \|\| window\.innerWidth/);
+  assert.match(app, /window\.visualViewport\?\.height \|\| window\.innerHeight/);
+  assert.match(app, /resetPvpFireControlPosition\(\)/);
+  assert.doesNotMatch(app, /window\.innerHeight - startY \+ joystickRadius \+ gap/);
   assert.match(app, /bindPvpTap\(desktopPvpFireButton, triggerPrimaryPvpShot\)/);
   assert.match(app, /fireUiButtons = \[pvpFireButton, desktopPvpFireButton\]/);
   assert.match(html, /id="btn-pvp-fire"/);
