@@ -3165,6 +3165,18 @@ class PaleciakiScene extends xb.Script {
         setMatchmakingUiPhase('matched');
         startPvpMatchUI(session, localOp, remoteOp);
       };
+      session.onState = (state) => {
+        this.engine.setLastPvpState(state);
+        // If the opponent leaves before the countdown starts, release the lobby
+        // session so the player can immediately search again.
+        if (matchmakingSession === session && state.status === 'waiting' && !state.p2.connected) {
+          matchmakingSession = null;
+          if (this.pvpSession === session) this.pvpSession = null;
+          session.dispose();
+          setMatchmakingUiPhase('idle');
+          setPvpConnectionStatus('error', 'RYWAL SIĘ ROZŁĄCZYŁ', 'Przeciwnik opuścił pokój przed startem. Możesz ponownie wyszukać gracza.');
+        }
+      };
       session.onRoomClosed = (message) => {
         if (matchmakingSession !== session) return;
         setMatchmakingUiPhase('idle');
@@ -3174,6 +3186,7 @@ class PaleciakiScene extends xb.Script {
         if (matchmakingSession !== session) return;
         matchmakingSession = null;
         if (this.pvpSession === session) this.pvpSession = null;
+        session.dispose();
         setMatchmakingUiPhase('idle');
         setPvpConnectionStatus('error', 'WYSZUKIWANIE NIEUDANE', error);
       };
