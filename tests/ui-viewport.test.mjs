@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateUiViewport } from '../src/uiViewport.ts';
+import { calculateUiViewport, shouldShowTouchControls } from '../src/uiViewport.ts';
 
 test('modern phone portrait uses a near-native menu scale', () => {
   const profile = calculateUiViewport(390, 844, true);
@@ -38,4 +38,22 @@ test('very narrow touch screens never get a panel wider than the usable viewport
   const profile = calculateUiViewport(320, 568, true);
   assert.equal(profile.panelMaxWidth, 304);
   assert.ok(profile.panelMaxWidth <= 320);
+});
+
+test('touch controls stay hidden in a narrow desktop window with a fine mouse pointer', () => {
+  assert.equal(shouldShowTouchControls(true, 760, false, true), false);
+});
+
+test('touch hardware and coarse pointers keep controls at wide viewport sizes', () => {
+  assert.equal(shouldShowTouchControls(true, 1440, true, true), true);
+  assert.equal(shouldShowTouchControls(true, 1440, true, false), true);
+});
+
+test('pointerless narrow devices retain the compact-layout fallback', () => {
+  assert.equal(shouldShowTouchControls(true, 760, false, false), true);
+  assert.equal(shouldShowTouchControls(true, 1200, false, false), false);
+});
+
+test('hidden gameplay states never expose touch controls', () => {
+  assert.equal(shouldShowTouchControls(false, 390, true, false), false);
 });
