@@ -215,8 +215,8 @@ export function sanitizeAccountProgressionProfile(value: unknown): AccountProgre
 
 export function getAccountRankInfo(level: number) {
   const current = safeInt(level, 1, ACCOUNT_PROGRESS_MAX_LEVEL);
-  let active = ACCOUNT_RANKS[0];
-  let next = ACCOUNT_RANKS[1] || null;
+  let active: (typeof ACCOUNT_RANKS)[number] = ACCOUNT_RANKS[0]!;
+  let next: (typeof ACCOUNT_RANKS)[number] | null = ACCOUNT_RANKS[1] ?? null;
   for (let i = 0; i < ACCOUNT_RANKS.length; i++) {
     const rank = ACCOUNT_RANKS[i]!;
     if (rank.level <= current) {
