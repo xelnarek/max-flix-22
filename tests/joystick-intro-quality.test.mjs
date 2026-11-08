@@ -63,6 +63,8 @@ test('boot only warms runtime textures and lazily creates models and audio after
   assert.match(assets, /const assetList: AssetItem\[\] = \[/);
   assert.match(assets, /this\.updateProgress\(this\.progress, `Wczytywanie:/);
   assert.doesNotMatch(assets, /itemsLoaded \/ itemsTotal/);
+  const managerLoad = assets.match(/this\.loadingManager\.onLoad = \(\) => \{([\\s\\S]*?)\};/)?.[1] ?? '';
+  assert.doesNotMatch(managerLoad, /this\.isLoaded\s*=/);
   for (const texture of ['getFloorTexture()', 'getWallTexture()', 'getShowroomMarbleFloorTexture()', 'getShowroomWallTexture()', 'getTerminalGraniteFloorTexture()', 'getHazardStripeTexture()']) {
     assert.ok(assets.includes(texture), 'missing runtime texture warmup: ' + texture);
   }
