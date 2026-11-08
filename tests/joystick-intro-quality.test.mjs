@@ -107,7 +107,7 @@ test('the title menu is portaled above the WebGL shell for mobile compositor saf
   const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
   const boot = app.slice(app.indexOf('async function startApp()'));
   assert.match(boot, /titleScreen\.parentElement !== document\.body[\s\S]*?document\.body\.appendChild\(titleScreen\)/);
-  assert.match(boot, /titleScreen\.style\.setProperty\('z-index', '10000000', 'important'\)/);
+  assert.match(boot, /titleScreen\.style\.setProperty\('z-index', '1000000', 'important'\)/);
   assert.match(boot, /titleScreen\.style\.setProperty\('pointer-events', 'auto', 'important'\)/);
 });
 
