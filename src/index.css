@@ -7263,3 +7263,14 @@ body #touch-controls.manual-aim-mode:not(.hidden) .pvp-move-caption {
   font: 900 8px/1.2 'JetBrains Mono', monospace;
   touch-action: manipulation;
 }
+
+.account-google-connect-button {
+  border-color: rgba(251, 191, 36, .34);
+  background: rgba(120, 83, 21, .18);
+  color: #fde68a;
+}
+.account-google-connect-button:disabled,
+.account-cloud-sync-button:disabled {
+  opacity: .55;
+  cursor: wait;
+}
