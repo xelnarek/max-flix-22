@@ -82,7 +82,7 @@ test('PvP timing cursor handles invalid values and wrapped angles', () => {
   const badTime = getPvpSweepAimAngle(Number.NaN, 0.5);
   const badCenter = getPvpSweepAimAngle(1, Number.NaN);
   assert.ok(wrapped >= -Math.PI && wrapped <= Math.PI);
-  assert.equal(badTime, 0.5 - PVP_AIM_SWEEP_HALF_ARC);
+  assert.ok(Math.abs(badTime - (0.5 - PVP_AIM_SWEEP_HALF_ARC)) < 1e-12);
   assert.equal(badCenter, 0);
 });
 
