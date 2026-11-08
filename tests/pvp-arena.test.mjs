@@ -708,7 +708,7 @@ test('one-shot fire intent shoots once, respects operator recovery, and can be t
   assert.equal(state.projectiles.filter(projectile => projectile.ownerSlot === 'p1').length, 1);
   stepPvpArena(state, 0.05, { ...input, wantFire: false });
   assert.equal(state.projectiles.filter(projectile => projectile.ownerSlot === 'p1').length, 1, 'neutral input must not auto-fire');
-  advanceArena(state, 0.30);
+  advanceArena(state, 0.70); // Marcin's revised primary-shot cooldown is 0.62s.
   stepPvpArena(state, 0.03, input);
   assert.equal(state.projectiles.filter(projectile => projectile.ownerSlot === 'p1').length, 2, 'a fresh tap after recovery fires again');
 });
