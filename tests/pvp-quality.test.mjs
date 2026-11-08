@@ -260,7 +260,7 @@ test('public PvP matchmaking connects the lobby, server FIFO queue, auto-ready a
   assert.match(server, /type: 'match_found'/);
   assert.match(server, /first\.assignRoom\(code, 'p1'\)/);
   assert.match(server, /second\.assignRoom\(code, 'p2'\)/);
-  assert.match(client, /public findMatch\(operatorId: CharacterId, playerName: string\)/);
+  assert.match(client, /public findMatch\(\s*operatorId: CharacterId,\s*playerName: string,\s*progressionBonuses: PvpProgressionBonuses/);
   assert.match(client, /public cancelMatchmaking\(\): boolean/);
   assert.match(client, /case 'matchmaking_status'/);
   assert.match(client, /case 'match_found'/);
@@ -268,7 +268,7 @@ test('public PvP matchmaking connects the lobby, server FIFO queue, auto-ready a
   assert.match(client, /this\.send\(\{ type: 'set_ready', ready: true \}\)/);
   assert.match(app, /btn-pvp-find-match/);
   assert.match(app, /btn-pvp-cancel-match/);
-  assert.match(app, /session\.findMatch\(this\.selectedPvpOperator, playerNick\)/);
+  assert.match(app, /session\.findMatch\(this\.selectedPvpOperator, playerNick, getAccountPvpProgressionBonuses\(accountProgressionProfile\)\)/);
   assert.match(app, /session\.cancelMatchmaking\(\)/);
   assert.match(app, /RYWAL SIĘ ROZŁĄCZYŁ/);
   assert.match(app, /Twoja pozycja: \$\{position\}/);
