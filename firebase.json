@@ -1,0 +1,8 @@
+{
+  "firestore": [
+    {
+      "database": "ai-studio-maxflixvol2-938de3b7-0d7d-4164-9dae-7d99b2e46560",
+      "rules": "firestore.rules"
+    }
+  ]
+}
