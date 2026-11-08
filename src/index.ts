@@ -2642,7 +2642,6 @@ class PaleciakiScene extends xb.Script {
 
     // PvP aim is a world-space timing sweep around the operator. Tap STRZAŁ
     // when the moving arrow crosses the opponent's firing lane.
-    // getElementById('pvp-aim-zone') is intentionally no longer queried.
 
     const bindTouchAction = (id: string, action: () => void) => {
       const btn = document.getElementById(id);
