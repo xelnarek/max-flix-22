@@ -213,3 +213,35 @@ test('PvP lobby shows accessible live connection, waiting-room and opponent stat
   assert.match(css, /\.pvp-connection-status\.is-connecting/);
   assert.match(css, /prefers-reduced-motion: reduce/);
 });
+
+
+test('public PvP matchmaking connects the lobby, server FIFO queue, auto-ready and cancel action', async () => {
+  const [server, client, app, html, css] = await Promise.all([
+    readFile(new URL('../src/server/pvpServer.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pvpClient.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
+  ]);
+  assert.match(server, /const matchmakingQueue: MatchmakingQueueEntry\[\] = \[\]/);
+  assert.match(server, /case 'find_match'/);
+  assert.match(server, /case 'cancel_matchmaking'/);
+  assert.match(server, /type: 'matchmaking_status'/);
+  assert.match(server, /type: 'match_found'/);
+  assert.match(server, /first\.assignRoom\(code, 'p1'\)/);
+  assert.match(server, /second\.assignRoom\(code, 'p2'\)/);
+  assert.match(client, /public findMatch\(operatorId: CharacterId, playerName: string\)/);
+  assert.match(client, /public cancelMatchmaking\(\): boolean/);
+  assert.match(client, /case 'matchmaking_status'/);
+  assert.match(client, /case 'match_found'/);
+  assert.match(client, /this\.send\(\{ type: 'set_ready', ready: true \}\)/);
+  assert.match(app, /btn-pvp-find-match/);
+  assert.match(app, /btn-pvp-cancel-match/);
+  assert.match(app, /session\.findMatch\(this\.selectedPvpOperator, playerNick\)/);
+  assert.match(app, /session\.cancelMatchmaking\(\)/);
+  assert.match(app, /Pozycja: \$\{position\}/);
+  assert.match(html, /id="btn-pvp-find-match"/);
+  assert.match(html, /id="btn-pvp-cancel-match"/);
+  assert.match(css, /\.pvp-matchmaking-actions/);
+  assert.match(css, /\.pvp-connection-status\.is-searching/);
+});
