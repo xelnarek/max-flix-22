@@ -61,6 +61,8 @@ test('manual touch aim, server-origin checks, six-character invite codes and mut
   assert.match(arena, /updatePvpPerkDrop/);
   assert.match(arena, /perkDrop: \{ active: false/);
   assert.match(game, /applyPvpCameraFraming/);
+  assert.match(game, /pvpScreenAimToWorld/);
+  assert.match(game, /pvpScreenMovementToWorld/);
   assert.match(game, /pvpAimGuide/);
   assert.match(app, /pvp-perk-status/);
   assert.match(html, /id="pvp-perk-status"/);

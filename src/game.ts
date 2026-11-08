@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { getPvpAimAngle, isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle, PVP_AIM_DIRECTION_DEADZONE, type PvpAimDirection } from './pvpAim.ts';
+import { getPvpAimAngle, isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle, pvpScreenAimToWorld, pvpScreenMovementToWorld, PVP_AIM_DIRECTION_DEADZONE, type PvpAimDirection } from './pvpAim.ts';
 import type { IPvpSession } from './pvpClient.ts';
 import {
   createDefaultPvpObstacles,
@@ -1256,10 +1256,12 @@ export class PaleciakiGameEngine {
   /** Update world-space aim from the right-hand touch stick; neutral input preserves direction. */
   public setManualAimInput(x: number, z: number) {
     if (!this.manualAimEnabled) return;
-    const directionActive = isPvpAimInputActive(x, z, PVP_AIM_DIRECTION_DEADZONE);
+    const portrait = window.innerWidth / Math.max(1, window.innerHeight) < 0.86;
+    const worldInput = pvpScreenAimToWorld(x, z, portrait);
+    const directionActive = isPvpAimInputActive(worldInput.x, worldInput.z, PVP_AIM_DIRECTION_DEADZONE);
     this.manualAimDirection = normalizePvpAimDirection(
-      x,
-      z,
+      worldInput.x,
+      worldInput.z,
       this.manualAimDirection,
       PVP_AIM_DIRECTION_DEADZONE,
     );
@@ -2226,8 +2228,10 @@ export class PaleciakiGameEngine {
       screenY = -this.virtualJoystick.y;
     }
 
-    const moveX = screenX;
-    const moveZ = -screenY;
+    const portrait = window.innerWidth / Math.max(1, window.innerHeight) < 0.86;
+    const worldMovement = pvpScreenMovementToWorld(screenX, screenY, portrait);
+    const moveX = worldMovement.x;
+    const moveZ = worldMovement.z;
 
     // The authoritative room simulates at 30 Hz. Throttle inputs to the same cadence
     // instead of flooding the socket at the device's render rate (60–120 Hz).

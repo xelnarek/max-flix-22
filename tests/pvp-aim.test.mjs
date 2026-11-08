@@ -4,6 +4,7 @@ import {
   DEFAULT_PVP_AIM_DIRECTION, PVP_AIM_DEADZONE, PVP_AIM_DIRECTION_DEADZONE,
   PVP_AIM_FIRE_START_DEADZONE, PVP_AIM_FIRE_STOP_DEADZONE, getPvpAimAngle,
   isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle, shouldPvpAimFire,
+  pvpScreenAimToWorld, pvpScreenMovementToWorld,
 } from '../src/pvpAim.ts';
 
 test('normalizes diagonal touch aim without amplifying stick length', () => {
@@ -88,4 +89,16 @@ test('PvP fire trigger uses hysteresis so thumb jitter does not rapidly toggle s
   assert.equal(shouldPvpAimFire(PVP_AIM_FIRE_STOP_DEADZONE + 0.01, 0, true), true);
   assert.equal(shouldPvpAimFire(PVP_AIM_FIRE_STOP_DEADZONE - 0.01, 0, true), false);
   assert.equal(shouldPvpAimFire(0, 0, false), false);
+});
+
+
+test('portrait PvP camera rotates screen-relative movement and aiming to match the rotated arena', () => {
+  assert.deepEqual(pvpScreenMovementToWorld(1, 0, false), { x: 1, z: 0 });
+  assert.deepEqual(pvpScreenMovementToWorld(0, 1, false), { x: 0, z: -1 });
+  assert.deepEqual(pvpScreenMovementToWorld(1, 0, true), { x: 0, z: -1 });
+  assert.deepEqual(pvpScreenMovementToWorld(0, 1, true), { x: -1, z: 0 });
+  assert.deepEqual(pvpScreenAimToWorld(1, 0, false), { x: 1, z: 0 });
+  assert.deepEqual(pvpScreenAimToWorld(0, -1, false), { x: 0, z: -1 });
+  assert.deepEqual(pvpScreenAimToWorld(1, 0, true), { x: 0, z: -1 });
+  assert.deepEqual(pvpScreenAimToWorld(0, -1, true), { x: -1, z: 0 });
 });

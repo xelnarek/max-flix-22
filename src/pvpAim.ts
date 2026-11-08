@@ -51,3 +51,19 @@ export function pvpAimDirectionFromAngle(angle: number): PvpAimDirection {
   if (!finite(angle)) return { ...DEFAULT_PVP_AIM_DIRECTION };
   return { x: Math.sin(angle), z: Math.cos(angle) };
 }
+
+
+/** Convert a screen-space aim drag into world X/Z for the current PvP camera axis. */
+export function pvpScreenAimToWorld(x: number, y: number, portrait: boolean): PvpAimDirection {
+  if (!finite(x) || !finite(y)) return { ...DEFAULT_PVP_AIM_DIRECTION };
+  // Portrait PvP rotates the view 90° to keep the long arena lane vertical.
+  return portrait ? { x: y, z: -x } : { x, z: y };
+}
+
+/** Convert screen-relative movement (positive Y = up) into arena world X/Z. */
+export function pvpScreenMovementToWorld(screenX: number, screenY: number, portrait: boolean): PvpAimDirection {
+  if (!finite(screenX) || !finite(screenY)) return { x: 0, z: 0 };
+  return portrait
+    ? { x: -screenY, z: -screenX }
+    : { x: screenX, z: -screenY };
+}
