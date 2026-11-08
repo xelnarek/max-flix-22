@@ -102,3 +102,18 @@ test('portrait PvP camera rotates screen-relative movement and aiming to match t
   assert.deepEqual(pvpScreenAimToWorld(1, 0, true), { x: 0, z: -1 });
   assert.deepEqual(pvpScreenAimToWorld(0, -1, true), { x: -1, z: 0 });
 });
+
+
+test('PvP camera fit scales to portrait and landscape viewports without clipping arena width', async () => {
+  const { calculatePvpCameraFrame } = await import('../src/pvpCamera.ts');
+  const bounds = { minX: -22, maxX: 22, minZ: -12, maxZ: 12 };
+  for (const viewport of [{ width: 393, height: 852 }, { width: 432, height: 768 }, { width: 1280, height: 720 }, { width: 2560, height: 1080 }]) {
+    const frame = calculatePvpCameraFrame(viewport.width, viewport.height, { x: 4, z: -3 }, bounds);
+    assert.equal(frame.portrait, viewport.width / viewport.height < 0.86);
+    assert.ok(frame.visibleWidth >= frame.requiredWidth * 1.1, `horizontal arena coverage should have a margin at ${viewport.width}x${viewport.height}`);
+    assert.ok(Math.abs(frame.target.x - 4) < 1e-9);
+    assert.ok(Math.abs(frame.target.z + 3) < 1e-9);
+    assert.ok(frame.position.x !== frame.target.x || frame.position.z !== frame.target.z);
+    assert.ok(frame.fitDistance > 0);
+  }
+});

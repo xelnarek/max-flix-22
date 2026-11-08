@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { calculatePvpCameraFrame } from './pvpCamera.ts';
 import { getPvpAimAngle, isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle, pvpScreenAimToWorld, pvpScreenMovementToWorld, PVP_AIM_DIRECTION_DEADZONE, type PvpAimDirection } from './pvpAim.ts';
 import type { IPvpSession } from './pvpClient.ts';
 import {
@@ -536,6 +537,9 @@ export class PaleciakiGameEngine {
   private pvpMedkitMesh: THREE.Group | null = null;
   private pvpPerkMesh: THREE.Group | null = null;
   private pvpPerkGem: THREE.Mesh | null = null;
+  private pvpPerkLabel: THREE.Sprite | null = null;
+  private pvpPerkLabelContext: CanvasRenderingContext2D | null = null;
+  private pvpPerkLabelLastType = '';
   private pvpPerkLastActive = false;
   private pvpAimGuide: THREE.Line | null = null;
   private pvpAimTarget: THREE.Mesh | null = null;
@@ -1794,7 +1798,8 @@ export class PaleciakiGameEngine {
 
     this.cameraMode = 'iso';
     this.hasManualCameraZoom = false;
-    this.applyPvpCameraFraming(0, 0, true);
+    this.camera.up.set(0, 1, 0);
+    this.applyPvpCameraFraming(0, 0, 1 / 60, true);
 
     this.callbacks.onHpUpdate(this.hp, this.maxHp);
     this.callbacks.onAbilityCooldown(1, true, 0, false);
@@ -1860,6 +1865,14 @@ export class PaleciakiGameEngine {
     this.pvpLocalMarker = null;
     this.pvpPerkMesh = null;
     this.pvpPerkGem = null;
+    if (this.pvpPerkLabel) {
+      const material = this.pvpPerkLabel.material as THREE.SpriteMaterial;
+      material.map?.dispose();
+      material.dispose();
+      this.pvpPerkLabel = null;
+      this.pvpPerkLabelContext = null;
+      this.pvpPerkLabelLastType = '';
+    }
     this.pvpAimGuide?.geometry.dispose();
     (this.pvpAimGuide?.material as THREE.Material | undefined)?.dispose();
     this.pvpAimGuide = null;
@@ -2018,30 +2031,30 @@ export class PaleciakiGameEngine {
     const center = new THREE.Mesh(new THREE.CircleGeometry(0.18, 20), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false }));
     center.rotation.x = -Math.PI / 2; center.position.y = -0.43;
     const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.48, 4), new THREE.MeshBasicMaterial({ color, depthTest: false, transparent: true, opacity: 0.98 }));
+    arrow.rotation.x = Math.PI / 2;
     arrow.position.set(0, 3.15, 0); arrow.renderOrder = 30;
     marker.add(ring, center, arrow);
     marker.traverse((object) => { if (object instanceof THREE.Mesh) { object.frustumCulled = false; object.material.depthWrite = false; } });
     this.playerGroup.add(marker); this.pvpLocalMarker = marker;
   }
 
-  private applyPvpCameraFraming(midX: number, midZ: number, immediate = false) {
-    const aspect = Math.max(0.35, window.innerWidth / Math.max(1, window.innerHeight));
-    const portrait = aspect < 0.86;
-    const targetPosition = portrait
-      ? new THREE.Vector3(midX + 36.5, 27.5, midZ * 0.06)
-      : new THREE.Vector3(midX * 0.28, 24.0, midZ + 19.0);
-    const targetLook = portrait
-      ? new THREE.Vector3(midX * 0.06, 0.5, midZ * 0.06)
-      : new THREE.Vector3(midX * 0.28, 0.5, midZ * 0.28);
+  private applyPvpCameraFraming(midX: number, midZ: number, dt = 1 / 60, immediate = false) {
+    const width = Math.max(1, window.visualViewport?.width || window.innerWidth);
+    const height = Math.max(1, window.visualViewport?.height || window.innerHeight);
+    const frame = calculatePvpCameraFrame(width, height, { x: midX, z: midZ }, PVP_ARENA_BOUNDS);
     if (this.camera instanceof THREE.PerspectiveCamera) {
-      const targetFov = portrait ? 72 : 58;
-      if (Math.abs(this.camera.fov - targetFov) > 0.2) {
-        this.camera.fov = immediate ? targetFov : THREE.MathUtils.damp(this.camera.fov, targetFov, 5.5, 1 / 30);
+      this.camera.aspect = frame.aspect;
+      if (Math.abs(this.camera.fov - frame.fov) > 0.05) {
+        this.camera.fov = frame.fov;
         this.camera.updateProjectionMatrix();
       }
     }
-    if (immediate) { this.camera.position.copy(targetPosition); this.currentLookAt.copy(targetLook); }
-    else { this.camera.position.lerp(targetPosition, 0.18); this.currentLookAt.lerp(targetLook, 0.18); }
+    const position = new THREE.Vector3(frame.position.x, frame.position.y, frame.position.z);
+    const target = new THREE.Vector3(frame.target.x, frame.target.y, frame.target.z);
+    const safeDt = Number.isFinite(dt) ? THREE.MathUtils.clamp(dt, 0, 0.1) : 1 / 60;
+    const alpha = immediate ? 1 : 1 - Math.exp(-8.5 * safeDt);
+    this.camera.position.lerp(position, alpha);
+    this.currentLookAt.lerp(target, alpha);
     this.camera.lookAt(this.currentLookAt);
   }
 
@@ -2190,8 +2203,13 @@ export class PaleciakiGameEngine {
     const perkBeacon = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.12, 1.9, 8, 1, true), new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false }));
     perkBeacon.position.y = 1.55;
     const perkLight = new THREE.PointLight(0xfacc15, 4, 7); perkLight.position.y = 1.3;
-    perkGroup.add(perkBase, perkGem, perkBeacon, perkLight); perkGroup.visible = false;
-    this.pvpPerkMesh = perkGroup; this.pvpPerkGem = perkGem; this.pvpArenaRoot.add(perkGroup);
+    const labelCanvas = document.createElement('canvas'); labelCanvas.width = 320; labelCanvas.height = 72;
+    this.pvpPerkLabelContext = labelCanvas.getContext('2d');
+    const labelTexture = new THREE.CanvasTexture(labelCanvas);
+    const labelSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTexture, transparent: true, depthWrite: false }));
+    labelSprite.position.y = 2.45; labelSprite.scale.set(2.8, 0.63, 1); labelSprite.renderOrder = 8;
+    perkGroup.add(perkBase, perkGem, perkBeacon, perkLight, labelSprite); perkGroup.visible = false;
+    this.pvpPerkMesh = perkGroup; this.pvpPerkGem = perkGem; this.pvpPerkLabel = labelSprite; this.pvpArenaRoot.add(perkGroup);
     const aimGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 0.055, 7.5)]);
     const aimColor = this.pvpSlot === 'p1' ? 0x60a5fa : 0xfbbf24;
     this.pvpAimGuide = new THREE.Line(aimGeometry, new THREE.LineBasicMaterial({ color: aimColor, transparent: true, opacity: 0.82, depthWrite: false }));
@@ -2368,7 +2386,11 @@ export class PaleciakiGameEngine {
       const aimX = Math.sin(local.rot), aimZ = Math.cos(local.rot);
       const start = new THREE.Vector3(local.x, 0.055, local.z);
       const end = new THREE.Vector3(local.x + aimX * 7.5, 0.055, local.z + aimZ * 7.5);
-      this.pvpAimGuide.geometry.setFromPoints([start, end]);
+      const aimPositions = this.pvpAimGuide.geometry.getAttribute('position') as THREE.BufferAttribute;
+      aimPositions.setXYZ(0, start.x, start.y, start.z);
+      aimPositions.setXYZ(1, end.x, end.y, end.z);
+      aimPositions.needsUpdate = true;
+      this.pvpAimGuide.geometry.computeBoundingSphere();
       this.pvpAimTarget.position.set(end.x, 0.055, end.z);
       this.pvpAimGuide.visible = state.status === 'in_round';
       this.pvpAimTarget.visible = state.status === 'in_round';
@@ -2433,6 +2455,19 @@ export class PaleciakiGameEngine {
         this.pvpPerkMesh.position.set(perk.x, 0, perk.z); this.pvpPerkMesh.rotation.y += dt * 1.45;
         const colors: Record<string, number> = { power: 0xef4444, sprint: 0x38bdf8, shield: 0x22c55e, rapid: 0xa78bfa };
         const color = colors[perk.type] || 0xfacc15;
+        if (this.pvpPerkLabelContext && this.pvpPerkLabel && this.pvpPerkLabelLastType !== perk.type) {
+          const ctx = this.pvpPerkLabelContext;
+          ctx.clearRect(0, 0, 320, 72);
+          ctx.fillStyle = 'rgba(2, 8, 20, 0.92)';
+          ctx.beginPath(); ctx.roundRect(5, 5, 310, 62, 18); ctx.fill();
+          ctx.strokeStyle = '#' + color.toString(16).padStart(6, '0'); ctx.lineWidth = 4; ctx.stroke();
+          ctx.fillStyle = '#ffffff'; ctx.font = '900 28px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          const labels: Record<string, string> = { power: 'MOC +22%', sprint: 'SPRINT +18%', shield: 'TARCZA +165', rapid: 'RAPID -22%' };
+          ctx.fillText(labels[perk.type] || 'LOSOWY PERK', 160, 37);
+          const spriteMaterial = this.pvpPerkLabel.material as THREE.SpriteMaterial;
+          if (spriteMaterial.map) spriteMaterial.map.needsUpdate = true;
+          this.pvpPerkLabelLastType = perk.type;
+        }
         if (this.pvpPerkGem?.material instanceof THREE.MeshStandardMaterial) { this.pvpPerkGem.material.color.setHex(color); this.pvpPerkGem.material.emissive.setHex(color); }
         const beacon = this.pvpPerkMesh.children[2] as THREE.Mesh | undefined;
         if (beacon?.material instanceof THREE.MeshBasicMaterial) beacon.material.color.setHex(color);
@@ -2479,7 +2514,7 @@ export class PaleciakiGameEngine {
 
     const midX = (local.x + remote.x) * 0.5;
     const midZ = (local.z + remote.z) * 0.5;
-    this.applyPvpCameraFraming(midX, midZ);
+    this.applyPvpCameraFraming(midX, midZ, dt);
 
     this.callbacks.onPvpUpdate?.(state, this.pvpSlot);
 
@@ -5061,6 +5096,14 @@ export class PaleciakiGameEngine {
       } else {
         this.camZoomFactor = 0.98;
       }
+    }
+    if (this.gameMode === 'pvp') {
+      const state = this.lastPvpState;
+      const local = state ? (this.pvpSlot === 'p1' ? state.p1 : state.p2) : null;
+      const remote = state ? (this.pvpSlot === 'p1' ? state.p2 : state.p1) : null;
+      const centerX = local && remote ? (local.x + remote.x) * 0.5 : this.playerPos.x;
+      const centerZ = local && remote ? (local.z + remote.z) * 0.5 : this.playerPos.z;
+      this.applyPvpCameraFraming(centerX, centerZ, 0, true);
     }
     this.syncCameraZoomControl();
   }

@@ -6568,6 +6568,7 @@ button {
 .pvp-dot { width: 8px; height: 8px; }
 .pvp-dot.scored { background: #facc15; border-color: #facc15; box-shadow: 0 0 9px rgba(250,204,21,.75); }
 .pvp-center-box {
+  position: relative;
   min-width: 104px; padding: 0 10px;
   border-right: 1px solid rgba(148,163,184,.14);
   border-left: 1px solid rgba(148,163,184,.14);
@@ -6606,6 +6607,8 @@ button {
 
 
 /* PvP twin-stick clarity and field-perk feedback. */
+.pvp-center-box { position: relative; }
+.pvp-perk-status { z-index: 2; }
 body #touch-controls.manual-aim-mode:not(.hidden) .pvp-aim-zone {
   display: block !important; top: 46% !important; left: 51% !important; right: 0 !important; bottom: 108px !important;
   z-index: 120 !important; background: transparent !important;
