@@ -36,6 +36,10 @@ test('movement and PvP aim sticks capture separate pointers for simultaneous tou
   assert.match(app, /activePointerId !== null/);
   assert.match(app, /joystickZone\.setPointerCapture\(event\.pointerId\)/);
   assert.match(app, /window\.addEventListener\('pointercancel', handleEnd/);
+  assert.match(app, /window\.addEventListener\('orientationchange', resetJoystick\)/);
+  assert.match(app, /window\.visualViewport\?\.addEventListener\('resize', resetJoystick/);
+  assert.match(app, /window\.addEventListener\('orientationchange', resetAim\)/);
+  assert.match(app, /window\.visualViewport\?\.addEventListener\('resize', resetAim/);
   assert.match(app, /calculateVirtualJoystickInput\(dx, dy, maxRadius\)/);
   assert.match(app, /activeAimPointerId !== null/);
   assert.doesNotMatch(app, /event\.isPrimary === false/);
