@@ -6663,3 +6663,464 @@ body #touch-controls.manual-aim-mode:not(.hidden) .pvp-move-caption {
 @media (max-width: 390px) {
   #touch-controls.pvp-mode .touch-actions-zone { gap: 5px !important; max-width: min(43vw, 136px) !important; }
 }
+
+
+/* Shared account progression: one Archero-style tree and rank ladder for Survival + PvP. */
+.account-progression-panel,
+.account-ranks-panel {
+  display: grid;
+  gap: clamp(10px, 1.4vw, 16px);
+  min-width: 0;
+  color: #e7eef8;
+}
+.account-progression-hero,
+.account-ranks-hero {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: clamp(14px, 2vw, 22px);
+  overflow: hidden;
+  border: 1px solid rgba(125, 211, 252, .22);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 92% 0%, rgba(14, 165, 233, .18), transparent 36%),
+    linear-gradient(145deg, rgba(13, 34, 54, .98), rgba(5, 15, 29, .98) 72%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.045), 0 12px 32px rgba(0,0,0,.18);
+}
+.account-progression-kicker {
+  color: #7dd3fc;
+  font: 800 9px/1.35 'JetBrains Mono', monospace;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+.account-progression-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  min-width: 0;
+}
+.account-progression-heading h2 {
+  margin: 3px 0 5px;
+  color: #f8fafc;
+  font: 900 clamp(17px, 2.3vw, 23px)/1.1 'Outfit', sans-serif;
+  letter-spacing: .015em;
+}
+.account-progression-heading p {
+  max-width: 760px;
+  margin: 0;
+  color: #a8bdd1;
+  font-size: 11px;
+  line-height: 1.55;
+}
+.account-level-transponder {
+  display: grid;
+  flex: 0 0 62px;
+  width: 62px;
+  min-height: 62px;
+  align-content: center;
+  justify-items: center;
+  border: 1px solid rgba(251, 191, 36, .52);
+  border-radius: 15px;
+  background: linear-gradient(145deg, rgba(120, 83, 21, .34), rgba(28, 29, 30, .8));
+}
+.account-level-transponder strong {
+  color: #fde68a;
+  font: 900 27px/1 'JetBrains Mono', monospace;
+}
+.account-level-transponder span {
+  margin-top: 4px;
+  color: #d9c58d;
+  font: 800 8px/1 'JetBrains Mono', monospace;
+  letter-spacing: .09em;
+}
+.account-progression-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.account-progression-rank,
+.account-progression-points {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid rgba(148, 163, 184, .16);
+  border-radius: 11px;
+  background: rgba(2, 9, 20, .52);
+}
+.account-progression-rank span,
+.account-progression-points span {
+  color: #8ea4bb;
+  font: 800 8px/1.2 'JetBrains Mono', monospace;
+  letter-spacing: .1em;
+}
+.account-progression-rank strong,
+.account-progression-points strong {
+  color: #f8fafc;
+  font: 900 13px/1.2 'Outfit', sans-serif;
+}
+.account-progression-points strong { color: #fde68a; }
+.account-progression-xp-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+}
+.account-progression-xp-meta strong {
+  color: #dbeafe;
+  font: 800 10px/1.3 'JetBrains Mono', monospace;
+}
+.account-progression-xp-meta span {
+  color: #8ea4bb;
+  font-size: 9px;
+}
+.account-progression-track {
+  height: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(125, 211, 252, .18);
+  border-radius: 99px;
+  background: rgba(2, 9, 20, .9);
+}
+.account-progression-track > span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #0284c7, #38bdf8, #fde68a);
+  box-shadow: 0 0 14px rgba(56, 189, 248, .35);
+  transition: width .25s ease;
+}
+.account-progression-rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.account-progression-rules span {
+  padding: 5px 7px;
+  border: 1px solid rgba(125, 211, 252, .16);
+  border-radius: 6px;
+  background: rgba(15, 35, 53, .62);
+  color: #9fb9cf;
+  font: 800 7px/1.25 'JetBrains Mono', monospace;
+  letter-spacing: .07em;
+}
+.account-tree-instructions {
+  display: grid;
+  gap: 5px;
+  padding: 10px 13px;
+  border-left: 3px solid rgba(251, 191, 36, .72);
+  border-radius: 0 10px 10px 0;
+  background: rgba(15, 23, 42, .58);
+}
+.account-tree-instructions strong {
+  color: #fde68a;
+  font: 900 9px/1.2 'JetBrains Mono', monospace;
+  letter-spacing: .08em;
+}
+.account-tree-instructions p {
+  margin: 0;
+  color: #a8bdd1;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.account-tree-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+.account-tree-branch {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(125, 211, 252, .16);
+  border-radius: 15px;
+  background: linear-gradient(155deg, rgba(11, 27, 44, .96), rgba(6, 15, 28, .98));
+}
+.account-branch-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid rgba(148, 163, 184, .12);
+}
+.account-branch-icon {
+  display: grid;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid rgba(125, 211, 252, .25);
+  border-radius: 10px;
+  background: rgba(14, 116, 144, .17);
+  font-size: 19px;
+}
+.account-branch-copy { min-width: 0; }
+.account-branch-copy strong {
+  display: block;
+  color: #e7f4ff;
+  font: 900 11px/1.2 'Outfit', sans-serif;
+  letter-spacing: .08em;
+}
+.account-branch-copy p {
+  margin: 3px 0 0;
+  color: #8ea4bb;
+  font-size: 9px;
+  line-height: 1.4;
+}
+.account-branch-nodes {
+  display: grid;
+  gap: 8px;
+}
+.account-talent-node {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(56, 189, 248, .2);
+  border-radius: 11px;
+  background: rgba(8, 23, 39, .82);
+  transition: border-color .16s ease, background .16s ease, opacity .16s ease;
+}
+.account-talent-node:not(.is-locked):not(.is-maxed) {
+  box-shadow: inset 3px 0 0 rgba(56, 189, 248, .5);
+}
+.account-talent-node.is-locked {
+  border-color: rgba(148, 163, 184, .13);
+  background: rgba(15, 23, 42, .55);
+}
+.account-talent-node.is-maxed {
+  border-color: rgba(251, 191, 36, .42);
+  background: linear-gradient(135deg, rgba(88, 62, 16, .25), rgba(8, 23, 39, .9));
+}
+.account-talent-node-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.account-talent-icon { font-size: 17px; }
+.account-talent-tier {
+  color: #8ea4bb;
+  font: 800 7px/1.2 'JetBrains Mono', monospace;
+  letter-spacing: .1em;
+}
+.account-talent-name {
+  color: #eff6ff;
+  font: 900 11px/1.2 'Outfit', sans-serif;
+}
+.account-talent-description {
+  margin: 0;
+  color: #9bb0c4;
+  font-size: 9px;
+  line-height: 1.45;
+}
+.account-talent-effect {
+  color: #7dd3fc;
+  font: 800 8px/1.35 'JetBrains Mono', monospace;
+  letter-spacing: .025em;
+}
+.account-talent-node.is-maxed .account-talent-effect { color: #fde68a; }
+.account-talent-pips {
+  display: flex;
+  gap: 5px;
+}
+.account-talent-pips span {
+  width: 24px;
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(100, 116, 139, .34);
+}
+.account-talent-pips span.is-filled {
+  background: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, .28);
+}
+.account-talent-node.is-maxed .account-talent-pips span.is-filled { background: #fbbf24; }
+.account-talent-upgrade {
+  min-height: 31px;
+  padding: 6px 8px;
+  border: 1px solid rgba(56, 189, 248, .4);
+  border-radius: 7px;
+  background: rgba(3, 105, 161, .18);
+  color: #bae6fd;
+  font: 900 8px/1.2 'JetBrains Mono', monospace;
+  letter-spacing: .045em;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.account-talent-upgrade:not(:disabled):active { transform: translateY(1px); }
+.account-talent-upgrade:disabled {
+  border-color: rgba(100, 116, 139, .16);
+  background: rgba(30, 41, 59, .36);
+  color: #72869b;
+  cursor: not-allowed;
+}
+.account-talent-node.is-maxed .account-talent-upgrade:disabled {
+  color: #fde68a;
+  border-color: rgba(251, 191, 36, .25);
+}
+.account-rank-emblem {
+  display: grid;
+  flex: 0 0 54px;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  border: 1px solid rgba(251, 191, 36, .36);
+  border-radius: 14px;
+  background: rgba(120, 83, 21, .2);
+  font-size: 27px;
+}
+.account-current-rank-card {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid rgba(251, 191, 36, .3);
+  border-radius: 12px;
+  background: rgba(4, 12, 23, .62);
+}
+.account-current-rank-card > span {
+  color: #a2b4c6;
+  font: 800 8px/1.2 'JetBrains Mono', monospace;
+  letter-spacing: .11em;
+}
+.account-current-rank-card > strong {
+  color: #fde68a;
+  font: 900 14px/1.25 'Outfit', sans-serif;
+}
+.account-current-rank-card > p {
+  margin: 0;
+  color: #9fb2c6;
+  font-size: 10px;
+  line-height: 1.45;
+}
+.account-rank-section {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+}
+.account-rank-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+.account-rank-section-heading strong {
+  color: #dbeafe;
+  font: 900 10px/1.25 'JetBrains Mono', monospace;
+  letter-spacing: .1em;
+}
+.account-rank-section-heading span {
+  color: #8298ad;
+  font: 800 8px/1.25 'JetBrains Mono', monospace;
+}
+.account-rank-track {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+.account-rank-card {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(100, 116, 139, .19);
+  border-radius: 11px;
+  background: rgba(10, 20, 34, .76);
+  opacity: .65;
+}
+.account-rank-card.is-unlocked {
+  border-color: rgba(56, 189, 248, .24);
+  opacity: 1;
+}
+.account-rank-card.is-current {
+  border-color: rgba(251, 191, 36, .6);
+  background: linear-gradient(145deg, rgba(111, 77, 18, .25), rgba(10, 20, 34, .9));
+  box-shadow: inset 0 0 0 1px rgba(251, 191, 36, .08);
+}
+.account-rank-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.account-rank-icon { font-size: 19px; }
+.account-rank-card-top small {
+  color: #91a5b9;
+  font: 800 7px/1.2 'JetBrains Mono', monospace;
+}
+.account-rank-card > strong {
+  color: #e6f3ff;
+  font: 900 10px/1.2 'Outfit', sans-serif;
+}
+.account-rank-card.is-current > strong { color: #fde68a; }
+.account-rank-card > p {
+  margin: 0;
+  color: #8ea4bb;
+  font-size: 9px;
+  line-height: 1.35;
+}
+.account-rank-reward {
+  color: #a8c4d8;
+  font-size: 8px;
+  line-height: 1.4;
+}
+.account-rank-card.is-current .account-rank-reward { color: #f4d98b; }
+.account-rank-bonuses {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+.account-bonus-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(125, 211, 252, .14);
+  border-radius: 9px;
+  background: rgba(8, 23, 39, .75);
+}
+.account-bonus-row span {
+  color: #9eb3c7;
+  font-size: 9px;
+}
+.account-bonus-row strong {
+  color: #7dd3fc;
+  font: 900 9px/1.2 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+.account-progression-footnote {
+  margin: 0;
+  color: #8298ad;
+  font-size: 9px;
+  line-height: 1.45;
+}
+.account-menu-tab .tab-icon { color: #fbbf24; }
+
+@media (max-width: 760px) {
+  .account-tree-grid { grid-template-columns: minmax(0, 1fr); }
+  .account-rank-track { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 420px) {
+  .account-progression-heading { gap: 8px; }
+  .account-level-transponder { flex-basis: 52px; width: 52px; min-height: 52px; }
+  .account-level-transponder strong { font-size: 23px; }
+  .account-progression-summary { gap: 6px; }
+  .account-progression-rank,
+  .account-progression-points { padding: 8px; }
+  .account-progression-rank strong,
+  .account-progression-points strong { font-size: 11px; }
+  .account-rank-track,
+  .account-rank-bonuses { grid-template-columns: minmax(0, 1fr); }
+  .account-progression-rules span { font-size: 6px; }
+}
