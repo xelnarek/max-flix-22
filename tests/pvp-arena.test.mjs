@@ -654,10 +654,10 @@ test('one-shot fire intent shoots once, respects operator recovery, and can be t
   const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
   resetPvpRound(state);
   advanceArena(state, 3.1);
-  state.p1.x = -8;
-  state.p1.z = 0;
-  state.p2.x = 8;
-  state.p2.z = 0;
+  state.p1.x = -5;
+  state.p1.z = -9;
+  state.p2.x = 18;
+  state.p2.z = -9;
   const input = { moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantFire: true };
   stepPvpArena(state, 0.03, input);
   assert.equal(state.projectiles.filter(projectile => projectile.ownerSlot === 'p1').length, 1);
