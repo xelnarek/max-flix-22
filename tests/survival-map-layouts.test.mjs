@@ -26,3 +26,25 @@ test('each Survival arena has a distinct, non-empty physical route layout', () =
 test('unknown map ids fall back safely to the B4 layout', () => {
   assert.deepEqual(getSurvivalMapRouteFeatures('unknown'), getSurvivalMapRouteFeatures('warehouse_b4'));
 });
+
+
+test('all Survival map feature families render physical, map-specific industrial detail', async () => {
+  const game = await (await import('node:fs/promises')).readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
+  for (const feature of [
+    "feature.kind === 'pallet_stack'",
+    'cargoStraps',
+    'deckBoards',
+    "feature.kind === 'container_stack'",
+    'const ribs = new THREE.InstancedMesh',
+    "feature.kind === 'cold_compressor'",
+    'fanRing',
+    'ventSlats',
+    "feature.kind === 'sorter_belt'",
+    'statusLamp',
+  ]) {
+    assert.ok(game.includes(feature), 'missing map detail: ' + feature);
+  }
+  // Visual upgrades must not silently change collision sizing.
+  assert.match(game, /halfWidth: feature\.width \* 0\.56/);
+  assert.match(game, /halfDepth: feature\.depth \* 0\.56/);
+});
