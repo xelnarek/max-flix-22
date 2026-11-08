@@ -1,3 +1,16 @@
+/** Shared Survival tuning applied to every operator, including weapons and abilities. */
+export const SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER = 0.76;
+export const SURVIVAL_INCOMING_DAMAGE_MULTIPLIER = 1.15;
+export const SURVIVAL_HIT_INVULNERABILITY_SECONDS = 1.15;
+
+export function scaleSurvivalOutgoingDamage(amount: number): number {
+  return Number.isFinite(amount) ? Math.max(0, amount) * SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER : 0;
+}
+
+export function scaleSurvivalIncomingDamage(amount: number): number {
+  return Number.isFinite(amount) ? Math.max(0, amount) * SURVIVAL_INCOMING_DAMAGE_MULTIPLIER : 0;
+}
+
 export interface IncomingCharacterDamage {
   damage: number;
   remainder: number;
