@@ -6402,3 +6402,24 @@ button {
     min-height: 48px;
   }
 }
+
+
+/* The title screen has z-index 1,000,000. PvP dialogs must sit above it,
+   otherwise the lobby opens underneath the menu and appears unclickable. */
+#pvp-lobby-modal,
+#pvp-match-end-modal {
+  z-index: 1000005 !important;
+  pointer-events: auto !important;
+}
+#pvp-lobby-modal .pvp-lobby-card,
+#pvp-match-end-modal .pvp-match-end-card {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto !important;
+}
+#pvp-lobby-modal button,
+#pvp-lobby-modal input,
+#pvp-match-end-modal button {
+  pointer-events: auto !important;
+  position: relative;
+}
