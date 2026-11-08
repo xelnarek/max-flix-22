@@ -63,7 +63,7 @@ function setTouchControlsVisibility(visible: boolean): void {
   layer.style.setProperty('isolation', 'isolate', 'important');
 
   const viewportWidth = window.visualViewport?.width || window.innerWidth;
-  const touchCapable = ('ontouchstart' in window) || window.matchMedia?.('(pointer: coarse)').matches === true;
+  const touchCapable = (navigator.maxTouchPoints || 0) > 0 || window.matchMedia?.('(pointer: coarse)').matches === true;
   const shouldShowTouchLayer = visible && (touchCapable || viewportWidth <= 900);
 
   if (shouldShowTouchLayer) {
