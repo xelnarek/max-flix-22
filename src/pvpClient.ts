@@ -5,8 +5,8 @@ import {
   resetPvpMatchStats,
   sanitizePvpInputIntent,
   stepPvpArena,
-  hasPvpLineOfSight,
 } from './pvpArena.ts';
+import { choosePvpBotDecision } from './pvpBotTactics.ts';
 import type {
   PvpArenaState,
   PvpInputIntent,
@@ -412,9 +412,10 @@ export class PvpLocalBotSession implements IPvpSession {
   private p2Input: PvpInputIntent = { moveX: 0, moveZ: 0, aimAngle: Math.PI, isFiring: false };
   private loopInterval: any = null;
   private lastTime = Date.now();
-  private botReactionTimer = 0;
   private botRepositionTimer = 0;
-  private botTargetMove = { x: 0, z: 0 };
+  private botDecisionTick = 0;
+  private botPreviousOpponentPosition = { x: 0, z: 0 };
+  private botOpponentVelocity = { x: 0, z: 0 };
 
   constructor(
     operatorId: CharacterId,
@@ -433,6 +434,7 @@ export class PvpLocalBotSession implements IPvpSession {
     this.state.p1.isReady = true;
     this.state.p2.isReady = true;
     this.state.p2.connected = true;
+    this.botPreviousOpponentPosition = { x: this.state.p1.x, z: this.state.p1.z };
 
     // Start countdown
     resetPvpRound(this.state);
@@ -474,89 +476,49 @@ export class PvpLocalBotSession implements IPvpSession {
   private updateBot(dt: number) {
     const bot = this.state.p2;
     const player = this.state.p1;
-    if (this.state.status !== 'in_round' || bot.stunTimer > 0) {
+    const safeDt = Number.isFinite(dt) ? Math.max(0.001, Math.min(dt, 0.1)) : 1 / 30;
+
+    const rawVelocityX = (player.x - this.botPreviousOpponentPosition.x) / safeDt;
+    const rawVelocityZ = (player.z - this.botPreviousOpponentPosition.z) / safeDt;
+    const velocityLength = Math.hypot(rawVelocityX, rawVelocityZ);
+    const velocityScale = velocityLength > 14 ? 14 / velocityLength : 1;
+    const measuredVelocity = {
+      x: rawVelocityX * velocityScale,
+      z: rawVelocityZ * velocityScale,
+    };
+    this.botOpponentVelocity.x = this.botOpponentVelocity.x * 0.58 + measuredVelocity.x * 0.42;
+    this.botOpponentVelocity.z = this.botOpponentVelocity.z * 0.58 + measuredVelocity.z * 0.42;
+    this.botPreviousOpponentPosition = { x: player.x, z: player.z };
+
+    this.botRepositionTimer -= safeDt;
+    if (this.botRepositionTimer <= 0) {
+      this.botRepositionTimer = 0.62;
+      this.botDecisionTick += 1;
+    }
+
+    if (this.state.status !== 'in_round' || bot.stunTimer > 0 || bot.hp <= 0) {
       this.p2Input = {
         moveX: 0,
         moveZ: 0,
         aimAngle: Math.atan2(player.x - bot.x, player.z - bot.z),
         isFiring: false,
+        wantDash: false,
+        wantAbility: false,
       };
       return;
     }
-    const dx = player.x - bot.x;
-    const dz = player.z - bot.z;
-    const distToPlayer = Math.hypot(dx, dz) || 0.001;
 
-    // Aim toward player with slight dynamic aim lead
-    const aimAngle = Math.atan2(dx, dz);
-    this.p2Input.aimAngle = aimAngle;
-
-    // Do not waste shots into pallet cover. The arena simulation resolves the
-    // same line-of-sight rule for direct abilities and projectiles.
-    const hasClearShot = hasPvpLineOfSight(bot, player, this.state.obstacles);
-    this.p2Input.isFiring = distToPlayer < 22 && hasClearShot;
-
-    // Tactical movement logic
-    this.botReactionTimer -= dt;
-    this.botRepositionTimer -= dt;
-
-    if (this.botRepositionTimer <= 0) {
-      this.botRepositionTimer = 0.8 + Math.random() * 0.7;
-
-      // If low HP and medkit active, move towards medkit
-      if (bot.hp < 450 && this.state.pickup.active) {
-        const medX = this.state.pickup.x - bot.x;
-        const medZ = this.state.pickup.z - bot.z;
-        const medDist = Math.hypot(medX, medZ) || 1;
-        this.botTargetMove = { x: medX / medDist, z: medZ / medDist };
-      } else if (distToPlayer > 14) {
-        // Advance
-        this.botTargetMove = { x: dx / distToPlayer, z: dz / distToPlayer };
-      } else if (distToPlayer < 6) {
-        // Back off or circle
-        const strafeDir = Math.random() > 0.5 ? 1 : -1;
-        this.botTargetMove = {
-          x: (-dx / distToPlayer) * 0.7 + (-dz / distToPlayer) * strafeDir * 0.7,
-          z: (-dz / distToPlayer) * 0.7 + (dx / distToPlayer) * strafeDir * 0.7,
-        };
-      } else {
-        // Combat strafing
-        const strafeDir = Math.random() > 0.5 ? 1 : -1;
-        this.botTargetMove = {
-          x: (-dz / distToPlayer) * strafeDir,
-          z: (dx / distToPlayer) * strafeDir,
-        };
-      }
-    }
-
-    this.p2Input.moveX = this.botTargetMove.x;
-    this.p2Input.moveZ = this.botTargetMove.z;
-
-    // Bot dash logic: dash if player projectiles are incoming
-    for (const proj of this.state.projectiles) {
-      if (proj.ownerSlot === 'p1') {
-        const pDist = Math.hypot(bot.x - proj.x, bot.z - proj.z);
-        if (pDist < 4.0 && bot.dashCooldownTimer <= 0) {
-          this.p2Input.wantDash = true;
-          break;
-        }
-      }
-    }
-
-    // Bot ability logic
-    if (bot.abilityCooldownTimer <= 0) {
-      if (bot.operatorId === 'grzesiek' && distToPlayer < 8.0) {
-        this.p2Input.wantAbility = true;
-      } else if (bot.operatorId === 'marcin' && bot.hp < 700) {
-        this.p2Input.wantAbility = true;
-      } else if (bot.operatorId === 'dawid' && distToPlayer < 12.0) {
-        this.p2Input.wantAbility = true;
-      } else if (bot.operatorId === 'mateusz' && distToPlayer < 5.0) {
-        this.p2Input.wantAbility = true;
-      } else if (bot.operatorId === 'piotr' && distToPlayer < 6.5) {
-        this.p2Input.wantAbility = true;
-      }
-    }
+    const decision = choosePvpBotDecision({
+      bot,
+      opponent: player,
+      state: this.state,
+      opponentVelocity: this.botOpponentVelocity,
+      orbitSign: this.botDecisionTick % 2 === 0 ? 1 : -1,
+    });
+    this.p2Input = {
+      ...this.p2Input,
+      ...decision,
+    };
   }
 
   public createRoom() {
