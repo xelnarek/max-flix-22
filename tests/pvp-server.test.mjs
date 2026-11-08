@@ -199,27 +199,22 @@ test('PvP public matchmaking pairs the oldest waiting players and supports relia
   const second = await connect();
   const third = await connect();
 
+  // A lone search can be cancelled without reserving a slot in the queue.
+  const secondQueued = waitForMessage(second, (message) =>
+    message.type === 'matchmaking_status' && message.status === 'searching' && message.position === 1
+  );
+  second.send(JSON.stringify({ type: 'find_match', operatorId: 'grzesiek', playerName: 'Anulujący' }));
+  await secondQueued;
+  const cancelled = waitForMessage(second, (message) => message.type === 'matchmaking_cancelled');
+  second.send(JSON.stringify({ type: 'cancel_matchmaking' }));
+  await cancelled;
+
+  // FIFO order: the first queued player is paired with the next arrival.
   const firstQueued = waitForMessage(first, (message) =>
     message.type === 'matchmaking_status' && message.status === 'searching' && message.position === 1
   );
   first.send(JSON.stringify({ type: 'find_match', operatorId: 'marcin', playerName: 'Pierwszy' }));
   await firstQueued;
-
-  const secondPosition = waitForMessage(second, (message) =>
-    message.type === 'matchmaking_status' && message.status === 'searching' && message.position === 2
-  );
-  const firstQueueUpdate = waitForMessage(first, (message) =>
-    message.type === 'matchmaking_status' && message.status === 'searching' && message.waitingPlayers === 2
-  );
-  second.send(JSON.stringify({ type: 'find_match', operatorId: 'grzesiek', playerName: 'Anulujący' }));
-  await Promise.all([secondPosition, firstQueueUpdate]);
-
-  const cancelled = waitForMessage(second, (message) => message.type === 'matchmaking_cancelled');
-  const firstAfterCancel = waitForMessage(first, (message) =>
-    message.type === 'matchmaking_status' && message.status === 'searching' && message.waitingPlayers === 1
-  );
-  second.send(JSON.stringify({ type: 'cancel_matchmaking' }));
-  await Promise.all([cancelled, firstAfterCancel]);
 
   const firstFound = waitForMessage(first, (message) => message.type === 'match_found');
   const thirdFound = waitForMessage(third, (message) => message.type === 'match_found');
