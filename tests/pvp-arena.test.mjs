@@ -686,13 +686,32 @@ test('PvP random perk capsule spawns and grants its effect on pickup', () => {
   } finally { Math.random = oldRandom; }
 });
 
-test('PvP weapon cooldowns and projectile speeds now create deliberate, readable fire rhythm', async () => {
+test('PvP weapons use a deliberate ~3-second primary-shot cycle with readable projectile speeds', async () => {
   const { getPvpOperatorAttackCooldown, PVP_OPERATOR_PROFILES } = await import('../src/pvpArena.ts');
   for (const id of ['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr']) {
-    assert.ok(getPvpOperatorAttackCooldown(id) >= 0.55);
-    assert.ok(PVP_OPERATOR_PROFILES[id].projectileSpeed <= 22);
+    const cooldown = getPvpOperatorAttackCooldown(id);
+    assert.ok(cooldown >= 2.8 && cooldown <= 3.2, `${id} cooldown should be close to 3 seconds`);
+    assert.ok(PVP_OPERATOR_PROFILES[id].projectileSpeed >= 13 && PVP_OPERATOR_PROFILES[id].projectileSpeed <= 18);
   }
   assert.equal(new Set(Object.values(PVP_OPERATOR_PROFILES).map(profile => profile.attackCooldown)).size, 5);
+});
+
+test('PvP standard movement and dash are slower and more controlled', async () => {
+  const { PVP_BASE_SPEED, PVP_DASH_SPEED, PVP_DASH_COOLDOWN } = await import('../src/pvpArena.ts');
+  assert.equal(PVP_BASE_SPEED, 6.2);
+  assert.equal(PVP_DASH_SPEED, 16.0);
+  assert.equal(PVP_DASH_COOLDOWN, 3.8);
+
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  resetPvpRound(state);
+  state.status = 'in_round';
+  state.obstacles = [];
+  state.pickup.active = false;
+  state.perkDrop.active = false;
+  state.p1.x = -5;
+  const startX = state.p1.x;
+  stepPvpArena(state, 0.1, { moveX: 1, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false });
+  assert.ok(Math.abs((state.p1.x - startX) - 0.62) < 1e-6, 'normal movement should travel 0.62 units in 0.1s');
 });
 
 test('one-shot fire intent shoots once, respects operator recovery, and can be tapped again', () => {
@@ -708,7 +727,9 @@ test('one-shot fire intent shoots once, respects operator recovery, and can be t
   assert.equal(state.projectiles.filter(projectile => projectile.ownerSlot === 'p1').length, 1);
   stepPvpArena(state, 0.05, { ...input, wantFire: false });
   assert.equal(state.projectiles.filter(projectile => projectile.ownerSlot === 'p1').length, 1, 'neutral input must not auto-fire');
-  advanceArena(state, 0.70); // Marcin's revised primary-shot cooldown is 0.62s.
+  advanceArena(state, 2.90, { ...input, wantFire: false });
+  stepPvpArena(state, 0.03, input);
+  assert.equal(state.projectiles.filter(projectile => projectile.ownerSlot === 'p1').length, 1, 'a tap before the 3-second recovery must be rejected');
   stepPvpArena(state, 0.03, input);
   assert.equal(state.projectiles.filter(projectile => projectile.ownerSlot === 'p1').length, 2, 'a fresh tap after recovery fires again');
 });

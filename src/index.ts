@@ -19,7 +19,7 @@ import {
 } from './ads.ts';
 import { CharacterId, PerkType } from './types.ts';
 import { PvpNetworkSession, PvpLocalBotSession, type IPvpSession } from './pvpClient.ts';
-import { getPvpOperatorAttackCooldown } from './pvpArena.ts';
+import { getPvpOperatorAttackCooldown, PVP_RAPID_FIRE_COOLDOWN_MULTIPLIER } from './pvpArena.ts';
 import type { PvpArenaState, PvpSlot } from './pvpArena.ts';
 import { AssetItem, assetLoader } from './assets.ts';
 import { SelectiveBloomPipeline } from './selectiveBloom.ts';
@@ -3631,9 +3631,9 @@ class PaleciakiScene extends xb.Script {
 
     const perkStatus = document.getElementById('pvp-perk-status');
     const localPerkPlayer = localSlot === 'p1' ? state.p1 : state.p2;
-    this.pvpFireCooldownMultiplier = localPerkPlayer.activePerk === 'rapid' && localPerkPlayer.perkTimer > 0 ? 0.78 : 1;
+    this.pvpFireCooldownMultiplier = localPerkPlayer.activePerk === 'rapid' && localPerkPlayer.perkTimer > 0 ? PVP_RAPID_FIRE_COOLDOWN_MULTIPLIER : 1;
     if (perkStatus) {
-      const perkNames: Record<string, string> = { power: 'MOC +22% OBRAŻEŃ', sprint: 'SPRINT +18% RUCHU', shield: 'TARCZA +165 HP', rapid: 'SZYBSZE ŁADOWANIE' };
+      const perkNames: Record<string, string> = { power: 'MOC +22% OBRAŻEŃ', sprint: 'SPRINT +16% RUCHU', shield: 'TARCZA +165 HP', rapid: 'SZYBSZE ŁADOWANIE' };
       const localPlayer = localSlot === 'p1' ? state.p1 : state.p2;
       if (localPlayer.activePerk === 'shield' && localPlayer.shieldHp > 0) perkStatus.textContent = `TARCZA AKTYWNA • ${Math.ceil(localPlayer.shieldHp)} HP`;
       else if (localPlayer.activePerk && localPlayer.perkTimer > 0) perkStatus.textContent = `TWÓJ PERK: ${perkNames[localPlayer.activePerk] || 'AKTYWNY'} • ${Math.ceil(localPlayer.perkTimer)} s`;
