@@ -72,8 +72,10 @@ export class B4AssetLoader {
     };
 
     this.loadingManager.onLoad = () => {
-      console.log(`%c[AssetLoader:LoadingManager] ✅ Wszystkie zarejestrowane zasoby zostały przetworzone.`, 'color: #22c55e; font-weight: bold;');
-      this.isLoaded = true;
+      // LoadingManager sees each procedural item as an individual queue, because
+      // preloadAll() calls itemStart/itemEnd sequentially. It must not mark the
+      // entire application as loaded after the first item; preloadAll() owns that flag.
+      console.log(`%c[AssetLoader:LoadingManager] ✅ Zakończono bieżący zasób.`, 'color: #22c55e; font-weight: bold;');
     };
 
     this.loadingManager.onError = (url) => {
