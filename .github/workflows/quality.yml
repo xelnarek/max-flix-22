@@ -41,3 +41,30 @@ jobs:
 
       - name: Production build
         run: npm run build
+
+      - name: Build PvP server container
+        run: docker build --tag paleciaki-pvp:ci .
+
+      - name: Smoke-test PvP container health endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --detach --name paleciaki-pvp-ci \
+            --publish 8080:8080 \
+            --env PVP_PORT=8080 \
+            --env NODE_ENV=production \
+            --env PVP_ALLOWED_ORIGINS=https://xelnarek.github.io \
+            paleciaki-pvp:ci
+          cleanup() {
+            docker logs paleciaki-pvp-ci || true
+            docker rm --force paleciaki-pvp-ci >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:8080/healthz; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "PvP container did not become healthy within 20 seconds."
+          exit 1
