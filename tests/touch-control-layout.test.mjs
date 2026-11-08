@@ -97,7 +97,7 @@ test('clamped live stick footprint never reaches the Survival or PvP action dock
         touchX: viewport.width,
         touchY: viewport.height,
       });
-      const radius = 74;
+      const radius = Math.max(126, Math.min(148, viewport.width * 0.36)) * 0.5;
       assert.ok(point.x + radius <= geometry.actionDock.left - 8,
         mode + ' active stick touches the action dock at ' + viewport.width + 'x' + viewport.height);
       assert.ok(point.y + radius <= viewport.height - 12);
