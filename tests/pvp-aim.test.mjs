@@ -1,38 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  DEFAULT_PVP_AIM_DIRECTION, PVP_AIM_DEADZONE, PVP_AIM_DIRECTION_DEADZONE,
-  PVP_AIM_FIRE_START_DEADZONE, PVP_AIM_FIRE_STOP_DEADZONE, getPvpAimAngle,
-  isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle, shouldPvpAimFire,
-  pvpScreenAimToWorld, pvpScreenMovementToWorld, calculatePvpAimPreview,
-  getPvpSweepAimAngle, PVP_AIM_SWEEP_HALF_ARC, PVP_AIM_SWEEP_PERIOD_SECONDS,
+  getPvpAimAngle,
+  pvpAimDirectionFromAngle,
+  pvpScreenMovementToWorld,
+  calculatePvpAimPreview,
+  getPvpSweepAimAngle,
+  PVP_AIM_SWEEP_HALF_ARC,
+  PVP_AIM_SWEEP_PERIOD_SECONDS,
 } from '../src/pvpAim.ts';
-
-test('normalizes diagonal touch aim without amplifying stick length', () => {
-  const direction = normalizePvpAimDirection(0.8, 0.8);
-  assert.ok(Math.abs(Math.hypot(direction.x, direction.z) - 1) < 1e-10);
-  assert.ok(Math.abs(direction.x - Math.SQRT1_2) < 1e-10);
-  assert.ok(Math.abs(direction.z - Math.SQRT1_2) < 1e-10);
-});
-
-test('neutral touch input preserves the last deliberate aim direction', () => {
-  const previous = { x: 1, z: 0 };
-  assert.deepEqual(normalizePvpAimDirection(0.02, -0.03, previous), previous);
-  assert.deepEqual(normalizePvpAimDirection(0, 0, previous), previous);
-});
-
-test('invalid samples never inject NaN into combat direction', () => {
-  const previous = { x: 0, z: -1 };
-  assert.deepEqual(normalizePvpAimDirection(Number.NaN, 1, previous), previous);
-  assert.deepEqual(normalizePvpAimDirection(1, Number.POSITIVE_INFINITY, previous), previous);
-  assert.deepEqual(normalizePvpAimDirection(0, 0, { x: Number.NaN, z: 0 }), DEFAULT_PVP_AIM_DIRECTION);
-});
-
-test('aim activation respects a radial deadzone', () => {
-  assert.equal(isPvpAimInputActive(PVP_AIM_DEADZONE, 0), true);
-  assert.equal(isPvpAimInputActive(PVP_AIM_DEADZONE / 2, 0), false);
-  assert.equal(isPvpAimInputActive(Number.NaN, 1), false);
-});
 
 test('angle conversions use the engine forward-axis convention', () => {
   const direction = pvpAimDirectionFromAngle(Math.PI / 2);
@@ -40,31 +16,10 @@ test('angle conversions use the engine forward-axis convention', () => {
   assert.ok(Math.abs(direction.z) < 1e-10);
   assert.ok(Math.abs(getPvpAimAngle(direction) - Math.PI / 2) < 1e-10);
   assert.ok(Math.abs(getPvpAimAngle({ x: 0, z: -1 }) - Math.PI) < 1e-10);
+  assert.deepEqual(pvpAimDirectionFromAngle(Number.NaN), { x: 0, z: 1 });
 });
 
-test('PvP timing sweep drives the 3D cursor and keeps separate movement and fire actions', async () => {
-  const { readFile } = await import('node:fs/promises');
-  const [app, game, html, css] = await Promise.all([
-    readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
-    readFile(new URL('../src/game.ts', import.meta.url), 'utf8'),
-    readFile(new URL('../index.html', import.meta.url), 'utf8'),
-    readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
-  ]);
-  assert.ok(app.includes("activePointerId = event.pointerId"));
-  assert.ok(app.includes("joystickZone.setPointerCapture(event.pointerId)"));
-  assert.ok(!app.includes("activeAimPointerId"));
-  assert.ok(app.includes("bindPvpTap(pvpFireButton"));
-  assert.ok(game.includes("getPvpSweepAimAngle("));
-  assert.ok(game.includes("this.pvpAimArc"));
-  assert.ok(game.includes("this.pvpAimSweepPointer"));
-  assert.ok(game.includes("wantFire: this.pvpWantFire"));
-  assert.ok(html.includes('id="pvp-fire-control"'));
-  assert.ok(html.includes('id="btn-pvp-fire"'));
-  assert.ok(!html.includes('id="pvp-aim-zone"'));
-  assert.ok(css.includes("pvp-fire-control"));
-});
-
-test('PvP timing cursor moves left-to-right and back to its starting point', () => {
+test('Archero timing cursor sweeps left-to-right and returns across the full arc', () => {
   const start = getPvpSweepAimAngle(0, 0);
   const middle = getPvpSweepAimAngle(PVP_AIM_SWEEP_PERIOD_SECONDS * 0.25, 0);
   const farEdge = getPvpSweepAimAngle(PVP_AIM_SWEEP_PERIOD_SECONDS * 0.5, 0);
@@ -77,44 +32,65 @@ test('PvP timing cursor moves left-to-right and back to its starting point', () 
   assert.ok(Math.abs(loop - start) < 1e-9);
 });
 
-test('PvP timing cursor handles invalid values and wrapped angles', () => {
+test('timing cursor handles invalid values, wrapped angles and custom arc limits', () => {
   const wrapped = getPvpSweepAimAngle(0, Math.PI - 0.1, 0.2, 2);
   const badTime = getPvpSweepAimAngle(Number.NaN, 0.5);
   const badCenter = getPvpSweepAimAngle(1, Number.NaN);
   assert.ok(wrapped >= -Math.PI && wrapped <= Math.PI);
   assert.ok(Math.abs(badTime - (0.5 - PVP_AIM_SWEEP_HALF_ARC)) < 1e-12);
   assert.equal(badCenter, 0);
+  assert.ok(Number.isFinite(getPvpSweepAimAngle(Infinity, 0.5, Infinity, -1)));
 });
 
-test('PvP fire trigger uses hysteresis so thumb jitter does not rapidly toggle shots', () => {
-  assert.ok(PVP_AIM_DIRECTION_DEADZONE < PVP_AIM_FIRE_STOP_DEADZONE);
-  assert.ok(PVP_AIM_FIRE_STOP_DEADZONE < PVP_AIM_FIRE_START_DEADZONE);
-  assert.equal(shouldPvpAimFire(PVP_AIM_FIRE_START_DEADZONE, 0, false), true);
-  assert.equal(shouldPvpAimFire(PVP_AIM_FIRE_STOP_DEADZONE + 0.01, 0, true), true);
-  assert.equal(shouldPvpAimFire(PVP_AIM_FIRE_STOP_DEADZONE - 0.01, 0, true), false);
-  assert.equal(shouldPvpAimFire(0, 0, false), false);
+test('PvP timing sweep drives the 3D cursor while movement and firing stay separate', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const [app, game, html, css, arena] = await Promise.all([
+    readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/game.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pvpArena.ts', import.meta.url), 'utf8'),
+  ]);
+  assert.ok(app.includes('activePointerId = event.pointerId'));
+  assert.ok(app.includes('joystickZone.setPointerCapture(event.pointerId)'));
+  assert.ok(!app.includes('activeAimPointerId'));
+  assert.ok(app.includes('bindPvpTap(pvpFireButton'));
+  assert.ok(app.includes('bindPvpTap(desktopPvpFireButton, triggerPrimaryPvpShot)'));
+  assert.ok(game.includes('getPvpSweepAimAngle('));
+  assert.ok(game.includes('this.pvpAimArc'));
+  assert.ok(game.includes('this.pvpAimSweepPointer'));
+  assert.ok(game.includes('wantFire: this.pvpWantFire'));
+  assert.ok(arena.includes('player.aimAngle = safeInput.aimAngle'));
+  assert.ok(!arena.includes('getPvpAimAssistAngle'));
+  assert.ok(html.includes('id="pvp-fire-control"'));
+  assert.ok(html.includes('id="btn-pvp-fire"'));
+  assert.ok(!html.includes('id="pvp-aim-zone"'));
+  assert.ok(!html.includes('id="pvp-aim-base"'));
+  assert.ok(!css.includes('pvp-aim-zone'));
+  assert.ok(!css.includes('pvp-aim-base'));
+  assert.ok(!app.includes('pvp-aim-zone'));
+  assert.ok(!game.includes('manualAimFiring'));
 });
 
-
-test('portrait PvP camera rotates screen-relative movement and aiming to match the rotated arena', () => {
+test('portrait PvP camera rotates screen-relative movement to match the arena axis', () => {
   assert.deepEqual(pvpScreenMovementToWorld(1, 0, false), { x: 1, z: 0 });
   assert.deepEqual(pvpScreenMovementToWorld(0, 1, false), { x: 0, z: -1 });
   assert.deepEqual(pvpScreenMovementToWorld(1, 0, true), { x: 0, z: -1 });
   assert.deepEqual(pvpScreenMovementToWorld(0, 1, true), { x: -1, z: 0 });
-  assert.deepEqual(pvpScreenAimToWorld(1, 0, false), { x: 1, z: 0 });
-  assert.deepEqual(pvpScreenAimToWorld(0, -1, false), { x: 0, z: -1 });
-  assert.deepEqual(pvpScreenAimToWorld(1, 0, true), { x: 0, z: -1 });
-  assert.deepEqual(pvpScreenAimToWorld(0, -1, true), { x: -1, z: 0 });
 });
 
-
-test('PvP camera fit scales to portrait and landscape viewports without clipping arena width', async () => {
+test('PvP camera fit scales to portrait and landscape without clipping arena width', async () => {
   const { calculatePvpCameraFrame } = await import('../src/pvpCamera.ts');
   const bounds = { minX: -22, maxX: 22, minZ: -12, maxZ: 12 };
-  for (const viewport of [{ width: 393, height: 852 }, { width: 432, height: 768 }, { width: 1280, height: 720 }, { width: 2560, height: 1080 }]) {
+  for (const viewport of [
+    { width: 393, height: 852 },
+    { width: 432, height: 768 },
+    { width: 1280, height: 720 },
+    { width: 2560, height: 1080 },
+  ]) {
     const frame = calculatePvpCameraFrame(viewport.width, viewport.height, { x: 4, z: -3 }, bounds);
     assert.equal(frame.portrait, viewport.width / viewport.height < 0.86);
-    assert.ok(frame.visibleWidth >= frame.requiredWidth * 1.1, `horizontal arena coverage should have a margin at ${viewport.width}x${viewport.height}`);
+    assert.ok(frame.visibleWidth >= frame.requiredWidth * 1.1, `horizontal arena coverage at ${viewport.width}x${viewport.height}`);
     assert.ok(Math.abs(frame.target.x - 4) < 1e-9);
     assert.ok(Math.abs(frame.target.z + 3) < 1e-9);
     assert.ok(frame.position.x !== frame.target.x || frame.position.z !== frame.target.z);
@@ -122,8 +98,7 @@ test('PvP camera fit scales to portrait and landscape viewports without clipping
   }
 });
 
-
-test('aim preview stops before the first cover piece instead of drawing through it', () => {
+test('aim preview stops at the first cover piece instead of drawing through it', () => {
   const preview = calculatePvpAimPreview(
     { x: 0, z: 0 },
     { x: 1, z: 0 },
@@ -137,7 +112,7 @@ test('aim preview stops before the first cover piece instead of drawing through 
   assert.ok(preview.x < 2 && preview.x > 0);
 });
 
-test('aim preview confirms a target only when it lies on a clear manual firing ray', () => {
+test('aim preview marks a target only when it lies on a clear firing ray', () => {
   const aligned = calculatePvpAimPreview(
     { x: 0, z: 0 },
     { x: 1, z: 0 },
@@ -158,7 +133,7 @@ test('aim preview confirms a target only when it lies on a clear manual firing r
   assert.equal(aligned.impact, 'boundary');
 });
 
-test('aim preview returns finite points for malformed directions and clips to the arena boundary', () => {
+test('aim preview remains finite for malformed directions and clips to arena bounds', () => {
   const preview = calculatePvpAimPreview(
     { x: 9, z: 0 },
     { x: Number.NaN, z: 0 },
