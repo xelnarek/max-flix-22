@@ -1,11 +1,6 @@
 import * as THREE from 'three';
 import * as xb from 'xrblocks';
 import { CHARACTERS } from './characters.ts';
-import {
-  ensureLeaderboardServices,
-  submitScore,
-  getTopSurvivalLeaderboard,
-} from './firebase.ts';
 import { PaleciakiGameEngine, type SurvivalSnapshot, type SurvivalUpgradeOption } from './game.ts';
 import { sound } from './sound.ts';
 import { CinematicIntroManager } from './cinematicIntro.ts';
@@ -40,6 +35,22 @@ import { SURVIVAL_MAPS, type SurvivalMapId } from './survivalMaps.ts';
 import { launchOniricPlatformer } from './oniricPlatformer.ts';
 import { getMenuTabIndexForKey } from './menuTabNavigation.ts';
 import { readSurvivalMapPreference, writeSurvivalMapPreference } from './survivalMapPreference.ts';
+// Firestore is only needed for the optional leaderboard. Keep its large SDK
+// outside the initial game/menu load and fetch it when the player opens ranking.
+type FirebaseLeaderboardServices = typeof import('./firebase.ts');
+let firebaseLeaderboardServicesPromise: Promise<FirebaseLeaderboardServices> | null = null;
+
+const loadFirebaseLeaderboardServices = (): Promise<FirebaseLeaderboardServices> => {
+  if (!firebaseLeaderboardServicesPromise) {
+    firebaseLeaderboardServicesPromise = import('./firebase.ts').catch((error: unknown) => {
+      // A transient chunk/network failure must not poison future retries.
+      firebaseLeaderboardServicesPromise = null;
+      throw error;
+    });
+  }
+  return firebaseLeaderboardServicesPromise;
+};
+
 import {
   ACCOUNT_PROGRESS_MAX_LEVEL,
   ACCOUNT_PROGRESS_STORAGE_KEY,
@@ -1997,6 +2008,7 @@ class PaleciakiScene extends xb.Script {
     const firestoreStatusText = document.getElementById('firestore-status-text');
 
     let leaderboardRenderInFlight = false;
+    let leaderboardHasBeenOpened = false;
 
     const updateFirestoreStatusUI = (status: 'checking' | 'online' | 'offline', customMsg?: string) => {
       if (!firestoreStatusBadge || !firestoreStatusText) return;
@@ -2028,15 +2040,15 @@ class PaleciakiScene extends xb.Script {
       leaderboardList.innerHTML = '';
 
       try {
-        // Direct connectivity check against singleton db instance
-        const isConnected = await ensureLeaderboardServices();
+        const services = await loadFirebaseLeaderboardServices();
+        const isConnected = await services.ensureLeaderboardServices();
         if (isConnected) {
           updateFirestoreStatusUI('online', 'Baza Firestore: Online');
         } else {
           updateFirestoreStatusUI('offline', 'Baza Firestore: Tryb Offline');
         }
 
-        const topScores = await getTopSurvivalLeaderboard(15);
+        const topScores = await services.getTopSurvivalLeaderboard(15);
         leaderboardLoading.classList.add('hidden');
         leaderboardList.classList.remove('hidden');
 
@@ -2139,8 +2151,8 @@ class PaleciakiScene extends xb.Script {
       });
 
       if (targetId === 'tab-leaderboard') {
+        leaderboardHasBeenOpened = true;
         renderLeaderboard();
-        ensureLeaderboardServices().catch(console.warn);
       } else if (targetId === 'tab-achievements') {
         renderSurvivalAchievements();
       } else if (targetId === 'tab-talent-tree' || targetId === 'tab-ranks') {
@@ -2693,7 +2705,8 @@ class PaleciakiScene extends xb.Script {
         }
 
         try {
-          const result = await submitScore({
+          const services = await loadFirebaseLeaderboardServices();
+          const result = await services.submitScore({
             playerName,
             hero: CHARACTERS[this.selectedCharId].name,
             mode: this.lastMode === 'pvp' ? 'survival' : this.lastMode,
@@ -2732,10 +2745,12 @@ class PaleciakiScene extends xb.Script {
     bindScoreSubmission('btn-submit-score', 'player-nickname-input', 'submit-feedback-msg');
     bindScoreSubmission('btn-submit-score-gameover', 'player-nickname-gameover', 'submit-feedback-gameover');
 
-    ensureLeaderboardServices().catch(console.warn);
-    renderLeaderboard();
+    // Do not initialize Firebase or fetch ranking data during game startup.
+    // The leaderboard loads on demand, and reconnect refreshes it only while open.
     window.addEventListener('online', () => {
-      ensureLeaderboardServices().then(() => renderLeaderboard()).catch(console.warn);
+      if (leaderboardHasBeenOpened && document.getElementById('tab-leaderboard')?.classList.contains('active')) {
+        void renderLeaderboard();
+      }
     });
 
     // Do not let a backgrounded mobile browser continue a live run invisibly.
