@@ -30,6 +30,27 @@ export const PVP_AIM_SWEEP_PERIOD_SECONDS = 3.2;
 export const PVP_AIM_SWEEP_RADIUS = 2.75;
 export const PVP_AIM_SWEEP_SEGMENTS = 40;
 
+/**
+ * The sweep centre belongs to the player, not to a tracked opponent.
+ * A deliberate movement direction reorients the arc; releasing movement
+ * keeps the last facing direction so the player can time the shot while still.
+ */
+export function getPvpAimSweepCenterAngle(
+  moveX: number,
+  moveZ: number,
+  previousAngle: number,
+  movementThreshold = 0.18,
+): number {
+  const fallback = finite(previousAngle)
+    ? Math.atan2(Math.sin(previousAngle), Math.cos(previousAngle))
+    : 0;
+  if (!finite(moveX) || !finite(moveZ)) return fallback;
+  const threshold = finite(movementThreshold) ? Math.max(0, movementThreshold) : 0.18;
+  const magnitude = Math.hypot(moveX, moveZ);
+  if (!finite(magnitude) || magnitude < threshold) return fallback;
+  return Math.atan2(moveX, moveZ);
+}
+
 export function getPvpSweepAimAngle(
   elapsedSeconds: number,
   centerAngle: number,
