@@ -1,0 +1,77 @@
+/* PWA update prompt: visible on the menu between runs, never over gameplay controls. */
+.pwa-update-notice {
+  position: fixed;
+  z-index: 2147483001;
+  left: 50%;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: min(520px, calc(100vw - 24px));
+  padding: 12px 14px;
+  border: 1px solid rgba(56, 189, 248, 0.42);
+  border-radius: 15px;
+  background: rgba(5, 17, 29, 0.97);
+  color: #eaf7ff;
+  box-shadow: 0 14px 42px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  pointer-events: auto;
+}
+
+.pwa-update-copy {
+  margin: 0;
+  font: 600 12px/1.45 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+.pwa-update-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.pwa-update-actions button {
+  min-height: 36px;
+  padding: 0 11px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 9px;
+  color: #e2e8f0;
+  background: rgba(30, 41, 59, 0.78);
+  font: 800 10px/1 system-ui, sans-serif;
+  letter-spacing: 0.035em;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.pwa-update-actions .pwa-update-reload {
+  border-color: rgba(56, 189, 248, 0.65);
+  background: linear-gradient(135deg, #075985, #0e7490);
+  color: #f0f9ff;
+}
+
+.pwa-update-actions button:focus-visible {
+  outline: 2px solid #7dd3fc;
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .pwa-update-notice {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 9px;
+    padding: 11px 12px;
+  }
+
+  .pwa-update-actions {
+    justify-content: flex-end;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pwa-update-notice {
+    scroll-behavior: auto;
+    transition: none;
+  }
+}

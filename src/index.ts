@@ -1,3 +1,5 @@
+import './pwa-update.css';
+import { shouldAnnounceServiceWorkerUpdate } from './pwaUpdateNotice.ts';
 import * as THREE from 'three';
 import * as xb from 'xrblocks';
 import { CHARACTERS } from './characters.ts';
@@ -4510,7 +4512,62 @@ async function startApp() {
 
 // Progressive Web App support for secure mobile browsers.
 if ('serviceWorker' in navigator && window.isSecureContext) {
-  void navigator.serviceWorker.register('./sw.js', { scope: './' }).catch((error: unknown) => {
+  const serviceWorker = navigator.serviceWorker;
+  // Do not show an update prompt for the first installation. A controller
+  // change only counts as an update when this page was already SW-controlled.
+  const hadActiveController = Boolean(serviceWorker.controller);
+  let updateAnnounced = false;
+
+  serviceWorker.addEventListener('controllerchange', () => {
+    if (!shouldAnnounceServiceWorkerUpdate(hadActiveController, updateAnnounced)) return;
+    updateAnnounced = true;
+
+    // Keep the prompt inside the menu layer. It is therefore visible between
+    // runs, but never covers the joystick, action dock or live game HUD.
+    const host = document.getElementById('title-screen') || document.body;
+    if (document.getElementById('pwa-update-notice')) return;
+
+    const notice = document.createElement('aside');
+    notice.id = 'pwa-update-notice';
+    notice.className = 'pwa-update-notice';
+    notice.setAttribute('role', 'status');
+    notice.setAttribute('aria-live', 'polite');
+    notice.setAttribute('aria-atomic', 'true');
+
+    const copy = document.createElement('p');
+    copy.className = 'pwa-update-copy';
+    copy.textContent = 'Nowa wersja gry jest gotowa. Odśwież po zakończeniu rozgrywki.';
+
+    const actions = document.createElement('div');
+    actions.className = 'pwa-update-actions';
+
+    const reload = document.createElement('button');
+    reload.type = 'button';
+    reload.className = 'pwa-update-reload';
+    reload.textContent = 'ODŚWIEŻ GRĘ';
+    reload.addEventListener('click', () => window.location.reload());
+
+    const dismiss = document.createElement('button');
+    dismiss.type = 'button';
+    dismiss.className = 'pwa-update-dismiss';
+    dismiss.textContent = 'PÓŹNIEJ';
+    dismiss.addEventListener('click', () => notice.remove());
+
+    actions.append(reload, dismiss);
+    notice.append(copy, actions);
+    host.appendChild(notice);
+  });
+
+  void navigator.serviceWorker.register('./sw.js', { scope: './' }).then((registration) => {
+    // Re-check when the player returns to the app. The browser throttles
+    // update checks internally; failures must never block gameplay.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      void registration.update().catch((error: unknown) => {
+        console.warn('[App:PWA] Update check unavailable:', error);
+      });
+    });
+  }).catch((error: unknown) => {
     console.warn('[App:PWA] Registration unavailable:', error);
   });
 }
