@@ -103,6 +103,14 @@ test('Survival starts without waiting for the ad provider and the menu is not co
   assert.match(app, /btn-open-intro/);
 });
 
+test('the title menu is portaled above the WebGL shell for mobile compositor safety', async () => {
+  const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
+  const boot = app.slice(app.indexOf('async function startApp()'));
+  assert.match(boot, /titleScreen\.parentElement !== document\.body[\\s\\S]*?document\.body\.appendChild\(titleScreen\)/);
+  assert.match(boot, /titleScreen\.style\.setProperty\('z-index', '10000000', 'important'\)/);
+  assert.match(boot, /titleScreen\.style\.setProperty\('pointer-events', 'auto', 'important'\)/);
+});
+
 test('touch controls are explicitly hit-testable above the WebGL canvas during gameplay', async () => {
   const css = await readFile(new URL('../src/index.css', import.meta.url), 'utf8');
   assert.match(css, /#touch-controls:not\(\.hidden\)[\s\S]*?pointer-events: none !important/);
