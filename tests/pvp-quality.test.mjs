@@ -29,7 +29,7 @@ test('online session handles static hosting, bounded retries and does not restar
   assert.match(client, /rematch_waiting/);
 });
 
-test('manual touch aim, server-origin checks, six-character invite codes and mutual rematch are wired', async () => {
+test('timing-based PvP aim, server-origin checks, six-character invite codes and mutual rematch are wired', async () => {
   const [game, app, html, server, arena] = await Promise.all([
     readFile(new URL('../src/game.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
@@ -39,13 +39,13 @@ test('manual touch aim, server-origin checks, six-character invite codes and mut
   ]);
   assert.match(game, /wantFire: this\.pvpWantFire/);
   assert.match(game, /public triggerPvpFire\(\): boolean/);
-  assert.doesNotMatch(game, /shouldPvpAimFire\(x, z, this\.manualAimFiring\)/);
-  assert.match(game, /PVP_AIM_DIRECTION_DEADZONE/);
+  assert.match(game, /getPvpSweepAimAngle\(/);
+  assert.doesNotMatch(game, /setManualAimInput|pvpScreenAimToWorld|manualAimFiring/);
   assert.match(game, /this\.pvpInputSendAccumulator %= inputInterval/);
-  assert.match(app, /getElementById\('pvp-aim-zone'\)/);
+  assert.doesNotMatch(app, /pvp-aim-zone|pvp-aim-base/);
   assert.match(app, /getPvpOperatorAttackCooldown\(operatorId\)/);
   assert.match(app, /startPvpFireCooldown\(/);
-  assert.match(app, /fireButton\.dataset\.roundActive = String\(roundActive\)/);
+  assert.match(app, /button\.dataset\.roundActive = String\(roundActive\)/);
   assert.match(app, /REWANŻ ZGŁOSZONY • CZEKAJ NA RYWALA/);
   assert.match(html, /maxlength="6"/);
   assert.match(server, /maxPayload: 4096/);
@@ -57,14 +57,14 @@ test('manual touch aim, server-origin checks, six-character invite codes and mut
   assert.match(server, /\{6\}/);
   assert.match(arena, /sanitizePvpInputIntent/);
   assert.match(arena, /firstProjectileObstacleHit/);
-  assert.match(arena, /getPvpAimAssistAngle/);
+  assert.doesNotMatch(arena, /getPvpAimAssistAngle/);
   assert.match(arena, /updatePvpPerkDrop/);
   assert.match(arena, /perkDrop: \{ active: false/);
   assert.match(game, /applyPvpCameraFraming/);
   assert.match(game, /calculatePvpCameraFrame/);
   assert.match(game, /pvpPerkLabelContext/);
   assert.match(game, /aimPositions\.needsUpdate/);
-  assert.match(game, /pvpScreenAimToWorld/);
+  assert.doesNotMatch(game, /pvpScreenAimToWorld/);
   assert.match(game, /pvpScreenMovementToWorld/);
   assert.match(game, /pvpAimGuide/);
   assert.match(app, /pvp-perk-status/);
@@ -151,18 +151,23 @@ test('PvP WebSocket server expires stale movement and firing intents', async () 
 });
 
 
-test('PvP right-stick is revealed on the portaled touch-controls layer, not the WebGL shell', async () => {
-  const [app, css] = await Promise.all([
+test('PvP timing sweep, rather than a right stick, is shown on the portaled touch-controls layer', async () => {
+  const [app, css, html, game] = await Promise.all([
     readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
+    readFile(new URL('../index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../src/game.ts', import.meta.url), 'utf8'),
   ]);
   assert.match(app, /setTouchControlsMode\('pvp'\)/);
   assert.match(app, /root\.classList\.toggle\('pvp-mode', activePvp\)/);
-  assert.match(app, /setTouchControlsMode\('hidden'\)/);
   assert.match(app, /root\.classList\.toggle\('manual-aim-mode', activePvp\)/);
-  assert.match(css, /#touch-controls\.manual-aim-mode \.pvp-aim-zone \{ display: block !important; \}/);
-  assert.doesNotMatch(css, /#game-shell\.manual-aim-mode \.pvp-aim-zone \{ display: block !important; \}/);
-  assert.match(css, /#touch-controls\.manual-aim-mode \.pvp-aim-base:not\(\.active\) \{ opacity: \.48 !important; \}/);
+  assert.match(app, /setTouchControlsMode\('hidden'\)/);
+  assert.match(game, /getPvpSweepAimAngle\(/);
+  assert.match(html, /id="pvp-fire-control"/);
+  assert.match(html, /id="btn-pvp-fire"/);
+  assert.doesNotMatch(html, /id="pvp-aim-zone"|id="pvp-aim-base"/);
+  assert.doesNotMatch(css, /\.pvp-aim-zone|\.pvp-aim-base/);
+  assert.match(css, /#touch-controls\.pvp-mode \.pvp-control-guide\.pvp-only-control/);
 });
 
 test('PvP online buttons are disabled with a clear WSS requirement when the static client has no server URL', async () => {
@@ -362,9 +367,29 @@ test('Survival and PvP use exclusive control sets with no shared mode classes le
   assert.match(app, /setTouchControlsMode\('survival'\)/);
   assert.match(app, /setTouchControlsMode\('pvp'\)/);
   assert.match(app, /setTouchControlsMode\('hidden'\)/);
-  assert.match(html, /class="pvp-aim-zone pvp-only-control"/);
-  assert.match(html, /class="pvp-control-guide pvp-only-control"/);
-  assert.match(html, /pvp-fire-btn pvp-only-control hidden/);
+  assert.match(html, /id="touch-joystick-zone"/);
+  assert.match(html, /id="pvp-fire-control" class="pvp-fire-control pvp-only-control"/);
+  assert.match(html, /id="btn-pvp-fire" class="touch-action-btn pvp-fire-btn hidden"/);
+  assert.doesNotMatch(html, /pvp-aim-zone|pvp-aim-base/);
   assert.match(css, /#touch-controls:not\(\.pvp-mode\) \.pvp-only-control/);
   assert.match(css, /#touch-controls\.pvp-mode \.pvp-control-guide\.pvp-only-control/);
+  assert.match(css, /#touch-controls\.pvp-mode #btn-touch-attack,[\s\S]*?#btn-touch-jump/);
+  assert.match(app, /bindPvpTap\(desktopPvpFireButton, triggerPrimaryPvpShot\)/);
+  assert.match(app, /shouldShowTouchLayer = visible && \(touchCapable \|\| viewportWidth <= 900\)/);
+  assert.match(css, /#game-shell\.pvp-mode #btn-event \{ display: none !important; \}/);
+});
+
+test('PvP fire sits directly above the touch movement joystick and desktop dock owns its own fire action', async () => {
+  const [app, css, html] = await Promise.all([
+    readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
+    readFile(new URL('../index.html', import.meta.url), 'utf8'),
+  ]);
+  assert.match(app, /pvpFireControl\.style\.setProperty\('left', `\$\{startX\}px`/);
+  assert.match(app, /window\.innerHeight - startY \+ joystickRadius \+ gap/);
+  assert.match(app, /bindPvpTap\(desktopPvpFireButton, triggerPrimaryPvpShot\)/);
+  assert.match(app, /fireUiButtons = \[pvpFireButton, desktopPvpFireButton\]/);
+  assert.match(html, /id="btn-pvp-fire"/);
+  assert.match(html, /id="btn-attack" class="attack-button"/);
+  assert.match(css, /body #touch-controls\.manual-aim-mode:not\(\.hidden\) \.pvp-fire-control\s*\{[\s\S]*?z-index: 2147483005/);
 });

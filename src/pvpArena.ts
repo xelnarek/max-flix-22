@@ -834,9 +834,9 @@ function stepPlayer(player: PvpPlayerState, input: PvpInputIntent | undefined, s
   if (!input) return;
   const safeInput = sanitizePvpInputIntent(input);
 
-  // Aim update
-  const opponentForAim = player.slot === 'p1' ? state.p2 : state.p1;
-  player.aimAngle = getPvpAimAssistAngle(safeInput.aimAngle, player, opponentForAim, state.obstacles);
+  // The client-selected Archero timing cursor is the exact firing direction.
+  // Do not magnetize it toward an opponent: cover and angle must decide the hit.
+  player.aimAngle = safeInput.aimAngle;
   player.rot = player.aimAngle;
   player.isFiring = safeInput.isFiring;
 
@@ -910,19 +910,6 @@ function stepPlayer(player: PvpPlayerState, input: PvpInputIntent | undefined, s
   }
 }
 
-
-/** Limited correction in a narrow cone; the player still chooses direction and fires manually. */
-export function getPvpAimAssistAngle(angle: number, source: PvpPlayerState, target: PvpPlayerState, obstacles: PvpObstacle[]): number {
-  const safeAngle = Number.isFinite(angle) ? Math.atan2(Math.sin(angle), Math.cos(angle)) : source.aimAngle;
-  const distance = Math.hypot(target.x - source.x, target.z - source.z);
-  if (distance < 0.5 || distance > 30 || !hasPvpLineOfSight(source, target, obstacles)) return safeAngle;
-  const targetAngle = Math.atan2(target.x - source.x, target.z - source.z);
-  const delta = Math.atan2(Math.sin(targetAngle - safeAngle), Math.cos(targetAngle - safeAngle));
-  if (Math.abs(delta) > 10 * Math.PI / 180) return safeAngle;
-  const strength = 0.48 * (1 - Math.max(0, Math.min(0.65, distance / 36)));
-  const corrected = safeAngle + delta * strength;
-  return Math.atan2(Math.sin(corrected), Math.cos(corrected));
-}
 
 function updatePvpPerkDrop(state: PvpArenaState, dt: number): void {
   const drop = state.perkDrop;

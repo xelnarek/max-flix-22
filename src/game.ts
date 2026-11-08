@@ -4,8 +4,7 @@ import { calculatePvpCameraFrame, calculatePvpCameraTrackingBounds, isPvpPortrai
 import { createArenaObstacleFootprint, createPvpFloorTexture, createPvpObstacleTexture } from './pvpTextures.ts';
 import {
   calculatePvpAimPreview, getPvpAimAngle, getPvpSweepAimAngle,
-  isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle,
-  pvpScreenAimToWorld, pvpScreenMovementToWorld, PVP_AIM_DIRECTION_DEADZONE,
+  pvpAimDirectionFromAngle, pvpScreenMovementToWorld,
   PVP_AIM_SWEEP_HALF_ARC, PVP_AIM_SWEEP_PERIOD_SECONDS, PVP_AIM_SWEEP_RADIUS,
   PVP_AIM_SWEEP_SEGMENTS, type PvpAimDirection,
 } from './pvpAim.ts';
@@ -979,7 +978,6 @@ export class PaleciakiGameEngine {
   private virtualJoystick = { x: 0, y: 0 };
   // Separate PvP aim state: movement input must never snap the attack direction.
   private manualAimEnabled = false;
-  private manualAimFiring = false;
   private manualAimDirection: PvpAimDirection = { x: 0, z: 1 };
   private callbacks: GameCallbacks;
 
@@ -1202,11 +1200,6 @@ export class PaleciakiGameEngine {
           this.playerVel.y *= 0.52;
         }
       }
-      if (e.code === 'KeyF' || e.code === 'KeyJ' || e.code === 'KeyX' || e.code === 'Numpad0') {
-        if (this.gameMode === 'pvp') {
-          this.manualAimFiring = false;
-        }
-      }
     });
 
     const canvasContainer = document.getElementById('game-canvas-container');
@@ -1224,37 +1217,12 @@ export class PaleciakiGameEngine {
       }
     });
 
-    window.addEventListener('pointerup', (e) => {
-      if (this.gameMode === 'pvp' && e.button === 0) {
-        this.manualAimFiring = false;
-      }
-    });
-
-    const pvpRaycaster = new THREE.Raycaster();
-    const pvpGroundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.5);
-    const pvpIntersection = new THREE.Vector3();
-    const mouseNd = new THREE.Vector2();
-
-    window.addEventListener('pointermove', (e) => {
-      if (this.gameMode !== 'pvp' || !this.manualAimEnabled) return;
-      if (e.pointerType === 'touch') return;
-      mouseNd.x = (e.clientX / window.innerWidth) * 2 - 1;
-      mouseNd.y = -(e.clientY / window.innerHeight) * 2 + 1;
-      pvpRaycaster.setFromCamera(mouseNd, this.camera);
-      if (pvpRaycaster.ray.intersectPlane(pvpGroundPlane, pvpIntersection)) {
-        const dx = pvpIntersection.x - this.playerPos.x;
-        const dz = pvpIntersection.z - this.playerPos.z;
-        this.setManualAimInput(dx, dz);
-        // Pointer movement only changes direction; fire happens on a discrete press.
-      }
-    });
+    // PvP aiming is the same timed directional sweep on desktop and touch.
+    // Mouse click fires; pointer movement does not override the sweep.
 
     window.addEventListener('blur', () => {
       this.keys = {};
       this.virtualJoystick = { x: 0, y: 0 };
-      if (this.gameMode === 'pvp') {
-        this.manualAimFiring = false;
-      }
     });
   }
 
@@ -1266,41 +1234,11 @@ export class PaleciakiGameEngine {
   /** Dedicated PvP twin-stick path. The existing PvE Survival auto-aim is unaffected while disabled. */
   public setManualAimMode(enabled: boolean) {
     this.manualAimEnabled = enabled;
-    this.manualAimFiring = false;
     this.pvpWantFire = false;
     this.pvpAimSweepElapsed = 0;
     this.pvpAimSweepRound = 0;
     if (enabled) this.manualAimDirection = pvpAimDirectionFromAngle(this.playerRot);
     document.getElementById('game-shell')?.classList.toggle('manual-aim-mode', enabled);
-  }
-
-  /** Update world-space aim from the right-hand touch stick; neutral input preserves direction. */
-  public setManualAimInput(x: number, z: number) {
-    if (!this.manualAimEnabled) return;
-    const viewportWidth = window.visualViewport?.width || window.innerWidth;
-    const viewportHeight = window.visualViewport?.height || window.innerHeight;
-    const portrait = isPvpPortraitViewport(viewportWidth, viewportHeight);
-    const worldInput = pvpScreenAimToWorld(x, z, portrait);
-    const directionActive = isPvpAimInputActive(worldInput.x, worldInput.z, PVP_AIM_DIRECTION_DEADZONE);
-    this.manualAimDirection = normalizePvpAimDirection(
-      worldInput.x,
-      worldInput.z,
-      this.manualAimDirection,
-      PVP_AIM_DIRECTION_DEADZONE,
-    );
-    // Aiming is independent from firing: moving this stick never sends a shot.
-    if (directionActive) {
-      this.playerRot = getPvpAimAngle(this.manualAimDirection);
-      if (this.playerGroup) this.playerGroup.rotation.y = this.playerRot;
-    }
-  }
-
-  public stopManualAimFiring() {
-    this.manualAimFiring = false;
-  }
-
-  public isManualAimEnabled(): boolean {
-    return this.manualAimEnabled;
   }
 
   public selectCharacter(
@@ -4482,7 +4420,6 @@ export class PaleciakiGameEngine {
     if (this.gameMode === 'survival' && this.state === 'levelup') return;
     if (this.state === 'playing') {
       this.state = 'paused';
-      this.stopManualAimFiring();
       sound.stopMusic();
     } else if (this.state === 'paused') {
       this.state = 'playing';
