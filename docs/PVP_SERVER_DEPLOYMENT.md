@@ -11,7 +11,7 @@ The repository now includes:
 - `GET /healthz`: HTTP health check.
 - `wss://<service>.onrender.com/pvp-ws`: secure WebSocket endpoint after deployment.
 
-The Blueprint sets `NODE_ENV=production`, restricts browser origins to `https://xelnarek.github.io`, enables deploys after GitHub checks pass, and uses the Starter/0.5 CPU, 512 MB compute plan.
+The Blueprint sets `NODE_ENV=production` and `PVP_ALLOWED_ORIGINS=https://xelnarek.github.io`, which restricts browser WebSocket upgrades to the published game origin. It enables deploys after GitHub checks pass and uses the Starter/0.5 CPU, 512 MB compute plan.
 
 ## Deploy with Render
 
