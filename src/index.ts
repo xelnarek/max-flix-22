@@ -62,7 +62,11 @@ function setTouchControlsVisibility(visible: boolean): void {
   layer.style.setProperty('pointer-events', 'none', 'important');
   layer.style.setProperty('isolation', 'isolate', 'important');
 
-  if (visible) {
+  const viewportWidth = window.visualViewport?.width || window.innerWidth;
+  const touchCapable = ('ontouchstart' in window) || window.matchMedia?.('(pointer: coarse)').matches === true;
+  const shouldShowTouchLayer = visible && (touchCapable || viewportWidth <= 900);
+
+  if (shouldShowTouchLayer) {
     layer.classList.remove('hidden');
     layer.style.setProperty('display', 'block', 'important');
     layer.style.setProperty('visibility', 'visible', 'important');
@@ -2206,7 +2210,9 @@ class PaleciakiScene extends xb.Script {
 
 
     document.getElementById('btn-attack')?.addEventListener('click', () => {
-      this.engine.triggerAttack();
+      // In PvP this dock slot is rebound to the one-shot timing fire action.
+      // Survival keeps its original direct attack.
+      if (this.engine.getGameMode() !== 'pvp') this.engine.triggerAttack();
     });
 
     document.getElementById('btn-ability')?.addEventListener('click', () => {
@@ -3024,39 +3030,63 @@ class PaleciakiScene extends xb.Script {
     const btnExitToMenu = document.getElementById('btn-pvp-exit-to-menu');
     const pauseModal = document.getElementById('pause-modal');
     const pvpFireButton = document.getElementById('btn-pvp-fire') as HTMLButtonElement | null;
+    const desktopPvpFireButton = document.getElementById('btn-attack') as HTMLButtonElement | null;
     const pvpFireLabel = pvpFireButton?.querySelector<HTMLElement>('.pvp-fire-label') || null;
     const pvpFireState = pvpFireButton?.querySelector<HTMLElement>('.pvp-fire-state') || null;
+    const desktopPvpFireLabel = desktopPvpFireButton?.querySelector<HTMLElement>('.attack-name') || null;
+    const desktopPvpFireState = desktopPvpFireButton?.querySelector<HTMLElement>('.attack-hint') || null;
+    const desktopPvpFireIcon = desktopPvpFireButton?.querySelector<HTMLElement>('.attack-icon') || null;
+    const fireUiButtons = [pvpFireButton, desktopPvpFireButton].filter(
+      (button): button is HTMLButtonElement => button !== null,
+    );
+    let desktopAttackPresentation: { name: string; hint: string; icon: string; title: string } | null = null;
     let pvpFireCooldownFrame = 0;
+    const setFireButtonCopy = (button: HTMLButtonElement, coolingDown: boolean, secondsLeft = 0) => {
+      if (button === pvpFireButton) {
+        if (pvpFireLabel) pvpFireLabel.textContent = coolingDown ? 'ŁADOWANIE' : 'STRZAŁ';
+        if (pvpFireState) pvpFireState.textContent = coolingDown ? `${secondsLeft.toFixed(1)} s` : 'GOTOWY';
+      } else {
+        if (desktopPvpFireLabel) desktopPvpFireLabel.textContent = coolingDown ? 'ŁADOWANIE' : 'STRZAŁ';
+        if (desktopPvpFireState) desktopPvpFireState.textContent = coolingDown ? `${secondsLeft.toFixed(1)} s` : 'KLIK / F';
+      }
+    };
     const resetPvpFireButton = () => {
       if (pvpFireCooldownFrame) cancelAnimationFrame(pvpFireCooldownFrame);
       pvpFireCooldownFrame = 0;
-      if (!pvpFireButton) return;
-      pvpFireButton.classList.remove('is-reloading');
-      pvpFireButton.style.setProperty('--pvp-fire-progress', '0%');
-      if (pvpFireLabel) pvpFireLabel.textContent = 'STRZAŁ';
-      if (pvpFireState) pvpFireState.textContent = 'GOTOWY';
-      pvpFireButton.disabled = pvpFireButton.dataset.roundActive !== 'true';
+      fireUiButtons.forEach((button) => {
+        button.classList.remove('is-reloading');
+        button.style.setProperty('--pvp-fire-progress', '0%');
+        button.disabled = button.dataset.roundActive !== 'true';
+        setFireButtonCopy(button, false);
+      });
     };
     const startPvpFireCooldown = (cooldownSeconds: number) => {
-      if (!pvpFireButton) return;
+      if (fireUiButtons.length === 0) return;
       if (pvpFireCooldownFrame) cancelAnimationFrame(pvpFireCooldownFrame);
       const durationMs = Math.max(120, (cooldownSeconds * this.pvpFireCooldownMultiplier + 0.075) * 1000);
       const startedAt = performance.now();
-      pvpFireButton.disabled = true;
-      pvpFireButton.classList.add('is-reloading');
-      if (pvpFireLabel) pvpFireLabel.textContent = 'ŁADOWANIE';
+      fireUiButtons.forEach((button) => {
+        button.disabled = true;
+        button.classList.add('is-reloading');
+        setFireButtonCopy(button, true, durationMs / 1000);
+      });
       const update = (now: number) => {
         const elapsed = Math.max(0, now - startedAt);
         const remaining = Math.max(0, durationMs - elapsed);
         const progress = Math.min(1, elapsed / durationMs);
-        pvpFireButton.style.setProperty('--pvp-fire-progress', (progress * 100).toFixed(1) + '%');
-        if (pvpFireState) pvpFireState.textContent = remaining > 0 ? (remaining / 1000).toFixed(1) + ' s' : 'GOTOWY';
+        fireUiButtons.forEach((button) => {
+          button.style.setProperty('--pvp-fire-progress', (progress * 100).toFixed(1) + '%');
+          if (remaining <= 0) {
+            button.classList.remove('is-reloading');
+            button.disabled = button.dataset.roundActive !== 'true';
+            button.style.setProperty('--pvp-fire-progress', '0%');
+            setFireButtonCopy(button, false);
+          } else {
+            setFireButtonCopy(button, true, remaining / 1000);
+          }
+        });
         if (remaining <= 0) {
           pvpFireCooldownFrame = 0;
-          pvpFireButton.classList.remove('is-reloading');
-          pvpFireButton.disabled = pvpFireButton.dataset.roundActive !== 'true';
-          if (pvpFireLabel) pvpFireLabel.textContent = 'STRZAŁ';
-          pvpFireButton.style.setProperty('--pvp-fire-progress', '0%');
           return;
         }
         pvpFireCooldownFrame = requestAnimationFrame(update);
@@ -3089,12 +3119,16 @@ class PaleciakiScene extends xb.Script {
       element.addEventListener('click', activate);
     };
 
-    bindPvpTap(pvpFireButton, () => {
+    const triggerPrimaryPvpShot = () => {
       if (!this.engine.triggerPvpFire()) return;
       const operatorId = (pvpFireButton?.dataset.operator as CharacterId | undefined) || this.selectedPvpOperator;
       startPvpFireCooldown(getPvpOperatorAttackCooldown(operatorId));
       sound.playAttackWhoosh();
-    });
+    };
+    bindPvpTap(pvpFireButton, triggerPrimaryPvpShot);
+    // Desktop uses the existing bottom-dock attack slot; mobile uses the
+    // dedicated large fire button directly above the movement joystick.
+    bindPvpTap(desktopPvpFireButton, triggerPrimaryPvpShot);
 
     opPicker?.querySelectorAll<HTMLButtonElement>('.pvp-operator-btn').forEach((btn) => {
       bindPvpTap(btn, () => {
@@ -3169,6 +3203,21 @@ class PaleciakiScene extends xb.Script {
 
       pvpHud?.classList.remove('hidden');
       hudBottom?.classList.remove('hidden');
+      if (desktopPvpFireButton) {
+        desktopAttackPresentation = {
+          name: desktopPvpFireLabel?.textContent || 'Atak',
+          hint: desktopPvpFireState?.textContent || '[F / J / Klik]',
+          icon: desktopPvpFireIcon?.innerHTML || '🥊',
+          title: desktopPvpFireButton.title || '',
+        };
+        desktopPvpFireButton.classList.add('pvp-primary-fire');
+        desktopPvpFireButton.dataset.roundActive = 'false';
+        desktopPvpFireButton.disabled = true;
+        desktopPvpFireButton.title = 'Strzał pojedynczy • kliknij, gdy wskaźnik na łuku pokryje się z przeciwnikiem (F)';
+        if (desktopPvpFireIcon) desktopPvpFireIcon.textContent = '➤';
+        if (desktopPvpFireLabel) desktopPvpFireLabel.textContent = 'STRZAŁ';
+        if (desktopPvpFireState) desktopPvpFireState.textContent = 'KLIK / F';
+      }
       setTouchControlsVisibility(true);
       // touch-controls is portaled to body, so it needs its own mode classes.
       // Classes on #game-shell do not cascade into this detached control layer.
@@ -3522,6 +3571,19 @@ class PaleciakiScene extends xb.Script {
         pvpFireButton.dataset.roundActive = 'false';
         pvpFireButton.dataset.operator = '';
       }
+      if (desktopPvpFireButton) {
+        desktopPvpFireButton.classList.remove('pvp-primary-fire', 'is-reloading');
+        desktopPvpFireButton.disabled = false;
+        desktopPvpFireButton.dataset.roundActive = 'false';
+        desktopPvpFireButton.style.setProperty('--pvp-fire-progress', '0%');
+        if (desktopAttackPresentation) {
+          if (desktopPvpFireLabel) desktopPvpFireLabel.textContent = desktopAttackPresentation.name;
+          if (desktopPvpFireState) desktopPvpFireState.textContent = desktopAttackPresentation.hint;
+          if (desktopPvpFireIcon) desktopPvpFireIcon.innerHTML = desktopAttackPresentation.icon;
+          desktopPvpFireButton.title = desktopAttackPresentation.title;
+        }
+      }
+      desktopAttackPresentation = null;
       setTouchControlsMode('hidden');
       setTouchControlsVisibility(false);
       this.engine.setManualAimMode(false);
