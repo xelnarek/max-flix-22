@@ -17,7 +17,7 @@ test('Home and End jump to the first and last menu tab', () => {
 test('unrelated keys and invalid tab indexes do not change navigation', () => {
   assert.equal(getMenuTabIndexForKey('Enter', 0, 10), null);
   assert.equal(getMenuTabIndexForKey('ArrowRight', -1, 10), null);
-  assert.equal(getMenuTabIndexForKey('ArrowLeft', 9, 10), null);
+  assert.equal(getMenuTabIndexForKey('ArrowLeft', 10, 10), null);
   assert.equal(getMenuTabIndexForKey('Home', 0, 0), null);
   assert.equal(getMenuTabIndexForKey('End', 0.5, 10), null);
 });
