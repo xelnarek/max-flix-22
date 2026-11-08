@@ -39,8 +39,8 @@ test('manual touch aim, server-origin checks, six-character invite codes and mut
   ]);
   assert.match(game, /wantFire: this\.pvpWantFire/);
   assert.match(game, /public triggerPvpFire\(\): boolean/);
-  assert.doesNotMatch(game, /shouldPvpAimFire\(x, z, this\.manualAimFiring\)/);
-  assert.match(game, /PVP_AIM_DIRECTION_DEADZONE/);
+  assert.match(game, /getPvpSweepAimAngle\(/);
+  assert.doesNotMatch(game, /setManualAimInput|pvpScreenAimToWorld|manualAimFiring/);
   assert.match(game, /this\.pvpInputSendAccumulator %= inputInterval/);
   assert.doesNotMatch(app, /pvp-aim-zone|pvp-aim-base/);
   assert.match(app, /getPvpOperatorAttackCooldown\(operatorId\)/);
