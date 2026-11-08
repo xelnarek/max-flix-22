@@ -2605,6 +2605,11 @@ class PaleciakiScene extends xb.Script {
         const pointerId = activeAimPointerId;
         activeAimPointerId = null;
         aimBase.classList.remove('active');
+        aimBase.style.left = '';
+        aimBase.style.top = '';
+        aimBase.style.right = '';
+        aimBase.style.bottom = '';
+        aimBase.style.transform = '';
         aimKnob.style.transform = 'translate(-50%, -50%)';
         this.engine.stopManualAimFiring();
         if (pointerId !== null) {
@@ -2628,10 +2633,16 @@ class PaleciakiScene extends xb.Script {
         if (!this.engine.isManualAimEnabled() || activeAimPointerId !== null) return;
         if (event.pointerType === 'mouse' && event.button !== 0) return;
         activeAimPointerId = event.pointerId;
-        const aimRect = aimBase.getBoundingClientRect();
-        aimStartX = aimRect.left + aimRect.width / 2;
-        aimStartY = aimRect.top + aimRect.height / 2;
+        // Floating right stick: start the aim vector exactly where the thumb lands.
+        // This removes the large dead travel when the player touches away from the fixed base.
+        aimStartX = event.clientX;
+        aimStartY = event.clientY;
         aimMaxRadius = getAimRadius();
+        aimBase.style.left = `${aimStartX}px`;
+        aimBase.style.top = `${aimStartY}px`;
+        aimBase.style.right = 'auto';
+        aimBase.style.bottom = 'auto';
+        aimBase.style.transform = 'translate(-50%, -50%)';
         aimBase.classList.add('active');
         aimKnob.style.transform = 'translate(-50%, -50%)';
         try { aimZone.setPointerCapture(event.pointerId); } catch { /* window handlers are the fallback */ }

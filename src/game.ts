@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { calculatePvpCameraFrame } from './pvpCamera.ts';
+import { createPvpFloorTexture, createPvpObstacleTexture } from './pvpTextures.ts';
 import { getPvpAimAngle, isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle, pvpScreenAimToWorld, pvpScreenMovementToWorld, PVP_AIM_DIRECTION_DEADZONE, type PvpAimDirection } from './pvpAim.ts';
 import type { IPvpSession } from './pvpClient.ts';
 import {
@@ -2074,10 +2075,14 @@ export class PaleciakiGameEngine {
     const depth = bounds.maxZ - bounds.minZ;
 
     const floorGeo = new THREE.BoxGeometry(width + 4, 1.0, depth + 4);
+    const floorTexture = createPvpFloorTexture();
+    floorTexture.repeat.set(5, 3);
+    floorTexture.needsUpdate = true;
     const floorMat = new THREE.MeshStandardMaterial({
-      color: 0x0f172a,
-      roughness: 0.5,
-      metalness: 0.2,
+      color: 0xffffff,
+      map: floorTexture,
+      roughness: 0.82,
+      metalness: 0.12,
     });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.position.set(0, -0.5, 0);
@@ -2120,7 +2125,8 @@ export class PaleciakiGameEngine {
     p2Ring.position.set(PVP_SPAWN_P2.x, 0.03, PVP_SPAWN_P2.z);
     this.pvpArenaRoot.add(p1Ring, p2Ring);
 
-    const wallMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7 });
+    const wallTexture = createPvpObstacleTexture('wall');
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: wallTexture, roughness: 0.72, metalness: 0.22 });
     const wN = new THREE.Mesh(new THREE.BoxGeometry(width + 4, 3.2, 1.2), wallMat);
     wN.position.set(0, 1.6, bounds.minZ - 1.2);
     const wS = new THREE.Mesh(new THREE.BoxGeometry(width + 4, 3.2, 1.2), wallMat);
@@ -2137,7 +2143,7 @@ export class PaleciakiGameEngine {
       group.position.set(obs.x, 0, obs.z);
 
       if (obs.type === 'pallet') {
-        const palletMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.8 });
+        const palletMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: createPvpObstacleTexture('crate'), roughness: 0.82, metalness: 0.08 });
         const stackMesh = new THREE.Mesh(new THREE.BoxGeometry(obs.width, obs.height, obs.depth), palletMat);
         stackMesh.position.y = obs.height / 2;
         stackMesh.castShadow = true;
@@ -2147,7 +2153,7 @@ export class PaleciakiGameEngine {
         band.position.y = obs.height - 0.2;
         group.add(band);
       } else if (obs.type === 'barrier') {
-        const barrierMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.6 });
+        const barrierMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: createPvpObstacleTexture('barrier'), roughness: 0.68, metalness: 0.28 });
         const barMesh = new THREE.Mesh(new THREE.BoxGeometry(obs.width, obs.height, obs.depth), barrierMat);
         barMesh.position.y = obs.height / 2;
         barMesh.castShadow = true;
@@ -2157,7 +2163,7 @@ export class PaleciakiGameEngine {
         stripe.position.y = obs.height * 0.6;
         group.add(stripe);
       } else {
-        const pillarMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.5, metalness: 0.4 });
+        const pillarMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: createPvpObstacleTexture('wall'), roughness: 0.58, metalness: 0.38 });
         const pilMesh = new THREE.Mesh(new THREE.BoxGeometry(obs.width, obs.height, obs.depth), pillarMat);
         pilMesh.position.y = obs.height / 2;
         group.add(pilMesh);
