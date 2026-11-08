@@ -107,7 +107,7 @@ test('account profile sanitization rejects unknown talents, unmet prerequisites 
 
   assert.equal(clean.version, 1);
   assert.equal(clean.level, 2);
-  assert.equal(clean.xp, 74);
+  assert.equal(clean.xp, 96);
   assert.deepEqual(clean.talentRanks, { weapon_training: 1 });
   assert.equal(clean.stats.pvpWins, 0);
   assert.equal(clean.stats.survivalKills, 23);
@@ -165,7 +165,7 @@ test('account bonuses combine with the existing operator mastery without unbound
 test('PvP adapter maps account cooldown bonuses to the server profile contract', async () => {
   const { getAccountPvpProgressionBonuses } = await import('../src/accountProgression.ts');
   const profile = createInitialAccountProgressionProfile();
-  profile.level = 7;
+  profile.level = 8;
   profile.talentRanks = { weapon_training: 3, ability_calibration: 3, rapid_protocol: 1 };
   const bonuses = getAccountPvpProgressionBonuses(profile);
   assert.equal(bonuses.damageMultiplier, getAccountProgressionBonuses(profile).damageMultiplier);
