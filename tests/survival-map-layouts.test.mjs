@@ -56,3 +56,28 @@ test('pallet cargo body is raised to expose its physical pallet deck detail', as
   assert.match(game, /palletBase\.position\.y = 0\.075/);
   assert.match(game, /deckBoards\.instanceMatrix\.needsUpdate = true/);
 });
+
+
+test('map cover footprints do not overlap one another or block the central start lane', () => {
+  for (const [mapId, features] of Object.entries(SURVIVAL_MAP_LAYOUTS)) {
+    for (const feature of features) {
+      const left = feature.x - feature.width * 0.56;
+      const right = feature.x + feature.width * 0.56;
+      const near = feature.z - feature.depth * 0.56;
+      const far = feature.z + feature.depth * 0.56;
+      assert.ok(right <= -5 || left >= 5 || far <= -5 || near >= 5,
+        mapId + ' blocks the central start lane: ' + feature.id);
+    }
+    for (let i = 0; i < features.length; i++) {
+      for (let j = i + 1; j < features.length; j++) {
+        const a = features[i], b = features[j];
+        const overlapX = Math.min(a.x + a.width * 0.56, b.x + b.width * 0.56)
+          - Math.max(a.x - a.width * 0.56, b.x - b.width * 0.56);
+        const overlapZ = Math.min(a.z + a.depth * 0.56, b.z + b.depth * 0.56)
+          - Math.max(a.z - a.depth * 0.56, b.z - b.depth * 0.56);
+        assert.ok(overlapX <= 0 || overlapZ <= 0,
+          mapId + ' has overlapping collision footprints: ' + a.id + ' / ' + b.id);
+      }
+    }
+  }
+});
