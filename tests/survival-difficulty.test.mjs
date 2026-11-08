@@ -25,8 +25,6 @@ test('late-game pressure stops at explicit spawn and stat limits', () => {
   assert.equal(late.enemyHealthMultiplier, 3);
   assert.equal(late.enemySpeedMultiplier, 1.26);
   assert.equal(late.spawnIntervalSeconds, 4.2);
-  assert.equal(late.enemySpeedMultiplier, 1.036);
-  assert.equal(late.spawnIntervalSeconds, 5.2);
   assert.equal(late.extraGroupSize, 3);
   assert.equal(late.enemyAbilityRateMultiplier, 1.4);
 });
