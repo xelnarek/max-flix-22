@@ -51,3 +51,13 @@ test('Survival reuses the PvP floor, crate, barrier, wall and footprint assets',
   assert.match(textures, /export function createArenaObstacleFootprint/);
   assert.match(game, /createArenaObstacleFootprint\(obs\.width, obs\.depth, footprintColor\)/);
 });
+
+
+test('arena surfaces include industrial wear, drainage and distinct freight hardware marks', async () => {
+  const textures = await readFile(new URL('../src/pvpTextures.ts', import.meta.url), 'utf8');
+  assert.match(textures, /Recessed drainage plates/);
+  assert.match(textures, /Forklift tyre polishing/);
+  assert.match(textures, /B4/);
+  assert.match(textures, /Reflective panels, end caps and fixing bolts/);
+  assert.match(textures, /Concrete wall seams, anchor plates/);
+});

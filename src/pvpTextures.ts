@@ -54,6 +54,62 @@ export function createPvpFloorTexture(): THREE.CanvasTexture {
       ctx.fillRect(x + 18, 18, 34, 5);
       ctx.fillRect(x + 18, size - 23, 34, 5);
     }
+
+    // Recessed drainage plates in the concrete. The geometry stays inside each
+    // 128px tile so the repeated surface does not introduce visible edge seams.
+    for (let y = 0; y < size; y += 128) {
+      for (let x = 0; x < size; x += 128) {
+        const gx = x + 76;
+        const gy = y + 76;
+        ctx.fillStyle = 'rgba(8,14,23,.58)';
+        ctx.fillRect(gx, gy, 36, 18);
+        ctx.strokeStyle = 'rgba(182,196,211,.48)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(gx + 1, gy + 1, 34, 16);
+        ctx.beginPath();
+        for (let line = 0; line < 6; line++) {
+          const ly = gy + 3 + line * 2.4;
+          ctx.moveTo(gx + 4, ly);
+          ctx.lineTo(gx + 32, ly);
+        }
+        ctx.stroke();
+      }
+    }
+
+    // Forklift tyre polishing and small painted aisle arrows add scale and
+    // direction cues while remaining a static, low-cost canvas texture.
+    for (let track = 0; track < 8; track++) {
+      const tx = 34 + (track * 61) % 410;
+      const ty = 44 + (track * 97) % 408;
+      ctx.save();
+      ctx.translate(tx, ty);
+      ctx.rotate(((track % 3) - 1) * 0.16);
+      ctx.strokeStyle = 'rgba(10,16,25,.28)';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(-23, -8);
+      ctx.lineTo(23, -8);
+      ctx.moveTo(-23, 8);
+      ctx.lineTo(23, 8);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(205,214,225,.12)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-17, -10);
+      ctx.lineTo(18, -10);
+      ctx.moveTo(-17, 10);
+      ctx.lineTo(18, 10);
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.strokeStyle = 'rgba(226,232,240,.34)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([14, 11]);
+    ctx.beginPath();
+    ctx.moveTo(250, 150);
+    ctx.lineTo(250, 362);
+    ctx.stroke();
+    ctx.setLineDash([]);
   }, 2, 2);
 }
 
@@ -79,6 +135,23 @@ export function createPvpObstacleTexture(kind: ObstacleTextureKind): THREE.Canva
       for (const [x,y] of [[42,42],[size-42,42],[42,size-42],[size-42,size-42]]) {
         ctx.beginPath(); ctx.arc(x,y,9,0,Math.PI*2); ctx.fill();
       }
+      // Board grain and a compact inventory stamp make the crate read as
+      // wooden freight rather than a flat brown cube at camera distance.
+      ctx.strokeStyle = 'rgba(45,25,14,.30)';
+      ctx.lineWidth = 3;
+      for (let y = 104; y < size - 96; y += 58) {
+        ctx.beginPath();
+        ctx.moveTo(82, y);
+        ctx.bezierCurveTo(170, y - 9, 300, y + 10, size - 82, y - 2);
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#f1e5cc';
+      ctx.fillRect(size - 154, size - 118, 88, 42);
+      ctx.fillStyle = '#263444';
+      ctx.font = '900 22px monospace';
+      ctx.fillText('B4', size - 142, size - 90);
+      ctx.fillRect(size - 139, size - 82, 60, 3);
+      ctx.fillRect(size - 139, size - 74, 60, 3);
     } else {
       ctx.fillStyle = kind === 'barrier' ? '#f2b632' : '#263b50';
       if (kind === 'barrier') {
@@ -89,6 +162,38 @@ export function createPvpObstacleTexture(kind: ObstacleTextureKind): THREE.Canva
         for (let y = 72; y < size; y += 112) {
           ctx.fillStyle = y % 224 ? '#40556c' : '#1d2b3d';
           ctx.fillRect(40, y, size - 80, 42);
+        }
+      }
+      if (kind === 'barrier') {
+        // Reflective panels, end caps and fixing bolts break up the warning tape.
+        ctx.fillStyle = 'rgba(255,255,255,.72)';
+        for (let x = 48; x < size - 20; x += 128) {
+          ctx.fillRect(x, 34, 26, 18);
+          ctx.fillRect(x, size - 52, 26, 18);
+        }
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(20, 18, 28, size - 36);
+        ctx.fillRect(size - 48, 18, 28, size - 36);
+        ctx.fillStyle = '#cbd5e1';
+        for (const x of [31, size - 31]) {
+          for (const y of [54, size * 0.5, size - 54]) {
+            ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.fill();
+          }
+        }
+      } else {
+        // Concrete wall seams, anchor plates and shallow damp streaks.
+        ctx.strokeStyle = 'rgba(7,15,25,.48)';
+        ctx.lineWidth = 5;
+        for (let y = 112; y < size; y += 128) {
+          ctx.beginPath(); ctx.moveTo(52, y); ctx.lineTo(size - 52, y); ctx.stroke();
+        }
+        ctx.fillStyle = 'rgba(10,18,29,.32)';
+        for (let x = 94; x < size - 60; x += 132) {
+          ctx.fillRect(x, 58, 8, size - 116);
+        }
+        ctx.fillStyle = '#cbd5e1';
+        for (const [x,y] of [[58,58],[size-58,58],[58,size-58],[size-58,size-58]]) {
+          ctx.beginPath(); ctx.arc(x,y,8,0,Math.PI*2); ctx.fill();
         }
       }
       ctx.fillStyle = '#6ee7f9';

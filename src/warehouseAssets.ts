@@ -1086,6 +1086,44 @@ export function createCharacterModel(def: CharacterDef): {
   stripeV2.position.set(0.1, 0.56, 0);
   group.add(stripeH, stripeV1, stripeV2);
 
+  // Tailored workwear finish: front zip, double utility pockets and stitch
+  // seams add readable detail without changing the torso silhouette or hitbox.
+  const zipperMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: 0.3, metalness: 0.74 });
+  const frontZip = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.25, 0.014), zipperMat);
+  frontZip.position.set(0, 0.565, 0.158);
+  const zipPull = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.045, 0.018), zipperMat);
+  zipPull.position.set(0, 0.665, 0.166);
+  group.add(frontZip, zipPull);
+
+  const pocketPanel = new THREE.BoxGeometry(0.132, 0.125, 0.026);
+  const pocketFlapGeo = new THREE.BoxGeometry(0.14, 0.035, 0.032);
+  for (const side of [-1, 1]) {
+    const pocket = new THREE.Mesh(pocketPanel, armorMat);
+    pocket.position.set(side * 0.132, 0.435, 0.147);
+    const flap = new THREE.Mesh(pocketFlapGeo, trimMat);
+    flap.position.set(side * 0.132, 0.495, 0.164);
+    const rivet = new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 5), silverReflectMat);
+    rivet.position.set(side * 0.132, 0.493, 0.184);
+    group.add(pocket, flap, rivet);
+  }
+
+  const seamMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc, transparent: true, opacity: 0.58 });
+  const seamMarks = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(0.12, 0.007, 0.006),
+    seamMat,
+    4,
+  );
+  const seamTransform = new THREE.Object3D();
+  for (let i = 0; i < 4; i++) {
+    seamTransform.position.set(i % 2 === 0 ? -0.13 : 0.13, 0.35 + Math.floor(i / 2) * 0.025, 0.16);
+    seamTransform.rotation.set(0, 0, 0);
+    seamTransform.scale.set(1, 1, 1);
+    seamTransform.updateMatrix();
+    seamMarks.setMatrixAt(i, seamTransform.matrix);
+  }
+  seamMarks.instanceMatrix.needsUpdate = true;
+  group.add(seamMarks);
+
   // 2. Head with Face Details
   const headGeo = new THREE.SphereGeometry(0.145, 20, 14);
   const head = new THREE.Mesh(headGeo, skinMat);
@@ -1355,6 +1393,21 @@ export function createCharacterModel(def: CharacterDef): {
   rightBoot.position.copy(leftBoot.position);
   rightLeg.add(rightBoot);
 
+  // Steel-toe caps and deep rubber soles are attached to the animated leg
+  // meshes, so the extra detail follows every stride and jump pose cleanly.
+  const soleGeo = new THREE.BoxGeometry(0.145, 0.035, 0.205);
+  const toeCapGeo = new THREE.SphereGeometry(0.075, 10, 7);
+  const steelToeMat = new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.28, metalness: 0.82 });
+  for (const leg of [leftLeg, rightLeg]) {
+    const sole = new THREE.Mesh(soleGeo, rubberMat);
+    sole.position.set(0, -0.205, 0.055);
+    sole.castShadow = true;
+    const toeCap = new THREE.Mesh(toeCapGeo, steelToeMat);
+    toeCap.scale.set(1.02, 0.38, 0.48);
+    toeCap.position.set(0, -0.157, 0.158);
+    leg.add(sole, toeCap);
+  }
+
   group.add(leftLeg, rightLeg);
 
   // Knee guards follow the animated leg bones instead of floating beside the character.
@@ -1398,7 +1451,18 @@ export function createCharacterModel(def: CharacterDef): {
     arm.add(cuff);
     const cuffBand = new THREE.Mesh(new THREE.BoxGeometry(0.105, 0.025, 0.11), trimMat);
     cuffBand.position.set(0, -0.12, 0.012);
-    arm.add(cuffBand);
+    const reflectiveArmBand = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 0.035, 0.118),
+      silverReflectMat,
+    );
+    reflectiveArmBand.position.set(0, 0.065, 0.012);
+    const elbowPad = new THREE.Mesh(
+      new THREE.SphereGeometry(0.074, 8, 6),
+      armorMat,
+    );
+    elbowPad.scale.set(1.12, 0.66, 0.78);
+    elbowPad.position.set(0, -0.04, -0.012);
+    arm.add(cuffBand, reflectiveArmBand, elbowPad);
   }
 
   group.add(leftArm, rightArm);

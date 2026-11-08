@@ -112,3 +112,23 @@ test('engine drives class-specific attack poses and low-cost footprint effects',
   assert.match(game, /const landingColor = motionProfile\.footstepColor/);
   assert.doesNotMatch(game, /this\.rightArm\.rotation\.x = -1\.8 \+ \(this\.attackSwingTimer/);
 });
+
+
+test('operator models include finished uniform, reflective arm bands and steel-toe boot details', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const assets = await readFile(new URL('../src/warehouseAssets.ts', import.meta.url), 'utf8');
+  for (const feature of [
+    'frontZip',
+    'pocketPanel',
+    'pocketFlapGeo',
+    'reflectiveArmBand',
+    'elbowPad',
+    'steelToeMat',
+    'toeCap',
+    'soleGeo',
+  ]) {
+    assert.ok(assets.includes(feature), 'missing finished uniform detail: ' + feature);
+  }
+  assert.match(assets, /const seamMarks = new THREE\.InstancedMesh/);
+  assert.match(assets, /leg\.add\(sole, toeCap\)/);
+});
