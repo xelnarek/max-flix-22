@@ -34,3 +34,8 @@ test('network interruptions freeze the live simulation and only forfeit after th
   assert.match(server, /const graceMs = intentionalLeave \? 0 : getPvpReconnectGraceMs\(\)/);
   assert.match(server, /room\.state\.matchWinner = other/);
 });
+
+test('best-effort room cleanup timers do not keep an idle test or server process alive', () => {
+  assert.match(server, /function scheduleRoomCleanup\(room: PvpRoom, delayMs: number\)/);
+  assert.match(server, /timer\.unref\?\.\(\)/);
+});
