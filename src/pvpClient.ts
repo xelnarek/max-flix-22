@@ -150,8 +150,8 @@ export class PvpNetworkSession implements IPvpSession {
         } else if (this.pendingJoin) {
           this.joinRoom(this.pendingJoin.code, this.pendingJoin.operatorId, this.pendingJoin.playerName);
         } else if (this.pendingMatchmaking) {
+          // Keep the request until matched/cancelled so reconnects can re-enter the FIFO queue.
           const request = this.pendingMatchmaking;
-          this.pendingMatchmaking = undefined;
           this.send({ type: 'find_match', operatorId: request.operatorId, playerName: request.playerName });
         }
       };
@@ -345,7 +345,6 @@ export class PvpNetworkSession implements IPvpSession {
     this.pendingJoin = undefined;
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
     const request = this.pendingMatchmaking;
-    this.pendingMatchmaking = undefined;
     this.send({ type: 'find_match', operatorId: request.operatorId, playerName: request.playerName });
   }
 
