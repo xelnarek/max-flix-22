@@ -881,7 +881,20 @@ body {
   height: 100% !important;
   height: 100dvh !important;
   pointer-events: none !important;
-  z-index: 80 !important;
+  isolation: isolate !important;
+  z-index: 2000000 !important;
+}
+
+/* Explicit hit-testing layer above the WebGL canvas on Android/Chrome. */
+#touch-controls:not(.hidden) {
+  display: block !important;
+  visibility: visible !important;
+  pointer-events: none !important;
+}
+#touch-controls .joystick-zone,
+#touch-controls .touch-actions-zone,
+#touch-controls .pvp-aim-zone {
+  pointer-events: auto !important;
 }
 
 .joystick-zone {
