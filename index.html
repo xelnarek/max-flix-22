@@ -413,6 +413,12 @@
               </span>
               <span class="tab-label">OPERATORZY</span>
             </button>
+            <button class="menu-tab-btn" data-tab="tab-map" aria-controls="tab-map" aria-label="Wybór mapy Survival">
+              <span class="tab-icon" aria-hidden="true">
+                <svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg>
+              </span>
+              <span class="tab-label">WYBÓR MAPY</span>
+            </button>
             <button class="menu-tab-btn" data-tab="tab-enemies">
               <span class="tab-icon">
                 <svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
@@ -1185,9 +1191,8 @@
               </div>
               </section>
             </div>
-          </div>
-
-          <section id="survival-map-picker" class="survival-map-picker menu-map-picker-frame" aria-label="Wybór mapy Survival">
+            <div id="tab-map" class="tab-panel map-selection-panel" aria-label="Wybór mapy Survival">
+              <section id="survival-map-picker" class="survival-map-picker menu-map-picker-frame" aria-label="Wybór mapy Survival">
               <div class="survival-map-picker-heading">
                 <strong>WYBIERZ ARENĘ</strong>
                 <span>4 ARENY • RÓŻNE TRASY</span>
@@ -1201,7 +1206,9 @@
               </div>
               <div class="survival-map-preview" aria-live="polite"><strong id="survival-map-preview-title">ROTACJA AREN</strong><span id="survival-map-preview-detail">Losowanie bez powtórzenia poprzedniej mapy. Każda arena ma własny układ osłon.</span></div>
               <p id="survival-map-picker-hint" class="survival-map-picker-hint">Wybierz kafelek, aby zobaczyć zasady i charakter trasy.</p>
-          </section>
+              </section>
+            </div>
+          </div>
 
           <div class="menu-fixed-bottom-bar">
             <div class="menu-cta-row">
