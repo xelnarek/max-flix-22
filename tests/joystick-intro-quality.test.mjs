@@ -107,7 +107,7 @@ test('touch controls are portaled outside the WebGL shell for Android hit testin
   const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
   const boot = app.slice(app.indexOf('async function startApp()'));
   assert.match(boot, /touchLayer && touchLayer\.parentElement !== document\.body[\s\S]*?document\.body\.appendChild\(touchLayer\)/);
-  assert.match(boot, /touchLayer\.style\.setProperty\('z-index', '2000000', 'important'\)/);
+  assert.match(boot, /touchLayer\.style\.setProperty\('z-index', '2147483000', 'important'\)/);
   assert.match(boot, /touchLayer\.style\.setProperty\('pointer-events', 'none', 'important'\)/);
   assert.match(app, /touchControls\?\.classList\.add\('survival-mode'\)/);
 });
@@ -151,7 +151,8 @@ test('gameplay explicitly forces the mobile touch layer visible when a run start
 test('touch layer is portaled to body and receives top mobile compositor priority on every visibility change', async () => {
   const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
   const helper = app.slice(app.indexOf('function setTouchControlsVisibility'), app.indexOf('import {', app.indexOf('function setTouchControlsVisibility')));
-  assert.match(helper, /layer\.parentElement !== document\.body[\\s\\S]*?document\.body\.appendChild\(layer\)/);
+  assert.ok(helper.includes('layer.parentElement !== document.body'));
+  assert.ok(helper.includes('document.body.appendChild(layer)'));
   assert.ok(helper.includes("layer.style.setProperty('position', 'fixed', 'important')"));
   assert.ok(helper.includes("layer.style.setProperty('z-index', '2147483000', 'important')"));
   assert.ok(helper.includes("layer.style.setProperty('pointer-events', 'none', 'important')"));
