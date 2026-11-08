@@ -45,7 +45,7 @@ test('manual touch aim, server-origin checks, six-character invite codes and mut
   assert.match(app, /getElementById\('pvp-aim-zone'\)/);
   assert.match(app, /getPvpOperatorAttackCooldown\(operatorId\)/);
   assert.match(app, /startPvpFireCooldown\(/);
-  assert.match(app, /fireButton\.dataset\.roundActive = String\(roundActive\)/);
+  assert.match(app, /button\.dataset\.roundActive = String\(roundActive\)/);
   assert.match(app, /REWANŻ ZGŁOSZONY • CZEKAJ NA RYWALA/);
   assert.match(html, /maxlength="6"/);
   assert.match(server, /maxPayload: 4096/);
@@ -152,16 +152,17 @@ test('PvP WebSocket server expires stale movement and firing intents', async () 
 
 
 test('PvP timing sweep, rather than a right stick, is shown on the portaled touch-controls layer', async () => {
-  const [app, css, html] = await Promise.all([
+  const [app, css, html, game] = await Promise.all([
     readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
     readFile(new URL('../index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../src/game.ts', import.meta.url), 'utf8'),
   ]);
   assert.match(app, /setTouchControlsMode\('pvp'\)/);
   assert.match(app, /root\.classList\.toggle\('pvp-mode', activePvp\)/);
   assert.match(app, /root\.classList\.toggle\('manual-aim-mode', activePvp\)/);
   assert.match(app, /setTouchControlsMode\('hidden'\)/);
-  assert.match(app, /getPvpSweepAimAngle\(/);
+  assert.match(game, /getPvpSweepAimAngle\(/);
   assert.match(html, /id="pvp-fire-control"/);
   assert.match(html, /id="btn-pvp-fire"/);
   assert.doesNotMatch(html, /id="pvp-aim-zone"|id="pvp-aim-base"/);
