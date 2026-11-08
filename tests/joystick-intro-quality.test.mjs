@@ -45,6 +45,7 @@ test('movement and PvP aim sticks capture separate pointers for simultaneous tou
   assert.doesNotMatch(app, /event\.isPrimary === false/);
   assert.match(css, /touch-action: none !important/);
   assert.match(css, /\.joystick-base::before/);
+  assert.match(css, /:is\(#game-shell, #touch-controls\)\.manual-aim-mode \.pvp-aim-zone \{ bottom: 98px !important; \}/);
 });
 
 test('cinematic intro stages its title reveal over a richer animated warehouse scene', async () => {
