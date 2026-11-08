@@ -1,56 +1,49 @@
-# Hosting the Paleciaki PvP WebSocket service
+# Deploy the Paleciaki PvP WebSocket service
 
-The public GitHub Pages site is static. It cannot host the `/pvp-ws` WebSocket endpoint itself. PvP practice with the local bot works without a network service; online rooms require this small Node service to be deployed separately.
+The browser game is hosted as a static GitHub Pages site. The multiplayer room server must run separately because GitHub Pages cannot host a persistent WebSocket endpoint.
 
-## Runtime
+## Prepared deployment
 
-- Node.js 24 or newer.
+The repository now includes:
 
-## Container deployment
+- `Dockerfile`: a small Node 24 image with only the `ws` runtime dependency.
+- `render.yaml`: a Render Blueprint for one always-on web service in Frankfurt.
+- `GET /healthz`: HTTP health check.
+- `wss://<service>.onrender.com/pvp-ws`: secure WebSocket endpoint after deployment.
 
-The repository includes a minimal production `Dockerfile` for hosts that deploy containers:
+The Blueprint sets `NODE_ENV=production`, restricts browser origins to `https://xelnarek.github.io`, enables deploys after GitHub checks pass, and uses the Starter/0.5 CPU, 512 MB compute plan.
 
-```bash
-docker build -t paleciaki-pvp .
-docker run --rm -p 8080:8080 \
-  -e NODE_ENV=production \
-  -e PVP_ALLOWED_ORIGINS=https://xelnarek.github.io \
-  paleciaki-pvp
-```
+## Deploy with Render
 
-The platform should expose the container's HTTP port and terminate TLS so the public browser client can connect using `wss://`. Configure the public WebSocket URL in the GitHub Actions variable described below. The HTTP health probe is `/healthz`.
+1. Connect your Render account to ChatGPT using the Render connection prompt. Do not paste your password or API key into this chat.
+2. In Render, create a new **Blueprint** and select GitHub repository `xelnarek/max-flix-22`, branch `main`.
+3. Render detects `render.yaml`. Review the proposed service `paleciaki-pvp`, Frankfurt region, health path `/healthz`, and Starter compute plan. Approve creation only after reviewing the price shown in your account.
+4. Wait for the first deployment to finish. Open `https://<service-name>.onrender.com/healthz`. A healthy response looks like:
+   `{"ok":true,"service":"paleciaki-pvp","websocketPath":"/pvp-ws"}`
+5. Copy the hostname Render assigned to the service. The browser endpoint is the same hostname with `wss://` and path `/pvp-ws`.
 
+## Why Starter instead of Free
 
-- Install the repository dependencies with `npm ci`.
-- Start the service with `npm run pvp:server`.
-- The host supplies `PORT`; locally the server uses `PVP_PORT` or 8080.
-- Health endpoint: `GET /healthz`.
-- WebSocket endpoint: `/pvp-ws` (the reverse proxy must support WebSocket upgrade).
+Render's Free web services can spin down after 15 minutes without inbound traffic, including WebSocket traffic. The next connection can take about a minute to wake the service. That is unsuitable for a responsive real-time PvP lobby. The Starter plan stays running; current listed compute price is approximately USD 7/month, in addition to any applicable metered usage. Check the exact amount shown by Render before approving. Sources: [Render Free instance limits](https://render.com/docs/free) and [Render pricing](https://render.com/pricing).
 
-## Required production settings
+## Connect the website to the deployed server
 
-Set `NODE_ENV=production` and `PVP_ALLOWED_ORIGINS` to a comma-separated exact origin allow-list, for example:
-
-```text
-PVP_ALLOWED_ORIGINS=https://xelnarek.github.io
-```
-
-Add any real custom game domain separately. The server rejects browser WebSocket upgrades from origins outside this list. Do not put private credentials in the static website bundle.
-
-## Configure the static client
-
-After deploying the service with TLS, set the GitHub repository Actions variable `VITE_PVP_WS_URL` to the public secure endpoint:
+After Render confirms the exact public hostname, set the website build variable `VITE_PVP_WS_URL` to:
 
 ```text
-wss://YOUR-PVP-HOST.example.com/pvp-ws
+wss://<exact-render-hostname>.onrender.com/pvp-ws
 ```
 
-The deploy workflow passes that variable into the Vite production build. Because it is a public endpoint, use a repository *variable*, not a secret. Re-run the GitHub Pages deployment after setting it.
+The existing GitHub Pages workflow already passes `vars.VITE_PVP_WS_URL` into the Vite build. This variable is a public endpoint, not a secret. Re-run the Pages deployment after it is set.
 
-Without the variable, the client deliberately disables online room creation on GitHub Pages and explains that the online service is not configured. Local bot practice remains available.
+## Verification checklist
 
-## Current multiplayer scope and operational limits
+- `GET /healthz` returns HTTP 200.
+- Browser WebSocket handshake to `wss://<host>/pvp-ws` succeeds from the game origin.
+- Device A creates a room and receives a six-character code.
+- Device B joins using the code.
+- Both players mark ready; the server starts the match.
+- Movement, manual aim, firing, abilities, round results and rematches synchronize.
+- Disconnecting one player ends the room safely.
 
-The server runs an authoritative 1v1 simulation at 30 Hz, validates/clamps player input, limits WebSocket payload size and message rate, uses six-character invite codes, requires both players to agree to a rematch, and rejects production origins not explicitly allowed. It closes the match if a player disconnects; reconnect/resume is not implemented yet.
-
-This is an MVP room server, not a full account/authentication or anti-cheat platform. For public ranked play, add authenticated room ownership, match result persistence, queue-based matchmaking, reconnect tokens, server metrics, abuse monitoring and multi-device latency testing before enabling rankings or rewards.
+The current service is an authoritative 1v1 MVP at 30 Hz. It does not yet restore an active match after a disconnect and is not a ranked/anti-cheat platform. Do not publish rankings or paid rewards until authentication, persistent match results, reconnect handling and abuse controls are added.
