@@ -103,6 +103,15 @@ test('Survival starts without waiting for the ad provider and the menu is not co
   assert.match(app, /btn-open-intro/);
 });
 
+test('touch controls are portaled outside the WebGL shell for Android hit testing', async () => {
+  const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
+  const boot = app.slice(app.indexOf('async function startApp()'));
+  assert.match(boot, /touchLayer && touchLayer\.parentElement !== document\.body[\s\S]*?document\.body\.appendChild\(touchLayer\)/);
+  assert.match(boot, /touchLayer\.style\.setProperty\('z-index', '2000000', 'important'\)/);
+  assert.match(boot, /touchLayer\.style\.setProperty\('pointer-events', 'none', 'important'\)/);
+  assert.match(app, /touchControls\?\.classList\.add\('survival-mode'\)/);
+});
+
 test('the title menu is portaled above the WebGL shell for mobile compositor safety', async () => {
   const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
   const boot = app.slice(app.indexOf('async function startApp()'));
