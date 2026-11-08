@@ -17,20 +17,20 @@ function safeWave(value: number): number {
 
 /**
  * A deliberate, readable difficulty curve:
- * - HP and movement pressure rise every wave.
- * - New group members enter in measured six-wave steps.
- * - Spawn cadence bottoms out at 5.2 seconds so the late game stays intense,
- *   while the separate device enemy cap remains the performance guardrail.
- * - Special cooldowns tighten gradually without shortening telegraph windows.
+ * - Enemies start assertively instead of spending the opening waves at reduced speed.
+ * - Health, group size and ability pressure rise in bounded wave steps.
+ * - Spawn cadence bottoms out at 4.2 seconds; the device enemy cap remains the
+ *   performance guardrail on handheld hardware.
+ * - Special cooldowns tighten gradually without shortening visible wind-ups.
  */
 export function getSurvivalDifficultyProfile(wave: number): SurvivalDifficultyProfile {
   const currentWave = safeWave(wave);
   const waveIndex = currentWave - 1;
   return {
-    enemyHealthMultiplier: 1 + Math.min(2.55, waveIndex * 0.095),
-    enemySpeedMultiplier: 0.70 * (1 + Math.min(0.48, waveIndex * 0.018)),
-    spawnIntervalSeconds: Math.max(5.2, 9.8 - waveIndex * 0.20),
-    extraGroupSize: Math.min(2, Math.floor(waveIndex / 6)),
-    enemyAbilityRateMultiplier: 1 + Math.min(0.28, waveIndex * 0.012),
+    enemyHealthMultiplier: 1.18 + Math.min(1.82, waveIndex * 0.075),
+    enemySpeedMultiplier: 0.90 * (1 + Math.min(0.40, waveIndex * 0.014)),
+    spawnIntervalSeconds: Math.max(4.2, 7.4 - waveIndex * 0.13),
+    extraGroupSize: Math.min(3, Math.floor(waveIndex / 5)),
+    enemyAbilityRateMultiplier: 1 + Math.min(0.40, waveIndex * 0.014),
   };
 }
