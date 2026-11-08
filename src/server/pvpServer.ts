@@ -814,7 +814,9 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
         if (playerSlot === 'p1' && connectedOpponent?.readyState === WebSocket.OPEN) {
           connectedOpponent.send(JSON.stringify({
             type: 'room_closed',
-            message: 'Host nie wrócił do pokoju w wyznaczonym czasie.',
+            message: intentionalLeave
+              ? 'Host opuścił pokój.'
+              : 'Host nie wrócił do pokoju w wyznaczonym czasie.',
           }));
           connectedOpponent.close(1000, 'Host nie wrócił');
           cleanRoom(room.code);
