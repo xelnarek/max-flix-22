@@ -4420,7 +4420,6 @@ export class PaleciakiGameEngine {
     if (this.gameMode === 'survival' && this.state === 'levelup') return;
     if (this.state === 'playing') {
       this.state = 'paused';
-      this.stopManualAimFiring();
       sound.stopMusic();
     } else if (this.state === 'paused') {
       this.state = 'playing';
