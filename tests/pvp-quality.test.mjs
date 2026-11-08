@@ -397,3 +397,46 @@ test('PvP fire sits directly above the touch movement joystick and desktop dock 
   assert.match(css, /body #touch-controls\.manual-aim-mode:not\(\.hidden\) \.pvp-fire-control\s*\{[\s\S]*?z-index: 2147483005/);
   assert.match(css, /#touch-controls\.pvp-mode \.joystick-zone\s*\{[\s\S]*?width: min\(46vw, 300px\)[\s\S]*?height: min\(46vh, 420px\)/);
 });
+
+
+test('shared account progression applies to both Survival and authoritative PvP and has dedicated menu sectors', async () => {
+  const [account, app, client, arena, server, html] = await Promise.all([
+    readFile(new URL('../src/accountProgression.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pvpClient.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pvpArena.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/server/pvpServer.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../index.html', import.meta.url), 'utf8'),
+  ]);
+  assert.match(account, /export function recordAccountSurvivalRun/);
+  assert.match(account, /export function recordAccountPvpMatch/);
+  assert.match(account, /export function spendAccountTalentPoint/);
+  assert.match(account, /ACCOUNT_PROGRESS_MAX_LEVEL = 37/);
+  assert.match(app, /ACCOUNT_PROGRESS_STORAGE_KEY/);
+  assert.match(app, /recordAccountSurvivalRun\(accountProgressionProfile/);
+  assert.match(app, /recordAccountPvpMatch\(accountProgressionProfile/);
+  assert.match(app, /getAccountProgressionBonuses\(accountProgressionProfile\)/);
+  assert.match(app, /combineAccountAndCharacterBonuses\(/);
+  assert.match(app, /renderAccountProgressionPanels/);
+  assert.match(client, /progressionBonuses: PvpProgressionBonuses/);
+  assert.match(client, /progressionBonuses: safeBonuses/);
+  assert.match(arena, /sanitizePvpProgressionBonuses/);
+  assert.match(arena, /getPlayerProgressionBonuses\(shooterPlayer\)\.damageMultiplier/);
+  assert.match(arena, /getPlayerProgressionBonuses\(targetPlayer\)\.damageTakenMultiplier/);
+  assert.match(server, /sanitizePvpProgressionBonuses\(msg\.progressionBonuses\)/);
+  assert.match(html, /data-tab="tab-talent-tree"/);
+  assert.match(html, /data-tab="tab-ranks"/);
+  assert.match(html, /id="tab-talent-tree"/);
+  assert.match(html, /id="tab-ranks"/);
+  assert.match(html, /id="account-tree-grid"/);
+  assert.match(html, /id="account-rank-track"/);
+});
+
+test('Survival progression remains award-once per run and PvP progression award-once per match', async () => {
+  const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
+  assert.match(app, /if \(this\.lastMode === 'survival' && !this\.masteryAwardedForRun\)/);
+  assert.match(app, /recordAccountSurvivalRun\(accountProgressionProfile/);
+  assert.match(app, /private accountPvpAwardedForMatch = false/);
+  assert.match(app, /if \(!this\.accountPvpAwardedForMatch\)/);
+  assert.match(app, /this\.accountPvpAwardedForMatch = false/);
+});
