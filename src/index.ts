@@ -3610,13 +3610,42 @@ class PaleciakiScene extends xb.Script {
   }
 
   private updatePvpScoreboard(state: PvpArenaState, localSlot: PvpSlot) {
-    const fireButton = document.getElementById('btn-pvp-fire') as HTMLButtonElement | null;
-    if (fireButton) {
-      const roundActive = state.status === 'in_round';
-      fireButton.dataset.roundActive = String(roundActive);
-      if (!roundActive) fireButton.disabled = true;
-      else if (!fireButton.classList.contains('is-reloading')) fireButton.disabled = false;
-    }
+    const roundActive = state.status === 'in_round';
+    const localPlayer = localSlot === 'p1' ? state.p1 : state.p2;
+    const cooldownActive = Number.isFinite(localPlayer.attackCooldownTimer) && localPlayer.attackCooldownTimer > 0.08;
+    const fireButtons = [
+      document.getElementById('btn-pvp-fire') as HTMLButtonElement | null,
+      document.getElementById('btn-attack') as HTMLButtonElement | null,
+    ];
+    fireButtons.forEach((button) => {
+      if (!button) return;
+      button.dataset.roundActive = String(roundActive);
+      if (!roundActive || cooldownActive) {
+        button.disabled = true;
+        if (roundActive && cooldownActive) button.classList.add('is-reloading');
+        else button.classList.remove('is-reloading');
+        const label = button.id === 'btn-pvp-fire'
+          ? button.querySelector<HTMLElement>('.pvp-fire-label')
+          : button.querySelector<HTMLElement>('.attack-name');
+        const status = button.id === 'btn-pvp-fire'
+          ? button.querySelector<HTMLElement>('.pvp-fire-state')
+          : button.querySelector<HTMLElement>('.attack-hint');
+        if (label) label.textContent = roundActive ? 'ŁADOWANIE' : 'STRZAŁ';
+        if (status) status.textContent = roundActive && cooldownActive
+          ? `${Math.max(0, localPlayer.attackCooldownTimer).toFixed(1)} s`
+          : button.id === 'btn-pvp-fire' ? 'GOTOWY' : 'KLIK / F';
+      } else if (!button.classList.contains('is-reloading')) {
+        button.disabled = false;
+        const label = button.id === 'btn-pvp-fire'
+          ? button.querySelector<HTMLElement>('.pvp-fire-label')
+          : button.querySelector<HTMLElement>('.attack-name');
+        const status = button.id === 'btn-pvp-fire'
+          ? button.querySelector<HTMLElement>('.pvp-fire-state')
+          : button.querySelector<HTMLElement>('.attack-hint');
+        if (label) label.textContent = 'STRZAŁ';
+        if (status) status.textContent = button.id === 'btn-pvp-fire' ? 'GOTOWY' : 'KLIK / F';
+      }
+    });
     const p1Fill = document.getElementById('pvp-p1-hp-fill');
     const p1Text = document.getElementById('pvp-p1-hp-text');
     const p1Name = document.getElementById('pvp-p1-name');
