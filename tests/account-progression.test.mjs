@@ -189,3 +189,45 @@ test('a max-level account keeps match statistics but does not display unspendabl
   assert.equal(update.profile.level, ACCOUNT_PROGRESS_MAX_LEVEL);
   assert.equal(update.profile.stats.survivalRuns, 1);
 });
+
+test('cloud profile merge never rolls earned XP backwards and keeps monotonic career counters', async () => {
+  const { mergeAccountProgressionProfiles } = await import('../src/accountProgression.ts');
+  const local = createInitialAccountProgressionProfile();
+  local.level = 3;
+  local.xp = 15;
+  local.stats.survivalRuns = 4;
+  local.stats.survivalKills = 120;
+
+  const cloud = createInitialAccountProgressionProfile();
+  cloud.level = 4;
+  cloud.xp = 7;
+  cloud.stats.pvpMatches = 6;
+  cloud.stats.pvpWins = 3;
+  cloud.stats.survivalKills = 80;
+
+  const merged = mergeAccountProgressionProfiles(local, cloud);
+  assert.equal(merged.level, 4);
+  assert.equal(merged.xp, 7);
+  assert.equal(merged.stats.survivalRuns, 4);
+  assert.equal(merged.stats.pvpMatches, 6);
+  assert.equal(merged.stats.pvpWins, 3);
+  assert.equal(merged.stats.survivalKills, 120);
+});
+
+test('cloud profile merge preserves the device with more allocated points when earned XP is equal', async () => {
+  const { mergeAccountProgressionProfiles } = await import('../src/accountProgression.ts');
+  const local = createInitialAccountProgressionProfile();
+  local.level = 5;
+  local.xp = 20;
+  local.talentRanks = { weapon_training: 3, ability_calibration: 1 };
+  const cloud = createInitialAccountProgressionProfile();
+  cloud.level = 5;
+  cloud.xp = 20;
+  cloud.talentRanks = { reinforced_vest: 3 };
+
+  const merged = mergeAccountProgressionProfiles(local, cloud);
+  assert.equal(merged.talentRanks.weapon_training, 3);
+  assert.equal(merged.talentRanks.ability_calibration, 1);
+  assert.equal(merged.talentRanks.reinforced_vest, undefined);
+  assert.equal(getAccountProgressionSummary(merged).spentSkillPoints, 4);
+});
