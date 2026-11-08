@@ -216,10 +216,18 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
   const pairQueuedPlayers = () => {
     let pairedAny = false;
     while (matchmakingQueue.length >= 2 && activeRooms.size < MAX_ACTIVE_ROOMS) {
-      const first = matchmakingQueue.shift()!;
-      const second = matchmakingQueue.shift()!;
-      if (first.ws.readyState !== WebSocket.OPEN) continue;
-      if (second.ws.readyState !== WebSocket.OPEN) {
+      let first: MatchmakingQueueEntry | undefined;
+      let second: MatchmakingQueueEntry | undefined;
+      while (matchmakingQueue.length > 0 && !first) {
+        const candidate = matchmakingQueue.shift()!;
+        if (candidate.ws.readyState === WebSocket.OPEN) first = candidate;
+      }
+      while (matchmakingQueue.length > 0 && !second) {
+        const candidate = matchmakingQueue.shift()!;
+        if (candidate.ws.readyState === WebSocket.OPEN) second = candidate;
+      }
+      if (!first) break;
+      if (!second) {
         matchmakingQueue.unshift(first);
         break;
       }
