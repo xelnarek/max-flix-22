@@ -1503,8 +1503,8 @@ test('Survival raises enemy pressure gradually and keeps mobile horde caps as a 
   assert.match(game, /this\.survivalSpawnTimer = difficultyProfile\.spawnIntervalSeconds/);
   assert.match(game, /e\.specialActionTimer -= dt \* survivalAbilityRate/);
   assert.match(game, /const mobileEnemyCap = this\.adaptivePerformanceTier >= 2 \? 13/);
-  assert.match(difficulty, /spawnIntervalSeconds: Math\.max\(5\.2/);
-  assert.match(difficulty, /enemyAbilityRateMultiplier: 1 \+ Math\.min\(0\.28/);
+  assert.match(difficulty, /spawnIntervalSeconds: Math\.max\(4\.2/);
+  assert.match(difficulty, /enemyAbilityRateMultiplier: 1 \+ Math\.min\(0\.40/);
 });
 
 test('high-density projectile collision uses a broad-phase grid and retains swept-segment hit checks', async () => {
