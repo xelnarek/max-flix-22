@@ -10,16 +10,19 @@ import {
   resetPvpMatchStats,
   stepPvpArena,
   sanitizePvpInputIntent,
+  sanitizePvpProgressionBonuses,
 } from '../pvpArena.ts';
 import type {
   PvpArenaState,
   PvpInputIntent,
+  PvpProgressionBonuses,
 } from '../pvpArena.ts';
 
 interface MatchmakingQueueEntry {
   ws: WebSocket;
   operatorId: CharacterId;
   playerName: string;
+  progressionBonuses: PvpProgressionBonuses;
   enqueuedAt: number;
   assignRoom: (code: string, slot: 'p1' | 'p2') => void;
 }
@@ -241,6 +244,8 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
         first.playerName,
         second.operatorId,
         second.playerName,
+        first.progressionBonuses,
+        second.progressionBonuses,
       );
       state.status = 'ready';
       state.p1.connected = true;
@@ -333,9 +338,16 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
             }
             const operatorId: CharacterId = isCharacterId(msg.operatorId) ? msg.operatorId : 'marcin';
             const playerName = sanitizePlayerName(msg.playerName, 'Gracz 1');
+            const progressionBonuses = sanitizePvpProgressionBonuses(msg.progressionBonuses);
             const code = generateRoomCode();
 
-            const state = createInitialPvpArenaState(operatorId, playerName, 'grzesiek', 'Oczekiwanie...');
+            const state = createInitialPvpArenaState(
+              operatorId,
+              playerName,
+              'grzesiek',
+              'Oczekiwanie...',
+              progressionBonuses,
+            );
             state.p1.connected = true;
             state.p2.connected = false;
 
@@ -379,6 +391,7 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
             }
             const operatorId: CharacterId = isCharacterId(msg.operatorId) ? msg.operatorId : 'grzesiek';
             const playerName = sanitizePlayerName(msg.playerName, 'Gracz 2');
+            const progressionBonuses = sanitizePvpProgressionBonuses(msg.progressionBonuses);
 
             const room = activeRooms.get(code);
             if (!room) {
@@ -399,6 +412,7 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
             room.state.p2.operatorId = operatorId;
             room.state.p2.name = playerName;
             room.state.p2.nickname = playerName;
+            room.state.p2.progressionBonuses = progressionBonuses;
             room.state.p2.connected = true;
             room.state.p2.isReady = false;
             room.state.status = 'ready';
@@ -451,10 +465,12 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
 
             const operatorId: CharacterId = isCharacterId(msg.operatorId) ? msg.operatorId : 'marcin';
             const playerName = sanitizePlayerName(msg.playerName, 'Operator B4');
+            const progressionBonuses = sanitizePvpProgressionBonuses(msg.progressionBonuses);
             const entry: MatchmakingQueueEntry = {
               ws,
               operatorId,
               playerName,
+              progressionBonuses,
               enqueuedAt: Date.now(),
               assignRoom: (code, slot) => {
                 currentRoomCode = code;
