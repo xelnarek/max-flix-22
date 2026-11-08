@@ -21,7 +21,7 @@ test('all nine menu destinations remain available as buttons and panels', () => 
   const panels = [...html.matchAll(/id="(tab-(?:team|enemies|perks|field-guide|talent-tree|ranks|leaderboard|achievements|settings))"/g)].map((match) => match[1]);
   assert.equal(buttons.length, 9);
   assert.deepEqual(new Set(buttons), new Set(panels));
-  assert.match(layout, /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(layout, /grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/);
 });
 
 test('the active content panel scrolls independently while the map selector and launch remain in normal flow', () => {
