@@ -3294,7 +3294,7 @@ button {
 #game-shell.survival-mode #btn-event,
 #game-shell.survival-mode #btn-top-event,
 #game-shell.survival-mode #btn-attack,
-#game-shell.survival-mode #btn-touch-attack {
+:is(#game-shell, #touch-controls).survival-mode #btn-touch-attack {
   display: none !important;
 }
 
@@ -3685,12 +3685,12 @@ button {
     top: calc(174px + env(safe-area-inset-top));
     width: min(190px, 50vw);
   }
-  #game-shell.survival-mode .touch-actions-zone {
+  :is(#game-shell, #touch-controls).survival-mode .touch-actions-zone {
     gap: 8px;
     right: max(10px, env(safe-area-inset-right)) !important;
     bottom: max(12px, env(safe-area-inset-bottom)) !important;
   }
-  #game-shell.survival-mode .joystick-zone {
+  :is(#game-shell, #touch-controls).survival-mode .joystick-zone {
     width: min(54vw, 320px) !important;
     height: min(56vh, 460px) !important;
   }
@@ -4377,7 +4377,7 @@ button {
   display: flex !important;
 }
 
-#game-shell.survival-mode .dash-touch-btn:disabled {
+:is(#game-shell, #touch-controls).survival-mode .dash-touch-btn:disabled {
   cursor: default !important;
   filter: saturate(0.65) !important;
 }
@@ -5549,11 +5549,11 @@ button {
   will-change: transform;
 }
 #game-shell.manual-aim-mode .pvp-aim-zone { display: block !important; }
-#game-shell.manual-aim-mode .joystick-zone { width: min(50vw, 340px) !important; }
-#game-shell.manual-aim-mode #btn-touch-attack { display: none !important; }
+:is(#game-shell, #touch-controls).manual-aim-mode .joystick-zone { width: min(50vw, 340px) !important; }
+:is(#game-shell, #touch-controls).manual-aim-mode #btn-touch-attack { display: none !important; }
 @media (max-width: 390px) {
   #game-shell.manual-aim-mode .pvp-aim-zone { bottom: 98px !important; }
-  #game-shell.manual-aim-mode .touch-actions-zone { gap: 6px !important; }
+  :is(#game-shell, #touch-controls).manual-aim-mode .touch-actions-zone { gap: 6px !important; }
 }
 
 /* ==========================================================================
