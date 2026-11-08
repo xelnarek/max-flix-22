@@ -9,6 +9,7 @@ The repository now includes:
 - `Dockerfile`: a small Node 24 image with only the `ws` runtime dependency.
 - `render.yaml`: a Render Blueprint for one always-on web service in Frankfurt.
 - `GET /healthz`: HTTP health check.
+- `npm run pvp:server`: starts the server locally; Render runs the same package script from the Docker image.
 - `wss://<service>.onrender.com/pvp-ws`: secure WebSocket endpoint after deployment.
 
 The Blueprint sets `NODE_ENV=production` and `PVP_ALLOWED_ORIGINS=https://xelnarek.github.io`, which restricts browser WebSocket upgrades to the published game origin. It enables deploys after GitHub checks pass and uses the Starter/0.5 CPU, 512 MB compute plan.
