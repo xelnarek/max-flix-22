@@ -38,6 +38,7 @@ import { SURVIVAL_MAPS, type SurvivalMapId } from './survivalMaps.ts';
 import { launchOniricPlatformer } from './oniricPlatformer.ts';
 import { getMenuTabIndexForKey } from './menuTabNavigation.ts';
 import { readSurvivalMapPreference, writeSurvivalMapPreference } from './survivalMapPreference.ts';
+import { getVisibilityPauseAction } from './visibilityPause.ts';
 // Firestore is only needed for the optional leaderboard. Keep its large SDK
 // outside the initial game/menu load and fetch it when the player opens ranking.
 type FirebaseLeaderboardServices = typeof import('./firebase.ts');
@@ -2614,13 +2615,6 @@ class PaleciakiScene extends xb.Script {
       pauseModal?.setAttribute('aria-hidden', 'false');
       (document.getElementById('btn-resume') as HTMLButtonElement | null)?.focus();
     };
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden && this.engine.getGameState() === 'playing') {
-        this.engine.togglePause();
-        pauseModal?.classList.remove('hidden');
-        pauseModal?.setAttribute('aria-hidden', 'false');
-      }
-    });
     bindTap(document.getElementById('btn-top-pause'), handlePause);
     bindTap(document.getElementById('btn-pause'), handlePause);
 
@@ -2756,17 +2750,25 @@ class PaleciakiScene extends xb.Script {
       }
     });
 
-    // Do not let a backgrounded mobile browser continue a live run invisibly.
-    // Resume only when this handler itself caused the pause; manual pauses stay paused.
+    // One visibility owner prevents duplicate listeners from pausing the run
+    // before the auto-resume flag can be set. Manual pauses remain untouched.
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        if (this.engine?.getGameState() === 'playing') {
-          this.engine.togglePause();
-          this.pausedForVisibility = true;
-        }
-      } else if (this.pausedForVisibility && this.engine?.getGameState() === 'paused') {
+      const action = getVisibilityPauseAction(
+        document.hidden,
+        this.engine?.getGameState() ?? 'other',
+        this.pausedForVisibility,
+      );
+
+      if (action === 'pause') {
+        this.engine.togglePause();
+        this.pausedForVisibility = true;
+        pauseModal?.classList.remove('hidden');
+        pauseModal?.setAttribute('aria-hidden', 'false');
+      } else if (action === 'resume') {
         this.engine.togglePause();
         this.pausedForVisibility = false;
+        pauseModal?.classList.add('hidden');
+        pauseModal?.setAttribute('aria-hidden', 'true');
       }
     });
 
