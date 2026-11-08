@@ -70,6 +70,8 @@ export class CinematicIntroManager {
       // scene or force users to wait for the normal 11.8-second intro.
       this.elapsed = this.duration;
       this.render(this.elapsed);
+      // A still poster must not trap the user behind the intro overlay.
+      this.completionTimeout = window.setTimeout(() => this.stop(), 1800);
       return;
     }
 
@@ -143,7 +145,9 @@ export class CinematicIntroManager {
   private resizeCanvas(): void {
     if (!this.canvas) return;
     const mobile = window.innerWidth < 760 || navigator.maxTouchPoints > 0;
-    const dpr = Math.min(1.5, Math.max(1, window.devicePixelRatio || 1));
+    // On touch devices the browser DPR may exceed 2; the intro is decorative,
+    // so render its canvas at CSS resolution and leave GPU headroom for the game.
+    const dpr = mobile ? 1 : Math.min(1.5, Math.max(1, window.devicePixelRatio || 1));
     const ratio = Math.max(0.32, Math.min(2.4, window.innerWidth / Math.max(1, window.innerHeight)));
     // The five animated operator portraits are decorative; cap their backing
     // canvas on mobile to avoid GPU/CPU stalls during the opening sequence.
