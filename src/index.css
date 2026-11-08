@@ -6676,3 +6676,18 @@ body #touch-controls.manual-aim-mode:not(.hidden) .pvp-move-caption {
   body #touch-controls.manual-aim-mode:not(.hidden) .pvp-aim-base { width: 98px !important; height: 98px !important; }
   .pvp-control-guide { display: none; }
 }
+
+
+/* Explicit UI boundary: PvP-only overlays never render in Survival or menu mode. */
+#touch-controls:not(.pvp-mode) .pvp-only-control {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+#touch-controls.pvp-mode .pvp-only-control {
+  visibility: visible;
+}
+#touch-controls.pvp-mode .pvp-control-guide.pvp-only-control {
+  display: flex !important;
+}
