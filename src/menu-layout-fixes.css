@@ -738,7 +738,7 @@
   #title-screen .title-sheet {
     display: grid !important;
     grid-template-columns: clamp(172px, 17vw, 206px) minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
     gap: 12px;
     align-items: stretch;
     align-content: stretch;
@@ -774,16 +774,16 @@
     border: 1px solid rgba(132,184,210,.16); border-radius: 14px;
     background: linear-gradient(160deg, rgba(5,17,29,.46), rgba(5,12,22,.24));
   }
-  #title-screen .menu-map-picker-frame { grid-column: 1 / -1; grid-row: 3; width: 100%; max-width: none; margin: 0; }
+  #title-screen .menu-map-picker-frame { grid-column: auto; grid-row: auto; width: 100%; max-width: none; margin: 0; }
   #title-screen .survival-map-picker { padding: 9px 12px; border-radius: 14px; }
   #title-screen .survival-map-picker-options { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
   #title-screen .survival-map-choice { min-height: 62px; padding: 6px; }
   #title-screen .survival-map-preview { margin-top: 6px; padding: 7px 10px; }
-  #title-screen .menu-fixed-bottom-bar { grid-column: 1 / -1; grid-row: 4; width: 100%; max-width: none; margin: 0; }
+  #title-screen .menu-fixed-bottom-bar { grid-column: 1 / -1; grid-row: 3; width: 100%; max-width: none; margin: 0; }
   #title-screen .btn-survival-start { max-width: 100%; min-height: 54px; }
 }
 
-/* Touch layouts: all nine tabs visible at once; map tiles and launch remain separate. */
+/* Touch layouts: all ten destinations remain visible; the map picker is scoped to its tab. */
 @media (max-width: 760px), (pointer: coarse) {
   #title-screen .title-sheet {
     display: flex !important; flex-direction: column !important; align-items: stretch; justify-content: flex-start !important;
@@ -892,5 +892,146 @@
 @media (prefers-reduced-motion: reduce) {
   #title-screen .menu-tab-btn, #title-screen .survival-map-choice, #title-screen .btn-survival-start {
     transition: none !important; transform: none !important;
+  }
+}
+
+
+/* The arena picker is a real destination, not a permanent overlay beneath every tab. */
+#title-screen #tab-map {
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  align-content: start;
+  justify-content: start;
+  gap: 12px;
+}
+#title-screen #tab-map .menu-map-picker-frame {
+  width: min(100%, 980px);
+  max-width: 980px;
+  margin: 0 auto;
+  padding: clamp(12px, 1.6vw, 20px);
+}
+#title-screen #tab-map .survival-map-picker-heading {
+  margin-bottom: 12px;
+  font-size: clamp(12px, 1.2vw, 15px);
+}
+#title-screen #tab-map .survival-map-picker-heading span {
+  font-size: 9px;
+}
+#title-screen #tab-map .survival-map-picker-options {
+  gap: clamp(8px, 1vw, 12px);
+}
+#title-screen #tab-map .survival-map-choice {
+  min-height: clamp(76px, 11vh, 104px);
+  padding: 10px 8px;
+}
+#title-screen #tab-map .survival-map-choice > span {
+  font-size: 25px;
+}
+#title-screen #tab-map .survival-map-choice strong {
+  font-size: clamp(10px, .95vw, 12px);
+}
+#title-screen #tab-map .survival-map-choice small {
+  font-size: 9px;
+}
+#title-screen #tab-map .survival-map-preview {
+  margin-top: 12px;
+  padding: 12px 14px;
+  gap: 5px;
+}
+#title-screen #tab-map .survival-map-preview strong {
+  font-size: 11px;
+}
+#title-screen #tab-map .survival-map-preview span {
+  font-size: 11px;
+  line-height: 1.5;
+}
+#title-screen #tab-map .survival-map-picker-hint {
+  margin: 10px 2px 0;
+  font-size: 10px;
+}
+
+/* More room for the operator roster now that the map panel no longer consumes
+   space on every menu destination. Keep the selected portrait readable. */
+#title-screen #tab-team .char-grid {
+  gap: clamp(10px, 1.1vw, 16px) !important;
+}
+#title-screen #tab-team .char-card {
+  min-height: clamp(176px, 20vh, 210px) !important;
+  padding: 14px 10px 15px !important;
+  gap: 6px !important;
+}
+#title-screen #tab-team .char-card-badge.operator-emblem {
+  width: clamp(78px, 7vw, 90px) !important;
+  height: clamp(78px, 7vw, 90px) !important;
+  flex-basis: clamp(78px, 7vw, 90px);
+  margin: 5px 0 8px !important;
+}
+#title-screen #tab-team .char-card-name {
+  font-size: clamp(14px, 1.1vw, 17px) !important;
+}
+#title-screen #tab-team .char-card-role {
+  font-size: clamp(9px, .8vw, 11px) !important;
+}
+#title-screen #tab-team .char-card-ability {
+  font-size: clamp(8px, .72vw, 10px) !important;
+}
+
+@media (max-width: 640px) {
+  #title-screen #tab-map .survival-map-picker {
+    padding: 11px;
+  }
+  #title-screen #tab-map .survival-map-choice {
+    min-height: 74px;
+  }
+  #title-screen #tab-map .survival-map-choice[data-survival-map="random"] {
+    min-height: 54px;
+  }
+  #title-screen #tab-map .survival-map-choice > span {
+    font-size: 21px;
+  }
+  #title-screen #tab-map .survival-map-preview {
+    padding: 9px 10px;
+  }
+  #title-screen #tab-map .survival-map-picker-hint {
+    display: block;
+    font-size: 8px;
+  }
+  #title-screen #tab-team .char-card {
+    min-height: 160px !important;
+    padding: 9px 6px 10px !important;
+  }
+  #title-screen #tab-team .char-card-badge.operator-emblem {
+    width: 68px !important;
+    height: 68px !important;
+    flex-basis: 68px;
+  }
+  #title-screen #tab-team .char-card-name {
+    font-size: 12px !important;
+  }
+  #title-screen #tab-team .char-card-role {
+    font-size: 8px !important;
+  }
+  #title-screen #tab-team .char-card-ability {
+    font-size: 7px !important;
+  }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+  #title-screen #tab-team .char-card {
+    min-height: 116px !important;
+    padding: 6px 5px 7px !important;
+  }
+  #title-screen #tab-team .char-card-badge.operator-emblem {
+    width: 52px !important;
+    height: 52px !important;
+    flex-basis: 52px;
+    margin: 2px 0 4px !important;
+  }
+  #title-screen #tab-map .survival-map-choice {
+    min-height: 48px;
+  }
+  #title-screen #tab-map .survival-map-preview,
+  #title-screen #tab-map .survival-map-picker-hint {
+    display: none;
   }
 }

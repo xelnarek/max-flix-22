@@ -8,17 +8,19 @@ const [html, css] = await Promise.all([
   read('src/menu-layout-fixes.css'),
 ]);
 
-test('Survival map selector is a standalone sibling, not part of the launch bar or tab content', () => {
+test('Survival map selector lives only inside its dedicated menu tab and never overlays other panels', () => {
   assert.equal((html.match(/id="survival-map-picker"/g) || []).length, 1);
   const contentStart = html.indexOf('<div class="menu-tab-content-area">');
-  const contentEnd = html.indexOf('\n          </div>\n\n          <section id="survival-map-picker"', contentStart);
+  const mapPanelStart = html.indexOf('<div id="tab-map" class="tab-panel map-selection-panel"');
   const pickerStart = html.indexOf('<section id="survival-map-picker"');
   const pickerEnd = html.indexOf('</section>', pickerStart);
-  const startBar = html.indexOf('<div class="menu-fixed-bottom-bar">', pickerStart);
-  assert.ok(contentStart >= 0 && contentEnd > contentStart, 'tab content area should close before the map card');
-  assert.ok(pickerStart > contentEnd, 'map card must live outside the scrollable tab content');
-  assert.ok(pickerEnd > pickerStart && startBar > pickerEnd, 'map card must precede the independent launch bar');
-  assert.doesNotMatch(html.slice(startBar, html.indexOf('</div>', startBar) + 6), /survival-map-picker/);
+  const contentEnd = html.indexOf('\n          </div>\n\n          <div class="menu-fixed-bottom-bar">', pickerEnd);
+  const startBar = html.indexOf('<div class="menu-fixed-bottom-bar">', pickerEnd);
+  assert.ok(contentStart >= 0 && mapPanelStart > contentStart, 'map tab must be nested inside the scrollable tab content');
+  assert.ok(pickerStart > mapPanelStart && pickerEnd > pickerStart && contentEnd > pickerEnd, 'map controls must remain inside the map tab');
+  assert.ok(startBar > contentEnd, 'launch action remains a separate row below tab content');
+  assert.match(html, /data-tab="tab-map"/);
+  assert.doesNotMatch(html.slice(contentEnd, startBar), /survival-map-picker/);
   for (const map of ['random', 'warehouse_b4', 'container_terminal', 'cold_storage', 'night_sorting']) {
     assert.ok(html.includes('data-survival-map="' + map + '"'), 'missing map ' + map);
   }
@@ -43,12 +45,18 @@ test('audio controls and related information share one dedicated outer settings 
   assert.equal((html.match(/class="audio-settings-frame"/g) || []).length, 1);
 });
 
-test('the map frame stays in normal document flow and uses a visible mobile grid', () => {
-  assert.match(css, /\.menu-map-picker-frame\s*\{[\s\S]*?flex:\s*0 0 auto/);
+test('the map frame is scoped to its own tab and uses a visible mobile grid', () => {
+  assert.match(css, /#title-screen #tab-map[\s\S]*?\.menu-map-picker-frame/);
   assert.match(css, /\.menu-fixed-bottom-bar\s*\{[\s\S]*?position:\s*static !important/);
   assert.match(css, /@media \(max-width:\s*640px\)[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
   assert.match(css, /data-survival-map="random"\]\s*\{[\s\S]*?grid-column:\s*1 \/ -1/);
   assert.doesNotMatch(css, /\.menu-fixed-bottom-bar\s*\{[^}]*position:\s*sticky/s);
+});
+
+test('operator selection cards and portraits have enough area on desktop and phones', () => {
+  assert.match(css, /#title-screen #tab-team \.char-card\s*\{[\s\S]*?min-height:\s*clamp\(176px, 20vh, 210px\)/);
+  assert.match(css, /#title-screen #tab-team \.char-card-badge\.operator-emblem\s*\{[\s\S]*?clamp\(78px, 7vw, 90px\)/);
+  assert.match(css, /@media \(max-width:\s*640px\)[\s\S]*?#title-screen #tab-team \.char-card\s*\{[\s\S]*?min-height:\s*160px/);
 });
 
 test('audio settings have one visible frame and compact touch-friendly slider rows', () => {
