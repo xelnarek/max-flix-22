@@ -3,7 +3,7 @@ import { disposePvpObjectTree } from './pvpResourceCleanup.ts';
 import { calculatePvpCameraFrame, calculatePvpCameraTrackingBounds, isPvpPortraitViewport } from './pvpCamera.ts';
 import { createArenaObstacleFootprint, createPvpFloorTexture, createPvpObstacleTexture } from './pvpTextures.ts';
 import {
-  calculatePvpAimPreview, getPvpAimAngle, getPvpSweepAimAngle,
+  calculatePvpAimPreview, getPvpAimAngle, getPvpSweepAimAngle, getPvpAimSweepCenterAngle,
   pvpAimDirectionFromAngle, pvpScreenMovementToWorld,
   PVP_AIM_SWEEP_HALF_ARC, PVP_AIM_SWEEP_PERIOD_SECONDS, PVP_AIM_SWEEP_RADIUS,
   PVP_AIM_SWEEP_SEGMENTS, type PvpAimDirection,
@@ -557,6 +557,7 @@ export class PaleciakiGameEngine {
   private pvpAimSweepPointer: THREE.Mesh | null = null;
   private pvpAimSweepElapsed = 0;
   private pvpAimSweepRound = 0;
+  private pvpAimSweepCenterAngle = Math.PI / 2;
   private pvpLocalMarker: THREE.Group | null = null;
   private pvpProjectileMeshes = new Map<string, THREE.Mesh>();
   private pvpArenaRoot: THREE.Group | null = null;
@@ -1237,6 +1238,7 @@ export class PaleciakiGameEngine {
     this.pvpWantFire = false;
     this.pvpAimSweepElapsed = 0;
     this.pvpAimSweepRound = 0;
+    this.pvpAimSweepCenterAngle = Number.isFinite(this.playerRot) ? this.playerRot : Math.PI / 2;
     if (enabled) this.manualAimDirection = pvpAimDirectionFromAngle(this.playerRot);
     document.getElementById('game-shell')?.classList.toggle('manual-aim-mode', enabled);
   }
@@ -1841,6 +1843,7 @@ export class PaleciakiGameEngine {
     this.pvpAimSweepPointer = null;
     this.pvpAimSweepElapsed = 0;
     this.pvpAimSweepRound = 0;
+    this.pvpAimSweepCenterAngle = Number.isFinite(this.playerRot) ? this.playerRot : Math.PI / 2;
     this.pvpProjectileMeshes.forEach((mesh) => {
       this.levelRoot.remove(mesh);
       disposePvpObjectTree(mesh);
@@ -2281,12 +2284,20 @@ export class PaleciakiGameEngine {
       if (currentState.round !== this.pvpAimSweepRound) {
         this.pvpAimSweepRound = currentState.round;
         this.pvpAimSweepElapsed = 0;
+        // The round spawn establishes the first facing direction. From then on
+        // players turn the sweep by choosing a movement direction, not by
+        // having the cursor chase the rival's position.
+        this.pvpAimSweepCenterAngle = Number.isFinite(localForAim.rot)
+          ? localForAim.rot
+          : this.pvpAimSweepCenterAngle;
       }
       if (currentState.status === 'in_round' && localForAim.hp > 0 && remoteForAim.hp > 0) {
+        this.pvpAimSweepCenterAngle = getPvpAimSweepCenterAngle(
+          moveX, moveZ, this.pvpAimSweepCenterAngle,
+        );
         this.pvpAimSweepElapsed += Number.isFinite(dt) ? Math.max(0, Math.min(dt, 0.1)) : 0;
-        const opponentBearing = Math.atan2(remoteForAim.x - localForAim.x, remoteForAim.z - localForAim.z);
         this.manualAimDirection = pvpAimDirectionFromAngle(getPvpSweepAimAngle(
-          this.pvpAimSweepElapsed, opponentBearing,
+          this.pvpAimSweepElapsed, this.pvpAimSweepCenterAngle,
           PVP_AIM_SWEEP_HALF_ARC, PVP_AIM_SWEEP_PERIOD_SECONDS,
         ));
       }
@@ -2459,7 +2470,7 @@ export class PaleciakiGameEngine {
       const arcSegments = arcPositions.count - 1;
       for (let segment = 0; segment <= arcSegments; segment++) {
         const progress = arcSegments > 0 ? segment / arcSegments : 0;
-        const angle = opponentBearing - PVP_AIM_SWEEP_HALF_ARC + PVP_AIM_SWEEP_HALF_ARC * 2 * progress;
+        const angle = this.pvpAimSweepCenterAngle - PVP_AIM_SWEEP_HALF_ARC + PVP_AIM_SWEEP_HALF_ARC * 2 * progress;
         arcPositions.setXYZ(segment,
           local.x + Math.sin(angle) * PVP_AIM_SWEEP_RADIUS,
           0.105,
