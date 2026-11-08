@@ -325,3 +325,22 @@ test('manual PvP fire input cannot bypass the authoritative reload timer', async
   const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
   assert.match(game, /localPvpPlayer\.attackCooldownTimer > 0\.08/);
 });
+
+
+test('PvP camera tracks both duelists, refreshes projection on aspect changes and previews first cover hit', async () => {
+  const [game, camera, aim] = await Promise.all([
+    readFile(new URL('../src/game.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pvpCamera.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pvpAim.ts', import.meta.url), 'utf8'),
+  ]);
+  assert.match(game, /calculatePvpCameraTrackingBounds\(duel\.first, duel\.second/);
+  assert.match(game, /const aspectChanged = Math\.abs\(this\.camera\.aspect - frame\.aspect\)/);
+  assert.match(game, /this\.camera\.updateProjectionMatrix\(\)/);
+  assert.match(game, /first: \{ x: local\.x, z: local\.z \}/);
+  assert.match(game, /second: \{ x: remote\.x, z: remote\.z \}/);
+  assert.match(game, /calculatePvpAimPreview\(/);
+  assert.match(game, /preview\.onTarget \? 0x4ade80 : preview\.blocked \? 0xef4444/);
+  assert.match(game, /footprintGeometry/);
+  assert.match(camera, /export function calculatePvpCameraTrackingBounds/);
+  assert.match(aim, /export function calculatePvpAimPreview/);
+});

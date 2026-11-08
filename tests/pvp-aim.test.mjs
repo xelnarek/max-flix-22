@@ -4,7 +4,7 @@ import {
   DEFAULT_PVP_AIM_DIRECTION, PVP_AIM_DEADZONE, PVP_AIM_DIRECTION_DEADZONE,
   PVP_AIM_FIRE_START_DEADZONE, PVP_AIM_FIRE_STOP_DEADZONE, getPvpAimAngle,
   isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle, shouldPvpAimFire,
-  pvpScreenAimToWorld, pvpScreenMovementToWorld,
+  pvpScreenAimToWorld, pvpScreenMovementToWorld, calculatePvpAimPreview,
 } from '../src/pvpAim.ts';
 
 test('normalizes diagonal touch aim without amplifying stick length', () => {
@@ -116,4 +116,52 @@ test('PvP camera fit scales to portrait and landscape viewports without clipping
     assert.ok(frame.position.x !== frame.target.x || frame.position.z !== frame.target.z);
     assert.ok(frame.fitDistance > 0);
   }
+});
+
+
+test('aim preview stops before the first cover piece instead of drawing through it', () => {
+  const preview = calculatePvpAimPreview(
+    { x: 0, z: 0 },
+    { x: 1, z: 0 },
+    { minX: -10, maxX: 10, minZ: -8, maxZ: 8 },
+    [{ x: 3, z: 0, width: 2, depth: 4 }],
+    { x: 8, z: 0 },
+  );
+  assert.equal(preview.blocked, true);
+  assert.equal(preview.onTarget, false);
+  assert.equal(preview.impact, 'cover');
+  assert.ok(preview.x < 2 && preview.x > 0);
+});
+
+test('aim preview confirms a target only when it lies on a clear manual firing ray', () => {
+  const aligned = calculatePvpAimPreview(
+    { x: 0, z: 0 },
+    { x: 1, z: 0 },
+    { minX: -10, maxX: 10, minZ: -8, maxZ: 8 },
+    [],
+    { x: 6, z: 0.4 },
+  );
+  const misaligned = calculatePvpAimPreview(
+    { x: 0, z: 0 },
+    { x: 1, z: 0 },
+    { minX: -10, maxX: 10, minZ: -8, maxZ: 8 },
+    [],
+    { x: 6, z: 2.2 },
+  );
+  assert.equal(aligned.onTarget, true);
+  assert.equal(aligned.blocked, false);
+  assert.equal(misaligned.onTarget, false);
+  assert.equal(aligned.impact, 'boundary');
+});
+
+test('aim preview returns finite points for malformed directions and clips to the arena boundary', () => {
+  const preview = calculatePvpAimPreview(
+    { x: 9, z: 0 },
+    { x: Number.NaN, z: 0 },
+    { minX: -10, maxX: 10, minZ: -8, maxZ: 8 },
+    [],
+  );
+  assert.ok(Number.isFinite(preview.x) && Number.isFinite(preview.z));
+  assert.ok(preview.x <= 10);
+  assert.equal(preview.impact, 'boundary');
 });

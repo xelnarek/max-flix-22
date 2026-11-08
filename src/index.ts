@@ -2599,7 +2599,8 @@ class PaleciakiScene extends xb.Script {
       const getAimRadius = () => {
         const rect = aimBase.getBoundingClientRect();
         const size = Math.min(rect.width || 142, rect.height || 142);
-        return Math.max(24, Math.min(64, size * 0.5 - 36));
+        const viewportLimit = Math.min(window.visualViewport?.width || window.innerWidth, window.visualViewport?.height || window.innerHeight);
+        return Math.max(22, Math.min(58, size * 0.5 - 36, viewportLimit * 0.085));
       };
       const resetAim = () => {
         const pointerId = activeAimPointerId;

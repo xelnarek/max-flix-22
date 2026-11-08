@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 import { disposePvpObjectTree } from './pvpResourceCleanup.ts';
-import { calculatePvpCameraFrame } from './pvpCamera.ts';
+import { calculatePvpCameraFrame, calculatePvpCameraTrackingBounds, isPvpPortraitViewport } from './pvpCamera.ts';
 import { createPvpFloorTexture, createPvpObstacleTexture } from './pvpTextures.ts';
-import { getPvpAimAngle, isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle, pvpScreenAimToWorld, pvpScreenMovementToWorld, PVP_AIM_DIRECTION_DEADZONE, type PvpAimDirection } from './pvpAim.ts';
+import { calculatePvpAimPreview, getPvpAimAngle, isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle, pvpScreenAimToWorld, pvpScreenMovementToWorld, PVP_AIM_DIRECTION_DEADZONE, type PvpAimDirection } from './pvpAim.ts';
 import type { IPvpSession } from './pvpClient.ts';
 import {
   createDefaultPvpObstacles,
   PVP_ARENA_BOUNDS,
+  PVP_DASH_COOLDOWN,
   PVP_NORMALIZED_HP,
   PVP_SPAWN_P1,
   PVP_SPAWN_P2,
@@ -465,6 +466,8 @@ export class PaleciakiGameEngine {
   // Tactical Elevated camera default (~45° isometric/tactical perspective like Hades/Brawl Stars)
   private currentCamOffset = new THREE.Vector3(-2.2, 10.8, 9.2);
   private currentLookAt = new THREE.Vector3(0, 1.2, 0);
+  private pvpCameraDesiredPosition = new THREE.Vector3();
+  private pvpCameraDesiredTarget = new THREE.Vector3();
   // Reused camera scratch vectors: avoid two Vector3 allocations on every frame.
   private readonly cameraTargetPosition = new THREE.Vector3();
   private readonly desiredLookAtPosition = new THREE.Vector3();
@@ -1262,7 +1265,9 @@ export class PaleciakiGameEngine {
   /** Update world-space aim from the right-hand touch stick; neutral input preserves direction. */
   public setManualAimInput(x: number, z: number) {
     if (!this.manualAimEnabled) return;
-    const portrait = window.innerWidth / Math.max(1, window.innerHeight) < 0.86;
+    const viewportWidth = window.visualViewport?.width || window.innerWidth;
+    const viewportHeight = window.visualViewport?.height || window.innerHeight;
+    const portrait = isPvpPortraitViewport(viewportWidth, viewportHeight);
     const worldInput = pvpScreenAimToWorld(x, z, portrait);
     const directionActive = isPvpAimInputActive(worldInput.x, worldInput.z, PVP_AIM_DIRECTION_DEADZONE);
     this.manualAimDirection = normalizePvpAimDirection(
@@ -2036,23 +2041,36 @@ export class PaleciakiGameEngine {
     this.playerGroup.add(marker); this.pvpLocalMarker = marker;
   }
 
-  private applyPvpCameraFraming(midX: number, midZ: number, dt = 1 / 60, immediate = false) {
+  private applyPvpCameraFraming(
+    midX: number,
+    midZ: number,
+    dt = 1 / 60,
+    immediate = false,
+    duel?: { first: { x: number; z: number }; second: { x: number; z: number } },
+  ) {
     const width = Math.max(1, window.visualViewport?.width || window.innerWidth);
     const height = Math.max(1, window.visualViewport?.height || window.innerHeight);
-    const frame = calculatePvpCameraFrame(width, height, { x: midX, z: midZ }, PVP_ARENA_BOUNDS);
+    const portrait = isPvpPortraitViewport(width, height);
+    const trackingBounds = duel
+      ? calculatePvpCameraTrackingBounds(duel.first, duel.second, PVP_ARENA_BOUNDS, portrait)
+      : PVP_ARENA_BOUNDS;
+    const frame = calculatePvpCameraFrame(width, height, { x: midX, z: midZ }, trackingBounds);
     if (this.camera instanceof THREE.PerspectiveCamera) {
-      this.camera.aspect = frame.aspect;
-      if (Math.abs(this.camera.fov - frame.fov) > 0.05) {
+      const aspectChanged = Math.abs(this.camera.aspect - frame.aspect) > 0.001;
+      const fovChanged = Math.abs(this.camera.fov - frame.fov) > 0.05;
+      if (aspectChanged || fovChanged) {
+        this.camera.aspect = frame.aspect;
         this.camera.fov = frame.fov;
+        // Aspect-only changes matter after fullscreen and orientation switches too.
         this.camera.updateProjectionMatrix();
       }
     }
-    const position = new THREE.Vector3(frame.position.x, frame.position.y, frame.position.z);
-    const target = new THREE.Vector3(frame.target.x, frame.target.y, frame.target.z);
+    this.pvpCameraDesiredPosition.set(frame.position.x, frame.position.y, frame.position.z);
+    this.pvpCameraDesiredTarget.set(frame.target.x, frame.target.y, frame.target.z);
     const safeDt = Number.isFinite(dt) ? THREE.MathUtils.clamp(dt, 0, 0.1) : 1 / 60;
-    const alpha = immediate ? 1 : 1 - Math.exp(-8.5 * safeDt);
-    this.camera.position.lerp(position, alpha);
-    this.currentLookAt.lerp(target, alpha);
+    const alpha = immediate ? 1 : 1 - Math.exp(-6.2 * safeDt);
+    this.camera.position.lerp(this.pvpCameraDesiredPosition, alpha);
+    this.currentLookAt.lerp(this.pvpCameraDesiredTarget, alpha);
     this.camera.lookAt(this.currentLookAt);
   }
 
@@ -2154,6 +2172,24 @@ export class PaleciakiGameEngine {
     for (const obs of obstacles) {
       const group = new THREE.Group();
       group.position.set(obs.x, 0, obs.z);
+
+      // Fine floor outline shows the actual cover footprint clearly on mobile.
+      const footprintColor = obs.type === 'barrier' ? 0xf87171 : obs.type === 'pillar' ? 0x67e8f9 : 0xfacc15;
+      const footprintHalfW = obs.width * 0.5 + 0.12;
+      const footprintHalfD = obs.depth * 0.5 + 0.12;
+      const footprintGeometry = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-footprintHalfW, 0, -footprintHalfD),
+        new THREE.Vector3(footprintHalfW, 0, -footprintHalfD),
+        new THREE.Vector3(footprintHalfW, 0, footprintHalfD),
+        new THREE.Vector3(-footprintHalfW, 0, footprintHalfD),
+      ]);
+      const footprint = new THREE.LineLoop(
+        footprintGeometry,
+        new THREE.LineBasicMaterial({ color: footprintColor, transparent: true, opacity: 0.72, depthWrite: false }),
+      );
+      footprint.position.y = 0.045;
+      footprint.renderOrder = 3;
+      group.add(footprint);
 
       if (obs.type === 'pallet') {
         const stackMesh = new THREE.Mesh(new THREE.BoxGeometry(obs.width, obs.height, obs.depth), palletMat);
@@ -2263,7 +2299,9 @@ export class PaleciakiGameEngine {
       screenY = -this.virtualJoystick.y;
     }
 
-    const portrait = window.innerWidth / Math.max(1, window.innerHeight) < 0.86;
+    const viewportWidth = window.visualViewport?.width || window.innerWidth;
+    const viewportHeight = window.visualViewport?.height || window.innerHeight;
+    const portrait = isPvpPortraitViewport(viewportWidth, viewportHeight);
     const worldMovement = pvpScreenMovementToWorld(screenX, screenY, portrait);
     const moveX = worldMovement.x;
     const moveZ = worldMovement.z;
@@ -2327,7 +2365,7 @@ export class PaleciakiGameEngine {
       false
     );
 
-    const dashCdProgress = local.dashCooldownTimer <= 0 ? 1 : 1 - (local.dashCooldownTimer / 3.2);
+    const dashCdProgress = local.dashCooldownTimer <= 0 ? 1 : 1 - (local.dashCooldownTimer / PVP_DASH_COOLDOWN);
     this.callbacks.onSurvivalDashUpdate?.(
       dashCdProgress,
       local.dashCooldownTimer <= 0,
@@ -2400,14 +2438,31 @@ export class PaleciakiGameEngine {
     }
 
     if (this.pvpAimGuide && this.pvpAimTarget) {
-      const aimX = Math.sin(local.rot), aimZ = Math.cos(local.rot);
+      const preview = calculatePvpAimPreview(
+        { x: local.x, z: local.z },
+        pvpAimDirectionFromAngle(local.rot),
+        PVP_ARENA_BOUNDS,
+        state.obstacles,
+        { x: remote.x, z: remote.z },
+      );
       const start = new THREE.Vector3(local.x, 0.055, local.z);
-      const end = new THREE.Vector3(local.x + aimX * 7.5, 0.055, local.z + aimZ * 7.5);
+      const end = new THREE.Vector3(preview.x, 0.055, preview.z);
       const aimPositions = this.pvpAimGuide.geometry.getAttribute('position') as THREE.BufferAttribute;
       aimPositions.setXYZ(0, start.x, start.y, start.z);
       aimPositions.setXYZ(1, end.x, end.y, end.z);
       aimPositions.needsUpdate = true;
       this.pvpAimGuide.geometry.computeBoundingSphere();
+
+      // Feedback only: direction remains fully controlled by the player.
+      const previewColor = preview.onTarget ? 0x4ade80 : preview.blocked ? 0xef4444
+        : (this.pvpSlot === 'p1' ? 0x60a5fa : 0xfbbf24);
+      const guideMaterial = this.pvpAimGuide.material as THREE.LineBasicMaterial;
+      const targetMaterial = this.pvpAimTarget.material as THREE.MeshBasicMaterial;
+      guideMaterial.color.setHex(previewColor);
+      targetMaterial.color.setHex(previewColor);
+      guideMaterial.opacity = preview.blocked ? 0.96 : 0.78;
+      targetMaterial.opacity = preview.blocked ? 0.98 : 0.88;
+      this.pvpAimTarget.scale.setScalar(preview.onTarget ? 1.16 : 1);
       this.pvpAimTarget.position.set(end.x, 0.055, end.z);
       this.pvpAimGuide.visible = state.status === 'in_round';
       this.pvpAimTarget.visible = state.status === 'in_round';
@@ -2531,7 +2586,10 @@ export class PaleciakiGameEngine {
 
     const midX = (local.x + remote.x) * 0.5;
     const midZ = (local.z + remote.z) * 0.5;
-    this.applyPvpCameraFraming(midX, midZ, dt);
+    this.applyPvpCameraFraming(midX, midZ, dt, false, {
+      first: { x: local.x, z: local.z },
+      second: { x: remote.x, z: remote.z },
+    });
 
     this.callbacks.onPvpUpdate?.(state, this.pvpSlot);
 

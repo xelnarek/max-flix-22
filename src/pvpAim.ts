@@ -69,3 +69,122 @@ export function pvpScreenMovementToWorld(screenX: number, screenY: number, portr
     : { x: screenX, z: -screenY };
   return { x: world.x === 0 ? 0 : world.x, z: world.z === 0 ? 0 : world.z };
 }
+
+
+export interface PvpAimPreviewBounds {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+}
+
+export interface PvpAimPreviewObstacle {
+  x: number;
+  z: number;
+  width: number;
+  depth: number;
+}
+
+export interface PvpAimPreviewTarget {
+  x: number;
+  z: number;
+}
+
+export interface PvpAimPreview {
+  x: number;
+  z: number;
+  distance: number;
+  blocked: boolean;
+  onTarget: boolean;
+  impact: 'cover' | 'boundary' | 'range';
+}
+
+function rayRectangleDistance(
+  origin: PvpAimPreviewTarget,
+  direction: PvpAimDirection,
+  minX: number,
+  maxX: number,
+  minZ: number,
+  maxZ: number,
+  maxDistance: number,
+): number | null {
+  let near = 0;
+  let far = maxDistance;
+  for (const axis of [
+    { position: origin.x, direction: direction.x, min: minX, max: maxX },
+    { position: origin.z, direction: direction.z, min: minZ, max: maxZ },
+  ]) {
+    if (Math.abs(axis.direction) < 1e-8) {
+      if (axis.position < axis.min || axis.position > axis.max) return null;
+      continue;
+    }
+    const first = (axis.min - axis.position) / axis.direction;
+    const second = (axis.max - axis.position) / axis.direction;
+    near = Math.max(near, Math.min(first, second));
+    far = Math.min(far, Math.max(first, second));
+    if (far < near) return null;
+  }
+  if (far < 0 || near > maxDistance) return null;
+  return near > 1e-4 ? near : far > 1e-4 ? far : null;
+}
+
+/** Show the first physical cover/boundary along the manual firing direction. */
+export function calculatePvpAimPreview(
+  origin: PvpAimPreviewTarget,
+  directionInput: PvpAimDirection,
+  bounds: PvpAimPreviewBounds,
+  obstacles: PvpAimPreviewObstacle[],
+  target?: PvpAimPreviewTarget,
+  maxDistance = 56,
+): PvpAimPreview {
+  const direction = safePreviousDirection(directionInput);
+  const safeOrigin = {
+    x: finite(origin.x) ? origin.x : 0,
+    z: finite(origin.z) ? origin.z : 0,
+  };
+  const range = finite(maxDistance) ? Math.max(1, maxDistance) : 56;
+  const edgeDistances = [
+    direction.x > 1e-8 ? (bounds.maxX - safeOrigin.x) / direction.x
+      : direction.x < -1e-8 ? (bounds.minX - safeOrigin.x) / direction.x : Number.POSITIVE_INFINITY,
+    direction.z > 1e-8 ? (bounds.maxZ - safeOrigin.z) / direction.z
+      : direction.z < -1e-8 ? (bounds.minZ - safeOrigin.z) / direction.z : Number.POSITIVE_INFINITY,
+  ].filter((distance) => Number.isFinite(distance) && distance >= 0);
+  const boundaryDistance = edgeDistances.length ? Math.min(range, ...edgeDistances) : range;
+
+  let nearestCover = Number.POSITIVE_INFINITY;
+  for (const obstacle of obstacles) {
+    if (![obstacle.x, obstacle.z, obstacle.width, obstacle.depth].every(finite)) continue;
+    if (obstacle.width <= 0 || obstacle.depth <= 0) continue;
+    const hitDistance = rayRectangleDistance(
+      safeOrigin,
+      direction,
+      obstacle.x - obstacle.width * 0.5 - 0.16,
+      obstacle.x + obstacle.width * 0.5 + 0.16,
+      obstacle.z - obstacle.depth * 0.5 - 0.16,
+      obstacle.z + obstacle.depth * 0.5 + 0.16,
+      Math.min(range, boundaryDistance),
+    );
+    if (hitDistance !== null && hitDistance < nearestCover) nearestCover = hitDistance;
+  }
+
+  const blocked = nearestCover < boundaryDistance;
+  const impact = blocked ? 'cover' : boundaryDistance < range ? 'boundary' : 'range';
+  const stopDistance = Math.max(0.7, Math.min(range, boundaryDistance, nearestCover) - (blocked ? 0.2 : 0));
+  let onTarget = false;
+  if (target && finite(target.x) && finite(target.z) && !blocked) {
+    const targetX = target.x - safeOrigin.x;
+    const targetZ = target.z - safeOrigin.z;
+    const alongRay = targetX * direction.x + targetZ * direction.z;
+    const acrossRay = Math.abs(targetX * direction.z - targetZ * direction.x);
+    onTarget = alongRay >= 0 && alongRay <= stopDistance + 0.25 && acrossRay <= 0.95;
+  }
+
+  return {
+    x: safeOrigin.x + direction.x * stopDistance,
+    z: safeOrigin.z + direction.z * stopDistance,
+    distance: stopDistance,
+    blocked,
+    onTarget,
+    impact,
+  };
+}
