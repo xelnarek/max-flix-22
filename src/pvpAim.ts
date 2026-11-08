@@ -20,7 +20,7 @@ export function getPvpAimAngle(direction: PvpAimDirection): number {
 }
 
 export function pvpAimDirectionFromAngle(angle: number): PvpAimDirection {
-  if (!finite(angle)) return { ...DEFAULT_PVP_AIM_DIRECTION };
+  if (!finite(angle)) return { x: 0, z: 1 };
   return { x: Math.sin(angle), z: Math.cos(angle) };
 }
 
