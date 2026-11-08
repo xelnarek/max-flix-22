@@ -794,7 +794,9 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
           broadcastRoomState(room);
           connectedOpponent.send(JSON.stringify({
             type: 'room_closed',
-            message: 'Przeciwnik nie wrócił do meczu w wyznaczonym czasie.',
+            message: intentionalLeave
+              ? 'Rywal rozłączył się. Mecz zakończony.'
+              : 'Przeciwnik nie wrócił do meczu w wyznaczonym czasie.',
           }));
           room.emptyTimeout = setTimeout(() => cleanRoom(room.code), 60_000);
           return;
