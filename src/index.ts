@@ -2282,6 +2282,7 @@ class PaleciakiScene extends xb.Script {
       if (document.hidden && this.engine.getGameState() === 'playing') {
         this.engine.togglePause();
         pauseModal?.classList.remove('hidden');
+        pauseModal?.setAttribute('aria-hidden', 'false');
       }
     });
     bindTap(document.getElementById('btn-top-pause'), handlePause);
