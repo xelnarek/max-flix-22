@@ -3010,13 +3010,14 @@ class PaleciakiScene extends xb.Script {
         pvpConnectionStatus.setAttribute('data-state', state);
       }
     };
-    type MatchmakingUiPhase = 'idle' | 'searching' | 'matched';
+    type MatchmakingUiPhase = 'idle' | 'searching' | 'matched' | 'busy';
     const setMatchmakingUiPhase = (phase: MatchmakingUiPhase) => {
       if (btnFindMatch) {
         btnFindMatch.disabled = phase !== 'idle' || !onlineReady;
         btnFindMatch.textContent = phase === 'searching'
           ? 'SZUKANIE PRZECIWNIKA…'
-          : phase === 'matched' ? 'PRZECIWNIK ZNALEZIONY' : '⚔️ SZUKAJ PRZECIWNIKA';
+          : phase === 'matched' ? 'PRZECIWNIK ZNALEZIONY'
+            : phase === 'busy' ? 'POKÓJ ONLINE W TOKU' : '⚔️ SZUKAJ PRZECIWNIKA';
       }
       if (btnCancelMatch) {
         btnCancelMatch.classList.toggle('hidden', phase !== 'searching');
@@ -3024,6 +3025,11 @@ class PaleciakiScene extends xb.Script {
       }
       if (createRoomButton) createRoomButton.disabled = !onlineReady || phase !== 'idle';
       if (joinRoomButton) joinRoomButton.disabled = !onlineReady || phase !== 'idle';
+      const busy = phase !== 'idle';
+      const startBotButton = document.getElementById('btn-pvp-start-bot') as HTMLButtonElement | null;
+      if (startBotButton) startBotButton.disabled = busy;
+      if (nickInput) nickInput.disabled = busy;
+      opPicker?.querySelectorAll<HTMLButtonElement>('.pvp-operator-btn').forEach((button) => { button.disabled = busy; });
     };
     setMatchmakingUiPhase('idle');
 
@@ -3230,6 +3236,7 @@ class PaleciakiScene extends xb.Script {
     // Online WebSocket Host
     btnCreateRoom?.addEventListener('click', () => {
       const playerNick = nickInput?.value.trim() || 'Operator B4';
+      setMatchmakingUiPhase('busy');
       // Keep connection feedback visible before the WebSocket handshake finishes.
       createdRoomInfo?.classList.remove('hidden');
       if (displayRoomCode) displayRoomCode.textContent = 'ŁĄCZENIE…';
@@ -3253,6 +3260,7 @@ class PaleciakiScene extends xb.Script {
         if (btnRematch) btnRematch.textContent = `REWANŻ • ${votes}/${required} GOTOWYCH`;
       };
       netSession.onRoomClosed = (message) => {
+        setMatchmakingUiPhase('idle');
         if (hostStatus) hostStatus.textContent = message;
       };
       netSession.onRoomJoined = (roomCode, slot, roomState) => {
@@ -3306,6 +3314,7 @@ class PaleciakiScene extends xb.Script {
       };
 
       netSession.onError = (err) => {
+        setMatchmakingUiPhase('idle');
         createdRoomInfo?.classList.remove('hidden');
         if (hostStatus) {
           hostStatus.textContent = `Błąd: ${err}`;
@@ -3330,6 +3339,7 @@ class PaleciakiScene extends xb.Script {
       }
 
       const playerNick = nickInput?.value.trim() || 'Operator B4';
+      setMatchmakingUiPhase('busy');
       setPvpConnectionStatus('connecting', 'ŁĄCZENIE Z SERWEREM', 'Sprawdzam dostępność serwera i przygotowuję dołączenie do pokoju.');
       if (joinStatus) { joinStatus.classList.remove('hidden'); joinStatus.textContent = 'Łączenie z serwerem PvP…'; }
       const netSession = new PvpNetworkSession();
@@ -3352,6 +3362,7 @@ class PaleciakiScene extends xb.Script {
         if (btnRematch) btnRematch.textContent = `REWANŻ • ${votes}/${required} GOTOWYCH`;
       };
       netSession.onRoomClosed = (message) => {
+        setMatchmakingUiPhase('idle');
         if (joinStatus) {
           joinStatus.classList.remove('hidden');
           joinStatus.textContent = message;
@@ -3399,6 +3410,7 @@ class PaleciakiScene extends xb.Script {
       };
 
       netSession.onError = (err) => {
+        setMatchmakingUiPhase('idle');
         if (joinStatus) {
           joinStatus.classList.remove('hidden');
           joinStatus.textContent = `Błąd dołączania: ${err}`;
