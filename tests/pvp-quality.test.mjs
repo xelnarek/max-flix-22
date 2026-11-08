@@ -392,4 +392,5 @@ test('PvP fire sits directly above the touch movement joystick and desktop dock 
   assert.match(html, /id="btn-pvp-fire"/);
   assert.match(html, /id="btn-attack" class="attack-button"/);
   assert.match(css, /body #touch-controls\.manual-aim-mode:not\(\.hidden\) \.pvp-fire-control\s*\{[\s\S]*?z-index: 2147483005/);
+  assert.match(css, /#touch-controls\.pvp-mode \.joystick-zone\s*\{[\s\S]*?width: min\(46vw, 300px\)[\s\S]*?height: min\(46vh, 420px\)/);
 });
