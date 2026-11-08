@@ -574,6 +574,7 @@ class PaleciakiScene extends xb.Script {
   private lastBossDefeated: boolean = false;
   private lastMode: 'campaign' | 'survival' | 'pvp' = 'survival';
   private masteryAwardedForRun = false;
+  private renderAccountProgressionUi: () => void = () => {};
   private accountPvpAwardedForMatch = false;
   private pvpSession: IPvpSession | null = null;
   private selectedPvpOperator: CharacterId = 'marcin';
@@ -1836,6 +1837,7 @@ class PaleciakiScene extends xb.Script {
         }
       }
     };
+    this.renderAccountProgressionUi = renderAccountProgressionPanels;
 
     const updateCharacterUI = (id: CharacterId) => {
       this.selectedCharId = id;
@@ -4028,7 +4030,7 @@ class PaleciakiScene extends xb.Script {
       });
       accountProgressionProfile = accountResult.profile;
       persistAccountProgressionProfile();
-      renderAccountProgressionPanels();
+      this.renderAccountProgressionUi();
       if (accountResult.xpEarned > 0) {
         const accountToast = document.createElement('div');
         accountToast.className = 'achievement-unlock-toast';
