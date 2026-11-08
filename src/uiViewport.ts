@@ -30,7 +30,8 @@ export function calculateUiViewport(
   const fit = Math.min(widthFit, heightFit);
   const scale = clamp(fit, isTouch ? 0.82 : 0.84, isTouch ? 1.10 : 1.12);
   const fontScale = clamp(Math.sqrt(scale), 0.90, 1.08);
-  const panelMaxWidth = Math.round(clamp(width - (isTouch ? 16 : 40), 320, 1240));
+  // Never force a 320px minimum on narrow phones: that creates horizontal overflow.
+  const panelMaxWidth = Math.round(Math.max(1, Math.min(width - (isTouch ? 16 : 40), 1240)));
 
   const density: UiDensity =
     width < 380 || height < 640 || (landscapeTouch && height < 430)
