@@ -3045,6 +3045,10 @@ class PaleciakiScene extends xb.Script {
 
     const openLobby = () => {
       pvpLobbyModal?.classList.remove('hidden');
+      if (!matchmakingSession && !this.pvpSession) {
+        setMatchmakingUiPhase('idle');
+        setPvpConnectionStatus('idle', 'ONLINE GOTOWE', 'Wybierz „Szukaj przeciwnika” albo utwórz pokój i udostępnij kod.');
+      }
       sound.playSmack();
     };
 
@@ -3065,6 +3069,8 @@ class PaleciakiScene extends xb.Script {
         findButton.textContent = '⚔️ SZUKAJ PRZECIWNIKA';
       }
       cancelButton?.classList.add('hidden');
+      setMatchmakingUiPhase('idle');
+      setPvpConnectionStatus('idle', 'ONLINE GOTOWE', 'Wybierz „Szukaj przeciwnika” albo utwórz pokój i udostępnij kod.');
       this.pvpLocalReady = false;
       if (readyBar) readyBar.classList.add('hidden');
       if (createdRoomInfo) createdRoomInfo.classList.add('hidden');
