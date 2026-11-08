@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { disposePvpObjectTree } from './pvpResourceCleanup.ts';
 import { calculatePvpCameraFrame, calculatePvpCameraTrackingBounds, isPvpPortraitViewport } from './pvpCamera.ts';
-import { createPvpFloorTexture, createPvpObstacleTexture } from './pvpTextures.ts';
+import { createArenaObstacleFootprint, createPvpFloorTexture, createPvpObstacleTexture } from './pvpTextures.ts';
 import { calculatePvpAimPreview, getPvpAimAngle, isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle, pvpScreenAimToWorld, pvpScreenMovementToWorld, PVP_AIM_DIRECTION_DEADZONE, type PvpAimDirection } from './pvpAim.ts';
 import type { IPvpSession } from './pvpClient.ts';
 import {
@@ -2175,21 +2175,7 @@ export class PaleciakiGameEngine {
 
       // Fine floor outline shows the actual cover footprint clearly on mobile.
       const footprintColor = obs.type === 'barrier' ? 0xf87171 : obs.type === 'pillar' ? 0x67e8f9 : 0xfacc15;
-      const footprintHalfW = obs.width * 0.5 + 0.12;
-      const footprintHalfD = obs.depth * 0.5 + 0.12;
-      const footprintGeometry = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(-footprintHalfW, 0, -footprintHalfD),
-        new THREE.Vector3(footprintHalfW, 0, -footprintHalfD),
-        new THREE.Vector3(footprintHalfW, 0, footprintHalfD),
-        new THREE.Vector3(-footprintHalfW, 0, footprintHalfD),
-      ]);
-      const footprint = new THREE.LineLoop(
-        footprintGeometry,
-        new THREE.LineBasicMaterial({ color: footprintColor, transparent: true, opacity: 0.72, depthWrite: false }),
-      );
-      footprint.position.y = 0.045;
-      footprint.renderOrder = 3;
-      group.add(footprint);
+      group.add(createArenaObstacleFootprint(obs.width, obs.depth, footprintColor));
 
       if (obs.type === 'pallet') {
         const stackMesh = new THREE.Mesh(new THREE.BoxGeometry(obs.width, obs.height, obs.depth), palletMat);
@@ -2607,23 +2593,46 @@ export class PaleciakiGameEngine {
   private buildSurvivalArenaExpansion(mapId: SurvivalMapId) {
     const mapDefinition = getSurvivalMapDefinition(mapId);
     this.survivalObstacles = [];
-    const floorTexture = getFloorTexture().clone();
-    floorTexture.needsUpdate = true;
-    floorTexture.wrapS = THREE.RepeatWrapping;
-    floorTexture.wrapT = THREE.RepeatWrapping;
+    // Survival reuses the generated industrial floor and warehouse surface maps from PvP.
+    // Map-specific colours tint the common assets without creating a second texture system.
+    const floorTexture = createPvpFloorTexture();
     floorTexture.repeat.set(3, 4);
+    const crateTexture = createPvpObstacleTexture('crate');
+    const barrierTexture = createPvpObstacleTexture('barrier');
+    const wallTexture = createPvpObstacleTexture('wall');
     const floorMaterial = new THREE.MeshStandardMaterial({ map: floorTexture, color: mapDefinition.floorColor, roughness: mapId === 'cold_storage' ? 0.42 : mapId === 'night_sorting' ? 0.34 : 0.62, metalness: mapId === 'container_terminal' ? 0.24 : mapId === 'night_sorting' ? 0.36 : 0.12 });
     applyIndustrialPbr(floorMaterial, 0.018);
-    const wallMaterial = new THREE.MeshStandardMaterial({ color: mapDefinition.wallColor, roughness: 0.72, metalness: mapId === 'container_terminal' ? 0.42 : 0.32 });
+    const wallMaterial = new THREE.MeshStandardMaterial({ map: wallTexture, color: mapDefinition.wallColor, roughness: 0.72, metalness: mapId === 'container_terminal' ? 0.42 : 0.32 });
     const trimMaterial = new THREE.MeshStandardMaterial({ color: mapDefinition.accentColor, roughness: 0.48, metalness: 0.24, emissive: mapDefinition.accentColor, emissiveIntensity: 0.10 });
-    const palletMaterial = new THREE.MeshStandardMaterial({ color: 0x76513a, roughness: 0.88 });
+    const palletMaterial = new THREE.MeshStandardMaterial({ map: crateTexture, color: 0x76513a, roughness: 0.88 });
     const crateMaterials = [
-      new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.82 }),
-      new THREE.MeshStandardMaterial({ color: 0x854d0e, roughness: 0.78 }),
-      new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.72 }),
+      new THREE.MeshStandardMaterial({ map: crateTexture, color: 0x475569, roughness: 0.82 }),
+      new THREE.MeshStandardMaterial({ map: crateTexture, color: 0x854d0e, roughness: 0.78 }),
+      new THREE.MeshStandardMaterial({ map: crateTexture, color: 0x334155, roughness: 0.72 }),
     ];
+    const barrierMaterial = new THREE.MeshStandardMaterial({ map: barrierTexture, color: 0xffffff, roughness: 0.72, metalness: 0.12 });
+
+    // Track map-owned GPU resources: all these textures/materials are shared by many map meshes.
+    for (const material of [floorMaterial, wallMaterial, trimMaterial, palletMaterial, barrierMaterial, ...crateMaterials]) {
+      this.survivalArenaInstanceMaterials.add(material);
+    }
+    for (const texture of [floorTexture, crateTexture, barrierTexture, wallTexture]) {
+      this.survivalArenaInstanceTextures.add(texture);
+    }
+
+    const addSurvivalFootprint = (group: THREE.Group, width: number, depth: number) => {
+      const footprint = createArenaObstacleFootprint(width, depth, mapDefinition.accentColor);
+      this.survivalArenaInstanceGeometries.add(footprint.geometry);
+      const footprintMaterials = Array.isArray(footprint.material) ? footprint.material : [footprint.material];
+      footprintMaterials.forEach((material) => this.survivalArenaInstanceMaterials.add(material));
+      group.add(footprint);
+    };
+
     const floorGeometry = new THREE.PlaneGeometry(23.5, 40);
-    const centerFloor = new THREE.Mesh(new THREE.PlaneGeometry(72, 40), floorMaterial);
+    this.survivalArenaInstanceGeometries.add(floorGeometry);
+    const centerFloorGeometry = new THREE.PlaneGeometry(72, 40);
+    this.survivalArenaInstanceGeometries.add(centerFloorGeometry);
+    const centerFloor = new THREE.Mesh(centerFloorGeometry, floorMaterial);
     centerFloor.rotation.x = -Math.PI / 2;
     centerFloor.position.set(0, -0.015, 0);
     centerFloor.receiveShadow = true;
@@ -2757,6 +2766,7 @@ export class PaleciakiGameEngine {
       ];
       for (const point of coverPoints) {
         const group = new THREE.Group();
+        addSurvivalFootprint(group, 2.9, 1.95);
         const base = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.24, 1.95), palletMaterial);
         base.position.y = 0.12;
         group.add(base);
@@ -2811,9 +2821,10 @@ export class PaleciakiGameEngine {
       { x: -22, z: 12 }, { x: 22, z: -12 }, { x: -8, z: -14 }, { x: 9, z: 14 },
     ]) {
       const barricade = new THREE.Group();
+      addSurvivalFootprint(barricade, 2.45, 1.25);
       const base = new THREE.Mesh(new THREE.BoxGeometry(2.45, 0.22, 1.25), palletMaterial);
       base.position.y = 0.11;
-      const crate = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.88, 1.05), crateMaterials[1]);
+      const crate = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.88, 1.05), barrierMaterial);
       crate.position.y = 0.66;
       this.registerCameraOccluder(crate, 0.13);
       const stripe = new THREE.Mesh(new THREE.BoxGeometry(2.12, 0.09, 1.08), trimMaterial);
