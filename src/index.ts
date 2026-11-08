@@ -2877,7 +2877,7 @@ class PaleciakiScene extends xb.Script {
         fireButtonSize: fireControlSize,
         fireGap: 10,
         topHudClearance: 88,
-        safeBottom: Math.max(12, Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-bottom')) || 12),
+        safeBottom: 12,
       });
       startX = origin.x;
       startY = origin.y;
