@@ -61,6 +61,7 @@ test('cinematic intro stages its title reveal over a richer animated warehouse s
 test('boot only warms runtime textures and lazily creates models and audio after interaction', async () => {
   const assets = await readFile(new URL('../src/assets.ts', import.meta.url), 'utf8');
   assert.match(assets, /const assetList: AssetItem\[\] = \[/);
+  assert.match(assets, /const pct = itemsTotal > 0 \? Math\.round\(\(itemsLoaded \/ itemsTotal\) \* 70\) : 0/);
   for (const texture of ['getFloorTexture()', 'getWallTexture()', 'getShowroomMarbleFloorTexture()', 'getShowroomWallTexture()', 'getTerminalGraniteFloorTexture()', 'getHazardStripeTexture()']) {
     assert.ok(assets.includes(texture), 'missing runtime texture warmup: ' + texture);
   }
