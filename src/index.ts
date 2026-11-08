@@ -3419,23 +3419,90 @@ async function startApp() {
   const titleScreen = document.getElementById('title-screen');
   const shell = document.getElementById('game-shell');
 
-  // Safety fallback: reveal UI even if loading hangs
-  const safetyTimeout = setTimeout(() => {
-    console.warn('[App:Boot] ⚠️ Przekroczono czas ładowania (Safety Timeout 12s). Wymuszanie wyświetlenia interfejsu.');
+  const revealStartupUi = () => {
     assetLoader.hide();
-    if (titleScreen) {
-      titleScreen.classList.remove('hidden');
-      titleScreen.style.removeProperty('display');
-      titleScreen.style.setProperty('display', 'flex', 'important');
-      titleScreen.style.setProperty('z-index', '10000000', 'important');
-    }
     if (shell) {
       shell.classList.remove('hidden');
       shell.style.removeProperty('display');
       shell.style.setProperty('display', 'flex', 'important');
       shell.style.setProperty('z-index', '9999999', 'important');
     }
-  }, 12000);
+    if (titleScreen) {
+      titleScreen.classList.remove('hidden');
+      titleScreen.style.removeProperty('display');
+      titleScreen.style.setProperty('display', 'flex', 'important');
+      titleScreen.style.setProperty('z-index', '10000000', 'important');
+    }
+  };
+
+  const showBootRecoveryNotice = (message: string) => {
+    let notice = document.getElementById('boot-recovery-notice');
+    if (!notice) {
+      notice = document.createElement('div');
+      notice.id = 'boot-recovery-notice';
+      notice.setAttribute('role', 'alert');
+      Object.assign(notice.style, {
+        position: 'fixed',
+        left: '16px',
+        right: '16px',
+        bottom: 'max(16px, env(safe-area-inset-bottom))',
+        zIndex: '30000000',
+        maxWidth: '560px',
+        margin: '0 auto',
+        padding: '14px 16px',
+        border: '1px solid rgba(248,113,113,.55)',
+        borderRadius: '14px',
+        background: 'rgba(8,15,27,.97)',
+        color: '#f8fafc',
+        boxShadow: '0 20px 60px rgba(0,0,0,.45)',
+        font: '600 14px/1.45 system-ui,sans-serif',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '12px'
+      });
+      const copy = document.createElement('span');
+      copy.id = 'boot-recovery-message';
+      const reload = document.createElement('button');
+      reload.type = 'button';
+      reload.textContent = 'ODŚWIEŻ GRĘ';
+      Object.assign(reload.style, {
+        flex: '0 0 auto',
+        border: '1px solid rgba(248,113,113,.7)',
+        borderRadius: '9px',
+        padding: '9px 12px',
+        background: 'rgba(127,29,29,.45)',
+        color: '#fff',
+        font: '800 11px system-ui,sans-serif'
+      });
+      reload.addEventListener('click', () => window.location.reload());
+      notice.append(copy, reload);
+      document.body.appendChild(notice);
+    }
+    const copy = notice.querySelector('#boot-recovery-message');
+    if (copy) copy.textContent = message;
+  };
+
+  const withBootTimeout = async <T>(task: Promise<T>, timeoutMs: number, message: string): Promise<T> => {
+    let timeoutId: number | undefined;
+    try {
+      return await Promise.race([
+        task,
+        new Promise<never>((_, reject) => {
+          timeoutId = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+        })
+      ]);
+    } finally {
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+    }
+  };
+
+  // Last-resort UI watchdog. Normal startup has shorter, stage-specific timeouts.
+  const safetyTimeout = window.setTimeout(() => {
+    console.warn('[App:Boot] Przekroczono maksymalny czas uruchamiania.');
+    revealStartupUi();
+    showBootRecoveryNotice('Uruchamianie gry trwa zbyt długo. Odśwież grę; jeżeli problem wróci, sprawdź połączenie i WebGL.');
+  }, 36000);
 
   try {
     // 1. Show Asset Loader immediately
@@ -3444,7 +3511,11 @@ async function startApp() {
 
     // 2. Preload all procedural textures, 3D models and audio context (covers 0% - 70%)
     console.log('[App:Boot] ⏳ Wstępne ładowanie zasobów...');
-    await assetLoader.preloadAll();
+    await withBootTimeout(
+      assetLoader.preloadAll(),
+      12000,
+      'Przygotowanie zasobów 3D przekroczyło 12 sekund.'
+    );
     console.log('[App:Boot] ✅ Zasoby załadowane.');
 
     // 3. Ensure canvas in container
@@ -3492,12 +3563,21 @@ async function startApp() {
     try {
       console.log('[App:Boot] 🔗 Łączenie z silnikiem renderingu...');
       
-      await xb.init(options);
+      await withBootTimeout(
+        xb.init(options),
+        18000,
+        'Silnik 3D nie odpowiedział w ciągu 18 sekund. Sprawdź obsługę WebGL i odśwież grę.'
+      );
       console.log('[App:Boot] ✅ Silnik 3D zainicjalizowany.');
-      
+
+      const renderer = xb.core.renderer as THREE.WebGLRenderer | undefined;
+      if (!renderer) {
+        throw new Error('Silnik 3D nie utworzył renderera WebGL. Uruchom grę ponownie w obsługiwanej przeglądarce.');
+      }
+
       // High fidelity rendering configuration
-      if (xb.core.renderer) {
-        const r = xb.core.renderer as THREE.WebGLRenderer;
+      {
+        const r = renderer;
         const renderProfile = currentDeviceRenderProfile();
         document.documentElement.dataset.renderTier = renderProfile.tier;
         r.outputColorSpace = THREE.SRGBColorSpace;
@@ -3521,7 +3601,13 @@ async function startApp() {
         container.style.zIndex = '1';
       }
     } catch (e) {
-      console.warn('[App:Boot] ⚠️ Uwaga inicjalizacji XR:', e);
+      console.error('[App:Boot] ❌ Nie udało się uruchomić silnika 3D:', e);
+      throw new Error(
+        e instanceof Error
+          ? e.message
+          : 'Nie udało się uruchomić silnika 3D. Sprawdź obsługę WebGL i odśwież grę.',
+        { cause: e }
+      );
     }
 
     assetLoader.updateProgress(98, 'Synchronizacja bazy Firestore i gotowość...', 'engine', 'FIRESTORE');
@@ -3532,6 +3618,7 @@ async function startApp() {
     await new Promise(r => setTimeout(r, 320));
 
     clearTimeout(safetyTimeout);
+    document.getElementById('boot-recovery-notice')?.remove();
     assetLoader.hide();
 
     // UMP must refresh consent on every native app launch, before any ad request.
@@ -3556,21 +3643,19 @@ async function startApp() {
       console.log('[App:Boot] 🎉 Ekran tytułowy gotowy.');
     }
 
-    // Paint the ready menu once, then run the opening sequence automatically.
-    // It no longer depends on a retired Campaign/story button existing in the DOM.
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-    });
+    // The menu is already visible; a short task yield is enough before intro.
+    // Do not wait for requestAnimationFrame here: mobile browsers pause RAF in background.
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 50));
     if (!document.hidden) document.dispatchEvent(new Event('paleciaki:launch-intro'));
 
   } catch (err) {
     console.error('[App:Boot] ❌ KRYTYCZNY BŁĄD STARTU:', err);
     clearTimeout(safetyTimeout);
-    assetLoader.hide();
-    if (titleScreen) {
-      titleScreen.classList.remove('hidden');
-      titleScreen.style.setProperty('display', 'flex', 'important');
-    }
+    revealStartupUi();
+    const message = err instanceof Error
+      ? err.message
+      : 'Nie udało się uruchomić gry. Odśwież stronę i spróbuj ponownie.';
+    showBootRecoveryNotice(message);
   }
 }
 
