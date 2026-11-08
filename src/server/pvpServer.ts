@@ -203,6 +203,15 @@ function cleanRoom(code: string) {
   activeRooms.delete(code);
 }
 
+/** Room cleanup is best-effort housekeeping and must not keep an idle Node
+ * process alive after all WebSocket clients have disconnected. */
+function scheduleRoomCleanup(room: PvpRoom, delayMs: number): void {
+  if (room.emptyTimeout) clearTimeout(room.emptyTimeout);
+  const timer = setTimeout(() => cleanRoom(room.code), delayMs);
+  timer.unref?.();
+  room.emptyTimeout = timer;
+}
+
 export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
   const allowedOrigins = new Set(
     (process.env.PVP_ALLOWED_ORIGINS || '')
@@ -798,7 +807,7 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
               ? 'Rywal rozłączył się. Mecz zakończony.'
               : 'Przeciwnik nie wrócił do meczu w wyznaczonym czasie.',
           }));
-          room.emptyTimeout = setTimeout(() => cleanRoom(room.code), 60_000);
+          scheduleRoomCleanup(room, 60_000);
           return;
         }
 
@@ -823,13 +832,13 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
           clearRoomInputs(room);
           broadcastRoomState(room);
           if (room.clients.size === 0) {
-            room.emptyTimeout = setTimeout(() => cleanRoom(room.code), 30_000);
+            scheduleRoomCleanup(room, 30_000);
           }
           return;
         }
 
         if (room.clients.size === 0) {
-          room.emptyTimeout = setTimeout(() => cleanRoom(room.code), 30_000);
+          scheduleRoomCleanup(room, 30_000);
         } else {
           cleanRoom(room.code);
         }
