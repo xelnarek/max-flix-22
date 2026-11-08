@@ -55,7 +55,13 @@ const MAX_ACTIVE_ROOMS = 256;
 const MAX_MATCHMAKING_QUEUE = 100;
 const MAX_MESSAGES_PER_SECOND = 120;
 const PVP_INPUT_STALE_TIMEOUT_MS = 220;
-const PVP_RECONNECT_GRACE_MS = 20_000;
+const DEFAULT_PVP_RECONNECT_GRACE_MS = 20_000;
+const getPvpReconnectGraceMs = (): number => {
+  const configured = Number(process.env.PVP_RECONNECT_GRACE_MS);
+  return process.env.NODE_ENV === 'test' && Number.isFinite(configured) && configured >= 250 && configured <= 60_000
+    ? Math.floor(configured)
+    : DEFAULT_PVP_RECONNECT_GRACE_MS;
+};
 const PVP_RECONNECT_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
 function createPvpReconnectToken(): string {
@@ -765,7 +771,7 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
       }
       broadcastRoomState(room);
 
-      const graceMs = intentionalLeave ? 0 : PVP_RECONNECT_GRACE_MS;
+      const graceMs = intentionalLeave ? 0 : getPvpReconnectGraceMs();
       const expireDisconnectedSlot = () => {
         room.reconnectTimers[playerSlot!] = null;
         if (room.clients.has(playerSlot!) || !activeRooms.has(room.code)) return;
