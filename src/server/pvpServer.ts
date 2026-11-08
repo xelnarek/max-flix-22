@@ -763,7 +763,7 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
 
       const otherSlot = playerSlot === 'p1' ? 'p2' : 'p1';
       const otherClient = room.clients.get(otherSlot);
-      const intentionalLeave = closeCode === 1000 && /client closed room|user left|opu|wyj/i.test(closeReason.toString());
+      const intentionalLeave = closeCode === 1000;
       if ((room.state.status === 'in_round' || room.state.status === 'countdown') && !intentionalLeave) {
         // Freeze the authoritative simulation during a short network interruption.
         // Position, health and round clock remain intact until the player reconnects.
