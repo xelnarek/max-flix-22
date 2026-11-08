@@ -764,10 +764,15 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
       const otherSlot = playerSlot === 'p1' ? 'p2' : 'p1';
       const otherClient = room.clients.get(otherSlot);
       const intentionalLeave = closeCode === 1000;
-      if ((room.state.status === 'in_round' || room.state.status === 'countdown') && !intentionalLeave) {
+      const isLiveMatch = room.state.status === 'in_round' || room.state.status === 'countdown';
+      if (isLiveMatch && !intentionalLeave) {
         // Freeze the authoritative simulation during a short network interruption.
         // Position, health and round clock remain intact until the player reconnects.
         stopRoomLoop(room);
+      } else if (!isLiveMatch) {
+        room.state.status = 'waiting';
+        room.state.p1.isReady = false;
+        room.state.p2.isReady = false;
       }
       broadcastRoomState(room);
 
