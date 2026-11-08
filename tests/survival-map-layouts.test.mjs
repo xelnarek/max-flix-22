@@ -48,3 +48,11 @@ test('all Survival map feature families render physical, map-specific industrial
   assert.match(game, /halfWidth: feature\.width \* 0\.56/);
   assert.match(game, /halfDepth: feature\.depth \* 0\.56/);
 });
+
+test('pallet cargo body is raised to expose its physical pallet deck detail', async () => {
+  const game = await (await import('node:fs/promises')).readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
+  assert.match(game, /const bodyBaseY = feature\.kind === 'pallet_stack' \? 0\.26 : 0/);
+  assert.match(game, /new THREE\.BoxGeometry\(feature\.width, bodyHeight, feature\.depth\)/);
+  assert.match(game, /palletBase\.position\.y = 0\.075/);
+  assert.match(game, /deckBoards\.instanceMatrix\.needsUpdate = true/);
+});
