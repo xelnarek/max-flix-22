@@ -5548,9 +5548,12 @@ button {
   pointer-events: none;
   will-change: transform;
 }
-#game-shell.manual-aim-mode .pvp-aim-zone { display: block !important; }
+/* The controls are portaled to body; show the right stick from the controls layer, not #game-shell. */
+#touch-controls.manual-aim-mode .pvp-aim-zone { display: block !important; }
 :is(#game-shell, #touch-controls).manual-aim-mode .joystick-zone { width: min(50vw, 340px) !important; }
-:is(#game-shell, #touch-controls).manual-aim-mode #btn-touch-attack { display: none !important; }
+:is(#game-shell, #touch-controls).manual-aim-mode #btn-touch-attack,
+#touch-controls.manual-aim-mode #btn-touch-jump { display: none !important; }
+#touch-controls.manual-aim-mode .pvp-aim-base:not(.active) { opacity: .48 !important; }
 @media (max-width: 390px) {
   #game-shell.manual-aim-mode .pvp-aim-zone { bottom: 98px !important; }
   :is(#game-shell, #touch-controls).manual-aim-mode .touch-actions-zone { gap: 6px !important; }
@@ -6184,4 +6187,31 @@ button {
     position: relative !important;
     z-index: 2147483003 !important;
   }
+}
+
+
+/* PvP network capability: never imply that static GitHub Pages hosts WSS. */
+.pvp-online-hint {
+  margin: 8px 0 10px;
+  padding: 9px 11px;
+  border: 1px solid rgba(245, 158, 11, .35);
+  border-radius: 10px;
+  background: rgba(120, 75, 18, .16);
+  color: #fde68a;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.pvp-online-hint.is-online-ready {
+  border-color: rgba(52, 211, 153, .35);
+  background: rgba(6, 95, 70, .18);
+  color: #a7f3d0;
+}
+.pvp-online-hint.is-online-unavailable {
+  border-color: rgba(245, 158, 11, .35);
+  color: #fde68a;
+}
+.pvp-network-box button:disabled {
+  opacity: .42;
+  filter: grayscale(.55);
+  cursor: not-allowed;
 }
