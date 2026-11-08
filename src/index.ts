@@ -2944,6 +2944,25 @@ class PaleciakiScene extends xb.Script {
     const btnOpenPvp = document.getElementById('btn-open-pvp');
     const pvpLobbyModal = document.getElementById('pvp-lobby-modal');
     const btnClosePvpLobby = document.getElementById('btn-close-pvp-lobby');
+    const onlineHint = document.getElementById('pvp-online-hint');
+    const onlineReady = Boolean(import.meta.env.VITE_PVP_WS_URL?.trim());
+    const createRoomButton = document.getElementById('btn-pvp-create-room') as HTMLButtonElement | null;
+    const joinRoomButton = document.getElementById('btn-pvp-join-room') as HTMLButtonElement | null;
+    if (onlineHint) {
+      onlineHint.textContent = onlineReady
+        ? 'Serwer WSS skonfigurowany. Możesz tworzyć pokoje i dołączać kodem.'
+        : 'PvP online jest wyłączone: strona GitHub Pages nie hostuje serwera WSS. Trening z botem działa lokalnie.';
+      onlineHint.classList.toggle('is-online-ready', onlineReady);
+      onlineHint.classList.toggle('is-online-unavailable', !onlineReady);
+    }
+    if (createRoomButton) {
+      createRoomButton.disabled = !onlineReady;
+      createRoomButton.title = onlineReady ? 'Utwórz pokój online' : 'Wymagany osobny serwer WSS';
+    }
+    if (joinRoomButton) {
+      joinRoomButton.disabled = !onlineReady;
+      joinRoomButton.title = onlineReady ? 'Dołącz do pokoju online' : 'Wymagany osobny serwer WSS';
+    }
     const titleScreen = document.getElementById('title-screen');
     const hudTop = document.getElementById('hud-top');
     const hudBottom = document.getElementById('hud-bottom');
@@ -3024,6 +3043,9 @@ class PaleciakiScene extends xb.Script {
       pvpHud?.classList.remove('hidden');
       hudBottom?.classList.remove('hidden');
       setTouchControlsVisibility(true);
+      // touch-controls is portaled to body, so it needs its own mode classes.
+      // Classes on #game-shell do not cascade into this detached control layer.
+      touchControls?.classList.add('pvp-mode', 'manual-aim-mode');
 
       gameShell?.classList.add('pvp-mode');
       this.engine.setManualAimMode(true);
@@ -3038,7 +3060,7 @@ class PaleciakiScene extends xb.Script {
       const botOp: CharacterId = localOp === 'marcin' ? 'grzesiek' : localOp === 'grzesiek' ? 'dawid' : 'marcin';
       const playerNick = nickInput?.value.trim() || 'Operator B4';
 
-      const botSession = new PvpLocalBotSession(localOp, botOp, playerNick, 'Grzesiek [BOT SI]');
+      const botSession = new PvpLocalBotSession(localOp, botOp, playerNick, `${CHARACTERS[botOp].name} [BOT SI]`);
       this.pvpSession = botSession;
       this.pvpLocalSlot = 'p1';
 
@@ -3233,6 +3255,8 @@ class PaleciakiScene extends xb.Script {
       matchEndModal?.classList.add('hidden');
       pvpHud?.classList.add('hidden');
       gameShell?.classList.remove('pvp-mode');
+      touchControls?.classList.remove('pvp-mode', 'manual-aim-mode');
+      setTouchControlsVisibility(false);
       this.engine.setManualAimMode(false);
       this.engine.exitPvp();
       if (this.pvpSession) {
