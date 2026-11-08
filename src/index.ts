@@ -2645,8 +2645,12 @@ class PaleciakiScene extends xb.Script {
         aimBase.style.transform = 'translate(-50%, -50%)';
         aimBase.classList.add('active');
         aimKnob.style.transform = 'translate(-50%, -50%)';
+        // Apply direction on pointer-down as well: no dead first frame and no
+        // requirement to make a second tiny movement after touching the aim pad.
+        updateAim(event);
         try { aimZone.setPointerCapture(event.pointerId); } catch { /* window handlers are the fallback */ }
         if (event.cancelable) event.preventDefault();
+        event.stopPropagation();
       }, { passive: false });
       window.addEventListener('pointermove', (event) => {
         if (activeAimPointerId !== event.pointerId) return;
