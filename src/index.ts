@@ -2275,6 +2275,8 @@ class PaleciakiScene extends xb.Script {
       if (this.engine.getGameState() !== 'playing') return;
       this.engine.togglePause();
       pauseModal?.classList.remove('hidden');
+      pauseModal?.setAttribute('aria-hidden', 'false');
+      (document.getElementById('btn-resume') as HTMLButtonElement | null)?.focus();
     };
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && this.engine.getGameState() === 'playing') {
@@ -2289,11 +2291,13 @@ class PaleciakiScene extends xb.Script {
 
     bindTap(document.getElementById('btn-resume'), () => {
       pauseModal?.classList.add('hidden');
+      pauseModal?.setAttribute('aria-hidden', 'true');
       this.engine.togglePause();
     });
 
     bindTap(document.getElementById('btn-restart-pause'), () => {
       pauseModal?.classList.add('hidden');
+      pauseModal?.setAttribute('aria-hidden', 'true');
       survivalLevelUp?.classList.add('hidden');
       survivalHud?.classList.remove('hidden');
       gameShell?.classList.add('survival-mode');
@@ -2305,13 +2309,14 @@ class PaleciakiScene extends xb.Script {
         touchControls?.classList.add('survival-mode');
     });
 
-    bindTap(document.getElementById('btn-menu-pause'), () => {
+    const exitPausedRunToMenu = () => {
       pauseModal?.classList.add('hidden');
+      pauseModal?.setAttribute('aria-hidden', 'true');
       hudPerksRow?.classList.add('hidden');
       survivalHud?.classList.add('hidden');
       survivalLevelUp?.classList.add('hidden');
       gameShell?.classList.remove('survival-mode');
-        touchControls?.classList.remove('survival-mode');
+      touchControls?.classList.remove('survival-mode');
       hudTop?.classList.add('hidden');
       hudBottom?.classList.add('hidden');
       setTouchControlsVisibility(false);
@@ -2320,7 +2325,8 @@ class PaleciakiScene extends xb.Script {
         titleScreen.style.setProperty('display', 'flex', 'important');
       }
       this.engine.startTitle();
-    });
+    };
+    bindTap(document.getElementById('btn-menu-pause'), exitPausedRunToMenu);
 
     bindTap(document.getElementById('btn-retry'), () => {
       gameoverModal?.classList.add('hidden');
