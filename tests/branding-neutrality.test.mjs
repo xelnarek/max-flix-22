@@ -5,16 +5,25 @@ import test from 'node:test';
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
 test('public identity and operator labels are generic', async () => {
-  const [html, app, intro, characters, metadata] = await Promise.all([
+  const [html, app, intro, characters, metadataText, listingText, manifestText] = await Promise.all([
     read('../index.html'),
     read('../src/index.ts'),
     read('../src/cinematicIntro.ts'),
     read('../src/characters.ts'),
     read('../metadata.json'),
+    read('../play-store/listing-pl.json'),
+    read('../public/manifest.webmanifest'),
   ]);
+  const metadata = JSON.parse(metadataText);
+  const listing = JSON.parse(listingText);
+  const manifest = JSON.parse(manifestText);
   assert.match(html, /<title>Paleciaki! Magazyn Chaosu<\/title>/);
   assert.match(html, /SURVIVAL • FALE • HORDY I EWOLUCJE/);
-  assert.match(metadata, /"name": "Paleciaki! Magazyn Chaosu"/);
+  assert.match(metadataText, /"name": "Paleciaki! Magazyn Chaosu"/);
+  const publishedDescriptions = [metadata.description, listing.shortDescription, listing.fullDescription, manifest.description].join('\\n');
+  assert.match(publishedDescriptions, /Survival PvE/);
+  assert.match(publishedDescriptions, /PvP 1v1/);
+  assert.doesNotMatch(publishedDescriptions, /kampania|campaign/i);
 
   const publicHtml = html
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
