@@ -1,10 +1,17 @@
 {
   "language": "pl-PL",
   "appName": "Paleciaki! Magazyn Chaosu",
-  "shortDescription": "3D magazynowa rozwałka: kampania, hordy, perki i ewolucje broni.",
-  "fullDescription": "Zmiana właśnie wymknęła się spod kontroli.\n\nWskakuj do trójwymiarowego magazynu, wybierz operatora i przetrwaj starcie z falami przeciwników. W Kampanii przemierzaj kolejne strefy, zbieraj zapasy i mierz się z bossami. W Survivalu odpieraj coraz większe hordy, zdobywaj doświadczenie i składaj coraz mocniejszy zestaw ataków.\n\n• Kampania 3D i osobny tryb Survival.\n• Pięciu fikcyjnych operatorów o różnych umiejętnościach.\n• Perki, ulepszenia i ewolucje broni.\n• Dynamiczne fale przeciwników, bossowie i sekrety.\n• Ranking wyników z datą i godziną zapisu.\n\nSteruj, unikaj, atakuj i zbieraj premie. Palety same się nie rozładują — a tym bardziej nie obronią magazynu.\n\nGra wymaga połączenia z internetem do synchronizacji rankingu. Rozgrywka i lokalne ustawienia są dostępne również przy chwilowym braku sieci.",
+  "shortDescription": "3D Survival PvE i arena PvP 1v1. Hordy, bossowie, perki i ewolucje.",
+  "fullDescription": "Zmiana właśnie wymknęła się spod kontroli.\n\nWejdź do trójwymiarowego magazynu, wybierz operatora i przetrwaj kolejne fale przeciwników w trybie Survival. Zbieraj XP, wybieraj moduły, rozwijaj autonomiczne bronie i buduj zestaw, który pozwoli dotrwać do następnej zmiany.\n\nGdy masz ochotę na pojedynek, przejdź do osobnej areny PvP 1v1. To odrębne zasady i osobny interfejs: lewy joystick odpowiada za ruch, a strzał oddajesz w chwili, gdy przesuwający się po łuku wskaźnik wskazuje kierunek przeciwnika. Ćwicz przeciw botowi lub rozgrywaj pojedynki w dostępnych pokojach.\n\n• Survival PvE: fale co 60 sekund, bossowie, eventy, kontrakty i sekrety.\n• Arena PvP 1v1: ręczny timing strzału, zdolności operatorów i taktyczne uniki.\n• Pięciu fikcyjnych operatorów o różnych stylach ruchu i walki.\n• Cztery mapy Survival, 15 modułów, 12 autonomicznych broni i ich ewolucje.\n• Ranking wyników z datą i godziną zapisu.\n\nSteruj, unikaj, atakuj i zbieraj premie. Palety same się nie rozładują — a tym bardziej nie obronią magazynu.\n\nPołączenie z internetem jest potrzebne do synchronizacji rankingu i rozgrywek sieciowych. Survival, lokalne ustawienia i trening PvP z botem są dostępne bez bieżącego połączenia z serwerem pojedynków.",
   "categorySuggestion": "Akcja",
-  "tagsSuggestion": ["gra akcji", "survival", "hordy", "3D", "ulepszenia", "magazyn"],
+  "tagsSuggestion": [
+    "gra akcji",
+    "survival",
+    "hordy",
+    "3D",
+    "ulepszenia",
+    "magazyn"
+  ],
   "requiredArtwork": {
     "appIcon": "512x512 PNG, bez przezroczystości",
     "featureGraphic": "1024x500 PNG lub JPEG",
