@@ -36,6 +36,19 @@ service cloud.firestore {
       let profile = data.profile;
       let ranks = profile.talentRanks;
       let stats = profile.stats;
+      let spentPoints =
+        (('weapon_training' in ranks) ? ranks.weapon_training : 0) +
+        (('ability_calibration' in ranks) ? ranks.ability_calibration : 0) +
+        (('rapid_protocol' in ranks) ? ranks.rapid_protocol : 0) +
+        (('reinforced_vest' in ranks) ? ranks.reinforced_vest : 0) +
+        (('impact_bracing' in ranks) ? ranks.impact_bracing : 0) +
+        (('last_reserve' in ranks) ? ranks.last_reserve : 0) +
+        (('light_footwork' in ranks) ? ranks.light_footwork : 0) +
+        (('dynamic_stride' in ranks) ? ranks.dynamic_stride : 0) +
+        (('jump_technique' in ranks) ? ranks.jump_technique : 0) +
+        (('combat_analysis' in ranks) ? ranks.combat_analysis : 0) +
+        (('cooldown_planning' in ranks) ? ranks.cooldown_planning : 0) +
+        (('field_intelligence' in ranks) ? ranks.field_intelligence : 0);
       return data.keys().hasAll(['schemaVersion', 'profile', 'updatedAt']) &&
         data.keys().hasOnly(['schemaVersion', 'profile', 'updatedAt']) &&
         data.schemaVersion == 1 &&
@@ -46,6 +59,8 @@ service cloud.firestore {
         profile.version == 1 &&
         profile.level is int && profile.level >= 1 && profile.level <= 37 &&
         profile.xp is int && profile.xp >= 0 && profile.xp <= 10000 &&
+        (profile.level == 37 ? profile.xp == 0 : profile.xp < (75 + (profile.level - 1) * 22)) &&
+        spentPoints <= profile.level - 1 &&
         ranks is map && ranks.size() <= 12 &&
         ranks.keys().hasOnly([
           'weapon_training', 'ability_calibration', 'rapid_protocol',
@@ -54,23 +69,24 @@ service cloud.firestore {
           'combat_analysis', 'cooldown_planning', 'field_intelligence'
         ]) &&
         (!('weapon_training' in ranks) || (ranks.weapon_training is int && ranks.weapon_training >= 0 && ranks.weapon_training <= 3)) &&
-        (!('ability_calibration' in ranks) || (ranks.ability_calibration is int && ranks.ability_calibration >= 0 && ranks.ability_calibration <= 3)) &&
-        (!('rapid_protocol' in ranks) || (ranks.rapid_protocol is int && ranks.rapid_protocol >= 0 && ranks.rapid_protocol <= 3)) &&
+        (!('ability_calibration' in ranks) || (ranks.ability_calibration is int && ranks.ability_calibration >= 0 && ranks.ability_calibration <= 3 && (ranks.ability_calibration == 0 || ('weapon_training' in ranks && ranks.weapon_training == 3)))) &&
+        (!('rapid_protocol' in ranks) || (ranks.rapid_protocol is int && ranks.rapid_protocol >= 0 && ranks.rapid_protocol <= 3 && (ranks.rapid_protocol == 0 || ('ability_calibration' in ranks && ranks.ability_calibration == 3)))) &&
         (!('reinforced_vest' in ranks) || (ranks.reinforced_vest is int && ranks.reinforced_vest >= 0 && ranks.reinforced_vest <= 3)) &&
-        (!('impact_bracing' in ranks) || (ranks.impact_bracing is int && ranks.impact_bracing >= 0 && ranks.impact_bracing <= 3)) &&
-        (!('last_reserve' in ranks) || (ranks.last_reserve is int && ranks.last_reserve >= 0 && ranks.last_reserve <= 3)) &&
+        (!('impact_bracing' in ranks) || (ranks.impact_bracing is int && ranks.impact_bracing >= 0 && ranks.impact_bracing <= 3 && (ranks.impact_bracing == 0 || ('reinforced_vest' in ranks && ranks.reinforced_vest == 3)))) &&
+        (!('last_reserve' in ranks) || (ranks.last_reserve is int && ranks.last_reserve >= 0 && ranks.last_reserve <= 3 && (ranks.last_reserve == 0 || ('impact_bracing' in ranks && ranks.impact_bracing == 3)))) &&
         (!('light_footwork' in ranks) || (ranks.light_footwork is int && ranks.light_footwork >= 0 && ranks.light_footwork <= 3)) &&
-        (!('dynamic_stride' in ranks) || (ranks.dynamic_stride is int && ranks.dynamic_stride >= 0 && ranks.dynamic_stride <= 3)) &&
-        (!('jump_technique' in ranks) || (ranks.jump_technique is int && ranks.jump_technique >= 0 && ranks.jump_technique <= 3)) &&
+        (!('dynamic_stride' in ranks) || (ranks.dynamic_stride is int && ranks.dynamic_stride >= 0 && ranks.dynamic_stride <= 3 && (ranks.dynamic_stride == 0 || ('light_footwork' in ranks && ranks.light_footwork == 3)))) &&
+        (!('jump_technique' in ranks) || (ranks.jump_technique is int && ranks.jump_technique >= 0 && ranks.jump_technique <= 3 && (ranks.jump_technique == 0 || ('dynamic_stride' in ranks && ranks.dynamic_stride == 3)))) &&
         (!('combat_analysis' in ranks) || (ranks.combat_analysis is int && ranks.combat_analysis >= 0 && ranks.combat_analysis <= 3)) &&
-        (!('cooldown_planning' in ranks) || (ranks.cooldown_planning is int && ranks.cooldown_planning >= 0 && ranks.cooldown_planning <= 3)) &&
-        (!('field_intelligence' in ranks) || (ranks.field_intelligence is int && ranks.field_intelligence >= 0 && ranks.field_intelligence <= 3)) &&
+        (!('cooldown_planning' in ranks) || (ranks.cooldown_planning is int && ranks.cooldown_planning >= 0 && ranks.cooldown_planning <= 3 && (ranks.cooldown_planning == 0 || ('combat_analysis' in ranks && ranks.combat_analysis == 3)))) &&
+        (!('field_intelligence' in ranks) || (ranks.field_intelligence is int && ranks.field_intelligence >= 0 && ranks.field_intelligence <= 3 && (ranks.field_intelligence == 0 || ('cooldown_planning' in ranks && ranks.cooldown_planning == 3)))) &&
         stats is map &&
         stats.keys().hasAll(['survivalRuns', 'pvpMatches', 'pvpWins', 'survivalKills', 'pvpDamage', 'bossesDefeated']) &&
         stats.keys().hasOnly(['survivalRuns', 'pvpMatches', 'pvpWins', 'survivalKills', 'pvpDamage', 'bossesDefeated']) &&
         stats.survivalRuns is int && stats.survivalRuns >= 0 && stats.survivalRuns <= 10000000 &&
         stats.pvpMatches is int && stats.pvpMatches >= 0 && stats.pvpMatches <= 10000000 &&
         stats.pvpWins is int && stats.pvpWins >= 0 && stats.pvpWins <= 10000000 &&
+        stats.pvpWins <= stats.pvpMatches &&
         stats.survivalKills is int && stats.survivalKills >= 0 && stats.survivalKills <= 100000000 &&
         stats.pvpDamage is int && stats.pvpDamage >= 0 && stats.pvpDamage <= 1000000000 &&
         stats.bossesDefeated is int && stats.bossesDefeated >= 0 && stats.bossesDefeated <= 10000000;
