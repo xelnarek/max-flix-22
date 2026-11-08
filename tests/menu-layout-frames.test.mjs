@@ -53,6 +53,12 @@ test('the map frame is scoped to its own tab and uses a visible mobile grid', ()
   assert.doesNotMatch(css, /\.menu-fixed-bottom-bar\s*\{[^}]*position:\s*sticky/s);
 });
 
+test('operator selection cards and portraits have enough area on desktop and phones', () => {
+  assert.match(css, /#title-screen #tab-team \.char-card\s*\{[\s\S]*?min-height:\s*clamp\(176px, 20vh, 210px\)/);
+  assert.match(css, /#title-screen #tab-team \.char-card-badge\.operator-emblem\s*\{[\s\S]*?clamp\(78px, 7vw, 90px\)/);
+  assert.match(css, /@media \(max-width:\s*640px\)[\s\S]*?#title-screen #tab-team \.char-card\s*\{[\s\S]*?min-height:\s*160px/);
+});
+
 test('audio settings have one visible frame and compact touch-friendly slider rows', () => {
   assert.match(css, /\.audio-settings-frame\s*\{[\s\S]*?border:\s*1px solid/);
   assert.match(css, /\.audio-settings-frame \.settings-hero\s*\{[\s\S]*?border:\s*0/);
