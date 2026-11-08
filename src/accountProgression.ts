@@ -352,7 +352,7 @@ function addAccountXp(
   updateStats(profile.stats);
   const safeBaseXp = safeInt(baseXp, 0, 100_000);
   const multiplier = clamp(xpMultiplier, 1, 1.18);
-  const xpEarned = Math.min(2_000, Math.round(safeBaseXp * multiplier));
+  const xpEarned = profile.level >= ACCOUNT_PROGRESS_MAX_LEVEL ? 0 : Math.min(2_000, Math.round(safeBaseXp * multiplier));
   const previousRank = getAccountRankInfo(profile.level).rankName;
   let level = profile.level;
   let xp = profile.xp + xpEarned;
