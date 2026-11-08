@@ -66,8 +66,8 @@ export function calculateTouchControlGeometry(input: {
   );
   const joystickZoneHeight = Math.min(height * 0.54, 440);
   const joystickZoneTop = Math.max(0, height - safeBottom - joystickZoneHeight);
-  const joystickZone = makeRect(safeLeft, joystickZoneTop, Math.max(0, joystickZoneWidth - safeLeft), joystickZoneHeight);
-  const joystickMaxVisualRight = joystickZoneWidth + joystickSize * 0.5;
+  const joystickZone = makeRect(safeLeft, joystickZoneTop, joystickZoneWidth, joystickZoneHeight);
+  const joystickMaxVisualRight = safeLeft + joystickZoneWidth + joystickSize * 0.5;
 
   // Survival uses ability, jump and dash. PvP uses ability and dash; its
   // dedicated timed shot is measured independently below.
@@ -142,11 +142,19 @@ export function clampTouchJoystickOrigin(input: {
     height - safeBottom - radius - 18,
   );
 
+  const maxCenterX = Math.max(
+    geometry.joystickZone.left,
+    Math.min(
+      geometry.joystickZone.right,
+      geometry.actionDock.left - radius - 8,
+    ),
+  );
+
   return {
     x: clamp(
       finiteOr(input.touchX, geometry.joystickZone.left),
       geometry.joystickZone.left,
-      geometry.joystickZone.right,
+      maxCenterX,
     ),
     y: clamp(
       finiteOr(input.touchY, minimumCenterY),
