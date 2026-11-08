@@ -80,3 +80,42 @@ test('malformed viewport values still produce finite, non-negative geometry', ()
   assert.ok(geometry.actionDock.left >= 0);
   assert.ok(geometry.actionDock.top >= 0);
 });
+
+test('clamped live stick footprint never reaches the Survival or PvP action dock', async () => {
+  const { clampTouchJoystickOrigin } = await import('../src/touchControlLayout.ts');
+  for (const mode of ['survival', 'pvp']) {
+    for (const viewport of touchViewports) {
+      const geometry = calculateTouchControlGeometry({
+        viewportWidth: viewport.width,
+        viewportHeight: viewport.height,
+        mode,
+      });
+      const point = clampTouchJoystickOrigin({
+        viewportWidth: viewport.width,
+        viewportHeight: viewport.height,
+        mode,
+        touchX: viewport.width,
+        touchY: viewport.height,
+      });
+      const radius = 74;
+      assert.ok(point.x + radius <= geometry.actionDock.left - 8,
+        mode + ' active stick touches the action dock at ' + viewport.width + 'x' + viewport.height);
+      assert.ok(point.y + radius <= viewport.height - 12);
+    }
+  }
+});
+
+test('PvP stick origin reserves a dedicated timed-fire lane below the top HUD', async () => {
+  const { clampTouchJoystickOrigin } = await import('../src/touchControlLayout.ts');
+  const point = clampTouchJoystickOrigin({
+    viewportWidth: 844,
+    viewportHeight: 390,
+    mode: 'pvp',
+    touchX: 80,
+    touchY: 70,
+    fireButtonSize: 68,
+    topHudClearance: 88,
+  });
+  const fireTop = point.y - 74 - 10 - 68;
+  assert.ok(fireTop >= 88);
+});
