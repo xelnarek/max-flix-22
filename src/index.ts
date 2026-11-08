@@ -1965,6 +1965,7 @@ class PaleciakiScene extends xb.Script {
         touchControls?.classList.remove('hidden');
         survivalHud?.classList.remove('hidden');
         gameShell?.classList.add('survival-mode');
+        touchControls?.classList.add('survival-mode');
 
         this.masteryAwardedForRun = false;
         this.engine.startSurvival(selectedSurvivalMapId);
@@ -1977,6 +1978,7 @@ class PaleciakiScene extends xb.Script {
         touchControls?.classList.add('hidden');
         survivalHud?.classList.add('hidden');
         gameShell?.classList.remove('survival-mode');
+        touchControls?.classList.remove('survival-mode');
         let errorBanner = document.getElementById('survival-start-error');
         if (!errorBanner && titleScreen) {
           errorBanner = document.createElement('div');
@@ -2254,6 +2256,7 @@ class PaleciakiScene extends xb.Script {
       survivalLevelUp?.classList.add('hidden');
       survivalHud?.classList.remove('hidden');
       gameShell?.classList.add('survival-mode');
+        touchControls?.classList.add('survival-mode');
       this.masteryAwardedForRun = false;
       this.engine.startSurvival(selectedSurvivalMapId);
     });
@@ -2264,6 +2267,7 @@ class PaleciakiScene extends xb.Script {
       survivalHud?.classList.add('hidden');
       survivalLevelUp?.classList.add('hidden');
       gameShell?.classList.remove('survival-mode');
+        touchControls?.classList.remove('survival-mode');
       hudTop?.classList.add('hidden');
       hudBottom?.classList.add('hidden');
       touchControls?.classList.add('hidden');
@@ -2282,6 +2286,7 @@ class PaleciakiScene extends xb.Script {
       touchControls?.classList.remove('hidden');
       survivalHud?.classList.remove('hidden');
       gameShell?.classList.add('survival-mode');
+        touchControls?.classList.add('survival-mode');
       this.masteryAwardedForRun = false;
       this.engine.startSurvival(selectedSurvivalMapId);
     });
@@ -2291,6 +2296,7 @@ class PaleciakiScene extends xb.Script {
       survivalHud?.classList.add('hidden');
       survivalLevelUp?.classList.add('hidden');
       gameShell?.classList.remove('survival-mode');
+        touchControls?.classList.remove('survival-mode');
       if (titleScreen) {
         titleScreen.classList.remove('hidden');
         titleScreen.style.setProperty('display', 'flex', 'important');
@@ -3418,6 +3424,21 @@ const injectThemeStyles = () => {
 async function startApp() {
   console.log('%c[App:Boot] 🚀 Start gry Paleciaki! Magazyn Chaosu...', 'color: #38bdf8; font-weight: bold;');
   injectThemeStyles();
+
+  // The touch layer must not be a descendant of the WebGL shell: Android
+  // WebView can composite the canvas above descendants even when their
+  // z-index is larger. Portal the existing node to body; its listeners stay
+  // attached and its children remain the same DOM elements.
+  const touchLayer = document.getElementById('touch-controls');
+  if (touchLayer && touchLayer.parentElement !== document.body) {
+    document.body.appendChild(touchLayer);
+  }
+  if (touchLayer) {
+    touchLayer.style.setProperty('position', 'fixed', 'important');
+    touchLayer.style.setProperty('inset', '0', 'important');
+    touchLayer.style.setProperty('z-index', '2000000', 'important');
+    touchLayer.style.setProperty('pointer-events', 'none', 'important');
+  }
   renderSurvivalAchievements();
 
   const titleScreen = document.getElementById('title-screen');
