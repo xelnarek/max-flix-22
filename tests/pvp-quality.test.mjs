@@ -340,7 +340,29 @@ test('PvP camera tracks both duelists, refreshes projection on aspect changes an
   assert.match(game, /second: \{ x: remote\.x, z: remote\.z \}/);
   assert.match(game, /calculatePvpAimPreview\(/);
   assert.match(game, /preview\.onTarget \? 0x4ade80 : preview\.blocked \? 0xef4444/);
-  assert.match(game, /footprintGeometry/);
+  assert.match(game, /createArenaObstacleFootprint\(obs\.width, obs\.depth, footprintColor\)/);
   assert.match(camera, /export function calculatePvpCameraTrackingBounds/);
   assert.match(aim, /export function calculatePvpAimPreview/);
+});
+
+
+test('Survival and PvP use exclusive control sets with no shared mode classes left behind', async () => {
+  const [app, html, css] = await Promise.all([
+    readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
+  ]);
+  assert.match(app, /type TouchControlsMode = 'survival' \| 'pvp' \| 'hidden'/);
+  assert.match(app, /function setTouchControlsMode\(mode: TouchControlsMode\)/);
+  assert.match(app, /root\.classList\.toggle\('pvp-mode', activePvp\)/);
+  assert.match(app, /root\.classList\.toggle\('manual-aim-mode', activePvp\)/);
+  assert.match(app, /root\.classList\.toggle\('survival-mode', activeSurvival\)/);
+  assert.match(app, /setTouchControlsMode\('survival'\)/);
+  assert.match(app, /setTouchControlsMode\('pvp'\)/);
+  assert.match(app, /setTouchControlsMode\('hidden'\)/);
+  assert.match(html, /class="pvp-aim-zone pvp-only-control"/);
+  assert.match(html, /class="pvp-control-guide pvp-only-control"/);
+  assert.match(html, /pvp-fire-btn pvp-only-control hidden/);
+  assert.match(css, /#touch-controls:not\(\.pvp-mode\) \.pvp-only-control/);
+  assert.match(css, /#touch-controls\.pvp-mode \.pvp-control-guide\.pvp-only-control/);
 });
