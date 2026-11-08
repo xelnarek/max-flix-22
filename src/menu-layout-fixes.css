@@ -783,7 +783,7 @@
   #title-screen .btn-survival-start { max-width: 100%; min-height: 54px; }
 }
 
-/* Touch layouts: all nine tabs visible at once; map tiles and launch remain separate. */
+/* Touch layouts: all ten destinations remain visible; the map picker is scoped to its tab. */
 @media (max-width: 760px), (pointer: coarse) {
   #title-screen .title-sheet {
     display: flex !important; flex-direction: column !important; align-items: stretch; justify-content: flex-start !important;
