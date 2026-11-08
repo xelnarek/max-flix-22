@@ -184,7 +184,7 @@ test('PvP deployment uses a minimal runtime Docker image and a Frankfurt Render 
   assert.doesNotMatch(docker, /npm ci/);
   assert.match(blueprint, /runtime: docker/);
   assert.match(blueprint, /region: frankfurt/);
-  assert.match(blueprint, /plan: 0\.5c-512mb/);
+  assert.match(blueprint, /plan: free/);
   assert.match(blueprint, /healthCheckPath: \/healthz/);
   assert.match(blueprint, /autoDeployTrigger: checksPass/);
   assert.match(blueprint, /PVP_ALLOWED_ORIGINS/);
