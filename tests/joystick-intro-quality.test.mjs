@@ -126,3 +126,12 @@ test('touch controls are explicitly hit-testable above the WebGL canvas during g
   assert.match(css, /#touch-controls \.joystick-zone,[\s\S]*?pointer-events: auto !important/);
   assert.match(css, /isolation: isolate !important/);
 });
+
+
+test('mobile touch controls stay visible and viewport-anchored after being portaled to body', async () => {
+  const css = await readFile(new URL('../src/index.css', import.meta.url), 'utf8');
+  assert.match(css, /body #touch-controls:not\\(\\.hidden\\)[\\s\\S]*?z-index: 2147483000 !important/);
+  assert.match(css, /body #touch-controls:not\\(\\.hidden\\) \\.joystick-base[\\s\\S]*?opacity: \.72 !important/);
+  assert.match(css, /body #touch-controls:not\\(\\.hidden\\) \\.touch-actions-zone[\\s\\S]*?display: flex !important/);
+  assert.match(css, /body #touch-controls:not\\(\\.hidden\\) \\.touch-actions-zone \\.touch-action-btn[\\s\\S]*?pointer-events: auto !important/);
+});
