@@ -5555,7 +5555,8 @@ button {
 #touch-controls.manual-aim-mode #btn-touch-jump { display: none !important; }
 #touch-controls.manual-aim-mode .pvp-aim-base:not(.active) { opacity: .48 !important; }
 @media (max-width: 390px) {
-  #game-shell.manual-aim-mode .pvp-aim-zone { bottom: 98px !important; }
+  /* The touch layer is portaled to body, so include it alongside the game shell. */
+  :is(#game-shell, #touch-controls).manual-aim-mode .pvp-aim-zone { bottom: 98px !important; }
   :is(#game-shell, #touch-controls).manual-aim-mode .touch-actions-zone { gap: 6px !important; }
 }
 
