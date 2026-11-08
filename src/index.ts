@@ -2077,7 +2077,9 @@ class PaleciakiScene extends xb.Script {
               this.engine.setLevelVisible(true);
               if (titleScreen) {
                 titleScreen.classList.remove('hidden');
+                titleScreen.style.removeProperty('display');
                 titleScreen.style.setProperty('display', 'flex', 'important');
+                titleScreen.style.setProperty('z-index', '10000000', 'important');
               }
               this.engine.startTitle();
             },
@@ -2088,18 +2090,25 @@ class PaleciakiScene extends xb.Script {
           });
         }
 
+        // Keep titleScreen ready so that if the overlay is blocked by mobile adblockers
+        // (such as com.hsv.freeadblockerbrowser), the player is NEVER stranded in a blank void.
+        // The cinematic overlay is styled with z-index: 20000000 and solid background.
         if (titleScreen) {
-          titleScreen.classList.add('hidden');
-          titleScreen.style.setProperty('display', 'none', 'important');
+          titleScreen.classList.remove('hidden');
+          titleScreen.style.removeProperty('display');
+          titleScreen.style.setProperty('display', 'flex', 'important');
         }
-        this.engine.setLevelVisible(false);
         this.cinematicIntro.start();
       } catch (error) {
         console.error('[CinematicIntro] Nie udało się uruchomić intro:', error);
         assetLoader.hide();
         this.engine?.setLevelVisible(true);
-        titleScreen?.classList.remove('hidden');
-        titleScreen?.style.setProperty('display', 'flex', 'important');
+        if (titleScreen) {
+          titleScreen.classList.remove('hidden');
+          titleScreen.style.removeProperty('display');
+          titleScreen.style.setProperty('display', 'flex', 'important');
+          titleScreen.style.setProperty('z-index', '10000000', 'important');
+        }
       } finally {
         cinematicIntroLaunchPending = false;
       }
@@ -2107,6 +2116,7 @@ class PaleciakiScene extends xb.Script {
 
     // The boot sequence is in a different method scope; bridge it with a private DOM event.
     document.addEventListener('paleciaki:launch-intro', () => { void launchCinematicIntro(); }, { once: true });
+    document.getElementById('btn-open-intro')?.addEventListener('click', (e) => void launchCinematicIntro(e));
 
 
     document.getElementById('btn-attack')?.addEventListener('click', () => {
@@ -2387,11 +2397,11 @@ class PaleciakiScene extends xb.Script {
 
     if (titleScreen) {
       titleScreen.classList.remove('hidden');
-      titleScreen.style.display = 'flex';
+      titleScreen.style.removeProperty('display');
+      titleScreen.style.setProperty('display', 'flex', 'important');
+      titleScreen.style.setProperty('z-index', '10000000', 'important');
     }
     this.engine.startTitle();
-    // The intro is the actual opening beat now, not an obsolete menu demo.
-    window.setTimeout(() => { void launchCinematicIntro(); }, 220);
   }
 
   private prepareScoreSubmissionForm(inputId: string, buttonId: string, feedbackId: string) {
@@ -3415,11 +3425,13 @@ async function startApp() {
     assetLoader.hide();
     if (titleScreen) {
       titleScreen.classList.remove('hidden');
+      titleScreen.style.removeProperty('display');
       titleScreen.style.setProperty('display', 'flex', 'important');
       titleScreen.style.setProperty('z-index', '10000000', 'important');
     }
     if (shell) {
       shell.classList.remove('hidden');
+      shell.style.removeProperty('display');
       shell.style.setProperty('display', 'flex', 'important');
       shell.style.setProperty('z-index', '9999999', 'important');
     }
@@ -3531,12 +3543,14 @@ async function startApp() {
     // 7. Reveal UI with high priority
     if (shell) {
       shell.classList.remove('hidden');
+      shell.style.removeProperty('display');
       shell.style.setProperty('display', 'flex', 'important');
       shell.style.setProperty('z-index', '9999999', 'important');
     }
 
     if (titleScreen) {
       titleScreen.classList.remove('hidden');
+      titleScreen.style.removeProperty('display');
       titleScreen.style.setProperty('display', 'flex', 'important');
       titleScreen.style.setProperty('z-index', '10000000', 'important');
       console.log('[App:Boot] 🎉 Ekran tytułowy gotowy.');

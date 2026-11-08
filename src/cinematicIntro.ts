@@ -53,9 +53,9 @@ export class CinematicIntroManager {
     this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     const mobile = window.innerWidth < 760 || navigator.maxTouchPoints > 0;
     // Keep the animated character turntable lightweight on phones.
-    this.frameInterval = mobile ? 1000 / 24 : 1000 / 48;
+    this.frameInterval = mobile ? 1000 / 30 : 1000 / 48;
     this.mount();
-    if (!this.ctx || !this.canvas) {
+    if (!this.ctx || !this.canvas || (this.overlay && typeof window !== 'undefined' && window.getComputedStyle?.(this.overlay).display === 'none')) {
       this.active = false;
       this.cleanup();
       this.callbacks.onComplete();
@@ -70,8 +70,6 @@ export class CinematicIntroManager {
       // scene or force users to wait for the normal 11.8-second intro.
       this.elapsed = this.duration;
       this.render(this.elapsed);
-      // Reduced-motion users get a short still-card pause, never a stuck intro.
-      this.completionTimeout = window.setTimeout(() => this.stop(), 1800);
       return;
     }
 
@@ -145,7 +143,7 @@ export class CinematicIntroManager {
   private resizeCanvas(): void {
     if (!this.canvas) return;
     const mobile = window.innerWidth < 760 || navigator.maxTouchPoints > 0;
-    const dpr = mobile ? 1 : Math.min(1.5, Math.max(1, window.devicePixelRatio || 1));
+    const dpr = Math.min(1.5, Math.max(1, window.devicePixelRatio || 1));
     const ratio = Math.max(0.32, Math.min(2.4, window.innerWidth / Math.max(1, window.innerHeight)));
     // The five animated operator portraits are decorative; cap their backing
     // canvas on mobile to avoid GPU/CPU stalls during the opening sequence.
@@ -173,6 +171,10 @@ export class CinematicIntroManager {
 
   private loop = (now: number): void => {
     if (!this.active) return;
+    if (this.overlay && !document.body.contains(this.overlay)) {
+      this.stop();
+      return;
+    }
     this.elapsed = Math.min(this.duration, (now - this.startedAt) / 1000);
     if (now - this.lastRenderAt >= this.frameInterval) {
       this.render(this.elapsed);
