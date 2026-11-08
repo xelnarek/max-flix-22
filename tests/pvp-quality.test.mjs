@@ -29,7 +29,7 @@ test('online session handles static hosting, bounded retries and does not restar
   assert.match(client, /rematch_waiting/);
 });
 
-test('manual touch aim, server-origin checks, six-character invite codes and mutual rematch are wired', async () => {
+test('timing-based PvP aim, server-origin checks, six-character invite codes and mutual rematch are wired', async () => {
   const [game, app, html, server, arena] = await Promise.all([
     readFile(new URL('../src/game.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
