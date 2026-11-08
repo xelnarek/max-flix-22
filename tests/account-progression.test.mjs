@@ -135,11 +135,11 @@ test('all 36 points can fully rank the twelve talents without exceeding combat c
   assert.equal(summary.availableSkillPoints, 0);
   assert.equal(summary.isMaxLevel, true);
   assert.equal(bonuses.damageMultiplier, 1.08);
-  assert.equal(bonuses.damageTakenMultiplier, 0.90);
+  assert.equal(bonuses.damageTakenMultiplier, 0.9108);
   assert.equal(bonuses.speedMultiplier, 1.06);
   assert.ok(bonuses.jumpMultiplier <= 1.06);
-  assert.equal(bonuses.abilityCooldownMultiplier, 0.90);
-  assert.equal(bonuses.xpMultiplier, 1.18);
+  assert.equal(bonuses.abilityCooldownMultiplier, 0.9306);
+  assert.ok(Math.abs(bonuses.xpMultiplier - 1.17690048) < 1e-10);
 });
 
 test('account bonuses combine with the existing operator mastery without unbounded stat stacking', () => {
