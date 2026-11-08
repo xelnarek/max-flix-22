@@ -2996,6 +2996,17 @@ class PaleciakiScene extends xb.Script {
     const readyBar = document.getElementById('pvp-ready-bar');
     const readyBtn = document.getElementById('btn-pvp-toggle-ready') as HTMLButtonElement | null;
     const lobbyPlayersStatus = document.getElementById('pvp-lobby-players-status');
+    const pvpConnectionStatus = document.getElementById('pvp-connection-status');
+    const pvpConnectionTitle = document.getElementById('pvp-connection-title');
+    const pvpConnectionDetail = document.getElementById('pvp-connection-detail');
+    const setPvpConnectionStatus = (state: 'idle' | 'connecting' | 'connected' | 'waiting' | 'matched' | 'error', title: string, detail: string) => {
+      if (pvpConnectionTitle) pvpConnectionTitle.textContent = title;
+      if (pvpConnectionDetail) pvpConnectionDetail.textContent = detail;
+      if (pvpConnectionStatus) {
+        pvpConnectionStatus.className = `pvp-connection-status is-${state}`;
+        pvpConnectionStatus.setAttribute('data-state', state);
+      }
+    };
 
     const matchEndModal = document.getElementById('pvp-match-end-modal');
     const btnRematch = document.getElementById('btn-pvp-rematch') as HTMLButtonElement | null;
@@ -3087,6 +3098,7 @@ class PaleciakiScene extends xb.Script {
       createdRoomInfo?.classList.remove('hidden');
       if (displayRoomCode) displayRoomCode.textContent = 'ŁĄCZENIE…';
       if (hostStatus) hostStatus.textContent = 'Łączenie z serwerem PvP…';
+      setPvpConnectionStatus('connecting', 'ŁĄCZENIE Z SERWEREM', 'Serwer może się wybudzać po bezczynności. Pierwsze połączenie może potrwać do około minuty.');
       const netSession = new PvpNetworkSession();
       if (readyBtn) readyBtn.disabled = true;
       this.pvpSession = netSession;
@@ -3099,6 +3111,7 @@ class PaleciakiScene extends xb.Script {
         if (hostStatus) hostStatus.textContent = connected
           ? 'Połączono z serwerem PvP. Tworzenie pokoju...'
           : 'Połączenie z serwerem PvP zostało przerwane.';
+        setPvpConnectionStatus(connected ? 'connected' : 'connecting', connected ? 'SERWER POŁĄCZONY' : 'PONAWIANIE POŁĄCZENIA', connected ? 'Serwer odpowiada. Tworzę pokój i generuję kod dla przeciwnika.' : 'Trwa ponawianie próby połączenia. Poczekaj chwilę.');
       };
       netSession.onRematchWaiting = (votes, required) => {
         if (btnRematch) btnRematch.textContent = `REWANŻ • ${votes}/${required} GOTOWYCH`;
@@ -3113,13 +3126,15 @@ class PaleciakiScene extends xb.Script {
         if (displayRoomCode) displayRoomCode.textContent = roomCode;
         createdRoomInfo?.classList.remove('hidden');
         readyBar?.classList.remove('hidden');
-        if (hostStatus) hostStatus.textContent = 'Kod pokoju aktywny! Podaj go drugiemu graczowi.';
+        if (hostStatus) hostStatus.textContent = 'Pokój utworzony. Czekam na drugiego gracza.';
+        setPvpConnectionStatus('waiting', 'POKÓJ UTWORZONY • OCZEKIWANIE', `Kod ${roomCode} jest aktywny. Wyślij go przeciwnikowi; mecz ruszy, gdy obaj gracze będą gotowi.`);
         if (lobbyPlayersStatus) lobbyPlayersStatus.textContent = `Gracz 1: ${roomState.p1.nickname || playerNick} (Ty)`;
       };
 
       netSession.onPlayerJoined = (player) => {
         if (readyBtn) readyBtn.disabled = false;
         if (hostStatus) hostStatus.textContent = `Gracz ${player.nickname} dołączył! Kliknij 'ZGŁOŚ GOTOWOŚĆ'.`;
+        setPvpConnectionStatus('matched', 'PRZECIWNIK DOŁĄCZYŁ', `${player.nickname} jest w pokoju. Potwierdź gotowość, aby rozpocząć pojedynek.`);
         if (lobbyPlayersStatus) lobbyPlayersStatus.textContent = `Gracz 1: Ty • Gracz 2: ${player.nickname}`;
         sound.playPickup();
       };
@@ -3158,6 +3173,7 @@ class PaleciakiScene extends xb.Script {
           hostStatus.textContent = `Błąd: ${err}`;
           hostStatus.setAttribute('role', 'alert');
         }
+        setPvpConnectionStatus('error', 'NIE UDAŁO SIĘ POŁĄCZYĆ', err);
       };
 
       netSession.createRoom(this.selectedPvpOperator, playerNick);
@@ -3176,6 +3192,8 @@ class PaleciakiScene extends xb.Script {
       }
 
       const playerNick = nickInput?.value.trim() || 'Operator B4';
+      setPvpConnectionStatus('connecting', 'ŁĄCZENIE Z SERWEREM', 'Sprawdzam dostępność serwera i przygotowuję dołączenie do pokoju.');
+      if (joinStatus) { joinStatus.classList.remove('hidden'); joinStatus.textContent = 'Łączenie z serwerem PvP…'; }
       const netSession = new PvpNetworkSession();
       if (readyBtn) readyBtn.disabled = true;
       this.pvpSession = netSession;
@@ -3190,6 +3208,7 @@ class PaleciakiScene extends xb.Script {
             ? 'Połączono z serwerem PvP. Dołączanie do pokoju...'
             : 'Połączenie z serwerem PvP zostało przerwane.';
         }
+        setPvpConnectionStatus(connected ? 'connected' : 'connecting', connected ? 'SERWER POŁĄCZONY' : 'PONAWIANIE POŁĄCZENIA', connected ? 'Serwer odpowiada. Sprawdzam kod pokoju…' : 'Trwa ponawianie próby połączenia. Poczekaj chwilę.');
       };
       netSession.onRematchWaiting = (votes, required) => {
         if (btnRematch) btnRematch.textContent = `REWANŻ • ${votes}/${required} GOTOWYCH`;
@@ -3209,6 +3228,7 @@ class PaleciakiScene extends xb.Script {
           joinStatus.classList.remove('hidden');
           joinStatus.textContent = `Dołączono do pokoju ${roomCode}!`;
         }
+        setPvpConnectionStatus('matched', 'DOŁĄCZONO DO POKOJU', `Pokój ${roomCode} jest dostępny. Poczekaj na gotowość obu graczy.`);
         if (lobbyPlayersStatus) {
           lobbyPlayersStatus.textContent = `Połączono! Gracz 1: ${roomState.p1.nickname || 'Host'} • Gracz 2: ${playerNick} (Ty)`;
         }
@@ -3243,6 +3263,7 @@ class PaleciakiScene extends xb.Script {
           joinStatus.classList.remove('hidden');
           joinStatus.textContent = `Błąd dołączania: ${err}`;
         }
+        setPvpConnectionStatus('error', 'NIE UDAŁO SIĘ DOŁĄCZYĆ', err);
       };
 
       netSession.joinRoom(code, this.selectedPvpOperator, playerNick);
