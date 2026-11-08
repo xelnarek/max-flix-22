@@ -59,7 +59,7 @@ test('PvP wiring supports two separate touch pointers and does not snap to a tar
   assert.match(game, /this\.setManualAimMode\(false\);[\s\S]*this\.gameMode = 'survival'/);
   assert.match(game, /if \(this\.state !== 'playing' \|\| this\.gameMode !== 'survival' \|\| this\.manualAimEnabled\) return/);
   assert.match(html, /id="pvp-aim-zone"/);
-  assert.match(css, /#game-shell\.manual-aim-mode \.pvp-aim-zone \{ display: block !important; \}/);
+  assert.match(css, /#touch-controls\.manual-aim-mode \.pvp-aim-zone \{ display: block !important; \}/);
 });
 
 test('right-stick aim can adjust direction before firing starts', () => {
