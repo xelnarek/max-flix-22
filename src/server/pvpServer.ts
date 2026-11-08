@@ -16,6 +16,14 @@ import type {
   PvpInputIntent,
 } from '../pvpArena.ts';
 
+interface MatchmakingQueueEntry {
+  ws: WebSocket;
+  operatorId: CharacterId;
+  playerName: string;
+  enqueuedAt: number;
+  assignRoom: (code: string, slot: 'p1' | 'p2') => void;
+}
+
 interface PvpRoom {
   code: string;
   state: PvpArenaState;
@@ -36,8 +44,10 @@ interface PvpRoom {
 }
 
 const activeRooms = new Map<string, PvpRoom>();
+const matchmakingQueue: MatchmakingQueueEntry[] = [];
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const MAX_ACTIVE_ROOMS = 256;
+const MAX_MATCHMAKING_QUEUE = 100;
 const MAX_MESSAGES_PER_SECOND = 120;
 const PVP_INPUT_STALE_TIMEOUT_MS = 220;
 const VALID_OPERATOR_IDS = new Set<CharacterId>(['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr']);
@@ -189,6 +199,74 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
     });
   });
 
+  const broadcastMatchmakingStatus = () => {
+    const waitingPlayers = matchmakingQueue.length;
+    matchmakingQueue.forEach((entry, index) => {
+      if (entry.ws.readyState !== WebSocket.OPEN) return;
+      entry.ws.send(JSON.stringify({
+        type: 'matchmaking_status',
+        status: 'searching',
+        position: index + 1,
+        waitingPlayers,
+        waitedMs: Math.max(0, Date.now() - entry.enqueuedAt),
+      }));
+    });
+  };
+
+  const pairQueuedPlayers = () => {
+    let pairedAny = false;
+    while (matchmakingQueue.length >= 2 && activeRooms.size < MAX_ACTIVE_ROOMS) {
+      const first = matchmakingQueue.shift()!;
+      const second = matchmakingQueue.shift()!;
+      if (first.ws.readyState !== WebSocket.OPEN) continue;
+      if (second.ws.readyState !== WebSocket.OPEN) {
+        matchmakingQueue.unshift(first);
+        break;
+      }
+
+      const code = generateRoomCode();
+      const state = createInitialPvpArenaState(
+        first.operatorId,
+        first.playerName,
+        second.operatorId,
+        second.playerName,
+      );
+      state.status = 'ready';
+      state.p1.connected = true;
+      state.p2.connected = true;
+      state.p1.isReady = false;
+      state.p2.isReady = false;
+
+      const room: PvpRoom = {
+        code,
+        state,
+        clients: new Map([['p1', first.ws], ['p2', second.ws]]),
+        inputs: {
+          p1: { moveX: 0, moveZ: 0, aimAngle: state.p1.rot, isFiring: false },
+          p2: { moveX: 0, moveZ: 0, aimAngle: state.p2.rot, isFiring: false },
+        },
+        lastInputAt: { p1: null, p2: null },
+        tickInterval: null,
+        lastTickTime: Date.now(),
+        emptyTimeout: null,
+        rematchVotes: new Set(),
+      };
+
+      activeRooms.set(code, room);
+      first.assignRoom(code, 'p1');
+      second.assignRoom(code, 'p2');
+
+      const foundPayload = JSON.stringify({ type: 'match_found', code });
+      first.ws.send(foundPayload);
+      second.ws.send(foundPayload);
+      first.ws.send(JSON.stringify({ type: 'room_created', code, slot: 'p1', state }));
+      second.ws.send(JSON.stringify({ type: 'room_joined', code, slot: 'p2', state }));
+      pairedAny = true;
+    }
+
+    if (pairedAny || matchmakingQueue.length > 0) broadcastMatchmakingStatus();
+  };
+
   wss.on('connection', (ws: WebSocket) => {
     let isAlive = true;
     const heartbeat = setInterval(() => {
@@ -209,6 +287,7 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
 
     let currentRoomCode: string | null = null;
     let playerSlot: 'p1' | 'p2' | null = null;
+    let queueEntry: MatchmakingQueueEntry | null = null;
     let messageWindowStartedAt = Date.now();
     let messagesInWindow = 0;
 
@@ -233,7 +312,7 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
 
         switch (msg.type) {
           case 'create_room': {
-            if (currentRoomCode || playerSlot) {
+            if (currentRoomCode || playerSlot || queueEntry) {
               sendError(ws, 'To połączenie jest już przypisane do pokoju.');
               return;
             }
@@ -278,7 +357,7 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
           }
 
           case 'join_room': {
-            if (currentRoomCode || playerSlot) {
+            if (currentRoomCode || playerSlot || queueEntry) {
               sendError(ws, 'To połączenie jest już przypisane do pokoju.');
               return;
             }
@@ -338,6 +417,59 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
             }
 
             broadcastRoomState(room);
+            break;
+          }
+
+          case 'find_match': {
+            if (currentRoomCode || playerSlot) {
+              sendError(ws, 'To połączenie jest już przypisane do pokoju.');
+              return;
+            }
+            if (queueEntry) {
+              broadcastMatchmakingStatus();
+              return;
+            }
+            if (activeRooms.size >= MAX_ACTIVE_ROOMS) {
+              sendError(ws, 'Serwer osiągnął limit aktywnych pokoi. Spróbuj później.');
+              return;
+            }
+            if (matchmakingQueue.length >= MAX_MATCHMAKING_QUEUE) {
+              sendError(ws, 'Kolejka PvP jest pełna. Spróbuj ponownie za chwilę.');
+              return;
+            }
+
+            const operatorId: CharacterId = isCharacterId(msg.operatorId) ? msg.operatorId : 'marcin';
+            const playerName = sanitizePlayerName(msg.playerName, 'Operator B4');
+            const entry: MatchmakingQueueEntry = {
+              ws,
+              operatorId,
+              playerName,
+              enqueuedAt: Date.now(),
+              assignRoom: (code, slot) => {
+                currentRoomCode = code;
+                playerSlot = slot;
+                queueEntry = null;
+              },
+            };
+            queueEntry = entry;
+            matchmakingQueue.push(entry);
+            broadcastMatchmakingStatus();
+            pairQueuedPlayers();
+            break;
+          }
+
+          case 'cancel_matchmaking': {
+            if (queueEntry) {
+              const index = matchmakingQueue.indexOf(queueEntry);
+              if (index >= 0) matchmakingQueue.splice(index, 1);
+              queueEntry = null;
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'matchmaking_cancelled' }));
+              }
+              broadcastMatchmakingStatus();
+            } else {
+              sendError(ws, 'Nie trwa już wyszukiwanie przeciwnika.');
+            }
             break;
           }
 
@@ -453,6 +585,12 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
 
     ws.on('close', () => {
       clearInterval(heartbeat);
+      if (queueEntry) {
+        const index = matchmakingQueue.indexOf(queueEntry);
+        if (index >= 0) matchmakingQueue.splice(index, 1);
+        queueEntry = null;
+        broadcastMatchmakingStatus();
+      }
       if (!currentRoomCode || !playerSlot) return;
       const room = activeRooms.get(currentRoomCode);
       if (!room || room.clients.get(playerSlot) !== ws) return;
