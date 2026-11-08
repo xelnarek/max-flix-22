@@ -11,12 +11,20 @@ import {
   orderBy,
   where,
   limit,
+  getDoc,
   getDocFromServer,
+  runTransaction,
   DocumentData,
 } from 'firebase/firestore';
 import { getAuth, signInAnonymously, onAuthStateChanged, type User, type Unsubscribe } from 'firebase/auth';
 import firebaseConfig from '../firebase-applet-config.json';
 import { withTimeout } from './asyncTimeout.ts';
+import {
+  createInitialAccountProgressionProfile,
+  mergeAccountProgressionProfiles,
+  sanitizeAccountProgressionProfile,
+  type AccountProgressionProfile,
+} from './accountProgression.ts';
 import {
   getLeaderboardSlice,
   getSurvivalLeaderboardSlice,
@@ -361,6 +369,57 @@ export async function testFirestoreConnection(): Promise<boolean> {
     );
     return false;
   }
+}
+
+
+const ACCOUNT_PROGRESSION_DOCUMENT_ID = 'accountProgression';
+
+function getAccountProgressionDocument(userId: string) {
+  return doc(db, 'users', userId, 'gameData', ACCOUNT_PROGRESSION_DOCUMENT_ID);
+}
+
+/** Load the signed-in player's account progress. Anonymous auth keeps this
+ * device stable; a linked Firebase provider can make the same UID portable. */
+export async function loadAccountProgressionProfileFromCloud(): Promise<AccountProgressionProfile | null> {
+  const user = await withTimeout(initAuth(), AUTH_INIT_TIMEOUT_MS + 1_000, 'Account progression authentication');
+  if (!user?.uid) throw new Error('Nie udało się uwierzytelnić zapisu postępów konta.');
+  const snapshot = await withTimeout(
+    getDoc(getAccountProgressionDocument(user.uid)),
+    FIRESTORE_QUERY_TIMEOUT_MS,
+    'Account progression cloud load',
+  );
+  if (!snapshot.exists()) return null;
+  const payload = snapshot.data() as DocumentData;
+  if (!payload.profile || typeof payload.profile !== 'object') return null;
+  return sanitizeAccountProgressionProfile(payload.profile);
+}
+
+/** Transactionally keep the strongest locally/cloud-saved profile. Writes are
+ * restricted by Firestore rules to the current user's own account document. */
+export async function saveAccountProgressionProfileToCloud(
+  profileValue: unknown,
+): Promise<AccountProgressionProfile> {
+  const user = await withTimeout(initAuth(), AUTH_INIT_TIMEOUT_MS + 1_000, 'Account progression authentication');
+  if (!user?.uid) throw new Error('Nie udało się uwierzytelnić zapisu postępów konta.');
+  const localProfile = sanitizeAccountProgressionProfile(profileValue);
+  const reference = getAccountProgressionDocument(user.uid);
+  return withTimeout(
+    runTransaction(db, async (transaction) => {
+      const snapshot = await transaction.get(reference);
+      const cloudProfile = snapshot.exists()
+        ? sanitizeAccountProgressionProfile((snapshot.data() as DocumentData).profile)
+        : createInitialAccountProgressionProfile();
+      const merged = mergeAccountProgressionProfiles(localProfile, cloudProfile);
+      transaction.set(reference, {
+        schemaVersion: 1,
+        profile: merged,
+        updatedAt: Date.now(),
+      });
+      return merged;
+    }),
+    FIRESTORE_WRITE_TIMEOUT_MS,
+    'Account progression cloud save',
+  );
 }
 
 /**
