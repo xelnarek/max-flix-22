@@ -375,7 +375,7 @@ test('Survival and PvP use exclusive control sets with no shared mode classes le
   assert.match(css, /#touch-controls\.pvp-mode \.pvp-control-guide\.pvp-only-control/);
   assert.match(css, /#touch-controls\.pvp-mode #btn-touch-attack,[\s\S]*?#btn-touch-jump/);
   assert.match(app, /bindPvpTap\(desktopPvpFireButton, triggerPrimaryPvpShot\)/);
-  assert.match(app, /shouldShowTouchLayer = visible && \(touchCapable \|\| viewportWidth <= 900\)/);
+  assert.ok(app.includes('shouldShowTouchControls(visible, viewportWidth, touchCapable, finePointer)'));
   assert.match(css, /#game-shell\.pvp-mode #btn-event \{ display: none !important; \}/);
 });
 

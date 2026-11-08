@@ -24,7 +24,7 @@ import type { PvpArenaState, PvpSlot } from './pvpArena.ts';
 import { AssetItem, assetLoader } from './assets.ts';
 import { SelectiveBloomPipeline } from './selectiveBloom.ts';
 import { ThreeClickTrigger } from './menuInteraction.ts';
-import { calculateUiViewport } from './uiViewport.ts';
+import { calculateUiViewport, shouldShowTouchControls } from './uiViewport.ts';
 import { getAdaptiveEffectsTier, getAdaptiveRenderScale, getDeviceRenderProfile, shouldApplyPixelRatioChange, type AdaptiveEffectsTier } from './renderQuality.ts';
 import { calculateVirtualJoystickInput } from './virtualJoystick.ts';
 import { calculatePvpFireControlPosition } from './pvpTouchLayout.ts';
@@ -65,7 +65,8 @@ function setTouchControlsVisibility(visible: boolean): void {
 
   const viewportWidth = window.visualViewport?.width || window.innerWidth;
   const touchCapable = (navigator.maxTouchPoints || 0) > 0 || window.matchMedia?.('(pointer: coarse)').matches === true;
-  const shouldShowTouchLayer = visible && (touchCapable || viewportWidth <= 900);
+  const finePointer = window.matchMedia?.('(pointer: fine)').matches === true;
+  const shouldShowTouchLayer = shouldShowTouchControls(visible, viewportWidth, touchCapable, finePointer);
 
   if (shouldShowTouchLayer) {
     layer.classList.remove('hidden');
