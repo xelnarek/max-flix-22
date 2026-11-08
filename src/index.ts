@@ -2950,6 +2950,7 @@ class PaleciakiScene extends xb.Script {
   }
 
   private setupPvpLobby() {
+    let matchmakingSession: PvpNetworkSession | null = null;
     const btnOpenPvp = document.getElementById('btn-open-pvp');
     const pvpLobbyModal = document.getElementById('pvp-lobby-modal');
     const btnClosePvpLobby = document.getElementById('btn-close-pvp-lobby');
@@ -3049,10 +3050,21 @@ class PaleciakiScene extends xb.Script {
 
     const closeLobby = () => {
       pvpLobbyModal?.classList.add('hidden');
+      if (matchmakingSession) {
+        matchmakingSession.cancelMatchmaking();
+        matchmakingSession = null;
+      }
       if (this.pvpSession) {
         this.pvpSession.leaveRoom?.();
         this.pvpSession = null;
       }
+      const findButton = document.getElementById('btn-pvp-find-match') as HTMLButtonElement | null;
+      const cancelButton = document.getElementById('btn-pvp-cancel-match');
+      if (findButton) {
+        findButton.disabled = !onlineReady;
+        findButton.textContent = '⚔️ SZUKAJ PRZECIWNIKA';
+      }
+      cancelButton?.classList.add('hidden');
       this.pvpLocalReady = false;
       if (readyBar) readyBar.classList.add('hidden');
       if (createdRoomInfo) createdRoomInfo.classList.add('hidden');
@@ -3110,7 +3122,6 @@ class PaleciakiScene extends xb.Script {
     });
 
     // Public FIFO matchmaking: the server pairs the oldest two available players.
-    let matchmakingSession: PvpNetworkSession | null = null;
     btnFindMatch?.addEventListener('click', () => {
       if (matchmakingSession || this.pvpSession) return;
       const playerNick = nickInput?.value.trim() || 'Operator B4';
@@ -3421,6 +3432,10 @@ class PaleciakiScene extends xb.Script {
       setTouchControlsVisibility(false);
       this.engine.setManualAimMode(false);
       this.engine.exitPvp();
+      if (matchmakingSession) {
+        matchmakingSession.leaveRoom();
+        matchmakingSession = null;
+      }
       if (this.pvpSession) {
         this.pvpSession.leaveRoom?.();
         this.pvpSession = null;
