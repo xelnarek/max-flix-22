@@ -18,6 +18,44 @@ import type {
 
 export type PvpMatchmakingStatus = 'searching' | 'matched' | 'cancelled';
 
+interface PvpReconnectTicket {
+  code: string;
+  slot: PvpSlot;
+  token: string;
+}
+
+const PVP_RECONNECT_TICKET_STORAGE_KEY = 'paleciaki.pvp.reconnect.v1';
+
+function readPvpReconnectTicket(): PvpReconnectTicket | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.sessionStorage.getItem(PVP_RECONNECT_TICKET_STORAGE_KEY);
+    if (!raw) return null;
+    const value = JSON.parse(raw) as Partial<PvpReconnectTicket>;
+    if (
+      typeof value.code !== 'string' ||
+      !/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(value.code) ||
+      (value.slot !== 'p1' && value.slot !== 'p2') ||
+      typeof value.token !== 'string' ||
+      !/^[A-Za-z0-9_-]{43}$/.test(value.token)
+    ) return null;
+    return { code: value.code, slot: value.slot, token: value.token };
+  } catch {
+    return null;
+  }
+}
+
+function persistPvpReconnectTicket(ticket: PvpReconnectTicket | null): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (ticket) window.sessionStorage.setItem(PVP_RECONNECT_TICKET_STORAGE_KEY, JSON.stringify(ticket));
+    else window.sessionStorage.removeItem(PVP_RECONNECT_TICKET_STORAGE_KEY);
+  } catch {
+    // Session storage can be unavailable in private or embedded browsers.
+  }
+}
+
+
 export interface PvpSessionCallbacks {
   onRoomCreated?: (code: string, slot: 'p1', state: PvpArenaState) => void;
   onRoomJoined?: (code: string, slot: 'p2', state: PvpArenaState) => void;
@@ -71,8 +109,13 @@ export class PvpNetworkSession implements IPvpSession {
   private pendingJoin?: { code: string; operatorId: CharacterId; playerName: string; progressionBonuses: PvpProgressionBonuses };
   private pendingMatchmaking?: { operatorId: CharacterId; playerName: string; progressionBonuses: PvpProgressionBonuses };
   private matchmakingRequested = false;
+  private reconnectTicket: PvpReconnectTicket | null = readPvpReconnectTicket();
+  private reconnectStartedAt: number | null = null;
+  private reconnectInProgress = false;
 
   private static readonly MAX_CONNECT_ATTEMPTS = 3;
+  private static readonly MAX_ROOM_RECONNECT_ATTEMPTS = 10;
+  private static readonly ROOM_RECONNECT_WINDOW_MS = 18_000;
   // Render Free can take about a minute to wake after inactivity. Give the
   // first handshake enough time, then use shorter bounded retries.
   private static readonly CONNECT_TIMEOUT_MS = 75_000;
@@ -148,7 +191,15 @@ export class PvpNetworkSession implements IPvpSession {
         this.clearConnectionTimeout();
         this.callbacks.onConnectionChange?.(true);
         this.onConnectionChange?.(true);
-        if (this.pendingCreate) {
+        if (this.reconnectTicket) {
+          this.reconnectInProgress = true;
+          this.send({
+            type: 'rejoin_room',
+            code: this.reconnectTicket.code,
+            slot: this.reconnectTicket.slot,
+            reconnectToken: this.reconnectTicket.token,
+          });
+        } else if (this.pendingCreate) {
           this.createRoom(this.pendingCreate.operatorId, this.pendingCreate.playerName, this.pendingCreate.progressionBonuses);
         } else if (this.pendingJoin) {
           this.joinRoom(this.pendingJoin.code, this.pendingJoin.operatorId, this.pendingJoin.playerName, this.pendingJoin.progressionBonuses);
@@ -185,21 +236,32 @@ export class PvpNetworkSession implements IPvpSession {
               this.onMatchmakingStatus?.('cancelled', 0, 0);
               break;
             case 'room_created':
-            case 'room_joined': {
-              if (typeof msg.code !== 'string' || (msg.slot !== 'p1' && msg.slot !== 'p2') || !msg.state) {
-                this.emitError('Serwer zwrócił nieprawidłowe dane pokoju.');
+            case 'room_joined':
+            case 'room_rejoined': {
+              if (
+                typeof msg.code !== 'string' ||
+                (msg.slot !== 'p1' && msg.slot !== 'p2') ||
+                !msg.state ||
+                typeof msg.reconnectToken !== 'string' ||
+                !/^[A-Za-z0-9_-]{43}$/.test(msg.reconnectToken)
+              ) {
+                this.emitError('Serwer zwrócił nieprawidłowe dane pokoju lub bilet wznowienia.');
                 return;
               }
               this.roomCode = msg.code;
               this.slot = msg.slot;
               this.hasJoinedRoom = true;
               this.reconnectAttempts = 0;
+              this.reconnectStartedAt = null;
+              this.reconnectInProgress = false;
+              this.reconnectTicket = { code: msg.code, slot: msg.slot, token: msg.reconnectToken };
+              persistPvpReconnectTicket(this.reconnectTicket);
               this.pendingCreate = undefined;
               this.pendingJoin = undefined;
-              if (msg.type === 'room_created') {
-                this.callbacks.onRoomCreated?.(msg.code, msg.slot, msg.state);
+              if (msg.type === 'room_created' || (msg.type === 'room_rejoined' && msg.slot === 'p1')) {
+                this.callbacks.onRoomCreated?.(msg.code, 'p1', msg.state);
               } else {
-                this.callbacks.onRoomJoined?.(msg.code, msg.slot, msg.state);
+                this.callbacks.onRoomJoined?.(msg.code, 'p2', msg.state);
               }
               this.callbacks.onStateUpdate?.(msg.state);
               this.onRoomJoined?.(msg.code, msg.slot, msg.state);
@@ -246,10 +308,19 @@ export class PvpNetworkSession implements IPvpSession {
               const message = typeof msg.message === 'string' ? msg.message : 'Pokój został zamknięty.';
               this.onRoomClosed?.(message);
               this.emitError(message);
+              this.reconnectTicket = null;
+              persistPvpReconnectTicket(null);
               this.dispose();
               break;
             }
             case 'error':
+              if (this.reconnectInProgress) {
+                this.reconnectInProgress = false;
+                this.reconnectTicket = null;
+                this.hasJoinedRoom = false;
+                this.reconnectStartedAt = null;
+                persistPvpReconnectTicket(null);
+              }
               this.pendingCreate = undefined;
               this.pendingJoin = undefined;
               this.pendingMatchmaking = undefined;
@@ -274,8 +345,44 @@ export class PvpNetworkSession implements IPvpSession {
         this.onConnectionChange?.(false);
         if (this.isDisposed) return;
 
-        if (this.hasJoinedRoom) {
-          this.emitError('Połączenie PvP zostało przerwane. Bieżący pokój nie obsługuje jeszcze wznowienia sesji.');
+        if (this.hasJoinedRoom && this.reconnectTicket) {
+          if (this.reconnectStartedAt === null) this.reconnectStartedAt = Date.now();
+          const withinGrace = Date.now() - this.reconnectStartedAt < PvpNetworkSession.ROOM_RECONNECT_WINDOW_MS;
+          if (
+            withinGrace &&
+            this.reconnectAttempts < PvpNetworkSession.MAX_ROOM_RECONNECT_ATTEMPTS
+          ) {
+            const delay = Math.min(500 * (2 ** this.reconnectAttempts), 3000);
+            this.reconnectAttempts++;
+            this.reconnectTimer = setTimeout(() => {
+              this.reconnectTimer = null;
+              this.connect();
+            }, delay);
+            return;
+          }
+          this.emitError('Nie udało się wznowić sesji PvP w wyznaczonym czasie. Pokój mógł już wygasnąć.');
+          this.reconnectTicket = null;
+          persistPvpReconnectTicket(null);
+          this.hasJoinedRoom = false;
+          this.dispose();
+          return;
+        }
+
+        if (this.reconnectTicket && !this.hasJoinedRoom) {
+          if (this.reconnectStartedAt === null) this.reconnectStartedAt = Date.now();
+          const withinGrace = Date.now() - this.reconnectStartedAt < PvpNetworkSession.ROOM_RECONNECT_WINDOW_MS;
+          if (withinGrace && this.reconnectAttempts < PvpNetworkSession.MAX_ROOM_RECONNECT_ATTEMPTS) {
+            const delay = Math.min(500 * (2 ** this.reconnectAttempts), 3000);
+            this.reconnectAttempts++;
+            this.reconnectTimer = setTimeout(() => {
+              this.reconnectTimer = null;
+              this.connect();
+            }, delay);
+            return;
+          }
+          this.reconnectTicket = null;
+          persistPvpReconnectTicket(null);
+          this.emitError('Nie udało się odzyskać poprzedniej sesji PvP.');
           this.dispose();
           return;
         }
@@ -400,6 +507,10 @@ export class PvpNetworkSession implements IPvpSession {
   public dispose() {
     if (this.isDisposed) return;
     this.isDisposed = true;
+    this.reconnectTicket = null;
+    this.reconnectStartedAt = null;
+    this.reconnectInProgress = false;
+    persistPvpReconnectTicket(null);
     this.clearConnectionTimeout();
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);

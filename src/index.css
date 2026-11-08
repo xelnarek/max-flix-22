@@ -7234,3 +7234,43 @@ body #touch-controls.manual-aim-mode:not(.hidden) .pvp-move-caption {
     bottom: max(170px, calc(env(safe-area-inset-bottom) + 160px)) !important;
   }
 }
+
+
+.account-cloud-sync-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  padding-top: 7px;
+  border-top: 1px solid rgba(125, 211, 252, .12);
+}
+.account-cloud-sync-row > span {
+  flex: 1 1 180px;
+  min-width: 0;
+  color: #8fb0c8;
+  font-size: 9px;
+  line-height: 1.4;
+}
+.account-cloud-sync-button {
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 1px solid rgba(56, 189, 248, .38);
+  border-radius: 8px;
+  background: rgba(3, 105, 161, .22);
+  color: #bae6fd;
+  font: 900 8px/1.2 'JetBrains Mono', monospace;
+  touch-action: manipulation;
+}
+
+.account-google-connect-button {
+  border-color: rgba(251, 191, 36, .34);
+  background: rgba(120, 83, 21, .18);
+  color: #fde68a;
+}
+.account-google-connect-button:disabled,
+.account-cloud-sync-button:disabled {
+  opacity: .55;
+  cursor: wait;
+}

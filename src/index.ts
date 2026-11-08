@@ -66,6 +66,7 @@ import {
   createInitialAccountProgressionProfile,
   getAccountProgressionBonuses,
   getAccountPvpProgressionBonuses,
+  mergeAccountProgressionProfiles,
   getAccountProgressionSummary,
   getAccountRankInfo,
   recordAccountPvpMatch,
@@ -592,6 +593,7 @@ class PaleciakiScene extends xb.Script {
   private masteryAwardedForRun = false;
   private renderAccountProgressionUi: () => void = () => {};
   private accountPvpAwardedForMatch = false;
+  private accountCloudSyncInFlight: Promise<void> | null = null;
   private pvpSession: IPvpSession | null = null;
   private selectedPvpOperator: CharacterId = 'marcin';
   private pvpRoomCode: string = '';
@@ -1217,6 +1219,7 @@ class PaleciakiScene extends xb.Script {
             });
             accountProgressionProfile = accountResult.profile;
             persistAccountProgressionProfile();
+            void this.syncAccountProgressionWithCloud();
             this.engine.selectCharacter(operatorId, combineAccountAndCharacterBonuses(
               getCharacterTalentBonuses(characterMasteryProfile, operatorId),
               getAccountProgressionBonuses(accountProgressionProfile),
@@ -1781,6 +1784,7 @@ class PaleciakiScene extends xb.Script {
               if (!result.purchased) return;
               accountProgressionProfile = result.profile;
               persistAccountProgressionProfile();
+              void this.syncAccountProgressionWithCloud();
               this.engine.selectCharacter(
                 this.selectedCharId,
                 combineAccountAndCharacterBonuses(
@@ -2136,6 +2140,13 @@ class PaleciakiScene extends xb.Script {
     menuTabList?.setAttribute('aria-label', 'Sekcje menu głównego');
     const menuTabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.menu-tab-btn'));
 
+    document.getElementById('btn-account-cloud-sync')?.addEventListener('click', () => {
+      void this.syncAccountProgressionWithCloud();
+    });
+    document.getElementById('btn-account-google-connect')?.addEventListener('click', () => {
+      void this.connectAccountProgressionToGoogle();
+    });
+
     const activateMenuTab = (selectedTab: HTMLButtonElement) => {
       const targetId = selectedTab.getAttribute('data-tab');
       if (!targetId) return;
@@ -2161,6 +2172,7 @@ class PaleciakiScene extends xb.Script {
         renderSurvivalAchievements();
       } else if (targetId === 'tab-talent-tree' || targetId === 'tab-ranks') {
         renderAccountProgressionPanels();
+        void this.syncAccountProgressionWithCloud();
       }
     };
 
@@ -4049,6 +4061,82 @@ class PaleciakiScene extends xb.Script {
     }
   }
 
+
+  private syncAccountProgressionWithCloud(): Promise<void> {
+    if (this.accountCloudSyncInFlight) return this.accountCloudSyncInFlight;
+    const status = document.getElementById('account-cloud-sync-status');
+    if (status) status.textContent = 'ŁĄCZENIE Z CHMURĄ...';
+
+    this.accountCloudSyncInFlight = (async () => {
+      const services = await loadFirebaseLeaderboardServices();
+      const remoteProfile = await services.loadAccountProgressionProfileFromCloud();
+      accountProgressionProfile = mergeAccountProgressionProfiles(
+        accountProgressionProfile,
+        remoteProfile ?? createInitialAccountProgressionProfile(),
+      );
+      persistAccountProgressionProfile();
+      const savedProfile = await services.saveAccountProgressionProfileToCloud(accountProgressionProfile);
+      accountProgressionProfile = mergeAccountProgressionProfiles(accountProgressionProfile, savedProfile);
+      persistAccountProgressionProfile();
+      this.engine.selectCharacter(
+        this.selectedCharId,
+        combineAccountAndCharacterBonuses(
+          getCharacterTalentBonuses(characterMasteryProfile, this.selectedCharId),
+          getAccountProgressionBonuses(accountProgressionProfile),
+        ),
+      );
+      this.renderAccountProgressionUi();
+      if (status) status.textContent = 'SYNCHRONIZACJA ZAKOŃCZONA • PROFIL ZABEZPIECZONY W FIREBASE';
+    })().catch((error: unknown) => {
+      console.warn('[Account progression] Cloud sync unavailable; local profile remains safe:', error);
+      if (status) status.textContent = 'CHMURA NIEDOSTĘPNA • POSTĘP LOKALNY ZACHOWANY';
+    }).finally(() => {
+      this.accountCloudSyncInFlight = null;
+    });
+    return this.accountCloudSyncInFlight;
+  }
+
+
+  private async connectAccountProgressionToGoogle(): Promise<void> {
+    const status = document.getElementById('account-cloud-sync-status');
+    const button = document.getElementById('btn-account-google-connect') as HTMLButtonElement | null;
+    if (button) button.disabled = true;
+    if (status) status.textContent = 'ZABEZPIECZANIE PROFILU I ŁĄCZENIE GOOGLE...';
+
+    try {
+      const services = await loadFirebaseLeaderboardServices();
+      // Save the anonymous profile before linking or switching Firebase identity.
+      await services.saveAccountProgressionProfileToCloud(accountProgressionProfile);
+      const identity = await services.connectAccountWithGoogle();
+      const cloudProfile = await services.loadAccountProgressionProfileFromCloud();
+      accountProgressionProfile = mergeAccountProgressionProfiles(
+        accountProgressionProfile,
+        cloudProfile ?? createInitialAccountProgressionProfile(),
+      );
+      const saved = await services.saveAccountProgressionProfileToCloud(accountProgressionProfile);
+      accountProgressionProfile = mergeAccountProgressionProfiles(accountProgressionProfile, saved);
+      persistAccountProgressionProfile();
+      this.engine.selectCharacter(
+        this.selectedCharId,
+        combineAccountAndCharacterBonuses(
+          getCharacterTalentBonuses(characterMasteryProfile, this.selectedCharId),
+          getAccountProgressionBonuses(accountProgressionProfile),
+        ),
+      );
+      this.renderAccountProgressionUi();
+      if (status) {
+        status.textContent = identity.isAnonymous
+          ? 'SESJA POZOSTAŁA ANONIMOWA • SPRAWDŹ USTAWIENIA GOOGLE'
+          : 'KONTO GOOGLE POŁĄCZONE • POSTĘP DOSTĘPNY PO ZALOGOWANIU NA INNYM URZĄDZENIU';
+      }
+    } catch (error) {
+      console.warn('[Account progression] Google account linking failed; local profile remains safe:', error);
+      if (status) status.textContent = 'NIE UDAŁO SIĘ POŁĄCZYĆ GOOGLE • POSTĘP LOKALNY ZACHOWANY';
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
   private handlePvpMatchEnd(state: PvpArenaState, localSlot: PvpSlot) {
     const fireButton = document.getElementById('btn-pvp-fire') as HTMLButtonElement | null;
     if (fireButton) {
@@ -4070,6 +4158,7 @@ class PaleciakiScene extends xb.Script {
       });
       accountProgressionProfile = accountResult.profile;
       persistAccountProgressionProfile();
+      void this.syncAccountProgressionWithCloud();
       this.renderAccountProgressionUi();
       if (accountResult.xpEarned > 0) {
         const accountToast = document.createElement('div');

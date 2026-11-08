@@ -248,3 +248,180 @@ test('PvP public matchmaking pairs the oldest waiting players and supports relia
   assert.equal(firstState.state.status, 'countdown');
   assert.equal(thirdState.state.status, 'countdown');
 });
+
+
+test('PvP reconnect ticket restores the same player slot and resumes a paused live match', async (t) => {
+  const originalNodeEnv = process.env.NODE_ENV;
+  const originalGrace = process.env.PVP_RECONNECT_GRACE_MS;
+  process.env.NODE_ENV = 'test';
+  process.env.PVP_RECONNECT_GRACE_MS = '1200';
+  const httpServer = createServer();
+  const websocketServer = attachPvpWebSocketServer(httpServer);
+  const sockets = [];
+  await new Promise((resolve, reject) => {
+    httpServer.once('error', reject);
+    httpServer.listen(0, '127.0.0.1', resolve);
+  });
+  const address = httpServer.address();
+  assert.ok(address && typeof address === 'object');
+  const url = `ws://127.0.0.1:${address.port}/pvp-ws`;
+
+  t.after(async () => {
+    for (const socket of sockets) await closeSocket(socket);
+    await new Promise((resolve) => websocketServer.close(resolve));
+    await new Promise((resolve) => httpServer.close(() => resolve()));
+    if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = originalNodeEnv;
+    if (originalGrace === undefined) delete process.env.PVP_RECONNECT_GRACE_MS;
+    else process.env.PVP_RECONNECT_GRACE_MS = originalGrace;
+  });
+
+  const p1 = new WebSocket(url);
+  sockets.push(p1);
+  await waitForOpen(p1);
+  const createdPromise = waitForMessage(p1, (m) => m.type === 'room_created');
+  p1.send(JSON.stringify({ type: 'create_room', operatorId: 'marcin', playerName: 'Host' }));
+  const created = await createdPromise;
+  assert.match(created.reconnectToken, /^[A-Za-z0-9_-]{43}$/);
+
+  const p2 = new WebSocket(url);
+  sockets.push(p2);
+  await waitForOpen(p2);
+  const joinedPromise = waitForMessage(p2, (m) => m.type === 'room_joined');
+  p2.send(JSON.stringify({ type: 'join_room', code: created.code, operatorId: 'grzesiek', playerName: 'Gość' }));
+  const joined = await joinedPromise;
+  assert.match(joined.reconnectToken, /^[A-Za-z0-9_-]{43}$/);
+
+  const countdown = waitForMessage(p2, (m) => m.type === 'room_update' && m.state?.status === 'countdown');
+  p1.send(JSON.stringify({ type: 'set_ready', ready: true }));
+  p2.send(JSON.stringify({ type: 'set_ready', ready: true }));
+  await countdown;
+  const live = await waitForMessage(p2, (m) => m.type === 'room_update' && m.state?.status === 'in_round', 5000);
+  const savedPosition = { x: live.state.p1.x, z: live.state.p1.z, hp: live.state.p1.hp };
+
+  const disconnected = waitForMessage(p2, (m) =>
+    m.type === 'room_update' && m.state?.p1.connected === false,
+  );
+  p1.terminate();
+  const frozen = await disconnected;
+  assert.equal(frozen.state.status, 'in_round');
+  assert.equal(frozen.state.p1.hp, savedPosition.hp);
+
+  const p1Restored = new WebSocket(url);
+  sockets.push(p1Restored);
+  await waitForOpen(p1Restored);
+  const restoredPromise = waitForMessage(p1Restored, (m) => m.type === 'room_rejoined');
+  p1Restored.send(JSON.stringify({
+    type: 'rejoin_room',
+    code: created.code,
+    slot: 'p1',
+    reconnectToken: created.reconnectToken,
+  }));
+  const restored = await restoredPromise;
+  assert.equal(restored.slot, 'p1');
+  assert.equal(restored.code, created.code);
+  assert.equal(restored.state.status, 'in_round');
+  assert.equal(restored.state.p1.hp, savedPosition.hp);
+  assert.ok(Math.abs(restored.state.p1.x - savedPosition.x) < 0.01);
+  assert.notEqual(restored.reconnectToken, created.reconnectToken,
+    'rejoin rotates the capability token to prevent replay');
+
+  const connectedAgain = await waitForMessage(p2, (m) =>
+    m.type === 'room_update' && m.state?.p1.connected === true,
+  );
+  assert.equal(connectedAgain.state.status, 'in_round');
+
+  const beforeX = connectedAgain.state.p1.x;
+  const movedPromise = waitForMessage(p1Restored, (m) =>
+    m.type === 'room_update' && m.state?.status === 'in_round' && m.state.p1.x > beforeX + 0.05,
+  );
+  p1Restored.send(JSON.stringify({
+    type: 'input',
+    moveX: 1,
+    moveZ: 0,
+    aimAngle: Math.PI / 2,
+    isFiring: false,
+    wantDash: false,
+    wantAbility: false,
+  }));
+  const moved = await movedPromise;
+  assert.ok(moved.state.p1.x > beforeX);
+
+  const replayClient = new WebSocket(url);
+  sockets.push(replayClient);
+  await waitForOpen(replayClient);
+  const replayError = waitForMessage(replayClient, (m) => m.type === 'error');
+  replayClient.send(JSON.stringify({
+    type: 'rejoin_room',
+    code: created.code,
+    slot: 'p1',
+    reconnectToken: created.reconnectToken,
+  }));
+  assert.match((await replayError).message, /nieprawidłowy|wygasł|aktywne/i);
+});
+
+test('an expired PvP reconnect ticket cannot reclaim the slot and the lobby can accept a replacement', async (t) => {
+  const originalNodeEnv = process.env.NODE_ENV;
+  const originalGrace = process.env.PVP_RECONNECT_GRACE_MS;
+  process.env.NODE_ENV = 'test';
+  process.env.PVP_RECONNECT_GRACE_MS = '300';
+  const httpServer = createServer();
+  const websocketServer = attachPvpWebSocketServer(httpServer);
+  const sockets = [];
+  await new Promise((resolve, reject) => {
+    httpServer.once('error', reject);
+    httpServer.listen(0, '127.0.0.1', resolve);
+  });
+  const address = httpServer.address();
+  assert.ok(address && typeof address === 'object');
+  const url = `ws://127.0.0.1:${address.port}/pvp-ws`;
+
+  t.after(async () => {
+    for (const socket of sockets) await closeSocket(socket);
+    await new Promise((resolve) => websocketServer.close(resolve));
+    await new Promise((resolve) => httpServer.close(() => resolve()));
+    if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = originalNodeEnv;
+    if (originalGrace === undefined) delete process.env.PVP_RECONNECT_GRACE_MS;
+    else process.env.PVP_RECONNECT_GRACE_MS = originalGrace;
+  });
+
+  const host = new WebSocket(url);
+  sockets.push(host);
+  await waitForOpen(host);
+  const createdPromise = waitForMessage(host, (m) => m.type === 'room_created');
+  host.send(JSON.stringify({ type: 'create_room', operatorId: 'marcin', playerName: 'Host' }));
+  const created = await createdPromise;
+
+  const guest = new WebSocket(url);
+  sockets.push(guest);
+  await waitForOpen(guest);
+  const guestJoinedPromise = waitForMessage(guest, (m) => m.type === 'room_joined');
+  guest.send(JSON.stringify({ type: 'join_room', code: created.code, operatorId: 'grzesiek', playerName: 'Gość' }));
+  const guestJoined = await guestJoinedPromise;
+  const waiting = waitForMessage(host, (m) =>
+    m.type === 'room_update' && m.state?.p2.connected === false && m.state?.status === 'waiting',
+  );
+  guest.terminate();
+  await waiting;
+  await new Promise((resolve) => setTimeout(resolve, 450));
+
+  const staleClient = new WebSocket(url);
+  sockets.push(staleClient);
+  await waitForOpen(staleClient);
+  const staleError = waitForMessage(staleClient, (m) => m.type === 'error');
+  staleClient.send(JSON.stringify({
+    type: 'rejoin_room',
+    code: created.code,
+    slot: 'p2',
+    reconnectToken: guestJoined.reconnectToken,
+  }));
+  assert.match((await staleError).message, /nieprawidłowy|wygasł/i);
+
+  const replacement = new WebSocket(url);
+  sockets.push(replacement);
+  await waitForOpen(replacement);
+  const replacementJoined = waitForMessage(replacement, (m) => m.type === 'room_joined');
+  replacement.send(JSON.stringify({ type: 'join_room', code: created.code, operatorId: 'dawid', playerName: 'Zastępca' }));
+  assert.equal((await replacementJoined).slot, 'p2');
+});

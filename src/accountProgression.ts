@@ -317,6 +317,41 @@ function getRankBonuses(level: number): AccountProgressionBonuses {
   return bonuses;
 }
 
+
+/** Prefer the profile with the greatest earned account XP, then the one with
+ * more allocated points. Cumulative statistics merge monotonically so opening
+ * a second device cannot roll counters backwards. */
+export function mergeAccountProgressionProfiles(
+  localValue: unknown,
+  cloudValue: unknown,
+): AccountProgressionProfile {
+  const local = sanitizeAccountProgressionProfile(localValue);
+  const cloud = sanitizeAccountProgressionProfile(cloudValue);
+  const totalEarnedXp = (profile: AccountProgressionProfile): number => {
+    let total = profile.xp;
+    for (let level = 1; level < profile.level; level++) total += getAccountXpRequirement(level);
+    return total;
+  };
+  const spentPoints = (profile: AccountProgressionProfile): number =>
+    Object.values(profile.talentRanks).reduce((sum, rank) => sum + rank, 0);
+  const localXp = totalEarnedXp(local);
+  const cloudXp = totalEarnedXp(cloud);
+  const localSpent = spentPoints(local);
+  const cloudSpent = spentPoints(cloud);
+  const preferred = cloudXp > localXp || (cloudXp === localXp && cloudSpent >= localSpent)
+    ? cloud
+    : local;
+  const stats: AccountProgressionStats = {
+    survivalRuns: Math.max(local.stats.survivalRuns, cloud.stats.survivalRuns),
+    pvpMatches: Math.max(local.stats.pvpMatches, cloud.stats.pvpMatches),
+    pvpWins: Math.max(local.stats.pvpWins, cloud.stats.pvpWins),
+    survivalKills: Math.max(local.stats.survivalKills, cloud.stats.survivalKills),
+    pvpDamage: Math.max(local.stats.pvpDamage, cloud.stats.pvpDamage),
+    bossesDefeated: Math.max(local.stats.bossesDefeated, cloud.stats.bossesDefeated),
+  };
+  return sanitizeAccountProgressionProfile({ ...preferred, stats });
+}
+
 export function getAccountProgressionBonuses(value: unknown): AccountProgressionBonuses {
   const profile = sanitizeAccountProgressionProfile(value);
   const nodes = getNodeBonuses(profile);

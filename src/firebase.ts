@@ -11,12 +11,30 @@ import {
   orderBy,
   where,
   limit,
+  getDoc,
   getDocFromServer,
+  runTransaction,
   DocumentData,
 } from 'firebase/firestore';
-import { getAuth, signInAnonymously, onAuthStateChanged, type User, type Unsubscribe } from 'firebase/auth';
+import {
+  getAuth,
+  signInAnonymously,
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  linkWithPopup,
+  signInWithPopup,
+  type User,
+  type UserCredential,
+  type Unsubscribe,
+} from 'firebase/auth';
 import firebaseConfig from '../firebase-applet-config.json';
 import { withTimeout } from './asyncTimeout.ts';
+import {
+  createInitialAccountProgressionProfile,
+  mergeAccountProgressionProfiles,
+  sanitizeAccountProgressionProfile,
+  type AccountProgressionProfile,
+} from './accountProgression.ts';
 import {
   getLeaderboardSlice,
   getSurvivalLeaderboardSlice,
@@ -293,6 +311,40 @@ export function initAuth(): Promise<User | null> {
   return authPromise;
 }
 
+
+/** Link the current anonymous profile to Google, or sign into an existing
+ * Google-linked account on another device. The caller must invoke this from a
+ * direct user gesture because Firebase popup auth is browser-mediated. */
+export async function connectAccountWithGoogle(): Promise<{ uid: string; isAnonymous: boolean }> {
+  const user = await withTimeout(initAuth(), AUTH_INIT_TIMEOUT_MS + 1_000, 'Google account authentication');
+  if (!user) throw new Error('Nie ma aktywnej sesji Firebase do połączenia z Google.');
+
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+
+  let credential: UserCredential;
+  if (user.isAnonymous) {
+    try {
+      credential = await linkWithPopup(user, provider);
+    } catch (error) {
+      const code = (error as { code?: string })?.code;
+      if (code !== 'auth/credential-already-in-use' && code !== 'auth/email-already-in-use') {
+        throw error;
+      }
+      // The Google identity already belongs to an account from another device.
+      // Sign into it; the caller merges the local profile with the cloud profile.
+      credential = await signInWithPopup(auth, provider);
+    }
+  } else {
+    credential = await signInWithPopup(auth, provider);
+  }
+
+  currentUser = credential.user;
+  isAuthInitialized = true;
+  authPromise = Promise.resolve(credential.user);
+  return { uid: credential.user.uid, isAnonymous: credential.user.isAnonymous };
+}
+
 export async function ensureLeaderboardServices(): Promise<boolean> {
   // The leaderboard is publicly readable. Do not make a slow anonymous-auth
   // attempt block the public read; authentication continues in the background
@@ -361,6 +413,57 @@ export async function testFirestoreConnection(): Promise<boolean> {
     );
     return false;
   }
+}
+
+
+const ACCOUNT_PROGRESSION_DOCUMENT_ID = 'accountProgression';
+
+function getAccountProgressionDocument(userId: string) {
+  return doc(db, 'users', userId, 'gameData', ACCOUNT_PROGRESSION_DOCUMENT_ID);
+}
+
+/** Load the signed-in player's account progress. Anonymous auth keeps this
+ * device stable; a linked Firebase provider can make the same UID portable. */
+export async function loadAccountProgressionProfileFromCloud(): Promise<AccountProgressionProfile | null> {
+  const user = await withTimeout(initAuth(), AUTH_INIT_TIMEOUT_MS + 1_000, 'Account progression authentication');
+  if (!user?.uid) throw new Error('Nie udało się uwierzytelnić zapisu postępów konta.');
+  const snapshot = await withTimeout(
+    getDoc(getAccountProgressionDocument(user.uid)),
+    FIRESTORE_QUERY_TIMEOUT_MS,
+    'Account progression cloud load',
+  );
+  if (!snapshot.exists()) return null;
+  const payload = snapshot.data() as DocumentData;
+  if (!payload.profile || typeof payload.profile !== 'object') return null;
+  return sanitizeAccountProgressionProfile(payload.profile);
+}
+
+/** Transactionally keep the strongest locally/cloud-saved profile. Writes are
+ * restricted by Firestore rules to the current user's own account document. */
+export async function saveAccountProgressionProfileToCloud(
+  profileValue: unknown,
+): Promise<AccountProgressionProfile> {
+  const user = await withTimeout(initAuth(), AUTH_INIT_TIMEOUT_MS + 1_000, 'Account progression authentication');
+  if (!user?.uid) throw new Error('Nie udało się uwierzytelnić zapisu postępów konta.');
+  const localProfile = sanitizeAccountProgressionProfile(profileValue);
+  const reference = getAccountProgressionDocument(user.uid);
+  return withTimeout(
+    runTransaction(db, async (transaction) => {
+      const snapshot = await transaction.get(reference);
+      const cloudProfile = snapshot.exists()
+        ? sanitizeAccountProgressionProfile((snapshot.data() as DocumentData).profile)
+        : createInitialAccountProgressionProfile();
+      const merged = mergeAccountProgressionProfiles(localProfile, cloudProfile);
+      transaction.set(reference, {
+        schemaVersion: 1,
+        profile: merged,
+        updatedAt: Date.now(),
+      });
+      return merged;
+    }),
+    FIRESTORE_WRITE_TIMEOUT_MS,
+    'Account progression cloud save',
+  );
 }
 
 /**
