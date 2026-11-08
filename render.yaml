@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: paleciaki-pvp
+    runtime: docker
+    plan: 0.5c-512mb
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeployTrigger: checksPass
+    maxShutdownDelaySeconds: 120
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PVP_ALLOWED_ORIGINS
+        value: https://xelnarek.github.io
