@@ -7199,3 +7199,38 @@ body #touch-controls.manual-aim-mode:not(.hidden) .pvp-move-caption {
     gap: 6px !important;
   }
 }
+
+
+/* Compact landscape: put the mode-specific action dock on one bottom row.
+   It clears the wide Survival HUD and preserves comfortable thumb targets. */
+@media (max-height: 430px) and (min-width: 560px) and (pointer: coarse) {
+  body #touch-controls:not(.hidden) .touch-actions-zone {
+    grid-template-columns: repeat(3, max-content) !important;
+    grid-template-rows: max-content !important;
+    grid-auto-flow: column !important;
+    align-content: end !important;
+    justify-content: end !important;
+    align-items: center !important;
+    gap: 7px !important;
+    bottom: max(10px, calc(env(safe-area-inset-bottom) + 6px)) !important;
+    right: max(12px, env(safe-area-inset-right)) !important;
+  }
+
+  body #touch-controls.pvp-mode:not(.hidden) .touch-actions-zone,
+  body #touch-controls.manual-aim-mode:not(.hidden) .touch-actions-zone {
+    grid-template-columns: repeat(2, max-content) !important;
+    grid-template-rows: max-content !important;
+  }
+
+  body #touch-controls:not(.hidden) .touch-actions-zone .touch-action-btn {
+    width: 54px !important;
+    height: 54px !important;
+    min-width: 54px !important;
+    min-height: 54px !important;
+  }
+
+  /* The time-aim fire button stays near the movement stick, never in the row. */
+  body #touch-controls.manual-aim-mode:not(.hidden) .pvp-fire-control {
+    bottom: max(140px, calc(env(safe-area-inset-bottom) + 132px)) !important;
+  }
+}

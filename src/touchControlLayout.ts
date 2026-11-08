@@ -37,8 +37,8 @@ const makeRect = (left: number, top: number, width: number, height: number): Tou
  * Describes the final two-thumb layout used by the mobile HUD.
  *
  * The movement hit-zone and its largest possible stick footprint are reserved
- * on the left. Action buttons are stacked at the far right. PvP's timed fire
- * button stays above the left stick and cannot enter the right action dock.
+ * on the left. Action buttons form a vertical dock in portrait and a short
+ * horizontal dock in compact landscape. PvP fire stays above the left stick.
  */
 export function calculateTouchControlGeometry(input: {
   viewportWidth: number;
@@ -72,12 +72,21 @@ export function calculateTouchControlGeometry(input: {
   // Survival uses ability, jump and dash. PvP uses ability and dash; its
   // dedicated timed shot is measured independently below.
   const actionCount = input.mode === 'pvp' ? 2 : 3;
-  const actionHeight = actionCount * actionButtonSize + (actionCount - 1) * actionGap;
   const actionBottom = Math.max(0, height - safeBottom - 18);
+  // Short landscape screens have very little vertical room below the HUD.
+  // Lay the buttons side-by-side there; portrait keeps the compact vertical
+  // thumb stack. This also creates a clean bottom band below the Survival HUD.
+  const compactLandscape = height <= 430 && width >= height * 1.35;
+  const actionWidth = compactLandscape
+    ? actionCount * actionButtonSize + (actionCount - 1) * actionGap
+    : actionButtonSize;
+  const actionHeight = compactLandscape
+    ? actionButtonSize
+    : actionCount * actionButtonSize + (actionCount - 1) * actionGap;
   const actionDock = makeRect(
-    Math.max(0, width - safeRight - actionButtonSize),
+    Math.max(0, width - safeRight - actionWidth),
     Math.max(0, actionBottom - actionHeight),
-    Math.min(actionButtonSize, width),
+    Math.min(actionWidth, width),
     Math.min(actionHeight, height),
   );
 
