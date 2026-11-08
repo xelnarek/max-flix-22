@@ -3,6 +3,17 @@ export interface PvpAimDirection {
   z: number;
 }
 
+function finite(value: number): boolean {
+  return Number.isFinite(value);
+}
+
+function safePreviousDirection(previous: PvpAimDirection): PvpAimDirection {
+  if (!finite(previous.x) || !finite(previous.z)) return { x: 0, z: 1 };
+  const length = Math.hypot(previous.x, previous.z);
+  if (!finite(length) || length <= 1e-6) return { x: 0, z: 1 };
+  return { x: previous.x / length, z: previous.z / length };
+}
+
 export function getPvpAimAngle(direction: PvpAimDirection): number {
   const safe = safePreviousDirection(direction);
   return Math.atan2(safe.x, safe.z);
