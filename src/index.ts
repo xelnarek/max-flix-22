@@ -2568,6 +2568,11 @@ class PaleciakiScene extends xb.Script {
     window.addEventListener('pointercancel', handleEnd, { passive: true });
     window.addEventListener('blur', resetJoystick);
     window.addEventListener('pagehide', resetJoystick);
+    // Android fullscreen and orientation changes can resize the visual viewport
+    // without reliably delivering pointercancel; never leave movement stuck.
+    window.addEventListener('resize', resetJoystick, { passive: true });
+    window.addEventListener('orientationchange', resetJoystick);
+    window.visualViewport?.addEventListener('resize', resetJoystick, { passive: true });
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) resetJoystick();
     });
@@ -2640,6 +2645,10 @@ class PaleciakiScene extends xb.Script {
       window.addEventListener('pointercancel', endAim, { passive: true });
       window.addEventListener('blur', resetAim);
       window.addEventListener('pagehide', resetAim);
+      // Keep the PvP firing trigger from sticking across fullscreen/rotation changes.
+      window.addEventListener('resize', resetAim, { passive: true });
+      window.addEventListener('orientationchange', resetAim);
+      window.visualViewport?.addEventListener('resize', resetAim, { passive: true });
       document.addEventListener('visibilitychange', () => { if (document.hidden) resetAim(); });
     }
 
