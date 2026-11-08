@@ -220,8 +220,7 @@
 
       <div id="survival-hud" class="survival-hud hidden" aria-live="polite">
         <div class="survival-hud-main">
-          <div class="survival-hud-kicker"><span class="survival-live-dot"></span> SURVIVAL SHIFT <span class="survival-hud-divider">/</span> STREFA OPERACYJNA <span id="survival-map-name" class="survival-map-name" title="Wybrana losowo arena">MAGAZYN B4</span><span id="survival-secret-count" class="survival-secret-count">SEKRETY 0/4</span></div>
-          <div class="survival-metrics">
+<div class="survival-metrics">
             <div class="survival-chip time-chip"><span class="survival-chip-label">CZAS</span><strong id="survival-time">00:00</strong></div>
             <div class="survival-chip wave-chip"><span class="survival-chip-label">FALA</span><strong id="survival-wave">1</strong></div>
             <div class="survival-chip level-chip"><span class="survival-chip-label">POZIOM</span><strong id="survival-level">1</strong></div>
@@ -1135,14 +1134,14 @@
 
       
 
-      <div id="pause-modal" class="game-modal hidden">
+      <div id="pause-modal" class="game-modal hidden" role="dialog" aria-modal="true" aria-labelledby="pause-modal-title" aria-hidden="true">
         <div class="modal-card">
-          <div class="modal-title">PRZERWA KAWOWA (PAUZA)</div>
-          <p class="modal-desc">Strefa odpoczynku jest bezpieczna tylko przez chwilę. Zregeneruj siły i wracaj do walki.</p>
+          <div id="pause-modal-title" class="modal-title">GRA WSTRZYMANA</div>
+          <p class="modal-desc">Rozgrywka jest zatrzymana. Wróć do walki, rozpocznij próbę od nowa albo zakończ ją i wróć do menu.</p>
           <div class="modal-actions">
-            <button id="btn-resume" class="btn-modal btn-primary">WZNÓW GRĘ</button>
-            <button id="btn-restart-pause" class="btn-modal">RESTART POZIOMU</button>
-            <button id="btn-menu-pause" class="btn-modal">MENU GŁÓWNE</button>
+            <button id="btn-resume" class="btn-modal btn-primary" type="button">WZNÓW GRĘ</button>
+            <button id="btn-menu-pause" class="btn-modal pause-exit-button" type="button" aria-label="Zakończ bieżącą próbę i wyjdź do menu głównego">WYJDŹ DO MENU</button>
+            <button id="btn-restart-pause" class="btn-modal" type="button">RESTART PRÓBY</button>
           </div>
         </div>
       </div>
