@@ -57,13 +57,15 @@ export function pvpAimDirectionFromAngle(angle: number): PvpAimDirection {
 export function pvpScreenAimToWorld(x: number, y: number, portrait: boolean): PvpAimDirection {
   if (!finite(x) || !finite(y)) return { ...DEFAULT_PVP_AIM_DIRECTION };
   // Portrait PvP rotates the view 90° to keep the long arena lane vertical.
-  return portrait ? { x: y, z: -x } : { x, z: y };
+  const world = portrait ? { x: y, z: -x } : { x, z: y };
+  return { x: world.x === 0 ? 0 : world.x, z: world.z === 0 ? 0 : world.z };
 }
 
 /** Convert screen-relative movement (positive Y = up) into arena world X/Z. */
 export function pvpScreenMovementToWorld(screenX: number, screenY: number, portrait: boolean): PvpAimDirection {
   if (!finite(screenX) || !finite(screenY)) return { x: 0, z: 0 };
-  return portrait
+  const world = portrait
     ? { x: -screenY, z: -screenX }
     : { x: screenX, z: -screenY };
+  return { x: world.x === 0 ? 0 : world.x, z: world.z === 0 ? 0 : world.z };
 }
