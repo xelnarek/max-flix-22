@@ -46,6 +46,21 @@ function setTouchControlsVisibility(visible: boolean): void {
   const layer = document.getElementById('touch-controls');
   if (!layer) return;
 
+  // Re-assert the portal whenever the game enters/leaves a run. This makes
+  // visibility independent from the order in which the menu, WebGL shell and
+  // Android compositor create their stacking contexts.
+  if (layer.parentElement !== document.body) {
+    document.body.appendChild(layer);
+  }
+  layer.style.setProperty('position', 'fixed', 'important');
+  layer.style.setProperty('inset', '0', 'important');
+  layer.style.setProperty('width', '100vw', 'important');
+  layer.style.setProperty('height', '100vh', 'important');
+  layer.style.setProperty('height', '100dvh', 'important');
+  layer.style.setProperty('z-index', '2147483000', 'important');
+  layer.style.setProperty('pointer-events', 'none', 'important');
+  layer.style.setProperty('isolation', 'isolate', 'important');
+
   if (visible) {
     layer.classList.remove('hidden');
     layer.style.setProperty('display', 'block', 'important');
@@ -3459,7 +3474,7 @@ async function startApp() {
   if (touchLayer) {
     touchLayer.style.setProperty('position', 'fixed', 'important');
     touchLayer.style.setProperty('inset', '0', 'important');
-    touchLayer.style.setProperty('z-index', '2000000', 'important');
+    touchLayer.style.setProperty('z-index', '2147483000', 'important');
     touchLayer.style.setProperty('pointer-events', 'none', 'important');
   }
   renderSurvivalAchievements();
