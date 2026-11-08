@@ -64,7 +64,7 @@ test('timing-based PvP aim, server-origin checks, six-character invite codes and
   assert.match(game, /calculatePvpCameraFrame/);
   assert.match(game, /pvpPerkLabelContext/);
   assert.match(game, /aimPositions\.needsUpdate/);
-  assert.match(game, /pvpScreenAimToWorld/);
+  assert.doesNotMatch(game, /pvpScreenAimToWorld/);
   assert.match(game, /pvpScreenMovementToWorld/);
   assert.match(game, /pvpAimGuide/);
   assert.match(app, /pvp-perk-status/);
