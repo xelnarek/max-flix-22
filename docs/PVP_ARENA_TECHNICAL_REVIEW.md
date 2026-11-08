@@ -8,11 +8,11 @@ The browser version is published on GitHub Pages. Online human-vs-human matches 
 
 ## Combat and controls
 
-- Phones use twin-stick controls: left stick moves, right stick aims and fires. Keyboard/mouse use the manual aim path as well.
-- The aiming direction has its own low deadzone. Firing has separate start/stop thresholds, which reduces accidental shots and trigger flicker from thumb jitter.
-- Releasing the right stick stops firing but preserves the last deliberate direction.
-- No opponent snap-aim or nearest-target selection is used in PvP.
-- Survival auto-targeting remains enabled when manual PvP aim mode is off.
+- **Touch / phones:** the left virtual joystick moves the operator. A single large **STRZAŁ** button is placed immediately above that joystick. To the right, only the PvP actions remain: **MOC** and **UNIK**. The Survival-only basic attack and jump controls are hidden while PvP is active.
+- **Archero-style timing:** a directional cursor sweeps along a curved arc beside the operator, from one end to the other and back. The player taps **STRZAŁ** when the cursor crosses the opponent's firing direction. The sweep is deterministic and independent of movement input; it does not snap to the opponent or silently choose a target.
+- **Desktop:** movement uses WASD / arrow keys. The existing bottom-dock attack slot becomes **STRZAŁ**, with the same reload/readiness feedback as the mobile button. F, J, X and the arena click remain quick-fire inputs; Q performs the dash and E / Shift activates the operator ability. The redundant touch overlay is hidden on a non-touch desktop.
+- The server remains authoritative for shot cooldowns, projectile collision, cover and damage. Client countdown feedback is only a visual aid; the server decides whether a shot is accepted.
+- Survival retains its separate PvE auto-targeting, weapon dispatch, upgrade, wave and damage-report systems. Its attack, jump, ability and dash controls are not reused as PvP primary fire.
 - Standard shots and operator abilities are tracked separately. Ability projectiles must not be counted as primary-weapon shots when calculating weapon accuracy.
 - Projectile collisions are swept across their movement segment and respect arena cover. Player movement and dash use substeps to reduce tunnelling through pallets and barriers.
 - Hit events have unique monotonic IDs. Every hit from the same authoritative simulation tick is retained and buffered by clients so simultaneous damage feedback is not dropped.
@@ -44,6 +44,10 @@ The dedicated WebSocket service:
 - closes the match when a player disconnects.
 
 **Known limitation:** active-match reconnection/resume is not implemented. A player disconnect ends the current match rather than attempting a risky partial state restore. This behaviour is surfaced to the remaining player.
+
+## Desktop / mobile verification boundary
+
+Automated tests verify the input routing, mode-specific HUD ownership, sweep timing, touch-zone placement logic and desktop fire action. They do not simulate a real thumb, multi-touch gesture or GPU compositor. A visual acceptance pass is still required on a phone and on a desktop browser before calling the controls fully verified.
 
 ## Release and test gates
 
