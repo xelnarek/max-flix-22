@@ -35,10 +35,17 @@ test('service worker keeps remote services and API data outside its cache', asyn
   assert.match(worker, /paleciaki-magazyn-chaosu-shell-\$\{BUILD_ID\}/);
 });
 
-test('mobile lifecycle pauses active gameplay when the document is hidden', async () => {
-  const app = await read('../src/index.ts');
-  assert.match(app, /document\.addEventListener\('visibilitychange'/);
-  assert.match(app, /document\.hidden && this\.engine\.getGameState\(\) === 'playing'/);
+test('mobile lifecycle pauses and resumes active gameplay through one visibility handler', async () => {
+  const [app, policy] = await Promise.all([
+    read('../src/index.ts'),
+    read('../src/visibilityPause.ts'),
+  ]);
+  assert.match(app, /getVisibilityPauseAction\(/);
+  assert.match(app, /if \(action === 'pause'\)/);
+  assert.match(app, /else if \(action === 'resume'\)/);
+  assert.equal((app.match(/getVisibilityPauseAction\(/g) || []).length, 1);
+  assert.match(policy, /documentHidden && gameState === 'playing'/);
+  assert.match(policy, /!documentHidden && pausedByVisibility && gameState === 'paused'/);
   assert.match(app, /navigator\.serviceWorker\.register\(`\.\/sw\.js\?build=\$\{__PALIECIAKI_BUILD_ID__\}`/);
 });
 
