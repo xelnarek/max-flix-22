@@ -13,12 +13,16 @@ import type {
   PvpSlot,
 } from './pvpArena.ts';
 
+export type PvpMatchmakingStatus = 'searching' | 'matched' | 'cancelled';
+
 export interface PvpSessionCallbacks {
   onRoomCreated?: (code: string, slot: 'p1', state: PvpArenaState) => void;
   onRoomJoined?: (code: string, slot: 'p2', state: PvpArenaState) => void;
   onStateUpdate?: (state: PvpArenaState) => void;
   onError?: (message: string) => void;
   onConnectionChange?: (connected: boolean) => void;
+  onMatchmakingStatus?: (status: PvpMatchmakingStatus, position: number, waitingPlayers: number) => void;
+  onMatchFound?: (code: string) => void;
 }
 
 export interface IPvpSession {
@@ -48,6 +52,8 @@ export class PvpNetworkSession implements IPvpSession {
   public onConnectionChange?: (connected: boolean) => void;
   public onRematchWaiting?: (votes: number, required: number) => void;
   public onRoomClosed?: (message: string) => void;
+  public onMatchmakingStatus?: (status: PvpMatchmakingStatus, position: number, waitingPlayers: number) => void;
+  public onMatchFound?: (code: string) => void;
 
   private ws: WebSocket | null = null;
   private callbacks: PvpSessionCallbacks;
@@ -60,6 +66,8 @@ export class PvpNetworkSession implements IPvpSession {
   private reconnectAttempts = 0;
   private pendingCreate?: { operatorId: CharacterId; playerName: string };
   private pendingJoin?: { code: string; operatorId: CharacterId; playerName: string };
+  private pendingMatchmaking?: { operatorId: CharacterId; playerName: string };
+  private matchmakingRequested = false;
 
   private static readonly MAX_CONNECT_ATTEMPTS = 3;
   // Render Free can take about a minute to wake after inactivity. Give the
@@ -141,6 +149,10 @@ export class PvpNetworkSession implements IPvpSession {
           this.createRoom(this.pendingCreate.operatorId, this.pendingCreate.playerName);
         } else if (this.pendingJoin) {
           this.joinRoom(this.pendingJoin.code, this.pendingJoin.operatorId, this.pendingJoin.playerName);
+        } else if (this.pendingMatchmaking) {
+          const request = this.pendingMatchmaking;
+          this.pendingMatchmaking = undefined;
+          this.send({ type: 'find_match', operatorId: request.operatorId, playerName: request.playerName });
         }
       };
 
@@ -150,6 +162,25 @@ export class PvpNetworkSession implements IPvpSession {
           const msg = JSON.parse(String(event.data));
           if (!msg || typeof msg !== 'object' || Array.isArray(msg)) return;
           switch (msg.type) {
+            case 'matchmaking_status': {
+              const position = Number.isFinite(msg.position) ? Math.max(1, Math.floor(msg.position)) : 1;
+              const waitingPlayers = Number.isFinite(msg.waitingPlayers) ? Math.max(1, Math.floor(msg.waitingPlayers)) : position;
+              this.callbacks.onMatchmakingStatus?.('searching', position, waitingPlayers);
+              this.onMatchmakingStatus?.('searching', position, waitingPlayers);
+              break;
+            }
+            case 'match_found': {
+              const code = typeof msg.code === 'string' ? msg.code : '';
+              this.callbacks.onMatchFound?.(code);
+              this.onMatchFound?.(code);
+              this.callbacks.onMatchmakingStatus?.('matched', 0, 2);
+              this.onMatchmakingStatus?.('matched', 0, 2);
+              break;
+            }
+            case 'matchmaking_cancelled':
+              this.callbacks.onMatchmakingStatus?.('cancelled', 0, 0);
+              this.onMatchmakingStatus?.('cancelled', 0, 0);
+              break;
             case 'room_created':
             case 'room_joined': {
               if (typeof msg.code !== 'string' || (msg.slot !== 'p1' && msg.slot !== 'p2') || !msg.state) {
@@ -170,6 +201,12 @@ export class PvpNetworkSession implements IPvpSession {
               this.callbacks.onStateUpdate?.(msg.state);
               this.onRoomJoined?.(msg.code, msg.slot, msg.state);
               this.onState?.(msg.state);
+              if (this.matchmakingRequested) {
+                // Random matches start immediately: both matched clients confirm ready.
+                this.matchmakingRequested = false;
+                this.pendingMatchmaking = undefined;
+                this.send({ type: 'set_ready', ready: true });
+              }
               break;
             }
             case 'player_joined':
@@ -212,6 +249,8 @@ export class PvpNetworkSession implements IPvpSession {
             case 'error':
               this.pendingCreate = undefined;
               this.pendingJoin = undefined;
+              this.pendingMatchmaking = undefined;
+              this.matchmakingRequested = false;
               this.emitError(typeof msg.message === 'string' ? msg.message : 'Błąd serwera PvP.');
               break;
           }
@@ -249,6 +288,8 @@ export class PvpNetworkSession implements IPvpSession {
           const reason = event.reason || 'Serwer PvP jest niedostępny.';
           this.pendingCreate = undefined;
           this.pendingJoin = undefined;
+          this.pendingMatchmaking = undefined;
+          this.matchmakingRequested = false;
           this.emitError(
             reason +
             ' Sprawdź adres hostingu i spróbuj ponownie. Na darmowym Render wybudzenie po bezczynności może trwać około minuty; pierwsza próba połączenia ma wydłużony limit.'
@@ -293,6 +334,33 @@ export class PvpNetworkSession implements IPvpSession {
       return;
     }
     this.send({ type: 'join_room', code: normalizedCode, operatorId, playerName });
+  }
+
+  /** Join the FIFO public queue; the server assigns the first available opponent. */
+  public findMatch(operatorId: CharacterId, playerName: string) {
+    if (this.isUnavailable || this.isDisposed || this.hasJoinedRoom) return;
+    this.matchmakingRequested = true;
+    this.pendingMatchmaking = { operatorId, playerName };
+    this.pendingCreate = undefined;
+    this.pendingJoin = undefined;
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    const request = this.pendingMatchmaking;
+    this.pendingMatchmaking = undefined;
+    this.send({ type: 'find_match', operatorId: request.operatorId, playerName: request.playerName });
+  }
+
+  /** Cancel search safely; closing the socket also removes the player if the cancel packet races. */
+  public cancelMatchmaking(): boolean {
+    if (this.hasJoinedRoom || !this.matchmakingRequested) return false;
+    this.matchmakingRequested = false;
+    this.pendingMatchmaking = undefined;
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.send({ type: 'cancel_matchmaking' });
+    }
+    this.callbacks.onMatchmakingStatus?.('cancelled', 0, 0);
+    this.onMatchmakingStatus?.('cancelled', 0, 0);
+    this.dispose();
+    return true;
   }
 
   public setReady(ready: boolean) {
