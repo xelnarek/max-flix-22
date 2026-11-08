@@ -651,18 +651,19 @@ test('starting a rematch resets every match-wide statistic and its published sna
 
 
 
-test('PvP soft aim assist helps near alignment but never locks through cover', async () => {
-  const { getPvpAimAssistAngle, createInitialPvpArenaState } = await import('../src/pvpArena.ts');
+test('PvP timing shots preserve the exact submitted direction without hidden opponent magnetism', async () => {
+  const { stepPvpArena, createInitialPvpArenaState } = await import('../src/pvpArena.ts');
   const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  state.status = 'in_round';
   state.obstacles = [];
   state.p1.x = -5; state.p1.z = 0; state.p2.x = 5; state.p2.z = 0;
-  const near = Math.PI / 2 - 0.12;
-  const assisted = getPvpAimAssistAngle(near, state.p1, state.p2, state.obstacles);
-  assert.ok(Math.abs(assisted - Math.PI / 2) < Math.abs(near - Math.PI / 2));
-  const off = Math.PI / 2 - 0.5;
-  assert.ok(Math.abs(getPvpAimAssistAngle(off, state.p1, state.p2, state.obstacles) - off) < 1e-9);
-  state.obstacles = [{ id: 'wall', x: 0, z: 0, width: 1.6, depth: 5, height: 2, type: 'barrier' }];
-  assert.ok(Math.abs(getPvpAimAssistAngle(near, state.p1, state.p2, state.obstacles) - near) < 1e-9);
+  const chosenAngle = Math.PI / 2 - 0.12;
+  stepPvpArena(state, 0.04, {
+    moveX: 0, moveZ: 0, aimAngle: chosenAngle, isFiring: false,
+  });
+  assert.ok(Math.abs(state.p1.aimAngle - chosenAngle) < 1e-10);
+  assert.ok(Math.abs(state.p1.rot - chosenAngle) < 1e-10);
+  assert.ok(Math.abs(state.p1.aimAngle - Math.PI / 2) > 0.1, 'server must not pull the cursor toward the opponent');
 });
 
 test('PvP random perk capsule spawns and grants its effect on pickup', () => {
