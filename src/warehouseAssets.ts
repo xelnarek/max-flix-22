@@ -1113,12 +1113,13 @@ export function createCharacterModel(def: CharacterDef): {
     seamMat,
     4,
   );
+  const seamTransform = new THREE.Object3D();
   for (let i = 0; i < 4; i++) {
-    dummy.position.set(i % 2 === 0 ? -0.13 : 0.13, 0.35 + Math.floor(i / 2) * 0.025, 0.16);
-    dummy.rotation.set(0, 0, 0);
-    dummy.scale.set(1, 1, 1);
-    dummy.updateMatrix();
-    seamMarks.setMatrixAt(i, dummy.matrix);
+    seamTransform.position.set(i % 2 === 0 ? -0.13 : 0.13, 0.35 + Math.floor(i / 2) * 0.025, 0.16);
+    seamTransform.rotation.set(0, 0, 0);
+    seamTransform.scale.set(1, 1, 1);
+    seamTransform.updateMatrix();
+    seamMarks.setMatrixAt(i, seamTransform.matrix);
   }
   seamMarks.instanceMatrix.needsUpdate = true;
   group.add(seamMarks);
