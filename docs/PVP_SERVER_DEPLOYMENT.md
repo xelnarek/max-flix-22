@@ -12,20 +12,20 @@ The repository now includes:
 - `npm run pvp:server`: starts the server locally; Render runs the same package script from the Docker image.
 - `wss://<service>.onrender.com/pvp-ws`: secure WebSocket endpoint after deployment.
 
-The Blueprint sets `NODE_ENV=production` and `PVP_ALLOWED_ORIGINS=https://xelnarek.github.io`, which restricts browser WebSocket upgrades to the published game origin. It enables deploys after GitHub checks pass and uses the Starter/0.5 CPU, 512 MB compute plan.
+The Blueprint sets `NODE_ENV=production` and `PVP_ALLOWED_ORIGINS=https://xelnarek.github.io`, which restricts browser WebSocket upgrades to the published game origin. It enables deploys after GitHub checks pass and uses Render's Free compute plan (0.1 CPU, 512 MB).
 
 ## Deploy with Render
 
 1. Connect your Render account to ChatGPT using the Render connection prompt. Do not paste your password or API key into this chat.
 2. In Render, create a new **Blueprint** and select GitHub repository `xelnarek/max-flix-22`, branch `main`.
-3. Render detects `render.yaml`. Review the proposed service `paleciaki-pvp`, Frankfurt region, health path `/healthz`, and Starter compute plan. Approve creation only after reviewing the price shown in your account.
+3. Render detects `render.yaml`. Review the proposed service `paleciaki-pvp`, Frankfurt region, health path `/healthz`, and Free compute plan. Approve creation only after reviewing the price shown in your account.
 4. Wait for the first deployment to finish. Open `https://<service-name>.onrender.com/healthz`. A healthy response looks like:
    `{"ok":true,"service":"paleciaki-pvp","websocketPath":"/pvp-ws"}`
 5. Copy the hostname Render assigned to the service. The browser endpoint is the same hostname with `wss://` and path `/pvp-ws`.
 
-## Why Starter instead of Free
+## Free-plan limitations
 
-Render's Free web services can spin down after 15 minutes without inbound traffic, including WebSocket traffic. The next connection can take about a minute to wake the service. That is unsuitable for a responsive real-time PvP lobby. The Starter plan stays running; current listed compute price is approximately USD 7/month, in addition to any applicable metered usage. Check the exact amount shown by Render before approving. Sources: [Render Free instance limits](https://render.com/docs/free) and [Render pricing](https://render.com/pricing).
+This is deliberately configured for a free test, not production. Render Free web services spin down after 15 minutes without inbound traffic, including WebSocket traffic. The first connection after sleeping can take about a minute. Free instances have 0.1 CPU and 512 MB RAM, may restart, and have no persistent disk. Active match state is therefore temporary and can be lost during sleep or restart. This is suitable for testing the connection flow, not reliable competitive matchmaking. Sources: [Render Free instance limits](https://render.com/docs/free) and [Render compute plans](https://render.com/docs/compute-plans).
 
 ## Connect the website to the deployed server
 
