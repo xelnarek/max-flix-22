@@ -72,7 +72,7 @@ import { CHARACTERS } from './characters.ts';
 import { NEUTRAL_CHARACTER_COMBAT_BONUSES, type CharacterCombatBonuses } from './characterProgression.ts';
 import { getCharacterMotionProfile } from './characterMotion.ts';
 import { getAttackPoseStrength, getCharacterAttackMotionProfile } from './characterAttackMotion.ts';
-import { resolveCharacterIncomingDamage, scaleCharacterBasicAttackDamage } from './characterBalance.ts';
+import { resolveCharacterIncomingDamage, scaleCharacterBasicAttackDamage, scaleSurvivalOutgoingDamage, scaleSurvivalIncomingDamage, SURVIVAL_HIT_INVULNERABILITY_SECONDS } from './characterBalance.ts';
 import { sound } from './sound.ts';
 import {
   ActivePerks,
@@ -7501,7 +7501,7 @@ export class PaleciakiGameEngine {
       this.survivalSpawnTimer -= dt;
       if (this.survivalSpawnTimer <= 0 && aliveCount < enemyCap) {
         const groupLimit = isMobile ? (this.adaptivePerformanceTier >= 2 ? 3 : this.adaptivePerformanceTier === 1 ? 4 : 5) : 7;
-        const groupSize = Math.min(groupLimit, 2 + Math.floor(this.survivalWave * 0.34) + difficultyProfile.extraGroupSize, enemyCap - aliveCount);
+        const groupSize = Math.min(groupLimit, 3 + Math.floor(this.survivalWave * 0.34) + difficultyProfile.extraGroupSize, enemyCap - aliveCount);
         for (let i = 0; i < groupSize; i++) this.spawnSurvivalEnemy(this.survivalWave);
         this.survivalSpawnTimer = difficultyProfile.spawnIntervalSeconds;
       }
@@ -10352,7 +10352,12 @@ export class PaleciakiGameEngine {
       return enemy.hp;
     }
     const previousHp = enemy.hp;
-    enemy.hp = Math.max(0, enemy.hp - amount);
+    // One shared Survival output nerf keeps every operator, weapon and ability
+    // from deleting waves before the enemy director can create real pressure.
+    const appliedDamage = this.gameMode === 'survival'
+      ? scaleSurvivalOutgoingDamage(amount)
+      : amount;
+    enemy.hp = Math.max(0, enemy.hp - appliedDamage);
     const actualDamage = Math.max(0, previousHp - enemy.hp);
     if (this.gameMode === 'survival' && actualDamage > 0) {
       recordSurvivalDamage(this.survivalDamageStats, damageSource, actualDamage);
@@ -14244,13 +14249,18 @@ export class PaleciakiGameEngine {
       return;
     }
 
+    const incomingAmount = this.gameMode === 'survival'
+      ? scaleSurvivalIncomingDamage(amount)
+      : amount;
     const damageResolution = resolveCharacterIncomingDamage(
-      amount,
+      incomingAmount,
       this.charDef.damageTakenMultiplier * this.characterMasteryBonuses.damageTakenMultiplier,
       this.characterDamageRemainder,
     );
     this.characterDamageRemainder = damageResolution.remainder;
-    this.invulnerableTimer = 1.8;
+    this.invulnerableTimer = this.gameMode === 'survival'
+      ? SURVIVAL_HIT_INVULNERABILITY_SECONDS
+      : 1.8;
     if (damageResolution.damage <= 0) {
       sound.playShieldBreak();
       this.emitFloatingToast('🛡️ REDUKCJA OBRAŻEŃ • PANCERZ OPERATORA', this.playerPos.x, this.playerPos.y + 1.25, this.playerPos.z, 'perk');
