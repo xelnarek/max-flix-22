@@ -5,6 +5,7 @@ import {
   resetPvpMatchStats,
   sanitizePvpInputIntent,
   stepPvpArena,
+  hasPvpLineOfSight,
 } from './pvpArena.ts';
 import type {
   PvpArenaState,
@@ -394,8 +395,13 @@ export class PvpLocalBotSession implements IPvpSession {
   }
 
   private updateBot(dt: number) {
-    if (this.state.status !== 'in_round') {
-      this.p2Input = { moveX: 0, moveZ: 0, aimAngle: -Math.PI / 2, isFiring: false };
+    if (this.state.status !== 'in_round' || bot.stunTimer > 0) {
+      this.p2Input = {
+        moveX: 0,
+        moveZ: 0,
+        aimAngle: Math.atan2(player.x - bot.x, player.z - bot.z),
+        isFiring: false,
+      };
       return;
     }
 
@@ -409,8 +415,10 @@ export class PvpLocalBotSession implements IPvpSession {
     const aimAngle = Math.atan2(dx, dz);
     this.p2Input.aimAngle = aimAngle;
 
-    // Fire if in range and line of sight reasonable
-    this.p2Input.isFiring = distToPlayer < 22;
+    // Do not waste shots into pallet cover. The arena simulation resolves the
+    // same line-of-sight rule for direct abilities and projectiles.
+    const hasClearShot = hasPvpLineOfSight(bot, player, this.state.obstacles);
+    this.p2Input.isFiring = distToPlayer < 22 && hasClearShot;
 
     // Tactical movement logic
     this.botReactionTimer -= dt;
