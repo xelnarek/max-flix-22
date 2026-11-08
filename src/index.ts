@@ -3204,12 +3204,14 @@ class PaleciakiScene extends xb.Script {
       pvpHud?.classList.remove('hidden');
       hudBottom?.classList.remove('hidden');
       if (desktopPvpFireButton) {
-        desktopAttackPresentation = {
-          name: desktopPvpFireLabel?.textContent || 'Atak',
-          hint: desktopPvpFireState?.textContent || '[F / J / Klik]',
-          icon: desktopPvpFireIcon?.innerHTML || '🥊',
-          title: desktopPvpFireButton.title || '',
-        };
+        if (!desktopAttackPresentation) {
+          desktopAttackPresentation = {
+            name: desktopPvpFireLabel?.textContent || 'Atak',
+            hint: desktopPvpFireState?.textContent || '[F / J / Klik]',
+            icon: desktopPvpFireIcon?.innerHTML || '🥊',
+            title: desktopPvpFireButton.title || '',
+          };
+        }
         desktopPvpFireButton.classList.add('pvp-primary-fire');
         desktopPvpFireButton.dataset.roundActive = 'false';
         desktopPvpFireButton.disabled = true;
