@@ -16,12 +16,12 @@ test('the desktop menu is a control room with a left navigation rail and indepen
   assert.match(layout, /\.menu-fixed-bottom-bar\s*\{[\s\S]*?grid-row:\s*4/);
 });
 
-test('all seven menu destinations remain available as buttons and panels', () => {
+test('all nine menu destinations remain available as buttons and panels', () => {
   const buttons = [...html.matchAll(/class="menu-tab-btn[^"]*" data-tab="(tab-[^"]+)"/g)].map((match) => match[1]);
-  const panels = [...html.matchAll(/id="(tab-(?:team|enemies|perks|field-guide|leaderboard|achievements|settings))"/g)].map((match) => match[1]);
-  assert.equal(buttons.length, 7);
+  const panels = [...html.matchAll(/id="(tab-(?:team|enemies|perks|field-guide|talent-tree|ranks|leaderboard|achievements|settings))"/g)].map((match) => match[1]);
+  assert.equal(buttons.length, 9);
   assert.deepEqual(new Set(buttons), new Set(panels));
-  assert.match(layout, /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(layout, /grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/);
 });
 
 test('the active content panel scrolls independently while the map selector and launch remain in normal flow', () => {
