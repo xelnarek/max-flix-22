@@ -2986,6 +2986,8 @@ class PaleciakiScene extends xb.Script {
     const nickInput = document.getElementById('pvp-nickname-input') as HTMLInputElement | null;
 
     const btnStartBot = document.getElementById('btn-pvp-start-bot');
+    const btnFindMatch = document.getElementById('btn-pvp-find-match') as HTMLButtonElement | null;
+    const btnCancelMatch = document.getElementById('btn-pvp-cancel-match') as HTMLButtonElement | null;
     const btnCreateRoom = document.getElementById('btn-pvp-create-room');
     const btnJoinRoom = document.getElementById('btn-pvp-join-room');
     const joinCodeInput = document.getElementById('pvp-join-code-input') as HTMLInputElement | null;
@@ -2999,7 +3001,7 @@ class PaleciakiScene extends xb.Script {
     const pvpConnectionStatus = document.getElementById('pvp-connection-status');
     const pvpConnectionTitle = document.getElementById('pvp-connection-title');
     const pvpConnectionDetail = document.getElementById('pvp-connection-detail');
-    const setPvpConnectionStatus = (state: 'idle' | 'connecting' | 'connected' | 'waiting' | 'matched' | 'error', title: string, detail: string) => {
+    const setPvpConnectionStatus = (state: 'idle' | 'connecting' | 'connected' | 'searching' | 'waiting' | 'matched' | 'cancelled' | 'error', title: string, detail: string) => {
       if (pvpConnectionTitle) pvpConnectionTitle.textContent = title;
       if (pvpConnectionDetail) pvpConnectionDetail.textContent = detail;
       if (pvpConnectionStatus) {
@@ -3007,6 +3009,22 @@ class PaleciakiScene extends xb.Script {
         pvpConnectionStatus.setAttribute('data-state', state);
       }
     };
+    type MatchmakingUiPhase = 'idle' | 'searching' | 'matched';
+    const setMatchmakingUiPhase = (phase: MatchmakingUiPhase) => {
+      if (btnFindMatch) {
+        btnFindMatch.disabled = phase !== 'idle' || !onlineReady;
+        btnFindMatch.textContent = phase === 'searching'
+          ? 'SZUKANIE PRZECIWNIKA…'
+          : phase === 'matched' ? 'PRZECIWNIK ZNALEZIONY' : '⚔️ SZUKAJ PRZECIWNIKA';
+      }
+      if (btnCancelMatch) {
+        btnCancelMatch.classList.toggle('hidden', phase !== 'searching');
+        btnCancelMatch.disabled = phase !== 'searching';
+      }
+      if (createRoomButton) createRoomButton.disabled = !onlineReady || phase !== 'idle';
+      if (joinRoomButton) joinRoomButton.disabled = !onlineReady || phase !== 'idle';
+    };
+    setMatchmakingUiPhase('idle');
 
     const matchEndModal = document.getElementById('pvp-match-end-modal');
     const btnRematch = document.getElementById('btn-pvp-rematch') as HTMLButtonElement | null;
@@ -3089,6 +3107,94 @@ class PaleciakiScene extends xb.Script {
       };
 
       startPvpMatchUI(botSession, localOp, botOp);
+    });
+
+    // Public FIFO matchmaking: the server pairs the oldest two available players.
+    let matchmakingSession: PvpNetworkSession | null = null;
+    btnFindMatch?.addEventListener('click', () => {
+      if (matchmakingSession || this.pvpSession) return;
+      const playerNick = nickInput?.value.trim() || 'Operator B4';
+      setMatchmakingUiPhase('searching');
+      setPvpConnectionStatus('connecting', 'ŁĄCZENIE Z SERWEREM', 'Łączę się z serwerem i przygotowuję wyszukiwanie. Darmowy serwer może potrzebować chwili na wybudzenie.');
+      const session = new PvpNetworkSession();
+      matchmakingSession = session;
+      this.pvpSession = session;
+      this.pvpLocalReady = false;
+      this.pvpIsHost = false;
+
+      session.onConnectionChange = (connected) => {
+        if (matchmakingSession !== session) return;
+        setPvpConnectionStatus(
+          connected ? 'connected' : 'connecting',
+          connected ? 'SERWER POŁĄCZONY' : 'PONAWIANIE POŁĄCZENIA',
+          connected ? 'Serwer odpowiada. Wyszukuję pierwszego dostępnego przeciwnika…' : 'Połączenie jest ponawiane. Wyszukiwanie zostanie wznowione automatycznie.',
+        );
+      };
+      session.onMatchmakingStatus = (status, position, waitingPlayers) => {
+        if (matchmakingSession !== session) return;
+        if (status === 'searching') {
+          setMatchmakingUiPhase('searching');
+          const waitingText = waitingPlayers === 1 ? '1 gracz czeka w kolejce.' : `${waitingPlayers} graczy czeka w kolejce.`;
+          setPvpConnectionStatus('searching', 'SZUKAM PRZECIWNIKA', `Twoja pozycja: ${position}. ${waitingText} Mecz rozpocznie się automatycznie po znalezieniu rywala.`);
+        } else if (status === 'matched') {
+          setMatchmakingUiPhase('matched');
+          setPvpConnectionStatus('matched', 'PRZECIWNIK ZNALEZIONY', 'Przygotowuję wspólną arenę. Obaj gracze zostaną automatycznie ustawieni jako gotowi.');
+        } else {
+          setMatchmakingUiPhase('idle');
+          setPvpConnectionStatus('cancelled', 'WYSZUKIWANIE ANULOWANE', 'Możesz rozpocząć nowe wyszukiwanie, kiedy będziesz gotowy.');
+        }
+      };
+      session.onMatchFound = (roomCode) => {
+        if (matchmakingSession !== session) return;
+        this.pvpRoomCode = roomCode;
+        setMatchmakingUiPhase('matched');
+        setPvpConnectionStatus('matched', 'PRZECIWNIK ZNALEZIONY', `Połączono graczy w pokoju ${roomCode}. Uruchamiam pojedynek…`);
+        sound.playPickup();
+      };
+      session.onRoomJoined = (roomCode, slot) => {
+        if (matchmakingSession !== session) return;
+        this.pvpRoomCode = roomCode;
+        this.pvpLocalSlot = slot;
+        setMatchmakingUiPhase('matched');
+        setPvpConnectionStatus('matched', 'ARENA GOTOWA', 'Przeciwnik połączony. Gotowość została potwierdzona automatycznie.');
+      };
+      session.onMatchStart = (state) => {
+        if (matchmakingSession !== session) return;
+        const localOp = this.pvpLocalSlot === 'p1' ? state.p1.operatorId : state.p2.operatorId;
+        const remoteOp = this.pvpLocalSlot === 'p1' ? state.p2.operatorId : state.p1.operatorId;
+        setMatchmakingUiPhase('matched');
+        startPvpMatchUI(session, localOp, remoteOp);
+      };
+      session.onRoomClosed = (message) => {
+        if (matchmakingSession !== session) return;
+        setMatchmakingUiPhase('idle');
+        setPvpConnectionStatus('error', 'POKÓJ ZAMKNIĘTY', message);
+      };
+      session.onError = (error) => {
+        if (matchmakingSession !== session) return;
+        matchmakingSession = null;
+        if (this.pvpSession === session) this.pvpSession = null;
+        setMatchmakingUiPhase('idle');
+        setPvpConnectionStatus('error', 'WYSZUKIWANIE NIEUDANE', error);
+      };
+      session.findMatch(this.selectedPvpOperator, playerNick);
+      sound.playSmack();
+    });
+
+    btnCancelMatch?.addEventListener('click', () => {
+      const session = matchmakingSession;
+      if (!session) return;
+      if (!session.cancelMatchmaking()) {
+        setMatchmakingUiPhase('matched');
+        setPvpConnectionStatus('matched', 'PRZECIWNIK ZNALEZIONY', 'Połączenie zostało już przydzielone. Przygotowuję arenę.');
+        return;
+      }
+      matchmakingSession = null;
+      if (this.pvpSession === session) this.pvpSession = null;
+      this.pvpLocalReady = false;
+      setMatchmakingUiPhase('idle');
+      setPvpConnectionStatus('cancelled', 'WYSZUKIWANIE ANULOWANE', 'Możesz rozpocząć nowe wyszukiwanie, kiedy będziesz gotowy.');
+      sound.playSmack();
     });
 
     // Online WebSocket Host
