@@ -65,7 +65,10 @@ export class B4AssetLoader {
     };
 
     this.loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
-      const pct = Math.round((itemsLoaded / itemsTotal) * 100);
+      // Preloaded textures own only the first 70% of the boot bar. Use
+      // the same scale as preloadAll() so LoadingManager cannot push progress
+      // to 100% and then make it jump backwards after each item.
+      const pct = itemsTotal > 0 ? Math.round((itemsLoaded / itemsTotal) * 70) : 0;
       this.updateProgress(pct, `Wczytywanie: ${url.split('/').pop()} (${pct}%)`);
     };
 
