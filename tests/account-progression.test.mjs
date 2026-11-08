@@ -174,3 +174,18 @@ test('PvP adapter maps account cooldown bonuses to the server profile contract',
   assert.equal(bonuses.cooldownMultiplier, getAccountProgressionBonuses(profile).abilityCooldownMultiplier);
   assert.ok(bonuses.cooldownMultiplier < 1);
 });
+
+test('a max-level account keeps match statistics but does not display unspendable XP', () => {
+  const profile = createInitialAccountProgressionProfile();
+  profile.level = ACCOUNT_PROGRESS_MAX_LEVEL;
+  const update = recordAccountSurvivalRun(profile, {
+    kills: 8,
+    elapsedSeconds: 90,
+    bossesDefeated: 0,
+    secretsFound: 0,
+    highestWave: 2,
+  });
+  assert.equal(update.xpEarned, 0);
+  assert.equal(update.profile.level, ACCOUNT_PROGRESS_MAX_LEVEL);
+  assert.equal(update.profile.stats.survivalRuns, 1);
+});
