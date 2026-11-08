@@ -23,6 +23,7 @@ import { calculateUiViewport, shouldShowTouchControls } from './uiViewport.ts';
 import { getAdaptiveEffectsTier, getAdaptiveRenderScale, getDeviceRenderProfile, shouldApplyPixelRatioChange, type AdaptiveEffectsTier } from './renderQuality.ts';
 import { calculateVirtualJoystickInput } from './virtualJoystick.ts';
 import { calculatePvpFireControlPosition } from './pvpTouchLayout.ts';
+import { clampTouchJoystickOrigin } from './touchControlLayout.ts';
 import {
   createInitialSurvivalAchievementProgress,
   getSurvivalAchievementCards,
@@ -2856,24 +2857,39 @@ class PaleciakiScene extends xb.Script {
       if (event.pointerType === 'mouse' && event.button !== 0) return;
 
       activePointerId = event.pointerId;
-      startX = event.clientX;
-      startY = event.clientY;
       maxRadius = getJoystickRadius();
 
       const touchLayer = document.getElementById('touch-controls');
       const pvpFireControl = document.getElementById('pvp-fire-control') as HTMLElement | null;
-      if (touchLayer?.classList.contains('manual-aim-mode') && pvpFireControl) {
-        const baseRect = joystickBase.getBoundingClientRect();
-        const joystickRadius = Math.min(baseRect.width || 148, baseRect.height || 148) * 0.5;
-        const viewportWidth = Math.max(1, window.visualViewport?.width || window.innerWidth);
-        const viewportHeight = Math.max(1, window.visualViewport?.height || window.innerHeight);
+      const viewportWidth = Math.max(1, window.visualViewport?.width || window.innerWidth);
+      const viewportHeight = Math.max(1, window.visualViewport?.height || window.innerHeight);
+      const baseRect = joystickBase.getBoundingClientRect();
+      const joystickSize = Math.min(baseRect.width || 148, baseRect.height || 148);
+      const isPvpTouch = touchLayer?.classList.contains('manual-aim-mode') === true;
+      const fireControlSize = viewportHeight <= 430 ? 68 : 78;
+      const origin = clampTouchJoystickOrigin({
+        viewportWidth,
+        viewportHeight,
+        mode: isPvpTouch ? 'pvp' : 'survival',
+        touchX: event.clientX,
+        touchY: event.clientY,
+        joystickSize,
+        fireButtonSize: fireControlSize,
+        fireGap: 10,
+        topHudClearance: 88,
+        safeBottom: Math.max(12, Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-bottom')) || 12),
+      });
+      startX = origin.x;
+      startY = origin.y;
+
+      if (isPvpTouch && pvpFireControl) {
         const position = calculatePvpFireControlPosition({
           viewportWidth,
           viewportHeight,
           touchX: startX,
           touchY: startY,
-          joystickRadius,
-          fireControlSize: 78,
+          joystickRadius: joystickSize * 0.5,
+          fireControlSize,
           gap: 10,
           safeMargin: 12,
         });
