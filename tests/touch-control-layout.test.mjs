@@ -139,3 +139,23 @@ test('PvP stick origin reserves a dedicated timed-fire lane below the top HUD', 
   const fireTop = point.y - 74 - 10 - 68;
   assert.ok(fireTop >= 88);
 });
+
+
+test('compact-landscape PvP fire circle stays at least 10px above the idle joystick', () => {
+  for (const viewport of [
+    { width: 568, height: 320 },
+    { width: 844, height: 390 },
+    { width: 915, height: 412 },
+  ]) {
+    const geometry = calculateTouchControlGeometry({
+      viewportWidth: viewport.width,
+      viewportHeight: viewport.height,
+      mode: 'pvp',
+    });
+    const idleJoystickTop = viewport.height - Math.max(82, 12 + 76)
+      - Math.max(126, Math.min(148, viewport.width * 0.36)) * 0.5;
+    assert.ok(geometry.fireControl);
+    assert.ok(geometry.fireControl.bottom <= idleJoystickTop - 10,
+      'fire control overlaps idle joystick at ' + viewport.width + 'x' + viewport.height);
+  }
+});
