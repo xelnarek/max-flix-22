@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { disposePvpObjectTree } from './pvpResourceCleanup.ts';
 import { calculatePvpCameraFrame } from './pvpCamera.ts';
 import { createPvpFloorTexture, createPvpObstacleTexture } from './pvpTextures.ts';
 import { getPvpAimAngle, isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle, pvpScreenAimToWorld, pvpScreenMovementToWorld, PVP_AIM_DIRECTION_DEADZONE, type PvpAimDirection } from './pvpAim.ts';
@@ -1856,38 +1857,32 @@ export class PaleciakiGameEngine {
     }
     if (this.pvpArenaRoot) {
       this.levelRoot.remove(this.pvpArenaRoot);
+      disposePvpObjectTree(this.pvpArenaRoot);
       this.pvpArenaRoot = null;
     }
     if (this.remotePlayerGroup) {
       this.levelRoot.remove(this.remotePlayerGroup);
       this.remotePlayerGroup = null;
     }
-    if (this.pvpLocalMarker && this.playerGroup) this.playerGroup.remove(this.pvpLocalMarker);
+    if (this.pvpLocalMarker && this.playerGroup) {
+      this.playerGroup.remove(this.pvpLocalMarker);
+      disposePvpObjectTree(this.pvpLocalMarker);
+    }
     this.pvpLocalMarker = null;
+    this.pvpObstacleMeshes = [];
+    this.pvpMedkitMesh = null;
     this.pvpPerkMesh = null;
     this.pvpPerkGem = null;
-    if (this.pvpPerkLabel) {
-      const material = this.pvpPerkLabel.material as THREE.SpriteMaterial;
-      material.map?.dispose();
-      material.dispose();
-      this.pvpPerkLabel = null;
-      this.pvpPerkLabelContext = null;
-      this.pvpPerkLabelLastType = '';
-    }
-    this.pvpAimGuide?.geometry.dispose();
-    (this.pvpAimGuide?.material as THREE.Material | undefined)?.dispose();
+    this.pvpPerkLabel = null;
+    this.pvpPerkLabelContext = null;
+    this.pvpPerkLabelLastType = '';
+    this.pvpPerkLastActive = false;
+    // These renderables are children of pvpArenaRoot and were disposed with it.
     this.pvpAimGuide = null;
-    this.pvpAimTarget?.geometry.dispose();
-    (this.pvpAimTarget?.material as THREE.Material | undefined)?.dispose();
     this.pvpAimTarget = null;
     this.pvpProjectileMeshes.forEach((mesh) => {
       this.levelRoot.remove(mesh);
-      mesh.traverse((object) => {
-        if (!(object instanceof THREE.Mesh)) return;
-        object.geometry.dispose();
-        const materials = Array.isArray(object.material) ? object.material : [object.material];
-        materials.forEach((material) => material.dispose());
-      });
+      disposePvpObjectTree(mesh);
     });
     this.pvpProjectileMeshes.clear();
     if (this.pvpSession) {
@@ -2062,12 +2057,16 @@ export class PaleciakiGameEngine {
   private buildPvpArena() {
     if (this.pvpArenaRoot) {
       this.levelRoot.remove(this.pvpArenaRoot);
+      disposePvpObjectTree(this.pvpArenaRoot);
       this.pvpArenaRoot = null;
     }
 
     this.pvpArenaRoot = new THREE.Group();
     this.pvpObstacleMeshes = [];
-    this.pvpProjectileMeshes.forEach((mesh) => this.levelRoot.remove(mesh));
+    this.pvpProjectileMeshes.forEach((mesh) => {
+      this.levelRoot.remove(mesh);
+      disposePvpObjectTree(mesh);
+    });
     this.pvpProjectileMeshes.clear();
 
     const bounds = PVP_ARENA_BOUNDS;
@@ -2138,34 +2137,44 @@ export class PaleciakiGameEngine {
     this.pvpArenaRoot.add(wN, wS, wW, wE);
 
     const obstacles = createDefaultPvpObstacles();
+    const palletMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff, map: createPvpObstacleTexture('crate'), roughness: 0.82, metalness: 0.08,
+    });
+    const barrierMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff, map: createPvpObstacleTexture('barrier'), roughness: 0.68, metalness: 0.28,
+    });
+    const pillarMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff, map: wallTexture, roughness: 0.58, metalness: 0.38,
+    });
+    const palletBandMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+    const barrierStripeMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+
     for (const obs of obstacles) {
       const group = new THREE.Group();
       group.position.set(obs.x, 0, obs.z);
 
       if (obs.type === 'pallet') {
-        const palletMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: createPvpObstacleTexture('crate'), roughness: 0.82, metalness: 0.08 });
         const stackMesh = new THREE.Mesh(new THREE.BoxGeometry(obs.width, obs.height, obs.depth), palletMat);
         stackMesh.position.y = obs.height / 2;
         stackMesh.castShadow = true;
         group.add(stackMesh);
 
-        const band = new THREE.Mesh(new THREE.BoxGeometry(obs.width + 0.04, 0.3, obs.depth + 0.04), new THREE.MeshBasicMaterial({ color: 0xfacc15 }));
+        const band = new THREE.Mesh(new THREE.BoxGeometry(obs.width + 0.04, 0.3, obs.depth + 0.04), palletBandMat);
         band.position.y = obs.height - 0.2;
         group.add(band);
       } else if (obs.type === 'barrier') {
-        const barrierMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: createPvpObstacleTexture('barrier'), roughness: 0.68, metalness: 0.28 });
         const barMesh = new THREE.Mesh(new THREE.BoxGeometry(obs.width, obs.height, obs.depth), barrierMat);
         barMesh.position.y = obs.height / 2;
         barMesh.castShadow = true;
         group.add(barMesh);
 
-        const stripe = new THREE.Mesh(new THREE.BoxGeometry(obs.width + 0.05, 0.25, obs.depth * 0.7), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+        const stripe = new THREE.Mesh(new THREE.BoxGeometry(obs.width + 0.05, 0.25, obs.depth * 0.7), barrierStripeMat);
         stripe.position.y = obs.height * 0.6;
         group.add(stripe);
       } else {
-        const pillarMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: createPvpObstacleTexture('wall'), roughness: 0.58, metalness: 0.38 });
         const pilMesh = new THREE.Mesh(new THREE.BoxGeometry(obs.width, obs.height, obs.depth), pillarMat);
         pilMesh.position.y = obs.height / 2;
+        pilMesh.castShadow = true;
         group.add(pilMesh);
 
         const light = new THREE.PointLight(0x38bdf8, 5, 8);
