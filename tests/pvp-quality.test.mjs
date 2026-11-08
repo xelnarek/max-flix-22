@@ -241,7 +241,7 @@ test('public PvP matchmaking connects the lobby, server FIFO queue, auto-ready a
   assert.match(app, /session\.findMatch\(this\.selectedPvpOperator, playerNick\)/);
   assert.match(app, /session\.cancelMatchmaking\(\)/);
   assert.match(app, /RYWAL SIĘ ROZŁĄCZYŁ/);
-  assert.match(app, /Pozycja: \$\{position\}/);
+  assert.match(app, /Twoja pozycja: \$\{position\}/);
   assert.match(html, /id="btn-pvp-find-match"/);
   assert.match(html, /id="btn-pvp-cancel-match"/);
   assert.match(css, /\.pvp-matchmaking-actions/);
