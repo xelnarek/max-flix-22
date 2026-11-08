@@ -64,12 +64,11 @@ export class B4AssetLoader {
       console.log(`%c[AssetLoader:LoadingManager] 🚀 Start kolejki ładowania (${itemsTotal} pozycji)...`, 'color: #38bdf8; font-weight: bold;');
     };
 
-    this.loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
-      // Preloaded textures own only the first 70% of the boot bar. Use
-      // the same scale as preloadAll() so LoadingManager cannot push progress
-      // to 100% and then make it jump backwards after each item.
-      const pct = itemsTotal > 0 ? Math.round((itemsLoaded / itemsTotal) * 70) : 0;
-      this.updateProgress(pct, `Wczytywanie: ${url.split('/').pop()} (${pct}%)`);
+    this.loadingManager.onProgress = (url) => {
+      // itemStart/itemEnd are issued one-by-one for procedural assets, so
+      // LoadingManager's ratio is not a meaningful queue percentage here.
+      // Keep the text current and let preloadAll() own the monotonic progress bar.
+      this.updateProgress(this.progress, `Wczytywanie: ${url.split('/').pop()}`);
     };
 
     this.loadingManager.onLoad = () => {
