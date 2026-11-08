@@ -2627,11 +2627,10 @@ class PaleciakiScene extends xb.Script {
         if (!this.engine.isManualAimEnabled() || activeAimPointerId !== null) return;
         if (event.pointerType === 'mouse' && event.button !== 0) return;
         activeAimPointerId = event.pointerId;
-        aimStartX = event.clientX;
-        aimStartY = event.clientY;
+        const aimRect = aimBase.getBoundingClientRect();
+        aimStartX = aimRect.left + aimRect.width / 2;
+        aimStartY = aimRect.top + aimRect.height / 2;
         aimMaxRadius = getAimRadius();
-        aimBase.style.left = `${aimStartX}px`;
-        aimBase.style.top = `${aimStartY}px`;
         aimBase.classList.add('active');
         aimKnob.style.transform = 'translate(-50%, -50%)';
         try { aimZone.setPointerCapture(event.pointerId); } catch { /* window handlers are the fallback */ }
@@ -3614,6 +3613,15 @@ class PaleciakiScene extends xb.Script {
     const roundIndicator = document.getElementById('pvp-round-indicator');
     if (roundIndicator) roundIndicator.textContent = `RUNDA ${state.currentRound} / ${state.maxRounds}`;
 
+    const perkStatus = document.getElementById('pvp-perk-status');
+    if (perkStatus) {
+      const perkNames: Record<string, string> = { power: 'MOC +22% OBRAŻEŃ', sprint: 'SPRINT +18% RUCHU', shield: 'TARCZA +165 HP', rapid: 'SZYBSZE ŁADOWANIE' };
+      const localPlayer = localSlot === 'p1' ? state.p1 : state.p2;
+      if (localPlayer.activePerk === 'shield' && localPlayer.shieldHp > 0) perkStatus.textContent = `TARCZA AKTYWNA • ${Math.ceil(localPlayer.shieldHp)} HP`;
+      else if (localPlayer.activePerk && localPlayer.perkTimer > 0) perkStatus.textContent = `TWÓJ PERK: ${perkNames[localPlayer.activePerk] || 'AKTYWNY'} • ${Math.ceil(localPlayer.perkTimer)} s`;
+      else if (state.perkDrop.active) perkStatus.textContent = `KAPSUŁA: ${perkNames[state.perkDrop.type] || 'LOSOWY PERK'} • ZBIERZ NA ARENIE`;
+      else perkStatus.textContent = `NOWA KAPSUŁA ZA ${Math.ceil(state.perkDrop.spawnTimer)} s • SPRAWDŹ MAPĘ`;
+    }
     const banner = document.getElementById('pvp-status-banner');
     if (banner) {
       if (state.status === 'countdown') {

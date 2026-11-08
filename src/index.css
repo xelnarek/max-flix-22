@@ -6603,3 +6603,73 @@ button {
   .pvp-center-box { min-width: 64px; padding: 0 3px; }
   .pvp-round-text { font-size: 10px; }
 }
+
+
+/* PvP twin-stick clarity and field-perk feedback. */
+body #touch-controls.manual-aim-mode:not(.hidden) .pvp-aim-zone {
+  display: block !important; top: 46% !important; left: 51% !important; right: 0 !important; bottom: 108px !important;
+  z-index: 120 !important; background: transparent !important;
+}
+body #touch-controls.manual-aim-mode:not(.hidden) .pvp-aim-base {
+  position: fixed !important; left: auto !important; top: auto !important;
+  right: max(18px, env(safe-area-inset-right)) !important;
+  bottom: max(112px, calc(env(safe-area-inset-bottom) + 112px)) !important;
+  width: clamp(112px, 30vw, 140px) !important; height: clamp(112px, 30vw, 140px) !important;
+  transform: none !important; opacity: .82 !important; border: 2px solid rgba(103,232,249,.96) !important;
+  background: radial-gradient(circle at 50% 50%, rgba(6,54,72,.40), rgba(3,15,28,.22) 72%) !important;
+  box-shadow: 0 0 28px rgba(34,211,238,.24), inset 0 0 22px rgba(255,255,255,.08) !important; pointer-events: none !important;
+}
+body #touch-controls.manual-aim-mode:not(.hidden) .pvp-aim-base::after {
+  content: "◉"; position: absolute; inset: 0; display: grid; place-items: center;
+  color: rgba(207,250,254,.2); font-size: 36px; pointer-events: none;
+}
+.pvp-aim-center-label {
+  position: absolute; z-index: 4; left: 50%; top: 50%; transform: translate(-50%,-50%);
+  color: rgba(224,242,254,.92); font: 1000 13px/1 system-ui,sans-serif; letter-spacing: .14em;
+  text-shadow: 0 2px 5px #020617; pointer-events: none;
+}
+.pvp-aim-base.active .pvp-aim-center-label { opacity: .24; }
+.pvp-stick-caption {
+  position: absolute; z-index: 5; bottom: 8px; color: rgba(255,255,255,.9);
+  font: 900 9px/1 system-ui,sans-serif; letter-spacing: .12em;
+  text-shadow: 0 2px 5px #020617, 0 0 7px rgba(0,0,0,.9); pointer-events: none;
+}
+body #touch-controls.manual-aim-mode:not(.hidden) .pvp-aim-caption {
+  position: fixed !important; right: max(48px, env(safe-area-inset-right)) !important;
+  bottom: max(94px, calc(env(safe-area-inset-bottom) + 94px)) !important;
+}
+body #touch-controls.manual-aim-mode:not(.hidden) .pvp-move-caption {
+  position: fixed !important; left: 48px !important;
+  bottom: max(88px, calc(env(safe-area-inset-bottom) + 88px)) !important;
+}
+.pvp-control-guide {
+  position: fixed; left: 50%; top: max(90px, calc(env(safe-area-inset-top) + 84px)); z-index: 122;
+  transform: translateX(-50%); display: flex; align-items: center; justify-content: center; gap: 8px;
+  max-width: calc(100vw - 16px); padding: 6px 10px; border: 1px solid rgba(148,163,184,.24);
+  border-radius: 999px; color: #dbeafe; background: rgba(2,8,20,.76);
+  -webkit-backdrop-filter: blur(9px); backdrop-filter: blur(9px);
+  font: 800 8px/1 system-ui,sans-serif; letter-spacing: .04em; white-space: nowrap; pointer-events: none;
+}
+.pvp-control-guide i { width: 3px; height: 3px; border-radius: 50%; background: #fbbf24; flex: 0 0 3px; }
+.pvp-perk-status {
+  position: absolute; top: calc(100% + 5px); left: 50%; transform: translateX(-50%);
+  min-width: min(82vw, 260px); padding: 5px 10px; border: 1px solid rgba(250,204,21,.28);
+  border-radius: 999px; background: rgba(8,15,28,.88); color: #fde68a; text-align: center;
+  font: 900 8px/1.25 system-ui,sans-serif; letter-spacing: .08em; box-shadow: 0 5px 16px rgba(0,0,0,.26); pointer-events: none;
+}
+@media (max-width: 390px) {
+  body #touch-controls.manual-aim-mode:not(.hidden) .touch-actions-zone {
+    flex-wrap: nowrap !important; max-width: min(82vw, 284px) !important; width: auto !important; gap: 5px !important;
+    right: max(7px, env(safe-area-inset-right)) !important; bottom: max(12px, calc(env(safe-area-inset-bottom) + 8px)) !important;
+  }
+  body #touch-controls.manual-aim-mode:not(.hidden) .pvp-aim-base {
+    width: 108px !important; height: 108px !important; right: 12px !important;
+    bottom: max(110px, calc(env(safe-area-inset-bottom) + 110px)) !important;
+  }
+  body #touch-controls.manual-aim-mode:not(.hidden) .pvp-aim-caption { right: 28px !important; }
+  .pvp-control-guide { gap: 5px; padding: 5px 7px; font-size: 7px; }
+}
+@media (max-width: 340px) {
+  body #touch-controls.manual-aim-mode:not(.hidden) .pvp-aim-base { width: 98px !important; height: 98px !important; }
+  .pvp-control-guide { display: none; }
+}

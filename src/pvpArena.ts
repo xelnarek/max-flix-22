@@ -25,6 +25,9 @@ export interface PvpPickup {
   respawnTimer: number;
 }
 
+export type PvpPerkType = 'power' | 'sprint' | 'shield' | 'rapid';
+export interface PvpPerkDrop { active: boolean; type: PvpPerkType; x: number; z: number; timeLeft: number; spawnTimer: number; }
+
 export interface PvpProjectile {
   id: string;
   ownerSlot: 'p1' | 'p2';
@@ -81,6 +84,8 @@ export interface PvpPlayerState extends PvpCombatStats {
   aimAngle: number;
   isFiring: boolean;
   stunTimer: number;
+  activePerk: PvpPerkType | null;
+  perkTimer: number;
 }
 
 export type PvpMatchStatus = 'waiting' | 'ready' | 'countdown' | 'in_round' | 'round_end' | 'match_end';
@@ -114,6 +119,7 @@ export interface PvpArenaState {
   p2: PvpPlayerState;
   obstacles: PvpObstacle[];
   pickup: PvpPickup;
+  perkDrop: PvpPerkDrop;
   projectiles: PvpProjectile[];
   hitEventSequence: number;
   hitEvents: PvpHitEvent[];
@@ -358,9 +364,9 @@ export interface OperatorPvpProfile {
 export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
   marcin: {
     name: 'Audytor Marcin',
-    projectileSpeed: 26,
-    projectileDamage: 85,
-    attackCooldown: 0.28,
+    projectileSpeed: 18,
+    projectileDamage: 100,
+    attackCooldown: 0.62,
     projectileRadius: 0.28,
     color: 0x3b82f6,
     abilityName: 'Pieczęć WZ (Tarcza BHP)',
@@ -368,9 +374,9 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
   },
   grzesiek: {
     name: 'Grzesiek Monter',
-    projectileSpeed: 19,
-    projectileDamage: 135,
-    attackCooldown: 0.48,
+    projectileSpeed: 15,
+    projectileDamage: 150,
+    attackCooldown: 0.78,
     projectileRadius: 0.42,
     color: 0xf59e0b,
     abilityName: 'Szarża Paleciaka',
@@ -378,9 +384,9 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
   },
   dawid: {
     name: 'Dawid Handlowiec',
-    projectileSpeed: 30,
-    projectileDamage: 65,
-    attackCooldown: 0.22,
+    projectileSpeed: 21,
+    projectileDamage: 78,
+    attackCooldown: 0.56,
     projectileRadius: 0.22,
     color: 0x10b981,
     abilityName: 'Laserowy Protokół Strat',
@@ -388,9 +394,9 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
   },
   mateusz: {
     name: 'Mateusz Kierownik',
-    projectileSpeed: 21,
-    projectileDamage: 115,
-    attackCooldown: 0.38,
+    projectileSpeed: 17,
+    projectileDamage: 125,
+    attackCooldown: 0.70,
     projectileRadius: 0.35,
     color: 0xef4444,
     abilityName: 'Hydrauliczne Przełamanie',
@@ -398,9 +404,9 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
   },
   piotr: {
     name: 'Piotr Serwisant',
-    projectileSpeed: 24,
-    projectileDamage: 95,
-    attackCooldown: 0.32,
+    projectileSpeed: 18,
+    projectileDamage: 105,
+    attackCooldown: 0.66,
     projectileRadius: 0.32,
     color: 0x8b5cf6,
     abilityName: 'Impuls Zwarcia B4',
@@ -456,6 +462,8 @@ export function createInitialPvpPlayer(slot: 'p1' | 'p2', operatorId: CharacterI
     aimAngle: spawn.rot,
     isFiring: false,
     stunTimer: 0,
+    activePerk: null,
+    perkTimer: 0,
     damageDealt: 0,
     damageTaken: 0,
     primaryDamageDealt: 0,
@@ -506,6 +514,7 @@ export function createInitialPvpArenaState(
       respawnTimeSeconds: 14.0,
       respawnTimer: 0,
     },
+    perkDrop: { active: false, type: 'power', x: -5, z: -9, timeLeft: 0, spawnTimer: 5.5 },
     projectiles: [],
     hitEventSequence: 0,
     hitEvents: [],
@@ -527,6 +536,8 @@ export function resetPvpRound(state: PvpArenaState) {
   state.p1.abilityCooldownTimer = 0;
   state.p1.stunTimer = 0;
   state.p1.isFiring = false;
+  state.p1.activePerk = null;
+  state.p1.perkTimer = 0;
 
   state.p2.x = PVP_SPAWN_P2.x;
   state.p2.y = PVP_SPAWN_P2.y;
@@ -542,10 +553,15 @@ export function resetPvpRound(state: PvpArenaState) {
   state.p2.abilityCooldownTimer = 0;
   state.p2.stunTimer = 0;
   state.p2.isFiring = false;
+  state.p2.activePerk = null;
+  state.p2.perkTimer = 0;
 
   state.projectiles = [];
   state.pickup.active = true;
   state.pickup.respawnTimer = 0;
+  state.perkDrop.active = false;
+  state.perkDrop.timeLeft = 0;
+  state.perkDrop.spawnTimer = 5.5;
   state.roundWinner = null;
   state.roundEndTimer = 0;
   state.lastHitEvent = undefined;
@@ -660,6 +676,7 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
     return;
   }
   separatePvpPlayers(state);
+  updatePvpPerkDrop(state, safeDt);
 
   // One fair medkit claim per spawn: nearest eligible player wins. Exact ties
   // alternate by round, so P1 never receives a permanent update-order advantage.
@@ -791,6 +808,11 @@ function stepPlayer(player: PvpPlayerState, input: PvpInputIntent | undefined, s
   if (player.dashCooldownTimer > 0) player.dashCooldownTimer = Math.max(0, player.dashCooldownTimer - dt);
   if (player.attackCooldownTimer > 0) player.attackCooldownTimer = Math.max(0, player.attackCooldownTimer - dt);
   if (player.abilityCooldownTimer > 0) player.abilityCooldownTimer = Math.max(0, player.abilityCooldownTimer - dt);
+  if (player.perkTimer > 0) {
+    player.perkTimer = Math.max(0, player.perkTimer - dt);
+    if (player.perkTimer <= 0 && player.activePerk !== 'shield') player.activePerk = null;
+  }
+  if (player.activePerk === 'shield' && player.shieldHp <= 0) player.activePerk = null;
 
   // Stun handling
   if (player.stunTimer > 0) {
@@ -811,8 +833,9 @@ function stepPlayer(player: PvpPlayerState, input: PvpInputIntent | undefined, s
   const safeInput = sanitizePvpInputIntent(input);
 
   // Aim update
-  player.aimAngle = safeInput.aimAngle;
-  player.rot = safeInput.aimAngle;
+  const opponentForAim = player.slot === 'p1' ? state.p2 : state.p1;
+  player.aimAngle = getPvpAimAssistAngle(safeInput.aimAngle, player, opponentForAim, state.obstacles);
+  player.rot = player.aimAngle;
   player.isFiring = safeInput.isFiring;
 
   // Dash initiation
@@ -830,6 +853,7 @@ function stepPlayer(player: PvpPlayerState, input: PvpInputIntent | undefined, s
 
   // Movement
   let speed = player.isDashing ? PVP_DASH_SPEED : PVP_BASE_SPEED;
+  if (player.activePerk === 'sprint' && player.perkTimer > 0) speed *= 1.18;
   let moveDirX = safeInput.moveX;
   let moveDirZ = safeInput.moveZ;
   const moveLen = Math.hypot(moveDirX, moveDirZ);
@@ -884,9 +908,60 @@ function stepPlayer(player: PvpPlayerState, input: PvpInputIntent | undefined, s
   }
 }
 
+
+/** Limited correction in a narrow cone; the player still chooses direction and fires manually. */
+export function getPvpAimAssistAngle(angle: number, source: PvpPlayerState, target: PvpPlayerState, obstacles: PvpObstacle[]): number {
+  const safeAngle = Number.isFinite(angle) ? Math.atan2(Math.sin(angle), Math.cos(angle)) : source.aimAngle;
+  const distance = Math.hypot(target.x - source.x, target.z - source.z);
+  if (distance < 0.5 || distance > 30 || !hasPvpLineOfSight(source, target, obstacles)) return safeAngle;
+  const targetAngle = Math.atan2(target.x - source.x, target.z - source.z);
+  const delta = Math.atan2(Math.sin(targetAngle - safeAngle), Math.cos(targetAngle - safeAngle));
+  if (Math.abs(delta) > 10 * Math.PI / 180) return safeAngle;
+  const strength = 0.48 * (1 - Math.max(0, Math.min(0.65, distance / 36)));
+  const corrected = safeAngle + delta * strength;
+  return Math.atan2(Math.sin(corrected), Math.cos(corrected));
+}
+
+function updatePvpPerkDrop(state: PvpArenaState, dt: number): void {
+  const drop = state.perkDrop;
+  if (drop.active) {
+    drop.timeLeft = Math.max(0, drop.timeLeft - dt);
+    const radius = PVP_PLAYER_RADIUS + 0.62;
+    const contenders = ([state.p1, state.p2] as const)
+      .map((player) => ({ player, distance: Math.hypot(player.x - drop.x, player.z - drop.z) }))
+      .filter(({ player, distance }) => player.hp > 0 && distance <= radius)
+      .sort((a, b) => a.distance - b.distance ||
+        (state.round % 2 === 1 ? (a.player.slot === 'p1' ? -1 : 1) : (a.player.slot === 'p2' ? -1 : 1)));
+    const winner = contenders[0]?.player;
+    if (winner) {
+      winner.activePerk = drop.type;
+      winner.perkTimer = 8;
+      if (drop.type === 'shield') winner.shieldHp = Math.min(250, winner.shieldHp + 165);
+      drop.active = false;
+      drop.timeLeft = 0;
+      drop.spawnTimer = 12;
+    } else if (drop.timeLeft <= 0) {
+      drop.active = false;
+      drop.spawnTimer = 5;
+    }
+    return;
+  }
+  drop.spawnTimer = Math.max(0, drop.spawnTimer - dt);
+  if (drop.spawnTimer > 0) return;
+  const locations = [{ x: -5, z: -9 }, { x: 5, z: -9 }, { x: -5, z: 9 }, { x: 5, z: 9 }];
+  const types: PvpPerkType[] = ['power', 'sprint', 'shield', 'rapid'];
+  drop.type = types[Math.floor(Math.random() * types.length)]!;
+  const location = locations[Math.floor(Math.random() * locations.length)]!;
+  drop.x = location.x;
+  drop.z = location.z;
+  drop.active = true;
+  drop.timeLeft = 11;
+}
+
 function firePlayerPrimary(player: PvpPlayerState, state: PvpArenaState) {
   const profile = PVP_OPERATOR_PROFILES[player.operatorId] || PVP_OPERATOR_PROFILES.marcin;
-  player.attackCooldownTimer = profile.attackCooldown;
+  const rapidMultiplier = player.activePerk === 'rapid' && player.perkTimer > 0 ? 0.78 : 1;
+  player.attackCooldownTimer = profile.attackCooldown * rapidMultiplier;
   player.shotsFired++;
 
   const angle = player.aimAngle;
@@ -906,8 +981,8 @@ function firePlayerPrimary(player: PvpPlayerState, state: PvpArenaState) {
     vx: dirX * profile.projectileSpeed,
     vz: dirZ * profile.projectileSpeed,
     radius: profile.projectileRadius,
-    damage: profile.projectileDamage,
-    life: 2.2,
+    damage: profile.projectileDamage * (player.activePerk === 'power' && player.perkTimer > 0 ? 1.22 : 1),
+    life: 3.0,
     pierce: 1,
     color: profile.color,
     kind: 'primary',
@@ -964,8 +1039,8 @@ function triggerPlayerAbility(player: PvpPlayerState, state: PvpArenaState) {
           x: player.x + Math.sin(currentAngle) * (PVP_PLAYER_RADIUS + 0.2),
           y: 0.6,
           z: player.z + Math.cos(currentAngle) * (PVP_PLAYER_RADIUS + 0.2),
-          vx: Math.sin(currentAngle) * 32,
-          vz: Math.cos(currentAngle) * 32,
+          vx: Math.sin(currentAngle) * 22,
+          vz: Math.cos(currentAngle) * 22,
           radius: 0.28,
           damage: 70,
           life: 1.8,

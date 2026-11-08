@@ -650,6 +650,51 @@ test('starting a rematch resets every match-wide statistic and its published sna
 });
 
 
+
+test('PvP soft aim assist helps near alignment but never locks through cover', async () => {
+  const { getPvpAimAssistAngle, createInitialPvpArenaState } = await import('../src/pvpArena.ts');
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  state.obstacles = [];
+  state.p1.x = -5; state.p1.z = 0; state.p2.x = 5; state.p2.z = 0;
+  const near = Math.PI / 2 - 0.12;
+  const assisted = getPvpAimAssistAngle(near, state.p1, state.p2, state.obstacles);
+  assert.ok(Math.abs(assisted - Math.PI / 2) < Math.abs(near - Math.PI / 2));
+  const off = Math.PI / 2 - 0.5;
+  assert.ok(Math.abs(getPvpAimAssistAngle(off, state.p1, state.p2, state.obstacles) - off) < 1e-9);
+  state.obstacles = [{ id: 'wall', x: 0, z: 0, width: 1.6, depth: 5, height: 2, type: 'barrier' }];
+  assert.ok(Math.abs(getPvpAimAssistAngle(near, state.p1, state.p2, state.obstacles) - near) < 1e-9);
+});
+
+test('PvP random perk capsule spawns and grants its effect on pickup', () => {
+  const oldRandom = Math.random;
+  Math.random = () => 0;
+  try {
+    const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+    resetPvpRound(state);
+    advanceArena(state, 3.1);
+    advanceArena(state, 5.6);
+    assert.equal(state.perkDrop.active, true);
+    state.p1.x = state.perkDrop.x; state.p1.z = state.perkDrop.z;
+    stepPvpArena(state, 0.04);
+    assert.equal(state.perkDrop.active, false);
+    assert.equal(state.p1.activePerk, 'power');
+    assert.equal(state.p1.perkTimer, 8);
+    state.obstacles = [];
+    state.p1.x = -5; state.p1.z = 0; state.p2.x = 5; state.p2.z = 0;
+    stepPvpArena(state, 0.04, { moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantFire: true });
+    assert.ok(state.projectiles.some(projectile => projectile.damage > 100));
+  } finally { Math.random = oldRandom; }
+});
+
+test('PvP weapon cooldowns and projectile speeds now create deliberate, readable fire rhythm', async () => {
+  const { getPvpOperatorAttackCooldown, PVP_OPERATOR_PROFILES } = await import('../src/pvpArena.ts');
+  for (const id of ['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr']) {
+    assert.ok(getPvpOperatorAttackCooldown(id) >= 0.55);
+    assert.ok(PVP_OPERATOR_PROFILES[id].projectileSpeed <= 22);
+  }
+  assert.equal(new Set(Object.values(PVP_OPERATOR_PROFILES).map(profile => profile.attackCooldown)).size, 5);
+});
+
 test('one-shot fire intent shoots once, respects operator recovery, and can be tapped again', () => {
   const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
   resetPvpRound(state);

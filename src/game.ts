@@ -534,6 +534,12 @@ export class PaleciakiGameEngine {
   private prevPvpLocalHp = -1;
   private pvpObstacleMeshes: THREE.Object3D[] = [];
   private pvpMedkitMesh: THREE.Group | null = null;
+  private pvpPerkMesh: THREE.Group | null = null;
+  private pvpPerkGem: THREE.Mesh | null = null;
+  private pvpPerkLastActive = false;
+  private pvpAimGuide: THREE.Line | null = null;
+  private pvpAimTarget: THREE.Mesh | null = null;
+  private pvpLocalMarker: THREE.Group | null = null;
   private pvpProjectileMeshes = new Map<string, THREE.Mesh>();
   private pvpArenaRoot: THREE.Group | null = null;
   private pvpWantFire = false;
@@ -1772,6 +1778,7 @@ export class PaleciakiGameEngine {
 
     this.rebuildPlayerMesh();
     this.buildPvpArena();
+    this.buildPvpLocalMarker();
     this.buildRemotePlayer(remoteOperatorId);
 
     const spawn = this.pvpSlot === 'p1' ? PVP_SPAWN_P1 : PVP_SPAWN_P2;
@@ -1785,8 +1792,7 @@ export class PaleciakiGameEngine {
 
     this.cameraMode = 'iso';
     this.hasManualCameraZoom = false;
-    this.camera.position.set(0, 24, 18);
-    this.camera.lookAt(0, 0.5, 0);
+    this.applyPvpCameraFraming(0, 0, true);
 
     this.callbacks.onHpUpdate(this.hp, this.maxHp);
     this.callbacks.onAbilityCooldown(1, true, 0, false);
@@ -1848,6 +1854,16 @@ export class PaleciakiGameEngine {
       this.levelRoot.remove(this.remotePlayerGroup);
       this.remotePlayerGroup = null;
     }
+    if (this.pvpLocalMarker && this.playerGroup) this.playerGroup.remove(this.pvpLocalMarker);
+    this.pvpLocalMarker = null;
+    this.pvpPerkMesh = null;
+    this.pvpPerkGem = null;
+    this.pvpAimGuide?.geometry.dispose();
+    (this.pvpAimGuide?.material as THREE.Material | undefined)?.dispose();
+    this.pvpAimGuide = null;
+    this.pvpAimTarget?.geometry.dispose();
+    (this.pvpAimTarget?.material as THREE.Material | undefined)?.dispose();
+    this.pvpAimTarget = null;
     this.pvpProjectileMeshes.forEach((mesh) => {
       this.levelRoot.remove(mesh);
       mesh.traverse((object) => {
@@ -1990,6 +2006,43 @@ export class PaleciakiGameEngine {
     this.levelRoot.add(this.remotePlayerGroup);
   }
 
+
+  private buildPvpLocalMarker() {
+    if (!this.playerGroup) return;
+    const color = this.pvpSlot === 'p1' ? 0x38bdf8 : 0xf59e0b;
+    const marker = new THREE.Group();
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.92, 1.08, 36), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.96, side: THREE.DoubleSide, depthWrite: false }));
+    ring.rotation.x = -Math.PI / 2; ring.position.y = -0.44; ring.renderOrder = 12;
+    const center = new THREE.Mesh(new THREE.CircleGeometry(0.18, 20), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false }));
+    center.rotation.x = -Math.PI / 2; center.position.y = -0.43;
+    const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.48, 4), new THREE.MeshBasicMaterial({ color, depthTest: false, transparent: true, opacity: 0.98 }));
+    arrow.position.set(0, 3.15, 0); arrow.renderOrder = 30;
+    marker.add(ring, center, arrow);
+    marker.traverse((object) => { if (object instanceof THREE.Mesh) { object.frustumCulled = false; object.material.depthWrite = false; } });
+    this.playerGroup.add(marker); this.pvpLocalMarker = marker;
+  }
+
+  private applyPvpCameraFraming(midX: number, midZ: number, immediate = false) {
+    const aspect = Math.max(0.35, window.innerWidth / Math.max(1, window.innerHeight));
+    const portrait = aspect < 0.86;
+    const targetPosition = portrait
+      ? new THREE.Vector3(midX + 36.5, 27.5, midZ * 0.06)
+      : new THREE.Vector3(midX * 0.28, 24.0, midZ + 19.0);
+    const targetLook = portrait
+      ? new THREE.Vector3(midX * 0.06, 0.5, midZ * 0.06)
+      : new THREE.Vector3(midX * 0.28, 0.5, midZ * 0.28);
+    if (this.camera instanceof THREE.PerspectiveCamera) {
+      const targetFov = portrait ? 72 : 58;
+      if (Math.abs(this.camera.fov - targetFov) > 0.2) {
+        this.camera.fov = immediate ? targetFov : THREE.MathUtils.damp(this.camera.fov, targetFov, 5.5, 1 / 30);
+        this.camera.updateProjectionMatrix();
+      }
+    }
+    if (immediate) { this.camera.position.copy(targetPosition); this.currentLookAt.copy(targetLook); }
+    else { this.camera.position.lerp(targetPosition, 0.18); this.currentLookAt.lerp(targetLook, 0.18); }
+    this.camera.lookAt(this.currentLookAt);
+  }
+
   private buildPvpArena() {
     if (this.pvpArenaRoot) {
       this.levelRoot.remove(this.pvpArenaRoot);
@@ -2034,6 +2087,15 @@ export class PaleciakiGameEngine {
     centerLine.position.set(0, 0.02, 0);
 
     this.pvpArenaRoot.add(bTop, bBottom, bLeft, bRight, centerLine);
+    const laneMat = new THREE.MeshBasicMaterial({ color: 0x64748b, transparent: true, opacity: 0.18, depthWrite: false });
+    for (let x = -18; x <= 18; x += 6) {
+      const lane = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.018, depth - 2.2), laneMat);
+      lane.position.set(x, 0.025, 0); this.pvpArenaRoot.add(lane);
+    }
+    for (let z = -9; z <= 9; z += 3) {
+      const lane = new THREE.Mesh(new THREE.BoxGeometry(width - 2.2, 0.018, 0.055), laneMat);
+      lane.position.set(0, 0.026, z); this.pvpArenaRoot.add(lane);
+    }
 
     const ringGeo = new THREE.RingGeometry(1.6, 1.9, 32);
     ringGeo.rotateX(-Math.PI / 2);
@@ -2117,6 +2179,24 @@ export class PaleciakiGameEngine {
     medGroup.add(crate, crossH, crossV, medBeacon);
     this.pvpMedkitMesh = medGroup;
     this.pvpArenaRoot.add(medGroup);
+
+    const perkGroup = new THREE.Group();
+    const perkBase = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.075, 8, 28), new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.92, depthWrite: false }));
+    perkBase.rotation.x = -Math.PI / 2; perkBase.position.y = 0.08;
+    const perkGem = new THREE.Mesh(new THREE.OctahedronGeometry(0.62, 0), new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0x6b3f00, emissiveIntensity: 0.9, metalness: 0.25, roughness: 0.25 }));
+    perkGem.position.y = 1.0;
+    const perkBeacon = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.12, 1.9, 8, 1, true), new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false }));
+    perkBeacon.position.y = 1.55;
+    const perkLight = new THREE.PointLight(0xfacc15, 4, 7); perkLight.position.y = 1.3;
+    perkGroup.add(perkBase, perkGem, perkBeacon, perkLight); perkGroup.visible = false;
+    this.pvpPerkMesh = perkGroup; this.pvpPerkGem = perkGem; this.pvpArenaRoot.add(perkGroup);
+    const aimGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 0.055, 7.5)]);
+    const aimColor = this.pvpSlot === 'p1' ? 0x60a5fa : 0xfbbf24;
+    this.pvpAimGuide = new THREE.Line(aimGeometry, new THREE.LineBasicMaterial({ color: aimColor, transparent: true, opacity: 0.82, depthWrite: false }));
+    this.pvpAimGuide.renderOrder = 6; this.pvpArenaRoot.add(this.pvpAimGuide);
+    const aimRingGeo = new THREE.RingGeometry(0.42, 0.57, 24); aimRingGeo.rotateX(-Math.PI / 2);
+    this.pvpAimTarget = new THREE.Mesh(aimRingGeo, new THREE.MeshBasicMaterial({ color: aimColor, transparent: true, opacity: 0.88, side: THREE.DoubleSide, depthWrite: false }));
+    this.pvpAimTarget.position.y = 0.055; this.pvpAimTarget.renderOrder = 7; this.pvpArenaRoot.add(this.pvpAimTarget);
 
     this.levelRoot.add(this.pvpArenaRoot);
   }
@@ -2280,6 +2360,16 @@ export class PaleciakiGameEngine {
       }
     }
 
+    if (this.pvpAimGuide && this.pvpAimTarget) {
+      const aimX = Math.sin(local.rot), aimZ = Math.cos(local.rot);
+      const start = new THREE.Vector3(local.x, 0.055, local.z);
+      const end = new THREE.Vector3(local.x + aimX * 7.5, 0.055, local.z + aimZ * 7.5);
+      this.pvpAimGuide.geometry.setFromPoints([start, end]);
+      this.pvpAimTarget.position.set(end.x, 0.055, end.z);
+      this.pvpAimGuide.visible = state.status === 'in_round';
+      this.pvpAimTarget.visible = state.status === 'in_round';
+    }
+
     const activeIds = new Set<string>();
     for (const proj of state.projectiles) {
       activeIds.add(proj.id);
@@ -2330,6 +2420,23 @@ export class PaleciakiGameEngine {
       }
     }
 
+    if (this.pvpPerkMesh) {
+      const perk = state.perkDrop;
+      if (this.pvpPerkMesh.visible && !perk.active && this.pvpPerkLastActive) { this.spawnParticleRing(perk.x, 0.5, perk.z, 0xfacc15); sound.playPickup(); }
+      this.pvpPerkLastActive = perk.active;
+      this.pvpPerkMesh.visible = perk.active;
+      if (perk.active) {
+        this.pvpPerkMesh.position.set(perk.x, 0, perk.z); this.pvpPerkMesh.rotation.y += dt * 1.45;
+        const colors: Record<string, number> = { power: 0xef4444, sprint: 0x38bdf8, shield: 0x22c55e, rapid: 0xa78bfa };
+        const color = colors[perk.type] || 0xfacc15;
+        if (this.pvpPerkGem?.material instanceof THREE.MeshStandardMaterial) { this.pvpPerkGem.material.color.setHex(color); this.pvpPerkGem.material.emissive.setHex(color); }
+        const beacon = this.pvpPerkMesh.children[2] as THREE.Mesh | undefined;
+        if (beacon?.material instanceof THREE.MeshBasicMaterial) beacon.material.color.setHex(color);
+        const base = this.pvpPerkMesh.children[0] as THREE.Mesh | undefined;
+        if (base?.material instanceof THREE.MeshBasicMaterial) base.material.color.setHex(color);
+        if (this.pvpPerkGem) this.pvpPerkGem.position.y = 0.94 + Math.sin(performance.now() * 0.003) * 0.13;
+      }
+    }
     if (this.pvpMedkitMesh) {
       if (this.pvpMedkitMesh.visible && !state.pickup.active) {
         sound.playPickup();
@@ -2368,17 +2475,7 @@ export class PaleciakiGameEngine {
 
     const midX = (local.x + remote.x) * 0.5;
     const midZ = (local.z + remote.z) * 0.5;
-    const targetCamX = midX * 0.45;
-    const targetCamZ = midZ * 0.45 + 19.0;
-    const targetCamY = 24.0;
-
-    this.camera.position.x = THREE.MathUtils.lerp(this.camera.position.x, targetCamX, Math.min(1, dt * 5.0));
-    this.camera.position.y = THREE.MathUtils.lerp(this.camera.position.y, targetCamY, Math.min(1, dt * 5.0));
-    this.camera.position.z = THREE.MathUtils.lerp(this.camera.position.z, targetCamZ, Math.min(1, dt * 5.0));
-    this.currentLookAt.x = THREE.MathUtils.lerp(this.currentLookAt.x, midX * 0.45, Math.min(1, dt * 5.0));
-    this.currentLookAt.y = THREE.MathUtils.lerp(this.currentLookAt.y, 0.5, Math.min(1, dt * 5.0));
-    this.currentLookAt.z = THREE.MathUtils.lerp(this.currentLookAt.z, midZ * 0.45, Math.min(1, dt * 5.0));
-    this.camera.lookAt(this.currentLookAt);
+    this.applyPvpCameraFraming(midX, midZ);
 
     this.callbacks.onPvpUpdate?.(state, this.pvpSlot);
 
