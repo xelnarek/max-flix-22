@@ -30,7 +30,7 @@ test('server stores only hashed capabilities and rotates them after a successful
 });
 
 test('network interruptions freeze the live simulation and only forfeit after the grace period', () => {
-  assert.match(server, /if \(\(room\.state\.status === 'in_round' \|\| room\.state\.status === 'countdown'\) && !intentionalLeave\) \{\s*\/\/ Freeze the authoritative simulation/);
+  assert.match(server, /if \(isLiveMatch && !intentionalLeave\) \{\s*\/\/ Freeze the authoritative simulation/);
   assert.match(server, /const graceMs = intentionalLeave \? 0 : getPvpReconnectGraceMs\(\)/);
   assert.match(server, /room\.state\.matchWinner = other/);
 });
