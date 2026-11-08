@@ -468,6 +468,7 @@ const escapeLeaderboardText = (value: string): string => value.replace(/[&<>"']/
 });
 class PaleciakiScene extends xb.Script {
   private engine!: PaleciakiGameEngine;
+  private pvpFireCooldownMultiplier = 1;
   private cinematicIntro: CinematicIntroManager | null = null;
   private selectedCharId: CharacterId = 'marcin';
   private lastScore: number = 0;
@@ -3048,7 +3049,6 @@ class PaleciakiScene extends xb.Script {
     const pvpFireLabel = pvpFireButton?.querySelector<HTMLElement>('.pvp-fire-label') || null;
     const pvpFireState = pvpFireButton?.querySelector<HTMLElement>('.pvp-fire-state') || null;
     let pvpFireCooldownFrame = 0;
-    let pvpFireCooldownMultiplier = 1;
     const resetPvpFireButton = () => {
       if (pvpFireCooldownFrame) cancelAnimationFrame(pvpFireCooldownFrame);
       pvpFireCooldownFrame = 0;
@@ -3062,7 +3062,7 @@ class PaleciakiScene extends xb.Script {
     const startPvpFireCooldown = (cooldownSeconds: number) => {
       if (!pvpFireButton) return;
       if (pvpFireCooldownFrame) cancelAnimationFrame(pvpFireCooldownFrame);
-      const durationMs = Math.max(120, (cooldownSeconds * pvpFireCooldownMultiplier + 0.075) * 1000);
+      const durationMs = Math.max(120, (cooldownSeconds * this.pvpFireCooldownMultiplier + 0.075) * 1000);
       const startedAt = performance.now();
       pvpFireButton.disabled = true;
       pvpFireButton.classList.add('is-reloading');
@@ -3616,7 +3616,7 @@ class PaleciakiScene extends xb.Script {
 
     const perkStatus = document.getElementById('pvp-perk-status');
     const localPerkPlayer = localSlot === 'p1' ? state.p1 : state.p2;
-    pvpFireCooldownMultiplier = localPerkPlayer.activePerk === 'rapid' && localPerkPlayer.perkTimer > 0 ? 0.78 : 1;
+    this.pvpFireCooldownMultiplier = localPerkPlayer.activePerk === 'rapid' && localPerkPlayer.perkTimer > 0 ? 0.78 : 1;
     if (perkStatus) {
       const perkNames: Record<string, string> = { power: 'MOC +22% OBRAŻEŃ', sprint: 'SPRINT +18% RUCHU', shield: 'TARCZA +165 HP', rapid: 'SZYBSZE ŁADOWANIE' };
       const localPlayer = localSlot === 'p1' ? state.p1 : state.p2;
