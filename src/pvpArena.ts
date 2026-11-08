@@ -45,6 +45,39 @@ export interface PvpProjectile {
   kind?: 'primary' | 'ability';
 }
 
+export interface PvpProgressionBonuses {
+  damageMultiplier: number;
+  damageTakenMultiplier: number;
+  speedMultiplier: number;
+  cooldownMultiplier: number;
+}
+
+export const NEUTRAL_PVP_PROGRESSION_BONUSES: Readonly<PvpProgressionBonuses> = Object.freeze({
+  damageMultiplier: 1,
+  damageTakenMultiplier: 1,
+  speedMultiplier: 1,
+  cooldownMultiplier: 1,
+});
+
+/** Bound untrusted room payloads to the small progression envelope used by both clients. */
+export function sanitizePvpProgressionBonuses(value: unknown): PvpProgressionBonuses {
+  const raw = value && typeof value === 'object' ? value as Partial<PvpProgressionBonuses> : {};
+  const read = (value: unknown, fallback: number, min: number, max: number) =>
+    typeof value === 'number' && Number.isFinite(value)
+      ? Math.max(min, Math.min(max, value))
+      : fallback;
+  return {
+    damageMultiplier: read(raw.damageMultiplier, 1, 1, 1.08),
+    damageTakenMultiplier: read(raw.damageTakenMultiplier, 1, 0.90, 1),
+    speedMultiplier: read(raw.speedMultiplier, 1, 1, 1.06),
+    cooldownMultiplier: read(raw.cooldownMultiplier, 1, 0.90, 1),
+  };
+}
+
+function getPlayerProgressionBonuses(player: PvpPlayerState): PvpProgressionBonuses {
+  return sanitizePvpProgressionBonuses(player.progressionBonuses);
+}
+
 export type PvpSlot = 'p1' | 'p2';
 
 export interface PvpCombatStats {
@@ -64,6 +97,7 @@ export interface PvpCombatStats {
 export interface PvpPlayerState extends PvpCombatStats {
   slot: PvpSlot;
   operatorId: CharacterId;
+  progressionBonuses: PvpProgressionBonuses;
   name: string;
   nickname: string;
   x: number;
@@ -271,7 +305,10 @@ function applyPvpAbilityDamage(
   requestedDamage: number,
   stunSeconds = 0,
 ): number {
-  const safeDamage = Number.isFinite(requestedDamage) ? Math.max(0, requestedDamage) : 0;
+  const requested = Number.isFinite(requestedDamage) ? Math.max(0, requestedDamage) : 0;
+  const sourceBonuses = getPlayerProgressionBonuses(source);
+  const targetBonuses = getPlayerProgressionBonuses(target);
+  const safeDamage = requested * sourceBonuses.damageMultiplier * targetBonuses.damageTakenMultiplier;
   const actualDamage = Math.min(safeDamage, Math.max(0, target.hp) + Math.max(0, target.shieldHp));
   if (actualDamage <= 0) return 0;
 
@@ -439,11 +476,17 @@ export function createDefaultPvpObstacles(): PvpObstacle[] {
   ];
 }
 
-export function createInitialPvpPlayer(slot: 'p1' | 'p2', operatorId: CharacterId, name: string): PvpPlayerState {
+export function createInitialPvpPlayer(
+  slot: 'p1' | 'p2',
+  operatorId: CharacterId,
+  name: string,
+  progressionBonuses: unknown = NEUTRAL_PVP_PROGRESSION_BONUSES,
+): PvpPlayerState {
   const spawn = slot === 'p1' ? PVP_SPAWN_P1 : PVP_SPAWN_P2;
   return {
     slot,
     operatorId,
+    progressionBonuses: sanitizePvpProgressionBonuses(progressionBonuses),
     name,
     nickname: name,
     x: spawn.x,
@@ -484,10 +527,12 @@ export function createInitialPvpArenaState(
   p1Operator: CharacterId = 'marcin',
   p1Name = 'Gracz 1',
   p2Operator: CharacterId = 'grzesiek',
-  p2Name = 'Gracz 2'
+  p2Name = 'Gracz 2',
+  p1ProgressionBonuses: unknown = NEUTRAL_PVP_PROGRESSION_BONUSES,
+  p2ProgressionBonuses: unknown = NEUTRAL_PVP_PROGRESSION_BONUSES,
 ): PvpArenaState {
-  const p1 = createInitialPvpPlayer('p1', p1Operator, p1Name);
-  const p2 = createInitialPvpPlayer('p2', p2Operator, p2Name);
+  const p1 = createInitialPvpPlayer('p1', p1Operator, p1Name, p1ProgressionBonuses);
+  const p2 = createInitialPvpPlayer('p2', p2Operator, p2Name, p2ProgressionBonuses);
   return {
     status: 'waiting',
     round: 1,
@@ -733,7 +778,9 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
     if (hitPlayer && (obstacleT === null || playerT <= obstacleT)) {
       proj.x = startX + travelX * playerT;
       proj.z = startZ + travelZ * playerT;
-      let damageRemaining = Math.max(0, Number.isFinite(proj.damage) ? proj.damage : 0);
+      let damageRemaining = Math.max(0, Number.isFinite(proj.damage) ? proj.damage : 0)
+        * getPlayerProgressionBonuses(shooterPlayer).damageMultiplier
+        * getPlayerProgressionBonuses(targetPlayer).damageTakenMultiplier;
       const actualDamage = Math.min(damageRemaining, targetPlayer.shieldHp + targetPlayer.hp);
       shooterPlayer.damageDealt += actualDamage;
       targetPlayer.damageTaken += actualDamage;
@@ -845,7 +892,7 @@ function stepPlayer(player: PvpPlayerState, input: PvpInputIntent | undefined, s
     player.dashesUsed += 1;
     player.isDashing = true;
     player.dashTimer = PVP_DASH_DURATION;
-    player.dashCooldownTimer = PVP_DASH_COOLDOWN;
+    player.dashCooldownTimer = PVP_DASH_COOLDOWN * getPlayerProgressionBonuses(player).cooldownMultiplier;
   }
 
   // Ability initiation
@@ -854,7 +901,7 @@ function stepPlayer(player: PvpPlayerState, input: PvpInputIntent | undefined, s
   }
 
   // Movement
-  let speed = player.isDashing ? PVP_DASH_SPEED : PVP_BASE_SPEED;
+  let speed = (player.isDashing ? PVP_DASH_SPEED : PVP_BASE_SPEED) * getPlayerProgressionBonuses(player).speedMultiplier;
   if (player.activePerk === 'sprint' && player.perkTimer > 0) speed *= PVP_SPRINT_SPEED_MULTIPLIER;
   let moveDirX = safeInput.moveX;
   let moveDirZ = safeInput.moveZ;
@@ -950,7 +997,8 @@ function updatePvpPerkDrop(state: PvpArenaState, dt: number): void {
 function firePlayerPrimary(player: PvpPlayerState, state: PvpArenaState) {
   const profile = PVP_OPERATOR_PROFILES[player.operatorId] || PVP_OPERATOR_PROFILES.marcin;
   const rapidMultiplier = player.activePerk === 'rapid' && player.perkTimer > 0 ? PVP_RAPID_FIRE_COOLDOWN_MULTIPLIER : 1;
-  player.attackCooldownTimer = profile.attackCooldown * rapidMultiplier;
+  const progression = getPlayerProgressionBonuses(player);
+  player.attackCooldownTimer = profile.attackCooldown * rapidMultiplier * progression.cooldownMultiplier;
   player.shotsFired++;
 
   const angle = player.aimAngle;
@@ -970,7 +1018,7 @@ function firePlayerPrimary(player: PvpPlayerState, state: PvpArenaState) {
     vx: dirX * profile.projectileSpeed,
     vz: dirZ * profile.projectileSpeed,
     radius: profile.projectileRadius,
-    damage: profile.projectileDamage * (player.activePerk === 'power' && player.perkTimer > 0 ? 1.22 : 1),
+    damage: profile.projectileDamage * progression.damageMultiplier * (player.activePerk === 'power' && player.perkTimer > 0 ? 1.22 : 1),
     life: 3.0,
     pierce: 1,
     color: profile.color,
@@ -980,7 +1028,7 @@ function firePlayerPrimary(player: PvpPlayerState, state: PvpArenaState) {
 
 function triggerPlayerAbility(player: PvpPlayerState, state: PvpArenaState) {
   player.abilityUses += 1;
-  player.abilityCooldownTimer = PVP_ABILITY_COOLDOWN;
+  player.abilityCooldownTimer = PVP_ABILITY_COOLDOWN * getPlayerProgressionBonuses(player).cooldownMultiplier;
   const opponent = player.slot === 'p1' ? state.p2 : state.p1;
   const angle = player.aimAngle;
   const dx = opponent.x - player.x;
@@ -1008,7 +1056,7 @@ function triggerPlayerAbility(player: PvpPlayerState, state: PvpArenaState) {
       // A genuine frontal forklift charge: an opponent behind or beside Grzesiek is not hit.
       player.isDashing = true;
       player.dashTimer = PVP_DASH_DURATION * 1.8;
-      player.dashCooldownTimer = Math.max(player.dashCooldownTimer, PVP_DASH_COOLDOWN);
+      player.dashCooldownTimer = Math.max(player.dashCooldownTimer, PVP_DASH_COOLDOWN * getPlayerProgressionBonuses(player).cooldownMultiplier);
       const forwardX = Math.sin(angle);
       const forwardZ = Math.cos(angle);
       const alignment = distance > 1e-5 ? (dx * forwardX + dz * forwardZ) / distance : 1;
