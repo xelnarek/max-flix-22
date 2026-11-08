@@ -8,9 +8,7 @@ test('disposes shared PvP geometry, material and texture exactly once', () => {
   const geometry = new THREE.BoxGeometry(1, 1, 1);
   const texture = new THREE.Texture();
   const material = new THREE.MeshStandardMaterial({ map: texture });
-  const first = new THREE.Mesh(geometry, material);
-  const second = new THREE.Mesh(geometry, material);
-  root.add(first, second);
+  root.add(new THREE.Mesh(geometry, material), new THREE.Mesh(geometry, material));
 
   let geometryDisposals = 0;
   let textureDisposals = 0;
@@ -30,23 +28,27 @@ test('collects textures from material arrays and shader uniform values', () => {
   const root = new THREE.Group();
   const textureA = new THREE.Texture();
   const textureB = new THREE.Texture();
-  const mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1, 1),
-    [
-      new THREE.MeshBasicMaterial({ map: textureA }),
-      new THREE.MeshBasicMaterial({ alphaMap: textureB }),
-    ],
-  );
-  root.add(mesh);
-  let disposedA = 0;
-  let disposedB = 0;
-  textureA.addEventListener('dispose', () => disposedA++);
-  textureB.addEventListener('dispose', () => disposedB++);
+  const uniformTexture = new THREE.Texture();
+  const arrayMaterial = [
+    new THREE.MeshBasicMaterial({ map: textureA }),
+    new THREE.MeshBasicMaterial({ alphaMap: textureB }),
+  ];
+  root.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), arrayMaterial));
+  const shaderMaterial = new THREE.ShaderMaterial({
+    uniforms: { uMap: { value: uniformTexture } },
+    vertexShader: 'void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: 'void main() { gl_FragColor = vec4(1.0); }',
+  });
+  root.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), shaderMaterial));
+
+  const disposed = new Map([[textureA, 0], [textureB, 0], [uniformTexture, 0]]);
+  for (const texture of disposed.keys()) texture.addEventListener('dispose', () => disposed.set(texture, disposed.get(texture) + 1));
 
   disposePvpObjectTree(root);
 
-  assert.equal(disposedA, 1);
-  assert.equal(disposedB, 1);
+  assert.equal(disposed.get(textureA), 1);
+  assert.equal(disposed.get(textureB), 1);
+  assert.equal(disposed.get(uniformTexture), 1);
 });
 
 test('arena rebuild and exit clean up arena and projectile resources', async () => {

@@ -2144,7 +2144,7 @@ export class PaleciakiGameEngine {
       color: 0xffffff, map: createPvpObstacleTexture('barrier'), roughness: 0.68, metalness: 0.28,
     });
     const pillarMat = new THREE.MeshStandardMaterial({
-      color: 0xffffff, map: createPvpObstacleTexture('wall'), roughness: 0.58, metalness: 0.38,
+      color: 0xffffff, map: wallTexture, roughness: 0.58, metalness: 0.38,
     });
     const palletBandMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
     const barrierStripeMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
