@@ -6133,7 +6133,7 @@ button {
     z-index: 2147483001 !important;
   }
 
-  body #touch-controls:not(.hidden) .joystick-base {
+  body #touch-controls:not(.hidden) .joystick-base:not(.active) {
     position: fixed !important;
     left: clamp(78px, 22vw, 104px) !important;
     top: auto !important;
@@ -6147,8 +6147,10 @@ button {
     pointer-events: none !important;
   }
 
+  /* Once a finger is down, allow the handler's live left/top values to place the stick. */
   body #touch-controls:not(.hidden) .joystick-base.active {
     opacity: 1 !important;
+    transform: translate(-50%, -50%) !important;
   }
 
   body #touch-controls:not(.hidden) .touch-actions-zone {
