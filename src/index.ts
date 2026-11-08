@@ -2007,6 +2007,9 @@ class PaleciakiScene extends xb.Script {
 
         this.masteryAwardedForRun = false;
         this.engine.startSurvival(selectedSurvivalMapId);
+        // Re-assert after the scene transition as a mobile WebView compositor guard.
+        setTouchControlsVisibility(true);
+        touchControls?.classList.add('survival-mode');
       } catch (error) {
         console.error('[Survival] Nie udało się uruchomić rozgrywki:', error);
         titleScreen?.classList.remove('hidden');
@@ -2297,6 +2300,9 @@ class PaleciakiScene extends xb.Script {
         touchControls?.classList.add('survival-mode');
       this.masteryAwardedForRun = false;
       this.engine.startSurvival(selectedSurvivalMapId);
+        // Re-assert after the scene transition as a mobile WebView compositor guard.
+        setTouchControlsVisibility(true);
+        touchControls?.classList.add('survival-mode');
     });
 
     bindTap(document.getElementById('btn-menu-pause'), () => {
@@ -2327,6 +2333,9 @@ class PaleciakiScene extends xb.Script {
         touchControls?.classList.add('survival-mode');
       this.masteryAwardedForRun = false;
       this.engine.startSurvival(selectedSurvivalMapId);
+        // Re-assert after the scene transition as a mobile WebView compositor guard.
+        setTouchControlsVisibility(true);
+        touchControls?.classList.add('survival-mode');
     });
 
     bindTap(document.getElementById('btn-menu-gameover'), () => {
