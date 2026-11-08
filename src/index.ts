@@ -1201,6 +1201,10 @@ class PaleciakiScene extends xb.Script {
             });
             accountProgressionProfile = accountResult.profile;
             persistAccountProgressionProfile();
+            this.engine.selectCharacter(operatorId, combineAccountAndCharacterBonuses(
+              getCharacterTalentBonuses(characterMasteryProfile, operatorId),
+              getAccountProgressionBonuses(accountProgressionProfile),
+            ));
             renderAccountProgressionPanels();
             if (accountResult.xpEarned > 0) {
               const accountToast = document.createElement('div');
