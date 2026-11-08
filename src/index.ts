@@ -2143,6 +2143,9 @@ class PaleciakiScene extends xb.Script {
     document.getElementById('btn-account-cloud-sync')?.addEventListener('click', () => {
       void this.syncAccountProgressionWithCloud();
     });
+    document.getElementById('btn-account-google-connect')?.addEventListener('click', () => {
+      void this.connectAccountProgressionToGoogle();
+    });
 
     const activateMenuTab = (selectedTab: HTMLButtonElement) => {
       const targetId = selectedTab.getAttribute('data-tab');
@@ -4091,6 +4094,47 @@ class PaleciakiScene extends xb.Script {
       this.accountCloudSyncInFlight = null;
     });
     return this.accountCloudSyncInFlight;
+  }
+
+
+  private async connectAccountProgressionToGoogle(): Promise<void> {
+    const status = document.getElementById('account-cloud-sync-status');
+    const button = document.getElementById('btn-account-google-connect') as HTMLButtonElement | null;
+    if (button) button.disabled = true;
+    if (status) status.textContent = 'ZABEZPIECZANIE PROFILU I ŁĄCZENIE GOOGLE...';
+
+    try {
+      const services = await loadFirebaseLeaderboardServices();
+      // Save the anonymous profile before linking or switching Firebase identity.
+      await services.saveAccountProgressionProfileToCloud(accountProgressionProfile);
+      const identity = await services.connectAccountWithGoogle();
+      const cloudProfile = await services.loadAccountProgressionProfileFromCloud();
+      accountProgressionProfile = mergeAccountProgressionProfiles(
+        accountProgressionProfile,
+        cloudProfile ?? createInitialAccountProgressionProfile(),
+      );
+      const saved = await services.saveAccountProgressionProfileToCloud(accountProgressionProfile);
+      accountProgressionProfile = mergeAccountProgressionProfiles(accountProgressionProfile, saved);
+      persistAccountProgressionProfile();
+      this.engine.selectCharacter(
+        this.selectedCharId,
+        combineAccountAndCharacterBonuses(
+          getCharacterTalentBonuses(characterMasteryProfile, this.selectedCharId),
+          getAccountProgressionBonuses(accountProgressionProfile),
+        ),
+      );
+      this.renderAccountProgressionUi();
+      if (status) {
+        status.textContent = identity.isAnonymous
+          ? 'SESJA POZOSTAŁA ANONIMOWA • SPRAWDŹ USTAWIENIA GOOGLE'
+          : 'KONTO GOOGLE POŁĄCZONE • POSTĘP DOSTĘPNY PO ZALOGOWANIU NA INNYM URZĄDZENIU';
+      }
+    } catch (error) {
+      console.warn('[Account progression] Google account linking failed; local profile remains safe:', error);
+      if (status) status.textContent = 'NIE UDAŁO SIĘ POŁĄCZYĆ GOOGLE • POSTĘP LOKALNY ZACHOWANY';
+    } finally {
+      if (button) button.disabled = false;
+    }
   }
 
   private handlePvpMatchEnd(state: PvpArenaState, localSlot: PvpSlot) {
