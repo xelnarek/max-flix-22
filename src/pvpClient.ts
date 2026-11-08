@@ -395,6 +395,8 @@ export class PvpLocalBotSession implements IPvpSession {
   }
 
   private updateBot(dt: number) {
+    const bot = this.state.p2;
+    const player = this.state.p1;
     if (this.state.status !== 'in_round' || bot.stunTimer > 0) {
       this.p2Input = {
         moveX: 0,
@@ -404,9 +406,6 @@ export class PvpLocalBotSession implements IPvpSession {
       };
       return;
     }
-
-    const bot = this.state.p2;
-    const player = this.state.p1;
     const dx = player.x - bot.x;
     const dz = player.z - bot.z;
     const distToPlayer = Math.hypot(dx, dz) || 0.001;
