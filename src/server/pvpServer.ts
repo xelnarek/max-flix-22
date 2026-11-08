@@ -386,7 +386,7 @@ export function attachPvpWebSocketServer(server: HttpServer): WebSocketServer {
               return;
             }
             const code = typeof msg.code === 'string' ? msg.code.trim().toUpperCase() : '';
-            const slot = msg.slot === 'p1' || msg.slot === 'p2' ? msg.slot : null;
+            const slot: 'p1' | 'p2' | null = msg.slot === 'p1' ? 'p1' : msg.slot === 'p2' ? 'p2' : null;
             if (!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(code) || !slot) {
               sendError(ws, 'Nieprawidłowy bilet wznowienia pokoju.');
               return;
