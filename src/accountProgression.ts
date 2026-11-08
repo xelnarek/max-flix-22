@@ -331,6 +331,17 @@ export function getAccountProgressionBonuses(value: unknown): AccountProgression
   };
 }
 
+/** Adapter for the server-authoritative PvP profile; jump and XP remain account-level effects. */
+export function getAccountPvpProgressionBonuses(value: unknown) {
+  const bonuses = getAccountProgressionBonuses(value);
+  return {
+    damageMultiplier: bonuses.damageMultiplier,
+    damageTakenMultiplier: bonuses.damageTakenMultiplier,
+    speedMultiplier: bonuses.speedMultiplier,
+    cooldownMultiplier: bonuses.abilityCooldownMultiplier,
+  };
+}
+
 function addAccountXp(
   value: unknown,
   baseXp: number,
