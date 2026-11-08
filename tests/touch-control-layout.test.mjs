@@ -46,16 +46,36 @@ test('PvP timed fire button remains left of the right-side ability and dash cont
   }
 });
 
-test('compact landscape layouts shrink neither touch target below 54px nor clip the dock', () => {
-  const geometry = calculateTouchControlGeometry({
+test('compact landscape uses a horizontal action dock below the top HUD', () => {
+  for (const mode of ['survival', 'pvp']) {
+    const geometry = calculateTouchControlGeometry({
+      viewportWidth: 844,
+      viewportHeight: 390,
+      mode,
+    });
+    const expectedButtons = mode === 'pvp' ? 2 : 3;
+    assert.ok(geometry.actionDock.width >= expectedButtons * 54);
+    assert.ok(geometry.actionDock.height >= 54);
+    assert.ok(geometry.actionDock.bottom <= 390);
+    assert.ok(geometry.actionDock.top >= 250, 'action row must stay in the bottom HUD-free band');
+    assert.ok(geometry.actionDock.left >= 390);
+    if (mode === 'pvp') assert.ok(geometry.fireGapToActions >= 8);
+  }
+});
+
+test('portrait keeps a vertical action stack while short landscape changes orientation', () => {
+  const portrait = calculateTouchControlGeometry({
+    viewportWidth: 393,
+    viewportHeight: 852,
+    mode: 'survival',
+  });
+  const landscape = calculateTouchControlGeometry({
     viewportWidth: 844,
     viewportHeight: 390,
-    mode: 'pvp',
+    mode: 'survival',
   });
-  assert.ok(geometry.actionDock.width >= 54);
-  assert.ok(geometry.actionDock.height >= 116);
-  assert.ok(geometry.actionDock.bottom <= 390);
-  assert.ok(geometry.fireGapToActions >= 8);
+  assert.ok(portrait.actionDock.height > portrait.actionDock.width);
+  assert.ok(landscape.actionDock.width > landscape.actionDock.height);
 });
 
 test('malformed viewport values still produce finite, non-negative geometry', () => {
