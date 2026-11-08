@@ -6,6 +6,9 @@ const firebase = await readFile(new URL('../src/firebase.ts', import.meta.url), 
 const rules = await readFile(new URL('../firestore.rules', import.meta.url), 'utf8');
 const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
 const progression = await readFile(new URL('../src/accountProgression.ts', import.meta.url), 'utf8');
+const firebaseConfig = JSON.parse(await readFile(new URL('../firebase.json', import.meta.url), 'utf8'));
+const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+const firebaseGuide = await readFile(new URL('../docs/FIREBASE_ACCOUNT_SYNC.md', import.meta.url), 'utf8');
 
 test('account progression cloud storage requires a Firebase-authenticated user and a transaction', () => {
   assert.match(firebase, /export async function loadAccountProgressionProfileFromCloud/);
@@ -38,4 +41,15 @@ test('account menu exposes a user-triggered cloud sync and sync runs on progress
   assert.match(app, /saveAccountProgressionProfileToCloud\(accountProgressionProfile\)/);
   assert.match(app, /void this\.syncAccountProgressionWithCloud\(\)/);
   assert.match(progression, /export function mergeAccountProgressionProfiles/);
+});
+
+test('Firebase CLI config targets only the named database used by the game and documents deployment', () => {
+  assert.equal(firebaseConfig.firestore.length, 1);
+  assert.equal(firebaseConfig.firestore[0].database, 'ai-studio-maxflixvol2-938de3b7-0d7d-4164-9dae-7d99b2e46560');
+  assert.equal(firebaseConfig.firestore[0].rules, 'firestore.rules');
+  assert.equal(packageJson.scripts['firebase:deploy-rules'],
+    'npx firebase-tools deploy --only firestore:ai-studio-maxflixvol2-938de3b7-0d7d-4164-9dae-7d99b2e46560');
+  assert.match(firebaseGuide, /Authentication → Sign-in method/);
+  assert.match(firebaseGuide, /xelnarek\.github\.io/);
+  assert.match(firebaseGuide, /SYNCHRONIZUJ/);
 });
