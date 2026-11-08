@@ -431,6 +431,14 @@
               </span>
               <span class="tab-label">KODEKS</span>
             </button>
+            <button class="menu-tab-btn account-menu-tab" data-tab="tab-talent-tree" aria-controls="tab-talent-tree" aria-label="Drzewko rozwoju konta">
+              <span class="tab-icon" aria-hidden="true">🌳</span>
+              <span class="tab-label">DRZEWKO</span>
+            </button>
+            <button class="menu-tab-btn account-menu-tab" data-tab="tab-ranks" aria-controls="tab-ranks" aria-label="Rangi i bonusy konta">
+              <span class="tab-icon" aria-hidden="true">🏅</span>
+              <span class="tab-label">RANGI</span>
+            </button>
             <button class="menu-tab-btn" data-tab="tab-leaderboard">
               <span class="tab-icon">
                 <svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
@@ -1023,6 +1031,80 @@
             
 
 
+
+            <div id="tab-talent-tree" class="tab-panel account-progression-panel" aria-labelledby="account-progression-title">
+              <section class="account-progression-hero">
+                <div class="account-progression-kicker">ROZWÓJ GLOBALNY / SURVIVAL + ARENA PVP</div>
+                <div class="account-progression-heading">
+                  <div>
+                    <h2 id="account-progression-title">DRZEWKO OPERATORA</h2>
+                    <p>Jeden profil rozwoju dla obu trybów. Zdobywaj XP za eliminacje, czas przetrwania, bossów i wyniki pojedynków. Każdy awans daje jeden punkt do rozdania.</p>
+                  </div>
+                  <div class="account-level-transponder">
+                    <strong id="account-progress-level">1</strong>
+                    <span>POZIOM</span>
+                  </div>
+                </div>
+                <div class="account-progression-summary">
+                  <div class="account-progression-rank">
+                    <span>AKTUALNA RANGA</span>
+                    <strong id="account-progress-rank">REKRUT</strong>
+                  </div>
+                  <div class="account-progression-points">
+                    <span>DOSTĘPNE PUNKTY</span>
+                    <strong id="account-progress-points">0 / 36</strong>
+                  </div>
+                </div>
+                <div class="account-progression-xp-meta">
+                  <strong id="account-progress-xp">0 / 75 XP</strong>
+                  <span id="account-progress-statline">0 zmian Survival • 0 pojedynków PvP • 0 zwycięstw</span>
+                </div>
+                <div class="account-progression-track"><span id="account-progress-fill"></span></div>
+                <div class="account-progression-rules">
+                  <span>12 TALENTÓW • 4 GAŁĘZIE</span>
+                  <span>36 PUNKTÓW DO ROZDANIA</span>
+                  <span>POSTĘP ZAPISYWANY LOKALNIE</span>
+                </div>
+              </section>
+              <section class="account-tree-instructions">
+                <strong>JAK DZIAŁA ROZWÓJ</strong>
+                <p>Każdy węzeł ma trzy poziomy. Węzły kolejnego poziomu wymagają maksymalnego rozwinięcia poprzedniego. Punkty są wspólne dla całego konta, więc wybieraj świadomie — nie ma automatycznego resetu ani darmowego cofania.</p>
+              </section>
+              <div id="account-tree-grid" class="account-tree-grid" aria-label="Cztery gałęzie drzewka rozwoju"></div>
+            </div>
+
+            <div id="tab-ranks" class="tab-panel account-ranks-panel" aria-labelledby="account-ranks-title">
+              <section class="account-ranks-hero">
+                <div class="account-progression-kicker">ŚCIEŻKA KARIERY / OD REKRUTA DO LEGENDY</div>
+                <div class="account-progression-heading">
+                  <div>
+                    <h2 id="account-ranks-title">RANGI I PREMIE</h2>
+                    <p>Ranga wynika z poziomu konta, nie z wybranej postaci. Jej pasywne bonusy działają w Survival i PvP, a kolejne stopnie odblokowują stałe premie.</p>
+                  </div>
+                  <div class="account-rank-emblem">🏆</div>
+                </div>
+                <div class="account-current-rank-card">
+                  <span>TWÓJ STATUS</span>
+                  <strong id="account-rank-current">🔰 REKRUT • POZIOM 1</strong>
+                  <p id="account-rank-next">Następna ranga: OPERATOR • poziom 5 • 4 poziomy do awansu</p>
+                </div>
+              </section>
+              <section class="account-rank-section">
+                <div class="account-rank-section-heading">
+                  <strong>DRABINA RANG</strong>
+                  <span>9 STOPNI • MAKSIMUM: LEGENDA B4</span>
+                </div>
+                <div id="account-rank-track" class="account-rank-track" aria-label="Lista rang konta"></div>
+              </section>
+              <section class="account-rank-section account-bonuses-section">
+                <div class="account-rank-section-heading">
+                  <strong>AKTYWNE BONUSY GLOBALNE</strong>
+                  <span>SURVIVAL + PVP</span>
+                </div>
+                <div id="account-rank-bonuses" class="account-rank-bonuses"></div>
+                <p class="account-progression-footnote">Bonusy mają limity, żeby rozwój nie niszczył balansu. W PvP wartości są weryfikowane i ograniczane również po stronie serwera.</p>
+              </section>
+            </div>
 
             <div id="tab-achievements" class="tab-panel survival-achievements-panel" aria-labelledby="survival-achievements-title">
               <section class="survival-achievements-hero">
