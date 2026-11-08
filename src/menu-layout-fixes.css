@@ -783,7 +783,7 @@
   #title-screen .btn-survival-start { max-width: 100%; min-height: 54px; }
 }
 
-/* Touch layouts: all seven tabs visible at once; map tiles and launch remain separate. */
+/* Touch layouts: all nine tabs visible at once; map tiles and launch remain separate. */
 @media (max-width: 760px), (pointer: coarse) {
   #title-screen .title-sheet {
     display: flex !important; flex-direction: column !important; align-items: stretch; justify-content: flex-start !important;
@@ -798,7 +798,7 @@
   #title-screen .menu-release-strip { display: none !important; }
 
   #title-screen .menu-tabs-bar {
-    display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: minmax(38px, auto);
+    display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(38px, auto);
     flex: 0 0 auto !important; align-items: stretch; gap: 4px !important; width: 100%; min-width: 0;
     margin: 0 !important; padding: 5px !important; overflow: visible !important;
     border: 1px solid rgba(132,184,210,.20) !important; border-radius: 11px !important; background: rgba(4,13,22,.74) !important;
@@ -860,7 +860,7 @@
 }
 
 @media (max-width: 360px) and (orientation: portrait) {
-  #title-screen .menu-tabs-bar { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px !important; padding: 4px !important; }
+  #title-screen .menu-tabs-bar { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px !important; padding: 4px !important; }
   #title-screen .menu-tab-btn { min-height: 36px !important; padding: 3px 1px !important; }
   #title-screen .menu-tab-btn .tab-label { font-size: 6.5px !important; }
   #title-screen .survival-map-choice small { display: none; }
