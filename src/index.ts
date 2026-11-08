@@ -77,6 +77,47 @@ function setTouchControlsVisibility(visible: boolean): void {
   }
 }
 
+type TouchControlsMode = 'survival' | 'pvp' | 'hidden';
+
+/**
+ * Touch UI is mode-scoped. Because the layer is portaled to body, both it and
+ * the WebGL shell must receive the same state or stale PvP controls can leak
+ * into Survival after a scene transition on Android.
+ */
+function setTouchControlsMode(mode: TouchControlsMode): void {
+  const layer = document.getElementById('touch-controls');
+  const shell = document.getElementById('game-shell');
+  const activePvp = mode === 'pvp';
+  const activeSurvival = mode === 'survival';
+
+  for (const root of [layer, shell]) {
+    if (!root) continue;
+    root.classList.toggle('pvp-mode', activePvp);
+    root.classList.toggle('manual-aim-mode', activePvp);
+    root.classList.toggle('survival-mode', activeSurvival);
+  }
+
+  document.getElementById('pvp-hud')?.classList.toggle('hidden', !activePvp);
+  document.getElementById('survival-hud')?.classList.toggle('hidden', !activeSurvival);
+
+  if (!activePvp) {
+    const fireButton = document.getElementById('btn-pvp-fire') as HTMLButtonElement | null;
+    fireButton?.classList.add('hidden');
+    if (fireButton) {
+      fireButton.disabled = true;
+      fireButton.dataset.roundActive = 'false';
+      fireButton.dataset.operator = '';
+      fireButton.classList.remove('is-reloading');
+      fireButton.style.setProperty('--pvp-fire-progress', '0%');
+      const label = fireButton.querySelector<HTMLElement>('.pvp-fire-label');
+      const state = fireButton.querySelector<HTMLElement>('.pvp-fire-state');
+      if (label) label.textContent = 'STRZAŁ';
+      if (state) state.textContent = 'GOTOWY';
+    }
+    document.getElementById('pvp-match-end-modal')?.classList.add('hidden');
+  }
+}
+
 import {
   CHARACTER_TALENTS,
   createInitialCharacterMasteryProfile,
@@ -2002,26 +2043,22 @@ class PaleciakiScene extends xb.Script {
 
         hudTop?.classList.remove('hidden');
         hudBottom?.classList.remove('hidden');
+        setTouchControlsMode('survival');
         setTouchControlsVisibility(true);
-        survivalHud?.classList.remove('hidden');
-        gameShell?.classList.add('survival-mode');
-        touchControls?.classList.add('survival-mode');
 
         this.masteryAwardedForRun = false;
         this.engine.startSurvival(selectedSurvivalMapId);
-        // Re-assert after the scene transition as a mobile WebView compositor guard.
+        // Re-assert visibility and exclusive mode after the scene transition.
+        setTouchControlsMode('survival');
         setTouchControlsVisibility(true);
-        touchControls?.classList.add('survival-mode');
       } catch (error) {
         console.error('[Survival] Nie udało się uruchomić rozgrywki:', error);
         titleScreen?.classList.remove('hidden');
         titleScreen?.style.setProperty('display', 'flex', 'important');
         hudTop?.classList.add('hidden');
         hudBottom?.classList.add('hidden');
+        setTouchControlsMode('hidden');
         setTouchControlsVisibility(false);
-        survivalHud?.classList.add('hidden');
-        gameShell?.classList.remove('survival-mode');
-        touchControls?.classList.remove('survival-mode');
         let errorBanner = document.getElementById('survival-start-error');
         if (!errorBanner && titleScreen) {
           errorBanner = document.createElement('div');
@@ -2302,14 +2339,12 @@ class PaleciakiScene extends xb.Script {
       pauseModal?.classList.add('hidden');
       pauseModal?.setAttribute('aria-hidden', 'true');
       survivalLevelUp?.classList.add('hidden');
-      survivalHud?.classList.remove('hidden');
-      gameShell?.classList.add('survival-mode');
-        touchControls?.classList.add('survival-mode');
+      setTouchControlsMode('survival');
       this.masteryAwardedForRun = false;
       this.engine.startSurvival(selectedSurvivalMapId);
-        // Re-assert after the scene transition as a mobile WebView compositor guard.
+        // Re-assert visibility and exclusive mode after the scene transition.
+        setTouchControlsMode('survival');
         setTouchControlsVisibility(true);
-        touchControls?.classList.add('survival-mode');
     });
 
     const exitPausedRunToMenu = () => {
@@ -2318,8 +2353,7 @@ class PaleciakiScene extends xb.Script {
       hudPerksRow?.classList.add('hidden');
       survivalHud?.classList.add('hidden');
       survivalLevelUp?.classList.add('hidden');
-      gameShell?.classList.remove('survival-mode');
-      touchControls?.classList.remove('survival-mode');
+      setTouchControlsMode('hidden');
       hudTop?.classList.add('hidden');
       hudBottom?.classList.add('hidden');
       setTouchControlsVisibility(false);
@@ -2337,22 +2371,19 @@ class PaleciakiScene extends xb.Script {
       hudTop?.classList.remove('hidden');
       hudBottom?.classList.remove('hidden');
       setTouchControlsVisibility(true);
-      survivalHud?.classList.remove('hidden');
-      gameShell?.classList.add('survival-mode');
-        touchControls?.classList.add('survival-mode');
+      setTouchControlsMode('survival');
       this.masteryAwardedForRun = false;
       this.engine.startSurvival(selectedSurvivalMapId);
-        // Re-assert after the scene transition as a mobile WebView compositor guard.
+        // Re-assert visibility and exclusive mode after the scene transition.
+        setTouchControlsMode('survival');
         setTouchControlsVisibility(true);
-        touchControls?.classList.add('survival-mode');
     });
 
     bindTap(document.getElementById('btn-menu-gameover'), () => {
       gameoverModal?.classList.add('hidden');
       survivalHud?.classList.add('hidden');
       survivalLevelUp?.classList.add('hidden');
-      gameShell?.classList.remove('survival-mode');
-        touchControls?.classList.remove('survival-mode');
+      setTouchControlsMode('hidden');
       if (titleScreen) {
         titleScreen.classList.remove('hidden');
         titleScreen.style.setProperty('display', 'flex', 'important');
@@ -3210,7 +3241,7 @@ class PaleciakiScene extends xb.Script {
       setTouchControlsVisibility(true);
       // touch-controls is portaled to body, so it needs its own mode classes.
       // Classes on #game-shell do not cascade into this detached control layer.
-      touchControls?.classList.add('pvp-mode', 'manual-aim-mode');
+      setTouchControlsMode('pvp');
       resetPvpFireButton();
       if (pvpFireButton) {
         pvpFireButton.classList.remove('hidden');
@@ -3219,7 +3250,6 @@ class PaleciakiScene extends xb.Script {
         pvpFireButton.disabled = true;
       }
 
-      gameShell?.classList.add('pvp-mode');
       this.engine.setManualAimMode(true);
 
       this.engine.startPvp(session, localOp, remoteOp);
@@ -3561,8 +3591,7 @@ class PaleciakiScene extends xb.Script {
         pvpFireButton.dataset.roundActive = 'false';
         pvpFireButton.dataset.operator = '';
       }
-      gameShell?.classList.remove('pvp-mode');
-      touchControls?.classList.remove('pvp-mode', 'manual-aim-mode');
+      setTouchControlsMode('hidden');
       setTouchControlsVisibility(false);
       this.engine.setManualAimMode(false);
       this.engine.exitPvp();
