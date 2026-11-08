@@ -6301,3 +6301,104 @@ button {
   background: #94a3b8;
   box-shadow: 0 0 0 3px rgba(148, 163, 184, .12);
 }
+
+
+/* Strip the nonessential "operational zone" layer from live combat. */
+#game-shell.survival-mode .survival-hud-kicker,
+#game-shell.survival-mode #survival-contract,
+#game-shell.survival-mode #survival-event {
+  display: none !important;
+}
+
+/* On touch screens keep only time and wave in a small, non-obstructive chip. */
+@media (max-width: 900px), (pointer: coarse) {
+  #game-shell.survival-mode .survival-hud {
+    top: calc(42px + env(safe-area-inset-top));
+    left: auto;
+    right: max(8px, env(safe-area-inset-right));
+    width: min(150px, calc(100vw - 150px));
+    min-width: 0;
+    max-width: min(150px, calc(100vw - 150px));
+    transform: none;
+    gap: 0;
+  }
+  #game-shell.survival-mode .survival-hud-main {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  #game-shell.survival-mode .survival-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+  }
+  #game-shell.survival-mode .survival-xp-chip,
+  #game-shell.survival-mode .level-chip,
+  #game-shell.survival-mode .kills-chip,
+  #game-shell.survival-mode .enemies-chip,
+  #game-shell.survival-mode .survival-weapon-rack {
+    display: none !important;
+  }
+  #game-shell.survival-mode .survival-chip {
+    min-height: 29px;
+    padding: 4px 5px;
+    border: 1px solid rgba(148, 163, 184, .14);
+    border-radius: 7px;
+    background: rgba(4, 13, 26, .58);
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  #game-shell.survival-mode .survival-chip-label {
+    font-size: 6px;
+    letter-spacing: .35px;
+  }
+  #game-shell.survival-mode .survival-chip strong {
+    font-size: 11px;
+    line-height: 1.05;
+  }
+}
+
+/* Pause actions remain fully visible and the exit route is unmistakable. */
+#pause-modal {
+  z-index: 1000002 !important;
+}
+#pause-modal .modal-card {
+  width: min(92vw, 420px);
+  min-width: 0;
+  max-height: min(78dvh, 480px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+#pause-modal .modal-actions {
+  display: flex !important;
+  flex-direction: column;
+  gap: 9px;
+}
+#pause-modal .pause-exit-button {
+  display: flex !important;
+  visibility: visible !important;
+  width: 100%;
+  min-height: 50px;
+  order: 2;
+  border: 1px solid rgba(248, 113, 113, .66);
+  background: linear-gradient(135deg, rgba(153, 27, 27, .98), rgba(127, 29, 29, .98));
+  color: #fff;
+  box-shadow: 0 5px 18px rgba(127, 29, 29, .3);
+}
+#pause-modal #btn-restart-pause { order: 3; }
+@media (max-width: 600px) {
+  #pause-modal .modal-card {
+    width: min(94vw, 380px);
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);
+    padding: 18px 16px;
+    gap: 10px;
+  }
+  #pause-modal .modal-actions button {
+    min-height: 48px;
+  }
+}
