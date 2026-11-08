@@ -6388,3 +6388,40 @@ button {
   pointer-events: auto !important;
   touch-action: manipulation;
 }
+
+
+/* Pause dialog keeps the exit action visually distinct and easy to tap. */
+#pause-modal .modal-card {
+  width: min(92vw, 420px);
+  min-width: 0;
+  max-height: min(78dvh, 480px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+#pause-modal .modal-actions {
+  display: flex !important;
+  flex-direction: column;
+  gap: 9px;
+}
+#pause-modal .pause-exit-button {
+  display: flex !important;
+  visibility: visible !important;
+  width: 100%;
+  min-height: 50px;
+  order: 2;
+  border: 1px solid rgba(248, 113, 113, .66);
+  background: linear-gradient(135deg, rgba(153, 27, 27, .98), rgba(127, 29, 29, .98));
+  color: #fff;
+  box-shadow: 0 5px 18px rgba(127, 29, 29, .3);
+}
+#pause-modal #btn-restart-pause { order: 3; }
+@media (max-width: 600px) {
+  #pause-modal .modal-card {
+    width: min(94vw, 380px);
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);
+    padding: 18px 16px;
+    gap: 10px;
+  }
+  #pause-modal .modal-actions button { min-height: 48px; }
+}

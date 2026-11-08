@@ -277,6 +277,7 @@ test('Survival is harder to trivialize, combat HUD stops covering the arena, and
   assert.match(css, /#game-shell\.survival-mode #survival-hud \.survival-chip:not\(\.time-chip\):not\(\.wave-chip\)/);
   assert.match(app, /document\.body\.appendChild\(dialog\)/);
   assert.match(css, /#pause-modal \.pause-exit-button/);
+  assert.match(css, /#pause-modal \.modal-actions[\s\S]*?flex-direction: column/);
 });
 
 
