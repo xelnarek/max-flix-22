@@ -1190,6 +1190,26 @@ class PaleciakiScene extends xb.Script {
               document.body.appendChild(masteryToast);
               window.setTimeout(() => masteryToast.remove(), 3900);
             }
+
+            const accountResult = recordAccountSurvivalRun(accountProgressionProfile, {
+              kills: snapshot.kills,
+              elapsedSeconds: snapshot.elapsedSeconds,
+              bossesDefeated: snapshot.bossesDefeated,
+              secretsFound: snapshot.secretsFound,
+              highestWave: snapshot.wave,
+            });
+            accountProgressionProfile = accountResult.profile;
+            persistAccountProgressionProfile();
+            renderAccountProgressionPanels();
+            if (accountResult.xpEarned > 0) {
+              const accountToast = document.createElement('div');
+              accountToast.className = 'achievement-unlock-toast';
+              accountToast.textContent = '🌳 POSTĘP KONTA • +' + accountResult.xpEarned + ' XP' +
+                (accountResult.levelsGained > 0 ? ' • AWANS +' + accountResult.levelsGained + ' • +1 PKT ZA KAŻDY POZIOM' : '') +
+                (accountResult.rankUps.length ? ' • NOWA RUNGA: ' + accountResult.rankUps.join(', ') : '');
+              document.body.appendChild(accountToast);
+              window.setTimeout(() => accountToast.remove(), 4300);
+            }
           }
 
 
@@ -1653,7 +1673,7 @@ class PaleciakiScene extends xb.Script {
       if (xp) xp.textContent = summary.isMaxLevel
         ? 'MAKSYMALNY POZIOM • 37 / 37'
         : summary.xp.toLocaleString('pl-PL') + ' / ' + summary.xpToNext.toLocaleString('pl-PL') + ' XP';
-      if (points) points.textContent = summary.availableSkillPoints + ' / ' + ACCOUNT_PROGRESS_MAX_LEVEL - 1 + ' DOSTĘPNYCH PUNKTÓW';
+      if (points) points.textContent = summary.availableSkillPoints + ' / ' + (ACCOUNT_PROGRESS_MAX_LEVEL - 1) + ' DOSTĘPNYCH PUNKTÓW';
       if (fill) fill.style.width = summary.progressPercent + '%';
       if (statline) statline.textContent =
         summary.stats.survivalRuns + ' zmian Survival • ' +
@@ -1789,7 +1809,7 @@ class PaleciakiScene extends xb.Script {
           subtitle.textContent = rankEntry.subtitle;
           const reward = document.createElement('span');
           reward.className = 'account-rank-reward';
-          reward.textContent = (unlocked ? 'ODblokowano • ' : 'NAGRODA • ') + rankEntry.reward;
+          reward.textContent = (unlocked ? 'ODBLOKOWANO • ' : 'NAGRODA • ') + rankEntry.reward;
           card.append(top, title, subtitle, reward);
           rankTrack.appendChild(card);
         }
@@ -3994,9 +4014,33 @@ class PaleciakiScene extends xb.Script {
       fireButton.disabled = true;
     }
     const matchEndModal = document.getElementById('pvp-match-end-modal');
+    const isWinner = state.winner === localSlot;
+    if (!this.accountPvpAwardedForMatch) {
+      this.accountPvpAwardedForMatch = true;
+      const playerStats = localSlot === 'p1' ? state.stats.p1 : state.stats.p2;
+      const roundsWon = localSlot === 'p1' ? state.score.p1 : state.score.p2;
+      const accountResult = recordAccountPvpMatch(accountProgressionProfile, {
+        damageDealt: playerStats.damageDealt,
+        shotsHit: playerStats.shotsHit,
+        knockouts: playerStats.knockouts,
+        roundsWon,
+        wonMatch: isWinner,
+      });
+      accountProgressionProfile = accountResult.profile;
+      persistAccountProgressionProfile();
+      renderAccountProgressionPanels();
+      if (accountResult.xpEarned > 0) {
+        const accountToast = document.createElement('div');
+        accountToast.className = 'achievement-unlock-toast';
+        accountToast.textContent = '⚔️ POSTĘP KONTA • +' + accountResult.xpEarned + ' XP' +
+          (accountResult.levelsGained > 0 ? ' • AWANS +' + accountResult.levelsGained + ' • +1 PKT ZA KAŻDY POZIOM' : '') +
+          (accountResult.rankUps.length ? ' • NOWA RUNGA: ' + accountResult.rankUps.join(', ') : '');
+        document.body.appendChild(accountToast);
+        window.setTimeout(() => accountToast.remove(), 4300);
+      }
+    }
     if (!matchEndModal) return;
 
-    const isWinner = state.winner === localSlot;
     if (isWinner) {
       sound.playWin();
     } else {
