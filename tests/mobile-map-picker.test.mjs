@@ -22,7 +22,7 @@ test('desktop keeps a five-column map picker', () => {
 test('the final mobile stylesheet shows every map in a two-column grid and removes the hidden swipe strip', () => {
   const mobile = layout.slice(layout.lastIndexOf('@media (max-width: 760px)'));
   assert.match(mobile, /\.menu-tabs-bar\s*\{[\s\S]*?display:\s*grid !important/);
-  assert.match(mobile, /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(mobile, /grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/);
   assert.match(mobile, /\.survival-map-picker-options\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
   assert.match(mobile, /data-survival-map="random"[\s\S]*?grid-column:\s*1 \/ -1/);
   assert.match(mobile, /\.menu-fixed-bottom-bar\s*\{[\s\S]*?position:\s*static !important/);
