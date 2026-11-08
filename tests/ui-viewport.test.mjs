@@ -31,5 +31,11 @@ test('desktop panels have a bounded width and never exceed the design maximum', 
 test('invalid dimensions are safely normalized', () => {
   const profile = calculateUiViewport(Number.NaN, 0, false);
   assert.ok(Number.isFinite(profile.scale));
-  assert.ok(profile.panelMaxWidth >= 320);
+  assert.ok(profile.panelMaxWidth >= 1);
+});
+
+test('very narrow touch screens never get a panel wider than the usable viewport', () => {
+  const profile = calculateUiViewport(320, 568, true);
+  assert.equal(profile.panelMaxWidth, 304);
+  assert.ok(profile.panelMaxWidth <= 320);
 });
