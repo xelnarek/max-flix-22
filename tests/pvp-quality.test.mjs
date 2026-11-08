@@ -169,3 +169,25 @@ test('PvP host lobby exposes connection progress and server errors before a room
   assert.ok(host.includes("hostStatus.setAttribute('role', 'alert')"));
   assert.ok(host.includes('hostStatus.textContent = ' + String.fromCharCode(96) + 'Błąd: ${err}' + String.fromCharCode(96)));
 });
+
+
+test('PvP deployment uses a minimal runtime Docker image and a Frankfurt Render Blueprint', async () => {
+  const [docker, blueprint, server] = await Promise.all([
+    readFile(new URL('../Dockerfile', import.meta.url), 'utf8'),
+    readFile(new URL('../render.yaml', import.meta.url), 'utf8'),
+    readFile(new URL('../src/server/standalone.ts', import.meta.url), 'utf8'),
+  ]);
+  assert.match(docker, /FROM node:24-alpine AS runtime-deps/);
+  assert.match(docker, /npm install --omit=dev --no-package-lock[^\\n]*ws@8\\.22\\.1/);
+  assert.match(docker, /COPY --from=runtime-deps \/deps\/node_modules \.\/node_modules/);
+  assert.match(docker, /npm run pvp:server/);
+  assert.doesNotMatch(docker, /npm ci/);
+  assert.match(blueprint, /runtime: docker/);
+  assert.match(blueprint, /region: frankfurt/);
+  assert.match(blueprint, /plan: 0\.5c-512mb/);
+  assert.match(blueprint, /healthCheckPath: \/healthz/);
+  assert.match(blueprint, /autoDeployTrigger: checksPass/);
+  assert.match(blueprint, /PVP_ALLOWED_ORIGINS/);
+  assert.match(server, /request\.url === '\/healthz'/);
+  assert.match(server, /process\.env\.PORT/);
+});
