@@ -12,8 +12,8 @@ test('the desktop menu is a control room with a left navigation rail and indepen
   assert.match(layout, /@media \(min-width: 761px\) and \(pointer: fine\)[\s\S]*?grid-template-columns:\s*clamp\(172px, 17vw, 206px\) minmax\(0, 1fr\)/);
   assert.match(layout, /\.menu-tabs-bar\s*\{[\s\S]*?flex-direction:\s*column !important/);
   assert.match(layout, /\.menu-tab-content-area\s*\{[\s\S]*?grid-column:\s*2/);
-  assert.match(layout, /\.menu-map-picker-frame\s*\{[\s\S]*?grid-row:\s*3/);
-  assert.match(layout, /\.menu-fixed-bottom-bar\s*\{[\s\S]*?grid-row:\s*4/);
+  assert.match(layout, /grid-template-rows:\s*auto minmax\(0, 1fr\) auto/);
+  assert.match(layout, /\.menu-fixed-bottom-bar\s*\{[\s\S]*?grid-row:\s*3/);
 });
 
 test('all nine menu destinations remain available as buttons and panels', () => {
@@ -24,13 +24,17 @@ test('all nine menu destinations remain available as buttons and panels', () => 
   assert.match(layout, /grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/);
 });
 
-test('the active content panel scrolls independently while the map selector and launch remain in normal flow', () => {
+test('the active tab owns its content and the persistent map picker has been removed from the shared shell', () => {
   assert.match(layout, /\.menu-tab-content-area\s*\{[\s\S]*?overflow-y:\s*auto !important/);
   assert.match(layout, /\.title-sheet\s*\{[\s\S]*?overflow:\s*hidden !important/);
   assert.match(layout, /\.menu-fixed-bottom-bar\s*\{[\s\S]*?position:\s*static !important/);
   const picker = html.indexOf('<section id="survival-map-picker"');
+  const mapPanel = html.indexOf('<div id="tab-map" class="tab-panel map-selection-panel"');
+  const content = html.indexOf('<div class="menu-tab-content-area">');
   const launch = html.indexOf('<div class="menu-fixed-bottom-bar">', picker);
-  assert.ok(picker >= 0 && launch > picker);
+  assert.ok(content >= 0 && mapPanel > content && picker > mapPanel);
+  assert.ok(launch > picker);
+  assert.match(html, /data-tab="tab-map"/);
 });
 
 
