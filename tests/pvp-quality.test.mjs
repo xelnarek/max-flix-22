@@ -247,3 +247,31 @@ test('public PvP matchmaking connects the lobby, server FIFO queue, auto-ready a
   assert.match(css, /\.pvp-matchmaking-actions/);
   assert.match(css, /\.pvp-connection-status\.is-searching/);
 });
+
+
+test('Survival is harder to trivialize, combat HUD stops covering the arena, and pause exposes exit to menu', async () => {
+  const [balance, difficulty, game, html, app, css] = await Promise.all([
+    readFile(new URL('../src/characterBalance.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/survivalDifficulty.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/game.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
+  ]);
+  assert.match(balance, /SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER = 0\.76/);
+  assert.match(balance, /SURVIVAL_INCOMING_DAMAGE_MULTIPLIER = 1\.15/);
+  assert.match(balance, /SURVIVAL_HIT_INVULNERABILITY_SECONDS = 1\.15/);
+  assert.match(game, /scaleSurvivalOutgoingDamage\(amount\)/);
+  assert.match(game, /scaleSurvivalIncomingDamage\(amount\)/);
+  assert.match(game, /SURVIVAL_HIT_INVULNERABILITY_SECONDS/);
+  assert.match(game, /const groupSize = Math\.min\(groupLimit, 3 \+/);
+  assert.match(difficulty, /spawnIntervalSeconds: Math\.max\(4\.2/);
+  assert.match(difficulty, /enemySpeedMultiplier: 0\.90/);
+  assert.match(html, /id="btn-menu-pause" class="btn-modal pause-exit-button"[^>]*>WYJDŹ DO MENU/);
+  assert.match(html, /aria-modal="true"/);
+  assert.match(app, /const exitPausedRunToMenu = \(\) =>/);
+  assert.match(app, /bindTap\(document\.getElementById\('btn-menu-pause'\), exitPausedRunToMenu\)/);
+  assert.match(css, /#game-shell\.survival-mode #survival-contract/);
+  assert.match(css, /#game-shell\.survival-mode #survival-event/);
+  assert.match(css, /#pause-modal \.pause-exit-button/);
+});
