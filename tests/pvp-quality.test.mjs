@@ -180,7 +180,7 @@ test('PvP deployment uses a minimal runtime Docker image and a Frankfurt Render 
   assert.match(docker, /FROM node:24-alpine AS runtime-deps/);
   assert.ok(docker.includes('npm install --omit=dev --no-package-lock --no-audit --no-fund ws@8.22.1'));
   assert.match(docker, /COPY --from=runtime-deps \/deps\/node_modules \.\/node_modules/);
-  assert.match(docker, /CMD \\[\"npm\", \\"run\\", \\"pvp:server\\"\\]/);
+  assert.ok(docker.includes('CMD ["npm", "run", "pvp:server"]'));
   assert.doesNotMatch(docker, /npm ci/);
   assert.match(blueprint, /runtime: docker/);
   assert.match(blueprint, /region: frankfurt/);
