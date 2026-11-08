@@ -56,3 +56,33 @@ test('cinematic intro stages its title reveal over a richer animated warehouse s
   assert.match(intro, /is-title-reveal/);
   assert.match(css, /\.cinematic-intro-overlay\.is-title-reveal \.cinematic-intro-copy/);
 });
+
+
+test('boot only warms runtime textures and lazily creates models and audio after interaction', async () => {
+  const assets = await readFile(new URL('../src/assets.ts', import.meta.url), 'utf8');
+  assert.match(assets, /const assetList: AssetItem\[\] = \[/);
+  for (const texture of ['getFloorTexture()', 'getWallTexture()', 'getShowroomMarbleFloorTexture()', 'getShowroomWallTexture()', 'getTerminalGraniteFloorTexture()', 'getHazardStripeTexture()']) {
+    assert.ok(assets.includes(texture), 'missing runtime texture warmup: ' + texture);
+  }
+  assert.doesNotMatch(assets, /createCharacterModel\(|createWalczakBossModel\(|createDisplayPodium\(|createShowroomPlant\(/);
+  assert.doesNotMatch(assets, /sound\.initCtx\(/);
+  assert.match(assets, /cat-count-models">NA ŻĄDANIE/);
+  assert.match(assets, /cat-count-audio">PO DOTKNIĘCIU/);
+});
+
+test('mobile intro has a bounded canvas pixel ratio and auto-closes its reduced-motion poster', async () => {
+  const intro = await readFile(new URL('../src/cinematicIntro.ts', import.meta.url), 'utf8');
+  assert.match(intro, /const dpr = mobile \? 1 : Math\.min\(1\.5/);
+  assert.match(intro, /this\.completionTimeout = window\.setTimeout\(\(\) => this\.stop\(\), 1800\)/);
+  assert.match(intro, /if \(this\.completionTimeout !== null\) window\.clearTimeout\(this\.completionTimeout\)/);
+});
+
+test('boot timeouts prevent false-ready menus when the asset or WebGL engine initialization fails', async () => {
+  const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
+  assert.match(app, /withBootTimeout\(\s*assetLoader\.preloadAll\(\),\s*12000/);
+  assert.match(app, /withBootTimeout\(\s*xb\.init\(options\),\s*18000/);
+  assert.match(app, /if \(!renderer\)/);
+  assert.match(app, /Nie udało się uruchomić silnika 3D/);
+  assert.match(app, /boot-recovery-notice/);
+  assert.doesNotMatch(app, /requestAnimationFrame\(\(\) => requestAnimationFrame\(\(\) => resolve\(\)\)\)/);
+});
