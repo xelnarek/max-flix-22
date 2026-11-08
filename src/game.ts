@@ -1230,24 +1230,8 @@ export class PaleciakiGameEngine {
       }
     });
 
-    const pvpRaycaster = new THREE.Raycaster();
-    const pvpGroundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.5);
-    const pvpIntersection = new THREE.Vector3();
-    const mouseNd = new THREE.Vector2();
-
-    window.addEventListener('pointermove', (e) => {
-      if (this.gameMode !== 'pvp' || !this.manualAimEnabled) return;
-      if (e.pointerType === 'touch') return;
-      mouseNd.x = (e.clientX / window.innerWidth) * 2 - 1;
-      mouseNd.y = -(e.clientY / window.innerHeight) * 2 + 1;
-      pvpRaycaster.setFromCamera(mouseNd, this.camera);
-      if (pvpRaycaster.ray.intersectPlane(pvpGroundPlane, pvpIntersection)) {
-        const dx = pvpIntersection.x - this.playerPos.x;
-        const dz = pvpIntersection.z - this.playerPos.z;
-        this.setManualAimInput(dx, dz);
-        // Pointer movement only changes direction; fire happens on a discrete press.
-      }
-    });
+    // PvP aiming is the same timed directional sweep on desktop and touch.
+    // Mouse click fires; pointer movement does not override the sweep.
 
     window.addEventListener('blur', () => {
       this.keys = {};
