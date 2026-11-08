@@ -7124,3 +7124,9 @@ body #touch-controls.manual-aim-mode:not(.hidden) .pvp-move-caption {
   .account-rank-bonuses { grid-template-columns: minmax(0, 1fr); }
   .account-progression-rules span { font-size: 6px; }
 }
+
+#tab-talent-tree.active,
+#tab-ranks.active {
+  display: grid !important;
+  align-content: start;
+}
