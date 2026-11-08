@@ -19,7 +19,10 @@ test('online session handles static hosting, bounded retries and does not restar
   assert.match(client, /VITE_PVP_WS_URL/);
   assert.match(client, /isGitHubPages/);
   assert.match(client, /MAX_CONNECT_ATTEMPTS = 3/);
-  assert.match(client, /CONNECT_TIMEOUT_MS = 7000/);
+  assert.match(client, /CONNECT_TIMEOUT_MS = 75_000/);
+  assert.match(client, /RETRY_CONNECT_TIMEOUT_MS = 12_000/);
+  assert.match(client, /this\.reconnectAttempts === 0/);
+  assert.match(client, /wybudzenie po bezczynności może trwać około minuty/);
   assert.match(client, /hasStartedMatch/);
   assert.match(client, /pendingCreate = undefined/);
   assert.match(client, /pendingJoin = undefined/);
