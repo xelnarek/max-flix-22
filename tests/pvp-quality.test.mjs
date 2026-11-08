@@ -156,8 +156,10 @@ test('PvP right-stick is revealed on the portaled touch-controls layer, not the 
     readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
   ]);
-  assert.match(app, /touchControls\?\.classList\.add\('pvp-mode', 'manual-aim-mode'\)/);
-  assert.match(app, /touchControls\?\.classList\.remove\('pvp-mode', 'manual-aim-mode'\)/);
+  assert.match(app, /setTouchControlsMode\('pvp'\)/);
+  assert.match(app, /root\.classList\.toggle\('pvp-mode', activePvp\)/);
+  assert.match(app, /setTouchControlsMode\('hidden'\)/);
+  assert.match(app, /root\.classList\.toggle\('manual-aim-mode', activePvp\)/);
   assert.match(css, /#touch-controls\.manual-aim-mode \.pvp-aim-zone \{ display: block !important; \}/);
   assert.doesNotMatch(css, /#game-shell\.manual-aim-mode \.pvp-aim-zone \{ display: block !important; \}/);
   assert.match(css, /#touch-controls\.manual-aim-mode \.pvp-aim-base:not\(\.active\) \{ opacity: \.48 !important; \}/);

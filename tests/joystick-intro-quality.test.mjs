@@ -114,7 +114,8 @@ test('touch controls are portaled outside the WebGL shell for Android hit testin
   assert.match(boot, /touchLayer && touchLayer\.parentElement !== document\.body[\s\S]*?document\.body\.appendChild\(touchLayer\)/);
   assert.match(boot, /touchLayer\.style\.setProperty\('z-index', '2147483000', 'important'\)/);
   assert.match(boot, /touchLayer\.style\.setProperty\('pointer-events', 'none', 'important'\)/);
-  assert.match(app, /touchControls\?\.classList\.add\('survival-mode'\)/);
+  assert.match(app, /setTouchControlsMode\('survival'\)/);
+  assert.match(app, /root\.classList\.toggle\('survival-mode', activeSurvival\)/);
 });
 
 test('the title menu is portaled above the WebGL shell for mobile compositor safety', async () => {
