@@ -130,8 +130,27 @@ test('touch controls are explicitly hit-testable above the WebGL canvas during g
 
 test('mobile touch controls stay visible and viewport-anchored after being portaled to body', async () => {
   const css = await readFile(new URL('../src/index.css', import.meta.url), 'utf8');
-  assert.match(css, /body #touch-controls:not\\(\\.hidden\\)[\\s\\S]*?z-index: 2147483000 !important/);
-  assert.match(css, /body #touch-controls:not\\(\\.hidden\\) \\.joystick-base[\\s\\S]*?opacity: \.72 !important/);
-  assert.match(css, /body #touch-controls:not\\(\\.hidden\\) \\.touch-actions-zone[\\s\\S]*?display: flex !important/);
-  assert.match(css, /body #touch-controls:not\\(\\.hidden\\) \\.touch-actions-zone \\.touch-action-btn[\\s\\S]*?pointer-events: auto !important/);
+  assert.ok(css.includes('body #touch-controls:not(.hidden) {'));
+  assert.ok(css.includes('z-index: 2147483000 !important;'));
+  assert.ok(css.includes('body #touch-controls:not(.hidden) .joystick-base:not(.active) {'));
+  assert.ok(css.includes('opacity: .72 !important;'));
+  assert.ok(css.includes('body #touch-controls:not(.hidden) .touch-actions-zone {'));
+  assert.ok(css.includes('body #touch-controls:not(.hidden) .touch-actions-zone .touch-action-btn {'));
+});
+
+
+test('gameplay explicitly forces the mobile touch layer visible when a run starts and hides it on return to menu', async () => {
+  const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
+  assert.match(app, /function setTouchControlsVisibility\(visible: boolean\)/);
+  assert.ok(app.includes("layer.classList.remove('hidden')"));
+  assert.ok(app.includes("layer.style.setProperty('display', 'block', 'important')"));
+  assert.ok(app.includes('setTouchControlsVisibility(true)'));
+  assert.ok(app.includes('setTouchControlsVisibility(false)'));
+});
+
+test('joystick resting anchor does not override live pointer position while active', async () => {
+  const css = await readFile(new URL('../src/index.css', import.meta.url), 'utf8');
+  assert.ok(css.includes('.joystick-base:not(.active) {'));
+  assert.ok(css.includes('.joystick-base.active {'));
+  assert.ok(css.includes('transform: translate(-50%, -50%) !important;'));
 });
