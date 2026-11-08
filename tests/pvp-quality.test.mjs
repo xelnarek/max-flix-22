@@ -234,11 +234,13 @@ test('public PvP matchmaking connects the lobby, server FIFO queue, auto-ready a
   assert.match(client, /public cancelMatchmaking\(\): boolean/);
   assert.match(client, /case 'matchmaking_status'/);
   assert.match(client, /case 'match_found'/);
+  assert.match(client, /Keep the request until matched\/cancelled so reconnects can re-enter the FIFO queue/);
   assert.match(client, /this\.send\(\{ type: 'set_ready', ready: true \}\)/);
   assert.match(app, /btn-pvp-find-match/);
   assert.match(app, /btn-pvp-cancel-match/);
   assert.match(app, /session\.findMatch\(this\.selectedPvpOperator, playerNick\)/);
   assert.match(app, /session\.cancelMatchmaking\(\)/);
+  assert.match(app, /RYWAL SIĘ ROZŁĄCZYŁ/);
   assert.match(app, /Pozycja: \$\{position\}/);
   assert.match(html, /id="btn-pvp-find-match"/);
   assert.match(html, /id="btn-pvp-cancel-match"/);
