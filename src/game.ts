@@ -2917,7 +2917,79 @@ export class PaleciakiGameEngine {
       body.receiveShadow = true;
       root.add(body);
 
-      if (feature.kind === 'sorter_belt') {
+      if (feature.kind === 'pallet_stack') {
+        // Realistic palletised cargo: deck runners, separated boards, tension
+        // straps and a front shipping label. The original collision footprint
+        // is deliberately unchanged.
+        const darkWood = new THREE.MeshStandardMaterial({ color: 0x4b3829, roughness: 0.92 });
+        const paleWood = new THREE.MeshStandardMaterial({ color: 0xb38a5d, roughness: 0.86 });
+        const palletBase = new THREE.Mesh(
+          new THREE.BoxGeometry(feature.width + 0.16, 0.13, feature.depth + 0.14),
+          darkWood,
+        );
+        palletBase.position.y = 0.075;
+        root.add(palletBase);
+
+        const runner = new THREE.Mesh(new THREE.BoxGeometry(feature.width + 0.08, 0.11, 0.13), wood);
+        for (const z of [-feature.depth * 0.34, 0, feature.depth * 0.34]) {
+          const support = runner.clone();
+          support.position.set(0, 0.16, z);
+          root.add(support);
+        }
+
+        const boardCount = Math.max(5, Math.min(9, Math.round(feature.width * 1.5)));
+        const deckBoards = new THREE.InstancedMesh(
+          new THREE.BoxGeometry(feature.width * 0.96 / boardCount, 0.045, feature.depth * 0.88),
+          paleWood,
+          boardCount,
+        );
+        for (let i = 0; i < boardCount; i++) {
+          dummy.position.set(
+            -feature.width * 0.46 + (i + 0.5) * feature.width * 0.92 / boardCount,
+            0.235,
+            0,
+          );
+          dummy.rotation.set(0, 0, 0);
+          dummy.scale.set(1, 1, 1);
+          dummy.updateMatrix();
+          deckBoards.setMatrixAt(i, dummy.matrix);
+        }
+        deckBoards.instanceMatrix.needsUpdate = true;
+        root.add(deckBoards);
+
+        const strapMaterial = new THREE.MeshStandardMaterial({
+          color: 0x172b3b,
+          roughness: 0.52,
+          metalness: 0.22,
+        });
+        const cargoStraps = new THREE.InstancedMesh(
+          new THREE.BoxGeometry(0.065, feature.height + 0.08, feature.depth + 0.07),
+          strapMaterial,
+          2,
+        );
+        for (let i = 0; i < 2; i++) {
+          dummy.position.set((i === 0 ? -1 : 1) * feature.width * 0.24, feature.height * 0.5 + 0.11, 0);
+          dummy.rotation.set(0, 0, 0);
+          dummy.scale.set(1, 1, 1);
+          dummy.updateMatrix();
+          cargoStraps.setMatrixAt(i, dummy.matrix);
+        }
+        cargoStraps.instanceMatrix.needsUpdate = true;
+        root.add(cargoStraps);
+
+        const labelPlate = new THREE.Mesh(
+          new THREE.BoxGeometry(Math.min(0.62, feature.width * 0.34), 0.26, 0.025),
+          new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.78 }),
+        );
+        labelPlate.position.set(0, feature.height * 0.62, feature.depth * 0.5 + 0.018);
+        root.add(labelPlate);
+        const labelCode = new THREE.Mesh(
+          new THREE.BoxGeometry(Math.min(0.40, feature.width * 0.22), 0.035, 0.012),
+          new THREE.MeshBasicMaterial({ color: feature.accent }),
+        );
+        labelCode.position.set(0, feature.height * 0.62 + 0.045, feature.depth * 0.5 + 0.034);
+        root.add(labelCode);
+      } else if (feature.kind === 'sorter_belt') {
         const belt = new THREE.Mesh(
           new THREE.BoxGeometry(feature.width * 0.92, 0.09, feature.depth * 0.82),
           new THREE.MeshStandardMaterial({ color: 0x111827, metalness: 0.35, roughness: 0.72 })
@@ -2938,17 +3010,80 @@ export class PaleciakiGameEngine {
         }
         rollers.instanceMatrix.needsUpdate = true;
         root.add(rollers);
+
+        const railMaterial = new THREE.MeshStandardMaterial({ color: 0x7c8797, metalness: 0.72, roughness: 0.34 });
+        for (const side of [-1, 1]) {
+          const rail = new THREE.Mesh(
+            new THREE.BoxGeometry(feature.width * 0.96, 0.16, 0.075),
+            railMaterial,
+          );
+          rail.position.set(0, feature.height + 0.18, side * feature.depth * 0.43);
+          root.add(rail);
+        }
+        const sensor = new THREE.Mesh(
+          new THREE.BoxGeometry(0.16, 0.22, 0.12),
+          new THREE.MeshStandardMaterial({ color: 0x17212e, metalness: 0.46, roughness: 0.38 }),
+        );
+        sensor.position.set(feature.width * 0.34, feature.height + 0.24, feature.depth * 0.48);
+        root.add(sensor);
+        const statusLamp = new THREE.Mesh(
+          new THREE.SphereGeometry(0.045, 8, 6),
+          new THREE.MeshBasicMaterial({ color: 0x4ade80 }),
+        );
+        statusLamp.position.set(feature.width * 0.34, feature.height + 0.37, feature.depth * 0.48);
+        root.add(statusLamp);
       } else if (feature.kind === 'cold_compressor') {
         const fanHousing = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.42, 0.42, 0.12, 12),
+          new THREE.CylinderGeometry(0.42, 0.42, 0.12, 16),
           accent
         );
         fanHousing.rotation.z = Math.PI / 2;
         fanHousing.position.set(feature.width / 2 + 0.07, feature.height * 0.62, 0);
         root.add(fanHousing);
+        const fanRing = new THREE.Mesh(
+          new THREE.TorusGeometry(0.33, 0.035, 6, 20),
+          sharedMetal,
+        );
+        fanRing.rotation.y = Math.PI / 2;
+        fanRing.position.set(feature.width / 2 + 0.145, feature.height * 0.62, 0);
+        root.add(fanRing);
+        const fanHub = new THREE.Mesh(
+          new THREE.SphereGeometry(0.085, 10, 8),
+          new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.76, roughness: 0.25 }),
+        );
+        fanHub.position.set(feature.width / 2 + 0.155, feature.height * 0.62, 0);
+        root.add(fanHub);
+        for (let blade = 0; blade < 4; blade++) {
+          const vane = new THREE.Mesh(
+            new THREE.BoxGeometry(0.035, 0.25, 0.065),
+            sharedMetal,
+          );
+          const angle = blade * Math.PI / 2;
+          vane.position.set(
+            feature.width / 2 + 0.16,
+            feature.height * 0.62 + Math.cos(angle) * 0.17,
+            Math.sin(angle) * 0.17,
+          );
+          vane.rotation.x = angle;
+          root.add(vane);
+        }
         const vent = new THREE.Mesh(new THREE.BoxGeometry(0.12, feature.height * 0.62, feature.depth * 0.64), accent);
         vent.position.set(feature.width / 2 + 0.08, feature.height * 0.3, 0);
         root.add(vent);
+        const ventSlats = new THREE.InstancedMesh(
+          new THREE.BoxGeometry(0.04, 0.035, feature.depth * 0.58),
+          sharedMetal,
+          5,
+        );
+        for (let i = 0; i < 5; i++) {
+          dummy.position.set(feature.width / 2 + 0.15, 0.20 + i * feature.height * 0.105, 0);
+          dummy.rotation.set(0, 0, 0);
+          dummy.scale.set(1, 1, 1);
+          dummy.updateMatrix();
+          ventSlats.setMatrixAt(i, dummy.matrix);
+        }
+        ventSlats.instanceMatrix.needsUpdate = true;
+        root.add(ventSlats);
       } else if (feature.kind === 'container_stack') {
         const corner = new THREE.Mesh(new THREE.BoxGeometry(0.12, feature.height * 0.92, 0.12), accent);
         for (const x of [-1, 1]) for (const z of [-1, 1]) {
@@ -2959,12 +3094,41 @@ export class PaleciakiGameEngine {
         const top = new THREE.Mesh(new THREE.BoxGeometry(feature.width + 0.12, 0.10, feature.depth + 0.12), accent);
         top.position.y = feature.height + 0.05;
         root.add(top);
-      } else {
-        for (const y of [0.34, 0.78]) {
-          const slat = new THREE.Mesh(new THREE.BoxGeometry(feature.width * 0.92, 0.07, feature.depth * 1.02), accent);
-          slat.position.y = y;
-          root.add(slat);
+
+        // Corrugated container sides: repeated narrow ribs read as steel panels
+        // from the normal top-down camera, without changing the obstacle bounds.
+        const ribCount = Math.max(6, Math.min(12, Math.round(feature.width * 2)));
+        const ribs = new THREE.InstancedMesh(
+          new THREE.BoxGeometry(0.045, feature.height * 0.78, 0.045),
+          sharedMetal,
+          ribCount * 2,
+        );
+        for (let i = 0; i < ribCount; i++) {
+          const x = -feature.width * 0.43 + i * (feature.width * 0.86 / Math.max(1, ribCount - 1));
+          for (const side of [-1, 1]) {
+            dummy.position.set(x, feature.height * 0.5, side * (feature.depth * 0.5 + 0.025));
+            dummy.rotation.set(0, 0, 0);
+            dummy.scale.set(1, 1, 1);
+            dummy.updateMatrix();
+            ribs.setMatrixAt(i * 2 + (side > 0 ? 1 : 0), dummy.matrix);
+          }
         }
+        ribs.instanceMatrix.needsUpdate = true;
+        root.add(ribs);
+        const doorBars = new THREE.InstancedMesh(
+          new THREE.BoxGeometry(0.065, feature.height * 0.74, 0.07),
+          accent,
+          2,
+        );
+        for (let i = 0; i < 2; i++) {
+          dummy.position.set(feature.width * 0.5 + 0.04, feature.height * 0.5, (i === 0 ? -1 : 1) * feature.depth * 0.21);
+          dummy.rotation.set(0, 0, 0);
+          dummy.scale.set(1, 1, 1);
+          dummy.updateMatrix();
+          doorBars.setMatrixAt(i, dummy.matrix);
+        }
+        doorBars.instanceMatrix.needsUpdate = true;
+        root.add(doorBars);
       }
 
       root.position.set(feature.x, 0, feature.z);
