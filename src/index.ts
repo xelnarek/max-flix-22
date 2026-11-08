@@ -40,6 +40,23 @@ import { SURVIVAL_MAPS, type SurvivalMapId } from './survivalMaps.ts';
 import { launchOniricPlatformer } from './oniricPlatformer.ts';
 import { getMenuTabIndexForKey } from './menuTabNavigation.ts';
 import { readSurvivalMapPreference, writeSurvivalMapPreference } from './survivalMapPreference.ts';
+import {
+  ACCOUNT_PROGRESS_MAX_LEVEL,
+  ACCOUNT_PROGRESS_STORAGE_KEY,
+  ACCOUNT_RANKS,
+  ACCOUNT_TALENTS,
+  ACCOUNT_TALENT_BRANCHES,
+  canSpendAccountTalentPoint,
+  combineAccountAndCharacterBonuses,
+  createInitialAccountProgressionProfile,
+  getAccountProgressionBonuses,
+  getAccountProgressionSummary,
+  getAccountRankInfo,
+  recordAccountPvpMatch,
+  recordAccountSurvivalRun,
+  sanitizeAccountProgressionProfile,
+  spendAccountTalentPoint,
+} from './accountProgression.ts';
 
 // Set the mobile control layer as a single, explicit UI state. Removing the
 // class alone is insufficient in some Android WebViews after the DOM portal
@@ -149,6 +166,29 @@ import {
 
 const SURVIVAL_ACHIEVEMENTS_STORAGE_KEY = 'paleciaki.survival.achievements.v1';
 const CHARACTER_MASTERY_STORAGE_KEY = 'paleciaki.character.mastery.v1';
+
+const loadAccountProgressionProfile = () => {
+  try {
+    const saved = localStorage.getItem(ACCOUNT_PROGRESS_STORAGE_KEY);
+    return saved
+      ? sanitizeAccountProgressionProfile(JSON.parse(saved))
+      : createInitialAccountProgressionProfile();
+  } catch {
+    return createInitialAccountProgressionProfile();
+  }
+};
+
+let accountProgressionProfile = loadAccountProgressionProfile();
+
+const persistAccountProgressionProfile = () => {
+  try {
+    localStorage.setItem(ACCOUNT_PROGRESS_STORAGE_KEY, JSON.stringify(accountProgressionProfile));
+  } catch (error) {
+    console.warn('[Account progression] Local save unavailable:', error);
+  }
+};
+
+
 
 const loadCharacterMasteryProfile = () => {
   try {
@@ -534,6 +574,7 @@ class PaleciakiScene extends xb.Script {
   private lastBossDefeated: boolean = false;
   private lastMode: 'campaign' | 'survival' | 'pvp' = 'survival';
   private masteryAwardedForRun = false;
+  private accountPvpAwardedForMatch = false;
   private pvpSession: IPvpSession | null = null;
   private selectedPvpOperator: CharacterId = 'marcin';
   private pvpRoomCode: string = '';
@@ -571,6 +612,7 @@ class PaleciakiScene extends xb.Script {
 
   private setupUIAndEngine() {
     let renderCharacterMasteryPanel: (id: CharacterId) => void = () => {};
+    let renderAccountProgressionPanels: () => void = () => {};
     const handleResize = () => {
       // visualViewport reflects the usable viewport on mobile browsers when browser chrome changes size.
       const width = Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth));
@@ -1574,7 +1616,10 @@ class PaleciakiScene extends xb.Script {
           if (!result.purchased) return;
           characterMasteryProfile = result.profile;
           persistCharacterMasteryProfile();
-          this.engine.selectCharacter(id, getCharacterTalentBonuses(characterMasteryProfile, id));
+          this.engine.selectCharacter(id, combineAccountAndCharacterBonuses(
+            getCharacterTalentBonuses(characterMasteryProfile, id),
+            getAccountProgressionBonuses(accountProgressionProfile),
+          ));
           renderCharacterMasteryPanel(id);
           const toast = document.createElement('div');
           toast.className = 'achievement-unlock-toast';
@@ -1881,6 +1926,8 @@ class PaleciakiScene extends xb.Script {
         ensureLeaderboardServices().catch(console.warn);
       } else if (targetId === 'tab-achievements') {
         renderSurvivalAchievements();
+      } else if (targetId === 'tab-talent-tree' || targetId === 'tab-ranks') {
+        renderAccountProgressionPanels();
       }
     };
 
@@ -3209,6 +3256,7 @@ class PaleciakiScene extends xb.Script {
     bindPvpTap(btnClosePvpLobby, closeLobby);
 
     const startPvpMatchUI = (session: IPvpSession, localOp: CharacterId, remoteOp: CharacterId) => {
+      this.accountPvpAwardedForMatch = false;
       if (this.cinematicIntro?.isRunning()) this.cinematicIntro.stop(false, false);
       this.engine.setLevelVisible(true);
 
@@ -3267,7 +3315,14 @@ class PaleciakiScene extends xb.Script {
       const botOp: CharacterId = localOp === 'marcin' ? 'grzesiek' : localOp === 'grzesiek' ? 'dawid' : 'marcin';
       const playerNick = nickInput?.value.trim() || 'Operator B4';
 
-      const botSession = new PvpLocalBotSession(localOp, botOp, playerNick, `${CHARACTERS[botOp].name} [BOT SI]`);
+      const botSession = new PvpLocalBotSession(
+        localOp,
+        botOp,
+        playerNick,
+        `${CHARACTERS[botOp].name} [BOT SI]`,
+        {},
+        getAccountProgressionBonuses(accountProgressionProfile),
+      );
       this.pvpSession = botSession;
       this.pvpLocalSlot = 'p1';
 
@@ -3358,7 +3413,7 @@ class PaleciakiScene extends xb.Script {
         setMatchmakingUiPhase('idle');
         setPvpConnectionStatus('error', 'WYSZUKIWANIE NIEUDANE', error);
       };
-      session.findMatch(this.selectedPvpOperator, playerNick);
+      session.findMatch(this.selectedPvpOperator, playerNick, getAccountProgressionBonuses(accountProgressionProfile));
       sound.playSmack();
     });
 
@@ -3468,7 +3523,7 @@ class PaleciakiScene extends xb.Script {
         setPvpConnectionStatus('error', 'NIE UDAŁO SIĘ POŁĄCZYĆ', err);
       };
 
-      netSession.createRoom(this.selectedPvpOperator, playerNick);
+      netSession.createRoom(this.selectedPvpOperator, playerNick, getAccountProgressionBonuses(accountProgressionProfile));
       sound.playSmack();
     });
 
@@ -3563,7 +3618,7 @@ class PaleciakiScene extends xb.Script {
         setPvpConnectionStatus('error', 'NIE UDAŁO SIĘ DOŁĄCZYĆ', err);
       };
 
-      netSession.joinRoom(code, this.selectedPvpOperator, playerNick);
+      netSession.joinRoom(code, this.selectedPvpOperator, playerNick, getAccountProgressionBonuses(accountProgressionProfile));
       sound.playSmack();
     });
 
@@ -3577,6 +3632,7 @@ class PaleciakiScene extends xb.Script {
 
     bindPvpTap(btnRematch, () => {
       if (!this.pvpSession) return;
+      this.accountPvpAwardedForMatch = false;
       this.pvpSession.requestRematch?.();
       if (this.pvpSession.isLocalBot) {
         matchEndModal?.classList.add('hidden');
