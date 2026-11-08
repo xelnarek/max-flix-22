@@ -90,3 +90,22 @@ test('boot timeouts prevent false-ready menus when the asset or WebGL engine ini
   assert.match(app, /boot-recovery-notice/);
   assert.doesNotMatch(app, /requestAnimationFrame\(\(\) => requestAnimationFrame\(\(\) => resolve\(\)\)\)/);
 });
+
+
+test('Survival starts without waiting for the ad provider and the menu is not covered by auto intro', async () => {
+  const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
+  const start = app.slice(app.indexOf('const doStartSurvival'), app.indexOf('const bindTap ='));
+  assert.match(start, /await assetLoader\.waitUntilReady\('Gra 3D'\)/);
+  assert.match(start, /void initializeGameAds\(\)/);
+  assert.doesNotMatch(start, /await initializeGameAds\(\)/);
+  const boot = app.slice(app.indexOf('async function startApp()'));
+  assert.doesNotMatch(boot, /dispatchEvent\(new Event\('paleciaki:launch-intro'\)\)/);
+  assert.match(app, /btn-open-intro/);
+});
+
+test('touch controls are explicitly hit-testable above the WebGL canvas during gameplay', async () => {
+  const css = await readFile(new URL('../src/index.css', import.meta.url), 'utf8');
+  assert.match(css, /#touch-controls:not\(\.hidden\)[\s\S]*?pointer-events: none !important/);
+  assert.match(css, /#touch-controls \.joystick-zone,[\s\S]*?pointer-events: auto !important/);
+  assert.match(css, /isolation: isolate !important/);
+});
