@@ -178,7 +178,7 @@ test('PvP deployment uses a minimal runtime Docker image and a Frankfurt Render 
     readFile(new URL('../src/server/standalone.ts', import.meta.url), 'utf8'),
   ]);
   assert.match(docker, /FROM node:24-alpine AS runtime-deps/);
-  assert.match(docker, /npm install --omit=dev --no-package-lock[^\\n]*ws@8\\.22\\.1/);
+  assert.ok(docker.includes('npm install --omit=dev --no-package-lock --no-audit --no-fund ws@8.22.1'));
   assert.match(docker, /COPY --from=runtime-deps \/deps\/node_modules \.\/node_modules/);
   assert.match(docker, /npm run pvp:server/);
   assert.doesNotMatch(docker, /npm ci/);
