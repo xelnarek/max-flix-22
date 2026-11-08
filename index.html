@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Paleciaki! Magazyn Chaosu</title>
-    <meta name="description" content="Paleciaki! Magazyn Chaosu — trójwymiarowy roguelite survival w magazynowym świecie. Walcz z hordami, zbieraj moduły, rozwijaj broń i przetrwaj kolejne fale." />
+    <meta name="description" content="Paleciaki! Magazyn Chaosu — trójwymiarowa gra akcji Survival PvE i arena PvP 1v1. Walcz z hordami, rozwijaj build lub zmierz się z przeciwnikiem w pojedynku." />
     <meta property="og:title" content="Paleciaki! Magazyn Chaosu" />
-    <meta property="og:description" content="Jedna zmiana, setki przeciwników i paleciak, który nie zna słowa stop. Survival 3D, moduły o różnej rzadkości i ewolucje broni." />
+    <meta property="og:description" content="Dwa odrębne tryby: Survival 3D z automatycznym namierzaniem oraz arena PvP 1v1 z ręcznym strzałem na timing." />
     <meta property="og:type" content="website" />
     <meta name="theme-color" content="#07131d" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -388,7 +388,7 @@
           <button id="btn-touch-attack" class="touch-action-btn attack-touch-btn" title="Atak">🥊 ATAK</button>
           <button id="btn-touch-ability" class="touch-action-btn ability-touch-btn" title="Moc">⚡ MOC</button>
           <button id="btn-touch-jump" class="touch-action-btn jump-touch-btn" title="Skok">SKOK</button>
-          <button id="btn-touch-dash" class="touch-action-btn dash-touch-btn" title="Unik taktyczny (Q) • Survival" aria-label="Unik taktyczny">↗ UNIK</button>
+          <button id="btn-touch-dash" class="touch-action-btn dash-touch-btn" title="Unik taktyczny (Q) • Survival i PvP" aria-label="Unik taktyczny w Survival i PvP">↗ UNIK</button>
         </div>
       </div>
 
@@ -398,7 +398,7 @@
           <div class="menu-top-header">
             <div class="brand-badge-pill">PALECIAKI! • ZMIANA BEZ LITOŚCI</div>
             <h1 class="menu-game-title" title="Kliknij trzy razy. Nie pytaj, dlaczego." aria-label="Paleciaki! Magazyn Chaosu — kliknij trzy razy, aby odkryć sekret">PALECIAKI! <span>MAGAZYN</span><em>CHAOSU</em></h1>
-            <p class="menu-game-subtitle">3D MAGAZYNOWA GRA AKCJI • SURVIVAL • FALE • HORDY I EWOLUCJE</p>
+            <p class="menu-game-subtitle">3D MAGAZYNOWA GRA AKCJI • SURVIVAL PVE • ARENA PVP 1v1</p>
             <div class="menu-release-strip">
               <span class="menu-release-pill">NOWA ZMIANA</span>
               <span>SHIFT OVERHAUL</span><span>20 TYPÓW WROGÓW</span><span>15 PERKÓW</span><span>4 BUILDY + 12 BRONI</span>
@@ -846,16 +846,17 @@
             <div id="tab-field-guide" class="tab-panel field-guide-panel">
               <section class="field-guide-hero">
                 <div class="field-guide-kicker">CENTRUM B4 INTELLIGENCE DIVISION • FIELD MANUAL 02.6</div>
-                <div class="field-guide-heading-row"><div><h2>BAZA TAKTYCZNA</h2><p>Pełny przewodnik po Survival Shift, przeciwnicy, pułapki, eventy, perki, ulepszenia i sekrety. Wszystko w jednym miejscu, przed wejściem na halę.</p></div><div class="field-guide-stamp">AKTUALNE<br>31.10.2026</div></div>
+                <div class="field-guide-heading-row"><div><h2>BAZA TAKTYCZNA</h2><p>Pełny przewodnik po Survival Shift, przeciwnicy, pułapki, eventy, perki, ulepszenia i sekrety. Wszystko w jednym miejscu, przed wejściem na halę.</p></div><div class="field-guide-stamp">AKTUALNE<br>08.11.2026</div></div>
                 <div class="field-guide-metrics">
                   <div><strong>20</strong><span>typów zagrożeń</span></div><div><strong>4</strong><span>pułapki</span></div><div><strong>5</strong><span>eventów</span></div><div><strong>15</strong><span>perków</span></div><div><strong>12</strong><span>ulepszeń pasywnych</span></div><div><strong>12 + 4</strong><span>ewolucji broni + synergii buildów</span></div>
                 </div>
               </section>
 
               <section class="field-guide-section">
-                <div class="field-guide-section-head"><span class="field-guide-index">01</span><div><h3>SURVIVAL • JEDEN TRYB</h3><p>Jedyny tryb gry: rozbudowana arena Survival, w której rozwijasz build, odblokowujesz ewolucje i próbujesz wytrzymać jak najdłużej.</p></div></div>
+                <div class="field-guide-section-head"><span class="field-guide-index">01</span><div><h3>SURVIVAL I PVP • DWA ODRĘBNE TRYBY</h3><p>Survival to rozgrywka PvE z automatycznym namierzaniem, falami i rozwojem builda. Arena PvP 1v1 ma osobny HUD, ręczny timing strzału, własne tempo walki i umiejętności. Sterowanie jednego trybu nie przenika do drugiego.</p></div></div>
                 <div class="field-guide-card-grid three-col">
                   <article class="field-guide-card"><span class="field-guide-icon">⚔️</span><h4>SURVIVAL SHIFT • ROGUELITE</h4><p>Samodzielna arena, fale co 60 sekund i automatyczne namierzanie. Ataki mają niezależne, długie przeładowania. Co 5 fal pojawia się główny boss w rotacji trzech modeli: Nadzorca Zero (fala 5), Dyrektor Widmo (10) i Bosman Kraków (15), potem cykl się powtarza. Boss zostawia skrzynię z łupem i dodatkowe XP.</p><small>CEL: PRZETRWAJ • ZBIERAJ XP • SKŁADAJ BUILD</small></article>
+                  <article class="field-guide-card"><span class="field-guide-icon">🎯</span><h4>ARENA PVP • POJEDYNEK 1v1</h4><p>Osobna arena i zestaw zasad. Przeciwnik nie jest automatycznie namierzany: obok operatora porusza się wskaźnik na łuku, a strzał oddajesz przyciskiem STRZAŁ w chwili, gdy kierunek pokrywa się z przeciwnikiem. Na telefonie ruch obsługuje lewy joystick, strzał znajduje się bezpośrednio nad nim, a MOC i UNIK są po prawej. Na PC strzelasz przyciskiem w dolnym panelu, klawiszem F lub kliknięciem areny.</p><small>CEL: WYBIERZ MOMENT • ZACHOWAJ DYSTANS • WYGRAJ 2 RUNDY</small></article>
                   <article class="field-guide-card"><span class="field-guide-icon">🔫</span><h4>ARSENAŁ • 12 BRONI AUTONOMICZNYCH</h4><p>Działo paletowe (fala uderzeniowa), Tarcza diamentowa (przebicie i rykoszet), Mina Mapei (spowolnienie), Kubełek bombowy (ogień), Dron Piorun (naprowadzanie), Nitownica UDT (szybkie przebicie), Impuls skanera B4 (precyzyjne namierzanie), Wirujące tarcze (obrona orbitalna), Odłamki Calacatty (wachlarz przebijających odłamków), Bomba Parowa (strefa spowolnienia), Klakson Sztaplarki (fala ogłuszająca) i WZ-Bumerang (powracający pocisk). Broń rozwijasz do poziomu 5. Unikalna ewolucja wymaga 5 minut Survival oraz co najmniej jednego poziomu przypisanego modułu pasywnego.</p><small>TAKTYKA: DOBIERAJ WZORY ATAKU, NIE TYLKO SUROWE OBRAŻENIA</small></article>
                 </div>
                 <div class="field-guide-callout"><strong>Tempo i czytelność:</strong> fale przychodzą co 60 sekund, liczebność grup i limit przeciwników są ograniczone. Maksymalnie 22 aktywnych przeciwników na urządzeniach mobilnych i 34 na desktopie. Sekretna fala Pomazańców otrzymuje pięć krótkotrwałych, dodatkowych slotów. Im dalej w zmianę, tym bardziej wytrzymali są wrogowie.</div>
