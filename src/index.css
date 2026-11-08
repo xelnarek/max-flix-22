@@ -6629,6 +6629,11 @@ body #touch-controls.manual-aim-mode:not(.hidden) .pvp-move-caption {
 
 /* Mode-specific action ownership: Survival keeps its four-action cluster;
    PvP keeps only ability and dash beside its dedicated timed fire control. */
+#touch-controls.pvp-mode .joystick-zone {
+  /* Keep the left movement hit-zone clear of the two right-side action buttons. */
+  width: min(46vw, 300px) !important;
+  height: min(46vh, 420px) !important;
+}
 #touch-controls.pvp-mode #btn-touch-attack,
 #touch-controls.pvp-mode #btn-touch-jump {
   display: none !important;
