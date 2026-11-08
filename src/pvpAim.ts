@@ -52,6 +52,28 @@ export function pvpAimDirectionFromAngle(angle: number): PvpAimDirection {
   return { x: Math.sin(angle), z: Math.cos(angle) };
 }
 
+/** Archero-inspired timing cursor: left edge -> right edge -> left edge. */
+export const PVP_AIM_SWEEP_HALF_ARC = 68 * Math.PI / 180;
+export const PVP_AIM_SWEEP_PERIOD_SECONDS = 3.2;
+export const PVP_AIM_SWEEP_RADIUS = 2.75;
+export const PVP_AIM_SWEEP_SEGMENTS = 40;
+
+export function getPvpSweepAimAngle(
+  elapsedSeconds: number,
+  centerAngle: number,
+  halfArc = PVP_AIM_SWEEP_HALF_ARC,
+  periodSeconds = PVP_AIM_SWEEP_PERIOD_SECONDS,
+): number {
+  if (!finite(centerAngle)) return 0;
+  const elapsed = finite(elapsedSeconds) ? elapsedSeconds : 0;
+  const period = finite(periodSeconds) && periodSeconds > 0 ? periodSeconds : PVP_AIM_SWEEP_PERIOD_SECONDS;
+  const arc = finite(halfArc) ? Math.max(0, Math.min(Math.PI, Math.abs(halfArc))) : PVP_AIM_SWEEP_HALF_ARC;
+  const phase = ((elapsed % period) + period) % period / period;
+  const travel = phase <= 0.5 ? phase * 2 : (1 - phase) * 2;
+  const angle = centerAngle + (travel * 2 - 1) * arc;
+  return Math.atan2(Math.sin(angle), Math.cos(angle));
+}
+
 
 /** Convert a screen-space aim drag into world X/Z for the current PvP camera axis. */
 export function pvpScreenAimToWorld(x: number, y: number, portrait: boolean): PvpAimDirection {

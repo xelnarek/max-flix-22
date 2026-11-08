@@ -372,17 +372,19 @@
           <div id="joystick-base" class="joystick-base"><div id="joystick-knob" class="joystick-knob"></div></div>
           <span class="pvp-stick-caption pvp-move-caption pvp-only-control">RUCH</span>
         </div>
-        <div id="pvp-aim-zone" class="pvp-aim-zone pvp-only-control" aria-label="Prawy joystick ustawia kierunek celowania. Przycisk STRZAŁ oddaje pojedynczy pocisk.">
-          <div id="pvp-aim-base" class="pvp-aim-base"><span class="pvp-aim-center-label">CELUJ</span><div id="pvp-aim-knob" class="pvp-aim-knob"></div></div>
-          <span class="pvp-stick-caption pvp-aim-caption pvp-only-control">CELUJ • PRZYTRZYMAJ I PRZESUŃ</span>
+        <div class="pvp-control-guide pvp-only-control" aria-hidden="true">
+          <span>RUCH</span><i></i><span>OBSERWUJ ŁUK</span><i></i><span>STRZEL W MOMENCIE</span>
         </div>
-        <div class="pvp-control-guide pvp-only-control" aria-hidden="true"><span>1. RUCH</span><i></i><span>2. CELUJ</span><i></i><span>3. STRZAŁ</span></div>
-        <div class="touch-actions-zone">
-          <button id="btn-pvp-fire" class="touch-action-btn pvp-fire-btn pvp-only-control hidden" type="button" aria-label="Oddaj jeden strzał" title="Strzał pojedynczy • krótka przerwa na przeładowanie">
+        <div id="pvp-fire-control" class="pvp-fire-control pvp-only-control">
+          <button id="btn-pvp-fire" class="touch-action-btn pvp-fire-btn hidden" type="button"
+            aria-label="Oddaj jeden strzał, gdy wskaźnik przejdzie przez kierunek przeciwnika"
+            title="Strzał pojedynczy • kliknij, gdy wskaźnik na łuku pokryje się z przeciwnikiem">
             <span class="pvp-fire-glyph" aria-hidden="true">➤</span>
             <span class="pvp-fire-label">STRZAŁ</span>
             <span class="pvp-fire-state">GOTOWY</span>
           </button>
+        </div>
+        <div class="touch-actions-zone">
           <button id="btn-touch-attack" class="touch-action-btn attack-touch-btn" title="Atak">🥊 ATAK</button>
           <button id="btn-touch-ability" class="touch-action-btn ability-touch-btn" title="Moc">⚡ MOC</button>
           <button id="btn-touch-jump" class="touch-action-btn jump-touch-btn" title="Skok">SKOK</button>

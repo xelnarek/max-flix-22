@@ -30,22 +30,21 @@ test('virtual joystick handles invalid dimensions and clamps travel beyond the r
   assert.equal(beyondRim.y, 0);
 });
 
-test('movement and PvP aim sticks capture separate pointers for simultaneous touch', async () => {
-  const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
-  const css = await readFile(new URL('../src/index.css', import.meta.url), 'utf8');
-  assert.match(app, /activePointerId !== null/);
-  assert.match(app, /joystickZone\.setPointerCapture\(event\.pointerId\)/);
-  assert.match(app, /window\.addEventListener\('pointercancel', handleEnd/);
-  assert.match(app, /window\.addEventListener\('orientationchange', resetJoystick\)/);
-  assert.match(app, /window\.visualViewport\?\.addEventListener\('resize', resetJoystick/);
-  assert.match(app, /window\.addEventListener\('orientationchange', resetAim\)/);
-  assert.match(app, /window\.visualViewport\?\.addEventListener\('resize', resetAim/);
-  assert.match(app, /calculateVirtualJoystickInput\(dx, dy, maxRadius\)/);
-  assert.match(app, /activeAimPointerId !== null/);
-  assert.doesNotMatch(app, /event\.isPrimary === false/);
-  assert.match(css, /touch-action: none !important/);
-  assert.match(css, /\.joystick-base::before/);
-  assert.match(css, /:is\(#game-shell, #touch-controls\)\.manual-aim-mode \.pvp-aim-zone \{ bottom: 98px !important; \}/);
+test('movement joystick retains pointer capture and PvP STRZAŁ follows its position', async () => {
+  const [app, css, html] = await Promise.all([
+    readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
+    readFile(new URL('../index.html', import.meta.url), 'utf8'),
+  ]);
+  assert.ok(app.includes("activePointerId !== null"));
+  assert.ok(app.includes("joystickZone.setPointerCapture(event.pointerId)"));
+  assert.ok(app.includes("window.addEventListener('pointercancel', handleEnd"));
+  assert.ok(app.includes("calculateVirtualJoystickInput(dx, dy, maxRadius)"));
+  assert.ok(!app.includes("activeAimPointerId"));
+  assert.ok(css.includes("touch-action: none !important"));
+  assert.ok(css.includes("pvp-fire-control"));
+  assert.ok(html.includes('id="pvp-fire-control"'));
+  assert.ok(!html.includes('id="pvp-aim-zone"'));
 });
 
 test('cinematic intro stages its title reveal over a richer animated warehouse scene', async () => {

@@ -15,19 +15,25 @@ test('PvP arena uses generated floor and obstacle surface maps rather than flat 
   assert.match(textures, /THREE\.SRGBColorSpace/);
 });
 
-test('PvP right-hand aim control is a floating drag pad with a separate one-shot fire button', async () => {
-  const [app, html] = await Promise.all([
+test('PvP timing arc and STRZAŁ are placed over the movement joystick', async () => {
+  const [app, game, html, css] = await Promise.all([
     readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/game.ts', import.meta.url), 'utf8'),
     readFile(new URL('../index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
   ]);
-  assert.match(app, /aimStartX = event\.clientX/);
-  assert.match(app, /aimStartY = event\.clientY/);
-  assert.match(app, /aimBase\.style\.left = ''/);
-  assert.match(app, /bindPvpTap\(pvpFireButton/);
-  assert.match(html, /CELUJ • PRZYTRZYMAJ I PRZESUŃ/);
-  assert.match(html, /id="btn-pvp-fire"/);
+  assert.ok(app.includes("bindPvpTap(pvpFireButton"));
+  assert.ok(!app.includes("activeAimPointerId"));
+  assert.ok(app.includes("pvpFireControl.style.setProperty"));
+  assert.ok(game.includes("getPvpSweepAimAngle("));
+  assert.ok(game.includes("pvpAimSweepPointer"));
+  assert.ok(html.includes('id="pvp-fire-control"'));
+  assert.ok(html.includes("OBSERWUJ ŁUK"));
+  assert.ok(html.indexOf('id="touch-joystick-zone"') < html.indexOf('id="pvp-fire-control"'));
+  assert.ok(html.indexOf('id="pvp-fire-control"') < html.indexOf('class="touch-actions-zone"'));
+  assert.ok(!html.includes('id="pvp-aim-zone"'));
+  assert.ok(css.includes("pvp-fire-control"));
 });
-
 
 test('Survival reuses the PvP floor, crate, barrier, wall and footprint assets', async () => {
   const [game, textures] = await Promise.all([

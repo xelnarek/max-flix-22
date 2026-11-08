@@ -2,7 +2,13 @@ import * as THREE from 'three';
 import { disposePvpObjectTree } from './pvpResourceCleanup.ts';
 import { calculatePvpCameraFrame, calculatePvpCameraTrackingBounds, isPvpPortraitViewport } from './pvpCamera.ts';
 import { createArenaObstacleFootprint, createPvpFloorTexture, createPvpObstacleTexture } from './pvpTextures.ts';
-import { calculatePvpAimPreview, getPvpAimAngle, isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle, pvpScreenAimToWorld, pvpScreenMovementToWorld, PVP_AIM_DIRECTION_DEADZONE, type PvpAimDirection } from './pvpAim.ts';
+import {
+  calculatePvpAimPreview, getPvpAimAngle, getPvpSweepAimAngle,
+  isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle,
+  pvpScreenAimToWorld, pvpScreenMovementToWorld, PVP_AIM_DIRECTION_DEADZONE,
+  PVP_AIM_SWEEP_HALF_ARC, PVP_AIM_SWEEP_PERIOD_SECONDS, PVP_AIM_SWEEP_RADIUS,
+  PVP_AIM_SWEEP_SEGMENTS, type PvpAimDirection,
+} from './pvpAim.ts';
 import type { IPvpSession } from './pvpClient.ts';
 import {
   createDefaultPvpObstacles,
@@ -548,6 +554,10 @@ export class PaleciakiGameEngine {
   private pvpPerkLastActive = false;
   private pvpAimGuide: THREE.Line | null = null;
   private pvpAimTarget: THREE.Mesh | null = null;
+  private pvpAimArc: THREE.Line | null = null;
+  private pvpAimSweepPointer: THREE.Mesh | null = null;
+  private pvpAimSweepElapsed = 0;
+  private pvpAimSweepRound = 0;
   private pvpLocalMarker: THREE.Group | null = null;
   private pvpProjectileMeshes = new Map<string, THREE.Mesh>();
   private pvpArenaRoot: THREE.Group | null = null;
@@ -1258,6 +1268,8 @@ export class PaleciakiGameEngine {
     this.manualAimEnabled = enabled;
     this.manualAimFiring = false;
     this.pvpWantFire = false;
+    this.pvpAimSweepElapsed = 0;
+    this.pvpAimSweepRound = 0;
     if (enabled) this.manualAimDirection = pvpAimDirectionFromAngle(this.playerRot);
     document.getElementById('game-shell')?.classList.toggle('manual-aim-mode', enabled);
   }
@@ -1887,6 +1899,10 @@ export class PaleciakiGameEngine {
     // These renderables are children of pvpArenaRoot and were disposed with it.
     this.pvpAimGuide = null;
     this.pvpAimTarget = null;
+    this.pvpAimArc = null;
+    this.pvpAimSweepPointer = null;
+    this.pvpAimSweepElapsed = 0;
+    this.pvpAimSweepRound = 0;
     this.pvpProjectileMeshes.forEach((mesh) => {
       this.levelRoot.remove(mesh);
       disposePvpObjectTree(mesh);
@@ -2257,6 +2273,34 @@ export class PaleciakiGameEngine {
     this.pvpAimTarget = new THREE.Mesh(aimRingGeo, new THREE.MeshBasicMaterial({ color: aimColor, transparent: true, opacity: 0.88, side: THREE.DoubleSide, depthWrite: false }));
     this.pvpAimTarget.position.y = 0.055; this.pvpAimTarget.renderOrder = 7; this.pvpArenaRoot.add(this.pvpAimTarget);
 
+    // A floor arc beside the operator makes the timing window readable.
+    const sweepArcGeometry = new THREE.BufferGeometry();
+    sweepArcGeometry.setAttribute(
+      'position',
+      new THREE.BufferAttribute(new Float32Array((PVP_AIM_SWEEP_SEGMENTS + 1) * 3), 3),
+    );
+    this.pvpAimArc = new THREE.Line(
+      sweepArcGeometry,
+      new THREE.LineBasicMaterial({
+        color: aimColor, transparent: true, opacity: 0.62, depthWrite: false,
+        blending: THREE.AdditiveBlending, toneMapped: false,
+      }),
+    );
+    this.pvpAimArc.renderOrder = 5;
+    this.pvpArenaRoot.add(this.pvpAimArc);
+
+    const sweepPointerGeometry = new THREE.ConeGeometry(0.19, 0.72, 6);
+    sweepPointerGeometry.rotateX(Math.PI / 2);
+    this.pvpAimSweepPointer = new THREE.Mesh(
+      sweepPointerGeometry,
+      new THREE.MeshBasicMaterial({
+        color: 0xffe7a3, transparent: true, opacity: 0.98, depthWrite: false,
+        blending: THREE.AdditiveBlending, toneMapped: false,
+      }),
+    );
+    this.pvpAimSweepPointer.renderOrder = 8;
+    this.pvpArenaRoot.add(this.pvpAimSweepPointer);
+
     this.levelRoot.add(this.pvpArenaRoot);
   }
 
@@ -2292,6 +2336,24 @@ export class PaleciakiGameEngine {
     const moveX = worldMovement.x;
     const moveZ = worldMovement.z;
 
+    const currentState = this.lastPvpState;
+    if (currentState && this.manualAimEnabled) {
+      const localForAim = this.pvpSlot === 'p1' ? currentState.p1 : currentState.p2;
+      const remoteForAim = this.pvpSlot === 'p1' ? currentState.p2 : currentState.p1;
+      if (currentState.round !== this.pvpAimSweepRound) {
+        this.pvpAimSweepRound = currentState.round;
+        this.pvpAimSweepElapsed = 0;
+      }
+      if (currentState.status === 'in_round' && localForAim.hp > 0 && remoteForAim.hp > 0) {
+        this.pvpAimSweepElapsed += Number.isFinite(dt) ? Math.max(0, Math.min(dt, 0.1)) : 0;
+        const opponentBearing = Math.atan2(remoteForAim.x - localForAim.x, remoteForAim.z - localForAim.z);
+        this.manualAimDirection = pvpAimDirectionFromAngle(getPvpSweepAimAngle(
+          this.pvpAimSweepElapsed, opponentBearing,
+          PVP_AIM_SWEEP_HALF_ARC, PVP_AIM_SWEEP_PERIOD_SECONDS,
+        ));
+      }
+    }
+
     // The authoritative room simulates at 30 Hz. Throttle inputs to the same cadence
     // instead of flooding the socket at the device's render rate (60–120 Hz).
     this.pvpInputSendAccumulator += Number.isFinite(dt) ? Math.max(0, Math.min(dt, 0.1)) : 0;
@@ -2307,15 +2369,14 @@ export class PaleciakiGameEngine {
         wantDash: this.pvpWantDash,
         wantAbility: this.pvpWantAbility,
       });
-      // One-shot actions remain latched until an input packet has actually been emitted.
       this.pvpWantFire = false;
       this.pvpWantDash = false;
       this.pvpWantAbility = false;
     }
 
-    if (!this.lastPvpState) return;
+    if (!currentState) return;
 
-    const state = this.lastPvpState;
+    const state = currentState;
     const local = this.pvpSlot === 'p1' ? state.p1 : state.p2;
     const remote = this.pvpSlot === 'p1' ? state.p2 : state.p1;
 
@@ -2452,6 +2513,43 @@ export class PaleciakiGameEngine {
       this.pvpAimTarget.position.set(end.x, 0.055, end.z);
       this.pvpAimGuide.visible = state.status === 'in_round';
       this.pvpAimTarget.visible = state.status === 'in_round';
+    }
+
+    if (this.pvpAimArc && this.pvpAimSweepPointer) {
+      const opponentBearing = Math.atan2(remote.x - local.x, remote.z - local.z);
+      const arcPositions = this.pvpAimArc.geometry.getAttribute('position') as THREE.BufferAttribute;
+      const arcSegments = arcPositions.count - 1;
+      for (let segment = 0; segment <= arcSegments; segment++) {
+        const progress = arcSegments > 0 ? segment / arcSegments : 0;
+        const angle = opponentBearing - PVP_AIM_SWEEP_HALF_ARC + PVP_AIM_SWEEP_HALF_ARC * 2 * progress;
+        arcPositions.setXYZ(segment,
+          local.x + Math.sin(angle) * PVP_AIM_SWEEP_RADIUS,
+          0.105,
+          local.z + Math.cos(angle) * PVP_AIM_SWEEP_RADIUS,
+        );
+      }
+      arcPositions.needsUpdate = true;
+      this.pvpAimArc.geometry.computeBoundingSphere();
+
+      const pointerDirection = pvpAimDirectionFromAngle(local.rot);
+      this.pvpAimSweepPointer.position.set(
+        local.x + pointerDirection.x * PVP_AIM_SWEEP_RADIUS,
+        0.18,
+        local.z + pointerDirection.z * PVP_AIM_SWEEP_RADIUS,
+      );
+      this.pvpAimSweepPointer.rotation.y = local.rot;
+
+      const arcMaterial = this.pvpAimArc.material as THREE.LineBasicMaterial;
+      const pointerMaterial = this.pvpAimSweepPointer.material as THREE.MeshBasicMaterial;
+      const delta = Math.atan2(Math.sin(local.rot - opponentBearing), Math.cos(local.rot - opponentBearing));
+      const guideMaterial = this.pvpAimGuide?.material as THREE.LineBasicMaterial | undefined;
+      const blocked = guideMaterial?.color.getHex() === 0xef4444;
+      const aligned = Math.abs(delta) <= 9 * Math.PI / 180;
+      arcMaterial.color.setHex(this.pvpSlot === 'p1' ? 0x60a5fa : 0xfbbf24);
+      pointerMaterial.color.setHex(blocked ? 0xef4444 : aligned ? 0x4ade80 : 0xffe7a3);
+      const roundActive = state.status === 'in_round';
+      this.pvpAimArc.visible = roundActive;
+      this.pvpAimSweepPointer.visible = roundActive;
     }
 
     const activeIds = new Set<string>();

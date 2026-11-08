@@ -6691,3 +6691,54 @@ body #touch-controls.manual-aim-mode:not(.hidden) .pvp-move-caption {
 #touch-controls.pvp-mode .pvp-control-guide.pvp-only-control {
   display: flex !important;
 }
+
+
+/* PvP timing arc: the fire control follows the active movement joystick. */
+#touch-controls .pvp-fire-control { pointer-events: auto !important; }
+body #touch-controls.manual-aim-mode:not(.hidden) .pvp-fire-control {
+  position: fixed !important;
+  left: max(52px, calc(env(safe-area-inset-left) + 44px));
+  right: auto !important; top: auto !important;
+  bottom: max(154px, calc(env(safe-area-inset-bottom) + 146px));
+  display: flex !important; align-items: center !important; justify-content: center !important;
+  width: 78px !important; height: 78px !important;
+  z-index: 2147483005 !important; pointer-events: auto !important;
+}
+body #touch-controls.manual-aim-mode:not(.hidden) .pvp-fire-btn:not(.hidden) {
+  display: flex !important; visibility: visible !important; opacity: 1 !important;
+  width: 76px !important; height: 76px !important;
+  min-width: 76px !important; min-height: 76px !important;
+  flex: 0 0 76px !important; touch-action: manipulation !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+body #touch-controls.manual-aim-mode:not(.hidden) .touch-actions-zone {
+  position: fixed !important; left: auto !important; top: auto !important;
+  right: max(14px, env(safe-area-inset-right)) !important;
+  bottom: max(14px, calc(env(safe-area-inset-bottom) + 10px)) !important;
+  display: flex !important; flex-wrap: nowrap !important;
+  align-items: center !important; justify-content: flex-end !important;
+  width: auto !important; max-width: min(42vw, 148px) !important;
+  gap: 7px !important; z-index: 2147483004 !important; pointer-events: auto !important;
+}
+body #touch-controls.manual-aim-mode:not(.hidden) .pvp-control-guide {
+  display: flex !important; top: max(84px, calc(env(safe-area-inset-top) + 78px)) !important;
+  width: max-content !important; max-width: min(94vw, 560px) !important;
+  white-space: nowrap !important; letter-spacing: .055em !important;
+  font-size: clamp(7px, 1.7vw, 9px) !important; gap: clamp(5px, 1.3vw, 9px) !important;
+}
+body #touch-controls.manual-aim-mode:not(.hidden) .pvp-move-caption {
+  left: max(78px, calc(env(safe-area-inset-left) + 70px)) !important;
+  bottom: max(82px, calc(env(safe-area-inset-bottom) + 78px)) !important;
+}
+@media (max-height: 430px) {
+  body #touch-controls.manual-aim-mode:not(.hidden) .pvp-fire-control { width: 68px !important; height: 68px !important; }
+  body #touch-controls.manual-aim-mode:not(.hidden) .pvp-fire-btn:not(.hidden) {
+    width: 66px !important; height: 66px !important; min-width: 66px !important; min-height: 66px !important;
+    flex-basis: 66px !important;
+  }
+  body #touch-controls.manual-aim-mode:not(.hidden) .pvp-control-guide { top: max(58px, calc(env(safe-area-inset-top) + 54px)) !important; }
+}
+@media (max-width: 390px) {
+  body #touch-controls.manual-aim-mode:not(.hidden) .pvp-fire-control { left: max(44px, calc(env(safe-area-inset-left) + 38px)); }
+  body #touch-controls.manual-aim-mode:not(.hidden) .touch-actions-zone { gap: 5px !important; max-width: min(43vw, 136px) !important; }
+}

@@ -5,6 +5,7 @@ import {
   PVP_AIM_FIRE_START_DEADZONE, PVP_AIM_FIRE_STOP_DEADZONE, getPvpAimAngle,
   isPvpAimInputActive, normalizePvpAimDirection, pvpAimDirectionFromAngle, shouldPvpAimFire,
   pvpScreenAimToWorld, pvpScreenMovementToWorld, calculatePvpAimPreview,
+  getPvpSweepAimAngle, PVP_AIM_SWEEP_HALF_ARC, PVP_AIM_SWEEP_PERIOD_SECONDS,
 } from '../src/pvpAim.ts';
 
 test('normalizes diagonal touch aim without amplifying stick length', () => {
@@ -41,7 +42,7 @@ test('angle conversions use the engine forward-axis convention', () => {
   assert.ok(Math.abs(getPvpAimAngle({ x: 0, z: -1 }) - Math.PI) < 1e-10);
 });
 
-test('PvP wiring supports two separate touch pointers and does not snap to a target', async () => {
+test('PvP timing sweep drives the 3D cursor and keeps separate movement and fire actions', async () => {
   const { readFile } = await import('node:fs/promises');
   const [app, game, html, css] = await Promise.all([
     readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
@@ -49,37 +50,40 @@ test('PvP wiring supports two separate touch pointers and does not snap to a tar
     readFile(new URL('../index.html', import.meta.url), 'utf8'),
     readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
   ]);
-  assert.match(app, /activePointerId = event\.pointerId/);
-  assert.match(app, /activeAimPointerId = event\.pointerId/);
-  assert.doesNotMatch(app, /activePointerId !== null \|\| event\.isPrimary === false/);
-  assert.doesNotMatch(app, /activeAimPointerId !== null \|\| event\.isPrimary === false/);
-  assert.match(app, /this\.engine\.setManualAimInput\(input\.x, input\.y\)/);
-  assert.match(app, /this\.engine\.stopManualAimFiring\(\)/);
-  assert.match(app, /bindPvpTap\(pvpFireButton/);
-  assert.match(game, /this\.pvpWantFire = true/);
-  assert.match(game, /wantFire: this\.pvpWantFire/);
-  assert.doesNotMatch(game, /shouldPvpAimFire\(x, z, this\.manualAimFiring\)/);
-  assert.match(game, /if \(!this\.manualAimEnabled\) this\.playerRot = Math\.atan2\(this\.survivalDashDirection\.x, this\.survivalDashDirection\.z\)/);
-  assert.match(game, /this\.setManualAimMode\(false\);[\s\S]*this\.gameMode = 'survival'/);
-  assert.match(game, /if \(this\.state !== 'playing' \|\| this\.gameMode !== 'survival' \|\| this\.manualAimEnabled\) return/);
-  assert.match(html, /id="pvp-aim-zone"/);
-  assert.match(html, /pvp-stick-caption pvp-move-caption/);
-  assert.match(html, /pvp-aim-center-label/);
-  assert.match(html, /pvp-control-guide/);
-  assert.match(html, /id="btn-pvp-fire"/);
-  assert.match(css, /#touch-controls\.manual-aim-mode \.pvp-fire-btn/);
-  assert.match(css, /body #touch-controls\.manual-aim-mode:not\(\.hidden\) \.pvp-aim-base/);
-  assert.match(css, /flex-wrap: nowrap !important/);
-  assert.match(css, /#touch-controls\.manual-aim-mode \.pvp-aim-zone \{ display: block !important; \}/);
+  assert.ok(app.includes("activePointerId = event.pointerId"));
+  assert.ok(app.includes("joystickZone.setPointerCapture(event.pointerId)"));
+  assert.ok(!app.includes("activeAimPointerId"));
+  assert.ok(app.includes("bindPvpTap(pvpFireButton"));
+  assert.ok(game.includes("getPvpSweepAimAngle("));
+  assert.ok(game.includes("this.pvpAimArc"));
+  assert.ok(game.includes("this.pvpAimSweepPointer"));
+  assert.ok(game.includes("wantFire: this.pvpWantFire"));
+  assert.ok(html.includes('id="pvp-fire-control"'));
+  assert.ok(html.includes('id="btn-pvp-fire"'));
+  assert.ok(!html.includes('id="pvp-aim-zone"'));
+  assert.ok(css.includes("pvp-fire-control"));
 });
 
-test('right-stick aim can adjust direction before firing starts', () => {
-  const previous = { x: 0, z: 1 };
-  const gentleInput = PVP_AIM_DIRECTION_DEADZONE + 0.02;
-  assert.equal(isPvpAimInputActive(gentleInput, 0, PVP_AIM_DIRECTION_DEADZONE), true);
-  assert.equal(shouldPvpAimFire(gentleInput, 0, false), false);
-  const direction = normalizePvpAimDirection(gentleInput, 0, previous, PVP_AIM_DIRECTION_DEADZONE);
-  assert.ok(direction.x > 0.99);
+test('PvP timing cursor moves left-to-right and back to its starting point', () => {
+  const start = getPvpSweepAimAngle(0, 0);
+  const middle = getPvpSweepAimAngle(PVP_AIM_SWEEP_PERIOD_SECONDS * 0.25, 0);
+  const farEdge = getPvpSweepAimAngle(PVP_AIM_SWEEP_PERIOD_SECONDS * 0.5, 0);
+  const returnMiddle = getPvpSweepAimAngle(PVP_AIM_SWEEP_PERIOD_SECONDS * 0.75, 0);
+  const loop = getPvpSweepAimAngle(PVP_AIM_SWEEP_PERIOD_SECONDS, 0);
+  assert.ok(Math.abs(start + PVP_AIM_SWEEP_HALF_ARC) < 1e-9);
+  assert.ok(Math.abs(middle) < 1e-9);
+  assert.ok(Math.abs(farEdge - PVP_AIM_SWEEP_HALF_ARC) < 1e-9);
+  assert.ok(Math.abs(returnMiddle) < 1e-9);
+  assert.ok(Math.abs(loop - start) < 1e-9);
+});
+
+test('PvP timing cursor handles invalid values and wrapped angles', () => {
+  const wrapped = getPvpSweepAimAngle(0, Math.PI - 0.1, 0.2, 2);
+  const badTime = getPvpSweepAimAngle(Number.NaN, 0.5);
+  const badCenter = getPvpSweepAimAngle(1, Number.NaN);
+  assert.ok(wrapped >= -Math.PI && wrapped <= Math.PI);
+  assert.equal(badTime, 0.5 - PVP_AIM_SWEEP_HALF_ARC);
+  assert.equal(badCenter, 0);
 });
 
 test('PvP fire trigger uses hysteresis so thumb jitter does not rapidly toggle shots', () => {

@@ -2563,6 +2563,22 @@ class PaleciakiScene extends xb.Script {
       startY = event.clientY;
       maxRadius = getJoystickRadius();
 
+      const touchLayer = document.getElementById('touch-controls');
+      const pvpFireControl = document.getElementById('pvp-fire-control') as HTMLElement | null;
+      if (touchLayer?.classList.contains('manual-aim-mode') && pvpFireControl) {
+        const baseRect = joystickBase.getBoundingClientRect();
+        const joystickRadius = Math.min(baseRect.width || 148, baseRect.height || 148) * 0.5;
+        const gap = 10;
+        pvpFireControl.style.setProperty('left', `${startX}px`, 'important');
+        pvpFireControl.style.setProperty('right', 'auto', 'important');
+        pvpFireControl.style.setProperty(
+          'bottom',
+          `${Math.max(8, window.innerHeight - startY + joystickRadius + gap)}px`,
+          'important',
+        );
+        pvpFireControl.style.setProperty('transform', 'translateX(-50%)', 'important');
+      }
+
       joystickBase.style.left = `${startX}px`;
       joystickBase.style.top = `${startY}px`;
       joystickBase.classList.add('active');
@@ -2618,94 +2634,9 @@ class PaleciakiScene extends xb.Script {
     });
 
 
-    // Independent second pointer for PvP: left stick remains movement; right stick aims/fires.
-    const aimZone = document.getElementById('pvp-aim-zone');
-    const aimBase = document.getElementById('pvp-aim-base');
-    const aimKnob = document.getElementById('pvp-aim-knob');
-    if (aimZone && aimBase && aimKnob) {
-      let activeAimPointerId: number | null = null;
-      let aimStartX = 0;
-      let aimStartY = 0;
-      let aimMaxRadius = 38;
-      const getAimRadius = () => {
-        const rect = aimBase.getBoundingClientRect();
-        const size = Math.min(rect.width || 142, rect.height || 142);
-        const viewportLimit = Math.min(window.visualViewport?.width || window.innerWidth, window.visualViewport?.height || window.innerHeight);
-        return Math.max(22, Math.min(58, size * 0.5 - 36, viewportLimit * 0.085));
-      };
-      const resetAim = () => {
-        const pointerId = activeAimPointerId;
-        activeAimPointerId = null;
-        aimBase.classList.remove('active');
-        aimBase.style.left = '';
-        aimBase.style.top = '';
-        aimBase.style.right = '';
-        aimBase.style.bottom = '';
-        aimBase.style.transform = '';
-        aimKnob.style.transform = 'translate(-50%, -50%)';
-        this.engine.stopManualAimFiring();
-        if (pointerId !== null) {
-          try {
-            if (aimZone.hasPointerCapture(pointerId)) aimZone.releasePointerCapture(pointerId);
-          } catch {
-            // Pointer capture may already have been released.
-          }
-        }
-      };
-      const updateAim = (event: PointerEvent) => {
-        const dx = event.clientX - aimStartX;
-        const dy = event.clientY - aimStartY;
-        const distance = Math.hypot(dx, dy);
-        const scale = distance > aimMaxRadius ? aimMaxRadius / distance : 1;
-        aimKnob.style.transform = `translate(calc(-50% + ${(dx * scale).toFixed(1)}px), calc(-50% + ${(dy * scale).toFixed(1)}px))`;
-        const input = calculateVirtualJoystickInput(dx, dy, aimMaxRadius);
-        this.engine.setManualAimInput(input.x, input.y);
-      };
-      aimZone.addEventListener('pointerdown', (event) => {
-        if (!this.engine.isManualAimEnabled() || activeAimPointerId !== null) return;
-        if (event.pointerType === 'mouse' && event.button !== 0) return;
-        activeAimPointerId = event.pointerId;
-        // Floating right stick: start the aim vector exactly where the thumb lands.
-        // This removes the large dead travel when the player touches away from the fixed base.
-        aimStartX = event.clientX;
-        aimStartY = event.clientY;
-        aimMaxRadius = getAimRadius();
-        aimBase.style.left = `${aimStartX}px`;
-        aimBase.style.top = `${aimStartY}px`;
-        aimBase.style.right = 'auto';
-        aimBase.style.bottom = 'auto';
-        aimBase.style.transform = 'translate(-50%, -50%)';
-        aimBase.classList.add('active');
-        aimKnob.style.transform = 'translate(-50%, -50%)';
-        // Apply direction on pointer-down as well: no dead first frame and no
-        // requirement to make a second tiny movement after touching the aim pad.
-        updateAim(event);
-        try { aimZone.setPointerCapture(event.pointerId); } catch { /* window handlers are the fallback */ }
-        if (event.cancelable) event.preventDefault();
-        event.stopPropagation();
-      }, { passive: false });
-      window.addEventListener('pointermove', (event) => {
-        if (activeAimPointerId !== event.pointerId) return;
-        updateAim(event);
-        if (event.cancelable) event.preventDefault();
-      }, { passive: false });
-      const endAim = (event: PointerEvent) => {
-        if (activeAimPointerId !== event.pointerId) return;
-        resetAim();
-      };
-      aimZone.addEventListener('lostpointercapture', (event) => {
-        if (activeAimPointerId === event.pointerId) resetAim();
-      });
-      window.addEventListener('pointerup', endAim, { passive: true });
-      window.addEventListener('pointercancel', endAim, { passive: true });
-      window.addEventListener('blur', resetAim);
-      window.addEventListener('pagehide', resetAim);
-      // Keep the PvP firing trigger from sticking across fullscreen/rotation changes.
-      window.addEventListener('resize', resetAim, { passive: true });
-      window.addEventListener('orientationchange', resetAim);
-      window.visualViewport?.addEventListener('resize', resetAim, { passive: true });
-      document.addEventListener('visibilitychange', () => { if (document.hidden) resetAim(); });
-    }
+    // PvP aim is a world-space timing sweep around the operator. Tap STRZAŁ
+    // when the moving arrow crosses the opponent's firing lane.
+    // getElementById('pvp-aim-zone') is intentionally no longer queried.
 
     const bindTouchAction = (id: string, action: () => void) => {
       const btn = document.getElementById(id);
