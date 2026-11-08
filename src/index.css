@@ -7231,6 +7231,6 @@ body #touch-controls.manual-aim-mode:not(.hidden) .pvp-move-caption {
 
   /* The time-aim fire button stays near the movement stick, never in the row. */
   body #touch-controls.manual-aim-mode:not(.hidden) .pvp-fire-control {
-    bottom: max(140px, calc(env(safe-area-inset-bottom) + 132px)) !important;
+    bottom: max(170px, calc(env(safe-area-inset-bottom) + 160px)) !important;
   }
 }

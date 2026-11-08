@@ -95,10 +95,13 @@ export function calculateTouchControlGeometry(input: {
     60,
     88,
   );
+  const idleFireTop = compactLandscape
+    ? Math.max(0, height - Math.max(170, safeBottom + 160) - fireButtonSize)
+    : Math.max(0, joystickZoneTop - fireButtonSize - 10);
   const fireControl = input.mode === 'pvp'
     ? makeRect(
         0,
-        Math.max(0, joystickZoneTop - fireButtonSize - 10),
+        idleFireTop,
         Math.min(fireButtonSize, width),
         Math.min(fireButtonSize, height),
       )
