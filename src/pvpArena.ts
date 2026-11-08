@@ -1018,7 +1018,7 @@ function firePlayerPrimary(player: PvpPlayerState, state: PvpArenaState) {
     vx: dirX * profile.projectileSpeed,
     vz: dirZ * profile.projectileSpeed,
     radius: profile.projectileRadius,
-    damage: profile.projectileDamage * progression.damageMultiplier * (player.activePerk === 'power' && player.perkTimer > 0 ? 1.22 : 1),
+    damage: profile.projectileDamage * (player.activePerk === 'power' && player.perkTimer > 0 ? 1.22 : 1),
     life: 3.0,
     pierce: 1,
     color: profile.color,
