@@ -150,7 +150,7 @@ test('PvP online buttons are disabled with a clear WSS requirement when the stat
     readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
     readFile(new URL('../index.html', import.meta.url), 'utf8'),
   ]);
-  assert.match(app, /const onlineReady = Boolean\(import\.meta\.env\.VITE_PVP_WS_URL\?\.trim\(\)\)/);
+  assert.match(app, /const onlineReady = Boolean\(import\.meta\.env\.VITE_PVP_WS_URL\?\.trim\(\) \|\| 'wss:\/\/paleciaki-pvp\.onrender\.com\/pvp-ws'\)/);
   assert.match(app, /createRoomButton\.disabled = !onlineReady/);
   assert.match(app, /joinRoomButton\.disabled = !onlineReady/);
   assert.match(html, /id="pvp-online-hint"/);
