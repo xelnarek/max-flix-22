@@ -653,7 +653,7 @@ test('starting a rematch resets every match-wide statistic and its published sna
 test('one-shot fire intent shoots once, respects operator recovery, and can be tapped again', () => {
   const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
   resetPvpRound(state);
-  advanceArena(state, 3.0);
+  advanceArena(state, 3.1);
   state.p1.x = -8;
   state.p1.z = 0;
   state.p2.x = 8;
