@@ -92,8 +92,10 @@ Nadal potrzebne są aktualne zrzuty ekranu gry z urządzenia fizycznego oraz wer
 
 Po pobraniu artefaktów z workflow zainstaluj APK debug na urządzeniu Android i sprawdź:
 - zimny start, animację intro, skip i przejście do menu;
-- WebGL/Three.js, rozgrywkę Kampanii i Survivalu przez dłuższą sesję;
-- dotykowy joystick, atak, atak specjalny, pauzę i wznowienie;
+- WebGL/Three.js i dłuższą sesję Survival PvE: fale, bossowie, moduły, bronie, eventy i podsumowanie śmierci;
+- pełny przebieg lokalnego PvP 1v1: start z lobby, ruch, łuk timingu, strzał, przeładowanie, umiejętność, unik, koniec rundy i powrót do menu;
+- odrębność HUD-ów i sterowania: Survival zachowuje własny atak i skok, PvP używa osobnego strzału na timing; sprawdź brak nakładania się przycisków;
+- dotykowy joystick, strzał umieszczony nad joystickiem, atak specjalny, pauzę i wznowienie;
 - powrót aplikacji z tła, obrót ekranu, utratę sieci, kolejkowanie i synchronizację rankingu;
 - uprawnienia, pasek systemowy, tryb immersyjny, dźwięk i stan aplikacji po ubiciu procesu.
 
