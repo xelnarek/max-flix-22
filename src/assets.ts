@@ -310,7 +310,8 @@ export class B4AssetLoader {
         { id: 'b4-pack/carton.svg', name: 'B4 Asset Pack • Kartony transportowe', category: 'texture', execute: () => preloadB4VisualTexture('carton') },
         { id: 'b4-pack/steel.svg', name: 'B4 Asset Pack • Blacha falista', category: 'texture', execute: () => preloadB4VisualTexture('steel') },
         { id: 'b4-pack/hazard.svg', name: 'B4 Asset Pack • Oznaczenia BHP', category: 'texture', execute: () => preloadB4VisualTexture('hazard') },
-        { id: 'b4-pack/sprites.svg', name: 'B4 Asset Pack • Atlas sprite’ów', category: 'texture', execute: () => preloadB4VisualTexture('spriteAtlas') }
+        { id: 'b4-pack/sprites.svg', name: 'B4 Asset Pack • Atlas sprite’ów', category: 'texture', execute: () => preloadB4VisualTexture('spriteAtlas') },
+        { id: 'b4-pack/enemies.svg', name: 'B4 Asset Pack • Atlas przeciwników', category: 'texture', execute: () => preloadB4VisualTexture('enemyAtlas') }
       ];
 
       const totalTextures = assetList.length;
