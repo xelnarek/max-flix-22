@@ -380,13 +380,13 @@ export const PVP_SPAWN_P1 = { x: -16, y: 0.5, z: 0, rot: Math.PI / 2 };
 export const PVP_SPAWN_P2 = { x: 16, y: 0.5, z: 0, rot: -Math.PI / 2 };
 
 export const PVP_NORMALIZED_HP = 1000;
-export const PVP_BASE_SPEED = 6.2;
-export const PVP_DASH_SPEED = 16.0;
+export const PVP_BASE_SPEED = 5.0;
+export const PVP_DASH_SPEED = 13.2;
 export const PVP_DASH_DURATION = 0.22;
 export const PVP_DASH_COOLDOWN = 3.8;
 export const PVP_ABILITY_COOLDOWN = 9.0;
 export const PVP_PLAYER_RADIUS = 0.65;
-export const PVP_SPRINT_SPEED_MULTIPLIER = 1.16;
+export const PVP_SPRINT_SPEED_MULTIPLIER = 1.10;
 export const PVP_RAPID_FIRE_COOLDOWN_MULTIPLIER = 0.82;
 
 export interface OperatorPvpProfile {
@@ -406,7 +406,7 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
     projectileSpeed: 15.5,
     projectileDamage: 100,
     attackCooldown: 3.0,
-    projectileRadius: 0.28,
+    projectileRadius: 0.40,
     color: 0x3b82f6,
     abilityName: 'Pieczęć WZ (Tarcza BHP)',
     abilityDesc: 'Tymczasowa tarcza pochłaniająca 250 pkt obrażeń i odpychająca wroga.',
@@ -416,7 +416,7 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
     projectileSpeed: 13.5,
     projectileDamage: 150,
     attackCooldown: 3.2,
-    projectileRadius: 0.42,
+    projectileRadius: 0.54,
     color: 0xf59e0b,
     abilityName: 'Szarża Paleciaka',
     abilityDesc: 'Potężny taran na wprost zadający 180 pkt obrażeń i ogłuszający na 0.8s.',
@@ -426,7 +426,7 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
     projectileSpeed: 18,
     projectileDamage: 78,
     attackCooldown: 2.8,
-    projectileRadius: 0.22,
+    projectileRadius: 0.33,
     color: 0x10b981,
     abilityName: 'Laserowy Protokół Strat',
     abilityDesc: 'Potrójna wiązka laserowa w wachlarzu zadająca 3x65 pkt obrażeń.',
@@ -436,7 +436,7 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
     projectileSpeed: 14.5,
     projectileDamage: 125,
     attackCooldown: 3.1,
-    projectileRadius: 0.35,
+    projectileRadius: 0.48,
     color: 0xef4444,
     abilityName: 'Hydrauliczne Przełamanie',
     abilityDesc: 'Impuls uderzeniowy o promieniu 5m zadający 150 pkt obrażeń.',
@@ -446,7 +446,7 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
     projectileSpeed: 16.5,
     projectileDamage: 105,
     attackCooldown: 2.9,
-    projectileRadius: 0.32,
+    projectileRadius: 0.45,
     color: 0x8b5cf6,
     abilityName: 'Impuls Zwarcia B4',
     abilityDesc: 'Wyładowanie elektryczne paraliżujące przeciwnika na 1.1s i zadające 110 dmg.',
@@ -1078,7 +1078,7 @@ function triggerPlayerAbility(player: PvpPlayerState, state: PvpArenaState) {
           z: player.z + Math.cos(currentAngle) * (PVP_PLAYER_RADIUS + 0.2),
           vx: Math.sin(currentAngle) * 22,
           vz: Math.cos(currentAngle) * 22,
-          radius: 0.28,
+          radius: 0.38,
           damage: 70,
           life: 1.8,
           pierce: 1,
