@@ -62,6 +62,32 @@ test('Unity prototype contains bootstrap, an articulated operator rig, controls 
   assert.match(sceneInstaller, /EditorBuildSettings\.scenes/);
 });
 
+test('Unity Survival maps have distinct collision-backed layouts and a shared arena safety boundary', async () => {
+  const world = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs');
+  const build = world.slice(
+    world.indexOf('public static PlayerController BuildB4Slice()'),
+    world.indexOf('private static void CreateLighting(')
+  );
+  assert.match(build, /CreateMapLayout\(map\)/);
+  assert.doesNotMatch(build, /CreateRackBay|CreatePalletStack|CreateMapSetDressing/);
+  assert.match(world, /floor\.transform\.localScale = new Vector3\(52f, 0\.6f, 52f\)/);
+  assert.match(world, /CreateWorldBounds\(map\)/);
+  assert.match(world, /Arena boundary • north/);
+  assert.match(world, /Arena boundary • south/);
+  assert.match(world, /Arena boundary • east/);
+  assert.match(world, /Arena boundary • west/);
+  for (const layout of [
+    'CreateB4Layout', 'CreateContainerTerminalLayout',
+    'CreateColdStorageLayout', 'CreateNightSortingLayout',
+  ]) assert.match(world, new RegExp('private static void ' + layout + '\\('));
+  assert.match(world, /case WarehouseMapId\.ContainerTerminal:/);
+  assert.match(world, /case WarehouseMapId\.ColdStorage:/);
+  assert.match(world, /case WarehouseMapId\.NightSorting:/);
+  assert.match(world, /CreateContainer\(/);
+  assert.match(world, /CreateRackBay\(/);
+  assert.match(world, /CreateSafetyLanes\(/);
+});
+
 test('Unity migration is staged and does not replace the current production deployment', async () => {
   const [plan, readme, workflow] = await Promise.all([
     read('../docs/UNITY_MIGRATION_PLAN.md'),
