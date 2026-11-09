@@ -46,7 +46,7 @@ export function calculatePvpFireControlPosition(
   // keep the button centred rather than producing an inverted clamp range.
   const minLeft = Math.min(width * 0.5, margin + size * 0.5);
   const maxLeft = Math.max(minLeft, width - margin - size * 0.5);
-  const left = clamp(touchX, minLeft, maxLeft);
+  const left = clamp(touchX - 14, minLeft, maxLeft);
 
   const minTop = Math.min(height * 0.5, margin);
   const maxTop = Math.max(minTop, height - margin - size);
