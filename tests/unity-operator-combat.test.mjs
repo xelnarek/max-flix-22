@@ -551,3 +551,51 @@ test('Unity Survival performance governor samples frame time with hysteresis and
   assert.match(bootstrap, /performanceGovernor\?\.Initialize\(waveDirector, _hud\)/);
   assert.match(director, /SurvivalDifficultyCatalog\.GetLiveEnemyCap\(_isMobile, _adaptiveTier\)/);
 });
+
+
+test('Unity Survival stability branch centralizes agent snapshots and avoids redundant frame-loop scene scans', async () => {
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  const director = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWaveDirector.cs');
+  const weapons = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWeaponController.cs');
+  const kit = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorCombatKit.cs');
+  assert.match(enemy, /public static EnemyAgent\[\] GetCachedAgents\(\)/);
+  assert.equal((enemy.match(/FindObjectsByType<EnemyAgent>/g) || []).length, 1);
+  assert.doesNotMatch(director + weapons + kit, /FindObjectsByType<EnemyAgent>/);
+  assert.match(director, /EnemyAgent\.GetCachedAgents\(\)/);
+  assert.match(weapons, /EnemyAgent\.GetCachedAgents\(\)/);
+  assert.match(kit, /EnemyAgent\.GetCachedAgents\(\)/);
+  assert.doesNotMatch(weapons, /_enemyRefreshRemaining/);
+  assert.doesNotMatch(kit, /_enemyCacheRemaining/);
+});
+
+test('Unity projectile pool services expose bounded warmup and return pooled bodies safely', async () => {
+  const operatorProjectile = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/CombatProjectile.cs');
+  const enemyProjectile = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAttackProjectile.cs');
+  const factory = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs');
+  const kit = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorCombatKit.cs');
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  assert.match(operatorProjectile, /PoolLimitPerShape = 18/);
+  assert.match(operatorProjectile, /private static void ReturnToPool/);
+  assert.match(operatorProjectile, /_hitTargets\.Clear\(\)/);
+  assert.match(operatorProjectile, /_body\.detectCollisions = false/);
+  assert.match(operatorProjectile, /PooledCount/);
+  assert.match(enemyProjectile, /PoolLimit = 36/);
+  assert.match(enemyProjectile, /private void ReturnToPool/);
+  assert.match(enemyProjectile, /_body\.detectCollisions = false/);
+  assert.match(enemyProjectile, /PooledCount/);
+  assert.match(factory, /CombatProjectile\.Prewarm\(3\)/);
+  assert.match(factory, /EnemyAttackProjectile\.Prewarm\(12\)/);
+  assert.match(kit, /CombatProjectile\.Spawn/);
+  assert.match(enemy, /EnemyAttackProjectile\.Spawn/);
+});
+
+test('Unity performance governor preserves one baseline across restarts and restores global quality settings', async () => {
+  const governor = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalPerformanceGovernor.cs');
+  assert.match(governor, /private static bool _baselineCaptured/);
+  assert.match(governor, /if \(!_baselineCaptured\)/);
+  assert.match(governor, /_baselineTargetFrameRate = Application\.targetFrameRate/);
+  assert.match(governor, /_baselineShadowResolution = QualitySettings\.shadowResolution/);
+  assert.match(governor, /Application\.targetFrameRate = _baselineTargetFrameRate/);
+  assert.match(governor, /QualitySettings\.vSyncCount = _baselineVsyncCount/);
+  assert.match(governor, /QualitySettings\.shadowResolution = _baselineShadowResolution/);
+});
