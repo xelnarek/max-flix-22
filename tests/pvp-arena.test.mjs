@@ -734,3 +734,63 @@ test('one-shot fire intent shoots once, respects operator recovery, and can be t
   stepPvpArena(state, 0.03, input);
   assert.equal(state.p1.shotsFired, 2, 'a fresh tap after recovery fires again');
 });
+
+
+test('Marcin PvP ability grants the intended shield and only pushes a nearby visible opponent', () => {
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  resetPvpRound(state);
+  state.status = 'in_round';
+  state.countdownTimer = 0;
+  state.obstacles = [];
+  state.pickup.active = false;
+  state.pickup.respawnTimer = 30;
+  state.p1.x = -2; state.p1.z = 0;
+  state.p2.x = 0; state.p2.z = 0;
+  const startOpponentX = state.p2.x;
+
+  stepPvpArena(state, 0.05, {
+    moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantAbility: true,
+  });
+
+  assert.equal(state.p1.shieldHp, 250);
+  assert.equal(state.p1.abilityUses, 1);
+  assert.equal(state.p1.abilityDamageDealt, 0, 'the defensive shield is not counted as damaging ability output');
+  assert.ok(state.p2.x > startOpponentX + 3, 'the clear close-range pulse should push the opponent away');
+  assert.ok(state.p1.abilityCooldownTimer > 0);
+
+  stepPvpArena(state, 0.05, {
+    moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantAbility: true,
+  });
+  assert.equal(state.p1.abilityUses, 1, 'a second press during cooldown must not retrigger the ability');
+  assert.equal(state.p1.shieldHp, 250);
+});
+
+test('Piotr PvP ability applies its electrical damage and stun exactly once per cooldown', () => {
+  const state = createInitialPvpArenaState('piotr', 'P1', 'marcin', 'P2');
+  resetPvpRound(state);
+  state.status = 'in_round';
+  state.countdownTimer = 0;
+  state.obstacles = [];
+  state.pickup.active = false;
+  state.pickup.respawnTimer = 30;
+  state.p1.x = -3; state.p1.z = 0;
+  state.p2.x = 0; state.p2.z = 0;
+  const initialHp = state.p2.hp;
+
+  stepPvpArena(state, 0.05, {
+    moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantAbility: true,
+  });
+
+  assert.equal(state.p1.abilityUses, 1);
+  assert.equal(state.p1.abilityHits, 1);
+  assert.equal(state.p1.abilityDamageDealt, 110);
+  assert.equal(state.p2.hp, initialHp - 110);
+  assert.ok(state.p2.stunTimer > 1.0, 'Piotr should apply the documented 1.1-second stun');
+  assert.ok(state.p1.abilityCooldownTimer > 0);
+
+  stepPvpArena(state, 0.05, {
+    moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantAbility: true,
+  });
+  assert.equal(state.p1.abilityUses, 1, 'cooldown prevents a duplicate activation');
+  assert.equal(state.p1.abilityDamageDealt, 110);
+});
