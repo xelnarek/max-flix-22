@@ -102,7 +102,7 @@ namespace MaxFlix.Unity.Runtime
             Time.timeScale = 1f;
             GameSession.SetState(GameFlowState.MainMenu);
             if (_menu != null) Destroy(_menu.gameObject);
-            _menu = MainMenuController.Create(this);
+            _menu = MainMenuController.Create(this, StartupMode, StartupOperator, StartupMap);
         }
 
         private void OnDestroy()
