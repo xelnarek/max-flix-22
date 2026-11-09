@@ -3,6 +3,7 @@ using System;
 using System.Linq;
 using System.Reflection;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -23,11 +24,13 @@ namespace MaxFlix.Unity.Editor
         private const string SettingsFolder = "Assets/Settings";
         private const string UrpMenuItem = "Assets/Create/Rendering/URP Asset (with Universal Renderer)";
         private const int NewInputSystemBackend = 1;
+        private const string AndroidApplicationId = "pl.paleciaki.magazynchaosu";
 
         [MenuItem("Max Flix/Configure URP and New Input System")]
         public static void ConfigureRenderingAndInput()
         {
             EnsureSettingsFolder();
+            ConfigureApplicationIdentity();
 
             UniversalRenderPipelineAsset pipeline = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(
                 SettingsFolder + "/MaxFlix_URP.asset");
@@ -91,6 +94,27 @@ namespace MaxFlix.Unity.Editor
             {
                 Debug.LogWarning("[Max Flix] URP is configured, but Active Input Handling could not be changed automatically. Set Project Settings > Player > Other Settings > Active Input Handling to Input System Package (New), then restart the Editor.");
             }
+        }
+
+        private static void ConfigureApplicationIdentity()
+        {
+            PlayerSettings.companyName = "Paleciaki";
+            PlayerSettings.productName = "Paleciaki! Magazyn Chaosu";
+            PlayerSettings.bundleVersion = "0.2.0";
+            PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, AndroidApplicationId);
+
+            // Match the existing Android application identity and prepare a Play-compatible 64-bit player.
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
+            PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
+            PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel26;
+            PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevel36;
+
+            // The game is designed around a landscape playfield on desktop and mobile.
+            PlayerSettings.defaultInterfaceOrientation = UIOrientation.LandscapeLeft;
+            PlayerSettings.allowedAutorotateToPortrait = false;
+            PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
+            PlayerSettings.allowedAutorotateToLandscapeLeft = true;
+            PlayerSettings.allowedAutorotateToLandscapeRight = true;
         }
 
         private static void ConfigureWebGraphicsApis()
