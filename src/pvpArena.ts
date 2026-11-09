@@ -398,6 +398,7 @@ export interface OperatorPvpProfile {
   color: number;
   abilityName: string;
   abilityDesc: string;
+  menuSummary: string;
 }
 
 export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
@@ -410,6 +411,7 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
     color: 0x3b82f6,
     abilityName: 'Pieczęć WZ (Tarcza BHP)',
     abilityDesc: 'Tymczasowa tarcza pochłaniająca 250 pkt obrażeń i odpychająca wroga.',
+    menuSummary: 'Tarcza 250 + odrzut',
   },
   grzesiek: {
     name: 'Grzesiek Monter',
@@ -420,6 +422,7 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
     color: 0xf59e0b,
     abilityName: 'Szarża Paleciaka',
     abilityDesc: 'Potężny taran na wprost zadający 180 pkt obrażeń i ogłuszający na 0.8s.',
+    menuSummary: '180 obrażeń / stun 0,8 s',
   },
   dawid: {
     name: 'Dawid Handlowiec',
@@ -430,6 +433,7 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
     color: 0x10b981,
     abilityName: 'Laserowy Protokół Strat',
     abilityDesc: 'Potrójna wiązka laserowa w wachlarzu zadająca do 3x70 pkt obrażeń.',
+    menuSummary: '3 × 70 obrażeń',
   },
   mateusz: {
     name: 'Mateusz Kierownik',
@@ -440,6 +444,7 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
     color: 0xef4444,
     abilityName: 'Hydrauliczne Przełamanie',
     abilityDesc: 'Impuls uderzeniowy w promieniu 5,2 m zadający 150 pkt obrażeń i ogłuszający na 0,5 s.',
+    menuSummary: '150 / stun 0,5 s',
   },
   piotr: {
     name: 'Piotr Serwisant',
@@ -450,6 +455,7 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
     color: 0x8b5cf6,
     abilityName: 'Impuls Zwarcia B4',
     abilityDesc: 'Wyładowanie elektryczne paraliżujące przeciwnika na 1.1s i zadające 110 dmg.',
+    menuSummary: '110 / stun 1,1 s',
   },
 };
 
