@@ -38,8 +38,64 @@ namespace MaxFlix.Unity.Runtime
         WarehouseB4 = 0,
         ContainerTerminal = 1,
         ColdStorage = 2,
-        NightSorting = 3,
-        OniricDream = 4
+        NightSorting = 3
+    }
+
+    public enum SurvivalSecretStyle
+    {
+        Wz = 0,
+        Cassette = 1,
+        Capybara = 2,
+        RabbitHole = 3
+    }
+
+    public enum CollectibleKind
+    {
+        Grout = 0,
+        TileBox = 1,
+        Coffee = 2,
+        VipItem = 3,
+        Espresso = 4,
+        Magnet = 5,
+        GoldenCutter = 6,
+        KfcBucket = 7,
+        Carrara = 8,
+        EasterEgg = 9
+    }
+
+    public enum PerkKind
+    {
+        Hardhat = 0,
+        VibramBoots = 1,
+        OrderMagnet = 2,
+        EspressoBoost = 3,
+        KfcBucket = 4,
+        GoldenPaleciak = 5,
+        StretchArmor = 6,
+        AttackHaste = 7,
+        ArcDrone = 8,
+        XpSurge = 9,
+        DamageWard = 10,
+        ForkliftHorn = 11,
+        NightShiftEspresso = 12,
+        GoldenWz = 13,
+        PalletGuard = 14
+    }
+
+    public enum SurvivalWeaponKind
+    {
+        PalletCannon = 0,
+        DiamondSaw = 1,
+        GlueMine = 2,
+        KfcBomber = 3,
+        PiorunDrone = 4,
+        ForkliftBolter = 5,
+        ScannerPulse = 6,
+        OrbitBlades = 7,
+        CalacattaShards = 8,
+        SteamBomb = 9,
+        ForkliftHorn = 10,
+        WzBoomerang = 11
     }
 
     public enum EnemyKind
