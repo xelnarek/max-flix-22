@@ -181,3 +181,17 @@ test('Unity runtime can be initialized in Survival through a mode/map/operator h
   assert.match(factory, /GameSession\.Current\.Mode == GameMode\.Survival/);
   assert.match(factory, /root\.AddComponent<SurvivalWaveDirector>\(\)/);
 });
+
+
+test('Dawid stretch passive actually fires a three-projectile fan and his five-plate ability can ricochet', async () => {
+  const kit = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorCombatKit.cs');
+  const projectile = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/CombatProjectile.cs');
+  const attack = kit.slice(kit.indexOf('case OperatorId.Dawid:'), kit.indexOf('case OperatorId.Mateusz:'));
+  const ability = kit.slice(kit.indexOf('case OperatorId.Dawid:', kit.indexOf('public bool TryActivateAbility')), kit.indexOf('case OperatorId.Mateusz:', kit.indexOf('public bool TryActivateAbility')));
+  assert.match(attack, /for \(int i = -1; i <= 1; i\+\+\)/);
+  assert.match(attack, /i \* 12f/);
+  assert.match(ability, /false, 3\.2f, false, 2/);
+  assert.match(kit, /int ricochets = 0/);
+  assert.match(projectile, /_ricochetsRemaining/);
+  assert.match(projectile, /Vector3\.Reflect/);
+});
