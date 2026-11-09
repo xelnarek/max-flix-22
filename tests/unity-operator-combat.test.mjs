@@ -324,7 +324,9 @@ test('Unity XP progression has pooled crystals, map XP scaling, level-up drafts 
   assert.match(progression, /Time\.timeScale = 0f/);
   assert.match(progression, /SurvivalUpgradeCatalog|SurvivalWeaponCatalog\.RollRarity/);
   assert.match(progression, /AddFallbackCard/);
-  assert.match(progression, /fallback_repair/);\n  assert.match(progression, /fallback_credits/);\n  assert.match(progression, /fallback_overdrive/);
+  assert.match(progression, /fallback_repair/);
+  assert.match(progression, /fallback_credits/);
+  assert.match(progression, /fallback_overdrive/);
   assert.match(progression, /wasBossReward/);
   assert.match(progression, /Text description = CreateText\(rect, card\.Description,[\s\S]*?Vector2\.zero, 17, TextAnchor\.MiddleCenter/);
   assert.match(player, /SetSurvivalMoveMultiplier/);
