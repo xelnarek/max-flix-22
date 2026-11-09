@@ -2267,6 +2267,9 @@ export function createCustomerEnemyModel(): {
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.44, 0.24), jacketMat);
   body.position.y = 0.52;
   body.castShadow = true;
+  const customerPatch = createB4SpriteDecal('customer', 0.18, 0.18);
+  customerPatch.position.set(0, 0, 0.123);
+  body.add(customerPatch);
   group.add(body);
 
   // Head with Angry Expression
@@ -2634,6 +2637,9 @@ export function createInspectorEnemyModel(): {
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.5, 0.22), vestMat);
   body.position.y = 0.62;
   body.castShadow = true;
+  const inspectorPatch = createB4SpriteDecal('inspector', 0.19, 0.19);
+  inspectorPatch.position.set(0.11, -0.015, 0.114);
+  body.add(inspectorPatch);
 
   // Reflective Silver Strips
   const tape1 = new THREE.Mesh(new THREE.BoxGeometry(0.385, 0.05, 0.225), silverTapeMat);
@@ -3173,6 +3179,9 @@ export function createHandlowiecEnemyModel(): {
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.5, 0.22), suitMat);
   body.position.y = 0.6;
   body.castShadow = true;
+  const handlowiecPatch = createB4SpriteDecal('handlowiec', 0.14, 0.15);
+  handlowiecPatch.position.set(0.115, 0.09, 0.114);
+  body.add(handlowiecPatch);
 
   // White Shirt & Red Tie Insert
   const shirt = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.48, 0.02), shirtMat);
@@ -3261,6 +3270,9 @@ export function createMonterEnemyModel(): {
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.5, 0.22), dungareesMat);
   body.position.y = 0.6;
   body.castShadow = true;
+  const monterPatch = createB4SpriteDecal('monter', 0.15, 0.16);
+  monterPatch.position.set(0.105, 0.075, 0.114);
+  body.add(monterPatch);
 
   // Red T-shirt sleeves & top
   const shirtUnder = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.16, 0.225), tShirtMat);
