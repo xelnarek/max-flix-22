@@ -1389,6 +1389,12 @@ class PaleciakiScene extends xb.Script {
           survivalHud?.classList.add('hidden');
           survivalLevelUp?.classList.add('hidden');
           } catch (error) {
+            // An exception in deferred result rendering must not resurrect the
+            // previous run's modal after Retry, menu navigation or a new match.
+            if (
+              endedSessionGeneration !== this.gameSessionGeneration ||
+              this.engine.getGameState() !== 'gameover'
+            ) return;
             console.error('[GameOver UI] Optional result processing failed; the results screen remains available.', error);
             if (gameoverReason) gameoverReason.textContent = reason;
             if (gameoverModal) {
