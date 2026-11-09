@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<defs>
+  <linearGradient id="metal" x2="1"><stop stop-color="#172737"/><stop offset=".16" stop-color="#4b657d"/><stop offset=".28" stop-color="#243b50"/><stop offset=".58" stop-color="#5d748b"/><stop offset=".74" stop-color="#203449"/><stop offset="1" stop-color="#101d2c"/></linearGradient>
+  <pattern id="rib" width="32" height="512" patternUnits="userSpaceOnUse">
+    <rect width="32" height="512" fill="url(#metal)"/>
+    <path d="M2 0V512" stroke="#0a1420" stroke-width="4" opacity=".82"/>
+    <path d="M7 0V512" stroke="#b8c9d9" stroke-width="3" opacity=".27"/>
+    <path d="M15 0V512" stroke="#dbe7f1" stroke-width="1" opacity=".25"/>
+    <path d="M29 0V512" stroke="#020b14" stroke-width="2" opacity=".65"/>
+  </pattern>
+</defs>
+<rect width="512" height="512" fill="#26384b"/>
+<rect width="512" height="512" fill="url(#rib)"/>
+<path d="M0 30H512M0 482H512" stroke="#0a1724" stroke-width="20"/>
+<path d="M0 24H512M0 488H512" stroke="#a8bccf" stroke-width="3" opacity=".5"/>
+<path d="M0 108H512M0 404H512" stroke="#0b1724" stroke-width="9" opacity=".8"/>
+<g fill="#d2dbe4" stroke="#0d1b29" stroke-width="3"><circle cx="20" cy="54" r="5"/><circle cx="492" cy="54" r="5"/><circle cx="20" cy="458" r="5"/><circle cx="492" cy="458" r="5"/></g>
+<path d="M20 125h472M20 387h472" stroke="#f59e0b" stroke-width="3" stroke-dasharray="28 24" opacity=".5"/>
+</svg>
