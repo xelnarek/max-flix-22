@@ -469,7 +469,7 @@ namespace MaxFlix.Unity.Runtime
             for (int i = _activeShots.Count - 1; i >= 0; i--)
             {
                 ShotState shot = _activeShots[i];
-                if (shot.Root == null)
+                if (shot.Root == null || !shot.Root.activeSelf)
                 {
                     _activeShots.RemoveAt(i);
                     continue;
@@ -483,6 +483,14 @@ namespace MaxFlix.Unity.Runtime
                 }
 
                 Vector3 position = shot.Root.transform.position;
+                if (shot.IsPulse)
+                {
+                    shot.PulseAge += deltaTime;
+                    float pulseProgress = Mathf.Clamp01(shot.PulseAge / Mathf.Max(0.01f, shot.PulseDuration));
+                    shot.Root.transform.localScale = Vector3.Lerp(Vector3.one * 0.12f, shot.PulseBaseScale, pulseProgress);
+                    continue;
+                }
+
                 if (shot.Boomerang && !shot.Returning && shot.RemainingLife < shot.MaximumLife * 0.52f)
                 {
                     shot.Returning = true;
@@ -583,6 +591,7 @@ namespace MaxFlix.Unity.Runtime
                     return;
                 }
 
+                shot.RemainingLife = 0f;
                 DeactivateShot(shot);
                 return;
             }
