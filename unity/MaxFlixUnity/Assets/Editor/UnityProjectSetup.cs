@@ -115,6 +115,7 @@ namespace MaxFlix.Unity.Editor
             PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
             PlayerSettings.allowedAutorotateToLandscapeLeft = true;
             PlayerSettings.allowedAutorotateToLandscapeRight = true;
+            AssetDatabase.SaveAssets();
         }
 
         private static void ConfigureWebGraphicsApis()
