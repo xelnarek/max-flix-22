@@ -27,7 +27,6 @@ namespace MaxFlix.Unity.Runtime
         private readonly MaterialPropertyBlock _propertyBlock = new MaterialPropertyBlock();
         private static readonly Dictionary<int, Material> SupportMaterials = new Dictionary<int, Material>();
         private EnemyAgent[] _enemyCache = new EnemyAgent[0];
-        private float _enemyCacheRemaining;
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
         private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
@@ -65,12 +64,7 @@ namespace MaxFlix.Unity.Runtime
             if (_profile == null || _player == null || _player.IsDefeated) return;
 
             _abilityCooldownRemaining = Mathf.Max(0f, _abilityCooldownRemaining - deltaTime);
-            _enemyCacheRemaining -= deltaTime;
-            if (_enemyCacheRemaining <= 0f)
-            {
-                _enemyCache = FindObjectsByType<EnemyAgent>(FindObjectsSortMode.None);
-                _enemyCacheRemaining = 0.25f;
-            }
+            _enemyCache = EnemyAgent.GetCachedAgents();
             _sprintRemaining = Mathf.Max(0f, _sprintRemaining - deltaTime);
             _invulnerabilityRemaining = Mathf.Max(0f, _invulnerabilityRemaining - deltaTime);
             _shieldRemaining = Mathf.Max(0f, _shieldRemaining - deltaTime);
