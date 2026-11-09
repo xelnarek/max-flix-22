@@ -54,11 +54,32 @@ test('Survival reuses the PvP floor, crate, barrier, wall and footprint assets',
 });
 
 
-test('arena surfaces include industrial wear, drainage and distinct freight hardware marks', async () => {
-  const textures = await readFile(new URL('../src/pvpTextures.ts', import.meta.url), 'utf8');
-  assert.match(textures, /Recessed drainage plates/);
-  assert.match(textures, /Forklift tyre polishing/);
-  assert.match(textures, /B4/);
-  assert.match(textures, /Reflective panels, end caps and fixing bolts/);
-  assert.match(textures, /Concrete wall seams, anchor plates/);
+test('original B4 art pack supplies the shared industrial floors, freight props and sprite atlas', async () => {
+  const [textures, pack, assets, floor, pallet, carton, steel, hazard, sprites] = await Promise.all([
+    readFile(new URL('../src/pvpTextures.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/b4AssetPack.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/assets.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/visuals/b4-floor-concrete.svg', import.meta.url), 'utf8'),
+    readFile(new URL('../src/visuals/b4-pallet-wood.svg', import.meta.url), 'utf8'),
+    readFile(new URL('../src/visuals/b4-freight-carton.svg', import.meta.url), 'utf8'),
+    readFile(new URL('../src/visuals/b4-corrugated-steel.svg', import.meta.url), 'utf8'),
+    readFile(new URL('../src/visuals/b4-hazard-chevron.svg', import.meta.url), 'utf8'),
+    readFile(new URL('../src/visuals/b4-sprite-atlas.svg', import.meta.url), 'utf8'),
+  ]);
+  assert.match(textures, /return getB4VisualTexture\('floor'\)/);
+  assert.match(textures, /getB4VisualTexture\('carton'\)/);
+  assert.match(textures, /getB4VisualTexture\('hazard'\)/);
+  assert.match(textures, /getB4VisualTexture\('steel'\)/);
+  for (const kind of ['floor', 'pallet', 'carton', 'steel', 'hazard', 'spriteAtlas']) {
+    assert.match(pack, new RegExp(`'\\./visuals/b4-[^']+\\.svg\\?url'`));
+    assert.match(assets, new RegExp(`preloadB4VisualTexture\\('${kind}'\\)`));
+  }
+  assert.match(pack, /createB4FreightStack/);
+  assert.match(pack, /createB4SpriteDecal/);
+  assert.match(floor, /gradient/);
+  assert.match(pallet, /fibres/);
+  assert.match(carton, /MAX FLIX/);
+  assert.match(steel, /linearGradient/);
+  assert.match(hazard, /chev/);
+  assert.match(sprites, /enemy|worker|zombie|forklift|pallet/i);
 });
