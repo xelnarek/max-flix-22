@@ -132,7 +132,9 @@ namespace MaxFlix.Unity.Runtime
         private static void EnsureEventSystem()
         {
             if (FindFirstObjectByType<EventSystem>() != null) return;
-            new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
+            GameObject eventSystem = new GameObject("EventSystem", typeof(EventSystem));
+            InputSystemUIInputModule inputModule = eventSystem.AddComponent<InputSystemUIInputModule>();
+            inputModule.pointerBehavior = UIPointerBehavior.SingleMouseOrPenButMultiTouchAndTrack;
         }
     }
 }
