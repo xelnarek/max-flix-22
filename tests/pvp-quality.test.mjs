@@ -462,3 +462,28 @@ test('PvP obstacles retain soft baked contact shadows when mobile shadow maps ar
   assert.match(game, /shadow\.renderOrder = 1/);
   assert.match(game, /roughness: 0\.82,[\s\S]*?metalness: 0\.08/);
 });
+
+
+test('PvP HUD shows each operator ability that the arena actually executes and restores Survival labels', async () => {
+  const [app, arena] = await Promise.all([
+    readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pvpArena.ts', import.meta.url), 'utf8'),
+  ]);
+  assert.match(app, /import \{ getPvpOperatorAttackCooldown, PVP_OPERATOR_PROFILES/);
+  const presentationStart = app.indexOf('const applyPvpAbilityPresentation');
+  const presentationEnd = app.indexOf('const startPvpMatchUI', presentationStart);
+  const presentation = app.slice(presentationStart, presentationEnd);
+  assert.ok(presentationStart >= 0 && presentationEnd > presentationStart);
+  assert.match(presentation, /profile\.abilityName/);
+  assert.match(presentation, /profile\.abilityDesc/);
+  for (const id of ['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr']) {
+    assert.match(presentation, new RegExp('^', 'm') === null ? /$^/ : new RegExp(id + ':'));
+    assert.match(arena, new RegExp(id + ':'));
+  }
+  const pvpStart = app.indexOf('this.engine.startPvp(session, localOp, remoteOp)');
+  assert.ok(pvpStart > presentationStart);
+  assert.ok(app.indexOf('applyPvpAbilityPresentation(localOp)', pvpStart) > pvpStart);
+  const survivalStart = app.indexOf('this.engine.startSurvival(selectedSurvivalMapId)');
+  const restoreStart = app.lastIndexOf('updateCharacterUI(this.selectedCharId)', survivalStart);
+  assert.ok(restoreStart >= 0 && restoreStart < survivalStart, 'Survival should restore its own ability label/icon');
+});
