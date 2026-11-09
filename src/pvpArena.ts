@@ -439,7 +439,7 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
     projectileRadius: 0.48,
     color: 0xef4444,
     abilityName: 'Hydrauliczne Przełamanie',
-    abilityDesc: 'Impuls uderzeniowy o promieniu 5m zadający 150 pkt obrażeń.',
+    abilityDesc: 'Impuls uderzeniowy w promieniu 5,2 m zadający 150 pkt obrażeń i ogłuszający na 0,5 s.',
   },
   piotr: {
     name: 'Piotr Serwisant',
