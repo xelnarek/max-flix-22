@@ -214,6 +214,31 @@ test('Unity Campaign builds a connected three-sector mega-map with boss-gated pr
 });
 
 
+
+test('Unity release identity and manual build workflow target WebGPU WebGL and ARM64 Android', async () => {
+  const [setup, workflow, projectVersion] = await Promise.all([
+    read('../unity/MaxFlixUnity/Assets/Editor/UnityProjectSetup.cs'),
+    read('../.github/workflows/unity-validation.yml'),
+    read('../unity/MaxFlixUnity/ProjectSettings/ProjectVersion.txt'),
+  ]);
+  assert.match(projectVersion, /m_EditorVersion: 6000\.6\.8f1/);
+  assert.match(setup, /AndroidApplicationId = "pl\.paleciaki\.magazynchaosu"/);
+  assert.match(setup, /PlayerSettings\.SetApplicationIdentifier\(NamedBuildTarget\.Android, AndroidApplicationId\)/);
+  assert.match(setup, /PlayerSettings\.SetScriptingBackend\(NamedBuildTarget\.Android, ScriptingImplementation\.IL2CPP\)/);
+  assert.match(setup, /PlayerSettings\.Android\.targetArchitectures = AndroidArchitecture\.ARM64/);
+  assert.match(setup, /AndroidApiLevel36/);
+  assert.match(setup, /WebGPU, GraphicsDeviceType\.OpenGLES3/);
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /game-ci\/unity-builder@v4/);
+  assert.match(workflow, /projectPath: unity\/MaxFlixUnity/);
+  assert.match(workflow, /targetPlatform: WebGL/);
+  assert.match(workflow, /androidExportType: androidAppBundle/);
+  assert.match(workflow, /secrets\.UNITY_LICENSE/);
+  assert.match(workflow, /secrets\.ANDROID_UPLOAD_KEYSTORE_BASE64/);
+  assert.doesNotMatch(workflow, /r0adkll\/upload-google-play/);
+});
+
+
 test('Unity setup creates URP, configures WebGPU with WebGL2 fallback and enables the New Input System', async () => {
   const setup = await read('../unity/MaxFlixUnity/Assets/Editor/UnityProjectSetup.cs');
   assert.match(setup, /UniversalRenderPipelineAsset/);
