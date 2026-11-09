@@ -11,8 +11,8 @@
 2. Install editor **6000.6.8f1** with Android Build Support (SDK/NDK + OpenJDK) and Web Build Support.
 3. Open this folder (unity/MaxFlixUnity) as a Unity project.
 4. Allow Package Manager to resolve the pinned packages.
-5. The editor installer creates Assets/Scenes/Bootstrap.unity and registers it in Build Settings.
-6. Run **Max Flix > Configure URP and New Input System** from the Unity menu. This creates/assigns the URP asset, selects the new Input System backend and enables WebGPU with WebGL 2 fallback for Web builds. Restart the Editor if Unity asks.
+5. The editor installer creates Assets/Scenes/Bootstrap.unity and registers it in Build Settings. On the first editor load, the project setup also creates/assigns the URP asset, selects the New Input System backend and configures WebGPU with WebGL 2 fallback for Web builds. Restart the Editor if Unity asks.
+6. If the automatic setup is interrupted, run **Max Flix > Configure URP and New Input System** from the Unity menu to repair the renderer/input configuration.
 7. Press Play. The main menu appears; choose Survival or the B4 training arena, operator and Survival map. Survival starts with its wave director, XP progression and auto-weapon services.
 
 The project deliberately does not import or overwrite the old game. New C# systems live beside the old code until their parity tests are approved.
