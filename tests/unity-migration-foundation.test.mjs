@@ -14,6 +14,7 @@ test('Unity migration pins the supported 6.6.8 editor and package versions', asy
   assert.match(manifest, /com\.unity\.inputsystem/);
   assert.match(manifest, /1\.20\.1/);
   assert.match(manifest, /com\.unity\.render-pipelines\.universal/);
+  assert.match(manifest, /com\.unity\.ugui": "2\.6\.0"/);
 });
 
 test('first Unity vertical slice preserves all five legacy operator IDs and their base combat stats', async () => {
