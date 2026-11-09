@@ -3707,7 +3707,7 @@ class PaleciakiScene extends xb.Script {
         piotr: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'><path d='m27 4-17 23h12l-2 17 18-25H26Z' fill='currentColor' stroke='none'/><path d='M7 10 4 7M41 38l3 3' opacity='.7'/></svg>",
       };
       if (abilityNameElement) {
-        abilityNameElement.textContent = profile.abilityNameElement;
+        abilityNameElement.textContent = profile.abilityName;
         abilityNameElement.title = profile.abilityDesc;
       }
       if (abilityIconElement) {
@@ -3716,8 +3716,8 @@ class PaleciakiScene extends xb.Script {
         abilityIconElement.title = profile.abilityDesc;
       }
       const abilityButton = document.getElementById('btn-ability') as HTMLButtonElement | null;
-      abilityButton?.setAttribute('aria-label', `${profile.abilityNameElement}. ${profile.abilityDesc}`);
-      if (abilityButton) abilityButton.title = `${profile.abilityNameElement} — ${profile.abilityDesc} (E / Shift / przycisk)`;
+      abilityButton?.setAttribute('aria-label', `${profile.abilityName}. ${profile.abilityDesc}`);
+      if (abilityButton) abilityButton.title = `${profile.abilityName} — ${profile.abilityDesc} (E / Shift / przycisk)`;
     };
 
     const startPvpMatchUI = (session: IPvpSession, localOp: CharacterId, remoteOp: CharacterId) => {
