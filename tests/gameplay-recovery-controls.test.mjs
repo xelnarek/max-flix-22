@@ -121,6 +121,10 @@ test('lethal damage is terminal and the result workload yields one frame for the
   assert.ok(callback.includes("const shouldAwardMastery = endedMode === 'survival' && !this.masteryAwardedForRun"));
   assert.ok(callback.includes('const endedOperatorId = this.engine.getCharacterDef().id'));
   assert.ok(callback.includes('if (shouldAwardMastery) {'));
+  assert.ok(callback.includes('const endedSessionGeneration = this.gameSessionGeneration'));
+  assert.ok(callback.includes('endedSessionGeneration !== this.gameSessionGeneration'));
+  assert.ok(callback.includes("this.engine.getGameState() !== 'gameover'"));
+  assert.match(app, /private gameSessionGeneration = 0/);
   const runStart = app.slice(app.indexOf('const doStartSurvival = async'), app.indexOf('const handlePause ='));
   assert.ok(runStart.includes('updateCharacterUI(this.selectedCharId)'));
 });
