@@ -50,11 +50,11 @@ namespace MaxFlix.Unity.Runtime
             _maxHealth = Mathf.Max(1f, _profile.BaseHealth * Mathf.Clamp(healthMultiplier, 0.25f, 8f));
             _health = _maxHealth;
             float safeSpeedMultiplier = Mathf.Clamp(speedMultiplier, 0.5f, 2.5f);
-            _moveSpeed = _moveSpeed * safeSpeedMultiplier;
-            _attackInterval = _attackInterval;
-            _attackRange = _attackRange;
-            _aggroRange = _aggroRange;
-            _attackDamage = _attackDamage;
+            _moveSpeed = _profile.MoveSpeed * safeSpeedMultiplier;
+            _attackInterval = _profile.AttackInterval;
+            _attackRange = _profile.AttackRange;
+            _aggroRange = _profile.AggroRange;
+            _attackDamage = _profile.AttackDamage;
             _abilityRateMultiplier = Mathf.Clamp(abilityRateMultiplier, 0.5f, 2.5f);
             _attackTimer = _attackInterval * 0.55f;
             _patrolCenter = transform.position;
@@ -70,6 +70,7 @@ namespace MaxFlix.Unity.Runtime
         {
             Initialize(target, EnemyKind.Customer, 1f);
             _health = Mathf.Max(1f, health);
+            _maxHealth = _health;
         }
 
         public void ApplyDamage(float damage)
@@ -214,15 +215,15 @@ namespace MaxFlix.Unity.Runtime
 
         private void TickRanged(float deltaTime, Vector3 direction, float distance)
         {
-            float preferredRange = _profile.AttackRange;
+            float preferredRange = _attackRange;
             if (distance > preferredRange * 1.12f)
-                Move(direction * (_profile.MoveSpeed * _slowMultiplier), deltaTime);
+                Move(direction * (_moveSpeed * _slowMultiplier), deltaTime);
             else if (distance < preferredRange * 0.58f)
-                Move(-direction * (_profile.MoveSpeed * 0.72f * _slowMultiplier), deltaTime);
+                Move(-direction * (_moveSpeed * 0.72f * _slowMultiplier), deltaTime);
             else
             {
                 Vector3 strafe = Vector3.Cross(Vector3.up, direction) * _patrolDirection;
-                Move(strafe * (_profile.MoveSpeed * 0.34f * _slowMultiplier), deltaTime);
+                Move(strafe * (_moveSpeed * 0.34f * _slowMultiplier), deltaTime);
             }
 
             Face(direction, deltaTime);
@@ -235,8 +236,8 @@ namespace MaxFlix.Unity.Runtime
 
         private void TickSupport(float deltaTime, Vector3 direction, float distance)
         {
-            if (distance > _profile.AttackRange * 0.90f)
-                Move(direction * (_profile.MoveSpeed * 0.82f * _slowMultiplier), deltaTime);
+            if (distance > _attackRange * 0.90f)
+                Move(direction * (_moveSpeed * 0.82f * _slowMultiplier), deltaTime);
             Face(direction, deltaTime);
 
             if (_attackTimer > 0f) return;
@@ -256,17 +257,17 @@ namespace MaxFlix.Unity.Runtime
 
         private void TickCharger(float deltaTime, Vector3 direction, float distance)
         {
-            if (distance > _profile.AttackRange && distance <= _profile.AggroRange)
+            if (distance > _attackRange && distance <= _aggroRange)
             {
-                Move(direction * (_profile.MoveSpeed * _phaseTwoMoveMultiplier * _slowMultiplier), deltaTime);
+                Move(direction * (_moveSpeed * _phaseTwoMoveMultiplier * _slowMultiplier), deltaTime);
                 Face(direction, deltaTime);
             }
-            else if (distance > _profile.AggroRange)
+            else if (distance > _aggroRange)
             {
                 TickPatrol(deltaTime);
             }
 
-            if (_attackTimer <= 0f && distance <= _profile.AggroRange)
+            if (_attackTimer <= 0f && distance <= _aggroRange)
             {
                 _chargeWindupRemaining = _profile.IsBoss ? 0.82f : 0.62f;
                 _attackTimer = _attackInterval / _abilityRateMultiplier * (_phaseTwo ? 0.76f : 1f);
@@ -275,16 +276,16 @@ namespace MaxFlix.Unity.Runtime
 
         private void TickCharge(float deltaTime)
         {
-            float chargeSpeed = _profile.MoveSpeed * (_profile.IsBoss ? 2.15f : 2.45f) * _phaseTwoMoveMultiplier;
+            float chargeSpeed = _moveSpeed * (_profile.IsBoss ? 2.15f : 2.45f) * _phaseTwoMoveMultiplier;
             Move(_chargeDirection * chargeSpeed, deltaTime);
 
             if (!_chargeHitApplied && _target != null)
             {
                 Vector3 offset = _target.transform.position - transform.position;
                 offset.y = 0f;
-                if (offset.sqrMagnitude <= (_profile.AttackRange + 0.5f) * (_profile.AttackRange + 0.5f))
+                if (offset.sqrMagnitude <= (_attackRange + 0.5f) * (_attackRange + 0.5f))
                 {
-                    _target.ApplyDamage(_profile.AttackDamage * (_profile.IsBoss ? 1.35f : 1f));
+                    _target.ApplyDamage(_attackDamage * (_profile.IsBoss ? 1.35f : 1f));
                     _chargeHitApplied = true;
                 }
             }
@@ -299,7 +300,7 @@ namespace MaxFlix.Unity.Runtime
             else if (patrolOffset < -2.8f) _patrolDirection = 1f;
 
             Vector3 direction = Vector3.right * _patrolDirection;
-            Move(direction * (_profile.MoveSpeed * 0.28f * _slowMultiplier), deltaTime);
+            Move(direction * (_moveSpeed * 0.28f * _slowMultiplier), deltaTime);
             Face(direction, deltaTime);
         }
 
@@ -318,7 +319,7 @@ namespace MaxFlix.Unity.Runtime
             Rigidbody body = shot.AddComponent<Rigidbody>();
             body.useGravity = false;
             EnemyAttackProjectile attack = shot.AddComponent<EnemyAttackProjectile>();
-            attack.Initialize(_target, _profile.AttackDamage, aim.normalized, 10.5f, _profile.AccentColor);
+            attack.Initialize(_target, _attackDamage, aim.normalized, 10.5f, _profile.AccentColor);
         }
 
         private void Move(Vector3 horizontalVelocity, float deltaTime)
