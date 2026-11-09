@@ -702,7 +702,11 @@ class PaleciakiScene extends xb.Script {
     }, { passive: true });
 
     const handleFullscreenChange = () => {
+      // Fullscreen transitions are not guaranteed to emit a matching resize in
+      // every Android WebView. Release the movement stick and restore any
+      // pointer-positioned fire control before the next frame.
       this.resetTouchJoystick?.();
+      resetPvpFireControlPosition();
       scheduleResize();
     };
     document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -3024,6 +3028,10 @@ class PaleciakiScene extends xb.Script {
       window.addEventListener('pagehide', resetAimStick);
       window.addEventListener('resize', resetAimStick, { passive: true });
       window.visualViewport?.addEventListener('resize', resetAimStick, { passive: true });
+      // Some Android fullscreen transitions change the visible surface without
+      // dispatching resize; never leave the right-thumb aim input latched.
+      document.addEventListener('fullscreenchange', resetAimStick);
+      document.addEventListener('webkitfullscreenchange', resetAimStick);
       document.addEventListener('visibilitychange', () => {
         if (document.hidden) resetAimStick();
       });

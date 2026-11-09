@@ -81,3 +81,19 @@ test('local bot pauses with the practice match and its aim is deliberately imper
   assert.match(tactics, /PVP_BOT_AIM_SPREAD_RADIANS = 0\.18/);
   assert.match(tactics, /applyPvpBotAimSpread/);
 });
+
+test('fullscreen transitions release movement, aim and positioned fire input on Android WebViews', async () => {
+  const app = await read('../src/index.ts');
+  const fullscreenHandler = app.slice(
+    app.indexOf('const handleFullscreenChange = () =>'),
+    app.indexOf("document.addEventListener('fullscreenchange', handleFullscreenChange)"),
+  );
+  assert.match(fullscreenHandler, /this\.resetTouchJoystick\?\.\(\)/);
+  assert.match(fullscreenHandler, /resetPvpFireControlPosition\(\)/);
+  const aimControls = app.slice(
+    app.indexOf('const resetAimStick = () =>'),
+    app.indexOf('const handleStart = (event: PointerEvent) =>'),
+  );
+  assert.match(aimControls, /document\.addEventListener\('fullscreenchange', resetAimStick\)/);
+  assert.match(aimControls, /document\.addEventListener\('webkitfullscreenchange', resetAimStick\)/);
+});
