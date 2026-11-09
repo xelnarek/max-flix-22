@@ -5,7 +5,7 @@ import {
   createInitialPvpArenaState,
   PVP_PLAYER_RADIUS,
 } from '../src/pvpArena.ts';
-import { choosePvpBotDecision } from '../src/pvpBotTactics.ts';
+import { applyPvpBotAimSpread, choosePvpBotDecision, PVP_BOT_AIM_SPREAD_RADIANS } from '../src/pvpBotTactics.ts';
 
 function contextWith(botId = 'dawid') {
   const state = createInitialPvpArenaState('marcin', 'PLAYER', botId, 'BOT');
@@ -28,6 +28,30 @@ function contextWith(botId = 'dawid') {
       choosePvpBotDecision({ bot, opponent, state, opponentVelocity, orbitSign }),
   };
 }
+
+test('practice bot aim includes bounded miss chance instead of perfect frame-by-frame tracking', () => {
+  const targetAngle = 1.1;
+  const samples = Array.from({ length: 12 }, (_, index) => applyPvpBotAimSpread(targetAngle, index));
+  assert.ok(samples.every(Number.isFinite));
+  assert.ok(samples.every((angle) => Math.abs(Math.atan2(Math.sin(angle - targetAngle), Math.cos(angle - targetAngle))) <= PVP_BOT_AIM_SPREAD_RADIANS + 1e-9));
+  assert.ok(new Set(samples.map((angle) => angle.toFixed(4))).size > 8, 'spread should vary between decisions');
+});
+
+test('bot aim spread is deterministic and safely wraps angles', () => {
+  assert.equal(applyPvpBotAimSpread(0.4, 5), applyPvpBotAimSpread(0.4, 5));
+  assert.ok(applyPvpBotAimSpread(Math.PI - 0.02, 4) >= -Math.PI);
+  assert.equal(applyPvpBotAimSpread(Number.NaN, 1), 0);
+});
+
+test('local bot practice supports a real pause and throttles its AI decisions', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const client = await readFile(new URL('../src/pvpClient.ts', import.meta.url), 'utf8');
+  assert.match(client, /public setPaused\(paused: boolean\)/);
+  assert.match(client, /if \(this\.paused\) return/);
+  assert.match(client, /if \(this\.botRepositionTimer > 0\) return/);
+  assert.match(client, /this\.botRepositionTimer = 0\.46/);
+  assert.match(client, /applyPvpBotAimSpread\(decision\.aimAngle, this\.botDecisionTick\)/);
+});
 
 test('bot leads shots toward a moving opponent instead of aiming only at its current position', () => {
   const { makeDecision } = contextWith('dawid');

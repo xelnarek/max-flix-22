@@ -40,11 +40,13 @@ test('movement joystick retains pointer capture and PvP STRZAŁ follows its posi
   assert.ok(app.includes("joystickZone.setPointerCapture(event.pointerId)"));
   assert.ok(app.includes("window.addEventListener('pointercancel', handleEnd"));
   assert.ok(app.includes("calculateVirtualJoystickInput(dx, dy, maxRadius)"));
-  assert.ok(!app.includes("activeAimPointerId"));
+  assert.ok(app.includes("activeAimPointerId")); 
+  assert.ok(app.includes("pvpAimZone.addEventListener('pointerdown', handleAimStart"));
+  assert.ok(app.includes("this.engine.setPvpAimStickInput("));
   assert.ok(css.includes("touch-action: none !important"));
   assert.ok(css.includes("pvp-fire-control"));
   assert.ok(html.includes('id="pvp-fire-control"'));
-  assert.ok(!html.includes('id="pvp-aim-zone"'));
+  assert.ok(html.includes('id="pvp-aim-zone"'));
 });
 
 test('cinematic intro stages its title reveal over a richer animated warehouse scene', async () => {

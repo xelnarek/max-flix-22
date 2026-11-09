@@ -982,6 +982,7 @@ export class PaleciakiGameEngine {
   private virtualJoystick = { x: 0, y: 0 };
   // Separate PvP aim state: movement input must never snap the attack direction.
   private manualAimEnabled = false;
+  private manualPvpAimOverride = false;
   private manualAimDirection: PvpAimDirection = { x: 0, z: 1 };
   private callbacks: GameCallbacks;
 
@@ -1254,12 +1255,34 @@ export class PaleciakiGameEngine {
   /** Dedicated PvP twin-stick path. The existing PvE Survival auto-aim is unaffected while disabled. */
   public setManualAimMode(enabled: boolean) {
     this.manualAimEnabled = enabled;
+    this.manualPvpAimOverride = false;
     this.pvpWantFire = false;
     this.pvpAimSweepElapsed = 0;
     this.pvpAimSweepRound = 0;
     this.pvpAimSweepCenterAngle = Number.isFinite(this.playerRot) ? this.playerRot : Math.PI / 2;
     if (enabled) this.manualAimDirection = pvpAimDirectionFromAngle(this.playerRot);
     document.getElementById('game-shell')?.classList.toggle('manual-aim-mode', enabled);
+  }
+
+  /** Receives a right-stick direction in screen space (positive Y points up). */
+  public setPvpAimStickInput(screenX: number, screenY: number) {
+    if (this.gameMode !== 'pvp' || !this.manualAimEnabled) return;
+    if (!Number.isFinite(screenX) || !Number.isFinite(screenY)) return;
+    const length = Math.hypot(screenX, screenY);
+    if (length < 0.22) return;
+
+    const viewportWidth = window.visualViewport?.width || window.innerWidth;
+    const viewportHeight = window.visualViewport?.height || window.innerHeight;
+    const world = pvpScreenMovementToWorld(
+      screenX / length,
+      screenY / length,
+      isPvpPortraitViewport(viewportWidth, viewportHeight),
+    );
+    const worldLength = Math.hypot(world.x, world.z);
+    if (worldLength < 0.001) return;
+    this.manualAimDirection = { x: world.x / worldLength, z: world.z / worldLength };
+    this.manualPvpAimOverride = true;
+    this.pvpAimSweepCenterAngle = getPvpAimAngle(this.manualAimDirection);
   }
 
   public selectCharacter(
@@ -2308,7 +2331,7 @@ export class PaleciakiGameEngine {
           ? localForAim.rot
           : this.pvpAimSweepCenterAngle;
       }
-      if (currentState.status === 'in_round' && localForAim.hp > 0 && remoteForAim.hp > 0) {
+      if (currentState.status === 'in_round' && localForAim.hp > 0 && remoteForAim.hp > 0 && !this.manualPvpAimOverride) {
         this.pvpAimSweepCenterAngle = getPvpAimSweepCenterAngle(
           moveX, moveZ, this.pvpAimSweepCenterAngle,
         );
@@ -4632,9 +4655,11 @@ export class PaleciakiGameEngine {
     if (this.gameMode === 'survival' && this.state === 'levelup') return;
     if (this.state === 'playing') {
       this.state = 'paused';
+      if (this.gameMode === 'pvp') this.pvpSession?.setPaused?.(true);
       sound.stopMusic();
     } else if (this.state === 'paused') {
       this.state = 'playing';
+      if (this.gameMode === 'pvp') this.pvpSession?.setPaused?.(false);
       sound.startMusic();
     }
   }
@@ -14867,7 +14892,20 @@ export class PaleciakiGameEngine {
       const finalReason = this.gameMode === 'survival'
         ? reason + ' | Fala ' + this.survivalWave + ' • ' + this.survivalKills + ' eliminacji • ' + this.survivalPerfectDodges + ' perfekcyjnych uników • ' + Math.floor(this.survivalElapsed) + ' s'
         : reason;
-      this.callbacks.onGameOver(finalReason);
+      try {
+        this.callbacks.onGameOver(finalReason);
+      } catch (error) {
+        // A result-screen or persistence callback must never break the render loop.
+        console.error('[GameOver] Result callback failed; showing the fallback results panel.', error);
+        const modal = document.getElementById('gameover-modal');
+        const reasonText = document.getElementById('gameover-reason');
+        if (reasonText) reasonText.textContent = finalReason;
+        if (modal) {
+          modal.classList.remove('hidden');
+          modal.style.setProperty('display', 'flex', 'important');
+          modal.style.setProperty('pointer-events', 'auto', 'important');
+        }
+      }
     }
   }
 

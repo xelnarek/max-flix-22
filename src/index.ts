@@ -24,7 +24,7 @@ import { ThreeClickTrigger } from './menuInteraction.ts';
 import { calculateUiViewport, shouldShowTouchControls } from './uiViewport.ts';
 import { getAdaptiveEffectsTier, getAdaptiveRenderScale, getDeviceRenderProfile, shouldApplyPixelRatioChange, type AdaptiveEffectsTier } from './renderQuality.ts';
 import { calculateVirtualJoystickInput } from './virtualJoystick.ts';
-import { calculatePvpFireControlPosition } from './pvpTouchLayout.ts';
+
 import { clampTouchJoystickOrigin } from './touchControlLayout.ts';
 import {
   createInitialSurvivalAchievementProgress,
@@ -1166,6 +1166,26 @@ class PaleciakiScene extends xb.Script {
           hudPerksRow?.classList.toggle('hidden', !hasVisiblePerk);
         },
         onGameOver: (reason) => {
+          if (gameoverReason) gameoverReason.textContent = reason;
+          if (gameoverModal) {
+            gameoverModal.classList.remove('hidden');
+            gameoverModal.style.setProperty('display', 'flex', 'important');
+            gameoverModal.style.setProperty('pointer-events', 'auto', 'important');
+            gameoverModal.style.setProperty('z-index', '2147483012', 'important');
+          }
+          hudTop?.classList.add('hidden');
+          hudBottom?.classList.add('hidden');
+          bossHudBar?.classList.add('hidden');
+          hudPerksRow?.classList.add('hidden');
+          survivalHud?.classList.add('hidden');
+          survivalLevelUp?.classList.add('hidden');
+          try {
+            setTouchControlsVisibility(false);
+          } catch (visibilityError) {
+            console.warn('[GameOver UI] Touch layer could not be hidden.', visibilityError);
+          }
+
+          try {
           hideSurvivalAnnouncement();
           this.lastScore = this.engine.getScore();
           this.lastCoins = this.engine.getCollectedVipCount();
@@ -1313,6 +1333,21 @@ class PaleciakiScene extends xb.Script {
           hudPerksRow?.classList.add('hidden');
           survivalHud?.classList.add('hidden');
           survivalLevelUp?.classList.add('hidden');
+          } catch (error) {
+            console.error('[GameOver UI] Optional result processing failed; the results screen remains available.', error);
+            if (gameoverReason) gameoverReason.textContent = reason;
+            if (gameoverModal) {
+              gameoverModal.classList.remove('hidden');
+              gameoverModal.style.setProperty('display', 'flex', 'important');
+              gameoverModal.style.setProperty('pointer-events', 'auto', 'important');
+              gameoverModal.style.setProperty('z-index', '2147483012', 'important');
+            }
+            hudTop?.classList.add('hidden');
+            hudBottom?.classList.add('hidden');
+            setTouchControlsVisibility(false);
+            survivalHud?.classList.add('hidden');
+            survivalLevelUp?.classList.add('hidden');
+          }
         },
         onSurvivalUpdate: (snapshot: SurvivalSnapshot) => {
           trackSurvivalAchievementSnapshot(snapshot);
@@ -2620,46 +2655,81 @@ class PaleciakiScene extends xb.Script {
     syncAudioSettingsUI();
 
 
+    const activeTouchMode = (): TouchControlsMode =>
+      this.engine.getGameMode() === 'pvp' ? 'pvp' : 'survival';
+
     const handlePause = () => {
       if (this.engine.getGameState() !== 'playing') return;
+      this.resetTouchJoystick?.();
       this.engine.togglePause();
+      this.pausedForVisibility = false;
+      setTouchControlsVisibility(false);
       pauseModal?.classList.remove('hidden');
       pauseModal?.setAttribute('aria-hidden', 'false');
+      pauseModal?.style.setProperty('display', 'flex', 'important');
+      pauseModal?.style.setProperty('z-index', '2147483012', 'important');
+
+      const isPvp = this.engine.getGameMode() === 'pvp';
+      const restartButton = document.getElementById('btn-restart-pause');
+      restartButton?.classList.toggle('hidden', isPvp);
+      const pauseDescription = pauseModal?.querySelector<HTMLElement>('.modal-desc');
+      if (pauseDescription) {
+        pauseDescription.textContent = isPvp && !(this.pvpSession?.isLocalBot)
+          ? 'Lokalny ekran został wstrzymany. W pojedynku online przeciwnik i serwer mogą nadal wykonywać ruchy.'
+          : 'Rozgrywka jest wstrzymana. Wznów ją, rozpocznij próbę od nowa albo wróć do menu.';
+      }
       (document.getElementById('btn-resume') as HTMLButtonElement | null)?.focus();
     };
     bindTap(document.getElementById('btn-top-pause'), handlePause);
     bindTap(document.getElementById('btn-pause'), handlePause);
+    bindTap(document.getElementById('btn-touch-pause'), handlePause);
 
     // Campaign briefing UI has been retired; Survival is the only playable mode.
 
     bindTap(document.getElementById('btn-resume'), () => {
+      if (this.engine.getGameState() !== 'paused') return;
+      this.engine.togglePause();
+      this.pausedForVisibility = false;
       pauseModal?.classList.add('hidden');
       pauseModal?.setAttribute('aria-hidden', 'true');
-      this.engine.togglePause();
+      pauseModal?.style.removeProperty('display');
+      const restartButton = document.getElementById('btn-restart-pause');
+      restartButton?.classList.toggle('hidden', this.engine.getGameMode() === 'pvp');
+      setTouchControlsMode(activeTouchMode());
+      setTouchControlsVisibility(true);
     });
 
     bindTap(document.getElementById('btn-restart-pause'), () => {
+      if (this.engine.getGameMode() !== 'survival') return;
       pauseModal?.classList.add('hidden');
       pauseModal?.setAttribute('aria-hidden', 'true');
+      pauseModal?.style.removeProperty('display');
       survivalLevelUp?.classList.add('hidden');
       setTouchControlsMode('survival');
       this.masteryAwardedForRun = false;
       this.engine.startSurvival(selectedSurvivalMapId);
-        // Re-assert visibility and exclusive mode after the scene transition.
-        setTouchControlsMode('survival');
-        setTouchControlsVisibility(true);
+      setTouchControlsMode('survival');
+      setTouchControlsVisibility(true);
     });
 
     const exitPausedRunToMenu = () => {
+      const leavingPvp = this.engine.getGameMode() === 'pvp';
       pauseModal?.classList.add('hidden');
       pauseModal?.setAttribute('aria-hidden', 'true');
+      pauseModal?.style.removeProperty('display');
       hudPerksRow?.classList.add('hidden');
       survivalHud?.classList.add('hidden');
       survivalLevelUp?.classList.add('hidden');
       setTouchControlsMode('hidden');
       hudTop?.classList.add('hidden');
       hudBottom?.classList.add('hidden');
+      document.getElementById('pvp-hud')?.classList.add('hidden');
       setTouchControlsVisibility(false);
+      if (leavingPvp) {
+        this.pvpSession?.dispose();
+        this.pvpSession = null;
+        this.engine.exitPvp();
+      }
       if (titleScreen) {
         titleScreen.classList.remove('hidden');
         titleScreen.style.setProperty('display', 'flex', 'important');
@@ -2772,15 +2842,22 @@ class PaleciakiScene extends xb.Script {
       );
 
       if (action === 'pause') {
+        this.resetTouchJoystick?.();
         this.engine.togglePause();
         this.pausedForVisibility = true;
+        setTouchControlsVisibility(false);
         pauseModal?.classList.remove('hidden');
         pauseModal?.setAttribute('aria-hidden', 'false');
+        pauseModal?.style.setProperty('display', 'flex', 'important');
+        pauseModal?.style.setProperty('z-index', '2147483012', 'important');
       } else if (action === 'resume') {
         this.engine.togglePause();
         this.pausedForVisibility = false;
         pauseModal?.classList.add('hidden');
         pauseModal?.setAttribute('aria-hidden', 'true');
+        pauseModal?.style.removeProperty('display');
+        setTouchControlsMode(activeTouchMode());
+        setTouchControlsVisibility(true);
       }
     });
 
@@ -2836,6 +2913,9 @@ class PaleciakiScene extends xb.Script {
     const joystickZone = document.getElementById('touch-joystick-zone');
     const joystickBase = document.getElementById('joystick-base');
     const joystickKnob = document.getElementById('joystick-knob');
+    const pvpAimZone = document.getElementById('pvp-aim-zone');
+    const pvpAimBase = document.getElementById('pvp-aim-base');
+    const pvpAimKnob = document.getElementById('pvp-aim-knob');
     if (!joystickZone || !joystickBase || !joystickKnob) return;
 
     // A floating, radial joystick. Pointer capture keeps the stick attached to the
@@ -2868,6 +2948,87 @@ class PaleciakiScene extends xb.Script {
     };
     this.resetTouchJoystick = resetJoystick;
 
+    // Keep pause inside the right action dock so it cannot float over the
+    // aim pad, top HUD or gameplay view on short phone screens.
+    const touchActionDock = document.querySelector<HTMLElement>('#touch-controls .touch-actions-zone');
+    const touchPauseButton = document.getElementById('btn-touch-pause');
+    if (touchActionDock && touchPauseButton && touchPauseButton.parentElement !== touchActionDock) {
+      touchActionDock.appendChild(touchPauseButton);
+    }
+
+    // Independent right-thumb aim stick for PvP. Movement and aiming use
+    // separate pointer IDs, so both thumbs can be active at the same time.
+    if (pvpAimZone && pvpAimBase && pvpAimKnob) {
+      let activeAimPointerId: number | null = null;
+      let aimCenterX = 0;
+      let aimCenterY = 0;
+      let aimRadius = 42;
+
+      const resetAimStick = () => {
+        const pointerId = activeAimPointerId;
+        activeAimPointerId = null;
+        pvpAimKnob.style.transform = 'translate(-50%, -50%)';
+        if (pointerId !== null) {
+          try {
+            if (pvpAimZone.hasPointerCapture(pointerId)) pvpAimZone.releasePointerCapture(pointerId);
+          } catch {
+            // The pointer may already have been released or cancelled by Android.
+          }
+        }
+      };
+
+      const handleAimStart = (event: PointerEvent) => {
+        if (activeAimPointerId !== null || (event.pointerType === 'mouse' && event.button !== 0)) return;
+        activeAimPointerId = event.pointerId;
+        const rect = pvpAimBase.getBoundingClientRect();
+        aimCenterX = rect.left + rect.width * 0.5;
+        aimCenterY = rect.top + rect.height * 0.5;
+        const knobRect = pvpAimKnob.getBoundingClientRect();
+        aimRadius = Math.max(20, Math.min(52, (Math.min(rect.width, rect.height) - Math.min(knobRect.width, knobRect.height)) * 0.5 - 5));
+        try {
+          pvpAimZone.setPointerCapture(event.pointerId);
+        } catch {
+          // Window-level handlers below provide the fallback path.
+        }
+        handleAimMove(event);
+        if (event.cancelable) event.preventDefault();
+      };
+
+      const handleAimMove = (event: PointerEvent) => {
+        if (activeAimPointerId !== event.pointerId) return;
+        const dx = event.clientX - aimCenterX;
+        const dy = event.clientY - aimCenterY;
+        const distance = Math.hypot(dx, dy);
+        const scale = distance > aimRadius ? aimRadius / Math.max(0.001, distance) : 1;
+        const knobX = dx * scale;
+        const knobY = dy * scale;
+        pvpAimKnob.style.transform =
+          `translate(calc(-50% + ${knobX.toFixed(1)}px), calc(-50% + ${knobY.toFixed(1)}px))`;
+        this.engine.setPvpAimStickInput(knobX / aimRadius, -knobY / aimRadius);
+        if (event.cancelable) event.preventDefault();
+      };
+
+      const handleAimEnd = (event: PointerEvent) => {
+        if (activeAimPointerId !== event.pointerId) return;
+        resetAimStick();
+      };
+
+      pvpAimZone.addEventListener('pointerdown', handleAimStart, { passive: false });
+      pvpAimZone.addEventListener('lostpointercapture', (event) => {
+        if (activeAimPointerId === event.pointerId) resetAimStick();
+      });
+      window.addEventListener('pointermove', handleAimMove, { passive: false });
+      window.addEventListener('pointerup', handleAimEnd, { passive: true });
+      window.addEventListener('pointercancel', handleAimEnd, { passive: true });
+      window.addEventListener('blur', resetAimStick);
+      window.addEventListener('pagehide', resetAimStick);
+      window.addEventListener('resize', resetAimStick, { passive: true });
+      window.visualViewport?.addEventListener('resize', resetAimStick, { passive: true });
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) resetAimStick();
+      });
+    }
+
     const handleStart = (event: PointerEvent) => {
       if (activePointerId !== null) return;
       if (event.pointerType === 'mouse' && event.button !== 0) return;
@@ -2876,7 +3037,6 @@ class PaleciakiScene extends xb.Script {
       maxRadius = getJoystickRadius();
 
       const touchLayer = document.getElementById('touch-controls');
-      const pvpFireControl = document.getElementById('pvp-fire-control') as HTMLElement | null;
       const viewportWidth = Math.max(1, window.visualViewport?.width || window.innerWidth);
       const viewportHeight = Math.max(1, window.visualViewport?.height || window.innerHeight);
       const baseRect = joystickBase.getBoundingClientRect();
@@ -2890,31 +3050,14 @@ class PaleciakiScene extends xb.Script {
         touchX: event.clientX,
         touchY: event.clientY,
         joystickSize,
-        fireButtonSize: fireControlSize,
+        fireButtonSize: viewportHeight <= 430 ? 68 : 78,
         fireGap: 10,
         topHudClearance: 88,
         safeBottom: 12,
+        reserveFireButton: false,
       });
       startX = origin.x;
       startY = origin.y;
-
-      if (isPvpTouch && pvpFireControl) {
-        const position = calculatePvpFireControlPosition({
-          viewportWidth,
-          viewportHeight,
-          touchX: startX,
-          touchY: startY,
-          joystickRadius: joystickSize * 0.5,
-          fireControlSize,
-          gap: 10,
-          safeMargin: 12,
-        });
-        pvpFireControl.style.setProperty('left', `${position.left}px`, 'important');
-        pvpFireControl.style.setProperty('right', 'auto', 'important');
-        pvpFireControl.style.setProperty('top', 'auto', 'important');
-        pvpFireControl.style.setProperty('bottom', `${position.bottom}px`, 'important');
-        pvpFireControl.style.setProperty('transform', 'translateX(-50%)', 'important');
-      }
 
       joystickBase.style.left = `${startX}px`;
       joystickBase.style.top = `${startY}px`;
@@ -3559,6 +3702,18 @@ class PaleciakiScene extends xb.Script {
       // touch-controls is portaled to body, so it needs its own mode classes.
       // Classes on #game-shell do not cascade into this detached control layer.
       setTouchControlsMode('pvp');
+      const pvpAimKnob = document.getElementById('pvp-aim-knob');
+      if (pvpAimKnob) pvpAimKnob.style.transform = 'translate(-50%, -50%)';
+      const touchActionsZone = document.querySelector<HTMLElement>('#touch-controls .touch-actions-zone');
+      const pvpFireControl = document.getElementById('pvp-fire-control');
+      if (pvpFireControl && touchActionsZone && pvpFireControl.parentElement !== touchActionsZone) {
+        touchActionsZone.prepend(pvpFireControl);
+      }
+      if (pvpFireControl) {
+        for (const property of ['position', 'left', 'right', 'top', 'bottom', 'transform']) {
+          pvpFireControl.style.removeProperty(property);
+        }
+      }
       resetPvpFireButton();
       if (pvpFireButton) {
         pvpFireButton.classList.remove('hidden');
