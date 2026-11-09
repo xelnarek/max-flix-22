@@ -712,7 +712,7 @@ test('PvP standard movement and dash are slower and more controlled', async () =
   state.p1.x = -5;
   const startX = state.p1.x;
   stepPvpArena(state, 0.1, { moveX: 1, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false });
-  assert.ok(Math.abs((state.p1.x - startXundefined);
+  assert.ok(Math.abs((state.p1.x - startX) - 0.5) < 1e-6, 'normal movement should travel 0.5 units in 0.1s');
 });
 
 test('one-shot fire intent shoots once, respects operator recovery, and can be tapped again', () => {
