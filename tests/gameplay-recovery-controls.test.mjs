@@ -117,6 +117,10 @@ test('lethal damage is terminal and the result workload yields one frame for the
   assert.ok(callback.includes('const snapshot = this.engine.getSurvivalSnapshot()'));
   assert.ok(callback.includes('const damageReport = this.engine.getSurvivalDamageReport()'));
   assert.ok(!callback.includes('this.engine.selectCharacter(operatorId'));
+  assert.ok(callback.indexOf("if (shouldAwardMastery) this.masteryAwardedForRun = true") < callback.indexOf('window.requestAnimationFrame'));
+  assert.ok(callback.includes("const shouldAwardMastery = endedMode === 'survival' && !this.masteryAwardedForRun"));
+  assert.ok(callback.includes('const endedOperatorId = this.engine.getCharacterDef().id'));
+  assert.ok(callback.includes('if (shouldAwardMastery) {'));
   const runStart = app.slice(app.indexOf('const doStartSurvival = async'), app.indexOf('const handlePause ='));
   assert.ok(runStart.includes('updateCharacterUI(this.selectedCharId)'));
 });
