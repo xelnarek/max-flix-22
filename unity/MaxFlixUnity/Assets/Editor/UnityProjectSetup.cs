@@ -13,9 +13,9 @@ namespace MaxFlix.Unity.Editor
     {
         private const string SettingsFolder = "Assets/Settings";
         private const string UrpMenuItem = "Assets/Create/Rendering/URP Asset (with Universal Renderer)";
-        private const int BothInputBackends = 2;
+        private const int NewInputSystemBackend = 1;
 
-        [MenuItem("Max Flix/Configure URP and migration input compatibility")]
+        [MenuItem("Max Flix/Configure URP and New Input System")]
         public static void ConfigureRenderingAndInput()
         {
             EnsureSettingsFolder();
@@ -70,16 +70,16 @@ namespace MaxFlix.Unity.Editor
             GraphicsSettings.defaultRenderPipeline = pipeline;
             EditorUtility.SetDirty(pipeline);
 
-            bool inputConfigured = ConfigureLegacyCompatibilityForFirstSlice();
+            bool inputConfigured = ConfigureNewInputSystem();
             AssetDatabase.SaveAssets();
 
             if (inputConfigured)
             {
-                Debug.Log("[Max Flix] URP is now the default render pipeline. Active Input Handling is set to Both temporarily for the first slice; the final migration will consolidate on the New Input System.");
+                Debug.Log("[Max Flix] URP is now the default render pipeline and Active Input Handling is set to the New Input System. Restart the Editor when prompted.");
             }
             else
             {
-                Debug.LogWarning("[Max Flix] URP is configured, but Active Input Handling could not be changed automatically. Set Project Settings > Player > Other Settings > Active Input Handling to Both for the current migration slice, then restart the Editor.");
+                Debug.LogWarning("[Max Flix] URP is configured, but Active Input Handling could not be changed automatically. Set Project Settings > Player > Other Settings > Active Input Handling to Input System Package (New), then restart the Editor.");
             }
         }
 
@@ -92,7 +92,7 @@ namespace MaxFlix.Unity.Editor
             }
         }
 
-        private static bool ConfigureLegacyCompatibilityForFirstSlice()
+        private static bool ConfigureNewInputSystem()
         {
             PlayerSettings settings = GetGlobalPlayerSettings();
             if (settings == null)
@@ -105,7 +105,7 @@ namespace MaxFlix.Unity.Editor
             SerializedProperty activeInputHandler = serializedSettings.FindProperty("activeInputHandler");
             if (activeInputHandler == null) return false;
 
-            activeInputHandler.intValue = BothInputBackends;
+            activeInputHandler.intValue = NewInputSystemBackend;
             serializedSettings.ApplyModifiedProperties();
             return true;
         }
