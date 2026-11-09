@@ -34,7 +34,7 @@ namespace MaxFlix.Unity.Runtime
         {
             EnsureEventSystem();
 
-            GameObject canvasObject = new GameObject("Max Flix Main Menu", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            GameObject canvasObject = new GameObject("Paleciaki Main Menu", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             Canvas canvas = canvasObject.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 100;
@@ -61,16 +61,28 @@ namespace MaxFlix.Unity.Runtime
 
             CreateBackdropPanel(root, new Vector2(0f, 0.42f), new Vector2(1f, 1f),
                 new Color(0.08f, 0.18f, 0.28f, 0.48f));
-            CreateText(root, "MAX FLIX", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+
+            // Keep menu controls inside the device safe area. The full-screen
+            // background remains behind system cutouts and gesture insets.
+            GameObject safeAreaObject = new GameObject("Menu Safe Area", typeof(RectTransform));
+            RectTransform safeRoot = safeAreaObject.GetComponent<RectTransform>();
+            safeRoot.SetParent(root, false);
+            safeRoot.anchorMin = Vector2.zero;
+            safeRoot.anchorMax = Vector2.one;
+            safeRoot.offsetMin = Vector2.zero;
+            safeRoot.offsetMax = Vector2.zero;
+            safeAreaObject.AddComponent<SafeAreaLayout>();
+
+            CreateText(safeRoot, "PALECIAKI!", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0.5f, 1f), new Vector2(0f, -28f), new Vector2(900f, 66f),
                 46, TextAnchor.MiddleCenter, new Color(0.97f, 0.98f, 1f));
-            CreateText(root, "UNITY EDITION  •  MAGAZYN PRZETRWANIA", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+            CreateText(safeRoot, "MAGAZYN CHAOSU  •  SURVIVAL I KAMPANIA", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0.5f, 1f), new Vector2(0f, -93f), new Vector2(900f, 36f),
-                18, TextAnchor.MiddleCenter, new Color(0.48f, 0.78f, 0.92f));
+                17, TextAnchor.MiddleCenter, new Color(0.48f, 0.78f, 0.92f));
 
             GameObject scrollObject = new GameObject("Menu scroll viewport", typeof(RectTransform), typeof(Image), typeof(Mask), typeof(ScrollRect));
             RectTransform viewport = scrollObject.GetComponent<RectTransform>();
-            viewport.SetParent(root, false);
+            viewport.SetParent(safeRoot, false);
             viewport.anchorMin = new Vector2(0.055f, 0.145f);
             viewport.anchorMax = new Vector2(0.945f, 0.83f);
             viewport.offsetMin = Vector2.zero;
@@ -109,20 +121,24 @@ namespace MaxFlix.Unity.Runtime
             scroll.scrollSensitivity = 42f;
 
             bool portrait = Screen.height > Screen.width;
-            AddSectionTitle(content, "01  •  WYBIERZ TRYB");
+            AddSectionTitle(content, "01  •  TRYB GRY");
             AddModeGrid(content, portrait);
-            AddSectionTitle(content, "02  •  OPERATOR");
+            AddSectionTitle(content, "02  •  WYBIERZ OPERATORA");
             AddOperatorGrid(content, portrait);
-            AddSectionTitle(content, "03  •  MAPA");
+            AddSectionTitle(content, "03  •  WYBIERZ MAPĘ");
             AddMapGrid(content, portrait);
 
-            _selectionSummary = CreateText(root, string.Empty, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0.5f, 0f), new Vector2(0f, 118f), new Vector2(900f, 30f),
-                16, TextAnchor.MiddleCenter, new Color(0.65f, 0.78f, 0.88f));
+            float canvasScale = Mathf.Max(0.5f, _canvas.scaleFactor);
+            float safeWidth = Screen.safeArea.width / canvasScale;
+            _selectionSummary = CreateText(safeRoot, string.Empty, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(0.5f, 0f), new Vector2(0f, 142f),
+                new Vector2(Mathf.Max(260f, Mathf.Min(1120f, safeWidth - 32f)), 48f),
+                14, TextAnchor.MiddleCenter, new Color(0.72f, 0.83f, 0.91f));
 
-            _startButton = CreateButton(root, "ROZPOCZNIJ SURVIVAL", new Vector2(0.5f, 0f),
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 52f),
-                new Vector2(520f, 92f), new Color(0.10f, 0.55f, 0.40f, 1f), 28,
+            _startButton = CreateButton(safeRoot, "ROZPOCZNIJ SURVIVAL", new Vector2(0.5f, 0f),
+                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 42f),
+                new Vector2(Mathf.Max(280f, Mathf.Min(560f, safeWidth - 32f)), 78f),
+                new Color(0.10f, 0.55f, 0.40f, 1f), 24,
                 StartSelectedRun);
 
             RefreshSelection();
@@ -136,7 +152,7 @@ namespace MaxFlix.Unity.Runtime
                 delegate { _selectedMode = GameMode.Survival; RefreshSelection(); }, true, _modeButtons);
             AddGridButton(grid, GameMode.Campaign, "KAMPANIA • WIELKA MAPA\nTrzy sektory, bossowie i dostawa", new Color(0.18f, 0.25f, 0.36f),
                 delegate { _selectedMode = GameMode.Campaign; RefreshSelection(); }, true, _modeButtons);
-            AddGridButton(grid, GameMode.PvP, "PVP ARENA\nKlient sieciowy w migracji", new Color(0.15f, 0.17f, 0.22f),
+            AddGridButton(grid, GameMode.PvP, "PVP ARENA\nW przygotowaniu do wersji Unity", new Color(0.15f, 0.17f, 0.22f),
                 null, false, _modeButtons);
         }
 
@@ -181,8 +197,10 @@ namespace MaxFlix.Unity.Runtime
             grid.padding = new RectOffset(4, 4, 4, 4);
             grid.childAlignment = TextAnchor.MiddleCenter;
             float scale = Mathf.Max(0.5f, _canvas.scaleFactor);
-            float available = Screen.width / scale - 160f;
-            float cellWidth = Mathf.Max(230f, (available - (columns - 1) * grid.spacing.x) / columns);
+            // A fixed 230-unit minimum pushes two-column cards outside narrow phone viewports.
+            float available = Mathf.Max(260f, Screen.safeArea.width / scale - 48f);
+            float innerWidth = available - grid.padding.horizontal - (columns - 1) * grid.spacing.x;
+            float cellWidth = Mathf.Max(124f, innerWidth / columns);
             grid.cellSize = new Vector2(cellWidth, cellHeight);
             return grid;
         }
@@ -240,7 +258,19 @@ namespace MaxFlix.Unity.Runtime
 
             SurvivalMapProfile map = GameContentCatalog.GetMap(_selectedMap);
             OperatorProfile op = OperatorCatalog.Get(_selectedOperator);
-            _selectionSummary.text = op.DisplayName + "  •  " + map.DisplayName + "  •  " + _selectedMode.ToString().ToUpperInvariant();
+            bool campaignSelected = _selectedMode == GameMode.Campaign;
+            _selectionSummary.text = campaignSelected
+                ? string.Format("{0}  •  {1}  •  HP {2}  •  SPD {3:0.0}\nKAMPANIA: WIELKA MAPA  •  3 SEKTORY  •  BRAMY ODBLOKOWYWANE PO POKONANIU BOSSÓW",
+                    op.DisplayName, op.ClassName, op.MaxHealth, op.MoveSpeed)
+                : string.Format("{0}  •  {1}  •  HP {2}  •  SPD {3:0.0}\n{4}  •  HP WROGÓW ×{5:0.00}  •  SPD ×{6:0.00}  •  XP ×{7:0.00}",
+                    op.DisplayName, op.ClassName, op.MaxHealth, op.MoveSpeed,
+                    map.DisplayName, map.EnemyHealthMultiplier, map.EnemySpeedMultiplier, map.XpMultiplier);
+
+            // The connected Campaign mega-map is fixed; don't imply that changing
+            // a Survival arena also changes the Campaign route.
+            foreach (KeyValuePair<WarehouseMapId, Button> item in _mapButtons)
+                if (item.Value != null) item.Value.interactable = !campaignSelected;
+
             bool canStart = _selectedMode == GameMode.Survival || _selectedMode == GameMode.Campaign;
             _startButton.interactable = canStart;
             Text startText = _startButton.GetComponentInChildren<Text>();

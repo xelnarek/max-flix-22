@@ -15,6 +15,13 @@ namespace MaxFlix.Unity.Runtime
         private Text _abilityButtonLabel;
         private Button _abilityButton;
         private Button _pauseButton;
+        private Button _jumpButton;
+        private Button _attackButton;
+        private RectTransform _safeAreaRoot;
+        private RectTransform _joystickRect;
+        private RectTransform _joystickHandleRect;
+        private float _lastControlWidth = -1f;
+        private float _lastControlHeight = -1f;
         private GameObject _modalOverlay;
         private Action _retryAction;
         private Action _returnToMenuAction;
@@ -82,6 +89,7 @@ namespace MaxFlix.Unity.Runtime
 
         private void Update()
         {
+            ApplyResponsiveTouchLayout(false);
             Keyboard keyboard = Keyboard.current;
             if (_modalOverlay != null)
             {
@@ -104,6 +112,7 @@ namespace MaxFlix.Unity.Runtime
 
         private void Build(RectTransform root, PlayerController player)
         {
+            _safeAreaRoot = root;
             _statusText = CreateText(root, "SURVIVAL • ZMIANA 01", new Vector2(24f, -24f), new Vector2(690f, 62f), 25, TextAnchor.MiddleLeft);
             _healthText = CreateText(root, "HP  5/5", new Vector2(-24f, -24f), new Vector2(280f, 62f), 29, TextAnchor.MiddleRight);
             _healthText.rectTransform.anchorMin = new Vector2(1f, 1f);
@@ -120,20 +129,121 @@ namespace MaxFlix.Unity.Runtime
                 new Vector2(1f, 1f), new Vector2(-28f, -102f), new Vector2(156f, 72f),
                 new Color(0.14f, 0.21f, 0.30f, 0.94f), 18, TogglePause);
 
-            GameObject stick = CreateImage(root, "Virtual joystick", new Vector2(165f, 165f), new Vector2(210f, 210f), new Color(0.07f, 0.12f, 0.18f, 0.54f));
-            stick.GetComponent<RectTransform>().anchorMin = Vector2.zero;
-            stick.GetComponent<RectTransform>().anchorMax = Vector2.zero;
+            GameObject stick = CreateImage(root, "Virtual joystick", Vector2.zero, new Vector2(210f, 210f), new Color(0.07f, 0.12f, 0.18f, 0.54f));
+            _joystickRect = stick.GetComponent<RectTransform>();
             Joystick = stick.AddComponent<VirtualJoystick>();
 
-            GameObject knob = CreateImage(stick.GetComponent<RectTransform>(), "Joystick handle", Vector2.zero, new Vector2(82f, 82f), new Color(0.52f, 0.72f, 0.86f, 0.82f));
+            GameObject knob = CreateImage(_joystickRect, "Joystick handle", Vector2.zero, new Vector2(82f, 82f), new Color(0.52f, 0.72f, 0.86f, 0.82f));
+            _joystickHandleRect = knob.GetComponent<RectTransform>();
             knob.GetComponent<Image>().raycastTarget = false;
-            Joystick.ConfigureHandle(knob.GetComponent<RectTransform>());
+            Joystick.ConfigureHandle(_joystickHandleRect);
 
-            CreateActionButton(root, "SKOK", new Vector2(-150f, 245f), new Vector2(170f, 112f), new Color(0.18f, 0.42f, 0.58f, 0.88f), player.RequestJump, 25);
-            CreateActionButton(root, "ATAK", new Vector2(-150f, 105f), new Vector2(190f, 126f), new Color(0.76f, 0.36f, 0.12f, 0.92f), player.RequestAttack, 25);
-            _abilityButton = CreateActionButton(root, "SPECJALNA", new Vector2(-390f, 105f), new Vector2(190f, 126f),
-                new Color(0.22f, 0.56f, 0.42f, 0.96f), player.RequestAbility, 20);
+            _jumpButton = CreateActionButton(root, "SKOK", Vector2.zero, new Vector2(170f, 112f),
+                new Color(0.18f, 0.42f, 0.58f, 0.88f), player.RequestJump, 20);
+            _attackButton = CreateActionButton(root, "ATAK", Vector2.zero, new Vector2(190f, 126f),
+                new Color(0.76f, 0.36f, 0.12f, 0.92f), player.RequestAttack, 20);
+            _abilityButton = CreateActionButton(root, "SPECJALNA", Vector2.zero, new Vector2(190f, 126f),
+                new Color(0.22f, 0.56f, 0.42f, 0.96f), player.RequestAbility, 18);
             _abilityButtonLabel = _abilityButton.GetComponentInChildren<Text>();
+
+            Canvas.ForceUpdateCanvases();
+            ApplyResponsiveTouchLayout(true);
+        }
+
+        /// <summary>
+        /// Positions the thumbstick and action cluster from the live safe-area size.
+        /// This avoids hard-coded offsets pushing the special button off-screen on
+        /// narrow Android layouts and reflows again after rotation or split-screen resize.
+        /// </summary>
+        private void ApplyResponsiveTouchLayout(bool force)
+        {
+            if (_safeAreaRoot == null || _joystickRect == null
+                || _jumpButton == null || _attackButton == null || _abilityButton == null) return;
+
+            Rect safeRect = _safeAreaRoot.rect;
+            float width = safeRect.width;
+            float height = safeRect.height;
+            if (width < 1f || height < 1f) return;
+            if (!force && Mathf.Abs(width - _lastControlWidth) < 1f
+                && Mathf.Abs(height - _lastControlHeight) < 1f) return;
+
+            _lastControlWidth = width;
+            _lastControlHeight = height;
+            bool portrait = height > width * 1.12f;
+            float edgeX = Mathf.Clamp(width * 0.035f, 18f, 58f);
+            float edgeY = Mathf.Clamp(height * 0.045f, 18f, 54f);
+            float stickSize = portrait
+                ? Mathf.Clamp(Mathf.Min(width * 0.28f, height * 0.17f), 124f, 190f)
+                : Mathf.Clamp(Mathf.Min(width * 0.12f, height * 0.24f), 140f, 210f);
+            SetControlRect(_joystickRect, Vector2.zero, Vector2.zero,
+                new Vector2(edgeX, edgeY), new Vector2(stickSize, stickSize));
+            if (_joystickHandleRect != null)
+            {
+                float handleSize = stickSize * 0.40f;
+                _joystickHandleRect.sizeDelta = new Vector2(handleSize, handleSize);
+            }
+
+            float buttonWidth = portrait
+                ? Mathf.Clamp(Mathf.Min(width * 0.30f, height * 0.105f), 112f, 148f)
+                : Mathf.Clamp(Mathf.Min(width * 0.095f, height * 0.17f), 136f, 176f);
+            float buttonHeight = buttonWidth * 0.64f;
+            float gap = Mathf.Clamp(buttonWidth * 0.14f, 14f, 24f);
+            float right = Mathf.Clamp(width * 0.035f, 18f, 58f);
+
+            SetControlRect(_attackButton.GetComponent<RectTransform>(), new Vector2(1f, 0f), new Vector2(1f, 0f),
+                new Vector2(-right, edgeY), new Vector2(buttonWidth, buttonHeight));
+            if (portrait)
+            {
+                SetControlRect(_abilityButton.GetComponent<RectTransform>(), new Vector2(1f, 0f), new Vector2(1f, 0f),
+                    new Vector2(-right, edgeY + buttonHeight + gap), new Vector2(buttonWidth, buttonHeight));
+                SetControlRect(_jumpButton.GetComponent<RectTransform>(), new Vector2(1f, 0f), new Vector2(1f, 0f),
+                    new Vector2(-right, edgeY + (buttonHeight + gap) * 2f), new Vector2(buttonWidth, buttonHeight * 0.82f));
+            }
+            else
+            {
+                SetControlRect(_abilityButton.GetComponent<RectTransform>(), new Vector2(1f, 0f), new Vector2(1f, 0f),
+                    new Vector2(-(right + buttonWidth + gap), edgeY), new Vector2(buttonWidth, buttonHeight));
+                SetControlRect(_jumpButton.GetComponent<RectTransform>(), new Vector2(1f, 0f), new Vector2(1f, 0f),
+                    new Vector2(-right, edgeY + buttonHeight + gap), new Vector2(buttonWidth * 0.90f, buttonHeight * 0.82f));
+            }
+
+            int fontSize = Mathf.RoundToInt(Mathf.Clamp(buttonWidth * 0.12f, 14f, 20f));
+            SetButtonFont(_attackButton, fontSize);
+            SetButtonFont(_abilityButton, fontSize);
+            SetButtonFont(_jumpButton, fontSize);
+
+            if (_helpText != null)
+            {
+                _helpText.gameObject.SetActive(!portrait && height > 480f);
+                _helpText.rectTransform.sizeDelta = new Vector2(Mathf.Min(1040f, width * 0.62f), 42f);
+            }
+            if (_statusText != null)
+            {
+                _statusText.rectTransform.sizeDelta = new Vector2(Mathf.Min(690f, width * 0.46f), 62f);
+                _statusText.fontSize = Mathf.RoundToInt(Mathf.Clamp(width * 0.014f, 16f, 24f));
+            }
+            if (_healthText != null)
+            {
+                _healthText.rectTransform.sizeDelta = new Vector2(Mathf.Min(280f, width * 0.25f), 62f);
+                _healthText.fontSize = Mathf.RoundToInt(Mathf.Clamp(width * 0.016f, 18f, 26f));
+            }
+        }
+
+        private static void SetControlRect(RectTransform rect, Vector2 anchor, Vector2 pivot, Vector2 position, Vector2 size)
+        {
+            if (rect == null) return;
+            rect.anchorMin = anchor;
+            rect.anchorMax = anchor;
+            rect.pivot = pivot;
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
+        }
+
+        private static void SetButtonFont(Button button, int fontSize)
+        {
+            if (button == null) return;
+            Text label = button.GetComponentInChildren<Text>();
+            if (label != null) label.fontSize = fontSize;
         }
 
         private void TogglePause()
