@@ -8,7 +8,7 @@ import {
   NEUTRAL_PVP_PROGRESSION_BONUSES,
   stepPvpArena,
 } from './pvpArena.ts';
-import { choosePvpBotDecision } from './pvpBotTactics.ts';
+import { applyPvpBotAimSpread, choosePvpBotDecision } from './pvpBotTactics.ts';
 import type {
   PvpArenaState,
   PvpInputIntent,
@@ -74,6 +74,7 @@ export interface IPvpSession {
   joinRoom?(code: string, operatorId: CharacterId, playerName: string, progressionBonuses?: PvpProgressionBonuses): void;
   setReady?(ready: boolean): void;
   sendInput(intent: PvpInputIntent): void;
+  setPaused?(paused: boolean): void;
   requestRematch?(): void;
   leaveRoom?(): void;
   dispose(): void;
@@ -487,6 +488,21 @@ export class PvpNetworkSession implements IPvpSession {
     return true;
   }
 
+  public setPaused(paused: boolean) {
+    this.paused = paused;
+    this.lastTime = Date.now();
+    if (paused) {
+      this.p1Input = {
+        moveX: 0, moveZ: 0, aimAngle: this.p1Input.aimAngle,
+        isFiring: false, wantFire: false, wantDash: false, wantAbility: false,
+      };
+      this.p2Input = {
+        moveX: 0, moveZ: 0, aimAngle: this.p2Input.aimAngle,
+        isFiring: false, wantFire: false, wantDash: false, wantAbility: false,
+      };
+    }
+  }
+
   public setReady(ready: boolean) {
     this.send({ type: 'set_ready', ready });
   }
@@ -545,6 +561,7 @@ export class PvpLocalBotSession implements IPvpSession {
   private botDecisionTick = 0;
   private botPreviousOpponentPosition = { x: 0, z: 0 };
   private botOpponentVelocity = { x: 0, z: 0 };
+  private paused = false;
 
   constructor(
     operatorId: CharacterId,
@@ -584,6 +601,8 @@ export class PvpLocalBotSession implements IPvpSession {
       const dt = Math.min((now - this.lastTime) / 1000, 0.1);
       this.lastTime = now;
 
+      if (this.paused) return;
+
       // Update bot AI
       this.updateBot(dt);
 
@@ -621,10 +640,6 @@ export class PvpLocalBotSession implements IPvpSession {
     this.botPreviousOpponentPosition = { x: player.x, z: player.z };
 
     this.botRepositionTimer -= safeDt;
-    if (this.botRepositionTimer <= 0) {
-      this.botRepositionTimer = 0.62;
-      this.botDecisionTick += 1;
-    }
 
     if (this.state.status !== 'in_round' || bot.stunTimer > 0 || bot.hp <= 0) {
       this.p2Input = {
@@ -638,6 +653,12 @@ export class PvpLocalBotSession implements IPvpSession {
       return;
     }
 
+    // Human-paced reactions: the AI recalculates roughly twice per second,
+    // rather than receiving perfect target updates on every 30 Hz simulation tick.
+    if (this.botRepositionTimer > 0) return;
+    this.botRepositionTimer = 0.46;
+    this.botDecisionTick += 1;
+
     const decision = choosePvpBotDecision({
       bot,
       opponent: player,
@@ -648,6 +669,7 @@ export class PvpLocalBotSession implements IPvpSession {
     this.p2Input = {
       ...this.p2Input,
       ...decision,
+      aimAngle: applyPvpBotAimSpread(decision.aimAngle, this.botDecisionTick),
     };
   }
 
