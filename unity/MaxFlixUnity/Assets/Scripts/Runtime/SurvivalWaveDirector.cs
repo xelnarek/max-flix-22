@@ -29,6 +29,8 @@ namespace MaxFlix.Unity.Runtime
         private float _hordeElapsed;
         private float _hordeSpawnTimer;
         private int _hordeSpawnQueue;
+        private int _hordeSpawned;
+        private float _hordeStartAngle;
         private float _bossWarningRemaining;
 
         public int CurrentWave { get { return _currentWave; } }
@@ -93,6 +95,22 @@ namespace MaxFlix.Unity.Runtime
                 return;
             }
 
+            if (_currentWave >= 6 && alive < cap && !HasActiveMajorBoss() && Random.value < 0.04f)
+            {
+                Vector3 rareBossSpawn = GetSpawnPosition(Random.value * Mathf.PI * 2f, 16f);
+                EnemyAgent rareBoss = WarehouseWorldFactory.SpawnSurvivalEnemy(
+                    _player, EnemyKind.BosmanKrakow, rareBossSpawn,
+                    profile.EnemyHealthMultiplier, profile.EnemySpeedMultiplier,
+                    profile.EnemyAbilityRateMultiplier);
+                if (rareBoss != null)
+                {
+                    rareBoss.name = "Bosman Kraków • Rzadki patrol rampy";
+                    _spawnTimer = profile.SpawnIntervalSeconds;
+                    FindFirstObjectByType<HudController>()?.SetStatus("RZADKIE SPOTKANIE • BOSMAN KRAKÓW");
+                    return;
+                }
+            }
+
             for (int i = 0; i < groupSize; i++)
             {
                 EnemyKind kind = EnemyArchetypeCatalog.ChooseSurvivalSpawnType(
@@ -109,6 +127,8 @@ namespace MaxFlix.Unity.Runtime
             {
                 _hordeElapsed = 0.001f;
                 _hordeSpawnQueue = _hordeProfile.EnemyCount;
+                _hordeSpawned = 0;
+                _hordeStartAngle = Random.value * Mathf.PI * 2f;
                 _hordeSpawnTimer = 0f;
                 _nextHordeAt += HordeCadenceSeconds;
                 if (_player != null)
@@ -131,8 +151,9 @@ namespace MaxFlix.Unity.Runtime
             {
                 SurvivalDifficultyProfile difficulty = GetDifficultyProfile(_currentWave);
                 EnemyKind kind = EnemyArchetypeCatalog.ChooseSurvivalSpawnType(_currentWave, elapsed, Random.value);
-                float angle = Random.value * Mathf.PI * 2f;
-                SpawnEnemy(kind, difficulty, angle, radius + Random.Range(-0.45f, 0.45f));
+                float angle = _hordeStartAngle + (_hordeSpawned / (float)Mathf.Max(1, _hordeProfile.EnemyCount)) * Mathf.PI * 2f;
+                SpawnEnemy(kind, difficulty, angle, radius);
+                _hordeSpawned++;
                 _hordeSpawnQueue--;
                 _hordeSpawnTimer = _hordeProfile.SpawnIntervalSeconds;
             }
