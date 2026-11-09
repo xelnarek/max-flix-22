@@ -2948,6 +2948,14 @@ class PaleciakiScene extends xb.Script {
     };
     this.resetTouchJoystick = resetJoystick;
 
+    // Keep pause inside the right action dock so it cannot float over the
+    // aim pad, top HUD or gameplay view on short phone screens.
+    const touchActionDock = document.querySelector<HTMLElement>('#touch-controls .touch-actions-zone');
+    const touchPauseButton = document.getElementById('btn-touch-pause');
+    if (touchActionDock && touchPauseButton && touchPauseButton.parentElement !== touchActionDock) {
+      touchActionDock.appendChild(touchPauseButton);
+    }
+
     // Independent right-thumb aim stick for PvP. Movement and aiming use
     // separate pointer IDs, so both thumbs can be active at the same time.
     if (pvpAimZone && pvpAimBase && pvpAimKnob) {
