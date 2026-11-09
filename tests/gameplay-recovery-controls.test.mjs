@@ -188,7 +188,7 @@ test('generic game-over results are mode-aware and never submit PvP as a Surviva
   assert.match(callback, /survivalRetryButton\?\.classList\.toggle\('hidden', !isSurvivalResult\)/);
   assert.match(callback, /POJEDYNEK 1v1 • WYNIK/);
   assert.doesNotMatch(app, /mode: this\.lastMode === 'pvp' \? 'survival'/);
-  assert.match(app, /if \(this\.lastMode === 'pvp'\)[\s\S]*?Wyniki PvP są zapisywane/);
+  assert.match(app, /if \(submittedMode === 'pvp'\)[\s\S]*?Wyniki PvP są zapisywane/);
   assert.match(html, /id="gameover-modal"[^>]*role="dialog"[^>]*aria-modal="true"/);
   assert.match(html, /id="gameover-modal-title"/);
 });
