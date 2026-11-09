@@ -575,7 +575,7 @@ test('Unity projectile pool services expose bounded warmup and return pooled bod
   const kit = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorCombatKit.cs');
   const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
   assert.match(operatorProjectile, /PoolLimitPerShape = 18/);
-  assert.match(operatorProjectile, /private static void ReturnToPool/);
+  assert.match(operatorProjectile, /private void ReturnToPool\(\)/);
   assert.match(operatorProjectile, /_hitTargets\.Clear\(\)/);
   assert.match(operatorProjectile, /_body\.detectCollisions = false/);
   assert.match(operatorProjectile, /PooledCount/);
