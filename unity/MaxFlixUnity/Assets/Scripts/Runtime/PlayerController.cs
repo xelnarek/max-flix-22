@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace MaxFlix.Unity.Runtime
 {
@@ -97,9 +98,13 @@ namespace MaxFlix.Unity.Runtime
                 );
             }
 
-            bool attackKey = Input.GetKeyDown(KeyCode.J) ||
-                             Input.GetKeyDown(KeyCode.K) ||
-                             Input.GetMouseButtonDown(0);
+            Keyboard keyboard = Keyboard.current;
+            Mouse mouse = Mouse.current;
+            Gamepad gamepad = Gamepad.current;
+            bool attackKey =
+                (keyboard != null && (keyboard.jKey.wasPressedThisFrame || keyboard.kKey.wasPressedThisFrame)) ||
+                (mouse != null && mouse.leftButton.wasPressedThisFrame) ||
+                (gamepad != null && gamepad.rightTrigger.wasPressedThisFrame);
             if ((_attackRequested || attackKey) && _attackCooldown <= 0f)
                 FirePrimaryAttack();
 
@@ -108,16 +113,24 @@ namespace MaxFlix.Unity.Runtime
 
         private Vector2 ReadMovement()
         {
-            Vector2 keyboard = Vector2.zero;
-            if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) keyboard.x -= 1f;
-            if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) keyboard.x += 1f;
-            if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) keyboard.y += 1f;
-            if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) keyboard.y -= 1f;
+            Vector2 keyboardInput = Vector2.zero;
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null)
+            {
+                if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed) keyboardInput.x -= 1f;
+                if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) keyboardInput.x += 1f;
+                if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed) keyboardInput.y += 1f;
+                if (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed) keyboardInput.y -= 1f;
+            }
+
+            Gamepad gamepad = Gamepad.current;
+            if (gamepad != null && gamepad.leftStick.ReadValue().sqrMagnitude > 0.01f)
+                keyboardInput = gamepad.leftStick.ReadValue();
 
             if (_joystick != null && _joystick.Value.sqrMagnitude > 0.01f)
                 return _joystick.Value;
 
-            return Vector2.ClampMagnitude(keyboard, 1f);
+            return Vector2.ClampMagnitude(keyboardInput, 1f);
         }
 
         private void FirePrimaryAttack()
