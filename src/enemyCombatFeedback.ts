@@ -41,3 +41,35 @@ export function getEnemyHitPulse(timer: number, duration: number): number {
   if (progress <= 0 || progress >= 1) return 0;
   return Math.sin(progress * Math.PI);
 }
+
+
+export interface EnemyImpactBurstProfile {
+  particleCount: number;
+  particleScale: number;
+  particleSpeed: number;
+  duration: number;
+}
+
+/** Bounded hit sparks; mobile quality tiers reduce particle count, never combat feedback. */
+export function getEnemyImpactBurstProfile(
+  damage: number,
+  isBoss = false,
+  isMobile = false,
+  effectsTier = 0,
+): EnemyImpactBurstProfile {
+  const safeDamage = Number.isFinite(damage) ? Math.max(0, damage) : 0;
+  const tier = Number.isFinite(effectsTier)
+    ? Math.max(0, Math.min(2, Math.floor(effectsTier)))
+    : 1;
+  const intensity = Math.min(1.45, 0.82 + Math.min(8, safeDamage) * 0.075);
+  const particleCount = isMobile
+    ? (tier >= 2 ? 1 : tier === 1 ? 2 : isBoss ? 3 : 2)
+    : (isBoss ? 5 : safeDamage >= 3 ? 4 : 3);
+
+  return {
+    particleCount,
+    particleScale: (0.044 + intensity * 0.018) * (isBoss ? 1.12 : 1),
+    particleSpeed: Math.min(4.2, 2.25 + intensity * 1.2),
+    duration: isBoss ? 0.24 : 0.19,
+  };
+}

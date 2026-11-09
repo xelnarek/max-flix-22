@@ -22,7 +22,7 @@ import {
 import { clampHorizontalPosition } from './arenaBounds.ts';
 import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoint, resolveEnemyPlayerSeparation } from './enemySpacing.ts';
 import { calculateEnemyObstacleAvoidanceVector } from './enemyNavigation.ts';
-import { createEnemyHitReaction, getEnemyHitPulse } from './enemyCombatFeedback.ts';
+import { createEnemyHitReaction, getEnemyHitPulse, getEnemyImpactBurstProfile } from './enemyCombatFeedback.ts';
 import { isEffectiveBossLaneDodge, isInsideBossAttackLane, isWithinBossImpactRadius } from './combatTelegraphs.ts';
 import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
 import { chooseSurvivalEventSpawnPoint } from './survivalSpawn.ts';
@@ -801,10 +801,10 @@ export class PaleciakiGameEngine {
 
   // 3D Player Meshes
   private playerGroup: THREE.Group | null = null;
-  private leftLeg: THREE.Mesh | null = null;
-  private rightLeg: THREE.Mesh | null = null;
-  private leftArm: THREE.Mesh | null = null;
-  private rightArm: THREE.Mesh | null = null;
+  private leftLeg: THREE.Group | null = null;
+  private rightLeg: THREE.Group | null = null;
+  private leftArm: THREE.Group | null = null;
+  private rightArm: THREE.Group | null = null;
   private playerHead: THREE.Mesh | null = null;
   private playerBody: THREE.Mesh | null = null;
   private playerAccessory: THREE.Group | null = null;
@@ -10851,6 +10851,7 @@ export class PaleciakiGameEngine {
       : amount;
     enemy.hp = Math.max(0, enemy.hp - appliedDamage);
     const actualDamage = Math.max(0, previousHp - enemy.hp);
+    const shouldSpawnImpactBurst = actualDamage > 0 && (enemy.hitReactTimer || 0) <= 0.015;
     if (this.gameMode === 'survival' && actualDamage > 0) {
       recordSurvivalDamage(this.survivalDamageStats, damageSource, actualDamage);
       if (previousHp > 0 && enemy.hp <= 0) {
@@ -10858,6 +10859,7 @@ export class PaleciakiGameEngine {
       }
     }
     this.triggerEnemyHitReaction(enemy, actualDamage, sourceX, sourceZ);
+    if (shouldSpawnImpactBurst) this.spawnEnemyImpactBurst(enemy, actualDamage, sourceX, sourceZ);
     if (actualDamage > 0) {
       const isCrit = actualDamage >= 4 || Math.random() < 0.28;
       const comicWords = ['POW!', 'BUM!', 'KRACH!', 'WZ-CRIT!', '44 TON!', 'FAKTURA!', 'DYLATACJA!'];
@@ -10869,6 +10871,81 @@ export class PaleciakiGameEngine {
       }
     }
     return enemy.hp;
+  }
+
+  private spawnEnemyImpactBurst(enemy: EnemyItem, damage: number, sourceX: number, sourceZ: number): void {
+    if (!enemy.mesh || enemy.state === 'defeated') return;
+
+    const isBoss = isMajorSurvivalBossType(enemy.type) || enemy.type === 'sebix_m';
+    const profile = getEnemyImpactBurstProfile(
+      damage,
+      isBoss,
+      this.isHandheldViewport,
+      this.adaptivePerformanceTier,
+    );
+    const palette: Record<string, number> = {
+      customer: 0xef4444,
+      architect: 0xa78bfa,
+      inspector: 0x38bdf8,
+      handlowiec: 0xf59e0b,
+      monter: 0x22c55e,
+      kurier: 0xf97316,
+      przedstawiciel_włoski: 0xdc2626,
+      sztaplar_szalony: 0xfacc15,
+      pan_roman: 0x92400e,
+      serwisant: 0x06b6d4,
+      zombie_pracownik: 0x84cc16,
+      elite_walczak_guard: 0xf43f5e,
+      walczak: 0xf59e0b,
+      krol_leto: 0xa855f7,
+      bosman_krakow: 0x0ea5e9,
+      agv_robot: 0x38bdf8,
+      piorun_dron: 0x22d3ee,
+      sebix_m: 0xfb923c,
+    };
+    const color = palette[enemy.type] ?? 0xfbbf24;
+    let dx = enemy.x - sourceX;
+    let dz = enemy.z - sourceZ;
+    const directionLength = Math.hypot(dx, dz);
+    if (directionLength > 0.0001) {
+      dx /= directionLength;
+      dz /= directionLength;
+    } else {
+      const facing = enemy.mesh.rotation?.y ?? 0;
+      dx = Math.sin(facing) || 1;
+      dz = Math.cos(facing);
+    }
+    const sideX = -dz;
+    const sideZ = dx;
+
+    for (let index = 0; index < profile.particleCount; index++) {
+      const mesh = this.particlePool.acquire(
+        index % 2 === 0 ? 'octahedron' : 'tetrahedron',
+        color,
+        profile.particleScale,
+        0.94,
+      );
+      if (!mesh) break;
+
+      const lane = index - (profile.particleCount - 1) * 0.5;
+      const sideSpread = lane * 0.32;
+      const speed = profile.particleSpeed * (0.9 + (index % 2) * 0.12);
+      mesh.position.set(enemy.x, enemy.y + 0.62, enemy.z);
+      this.levelRoot.add(mesh);
+      this.particles.push({
+        mesh,
+        vel: new THREE.Vector3(
+          dx * speed + sideX * sideSpread,
+          0.72 + (index % 2) * 0.22,
+          dz * speed + sideZ * sideSpread,
+        ),
+        life: profile.duration,
+        maxLife: profile.duration,
+        gravity: 2.8,
+        baseScale: profile.particleScale,
+        rotVel: new THREE.Vector3(5 + index, 6 + index * 0.7, 4 + index * 0.5),
+      });
+    }
   }
 
   private triggerEnemyHitReaction(enemy: EnemyItem, damage: number, sourceX: number, sourceZ: number): void {
