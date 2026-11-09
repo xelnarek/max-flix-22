@@ -108,6 +108,9 @@ test('main-menu navigation and the single Survival launch action use consistent 
   const survivalStart = html.indexOf('id="btn-start-survival"');
   assert.ok(codexStart >= 0 && html.slice(codexStart, codexStart + 500).includes('<svg'));
   assert.ok(settingsStart >= 0 && html.slice(settingsStart, settingsStart + 700).includes('<svg'));
+  const menuIcons = [...html.matchAll(/<span class="tab-icon"[^>]*>([\\s\\S]*?)<\\/span>/g)].map((match) => match[1]);
+  assert.equal(menuIcons.length, 10, 'every top-level menu destination needs an icon');
+  assert.ok(menuIcons.every((icon) => icon.includes('<svg')), 'all ten menu tabs use consistent vector icons');
   assert.ok(survivalStart >= 0 && html.slice(survivalStart, survivalStart + 800).includes('menu-cta-icon'));
   assert.doesNotMatch(html, /btn-start-game|btn-open-story-modal|btn-open-cinematic-intro/);
 });
