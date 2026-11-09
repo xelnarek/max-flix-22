@@ -25,7 +25,10 @@ namespace MaxFlix.Unity.Runtime
 
         private readonly List<SupportUnit> _supportUnits = new List<SupportUnit>();
         private readonly MaterialPropertyBlock _propertyBlock = new MaterialPropertyBlock();
+        private static readonly Dictionary<int, Material> SupportMaterials = new Dictionary<int, Material>();
         private static Material _sharedProjectileMaterial;
+        private EnemyAgent[] _enemyCache = new EnemyAgent[0];
+        private float _enemyCacheRemaining;
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
         private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
@@ -61,6 +64,12 @@ namespace MaxFlix.Unity.Runtime
             if (_profile == null || _player == null || _player.IsDefeated) return;
 
             _abilityCooldownRemaining = Mathf.Max(0f, _abilityCooldownRemaining - deltaTime);
+            _enemyCacheRemaining -= deltaTime;
+            if (_enemyCacheRemaining <= 0f)
+            {
+                _enemyCache = FindObjectsByType<EnemyAgent>(FindObjectsSortMode.None);
+                _enemyCacheRemaining = 0.25f;
+            }
             _sprintRemaining = Mathf.Max(0f, _sprintRemaining - deltaTime);
             _invulnerabilityRemaining = Mathf.Max(0f, _invulnerabilityRemaining - deltaTime);
             _shieldRemaining = Mathf.Max(0f, _shieldRemaining - deltaTime);
@@ -238,9 +247,8 @@ namespace MaxFlix.Unity.Runtime
 
         private void DamageNearbyEnemies(float radius, float damage, float stun, float knockback)
         {
-            EnemyAgent[] enemies = FindObjectsByType<EnemyAgent>(FindObjectsSortMode.None);
             Vector3 center = transform.position;
-            foreach (EnemyAgent enemy in enemies)
+            foreach (EnemyAgent enemy in _enemyCache)
             {
                 if (enemy == null || Vector3.Distance(center, enemy.transform.position) > radius) continue;
                 Vector3 push = enemy.transform.position - center;
@@ -367,11 +375,10 @@ namespace MaxFlix.Unity.Runtime
 
         private EnemyAgent FindClosestEnemy(float maxRange)
         {
-            EnemyAgent[] enemies = FindObjectsByType<EnemyAgent>(FindObjectsSortMode.None);
             EnemyAgent closest = null;
             float bestDistance = maxRange * maxRange;
             Vector3 position = transform.position;
-            foreach (EnemyAgent enemy in enemies)
+            foreach (EnemyAgent enemy in _enemyCache)
             {
                 if (enemy == null) continue;
                 float sqrDistance = (enemy.transform.position - position).sqrMagnitude;
@@ -423,10 +430,16 @@ namespace MaxFlix.Unity.Runtime
             Renderer renderer = part.GetComponent<Renderer>();
             if (renderer != null)
             {
-                Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-                if (shader == null) shader = Shader.Find("Standard");
-                renderer.sharedMaterial = new Material(shader);
-                renderer.sharedMaterial.color = color;
+                Color32 rgba = color;
+                int key = (rgba.r << 24) | (rgba.g << 16) | (rgba.b << 8) | rgba.a;
+                if (!SupportMaterials.TryGetValue(key, out Material material))
+                {
+                    Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+                    if (shader == null) shader = Shader.Find("Standard");
+                    material = new Material(shader) { color = color, enableInstancing = true };
+                    SupportMaterials.Add(key, material);
+                }
+                renderer.sharedMaterial = material;
             }
         }
 
