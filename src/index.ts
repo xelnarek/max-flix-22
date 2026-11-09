@@ -1200,6 +1200,7 @@ class PaleciakiScene extends xb.Script {
           if (gameoverReason) gameoverReason.textContent = reason;
           if (gameoverModal) {
             gameoverModal.classList.remove('hidden');
+            gameoverModal.setAttribute('aria-hidden', 'false');
             gameoverModal.style.setProperty('display', 'flex', 'important');
             gameoverModal.style.setProperty('pointer-events', 'auto', 'important');
             gameoverModal.style.setProperty('z-index', '2147483012', 'important');
@@ -1219,6 +1220,7 @@ class PaleciakiScene extends xb.Script {
           this.resetTouchJoystick?.();
           setTouchControlsMode('hidden');
           const endedMode = this.engine.getGameMode();
+          const isSurvivalResult = endedMode === 'survival';
           const endedSessionGeneration = this.gameSessionGeneration;
           const endedOperatorId = this.engine.getCharacterDef().id;
           const endedScore = this.engine.getScore();
@@ -1235,6 +1237,15 @@ class PaleciakiScene extends xb.Script {
           this.lastTimeSeconds = endedTimeSeconds;
           this.lastBossDefeated = endedBossDefeated;
           this.lastMode = endedMode;
+          // The general results panel is shared by engine fallback paths, while
+          // normal PvP endings use the dedicated head-to-head result modal.
+          const damagePanel = document.getElementById('gameover-damage-panel');
+          const survivalRankingPanel = document.querySelector<HTMLElement>('.gameover-submit-box');
+          const survivalRetryButton = document.getElementById('btn-retry');
+          damagePanel?.classList.toggle('hidden', !isSurvivalResult);
+          survivalRankingPanel?.classList.toggle('hidden', !isSurvivalResult);
+          survivalRetryButton?.classList.toggle('hidden', !isSurvivalResult);
+          if (endedMode === 'pvp') pvpHud?.classList.add('hidden');
           // Freeze the ended run's data before any retry can start a new run.
           const snapshot = this.engine.getSurvivalSnapshot();
           const damageReport = this.engine.getSurvivalDamageReport();
@@ -1255,8 +1266,20 @@ class PaleciakiScene extends xb.Script {
             const seconds = endedTimeSeconds % 60;
             finalTime.textContent = minutes + ':' + String(seconds).padStart(2, '0');
           }
-          if (finalMode) finalMode.textContent = 'SURVIVAL SHIFT';
-          if (runDetail) runDetail.textContent = `FALA ${snapshot.wave} • ${snapshot.kills} ELIMINACJI • POZIOM ${snapshot.level}`;
+          if (finalMode) {
+            finalMode.textContent = endedMode === 'pvp'
+              ? 'ARENA PvP'
+              : endedMode === 'campaign'
+                ? 'KAMPANIA'
+                : 'SURVIVAL SHIFT';
+          }
+          if (runDetail) {
+            runDetail.textContent = isSurvivalResult
+              ? `FALA ${snapshot.wave} • ${snapshot.kills} ELIMINACJI • POZIOM ${snapshot.level}`
+              : endedMode === 'pvp'
+                ? `POJEDYNEK 1v1 • WYNIK ${endedScore.toLocaleString('pl-PL')} PKT`
+                : `KAMPANIA • WYNIK ${endedScore.toLocaleString('pl-PL')} PKT`;
+          }
 
           // Award mastery exactly once when a Survival run ends. A retry starts a fresh award window.
           if (shouldAwardMastery) {
@@ -2818,7 +2841,9 @@ class PaleciakiScene extends xb.Script {
     bindTap(document.getElementById('btn-menu-pause'), exitPausedRunToMenu);
 
     bindTap(document.getElementById('btn-retry'), () => {
+      if (this.lastMode !== 'survival') return;
       gameoverModal?.classList.add('hidden');
+      gameoverModal?.setAttribute('aria-hidden', 'true');
       survivalLevelUp?.classList.add('hidden');
       hudTop?.classList.remove('hidden');
       hudBottom?.classList.remove('hidden');
@@ -2834,6 +2859,13 @@ class PaleciakiScene extends xb.Script {
 
     bindTap(document.getElementById('btn-menu-gameover'), () => {
       gameoverModal?.classList.add('hidden');
+      gameoverModal?.setAttribute('aria-hidden', 'true');
+      if (this.engine.getGameMode() === 'pvp') {
+        pvpHud?.classList.add('hidden');
+        this.engine.exitPvp();
+        this.pvpSession = null;
+      }
+      this.pausedForVisibility = false;
       survivalHud?.classList.add('hidden');
       survivalLevelUp?.classList.add('hidden');
       setTouchControlsMode('hidden');
@@ -2852,6 +2884,14 @@ class PaleciakiScene extends xb.Script {
       const feedbackMsg = document.getElementById(feedbackId);
 
       submitBtn?.addEventListener('click', async () => {
+        if (this.lastMode === 'pvp') {
+          if (feedbackMsg) {
+            feedbackMsg.className = 'submit-feedback';
+            feedbackMsg.textContent = 'Wyniki PvP są zapisywane w osobnym podsumowaniu pojedynku, nie w rankingu Survival.';
+            feedbackMsg.classList.remove('hidden');
+          }
+          return;
+        }
         const playerName = nickInput?.value.trim().slice(0, 32) ||
           `Kierownik ${CHARACTERS[this.selectedCharId].name}`;
         try { localStorage.setItem('maxfliz_player_nick', playerName); } catch { /* private browsing */ }
@@ -2869,7 +2909,7 @@ class PaleciakiScene extends xb.Script {
           const result = await services.submitScore({
             playerName,
             hero: CHARACTERS[this.selectedCharId].name,
-            mode: this.lastMode === 'pvp' ? 'survival' : this.lastMode,
+            mode: this.lastMode,
             score: this.lastScore,
             coins: this.lastCoins,
             timeSeconds: this.lastTimeSeconds,
@@ -2919,7 +2959,6 @@ class PaleciakiScene extends xb.Script {
       const action = getVisibilityPauseAction(
         document.hidden,
         this.engine?.getGameState() ?? 'other',
-        this.pausedForVisibility,
       );
 
       if (action === 'pause') {
@@ -2931,15 +2970,13 @@ class PaleciakiScene extends xb.Script {
         pauseModal?.setAttribute('aria-hidden', 'false');
         pauseModal?.style.setProperty('display', 'flex', 'important');
         pauseModal?.style.setProperty('z-index', '2147483012', 'important');
-      } else if (action === 'resume') {
-        this.engine.togglePause();
-        this.pausedForVisibility = false;
-        pauseModal?.classList.add('hidden');
-        pauseModal?.setAttribute('aria-hidden', 'true');
-        pauseModal?.style.removeProperty('display');
-        setTouchControlsMode(activeTouchMode());
-        setTouchControlsVisibility(true);
+        const pauseDescription = pauseModal?.querySelector<HTMLElement>('.modal-desc');
+        if (pauseDescription) {
+          pauseDescription.textContent = 'Aplikacja wróciła z tła. Rozgrywka nadal jest wstrzymana — naciśnij WZNÓW GRĘ, gdy będziesz gotowy.';
+        }
       }
+      // Returning to the app never resumes combat by itself. The explicit
+      // WZNÓW action protects a player who only switched back to check a message.
     });
 
     this.setupTouchControls();
