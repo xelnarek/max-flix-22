@@ -227,6 +227,8 @@ test('Unity release identity and manual build workflow target WebGPU WebGL and A
   assert.match(setup, /PlayerSettings\.SetScriptingBackend\(NamedBuildTarget\.Android, ScriptingImplementation\.IL2CPP\)/);
   assert.match(setup, /PlayerSettings\.Android\.targetArchitectures = AndroidArchitecture\.ARM64/);
   assert.match(setup, /AndroidApiLevel36/);
+  assert.match(setup, /AndroidApiLevel26/);
+  assert.match(setup, /defaultInterfaceOrientation = UIOrientation\.LandscapeLeft/);
   assert.match(setup, /WebGPU, GraphicsDeviceType\.OpenGLES3/);
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /game-ci\/unity-builder@v4/);
