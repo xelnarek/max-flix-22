@@ -25,7 +25,15 @@ namespace MaxFlix.Unity.Runtime
 
             PlayerController player = CreateOperator(OperatorCatalog.Get(GameSession.Current.SelectedOperator), new Vector3(0f, 0.1f, -9f));
             CreateCamera(player.transform);
-            CreateTrainingEnemies(player);
+            if (GameSession.Current.Mode == GameMode.Survival)
+            {
+                SurvivalWaveDirector director = root.AddComponent<SurvivalWaveDirector>();
+                director.Initialize(player);
+            }
+            else
+            {
+                CreateTrainingEnemies(player);
+            }
             return player;
         }
 
@@ -199,7 +207,15 @@ namespace MaxFlix.Unity.Runtime
             CreateEnemy(new Vector3(10f, 0.05f, -1f), player, EnemyKind.Inspector);
         }
 
-        private static void CreateEnemy(Vector3 position, PlayerController player, EnemyKind kind)
+        public static EnemyAgent SpawnSurvivalEnemy(PlayerController player, EnemyKind kind, Vector3 position,
+            float healthMultiplier, float speedMultiplier, float abilityRateMultiplier)
+        {
+            if (_worldRoot == null || player == null) return null;
+            return CreateEnemy(position, player, kind, healthMultiplier, speedMultiplier, abilityRateMultiplier);
+        }
+
+        private static EnemyAgent CreateEnemy(Vector3 position, PlayerController player, EnemyKind kind,
+            float healthMultiplier = 1f, float speedMultiplier = 1f, float abilityRateMultiplier = 1f)
         {
             EnemyArchetypeProfile profile = EnemyArchetypeCatalog.Get(kind);
             if (profile.IsHazardOnly) return;
@@ -237,8 +253,58 @@ namespace MaxFlix.Unity.Runtime
                 }
             }
 
+            if (kind == EnemyKind.Kurier || kind == EnemyKind.PanRoman)
+            {
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Delivery backpack", new Vector3(0f, 0.88f, -0.27f), new Vector3(0.40f, 0.45f, 0.27f), new Color(0.10f, 0.20f, 0.28f));
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Backpack label", new Vector3(0f, 0.90f, -0.415f), new Vector3(0.23f, 0.12f, 0.025f), new Color(0.92f, 0.72f, 0.25f));
+            }
+            else if (kind == EnemyKind.CyberSalesman)
+            {
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Cyber visor", new Vector3(0f, 1.48f, 0.19f), new Vector3(0.50f, 0.12f, 0.07f), new Color(0.08f, 0.95f, 1f));
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Holographic offer", new Vector3(0.48f, 1.02f, 0.16f), new Vector3(0.42f, 0.42f, 0.035f), new Color(0.12f, 0.85f, 0.92f));
+            }
+            else if (kind == EnemyKind.RadioactivePip || kind == EnemyKind.MutantGammaForklift)
+            {
+                CreateVisualPart(enemy.transform, PrimitiveType.Sphere, "Radiation core", new Vector3(0f, 0.90f, 0.24f), new Vector3(0.27f, 0.27f, 0.09f), new Color(0.35f, 1f, 0.18f));
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Radiation warning", new Vector3(0f, 1.48f, 0.19f), new Vector3(0.42f, 0.07f, 0.07f), new Color(0.92f, 1f, 0.14f));
+            }
+            else if (kind == EnemyKind.CrazyStacker || kind == EnemyKind.EliteWalczakGuard)
+            {
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Forklift guard plate", new Vector3(0f, 0.72f, 0.27f), new Vector3(0.76f, 0.30f, 0.12f), new Color(0.12f, 0.15f, 0.18f));
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Hazard stripe", new Vector3(0f, 0.72f, 0.34f), new Vector3(0.62f, 0.08f, 0.025f), new Color(1f, 0.68f, 0.12f));
+            }
+            else if (kind == EnemyKind.Sebix || kind == EnemyKind.Walczak || kind == EnemyKind.KingLeto || kind == EnemyKind.BosmanKrakow)
+            {
+                for (int side = -1; side <= 1; side += 2)
+                    CreateVisualPart(enemy.transform, PrimitiveType.Cylinder, "Boss shoulder armor", new Vector3(side * 0.46f, 1.08f, 0f), new Vector3(0.24f, 0.28f, 0.24f), new Color(0.12f, 0.16f, 0.22f));
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Boss chest insignia", new Vector3(0f, 0.95f, 0.22f), new Vector3(0.24f, 0.24f, 0.06f), profile.AccentColor);
+            }
+            else if (kind == EnemyKind.PiorunDrone)
+            {
+                CreateVisualPart(enemy.transform, PrimitiveType.Sphere, "Drone core", new Vector3(0f, 1.25f, 0f), new Vector3(0.50f, 0.34f, 0.52f), profile.AccentColor);
+                CreateVisualPart(enemy.transform, PrimitiveType.Sphere, "Drone sensor eye", new Vector3(0f, 1.28f, 0.26f), new Vector3(0.22f, 0.12f, 0.06f), new Color(0.85f, 1f, 1f));
+                for (int i = 0; i < 4; i++)
+                {
+                    float angle = i * Mathf.PI * 0.5f;
+                    Vector3 arm = new Vector3(Mathf.Cos(angle), 1.28f, Mathf.Sin(angle)) * 0.48f;
+                    CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Drone rotor arm", arm, new Vector3(0.48f, 0.07f, 0.08f), new Color(0.12f, 0.18f, 0.23f));
+                    CreateVisualPart(enemy.transform, PrimitiveType.Cylinder, "Drone rotor", arm + new Vector3(Mathf.Cos(angle) * 0.30f, 0.06f, Mathf.Sin(angle) * 0.30f), new Vector3(0.22f, 0.035f, 0.22f), new Color(0.82f, 0.90f, 0.96f));
+                }
+            }
+            else if (kind == EnemyKind.Monter)
+            {
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Tool belt", new Vector3(0f, 0.54f, 0.20f), new Vector3(0.68f, 0.16f, 0.12f), new Color(0.13f, 0.11f, 0.09f));
+                CreateVisualPart(enemy.transform, PrimitiveType.Cylinder, "Wrench", new Vector3(0.40f, 0.88f, 0.20f), new Vector3(0.07f, 0.26f, 0.07f), new Color(0.65f, 0.71f, 0.76f));
+            }
+            else if (kind == EnemyKind.Pomazaniec)
+            {
+                CreateVisualPart(enemy.transform, PrimitiveType.Cylinder, "Bike front wheel", new Vector3(0f, 0.18f, 0.48f), new Vector3(0.32f, 0.055f, 0.32f), new Color(0.10f, 0.12f, 0.16f));
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Bike frame", new Vector3(0f, 0.42f, 0.02f), new Vector3(0.10f, 0.10f, 0.72f), new Color(0.92f, 0.16f, 0.45f));
+            }
+
             EnemyAgent agent = enemy.AddComponent<EnemyAgent>();
-            agent.Initialize(player, kind);
+            agent.Initialize(player, kind, healthMultiplier, speedMultiplier, abilityRateMultiplier);
+            return agent;
         }
 
         private static GameObject CreateBox(string objectName, Vector3 position, Vector3 scale, Color color, float roughness = 0.65f)
