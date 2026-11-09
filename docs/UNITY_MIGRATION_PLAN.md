@@ -63,6 +63,17 @@ Pierwszy commit Unity jest **fundamentem migracji i grywalnym wycinkiem technicz
 - profil uruchomieniowy Web/Android/PC;
 - walidacja w Unity Editor oraz na rzeczywistym Poco F6. (Etap rozpoczęty.)
 
+### Etap 2A — pierwsze przeniesienie walki operatorów (wdrożone w kodzie, bez walidacji Unity Editor)
+
+- Pięć odrębnych ścieżek ataku podstawowego zamiast jednego wspólnego pocisku.
+- Efekty trafień: ogłuszenie, spowolnienie, odrzut, przebijanie celów oraz powracający atak Piotra.
+- Pierwsze implementacje umiejętności: eskortujący WZ-404, obszarowy ścisk i tryb tarana Grześka, pięć płyt Dawida z leczeniem i krótką osłoną, trzy koty Mateusza oraz wybuch pentagramu i trzy MafiKapibary Piotra.
+- Pasywy odzwierciedlone w pętli walki: pieczęć co trzeci atak, mocniejszy rzut co trzeci atak, rozrzut stretchu, Speedrun co dziewiąte trafienie, podwójny skok i bumerang z powrotem.
+- Osobny przycisk umiejętności z odliczaniem, sterowanie E na PC oraz obsługa dotyku.
+- Dodane testy regresji kodu dla pięciu ścieżek ataków, umiejętności, statusów trafień, skoku i przycisku HUD.
+
+**Ograniczenia:** to pierwszy port logiki, a nie zatwierdzona zgodność 1:1. Trzeba zweryfikować wartości i zachowanie w Unity Editor, porównać przebieg walki z wersją Three.js, zbalansować obrażenia/czasy, poprawić animacje i zastąpić obecne generowanie/niszczenie pocisków pulą obiektów. Nie ma jeszcze pełnej implementacji wszystkich archetypów przeciwników, AI bossów ani systemu dropów/perków.
+
 ### Etap 2 — pełny rdzeń walki i pięciu operatorów
 - wszystkie ataki podstawowe, pasywy i umiejętności specjalne;
 - animacje i wyposażenie operatorów;
