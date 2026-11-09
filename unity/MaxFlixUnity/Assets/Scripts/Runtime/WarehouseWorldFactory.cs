@@ -39,6 +39,7 @@ namespace MaxFlix.Unity.Runtime
                 EnemyAttackProjectile.Prewarm(12);
                 root.AddComponent<SurvivalWeaponController>();
                 root.AddComponent<SurvivalProgressionController>();
+                root.AddComponent<SurvivalPerformanceGovernor>();
                 SurvivalWaveDirector director = root.AddComponent<SurvivalWaveDirector>();
                 director.Initialize(player);
             }
