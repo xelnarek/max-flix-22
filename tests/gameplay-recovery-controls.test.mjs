@@ -129,6 +129,21 @@ test('lethal damage is terminal and the result workload yields one frame for the
   assert.ok(runStart.includes('updateCharacterUI(this.selectedCharId)'));
 });
 
+test('deferred game-over fallback cannot reopen an obsolete result screen after a new session starts', async () => {
+  const app = await read('../src/index.ts');
+  const callbackStart = app.indexOf('onGameOver: (reason) =>');
+  const callbackEnd = app.indexOf('onSurvivalUpdate:', callbackStart);
+  const callback = app.slice(callbackStart, callbackEnd);
+  const fallbackStart = callback.lastIndexOf('} catch (error) {');
+  assert.ok(fallbackStart >= 0, 'deferred game-over fallback catch must exist');
+  const fallback = callback.slice(fallbackStart);
+  const generationGuard = fallback.indexOf('endedSessionGeneration !== this.gameSessionGeneration');
+  const stateGuard = fallback.indexOf("this.engine.getGameState() !== 'gameover'");
+  const modalShow = fallback.indexOf("gameoverModal.classList.remove('hidden')");
+  assert.ok(generationGuard >= 0 && stateGuard >= 0, 'fallback must reject stale session generations and non-gameover states');
+  assert.ok(generationGuard < modalShow && stateGuard < modalShow, 'stale-session guards must run before the fallback paints the modal');
+});
+
 test('fullscreen transitions release movement, aim and positioned fire input on Android WebViews', async () => {
   const app = await read('../src/index.ts');
   const fullscreenHandler = app.slice(
