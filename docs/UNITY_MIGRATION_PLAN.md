@@ -72,6 +72,8 @@ Pierwszy commit Unity jest **fundamentem migracji i grywalnym wycinkiem technicz
 - Osobny przycisk umiejętności z odliczaniem, sterowanie E na PC oraz obsługa dotyku.
 - Dodane testy regresji kodu dla pięciu ścieżek ataków, umiejętności, statusów trafień, skoku i przycisku HUD.
 
+W tej fazie przeniesiono też źródłowe czasy ataków podstawowych oddzielnie dla Kampanii i Survival, mnożniki obrażeń Survival (0,62 zadawanych / 1,30 otrzymywanych), czas nietykalności po trafieniu 0,78 s oraz skalowanie cooldownu umiejętności (×1,25 Kampania / ×2 Survival).
+
 **Ograniczenia:** to pierwszy port logiki, a nie zatwierdzona zgodność 1:1. Trzeba zweryfikować wartości i zachowanie w Unity Editor, porównać przebieg walki z wersją Three.js, zbalansować obrażenia/czasy, poprawić animacje i zastąpić obecne generowanie/niszczenie pocisków pulą obiektów. Nie ma jeszcze pełnej implementacji wszystkich archetypów przeciwników, AI bossów ani systemu dropów/perków.
 
 ### Etap 2 — pełny rdzeń walki i pięciu operatorów
