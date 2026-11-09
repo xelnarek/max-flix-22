@@ -102,3 +102,45 @@ test('Unity character damage uses the source rounding bounds and fractional armo
   assert.match(player, /Mathf\.Floor\(accumulatedDamage \+ 1e-6f\)/);
   assert.match(player, /_incomingDamageRemainder = Mathf\.Max\(0f, accumulatedDamage - wholeDamage\)/);
 });
+
+
+test('Unity enemy catalog preserves all 23 legacy IDs and the Survival unlock roster', async () => {
+  const catalog = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyArchetypeCatalog.cs');
+  const domain = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/GameDomain.cs');
+  const enemyKinds = domain.slice(domain.indexOf('public enum EnemyKind'), domain.indexOf('[Serializable]', domain.indexOf('public enum EnemyKind')));
+  assert.equal((catalog.match(/Make\(EnemyKind\./g) || []).length, 23);
+  for (const id of [
+    'Customer', 'Walczak', 'Forklift', 'Architect', 'Inspector', 'AgvRobot',
+    'Handlowiec', 'Monter', 'PiorunDrone', 'EliteWalczakGuard', 'Kurier',
+    'ItalianVendor', 'CrazyStacker', 'KingLeto', 'PanRoman', 'Serwisant',
+    'BosmanKrakow', 'ZombieWorker', 'Pomazaniec', 'Sebix',
+    'MutantGammaForklift', 'RadioactivePip', 'CyberSalesman'
+  ]) {
+    assert.match(enemyKinds, new RegExp(id));
+    assert.match(catalog, new RegExp('EnemyKind\\.' + id));
+  }
+  assert.match(catalog, /MinimumSurvivalElapsedSeconds/);
+  assert.match(catalog, /GetSurvivalEligible/);
+  assert.match(catalog, /ChooseSurvivalSpawnType/);
+  assert.match(catalog, /MinimumSurvivalWave/);
+  assert.match(catalog, /EnemyKind\.ZombieWorker, EnemyKind\.Kurier, EnemyKind\.CrazyStacker/);
+});
+
+test('Unity enemy AI has separated melee, ranged, support, charger and boss phases', async () => {
+  const agent = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  const projectile = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAttackProjectile.cs');
+  const factory = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs');
+  for (const style of ['MeleeChaser', 'PatrolRammer', 'Ranged', 'Support', 'Charger', 'Boss']) {
+    assert.match(agent, new RegExp('EnemyBehaviorStyle\\.' + style));
+  }
+  assert.match(agent, /TickRanged/);
+  assert.match(agent, /TickSupport/);
+  assert.match(agent, /TickCharge/);
+  assert.match(agent, /_phaseTwoMoveMultiplier/);
+  assert.match(agent, /GrantSupportShield/);
+  assert.match(agent, /FireRangedAttack/);
+  assert.match(projectile, /player\.ApplyDamage\(_damage\)/);
+  assert.match(factory, /agent\.Initialize\(player, kind\)/);
+  assert.match(factory, /AGV sensor rail/);
+  assert.match(factory, /Inspector visor/);
+});
