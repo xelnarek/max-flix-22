@@ -348,6 +348,11 @@ namespace MaxFlix.Unity.Runtime
                 GameSession.Current.Score += _profile != null && _profile.IsBoss ? 100 : 10;
                 if (_profile != null && _profile.IsBoss) GameSession.Current.BossesDefeated++;
             }
+            if (GameSession.Current != null && GameSession.Current.Mode == GameMode.Survival)
+            {
+                SurvivalProgressionController progression = GetComponentInParent<SurvivalProgressionController>();
+                progression?.OnEnemyDefeated(this);
+            }
             Destroy(gameObject, 0.06f);
         }
 
