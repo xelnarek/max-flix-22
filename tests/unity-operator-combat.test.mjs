@@ -183,7 +183,8 @@ test('Unity runtime can be initialized in Survival through a mode/map/operator h
   const bootstrap = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/MainGameBootstrap.cs');
   const factory = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs');
   assert.match(bootstrap, /ConfigureNextRun\(GameMode mode, OperatorId operatorId, WarehouseMapId mapId\)/);
-  assert.match(bootstrap, /GameSession\.Begin\(StartupMode, StartupOperator, StartupMap\)/);
+  assert.match(bootstrap, /GameSession\.Begin\(mode, operatorId, mapId\)/);
+  assert.match(bootstrap, /WarehouseWorldFactory\.BuildB4Slice\(\)/);
   assert.match(factory, /GameSession\.Current\.Mode == GameMode\.Survival/);
   assert.match(factory, /root\.AddComponent<SurvivalWaveDirector>\(\)/);
 });
