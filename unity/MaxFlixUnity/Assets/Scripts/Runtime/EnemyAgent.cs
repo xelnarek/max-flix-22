@@ -9,6 +9,13 @@ namespace MaxFlix.Unity.Runtime
         private PlayerController _target;
         private EnemyArchetypeProfile _profile;
         private float _health;
+        private float _maxHealth;
+        private float _moveSpeed;
+        private float _attackInterval;
+        private float _attackRange;
+        private float _aggroRange;
+        private float _attackDamage;
+        private float _abilityRateMultiplier = 1f;
         private float _attackTimer;
         private float _stunRemaining;
         private float _slowRemaining;
@@ -33,15 +40,23 @@ namespace MaxFlix.Unity.Runtime
         public bool IsDefeated { get { return _defeated; } }
         public EnemyKind Kind { get { return _profile != null ? _profile.Id : EnemyKind.Customer; } }
         public float CurrentHealth { get { return _health; } }
-        public float MaxHealth { get { return _profile != null ? _profile.BaseHealth : 1f; } }
+        public float MaxHealth { get { return _maxHealth; } }
 
-        public void Initialize(PlayerController target, EnemyKind kind, float healthMultiplier = 1f)
+        public void Initialize(PlayerController target, EnemyKind kind, float healthMultiplier = 1f, float speedMultiplier = 1f, float abilityRateMultiplier = 1f)
         {
             _controller = GetComponent<CharacterController>();
             _target = target;
             _profile = EnemyArchetypeCatalog.Get(kind);
-            _health = Mathf.Max(1f, _profile.BaseHealth * Mathf.Clamp(healthMultiplier, 0.25f, 8f));
-            _attackTimer = _profile.AttackInterval * 0.55f;
+            _maxHealth = Mathf.Max(1f, _profile.BaseHealth * Mathf.Clamp(healthMultiplier, 0.25f, 8f));
+            _health = _maxHealth;
+            float safeSpeedMultiplier = Mathf.Clamp(speedMultiplier, 0.5f, 2.5f);
+            _moveSpeed = _moveSpeed * safeSpeedMultiplier;
+            _attackInterval = _attackInterval;
+            _attackRange = _attackRange;
+            _aggroRange = _aggroRange;
+            _attackDamage = _attackDamage;
+            _abilityRateMultiplier = Mathf.Clamp(abilityRateMultiplier, 0.5f, 2.5f);
+            _attackTimer = _attackInterval * 0.55f;
             _patrolCenter = transform.position;
             _patrolDirection = (GetInstanceID() & 1) == 0 ? 1f : -1f;
             _renderers = GetComponentsInChildren<Renderer>();
@@ -96,7 +111,7 @@ namespace MaxFlix.Unity.Runtime
             {
                 _phaseTwo = true;
                 _phaseTwoMoveMultiplier = 1.22f;
-                _attackTimer = Mathf.Min(_attackTimer, _profile.AttackInterval * 0.35f);
+                _attackTimer = Mathf.Min(_attackTimer, _attackInterval / _abilityRateMultiplier * 0.35f);
             }
 
             if (_health <= 0f) Defeat();
@@ -180,10 +195,10 @@ namespace MaxFlix.Unity.Runtime
 
         private void TickMelee(float deltaTime, Vector3 direction, float distance)
         {
-            if (distance > _profile.AttackRange)
+            if (distance > _attackRange)
             {
-                if (distance <= _profile.AggroRange)
-                    Move(direction * (_profile.MoveSpeed * _phaseTwoMoveMultiplier * _slowMultiplier), deltaTime);
+                if (distance <= _aggroRange)
+                    Move(direction * (_moveSpeed * _phaseTwoMoveMultiplier * _slowMultiplier), deltaTime);
                 else
                     TickPatrol(deltaTime);
                 Face(direction, deltaTime);
@@ -192,8 +207,8 @@ namespace MaxFlix.Unity.Runtime
 
             if (_attackTimer <= 0f)
             {
-                _target.ApplyDamage(_profile.AttackDamage);
-                _attackTimer = _profile.AttackInterval;
+                _target.ApplyDamage(_attackDamage);
+                _attackTimer = _attackInterval / _abilityRateMultiplier;
             }
         }
 
@@ -214,7 +229,7 @@ namespace MaxFlix.Unity.Runtime
             if (_attackTimer <= 0f)
             {
                 FireRangedAttack(direction);
-                _attackTimer = _profile.AttackInterval * (_phaseTwo ? 0.78f : 1f);
+                _attackTimer = _attackInterval / _abilityRateMultiplier * (_phaseTwo ? 0.78f : 1f);
             }
         }
 
@@ -236,7 +251,7 @@ namespace MaxFlix.Unity.Runtime
             }
 
             if (shielded == 0) FireRangedAttack(direction);
-            _attackTimer = _profile.AttackInterval * (_phaseTwo ? 0.85f : 1f);
+            _attackTimer = _attackInterval / _abilityRateMultiplier * (_phaseTwo ? 0.85f : 1f);
         }
 
         private void TickCharger(float deltaTime, Vector3 direction, float distance)
@@ -254,7 +269,7 @@ namespace MaxFlix.Unity.Runtime
             if (_attackTimer <= 0f && distance <= _profile.AggroRange)
             {
                 _chargeWindupRemaining = _profile.IsBoss ? 0.82f : 0.62f;
-                _attackTimer = _profile.AttackInterval * (_phaseTwo ? 0.76f : 1f);
+                _attackTimer = _attackInterval / _abilityRateMultiplier * (_phaseTwo ? 0.76f : 1f);
             }
         }
 
