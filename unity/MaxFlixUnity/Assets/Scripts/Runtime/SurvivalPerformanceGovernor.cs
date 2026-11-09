@@ -119,14 +119,14 @@ namespace MaxFlix.Unity.Runtime
 
             if (_tier == 1)
             {
-                QualitySettings.lodBias = Mathf.Max(0.8f, _originalLodBias * 0.86f);
-                QualitySettings.shadowDistance = Mathf.Min(_originalShadowDistance, 30f);
+                QualitySettings.lodBias = Mathf.Max(0.8f, _baselineLodBias * 0.86f);
+                QualitySettings.shadowDistance = Mathf.Min(_baselineShadowDistance, 30f);
                 QualitySettings.shadowResolution = ShadowResolution.Medium;
                 return;
             }
 
-            QualitySettings.lodBias = Mathf.Max(0.6f, _originalLodBias * 0.68f);
-            QualitySettings.shadowDistance = Mathf.Min(_originalShadowDistance, 16f);
+            QualitySettings.lodBias = Mathf.Max(0.6f, _baselineLodBias * 0.68f);
+            QualitySettings.shadowDistance = Mathf.Min(_baselineShadowDistance, 16f);
             QualitySettings.shadowResolution = ShadowResolution.Low;
         }
 
@@ -135,9 +135,9 @@ namespace MaxFlix.Unity.Runtime
             if (!_initialized) return;
             Application.targetFrameRate = _baselineTargetFrameRate;
             QualitySettings.vSyncCount = _baselineVsyncCount;
-            QualitySettings.lodBias = _originalLodBias;
-            QualitySettings.shadowDistance = _originalShadowDistance;
-            QualitySettings.shadowResolution = _originalShadowResolution;
+            QualitySettings.lodBias = _baselineLodBias;
+            QualitySettings.shadowDistance = _baselineShadowDistance;
+            QualitySettings.shadowResolution = _baselineShadowResolution;
         }
     }
 }
