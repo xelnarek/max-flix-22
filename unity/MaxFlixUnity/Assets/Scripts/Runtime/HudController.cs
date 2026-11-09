@@ -24,8 +24,17 @@ namespace MaxFlix.Unity.Runtime
             scaler.referenceResolution = new Vector2(1920f, 1080f);
             scaler.matchWidthOrHeight = 0.5f;
 
+            GameObject safeAreaObject = new GameObject("Safe Area Content", typeof(RectTransform));
+            RectTransform safeArea = safeAreaObject.GetComponent<RectTransform>();
+            safeArea.SetParent(canvasObject.transform, false);
+            safeArea.anchorMin = Vector2.zero;
+            safeArea.anchorMax = Vector2.one;
+            safeArea.offsetMin = Vector2.zero;
+            safeArea.offsetMax = Vector2.zero;
+            safeAreaObject.AddComponent<SafeAreaLayout>();
+
             HudController hud = canvasObject.AddComponent<HudController>();
-            hud.Build(canvasObject.GetComponent<RectTransform>(), player);
+            hud.Build(safeArea, player);
             return hud;
         }
 
@@ -48,6 +57,7 @@ namespace MaxFlix.Unity.Runtime
             _helpText = CreateText(root, "PC: WASD / SPACE / J   •   EKRAN: joystick + SKOK + ATAK", new Vector2(0f, -98f), new Vector2(900f, 42f), 18, TextAnchor.MiddleCenter);
             _helpText.rectTransform.anchorMin = new Vector2(0.5f, 1f);
             _helpText.rectTransform.anchorMax = new Vector2(0.5f, 1f);
+            _helpText.rectTransform.pivot = new Vector2(0.5f, 1f);
 
             GameObject stick = CreateImage(root, "Virtual joystick", new Vector2(165f, 165f), new Vector2(210f, 210f), new Color(0.07f, 0.12f, 0.18f, 0.54f));
             stick.GetComponent<RectTransform>().anchorMin = Vector2.zero;
@@ -55,6 +65,7 @@ namespace MaxFlix.Unity.Runtime
             Joystick = stick.AddComponent<VirtualJoystick>();
 
             GameObject knob = CreateImage(stick.GetComponent<RectTransform>(), "Joystick handle", Vector2.zero, new Vector2(82f, 82f), new Color(0.52f, 0.72f, 0.86f, 0.82f));
+            knob.GetComponent<Image>().raycastTarget = false;
             Joystick.ConfigureHandle(knob.GetComponent<RectTransform>());
 
             CreateActionButton(root, "SKOK", new Vector2(-150f, 245f), new Vector2(170f, 112f), new Color(0.18f, 0.42f, 0.58f, 0.88f), player.RequestJump);
@@ -77,6 +88,7 @@ namespace MaxFlix.Unity.Runtime
             text.fontSize = fontSize;
             text.fontStyle = FontStyle.Bold;
             text.color = Color.white;
+            text.raycastTarget = false;
             text.alignment = alignment;
             text.horizontalOverflow = HorizontalWrapMode.Wrap;
             text.verticalOverflow = VerticalWrapMode.Overflow;
