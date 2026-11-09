@@ -17,6 +17,10 @@ namespace MaxFlix.Unity.Runtime
         private Button _pauseButton;
         private Button _jumpButton;
         private Button _attackButton;
+        private Button _cameraModeButton;
+        private Text _cameraModeLabel;
+        private Slider _cameraZoomSlider;
+        private CameraFollowRig _cameraRig;
         private RectTransform _safeAreaRoot;
         private RectTransform _joystickRect;
         private RectTransform _joystickHandleRect;
@@ -125,6 +129,24 @@ namespace MaxFlix.Unity.Runtime
             _helpText.rectTransform.anchorMax = new Vector2(0.5f, 1f);
             _helpText.rectTransform.pivot = new Vector2(0.5f, 1f);
 
+            if (GameSession.Current != null && GameSession.Current.Mode == GameMode.Survival)
+            {
+                _cameraRig = FindFirstObjectByType<CameraFollowRig>();
+                if (_cameraRig != null)
+                {
+                    _cameraModeButton = CreateAnchoredButton(root, "KAMERA 3D",
+                        new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                        new Vector2(0f, -158f), new Vector2(124f, 40f),
+                        new Color(0.13f, 0.27f, 0.38f, 0.94f), 15, ToggleCameraView);
+                    _cameraModeLabel = _cameraModeButton.GetComponentInChildren<Text>();
+                    _cameraZoomSlider = CreateCameraZoomSlider(root, _cameraRig);
+                    RefreshCameraModeLabel();
+                    // The mobile camera controls occupy the central top rail.
+                    // The general help line is hidden in Survival to keep the playfield clear.
+                    _helpText.gameObject.SetActive(false);
+                }
+            }
+
             _pauseButton = CreateAnchoredButton(root, "PAUZA", new Vector2(1f, 1f), new Vector2(1f, 1f),
                 new Vector2(1f, 1f), new Vector2(-28f, -102f), new Vector2(156f, 72f),
                 new Color(0.14f, 0.21f, 0.30f, 0.94f), 18, TogglePause);
@@ -220,7 +242,7 @@ namespace MaxFlix.Unity.Runtime
 
             if (_helpText != null)
             {
-                _helpText.gameObject.SetActive(!portrait && height > 480f);
+                _helpText.gameObject.SetActive(_cameraZoomSlider == null && !portrait && height > 480f);
                 _helpText.rectTransform.sizeDelta = new Vector2(Mathf.Min(1040f, width * 0.62f), 42f);
             }
             if (_statusText != null)
@@ -233,6 +255,99 @@ namespace MaxFlix.Unity.Runtime
                 _healthText.rectTransform.sizeDelta = new Vector2(Mathf.Min(280f, width * 0.25f), 62f);
                 _healthText.fontSize = Mathf.RoundToInt(Mathf.Clamp(width * 0.016f, 18f, 26f));
             }
+
+            if (_cameraZoomSlider != null)
+            {
+                RectTransform sliderRect = _cameraZoomSlider.GetComponent<RectTransform>();
+                float sliderWidth = Mathf.Clamp(width * 0.25f, 150f, 250f);
+                SetControlRect(sliderRect, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                    new Vector2(0f, -108f), new Vector2(sliderWidth, 22f));
+                if (_cameraModeButton != null)
+                {
+                    RectTransform modeRect = _cameraModeButton.GetComponent<RectTransform>();
+                    SetControlRect(modeRect, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                        new Vector2(0f, -154f), new Vector2(Mathf.Clamp(width * 0.14f, 104f, 132f), 38f));
+                }
+            }
+        }
+
+        private void ToggleCameraView()
+        {
+            if (_cameraRig == null) return;
+            _cameraRig.ToggleViewMode();
+            RefreshCameraModeLabel();
+        }
+
+        private void RefreshCameraModeLabel()
+        {
+            if (_cameraModeLabel == null || _cameraRig == null) return;
+            _cameraModeLabel.text = _cameraRig.IsTopDown ? "KAMERA 2D" : "KAMERA 3D";
+        }
+
+        private static Slider CreateCameraZoomSlider(RectTransform parent, CameraFollowRig cameraRig)
+        {
+            GameObject sliderObject = new GameObject("Camera zoom slider", typeof(RectTransform), typeof(Slider));
+            RectTransform sliderRect = sliderObject.GetComponent<RectTransform>();
+            sliderRect.SetParent(parent, false);
+            sliderRect.anchorMin = new Vector2(0.5f, 1f);
+            sliderRect.anchorMax = new Vector2(0.5f, 1f);
+            sliderRect.pivot = new Vector2(0.5f, 1f);
+            sliderRect.anchoredPosition = new Vector2(0f, -108f);
+            sliderRect.sizeDelta = new Vector2(220f, 22f);
+
+            GameObject track = CreateImage(sliderRect, "Zoom track", Vector2.zero,
+                new Vector2(220f, 8f), new Color(0.04f, 0.08f, 0.12f, 0.92f));
+            RectTransform trackRect = track.GetComponent<RectTransform>();
+            trackRect.anchorMin = Vector2.zero;
+            trackRect.anchorMax = Vector2.one;
+            trackRect.offsetMin = Vector2.zero;
+            trackRect.offsetMax = Vector2.zero;
+            trackRect.sizeDelta = Vector2.zero;
+            trackRect.anchoredPosition = Vector2.zero;
+
+            GameObject fillArea = new GameObject("Fill Area", typeof(RectTransform));
+            RectTransform fillAreaRect = fillArea.GetComponent<RectTransform>();
+            fillAreaRect.SetParent(sliderRect, false);
+            fillAreaRect.anchorMin = new Vector2(0f, 0.25f);
+            fillAreaRect.anchorMax = new Vector2(1f, 0.75f);
+            fillAreaRect.offsetMin = new Vector2(5f, 0f);
+            fillAreaRect.offsetMax = new Vector2(-5f, 0f);
+
+            GameObject fill = CreateImage(fillAreaRect, "Zoom fill", Vector2.zero,
+                Vector2.zero, new Color(0.20f, 0.72f, 0.86f, 1f));
+            RectTransform fillRect = fill.GetComponent<RectTransform>();
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = Vector2.one;
+            fillRect.offsetMin = Vector2.zero;
+            fillRect.offsetMax = Vector2.zero;
+            fillRect.sizeDelta = Vector2.zero;
+
+            GameObject handleArea = new GameObject("Handle Slide Area", typeof(RectTransform));
+            RectTransform handleAreaRect = handleArea.GetComponent<RectTransform>();
+            handleAreaRect.SetParent(sliderRect, false);
+            handleAreaRect.anchorMin = Vector2.zero;
+            handleAreaRect.anchorMax = Vector2.one;
+            handleAreaRect.offsetMin = new Vector2(10f, 0f);
+            handleAreaRect.offsetMax = new Vector2(-10f, 0f);
+
+            GameObject handle = CreateImage(handleAreaRect, "Zoom handle", Vector2.zero,
+                new Vector2(22f, 30f), new Color(0.88f, 0.95f, 1f, 1f));
+            RectTransform handleRect = handle.GetComponent<RectTransform>();
+            handleRect.anchorMin = new Vector2(0.5f, 0.5f);
+            handleRect.anchorMax = new Vector2(0.5f, 0.5f);
+            handleRect.pivot = new Vector2(0.5f, 0.5f);
+
+            Slider slider = sliderObject.GetComponent<Slider>();
+            slider.direction = Slider.Direction.LeftToRight;
+            slider.minValue = 0f;
+            slider.maxValue = 1f;
+            slider.wholeNumbers = false;
+            slider.fillRect = fillRect;
+            slider.handleRect = handleRect;
+            slider.targetGraphic = handle.GetComponent<Image>();
+            slider.SetValueWithoutNotify(cameraRig.ZoomNormalized);
+            slider.onValueChanged.AddListener(cameraRig.SetZoomNormalized);
+            return slider;
         }
 
         private static void SetControlRect(RectTransform rect, Vector2 anchor, Vector2 pivot, Vector2 position, Vector2 size)
