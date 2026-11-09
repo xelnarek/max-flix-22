@@ -39,6 +39,7 @@ namespace MaxFlix.Unity.Runtime
         private int _primaryCount;
         private int _mateuszHitCount;
         private float _abilityCooldownRemaining;
+        private float _abilityCooldownDuration;
         private float _sprintRemaining;
         private float _invulnerabilityRemaining;
         private float _shieldRemaining;
@@ -56,6 +57,7 @@ namespace MaxFlix.Unity.Runtime
             _hud = hud;
             _profile = profile;
             _abilityCooldownRemaining = 0f;
+            _abilityCooldownDuration = 0f;
             UpdateAbilityHud();
         }
 
@@ -156,7 +158,8 @@ namespace MaxFlix.Unity.Runtime
             if (_profile == null || _player == null || _player.IsDefeated || _abilityCooldownRemaining > 0f)
                 return false;
 
-            _abilityCooldownRemaining = _profile.AbilityCooldownSeconds;
+            _abilityCooldownDuration = CombatBalanceCatalog.GetAbilityCooldown(_profile.AbilityCooldownSeconds, mode);
+            _abilityCooldownRemaining = _abilityCooldownDuration;
             switch (_profile.Id)
             {
                 case OperatorId.Marcin:
@@ -448,7 +451,7 @@ namespace MaxFlix.Unity.Runtime
         private void UpdateAbilityHud()
         {
             if (_hud == null || _profile == null) return;
-            _hud.SetAbilityState(_abilityCooldownRemaining, _profile.AbilityCooldownSeconds);
+            _hud.SetAbilityState(_abilityCooldownRemaining, _abilityCooldownDuration);
         }
 
         private void OnDestroy()
