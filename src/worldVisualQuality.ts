@@ -103,12 +103,12 @@ const CAMPAIGN_LIGHTING_PROFILES: Readonly<Record<1 | 2 | 3 | 4, WorldLightingPr
 };
 
 export const PVP_LIGHTING_PROFILE: WorldLightingProfile & { backgroundColor: number } = {
-  ambientColor: 0xd6e6f2, ambientIntensity: 0.94,
-  hemisphereSkyColor: 0x9bc9e8, hemisphereGroundColor: 0x192d41, hemisphereIntensity: 1.30,
-  directionalColor: 0xffe2c0, directionalIntensity: 2.84,
-  rimColor: 0x55c5ed, rimIntensity: 1.48,
-  fogColor: 0x0d1c2b, fogNear: 62, fogFar: 158,
-  environmentIntensity: 0.48, exposure: 1.07,
+  ambientColor: 0xcbdce9, ambientIntensity: 0.86,
+  hemisphereSkyColor: 0x91bddc, hemisphereGroundColor: 0x15283a, hemisphereIntensity: 1.22,
+  directionalColor: 0xffdfbd, directionalIntensity: 2.68,
+  rimColor: 0x55c5ed, rimIntensity: 1.58,
+  fogColor: 0x0d1c2b, fogNear: 58, fogFar: 148,
+  environmentIntensity: 0.44, exposure: 1.04,
   backgroundColor: 0x08121e,
 };
 
