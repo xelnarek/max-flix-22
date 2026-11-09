@@ -82,6 +82,31 @@ function setTouchControlsVisibility(visible: boolean): void {
   const layer = document.getElementById('touch-controls');
   if (!layer) return;
 
+  // Reassert pause hit-targets after every mode/viewport transition. A few
+  // legacy HUD rules can override display or pointer-events in Android WebView.
+  const topPause = document.getElementById('btn-top-pause') as HTMLButtonElement | null;
+  if (topPause) {
+    topPause.classList.remove('hidden');
+    topPause.disabled = false;
+    topPause.style.setProperty('display', 'inline-flex', 'important');
+    topPause.style.setProperty('visibility', 'visible', 'important');
+    topPause.style.setProperty('opacity', '1', 'important');
+    topPause.style.setProperty('pointer-events', 'auto', 'important');
+    topPause.style.setProperty('z-index', '2147483010', 'important');
+    topPause.setAttribute('aria-label', 'Wstrzymaj rozgrywkę');
+  }
+
+  const touchPause = document.getElementById('btn-touch-pause') as HTMLButtonElement | null;
+  if (touchPause) {
+    touchPause.classList.remove('hidden');
+    touchPause.disabled = false;
+    touchPause.style.setProperty('display', 'flex', 'important');
+    touchPause.style.setProperty('visibility', 'visible', 'important');
+    touchPause.style.setProperty('opacity', '1', 'important');
+    touchPause.style.setProperty('pointer-events', 'auto', 'important');
+    touchPause.style.setProperty('z-index', '2147483010', 'important');
+  }
+
   // Re-assert the portal whenever the game enters/leaves a run. This makes
   // visibility independent from the order in which the menu, WebGL shell and
   // Android compositor create their stacking contexts.
@@ -1189,15 +1214,21 @@ class PaleciakiScene extends xb.Script {
             console.warn('[GameOver UI] Touch layer could not be hidden.', visibilityError);
           }
 
-          try {
-          hideSurvivalAnnouncement();
+          this.resetTouchJoystick?.();
+          setTouchControlsMode('hidden');
           this.lastScore = this.engine.getScore();
           this.lastCoins = this.engine.getCollectedVipCount();
-                    this.lastTimeSeconds = this.engine.getElapsedSeconds();
+          this.lastTimeSeconds = this.engine.getElapsedSeconds();
           this.lastBossDefeated = this.engine.isBossDefeated();
           this.lastMode = this.engine.getGameMode();
 
-          const finalScore = document.getElementById('gameover-score');
+          // Paint the death/result screen before optional progression, local
+          // persistence and damage-report rendering run on the main thread.
+          window.requestAnimationFrame(() => {
+            window.setTimeout(() => {
+              try {
+                hideSurvivalAnnouncement();
+                const finalScore = document.getElementById('gameover-score');
           const finalTime = document.getElementById('gameover-time');
           const finalMode = document.getElementById('gameover-mode-summary');
           const runDetail = document.getElementById('gameover-run-detail');
@@ -1351,7 +1382,9 @@ class PaleciakiScene extends xb.Script {
             setTouchControlsVisibility(false);
             survivalHud?.classList.add('hidden');
             survivalLevelUp?.classList.add('hidden');
-          }
+              }
+            }, 0);
+          });
         },
         onSurvivalUpdate: (snapshot: SurvivalSnapshot) => {
           trackSurvivalAchievementSnapshot(snapshot);
