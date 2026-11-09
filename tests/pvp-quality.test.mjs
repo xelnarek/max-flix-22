@@ -477,6 +477,11 @@ test('PvP HUD shows each operator ability that the arena actually executes and r
   assert.ok(presentationStart >= 0 && presentationEnd > presentationStart);
   assert.match(presentation, /profile\.abilityName/);
   assert.match(presentation, /profile\.abilityDesc/);
+  const standardUiStart = app.indexOf('const updateCharacterUI = (id: CharacterId) => {');
+  const standardUiEnd = app.indexOf("updateCharacterUI('marcin')", standardUiStart);
+  const standardUi = app.slice(standardUiStart, standardUiEnd);
+  assert.match(standardUi, /standardAbilityButton\?\.setAttribute\('aria-label', `\$\{def\.abilityName\}/);
+  assert.match(standardUi, /standardAbilityButton\.title = `\$\{def\.abilityName\}/);
   for (const id of ['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr']) {
     assert.ok(presentation.includes(id + ':'), `missing PvP HUD ability icon for ${id}`);
     assert.match(arena, new RegExp(id + ':'));
