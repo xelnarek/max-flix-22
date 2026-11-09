@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { disposePvpObjectTree } from './pvpResourceCleanup.ts';
 import { calculatePvpCameraFrame, calculatePvpCameraTrackingBounds, isPvpPortraitViewport } from './pvpCamera.ts';
-import { createArenaObstacleFootprint, createPvpFloorTexture, createPvpObstacleTexture } from './pvpTextures.ts';
+import { createArenaObstacleFootprint, createPvpContactShadowTexture, createPvpFloorTexture, createPvpObstacleTexture } from './pvpTextures.ts';
 import {
   calculatePvpAimPreview, getPvpAimAngle, getPvpSweepAimAngle, getPvpAimSweepCenterAngle,
   pvpAimDirectionFromAngle, pvpScreenMovementToWorld,
@@ -2095,10 +2095,10 @@ export class PaleciakiGameEngine {
     floorTexture.repeat.set(5, 3);
     floorTexture.needsUpdate = true;
     const floorMat = new THREE.MeshStandardMaterial({
-      color: 0xe7edf2,
+      color: 0xd8e2ec,
       map: floorTexture,
-      roughness: 0.74,
-      metalness: 0.16,
+      roughness: 0.82,
+      metalness: 0.08,
     });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.position.set(0, -0.5, 0);
@@ -2169,6 +2169,23 @@ export class PaleciakiGameEngine {
     for (const obs of obstacles) {
       const group = new THREE.Group();
       group.position.set(obs.x, 0, obs.z);
+
+      // Baked soft contact shadows preserve depth on phones where dynamic
+      // shadow maps are intentionally disabled to protect frame pacing.
+      const shadow = new THREE.Mesh(
+        new THREE.PlaneGeometry(obs.width + 1.35, obs.depth + 1.35),
+        new THREE.MeshBasicMaterial({
+          map: createPvpContactShadowTexture(),
+          transparent: true,
+          opacity: 0.76,
+          depthWrite: false,
+          toneMapped: false,
+        }),
+      );
+      shadow.rotation.x = -Math.PI / 2;
+      shadow.position.y = 0.028;
+      shadow.renderOrder = 1;
+      group.add(shadow);
 
       // Fine floor outline shows the actual cover footprint clearly on mobile.
       const footprintColor = obs.type === 'barrier' ? 0xf87171 : obs.type === 'pillar' ? 0x67e8f9 : 0xfacc15;
