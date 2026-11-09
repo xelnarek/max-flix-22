@@ -25,7 +25,11 @@ namespace MaxFlix.Unity.Runtime
                         DamageTakenMultiplier = 0.82f,
                         AbilityCooldownSeconds = 17.0f,
                         PassiveName = "Mistrz Zaklęć ERP",
-                        AbilityName = "KONWÓJ WZ-404! DO BOJU!"
+                        AbilityName = "KONWÓJ WZ-404! DO BOJU!",
+                        GaitFrequency = 11.5f,
+                        Stride = 0.46f,
+                        ArmSwing = 0.28f,
+                        AttackDurationSeconds = 0.32f
                     }
                 },
                 {
@@ -45,7 +49,11 @@ namespace MaxFlix.Unity.Runtime
                         DamageTakenMultiplier = 0.92f,
                         AbilityCooldownSeconds = 12.0f,
                         PassiveName = "Hantla 44 cm — Rzut Siłacza",
-                        AbilityName = "Ścisk Zagłady 44cm + Tryb Tarana"
+                        AbilityName = "Ścisk Zagłady 44cm + Tryb Tarana",
+                        GaitFrequency = 10.0f,
+                        Stride = 0.78f,
+                        ArmSwing = 0.48f,
+                        AttackDurationSeconds = 0.46f
                     }
                 },
                 {
@@ -65,7 +73,11 @@ namespace MaxFlix.Unity.Runtime
                         DamageTakenMultiplier = 1.00f,
                         AbilityCooldownSeconds = 13.0f,
                         PassiveName = "Rolka Stretch — Owinięcie Problemu",
-                        AbilityName = "Salwa Marmurowa Wielkiego Formatu"
+                        AbilityName = "Salwa Marmurowa Wielkiego Formatu",
+                        GaitFrequency = 16.8f,
+                        Stride = 0.88f,
+                        ArmSwing = 0.56f,
+                        AttackDurationSeconds = 0.36f
                     }
                 },
                 {
@@ -85,7 +97,11 @@ namespace MaxFlix.Unity.Runtime
                         DamageTakenMultiplier = 1.08f,
                         AbilityCooldownSeconds = 16.0f,
                         PassiveName = "Paralizator — Impuls Trzech Elektrod",
-                        AbilityName = "KOCIA ARMIA ONLINE • 3× MIAU-CRITICAL"
+                        AbilityName = "KOCIA ARMIA ONLINE • 3× MIAU-CRITICAL",
+                        GaitFrequency = 20.2f,
+                        Stride = 0.48f,
+                        ArmSwing = 0.78f,
+                        AttackDurationSeconds = 0.20f
                     }
                 },
                 {
@@ -105,7 +121,11 @@ namespace MaxFlix.Unity.Runtime
                         DamageTakenMultiplier = 0.95f,
                         AbilityCooldownSeconds = 16.5f,
                         PassiveName = "Weteran B4 — Droga Powrotna",
-                        AbilityName = "Rytuał MafiKapibar — Pentagram B4"
+                        AbilityName = "Rytuał MafiKapibar — Pentagram B4",
+                        GaitFrequency = 12.4f,
+                        Stride = 0.58f,
+                        ArmSwing = 0.40f,
+                        AttackDurationSeconds = 0.38f
                     }
                 }
             };
