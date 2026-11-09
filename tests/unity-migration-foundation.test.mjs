@@ -136,8 +136,8 @@ test('Unity domain catalog preserves the exact legacy content IDs and four Survi
   assert.match(catalog, /EnemySpeedMultiplier = 0\.90f/);
   assert.match(catalog, /XpMultiplier = 1\.15f/);
   assert.equal((catalog.match(/Secret\("oniric_dream"/g) || []).length, 4);
-  assert.equal((catalog.match(/\\{ SurvivalWeaponKind\\./g) || []).length, 12);
-  assert.equal((catalog.match(/SurvivalWeaponKind\\./g) || []).length, 25);
+  assert.equal((catalog.match(/\{\s*SurvivalWeaponKind\.[A-Za-z]+,\s*Weapon\(/g) || []).length, 12);
+  assert.equal((catalog.match(/SurvivalWeaponKind\./g) || []).length, 25);
 });
 
 test('Unity setup creates URP, configures WebGPU with WebGL2 fallback and enables the New Input System', async () => {
