@@ -53,8 +53,9 @@ function createEntry(kind: B4VisualTextureKind): B4TextureEntry {
   );
   texture.name = 'max-flix-b4-' + kind;
   texture.colorSpace = THREE.SRGBColorSpace;
-  texture.wrapS = kind === 'spriteAtlas' ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
-  texture.wrapT = kind === 'spriteAtlas' ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
+  const isAtlas = kind === 'spriteAtlas' || kind === 'enemyAtlas';
+  texture.wrapS = isAtlas ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
+  texture.wrapT = isAtlas ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
   texture.anisotropy = 4;
   texture.generateMipmaps = true;
   texture.minFilter = THREE.LinearMipmapLinearFilter;
