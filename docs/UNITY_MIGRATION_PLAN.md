@@ -103,6 +103,18 @@ W podetapie 2B dodano katalog wszystkich 23 identyfikatorów przeciwników (z ro
 
 W etapie 2D uzupełniono też dwa źródłowe rzadkie spotkania (Bosman od fali 6 z szansą 4%, Sebix od fali 8 z szansą 6,5%), limit pojedynczej aktywnej instancji każdego oraz równomierne rozmieszczenie wejścia hordy. AI otrzymało współdzielony cache przestrzenny i separację, aby ograniczać nakładanie przeciwników w tłumie.
 
+
+### Etap 3A — odrębna geometria czterech map Unity (wdrożone w kodzie, bez walidacji Unity Editor)
+
+- Wybór mapy prowadzi teraz do osobnego generatora geometrii, zamiast nakładać dekoracje na jeden wspólny układ regałów.
+- B4 ma dwa bloki regałów, otwartą aleję, strefy odkładcze i oznakowanie BHP.
+- Port Kontenerowy 17 ma rozmieszczone pod kątem kontenery z kolizjami, korytarze slalomowe i konstrukcję suwnicy.
+- Chłodnia Zero ma izolowane ściany, banki sprężarek, regały, przewody chłodnicze i pasy lodowe.
+- Sortownia Widmowa ma dwa pasy przenośników, prowadnice świetlne, trzy bramki skanerów i wieżę sterowniczą.
+- Powiększono podłoże i dodano cztery fizyczne granice areny, aby pozycje gracza i spawnów fal pozostały na mapie.
+
+**Ograniczenia:** to proceduralna geometria z prostych brył; nie zastępuje finalnych modeli, tekstur PBR ani ręcznie zaprojektowanych scen. Geometria, nawigacja przeciwników, kolizje i wydajność nadal wymagają sprawdzenia w Unity Editor oraz na Poco F6.
+
 ### Etap 2 — pełny rdzeń walki i pięciu operatorów
 - wszystkie ataki podstawowe, pasywy i umiejętności specjalne;
 - animacje i wyposażenie operatorów;
