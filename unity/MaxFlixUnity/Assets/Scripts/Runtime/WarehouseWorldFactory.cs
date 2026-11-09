@@ -218,7 +218,7 @@ namespace MaxFlix.Unity.Runtime
             float healthMultiplier = 1f, float speedMultiplier = 1f, float abilityRateMultiplier = 1f)
         {
             EnemyArchetypeProfile profile = EnemyArchetypeCatalog.Get(kind);
-            if (profile.IsHazardOnly) return;
+            if (profile.IsHazardOnly) return null;
 
             GameObject enemy = new GameObject(profile.DisplayName + " • B4");
             enemy.transform.SetParent(_worldRoot, false);
