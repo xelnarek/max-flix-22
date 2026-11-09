@@ -1,0 +1,123 @@
+name: Unity 6.6 WebGL and Android build
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Select which Unity player to compile
+        type: choice
+        required: true
+        default: WebGL
+        options:
+          - WebGL
+          - Android APK
+          - Android AAB
+          - WebGL + Android APK
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unity-player-build-${{ github.ref }}-${{ inputs.target }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Unity 6.6 • ${{ inputs.target }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout Unity project
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Validate Unity and Android signing credentials
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          UNITY_TARGET: ${{ inputs.target }}
+        run: |
+          if [ -z "${UNITY_LICENSE:-}" ]; then
+            echo "::error::Missing repository secret UNITY_LICENSE. Add the Unity Personal/Pro license file contents in Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          if [ "$UNITY_TARGET" = "Android AAB" ]; then
+            if [ -z "${ANDROID_UPLOAD_KEYSTORE_BASE64:-}" ] || [ -z "${ANDROID_KEYSTORE_PASSWORD:-}" ] || [ -z "${ANDROID_KEY_ALIAS:-}" ] || [ -z "${ANDROID_KEY_PASSWORD:-}" ]; then
+              echo "::error::Android AAB requires ANDROID_UPLOAD_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD."
+              exit 1
+            fi
+          fi
+
+      - name: Cache Unity import and compilation state
+        uses: actions/cache@v4
+        with:
+          path: unity/MaxFlixUnity/Library
+          key: unity-6000.6-${{ runner.os }}-${{ inputs.target }}-${{ hashFiles('unity/MaxFlixUnity/Assets/**', 'unity/MaxFlixUnity/Packages/**', 'unity/MaxFlixUnity/ProjectSettings/**') }}
+          restore-keys: |
+            unity-6000.6-${{ runner.os }}-${{ inputs.target }}-
+
+      - name: Compile Unity Web player (WebGPU with WebGL 2 fallback)
+        if: inputs.target == 'WebGL' || inputs.target == 'WebGL + Android APK'
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          projectPath: unity/MaxFlixUnity
+          unityVersion: auto
+          targetPlatform: WebGL
+          buildName: Paleciaki-Unity-Web
+          buildsPath: build/unity
+          versioning: None
+
+      - name: Compile Android development APK (ARM64 / IL2CPP)
+        if: inputs.target == 'Android APK' || inputs.target == 'WebGL + Android APK'
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          projectPath: unity/MaxFlixUnity
+          unityVersion: auto
+          targetPlatform: Android
+          androidExportType: androidPackage
+          buildName: Paleciaki-Unity-Android
+          buildsPath: build/unity
+          versioning: None
+
+      - name: Set monotonic Google Play version code
+        if: inputs.target == 'Android AAB'
+        id: android-version
+        shell: bash
+        run: echo "code=$((100000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_OUTPUT"
+
+      - name: Compile signed Google Play App Bundle
+        if: inputs.target == 'Android AAB'
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          projectPath: unity/MaxFlixUnity
+          unityVersion: auto
+          targetPlatform: Android
+          androidExportType: androidAppBundle
+          androidKeystoreName: paleciaki-upload-key.jks
+          androidKeystoreBase64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          androidKeystorePass: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          androidKeyaliasName: ${{ secrets.ANDROID_KEY_ALIAS }}
+          androidKeyaliasPass: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          androidVersionCode: ${{ steps.android-version.outputs.code }}
+          buildName: Paleciaki-Unity-Android
+          buildsPath: build/unity
+          versioning: None
+
+      - name: Upload Unity player artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: paleciaki-unity-${{ inputs.target }}-${{ github.run_number }}
+          path: build/unity/**
+          if-no-files-found: warn
+          retention-days: 21

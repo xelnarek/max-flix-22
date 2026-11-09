@@ -45,3 +45,12 @@ Still missing or only partially ported: the full legacy Campaign collectible cat
 ## Build policy
 
 Do not publish this project to GitHub Pages or Google Play yet. A Unity build is not a replacement for the live Three.js version until all migration gates and device tests pass.
+
+
+## Builds and release identity
+
+Unity builds use the same Android application ID as the current app: `pl.paleciaki.magazynchaosu`. The Editor setup selects IL2CPP + ARM64, Android API 26 minimum / API 36 target and landscape orientation.
+
+A manual GitHub Actions workflow is available at **Actions → Unity 6.6 WebGL and Android build**. Add the repository secret `UNITY_LICENSE` with the contents of a valid Unity license file before starting a build. WebGL and unsigned development APK builds need only that Unity license. A signed Google Play AAB additionally requires the same four upload-signing secrets used by the existing Android release pipeline: `ANDROID_UPLOAD_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`.
+
+The workflow only creates downloadable artifacts; it does not replace GitHub Pages or submit a Unity build to Google Play. Do not publish the Unity AAB as an update until the Unity project has passed Editor compilation, gameplay/device tests and a full feature-parity review.
