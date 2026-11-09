@@ -1173,6 +1173,17 @@ class PaleciakiScene extends xb.Script {
             gameoverModal.style.setProperty('pointer-events', 'auto', 'important');
             gameoverModal.style.setProperty('z-index', '2147483012', 'important');
           }
+          hudTop?.classList.add('hidden');
+          hudBottom?.classList.add('hidden');
+          bossHudBar?.classList.add('hidden');
+          hudPerksRow?.classList.add('hidden');
+          survivalHud?.classList.add('hidden');
+          survivalLevelUp?.classList.add('hidden');
+          try {
+            setTouchControlsVisibility(false);
+          } catch (visibilityError) {
+            console.warn('[GameOver UI] Touch layer could not be hidden.', visibilityError);
+          }
 
           try {
           hideSurvivalAnnouncement();
