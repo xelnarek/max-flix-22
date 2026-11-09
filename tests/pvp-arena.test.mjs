@@ -699,8 +699,8 @@ test('PvP weapons use a deliberate ~3-second primary-shot cycle with readable pr
 
 test('PvP standard movement and dash are slower and more controlled', async () => {
   const { PVP_BASE_SPEED, PVP_DASH_SPEED, PVP_DASH_COOLDOWN } = await import('../src/pvpArena.ts');
-  assert.equal(PVP_BASE_SPEED, 6.2);
-  assert.equal(PVP_DASH_SPEED, 16.0);
+  assert.equal(PVP_BASE_SPEED, 5.0);
+  assert.equal(PVP_DASH_SPEED, 13.2);
   assert.equal(PVP_DASH_COOLDOWN, 3.8);
 
   const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
@@ -712,7 +712,7 @@ test('PvP standard movement and dash are slower and more controlled', async () =
   state.p1.x = -5;
   const startX = state.p1.x;
   stepPvpArena(state, 0.1, { moveX: 1, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false });
-  assert.ok(Math.abs((state.p1.x - startX) - 0.62) < 1e-6, 'normal movement should travel 0.62 units in 0.1s');
+  assert.ok(Math.abs((state.p1.x - startXundefined);
 });
 
 test('one-shot fire intent shoots once, respects operator recovery, and can be tapped again', () => {
