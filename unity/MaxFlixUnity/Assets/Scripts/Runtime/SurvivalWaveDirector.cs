@@ -19,6 +19,7 @@ namespace MaxFlix.Unity.Runtime
         private PlayerController _player;
         private LineRenderer _hordeRing;
         private SurvivalHordeProfile _hordeProfile;
+        private SurvivalMapProfile _mapProfile;
         private bool _isMobile;
         private int _adaptiveTier;
         private int _currentWave = 1;
@@ -39,6 +40,8 @@ namespace MaxFlix.Unity.Runtime
             _player = player;
             _isMobile = SystemInfo.deviceType == DeviceType.Handheld || Screen.width < 900;
             _hordeProfile = SurvivalHordeCatalog.GetProfile(_isMobile);
+            _mapProfile = GameContentCatalog.GetMap(GameSession.Current != null
+                ? GameSession.Current.SelectedMap : WarehouseMapId.WarehouseB4);
             _currentWave = 1;
             _lastBossWave = 0;
             _nextHordeAt = FirstHordeAtSeconds;
@@ -81,12 +84,9 @@ namespace MaxFlix.Unity.Runtime
 
             int cap = SurvivalDifficultyCatalog.GetLiveEnemyCap(_isMobile, _adaptiveTier);
             int alive = CountAliveEnemies();
+            SurvivalDifficultyProfile profile = GetDifficultyProfile(_currentWave);
             int groupSize = SurvivalDifficultyCatalog.GetGroupSize(
-                _currentWave,
-                SurvivalDifficultyCatalog.GetProfile(_currentWave),
-                _isMobile,
-                _adaptiveTier,
-                cap - alive);
+                _currentWave, profile, _isMobile, _adaptiveTier, cap - alive);
 
             if (groupSize <= 0)
             {
@@ -94,7 +94,6 @@ namespace MaxFlix.Unity.Runtime
                 return;
             }
 
-            SurvivalDifficultyProfile profile = SurvivalDifficultyCatalog.GetProfile(_currentWave);
             for (int i = 0; i < groupSize; i++)
             {
                 EnemyKind kind = EnemyArchetypeCatalog.ChooseSurvivalSpawnType(
@@ -131,7 +130,7 @@ namespace MaxFlix.Unity.Runtime
 
             if (_hordeSpawnQueue > 0 && _hordeSpawnTimer <= 0f && alive < cap)
             {
-                SurvivalDifficultyProfile difficulty = SurvivalDifficultyCatalog.GetProfile(_currentWave);
+                SurvivalDifficultyProfile difficulty = GetDifficultyProfile(_currentWave);
                 EnemyKind kind = EnemyArchetypeCatalog.ChooseSurvivalSpawnType(_currentWave, elapsed, Random.value);
                 float angle = Random.value * Mathf.PI * 2f;
                 SpawnEnemy(kind, difficulty, angle, radius + Random.Range(-0.45f, 0.45f));
@@ -179,7 +178,7 @@ namespace MaxFlix.Unity.Runtime
         private void SpawnMajorBoss(int majorBossWave)
         {
             EnemyKind kind = GetBossKind(majorBossWave);
-            SurvivalDifficultyProfile difficulty = SurvivalDifficultyCatalog.GetProfile(_currentWave);
+            SurvivalDifficultyProfile difficulty = GetDifficultyProfile(_currentWave);
             Vector3 spawn = GetSpawnPosition(Random.value * Mathf.PI * 2f, 16f);
             EnemyAgent boss = WarehouseWorldFactory.SpawnSurvivalEnemy(
                 _player, kind, spawn,
@@ -232,6 +231,17 @@ namespace MaxFlix.Unity.Runtime
             foreach (EnemyAgent enemy in enemies)
                 if (enemy != null && !enemy.IsDefeated) count++;
             return count;
+        }
+
+        private SurvivalDifficultyProfile GetDifficultyProfile(int wave)
+        {
+            SurvivalDifficultyProfile profile = SurvivalDifficultyCatalog.GetProfile(wave);
+            if (_mapProfile != null)
+            {
+                profile.EnemyHealthMultiplier *= _mapProfile.EnemyHealthMultiplier;
+                profile.EnemySpeedMultiplier *= _mapProfile.EnemySpeedMultiplier;
+            }
+            return profile;
         }
 
         private void SpawnEnemy(EnemyKind kind, SurvivalDifficultyProfile difficulty, float angle, float radius)
