@@ -82,9 +82,15 @@ namespace MaxFlix.Unity.Runtime
 
         private void Update()
         {
-            if (_modalOverlay != null) return;
-
             Keyboard keyboard = Keyboard.current;
+            if (_modalOverlay != null)
+            {
+                if (GameSession.Current != null && GameSession.Current.State == GameFlowState.Paused
+                    && keyboard != null && keyboard.escapeKey.wasPressedThisFrame)
+                    ResumeGame();
+                return;
+            }
+
             if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame)
             {
                 TogglePause();
@@ -208,7 +214,10 @@ namespace MaxFlix.Unity.Runtime
             border.effectColor = new Color(0.20f, 0.49f, 0.64f, 0.95f);
             border.effectDistance = new Vector2(2f, -2f);
 
-            CreateText(panelRect, title, new Vector2(0f, -30f), new Vector2(590f, 58f), 30, TextAnchor.MiddleCenter);
+            Text titleText = CreateText(panelRect, title, new Vector2(0f, -30f), new Vector2(590f, 58f), 30, TextAnchor.MiddleCenter);
+            titleText.rectTransform.anchorMin = new Vector2(0.5f, 1f);
+            titleText.rectTransform.anchorMax = new Vector2(0.5f, 1f);
+            titleText.rectTransform.pivot = new Vector2(0.5f, 1f);
             Text bodyText = CreateText(panelRect, body, new Vector2(0f, -112f), new Vector2(560f, 136f), 20, TextAnchor.MiddleCenter);
             bodyText.rectTransform.anchorMin = new Vector2(0.5f, 1f);
             bodyText.rectTransform.anchorMax = new Vector2(0.5f, 1f);
