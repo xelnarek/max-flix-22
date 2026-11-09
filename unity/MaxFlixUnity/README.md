@@ -21,14 +21,16 @@ The project deliberately does not import or overwrite the old game. New C# syste
 
 - Five operator IDs and baseline statistics are declared in Assets/Scripts/Runtime/OperatorCatalog.cs.
 - Operator 01 is selected by default.
-- Basic movement, jumping, camera follow, projectile attack and training enemy reactions are available.
-- The B4 layout is procedural so the first slice does not depend on unavailable source art files.
-- Touch controls are rendered by the HUD; keyboard, mouse and gamepad use Unity's New Input System.
-- The EventSystem uses InputSystemUIInputModule; the touch joystick and buttons remain compatible with simultaneous touch pointers.
+- Basic movement, camera follow, health, safe-area HUD and multi-touch joystick/buttons are available.
+- Each of the five operators now has a distinct first-pass primary attack and special ability; legacy base stats and cooldowns remain in OperatorCatalog.
+- Projectile hits support stun, slow, knockback, piercing and the returning WZ wrench; operator-specific hit thresholds, shield/sprint windows, double jump and summon support are implemented in the first combat pass.
+- Special ability has a separate touch button, visible cooldown and keyboard E shortcut.
+- The current B4 layout remains procedural; combat support models (WZ-404, three cats and MafiKapibary) are also procedural placeholders.
+- Keyboard, mouse, gamepad and multi-touch UI use Unity's New Input System; this code still requires an actual Unity Editor compile and device balancing pass.
 
 ## Not migrated yet
 
-Campaign progression, full Survival, all enemies and bosses, every weapon/passive/ability, PvP network client, account/cloud saves, Firebase, Google sign-in, ads/UMP, all legacy screens, achievements, easter eggs and release signing are tracked in docs/UNITY_MIGRATION_PLAN.md.
+Campaign progression, full Survival, all legacy enemy archetypes and bosses, the 12 Survival weapons/perk progression, exact legacy map geometry, PvP network client, account/cloud saves, Firebase, Google sign-in, ads/UMP, all legacy screens, achievements, easter eggs and release signing remain tracked in docs/UNITY_MIGRATION_PLAN.md. The new operator combat code is a first-pass port, not yet verified for exact gameplay parity or runtime performance.
 
 ## Build policy
 
