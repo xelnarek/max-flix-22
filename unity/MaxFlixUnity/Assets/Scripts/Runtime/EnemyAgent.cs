@@ -155,7 +155,8 @@ namespace MaxFlix.Unity.Runtime
 
         private void Update()
         {
-            if (_defeated || _target == null || _target.IsDefeated || _profile == null) return;
+            if (_defeated || _target == null || _target.IsDefeated || _profile == null
+                || (GameSession.Current != null && GameSession.Current.State != GameFlowState.Playing)) return;
 
             float deltaTime = Time.deltaTime;
             _attackTimer -= deltaTime;
