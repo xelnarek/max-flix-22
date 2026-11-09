@@ -74,6 +74,8 @@ Pierwszy commit Unity jest **fundamentem migracji i grywalnym wycinkiem technicz
 
 W tej fazie przeniesiono też źródłowe czasy ataków podstawowych oddzielnie dla Kampanii i Survival, mnożniki obrażeń Survival (0,62 zadawanych / 1,30 otrzymywanych), czas nietykalności po trafieniu 0,78 s oraz skalowanie cooldownu umiejętności (×1,25 Kampania / ×2 Survival).
 
+W podetapie 2B dodano katalog wszystkich 23 identyfikatorów przeciwników (z rozróżnieniem sztaplarki jako hazardu), źródłowe bazowe HP/prędkości dla archetypów oraz 17-elementową tabelę odblokowań i wag Survival. Pierwszy przebieg AI ma oddzielne rodziny: wręcz, dystans, wsparcie tarczą, taran/szarżę i fazę drugą bossów. B4 pokazuje na razie trzy archetypy testowe (Klient, AGV, Inspektor), nie pełną falę ani całą populację.
+
 **Ograniczenia:** to pierwszy port logiki, a nie zatwierdzona zgodność 1:1. Trzeba zweryfikować wartości i zachowanie w Unity Editor, porównać przebieg walki z wersją Three.js, zbalansować obrażenia/czasy, poprawić animacje i zastąpić obecne generowanie/niszczenie pocisków pulą obiektów. Nie ma jeszcze pełnej implementacji wszystkich archetypów przeciwników, AI bossów ani systemu dropów/perków.
 
 ### Etap 2 — pełny rdzeń walki i pięciu operatorów
