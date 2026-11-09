@@ -74,6 +74,17 @@ namespace MaxFlix.Unity.Runtime
             );
             player.Initialize(OperatorCatalog.Get(operatorId), _hud.Joystick, _hud);
 
+            if (mode == GameMode.Survival)
+            {
+                SurvivalWeaponController weaponController = player.GetComponentInParent<SurvivalWeaponController>();
+                SurvivalProgressionController progressionController = player.GetComponentInParent<SurvivalProgressionController>();
+                if (weaponController != null && progressionController != null)
+                {
+                    weaponController.Initialize(player, _hud, progressionController);
+                    progressionController.Initialize(player, _hud, weaponController);
+                }
+            }
+
             SurvivalMapProfile map = GameContentCatalog.GetMap(mapId);
             _hud.SetStatus(mode == GameMode.Survival
                 ? "SURVIVAL • " + map.DisplayName.ToUpperInvariant() + " • ZMIANA 01"
