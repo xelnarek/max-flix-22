@@ -98,12 +98,13 @@ test('Unity gameplay and UI use the pinned New Input System without legacy Input
 });
 
 test('Unity combat projectile visuals use shared materials and property blocks', async () => {
+  const projectile = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/CombatProjectile.cs');
   const kit = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorCombatKit.cs');
-  assert.match(kit, /private static Material _sharedProjectileMaterial/);
-  assert.match(kit, /renderer\.SetPropertyBlock\(_propertyBlock\)/);
-  assert.match(kit, /renderer\.sharedMaterial = _sharedProjectileMaterial/);
+  assert.match(projectile, /private static Material _sharedMaterial/);
+  assert.ok(projectile.includes("_renderer.SetPropertyBlock(_propertyBlock)"));
+  assert.ok(projectile.includes("_renderer.sharedMaterial = _sharedMaterial"));
   assert.match(kit, /SupportMaterials/);
-  assert.doesNotMatch(kit, /Material material = new Material\(shader\)/);
+  assert.ok(!kit.includes("Material material = new Material(shader)"));
 });
 
 

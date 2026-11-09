@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace MaxFlix.Unity.Runtime
@@ -35,6 +36,9 @@ namespace MaxFlix.Unity.Runtime
         private Renderer[] _renderers;
         private MaterialPropertyBlock _propertyBlock;
         private static EnemyAgent[] _separationCache = new EnemyAgent[0];
+        private static readonly Dictionary<Vector2Int, List<EnemyAgent>> SeparationBuckets =
+            new Dictionary<Vector2Int, List<EnemyAgent>>(64);
+        private const float SeparationCellSize = 3.6f;
         private static float _nextSeparationRefreshTime;
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
@@ -43,6 +47,12 @@ namespace MaxFlix.Unity.Runtime
         public EnemyKind Kind { get { return _profile != null ? _profile.Id : EnemyKind.Customer; } }
         public float CurrentHealth { get { return _health; } }
         public float MaxHealth { get { return _maxHealth; } }
+
+        public static EnemyAgent[] GetCachedAgents()
+        {
+            RefreshSeparationIndex();
+            return _separationCache;
+        }
 
         public void Initialize(PlayerController target, EnemyKind kind, float healthMultiplier = 1f, float speedMultiplier = 1f, float abilityRateMultiplier = 1f)
         {
@@ -155,7 +165,9 @@ namespace MaxFlix.Unity.Runtime
 
         private void Update()
         {
-            if (_defeated || _target == null || _target.IsDefeated || _profile == null) return;
+            if (_defeated || _target == null || _target.IsDefeated || _profile == null
+                || GameSession.Current == null
+                || GameSession.Current.State != GameFlowState.Playing) return;
 
             float deltaTime = Time.deltaTime;
             _attackTimer -= deltaTime;
@@ -272,9 +284,9 @@ namespace MaxFlix.Unity.Runtime
             Face(direction, deltaTime);
 
             if (_attackTimer > 0f) return;
-            EnemyAgent[] allies = FindObjectsByType<EnemyAgent>(FindObjectsSortMode.None);
+            RefreshSeparationIndex();
             int shielded = 0;
-            foreach (EnemyAgent ally in allies)
+            foreach (EnemyAgent ally in _separationCache)
             {
                 if (ally == null || ally == this || ally.IsDefeated) continue;
                 if ((ally.transform.position - transform.position).sqrMagnitude > 6.5f * 6.5f) continue;
@@ -341,48 +353,77 @@ namespace MaxFlix.Unity.Runtime
             Vector3 origin = transform.position + Vector3.up * 0.92f + transform.forward * 0.48f;
             Vector3 aim = _target.transform.position + Vector3.up * 0.82f - origin;
             if (aim.sqrMagnitude < 0.01f) aim = direction;
-            GameObject shot = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            shot.name = _profile.DisplayName + " attack";
-            shot.transform.position = origin;
-            shot.transform.localScale = Vector3.one * 0.34f;
-            Collider collider = shot.GetComponent<Collider>();
-            if (collider != null) collider.isTrigger = true;
-            Rigidbody body = shot.AddComponent<Rigidbody>();
-            body.useGravity = false;
-            EnemyAttackProjectile attack = shot.AddComponent<EnemyAttackProjectile>();
-            attack.Initialize(_target, _attackDamage, aim.normalized, 10.5f, _profile.AccentColor);
+            EnemyAttackProjectile.Spawn(
+                _target, _attackDamage, origin, aim.normalized, 10.5f, _profile.AccentColor);
+        }
+
+        private static Vector2Int GetSeparationCell(Vector3 position)
+        {
+            return new Vector2Int(
+                Mathf.FloorToInt(position.x / SeparationCellSize),
+                Mathf.FloorToInt(position.z / SeparationCellSize));
+        }
+
+        private static void RefreshSeparationIndex()
+        {
+            if (Time.time < _nextSeparationRefreshTime) return;
+
+            _separationCache = FindObjectsByType<EnemyAgent>(FindObjectsSortMode.None);
+            foreach (List<EnemyAgent> bucket in SeparationBuckets.Values)
+                bucket.Clear();
+
+            foreach (EnemyAgent enemy in _separationCache)
+            {
+                if (enemy == null || enemy.IsDefeated) continue;
+                Vector2Int cell = GetSeparationCell(enemy.transform.position);
+                if (!SeparationBuckets.TryGetValue(cell, out List<EnemyAgent> bucket))
+                {
+                    bucket = new List<EnemyAgent>(6);
+                    SeparationBuckets.Add(cell, bucket);
+                }
+                bucket.Add(enemy);
+            }
+
+            _nextSeparationRefreshTime = Time.time + 0.10f;
         }
 
         private void ApplySeparation(float deltaTime)
         {
             if (_controller == null || _target == null) return;
-            if (Time.time >= _nextSeparationRefreshTime)
-            {
-                _separationCache = FindObjectsByType<EnemyAgent>(FindObjectsSortMode.None);
-                _nextSeparationRefreshTime = Time.time + 0.16f;
-            }
+            RefreshSeparationIndex();
 
             Vector3 force = Vector3.zero;
-            foreach (EnemyAgent other in _separationCache)
+            Vector2Int originCell = GetSeparationCell(transform.position);
+            for (int cellX = -1; cellX <= 1; cellX++)
             {
-                if (other == null || other == this || other.IsDefeated) continue;
-                Vector3 offset = transform.position - other.transform.position;
-                offset.y = 0f;
-                float distanceSquared = offset.sqrMagnitude;
-                float desiredDistance = (_profile != null && _profile.IsBoss ? 1.48f : 1.12f)
-                    + (other._profile != null && other._profile.IsBoss ? 0.28f : 0f);
-                float desiredSquared = desiredDistance * desiredDistance;
-                if (distanceSquared >= desiredSquared) continue;
+                for (int cellZ = -1; cellZ <= 1; cellZ++)
+                {
+                    Vector2Int cell = new Vector2Int(originCell.x + cellX, originCell.y + cellZ);
+                    if (!SeparationBuckets.TryGetValue(cell, out List<EnemyAgent> bucket)) continue;
 
-                float distance = Mathf.Sqrt(Mathf.Max(0f, distanceSquared));
-                Vector3 direction;
-                if (distanceSquared < 0.0001f)
-                    direction = GetInstanceID() < other.GetInstanceID() ? Vector3.right : Vector3.left;
-                else
-                    direction = offset / distance;
+                    for (int i = 0; i < bucket.Count; i++)
+                    {
+                        EnemyAgent other = bucket[i];
+                        if (other == null || other == this || other.IsDefeated) continue;
+                        Vector3 offset = transform.position - other.transform.position;
+                        offset.y = 0f;
+                        float distanceSquared = offset.sqrMagnitude;
+                        float desiredDistance = (_profile != null && _profile.IsBoss ? 1.48f : 1.12f)
+                            + (other._profile != null && other._profile.IsBoss ? 0.28f : 0f);
+                        float desiredSquared = desiredDistance * desiredDistance;
+                        if (distanceSquared >= desiredSquared) continue;
 
-                float penetration = (desiredDistance - distance) / desiredDistance;
-                force += direction * penetration;
+                        float distance = Mathf.Sqrt(Mathf.Max(0f, distanceSquared));
+                        Vector3 direction;
+                        if (distanceSquared < 0.0001f)
+                            direction = GetInstanceID() < other.GetInstanceID() ? Vector3.right : Vector3.left;
+                        else
+                            direction = offset / distance;
+
+                        float penetration = (desiredDistance - distance) / desiredDistance;
+                        force += direction * penetration;
+                    }
+                }
             }
 
             Vector3 playerOffset = transform.position - _target.transform.position;

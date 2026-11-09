@@ -72,7 +72,6 @@ namespace MaxFlix.Unity.Runtime
         private PlayerController _player;
         private HudController _hud;
         private SurvivalProgressionController _progression;
-        private float _enemyRefreshRemaining;
         private float _dispatchRemaining;
         private float _damageMultiplier = 1f;
         private float _reloadMultiplier = 1f;
@@ -96,7 +95,6 @@ namespace MaxFlix.Unity.Runtime
             _weapons.Clear();
             _activeShots.Clear();
             _dispatchRemaining = 0f;
-            _enemyRefreshRemaining = 0f;
             _initialized = true;
             UpdateHudSummary();
         }
@@ -215,12 +213,7 @@ namespace MaxFlix.Unity.Runtime
                 return;
 
             float deltaTime = Time.deltaTime;
-            _enemyRefreshRemaining -= deltaTime;
-            if (_enemyRefreshRemaining <= 0f)
-            {
-                _enemyCache = FindObjectsByType<EnemyAgent>(FindObjectsSortMode.None);
-                _enemyRefreshRemaining = 0.22f;
-            }
+            _enemyCache = EnemyAgent.GetCachedAgents();
 
             _dispatchRemaining = Mathf.Max(0f, _dispatchRemaining - deltaTime);
             _overdriveRemaining = Mathf.Max(0f, _overdriveRemaining - deltaTime);

@@ -31,12 +31,15 @@ namespace MaxFlix.Unity.Runtime
             CreatePalletStack(new Vector3(11f, 0f, -5f));
             CreateMapSetDressing(map);
 
+            CombatProjectile.Prewarm(3);
             PlayerController player = CreateOperator(OperatorCatalog.Get(GameSession.Current.SelectedOperator), new Vector3(0f, 0.1f, -9f));
             CreateCamera(player.transform);
             if (GameSession.Current.Mode == GameMode.Survival)
             {
+                EnemyAttackProjectile.Prewarm(12);
                 root.AddComponent<SurvivalWeaponController>();
                 root.AddComponent<SurvivalProgressionController>();
+                root.AddComponent<SurvivalPerformanceGovernor>();
                 SurvivalWaveDirector director = root.AddComponent<SurvivalWaveDirector>();
                 director.Initialize(player);
             }

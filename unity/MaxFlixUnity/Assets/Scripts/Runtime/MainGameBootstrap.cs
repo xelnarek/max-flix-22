@@ -78,10 +78,13 @@ namespace MaxFlix.Unity.Runtime
             {
                 SurvivalWeaponController weaponController = player.GetComponentInParent<SurvivalWeaponController>();
                 SurvivalProgressionController progressionController = player.GetComponentInParent<SurvivalProgressionController>();
+                SurvivalWaveDirector waveDirector = player.GetComponentInParent<SurvivalWaveDirector>();
+                SurvivalPerformanceGovernor performanceGovernor = player.GetComponentInParent<SurvivalPerformanceGovernor>();
                 if (weaponController != null && progressionController != null)
                 {
                     weaponController.Initialize(player, _hud, progressionController);
                     progressionController.Initialize(player, _hud, weaponController);
+                    performanceGovernor?.Initialize(waveDirector, _hud);
                 }
                 else
                 {

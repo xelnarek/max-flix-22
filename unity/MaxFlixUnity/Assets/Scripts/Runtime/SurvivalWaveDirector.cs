@@ -31,6 +31,8 @@ namespace MaxFlix.Unity.Runtime
         private int _hordeSpawnQueue;
         private int _hordeSpawned;
         private float _hordeStartAngle;
+        private EnemyAgent _trackedRareSebix;
+        private EnemyAgent _trackedRareBosman;
         private float _bossWarningRemaining;
 
         public int CurrentWave { get { return _currentWave; } }
@@ -44,6 +46,8 @@ namespace MaxFlix.Unity.Runtime
             _mapProfile = GameContentCatalog.GetMap(GameSession.Current != null
                 ? GameSession.Current.SelectedMap : WarehouseMapId.WarehouseB4);
             _currentWave = 1;
+            _trackedRareSebix = null;
+            _trackedRareBosman = null;
             _lastBossWave = 0;
             _nextHordeAt = FirstHordeAtSeconds;
             _spawnTimer = 1.5f;
@@ -213,7 +217,7 @@ namespace MaxFlix.Unity.Runtime
 
         private bool HasActiveMajorBoss()
         {
-            EnemyAgent[] enemies = FindObjectsByType<EnemyAgent>(FindObjectsSortMode.None);
+            EnemyAgent[] enemies = EnemyAgent.GetCachedAgents();
             foreach (EnemyAgent enemy in enemies)
             {
                 if (enemy == null || enemy.IsDefeated) continue;
@@ -226,7 +230,7 @@ namespace MaxFlix.Unity.Runtime
 
         private int CountAliveEnemies()
         {
-            EnemyAgent[] enemies = FindObjectsByType<EnemyAgent>(FindObjectsSortMode.None);
+            EnemyAgent[] enemies = EnemyAgent.GetCachedAgents();
             int count = 0;
             foreach (EnemyAgent enemy in enemies)
                 if (enemy != null && !enemy.IsDefeated) count++;
@@ -239,7 +243,9 @@ namespace MaxFlix.Unity.Runtime
             float radius = Random.Range(11.5f, 15.5f);
             Vector3 spawn = GetSpawnPosition(angle, radius);
 
-            if (_currentWave >= 8 && !HasActiveEnemyKind(EnemyKind.Sebix) && Random.value < 0.065f)
+            bool sebixAlreadyActive = (_trackedRareSebix != null && !_trackedRareSebix.IsDefeated)
+                || HasActiveEnemyKind(EnemyKind.Sebix);
+            if (_currentWave >= 8 && !sebixAlreadyActive && Random.value < 0.065f)
             {
                 EnemyAgent sebix = WarehouseWorldFactory.SpawnSurvivalEnemy(
                     _player, EnemyKind.Sebix, spawn,
@@ -248,13 +254,16 @@ namespace MaxFlix.Unity.Runtime
                     difficulty.EnemyAbilityRateMultiplier);
                 if (sebix != null)
                 {
+                    _trackedRareSebix = sebix;
                     sebix.name = "Sebix M • Rzadki operator turbo";
                     FindFirstObjectByType<HudController>()?.SetStatus("RZADKIE SPOTKANIE • SEBIX M");
                     return;
                 }
             }
 
-            if (_currentWave >= 6 && !HasActiveEnemyKind(EnemyKind.BosmanKrakow) && Random.value < 0.04f)
+            bool bosmanAlreadyActive = (_trackedRareBosman != null && !_trackedRareBosman.IsDefeated)
+                || HasActiveEnemyKind(EnemyKind.BosmanKrakow);
+            if (_currentWave >= 6 && !bosmanAlreadyActive && Random.value < 0.04f)
             {
                 EnemyAgent bosman = WarehouseWorldFactory.SpawnSurvivalEnemy(
                     _player, EnemyKind.BosmanKrakow, spawn,
@@ -263,6 +272,7 @@ namespace MaxFlix.Unity.Runtime
                     difficulty.EnemyAbilityRateMultiplier);
                 if (bosman != null)
                 {
+                    _trackedRareBosman = bosman;
                     bosman.name = "Bosman Kraków • Rzadki patrol rampy";
                     FindFirstObjectByType<HudController>()?.SetStatus("RZADKIE SPOTKANIE • BOSMAN KRAKÓW");
                     return;
@@ -280,7 +290,7 @@ namespace MaxFlix.Unity.Runtime
 
         private bool HasActiveEnemyKind(EnemyKind kind)
         {
-            EnemyAgent[] enemies = FindObjectsByType<EnemyAgent>(FindObjectsSortMode.None);
+            EnemyAgent[] enemies = EnemyAgent.GetCachedAgents();
             foreach (EnemyAgent enemy in enemies)
                 if (enemy != null && !enemy.IsDefeated && enemy.Kind == kind) return true;
             return false;
