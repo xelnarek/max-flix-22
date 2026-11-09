@@ -14833,6 +14833,9 @@ export class PaleciakiGameEngine {
   }
 
   private takeDamage(reason: string, amount: number = 1) {
+    // Death is a terminal state for this run. Ignore residual collisions from
+    // the same simulation frame so the result callback can only fire once.
+    if (this.state !== 'playing' || this.hp <= 0) return;
     if (this.invulnerableTimer > 0) return;
 
     if (this.marcinReclamationTimer > 0) {
