@@ -35,6 +35,7 @@ namespace MaxFlix.Unity.Runtime
             CreateCamera(player.transform);
             if (GameSession.Current.Mode == GameMode.Survival)
             {
+                EnemyAttackProjectile.Prewarm(12);
                 root.AddComponent<SurvivalWeaponController>();
                 root.AddComponent<SurvivalProgressionController>();
                 SurvivalWaveDirector director = root.AddComponent<SurvivalWaveDirector>();
