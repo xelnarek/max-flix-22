@@ -488,21 +488,6 @@ export class PvpNetworkSession implements IPvpSession {
     return true;
   }
 
-  public setPaused(paused: boolean) {
-    this.paused = paused;
-    this.lastTime = Date.now();
-    if (paused) {
-      this.p1Input = {
-        moveX: 0, moveZ: 0, aimAngle: this.p1Input.aimAngle,
-        isFiring: false, wantFire: false, wantDash: false, wantAbility: false,
-      };
-      this.p2Input = {
-        moveX: 0, moveZ: 0, aimAngle: this.p2Input.aimAngle,
-        isFiring: false, wantFire: false, wantDash: false, wantAbility: false,
-      };
-    }
-  }
-
   public setReady(ready: boolean) {
     this.send({ type: 'set_ready', ready });
   }
@@ -692,6 +677,21 @@ export class PvpLocalBotSession implements IPvpSession {
 
   public sendInput(intent: PvpInputIntent) {
     this.p1Input = { ...intent };
+  }
+
+  public setPaused(paused: boolean) {
+    this.paused = paused;
+    this.lastTime = Date.now();
+    if (paused) {
+      this.p1Input = {
+        moveX: 0, moveZ: 0, aimAngle: this.p1Input.aimAngle,
+        isFiring: false, wantFire: false, wantDash: false, wantAbility: false,
+      };
+      this.p2Input = {
+        moveX: 0, moveZ: 0, aimAngle: this.p2Input.aimAngle,
+        isFiring: false, wantFire: false, wantDash: false, wantAbility: false,
+      };
+    }
   }
 
   public requestRematch() {
