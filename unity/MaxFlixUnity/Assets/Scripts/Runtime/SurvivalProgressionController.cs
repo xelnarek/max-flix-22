@@ -330,9 +330,9 @@ namespace MaxFlix.Unity.Runtime
             if (excluded != null) pool.RemoveAll(card => excluded.Contains(card.Id));
             if (pool.Count == 0)
             {
-                AddPassive(pool, "damage", "WZMOCNIONA AMUNICJA", "+12% obrażeń broni Survival.", "◆", 12, true);
-                AddPassive(pool, "rapid", "RYTM ATAKU", "Skrócenie przeładowania broni o 3%.", "⚡", 12, true);
-                AddPassive(pool, "boots", "BUTY SPRINTU", "+6% prędkości poruszania się.", "➤", 12, true);
+                AddFallbackCard(pool, "damage", "REZERWA AMUNICJI", "+12% obrażeń broni Survival.", "◆");
+                AddFallbackCard(pool, "rapid", "REZERWA PRZEŁADOWANIA", "Przyspiesza cykl strzałów broni Survival.", "⚡");
+                AddFallbackCard(pool, "boots", "REZERWA MOBILNOŚCI", "Zwiększa prędkość poruszania się.", "➤");
             }
 
             Shuffle(pool);
@@ -371,6 +371,19 @@ namespace MaxFlix.Unity.Runtime
             {
                 Id = id,
                 Title = title + (maxStacks > 1 ? " • " + (stacks + 1) + "/" + maxStacks : string.Empty),
+                Description = description,
+                Icon = icon,
+                HasWeapon = false
+            });
+        }
+
+        private void AddFallbackCard(List<SurvivalUpgradeCard> pool, string id, string title,
+            string description, string icon)
+        {
+            pool.Add(new SurvivalUpgradeCard
+            {
+                Id = id + ":fallback:" + _level,
+                Title = title,
                 Description = description,
                 Icon = icon,
                 HasWeapon = false
@@ -495,9 +508,7 @@ namespace MaxFlix.Unity.Runtime
 
             Text description = CreateText(rect, card.Description,
                 new Vector2(0.5f, 0.5f), Vector2.zero,
-                new Vector2(0f, 0f), new Vector2(0f, 0f),
-                grid.cellSize.y > 180f ? new Vector2(0f, 112f) : new Vector2(0f, 70f),
-                17, TextAnchor.MiddleCenter, new Color(0.88f, 0.92f, 0.96f));
+                Vector2.zero, 17, TextAnchor.MiddleCenter, new Color(0.88f, 0.92f, 0.96f));
             description.rectTransform.anchorMin = new Vector2(0f, 0f);
             description.rectTransform.anchorMax = new Vector2(1f, 1f);
             description.rectTransform.offsetMin = new Vector2(14f, 12f);
@@ -514,12 +525,13 @@ namespace MaxFlix.Unity.Runtime
                 new Vector2(0.5f, 0f), new Vector2(0f, 20f),
                 new Vector2(900f, 34f), 16, TextAnchor.MiddleCenter, new Color(0.66f, 0.80f, 0.90f));
 
+            bool canReroll = _rerolls > 0 && !_isBossReward;
             _rerollButton = CreateButton(panelRect,
-                _rerolls > 0 ? "PRZERZUĆ (" + _rerolls + ")" : "BRAK PRZERZUTÓW",
+                canReroll ? "PRZERZUĆ (" + _rerolls + ")" : "PRZERZUT NIEDOSTĘPNY",
                 new Vector2(0.5f, 0f), new Vector2(0f, 66f), new Vector2(280f, 62f),
-                new Color(0.18f, 0.27f, 0.37f, 1f), delegate { RerollCards(); }, _rerolls > 0);
+                new Color(0.18f, 0.27f, 0.37f, 1f), delegate { RerollCards(); }, canReroll);
             _rerollLabel = _rerollButton.GetComponentInChildren<Text>();
-            if (_rerollLabel != null) _rerollLabel.text = _rerolls > 0 ? "PRZERZUĆ (" + _rerolls + ")" : "BRAK PRZERZUTÓW";
+            if (_rerollLabel != null) _rerollLabel.text = canReroll ? "PRZERZUĆ (" + _rerolls + ")" : "PRZERZUT NIEDOSTĘPNY";
         }
 
         private void ChooseCard(SurvivalUpgradeCard card)
@@ -548,11 +560,14 @@ namespace MaxFlix.Unity.Runtime
             }
             else
             {
-                int stacks = GetPassiveStacks(card.Id) + 1;
-                _passiveStacks[card.Id] = stacks;
+                string passiveId = card.Id;
+                int fallbackSeparator = passiveId.IndexOf(":fallback:", StringComparison.Ordinal);
+                if (fallbackSeparator >= 0) passiveId = passiveId.Substring(0, fallbackSeparator);
+                int stacks = GetPassiveStacks(passiveId) + 1;
+                _passiveStacks[passiveId] = stacks;
                 float strength = card.Strength;
-                _weapons.ApplyPassive(card.Id, strength);
-                switch (card.Id)
+                _weapons.ApplyPassive(passiveId, strength);
+                switch (passiveId)
                 {
                     case "boots":
                         _player.SetSurvivalMoveMultiplier(Mathf.Min(1.38f,
