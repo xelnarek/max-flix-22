@@ -91,6 +91,28 @@ namespace MaxFlix.Unity.Runtime
             float slowMultiplier,
             Vector3 knockbackVelocity)
         {
+            ApplyCombatHitInternal(damage, stunSeconds, slowSeconds, slowMultiplier, knockbackVelocity, null);
+        }
+
+        public void ApplyWeaponHit(
+            float damage,
+            float stunSeconds,
+            float slowSeconds,
+            float slowMultiplier,
+            Vector3 knockbackVelocity,
+            SurvivalWeaponKind weapon)
+        {
+            ApplyCombatHitInternal(damage, stunSeconds, slowSeconds, slowMultiplier, knockbackVelocity, weapon);
+        }
+
+        private void ApplyCombatHitInternal(
+            float damage,
+            float stunSeconds,
+            float slowSeconds,
+            float slowMultiplier,
+            Vector3 knockbackVelocity,
+            SurvivalWeaponKind? weaponSource)
+        {
             if (_defeated || float.IsNaN(damage) || float.IsInfinity(damage) || damage <= 0f) return;
 
             GameMode mode = GameSession.Current != null ? GameSession.Current.Mode : GameMode.Campaign;
@@ -98,7 +120,13 @@ namespace MaxFlix.Unity.Runtime
             if (_supportShieldRemaining > 0f) balancedDamage *= 0.62f;
             if (balancedDamage <= 0f) return;
 
+            float actualDamage = Mathf.Min(_health, balancedDamage);
             _health -= balancedDamage;
+            if (mode == GameMode.Survival)
+            {
+                if (weaponSource.HasValue) SurvivalDamageTracker.RecordWeaponDamage(weaponSource.Value, actualDamage);
+                else SurvivalDamageTracker.RecordOperatorDamage(actualDamage);
+            }
             _hitFlashTimer = 0.13f;
             _stunRemaining = Mathf.Max(_stunRemaining, Mathf.Clamp(stunSeconds, 0f, 3f));
             if (slowSeconds > _slowRemaining)
