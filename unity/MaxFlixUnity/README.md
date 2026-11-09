@@ -26,7 +26,8 @@ The project deliberately does not import or overwrite the old game. New C# syste
 - Projectile hits support stun, slow, knockback, piercing and the returning WZ wrench; operator-specific hit thresholds, shield/sprint windows, double jump and summon support are implemented in the first combat pass.
 - CombatBalanceCatalog now preserves the source Campaign/Survival primary-attack cadence, special cooldown scaling, Survival outgoing/incoming damage modifiers and 0.78 s Survival hit-invulnerability window.
 - Special ability has a separate touch button, visible cooldown and keyboard E shortcut.
-- The current B4 layout remains procedural; combat support models (WZ-404, three cats and MafiKapibary) are also procedural placeholders.
+- EnemyArchetypeCatalog contains all 23 legacy enemy IDs (forklift is classified as a world hazard) and the 17-entry Survival spawn unlock/weight roster. The first AI pass separates melee chasers, ranged attackers, support units, chargers and boss phase changes. The B4 slice currently instantiates only the Customer, AGV and Inspector examples.
+- The current B4 layout remains procedural; enemy/operator/support models are readable low-poly placeholders, not the final imported rigs.
 - Keyboard, mouse, gamepad and multi-touch UI use Unity's New Input System; this code still requires an actual Unity Editor compile and device balancing pass.
 
 ## Not migrated yet
