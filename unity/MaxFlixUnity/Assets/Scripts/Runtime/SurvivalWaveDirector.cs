@@ -95,28 +95,8 @@ namespace MaxFlix.Unity.Runtime
                 return;
             }
 
-            if (_currentWave >= 6 && alive < cap && !HasActiveMajorBoss() && Random.value < 0.04f)
-            {
-                Vector3 rareBossSpawn = GetSpawnPosition(Random.value * Mathf.PI * 2f, 16f);
-                EnemyAgent rareBoss = WarehouseWorldFactory.SpawnSurvivalEnemy(
-                    _player, EnemyKind.BosmanKrakow, rareBossSpawn,
-                    profile.EnemyHealthMultiplier, profile.EnemySpeedMultiplier,
-                    profile.EnemyAbilityRateMultiplier);
-                if (rareBoss != null)
-                {
-                    rareBoss.name = "Bosman Kraków • Rzadki patrol rampy";
-                    _spawnTimer = profile.SpawnIntervalSeconds;
-                    FindFirstObjectByType<HudController>()?.SetStatus("RZADKIE SPOTKANIE • BOSMAN KRAKÓW");
-                    return;
-                }
-            }
-
             for (int i = 0; i < groupSize; i++)
-            {
-                EnemyKind kind = EnemyArchetypeCatalog.ChooseSurvivalSpawnType(
-                    _currentWave, elapsed, Random.value);
-                SpawnEnemy(kind, profile, Random.value * Mathf.PI * 2f, Random.Range(11.5f, 15.5f));
-            }
+                SpawnRegularSurvivalEnemy(profile, elapsed);
 
             _spawnTimer = profile.SpawnIntervalSeconds;
         }
@@ -251,6 +231,59 @@ namespace MaxFlix.Unity.Runtime
             foreach (EnemyAgent enemy in enemies)
                 if (enemy != null && !enemy.IsDefeated) count++;
             return count;
+        }
+
+        private void SpawnRegularSurvivalEnemy(SurvivalDifficultyProfile difficulty, float elapsed)
+        {
+            float angle = Random.value * Mathf.PI * 2f;
+            float radius = Random.Range(11.5f, 15.5f);
+            Vector3 spawn = GetSpawnPosition(angle, radius);
+
+            if (_currentWave >= 8 && !HasActiveEnemyKind(EnemyKind.Sebix) && Random.value < 0.065f)
+            {
+                EnemyAgent sebix = WarehouseWorldFactory.SpawnSurvivalEnemy(
+                    _player, EnemyKind.Sebix, spawn,
+                    difficulty.EnemyHealthMultiplier,
+                    difficulty.EnemySpeedMultiplier,
+                    difficulty.EnemyAbilityRateMultiplier);
+                if (sebix != null)
+                {
+                    sebix.name = "Sebix M • Rzadki operator turbo";
+                    FindFirstObjectByType<HudController>()?.SetStatus("RZADKIE SPOTKANIE • SEBIX M");
+                    return;
+                }
+            }
+
+            if (_currentWave >= 6 && !HasActiveEnemyKind(EnemyKind.BosmanKrakow) && Random.value < 0.04f)
+            {
+                EnemyAgent bosman = WarehouseWorldFactory.SpawnSurvivalEnemy(
+                    _player, EnemyKind.BosmanKrakow, spawn,
+                    difficulty.EnemyHealthMultiplier,
+                    difficulty.EnemySpeedMultiplier,
+                    difficulty.EnemyAbilityRateMultiplier);
+                if (bosman != null)
+                {
+                    bosman.name = "Bosman Kraków • Rzadki patrol rampy";
+                    FindFirstObjectByType<HudController>()?.SetStatus("RZADKIE SPOTKANIE • BOSMAN KRAKÓW");
+                    return;
+                }
+            }
+
+            EnemyKind kind = EnemyArchetypeCatalog.ChooseSurvivalSpawnType(
+                _currentWave, elapsed, Random.value);
+            WarehouseWorldFactory.SpawnSurvivalEnemy(
+                _player, kind, spawn,
+                difficulty.EnemyHealthMultiplier,
+                difficulty.EnemySpeedMultiplier,
+                difficulty.EnemyAbilityRateMultiplier);
+        }
+
+        private bool HasActiveEnemyKind(EnemyKind kind)
+        {
+            EnemyAgent[] enemies = FindObjectsByType<EnemyAgent>(FindObjectsSortMode.None);
+            foreach (EnemyAgent enemy in enemies)
+                if (enemy != null && !enemy.IsDefeated && enemy.Kind == kind) return true;
+            return false;
         }
 
         private SurvivalDifficultyProfile GetDifficultyProfile(int wave)
