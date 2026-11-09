@@ -13,6 +13,8 @@ namespace MaxFlix.Unity.Runtime
         private Text _healthText;
         private Text _helpText;
         private Text _abilityButtonLabel;
+        private Text _progressText;
+        private Text _weaponsText;
         private Button _abilityButton;
         private Button _pauseButton;
         private GameObject _modalOverlay;
@@ -66,6 +68,18 @@ namespace MaxFlix.Unity.Runtime
             if (_statusText != null) _statusText.text = status;
         }
 
+        public void SetSurvivalProgress(int level, int xp, int xpToNext, string rankName)
+        {
+            if (_progressText != null)
+                _progressText.text = string.Format("LV {0:00}  •  {1}  •  XP {2}/{3}", level, rankName, xp, xpToNext);
+        }
+
+        public void SetWeaponsSummary(string summary)
+        {
+            if (_weaponsText == null) return;
+            _weaponsText.text = string.IsNullOrWhiteSpace(summary) ? string.Empty : summary;
+        }
+
         public void SetAbilityState(float remaining, float maximum)
         {
             if (_abilityButton == null || _abilityButtonLabel == null) return;
@@ -110,8 +124,16 @@ namespace MaxFlix.Unity.Runtime
             _healthText.rectTransform.anchorMax = new Vector2(1f, 1f);
             _healthText.rectTransform.pivot = new Vector2(1f, 1f);
 
+            _progressText = CreateText(root, "LV 01  •  NOWICJUSZ  •  XP 0/9",
+                new Vector2(24f, -74f), new Vector2(620f, 34f), 14, TextAnchor.MiddleLeft);
+            _weaponsText = CreateText(root, string.Empty,
+                new Vector2(0f, 28f), new Vector2(1500f, 34f), 13, TextAnchor.MiddleCenter);
+            _weaponsText.rectTransform.anchorMin = new Vector2(0.5f, 0f);
+            _weaponsText.rectTransform.anchorMax = new Vector2(0.5f, 0f);
+            _weaponsText.rectTransform.pivot = new Vector2(0.5f, 0f);
+
             _helpText = CreateText(root, "PC: WASD / SPACE / J / E   •   EKRAN: joystick + SKOK + ATAK + SPECJALNA",
-                new Vector2(0f, -98f), new Vector2(1040f, 42f), 17, TextAnchor.MiddleCenter);
+                new Vector2(0f, -150f), new Vector2(1040f, 30f), 15, TextAnchor.MiddleCenter);
             _helpText.rectTransform.anchorMin = new Vector2(0.5f, 1f);
             _helpText.rectTransform.anchorMax = new Vector2(0.5f, 1f);
             _helpText.rectTransform.pivot = new Vector2(0.5f, 1f);
