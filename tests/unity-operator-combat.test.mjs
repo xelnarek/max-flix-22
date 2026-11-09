@@ -295,7 +295,8 @@ test('Unity Survival weapon behaviors use pooled shots, homing, orbiting, ricoch
   const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
   assert.match(weapons, /PoolPerShapeLimit = 28/);
   assert.match(weapons, /_sharedMaterial/);
-  assert.match(weapons, /_enemyRefreshRemaining = 0\.22f/);
+  assert.match(weapons, /EnemyAgent\.GetCachedAgents\(\)/);
+  assert.doesNotMatch(weapons, /_enemyRefreshRemaining/);
   for (const id of [
     'PalletCannon', 'DiamondSaw', 'GlueMine', 'KfcBomber', 'PiorunDrone',
     'ForkliftBolter', 'ScannerPulse', 'OrbitBlades', 'CalacattaShards',
