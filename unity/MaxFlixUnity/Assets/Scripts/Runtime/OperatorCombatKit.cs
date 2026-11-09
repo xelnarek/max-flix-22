@@ -123,20 +123,10 @@ namespace MaxFlix.Unity.Runtime
                 }
                 case OperatorId.Mateusz:
                 {
-                    _mateuszHitCount++;
                     SpawnProjectile(origin, transform.forward, PrimitiveType.Sphere,
                         _profile.SecondaryColor, _profile.BasicAttackDamageMultiplier,
-                        20f, 0, 0.22f, 1.1f, 0.58f, 0f, false, 1.4f);
-                    if (_mateuszHitCount % 9 == 0)
-                    {
-                        _sprintRemaining = 3.2f;
-                        _invulnerabilityRemaining = 1.25f;
-                        _hud?.SetStatus("SPEEDRUN • SPRINT + NIETYKALNOŚĆ");
-                    }
-                    else
-                    {
-                        _hud?.SetStatus("IMPULS PARALIZATORA • ELEKTRYZACJA");
-                    }
+                        20f, 0, 0.22f, 1.1f, 0.58f, 0f, false, 1.4f, true);
+                    _hud?.SetStatus("IMPULS PARALIZATORA • ELEKTRYZACJA");
                     break;
                 }
                 case OperatorId.Piotr:
@@ -148,6 +138,17 @@ namespace MaxFlix.Unity.Runtime
                     break;
                 }
             }
+        }
+
+        public void OnPrimaryHit()
+        {
+            if (_profile == null || _profile.Id != OperatorId.Mateusz) return;
+            _mateuszHitCount++;
+            if (_mateuszHitCount % 9 != 0) return;
+
+            _sprintRemaining = 3.2f;
+            _invulnerabilityRemaining = 1.25f;
+            _hud?.SetStatus("SPEEDRUN • SPRINT + NIETYKALNOŚĆ");
         }
 
         public bool TryActivateAbility(GameMode mode)
@@ -242,7 +243,7 @@ namespace MaxFlix.Unity.Runtime
 
             CombatProjectile impact = projectile.AddComponent<CombatProjectile>();
             impact.Initialize(damage, 3.2f, transform, speed, pierce, stun,
-                slowDuration, slowMultiplier, knockback, returnToOwner, range);
+                slowDuration, slowMultiplier, knockback, returnToOwner, range, countsForMateuszPassive);
         }
 
         private void DamageNearbyEnemies(float radius, float damage, float stun, float knockback)
