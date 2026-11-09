@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CharacterDef, CharacterId } from './types.ts';
+import { getB4VisualTexture, createB4SpriteDecal } from './b4AssetPack.ts';
 
 // Cached procedural textures
 let floorTexture: THREE.CanvasTexture | null = null;
@@ -1818,15 +1819,20 @@ export function createTilePallet(tier = 1, tileType: 'calacatta' | 'nero' | 'woo
   const group = new THREE.Group();
   group.name = 'tile_pallet';
 
-  // Wooden EUR Pallet slats
-  const woodMat = new THREE.MeshStandardMaterial({ color: 0x92653a, roughness: 0.85 });
+  // Original B4 asset pack: distinct timber grain and real freight-carton print.
+  const woodMat = new THREE.MeshStandardMaterial({
+    map: getB4VisualTexture('pallet'), color: 0xffffff, roughness: 0.9, metalness: 0.02,
+  });
+  applyIndustrialPbr(woodMat, 0.012);
   const palletBase = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.14, 1.0), woodMat);
   palletBase.position.y = 0.07;
   palletBase.castShadow = true;
   group.add(palletBase);
 
   // Stacked Tile Boxes
-  const boxMat = new THREE.MeshStandardMaterial({ map: getTileBoxTexture(), roughness: 0.6 });
+  const boxMat = new THREE.MeshStandardMaterial({
+    map: getB4VisualTexture('carton'), color: 0xffffff, roughness: 0.84, metalness: 0.01,
+  });
   const boxCount = tier === 1 ? 4 : 8;
 
   for (let i = 0; i < boxCount; i++) {
@@ -2015,9 +2021,15 @@ export function createWarehouseRack(width = 4.0, height = 3.8, depth = 1.2): THR
   const group = new THREE.Group();
   group.name = 'warehouse_rack';
 
-  const blueMat = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.4, metalness: 0.45 });
-  const orangeBeamMat = new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.35, metalness: 0.4 });
-  const meshDeckMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.6, metalness: 0.65 });
+  const blueMat = new THREE.MeshStandardMaterial({
+    map: getB4VisualTexture('steel'), color: 0x4c88b8, roughness: 0.48, metalness: 0.52,
+  });
+  const orangeBeamMat = new THREE.MeshStandardMaterial({
+    map: getB4VisualTexture('hazard'), color: 0xf4a72c, roughness: 0.42, metalness: 0.28,
+  });
+  const meshDeckMat = new THREE.MeshStandardMaterial({
+    map: getB4VisualTexture('steel'), color: 0x77899b, roughness: 0.68, metalness: 0.48,
+  });
   applyIndustrialPbr(blueMat, 0.022);
   applyIndustrialPbr(orangeBeamMat, 0.018);
   applyIndustrialPbr(meshDeckMat, 0.026);
@@ -4993,6 +5005,13 @@ export function createZombieWorkerEnemyModel(): {
   body.rotation.x = 0.15;
   body.castShadow = true;
   group.add(body);
+
+  // Original four-frame sprite atlas becomes a stitched high-visibility BHP
+  // patch, tying the 3D enemy silhouette to the new visual asset family.
+  const zombiePatch = createB4SpriteDecal('zombie', 0.17, 0.17);
+  zombiePatch.position.set(0, 0.57, 0.128);
+  zombiePatch.rotation.x = 0.15;
+  group.add(zombiePatch);
 
   // Head
   const head = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.26, 0.26), zombieSkinMat);
