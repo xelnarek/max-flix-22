@@ -62,7 +62,7 @@ jobs:
 
       - name: Compile Unity Web player (WebGPU with WebGL 2 fallback)
         if: inputs.target == 'WebGL' || inputs.target == 'WebGL + Android APK'
-        uses: game-ci/unity-builder@v4
+        uses: game-ci/unity-builder@v4.8.2
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
         with:
@@ -75,7 +75,7 @@ jobs:
 
       - name: Compile Android development APK (ARM64 / IL2CPP)
         if: inputs.target == 'Android APK' || inputs.target == 'WebGL + Android APK'
-        uses: game-ci/unity-builder@v4
+        uses: game-ci/unity-builder@v4.8.2
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
         with:
@@ -95,7 +95,7 @@ jobs:
 
       - name: Compile signed Google Play App Bundle
         if: inputs.target == 'Android AAB'
-        uses: game-ci/unity-builder@v4
+        uses: game-ci/unity-builder@v4.8.2
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
         with:
