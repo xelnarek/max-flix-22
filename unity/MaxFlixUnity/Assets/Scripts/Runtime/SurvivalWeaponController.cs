@@ -215,12 +215,7 @@ namespace MaxFlix.Unity.Runtime
                 return;
 
             float deltaTime = Time.deltaTime;
-            _enemyRefreshRemaining -= deltaTime;
-            if (_enemyRefreshRemaining <= 0f)
-            {
-                _enemyCache = FindObjectsByType<EnemyAgent>(FindObjectsSortMode.None);
-                _enemyRefreshRemaining = 0.22f;
-            }
+            _enemyCache = EnemyAgent.GetCachedAgents();
 
             _dispatchRemaining = Mathf.Max(0f, _dispatchRemaining - deltaTime);
             _overdriveRemaining = Mathf.Max(0f, _overdriveRemaining - deltaTime);
