@@ -3067,6 +3067,29 @@ class PaleciakiScene extends xb.Script {
       startX = origin.x;
       startY = origin.y;
 
+      // In PvP the primary shot sits directly above the active movement stick,
+      // shifted slightly left so both thumbs have independent, comfortable lanes.
+      if (isPvpTouch) {
+        const fireControl = document.getElementById('pvp-fire-control') as HTMLElement | null;
+        if (fireControl) {
+          const fireSize = fireControlSize;
+          const fireLeft = Math.max(12, Math.min(
+            viewportWidth - fireSize - 12,
+            startX - fireSize * 0.5 - 14,
+          ));
+          const fireTop = Math.max(88, Math.min(
+            viewportHeight - fireSize - 12,
+            startY - joystickSize * 0.5 - 10 - fireSize,
+          ));
+          fireControl.style.setProperty('position', 'fixed', 'important');
+          fireControl.style.setProperty('left', `${fireLeft}px`, 'important');
+          fireControl.style.setProperty('right', 'auto', 'important');
+          fireControl.style.setProperty('top', `${fireTop}px`, 'important');
+          fireControl.style.setProperty('bottom', 'auto', 'important');
+          fireControl.style.setProperty('transform', 'none', 'important');
+        }
+      }
+
       joystickBase.style.left = `${startX}px`;
       joystickBase.style.top = `${startY}px`;
       joystickBase.classList.add('active');
