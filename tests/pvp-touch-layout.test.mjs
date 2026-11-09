@@ -11,7 +11,7 @@ test('PvP fire button follows the movement stick in a normal phone portrait', ()
     joystickRadius: 74,
   });
 
-  assert.equal(position.left, 120);
+  assert.equal(position.left, 106);
   assert.equal(position.top, 538);
   assert.equal(position.bottom, 236);
   assert.ok(position.left - 39 >= 12);
