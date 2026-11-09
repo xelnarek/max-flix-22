@@ -4,13 +4,20 @@ import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
-test('Android CI caches Gradle artifacts and retries transient remote dependency failures', async () => {
-  const workflow = await read('../.github/workflows/android-release.yml');
+test('Android CI caches Gradle and retries transient network failures across native dependency installs', async () => {
+  const [workflow, retry] = await Promise.all([
+    read('../.github/workflows/android-release.yml'),
+    read('../scripts/retry-command.sh'),
+  ]);
   assert.match(workflow, /uses: gradle\/actions\/setup-gradle@v6/);
-  assert.match(workflow, /for attempt in 1 2 3; do/);
-  assert.match(workflow, /if \.\/gradlew --no-daemon bundleRelease assembleDebug assembleRelease; then/);
-  assert.match(workflow, /sleep "\$delay"/);
-  assert.match(workflow, /exit "\$build_status"/);
+  assert.match(workflow, /bash scripts\/retry-command\.sh npm install --no-audit --no-fund/);
+  assert.match(workflow, /bash scripts\/retry-command\.sh npm install --no-save/);
+  assert.match(workflow, /bash \.\.\/scripts\/retry-command\.sh \.\/gradlew --no-daemon bundleRelease assembleDebug assembleRelease/);
+  assert.match(retry, /5\[0-9\]\{2\}/);
+  assert.match(retry, /gateway time/);
+  assert.match(retry, /for attempt in/);
+  assert.match(retry, /sleep "\$delay"/);
+  assert.match(retry, /exit "\$status"/);
 });
 
 test('Android wrapper targets the selected Paleciaki package and built web assets', async () => {
