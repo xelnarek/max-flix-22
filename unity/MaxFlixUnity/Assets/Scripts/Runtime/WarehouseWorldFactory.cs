@@ -194,26 +194,51 @@ namespace MaxFlix.Unity.Runtime
 
         private static void CreateTrainingEnemies(PlayerController player)
         {
-            CreateEnemy("Customer trainee", new Vector3(-5f, 0.05f, 4f), player, new Color(0.72f, 0.18f, 0.17f), 5f);
-            CreateEnemy("AGV trainee", new Vector3(6f, 0.05f, 8f), player, new Color(0.12f, 0.58f, 0.76f), 7f);
-            CreateEnemy("Inspector trainee", new Vector3(10f, 0.05f, -1f), player, new Color(0.20f, 0.48f, 0.85f), 6f);
+            CreateEnemy(new Vector3(-5f, 0.05f, 4f), player, EnemyKind.Customer);
+            CreateEnemy(new Vector3(6f, 0.05f, 8f), player, EnemyKind.AgvRobot);
+            CreateEnemy(new Vector3(10f, 0.05f, -1f), player, EnemyKind.Inspector);
         }
 
-        private static void CreateEnemy(string enemyName, Vector3 position, PlayerController player, Color color, float health)
+        private static void CreateEnemy(Vector3 position, PlayerController player, EnemyKind kind)
         {
-            GameObject enemy = new GameObject(enemyName);
+            EnemyArchetypeProfile profile = EnemyArchetypeCatalog.Get(kind);
+            if (profile.IsHazardOnly) return;
+
+            GameObject enemy = new GameObject(profile.DisplayName + " • B4");
             enemy.transform.SetParent(_worldRoot, false);
             enemy.transform.position = position;
 
+            bool boss = profile.IsBoss;
             CharacterController controller = enemy.AddComponent<CharacterController>();
-            controller.height = 1.65f;
-            controller.radius = 0.34f;
-            controller.center = new Vector3(0f, 0.82f, 0f);
-            CreateVisualPart(enemy.transform, PrimitiveType.Capsule, enemyName + " body", new Vector3(0f, 0.78f, 0f), new Vector3(0.65f, 0.68f, 0.38f), color);
-            CreateVisualPart(enemy.transform, PrimitiveType.Sphere, enemyName + " head", new Vector3(0f, 1.47f, 0f), new Vector3(0.34f, 0.37f, 0.33f), new Color(0.76f, 0.58f, 0.45f));
-            CreateVisualPart(enemy.transform, PrimitiveType.Sphere, enemyName + " helmet", new Vector3(0f, 1.68f, 0f), new Vector3(0.42f, 0.18f, 0.42f), color);
+            controller.height = boss ? 2.05f : 1.65f;
+            controller.radius = boss ? 0.48f : 0.34f;
+            controller.center = new Vector3(0f, controller.height * 0.5f, 0f);
+            Color skin = new Color(0.76f, 0.58f, 0.45f);
+
+            if (kind == EnemyKind.AgvRobot)
+            {
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "AGV chassis", new Vector3(0f, 0.42f, 0f), new Vector3(0.92f, 0.56f, 0.78f), profile.AccentColor);
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "AGV sensor rail", new Vector3(0f, 0.78f, 0f), new Vector3(0.72f, 0.08f, 0.16f), new Color(0.12f, 0.20f, 0.26f));
+                CreateVisualPart(enemy.transform, PrimitiveType.Sphere, "AGV scanning eye", new Vector3(0f, 0.57f, 0.42f), new Vector3(0.25f, 0.10f, 0.06f), new Color(0.25f, 0.94f, 1f));
+                for (int side = -1; side <= 1; side += 2)
+                    CreateVisualPart(enemy.transform, PrimitiveType.Cylinder, "AGV wheel", new Vector3(side * 0.48f, 0.18f, 0f), new Vector3(0.15f, 0.18f, 0.15f), new Color(0.08f, 0.10f, 0.13f));
+            }
+            else
+            {
+                float bodyScale = boss ? 1.20f : 1f;
+                CreateVisualPart(enemy.transform, PrimitiveType.Capsule, "Enemy torso", new Vector3(0f, 0.78f * bodyScale, 0f), new Vector3(0.65f * bodyScale, 0.68f * bodyScale, 0.38f * bodyScale), profile.AccentColor);
+                CreateVisualPart(enemy.transform, PrimitiveType.Sphere, "Enemy head", new Vector3(0f, 1.47f * bodyScale, 0f), new Vector3(0.34f * bodyScale, 0.37f * bodyScale, 0.33f * bodyScale), skin);
+                CreateVisualPart(enemy.transform, PrimitiveType.Sphere, "Enemy helmet", new Vector3(0f, 1.68f * bodyScale, 0f), new Vector3(0.42f * bodyScale, 0.18f * bodyScale, 0.42f * bodyScale), profile.AccentColor);
+
+                if (kind == EnemyKind.Inspector)
+                {
+                    CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Inspector visor", new Vector3(0f, 1.52f, 0.18f), new Vector3(0.42f, 0.06f, 0.08f), new Color(0.94f, 0.76f, 0.22f));
+                    CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Inspection clipboard", new Vector3(0.44f, 0.84f, 0.20f), new Vector3(0.22f, 0.34f, 0.06f), new Color(0.40f, 0.28f, 0.16f));
+                }
+            }
+
             EnemyAgent agent = enemy.AddComponent<EnemyAgent>();
-            agent.Initialize(player, health);
+            agent.Initialize(player, kind);
         }
 
         private static GameObject CreateBox(string objectName, Vector3 position, Vector3 scale, Color color, float roughness = 0.65f)
