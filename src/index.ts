@@ -1216,11 +1216,22 @@ class PaleciakiScene extends xb.Script {
 
           this.resetTouchJoystick?.();
           setTouchControlsMode('hidden');
-          this.lastScore = this.engine.getScore();
-          this.lastCoins = this.engine.getCollectedVipCount();
-          this.lastTimeSeconds = this.engine.getElapsedSeconds();
-          this.lastBossDefeated = this.engine.isBossDefeated();
-          this.lastMode = this.engine.getGameMode();
+          const endedMode = this.engine.getGameMode();
+          const endedOperatorId = this.engine.getCharacterDef().id;
+          const endedScore = this.engine.getScore();
+          const endedCoins = this.engine.getCollectedVipCount();
+          const endedTimeSeconds = this.engine.getElapsedSeconds();
+          const endedBossDefeated = this.engine.isBossDefeated();
+          const shouldAwardMastery = endedMode === 'survival' && !this.masteryAwardedForRun;
+          // Claim the award synchronously: a very fast Retry must not reset this
+          // flag before the deferred results callback processes the previous run.
+          if (shouldAwardMastery) this.masteryAwardedForRun = true;
+
+          this.lastScore = endedScore;
+          this.lastCoins = endedCoins;
+          this.lastTimeSeconds = endedTimeSeconds;
+          this.lastBossDefeated = endedBossDefeated;
+          this.lastMode = endedMode;
           // Freeze the ended run's data before any retry can start a new run.
           const snapshot = this.engine.getSurvivalSnapshot();
           const damageReport = this.engine.getSurvivalDamageReport();
@@ -1235,19 +1246,18 @@ class PaleciakiScene extends xb.Script {
           const finalTime = document.getElementById('gameover-time');
           const finalMode = document.getElementById('gameover-mode-summary');
           const runDetail = document.getElementById('gameover-run-detail');
-          if (finalScore) finalScore.textContent = this.lastScore.toLocaleString('pl-PL');
+          if (finalScore) finalScore.textContent = endedScore.toLocaleString('pl-PL');
           if (finalTime) {
-            const minutes = Math.floor(this.lastTimeSeconds / 60);
-            const seconds = this.lastTimeSeconds % 60;
+            const minutes = Math.floor(endedTimeSeconds / 60);
+            const seconds = endedTimeSeconds % 60;
             finalTime.textContent = minutes + ':' + String(seconds).padStart(2, '0');
           }
           if (finalMode) finalMode.textContent = 'SURVIVAL SHIFT';
           if (runDetail) runDetail.textContent = `FALA ${snapshot.wave} • ${snapshot.kills} ELIMINACJI • POZIOM ${snapshot.level}`;
 
           // Award mastery exactly once when a Survival run ends. A retry starts a fresh award window.
-          if (this.lastMode === 'survival' && !this.masteryAwardedForRun) {
-            this.masteryAwardedForRun = true;
-            const operatorId = this.engine.getCharacterDef().id;
+          if (shouldAwardMastery) {
+            const operatorId = endedOperatorId;
             const masteryResult = recordCharacterRunResult(characterMasteryProfile, operatorId, {
               kills: snapshot.kills,
               elapsedSeconds: snapshot.elapsedSeconds,
