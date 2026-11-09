@@ -213,7 +213,7 @@ namespace MaxFlix.Unity.Runtime
 
         private bool HasActiveMajorBoss()
         {
-            EnemyAgent[] enemies = FindObjectsByType<EnemyAgent>(FindObjectsSortMode.None);
+            EnemyAgent[] enemies = EnemyAgent.GetCachedAgents();
             foreach (EnemyAgent enemy in enemies)
             {
                 if (enemy == null || enemy.IsDefeated) continue;
@@ -226,7 +226,7 @@ namespace MaxFlix.Unity.Runtime
 
         private int CountAliveEnemies()
         {
-            EnemyAgent[] enemies = FindObjectsByType<EnemyAgent>(FindObjectsSortMode.None);
+            EnemyAgent[] enemies = EnemyAgent.GetCachedAgents();
             int count = 0;
             foreach (EnemyAgent enemy in enemies)
                 if (enemy != null && !enemy.IsDefeated) count++;
@@ -280,7 +280,7 @@ namespace MaxFlix.Unity.Runtime
 
         private bool HasActiveEnemyKind(EnemyKind kind)
         {
-            EnemyAgent[] enemies = FindObjectsByType<EnemyAgent>(FindObjectsSortMode.None);
+            EnemyAgent[] enemies = EnemyAgent.GetCachedAgents();
             foreach (EnemyAgent enemy in enemies)
                 if (enemy != null && !enemy.IsDefeated && enemy.Kind == kind) return true;
             return false;
