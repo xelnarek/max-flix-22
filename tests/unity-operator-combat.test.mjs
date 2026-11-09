@@ -140,7 +140,7 @@ test('Unity enemy AI has separated melee, ranged, support, charger and boss phas
   assert.match(agent, /GrantSupportShield/);
   assert.match(agent, /FireRangedAttack/);
   assert.match(projectile, /player\.ApplyDamage\(_damage\)/);
-  assert.match(factory, /agent\.Initialize\(player, kind\)/);
+  assert.match(factory, /agent\.Initialize\(player, kind, healthMultiplier, speedMultiplier, abilityRateMultiplier\)/);
   assert.match(factory, /AGV sensor rail/);
   assert.match(factory, /Inspector visor/);
 });
