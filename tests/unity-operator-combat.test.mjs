@@ -613,3 +613,12 @@ test('Unity projectile pool roots survive scene changes so static pool reference
   assert.match(operatorProjectile, /Operator projectile pool/);
   assert.match(enemyProjectile, /Enemy projectile pool/);
 });
+
+test('Unity editor bootstraps URP and the New Input System automatically', async () => {
+  const setup = await read('../unity/MaxFlixUnity/Assets/Editor/UnityProjectSetup.cs');
+  assert.match(setup, /\[InitializeOnLoad\]/);
+  assert.match(setup, /EditorApplication\.delayCall \+= ConfigureRenderingAndInput/);
+  assert.match(setup, /GraphicsSettings\.defaultRenderPipeline = pipeline/);
+  assert.match(setup, /PlayerSettings\.SetGraphicsAPIs\(/);
+  assert.match(setup, /GraphicsDeviceType\.WebGPU, GraphicsDeviceType\.OpenGLES3/);
+});
