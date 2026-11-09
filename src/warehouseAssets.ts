@@ -1407,21 +1407,21 @@ export function createCharacterModel(def: CharacterDef): {
   const soleGeo = new THREE.BoxGeometry(0.145, 0.035, 0.205);
   const toeCapGeo = new THREE.SphereGeometry(0.075, 10, 7);
   const steelToeMat = new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.28, metalness: 0.82 });
-  for (const legMesh of [leftLegMesh, rightLegMesh]) {
+  for (const leg of [leftLegMesh, rightLegMesh]) {
     const sole = new THREE.Mesh(soleGeo, rubberMat);
     sole.position.set(0, -0.205, 0.055);
     sole.castShadow = true;
     const toeCap = new THREE.Mesh(toeCapGeo, steelToeMat);
     toeCap.scale.set(1.02, 0.38, 0.48);
     toeCap.position.set(0, -0.157, 0.158);
-    legMesh.add(sole, toeCap);
+    leg.add(sole, toeCap);
 
     const knee = new THREE.Mesh(new THREE.DodecahedronGeometry(0.092, 0), armorMat);
     knee.scale.set(0.95, 0.55, 0.72);
     knee.position.set(0, 0.02, 0.083);
     const reflectiveKneeMark = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.022, 0.02), trimMat);
     reflectiveKneeMark.position.set(0, 0.02, 0.145);
-    legMesh.add(knee, reflectiveKneeMark);
+    leg.add(knee, reflectiveKneeMark);
   }
 
   group.add(leftLeg, rightLeg);
