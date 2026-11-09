@@ -18,7 +18,7 @@ test('B4 art pack is bundled, warmed and typed before any scene uses it', async 
     'b4-hazard-chevron.svg',
     'b4-sprite-atlas.svg',
   ]) assert.ok(pack.includes(asset), 'missing bundled asset: ' + asset);
-  for (const kind of ['floor', 'pallet', 'carton', 'steel', 'hazard', 'spriteAtlas']) {
+  for (const kind of ['floor', 'pallet', 'carton', 'steel', 'hazard', 'spriteAtlas', 'enemyAtlas']) {
     assert.ok(assets.includes(`preloadB4VisualTexture('${kind}')`), 'missing warm-up: ' + kind);
   }
   assert.match(assets, /await item\.execute\(\)/);
