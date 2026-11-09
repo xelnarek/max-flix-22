@@ -33,6 +33,15 @@ namespace MaxFlix.Unity.Runtime
             return safeBase * (mode == GameMode.Survival ? 2f : 1.25f);
         }
 
+        public static float ScaleCharacterBasicAttackDamage(float baseDamage, float multiplier)
+        {
+            if (float.IsNaN(baseDamage) || float.IsInfinity(baseDamage)) baseDamage = 0f;
+            if (float.IsNaN(multiplier) || float.IsInfinity(multiplier)) multiplier = 1f;
+            float safeDamage = UnityEngine.Mathf.Max(0f, baseDamage);
+            float safeMultiplier = UnityEngine.Mathf.Clamp(multiplier, 0.5f, 1.8f);
+            return UnityEngine.Mathf.Max(0f, UnityEngine.Mathf.Round(safeDamage * safeMultiplier * 10f) / 10f);
+        }
+
         public static float ScaleOutgoingDamage(float amount, GameMode mode)
         {
             if (float.IsNaN(amount) || float.IsInfinity(amount)) return 0f;
