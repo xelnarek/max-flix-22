@@ -417,3 +417,42 @@ test('Unity Survival world attaches and initializes wave director, pooled weapon
   assert.match(bootstrap, /progressionController\.Initialize\(player, _hud, weaponController\)/);
   assert.match(enemy, /GetComponentInParent<SurvivalProgressionController>\(\)/);
 });
+
+
+test('Unity Survival director matches rare Sebix and Bosman encounters plus an evenly spaced contracting horde', async () => {
+  const director = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWaveDirector.cs');
+  const encounters = director.slice(director.indexOf('private void SpawnRegularSurvivalEnemy'), director.indexOf('private bool HasActiveEnemyKind'));
+  assert.match(encounters, /_currentWave >= 8/);
+  assert.match(encounters, /Random\.value < 0\.065f/);
+  assert.match(encounters, /EnemyKind\.Sebix/);
+  assert.match(encounters, /_currentWave >= 6/);
+  assert.match(encounters, /Random\.value < 0\.04f/);
+  assert.match(encounters, /EnemyKind\.BosmanKrakow/);
+  assert.match(director, /HasActiveEnemyKind\(EnemyKind\.Sebix\)/);
+  assert.match(director, /HasActiveEnemyKind\(EnemyKind\.BosmanKrakow\)/);
+  assert.match(director, /_hordeStartAngle/);
+  assert.match(director, /_hordeSpawned \/ \(float\)Mathf\.Max\(1, _hordeProfile\.EnemyCount\)/);
+  assert.match(director, /SurvivalHordeCatalog\.GetContractingRadius/);
+});
+
+test('Unity enemy AI separates nearby enemies and preserves clearance around the player', async () => {
+  const agent = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  assert.match(agent, /_separationCache/);
+  assert.match(agent, /_nextSeparationRefreshTime = Time\.time \+ 0\.16f/);
+  assert.match(agent, /ApplySeparation\(deltaTime\)/);
+  assert.match(agent, /desiredDistance = \(_profile != null && _profile\.IsBoss \? 1\.48f : 1\.12f\)/);
+  assert.match(agent, /const float playerClearance = 1\.15f/);
+  assert.match(agent, /Vector3\.ClampMagnitude\(force \* 3\.4f, 3\.8f\)/);
+});
+
+test('Unity only opens legendary boss rewards for the three rotating major Survival bosses', async () => {
+  const progression = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalProgressionController.cs');
+  const encounters = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWaveDirector.cs');
+  const rewardCondition = progression.slice(progression.indexOf('bool majorBoss'), progression.indexOf('OpenBossReward();') + 20);
+  assert.match(rewardCondition, /EnemyKind\.Walczak/);
+  assert.match(rewardCondition, /EnemyKind\.KingLeto/);
+  assert.match(rewardCondition, /EnemyKind\.BosmanKrakow/);
+  assert.doesNotMatch(rewardCondition, /EnemyKind\.Sebix/);
+  assert.match(encounters, /GetBossKind/);
+  assert.match(encounters, /cycle === 1|cycle/);
+});
