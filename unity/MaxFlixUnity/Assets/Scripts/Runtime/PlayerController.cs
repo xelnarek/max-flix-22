@@ -77,6 +77,11 @@ namespace MaxFlix.Unity.Runtime
             }
         }
 
+        public void RecordPrimaryHit()
+        {
+            _combatKit?.OnPrimaryHit();
+        }
+
         public void RestoreHealth(float amount)
         {
             if (_defeated || float.IsNaN(amount) || float.IsInfinity(amount) || amount <= 0f) return;
