@@ -94,7 +94,10 @@ namespace MaxFlix.Unity.Runtime
             if (_kills > 0 && _kills % 8 == 0) baseXp += 2;
             SpawnXpOrb(enemy.transform.position + Vector3.up * 0.45f, baseXp);
 
-            if (profile.IsBoss)
+            bool majorBoss = enemy.Kind == EnemyKind.Walczak
+                || enemy.Kind == EnemyKind.KingLeto
+                || enemy.Kind == EnemyKind.BosmanKrakow;
+            if (majorBoss)
                 OpenBossReward();
         }
 
