@@ -429,7 +429,7 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
     projectileRadius: 0.33,
     color: 0x10b981,
     abilityName: 'Laserowy Protokół Strat',
-    abilityDesc: 'Potrójna wiązka laserowa w wachlarzu zadająca 3x65 pkt obrażeń.',
+    abilityDesc: 'Potrójna wiązka laserowa w wachlarzu zadająca do 3x70 pkt obrażeń.',
   },
   mateusz: {
     name: 'Mateusz Kierownik',
