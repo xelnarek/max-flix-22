@@ -1912,7 +1912,17 @@ class PaleciakiScene extends xb.Script {
       const def = CHARACTERS[id];
       if (hudHeroName) hudHeroName.textContent = def.name;
       if (hudHeroRole) hudHeroRole.textContent = def.className;
-      if (abilityName) abilityName.textContent = def.abilityName;
+      if (abilityName) {
+        abilityName.textContent = def.abilityName;
+        abilityName.title = def.abilityDescription;
+      }
+      // Restore the Survival/standard ability accessibility text after PvP has
+      // temporarily replaced it with the arena-specific ability presentation.
+      const standardAbilityButton = document.getElementById('btn-ability') as HTMLButtonElement | null;
+      standardAbilityButton?.setAttribute('aria-label', `${def.abilityName}. ${def.abilityDescription}`);
+      if (standardAbilityButton) {
+        standardAbilityButton.title = `${def.abilityName} — ${def.abilityDescription} (E / Shift / przycisk)`;
+      }
 
       const abilityIcons: Record<CharacterId, string> = {
         marcin: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='M15 10h18a4 4 0 0 1 4 4v25H11V14a4 4 0 0 1 4-4Z'/><path d='M19 10V7h10v3M17 19h12M17 26l3 3 5-6M29 27h4M17 34h15'/><path d='m33 15 1.6 2.4 2.8.8-2.8.9-1.6 2.4-1.5-2.4-2.8-.9 2.8-.8Z' fill='currentColor' stroke='none'/></svg>",
