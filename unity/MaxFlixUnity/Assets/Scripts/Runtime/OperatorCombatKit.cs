@@ -205,7 +205,8 @@ namespace MaxFlix.Unity.Runtime
         private void SpawnProjectile(
             Vector3 origin, Vector3 direction, PrimitiveType shape, Color color,
             float damage, float speed, int pierce, float stun, float slowDuration,
-            float slowMultiplier, float knockback, bool returnToOwner, float range)
+            float slowMultiplier, float knockback, bool returnToOwner, float range,
+            bool countsForMateuszPassive = false)
         {
             GameObject projectile = GameObject.CreatePrimitive(shape);
             projectile.name = "Operator combat projectile";
