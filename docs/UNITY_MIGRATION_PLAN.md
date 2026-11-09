@@ -63,9 +63,9 @@ Pierwszy commit Unity jest **fundamentem migracji i grywalnym wycinkiem technicz
 - Unity Editor ustawia nazwę produktu, identyfikator, orientację poziomą, IL2CPP, ARM64, min API 26 i target API 36.
 - Dodano ręczny workflow GameCI dla WebGL (WebGPU z WebGL 2 fallback), Android APK i podpisywanego AAB.
 - AAB używa istniejącego zestawu sekretów podpisu Android; workflow nie publikuje automatycznie do Google Play.
-- Build wymaga sekretu repozytorium `UNITY_LICENSE`. Bez niego nie da się wykonać kompilacji Unity w GitHub Actions.
+- Build wymaga trzech sekretów repozytorium: `UNITY_LICENSE`, `UNITY_EMAIL`, `UNITY_PASSWORD`. Przy licencji Personal plik `.ulf` trzeba jednorazowo wygenerować przez Unity Hub; nie ma bezpiecznego sposobu, aby asystent automatycznie aktywował prywatne konto Unity lub zapisał tajne dane bez udziału właściciela.
 
-**Status:** workflow i konfiguracja są w repozytorium; żadnego Unity Player/WebGL/APK/AAB nie wygenerowano w tej zmianie, ponieważ nie ma potwierdzonego sekretu licencji w GitHub. Po dodaniu sekretu trzeba ręcznie uruchomić workflow i usunąć błędy kompilacji, jeśli wystąpią.
+**Status:** workflow i konfiguracja są w repozytorium; żadnego Unity Player/WebGL/APK/AAB nie wygenerowano w tej zmianie, ponieważ nie ma potwierdzonego sekretu licencji w GitHub. Po dodaniu trzech sekretów można ręcznie uruchomić workflow; kompilator następnie ujawni rzeczywiste błędy Unity C#, które trzeba naprawić.
 
 ### Etap 1 — fundament Unity i pionowy wycinek B4
 - projekt Unity 6000.6.8f1, URP, New Input System i scena startowa;
