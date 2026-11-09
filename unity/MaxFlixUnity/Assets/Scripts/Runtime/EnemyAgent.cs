@@ -347,16 +347,8 @@ namespace MaxFlix.Unity.Runtime
             Vector3 origin = transform.position + Vector3.up * 0.92f + transform.forward * 0.48f;
             Vector3 aim = _target.transform.position + Vector3.up * 0.82f - origin;
             if (aim.sqrMagnitude < 0.01f) aim = direction;
-            GameObject shot = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            shot.name = _profile.DisplayName + " attack";
-            shot.transform.position = origin;
-            shot.transform.localScale = Vector3.one * 0.34f;
-            Collider collider = shot.GetComponent<Collider>();
-            if (collider != null) collider.isTrigger = true;
-            Rigidbody body = shot.AddComponent<Rigidbody>();
-            body.useGravity = false;
-            EnemyAttackProjectile attack = shot.AddComponent<EnemyAttackProjectile>();
-            attack.Initialize(_target, _attackDamage, aim.normalized, 10.5f, _profile.AccentColor);
+            EnemyAttackProjectile.Spawn(
+                _target, _attackDamage, origin, aim.normalized, 10.5f, _profile.AccentColor);
         }
 
         private static Vector2Int GetSeparationCell(Vector3 position)
