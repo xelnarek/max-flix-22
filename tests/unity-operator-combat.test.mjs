@@ -202,3 +202,65 @@ test('Dawid stretch passive actually fires a three-projectile fan and his five-p
   assert.match(projectile, /_ricochetsRemaining/);
   assert.match(projectile, /Vector3\.Reflect/);
 });
+
+
+test('Unity front end starts only implemented modes and selects operator plus one of four maps', async () => {
+  const menu = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/MainMenuController.cs');
+  const bootstrap = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/MainGameBootstrap.cs');
+  const catalog = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/GameContentCatalog.cs');
+  assert.match(menu, /GameMode\.Survival/);
+  assert.match(menu, /GameMode\.Campaign/);
+  assert.match(menu, /GameMode\.PvP/);
+  assert.match(menu, /null, false, _modeButtons/);
+  assert.match(menu, /OperatorCatalog\.All/);
+  assert.match(menu, /Enum\.GetValues\(typeof\(WarehouseMapId\)\)/);
+  assert.match(menu, /ScrollRect/);
+  assert.match(menu, /Screen\.height > Screen\.width/);
+  assert.match(menu, /StartRun\(_selectedMode, _selectedOperator, _selectedMap\)/);
+  assert.match(bootstrap, /StartupMode \{ get; private set; \} = GameMode\.Survival/);
+  assert.match(bootstrap, /MainMenuController\.Create\(this, StartupMode, StartupOperator, StartupMap\)/);
+  assert.match(bootstrap, /if \(mode == GameMode\.PvP\) return/);
+  assert.equal((catalog.match(/WarehouseMapId\.(WarehouseB4|ContainerTerminal|ColdStorage|NightSorting),\s*new SurvivalMapProfile/g) || []).length, 4);
+});
+
+test('selected Survival map changes environment art and applies its health/speed modifiers', async () => {
+  const factory = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs');
+  const director = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWaveDirector.cs');
+  assert.match(factory, /GameContentCatalog\.GetMap\(GameSession\.Current\.SelectedMap\)/);
+  assert.match(factory, /CreateLighting\(map\)/);
+  assert.match(factory, /CreateFloor\(map\)/);
+  assert.match(factory, /CreateMapSetDressing\(map\)/);
+  assert.match(factory, /Port container/);
+  assert.match(factory, /Refrigeration condenser/);
+  assert.match(factory, /Night conveyor belt/);
+  assert.match(director, /_mapProfile = GameContentCatalog\.GetMap/);
+  assert.match(director, /profile\.EnemyHealthMultiplier \*= _mapProfile\.EnemyHealthMultiplier/);
+  assert.match(director, /profile\.EnemySpeedMultiplier \*= _mapProfile\.EnemySpeedMultiplier/);
+  assert.match(director, /GetDifficultyProfile\(_currentWave\)/);
+});
+
+test('Unity HUD provides a real pause/resume, game-over summary, retry and return-to-menu flow', async () => {
+  const hud = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs');
+  const bootstrap = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/MainGameBootstrap.cs');
+  assert.match(hud, /GameFlowState\.Paused/);
+  assert.match(hud, /Time\.timeScale = 0f/);
+  assert.match(hud, /ResumeGame/);
+  assert.match(hud, /keyboard\.escapeKey\.wasPressedThisFrame/);
+  assert.match(hud, /PresentGameOver/);
+  assert.match(hud, /Najdalsza fala/);
+  assert.match(hud, /RetryRun/);
+  assert.match(hud, /ReturnToMenu/);
+  assert.match(bootstrap, /RestartLastRun/);
+  assert.match(bootstrap, /ReturnToMainMenu/);
+  assert.match(bootstrap, /WarehouseWorldFactory\.DestroyCurrentWorld/);
+});
+
+test('Unity main-menu and HUD restart paths clear the previous world and reset time scale', async () => {
+  const bootstrap = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/MainGameBootstrap.cs');
+  const factory = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs');
+  assert.match(bootstrap, /Time\.timeScale = 1f/);
+  assert.match(bootstrap, /WarehouseWorldFactory\.DestroyCurrentWorld\(\)/);
+  assert.match(bootstrap, /Destroy\(_menu\.gameObject\)/);
+  assert.match(factory, /public static void DestroyCurrentWorld\(\)/);
+  assert.match(factory, /_worldRoot = null/);
+});
