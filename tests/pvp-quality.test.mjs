@@ -443,7 +443,9 @@ test('shared account progression applies to both Survival and authoritative PvP 
 
 test('Survival progression remains award-once per run and PvP progression award-once per match', async () => {
   const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
-  assert.match(app, /if \(this\.lastMode === 'survival' && !this\.masteryAwardedForRun\)/);
+  assert.match(app, /const shouldAwardMastery = endedMode === 'survival' && !this\.masteryAwardedForRun/);
+  assert.match(app, /if \(shouldAwardMastery\) this\.masteryAwardedForRun = true/);
+  assert.match(app, /if \(shouldAwardMastery\) \{/);
   assert.match(app, /recordAccountSurvivalRun\(accountProgressionProfile/);
   assert.match(app, /private accountPvpAwardedForMatch = false/);
   assert.match(app, /if \(!this\.accountPvpAwardedForMatch\)/);
