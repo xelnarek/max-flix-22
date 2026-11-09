@@ -497,9 +497,8 @@ namespace MaxFlix.Unity.Runtime
 
             Text description = CreateText(rect, card.Description,
                 new Vector2(0.5f, 0.5f), Vector2.zero,
-                new Vector2(0f, 0f), new Vector2(0f, 0f),
-                grid.cellSize.y > 180f ? new Vector2(0f, 112f) : new Vector2(0f, 70f),
-                17, TextAnchor.MiddleCenter, new Color(0.88f, 0.92f, 0.96f));
+                new Vector2(0f, 0f), 17, TextAnchor.MiddleCenter,
+                new Color(0.88f, 0.92f, 0.96f));
             description.rectTransform.anchorMin = new Vector2(0f, 0f);
             description.rectTransform.anchorMax = new Vector2(1f, 1f);
             description.rectTransform.offsetMin = new Vector2(14f, 12f);
@@ -516,12 +515,13 @@ namespace MaxFlix.Unity.Runtime
                 new Vector2(0.5f, 0f), new Vector2(0f, 20f),
                 new Vector2(900f, 34f), 16, TextAnchor.MiddleCenter, new Color(0.66f, 0.80f, 0.90f));
 
+            bool canReroll = _rerolls > 0 && !_isBossReward;
             _rerollButton = CreateButton(panelRect,
-                _rerolls > 0 ? "PRZERZUĆ (" + _rerolls + ")" : "BRAK PRZERZUTÓW",
+                canReroll ? "PRZERZUĆ (" + _rerolls + ")" : "PRZERZUT NIEDOSTĘPNY",
                 new Vector2(0.5f, 0f), new Vector2(0f, 66f), new Vector2(280f, 62f),
-                new Color(0.18f, 0.27f, 0.37f, 1f), delegate { RerollCards(); }, _rerolls > 0);
+                new Color(0.18f, 0.27f, 0.37f, 1f), delegate { RerollCards(); }, canReroll);
             _rerollLabel = _rerollButton.GetComponentInChildren<Text>();
-            if (_rerollLabel != null) _rerollLabel.text = _rerolls > 0 ? "PRZERZUĆ (" + _rerolls + ")" : "BRAK PRZERZUTÓW";
+            if (_rerollLabel != null) _rerollLabel.text = canReroll ? "PRZERZUĆ (" + _rerolls + ")" : "PRZERZUT NIEDOSTĘPNY";
         }
 
         private void ChooseCard(SurvivalUpgradeCard card)
