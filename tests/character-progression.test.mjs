@@ -154,8 +154,10 @@ test('talent bonuses are connected to live movement, attacks, defence and super 
 test('a single ended Survival run is awarded once and all retry paths open a fresh award window', async () => {
   const { readFile } = await import('node:fs/promises');
   const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
-  assert.match(app, /if \(this\.lastMode === 'survival' && !this\.masteryAwardedForRun\)/);
-  assert.match(app, /this\.masteryAwardedForRun = true/);
+  assert.match(app, /const shouldAwardMastery = endedMode === 'survival' && !this\.masteryAwardedForRun/);
+  assert.match(app, /if \(shouldAwardMastery\) this\.masteryAwardedForRun = true/);
+  assert.match(app, /const endedOperatorId = this\.engine\.getCharacterDef\(\)\.id/);
+  assert.match(app, /if \(shouldAwardMastery\) \{/);
   assert.equal((app.match(/this\.masteryAwardedForRun = false;/g) || []).length, 3);
 });
 
