@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { disposePvpObjectTree } from './pvpResourceCleanup.ts';
 import { calculatePvpCameraFrame, calculatePvpCameraTrackingBounds, isPvpPortraitViewport } from './pvpCamera.ts';
 import { createArenaObstacleFootprint, createPvpContactShadowTexture, createPvpFloorTexture, createPvpObstacleTexture } from './pvpTextures.ts';
+import { createB4FreightStack, createB4WallSprite } from './b4AssetPack.ts';
 import {
   calculatePvpAimPreview, getPvpAimAngle, getPvpSweepAimAngle, getPvpAimSweepCenterAngle,
   pvpAimDirectionFromAngle, pvpScreenMovementToWorld,
@@ -2153,6 +2154,14 @@ export class PaleciakiGameEngine {
     wE.position.set(bounds.maxX + 1.2, 1.6, 0);
     this.pvpArenaRoot.add(wN, wS, wW, wE);
 
+    // Factory signage uses the new four-frame sprite atlas as real world props.
+    // Matching placement and scale on both end walls preserve PvP symmetry.
+    const pvpLeftSign = createB4WallSprite('forklift', 1.35, 1.35);
+    pvpLeftSign.position.set(-width * 0.28, 2.45, bounds.minZ + 0.42);
+    const pvpRightSign = createB4WallSprite('zombie', 1.35, 1.35);
+    pvpRightSign.position.set(width * 0.28, 2.45, bounds.maxZ - 0.42);
+    this.pvpArenaRoot.add(pvpLeftSign, pvpRightSign);
+
     const obstacles = createDefaultPvpObstacles();
     const palletMat = new THREE.MeshStandardMaterial({
       color: 0xffffff, map: createPvpObstacleTexture('crate'), roughness: 0.82, metalness: 0.08,
@@ -2954,6 +2963,34 @@ export class PaleciakiGameEngine {
       this.levelRoot.add(barricade);
       this.survivalObstacles.push({ x: point.x, z: point.z, halfWidth: 1.32, halfDepth: 0.72 });
     }
+
+    // New B4 cargo props are actual 3D cover, not flat decorations. Their
+    // collision footprints also feed player movement and enemy path avoidance.
+    for (const cargo of [
+      { x: -33.5, z: -13.7, rotation: 0 },
+      { x: 33.5, z: 13.7, rotation: Math.PI },
+    ]) {
+      const freightStack = createB4FreightStack();
+      freightStack.position.set(cargo.x, 0, cargo.z);
+      freightStack.rotation.y = cargo.rotation;
+      freightStack.scale.setScalar(0.82);
+      this.registerCameraOccludersInGroup(freightStack, 0.14);
+      this.levelRoot.add(freightStack);
+      this.survivalObstacles.push({
+        x: cargo.x,
+        z: cargo.z,
+        halfWidth: 1.28,
+        halfDepth: 1.05,
+      });
+    }
+
+    // BHP sprite signs keep the route landmarks recognisable at a distance.
+    const survivalForkliftSign = createB4WallSprite('forklift', 1.3, 1.3);
+    survivalForkliftSign.position.set(-29, 3.15, -19.28);
+    const survivalWorkerSign = createB4WallSprite('worker', 1.3, 1.3);
+    survivalWorkerSign.position.set(29, 3.15, 19.28);
+    this.levelRoot.add(survivalForkliftSign, survivalWorkerSign);
+
     this.buildSurvivalArenaDressing(mapId);
     this.buildSurvivalMapLandmarks(mapId);
     this.buildSurvivalMapRouteFeatures(mapId);
