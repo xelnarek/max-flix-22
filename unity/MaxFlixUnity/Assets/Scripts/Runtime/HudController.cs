@@ -160,6 +160,24 @@ namespace MaxFlix.Unity.Runtime
             GameSession.SetState(GameFlowState.Playing);
         }
 
+        public void PresentCampaignVictory(int vipCount, int requiredVip)
+        {
+            if (_gameOverPresented) return;
+            _gameOverPresented = true;
+            Time.timeScale = 0f;
+            RunSnapshot run = GameSession.Current;
+            int minutes = Mathf.FloorToInt(run.ElapsedSeconds / 60f);
+            int seconds = Mathf.FloorToInt(run.ElapsedSeconds % 60f);
+            string summary = "Czas: " + minutes.ToString("00") + ":" + seconds.ToString("00")
+                + "\\nZebrane zamówienia VIP: " + vipCount + "/" + requiredVip
+                + "\\nEliminacje: " + run.Kills + "  •  Bossowie: " + run.BossesDefeated
+                + "\\nWynik końcowy: " + run.Score
+                + "\\nOperator: " + OperatorCatalog.Get(run.SelectedOperator).DisplayName
+                + "\\nWszystkie sektory zabezpieczone. Dostawa została zakończona.";
+            ShowModal("KAMPANIA UKOŃCZONA", summary,
+                "ZAGRAJ PONOWNIE", RetryRun, "MENU GŁÓWNE", ReturnToMenu);
+        }
+
         private void PresentGameOver()
         {
             _gameOverPresented = true;
