@@ -3651,6 +3651,15 @@ class PaleciakiScene extends xb.Script {
     bindPvpTap(desktopPvpFireButton, triggerPrimaryPvpShot);
 
     opPicker?.querySelectorAll<HTMLButtonElement>('.pvp-operator-btn').forEach((btn) => {
+      // Combat catalog owns the short selector description so menu text cannot
+      // drift from the actual PvP damage, stun and defensive effects.
+      const operatorId = btn.dataset.op as CharacterId | undefined;
+      const operatorProfile = operatorId ? PVP_OPERATOR_PROFILES[operatorId] : undefined;
+      const summary = btn.querySelector<HTMLElement>('small');
+      if (operatorProfile && summary) {
+        summary.textContent = operatorProfile.menuSummary;
+        summary.title = operatorProfile.abilityDesc;
+      }
       bindPvpTap(btn, () => {
         opPicker.querySelectorAll('.pvp-operator-btn').forEach((b) => b.classList.remove('selected'));
         btn.classList.add('selected');
