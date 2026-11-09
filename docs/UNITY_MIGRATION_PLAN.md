@@ -104,6 +104,18 @@ W podetapie 2B dodano katalog wszystkich 23 identyfikatorów przeciwników (z ro
 W etapie 2D uzupełniono też dwa źródłowe rzadkie spotkania (Bosman od fali 6 z szansą 4%, Sebix od fali 8 z szansą 6,5%), limit pojedynczej aktywnej instancji każdego oraz równomierne rozmieszczenie wejścia hordy. AI otrzymało współdzielony cache przestrzenny i separację, aby ograniczać nakładanie przeciwników w tłumie.
 
 
+
+### Etap 3B — grywalna kampania Unity: trzy sektory, bramy bossów i dostawa VIP
+
+- Kampania nie uruchamia już treningowej areny B4. Otwiera fizycznie połączoną mapę mega-magazynu z sektorami A (B4), B (showroom SPA) i C (terminal VIP).
+- Dwie bramy mają rzeczywiste collidery. Pokonanie Bosmana Kraków w sektorze A otwiera B; pokonanie Dyrektora Widmo w B otwiera C. Odblokowanie sektora jest zapisywane lokalnie w PlayerPrefs.
+- Każdy sektor ma własne zagęszczenie przeciwników i elementy otoczenia; w terminalu trzeba pokonać Nadzorcę Zero i Dyrektora Widmo.
+- Dodano pięć fizycznych, dotykowo-zbieralnych zamówień VIP. Do zakończenia kampanii wymagane są co najmniej cztery.
+- Dostawa kończy się dopiero po pokonaniu obu bossów terminalu, zebraniu wymaganych VIP i dojściu do bramy wyjazdowej. Ekran zwycięstwa pokazuje czas, eliminacje, bossów i wynik.
+- Przycisk Kampania w menu uruchamia teraz właściwy tryb, a nie treningową arenę.
+
+**Walidacja i ograniczenia:** CI sprawdza statyczne połączenia, warunki postępu i testy regresji. Nadal wymagają testów w Unity Editor: przejście CharacterController przez bramy po odblokowaniu, odbiór triggerów, zachowanie kamery na długości 242 m, zachowanie bossów, nawigacja przy regałach i wydajność na Poco F6. To funkcjonalny pionowy wycinek kampanii, nie pełny port wszystkich pułapek, pobocznych zadań i easter eggów.
+
 ### Etap 3A — odrębna geometria czterech map Unity (wdrożone w kodzie, bez walidacji Unity Editor)
 
 - Wybór mapy prowadzi teraz do osobnego generatora geometrii, zamiast nakładać dekoracje na jeden wspólny układ regałów.
