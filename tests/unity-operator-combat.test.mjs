@@ -603,3 +603,13 @@ test('Unity performance governor preserves one baseline across restarts and rest
   assert.match(governor, /Mathf\.Min\(_baselineShadowDistance, 30f\)/);
   assert.match(governor, /Mathf\.Min\(_baselineShadowDistance, 16f\)/);
 });
+
+
+test('Unity projectile pool roots survive scene changes so static pool references stay valid', async () => {
+  const operatorProjectile = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/CombatProjectile.cs');
+  const enemyProjectile = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAttackProjectile.cs');
+  assert.match(operatorProjectile, /Object\.DontDestroyOnLoad\(root\)/);
+  assert.match(enemyProjectile, /Object\.DontDestroyOnLoad\(root\)/);
+  assert.match(operatorProjectile, /Operator projectile pool/);
+  assert.match(enemyProjectile, /Enemy projectile pool/);
+});
