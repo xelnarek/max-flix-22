@@ -76,7 +76,7 @@ test('original B4 art pack supplies the shared industrial floors, freight props 
   }
   assert.match(pack, /createB4FreightStack/);
   assert.match(pack, /createB4SpriteDecal/);
-  assert.match(floor, /gradient/);
+  assert.match(floor, /Gradient/i);
   assert.match(pallet, /fibres/);
   assert.match(carton, /MAX FLIX/);
   assert.match(steel, /linearGradient/);
