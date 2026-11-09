@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { preloadB4VisualTexture } from './b4AssetPack.ts';
 import {
   getFloorTexture,
   getWallTexture,
@@ -303,7 +304,13 @@ export class B4AssetLoader {
         { id: 'textures/showroom_marble_calacatta.canvas', name: 'Spiek Biały Marmur (Showroom)', category: 'texture', execute: () => getShowroomMarbleFloorTexture() },
         { id: 'textures/showroom_oak_slat_wall.canvas', name: 'Ściany Lamele Dębowe', category: 'texture', execute: () => getShowroomWallTexture() },
         { id: 'textures/terminal_granite_floor.canvas', name: 'Granit Przemysłowy Rampy B1', category: 'texture', execute: () => getTerminalGraniteFloorTexture() },
-        { id: 'textures/hazard_warning_stripes.canvas', name: 'Pasy Ostrzegawcze BHP Żółto-Czarne', category: 'texture', execute: () => getHazardStripeTexture() }
+        { id: 'textures/hazard_warning_stripes.canvas', name: 'Pasy Ostrzegawcze BHP Żółto-Czarne', category: 'texture', execute: () => getHazardStripeTexture() },
+        { id: 'b4-pack/floor.svg', name: 'B4 Asset Pack • Beton epoksydowy', category: 'texture', execute: () => preloadB4VisualTexture('floor') },
+        { id: 'b4-pack/pallet.svg', name: 'B4 Asset Pack • Drewno palet EUR', category: 'texture', execute: () => preloadB4VisualTexture('pallet') },
+        { id: 'b4-pack/carton.svg', name: 'B4 Asset Pack • Kartony transportowe', category: 'texture', execute: () => preloadB4VisualTexture('carton') },
+        { id: 'b4-pack/steel.svg', name: 'B4 Asset Pack • Blacha falista', category: 'texture', execute: () => preloadB4VisualTexture('steel') },
+        { id: 'b4-pack/hazard.svg', name: 'B4 Asset Pack • Oznaczenia BHP', category: 'texture', execute: () => preloadB4VisualTexture('hazard') },
+        { id: 'b4-pack/sprites.svg', name: 'B4 Asset Pack • Atlas sprite’ów', category: 'texture', execute: () => preloadB4VisualTexture('spriteAtlas') }
       ];
 
       const totalTextures = assetList.length;
@@ -319,7 +326,7 @@ export class B4AssetLoader {
           this.loadingManager.itemStart(item.id);
 
           try {
-            const result = item.execute();
+            const result = await item.execute();
             const duration = Math.round(performance.now() - itemStartTime);
             this.loadedAssets.set(item.id, { category: item.category, durationMs: duration, success: true });
             if (result) {
