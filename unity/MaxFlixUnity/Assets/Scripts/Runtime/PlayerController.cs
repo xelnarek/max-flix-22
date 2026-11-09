@@ -19,6 +19,7 @@ namespace MaxFlix.Unity.Runtime
         private float _attackCooldown;
         private float _currentHealth;
         private float _hitInvulnerabilityRemaining;
+        private float _incomingDamageRemainder;
         private bool _jumpRequested;
         private bool _airJumpUsed;
         private bool _attackRequested;
@@ -70,7 +71,10 @@ namespace MaxFlix.Unity.Runtime
             float damageMultiplier = _combatKit != null
                 ? _combatKit.DamageTakenMultiplier
                 : _profile.DamageTakenMultiplier;
-            _currentHealth = Mathf.Max(0f, _currentHealth - scaledIncomingDamage * damageMultiplier);
+            float accumulatedDamage = scaledIncomingDamage * damageMultiplier + _incomingDamageRemainder;
+            float wholeDamage = Mathf.Floor(accumulatedDamage + 1e-6f);
+            _incomingDamageRemainder = Mathf.Max(0f, accumulatedDamage - wholeDamage);
+            _currentHealth = Mathf.Max(0f, _currentHealth - wholeDamage);
             if (currentMode == GameMode.Survival)
                 _hitInvulnerabilityRemaining = CombatBalanceCatalog.SurvivalHitInvulnerabilitySeconds;
             _hud?.SetHealth(_currentHealth, _profile.MaxHealth);
