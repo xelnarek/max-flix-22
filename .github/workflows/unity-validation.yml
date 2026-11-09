@@ -35,14 +35,16 @@ jobs:
       - name: Validate Unity and Android signing credentials
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
           ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           UNITY_TARGET: ${{ inputs.target }}
         run: |
-          if [ -z "${UNITY_LICENSE:-}" ]; then
-            echo "::error::Missing repository secret UNITY_LICENSE. Add the Unity Personal/Pro license file contents in Settings > Secrets and variables > Actions."
+          if [ -z "${UNITY_LICENSE:-}" ] || [ -z "${UNITY_EMAIL:-}" ] || [ -z "${UNITY_PASSWORD:-}" ]; then
+            echo "::error::Unity activation is incomplete. Add UNITY_LICENSE (the .ulf file contents), UNITY_EMAIL and UNITY_PASSWORD in Settings > Secrets and variables > Actions. Never put these values in the repository or chat."
             exit 1
           fi
           if [ "$UNITY_TARGET" = "Android AAB" ]; then
@@ -65,6 +67,8 @@ jobs:
         uses: game-ci/unity-builder@v4.8.2
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
           projectPath: unity/MaxFlixUnity
           unityVersion: auto
@@ -78,6 +82,8 @@ jobs:
         uses: game-ci/unity-builder@v4.8.2
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
           projectPath: unity/MaxFlixUnity
           unityVersion: auto
@@ -98,6 +104,8 @@ jobs:
         uses: game-ci/unity-builder@v4.8.2
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
           projectPath: unity/MaxFlixUnity
           unityVersion: auto
