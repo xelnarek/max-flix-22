@@ -78,6 +78,17 @@ W podetapie 2B dodano katalog wszystkich 23 identyfikatorów przeciwników (z ro
 
 **Ograniczenia:** to pierwszy port logiki, a nie zatwierdzona zgodność 1:1. Trzeba zweryfikować wartości i zachowanie w Unity Editor, porównać przebieg walki z wersją Three.js, zbalansować obrażenia/czasy, poprawić animacje i zastąpić obecne generowanie/niszczenie pocisków pulą obiektów. Nie ma jeszcze pełnej implementacji wszystkich archetypów przeciwników, AI bossów ani systemu dropów/perków.
 
+### Etap 2C — rdzeń fal Survival (wdrożony w kodzie, bez walidacji Unity Editor)
+
+- Port wzorów źródłowych krzywej trudności: HP, prędkości, interwału spawnu, rozmiaru grup i tempa umiejętności przeciwników.
+- Zachowane limity populacji: mobile 18/16/13 zależnie od poziomu adaptacji, desktop 34; rozmiary grup 5/4/3 na mobile i 7 na desktop.
+- Fale co 60 sekund, spawn z 17-entry roster z uwzględnieniem wag oraz minimalnej fali/czasu.
+- Pierścień falowej szarży: 12 przeciwników mobile / 16 desktop, 18 sekund, 0,48 s między spawnami, promień 13,4 → 6,8 m.
+- Główny boss co 300 sekund, ostrzeżenie 6 sekund i rotacja Walczak → Dyrektor Widmo → Bosman Kraków.
+- Spawn potrafi przekazać mnożniki HP, prędkości i tempa ataków do AI; B4 factory buduje teraz warianty wizualne wybranych archetypów.
+
+**Ograniczenia:** Survival wave director ma ścieżkę uruchomienia, ale główny bootstrap nadal wybiera Campaign. Menu wyboru trybu/mapy, pełna progresja XP/perków/broni/dropów/kontraktów/eventów/sekretów oraz modele wszystkich archetypów wymagają kolejnych etapów. Aktualnie jest to funkcjonalny szkielet fali, nie pełna zgodność Survival 1:1.
+
 ### Etap 2 — pełny rdzeń walki i pięciu operatorów
 - wszystkie ataki podstawowe, pasywy i umiejętności specjalne;
 - animacje i wyposażenie operatorów;
