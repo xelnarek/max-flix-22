@@ -477,7 +477,7 @@ test('PvP HUD shows each operator ability that the arena actually executes and r
   assert.match(presentation, /profile\.abilityName/);
   assert.match(presentation, /profile\.abilityDesc/);
   for (const id of ['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr']) {
-    assert.match(presentation, new RegExp('^', 'm') === null ? /$^/ : new RegExp(id + ':'));
+    assert.ok(presentation.includes(id + ':'), `missing PvP HUD ability icon for ${id}`);
     assert.match(arena, new RegExp(id + ':'));
   }
   const pvpStart = app.indexOf('this.engine.startPvp(session, localOp, remoteOp)');
