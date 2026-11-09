@@ -16,6 +16,11 @@ namespace MaxFlix.Unity.Runtime
         private VirtualJoystick _joystick;
         private HudController _hud;
         private OperatorAnimationRig _animationRig;
+        private readonly MaterialPropertyBlock _projectileProperties = new MaterialPropertyBlock();
+        private static Material _sharedProjectileMaterial;
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        private static readonly int ColorId = Shader.PropertyToID("_Color");
+        private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
         private float _verticalSpeed;
         private float _attackCooldown;
         private float _currentHealth;
@@ -148,16 +153,24 @@ namespace MaxFlix.Unity.Runtime
             Renderer renderer = projectile.GetComponent<Renderer>();
             if (renderer != null)
             {
-                Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-                if (shader == null) shader = Shader.Find("Standard");
-                Material material = new Material(shader);
-                material.color = _profile.SecondaryColor;
-                if (material.HasProperty("_EmissionColor"))
+                if (_sharedProjectileMaterial == null)
                 {
-                    material.EnableKeyword("_EMISSION");
-                    material.SetColor("_EmissionColor", _profile.SecondaryColor * 1.5f);
+                    Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+                    if (shader == null) shader = Shader.Find("Standard");
+                    _sharedProjectileMaterial = new Material(shader)
+                    {
+                        enableInstancing = true
+                    };
+                    if (_sharedProjectileMaterial.HasProperty(EmissionColorId))
+                        _sharedProjectileMaterial.EnableKeyword("_EMISSION");
                 }
-                renderer.sharedMaterial = material;
+
+                renderer.sharedMaterial = _sharedProjectileMaterial;
+                renderer.GetPropertyBlock(_projectileProperties);
+                _projectileProperties.SetColor(BaseColorId, _profile.SecondaryColor);
+                _projectileProperties.SetColor(ColorId, _profile.SecondaryColor);
+                _projectileProperties.SetColor(EmissionColorId, _profile.SecondaryColor * 1.5f);
+                renderer.SetPropertyBlock(_projectileProperties);
             }
 
             SphereCollider collider = projectile.GetComponent<SphereCollider>();
