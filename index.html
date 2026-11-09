@@ -369,12 +369,22 @@
       </div>
 
       <div id="touch-controls" class="touch-layer hidden">
+        <button id="btn-touch-pause" class="touch-pause-btn" type="button"
+          aria-label="Wstrzymaj rozgrywkę" title="Pauza">⏸</button>
         <div id="touch-joystick-zone" class="joystick-zone">
           <div id="joystick-base" class="joystick-base"><div id="joystick-knob" class="joystick-knob"></div></div>
           <span class="pvp-stick-caption pvp-move-caption pvp-only-control">RUCH</span>
         </div>
         <div class="pvp-control-guide pvp-only-control" aria-hidden="true">
-          <span>RUCH USTAWIA KIERUNEK</span><i></i><span>OBSERWUJ ŁUK</span><i></i><span>STRZEL W MOMENCIE</span>
+          <span>LEWY DRĄŻEK: RUCH</span><i></i><span>PRAWY: CELOWANIE</span><i></i><span>STRZAŁ: ODDZIELNY PRZYCISK</span>
+        </div>
+        <div id="pvp-aim-zone" class="pvp-aim-zone pvp-only-control"
+          role="group" aria-label="Drążek ręcznego celowania PvP">
+          <div id="pvp-aim-base" class="pvp-aim-base">
+            <span class="pvp-aim-crosshair" aria-hidden="true">＋</span>
+            <div id="pvp-aim-knob" class="pvp-aim-knob"></div>
+          </div>
+          <span class="pvp-aim-caption">CEL</span>
         </div>
         <div id="pvp-fire-control" class="pvp-fire-control pvp-only-control">
           <button id="btn-pvp-fire" class="touch-action-btn pvp-fire-btn hidden" type="button"
