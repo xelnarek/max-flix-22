@@ -19,3 +19,8 @@ interface ImportMeta {
 
 declare module '*.css';
 declare const __PALIECIAKI_BUILD_ID__: string;
+
+declare module '*.svg?url' {
+  const url: string;
+  export default url;
+}
