@@ -82,6 +82,40 @@ test('local bot pauses with the practice match and its aim is deliberately imper
   assert.match(tactics, /applyPvpBotAimSpread/);
 });
 
+
+test('pause controls are re-enabled for desktop and touch after each gameplay transition', async () => {
+  const [html, app, css] = await Promise.all([
+    read('../index.html'),
+    read('../src/index.ts'),
+    read('../src/index.css'),
+  ]);
+  assert.match(html, /id="btn-top-pause"/);
+  assert.match(html, /id="btn-touch-pause"/);
+  assert.match(app, /bindTap\(document\.getElementById\('btn-top-pause'\), handlePause\)/);
+  assert.match(app, /bindTap\(document\.getElementById\('btn-touch-pause'\), handlePause\)/);
+  const visibility = app.slice(app.indexOf('function setTouchControlsVisibility'), app.indexOf('type TouchControlsMode'));
+  assert.match(visibility, /topPause\.style\.setProperty\('pointer-events', 'auto', 'important'\)/);
+  assert.match(visibility, /touchPause\.style\.setProperty\('display', 'flex', 'important'\)/);
+  assert.match(app, /touchActionDock\.appendChild\(touchPauseButton\)/);
+  assert.match(css, /#touch-controls \.touch-pause-btn[\s\S]*?min-width: 42px !important/);
+});
+
+test('lethal damage is terminal and the result workload yields one frame for the death screen', async () => {
+  const [game, app] = await Promise.all([
+    read('../src/game.ts'),
+    read('../src/index.ts'),
+  ]);
+  const damage = game.slice(game.indexOf('private takeDamage('), game.indexOf('private checkLevelFinish(', game.indexOf('private takeDamage(')));
+  assert.match(damage, /if \(this\.state !== 'playing' \|\| this\.hp <= 0\) return/);
+  assert.ok(damage.indexOf("this.state = 'gameover'") < damage.indexOf('this.callbacks.onGameOver(finalReason)'));
+  const callbackStart = app.indexOf('onGameOver: (reason) =>');
+  const callbackEnd = app.indexOf('onSurvivalUpdate:', callbackStart);
+  const callback = app.slice(callbackStart, callbackEnd);
+  assert.ok(callback.indexOf('gameoverModal.classList.remove') < callback.indexOf('window.requestAnimationFrame'));
+  assert.ok(callback.indexOf('window.requestAnimationFrame') < callback.indexOf('recordCharacterRunResult'));
+  assert.match(callback, /setTouchControlsMode\('hidden'\)/);
+});
+
 test('fullscreen transitions release movement, aim and positioned fire input on Android WebViews', async () => {
   const app = await read('../src/index.ts');
   const fullscreenHandler = app.slice(
