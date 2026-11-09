@@ -9,6 +9,8 @@ namespace MaxFlix.Unity.Runtime
         private readonly HashSet<int> _hitTargets = new HashSet<int>();
         private Rigidbody _body;
         private Transform _owner;
+        private PlayerController _ownerPlayer;
+        private bool _countsForMateuszPassive;
         private float _damage;
         private float _lifeSeconds;
         private float _speed;
@@ -39,10 +41,13 @@ namespace MaxFlix.Unity.Runtime
             float slowMultiplier,
             float knockback,
             bool returnToOwner,
-            float maxRange)
+            float maxRange,
+            bool countsForMateuszPassive = false)
         {
             _body = GetComponent<Rigidbody>();
             _owner = owner;
+            _ownerPlayer = owner != null ? owner.GetComponent<PlayerController>() : null;
+            _countsForMateuszPassive = countsForMateuszPassive;
             _damage = Mathf.Max(0.1f, damage);
             _lifeSeconds = Mathf.Clamp(lifeSeconds, 0.1f, 8f);
             _speed = Mathf.Clamp(speed, 1f, 40f);
@@ -115,6 +120,7 @@ namespace MaxFlix.Unity.Runtime
                 ? _body.velocity.normalized
                 : transform.forward;
             enemy.ApplyCombatHit(_damage, _stunSeconds, _slowSeconds, _slowMultiplier, direction * _knockback);
+            if (_countsForMateuszPassive && _ownerPlayer != null) _ownerPlayer.RecordPrimaryHit();
 
             if (_pierceRemaining > 0)
             {
