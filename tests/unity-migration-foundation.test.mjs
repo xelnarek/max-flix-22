@@ -231,7 +231,7 @@ test('Unity release identity and manual build workflow target WebGPU WebGL and A
   assert.match(setup, /defaultInterfaceOrientation = UIOrientation\.LandscapeLeft/);
   assert.match(setup, /WebGPU, GraphicsDeviceType\.OpenGLES3/);
   assert.match(workflow, /workflow_dispatch:/);
-  assert.match(workflow, /game-ci\/unity-builder@v4/);
+  assert.match(workflow, /game-ci\/unity-builder@v4\.8\.2/);
   assert.match(workflow, /projectPath: unity\/MaxFlixUnity/);
   assert.match(workflow, /targetPlatform: WebGL/);
   assert.match(workflow, /androidExportType: androidAppBundle/);
