@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<defs>
+  <linearGradient id="tile" x2="0" y2="1"><stop stop-color="#263b50"/><stop offset="1" stop-color="#0d1a29"/></linearGradient>
+  <filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect width="512" height="512" fill="#091522"/>
+<g>
+  <rect x="8" y="8" width="240" height="240" rx="28" fill="url(#tile)" stroke="#36b9e7" stroke-width="5"/>
+  <rect x="264" y="8" width="240" height="240" rx="28" fill="url(#tile)" stroke="#e65e54" stroke-width="5"/>
+  <rect x="8" y="264" width="240" height="240" rx="28" fill="url(#tile)" stroke="#f5b942" stroke-width="5"/>
+  <rect x="264" y="264" width="240" height="240" rx="28" fill="url(#tile)" stroke="#65d2a2" stroke-width="5"/>
+</g>
+<!-- worker helmet / head -->
+<g transform="translate(128 128)" filter="url(#glow)">
+  <path d="M-49 13q4-65 49-65t49 65v18h-98z" fill="#f2b52c" stroke="#fff0b8" stroke-width="6"/>
+  <path d="M-62 21h124v15H-62z" fill="#f7ce68" stroke="#fff0b8" stroke-width="5"/>
+  <path d="M-30 38h60v48q-30 27-60 0z" fill="#d4a47a" stroke="#e9c5a4" stroke-width="5"/>
+  <path d="M-19 55h8m22 0h8" stroke="#102033" stroke-width="9" stroke-linecap="round"/>
+  <path d="M-12 77q12 8 24 0" fill="none" stroke="#7a3c31" stroke-width="5" stroke-linecap="round"/>
+</g>
+<!-- zombie worker -->
+<g transform="translate(384 128)" filter="url(#glow)">
+  <path d="M-46 14q1-60 46-60t46 60v15h-92z" fill="#e8b338" stroke="#ffe29a" stroke-width="5"/>
+  <path d="M-58 22h116v13H-58z" fill="#f3c85b" stroke="#ffe29a" stroke-width="5"/>
+  <path d="M-36 39h72v67h-72z" fill="#bd3d32" stroke="#f08069" stroke-width="5"/>
+  <path d="M-29 49l18 10m40-10L11 59" stroke="#f2d2a8" stroke-width="4"/>
+  <path d="M-21 65h12m18 0h12" stroke="#e9ff9f" stroke-width="10" stroke-linecap="round"/>
+  <path d="M-12 89q13-10 24 0v9h-24z" fill="#381c1e"/>
+  <path d="M-49 47l-20 29m118-29 20 29" stroke="#8bc34a" stroke-width="13" stroke-linecap="round"/>
+</g>
+<!-- forklift icon -->
+<g transform="translate(128 384)" filter="url(#glow)" stroke-linejoin="round">
+  <path d="M-72 25h114l18 23h-132z" fill="#e5a72b" stroke="#ffe19a" stroke-width="6"/>
+  <path d="M-20 20v-86h48v86" fill="none" stroke="#e7edf2" stroke-width="10"/>
+  <path d="M-12-54h35v40h-35z" fill="#76c4df" stroke="#d8f4ff" stroke-width="5"/>
+  <path d="M30-67v101m13-101v101m-13-15h30" stroke="#e5eaf0" stroke-width="7"/>
+  <circle cx="-39" cy="51" r="18" fill="#0a1420" stroke="#cbd5e1" stroke-width="5"/><circle cx="29" cy="51" r="18" fill="#0a1420" stroke="#cbd5e1" stroke-width="5"/>
+  <path d="M-70-2h40v23h-40z" fill="#f59e0b" stroke="#ffe19a" stroke-width="4"/>
+</g>
+<!-- pallet stack -->
+<g transform="translate(384 384)" filter="url(#glow)">
+  <path d="M-70 36h140v18H-70z" fill="#9b683d" stroke="#f0c28c" stroke-width="5"/>
+  <path d="M-62 13h124v21H-62z" fill="#bf874e" stroke="#f0c28c" stroke-width="5"/>
+  <path d="M-54-52h108v62H-54z" fill="#b47a45" stroke="#e8bf8d" stroke-width="6"/>
+  <path d="M-54-23h108M-24-52v62M24-52v62" stroke="#704627" stroke-width="5"/>
+  <path d="M-44-12h88v15h-88z" fill="#e7e1d0" stroke="#344556" stroke-width="4"/>
+  <path d="M-32-7h10m7 0h5m6 0h4m7 0h12" stroke="#243548" stroke-width="4"/>
+</g>
+</svg>
