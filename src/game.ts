@@ -1759,6 +1759,7 @@ export class PaleciakiGameEngine {
 
     this.rebuildPlayerMesh();
     this.buildPvpArena();
+    this.applySceneTextureQuality();
     this.buildPvpLocalMarker();
     this.buildRemotePlayer(remoteOperatorId);
 
