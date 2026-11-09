@@ -124,7 +124,7 @@ test('Unity enemy catalog preserves all 23 legacy IDs and the Survival unlock ro
   assert.match(catalog, /ChooseSurvivalSpawnType/);
   assert.match(catalog, /MinimumSurvivalWave/);
   assert.match(catalog, /EnemyKind\.ZombieWorker, EnemyKind\.Kurier, EnemyKind\.CrazyStacker/);
-  const roster = catalog.match(/private static readonly EnemyKind\[\] SurvivalRoster\\s*=\\s*\{([\\s\\S]*?)\};/);
+  const roster = catalog.match(/private static readonly EnemyKind\[\] SurvivalRoster\s*=\s*\{([\s\S]*?)\};/);
   assert.ok(roster, 'missing Survival roster block');
   assert.equal((roster[1].match(/EnemyKind\./g) || []).length, 17);
   for (const sourceUnlock of ['MinimumSurvivalWave = minWave', 'MinimumSurvivalElapsedSeconds = minElapsed', 'SurvivalSpawnWeight = spawnWeight']) {
