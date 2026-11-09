@@ -465,9 +465,10 @@ test('PvP obstacles retain soft baked contact shadows when mobile shadow maps ar
 
 
 test('PvP HUD shows each operator ability that the arena actually executes and restores Survival labels', async () => {
-  const [app, arena] = await Promise.all([
+  const [app, arena, html] = await Promise.all([
     readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/pvpArena.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../index.html', import.meta.url), 'utf8'),
   ]);
   assert.match(app, /import \{ getPvpOperatorAttackCooldown, PVP_OPERATOR_PROFILES/);
   const presentationStart = app.indexOf('const applyPvpAbilityPresentation');
@@ -486,4 +487,11 @@ test('PvP HUD shows each operator ability that the arena actually executes and r
   const survivalStart = app.indexOf('this.engine.startSurvival(selectedSurvivalMapId)');
   const restoreStart = app.lastIndexOf('updateCharacterUI(this.selectedCharId)', survivalStart);
   assert.ok(restoreStart >= 0 && restoreStart < survivalStart, 'Survival should restore its own ability label/icon');
+  for (const label of [
+    'Tarcza 250 + odrzut',
+    '180 obrażeń / stun 0,8 s',
+    '3 × 70 obrażeń',
+    '150 / stun 0,5 s',
+    '110 / stun 1,1 s',
+  ]) assert.ok(html.includes(label), `PvP selector ability summary is out of sync: ${label}`);
 });
