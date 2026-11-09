@@ -100,7 +100,7 @@ namespace MaxFlix.Unity.Runtime
                 {
                     bool auditSeal = _primaryCount % 3 == 0;
                     SpawnProjectile(origin, transform.forward, auditSeal ? PrimitiveType.Sphere : PrimitiveType.Cube,
-                        _profile.SecondaryColor, _profile.BasicAttackDamageMultiplier * (auditSeal ? 2.1f : 1f),
+                        _profile.SecondaryColor, CombatBalanceCatalog.ScaleCharacterBasicAttackDamage(1f, _profile.BasicAttackDamageMultiplier) * (auditSeal ? 2.1f : 1f),
                         17f, auditSeal ? 1 : 0, 0.34f, 0f, 1f, 0f, false, 2.8f);
                     _hud?.SetStatus(auditSeal ? "PIECZĘĆ AUDYTU • WZMOCNIONY ATAK" : "ZAKLĘCIE ERP • CEL OZNACZONY");
                     break;
@@ -109,7 +109,7 @@ namespace MaxFlix.Unity.Runtime
                 {
                     bool heavyThrow = _primaryCount % 3 == 0;
                     SpawnProjectile(origin, transform.forward, PrimitiveType.Cylinder,
-                        _profile.SecondaryColor, _profile.BasicAttackDamageMultiplier * (heavyThrow ? 1.8f : 1f),
+                        _profile.SecondaryColor, CombatBalanceCatalog.ScaleCharacterBasicAttackDamage(1f, _profile.BasicAttackDamageMultiplier) * (heavyThrow ? 1.8f : 1f),
                         14f, heavyThrow ? 4 : 0, 0f, 0f, 1f, heavyThrow ? 4.2f : 1.5f, false, 3.0f);
                     _hud?.SetStatus(heavyThrow ? "RZUT SIŁACZA • PRZEBICIE" : "HANTLA 44 CM • RZUT");
                     break;
@@ -118,7 +118,7 @@ namespace MaxFlix.Unity.Runtime
                 {
                     bool stretchBurst = _primaryCount % 3 == 0;
                     SpawnProjectile(origin, transform.forward, PrimitiveType.Capsule,
-                        _profile.SecondaryColor, _profile.BasicAttackDamageMultiplier * (stretchBurst ? 1.25f : 1f),
+                        _profile.SecondaryColor, CombatBalanceCatalog.ScaleCharacterBasicAttackDamage(1f, _profile.BasicAttackDamageMultiplier) * (stretchBurst ? 1.25f : 1f),
                         14.5f, stretchBurst ? 2 : 0, 0f, 1.55f, 0.48f, 0.25f, false, 3.0f);
                     _hud?.SetStatus(stretchBurst ? "STRETCH • PASMA ROZRZUcone" : "FOLIA STRETCH • CEL SPOWOLNIONY");
                     break;
@@ -126,7 +126,7 @@ namespace MaxFlix.Unity.Runtime
                 case OperatorId.Mateusz:
                 {
                     SpawnProjectile(origin, transform.forward, PrimitiveType.Sphere,
-                        _profile.SecondaryColor, _profile.BasicAttackDamageMultiplier,
+                        _profile.SecondaryColor, CombatBalanceCatalog.ScaleCharacterBasicAttackDamage(1f, _profile.BasicAttackDamageMultiplier),
                         20f, 0, 0.22f, 1.1f, 0.58f, 0f, false, 1.4f, true);
                     _hud?.SetStatus("IMPULS PARALIZATORA • ELEKTRYZACJA");
                     break;
