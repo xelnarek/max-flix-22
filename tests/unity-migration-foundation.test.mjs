@@ -238,7 +238,7 @@ test('Unity release identity and manual build workflow target WebGPU WebGL and A
   assert.match(workflow, /secrets\.UNITY_LICENSE/);
   assert.match(workflow, /secrets\.UNITY_EMAIL/);
   assert.match(workflow, /secrets\.UNITY_PASSWORD/);
-  assert.match(workflow, /UNITY_LICENSE:\\- \\"|UNITY_LICENSE/);
+  assert.match(workflow, /UNITY_LICENSE and UNITY_EMAIL and UNITY_PASSWORD/);
 
   assert.match(workflow, /secrets\.ANDROID_UPLOAD_KEYSTORE_BASE64/);
   assert.doesNotMatch(workflow, /r0adkll\/upload-google-play/);
