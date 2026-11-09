@@ -135,6 +135,9 @@ namespace MaxFlix.Unity.Runtime
 
             GameObject knob = CreateImage(_joystickRect, "Joystick handle", Vector2.zero, new Vector2(82f, 82f), new Color(0.52f, 0.72f, 0.86f, 0.82f));
             _joystickHandleRect = knob.GetComponent<RectTransform>();
+            _joystickHandleRect.anchorMin = new Vector2(0.5f, 0.5f);
+            _joystickHandleRect.anchorMax = new Vector2(0.5f, 0.5f);
+            _joystickHandleRect.anchoredPosition = Vector2.zero;
             knob.GetComponent<Image>().raycastTarget = false;
             Joystick.ConfigureHandle(_joystickHandleRect);
 
@@ -175,13 +178,16 @@ namespace MaxFlix.Unity.Runtime
             float stickSize = portrait
                 ? Mathf.Clamp(Mathf.Min(width * 0.28f, height * 0.17f), 124f, 190f)
                 : Mathf.Clamp(Mathf.Min(width * 0.12f, height * 0.24f), 140f, 210f);
-            SetControlRect(_joystickRect, Vector2.zero, Vector2.zero,
-                new Vector2(edgeX, edgeY), new Vector2(stickSize, stickSize));
+            // Keep the joystick origin at the visual center. The pointer vector is
+            // measured in root-local coordinates, so a bottom-left pivot would
+            // otherwise shift the neutral point and make movement drift diagonally.
+            SetControlRect(_joystickRect, Vector2.zero, new Vector2(0.5f, 0.5f),
+                new Vector2(edgeX + stickSize * 0.5f, edgeY + stickSize * 0.5f),
+                new Vector2(stickSize, stickSize));
+            float handleSize = stickSize * 0.40f;
             if (_joystickHandleRect != null)
-            {
-                float handleSize = stickSize * 0.40f;
                 _joystickHandleRect.sizeDelta = new Vector2(handleSize, handleSize);
-            }
+            Joystick?.ConfigureMovementRadius(Mathf.Max(1f, (stickSize - handleSize) * 0.5f));
 
             float buttonWidth = portrait
                 ? Mathf.Clamp(Mathf.Min(width * 0.30f, height * 0.105f), 112f, 148f)

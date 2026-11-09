@@ -18,6 +18,14 @@ namespace MaxFlix.Unity.Runtime
             handle = value;
         }
 
+        public void ConfigureMovementRadius(float value)
+        {
+            if (float.IsNaN(value) || float.IsInfinity(value)) return;
+            movementRadius = Mathf.Clamp(value, 1f, 256f);
+            if (_value.sqrMagnitude > 0.0001f)
+                handle.anchoredPosition = _value * movementRadius;
+        }
+
         private void Awake()
         {
             _root = transform as RectTransform;
