@@ -23,15 +23,16 @@ test('PvP timing arc and STRZAŁ are placed over the movement joystick', async (
     readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
   ]);
   assert.ok(app.includes("bindPvpTap(pvpFireButton"));
-  assert.ok(!app.includes("activeAimPointerId"));
-  assert.ok(app.includes("pvpFireControl.style.setProperty"));
+  assert.ok(app.includes("activeAimPointerId = event.pointerId"));
+  assert.ok(app.includes("this.engine.setPvpAimStickInput("));
+  assert.ok(app.includes("touchActionsZone.prepend(pvpFireControl)"));
   assert.ok(game.includes("getPvpSweepAimAngle("));
   assert.ok(game.includes("pvpAimSweepPointer"));
   assert.ok(html.includes('id="pvp-fire-control"'));
-  assert.ok(html.includes("OBSERWUJ ŁUK"));
+  assert.ok(html.includes("PRAWY: CELOWANIE"));
   assert.ok(html.indexOf('id="touch-joystick-zone"') < html.indexOf('id="pvp-fire-control"'));
   assert.ok(html.indexOf('id="pvp-fire-control"') < html.indexOf('class="touch-actions-zone"'));
-  assert.ok(!html.includes('id="pvp-aim-zone"'));
+  assert.ok(html.includes('id="pvp-aim-zone"'));
   assert.ok(css.includes("pvp-fire-control"));
 });
 
