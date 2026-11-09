@@ -7551,3 +7551,9 @@ body #touch-controls.manual-aim-mode:not(.hidden) .pvp-control-guide {
     min-height: 38px !important;
   }
 }
+
+#touch-controls.pvp-mode .pvp-aim-zone {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
