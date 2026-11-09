@@ -599,4 +599,7 @@ test('Unity performance governor preserves one baseline across restarts and rest
   assert.match(governor, /Application\.targetFrameRate = _baselineTargetFrameRate/);
   assert.match(governor, /QualitySettings\.vSyncCount = _baselineVsyncCount/);
   assert.match(governor, /QualitySettings\.shadowResolution = _baselineShadowResolution/);
+  assert.doesNotMatch(governor, /_original(LodBias|ShadowDistance|ShadowResolution|TargetFrameRate|VsyncCount)/);
+  assert.match(governor, /Mathf\.Min\(_baselineShadowDistance, 30f\)/);
+  assert.match(governor, /Mathf\.Min\(_baselineShadowDistance, 16f\)/);
 });
