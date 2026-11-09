@@ -14,13 +14,15 @@ namespace MaxFlix.Unity.Runtime
         private const int SlowWindowsBeforeDowngrade = 2;
         private const int FastWindowsBeforeUpgrade = 4;
 
+        private static bool _baselineCaptured;
+        private static int _baselineTargetFrameRate;
+        private static int _baselineVsyncCount;
+        private static float _baselineLodBias;
+        private static float _baselineShadowDistance;
+        private static ShadowResolution _baselineShadowResolution;
+
         private SurvivalWaveDirector _director;
         private HudController _hud;
-        private int _originalTargetFrameRate;
-        private int _originalVsyncCount;
-        private float _originalLodBias;
-        private float _originalShadowDistance;
-        private ShadowResolution _originalShadowResolution;
         private float _windowSeconds;
         private int _windowFrames;
         private int _slowWindows;
@@ -36,11 +38,15 @@ namespace MaxFlix.Unity.Runtime
             if (_initialized) return;
             _director = director;
             _hud = hud;
-            _originalTargetFrameRate = Application.targetFrameRate;
-            _originalVsyncCount = QualitySettings.vSyncCount;
-            _originalLodBias = QualitySettings.lodBias;
-            _originalShadowDistance = QualitySettings.shadowDistance;
-            _originalShadowResolution = QualitySettings.shadowResolution;
+            if (!_baselineCaptured)
+            {
+                _baselineTargetFrameRate = Application.targetFrameRate;
+                _baselineVsyncCount = QualitySettings.vSyncCount;
+                _baselineLodBias = QualitySettings.lodBias;
+                _baselineShadowDistance = QualitySettings.shadowDistance;
+                _baselineShadowResolution = QualitySettings.shadowResolution;
+                _baselineCaptured = true;
+            }
 
             Application.targetFrameRate = 60;
             QualitySettings.vSyncCount = 0;
@@ -105,9 +111,9 @@ namespace MaxFlix.Unity.Runtime
         {
             if (_tier == 0)
             {
-                QualitySettings.lodBias = _originalLodBias;
-                QualitySettings.shadowDistance = _originalShadowDistance;
-                QualitySettings.shadowResolution = _originalShadowResolution;
+                QualitySettings.lodBias = _baselineLodBias;
+                QualitySettings.shadowDistance = _baselineShadowDistance;
+                QualitySettings.shadowResolution = _baselineShadowResolution;
                 return;
             }
 
@@ -127,8 +133,8 @@ namespace MaxFlix.Unity.Runtime
         private void OnDestroy()
         {
             if (!_initialized) return;
-            Application.targetFrameRate = _originalTargetFrameRate;
-            QualitySettings.vSyncCount = _originalVsyncCount;
+            Application.targetFrameRate = _baselineTargetFrameRate;
+            QualitySettings.vSyncCount = _baselineVsyncCount;
             QualitySettings.lodBias = _originalLodBias;
             QualitySettings.shadowDistance = _originalShadowDistance;
             QualitySettings.shadowResolution = _originalShadowResolution;
