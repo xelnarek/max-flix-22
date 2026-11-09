@@ -7557,3 +7557,44 @@ body #touch-controls.manual-aim-mode:not(.hidden) .pvp-control-guide {
   visibility: visible !important;
   opacity: 1 !important;
 }
+
+/* Pause is a first-class member of the action dock, not a floating overlay. */
+#touch-controls .touch-pause-btn {
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+  flex: 0 0 42px !important;
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  min-height: 42px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 13px !important;
+  pointer-events: auto !important;
+  z-index: 2147483010 !important;
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  #touch-controls .touch-pause-btn {
+    flex-basis: 38px !important;
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+  }
+}
+@media (max-height: 560px) and (orientation: portrait) {
+  #touch-controls .pvp-aim-zone {
+    top: 22% !important;
+    width: 98px !important;
+    height: 112px !important;
+  }
+  #touch-controls .pvp-aim-base {
+    width: 88px !important;
+    height: 88px !important;
+  }
+  #touch-controls .pvp-aim-knob {
+    width: 36px !important;
+    height: 36px !important;
+  }
+}
