@@ -5,9 +5,10 @@ import cartonUrl from './visuals/b4-freight-carton.svg?url';
 import steelUrl from './visuals/b4-corrugated-steel.svg?url';
 import hazardUrl from './visuals/b4-hazard-chevron.svg?url';
 import spriteAtlasUrl from './visuals/b4-sprite-atlas.svg?url';
+import enemyAtlasUrl from './visuals/b4-enemy-atlas.svg?url';
 
-export type B4VisualTextureKind = 'floor' | 'pallet' | 'carton' | 'steel' | 'hazard' | 'spriteAtlas';
-export type B4SpriteKind = 'worker' | 'zombie' | 'forklift' | 'pallet';
+export type B4VisualTextureKind = 'floor' | 'pallet' | 'carton' | 'steel' | 'hazard' | 'spriteAtlas' | 'enemyAtlas';
+export type B4SpriteKind = 'worker' | 'zombie' | 'forklift' | 'pallet' | 'inspector' | 'customer' | 'handlowiec' | 'monter';
 
 interface B4TextureEntry {
   texture: THREE.Texture;
@@ -21,6 +22,7 @@ const textureUrls: Record<B4VisualTextureKind, string> = {
   steel: steelUrl,
   hazard: hazardUrl,
   spriteAtlas: spriteAtlasUrl,
+  enemyAtlas: enemyAtlasUrl,
 };
 
 const textureCache = new Map<B4VisualTextureKind, B4TextureEntry>();
@@ -71,21 +73,34 @@ export function preloadB4VisualTexture(kind: B4VisualTextureKind): Promise<THREE
   return (textureCache.get(kind) || createEntry(kind)).ready;
 }
 
-const spriteFrames: Record<B4SpriteKind, { x: number; y: number }> = {
-  worker: { x: 0, y: 0.5 },
-  zombie: { x: 0.5, y: 0.5 },
-  forklift: { x: 0, y: 0 },
-  pallet: { x: 0.5, y: 0 },
+const spriteFrames: Record<B4SpriteKind, { atlas: 'spriteAtlas' | 'enemyAtlas'; x: number; y: number }> = {
+  worker: { atlas: 'spriteAtlas', x: 0, y: 0.5 },
+  zombie: { atlas: 'spriteAtlas', x: 0.5, y: 0.5 },
+  forklift: { atlas: 'spriteAtlas', x: 0, y: 0 },
+  pallet: { atlas: 'spriteAtlas', x: 0.5, y: 0 },
+  inspector: { atlas: 'enemyAtlas', x: 0, y: 0.5 },
+  customer: { atlas: 'enemyAtlas', x: 0.5, y: 0.5 },
+  handlowiec: { atlas: 'enemyAtlas', x: 0, y: 0 },
+  monter: { atlas: 'enemyAtlas', x: 0.5, y: 0 },
 };
 
-/** Creates a crisp alpha-cut sprite from the original four-frame B4 atlas. */
+// One texture view per atlas frame: many enemies can share it without creating
+// a fresh GPU texture for every spawned/despawned NPC.
+const spriteTextureViews = new Map<B4SpriteKind, THREE.Texture>();
+
+/** Creates a crisp alpha-cut sprite from the original B4 character/object atlases. */
 export function createB4SpriteDecal(kind: B4SpriteKind, width = 0.32, height = 0.32): THREE.Mesh {
-  const texture = getB4VisualTexture('spriteAtlas').clone();
   const frame = spriteFrames[kind];
-  texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
-  texture.repeat.set(0.5, 0.5);
-  texture.offset.set(frame.x, frame.y);
-  texture.needsUpdate = true;
+  let texture = spriteTextureViews.get(kind);
+  if (!texture) {
+    texture = getB4VisualTexture(frame.atlas).clone();
+    texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
+    texture.repeat.set(0.5, 0.5);
+    texture.offset.set(frame.x, frame.y);
+    texture.needsUpdate = true;
+    texture.name = 'max-flix-b4-sprite-' + kind;
+    spriteTextureViews.set(kind, texture);
+  }
   const material = new THREE.MeshBasicMaterial({
     map: texture,
     transparent: true,
