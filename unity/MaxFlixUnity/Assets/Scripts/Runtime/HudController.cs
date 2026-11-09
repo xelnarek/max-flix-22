@@ -89,6 +89,7 @@ namespace MaxFlix.Unity.Runtime
 
         private void Update()
         {
+            ApplyResponsiveTouchLayout(false);
             Keyboard keyboard = Keyboard.current;
             if (_modalOverlay != null)
             {
