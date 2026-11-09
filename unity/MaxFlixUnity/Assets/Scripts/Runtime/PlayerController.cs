@@ -9,23 +9,20 @@ namespace MaxFlix.Unity.Runtime
         [SerializeField] private float gravity = -24f;
         [SerializeField] private float turnSharpness = 14f;
         [SerializeField] private float attackInterval = 0.42f;
-        [SerializeField] private float projectileSpeed = 17f;
 
         private CharacterController _controller;
         private OperatorProfile _profile;
         private VirtualJoystick _joystick;
         private HudController _hud;
         private OperatorAnimationRig _animationRig;
-        private readonly MaterialPropertyBlock _projectileProperties = new MaterialPropertyBlock();
-        private static Material _sharedProjectileMaterial;
-        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
-        private static readonly int ColorId = Shader.PropertyToID("_Color");
-        private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
+        private OperatorCombatKit _combatKit;
         private float _verticalSpeed;
         private float _attackCooldown;
         private float _currentHealth;
         private bool _jumpRequested;
+        private bool _airJumpUsed;
         private bool _attackRequested;
+        private bool _abilityRequested;
         private bool _defeated;
 
         public float CurrentHealth { get { return _currentHealth; } }
@@ -40,6 +37,9 @@ namespace MaxFlix.Unity.Runtime
             _animationRig = GetComponent<OperatorAnimationRig>();
             _joystick = joystick;
             _hud = hud;
+            _combatKit = GetComponent<OperatorCombatKit>();
+            if (_combatKit == null) _combatKit = gameObject.AddComponent<OperatorCombatKit>();
+            _combatKit.Initialize(this, hud, _profile);
             _currentHealth = _profile.MaxHealth;
             _hud?.SetHealth(_currentHealth, _profile.MaxHealth);
         }
@@ -54,10 +54,20 @@ namespace MaxFlix.Unity.Runtime
             if (!_defeated) _attackRequested = true;
         }
 
+        public void RequestAbility()
+        {
+            if (!_defeated) _abilityRequested = true;
+        }
+
         public void ApplyDamage(float amount)
         {
-            if (_defeated || float.IsNaN(amount) || float.IsInfinity(amount) || amount <= 0f) return;
-            _currentHealth = Mathf.Max(0f, _currentHealth - amount * _profile.DamageTakenMultiplier);
+            if (_defeated || (_combatKit != null && _combatKit.IsInvulnerable)
+                || float.IsNaN(amount) || float.IsInfinity(amount) || amount <= 0f) return;
+
+            float damageMultiplier = _combatKit != null
+                ? _combatKit.DamageTakenMultiplier
+                : _profile.DamageTakenMultiplier;
+            _currentHealth = Mathf.Max(0f, _currentHealth - amount * damageMultiplier);
             _hud?.SetHealth(_currentHealth, _profile.MaxHealth);
             if (_currentHealth <= 0f)
             {
@@ -67,6 +77,13 @@ namespace MaxFlix.Unity.Runtime
             }
         }
 
+        public void RestoreHealth(float amount)
+        {
+            if (_defeated || float.IsNaN(amount) || float.IsInfinity(amount) || amount <= 0f) return;
+            _currentHealth = Mathf.Min(_profile.MaxHealth, _currentHealth + amount);
+            _hud?.SetHealth(_currentHealth, _profile.MaxHealth);
+        }
+
         private void Awake()
         {
             _controller = GetComponent<CharacterController>();
@@ -74,24 +91,43 @@ namespace MaxFlix.Unity.Runtime
 
         private void Update()
         {
-            if (_controller == null || _defeated) return;
+            if (_controller == null || _defeated || _profile == null) return;
 
-            GameSession.AddElapsedTime(Time.deltaTime);
-            _attackCooldown = Mathf.Max(0f, _attackCooldown - Time.deltaTime);
+            float deltaTime = Time.deltaTime;
+            GameSession.AddElapsedTime(deltaTime);
+            _combatKit?.Tick(deltaTime);
+            _attackCooldown = Mathf.Max(0f, _attackCooldown - deltaTime);
 
             Vector2 moveInput = ReadMovement();
             Vector3 move = new Vector3(moveInput.x, 0f, moveInput.y);
             if (move.sqrMagnitude > 1f) move.Normalize();
 
-            if (_controller.isGrounded && _verticalSpeed < 0f) _verticalSpeed = -2f;
-            if (_jumpRequested && _controller.isGrounded) _verticalSpeed = _profile.JumpForce;
-            _jumpRequested = false;
-            _verticalSpeed += gravity * Time.deltaTime;
+            if (_controller.isGrounded)
+            {
+                if (_verticalSpeed < 0f) _verticalSpeed = -2f;
+                _airJumpUsed = false;
+            }
 
-            Vector3 velocity = move * _profile.MoveSpeed;
+            if (_jumpRequested)
+            {
+                if (_controller.isGrounded)
+                {
+                    _verticalSpeed = _profile.JumpForce;
+                }
+                else if (_profile.Id == OperatorId.Piotr && !_airJumpUsed)
+                {
+                    _verticalSpeed = _profile.JumpForce * 0.86f;
+                    _airJumpUsed = true;
+                }
+            }
+            _jumpRequested = false;
+            _verticalSpeed += gravity * deltaTime;
+
+            float movementMultiplier = _combatKit != null ? _combatKit.MovementMultiplier : 1f;
+            Vector3 velocity = move * (_profile.MoveSpeed * movementMultiplier);
             velocity.y = _verticalSpeed;
-            _controller.Move(velocity * Time.deltaTime);
-            _animationRig?.Tick(move.magnitude, _controller.isGrounded, Time.deltaTime);
+            _controller.Move(velocity * deltaTime);
+            _animationRig?.Tick(move.magnitude, _controller.isGrounded, deltaTime);
 
             if (move.sqrMagnitude > 0.02f)
             {
@@ -99,7 +135,7 @@ namespace MaxFlix.Unity.Runtime
                 transform.rotation = Quaternion.Slerp(
                     transform.rotation,
                     facing,
-                    1f - Mathf.Exp(-turnSharpness * Time.deltaTime)
+                    1f - Mathf.Exp(-turnSharpness * deltaTime)
                 );
             }
 
@@ -110,10 +146,20 @@ namespace MaxFlix.Unity.Runtime
                 (keyboard != null && (keyboard.jKey.wasPressedThisFrame || keyboard.kKey.wasPressedThisFrame)) ||
                 (mouse != null && mouse.leftButton.wasPressedThisFrame) ||
                 (gamepad != null && gamepad.rightTrigger.wasPressedThisFrame);
+            bool abilityKey = keyboard != null && keyboard.eKey.wasPressedThisFrame;
+
             if ((_attackRequested || attackKey) && _attackCooldown <= 0f)
-                FirePrimaryAttack();
+            {
+                _attackCooldown = attackInterval;
+                _animationRig?.TriggerAttack();
+                _combatKit?.FirePrimaryAttack();
+            }
+
+            if (_abilityRequested || abilityKey)
+                _combatKit?.TryActivateAbility(GameSession.Current != null ? GameSession.Current.Mode : GameMode.Campaign);
 
             _attackRequested = false;
+            _abilityRequested = false;
         }
 
         private Vector2 ReadMovement()
@@ -136,53 +182,6 @@ namespace MaxFlix.Unity.Runtime
                 return _joystick.Value;
 
             return Vector2.ClampMagnitude(keyboardInput, 1f);
-        }
-
-        private void FirePrimaryAttack()
-        {
-            _attackCooldown = attackInterval;
-            _animationRig?.TriggerAttack();
-            Vector3 direction = transform.forward;
-            Vector3 origin = transform.position + Vector3.up * 1.0f + direction * 0.65f;
-
-            GameObject projectile = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            projectile.name = "B4 ERP energy bolt";
-            projectile.transform.position = origin;
-            projectile.transform.localScale = Vector3.one * 0.24f;
-
-            Renderer renderer = projectile.GetComponent<Renderer>();
-            if (renderer != null)
-            {
-                if (_sharedProjectileMaterial == null)
-                {
-                    Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-                    if (shader == null) shader = Shader.Find("Standard");
-                    _sharedProjectileMaterial = new Material(shader)
-                    {
-                        enableInstancing = true
-                    };
-                    if (_sharedProjectileMaterial.HasProperty(EmissionColorId))
-                        _sharedProjectileMaterial.EnableKeyword("_EMISSION");
-                }
-
-                renderer.sharedMaterial = _sharedProjectileMaterial;
-                renderer.GetPropertyBlock(_projectileProperties);
-                _projectileProperties.SetColor(BaseColorId, _profile.SecondaryColor);
-                _projectileProperties.SetColor(ColorId, _profile.SecondaryColor);
-                _projectileProperties.SetColor(EmissionColorId, _profile.SecondaryColor * 1.5f);
-                renderer.SetPropertyBlock(_projectileProperties);
-            }
-
-            SphereCollider collider = projectile.GetComponent<SphereCollider>();
-            collider.isTrigger = true;
-            Rigidbody body = projectile.AddComponent<Rigidbody>();
-            body.useGravity = false;
-            body.isKinematic = false;
-            body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-            body.velocity = direction * projectileSpeed;
-
-            CombatProjectile impact = projectile.AddComponent<CombatProjectile>();
-            impact.Initialize(_profile.BasicAttackDamageMultiplier, 2.5f);
         }
     }
 }
