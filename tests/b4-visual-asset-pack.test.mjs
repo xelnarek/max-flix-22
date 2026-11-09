@@ -65,7 +65,7 @@ test('second B4 atlas is bundled, preloaded and used by four distinct enemy arch
   ]);
   assert.match(pack, /enemyAtlasUrl from '\.\/visuals\/b4-enemy-atlas\.svg\?url'/);
   assert.match(pack, /enemyAtlas: enemyAtlasUrl/);
-  assert.match(pack, /enemyAtlas: 'enemyAtlas'/);
+  assert.match(pack, /atlas: 'enemyAtlas'/);
   assert.match(assets, /preloadB4VisualTexture\('enemyAtlas'\)/);
   for (const kind of ['customer', 'inspector', 'handlowiec', 'monter']) {
     assert.match(pack, new RegExp(`\\b${kind}: \\{ atlas: 'enemyAtlas'`));
