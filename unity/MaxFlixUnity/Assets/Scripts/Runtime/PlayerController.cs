@@ -8,7 +8,6 @@ namespace MaxFlix.Unity.Runtime
     {
         [SerializeField] private float gravity = -24f;
         [SerializeField] private float turnSharpness = 14f;
-        [SerializeField] private float attackInterval = 0.42f;
 
         private CharacterController _controller;
         private OperatorProfile _profile;
@@ -19,6 +18,7 @@ namespace MaxFlix.Unity.Runtime
         private float _verticalSpeed;
         private float _attackCooldown;
         private float _currentHealth;
+        private float _hitInvulnerabilityRemaining;
         private bool _jumpRequested;
         private bool _airJumpUsed;
         private bool _attackRequested;
@@ -62,12 +62,17 @@ namespace MaxFlix.Unity.Runtime
         public void ApplyDamage(float amount)
         {
             if (_defeated || (_combatKit != null && _combatKit.IsInvulnerable)
+                || _hitInvulnerabilityRemaining > 0f
                 || float.IsNaN(amount) || float.IsInfinity(amount) || amount <= 0f) return;
 
+            GameMode currentMode = GameSession.Current != null ? GameSession.Current.Mode : GameMode.Campaign;
+            float scaledIncomingDamage = CombatBalanceCatalog.ScaleIncomingDamage(amount, currentMode);
             float damageMultiplier = _combatKit != null
                 ? _combatKit.DamageTakenMultiplier
                 : _profile.DamageTakenMultiplier;
-            _currentHealth = Mathf.Max(0f, _currentHealth - amount * damageMultiplier);
+            _currentHealth = Mathf.Max(0f, _currentHealth - scaledIncomingDamage * damageMultiplier);
+            if (currentMode == GameMode.Survival)
+                _hitInvulnerabilityRemaining = CombatBalanceCatalog.SurvivalHitInvulnerabilitySeconds;
             _hud?.SetHealth(_currentHealth, _profile.MaxHealth);
             if (_currentHealth <= 0f)
             {
@@ -99,6 +104,7 @@ namespace MaxFlix.Unity.Runtime
             if (_controller == null || _defeated || _profile == null) return;
 
             float deltaTime = Time.deltaTime;
+            _hitInvulnerabilityRemaining = Mathf.Max(0f, _hitInvulnerabilityRemaining - deltaTime);
             GameSession.AddElapsedTime(deltaTime);
             _combatKit?.Tick(deltaTime);
             _attackCooldown = Mathf.Max(0f, _attackCooldown - deltaTime);
@@ -155,7 +161,8 @@ namespace MaxFlix.Unity.Runtime
 
             if ((_attackRequested || attackKey) && _attackCooldown <= 0f)
             {
-                _attackCooldown = attackInterval;
+                GameMode currentMode = GameSession.Current != null ? GameSession.Current.Mode : GameMode.Campaign;
+                _attackCooldown = CombatBalanceCatalog.GetPrimaryAttackCooldown(_profile.Id, currentMode);
                 _animationRig?.TriggerAttack();
                 _combatKit?.FirePrimaryAttack();
             }
