@@ -242,7 +242,7 @@ namespace MaxFlix.Unity.Runtime
 
             if (_helpText != null)
             {
-                _helpText.gameObject.SetActive(!portrait && height > 480f);
+                _helpText.gameObject.SetActive(_cameraZoomSlider == null && !portrait && height > 480f);
                 _helpText.rectTransform.sizeDelta = new Vector2(Mathf.Min(1040f, width * 0.62f), 42f);
             }
             if (_statusText != null)
