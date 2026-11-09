@@ -229,10 +229,13 @@ test('selected Survival map changes environment art and applies its health/speed
   assert.match(factory, /GameContentCatalog\.GetMap\(GameSession\.Current\.SelectedMap\)/);
   assert.match(factory, /CreateLighting\(map\)/);
   assert.match(factory, /CreateFloor\(map\)/);
-  assert.match(factory, /CreateMapSetDressing\(map\)/);
-  assert.match(factory, /Port container/);
-  assert.match(factory, /Refrigeration condenser/);
-  assert.match(factory, /Night conveyor belt/);
+  assert.match(factory, /CreateMapLayout\(map\)/);
+  assert.match(factory, /CreateContainerTerminalLayout/);
+  assert.match(factory, /CreateColdStorageLayout/);
+  assert.match(factory, /CreateNightSortingLayout/);
+  assert.match(factory, /Container 17/);
+  assert.match(factory, /Cold-room compressor bank/);
+  assert.match(factory, /Sortation conveyor belt/);
   assert.match(director, /_mapProfile = GameContentCatalog\.GetMap/);
   assert.match(director, /profile\.EnemyHealthMultiplier \*= _mapProfile\.EnemyHealthMultiplier/);
   assert.match(director, /profile\.EnemySpeedMultiplier \*= _mapProfile\.EnemySpeedMultiplier/);
