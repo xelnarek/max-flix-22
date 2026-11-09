@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { disposePvpObjectTree } from './pvpResourceCleanup.ts';
 import { calculatePvpCameraFrame, calculatePvpCameraTrackingBounds, isPvpPortraitViewport } from './pvpCamera.ts';
 import { createArenaObstacleFootprint, createPvpContactShadowTexture, createPvpFloorTexture, createPvpObstacleTexture } from './pvpTextures.ts';
-import { createB4FreightStack, createB4WallSprite } from './b4AssetPack.ts';
+import { createB4FreightStack, createB4HazardDrumCluster, createB4WallSprite, getB4VisualTexture } from './b4AssetPack.ts';
 import {
   calculatePvpAimPreview, getPvpAimAngle, getPvpSweepAimAngle, getPvpAimSweepCenterAngle,
   pvpAimDirectionFromAngle, pvpScreenMovementToWorld,
@@ -2170,7 +2170,7 @@ export class PaleciakiGameEngine {
       color: 0xffffff, map: createPvpObstacleTexture('barrier'), roughness: 0.68, metalness: 0.28,
     });
     const pillarMat = new THREE.MeshStandardMaterial({
-      color: 0xffffff, map: wallTexture, roughness: 0.58, metalness: 0.38,
+      color: 0xffffff, map: getB4VisualTexture('container'), roughness: 0.58, metalness: 0.38,
     });
     const palletBandMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
     const barrierStripeMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
@@ -2200,7 +2200,11 @@ export class PaleciakiGameEngine {
       const footprintColor = obs.type === 'barrier' ? 0xf87171 : obs.type === 'pillar' ? 0x67e8f9 : 0xfacc15;
       group.add(createArenaObstacleFootprint(obs.width, obs.depth, footprintColor));
 
-      if (obs.type === 'pallet') {
+      if (obs.type === 'barrel') {
+        const drumCluster = createB4HazardDrumCluster();
+        drumCluster.scale.set(obs.width / 1.88, obs.height / 1.25, obs.depth / 1.86);
+        group.add(drumCluster);
+      } else if (obs.type === 'pallet') {
         const stackMesh = new THREE.Mesh(new THREE.BoxGeometry(obs.width, obs.height, obs.depth), palletMat);
         stackMesh.position.y = obs.height / 2;
         stackMesh.castShadow = true;
@@ -3004,7 +3008,10 @@ export class PaleciakiGameEngine {
   private buildSurvivalMapRouteFeatures(mapId: SurvivalMapId) {
     const features = getSurvivalMapRouteFeatures(mapId);
     const sharedMetal = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.62, roughness: 0.48 });
-    const wood = new THREE.MeshStandardMaterial({ color: 0x8b6545, roughness: 0.86 });
+    const wood = new THREE.MeshStandardMaterial({ color: 0x8b6545, roughness: 0.86, map: getB4VisualTexture('pallet') });
+    const containerSkin = new THREE.MeshStandardMaterial({ color: 0xffffff, map: getB4VisualTexture('container'), metalness: 0.54, roughness: 0.6 });
+    const coldStorageSkin = new THREE.MeshStandardMaterial({ color: 0xe0f6ff, map: getB4VisualTexture('coldStorage'), metalness: 0.36, roughness: 0.46 });
+    const conveyorSkin = new THREE.MeshStandardMaterial({ color: 0xffffff, map: getB4VisualTexture('conveyor'), metalness: 0.52, roughness: 0.58 });
     const dummy = new THREE.Object3D();
 
     for (const feature of features) {
@@ -3017,7 +3024,9 @@ export class PaleciakiGameEngine {
       });
       const root = new THREE.Group();
       root.name = 'survival-route-feature-' + feature.id;
-      const baseMaterial = feature.kind === 'pallet_stack' ? wood : sharedMetal;
+      const baseMaterial = feature.kind === 'pallet_stack' ? wood
+        : feature.kind === 'container_stack' ? containerSkin
+          : feature.kind === 'cold_compressor' ? coldStorageSkin : sharedMetal;
       // Lift the palletised cargo block above its visible pallet deck. Other
       // cover families keep their original solid body and collision dimensions.
       const bodyBaseY = feature.kind === 'pallet_stack' ? 0.26 : 0;
@@ -3106,7 +3115,7 @@ export class PaleciakiGameEngine {
       } else if (feature.kind === 'sorter_belt') {
         const belt = new THREE.Mesh(
           new THREE.BoxGeometry(feature.width * 0.92, 0.09, feature.depth * 0.82),
-          new THREE.MeshStandardMaterial({ color: 0x111827, metalness: 0.35, roughness: 0.72 })
+          conveyorSkin
         );
         belt.position.y = feature.height + 0.05;
         root.add(belt);
@@ -3263,6 +3272,16 @@ export class PaleciakiGameEngine {
     this.survivalMapLandmarks = root;
     this.levelRoot.add(root);
 
+    if (mapId === 'cold_storage') {
+      for (const point of [{ x: -44, z: 12.5 }, { x: 44, z: -12.5 }]) {
+        const drums = createB4HazardDrumCluster();
+        drums.position.set(point.x, 0, point.z);
+        this.registerCameraOccludersInGroup(drums, 0.16);
+        root.add(drums);
+        this.survivalObstacles.push({ x: point.x, z: point.z, halfWidth: 0.98, halfDepth: 0.96 });
+      }
+    }
+
     if (mapId === 'container_terminal') {
       const containerColors = [0xb4533f, 0x256b89, 0x9b6b28, 0x355b4e];
       const positions = [
@@ -3272,7 +3291,7 @@ export class PaleciakiGameEngine {
       const ribGeometry = new THREE.BoxGeometry(0.055, 2.82, 4.18);
       positions.forEach((position, index) => {
         const color = containerColors[index % containerColors.length];
-        const bodyMaterial = new THREE.MeshStandardMaterial({ color, metalness: 0.42, roughness: 0.62 });
+        const bodyMaterial = new THREE.MeshStandardMaterial({ color, map: getB4VisualTexture('container'), metalness: 0.42, roughness: 0.62 });
         const frameMaterial = new THREE.MeshStandardMaterial({ color: 0xd5dde4, metalness: 0.8, roughness: 0.32 });
         const group = new THREE.Group();
         group.name = 'port-container-' + index;

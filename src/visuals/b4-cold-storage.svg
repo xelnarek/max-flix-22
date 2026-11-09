@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<defs>
+  <linearGradient id="ice" x2="0" y2="1"><stop stop-color="#e7fbff"/><stop offset=".46" stop-color="#a9dce9"/><stop offset="1" stop-color="#477e98"/></linearGradient>
+  <pattern id="panels" width="128" height="512" patternUnits="userSpaceOnUse">
+    <path d="M7 0v512M14 0v512" stroke="#f4fdff" stroke-width="4" opacity=".68"/>
+    <path d="M121 0v512" stroke="#22526b" stroke-width="5" opacity=".5"/>
+    <circle cx="26" cy="34" r="4" fill="#f8feff"/><circle cx="26" cy="478" r="4" fill="#f8feff"/>
+  </pattern>
+  <pattern id="frost" width="72" height="72" patternUnits="userSpaceOnUse">
+    <path d="M8 30l10-10 10 10-10 10zM48 56l8-8 8 8-8 8z" fill="#fff" opacity=".36"/>
+    <path d="M0 60l18-18m26-28 18-18" stroke="#fff" stroke-width="2" opacity=".3"/>
+  </pattern>
+</defs>
+<rect width="512" height="512" fill="url(#ice)"/>
+<rect width="512" height="512" fill="url(#panels)"/>
+<rect width="512" height="512" fill="url(#frost)"/>
+<path d="M0 26h512M0 486h512" stroke="#eaffff" stroke-width="16" opacity=".7"/>
+<rect x="40" y="76" width="432" height="112" rx="12" fill="#123d56" opacity=".88"/>
+<text x="256" y="120" font-family="Arial,sans-serif" font-size="28" font-weight="700" fill="#dffaff" text-anchor="middle">CHŁODNIA B4</text>
+<text x="256" y="158" font-family="Arial,sans-serif" font-size="22" font-weight="700" fill="#7dd3fc" text-anchor="middle">-18°C • KEEP COLD</text>
+<path d="M90 240h332M90 260h332M90 280h332" stroke="#effcff" stroke-width="8" opacity=".55"/>
+<g fill="#dffaff"><circle cx="58" cy="218" r="7"/><circle cx="454" cy="218" r="7"/><circle cx="58" cy="420" r="7"/><circle cx="454" cy="420" r="7"/></g>
+</svg>

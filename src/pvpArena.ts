@@ -12,7 +12,7 @@ export interface PvpObstacle {
   width: number;
   depth: number;
   height: number;
-  type: 'pallet' | 'barrier' | 'pillar';
+  type: 'pallet' | 'barrier' | 'pillar' | 'barrel';
 }
 
 export interface PvpPickup {
@@ -474,6 +474,9 @@ export function createDefaultPvpObstacles(): PvpObstacle[] {
     { id: 'barrier_west', x: -8.0, z: 0, width: 1.8, depth: 4.8, height: 1.4, type: 'barrier' },
     // East flanking barricades
     { id: 'barrier_east', x: 8.0, z: 0, width: 1.8, depth: 4.8, height: 1.4, type: 'barrier' },
+    // Symmetric hazard-drum cover keeps the centre lane open while adding a new readable prop family.
+    { id: 'drum_cache_w', x: -5.4, z: 0, width: 1.85, depth: 1.8, height: 1.28, type: 'barrel' },
+    { id: 'drum_cache_e', x: 5.4, z: 0, width: 1.85, depth: 1.8, height: 1.28, type: 'barrel' },
     // Corner support pillars
     { id: 'pillar_nw', x: -14.0, z: -7.5, width: 2.0, depth: 2.0, height: 3.5, type: 'pillar' },
     { id: 'pillar_sw', x: -14.0, z: 7.5, width: 2.0, depth: 2.0, height: 3.5, type: 'pillar' },

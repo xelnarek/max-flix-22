@@ -6,8 +6,12 @@ import steelUrl from './visuals/b4-corrugated-steel.svg?url';
 import hazardUrl from './visuals/b4-hazard-chevron.svg?url';
 import spriteAtlasUrl from './visuals/b4-sprite-atlas.svg?url';
 import enemyAtlasUrl from './visuals/b4-enemy-atlas.svg?url';
+import containerUrl from './visuals/b4-container-corrugate.svg?url';
+import conveyorUrl from './visuals/b4-conveyor-rollers.svg?url';
+import coldStorageUrl from './visuals/b4-cold-storage.svg?url';
+import drumUrl from './visuals/b4-hazard-drum.svg?url';
 
-export type B4VisualTextureKind = 'floor' | 'pallet' | 'carton' | 'steel' | 'hazard' | 'spriteAtlas' | 'enemyAtlas';
+export type B4VisualTextureKind = 'floor' | 'pallet' | 'carton' | 'steel' | 'hazard' | 'spriteAtlas' | 'enemyAtlas' | 'container' | 'conveyor' | 'coldStorage' | 'drum';
 export type B4SpriteKind = 'worker' | 'zombie' | 'forklift' | 'pallet' | 'inspector' | 'customer' | 'handlowiec' | 'monter';
 
 interface B4TextureEntry {
@@ -23,6 +27,10 @@ const textureUrls: Record<B4VisualTextureKind, string> = {
   hazard: hazardUrl,
   spriteAtlas: spriteAtlasUrl,
   enemyAtlas: enemyAtlasUrl,
+  container: containerUrl,
+  conveyor: conveyorUrl,
+  coldStorage: coldStorageUrl,
+  drum: drumUrl,
 };
 
 const textureCache = new Map<B4VisualTextureKind, B4TextureEntry>();
@@ -216,4 +224,85 @@ export function createB4WallSprite(kind: B4SpriteKind, width = 1.25, height = 1.
   mesh.geometry.dispose();
   material.dispose();
   return sprite;
+}
+
+
+/**
+ * Original B4 hazard-drum set piece.
+ * Three steel drums share one cached texture/material and a compact footprint,
+ * so the prop can dress Survival maps and become collision-backed PvP cover.
+ */
+export function createB4HazardDrumCluster(): THREE.Group {
+  const group = new THREE.Group();
+  group.name = 'b4-hazard-drum-cluster';
+
+  const bodyMaterial = new THREE.MeshStandardMaterial({
+    map: getB4VisualTexture('drum'),
+    color: 0xffffff,
+    roughness: 0.62,
+    metalness: 0.48,
+  });
+  const rimMaterial = new THREE.MeshStandardMaterial({
+    color: 0x9aa8b4,
+    metalness: 0.82,
+    roughness: 0.28,
+  });
+  const bungMaterial = new THREE.MeshStandardMaterial({
+    color: 0x263746,
+    metalness: 0.76,
+    roughness: 0.34,
+  });
+
+  const positions: Array<[number, number]> = [
+    [-0.43, -0.23],
+    [0.43, -0.23],
+    [0, 0.51],
+  ];
+  const bodyGeometry = new THREE.CylinderGeometry(0.39, 0.39, 1.16, 16, 1, false);
+  const rimGeometry = new THREE.TorusGeometry(0.385, 0.035, 6, 18);
+  const topGeometry = new THREE.CylinderGeometry(0.37, 0.37, 0.045, 16);
+  const bungGeometry = new THREE.CylinderGeometry(0.055, 0.055, 0.018, 12);
+
+  for (const [x, z] of positions) {
+    const drum = new THREE.Group();
+    drum.position.set(x, 0, z);
+
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    body.position.y = 0.60;
+    body.castShadow = true;
+    body.receiveShadow = true;
+    drum.add(body);
+
+    const top = new THREE.Mesh(topGeometry, rimMaterial);
+    top.position.y = 1.19;
+    drum.add(top);
+
+    const upperRim = new THREE.Mesh(rimGeometry, rimMaterial);
+    upperRim.position.y = 1.16;
+    drum.add(upperRim);
+    const lowerRim = new THREE.Mesh(rimGeometry, rimMaterial);
+    lowerRim.position.y = 0.12;
+    drum.add(lowerRim);
+
+    const bung = new THREE.Mesh(bungGeometry, bungMaterial);
+    bung.position.set(0.12, 1.222, -0.08);
+    drum.add(bung);
+
+    const label = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.34, 0.22),
+      new THREE.MeshBasicMaterial({
+        map: getB4VisualTexture('drum'),
+        transparent: true,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    );
+    label.position.set(0, 0.73, 0.397);
+    drum.add(label);
+    group.add(drum);
+  }
+
+  group.userData.assetPack = 'MAX-FLIX-B4-ORIGINAL';
+  group.userData.collisionFootprint = { halfWidth: 0.94, halfDepth: 0.93 };
+  return group;
 }

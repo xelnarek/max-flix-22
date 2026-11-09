@@ -105,7 +105,7 @@ export class B4AssetLoader {
               <span class="cat-icon">🎨</span>
               <div class="cat-info">
                 <span class="cat-name">Tekstury</span>
-                <span class="cat-count" id="cat-count-textures">0/6</span>
+                <span class="cat-count" id="cat-count-textures">0/17</span>
               </div>
             </div>
             <div class="loader-category-pill" id="cat-pill-models">
@@ -294,7 +294,7 @@ export class B4AssetLoader {
       const overallStartTime = performance.now();
       console.group('%c[AssetLoader] 🔍 INSPEKCJA ZASOBÓW: Inicjalizacja modeli 3D i tekstur', 'color: #38bdf8; font-weight: bold;');
 
-      // Warm the six procedural warehouse textures and six original B4 visual-pack assets used by the runtime.
+      // Warm the six procedural warehouse textures and eleven original B4 visual-pack assets used by the runtime.
       // Operators, bosses and props are created on demand; prebuilding every model
       // here duplicated GPU resources before the player had even opened the menu.
       // WebAudio is also initialized lazily from the first user gesture.
@@ -311,7 +311,11 @@ export class B4AssetLoader {
         { id: 'b4-pack/steel.svg', name: 'B4 Asset Pack • Blacha falista', category: 'texture', execute: () => preloadB4VisualTexture('steel') },
         { id: 'b4-pack/hazard.svg', name: 'B4 Asset Pack • Oznaczenia BHP', category: 'texture', execute: () => preloadB4VisualTexture('hazard') },
         { id: 'b4-pack/sprites.svg', name: 'B4 Asset Pack • Atlas sprite’ów', category: 'texture', execute: () => preloadB4VisualTexture('spriteAtlas') },
-        { id: 'b4-pack/enemies.svg', name: 'B4 Asset Pack • Atlas przeciwników', category: 'texture', execute: () => preloadB4VisualTexture('enemyAtlas') }
+        { id: 'b4-pack/enemies.svg', name: 'B4 Asset Pack • Atlas przeciwników', category: 'texture', execute: () => preloadB4VisualTexture('enemyAtlas') },
+        { id: 'b4-pack/container.svg', name: 'B4 Asset Pack • Kontenery faliste', category: 'texture', execute: () => preloadB4VisualTexture('container') },
+        { id: 'b4-pack/conveyor.svg', name: 'B4 Asset Pack • Taśma rolkowa', category: 'texture', execute: () => preloadB4VisualTexture('conveyor') },
+        { id: 'b4-pack/cold-storage.svg', name: 'B4 Asset Pack • Panele chłodni', category: 'texture', execute: () => preloadB4VisualTexture('coldStorage') },
+        { id: 'b4-pack/drum.svg', name: 'B4 Asset Pack • Beczki BHP', category: 'texture', execute: () => preloadB4VisualTexture('drum') }
       ];
 
       const totalTextures = assetList.length;
