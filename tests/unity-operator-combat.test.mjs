@@ -269,6 +269,7 @@ test('Unity main-menu and HUD restart paths clear the previous world and reset t
 test('Unity Survival weapon catalog defines all twelve timed unlocks, rarities and reload progression', async () => {
   const catalog = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWeaponCatalog.cs');
   const domain = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/GameDomain.cs');
+  const weaponEnum = domain.slice(domain.indexOf('public enum SurvivalWeaponKind'), domain.indexOf('public enum EnemyKind'));
   const roster = catalog.match(/private static readonly SurvivalWeaponProfile\[\] Profiles\s*=\s*\{([\s\S]*?)\n        \};/);
   assert.ok(roster, 'missing Survival weapon profile table');
   assert.equal((roster[1].match(/Make\(SurvivalWeaponKind\./g) || []).length, 12);
@@ -276,7 +277,7 @@ test('Unity Survival weapon catalog defines all twelve timed unlocks, rarities a
     'PalletCannon', 'DiamondSaw', 'GlueMine', 'KfcBomber', 'PiorunDrone',
     'ForkliftBolter', 'ScannerPulse', 'OrbitBlades', 'CalacattaShards',
     'SteamBomb', 'ForkliftHorn', 'WzBoomerang'
-  ]) assert.match(domain, new RegExp('SurvivalWeaponKind\\.' + id));
+  ]) assert.match(weaponEnum, new RegExp(id + '\\s*='));
   for (const unlock of ['30f', '55f', '80f', '105f', '130f', '155f', '180f', '205f', '230f', '255f', '280f', '305f'])
     assert.ok(roster[1].includes(unlock), 'missing weapon unlock time ' + unlock);
   assert.match(catalog, /GetReloadSeconds/);
@@ -305,7 +306,7 @@ test('Unity Survival weapon behaviors use pooled shots, homing, orbiting, ricoch
   assert.match(weapons, /shot\.Returning/);
   assert.match(weapons, /RicochetsRemaining/);
   assert.match(weapons, /ApplyAreaDamage/);
-  assert.match(weapons, /hitTargets/);
+  assert.match(weapons, /HitTargets/);
   assert.match(weapons, /enemy\.ApplyWeaponHit/);
   assert.match(enemy, /ApplyWeaponHit/);
 });
@@ -323,7 +324,7 @@ test('Unity XP progression has pooled crystals, map XP scaling, level-up drafts 
   assert.match(progression, /Time\.timeScale = 0f/);
   assert.match(progression, /SurvivalUpgradeCatalog|SurvivalWeaponCatalog\.RollRarity/);
   assert.match(progression, /AddFallbackCard/);
-  assert.match(progression, /fallbackSeparator/);
+  assert.match(progression, /fallback_repair/);\n  assert.match(progression, /fallback_credits/);\n  assert.match(progression, /fallback_overdrive/);
   assert.match(progression, /wasBossReward/);
   assert.match(progression, /Text description = CreateText\(rect, card\.Description,[\s\S]*?Vector2\.zero, 17, TextAnchor\.MiddleCenter/);
   assert.match(player, /SetSurvivalMoveMultiplier/);
@@ -340,7 +341,7 @@ test('Unity Survival damage ledger reports only applied HP damage by operator an
   const hud = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs');
   assert.match(tracker, /RecordWeaponDamage/);
   assert.match(tracker, /RecordOperatorDamage/);
-  assert.match(tracker, /float actualDamage = Mathf\.Min\(_health, balancedDamage\)/);
+  assert.match(enemy, /float actualDamage = Mathf\.Min\(_health, balancedDamage\)/);
   assert.match(tracker, /BuildSummary\(int maximumLines = 5\)/);
   assert.match(enemy, /SurvivalDamageTracker\.RecordWeaponDamage\(weaponSource\.Value, actualDamage\)/);
   assert.match(enemy, /SurvivalDamageTracker\.RecordOperatorDamage\(actualDamage\)/);
@@ -359,7 +360,7 @@ test('Unity Survival damage report attributes effective damage and displays perc
   const session = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/GameDomain.cs');
   assert.match(tracker, /RecordWeaponDamage/);
   assert.match(tracker, /RecordOperatorDamage/);
-  assert.match(tracker, /entry\.Value \/ _totalDamage \* 100f/);
+  assert.match(tracker, /rows\[i\]\.Value \/ _totalDamage \* 100f/);
   assert.match(tracker, /BuildSummary\(int maximumLines = 5\)/);
   assert.match(enemy, /float actualDamage = Mathf\.Min\(_health, balancedDamage\)/);
   assert.match(enemy, /SurvivalDamageTracker\.RecordWeaponDamage\(weaponSource\.Value, actualDamage\)/);
