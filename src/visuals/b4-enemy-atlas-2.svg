@@ -1,4 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<title>MAX FLIX B4 enemy sprites: AGV robot, courier, Pan Roman, stacker operator</title>
 <defs>
   <linearGradient id="panel" x2="0" y2="1"><stop stop-color="#34485c"/><stop offset="1" stop-color="#101e2d"/></linearGradient>
   <filter id="edge"><feGaussianBlur stdDeviation="2.2" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
