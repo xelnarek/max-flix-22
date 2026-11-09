@@ -28,6 +28,20 @@ test('Unity operator abilities preserve source cooldown and mode-specific summon
   assert.match(kit, /SpawnSupport\(SupportStyle\.Capybara, i, 8\.5f/);
 });
 
+test('Mateusz Speedrun passive counts confirmed hits rather than projectiles fired', async () => {
+  const kit = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorCombatKit.cs');
+  const player = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/PlayerController.cs');
+  const projectile = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/CombatProjectile.cs');
+  const mateuszAttack = kit.slice(kit.indexOf('case OperatorId.Mateusz:'), kit.indexOf('case OperatorId.Piotr:'));
+  const hitHandler = kit.slice(kit.indexOf('public void OnPrimaryHit()'), kit.indexOf('public bool TryActivateAbility('));
+  assert.match(mateuszAttack, /false, 1\.4f, true/);
+  assert.doesNotMatch(mateuszAttack, /_mateuszHitCount\+\+/);
+  assert.match(hitHandler, /_mateuszHitCount\+\+/);
+  assert.match(player, /public void RecordPrimaryHit\(\)/);
+  assert.match(projectile, /_ownerPlayer\.RecordPrimaryHit\(\)/);
+  assert.match(projectile, /_countsForMateuszPassive/);
+});
+
 test('Unity projectiles implement piercing, return path and on-hit status effects', async () => {
   const projectile = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/CombatProjectile.cs');
   const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
