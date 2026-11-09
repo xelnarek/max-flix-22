@@ -975,10 +975,10 @@ export function getHazardStripeTexture(): THREE.CanvasTexture {
  */
 export function createCharacterModel(def: CharacterDef): {
   group: THREE.Group;
-  leftLeg: THREE.Mesh;
-  rightLeg: THREE.Mesh;
-  leftArm: THREE.Mesh;
-  rightArm: THREE.Mesh;
+  leftLeg: THREE.Group;
+  rightLeg: THREE.Group;
+  leftArm: THREE.Group;
+  rightArm: THREE.Group;
   head: THREE.Mesh;
   body: THREE.Mesh;
   accessory: THREE.Group;
@@ -1370,85 +1370,99 @@ export function createCharacterModel(def: CharacterDef): {
     group.add(pressureGauge);
   }
 
-  // 3. Legs & Leather Steel-toe Boots
+  // 3. Legs & steel-toe boots.
+  // The pivot sits at the hip; the visible leg mesh is offset down by its half-height.
+  // This preserves the original rest pose while making stride and jump rotation anatomical.
   const legGeo = new THREE.CapsuleGeometry(0.065, 0.21, 3, 12);
-  const leftLeg = new THREE.Mesh(legGeo, pantsMat);
-  leftLeg.scale.set(profile.legWidth, profile.legLength, 1.12);
-  leftLeg.position.set(-0.1 * profile.torsoWidth, 0.19, 0);
-  leftLeg.castShadow = true;
+  const leftLeg = new THREE.Group();
+  leftLeg.name = `character_${def.id}_left_hip`;
+  leftLeg.position.set(-0.1 * profile.torsoWidth, 0.35, 0);
+  const leftLegMesh = new THREE.Mesh(legGeo, pantsMat);
+  leftLegMesh.scale.set(profile.legWidth, profile.legLength, 1.12);
+  leftLegMesh.position.y = -0.16;
+  leftLegMesh.castShadow = true;
+  leftLeg.add(leftLegMesh);
 
-  const rightLeg = new THREE.Mesh(legGeo, pantsMat);
-  rightLeg.scale.set(profile.legWidth, profile.legLength, 1.12);
-  rightLeg.position.set(0.1 * profile.torsoWidth, 0.19, 0);
-  rightLeg.castShadow = true;
+  const rightLeg = new THREE.Group();
+  rightLeg.name = `character_${def.id}_right_hip`;
+  rightLeg.position.set(0.1 * profile.torsoWidth, 0.35, 0);
+  const rightLegMesh = new THREE.Mesh(legGeo, pantsMat);
+  rightLegMesh.scale.set(profile.legWidth, profile.legLength, 1.12);
+  rightLegMesh.position.y = -0.16;
+  rightLegMesh.castShadow = true;
+  rightLeg.add(rightLegMesh);
 
   const bootGeo = new THREE.SphereGeometry(0.1, 14, 10);
   const leftBoot = new THREE.Mesh(bootGeo, bootMat);
   leftBoot.scale.set(0.86, 0.54, 1.32);
   leftBoot.position.set(0, -0.15, 0.045);
-  leftLeg.add(leftBoot);
+  leftLegMesh.add(leftBoot);
 
   const rightBoot = new THREE.Mesh(bootGeo, bootMat);
   rightBoot.scale.copy(leftBoot.scale);
   rightBoot.position.copy(leftBoot.position);
-  rightLeg.add(rightBoot);
+  rightLegMesh.add(rightBoot);
 
-  // Steel-toe caps and deep rubber soles are attached to the animated leg
-  // meshes, so the extra detail follows every stride and jump pose cleanly.
+  // Steel-toe caps and rubber soles remain attached to the moving leg meshes.
   const soleGeo = new THREE.BoxGeometry(0.145, 0.035, 0.205);
   const toeCapGeo = new THREE.SphereGeometry(0.075, 10, 7);
   const steelToeMat = new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.28, metalness: 0.82 });
-  for (const leg of [leftLeg, rightLeg]) {
+  for (const legMesh of [leftLegMesh, rightLegMesh]) {
     const sole = new THREE.Mesh(soleGeo, rubberMat);
     sole.position.set(0, -0.205, 0.055);
     sole.castShadow = true;
     const toeCap = new THREE.Mesh(toeCapGeo, steelToeMat);
     toeCap.scale.set(1.02, 0.38, 0.48);
     toeCap.position.set(0, -0.157, 0.158);
-    leg.add(sole, toeCap);
+    legMesh.add(sole, toeCap);
+
+    const knee = new THREE.Mesh(new THREE.DodecahedronGeometry(0.092, 0), armorMat);
+    knee.scale.set(0.95, 0.55, 0.72);
+    knee.position.set(0, 0.02, 0.083);
+    const reflectiveKneeMark = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.022, 0.02), trimMat);
+    reflectiveKneeMark.position.set(0, 0.02, 0.145);
+    legMesh.add(knee, reflectiveKneeMark);
   }
 
   group.add(leftLeg, rightLeg);
 
-  // Knee guards follow the animated leg bones instead of floating beside the character.
-  for (const leg of [leftLeg, rightLeg]) {
-    const knee = new THREE.Mesh(new THREE.DodecahedronGeometry(0.092, 0), armorMat);
-    knee.scale.set(0.95, 0.55, 0.72);
-    knee.position.set(0, 0.02, 0.083);
-    leg.add(knee);
-    const reflectiveKneeMark = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.022, 0.02), trimMat);
-    reflectiveKneeMark.position.set(0, 0.02, 0.145);
-    leg.add(reflectiveKneeMark);
-  }
-
-  // 4. Arms & Hands
+  // 4. Arms & hands.
+  // Shoulder pivots carry the complete forearm, hand, guards and held equipment.
   const armGeo = new THREE.CapsuleGeometry(0.05, 0.24, 3, 10);
-  const leftArm = new THREE.Mesh(armGeo, clothesMat);
-  leftArm.scale.set(profile.armWidth, profile.armLength, 1.05);
-  leftArm.position.set(-0.25 * profile.torsoWidth, 0.54, 0);
-  leftArm.castShadow = true;
 
-  const rightArm = new THREE.Mesh(armGeo, clothesMat);
-  rightArm.scale.set(profile.armWidth, profile.armLength, 1.05);
-  rightArm.position.set(0.25 * profile.torsoWidth, 0.54, 0);
-  rightArm.castShadow = true;
+  const leftArm = new THREE.Group();
+  leftArm.name = `character_${def.id}_left_shoulder`;
+  leftArm.position.set(-0.25 * profile.torsoWidth, 0.72, 0);
+  const leftArmMesh = new THREE.Mesh(armGeo, clothesMat);
+  leftArmMesh.scale.set(profile.armWidth, profile.armLength, 1.05);
+  leftArmMesh.position.y = -0.18;
+  leftArmMesh.castShadow = true;
+  leftArm.add(leftArmMesh);
+
+  const rightArm = new THREE.Group();
+  rightArm.name = `character_${def.id}_right_shoulder`;
+  rightArm.position.set(0.25 * profile.torsoWidth, 0.72, 0);
+  const rightArmMesh = new THREE.Mesh(armGeo, clothesMat);
+  rightArmMesh.scale.set(profile.armWidth, profile.armLength, 1.05);
+  rightArmMesh.position.y = -0.18;
+  rightArmMesh.castShadow = true;
+  rightArm.add(rightArmMesh);
 
   // Hands
   const handGeo = new THREE.BoxGeometry(0.09, 0.09, 0.09);
   const leftHand = new THREE.Mesh(handGeo, skinMat);
   leftHand.position.set(0, -0.18, 0);
-  leftArm.add(leftHand);
+  leftArmMesh.add(leftHand);
 
   const rightHand = new THREE.Mesh(handGeo, skinMat);
   rightHand.position.set(0, -0.18, 0);
-  rightArm.add(rightHand);
+  rightArmMesh.add(rightHand);
 
-  // Wrist guards and small grip cuffs move with the animated forearms.
-  for (const arm of [leftArm, rightArm]) {
+  // Wrist guards and reflective bands follow each forearm.
+  for (const armMesh of [leftArmMesh, rightArmMesh]) {
     const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.073, 0.073, 0.07, 8), armorMat);
     cuff.rotation.x = Math.PI / 2;
     cuff.position.set(0, -0.12, 0);
-    arm.add(cuff);
     const cuffBand = new THREE.Mesh(new THREE.BoxGeometry(0.105, 0.025, 0.11), trimMat);
     cuffBand.position.set(0, -0.12, 0.012);
     const reflectiveArmBand = new THREE.Mesh(
@@ -1456,13 +1470,10 @@ export function createCharacterModel(def: CharacterDef): {
       silverReflectMat,
     );
     reflectiveArmBand.position.set(0, 0.065, 0.012);
-    const elbowPad = new THREE.Mesh(
-      new THREE.SphereGeometry(0.074, 8, 6),
-      armorMat,
-    );
+    const elbowPad = new THREE.Mesh(new THREE.SphereGeometry(0.074, 8, 6), armorMat);
     elbowPad.scale.set(1.12, 0.66, 0.78);
     elbowPad.position.set(0, -0.04, -0.012);
-    arm.add(cuffBand, reflectiveArmBand, elbowPad);
+    armMesh.add(cuff, cuffBand, reflectiveArmBand, elbowPad);
   }
 
   group.add(leftArm, rightArm);
@@ -1585,6 +1596,8 @@ export function createCharacterModel(def: CharacterDef): {
     accessory.rotation.x = 0.18;
   }
   group.add(accessory);
+  group.updateMatrixWorld(true);
+  rightArm.attach(accessory);
   // High-readability class gear: broad forms are visible from behind and at
   // the standard Survival camera distance, not just in close-up portraits.
   if (def.id === 'marcin') {
@@ -1602,12 +1615,12 @@ export function createCharacterModel(def: CharacterDef): {
     const beltPlate = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.095, 0.035), trimMat);
     beltPlate.position.set(0, 0.355, 0.196);
     group.add(liftingBelt, beltPlate);
-    for (const arm of [leftArm, rightArm]) {
+    for (const armMesh of [leftArmMesh, rightArmMesh]) {
       const forearmGuard = new THREE.Mesh(new THREE.BoxGeometry(0.145, 0.19, 0.14), armorMat);
       forearmGuard.position.set(0, -0.045, 0.035);
       const greenRib = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.035, 0.15), trimMat);
       greenRib.position.set(0, -0.035, 0.11);
-      arm.add(forearmGuard, greenRib);
+      armMesh.add(forearmGuard, greenRib);
     }
   } else if (def.id === 'dawid') {
     const tileEdge = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.45, metalness: 0.24 });
