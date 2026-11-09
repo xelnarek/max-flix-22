@@ -2459,8 +2459,7 @@ class PaleciakiScene extends xb.Script {
         this.masteryAwardedForRun = false;
         // Restore the Survival-specific ability label/icon after leaving PvP.
         updateCharacterUI(this.selectedCharId);
-        this.gameSessionGeneration++;
-        this.gameSessionGeneration++;
+      this.gameSessionGeneration++;
       this.engine.startSurvival(selectedSurvivalMapId);
         // Re-assert visibility and exclusive mode after the scene transition.
         setTouchControlsMode('survival');
@@ -2581,9 +2580,7 @@ class PaleciakiScene extends xb.Script {
                 titleScreen.style.setProperty('display', 'flex', 'important');
                 titleScreen.style.setProperty('z-index', '1000000', 'important');
               }
-              this.gameSessionGeneration++;
-              this.gameSessionGeneration++;
-      this.gameSessionGeneration++;
+    this.gameSessionGeneration++;
     this.engine.startTitle();
             },
             onStartGame: () => {
@@ -2781,6 +2778,7 @@ class PaleciakiScene extends xb.Script {
       survivalLevelUp?.classList.add('hidden');
       setTouchControlsMode('survival');
       this.masteryAwardedForRun = false;
+      this.gameSessionGeneration++;
       this.engine.startSurvival(selectedSurvivalMapId);
       setTouchControlsMode('survival');
       setTouchControlsVisibility(true);
@@ -2808,6 +2806,7 @@ class PaleciakiScene extends xb.Script {
         titleScreen.classList.remove('hidden');
         titleScreen.style.setProperty('display', 'flex', 'important');
       }
+      this.gameSessionGeneration++;
       this.engine.startTitle();
     };
     bindTap(document.getElementById('btn-menu-pause'), exitPausedRunToMenu);
@@ -2820,6 +2819,7 @@ class PaleciakiScene extends xb.Script {
       setTouchControlsVisibility(true);
       setTouchControlsMode('survival');
       this.masteryAwardedForRun = false;
+      this.gameSessionGeneration++;
       this.engine.startSurvival(selectedSurvivalMapId);
         // Re-assert visibility and exclusive mode after the scene transition.
         setTouchControlsMode('survival');
@@ -2835,6 +2835,7 @@ class PaleciakiScene extends xb.Script {
         titleScreen.classList.remove('hidden');
         titleScreen.style.setProperty('display', 'flex', 'important');
       }
+      this.gameSessionGeneration++;
       this.engine.startTitle();
       void showInterstitialAfterRun();
     });
@@ -2963,6 +2964,7 @@ class PaleciakiScene extends xb.Script {
       titleScreen.style.setProperty('display', 'flex', 'important');
       titleScreen.style.setProperty('z-index', '1000000', 'important');
     }
+    this.gameSessionGeneration++;
     this.engine.startTitle();
   }
 
@@ -3297,6 +3299,7 @@ class PaleciakiScene extends xb.Script {
     }
 
     this.camera = camera;
+    this.gameSessionGeneration++;
     this.engine.startTitle();
     // Apply the initial viewport profile immediately; waiting for the next
     // resize event leaves portrait devices with the desktop camera distance.
