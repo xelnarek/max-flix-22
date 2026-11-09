@@ -8,20 +8,28 @@ namespace MaxFlix.Unity.Runtime
         private static Transform _worldRoot;
         private static readonly Dictionary<string, Material> MaterialCache = new Dictionary<string, Material>();
 
+        public static void DestroyCurrentWorld()
+        {
+            if (_worldRoot != null) Object.Destroy(_worldRoot.gameObject);
+            _worldRoot = null;
+        }
+
         public static PlayerController BuildB4Slice()
         {
-            GameObject root = new GameObject("B4 Warehouse World");
+            SurvivalMapProfile map = GameContentCatalog.GetMap(GameSession.Current.SelectedMap);
+            GameObject root = new GameObject(map.DisplayName + " • Unity World");
             _worldRoot = root.transform;
 
-            CreateLighting();
-            CreateFloor();
-            CreateRackBay(new Vector3(-8f, 0f, 4f), 3);
-            CreateRackBay(new Vector3(0f, 0f, 4f), 3);
-            CreateRackBay(new Vector3(8f, 0f, 4f), 3);
-            CreateSafetyLanes();
+            CreateLighting(map);
+            CreateFloor(map);
+            CreateRackBay(new Vector3(-8f, 0f, 4f), 3, map);
+            CreateRackBay(new Vector3(0f, 0f, 4f), 3, map);
+            CreateRackBay(new Vector3(8f, 0f, 4f), 3, map);
+            CreateSafetyLanes(map);
             CreatePalletStack(new Vector3(-4f, 0f, -3f));
             CreatePalletStack(new Vector3(4f, 0f, -3f));
             CreatePalletStack(new Vector3(11f, 0f, -5f));
+            CreateMapSetDressing(map);
 
             PlayerController player = CreateOperator(OperatorCatalog.Get(GameSession.Current.SelectedOperator), new Vector3(0f, 0.1f, -9f));
             CreateCamera(player.transform);
@@ -37,14 +45,17 @@ namespace MaxFlix.Unity.Runtime
             return player;
         }
 
-        private static void CreateLighting()
+        private static void CreateLighting(SurvivalMapProfile map)
         {
+            Color sky = Color.Lerp(map.BackgroundColor, Color.white, 0.24f);
+            Color equator = Color.Lerp(map.WallColor, map.AccentColor, 0.12f);
+            Color ground = Color.Lerp(map.BackgroundColor, Color.black, 0.18f);
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.44f, 0.54f, 0.66f);
-            RenderSettings.ambientEquatorColor = new Color(0.26f, 0.31f, 0.37f);
-            RenderSettings.ambientGroundColor = new Color(0.12f, 0.15f, 0.19f);
+            RenderSettings.ambientSkyColor = sky;
+            RenderSettings.ambientEquatorColor = equator;
+            RenderSettings.ambientGroundColor = ground;
             RenderSettings.fog = true;
-            RenderSettings.fogColor = new Color(0.23f, 0.29f, 0.35f);
+            RenderSettings.fogColor = map.FogColor;
             RenderSettings.fogMode = FogMode.Linear;
             RenderSettings.fogStartDistance = 32f;
             RenderSettings.fogEndDistance = 82f;
@@ -55,7 +66,7 @@ namespace MaxFlix.Unity.Runtime
             Light directional = keyLight.AddComponent<Light>();
             directional.type = LightType.Directional;
             directional.intensity = 1.25f;
-            directional.color = new Color(1f, 0.86f, 0.68f);
+            directional.color = Color.Lerp(new Color(1f, 0.86f, 0.68f), map.AccentColor, 0.10f);
             directional.shadows = LightShadows.Soft;
 
             GameObject fillLight = new GameObject("B4 cool fill");
@@ -65,24 +76,25 @@ namespace MaxFlix.Unity.Runtime
             fill.type = LightType.Point;
             fill.range = 22f;
             fill.intensity = 2.2f;
-            fill.color = new Color(0.36f, 0.66f, 0.95f);
+            fill.color = Color.Lerp(new Color(0.36f, 0.66f, 0.95f), map.AccentColor, 0.28f);
             fill.shadows = LightShadows.None;
         }
 
-        private static void CreateFloor()
+        private static void CreateFloor(SurvivalMapProfile map)
         {
             GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            floor.name = "B4 polished concrete floor";
+            floor.name = map.DisplayName + " • posadzka";
             floor.transform.SetParent(_worldRoot, false);
             floor.transform.position = new Vector3(0f, -0.3f, 0f);
             floor.transform.localScale = new Vector3(38f, 0.6f, 32f);
-            ApplyMaterial(floor, new Color(0.19f, 0.24f, 0.30f), 0.78f, 0.12f);
+            Color floorTone = Color.Lerp(map.FloorColor, map.WallColor, 0.68f);
+            ApplyMaterial(floor, floorTone, 0.84f, 0.10f);
         }
 
-        private static void CreateRackBay(Vector3 origin, int bays)
+        private static void CreateRackBay(Vector3 origin, int bays, SurvivalMapProfile map)
         {
-            Color steel = new Color(0.22f, 0.31f, 0.40f);
-            Color orange = new Color(0.93f, 0.43f, 0.12f);
+            Color steel = Color.Lerp(map.WallColor, Color.white, 0.18f);
+            Color orange = map.AccentColor;
             for (int bay = 0; bay < bays; bay++)
             {
                 float x = origin.x + bay * 2.4f;
@@ -116,15 +128,82 @@ namespace MaxFlix.Unity.Runtime
             }
         }
 
-        private static void CreateSafetyLanes()
+        private static void CreateSafetyLanes(SurvivalMapProfile map)
         {
-            Color amber = new Color(1f, 0.65f, 0.14f);
+            Color amber = Color.Lerp(map.AccentColor, new Color(1f, 0.65f, 0.14f), 0.32f);
             for (int z = -12; z <= 12; z += 4)
             {
                 CreateBox("Pedestrian lane marking", new Vector3(-13f, 0.012f, z), new Vector3(0.12f, 0.02f, 2.2f), amber);
                 CreateBox("Pedestrian lane marking", new Vector3(13f, 0.012f, z), new Vector3(0.12f, 0.02f, 2.2f), amber);
             }
-            CreateBox("B4 central route line", new Vector3(0f, 0.014f, 0f), new Vector3(0.07f, 0.02f, 27f), new Color(0.18f, 0.64f, 0.79f));
+            CreateBox("Central route line", new Vector3(0f, 0.014f, 0f), new Vector3(0.07f, 0.02f, 27f), Color.Lerp(map.AccentColor, Color.white, 0.18f));
+        }
+
+        private static void CreateMapSetDressing(SurvivalMapProfile map)
+        {
+            switch (map.Id)
+            {
+                case WarehouseMapId.ContainerTerminal:
+                    for (int i = 0; i < 4; i++)
+                    {
+                        float z = -10f + i * 6.6f;
+                        Color containerColor = i % 2 == 0
+                            ? new Color(0.70f, 0.27f, 0.15f)
+                            : new Color(0.14f, 0.40f, 0.58f);
+                        float side = i % 2 == 0 ? -15.7f : 15.7f;
+                        CreateBox("Port container", new Vector3(side, 1.35f, z), new Vector3(4.1f, 2.7f, 5.8f), containerColor, 0.78f);
+                        for (int rib = -2; rib <= 2; rib++)
+                            CreateBox("Container rib", new Vector3(side + (side < 0f ? 2.08f : -2.08f), 1.35f, z + rib * 0.92f),
+                                new Vector3(0.10f, 2.45f, 0.10f), Color.Lerp(containerColor, Color.white, 0.20f));
+                        CreateBox("Container ID panel", new Vector3(side, 2.72f, z), new Vector3(1.15f, 0.20f, 0.04f), map.AccentColor);
+                    }
+                    CreateBox("Port crane beam", new Vector3(0f, 4.2f, 12.6f), new Vector3(34f, 0.34f, 0.38f), map.AccentColor);
+                    CreateBox("Port crane left column", new Vector3(-16f, 2.1f, 12.6f), new Vector3(0.34f, 4.2f, 0.38f), map.WallColor);
+                    CreateBox("Port crane right column", new Vector3(16f, 2.1f, 12.6f), new Vector3(0.34f, 4.2f, 0.38f), map.WallColor);
+                    break;
+
+                case WarehouseMapId.ColdStorage:
+                    for (int side = -1; side <= 1; side += 2)
+                    {
+                        float x = side * 16.8f;
+                        CreateBox("Cold-room insulated wall", new Vector3(x, 1.8f, 0f), new Vector3(0.38f, 3.6f, 29f), map.WallColor);
+                        CreateBox("Coolant pipe upper", new Vector3(x - side * 0.52f, 3.15f, 0f), new Vector3(0.15f, 0.15f, 28f), map.AccentColor);
+                        CreateBox("Coolant pipe lower", new Vector3(x - side * 0.52f, 2.55f, 0f), new Vector3(0.10f, 0.10f, 28f), Color.Lerp(map.AccentColor, Color.white, 0.35f));
+                        for (int section = -1; section <= 1; section++)
+                        {
+                            CreateBox("Refrigeration condenser", new Vector3(x - side * 1.3f, 1.1f, section * 8f),
+                                new Vector3(1.0f, 2.0f, 2.8f), Color.Lerp(map.WallColor, Color.white, 0.16f));
+                            CreateBox("Condenser grille", new Vector3(x - side * 0.76f, 1.2f, section * 8f),
+                                new Vector3(0.06f, 1.35f, 2.1f), map.AccentColor);
+                        }
+                    }
+                    break;
+
+                case WarehouseMapId.NightSorting:
+                    for (int lane = -1; lane <= 1; lane++)
+                    {
+                        float z = lane * 6.1f;
+                        CreateBox("Night conveyor belt", new Vector3(lane * 10.6f, 0.56f, z),
+                            new Vector3(3.8f, 0.38f, 19.5f), Color.Lerp(map.WallColor, Color.black, 0.20f));
+                        CreateBox("Conveyor neon guide", new Vector3(lane * 10.6f, 0.78f, z),
+                            new Vector3(3.95f, 0.055f, 19.2f), map.AccentColor);
+                    }
+                    for (int frame = -1; frame <= 1; frame++)
+                    {
+                        float z = frame * 8f;
+                        CreateBox("Scanner arch left", new Vector3(-5.8f, 2.25f, z), new Vector3(0.18f, 4.5f, 0.18f), map.AccentColor);
+                        CreateBox("Scanner arch right", new Vector3(5.8f, 2.25f, z), new Vector3(0.18f, 4.5f, 0.18f), map.AccentColor);
+                        CreateBox("Scanner arch header", new Vector3(0f, 4.45f, z), new Vector3(11.8f, 0.18f, 0.18f), map.AccentColor);
+                        CreateBox("Scanner indicator", new Vector3(0f, 4.26f, z), new Vector3(0.62f, 0.07f, 0.07f), Color.white);
+                    }
+                    break;
+
+                default:
+                    CreateBox("B4 dock shutter left", new Vector3(-17.7f, 1.7f, 13.6f), new Vector3(0.12f, 3.2f, 4.2f), map.WallColor);
+                    CreateBox("B4 dock shutter right", new Vector3(17.7f, 1.7f, 13.6f), new Vector3(0.12f, 3.2f, 4.2f), map.WallColor);
+                    CreateBox("B4 dock header", new Vector3(0f, 3.4f, 15.7f), new Vector3(35f, 0.22f, 0.22f), map.AccentColor);
+                    break;
+            }
         }
 
         private static PlayerController CreateOperator(OperatorProfile profile, Vector3 position)
