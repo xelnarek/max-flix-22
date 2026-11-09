@@ -53,7 +53,6 @@ namespace MaxFlix.Unity.Runtime
         private int _rerolls;
         private float _xpGrowthMultiplier = 1f;
         private float _magnetMultiplier = 1f;
-        private float _lastXpPickupTime;
         private bool _isBossReward;
         private bool _isPromotion;
 
@@ -75,7 +74,6 @@ namespace MaxFlix.Unity.Runtime
             _rerolls = 0;
             _xpGrowthMultiplier = 1f;
             _magnetMultiplier = 1f;
-            _lastXpPickupTime = -100f;
             _passiveStacks.Clear();
             _orbs.Clear();
             _currentCards.Clear();
@@ -194,7 +192,7 @@ namespace MaxFlix.Unity.Runtime
                 if (orb != null && !orb.activeSelf) return orb;
 
             if (_orbPool.Count >= 48) return null;
-            GameObject created = GameObject.CreatePrimitive(PrimitiveType.Octahedron);
+            GameObject created = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             created.name = "Survival XP crystal";
             created.transform.SetParent(transform, false);
             Collider collider = created.GetComponent<Collider>();
@@ -228,7 +226,6 @@ namespace MaxFlix.Unity.Runtime
             _xp += amount;
             GameSession.Current.Score += amount * 12;
             GameSession.Current.Coins += Mathf.Max(0, amount / 3);
-            _lastXpPickupTime = GameSession.Current.ElapsedSeconds;
             if (orb.Root != null) orb.Root.SetActive(false);
             UpdateHud();
 
@@ -519,13 +516,10 @@ namespace MaxFlix.Unity.Runtime
 
             _rerollButton = CreateButton(panelRect,
                 _rerolls > 0 ? "PRZERZUĆ (" + _rerolls + ")" : "BRAK PRZERZUTÓW",
-                new Vector2(0.5f, 0f), new Vector2(-175f, 66f), new Vector2(260f, 62f),
+                new Vector2(0.5f, 0f), new Vector2(0f, 66f), new Vector2(280f, 62f),
                 new Color(0.18f, 0.27f, 0.37f, 1f), delegate { RerollCards(); }, _rerolls > 0);
             _rerollLabel = _rerollButton.GetComponentInChildren<Text>();
             if (_rerollLabel != null) _rerollLabel.text = _rerolls > 0 ? "PRZERZUĆ (" + _rerolls + ")" : "BRAK PRZERZUTÓW";
-            CreateButton(panelRect, "WYBIERZ JEDNĄ KARTĘ", new Vector2(0.5f, 0f),
-                new Vector2(175f, 66f), new Vector2(300f, 62f),
-                new Color(0.12f, 0.45f, 0.36f, 1f), null, false);
         }
 
         private void ChooseCard(SurvivalUpgradeCard card)
@@ -601,6 +595,7 @@ namespace MaxFlix.Unity.Runtime
 
         private void CloseDraft()
         {
+            bool wasBossReward = _isBossReward;
             if (_draftCanvas != null) Destroy(_draftCanvas);
             _draftCanvas = null;
             _isBossReward = false;
@@ -609,7 +604,7 @@ namespace MaxFlix.Unity.Runtime
             GameSession.SetState(GameFlowState.Playing);
             UpdateHud();
 
-            if (!_isBossReward && _xp >= _xpToNext)
+            if (!wasBossReward && _xp >= _xpToNext)
                 BeginLevelUp(false);
         }
 
