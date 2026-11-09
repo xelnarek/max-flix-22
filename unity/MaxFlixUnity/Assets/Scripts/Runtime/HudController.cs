@@ -169,11 +169,11 @@ namespace MaxFlix.Unity.Runtime
             int minutes = Mathf.FloorToInt(run.ElapsedSeconds / 60f);
             int seconds = Mathf.FloorToInt(run.ElapsedSeconds % 60f);
             string summary = "Czas: " + minutes.ToString("00") + ":" + seconds.ToString("00")
-                + "\\nZebrane zamówienia VIP: " + vipCount + "/" + requiredVip
-                + "\\nEliminacje: " + run.Kills + "  •  Bossowie: " + run.BossesDefeated
-                + "\\nWynik końcowy: " + run.Score
-                + "\\nOperator: " + OperatorCatalog.Get(run.SelectedOperator).DisplayName
-                + "\\nWszystkie sektory zabezpieczone. Dostawa została zakończona.";
+                + "\nZebrane zamówienia VIP: " + vipCount + "/" + requiredVip
+                + "\nEliminacje: " + run.Kills + "  •  Bossowie: " + run.BossesDefeated
+                + "\nWynik końcowy: " + run.Score
+                + "\nOperator: " + OperatorCatalog.Get(run.SelectedOperator).DisplayName
+                + "\nWszystkie sektory zabezpieczone. Dostawa została zakończona.";
             ShowModal("KAMPANIA UKOŃCZONA", summary,
                 "ZAGRAJ PONOWNIE", RetryRun, "MENU GŁÓWNE", ReturnToMenu);
         }
