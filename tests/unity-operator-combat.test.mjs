@@ -401,3 +401,19 @@ test('Unity Survival draft is responsive, has a valid text factory call, and blo
   assert.match(hud, /GameFlowState\.Paused/);
   assert.match(hud, /GameFlowState\.GameOver/);
 });
+
+
+test('Unity Survival world attaches and initializes wave director, pooled weapons and XP progression', async () => {
+  const factory = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs');
+  const bootstrap = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/MainGameBootstrap.cs');
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  assert.match(factory, /root\.AddComponent<SurvivalWeaponController>\(\)/);
+  assert.match(factory, /root\.AddComponent<SurvivalProgressionController>\(\)/);
+  assert.match(factory, /root\.AddComponent<SurvivalWaveDirector>\(\)/);
+  assert.match(factory, /SpawnSurvivalEnemy/);
+  assert.match(bootstrap, /GetComponentInParent<SurvivalWeaponController>\(\)/);
+  assert.match(bootstrap, /GetComponentInParent<SurvivalProgressionController>\(\)/);
+  assert.match(bootstrap, /weaponController\.Initialize\(player, _hud, progressionController\)/);
+  assert.match(bootstrap, /progressionController\.Initialize\(player, _hud, weaponController\)/);
+  assert.match(enemy, /GetComponentInParent<SurvivalProgressionController>\(\)/);
+});
