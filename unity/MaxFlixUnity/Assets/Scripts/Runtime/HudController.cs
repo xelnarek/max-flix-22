@@ -10,6 +10,8 @@ namespace MaxFlix.Unity.Runtime
         private Text _statusText;
         private Text _healthText;
         private Text _helpText;
+        private Text _abilityButtonLabel;
+        private Button _abilityButton;
 
         public VirtualJoystick Joystick { get; private set; }
 
@@ -49,6 +51,20 @@ namespace MaxFlix.Unity.Runtime
             if (_statusText != null) _statusText.text = status;
         }
 
+        public void SetAbilityState(float remaining, float maximum)
+        {
+            if (_abilityButton == null || _abilityButtonLabel == null) return;
+            bool ready = remaining <= 0.05f;
+            _abilityButton.interactable = ready;
+            _abilityButtonLabel.text = ready
+                ? "SPECJALNA\nGOTOWA"
+                : string.Format("SPECJALNA\n{0:0.0} s", remaining);
+            ColorBlock colors = _abilityButton.colors;
+            colors.normalColor = ready ? new Color(0.22f, 0.56f, 0.42f, 0.96f) : new Color(0.27f, 0.31f, 0.36f, 0.90f);
+            colors.highlightedColor = ready ? new Color(0.30f, 0.68f, 0.50f, 1f) : colors.normalColor;
+            _abilityButton.colors = colors;
+        }
+
         private void Build(RectTransform root, PlayerController player)
         {
             _statusText = CreateText(root, "UNITY PORT • B4 TRAINING SLICE", new Vector2(24f, -24f), new Vector2(620f, 62f), 27, TextAnchor.MiddleLeft);
@@ -56,7 +72,7 @@ namespace MaxFlix.Unity.Runtime
             _healthText.rectTransform.anchorMin = new Vector2(1f, 1f);
             _healthText.rectTransform.anchorMax = new Vector2(1f, 1f);
             _healthText.rectTransform.pivot = new Vector2(1f, 1f);
-            _helpText = CreateText(root, "PC: WASD / SPACE / J   •   EKRAN: joystick + SKOK + ATAK", new Vector2(0f, -98f), new Vector2(900f, 42f), 18, TextAnchor.MiddleCenter);
+            _helpText = CreateText(root, "PC: WASD / SPACE / J / E   •   EKRAN: joystick + SKOK + ATAK + SPECJALNA", new Vector2(0f, -98f), new Vector2(1040f, 42f), 17, TextAnchor.MiddleCenter);
             _helpText.rectTransform.anchorMin = new Vector2(0.5f, 1f);
             _helpText.rectTransform.anchorMax = new Vector2(0.5f, 1f);
             _helpText.rectTransform.pivot = new Vector2(0.5f, 1f);
@@ -70,8 +86,11 @@ namespace MaxFlix.Unity.Runtime
             knob.GetComponent<Image>().raycastTarget = false;
             Joystick.ConfigureHandle(knob.GetComponent<RectTransform>());
 
-            CreateActionButton(root, "SKOK", new Vector2(-150f, 245f), new Vector2(170f, 112f), new Color(0.18f, 0.42f, 0.58f, 0.88f), player.RequestJump);
-            CreateActionButton(root, "ATAK", new Vector2(-150f, 105f), new Vector2(190f, 126f), new Color(0.76f, 0.36f, 0.12f, 0.92f), player.RequestAttack);
+            CreateActionButton(root, "SKOK", new Vector2(-150f, 245f), new Vector2(170f, 112f), new Color(0.18f, 0.42f, 0.58f, 0.88f), player.RequestJump, 25);
+            CreateActionButton(root, "ATAK", new Vector2(-150f, 105f), new Vector2(190f, 126f), new Color(0.76f, 0.36f, 0.12f, 0.92f), player.RequestAttack, 25);
+            _abilityButton = CreateActionButton(root, "SPECJALNA", new Vector2(-390f, 105f), new Vector2(190f, 126f),
+                new Color(0.22f, 0.56f, 0.42f, 0.96f), player.RequestAbility, 20);
+            _abilityButtonLabel = _abilityButton.GetComponentInChildren<Text>();
         }
 
         private static Text CreateText(RectTransform parent, string value, Vector2 anchoredPosition, Vector2 size, int fontSize, TextAnchor alignment)
@@ -113,7 +132,9 @@ namespace MaxFlix.Unity.Runtime
             return imageObject;
         }
 
-        private void CreateActionButton(RectTransform root, string label, Vector2 anchoredPosition, Vector2 size, Color color, UnityEngine.Events.UnityAction onClick)
+        private Button CreateActionButton(
+            RectTransform root, string label, Vector2 anchoredPosition, Vector2 size,
+            Color color, UnityEngine.Events.UnityAction onClick, int fontSize)
         {
             GameObject buttonObject = CreateImage(root, label + " button", anchoredPosition, size, color);
             RectTransform rect = buttonObject.GetComponent<RectTransform>();
@@ -121,12 +142,13 @@ namespace MaxFlix.Unity.Runtime
             rect.anchorMax = new Vector2(1f, 0f);
             Button button = buttonObject.AddComponent<Button>();
             button.onClick.AddListener(onClick);
-            Text labelText = CreateText(rect, label, Vector2.zero, size, 25, TextAnchor.MiddleCenter);
+            Text labelText = CreateText(rect, label, Vector2.zero, size, fontSize, TextAnchor.MiddleCenter);
             labelText.rectTransform.anchorMin = Vector2.zero;
             labelText.rectTransform.anchorMax = Vector2.one;
             labelText.rectTransform.pivot = new Vector2(0.5f, 0.5f);
             labelText.rectTransform.anchoredPosition = Vector2.zero;
             labelText.rectTransform.sizeDelta = Vector2.zero;
+            return button;
         }
 
         private static void EnsureEventSystem()
