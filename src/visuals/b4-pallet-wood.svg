@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<defs>
+  <linearGradient id="wood" x2="0" y2="1"><stop stop-color="#b57a45"/><stop offset=".2" stop-color="#d09a5d"/><stop offset=".52" stop-color="#a86d3c"/><stop offset=".8" stop-color="#c18a50"/><stop offset="1" stop-color="#774a2c"/></linearGradient>
+  <pattern id="fibres" width="128" height="128" patternUnits="userSpaceOnUse">
+    <path d="M0 18q35-8 70 1t58-2M0 39q33 6 70-1t58 1M0 78q41-7 70 2t58-2M0 105q29 5 69-1t59 0" fill="none" stroke="#4a2c1b" stroke-width="2" opacity=".25"/>
+    <path d="M9 57q25-6 43 0m28 37q18-4 38 0M19 119q20-4 39 0" fill="none" stroke="#f2c98a" stroke-width="2" opacity=".36"/>
+    <ellipse cx="85" cy="24" rx="16" ry="5" fill="none" stroke="#5a3421" stroke-width="2" opacity=".35"/>
+    <ellipse cx="85" cy="24" rx="6" ry="2" fill="none" stroke="#5a3421" stroke-width="1" opacity=".32"/>
+  </pattern>
+</defs>
+<rect width="512" height="512" fill="#392719"/>
+<rect x="3" y="3" width="506" height="506" fill="url(#wood)"/>
+<rect width="512" height="512" fill="url(#fibres)"/>
+<path d="M0 7H512M0 168H512M0 336H512M0 505H512" stroke="#4e301d" stroke-width="9" opacity=".72"/>
+<path d="M0 13H512M0 174H512M0 342H512M0 499H512" stroke="#f1c78e" stroke-width="2" opacity=".3"/>
+<g fill="#d1d5db" stroke="#49301e" stroke-width="3">
+  <circle cx="25" cy="30" r="6"/><circle cx="487" cy="30" r="6"/><circle cx="25" cy="482" r="6"/><circle cx="487" cy="482" r="6"/>
+  <circle cx="256" cy="30" r="5"/><circle cx="256" cy="482" r="5"/>
+</g>
+<g stroke="#57351f" stroke-width="2" opacity=".42"><path d="M55 70q48-15 95-2t95 0m-188 190q35-9 75 1t85 0m110-185q45-10 88 2t72-1m-190 315q41-12 80 1t100 0"/></g>
+</svg>
