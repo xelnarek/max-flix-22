@@ -187,9 +187,6 @@ namespace MaxFlix.Unity.Runtime
         private void OnDestroy()
         {
             Pool.Remove(this);
-            if (_poolRoot == null || _poolRoot.childCount != 0) return;
-            Destroy(_poolRoot.gameObject);
-            _poolRoot = null;
         }
     }
 }
