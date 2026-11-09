@@ -15,7 +15,7 @@ test('Android CI caches Gradle and retries transient network failures across nat
   assert.match(workflow, /bash \.\.\/scripts\/retry-command\.sh \.\/gradlew --no-daemon bundleRelease assembleDebug assembleRelease/);
   assert.match(retry, /5\[0-9\]\{2\}/);
   assert.match(retry, /gateway time/);
-  assert.match(retry, /for attempt in/);
+  assert.match(retry, /for \(\(attempt = 1; attempt <= max_attempts; attempt\+\+\)/);
   assert.match(retry, /sleep "\$delay"/);
   assert.match(retry, /exit "\$status"/);
 });
