@@ -449,3 +449,16 @@ test('Survival progression remains award-once per run and PvP progression award-
   assert.match(app, /if \(!this\.accountPvpAwardedForMatch\)/);
   assert.match(app, /this\.accountPvpAwardedForMatch = false/);
 });
+
+
+test('PvP obstacles retain soft baked contact shadows when mobile shadow maps are disabled', async () => {
+  const [textures, game] = await Promise.all([
+    readFile(new URL('../src/pvpTextures.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/game.ts', import.meta.url), 'utf8'),
+  ]);
+  assert.match(textures, /export function createPvpContactShadowTexture/);
+  assert.match(textures, /createRadialGradient/);
+  assert.match(game, /createPvpContactShadowTexture\(\)/);
+  assert.match(game, /shadow\.renderOrder = 1/);
+  assert.match(game, /roughness: 0\.82,[\s\S]*?metalness: 0\.08/);
+});
