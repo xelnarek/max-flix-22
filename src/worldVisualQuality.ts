@@ -135,7 +135,7 @@ const SURVIVAL_SURFACE_PROFILES: Readonly<Record<SurvivalMapId, SurvivalSurfaceP
     barrierRoughness: 0.64, barrierMetalness: 0.16,
   },
   night_sorting: {
-    floorRoughness: 0.48, floorMetalness: 0.34,
+    floorRoughness: 0.54, floorMetalness: 0.34,
     wallRoughness: 0.64, wallMetalness: 0.44,
     trimRoughness: 0.34, trimMetalness: 0.42, trimEmissiveIntensity: 0.22,
     palletColor: 0x533d60, crateColors: [0x50456e, 0x784a65, 0x343550],
