@@ -22,7 +22,7 @@ The project deliberately does not import or overwrite the old game. New C# syste
 - Five operator IDs and baseline statistics are declared in Assets/Scripts/Runtime/OperatorCatalog.cs.
 - Operator 01 is selected by default.
 - Basic movement, camera follow, health, safe-area HUD and multi-touch joystick/buttons are available.
-- Each of the five operators now has a distinct first-pass primary attack and special ability; legacy base stats and cooldowns remain in OperatorCatalog.
+- Each of the five operators now has a distinct first-pass primary attack and special ability; Dawid's third primary attack fans into three stretch strands, his five-plate special can ricochet, and Mateusz's ninth-hit Speedrun only counts confirmed enemy impacts. Legacy base stats and cooldowns remain in OperatorCatalog.
 - Projectile hits support stun, slow, knockback, piercing and the returning WZ wrench; operator-specific hit thresholds, shield/sprint windows, double jump and summon support are implemented in the first combat pass.
 - CombatBalanceCatalog now preserves the source Campaign/Survival primary-attack cadence, special cooldown scaling, Survival outgoing/incoming damage modifiers and 0.78 s Survival hit-invulnerability window.
 - Special ability has a separate touch button, visible cooldown and keyboard E shortcut.
