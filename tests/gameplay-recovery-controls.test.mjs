@@ -192,3 +192,22 @@ test('generic game-over results are mode-aware and never submit PvP as a Surviva
   assert.match(html, /id="gameover-modal"[^>]*role="dialog"[^>]*aria-modal="true"/);
   assert.match(html, /id="gameover-modal-title"/);
 });
+
+test('score submission snapshots the completed run before asynchronous leaderboard loading', async () => {
+  const app = await read('../src/index.ts');
+  const start = app.indexOf('const bindScoreSubmission =');
+  const end = app.indexOf('bindScoreSubmission(\'btn-submit-score\'', start);
+  const handler = app.slice(start, end);
+  for (const key of [
+    'submittedMode',
+    'submittedScore',
+    'submittedCoins',
+    'submittedTimeSeconds',
+    'submittedBossDefeated',
+    'submittedCharacterId',
+  ]) assert.ok(handler.indexOf(`const ${key} =`) < handler.indexOf('await loadFirebaseLeaderboardServices()'), `${key} must be captured before async work`);
+  assert.match(handler, /mode: submittedMode/);
+  assert.match(handler, /score: submittedScore/);
+  assert.match(handler, /hero: CHARACTERS\[submittedCharacterId\]\.name/);
+  assert.match(handler, /if \(submittedMode === 'pvp'\)/);
+});
