@@ -477,6 +477,11 @@ namespace MaxFlix.Unity.Runtime
                 SurvivalProgressionController progression = GetComponentInParent<SurvivalProgressionController>();
                 progression?.OnEnemyDefeated(this);
             }
+            else if (GameSession.Current != null && GameSession.Current.Mode == GameMode.Campaign)
+            {
+                CampaignMissionDirector campaign = GetComponentInParent<CampaignMissionDirector>();
+                campaign?.OnEnemyDefeated(this);
+            }
             Destroy(gameObject, 0.06f);
         }
 
