@@ -90,3 +90,15 @@ test('Unity CombatBalanceCatalog preserves legacy attack cadence and Survival sc
   assert.match(kit, /GetAbilityCooldown\(_profile\.AbilityCooldownSeconds, mode\)/);
   assert.match(kit, /_hud\.SetAbilityState\(_abilityCooldownRemaining, _abilityCooldownDuration\)/);
 });
+
+
+test('Unity character damage uses the source rounding bounds and fractional armor remainder', async () => {
+  const balance = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/CombatBalanceCatalog.cs');
+  const player = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/PlayerController.cs');
+  assert.match(balance, /ScaleCharacterBasicAttackDamage/);
+  assert.match(balance, /Clamp\(multiplier, 0\.5f, 1\.8f\)/);
+  assert.match(balance, /Round\(safeDamage \* safeMultiplier \* 10f\) \/ 10f/);
+  assert.match(player, /_incomingDamageRemainder/);
+  assert.match(player, /Mathf\.Floor\(accumulatedDamage \+ 1e-6f\)/);
+  assert.match(player, /_incomingDamageRemainder = Mathf\.Max\(0f, accumulatedDamage - wholeDamage\)/);
+});
