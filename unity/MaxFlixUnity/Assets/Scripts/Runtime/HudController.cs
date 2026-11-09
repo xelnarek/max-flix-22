@@ -168,9 +168,14 @@ namespace MaxFlix.Unity.Runtime
             int minutes = Mathf.FloorToInt(run.ElapsedSeconds / 60f);
             int seconds = Mathf.FloorToInt(run.ElapsedSeconds % 60f);
             string wave = run.Mode == GameMode.Survival ? "\nNajdalsza fala: " + Mathf.Max(1, run.HighestWave) : string.Empty;
+            string damageReport = run.Mode == GameMode.Survival
+                ? "\n\n" + SurvivalDamageTracker.BuildSummary(5)
+                : string.Empty;
             string summary = "Czas: " + minutes.ToString("00") + ":" + seconds.ToString("00")
-                + "\nEliminacje: " + run.Kills + "    •    Wynik: " + run.Score
-                + wave + "\nOperator: " + OperatorCatalog.Get(run.SelectedOperator).DisplayName;
+                + "\nEliminacje: " + run.Kills + "    •    Bossowie: " + run.BossesDefeated
+                + "\nWynik: " + run.Score
+                + wave + "\nOperator: " + OperatorCatalog.Get(run.SelectedOperator).DisplayName
+                + damageReport;
             ShowModal("ZMIANA ZAKOŃCZONA", summary,
                 "ZAGRAJ PONOWNIE", RetryRun, "MENU GŁÓWNE", ReturnToMenu);
         }
@@ -208,7 +213,13 @@ namespace MaxFlix.Unity.Runtime
             panelRect.anchorMax = new Vector2(0.5f, 0.5f);
             panelRect.pivot = new Vector2(0.5f, 0.5f);
             panelRect.anchoredPosition = Vector2.zero;
-            panelRect.sizeDelta = new Vector2(660f, 390f);
+            Canvas rootCanvas = GetComponent<Canvas>();
+            float scaleFactor = rootCanvas != null ? Mathf.Max(0.35f, rootCanvas.scaleFactor) : 1f;
+            float availableWidth = Screen.width / scaleFactor - 36f;
+            float availableHeight = Screen.height / scaleFactor - 36f;
+            float panelWidth = Mathf.Min(820f, availableWidth);
+            float panelHeight = Mathf.Min(520f, availableHeight);
+            panelRect.sizeDelta = new Vector2(Mathf.Max(300f, panelWidth), Mathf.Max(310f, panelHeight));
             panel.GetComponent<Image>().color = new Color(0.055f, 0.085f, 0.12f, 0.99f);
             Outline border = panel.GetComponent<Outline>();
             border.effectColor = new Color(0.20f, 0.49f, 0.64f, 0.95f);
@@ -218,15 +229,18 @@ namespace MaxFlix.Unity.Runtime
             titleText.rectTransform.anchorMin = new Vector2(0.5f, 1f);
             titleText.rectTransform.anchorMax = new Vector2(0.5f, 1f);
             titleText.rectTransform.pivot = new Vector2(0.5f, 1f);
-            Text bodyText = CreateText(panelRect, body, new Vector2(0f, -112f), new Vector2(560f, 136f), 20, TextAnchor.MiddleCenter);
+            bool isDamageReport = body.Contains("OBRAŻENIA WG ŹRÓDŁA");
+            Text bodyText = CreateText(panelRect, body, new Vector2(0f, -112f),
+                new Vector2(panelWidth - 64f, isDamageReport ? panelHeight - 230f : panelHeight - 245f),
+                isDamageReport ? 16 : 20, TextAnchor.MiddleCenter);
             bodyText.rectTransform.anchorMin = new Vector2(0.5f, 1f);
             bodyText.rectTransform.anchorMax = new Vector2(0.5f, 1f);
             bodyText.rectTransform.pivot = new Vector2(0.5f, 1f);
             CreateAnchoredButton(panelRect, primaryLabel, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(1f, 0.5f), new Vector2(-8f, 88f), new Vector2(270f, 78f),
+                new Vector2(1f, 0.5f), new Vector2(-8f, 54f), new Vector2(Mathf.Min(270f, panelWidth * 0.39f), 68f),
                 new Color(0.10f, 0.52f, 0.40f, 1f), 18, primaryAction);
             CreateAnchoredButton(panelRect, secondaryLabel, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 0.5f), new Vector2(8f, 88f), new Vector2(270f, 78f),
+                new Vector2(0f, 0.5f), new Vector2(8f, 54f), new Vector2(Mathf.Min(270f, panelWidth * 0.39f), 68f),
                 new Color(0.19f, 0.27f, 0.37f, 1f), 18, secondaryAction);
         }
 

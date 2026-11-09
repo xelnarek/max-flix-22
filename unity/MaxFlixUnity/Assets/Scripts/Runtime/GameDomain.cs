@@ -169,6 +169,7 @@ namespace MaxFlix.Unity.Runtime
 
         public static void Begin(GameMode mode, OperatorId operatorId, WarehouseMapId mapId)
         {
+            if (mode == GameMode.Survival) SurvivalDamageTracker.Reset();
             Current = new RunSnapshot
             {
                 Mode = mode,

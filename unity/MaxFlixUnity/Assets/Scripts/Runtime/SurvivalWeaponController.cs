@@ -79,6 +79,9 @@ namespace MaxFlix.Unity.Runtime
         private float _rangeMultiplier = 1f;
         private float _criticalChance = 0.05f;
         private float _criticalDamageMultiplier = 1.75f;
+        private float _overdriveRemaining;
+        private float _overdriveDamageMultiplier = 1f;
+        private float _overdriveReloadMultiplier = 1f;
         private int _dispatchCursor;
         private bool _initialized;
 
@@ -151,6 +154,14 @@ namespace MaxFlix.Unity.Runtime
             return true;
         }
 
+        public void GrantOverdrive(float duration, float damageMultiplier, float reloadMultiplier)
+        {
+            _overdriveRemaining = Mathf.Max(_overdriveRemaining, Mathf.Clamp(duration, 1f, 30f));
+            _overdriveDamageMultiplier = Mathf.Max(_overdriveDamageMultiplier, Mathf.Clamp(damageMultiplier, 1f, 1.6f));
+            _overdriveReloadMultiplier = Mathf.Min(_overdriveReloadMultiplier, Mathf.Clamp(reloadMultiplier, 0.65f, 1f));
+            _hud?.SetStatus("OVERDRIVE • " + _overdriveRemaining.ToString("0") + " S");
+        }
+
         public void ApplyPassive(string id, float strength)
         {
             float safeStrength = Mathf.Clamp(strength, 0.5f, 1.75f);
@@ -212,6 +223,12 @@ namespace MaxFlix.Unity.Runtime
             }
 
             _dispatchRemaining = Mathf.Max(0f, _dispatchRemaining - deltaTime);
+            _overdriveRemaining = Mathf.Max(0f, _overdriveRemaining - deltaTime);
+            if (_overdriveRemaining <= 0f)
+            {
+                _overdriveDamageMultiplier = 1f;
+                _overdriveReloadMultiplier = 1f;
+            }
             for (int i = 0; i < _weapons.Count; i++)
                 _weapons[i].Cooldown = Mathf.Max(0f, _weapons[i].Cooldown - deltaTime);
 
@@ -226,7 +243,8 @@ namespace MaxFlix.Unity.Runtime
 
             WeaponState ready = _weapons[readyIndex];
             Fire(ready, target);
-            ready.Cooldown = SurvivalWeaponCatalog.GetReloadSeconds(ready.Id, ready.Level, ready.Evolved, _reloadMultiplier);
+            ready.Cooldown = SurvivalWeaponCatalog.GetReloadSeconds(
+                ready.Id, ready.Level, ready.Evolved, _reloadMultiplier * _overdriveReloadMultiplier);
             _dispatchCursor = (readyIndex + 1) % Mathf.Max(1, _weapons.Count);
             _dispatchRemaining = SurvivalWeaponCatalog.GetDispatchInterval();
         }
@@ -274,14 +292,14 @@ namespace MaxFlix.Unity.Runtime
             float baseDamage = weapon.Id == SurvivalWeaponKind.OrbitBlades
                 ? 1f + (weapon.Level >= 3 ? 1f : 0f) + (weapon.Evolved ? 1f : 0f)
                 : 1f + Mathf.Floor((weapon.Level - 1) / 3f) + (weapon.Evolved ? 1f : 0f);
-            float damage = Mathf.Max(1f, Mathf.Round(baseDamage * _damageMultiplier));
+            float damage = Mathf.Max(1f, Mathf.Round(baseDamage * _damageMultiplier * _overdriveDamageMultiplier));
             bool critical = UnityEngine.Random.value < _criticalChance;
             if (critical) damage = Mathf.Max(1f, Mathf.Round(damage * _criticalDamageMultiplier));
 
             if (weapon.Id == SurvivalWeaponKind.ForkliftHorn)
             {
                 float radius = weapon.Evolved ? 10f : 7f;
-                ApplyAreaDamage(origin, radius, damage, 1.1f, 0f, 1f, 3.4f);
+                ApplyAreaDamage(origin, radius, damage, 1.1f, 0f, 1f, 3.4f, null, weapon.Id);
                 SpawnPulse(origin, profile.Color, radius);
                 _hud?.SetStatus("KLAKSON SZTAPLARKI • FALA UDERZENIOWA");
                 return;
@@ -571,8 +589,12 @@ namespace MaxFlix.Unity.Runtime
                 if ((enemyPosition - closest).sqrMagnitude > shot.HitRadius * shot.HitRadius) continue;
 
                 if (shot.AoeRadius > 0.05f)
+                {
                     ApplyAreaDamage(enemy.transform.position, shot.AoeRadius, shot.Damage,
-                        shot.StunSeconds, shot.SlowSeconds, shot.SlowMultiplier, shot.Knockback);
+                        shot.StunSeconds, shot.SlowSeconds, shot.SlowMultiplier, shot.Knockback, null, shot.WeaponId);
+                    if (shot.Ignites && !enemy.IsDefeated)
+                        enemy.ApplyWeaponHit(0.35f, 0f, 1.4f, 0.78f, Vector3.zero, shot.WeaponId);
+                }
                 else
                     ApplyHit(enemy, shot);
 
@@ -601,17 +623,18 @@ namespace MaxFlix.Unity.Runtime
         {
             if (enemy == null || enemy.IsDefeated) return;
             Vector3 direction = shot.Velocity.sqrMagnitude > 0.001f ? shot.Velocity.normalized : transform.forward;
-            enemy.ApplyCombatHit(shot.Damage, shot.StunSeconds, shot.SlowSeconds,
-                shot.SlowMultiplier, direction * shot.Knockback);
+            enemy.ApplyWeaponHit(shot.Damage, shot.StunSeconds, shot.SlowSeconds,
+                shot.SlowMultiplier, direction * shot.Knockback, shot.WeaponId);
             if (shot.Ignites && !enemy.IsDefeated)
-                enemy.ApplyCombatHit(0.35f, 0f, 1.4f, 0.78f, Vector3.zero);
+                enemy.ApplyWeaponHit(0.35f, 0f, 1.4f, 0.78f, Vector3.zero, shot.WeaponId);
             if (shot.AoeRadius > 0.05f)
                 ApplyAreaDamage(enemy.transform.position, shot.AoeRadius, shot.Damage,
-                    shot.StunSeconds, shot.SlowSeconds, shot.SlowMultiplier, shot.Knockback, enemy);
+                    shot.StunSeconds, shot.SlowSeconds, shot.SlowMultiplier, shot.Knockback, enemy, shot.WeaponId);
         }
 
         private void ApplyAreaDamage(Vector3 center, float radius, float damage, float stun,
-            float slow, float slowMultiplier, float knockback, EnemyAgent excluded = null)
+            float slow, float slowMultiplier, float knockback, EnemyAgent excluded = null,
+            SurvivalWeaponKind? weaponSource = null)
         {
             float radiusSquared = radius * radius;
             foreach (EnemyAgent enemy in _enemyCache)
@@ -621,7 +644,10 @@ namespace MaxFlix.Unity.Runtime
                 offset.y = 0f;
                 if (offset.sqrMagnitude > radiusSquared) continue;
                 Vector3 direction = offset.sqrMagnitude > 0.001f ? offset.normalized : transform.forward;
-                enemy.ApplyCombatHit(damage, stun, slow, slowMultiplier, direction * knockback);
+                if (weaponSource.HasValue)
+                    enemy.ApplyWeaponHit(damage, stun, slow, slowMultiplier, direction * knockback, weaponSource.Value);
+                else
+                    enemy.ApplyCombatHit(damage, stun, slow, slowMultiplier, direction * knockback);
             }
         }
 

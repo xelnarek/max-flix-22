@@ -264,3 +264,210 @@ test('Unity main-menu and HUD restart paths clear the previous world and reset t
   assert.match(factory, /public static void DestroyCurrentWorld\(\)/);
   assert.match(factory, /_worldRoot = null/);
 });
+
+
+test('Unity Survival weapon catalog defines all twelve timed unlocks, rarities and reload progression', async () => {
+  const catalog = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWeaponCatalog.cs');
+  const domain = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/GameDomain.cs');
+  const weaponEnum = domain.slice(domain.indexOf('public enum SurvivalWeaponKind'), domain.indexOf('public enum EnemyKind'));
+  const roster = catalog.match(/private static readonly SurvivalWeaponProfile\[\] Profiles\s*=\s*\{([\s\S]*?)\n        \};/);
+  assert.ok(roster, 'missing Survival weapon profile table');
+  assert.equal((roster[1].match(/Make\(SurvivalWeaponKind\./g) || []).length, 12);
+  for (const id of [
+    'PalletCannon', 'DiamondSaw', 'GlueMine', 'KfcBomber', 'PiorunDrone',
+    'ForkliftBolter', 'ScannerPulse', 'OrbitBlades', 'CalacattaShards',
+    'SteamBomb', 'ForkliftHorn', 'WzBoomerang'
+  ]) assert.match(weaponEnum, new RegExp(id + '\\s*='));
+  for (const unlock of ['30f', '55f', '80f', '105f', '130f', '155f', '180f', '205f', '230f', '255f', '280f', '305f'])
+    assert.ok(roster[1].includes(unlock), 'missing weapon unlock time ' + unlock);
+  assert.match(catalog, /GetReloadSeconds/);
+  assert.match(catalog, /GetDispatchInterval\(\) \{ return 1\.05f; \}/);
+  assert.match(catalog, /GetInitialLevel/);
+  assert.match(catalog, /GetUpgradeSteps/);
+  assert.match(catalog, /GetPromotionRarityFloor/);
+  assert.match(catalog, /GetRarityStrength/);
+  assert.match(catalog, /GetXpRequirement/);
+  assert.match(catalog, /GetRankName/);
+});
+
+test('Unity Survival weapon behaviors use pooled shots, homing, orbiting, ricochet, AOE and return paths', async () => {
+  const weapons = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWeaponController.cs');
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  assert.match(weapons, /PoolPerShapeLimit = 28/);
+  assert.match(weapons, /_sharedMaterial/);
+  assert.match(weapons, /_enemyRefreshRemaining = 0\.22f/);
+  for (const id of [
+    'PalletCannon', 'DiamondSaw', 'GlueMine', 'KfcBomber', 'PiorunDrone',
+    'ForkliftBolter', 'ScannerPulse', 'OrbitBlades', 'CalacattaShards',
+    'SteamBomb', 'ForkliftHorn', 'WzBoomerang'
+  ]) assert.match(weapons, new RegExp('SurvivalWeaponKind\\.' + id));
+  assert.match(weapons, /shot\.Homing/);
+  assert.match(weapons, /shot\.Orbiting/);
+  assert.match(weapons, /shot\.Returning/);
+  assert.match(weapons, /RicochetsRemaining/);
+  assert.match(weapons, /ApplyAreaDamage/);
+  assert.match(weapons, /HitTargets/);
+  assert.match(weapons, /enemy\.ApplyWeaponHit/);
+  assert.match(enemy, /ApplyWeaponHit/);
+});
+
+test('Unity XP progression has pooled crystals, map XP scaling, level-up drafts and non-empty fallbacks', async () => {
+  const progression = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalProgressionController.cs');
+  const player = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/PlayerController.cs');
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  assert.match(progression, /_orbPool\.Count >= 48/);
+  assert.match(progression, /Life = 32f/);
+  assert.match(progression, /1\.6f \* _magnetMultiplier/);
+  assert.match(progression, /map\.XpMultiplier/);
+  assert.match(progression, /GetXpRequirement\(_level\)/);
+  assert.match(progression, /GameFlowState\.LevelUp/);
+  assert.match(progression, /Time\.timeScale = 0f/);
+  assert.match(progression, /SurvivalUpgradeCatalog|SurvivalWeaponCatalog\.RollRarity/);
+  assert.match(progression, /AddFallbackCard/);
+  assert.match(progression, /fallback_repair/);
+  assert.match(progression, /fallback_credits/);
+  assert.match(progression, /fallback_overdrive/);
+  assert.match(progression, /wasBossReward/);
+  assert.match(progression, /Text description = CreateText\(rect, card\.Description,[\s\S]*?Vector2\.zero, 17, TextAnchor\.MiddleCenter/);
+  assert.match(player, /SetSurvivalMoveMultiplier/);
+  assert.match(player, /IncreaseMaxHealth/);
+  assert.match(player, /GrantSurvivalShield/);
+  assert.match(enemy, /progression\?\.OnEnemyDefeated\(this\)/);
+});
+
+test('Unity Survival damage ledger reports only applied HP damage by operator and named weapon', async () => {
+  const tracker = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalDamageTracker.cs');
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  const weapons = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWeaponController.cs');
+  const domain = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/GameDomain.cs');
+  const hud = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs');
+  assert.match(tracker, /RecordWeaponDamage/);
+  assert.match(tracker, /RecordOperatorDamage/);
+  assert.match(enemy, /float actualDamage = Mathf\.Min\(_health, balancedDamage\)/);
+  assert.match(tracker, /BuildSummary\(int maximumLines = 5\)/);
+  assert.match(enemy, /SurvivalDamageTracker\.RecordWeaponDamage\(weaponSource\.Value, actualDamage\)/);
+  assert.match(enemy, /SurvivalDamageTracker\.RecordOperatorDamage\(actualDamage\)/);
+  assert.match(weapons, /ApplyWeaponHit/);
+  assert.match(domain, /SurvivalDamageTracker\.Reset\(\)/);
+  assert.match(hud, /SurvivalDamageTracker\.BuildSummary\(5\)/);
+  assert.match(hud, /OBRAŻENIA WG ŹRÓDŁA/);
+});
+
+
+test('Unity Survival damage report attributes effective damage and displays percentages at game over', async () => {
+  const tracker = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalDamageTracker.cs');
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  const weapons = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWeaponController.cs');
+  const hud = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs');
+  const session = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/GameDomain.cs');
+  assert.match(tracker, /RecordWeaponDamage/);
+  assert.match(tracker, /RecordOperatorDamage/);
+  assert.match(tracker, /rows\[i\]\.Value \/ _totalDamage \* 100f/);
+  assert.match(tracker, /BuildSummary\(int maximumLines = 5\)/);
+  assert.match(enemy, /float actualDamage = Mathf\.Min\(_health, balancedDamage\)/);
+  assert.match(enemy, /SurvivalDamageTracker\.RecordWeaponDamage\(weaponSource\.Value, actualDamage\)/);
+  assert.match(enemy, /SurvivalDamageTracker\.RecordOperatorDamage\(actualDamage\)/);
+  assert.match(weapons, /ApplyWeaponHit/);
+  assert.match(weapons, /shot\.WeaponId/);
+  assert.match(session, /if \(mode == GameMode\.Survival\) SurvivalDamageTracker\.Reset\(\)/);
+  assert.match(hud, /SurvivalDamageTracker\.BuildSummary\(5\)/);
+  assert.match(hud, /OBRAŻENIA WG ŹRÓDŁA/);
+  assert.match(hud, /Bossowie:/);
+});
+
+test('Unity late-run upgrade fallback always has three real effects when the normal pool is empty', async () => {
+  const progression = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalProgressionController.cs');
+  const weapons = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWeaponController.cs');
+  assert.match(progression, /fallback_repair/);
+  assert.match(progression, /fallback_credits/);
+  assert.match(progression, /fallback_overdrive/);
+  assert.match(progression, /_player\.RestoreHealth\(2f\)/);
+  assert.match(progression, /GameSession\.Current\.Coins \+= 25/);
+  assert.match(progression, /_weapons\.GrantOverdrive\(12f, 1\.25f, 0\.82f\)/);
+  assert.match(weapons, /public void GrantOverdrive\(float duration, float damageMultiplier, float reloadMultiplier\)/);
+  assert.match(weapons, /_overdriveRemaining/);
+  assert.match(weapons, /_overdriveDamageMultiplier/);
+  assert.match(weapons, /_overdriveReloadMultiplier/);
+});
+
+test('Unity Survival draft is responsive, has a valid text factory call, and blocks reroll during boss rewards', async () => {
+  const progression = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalProgressionController.cs');
+  const hud = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs');
+  assert.match(progression, /Text description = CreateText\(rect, card\.Description,[\s\S]*?Vector2\.zero, 17, TextAnchor\.MiddleCenter/);
+  assert.match(progression, /bool canReroll = _rerolls > 0 && !_isBossReward/);
+  assert.match(progression, /portrait \? 1 : Mathf\.Min\(3/);
+  assert.match(progression, /Mathf\.Clamp\(availableHeight \/ Mathf\.Max\(1, _currentCards\.Count\), 108f, 154f\)/);
+  assert.match(progression, /GameFlowState\.LevelUp/);
+  assert.match(hud, /GameFlowState\.Paused/);
+  assert.match(hud, /GameFlowState\.GameOver/);
+});
+
+
+test('Unity Survival world attaches and initializes wave director, pooled weapons and XP progression', async () => {
+  const factory = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs');
+  const bootstrap = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/MainGameBootstrap.cs');
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  assert.match(factory, /root\.AddComponent<SurvivalWeaponController>\(\)/);
+  assert.match(factory, /root\.AddComponent<SurvivalProgressionController>\(\)/);
+  assert.match(factory, /root\.AddComponent<SurvivalWaveDirector>\(\)/);
+  assert.match(factory, /SpawnSurvivalEnemy/);
+  assert.match(bootstrap, /GetComponentInParent<SurvivalWeaponController>\(\)/);
+  assert.match(bootstrap, /GetComponentInParent<SurvivalProgressionController>\(\)/);
+  assert.match(bootstrap, /weaponController\.Initialize\(player, _hud, progressionController\)/);
+  assert.match(bootstrap, /progressionController\.Initialize\(player, _hud, weaponController\)/);
+  assert.match(enemy, /GetComponentInParent<SurvivalProgressionController>\(\)/);
+});
+
+
+test('Unity Survival director matches rare Sebix and Bosman encounters plus an evenly spaced contracting horde', async () => {
+  const director = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWaveDirector.cs');
+  const encounters = director.slice(director.indexOf('private void SpawnRegularSurvivalEnemy'), director.indexOf('private bool HasActiveEnemyKind'));
+  assert.match(encounters, /_currentWave >= 8/);
+  assert.match(encounters, /Random\.value < 0\.065f/);
+  assert.match(encounters, /EnemyKind\.Sebix/);
+  assert.match(encounters, /_currentWave >= 6/);
+  assert.match(encounters, /Random\.value < 0\.04f/);
+  assert.match(encounters, /EnemyKind\.BosmanKrakow/);
+  assert.match(director, /HasActiveEnemyKind\(EnemyKind\.Sebix\)/);
+  assert.match(director, /HasActiveEnemyKind\(EnemyKind\.BosmanKrakow\)/);
+  assert.match(director, /_hordeStartAngle/);
+  assert.match(director, /_hordeSpawned \/ \(float\)Mathf\.Max\(1, _hordeProfile\.EnemyCount\)/);
+  assert.match(director, /SurvivalHordeCatalog\.GetContractingRadius/);
+});
+
+test('Unity enemy AI separates nearby enemies and preserves clearance around the player', async () => {
+  const agent = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  assert.match(agent, /_separationCache/);
+  assert.match(agent, /_nextSeparationRefreshTime = Time\.time \+ 0\.16f/);
+  assert.match(agent, /ApplySeparation\(deltaTime\)/);
+  assert.match(agent, /desiredDistance = \(_profile != null && _profile\.IsBoss \? 1\.48f : 1\.12f\)/);
+  assert.match(agent, /const float playerClearance = 1\.15f/);
+  assert.match(agent, /Vector3\.ClampMagnitude\(force \* 3\.4f, 3\.8f\)/);
+});
+
+test('Unity only opens legendary boss rewards for the three rotating major Survival bosses', async () => {
+  const progression = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalProgressionController.cs');
+  const encounters = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWaveDirector.cs');
+  const rewardCondition = progression.slice(progression.indexOf('bool majorBoss'), progression.indexOf('OpenBossReward();') + 20);
+  assert.match(rewardCondition, /EnemyKind\.Walczak/);
+  assert.match(rewardCondition, /EnemyKind\.KingLeto/);
+  assert.match(rewardCondition, /EnemyKind\.BosmanKrakow/);
+  assert.doesNotMatch(rewardCondition, /EnemyKind\.Sebix/);
+  assert.match(encounters, /GetBossKind/);
+  assert.match(encounters, /cycle === 1|cycle/);
+});
+
+
+test('Unity pause and upgrade drafts freeze player input, enemy AI, weapon reloads and wave timers', async () => {
+  const player = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/PlayerController.cs');
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  const weapons = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWeaponController.cs');
+  const director = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWaveDirector.cs');
+  const progression = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalProgressionController.cs');
+  for (const source of [player, enemy, weapons, director, progression])
+    assert.match(source, /GameSession\.Current\.State != GameFlowState\.Playing/);
+  assert.match(progression, /Time\.timeScale = 0f/);
+  assert.match(progression, /Time\.timeScale = 1f/);
+  assert.match(weapons, /_weapons\[i\]\.Cooldown = Mathf\.Max\(0f/);
+  assert.match(director, /GameFlowState\.Playing/);
+});

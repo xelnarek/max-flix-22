@@ -3,10 +3,9 @@ using UnityEngine;
 namespace MaxFlix.Unity.Runtime
 {
     /// <summary>
-    /// First playable Survival loop: source-accurate 60 s waves, weighted roster,
-    /// difficulty growth, device-aware live caps, 90 s horde rings and the
-    /// 5-minute rotating boss warning cadence. Full weapon/perk/reward systems
-    /// remain separate migration stages.
+    /// Survival wave loop: 60 s waves, weighted roster, map/difficulty modifiers,
+    /// device-aware live caps, 90 s horde rings and 5-minute major-boss warnings.
+    /// Weapon firing and level-up progression are hosted by sibling components.
     /// </summary>
     public sealed class SurvivalWaveDirector : MonoBehaviour
     {
@@ -30,6 +29,8 @@ namespace MaxFlix.Unity.Runtime
         private float _hordeElapsed;
         private float _hordeSpawnTimer;
         private int _hordeSpawnQueue;
+        private int _hordeSpawned;
+        private float _hordeStartAngle;
         private float _bossWarningRemaining;
 
         public int CurrentWave { get { return _currentWave; } }
@@ -95,11 +96,7 @@ namespace MaxFlix.Unity.Runtime
             }
 
             for (int i = 0; i < groupSize; i++)
-            {
-                EnemyKind kind = EnemyArchetypeCatalog.ChooseSurvivalSpawnType(
-                    _currentWave, elapsed, Random.value);
-                SpawnEnemy(kind, profile, Random.value * Mathf.PI * 2f, Random.Range(11.5f, 15.5f));
-            }
+                SpawnRegularSurvivalEnemy(profile, elapsed);
 
             _spawnTimer = profile.SpawnIntervalSeconds;
         }
@@ -110,6 +107,8 @@ namespace MaxFlix.Unity.Runtime
             {
                 _hordeElapsed = 0.001f;
                 _hordeSpawnQueue = _hordeProfile.EnemyCount;
+                _hordeSpawned = 0;
+                _hordeStartAngle = Random.value * Mathf.PI * 2f;
                 _hordeSpawnTimer = 0f;
                 _nextHordeAt += HordeCadenceSeconds;
                 if (_player != null)
@@ -132,8 +131,9 @@ namespace MaxFlix.Unity.Runtime
             {
                 SurvivalDifficultyProfile difficulty = GetDifficultyProfile(_currentWave);
                 EnemyKind kind = EnemyArchetypeCatalog.ChooseSurvivalSpawnType(_currentWave, elapsed, Random.value);
-                float angle = Random.value * Mathf.PI * 2f;
-                SpawnEnemy(kind, difficulty, angle, radius + Random.Range(-0.45f, 0.45f));
+                float angle = _hordeStartAngle + (_hordeSpawned / (float)Mathf.Max(1, _hordeProfile.EnemyCount)) * Mathf.PI * 2f;
+                SpawnEnemy(kind, difficulty, angle, radius);
+                _hordeSpawned++;
                 _hordeSpawnQueue--;
                 _hordeSpawnTimer = _hordeProfile.SpawnIntervalSeconds;
             }
@@ -231,6 +231,59 @@ namespace MaxFlix.Unity.Runtime
             foreach (EnemyAgent enemy in enemies)
                 if (enemy != null && !enemy.IsDefeated) count++;
             return count;
+        }
+
+        private void SpawnRegularSurvivalEnemy(SurvivalDifficultyProfile difficulty, float elapsed)
+        {
+            float angle = Random.value * Mathf.PI * 2f;
+            float radius = Random.Range(11.5f, 15.5f);
+            Vector3 spawn = GetSpawnPosition(angle, radius);
+
+            if (_currentWave >= 8 && !HasActiveEnemyKind(EnemyKind.Sebix) && Random.value < 0.065f)
+            {
+                EnemyAgent sebix = WarehouseWorldFactory.SpawnSurvivalEnemy(
+                    _player, EnemyKind.Sebix, spawn,
+                    difficulty.EnemyHealthMultiplier,
+                    difficulty.EnemySpeedMultiplier,
+                    difficulty.EnemyAbilityRateMultiplier);
+                if (sebix != null)
+                {
+                    sebix.name = "Sebix M • Rzadki operator turbo";
+                    FindFirstObjectByType<HudController>()?.SetStatus("RZADKIE SPOTKANIE • SEBIX M");
+                    return;
+                }
+            }
+
+            if (_currentWave >= 6 && !HasActiveEnemyKind(EnemyKind.BosmanKrakow) && Random.value < 0.04f)
+            {
+                EnemyAgent bosman = WarehouseWorldFactory.SpawnSurvivalEnemy(
+                    _player, EnemyKind.BosmanKrakow, spawn,
+                    difficulty.EnemyHealthMultiplier,
+                    difficulty.EnemySpeedMultiplier,
+                    difficulty.EnemyAbilityRateMultiplier);
+                if (bosman != null)
+                {
+                    bosman.name = "Bosman Kraków • Rzadki patrol rampy";
+                    FindFirstObjectByType<HudController>()?.SetStatus("RZADKIE SPOTKANIE • BOSMAN KRAKÓW");
+                    return;
+                }
+            }
+
+            EnemyKind kind = EnemyArchetypeCatalog.ChooseSurvivalSpawnType(
+                _currentWave, elapsed, Random.value);
+            WarehouseWorldFactory.SpawnSurvivalEnemy(
+                _player, kind, spawn,
+                difficulty.EnemyHealthMultiplier,
+                difficulty.EnemySpeedMultiplier,
+                difficulty.EnemyAbilityRateMultiplier);
+        }
+
+        private bool HasActiveEnemyKind(EnemyKind kind)
+        {
+            EnemyAgent[] enemies = FindObjectsByType<EnemyAgent>(FindObjectsSortMode.None);
+            foreach (EnemyAgent enemy in enemies)
+                if (enemy != null && !enemy.IsDefeated && enemy.Kind == kind) return true;
+            return false;
         }
 
         private SurvivalDifficultyProfile GetDifficultyProfile(int wave)

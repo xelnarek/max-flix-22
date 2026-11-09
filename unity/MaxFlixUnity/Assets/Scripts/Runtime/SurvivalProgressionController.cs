@@ -94,7 +94,10 @@ namespace MaxFlix.Unity.Runtime
             if (_kills > 0 && _kills % 8 == 0) baseXp += 2;
             SpawnXpOrb(enemy.transform.position + Vector3.up * 0.45f, baseXp);
 
-            if (profile.IsBoss)
+            bool majorBoss = enemy.Kind == EnemyKind.Walczak
+                || enemy.Kind == EnemyKind.KingLeto
+                || enemy.Kind == EnemyKind.BosmanKrakow;
+            if (majorBoss)
                 OpenBossReward();
         }
 
@@ -330,9 +333,9 @@ namespace MaxFlix.Unity.Runtime
             if (excluded != null) pool.RemoveAll(card => excluded.Contains(card.Id));
             if (pool.Count == 0)
             {
-                AddPassive(pool, "damage", "WZMOCNIONA AMUNICJA", "+12% obrażeń broni Survival.", "◆", 12, true);
-                AddPassive(pool, "rapid", "RYTM ATAKU", "Skrócenie przeładowania broni o 3%.", "⚡", 12, true);
-                AddPassive(pool, "boots", "BUTY SPRINTU", "+6% prędkości poruszania się.", "➤", 12, true);
+                AddFallbackCard(pool, "fallback_repair", "ZESTAW RATUNKOWY", "+2 zdrowia i jedna blokada następnego trafienia.", "+");
+                AddFallbackCard(pool, "fallback_credits", "PREMIA ZA ZMIANĘ", "+250 punktów i +25 monet.", "¤");
+                AddFallbackCard(pool, "fallback_overdrive", "OVERDRIVE 12 S", "Przez 12 sekund broń zadaje 25% więcej obrażeń i przeładowuje się szybciej.", "⚡");
             }
 
             Shuffle(pool);
@@ -371,6 +374,19 @@ namespace MaxFlix.Unity.Runtime
             {
                 Id = id,
                 Title = title + (maxStacks > 1 ? " • " + (stacks + 1) + "/" + maxStacks : string.Empty),
+                Description = description,
+                Icon = icon,
+                HasWeapon = false
+            });
+        }
+
+        private void AddFallbackCard(List<SurvivalUpgradeCard> pool, string id, string title,
+            string description, string icon)
+        {
+            pool.Add(new SurvivalUpgradeCard
+            {
+                Id = id,
+                Title = title,
                 Description = description,
                 Icon = icon,
                 HasWeapon = false
@@ -495,9 +511,7 @@ namespace MaxFlix.Unity.Runtime
 
             Text description = CreateText(rect, card.Description,
                 new Vector2(0.5f, 0.5f), Vector2.zero,
-                new Vector2(0f, 0f), new Vector2(0f, 0f),
-                grid.cellSize.y > 180f ? new Vector2(0f, 112f) : new Vector2(0f, 70f),
-                17, TextAnchor.MiddleCenter, new Color(0.88f, 0.92f, 0.96f));
+                Vector2.zero, 17, TextAnchor.MiddleCenter, new Color(0.88f, 0.92f, 0.96f));
             description.rectTransform.anchorMin = new Vector2(0f, 0f);
             description.rectTransform.anchorMax = new Vector2(1f, 1f);
             description.rectTransform.offsetMin = new Vector2(14f, 12f);
@@ -514,12 +528,13 @@ namespace MaxFlix.Unity.Runtime
                 new Vector2(0.5f, 0f), new Vector2(0f, 20f),
                 new Vector2(900f, 34f), 16, TextAnchor.MiddleCenter, new Color(0.66f, 0.80f, 0.90f));
 
+            bool canReroll = _rerolls > 0 && !_isBossReward;
             _rerollButton = CreateButton(panelRect,
-                _rerolls > 0 ? "PRZERZUĆ (" + _rerolls + ")" : "BRAK PRZERZUTÓW",
+                canReroll ? "PRZERZUĆ (" + _rerolls + ")" : "PRZERZUT NIEDOSTĘPNY",
                 new Vector2(0.5f, 0f), new Vector2(0f, 66f), new Vector2(280f, 62f),
-                new Color(0.18f, 0.27f, 0.37f, 1f), delegate { RerollCards(); }, _rerolls > 0);
+                new Color(0.18f, 0.27f, 0.37f, 1f), delegate { RerollCards(); }, canReroll);
             _rerollLabel = _rerollButton.GetComponentInChildren<Text>();
-            if (_rerollLabel != null) _rerollLabel.text = _rerolls > 0 ? "PRZERZUĆ (" + _rerolls + ")" : "BRAK PRZERZUTÓW";
+            if (_rerollLabel != null) _rerollLabel.text = canReroll ? "PRZERZUĆ (" + _rerolls + ")" : "PRZERZUT NIEDOSTĘPNY";
         }
 
         private void ChooseCard(SurvivalUpgradeCard card)
@@ -531,6 +546,26 @@ namespace MaxFlix.Unity.Runtime
 
         private void ApplyCard(SurvivalUpgradeCard card)
         {
+            if (card.Id == "fallback_repair")
+            {
+                _player.RestoreHealth(2f);
+                _player.GrantSurvivalShield(1);
+                _hud?.SetStatus("ZESTAW RATUNKOWY • +2 HP • OSŁONA");
+                return;
+            }
+            if (card.Id == "fallback_credits")
+            {
+                GameSession.Current.Score += 250;
+                GameSession.Current.Coins += 25;
+                _hud?.SetStatus("PREMIA ZA ZMIANĘ • +250 PKT • +25 MONET");
+                return;
+            }
+            if (card.Id == "fallback_overdrive")
+            {
+                _weapons.GrantOverdrive(12f, 1.25f, 0.82f);
+                return;
+            }
+
             if (card.Id.StartsWith("weapon_unlock:", StringComparison.Ordinal))
             {
                 if (SurvivalWeaponCatalog.TryParse(card.Id.Substring("weapon_unlock:".Length), out SurvivalWeaponKind weapon))
@@ -548,11 +583,12 @@ namespace MaxFlix.Unity.Runtime
             }
             else
             {
-                int stacks = GetPassiveStacks(card.Id) + 1;
-                _passiveStacks[card.Id] = stacks;
+                string passiveId = card.Id;
+                int stacks = GetPassiveStacks(passiveId) + 1;
+                _passiveStacks[passiveId] = stacks;
                 float strength = card.Strength;
-                _weapons.ApplyPassive(card.Id, strength);
-                switch (card.Id)
+                _weapons.ApplyPassive(passiveId, strength);
+                switch (passiveId)
                 {
                     case "boots":
                         _player.SetSurvivalMoveMultiplier(Mathf.Min(1.38f,
