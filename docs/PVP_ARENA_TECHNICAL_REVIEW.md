@@ -46,6 +46,16 @@ The dedicated WebSocket service:
 
 **Known limitation:** active-match reconnection/resume is not implemented. A player disconnect ends the current match rather than attempting a risky partial state restore. This behaviour is surfaced to the remaining player.
 
+## Latest PvP tuning and visual pass
+
+The current PvP tuning uses a standard movement speed of 5.0 world units/s, a dash speed of 13.2, and a sprint perk multiplier of 1.10. These are deliberately lower than the previous 6.2 / 16.0 / 1.16 values so that spacing and shot timing are readable rather than twitch-driven.
+
+Primary projectile collision/display radii are now operator-specific: Marcin 0.40, Grzesiek 0.54, Dawid 0.33, Mateusz 0.48 and Piotr 0.45. The Dawid special fires three ability beams with 70 damage each; these are still tracked separately from primary-shot accuracy. All five operator ability branches now have regression coverage across shield/push, frontal charge, tri-beam, shockwave/cover and electrical damage/stun behaviour. Piotr's electrical special applies 110 damage and a 1.1-second stun; Marcin's defensive special grants 250 shield.
+
+The PvP floor uses a more matte industrial finish to reduce broad specular glare. Cover objects receive baked radial contact shadows so their silhouettes still read on phones where dynamic shadow maps are disabled for performance. Desktop dynamic shadows remain available through the existing renderer profile. Arena lighting has been rebalanced toward lower ambient fill and a slightly stronger cool rim light, preserving warm key-light highlights without flattening the floor texture.
+
+The mobile fire control is anchored above the movement stick and shifted 14 px left of its centre line. The active pointer position is used to keep the control close to the movement origin; safe-area and viewport clamps prevent clipping.
+
 ## Desktop / mobile verification boundary
 
 Automated tests verify the input routing, mode-specific HUD ownership, sweep timing, touch-zone placement logic and desktop fire action. They do not simulate a real thumb, multi-touch gesture or GPU compositor. A visual acceptance pass is still required on a phone and on a desktop browser before calling the controls fully verified.
