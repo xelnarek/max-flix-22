@@ -294,6 +294,11 @@ namespace MaxFlix.Unity.Runtime
             image.color = color;
             Button button = buttonObject.GetComponent<Button>();
             button.targetGraphic = image;
+            ColorBlock buttonColors = button.colors;
+            buttonColors.normalColor = color;
+            buttonColors.highlightedColor = Color.Lerp(color, Color.white, 0.16f);
+            buttonColors.pressedColor = Color.Lerp(color, Color.black, 0.12f);
+            button.colors = buttonColors;
             button.onClick.AddListener(onClick);
             Text labelText = CreateText(rect, label, Vector2.zero, size, fontSize, TextAnchor.MiddleCenter);
             labelText.rectTransform.anchorMin = Vector2.zero;
