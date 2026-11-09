@@ -5,19 +5,25 @@ namespace MaxFlix.Unity.Runtime
     [RequireComponent(typeof(CharacterController))]
     public sealed class EnemyAgent : MonoBehaviour
     {
-        [SerializeField] private float moveSpeed = 2.6f;
-        [SerializeField] private float attackDistance = 1.55f;
-        [SerializeField] private float attackInterval = 1.4f;
-
         private CharacterController _controller;
         private PlayerController _target;
-        private float _health = 5f;
+        private EnemyArchetypeProfile _profile;
+        private float _health;
         private float _attackTimer;
-        private float _hitFlashTimer;
         private float _stunRemaining;
         private float _slowRemaining;
         private float _slowMultiplier = 1f;
+        private float _hitFlashTimer;
+        private float _supportShieldRemaining;
+        private float _chargeWindupRemaining;
+        private float _chargeRemaining;
+        private float _phaseTwoMoveMultiplier = 1f;
+        private Vector3 _chargeDirection;
         private Vector3 _knockbackVelocity;
+        private Vector3 _patrolCenter;
+        private float _patrolDirection = 1f;
+        private bool _chargeHitApplied;
+        private bool _phaseTwo;
         private bool _defeated;
         private Renderer[] _renderers;
         private MaterialPropertyBlock _propertyBlock;
@@ -25,19 +31,41 @@ namespace MaxFlix.Unity.Runtime
         private static readonly int ColorId = Shader.PropertyToID("_Color");
 
         public bool IsDefeated { get { return _defeated; } }
+        public EnemyKind Kind { get { return _profile != null ? _profile.Id : EnemyKind.Customer; } }
+        public float CurrentHealth { get { return _health; } }
+        public float MaxHealth { get { return _profile != null ? _profile.BaseHealth : 1f; } }
 
-        public void Initialize(PlayerController target, float health = 5f)
+        public void Initialize(PlayerController target, EnemyKind kind, float healthMultiplier = 1f)
         {
             _controller = GetComponent<CharacterController>();
             _target = target;
-            _health = Mathf.Max(1f, health);
+            _profile = EnemyArchetypeCatalog.Get(kind);
+            _health = Mathf.Max(1f, _profile.BaseHealth * Mathf.Clamp(healthMultiplier, 0.25f, 8f));
+            _attackTimer = _profile.AttackInterval * 0.55f;
+            _patrolCenter = transform.position;
+            _patrolDirection = (GetInstanceID() & 1) == 0 ? 1f : -1f;
             _renderers = GetComponentsInChildren<Renderer>();
             _propertyBlock = new MaterialPropertyBlock();
+            _defeated = _profile.IsHazardOnly;
+            if (_defeated) gameObject.SetActive(false);
+        }
+
+        // Retained for older callers while scenes are migrated to typed archetypes.
+        public void Initialize(PlayerController target, float health = 5f)
+        {
+            Initialize(target, EnemyKind.Customer, 1f);
+            _health = Mathf.Max(1f, health);
         }
 
         public void ApplyDamage(float damage)
         {
             ApplyCombatHit(damage, 0f, 0f, 1f, Vector3.zero);
+        }
+
+        public void GrantSupportShield(float duration)
+        {
+            if (_defeated) return;
+            _supportShieldRemaining = Mathf.Max(_supportShieldRemaining, Mathf.Clamp(duration, 0f, 6f));
         }
 
         public void ApplyCombatHit(
@@ -51,7 +79,9 @@ namespace MaxFlix.Unity.Runtime
 
             GameMode mode = GameSession.Current != null ? GameSession.Current.Mode : GameMode.Campaign;
             float balancedDamage = CombatBalanceCatalog.ScaleOutgoingDamage(damage, mode);
+            if (_supportShieldRemaining > 0f) balancedDamage *= 0.62f;
             if (balancedDamage <= 0f) return;
+
             _health -= balancedDamage;
             _hitFlashTimer = 0.13f;
             _stunRemaining = Mathf.Max(_stunRemaining, Mathf.Clamp(stunSeconds, 0f, 3f));
@@ -62,12 +92,14 @@ namespace MaxFlix.Unity.Runtime
             }
             _knockbackVelocity += Vector3.ClampMagnitude(knockbackVelocity, 12f);
 
-            if (_health <= 0f)
+            if (_profile != null && _profile.IsBoss && !_phaseTwo && _health <= MaxHealth * 0.5f)
             {
-                _defeated = true;
-                if (GameSession.Current != null) GameSession.Current.Kills++;
-                Destroy(gameObject, 0.06f);
+                _phaseTwo = true;
+                _phaseTwoMoveMultiplier = 1.22f;
+                _attackTimer = Mathf.Min(_attackTimer, _profile.AttackInterval * 0.35f);
             }
+
+            if (_health <= 0f) Defeat();
         }
 
         private void Awake()
@@ -77,51 +109,230 @@ namespace MaxFlix.Unity.Runtime
 
         private void Update()
         {
-            if (_defeated || _target == null || _target.IsDefeated) return;
+            if (_defeated || _target == null || _target.IsDefeated || _profile == null) return;
 
             float deltaTime = Time.deltaTime;
-            if (_controller == null) _controller = GetComponent<CharacterController>();
+            _attackTimer -= deltaTime;
+            _stunRemaining = Mathf.Max(0f, _stunRemaining - deltaTime);
+            _slowRemaining = Mathf.Max(0f, _slowRemaining - deltaTime);
+            _supportShieldRemaining = Mathf.Max(0f, _supportShieldRemaining - deltaTime);
+            if (_slowRemaining <= 0f) _slowMultiplier = 1f;
 
             if (_knockbackVelocity.sqrMagnitude > 0.01f)
             {
-                _controller.Move(_knockbackVelocity * deltaTime);
+                Move(_knockbackVelocity, deltaTime);
                 _knockbackVelocity = Vector3.MoveTowards(_knockbackVelocity, Vector3.zero, 18f * deltaTime);
             }
 
             if (_stunRemaining > 0f)
             {
-                _stunRemaining = Mathf.Max(0f, _stunRemaining - deltaTime);
                 UpdateHitFlash(deltaTime);
                 return;
             }
 
-            _slowRemaining = Mathf.Max(0f, _slowRemaining - deltaTime);
-            if (_slowRemaining <= 0f) _slowMultiplier = 1f;
-
             Vector3 offset = _target.transform.position - transform.position;
             offset.y = 0f;
             float distance = offset.magnitude;
-            if (distance > attackDistance && distance > 0.01f)
+            Vector3 direction = distance > 0.01f ? offset / distance : transform.forward;
+
+            if (_chargeRemaining > 0f)
             {
-                Vector3 direction = offset / distance;
-                _controller.Move(direction * (moveSpeed * _slowMultiplier) * deltaTime);
-                transform.rotation = Quaternion.Slerp(
-                    transform.rotation,
-                    Quaternion.LookRotation(direction),
-                    1f - Mathf.Exp(-7f * deltaTime)
-                );
+                TickCharge(deltaTime);
+                UpdateHitFlash(deltaTime);
+                return;
             }
-            else
+
+            if (_chargeWindupRemaining > 0f)
             {
-                _attackTimer -= deltaTime;
-                if (_attackTimer <= 0f)
+                _chargeWindupRemaining -= deltaTime;
+                if (_chargeWindupRemaining <= 0f)
                 {
-                    _attackTimer = attackInterval;
-                    _target.ApplyDamage(1f);
+                    _chargeDirection = direction;
+                    _chargeRemaining = _profile.IsBoss ? 0.82f : 0.62f;
+                    _chargeHitApplied = false;
+                    transform.rotation = Quaternion.LookRotation(_chargeDirection);
                 }
+                UpdateHitFlash(deltaTime);
+                return;
+            }
+
+            switch (_profile.Behavior)
+            {
+                case EnemyBehaviorStyle.Ranged:
+                    TickRanged(deltaTime, direction, distance);
+                    break;
+                case EnemyBehaviorStyle.Support:
+                    TickSupport(deltaTime, direction, distance);
+                    break;
+                case EnemyBehaviorStyle.Charger:
+                case EnemyBehaviorStyle.Boss:
+                case EnemyBehaviorStyle.PatrolRammer:
+                    TickCharger(deltaTime, direction, distance);
+                    break;
+                case EnemyBehaviorStyle.MeleeChaser:
+                default:
+                    TickMelee(deltaTime, direction, distance);
+                    break;
             }
 
             UpdateHitFlash(deltaTime);
+        }
+
+        private void TickMelee(float deltaTime, Vector3 direction, float distance)
+        {
+            if (distance > _profile.AttackRange)
+            {
+                if (distance <= _profile.AggroRange)
+                    Move(direction * (_profile.MoveSpeed * _phaseTwoMoveMultiplier * _slowMultiplier), deltaTime);
+                else
+                    TickPatrol(deltaTime);
+                Face(direction, deltaTime);
+                return;
+            }
+
+            if (_attackTimer <= 0f)
+            {
+                _target.ApplyDamage(_profile.AttackDamage);
+                _attackTimer = _profile.AttackInterval;
+            }
+        }
+
+        private void TickRanged(float deltaTime, Vector3 direction, float distance)
+        {
+            float preferredRange = _profile.AttackRange;
+            if (distance > preferredRange * 1.12f)
+                Move(direction * (_profile.MoveSpeed * _slowMultiplier), deltaTime);
+            else if (distance < preferredRange * 0.58f)
+                Move(-direction * (_profile.MoveSpeed * 0.72f * _slowMultiplier), deltaTime);
+            else
+            {
+                Vector3 strafe = Vector3.Cross(Vector3.up, direction) * _patrolDirection;
+                Move(strafe * (_profile.MoveSpeed * 0.34f * _slowMultiplier), deltaTime);
+            }
+
+            Face(direction, deltaTime);
+            if (_attackTimer <= 0f)
+            {
+                FireRangedAttack(direction);
+                _attackTimer = _profile.AttackInterval * (_phaseTwo ? 0.78f : 1f);
+            }
+        }
+
+        private void TickSupport(float deltaTime, Vector3 direction, float distance)
+        {
+            if (distance > _profile.AttackRange * 0.90f)
+                Move(direction * (_profile.MoveSpeed * 0.82f * _slowMultiplier), deltaTime);
+            Face(direction, deltaTime);
+
+            if (_attackTimer > 0f) return;
+            EnemyAgent[] allies = FindObjectsByType<EnemyAgent>(FindObjectsSortMode.None);
+            int shielded = 0;
+            foreach (EnemyAgent ally in allies)
+            {
+                if (ally == null || ally == this || ally.IsDefeated) continue;
+                if ((ally.transform.position - transform.position).sqrMagnitude > 6.5f * 6.5f) continue;
+                ally.GrantSupportShield(2.3f);
+                shielded++;
+            }
+
+            if (shielded == 0) FireRangedAttack(direction);
+            _attackTimer = _profile.AttackInterval * (_phaseTwo ? 0.85f : 1f);
+        }
+
+        private void TickCharger(float deltaTime, Vector3 direction, float distance)
+        {
+            if (distance > _profile.AttackRange && distance <= _profile.AggroRange)
+            {
+                Move(direction * (_profile.MoveSpeed * _phaseTwoMoveMultiplier * _slowMultiplier), deltaTime);
+                Face(direction, deltaTime);
+            }
+            else if (distance > _profile.AggroRange)
+            {
+                TickPatrol(deltaTime);
+            }
+
+            if (_attackTimer <= 0f && distance <= _profile.AggroRange)
+            {
+                _chargeWindupRemaining = _profile.IsBoss ? 0.82f : 0.62f;
+                _attackTimer = _profile.AttackInterval * (_phaseTwo ? 0.76f : 1f);
+            }
+        }
+
+        private void TickCharge(float deltaTime)
+        {
+            float chargeSpeed = _profile.MoveSpeed * (_profile.IsBoss ? 2.15f : 2.45f) * _phaseTwoMoveMultiplier;
+            Move(_chargeDirection * chargeSpeed, deltaTime);
+
+            if (!_chargeHitApplied && _target != null)
+            {
+                Vector3 offset = _target.transform.position - transform.position;
+                offset.y = 0f;
+                if (offset.sqrMagnitude <= (_profile.AttackRange + 0.5f) * (_profile.AttackRange + 0.5f))
+                {
+                    _target.ApplyDamage(_profile.AttackDamage * (_profile.IsBoss ? 1.35f : 1f));
+                    _chargeHitApplied = true;
+                }
+            }
+
+            _chargeRemaining = Mathf.Max(0f, _chargeRemaining - deltaTime);
+        }
+
+        private void TickPatrol(float deltaTime)
+        {
+            float patrolOffset = transform.position.x - _patrolCenter.x;
+            if (patrolOffset > 2.8f) _patrolDirection = -1f;
+            else if (patrolOffset < -2.8f) _patrolDirection = 1f;
+
+            Vector3 direction = Vector3.right * _patrolDirection;
+            Move(direction * (_profile.MoveSpeed * 0.28f * _slowMultiplier), deltaTime);
+            Face(direction, deltaTime);
+        }
+
+        private void FireRangedAttack(Vector3 direction)
+        {
+            if (_target == null) return;
+            Vector3 origin = transform.position + Vector3.up * 0.92f + transform.forward * 0.48f;
+            Vector3 aim = _target.transform.position + Vector3.up * 0.82f - origin;
+            if (aim.sqrMagnitude < 0.01f) aim = direction;
+            GameObject shot = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            shot.name = _profile.DisplayName + " attack";
+            shot.transform.position = origin;
+            shot.transform.localScale = Vector3.one * 0.34f;
+            Collider collider = shot.GetComponent<Collider>();
+            if (collider != null) collider.isTrigger = true;
+            Rigidbody body = shot.AddComponent<Rigidbody>();
+            body.useGravity = false;
+            EnemyAttackProjectile attack = shot.AddComponent<EnemyAttackProjectile>();
+            attack.Initialize(_target, _profile.AttackDamage, aim.normalized, 10.5f, _profile.AccentColor);
+        }
+
+        private void Move(Vector3 horizontalVelocity, float deltaTime)
+        {
+            if (_controller == null) return;
+            Vector3 velocity = horizontalVelocity;
+            velocity.y = -2f;
+            _controller.Move(velocity * deltaTime);
+        }
+
+        private void Face(Vector3 direction, float deltaTime)
+        {
+            direction.y = 0f;
+            if (direction.sqrMagnitude < 0.01f) return;
+            Quaternion facing = Quaternion.LookRotation(direction.normalized);
+            transform.rotation = Quaternion.Slerp(transform.rotation, facing, 1f - Mathf.Exp(-7f * deltaTime));
+        }
+
+        private void Defeat()
+        {
+            if (_defeated) return;
+            _defeated = true;
+            if (GameSession.Current != null)
+            {
+                GameSession.Current.Kills++;
+                GameSession.Current.Score += _profile != null && _profile.IsBoss ? 100 : 10;
+                if (_profile != null && _profile.IsBoss) GameSession.Current.BossesDefeated++;
+            }
+            Destroy(gameObject, 0.06f);
         }
 
         private void UpdateHitFlash(float deltaTime)
@@ -134,7 +345,9 @@ namespace MaxFlix.Unity.Runtime
         private void SetHitTint(bool active)
         {
             if (_renderers == null) return;
-            Color tint = active ? new Color(1f, 0.48f, 0.32f, 1f) : Color.white;
+            Color tint = active
+                ? new Color(1f, 0.48f, 0.32f, 1f)
+                : (_supportShieldRemaining > 0f ? new Color(0.42f, 0.76f, 1f, 1f) : Color.white);
             foreach (Renderer renderer in _renderers)
             {
                 if (renderer == null) continue;
