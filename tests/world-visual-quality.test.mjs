@@ -51,4 +51,8 @@ test('PvP has its own neutral-blue and warm-key lighting profile', () => {
   assert.equal(PVP_LIGHTING_PROFILE.rimColor, 0x55c5ed);
   assert.ok(PVP_LIGHTING_PROFILE.fogFar > PVP_LIGHTING_PROFILE.fogNear);
   assert.ok(PVP_LIGHTING_PROFILE.backgroundColor > 0);
+  assert.ok(PVP_LIGHTING_PROFILE.ambientIntensity >= 0.82 && PVP_LIGHTING_PROFILE.ambientIntensity <= 0.92);
+  assert.ok(PVP_LIGHTING_PROFILE.directionalIntensity >= 2.4 && PVP_LIGHTING_PROFILE.directionalIntensity <= 2.9);
+  assert.ok(PVP_LIGHTING_PROFILE.rimIntensity > PVP_LIGHTING_PROFILE.ambientIntensity);
+  assert.ok(PVP_LIGHTING_PROFILE.exposure >= 1 && PVP_LIGHTING_PROFILE.exposure <= 1.08);
 });
