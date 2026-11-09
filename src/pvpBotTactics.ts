@@ -37,6 +37,18 @@ interface ProjectileThreat {
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
+export const PVP_BOT_AIM_SPREAD_RADIANS = 0.18;
+
+/** Adds a bounded, deterministic reaction/aim error to the practice bot. */
+export function applyPvpBotAimSpread(angle: number, decisionIndex: number, spread = PVP_BOT_AIM_SPREAD_RADIANS): number {
+  if (!Number.isFinite(angle)) return 0;
+  const safeSpread = Number.isFinite(spread) ? clamp(Math.abs(spread), 0, Math.PI * 0.5) : PVP_BOT_AIM_SPREAD_RADIANS;
+  const safeIndex = Number.isFinite(decisionIndex) ? Math.max(0, Math.floor(decisionIndex)) : 0;
+  const error = Math.sin((safeIndex + 1) * 2.399963229728653) * safeSpread;
+  const result = angle + error;
+  return Math.atan2(Math.sin(result), Math.cos(result));
+}
+
 function normalize(x: number, z: number): PvpVector2 {
   const length = Math.hypot(x, z);
   if (!Number.isFinite(length) || length < 1e-6) return { x: 0, z: 0 };
