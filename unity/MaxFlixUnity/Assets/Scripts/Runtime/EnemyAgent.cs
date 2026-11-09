@@ -34,6 +34,8 @@ namespace MaxFlix.Unity.Runtime
         private bool _defeated;
         private Renderer[] _renderers;
         private MaterialPropertyBlock _propertyBlock;
+        private static EnemyAgent[] _separationCache = new EnemyAgent[0];
+        private static float _nextSeparationRefreshTime;
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
 
@@ -162,6 +164,7 @@ namespace MaxFlix.Unity.Runtime
             _supportShieldRemaining = Mathf.Max(0f, _supportShieldRemaining - deltaTime);
             if (_slowRemaining <= 0f) _slowMultiplier = 1f;
 
+            ApplySeparation(deltaTime);
             if (_knockbackVelocity.sqrMagnitude > 0.01f)
             {
                 Move(_knockbackVelocity, deltaTime);
@@ -348,6 +351,51 @@ namespace MaxFlix.Unity.Runtime
             body.useGravity = false;
             EnemyAttackProjectile attack = shot.AddComponent<EnemyAttackProjectile>();
             attack.Initialize(_target, _attackDamage, aim.normalized, 10.5f, _profile.AccentColor);
+        }
+
+        private void ApplySeparation(float deltaTime)
+        {
+            if (_controller == null || _target == null) return;
+            if (Time.time >= _nextSeparationRefreshTime)
+            {
+                _separationCache = FindObjectsByType<EnemyAgent>(FindObjectsSortMode.None);
+                _nextSeparationRefreshTime = Time.time + 0.16f;
+            }
+
+            Vector3 force = Vector3.zero;
+            foreach (EnemyAgent other in _separationCache)
+            {
+                if (other == null || other == this || other.IsDefeated) continue;
+                Vector3 offset = transform.position - other.transform.position;
+                offset.y = 0f;
+                float distanceSquared = offset.sqrMagnitude;
+                float desiredDistance = (_profile != null && _profile.IsBoss ? 1.48f : 1.12f)
+                    + (other._profile != null && other._profile.IsBoss ? 0.28f : 0f);
+                float desiredSquared = desiredDistance * desiredDistance;
+                if (distanceSquared >= desiredSquared) continue;
+
+                float distance = Mathf.Sqrt(Mathf.Max(0f, distanceSquared));
+                Vector3 direction;
+                if (distanceSquared < 0.0001f)
+                    direction = GetInstanceID() < other.GetInstanceID() ? Vector3.right : Vector3.left;
+                else
+                    direction = offset / distance;
+
+                float penetration = (desiredDistance - distance) / desiredDistance;
+                force += direction * penetration;
+            }
+
+            Vector3 playerOffset = transform.position - _target.transform.position;
+            playerOffset.y = 0f;
+            float playerDistance = playerOffset.magnitude;
+            const float playerClearance = 1.15f;
+            if (playerDistance > 0.001f && playerDistance < playerClearance)
+                force += playerOffset / playerDistance * ((playerClearance - playerDistance) / playerClearance) * 1.35f;
+
+            if (force.sqrMagnitude < 0.0001f) return;
+            Vector3 velocity = Vector3.ClampMagnitude(force * 3.4f, 3.8f);
+            velocity.y = -2f;
+            _controller.Move(velocity * deltaTime);
         }
 
         private void Move(Vector3 horizontalVelocity, float deltaTime)
