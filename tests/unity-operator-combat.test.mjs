@@ -438,7 +438,7 @@ test('Unity Survival director matches rare Sebix and Bosman encounters plus an e
 test('Unity enemy AI separates nearby enemies and preserves clearance around the player', async () => {
   const agent = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
   assert.match(agent, /_separationCache/);
-  assert.match(agent, /_nextSeparationRefreshTime = Time\.time \+ 0\.16f/);
+  assert.match(agent, /_nextSeparationRefreshTime = Time\.time \+ 0\.10f/);
   assert.match(agent, /ApplySeparation\(deltaTime\)/);
   assert.match(agent, /desiredDistance = \(_profile != null && _profile\.IsBoss \? 1\.48f : 1\.12f\)/);
   assert.match(agent, /const float playerClearance = 1\.15f/);
