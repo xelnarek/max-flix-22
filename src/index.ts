@@ -16,7 +16,7 @@ import {
 } from './ads.ts';
 import { CharacterId, PerkType } from './types.ts';
 import { PvpNetworkSession, PvpLocalBotSession, type IPvpSession } from './pvpClient.ts';
-import { getPvpOperatorAttackCooldown, PVP_RAPID_FIRE_COOLDOWN_MULTIPLIER } from './pvpArena.ts';
+import { getPvpOperatorAttackCooldown, PVP_OPERATOR_PROFILES, PVP_RAPID_FIRE_COOLDOWN_MULTIPLIER } from './pvpArena.ts';
 import type { PvpArenaState, PvpSlot } from './pvpArena.ts';
 import { AssetItem, assetLoader } from './assets.ts';
 import { SelectiveBloomPipeline } from './selectiveBloom.ts';
@@ -2394,6 +2394,8 @@ class PaleciakiScene extends xb.Script {
         setTouchControlsVisibility(true);
 
         this.masteryAwardedForRun = false;
+        // Restore the Survival-specific ability label/icon after leaving PvP.
+        updateCharacterUI(this.selectedCharId);
         this.engine.startSurvival(selectedSurvivalMapId);
         // Re-assert visibility and exclusive mode after the scene transition.
         setTouchControlsMode('survival');
@@ -3693,6 +3695,29 @@ class PaleciakiScene extends xb.Script {
     bindPvpTap(btnOpenPvp, openLobby);
     bindPvpTap(btnClosePvpLobby, closeLobby);
 
+    const applyPvpAbilityPresentation = (operatorId: CharacterId) => {
+      const profile = PVP_OPERATOR_PROFILES[operatorId];
+      const pvpAbilityIcons: Record<CharacterId, string> = {
+        marcin: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.7' stroke-linecap='round' stroke-linejoin='round'><path d='M24 5 39 11v11c0 10-6 16-15 21C15 38 9 32 9 22V11Z'/><path d='m16 24 5 5 11-12'/></svg>",
+        grzesiek: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.7' stroke-linecap='round' stroke-linejoin='round'><path d='M6 31h25l7-9h5v9h-4M12 31v-9h12l7 9M16 31a4 4 0 1 0 8 0M34 31a4 4 0 1 0 8 0'/><path d='M8 13h11M14 8l5 5-5 5'/></svg>",
+        dawid: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'><path d='M7 13h13M7 24h19M7 35h13M22 9l8 15-8 15M31 16l9 8-9 8'/></svg>",
+        mateusz: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'><circle cx='24' cy='24' r='4'/><path d='M24 5a19 19 0 0 1 0 38M24 11a13 13 0 0 1 0 26M24 5a19 19 0 0 0 0 38M24 11a13 13 0 0 0 0 26'/></svg>",
+        piotr: "<svg class='operator-action-svg' viewBox='0 0 48 48' aria-hidden='true' focusable='false' fill='none' stroke='currentColor' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'><path d='m27 4-17 23h12l-2 17 18-25H26Z' fill='currentColor' stroke='none'/><path d='M7 10 4 7M41 38l3 3' opacity='.7'/></svg>",
+      };
+      if (abilityName) {
+        abilityName.textContent = profile.abilityName;
+        abilityName.title = profile.abilityDesc;
+      }
+      if (abilityIcon) {
+        abilityIcon.innerHTML = pvpAbilityIcons[operatorId];
+        abilityIcon.dataset.operatorIcon = operatorId;
+        abilityIcon.title = profile.abilityDesc;
+      }
+      const abilityButton = document.getElementById('btn-ability') as HTMLButtonElement | null;
+      abilityButton?.setAttribute('aria-label', `${profile.abilityName}. ${profile.abilityDesc}`);
+      if (abilityButton) abilityButton.title = `${profile.abilityName} — ${profile.abilityDesc} (E / Shift / przycisk)`;
+    };
+
     const startPvpMatchUI = (session: IPvpSession, localOp: CharacterId, remoteOp: CharacterId) => {
       this.accountPvpAwardedForMatch = false;
       if (this.cinematicIntro?.isRunning()) this.cinematicIntro.stop(false, false);
@@ -3756,6 +3781,7 @@ class PaleciakiScene extends xb.Script {
       this.engine.setManualAimMode(true);
 
       this.engine.startPvp(session, localOp, remoteOp);
+      applyPvpAbilityPresentation(localOp);
       sound.playBossWarning();
     };
 
