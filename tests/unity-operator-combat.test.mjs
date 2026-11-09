@@ -471,3 +471,83 @@ test('Unity pause and upgrade drafts freeze player input, enemy AI, weapon reloa
   assert.match(weapons, /_weapons\[i\]\.Cooldown = Mathf\.Max\(0f/);
   assert.match(director, /GameFlowState\.Playing/);
 });
+
+
+test('Unity enemy crowd separation uses a spatial hash and freezes enemy AI outside Playing', async () => {
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  const director = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWaveDirector.cs');
+  const weapons = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWeaponController.cs');
+  const operatorKit = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorCombatKit.cs');
+  assert.match(enemy, /GameSession\.Current\.State != GameFlowState\.Playing/);
+  assert.match(enemy, /Dictionary<Vector2Int, List<EnemyAgent>> SeparationBuckets/);
+  assert.match(enemy, /SeparationCellSize = 2\.4f/);
+  assert.match(enemy, /RefreshSeparationIndex/);
+  assert.match(enemy, /originCell\.x \+ cellX/);
+  assert.match(enemy, /originCell\.y \+ cellZ/);
+  assert.match(enemy, /public static EnemyAgent\[\] GetCachedAgents\(\)/);
+  assert.equal((enemy.match(/FindObjectsByType<EnemyAgent>/g) || []).length, 1);
+  assert.doesNotMatch(director, /FindObjectsByType<EnemyAgent>/);
+  assert.doesNotMatch(weapons, /FindObjectsByType<EnemyAgent>/);
+  assert.doesNotMatch(operatorKit, /FindObjectsByType<EnemyAgent>/);
+  assert.match(director, /EnemyAgent\.GetCachedAgents\(\)/);
+  assert.match(weapons, /EnemyAgent\.GetCachedAgents\(\)/);
+  assert.match(operatorKit, /EnemyAgent\.GetCachedAgents\(\)/);
+});
+
+test('Unity enemy ranged shots are prewarmed pooled projectiles instead of per-shot scene allocations', async () => {
+  const projectile = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAttackProjectile.cs');
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  const factory = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs');
+  assert.match(projectile, /PoolLimit = 36/);
+  assert.match(projectile, /DefaultPrewarmCount = 12/);
+  assert.match(projectile, /public static void Prewarm/);
+  assert.match(projectile, /public static void Spawn/);
+  assert.match(projectile, /private static EnemyAttackProjectile Acquire/);
+  assert.match(projectile, /gameObject\.SetActive\(false\)/);
+  assert.match(projectile, /_body\.detectCollisions = false/);
+  assert.match(projectile, /_body\.detectCollisions = true/);
+  assert.doesNotMatch(projectile, /Destroy\(gameObject\)/);
+  assert.match(enemy, /EnemyAttackProjectile\.Spawn\(/);
+  assert.doesNotMatch(enemy.slice(enemy.indexOf('private void FireRangedAttack'), enemy.indexOf('private static Vector2Int GetSeparationCell')), /GameObject\.CreatePrimitive/);
+  assert.match(factory, /EnemyAttackProjectile\.Prewarm\(12\)/);
+});
+
+test('Unity operator projectiles use a bounded per-shape pool and reset all hit/return state', async () => {
+  const projectile = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/CombatProjectile.cs');
+  const kit = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorCombatKit.cs');
+  const factory = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs');
+  assert.match(projectile, /PoolLimitPerShape = 18/);
+  assert.match(projectile, /Dictionary<PrimitiveType, List<CombatProjectile>> Pools/);
+  assert.match(projectile, /public static void Prewarm\(int perShape = 3\)/);
+  assert.match(projectile, /public static CombatProjectile Spawn/);
+  assert.match(projectile, /_hitTargets\.Clear\(\)/);
+  assert.match(projectile, /_travelled = 0f/);
+  assert.match(projectile, /_returning = false/);
+  assert.match(projectile, /private void ReturnToPool\(\)/);
+  assert.match(projectile, /_body\.detectCollisions = false/);
+  assert.match(projectile, /gameObject\.SetActive\(false\)/);
+  const spawnMethod = kit.slice(kit.indexOf('private void SpawnProjectile'), kit.indexOf('private void DamageNearbyEnemies'));
+  assert.match(spawnMethod, /CombatProjectile\.Spawn/);
+  assert.doesNotMatch(spawnMethod, /GameObject\.CreatePrimitive|AddComponent<Rigidbody>|AddComponent<CombatProjectile>/);
+  assert.match(factory, /CombatProjectile\.Prewarm\(3\)/);
+});
+
+test('Unity Survival performance governor samples frame time with hysteresis and adjusts wave caps', async () => {
+  const governor = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalPerformanceGovernor.cs');
+  const factory = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs');
+  const bootstrap = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/MainGameBootstrap.cs');
+  const director = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWaveDirector.cs');
+  assert.match(governor, /SampleWindowSeconds = 2\.5f/);
+  assert.match(governor, /SlowWindowsBeforeDowngrade = 2/);
+  assert.match(governor, /FastWindowsBeforeUpgrade = 4/);
+  assert.match(governor, /LastMeasuredFps < 46f/);
+  assert.match(governor, /LastMeasuredFps > 57f/);
+  assert.match(governor, /Application\.targetFrameRate = 60/);
+  assert.match(governor, /QualitySettings\.shadowDistance/);
+  assert.match(governor, /QualitySettings\.lodBias/);
+  assert.match(governor, /_director\?\.SetAdaptivePerformanceTier\(_tier\)/);
+  assert.match(governor, /OnDestroy/);
+  assert.match(factory, /root\.AddComponent<SurvivalPerformanceGovernor>\(\)/);
+  assert.match(bootstrap, /performanceGovernor\?\.Initialize\(waveDirector, _hud\)/);
+  assert.match(director, /SurvivalDifficultyCatalog\.GetLiveEnemyCap\(_isMobile, _adaptiveTier\)/);
+});
