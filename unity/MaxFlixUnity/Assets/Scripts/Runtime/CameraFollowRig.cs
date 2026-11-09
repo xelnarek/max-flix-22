@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace MaxFlix.Unity.Runtime
 {
@@ -24,7 +25,7 @@ namespace MaxFlix.Unity.Runtime
             if (target == null) return;
             if (_distance <= 0f) _distance = offset.magnitude;
 
-            float wheel = Input.mouseScrollDelta.y;
+            float wheel = Mouse.current != null ? Mouse.current.scroll.ReadValue().y / 120f : 0f;
             if (Mathf.Abs(wheel) > 0.01f)
             {
                 _distance = Mathf.Clamp(_distance - wheel * 0.75f, minDistance, maxDistance);
