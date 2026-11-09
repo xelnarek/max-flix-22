@@ -2902,6 +2902,9 @@ class PaleciakiScene extends xb.Script {
     const joystickZone = document.getElementById('touch-joystick-zone');
     const joystickBase = document.getElementById('joystick-base');
     const joystickKnob = document.getElementById('joystick-knob');
+    const pvpAimZone = document.getElementById('pvp-aim-zone');
+    const pvpAimBase = document.getElementById('pvp-aim-base');
+    const pvpAimKnob = document.getElementById('pvp-aim-knob');
     if (!joystickZone || !joystickBase || !joystickKnob) return;
 
     // A floating, radial joystick. Pointer capture keeps the stick attached to the
@@ -2934,6 +2937,79 @@ class PaleciakiScene extends xb.Script {
     };
     this.resetTouchJoystick = resetJoystick;
 
+    // Independent right-thumb aim stick for PvP. Movement and aiming use
+    // separate pointer IDs, so both thumbs can be active at the same time.
+    if (pvpAimZone && pvpAimBase && pvpAimKnob) {
+      let activeAimPointerId: number | null = null;
+      let aimCenterX = 0;
+      let aimCenterY = 0;
+      let aimRadius = 42;
+
+      const resetAimStick = () => {
+        const pointerId = activeAimPointerId;
+        activeAimPointerId = null;
+        pvpAimKnob.style.transform = 'translate(-50%, -50%)';
+        if (pointerId !== null) {
+          try {
+            if (pvpAimZone.hasPointerCapture(pointerId)) pvpAimZone.releasePointerCapture(pointerId);
+          } catch {
+            // The pointer may already have been released or cancelled by Android.
+          }
+        }
+      };
+
+      const handleAimStart = (event: PointerEvent) => {
+        if (activeAimPointerId !== null || (event.pointerType === 'mouse' && event.button !== 0)) return;
+        activeAimPointerId = event.pointerId;
+        const rect = pvpAimBase.getBoundingClientRect();
+        aimCenterX = rect.left + rect.width * 0.5;
+        aimCenterY = rect.top + rect.height * 0.5;
+        const knobRect = pvpAimKnob.getBoundingClientRect();
+        aimRadius = Math.max(20, Math.min(52, (Math.min(rect.width, rect.height) - Math.min(knobRect.width, knobRect.height)) * 0.5 - 5));
+        try {
+          pvpAimZone.setPointerCapture(event.pointerId);
+        } catch {
+          // Window-level handlers below provide the fallback path.
+        }
+        handleAimMove(event);
+        if (event.cancelable) event.preventDefault();
+      };
+
+      const handleAimMove = (event: PointerEvent) => {
+        if (activeAimPointerId !== event.pointerId) return;
+        const dx = event.clientX - aimCenterX;
+        const dy = event.clientY - aimCenterY;
+        const distance = Math.hypot(dx, dy);
+        const scale = distance > aimRadius ? aimRadius / Math.max(0.001, distance) : 1;
+        const knobX = dx * scale;
+        const knobY = dy * scale;
+        pvpAimKnob.style.transform =
+          `translate(calc(-50% + ${knobX.toFixed(1)}px), calc(-50% + ${knobY.toFixed(1)}px))`;
+        this.engine.setPvpAimStickInput(knobX / aimRadius, -knobY / aimRadius);
+        if (event.cancelable) event.preventDefault();
+      };
+
+      const handleAimEnd = (event: PointerEvent) => {
+        if (activeAimPointerId !== event.pointerId) return;
+        resetAimStick();
+      };
+
+      pvpAimZone.addEventListener('pointerdown', handleAimStart, { passive: false });
+      pvpAimZone.addEventListener('lostpointercapture', (event) => {
+        if (activeAimPointerId === event.pointerId) resetAimStick();
+      });
+      window.addEventListener('pointermove', handleAimMove, { passive: false });
+      window.addEventListener('pointerup', handleAimEnd, { passive: true });
+      window.addEventListener('pointercancel', handleAimEnd, { passive: true });
+      window.addEventListener('blur', resetAimStick);
+      window.addEventListener('pagehide', resetAimStick);
+      window.addEventListener('resize', resetAimStick, { passive: true });
+      window.visualViewport?.addEventListener('resize', resetAimStick, { passive: true });
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) resetAimStick();
+      });
+    }
+
     const handleStart = (event: PointerEvent) => {
       if (activePointerId !== null) return;
       if (event.pointerType === 'mouse' && event.button !== 0) return;
@@ -2942,7 +3018,6 @@ class PaleciakiScene extends xb.Script {
       maxRadius = getJoystickRadius();
 
       const touchLayer = document.getElementById('touch-controls');
-      const pvpFireControl = document.getElementById('pvp-fire-control') as HTMLElement | null;
       const viewportWidth = Math.max(1, window.visualViewport?.width || window.innerWidth);
       const viewportHeight = Math.max(1, window.visualViewport?.height || window.innerHeight);
       const baseRect = joystickBase.getBoundingClientRect();
@@ -2956,31 +3031,14 @@ class PaleciakiScene extends xb.Script {
         touchX: event.clientX,
         touchY: event.clientY,
         joystickSize,
-        fireButtonSize: fireControlSize,
+        fireButtonSize: viewportHeight <= 430 ? 68 : 78,
         fireGap: 10,
         topHudClearance: 88,
         safeBottom: 12,
+        reserveFireButton: false,
       });
       startX = origin.x;
       startY = origin.y;
-
-      if (isPvpTouch && pvpFireControl) {
-        const position = calculatePvpFireControlPosition({
-          viewportWidth,
-          viewportHeight,
-          touchX: startX,
-          touchY: startY,
-          joystickRadius: joystickSize * 0.5,
-          fireControlSize,
-          gap: 10,
-          safeMargin: 12,
-        });
-        pvpFireControl.style.setProperty('left', `${position.left}px`, 'important');
-        pvpFireControl.style.setProperty('right', 'auto', 'important');
-        pvpFireControl.style.setProperty('top', 'auto', 'important');
-        pvpFireControl.style.setProperty('bottom', `${position.bottom}px`, 'important');
-        pvpFireControl.style.setProperty('transform', 'translateX(-50%)', 'important');
-      }
 
       joystickBase.style.left = `${startX}px`;
       joystickBase.style.top = `${startY}px`;
@@ -3625,6 +3683,8 @@ class PaleciakiScene extends xb.Script {
       // touch-controls is portaled to body, so it needs its own mode classes.
       // Classes on #game-shell do not cascade into this detached control layer.
       setTouchControlsMode('pvp');
+      const pvpAimKnob = document.getElementById('pvp-aim-knob');
+      if (pvpAimKnob) pvpAimKnob.style.transform = 'translate(-50%, -50%)';
       const touchActionsZone = document.querySelector<HTMLElement>('#touch-controls .touch-actions-zone');
       const pvpFireControl = document.getElementById('pvp-fire-control');
       if (pvpFireControl && touchActionsZone && pvpFireControl.parentElement !== touchActionsZone) {
