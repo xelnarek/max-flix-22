@@ -46,6 +46,9 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      - name: Cache Gradle distributions and dependencies
+        uses: gradle/actions/setup-gradle@v6
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
         with:
@@ -55,7 +58,7 @@ jobs:
         run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Install web dependencies
-        run: npm install --no-audit --no-fund
+        run: bash scripts/retry-command.sh npm install --no-audit --no-fund
 
       - name: Run automated tests
         run: npm test
@@ -71,7 +74,7 @@ jobs:
         run: npm run build
 
       - name: Install pinned Capacitor toolchain
-        run: npm install --no-save --package-lock=false @capacitor/core@8.6.0 @capacitor/cli@8.6.0 @capacitor/android@8.6.0 @capacitor/assets@3.0.5
+        run: bash scripts/retry-command.sh npm install --no-save --package-lock=false @capacitor/core@8.6.0 @capacitor/cli@8.6.0 @capacitor/android@8.6.0 @capacitor/assets@3.0.5
 
       - name: Prepare Android source artwork
         run: |
@@ -122,7 +125,7 @@ jobs:
         run: |
           chmod +x android/gradlew
           cd android
-          ./gradlew --no-daemon bundleRelease assembleDebug assembleRelease
+          bash ../scripts/retry-command.sh ./gradlew --no-daemon bundleRelease assembleDebug assembleRelease
 
       - name: Verify Android package signatures and SDK metadata
         run: node scripts/verify-android-release.mjs

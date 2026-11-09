@@ -4,6 +4,22 @@ import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
+test('Android CI caches Gradle and retries transient network failures across native dependency installs', async () => {
+  const [workflow, retry] = await Promise.all([
+    read('../.github/workflows/android-release.yml'),
+    read('../scripts/retry-command.sh'),
+  ]);
+  assert.match(workflow, /uses: gradle\/actions\/setup-gradle@v6/);
+  assert.match(workflow, /bash scripts\/retry-command\.sh npm install --no-audit --no-fund/);
+  assert.match(workflow, /bash scripts\/retry-command\.sh npm install --no-save/);
+  assert.match(workflow, /bash \.\.\/scripts\/retry-command\.sh \.\/gradlew --no-daemon bundleRelease assembleDebug assembleRelease/);
+  assert.match(retry, /5\[0-9\]\{2\}/);
+  assert.match(retry, /gateway time/);
+  assert.match(retry, /for \(\(attempt = 1; attempt <= max_attempts; attempt\+\+\)/);
+  assert.match(retry, /sleep "\$delay"/);
+  assert.match(retry, /exit "\$status"/);
+});
+
 test('Android wrapper targets the selected Paleciaki package and built web assets', async () => {
   const config = JSON.parse(await read('../capacitor.config.json'));
   assert.equal(config.appId, 'pl.paleciaki.magazynchaosu');
