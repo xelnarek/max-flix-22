@@ -113,7 +113,12 @@ test('lethal damage is terminal and the result workload yields one frame for the
   const callback = app.slice(callbackStart, callbackEnd);
   assert.ok(callback.indexOf('gameoverModal.classList.remove') < callback.indexOf('window.requestAnimationFrame'));
   assert.ok(callback.indexOf('window.requestAnimationFrame') < callback.indexOf('recordCharacterRunResult'));
-  assert.match(callback, /setTouchControlsMode\('hidden'\)/);
+  assert.match(callback, /setTouchControlsMode\\('hidden'\\)/);
+  assert.match(callback, /const snapshot = this\\.engine\\.getSurvivalSnapshot\\(\\)/);
+  assert.match(callback, /const damageReport = this\\.engine\\.getSurvivalDamageReport\\(\\)/);
+  assert.doesNotMatch(callback, /this\\.engine\\.selectCharacter\\(operatorId/);
+  const runStart = app.slice(app.indexOf('const doStartSurvival = async'), app.indexOf('const handlePause ='));
+  assert.match(runStart, /updateCharacterUI\\(this\\.selectedCharId\\)/);
 });
 
 test('fullscreen transitions release movement, aim and positioned fire input on Android WebViews', async () => {
