@@ -26,7 +26,6 @@ namespace MaxFlix.Unity.Runtime
         private readonly List<SupportUnit> _supportUnits = new List<SupportUnit>();
         private readonly MaterialPropertyBlock _propertyBlock = new MaterialPropertyBlock();
         private static readonly Dictionary<int, Material> SupportMaterials = new Dictionary<int, Material>();
-        private static Material _sharedProjectileMaterial;
         private EnemyAgent[] _enemyCache = new EnemyAgent[0];
         private float _enemyCacheRemaining;
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
@@ -226,43 +225,10 @@ namespace MaxFlix.Unity.Runtime
             float slowMultiplier, float knockback, bool returnToOwner, float range,
             bool countsForMateuszPassive = false, int ricochets = 0)
         {
-            GameObject projectile = GameObject.CreatePrimitive(shape);
-            projectile.name = "Operator combat projectile";
-            projectile.transform.position = origin;
-            projectile.transform.rotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
-            projectile.transform.localScale = shape == PrimitiveType.Cylinder
-                ? new Vector3(0.22f, 0.22f, 0.48f)
-                : (shape == PrimitiveType.Cube ? new Vector3(0.22f, 0.22f, 0.32f) : Vector3.one * 0.22f);
-
-            Renderer renderer = projectile.GetComponent<Renderer>();
-            if (renderer != null)
-            {
-                if (_sharedProjectileMaterial == null)
-                {
-                    Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-                    if (shader == null) shader = Shader.Find("Standard");
-                    _sharedProjectileMaterial = new Material(shader) { enableInstancing = true };
-                    if (_sharedProjectileMaterial.HasProperty(EmissionColorId))
-                        _sharedProjectileMaterial.EnableKeyword("_EMISSION");
-                }
-                renderer.sharedMaterial = _sharedProjectileMaterial;
-                renderer.GetPropertyBlock(_propertyBlock);
-                _propertyBlock.SetColor(BaseColorId, color);
-                _propertyBlock.SetColor(ColorId, color);
-                _propertyBlock.SetColor(EmissionColorId, color * 1.35f);
-                renderer.SetPropertyBlock(_propertyBlock);
-            }
-
-            Collider hitbox = projectile.GetComponent<Collider>();
-            if (hitbox != null) hitbox.isTrigger = true;
-            Rigidbody body = projectile.AddComponent<Rigidbody>();
-            body.useGravity = false;
-            body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-            body.velocity = direction.normalized * speed;
-
-            CombatProjectile impact = projectile.AddComponent<CombatProjectile>();
-            impact.Initialize(damage, 3.2f, transform, speed, pierce, stun,
-                slowDuration, slowMultiplier, knockback, returnToOwner, range, countsForMateuszPassive, ricochets);
+            CombatProjectile.Spawn(
+                shape, transform, origin, direction, color, damage, 3.2f, speed,
+                pierce, stun, slowDuration, slowMultiplier, knockback,
+                returnToOwner, range, countsForMateuszPassive, ricochets);
         }
 
         private void DamageNearbyEnemies(float radius, float damage, float stun, float knockback)
