@@ -349,3 +349,52 @@ test('Unity Survival damage ledger reports only applied HP damage by operator an
   assert.match(hud, /SurvivalDamageTracker\.BuildSummary\(5\)/);
   assert.match(hud, /OBRAŻENIA WG ŹRÓDŁA/);
 });
+
+
+test('Unity Survival damage report attributes effective damage and displays percentages at game over', async () => {
+  const tracker = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalDamageTracker.cs');
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  const weapons = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWeaponController.cs');
+  const hud = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs');
+  const session = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/GameDomain.cs');
+  assert.match(tracker, /RecordWeaponDamage/);
+  assert.match(tracker, /RecordOperatorDamage/);
+  assert.match(tracker, /entry\.Value \/ _totalDamage \* 100f/);
+  assert.match(tracker, /BuildSummary\(int maximumLines = 5\)/);
+  assert.match(enemy, /float actualDamage = Mathf\.Min\(_health, balancedDamage\)/);
+  assert.match(enemy, /SurvivalDamageTracker\.RecordWeaponDamage\(weaponSource\.Value, actualDamage\)/);
+  assert.match(enemy, /SurvivalDamageTracker\.RecordOperatorDamage\(actualDamage\)/);
+  assert.match(weapons, /ApplyWeaponHit/);
+  assert.match(weapons, /shot\.WeaponId/);
+  assert.match(session, /if \(mode == GameMode\.Survival\) SurvivalDamageTracker\.Reset\(\)/);
+  assert.match(hud, /SurvivalDamageTracker\.BuildSummary\(5\)/);
+  assert.match(hud, /OBRAŻENIA WG ŹRÓDŁA/);
+  assert.match(hud, /Bossowie:/);
+});
+
+test('Unity late-run upgrade fallback always has three real effects when the normal pool is empty', async () => {
+  const progression = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalProgressionController.cs');
+  const weapons = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWeaponController.cs');
+  assert.match(progression, /fallback_repair/);
+  assert.match(progression, /fallback_credits/);
+  assert.match(progression, /fallback_overdrive/);
+  assert.match(progression, /_player\.RestoreHealth\(2f\)/);
+  assert.match(progression, /GameSession\.Current\.Coins \+= 25/);
+  assert.match(progression, /_weapons\.GrantOverdrive\(12f, 1\.25f, 0\.82f\)/);
+  assert.match(weapons, /public void GrantOverdrive\(float duration, float damageMultiplier, float reloadMultiplier\)/);
+  assert.match(weapons, /_overdriveRemaining/);
+  assert.match(weapons, /_overdriveDamageMultiplier/);
+  assert.match(weapons, /_overdriveReloadMultiplier/);
+});
+
+test('Unity Survival draft is responsive, has a valid text factory call, and blocks reroll during boss rewards', async () => {
+  const progression = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalProgressionController.cs');
+  const hud = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs');
+  assert.match(progression, /Text description = CreateText\(rect, card\.Description,[\s\S]*?Vector2\.zero, 17, TextAnchor\.MiddleCenter/);
+  assert.match(progression, /bool canReroll = _rerolls > 0 && !_isBossReward/);
+  assert.match(progression, /portrait \? 1 : Mathf\.Min\(3/);
+  assert.match(progression, /Mathf\.Clamp\(availableHeight \/ Mathf\.Max\(1, _currentCards\.Count\), 108f, 154f\)/);
+  assert.match(progression, /GameFlowState\.LevelUp/);
+  assert.match(hud, /GameFlowState\.Paused/);
+  assert.match(hud, /GameFlowState\.GameOver/);
+});
