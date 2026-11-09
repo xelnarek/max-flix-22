@@ -27,6 +27,7 @@ The project deliberately does not import or overwrite the old game. New C# syste
 - CombatBalanceCatalog now preserves the source Campaign/Survival primary-attack cadence, special cooldown scaling, Survival outgoing/incoming damage modifiers and 0.78 s Survival hit-invulnerability window.
 - Special ability has a separate touch button, visible cooldown and keyboard E shortcut.
 - EnemyArchetypeCatalog contains all 23 legacy enemy IDs (forklift is classified as a world hazard) and the 17-entry Survival spawn unlock/weight roster. The first AI pass separates melee chasers, ranged attackers, support units, chargers and boss phase changes. The B4 slice currently instantiates only the Customer, AGV and Inspector examples.
+- SurvivalWaveDirector now includes the source 60-second wave clock, weighted regular spawning, exact wave difficulty curve, mobile/desktop live-enemy caps, the 90-second contracting horde ring and 5-minute rotating major-boss warnings. A run can be handed to the runtime as Survival through MainGameBootstrap.ConfigureNextRun; the present bootstrap still defaults to Campaign because a complete mode-selection menu has not yet been ported.
 - The current B4 layout remains procedural; enemy/operator/support models are readable low-poly placeholders, not the final imported rigs.
 - Keyboard, mouse, gamepad and multi-touch UI use Unity's New Input System; this code still requires an actual Unity Editor compile and device balancing pass.
 
