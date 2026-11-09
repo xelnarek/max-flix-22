@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createEnemyHitReaction, getEnemyHitPulse } from '../src/enemyCombatFeedback.ts';
+import { createEnemyHitReaction, getEnemyHitPulse, getEnemyImpactBurstProfile } from '../src/enemyCombatFeedback.ts';
 
 test('normal hit recoil pushes an enemy away from the damage source', () => {
   const reaction = createEnemyHitReaction(4, 3, 1, 3, 2, false);
@@ -38,4 +38,37 @@ test('hit pulse is zero at both ends and peaks halfway through the reaction', ()
   assert.ok(Math.abs(getEnemyHitPulse(0, 0.24)) < 1e-9);
   assert.equal(getEnemyHitPulse(-1, 0.24), 0);
   assert.equal(getEnemyHitPulse(0.2, 0), 0);
+});
+
+
+test('impact bursts become more pronounced for heavier hits and bosses while staying bounded', () => {
+  const light = getEnemyImpactBurstProfile(1, false, false, 0);
+  const heavy = getEnemyImpactBurstProfile(5, false, false, 0);
+  const boss = getEnemyImpactBurstProfile(5, true, false, 0);
+  assert.ok(heavy.particleCount >= light.particleCount);
+  assert.equal(boss.particleCount, 5);
+  assert.ok(boss.particleScale > heavy.particleScale);
+  assert.ok(boss.particleSpeed <= 4.2);
+  assert.equal(boss.duration, 0.24);
+});
+
+test('handheld impact bursts respect adaptive effects quality tiers', () => {
+  const normal = getEnemyImpactBurstProfile(3, false, true, 0);
+  const reduced = getEnemyImpactBurstProfile(3, false, true, 1);
+  const low = getEnemyImpactBurstProfile(3, true, true, 2);
+  assert.equal(normal.particleCount, 2);
+  assert.equal(reduced.particleCount, 2);
+  assert.equal(low.particleCount, 1);
+  assert.ok(low.particleScale > 0);
+  assert.ok(low.duration > 0);
+});
+
+test('impact burst profile sanitizes invalid damage and performance inputs', () => {
+  const profile = getEnemyImpactBurstProfile(Number.NaN, true, true, Number.NaN);
+  assert.deepEqual(profile, {
+    particleCount: 2,
+    particleScale: (0.044 + 0.82 * 0.018) * 1.12,
+    particleSpeed: 2.25 + 0.82 * 1.2,
+    duration: 0.24,
+  });
 });
