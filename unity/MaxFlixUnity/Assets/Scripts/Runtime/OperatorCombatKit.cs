@@ -396,8 +396,8 @@ namespace MaxFlix.Unity.Runtime
             {
                 CreatePart(root, PrimitiveType.Sphere, "Cat body", new Vector3(0f, 0.20f, 0f), new Vector3(0.58f, 0.42f, 0.78f), color);
                 CreatePart(root, PrimitiveType.Sphere, "Cat head", new Vector3(0f, 0.54f, 0.28f), new Vector3(0.48f, 0.42f, 0.42f), color);
-                CreatePart(root, PrimitiveType.Cone, "Cat left ear", new Vector3(-0.15f, 0.83f, 0.29f), new Vector3(0.16f, 0.28f, 0.16f), color);
-                CreatePart(root, PrimitiveType.Cone, "Cat right ear", new Vector3(0.15f, 0.83f, 0.29f), new Vector3(0.16f, 0.28f, 0.16f), color);
+                CreatePart(root, PrimitiveType.Cylinder, "Cat left ear", new Vector3(-0.15f, 0.83f, 0.29f), new Vector3(0.16f, 0.28f, 0.16f), color);
+                CreatePart(root, PrimitiveType.Cylinder, "Cat right ear", new Vector3(0.15f, 0.83f, 0.29f), new Vector3(0.16f, 0.28f, 0.16f), color);
                 CreatePart(root, PrimitiveType.Sphere, "Cat visor", new Vector3(0f, 0.56f, 0.48f), new Vector3(0.25f, 0.09f, 0.04f), Color.black);
             }
             else
