@@ -89,6 +89,18 @@ W podetapie 2B dodano katalog wszystkich 23 identyfikatorów przeciwników (z ro
 
 **Ograniczenia:** Survival wave director ma ścieżkę uruchomienia, ale główny bootstrap nadal wybiera Campaign. Menu wyboru trybu/mapy, pełna progresja XP/perków/broni/dropów/kontraktów/eventów/sekretów oraz modele wszystkich archetypów wymagają kolejnych etapów. Aktualnie jest to funkcjonalny szkielet fali, nie pełna zgodność Survival 1:1.
 
+### Etap 2D — arsenal Survival, progresja i raport obrażeń (wdrożone w kodzie, bez walidacji Unity Editor)
+
+- Katalog dwunastu broni ma czasy odblokowania, czasy przeładowania, poziomy, ewolucje i poziomy startowe wynikające z rzadkości.
+- SurvivalWeaponController obsługuje automatyczne wybieranie celu i kolejkę strzałów (1,05 s pomiędzy dispatchami), niezależne cooldowny, pooling pocisków oraz pierwsze zachowania broni: AOE, spowolnienia, naprowadzanie, przebijanie, orbitowanie, odbicie i powrót.
+- Kryształy XP są tworzone z puli, przyciągane do operatora i przeliczane przez mnożnik wybranej mapy.
+- Po awansie gra zatrzymuje symulację i pokazuje trzy karty. Dodano rzadkości, progi awansu rang, przerzuty, odblokowania/ulepszenia/ewolucje broni oraz pierwszą grupę pasywów.
+- Nagrody głównych bossów otwierają osobny wybór legendarnego ulepszenia.
+- SurvivalDamageTracker zapisuje efektywne obrażenia po uwzględnieniu zdrowia i osłon; ekran końca rundy pokazuje rozkład źródeł i procent całkowitych obrażeń.
+- Rozszerzono HUD o poziom, rangę, XP, skrócony arsenał oraz raport obrażeń; stan LevelUp blokuje ruch i AI.
+
+**Ograniczenia:** zachowania dwunastu broni i wartości kart są pierwszym portem, część pasywów źródłowych, kontraktów, zdarzeń, mutatorów, streaków i szczegółów ewolucji nadal wymaga mapowania. Nie ma jeszcze testu C# z Unity Editor ani balansu na urządzeniu. Nie należy traktować statycznych testów kodu jako potwierdzenia pełnej zgodności rozgrywki.
+
 ### Etap 2 — pełny rdzeń walki i pięciu operatorów
 - wszystkie ataki podstawowe, pasywy i umiejętności specjalne;
 - animacje i wyposażenie operatorów;
