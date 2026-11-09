@@ -835,7 +835,7 @@ test('Survival defeat submits a mode-labelled score and uses the Survival summar
   const html = await read('../index.html');
   assert.match(app, /onGameOver: \(reason\) => \{[\s\S]*?const endedMode = this\.engine\.getGameMode\(\)/);
   assert.match(app, /this\.lastMode = endedMode/);
-  assert.match(app, /mode: this\.lastMode/);
+  assert.match(app, /mode: submittedMode/);
   assert.match(app, /bindScoreSubmission\('btn-submit-score-gameover'/);
   assert.match(html, /id="btn-submit-score-gameover"/);
   assert.match(html, /id="gameover-score"/);
