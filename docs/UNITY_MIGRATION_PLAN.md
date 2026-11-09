@@ -101,6 +101,8 @@ W podetapie 2B dodano katalog wszystkich 23 identyfikatorów przeciwników (z ro
 
 **Ograniczenia:** zachowania dwunastu broni i wartości kart są pierwszym portem, część pasywów źródłowych, kontraktów, zdarzeń, mutatorów, streaków i szczegółów ewolucji nadal wymaga mapowania. Nie ma jeszcze testu C# z Unity Editor ani balansu na urządzeniu. Nie należy traktować statycznych testów kodu jako potwierdzenia pełnej zgodności rozgrywki.
 
+W etapie 2D uzupełniono też dwa źródłowe rzadkie spotkania (Bosman od fali 6 z szansą 4%, Sebix od fali 8 z szansą 6,5%), limit pojedynczej aktywnej instancji każdego oraz równomierne rozmieszczenie wejścia hordy. AI otrzymało współdzielony cache przestrzenny i separację, aby ograniczać nakładanie przeciwników w tłumie.
+
 ### Etap 2 — pełny rdzeń walki i pięciu operatorów
 - wszystkie ataki podstawowe, pasywy i umiejętności specjalne;
 - animacje i wyposażenie operatorów;
