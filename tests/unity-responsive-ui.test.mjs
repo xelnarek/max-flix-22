@@ -4,6 +4,17 @@ import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
+test('Unity joystick origin and thumb travel remain centered and bounded after HUD scaling', async () => {
+  const hud = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs');
+  const joystick = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/VirtualJoystick.cs');
+  assert.match(hud, /_joystickHandleRect\.anchorMin = new Vector2\(0\.5f, 0\.5f\)/);
+  assert.match(hud, /SetControlRect\(_joystickRect, Vector2\.zero, new Vector2\(0\.5f, 0\.5f\)/);
+  assert.match(hud, /edgeX \+ stickSize \* 0\.5f/);
+  assert.match(hud, /ConfigureMovementRadius\(Mathf\.Max\(1f, \(stickSize - handleSize\) \* 0\.5f\)\)/);
+  assert.match(joystick, /public void ConfigureMovementRadius\(float value\)/);
+  assert.match(joystick, /movementRadius = Mathf\.Clamp\(value, 1f, 256f\)/);
+});
+
 test('Unity menu uses the Paleciaki brand and respects Android safe areas', async () => {
   const menu = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/MainMenuController.cs');
   assert.match(menu, /CreateText\(safeRoot, "PALECIAKI!"/);
