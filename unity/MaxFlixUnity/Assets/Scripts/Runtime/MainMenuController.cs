@@ -211,9 +211,9 @@ namespace MaxFlix.Unity.Runtime
             button.interactable = enabled;
             button.transition = Selectable.Transition.ColorTint;
             ColorBlock colors = button.colors;
-            colors.normalColor = Color.white;
-            colors.highlightedColor = new Color(1f, 1f, 1f, 1f);
-            colors.pressedColor = new Color(0.78f, 0.86f, 0.94f, 1f);
+            colors.normalColor = image.color;
+            colors.highlightedColor = Color.Lerp(image.color, Color.white, 0.22f);
+            colors.pressedColor = Color.Lerp(image.color, Color.black, 0.12f);
             colors.disabledColor = new Color(0.48f, 0.50f, 0.54f, 0.55f);
             colors.fadeDuration = 0.08f;
             button.colors = colors;
@@ -249,9 +249,17 @@ namespace MaxFlix.Unity.Runtime
                     _selectedMode == GameMode.Campaign ? "URUCHOM TRENING B4" : "PVP NIEDOSTĘPNE";
             Image startImage = _startButton.GetComponent<Image>();
             if (startImage != null)
-                startImage.color = _selectedMode == GameMode.Survival
+            {
+                Color startColor = _selectedMode == GameMode.Survival
                     ? new Color(0.10f, 0.55f, 0.40f, 1f)
                     : new Color(0.17f, 0.39f, 0.58f, 1f);
+                startImage.color = startColor;
+                ColorBlock startColors = _startButton.colors;
+                startColors.normalColor = startColor;
+                startColors.highlightedColor = Color.Lerp(startColor, Color.white, 0.18f);
+                startColors.pressedColor = Color.Lerp(startColor, Color.black, 0.12f);
+                _startButton.colors = startColors;
+            }
         }
 
         private static void RefreshButtons<T>(Dictionary<T, Button> buttons, T selected)
@@ -262,9 +270,15 @@ namespace MaxFlix.Unity.Runtime
                 Image image = item.Value.GetComponent<Image>();
                 if (image == null) continue;
                 bool active = EqualityComparer<T>.Default.Equals(item.Key, selected);
-                image.color = active
+                Color cardColor = active
                     ? new Color(0.10f, 0.42f, 0.39f, 1f)
                     : new Color(0.08f, 0.13f, 0.20f, 0.96f);
+                image.color = cardColor;
+                ColorBlock buttonColors = item.Value.colors;
+                buttonColors.normalColor = cardColor;
+                buttonColors.highlightedColor = Color.Lerp(cardColor, Color.white, 0.20f);
+                buttonColors.pressedColor = Color.Lerp(cardColor, Color.black, 0.12f);
+                item.Value.colors = buttonColors;
                 Outline outline = item.Value.GetComponent<Outline>();
                 if (active && outline == null) outline = item.Value.gameObject.AddComponent<Outline>();
                 if (outline != null)
@@ -340,6 +354,11 @@ namespace MaxFlix.Unity.Runtime
             image.color = color;
             Button button = buttonObject.GetComponent<Button>();
             button.targetGraphic = image;
+            ColorBlock buttonColors = button.colors;
+            buttonColors.normalColor = color;
+            buttonColors.highlightedColor = Color.Lerp(color, Color.white, 0.18f);
+            buttonColors.pressedColor = Color.Lerp(color, Color.black, 0.12f);
+            button.colors = buttonColors;
             button.onClick.AddListener(onClick);
             Text text = CreateText(rect, label, Vector2.zero, Vector2.zero,
                 new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero,
