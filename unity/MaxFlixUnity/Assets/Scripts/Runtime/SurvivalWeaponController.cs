@@ -72,7 +72,6 @@ namespace MaxFlix.Unity.Runtime
         private PlayerController _player;
         private HudController _hud;
         private SurvivalProgressionController _progression;
-        private float _enemyRefreshRemaining;
         private float _dispatchRemaining;
         private float _damageMultiplier = 1f;
         private float _reloadMultiplier = 1f;
@@ -96,7 +95,6 @@ namespace MaxFlix.Unity.Runtime
             _weapons.Clear();
             _activeShots.Clear();
             _dispatchRemaining = 0f;
-            _enemyRefreshRemaining = 0f;
             _initialized = true;
             UpdateHudSummary();
         }
