@@ -9,8 +9,17 @@ using UnityEngine.Rendering.Universal;
 
 namespace MaxFlix.Unity.Editor
 {
+    [InitializeOnLoad]
     public static class UnityProjectSetup
     {
+        static UnityProjectSetup()
+        {
+            // Apply the rendering and input setup on first editor load so the
+            // project cannot silently remain on the built-in renderer.
+            // The menu item remains available as a manual repair command.
+            EditorApplication.delayCall += ConfigureRenderingAndInput;
+        }
+
         private const string SettingsFolder = "Assets/Settings";
         private const string UrpMenuItem = "Assets/Create/Rendering/URP Asset (with Universal Renderer)";
         private const int NewInputSystemBackend = 1;
