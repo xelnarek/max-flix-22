@@ -21,6 +21,7 @@ test('Unity Survival HUD binds zoom slider and camera toggle to the active camer
   assert.match(hud, /FindFirstObjectByType<CameraFollowRig>\(\)/);
   assert.match(hud, /CreateCameraZoomSlider\(root, _cameraRig\)/);
   assert.match(hud, /slider\.onValueChanged\.AddListener\(cameraRig\.SetZoomNormalized\)/);
+  assert.match(hud, /_cameraZoomSlider == null && !portrait && height > 480f/);
   assert.match(hud, /_cameraRig\.ToggleViewMode\(\)/);
   assert.match(hud, /_cameraRig\.IsTopDown \? "KAMERA 2D" : "KAMERA 3D"/);
 });
