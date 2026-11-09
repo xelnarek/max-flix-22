@@ -20,6 +20,10 @@ namespace MaxFlix.Unity.Runtime
         private float _currentHealth;
         private float _hitInvulnerabilityRemaining;
         private float _incomingDamageRemainder;
+        private float _survivalMoveMultiplier = 1f;
+        private float _survivalDefenseMultiplier = 1f;
+        private int _bonusMaxHealth;
+        private int _survivalShieldCharges;
         private bool _jumpRequested;
         private bool _airJumpUsed;
         private bool _attackRequested;
@@ -27,7 +31,8 @@ namespace MaxFlix.Unity.Runtime
         private bool _defeated;
 
         public float CurrentHealth { get { return _currentHealth; } }
-        public float MaxHealth { get { return _profile != null ? _profile.MaxHealth : 5f; } }
+        public float MaxHealth { get { return (_profile != null ? _profile.MaxHealth : 5f) + _bonusMaxHealth; } }
+        public float SurvivalMoveMultiplier { get { return _survivalMoveMultiplier; } }
         public bool IsDefeated { get { return _defeated; } }
         public OperatorId OperatorId { get { return _profile != null ? _profile.Id : OperatorId.Marcin; } }
 
@@ -41,8 +46,12 @@ namespace MaxFlix.Unity.Runtime
             _combatKit = GetComponent<OperatorCombatKit>();
             if (_combatKit == null) _combatKit = gameObject.AddComponent<OperatorCombatKit>();
             _combatKit.Initialize(this, hud, _profile);
-            _currentHealth = _profile.MaxHealth;
-            _hud?.SetHealth(_currentHealth, _profile.MaxHealth);
+            _bonusMaxHealth = 0;
+            _survivalMoveMultiplier = 1f;
+            _survivalDefenseMultiplier = 1f;
+            _survivalShieldCharges = 0;
+            _currentHealth = MaxHealth;
+            _hud?.SetHealth(_currentHealth, MaxHealth);
         }
 
         public void RequestJump()
@@ -66,18 +75,25 @@ namespace MaxFlix.Unity.Runtime
                 || _hitInvulnerabilityRemaining > 0f
                 || float.IsNaN(amount) || float.IsInfinity(amount) || amount <= 0f) return;
 
+            if (_survivalShieldCharges > 0)
+            {
+                _survivalShieldCharges--;
+                _hud?.SetStatus("PALETA OCHRONNA • TRAFIENIE ZABLOKOWANE");
+                return;
+            }
+
             GameMode currentMode = GameSession.Current != null ? GameSession.Current.Mode : GameMode.Campaign;
             float scaledIncomingDamage = CombatBalanceCatalog.ScaleIncomingDamage(amount, currentMode);
-            float damageMultiplier = _combatKit != null
+            float damageMultiplier = (_combatKit != null
                 ? _combatKit.DamageTakenMultiplier
-                : _profile.DamageTakenMultiplier;
+                : _profile.DamageTakenMultiplier) * _survivalDefenseMultiplier;
             float accumulatedDamage = scaledIncomingDamage * damageMultiplier + _incomingDamageRemainder;
             float wholeDamage = Mathf.Floor(accumulatedDamage + 1e-6f);
             _incomingDamageRemainder = Mathf.Max(0f, accumulatedDamage - wholeDamage);
             _currentHealth = Mathf.Max(0f, _currentHealth - wholeDamage);
             if (currentMode == GameMode.Survival)
                 _hitInvulnerabilityRemaining = CombatBalanceCatalog.SurvivalHitInvulnerabilitySeconds;
-            _hud?.SetHealth(_currentHealth, _profile.MaxHealth);
+            _hud?.SetHealth(_currentHealth, MaxHealth);
             if (_currentHealth <= 0f)
             {
                 _defeated = true;
@@ -94,8 +110,34 @@ namespace MaxFlix.Unity.Runtime
         public void RestoreHealth(float amount)
         {
             if (_defeated || float.IsNaN(amount) || float.IsInfinity(amount) || amount <= 0f) return;
-            _currentHealth = Mathf.Min(_profile.MaxHealth, _currentHealth + amount);
-            _hud?.SetHealth(_currentHealth, _profile.MaxHealth);
+            _currentHealth = Mathf.Min(MaxHealth, _currentHealth + amount);
+            _hud?.SetHealth(_currentHealth, MaxHealth);
+        }
+
+        public void IncreaseMaxHealth(int amount)
+        {
+            if (_defeated || amount <= 0) return;
+            _bonusMaxHealth = Mathf.Clamp(_bonusMaxHealth + amount, 0, 12);
+            _currentHealth = Mathf.Min(MaxHealth, _currentHealth + amount);
+            _hud?.SetHealth(_currentHealth, MaxHealth);
+        }
+
+        public void GrantSurvivalShield(int charges)
+        {
+            _survivalShieldCharges = Mathf.Clamp(_survivalShieldCharges + Mathf.Max(0, charges), 0, 3);
+            _hud?.SetStatus("PALETA OCHRONNA • " + _survivalShieldCharges + " BLOKADY");
+        }
+
+        public void SetSurvivalMoveMultiplier(float multiplier)
+        {
+            if (float.IsNaN(multiplier) || float.IsInfinity(multiplier)) return;
+            _survivalMoveMultiplier = Mathf.Clamp(multiplier, 0.75f, 1.50f);
+        }
+
+        public void SetSurvivalDefenseMultiplier(float multiplier)
+        {
+            if (float.IsNaN(multiplier) || float.IsInfinity(multiplier)) return;
+            _survivalDefenseMultiplier = Mathf.Clamp(multiplier, 0.60f, 1.25f);
         }
 
         private void Awake()
@@ -105,7 +147,8 @@ namespace MaxFlix.Unity.Runtime
 
         private void Update()
         {
-            if (_controller == null || _defeated || _profile == null) return;
+            if (_controller == null || _defeated || _profile == null
+                || (GameSession.Current != null && GameSession.Current.State != GameFlowState.Playing)) return;
 
             float deltaTime = Time.deltaTime;
             _hitInvulnerabilityRemaining = Mathf.Max(0f, _hitInvulnerabilityRemaining - deltaTime);
@@ -139,7 +182,7 @@ namespace MaxFlix.Unity.Runtime
             _verticalSpeed += gravity * deltaTime;
 
             float movementMultiplier = _combatKit != null ? _combatKit.MovementMultiplier : 1f;
-            Vector3 velocity = move * (_profile.MoveSpeed * movementMultiplier);
+            Vector3 velocity = move * (_profile.MoveSpeed * movementMultiplier * _survivalMoveMultiplier);
             velocity.y = _verticalSpeed;
             _controller.Move(velocity * deltaTime);
             _animationRig?.Tick(move.magnitude, _controller.isGrounded, deltaTime);
