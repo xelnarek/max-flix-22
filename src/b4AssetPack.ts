@@ -6,13 +6,14 @@ import steelUrl from './visuals/b4-corrugated-steel.svg?url';
 import hazardUrl from './visuals/b4-hazard-chevron.svg?url';
 import spriteAtlasUrl from './visuals/b4-sprite-atlas.svg?url';
 import enemyAtlasUrl from './visuals/b4-enemy-atlas.svg?url';
+import enemyAtlas2Url from './visuals/b4-enemy-atlas-2.svg?url';
 import containerUrl from './visuals/b4-container-corrugate.svg?url';
 import conveyorUrl from './visuals/b4-conveyor-rollers.svg?url';
 import coldStorageUrl from './visuals/b4-cold-storage.svg?url';
 import drumUrl from './visuals/b4-hazard-drum.svg?url';
 
-export type B4VisualTextureKind = 'floor' | 'pallet' | 'carton' | 'steel' | 'hazard' | 'spriteAtlas' | 'enemyAtlas' | 'container' | 'conveyor' | 'coldStorage' | 'drum';
-export type B4SpriteKind = 'worker' | 'zombie' | 'forklift' | 'pallet' | 'inspector' | 'customer' | 'handlowiec' | 'monter';
+export type B4VisualTextureKind = 'floor' | 'pallet' | 'carton' | 'steel' | 'hazard' | 'spriteAtlas' | 'enemyAtlas' | 'enemyAtlas2' | 'container' | 'conveyor' | 'coldStorage' | 'drum';
+export type B4SpriteKind = 'worker' | 'zombie' | 'forklift' | 'pallet' | 'inspector' | 'customer' | 'handlowiec' | 'monter' | 'agv' | 'courier' | 'roman' | 'stacker';
 
 interface B4TextureEntry {
   texture: THREE.Texture;
@@ -27,6 +28,7 @@ const textureUrls: Record<B4VisualTextureKind, string> = {
   hazard: hazardUrl,
   spriteAtlas: spriteAtlasUrl,
   enemyAtlas: enemyAtlasUrl,
+  enemyAtlas2: enemyAtlas2Url,
   container: containerUrl,
   conveyor: conveyorUrl,
   coldStorage: coldStorageUrl,
@@ -61,7 +63,7 @@ function createEntry(kind: B4VisualTextureKind): B4TextureEntry {
   );
   texture.name = 'max-flix-b4-' + kind;
   texture.colorSpace = THREE.SRGBColorSpace;
-  const isAtlas = kind === 'spriteAtlas' || kind === 'enemyAtlas';
+  const isAtlas = kind === 'spriteAtlas' || kind === 'enemyAtlas' || kind === 'enemyAtlas2';
   texture.wrapS = isAtlas ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
   texture.wrapT = isAtlas ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
   texture.anisotropy = 4;
@@ -82,7 +84,7 @@ export function preloadB4VisualTexture(kind: B4VisualTextureKind): Promise<THREE
   return (textureCache.get(kind) || createEntry(kind)).ready;
 }
 
-const spriteFrames: Record<B4SpriteKind, { atlas: 'spriteAtlas' | 'enemyAtlas'; x: number; y: number }> = {
+const spriteFrames: Record<B4SpriteKind, { atlas: 'spriteAtlas' | 'enemyAtlas' | 'enemyAtlas2'; x: number; y: number }> = {
   worker: { atlas: 'spriteAtlas', x: 0, y: 0.5 },
   zombie: { atlas: 'spriteAtlas', x: 0.5, y: 0.5 },
   forklift: { atlas: 'spriteAtlas', x: 0, y: 0 },
@@ -91,6 +93,10 @@ const spriteFrames: Record<B4SpriteKind, { atlas: 'spriteAtlas' | 'enemyAtlas'; 
   customer: { atlas: 'enemyAtlas', x: 0.5, y: 0.5 },
   handlowiec: { atlas: 'enemyAtlas', x: 0, y: 0 },
   monter: { atlas: 'enemyAtlas', x: 0.5, y: 0 },
+  agv: { atlas: 'enemyAtlas2', x: 0, y: 0.5 },
+  courier: { atlas: 'enemyAtlas2', x: 0.5, y: 0.5 },
+  roman: { atlas: 'enemyAtlas2', x: 0, y: 0 },
+  stacker: { atlas: 'enemyAtlas2', x: 0.5, y: 0 },
 };
 
 // One texture view per atlas frame: many enemies can share it without creating

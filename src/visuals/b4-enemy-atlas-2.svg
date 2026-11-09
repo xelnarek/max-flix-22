@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<defs>
+  <linearGradient id="panel" x2="0" y2="1"><stop stop-color="#34485c"/><stop offset="1" stop-color="#101e2d"/></linearGradient>
+  <filter id="edge"><feGaussianBlur stdDeviation="2.2" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect width="512" height="512" fill="#08131f"/>
+<rect x="7" y="7" width="242" height="242" rx="22" fill="url(#panel)" stroke="#38bdf8" stroke-width="6"/>
+<rect x="263" y="7" width="242" height="242" rx="22" fill="url(#panel)" stroke="#facc15" stroke-width="6"/>
+<rect x="7" y="263" width="242" height="242" rx="22" fill="url(#panel)" stroke="#fb923c" stroke-width="6"/>
+<rect x="263" y="263" width="242" height="242" rx="22" fill="url(#panel)" stroke="#ef4444" stroke-width="6"/>
+<!-- AGV robot: low chassis, laser dome, warning bumper -->
+<g transform="translate(128 128)" filter="url(#edge)">
+  <rect x="-69" y="-28" width="138" height="87" rx="21" fill="#0284c7" stroke="#bae6fd" stroke-width="7"/>
+  <rect x="-72" y="23" width="144" height="20" rx="6" fill="#facc15" stroke="#fff2b2" stroke-width="4"/>
+  <rect x="-36" y="-60" width="72" height="31" rx="13" fill="#e2e8f0" stroke="#94a3b8" stroke-width="5"/>
+  <circle cx="0" cy="-42" r="8" fill="#22d3ee"/>
+  <circle cx="-43" cy="62" r="15" fill="#0b1220" stroke="#94a3b8" stroke-width="5"/>
+  <circle cx="43" cy="62" r="15" fill="#0b1220" stroke="#94a3b8" stroke-width="5"/>
+  <path d="M-25 4h50" stroke="#dff7ff" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="0" cy="3" r="10" fill="#f8fafc"/>
+</g>
+<!-- courier: hi-vis jacket, parcel and scanning badge -->
+<g transform="translate(384 128)" filter="url(#edge)">
+  <path d="M-54-42q54-62 108 0l-12 22h-84z" fill="#0284c7" stroke="#bae6fd" stroke-width="6"/>
+  <path d="M-37-20h74v102h-74z" fill="#facc15" stroke="#fff0b3" stroke-width="6"/>
+  <path d="M-28 1h56M-28 35h56" stroke="#f8fafc" stroke-width="11"/>
+  <path d="M-16-2v64m32-64v64" stroke="#0284c7" stroke-width="7"/>
+  <rect x="-26" y="56" width="52" height="34" rx="5" fill="#a16207" stroke="#fef3c7" stroke-width="5"/>
+  <path d="M-13 65h26m-26 9h18" stroke="#fff7ed" stroke-width="4"/>
+  <circle cx="-17" cy="-42" r="6" fill="#111827"/><circle cx="17" cy="-42" r="6" fill="#111827"/>
+</g>
+<!-- Pan Roman: orange delivery uniform and hand truck -->
+<g transform="translate(128 384)" filter="url(#edge)">
+  <path d="M-48-54h96v116h-96z" fill="#f97316" stroke="#fdba74" stroke-width="6"/>
+  <path d="M-58-37h116v17H-58zM-58 22h116v17H-58z" fill="#e2e8f0"/>
+  <path d="M-20-80h40v17h-40z" fill="#d97706" stroke="#fed7aa" stroke-width="5"/>
+  <circle cx="-16" cy="-48" r="6" fill="#172033"/><circle cx="16" cy="-48" r="6" fill="#172033"/>
+  <path d="M-14-28q14 12 28 0" stroke="#7c2d12" stroke-width="5" fill="none"/>
+  <path d="M61-2v100m0-100h23" stroke="#cbd5e1" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="61" cy="104" r="13" fill="#111827" stroke="#cbd5e1" stroke-width="5"/>
+  <rect x="55" y="23" width="34" height="48" rx="4" fill="#f8fafc" stroke="#94a3b8" stroke-width="4"/>
+</g>
+<!-- stacker operator: red hat, industrial amber suit and pallet-jack handle -->
+<g transform="translate(384 384)" filter="url(#edge)">
+  <path d="M-53-48q53-50 106 0v20h-106z" fill="#dc2626" stroke="#fecaca" stroke-width="6"/>
+  <path d="M-65-26h130v12H-65z" fill="#ef4444" stroke="#fecaca" stroke-width="5"/>
+  <rect x="-39" y="1" width="78" height="93" rx="8" fill="#d97706" stroke="#fed7aa" stroke-width="6"/>
+  <path d="M-29 26h58m-58 31h58" stroke="#f8fafc" stroke-width="10"/>
+  <path d="M-20-2h12m16 0h12" stroke="#111827" stroke-width="8" stroke-linecap="round"/>
+  <path d="M-14 16h28" stroke="#7c2d12" stroke-width="5" stroke-linecap="round"/>
+  <path d="M-57 42l-18 34m132-34 18 34" stroke="#d97706" stroke-width="14" stroke-linecap="round"/>
+  <path d="M-20 100h40" stroke="#94a3b8" stroke-width="7"/>
+</g>
+</svg>

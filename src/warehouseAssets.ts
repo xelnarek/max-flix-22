@@ -2745,6 +2745,9 @@ export function createAgvRobotModel(): {
   const bumperB = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.06, 0.04), bumperMat);
   bumperB.position.set(0, 0.14, -0.36);
   group.add(bumperF, bumperB);
+  const agvIdentityPatch = createB4SpriteDecal('agv', 0.28, 0.18);
+  agvIdentityPatch.position.set(0, 0.17, 0.386);
+  group.add(agvIdentityPatch);
 
   // 4 Wheels
   const wheelGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.06, 16);
@@ -3936,6 +3939,9 @@ export function createKurierEnemyModel(): {
   const tape = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.25, 0.04), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
   parcel.add(tape);
   group.add(parcel);
+  const courierIdentityPatch = createB4SpriteDecal('courier', 0.18, 0.13);
+  courierIdentityPatch.position.set(0, 0.52, 0.335);
+  group.add(courierIdentityPatch);
 
   // Contact Shadow
   const shadow = new THREE.Mesh(
@@ -4058,6 +4064,10 @@ export function createSztaplarEnemyModel(): {
   body.position.y = 0.6;
   body.castShadow = true;
   group.add(body);
+
+  const stackerIdentityPatch = createB4SpriteDecal('stacker', 0.20, 0.18);
+  stackerIdentityPatch.position.set(0, 0.61, 0.143);
+  group.add(stackerIdentityPatch);
 
   // Head
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), skinMat);
@@ -4476,6 +4486,9 @@ export function createPanRomanEnemyModel(): {
   body.position.y = 0.65;
   body.castShadow = true;
   group.add(body);
+  const romanIdentityPatch = createB4SpriteDecal('roman', 0.20, 0.18);
+  romanIdentityPatch.position.set(0, 0.68, 0.124);
+  group.add(romanIdentityPatch);
 
   // Reflective Silver Strips on Vest
   const stripMat = new THREE.MeshBasicMaterial({ color: 0xe2e8f0 });
