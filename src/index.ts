@@ -24,7 +24,7 @@ import { ThreeClickTrigger } from './menuInteraction.ts';
 import { calculateUiViewport, shouldShowTouchControls } from './uiViewport.ts';
 import { getAdaptiveEffectsTier, getAdaptiveRenderScale, getDeviceRenderProfile, shouldApplyPixelRatioChange, type AdaptiveEffectsTier } from './renderQuality.ts';
 import { calculateVirtualJoystickInput } from './virtualJoystick.ts';
-import { calculatePvpFireControlPosition } from './pvpTouchLayout.ts';
+
 import { clampTouchJoystickOrigin } from './touchControlLayout.ts';
 import {
   createInitialSurvivalAchievementProgress,
@@ -1166,6 +1166,15 @@ class PaleciakiScene extends xb.Script {
           hudPerksRow?.classList.toggle('hidden', !hasVisiblePerk);
         },
         onGameOver: (reason) => {
+          if (gameoverReason) gameoverReason.textContent = reason;
+          if (gameoverModal) {
+            gameoverModal.classList.remove('hidden');
+            gameoverModal.style.setProperty('display', 'flex', 'important');
+            gameoverModal.style.setProperty('pointer-events', 'auto', 'important');
+            gameoverModal.style.setProperty('z-index', '2147483012', 'important');
+          }
+
+          try {
           hideSurvivalAnnouncement();
           this.lastScore = this.engine.getScore();
           this.lastCoins = this.engine.getCollectedVipCount();
@@ -1313,6 +1322,21 @@ class PaleciakiScene extends xb.Script {
           hudPerksRow?.classList.add('hidden');
           survivalHud?.classList.add('hidden');
           survivalLevelUp?.classList.add('hidden');
+          } catch (error) {
+            console.error('[GameOver UI] Optional result processing failed; the results screen remains available.', error);
+            if (gameoverReason) gameoverReason.textContent = reason;
+            if (gameoverModal) {
+              gameoverModal.classList.remove('hidden');
+              gameoverModal.style.setProperty('display', 'flex', 'important');
+              gameoverModal.style.setProperty('pointer-events', 'auto', 'important');
+              gameoverModal.style.setProperty('z-index', '2147483012', 'important');
+            }
+            hudTop?.classList.add('hidden');
+            hudBottom?.classList.add('hidden');
+            setTouchControlsVisibility(false);
+            survivalHud?.classList.add('hidden');
+            survivalLevelUp?.classList.add('hidden');
+          }
         },
         onSurvivalUpdate: (snapshot: SurvivalSnapshot) => {
           trackSurvivalAchievementSnapshot(snapshot);
@@ -2620,46 +2644,81 @@ class PaleciakiScene extends xb.Script {
     syncAudioSettingsUI();
 
 
+    const activeTouchMode = (): TouchControlsMode =>
+      this.engine.getGameMode() === 'pvp' ? 'pvp' : 'survival';
+
     const handlePause = () => {
       if (this.engine.getGameState() !== 'playing') return;
+      this.resetTouchJoystick?.();
       this.engine.togglePause();
+      this.pausedForVisibility = false;
+      setTouchControlsVisibility(false);
       pauseModal?.classList.remove('hidden');
       pauseModal?.setAttribute('aria-hidden', 'false');
+      pauseModal?.style.setProperty('display', 'flex', 'important');
+      pauseModal?.style.setProperty('z-index', '2147483012', 'important');
+
+      const isPvp = this.engine.getGameMode() === 'pvp';
+      const restartButton = document.getElementById('btn-restart-pause');
+      restartButton?.classList.toggle('hidden', isPvp);
+      const pauseDescription = pauseModal?.querySelector<HTMLElement>('.modal-desc');
+      if (pauseDescription) {
+        pauseDescription.textContent = isPvp && !(this.pvpSession?.isLocalBot)
+          ? 'Lokalny ekran został wstrzymany. W pojedynku online przeciwnik i serwer mogą nadal wykonywać ruchy.'
+          : 'Rozgrywka jest wstrzymana. Wznów ją, rozpocznij próbę od nowa albo wróć do menu.';
+      }
       (document.getElementById('btn-resume') as HTMLButtonElement | null)?.focus();
     };
     bindTap(document.getElementById('btn-top-pause'), handlePause);
     bindTap(document.getElementById('btn-pause'), handlePause);
+    bindTap(document.getElementById('btn-touch-pause'), handlePause);
 
     // Campaign briefing UI has been retired; Survival is the only playable mode.
 
     bindTap(document.getElementById('btn-resume'), () => {
+      if (this.engine.getGameState() !== 'paused') return;
+      this.engine.togglePause();
+      this.pausedForVisibility = false;
       pauseModal?.classList.add('hidden');
       pauseModal?.setAttribute('aria-hidden', 'true');
-      this.engine.togglePause();
+      pauseModal?.style.removeProperty('display');
+      const restartButton = document.getElementById('btn-restart-pause');
+      restartButton?.classList.toggle('hidden', this.engine.getGameMode() === 'pvp');
+      setTouchControlsMode(activeTouchMode());
+      setTouchControlsVisibility(true);
     });
 
     bindTap(document.getElementById('btn-restart-pause'), () => {
+      if (this.engine.getGameMode() !== 'survival') return;
       pauseModal?.classList.add('hidden');
       pauseModal?.setAttribute('aria-hidden', 'true');
+      pauseModal?.style.removeProperty('display');
       survivalLevelUp?.classList.add('hidden');
       setTouchControlsMode('survival');
       this.masteryAwardedForRun = false;
       this.engine.startSurvival(selectedSurvivalMapId);
-        // Re-assert visibility and exclusive mode after the scene transition.
-        setTouchControlsMode('survival');
-        setTouchControlsVisibility(true);
+      setTouchControlsMode('survival');
+      setTouchControlsVisibility(true);
     });
 
     const exitPausedRunToMenu = () => {
+      const leavingPvp = this.engine.getGameMode() === 'pvp';
       pauseModal?.classList.add('hidden');
       pauseModal?.setAttribute('aria-hidden', 'true');
+      pauseModal?.style.removeProperty('display');
       hudPerksRow?.classList.add('hidden');
       survivalHud?.classList.add('hidden');
       survivalLevelUp?.classList.add('hidden');
       setTouchControlsMode('hidden');
       hudTop?.classList.add('hidden');
       hudBottom?.classList.add('hidden');
+      pvpHud?.classList.add('hidden');
       setTouchControlsVisibility(false);
+      if (leavingPvp) {
+        this.pvpSession?.dispose();
+        this.pvpSession = null;
+        this.engine.exitPvp();
+      }
       if (titleScreen) {
         titleScreen.classList.remove('hidden');
         titleScreen.style.setProperty('display', 'flex', 'important');
@@ -2772,15 +2831,22 @@ class PaleciakiScene extends xb.Script {
       );
 
       if (action === 'pause') {
+        this.resetTouchJoystick?.();
         this.engine.togglePause();
         this.pausedForVisibility = true;
+        setTouchControlsVisibility(false);
         pauseModal?.classList.remove('hidden');
         pauseModal?.setAttribute('aria-hidden', 'false');
+        pauseModal?.style.setProperty('display', 'flex', 'important');
+        pauseModal?.style.setProperty('z-index', '2147483012', 'important');
       } else if (action === 'resume') {
         this.engine.togglePause();
         this.pausedForVisibility = false;
         pauseModal?.classList.add('hidden');
         pauseModal?.setAttribute('aria-hidden', 'true');
+        pauseModal?.style.removeProperty('display');
+        setTouchControlsMode(activeTouchMode());
+        setTouchControlsVisibility(true);
       }
     });
 
@@ -3559,6 +3625,16 @@ class PaleciakiScene extends xb.Script {
       // touch-controls is portaled to body, so it needs its own mode classes.
       // Classes on #game-shell do not cascade into this detached control layer.
       setTouchControlsMode('pvp');
+      const touchActionsZone = document.querySelector<HTMLElement>('#touch-controls .touch-actions-zone');
+      const pvpFireControl = document.getElementById('pvp-fire-control');
+      if (pvpFireControl && touchActionsZone && pvpFireControl.parentElement !== touchActionsZone) {
+        touchActionsZone.prepend(pvpFireControl);
+      }
+      if (pvpFireControl) {
+        for (const property of ['position', 'left', 'right', 'top', 'bottom', 'transform']) {
+          pvpFireControl.style.removeProperty(property);
+        }
+      }
       resetPvpFireButton();
       if (pvpFireButton) {
         pvpFireButton.classList.remove('hidden');
