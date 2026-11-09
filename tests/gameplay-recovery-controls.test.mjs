@@ -159,3 +159,36 @@ test('fullscreen transitions release movement, aim and positioned fire input on 
   assert.match(aimControls, /document\.addEventListener\('fullscreenchange', resetAimStick\)/);
   assert.match(aimControls, /document\.addEventListener\('webkitfullscreenchange', resetAimStick\)/);
 });
+
+test('visibility return keeps the game paused until the player presses Resume', async () => {
+  const [moduleSource, app] = await Promise.all([
+    read('../src/visibilityPause.ts'),
+    read('../src/index.ts'),
+  ]);
+  assert.match(moduleSource, /if \(documentHidden && gameState === 'playing'\) return 'pause'/);
+  assert.doesNotMatch(moduleSource, /return 'resume'/);
+  const handler = app.slice(app.indexOf("document.addEventListener('visibilitychange', () => {\n      const action = getVisibilityPauseAction"), app.indexOf('this.setupTouchControls();'));
+  assert.match(handler, /Aplikacja wróciła z tła[\s\S]*naciśnij WZNÓW GRĘ/);
+  assert.doesNotMatch(handler, /action === 'resume'/);
+  assert.match(app, /bindTap\(document.getElementById\('btn-resume'\), \(\) => \{/);
+});
+
+test('generic game-over results are mode-aware and never submit PvP as a Survival score', async () => {
+  const [app, html] = await Promise.all([
+    read('../src/index.ts'),
+    read('../index.html'),
+  ]);
+  const start = app.indexOf('onGameOver: (reason) =>');
+  const end = app.indexOf('onSurvivalUpdate:', start);
+  const callback = app.slice(start, end);
+  assert.match(callback, /endedMode === 'pvp'[\s\S]*?ARENA PvP/);
+  assert.match(callback, /endedMode === 'campaign'[\s\S]*?KAMPANIA/);
+  assert.match(callback, /damagePanel\?\.classList\.toggle\('hidden', !isSurvivalResult\)/);
+  assert.match(callback, /survivalRankingPanel\?\.classList\.toggle\('hidden', !isSurvivalResult\)/);
+  assert.match(callback, /survivalRetryButton\?\.classList\.toggle\('hidden', !isSurvivalResult\)/);
+  assert.match(callback, /POJEDYNEK 1v1 • WYNIK/);
+  assert.doesNotMatch(app, /mode: this\.lastMode === 'pvp' \? 'survival'/);
+  assert.match(app, /if \(this\.lastMode === 'pvp'\)[\s\S]*?Wyniki PvP są zapisywane/);
+  assert.match(html, /id="gameover-modal"[^>]*role="dialog"[^>]*aria-modal="true"/);
+  assert.match(html, /id="gameover-modal-title"/);
+});
