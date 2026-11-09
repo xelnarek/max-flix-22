@@ -500,3 +500,20 @@ test('PvP HUD shows each operator ability that the arena actually executes and r
     '110 / stun 1,1 s',
   ]) assert.ok(html.includes(label), `PvP selector ability summary is out of sync: ${label}`);
 });
+
+
+test('PvP operator picker summaries are sourced from the live combat profiles', async () => {
+  const [app, arena] = await Promise.all([
+    readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pvpArena.ts', import.meta.url), 'utf8'),
+  ]);
+  assert.match(app, /operatorProfile\.menuSummary/);
+  assert.match(app, /summary\.title = operatorProfile\.abilityDesc/);
+  for (const summary of [
+    'Tarcza 250 + odrzut',
+    '180 obrażeń / stun 0,8 s',
+    '3 × 70 obrażeń',
+    '150 / stun 0,5 s',
+    '110 / stun 1,1 s',
+  ]) assert.ok(arena.includes(`menuSummary: '${summary}'`), `missing catalog summary: ${summary}`);
+});
