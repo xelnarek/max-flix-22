@@ -1221,6 +1221,9 @@ class PaleciakiScene extends xb.Script {
           this.lastTimeSeconds = this.engine.getElapsedSeconds();
           this.lastBossDefeated = this.engine.isBossDefeated();
           this.lastMode = this.engine.getGameMode();
+          // Freeze the ended run's data before any retry can start a new run.
+          const snapshot = this.engine.getSurvivalSnapshot();
+          const damageReport = this.engine.getSurvivalDamageReport();
 
           // Paint the death/result screen before optional progression, local
           // persistence and damage-report rendering run on the main thread.
@@ -1239,7 +1242,6 @@ class PaleciakiScene extends xb.Script {
             finalTime.textContent = minutes + ':' + String(seconds).padStart(2, '0');
           }
           if (finalMode) finalMode.textContent = 'SURVIVAL SHIFT';
-          const snapshot = this.engine.getSurvivalSnapshot();
           if (runDetail) runDetail.textContent = `FALA ${snapshot.wave} • ${snapshot.kills} ELIMINACJI • POZIOM ${snapshot.level}`;
 
           // Award mastery exactly once when a Survival run ends. A retry starts a fresh award window.
@@ -1275,10 +1277,8 @@ class PaleciakiScene extends xb.Script {
             accountProgressionProfile = accountResult.profile;
             persistAccountProgressionProfile();
             void this.syncAccountProgressionWithCloud();
-            this.engine.selectCharacter(operatorId, combineAccountAndCharacterBonuses(
-              getCharacterTalentBonuses(characterMasteryProfile, operatorId),
-              getAccountProgressionBonuses(accountProgressionProfile),
-            ));
+            // The next Survival launch applies the new bonuses through updateCharacterUI.
+            // Never rebuild the player mesh from this deferred result callback.
             renderAccountProgressionPanels();
             if (accountResult.xpEarned > 0) {
               const accountToast = document.createElement('div');
@@ -1293,7 +1293,6 @@ class PaleciakiScene extends xb.Script {
 
 
           // The damage table is derived from actual enemy HP removed, not projectile counts.
-          const damageReport = this.engine.getSurvivalDamageReport();
           const damageTotal = document.getElementById('gameover-total-damage');
           const damageList = document.getElementById('gameover-damage-breakdown');
           if (damageTotal) damageTotal.textContent = damageReport.totalDamage.toLocaleString('pl-PL', { maximumFractionDigits: 1 }) + ' HP';
@@ -4344,13 +4343,16 @@ class PaleciakiScene extends xb.Script {
       const savedProfile = await services.saveAccountProgressionProfileToCloud(accountProgressionProfile);
       accountProgressionProfile = mergeAccountProgressionProfiles(accountProgressionProfile, savedProfile);
       persistAccountProgressionProfile();
-      this.engine.selectCharacter(
-        this.selectedCharId,
-        combineAccountAndCharacterBonuses(
-          getCharacterTalentBonuses(characterMasteryProfile, this.selectedCharId),
-          getAccountProgressionBonuses(accountProgressionProfile),
-        ),
-      );
+      const engineState = this.engine.getGameState();
+      if (engineState === 'title' || engineState === 'gameover') {
+        this.engine.selectCharacter(
+          this.selectedCharId,
+          combineAccountAndCharacterBonuses(
+            getCharacterTalentBonuses(characterMasteryProfile, this.selectedCharId),
+            getAccountProgressionBonuses(accountProgressionProfile),
+          ),
+        );
+      }
       this.renderAccountProgressionUi();
       if (status) status.textContent = 'SYNCHRONIZACJA ZAKOŃCZONA • PROFIL ZABEZPIECZONY W FIREBASE';
     })().catch((error: unknown) => {
