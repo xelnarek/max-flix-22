@@ -833,8 +833,8 @@ test('special ability has one authoritative timer and capped recharge in both mo
 test('Survival defeat submits a mode-labelled score and uses the Survival summary', async () => {
   const app = await read('../src/index.ts');
   const html = await read('../index.html');
-  assert.match(app, /onGameOver: \(reason\) => \{[\s\S]*?this\.lastMode = this\.engine\.getGameMode\(\)/);
-  assert.match(app, /this\.lastMode = this\.engine\.getGameMode\(\)/);
+  assert.match(app, /onGameOver: \(reason\) => \{[\s\S]*?const endedMode = this\.engine\.getGameMode\(\)/);
+  assert.match(app, /this\.lastMode = endedMode/);
   assert.match(app, /mode: this\.lastMode/);
   assert.match(app, /bindScoreSubmission\('btn-submit-score-gameover'/);
   assert.match(html, /id="btn-submit-score-gameover"/);
