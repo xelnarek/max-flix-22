@@ -71,3 +71,22 @@ test('Unity HUD exposes a separate special-ability button and cooldown state', a
   assert.match(hud, /new Vector2\(-390f, 105f\)/);
   assert.match(hud, /_abilityButton\.interactable = ready/);
 });
+
+test('Unity CombatBalanceCatalog preserves legacy attack cadence and Survival scaling', async () => {
+  const balance = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/CombatBalanceCatalog.cs');
+  const player = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/PlayerController.cs');
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  const kit = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorCombatKit.cs');
+  for (const value of ['2.10f', '2.28f', '2.08f', '2.00f', '2.34f']) assert.ok(balance.includes(value));
+  for (const value of ['1.05f', '1.22f', '1.14f', '1.10f', '1.25f']) assert.ok(balance.includes(value));
+  assert.match(balance, /SurvivalOutgoingDamageMultiplier = 0\.62f/);
+  assert.match(balance, /SurvivalIncomingDamageMultiplier = 1\.30f/);
+  assert.match(balance, /SurvivalHitInvulnerabilitySeconds = 0\.78f/);
+  assert.match(balance, /mode == GameMode\.Survival \? 2f : 1\.25f/);
+  assert.match(player, /GetPrimaryAttackCooldown\(_profile\.Id, currentMode\)/);
+  assert.match(player, /ScaleIncomingDamage\(amount, currentMode\)/);
+  assert.match(player, /SurvivalHitInvulnerabilitySeconds/);
+  assert.match(enemy, /ScaleOutgoingDamage\(damage, mode\)/);
+  assert.match(kit, /GetAbilityCooldown\(_profile\.AbilityCooldownSeconds, mode\)/);
+  assert.match(kit, /_hud\.SetAbilityState\(_abilityCooldownRemaining, _abilityCooldownDuration\)/);
+});
