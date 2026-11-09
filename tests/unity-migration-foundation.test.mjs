@@ -202,6 +202,10 @@ test('Unity Campaign builds a connected three-sector mega-map with boss-gated pr
   assert.match(pickup, /RequireComponent\(typeof\(SphereCollider\), typeof\(Rigidbody\)\)/);
   assert.match(pickup, /body\.isKinematic = true/);
   assert.match(pickup, /_basePosition \+ Vector3\.up/);
+  assert.match(pickup, /private void FixedUpdate\(\)/);
+  assert.match(pickup, /_body\.MovePosition\(/);
+  assert.match(pickup, /_body\.MoveRotation\(/);
+  assert.doesNotMatch(pickup, /position\.y \+=/);
   assert.match(pickup, /_mission\.CollectVipOrder\(\)/);
   assert.match(enemy, /CampaignMissionDirector campaign = GetComponentInParent<CampaignMissionDirector>/);
   assert.match(hud, /PresentCampaignVictory\(int vipCount, int requiredVip\)/);
