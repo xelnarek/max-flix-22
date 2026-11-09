@@ -68,12 +68,15 @@ test('PvP timing sweep drives the 3D cursor while movement and firing stay separ
   ]);
   assert.ok(app.includes('activePointerId = event.pointerId'));
   assert.ok(app.includes('joystickZone.setPointerCapture(event.pointerId)'));
-  assert.ok(!app.includes('activeAimPointerId'));
+  assert.ok(app.includes('activeAimPointerId = event.pointerId'));
+  assert.ok(app.includes('this.engine.setPvpAimStickInput('));
   assert.ok(app.includes('bindPvpTap(pvpFireButton'));
   assert.ok(app.includes('bindPvpTap(desktopPvpFireButton, triggerPrimaryPvpShot)'));
   assert.ok(game.includes('getPvpSweepAimAngle('));
   assert.ok(game.includes('getPvpAimSweepCenterAngle('));
   assert.ok(game.includes('this.pvpAimSweepCenterAngle - PVP_AIM_SWEEP_HALF_ARC'));
+  assert.ok(game.includes('public setPvpAimStickInput('));
+  assert.ok(game.includes('!this.manualPvpAimOverride'));
   assert.ok(!/getPvpSweepAimAngle\([\s\S]{0,180}opponentBearing/.test(game));
   assert.ok(game.includes('this.pvpAimArc'));
   assert.ok(game.includes('this.pvpAimSweepPointer'));
@@ -82,12 +85,12 @@ test('PvP timing sweep drives the 3D cursor while movement and firing stay separ
   assert.ok(!arena.includes('getPvpAimAssistAngle'));
   assert.ok(html.includes('id="pvp-fire-control"'));
   assert.ok(html.includes('id="btn-pvp-fire"'));
-  assert.ok(html.includes('RUCH USTAWIA KIERUNEK'));
-  assert.ok(!html.includes('id="pvp-aim-zone"'));
-  assert.ok(!html.includes('id="pvp-aim-base"'));
-  assert.ok(!css.includes('pvp-aim-zone'));
-  assert.ok(!css.includes('pvp-aim-base'));
-  assert.ok(!app.includes('pvp-aim-zone'));
+  assert.ok(html.includes('PRAWY: CELOWANIE'));
+  assert.ok(html.includes('id="pvp-aim-zone"'));
+  assert.ok(html.includes('id="pvp-aim-base"'));
+  assert.ok(css.includes('pvp-aim-zone'));
+  assert.ok(css.includes('pvp-aim-base'));
+  assert.ok(app.includes('pvp-aim-zone'));
   assert.ok(!game.includes('manualAimFiring'));
 });
 
