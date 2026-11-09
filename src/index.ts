@@ -1245,7 +1245,7 @@ class PaleciakiScene extends xb.Script {
           damagePanel?.classList.toggle('hidden', !isSurvivalResult);
           survivalRankingPanel?.classList.toggle('hidden', !isSurvivalResult);
           survivalRetryButton?.classList.toggle('hidden', !isSurvivalResult);
-          if (endedMode === 'pvp') pvpHud?.classList.add('hidden');
+          if (endedMode === 'pvp') document.getElementById('pvp-hud')?.classList.add('hidden');
           // Freeze the ended run's data before any retry can start a new run.
           const snapshot = this.engine.getSurvivalSnapshot();
           const damageReport = this.engine.getSurvivalDamageReport();
@@ -2861,7 +2861,7 @@ class PaleciakiScene extends xb.Script {
       gameoverModal?.classList.add('hidden');
       gameoverModal?.setAttribute('aria-hidden', 'true');
       if (this.engine.getGameMode() === 'pvp') {
-        pvpHud?.classList.add('hidden');
+        document.getElementById('pvp-hud')?.classList.add('hidden');
         this.engine.exitPvp();
         this.pvpSession = null;
       }
@@ -4247,7 +4247,7 @@ class PaleciakiScene extends xb.Script {
 
     bindPvpTap(btnExitToMenu, () => {
       matchEndModal?.classList.add('hidden');
-      pvpHud?.classList.add('hidden');
+      document.getElementById('pvp-hud')?.classList.add('hidden');
       resetPvpFireButton();
       pvpFireButton?.classList.add('hidden');
       if (pvpFireButton) {
