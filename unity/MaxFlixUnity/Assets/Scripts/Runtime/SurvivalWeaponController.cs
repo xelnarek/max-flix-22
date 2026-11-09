@@ -183,7 +183,8 @@ namespace MaxFlix.Unity.Runtime
         {
             if (_weapons.Count == 0) return "ARSENAŁ: brak broni — wybierz pierwszy moduł";
             System.Text.StringBuilder result = new System.Text.StringBuilder("ARSENAŁ ");
-            for (int i = 0; i < _weapons.Count; i++)
+            int visible = Mathf.Min(4, _weapons.Count);
+            for (int i = 0; i < visible; i++)
             {
                 WeaponState weapon = _weapons[i];
                 SurvivalWeaponProfile profile = SurvivalWeaponCatalog.Get(weapon.Id);
@@ -192,6 +193,7 @@ namespace MaxFlix.Unity.Runtime
                     .Append(weapon.Level).Append("/5");
                 if (weapon.Evolved) result.Append(" ✦");
             }
+            if (_weapons.Count > visible) result.Append("  •  +").Append(_weapons.Count - visible).Append(" BRONI");
             return result.ToString();
         }
 
@@ -313,7 +315,6 @@ namespace MaxFlix.Unity.Runtime
                         damage, weapon.Evolved ? 3 : 1, 0f, 0f, 1f, 0.35f,
                         false, false, false, false, 0f, 0f, 0f, 0f, profile.Color, weapon.Id);
                 }
-                _hud?.SetStatus("ODŁAMKI CALACATTY • SALWA " + spread.Length);
                 return;
             }
 
@@ -407,9 +408,7 @@ namespace MaxFlix.Unity.Runtime
             SpawnShot(shape, origin + forward * 0.90f, forward, speed, life, damage,
                 pierce, aoe, slow, slowMultiplier, stun, homing, returning, ricochet,
                 false, 0f, 0f, 0f, 0f, profile.Color, weapon.Id, knockback, ignites);
-            _hud?.SetStatus(critical
-                ? profile.DisplayName.ToUpperInvariant() + " • TRAFIENIE KRYTYCZNE"
-                : profile.DisplayName.ToUpperInvariant() + " • POZIOM " + weapon.Level + (weapon.Evolved ? " ✦" : string.Empty));
+            if (critical) _hud?.SetStatus(profile.DisplayName.ToUpperInvariant() + " • TRAFIENIE KRYTYCZNE");
         }
 
         private void SpawnShot(
