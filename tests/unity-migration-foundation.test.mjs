@@ -73,3 +73,32 @@ test('Unity migration is staged and does not replace the current production depl
   assert.match(workflow, /npm run build/);
   assert.doesNotMatch(workflow, /unity\/MaxFlixUnity/);
 });
+
+
+test('Unity gameplay and UI use the pinned New Input System without legacy Input calls', async () => {
+  const [player, camera, hud, setup, readme] = await Promise.all([
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/PlayerController.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/CameraFollowRig.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs'),
+    read('../unity/MaxFlixUnity/Assets/Editor/UnityProjectSetup.cs'),
+    read('../unity/MaxFlixUnity/README.md'),
+  ]);
+  assert.match(player, /Keyboard\.current/);
+  assert.match(player, /Gamepad\.current/);
+  assert.match(camera, /Mouse\.current/);
+  assert.match(hud, /InputSystemUIInputModule/);
+  assert.match(hud, /SingleMouseOrPenButMultiTouchAndTrack/);
+  assert.match(setup, /NewInputSystemBackend = 1/);
+  assert.match(setup, /GraphicsDeviceType\.WebGPU/);
+  assert.match(setup, /GraphicsDeviceType\.OpenGLES3/);
+  assert.doesNotMatch(player, /Input\.GetKey|Input\.GetMouseButton/);
+  assert.doesNotMatch(camera, /Input\.mouseScrollDelta/);
+  assert.match(readme, /Configure URP and New Input System/);
+});
+
+test('Unity projectile visual uses a shared material and property block rather than allocating one material per shot', async () => {
+  const player = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/PlayerController.cs');
+  assert.match(player, /private static Material _sharedProjectileMaterial/);
+  assert.match(player, /renderer\.SetPropertyBlock\(_projectileProperties\)/);
+  assert.doesNotMatch(player, /Material material = new Material\(shader\)/);
+});
