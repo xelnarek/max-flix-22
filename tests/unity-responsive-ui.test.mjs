@@ -4,6 +4,27 @@ import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
+test('Unity Survival camera exposes normalized zoom and a switchable orthographic top-down view', async () => {
+  const camera = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/CameraFollowRig.cs');
+  assert.match(camera, /public float ZoomNormalized/);
+  assert.match(camera, /public bool IsTopDown/);
+  assert.match(camera, /public void SetZoomNormalized\(float value\)/);
+  assert.match(camera, /public void ToggleViewMode\(\)/);
+  assert.match(camera, /_camera\.orthographic = true/);
+  assert.match(camera, /Quaternion\.LookRotation\(Vector3\.down, Vector3\.forward\)/);
+  assert.match(camera, /Mouse\.current\.scroll/);
+});
+
+test('Unity Survival HUD binds zoom slider and camera toggle to the active camera rig', async () => {
+  const hud = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs');
+  assert.match(hud, /GameSession\.Current\.Mode == GameMode\.Survival/);
+  assert.match(hud, /FindFirstObjectByType<CameraFollowRig>\(\)/);
+  assert.match(hud, /CreateCameraZoomSlider\(root, _cameraRig\)/);
+  assert.match(hud, /slider\.onValueChanged\.AddListener\(cameraRig\.SetZoomNormalized\)/);
+  assert.match(hud, /_cameraRig\.ToggleViewMode\(\)/);
+  assert.match(hud, /_cameraRig\.IsTopDown \? "KAMERA 2D" : "KAMERA 3D"/);
+});
+
 test('Unity joystick origin and thumb travel remain centered and bounded after HUD scaling', async () => {
   const hud = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs');
   const joystick = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/VirtualJoystick.cs');
