@@ -58,7 +58,7 @@ jobs:
         run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Install web dependencies
-        run: npm install --no-audit --no-fund
+        run: bash scripts/retry-command.sh npm install --no-audit --no-fund
 
       - name: Run automated tests
         run: npm test
@@ -74,7 +74,7 @@ jobs:
         run: npm run build
 
       - name: Install pinned Capacitor toolchain
-        run: npm install --no-save --package-lock=false @capacitor/core@8.6.0 @capacitor/cli@8.6.0 @capacitor/android@8.6.0 @capacitor/assets@3.0.5
+        run: bash scripts/retry-command.sh npm install --no-save --package-lock=false @capacitor/core@8.6.0 @capacitor/cli@8.6.0 @capacitor/android@8.6.0 @capacitor/assets@3.0.5
 
       - name: Prepare Android source artwork
         run: |
@@ -125,24 +125,7 @@ jobs:
         run: |
           chmod +x android/gradlew
           cd android
-
-          # GitHub-hosted dependency endpoints can temporarily return 5xx.
-          # Retry the complete build so Gradle can reuse its restored/downloaded cache.
-          for attempt in 1 2 3; do
-            if ./gradlew --no-daemon bundleRelease assembleDebug assembleRelease; then
-              exit 0
-            else
-              build_status=$?
-            fi
-
-            if [ "$attempt" -lt 3 ]; then
-              delay=$((attempt * 20))
-              echo "Gradle build attempt $attempt failed (exit $build_status). Retrying in ${delay}s."
-              sleep "$delay"
-            fi
-          done
-
-          exit "$build_status"
+          bash ../scripts/retry-command.sh ./gradlew --no-daemon bundleRelease assembleDebug assembleRelease
 
       - name: Verify Android package signatures and SDK metadata
         run: node scripts/verify-android-release.mjs
