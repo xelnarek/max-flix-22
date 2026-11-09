@@ -7,7 +7,7 @@ const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 test('Unity combat kit has individual primary attack paths for all five legacy operators', async () => {
   const kit = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorCombatKit.cs');
   for (const id of ['Marcin', 'Grzesiek', 'Dawid', 'Mateusz', 'Piotr']) {
-    assert.match(kit, new RegExp('case OperatorId\\.' + id + ':'));
+    assert.match(kit, new RegExp('case OperatorId\.' + id + ':'));
   }
   assert.match(kit, /_primaryCount % 3/);
   assert.match(kit, /_mateuszHitCount % 9/);
@@ -117,16 +117,16 @@ test('Unity enemy catalog preserves all 23 legacy IDs and the Survival unlock ro
     'MutantGammaForklift', 'RadioactivePip', 'CyberSalesman'
   ]) {
     assert.match(enemyKinds, new RegExp(id));
-    assert.match(catalog, new RegExp('EnemyKind\\.' + id));
+    assert.match(catalog, new RegExp('EnemyKind\.' + id));
   }
   assert.match(catalog, /MinimumSurvivalElapsedSeconds/);
   assert.match(catalog, /GetSurvivalEligible/);
   assert.match(catalog, /ChooseSurvivalSpawnType/);
   assert.match(catalog, /MinimumSurvivalWave/);
   assert.match(catalog, /EnemyKind\.ZombieWorker, EnemyKind\.Kurier, EnemyKind\.CrazyStacker/);
-  const roster = catalog.match(/private static readonly EnemyKind\\[\\] SurvivalRoster\\s*=\\s*\\{([\\s\\S]*?)\\};/);
+  const roster = catalog.match(/private static readonly EnemyKind\[\] SurvivalRoster\\s*=\\s*\{([\\s\\S]*?)\};/);
   assert.ok(roster, 'missing Survival roster block');
-  assert.equal((roster[1].match(/EnemyKind\\./g) || []).length, 17);
+  assert.equal((roster[1].match(/EnemyKind\./g) || []).length, 17);
   for (const sourceUnlock of ['MinimumSurvivalWave = minWave', 'MinimumSurvivalElapsedSeconds = minElapsed', 'SurvivalSpawnWeight = spawnWeight']) {
     assert.ok(catalog.includes(sourceUnlock));
   }
@@ -137,7 +137,7 @@ test('Unity enemy AI has separated melee, ranged, support, charger and boss phas
   const projectile = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAttackProjectile.cs');
   const factory = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs');
   for (const style of ['MeleeChaser', 'PatrolRammer', 'Ranged', 'Support', 'Charger', 'Boss']) {
-    assert.match(agent, new RegExp('EnemyBehaviorStyle\\.' + style));
+    assert.match(agent, new RegExp('EnemyBehaviorStyle\.' + style));
   }
   assert.match(agent, /TickRanged/);
   assert.match(agent, /TickSupport/);
