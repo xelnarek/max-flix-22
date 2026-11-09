@@ -42,10 +42,11 @@ test('mobile lifecycle pauses and resumes active gameplay through one visibility
   ]);
   assert.match(app, /getVisibilityPauseAction\(/);
   assert.match(app, /if \(action === 'pause'\)/);
-  assert.match(app, /else if \(action === 'resume'\)/);
+  assert.doesNotMatch(app, /else if \(action === 'resume'\)/);
   assert.equal((app.match(/getVisibilityPauseAction\(/g) || []).length, 1);
   assert.match(policy, /documentHidden && gameState === 'playing'/);
-  assert.match(policy, /!documentHidden && pausedByVisibility && gameState === 'paused'/);
+  assert.doesNotMatch(policy, /return 'resume'/);
+  assert.match(app, /Aplikacja wróciła z tła/);
   assert.match(app, /navigator\.serviceWorker\.register\(`\.\/sw\.js\?build=\$\{__PALIECIAKI_BUILD_ID__\}`/);
 });
 
