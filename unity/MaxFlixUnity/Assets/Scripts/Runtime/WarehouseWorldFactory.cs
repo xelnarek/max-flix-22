@@ -157,6 +157,9 @@ namespace MaxFlix.Unity.Runtime
             BuildLeg(leftHip, "Left leg", dark);
             BuildLeg(rightHip, "Right leg", dark);
 
+            OperatorAnimationRig animationRig = root.gameObject.AddComponent<OperatorAnimationRig>();
+            animationRig.Initialize(leftShoulder, rightShoulder, leftHip, rightHip, profile);
+
             if (profile.Id == OperatorId.Marcin)
                 CreateVisualPart(rightShoulder, PrimitiveType.Cube, "B4 ERP tablet", new Vector3(0.02f, -0.32f, 0.24f), new Vector3(0.22f, 0.16f, 0.035f), new Color(0.10f, 0.55f, 0.86f));
             else if (profile.Id == OperatorId.Grzesiek)
