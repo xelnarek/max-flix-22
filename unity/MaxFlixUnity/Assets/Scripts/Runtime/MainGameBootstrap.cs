@@ -66,13 +66,21 @@ namespace MaxFlix.Unity.Runtime
             _lastMap = mapId;
 
             GameSession.Begin(mode, operatorId, mapId);
-            PlayerController player = WarehouseWorldFactory.BuildB4Slice();
+            PlayerController player = mode == GameMode.Campaign
+                ? WarehouseWorldFactory.BuildCampaignMegaMap()
+                : WarehouseWorldFactory.BuildB4Slice();
             _hud = HudController.Create(
                 player,
                 RestartLastRun,
                 ReturnToMainMenu
             );
             player.Initialize(OperatorCatalog.Get(operatorId), _hud.Joystick, _hud);
+
+            if (mode == GameMode.Campaign)
+            {
+                CampaignMissionDirector campaign = player.GetComponentInParent<CampaignMissionDirector>();
+                campaign?.Initialize(player, _hud);
+            }
 
             if (mode == GameMode.Survival)
             {
@@ -93,9 +101,10 @@ namespace MaxFlix.Unity.Runtime
             }
 
             SurvivalMapProfile map = GameContentCatalog.GetMap(mapId);
-            _hud.SetStatus(mode == GameMode.Survival
-                ? "SURVIVAL • " + map.DisplayName.ToUpperInvariant() + " • ZMIANA 01"
-                : "TRENING B4 • " + OperatorCatalog.Get(operatorId).ClassName);
+            if (mode == GameMode.Survival)
+                _hud.SetStatus("SURVIVAL • " + map.DisplayName.ToUpperInvariant() + " • ZMIANA 01");
+            else
+                _hud.SetStatus("KAMPANIA • SEKTOR A • POKONAJ BOSMANA KRAKÓW");
         }
 
         public void RestartLastRun()

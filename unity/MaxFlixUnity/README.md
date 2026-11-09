@@ -27,7 +27,7 @@ The project deliberately does not import or overwrite the old game. New C# syste
 - CombatBalanceCatalog now preserves the source Campaign/Survival primary-attack cadence, special cooldown scaling, Survival outgoing/incoming damage modifiers and 0.78 s Survival hit-invulnerability window.
 - Special ability has a separate touch button, visible cooldown and keyboard E shortcut.
 - EnemyArchetypeCatalog contains all 23 legacy enemy IDs (forklift is classified as a world hazard) and the 17-entry Survival spawn unlock/weight roster. The first AI pass separates melee chasers, ranged attackers, support units, chargers and boss phase changes. The B4 slice currently instantiates only the Customer, AGV and Inspector examples.
-- MainMenuController now opens on startup and provides actual selection of Survival/Campaign, one of five operators and one of four maps. Survival is the default. PvP is deliberately disabled in this menu until the Unity client is connected to the existing authoritative server.
+- MainMenuController provides actual selection of Survival/Campaign, one of five operators and one of four maps. Campaign now starts a playable three-sector mega-map: physical sector gates, boss unlocks, five collectible VIP orders (four required), persistent sector unlocks and a delivery-victory condition. Survival remains the default. PvP is deliberately disabled in this menu until the Unity client is connected to the existing authoritative server.
 - Each Survival map now builds a distinct physical layout: B4 rack aisles and pallet staging, a container-terminal slalom with container collisions and crane structure, cold-room compressor/rack aisles, or night-sort conveyor lanes and scanner gates. All four share a larger bounded play area so the horde ring remains inside the floor. These are first-pass procedural layouts, not final imported environment art.
 - SurvivalWaveDirector includes the 60-second wave clock, weighted spawns, difficulty curve, mobile/desktop enemy caps, the 90-second contracting horde ring and 5-minute rotating boss warnings. It also ports the rare Bosman (wave 6+, 4%) and Sebix (wave 8+, 6.5%) spawn rules with one active copy of each. Horde entrants are distributed evenly around the contracting perimeter.
 - EnemyAgent uses a short shared spatial cache and separation force to reduce enemy stacking and preserve clearance around the operator.
@@ -35,12 +35,12 @@ The project deliberately does not import or overwrite the old game. New C# syste
 - SurvivalProgressionController adds pooled XP crystals, map-scaled XP, levels/ranks, three-card rarity drafts, promotion rerolls, boss reward drafts, weapon unlocks/upgrades/evolutions and first-pass passive effects.
 - A per-run SurvivalDamageTracker records effective HP damage by named weapon/operator and shows a percentage breakdown in the game-over report.
 - Pause/resume, retry and return-to-menu are wired; pause and draft states freeze player/enemy updates.
-- The current B4 layout remains procedural; enemy/operator/support models are readable low-poly placeholders, not the final imported rigs.
+- Campaign and Survival environments are currently procedural; enemy/operator/support models are readable low-poly placeholders, not the final imported rigs.
 - Keyboard, mouse, gamepad and multi-touch UI use Unity's New Input System; this code still requires an actual Unity Editor compile and device balancing pass.
 
 ## Not migrated yet
 
-Still missing or only partially ported: full Campaign objectives and sector progression; all original Survival contracts, mutators, events, secrets, complete passive catalogue and exact weapon/rarity behavior; several enemy special attacks and final boss patterns; exact legacy map geometry and final imported character/enemy rigs; PvP network client; account/cloud saves, Firebase/Google sign-in, leaderboard, ads/UMP, achievements and easter eggs; Android/Web/PC release signing. The current Survival systems are a playable implementation pass, not validated 1:1 parity.
+Still missing or only partially ported: the full legacy Campaign collectible catalogue, interactive traps, sector-specific side objectives and exact boss/mission scripting; all original Survival contracts, mutators, events, secrets, complete passive catalogue and exact weapon/rarity behavior; several enemy special attacks and final boss patterns; exact legacy map geometry and final imported character/enemy rigs; PvP network client; account/cloud saves, Firebase/Google sign-in, leaderboard, ads/UMP, achievements and easter eggs; Android/Web/PC release signing. The current Survival systems are a playable implementation pass, not validated 1:1 parity.
 
 ## Build policy
 

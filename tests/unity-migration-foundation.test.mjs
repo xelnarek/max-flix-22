@@ -169,6 +169,51 @@ test('Unity domain catalog preserves the exact legacy content IDs and four Survi
   assert.equal((catalog.match(/SurvivalWeaponKind\./g) || []).length, 25);
 });
 
+
+test('Unity Campaign builds a connected three-sector mega-map with boss-gated progression and VIP delivery', async () => {
+  const [world, bootstrap, director, pickup, hud, enemy, menu] = await Promise.all([
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/MainGameBootstrap.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/CampaignMissionDirector.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/CampaignVipPickup.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/MainMenuController.cs'),
+  ]);
+  assert.match(bootstrap, /mode == GameMode\.Campaign[\s\S]*?BuildCampaignMegaMap\(\)/);
+  assert.match(bootstrap, /campaign\?\.Initialize\(player, _hud\)/);
+  assert.match(world, /public static PlayerController BuildCampaignMegaMap\(\)/);
+  assert.match(world, /CreateCampaignMegaMapGeometry\(theme\)/);
+  assert.match(world, /CreateCampaignGate\("Brama do sektora B", 36f/);
+  assert.match(world, /CreateCampaignGate\("Brama do sektora C", 116f/);
+  assert.match(world, /CreateCampaignVipPickup\(/);
+  assert.match(world, /EnemyKind\.BosmanKrakow/);
+  assert.match(world, /EnemyKind\.KingLeto/);
+  assert.match(world, /EnemyKind\.Walczak/);
+  assert.match(director, /enemy\.Kind == EnemyKind\.BosmanKrakow/);
+  assert.match(director, /enemy\.Kind == EnemyKind\.KingLeto/);
+  assert.match(director, /enemy\.Kind == EnemyKind\.Walczak/);
+  assert.match(director, /PlayerPrefs\.SetInt\(UnlockedSectorKey/);
+  assert.match(director, /RequiredVipOrders = 4/);
+  assert.match(director, /_vipOrdersCollected < RequiredVipOrders/);
+  assert.match(director, /!_finalWalczakDefeated \|\| !_finalKingLetoDefeated/);
+  assert.match(director, /GameFlowState\.Victory/);
+  assert.match(pickup, /OnTriggerEnter\(Collider other\)/);
+  assert.match(pickup, /RequireComponent\(typeof\(SphereCollider\), typeof\(Rigidbody\)\)/);
+  assert.match(pickup, /body\.isKinematic = true/);
+  assert.match(pickup, /_basePosition \+ Vector3\.up/);
+  assert.match(pickup, /private void FixedUpdate\(\)/);
+  assert.match(pickup, /_body\.MovePosition\(/);
+  assert.match(pickup, /_body\.MoveRotation\(/);
+  assert.doesNotMatch(pickup, /position\.y \+=/);
+  assert.match(pickup, /_mission\.CollectVipOrder\(\)/);
+  assert.match(enemy, /CampaignMissionDirector campaign = GetComponentInParent<CampaignMissionDirector>/);
+  assert.match(hud, /PresentCampaignVictory\(int vipCount, int requiredVip\)/);
+  assert.match(menu, /KAMPANIA • WIELKA MAPA/);
+  assert.doesNotMatch(menu, /URUCHOM TRENING B4/);
+});
+
+
 test('Unity setup creates URP, configures WebGPU with WebGL2 fallback and enables the New Input System', async () => {
   const setup = await read('../unity/MaxFlixUnity/Assets/Editor/UnityProjectSetup.cs');
   assert.match(setup, /UniversalRenderPipelineAsset/);

@@ -14,6 +14,151 @@ namespace MaxFlix.Unity.Runtime
             _worldRoot = null;
         }
 
+        public static PlayerController BuildCampaignMegaMap()
+        {
+            SurvivalMapProfile theme = GameContentCatalog.GetMap(WarehouseMapId.WarehouseB4);
+            GameObject root = new GameObject("KAMPANIA • WIELKA MAPA B4");
+            _worldRoot = root.transform;
+            CreateLighting(theme);
+            CreateCampaignMegaMapGeometry(theme);
+
+            BoxCollider gateB = CreateCampaignGate("Brama do sektora B", 36f, new Color(0.10f, 0.68f, 0.92f));
+            BoxCollider gateC = CreateCampaignGate("Brama do sektora C", 116f, new Color(0.78f, 0.42f, 0.95f));
+            CreateCampaignExit(theme);
+
+            CampaignMissionDirector mission = root.AddComponent<CampaignMissionDirector>();
+            mission.ConfigureGates(gateB, gateC);
+
+            PlayerController player = CreateOperator(
+                OperatorCatalog.Get(GameSession.Current.SelectedOperator),
+                new Vector3(-32f, 0.1f, 0f));
+            CreateCamera(player.transform);
+
+            SpawnSurvivalEnemy(player, EnemyKind.Customer, new Vector3(-19f, 0.05f, -7f));
+            SpawnSurvivalEnemy(player, EnemyKind.Inspector, new Vector3(7f, 0.05f, 8f));
+            SpawnSurvivalEnemy(player, EnemyKind.AgvRobot, new Vector3(25f, 0.05f, 5f));
+            SpawnSurvivalEnemy(player, EnemyKind.Monter, new Vector3(-3f, 0.05f, 12f));
+            SpawnSurvivalEnemy(player, EnemyKind.BosmanKrakow, new Vector3(22f, 0.05f, 0f), 1.35f, 1f);
+
+            SpawnSurvivalEnemy(player, EnemyKind.Handlowiec, new Vector3(55f, 0.05f, -9f));
+            SpawnSurvivalEnemy(player, EnemyKind.Architect, new Vector3(72f, 0.05f, 8f));
+            SpawnSurvivalEnemy(player, EnemyKind.Kurier, new Vector3(86f, 0.05f, -8f));
+            SpawnSurvivalEnemy(player, EnemyKind.AgvRobot, new Vector3(109f, 0.05f, 7f));
+            SpawnSurvivalEnemy(player, EnemyKind.BosmanKrakow, new Vector3(91f, 0.05f, 10f), 1.15f, 1f);
+            SpawnSurvivalEnemy(player, EnemyKind.KingLeto, new Vector3(99f, 0.05f, 0f), 1.35f, 1f);
+
+            SpawnSurvivalEnemy(player, EnemyKind.ZombieWorker, new Vector3(142f, 0.05f, -10f));
+            SpawnSurvivalEnemy(player, EnemyKind.EliteWalczakGuard, new Vector3(157f, 0.05f, 10f));
+            SpawnSurvivalEnemy(player, EnemyKind.Kurier, new Vector3(174f, 0.05f, -11f));
+            SpawnSurvivalEnemy(player, EnemyKind.BosmanKrakow, new Vector3(176f, 0.05f, 0f), 1.15f, 1f);
+            SpawnSurvivalEnemy(player, EnemyKind.KingLeto, new Vector3(191f, 0.05f, 7f), 1.45f, 1f);
+            SpawnSurvivalEnemy(player, EnemyKind.Walczak, new Vector3(191f, 0.05f, -7f), 1.45f, 1f);
+            SpawnSurvivalEnemy(player, EnemyKind.CyberSalesman, new Vector3(149f, 0.05f, 0f));
+
+            CreateCampaignVipPickup(new Vector3(-8f, 0.85f, 12f), mission, new Color(0.98f, 0.72f, 0.22f));
+            CreateCampaignVipPickup(new Vector3(63f, 0.85f, -2f), mission, new Color(0.98f, 0.72f, 0.22f));
+            CreateCampaignVipPickup(new Vector3(82f, 0.85f, 13f), mission, new Color(0.98f, 0.72f, 0.22f));
+            CreateCampaignVipPickup(new Vector3(143f, 0.85f, 5f), mission, new Color(0.98f, 0.72f, 0.22f));
+            CreateCampaignVipPickup(new Vector3(181f, 0.85f, 13f), mission, new Color(0.98f, 0.72f, 0.22f));
+            return player;
+        }
+
+        private static void CreateCampaignMegaMapGeometry(SurvivalMapProfile theme)
+        {
+            CreateBox("Sektor A • posadzka B4", new Vector3(0f, -0.3f, 0f), new Vector3(72f, 0.6f, 40f), theme.FloorColor, 0.86f);
+            CreateBox("Sektor B • posadzka showroom SPA", new Vector3(76f, -0.3f, 0f), new Vector3(80f, 0.6f, 40f), Color.Lerp(theme.FloorColor, new Color(0.40f, 0.28f, 0.48f), 0.24f), 0.80f);
+            CreateBox("Sektor C • posadzka terminal VIP", new Vector3(161f, -0.3f, 0f), new Vector3(90f, 0.6f, 44f), Color.Lerp(theme.FloorColor, new Color(0.34f, 0.38f, 0.43f), 0.32f), 0.78f);
+
+            Color wall = Color.Lerp(theme.WallColor, Color.black, 0.18f);
+            CreateBox("Campaign north safety wall", new Vector3(85f, 2.8f, -20.4f), new Vector3(244f, 5.6f, 0.65f), wall);
+            CreateBox("Campaign south safety wall", new Vector3(85f, 2.8f, 20.4f), new Vector3(244f, 5.6f, 0.65f), wall);
+            CreateBox("Campaign start boundary", new Vector3(-36.4f, 2.8f, 0f), new Vector3(0.7f, 5.6f, 41f), wall);
+            CreateBox("Campaign terminal boundary", new Vector3(206.4f, 2.8f, 0f), new Vector3(0.7f, 5.6f, 45f), wall);
+
+            CreateCampaignFloorGuides(-32f, 32f, theme.AccentColor);
+            CreateCampaignFloorGuides(40f, 112f, new Color(0.35f, 0.66f, 0.92f));
+            CreateCampaignFloorGuides(120f, 202f, new Color(0.94f, 0.60f, 0.20f));
+
+            for (int x = -24; x <= 192; x += 24)
+            {
+                CreateBox("Campaign high-bay cross truss", new Vector3(x, 8.2f, 0f), new Vector3(0.24f, 0.24f, 35f), Color.Lerp(wall, Color.white, 0.20f));
+                CreateBox("Campaign high-bay north post", new Vector3(x, 3.85f, -17.2f), new Vector3(0.24f, 7.7f, 0.24f), wall);
+                CreateBox("Campaign high-bay south post", new Vector3(x, 3.85f, 17.2f), new Vector3(0.24f, 7.7f, 0.24f), wall);
+            }
+
+            // Sector A: recognisable B4 rack aisles and pallet staging.
+            CreateRackBay(new Vector3(-26f, 0f, -12f), 2, theme);
+            CreateRackBay(new Vector3(-4f, 0f, -12f), 2, theme);
+            CreatePalletStack(new Vector3(-25f, 0f, 8f));
+            CreatePalletStack(new Vector3(-12f, 0f, 13f));
+            CreatePalletStack(new Vector3(9f, 0f, 11f));
+            CreateBox("B4 dispatch desk", new Vector3(24f, 1.0f, -14.8f), new Vector3(4.4f, 2f, 1.4f), Color.Lerp(theme.WallColor, Color.white, 0.12f));
+
+            // Sector B: showroom presentation plinths, display fixtures and service islands.
+            Color spa = new Color(0.48f, 0.39f, 0.56f);
+            for (int display = 0; display < 4; display++)
+            {
+                float x = 51f + display * 18f;
+                float z = display % 2 == 0 ? -12f : 12f;
+                CreateBox("SPA showroom display plinth", new Vector3(x, 0.28f, z), new Vector3(7.2f, 0.56f, 3.4f), spa);
+                CreateBox("SPA marble display", new Vector3(x, 1.0f, z), new Vector3(5.0f, 0.9f, 2.2f), Color.Lerp(theme.FloorColor, Color.white, 0.56f), 0.28f);
+                CreateBox("SPA brass display trim", new Vector3(x, 1.48f, z), new Vector3(5.2f, 0.08f, 2.35f), new Color(0.76f, 0.56f, 0.24f), 0.32f);
+            }
+            CreateRackBay(new Vector3(57f, 0f, -16f), 2, theme);
+            CreateRackBay(new Vector3(93f, 0f, -16f), 2, theme);
+            CreateBox("SPA service counter", new Vector3(76f, 0.65f, 16.5f), new Vector3(12f, 1.3f, 1.4f), Color.Lerp(spa, Color.white, 0.2f));
+
+            // Sector C: terminal container lanes, dock structures and VIP loading apron.
+            CreateContainer("Campaign terminal • container 01", new Vector3(140f, 1.4f, -13f), 0f, new Color(0.70f, 0.27f, 0.15f), theme.AccentColor);
+            CreateContainer("Campaign terminal • container 02", new Vector3(159f, 1.4f, 13f), 90f, new Color(0.14f, 0.40f, 0.58f), theme.AccentColor);
+            CreateContainer("Campaign terminal • container 03", new Vector3(178f, 1.4f, -13f), 0f, new Color(0.18f, 0.46f, 0.30f), theme.AccentColor);
+            CreateBox("Campaign terminal • loading canopy", new Vector3(188f, 5.3f, 18f), new Vector3(32f, 0.34f, 0.42f), new Color(0.84f, 0.48f, 0.18f));
+            CreateBox("Campaign terminal • dock post left", new Vector3(173f, 2.7f, 18f), new Vector3(0.4f, 5.4f, 0.4f), wall);
+            CreateBox("Campaign terminal • dock post right", new Vector3(203f, 2.7f, 18f), new Vector3(0.4f, 5.4f, 0.4f), wall);
+        }
+
+        private static void CreateCampaignFloorGuides(float startX, float endX, Color color)
+        {
+            for (float x = startX; x <= endX; x += 3.2f)
+            {
+                CreateBox("Campaign safety lane • north", new Vector3(x, 0.014f, -10.2f), new Vector3(2.0f, 0.022f, 0.075f), color);
+                CreateBox("Campaign safety lane • south", new Vector3(x, 0.014f, 10.2f), new Vector3(2.0f, 0.022f, 0.075f), color);
+            }
+        }
+
+        private static BoxCollider CreateCampaignGate(string label, float x, Color accent)
+        {
+            CreateBox(label + " • left post", new Vector3(x, 2.6f, -15.6f), new Vector3(0.68f, 5.2f, 0.8f), Color.Lerp(accent, Color.black, 0.42f));
+            CreateBox(label + " • right post", new Vector3(x, 2.6f, 15.6f), new Vector3(0.68f, 5.2f, 0.8f), Color.Lerp(accent, Color.black, 0.42f));
+            CreateBox(label + " • lintel", new Vector3(x, 5.15f, 0f), new Vector3(0.82f, 0.42f, 31.8f), accent);
+            GameObject barrier = CreateBox(label + " • force field", new Vector3(x, 2.2f, 0f), new Vector3(0.3f, 4.4f, 30.6f), Color.Lerp(accent, Color.white, 0.18f), 0.25f);
+            return barrier.GetComponent<BoxCollider>();
+        }
+
+        private static void CreateCampaignExit(SurvivalMapProfile theme)
+        {
+            Color gold = new Color(0.95f, 0.66f, 0.19f);
+            CreateBox("Campaign exit • left pillar", new Vector3(201f, 2.65f, -15.2f), new Vector3(0.7f, 5.3f, 0.7f), gold);
+            CreateBox("Campaign exit • right pillar", new Vector3(201f, 2.65f, 15.2f), new Vector3(0.7f, 5.3f, 0.7f), gold);
+            CreateBox("Campaign exit • header", new Vector3(201f, 5.25f, 0f), new Vector3(0.9f, 0.45f, 31f), gold);
+            CreateBox("Campaign exit • delivery van", new Vector3(204.2f, 0.95f, 0f), new Vector3(3.2f, 1.9f, 2.4f), Color.Lerp(theme.AccentColor, Color.white, 0.18f));
+            CreateBox("Campaign exit • van windshield", new Vector3(202.45f, 1.35f, 0f), new Vector3(0.06f, 0.85f, 1.65f), new Color(0.18f, 0.43f, 0.58f));
+        }
+
+        private static void CreateCampaignVipPickup(Vector3 position, CampaignMissionDirector mission, Color color)
+        {
+            GameObject pickup = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            pickup.name = "Zamówienie VIP • do odbioru";
+            pickup.transform.SetParent(_worldRoot, false);
+            pickup.transform.position = position;
+            pickup.transform.localScale = Vector3.one * 0.72f;
+            SphereCollider collider = pickup.GetComponent<SphereCollider>();
+            collider.isTrigger = true;
+            ApplyMaterial(pickup, color, 0.22f, 0.44f);
+            CampaignVipPickup collectible = pickup.AddComponent<CampaignVipPickup>();
+            collectible.Initialize(mission);
+        }
+
         public static PlayerController BuildB4Slice()
         {
             SurvivalMapProfile map = GameContentCatalog.GetMap(GameSession.Current.SelectedMap);

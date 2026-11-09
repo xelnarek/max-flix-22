@@ -134,7 +134,7 @@ namespace MaxFlix.Unity.Runtime
             GridLayoutGroup grid = CreateGrid(content, "Game modes", columns, portrait ? 116f : 128f);
             AddGridButton(grid, GameMode.Survival, "SURVIVAL\nFale, elity i bossowie", new Color(0.10f, 0.34f, 0.31f),
                 delegate { _selectedMode = GameMode.Survival; RefreshSelection(); }, true, _modeButtons);
-            AddGridButton(grid, GameMode.Campaign, "KAMPANIA / B4\nObecnie: arena testowa", new Color(0.18f, 0.25f, 0.36f),
+            AddGridButton(grid, GameMode.Campaign, "KAMPANIA • WIELKA MAPA\nTrzy sektory, bossowie i dostawa", new Color(0.18f, 0.25f, 0.36f),
                 delegate { _selectedMode = GameMode.Campaign; RefreshSelection(); }, true, _modeButtons);
             AddGridButton(grid, GameMode.PvP, "PVP ARENA\nKlient sieciowy w migracji", new Color(0.15f, 0.17f, 0.22f),
                 null, false, _modeButtons);
@@ -246,7 +246,7 @@ namespace MaxFlix.Unity.Runtime
             Text startText = _startButton.GetComponentInChildren<Text>();
             if (startText != null)
                 startText.text = _selectedMode == GameMode.Survival ? "ROZPOCZNIJ SURVIVAL" :
-                    _selectedMode == GameMode.Campaign ? "URUCHOM TRENING B4" : "PVP NIEDOSTĘPNE";
+                    _selectedMode == GameMode.Campaign ? "ROZPOCZNIJ KAMPANIĘ" : "PVP NIEDOSTĘPNE";
             Image startImage = _startButton.GetComponent<Image>();
             if (startImage != null)
             {
