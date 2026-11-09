@@ -117,10 +117,25 @@ namespace MaxFlix.Unity.Runtime
                 case OperatorId.Dawid:
                 {
                     bool stretchBurst = _primaryCount % 3 == 0;
-                    SpawnProjectile(origin, transform.forward, PrimitiveType.Capsule,
-                        _profile.SecondaryColor, CombatBalanceCatalog.ScaleCharacterBasicAttackDamage(1f, _profile.BasicAttackDamageMultiplier) * (stretchBurst ? 1.25f : 1f),
-                        14.5f, stretchBurst ? 2 : 0, 0f, 1.55f, 0.48f, 0.25f, false, 3.0f);
-                    _hud?.SetStatus(stretchBurst ? "STRETCH • PASMA ROZRZUcone" : "FOLIA STRETCH • CEL SPOWOLNIONY");
+                    float damage = CombatBalanceCatalog.ScaleCharacterBasicAttackDamage(1f, _profile.BasicAttackDamageMultiplier)
+                        * (stretchBurst ? 1.15f : 1f);
+                    if (stretchBurst)
+                    {
+                        for (int i = -1; i <= 1; i++)
+                        {
+                            Quaternion spread = Quaternion.Euler(0f, i * 12f, 0f);
+                            SpawnProjectile(origin, spread * transform.forward, PrimitiveType.Capsule,
+                                _profile.SecondaryColor, damage, 14.5f, 0, 0.08f,
+                                1.55f, 0.48f, 0.25f, false, 3.0f);
+                        }
+                    }
+                    else
+                    {
+                        SpawnProjectile(origin, transform.forward, PrimitiveType.Capsule,
+                            _profile.SecondaryColor, damage, 14.5f, 0, 0f,
+                            1.1f, 0.58f, 0.15f, false, 3.0f);
+                    }
+                    _hud?.SetStatus(stretchBurst ? "STRETCH • 3 PASMA ROZRZUTU" : "FOLIA STRETCH • CEL SPOWOLNIONY");
                     break;
                 }
                 case OperatorId.Mateusz:
@@ -179,7 +194,7 @@ namespace MaxFlix.Unity.Runtime
                         Quaternion spread = Quaternion.Euler(0f, i * 13f, 0f);
                         SpawnProjectile(transform.position + Vector3.up * 1.05f + transform.forward * 0.55f,
                             spread * transform.forward, PrimitiveType.Cube, _profile.SecondaryColor,
-                            1.45f, 12f, 2, 0f, 0.65f, 0.68f, 1.1f, false, 3.2f);
+                            1.45f, 12f, 2, 0f, 0.65f, 0.68f, 1.1f, false, 3.2f, false, 2);
                     }
                     _shieldRemaining = 3.5f;
                     _player.RestoreHealth(1f);
@@ -247,7 +262,7 @@ namespace MaxFlix.Unity.Runtime
 
             CombatProjectile impact = projectile.AddComponent<CombatProjectile>();
             impact.Initialize(damage, 3.2f, transform, speed, pierce, stun,
-                slowDuration, slowMultiplier, knockback, returnToOwner, range, countsForMateuszPassive);
+                slowDuration, slowMultiplier, knockback, returnToOwner, range, countsForMateuszPassive, ricochets);
         }
 
         private void DamageNearbyEnemies(float radius, float damage, float stun, float knockback)
