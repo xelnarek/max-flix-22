@@ -79,6 +79,9 @@ namespace MaxFlix.Unity.Runtime
         private float _rangeMultiplier = 1f;
         private float _criticalChance = 0.05f;
         private float _criticalDamageMultiplier = 1.75f;
+        private float _overdriveRemaining;
+        private float _overdriveDamageMultiplier = 1f;
+        private float _overdriveReloadMultiplier = 1f;
         private int _dispatchCursor;
         private bool _initialized;
 
@@ -151,6 +154,14 @@ namespace MaxFlix.Unity.Runtime
             return true;
         }
 
+        public void GrantOverdrive(float duration, float damageMultiplier, float reloadMultiplier)
+        {
+            _overdriveRemaining = Mathf.Max(_overdriveRemaining, Mathf.Clamp(duration, 1f, 30f));
+            _overdriveDamageMultiplier = Mathf.Max(_overdriveDamageMultiplier, Mathf.Clamp(damageMultiplier, 1f, 1.6f));
+            _overdriveReloadMultiplier = Mathf.Min(_overdriveReloadMultiplier, Mathf.Clamp(reloadMultiplier, 0.65f, 1f));
+            _hud?.SetStatus("OVERDRIVE • " + _overdriveRemaining.ToString("0") + " S");
+        }
+
         public void ApplyPassive(string id, float strength)
         {
             float safeStrength = Mathf.Clamp(strength, 0.5f, 1.75f);
@@ -212,6 +223,12 @@ namespace MaxFlix.Unity.Runtime
             }
 
             _dispatchRemaining = Mathf.Max(0f, _dispatchRemaining - deltaTime);
+            _overdriveRemaining = Mathf.Max(0f, _overdriveRemaining - deltaTime);
+            if (_overdriveRemaining <= 0f)
+            {
+                _overdriveDamageMultiplier = 1f;
+                _overdriveReloadMultiplier = 1f;
+            }
             for (int i = 0; i < _weapons.Count; i++)
                 _weapons[i].Cooldown = Mathf.Max(0f, _weapons[i].Cooldown - deltaTime);
 
@@ -226,7 +243,8 @@ namespace MaxFlix.Unity.Runtime
 
             WeaponState ready = _weapons[readyIndex];
             Fire(ready, target);
-            ready.Cooldown = SurvivalWeaponCatalog.GetReloadSeconds(ready.Id, ready.Level, ready.Evolved, _reloadMultiplier);
+            ready.Cooldown = SurvivalWeaponCatalog.GetReloadSeconds(
+                ready.Id, ready.Level, ready.Evolved, _reloadMultiplier * _overdriveReloadMultiplier);
             _dispatchCursor = (readyIndex + 1) % Mathf.Max(1, _weapons.Count);
             _dispatchRemaining = SurvivalWeaponCatalog.GetDispatchInterval();
         }
@@ -274,7 +292,7 @@ namespace MaxFlix.Unity.Runtime
             float baseDamage = weapon.Id == SurvivalWeaponKind.OrbitBlades
                 ? 1f + (weapon.Level >= 3 ? 1f : 0f) + (weapon.Evolved ? 1f : 0f)
                 : 1f + Mathf.Floor((weapon.Level - 1) / 3f) + (weapon.Evolved ? 1f : 0f);
-            float damage = Mathf.Max(1f, Mathf.Round(baseDamage * _damageMultiplier));
+            float damage = Mathf.Max(1f, Mathf.Round(baseDamage * _damageMultiplier * _overdriveDamageMultiplier));
             bool critical = UnityEngine.Random.value < _criticalChance;
             if (critical) damage = Mathf.Max(1f, Mathf.Round(damage * _criticalDamageMultiplier));
 
