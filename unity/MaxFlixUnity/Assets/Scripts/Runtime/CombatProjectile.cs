@@ -21,6 +21,7 @@ namespace MaxFlix.Unity.Runtime
         private float _maxRange;
         private float _travelled;
         private int _pierceRemaining;
+        private int _ricochetsRemaining;
         private bool _returnToOwner;
         private bool _returning;
         private Vector3 _lastPosition;
@@ -42,7 +43,8 @@ namespace MaxFlix.Unity.Runtime
             float knockback,
             bool returnToOwner,
             float maxRange,
-            bool countsForMateuszPassive = false)
+            bool countsForMateuszPassive = false,
+            int ricochets = 0)
         {
             _body = GetComponent<Rigidbody>();
             _owner = owner;
@@ -52,6 +54,7 @@ namespace MaxFlix.Unity.Runtime
             _lifeSeconds = Mathf.Clamp(lifeSeconds, 0.1f, 8f);
             _speed = Mathf.Clamp(speed, 1f, 40f);
             _pierceRemaining = Mathf.Max(0, pierce);
+            _ricochetsRemaining = Mathf.Clamp(ricochets, 0, 4);
             _stunSeconds = Mathf.Clamp(stunSeconds, 0f, 3f);
             _slowSeconds = Mathf.Clamp(slowSeconds, 0f, 5f);
             _slowMultiplier = Mathf.Clamp(slowMultiplier, 0.15f, 1f);
@@ -111,7 +114,22 @@ namespace MaxFlix.Unity.Runtime
             }
 
             EnemyAgent enemy = other.GetComponentInParent<EnemyAgent>();
-            if (enemy == null || enemy.IsDefeated) return;
+            if (enemy == null || enemy.IsDefeated)
+            {
+                if (_ricochetsRemaining > 0 && !other.isTrigger && _body != null)
+                {
+                    Vector3 surface = other.ClosestPoint(transform.position);
+                    Vector3 normal = transform.position - surface;
+                    if (normal.sqrMagnitude < 0.001f) normal = -_body.velocity.normalized;
+                    _body.velocity = Vector3.Reflect(_body.velocity, normal.normalized).normalized * _speed;
+                    _ricochetsRemaining--;
+                }
+                else if (!other.isTrigger && !other.CompareTag("MainCamera"))
+                {
+                    Destroy(gameObject);
+                }
+                return;
+            }
 
             int targetId = enemy.GetInstanceID();
             if (!_hitTargets.Add(targetId)) return;
@@ -121,6 +139,16 @@ namespace MaxFlix.Unity.Runtime
                 : transform.forward;
             enemy.ApplyCombatHit(_damage, _stunSeconds, _slowSeconds, _slowMultiplier, direction * _knockback);
             if (_countsForMateuszPassive && _ownerPlayer != null) _ownerPlayer.RecordPrimaryHit();
+
+            if (_ricochetsRemaining > 0 && _body != null)
+            {
+                Vector3 normal = transform.position - enemy.transform.position;
+                normal.y = 0f;
+                if (normal.sqrMagnitude < 0.001f) normal = -_body.velocity;
+                _body.velocity = Vector3.Reflect(_body.velocity, normal.normalized).normalized * _speed;
+                _ricochetsRemaining--;
+                return;
+            }
 
             if (_pierceRemaining > 0)
             {
