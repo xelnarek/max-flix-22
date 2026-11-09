@@ -26,6 +26,12 @@ namespace MaxFlix.Unity.Runtime
 
         public static MainMenuController Create(MainGameBootstrap owner)
         {
+            return Create(owner, MainGameBootstrap.StartupMode,
+                MainGameBootstrap.StartupOperator, MainGameBootstrap.StartupMap);
+        }
+
+        public static MainMenuController Create(MainGameBootstrap owner, GameMode mode, OperatorId operatorId, WarehouseMapId mapId)
+        {
             EnsureEventSystem();
 
             GameObject canvasObject = new GameObject("Max Flix Main Menu", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
@@ -40,6 +46,9 @@ namespace MaxFlix.Unity.Runtime
             MainMenuController menu = canvasObject.AddComponent<MainMenuController>();
             menu._owner = owner;
             menu._canvas = canvas;
+            menu._selectedMode = mode == GameMode.PvP ? GameMode.Survival : mode;
+            menu._selectedOperator = operatorId;
+            menu._selectedMap = mapId;
             menu.Build();
             return menu;
         }
