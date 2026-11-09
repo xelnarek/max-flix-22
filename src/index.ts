@@ -2723,7 +2723,7 @@ class PaleciakiScene extends xb.Script {
       setTouchControlsMode('hidden');
       hudTop?.classList.add('hidden');
       hudBottom?.classList.add('hidden');
-      pvpHud?.classList.add('hidden');
+      document.getElementById('pvp-hud')?.classList.add('hidden');
       setTouchControlsVisibility(false);
       if (leavingPvp) {
         this.pvpSession?.dispose();
