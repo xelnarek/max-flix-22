@@ -456,3 +456,18 @@ test('Unity only opens legendary boss rewards for the three rotating major Survi
   assert.match(encounters, /GetBossKind/);
   assert.match(encounters, /cycle === 1|cycle/);
 });
+
+
+test('Unity pause and upgrade drafts freeze player input, enemy AI, weapon reloads and wave timers', async () => {
+  const player = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/PlayerController.cs');
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  const weapons = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWeaponController.cs');
+  const director = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWaveDirector.cs');
+  const progression = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalProgressionController.cs');
+  for (const source of [player, enemy, weapons, director, progression])
+    assert.match(source, /GameSession\.Current\.State != GameFlowState\.Playing/);
+  assert.match(progression, /Time\.timeScale = 0f/);
+  assert.match(progression, /Time\.timeScale = 1f/);
+  assert.match(weapons, /_weapons\[i\]\.Cooldown = Mathf\.Max\(0f/);
+  assert.match(director, /GameFlowState\.Playing/);
+});
