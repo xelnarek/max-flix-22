@@ -64,6 +64,7 @@ namespace MaxFlix.Unity.Runtime
             if (_poolRoot == null)
             {
                 GameObject root = new GameObject("Enemy projectile pool");
+                Object.DontDestroyOnLoad(root);
                 _poolRoot = root.transform;
             }
 
