@@ -144,3 +144,40 @@ test('Unity enemy AI has separated melee, ranged, support, charger and boss phas
   assert.match(factory, /AGV sensor rail/);
   assert.match(factory, /Inspector visor/);
 });
+
+
+test('Unity Survival difficulty curve, horde profile and performance caps match legacy rules', async () => {
+  const difficulty = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalDifficultyCatalog.cs');
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  const director = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWaveDirector.cs');
+  assert.match(difficulty, /1\.28f \+ Mathf\.Min\(2\.1f, waveIndex \* 0\.085f\)/);
+  assert.match(difficulty, /1f \+ Mathf\.Min\(0\.55f, waveIndex \* 0\.018f\)/);
+  assert.match(difficulty, /Mathf\.Max\(3f, 5\.5f - waveIndex \* 0\.11f\)/);
+  assert.match(difficulty, /Mathf\.Min\(6, Mathf\.FloorToInt\(waveIndex \/ 3f\)\)/);
+  assert.match(difficulty, /1\.10f \+ Mathf\.Min\(0\.60f, waveIndex \* 0\.02f\)/);
+  assert.match(difficulty, /return tier >= 2 \? 13 : tier == 1 \? 16 : 18/);
+  assert.match(difficulty, /return 34/);
+  assert.match(difficulty, /EnemyCount = isMobile \? 12 : 16/);
+  assert.match(difficulty, /DurationSeconds = 18f/);
+  assert.match(difficulty, /SpawnIntervalSeconds = 0\.48f/);
+  assert.match(difficulty, /InitialRadius = 13\.4f/);
+  assert.match(difficulty, /FinalRadius = 6\.8f/);
+  assert.match(director, /WaveDurationSeconds = 60f/);
+  assert.match(director, /FirstHordeAtSeconds = 90f/);
+  assert.match(director, /BossCadenceSeconds = 300f/);
+  assert.match(director, /_bossWarningRemaining = 6f/);
+  assert.match(director, /ChooseSurvivalSpawnType/);
+  assert.match(director, /DrawHordeRing/);
+  assert.match(enemy, /_maxHealth = Mathf\.Max\(1f, _profile\.BaseHealth \* Mathf\.Clamp\(healthMultiplier/);
+  assert.match(enemy, /_moveSpeed = _profile\.MoveSpeed \* safeSpeedMultiplier/);
+  assert.match(enemy, /_attackTimer = _attackInterval \/ _abilityRateMultiplier/);
+});
+
+test('Unity runtime can be initialized in Survival through a mode/map/operator handoff', async () => {
+  const bootstrap = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/MainGameBootstrap.cs');
+  const factory = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs');
+  assert.match(bootstrap, /ConfigureNextRun\(GameMode mode, OperatorId operatorId, WarehouseMapId mapId\)/);
+  assert.match(bootstrap, /GameSession\.Begin\(StartupMode, StartupOperator, StartupMap\)/);
+  assert.match(factory, /GameSession\.Current\.Mode == GameMode\.Survival/);
+  assert.match(factory, /root\.AddComponent<SurvivalWaveDirector>\(\)/);
+});
