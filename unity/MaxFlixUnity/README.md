@@ -1,6 +1,7 @@
 # Max Flix — Unity project
 
 **Editor:** Unity 6000.6.8f1 (Unity 6.6.8f1)  
+**Packages:** URP 17.5.0, uGUI 2.6.0, Input System 1.20.1  
 **Initial scope:** B4 warehouse vertical slice / migration foundation  
 **Production status:** prototype only — the current Three.js game remains the production build.
 
