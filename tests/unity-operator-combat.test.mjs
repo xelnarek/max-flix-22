@@ -480,7 +480,8 @@ test('Unity enemy crowd separation uses a spatial hash and freezes enemy AI outs
   const operatorKit = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorCombatKit.cs');
   assert.match(enemy, /GameSession\.Current\.State != GameFlowState\.Playing/);
   assert.match(enemy, /Dictionary<Vector2Int, List<EnemyAgent>> SeparationBuckets/);
-  assert.match(enemy, /SeparationCellSize = 2\.4f/);
+  assert.match(enemy, /SeparationCellSize = 3\.6f/);
+  assert.match(enemy, /Time\.time \+ 0\.10f/);
   assert.match(enemy, /RefreshSeparationIndex/);
   assert.match(enemy, /originCell\.x \+ cellX/);
   assert.match(enemy, /originCell\.y \+ cellZ/);
