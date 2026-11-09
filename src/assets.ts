@@ -294,7 +294,7 @@ export class B4AssetLoader {
       const overallStartTime = performance.now();
       console.group('%c[AssetLoader] 🔍 INSPEKCJA ZASOBÓW: Inicjalizacja modeli 3D i tekstur', 'color: #38bdf8; font-weight: bold;');
 
-      // Warm only the six procedural textures that are referenced by the runtime.
+      // Warm the six procedural warehouse textures and six original B4 visual-pack assets used by the runtime.
       // Operators, bosses and props are created on demand; prebuilding every model
       // here duplicated GPU resources before the player had even opened the menu.
       // WebAudio is also initialized lazily from the first user gesture.
