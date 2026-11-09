@@ -639,7 +639,6 @@ class PaleciakiScene extends xb.Script {
   private adaptiveRecoverySince: number = 0;
   private adaptiveEffectsTier: AdaptiveEffectsTier = 0;
   private adaptiveEffectsRecoverySince: number = 0;
-  private pausedForVisibility: boolean = false;
   private resetTouchJoystick: (() => void) | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private lastAdaptiveQualityAt: number = 0;
@@ -2762,7 +2761,6 @@ class PaleciakiScene extends xb.Script {
       if (this.engine.getGameState() !== 'playing') return;
       this.resetTouchJoystick?.();
       this.engine.togglePause();
-      this.pausedForVisibility = false;
       setTouchControlsVisibility(false);
       pauseModal?.classList.remove('hidden');
       pauseModal?.setAttribute('aria-hidden', 'false');
@@ -2789,7 +2787,6 @@ class PaleciakiScene extends xb.Script {
     bindTap(document.getElementById('btn-resume'), () => {
       if (this.engine.getGameState() !== 'paused') return;
       this.engine.togglePause();
-      this.pausedForVisibility = false;
       pauseModal?.classList.add('hidden');
       pauseModal?.setAttribute('aria-hidden', 'true');
       pauseModal?.style.removeProperty('display');
@@ -2865,7 +2862,6 @@ class PaleciakiScene extends xb.Script {
         this.engine.exitPvp();
         this.pvpSession = null;
       }
-      this.pausedForVisibility = false;
       survivalHud?.classList.add('hidden');
       survivalLevelUp?.classList.add('hidden');
       setTouchControlsMode('hidden');
@@ -2884,7 +2880,13 @@ class PaleciakiScene extends xb.Script {
       const feedbackMsg = document.getElementById(feedbackId);
 
       submitBtn?.addEventListener('click', async () => {
-        if (this.lastMode === 'pvp') {
+        const submittedMode = this.lastMode;
+        const submittedScore = this.lastScore;
+        const submittedCoins = this.lastCoins;
+        const submittedTimeSeconds = this.lastTimeSeconds;
+        const submittedBossDefeated = this.lastBossDefeated;
+        const submittedCharacterId = this.selectedCharId;
+        if (submittedMode === 'pvp') {
           if (feedbackMsg) {
             feedbackMsg.className = 'submit-feedback';
             feedbackMsg.textContent = 'Wyniki PvP są zapisywane w osobnym podsumowaniu pojedynku, nie w rankingu Survival.';
@@ -2893,7 +2895,7 @@ class PaleciakiScene extends xb.Script {
           return;
         }
         const playerName = nickInput?.value.trim().slice(0, 32) ||
-          `Kierownik ${CHARACTERS[this.selectedCharId].name}`;
+          `Kierownik ${CHARACTERS[submittedCharacterId].name}`;
         try { localStorage.setItem('maxfliz_player_nick', playerName); } catch { /* private browsing */ }
 
         submitBtn.disabled = true;
@@ -2908,12 +2910,12 @@ class PaleciakiScene extends xb.Script {
           const services = await loadFirebaseLeaderboardServices();
           const result = await services.submitScore({
             playerName,
-            hero: CHARACTERS[this.selectedCharId].name,
-            mode: this.lastMode,
-            score: this.lastScore,
-            coins: this.lastCoins,
-            timeSeconds: this.lastTimeSeconds,
-            bossDefeated: this.lastBossDefeated,
+            hero: CHARACTERS[submittedCharacterId].name,
+            mode: submittedMode,
+            score: submittedScore,
+            coins: submittedCoins,
+            timeSeconds: submittedTimeSeconds,
+            bossDefeated: submittedBossDefeated,
           });
 
           if (result.status === 'online') {
@@ -2964,7 +2966,6 @@ class PaleciakiScene extends xb.Script {
       if (action === 'pause') {
         this.resetTouchJoystick?.();
         this.engine.togglePause();
-        this.pausedForVisibility = true;
         setTouchControlsVisibility(false);
         pauseModal?.classList.remove('hidden');
         pauseModal?.setAttribute('aria-hidden', 'false');
