@@ -14,6 +14,7 @@ namespace MaxFlix.Unity.Runtime
         private OperatorProfile _profile;
         private VirtualJoystick _joystick;
         private HudController _hud;
+        private OperatorAnimationRig _animationRig;
         private float _verticalSpeed;
         private float _attackCooldown;
         private float _currentHealth;
@@ -30,6 +31,7 @@ namespace MaxFlix.Unity.Runtime
         {
             _controller = GetComponent<CharacterController>();
             _profile = profile ?? OperatorCatalog.Get(OperatorId.Marcin);
+            _animationRig = GetComponent<OperatorAnimationRig>();
             _joystick = joystick;
             _hud = hud;
             _currentHealth = _profile.MaxHealth;
@@ -83,6 +85,7 @@ namespace MaxFlix.Unity.Runtime
             Vector3 velocity = move * _profile.MoveSpeed;
             velocity.y = _verticalSpeed;
             _controller.Move(velocity * Time.deltaTime);
+            _animationRig?.Tick(move.magnitude, _controller.isGrounded, Time.deltaTime);
 
             if (move.sqrMagnitude > 0.02f)
             {
@@ -120,6 +123,7 @@ namespace MaxFlix.Unity.Runtime
         private void FirePrimaryAttack()
         {
             _attackCooldown = attackInterval;
+            _animationRig?.TriggerAttack();
             Vector3 direction = transform.forward;
             Vector3 origin = transform.position + Vector3.up * 1.0f + direction * 0.65f;
 
