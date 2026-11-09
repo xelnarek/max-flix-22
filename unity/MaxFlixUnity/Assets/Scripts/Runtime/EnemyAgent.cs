@@ -38,7 +38,7 @@ namespace MaxFlix.Unity.Runtime
         private static EnemyAgent[] _separationCache = new EnemyAgent[0];
         private static readonly Dictionary<Vector2Int, List<EnemyAgent>> SeparationBuckets =
             new Dictionary<Vector2Int, List<EnemyAgent>>(64);
-        private const float SeparationCellSize = 2.4f;
+        private const float SeparationCellSize = 3.6f;
         private static float _nextSeparationRefreshTime;
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
@@ -384,7 +384,7 @@ namespace MaxFlix.Unity.Runtime
                 bucket.Add(enemy);
             }
 
-            _nextSeparationRefreshTime = Time.time + 0.16f;
+            _nextSeparationRefreshTime = Time.time + 0.10f;
         }
 
         private void ApplySeparation(float deltaTime)
