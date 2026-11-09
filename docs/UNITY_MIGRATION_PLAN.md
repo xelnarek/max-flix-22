@@ -2,7 +2,7 @@
 
 ## Decyzja technologiczna
 
-Docelowy silnik: **Unity 6000.6.8f1 (Unity 6.6.8f1)**, wydany 3 listopada 2026 r. Wybrana jest najnowsza wspierana wersja z gałęzi Unity 6.6, a nie wersja Alpha/Beta. Render pipeline: **URP**, z osobnymi profilami jakości dla Androida, przeglądarki i PC.
+Docelowy silnik: **Unity 6000.6.8f1 (Unity 6.6.8f1)**, wydany 3 listopada 2026 r. Wybrana jest najnowsza wspierana wersja z gałęzi Unity 6.6, a nie wersja Alpha/Beta. Render pipeline: **URP 17.5.0** (dopasowany do Unity 6000.6), z uGUI 2.6.0 i Input System 1.20.1; osobne profile jakości dla Androida, przeglądarki i PC.
 
 Dlaczego ta wersja:
 - Unity 6.6 wprowadza produkcyjną obsługę WebGPU dla Web Player; WebGL 2 pozostaje ścieżką zgodności i może być używany jako fallback.
