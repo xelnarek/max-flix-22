@@ -611,7 +611,7 @@ namespace MaxFlix.Unity.Runtime
                 enemy.ApplyWeaponHit(0.35f, 0f, 1.4f, 0.78f, Vector3.zero, shot.WeaponId);
             if (shot.AoeRadius > 0.05f)
                 ApplyAreaDamage(enemy.transform.position, shot.AoeRadius, shot.Damage,
-                    shot.StunSeconds, shot.SlowSeconds, shot.SlowMultiplier, shot.Knockback, enemy);
+                    shot.StunSeconds, shot.SlowSeconds, shot.SlowMultiplier, shot.Knockback, enemy, shot.WeaponId);
         }
 
         private void ApplyAreaDamage(Vector3 center, float radius, float damage, float stun,
