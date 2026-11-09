@@ -1,15 +1,14 @@
 /**
- * Decide whether the live game should pause or resume when page visibility changes.
- * Only a pause initiated by the visibility handler may be automatically undone.
+ * Decide whether a live run must be paused when the page becomes hidden.
+ * A visibility pause is intentionally sticky: returning to the app does not
+ * resume combat until the player explicitly presses the Resume button.
  */
-export type VisibilityPauseAction = 'pause' | 'resume' | 'none';
+export type VisibilityPauseAction = 'pause' | 'none';
 
 export function getVisibilityPauseAction(
   documentHidden: boolean,
   gameState: string,
-  pausedByVisibility: boolean,
 ): VisibilityPauseAction {
   if (documentHidden && gameState === 'playing') return 'pause';
-  if (!documentHidden && pausedByVisibility && gameState === 'paused') return 'resume';
   return 'none';
 }
