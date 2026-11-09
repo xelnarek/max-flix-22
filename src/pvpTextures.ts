@@ -113,6 +113,20 @@ export function createPvpFloorTexture(): THREE.CanvasTexture {
   }, 2, 2);
 }
 
+/** Soft baked contact shadow used when mobile hardware disables shadow maps. */
+export function createPvpContactShadowTexture(): THREE.CanvasTexture {
+  return makeCanvasTexture((ctx, size) => {
+    const center = size * 0.5;
+    const gradient = ctx.createRadialGradient(center, center, size * 0.08, center, center, size * 0.5);
+    gradient.addColorStop(0, 'rgba(0, 0, 0, 0.34)');
+    gradient.addColorStop(0.48, 'rgba(0, 0, 0, 0.20)');
+    gradient.addColorStop(0.82, 'rgba(0, 0, 0, 0.07)');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, size, size);
+  });
+}
+
 export function createPvpObstacleTexture(kind: ObstacleTextureKind): THREE.CanvasTexture {
   return makeCanvasTexture((ctx, size) => {
     const base = kind === 'crate' ? '#9b5b2b' : kind === 'barrier' ? '#596678' : '#293748';
