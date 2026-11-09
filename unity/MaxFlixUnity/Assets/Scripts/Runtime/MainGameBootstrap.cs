@@ -6,6 +6,17 @@ namespace MaxFlix.Unity.Runtime
     {
         private static MainGameBootstrap _instance;
 
+        public static GameMode StartupMode { get; private set; } = GameMode.Campaign;
+        public static OperatorId StartupOperator { get; private set; } = OperatorId.Marcin;
+        public static WarehouseMapId StartupMap { get; private set; } = WarehouseMapId.WarehouseB4;
+
+        public static void ConfigureNextRun(GameMode mode, OperatorId operatorId, WarehouseMapId mapId)
+        {
+            StartupMode = mode;
+            StartupOperator = operatorId;
+            StartupMap = mapId;
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void InstallRuntime()
         {
@@ -25,7 +36,7 @@ namespace MaxFlix.Unity.Runtime
             _instance = this;
             DontDestroyOnLoad(gameObject);
 
-            GameSession.Begin(GameMode.Campaign, OperatorId.Marcin, WarehouseMapId.WarehouseB4);
+            GameSession.Begin(StartupMode, StartupOperator, StartupMap);
             PlayerController player = WarehouseWorldFactory.BuildB4Slice();
             HudController hud = HudController.Create(player);
             player.Initialize(OperatorCatalog.Get(GameSession.Current.SelectedOperator), hud.Joystick, hud);
