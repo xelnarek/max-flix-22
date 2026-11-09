@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<defs>
+  <linearGradient id="card" x2="0" y2="1"><stop stop-color="#c89a63"/><stop offset=".48" stop-color="#b9824e"/><stop offset="1" stop-color="#8e6039"/></linearGradient>
+  <pattern id="fib" width="96" height="96" patternUnits="userSpaceOnUse">
+    <path d="M0 21q30-6 56 0t40-1M0 68q25 6 52 0t44 2" fill="none" stroke="#654528" stroke-width="2" opacity=".18"/>
+    <circle cx="16" cy="48" r="1.4" fill="#f8e4bf" opacity=".28"/><circle cx="77" cy="87" r="1.2" fill="#3b2517" opacity=".3"/>
+  </pattern>
+</defs>
+<rect width="512" height="512" fill="url(#card)"/>
+<rect width="512" height="512" fill="url(#fib)"/>
+<path d="M0 30H512M0 482H512" stroke="#5d3a22" stroke-width="8" opacity=".5"/>
+<path d="M0 38H512M0 474H512" stroke="#ead0a7" stroke-width="2" opacity=".45"/>
+<path d="M240 0h32v512h-32z" fill="#e7c18c" opacity=".42"/>
+<path d="M246 0h20v512h-20z" fill="#90613a" opacity=".38"/>
+<rect x="46" y="74" width="420" height="352" rx="9" fill="#d8c4a0" stroke="#5a3d25" stroke-width="10"/>
+<rect x="61" y="89" width="390" height="322" rx="4" fill="#eee6d3" stroke="#7a5633" stroke-width="3"/>
+<path d="M84 126h195" stroke="#182333" stroke-width="10"/><path d="M84 145h146" stroke="#182333" stroke-width="4" opacity=".65"/>
+<text x="83" y="205" font-family="Arial,sans-serif" font-size="39" font-weight="900" fill="#182333">MAX FLIX</text>
+<text x="85" y="236" font-family="Arial,sans-serif" font-size="23" font-weight="800" letter-spacing="3" fill="#b45309">MAGAZYN B4</text>
+<g fill="#172033"><rect x="84" y="263" width="3" height="80"/><rect x="91" y="263" width="6" height="80"/><rect x="102" y="263" width="2" height="80"/><rect x="109" y="263" width="8" height="80"/><rect x="123" y="263" width="3" height="80"/><rect x="132" y="263" width="5" height="80"/><rect x="143" y="263" width="2" height="80"/><rect x="151" y="263" width="9" height="80"/><rect x="166" y="263" width="4" height="80"/><rect x="176" y="263" width="2" height="80"/><rect x="184" y="263" width="7" height="80"/><rect x="197" y="263" width="3" height="80"/><rect x="205" y="263" width="9" height="80"/><rect x="220" y="263" width="3" height="80"/><rect x="228" y="263" width="5" height="80"/><rect x="240" y="263" width="2" height="80"/><rect x="247" y="263" width="7" height="80"/></g>
+<g fill="none" stroke="#b45309" stroke-width="7"><path d="M330 153v70m-18-50 18-20 18 20"/><path d="M380 153v70m-18-50 18-20 18 20"/></g>
+<g fill="#172033"><path d="M320 294h92v18h-92zM320 324h92v8h-92z"/></g>
+<text x="325" y="358" font-family="Arial,sans-serif" font-size="18" font-weight="800" fill="#172033">FRAGILE</text>
+<path d="M75 393h362" stroke="#7b5a36" stroke-width="2" opacity=".55"/>
+</svg>
