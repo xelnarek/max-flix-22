@@ -6,33 +6,36 @@ namespace MaxFlix.Unity.Runtime
     public sealed class CampaignVipPickup : MonoBehaviour
     {
         private CampaignMissionDirector _mission;
+        private Rigidbody _body;
         private bool _collected;
         private float _phase;
         private Vector3 _basePosition;
+        private Quaternion _baseRotation;
 
         public void Initialize(CampaignMissionDirector mission)
         {
             _mission = mission;
             _basePosition = transform.position;
+            _baseRotation = transform.rotation;
 
             SphereCollider trigger = GetComponent<SphereCollider>();
             trigger.isTrigger = true;
             trigger.radius = 0.9f;
 
             // A kinematic body makes trigger delivery reliable with a CharacterController player.
-            Rigidbody body = GetComponent<Rigidbody>();
-            body.isKinematic = true;
-            body.useGravity = false;
-            body.detectCollisions = true;
-            body.interpolation = RigidbodyInterpolation.Interpolate;
+            _body = GetComponent<Rigidbody>();
+            _body.isKinematic = true;
+            _body.useGravity = false;
+            _body.detectCollisions = true;
+            _body.interpolation = RigidbodyInterpolation.Interpolate;
         }
 
-        private void Update()
+        private void FixedUpdate()
         {
-            if (_collected) return;
-            _phase += Time.deltaTime;
-            transform.Rotate(Vector3.up, 85f * Time.deltaTime, Space.World);
-            transform.position = _basePosition + Vector3.up * (Mathf.Sin(_phase * 2.4f) * 0.14f);
+            if (_collected || _body == null) return;
+            _phase += Time.fixedDeltaTime;
+            _body.MovePosition(_basePosition + Vector3.up * (Mathf.Sin(_phase * 2.4f) * 0.14f));
+            _body.MoveRotation(_baseRotation * Quaternion.Euler(0f, 85f * _phase, 0f));
         }
 
         private void OnTriggerEnter(Collider other)
