@@ -69,18 +69,29 @@ namespace MaxFlix.Unity.Editor
 
             GraphicsSettings.defaultRenderPipeline = pipeline;
             EditorUtility.SetDirty(pipeline);
+            ConfigureWebGraphicsApis();
 
             bool inputConfigured = ConfigureNewInputSystem();
             AssetDatabase.SaveAssets();
 
             if (inputConfigured)
             {
-                Debug.Log("[Max Flix] URP is now the default render pipeline and Active Input Handling is set to the New Input System. Restart the Editor when prompted.");
+                Debug.Log("[Max Flix] URP is active. Web builds prefer WebGPU with WebGL 2 fallback, and Active Input Handling uses the New Input System. Restart the Editor when prompted.");
             }
             else
             {
                 Debug.LogWarning("[Max Flix] URP is configured, but Active Input Handling could not be changed automatically. Set Project Settings > Player > Other Settings > Active Input Handling to Input System Package (New), then restart the Editor.");
             }
+        }
+
+        private static void ConfigureWebGraphicsApis()
+        {
+            // Prefer WebGPU on capable browsers, retaining OpenGLES3 as the
+            // WebGL 2 fallback for browsers and devices without WebGPU support.
+            PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.WebGL, false);
+            PlayerSettings.SetGraphicsAPIs(
+                BuildTarget.WebGL,
+                new[] { GraphicsDeviceType.WebGPU, GraphicsDeviceType.OpenGLES3 });
         }
 
         private static void EnsureSettingsFolder()
