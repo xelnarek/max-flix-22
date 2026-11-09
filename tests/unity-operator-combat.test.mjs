@@ -68,7 +68,8 @@ test('Unity HUD exposes a separate special-ability button and cooldown state', a
   assert.match(hud, /player\.RequestAbility/);
   assert.match(hud, /SetAbilityState\(float remaining, float maximum\)/);
   assert.match(hud, /SPECJALNA\\nGOTOWA/);
-  assert.match(hud, /SetControlRect\(_abilityButton\.GetComponent<RectTransform>/);\n  assert.match(hud, /ApplyResponsiveTouchLayout\(true\)/);
+  assert.match(hud, /SetControlRect\(_abilityButton\.GetComponent<RectTransform>/);
+  assert.match(hud, /ApplyResponsiveTouchLayout\(true\)/);
   assert.match(hud, /_abilityButton\.interactable = ready/);
 });
 
