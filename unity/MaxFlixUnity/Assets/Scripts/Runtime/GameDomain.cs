@@ -86,6 +86,10 @@ namespace MaxFlix.Unity.Runtime
         public float AbilityCooldownSeconds;
         public string PassiveName;
         public string AbilityName;
+        public float GaitFrequency;
+        public float Stride;
+        public float ArmSwing;
+        public float AttackDurationSeconds;
     }
 
     [Serializable]
