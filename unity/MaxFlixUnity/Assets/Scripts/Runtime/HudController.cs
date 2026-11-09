@@ -54,6 +54,7 @@ namespace MaxFlix.Unity.Runtime
             _healthText = CreateText(root, "HP  5/5", new Vector2(-24f, -24f), new Vector2(280f, 62f), 30, TextAnchor.MiddleRight);
             _healthText.rectTransform.anchorMin = new Vector2(1f, 1f);
             _healthText.rectTransform.anchorMax = new Vector2(1f, 1f);
+            _healthText.rectTransform.pivot = new Vector2(1f, 1f);
             _helpText = CreateText(root, "PC: WASD / SPACE / J   •   EKRAN: joystick + SKOK + ATAK", new Vector2(0f, -98f), new Vector2(900f, 42f), 18, TextAnchor.MiddleCenter);
             _helpText.rectTransform.anchorMin = new Vector2(0.5f, 1f);
             _helpText.rectTransform.anchorMax = new Vector2(0.5f, 1f);
