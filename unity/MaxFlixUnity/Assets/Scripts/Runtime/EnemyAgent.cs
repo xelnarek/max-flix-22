@@ -49,7 +49,10 @@ namespace MaxFlix.Unity.Runtime
         {
             if (_defeated || float.IsNaN(damage) || float.IsInfinity(damage) || damage <= 0f) return;
 
-            _health -= damage;
+            GameMode mode = GameSession.Current != null ? GameSession.Current.Mode : GameMode.Campaign;
+            float balancedDamage = CombatBalanceCatalog.ScaleOutgoingDamage(damage, mode);
+            if (balancedDamage <= 0f) return;
+            _health -= balancedDamage;
             _hitFlashTimer = 0.13f;
             _stunRemaining = Mathf.Max(_stunRemaining, Mathf.Clamp(stunSeconds, 0f, 3f));
             if (slowSeconds > _slowRemaining)
