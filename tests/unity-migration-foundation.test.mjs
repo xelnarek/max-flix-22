@@ -102,3 +102,48 @@ test('Unity projectile visual uses a shared material and property block rather t
   assert.match(player, /renderer\.SetPropertyBlock\(_projectileProperties\)/);
   assert.doesNotMatch(player, /Material material = new Material\(shader\)/);
 });
+
+
+test('Unity domain catalog preserves the exact legacy content IDs and four Survival map modifiers', async () => {
+  const [domain, catalog] = await Promise.all([
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/GameDomain.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/GameContentCatalog.cs'),
+  ]);
+  for (const enemy of [
+    'Customer', 'Walczak', 'Forklift', 'Architect', 'Inspector', 'AgvRobot',
+    'Handlowiec', 'Monter', 'PiorunDrone', 'EliteWalczakGuard', 'Kurier',
+    'ItalianVendor', 'CrazyStacker', 'KingLeto', 'PanRoman', 'Serwisant',
+    'BosmanKrakow', 'ZombieWorker', 'Pomazaniec', 'Sebix',
+    'MutantGammaForklift', 'RadioactivePip', 'CyberSalesman',
+  ]) assert.ok(domain.includes(enemy), 'missing original enemy ID: ' + enemy);
+
+  for (const item of ['Grout', 'TileBox', 'Coffee', 'VipItem', 'Espresso', 'Magnet', 'GoldenCutter', 'KfcBucket', 'Carrara', 'EasterEgg'])
+    assert.ok(domain.includes(item), 'missing collectible ID: ' + item);
+  for (const item of ['Hardhat', 'VibramBoots', 'OrderMagnet', 'EspressoBoost', 'GoldenPaleciak', 'StretchArmor', 'AttackHaste', 'ArcDrone', 'XpSurge', 'DamageWard', 'ForkliftHorn', 'NightShiftEspresso', 'GoldenWz', 'PalletGuard'])
+    assert.ok(domain.includes(item), 'missing perk ID: ' + item);
+  for (const weapon of ['PalletCannon', 'DiamondSaw', 'GlueMine', 'KfcBomber', 'PiorunDrone', 'ForkliftBolter', 'ScannerPulse', 'OrbitBlades', 'CalacattaShards', 'SteamBomb', 'ForkliftHorn', 'WzBoomerang'])
+    assert.ok(domain.includes(weapon), 'missing Survival weapon ID: ' + weapon);
+
+  for (const map of ['WarehouseB4', 'ContainerTerminal', 'ColdStorage', 'NightSorting'])
+    assert.match(domain, new RegExp(map + '\\s*='));
+  assert.doesNotMatch(domain, /OniricDream\\s*=/, 'Oniryczny sen is a secret side-mode, not a fifth Survival map');
+
+  assert.match(catalog, /EnemyHealthMultiplier = 0\.94f/);
+  assert.match(catalog, /EnemySpeedMultiplier = 1\.08f/);
+  assert.match(catalog, /XpMultiplier = 1\.12f/);
+  assert.match(catalog, /EnemyHealthMultiplier = 1\.12f/);
+  assert.match(catalog, /EnemySpeedMultiplier = 0\.90f/);
+  assert.match(catalog, /XpMultiplier = 1\.15f/);
+  assert.equal((catalog.match(/Secret\("oniric_dream"/g) || []).length, 4);
+  assert.equal((catalog.match(/SurvivalWeaponKind\./g) || []).length, 24);
+});
+
+test('Unity setup creates URP, configures WebGPU with WebGL2 fallback and enables the New Input System', async () => {
+  const setup = await read('../unity/MaxFlixUnity/Assets/Editor/UnityProjectSetup.cs');
+  assert.match(setup, /UniversalRenderPipelineAsset/);
+  assert.match(setup, /GraphicsSettings\.defaultRenderPipeline = pipeline/);
+  assert.match(setup, /GraphicsDeviceType\.WebGPU/);
+  assert.match(setup, /GraphicsDeviceType\.OpenGLES3/);
+  assert.match(setup, /NewInputSystemBackend = 1/);
+  assert.match(setup, /activeInputHandler\.intValue = NewInputSystemBackend/);
+});
