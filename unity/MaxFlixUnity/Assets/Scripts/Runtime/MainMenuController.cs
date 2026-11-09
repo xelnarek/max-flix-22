@@ -115,10 +115,6 @@ namespace MaxFlix.Unity.Runtime
                 new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 52f),
                 new Vector2(520f, 92f), new Color(0.10f, 0.55f, 0.40f, 1f), 28,
                 StartSelectedRun);
-            CreateText(root, "PC: WASD • J ATAK • E SPECJALNA     |     DOTYK: JOYSTICK + PRZYCISKI",
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 10f), new Vector2(1000f, 24f), 13, TextAnchor.MiddleCenter,
-                new Color(0.40f, 0.52f, 0.62f));
 
             RefreshSelection();
         }
