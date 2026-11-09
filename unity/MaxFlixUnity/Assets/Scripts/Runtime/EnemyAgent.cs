@@ -370,6 +370,13 @@ namespace MaxFlix.Unity.Runtime
         {
             if (_defeated) return;
             _defeated = true;
+            if (_controller != null) _controller.enabled = false;
+            if (_renderers != null)
+            {
+                foreach (Renderer renderer in _renderers)
+                    if (renderer != null) renderer.enabled = false;
+            }
+
             if (GameSession.Current != null)
             {
                 GameSession.Current.Kills++;
