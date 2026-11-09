@@ -32,6 +32,7 @@ import { getSurvivalBossVariant, isMajorSurvivalBossType, shouldSpawnBosmanKrako
 import { applySurvivalWaveMutator, getSurvivalWaveMutator } from './survivalWaveMutators.ts';
 import { getSurvivalConvoyHazardCount } from './survivalConvoy.ts';
 import { applySurvivalMapCombatModifier, chooseRandomSurvivalMap, getSurvivalMapDefinition, type SurvivalMapId } from './survivalMaps.ts';
+import { getCampaignLightingProfile, getSurvivalLightingProfile, getSurvivalSurfaceProfile, PVP_LIGHTING_PROFILE, type WorldLightingProfile } from './worldVisualQuality.ts';
 import { getSurvivalMapRouteFeatures } from './survivalMapLayouts.ts';
 import { chooseCampaignNearbyRewardSpawnPoint } from './campaignRewards.ts';
 import { chooseNearbySpawnPoint } from './arenaSpawn.ts';
@@ -514,6 +515,8 @@ export class PaleciakiGameEngine {
   private bloomPulseDuration = 0.3;
   private levelBounds = { minX: -35, maxX: 35, minZ: -15, maxZ: 15 };
   private envMapInitialized = false;
+  private environmentIntensity = 0.55;
+  private baseToneMappingExposure = 1.08;
   private attackComboStep = 0;
   private timedEventCooldown = 20.0;
   private timedEventIndex = 0;
@@ -1125,23 +1128,39 @@ export class PaleciakiGameEngine {
     this.camera.add(dofMesh);
   }
 
-  /** Adjusts the global fill/rim balance when the player enters a new map zone. */
+  /** Apply one coherent light/fog/environment recipe without allocating extra lights. */
+  private applyWorldLightingProfile(profile: WorldLightingProfile) {
+    this.ambientLight.color.setHex(profile.ambientColor);
+    this.ambientLight.intensity = profile.ambientIntensity;
+    this.hemiLight.color.setHex(profile.hemisphereSkyColor);
+    this.hemiLight.groundColor.setHex(profile.hemisphereGroundColor);
+    this.hemiLight.intensity = profile.hemisphereIntensity;
+    this.dirLight.color.setHex(profile.directionalColor);
+    this.dirLight.intensity = profile.directionalIntensity;
+    this.rimLight.color.setHex(profile.rimColor);
+    this.rimLight.intensity = profile.rimIntensity;
+
+    if (this.scene.fog instanceof THREE.Fog) {
+      this.scene.fog.color.setHex(profile.fogColor);
+      this.scene.fog.near = profile.fogNear;
+      this.scene.fog.far = profile.fogFar;
+    } else {
+      this.scene.fog = new THREE.Fog(profile.fogColor, profile.fogNear, profile.fogFar);
+    }
+
+    this.environmentIntensity = profile.environmentIntensity;
+    (this.scene as any).environmentIntensity = profile.environmentIntensity;
+    this.baseToneMappingExposure = profile.exposure;
+    if (this.threeRenderer) this.threeRenderer.toneMappingExposure = profile.exposure;
+  }
+
+  /** Campaign sectors retain their identity, now with a calibrated key light as well. */
   private applySectorLighting(sector: number) {
-    const profiles = {
-      1: { ambient: 0xdeefff, hemi: 0xb6e4ff, ground: 0x36475d, rim: 0x7dd3fc, fog: 0x15283a, ambientPower: 0.98, hemiPower: 1.40, rimPower: 1.25 },
-      2: { ambient: 0xfff0de, hemi: 0xffe3bd, ground: 0x514638, rim: 0xffd08a, fog: 0x302a26, ambientPower: 0.98, hemiPower: 1.36, rimPower: 1.35 },
-      3: { ambient: 0xddf5ff, hemi: 0xa2daef, ground: 0x314858, rim: 0x56d5e2, fog: 0x132e3a, ambientPower: 0.96, hemiPower: 1.38, rimPower: 1.40 },
-      4: { ambient: 0xdcebff, hemi: 0xa6cffd, ground: 0x2b3b54, rim: 0x7db7ff, fog: 0x15253c, ambientPower: 0.94, hemiPower: 1.32, rimPower: 1.35 },
-    } as const;
-    const profile = profiles[sector as keyof typeof profiles] || profiles[1];
-    this.ambientLight.color.setHex(profile.ambient);
-    this.ambientLight.intensity = profile.ambientPower;
-    this.hemiLight.color.setHex(profile.hemi);
-    this.hemiLight.groundColor.setHex(profile.ground);
-    this.hemiLight.intensity = profile.hemiPower;
-    this.rimLight.color.setHex(profile.rim);
-    this.rimLight.intensity = profile.rimPower;
-    if (this.scene.fog instanceof THREE.Fog) this.scene.fog.color.setHex(profile.fog);
+    this.applyWorldLightingProfile(getCampaignLightingProfile(sector));
+  }
+
+  private applySurvivalMapLighting(mapId: SurvivalMapId) {
+    this.applyWorldLightingProfile(getSurvivalLightingProfile(mapId));
   }
 
   private setupInput() {
@@ -1647,14 +1666,9 @@ export class PaleciakiGameEngine {
       // from soft shadow maps on a phone-sized render target.
       this.threeRenderer.shadowMap.enabled = false;
     }
-    this.applySectorLighting(4);
+    this.applySurvivalMapLighting(this.survivalMapId);
     this.buildSurvivalArenaExpansion(this.survivalMapId);
     this.applySceneTextureQuality();
-    if (this.scene.fog instanceof THREE.Fog) {
-      this.scene.fog.color.setHex(survivalMap.fogColor);
-      this.scene.fog.near = 42;
-      this.scene.fog.far = 112;
-    }
     this.survivalUpgradeStacks = {};
     this.survivalEvolutions.clear();
     this.survivalWeapons = [];
@@ -1722,6 +1736,8 @@ export class PaleciakiGameEngine {
   public startPvp(session: IPvpSession, localOperatorId: CharacterId, remoteOperatorId: CharacterId) {
     this.clearLevel();
     this.gameMode = 'pvp';
+    this.scene.background = new THREE.Color(PVP_LIGHTING_PROFILE.backgroundColor);
+    this.applyWorldLightingProfile(PVP_LIGHTING_PROFILE);
     this.pvpSession = session;
     this.pvpSlot = session.slot;
     this.lastPvpState = null;
@@ -1743,6 +1759,7 @@ export class PaleciakiGameEngine {
 
     this.rebuildPlayerMesh();
     this.buildPvpArena();
+    this.applySceneTextureQuality();
     this.buildPvpLocalMarker();
     this.buildRemotePlayer(remoteOperatorId);
 
@@ -2055,10 +2072,10 @@ export class PaleciakiGameEngine {
     floorTexture.repeat.set(5, 3);
     floorTexture.needsUpdate = true;
     const floorMat = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
+      color: 0xe7edf2,
       map: floorTexture,
-      roughness: 0.82,
-      metalness: 0.12,
+      roughness: 0.74,
+      metalness: 0.16,
     });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.position.set(0, -0.5, 0);
@@ -2647,17 +2664,33 @@ export class PaleciakiGameEngine {
     const crateTexture = createPvpObstacleTexture('crate');
     const barrierTexture = createPvpObstacleTexture('barrier');
     const wallTexture = createPvpObstacleTexture('wall');
-    const floorMaterial = new THREE.MeshStandardMaterial({ map: floorTexture, color: mapDefinition.floorColor, roughness: mapId === 'cold_storage' ? 0.42 : mapId === 'night_sorting' ? 0.34 : 0.62, metalness: mapId === 'container_terminal' ? 0.24 : mapId === 'night_sorting' ? 0.36 : 0.12 });
+    const surfaceProfile = getSurvivalSurfaceProfile(mapId);
+    const floorMaterial = new THREE.MeshStandardMaterial({
+      map: floorTexture, color: mapDefinition.floorColor,
+      roughness: surfaceProfile.floorRoughness, metalness: surfaceProfile.floorMetalness,
+    });
     applyIndustrialPbr(floorMaterial, 0.018);
-    const wallMaterial = new THREE.MeshStandardMaterial({ map: wallTexture, color: mapDefinition.wallColor, roughness: 0.72, metalness: mapId === 'container_terminal' ? 0.42 : 0.32 });
-    const trimMaterial = new THREE.MeshStandardMaterial({ color: mapDefinition.accentColor, roughness: 0.48, metalness: 0.24, emissive: mapDefinition.accentColor, emissiveIntensity: 0.10 });
-    const palletMaterial = new THREE.MeshStandardMaterial({ map: crateTexture, color: 0x76513a, roughness: 0.88 });
-    const crateMaterials = [
-      new THREE.MeshStandardMaterial({ map: crateTexture, color: 0x475569, roughness: 0.82 }),
-      new THREE.MeshStandardMaterial({ map: crateTexture, color: 0x854d0e, roughness: 0.78 }),
-      new THREE.MeshStandardMaterial({ map: crateTexture, color: 0x334155, roughness: 0.72 }),
-    ];
-    const barrierMaterial = new THREE.MeshStandardMaterial({ map: barrierTexture, color: 0xffffff, roughness: 0.72, metalness: 0.12 });
+    const wallMaterial = new THREE.MeshStandardMaterial({
+      map: wallTexture, color: mapDefinition.wallColor,
+      roughness: surfaceProfile.wallRoughness, metalness: surfaceProfile.wallMetalness,
+    });
+    const trimMaterial = new THREE.MeshStandardMaterial({
+      color: mapDefinition.accentColor,
+      roughness: surfaceProfile.trimRoughness,
+      metalness: surfaceProfile.trimMetalness,
+      emissive: mapDefinition.accentColor,
+      emissiveIntensity: surfaceProfile.trimEmissiveIntensity,
+    });
+    const palletMaterial = new THREE.MeshStandardMaterial({
+      map: crateTexture, color: surfaceProfile.palletColor, roughness: 0.86, metalness: 0.04,
+    });
+    const crateMaterials = surfaceProfile.crateColors.map((color, index) => new THREE.MeshStandardMaterial({
+      map: crateTexture, color, roughness: 0.78 + index * 0.035, metalness: index === 0 ? 0.08 : 0.04,
+    }));
+    const barrierMaterial = new THREE.MeshStandardMaterial({
+      map: barrierTexture, color: 0xffffff,
+      roughness: surfaceProfile.barrierRoughness, metalness: surfaceProfile.barrierMetalness,
+    });
 
     // Track map-owned GPU resources: all these textures/materials are shared by many map meshes.
     for (const material of [floorMaterial, wallMaterial, trimMaterial, palletMaterial, barrierMaterial, ...crateMaterials]) {
@@ -7400,7 +7433,7 @@ export class PaleciakiGameEngine {
         pmrem.compileEquirectangularShader();
         const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
         this.scene.environment = envTex;
-        (this.scene as any).environmentIntensity = 0.55;
+        (this.scene as any).environmentIntensity = this.environmentIntensity;
         pmrem.dispose();
         this.envMapInitialized = true;
       } catch (_e) {
@@ -7419,10 +7452,10 @@ export class PaleciakiGameEngine {
           1
         );
         const pulse = Math.sin(Math.PI * progress);
-        this.threeRenderer.toneMappingExposure = 1.08 + pulse * 0.075;
+        this.threeRenderer.toneMappingExposure = this.baseToneMappingExposure + pulse * 0.075;
       }
     } else if (this.threeRenderer) {
-      this.threeRenderer.toneMappingExposure = 1.08;
+      this.threeRenderer.toneMappingExposure = this.baseToneMappingExposure;
       this.bloomPulseDuration = 0.3;
     }
 
