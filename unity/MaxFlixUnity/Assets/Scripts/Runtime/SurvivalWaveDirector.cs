@@ -3,10 +3,9 @@ using UnityEngine;
 namespace MaxFlix.Unity.Runtime
 {
     /// <summary>
-    /// First playable Survival loop: source-accurate 60 s waves, weighted roster,
-    /// difficulty growth, device-aware live caps, 90 s horde rings and the
-    /// 5-minute rotating boss warning cadence. Full weapon/perk/reward systems
-    /// remain separate migration stages.
+    /// Survival wave loop: 60 s waves, weighted roster, map/difficulty modifiers,
+    /// device-aware live caps, 90 s horde rings and 5-minute major-boss warnings.
+    /// Weapon firing and level-up progression are hosted by sibling components.
     /// </summary>
     public sealed class SurvivalWaveDirector : MonoBehaviour
     {
