@@ -616,6 +616,8 @@ class PaleciakiScene extends xb.Script {
   private lastBossDefeated: boolean = false;
   private lastMode: 'campaign' | 'survival' | 'pvp' = 'survival';
   private masteryAwardedForRun = false;
+  // Invalidates deferred game-over UI work when a new run or title screen starts.
+  private gameSessionGeneration = 0;
   private renderAccountProgressionUi: () => void = () => {};
   private accountPvpAwardedForMatch = false;
   private accountCloudSyncInFlight: Promise<void> | null = null;
@@ -1217,6 +1219,7 @@ class PaleciakiScene extends xb.Script {
           this.resetTouchJoystick?.();
           setTouchControlsMode('hidden');
           const endedMode = this.engine.getGameMode();
+          const endedSessionGeneration = this.gameSessionGeneration;
           const endedOperatorId = this.engine.getCharacterDef().id;
           const endedScore = this.engine.getScore();
           const endedCoins = this.engine.getCollectedVipCount();
@@ -1301,6 +1304,14 @@ class PaleciakiScene extends xb.Script {
             }
           }
 
+
+          // An immediate Retry/menu exit may begin another session while this
+          // results task is deferred. Keep its earned reward, but never repaint
+          // an obsolete game-over modal over the new session.
+          if (
+            endedSessionGeneration !== this.gameSessionGeneration ||
+            this.engine.getGameState() !== 'gameover'
+          ) return;
 
           // The damage table is derived from actual enemy HP removed, not projectile counts.
           const damageTotal = document.getElementById('gameover-total-damage');
@@ -2448,7 +2459,9 @@ class PaleciakiScene extends xb.Script {
         this.masteryAwardedForRun = false;
         // Restore the Survival-specific ability label/icon after leaving PvP.
         updateCharacterUI(this.selectedCharId);
-        this.engine.startSurvival(selectedSurvivalMapId);
+        this.gameSessionGeneration++;
+        this.gameSessionGeneration++;
+      this.engine.startSurvival(selectedSurvivalMapId);
         // Re-assert visibility and exclusive mode after the scene transition.
         setTouchControlsMode('survival');
         setTouchControlsVisibility(true);
@@ -2568,7 +2581,10 @@ class PaleciakiScene extends xb.Script {
                 titleScreen.style.setProperty('display', 'flex', 'important');
                 titleScreen.style.setProperty('z-index', '1000000', 'important');
               }
-              this.engine.startTitle();
+              this.gameSessionGeneration++;
+              this.gameSessionGeneration++;
+      this.gameSessionGeneration++;
+    this.engine.startTitle();
             },
             onStartGame: () => {
               this.engine.setLevelVisible(true);
@@ -3843,6 +3859,7 @@ class PaleciakiScene extends xb.Script {
 
       this.engine.setManualAimMode(true);
 
+      this.gameSessionGeneration++;
       this.engine.startPvp(session, localOp, remoteOp);
       applyPvpAbilityPresentation(localOp);
       sound.playBossWarning();
