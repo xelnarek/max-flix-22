@@ -54,3 +54,23 @@ test('Survival and PvP use shared B4 surfaces; new Survival cargo has registered
   assert.match(game, /const survivalForkliftSign = createB4WallSprite\('forklift'/);
   assert.match(game, /const survivalWorkerSign = createB4WallSprite\('worker'/);
 });
+
+test('second B4 atlas is bundled, preloaded and used by four distinct enemy archetypes', async () => {
+  const [pack, assets, warehouse, atlas] = await Promise.all([
+    read('../src/b4AssetPack.ts'),
+    read('../src/assets.ts'),
+    read('../src/warehouseAssets.ts'),
+    read('../src/visuals/b4-enemy-atlas.svg'),
+  ]);
+  assert.match(pack, /enemyAtlasUrl from '\.\/visuals\/b4-enemy-atlas\.svg\?url'/);
+  assert.match(pack, /enemyAtlas: enemyAtlasUrl/);
+  assert.match(pack, /enemyAtlas: 'enemyAtlas'/);
+  assert.match(assets, /preloadB4VisualTexture\('enemyAtlas'\)/);
+  for (const kind of ['customer', 'inspector', 'handlowiec', 'monter']) {
+    assert.match(pack, new RegExp(`\\b${kind}: \\{ atlas: 'enemyAtlas'`));
+    assert.ok(warehouse.includes(`createB4SpriteDecal('${kind}'`), 'missing NPC patch: ' + kind);
+  }
+  assert.match(pack, /spriteTextureViews\.get\(kind\)/);
+  assert.match(atlas, /linearGradient/);
+  assert.match(atlas, /inspector|customer|handlowiec|monter/i);
+});
