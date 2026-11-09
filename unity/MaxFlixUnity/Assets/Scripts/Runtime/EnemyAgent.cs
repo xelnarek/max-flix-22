@@ -48,6 +48,12 @@ namespace MaxFlix.Unity.Runtime
         public float CurrentHealth { get { return _health; } }
         public float MaxHealth { get { return _maxHealth; } }
 
+        public static EnemyAgent[] GetCachedAgents()
+        {
+            RefreshSeparationIndex();
+            return _separationCache;
+        }
+
         public void Initialize(PlayerController target, EnemyKind kind, float healthMultiplier = 1f, float speedMultiplier = 1f, float abilityRateMultiplier = 1f)
         {
             _controller = GetComponent<CharacterController>();
