@@ -132,6 +132,7 @@ export function clampTouchJoystickOrigin(input: {
   fireButtonSize?: number;
   fireGap?: number;
   topHudClearance?: number;
+  reserveFireButton?: boolean;
 }): { x: number; y: number } {
   const geometry = calculateTouchControlGeometry(input);
   const width = Math.max(1, finiteOr(input.viewportWidth, 1));
@@ -143,7 +144,8 @@ export function clampTouchJoystickOrigin(input: {
   const fireButtonSize = clamp(finiteOr(input.fireButtonSize, height <= 430 ? 68 : 78), 60, 88);
   const fireGap = Math.max(0, finiteOr(input.fireGap, 10));
   const topHudClearance = Math.max(0, finiteOr(input.topHudClearance, 84));
-  const minimumCenterY = input.mode === 'pvp'
+  const reserveFireButton = input.reserveFireButton ?? input.mode === 'pvp';
+  const minimumCenterY = reserveFireButton
     ? Math.max(
         geometry.joystickZone.top + radius,
         topHudClearance + fireButtonSize + fireGap + radius,
