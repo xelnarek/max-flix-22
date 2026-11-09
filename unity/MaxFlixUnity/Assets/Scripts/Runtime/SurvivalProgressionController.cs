@@ -330,9 +330,9 @@ namespace MaxFlix.Unity.Runtime
             if (excluded != null) pool.RemoveAll(card => excluded.Contains(card.Id));
             if (pool.Count == 0)
             {
-                AddFallbackCard(pool, "damage", "REZERWA AMUNICJI", "+12% obrażeń broni Survival.", "◆");
-                AddFallbackCard(pool, "rapid", "REZERWA PRZEŁADOWANIA", "Przyspiesza cykl strzałów broni Survival.", "⚡");
-                AddFallbackCard(pool, "boots", "REZERWA MOBILNOŚCI", "Zwiększa prędkość poruszania się.", "➤");
+                AddFallbackCard(pool, "fallback_repair", "ZESTAW RATUNKOWY", "+2 zdrowia i jedna blokada następnego trafienia.", "+");
+                AddFallbackCard(pool, "fallback_credits", "PREMIA ZA ZMIANĘ", "+250 punktów i +25 monet.", "¤");
+                AddFallbackCard(pool, "fallback_overdrive", "OVERDRIVE 12 S", "Przez 12 sekund broń zadaje 25% więcej obrażeń i przeładowuje się szybciej.", "⚡");
             }
 
             Shuffle(pool);
@@ -382,7 +382,7 @@ namespace MaxFlix.Unity.Runtime
         {
             pool.Add(new SurvivalUpgradeCard
             {
-                Id = id + ":fallback:" + _level,
+                Id = id,
                 Title = title,
                 Description = description,
                 Icon = icon,
@@ -543,6 +543,26 @@ namespace MaxFlix.Unity.Runtime
 
         private void ApplyCard(SurvivalUpgradeCard card)
         {
+            if (card.Id == "fallback_repair")
+            {
+                _player.RestoreHealth(2f);
+                _player.GrantSurvivalShield(1);
+                _hud?.SetStatus("ZESTAW RATUNKOWY • +2 HP • OSŁONA");
+                return;
+            }
+            if (card.Id == "fallback_credits")
+            {
+                GameSession.Current.Score += 250;
+                GameSession.Current.Coins += 25;
+                _hud?.SetStatus("PREMIA ZA ZMIANĘ • +250 PKT • +25 MONET");
+                return;
+            }
+            if (card.Id == "fallback_overdrive")
+            {
+                _weapons.GrantOverdrive(12f, 1.25f, 0.82f);
+                return;
+            }
+
             if (card.Id.StartsWith("weapon_unlock:", StringComparison.Ordinal))
             {
                 if (SurvivalWeaponCatalog.TryParse(card.Id.Substring("weapon_unlock:".Length), out SurvivalWeaponKind weapon))
@@ -561,8 +581,6 @@ namespace MaxFlix.Unity.Runtime
             else
             {
                 string passiveId = card.Id;
-                int fallbackSeparator = passiveId.IndexOf(":fallback:", StringComparison.Ordinal);
-                if (fallbackSeparator >= 0) passiveId = passiveId.Substring(0, fallbackSeparator);
                 int stacks = GetPassiveStacks(passiveId) + 1;
                 _passiveStacks[passiveId] = stacks;
                 float strength = card.Strength;
