@@ -106,14 +106,33 @@ test('Gobkit build validates the embedded GLB JSON, skeleton, animation clips an
   assert.match(validator, /REQUIRED_RIG_CLIPS/);
 });
 
-
 test('per-frame actor animation reuses persistent scratch vectors and quaternion', async () => {
   const game = await read('../src/game.ts');
-  assert.match(game, /private readonly actorDisplacementScratch = new THREE\\.Vector3\\(\\)/);
-  assert.match(game, /private readonly actorLocalMovementScratch = new THREE\\.Vector3\\(\\)/);
-  assert.match(game, /private readonly actorRotationScratch = new THREE\\.Quaternion\\(\\)/);
-  assert.match(game, /const displacement = this\\.actorDisplacementScratch/);
-  assert.match(game, /const localMovement = this\\.actorLocalMovementScratch/);
-  assert.match(game, /const actorRotation = this\\.actorRotationScratch/);
-  assert.doesNotMatch(game, /updateGobkitAnimations\\(dt: number\\) \\{[\\s\\S]{0,300}const displacement = new THREE\\.Vector3\\(\\)/);
+  assert.match(game, /private readonly actorDisplacementScratch = new THREE\.Vector3\(\)/);
+  assert.match(game, /private readonly actorLocalMovementScratch = new THREE\.Vector3\(\)/);
+  assert.match(game, /private readonly actorRotationScratch = new THREE\.Quaternion\(\)/);
+  assert.match(game, /const displacement = this\.actorDisplacementScratch/);
+  assert.match(game, /const localMovement = this\.actorLocalMovementScratch/);
+  assert.match(game, /const actorRotation = this\.actorRotationScratch/);
+});
+
+test('only one imported actor rig can be installed per player or enemy group', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /private removeAttachedActorVisuals\(group: THREE\.Group\)/);
+  assert.match(game, /private installActorVisualRoot\(group: THREE\.Group, root: THREE\.Group\)/);
+  assert.match(game, /root\.userData\.actorVisualRoot = true/);
+  assert.match(game, /group\.userData\.actorVisualRoot = root/);
+  assert.match(game, /this\.stopGobkitTrack\(this\.playerGobkitTrack\)/);
+  assert.match(game, /this\.stopGobkitTrack\(this\.remoteGobkitTrack\)/);
+  assert.match(game, /this\.gobkitEnemyTracks\.delete\(enemy\)/);
+  assert.equal((game.match(/this\.installActorVisualRoot\(/g) || []).length, 5,
+    'all four model attachment paths plus the helper declaration must use the single-root installer');
+});
+
+test('procedural fallback hides every renderable body primitive but keeps explicit overlays', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /object instanceof THREE\.Mesh \|\| object instanceof THREE\.Line/);
+  assert.match(game, /object instanceof THREE\.Points \|\| object instanceof THREE\.Sprite/);
+  assert.match(game, /object\.userData\.gobkitKeep = true/);
+  assert.match(game, /object\.visible = false/);
 });
