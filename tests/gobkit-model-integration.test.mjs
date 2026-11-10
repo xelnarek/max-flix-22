@@ -126,7 +126,7 @@ test('only one imported actor rig can be installed per player or enemy group', a
   assert.match(game, /this\.stopGobkitTrack\(this\.remoteGobkitTrack\)/);
   assert.match(game, /this\.gobkitEnemyTracks\.delete\(enemy\)/);
   assert.equal((game.match(/this\.installActorVisualRoot\(/g) || []).length, 4,
-    'all four model attachment paths plus the helper declaration must use the single-root installer');
+    'all four model attachment paths must use the single-root installer');
 });
 
 
@@ -151,4 +151,28 @@ test('procedural fallback hides every renderable body primitive but keeps explic
   assert.match(game, /object instanceof THREE\.Points \|\| object instanceof THREE\.Sprite/);
   assert.match(game, /object\.userData\.gobkitKeep = true/);
   assert.match(game, /object\.visible = false/);
+});
+
+
+test('MakeHuman movement selects stable directional clips and keeps one-shot clips out of speed scaling', async () => {
+  const locomotion = await import('../src/makeHumanLocomotion.ts');
+  assert.equal(locomotion.chooseMakeHumanLocomotion(0, 0, false), 'Idle');
+  assert.equal(locomotion.chooseMakeHumanLocomotion(0, 5.2, false), 'Run');
+  assert.equal(locomotion.chooseMakeHumanLocomotion(0, -1.1, false), 'WalkBackward');
+  assert.equal(locomotion.chooseMakeHumanLocomotion(2.0, 0.4, false), 'StrafeLeft');
+  assert.equal(locomotion.chooseMakeHumanLocomotion(-2.0, 0.4, false), 'StrafeRight');
+  for (const action of ['Walk', 'Run', 'WalkBackward', 'StrafeLeft', 'StrafeRight']) {
+    assert.equal(locomotion.isMakeHumanVelocityAction(action), true);
+  }
+  for (const action of ['Idle', 'Fall', 'Jump', 'Land', 'Attack', 'Hit', 'Death', 'Special']) {
+    assert.equal(locomotion.isMakeHumanVelocityAction(action), false);
+  }
+});
+
+test('Death has higher animation priority than Hit and overrides an active hit reaction', async () => {
+  const animation = await import('../src/gobkitAnimation.ts');
+  assert.equal(animation.getGobkitActionPriority('Hit'), 4);
+  assert.equal(animation.getGobkitActionPriority('Death'), 5);
+  assert.equal(animation.shouldKeepGobkitAction(0.25, 4, 5), false);
+  assert.equal(animation.isGobkitOneShotAction('Death'), true);
 });
