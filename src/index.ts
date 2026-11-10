@@ -2683,6 +2683,7 @@ class PaleciakiScene extends xb.Script {
 
     const zoomSlider = document.getElementById('cam-zoom-slider') as HTMLInputElement | null;
     if (zoomSlider) {
+      zoomSlider.value = this.engine.getCamZoomFactor().toFixed(2);
       zoomSlider.addEventListener('input', (e) => {
         const val = parseFloat((e.target as HTMLInputElement).value);
         this.engine.setCamZoomFactor(val);
