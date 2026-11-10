@@ -2026,6 +2026,13 @@ class PaleciakiScene extends xb.Script {
         card.style.setProperty('--operator-accent', `#${accent}`);
         if (roleLabel) roleLabel.textContent = definition.className;
         if (identityLabel) identityLabel.textContent = definition.combatIdentity;
+        let modelLabel = card.querySelector<HTMLElement>('.char-card-model-label');
+        if (!modelLabel) {
+          modelLabel = document.createElement('span');
+          modelLabel.className = 'char-card-model-label';
+          card.appendChild(modelLabel);
+        }
+        modelLabel.textContent = 'MODEL 3D • ' + (definition.visualModelName || 'MODEL OPERATORA');
         card.setAttribute('aria-pressed', String(cardId === id));
         card.setAttribute('aria-label', `${definition.name} — ${definition.role}`);
         if (badge) badge.innerHTML = operatorPortrait(cardId);
