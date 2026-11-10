@@ -1581,6 +1581,19 @@ export class PaleciakiGameEngine {
     this.playGobkitAction(track, resolvedName, track.oneShotRemaining, true);
   }
 
+  private disposeUntrackedActorVisualRoot(root: THREE.Object3D): void {
+    root.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+      // Gobkit clones own their geometry; MakeHuman body/wearable geometry and
+      // equipment geometry are cache-shared and must remain available to peers.
+      if (object.userData.gobkitAsset === true) object.geometry.dispose();
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      for (const material of materials) {
+        if (material.userData.makeHumanShared !== true) material.dispose();
+      }
+    });
+  }
+
   /**
    * A character/enemy group may contain the old procedural body plus one imported
    * rig. Replace old imported roots before hiding fallback geometry so async asset
@@ -1607,7 +1620,10 @@ export class PaleciakiGameEngine {
     for (const child of [...group.children]) {
       const isActorRoot = child.userData.actorVisualRoot === true ||
         /^(makehuman|gobkit)-(operator|enemy)-/.test(child.name);
-      if (isActorRoot) child.removeFromParent();
+      if (isActorRoot) {
+        this.disposeUntrackedActorVisualRoot(child);
+        child.removeFromParent();
+      }
     }
     delete group.userData.actorVisualRoot;
   }
