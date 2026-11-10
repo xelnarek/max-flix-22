@@ -20,6 +20,8 @@ export interface CharacterDef {
   className: string;
   combatIdentity: string;
   movementIdentity: string;
+  /** Asset-backed 3D appearance shown on the operator selection card. */
+  visualModelName?: string;
   basicAttackDamageMultiplier: number;
   damageTakenMultiplier: number;
   abilityName: string;
