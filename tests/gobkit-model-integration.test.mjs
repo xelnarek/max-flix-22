@@ -74,8 +74,8 @@ test('the build downloader validates CC0, rigging, animation clips and GLB binar
   assert.match(script, /model\.rigged !== true/);
   assert.match(script, /'Idle', 'Walk', 'Run', 'Death', 'Hit'/);
   assert.match(script, /validateGlbAsset\(bytes, model\.id, model\.clipNames\)/);
-  assert.match(pkg, /"prebuild": "node scripts\/fetch-gobkit-assets\.mjs --strict && node scripts\/fetch-makehuman-assets\.mjs --strict && node scripts\/fetch-polyhaven-assets\.mjs --strict"/);
-  assert.match(pkg, /"predev": "node scripts\/fetch-gobkit-assets\.mjs && node scripts\/fetch-makehuman-assets\.mjs && node scripts\/fetch-polyhaven-assets\.mjs"/);
+  assert.match(pkg, /"prebuild": "node scripts\\/fetch-gobkit-assets\\.mjs --strict && node scripts\\/fetch-polyhaven-assets\\.mjs --strict"/);
+  assert.match(pkg, /"predev": "node scripts\\/fetch-gobkit-assets\\.mjs && node scripts\\/fetch-polyhaven-assets\\.mjs"/);
 });
 
 test('playable operators retain the original stylized models in Survival and both PvP slots', async () => {
