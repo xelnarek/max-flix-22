@@ -101,7 +101,7 @@ test('playable operator models use refined curved surfaces at close camera range
 });
 
 
-test('main-menu navigation and the single Survival launch action use consistent inline vector icons', async () => {
+test('main-menu navigation, Survival and PvP use separate vector-icon entry actions', async () => {
   const html = await read('../index.html');
   const codexStart = html.indexOf('data-tab="tab-field-guide"');
   const settingsStart = html.indexOf('data-tab="tab-settings"');
@@ -109,9 +109,11 @@ test('main-menu navigation and the single Survival launch action use consistent 
   assert.ok(codexStart >= 0 && html.slice(codexStart, codexStart + 500).includes('<svg'));
   assert.ok(settingsStart >= 0 && html.slice(settingsStart, settingsStart + 700).includes('<svg'));
   const menuIcons = [...html.matchAll(/<span class="tab-icon"[^>]*>([\s\S]*?)<\/span>/g)].map((match) => match[1]);
-  assert.equal(menuIcons.length, 10, 'every top-level menu destination needs an icon');
-  assert.ok(menuIcons.every((icon) => icon.includes('<svg')), 'all ten menu tabs use consistent vector icons');
+  assert.equal(menuIcons.length, 11, 'every top-level menu destination needs an icon');
+  assert.ok(menuIcons.every((icon) => icon.includes('<svg')), 'all eleven menu tabs use consistent vector icons');
   assert.ok(survivalStart >= 0 && html.slice(survivalStart, survivalStart + 800).includes('menu-cta-icon'));
+  assert.ok(html.includes('id="btn-open-pvp"') && html.includes('data-tab="tab-pvp"'));
+  assert.ok(html.includes('id="tab-pvp"') && html.includes('RĘCZNE CELOWANIE AKTYWNE'));
   assert.doesNotMatch(html, /btn-start-game|btn-open-story-modal|btn-open-cinematic-intro/);
 });
 
