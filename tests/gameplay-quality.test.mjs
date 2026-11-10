@@ -1535,3 +1535,25 @@ test('untagged projectiles are attributed to abilities while primary operator at
   assert.doesNotMatch(game, /p\.weaponProjectile \? 'ability' : 'basic_attack'/);
   assert.match(game, /damageSource: 'basic_attack'/);
 });
+
+
+test('Survival wave director reuses candidate buffers and avoids callback churn in per-enemy updates', async () => {
+  const game = await read('../src/game.ts');
+  const start = game.indexOf('private updateEnemies(dt: number)');
+  const end = game.indexOf('private spawnPenaltyNotice', start);
+  assert.ok(start >= 0 && end > start, 'wave director method boundaries must remain stable');
+  const method = game.slice(start, end);
+  assert.match(game, /private readonly waveDirectorCandidateScratch: \{ enemy: EnemyItem; dist: number \}\[\] = \[\]/);
+  assert.match(game, /private readonly waveDirectorCoalitionCandidateScratch: EnemyItem\[\] = \[\]/);
+  assert.match(game, /private readonly waveDirectorEnemyByIdScratch = new Map<string, EnemyItem>\(\)/);
+  assert.match(method, /const activeCandidates = this\.waveDirectorCandidateScratch/);
+  assert.match(method, /activeCandidates\.length = 0/);
+  assert.match(method, /const coalitionCandidates = this\.waveDirectorCoalitionCandidateScratch/);
+  assert.match(method, /coalitionCandidates\.length = 0/);
+  assert.match(method, /const activeById = this\.waveDirectorEnemyByIdScratch/);
+  assert.match(method, /activeById\.clear\(\)/);
+  assert.doesNotMatch(method, /new Map\(activeCandidates\.map/);
+  assert.match(method, /for \(const e of this\.enemies\)/);
+  assert.doesNotMatch(method, /this\.enemies\.forEach\(/);
+  assert.match(method, /for \(let wheelIndex = 0; wheelIndex < e\.bikeWheels\.length; wheelIndex\+\+\)/);
+});
