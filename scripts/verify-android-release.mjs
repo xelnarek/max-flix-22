@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { appendFileSync, createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
@@ -18,11 +18,18 @@ const releaseApk = releaseApkCandidates
 const outputs = {
   appBundle: resolve('android/app/build/outputs/bundle/release/app-release.aab'),
   debugApk: resolve('android/app/build/outputs/apk/debug/app-debug.apk'),
-  releaseApk: releaseApk || resolve('android/app/build/outputs/apk/release', releaseApkCandidates[0]),
+  // A release APK is useful only when it is signed with the configured upload
+  // key. Do not build or distribute a large unsigned APK that cannot be
+  // installed on a device or uploaded to a store.
+  ...(signingConfigured && releaseApk ? { releaseApk } : {}),
 };
-const missing = Object.entries(outputs).filter(([, path]) => !existsSync(path));
+const requiredOutputs = Object.entries(outputs);
+const missing = requiredOutputs.filter(([, path]) => !existsSync(path));
 if (missing.length) {
   throw new Error('Missing Android build outputs: ' + missing.map(([name]) => name).join(', '));
+}
+if (signingConfigured && !releaseApk) {
+  throw new Error('Upload signing is configured, but no signed release APK was produced.');
 }
 
 function gradleNumber(source, variable) {
@@ -51,8 +58,12 @@ function verify(command, args, label) {
   return output;
 }
 
-function sha256(path) {
-  return createHash('sha256').update(readFileSync(path)).digest('hex');
+async function sha256(path) {
+  const hash = createHash('sha256');
+  // Stream large APK/AAB files so verification does not buffer a full 150+ MB
+  // package in memory just to calculate its digest.
+  for await (const chunk of createReadStream(path)) hash.update(chunk);
+  return hash.digest('hex');
 }
 
 const bundleVerification = verify('jarsigner', ['-verify', '-certs', outputs.appBundle], 'AAB signature');
@@ -71,15 +82,15 @@ if (signingConfigured) {
   verify(apksigner, ['verify', '--verbose', outputs.releaseApk], 'Release APK signature');
 }
 
-const artifacts = Object.fromEntries(Object.entries(outputs).map(([name, path]) => [
+const artifacts = Object.fromEntries(await Promise.all(Object.entries(outputs).map(async ([name, path]) => [
   name,
   {
     file: path.replace(process.cwd() + '/', ''),
     bytes: statSync(path).size,
-    sha256: sha256(path),
+    sha256: await sha256(path),
     signed: name === 'appBundle' ? bundleSigned : (name === 'debugApk' || signingConfigured),
   },
-]));
+])));
 
 const report = {
   schemaVersion: 1,
@@ -111,6 +122,7 @@ const summary = [
   '| Version | ' + versionName + ' (' + versionCode + ') |',
   '| Android SDK | compile ' + compileSdk + ' / target ' + targetSdk + ' / min ' + minSdk + ' |',
   '| AAB signature | ' + (bundleSigned ? 'verified' : 'unsigned') + ' |',
+  '| Release APK | ' + (artifacts.releaseApk ? 'built and signed' : 'not built (no upload key configured)') + ' |',
   '| Google Play upload-ready | ' + (report.build.playStoreUploadReady ? 'yes' : 'no — signing key required') + ' |',
   '',
   'SHA-256:',
