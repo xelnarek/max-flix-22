@@ -876,6 +876,8 @@ export class PaleciakiGameEngine {
   private remoteGobkitSequence = 0;
   private requestedGobkitEnemies = new WeakSet<EnemyItem>();
   private gobkitEnemyTracks = new Map<EnemyItem, GobkitAnimationTrack>();
+  /** Reused membership set for the per-frame animation cleanup pass. */
+  private readonly activeEnemyAnimationScratch = new Set<EnemyItem>();
   private leftLeg: THREE.Group | null = null;
   private rightLeg: THREE.Group | null = null;
   private leftArm: THREE.Group | null = null;
@@ -2056,7 +2058,9 @@ export class PaleciakiGameEngine {
     advanceActor(this.playerGobkitTrack, this.playerGroup?.position || this.playerPos, playerAirborne);
     advanceActor(this.remoteGobkitTrack, this.remotePlayerGroup?.position || this.playerPos, remoteAirborne);
 
-    const activeEnemies = new Set(this.enemies);
+    const activeEnemies = this.activeEnemyAnimationScratch;
+    activeEnemies.clear();
+    for (const enemy of this.enemies) activeEnemies.add(enemy);
     for (const enemy of this.enemies) {
       const humanStyle = MAKEHUMAN_ENEMY_STYLES[enemy.type];
       const modelId = ENEMY_GOBKIT_MODELS[enemy.type];
@@ -2120,6 +2124,7 @@ export class PaleciakiGameEngine {
       this.stopGobkitTrack(track);
       this.gobkitEnemyTracks.delete(enemy);
     }
+    activeEnemies.clear();
   }
 
     private rebuildPlayerMesh() {
