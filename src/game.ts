@@ -12257,9 +12257,9 @@ export class PaleciakiGameEngine {
     for (const e of this.enemies) {
       if (e.state === 'defeated') {
         this.updateDefeatedEnemyVisual(e, dt);
-        return;
+        continue;
       }
-      if (!e.mesh) return;
+      if (!e.mesh) continue;
 
       if ((e.aiCommandBoostTimer ?? 0) > 0) {
         e.aiCommandBoostTimer = Math.max(0, (e.aiCommandBoostTimer ?? 0) - dt);
@@ -12286,7 +12286,7 @@ export class PaleciakiGameEngine {
       // Distance culling: skip heavy updates for distant non-boss enemies
       if (distToPlayer > 26.0 && !isMajorSurvivalBossType(e.type) && e.type !== 'sebix_m') {
         if (e.mesh.visible) e.mesh.visible = false;
-        return;
+        continue;
       }
       if (!e.mesh.visible) e.mesh.visible = true;
 
@@ -12496,7 +12496,7 @@ export class PaleciakiGameEngine {
           e.state = 'searching';
           e.searchTimer = 2.5;
         }
-        return;
+        continue;
       }
 
       if (this.gameMode === 'survival') this.updateSurvivalCommanderPulse(e, dt);
