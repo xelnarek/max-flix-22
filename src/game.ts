@@ -881,6 +881,8 @@ export class PaleciakiGameEngine {
   private readonly enemySpatialIndex = new EnemySpatialIndex<EnemyItem>(4.0);
   /** Per-enemy wall-clock gate prevents contact attacks from restarting their animation every frame. */
   private readonly enemyAttackAnimationUntil = new WeakMap<EnemyItem, number>();
+  /** Keeps a short attack window when an enemy strikes before its async rig finishes loading. */
+  private readonly enemyPendingAttackUntil = new WeakMap<EnemyItem, number>();
   private enemyProjectiles: {
     mesh: THREE.Mesh;
     vel: THREE.Vector3;
@@ -1589,6 +1591,31 @@ export class PaleciakiGameEngine {
     group.userData.actorVisualRoot = root;
   }
 
+  private resumePlayerAnimationAfterModelAttach(track: GobkitAnimationTrack): void {
+    if (this.state !== 'playing') return;
+    // Preserve attacks and damage reactions that happened while the rig was loading.
+    if (this.attackSwingTimer > 0) {
+      this.requestGobkitAction(track, 'Attack', this.attackSwingTimer);
+    } else if (this.invulnerableTimer > 0) {
+      this.requestGobkitAction(track, 'Hit', Math.min(0.34, this.invulnerableTimer));
+    }
+  }
+
+  private resumeEnemyAnimationAfterModelAttach(enemy: EnemyItem, track: GobkitAnimationTrack): void {
+    const now = performance.now();
+    const pendingAttackUntil = this.enemyPendingAttackUntil.get(enemy) ?? 0;
+    if (pendingAttackUntil > now) {
+      this.enemyPendingAttackUntil.delete(enemy);
+      this.requestGobkitAction(track, 'Attack', (pendingAttackUntil - now) / 1000);
+      return;
+    }
+    this.enemyPendingAttackUntil.delete(enemy);
+    const hitRemaining = Math.max(enemy.hitReactTimer || 0, enemy.stunTimer || 0);
+    if (hitRemaining > 0.015 || enemy.state === 'stunned') {
+      this.requestGobkitAction(track, 'Hit', hitRemaining > 0 ? hitRemaining : 0.28);
+    }
+  }
+
   private hideProceduralVisuals(group: THREE.Group, preserved: readonly THREE.Object3D[]) {
     for (const object of preserved) object.traverse((child) => { child.userData.gobkitKeep = true; });
     group.traverse((object) => {
@@ -1788,7 +1815,10 @@ export class PaleciakiGameEngine {
       this.installActorVisualRoot(group, actor.root);
       const track = this.createMakeHumanAnimationTrack(actor.root, actor.clips, group.position, actor.style);
       if (remote) this.remoteGobkitTrack = track;
-      else this.playerGobkitTrack = track;
+      else {
+        this.playerGobkitTrack = track;
+        this.resumePlayerAnimationAfterModelAttach(track);
+      }
       console.info('[MakeHuman] Loaded operator:', id, style);
     } catch (error) {
       if (!isCurrent() || group.parent !== this.levelRoot) return;
@@ -1818,7 +1848,9 @@ export class PaleciakiGameEngine {
       enemy.armL = undefined;
       enemy.armR = undefined;
       enemy.head = undefined;
-      this.gobkitEnemyTracks.set(enemy, this.createMakeHumanAnimationTrack(actor.root, actor.clips, enemy.mesh.position, actor.style));
+      const track = this.createMakeHumanAnimationTrack(actor.root, actor.clips, enemy.mesh.position, actor.style);
+      this.gobkitEnemyTracks.set(enemy, track);
+      this.resumeEnemyAnimationAfterModelAttach(enemy, track);
     } catch (error) {
       if (!this.enemies.includes(enemy) || !enemy.mesh ||
           enemy.mesh.parent !== this.levelRoot || enemy.state === 'defeated') return;
@@ -1848,7 +1880,10 @@ export class PaleciakiGameEngine {
       this.installActorVisualRoot(group, root);
       const track = this.createGobkitAnimationTrack(gltf, root, group.position);
       if (remote) this.remoteGobkitTrack = track;
-      else this.playerGobkitTrack = track;
+      else {
+        this.playerGobkitTrack = track;
+        this.resumePlayerAnimationAfterModelAttach(track);
+      }
     } catch (error) {
       console.warn('[Gobkit] Operator model unavailable; keeping procedural fallback:', modelId, error);
     }
@@ -1878,7 +1913,9 @@ export class PaleciakiGameEngine {
       enemy.armL = undefined;
       enemy.armR = undefined;
       enemy.head = undefined;
-      this.gobkitEnemyTracks.set(enemy, this.createGobkitAnimationTrack(gltf, root, enemy.mesh.position));
+      const track = this.createGobkitAnimationTrack(gltf, root, enemy.mesh.position);
+      this.gobkitEnemyTracks.set(enemy, track);
+      this.resumeEnemyAnimationAfterModelAttach(enemy, track);
     } catch (error) {
       console.warn('[Gobkit] Enemy model unavailable; keeping procedural fallback:', modelId, enemy.type, error);
     }
@@ -11732,7 +11769,13 @@ export class PaleciakiGameEngine {
     const now = performance.now();
     if (now < (this.enemyAttackAnimationUntil.get(enemy) ?? 0)) return;
     this.enemyAttackAnimationUntil.set(enemy, now + 720);
-    this.requestGobkitAction(this.gobkitEnemyTracks.get(enemy) || null, 'Attack', durationSeconds);
+    const track = this.gobkitEnemyTracks.get(enemy) || null;
+    if (track) {
+      this.enemyPendingAttackUntil.delete(enemy);
+      this.requestGobkitAction(track, 'Attack', durationSeconds);
+    } else {
+      this.enemyPendingAttackUntil.set(enemy, now + durationSeconds * 1000);
+    }
   }
 
   private updateEnemyHitReaction(enemy: EnemyItem, dt: number): void {
