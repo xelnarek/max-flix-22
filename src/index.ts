@@ -2721,8 +2721,8 @@ class PaleciakiScene extends xb.Script {
             this.engine.getGameMode() === 'pvp') return;
         const distance = getPinchDistance();
         if (lastPinchDistance > 0 && distance > 0) {
-          const delta = THREE.MathUtils.clamp((lastPinchDistance - distance) * 0.0035, -0.12, 0.12);
-          if (Math.abs(delta) >= 0.006) {
+          const delta = THREE.MathUtils.clamp((lastPinchDistance - distance) * 0.0028, -0.08, 0.08);
+          if (Math.abs(delta) >= 0.004) {
             const nextZoom = this.engine.getCamZoomFactor() + delta;
             this.engine.setCamZoomFactor(nextZoom);
             if (zoomSlider) zoomSlider.value = this.engine.getCamZoomFactor().toFixed(2);
