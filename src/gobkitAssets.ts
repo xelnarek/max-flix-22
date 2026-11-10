@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkinnedScene } from 'three/addons/utils/SkeletonUtils.js';
 import type { CharacterId, EnemyType } from './types.ts';
+import { ENEMY_VISUAL_PROFILES } from './enemyVisualProfiles.ts';
 
 export type GobkitModelId =
   | 'storemanager' | 'firechief' | 'stockclerk' | 'baggagehandler' | 'securityguard'
@@ -44,14 +45,14 @@ export const CHARACTER_GOBKIT_MODELS: Readonly<Record<CharacterId, GobkitModelId
  * Bosman) keep their bespoke caricature models from warehouseAssets.ts instead
  * of being flattened into another generic humanoid rig.
  */
-export const ENEMY_GOBKIT_MODELS: Readonly<Partial<Record<EnemyType, GobkitModelId>>> = Object.freeze({
-  zombie_pracownik: 'stitchedbrute',
-  mutant_gamma_forklift: 'bloodironjuggernaut',
-  radioactive_pip: 'nightwitch',
-  cyber_salesman: 'androidcommander',
-  walczak: 'werewolfcaptain',
-  krol_leto: 'bloodironjuggernaut',
-});
+const enemyGobkitModelEntries = Object.entries(ENEMY_VISUAL_PROFILES)
+  .flatMap(([enemyType, profile]) => profile.gobkitModel
+    ? [[enemyType, profile.gobkitModel] as const]
+    : []);
+
+export const ENEMY_GOBKIT_MODELS: Readonly<Partial<Record<EnemyType, GobkitModelId>>> = Object.freeze(
+  Object.fromEntries(enemyGobkitModelEntries) as Partial<Record<EnemyType, GobkitModelId>>,
+);
 
 type LoadedGobkitModel = Awaited<ReturnType<GLTFLoader['loadAsync']>>;
 const loader = new GLTFLoader();
