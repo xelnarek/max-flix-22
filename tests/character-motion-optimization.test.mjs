@@ -24,15 +24,15 @@ test('actor animation updates reuse persistent scratch transforms per frame', as
   const start = game.indexOf('private updateGobkitAnimations(dt: number)');
   const end = game.indexOf('private ', start + 12);
   const method = game.slice(start, end);
-  assert.match(game, /private readonly actorDisplacementScratch = new THREE\\.Vector3\\(\\)/);
-  assert.match(game, /private readonly actorLocalMovementScratch = new THREE\\.Vector3\\(\\)/);
-  assert.match(game, /private readonly actorRotationScratch = new THREE\\.Quaternion\\(\\)/);
-  assert.match(method, /const displacement = this\\.actorDisplacementScratch/);
-  assert.match(method, /const localMovement = this\\.actorLocalMovementScratch/);
-  assert.match(method, /const actorRotation = this\\.actorRotationScratch/);
-  assert.match(method, /displacement\\.copy\\(position\\)\\.sub\\(track\\.lastPosition\\)/);
-  assert.match(method, /parent\\.getWorldQuaternion\\(actorRotation\\)\\.invert\\(\\)/);
-  assert.doesNotMatch(method, /new THREE\\.(?:Vector3|Quaternion)\\(/,
+  assert.match(game, /private readonly actorDisplacementScratch = new THREE\.Vector3\(\)/);
+  assert.match(game, /private readonly actorLocalMovementScratch = new THREE\.Vector3\(\)/);
+  assert.match(game, /private readonly actorRotationScratch = new THREE\.Quaternion\(\)/);
+  assert.match(method, /const displacement = this\.actorDisplacementScratch/);
+  assert.match(method, /const localMovement = this\.actorLocalMovementScratch/);
+  assert.match(method, /const actorRotation = this\.actorRotationScratch/);
+  assert.match(method, /displacement\.copy\(position\)\.sub\(track\.lastPosition\)/);
+  assert.match(method, /parent\.getWorldQuaternion\(actorRotation\)\.invert\(\)/);
+  assert.doesNotMatch(method, /new THREE\.(?:Vector3|Quaternion)\(/,
     'animation updates must not allocate transform objects per frame or actor');
 });
 
