@@ -37,23 +37,20 @@ export const CHARACTER_GOBKIT_MODELS: Readonly<Record<CharacterId, GobkitModelId
   piotr: 'securityguard',
 });
 
+/**
+ * Imported GLB rigs are reserved for creatures, mutants and machine-like
+ * threats where a deliberately non-human silhouette is useful. Human warehouse
+ * roles (architect, inspector, courier, salesperson, customer, technician and
+ * Bosman) keep their bespoke caricature models from warehouseAssets.ts instead
+ * of being flattened into another generic humanoid rig.
+ */
 export const ENEMY_GOBKIT_MODELS: Readonly<Partial<Record<EnemyType, GobkitModelId>>> = Object.freeze({
-  customer: 'shoplifter',
-  architect: 'officemanager',
-  kurier: 'foodcourier',
-  handlowiec: 'salesrep',
-  inspector: 'hazmattech',
-  serwisant: 'forcibleentryfirefighter',
-  monter: 'forcibleentryfirefighter',
   zombie_pracownik: 'stitchedbrute',
-  sztaplar_szalony: 'baggagehandler',
-  elite_walczak_guard: 'securityguard',
   mutant_gamma_forklift: 'bloodironjuggernaut',
   radioactive_pip: 'nightwitch',
   cyber_salesman: 'androidcommander',
   walczak: 'werewolfcaptain',
   krol_leto: 'bloodironjuggernaut',
-  bosman_krakow: 'bloodirongrunt',
 });
 
 type LoadedGobkitModel = Awaited<ReturnType<GLTFLoader['loadAsync']>>;
