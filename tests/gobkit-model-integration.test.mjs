@@ -73,7 +73,7 @@ test('the build downloader validates CC0, rigging, animation clips and GLB binar
   assert.match(script, /CC0 1\.0/);
   assert.match(script, /model\.rigged !== true/);
   assert.match(script, /'Idle', 'Walk', 'Run', 'Death', 'Hit'/);
-  assert.match(script, /subarray\(0, 4\)\.toString\('ascii'\) !== 'glTF'/);
+  assert.match(script, /validateGlbAsset\(bytes, model\.id, model\.clipNames\)/);
   assert.match(pkg, /"prebuild": "node scripts\/fetch-gobkit-assets\.mjs --strict"/);
   assert.match(pkg, /"predev": "node scripts\/fetch-gobkit-assets\.mjs"/);
 });
