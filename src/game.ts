@@ -11125,9 +11125,11 @@ export class PaleciakiGameEngine {
         this.playerLandingTimer = Math.max(0, this.playerLandingTimer - dt);
         // Compact landing compression with bent knees and a brief arm brace.
         // The pose decays from the rig's cached rest state; no accumulated drift.
-        this.playerGroup.scale.x *= 1 + 0.035 * landingPulse;
-        this.playerGroup.scale.y *= 1 - 0.14 * landingPulse;
-        this.playerGroup.scale.z *= 1 + 0.035 * landingPulse;
+        const landingSquashY = THREE.MathUtils.clamp(motionProfile.landingSquashY, 0.70, 0.95);
+        const landingSquashXZ = 1 / Math.sqrt(landingSquashY);
+        this.playerGroup.scale.x *= 1 + (landingSquashXZ - 1) * landingPulse;
+        this.playerGroup.scale.y *= 1 - (1 - landingSquashY) * landingPulse;
+        this.playerGroup.scale.z *= 1 + (landingSquashXZ - 1) * landingPulse;
         this.playerGroup.rotation.x += 0.14 * landingPulse;
         this.playerGroup.position.y -= 0.045 * landingPulse;
         setProceduralLimbPose(this.leftLeg, 0.42 * landingPulse);
