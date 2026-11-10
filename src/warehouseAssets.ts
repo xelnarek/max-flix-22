@@ -1039,6 +1039,19 @@ export function createCharacterModel(def: CharacterDef): {
   vest.scale.set(profile.torsoWidth * 1.02, profile.torsoHeight, 0.74);
   vest.position.y = 0.56;
   group.add(vest);
+  // Five individual embroidered role patches keep operator identities readable
+  // in the menu and at normal gameplay zoom without altering the rig or hitbox.
+  const operatorBadgeKind = ({
+    marcin: 'operator01',
+    grzesiek: 'operator02',
+    dawid: 'operator03',
+    mateusz: 'operator04',
+    piotr: 'operator05',
+  } as const)[def.id];
+  const operatorPatch = createB4SpriteDecal(operatorBadgeKind, 0.19, 0.13);
+  operatorPatch.position.set(-0.095, 0.57, 0.174);
+  operatorPatch.renderOrder = 4;
+  group.add(operatorPatch);
 
   // Functional silhouette upgrades: padded shoulders, harness, radio, belt and ID plate.
   const harness = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.34, 0.30), armorMat);
@@ -2051,6 +2064,15 @@ export function createWarehouseRack(width = 4.0, height = 3.8, depth = 1.2): THR
     group.add(post);
   });
 
+  // Front-facing bay identity plates improve navigation and add readable
+  // industrial detail; they are visual-only and do not change rack collision.
+  const bayLabelA = createB4SpriteDecal('rackA', 0.34, 0.25);
+  bayLabelA.position.set(-halfW + 0.16, height * 0.76, halfD + 0.075);
+  const bayLabelB = createB4SpriteDecal('rackB', 0.34, 0.25);
+  bayLabelB.position.set(halfW - 0.16, height * 0.76, halfD + 0.075);
+  bayLabelA.renderOrder = bayLabelB.renderOrder = 4;
+  group.add(bayLabelA, bayLabelB);
+
   // Crossbeams & Decking
   const levels = [1.2, 2.5, 3.7];
   levels.forEach((lvlY) => {
@@ -2216,7 +2238,12 @@ export function createDeliveryVan(): THREE.Group {
  */
 export function createHighBayLamp(): THREE.Group {
   const group = new THREE.Group();
-  const metalMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.3 });
+  const metalMat = new THREE.MeshStandardMaterial({
+    map: getB4VisualTexture('lamp'),
+    color: 0xffffff,
+    metalness: 0.72,
+    roughness: 0.34,
+  });
   const emissiveLed = new THREE.MeshBasicMaterial({ color: 0xfffbeb });
 
   // UFO Heatsink fixture
@@ -2225,6 +2252,24 @@ export function createHighBayLamp(): THREE.Group {
   led.position.y = -0.1;
   fixture.add(led);
   group.add(fixture);
+
+  // Machined outer rim and recessed diffuser lift the fixture beyond a flat
+  // puck while preserving the existing single-light, low-draw-call setup.
+  const housingRim = new THREE.Mesh(
+    new THREE.TorusGeometry(0.56, 0.035, 8, 28),
+    metalMat,
+  );
+  housingRim.rotation.x = Math.PI / 2;
+  housingRim.position.y = -0.01;
+  group.add(housingRim);
+
+  const diffuserRim = new THREE.Mesh(
+    new THREE.TorusGeometry(0.43, 0.018, 6, 24),
+    new THREE.MeshBasicMaterial({ color: 0xe0f2fe, transparent: true, opacity: 0.82 }),
+  );
+  diffuserRim.rotation.x = Math.PI / 2;
+  diffuserRim.position.y = -0.105;
+  group.add(diffuserRim);
 
   // Hanging steel chain
   const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 3.0), metalMat);
@@ -2374,6 +2419,9 @@ export function createWalczakBossModel(): {
   body.position.y = 0.58;
   body.castShadow = true;
   group.add(body);
+  const walczakPatch = createB4SpriteDecal('walczak', 0.20, 0.18);
+  walczakPatch.position.set(0, 0.59, 0.151);
+  group.add(walczakPatch);
 
   // White shirt collar & red tie
   const shirt = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.02), new THREE.MeshBasicMaterial({ color: 0xffffff }));
@@ -3424,6 +3472,9 @@ export function createEliteGuardEnemyModel(): {
   body.position.y = 0.65;
   body.castShadow = true;
   group.add(body);
+  const eliteGuardPatch = createB4SpriteDecal('eliteGuard', 0.21, 0.19);
+  eliteGuardPatch.position.set(0, 0.65, 0.151);
+  group.add(eliteGuardPatch);
 
   // Helmet with Visor
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), skinMat);
@@ -4283,6 +4334,9 @@ export function createKrolLetoBossModel(): {
   body.position.y = 0.78;
   body.castShadow = true;
   group.add(body);
+  const krolPatch = createB4SpriteDecal('krolLeto', 0.18, 0.16);
+  krolPatch.position.set(0.17, 0.86, 0.151);
+  group.add(krolPatch);
 
   // White Shirt Front & Red Tie
   const shirt = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.58, 0.02), shirtMat);
@@ -4688,6 +4742,9 @@ export function createBosmanKrakowBossModel(): {
   body.position.y = 0.85;
   body.castShadow = true;
   group.add(body);
+  const bosmanPatch = createB4SpriteDecal('bosman', 0.20, 0.18);
+  bosmanPatch.position.set(0.16, 0.84, 0.171);
+  group.add(bosmanPatch);
 
   // White Shirt & Gold B4 HQ Badge
   const shirt = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.62, 0.02), shirtMat);
