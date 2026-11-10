@@ -2690,6 +2690,61 @@ class PaleciakiScene extends xb.Script {
       });
     }
 
+    // Two-finger pinch zoom works directly on the 3D playfield. It is intentionally
+    // disabled in PvP, where the camera auto-frames both duelists and their arena.
+    const pinchPointers = new Map<number, { x: number; y: number }>();
+    let lastPinchDistance = 0;
+    const getPinchDistance = (): number => {
+      const points = [...pinchPointers.values()];
+      if (points.length < 2) return 0;
+      return Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+    };
+    const resetPinchZoom = () => {
+      pinchPointers.clear();
+      lastPinchDistance = 0;
+    };
+    const pinchTarget = document.getElementById('game-canvas-container');
+    if (pinchTarget) {
+      pinchTarget.addEventListener('pointerdown', (event: PointerEvent) => {
+        if (event.pointerType !== 'touch' || this.engine.getGameState() !== 'playing' ||
+            this.engine.getGameMode() === 'pvp') return;
+        pinchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        if (pinchPointers.size === 2) lastPinchDistance = getPinchDistance();
+      }, { passive: true });
+
+      window.addEventListener('pointermove', (event: PointerEvent) => {
+        const point = pinchPointers.get(event.pointerId);
+        if (!point) return;
+        point.x = event.clientX;
+        point.y = event.clientY;
+        if (pinchPointers.size < 2 || this.engine.getGameState() !== 'playing' ||
+            this.engine.getGameMode() === 'pvp') return;
+        const distance = getPinchDistance();
+        if (lastPinchDistance > 0 && distance > 0) {
+          const delta = THREE.MathUtils.clamp((lastPinchDistance - distance) * 0.0035, -0.12, 0.12);
+          if (Math.abs(delta) >= 0.006) {
+            const nextZoom = this.engine.getCamZoomFactor() + delta;
+            this.engine.setCamZoomFactor(nextZoom);
+            if (zoomSlider) zoomSlider.value = this.engine.getCamZoomFactor().toFixed(2);
+          }
+        }
+        lastPinchDistance = distance;
+        if (event.cancelable) event.preventDefault();
+      }, { passive: false });
+
+      const finishPinchPointer = (event: PointerEvent) => {
+        if (!pinchPointers.delete(event.pointerId)) return;
+        lastPinchDistance = pinchPointers.size === 2 ? getPinchDistance() : 0;
+      };
+      window.addEventListener('pointerup', finishPinchPointer, { passive: true });
+      window.addEventListener('pointercancel', finishPinchPointer, { passive: true });
+      window.addEventListener('blur', resetPinchZoom);
+      window.addEventListener('pagehide', resetPinchZoom);
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) resetPinchZoom();
+      });
+    }
+
     const handleCameraToggle = () => {
       const mode = this.engine.toggleCameraMode();
       if (mode === 'tpp') {
