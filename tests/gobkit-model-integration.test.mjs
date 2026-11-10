@@ -114,6 +114,23 @@ test('player hit reaction is independent from the attack timer and both use pivo
   assert.doesNotMatch(game, /const armSwing = Math\.sin\(e\.walkCycle\)/);
 });
 
+test('defeated enemies remain visible through a short death animation before cleanup', async () => {
+  const [game, types] = await Promise.all([
+    read('../src/game.ts'),
+    read('../src/types.ts'),
+  ]);
+  assert.match(types, /deathVisualTimer\?: number/);
+  assert.match(types, /deathVisualRest\?: \{/);
+  assert.match(game, /private beginEnemyDeathVisual\(enemy: EnemyItem\)/);
+  assert.match(game, /private updateDefeatedEnemyVisual\(enemy: EnemyItem, dt: number\)/);
+  assert.match(game, /e\.state === 'defeated'\)\s*\{\s*this\.updateDefeatedEnemyVisual\(e, dt\)/);
+  assert.match(game, /this\.beginEnemyDeathVisual\(e\)/);
+  assert.match(game, /mesh\.visible = true/);
+  assert.match(game, /mesh\.visible = false/);
+  assert.match(game, /this\.stopGobkitTrack\(track\)/);
+  assert.match(game, /const duration = isBoss \? 1\.18 : 0\.82/);
+});
+
 test('procedural enemy rigs receive authored wind-up, strike and hit poses', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /enemy\.attackPoseDuration = poseDuration/);
