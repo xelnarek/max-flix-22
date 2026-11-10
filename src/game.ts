@@ -505,6 +505,8 @@ export class PaleciakiGameEngine {
   private playerHitReactTimer = 0;
   private playerHitReactDuration = 0.36;
   private playerHitReactDirection: -1 | 1 = 1;
+  private playerLandingTimer = 0;
+  private readonly playerLandingDuration = 0.28;
   private abilityCooldownState: AbilityCooldownState = createAbilityCooldown(0);
   private abilityCooldownUiTimer = 0;
   private abilityCooldownLastProgress = -1;
@@ -2152,6 +2154,7 @@ export class PaleciakiGameEngine {
     this.specialSwingTimer = 0;
     this.playerHitReactTimer = 0;
     this.playerHitReactDuration = 0.36;
+    this.playerLandingTimer = 0;
     this.attackCooldownTimer = 0;
     this.playerGobkitSequence++;
     this.stopGobkitTrack(this.playerGobkitTrack);
@@ -11022,9 +11025,7 @@ export class PaleciakiGameEngine {
     }
 
     if (!wasGrounded && landed && this.playerGroup) {
-      const squashY = motionProfile.landingSquashY;
-      const squashXZ = 1 / Math.sqrt(squashY);
-      this.playerGroup.scale.set(squashXZ, squashY, squashXZ);
+      this.playerLandingTimer = this.playerLandingDuration;
       const landingColor = motionProfile.footstepColor;
       this.spawnDust(this.playerPos.x - 0.16, this.playerPos.y, this.playerPos.z, landingColor);
       this.spawnDust(this.playerPos.x + 0.16, this.playerPos.y, this.playerPos.z, landingColor);
@@ -11063,6 +11064,23 @@ export class PaleciakiGameEngine {
       const idleBob = Math.sin(idlePhase * 2) * motionProfile.idleBob * (1 - motionRatio);
       this.playerGroup.position.y += walkBob + idleBob;
       this.playerGroup.scale.lerp(PLAYER_UNIT_SCALE, dt * 8);
+      if (this.playerLandingTimer > 0 && this.leftLeg && this.rightLeg && this.leftArm && this.rightArm) {
+        const landingPulse = THREE.MathUtils.clamp(this.playerLandingTimer / this.playerLandingDuration, 0, 1);
+        this.playerLandingTimer = Math.max(0, this.playerLandingTimer - dt);
+        // Compact landing compression with bent knees and a brief arm brace.
+        // The pose decays from the rig's cached rest state; no accumulated drift.
+        this.playerGroup.scale.x *= 1 + 0.035 * landingPulse;
+        this.playerGroup.scale.y *= 1 - 0.14 * landingPulse;
+        this.playerGroup.scale.z *= 1 + 0.035 * landingPulse;
+        this.playerGroup.rotation.x += 0.14 * landingPulse;
+        this.playerGroup.position.y -= 0.045 * landingPulse;
+        setProceduralLimbPose(this.leftLeg, 0.42 * landingPulse);
+        setProceduralLimbPose(this.rightLeg, 0.36 * landingPulse);
+        setProceduralLimbPose(this.leftArm, -0.24 * landingPulse, 0.08 * landingPulse);
+        setProceduralLimbPose(this.rightArm, -0.24 * landingPulse, -0.08 * landingPulse);
+        if (this.playerHead) this.playerHead.rotation.x += 0.055 * landingPulse;
+        if (this.playerAccessory) this.playerAccessory.rotation.x += 0.12 * landingPulse;
+      }
       if (this.playerHead) {
         this.playerHead.rotation.x = airborne ? motionProfile.jumpLean * -0.35 : Math.sin(idlePhase * 0.5) * 0.018 * (1 - motionRatio);
       }
