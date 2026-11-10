@@ -14,3 +14,16 @@ test('PNG signature validation rejects HTML error pages and truncated responses'
   assert.equal(isPng(Buffer.from('<html>404</html>')), false);
   assert.equal(isPng(Buffer.alloc(8)), false);
 });
+
+
+test('Survival and Campaign high-bay structures use the shared CC0 steel PBR set', async () => {
+  const game = await (await import('node:fs/promises')).readFile(
+    new URL('../src/game.ts', import.meta.url), 'utf8',
+  );
+  assert.match(game, /applyPolyHavenPbrMaps\(steel, 'metal_plate_02'/);
+  assert.match(game, /applyPolyHavenPbrMaps\(pipeMaterial, 'metal_plate_02'/);
+  assert.match(game, /applyPolyHavenPbrMaps\(deck, 'metal_plate_02'/);
+  assert.match(game, /applyPolyHavenPbrMaps\(floorMaterial, 'concrete_floor_worn_001'/);
+  assert.match(game, /applyPolyHavenPbrMaps\(wallMaterial, 'factory_wall'/);
+  assert.match(game, /applyPolyHavenPbrMaps\(barrierMaterial, 'metal_plate_02'/);
+});

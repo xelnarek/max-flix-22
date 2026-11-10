@@ -4360,11 +4360,13 @@ export class PaleciakiGameEngine {
   private buildSurvivalArenaDressing(mapId: SurvivalMapId = this.survivalMapId) {
     const mapDefinition = getSurvivalMapDefinition(mapId);
     const steel = new THREE.MeshStandardMaterial({ color: mapId === 'cold_storage' ? 0x8bb9c9 : mapId === 'night_sorting' ? 0x54365e : 0x3b4f60, metalness: 0.72, roughness: 0.42 });
+    applyPolyHavenPbrMaps(steel, 'metal_plate_02', 2, 2, 0.48);
     const orange = new THREE.MeshStandardMaterial({
       color: mapDefinition.accentColor, metalness: 0.38, roughness: 0.54,
       emissive: mapDefinition.accentColor, emissiveIntensity: 0.12,
     });
     const deck = new THREE.MeshStandardMaterial({ color: 0x647383, metalness: 0.58, roughness: 0.58 });
+    applyPolyHavenPbrMaps(deck, 'metal_plate_02', 2, 2, 0.36);
     const cargoMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.84, metalness: 0.06 });
     const dummy = new THREE.Object3D();
 
@@ -5634,8 +5636,10 @@ export class PaleciakiGameEngine {
    */
   private buildCampaignHighBayDressing() {
     const steel = new THREE.MeshStandardMaterial({ color: 0x3b5061, metalness: 0.68, roughness: 0.48 });
+    applyPolyHavenPbrMaps(steel, 'metal_plate_02', 3, 2, 0.48);
     const safetyOrange = new THREE.MeshStandardMaterial({ color: 0xe99a32, metalness: 0.32, roughness: 0.52, emissive: 0x693a0d, emissiveIntensity: 0.12 });
     const pipeMaterial = new THREE.MeshStandardMaterial({ color: 0x738392, metalness: 0.76, roughness: 0.3 });
+    applyPolyHavenPbrMaps(pipeMaterial, 'metal_plate_02', 4, 1, 0.28);
     const lampMaterial = new THREE.MeshStandardMaterial({ color: 0xdbeafe, roughness: 0.38, emissive: 0x91c9e8, emissiveIntensity: 0.42 });
     const dummy = new THREE.Object3D();
     const bayXs: number[] = [];
