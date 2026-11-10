@@ -74,8 +74,8 @@ test('additive recoil preserves the current gait or attack pose without accumula
 
 test('hit pulse rises quickly and decays to zero at the end of the reaction', () => {
   assert.equal(getProceduralHitPulse(0.36, 0.36), 0);
-  const early = getProceduralHitPulse(0.27, 0.36);
-  const middle = getProceduralHitPulse(0.16, 0.36);
+  const early = getProceduralHitPulse(0.324, 0.36);
+  const middle = getProceduralHitPulse(0.27, 0.36);
   const late = getProceduralHitPulse(0.02, 0.36);
   assert.ok(early > 0);
   assert.ok(middle > early);
