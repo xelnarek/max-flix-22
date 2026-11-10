@@ -200,15 +200,22 @@ test('touch Survival HUD keeps the zoom slider and 3D camera switch accessible',
   assert.ok(html.indexOf('visual-polish.css') < html.indexOf('hud-layout.css'), 'final touch HUD override must load after legacy visual-polish rules');
 });
 
-test('camera zoom controls stay synchronized with manual zoom and viewport defaults', async () => {
-  const game = await read('../src/game.ts');
+test('camera zoom controls stay synchronized, bounded and smooth across viewport modes', async () => {
+  const [game, html, app] = await Promise.all([
+    read('../src/game.ts'), read('../index.html'), read('../src/index.ts')
+  ]);
   assert.match(game, /private syncCameraZoomControl\(\)/);
-  assert.match(game, /this\.camZoomFactor = Math\.min\(2\.2, this\.camZoomFactor \+ 0\.15\)/);
-  assert.match(game, /if \(!Number\.isFinite\(val\)\) return/);
+  assert.match(game, /this\.camZoomFactor = Math\.min\(1\.72, this\.camZoomFactor \+ 0\.12\)/);
+  assert.match(game, /this\.camZoomFactor = Math\.max\(0\.58, this\.camZoomFactor - 0\.12\)/);
+  assert.match(game, /this\.camZoomFactor = THREE\.MathUtils\.clamp\(val, 0\.58, 1\.72\)/);
   assert.match(game, /this\.hasManualCameraZoom = true/);
+  assert.match(game, /this\.currentCamOffset\.x = THREE\.MathUtils\.damp\(this\.currentCamOffset\.x, targetOffsetX, 6\.6, dt\)/);
   assert.match(game, /if \(!this\.hasManualCameraZoom\)/);
   assert.match(game, /this\.syncCameraZoomControl\(\)/);
+  assert.match(html, /id="cam-zoom-slider" min="0\.58" max="1\.72" step="0\.02" value="0\.94"/);
+  assert.match(app, /zoomSlider\.value = this\.engine\.getCamZoomFactor\(\)\.toFixed\(2\)/);
 });
+
 test('Survival menu copy stays synchronized with the actual 60-second wave clock', async () => {
   const [game, html] = await Promise.all([read('../src/game.ts'), read('../index.html')]);
   assert.match(game, /const nextWave = 1 \+ Math\.floor\(this\.survivalElapsed \/ 60\)/);
