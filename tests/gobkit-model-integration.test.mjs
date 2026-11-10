@@ -75,7 +75,7 @@ test('the build downloader validates CC0, rigging, animation clips and GLB binar
   assert.match(script, /'Idle', 'Walk', 'Run', 'Death', 'Hit'/);
   assert.match(script, /validateGlbAsset\(bytes, model\.id, model\.clipNames\)/);
   assert.match(pkg, /"prebuild": "node scripts\/fetch-gobkit-assets\.mjs --strict && node scripts\/fetch-makehuman-assets\.mjs --strict"/);
-  assert.match(pkg, /"predev": "node scripts\/fetch-gobkit-assets\.mjs"/);
+  assert.match(pkg, /"predev": "node scripts\/fetch-gobkit-assets\.mjs && node scripts\/fetch-makehuman-assets\.mjs"/);
 });
 
 test('Survival actors and both PvP operator slots use the new models without changing combat APIs', async () => {
