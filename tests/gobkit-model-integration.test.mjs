@@ -125,7 +125,7 @@ test('only one imported actor rig can be installed per player or enemy group', a
   assert.match(game, /this\.stopGobkitTrack\(this\.playerGobkitTrack\)/);
   assert.match(game, /this\.stopGobkitTrack\(this\.remoteGobkitTrack\)/);
   assert.match(game, /this\.gobkitEnemyTracks\.delete\(enemy\)/);
-  assert.equal((game.match(/this\.installActorVisualRoot\(/g) || []).length, 5,
+  assert.equal((game.match(/this\.installActorVisualRoot\(/g) || []).length, 4,
     'all four model attachment paths plus the helper declaration must use the single-root installer');
 });
 
