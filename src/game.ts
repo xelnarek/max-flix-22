@@ -1931,12 +1931,13 @@ export class PaleciakiGameEngine {
       else if ((enemy.hitReactTimer || 0) > 0.015 || enemy.state === 'stunned' || enemy.stunTimer > 0) desired = 'Hit';
       else if (enemy.state === 'charging') desired = 'Run';
       else {
-        const displacement = enemy.mesh.position.clone().sub(track.lastPosition);
+        displacement.copy(enemy.mesh.position).sub(track.lastPosition);
         displacement.y = 0;
         const speed = displacement.length() / Math.max(0.001, dt);
         if (track.sharedGeometry) {
-          const actorRotation = enemy.mesh.getWorldQuaternion(new THREE.Quaternion()).invert();
-          const localMovement = displacement.applyQuaternion(actorRotation);
+          actorRotation.identity();
+          enemy.mesh.getWorldQuaternion(actorRotation).invert();
+          localMovement.copy(displacement).applyQuaternion(actorRotation);
           desired = chooseMakeHumanLocomotion(
             localMovement.x / Math.max(0.001, dt),
             localMovement.z / Math.max(0.001, dt),
