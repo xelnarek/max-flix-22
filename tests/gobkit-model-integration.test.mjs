@@ -199,3 +199,14 @@ test('all imported humanoid rigs keep root motion aligned with physics hitboxes'
   assert.match(game, /const safeClip = cloneRootMotionFreeClip\(clip\)/);
   assert.match(game, /const clip = cloneRootMotionFreeClip\(sourceClip\)/);
 });
+
+
+test('late enemy model loads cannot attach to a recycled mesh or changed archetype', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /const mesh = enemy\.mesh;\s+const requestedType = enemy\.type;/);
+  assert.match(game, /enemy\.mesh !== mesh \|\| enemy\.type !== requestedType/);
+  assert.match(game, /mesh\.parent !== this\.levelRoot \|\| enemy\.state === 'defeated'/);
+  assert.match(game, /const largeEnemy = requestedType === 'walczak'/);
+  assert.match(game, /this\.createMakeHumanAnimationTrack\(actor\.root, actor\.clips, mesh\.position/);
+  assert.match(game, /this\.createGobkitAnimationTrack\(gltf, root, mesh\.position/);
+});
