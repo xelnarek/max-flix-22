@@ -230,3 +230,12 @@ test('ranged and special enemy attacks request visible attack poses at projectil
       'attack animation must be requested before: ' + marker);
   }
 });
+
+
+test('orphan imported rigs are cleaned without disposing shared MakeHuman assets', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /private disposeUntrackedActorVisualRoot\(root: THREE\.Object3D\)/);
+  assert.match(game, /if \(object\.userData\.gobkitAsset === true\) object\.geometry\.dispose\(\)/);
+  assert.match(game, /material\.userData\.makeHumanShared !== true/);
+  assert.match(game, /this\.disposeUntrackedActorVisualRoot\(child\)/);
+});
