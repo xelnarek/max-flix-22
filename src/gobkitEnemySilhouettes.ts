@@ -141,10 +141,69 @@ function addCaricature(root: THREE.Group, type: EnemyType): void {
       addMesh(root, new THREE.BoxGeometry(0.12, 0.13, 0.025), wound, [0.17, 0.70, 0.16], [0, 0, 0.28]);
       break;
     }
+    case 'mutant_gamma_forklift': {
+      // Forklift mutant: a heavy steel front bumper and twin projecting forks.
+      addMesh(root, new THREE.BoxGeometry(0.62, 0.21, 0.34), metal, [0, 0.42, 0.12]);
+      addMesh(root, new THREE.BoxGeometry(0.11, 0.09, 0.70), yellow, [-0.19, 0.25, 0.45]);
+      addMesh(root, new THREE.BoxGeometry(0.11, 0.09, 0.70), yellow, [0.19, 0.25, 0.45]);
+      addMesh(root, new THREE.CylinderGeometry(0.105, 0.105, 0.045, 10), red, [0, 1.28, -0.04]);
+      addMesh(root, new THREE.CylinderGeometry(0.07, 0.07, 0.045, 10), yellow, [0, 1.31, -0.04]);
+      break;
+    }
+    case 'radioactive_pip': {
+      const glow = new THREE.MeshBasicMaterial({ color: 0xa3e635 });
+      addMesh(root, new THREE.SphereGeometry(0.265, 12, 8), yellow, [0, 1.02, 0]);
+      addMesh(root, new THREE.BoxGeometry(0.24, 0.12, 0.06), charcoal, [0, 0.92, 0.22]);
+      addMesh(root, new THREE.SphereGeometry(0.045, 9, 7), glow, [-0.075, 1.02, 0.225]);
+      addMesh(root, new THREE.SphereGeometry(0.045, 9, 7), glow, [0.075, 1.02, 0.225]);
+      addMesh(root, new THREE.BoxGeometry(0.34, 0.40, 0.20), navy, [0, 0.72, -0.22]);
+      addMesh(root, new THREE.TorusGeometry(0.13, 0.035, 7, 14), yellow, [0, 0.73, -0.12], [Math.PI / 2, 0, 0]);
+      break;
+    }
+    case 'cyber_salesman': {
+      const neon = new THREE.MeshBasicMaterial({ color: 0x22d3ee });
+      addMesh(root, new THREE.BoxGeometry(0.36, 0.12, 0.09), charcoal, [0, 1.00, 0.16]);
+      addMesh(root, new THREE.BoxGeometry(0.15, 0.045, 0.02), neon, [-0.08, 1.00, 0.212]);
+      addMesh(root, new THREE.BoxGeometry(0.15, 0.045, 0.02), neon, [0.08, 1.00, 0.212]);
+      addMesh(root, new THREE.BoxGeometry(0.42, 0.28, 0.08), metal, [0, 0.71, 0.16]);
+      addMesh(root, new THREE.BoxGeometry(0.24, 0.12, 0.025), neon, [0, 0.72, 0.212]);
+      addMesh(root, new THREE.BoxGeometry(0.21, 0.07, 0.12), charcoal, [0, 0.54, -0.20]);
+      break;
+    }
+    case 'walczak': {
+      // Werewolf foreman: exaggerated shoulder mass, muzzle and claws.
+      addMesh(root, new THREE.SphereGeometry(0.22, 10, 8), charcoal, [0, 1.02, 0.12]);
+      addMesh(root, new THREE.ConeGeometry(0.08, 0.25, 6), charcoal, [-0.14, 1.29, 0.02], [0, 0, -0.25]);
+      addMesh(root, new THREE.ConeGeometry(0.08, 0.25, 6), charcoal, [0.14, 1.29, 0.02], [0, 0, 0.25]);
+      addMesh(root, new THREE.BoxGeometry(0.62, 0.26, 0.30), navy, [0, 0.77, 0]);
+      addMesh(root, new THREE.ConeGeometry(0.065, 0.24, 6), white, [-0.32, 0.35, 0.19], [0, 0, 0.2]);
+      addMesh(root, new THREE.ConeGeometry(0.065, 0.24, 6), white, [0.32, 0.35, 0.19], [0, 0, -0.2]);
+      break;
+    }
+    case 'krol_leto': {
+      addMesh(root, new THREE.CylinderGeometry(0.23, 0.18, 0.10, 8), gold, [0, 1.25, 0]);
+      for (let i = 0; i < 5; i++) {
+        addMesh(root, new THREE.ConeGeometry(0.035, 0.18, 5), gold, [-0.16 + i * 0.08, 1.38, 0]);
+      }
+      addMesh(root, new THREE.BoxGeometry(0.52, 0.12, 0.29), metal, [0, 0.77, 0]);
+      addMesh(root, new THREE.CylinderGeometry(0.035, 0.035, 0.60, 8), white, [0.34, 0.78, 0.10]);
+      addMesh(root, new THREE.SphereGeometry(0.12, 9, 7), makeMaterial(0x67e8f9, 0.26), [0.34, 1.12, 0.10]);
+      break;
+    }
+    case 'bosman_krakow': {
+      addMesh(root, new THREE.CylinderGeometry(0.21, 0.19, 0.09, 12), navy, [0, 1.19, 0]);
+      addMesh(root, new THREE.BoxGeometry(0.30, 0.035, 0.16), navy, [0, 1.14, 0.12]);
+      addMesh(root, new THREE.BoxGeometry(0.45, 0.14, 0.075), gold, [0, 0.92, 0.16]);
+      addMesh(root, new THREE.BoxGeometry(0.12, 0.12, 0.03), white, [0, 0.92, 0.21]);
+      addMesh(root, new THREE.CylinderGeometry(0.025, 0.032, 0.10, 8), gold, [0.13, 0.70, 0.19], [Math.PI / 2, 0, 0]);
+      break;
+    }
     default:
       if (type === 'sztaplar_szalony' || type === 'elite_walczak_guard') {
-        addMesh(root, new THREE.BoxGeometry(0.46, 0.13, 0.24), yellow, [0, 0.49, 0]);
-        addMesh(root, new THREE.BoxGeometry(0.12, 0.17, 0.05), metal, [0.22, 0.78, 0.14]);
+        addMesh(root, new THREE.BoxGeometry(0.62, 0.23, 0.32), yellow, [0, 0.76, 0]);
+        addMesh(root, new THREE.BoxGeometry(0.18, 0.22, 0.09), metal, [-0.32, 0.79, 0.02]);
+        addMesh(root, new THREE.BoxGeometry(0.18, 0.22, 0.09), metal, [0.32, 0.79, 0.02]);
+        addMesh(root, new THREE.BoxGeometry(0.30, 0.065, 0.04), charcoal, [0, 1.02, 0.18]);
       }
       break;
   }
