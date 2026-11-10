@@ -12313,6 +12313,7 @@ export class PaleciakiGameEngine {
               }
             } else {
               e.specialActionTimer = cooldown;
+              this.requestEnemyAttackAnimation(e, 0.52);
               this.spawnPenaltyNotice(e.x, e.y + 1.2, e.z);
             }
           }
@@ -12382,6 +12383,7 @@ export class PaleciakiGameEngine {
               e.chargeTimer = undefined;
               e.chargeDir = undefined;
               e.specialActionTimer = cooldown;
+              this.requestEnemyAttackAnimation(e, 0.56);
               this.spawnDyscyplinarkaNotice(e.x, e.y + 1.2, e.z, lockedDirection);
               this.emitFloatingToast('⚖️ WYROK WYSTRZELONY — UNIKAJ LINII!', e.x, e.y + 1.5, e.z, 'damage');
             }
@@ -12484,6 +12486,7 @@ export class PaleciakiGameEngine {
               e.chargeTimer -= dt;
               if (e.chargeTimer <= 0) {
                 const lockedDirection = e.chargeDir;
+                this.requestEnemyAttackAnimation(e, 0.46);
                 this.spawnSparkZapProjectile(e.x, e.y + 0.75, e.z, lockedDirection);
                 this.emitFloatingToast('⚡ AGV-9: IMPULS OCHRONY!', e.x, e.y + 1.3, e.z, 'damage');
                 e.specialActionTimer = 6.4;
@@ -12501,12 +12504,14 @@ export class PaleciakiGameEngine {
             e.specialActionTimer = 4.35 + Math.random() * 1.25;
             e.mesh.rotation.y = Math.atan2(dx, dz);
             e.mesh.rotation.x = -0.08;
+            this.requestEnemyAttackAnimation(e, 0.42);
             this.spawnPomazaniecLollipop(e.x, e.y + 1.03, e.z, this.playerPos.x, this.playerPos.z, e.aiSlot || 0);
           }
         } else if ((e.type === 'handlowiec' || e.type === 'przedstawiciel_włoski') && e.specialActionTimer !== undefined) {
           e.specialActionTimer -= dt * survivalAbilityRate;
           if (e.specialActionTimer <= 0 && distToPlayer < 9.0) {
             e.specialActionTimer = 2.8;
+            this.requestEnemyAttackAnimation(e, 0.46);
             this.spawnPenaltyNotice(e.x, e.y + 0.8, e.z);
             const msg = e.type === 'przedstawiciel_włoski' ? '🇮🇹 ARMATURA DE LUX!' : '📑 OFERTA RABATOWA!';
             this.emitFloatingToast(msg, e.x, e.y + 1.2, e.z, 'damage');
@@ -12522,6 +12527,7 @@ export class PaleciakiGameEngine {
           e.specialActionTimer -= dt * survivalAbilityRate;
           if (e.specialActionTimer <= 0 && distToPlayer < 10.0) {
             e.specialActionTimer = 2.5;
+            this.requestEnemyAttackAnimation(e, 0.50);
             this.spawnSanitarywareProjectile(e.x, e.y + 0.8, e.z);
             this.emitFloatingToast('📦 UMYWALKA W DRODZE!', e.x, e.y + 1.2, e.z, 'damage');
           }
@@ -12529,6 +12535,7 @@ export class PaleciakiGameEngine {
           e.specialActionTimer -= dt * survivalAbilityRate;
           if (e.specialActionTimer <= 0 && distToPlayer < 8.5) {
             e.specialActionTimer = 2.2;
+            this.requestEnemyAttackAnimation(e, 0.42);
             this.spawnSparkZapProjectile(e.x, e.y + 0.8, e.z);
             this.emitFloatingToast('⚡ ISKRA SERWISU!', e.x, e.y + 1.2, e.z, 'damage');
           }
@@ -12573,6 +12580,7 @@ export class PaleciakiGameEngine {
               e.chargeTimer = undefined;
               e.chargeDir = undefined;
               e.specialActionTimer = isPhase2 ? 1.85 : 2.4;
+              this.requestEnemyAttackAnimation(e, 0.58);
               this.spawnOdprawaClipboardProjectile(e.x, e.y + 1.0, e.z, lockedDirection);
               this.emitFloatingToast('📋 ODPRAWA WYSTRZELONA — ZMIANA LINII!', e.x, e.y + 1.4, e.z, 'damage');
             }
