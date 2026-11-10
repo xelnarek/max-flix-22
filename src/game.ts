@@ -36,6 +36,7 @@ import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoi
 import { calculateEnemyObstacleAvoidanceVector } from './enemyNavigation.ts';
 import { createEnemyHitReaction, getEnemyHitPulse, getEnemyImpactBurstProfile } from './enemyCombatFeedback.ts';
 import { ENEMY_VISUAL_PROFILES } from './enemyVisualProfiles.ts';
+import { setProceduralJointRotation, setProceduralLimbPose } from './proceduralActorAnimation.ts';
 import { isEffectiveBossLaneDodge, isInsideBossAttackLane, isWithinBossImpactRadius } from './combatTelegraphs.ts';
 import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
 import { chooseSurvivalEventSpawnPoint } from './survivalSpawn.ts';
@@ -10779,25 +10780,21 @@ export class PaleciakiGameEngine {
       this.walkCycle += dt * motionProfile.gaitFrequency;
       if (this.leftLeg && this.rightLeg && this.leftArm && this.rightArm) {
         const gait = Math.sin(this.walkCycle);
-        this.leftLeg.rotation.x = gait * motionProfile.stride;
-        this.rightLeg.rotation.x = -gait * motionProfile.stride;
-        this.leftArm.rotation.x = -gait * motionProfile.armSwing;
-        this.rightArm.rotation.x = gait * motionProfile.armSwing;
+        setProceduralLimbPose(this.leftLeg, gait * motionProfile.stride);
+        setProceduralLimbPose(this.rightLeg, -gait * motionProfile.stride);
         const armSpread = motionProfile.lateralSway * 2.4;
-        this.leftArm.rotation.z = armSpread;
-        this.rightArm.rotation.z = -armSpread;
+        setProceduralLimbPose(this.leftArm, -gait * motionProfile.armSwing, armSpread);
+        setProceduralLimbPose(this.rightArm, gait * motionProfile.armSwing, -armSpread);
       }
     } else {
       const braking = this.isGrounded ? motionProfile.groundBraking : motionProfile.airBraking;
       this.playerVel.x = THREE.MathUtils.damp(this.playerVel.x, 0, braking, dt);
       this.playerVel.z = THREE.MathUtils.damp(this.playerVel.z, 0, braking, dt);
       if (this.leftLeg && this.rightLeg && this.leftArm && this.rightArm) {
-        this.leftLeg.rotation.x = 0;
-        this.rightLeg.rotation.x = 0;
-        this.leftArm.rotation.x = 0;
-        this.rightArm.rotation.x = 0;
-        this.leftArm.rotation.z = 0;
-        this.rightArm.rotation.z = 0;
+        setProceduralLimbPose(this.leftLeg, 0);
+        setProceduralLimbPose(this.rightLeg, 0);
+        setProceduralLimbPose(this.leftArm, 0, 0);
+        setProceduralLimbPose(this.rightArm, 0, 0);
       }
     }
 
@@ -10805,10 +10802,8 @@ export class PaleciakiGameEngine {
       const t = 1 - this.grzesiekCrushTimer / 0.9;
       const swing = Math.sin(t * Math.PI);
       if (this.leftArm && this.rightArm) {
-        this.leftArm.rotation.z = -1.2 + swing * 1.5;
-        this.rightArm.rotation.z = 1.2 - swing * 1.5;
-        this.leftArm.rotation.x = -1.3 + swing * 1.8;
-        this.rightArm.rotation.x = -1.3 + swing * 1.8;
+        setProceduralLimbPose(this.leftArm, -1.3 + swing * 1.8, -1.2 + swing * 1.5);
+        setProceduralLimbPose(this.rightArm, -1.3 + swing * 1.8, 1.2 - swing * 1.5);
       }
     }
 
@@ -11064,12 +11059,10 @@ export class PaleciakiGameEngine {
         this.playerAccessory.rotation.z = this.playerAccessoryRestZ + Math.cos(this.walkCycle) * motionProfile.toolRoll * motionRatio;
       }
       if (airborne && this.leftLeg && this.rightLeg && this.leftArm && this.rightArm) {
-        this.leftLeg.rotation.x = -motionProfile.jumpKneeTuck;
-        this.rightLeg.rotation.x = -motionProfile.jumpKneeTuck * 0.78;
-        this.leftArm.rotation.x = -motionProfile.jumpArmLift;
-        this.rightArm.rotation.x = -motionProfile.jumpArmLift * 0.84;
-        this.leftArm.rotation.z = motionProfile.jumpArmLift * 0.32;
-        this.rightArm.rotation.z = -motionProfile.jumpArmLift * 0.32;
+        setProceduralLimbPose(this.leftLeg, -motionProfile.jumpKneeTuck);
+        setProceduralLimbPose(this.rightLeg, -motionProfile.jumpKneeTuck * 0.78);
+        setProceduralLimbPose(this.leftArm, -motionProfile.jumpArmLift, motionProfile.jumpArmLift * 0.32);
+        setProceduralLimbPose(this.rightArm, -motionProfile.jumpArmLift * 0.84, -motionProfile.jumpArmLift * 0.32);
       }
 
       if (this.attackSwingTimer > 0 && this.attackSwingDuration > 0) {
@@ -12123,8 +12116,80 @@ export class PaleciakiGameEngine {
         }
       }
 
-      e.walkCycle += dt * 8;
+      const gaitRate = e.state === 'charging' || e.state === 'chase' ? 10.2 : e.state === 'patrol' ? 6.6 : 0;
+      e.walkCycle += dt * gaitRate;
       this.updateEnemyHitReaction(e, dt);
+
+      // Procedural actors use joint-pivot movement rather than rotating each limb
+      // around its centre. The same pose layer adds anticipation/follow-through
+      // for melee swings and a clear arm extension for ranged projectile launches.
+      if (e.legL && e.legR && e.type !== 'piorun_dron' && e.type !== 'forklift') {
+        const gaitAmount = e.state === 'chase' || e.state === 'charging' ? 0.52 : e.state === 'patrol' ? 0.34 : 0;
+        const gait = Math.sin(e.walkCycle) * gaitAmount;
+        setProceduralLimbPose(e.legL, gait);
+        setProceduralLimbPose(e.legR, -gait);
+      }
+      if (e.armL && e.armR && e.type !== 'piorun_dron' && e.type !== 'forklift') {
+        const gaitAmount = e.state === 'chase' || e.state === 'charging' ? 0.34 : e.state === 'patrol' ? 0.20 : 0;
+        const gait = Math.sin(e.walkCycle) * gaitAmount;
+        let leftArmX = -gait;
+        let rightArmX = gait;
+        let leftArmZ = 0;
+        let rightArmZ = 0;
+        const attackRemaining = Math.max(0, e.attackPoseTimer || 0);
+        const attackDuration = Math.max(0.12, e.attackPoseDuration || 0.48);
+        if (attackRemaining > 0) {
+          const progress = THREE.MathUtils.clamp(1 - attackRemaining / attackDuration, 0, 1);
+          const windup = progress < 0.28 ? progress / 0.28 : 0;
+          const strike = progress < 0.28 ? 0
+            : progress < 0.60 ? (progress - 0.28) / 0.32
+              : Math.max(0, (1 - progress) / 0.40);
+          const side = e.attackPoseSide || 1;
+          const style = ENEMY_VISUAL_PROFILES[e.type].attackStyle;
+          if (style === 'heavy-melee') {
+            const swing = 0.34 * windup - 1.18 * strike;
+            leftArmX += swing;
+            rightArmX += swing * 0.94;
+            leftArmZ -= 0.10 * strike;
+            rightArmZ += 0.10 * strike;
+          } else if (style === 'tool-melee') {
+            const swing = 0.30 * windup - 1.28 * strike;
+            if (side < 0) {
+              leftArmX += swing;
+              leftArmZ -= 0.18 * strike;
+            } else {
+              rightArmX += swing;
+              rightArmZ += 0.18 * strike;
+            }
+          } else if (style === 'ranged') {
+            const reach = 0.18 * windup - 0.90 * strike;
+            if (side < 0) {
+              leftArmX += reach;
+              leftArmZ -= 0.06 * strike;
+            } else {
+              rightArmX += reach;
+              rightArmZ += 0.06 * strike;
+            }
+          }
+        }
+        const hitPulse = (e.hitReactTimer || 0) > 0.015
+          ? getEnemyHitPulse(e.hitReactTimer || 0, e.hitReactDuration || 0.21)
+          : 0;
+        leftArmX += hitPulse * 0.58;
+        rightArmX += hitPulse * 0.58;
+        setProceduralLimbPose(e.armL, leftArmX, leftArmZ);
+        setProceduralLimbPose(e.armR, rightArmX, rightArmZ);
+        const attackPitch = attackRemaining > 0
+          ? (1 - attackRemaining / attackDuration) < 0.28 ? -0.07 : 0.10
+          : 0;
+        setProceduralJointRotation(e.head, -0.22 * hitPulse + attackPitch);
+        if (e.attackPoseTimer && e.attackPoseTimer > 0) {
+          e.attackPoseTimer = Math.max(0, e.attackPoseTimer - dt);
+        }
+      } else if (e.attackPoseTimer && e.attackPoseTimer > 0) {
+        e.attackPoseTimer = Math.max(0, e.attackPoseTimer - dt);
+      }
+
       if (e.shieldActive) {
         e.supportShieldTimer = Math.max(0, (e.supportShieldTimer ?? 0) - dt);
         if (e.supportShieldTimer <= 0) this.clearSurvivalSupportShield(e);
