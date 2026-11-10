@@ -1,12 +1,13 @@
 import{createHash}from'node:crypto';
 import{mkdir,readFile,writeFile}from'node:fs/promises';
 import path from'node:path';import{fileURLToPath}from'node:url';
-import{parseGlbJson,validateMakeHumanPack}from'./makeHumanPack.mjs';
+import{parseGlbJson,validateMakeHumanPack,validateMakeHumanSidecar}from'./makeHumanPack.mjs';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const OUT=path.join(ROOT,'public','assets','makehuman'),MANIFEST=path.join(OUT,'manifest.json');
 const COMMIT='852e48f316b90a0937234886630e4fb4cdfd1f78';
 const BASE='https://raw.githubusercontent.com/kblood/CharacterCreator/'+COMMIT+'/output/';
 const strict=process.argv.includes('--strict');
+const SIDECAR={file:'base_body.joints.json',size:45258,gitBlobSha1:'85c678206c9978215d3009a6ac476d93f57652b0'};
 const ASSETS=[
  ['base_body_anim.glb',8212156,'bdbdab04eb85903e46c56ff56c7a1ea0cbe9c78b','animated-base-humanoid'],
  ['clothing_shirt.glb',605956,'c46eb5a6afadedba00eae10a77aebcd6ad326233','business-shirt'],
@@ -36,8 +37,18 @@ async function run(){
   console.log('[MakeHuman] verified '+file+' • '+bytes.length+' bytes');
  }
  const validation=validateMakeHumanPack(files);
- manifest.clips=validation.animationNames;manifest.rig={boneCount:validation.bodyBoneCount,animationTargetCount:validation.animationTargetCount,parts:validation.parts};
+ const existingSidecar=await existing(SIDECAR.file,SIDECAR.size,SIDECAR.gitBlobSha1);
+ const sidecarBytes=existingSidecar||await fetchRetry(BASE+SIDECAR.file);
+ if(sidecarBytes.length!==SIDECAR.size)throw new Error('Unexpected sidecar byte length: '+sidecarBytes.length);
+ const sidecarSha=blobSha(sidecarBytes);
+ if(sidecarSha!==SIDECAR.gitBlobSha1)throw new Error('Joint sidecar Git blob SHA-1 mismatch: '+sidecarSha);
+ let sidecar;
+ try{sidecar=JSON.parse(sidecarBytes.toString('utf8'));}catch(error){throw new Error('Joint sidecar JSON is malformed: '+String(error));}
+ const sidecarValidation=validateMakeHumanSidecar(sidecar);
+ if(!existingSidecar)await writeFile(path.join(OUT,SIDECAR.file),sidecarBytes);
+ manifest.jointSidecar={file:SIDECAR.file,bytes:sidecarBytes.length,gitBlobSha1:sidecarSha,sha256:sha256(sidecarBytes),licence:'CC0-1.0',source:BASE+SIDECAR.file};
+ manifest.clips=validation.animationNames;manifest.rig={boneCount:validation.bodyBoneCount,animationTargetCount:validation.animationTargetCount,parts:validation.parts,sidecarBones:sidecarValidation.boneCount,sidecarMorphs:sidecarValidation.morphCount};
  await writeFile(MANIFEST,JSON.stringify(manifest,null,2)+'\n','utf8');
- console.log('[MakeHuman] ready • '+ASSETS.length+' GLBs • '+validation.bodyBoneCount+' bones • '+manifest.clips.length+' clips');
+ console.log('[MakeHuman] ready • '+ASSETS.length+' GLBs + joint sidecar • '+sidecarValidation.boneCount+' bones • '+manifest.clips.length+' clips');
 }
 run().catch(error=>{console.error('[MakeHuman] asset preparation failed:',error);if(strict)process.exitCode=1;else console.warn('[MakeHuman] development keeps its existing procedural/Gobkit fallback.');});

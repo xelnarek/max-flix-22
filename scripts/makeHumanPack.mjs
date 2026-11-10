@@ -51,3 +51,30 @@ export function validateMakeHumanPack(files){
  }
  return{bodyBoneCount:bodyBones.size,animationNames,animationTargetCount:targets.size,parts};
 }
+
+export function validateMakeHumanSidecar(sidecar) {
+  if (!sidecar || typeof sidecar !== 'object') throw new Error('MakeHuman joint sidecar is not an object');
+  const bones = sidecar.bones;
+  const morphs = sidecar.morphs;
+  if (!bones || typeof bones !== 'object' || Object.keys(bones).length < 50) {
+    throw new Error('MakeHuman joint sidecar has an incomplete 53-bone rest rig');
+  }
+  for (const required of ['Root', 'pelvis', 'spine_01', 'spine_02', 'spine_03', 'neck_01', 'head', 'thigh_l', 'calf_l', 'foot_l']) {
+    if (!Array.isArray(bones[required]) || bones[required].length !== 3 || !bones[required].every(Number.isFinite)) {
+      throw new Error('MakeHuman joint sidecar is missing rest joint: ' + required);
+    }
+  }
+  if (!morphs || typeof morphs !== 'object' || Object.keys(morphs).length < 50) {
+    throw new Error('MakeHuman joint sidecar has no complete morph offset table');
+  }
+  for (const [morph, offsets] of Object.entries(morphs)) {
+    if (!offsets || typeof offsets !== 'object') throw new Error('Invalid morph offset table: ' + morph);
+    for (const [bone, offset] of Object.entries(offsets)) {
+      if (!bones[bone]) throw new Error('Morph ' + morph + ' references an unknown rest bone: ' + bone);
+      if (!Array.isArray(offset) || offset.length !== 3 || !offset.every(Number.isFinite)) {
+        throw new Error('Morph ' + morph + ' has an invalid offset for ' + bone);
+      }
+    }
+  }
+  return { boneCount: Object.keys(bones).length, morphCount: Object.keys(morphs).length };
+}
