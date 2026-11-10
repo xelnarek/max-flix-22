@@ -17,6 +17,20 @@ export type EnemyAttackStyle =
   | 'vehicle'
   | 'none';
 
+export type EnemyGaitStyle =
+  | 'theatrical'
+  | 'heavy'
+  | 'rolling'
+  | 'deliberate'
+  | 'precise'
+  | 'robotic'
+  | 'hovering'
+  | 'brisk'
+  | 'shambling'
+  | 'compact'
+  | 'aggressive'
+  | 'limping';
+
 export interface EnemyVisualProfile {
   /** Existing bespoke fallback builder used before/when an optional GLB is unavailable. */
   readonly fallbackFactory: string;
@@ -24,6 +38,8 @@ export interface EnemyVisualProfile {
   readonly gobkitModel?: GobkitModelId;
   readonly category: EnemyVisualCategory;
   readonly attackStyle: EnemyAttackStyle;
+  /** Distinct locomotion gait for procedural rigs; vehicles/drones use non-foot styles. */
+  readonly gaitStyle: EnemyGaitStyle;
   /** Target world height after fitting imported GLB assets. */
   readonly targetHeight: number;
   /** Short visual brief used to keep model choice aligned with the enemy description. */
@@ -38,6 +54,7 @@ export interface EnemyVisualProfile {
  */
 export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfile>> = Object.freeze({
   customer: {
+    gaitStyle: 'theatrical',
     fallbackFactory: 'createCustomerEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'tool-melee',
@@ -45,6 +62,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Przesadnie ekspresyjny klient z reklamacją, fakturą i wielką teczką',
   },
   walczak: {
+    gaitStyle: 'heavy',
     fallbackFactory: 'createWalczakBossModel',
     gobkitModel: 'werewolfcaptain',
     category: 'boss-creature',
@@ -53,6 +71,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Potężny wilkołaczy nadzorca z szerokimi barkami i ciężkimi szponami',
   },
   forklift: {
+    gaitStyle: 'rolling',
     fallbackFactory: 'createForkliftModel',
     category: 'vehicle',
     attackStyle: 'vehicle',
@@ -60,6 +79,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Wózek widłowy z masztem, widłami, kabiną i lampą ostrzegawczą',
   },
   architect: {
+    gaitStyle: 'deliberate',
     fallbackFactory: 'createArchitectEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'tool-melee',
@@ -67,6 +87,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Architekt wnętrz: beret, wielkie okulary, wachlarz próbek i rulon projektu',
   },
   inspector: {
+    gaitStyle: 'precise',
     fallbackFactory: 'createInspectorEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'tool-melee',
@@ -74,6 +95,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Inspektor BHP z dużym kaskiem, kamizelką odblaskową, clipboardem i gwizdkiem',
   },
   agv_robot: {
+    gaitStyle: 'robotic',
     fallbackFactory: 'createAgvRobotModel',
     category: 'machine',
     attackStyle: 'ranged',
@@ -81,6 +103,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Niski autonomiczny robot AGV z czujnikami, światłami i pancernym zderzakiem',
   },
   handlowiec: {
+    gaitStyle: 'theatrical',
     fallbackFactory: 'createHandlowiecEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'ranged',
@@ -88,6 +111,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Handlowiec w przesadnym garniturze z teczką, krawatem i gadżetem reklamowym',
   },
   monter: {
+    gaitStyle: 'deliberate',
     fallbackFactory: 'createMonterEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'tool-melee',
@@ -95,6 +119,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Monter z pasem narzędziowym, rękawicami i dużym kluczem',
   },
   piorun_dron: {
+    gaitStyle: 'hovering',
     fallbackFactory: 'createPiorunDronModel',
     category: 'machine',
     attackStyle: 'ranged',
@@ -102,6 +127,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Latający dron patrolowy z czterema wirnikami, reflektorem i emiterem iskier',
   },
   elite_walczak_guard: {
+    gaitStyle: 'heavy',
     fallbackFactory: 'createEliteGuardEnemyModel',
     gobkitModel: 'bloodirongrunt',
     category: 'boss-creature',
@@ -110,6 +136,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Opancerzony elitarny ochroniarz-berserker z masywnymi naramiennikami i przyłbicą',
   },
   kurier: {
+    gaitStyle: 'brisk',
     fallbackFactory: 'createKurierEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'ranged',
@@ -117,6 +144,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Kurier z ogromnym termicznym plecakiem, paczkami i czapką dostawczą',
   },
   'przedstawiciel_włoski': {
+    gaitStyle: 'theatrical',
     fallbackFactory: 'createItalianVendorEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'tool-melee',
@@ -124,6 +152,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Włoski sprzedawca z przesadną gestykulacją, eleganckim strojem i próbkami',
   },
   sztaplar_szalony: {
+    gaitStyle: 'aggressive',
     fallbackFactory: 'createSztaplarEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'heavy-melee',
@@ -131,6 +160,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Szalony operator paleciaka w ochronnym wyposażeniu i masywnych rękawicach',
   },
   krol_leto: {
+    gaitStyle: 'heavy',
     fallbackFactory: 'createKrolLetoBossModel',
     gobkitModel: 'bloodironjuggernaut',
     category: 'boss-creature',
@@ -139,6 +169,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Monstrualny król-magazynu w ciężkim pancerzu z koroną i energią bossów',
   },
   pan_roman: {
+    gaitStyle: 'deliberate',
     fallbackFactory: 'createPanRomanEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'ranged',
@@ -146,6 +177,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Pan Roman: dostawca sanitariatów z pomarańczową kamizelką i wózkiem transportowym',
   },
   serwisant: {
+    gaitStyle: 'precise',
     fallbackFactory: 'createSerwisanciEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'tool-melee',
@@ -153,6 +185,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Serwisant z narzędziami, miernikiem i technicznym pasem',
   },
   bosman_krakow: {
+    gaitStyle: 'heavy',
     fallbackFactory: 'createBosmanKrakowBossModel',
     category: 'warehouse-caricature',
     attackStyle: 'heavy-melee',
@@ -160,6 +193,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Bosman Kraków: przesadnie szeroki kierownik w granatowym mundurze, złotej odznace i czapce',
   },
   zombie_pracownik: {
+    gaitStyle: 'shambling',
     fallbackFactory: 'createZombieWorkerEnemyModel',
     gobkitModel: 'stitchedbrute',
     category: 'undead',
@@ -168,6 +202,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Nieumarły pracownik z poszarpaną kamizelką, odsłoniętymi żebrami, ranami i świecącymi oczami',
   },
   pomazaniec: {
+    gaitStyle: 'compact',
     fallbackFactory: 'createPomazaniecRiderModel',
     category: 'secret-event',
     attackStyle: 'ranged',
@@ -175,6 +210,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Karykaturalny mały rowerzysta z kolorową czapką, wiatraczkiem i salwą lizaków',
   },
   sebix_m: {
+    gaitStyle: 'aggressive',
     fallbackFactory: 'createSebixEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'heavy-melee',
@@ -182,6 +218,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Przerysowany osiłek bez koszulki, w krótkich spodenkach, z agresywną miną i cegłami',
   },
   mutant_gamma_forklift: {
+    gaitStyle: 'heavy',
     fallbackFactory: 'createMutantGammaForkliftModel',
     gobkitModel: 'bloodironjuggernaut',
     category: 'mutant',
@@ -190,6 +227,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Radioaktywny mutant-sztaplarka z metalowym zderzakiem, widłami i ostrzegawczym światłem',
   },
   radioactive_pip: {
+    gaitStyle: 'limping',
     fallbackFactory: 'createRadioactivePipModel',
     gobkitModel: 'nightwitch',
     category: 'mutant',
@@ -198,6 +236,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Skażony inspektor PIP z toksycznymi oczami, żółto-czarnymi oznaczeniami i zieloną aurą',
   },
   cyber_salesman: {
+    gaitStyle: 'robotic',
     fallbackFactory: 'createCyberSalesmanModel',
     gobkitModel: 'androidcommander',
     category: 'machine',
