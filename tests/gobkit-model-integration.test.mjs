@@ -22,24 +22,40 @@ test('the Gobkit roster maps all five operators to distinct rigged 3D models', a
   assert.match(characters, /visualModelName: 'Security Guard/);
 });
 
-test('Survival enemy families have dedicated role-matched GLB variants', async () => {
+test('non-human enemy threats use dedicated internet-sourced rigged GLB variants', async () => {
   const registry = await read('../src/gobkitAssets.ts');
   for (const [enemy, model] of [
-    ['customer', 'shoplifter'],
-    ['architect', 'officemanager'],
-    ['kurier', 'foodcourier'],
-    ['handlowiec', 'salesrep'],
-    ['inspector', 'hazmattech'],
-    ['serwisant', 'forcibleentryfirefighter'],
     ['zombie_pracownik', 'stitchedbrute'],
     ['mutant_gamma_forklift', 'bloodironjuggernaut'],
     ['radioactive_pip', 'nightwitch'],
     ['cyber_salesman', 'androidcommander'],
     ['walczak', 'werewolfcaptain'],
-    ['bosman_krakow', 'bloodirongrunt'],
+    ['krol_leto', 'bloodironjuggernaut'],
   ]) {
-    assert.ok(registry.includes(enemy + ": '" + model + "'"), 'wrong model for ' + enemy);
+    assert.ok(registry.includes(enemy + ": '" + model + "'"), 'wrong creature model for ' + enemy);
     assert.ok(registry.includes(model + '.glb'), 'missing enemy GLB: ' + model);
+  }
+});
+
+test('human warehouse enemy archetypes retain bespoke caricature models instead of generic humanoid GLBs', async () => {
+  const [registry, game] = await Promise.all([
+    read('../src/gobkitAssets.ts'),
+    read('../src/game.ts'),
+  ]);
+  for (const humanType of ['customer', 'architect', 'kurier', 'handlowiec', 'inspector', 'serwisant', 'monter', 'bosman_krakow']) {
+    assert.doesNotMatch(registry, new RegExp('\\b' + humanType + ':'));
+  }
+  for (const factory of [
+    'createArchitectEnemyModel()',
+    'createCustomerEnemyModel()',
+    'createKurierEnemyModel()',
+    'createHandlowiecEnemyModel()',
+    'createInspectorEnemyModel()',
+    'createSerwisanciEnemyModel()',
+    'createMonterEnemyModel()',
+    'createBosmanKrakowBossModel()',
+  ]) {
+    assert.ok(game.includes(factory), 'missing bespoke human enemy factory: ' + factory);
   }
 });
 
