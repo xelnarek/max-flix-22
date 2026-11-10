@@ -22,8 +22,8 @@ test('the Gobkit roster maps all five operators to distinct rigged 3D models', a
   assert.match(characters, /visualModelName: 'Security Guard/);
 });
 
-test('non-human enemy threats use dedicated internet-sourced rigged GLB variants', async () => {
-  const registry = await read('../src/gobkitAssets.ts');
+test('non-human enemy threats use dedicated rigged GLB variants from the visual profile registry', async () => {
+  const { ENEMY_GOBKIT_MODELS, GOBKIT_MODEL_FILES } = await import('../src/gobkitAssets.ts');
   for (const [enemy, model] of [
     ['zombie_pracownik', 'stitchedbrute'],
     ['mutant_gamma_forklift', 'bloodironjuggernaut'],
@@ -31,12 +31,12 @@ test('non-human enemy threats use dedicated internet-sourced rigged GLB variants
     ['cyber_salesman', 'androidcommander'],
     ['walczak', 'werewolfcaptain'],
     ['krol_leto', 'bloodironjuggernaut'],
+    ['elite_walczak_guard', 'bloodirongrunt'],
   ]) {
-    assert.ok(registry.includes(enemy + ": '" + model + "'"), 'wrong creature model for ' + enemy);
-    assert.ok(registry.includes(model + '.glb'), 'missing enemy GLB: ' + model);
+    assert.equal(ENEMY_GOBKIT_MODELS[enemy], model, 'wrong creature model for ' + enemy);
+    assert.equal(GOBKIT_MODEL_FILES[model], model + '.glb', 'missing enemy GLB: ' + model);
   }
 });
-
 test('human warehouse enemy archetypes retain bespoke caricature models instead of generic humanoid GLBs', async () => {
   const [registry, game] = await Promise.all([
     read('../src/gobkitAssets.ts'),
@@ -58,6 +58,44 @@ test('human warehouse enemy archetypes retain bespoke caricature models instead 
     assert.ok(game.includes(factory), 'missing bespoke human enemy factory: ' + factory);
   }
 });
+
+test('the visual registry explicitly covers every declared enemy type and has a role-matched profile', async () => {
+  const [typesSource, registrySource, profiles] = await Promise.all([
+    read('../src/types.ts'),
+    read('../src/enemyVisualProfiles.ts'),
+    import('../src/enemyVisualProfiles.ts'),
+  ]);
+  const unionStart = typesSource.indexOf('export type EnemyType =');
+  const unionEnd = typesSource.indexOf(';', unionStart);
+  const declared = [...typesSource.slice(unionStart, unionEnd).matchAll(/'([^']+)'/g)].map((match) => match[1]);
+  const configured = Object.keys(profiles.ENEMY_VISUAL_PROFILES).sort();
+  assert.deepEqual(configured, [...declared].sort());
+  assert.equal(configured.length, 23);
+  for (const [type, profile] of Object.entries(profiles.ENEMY_VISUAL_PROFILES)) {
+    assert.ok(profile.visualBrief.length >= 24, 'visual brief missing for ' + type);
+    assert.ok(profile.fallbackFactory.startsWith('create'), 'fallback model factory missing for ' + type);
+    assert.ok(profile.targetHeight >= 0.7 && profile.targetHeight <= 2.2, 'invalid scale for ' + type);
+  }
+  assert.match(registrySource, /ENEMY_VISUAL_PROFILES/);
+});
+
+test('each imported rig gets a role-specific size and only creature/boss assets override bespoke human models', async () => {
+  const [profiles, assets, game] = await Promise.all([
+    import('../src/enemyVisualProfiles.ts'),
+    import('../src/gobkitAssets.ts'),
+    read('../src/game.ts'),
+  ]);
+  assert.equal(profiles.ENEMY_VISUAL_PROFILES.architect.gobkitModel, undefined);
+  assert.equal(profiles.ENEMY_VISUAL_PROFILES.inspector.gobkitModel, undefined);
+  assert.equal(profiles.ENEMY_VISUAL_PROFILES.kurier.gobkitModel, undefined);
+  assert.equal(profiles.ENEMY_VISUAL_PROFILES.bosman_krakow.gobkitModel, undefined);
+  assert.equal(profiles.ENEMY_VISUAL_PROFILES.zombie_pracownik.gobkitModel, 'stitchedbrute');
+  assert.equal(profiles.ENEMY_VISUAL_PROFILES.elite_walczak_guard.gobkitModel, 'bloodirongrunt');
+  assert.equal(assets.ENEMY_GOBKIT_MODELS.zombie_pracownik, 'stitchedbrute');
+  assert.equal(assets.ENEMY_GOBKIT_MODELS.elite_walczak_guard, 'bloodirongrunt');
+  assert.match(game, /fitGobkitModel\\(root, visualProfile\\.targetHeight/);
+});
+
 
 test('runtime clones skinned models safely and drives named locomotion/combat clips', async () => {
   const [registry, game] = await Promise.all([
@@ -100,7 +138,7 @@ test('playable operators retain the original stylized models in Survival and bot
   assert.match(game, /const built = createCharacterModel\(def\)/);
   assert.doesNotMatch(game, /void this\.attachMakeHumanOperatorModel/);
   assert.doesNotMatch(game, /void this\.attachMakeHumanEnemyModel/);
-  assert.match(game, /ENEMY_GOBKIT_MODELS\[enemy\.type\]/);
+  assert.match(game, /ENEMY_VISUAL_PROFILES\\[enemy\\.type\\]\\.gobkitModel/);
   assert.match(game, /void this\.attachGobkitEnemyModel\(enemy, modelId\)/);
   assert.match(game, /createGobkitEnemyRoleSilhouette\(requestedType\)/);
 });
