@@ -149,7 +149,7 @@ test('procedural fallback hides every renderable body primitive but keeps explic
   const game = await read('../src/game.ts');
   assert.match(game, /object instanceof THREE\.Mesh \|\| object instanceof THREE\.Line/);
   assert.match(game, /object instanceof THREE\.Points \|\| object instanceof THREE\.Sprite/);
-  assert.match(game, /object\.userData\.gobkitKeep = true/);
+  assert.match(game, /child\.userData\.gobkitKeep = true/);
   assert.match(game, /object\.visible = false/);
 });
 
@@ -180,7 +180,7 @@ test('Death has higher animation priority than Hit and overrides an active hit r
 
 test('async rig attachment restores pending player and enemy combat reactions', async () => {
   const game = await read('../src/game.ts');
-  assert.match(game, /private enemyPendingAttackUntil = new WeakMap<EnemyItem, number>\(\)/);
+  assert.match(game, /private readonly enemyPendingAttackUntil = new WeakMap<EnemyItem, number>\(\)/);
   assert.match(game, /this\.resumePlayerAnimationAfterModelAttach\(track\)/);
   assert.match(game, /this\.resumeEnemyAnimationAfterModelAttach\(enemy, track\)/);
   assert.match(game, /this\.enemyPendingAttackUntil\.set\(enemy, now \+ durationSeconds \* 1000\)/);
@@ -235,7 +235,7 @@ test('ranged and special enemy attacks request visible attack poses at projectil
 test('orphan imported rigs are cleaned without disposing shared MakeHuman assets', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /private disposeUntrackedActorVisualRoot\(root: THREE\.Object3D\)/);
-  assert.match(game, /if \(object\.userData\.gobkitAsset === true\) object\.geometry\.dispose\(\)/);
+  assert.match(game, /if \(object\.userData\.gobkitAsset === true && object\.userData\.gobkitSharedGeometry !== true\) object\.geometry\.dispose\(\)/);
   assert.match(game, /material\.userData\.makeHumanShared !== true/);
   assert.match(game, /this\.disposeUntrackedActorVisualRoot\(child\)/);
 });
