@@ -226,7 +226,7 @@ test('ranged and special enemy attacks request visible attack poses at projectil
     const index = game.indexOf(marker);
     assert.ok(index >= 0, 'missing ranged/special attack: ' + marker);
     const context = game.slice(Math.max(0, index - 260), index);
-    assert.match(context, /requestEnemyAttackAnimation\\((e|enemy),/,
+    assert.match(context, /requestEnemyAttackAnimation\((e|enemy),/,
       'attack animation must be requested before: ' + marker);
   }
 });
