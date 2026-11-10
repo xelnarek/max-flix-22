@@ -800,20 +800,22 @@ export class PaleciakiGameEngine {
 
   public zoomInCamera() {
     this.hasManualCameraZoom = true;
-    this.camZoomFactor = Math.max(0.58, this.camZoomFactor - 0.12);
+    // Smaller button steps give touch users predictable control between the
+    // tactical and close camera presets without jumping past a useful frame.
+    this.camZoomFactor = Math.max(0.50, this.camZoomFactor - 0.08);
     this.syncCameraZoomControl();
   }
 
   public zoomOutCamera() {
     this.hasManualCameraZoom = true;
-    this.camZoomFactor = Math.min(1.72, this.camZoomFactor + 0.12);
+    this.camZoomFactor = Math.min(1.85, this.camZoomFactor + 0.08);
     this.syncCameraZoomControl();
   }
 
   public setCamZoomFactor(val: number) {
     if (!Number.isFinite(val)) return;
     this.hasManualCameraZoom = true;
-    this.camZoomFactor = THREE.MathUtils.clamp(val, 0.58, 1.72);
+    this.camZoomFactor = THREE.MathUtils.clamp(val, 0.50, 1.85);
     this.syncCameraZoomControl();
   }
 
@@ -1309,6 +1311,9 @@ export class PaleciakiGameEngine {
     const canvasContainer = document.getElementById('game-canvas-container');
     canvasContainer?.addEventListener('pointerdown', (e) => {
       if (this.state === 'playing' && e.button === 0) {
+        // Touch users fire through the dedicated action controls. A canvas tap
+        // must not consume the first press of a two-finger camera pinch.
+        if (e.pointerType === 'touch') return;
         const target = e.target as HTMLElement | null;
         if (target && (target.closest('.hud-layer') || target.closest('.touch-layer') || target.closest('.game-modal') || target.closest('.game-screen'))) {
           return;
