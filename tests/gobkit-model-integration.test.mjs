@@ -341,7 +341,8 @@ test('late enemy model loads cannot attach to a recycled mesh or changed archety
   assert.match(game, /const mesh = enemy\.mesh;\s+const requestedType = enemy\.type;/);
   assert.match(game, /enemy\.mesh !== mesh \|\| enemy\.type !== requestedType/);
   assert.match(game, /mesh\.parent !== this\.levelRoot \|\| enemy\.state === 'defeated'/);
-  assert.match(game, /const largeEnemy = requestedType === 'walczak'/);
+  assert.match(game, /const visualProfile = ENEMY_VISUAL_PROFILES\[requestedType\]/);
+  assert.match(game, /fitGobkitModel\(root, visualProfile\.targetHeight/);
   assert.match(game, /this\.createMakeHumanAnimationTrack\(actor\.root, actor\.clips, mesh\.position/);
   assert.match(game, /this\.createGobkitAnimationTrack\(gltf, root, mesh\.position/);
 });
