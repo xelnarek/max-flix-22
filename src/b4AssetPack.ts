@@ -11,9 +11,25 @@ import containerUrl from './visuals/b4-container-corrugate.svg?url';
 import conveyorUrl from './visuals/b4-conveyor-rollers.svg?url';
 import coldStorageUrl from './visuals/b4-cold-storage.svg?url';
 import drumUrl from './visuals/b4-hazard-drum.svg?url';
+import operatorAtlasUrl from './visuals/b4-operator-atlas.svg?url';
+import combatAtlasUrl from './visuals/b4-combat-atlas.svg?url';
+import lampUrl from './visuals/b4-highbay-lamp.svg?url';
+import rackAtlasUrl from './visuals/b4-rack-labels.svg?url';
+import enemyAtlas3Url from './visuals/b4-enemy-atlas-3.svg?url';
 
-export type B4VisualTextureKind = 'floor' | 'pallet' | 'carton' | 'steel' | 'hazard' | 'spriteAtlas' | 'enemyAtlas' | 'enemyAtlas2' | 'container' | 'conveyor' | 'coldStorage' | 'drum';
-export type B4SpriteKind = 'worker' | 'zombie' | 'forklift' | 'pallet' | 'inspector' | 'customer' | 'handlowiec' | 'monter' | 'agv' | 'courier' | 'roman' | 'stacker';
+export type B4VisualTextureKind =
+  | 'floor' | 'pallet' | 'carton' | 'steel' | 'hazard'
+  | 'spriteAtlas' | 'enemyAtlas' | 'enemyAtlas2' | 'enemyAtlas3'
+  | 'container' | 'conveyor' | 'coldStorage' | 'drum'
+  | 'operatorAtlas' | 'combatAtlas' | 'lamp' | 'rackAtlas';
+export type B4SpriteKind =
+  | 'worker' | 'zombie' | 'forklift' | 'pallet'
+  | 'inspector' | 'customer' | 'handlowiec' | 'monter'
+  | 'agv' | 'courier' | 'roman' | 'stacker'
+  | 'operator01' | 'operator02' | 'operator03' | 'operator04' | 'operator05'
+  | 'bosman' | 'eliteGuard' | 'walczak' | 'krolLeto'
+  | 'rackA' | 'rackB' | 'rackC' | 'rackSafety';
+export type B4CombatOperator = 'marcin' | 'grzesiek' | 'dawid' | 'mateusz' | 'piotr';
 
 interface B4TextureEntry {
   texture: THREE.Texture;
@@ -33,6 +49,11 @@ const textureUrls: Record<B4VisualTextureKind, string> = {
   conveyor: conveyorUrl,
   coldStorage: coldStorageUrl,
   drum: drumUrl,
+  operatorAtlas: operatorAtlasUrl,
+  combatAtlas: combatAtlasUrl,
+  lamp: lampUrl,
+  rackAtlas: rackAtlasUrl,
+  enemyAtlas3: enemyAtlas3Url,
 };
 
 const textureCache = new Map<B4VisualTextureKind, B4TextureEntry>();
@@ -63,7 +84,7 @@ function createEntry(kind: B4VisualTextureKind): B4TextureEntry {
   );
   texture.name = 'max-flix-b4-' + kind;
   texture.colorSpace = THREE.SRGBColorSpace;
-  const isAtlas = kind === 'spriteAtlas' || kind === 'enemyAtlas' || kind === 'enemyAtlas2';
+  const isAtlas = kind === 'spriteAtlas' || kind === 'enemyAtlas' || kind === 'enemyAtlas2' || kind === 'enemyAtlas3' || kind === 'operatorAtlas' || kind === 'combatAtlas' || kind === 'rackAtlas';
   texture.wrapS = isAtlas ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
   texture.wrapT = isAtlas ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
   texture.anisotropy = 4;
@@ -84,40 +105,59 @@ export function preloadB4VisualTexture(kind: B4VisualTextureKind): Promise<THREE
   return (textureCache.get(kind) || createEntry(kind)).ready;
 }
 
-const spriteFrames: Record<B4SpriteKind, { atlas: 'spriteAtlas' | 'enemyAtlas' | 'enemyAtlas2'; x: number; y: number }> = {
-  worker: { atlas: 'spriteAtlas', x: 0, y: 0.5 },
-  zombie: { atlas: 'spriteAtlas', x: 0.5, y: 0.5 },
-  forklift: { atlas: 'spriteAtlas', x: 0, y: 0 },
-  pallet: { atlas: 'spriteAtlas', x: 0.5, y: 0 },
-  inspector: { atlas: 'enemyAtlas', x: 0, y: 0.5 },
-  customer: { atlas: 'enemyAtlas', x: 0.5, y: 0.5 },
-  handlowiec: { atlas: 'enemyAtlas', x: 0, y: 0 },
-  monter: { atlas: 'enemyAtlas', x: 0.5, y: 0 },
-  agv: { atlas: 'enemyAtlas2', x: 0, y: 0.5 },
-  courier: { atlas: 'enemyAtlas2', x: 0.5, y: 0.5 },
-  roman: { atlas: 'enemyAtlas2', x: 0, y: 0 },
-  stacker: { atlas: 'enemyAtlas2', x: 0.5, y: 0 },
+const spriteFrames: Record<B4SpriteKind, {
+  atlas: 'spriteAtlas' | 'enemyAtlas' | 'enemyAtlas2' | 'enemyAtlas3' | 'operatorAtlas' | 'rackAtlas';
+  x: number; y: number; width: number; height: number;
+}> = {
+  worker: { atlas: 'spriteAtlas', x: 0, y: 0.5, width: 0.5, height: 0.5 },
+  zombie: { atlas: 'spriteAtlas', x: 0.5, y: 0.5, width: 0.5, height: 0.5 },
+  forklift: { atlas: 'spriteAtlas', x: 0, y: 0, width: 0.5, height: 0.5 },
+  pallet: { atlas: 'spriteAtlas', x: 0.5, y: 0, width: 0.5, height: 0.5 },
+  inspector: { atlas: 'enemyAtlas', x: 0, y: 0.5, width: 0.5, height: 0.5 },
+  customer: { atlas: 'enemyAtlas', x: 0.5, y: 0.5, width: 0.5, height: 0.5 },
+  handlowiec: { atlas: 'enemyAtlas', x: 0, y: 0, width: 0.5, height: 0.5 },
+  monter: { atlas: 'enemyAtlas', x: 0.5, y: 0, width: 0.5, height: 0.5 },
+  agv: { atlas: 'enemyAtlas2', x: 0, y: 0.5, width: 0.5, height: 0.5 },
+  courier: { atlas: 'enemyAtlas2', x: 0.5, y: 0.5, width: 0.5, height: 0.5 },
+  roman: { atlas: 'enemyAtlas2', x: 0, y: 0, width: 0.5, height: 0.5 },
+  stacker: { atlas: 'enemyAtlas2', x: 0.5, y: 0, width: 0.5, height: 0.5 },
+  bosman: { atlas: 'enemyAtlas3', x: 0, y: 0.5, width: 0.5, height: 0.5 },
+  eliteGuard: { atlas: 'enemyAtlas3', x: 0.5, y: 0.5, width: 0.5, height: 0.5 },
+  walczak: { atlas: 'enemyAtlas3', x: 0, y: 0, width: 0.5, height: 0.5 },
+  krolLeto: { atlas: 'enemyAtlas3', x: 0.5, y: 0, width: 0.5, height: 0.5 },
+  operator01: { atlas: 'operatorAtlas', x: 0, y: 0, width: 0.2, height: 1 },
+  operator02: { atlas: 'operatorAtlas', x: 0.2, y: 0, width: 0.2, height: 1 },
+  operator03: { atlas: 'operatorAtlas', x: 0.4, y: 0, width: 0.2, height: 1 },
+  operator04: { atlas: 'operatorAtlas', x: 0.6, y: 0, width: 0.2, height: 1 },
+  operator05: { atlas: 'operatorAtlas', x: 0.8, y: 0, width: 0.2, height: 1 },
+  rackA: { atlas: 'rackAtlas', x: 0, y: 0.5, width: 0.5, height: 0.5 },
+  rackB: { atlas: 'rackAtlas', x: 0.5, y: 0.5, width: 0.5, height: 0.5 },
+  rackC: { atlas: 'rackAtlas', x: 0, y: 0, width: 0.5, height: 0.5 },
+  rackSafety: { atlas: 'rackAtlas', x: 0.5, y: 0, width: 0.5, height: 0.5 },
 };
 
-// One texture view per atlas frame: many enemies can share it without creating
-// a fresh GPU texture for every spawned/despawned NPC.
+// Cached atlas views share the decoded source image across every map and NPC.
 const spriteTextureViews = new Map<B4SpriteKind, THREE.Texture>();
 
-/** Creates a crisp alpha-cut sprite from the original B4 character/object atlases. */
-export function createB4SpriteDecal(kind: B4SpriteKind, width = 0.32, height = 0.32): THREE.Mesh {
+function getB4SpriteFrameTexture(kind: B4SpriteKind): THREE.Texture {
   const frame = spriteFrames[kind];
   let texture = spriteTextureViews.get(kind);
   if (!texture) {
     texture = getB4VisualTexture(frame.atlas).clone();
     texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
-    texture.repeat.set(0.5, 0.5);
+    texture.repeat.set(frame.width, frame.height);
     texture.offset.set(frame.x, frame.y);
     texture.needsUpdate = true;
     texture.name = 'max-flix-b4-sprite-' + kind;
     spriteTextureViews.set(kind, texture);
   }
+  return texture;
+}
+
+/** Creates a crisp alpha-cut sprite from the original B4 character/object atlases. */
+export function createB4SpriteDecal(kind: B4SpriteKind, width = 0.32, height = 0.32): THREE.Mesh {
   const material = new THREE.MeshBasicMaterial({
-    map: texture,
+    map: getB4SpriteFrameTexture(kind),
     transparent: true,
     alphaTest: 0.12,
     side: THREE.DoubleSide,
@@ -128,6 +168,46 @@ export function createB4SpriteDecal(kind: B4SpriteKind, width = 0.32, height = 0
   decal.name = 'b4-sprite-decal-' + kind;
   decal.renderOrder = 3;
   return decal;
+}
+
+const combatFrames: Record<B4CombatOperator, { x: number; y: number }> = {
+  marcin: { x: 0, y: 0.5 },
+  grzesiek: { x: 1 / 3, y: 0.5 },
+  dawid: { x: 2 / 3, y: 0.5 },
+  mateusz: { x: 0, y: 0 },
+  piotr: { x: 1 / 3, y: 0 },
+};
+const combatTextureViews = new Map<B4CombatOperator, THREE.Texture>();
+
+function getB4CombatFrameTexture(operator: B4CombatOperator): THREE.Texture {
+  let texture = combatTextureViews.get(operator);
+  if (!texture) {
+    const frame = combatFrames[operator];
+    texture = getB4VisualTexture('combatAtlas').clone();
+    texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
+    texture.repeat.set(1 / 3, 0.5);
+    texture.offset.set(frame.x, frame.y);
+    texture.needsUpdate = true;
+    texture.name = 'max-flix-b4-combat-' + operator;
+    combatTextureViews.set(operator, texture);
+  }
+  return texture;
+}
+
+/** Billboard weapon insignia keeps the operator-specific projectile identity readable in all modes. */
+export function createB4CombatSprite(operator: B4CombatOperator, size = 0.32): THREE.Sprite {
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: getB4CombatFrameTexture(operator),
+    color: 0xffffff,
+    transparent: true,
+    alphaTest: 0.08,
+    depthWrite: false,
+    toneMapped: false,
+  }));
+  sprite.name = 'b4-combat-signature-' + operator;
+  sprite.scale.set(size, size, 1);
+  sprite.renderOrder = 5;
+  return sprite;
 }
 
 /** A detailed modular stack for new cargo cover and background dressing. */
