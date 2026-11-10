@@ -75,7 +75,19 @@ export function loadGobkitModel(id: GobkitModelId): Promise<LoadedGobkitModel> {
 }
 
 export function cloneGobkitModel(gltf: LoadedGobkitModel): THREE.Group {
-  return cloneSkinnedScene(gltf.scene) as THREE.Group;
+  const root = cloneSkinnedScene(gltf.scene) as THREE.Group;
+  // Geometry/material instances are local to this actor so normal despawn and
+  // character-switch cleanup cannot invalidate a different copy's rig. Texture
+  // maps stay shared through the cached GLTF to keep GPU memory predictable.
+  root.traverse((object) => {
+    if (!(object instanceof THREE.Mesh)) return;
+    object.geometry = object.geometry.clone();
+    object.material = Array.isArray(object.material)
+      ? object.material.map((material) => material.clone())
+      : object.material.clone();
+    object.userData.gobkitAsset = true;
+  });
+  return root;
 }
 
 /** Normalize mixed source heights to a stable world-space scale and ground origin. */
