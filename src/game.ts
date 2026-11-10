@@ -2147,6 +2147,12 @@ export class PaleciakiGameEngine {
   }
 
     private rebuildPlayerMesh() {
+    // A fresh operator rig starts from a neutral pose even after game-over/retry.
+    this.attackSwingTimer = 0;
+    this.specialSwingTimer = 0;
+    this.playerHitReactTimer = 0;
+    this.playerHitReactDuration = 0.36;
+    this.attackCooldownTimer = 0;
     this.playerGobkitSequence++;
     this.stopGobkitTrack(this.playerGobkitTrack);
     this.playerGobkitTrack = null;
