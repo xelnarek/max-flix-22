@@ -71,6 +71,33 @@ export function setProceduralLimbPose(
   limb.rotation.z = rest.rotationZ + swingZ;
 }
 
+/** Add a short reaction on top of the current locomotion/attack pose. */
+export function addProceduralLimbPose(
+  limb: THREE.Object3D | undefined | null,
+  extraX: number,
+  extraZ = 0,
+): void {
+  if (!limb) return;
+  const rest = limb.userData.proceduralLimbRest as CachedLimbRest | undefined;
+  if (!rest) {
+    setProceduralLimbPose(limb, extraX, extraZ);
+    return;
+  }
+  setProceduralLimbPose(
+    limb,
+    limb.rotation.x - rest.rotationX + extraX,
+    limb.rotation.z - rest.rotationZ + extraZ,
+  );
+}
+
+/** Front-loaded hit pulse: a quick recoil with a smooth, short recovery. */
+export function getProceduralHitPulse(remainingSeconds: number, durationSeconds: number): number {
+  if (!Number.isFinite(remainingSeconds) || !Number.isFinite(durationSeconds) || durationSeconds <= 0) return 0;
+  const progress = THREE.MathUtils.clamp(1 - remainingSeconds / durationSeconds, 0, 1);
+  const impact = Math.sin(Math.min(1, progress / 0.44) * Math.PI * 0.5);
+  return impact * Math.pow(1 - progress, 0.65);
+}
+
 /** Apply an additive joint pose while preserving the factory-authored rest angle. */
 export function setProceduralJointRotation(
   joint: THREE.Object3D | undefined | null,
