@@ -512,6 +512,9 @@ export class PaleciakiGameEngine {
   // Reused camera scratch vectors: avoid two Vector3 allocations on every frame.
   private readonly cameraTargetPosition = new THREE.Vector3();
   private readonly desiredLookAtPosition = new THREE.Vector3();
+  // Shared synchronous scratch state: no per-frame Vector3/Quaternion churn for actors or homing shots.
+  private readonly projectileSteeringScratch = new THREE.Vector3();
+  private readonly enemySeparationScratch = { x: 0, z: 0 };
   private readonly cameraOcclusionWorldPosition = new THREE.Vector3();
   private readonly cameraOcclusionRaycaster = new THREE.Raycaster();
   private readonly cameraOcclusionHits: THREE.Intersection<THREE.Object3D>[] = [];
@@ -872,6 +875,8 @@ export class PaleciakiGameEngine {
   }[] = [];
   private enemies: EnemyItem[] = [];
   private readonly enemySpatialIndex = new EnemySpatialIndex<EnemyItem>(4.0);
+  /** Per-enemy wall-clock gate prevents contact attacks from restarting their animation every frame. */
+  private readonly enemyAttackAnimationUntil = new WeakMap<EnemyItem, number>();
   private enemyProjectiles: {
     mesh: THREE.Mesh;
     vel: THREE.Vector3;
@@ -1825,9 +1830,13 @@ export class PaleciakiGameEngine {
 
   private updateGobkitAnimations(dt: number) {
     if (!Number.isFinite(dt) || dt <= 0) return;
+    // The actor loop is synchronous, so one set of scratch objects safely serves every rig.
+    const displacement = new THREE.Vector3();
+    const localMovement = new THREE.Vector3();
+    const actorRotation = new THREE.Quaternion();
     const advanceActor = (track: GobkitAnimationTrack | null, position: THREE.Vector3, airborne = false) => {
       if (!track) return;
-      const displacement = position.clone().sub(track.lastPosition);
+      displacement.copy(position).sub(track.lastPosition);
       displacement.y = 0;
       const speed = displacement.length() / Math.max(0.001, dt);
 
@@ -1849,8 +1858,9 @@ export class PaleciakiGameEngine {
       let localSpeed = speed;
       if (track.sharedGeometry) {
         const parent = track.root.parent;
-        const actorRotation = parent ? parent.getWorldQuaternion(new THREE.Quaternion()).invert() : new THREE.Quaternion();
-        const localMovement = displacement.applyQuaternion(actorRotation);
+        actorRotation.identity();
+        if (parent) parent.getWorldQuaternion(actorRotation).invert();
+        localMovement.copy(displacement).applyQuaternion(actorRotation);
         const localVelocityX = localMovement.x / Math.max(0.001, dt);
         const localVelocityZ = localMovement.z / Math.max(0.001, dt);
         localSpeed = Math.hypot(localVelocityX, localVelocityZ);
@@ -11471,7 +11481,7 @@ export class PaleciakiGameEngine {
     }
 
     const nearbyEnemies = this.enemySpatialIndex.query(enemy.x, enemy.z, 4.1);
-    const separation = calculateEnemySeparationVector(enemy, nearbyEnemies, 2.6);
+    const separation = calculateEnemySeparationVector(enemy, nearbyEnemies, 2.6, this.enemySeparationScratch);
     const separationX = separation.x;
     const separationZ = separation.z;
 
@@ -11654,6 +11664,13 @@ export class PaleciakiGameEngine {
     this.requestGobkitAction(this.gobkitEnemyTracks.get(enemy) || null, 'Hit', reaction.duration);
     enemy.hitRecoilX = (enemy.hitRecoilX || 0) + reaction.impulseX;
     enemy.hitRecoilZ = (enemy.hitRecoilZ || 0) + reaction.impulseZ;
+  }
+
+  private requestEnemyAttackAnimation(enemy: EnemyItem, durationSeconds = 0.48): void {
+    const now = performance.now();
+    if (now < (this.enemyAttackAnimationUntil.get(enemy) ?? 0)) return;
+    this.enemyAttackAnimationUntil.set(enemy, now + 720);
+    this.requestGobkitAction(this.gobkitEnemyTracks.get(enemy) || null, 'Attack', durationSeconds);
   }
 
   private updateEnemyHitReaction(enemy: EnemyItem, dt: number): void {
@@ -12278,7 +12295,7 @@ export class PaleciakiGameEngine {
             // separation is also applied to coincident actors, so low-FPS frames
             // or simultaneous spawns cannot leave a permanent enemy stack.
             const nearbyCampaignEnemies = this.enemySpatialIndex.query(e.x, e.z, 4.0);
-            const separation = calculateEnemySeparationVector(e, nearbyCampaignEnemies, 2.5);
+            const separation = calculateEnemySeparationVector(e, nearbyCampaignEnemies, 2.5, this.enemySeparationScratch);
             const avoidance = calculateEnemyObstacleAvoidanceVector(
               e,
               { x: this.playerPos.x, z: this.playerPos.z },
@@ -12469,7 +12486,8 @@ export class PaleciakiGameEngine {
             e.state = 'stunned';
           }
         } else if (Math.abs(e.y - this.playerPos.y) < 1.1) {
-          // Horizontal Contact
+          // Horizontal contact triggers one readable enemy strike, not an arm animation restart on every frame.
+          if (e.state !== 'stunned') this.requestEnemyAttackAnimation(e, 0.48);
           if ((this.activePerks.bulldozer || 0) > 0) {
             const nowMs = performance.now();
             const lastHit = this.bulldozerHitCooldowns.get(e.id) || 0;
@@ -12867,7 +12885,7 @@ export class PaleciakiGameEngine {
         p.hitIds?.clear(); // Can hit enemies again on return!
       }
       if (p.boomerang && p.returning) {
-        const toPlayer = new THREE.Vector3(
+        const toPlayer = this.projectileSteeringScratch.set(
           this.playerPos.x - p.mesh.position.x,
           this.playerPos.y + 0.75 - p.mesh.position.y,
           this.playerPos.z - p.mesh.position.z
@@ -12887,7 +12905,9 @@ export class PaleciakiGameEngine {
       if (p.homing) {
         let nearest: EnemyItem | null = null;
         let minDist = 11.0;
-        for (const e of this.enemies) {
+        // The enemy grid is rebuilt before projectile simulation; only nearby cells can contain a valid homing target.
+        const nearbyTargets = this.enemySpatialIndex.query(p.mesh.position.x, p.mesh.position.z, minDist);
+        for (const e of nearbyTargets) {
           if (e.state === 'defeated') continue;
           const d = Math.hypot(e.x - p.mesh.position.x, e.z - p.mesh.position.z);
           if (d < minDist) {
@@ -12896,7 +12916,8 @@ export class PaleciakiGameEngine {
           }
         }
         if (nearest) {
-          const desired = new THREE.Vector3(nearest.x - p.mesh.position.x, 0, nearest.z - p.mesh.position.z)
+          const desired = this.projectileSteeringScratch
+            .set(nearest.x - p.mesh.position.x, 0, nearest.z - p.mesh.position.z)
             .normalize()
             .multiplyScalar(p.vel.length());
           p.vel.lerp(desired, dt * 8.5);
@@ -12971,7 +12992,8 @@ export class PaleciakiGameEngine {
 
       const segmentMidX = (previousProjectileX + p.mesh.position.x) * 0.5;
       const segmentMidZ = (previousProjectileZ + p.mesh.position.z) * 0.5;
-      const broadphaseRadius = Math.sqrt(segmentLengthSq) * 0.5 + 3.0;
+      // Exact hit radius is 1.35 m; a compact margin keeps fast-shot segment tests conservative without flooding the candidate set.
+      const broadphaseRadius = Math.sqrt(segmentLengthSq) * 0.5 + 1.65;
       const collisionCandidates = this.enemies.length >= 12
         ? this.enemySpatialIndex.query(segmentMidX, segmentMidZ, broadphaseRadius)
         : this.enemies;

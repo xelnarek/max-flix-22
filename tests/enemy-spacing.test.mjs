@@ -24,6 +24,20 @@ test('separation is zero outside the requested spacing radius', () => {
   assert.deepEqual(calculateEnemySeparationVector(self, [self, far], 2.6), { x: 0, z: 0 });
 });
 
+test('enemy separation can reuse a caller-owned result object without stale force values', () => {
+  const self = { id: 'self', x: 0, z: 0 };
+  const close = { id: 'close', x: 0.8, z: 0 };
+  const out = { x: 99, z: 99 };
+  const first = calculateEnemySeparationVector(self, [self, close], 2.6, out);
+  assert.equal(first, out);
+  assert.ok(first.x < 0);
+  assert.equal(first.z, 0);
+
+  const second = calculateEnemySeparationVector(self, [self], 2.6, out);
+  assert.equal(second, out);
+  assert.deepEqual(second, { x: 0, z: 0 });
+});
+
 test('defeated actors and invalid positions do not affect live enemy steering', () => {
   const self = { id: 'self', x: 0, z: 0 };
   const defeated = { id: 'dead', x: 0.4, z: 0, state: 'defeated' };

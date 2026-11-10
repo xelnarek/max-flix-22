@@ -140,6 +140,7 @@ export function calculateEnemySeparationVector(
   self: EnemySpacingActor,
   others: readonly EnemySpacingActor[],
   desiredSpacing = DEFAULT_ENEMY_SPACING,
+  out: HorizontalVector = { x: 0, z: 0 },
 ): HorizontalVector {
   const radius = Number.isFinite(desiredSpacing)
     ? Math.max(0.1, desiredSpacing)
@@ -182,7 +183,9 @@ export function calculateEnemySeparationVector(
     z *= scale;
   }
 
-  return { x, z };
+  out.x = x;
+  out.z = z;
+  return out;
 }
 
 

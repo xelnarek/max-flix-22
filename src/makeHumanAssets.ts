@@ -411,52 +411,67 @@ function addSharedAccessory(
   position: THREE.Vector3,
   rotation = new THREE.Euler(),
   parentBone?: string,
+  rootSpace = false,
 ): THREE.Mesh {
   const mesh = new THREE.Mesh(geometry, material);
   mesh.name = 'makehuman-equipment-' + name;
-  mesh.position.copy(position);
-  mesh.rotation.copy(rotation);
   mesh.castShadow = false;
   mesh.receiveShadow = false;
   mesh.userData.makeHumanAsset = true;
   mesh.userData.makeHumanSharedGeometry = true;
   const parent = parentBone ? root.getObjectByName(parentBone) : null;
+
+  if (parent && rootSpace) {
+    // Convert the authored bind-pose root transform into bone-local space once.
+    // Helmet, vest, radio, badge and carried parcels then follow skeletal motion.
+    root.updateMatrixWorld(true);
+    const parentInRoot = root.matrixWorld.clone().invert().multiply(parent.matrixWorld);
+    const rootTransform = new THREE.Matrix4().compose(
+      position,
+      new THREE.Quaternion().setFromEuler(rotation),
+      new THREE.Vector3(1, 1, 1),
+    );
+    parentInRoot.invert().multiply(rootTransform).decompose(mesh.position, mesh.quaternion, mesh.scale);
+  } else {
+    mesh.position.copy(position);
+    mesh.rotation.copy(rotation);
+  }
+
   (parent || root).add(mesh);
   return mesh;
 }
 
 function addRoleEquipment(root: THREE.Group, style: MakeHumanStyle): void {
+  root.updateMatrixWorld(true);
   const equipment = new Set(style.equipment);
   const geo = SHARED_ACCESSORY_GEOMETRIES;
   const mat = SHARED_ACCESSORY_MATERIALS;
   if (equipment.has('helmet')) {
     const helmetMaterial = style.helmetColor === 'orange' ? mat.helmetOrange
       : style.helmetColor === 'green' ? mat.helmetGreen : mat.helmetYellow;
-    addSharedAccessory(root, 'helmet-dome', geo.helmetCrown, helmetMaterial, new THREE.Vector3(0, 1.64, 0.035));
-    addSharedAccessory(root, 'helmet-brim', geo.helmetBrim, helmetMaterial, new THREE.Vector3(0, 1.64, 0.035));
-    addSharedAccessory(root, 'helmet-front-mark', geo.helmetStripe, mat.reflective, new THREE.Vector3(0, 1.737, 0.152));
+    addSharedAccessory(root, 'helmet-dome', geo.helmetCrown, helmetMaterial, new THREE.Vector3(0, 1.64, 0.035), new THREE.Euler(), 'head', true);
+    addSharedAccessory(root, 'helmet-brim', geo.helmetBrim, helmetMaterial, new THREE.Vector3(0, 1.64, 0.035), new THREE.Euler(), 'head', true);
+    addSharedAccessory(root, 'helmet-front-mark', geo.helmetStripe, mat.reflective, new THREE.Vector3(0, 1.737, 0.152), new THREE.Euler(), 'head', true);
   }
   if (equipment.has('vest')) {
     const vestMaterial = style.helmetColor === 'orange' ? mat.hiVisOrange : mat.hiVis;
     for (const side of [-1, 1]) {
-      const strap = addSharedAccessory(root, 'vest-strap-' + side, geo.vestStrap, vestMaterial,
-        new THREE.Vector3(side * 0.094, 1.195, 0.115));
-      strap.rotation.z = side * 0.24;
+      addSharedAccessory(root, 'vest-strap-' + side, geo.vestStrap, vestMaterial,
+        new THREE.Vector3(side * 0.094, 1.195, 0.115), new THREE.Euler(0, 0, side * 0.24), 'spine_02', true);
       addSharedAccessory(root, 'vest-reflective-strap-' + side, geo.vestStrap, mat.reflective,
-        new THREE.Vector3(side * 0.094, 1.195, 0.126)).scale.set(0.42, 1, 1);
+        new THREE.Vector3(side * 0.094, 1.195, 0.126), new THREE.Euler(0, 0, side * 0.24), 'spine_02', true).scale.set(0.42, 1, 1);
     }
-    addSharedAccessory(root, 'vest-chest-band', geo.vestBand, mat.reflective, new THREE.Vector3(0, 1.135, 0.124));
-    addSharedAccessory(root, 'vest-waist-band', geo.vestBand, mat.reflective, new THREE.Vector3(0, 1.01, 0.116));
+    addSharedAccessory(root, 'vest-chest-band', geo.vestBand, mat.reflective, new THREE.Vector3(0, 1.135, 0.124), new THREE.Euler(), 'spine_02', true);
+    addSharedAccessory(root, 'vest-waist-band', geo.vestBand, mat.reflective, new THREE.Vector3(0, 1.01, 0.116), new THREE.Euler(), 'spine_02', true);
   }
   if (equipment.has('radio')) {
-    addSharedAccessory(root, 'radio-body', geo.radioBody, mat.charcoal, new THREE.Vector3(0.17, 1.30, 0.095));
-    addSharedAccessory(root, 'radio-grille', geo.radioGrille, mat.steel, new THREE.Vector3(0.17, 1.285, 0.116));
-    const antenna = addSharedAccessory(root, 'radio-antenna', geo.radioAntenna, mat.charcoal, new THREE.Vector3(0.19, 1.395, 0.09));
-    antenna.rotation.z = -0.16;
+    addSharedAccessory(root, 'radio-body', geo.radioBody, mat.charcoal, new THREE.Vector3(0.17, 1.30, 0.095), new THREE.Euler(), 'spine_02', true);
+    addSharedAccessory(root, 'radio-grille', geo.radioGrille, mat.steel, new THREE.Vector3(0.17, 1.285, 0.116), new THREE.Euler(), 'spine_02', true);
+    addSharedAccessory(root, 'radio-antenna', geo.radioAntenna, mat.charcoal, new THREE.Vector3(0.19, 1.395, 0.09), new THREE.Euler(0, 0, -0.16), 'spine_02', true);
   }
   if (equipment.has('badge')) {
-    addSharedAccessory(root, 'staff-badge', geo.badgeCard, mat.badge, new THREE.Vector3(-0.105, 1.175, 0.132));
-    addSharedAccessory(root, 'staff-badge-line', geo.badgeLine, mat.badgeGold, new THREE.Vector3(-0.105, 1.198, 0.142));
+    addSharedAccessory(root, 'staff-badge', geo.badgeCard, mat.badge, new THREE.Vector3(-0.105, 1.175, 0.132), new THREE.Euler(), 'spine_02', true);
+    addSharedAccessory(root, 'staff-badge-line', geo.badgeLine, mat.badgeGold, new THREE.Vector3(-0.105, 1.198, 0.142), new THREE.Euler(), 'spine_02', true);
   }
   if (equipment.has('scanner')) {
     addSharedAccessory(root, 'hand-scanner', geo.scannerBody, mat.scanner,
@@ -471,15 +486,15 @@ function addRoleEquipment(root: THREE.Group, style: MakeHumanStyle): void {
       new THREE.Vector3(0.035, -0.048, 0.062), new THREE.Euler(0.16, 0.04, 0.16), 'hand_l');
   }
   if (equipment.has('parcel')) {
-    addSharedAccessory(root, 'courier-parcel', geo.parcelBox, mat.parcel, new THREE.Vector3(0, 1.19, -0.16));
-    addSharedAccessory(root, 'courier-parcel-tape', geo.parcelTape, mat.parcelTape, new THREE.Vector3(0, 1.19, -0.16));
-    addSharedAccessory(root, 'courier-parcel-label', geo.parcelLabel, mat.parcelLabel, new THREE.Vector3(0, 1.20, -0.071));
+    addSharedAccessory(root, 'courier-parcel', geo.parcelBox, mat.parcel, new THREE.Vector3(0, 1.19, -0.16), new THREE.Euler(), 'spine_02', true);
+    addSharedAccessory(root, 'courier-parcel-tape', geo.parcelTape, mat.parcelTape, new THREE.Vector3(0, 1.19, -0.16), new THREE.Euler(), 'spine_02', true);
+    addSharedAccessory(root, 'courier-parcel-label', geo.parcelLabel, mat.parcelLabel, new THREE.Vector3(0, 1.20, -0.071), new THREE.Euler(), 'spine_02', true);
   }
   if (equipment.has('toolBelt')) {
     addSharedAccessory(root, 'tool-belt-loop', geo.toolBelt, mat.charcoal,
-      new THREE.Vector3(0, 0.885, 0.012), new THREE.Euler(Math.PI / 2, 0, 0));
-    addSharedAccessory(root, 'tool-pouch-left', geo.toolPouch, mat.charcoal, new THREE.Vector3(0.16, 0.88, 0.068));
-    addSharedAccessory(root, 'tool-pouch-right', geo.toolPouch, mat.charcoal, new THREE.Vector3(-0.16, 0.88, 0.068));
+      new THREE.Vector3(0, 0.885, 0.012), new THREE.Euler(Math.PI / 2, 0, 0), 'pelvis', true);
+    addSharedAccessory(root, 'tool-pouch-left', geo.toolPouch, mat.charcoal, new THREE.Vector3(0.16, 0.88, 0.068), new THREE.Euler(), 'pelvis', true);
+    addSharedAccessory(root, 'tool-pouch-right', geo.toolPouch, mat.charcoal, new THREE.Vector3(-0.16, 0.88, 0.068), new THREE.Euler(), 'pelvis', true);
   }
   if (equipment.has('earpiece')) {
     addSharedAccessory(root, 'security-earpiece-loop', geo.earpieceLoop, mat.earpiece,
