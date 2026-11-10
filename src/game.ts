@@ -274,6 +274,8 @@ interface GobkitAnimationTrack {
   sharedGeometry?: boolean;
   /** Tracks one ground-to-air transition so jump and landing clips play only once. */
   wasAirborne?: boolean;
+  /** Last physical locomotion state for stable threshold hysteresis. */
+  locomotionAction?: string;
   idleVariantRemaining?: number;
   idleVariantCooldown?: number;
   idleVariantIndex?: number;
@@ -1959,7 +1961,8 @@ export class PaleciakiGameEngine {
         const localVelocityX = localMovement.x / Math.max(0.001, dt);
         const localVelocityZ = localMovement.z / Math.max(0.001, dt);
         localSpeed = Math.hypot(localVelocityX, localVelocityZ);
-        locomotion = chooseMakeHumanLocomotion(localVelocityX, localVelocityZ, airborne);
+        locomotion = chooseMakeHumanLocomotion(localVelocityX, localVelocityZ, airborne, track.locomotionAction);
+        track.locomotionAction = locomotion;
 
         if (!airborne && locomotion === 'Idle' && track.oneShotRemaining <= 0) {
           track.idleVariantCooldown = Math.max(0, (track.idleVariantCooldown ?? 5.5) - dt);
@@ -2042,7 +2045,9 @@ export class PaleciakiGameEngine {
             localMovement.x / Math.max(0.001, dt),
             localMovement.z / Math.max(0.001, dt),
             false,
+            track.locomotionAction as any,
           );
+          track.locomotionAction = desired;
         } else {
           desired = speed > 4.8 ? 'Run' : speed > 0.18 ? 'Walk' : 'Idle';
         }
