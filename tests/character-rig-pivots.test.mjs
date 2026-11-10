@@ -36,3 +36,19 @@ test('the existing operator model proportions and combat animation systems remai
   assert.match(game, /setProceduralLimbPose\(this\.leftArm, -gait \* motionProfile\.armSwing, armSpread\)/);
   assert.match(game, /setProceduralLimbPose\(this\.rightArm, gait \* motionProfile\.armSwing, -armSpread\)/);
 });
+
+
+test('operator landing has a bounded brace pose with a clean reset on rig rebuild', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /private playerLandingTimer = 0/);
+  assert.match(game, /private readonly playerLandingDuration = 0\.28/);
+  assert.match(game, /this\.playerLandingTimer = this\.playerLandingDuration/);
+  assert.match(game, /this\.playerGroup\.scale\.y \*= 1 - 0\.14 \* landingPulse/);
+  assert.match(game, /setProceduralLimbPose\(this\.leftLeg, 0\.42 \* landingPulse\)/);
+  assert.match(game, /setProceduralLimbPose\(this\.rightLeg, 0\.36 \* landingPulse\)/);
+  assert.match(game, /setProceduralLimbPose\(this\.leftArm, -0\.24 \* landingPulse/);
+  assert.match(game, /this\.playerLandingTimer = Math\.max\(0, this\.playerLandingTimer - dt\)/);
+  const rebuildStart = game.indexOf('private rebuildPlayerMesh()');
+  const rebuildEnd = game.indexOf('public startTitle()', rebuildStart);
+  assert.match(game.slice(rebuildStart, rebuildEnd), /this\.playerLandingTimer = 0/);
+});
