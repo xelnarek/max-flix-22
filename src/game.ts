@@ -11962,6 +11962,10 @@ export class PaleciakiGameEngine {
     const isBoss = isMajorSurvivalBossType(enemy.type) ||
       enemy.type === 'elite_walczak_guard' || enemy.type === 'sebix_m';
     const duration = isBoss ? 1.18 : 0.82;
+    if (enemy.hitBaseScale) {
+      mesh.scale.set(enemy.hitBaseScale.x, enemy.hitBaseScale.y, enemy.hitBaseScale.z);
+      enemy.hitBaseScale = undefined;
+    }
     enemy.deathVisualDuration = duration;
     enemy.deathVisualTimer = duration;
     enemy.deathVisualRest = {
