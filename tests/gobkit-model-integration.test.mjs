@@ -105,3 +105,15 @@ test('Gobkit build validates the embedded GLB JSON, skeleton, animation clips an
   assert.match(validator, /document\.animations/);
   assert.match(validator, /REQUIRED_RIG_CLIPS/);
 });
+
+
+test('per-frame actor animation reuses persistent scratch vectors and quaternion', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /private readonly actorDisplacementScratch = new THREE\\.Vector3\\(\\)/);
+  assert.match(game, /private readonly actorLocalMovementScratch = new THREE\\.Vector3\\(\\)/);
+  assert.match(game, /private readonly actorRotationScratch = new THREE\\.Quaternion\\(\\)/);
+  assert.match(game, /const displacement = this\\.actorDisplacementScratch/);
+  assert.match(game, /const localMovement = this\\.actorLocalMovementScratch/);
+  assert.match(game, /const actorRotation = this\\.actorRotationScratch/);
+  assert.doesNotMatch(game, /updateGobkitAnimations\\(dt: number\\) \\{[\\s\\S]{0,300}const displacement = new THREE\\.Vector3\\(\\)/);
+});
