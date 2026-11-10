@@ -9835,6 +9835,7 @@ export class PaleciakiGameEngine {
       if (distance < 16 && (enemy.specialActionTimer || 0) <= 0) {
         enemy.specialActionTimer = phase >= 2 ? 3.1 : 4.5;
         facePlayer();
+        this.requestEnemyAttackAnimation(enemy, 0.50);
         this.spawnSebixBrick(enemy.x,enemy.y+1.35,enemy.z,this.playerPos.x,this.playerPos.z);
       }
     }
@@ -12300,6 +12301,7 @@ export class PaleciakiGameEngine {
                 if (e.chargeTimer <= 0) {
                   e.chargeTimer = undefined;
                   e.specialActionTimer = cooldown + 0.7;
+                  this.requestEnemyAttackAnimation(e, 0.58);
                   this.triggerScreenShake(0.78, 0.48);
                   this.triggerHitStop(0.09);
                   this.triggerBloomPulse(0.52);
@@ -12520,6 +12522,7 @@ export class PaleciakiGameEngine {
           e.specialActionTimer -= dt * survivalAbilityRate;
           if (e.specialActionTimer <= 0 && distToPlayer < 6.5) {
             e.specialActionTimer = 2.8;
+            this.requestEnemyAttackAnimation(e, 0.38);
             sound.playWhistle();
             this.emitFloatingToast('🚨 KONTROLA BHP!', e.x, e.y + 1.2, e.z, 'damage');
           }
@@ -12543,6 +12546,7 @@ export class PaleciakiGameEngine {
           e.specialActionTimer -= dt * survivalAbilityRate;
           if (e.specialActionTimer <= 0) {
             e.specialActionTimer = 2.8;
+            this.requestEnemyAttackAnimation(e, 0.60);
             this.spawnParticleRing(e.x, 0.15, e.z, 0x4ade80);
             this.emitFloatingToast('☣️ SKAŻENIE GAMMA!', e.x, e.y + 1.2, e.z, 'damage');
             sound.playElectricalSparks();
@@ -12551,6 +12555,7 @@ export class PaleciakiGameEngine {
           e.specialActionTimer -= dt * survivalAbilityRate;
           if (e.specialActionTimer <= 0 && distToPlayer < 9.5) {
             e.specialActionTimer = 3.4;
+            this.requestEnemyAttackAnimation(e, 0.60);
             this.spawnParticleRing(e.x, 0.25, e.z, 0x84cc16);
             this.emitFloatingToast('☢️ PROTOKÓŁ SKAŻENIA PIP!', e.x, e.y + 1.2, e.z, 'damage');
             sound.playSirens();
@@ -12559,6 +12564,7 @@ export class PaleciakiGameEngine {
           e.specialActionTimer -= dt * survivalAbilityRate;
           if (e.specialActionTimer <= 0 && distToPlayer < 10.0) {
             e.specialActionTimer = 2.4;
+            this.requestEnemyAttackAnimation(e, 0.48);
             this.spawnPenaltyNotice(e.x, e.y + 0.8, e.z);
             this.emitFloatingToast('💻 CYBER-KATALOG 3.0!', e.x, e.y + 1.2, e.z, 'damage');
             sound.playAttackWhoosh();
