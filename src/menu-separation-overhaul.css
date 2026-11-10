@@ -1,0 +1,597 @@
+/*
+ * Main menu separation and polish pass.
+ * One active panel at a time; Survival and PvP own distinct entry actions,
+ * visual accents and instructions.
+ */
+
+#title-screen {
+  --menu-accent: #e9b44c;
+  --menu-accent-soft: rgba(233,180,76,.14);
+  --menu-accent-line: rgba(233,180,76,.42);
+  --menu-panel: rgba(11,20,31,.96);
+}
+
+#title-screen[data-active-menu-tab="tab-team"],
+#title-screen[data-active-menu-tab="tab-ranks"],
+#title-screen[data-active-menu-tab="tab-leaderboard"] {
+  --menu-accent: #e9b44c;
+  --menu-accent-soft: rgba(233,180,76,.14);
+  --menu-accent-line: rgba(233,180,76,.42);
+}
+
+#title-screen[data-active-menu-tab="tab-map"] {
+  --menu-accent: #55c7d8;
+  --menu-accent-soft: rgba(85,199,216,.14);
+  --menu-accent-line: rgba(85,199,216,.42);
+}
+
+#title-screen[data-active-menu-tab="tab-pvp"] {
+  --menu-accent: #b49af5;
+  --menu-accent-soft: rgba(180,154,245,.16);
+  --menu-accent-line: rgba(180,154,245,.46);
+}
+
+#title-screen[data-active-menu-tab="tab-enemies"] {
+  --menu-accent: #ef8e6c;
+  --menu-accent-soft: rgba(239,142,108,.14);
+  --menu-accent-line: rgba(239,142,108,.42);
+}
+
+#title-screen[data-active-menu-tab="tab-perks"] {
+  --menu-accent: #66d6a3;
+  --menu-accent-soft: rgba(102,214,163,.14);
+  --menu-accent-line: rgba(102,214,163,.42);
+}
+
+#title-screen[data-active-menu-tab="tab-field-guide"] {
+  --menu-accent: #74bce8;
+  --menu-accent-soft: rgba(116,188,232,.14);
+  --menu-accent-line: rgba(116,188,232,.42);
+}
+
+#title-screen[data-active-menu-tab="tab-talent-tree"] {
+  --menu-accent: #b49af5;
+  --menu-accent-soft: rgba(180,154,245,.14);
+  --menu-accent-line: rgba(180,154,245,.42);
+}
+
+#title-screen[data-active-menu-tab="tab-achievements"] {
+  --menu-accent: #e78fb4;
+  --menu-accent-soft: rgba(231,143,180,.14);
+  --menu-accent-line: rgba(231,143,180,.42);
+}
+
+#title-screen[data-active-menu-tab="tab-settings"] {
+  --menu-accent: #9ab0c2;
+  --menu-accent-soft: rgba(154,176,194,.12);
+  --menu-accent-line: rgba(154,176,194,.34);
+}
+
+/* Horizontal navigation remains a single clean row instead of squeezing labels. */
+#title-screen .menu-tabs-bar {
+  display: flex !important;
+  flex: 0 0 auto !important;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 6px !important;
+  min-width: 0;
+  width: 100%;
+  padding: 6px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(132,166,190,.42) transparent;
+  border: 1px solid rgba(129,159,181,.16) !important;
+  border-radius: 13px !important;
+  background: linear-gradient(180deg, rgba(9,18,29,.96), rgba(6,13,22,.96)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 7px 22px rgba(0,0,0,.16);
+  contain: layout paint;
+}
+
+#title-screen .menu-tab-btn {
+  display: inline-flex !important;
+  flex: 1 0 auto !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+  min-width: 86px !important;
+  min-height: 44px !important;
+  padding: 7px 11px !important;
+  border: 1px solid transparent !important;
+  border-radius: 9px !important;
+  background: transparent !important;
+  color: #91a5b7 !important;
+  font: 800 9px/1.15 "JetBrains Mono", monospace !important;
+  letter-spacing: .045em !important;
+  scroll-snap-align: center;
+  transition: color .16s ease, background .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+
+#title-screen .menu-tab-btn .tab-icon,
+#title-screen .menu-tab-btn .ui-svg-icon {
+  display: inline-flex;
+  width: 18px !important;
+  height: 18px !important;
+  flex: 0 0 18px !important;
+  color: currentColor;
+  opacity: .9;
+}
+
+#title-screen .menu-tab-btn:hover {
+  color: #edf5fa !important;
+  background: rgba(255,255,255,.045) !important;
+}
+
+#title-screen .menu-tab-btn.active {
+  color: var(--menu-accent) !important;
+  border-color: var(--menu-accent-line) !important;
+  background: linear-gradient(180deg, var(--menu-accent-soft), rgba(12,24,36,.76)) !important;
+  box-shadow: inset 0 -2px 0 var(--menu-accent), 0 4px 13px rgba(0,0,0,.18) !important;
+}
+
+#title-screen .menu-tab-btn:focus-visible,
+#title-screen .survival-map-choice:focus-visible,
+#title-screen .btn-primary-start:focus-visible {
+  outline: 2px solid var(--menu-accent) !important;
+  outline-offset: 3px;
+}
+
+#title-screen .menu-tab-content-area {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  min-width: 0;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(119,153,177,.34) transparent;
+  padding: 5px 4px 8px !important;
+}
+
+#title-screen .tab-panel {
+  width: 100%;
+  min-width: 0;
+  gap: clamp(10px, 1.2vw, 16px);
+  padding: 3px 2px 12px;
+  contain: layout style;
+}
+
+#title-screen .tab-panel[aria-hidden="true"] {
+  display: none !important;
+}
+
+#title-screen .tab-panel.active {
+  display: flex !important;
+  animation: menuPanelEnter .16s ease-out both;
+}
+
+@keyframes menuPanelEnter {
+  from { opacity: .78; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* No unrelated launch buttons or control hints on character, codex, account,
+   achievement or settings screens. The footer appears only on a mode screen. */
+#title-screen .menu-fixed-bottom-bar {
+  display: none !important;
+  flex: 0 0 auto !important;
+  width: 100%;
+  min-width: 0;
+  padding: 8px 0 max(4px, env(safe-area-inset-bottom)) !important;
+  border-top: 1px solid rgba(130,158,179,.16);
+  background: linear-gradient(180deg, rgba(7,14,23,.78), rgba(5,11,18,.98));
+}
+
+#title-screen[data-active-menu-tab="tab-map"] .menu-fixed-bottom-bar,
+#title-screen[data-active-menu-tab="tab-pvp"] .menu-fixed-bottom-bar {
+  display: flex !important;
+}
+
+#title-screen .menu-cta-row {
+  display: flex !important;
+  width: 100%;
+  gap: 10px;
+}
+
+#title-screen .btn-survival-start,
+#title-screen .btn-pvp-start {
+  display: none !important;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  min-height: 58px;
+  flex-direction: row !important;
+  justify-content: flex-start !important;
+  gap: 12px;
+  padding: 8px 16px !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+  border-radius: 12px !important;
+  text-align: left;
+  box-shadow: 0 8px 20px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.16) !important;
+}
+
+#title-screen[data-active-menu-tab="tab-map"] .btn-survival-start {
+  display: flex !important;
+  background: linear-gradient(110deg, #155665, #123a4d) !important;
+  border-color: rgba(85,199,216,.52) !important;
+  color: #e7fbff !important;
+  box-shadow: 0 8px 20px rgba(4,74,91,.24), inset 0 1px 0 rgba(255,255,255,.14) !important;
+}
+
+#title-screen[data-active-menu-tab="tab-pvp"] .btn-pvp-start {
+  display: flex !important;
+  background: linear-gradient(110deg, #49396f, #282342) !important;
+  border-color: rgba(180,154,245,.55) !important;
+  color: #f4efff !important;
+  box-shadow: 0 8px 20px rgba(68,45,116,.24), inset 0 1px 0 rgba(255,255,255,.14) !important;
+}
+
+#title-screen .menu-cta-icon {
+  display: inline-flex;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(255,255,255,.09);
+}
+
+#title-screen .menu-cta-icon svg {
+  width: 25px;
+  height: 25px;
+}
+
+#title-screen .menu-cta-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+#title-screen .survival-start-title {
+  color: inherit !important;
+  font: 900 13px/1.15 "Space Grotesk", sans-serif !important;
+  letter-spacing: .06em;
+}
+
+#title-screen .survival-start-subtitle {
+  color: rgba(231,242,248,.72) !important;
+  font: 700 8px/1.35 "JetBrains Mono", monospace !important;
+  letter-spacing: .035em;
+  white-space: normal;
+}
+
+#title-screen .btn-survival-start:hover,
+#title-screen .btn-pvp-start:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+#title-screen .menu-controls-hint {
+  display: none !important;
+}
+
+/* Dedicated PvP landing panel: no Survival map, perk or auto-aim content. */
+#title-screen #tab-pvp {
+  align-content: start;
+  justify-content: start;
+  gap: 14px;
+}
+
+#title-screen .pvp-menu-hero {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(16px, 2vw, 24px);
+  border: 1px solid rgba(180,154,245,.34);
+  border-radius: 16px;
+  background:
+    radial-gradient(ellipse at 88% 0%, rgba(180,154,245,.19), transparent 46%),
+    linear-gradient(145deg, rgba(31,30,53,.98), rgba(11,17,30,.98));
+  box-shadow: 0 12px 28px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+#title-screen .pvp-menu-hero::after {
+  content: "1v1";
+  position: absolute;
+  right: clamp(16px, 4vw, 42px);
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(213,199,255,.075);
+  font: 900 clamp(64px, 10vw, 116px)/1 "Space Grotesk", sans-serif;
+  letter-spacing: -.08em;
+  pointer-events: none;
+}
+
+#title-screen .pvp-menu-kicker {
+  color: #c7b8f7;
+  font: 800 9px/1.3 "JetBrains Mono", monospace;
+  letter-spacing: .15em;
+}
+
+#title-screen .pvp-menu-hero h2 {
+  position: relative;
+  z-index: 1;
+  margin: 6px 0 7px;
+  color: #f4efff;
+  font: 900 clamp(22px, 3.1vw, 34px)/1 "Space Grotesk", sans-serif;
+  letter-spacing: .055em;
+}
+
+#title-screen .pvp-menu-hero p {
+  position: relative;
+  z-index: 1;
+  max-width: 690px;
+  margin: 0;
+  color: #b9b3cf;
+  font: 500 clamp(11px, 1vw, 13px)/1.55 "Plus Jakarta Sans", sans-serif;
+}
+
+#title-screen .pvp-menu-status-line {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 15px;
+  color: #d7ccfa;
+  font: 800 8px/1.4 "JetBrains Mono", monospace;
+  letter-spacing: .06em;
+}
+
+#title-screen .pvp-menu-status-line > span:last-child {
+  color: #938cab;
+  font-weight: 700;
+}
+
+#title-screen .pvp-menu-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #a78bfa;
+  box-shadow: 0 0 0 4px rgba(167,139,250,.12), 0 0 12px rgba(167,139,250,.5);
+}
+
+#title-screen .pvp-menu-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+#title-screen .pvp-menu-feature-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(158,145,201,.2);
+  border-radius: 12px;
+  background: linear-gradient(155deg, rgba(26,27,45,.96), rgba(10,16,28,.98));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+}
+
+#title-screen .pvp-menu-feature-icon {
+  display: inline-flex;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(180,154,245,.32);
+  border-radius: 8px;
+  background: rgba(180,154,245,.1);
+  color: #cabaf8;
+  font: 800 18px/1 "Space Grotesk", sans-serif;
+}
+
+#title-screen .pvp-menu-feature-card strong,
+#title-screen .pvp-menu-roster-note strong {
+  display: block;
+  color: #e7e0f7;
+  font: 800 9px/1.35 "JetBrains Mono", monospace;
+  letter-spacing: .055em;
+}
+
+#title-screen .pvp-menu-feature-card p,
+#title-screen .pvp-menu-roster-note p {
+  margin: 5px 0 0;
+  color: #a7a2bb;
+  font: 500 10px/1.5 "Plus Jakarta Sans", sans-serif;
+}
+
+#title-screen .pvp-menu-roster-note {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(180,154,245,.19);
+  border-radius: 11px;
+  background: rgba(20,20,37,.72);
+}
+
+#title-screen .pvp-menu-roster-mark {
+  display: inline-flex;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(180,154,245,.12);
+  color: #c4b5fd;
+  font: 900 17px/1 "JetBrains Mono", monospace;
+}
+
+/* Mode-specific visual signatures. Keep the survival map independent from PvP. */
+#title-screen[data-active-menu-tab="tab-map"] .survival-map-picker {
+  border-color: rgba(85,199,216,.27);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(85,199,216,.09), transparent 58%),
+    linear-gradient(145deg, rgba(10,30,40,.98), rgba(7,15,24,.99));
+}
+
+#title-screen[data-active-menu-tab="tab-map"] .survival-map-choice[aria-pressed="true"] {
+  border-color: rgba(85,199,216,.72) !important;
+  box-shadow: 0 0 0 1px rgba(85,199,216,.16), 0 9px 22px rgba(0,0,0,.25) !important;
+}
+
+/* Lower GPU cost on phones: the menu is static UI, not a reason to blur the
+   full-screen compositor or animate multiple shadow layers. */
+#title-screen .char-card,
+#title-screen .char-details-box,
+#title-screen .enemy-guide-card,
+#title-screen .perk-card,
+#title-screen .field-guide-card,
+#title-screen .pvp-menu-feature-card {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+@media (max-width: 760px) {
+  #title-screen .title-sheet {
+    gap: 6px !important;
+    padding: 7px !important;
+  }
+
+  #title-screen .menu-top-header {
+    padding: 8px 8px 6px !important;
+  }
+
+  #title-screen .menu-game-title {
+    font-size: clamp(21px, 5vw, 28px) !important;
+  }
+
+  #title-screen .menu-tabs-bar {
+    gap: 4px !important;
+    padding: 4px !important;
+    border-radius: 10px !important;
+  }
+
+  #title-screen .menu-tab-btn {
+    flex: 0 0 auto !important;
+    min-width: 82px !important;
+    min-height: 42px !important;
+    padding: 6px 9px !important;
+    gap: 6px !important;
+    font-size: 8px !important;
+  }
+
+  #title-screen .menu-tab-content-area {
+    min-height: 0 !important;
+    max-height: none !important;
+    padding: 4px 2px 8px !important;
+  }
+
+  #title-screen #tab-team .char-grid {
+    grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+    gap: 8px !important;
+  }
+
+  #title-screen #tab-team .char-card {
+    min-height: 144px !important;
+  }
+
+  #title-screen .arcade-showcase-top {
+    align-items: flex-start;
+  }
+
+  #title-screen .pvp-menu-feature-grid {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  #title-screen .pvp-menu-feature-card {
+    padding: 11px;
+  }
+
+  #title-screen .pvp-menu-hero {
+    padding: 16px 14px;
+  }
+
+  #title-screen .menu-fixed-bottom-bar {
+    padding: 7px 0 max(4px, env(safe-area-inset-bottom)) !important;
+  }
+
+  #title-screen .btn-survival-start,
+  #title-screen .btn-pvp-start {
+    min-height: 52px;
+    padding: 7px 10px !important;
+  }
+
+  #title-screen .menu-cta-icon {
+    flex-basis: 34px;
+    width: 34px;
+    height: 34px;
+  }
+}
+
+@media (max-width: 380px) {
+  #title-screen .menu-tab-btn {
+    min-width: 76px !important;
+    min-height: 40px !important;
+    padding: 5px 7px !important;
+  }
+
+  #title-screen .menu-tab-btn .tab-icon,
+  #title-screen .menu-tab-btn .ui-svg-icon {
+    width: 15px !important;
+    height: 15px !important;
+    flex-basis: 15px !important;
+  }
+
+  #title-screen .menu-tab-btn .tab-label {
+    font-size: 7px !important;
+  }
+
+  #title-screen .char-showcase-portrait {
+    width: 62px;
+    height: 62px;
+    flex-basis: 62px;
+  }
+}
+
+@media (max-height: 560px) and (orientation: landscape) and (pointer: coarse) {
+  #title-screen .menu-top-header {
+    padding: 3px 8px !important;
+  }
+
+  #title-screen .brand-badge-pill,
+  #title-screen .menu-game-subtitle,
+  #title-screen .menu-release-strip {
+    display: none !important;
+  }
+
+  #title-screen .menu-tab-btn {
+    min-height: 34px !important;
+  }
+
+  #title-screen .menu-tab-content-area {
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+
+  #title-screen .pvp-menu-hero {
+    padding: 10px 12px;
+  }
+
+  #title-screen .pvp-menu-feature-card {
+    padding: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #title-screen .tab-panel.active {
+    animation: none !important;
+  }
+
+  #title-screen .menu-tab-btn,
+  #title-screen .btn-primary-start {
+    transition: none !important;
+  }
+}
