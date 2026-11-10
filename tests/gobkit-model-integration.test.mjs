@@ -178,6 +178,20 @@ test('rebuilding an operator clears previous run attack and hit poses', async ()
   assert.match(rebuild, /this\.attackCooldownTimer = 0/);
 });
 
+test('enemy locomotion blends smoothly between idle, patrol and chase without duplicate gait trig calls', async () => {
+  const [game, types] = await Promise.all([
+    read('../src/game.ts'),
+    read('../src/types.ts'),
+  ]);
+  assert.match(types, /gaitBlend\?: number/);
+  assert.match(game, /e\.gaitBlend = THREE\.MathUtils\.damp\(e\.gaitBlend \?\? 0, targetGaitMovement, 10, dt\)/);
+  assert.match(game, /const gaitWave = Math\.sin\(e\.walkCycle\)/);
+  assert.match(game, /const gaitHalfWave = Math\.sin\(e\.walkCycle \* 0\.5\)/);
+  assert.match(game, /const gait = gaitWave/);
+  assert.match(game, /let leftArmZ = -gaitHalfWave/);
+  assert.match(game, /const headBob = gaitHalfWave/);
+});
+
 test('procedural enemy rigs receive authored wind-up, strike and hit poses', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /enemy\.attackPoseDuration = poseDuration/);
