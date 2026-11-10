@@ -189,11 +189,13 @@ test('async rig attachment restores pending player and enemy combat reactions', 
 });
 
 
-test('humanoid animation clips cannot move the visual root away from physics hitboxes', async () => {
+test('all imported humanoid rigs keep root motion aligned with physics hitboxes', async () => {
   const game = await read('../src/game.ts');
-  assert.match(game, /Freeze authored root-position tracks in every locomotion clip/);
+  assert.match(game, /function cloneRootMotionFreeClip\(sourceClip: THREE\.AnimationClip\)/);
   assert.match(game, /sourceTrack\.name\.toLowerCase\(\)\.includes\('root\.position'\)/);
   assert.match(game, /cleaned\.values\[index\] = firstX/);
   assert.match(game, /cleaned\.values\[index \+ 1\] = firstY/);
   assert.match(game, /cleaned\.values\[index \+ 2\] = firstZ/);
+  assert.match(game, /const safeClip = cloneRootMotionFreeClip\(clip\)/);
+  assert.match(game, /const clip = cloneRootMotionFreeClip\(sourceClip\)/);
 });
