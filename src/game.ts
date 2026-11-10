@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { applyPolyHavenPbrMaps } from './polyHavenTextures.ts';
-import { chooseMakeHumanLocomotion, getMakeHumanPlaybackRate } from './makeHumanLocomotion.ts';
+import { chooseMakeHumanLocomotion, getMakeHumanPlaybackRate, isMakeHumanVelocityAction } from './makeHumanLocomotion.ts';
 import { createMakeHumanActor, MAKEHUMAN_OPERATOR_STYLES, MAKEHUMAN_ENEMY_STYLES, type MakeHumanStyleId } from './makeHumanAssets.ts';
 import {
   clampGobkitActionDuration,
@@ -1461,6 +1461,7 @@ export class PaleciakiGameEngine {
   private stopGobkitTrack(track: GobkitAnimationTrack | null) {
     if (!track) return;
     track.mixer.stopAllAction();
+    track.mixer.uncacheRoot(track.root);
     track.root.removeFromParent();
     // Each actor owns cloned geometry/materials; maps are shared by the
     // cached GLTF and deliberately remain alive for the next actor.
@@ -1947,7 +1948,9 @@ export class PaleciakiGameEngine {
         ? track.oneShotAction
         : locomotion;
       this.playGobkitAction(track, activeAction);
-      if (track.sharedGeometry) {
+      // Do not overwrite setDuration() for one-shot Attack/Hit/Jump/Land clips.
+      // Only velocity-driven locomotion should be retimed from the actor's speed.
+      if (track.sharedGeometry && isMakeHumanVelocityAction(activeAction)) {
         const action = track.actions.get(activeAction);
         if (action) action.setEffectiveTimeScale(getMakeHumanPlaybackRate(activeAction, localSpeed));
       }
@@ -1980,8 +1983,11 @@ export class PaleciakiGameEngine {
       if (!track || enemy.mesh.visible === false) continue;
 
       let desired = 'Idle';
-      if (enemy.state === 'defeated') desired = 'Death';
-      else if ((enemy.hitReactTimer || 0) > 0.015 || enemy.state === 'stunned' || enemy.stunTimer > 0) desired = 'Hit';
+      if (enemy.state === 'defeated') {
+        // Death must supersede an in-progress hit reaction instead of waiting for it to expire.
+        if (track.oneShotPriority < getGobkitActionPriority('Death')) this.requestGobkitAction(track, 'Death', 1.08);
+        desired = 'Death';
+      } else if ((enemy.hitReactTimer || 0) > 0.015 || enemy.state === 'stunned' || enemy.stunTimer > 0) desired = 'Hit';
       else if (enemy.state === 'charging') desired = 'Run';
       else {
         displacement.copy(enemy.mesh.position).sub(track.lastPosition);
@@ -2010,7 +2016,7 @@ export class PaleciakiGameEngine {
       }
       const activeAction = track.oneShotRemaining > 0 && track.oneShotAction ? track.oneShotAction : desired;
       this.playGobkitAction(track, activeAction);
-      if (track.sharedGeometry) {
+      if (track.sharedGeometry && isMakeHumanVelocityAction(activeAction)) {
         const speed = track.lastPosition.distanceTo(enemy.mesh.position) / Math.max(0.001, dt);
         const action = track.actions.get(activeAction);
         if (action) action.setEffectiveTimeScale(getMakeHumanPlaybackRate(activeAction, speed));
