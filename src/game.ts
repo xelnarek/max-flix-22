@@ -12261,13 +12261,17 @@ export class PaleciakiGameEngine {
               rightArmZ += 0.18 * strike;
             }
           } else if (style === 'ranged') {
-            const reach = 0.18 * windup - 0.90 * strike;
+            // Projectile attacks are requested on the launch frame: show the
+            // arm extension/recoil immediately, then relax instead of playing
+            // a delayed melee-style wind-up after the projectile has left.
+            const reach = -0.82 * Math.pow(1 - progress, 1.45) + 0.08 * windup;
+            const recoilRoll = 0.07 * Math.pow(1 - progress, 1.2);
             if (side < 0) {
               leftArmX += reach;
-              leftArmZ -= 0.06 * strike;
+              leftArmZ -= recoilRoll;
             } else {
               rightArmX += reach;
-              rightArmZ += 0.06 * strike;
+              rightArmZ += recoilRoll;
             }
           }
         }
