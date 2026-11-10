@@ -35,6 +35,7 @@ import { clampHorizontalPosition } from './arenaBounds.ts';
 import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoint, resolveEnemyPlayerSeparation } from './enemySpacing.ts';
 import { calculateEnemyObstacleAvoidanceVector } from './enemyNavigation.ts';
 import { createEnemyHitReaction, getEnemyHitPulse, getEnemyImpactBurstProfile } from './enemyCombatFeedback.ts';
+import { ENEMY_VISUAL_PROFILES } from './enemyVisualProfiles.ts';
 import { isEffectiveBossLaneDodge, isInsideBossAttackLane, isWithinBossImpactRadius } from './combatTelegraphs.ts';
 import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
 import { chooseSurvivalEventSpawnPoint } from './survivalSpawn.ts';
@@ -1952,10 +1953,8 @@ export class PaleciakiGameEngine {
       if (!this.enemies.includes(enemy) || enemy.mesh !== mesh || enemy.type !== requestedType ||
           mesh.parent !== this.levelRoot || enemy.state === 'defeated') return;
       const root = cloneGobkitModel(gltf);
-      const largeEnemy = requestedType === 'walczak' || requestedType === 'krol_leto' ||
-        requestedType === 'bosman_krakow' || requestedType === 'mutant_gamma_forklift' ||
-        requestedType === 'radioactive_pip';
-      fitGobkitModel(root, largeEnemy ? 1.92 : 1.48, this.threeRenderer?.capabilities.getMaxAnisotropy() ?? 1);
+      const visualProfile = ENEMY_VISUAL_PROFILES[requestedType];
+      fitGobkitModel(root, visualProfile.targetHeight, this.threeRenderer?.capabilities.getMaxAnisotropy() ?? 1);
       root.position.y -= mesh.position.y;
       root.name = 'gobkit-enemy-' + modelId + '-' + enemy.id;
       const overlays = [
@@ -2081,7 +2080,7 @@ export class PaleciakiGameEngine {
     activeEnemies.clear();
     for (const enemy of this.enemies) activeEnemies.add(enemy);
     for (const enemy of this.enemies) {
-      const modelId = ENEMY_GOBKIT_MODELS[enemy.type];
+      const modelId = ENEMY_VISUAL_PROFILES[enemy.type].gobkitModel;
       if (!modelId || !enemy.mesh) continue;
       if (!this.requestedGobkitEnemies.has(enemy)) {
         this.requestedGobkitEnemies.add(enemy);
