@@ -12,6 +12,8 @@ import {
 test('optional combat clips resolve to the best available visual fallback', () => {
   assert.equal(resolveGobkitActionName('Attack', new Set(['Hit', 'Idle'])), 'Hit');
   assert.equal(resolveGobkitActionName('Special', new Set(['Run', 'Idle'])), 'Run');
+  assert.equal(resolveGobkitActionName('Jump', new Set(['Idle', 'Walk'])), 'Walk');
+  assert.equal(resolveGobkitActionName('Jump', new Set(['Idle'])), 'Idle');
   assert.equal(resolveGobkitActionName('Run', new Set(['Walk', 'Idle'])), 'Walk');
   assert.equal(resolveGobkitActionName('Walk', new Set(['Idle'])), 'Idle');
   assert.equal(resolveGobkitActionName('Idle', new Set(['Walk'])), 'Walk');

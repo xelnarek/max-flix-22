@@ -15,7 +15,8 @@ type ActionLookup = {
 const ACTION_FALLBACKS: Readonly<Record<string, readonly string[]>> = Object.freeze({
   Attack: ['Hit', 'Run', 'Idle'],
   Special: ['Attack', 'Hit', 'Run', 'Idle'],
-  Jump: ['Idle', 'Walk'],
+  // The approved base asset pack guarantees Walk but not Jump; use the looping gait instead of a frozen idle pose in mid-air.
+  Jump: ['Walk', 'Run', 'Idle'],
   Hit: ['Idle', 'Walk'],
   Death: ['Idle'],
   Run: ['Walk', 'Idle'],
