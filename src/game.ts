@@ -2014,8 +2014,9 @@ export class PaleciakiGameEngine {
         const localVelocityX = localMovement.x / Math.max(0.001, dt);
         const localVelocityZ = localMovement.z / Math.max(0.001, dt);
         localSpeed = Math.hypot(localVelocityX, localVelocityZ);
-        locomotion = chooseMakeHumanLocomotion(localVelocityX, localVelocityZ, airborne, track.locomotionAction);
-        track.locomotionAction = locomotion;
+        const locomotionAction = chooseMakeHumanLocomotion(localVelocityX, localVelocityZ, airborne, track.locomotionAction);
+        locomotion = locomotionAction;
+        track.locomotionAction = locomotionAction;
 
         if (!airborne && locomotion === 'Idle' && track.oneShotRemaining <= 0) {
           track.idleVariantCooldown = Math.max(0, (track.idleVariantCooldown ?? 5.5) - dt);
@@ -2096,13 +2097,14 @@ export class PaleciakiGameEngine {
           actorRotation.identity();
           enemy.mesh.getWorldQuaternion(actorRotation).invert();
           localMovement.copy(displacement).applyQuaternion(actorRotation);
-          desired = chooseMakeHumanLocomotion(
+          const locomotionAction = chooseMakeHumanLocomotion(
             localMovement.x / Math.max(0.001, dt),
             localMovement.z / Math.max(0.001, dt),
             false,
             track.locomotionAction,
           );
-          track.locomotionAction = desired;
+          desired = locomotionAction;
+          track.locomotionAction = locomotionAction;
         } else {
           desired = speed > 4.8 ? 'Run' : speed > 0.18 ? 'Walk' : 'Idle';
         }
