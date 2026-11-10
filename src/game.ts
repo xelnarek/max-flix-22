@@ -1987,11 +1987,14 @@ export class PaleciakiGameEngine {
       displacement.y = 0;
       const speed = displacement.length() / Math.max(0.001, dt);
 
-      if (track.sharedGeometry) {
-        if (airborne && !track.wasAirborne) this.requestGobkitAction(track, 'Jump', 0.68);
-        else if (!airborne && track.wasAirborne) this.requestGobkitAction(track, 'Land', 0.42);
-        track.wasAirborne = airborne;
+      // Jump/land clips are optional per imported rig. Drive them whenever the
+      // asset actually contains the clip, including the Gobkit fallback operators.
+      if (airborne && !track.wasAirborne && track.actions.has('Jump')) {
+        this.requestGobkitAction(track, 'Jump', 0.68);
+      } else if (!airborne && track.wasAirborne && track.actions.has('Land')) {
+        this.requestGobkitAction(track, 'Land', 0.42);
       }
+      track.wasAirborne = airborne;
 
       if (track.oneShotRemaining > 0 && Number.isFinite(track.oneShotRemaining)) {
         track.oneShotRemaining = Math.max(0, track.oneShotRemaining - dt);
