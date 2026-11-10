@@ -105,7 +105,7 @@ export class B4AssetLoader {
               <span class="cat-icon">🎨</span>
               <div class="cat-info">
                 <span class="cat-name">Tekstury</span>
-                <span class="cat-count" id="cat-count-textures">0/18</span>
+                <span class="cat-count" id="cat-count-textures">0/23</span>
               </div>
             </div>
             <div class="loader-category-pill" id="cat-pill-models">
@@ -294,7 +294,7 @@ export class B4AssetLoader {
       const overallStartTime = performance.now();
       console.group('%c[AssetLoader] 🔍 INSPEKCJA ZASOBÓW: Inicjalizacja modeli 3D i tekstur', 'color: #38bdf8; font-weight: bold;');
 
-      // Warm the six procedural warehouse textures and twelve original B4 visual-pack assets used by the runtime.
+      // Warm the six procedural warehouse textures and seventeen original B4 visual-pack assets used by the runtime.
       // Operators, bosses and props are created on demand; prebuilding every model
       // here duplicated GPU resources before the player had even opened the menu.
       // WebAudio is also initialized lazily from the first user gesture.
@@ -316,7 +316,12 @@ export class B4AssetLoader {
         { id: 'b4-pack/container.svg', name: 'B4 Asset Pack • Kontenery faliste', category: 'texture', execute: () => preloadB4VisualTexture('container') },
         { id: 'b4-pack/conveyor.svg', name: 'B4 Asset Pack • Taśma rolkowa', category: 'texture', execute: () => preloadB4VisualTexture('conveyor') },
         { id: 'b4-pack/cold-storage.svg', name: 'B4 Asset Pack • Panele chłodni', category: 'texture', execute: () => preloadB4VisualTexture('coldStorage') },
-        { id: 'b4-pack/drum.svg', name: 'B4 Asset Pack • Beczki BHP', category: 'texture', execute: () => preloadB4VisualTexture('drum') }
+        { id: 'b4-pack/drum.svg', name: 'B4 Asset Pack • Beczki BHP', category: 'texture', execute: () => preloadB4VisualTexture('drum') },
+        { id: 'b4-pack/operator-atlas.svg', name: 'B4 Asset Pack • Naszywki pięciu operatorów', category: 'texture', execute: () => preloadB4VisualTexture('operatorAtlas') },
+        { id: 'b4-pack/combat-atlas.svg', name: 'B4 Asset Pack • Sygnatury broni i pocisków', category: 'texture', execute: () => preloadB4VisualTexture('combatAtlas') },
+        { id: 'b4-pack/highbay-lamp.svg', name: 'B4 Asset Pack • Oprawy LED wysokiego składowania', category: 'texture', execute: () => preloadB4VisualTexture('lamp') },
+        { id: 'b4-pack/rack-labels.svg', name: 'B4 Asset Pack • Oznaczenia regałów B4', category: 'texture', execute: () => preloadB4VisualTexture('rackAtlas') },
+        { id: 'b4-pack/enemy-atlas-3.svg', name: 'B4 Asset Pack • Identyfikatory bossów i ochrony', category: 'texture', execute: () => preloadB4VisualTexture('enemyAtlas3') }
       ];
 
       const totalTextures = assetList.length;
