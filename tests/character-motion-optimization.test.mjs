@@ -19,17 +19,21 @@ test('animated operator equipment is attached to the skeleton that drives the ma
   assert.match(assets, /'clipboard-board'[\s\S]*?'hand_l'\)/);
 });
 
-test('actor animation updates reuse scratch vectors instead of allocating transforms per rig and frame', async () => {
+test('actor animation updates reuse persistent scratch transforms per frame', async () => {
   const game = await read('../src/game.ts');
   const start = game.indexOf('private updateGobkitAnimations(dt: number)');
   const end = game.indexOf('private ', start + 12);
   const method = game.slice(start, end);
-  assert.match(method, /const displacement = new THREE\.Vector3\(\)/);
-  assert.match(method, /const localMovement = new THREE\.Vector3\(\)/);
-  assert.match(method, /const actorRotation = new THREE\.Quaternion\(\)/);
-  assert.match(method, /displacement\.copy\(position\)\.sub\(track\.lastPosition\)/);
-  assert.match(method, /parent\.getWorldQuaternion\(actorRotation\)\.invert\(\)/);
-  assert.equal((method.match(/new THREE\.Quaternion\(\)/g) || []).length, 1, 'one quaternion is created per animation update, not per actor');
+  assert.match(game, /private readonly actorDisplacementScratch = new THREE\\.Vector3\\(\\)/);
+  assert.match(game, /private readonly actorLocalMovementScratch = new THREE\\.Vector3\\(\\)/);
+  assert.match(game, /private readonly actorRotationScratch = new THREE\\.Quaternion\\(\\)/);
+  assert.match(method, /const displacement = this\\.actorDisplacementScratch/);
+  assert.match(method, /const localMovement = this\\.actorLocalMovementScratch/);
+  assert.match(method, /const actorRotation = this\\.actorRotationScratch/);
+  assert.match(method, /displacement\\.copy\\(position\\)\\.sub\\(track\\.lastPosition\\)/);
+  assert.match(method, /parent\\.getWorldQuaternion\\(actorRotation\\)\\.invert\\(\\)/);
+  assert.doesNotMatch(method, /new THREE\\.(?:Vector3|Quaternion)\\(/,
+    'animation updates must not allocate transform objects per frame or actor');
 });
 
 test('enemy crowd separation reuses one result object in both movement modes', async () => {
