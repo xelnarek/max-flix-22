@@ -271,3 +271,11 @@ test('playable operators receive a dedicated special-ability animation', async (
   assert.match(game, /else if \(this\.specialSwingTimer > 0\)[\s\S]{0,120}requestGobkitAction\(track, 'Special'/);
   assert.match(game, /this\.specialSwingTimer = Math\.max\(0, this\.specialSwingTimer - dt\)/);
 });
+
+
+test('jump and landing transitions use available clips on fallback operator rigs too', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /airborne && !track\.wasAirborne && track\.actions\.has\('Jump'\)/);
+  assert.match(game, /!airborne && track\.wasAirborne && track\.actions\.has\('Land'\)/);
+  assert.match(game, /track\.wasAirborne = airborne/);
+});
