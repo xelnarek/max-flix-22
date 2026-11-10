@@ -131,6 +131,32 @@
   box-shadow: inset 0 -2px 0 var(--menu-accent), 0 4px 13px rgba(0,0,0,.18) !important;
 }
 
+@media (min-width: 761px) and (pointer: fine) {
+  #title-screen .menu-tabs-bar {
+    flex-direction: column !important;
+    align-items: stretch;
+    justify-content: flex-start;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    scrollbar-gutter: stable;
+  }
+
+  #title-screen .menu-tab-btn {
+    flex: 0 0 auto !important;
+    width: 100%;
+    min-width: 0 !important;
+    justify-content: flex-start !important;
+    padding-inline: 13px !important;
+  }
+}
+
+@media (max-width: 760px) {
+  #title-screen .title-backdrop {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
 #title-screen .menu-tab-btn:focus-visible,
 #title-screen .survival-map-choice:focus-visible,
 #title-screen .btn-primary-start:focus-visible {
