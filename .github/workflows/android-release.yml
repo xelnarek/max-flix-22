@@ -16,6 +16,7 @@ on:
       - 'scripts/prepare-android-release.mjs'
       - 'scripts/verify-android-release.mjs'
       - 'scripts/prepare-play-store-artwork.mjs'
+      - 'scripts/fetch-gobkit-assets.mjs'
       - '.github/workflows/android-release.yml'
 
 permissions:
