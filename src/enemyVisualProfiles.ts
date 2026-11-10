@@ -76,13 +76,14 @@ export interface EnemyVisualProfile {
 
 /**
  * One complete visual contract for every EnemyType.
- * 23/23 enemy definitions are covered. Human warehouse roles keep their bespoke
- * caricature builders; imported rigs are reserved for undead, mutants, monsters
- * and the armored elite guard. The gameplay spawn names/AI remain unchanged.
+ * All 19 humanoid/creature archetypes use bundled animated CC0 rigs. Only the
+ * purpose-built forklift, AGV, patrol drone and secret bicycle rider retain their
+ * dedicated non-humanoid models. Spawn names, AI and combat balance stay unchanged.
  */
 export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfile>> = Object.freeze({
   customer: {
     gaitStyle: 'theatrical',
+    gobkitModel: 'shoplifter',
     fallbackFactory: 'createCustomerEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'tool-melee',
@@ -108,6 +109,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
   },
   architect: {
     gaitStyle: 'deliberate',
+    gobkitModel: 'officemanager',
     fallbackFactory: 'createArchitectEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'tool-melee',
@@ -116,6 +118,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
   },
   inspector: {
     gaitStyle: 'precise',
+    gobkitModel: 'hazmattech',
     fallbackFactory: 'createInspectorEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'tool-melee',
@@ -132,6 +135,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
   },
   handlowiec: {
     gaitStyle: 'theatrical',
+    gobkitModel: 'salesrep',
     fallbackFactory: 'createHandlowiecEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'ranged',
@@ -140,6 +144,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
   },
   monter: {
     gaitStyle: 'deliberate',
+    gobkitModel: 'forcibleentryfirefighter',
     fallbackFactory: 'createMonterEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'tool-melee',
@@ -165,6 +170,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
   },
   kurier: {
     gaitStyle: 'brisk',
+    gobkitModel: 'foodcourier',
     fallbackFactory: 'createKurierEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'ranged',
@@ -173,6 +179,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
   },
   'przedstawiciel_włoski': {
     gaitStyle: 'theatrical',
+    gobkitModel: 'storemanager',
     fallbackFactory: 'createItalianVendorEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'tool-melee',
@@ -181,6 +188,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
   },
   sztaplar_szalony: {
     gaitStyle: 'aggressive',
+    gobkitModel: 'baggagehandler',
     fallbackFactory: 'createSztaplarEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'heavy-melee',
@@ -198,6 +206,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
   },
   pan_roman: {
     gaitStyle: 'deliberate',
+    gobkitModel: 'stockclerk',
     fallbackFactory: 'createPanRomanEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'ranged',
@@ -206,6 +215,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
   },
   serwisant: {
     gaitStyle: 'precise',
+    gobkitModel: 'firechief',
     fallbackFactory: 'createSerwisanciEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'tool-melee',
@@ -214,6 +224,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
   },
   bosman_krakow: {
     gaitStyle: 'heavy',
+    gobkitModel: 'securityguard',
     fallbackFactory: 'createBosmanKrakowBossModel',
     category: 'warehouse-caricature',
     attackStyle: 'heavy-melee',
@@ -239,6 +250,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
   },
   sebix_m: {
     gaitStyle: 'aggressive',
+    gobkitModel: 'bloodirongrunt',
     fallbackFactory: 'createSebixEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'heavy-melee',

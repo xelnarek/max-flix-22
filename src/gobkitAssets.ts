@@ -39,11 +39,11 @@ export const CHARACTER_GOBKIT_MODELS: Readonly<Record<CharacterId, GobkitModelId
 });
 
 /**
- * Imported GLB rigs are reserved for creatures, mutants and machine-like
- * threats where a deliberately non-human silhouette is useful. Human warehouse
- * roles (architect, inspector, courier, salesperson, customer, technician and
- * Bosman) keep their bespoke caricature models from warehouseAssets.ts instead
- * of being flattened into another generic humanoid rig.
+ * Every humanoid/creature enemy profile points at a locally bundled, animated
+ * CC0 Gobkit rig. Role props in gobkitEnemySilhouettes.ts preserve each enemy's
+ * identity (architect, BHP, courier, supplier, installer, boss, undead, etc.).
+ * Only purpose-built vehicles, the AGV/drone and the bicycle rider keep bespoke
+ * non-humanoid meshes from warehouseAssets.ts.
  */
 const enemyGobkitModelEntries = Object.entries(ENEMY_VISUAL_PROFILES)
   .flatMap(([enemyType, profile]) => profile.gobkitModel

@@ -37,25 +37,25 @@ test('non-human enemy threats use dedicated rigged GLB variants from the visual 
     assert.equal(GOBKIT_MODEL_FILES[model], model + '.glb', 'missing enemy GLB: ' + model);
   }
 });
-test('human warehouse enemy archetypes retain bespoke caricature models instead of generic humanoid GLBs', async () => {
-  const [registry, game] = await Promise.all([
-    read('../src/gobkitAssets.ts'),
-    read('../src/game.ts'),
+test('all humanoid and creature enemies use bundled animated GLB rigs; only four non-humanoid archetypes stay bespoke', async () => {
+  const [profiles, assets, downloader] = await Promise.all([
+    import('../src/enemyVisualProfiles.ts'),
+    import('../src/gobkitAssets.ts'),
+    read('../scripts/fetch-gobkit-assets.mjs'),
   ]);
-  for (const humanType of ['customer', 'architect', 'kurier', 'handlowiec', 'inspector', 'serwisant', 'monter', 'bosman_krakow']) {
-    assert.doesNotMatch(registry, new RegExp('\\b' + humanType + ':'));
-  }
-  for (const factory of [
-    'createArchitectEnemyModel()',
-    'createCustomerEnemyModel()',
-    'createKurierEnemyModel()',
-    'createHandlowiecEnemyModel()',
-    'createInspectorEnemyModel()',
-    'createSerwisanciEnemyModel()',
-    'createMonterEnemyModel()',
-    'createBosmanKrakowBossModel()',
-  ]) {
-    assert.ok(game.includes(factory), 'missing bespoke human enemy factory: ' + factory);
+  const bespoke = new Set(['forklift', 'agv_robot', 'piorun_dron', 'pomazaniec']);
+  assert.equal(Object.keys(profiles.ENEMY_VISUAL_PROFILES).length, 23);
+  const mapped = Object.entries(profiles.ENEMY_VISUAL_PROFILES).filter(([type]) => !bespoke.has(type));
+  assert.equal(mapped.length, 19);
+  for (const [type, profile] of Object.entries(profiles.ENEMY_VISUAL_PROFILES)) {
+    if (bespoke.has(type)) {
+      assert.equal(profile.gobkitModel, undefined, type + ' must keep its purpose-built non-humanoid model');
+      continue;
+    }
+    assert.ok(profile.gobkitModel, 'missing imported enemy rig for ' + type);
+    assert.equal(assets.ENEMY_GOBKIT_MODELS[type], profile.gobkitModel, 'runtime registry mismatch for ' + type);
+    assert.equal(assets.GOBKIT_MODEL_FILES[profile.gobkitModel], profile.gobkitModel + '.glb');
+    assert.ok(downloader.includes("'" + profile.gobkitModel + "'"), 'build does not download ' + profile.gobkitModel);
   }
 });
 
@@ -108,21 +108,34 @@ test('every enemy type has a distinct locomotion style preset tuned to its role'
   assert.match(game, /visualProfile\.gaitStyle === 'robotic'/);
 });
 
-test('each imported rig gets a role-specific size and only creature/boss assets override bespoke human models', async () => {
+test('each imported enemy rig is role-mapped, correctly fitted and attached to the live enemy container', async () => {
   const [profiles, assets, game] = await Promise.all([
     import('../src/enemyVisualProfiles.ts'),
     import('../src/gobkitAssets.ts'),
     read('../src/game.ts'),
   ]);
-  assert.equal(profiles.ENEMY_VISUAL_PROFILES.architect.gobkitModel, undefined);
-  assert.equal(profiles.ENEMY_VISUAL_PROFILES.inspector.gobkitModel, undefined);
-  assert.equal(profiles.ENEMY_VISUAL_PROFILES.kurier.gobkitModel, undefined);
-  assert.equal(profiles.ENEMY_VISUAL_PROFILES.bosman_krakow.gobkitModel, undefined);
-  assert.equal(profiles.ENEMY_VISUAL_PROFILES.zombie_pracownik.gobkitModel, 'stitchedbrute');
-  assert.equal(profiles.ENEMY_VISUAL_PROFILES.elite_walczak_guard.gobkitModel, 'bloodirongrunt');
-  assert.equal(assets.ENEMY_GOBKIT_MODELS.zombie_pracownik, 'stitchedbrute');
-  assert.equal(assets.ENEMY_GOBKIT_MODELS.elite_walczak_guard, 'bloodirongrunt');
+  for (const [type, model] of [
+    ['customer', 'shoplifter'],
+    ['architect', 'officemanager'],
+    ['inspector', 'hazmattech'],
+    ['handlowiec', 'salesrep'],
+    ['monter', 'forcibleentryfirefighter'],
+    ['kurier', 'foodcourier'],
+    ['przedstawiciel_włoski', 'storemanager'],
+    ['sztaplar_szalony', 'baggagehandler'],
+    ['pan_roman', 'stockclerk'],
+    ['serwisant', 'firechief'],
+    ['bosman_krakow', 'securityguard'],
+    ['sebix_m', 'bloodirongrunt'],
+    ['zombie_pracownik', 'stitchedbrute'],
+    ['elite_walczak_guard', 'bloodirongrunt'],
+  ]) {
+    assert.equal(profiles.ENEMY_VISUAL_PROFILES[type].gobkitModel, model);
+    assert.equal(assets.ENEMY_GOBKIT_MODELS[type], model);
+  }
   assert.match(game, /fitGobkitModel\(root, visualProfile\.targetHeight/);
+  assert.match(game, /void this\.attachGobkitEnemyModel\(enemy, modelId\)/);
+  assert.match(game, /this\.hideProceduralVisuals\(mesh as THREE\.Group, overlays\)/);
 });
 
 
@@ -254,7 +267,7 @@ test('playable operators retain the original stylized models in Survival and bot
 test('CC0 enemy rigs receive a clear caricature silhouette matching their warehouse role', async () => {
   const silhouettes = await read('../src/gobkitEnemySilhouettes.ts');
   const game = await read('../src/game.ts');
-  for (const role of ['architect', 'inspector', 'kurier', 'handlowiec', 'customer', 'monter', 'serwisant', 'zombie_pracownik', 'mutant_gamma_forklift', 'radioactive_pip', 'cyber_salesman', 'walczak', 'krol_leto', 'bosman_krakow', 'elite_walczak_guard']) {
+  for (const role of ['architect', 'inspector', 'kurier', 'handlowiec', 'customer', 'monter', 'serwisant', 'przedstawiciel_włoski', 'sztaplar_szalony', 'pan_roman', 'sebix_m', 'zombie_pracownik', 'mutant_gamma_forklift', 'radioactive_pip', 'cyber_salesman', 'walczak', 'krol_leto', 'bosman_krakow', 'elite_walczak_guard']) {
     assert.match(silhouettes, new RegExp("case '" + role + "'"));
   }
   assert.match(silhouettes, /oversized sample fan/);

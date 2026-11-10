@@ -20,25 +20,31 @@ The operator IDs, character stats, attack definitions, passives, abilities, prog
 
 ## Survival enemy roster
 
+All 19 humanoid and creature archetypes use locally bundled, rigged GLB assets. Each imported rig receives a role-specific size, animation track and accessory kit; the previous warehouse-prop model is hidden after the new rig is attached.
+
 | Enemy family | 3D model |
 | --- | --- |
-| Customer | Shoplifter |
+| Customer / shoplifter | Shoplifter |
 | Architect | Office Manager |
 | Courier | Food Courier |
 | Sales representative | Sales Rep |
 | BHP inspector | Hazmat Tech |
 | Service technician / installer | Forcible Entry Firefighter |
-| Zombie warehouse worker | Stitched Brute |
+| Italian sales representative | Store Manager |
 | Pallet-truck operator | Baggage Handler |
-| Elite guard | Security Guard |
+| Pan Roman / sanitaryware supplier | Stock Clerk |
+| Serwisant | Fire Chief |
+| Bosman Kraków | Security Guard |
+| Sebix | Bloodiron Grunt |
+| Zombie warehouse worker | Stitched Brute |
+| Elite guard | Bloodiron Grunt |
+| Walczak boss | Werewolf Captain |
+| Król Leto boss | Bloodiron Juggernaut |
 | Gamma mutant | Bloodiron Juggernaut |
 | Radioactive Pip | Night Witch |
 | Cyber salesperson | Android Commander |
-| Walczak boss | Werewolf Captain |
-| Bosman Kraków | Bloodiron Grunt |
-| Król Leto | Bloodiron Juggernaut |
 
-Unmapped one-off and mechanical enemies retain their bespoke project models. Spawn weights, AI, collision capsules, hitboxes, health, damage, wave scaling, drop rates and score calculations are not changed by the asset layer.
+The forklift, AGV robot, Piorun drone and Pomazaniec bicycle rider remain purpose-built non-humanoid models, rather than being replaced with mismatched human rigs. Their collision, movement and attack systems are unchanged. Reused rig IDs are only used where the role-specific accessory kit makes the silhouette distinct.
 
 ## Runtime and performance
 

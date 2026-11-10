@@ -125,6 +125,17 @@ function addCaricature(root: THREE.Group, type: EnemyType): void {
       }
       break;
     }
+    case 'przedstawiciel_włoski': {
+      // Italian sales representative: tricolour tie, espresso and sample case.
+      addMesh(root, new THREE.BoxGeometry(0.075, 0.34, 0.035), red, [0, 0.78, 0.17], [0.05, 0, 0]);
+      addMesh(root, new THREE.BoxGeometry(0.075, 0.34, 0.025), white, [0.055, 0.78, 0.175], [0.05, 0, 0]);
+      addMesh(root, new THREE.BoxGeometry(0.075, 0.34, 0.025), makeMaterial(0x15803d, 0.5), [0.11, 0.78, 0.17], [0.05, 0, 0]);
+      addMesh(root, new THREE.BoxGeometry(0.26, 0.22, 0.13), navy, [-0.30, 0.52, 0.13]);
+      addMesh(root, new THREE.BoxGeometry(0.13, 0.035, 0.14), gold, [-0.30, 0.64, 0.13]);
+      addMesh(root, new THREE.CylinderGeometry(0.045, 0.05, 0.095, 10), white, [0.29, 0.89, 0.16]);
+      addMesh(root, new THREE.TorusGeometry(0.035, 0.009, 6, 12), gold, [0.34, 0.89, 0.16], [Math.PI / 2, 0, 0]);
+      break;
+    }
     case 'zombie_pracownik': {
       // Preserve the internet-sourced stitched undead rig and reinforce the
       // silhouette with sickly eyes, exposed ribs and torn hi-vis remnants.
@@ -190,6 +201,27 @@ function addCaricature(root: THREE.Group, type: EnemyType): void {
       addMesh(root, new THREE.SphereGeometry(0.12, 9, 7), makeMaterial(0x67e8f9, 0.26), [0.34, 1.12, 0.10]);
       break;
     }
+    case 'pan_roman': {
+      // Sanitaryware supplier: hi-vis panel, canister and cleaning tool.
+      addMesh(root, new THREE.BoxGeometry(0.43, 0.43, 0.055), orange, [0, 0.72, 0.155]);
+      addMesh(root, new THREE.BoxGeometry(0.42, 0.045, 0.065), white, [0, 0.77, 0.19]);
+      addMesh(root, new THREE.BoxGeometry(0.42, 0.04, 0.065), white, [0, 0.59, 0.19]);
+      addMesh(root, new THREE.CylinderGeometry(0.105, 0.11, 0.28, 10), blue, [-0.31, 0.66, -0.12]);
+      addMesh(root, new THREE.CylinderGeometry(0.035, 0.035, 0.08, 8), yellow, [-0.31, 0.83, -0.12]);
+      addMesh(root, new THREE.CylinderGeometry(0.018, 0.018, 0.53, 8), metal, [0.34, 0.75, 0.14], [0, 0, -0.12]);
+      addMesh(root, new THREE.BoxGeometry(0.16, 0.06, 0.07), charcoal, [0.40, 0.49, 0.14]);
+      break;
+    }
+    case 'sebix_m': {
+      // Tracksuit stripes, chain and brick distinguish this street thug.
+      addMesh(root, new THREE.BoxGeometry(0.46, 0.42, 0.055), charcoal, [0, 0.74, 0.15]);
+      addMesh(root, new THREE.BoxGeometry(0.055, 0.40, 0.06), red, [-0.17, 0.74, 0.19]);
+      addMesh(root, new THREE.BoxGeometry(0.055, 0.40, 0.06), white, [-0.08, 0.74, 0.19]);
+      addMesh(root, new THREE.BoxGeometry(0.055, 0.40, 0.06), red, [0.08, 0.74, 0.19]);
+      addMesh(root, new THREE.TorusGeometry(0.15, 0.018, 6, 18), gold, [0, 0.98, 0.19], [Math.PI / 2, 0, 0]);
+      addMesh(root, new THREE.BoxGeometry(0.22, 0.14, 0.16), makeMaterial(0xb45309, 0.88), [0.34, 0.51, 0.13], [0, 0, -0.16]);
+      break;
+    }
     case 'bosman_krakow': {
       addMesh(root, new THREE.CylinderGeometry(0.21, 0.19, 0.09, 12), navy, [0, 1.19, 0]);
       addMesh(root, new THREE.BoxGeometry(0.30, 0.035, 0.16), navy, [0, 1.14, 0.12]);
@@ -216,13 +248,17 @@ function addCaricature(root: THREE.Group, type: EnemyType): void {
       addMesh(root, new THREE.BoxGeometry(0.13, 0.18, 0.18), metal, [0.43, 0.67, 0.09]);
       break;
     }
+    case 'sztaplar_szalony': {
+      // Warehouse handler with high-vis panel, reinforced gloves and pallet-jack tiller.
+      addMesh(root, new THREE.BoxGeometry(0.52, 0.22, 0.34), yellow, [0, 0.77, 0]);
+      addMesh(root, new THREE.BoxGeometry(0.43, 0.045, 0.055), charcoal, [0, 0.73, 0.19]);
+      addMesh(root, new THREE.BoxGeometry(0.12, 0.17, 0.10), metal, [-0.34, 0.66, 0.03]);
+      addMesh(root, new THREE.BoxGeometry(0.12, 0.17, 0.10), metal, [0.34, 0.66, 0.03]);
+      addMesh(root, new THREE.CylinderGeometry(0.025, 0.025, 0.44, 8), charcoal, [0.33, 0.74, -0.19], [0.18, 0, -0.18]);
+      addMesh(root, new THREE.BoxGeometry(0.13, 0.07, 0.08), red, [0.37, 0.94, -0.23]);
+      break;
+    }
     default:
-      if (type === 'sztaplar_szalony') {
-        addMesh(root, new THREE.BoxGeometry(0.62, 0.23, 0.32), yellow, [0, 0.76, 0]);
-        addMesh(root, new THREE.BoxGeometry(0.18, 0.22, 0.09), metal, [-0.32, 0.79, 0.02]);
-        addMesh(root, new THREE.BoxGeometry(0.18, 0.22, 0.09), metal, [0.32, 0.79, 0.02]);
-        addMesh(root, new THREE.BoxGeometry(0.30, 0.065, 0.04), charcoal, [0, 1.02, 0.18]);
-      }
       break;
   }
 }
