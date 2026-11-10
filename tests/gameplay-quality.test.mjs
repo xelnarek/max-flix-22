@@ -1371,7 +1371,11 @@ test('Survival wave director assigns enemy coalitions with a leader, pincer lane
   assert.match(game, /enemy\.aiCoalitionRole = order\.role/);
   assert.match(game, /enemy\.aiFormationRadius = order\.preferredRadius/);
   assert.match(game, /enemy\.aiFormationRadius as number/);
-  assert.match(game, /activeCandidates[\s\S]*?filter\(\(\{ enemy \}\) => !enemy\.surgeRunner \|\| this\.survivalSurgeTimeLeft <= 0\)/);
+  assert.match(game, /const coalitionCandidates = this\.waveDirectorCoalitionCandidateScratch/);
+  assert.match(game, /coalitionCandidates\.length = 0/);
+  assert.match(game, /if \(enemy\.surgeRunner && this\.survivalSurgeTimeLeft > 0\) continue/);
+  assert.match(game, /buildSurvivalCoalitionOrders\(\s*coalitionCandidates/);
+  assert.match(game, /this\.waveDirectorEnemyByIdScratch/);
   assert.match(game, /const isCoalitionLeader = e\.aiCoalitionLeaderId === e\.id/);
   assert.match(game, /isCoalitionLeader \? 0xfbbf24/);
   assert.match(types, /aiCoalitionId\?: number/);
