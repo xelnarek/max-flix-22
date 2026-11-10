@@ -210,3 +210,23 @@ test('late enemy model loads cannot attach to a recycled mesh or changed archety
   assert.match(game, /this\.createMakeHumanAnimationTrack\(actor\.root, actor\.clips, mesh\.position/);
   assert.match(game, /this\.createGobkitAnimationTrack\(gltf, root, mesh\.position/);
 });
+
+
+test('ranged and special enemy attacks request visible attack poses at projectile launch', async () => {
+  const game = await read('../src/game.ts');
+  for (const marker of [
+    'spawnPenaltyNotice(e.x, e.y + 1.2, e.z)',
+    'spawnDyscyplinarkaNotice(e.x, e.y + 1.2, e.z, lockedDirection)',
+    'spawnSparkZapProjectile(e.x, e.y + 0.75, e.z, lockedDirection)',
+    'spawnPomazaniecLollipop(e.x, e.y + 1.03, e.z',
+    'spawnSanitarywareProjectile(e.x, e.y + 0.8, e.z)',
+    'spawnOdprawaClipboardProjectile(e.x, e.y + 1.0, e.z, lockedDirection)',
+    'spawnSebixBrick(enemy.x,enemy.y+1.35',
+  ]) {
+    const index = game.indexOf(marker);
+    assert.ok(index >= 0, 'missing ranged/special attack: ' + marker);
+    const context = game.slice(Math.max(0, index - 260), index);
+    assert.match(context, /requestEnemyAttackAnimation\\((e|enemy),/,
+      'attack animation must be requested before: ' + marker);
+  }
+});
