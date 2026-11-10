@@ -29,7 +29,7 @@ test('actor animation updates reuse scratch vectors instead of allocating transf
   assert.match(method, /const actorRotation = new THREE\.Quaternion\(\)/);
   assert.match(method, /displacement\.copy\(position\)\.sub\(track\.lastPosition\)/);
   assert.match(method, /parent\.getWorldQuaternion\(actorRotation\)\.invert\(\)/);
-  assert.doesNotMatch(method, /new THREE\.Quaternion\(\)/g);
+  assert.equal((method.match(/new THREE\.Quaternion\(\)/g) || []).length, 1, 'one quaternion is created per animation update, not per actor');
 });
 
 test('enemy crowd separation reuses one result object in both movement modes', async () => {
