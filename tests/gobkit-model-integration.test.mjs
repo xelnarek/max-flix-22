@@ -252,3 +252,12 @@ test('Gobkit rig clones share immutable geometry but keep actor-local materials'
   assert.match(assets, /object\.material\.clone\(\)/);
   assert.match(game, /object\.userData\.gobkitSharedGeometry !== true/);
 });
+
+
+test('per-frame animation cleanup reuses the active-enemy membership set', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /private readonly activeEnemyAnimationScratch = new Set<EnemyItem>\(\)/);
+  assert.match(game, /const activeEnemies = this\.activeEnemyAnimationScratch/);
+  assert.match(game, /activeEnemies\.clear\(\)/);
+  assert.match(game, /for \(const enemy of this\.enemies\) activeEnemies\.add\(enemy\)/);
+});
