@@ -1848,34 +1848,40 @@ export class PaleciakiGameEngine {
   }
 
   private async attachMakeHumanEnemyModel(enemy: EnemyItem, style: MakeHumanStyleId) {
+    const mesh = enemy.mesh;
+    const requestedType = enemy.type;
+    if (!mesh) return;
     try {
       const actor = await createMakeHumanActor(style, 1.48);
-      if (!this.enemies.includes(enemy) || !enemy.mesh || enemy.mesh.parent !== this.levelRoot || enemy.state === 'defeated') {
+      // Enemy objects may be recycled while a GLB is loading. Never attach a
+      // late result to a replacement mesh or a different enemy archetype.
+      if (!this.enemies.includes(enemy) || enemy.mesh !== mesh || enemy.type !== requestedType ||
+          mesh.parent !== this.levelRoot || enemy.state === 'defeated') {
         this.disposeMakeHumanActorMaterials(actor.root);
         return;
       }
-      actor.root.position.y -= enemy.mesh.position.y;
+      actor.root.position.y -= mesh.position.y;
       actor.root.name = 'makehuman-enemy-' + style + '-' + enemy.id;
       const overlays = [
         enemy.hpBar, enemy.hpFill, enemy.threatRing, enemy.shieldRing, enemy.auraRing,
         enemy.speechMesh, enemy.propeller, ...(enemy.bikeWheels || []),
       ].filter((object): object is THREE.Object3D => object instanceof THREE.Object3D);
-      this.removeAttachedActorVisuals(enemy.mesh as THREE.Group);
-      this.hideProceduralVisuals(enemy.mesh as THREE.Group, overlays);
-      this.installActorVisualRoot(enemy.mesh as THREE.Group, actor.root);
+      this.removeAttachedActorVisuals(mesh as THREE.Group);
+      this.hideProceduralVisuals(mesh as THREE.Group, overlays);
+      this.installActorVisualRoot(mesh as THREE.Group, actor.root);
       enemy.legL = undefined;
       enemy.legR = undefined;
       enemy.armL = undefined;
       enemy.armR = undefined;
       enemy.head = undefined;
-      const track = this.createMakeHumanAnimationTrack(actor.root, actor.clips, enemy.mesh.position, actor.style);
+      const track = this.createMakeHumanAnimationTrack(actor.root, actor.clips, mesh.position, actor.style);
       this.gobkitEnemyTracks.set(enemy, track);
       this.resumeEnemyAnimationAfterModelAttach(enemy, track);
     } catch (error) {
-      if (!this.enemies.includes(enemy) || !enemy.mesh ||
-          enemy.mesh.parent !== this.levelRoot || enemy.state === 'defeated') return;
-      console.warn('[MakeHuman] Enemy asset unavailable; using Gobkit fallback:', enemy.type, style, error);
-      const fallback = ENEMY_GOBKIT_MODELS[enemy.type];
+      if (!this.enemies.includes(enemy) || enemy.mesh !== mesh || enemy.type !== requestedType ||
+          mesh.parent !== this.levelRoot || enemy.state === 'defeated') return;
+      console.warn('[MakeHuman] Enemy asset unavailable; using Gobkit fallback:', requestedType, style, error);
+      const fallback = ENEMY_GOBKIT_MODELS[requestedType];
       if (fallback) void this.attachGobkitEnemyModel(enemy, fallback);
     }
   }
@@ -1910,34 +1916,40 @@ export class PaleciakiGameEngine {
   }
 
   private async attachGobkitEnemyModel(enemy: EnemyItem, modelId: GobkitModelId) {
+    const mesh = enemy.mesh;
+    const requestedType = enemy.type;
+    if (!mesh) return;
     try {
       const gltf = await loadGobkitModel(modelId);
-      if (!this.enemies.includes(enemy) || !enemy.mesh ||
-          enemy.mesh.parent !== this.levelRoot || enemy.state === 'defeated') return;
+      // Match the archetype and mesh captured before awaiting the asset request.
+      if (!this.enemies.includes(enemy) || enemy.mesh !== mesh || enemy.type !== requestedType ||
+          mesh.parent !== this.levelRoot || enemy.state === 'defeated') return;
       const root = cloneGobkitModel(gltf);
-      const largeEnemy = enemy.type === 'walczak' || enemy.type === 'krol_leto' ||
-        enemy.type === 'bosman_krakow' || enemy.type === 'mutant_gamma_forklift' ||
-        enemy.type === 'radioactive_pip';
+      const largeEnemy = requestedType === 'walczak' || requestedType === 'krol_leto' ||
+        requestedType === 'bosman_krakow' || requestedType === 'mutant_gamma_forklift' ||
+        requestedType === 'radioactive_pip';
       fitGobkitModel(root, largeEnemy ? 1.92 : 1.48, this.threeRenderer?.capabilities.getMaxAnisotropy() ?? 1);
-      root.position.y -= enemy.mesh.position.y;
+      root.position.y -= mesh.position.y;
       root.name = 'gobkit-enemy-' + modelId + '-' + enemy.id;
       const overlays = [
         enemy.hpBar, enemy.hpFill, enemy.threatRing, enemy.shieldRing,
         enemy.auraRing, enemy.speechMesh, enemy.propeller, ...(enemy.bikeWheels || []),
       ].filter((object): object is THREE.Object3D => object instanceof THREE.Object3D);
-      this.removeAttachedActorVisuals(enemy.mesh as THREE.Group);
-      this.hideProceduralVisuals(enemy.mesh as THREE.Group, overlays);
-      this.installActorVisualRoot(enemy.mesh as THREE.Group, root);
+      this.removeAttachedActorVisuals(mesh as THREE.Group);
+      this.hideProceduralVisuals(mesh as THREE.Group, overlays);
+      this.installActorVisualRoot(mesh as THREE.Group, root);
       enemy.legL = undefined;
       enemy.legR = undefined;
       enemy.armL = undefined;
       enemy.armR = undefined;
       enemy.head = undefined;
-      const track = this.createGobkitAnimationTrack(gltf, root, enemy.mesh.position);
+      const track = this.createGobkitAnimationTrack(gltf, root, mesh.position);
       this.gobkitEnemyTracks.set(enemy, track);
       this.resumeEnemyAnimationAfterModelAttach(enemy, track);
     } catch (error) {
-      console.warn('[Gobkit] Enemy model unavailable; keeping procedural fallback:', modelId, enemy.type, error);
+      if (!this.enemies.includes(enemy) || enemy.mesh !== mesh || enemy.type !== requestedType ||
+          mesh.parent !== this.levelRoot || enemy.state === 'defeated') return;
+      console.warn('[Gobkit] Enemy model unavailable; keeping procedural fallback:', modelId, requestedType, error);
     }
   }
 
