@@ -1496,7 +1496,8 @@ export class PaleciakiGameEngine {
     // cached GLTF and deliberately remain alive for the next actor.
     track.root.traverse((object) => {
       if (!(object instanceof THREE.Mesh)) return;
-      if (!track.sharedGeometry && object.userData.makeHumanSharedGeometry !== true) object.geometry.dispose();
+      if (!track.sharedGeometry && object.userData.makeHumanSharedGeometry !== true &&
+          object.userData.gobkitSharedGeometry !== true) object.geometry.dispose();
       const materials = Array.isArray(object.material) ? object.material : [object.material];
       materials.forEach((material) => {
         if (material.userData.makeHumanShared !== true) material.dispose();
@@ -1586,7 +1587,7 @@ export class PaleciakiGameEngine {
       if (!(object instanceof THREE.Mesh)) return;
       // Gobkit clones own their geometry; MakeHuman body/wearable geometry and
       // equipment geometry are cache-shared and must remain available to peers.
-      if (object.userData.gobkitAsset === true) object.geometry.dispose();
+      if (object.userData.gobkitAsset === true && object.userData.gobkitSharedGeometry !== true) object.geometry.dispose();
       const materials = Array.isArray(object.material) ? object.material : [object.material];
       for (const material of materials) {
         if (material.userData.makeHumanShared !== true) material.dispose();
