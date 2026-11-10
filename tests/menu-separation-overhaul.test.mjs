@@ -54,6 +54,10 @@ test('only the active Survival or PvP section reveals its own launch button', ()
   assert.match(css, /#title-screen \.menu-controls-hint\s*\{\s*display:\s*none !important/);
   assert.match(html, /menu-controls-hint-survival/);
   assert.match(html, /menu-controls-hint-pvp/);
+  assert.match(css, /data-active-menu-tab="tab-map"[^\\n]* \.menu-controls-hint/);
+  assert.match(css, /data-active-menu-tab="tab-pvp"[^\\n]* \.menu-controls-hint/);
+  assert.match(css, /data-active-menu-tab="tab-map"[^\\n]* \.menu-controls-hint-survival/);
+  assert.match(css, /data-active-menu-tab="tab-pvp"[^\\n]* \.menu-controls-hint-pvp/);
 });
 
 test('runtime keeps inactive panels inert and changes the section theme with the selected tab', () => {
