@@ -1961,7 +1961,12 @@ export class PaleciakiGameEngine {
       this.hideProceduralVisuals(mesh as THREE.Group, overlays);
       this.installActorVisualRoot(mesh as THREE.Group, root);
       const roleSilhouette = createGobkitEnemyRoleSilhouette(requestedType);
-      if (roleSilhouette) mesh.add(roleSilhouette);
+      if (roleSilhouette) {
+        // The original enemy container sits half a metre above the floor;
+        // role props are authored from the same floor origin as fitted GLB rigs.
+        roleSilhouette.position.y = -mesh.position.y;
+        mesh.add(roleSilhouette);
+      }
       enemy.legL = undefined;
       enemy.legR = undefined;
       enemy.armL = undefined;
