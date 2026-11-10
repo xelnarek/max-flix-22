@@ -232,6 +232,23 @@ test('PvP deployment uses a minimal runtime Docker image and a Frankfurt Render 
 });
 
 
+test('PvP local and remote operators use pivot-based gait, manual firing poses and hit recoil', async () => {
+  const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
+  const start = game.indexOf('private updatePvpMode(dt: number)');
+  const end = game.indexOf('\n  private ', start + 40);
+  const pvp = game.slice(start, end);
+  assert.match(pvp, /setProceduralLimbPose\(this\.leftLeg, gait \* \(local\.isDashing \? 0\.60 : 0\.45\)\)/);
+  assert.match(pvp, /setProceduralLimbPose\(this\.rightLeg, -gait \* \(local\.isDashing \? 0\.60 : 0\.45\)\)/);
+  assert.match(pvp, /if \(local\.isFiring\)[\s\S]{0,260}addProceduralLimbPose\(this\.rightArm, -0\.74/);
+  assert.match(pvp, /setProceduralLimbPose\(this\.remotePlayerMeshBuilt\.leftLeg/);
+  assert.match(pvp, /setProceduralLimbPose\(this\.remotePlayerMeshBuilt\.rightLeg/);
+  assert.match(pvp, /if \(remote\.isFiring\)[\s\S]{0,260}addProceduralLimbPose\(this\.remotePlayerMeshBuilt\.rightArm, -0\.74/);
+  assert.match(pvp, /this\.playerHitReactTimer = this\.playerHitReactDuration/);
+  assert.match(pvp, /this\.remotePvpHitReactTimer = this\.remotePvpHitReactDuration/);
+  assert.match(pvp, /getProceduralHitPulse\(this\.playerHitReactTimer/);
+  assert.match(pvp, /getProceduralHitPulse\(this\.remotePvpHitReactTimer/);
+});
+
 test('PvP lobby shows accessible live connection, waiting-room and opponent status', async () => {
   const [app, html, css] = await Promise.all([
     readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
