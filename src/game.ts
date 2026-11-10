@@ -1655,14 +1655,22 @@ export class PaleciakiGameEngine {
     for (const [alias, sourceName] of Object.entries(aliases)) {
       const sourceClip = THREE.AnimationClip.findByName(clips, sourceName);
       if (!sourceClip) continue;
-      // The game controller owns vertical movement. Remove the baked pelvis/root Y arc from
-      // jump and land so the authored body pose does not double the physics-driven jump height.
+      // World movement and jumping are owned by the game physics/controller.
+      // Freeze authored root-position tracks in every locomotion clip so baked
+      // root motion cannot make the visible rig drift away from its hitbox or
+      // double the jump arc. Keep the first key's bind-space offset unchanged.
       const tracks = sourceClip.tracks.map((sourceTrack) => {
-        const isJumpOrLand = sourceName === 'jump' || sourceName === 'land';
         const isRootTranslation = sourceTrack.name.toLowerCase().includes('root.position');
-        if (isJumpOrLand && isRootTranslation && sourceTrack instanceof THREE.VectorKeyframeTrack) {
+        if (isRootTranslation && sourceTrack instanceof THREE.VectorKeyframeTrack) {
           const cleaned = sourceTrack.clone() as THREE.VectorKeyframeTrack;
-          for (let index = 1; index < cleaned.values.length; index += 3) cleaned.values[index] = 0;
+          const firstX = cleaned.values[0] ?? 0;
+          const firstY = cleaned.values[1] ?? 0;
+          const firstZ = cleaned.values[2] ?? 0;
+          for (let index = 3; index < cleaned.values.length; index += 3) {
+            cleaned.values[index] = firstX;
+            cleaned.values[index + 1] = firstY;
+            cleaned.values[index + 2] = firstZ;
+          }
           return cleaned;
         }
         return sourceTrack.clone();
