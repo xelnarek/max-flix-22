@@ -4,7 +4,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
   marcin: {
     id: 'marcin',
     name: 'Operator 01',
-    visualModelName: 'Store Manager • Gobkit 3D',
+    visualModelName: 'Store Manager',
     role: 'Specjalista logistyki',
     title: 'Kontrola pola walki',
     color: 0x1e3a8a, // Navy / Royal Blue
@@ -42,7 +42,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
   grzesiek: {
     id: 'grzesiek',
     name: 'Operator 02',
-    visualModelName: 'Fire Chief • Gobkit 3D',
+    visualModelName: 'Fire Chief',
     role: 'Specjalista walki wręcz',
     title: 'Ekspert ciężkiego uderzenia',
     color: 0x16a34a, // Emerald Green
@@ -81,7 +81,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
   dawid: {
     id: 'dawid',
     name: 'Operator 03',
-    visualModelName: 'Stock Clerk • Gobkit 3D',
+    visualModelName: 'Stock Clerk',
     role: 'Specjalista kontroli obszaru',
     title: 'Ekspert kontroli dystansu',
     color: 0xd97706, // Amber / Terracotta
@@ -120,7 +120,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
   mateusz: {
     id: 'mateusz',
     name: 'Operator 04',
-    visualModelName: 'Baggage Handler • Gobkit 3D',
+    visualModelName: 'Baggage Handler',
     role: 'Specjalista systemów elektrycznych',
     title: 'Ekspert szybkości i precyzji',
     color: 0x7c3aed, // Purple / Indigo
@@ -159,7 +159,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
   piotr: {
     id: 'piotr',
     name: 'Operator 05',
-    visualModelName: 'Security Guard • Gobkit 3D',
+    visualModelName: 'Security Guard',
     role: 'Specjalista wsparcia taktycznego',
     title: 'Ekspert broni obszarowej',
     color: 0xef4444, // Crimson Red
