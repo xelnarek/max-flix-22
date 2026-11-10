@@ -13,9 +13,13 @@ test('requires clothing to be skinned while allowing static hair mesh assets',()
 test('validates joint rest positions and all referenced morph offsets before variant deformation',()=>{
  const bones={Root:[0,0,0],pelvis:[0,0.87,0],spine_01:[0,0.95,0],spine_02:[0,1.02,0],spine_03:[0,1.10,0],neck_01:[0,1.41,0],head:[0,1.51,0],thigh_l:[0.1,0.86,0],calf_l:[0.14,0.47,0],foot_l:[0.18,0.07,0]};
  for(let i=0;i<44;i++)bones['extra_'+i]=[0,0,0];
- const morphs={weight_max:{pelvis:[0,0.01,0],spine_02:[0,0.02,0]},muscle_max:{upperarm_l:[0.01,0,0]}};
- assert.deepEqual(validateMakeHumanSidecar({bones,morphs}),{boneCount:54,morphCount:2});
+ const morphs=Object.fromEntries(Array.from({length:51},(_,i)=>['morph_'+i,{pelvis:[0,0.01,0]}]));
+ morphs.weight_max={pelvis:[0,0.01,0],spine_02:[0,0.02,0]};
+ morphs.muscle_max={upperarm_l:[0.01,0,0]};
+ assert.deepEqual(validateMakeHumanSidecar({bones,morphs}),{boneCount:54,morphCount:51});
  assert.throws(()=>validateMakeHumanSidecar({bones:{pelvis:[0,0,0]},morphs}),/incomplete 53-bone/);
- assert.throws(()=>validateMakeHumanSidecar({bones:{...bones},morphs:{bad:{ghost:[0,0,0]}}}),/unknown rest bone/);
- assert.throws(()=>validateMakeHumanSidecar({bones:{...bones},morphs:{bad:{pelvis:[0,NaN,0]}}}),/invalid offset/);
+ const unknown={...morphs,bad:{ghost:[0,0,0]}};
+ assert.throws(()=>validateMakeHumanSidecar({bones:{...bones},morphs:unknown}),/unknown rest bone/);
+ const invalid={...morphs,bad:{pelvis:[0,NaN,0]}};
+ assert.throws(()=>validateMakeHumanSidecar({bones:{...bones},morphs:invalid}),/invalid offset/);
 });
