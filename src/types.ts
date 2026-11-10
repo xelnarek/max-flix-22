@@ -167,6 +167,10 @@ export interface EnemyItem {
   hitRecoilX?: number;
   hitRecoilZ?: number;
   hitBaseScale?: { x: number; y: number; z: number };
+  /** Active one-shot procedural combat pose for bespoke enemy rigs. */
+  attackPoseTimer?: number;
+  attackPoseDuration?: number;
+  attackPoseSide?: -1 | 1;
 }
 
 export interface HazardItem {
