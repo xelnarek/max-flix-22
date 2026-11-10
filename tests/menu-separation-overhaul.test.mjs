@@ -31,10 +31,10 @@ test('character selection and descriptions stay inside the operator panel', () =
 test('Survival map selection is isolated from the dedicated PvP configuration entry', () => {
   const mapStart = html.indexOf('<div id="tab-map"');
   const pvpStart = html.indexOf('<div id="tab-pvp"');
-  const enemiesStart = html.indexOf('<div id="tab-enemies"');
-  assert.ok(mapStart >= 0 && pvpStart > mapStart && enemiesStart > pvpStart);
+  const contentEnd = html.indexOf('<div class="menu-fixed-bottom-bar">', pvpStart);
+  assert.ok(mapStart >= 0 && pvpStart > mapStart && contentEnd > pvpStart);
   const survivalPanel = html.slice(mapStart, pvpStart);
-  const pvpPanel = html.slice(pvpStart, enemiesStart);
+  const pvpPanel = html.slice(pvpStart, contentEnd);
   assert.match(survivalPanel, /id="survival-map-picker"/);
   assert.match(survivalPanel, /data-survival-map=/);
   assert.doesNotMatch(survivalPanel, /pvp-menu-feature-grid|id="pvp-operator-picker"/);
