@@ -81,11 +81,13 @@ export function cloneGobkitModel(gltf: LoadedGobkitModel): THREE.Group {
   // maps stay shared through the cached GLTF to keep GPU memory predictable.
   root.traverse((object) => {
     if (!(object instanceof THREE.Mesh)) return;
-    object.geometry = object.geometry.clone();
+    // Skinned actors only animate bones; geometry stays immutable and can be
+    // shared across clones. Per-actor materials remain private for cleanup/tuning.
+    object.userData.gobkitAsset = true;
+    object.userData.gobkitSharedGeometry = true;
     object.material = Array.isArray(object.material)
       ? object.material.map((material) => material.clone())
       : object.material.clone();
-    object.userData.gobkitAsset = true;
   });
   return root;
 }
