@@ -187,3 +187,13 @@ test('async rig attachment restores pending player and enemy combat reactions', 
   assert.match(game, /if \(this\.invulnerableTimer > 0\)[\s\S]{0,180}requestGobkitAction\(track, 'Hit'/);
   assert.match(game, /if \(hitRemaining > 0\.015 \|\| enemy\.state === 'stunned'\)[\s\S]{0,180}requestGobkitAction\(track, 'Hit'/);
 });
+
+
+test('humanoid animation clips cannot move the visual root away from physics hitboxes', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /Freeze authored root-position tracks in every locomotion clip/);
+  assert.match(game, /sourceTrack\.name\.toLowerCase\(\)\.includes\('root\.position'\)/);
+  assert.match(game, /cleaned\.values\[index\] = firstX/);
+  assert.match(game, /cleaned\.values\[index \+ 1\] = firstY/);
+  assert.match(game, /cleaned\.values\[index \+ 2\] = firstZ/);
+});
