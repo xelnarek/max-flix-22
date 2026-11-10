@@ -93,7 +93,20 @@ test('each imported rig gets a role-specific size and only creature/boss assets 
   assert.equal(profiles.ENEMY_VISUAL_PROFILES.elite_walczak_guard.gobkitModel, 'bloodirongrunt');
   assert.equal(assets.ENEMY_GOBKIT_MODELS.zombie_pracownik, 'stitchedbrute');
   assert.equal(assets.ENEMY_GOBKIT_MODELS.elite_walczak_guard, 'bloodirongrunt');
-  assert.match(game, /fitGobkitModel\\(root, visualProfile\\.targetHeight/);
+  assert.match(game, /fitGobkitModel\(root, visualProfile\.targetHeight/);
+});
+
+
+test('procedural enemy rigs receive authored wind-up, strike and hit poses', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /enemy\.attackPoseDuration = poseDuration/);
+  assert.match(game, /enemy\.attackPoseTimer = poseDuration/);
+  assert.match(game, /const windup = progress < 0\.28/);
+  assert.match(game, /const strike = progress < 0\.28/);
+  assert.match(game, /const style = ENEMY_VISUAL_PROFILES\[e\.type\]\.attackStyle/);
+  assert.match(game, /setProceduralLimbPose\(e\.armL/);
+  assert.match(game, /setProceduralLimbPose\(e\.armR/);
+  assert.match(game, /getEnemyHitPulse\(e\.hitReactTimer/);
 });
 
 
@@ -138,7 +151,7 @@ test('playable operators retain the original stylized models in Survival and bot
   assert.match(game, /const built = createCharacterModel\(def\)/);
   assert.doesNotMatch(game, /void this\.attachMakeHumanOperatorModel/);
   assert.doesNotMatch(game, /void this\.attachMakeHumanEnemyModel/);
-  assert.match(game, /ENEMY_VISUAL_PROFILES\\[enemy\\.type\\]\\.gobkitModel/);
+  assert.match(game, /ENEMY_VISUAL_PROFILES\[enemy\.type\]\.gobkitModel/);
   assert.match(game, /void this\.attachGobkitEnemyModel\(enemy, modelId\)/);
   assert.match(game, /createGobkitEnemyRoleSilhouette\(requestedType\)/);
 });
