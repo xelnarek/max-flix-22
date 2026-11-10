@@ -99,6 +99,21 @@ test('each imported rig gets a role-specific size and only creature/boss assets 
 });
 
 
+test('player hit reaction is independent from the attack timer and both use pivot-based arm posing', async () => {
+  const game = await read('../src/game.ts');
+  const attackStart = game.indexOf('if (this.attackSwingTimer > 0 && this.attackSwingDuration > 0)');
+  const hitStart = game.indexOf('if (this.playerHitReactTimer > 0 && this.playerHitReactDuration > 0)');
+  assert.ok(attackStart >= 0 && hitStart > attackStart);
+  const between = game.slice(attackStart, hitStart);
+  assert.match(between, /addProceduralLimbPose\(\s*this\.rightArm/);
+  assert.match(between, /addProceduralLimbPose\(\s*this\.leftArm/);
+  assert.match(between, /\n      \}\s*\n\s*\/\/ Hit reaction is an additive layer/);
+  assert.match(game, /this\.playerHitReactTimer = this\.playerHitReactDuration/);
+  assert.match(game, /addProceduralLimbPose\(this\.leftArm, 0\.46 \* hit/);
+  assert.doesNotMatch(game, /e\.legL\.rotation\.x = Math\.sin\(e\.walkCycle\)/);
+  assert.doesNotMatch(game, /const armSwing = Math\.sin\(e\.walkCycle\)/);
+});
+
 test('procedural enemy rigs receive authored wind-up, strike and hit poses', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /enemy\.attackPoseDuration = poseDuration/);
