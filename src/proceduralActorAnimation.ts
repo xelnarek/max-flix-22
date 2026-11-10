@@ -5,10 +5,15 @@ interface CachedLimbRest {
   y: number;
   z: number;
   rotationX: number;
+  rotationY: number;
   rotationZ: number;
+  pivotLocalX: number;
+  pivotLocalY: number;
+  pivotLocalZ: number;
   pivotX: number;
   pivotY: number;
   pivotZ: number;
+  pivotScratch: THREE.Vector3;
 }
 
 interface CachedJointRest {
@@ -18,9 +23,13 @@ interface CachedJointRest {
 }
 
 /**
- * Rotate a mesh limb around its upper joint without changing the source model.
- * Rest data is cached once in userData; the per-frame path performs scalar math
- * only and creates no vectors, matrices, geometries or materials.
+ * Rotate a limb around its actual joint.
+ * - THREE.Group rigs (the five original operators) are already authored with
+ *   the shoulder/hip at the group's origin.
+ * - A standalone Mesh pivots around the centre of its upper geometry bounds.
+ *
+ * The local pivot and one scratch vector are cached once per limb. The frame
+ * update performs scalar math and mutates existing transforms only.
  */
 export function setProceduralLimbPose(
   limb: THREE.Object3D | undefined | null,
@@ -28,47 +37,66 @@ export function setProceduralLimbPose(
   swingZ = 0,
 ): void {
   if (!limb) return;
-  const data = limb.userData.proceduralLimbRest as CachedLimbRest | undefined;
-  let rest = data;
+  let rest = limb.userData.proceduralLimbRest as CachedLimbRest | undefined;
   if (!rest) {
-    let centerX = 0;
-    let topY = 0.20;
-    let centerZ = 0;
+    let pivotLocalX = 0;
+    let pivotLocalY = 0;
+    let pivotLocalZ = 0;
+
     const mesh = limb as THREE.Mesh;
     if (mesh.geometry instanceof THREE.BufferGeometry) {
       if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
       const bounds = mesh.geometry.boundingBox;
       if (bounds) {
-        centerX = (bounds.min.x + bounds.max.x) * 0.5;
-        topY = bounds.max.y;
-        centerZ = (bounds.min.z + bounds.max.z) * 0.5;
+        pivotLocalX = (bounds.min.x + bounds.max.x) * 0.5;
+        pivotLocalY = bounds.max.y;
+        pivotLocalZ = (bounds.min.z + bounds.max.z) * 0.5;
       }
     }
+
+    // Store the joint in parent space using the authored rest orientation.
+    // This prevents even a pre-rotated limb from drifting on its first pose.
+    const pivotScratch = new THREE.Vector3(
+      pivotLocalX * limb.scale.x,
+      pivotLocalY * limb.scale.y,
+      pivotLocalZ * limb.scale.z,
+    ).applyEuler(limb.rotation);
+
     rest = {
       x: limb.position.x,
       y: limb.position.y,
       z: limb.position.z,
       rotationX: limb.rotation.x,
+      rotationY: limb.rotation.y,
       rotationZ: limb.rotation.z,
-      pivotX: limb.position.x + centerX,
-      pivotY: limb.position.y + topY,
-      pivotZ: limb.position.z + centerZ,
+      pivotLocalX,
+      pivotLocalY,
+      pivotLocalZ,
+      pivotX: limb.position.x + pivotScratch.x,
+      pivotY: limb.position.y + pivotScratch.y,
+      pivotZ: limb.position.z + pivotScratch.z,
+      pivotScratch: new THREE.Vector3(),
     };
     limb.userData.proceduralLimbRest = rest;
   }
 
-  const offsetX = rest.x - rest.pivotX;
-  const offsetY = rest.y - rest.pivotY;
-  const offsetZ = rest.z - rest.pivotZ;
-  const cosine = Math.cos(swingX);
-  const sine = Math.sin(swingX);
-  limb.position.set(
-    rest.pivotX + offsetX,
-    rest.pivotY + offsetY * cosine - offsetZ * sine,
-    rest.pivotZ + offsetY * sine + offsetZ * cosine,
+  limb.rotation.set(
+    rest.rotationX + swingX,
+    rest.rotationY,
+    rest.rotationZ + swingZ,
   );
-  limb.rotation.x = rest.rotationX + swingX;
-  limb.rotation.z = rest.rotationZ + swingZ;
+  rest.pivotScratch
+    .set(
+      rest.pivotLocalX * limb.scale.x,
+      rest.pivotLocalY * limb.scale.y,
+      rest.pivotLocalZ * limb.scale.z,
+    )
+    .applyEuler(limb.rotation);
+  limb.position.set(
+    rest.pivotX - rest.pivotScratch.x,
+    rest.pivotY - rest.pivotScratch.y,
+    rest.pivotZ - rest.pivotScratch.z,
+  );
 }
 
 /** Add a short reaction on top of the current locomotion/attack pose. */
@@ -98,7 +126,7 @@ export function getProceduralHitPulse(remainingSeconds: number, durationSeconds:
   return impact * Math.pow(1 - progress, 0.65);
 }
 
-/** Apply an additive joint pose while preserving the factory-authored rest angle. */
+/** Apply an additive joint pose while preserving the factory-authored rest angles. */
 export function setProceduralJointRotation(
   joint: THREE.Object3D | undefined | null,
   x = 0,
