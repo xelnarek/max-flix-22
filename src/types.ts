@@ -171,6 +171,17 @@ export interface EnemyItem {
   attackPoseTimer?: number;
   attackPoseDuration?: number;
   attackPoseSide?: -1 | 1;
+  /** Short visual death animation; enemy remains visible until it finishes. */
+  deathVisualTimer?: number;
+  deathVisualDuration?: number;
+  deathVisualRest?: {
+    rotationX: number;
+    rotationZ: number;
+    positionY: number;
+    scaleX: number;
+    scaleY: number;
+    scaleZ: number;
+  };
 }
 
 export interface HazardItem {
