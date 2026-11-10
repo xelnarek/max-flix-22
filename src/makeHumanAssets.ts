@@ -610,9 +610,12 @@ export async function createMakeHumanActor(styleId: MakeHumanStyleId, targetHeig
   }
 
   const morphInfluences = buildMorphInfluences(style, sidecar);
-  addRoleEquipment(root, style);
   applyMorphsAndJointOffsets(root, sidecar, morphInfluences);
   root.updateMatrixWorld(true);
+
+  // Normalize from the character's body bounds only. Helmets, parcels, radios and
+  // other role equipment are added afterwards so equipped operators keep the same
+  // body height instead of being silently scaled down by a tall accessory.
   const bounds = new THREE.Box3().setFromObject(root);
   const size = bounds.getSize(new THREE.Vector3());
   if (!Number.isFinite(size.y) || size.y < 0.8) throw new Error('MakeHuman actor has invalid world bounds.');
@@ -621,6 +624,11 @@ export async function createMakeHumanActor(styleId: MakeHumanStyleId, targetHeig
   const center = bounds.getCenter(new THREE.Vector3());
   root.scale.setScalar(scale);
   root.position.set(-center.x * scale, -bounds.min.y * scale, -center.z * scale);
+  root.updateMatrixWorld(true);
+
+  // Equipment attaches in the fitted actor's root/bone space and therefore follows
+  // the same rig, but does not participate in the body-height normalization above.
+  addRoleEquipment(root, style);
   root.updateMatrixWorld(true);
   return { root, clips: loaded[0].animations, style: styleId, usesSharedGeometry: true };
 }
