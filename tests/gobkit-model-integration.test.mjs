@@ -81,6 +81,33 @@ test('the visual registry explicitly covers every declared enemy type and has a 
   assert.match(registrySource, /ENEMY_VISUAL_PROFILES/);
 });
 
+test('every enemy type has a distinct locomotion style preset tuned to its role', async () => {
+  const [profilesSource, game, module] = await Promise.all([
+    read('../src/enemyVisualProfiles.ts'),
+    read('../src/game.ts'),
+    import('../src/enemyVisualProfiles.ts'),
+  ]);
+  const presets = module.ENEMY_GAIT_PRESETS;
+  for (const [type, profile] of Object.entries(module.ENEMY_VISUAL_PROFILES)) {
+    const preset = presets[profile.gaitStyle];
+    assert.ok(preset, 'missing gait preset for ' + type);
+    assert.ok(preset.rate > 0 && preset.rate <= 1.5, 'invalid gait rate for ' + type);
+    assert.ok(preset.legSwing >= 0 && preset.legSwing <= 0.8, 'invalid leg swing for ' + type);
+    assert.ok(preset.armSwing >= 0 && preset.armSwing <= 0.6, 'invalid arm swing for ' + type);
+  }
+  assert.equal(module.ENEMY_VISUAL_PROFILES.zombie_pracownik.gaitStyle, 'shambling');
+  assert.equal(module.ENEMY_VISUAL_PROFILES.radioactive_pip.gaitStyle, 'limping');
+  assert.equal(module.ENEMY_VISUAL_PROFILES.kurier.gaitStyle, 'brisk');
+  assert.equal(module.ENEMY_VISUAL_PROFILES.krol_leto.gaitStyle, 'heavy');
+  assert.equal(module.ENEMY_VISUAL_PROFILES.piorun_dron.gaitStyle, 'hovering');
+  assert.equal(module.ENEMY_VISUAL_PROFILES.forklift.gaitStyle, 'rolling');
+  assert.match(profilesSource, /ENEMY_GAIT_PRESETS/);
+  assert.match(game, /const gaitPreset = ENEMY_GAIT_PRESETS\\[visualProfile\\.gaitStyle\\]/);
+  assert.match(game, /visualProfile\\.gaitStyle === 'shambling'/);
+  assert.match(game, /visualProfile\\.gaitStyle === 'limping'/);
+  assert.match(game, /visualProfile\\.gaitStyle === 'robotic'/);
+});
+
 test('each imported rig gets a role-specific size and only creature/boss assets override bespoke human models', async () => {
   const [profiles, assets, game] = await Promise.all([
     import('../src/enemyVisualProfiles.ts'),
@@ -129,6 +156,7 @@ test('defeated enemies remain visible through a short death animation before cle
   assert.match(game, /mesh\.visible = false/);
   assert.match(game, /this\.stopGobkitTrack\(track\)/);
   assert.match(game, /const duration = isBoss \? 1\.18 : 0\.82/);
+  assert.match(game, /this\.requestGobkitAction\(track, 'Death', duration\)/);
 });
 
 test('ranged enemy attack poses start with launch recoil and relax after the shot', async () => {
