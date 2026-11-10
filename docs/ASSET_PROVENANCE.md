@@ -31,3 +31,15 @@ procedural/Gobkit actors remain available as a fail-soft fallback.
 
 The generated GLB outputs are declared CC0-1.0 by the source project. Exact byte lengths, Git blob hashes,
 SHA-256 values and source URLs are recorded in public/assets/makehuman/manifest.json at build time.
+
+## Poly Haven industrial PBR materials
+
+The Survival warehouse uses the following Poly Haven CC0 PBR sets at 2K where available (1K is the build-time fallback):
+- concrete_floor_worn_001 — worn industrial concrete floor;
+- factory_wall — corrugated factory wall;
+- metal_plate_02 — scratched, worn steel for barriers and trim.
+
+The build downloader uses the public direct texture files, validates PNG payloads, records SHA-256 and preserves
+the source URL in public/assets/polyhaven/manifest.json. The settings screen includes the requested visible
+"Powered by Poly Haven" credit. Runtime shares loaded maps across the material instances and retains the
+procedural textures as an offline/dev fallback.

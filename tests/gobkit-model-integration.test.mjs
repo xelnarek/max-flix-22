@@ -74,8 +74,8 @@ test('the build downloader validates CC0, rigging, animation clips and GLB binar
   assert.match(script, /model\.rigged !== true/);
   assert.match(script, /'Idle', 'Walk', 'Run', 'Death', 'Hit'/);
   assert.match(script, /validateGlbAsset\(bytes, model\.id, model\.clipNames\)/);
-  assert.match(pkg, /"prebuild": "node scripts\/fetch-gobkit-assets\.mjs --strict && node scripts\/fetch-makehuman-assets\.mjs --strict"/);
-  assert.match(pkg, /"predev": "node scripts\/fetch-gobkit-assets\.mjs && node scripts\/fetch-makehuman-assets\.mjs"/);
+  assert.match(pkg, /"prebuild": "node scripts\/fetch-gobkit-assets\.mjs --strict && node scripts\/fetch-makehuman-assets\.mjs --strict && node scripts\/fetch-polyhaven-assets\.mjs --strict"/);
+  assert.match(pkg, /"predev": "node scripts\/fetch-gobkit-assets\.mjs && node scripts\/fetch-makehuman-assets\.mjs && node scripts\/fetch-polyhaven-assets\.mjs"/);
 });
 
 test('Survival actors and both PvP operator slots use the new models without changing combat APIs', async () => {
@@ -84,8 +84,8 @@ test('Survival actors and both PvP operator slots use the new models without cha
     read('../src/pvpArena.ts'),
   ]);
   assert.match(game, /ENEMY_GOBKIT_MODELS\[enemy\.type\]/);
-  assert.match(game, /attachGobkitOperatorModel\(this\.currentCharacterId/);
-  assert.match(game, /attachGobkitOperatorModel\(def\.id, this\.remotePlayerGroup/);
+  assert.match(game, /attachMakeHumanOperatorModel\(this\.currentCharacterId/);
+  assert.match(game, /attachMakeHumanOperatorModel\(def\.id, this\.remotePlayerGroup/);
   assert.match(game, /enemy\.legL = undefined/);
   assert.match(game, /this\.hideProceduralVisuals/);
   assert.match(arena, /export function createDefaultPvpObstacles/);

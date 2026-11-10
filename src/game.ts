@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { applyPolyHavenPbrMaps } from './polyHavenTextures.ts';
 import { createMakeHumanActor, MAKEHUMAN_OPERATOR_STYLES, MAKEHUMAN_ENEMY_STYLES, type MakeHumanStyleId } from './makeHumanAssets.ts';
 import {
   clampGobkitActionDuration,
@@ -3117,10 +3118,12 @@ export class PaleciakiGameEngine {
       roughness: surfaceProfile.floorRoughness, metalness: surfaceProfile.floorMetalness,
     });
     applyIndustrialPbr(floorMaterial, 0.018);
+    applyPolyHavenPbrMaps(floorMaterial, 'concrete_floor_worn_001', 3, 4, 0.5);
     const wallMaterial = new THREE.MeshStandardMaterial({
       map: wallTexture, color: mapDefinition.wallColor,
       roughness: surfaceProfile.wallRoughness, metalness: surfaceProfile.wallMetalness,
     });
+    applyPolyHavenPbrMaps(wallMaterial, 'factory_wall', 3, 2, 0.42);
     const trimMaterial = new THREE.MeshStandardMaterial({
       color: mapDefinition.accentColor,
       roughness: surfaceProfile.trimRoughness,
@@ -3138,6 +3141,7 @@ export class PaleciakiGameEngine {
       map: barrierTexture, color: 0xffffff,
       roughness: surfaceProfile.barrierRoughness, metalness: surfaceProfile.barrierMetalness,
     });
+    applyPolyHavenPbrMaps(barrierMaterial, 'metal_plate_02', 2, 2, 0.48);
 
     // Track map-owned GPU resources: all these textures/materials are shared by many map meshes.
     for (const material of [floorMaterial, wallMaterial, trimMaterial, palletMaterial, barrierMaterial, ...crateMaterials]) {
