@@ -126,7 +126,14 @@ jobs:
         run: |
           chmod +x android/gradlew
           cd android
-          bash ../scripts/retry-command.sh ./gradlew --no-daemon bundleRelease assembleDebug assembleRelease
+          if [ "$ANDROID_SIGNING_ENABLED" = "true" ]; then
+            # Build the installable release APK only when it can be signed.
+            bash ../scripts/retry-command.sh ./gradlew --no-daemon bundleRelease assembleDebug assembleRelease
+          else
+            # The debug APK is signed with the local debug key for device QA.
+            # An unsigned release APK is not installable and wastes ~170 MB.
+            bash ../scripts/retry-command.sh ./gradlew --no-daemon bundleRelease assembleDebug
+          fi
 
       - name: Verify Android package signatures and SDK metadata
         run: node scripts/verify-android-release.mjs
@@ -171,3 +178,6 @@ jobs:
             package-lock.json
           if-no-files-found: warn
           retention-days: 21
+          # APK and AAB are already ZIP-compressed; avoid spending runner CPU
+          # trying to compress them a second time.
+          compression-level: 0
