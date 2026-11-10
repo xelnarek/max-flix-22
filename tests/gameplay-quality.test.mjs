@@ -1559,5 +1559,10 @@ test('Survival wave director reuses candidate buffers and avoids callback churn 
   assert.doesNotMatch(method, /new Map\(activeCandidates\.map/);
   assert.match(method, /for \(const e of this\.enemies\)/);
   assert.doesNotMatch(method, /this\.enemies\.forEach\(/);
+  assert.match(method, /if \(e\.state === 'defeated'\) \{\s*this\.updateDefeatedEnemyVisual\(e, dt\);\s*continue;/);
+  assert.match(method, /if \(!e\.mesh\) continue;/);
+  assert.match(method, /if \(distToPlayer > 26\.0[\s\S]*?\) \{[\s\S]*?continue;/);
+  assert.match(method, /if \(e\.stunTimer > 0\) \{[\s\S]*?continue;/);
+  assert.doesNotMatch(method, /\breturn;/);
   assert.match(method, /for \(let wheelIndex = 0; wheelIndex < e\.bikeWheels\.length; wheelIndex\+\+\)/);
 });
