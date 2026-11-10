@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { applyPolyHavenPbrMaps } from './polyHavenTextures.ts';
 import { chooseMakeHumanLocomotion, getMakeHumanPlaybackRate, isMakeHumanVelocityAction, type MakeHumanLocomotionAction } from './makeHumanLocomotion.ts';
+import { createGobkitEnemyRoleSilhouette } from './gobkitEnemySilhouettes.ts';
 import { createMakeHumanActor, MAKEHUMAN_OPERATOR_STYLES, MAKEHUMAN_ENEMY_STYLES, type MakeHumanStyleId } from './makeHumanAssets.ts';
 import {
   clampGobkitActionDuration,
@@ -1618,13 +1619,12 @@ export class PaleciakiGameEngine {
       this.gobkitEnemyTracks.delete(enemy);
     }
 
-    // Also remove any untracked root left by an interrupted/older attachment.
-    // Geometry is intentionally not disposed here: MakeHuman source geometry can
-    // be shared by cached actors. Tracked roots use stopGobkitTrack for full cleanup.
+    // Also remove any untracked root or role-specific overlay left by an interrupted
+    // attachment. Each overlay owns its own geometry/materials.
     for (const child of [...group.children]) {
       const isActorRoot = child.userData.actorVisualRoot === true ||
         /^(makehuman|gobkit)-(operator|enemy)-/.test(child.name);
-      if (isActorRoot) {
+      if (isActorRoot || child.userData.actorRoleSilhouette === true) {
         this.disposeUntrackedActorVisualRoot(child);
         child.removeFromParent();
       }
@@ -1960,6 +1960,8 @@ export class PaleciakiGameEngine {
       this.removeAttachedActorVisuals(mesh as THREE.Group);
       this.hideProceduralVisuals(mesh as THREE.Group, overlays);
       this.installActorVisualRoot(mesh as THREE.Group, root);
+      const roleSilhouette = createGobkitEnemyRoleSilhouette(requestedType);
+      if (roleSilhouette) mesh.add(roleSilhouette);
       enemy.legL = undefined;
       enemy.legR = undefined;
       enemy.armL = undefined;
@@ -2069,15 +2071,11 @@ export class PaleciakiGameEngine {
     activeEnemies.clear();
     for (const enemy of this.enemies) activeEnemies.add(enemy);
     for (const enemy of this.enemies) {
-      const humanStyle = MAKEHUMAN_ENEMY_STYLES[enemy.type];
       const modelId = ENEMY_GOBKIT_MODELS[enemy.type];
-      if ((!humanStyle && !modelId) || !enemy.mesh) continue;
+      if (!modelId || !enemy.mesh) continue;
       if (!this.requestedGobkitEnemies.has(enemy)) {
         this.requestedGobkitEnemies.add(enemy);
-        if (enemy.state !== 'defeated') {
-          if (humanStyle) void this.attachMakeHumanEnemyModel(enemy, humanStyle);
-          else if (modelId) void this.attachGobkitEnemyModel(enemy, modelId);
-        }
+        if (enemy.state !== 'defeated') void this.attachGobkitEnemyModel(enemy, modelId);
       }
       const track = this.gobkitEnemyTracks.get(enemy);
       if (!track || enemy.mesh.visible === false) continue;
@@ -2219,8 +2217,8 @@ export class PaleciakiGameEngine {
 
     this.playerGroup.position.copy(this.playerPos);
     this.levelRoot.add(this.playerGroup);
-    const sequence = ++this.playerGobkitSequence;
-    void this.attachMakeHumanOperatorModel(this.currentCharacterId, this.playerGroup, sequence, false, [built.shadow]);
+    // Keep the original bespoke operator designs from createCharacterModel.
+    // The realistic MakeHuman replacement was flattening the five visual identities.
   }
 
   public startTitle() {
@@ -2762,9 +2760,8 @@ export class PaleciakiGameEngine {
     this.remotePlayerGroup.rotation.y = remoteSpawn.rot;
 
     this.levelRoot.add(this.remotePlayerGroup);
-    const sequence = ++this.remoteGobkitSequence;
-    const preserved = [marker, hpBarGroup, badgeMesh, groundRing, this.remotePlayerMeshBuilt.shadow];
-    void this.attachMakeHumanOperatorModel(def.id, this.remotePlayerGroup, sequence, true, preserved);
+    // PvP uses the same original stylized operator design as Survival. Keep
+    // the nameplate, HP bar and team ring attached to that procedural character.
   }
 
 
