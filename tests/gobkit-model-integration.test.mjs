@@ -131,6 +131,25 @@ test('defeated enemies remain visible through a short death animation before cle
   assert.match(game, /const duration = isBoss \? 1\.18 : 0\.82/);
 });
 
+test('ranged enemy attack poses start with launch recoil and relax after the shot', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /Projectile attacks are requested on the launch frame/);
+  assert.match(game, /const reach = -0\.82 \* Math\.pow\(1 - progress, 1\.45\)/);
+  assert.match(game, /const recoilRoll = 0\.07 \* Math\.pow\(1 - progress, 1\.2\)/);
+  assert.match(game, /this\.requestEnemyAttackAnimation\(e, 0\.50\)/);
+});
+
+test('rebuilding an operator clears previous run attack and hit poses', async () => {
+  const game = await read('../src/game.ts');
+  const start = game.indexOf('private rebuildPlayerMesh()');
+  const end = game.indexOf('public startTitle()', start);
+  const rebuild = game.slice(start, end);
+  assert.match(rebuild, /this\.attackSwingTimer = 0/);
+  assert.match(rebuild, /this\.specialSwingTimer = 0/);
+  assert.match(rebuild, /this\.playerHitReactTimer = 0/);
+  assert.match(rebuild, /this\.attackCooldownTimer = 0/);
+});
+
 test('procedural enemy rigs receive authored wind-up, strike and hit poses', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /enemy\.attackPoseDuration = poseDuration/);
