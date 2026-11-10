@@ -35,7 +35,7 @@ import { clampHorizontalPosition } from './arenaBounds.ts';
 import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoint, resolveEnemyPlayerSeparation } from './enemySpacing.ts';
 import { calculateEnemyObstacleAvoidanceVector } from './enemyNavigation.ts';
 import { createEnemyHitReaction, getEnemyHitPulse, getEnemyImpactBurstProfile } from './enemyCombatFeedback.ts';
-import { ENEMY_VISUAL_PROFILES } from './enemyVisualProfiles.ts';
+import { ENEMY_GAIT_PRESETS, ENEMY_VISUAL_PROFILES } from './enemyVisualProfiles.ts';
 import { addProceduralLimbPose, getProceduralHitPulse, setProceduralJointRotation, setProceduralLimbPose } from './proceduralActorAnimation.ts';
 import { isEffectiveBossLaneDodge, isInsideBossAttackLane, isWithinBossImpactRadius } from './combatTelegraphs.ts';
 import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
@@ -12061,8 +12061,11 @@ export class PaleciakiGameEngine {
     enemy.attackPoseTimer = 0;
     enemy.hitReactTimer = 0;
     enemy.hitReactStrength = 0;
-    // Keep the actor visible so imported Death clips and the procedural fall
-    // pose can play instead of being hidden on the same frame as the kill.
+    // Imported skinned rigs need an explicit Death clip request; keeping the
+    // actor visible alone would otherwise leave its previous Walk/Attack pose.
+    const track = this.gobkitEnemyTracks.get(enemy);
+    if (track) this.requestGobkitAction(track, 'Death', duration);
+    // Keep the actor visible until the imported clip or procedural fall finishes.
     mesh.visible = true;
   }
 
@@ -12291,26 +12294,60 @@ export class PaleciakiGameEngine {
         }
       }
 
-      const gaitRate = e.state === 'charging' || e.state === 'chase' ? 10.2 : e.state === 'patrol' ? 6.6 : 0;
+      const visualProfile = ENEMY_VISUAL_PROFILES[e.type];
+      const gaitPreset = ENEMY_GAIT_PRESETS[visualProfile.gaitStyle];
+      const gaitMovement = e.state === 'chase' || e.state === 'charging'
+        ? 1
+        : e.state === 'patrol'
+          ? 0.66
+          : 0;
+      const gaitRate = (e.state === 'charging' || e.state === 'chase' ? 10.2 : e.state === 'patrol' ? 6.6 : 0) * gaitPreset.rate;
       e.walkCycle += dt * gaitRate;
       this.updateEnemyHitReaction(e, dt);
 
-      // Procedural actors use joint-pivot movement rather than rotating each limb
-      // around its centre. The same pose layer adds anticipation/follow-through
-      // for melee swings and a clear arm extension for ranged projectile launches.
-      if (e.legL && e.legR && e.type !== 'piorun_dron' && e.type !== 'forklift') {
-        const gaitAmount = e.state === 'chase' || e.state === 'charging' ? 0.52 : e.state === 'patrol' ? 0.34 : 0;
-        const gait = Math.sin(e.walkCycle) * gaitAmount;
-        setProceduralLimbPose(e.legL, gait);
-        setProceduralLimbPose(e.legR, -gait);
+      // Every archetype has its own gait profile: heavy bosses take slower,
+      // wider steps; couriers move briskly; zombies limp and stagger; robots
+      // advance with precise compact motion. Joint pivots stay in place.
+      if (e.legL && e.legR && visualProfile.gaitStyle !== 'hovering' && visualProfile.gaitStyle !== 'rolling') {
+        const gait = Math.sin(e.walkCycle);
+        const gaitAmount = gaitPreset.legSwing * gaitMovement;
+        let leftLegX = gait * gaitAmount;
+        let rightLegX = -gait * gaitAmount;
+        if (visualProfile.gaitStyle === 'shambling') {
+          rightLegX = -Math.sin(e.walkCycle * 0.72 + 0.55) * gaitAmount * 0.68;
+        } else if (visualProfile.gaitStyle === 'limping') {
+          rightLegX = -Math.sin(e.walkCycle * 1.08 + 0.36) * gaitAmount * 0.48;
+        } else if (visualProfile.gaitStyle === 'robotic') {
+          leftLegX = Math.sin(e.walkCycle * 0.58) * gaitAmount * 0.76;
+          rightLegX = -Math.sin(e.walkCycle * 0.58) * gaitAmount * 0.76;
+        }
+        setProceduralLimbPose(e.legL, leftLegX);
+        setProceduralLimbPose(e.legR, rightLegX);
       }
-      if (e.armL && e.armR && e.type !== 'piorun_dron' && e.type !== 'forklift') {
-        const gaitAmount = e.state === 'chase' || e.state === 'charging' ? 0.34 : e.state === 'patrol' ? 0.20 : 0;
-        const gait = Math.sin(e.walkCycle) * gaitAmount;
-        let leftArmX = -gait;
-        let rightArmX = gait;
-        let leftArmZ = 0;
-        let rightArmZ = 0;
+      if (e.armL && e.armR && visualProfile.gaitStyle !== 'hovering' && visualProfile.gaitStyle !== 'rolling') {
+        const gait = Math.sin(e.walkCycle);
+        const armSwing = gait * gaitPreset.armSwing * gaitMovement;
+        let leftArmX = -armSwing;
+        let rightArmX = armSwing;
+        let leftArmZ = -Math.sin(e.walkCycle * 0.5) * gaitPreset.armSway * gaitMovement;
+        let rightArmZ = -leftArmZ;
+        if (visualProfile.gaitStyle === 'shambling') {
+          leftArmX -= 0.18 * gaitMovement;
+          rightArmX -= 0.18 * gaitMovement;
+          rightArmZ *= 0.55;
+        } else if (visualProfile.gaitStyle === 'limping') {
+          rightArmX *= 0.58;
+          leftArmZ -= 0.05 * gaitMovement;
+        } else if (visualProfile.gaitStyle === 'theatrical') {
+          leftArmZ -= 0.08 * gaitMovement;
+          rightArmZ += 0.08 * gaitMovement;
+        } else if (visualProfile.gaitStyle === 'aggressive') {
+          leftArmX -= 0.10 * gaitMovement;
+          rightArmX -= 0.10 * gaitMovement;
+        } else if (visualProfile.gaitStyle === 'compact') {
+          leftArmX -= 0.12 * gaitMovement;
+          rightArmX -= 0.12 * gaitMovement;
+        }
         const attackRemaining = Math.max(0, e.attackPoseTimer || 0);
         const attackDuration = Math.max(0.12, e.attackPoseDuration || 0.48);
         if (attackRemaining > 0) {
@@ -12320,7 +12357,7 @@ export class PaleciakiGameEngine {
             : progress < 0.60 ? (progress - 0.28) / 0.32
               : Math.max(0, (1 - progress) / 0.40);
           const side = e.attackPoseSide || 1;
-          const style = ENEMY_VISUAL_PROFILES[e.type].attackStyle;
+          const style = visualProfile.attackStyle;
           if (style === 'heavy-melee') {
             const swing = 0.34 * windup - 1.18 * strike;
             leftArmX += swing;
@@ -12361,7 +12398,11 @@ export class PaleciakiGameEngine {
         const attackPitch = attackRemaining > 0
           ? (1 - attackRemaining / attackDuration) < 0.28 ? -0.07 : 0.10
           : 0;
-        setProceduralJointRotation(e.head, -0.22 * hitPulse + attackPitch);
+        const headBob = Math.sin(e.walkCycle * 0.5) * gaitPreset.headBob * gaitMovement;
+        const headLean = visualProfile.gaitStyle === 'aggressive' || visualProfile.gaitStyle === 'shambling'
+          ? -0.045 * gaitMovement
+          : 0;
+        setProceduralJointRotation(e.head, headBob + headLean - 0.22 * hitPulse + attackPitch);
         if (e.attackPoseTimer && e.attackPoseTimer > 0) {
           e.attackPoseTimer = Math.max(0, e.attackPoseTimer - dt);
         }
