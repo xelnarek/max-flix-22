@@ -25,6 +25,6 @@ test('locomotion hysteresis prevents run/idle flicker around speed thresholds', 
   assert.equal(chooseMakeHumanLocomotion(0, 4.00, false, 'Run'), 'Walk');
   assert.equal(chooseMakeHumanLocomotion(0, 0.16, false, 'Idle'), 'Idle');
   assert.equal(chooseMakeHumanLocomotion(0, 0.16, false, 'Walk'), 'Walk');
-  assert.equal(chooseMakeHumanLocomotion(0.20, 0.30, false, 'StrafeLeft'), 'StrafeLeft');
-  assert.equal(chooseMakeHumanLocomotion(0.20, 0.30, false, 'Walk'), 'Walk');
+  assert.equal(chooseMakeHumanLocomotion(0.33, 0.30, false, 'StrafeLeft'), 'StrafeLeft');
+  assert.equal(chooseMakeHumanLocomotion(0.33, 0.30, false, 'Walk'), 'Walk');
 });
