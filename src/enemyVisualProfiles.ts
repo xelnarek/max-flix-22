@@ -31,6 +31,34 @@ export type EnemyGaitStyle =
   | 'aggressive'
   | 'limping';
 
+export interface EnemyGaitPreset {
+  /** Base gait-cycle multiplier during movement. */
+  readonly rate: number;
+  /** Leg swing amplitude in radians. */
+  readonly legSwing: number;
+  /** Arm counter-swing amplitude in radians. */
+  readonly armSwing: number;
+  /** Lateral arm gesture in radians. */
+  readonly armSway: number;
+  /** Small head movement that makes the gait readable at distance. */
+  readonly headBob: number;
+}
+
+export const ENEMY_GAIT_PRESETS: Readonly<Record<EnemyGaitStyle, EnemyGaitPreset>> = Object.freeze({
+  theatrical: { rate: 1.06, legSwing: 0.42, armSwing: 0.56, armSway: 0.34, headBob: 0.035 },
+  heavy: { rate: 0.78, legSwing: 0.68, armSwing: 0.46, armSway: 0.10, headBob: 0.075 },
+  rolling: { rate: 1.00, legSwing: 0, armSwing: 0, armSway: 0, headBob: 0 },
+  deliberate: { rate: 0.82, legSwing: 0.30, armSwing: 0.20, armSway: 0.08, headBob: 0.025 },
+  precise: { rate: 0.96, legSwing: 0.22, armSwing: 0.12, armSway: 0.045, headBob: 0.015 },
+  robotic: { rate: 0.94, legSwing: 0.32, armSwing: 0.14, armSway: 0.035, headBob: 0.018 },
+  hovering: { rate: 0.72, legSwing: 0, armSwing: 0, armSway: 0, headBob: 0.04 },
+  brisk: { rate: 1.35, legSwing: 0.58, armSwing: 0.40, armSway: 0.12, headBob: 0.035 },
+  shambling: { rate: 0.72, legSwing: 0.52, armSwing: 0.28, armSway: 0.08, headBob: 0.065 },
+  compact: { rate: 1.22, legSwing: 0.38, armSwing: 0.32, armSway: 0.16, headBob: 0.025 },
+  aggressive: { rate: 1.17, legSwing: 0.64, armSwing: 0.52, armSway: 0.08, headBob: 0.055 },
+  limping: { rate: 0.88, legSwing: 0.48, armSwing: 0.28, armSway: 0.07, headBob: 0.06 },
+});
+
 export interface EnemyVisualProfile {
   /** Existing bespoke fallback builder used before/when an optional GLB is unavailable. */
   readonly fallbackFactory: string;
