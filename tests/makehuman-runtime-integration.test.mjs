@@ -20,3 +20,26 @@ test('wearables share the loaded body rig and GLB geometry across character inst
   assert.match(source, /assets\/makehuman\//);
   assert.match(source, /new THREE\.Skeleton\(/);
 });
+
+
+test('role-matched staff models include distinct body proportions and industrial equipment', async () => {
+  const source = await readFile(new URL('../src/makeHumanAssets.ts', import.meta.url), 'utf8');
+  for (const equipment of ['helmet', 'vest', 'radio', 'badge', 'scanner', 'clipboard', 'parcel', 'toolBelt', 'earpiece']) {
+    assert.ok(source.includes("'" + equipment + "'"), 'missing equipment kit: ' + equipment);
+  }
+  assert.match(source, /jawWidth:/);
+  assert.match(source, /muscle:/);
+  assert.match(source, /age:/);
+  assert.match(source, /applyMorphsAndJointOffsets/);
+  assert.match(source, /validate.*sidecar/i);
+  assert.match(source, /makeHumanShared/);
+});
+
+test('every skinned mesh receives matching rest-pose joint corrections before actor fitting', async () => {
+  const source = await readFile(new URL('../src/makeHumanAssets.ts', import.meta.url), 'utf8');
+  assert.match(source, /captureSkeletonRestState/);
+  assert.match(source, /state\.mesh\.skeleton\.boneInverses/);
+  assert.match(source, /parentToLocal/);
+  assert.match(source, /states = skinnedMeshes\.map/);
+  assert.match(source, /base_body\.joints\.json/);
+});
