@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { disposePvpObjectTree } from './pvpResourceCleanup.ts';
 import { calculatePvpCameraFrame, calculatePvpCameraTrackingBounds, isPvpPortraitViewport } from './pvpCamera.ts';
 import { createArenaObstacleFootprint, createPvpContactShadowTexture, createPvpFloorTexture, createPvpObstacleTexture } from './pvpTextures.ts';
-import { createB4FreightStack, createB4HazardDrumCluster, createB4WallSprite, getB4VisualTexture } from './b4AssetPack.ts';
+import { createB4FreightStack, createB4HazardDrumCluster, createB4WallSprite, createB4SpriteDecal, createB4CombatSprite, getB4VisualTexture } from './b4AssetPack.ts';
 import {
   calculatePvpAimPreview, getPvpAimAngle, getPvpSweepAimAngle, getPvpAimSweepCenterAngle,
   pvpAimDirectionFromAngle, pvpScreenMovementToWorld,
@@ -2601,6 +2601,11 @@ export class PaleciakiGameEngine {
         trail.renderOrder = 3;
         mesh.add(trail);
 
+        const shooter = proj.ownerSlot === 'p1' ? state.p1 : state.p2;
+        const combatSignature = createB4CombatSprite(shooter.operatorId, 0.30);
+        combatSignature.position.set(0, 0.015, 0.035);
+        mesh.add(combatSignature);
+
         this.levelRoot.add(mesh);
         this.pvpProjectileMeshes.set(proj.id, mesh);
       }
@@ -2612,8 +2617,8 @@ export class PaleciakiGameEngine {
       if (!activeIds.has(id)) {
         this.levelRoot.remove(mesh);
         mesh.traverse((object) => {
-          if (!(object instanceof THREE.Mesh)) return;
-          object.geometry.dispose();
+          if (object instanceof THREE.Mesh) object.geometry.dispose();
+          if (!(object instanceof THREE.Mesh) && !(object instanceof THREE.Sprite)) return;
           const materials = Array.isArray(object.material) ? object.material : [object.material];
           materials.forEach((material) => material.dispose());
         });
@@ -2936,6 +2941,10 @@ export class PaleciakiGameEngine {
         this.registerCameraOccluder(shelf, 0.13);
         rack.add(shelf);
       }
+      const survivalRackLabel = createB4SpriteDecal('rackC', 0.48, 0.30);
+      survivalRackLabel.position.set(0, 3.03, 1.02);
+      survivalRackLabel.renderOrder = 4;
+      rack.add(survivalRackLabel);
       rack.position.set(side * 51.5, 0, 0);
       this.levelRoot.add(rack);
       this.survivalObstacles.push({ x: side * 51.5, z: 0, halfWidth: 1.95, halfDepth: 1.15 });
@@ -13021,6 +13030,14 @@ export class PaleciakiGameEngine {
         hitIds: new Set(),
       });
       if (isThirdCombo) this.emitFloatingToast('🔧 GRZECHOTKA B4 — GWINT ZAGŁADY!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'combo');
+    }
+
+    // A small billboard insignia follows each primary projectile so the weapon
+    // family remains readable at the elevated warehouse camera distance.
+    for (let index = firstPrimaryProjectile; index < this.projectiles.length; index++) {
+      const signature = createB4CombatSprite(charId, 0.34);
+      signature.position.set(0, 0.24, 0);
+      this.projectiles[index].mesh.add(signature);
     }
 
     if (this.gameMode === 'survival' && (this.survivalUpgradeStacks.ricochet || 0) > 0) {
