@@ -11456,7 +11456,7 @@ export class PaleciakiGameEngine {
               this.emitFloatingToast('💥 -3 HP!', e.x, e.y + 1.2, e.z, 'damage');
               if (e.hp <= 0 && e.type !== 'walczak' && e.type !== 'krol_leto') {
                 e.state = 'defeated';
-                if (e.mesh) e.mesh.visible = false;
+                this.beginEnemyDeathVisual(e);
                 this.score += 350;
                 this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
               }
@@ -11956,6 +11956,64 @@ export class PaleciakiGameEngine {
     enemy.mesh.position.z = resolved.z;
   }
 
+  private beginEnemyDeathVisual(enemy: EnemyItem): void {
+    const mesh = enemy.mesh as THREE.Object3D | undefined;
+    if (!mesh) return;
+    const isBoss = isMajorSurvivalBossType(enemy.type) ||
+      enemy.type === 'elite_walczak_guard' || enemy.type === 'sebix_m';
+    const duration = isBoss ? 1.18 : 0.82;
+    enemy.deathVisualDuration = duration;
+    enemy.deathVisualTimer = duration;
+    enemy.deathVisualRest = {
+      rotationX: mesh.rotation.x,
+      rotationZ: mesh.rotation.z,
+      positionY: mesh.position.y,
+      scaleX: mesh.scale.x,
+      scaleY: mesh.scale.y,
+      scaleZ: mesh.scale.z,
+    };
+    enemy.attackPoseTimer = 0;
+    enemy.hitReactTimer = 0;
+    enemy.hitReactStrength = 0;
+    // Keep the actor visible so imported Death clips and the procedural fall
+    // pose can play instead of being hidden on the same frame as the kill.
+    mesh.visible = true;
+  }
+
+  private updateDefeatedEnemyVisual(enemy: EnemyItem, dt: number): void {
+    const mesh = enemy.mesh as THREE.Object3D | undefined;
+    if (!mesh || !mesh.visible) return;
+    const timer = Math.max(0, (enemy.deathVisualTimer || 0) - dt);
+    enemy.deathVisualTimer = timer;
+    const duration = Math.max(0.1, enemy.deathVisualDuration || 0.82);
+    const progress = THREE.MathUtils.clamp(1 - timer / duration, 0, 1);
+    const eased = progress * progress * (3 - 2 * progress);
+    const rest = enemy.deathVisualRest;
+    const track = this.gobkitEnemyTracks.get(enemy);
+
+    if (!track && rest) {
+      const side = (enemy.aiSlot ?? enemy.id.length) % 2 === 0 ? 1 : -1;
+      const bossLean = isMajorSurvivalBossType(enemy.type) || enemy.type === 'sebix_m' ? 0.50 : 0.32;
+      mesh.rotation.x = rest.rotationX + bossLean * eased;
+      mesh.rotation.z = rest.rotationZ + side * 0.18 * eased;
+      mesh.position.y = rest.positionY - 0.12 * eased;
+      mesh.scale.set(
+        rest.scaleX * (1 + 0.035 * eased),
+        rest.scaleY * (1 - 0.20 * eased),
+        rest.scaleZ * (1 + 0.035 * eased),
+      );
+    }
+
+    if (timer <= 0) {
+      mesh.visible = false;
+      if (track) {
+        this.stopGobkitTrack(track);
+        this.gobkitEnemyTracks.delete(enemy);
+      }
+      enemy.deathVisualRest = undefined;
+    }
+  }
+
   private updateEnemies(dt: number) {
     const survivalAbilityRate = this.gameMode === 'survival'
       ? getSurvivalDifficultyProfile(this.survivalWave).enemyAbilityRateMultiplier
@@ -12091,7 +12149,11 @@ export class PaleciakiGameEngine {
     this.enemySpatialIndex.rebuild(this.enemies);
 
     this.enemies.forEach((e) => {
-      if (e.state === 'defeated' || !e.mesh) return;
+      if (e.state === 'defeated') {
+        this.updateDefeatedEnemyVisual(e, dt);
+        return;
+      }
+      if (!e.mesh) return;
 
       if ((e.aiCommandBoostTimer ?? 0) > 0) {
         e.aiCommandBoostTimer = Math.max(0, (e.aiCommandBoostTimer ?? 0) - dt);
@@ -15603,7 +15665,7 @@ export class PaleciakiGameEngine {
     if (e.state === 'defeated') return;
     this.clearSurvivalSupportShield(e);
     e.state = 'defeated';
-    e.mesh.visible = false;
+    this.beginEnemyDeathVisual(e);
     if (this.gameMode === 'campaign') {
       if (e.id === 'bosman_l1') this.unlockCampaignSector(2);
       if (e.id === 'boss_krol_leto_l2') this.unlockCampaignSector(3);
