@@ -8,7 +8,7 @@ function makeMaterial(color: number, roughness = 0.72, metalness = 0): THREE.Mes
 }
 
 function addMesh(
-  root: THREE.Group,
+  root: THREE.Object3D,
   geometry: THREE.BufferGeometry,
   material: THREE.Material,
   position: Point3,
@@ -37,7 +37,7 @@ function addClipboard(root: THREE.Group, position: Point3, color = 0x78350f): vo
   const paper = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
   const clip = makeMaterial(0x94a3b8, 0.3, 0.78);
   const boardMesh = addMesh(root, new THREE.BoxGeometry(0.21, 0.29, 0.035), board, position, [0.16, 0, -0.16]);
-  addMesh(boardMesh as unknown as THREE.Group, new THREE.BoxGeometry(0.17, 0.235, 0.01), paper, [0, 0, 0.021]);
+  addMesh(boardMesh, new THREE.BoxGeometry(0.17, 0.235, 0.01), paper, [0, 0, 0.021]);
   addMesh(boardMesh as unknown as THREE.Group, new THREE.BoxGeometry(0.07, 0.025, 0.016), clip, [0, 0.125, 0.03]);
   for (let i = 0; i < 3; i++) {
     addMesh(boardMesh as unknown as THREE.Group, new THREE.BoxGeometry(0.11, 0.008, 0.008), makeMaterial(0x64748b), [-0.015, 0.045 - i * 0.045, 0.028]);
