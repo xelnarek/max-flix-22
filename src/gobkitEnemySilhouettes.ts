@@ -198,8 +198,26 @@ function addCaricature(root: THREE.Group, type: EnemyType): void {
       addMesh(root, new THREE.CylinderGeometry(0.025, 0.032, 0.10, 8), gold, [0.13, 0.70, 0.19], [Math.PI / 2, 0, 0]);
       break;
     }
+    case 'elite_walczak_guard': {
+      // Elite warehouse enforcer: broad angular shoulder armor, full visor and
+      // a red/gold B4 chest insignia. The shape reads as a mini-boss at distance.
+      addMesh(root, new THREE.BoxGeometry(0.58, 0.28, 0.36), charcoal, [0, 0.79, 0]);
+      addMesh(root, new THREE.BoxGeometry(0.66, 0.20, 0.32), red, [0, 0.91, 0.015]);
+      addMesh(root, new THREE.BoxGeometry(0.23, 0.32, 0.29), navy, [-0.34, 0.88, 0]);
+      addMesh(root, new THREE.BoxGeometry(0.23, 0.32, 0.29), navy, [0.34, 0.88, 0]);
+      addMesh(root, new THREE.BoxGeometry(0.42, 0.28, 0.12), metal, [0, 1.15, 0.02]);
+      addMesh(root, new THREE.BoxGeometry(0.37, 0.12, 0.045), charcoal, [0, 1.02, 0.105]);
+      addMesh(root, new THREE.BoxGeometry(0.34, 0.055, 0.035), gold, [0, 0.88, 0.19]);
+      addMesh(root, new THREE.BoxGeometry(0.12, 0.12, 0.035), white, [0, 0.88, 0.215]);
+      addMesh(root, new THREE.BoxGeometry(0.30, 0.075, 0.12), charcoal, [0, 1.34, -0.015]);
+      addMesh(root, new THREE.ConeGeometry(0.10, 0.15, 5), gold, [-0.18, 1.33, 0]);
+      addMesh(root, new THREE.ConeGeometry(0.10, 0.15, 5), gold, [0.18, 1.33, 0]);
+      addMesh(root, new THREE.BoxGeometry(0.13, 0.18, 0.18), metal, [-0.43, 0.67, 0.09]);
+      addMesh(root, new THREE.BoxGeometry(0.13, 0.18, 0.18), metal, [0.43, 0.67, 0.09]);
+      break;
+    }
     default:
-      if (type === 'sztaplar_szalony' || type === 'elite_walczak_guard') {
+      if (type === 'sztaplar_szalony') {
         addMesh(root, new THREE.BoxGeometry(0.62, 0.23, 0.32), yellow, [0, 0.76, 0]);
         addMesh(root, new THREE.BoxGeometry(0.18, 0.22, 0.09), metal, [-0.32, 0.79, 0.02]);
         addMesh(root, new THREE.BoxGeometry(0.18, 0.22, 0.09), metal, [0.32, 0.79, 0.02]);
