@@ -59,3 +59,18 @@ test('MakeHuman sidecar validation checks every referenced joint offset before a
   assert.match(source, /invalid rest offset/);
   assert.match(source, /validateMakeHumanSidecar\(await response\.json/);
 });
+
+
+test('role equipment does not alter the normalized body height of operators', async () => {
+  const source = await readFile(new URL('../src/makeHumanAssets.ts', import.meta.url), 'utf8');
+  const factoryStart = source.indexOf('export async function createMakeHumanActor');
+  assert.ok(factoryStart >= 0);
+  const factory = source.slice(factoryStart);
+  const morphIndex = factory.indexOf('applyMorphsAndJointOffsets(root, sidecar, morphInfluences)');
+  const fitIndex = factory.indexOf('root.scale.setScalar(scale)');
+  const equipmentIndex = factory.indexOf('addRoleEquipment(root, style)');
+  assert.ok(morphIndex >= 0 && fitIndex > morphIndex);
+  assert.ok(equipmentIndex > fitIndex,
+    'helmet/vest/parcel bounds must not shrink the character body during height normalization');
+  assert.match(factory, /Normalize from the character's body bounds only/);
+});
