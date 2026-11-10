@@ -102,7 +102,7 @@ test('every enemy type has a distinct locomotion style preset tuned to its role'
   assert.equal(module.ENEMY_VISUAL_PROFILES.piorun_dron.gaitStyle, 'hovering');
   assert.equal(module.ENEMY_VISUAL_PROFILES.forklift.gaitStyle, 'rolling');
   assert.match(profilesSource, /ENEMY_GAIT_PRESETS/);
-  assert.match(game, /const gaitPreset = ENEMY_GAIT_PRESETS\\[visualProfile\\.gaitStyle\\]/);
+  assert.match(game, /const gaitPreset = ENEMY_GAIT_PRESETS\[visualProfile\.gaitStyle\]/);
   assert.match(game, /visualProfile\\.gaitStyle === 'shambling'/);
   assert.match(game, /visualProfile\\.gaitStyle === 'limping'/);
   assert.match(game, /visualProfile\\.gaitStyle === 'robotic'/);
