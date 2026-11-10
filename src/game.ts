@@ -1582,7 +1582,9 @@ export class PaleciakiGameEngine {
 
   private installActorVisualRoot(group: THREE.Group, root: THREE.Group): void {
     root.visible = true;
-    root.userData.actorVisualRoot = true;
+    // Mark the whole imported subtree, not only its wrapper, so any later
+    // fallback-visibility pass cannot accidentally hide the newly installed rig.
+    root.traverse((object) => { object.userData.actorVisualRoot = true; });
     group.add(root);
     group.userData.actorVisualRoot = root;
   }
