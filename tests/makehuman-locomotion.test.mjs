@@ -18,3 +18,13 @@ test('animation cadence follows actor speed inside safe bounds', () => {
   assert.ok(getMakeHumanPlaybackRate('Run', 6.8) <= 2.25);
   assert.equal(getMakeHumanPlaybackRate('StrafeLeft', 0.05), 0.72);
 });
+
+
+test('locomotion hysteresis prevents run/idle flicker around speed thresholds', () => {
+  assert.equal(chooseMakeHumanLocomotion(0, 4.30, false, 'Run'), 'Run');
+  assert.equal(chooseMakeHumanLocomotion(0, 4.00, false, 'Run'), 'Walk');
+  assert.equal(chooseMakeHumanLocomotion(0, 0.16, false, 'Idle'), 'Idle');
+  assert.equal(chooseMakeHumanLocomotion(0, 0.16, false, 'Walk'), 'Walk');
+  assert.equal(chooseMakeHumanLocomotion(0.20, 0.30, false, 'StrafeLeft'), 'StrafeLeft');
+  assert.equal(chooseMakeHumanLocomotion(0.20, 0.30, false, 'Walk'), 'Walk');
+});
