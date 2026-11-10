@@ -25,6 +25,11 @@ const blobSha=b=>createHash('sha1').update(Buffer.from('blob '+b.length+'\0')).u
 const sha256=b=>createHash('sha256').update(b).digest('hex');
 async function fetchRetry(url,attempts=4){let last;for(let i=1;i<=attempts;i++){try{const r=await fetch(url,{headers:{'user-agent':'MaxFlix22-CC0-AssetBuild/1.0'},signal:AbortSignal.timeout(45000)});if(!r.ok)throw new Error('HTTP '+r.status+' '+url);return Buffer.from(await r.arrayBuffer());}catch(e){last=e;if(i<attempts)await new Promise(resolve=>setTimeout(resolve,Math.min(8000,650*2**(i-1))));}}throw last;}
 async function existing(file,size,expectedSha){try{const b=await readFile(path.join(OUT,file));if(b.length!==size||blobSha(b)!==expectedSha)return null;parseGlbJson(b,file);return b;}catch{return null;}}
+async function existingSidecar(){try{
+ const bytes=await readFile(path.join(OUT,SIDECAR.file));
+ if(bytes.length!==SIDECAR.size||blobSha(bytes)!==SIDECAR.gitBlobSha1)return null;
+ const json=JSON.parse(bytes.toString('utf8'));validateMakeHumanSidecar(json);return bytes;
+ }catch{return null;}}
 async function run(){
  await mkdir(OUT,{recursive:true});const files=new Map();
  const manifest={provider:'MakeHuman / MPFB generated assets',sourceRepository:'https://github.com/kblood/CharacterCreator',sourceCommit:COMMIT,licence:'CC0-1.0 for generated GLB assets, as declared by the source project',note:'Only generated binary GLBs are bundled; GPL-3.0-or-later generator source is not copied into this game.',fetchedAt:new Date().toISOString(),body:'base_body_anim.glb',clips:[],assets:{}};
@@ -37,15 +42,15 @@ async function run(){
   console.log('[MakeHuman] verified '+file+' • '+bytes.length+' bytes');
  }
  const validation=validateMakeHumanPack(files);
- const existingSidecar=await existing(SIDECAR.file,SIDECAR.size,SIDECAR.gitBlobSha1);
- const sidecarBytes=existingSidecar||await fetchRetry(BASE+SIDECAR.file);
+ const existingJsonSidecar=await existingSidecar();
+ const sidecarBytes=existingJsonSidecar||await fetchRetry(BASE+SIDECAR.file);
  if(sidecarBytes.length!==SIDECAR.size)throw new Error('Unexpected sidecar byte length: '+sidecarBytes.length);
  const sidecarSha=blobSha(sidecarBytes);
  if(sidecarSha!==SIDECAR.gitBlobSha1)throw new Error('Joint sidecar Git blob SHA-1 mismatch: '+sidecarSha);
  let sidecar;
  try{sidecar=JSON.parse(sidecarBytes.toString('utf8'));}catch(error){throw new Error('Joint sidecar JSON is malformed: '+String(error));}
  const sidecarValidation=validateMakeHumanSidecar(sidecar);
- if(!existingSidecar)await writeFile(path.join(OUT,SIDECAR.file),sidecarBytes);
+ if(!existingJsonSidecar)await writeFile(path.join(OUT,SIDECAR.file),sidecarBytes);
  manifest.jointSidecar={file:SIDECAR.file,bytes:sidecarBytes.length,gitBlobSha1:sidecarSha,sha256:sha256(sidecarBytes),licence:'CC0-1.0',source:BASE+SIDECAR.file};
  manifest.clips=validation.animationNames;manifest.rig={boneCount:validation.bodyBoneCount,animationTargetCount:validation.animationTargetCount,parts:validation.parts,sidecarBones:sidecarValidation.boneCount,sidecarMorphs:sidecarValidation.morphCount};
  await writeFile(MANIFEST,JSON.stringify(manifest,null,2)+'\n','utf8');

@@ -31,7 +31,7 @@ test('role-matched staff models include distinct body proportions and industrial
   assert.match(source, /muscle:/);
   assert.match(source, /age:/);
   assert.match(source, /applyMorphsAndJointOffsets/);
-  assert.match(source, /validate.*sidecar/i);
+  assert.match(source, /validateMakeHumanSidecar/);
   assert.match(source, /makeHumanShared/);
 });
 
@@ -42,4 +42,20 @@ test('every skinned mesh receives matching rest-pose joint corrections before ac
   assert.match(source, /parentToLocal/);
   assert.match(source, /states = skinnedMeshes\.map/);
   assert.match(source, /base_body\.joints\.json/);
+});
+
+test('MakeHuman actor cleanup preserves cached geometry, textures and shared equipment materials', async () => {
+  const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
+  assert.match(game, /object\.userData\.makeHumanAsset === true\) return/);
+  assert.match(game, /object\.userData\.makeHumanSharedGeometry !== true/);
+  assert.match(game, /material\.userData\.makeHumanShared !== true/);
+  assert.match(game, /disposeMakeHumanActorMaterials/);
+});
+
+test('MakeHuman sidecar validation checks every referenced joint offset before actor creation', async () => {
+  const source = await readFile(new URL('../src/makeHumanAssets.ts', import.meta.url), 'utf8');
+  assert.match(source, /function validateMakeHumanSidecar/);
+  assert.match(source, /references an unknown rest bone/);
+  assert.match(source, /invalid rest offset/);
+  assert.match(source, /validateMakeHumanSidecar\(await response\.json/);
 });

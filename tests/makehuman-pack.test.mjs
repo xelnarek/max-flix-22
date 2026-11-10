@@ -11,8 +11,8 @@ test('rejects clothing whose bone names do not match the body skeleton',()=>{con
 test('requires clothing to be skinned while allowing static hair mesh assets',()=>{const unskinned={...clothing,nodes:[{name:'shirt'}],skins:[]};assert.throws(()=>validateMakeHumanPack(new Map([['base_body_anim.glb',makeGlb(body)],['clothing_shirt.glb',makeGlb(unskinned)]])),/not bound/);const hair={...unskinned,meshes:clothing.meshes};assert.equal(validateMakeHumanPack(new Map([['base_body_anim.glb',makeGlb(body)],['hair_short02.glb',makeGlb(hair)]] )).parts['hair_short02.glb'].hasSkinnedMesh,false);});
 
 test('validates joint rest positions and all referenced morph offsets before variant deformation',()=>{
- const bones={Root:[0,0,0],pelvis:[0,0.87,0],spine_01:[0,0.95,0],spine_02:[0,1.02,0],spine_03:[0,1.10,0],neck_01:[0,1.41,0],head:[0,1.51,0],thigh_l:[0.1,0.86,0],calf_l:[0.14,0.47,0],foot_l:[0.18,0.07,0]};
- for(let i=0;i<44;i++)bones['extra_'+i]=[0,0,0];
+ const bones={Root:[0,0,0],pelvis:[0,0.87,0],spine_01:[0,0.95,0],spine_02:[0,1.02,0],spine_03:[0,1.10,0],neck_01:[0,1.41,0],head:[0,1.51,0],thigh_l:[0.1,0.86,0],calf_l:[0.14,0.47,0],foot_l:[0.18,0.07,0],upperarm_l:[0.17,1.32,0.02]};
+ for(let i=0;i<43;i++)bones['extra_'+i]=[0,0,0];
  const morphs=Object.fromEntries(Array.from({length:51},(_,i)=>['morph_'+i,{pelvis:[0,0.01,0]}]));
  morphs.weight_max={pelvis:[0,0.01,0],spine_02:[0,0.02,0]};
  morphs.muscle_max={upperarm_l:[0.01,0,0]};

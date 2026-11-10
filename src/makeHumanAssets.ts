@@ -165,16 +165,37 @@ function loadAsset(part: string): Promise<LoadedGltf> {
   return pending;
 }
 
+function validateMakeHumanSidecar(sidecar: JointSidecar): JointSidecar {
+  const boneNames = Object.keys(sidecar?.bones || {});
+  const morphNames = Object.keys(sidecar?.morphs || {});
+  if (boneNames.length < 50 || morphNames.length < 50) {
+    throw new Error('MakeHuman joint sidecar does not contain the complete 53-bone / morph-offset set.');
+  }
+  for (const name of ['Root', 'pelvis', 'spine_01', 'spine_02', 'spine_03', 'neck_01', 'head', 'thigh_l', 'calf_l', 'foot_l']) {
+    const point = sidecar.bones[name];
+    if (!Array.isArray(point) || point.length !== 3 || !point.every(Number.isFinite)) {
+      throw new Error('MakeHuman joint sidecar has an invalid rest position: ' + name);
+    }
+  }
+  const knownBones = new Set(boneNames);
+  for (const [morphName, offsets] of Object.entries(sidecar.morphs)) {
+    if (!offsets || typeof offsets !== 'object') throw new Error('Invalid MakeHuman morph offsets: ' + morphName);
+    for (const [boneName, offset] of Object.entries(offsets)) {
+      if (!knownBones.has(boneName)) throw new Error('Morph ' + morphName + ' references an unknown rest bone: ' + boneName);
+      if (!Array.isArray(offset) || offset.length !== 3 || !offset.every(Number.isFinite)) {
+        throw new Error('Morph ' + morphName + ' has an invalid rest offset for ' + boneName);
+      }
+    }
+  }
+  return sidecar;
+}
+
 function loadJointSidecar(): Promise<JointSidecar> {
   if (!jointsPromise) {
     const url = new URL('assets/makehuman/base_body.joints.json', document.baseURI).href;
     jointsPromise = fetch(url).then(async (response) => {
       if (!response.ok) throw new Error('MakeHuman joint sidecar HTTP ' + response.status);
-      const sidecar = await response.json() as JointSidecar;
-      if (!sidecar?.bones?.pelvis || !sidecar?.bones?.head || !sidecar?.morphs?.weight_max) {
-        throw new Error('MakeHuman joint sidecar is incomplete.');
-      }
-      return sidecar;
+      return validateMakeHumanSidecar(await response.json() as JointSidecar);
     }).catch((error: unknown) => {
       jointsPromise = null;
       throw error;
