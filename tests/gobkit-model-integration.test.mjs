@@ -103,9 +103,9 @@ test('every enemy type has a distinct locomotion style preset tuned to its role'
   assert.equal(module.ENEMY_VISUAL_PROFILES.forklift.gaitStyle, 'rolling');
   assert.match(profilesSource, /ENEMY_GAIT_PRESETS/);
   assert.match(game, /const gaitPreset = ENEMY_GAIT_PRESETS\[visualProfile\.gaitStyle\]/);
-  assert.match(game, /visualProfile\\.gaitStyle === 'shambling'/);
-  assert.match(game, /visualProfile\\.gaitStyle === 'limping'/);
-  assert.match(game, /visualProfile\\.gaitStyle === 'robotic'/);
+  assert.match(game, /visualProfile\.gaitStyle === 'shambling'/);
+  assert.match(game, /visualProfile\.gaitStyle === 'limping'/);
+  assert.match(game, /visualProfile\.gaitStyle === 'robotic'/);
 });
 
 test('each imported rig gets a role-specific size and only creature/boss assets override bespoke human models', async () => {
@@ -198,7 +198,7 @@ test('procedural enemy rigs receive authored wind-up, strike and hit poses', asy
   assert.match(game, /enemy\.attackPoseTimer = poseDuration/);
   assert.match(game, /const windup = progress < 0\.28/);
   assert.match(game, /const strike = progress < 0\.28/);
-  assert.match(game, /const style = ENEMY_VISUAL_PROFILES\[e\.type\]\.attackStyle/);
+  assert.match(game, /const style = visualProfile\.attackStyle/);
   assert.match(game, /setProceduralLimbPose\(e\.armL/);
   assert.match(game, /setProceduralLimbPose\(e\.armR/);
   assert.match(game, /getEnemyHitPulse\(e\.hitReactTimer/);
