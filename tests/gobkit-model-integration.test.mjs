@@ -261,3 +261,13 @@ test('per-frame animation cleanup reuses the active-enemy membership set', async
   assert.match(game, /activeEnemies\.clear\(\)/);
   assert.match(game, /for \(const enemy of this\.enemies\) activeEnemies\.add\(enemy\)/);
 });
+
+
+test('playable operators receive a dedicated special-ability animation', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /private specialSwingTimer = 0/);
+  assert.match(game, /this\.specialSwingTimer = 0\.72/);
+  assert.match(game, /this\.requestGobkitAction\(this\.playerGobkitTrack, 'Special', this\.specialSwingTimer\)/);
+  assert.match(game, /else if \(this\.specialSwingTimer > 0\)[\s\S]{0,120}requestGobkitAction\(track, 'Special'/);
+  assert.match(game, /this\.specialSwingTimer = Math\.max\(0, this\.specialSwingTimer - dt\)/);
+});
