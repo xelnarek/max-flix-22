@@ -31,5 +31,8 @@ test('the existing operator model proportions and combat animation systems remai
   assert.match(assets, /const faceProfile: Record<CharacterId/);
   assert.match(assets, /const silhouette: Record<CharacterId/);
   assert.match(game, /getCharacterAttackMotionProfile\(this\.currentCharacterId\)/);
-  assert.match(game, /this\.leftLeg\.rotation\.x = gait \* motionProfile\.stride/);
+  assert.match(game, /setProceduralLimbPose\(this\.leftLeg, gait \* motionProfile\.stride\)/);
+  assert.match(game, /setProceduralLimbPose\(this\.rightLeg, -gait \* motionProfile\.stride\)/);
+  assert.match(game, /setProceduralLimbPose\(this\.leftArm, -gait \* motionProfile\.armSwing, armSpread\)/);
+  assert.match(game, /setProceduralLimbPose\(this\.rightArm, gait \* motionProfile\.armSwing, -armSpread\)/);
 });
