@@ -239,3 +239,16 @@ test('orphan imported rigs are cleaned without disposing shared MakeHuman assets
   assert.match(game, /material\.userData\.makeHumanShared !== true/);
   assert.match(game, /this\.disposeUntrackedActorVisualRoot\(child\)/);
 });
+
+
+test('Gobkit rig clones share immutable geometry but keep actor-local materials', async () => {
+  const [assets, game] = await Promise.all([
+    read('../src/gobkitAssets.ts'),
+    read('../src/game.ts'),
+  ]);
+  assert.match(assets, /cloneSkinnedScene\(gltf\.scene\)/);
+  assert.match(assets, /object\.userData\.gobkitSharedGeometry = true/);
+  assert.doesNotMatch(assets, /object\.geometry = object\.geometry\.clone\(\)/);
+  assert.match(assets, /object\.material\.clone\(\)/);
+  assert.match(game, /object\.userData\.gobkitSharedGeometry !== true/);
+});
