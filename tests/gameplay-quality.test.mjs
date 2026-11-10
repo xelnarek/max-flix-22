@@ -1510,7 +1510,7 @@ test('Survival raises enemy pressure gradually and keeps mobile horde caps as a 
 test('high-density projectile collision uses a broad-phase grid and retains swept-segment hit checks', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /this\.enemySpatialIndex\.query\(segmentMidX, segmentMidZ, broadphaseRadius\)/);
-  assert.match(game, /const broadphaseRadius = Math\.sqrt\(segmentLengthSq\) \* 0\.5 \+ 3\.0/);
+  assert.match(game, /const broadphaseRadius = Math\.sqrt\(segmentLengthSq\) \* 0\.5 \+ 1\.65/);
   assert.match(game, /const closestX = previousProjectileX \+ segmentX \* projection/);
   assert.match(game, /const closestZ = previousProjectileZ \+ segmentZ \* projection/);
 });
