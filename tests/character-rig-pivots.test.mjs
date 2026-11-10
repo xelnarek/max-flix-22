@@ -43,7 +43,9 @@ test('operator landing has a bounded brace pose with a clean reset on rig rebuil
   assert.match(game, /private playerLandingTimer = 0/);
   assert.match(game, /private readonly playerLandingDuration = 0\.28/);
   assert.match(game, /this\.playerLandingTimer = this\.playerLandingDuration/);
-  assert.match(game, /this\.playerGroup\.scale\.y \*= 1 - 0\.14 \* landingPulse/);
+  assert.match(game, /THREE\.MathUtils\.clamp\(motionProfile\.landingSquashY, 0\.70, 0\.95\)/);
+  assert.match(game, /this\.playerGroup\.scale\.y \*= 1 - \(1 - landingSquashY\) \* landingPulse/);
+  assert.match(game, /const landingSquashXZ = 1 \/ Math\.sqrt\(landingSquashY\)/);
   assert.match(game, /setProceduralLimbPose\(this\.leftLeg, 0\.42 \* landingPulse\)/);
   assert.match(game, /setProceduralLimbPose\(this\.rightLeg, 0\.36 \* landingPulse\)/);
   assert.match(game, /setProceduralLimbPose\(this\.leftArm, -0\.24 \* landingPulse/);
