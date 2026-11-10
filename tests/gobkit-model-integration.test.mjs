@@ -60,9 +60,10 @@ test('human warehouse enemy archetypes retain bespoke caricature models instead 
 });
 
 test('the visual registry explicitly covers every declared enemy type and has a role-matched profile', async () => {
-  const [typesSource, registrySource, profiles] = await Promise.all([
+  const [typesSource, registrySource, gameSource, profiles] = await Promise.all([
     read('../src/types.ts'),
     read('../src/enemyVisualProfiles.ts'),
+    read('../src/game.ts'),
     import('../src/enemyVisualProfiles.ts'),
   ]);
   const unionStart = typesSource.indexOf('export type EnemyType =');
@@ -74,6 +75,7 @@ test('the visual registry explicitly covers every declared enemy type and has a 
   for (const [type, profile] of Object.entries(profiles.ENEMY_VISUAL_PROFILES)) {
     assert.ok(profile.visualBrief.length >= 24, 'visual brief missing for ' + type);
     assert.ok(profile.fallbackFactory.startsWith('create'), 'fallback model factory missing for ' + type);
+    assert.ok(gameSource.includes(profile.fallbackFactory), 'fallback model factory is not wired for ' + type);
     assert.ok(profile.targetHeight >= 0.7 && profile.targetHeight <= 2.2, 'invalid scale for ' + type);
   }
   assert.match(registrySource, /ENEMY_VISUAL_PROFILES/);
@@ -159,7 +161,7 @@ test('playable operators retain the original stylized models in Survival and bot
 test('CC0 enemy rigs receive a clear caricature silhouette matching their warehouse role', async () => {
   const silhouettes = await read('../src/gobkitEnemySilhouettes.ts');
   const game = await read('../src/game.ts');
-  for (const role of ['architect', 'inspector', 'kurier', 'handlowiec', 'customer', 'monter', 'serwisant', 'zombie_pracownik', 'mutant_gamma_forklift', 'radioactive_pip', 'cyber_salesman', 'walczak', 'krol_leto', 'bosman_krakow']) {
+  for (const role of ['architect', 'inspector', 'kurier', 'handlowiec', 'customer', 'monter', 'serwisant', 'zombie_pracownik', 'mutant_gamma_forklift', 'radioactive_pip', 'cyber_salesman', 'walczak', 'krol_leto', 'bosman_krakow', 'elite_walczak_guard']) {
     assert.match(silhouettes, new RegExp("case '" + role + "'"));
   }
   assert.match(silhouettes, /oversized sample fan/);
@@ -167,6 +169,8 @@ test('CC0 enemy rigs receive a clear caricature silhouette matching their wareho
   assert.match(silhouettes, /sickly eyes/);
   assert.match(silhouettes, /Forklift mutant/);
   assert.match(silhouettes, /Werewolf foreman/);
+  assert.match(silhouettes, /Elite warehouse enforcer/);
+  assert.match(silhouettes, /case 'elite_walczak_guard'/);
   assert.match(game, /createGobkitEnemyRoleSilhouette/);
   assert.match(game, /actorRoleSilhouette === true/);
 });
