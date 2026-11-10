@@ -2192,7 +2192,7 @@ export class PaleciakiGameEngine {
     this.levelRoot.add(this.remotePlayerGroup);
     const sequence = ++this.remoteGobkitSequence;
     const preserved = [marker, hpBarGroup, badgeMesh, groundRing, this.remotePlayerMeshBuilt.shadow];
-    void this.attachGobkitOperatorModel(remoteOperatorId, this.remotePlayerGroup, sequence, true, preserved);
+    void this.attachGobkitOperatorModel(def.id, this.remotePlayerGroup, sequence, true, preserved);
   }
 
 
