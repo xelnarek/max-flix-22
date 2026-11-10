@@ -99,7 +99,7 @@ test('Gobkit build validates the embedded GLB JSON, skeleton, animation clips an
   ]);
   assert.match(script, /validateGlbAsset\(bytes, id, model\.clipNames\)/);
   assert.match(script, /sha256ForBytes\(bytes\)/);
-  assert.match(script, /existingFileIsValid\(filePath, model\)/);
+  assert.match(script, /existingFileIsValid\(filePath, \{ \.\.\.model, id \}\)/);
   assert.match(validator, /declaredLength !== bytes\.length/);
   assert.match(validator, /document\.skins/);
   assert.match(validator, /document\.animations/);

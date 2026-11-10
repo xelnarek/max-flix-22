@@ -16,7 +16,8 @@ export function readGlbDocument(bytes, modelId = 'unknown') {
   if (version !== 2) {
     throw new Error('Expected GLB 2.0, received version ' + version + ': ' + modelId);
   }
-  if (bytes.readUInt32LE(8) !== bytes.length) {
+  const declaredLength = bytes.readUInt32LE(8);
+  if (declaredLength !== bytes.length) {
     throw new Error('GLB declared length does not match downloaded bytes: ' + modelId);
   }
 
