@@ -13,7 +13,7 @@ test('the Gobkit roster maps all five operators to distinct rigged 3D models', a
     assert.ok(registry.includes(id + ".glb"), 'missing model file: ' + id);
   }
   for (const id of ['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr']) {
-    assert.match(registry, new RegExp('\\b' + id + ':'));
+    assert.ok(registry.includes(id + ':'), 'missing operator mapping: ' + id);
   }
   assert.match(characters, /visualModelName: 'Store Manager/);
   assert.match(characters, /visualModelName: 'Fire Chief/);
@@ -38,7 +38,7 @@ test('Survival enemy families have dedicated role-matched GLB variants', async (
     ['walczak', 'werewolfcaptain'],
     ['bosman_krakow', 'bloodirongrunt'],
   ]) {
-    assert.match(registry, new RegExp('\\b' + enemy + ': \\'' + model + '\\''));
+    assert.ok(registry.includes(enemy + ": '" + model + "'"), 'wrong model for ' + enemy);
     assert.ok(registry.includes(model + '.glb'), 'missing enemy GLB: ' + model);
   }
 });
