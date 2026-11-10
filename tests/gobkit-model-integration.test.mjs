@@ -129,6 +129,22 @@ test('only one imported actor rig can be installed per player or enemy group', a
     'all four model attachment paths plus the helper declaration must use the single-root installer');
 });
 
+
+test('one-shot action timing is not overwritten by locomotion speed scaling', async () => {
+  const game = await read('../src/game.ts');
+  const locomotion = await read('../src/makeHumanLocomotion.ts');
+  assert.match(locomotion, /export function isMakeHumanVelocityAction/);
+  assert.match(game, /track\.sharedGeometry && isMakeHumanVelocityAction\(activeAction\)/);
+  assert.match(game, /Do not overwrite setDuration\(\) for one-shot Attack\/Hit\/Jump\/Land clips/);
+  assert.match(game, /track\.mixer\.uncacheRoot\(track\.root\)/);
+});
+
+test('enemy death action supersedes any active hit reaction', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /enemy\.state === 'defeated'[\s\S]{0,220}track\.oneShotPriority < getGobkitActionPriority\('Death'\)/);
+  assert.match(game, /this\.requestGobkitAction\(track, 'Death', 1\.08\)/);
+});
+
 test('procedural fallback hides every renderable body primitive but keeps explicit overlays', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /object instanceof THREE\.Mesh \|\| object instanceof THREE\.Line/);
