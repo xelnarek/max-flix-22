@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { applyPolyHavenPbrMaps } from './polyHavenTextures.ts';
 import { chooseMakeHumanLocomotion, getMakeHumanPlaybackRate, isMakeHumanVelocityAction, type MakeHumanLocomotionAction } from './makeHumanLocomotion.ts';
 import { createGobkitEnemyRoleSilhouette } from './gobkitEnemySilhouettes.ts';
-import { createMakeHumanActor, MAKEHUMAN_OPERATOR_STYLES, MAKEHUMAN_ENEMY_STYLES, type MakeHumanStyleId } from './makeHumanAssets.ts';
+import { createMakeHumanActor, MAKEHUMAN_OPERATOR_STYLES, type MakeHumanStyleId } from './makeHumanAssets.ts';
 import {
   clampGobkitActionDuration,
   getGobkitActionPriority,
@@ -800,20 +800,20 @@ export class PaleciakiGameEngine {
 
   public zoomInCamera() {
     this.hasManualCameraZoom = true;
-    this.camZoomFactor = Math.max(0.4, this.camZoomFactor - 0.15);
+    this.camZoomFactor = Math.max(0.58, this.camZoomFactor - 0.12);
     this.syncCameraZoomControl();
   }
 
   public zoomOutCamera() {
     this.hasManualCameraZoom = true;
-    this.camZoomFactor = Math.min(2.2, this.camZoomFactor + 0.15);
+    this.camZoomFactor = Math.min(1.72, this.camZoomFactor + 0.12);
     this.syncCameraZoomControl();
   }
 
   public setCamZoomFactor(val: number) {
     if (!Number.isFinite(val)) return;
     this.hasManualCameraZoom = true;
-    this.camZoomFactor = THREE.MathUtils.clamp(val, 0.4, 2.2);
+    this.camZoomFactor = THREE.MathUtils.clamp(val, 0.58, 1.72);
     this.syncCameraZoomControl();
   }
 
@@ -831,7 +831,7 @@ export class PaleciakiGameEngine {
       this.cameraMode = 'tpp';
     }
     if (this.cameraMode === 'close') {
-      this.camZoomFactor = Math.min(this.camZoomFactor, 0.96);
+      this.camZoomFactor = Math.min(this.camZoomFactor, 0.82);
     }
     this.hasManualCameraZoom = true;
     this.syncCameraZoomControl();
@@ -16039,9 +16039,9 @@ export class PaleciakiGameEngine {
     const targetOffsetZ = baseOffsetZ * zoomMultiplier;
 
     // Smoothly interpolate camera offset between modes
-    this.currentCamOffset.x = THREE.MathUtils.damp(this.currentCamOffset.x, targetOffsetX, 4.6, dt);
-    this.currentCamOffset.y = THREE.MathUtils.damp(this.currentCamOffset.y, targetOffsetY, 4.6, dt);
-    this.currentCamOffset.z = THREE.MathUtils.damp(this.currentCamOffset.z, targetOffsetZ, 4.6, dt);
+    this.currentCamOffset.x = THREE.MathUtils.damp(this.currentCamOffset.x, targetOffsetX, 6.6, dt);
+    this.currentCamOffset.y = THREE.MathUtils.damp(this.currentCamOffset.y, targetOffsetY, 6.6, dt);
+    this.currentCamOffset.z = THREE.MathUtils.damp(this.currentCamOffset.z, targetOffsetZ, 6.6, dt);
 
     // Responsive FOV based on screen aspect ratio (mobile portrait vs landscape vs desktop)
     if (this.camera instanceof THREE.PerspectiveCamera) {
@@ -16095,8 +16095,8 @@ export class PaleciakiGameEngine {
     // Frame-rate independent camera follow. The previous linear lerp was tied to FPS:
     // on a 60/90/120 Hz phone it produced different response and visible judder.
     const positionDamping = this.gameMode === 'survival'
-      ? (this.isHandheldViewport ? 7.8 : 7.2)
-      : (this.isHandheldViewport ? 8.4 : 7.7);
+      ? (this.isHandheldViewport ? 8.8 : 8.2)
+      : (this.isHandheldViewport ? 9.0 : 8.6);
     this.camera.position.x = THREE.MathUtils.damp(this.camera.position.x, camTarget.x, positionDamping, dt);
     this.camera.position.y = THREE.MathUtils.damp(this.camera.position.y, camTarget.y, positionDamping, dt);
     this.camera.position.z = THREE.MathUtils.damp(this.camera.position.z, camTarget.z, positionDamping, dt);
@@ -16111,7 +16111,7 @@ export class PaleciakiGameEngine {
       this.smoothCamY + lookAheadY + shakeY * 0.3,
       this.playerPos.z + lookAheadZ + velLookAheadZ * 0.45 + shakeZ * 0.3
     );
-    const lookDamping = this.isHandheldViewport ? 9.2 : 8.6;
+    const lookDamping = this.isHandheldViewport ? 9.8 : 9.2;
     this.currentLookAt.x = THREE.MathUtils.damp(this.currentLookAt.x, desiredLookAt.x, lookDamping, dt);
     this.currentLookAt.y = THREE.MathUtils.damp(this.currentLookAt.y, desiredLookAt.y, lookDamping, dt);
     this.currentLookAt.z = THREE.MathUtils.damp(this.currentLookAt.z, desiredLookAt.z, lookDamping, dt);
