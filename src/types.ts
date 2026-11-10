@@ -167,6 +167,8 @@ export interface EnemyItem {
   hitRecoilX?: number;
   hitRecoilZ?: number;
   hitBaseScale?: { x: number; y: number; z: number };
+  /** Smoothed 0..1 locomotion blend for role-specific procedural gait. */
+  gaitBlend?: number;
   /** Active one-shot procedural combat pose for bespoke enemy rigs. */
   attackPoseTimer?: number;
   attackPoseDuration?: number;
