@@ -1358,6 +1358,23 @@ body {
   color: #ffffff;
 }
 
+.char-card-model-label {
+  display: block;
+  max-width: 100%;
+  margin-top: 4px;
+  padding: 3px 6px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 999px;
+  background: rgba(8, 18, 31, 0.72);
+  color: #a8d9ee;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
 .char-card-role {
   font-size: 10px;
   color: #f59e0b;
