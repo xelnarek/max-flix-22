@@ -91,7 +91,7 @@ export function cloneGobkitModel(gltf: LoadedGobkitModel): THREE.Group {
 }
 
 /** Normalize mixed source heights to a stable world-space scale and ground origin. */
-export function fitGobkitModel(root: THREE.Group, targetHeight: number): void {
+export function fitGobkitModel(root: THREE.Group, targetHeight: number, maxAnisotropy = 1): void {
   root.updateMatrixWorld(true);
   const bounds = new THREE.Box3().setFromObject(root);
   const size = bounds.getSize(new THREE.Vector3());
@@ -113,9 +113,22 @@ export function fitGobkitModel(root: THREE.Group, targetHeight: number): void {
     object.receiveShadow = true;
     object.frustumCulled = true;
     const materials = Array.isArray(object.material) ? object.material : [object.material];
+    const textureSlots = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap', 'alphaMap', 'bumpMap'];
+    const anisotropy = THREE.MathUtils.clamp(
+      Number.isFinite(maxAnisotropy) ? maxAnisotropy : 1,
+      1,
+      16,
+    );
     for (const material of materials) {
       if (material instanceof THREE.MeshStandardMaterial || material instanceof THREE.MeshPhysicalMaterial) {
-        material.envMapIntensity = Math.min(1.15, material.envMapIntensity || 1);
+        material.envMapIntensity = Math.min(1.2, material.envMapIntensity || 1);
+        for (const slot of textureSlots) {
+          const texture = (material as unknown as Record<string, unknown>)[slot];
+          if (texture instanceof THREE.Texture && texture.anisotropy < anisotropy) {
+            texture.anisotropy = anisotropy;
+            texture.needsUpdate = true;
+          }
+        }
         material.needsUpdate = true;
       }
     }

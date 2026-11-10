@@ -260,6 +260,10 @@ interface GobkitAnimationTrack {
   actions: Map<string, THREE.AnimationAction>;
   currentAction: string;
   lastPosition: THREE.Vector3;
+  /** Keeps attacks and damage reactions from being overwritten by locomotion next frame. */
+  oneShotRemaining: number;
+  oneShotPriority: number;
+  oneShotAction: string;
 }
 
 export class PaleciakiGameEngine {
@@ -1447,24 +1451,57 @@ export class PaleciakiGameEngine {
     const mixer = new THREE.AnimationMixer(root);
     const actions = new Map<string, THREE.AnimationAction>();
     for (const clip of gltf.animations) actions.set(clip.name, mixer.clipAction(clip));
-    const track: GobkitAnimationTrack = { root, mixer, actions, currentAction: '', lastPosition: initialPosition.clone() };
+    const track: GobkitAnimationTrack = {
+      root, mixer, actions, currentAction: '', lastPosition: initialPosition.clone(),
+      oneShotRemaining: 0, oneShotPriority: 0, oneShotAction: '',
+    };
     this.playGobkitAction(track, 'Idle');
     return track;
   }
 
+  /** Resolve optional clips to a real, visually useful action without restarting the mixer. */
+  private resolveGobkitActionName(track: GobkitAnimationTrack, requestedName: string): string {
+    if (track.actions.has(requestedName)) return requestedName;
+    const fallbacks: Record<string, string[]> = {
+      Attack: ['Hit', 'Run', 'Idle'],
+      Special: ['Attack', 'Hit', 'Run', 'Idle'],
+      Jump: ['Idle', 'Walk'],
+      Hit: ['Idle', 'Walk'],
+      Death: ['Idle'],
+      Run: ['Walk', 'Idle'],
+      Walk: ['Idle'],
+      Idle: ['Walk'],
+    };
+    return (fallbacks[requestedName] || ['Idle']).find((name) => track.actions.has(name)) || 'Idle';
+  }
+
   private playGobkitAction(track: GobkitAnimationTrack, requestedName: string) {
-    const name = track.actions.has(requestedName) ? requestedName : 'Idle';
+    const name = this.resolveGobkitActionName(track, requestedName);
     const next = track.actions.get(name);
     if (!next || track.currentAction === name) return;
     const previous = track.actions.get(track.currentAction);
-    const oneShot = name === 'Death' || name === 'Hit' || name === 'Attack' || name === 'Special';
+    const oneShot = name === 'Death' || name === 'Hit' || name === 'Attack' || name === 'Special' || name === 'Jump';
     next.reset();
     next.enabled = true;
     next.setLoop(oneShot ? THREE.LoopOnce : THREE.LoopRepeat, oneShot ? 1 : Infinity);
     next.clampWhenFinished = oneShot;
-    next.fadeIn(0.12).play();
-    if (previous && previous !== next) previous.fadeOut(0.12);
+    next.fadeIn(0.10).play();
+    if (previous && previous !== next) previous.fadeOut(0.10);
     track.currentAction = name;
+  }
+
+  /** High-priority reactions temporarily own the pose; locomotion resumes cleanly afterwards. */
+  private requestGobkitAction(track: GobkitAnimationTrack | null, requestedName: string, durationSeconds = 0.28) {
+    if (!track) return;
+    const priority = requestedName === 'Death' ? 4 : requestedName === 'Hit' ? 3 : requestedName === 'Special' ? 2 : 1;
+    if (track.oneShotRemaining > 0 && priority < track.oneShotPriority) return;
+    const resolvedName = this.resolveGobkitActionName(track, requestedName);
+    track.oneShotAction = resolvedName;
+    track.oneShotPriority = priority;
+    track.oneShotRemaining = requestedName === 'Death'
+      ? Number.POSITIVE_INFINITY
+      : THREE.MathUtils.clamp(Number.isFinite(durationSeconds) ? durationSeconds : 0.28, 0.12, 1.2);
+    this.playGobkitAction(track, resolvedName);
   }
 
   private hideProceduralVisuals(group: THREE.Group, preserved: readonly THREE.Object3D[]) {
@@ -1488,7 +1525,7 @@ export class PaleciakiGameEngine {
         : sequence === this.playerGobkitSequence && this.playerGroup === group;
       if (!isCurrent || group.parent !== this.levelRoot) return;
       const root = cloneGobkitModel(gltf);
-      fitGobkitModel(root, 1.52);
+      fitGobkitModel(root, 1.52, this.threeRenderer?.capabilities.getMaxAnisotropy() ?? 1);
       root.position.y -= group.position.y;
       root.name = 'gobkit-operator-' + modelId;
       this.hideProceduralVisuals(group, preserved);
@@ -1510,7 +1547,7 @@ export class PaleciakiGameEngine {
       const largeEnemy = enemy.type === 'walczak' || enemy.type === 'krol_leto' ||
         enemy.type === 'bosman_krakow' || enemy.type === 'mutant_gamma_forklift' ||
         enemy.type === 'radioactive_pip';
-      fitGobkitModel(root, largeEnemy ? 1.92 : 1.48);
+      fitGobkitModel(root, largeEnemy ? 1.92 : 1.48, this.threeRenderer?.capabilities.getMaxAnisotropy() ?? 1);
       root.position.y -= enemy.mesh.position.y;
       root.name = 'gobkit-enemy-' + modelId + '-' + enemy.id;
       const overlays = [
@@ -1532,15 +1569,23 @@ export class PaleciakiGameEngine {
 
   private updateGobkitAnimations(dt: number) {
     if (!Number.isFinite(dt) || dt <= 0) return;
-    const advanceActor = (track: GobkitAnimationTrack | null, position: THREE.Vector3) => {
+    const advanceActor = (track: GobkitAnimationTrack | null, position: THREE.Vector3, airborne = false) => {
       if (!track) return;
       const speed = track.lastPosition.distanceTo(position) / Math.max(0.001, dt);
-      this.playGobkitAction(track, speed > 4.8 ? 'Run' : speed > 0.18 ? 'Walk' : 'Idle');
+      if (track.oneShotRemaining > 0 && Number.isFinite(track.oneShotRemaining)) {
+        track.oneShotRemaining = Math.max(0, track.oneShotRemaining - dt);
+        if (track.oneShotRemaining <= 0) {
+          track.oneShotPriority = 0;
+          track.oneShotAction = '';
+        }
+      }
+      const locomotion = airborne ? 'Jump' : speed > 4.8 ? 'Run' : speed > 0.18 ? 'Walk' : 'Idle';
+      this.playGobkitAction(track, track.oneShotRemaining > 0 && track.oneShotAction ? track.oneShotAction : locomotion);
       track.lastPosition.copy(position);
       track.mixer.update(dt);
     };
-    advanceActor(this.playerGobkitTrack, this.playerGroup?.position || this.playerPos);
-    advanceActor(this.remoteGobkitTrack, this.remotePlayerGroup?.position || this.playerPos);
+    advanceActor(this.playerGobkitTrack, this.playerGroup?.position || this.playerPos, this.playerPos.y > 0.18);
+    advanceActor(this.remoteGobkitTrack, this.remotePlayerGroup?.position || this.playerPos, (this.remotePlayerGroup?.position.y || 0) > 0.18);
 
     const activeEnemies = new Set(this.enemies);
     for (const enemy of this.enemies) {
@@ -1554,13 +1599,21 @@ export class PaleciakiGameEngine {
       if (!track || enemy.mesh.visible === false) continue;
       let desired = 'Idle';
       if (enemy.state === 'defeated') desired = 'Death';
-      else if (enemy.state === 'stunned' || enemy.stunTimer > 0) desired = 'Hit';
+      else if ((enemy.hitReactTimer || 0) > 0.015 || enemy.state === 'stunned' || enemy.stunTimer > 0) desired = 'Hit';
       else if (enemy.state === 'charging' || enemy.state === 'chase') desired = 'Run';
       else {
         const speed = track.lastPosition.distanceTo(enemy.mesh.position) / Math.max(0.001, dt);
         desired = speed > 4.8 ? 'Run' : speed > 0.18 ? 'Walk' : 'Idle';
       }
-      this.playGobkitAction(track, desired);
+      if (track.oneShotRemaining > 0 && Number.isFinite(track.oneShotRemaining)) {
+        track.oneShotRemaining = Math.max(0, track.oneShotRemaining - dt);
+        if (track.oneShotRemaining <= 0) {
+          track.oneShotPriority = 0;
+          track.oneShotAction = '';
+        }
+      }
+      const activeAction = track.oneShotRemaining > 0 && track.oneShotAction ? track.oneShotAction : desired;
+      this.playGobkitAction(track, activeAction);
       track.lastPosition.copy(enemy.mesh.position);
       track.mixer.update(dt);
     }
@@ -11254,6 +11307,7 @@ export class PaleciakiGameEngine {
     enemy.hitReactTimer = Math.max(enemy.hitReactTimer || 0, reaction.duration);
     enemy.hitReactDuration = reaction.duration;
     enemy.hitReactStrength = Math.max(enemy.hitReactStrength || 0, reaction.strength);
+    this.requestGobkitAction(this.gobkitEnemyTracks.get(enemy) || null, 'Hit', reaction.duration);
     enemy.hitRecoilX = (enemy.hitRecoilX || 0) + reaction.impulseX;
     enemy.hitRecoilZ = (enemy.hitRecoilZ || 0) + reaction.impulseZ;
   }
@@ -13015,6 +13069,7 @@ export class PaleciakiGameEngine {
       attackHasteFactor;
     this.attackSwingDuration = getCharacterAttackMotionProfile(charId).durationSeconds;
     this.attackSwingTimer = this.attackSwingDuration;
+    this.requestGobkitAction(this.playerGobkitTrack, 'Attack', this.attackSwingDuration);
     const firstPrimaryProjectile = this.projectiles.length;
 
     sound.playAttackWhoosh();
@@ -15140,6 +15195,7 @@ export class PaleciakiGameEngine {
       return;
     }
     this.hp = Math.max(0, this.hp - damageResolution.damage);
+    this.requestGobkitAction(this.playerGobkitTrack, this.hp <= 0 ? 'Death' : 'Hit', 0.34);
     sound.playHit();
     this.triggerBloomPulse(0.45);
     this.callbacks.onHpUpdate(this.hp, this.maxHp);
