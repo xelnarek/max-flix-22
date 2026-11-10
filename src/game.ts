@@ -506,6 +506,7 @@ export class PaleciakiGameEngine {
   private attackCooldownTimer = 0;
   private attackSwingTimer = 0;
   private attackSwingDuration = 0.26;
+  private specialSwingTimer = 0;
   private characterFootstepTimer = 0;
   private walkCycle = 0;
   private speechBubbleTimer = 0;
@@ -1645,6 +1646,8 @@ export class PaleciakiGameEngine {
     // Damage has higher priority than an earlier attack that overlapped asset loading.
     if (this.invulnerableTimer > 0) {
       this.requestGobkitAction(track, 'Hit', Math.min(0.34, this.invulnerableTimer));
+    } else if (this.specialSwingTimer > 0) {
+      this.requestGobkitAction(track, 'Special', this.specialSwingTimer);
     } else if (this.attackSwingTimer > 0) {
       this.requestGobkitAction(track, 'Attack', this.attackSwingTimer);
     }
@@ -10812,6 +10815,9 @@ export class PaleciakiGameEngine {
     if (this.attackSwingTimer > 0) {
       this.attackSwingTimer = Math.max(0, this.attackSwingTimer - dt);
     }
+    if (this.specialSwingTimer > 0) {
+      this.specialSwingTimer = Math.max(0, this.specialSwingTimer - dt);
+    }
 
     const gravityMultiplier = this.playerVel.y > 0
       ? motionProfile.riseGravityMultiplier
@@ -15133,6 +15139,8 @@ export class PaleciakiGameEngine {
       (this.gameMode === 'survival' ? this.survivalAbilityCooldownMultiplier : 1);
     this.abilityCooldownState = createAbilityCooldown(cooldownSeconds);
     this.updateAbilityCooldown(0, true);
+    this.specialSwingTimer = 0.72;
+    this.requestGobkitAction(this.playerGobkitTrack, 'Special', this.specialSwingTimer);
     const abilityDamageMultiplier = this.gameMode === 'survival'
       ? Math.min(1.2, this.survivalDamageMultiplier * 0.78) : 1;
 
