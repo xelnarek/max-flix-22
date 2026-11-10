@@ -57,6 +57,10 @@ test('runtime clones skinned models safely and drives named locomotion/combat cl
   assert.match(game, /'Run'/);
   assert.match(game, /'Death'/);
   assert.match(game, /'Hit'/);
+  assert.match(game, /requestGobkitAction\(this\.playerGobkitTrack, 'Attack'/);
+  assert.match(game, /this\.hp <= 0 \? 'Death' : 'Hit'/);
+  assert.match(game, /enemy\.hitReactTimer.*'Hit'/s);
+  assert.match(game, /oneShotRemaining/);
   assert.match(game, /this\.updateGobkitAnimations\(simDt\)/);
 });
 

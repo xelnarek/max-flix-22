@@ -79,12 +79,13 @@ test('device render profiles cap mobile GPU work and preserve desktop quality', 
   assert.equal(balanced.shadowsEnabled, false);
   assert.equal(balanced.softShadows, false);
   assert.equal(balanced.bloomEnabled, false);
-  assert.equal(balanced.survivalPixelRatioCap, 1.08);
+  assert.equal(balanced.pixelRatioCap, 1.36);
+  assert.equal(balanced.survivalPixelRatioCap, 1.16);
 
   const high = getDeviceRenderProfile(true, 8, 8);
   assert.equal(high.tier, 'mobile-high');
-  assert.equal(high.pixelRatioCap, 1.45);
-  assert.equal(high.survivalPixelRatioCap, 1.22);
+  assert.equal(high.pixelRatioCap, 1.78);
+  assert.equal(high.survivalPixelRatioCap, 1.44);
   assert.equal(high.shadowsEnabled, false);
   assert.equal(high.bloomEnabled, true);
 
