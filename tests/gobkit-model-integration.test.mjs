@@ -176,3 +176,14 @@ test('Death has higher animation priority than Hit and overrides an active hit r
   assert.equal(animation.shouldKeepGobkitAction(0.25, 4, 5), false);
   assert.equal(animation.isGobkitOneShotAction('Death'), true);
 });
+
+
+test('async rig attachment restores pending player and enemy combat reactions', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /private enemyPendingAttackUntil = new WeakMap<EnemyItem, number>\(\)/);
+  assert.match(game, /this\.resumePlayerAnimationAfterModelAttach\(track\)/);
+  assert.match(game, /this\.resumeEnemyAnimationAfterModelAttach\(enemy, track\)/);
+  assert.match(game, /this\.enemyPendingAttackUntil\.set\(enemy, now \+ durationSeconds \* 1000\)/);
+  assert.match(game, /if \(this\.invulnerableTimer > 0\)[\s\S]{0,180}requestGobkitAction\(track, 'Hit'/);
+  assert.match(game, /if \(hitRemaining > 0\.015 \|\| enemy\.state === 'stunned'\)[\s\S]{0,180}requestGobkitAction\(track, 'Hit'/);
+});
