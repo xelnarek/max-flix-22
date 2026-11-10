@@ -2664,6 +2664,9 @@ export class PaleciakiGameEngine {
   }
 
   private buildRemotePlayer(remoteOperatorId: CharacterId) {
+    this.remotePvpHitReactTimer = 0;
+    this.remotePvpHitReactDuration = 0.34;
+    this.remotePvpHitReactDirection = 1;
     this.remoteGobkitSequence++;
     this.stopGobkitTrack(this.remoteGobkitTrack);
     this.remoteGobkitTrack = null;
