@@ -1548,12 +1548,55 @@ export class PaleciakiGameEngine {
     this.playGobkitAction(track, resolvedName, track.oneShotRemaining, true);
   }
 
+  /**
+   * A character/enemy group may contain the old procedural body plus one imported
+   * rig. Replace old imported roots before hiding fallback geometry so async asset
+   * completion order can never leave two visible actor models on the same entity.
+   */
+  private removeAttachedActorVisuals(group: THREE.Group): void {
+    if (group === this.playerGroup && this.playerGobkitTrack) {
+      this.stopGobkitTrack(this.playerGobkitTrack);
+      this.playerGobkitTrack = null;
+    }
+    if (group === this.remotePlayerGroup && this.remoteGobkitTrack) {
+      this.stopGobkitTrack(this.remoteGobkitTrack);
+      this.remoteGobkitTrack = null;
+    }
+    for (const [enemy, track] of this.gobkitEnemyTracks) {
+      if (enemy.mesh !== group && track.root.parent !== group) continue;
+      this.stopGobkitTrack(track);
+      this.gobkitEnemyTracks.delete(enemy);
+    }
+
+    // Also remove any untracked root left by an interrupted/older attachment.
+    // Geometry is intentionally not disposed here: MakeHuman source geometry can
+    // be shared by cached actors. Tracked roots use stopGobkitTrack for full cleanup.
+    for (const child of [...group.children]) {
+      const isActorRoot = child.userData.actorVisualRoot === true ||
+        /^(makehuman|gobkit)-(operator|enemy)-/.test(child.name);
+      if (isActorRoot) child.removeFromParent();
+    }
+    delete group.userData.actorVisualRoot;
+  }
+
+  private installActorVisualRoot(group: THREE.Group, root: THREE.Group): void {
+    root.visible = true;
+    root.userData.actorVisualRoot = true;
+    group.add(root);
+    group.userData.actorVisualRoot = root;
+  }
+
   private hideProceduralVisuals(group: THREE.Group, preserved: readonly THREE.Object3D[]) {
     for (const object of preserved) object.traverse((child) => { child.userData.gobkitKeep = true; });
     group.traverse((object) => {
-      if (object === group || object.userData.gobkitKeep === true) return;
+      if (object === group || object.userData.gobkitKeep === true || object.userData.actorVisualRoot === true) return;
       if (object.name === 'characterOutlineShell') { object.visible = false; return; }
-      if (object instanceof THREE.Mesh) object.visible = false;
+      // Old fallback actors may contain Lines/Points/Sprites as well as Meshes.
+      // Hide all renderable body parts, keeping only explicit HUD/shadow overlays.
+      if (object instanceof THREE.Mesh || object instanceof THREE.Line ||
+          object instanceof THREE.Points || object instanceof THREE.Sprite) {
+        object.visible = false;
+      }
     });
   }
 
@@ -1737,8 +1780,9 @@ export class PaleciakiGameEngine {
       }
       actor.root.position.y -= group.position.y;
       actor.root.name = 'makehuman-operator-' + id + '-' + style;
+      this.removeAttachedActorVisuals(group);
       this.hideProceduralVisuals(group, preserved);
-      group.add(actor.root);
+      this.installActorVisualRoot(group, actor.root);
       const track = this.createMakeHumanAnimationTrack(actor.root, actor.clips, group.position, actor.style);
       if (remote) this.remoteGobkitTrack = track;
       else this.playerGobkitTrack = track;
@@ -1763,8 +1807,9 @@ export class PaleciakiGameEngine {
         enemy.hpBar, enemy.hpFill, enemy.threatRing, enemy.shieldRing, enemy.auraRing,
         enemy.speechMesh, enemy.propeller, ...(enemy.bikeWheels || []),
       ].filter((object): object is THREE.Object3D => object instanceof THREE.Object3D);
+      this.removeAttachedActorVisuals(enemy.mesh as THREE.Group);
       this.hideProceduralVisuals(enemy.mesh as THREE.Group, overlays);
-      (enemy.mesh as THREE.Group).add(actor.root);
+      this.installActorVisualRoot(enemy.mesh as THREE.Group, actor.root);
       enemy.legL = undefined;
       enemy.legR = undefined;
       enemy.armL = undefined;
@@ -1772,6 +1817,8 @@ export class PaleciakiGameEngine {
       enemy.head = undefined;
       this.gobkitEnemyTracks.set(enemy, this.createMakeHumanAnimationTrack(actor.root, actor.clips, enemy.mesh.position, actor.style));
     } catch (error) {
+      if (!this.enemies.includes(enemy) || !enemy.mesh ||
+          enemy.mesh.parent !== this.levelRoot || enemy.state === 'defeated') return;
       console.warn('[MakeHuman] Enemy asset unavailable; using Gobkit fallback:', enemy.type, style, error);
       const fallback = ENEMY_GOBKIT_MODELS[enemy.type];
       if (fallback) void this.attachGobkitEnemyModel(enemy, fallback);
@@ -1793,8 +1840,9 @@ export class PaleciakiGameEngine {
       fitGobkitModel(root, 1.52, this.threeRenderer?.capabilities.getMaxAnisotropy() ?? 1);
       root.position.y -= group.position.y;
       root.name = 'gobkit-operator-' + modelId;
+      this.removeAttachedActorVisuals(group);
       this.hideProceduralVisuals(group, preserved);
-      group.add(root);
+      this.installActorVisualRoot(group, root);
       const track = this.createGobkitAnimationTrack(gltf, root, group.position);
       if (remote) this.remoteGobkitTrack = track;
       else this.playerGobkitTrack = track;
@@ -1819,8 +1867,9 @@ export class PaleciakiGameEngine {
         enemy.hpBar, enemy.hpFill, enemy.threatRing, enemy.shieldRing,
         enemy.auraRing, enemy.speechMesh, enemy.propeller, ...(enemy.bikeWheels || []),
       ].filter((object): object is THREE.Object3D => object instanceof THREE.Object3D);
+      this.removeAttachedActorVisuals(enemy.mesh as THREE.Group);
       this.hideProceduralVisuals(enemy.mesh as THREE.Group, overlays);
-      (enemy.mesh as THREE.Group).add(root);
+      this.installActorVisualRoot(enemy.mesh as THREE.Group, root);
       enemy.legL = undefined;
       enemy.legR = undefined;
       enemy.armL = undefined;
