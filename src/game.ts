@@ -1429,6 +1429,14 @@ export class PaleciakiGameEngine {
     if (!track) return;
     track.mixer.stopAllAction();
     track.root.removeFromParent();
+    // Each actor owns cloned geometry/materials; maps are shared by the
+    // cached GLTF and deliberately remain alive for the next actor.
+    track.root.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+      object.geometry.dispose();
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      materials.forEach((material) => material.dispose());
+    });
   }
 
   private createGobkitAnimationTrack(
