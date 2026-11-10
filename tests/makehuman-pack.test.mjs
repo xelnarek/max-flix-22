@@ -16,7 +16,7 @@ test('validates joint rest positions and all referenced morph offsets before var
  const morphs=Object.fromEntries(Array.from({length:51},(_,i)=>['morph_'+i,{pelvis:[0,0.01,0]}]));
  morphs.weight_max={pelvis:[0,0.01,0],spine_02:[0,0.02,0]};
  morphs.muscle_max={upperarm_l:[0.01,0,0]};
- assert.deepEqual(validateMakeHumanSidecar({bones,morphs}),{boneCount:54,morphCount:51});
+ assert.deepEqual(validateMakeHumanSidecar({bones,morphs}),{boneCount:54,morphCount:53});
  assert.throws(()=>validateMakeHumanSidecar({bones:{pelvis:[0,0,0]},morphs}),/incomplete 53-bone/);
  const unknown={...morphs,bad:{ghost:[0,0,0]}};
  assert.throws(()=>validateMakeHumanSidecar({bones:{...bones},morphs:unknown}),/unknown rest bone/);
