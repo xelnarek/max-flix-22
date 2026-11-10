@@ -2069,6 +2069,9 @@ export class PaleciakiGameEngine {
   }
 
   private buildRemotePlayer(remoteOperatorId: CharacterId) {
+    this.remoteGobkitSequence++;
+    this.stopGobkitTrack(this.remoteGobkitTrack);
+    this.remoteGobkitTrack = null;
     if (this.remotePlayerOutline) {
       if (this.remotePlayerOutline.material) this.remotePlayerOutline.material.dispose();
       if (this.remotePlayerOutline.groundRingMat) this.remotePlayerOutline.groundRingMat.dispose();
@@ -2094,6 +2097,8 @@ export class PaleciakiGameEngine {
     markerGeo.rotateX(Math.PI);
     const markerMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
     const marker = new THREE.Mesh(markerGeo, markerMat);
+    marker.name = 'remote-player-target-marker';
+    marker.userData.gobkitKeep = true;
     marker.position.set(0, 2.3, 0);
     this.remotePlayerGroup.add(marker);
 
@@ -2112,6 +2117,7 @@ export class PaleciakiGameEngine {
     fill.position.set(-0.58, 0, 0.01);
     hpBarGroup.add(bg, fill);
 
+    hpBarGroup.userData.gobkitKeep = true;
     this.remotePlayerHpBar = { group: hpBarGroup, fill };
     this.remotePlayerGroup.add(hpBarGroup);
 
@@ -2144,6 +2150,8 @@ export class PaleciakiGameEngine {
       opacity: 0.7,
     });
     const groundRing = new THREE.Mesh(groundRingGeo, groundRingMat);
+    groundRing.name = 'remote-player-ground-ring';
+    groundRing.userData.gobkitKeep = true;
     groundRing.position.set(0, 0.04, 0);
     outlineGroup.add(groundRing);
 
@@ -2160,6 +2168,7 @@ export class PaleciakiGameEngine {
       depthWrite: false,
     });
     const badgeMesh = new THREE.Mesh(badgeGeo, badgeMat);
+    badgeMesh.userData.gobkitKeep = true;
     badgeMesh.position.set(0, 3.1, 0);
     this.remotePlayerGroup.add(badgeMesh);
 
@@ -2181,6 +2190,9 @@ export class PaleciakiGameEngine {
     this.remotePlayerGroup.rotation.y = remoteSpawn.rot;
 
     this.levelRoot.add(this.remotePlayerGroup);
+    const sequence = ++this.remoteGobkitSequence;
+    const preserved = [marker, hpBarGroup, badgeMesh, groundRing, this.remotePlayerMeshBuilt.shadow];
+    void this.attachGobkitOperatorModel(remoteOperatorId, this.remotePlayerGroup, sequence, true, preserved);
   }
 
 
