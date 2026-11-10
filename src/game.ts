@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { applyPolyHavenPbrMaps } from './polyHavenTextures.ts';
+import { chooseMakeHumanLocomotion, getMakeHumanPlaybackRate } from './makeHumanLocomotion.ts';
 import { createMakeHumanActor, MAKEHUMAN_OPERATOR_STYLES, MAKEHUMAN_ENEMY_STYLES, type MakeHumanStyleId } from './makeHumanAssets.ts';
 import {
   clampGobkitActionDuration,
@@ -271,6 +272,12 @@ interface GobkitAnimationTrack {
   lastPosition: THREE.Vector3;
   /** MakeHuman wearable meshes share body geometry after their skeletons are re-bound. */
   sharedGeometry?: boolean;
+  /** Tracks one ground-to-air transition so jump and landing clips play only once. */
+  wasAirborne?: boolean;
+  idleVariantRemaining?: number;
+  idleVariantCooldown?: number;
+  idleVariantIndex?: number;
+  idleVariantAction?: string;
   /** Keeps attacks and damage reactions from being overwritten by locomotion next frame. */
   oneShotRemaining: number;
   oneShotPriority: number;
@@ -1429,7 +1436,9 @@ export class PaleciakiGameEngine {
     };
 
     root.traverse((object) => {
-      if (!(object instanceof THREE.Mesh) || object.userData.gobkitAsset === true) return;
+      // MakeHuman GLB geometry and source textures are cached and shared by live actor clones.
+      // Their per-actor materials are released by stopGobkitTrack instead.
+      if (!(object instanceof THREE.Mesh) || object.userData.gobkitAsset === true || object.userData.makeHumanAsset === true) return;
       if (object.geometry) geometries.add(object.geometry);
       const meshMaterials = Array.isArray(object.material) ? object.material : [object.material];
       for (const material of meshMaterials) collectMaterial(material);
@@ -1448,9 +1457,11 @@ export class PaleciakiGameEngine {
     // cached GLTF and deliberately remain alive for the next actor.
     track.root.traverse((object) => {
       if (!(object instanceof THREE.Mesh)) return;
-      if (!track.sharedGeometry) object.geometry.dispose();
+      if (!track.sharedGeometry && object.userData.makeHumanSharedGeometry !== true) object.geometry.dispose();
       const materials = Array.isArray(object.material) ? object.material : [object.material];
-      materials.forEach((material) => material.dispose());
+      materials.forEach((material) => {
+        if (material.userData.makeHumanShared !== true) material.dispose();
+      });
     });
   }
 
@@ -1537,28 +1548,62 @@ export class PaleciakiGameEngine {
     });
   }
 
-  private createMakeHumanAnimationTrack(root: THREE.Group, clips: THREE.AnimationClip[], initialPosition: THREE.Vector3): GobkitAnimationTrack {
+  private createMakeHumanAnimationTrack(
+    root: THREE.Group, clips: THREE.AnimationClip[], initialPosition: THREE.Vector3, style: MakeHumanStyleId,
+  ): GobkitAnimationTrack {
     const mixer = new THREE.AnimationMixer(root);
-    const aliases: Record<string, string> = { Idle: 'idle', Walk: 'walk', Run: 'run', Jump: 'jump' };
+    const aliases: Record<string, string> = {
+      Idle: 'idle_breathe',
+      IdleLook: 'idle_look',
+      IdleFidget: 'idle_fidget',
+      Walk: 'walk',
+      Run: 'run',
+      WalkBackward: 'walk_back',
+      StrafeLeft: 'strafe_left',
+      StrafeRight: 'strafe_right',
+      Jump: 'jump',
+      Fall: 'fall',
+      Land: 'land',
+    };
     const actions = new Map<string, THREE.AnimationAction>();
     for (const [alias, sourceName] of Object.entries(aliases)) {
-      const clip = THREE.AnimationClip.findByName(clips, sourceName);
-      if (clip) actions.set(alias, mixer.clipAction(clip));
+      const sourceClip = THREE.AnimationClip.findByName(clips, sourceName);
+      if (!sourceClip) continue;
+      // The game controller owns vertical movement. Remove the baked pelvis/root Y arc from
+      // jump and land so the authored body pose does not double the physics-driven jump height.
+      const tracks = sourceClip.tracks.map((sourceTrack) => {
+        const isJumpOrLand = sourceName === 'jump' || sourceName === 'land';
+        const isRootTranslation = sourceTrack.name.toLowerCase().includes('root.position');
+        if (isJumpOrLand && isRootTranslation && sourceTrack instanceof THREE.VectorKeyframeTrack) {
+          const cleaned = sourceTrack.clone() as THREE.VectorKeyframeTrack;
+          for (let index = 1; index < cleaned.values.length; index += 3) cleaned.values[index] = 0;
+          return cleaned;
+        }
+        return sourceTrack.clone();
+      });
+      const clip = new THREE.AnimationClip(sourceClip.name, sourceClip.duration, tracks);
+      actions.set(alias, mixer.clipAction(clip));
     }
     for (const name of ['Attack', 'Special', 'Hit', 'Death'] as const) {
-      const clip = this.createMakeHumanCombatClip(root, name);
+      const clip = this.createMakeHumanCombatClip(root, name, style);
       if (clip) actions.set(name, mixer.clipAction(clip));
     }
     const track: GobkitAnimationTrack = {
       root, mixer, actions, currentAction: '', lastPosition: initialPosition.clone(),
-      oneShotRemaining: 0, oneShotPriority: 0, oneShotAction: '', sharedGeometry: true,
+      oneShotRemaining: 0, oneShotPriority: 0, oneShotAction: '',
+      sharedGeometry: true, wasAirborne: false,
+      idleVariantRemaining: 0, idleVariantCooldown: 5.5, idleVariantIndex: 0, idleVariantAction: '',
     };
     this.playGobkitAction(track, 'Idle');
     return track;
   }
 
-  /** Compact authored arm/body poses fill the combat gaps in the MakeHuman locomotion pack. */
-  private createMakeHumanCombatClip(root: THREE.Group, name: 'Attack' | 'Special' | 'Hit' | 'Death'): THREE.AnimationClip | null {
+  /** Role-specific full-body combat poses supplement the authored humanoid locomotion clips. */
+  private createMakeHumanCombatClip(
+    root: THREE.Group,
+    name: 'Attack' | 'Special' | 'Hit' | 'Death',
+    style: MakeHumanStyleId,
+  ): THREE.AnimationClip | null {
     const tracks: THREE.KeyframeTrack[] = [];
     const addBone = (boneName: string, axis: THREE.Vector3, times: number[], angles: number[]) => {
       const bone = root.getObjectByName(boneName);
@@ -1572,38 +1617,100 @@ export class PaleciakiGameEngine {
       }
       tracks.push(new THREE.QuaternionKeyframeTrack(bone.name + '.quaternion', times, values));
     };
+    const x = new THREE.Vector3(1, 0, 0);
+    const y = new THREE.Vector3(0, 1, 0);
+    const z = new THREE.Vector3(0, 0, 1);
 
     if (name === 'Attack') {
       const times = [0, 0.08, 0.20, 0.34, 0.44];
-      addBone('spine_02', new THREE.Vector3(0, 1, 0), times, [0, -0.08, 0.12, -0.04, 0]);
-      addBone('upperarm_r', new THREE.Vector3(0, 0, 1), times, [0, 0.24, 0.78, 0.25, 0]);
-      addBone('lowerarm_r', new THREE.Vector3(1, 0, 0), times, [0, -0.18, -0.92, -0.12, 0]);
-      addBone('hand_r', new THREE.Vector3(1, 0, 0), times, [0, -0.10, 0.22, 0, 0]);
+      if (style === 'fireChief') {
+        addBone('spine_02', x, times, [0, -0.12, 0.28, 0.08, 0]);
+        addBone('upperarm_l', z, times, [0, -0.18, -0.98, -0.34, 0]);
+        addBone('lowerarm_l', x, times, [0, 0.10, -0.72, -0.14, 0]);
+        addBone('upperarm_r', z, times, [0, 0.18, 0.98, 0.34, 0]);
+        addBone('lowerarm_r', x, times, [0, -0.10, -0.72, -0.14, 0]);
+        addBone('thigh_l', x, times, [0, 0.04, 0.16, 0.06, 0]);
+        addBone('thigh_r', x, times, [0, 0.04, 0.16, 0.06, 0]);
+      } else if (style === 'stockClerk') {
+        addBone('spine_02', y, times, [0, -0.03, 0.10, -0.03, 0]);
+        addBone('upperarm_r', z, times, [0, 0.14, 0.92, 0.30, 0]);
+        addBone('lowerarm_r', x, times, [0, -0.16, -0.46, -0.08, 0]);
+        addBone('hand_r', x, times, [0, 0, 0.18, 0.05, 0]);
+        addBone('upperarm_l', z, times, [0, -0.06, -0.24, -0.10, 0]);
+      } else if (style === 'security') {
+        addBone('spine_02', y, times, [0, -0.05, 0.15, -0.02, 0]);
+        addBone('upperarm_l', z, times, [0, -0.30, -0.62, -0.28, 0]);
+        addBone('lowerarm_l', x, times, [0, 0.16, -0.60, -0.18, 0]);
+        addBone('upperarm_r', z, times, [0, 0.14, 0.84, 0.25, 0]);
+        addBone('lowerarm_r', x, times, [0, -0.12, -0.82, -0.12, 0]);
+      } else if (style === 'baggageHandler' || style === 'warehouse') {
+        addBone('spine_02', x, times, [0, -0.06, -0.18, 0.04, 0]);
+        addBone('upperarm_l', z, times, [0, -0.20, -0.74, -0.20, 0]);
+        addBone('lowerarm_l', x, times, [0, 0.10, -0.52, -0.10, 0]);
+        addBone('upperarm_r', z, times, [0, 0.22, 0.72, 0.22, 0]);
+        addBone('lowerarm_r', x, times, [0, -0.14, -0.54, -0.10, 0]);
+      } else if (style === 'inspector' || style === 'office' || style === 'sales' || style === 'manager') {
+        addBone('spine_02', y, times, [0, -0.08, 0.18, -0.03, 0]);
+        addBone('upperarm_l', z, times, [0, -0.10, -0.32, -0.08, 0]);
+        addBone('upperarm_r', z, times, [0, 0.16, 0.82, 0.24, 0]);
+        addBone('lowerarm_r', x, times, [0, -0.12, -0.78, -0.10, 0]);
+        addBone('hand_r', x, times, [0, 0.04, 0.24, 0.04, 0]);
+      } else {
+        addBone('spine_02', y, times, [0, -0.08, 0.12, -0.04, 0]);
+        addBone('upperarm_r', z, times, [0, 0.24, 0.78, 0.25, 0]);
+        addBone('lowerarm_r', x, times, [0, -0.18, -0.92, -0.12, 0]);
+        addBone('hand_r', x, times, [0, -0.10, 0.22, 0, 0]);
+      }
     } else if (name === 'Special') {
       const times = [0, 0.12, 0.28, 0.52, 0.72];
-      addBone('spine_02', new THREE.Vector3(0, 1, 0), times, [0, -0.14, 0.20, 0.08, 0]);
-      addBone('upperarm_l', new THREE.Vector3(0, 0, 1), times, [0, -0.36, -1.05, -0.40, 0]);
-      addBone('lowerarm_l', new THREE.Vector3(1, 0, 0), times, [0, 0.10, -0.75, -0.18, 0]);
-      addBone('upperarm_r', new THREE.Vector3(0, 0, 1), times, [0, 0.30, 0.90, 0.38, 0]);
-      addBone('lowerarm_r', new THREE.Vector3(1, 0, 0), times, [0, -0.10, -0.70, -0.20, 0]);
+      addBone('spine_02', y, times, [0, -0.14, 0.20, 0.08, 0]);
+      if (style === 'fireChief' || style === 'baggageHandler') {
+        addBone('upperarm_l', z, times, [0, -0.25, -1.25, -0.72, 0]);
+        addBone('lowerarm_l', x, times, [0, 0.12, -0.92, -0.24, 0]);
+        addBone('upperarm_r', z, times, [0, 0.25, 1.25, 0.72, 0]);
+        addBone('lowerarm_r', x, times, [0, -0.12, -0.92, -0.24, 0]);
+      } else {
+        addBone('upperarm_l', z, times, [0, -0.36, -1.05, -0.40, 0]);
+        addBone('lowerarm_l', x, times, [0, 0.10, -0.75, -0.18, 0]);
+        addBone('upperarm_r', z, times, [0, 0.30, 0.90, 0.38, 0]);
+        addBone('lowerarm_r', x, times, [0, -0.10, -0.70, -0.20, 0]);
+      }
     } else if (name === 'Hit') {
       const times = [0, 0.06, 0.17, 0.32];
-      addBone('pelvis', new THREE.Vector3(0, 1, 0), times, [0, 0.08, -0.05, 0]);
-      addBone('spine_02', new THREE.Vector3(1, 0, 0), times, [0, -0.26, 0.08, 0]);
-      addBone('upperarm_l', new THREE.Vector3(0, 0, 1), times, [0, -0.36, -0.12, 0]);
-      addBone('upperarm_r', new THREE.Vector3(0, 0, 1), times, [0, 0.36, 0.12, 0]);
+      addBone('pelvis', y, times, [0, 0.10, -0.08, 0]);
+      addBone('spine_02', x, times, [0, -0.30, 0.11, 0]);
+      addBone('spine_03', x, times, [0, -0.12, 0.06, 0]);
+      addBone('head', x, times, [0, 0.12, -0.05, 0]);
+      addBone('upperarm_l', z, times, [0, -0.42, -0.12, 0]);
+      addBone('upperarm_r', z, times, [0, 0.42, 0.12, 0]);
+      addBone('thigh_l', x, times, [0, 0.10, 0.02, 0]);
+      addBone('thigh_r', x, times, [0, 0.10, 0.02, 0]);
     } else {
       const times = [0, 0.18, 0.55, 1.08];
-      addBone('pelvis', new THREE.Vector3(1, 0, 0), times, [0, 0.18, 0.62, 0.78]);
-      addBone('spine_02', new THREE.Vector3(1, 0, 0), times, [0, -0.10, -0.42, -0.58]);
-      addBone('spine_03', new THREE.Vector3(0, 0, 1), times, [0, -0.08, -0.22, -0.28]);
-      addBone('head', new THREE.Vector3(1, 0, 0), times, [0, 0.08, 0.25, 0.34]);
-      addBone('upperarm_l', new THREE.Vector3(0, 0, 1), times, [0, -0.22, -0.52, -0.58]);
-      addBone('upperarm_r', new THREE.Vector3(0, 0, 1), times, [0, 0.22, 0.52, 0.58]);
+      addBone('pelvis', x, times, [0, 0.18, 0.62, 0.78]);
+      addBone('spine_02', x, times, [0, -0.10, -0.42, -0.58]);
+      addBone('spine_03', z, times, [0, -0.08, -0.22, -0.28]);
+      addBone('head', x, times, [0, 0.08, 0.25, 0.34]);
+      addBone('upperarm_l', z, times, [0, -0.22, -0.52, -0.58]);
+      addBone('upperarm_r', z, times, [0, 0.22, 0.52, 0.58]);
+      addBone('thigh_l', x, times, [0, 0.04, 0.48, 0.60]);
+      addBone('thigh_r', x, times, [0, 0.04, 0.48, 0.60]);
+      addBone('lowerarm_l', x, times, [0, 0.08, -0.18, -0.22]);
+      addBone('lowerarm_r', x, times, [0, -0.08, -0.18, -0.22]);
     }
     if (!tracks.length) return null;
     const duration = name === 'Attack' ? 0.44 : name === 'Special' ? 0.72 : name === 'Hit' ? 0.32 : 1.08;
-    return new THREE.AnimationClip('makehuman-' + name, duration, tracks);
+    return new THREE.AnimationClip('makehuman-' + name + '-' + style, duration, tracks);
+  }
+
+  private disposeMakeHumanActorMaterials(root: THREE.Object3D): void {
+    root.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      materials.forEach((material) => {
+        if (material.userData.makeHumanShared !== true) material.dispose();
+      });
+    });
   }
 
   private async attachMakeHumanOperatorModel(
@@ -1615,12 +1722,15 @@ export class PaleciakiGameEngine {
     try {
       const style = MAKEHUMAN_OPERATOR_STYLES[id];
       const actor = await createMakeHumanActor(style, 1.58);
-      if (!isCurrent() || group.parent !== this.levelRoot) return;
+      if (!isCurrent() || group.parent !== this.levelRoot) {
+        this.disposeMakeHumanActorMaterials(actor.root);
+        return;
+      }
       actor.root.position.y -= group.position.y;
       actor.root.name = 'makehuman-operator-' + id + '-' + style;
       this.hideProceduralVisuals(group, preserved);
       group.add(actor.root);
-      const track = this.createMakeHumanAnimationTrack(actor.root, actor.clips, group.position);
+      const track = this.createMakeHumanAnimationTrack(actor.root, actor.clips, group.position, actor.style);
       if (remote) this.remoteGobkitTrack = track;
       else this.playerGobkitTrack = track;
       console.info('[MakeHuman] Loaded operator:', id, style);
@@ -1635,11 +1745,7 @@ export class PaleciakiGameEngine {
     try {
       const actor = await createMakeHumanActor(style, 1.48);
       if (!this.enemies.includes(enemy) || !enemy.mesh || enemy.mesh.parent !== this.levelRoot || enemy.state === 'defeated') {
-        actor.root.traverse((object) => {
-          if (!(object instanceof THREE.Mesh)) return;
-          const materials = Array.isArray(object.material) ? object.material : [object.material];
-          materials.forEach((material) => material.dispose());
-        });
+        this.disposeMakeHumanActorMaterials(actor.root);
         return;
       }
       actor.root.position.y -= enemy.mesh.position.y;
@@ -1655,7 +1761,7 @@ export class PaleciakiGameEngine {
       enemy.armL = undefined;
       enemy.armR = undefined;
       enemy.head = undefined;
-      this.gobkitEnemyTracks.set(enemy, this.createMakeHumanAnimationTrack(actor.root, actor.clips, enemy.mesh.position));
+      this.gobkitEnemyTracks.set(enemy, this.createMakeHumanAnimationTrack(actor.root, actor.clips, enemy.mesh.position, actor.style));
     } catch (error) {
       console.warn('[MakeHuman] Enemy asset unavailable; using Gobkit fallback:', enemy.type, style, error);
       const fallback = ENEMY_GOBKIT_MODELS[enemy.type];
@@ -1721,7 +1827,16 @@ export class PaleciakiGameEngine {
     if (!Number.isFinite(dt) || dt <= 0) return;
     const advanceActor = (track: GobkitAnimationTrack | null, position: THREE.Vector3, airborne = false) => {
       if (!track) return;
-      const speed = track.lastPosition.distanceTo(position) / Math.max(0.001, dt);
+      const displacement = position.clone().sub(track.lastPosition);
+      displacement.y = 0;
+      const speed = displacement.length() / Math.max(0.001, dt);
+
+      if (track.sharedGeometry) {
+        if (airborne && !track.wasAirborne) this.requestGobkitAction(track, 'Jump', 0.68);
+        else if (!airborne && track.wasAirborne) this.requestGobkitAction(track, 'Land', 0.42);
+        track.wasAirborne = airborne;
+      }
+
       if (track.oneShotRemaining > 0 && Number.isFinite(track.oneShotRemaining)) {
         track.oneShotRemaining = Math.max(0, track.oneShotRemaining - dt);
         if (track.oneShotRemaining <= 0) {
@@ -1729,13 +1844,62 @@ export class PaleciakiGameEngine {
           track.oneShotAction = '';
         }
       }
-      const locomotion = airborne ? 'Jump' : speed > 4.8 ? 'Run' : speed > 0.18 ? 'Walk' : 'Idle';
-      this.playGobkitAction(track, track.oneShotRemaining > 0 && track.oneShotAction ? track.oneShotAction : locomotion);
+
+      let locomotion = 'Idle';
+      let localSpeed = speed;
+      if (track.sharedGeometry) {
+        const parent = track.root.parent;
+        const actorRotation = parent ? parent.getWorldQuaternion(new THREE.Quaternion()).invert() : new THREE.Quaternion();
+        const localMovement = displacement.applyQuaternion(actorRotation);
+        const localVelocityX = localMovement.x / Math.max(0.001, dt);
+        const localVelocityZ = localMovement.z / Math.max(0.001, dt);
+        localSpeed = Math.hypot(localVelocityX, localVelocityZ);
+        locomotion = chooseMakeHumanLocomotion(localVelocityX, localVelocityZ, airborne);
+
+        if (!airborne && locomotion === 'Idle' && track.oneShotRemaining <= 0) {
+          track.idleVariantCooldown = Math.max(0, (track.idleVariantCooldown ?? 5.5) - dt);
+          if ((track.idleVariantRemaining ?? 0) > 0) {
+            track.idleVariantRemaining = Math.max(0, (track.idleVariantRemaining ?? 0) - dt);
+            locomotion = track.idleVariantAction || 'Idle';
+            if (track.idleVariantRemaining <= 0) {
+              track.idleVariantAction = '';
+              track.idleVariantCooldown = 6.0;
+            }
+          } else if ((track.idleVariantCooldown ?? 0) <= 0) {
+            track.idleVariantIndex = ((track.idleVariantIndex ?? 0) + 1) % 2;
+            track.idleVariantAction = track.idleVariantIndex === 0 ? 'IdleLook' : 'IdleFidget';
+            track.idleVariantRemaining = track.idleVariantIndex === 0 ? 3.8 : 3.2;
+            locomotion = track.idleVariantAction;
+          }
+        } else if (locomotion !== 'Idle') {
+          track.idleVariantRemaining = 0;
+          track.idleVariantAction = '';
+          track.idleVariantCooldown = 5.5;
+        }
+      } else {
+        locomotion = airborne ? 'Jump' : speed > 4.8 ? 'Run' : speed > 0.18 ? 'Walk' : 'Idle';
+      }
+
+      const activeAction = track.oneShotRemaining > 0 && track.oneShotAction
+        ? track.oneShotAction
+        : locomotion;
+      this.playGobkitAction(track, activeAction);
+      if (track.sharedGeometry) {
+        const action = track.actions.get(activeAction);
+        if (action) action.setEffectiveTimeScale(getMakeHumanPlaybackRate(activeAction, localSpeed));
+      }
       track.lastPosition.copy(position);
       track.mixer.update(dt);
     };
-    advanceActor(this.playerGobkitTrack, this.playerGroup?.position || this.playerPos, this.playerPos.y > 0.18);
-    advanceActor(this.remoteGobkitTrack, this.remotePlayerGroup?.position || this.playerPos, (this.remotePlayerGroup?.position.y || 0) > 0.18);
+
+    // Local campaign/Survival physics owns jump height; the old raw y>0.18
+    // check treated the ordinary 0.5 m floor height as permanent flight.
+    const playerAirborne = this.gameMode !== 'pvp' && !this.isGrounded &&
+      (this.playerPos.y > 0.65 || Math.abs(this.playerVel.y) > 0.55);
+    const remoteAirborne = this.gameMode === 'pvp' &&
+      (this.remotePlayerGroup?.position.y || 0) > 0.68;
+    advanceActor(this.playerGobkitTrack, this.playerGroup?.position || this.playerPos, playerAirborne);
+    advanceActor(this.remoteGobkitTrack, this.remotePlayerGroup?.position || this.playerPos, remoteAirborne);
 
     const activeEnemies = new Set(this.enemies);
     for (const enemy of this.enemies) {
@@ -1751,14 +1915,28 @@ export class PaleciakiGameEngine {
       }
       const track = this.gobkitEnemyTracks.get(enemy);
       if (!track || enemy.mesh.visible === false) continue;
+
       let desired = 'Idle';
       if (enemy.state === 'defeated') desired = 'Death';
       else if ((enemy.hitReactTimer || 0) > 0.015 || enemy.state === 'stunned' || enemy.stunTimer > 0) desired = 'Hit';
-      else if (enemy.state === 'charging' || enemy.state === 'chase') desired = 'Run';
+      else if (enemy.state === 'charging') desired = 'Run';
       else {
-        const speed = track.lastPosition.distanceTo(enemy.mesh.position) / Math.max(0.001, dt);
-        desired = speed > 4.8 ? 'Run' : speed > 0.18 ? 'Walk' : 'Idle';
+        const displacement = enemy.mesh.position.clone().sub(track.lastPosition);
+        displacement.y = 0;
+        const speed = displacement.length() / Math.max(0.001, dt);
+        if (track.sharedGeometry) {
+          const actorRotation = enemy.mesh.getWorldQuaternion(new THREE.Quaternion()).invert();
+          const localMovement = displacement.applyQuaternion(actorRotation);
+          desired = chooseMakeHumanLocomotion(
+            localMovement.x / Math.max(0.001, dt),
+            localMovement.z / Math.max(0.001, dt),
+            false,
+          );
+        } else {
+          desired = speed > 4.8 ? 'Run' : speed > 0.18 ? 'Walk' : 'Idle';
+        }
       }
+
       if (track.oneShotRemaining > 0 && Number.isFinite(track.oneShotRemaining)) {
         track.oneShotRemaining = Math.max(0, track.oneShotRemaining - dt);
         if (track.oneShotRemaining <= 0) {
@@ -1768,6 +1946,11 @@ export class PaleciakiGameEngine {
       }
       const activeAction = track.oneShotRemaining > 0 && track.oneShotAction ? track.oneShotAction : desired;
       this.playGobkitAction(track, activeAction);
+      if (track.sharedGeometry) {
+        const speed = track.lastPosition.distanceTo(enemy.mesh.position) / Math.max(0.001, dt);
+        const action = track.actions.get(activeAction);
+        if (action) action.setEffectiveTimeScale(getMakeHumanPlaybackRate(activeAction, speed));
+      }
       track.lastPosition.copy(enemy.mesh.position);
       track.mixer.update(dt);
     }
@@ -1778,7 +1961,7 @@ export class PaleciakiGameEngine {
     }
   }
 
-  private rebuildPlayerMesh() {
+    private rebuildPlayerMesh() {
     this.playerGobkitSequence++;
     this.stopGobkitTrack(this.playerGobkitTrack);
     this.playerGobkitTrack = null;
