@@ -13,8 +13,9 @@ type ActionLookup = {
 };
 
 const ACTION_FALLBACKS: Readonly<Record<string, readonly string[]>> = Object.freeze({
-  Attack: ['Hit', 'Run', 'Idle'],
-  Special: ['Attack', 'Hit', 'Run', 'Idle'],
+  // Base catalogue models have no authored Attack clip; use a forward gait instead of a damage-flinch pose.
+  Attack: ['Run', 'Walk', 'Idle'],
+  Special: ['Attack', 'Run', 'Walk', 'Idle'],
   // The approved base asset pack guarantees Walk but not Jump; use the looping gait instead of a frozen idle pose in mid-air.
   Jump: ['Walk', 'Run', 'Idle'],
   Hit: ['Idle', 'Walk'],

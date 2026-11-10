@@ -10,8 +10,10 @@ import {
 } from '../src/gobkitAnimation.ts';
 
 test('optional combat clips resolve to the best available visual fallback', () => {
-  assert.equal(resolveGobkitActionName('Attack', new Set(['Hit', 'Idle'])), 'Hit');
-  assert.equal(resolveGobkitActionName('Special', new Set(['Run', 'Idle'])), 'Run');
+  assert.equal(resolveGobkitActionName('Attack', new Set(['Hit', 'Run', 'Idle'])), 'Run');
+  assert.equal(resolveGobkitActionName('Attack', new Set(['Hit', 'Idle'])), 'Idle');
+  assert.equal(resolveGobkitActionName('Special', new Set(['Hit', 'Run', 'Idle'])), 'Run');
+  assert.equal(resolveGobkitActionName('Special', new Set(['Attack', 'Hit', 'Idle'])), 'Attack');
   assert.equal(resolveGobkitActionName('Jump', new Set(['Idle', 'Walk'])), 'Walk');
   assert.equal(resolveGobkitActionName('Jump', new Set(['Idle'])), 'Idle');
   assert.equal(resolveGobkitActionName('Run', new Set(['Walk', 'Idle'])), 'Walk');

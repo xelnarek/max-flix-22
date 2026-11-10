@@ -1,4 +1,5 @@
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { sha256ForBytes, validateGlbAsset } from './glbValidation.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -54,12 +55,13 @@ async function fetchWithRetry(url, attempts = 4) {
   throw lastError;
 }
 
-async function existingFileIsValid(filePath) {
+async function existingFileIsValid(filePath, model) {
   try {
     const details = await stat(filePath);
     if (details.size < 2048) return false;
-    const handle = await readFile(filePath);
-    return handle.subarray(0, 4).toString('ascii') === 'glTF';
+    const bytes = await readFile(filePath);
+    validateGlbAsset(bytes, model.id, model.clipNames);
+    return true;
   } catch {
     return false;
   }
@@ -122,18 +124,22 @@ async function run() {
     const model = resolved.get(id);
     const filename = id + '.glb';
     const filePath = path.join(OUTPUT_DIR, filename);
-    if (await existingFileIsValid(filePath)) {
+    let bytes;
+    if (await existingFileIsValid(filePath, { ...model, id })) {
+      bytes = await readFile(filePath);
       reused++;
     } else {
       const response = await fetchWithRetry(model.sourceUrl);
-      const bytes = Buffer.from(await response.arrayBuffer());
-      if (bytes.length < 2048 || bytes.subarray(0, 4).toString('ascii') !== 'glTF') {
-        throw new Error('Downloaded file is not a valid binary glTF 2.0 asset: ' + id);
+      bytes = Buffer.from(await response.arrayBuffer());
+      if (bytes.length < 2048) {
+        throw new Error('Downloaded GLB is unexpectedly small: ' + id);
       }
+      validateGlbAsset(bytes, id, model.clipNames);
       await writeFile(filePath, bytes);
       downloaded++;
     }
 
+    const validated = validateGlbAsset(bytes, id, model.clipNames);
     outputManifest.models[id] = {
       name: model.name,
       filename,
@@ -142,7 +148,9 @@ async function run() {
       license: model.license,
       rigged: true,
       fps: model.fps ?? 30,
-      animations: model.clipNames,
+      byteLength: bytes.length,
+      sha256: sha256ForBytes(bytes),
+      animations: validated.clipNames,
     };
     console.log('[Gobkit] ' + (downloaded + reused) + '/' + REQUIRED_MODELS.length + ' • ' + model.name);
   }

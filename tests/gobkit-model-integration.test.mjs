@@ -90,3 +90,18 @@ test('Survival actors and both PvP operator slots use the new models without cha
   assert.match(game, /this\.hideProceduralVisuals/);
   assert.match(arena, /export function createDefaultPvpObstacles/);
 });
+
+
+test('Gobkit build validates the embedded GLB JSON, skeleton, animation clips and checksum before reuse', async () => {
+  const [script, validator] = await Promise.all([
+    read('../scripts/fetch-gobkit-assets.mjs'),
+    read('../scripts/glbValidation.mjs'),
+  ]);
+  assert.match(script, /validateGlbAsset\(bytes, id, model\.clipNames\)/);
+  assert.match(script, /sha256ForBytes\(bytes\)/);
+  assert.match(script, /existingFileIsValid\(filePath, model\)/);
+  assert.match(validator, /declaredLength !== bytes\.length/);
+  assert.match(validator, /document\.skins/);
+  assert.match(validator, /document\.animations/);
+  assert.match(validator, /REQUIRED_RIG_CLIPS/);
+});
