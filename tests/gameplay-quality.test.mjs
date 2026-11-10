@@ -205,18 +205,19 @@ test('camera zoom is bounded, smooth, synchronized and supports two-finger pinch
     read('../src/game.ts'), read('../index.html'), read('../src/index.ts')
   ]);
   assert.match(game, /private syncCameraZoomControl\(\)/);
-  assert.match(game, /this\.camZoomFactor = Math\.min\(1\.72, this\.camZoomFactor \+ 0\.12\)/);
-  assert.match(game, /this\.camZoomFactor = Math\.max\(0\.58, this\.camZoomFactor - 0\.12\)/);
-  assert.match(game, /this\.camZoomFactor = THREE\.MathUtils\.clamp\(val, 0\.58, 1\.72\)/);
+  assert.match(game, /this\.camZoomFactor = Math\.min\(1\.85, this\.camZoomFactor \+ 0\.08\)/);
+  assert.match(game, /this\.camZoomFactor = Math\.max\(0\.50, this\.camZoomFactor - 0\.08\)/);
+  assert.match(game, /this\.camZoomFactor = THREE\.MathUtils\.clamp\(val, 0\.50, 1\.85\)/);
+  assert.match(game, /if \(e\.pointerType === 'touch'\) return/);
   assert.match(game, /this\.hasManualCameraZoom = true/);
   assert.match(game, /this\.currentCamOffset\.x = THREE\.MathUtils\.damp\(this\.currentCamOffset\.x, targetOffsetX, 6\.6, dt\)/);
   assert.match(game, /if \(!this\.hasManualCameraZoom\)/);
   assert.match(game, /this\.syncCameraZoomControl\(\)/);
-  assert.match(html, /id="cam-zoom-slider" min="0\.58" max="1\.72" step="0\.02" value="0\.94"/);
+  assert.match(html, /id="cam-zoom-slider" min="0\.50" max="1\.85" step="0\.01" value="0\.94"/);
   assert.match(app, /zoomSlider\.value = this\.engine\.getCamZoomFactor\(\)\.toFixed\(2\)/);
   assert.match(app, /const pinchPointers = new Map<number, \{ x: number; y: number \}>\(\)/);
   assert.match(app, /const getPinchDistance = \(\): number =>/);
-  assert.match(app, /const delta = THREE\.MathUtils\.clamp\(\(lastPinchDistance - distance\) \* 0\.0035, -0\.12, 0\.12\)/);
+  assert.match(app, /const delta = THREE\.MathUtils\.clamp\(\(lastPinchDistance - distance\) \* 0\.0028, -0\.08, 0\.08\)/);
   assert.match(app, /this\.engine\.getGameMode\(\) === 'pvp'/);
   assert.match(app, /window\.addEventListener\('pointercancel', finishPinchPointer/);
 });
