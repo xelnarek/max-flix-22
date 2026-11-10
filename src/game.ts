@@ -624,6 +624,9 @@ export class PaleciakiGameEngine {
   private remotePlayerHpBar: any = null;
   private remotePlayerOutline: any = null;
   private prevPvpLocalHp = -1;
+  private remotePvpHitReactTimer = 0;
+  private remotePvpHitReactDuration = 0.34;
+  private remotePvpHitReactDirection: -1 | 1 = 1;
   private pvpObstacleMeshes: THREE.Object3D[] = [];
   private pvpMedkitMesh: THREE.Group | null = null;
   private pvpPerkMesh: THREE.Group | null = null;
@@ -3175,16 +3178,41 @@ export class PaleciakiGameEngine {
       this.playerGroup.rotation.y = this.playerRot;
 
       const isMoving = Math.hypot(moveX, moveZ) > 0.1 || local.isDashing;
-      if (isMoving && this.leftLeg && this.rightLeg) {
-        const cycle = (performance.now() / 150) % (Math.PI * 2);
-        this.leftLeg.rotation.x = Math.sin(cycle) * 0.45;
-        this.rightLeg.rotation.x = -Math.sin(cycle) * 0.45;
-      } else if (this.leftLeg && this.rightLeg) {
-        this.leftLeg.rotation.x = 0;
-        this.rightLeg.rotation.x = 0;
+      const cycle = (performance.now() / (local.isDashing ? 98 : 150)) % (Math.PI * 2);
+      const gait = isMoving ? Math.sin(cycle) : 0;
+      setProceduralLimbPose(this.leftLeg, gait * (local.isDashing ? 0.60 : 0.45));
+      setProceduralLimbPose(this.rightLeg, -gait * (local.isDashing ? 0.60 : 0.45));
+      setProceduralLimbPose(this.leftArm, -gait * 0.25, 0.025 * gait);
+      setProceduralLimbPose(this.rightArm, gait * 0.25, -0.025 * gait);
+
+      if (local.isDashing) {
+        this.playerGroup.rotation.x = -0.18;
+        addProceduralLimbPose(this.leftArm, -0.28, -0.10);
+        addProceduralLimbPose(this.rightArm, -0.28, 0.10);
+      } else {
+        this.playerGroup.rotation.x = 0;
+      }
+      if (local.isFiring) {
+        // Aim is manual in PvP; raise both arms into a two-handed firing pose.
+        addProceduralLimbPose(this.rightArm, -0.74, 0.035);
+        addProceduralLimbPose(this.leftArm, -0.38, -0.035);
+        if (this.playerAccessory) this.playerAccessory.rotation.x = this.playerAccessoryRestX - 0.12;
+      } else if (this.playerAccessory) {
+        this.playerAccessory.rotation.x = this.playerAccessoryRestX;
+      }
+      if (this.playerHitReactTimer > 0) {
+        const pulse = getProceduralHitPulse(this.playerHitReactTimer, this.playerHitReactDuration);
+        addProceduralLimbPose(this.leftArm, 0.48 * pulse, -0.12 * this.playerHitReactDirection * pulse);
+        addProceduralLimbPose(this.rightArm, 0.48 * pulse, 0.12 * this.playerHitReactDirection * pulse);
+        this.playerGroup.rotation.x += 0.10 * pulse;
+        this.playerGroup.rotation.z += 0.075 * this.playerHitReactDirection * pulse;
       }
     }
+    if (this.playerHitReactTimer > 0) {
+      this.playerHitReactTimer = Math.max(0, this.playerHitReactTimer - dt);
+    }
 
+    this.remotePvpHitReactTimer = Math.max(0, this.remotePvpHitReactTimer - dt);
     this.hp = local.hp;
     this.maxHp = local.maxHp;
     this.callbacks.onHpUpdate(this.hp, this.maxHp);
@@ -3258,13 +3286,31 @@ export class PaleciakiGameEngine {
       }
 
       if (this.remotePlayerMeshBuilt?.leftLeg && this.remotePlayerMeshBuilt?.rightLeg) {
-        if (remote.isFiring || Math.hypot(remote.x - this.remotePlayerGroup.position.x, remote.z - this.remotePlayerGroup.position.z) > 0.05) {
-          const cycle = (performance.now() / 150) % (Math.PI * 2);
-          this.remotePlayerMeshBuilt.leftLeg.rotation.x = Math.sin(cycle) * 0.45;
-          this.remotePlayerMeshBuilt.rightLeg.rotation.x = -Math.sin(cycle) * 0.45;
+        const remoteMoving = remote.isDashing ||
+          Math.hypot(remote.x - this.remotePlayerGroup.position.x, remote.z - this.remotePlayerGroup.position.z) > 0.05;
+        const cycle = (performance.now() / (remote.isDashing ? 98 : 150)) % (Math.PI * 2);
+        const gait = remoteMoving ? Math.sin(cycle) : 0;
+        setProceduralLimbPose(this.remotePlayerMeshBuilt.leftLeg, gait * (remote.isDashing ? 0.60 : 0.45));
+        setProceduralLimbPose(this.remotePlayerMeshBuilt.rightLeg, -gait * (remote.isDashing ? 0.60 : 0.45));
+        setProceduralLimbPose(this.remotePlayerMeshBuilt.leftArm, -gait * 0.25, 0.025 * gait);
+        setProceduralLimbPose(this.remotePlayerMeshBuilt.rightArm, gait * 0.25, -0.025 * gait);
+        if (remote.isDashing) {
+          this.remotePlayerGroup.rotation.x = -0.18;
+          addProceduralLimbPose(this.remotePlayerMeshBuilt.leftArm, -0.28, -0.10);
+          addProceduralLimbPose(this.remotePlayerMeshBuilt.rightArm, -0.28, 0.10);
         } else {
-          this.remotePlayerMeshBuilt.leftLeg.rotation.x = 0;
-          this.remotePlayerMeshBuilt.rightLeg.rotation.x = 0;
+          this.remotePlayerGroup.rotation.x = 0;
+        }
+        if (remote.isFiring) {
+          addProceduralLimbPose(this.remotePlayerMeshBuilt.rightArm, -0.74, 0.035);
+          addProceduralLimbPose(this.remotePlayerMeshBuilt.leftArm, -0.38, -0.035);
+        }
+        if (this.remotePvpHitReactTimer > 0) {
+          const pulse = getProceduralHitPulse(this.remotePvpHitReactTimer, this.remotePvpHitReactDuration);
+          addProceduralLimbPose(this.remotePlayerMeshBuilt.leftArm, 0.48 * pulse, -0.12 * this.remotePvpHitReactDirection * pulse);
+          addProceduralLimbPose(this.remotePlayerMeshBuilt.rightArm, 0.48 * pulse, 0.12 * this.remotePvpHitReactDirection * pulse);
+          this.remotePlayerGroup.rotation.x += 0.10 * pulse;
+          this.remotePlayerGroup.rotation.z += 0.075 * this.remotePvpHitReactDirection * pulse;
         }
       }
     }
@@ -3450,8 +3496,15 @@ export class PaleciakiGameEngine {
       this.spawnParticleRing(hit.x, 1.2, hit.z, 0xef4444);
 
       if (hit.targetSlot === this.pvpSlot) {
+        this.playerHitReactDuration = 0.32;
+        this.playerHitReactTimer = this.playerHitReactDuration;
+        this.playerHitReactDirection = hit.sourceSlot === 'p1' ? -1 : 1;
         this.triggerScreenShake(0.16, 0.2);
         this.pulsePvpFeedback('pvp-hit-vignette');
+      } else {
+        this.remotePvpHitReactDuration = 0.32;
+        this.remotePvpHitReactTimer = this.remotePvpHitReactDuration;
+        this.remotePvpHitReactDirection = hit.sourceSlot === 'p1' ? -1 : 1;
       }
       if (hit.sourceSlot === this.pvpSlot) {
         this.pulsePvpFeedback('pvp-hit-confirm');
