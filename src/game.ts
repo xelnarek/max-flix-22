@@ -2200,6 +2200,8 @@ export class PaleciakiGameEngine {
     if (!this.playerGroup) return;
     const color = this.pvpSlot === 'p1' ? 0x38bdf8 : 0xf59e0b;
     const marker = new THREE.Group();
+    marker.name = 'pvp-local-player-marker';
+    marker.userData.gobkitKeep = true;
     const ring = new THREE.Mesh(new THREE.RingGeometry(0.92, 1.08, 36), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.96, side: THREE.DoubleSide, depthWrite: false }));
     ring.rotation.x = -Math.PI / 2; ring.position.y = -0.44; ring.renderOrder = 12;
     const center = new THREE.Mesh(new THREE.CircleGeometry(0.18, 20), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false }));
