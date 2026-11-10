@@ -120,7 +120,7 @@ test('only one imported actor rig can be installed per player or enemy group', a
   const game = await read('../src/game.ts');
   assert.match(game, /private removeAttachedActorVisuals\(group: THREE\.Group\)/);
   assert.match(game, /private installActorVisualRoot\(group: THREE\.Group, root: THREE\.Group\)/);
-  assert.match(game, /root\.userData\.actorVisualRoot = true/);
+  assert.match(game, /root\.traverse\(\(object\) => \{ object\.userData\.actorVisualRoot = true; \}\)/);
   assert.match(game, /group\.userData\.actorVisualRoot = root/);
   assert.match(game, /this\.stopGobkitTrack\(this\.playerGobkitTrack\)/);
   assert.match(game, /this\.stopGobkitTrack\(this\.remoteGobkitTrack\)/);
