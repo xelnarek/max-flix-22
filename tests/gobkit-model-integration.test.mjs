@@ -92,12 +92,14 @@ test('playable operators retain the original stylized models in Survival and bot
 test('CC0 enemy rigs receive a clear caricature silhouette matching their warehouse role', async () => {
   const silhouettes = await read('../src/gobkitEnemySilhouettes.ts');
   const game = await read('../src/game.ts');
-  for (const role of ['architect', 'inspector', 'kurier', 'handlowiec', 'customer', 'monter', 'serwisant', 'zombie_pracownik']) {
+  for (const role of ['architect', 'inspector', 'kurier', 'handlowiec', 'customer', 'monter', 'serwisant', 'zombie_pracownik', 'mutant_gamma_forklift', 'radioactive_pip', 'cyber_salesman', 'walczak', 'krol_leto', 'bosman_krakow']) {
     assert.match(silhouettes, new RegExp("case '" + role + "'"));
   }
   assert.match(silhouettes, /oversized sample fan/);
   assert.match(silhouettes, /exposed ribs/);
   assert.match(silhouettes, /sickly eyes/);
+  assert.match(silhouettes, /Forklift mutant/);
+  assert.match(silhouettes, /Werewolf foreman/);
   assert.match(game, /createGobkitEnemyRoleSilhouette/);
   assert.match(game, /actorRoleSilhouette === true/);
 });
