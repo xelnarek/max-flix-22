@@ -518,6 +518,10 @@ export class PaleciakiGameEngine {
   private readonly cameraOcclusionWorldPosition = new THREE.Vector3();
   private readonly cameraOcclusionRaycaster = new THREE.Raycaster();
   private readonly cameraOcclusionHits: THREE.Intersection<THREE.Object3D>[] = [];
+  // Reused animation scratch state: updateGobkitAnimations runs every frame.
+  private readonly actorDisplacementScratch = new THREE.Vector3();
+  private readonly actorLocalMovementScratch = new THREE.Vector3();
+  private readonly actorRotationScratch = new THREE.Quaternion();
   private readonly cameraOcclusionHitSet = new Set<THREE.Object3D>();
   private cameraOcclusionCooldown = 0;
   private mobileShadowRefreshCooldown = 0;
@@ -1830,10 +1834,10 @@ export class PaleciakiGameEngine {
 
   private updateGobkitAnimations(dt: number) {
     if (!Number.isFinite(dt) || dt <= 0) return;
-    // The actor loop is synchronous, so one set of scratch objects safely serves every rig.
-    const displacement = new THREE.Vector3();
-    const localMovement = new THREE.Vector3();
-    const actorRotation = new THREE.Quaternion();
+    // Shared class-level scratch objects are safe because this actor loop is synchronous.
+    const displacement = this.actorDisplacementScratch;
+    const localMovement = this.actorLocalMovementScratch;
+    const actorRotation = this.actorRotationScratch;
     const advanceActor = (track: GobkitAnimationTrack | null, position: THREE.Vector3, airborne = false) => {
       if (!track) return;
       displacement.copy(position).sub(track.lastPosition);
