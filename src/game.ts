@@ -12296,20 +12296,25 @@ export class PaleciakiGameEngine {
 
       const visualProfile = ENEMY_VISUAL_PROFILES[e.type];
       const gaitPreset = ENEMY_GAIT_PRESETS[visualProfile.gaitStyle];
-      const gaitMovement = e.state === 'chase' || e.state === 'charging'
+      const targetGaitMovement = e.state === 'chase' || e.state === 'charging'
         ? 1
         : e.state === 'patrol'
           ? 0.66
           : 0;
+      // Blend state changes to avoid a hard pose snap on stop/start and on stun recovery.
+      e.gaitBlend = THREE.MathUtils.damp(e.gaitBlend ?? 0, targetGaitMovement, 10, dt);
+      const gaitMovement = e.gaitBlend;
       const gaitRate = (e.state === 'charging' || e.state === 'chase' ? 10.2 : e.state === 'patrol' ? 6.6 : 0) * gaitPreset.rate;
       e.walkCycle += dt * gaitRate;
+      const gaitWave = Math.sin(e.walkCycle);
+      const gaitHalfWave = Math.sin(e.walkCycle * 0.5);
       this.updateEnemyHitReaction(e, dt);
 
       // Every archetype has its own gait profile: heavy bosses take slower,
       // wider steps; couriers move briskly; zombies limp and stagger; robots
       // advance with precise compact motion. Joint pivots stay in place.
       if (e.legL && e.legR && visualProfile.gaitStyle !== 'hovering' && visualProfile.gaitStyle !== 'rolling') {
-        const gait = Math.sin(e.walkCycle);
+        const gait = gaitWave;
         const gaitAmount = gaitPreset.legSwing * gaitMovement;
         let leftLegX = gait * gaitAmount;
         let rightLegX = -gait * gaitAmount;
@@ -12325,11 +12330,11 @@ export class PaleciakiGameEngine {
         setProceduralLimbPose(e.legR, rightLegX);
       }
       if (e.armL && e.armR && visualProfile.gaitStyle !== 'hovering' && visualProfile.gaitStyle !== 'rolling') {
-        const gait = Math.sin(e.walkCycle);
+        const gait = gaitWave;
         const armSwing = gait * gaitPreset.armSwing * gaitMovement;
         let leftArmX = -armSwing;
         let rightArmX = armSwing;
-        let leftArmZ = -Math.sin(e.walkCycle * 0.5) * gaitPreset.armSway * gaitMovement;
+        let leftArmZ = -gaitHalfWave * gaitPreset.armSway * gaitMovement;
         let rightArmZ = -leftArmZ;
         if (visualProfile.gaitStyle === 'shambling') {
           leftArmX -= 0.18 * gaitMovement;
@@ -12398,7 +12403,7 @@ export class PaleciakiGameEngine {
         const attackPitch = attackRemaining > 0
           ? (1 - attackRemaining / attackDuration) < 0.28 ? -0.07 : 0.10
           : 0;
-        const headBob = Math.sin(e.walkCycle * 0.5) * gaitPreset.headBob * gaitMovement;
+        const headBob = gaitHalfWave * gaitPreset.headBob * gaitMovement;
         const headLean = visualProfile.gaitStyle === 'aggressive' || visualProfile.gaitStyle === 'shambling'
           ? -0.045 * gaitMovement
           : 0;
