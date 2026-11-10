@@ -1,4 +1,11 @@
 import * as THREE from 'three';
+import {
+  clampGobkitActionDuration,
+  getGobkitActionPriority,
+  isGobkitOneShotAction,
+  resolveGobkitActionName,
+  shouldKeepGobkitAction,
+} from './gobkitAnimation.ts';
 import { disposePvpObjectTree } from './pvpResourceCleanup.ts';
 import { calculatePvpCameraFrame, calculatePvpCameraTrackingBounds, isPvpPortraitViewport } from './pvpCamera.ts';
 import { createArenaObstacleFootprint, createPvpContactShadowTexture, createPvpFloorTexture, createPvpObstacleTexture } from './pvpTextures.ts';
@@ -1461,30 +1468,43 @@ export class PaleciakiGameEngine {
 
   /** Resolve optional clips to a real, visually useful action without restarting the mixer. */
   private resolveGobkitActionName(track: GobkitAnimationTrack, requestedName: string): string {
-    if (track.actions.has(requestedName)) return requestedName;
-    const fallbacks: Record<string, string[]> = {
-      Attack: ['Hit', 'Run', 'Idle'],
-      Special: ['Attack', 'Hit', 'Run', 'Idle'],
-      Jump: ['Idle', 'Walk'],
-      Hit: ['Idle', 'Walk'],
-      Death: ['Idle'],
-      Run: ['Walk', 'Idle'],
-      Walk: ['Idle'],
-      Idle: ['Walk'],
-    };
-    return (fallbacks[requestedName] || ['Idle']).find((name) => track.actions.has(name)) || 'Idle';
+    return resolveGobkitActionName(requestedName, track.actions);
   }
 
-  private playGobkitAction(track: GobkitAnimationTrack, requestedName: string) {
+  private playGobkitAction(
+    track: GobkitAnimationTrack,
+    requestedName: string,
+    durationSeconds?: number,
+    restartIfSame = false,
+  ) {
     const name = this.resolveGobkitActionName(track, requestedName);
     const next = track.actions.get(name);
-    if (!next || track.currentAction === name) return;
+    if (!next) return;
+    const oneShot = isGobkitOneShotAction(name);
+
+    // Repeated attacks must restart their pose even when the previous attack used
+    // the same clip; ordinary frame updates still leave a running action untouched.
+    if (track.currentAction === name) {
+      if (restartIfSame) {
+        next.reset();
+        if (oneShot && Number.isFinite(durationSeconds)) {
+          next.setDuration(clampGobkitActionDuration(durationSeconds as number));
+        }
+        next.fadeIn(0.06).play();
+      }
+      return;
+    }
+
     const previous = track.actions.get(track.currentAction);
-    const oneShot = name === 'Death' || name === 'Hit' || name === 'Attack' || name === 'Special' || name === 'Jump';
     next.reset();
     next.enabled = true;
     next.setLoop(oneShot ? THREE.LoopOnce : THREE.LoopRepeat, oneShot ? 1 : Infinity);
     next.clampWhenFinished = oneShot;
+    if (oneShot && Number.isFinite(durationSeconds)) {
+      // Match the authored clip to the actual attack / hit window instead of
+      // truncating a long clip or freezing a short clip before the gameplay event ends.
+      next.setDuration(clampGobkitActionDuration(durationSeconds as number));
+    }
     next.fadeIn(0.10).play();
     if (previous && previous !== next) previous.fadeOut(0.10);
     track.currentAction = name;
@@ -1493,15 +1513,15 @@ export class PaleciakiGameEngine {
   /** High-priority reactions temporarily own the pose; locomotion resumes cleanly afterwards. */
   private requestGobkitAction(track: GobkitAnimationTrack | null, requestedName: string, durationSeconds = 0.28) {
     if (!track) return;
-    const priority = requestedName === 'Death' ? 4 : requestedName === 'Hit' ? 3 : requestedName === 'Special' ? 2 : 1;
-    if (track.oneShotRemaining > 0 && priority < track.oneShotPriority) return;
+    const priority = getGobkitActionPriority(requestedName);
+    if (shouldKeepGobkitAction(track.oneShotRemaining, track.oneShotPriority, priority)) return;
     const resolvedName = this.resolveGobkitActionName(track, requestedName);
     track.oneShotAction = resolvedName;
     track.oneShotPriority = priority;
     track.oneShotRemaining = requestedName === 'Death'
       ? Number.POSITIVE_INFINITY
-      : THREE.MathUtils.clamp(Number.isFinite(durationSeconds) ? durationSeconds : 0.28, 0.12, 1.2);
-    this.playGobkitAction(track, resolvedName);
+      : clampGobkitActionDuration(durationSeconds);
+    this.playGobkitAction(track, resolvedName, track.oneShotRemaining, true);
   }
 
   private hideProceduralVisuals(group: THREE.Group, preserved: readonly THREE.Object3D[]) {
