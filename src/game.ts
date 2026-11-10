@@ -11075,12 +11075,16 @@ export class PaleciakiGameEngine {
         const attackProfile = getCharacterAttackMotionProfile(this.currentCharacterId);
         const progress = THREE.MathUtils.clamp(1 - this.attackSwingTimer / this.attackSwingDuration, 0, 1);
         const strike = getAttackPoseStrength(progress);
-        if (this.rightArm && this.leftArm) {
-          this.rightArm.rotation.x += attackProfile.rightArmX * strike;
-          this.leftArm.rotation.x += attackProfile.leftArmX * strike;
-          this.rightArm.rotation.z += attackProfile.rightArmZ * strike;
-          this.leftArm.rotation.z += attackProfile.leftArmZ * strike;
-        }
+        addProceduralLimbPose(
+          this.rightArm,
+          attackProfile.rightArmX * strike,
+          attackProfile.rightArmZ * strike,
+        );
+        addProceduralLimbPose(
+          this.leftArm,
+          attackProfile.leftArmX * strike,
+          attackProfile.leftArmZ * strike,
+        );
         this.playerGroup.rotation.x += attackProfile.torsoPitch * strike;
         this.playerGroup.rotation.z += attackProfile.torsoTwist * strike;
         if (this.playerHead) this.playerHead.rotation.x += attackProfile.headDip * strike;
@@ -11088,13 +11092,15 @@ export class PaleciakiGameEngine {
           this.playerAccessory.rotation.x += attackProfile.toolPitch * strike;
           this.playerAccessory.rotation.z += attackProfile.toolRoll * strike;
         }
+      }
+
+      // Hit reaction is an additive layer, independent of whether the player is attacking.
       if (this.playerHitReactTimer > 0 && this.playerHitReactDuration > 0) {
         const hit = getProceduralHitPulse(this.playerHitReactTimer, this.playerHitReactDuration);
         addProceduralLimbPose(this.leftArm, 0.46 * hit, -0.14 * this.playerHitReactDirection * hit);
         addProceduralLimbPose(this.rightArm, 0.46 * hit, 0.14 * this.playerHitReactDirection * hit);
         this.playerGroup.rotation.x += 0.065 * hit;
         this.playerGroup.rotation.z += 0.085 * this.playerHitReactDirection * hit;
-      }
       }
     }
 
@@ -12220,16 +12226,6 @@ export class PaleciakiGameEngine {
       if (e.bikeWheels) e.bikeWheels.forEach((wheel) => wheel.rotateX(dt * (e.state === 'chase' ? 8.5 : 3.4)));
       if (e.propeller) e.propeller.rotation.y += dt * (e.state === 'chase' ? 34 : 18);
       if (e.type === 'pomazaniec') e.mesh.rotation.x = THREE.MathUtils.lerp(e.mesh.rotation.x, 0, Math.min(1, dt * 3.2));
-      if (e.legL && e.legR && e.type !== 'piorun_dron') {
-        e.legL.rotation.x = Math.sin(e.walkCycle) * 0.5;
-        e.legR.rotation.x = -Math.sin(e.walkCycle) * 0.5;
-      }
-      if (e.armL && e.armR && e.type !== 'piorun_dron') {
-        const armSwing = Math.sin(e.walkCycle) * (e.state === 'chase' ? 0.34 : 0.20);
-        e.armL.rotation.x = -armSwing;
-        e.armR.rotation.x = armSwing;
-      }
-
       // Ground Threat Ring for actively chasing enemies
       if (!e.threatRing && e.type !== 'piorun_dron') {
         const isCoalitionLeader = e.aiCoalitionLeaderId === e.id;
