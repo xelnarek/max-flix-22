@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createMakeHumanActor, MAKEHUMAN_OPERATOR_STYLES, MAKEHUMAN_ENEMY_STYLES, type MakeHumanStyleId } from './makeHumanAssets.ts';
 import {
   clampGobkitActionDuration,
   getGobkitActionPriority,
@@ -267,6 +268,8 @@ interface GobkitAnimationTrack {
   actions: Map<string, THREE.AnimationAction>;
   currentAction: string;
   lastPosition: THREE.Vector3;
+  /** MakeHuman wearable meshes share body geometry after their skeletons are re-bound. */
+  sharedGeometry?: boolean;
   /** Keeps attacks and damage reactions from being overwritten by locomotion next frame. */
   oneShotRemaining: number;
   oneShotPriority: number;
@@ -1444,7 +1447,7 @@ export class PaleciakiGameEngine {
     // cached GLTF and deliberately remain alive for the next actor.
     track.root.traverse((object) => {
       if (!(object instanceof THREE.Mesh)) return;
-      object.geometry.dispose();
+      if (!track.sharedGeometry) object.geometry.dispose();
       const materials = Array.isArray(object.material) ? object.material : [object.material];
       materials.forEach((material) => material.dispose());
     });
@@ -1533,6 +1536,132 @@ export class PaleciakiGameEngine {
     });
   }
 
+  private createMakeHumanAnimationTrack(root: THREE.Group, clips: THREE.AnimationClip[], initialPosition: THREE.Vector3): GobkitAnimationTrack {
+    const mixer = new THREE.AnimationMixer(root);
+    const aliases: Record<string, string> = { Idle: 'idle', Walk: 'walk', Run: 'run', Jump: 'jump' };
+    const actions = new Map<string, THREE.AnimationAction>();
+    for (const [alias, sourceName] of Object.entries(aliases)) {
+      const clip = THREE.AnimationClip.findByName(clips, sourceName);
+      if (clip) actions.set(alias, mixer.clipAction(clip));
+    }
+    for (const name of ['Attack', 'Special', 'Hit', 'Death'] as const) {
+      const clip = this.createMakeHumanCombatClip(root, name);
+      if (clip) actions.set(name, mixer.clipAction(clip));
+    }
+    const track: GobkitAnimationTrack = {
+      root, mixer, actions, currentAction: '', lastPosition: initialPosition.clone(),
+      oneShotRemaining: 0, oneShotPriority: 0, oneShotAction: '', sharedGeometry: true,
+    };
+    this.playGobkitAction(track, 'Idle');
+    return track;
+  }
+
+  /** Compact authored arm/body poses fill the combat gaps in the MakeHuman locomotion pack. */
+  private createMakeHumanCombatClip(root: THREE.Group, name: 'Attack' | 'Special' | 'Hit' | 'Death'): THREE.AnimationClip | null {
+    const tracks: THREE.KeyframeTrack[] = [];
+    const addBone = (boneName: string, axis: THREE.Vector3, times: number[], angles: number[]) => {
+      const bone = root.getObjectByName(boneName);
+      if (!bone || times.length !== angles.length) return;
+      const rest = bone.quaternion.clone();
+      const values: number[] = [];
+      for (const angle of angles) {
+        const delta = new THREE.Quaternion().setFromAxisAngle(axis, angle);
+        const frame = rest.clone().multiply(delta);
+        values.push(frame.x, frame.y, frame.z, frame.w);
+      }
+      tracks.push(new THREE.QuaternionKeyframeTrack(bone.name + '.quaternion', times, values));
+    };
+
+    if (name === 'Attack') {
+      const times = [0, 0.08, 0.20, 0.34, 0.44];
+      addBone('spine_02', new THREE.Vector3(0, 1, 0), times, [0, -0.08, 0.12, -0.04, 0]);
+      addBone('upperarm_r', new THREE.Vector3(0, 0, 1), times, [0, 0.24, 0.78, 0.25, 0]);
+      addBone('lowerarm_r', new THREE.Vector3(1, 0, 0), times, [0, -0.18, -0.92, -0.12, 0]);
+      addBone('hand_r', new THREE.Vector3(1, 0, 0), times, [0, -0.10, 0.22, 0, 0]);
+    } else if (name === 'Special') {
+      const times = [0, 0.12, 0.28, 0.52, 0.72];
+      addBone('spine_02', new THREE.Vector3(0, 1, 0), times, [0, -0.14, 0.20, 0.08, 0]);
+      addBone('upperarm_l', new THREE.Vector3(0, 0, 1), times, [0, -0.36, -1.05, -0.40, 0]);
+      addBone('lowerarm_l', new THREE.Vector3(1, 0, 0), times, [0, 0.10, -0.75, -0.18, 0]);
+      addBone('upperarm_r', new THREE.Vector3(0, 0, 1), times, [0, 0.30, 0.90, 0.38, 0]);
+      addBone('lowerarm_r', new THREE.Vector3(1, 0, 0), times, [0, -0.10, -0.70, -0.20, 0]);
+    } else if (name === 'Hit') {
+      const times = [0, 0.06, 0.17, 0.32];
+      addBone('pelvis', new THREE.Vector3(0, 1, 0), times, [0, 0.08, -0.05, 0]);
+      addBone('spine_02', new THREE.Vector3(1, 0, 0), times, [0, -0.26, 0.08, 0]);
+      addBone('upperarm_l', new THREE.Vector3(0, 0, 1), times, [0, -0.36, -0.12, 0]);
+      addBone('upperarm_r', new THREE.Vector3(0, 0, 1), times, [0, 0.36, 0.12, 0]);
+    } else {
+      const times = [0, 0.18, 0.55, 1.08];
+      addBone('pelvis', new THREE.Vector3(1, 0, 0), times, [0, 0.18, 0.62, 0.78]);
+      addBone('spine_02', new THREE.Vector3(1, 0, 0), times, [0, -0.10, -0.42, -0.58]);
+      addBone('spine_03', new THREE.Vector3(0, 0, 1), times, [0, -0.08, -0.22, -0.28]);
+      addBone('head', new THREE.Vector3(1, 0, 0), times, [0, 0.08, 0.25, 0.34]);
+      addBone('upperarm_l', new THREE.Vector3(0, 0, 1), times, [0, -0.22, -0.52, -0.58]);
+      addBone('upperarm_r', new THREE.Vector3(0, 0, 1), times, [0, 0.22, 0.52, 0.58]);
+    }
+    if (!tracks.length) return null;
+    const duration = name === 'Attack' ? 0.44 : name === 'Special' ? 0.72 : name === 'Hit' ? 0.32 : 1.08;
+    return new THREE.AnimationClip('makehuman-' + name, duration, tracks);
+  }
+
+  private async attachMakeHumanOperatorModel(
+    id: CharacterId, group: THREE.Group, sequence: number, remote: boolean, preserved: readonly THREE.Object3D[],
+  ) {
+    const isCurrent = () => remote
+      ? sequence === this.remoteGobkitSequence && this.remotePlayerGroup === group
+      : sequence === this.playerGobkitSequence && this.playerGroup === group;
+    try {
+      const style = MAKEHUMAN_OPERATOR_STYLES[id];
+      const actor = await createMakeHumanActor(style, 1.58);
+      if (!isCurrent() || group.parent !== this.levelRoot) return;
+      actor.root.position.y -= group.position.y;
+      actor.root.name = 'makehuman-operator-' + id + '-' + style;
+      this.hideProceduralVisuals(group, preserved);
+      group.add(actor.root);
+      const track = this.createMakeHumanAnimationTrack(actor.root, actor.clips, group.position);
+      if (remote) this.remoteGobkitTrack = track;
+      else this.playerGobkitTrack = track;
+      console.info('[MakeHuman] Loaded operator:', id, style);
+    } catch (error) {
+      if (!isCurrent() || group.parent !== this.levelRoot) return;
+      console.warn('[MakeHuman] Operator asset unavailable; using Gobkit fallback:', id, error);
+      void this.attachGobkitOperatorModel(id, group, sequence, remote, preserved);
+    }
+  }
+
+  private async attachMakeHumanEnemyModel(enemy: EnemyItem, style: MakeHumanStyleId) {
+    try {
+      const actor = await createMakeHumanActor(style, 1.48);
+      if (!this.enemies.includes(enemy) || !enemy.mesh || enemy.mesh.parent !== this.levelRoot || enemy.state === 'defeated') {
+        actor.root.traverse((object) => {
+          if (!(object instanceof THREE.Mesh)) return;
+          const materials = Array.isArray(object.material) ? object.material : [object.material];
+          materials.forEach((material) => material.dispose());
+        });
+        return;
+      }
+      actor.root.position.y -= enemy.mesh.position.y;
+      actor.root.name = 'makehuman-enemy-' + style + '-' + enemy.id;
+      const overlays = [
+        enemy.hpBar, enemy.hpFill, enemy.threatRing, enemy.shieldRing, enemy.auraRing,
+        enemy.speechMesh, enemy.propeller, ...(enemy.bikeWheels || []),
+      ].filter((object): object is THREE.Object3D => object instanceof THREE.Object3D);
+      this.hideProceduralVisuals(enemy.mesh as THREE.Group, overlays);
+      (enemy.mesh as THREE.Group).add(actor.root);
+      enemy.legL = undefined;
+      enemy.legR = undefined;
+      enemy.armL = undefined;
+      enemy.armR = undefined;
+      enemy.head = undefined;
+      this.gobkitEnemyTracks.set(enemy, this.createMakeHumanAnimationTrack(actor.root, actor.clips, enemy.mesh.position));
+    } catch (error) {
+      console.warn('[MakeHuman] Enemy asset unavailable; using Gobkit fallback:', enemy.type, style, error);
+      const fallback = ENEMY_GOBKIT_MODELS[enemy.type];
+      if (fallback) void this.attachGobkitEnemyModel(enemy, fallback);
+    }
+  }
+
   private async attachGobkitOperatorModel(
     id: CharacterId, group: THREE.Group, sequence: number, remote: boolean,
     preserved: readonly THREE.Object3D[],
@@ -1609,11 +1738,15 @@ export class PaleciakiGameEngine {
 
     const activeEnemies = new Set(this.enemies);
     for (const enemy of this.enemies) {
+      const humanStyle = MAKEHUMAN_ENEMY_STYLES[enemy.type];
       const modelId = ENEMY_GOBKIT_MODELS[enemy.type];
-      if (!modelId || !enemy.mesh) continue;
+      if ((!humanStyle && !modelId) || !enemy.mesh) continue;
       if (!this.requestedGobkitEnemies.has(enemy)) {
         this.requestedGobkitEnemies.add(enemy);
-        if (enemy.state !== 'defeated') void this.attachGobkitEnemyModel(enemy, modelId);
+        if (enemy.state !== 'defeated') {
+          if (humanStyle) void this.attachMakeHumanEnemyModel(enemy, humanStyle);
+          else if (modelId) void this.attachGobkitEnemyModel(enemy, modelId);
+        }
       }
       const track = this.gobkitEnemyTracks.get(enemy);
       if (!track || enemy.mesh.visible === false) continue;
@@ -1729,7 +1862,7 @@ export class PaleciakiGameEngine {
     this.playerGroup.position.copy(this.playerPos);
     this.levelRoot.add(this.playerGroup);
     const sequence = ++this.playerGobkitSequence;
-    void this.attachGobkitOperatorModel(this.currentCharacterId, this.playerGroup, sequence, false, [built.shadow]);
+    void this.attachMakeHumanOperatorModel(this.currentCharacterId, this.playerGroup, sequence, false, [built.shadow]);
   }
 
   public startTitle() {
@@ -2273,7 +2406,7 @@ export class PaleciakiGameEngine {
     this.levelRoot.add(this.remotePlayerGroup);
     const sequence = ++this.remoteGobkitSequence;
     const preserved = [marker, hpBarGroup, badgeMesh, groundRing, this.remotePlayerMeshBuilt.shadow];
-    void this.attachGobkitOperatorModel(def.id, this.remotePlayerGroup, sequence, true, preserved);
+    void this.attachMakeHumanOperatorModel(def.id, this.remotePlayerGroup, sequence, true, preserved);
   }
 
 
