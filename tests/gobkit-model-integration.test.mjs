@@ -78,17 +78,28 @@ test('the build downloader validates CC0, rigging, animation clips and GLB binar
   assert.match(pkg, /"predev": "node scripts\/fetch-gobkit-assets\.mjs && node scripts\/fetch-makehuman-assets\.mjs && node scripts\/fetch-polyhaven-assets\.mjs"/);
 });
 
-test('Survival actors and both PvP operator slots use the new models without changing combat APIs', async () => {
-  const [game, arena] = await Promise.all([
-    read('../src/game.ts'),
-    read('../src/pvpArena.ts'),
-  ]);
+test('playable operators retain the original stylized models in Survival and both PvP slots', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /const built = createCharacterModel\(this\.charDef\)/);
+  assert.match(game, /const built = createCharacterModel\(def\)/);
+  assert.doesNotMatch(game, /void this\.attachMakeHumanOperatorModel/);
+  assert.doesNotMatch(game, /void this\.attachMakeHumanEnemyModel/);
   assert.match(game, /ENEMY_GOBKIT_MODELS\[enemy\.type\]/);
-  assert.match(game, /attachMakeHumanOperatorModel\(this\.currentCharacterId/);
-  assert.match(game, /attachMakeHumanOperatorModel\(def\.id, this\.remotePlayerGroup/);
-  assert.match(game, /enemy\.legL = undefined/);
-  assert.match(game, /this\.hideProceduralVisuals/);
-  assert.match(arena, /export function createDefaultPvpObstacles/);
+  assert.match(game, /void this\.attachGobkitEnemyModel\(enemy, modelId\)/);
+  assert.match(game, /createGobkitEnemyRoleSilhouette\(requestedType\)/);
+});
+
+test('CC0 enemy rigs receive a clear caricature silhouette matching their warehouse role', async () => {
+  const silhouettes = await read('../src/gobkitEnemySilhouettes.ts');
+  const game = await read('../src/game.ts');
+  for (const role of ['architect', 'inspector', 'kurier', 'handlowiec', 'customer', 'monter', 'serwisant', 'zombie_pracownik']) {
+    assert.match(silhouettes, new RegExp("case '" + role + "'"));
+  }
+  assert.match(silhouettes, /oversized sample fan/);
+  assert.match(silhouettes, /exposed ribs/);
+  assert.match(silhouettes, /sickly eyes/);
+  assert.match(game, /createGobkitEnemyRoleSilhouette/);
+  assert.match(game, /actorRoleSilhouette === true/);
 });
 
 
