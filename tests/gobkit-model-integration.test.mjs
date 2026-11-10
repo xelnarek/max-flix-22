@@ -1,0 +1,88 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { readFile } from 'node:fs/promises';
+
+const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
+
+test('the Gobkit roster maps all five operators to distinct rigged 3D models', async () => {
+  const [registry, characters] = await Promise.all([
+    read('../src/gobkitAssets.ts'),
+    read('../src/characters.ts'),
+  ]);
+  for (const id of ['storemanager', 'firechief', 'stockclerk', 'baggagehandler', 'securityguard']) {
+    assert.ok(registry.includes(id + ".glb"), 'missing model file: ' + id);
+  }
+  for (const id of ['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr']) {
+    assert.match(registry, new RegExp('\\b' + id + ':'));
+  }
+  assert.match(characters, /visualModelName: 'Store Manager/);
+  assert.match(characters, /visualModelName: 'Fire Chief/);
+  assert.match(characters, /visualModelName: 'Stock Clerk/);
+  assert.match(characters, /visualModelName: 'Baggage Handler/);
+  assert.match(characters, /visualModelName: 'Security Guard/);
+});
+
+test('Survival enemy families have dedicated role-matched GLB variants', async () => {
+  const registry = await read('../src/gobkitAssets.ts');
+  for (const [enemy, model] of [
+    ['customer', 'shoplifter'],
+    ['architect', 'officemanager'],
+    ['kurier', 'foodcourier'],
+    ['handlowiec', 'salesrep'],
+    ['inspector', 'hazmattech'],
+    ['serwisant', 'forcibleentryfirefighter'],
+    ['zombie_pracownik', 'stitchedbrute'],
+    ['mutant_gamma_forklift', 'bloodironjuggernaut'],
+    ['radioactive_pip', 'nightwitch'],
+    ['cyber_salesman', 'androidcommander'],
+    ['walczak', 'werewolfcaptain'],
+    ['bosman_krakow', 'bloodirongrunt'],
+  ]) {
+    assert.match(registry, new RegExp('\\b' + enemy + ': \\'' + model + '\\''));
+    assert.ok(registry.includes(model + '.glb'), 'missing enemy GLB: ' + model);
+  }
+});
+
+test('runtime clones skinned models safely and drives named locomotion/combat clips', async () => {
+  const [registry, game] = await Promise.all([
+    read('../src/gobkitAssets.ts'),
+    read('../src/game.ts'),
+  ]);
+  assert.match(registry, /SkeletonUtils\.js/);
+  assert.match(registry, /cloneSkinnedScene\(gltf\.scene\)/);
+  assert.match(registry, /new GLTFLoader\(\)/);
+  assert.match(game, /new THREE\.AnimationMixer\(root\)/);
+  assert.match(game, /'Idle'/);
+  assert.match(game, /'Walk'/);
+  assert.match(game, /'Run'/);
+  assert.match(game, /'Death'/);
+  assert.match(game, /'Hit'/);
+  assert.match(game, /this\.updateGobkitAnimations\(simDt\)/);
+});
+
+test('the build downloader validates CC0, rigging, animation clips and GLB binary headers', async () => {
+  const [script, pkg] = await Promise.all([
+    read('../scripts/fetch-gobkit-assets.mjs'),
+    read('../package.json'),
+  ]);
+  assert.match(script, /https:\/\/gobkit\.com\/api\/free/);
+  assert.match(script, /CC0 1\.0/);
+  assert.match(script, /model\.rigged !== true/);
+  assert.match(script, /'Idle', 'Walk', 'Run', 'Death', 'Hit'/);
+  assert.match(script, /subarray\(0, 4\)\.toString\('ascii'\) !== 'glTF'/);
+  assert.match(pkg, /"prebuild": "node scripts\/fetch-gobkit-assets\.mjs --strict"/);
+  assert.match(pkg, /"predev": "node scripts\/fetch-gobkit-assets\.mjs"/);
+});
+
+test('Survival actors and both PvP operator slots use the new models without changing combat APIs', async () => {
+  const [game, arena] = await Promise.all([
+    read('../src/game.ts'),
+    read('../src/pvpArena.ts'),
+  ]);
+  assert.match(game, /ENEMY_GOBKIT_MODELS\[enemy\.type\]/);
+  assert.match(game, /attachGobkitOperatorModel\(this\.currentCharacterId/);
+  assert.match(game, /attachGobkitOperatorModel\(def\.id, this\.remotePlayerGroup/);
+  assert.match(game, /enemy\.legL = undefined/);
+  assert.match(game, /this\.hideProceduralVisuals/);
+  assert.match(arena, /export function createDefaultPvpObstacles/);
+});
