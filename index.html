@@ -403,7 +403,7 @@
         </div>
       </div>
 
-      <div id="title-screen" class="game-screen">
+      <div id="title-screen" class="game-screen" data-active-menu-tab="tab-team">
         <div class="title-backdrop"></div>
         <div class="title-sheet">
           <div class="menu-top-header">
@@ -429,6 +429,12 @@
                 <svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg>
               </span>
               <span class="tab-label">WYBÓR MAPY</span>
+            </button>
+            <button class="menu-tab-btn pvp-menu-tab" data-tab="tab-pvp" aria-controls="tab-pvp" aria-label="Arena PvP 1 na 1">
+              <span class="tab-icon" aria-hidden="true">
+                <svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m4 4 6 6m-3-8 5 5m8 9-6-6m8 4-5-5M5 19l4-4m-2 7 5-5m7-12-4 4m7-2-5 5"/></svg>
+              </span>
+              <span class="tab-label">ARENA PVP</span>
             </button>
             <button class="menu-tab-btn" data-tab="tab-enemies">
               <span class="tab-icon">
@@ -1221,6 +1227,35 @@
               </div>
               <div class="survival-map-preview" aria-live="polite"><strong id="survival-map-preview-title">ROTACJA AREN</strong><span id="survival-map-preview-detail">Losowanie bez powtórzenia poprzedniej mapy. Każda arena ma własny układ osłon.</span></div>
               <p id="survival-map-picker-hint" class="survival-map-picker-hint">Wybierz kafelek, aby zobaczyć zasady i charakter trasy.</p>
+              </section>
+            </div>
+
+            <div id="tab-pvp" class="tab-panel pvp-menu-panel" aria-label="Ustawienia i zasady areny PvP">
+              <section class="pvp-menu-hero">
+                <div class="pvp-menu-kicker">TRYB KOMPETYCYJNY / 01 VS 01</div>
+                <h2>ARENA PVP</h2>
+                <p>Osobny tryb pojedynków. Tutaj liczy się precyzja, pozycja i właściwy moment strzału — nie automatyczne namierzanie.</p>
+                <div class="pvp-menu-status-line"><span class="pvp-menu-status-dot"></span><strong>RĘCZNE CELOWANIE AKTYWNE</strong><span>TOUCH / MYSZ / KLAWIATURA</span></div>
+              </section>
+
+              <section class="pvp-menu-feature-grid" aria-label="Zasady areny PvP">
+                <article class="pvp-menu-feature-card">
+                  <span class="pvp-menu-feature-icon">⌖</span>
+                  <div><strong>CELOWANIE MANUALNE</strong><p>Kierunek ataku wyznaczasz sam. Prawy drążek dotykowy lub mysz decydują o trajektorii strzału.</p></div>
+                </article>
+                <article class="pvp-menu-feature-card">
+                  <span class="pvp-menu-feature-icon">⚖</span>
+                  <div><strong>RÓWNE WARUNKI</strong><p>Symetryczna arena, wspólna pula zdrowia i osobne zdolności operatorów. Survivalowe premie nie przenikają do PvP.</p></div>
+                </article>
+                <article class="pvp-menu-feature-card">
+                  <span class="pvp-menu-feature-icon">◎</span>
+                  <div><strong>POJEDYNEK LUB TRENING</strong><p>Wyszukaj przeciwnika, utwórz pokój albo rozpocznij lokalny trening z botem.</p></div>
+                </article>
+              </section>
+
+              <section class="pvp-menu-roster-note">
+                <span class="pvp-menu-roster-mark">05</span>
+                <div><strong>PIĘCIU OPERATORÓW • PIĘĆ STYLÓW WALKI</strong><p>Wybór postaci i nicku wykonasz w lobby. Konfiguracja PvP pozostaje niezależna od wyboru mapy i ulepszeń Survival.</p></div>
               </section>
             </div>
           </div>
