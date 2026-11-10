@@ -621,3 +621,36 @@
     transition: none !important;
   }
 }
+
+
+/* Display only the control note belonging to the active game mode. */
+#title-screen[data-active-menu-tab="tab-map"] .menu-controls-hint,
+#title-screen[data-active-menu-tab="tab-pvp"] .menu-controls-hint {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 5px 8px 0;
+  color: #90a8ba;
+  font: 700 8px/1.4 "JetBrains Mono", monospace;
+  text-align: center;
+  letter-spacing: .015em;
+}
+
+#title-screen .menu-controls-hint-survival,
+#title-screen .menu-controls-hint-pvp {
+  display: none !important;
+}
+
+#title-screen[data-active-menu-tab="tab-map"] .menu-controls-hint-survival,
+#title-screen[data-active-menu-tab="tab-pvp"] .menu-controls-hint-pvp {
+  display: inline !important;
+}
+
+@media (max-width: 600px) {
+  #title-screen[data-active-menu-tab="tab-map"] .menu-controls-hint,
+  #title-screen[data-active-menu-tab="tab-pvp"] .menu-controls-hint {
+    padding-top: 4px;
+    font-size: 7px;
+  }
+}
