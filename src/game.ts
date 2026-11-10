@@ -36,7 +36,7 @@ import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoi
 import { calculateEnemyObstacleAvoidanceVector } from './enemyNavigation.ts';
 import { createEnemyHitReaction, getEnemyHitPulse, getEnemyImpactBurstProfile } from './enemyCombatFeedback.ts';
 import { ENEMY_VISUAL_PROFILES } from './enemyVisualProfiles.ts';
-import { setProceduralJointRotation, setProceduralLimbPose } from './proceduralActorAnimation.ts';
+import { addProceduralLimbPose, getProceduralHitPulse, setProceduralJointRotation, setProceduralLimbPose } from './proceduralActorAnimation.ts';
 import { isEffectiveBossLaneDodge, isInsideBossAttackLane, isWithinBossImpactRadius } from './combatTelegraphs.ts';
 import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
 import { chooseSurvivalEventSpawnPoint } from './survivalSpawn.ts';
@@ -502,6 +502,9 @@ export class PaleciakiGameEngine {
   private collectedVipCount = 0;
   private totalVipCount = 0;
   private invulnerableTimer = 0;
+  private playerHitReactTimer = 0;
+  private playerHitReactDuration = 0.36;
+  private playerHitReactDirection: -1 | 1 = 1;
   private abilityCooldownState: AbilityCooldownState = createAbilityCooldown(0);
   private abilityCooldownUiTimer = 0;
   private abilityCooldownLastProgress = -1;
@@ -10824,6 +10827,9 @@ export class PaleciakiGameEngine {
     if (this.specialSwingTimer > 0) {
       this.specialSwingTimer = Math.max(0, this.specialSwingTimer - dt);
     }
+    if (this.playerHitReactTimer > 0) {
+      this.playerHitReactTimer = Math.max(0, this.playerHitReactTimer - dt);
+    }
 
     const gravityMultiplier = this.playerVel.y > 0
       ? motionProfile.riseGravityMultiplier
@@ -11082,6 +11088,13 @@ export class PaleciakiGameEngine {
           this.playerAccessory.rotation.x += attackProfile.toolPitch * strike;
           this.playerAccessory.rotation.z += attackProfile.toolRoll * strike;
         }
+      if (this.playerHitReactTimer > 0 && this.playerHitReactDuration > 0) {
+        const hit = getProceduralHitPulse(this.playerHitReactTimer, this.playerHitReactDuration);
+        addProceduralLimbPose(this.leftArm, 0.46 * hit, -0.14 * this.playerHitReactDirection * hit);
+        addProceduralLimbPose(this.rightArm, 0.46 * hit, 0.14 * this.playerHitReactDirection * hit);
+        this.playerGroup.rotation.x += 0.065 * hit;
+        this.playerGroup.rotation.z += 0.085 * this.playerHitReactDirection * hit;
+      }
       }
     }
 
@@ -11837,10 +11850,18 @@ export class PaleciakiGameEngine {
     const now = performance.now();
     if (now < (this.enemyAttackAnimationUntil.get(enemy) ?? 0)) return;
     this.enemyAttackAnimationUntil.set(enemy, now + 720);
+    const poseDuration = THREE.MathUtils.clamp(
+      Number.isFinite(durationSeconds) ? durationSeconds : 0.48,
+      0.12,
+      1.2,
+    );
+    enemy.attackPoseDuration = poseDuration;
+    enemy.attackPoseTimer = poseDuration;
+    enemy.attackPoseSide = ((enemy.aiSlot ?? enemy.id.length) % 2 === 0 ? 1 : -1);
     const track = this.gobkitEnemyTracks.get(enemy) || null;
     if (track) {
       this.enemyPendingAttackUntil.delete(enemy);
-      this.requestGobkitAction(track, 'Attack', durationSeconds);
+      this.requestGobkitAction(track, 'Attack', poseDuration);
     } else {
       this.enemyPendingAttackUntil.set(enemy, now + durationSeconds * 1000);
     }
@@ -15821,7 +15842,15 @@ export class PaleciakiGameEngine {
       return;
     }
     this.hp = Math.max(0, this.hp - damageResolution.damage);
+    this.playerHitReactDuration = 0.36;
+    this.playerHitReactTimer = this.playerHitReactDuration;
+    this.playerHitReactDirection = this.playerHitReactDirection === 1 ? -1 : 1;
     this.requestGobkitAction(this.playerGobkitTrack, this.hp <= 0 ? 'Death' : 'Hit', 0.34);
+    if (this.hp <= 0 && this.playerGroup) {
+      // The original bespoke operator models have no imported Death clip.
+      this.playerGroup.rotation.x += 0.32;
+      this.playerGroup.rotation.z += 0.42 * this.playerHitReactDirection;
+    }
     sound.playHit();
     this.triggerBloomPulse(0.45);
     this.callbacks.onHpUpdate(this.hp, this.maxHp);
