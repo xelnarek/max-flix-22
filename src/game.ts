@@ -264,6 +264,31 @@ export interface GameCallbacks {
   onPvpMatchEnd?: (state: PvpArenaState, localSlot: 'p1' | 'p2') => void;
 }
 
+/**
+ * The game controller owns actor translation. Clone imported clips while
+ * freezing any animated root.position track at its first key, preventing
+ * animation root motion from visually separating a rig from its hitbox.
+ */
+function cloneRootMotionFreeClip(sourceClip: THREE.AnimationClip): THREE.AnimationClip {
+  const tracks = sourceClip.tracks.map((sourceTrack) => {
+    if (!sourceTrack.name.toLowerCase().includes('root.position') ||
+        !(sourceTrack instanceof THREE.VectorKeyframeTrack)) {
+      return sourceTrack.clone();
+    }
+    const cleaned = sourceTrack.clone() as THREE.VectorKeyframeTrack;
+    const firstX = cleaned.values[0] ?? 0;
+    const firstY = cleaned.values[1] ?? 0;
+    const firstZ = cleaned.values[2] ?? 0;
+    for (let index = 3; index < cleaned.values.length; index += 3) {
+      cleaned.values[index] = firstX;
+      cleaned.values[index + 1] = firstY;
+      cleaned.values[index + 2] = firstZ;
+    }
+    return cleaned;
+  });
+  return new THREE.AnimationClip(sourceClip.name, sourceClip.duration, tracks, sourceClip.blendMode);
+}
+
 interface GobkitAnimationTrack {
   root: THREE.Group;
   mixer: THREE.AnimationMixer;
@@ -1486,7 +1511,10 @@ export class PaleciakiGameEngine {
   ): GobkitAnimationTrack {
     const mixer = new THREE.AnimationMixer(root);
     const actions = new Map<string, THREE.AnimationAction>();
-    for (const clip of gltf.animations) actions.set(clip.name, mixer.clipAction(clip));
+    for (const clip of gltf.animations) {
+      const safeClip = cloneRootMotionFreeClip(clip);
+      actions.set(safeClip.name, mixer.clipAction(safeClip));
+    }
     const track: GobkitAnimationTrack = {
       root, mixer, actions, currentAction: '', lastPosition: initialPosition.clone(),
       oneShotRemaining: 0, oneShotPriority: 0, oneShotAction: '',
@@ -1655,27 +1683,7 @@ export class PaleciakiGameEngine {
     for (const [alias, sourceName] of Object.entries(aliases)) {
       const sourceClip = THREE.AnimationClip.findByName(clips, sourceName);
       if (!sourceClip) continue;
-      // World movement and jumping are owned by the game physics/controller.
-      // Freeze authored root-position tracks in every locomotion clip so baked
-      // root motion cannot make the visible rig drift away from its hitbox or
-      // double the jump arc. Keep the first key's bind-space offset unchanged.
-      const tracks = sourceClip.tracks.map((sourceTrack) => {
-        const isRootTranslation = sourceTrack.name.toLowerCase().includes('root.position');
-        if (isRootTranslation && sourceTrack instanceof THREE.VectorKeyframeTrack) {
-          const cleaned = sourceTrack.clone() as THREE.VectorKeyframeTrack;
-          const firstX = cleaned.values[0] ?? 0;
-          const firstY = cleaned.values[1] ?? 0;
-          const firstZ = cleaned.values[2] ?? 0;
-          for (let index = 3; index < cleaned.values.length; index += 3) {
-            cleaned.values[index] = firstX;
-            cleaned.values[index + 1] = firstY;
-            cleaned.values[index + 2] = firstZ;
-          }
-          return cleaned;
-        }
-        return sourceTrack.clone();
-      });
-      const clip = new THREE.AnimationClip(sourceClip.name, sourceClip.duration, tracks);
+      const clip = cloneRootMotionFreeClip(sourceClip);
       actions.set(alias, mixer.clipAction(clip));
     }
     for (const name of ['Attack', 'Special', 'Hit', 'Death'] as const) {
