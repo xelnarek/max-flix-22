@@ -126,5 +126,5 @@ export function getGobkitClip(
   gltf: LoadedGobkitModel,
   clipName: 'Idle' | 'Walk' | 'Run' | 'Death' | 'Hit' | 'Attack' | 'Special',
 ): THREE.AnimationClip | undefined {
-  return THREE.AnimationClip.findByName(gltf.animations, clipName);
+  return THREE.AnimationClip.findByName(gltf.animations, clipName) || undefined;
 }
