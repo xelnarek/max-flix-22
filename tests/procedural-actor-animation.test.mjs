@@ -33,6 +33,30 @@ test('procedural limb gait rotates around the upper joint and keeps the joint an
   material.dispose();
 });
 
+test('group-based operator shoulder and hip pivots stay at the authored group origin', () => {
+  const pivot = new THREE.Group();
+  pivot.position.set(-0.1, 0.35, 0);
+  const limbMesh = new THREE.Mesh(
+    new THREE.CapsuleGeometry(0.06, 0.24, 3, 8),
+    new THREE.MeshBasicMaterial(),
+  );
+  limbMesh.position.y = -0.16;
+  pivot.add(limbMesh);
+  pivot.updateMatrixWorld(true);
+  const origin = new THREE.Vector3(0, 0, 0).applyMatrix4(pivot.matrixWorld);
+
+  setProceduralLimbPose(pivot, 0.68, -0.12);
+  pivot.updateMatrixWorld(true);
+  const posedOrigin = new THREE.Vector3(0, 0, 0).applyMatrix4(pivot.matrixWorld);
+  assert.ok(posedOrigin.distanceTo(origin) < 1e-7, 'authored shoulder/hip origin must not drift');
+  assert.ok(Math.abs(pivot.rotation.x - 0.68) < 1e-8);
+  assert.ok(Math.abs(pivot.rotation.z + 0.12) < 1e-8);
+
+  setProceduralLimbPose(pivot, 0, 0);
+  assert.ok(Math.abs(pivot.position.x + 0.1) < 1e-8);
+  assert.ok(Math.abs(pivot.position.y - 0.35) < 1e-8);
+});
+
 test('additive recoil preserves the current gait or attack pose without accumulating drift', () => {
   const limb = new THREE.Mesh(
     new THREE.BoxGeometry(0.16, 0.42, 0.14),
