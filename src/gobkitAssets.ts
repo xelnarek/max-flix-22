@@ -76,9 +76,9 @@ export function loadGobkitModel(id: GobkitModelId): Promise<LoadedGobkitModel> {
 
 export function cloneGobkitModel(gltf: LoadedGobkitModel): THREE.Group {
   const root = cloneSkinnedScene(gltf.scene) as THREE.Group;
-  // Geometry/material instances are local to this actor so normal despawn and
-  // character-switch cleanup cannot invalidate a different copy's rig. Texture
-  // maps stay shared through the cached GLTF to keep GPU memory predictable.
+  // Skeletons and scene nodes are cloned per actor. Immutable geometry and
+  // texture maps stay shared, while materials are cloned for actor-local tuning
+  // and deterministic cleanup.
   root.traverse((object) => {
     if (!(object instanceof THREE.Mesh)) return;
     // Skinned actors only animate bones; geometry stays immutable and can be
