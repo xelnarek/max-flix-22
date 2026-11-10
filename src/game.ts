@@ -80,6 +80,10 @@ import { applyPerfectDodgeCounterattack, getSurvivalDashCooldownSeconds, getSurv
 import { advanceSurvivalMomentum, createSurvivalMomentumState, getSurvivalMomentumDamageMultiplier, getSurvivalMomentumMoveMultiplier, getSurvivalMomentumRateMultiplier, registerSurvivalKill, type SurvivalMomentumState } from './survivalMomentum.ts';
 import { selectSurvivalAutoTarget } from './survivalTargeting.ts';
 import { CHARACTERS } from './characters.ts';
+import {
+  CHARACTER_GOBKIT_MODELS, ENEMY_GOBKIT_MODELS, cloneGobkitModel,
+  fitGobkitModel, loadGobkitModel, type GobkitModelId,
+} from './gobkitAssets.ts';
 import { NEUTRAL_CHARACTER_COMBAT_BONUSES, type CharacterCombatBonuses } from './characterProgression.ts';
 import { getCharacterMotionProfile } from './characterMotion.ts';
 import { getAttackPoseStrength, getCharacterAttackMotionProfile } from './characterAttackMotion.ts';
@@ -248,6 +252,14 @@ export interface GameCallbacks {
   onSurvivalDashUpdate?: (progress: number, ready: boolean, remainingSeconds: number) => void;
   onPvpUpdate?: (state: PvpArenaState, localSlot: 'p1' | 'p2') => void;
   onPvpMatchEnd?: (state: PvpArenaState, localSlot: 'p1' | 'p2') => void;
+}
+
+interface GobkitAnimationTrack {
+  root: THREE.Group;
+  mixer: THREE.AnimationMixer;
+  actions: Map<string, THREE.AnimationAction>;
+  currentAction: string;
+  lastPosition: THREE.Vector3;
 }
 
 export class PaleciakiGameEngine {
@@ -802,6 +814,12 @@ export class PaleciakiGameEngine {
 
   // 3D Player Meshes
   private playerGroup: THREE.Group | null = null;
+  private playerGobkitTrack: GobkitAnimationTrack | null = null;
+  private remoteGobkitTrack: GobkitAnimationTrack | null = null;
+  private playerGobkitSequence = 0;
+  private remoteGobkitSequence = 0;
+  private requestedGobkitEnemies = new WeakSet<EnemyItem>();
+  private gobkitEnemyTracks = new Map<EnemyItem, GobkitAnimationTrack>();
   private leftLeg: THREE.Group | null = null;
   private rightLeg: THREE.Group | null = null;
   private leftArm: THREE.Group | null = null;
@@ -1396,7 +1414,7 @@ export class PaleciakiGameEngine {
     };
 
     root.traverse((object) => {
-      if (!(object instanceof THREE.Mesh)) return;
+      if (!(object instanceof THREE.Mesh) || object.userData.gobkitAsset === true) return;
       if (object.geometry) geometries.add(object.geometry);
       const meshMaterials = Array.isArray(object.material) ? object.material : [object.material];
       for (const material of meshMaterials) collectMaterial(material);
@@ -1407,7 +1425,148 @@ export class PaleciakiGameEngine {
     for (const material of materials) material.dispose();
   }
 
+  private stopGobkitTrack(track: GobkitAnimationTrack | null) {
+    if (!track) return;
+    track.mixer.stopAllAction();
+    track.root.removeFromParent();
+  }
+
+  private createGobkitAnimationTrack(
+    gltf: Awaited<ReturnType<typeof loadGobkitModel>>,
+    root: THREE.Group,
+    initialPosition: THREE.Vector3,
+  ): GobkitAnimationTrack {
+    const mixer = new THREE.AnimationMixer(root);
+    const actions = new Map<string, THREE.AnimationAction>();
+    for (const clip of gltf.animations) actions.set(clip.name, mixer.clipAction(clip));
+    const track: GobkitAnimationTrack = { root, mixer, actions, currentAction: '', lastPosition: initialPosition.clone() };
+    this.playGobkitAction(track, 'Idle');
+    return track;
+  }
+
+  private playGobkitAction(track: GobkitAnimationTrack, requestedName: string) {
+    const name = track.actions.has(requestedName) ? requestedName : 'Idle';
+    const next = track.actions.get(name);
+    if (!next || track.currentAction === name) return;
+    const previous = track.actions.get(track.currentAction);
+    const oneShot = name === 'Death' || name === 'Hit' || name === 'Attack' || name === 'Special';
+    next.reset();
+    next.enabled = true;
+    next.setLoop(oneShot ? THREE.LoopOnce : THREE.LoopRepeat, oneShot ? 1 : Infinity);
+    next.clampWhenFinished = oneShot;
+    next.fadeIn(0.12).play();
+    if (previous && previous !== next) previous.fadeOut(0.12);
+    track.currentAction = name;
+  }
+
+  private hideProceduralVisuals(group: THREE.Group, preserved: readonly THREE.Object3D[]) {
+    for (const object of preserved) object.traverse((child) => { child.userData.gobkitKeep = true; });
+    group.traverse((object) => {
+      if (object === group || object.userData.gobkitKeep === true) return;
+      if (object.name === 'characterOutlineShell') { object.visible = false; return; }
+      if (object instanceof THREE.Mesh) object.visible = false;
+    });
+  }
+
+  private async attachGobkitOperatorModel(
+    id: CharacterId, group: THREE.Group, sequence: number, remote: boolean,
+    preserved: readonly THREE.Object3D[],
+  ) {
+    const modelId = CHARACTER_GOBKIT_MODELS[id];
+    try {
+      const gltf = await loadGobkitModel(modelId);
+      const isCurrent = remote
+        ? sequence === this.remoteGobkitSequence && this.remotePlayerGroup === group
+        : sequence === this.playerGobkitSequence && this.playerGroup === group;
+      if (!isCurrent || group.parent !== this.levelRoot) return;
+      const root = cloneGobkitModel(gltf);
+      fitGobkitModel(root, 1.52);
+      root.position.y -= group.position.y;
+      root.name = 'gobkit-operator-' + modelId;
+      this.hideProceduralVisuals(group, preserved);
+      group.add(root);
+      const track = this.createGobkitAnimationTrack(gltf, root, group.position);
+      if (remote) this.remoteGobkitTrack = track;
+      else this.playerGobkitTrack = track;
+    } catch (error) {
+      console.warn('[Gobkit] Operator model unavailable; keeping procedural fallback:', modelId, error);
+    }
+  }
+
+  private async attachGobkitEnemyModel(enemy: EnemyItem, modelId: GobkitModelId) {
+    try {
+      const gltf = await loadGobkitModel(modelId);
+      if (!this.enemies.includes(enemy) || !enemy.mesh ||
+          enemy.mesh.parent !== this.levelRoot || enemy.state === 'defeated') return;
+      const root = cloneGobkitModel(gltf);
+      const largeEnemy = enemy.type === 'walczak' || enemy.type === 'krol_leto' ||
+        enemy.type === 'bosman_krakow' || enemy.type === 'mutant_gamma_forklift' ||
+        enemy.type === 'radioactive_pip';
+      fitGobkitModel(root, largeEnemy ? 1.92 : 1.48);
+      root.position.y -= enemy.mesh.position.y;
+      root.name = 'gobkit-enemy-' + modelId + '-' + enemy.id;
+      const overlays = [
+        enemy.hpBar, enemy.hpFill, enemy.threatRing, enemy.shieldRing,
+        enemy.auraRing, enemy.speechMesh, enemy.propeller, ...(enemy.bikeWheels || []),
+      ].filter((object): object is THREE.Object3D => object instanceof THREE.Object3D);
+      this.hideProceduralVisuals(enemy.mesh as THREE.Group, overlays);
+      (enemy.mesh as THREE.Group).add(root);
+      enemy.legL = undefined;
+      enemy.legR = undefined;
+      enemy.armL = undefined;
+      enemy.armR = undefined;
+      enemy.head = undefined;
+      this.gobkitEnemyTracks.set(enemy, this.createGobkitAnimationTrack(gltf, root, enemy.mesh.position));
+    } catch (error) {
+      console.warn('[Gobkit] Enemy model unavailable; keeping procedural fallback:', modelId, enemy.type, error);
+    }
+  }
+
+  private updateGobkitAnimations(dt: number) {
+    if (!Number.isFinite(dt) || dt <= 0) return;
+    const advanceActor = (track: GobkitAnimationTrack | null, position: THREE.Vector3) => {
+      if (!track) return;
+      const speed = track.lastPosition.distanceTo(position) / Math.max(0.001, dt);
+      this.playGobkitAction(track, speed > 4.8 ? 'Run' : speed > 0.18 ? 'Walk' : 'Idle');
+      track.lastPosition.copy(position);
+      track.mixer.update(dt);
+    };
+    advanceActor(this.playerGobkitTrack, this.playerGroup?.position || this.playerPos);
+    advanceActor(this.remoteGobkitTrack, this.remotePlayerGroup?.position || this.playerPos);
+
+    const activeEnemies = new Set(this.enemies);
+    for (const enemy of this.enemies) {
+      const modelId = ENEMY_GOBKIT_MODELS[enemy.type];
+      if (!modelId || !enemy.mesh) continue;
+      if (!this.requestedGobkitEnemies.has(enemy)) {
+        this.requestedGobkitEnemies.add(enemy);
+        if (enemy.state !== 'defeated') void this.attachGobkitEnemyModel(enemy, modelId);
+      }
+      const track = this.gobkitEnemyTracks.get(enemy);
+      if (!track || enemy.mesh.visible === false) continue;
+      let desired = 'Idle';
+      if (enemy.state === 'defeated') desired = 'Death';
+      else if (enemy.state === 'stunned' || enemy.stunTimer > 0) desired = 'Hit';
+      else if (enemy.state === 'charging' || enemy.state === 'chase') desired = 'Run';
+      else {
+        const speed = track.lastPosition.distanceTo(enemy.mesh.position) / Math.max(0.001, dt);
+        desired = speed > 4.8 ? 'Run' : speed > 0.18 ? 'Walk' : 'Idle';
+      }
+      this.playGobkitAction(track, desired);
+      track.lastPosition.copy(enemy.mesh.position);
+      track.mixer.update(dt);
+    }
+    for (const [enemy, track] of this.gobkitEnemyTracks) {
+      if (activeEnemies.has(enemy)) continue;
+      this.stopGobkitTrack(track);
+      this.gobkitEnemyTracks.delete(enemy);
+    }
+  }
+
   private rebuildPlayerMesh() {
+    this.playerGobkitSequence++;
+    this.stopGobkitTrack(this.playerGobkitTrack);
+    this.playerGobkitTrack = null;
     if (this.playerGroup) {
       const previousPlayerGroup = this.playerGroup;
       this.levelRoot.remove(previousPlayerGroup);
@@ -1488,6 +1647,8 @@ export class PaleciakiGameEngine {
 
     this.playerGroup.position.copy(this.playerPos);
     this.levelRoot.add(this.playerGroup);
+    const sequence = ++this.playerGobkitSequence;
+    void this.attachGobkitOperatorModel(this.currentCharacterId, this.playerGroup, sequence, false, [built.shadow]);
   }
 
   public startTitle() {
@@ -7467,6 +7628,7 @@ export class PaleciakiGameEngine {
     if (this.state === 'playing') {
       if (this.gameMode === 'pvp') {
         this.updatePvpMode(simDt);
+        this.updateGobkitAnimations(simDt);
         return;
       }
       this.activeElapsedSeconds += simDt;
@@ -7533,6 +7695,7 @@ export class PaleciakiGameEngine {
       this.updateSpecialEffects(simDt);
       this.updateParticles(simDt);
     }
+    this.updateGobkitAnimations(simDt);
 
     if (!this.envMapInitialized && this.threeRenderer && this.scene) {
       try {
