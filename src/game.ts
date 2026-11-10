@@ -1593,15 +1593,21 @@ export class PaleciakiGameEngine {
 
   private resumePlayerAnimationAfterModelAttach(track: GobkitAnimationTrack): void {
     if (this.state !== 'playing') return;
-    // Preserve attacks and damage reactions that happened while the rig was loading.
-    if (this.attackSwingTimer > 0) {
-      this.requestGobkitAction(track, 'Attack', this.attackSwingTimer);
-    } else if (this.invulnerableTimer > 0) {
+    // Damage has higher priority than an earlier attack that overlapped asset loading.
+    if (this.invulnerableTimer > 0) {
       this.requestGobkitAction(track, 'Hit', Math.min(0.34, this.invulnerableTimer));
+    } else if (this.attackSwingTimer > 0) {
+      this.requestGobkitAction(track, 'Attack', this.attackSwingTimer);
     }
   }
 
   private resumeEnemyAnimationAfterModelAttach(enemy: EnemyItem, track: GobkitAnimationTrack): void {
+    const hitRemaining = Math.max(enemy.hitReactTimer || 0, enemy.stunTimer || 0);
+    if (hitRemaining > 0.015 || enemy.state === 'stunned') {
+      this.enemyPendingAttackUntil.delete(enemy);
+      this.requestGobkitAction(track, 'Hit', hitRemaining > 0 ? hitRemaining : 0.28);
+      return;
+    }
     const now = performance.now();
     const pendingAttackUntil = this.enemyPendingAttackUntil.get(enemy) ?? 0;
     if (pendingAttackUntil > now) {
@@ -1610,10 +1616,6 @@ export class PaleciakiGameEngine {
       return;
     }
     this.enemyPendingAttackUntil.delete(enemy);
-    const hitRemaining = Math.max(enemy.hitReactTimer || 0, enemy.stunTimer || 0);
-    if (hitRemaining > 0.015 || enemy.state === 'stunned') {
-      this.requestGobkitAction(track, 'Hit', hitRemaining > 0 ? hitRemaining : 0.28);
-    }
   }
 
   private hideProceduralVisuals(group: THREE.Group, preserved: readonly THREE.Object3D[]) {
