@@ -12,7 +12,12 @@ test('Android CI caches Gradle and retries transient network failures across nat
   assert.match(workflow, /uses: gradle\/actions\/setup-gradle@v6/);
   assert.match(workflow, /bash scripts\/retry-command\.sh npm install --no-audit --no-fund/);
   assert.match(workflow, /bash scripts\/retry-command\.sh npm install --no-save/);
-  assert.match(workflow, /bash \.\.\/scripts\/retry-command\.sh \.\/gradlew --no-daemon bundleRelease assembleDebug assembleRelease/);
+  assert.match(workflow, /if \[ "\$ANDROID_SIGNING_ENABLED" = "true" \]/);
+  assert.match(workflow, /bundleRelease assembleDebug assembleRelease/);
+  assert.match(workflow, /bundleRelease assembleDebug/);
+  assert.match(workflow, /unsigned release APK is not installable and wastes ~170 MB/);
+  assert.match(workflow, /compression-level: 0/);
+  assert.match(workflow, /android\/app\/build\/outputs\/apk\/debug\/\*\.apk/);
   assert.match(retry, /5\[0-9\]\{2\}/);
   assert.match(retry, /gateway time/);
   assert.match(retry, /for \(\(attempt = 1; attempt <= max_attempts; attempt\+\+\)/);
@@ -101,6 +106,10 @@ test('Android artifact verifier blocks unsigned Play uploads and records hashes'
   assert.match(script, /targetSdk !== 36/);
   assert.match(script, /playStoreUploadReady/);
   assert.match(script, /sha256/);
+  assert.match(script, /createReadStream/);
+  assert.match(script, /signingConfigured && releaseApk/);
+  assert.match(script, /signingConfigured && !releaseApk/);
+  assert.match(script, /await sha256\(path\)/);
   assert.match(script, /android-build-report\.json/);
 });
 
