@@ -611,6 +611,11 @@ export class PaleciakiGameEngine {
   // Re-evaluate the nearest enemies in short slices instead of allocating/sorting every rendered frame.
   private waveDirectorCooldown = 0;
   private activeChaserIds = new Set<string>();
+  // Reuse the low-frequency wave-director working sets instead of rebuilding
+  // arrays/maps every 180 ms during large Survival encounters.
+  private readonly waveDirectorCandidateScratch: { enemy: EnemyItem; dist: number }[] = [];
+  private readonly waveDirectorCoalitionCandidateScratch: EnemyItem[] = [];
+  private readonly waveDirectorEnemyByIdScratch = new Map<string, EnemyItem>();
   private threatTier = 0;
 
   // Survival is the default game mode, PvP Arena is the 1v1 multiplayer mode.
@@ -12139,7 +12144,8 @@ export class PaleciakiGameEngine {
       const baseChasers = survivalMode ? (isMobile ? 3 : 4) : (isMobile ? 1 : 2);
       const platformCap = survivalMode ? (isMobile ? 6 : 8) : (isMobile ? 2 : 3);
       const maxActiveChasers = Math.min(platformCap, baseChasers + pressureSteps);
-      const activeCandidates: { enemy: EnemyItem; dist: number }[] = [];
+      const activeCandidates = this.waveDirectorCandidateScratch;
+      activeCandidates.length = 0;
 
       for (const e of this.enemies) {
         if (e.state === 'defeated' || !e.mesh) continue;
@@ -12151,7 +12157,11 @@ export class PaleciakiGameEngine {
         if (!e.mesh.visible) e.mesh.visible = true;
         const engageRadius = survivalMode ? 28.0 : 18.0;
         if (e.type !== 'walczak' && e.type !== 'krol_leto' && d <= engageRadius) {
-          activeCandidates.push({ enemy: e, dist: d });
+          const candidateIndex = activeCandidates.length;
+          const candidate = activeCandidates[candidateIndex] || { enemy: e, dist: d };
+          candidate.enemy = e;
+          candidate.dist = d;
+          activeCandidates.push(candidate);
         }
       }
 
@@ -12191,17 +12201,24 @@ export class PaleciakiGameEngine {
           enemy.aiCoalitionSize = undefined;
         }
 
+        const coalitionCandidates = this.waveDirectorCoalitionCandidateScratch;
+        coalitionCandidates.length = 0;
+        for (const candidate of activeCandidates) {
+          const enemy = candidate.enemy;
+          if (enemy.surgeRunner && this.survivalSurgeTimeLeft > 0) continue;
+          coalitionCandidates.push(enemy);
+        }
         const orders = buildSurvivalCoalitionOrders(
-          activeCandidates
-            .filter(({ enemy }) => !enemy.surgeRunner || this.survivalSurgeTimeLeft <= 0)
-            .map(({ enemy }) => enemy),
+          coalitionCandidates,
           this.playerPos.x,
           this.playerPos.z,
           formationBase,
           maxActiveChasers,
           4,
         );
-        const activeById = new Map(activeCandidates.map(({ enemy }) => [enemy.id, enemy] as const));
+        const activeById = this.waveDirectorEnemyByIdScratch;
+        activeById.clear();
+        for (const candidate of activeCandidates) activeById.set(candidate.enemy.id, candidate.enemy);
         for (const order of orders) {
           const enemy = activeById.get(order.enemyId);
           if (!enemy) continue;
@@ -12237,7 +12254,7 @@ export class PaleciakiGameEngine {
     // Build one broad-phase grid per frame instead of scanning the full crowd for every enemy.
     this.enemySpatialIndex.rebuild(this.enemies);
 
-    this.enemies.forEach((e) => {
+    for (const e of this.enemies) {
       if (e.state === 'defeated') {
         this.updateDefeatedEnemyVisual(e, dt);
         return;
@@ -12421,7 +12438,12 @@ export class PaleciakiGameEngine {
       }
       if (e.shieldRing?.visible) e.shieldRing.rotation.z += dt * 1.25;
       if (e.auraRing) e.auraRing.rotation.z += dt * 0.18;
-      if (e.bikeWheels) e.bikeWheels.forEach((wheel) => wheel.rotateX(dt * (e.state === 'chase' ? 8.5 : 3.4)));
+      if (e.bikeWheels) {
+        const wheelRate = dt * (e.state === 'chase' ? 8.5 : 3.4);
+        for (let wheelIndex = 0; wheelIndex < e.bikeWheels.length; wheelIndex++) {
+          e.bikeWheels[wheelIndex].rotateX(wheelRate);
+        }
+      }
       if (e.propeller) e.propeller.rotation.y += dt * (e.state === 'chase' ? 34 : 18);
       if (e.type === 'pomazaniec') e.mesh.rotation.x = THREE.MathUtils.lerp(e.mesh.rotation.x, 0, Math.min(1, dt * 3.2));
       // Ground Threat Ring for actively chasing enemies
@@ -13006,7 +13028,7 @@ export class PaleciakiGameEngine {
         // of TypeScript's earlier per-enemy state narrowing.
         this.resolveEnemyPlayerOverlap(e, contactRadius);
       }
-    });
+    }
   }
 
   private spawnPenaltyNotice(x: number, y: number, z: number) {
