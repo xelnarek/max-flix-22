@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL('../' + path, import.meta.url), 'utf8');
-const [html, app, css] = await Promise.all([
+const [html, app, css, hudCss] = await Promise.all([
   read('index.html'),
   read('src/index.ts'),
   read('src/menu-separation-overhaul.css'),
+  read('src/mode-hud-polish.css'),
 ]);
 
 test('each top-level menu destination has one dedicated panel', () => {
@@ -62,6 +63,17 @@ test('runtime keeps inactive panels inert and changes the section theme with the
   for (const tab of ['tab-team', 'tab-map', 'tab-pvp', 'tab-enemies', 'tab-perks', 'tab-settings']) {
     assert.ok(css.includes('data-active-menu-tab="' + tab + '"') || tab === 'tab-team' || tab === 'tab-enemies' || tab === 'tab-perks' || tab === 'tab-settings');
   }
+});
+
+test('Survival and PvP in-game HUDs use separate visual systems and lighter mobile materials', () => {
+  assert.match(html, /href="\/src\/mode-hud-polish\.css"/);
+  assert.match(hudCss, /#game-shell\.survival-mode #survival-hud \.survival-hud-main/);
+  assert.match(hudCss, /#game-shell\.survival-mode #survival-hud \.survival-event/);
+  assert.match(hudCss, /#game-shell\.pvp-mode \.pvp-hud-main/);
+  assert.match(hudCss, /#game-shell\.pvp-mode \.pvp-p1-box/);
+  assert.match(hudCss, /#game-shell\.pvp-mode \.pvp-p2-box/);
+  assert.match(hudCss, /#touch-controls\.pvp-mode \.pvp-aim-base/);
+  assert.match(hudCss, /backdrop-filter: none !important/);
 });
 
 test('menu navigation preserves a desktop rail and scrollable mobile tabs', () => {
