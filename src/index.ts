@@ -2288,6 +2288,11 @@ class PaleciakiScene extends xb.Script {
       const targetId = selectedTab.getAttribute('data-tab');
       if (!targetId) return;
 
+      // The selected menu section owns the accent color and the only visible
+      // launch action. Mode-specific controls never bleed into other sections.
+      const titleScreenRoot = document.getElementById('title-screen');
+      if (titleScreenRoot) titleScreenRoot.dataset.activeMenuTab = targetId;
+
       menuTabButtons.forEach((button) => {
         const active = button === selectedTab;
         button.classList.toggle('active', active);
@@ -2299,7 +2304,11 @@ class PaleciakiScene extends xb.Script {
         const active = panel.id === targetId;
         panel.classList.toggle('active', active);
         panel.setAttribute('aria-hidden', String(!active));
-        if (active) panel.setAttribute('aria-labelledby', selectedTab.id);
+        panel.inert = !active;
+        if (active) {
+          panel.setAttribute('aria-labelledby', selectedTab.id);
+          panel.scrollTop = 0;
+        }
       });
 
       if (targetId === 'tab-leaderboard') {
@@ -2324,6 +2333,7 @@ class PaleciakiScene extends xb.Script {
         panel?.setAttribute('aria-labelledby', tabBtn.id);
         panel?.setAttribute('tabindex', '0');
         panel?.setAttribute('aria-hidden', String(!panel.classList.contains('active')));
+        if (panel) panel.inert = !panel.classList.contains('active');
       }
       const initiallyActive = tabBtn.classList.contains('active');
       tabBtn.setAttribute('aria-selected', String(initiallyActive));
@@ -2340,6 +2350,9 @@ class PaleciakiScene extends xb.Script {
         if (!nextTab) return;
         activateMenuTab(nextTab);
         nextTab.focus();
+        if (menuTabList && menuTabList.scrollWidth > menuTabList.clientWidth) {
+          nextTab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        }
       });
     });
 
