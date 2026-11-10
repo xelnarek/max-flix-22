@@ -41,6 +41,12 @@ const REFERENCE_SPEED: Readonly<Record<string, number>> = Object.freeze({
   StrafeRight: 0.45,
 });
 
+/** True only for velocity-driven clips; one-shot clip timing is set by the combat/jump controller. */
+export function isMakeHumanVelocityAction(action: string): boolean {
+  return action === 'Walk' || action === 'Run' ||
+    action === 'WalkBackward' || action === 'StrafeLeft' || action === 'StrafeRight';
+}
+
 /** Scale authored cadence to in-game movement without allowing extreme foot-cycle rates. */
 export function getMakeHumanPlaybackRate(action: string, speed: number): number {
   const reference = REFERENCE_SPEED[action];
