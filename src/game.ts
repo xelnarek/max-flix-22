@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { applyPolyHavenPbrMaps } from './polyHavenTextures.ts';
-import { chooseMakeHumanLocomotion, getMakeHumanPlaybackRate, isMakeHumanVelocityAction } from './makeHumanLocomotion.ts';
+import { chooseMakeHumanLocomotion, getMakeHumanPlaybackRate, isMakeHumanVelocityAction, type MakeHumanLocomotionAction } from './makeHumanLocomotion.ts';
 import { createMakeHumanActor, MAKEHUMAN_OPERATOR_STYLES, MAKEHUMAN_ENEMY_STYLES, type MakeHumanStyleId } from './makeHumanAssets.ts';
 import {
   clampGobkitActionDuration,
@@ -275,7 +275,7 @@ interface GobkitAnimationTrack {
   /** Tracks one ground-to-air transition so jump and landing clips play only once. */
   wasAirborne?: boolean;
   /** Last physical locomotion state for stable threshold hysteresis. */
-  locomotionAction?: string;
+  locomotionAction?: MakeHumanLocomotionAction;
   idleVariantRemaining?: number;
   idleVariantCooldown?: number;
   idleVariantIndex?: number;
@@ -2045,7 +2045,7 @@ export class PaleciakiGameEngine {
             localMovement.x / Math.max(0.001, dt),
             localMovement.z / Math.max(0.001, dt),
             false,
-            track.locomotionAction as any,
+            track.locomotionAction,
           );
           track.locomotionAction = desired;
         } else {
