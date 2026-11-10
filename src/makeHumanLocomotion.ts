@@ -18,18 +18,25 @@ export function chooseMakeHumanLocomotion(
   localVelocityX: number,
   localVelocityZ: number,
   airborne = false,
+  previousAction?: MakeHumanLocomotionAction,
 ): MakeHumanLocomotionAction {
   if (airborne) return 'Fall';
   const speed = Math.hypot(localVelocityX, localVelocityZ);
-  if (speed < 0.16) return 'Idle';
+  // A small dead band prevents idle/walk and walk/run flicker at variable frame rates.
+  if (speed < 0.13 || (previousAction === 'Idle' && speed < 0.20)) return 'Idle';
 
   const lateral = Math.abs(localVelocityX);
   const forward = Math.abs(localVelocityZ);
-  if (lateral > Math.max(0.22, forward * 1.18)) {
+  const wasStrafing = previousAction === 'StrafeLeft' || previousAction === 'StrafeRight';
+  const lateralThreshold = wasStrafing
+    ? Math.max(0.17, forward * 1.04)
+    : Math.max(0.22, forward * 1.18);
+  if (lateral > lateralThreshold) {
     return localVelocityX > 0 ? 'StrafeLeft' : 'StrafeRight';
   }
   if (localVelocityZ < -0.18) return 'WalkBackward';
-  if (localVelocityZ > 0.18 && speed >= 4.65) return 'Run';
+  const runThreshold = previousAction === 'Run' ? 4.15 : 4.65;
+  if (localVelocityZ > 0.18 && speed >= runThreshold) return 'Run';
   return 'Walk';
 }
 
