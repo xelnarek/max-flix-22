@@ -1175,9 +1175,10 @@ export class PaleciakiGameEngine {
     // render at the display's 60–120 Hz rate during dense Survival waves.
     this.dirLight.shadow.autoUpdate = !isMobile;
 
-    // Sharp contact shadows matter for character readability. Keep mobile at
-    // 1024² (Poco F6 class hardware) and reserve 2048² for desktop.
-    const shadowMapSize = isMobile ? 1024 : 2048;
+    // Actor shadows are disabled separately on phones; 512² environment
+    // shadows keep the aisle grounding without a million depth pixels.
+    // Desktop retains full-resolution contact shadows.
+    const shadowMapSize = isMobile ? 512 : 2048;
     this.dirLight.shadow.mapSize.width = shadowMapSize;
     this.dirLight.shadow.mapSize.height = shadowMapSize;
     this.dirLight.shadow.camera.near = 0.5;
@@ -1946,6 +1947,7 @@ export class PaleciakiGameEngine {
       if (!isCurrent || group.parent !== this.levelRoot) return;
       const root = cloneGobkitModel(gltf);
       fitGobkitModel(root, 1.52, this.threeRenderer?.capabilities.getMaxAnisotropy() ?? 1);
+      this.applyHandheldActorShadowBudget(root);
       root.position.y -= group.position.y;
       root.name = 'gobkit-operator-' + modelId;
       this.removeAttachedActorVisuals(group);
@@ -1974,6 +1976,7 @@ export class PaleciakiGameEngine {
       const root = cloneGobkitModel(gltf);
       const visualProfile = ENEMY_VISUAL_PROFILES[requestedType];
       fitGobkitModel(root, visualProfile.targetHeight, this.threeRenderer?.capabilities.getMaxAnisotropy() ?? 1);
+      this.applyHandheldActorShadowBudget(root);
       root.position.y -= mesh.position.y;
       root.name = 'gobkit-enemy-' + modelId + '-' + enemy.id;
       const overlays = [
@@ -1987,6 +1990,7 @@ export class PaleciakiGameEngine {
       if (roleSilhouette) {
         // The original enemy container sits half a metre above the floor;
         // role props are authored from the same floor origin as fitted GLB rigs.
+        this.applyHandheldActorShadowBudget(roleSilhouette);
         roleSilhouette.position.y = -mesh.position.y;
         mesh.add(roleSilhouette);
       }
@@ -2205,6 +2209,7 @@ export class PaleciakiGameEngine {
     }
     const built = createCharacterModel(this.charDef);
     this.playerGroup = built.group;
+    this.applyHandheldActorShadowBudget(this.playerGroup);
     this.leftLeg = built.leftLeg;
     this.rightLeg = built.rightLeg;
     this.leftArm = built.leftArm;
@@ -8313,6 +8318,22 @@ export class PaleciakiGameEngine {
     this.levelRoot.add(l);
   }
 
+  /**
+   * Mobile shadow maps are reserved for the warehouse and major environment.
+   * Per-actor shadow casters multiply the depth pass by every skinned body part;
+   * disabling them leaves actor lighting intact and avoids swarm spikes.
+   */
+  private applyHandheldActorShadowBudget(root: THREE.Object3D): void {
+    if (!this.isHandheldViewport || root.userData.handheldActorShadowBudgetApplied === true) return;
+    root.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+      object.castShadow = false;
+      object.receiveShadow = false;
+      object.userData.handheldActorShadowBudgetApplied = true;
+    });
+    root.userData.handheldActorShadowBudgetApplied = true;
+  }
+
   private updateGameOverVisuals(dt: number): void {
     if (!Number.isFinite(dt) || dt <= 0) return;
     const deathTrack = this.playerGobkitTrack;
@@ -12322,6 +12343,7 @@ export class PaleciakiGameEngine {
         continue;
       }
       if (!e.mesh) continue;
+      this.applyHandheldActorShadowBudget(e.mesh);
       const facingAtFrameStart = e.mesh.rotation.y;
 
       if ((e.aiCommandBoostTimer ?? 0) > 0) {
@@ -16512,7 +16534,7 @@ export class PaleciakiGameEngine {
         this.mobileShadowRefreshCooldown -= dt / this.timeScale;
         if (this.mobileShadowRefreshCooldown <= 0) {
           this.dirLight.shadow.needsUpdate = true;
-          const shadowHz = this.adaptivePerformanceTier >= 2 ? 12 : this.adaptivePerformanceTier === 1 ? 18 : 24;
+          const shadowHz = this.adaptivePerformanceTier >= 2 ? 6 : this.adaptivePerformanceTier === 1 ? 9 : 12;
           this.mobileShadowRefreshCooldown = 1 / shadowHz;
         }
       }
