@@ -1,0 +1,32 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+
+const read = (path) => readFile(new URL('../' + path, import.meta.url), 'utf8');
+
+const [html, css] = await Promise.all([
+  read('index.html'),
+  read('src/mobile-menu-grid.css'),
+]);
+
+test('mobile menu exposes all eleven destinations as a visible grid without horizontal swiping', () => {
+  assert.match(html, /href="\/src\/mobile-menu-grid\.css"/);
+  const tabs = [...html.matchAll(/class="menu-tab-btn[^"]*" data-tab="(tab-[^"]+)"/g)];
+  assert.equal(tabs.length, 11);
+  assert.match(css, /@media \(max-width: 760px\), \(pointer: coarse\)/);
+  assert.match(css, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\) !important/);
+  assert.match(css, /overflow-x: visible !important/);
+  assert.match(css, /scroll-snap-type: none !important/);
+  assert.doesNotMatch(css, /overflow-x: auto !important/);
+});
+
+test('operator cards stay in a readable two-column grid on phone screens', () => {
+  assert.match(css, /#title-screen #tab-team \.char-grid\s*\{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\) !important/);
+  assert.match(css, /#title-screen #tab-team \.char-card\s*\{[\s\S]*?min-height: 144px !important/);
+});
+
+test('short landscape phones use a compact six-column menu with no carousel rules', () => {
+  assert.match(css, /@media \(max-height: 560px\) and \(orientation: landscape\) and \(pointer: coarse\)/);
+  assert.match(css, /grid-template-columns: repeat\(6, minmax\(0, 1fr\)\) !important/);
+  assert.match(css, /min-height: 29px !important/);
+});
