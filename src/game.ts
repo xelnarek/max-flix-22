@@ -930,6 +930,8 @@ export class PaleciakiGameEngine {
   }[] = [];
   private enemies: EnemyItem[] = [];
   private readonly enemySpatialIndex = new EnemySpatialIndex<EnemyItem>(4.0);
+  private enemySpatialIndexNextRefreshAt = 0;
+  private enemySpatialIndexCachedCount = -1;
   /** Per-enemy wall-clock gate prevents contact attacks from restarting their animation every frame. */
   private readonly enemyAttackAnimationUntil = new WeakMap<EnemyItem, number>();
   /** Keeps a short attack window when an enemy strikes before its async rig finishes loading. */
@@ -8311,10 +8313,31 @@ export class PaleciakiGameEngine {
     this.levelRoot.add(l);
   }
 
+  private updateGameOverVisuals(dt: number): void {
+    if (!Number.isFinite(dt) || dt <= 0) return;
+    const deathTrack = this.playerGobkitTrack;
+    if (deathTrack && deathTrack.oneShotPriority >= getGobkitActionPriority('Death')) {
+      // Death is a clamped one-shot. Advancing just this mixer lets the operator
+      // finish the fall while the combat simulation remains permanently stopped.
+      deathTrack.mixer.update(dt);
+    }
+    this.updateCamera(dt);
+  }
+
   public update(dt: number) {
+    const frameDt = Number.isFinite(dt) ? Math.max(0, dt) : 0.016;
+    // Camera smoothing follows frame time (including time-scale boosts) but
+    // ignores hit-stop so the view does not freeze or jump when the simulation slows.
+    const cameraDt = Math.min(
+      0.05,
+      frameDt * (this.state === 'playing' ? Math.max(0, this.timeScale) : 1),
+    );
+    if (this.state === 'gameover') {
+      this.updateGameOverVisuals(cameraDt);
+      return;
+    }
     if (this.state !== 'playing' && this.state !== 'title') return;
 
-    const frameDt = Number.isFinite(dt) ? Math.max(0, dt) : 0.016;
     dt = Math.min(0.12, frameDt * (this.state === 'playing' ? this.timeScale : 1));
     let effectiveDt = dt;
     if (this.hitStopTimer > 0) {
@@ -8429,7 +8452,7 @@ export class PaleciakiGameEngine {
       this.bloomPulseDuration = 0.3;
     }
 
-    this.updateCamera(dt);
+    this.updateCamera(cameraDt);
   }
 
   private updateSurvivalAutoCombat(dt: number) {
@@ -12278,8 +12301,20 @@ export class PaleciakiGameEngine {
       }
     }
 
-    // Build one broad-phase grid per frame instead of scanning the full crowd for every enemy.
-    this.enemySpatialIndex.rebuild(this.enemies);
+    // Rebuilding all crowd buckets at 60–120 Hz wastes CPU on handheld devices.
+    // Keep the grid fresh at ~42 Hz and force an immediate refresh after any
+    // spawn/despawn count change; projectile broadphase still checks exact distances.
+    const spatialIndexNow = performance.now();
+    const enemyCountChanged = this.enemies.length !== this.enemySpatialIndexCachedCount;
+    if (
+      !this.isHandheldViewport ||
+      enemyCountChanged ||
+      spatialIndexNow >= this.enemySpatialIndexNextRefreshAt
+    ) {
+      this.enemySpatialIndex.rebuild(this.enemies);
+      this.enemySpatialIndexCachedCount = this.enemies.length;
+      this.enemySpatialIndexNextRefreshAt = this.isHandheldViewport ? spatialIndexNow + 24 : spatialIndexNow;
+    }
 
     for (const e of this.enemies) {
       if (e.state === 'defeated') {

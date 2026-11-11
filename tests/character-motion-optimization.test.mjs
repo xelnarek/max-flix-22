@@ -78,3 +78,17 @@ test('homing and high-speed projectile collision use the enemy broad phase and r
   assert.match(game, /const broadphaseRadius = Math\.sqrt\(segmentLengthSq\) \* 0\.5 \+ 1\.65/);
   assert.match(game, /closest point on this frame's movement segment/);
 });
+
+test('handheld enemy broadphase refreshes below display rate and immediately after roster changes', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /private enemySpatialIndexNextRefreshAt = 0/);
+  assert.match(game, /private enemySpatialIndexCachedCount = -1/);
+  const start = game.indexOf('// Rebuilding all crowd buckets at 60–120 Hz wastes CPU on handheld devices.');
+  const end = game.indexOf('for (const e of this.enemies)', start);
+  const refresh = game.slice(start, end);
+  assert.match(refresh, /!this\.isHandheldViewport/);
+  assert.match(refresh, /enemyCountChanged/);
+  assert.match(refresh, /spatialIndexNow \+ 24/);
+  assert.match(refresh, /this\.enemySpatialIndex\.rebuild\(this\.enemies\)/);
+});
+

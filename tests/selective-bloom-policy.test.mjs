@@ -22,11 +22,10 @@ test('invalid or unavailable FPS data disables bloom safely', () => {
   assert.equal(shouldEnableSelectiveBloom(Number.POSITIVE_INFINITY, true, false), false);
 });
 
-test('Survival bloom requires extra FPS headroom on mobile and desktop', () => {
-  assert.equal(shouldEnableSelectiveBloom(57, true, false, true), false);
-  assert.equal(shouldEnableSelectiveBloom(58, true, false, true), true);
-  assert.equal(shouldEnableSelectiveBloom(53, true, true, true), true);
-  assert.equal(shouldEnableSelectiveBloom(50, true, true, true), false);
+test('mobile Survival bypasses the secondary bloom pass while desktop keeps a frame-rate gate', () => {
+  assert.equal(shouldEnableSelectiveBloom(58, true, false, true), false);
+  assert.equal(shouldEnableSelectiveBloom(120, true, false, true), false);
+  assert.equal(shouldEnableSelectiveBloom(60, true, true, true), false);
   assert.equal(shouldEnableSelectiveBloom(53, false, false, true), false);
   assert.equal(shouldEnableSelectiveBloom(54, false, false, true), true);
 });

@@ -160,6 +160,42 @@ test('fullscreen transitions release movement, aim and positioned fire input on 
   assert.match(aimControls, /document\.addEventListener\('webkitfullscreenchange', resetAimStick\)/);
 });
 
+
+test('touch controls and result dialogs stay inside the active fullscreen root', async () => {
+  const app = await read('../src/index.ts');
+  const portalStart = app.indexOf('function portalOverlayLayers()');
+  const portalEnd = app.indexOf('function setTouchControlsVisibility', portalStart);
+  const portal = app.slice(portalStart, portalEnd);
+  assert.match(portal, /document\.fullscreenElement/);
+  for (const id of ['touch-controls', 'pause-modal', 'gameover-modal', 'victory-modal', 'pvp-lobby-modal', 'pvp-match-end-modal']) {
+    assert.ok(portal.includes("'" + id + "'"), 'missing fullscreen portal: ' + id);
+  }
+  assert.match(portal, /portalRoot\.appendChild\(element\)/);
+  const visibility = app.slice(portalEnd, app.indexOf('type TouchControlsMode'));
+  assert.match(visibility, /portalOverlayLayers\(\)/);
+  assert.doesNotMatch(visibility, /document\.body\.appendChild\(layer\)/);
+  const fullscreenHandler = app.slice(
+    app.indexOf('const handleFullscreenChange = () =>'),
+    app.indexOf("document.addEventListener('fullscreenchange', handleFullscreenChange)"),
+  );
+  assert.match(fullscreenHandler, /portalOverlayLayers\(\)/);
+});
+
+test('game-over keeps the death clip and camera moving while gameplay simulation stays stopped', async () => {
+  const game = await read('../src/game.ts');
+  const updateStart = game.indexOf('public update(dt: number)');
+  const helperStart = game.indexOf('private updateGameOverVisuals(dt: number)');
+  assert.ok(helperStart >= 0 && helperStart < updateStart);
+  const helperEnd = game.indexOf('\n  public update(dt: number)', helperStart);
+  const helper = game.slice(helperStart, helperEnd);
+  assert.match(helper, /deathTrack\.mixer\.update\(dt\)/);
+  assert.match(helper, /this\.updateCamera\(dt\)/);
+  const updateEnd = game.indexOf('\n  private ', updateStart);
+  const update = game.slice(updateStart, updateEnd);
+  assert.match(update, /if \(this\.state === 'gameover'\) \{[\s\S]*?this\.updateGameOverVisuals\(cameraDt\);[\s\S]*?return;/);
+  assert.match(update, /const cameraDt = Math\.min\([\s\S]*?frameDt[\s\S]*?this\.timeScale/);
+});
+
 test('visibility return keeps the game paused until the player presses Resume', async () => {
   const [moduleSource, app] = await Promise.all([
     read('../src/visibilityPause.ts'),

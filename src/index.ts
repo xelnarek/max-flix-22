@@ -76,6 +76,30 @@ import {
 } from './accountProgression.ts';
 
 // Set the mobile control layer as a single, explicit UI state. Removing the
+/**
+ * Keep touch controls and critical dialogs inside the active fullscreen element.
+ * Browsers render only descendants of document.fullscreenElement while fullscreen
+ * is active; a body-level portal otherwise disappears even though it remains visible
+ * in the DOM. In normal mode they share body as one predictable stacking context.
+ */
+function portalOverlayLayers(): void {
+  const webkitDocument = document as Document & { webkitFullscreenElement?: Element | null };
+  const fullscreenElement = document.fullscreenElement ?? webkitDocument.webkitFullscreenElement ?? null;
+  const portalRoot = fullscreenElement instanceof HTMLElement ? fullscreenElement : document.body;
+  const overlayIds = [
+    'touch-controls',
+    'pause-modal',
+    'gameover-modal',
+    'victory-modal',
+    'pvp-lobby-modal',
+    'pvp-match-end-modal',
+  ];
+  for (const id of overlayIds) {
+    const element = document.getElementById(id);
+    if (element && element.parentElement !== portalRoot) portalRoot.appendChild(element);
+  }
+}
+
 // class alone is insufficient in some Android WebViews after the DOM portal
 // move, so restore the inline presentation state whenever gameplay begins.
 function setTouchControlsVisibility(visible: boolean): void {
@@ -107,12 +131,9 @@ function setTouchControlsVisibility(visible: boolean): void {
     touchPause.style.setProperty('z-index', '2147483010', 'important');
   }
 
-  // Re-assert the portal whenever the game enters/leaves a run. This makes
-  // visibility independent from the order in which the menu, WebGL shell and
-  // Android compositor create their stacking contexts.
-  if (layer.parentElement !== document.body) {
-    document.body.appendChild(layer);
-  }
+  // Reconcile the portal with the current fullscreen root on every transition.
+  // A body-level child is invisible while a nested game shell owns fullscreen.
+  portalOverlayLayers();
   layer.style.setProperty('position', 'fixed', 'important');
   layer.style.setProperty('inset', '0', 'important');
   layer.style.setProperty('width', '100vw', 'important');
@@ -733,6 +754,7 @@ class PaleciakiScene extends xb.Script {
       // pointer-positioned fire control before the next frame.
       this.resetTouchJoystick?.();
       resetPvpFireControlPosition();
+      portalOverlayLayers();
       scheduleResize();
     };
     document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -3795,12 +3817,9 @@ class PaleciakiScene extends xb.Script {
       pvpFireCooldownFrame = requestAnimationFrame(update);
     };
 
-    // Move critical dialogs out of the game shell's stacking context. The
-    // mobile controls are portaled to <body> at a very high z-index; keeping
-    // dialogs inside #game-shell can put visible buttons underneath that layer.
-    for (const dialog of [pvpLobbyModal, matchEndModal, pauseModal]) {
-      if (dialog && dialog.parentElement !== document.body) document.body.appendChild(dialog);
-    }
+    // All HUD controls and result/pause dialogs share the same portal root.
+    // The root switches to the fullscreen element when Android enters fullscreen.
+    portalOverlayLayers();
 
     // Pointer, touch and keyboard activation share one debounced action. This
     // avoids relying on synthetic click delivery in Android WebViews.
