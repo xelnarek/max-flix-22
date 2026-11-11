@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { EnemyType } from './types.ts';
 
 type Point3 = readonly [number, number, number];
@@ -263,12 +264,114 @@ function addCaricature(root: THREE.Group, type: EnemyType): void {
   }
 }
 
-/** Add a small, role-specific caricature kit to a CC0, rigged Gobkit enemy. */
-export function createGobkitEnemyRoleSilhouette(type: EnemyType): THREE.Group | null {
+// Role accessories used to be dozens of separate meshes per enemy. In a
+// packed Survival wave that multiplied draw calls and object traversal costs.
+// Bake each archetype once into one standard-material mesh plus (only when
+// needed) one unlit/emissive mesh, then share immutable geometry across actors.
+const silhouetteTemplates = new Map<EnemyType, THREE.Group | null>();
+
+const sharedAccessoryMaterial = new THREE.MeshStandardMaterial({
+  color: 0xffffff,
+  vertexColors: true,
+  roughness: 0.66,
+  metalness: 0.08,
+});
+sharedAccessoryMaterial.userData.makeHumanShared = true;
+
+const sharedGlowMaterial = new THREE.MeshBasicMaterial({
+  color: 0xffffff,
+  vertexColors: true,
+  toneMapped: false,
+});
+sharedGlowMaterial.userData.makeHumanShared = true;
+
+function bakeRoleSilhouette(type: EnemyType): THREE.Group | null {
+  const source = new THREE.Group();
+  addCaricature(source, type);
+  if (source.children.length === 0) return null;
+  source.updateMatrixWorld(true);
+
+  const standardParts: THREE.BufferGeometry[] = [];
+  const glowParts: THREE.BufferGeometry[] = [];
+  source.traverse((object) => {
+    if (!(object instanceof THREE.Mesh)) return;
+    const sourceMaterial = Array.isArray(object.material) ? object.material[0] : object.material;
+    const sourceColor = sourceMaterial && 'color' in sourceMaterial
+      ? (sourceMaterial as THREE.MeshStandardMaterial | THREE.MeshBasicMaterial).color
+      : new THREE.Color(0xffffff);
+
+    const indexed = object.geometry.clone();
+    const geometry = indexed.index ? indexed.toNonIndexed() : indexed;
+    if (geometry !== indexed) indexed.dispose();
+    geometry.applyMatrix4(object.matrixWorld);
+
+    const position = geometry.getAttribute('position');
+    const vertexColors = new Float32Array(position.count * 3);
+    for (let vertex = 0; vertex < position.count; vertex++) {
+      const offset = vertex * 3;
+      vertexColors[offset] = sourceColor.r;
+      vertexColors[offset + 1] = sourceColor.g;
+      vertexColors[offset + 2] = sourceColor.b;
+    }
+    geometry.setAttribute('color', new THREE.BufferAttribute(vertexColors, 3));
+    geometry.computeVertexNormals();
+
+    if (sourceMaterial instanceof THREE.MeshBasicMaterial) glowParts.push(geometry);
+    else standardParts.push(geometry);
+  });
+
   const root = new THREE.Group();
   root.name = 'gobkit-role-silhouette-' + type;
   root.userData.actorRoleSilhouette = true;
-  addCaricature(root, type);
+
+  const addMergedPart = (parts: THREE.BufferGeometry[], material: THREE.Material, suffix: string) => {
+    if (parts.length === 0) return;
+    const merged = mergeGeometries(parts, false);
+    for (const geometry of parts) geometry.dispose();
+    if (!merged) throw new Error('Could not merge role silhouette geometry for ' + type + ':' + suffix);
+    merged.computeBoundingSphere();
+    const mesh = new THREE.Mesh(merged, material);
+    mesh.name = suffix + '-' + type;
+    mesh.castShadow = false;
+    mesh.receiveShadow = false;
+    mesh.frustumCulled = true;
+    mesh.userData.actorRoleSilhouette = true;
+    mesh.userData.gobkitSharedGeometry = true;
+    root.add(mesh);
+  };
+
+  try {
+    addMergedPart(standardParts, sharedAccessoryMaterial, 'role-accessories');
+    addMergedPart(glowParts, sharedGlowMaterial, 'role-glow');
+  } catch (error) {
+    for (const geometry of [...standardParts, ...glowParts]) geometry.dispose();
+    throw error;
+  } finally {
+    source.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+      object.geometry.dispose();
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      for (const material of materials) material.dispose();
+    });
+  }
+
   if (root.children.length === 0) return null;
   return root;
+}
+
+/** Add a cached, draw-call-batched caricature kit to a CC0 animated rig. */
+export function createGobkitEnemyRoleSilhouette(type: EnemyType): THREE.Group | null {
+  if (!silhouetteTemplates.has(type)) {
+    silhouetteTemplates.set(type, bakeRoleSilhouette(type));
+  }
+  const template = silhouetteTemplates.get(type);
+  if (!template) return null;
+
+  // Object3D.clone shares immutable geometry/material references; only the
+  // actor transform hierarchy is new. Shared resources are protected from the
+  // per-enemy cleanup path by makeHumanShared/gobkitSharedGeometry markers.
+  const instance = template.clone(true) as THREE.Group;
+  instance.name = 'gobkit-role-silhouette-' + type;
+  instance.userData.actorRoleSilhouette = true;
+  return instance;
 }

@@ -282,6 +282,17 @@ test('CC0 enemy rigs receive a clear caricature silhouette matching their wareho
 });
 
 
+test('role-specific accessories are merged and cached to keep enemy draw calls bounded', async () => {
+  const silhouettes = await read('../src/gobkitEnemySilhouettes.ts');
+  assert.match(silhouettes, /mergeGeometries\(parts, false\)/);
+  assert.match(silhouettes, /vertexColors: true/);
+  assert.match(silhouettes, /const silhouetteTemplates = new Map<EnemyType, THREE\.Group \| null>\(\)/);
+  assert.match(silhouettes, /mesh\.castShadow = false/);
+  assert.match(silhouettes, /mesh\.userData\.gobkitSharedGeometry = true/);
+  assert.match(silhouettes, /sharedAccessoryMaterial\.userData\.makeHumanShared = true/);
+  assert.match(silhouettes, /const instance = template\.clone\(true\) as THREE\.Group/);
+});
+
 test('Gobkit build validates the embedded GLB JSON, skeleton, animation clips and checksum before reuse', async () => {
   const [script, validator] = await Promise.all([
     read('../scripts/fetch-gobkit-assets.mjs'),
