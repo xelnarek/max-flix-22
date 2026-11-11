@@ -1,6 +1,15 @@
 name: Unity 6.6 WebGL and Android build
 
 on:
+  # Build a WebGL smoke player automatically whenever the Unity runtime,
+  # its validated asset staging pipeline, or this workflow changes on main.
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/unity-validation.yml'
+      - 'scripts/fetch-gobkit-assets.mjs'
+      - 'scripts/glbValidation.mjs'
+      - 'unity/MaxFlixUnity/**'
   workflow_dispatch:
     inputs:
       target:
@@ -18,13 +27,15 @@ permissions:
   contents: read
 
 concurrency:
-  group: unity-player-build-${{ github.ref }}-${{ inputs.target }}
+  group: unity-player-build-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && inputs.target || 'WebGL' }}
   cancel-in-progress: true
 
 jobs:
   build:
-    name: Build Unity 6.6 • ${{ inputs.target }}
+    name: Build Unity 6.6 • ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'WebGL' }}
     runs-on: ubuntu-latest
+    env:
+      UNITY_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'WebGL' }}
     timeout-minutes: 120
     steps:
       - name: Checkout Unity project
@@ -41,7 +52,7 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          UNITY_TARGET: ${{ inputs.target }}
+          UNITY_TARGET: ${{ env.UNITY_TARGET }}
         run: |
           if [ -z "${UNITY_LICENSE:-}" ] || [ -z "${UNITY_EMAIL:-}" ] || [ -z "${UNITY_PASSWORD:-}" ]; then
             echo "::error::Unity activation is incomplete. Add UNITY_LICENSE (the .ulf file contents), UNITY_EMAIL and UNITY_PASSWORD in Settings > Secrets and variables > Actions. Never put these values in the repository or chat."
@@ -61,12 +72,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: unity/MaxFlixUnity/Library
-          key: unity-6000.6-${{ runner.os }}-${{ inputs.target }}-${{ hashFiles('unity/MaxFlixUnity/Assets/**', 'unity/MaxFlixUnity/Packages/**', 'unity/MaxFlixUnity/ProjectSettings/**') }}
+          key: unity-6000.6-${{ runner.os }}-${{ env.UNITY_TARGET }}-${{ hashFiles('unity/MaxFlixUnity/Assets/**', 'unity/MaxFlixUnity/Packages/**', 'unity/MaxFlixUnity/ProjectSettings/**') }}
           restore-keys: |
-            unity-6000.6-${{ runner.os }}-${{ inputs.target }}-
+            unity-6000.6-${{ runner.os }}-${{ env.UNITY_TARGET }}-
 
       - name: Compile Unity Web player (WebGPU with WebGL 2 fallback)
-        if: inputs.target == 'WebGL' || inputs.target == 'WebGL + Android APK'
+        if: env.UNITY_TARGET == 'WebGL' || env.UNITY_TARGET == 'WebGL + Android APK'
         uses: game-ci/unity-builder@v4.8.2
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -81,7 +92,7 @@ jobs:
           versioning: None
 
       - name: Compile Android development APK (ARM64 / IL2CPP)
-        if: inputs.target == 'Android APK' || inputs.target == 'WebGL + Android APK'
+        if: env.UNITY_TARGET == 'Android APK' || env.UNITY_TARGET == 'WebGL + Android APK'
         uses: game-ci/unity-builder@v4.8.2
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -97,13 +108,13 @@ jobs:
           versioning: None
 
       - name: Set monotonic Google Play version code
-        if: inputs.target == 'Android AAB'
+        if: env.UNITY_TARGET == 'Android AAB'
         id: android-version
         shell: bash
         run: echo "code=$((100000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_OUTPUT"
 
       - name: Compile signed Google Play App Bundle
-        if: inputs.target == 'Android AAB'
+        if: env.UNITY_TARGET == 'Android AAB'
         uses: game-ci/unity-builder@v4.8.2
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -128,7 +139,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: paleciaki-unity-${{ inputs.target }}-${{ github.run_number }}
+          name: paleciaki-unity-${{ env.UNITY_TARGET }}-${{ github.run_number }}
           path: build/unity/**
           if-no-files-found: warn
           retention-days: 21
