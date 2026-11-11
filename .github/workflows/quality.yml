@@ -33,7 +33,7 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Particle pool regression tests
+      - name: Full automated regression suite
         run: npm test
 
       - name: TypeScript check
