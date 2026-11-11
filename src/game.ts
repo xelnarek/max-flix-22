@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { applyPolyHavenPbrMaps } from './polyHavenTextures.ts';
 import { chooseMakeHumanLocomotion, getMakeHumanPlaybackRate, isMakeHumanVelocityAction, type MakeHumanLocomotionAction } from './makeHumanLocomotion.ts';
+import { dampActorAngle, getActorAnimationInterval, getEnemyRigPlaybackRate } from './actorMotion.ts';
 import { createGobkitEnemyRoleSilhouette } from './gobkitEnemySilhouettes.ts';
 import { createMakeHumanActor, MAKEHUMAN_OPERATOR_STYLES, type MakeHumanStyleId } from './makeHumanAssets.ts';
 import {
@@ -298,6 +299,8 @@ interface GobkitAnimationTrack {
   actions: Map<string, THREE.AnimationAction>;
   currentAction: string;
   lastPosition: THREE.Vector3;
+  /** Accumulated time for distance-throttled enemy mixers. */
+  animationAccumulator?: number;
   /** MakeHuman wearable meshes share body geometry after their skeletons are re-bound. */
   sharedGeometry?: boolean;
   /** Tracks one ground-to-air transition so jump and landing clips play only once. */
@@ -2101,34 +2104,52 @@ export class PaleciakiGameEngine {
         if (enemy.state !== 'defeated') void this.attachGobkitEnemyModel(enemy, modelId);
       }
       const track = this.gobkitEnemyTracks.get(enemy);
-      if (!track || enemy.mesh.visible === false) continue;
+      if (!track) continue;
+      if (enemy.mesh.visible === false) {
+        // Do not accumulate a false burst of speed while distance-culled.
+        track.lastPosition.copy(enemy.mesh.position);
+        track.animationAccumulator = 0;
+        continue;
+      }
+
+      const distanceToPlayer = Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z);
+      const interval = getActorAnimationInterval(distanceToPlayer, this.isHandheldViewport);
+      const accumulatedDt = (track.animationAccumulator ?? 0) + dt;
+      const advanceMixer = interval <= 0 || accumulatedDt + 1e-6 >= interval;
+      const animationDt = accumulatedDt;
+      track.animationAccumulator = advanceMixer ? 0 : accumulatedDt;
+
+      displacement.copy(enemy.mesh.position).sub(track.lastPosition);
+      displacement.y = 0;
+      const inverseDelta = 1 / Math.max(0.001, animationDt);
+      const worldSpeed = displacement.length() * inverseDelta;
+      actorRotation.identity();
+      enemy.mesh.getWorldQuaternion(actorRotation).invert();
+      localMovement.copy(displacement).applyQuaternion(actorRotation);
+      const localVelocityX = localMovement.x * inverseDelta;
+      const localVelocityZ = localMovement.z * inverseDelta;
+      const localSpeed = Math.hypot(localVelocityX, localVelocityZ);
 
       let desired = 'Idle';
       if (enemy.state === 'defeated') {
         // Death must supersede an in-progress hit reaction instead of waiting for it to expire.
         if (track.oneShotPriority < getGobkitActionPriority('Death')) this.requestGobkitAction(track, 'Death', 1.08);
         desired = 'Death';
-      } else if ((enemy.hitReactTimer || 0) > 0.015 || enemy.state === 'stunned' || enemy.stunTimer > 0) desired = 'Hit';
-      else if (enemy.state === 'charging') desired = 'Run';
-      else {
-        displacement.copy(enemy.mesh.position).sub(track.lastPosition);
-        displacement.y = 0;
-        const speed = displacement.length() / Math.max(0.001, dt);
-        if (track.sharedGeometry) {
-          actorRotation.identity();
-          enemy.mesh.getWorldQuaternion(actorRotation).invert();
-          localMovement.copy(displacement).applyQuaternion(actorRotation);
-          const locomotionAction = chooseMakeHumanLocomotion(
-            localMovement.x / Math.max(0.001, dt),
-            localMovement.z / Math.max(0.001, dt),
-            false,
-            track.locomotionAction,
-          );
-          desired = locomotionAction;
-          track.locomotionAction = locomotionAction;
-        } else {
-          desired = speed > 4.8 ? 'Run' : speed > 0.18 ? 'Walk' : 'Idle';
-        }
+      } else if ((enemy.hitReactTimer || 0) > 0.015 || enemy.state === 'stunned' || enemy.stunTimer > 0) {
+        desired = 'Hit';
+      } else if (enemy.state === 'charging') {
+        desired = 'Run';
+      } else {
+        // Read velocity in the actor's facing frame. Orbiting/flanking enemies can
+        // now use strafes/back-steps when the rig has those clips instead of moonwalking.
+        const locomotionAction = chooseMakeHumanLocomotion(
+          localVelocityX,
+          localVelocityZ,
+          false,
+          track.locomotionAction,
+        );
+        track.locomotionAction = locomotionAction;
+        desired = this.resolveGobkitActionName(track, locomotionAction);
       }
 
       if (track.oneShotRemaining > 0 && Number.isFinite(track.oneShotRemaining)) {
@@ -2140,13 +2161,19 @@ export class PaleciakiGameEngine {
       }
       const activeAction = track.oneShotRemaining > 0 && track.oneShotAction ? track.oneShotAction : desired;
       this.playGobkitAction(track, activeAction);
-      if (track.sharedGeometry && isMakeHumanVelocityAction(activeAction)) {
-        const speed = track.lastPosition.distanceTo(enemy.mesh.position) / Math.max(0.001, dt);
+      if (isMakeHumanVelocityAction(activeAction)) {
         const action = track.actions.get(activeAction);
-        if (action) action.setEffectiveTimeScale(getMakeHumanPlaybackRate(activeAction, speed));
+        const playbackRate = track.sharedGeometry
+          ? getMakeHumanPlaybackRate(activeAction, localSpeed)
+          : getEnemyRigPlaybackRate(activeAction, localSpeed || worldSpeed);
+        if (action) action.setEffectiveTimeScale(playbackRate);
       }
-      track.lastPosition.copy(enemy.mesh.position);
-      track.mixer.update(dt);
+      if (advanceMixer) {
+        track.lastPosition.copy(enemy.mesh.position);
+        // Mixer delta is accumulated while an actor is distant, keeping one-shot
+        // timing and fade curves stable despite fewer visual evaluations.
+        track.mixer.update(animationDt);
+      }
     }
     for (const [enemy, track] of this.gobkitEnemyTracks) {
       if (activeEnemies.has(enemy)) continue;
@@ -12260,6 +12287,7 @@ export class PaleciakiGameEngine {
         continue;
       }
       if (!e.mesh) continue;
+      const facingAtFrameStart = e.mesh.rotation.y;
 
       if ((e.aiCommandBoostTimer ?? 0) > 0) {
         e.aiCommandBoostTimer = Math.max(0, (e.aiCommandBoostTimer ?? 0) - dt);
@@ -12948,6 +12976,8 @@ export class PaleciakiGameEngine {
       // bosses and special enemies move directly (dash/chase), bypassing patrol
       // bounds; keep the rendered mesh and hit-test position in sync.
       this.clampEnemyToArena(e);
+      const turnResponsiveness = isMajorSurvivalBossType(e.type) || e.type === 'sebix_m' ? 13 : 19;
+      e.mesh.rotation.y = dampActorAngle(facingAtFrameStart, e.mesh.rotation.y, turnResponsiveness, dt);
 
       // Check collision with player
       const dist = Math.hypot(e.x - this.playerPos.x, e.z - this.playerPos.z);

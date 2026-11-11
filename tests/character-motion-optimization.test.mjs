@@ -55,6 +55,21 @@ test('enemy contact attacks use a gated full-body Attack action instead of resta
   assert.match(game, /if \(e\.state !== 'stunned'\) this\.requestEnemyAttackAnimation\(e, 0\.48\)/);
 });
 
+test('imported enemy rigs use directional locomotion, bounded cadence and distance-based mixer LOD', async () => {
+  const game = await read('../src/game.ts');
+  const start = game.indexOf('private updateGobkitAnimations(dt: number)');
+  const end = game.indexOf('private ', start + 12);
+  const method = game.slice(start, end);
+  assert.match(game, /animationAccumulator\?: number/);
+  assert.match(method, /getActorAnimationInterval\(distanceToPlayer, this\.isHandheldViewport\)/);
+  assert.match(method, /const accumulatedDt = \(track\.animationAccumulator \?\? 0\) \+ dt/);
+  assert.match(method, /track\.mixer\.update\(animationDt\)/);
+  assert.match(method, /chooseMakeHumanLocomotion\(\s*localVelocityX,\s*localVelocityZ/);
+  assert.match(method, /getEnemyRigPlaybackRate\(activeAction, localSpeed \|\| worldSpeed\)/);
+  assert.match(method, /track\.lastPosition\.copy\(enemy\.mesh\.position\)/);
+  assert.match(game, /dampActorAngle\(facingAtFrameStart, e\.mesh\.rotation\.y, turnResponsiveness, dt\)/);
+});
+
 test('homing and high-speed projectile collision use the enemy broad phase and reusable steering state', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /projectileSteeringScratch = new THREE\.Vector3\(\)/);
