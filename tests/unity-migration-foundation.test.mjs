@@ -306,3 +306,13 @@ test('Unity migration notes avoid assuming unsupported WebGPU progressive loadin
   assert.ok(plan.includes('Predictive Back Support'));
   assert.ok(!plan.includes('Web Player obsługuje Progressive Asset Loading'));
 });
+
+test('Unity Editor can create a non-release preview scene for the full imported CC0 rig roster', async () => {
+  const preview = await read('../unity/MaxFlixUnity/Assets/Editor/GobkitRigPreviewBuilder.cs');
+  assert.ok(preview.includes('GobkitActorCatalog.RequiredModelIds'));
+  assert.ok(preview.includes('PrefabUtility.InstantiatePrefab(prefab, scene)'));
+  assert.ok(preview.includes('SkinnedMeshRenderer') || preview.includes('GetComponentsInChildren<Renderer>'));
+  assert.ok(preview.includes('FitToPreviewHeight(instance.transform, 2.0f)'));
+  assert.ok(preview.includes('ScenePath = "Assets/Scenes/GobkitRigPreview.unity"'));
+  assert.ok(preview.includes('It is not included in Player Build Settings'));
+});
