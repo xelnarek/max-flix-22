@@ -4449,6 +4449,7 @@ class PaleciakiScene extends xb.Script {
     });
 
     bindPvpTap(btnExitToMenu, () => {
+      setPvpNetworkStatus('hidden');
       matchEndModal?.classList.add('hidden');
       document.getElementById('pvp-hud')?.classList.add('hidden');
       resetPvpFireButton();
