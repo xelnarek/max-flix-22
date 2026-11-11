@@ -94,6 +94,7 @@ function portalOverlayLayers(): void {
     'victory-modal',
     'pvp-lobby-modal',
     'pvp-match-end-modal',
+    'pvp-network-status',
     'webgl-recovery-notice',
   ];
   for (const id of overlayIds) {

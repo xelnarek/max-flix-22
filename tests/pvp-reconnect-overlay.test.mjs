@@ -15,6 +15,10 @@ test('online PvP disconnects are visible in the live arena and a rejoined room c
   assert.match(app, /setPvpNetworkStatus\('hidden'\)/);
   assert.match(app, /showPvpReconnectFailure\(message\)/);
   assert.match(html, /id="pvp-network-status"/);
+  const portalStart = app.indexOf('const overlayIds = [');
+  const portalEnd = app.indexOf('];', portalStart);
+  assert.ok(portalStart >= 0 && portalEnd > portalStart);
+  assert.match(app.slice(portalStart, portalEnd), /'pvp-network-status'/);
   assert.match(html, /pvp-reconnect-overlay\.css/);
   assert.match(css, /\.pvp-network-status\[data-state="reconnecting"\]/);
   assert.match(css, /\.pvp-network-status\[data-state="failed"\]/);
