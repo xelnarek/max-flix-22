@@ -30,3 +30,17 @@ test('short landscape phones use a compact six-column menu with no carousel rule
   assert.match(css, /grid-template-columns: repeat\(6, minmax\(0, 1fr\)\) !important/);
   assert.match(css, /min-height: 29px !important/);
 });
+
+test('phone layout presents all menu panels together and turns navigation tiles into section shortcuts', async () => {
+  const app = await read('src/index.ts');
+  assert.match(app, /window\.matchMedia\('\(max-width: 760px\), \(pointer: coarse\)'\)/);
+  assert.match(app, /classList\.toggle\('mobile-menu-overview', overview\)/);
+  assert.match(app, /panel\.classList\.toggle\('active', overview \|\| active\)/);
+  assert.match(app, /panel\.setAttribute\('aria-hidden', 'false'\)/);
+  assert.match(app, /panel\.inert = false/);
+  assert.match(app, /getElementById\(targetId\)\?\.scrollIntoView/);
+  assert.match(css, /#title-screen\.mobile-menu-overview \.tab-panel\[aria-hidden="true"\]\s*\{[\s\S]*?display: flex !important/);
+  for (const section of ['tab-team', 'tab-map', 'tab-pvp', 'tab-enemies', 'tab-perks', 'tab-field-guide', 'tab-talent-tree', 'tab-ranks', 'tab-leaderboard', 'tab-achievements', 'tab-settings']) {
+    assert.ok(css.includes('#title-screen.mobile-menu-overview #' + section + '::before'), 'missing section heading ' + section);
+  }
+});
