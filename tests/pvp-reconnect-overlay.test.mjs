@@ -15,7 +15,7 @@ test('online PvP disconnects are visible in the live arena and a rejoined room c
   assert.match(app, /setPvpNetworkStatus\('hidden'\)/);
   assert.match(app, /showPvpReconnectFailure\(message\)/);
   const matchEndExitStart = app.indexOf('bindPvpTap(btnExitToMenu, () => {');
-  const matchEndExitEnd = app.indexOf("\\n    });", matchEndExitStart);
+  const matchEndExitEnd = app.indexOf('\n    });', matchEndExitStart);
   assert.ok(matchEndExitStart >= 0 && matchEndExitEnd > matchEndExitStart);
   assert.match(app.slice(matchEndExitStart, matchEndExitEnd), /setPvpNetworkStatus\\('hidden'\\)/);
   assert.match(html, /id="pvp-network-status"/);
