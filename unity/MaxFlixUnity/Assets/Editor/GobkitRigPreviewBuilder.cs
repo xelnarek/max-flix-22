@@ -27,7 +27,6 @@ namespace MaxFlix.Unity.Editor
                 AssetDatabase.CreateFolder("Assets", "Scenes");
 
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            scene.name = "GobkitRigPreview";
             RenderSettings.ambientMode = AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(0.34f, 0.38f, 0.44f);
             RenderSettings.reflectionIntensity = 0.35f;
