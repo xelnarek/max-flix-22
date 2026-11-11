@@ -360,7 +360,9 @@ test('Survival crowd rendering defers distant model attachments and limits shado
   assert.match(game, /child\.castShadow = canCastShadow/);
   assert.match(game, /this\.dirLight\.shadow\.autoUpdate = !isMobile/);
   assert.match(game, /this\.mobileShadowRefreshCooldown -= dt \/ this\.timeScale/);
-  assert.match(game, /const shadowHz = this\.adaptivePerformanceTier >= 2 \? 12 : this\.adaptivePerformanceTier === 1 \? 18 : 24/);
+  assert.match(game, /const shadowMapSize = isMobile \? 512 : 2048/);
+  assert.match(game, /this\.applyHandheldActorShadowBudget\(e\.mesh\)/);
+  assert.match(game, /const shadowHz = this\.adaptivePerformanceTier >= 2 \? 6 : this\.adaptivePerformanceTier === 1 \? 9 : 12/);
 });
 
 test('camera visibility reuses one throttled raycast result and updates fade targets only on state changes', async () => {
@@ -1202,7 +1204,9 @@ test('mobile performance tiers limit crowd, particles and shadow refresh under l
   assert.match(game, /const num = isMobile \? \(this\.adaptivePerformanceTier >= 2 \? 4 : this\.adaptivePerformanceTier === 1 \? 6 : 8\) : 14/);
   assert.match(game, /const mobileBurstCap = this\.adaptivePerformanceTier >= 2 \? 4 : this\.adaptivePerformanceTier === 1 \? 7 : 10/);
   assert.match(game, /this\.mobileShadowRefreshCooldown -= dt \/ this\.timeScale/);
-  assert.match(game, /const shadowHz = this\.adaptivePerformanceTier >= 2 \? 12 : this\.adaptivePerformanceTier === 1 \? 18 : 24/);
+  assert.match(game, /const shadowMapSize = isMobile \? 512 : 2048/);
+  assert.match(game, /this\.applyHandheldActorShadowBudget\(e\.mesh\)/);
+  assert.match(game, /const shadowHz = this\.adaptivePerformanceTier >= 2 \? 6 : this\.adaptivePerformanceTier === 1 \? 9 : 12/);
 });
 
 test('Survival wave modifiers announce a tactical shift and change enemy stats and XP', async () => {
