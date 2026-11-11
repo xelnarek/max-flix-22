@@ -22,3 +22,7 @@
 .vs/
 .idea/
 .DS_Store
+
+# Generated from the validated CC0 Gobkit catalogue; do not commit transient imports.
+# Run: node scripts/fetch-gobkit-assets.mjs --strict --unity
+/Assets/Resources/Characters/Gobkit/

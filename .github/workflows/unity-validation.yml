@@ -54,6 +54,9 @@ jobs:
             fi
           fi
 
+      - name: Download and stage validated CC0 operator and enemy rigs
+        run: node scripts/fetch-gobkit-assets.mjs --strict --unity
+
       - name: Cache Unity import and compilation state
         uses: actions/cache@v4
         with:

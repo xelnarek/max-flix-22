@@ -6,6 +6,9 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUTPUT_DIR = path.join(ROOT, 'public', 'assets', 'gobkit');
 const MANIFEST_PATH = path.join(OUTPUT_DIR, 'manifest.json');
+const UNITY_OUTPUT_DIR = path.join(ROOT, 'unity', 'MaxFlixUnity', 'Assets', 'Resources', 'Characters', 'Gobkit');
+const UNITY_MANIFEST_PATH = path.join(UNITY_OUTPUT_DIR, 'manifest.json');
+const includeUnityAssets = process.argv.includes('--unity');
 const API_URL = 'https://gobkit.com/api/free';
 
 // These are deliberately role-matched rather than random samples: warehouse
@@ -69,6 +72,7 @@ async function existingFileIsValid(filePath, model) {
 
 async function run() {
   await mkdir(OUTPUT_DIR, { recursive: true });
+  if (includeUnityAssets) await mkdir(UNITY_OUTPUT_DIR, { recursive: true });
   const apiResponse = await fetchWithRetry(API_URL);
   const catalogue = await apiResponse.json();
 
@@ -139,6 +143,12 @@ async function run() {
       downloaded++;
     }
 
+    // Copy the exact same checksum-validated CC0 bytes into Unity Resources.
+    // Unity's pinned glTFast importer turns these GLBs into native project assets.
+    if (includeUnityAssets) {
+      await writeFile(path.join(UNITY_OUTPUT_DIR, filename), bytes);
+    }
+
     const validated = validateGlbAsset(bytes, id, model.clipNames);
     outputManifest.models[id] = {
       name: model.name,
@@ -156,6 +166,10 @@ async function run() {
   }
 
   await writeFile(MANIFEST_PATH, JSON.stringify(outputManifest, null, 2) + '\n', 'utf8');
+  if (includeUnityAssets) {
+    await writeFile(UNITY_MANIFEST_PATH, JSON.stringify(outputManifest, null, 2) + '\n', 'utf8');
+    console.log('[Gobkit] Unity Resources staged: ' + REQUIRED_MODELS.length + ' validated rigs at ' + UNITY_OUTPUT_DIR);
+  }
   console.log('[Gobkit] Ready: ' + downloaded + ' downloaded, ' + reused + ' reused. ' + OUTPUT_DIR);
 }
 
