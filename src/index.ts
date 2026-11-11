@@ -2298,6 +2298,65 @@ class PaleciakiScene extends xb.Script {
     menuTabList?.setAttribute('role', 'tablist');
     menuTabList?.setAttribute('aria-label', 'Sekcje menu głównego');
     const menuTabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.menu-tab-btn'));
+    const mobileMenuOverviewQuery = window.matchMedia('(max-width: 760px), (pointer: coarse)');
+    let currentMenuTargetId = menuTabButtons.find((button) => button.classList.contains('active'))?.getAttribute('data-tab') || 'tab-team';
+
+    const syncMenuPanelPresentation = (targetId: string, scrollToSection: boolean) => {
+      const overview = mobileMenuOverviewQuery.matches;
+      const titleScreenRoot = document.getElementById('title-screen');
+      titleScreenRoot?.classList.toggle('mobile-menu-overview', overview);
+      if (titleScreenRoot) titleScreenRoot.dataset.activeMenuTab = targetId;
+      menuTabList?.setAttribute('role', overview ? 'group' : 'tablist');
+
+      menuTabButtons.forEach((button) => {
+        const active = button.getAttribute('data-tab') === targetId;
+        button.classList.toggle('active', active);
+        if (overview) {
+          button.removeAttribute('role');
+          button.removeAttribute('aria-selected');
+          button.setAttribute('aria-pressed', String(active));
+          button.tabIndex = 0;
+        } else {
+          button.setAttribute('role', 'tab');
+          button.removeAttribute('aria-pressed');
+          button.setAttribute('aria-selected', String(active));
+          button.tabIndex = active ? 0 : -1;
+        }
+      });
+
+      document.querySelectorAll<HTMLElement>('.tab-panel').forEach((panel) => {
+        const active = panel.id === targetId;
+        const controllingTab = menuTabButtons.find((button) => button.getAttribute('data-tab') === panel.id);
+        panel.classList.toggle('active', overview || active);
+        if (overview) {
+          // Phone layout is a vertically stacked menu dashboard, not a tab
+          // carousel. Keep every section visible and its controls interactive.
+          panel.setAttribute('role', 'region');
+          panel.setAttribute('aria-hidden', 'false');
+          panel.removeAttribute('aria-labelledby');
+          panel.setAttribute('aria-label', controllingTab?.querySelector('.tab-label')?.textContent?.trim() || panel.id);
+          panel.inert = false;
+        } else {
+          panel.setAttribute('role', 'tabpanel');
+          panel.setAttribute('aria-hidden', String(!active));
+          if (controllingTab) panel.setAttribute('aria-labelledby', controllingTab.id);
+          panel.removeAttribute('aria-label');
+          panel.inert = !active;
+        }
+        if (active) panel.scrollTop = 0;
+      });
+
+      if (overview && scrollToSection) {
+        document.getElementById(targetId)?.scrollIntoView({
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+          block: 'start',
+          inline: 'nearest',
+        });
+      } else if (!overview && !scrollToSection) {
+        const contentArea = document.querySelector<HTMLElement>('.menu-tab-content-area');
+        if (contentArea) contentArea.scrollTop = 0;
+      }
+    };
 
     document.getElementById('btn-account-cloud-sync')?.addEventListener('click', () => {
       void this.syncAccountProgressionWithCloud();
@@ -2309,29 +2368,11 @@ class PaleciakiScene extends xb.Script {
     const activateMenuTab = (selectedTab: HTMLButtonElement) => {
       const targetId = selectedTab.getAttribute('data-tab');
       if (!targetId) return;
+      currentMenuTargetId = targetId;
 
-      // The selected menu section owns the accent color and the only visible
-      // launch action. Mode-specific controls never bleed into other sections.
-      const titleScreenRoot = document.getElementById('title-screen');
-      if (titleScreenRoot) titleScreenRoot.dataset.activeMenuTab = targetId;
-
-      menuTabButtons.forEach((button) => {
-        const active = button === selectedTab;
-        button.classList.toggle('active', active);
-        button.setAttribute('aria-selected', String(active));
-        button.tabIndex = active ? 0 : -1;
-      });
-
-      document.querySelectorAll<HTMLElement>('.tab-panel').forEach((panel) => {
-        const active = panel.id === targetId;
-        panel.classList.toggle('active', active);
-        panel.setAttribute('aria-hidden', String(!active));
-        panel.inert = !active;
-        if (active) {
-          panel.setAttribute('aria-labelledby', selectedTab.id);
-          panel.scrollTop = 0;
-        }
-      });
+      // The selected section owns the accent color and mode-specific launch action.
+      // On phones it also becomes the scroll destination within the full menu overview.
+      syncMenuPanelPresentation(targetId, true);
 
       if (targetId === 'tab-leaderboard') {
         leaderboardHasBeenOpened = true;
@@ -2357,7 +2398,7 @@ class PaleciakiScene extends xb.Script {
         panel?.setAttribute('aria-hidden', String(!panel.classList.contains('active')));
         if (panel) panel.inert = !panel.classList.contains('active');
       }
-      const initiallyActive = tabBtn.classList.contains('active');
+      const initiallyActive = tabBtn.getAttribute('data-tab') === currentMenuTargetId;
       tabBtn.setAttribute('aria-selected', String(initiallyActive));
       tabBtn.tabIndex = initiallyActive ? 0 : -1;
 
@@ -2376,6 +2417,11 @@ class PaleciakiScene extends xb.Script {
           nextTab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
         }
       });
+    });
+
+    syncMenuPanelPresentation(currentMenuTargetId, false);
+    mobileMenuOverviewQuery.addEventListener('change', () => {
+      syncMenuPanelPresentation(currentMenuTargetId, false);
     });
 
     document.querySelectorAll<HTMLElement>('.char-card').forEach((card) => {
