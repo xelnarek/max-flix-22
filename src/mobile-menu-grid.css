@@ -1,0 +1,170 @@
+/*
+ * Mobile menu navigation grid.
+ * Keep every top-level menu destination visible at once on touch devices:
+ * no horizontal tab carousel, no partial next tab, and no swipe-only navigation.
+ */
+@media (max-width: 760px), (pointer: coarse) {
+  #title-screen .menu-tabs-bar {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    grid-auto-rows: minmax(42px, auto);
+    flex: 0 0 auto !important;
+    align-items: stretch;
+    justify-content: stretch;
+    gap: 5px !important;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    margin: 0 !important;
+    padding: 5px !important;
+    overflow: visible !important;
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+    overscroll-behavior: auto !important;
+    scroll-snap-type: none !important;
+    scrollbar-width: none !important;
+    touch-action: manipulation;
+  }
+
+  #title-screen .menu-tabs-bar::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  #title-screen .menu-tab-btn {
+    display: flex !important;
+    flex: 0 0 auto !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 3px !important;
+    width: 100%;
+    min-width: 0 !important;
+    min-height: 42px !important;
+    height: auto;
+    padding: 4px 3px !important;
+    border-radius: 8px !important;
+    font-size: 7px !important;
+    line-height: 1.05 !important;
+    letter-spacing: .015em !important;
+    text-align: center !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    scroll-snap-align: none !important;
+  }
+
+  #title-screen .menu-tab-btn .tab-icon,
+  #title-screen .menu-tab-btn .ui-svg-icon {
+    display: inline-flex !important;
+    flex: 0 0 15px !important;
+    width: 15px !important;
+    height: 15px !important;
+  }
+
+  #title-screen .menu-tab-btn .tab-label {
+    display: block;
+    max-width: 100%;
+    font-size: clamp(6.5px, 1.9vw, 7.5px) !important;
+    line-height: 1.05 !important;
+    overflow-wrap: anywhere;
+  }
+
+  /* Two operator cards per row: readable names and multiple choices in view. */
+  #title-screen #tab-team .char-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  #title-screen #tab-team .char-card {
+    min-width: 0 !important;
+    min-height: 144px !important;
+    padding: 9px 7px 10px !important;
+  }
+
+  #title-screen #tab-team .char-card-badge.operator-emblem {
+    width: 64px !important;
+    height: 64px !important;
+    flex-basis: 64px !important;
+    margin: 3px 0 5px !important;
+  }
+
+  #title-screen #tab-team .char-card-name {
+    font-size: 11px !important;
+  }
+
+  #title-screen #tab-team .char-card-role {
+    font-size: 7.5px !important;
+    line-height: 1.15 !important;
+  }
+
+  #title-screen #tab-team .char-card-ability {
+    font-size: 7px !important;
+    line-height: 1.2 !important;
+  }
+}
+
+/* Very small phones keep the three-column navigation, with tighter tiles. */
+@media (max-width: 360px) and (orientation: portrait) {
+  #title-screen .menu-tabs-bar {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 3px !important;
+    padding: 4px !important;
+  }
+
+  #title-screen .menu-tab-btn {
+    min-height: 38px !important;
+    padding: 3px 2px !important;
+  }
+
+  #title-screen .menu-tab-btn .tab-icon,
+  #title-screen .menu-tab-btn .ui-svg-icon {
+    flex-basis: 13px !important;
+    width: 13px !important;
+    height: 13px !important;
+  }
+
+  #title-screen .menu-tab-btn .tab-label {
+    font-size: 6.2px !important;
+  }
+}
+
+/* Landscape phones show the entire destination grid in two compact rows. */
+@media (max-height: 560px) and (orientation: landscape) and (pointer: coarse) {
+  #title-screen .menu-tabs-bar {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    grid-auto-rows: minmax(30px, auto);
+    gap: 3px !important;
+    padding: 3px !important;
+  }
+
+  #title-screen .menu-tab-btn {
+    flex-direction: row !important;
+    gap: 4px !important;
+    min-height: 29px !important;
+    padding: 2px 3px !important;
+    font-size: 6.5px !important;
+  }
+
+  #title-screen .menu-tab-btn .tab-icon,
+  #title-screen .menu-tab-btn .ui-svg-icon {
+    flex-basis: 12px !important;
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  #title-screen .menu-tab-btn .tab-label {
+    font-size: 6px !important;
+  }
+
+  #title-screen #tab-team .char-card {
+    min-height: 106px !important;
+    padding: 5px !important;
+  }
+
+  #title-screen #tab-team .char-card-badge.operator-emblem {
+    width: 44px !important;
+    height: 44px !important;
+    flex-basis: 44px !important;
+    margin: 1px 0 2px !important;
+  }
+}
