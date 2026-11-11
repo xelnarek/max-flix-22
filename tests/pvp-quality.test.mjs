@@ -327,7 +327,11 @@ test('Survival is harder to trivialize, combat HUD stops covering the arena, and
   assert.match(css, /#game-shell\.survival-mode #survival-hud #survival-contract/);
   assert.match(css, /#game-shell\.survival-mode #survival-hud #survival-event/);
   assert.match(css, /#game-shell\.survival-mode #survival-hud \.survival-chip:not\(\.time-chip\):not\(\.wave-chip\)/);
-  assert.match(app, /document\.body\.appendChild\(dialog\)/);
+  const portal = app.slice(app.indexOf('function portalOverlayLayers'), app.indexOf('function setTouchControlsVisibility'));
+  assert.match(portal, /document\.fullscreenElement/);
+  assert.match(portal, /const portalRoot = fullscreenElement instanceof HTMLElement \? fullscreenElement : document\.body/);
+  assert.match(portal, /'pause-modal'/);
+  assert.match(app, /portalOverlayLayers\(\)/);
   assert.match(css, /#pause-modal \.pause-exit-button/);
   assert.match(css, /#pause-modal \.modal-actions[\s\S]*?flex-direction: column/);
 });
@@ -342,7 +346,13 @@ test('PvP lobby and match result dialogs render above the full-screen title menu
   assert.match(html, /id="btn-open-pvp"/);
   assert.match(html, /id="pvp-lobby-modal"[^>]*aria-hidden="true"/);
   assert.match(app, /bindPvpTap\(btnOpenPvp, openLobby\)/);
-  assert.match(app, /document\.body\.appendChild\(dialog\)/);
+  const portal = app.slice(app.indexOf('function portalOverlayLayers'), app.indexOf('function setTouchControlsVisibility'));
+  assert.match(portal, /document\.fullscreenElement/);
+  assert.match(portal, /'pvp-lobby-modal'/);
+  assert.match(portal, /'pvp-match-end-modal'/);
+  assert.match(portal, /portalRoot\.appendChild\(element\)/);
+  const lobbySetup = app.slice(app.indexOf('private setupPvpLobby()'), app.indexOf('private setup', app.indexOf('private setupPvpLobby()') + 20));
+  assert.match(lobbySetup, /portalOverlayLayers\(\)/);
   assert.match(app, /element\.addEventListener\('pointerup', activate\)/);
   assert.match(app, /pvpLobbyModal\.classList\.remove\('hidden'\)/);
   assert.match(app, /pvpLobbyModal\.setAttribute\('aria-hidden', 'false'\)/);

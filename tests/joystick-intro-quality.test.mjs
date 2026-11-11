@@ -155,14 +155,21 @@ test('gameplay explicitly forces the mobile touch layer visible when a run start
   assert.ok(app.includes('setTouchControlsVisibility(false)'));
 });
 
-test('touch layer is portaled to body and receives top mobile compositor priority on every visibility change', async () => {
+test('touch layer follows the active fullscreen root and keeps top mobile compositor priority', async () => {
   const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
-  const helper = app.slice(app.indexOf('function setTouchControlsVisibility'), app.indexOf('import {', app.indexOf('function setTouchControlsVisibility')));
-  assert.ok(helper.includes('layer.parentElement !== document.body'));
-  assert.ok(helper.includes('document.body.appendChild(layer)'));
+  const helper = app.slice(app.indexOf('function setTouchControlsVisibility'), app.indexOf('type TouchControlsMode'));
+  const portal = app.slice(app.indexOf('function portalOverlayLayers'), app.indexOf('function setTouchControlsVisibility'));
+  assert.ok(portal.includes('document.fullscreenElement'));
+  assert.ok(portal.includes('document.body'));
+  assert.ok(portal.includes("const portalRoot = fullscreenElement instanceof HTMLElement ? fullscreenElement : document.body"));
+  assert.ok(portal.includes("if (element && element.parentElement !== portalRoot) portalRoot.appendChild(element)"));
+  assert.ok(helper.includes('portalOverlayLayers()'));
+  assert.ok(!helper.includes('document.body.appendChild(layer)'));
   assert.ok(helper.includes("layer.style.setProperty('position', 'fixed', 'important')"));
   assert.ok(helper.includes("layer.style.setProperty('z-index', '2147483000', 'important')"));
   assert.ok(helper.includes("layer.style.setProperty('pointer-events', 'none', 'important')"));
+  const fullscreen = app.slice(app.indexOf('const handleFullscreenChange = () =>'), app.indexOf("document.addEventListener('fullscreenchange', handleFullscreenChange)"));
+  assert.ok(fullscreen.includes('portalOverlayLayers()'));
 });
 
 test('joystick resting anchor does not override live pointer position while active', async () => {
