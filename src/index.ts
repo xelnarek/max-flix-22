@@ -2978,6 +2978,10 @@ class PaleciakiScene extends xb.Script {
 
     const exitPausedRunToMenu = () => {
       const leavingPvp = this.engine.getGameMode() === 'pvp';
+      const networkNotice = document.getElementById('pvp-network-status');
+      networkNotice?.classList.add('hidden');
+      networkNotice?.setAttribute('aria-hidden', 'true');
+      if (networkNotice) networkNotice.dataset.state = 'hidden';
       pauseModal?.classList.add('hidden');
       pauseModal?.setAttribute('aria-hidden', 'true');
       pauseModal?.style.removeProperty('display');
@@ -3785,6 +3789,27 @@ class PaleciakiScene extends xb.Script {
     const pvpConnectionStatus = document.getElementById('pvp-connection-status');
     const pvpConnectionTitle = document.getElementById('pvp-connection-title');
     const pvpConnectionDetail = document.getElementById('pvp-connection-detail');
+    const pvpNetworkStatus = document.getElementById('pvp-network-status');
+    const setPvpNetworkStatus = (state: 'hidden' | 'reconnecting' | 'failed', message = '') => {
+      if (!pvpNetworkStatus) return;
+      pvpNetworkStatus.textContent = message;
+      pvpNetworkStatus.dataset.state = state;
+      const hidden = state === 'hidden';
+      pvpNetworkStatus.classList.toggle('hidden', hidden);
+      pvpNetworkStatus.setAttribute('aria-hidden', String(hidden));
+    };
+    const isActiveNetworkPvp = () =>
+      this.engine.getGameMode() === 'pvp' &&
+      (this.engine.getGameState() === 'playing' || this.engine.getGameState() === 'paused') &&
+      this.pvpSession?.isLocalBot === false;
+    const showPvpReconnectState = () => {
+      if (!isActiveNetworkPvp()) return;
+      setPvpNetworkStatus('reconnecting', 'UTRACONO POŁĄCZENIE • WZNOWIENIE POJEDYNKU');
+    };
+    const showPvpReconnectFailure = (message: string) => {
+      if (!isActiveNetworkPvp()) return;
+      setPvpNetworkStatus('failed', 'NIE UDAŁO SIĘ WZNOWIĆ POJEDYNKU. ' + message);
+    };
     const setPvpConnectionStatus = (state: 'idle' | 'connecting' | 'connected' | 'searching' | 'waiting' | 'matched' | 'cancelled' | 'error', title: string, detail: string) => {
       if (pvpConnectionTitle) pvpConnectionTitle.textContent = title;
       if (pvpConnectionDetail) pvpConnectionDetail.textContent = detail;
@@ -4008,6 +4033,7 @@ class PaleciakiScene extends xb.Script {
     };
 
     const startPvpMatchUI = (session: IPvpSession, localOp: CharacterId, remoteOp: CharacterId) => {
+      setPvpNetworkStatus('hidden');
       this.accountPvpAwardedForMatch = false;
       if (this.cinematicIntro?.isRunning()) this.cinematicIntro.stop(false, false);
       this.engine.setLevelVisible(true);
@@ -4113,6 +4139,7 @@ class PaleciakiScene extends xb.Script {
 
       session.onConnectionChange = (connected) => {
         if (matchmakingSession !== session) return;
+        if (!connected) showPvpReconnectState();
         setPvpConnectionStatus(
           connected ? 'connected' : 'connecting',
           connected ? 'SERWER POŁĄCZONY' : 'PONAWIANIE POŁĄCZENIA',
@@ -4142,6 +4169,7 @@ class PaleciakiScene extends xb.Script {
       };
       session.onRoomJoined = (roomCode, slot) => {
         if (matchmakingSession !== session) return;
+        setPvpNetworkStatus('hidden');
         this.pvpRoomCode = roomCode;
         this.pvpLocalSlot = slot;
         setMatchmakingUiPhase('matched');
@@ -4168,11 +4196,13 @@ class PaleciakiScene extends xb.Script {
       };
       session.onRoomClosed = (message) => {
         if (matchmakingSession !== session) return;
+        showPvpReconnectFailure(message);
         setMatchmakingUiPhase('idle');
         setPvpConnectionStatus('error', 'POKÓJ ZAMKNIĘTY', message);
       };
       session.onError = (error) => {
         if (matchmakingSession !== session) return;
+        showPvpReconnectFailure(error);
         matchmakingSession = null;
         if (this.pvpSession === session) this.pvpSession = null;
         session.dispose();
@@ -4216,6 +4246,7 @@ class PaleciakiScene extends xb.Script {
       this.pvpLocalReady = false;
 
       netSession.onConnectionChange = (connected) => {
+        if (!connected) showPvpReconnectState();
         createdRoomInfo?.classList.remove('hidden');
         if (hostStatus) hostStatus.textContent = connected
           ? 'Połączono z serwerem PvP. Tworzenie pokoju...'
@@ -4226,10 +4257,12 @@ class PaleciakiScene extends xb.Script {
         if (btnRematch) btnRematch.textContent = `REWANŻ • ${votes}/${required} GOTOWYCH`;
       };
       netSession.onRoomClosed = (message) => {
+        showPvpReconnectFailure(message);
         setMatchmakingUiPhase('idle');
         if (hostStatus) hostStatus.textContent = message;
       };
       netSession.onRoomJoined = (roomCode, slot, roomState) => {
+        setPvpNetworkStatus('hidden');
         if (readyBtn) readyBtn.disabled = true;
         this.pvpRoomCode = roomCode;
         this.pvpLocalSlot = slot;
@@ -4280,6 +4313,7 @@ class PaleciakiScene extends xb.Script {
       };
 
       netSession.onError = (err) => {
+        showPvpReconnectFailure(err);
         setMatchmakingUiPhase('idle');
         createdRoomInfo?.classList.remove('hidden');
         if (hostStatus) {
@@ -4316,6 +4350,7 @@ class PaleciakiScene extends xb.Script {
       this.pvpLocalReady = false;
 
       netSession.onConnectionChange = (connected) => {
+        if (!connected) showPvpReconnectState();
         if (joinStatus) {
           joinStatus.classList.remove('hidden');
           joinStatus.textContent = connected
@@ -4328,6 +4363,7 @@ class PaleciakiScene extends xb.Script {
         if (btnRematch) btnRematch.textContent = `REWANŻ • ${votes}/${required} GOTOWYCH`;
       };
       netSession.onRoomClosed = (message) => {
+        showPvpReconnectFailure(message);
         setMatchmakingUiPhase('idle');
         if (joinStatus) {
           joinStatus.classList.remove('hidden');
@@ -4335,6 +4371,7 @@ class PaleciakiScene extends xb.Script {
         }
       };
       netSession.onRoomJoined = (roomCode, slot, roomState) => {
+        setPvpNetworkStatus('hidden');
         if (readyBtn) readyBtn.disabled = false;
         this.pvpRoomCode = roomCode;
         this.pvpLocalSlot = slot;
@@ -4376,6 +4413,7 @@ class PaleciakiScene extends xb.Script {
       };
 
       netSession.onError = (err) => {
+        showPvpReconnectFailure(err);
         setMatchmakingUiPhase('idle');
         if (joinStatus) {
           joinStatus.classList.remove('hidden');

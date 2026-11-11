@@ -42,9 +42,12 @@ The dedicated WebSocket service:
 - limits payload size and message rate, checks allowed origins, and uses ping/pong heartbeats;
 - waits for both connected players to join and confirm readiness;
 - requires both players to request a rematch;
-- closes the match when a player disconnects.
+- gives an unexpectedly disconnected player a bounded reconnect grace period. The authoritative match simulation is frozen while a slot is disconnected; a successful rejoin restores the same slot and room state;
+- ends a live match only when the disconnect grace period expires or a player intentionally leaves.
 
-**Known limitation:** active-match reconnection/resume is not implemented. A player disconnect ends the current match rather than attempting a risky partial state restore. This behaviour is surfaced to the remaining player.
+**Reconnect contract:** each player receives a random, tab-scoped capability stored in `sessionStorage`. The client retries a lost room connection with bounded exponential backoff (up to 10 attempts inside an 18-second client window). The server stores only the SHA-256 hash of each capability, compares tokens in constant time, rotates the capability after a valid rejoin, and holds the live room for a default 20-second server grace period. An intentional leave does not receive the grace period. The remaining player receives an authoritative match-end result if the disconnected player does not return.
+
+The active-match reconnect path is implemented and regression-tested in `tests/pvp-session-reconnect.test.mjs`; actual two-device recovery under real mobile-network changes remains a physical-device acceptance test.
 
 ## Latest PvP tuning and visual pass
 
@@ -74,5 +77,5 @@ Passing CI does not prove touch comfort, frame pacing on a physical phone, fairn
 
 1. Complete and verify external WSS hosting before claiming online PvP is live.
 2. Playtest operator-specific damage, cooldowns and movement to tune matchup balance from measured results.
-3. Add a controlled reconnect grace period only after session identity and state restoration are designed and tested.
+3. Exercise the implemented reconnect flow on two physical devices: background/foreground the app, toggle Wi-Fi/mobile data, and confirm that a successful rejoin resumes the same round while an expired grace period ends it deterministically.
 4. Tune mobile touch-zone placement and visual feedback on-device, not solely through browser emulation.
