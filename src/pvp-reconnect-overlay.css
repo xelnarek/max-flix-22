@@ -1,0 +1,27 @@
+/* Keep a network interruption visible over the live arena, not only inside the hidden lobby. */
+.pvp-network-status.hidden { display:none !important; }
+.pvp-network-status {
+  position:fixed; z-index:2147483008; top:max(66px,calc(env(safe-area-inset-top) + 58px));
+  left:50%; width:min(560px,calc(100vw - 28px)); padding:11px 16px; transform:translateX(-50%);
+  border:1px solid rgba(251,191,36,.48); border-radius:14px; background:rgba(40,28,8,.94);
+  color:#fef3c7; box-shadow:0 14px 36px rgba(0,0,0,.42); text-align:center;
+  font:850 11px/1.45 'JetBrains Mono',ui-monospace,monospace; letter-spacing:.045em;
+  pointer-events:none; backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+}
+.pvp-network-status[data-state="reconnecting"]::before {
+  content:"●"; margin-right:9px; color:#fbbf24; animation:pvp-network-pulse 1.1s ease-in-out infinite;
+}
+.pvp-network-status[data-state="failed"] {
+  border-color:rgba(248,113,113,.65); background:rgba(69,10,10,.96); color:#fee2e2;
+}
+.pvp-network-status[data-state="failed"]::before {
+  content:"!"; display:inline-grid; width:16px; height:16px; margin-right:9px; place-items:center;
+  border-radius:50%; background:#991b1b; color:#fff;
+}
+@keyframes pvp-network-pulse { 50% { opacity:.35; } }
+@media (max-width:420px) {
+  .pvp-network-status { top:max(60px,calc(env(safe-area-inset-top) + 52px)); width:calc(100vw - 20px); padding:10px 11px; font-size:9px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .pvp-network-status[data-state="reconnecting"]::before { animation:none; }
+}
