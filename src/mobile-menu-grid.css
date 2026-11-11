@@ -168,3 +168,100 @@
     margin: 1px 0 2px !important;
   }
 }
+
+/*
+ * Mobile dashboard mode: every section is part of one vertical workspace.
+ * The destination tiles above become jump controls; they no longer replace
+ * the other panels or force the player to swipe sideways between pages.
+ */
+#title-screen.mobile-menu-overview .menu-tab-content-area {
+  display: flex !important;
+  flex: 1 1 0 !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 9px !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  padding: 7px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-top: 8px;
+}
+
+#title-screen.mobile-menu-overview .tab-panel,
+#title-screen.mobile-menu-overview .tab-panel[aria-hidden="true"] {
+  display: flex !important;
+  flex: 0 0 auto !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  gap: 9px !important;
+  margin: 0 !important;
+  padding: 11px 10px 13px !important;
+  border: 1px solid rgba(132, 184, 210, .17);
+  border-radius: 13px;
+  background:
+    linear-gradient(145deg, rgba(9, 23, 36, .92), rgba(5, 14, 24, .88));
+  box-shadow: 0 7px 20px rgba(0, 0, 0, .16), inset 0 1px 0 rgba(255, 255, 255, .035);
+  scroll-margin-top: 8px;
+  contain: layout style;
+}
+
+#title-screen.mobile-menu-overview .tab-panel.active {
+  animation: none !important;
+}
+
+#title-screen.mobile-menu-overview .tab-panel::before {
+  display: block;
+  flex: 0 0 auto;
+  padding: 0 2px 7px;
+  border-bottom: 1px solid rgba(132, 184, 210, .14);
+  color: #d3e2ec;
+  font: 800 8px/1.2 "JetBrains Mono", monospace;
+  letter-spacing: .12em;
+}
+
+#title-screen.mobile-menu-overview #tab-team::before { content: "01  /  OPERATORZY"; }
+#title-screen.mobile-menu-overview #tab-map::before { content: "02  /  WYBÓR MAPY"; }
+#title-screen.mobile-menu-overview #tab-pvp::before { content: "03  /  ARENA PVP"; }
+#title-screen.mobile-menu-overview #tab-enemies::before { content: "04  /  ZAGROŻENIA"; }
+#title-screen.mobile-menu-overview #tab-perks::before { content: "05  /  MODUŁY BHP"; }
+#title-screen.mobile-menu-overview #tab-field-guide::before { content: "06  /  KODEKS"; }
+#title-screen.mobile-menu-overview #tab-talent-tree::before { content: "07  /  ROZWÓJ KONTA"; }
+#title-screen.mobile-menu-overview #tab-ranks::before { content: "08  /  RANGI"; }
+#title-screen.mobile-menu-overview #tab-leaderboard::before { content: "09  /  RANKING"; }
+#title-screen.mobile-menu-overview #tab-achievements::before { content: "10  /  OSIĄGNIĘCIA"; }
+#title-screen.mobile-menu-overview #tab-settings::before { content: "11  /  USTAWIENIA"; }
+
+#title-screen.mobile-menu-overview .tab-panel .char-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+#title-screen.mobile-menu-overview .tab-panel .survival-map-picker-options {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+#title-screen.mobile-menu-overview .menu-fixed-bottom-bar {
+  flex: 0 0 auto !important;
+}
+
+@media (max-height: 560px) and (orientation: landscape) and (pointer: coarse) {
+  #title-screen.mobile-menu-overview .menu-tab-content-area {
+    padding: 4px !important;
+    gap: 5px !important;
+  }
+
+  #title-screen.mobile-menu-overview .tab-panel,
+  #title-screen.mobile-menu-overview .tab-panel[aria-hidden="true"] {
+    gap: 5px !important;
+    padding: 7px !important;
+  }
+
+  #title-screen.mobile-menu-overview .tab-panel::before {
+    padding-bottom: 4px;
+    font-size: 7px;
+  }
+}
