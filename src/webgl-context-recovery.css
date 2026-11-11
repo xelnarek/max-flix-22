@@ -1,0 +1,96 @@
+/* Visible only while the browser is recovering a lost GPU context. */
+.webgl-recovery-overlay[hidden] {
+  display: none !important;
+}
+
+.webgl-recovery-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  display: grid;
+  place-items: center;
+  padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right))
+    max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+  background: rgba(2, 8, 16, 0.88);
+  color: #edf6ff;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.webgl-recovery-card {
+  width: min(100%, 460px);
+  padding: clamp(22px, 5vw, 32px);
+  border: 1px solid rgba(125, 211, 252, 0.32);
+  border-radius: 22px;
+  background: linear-gradient(155deg, rgba(15, 35, 52, 0.98), rgba(5, 13, 23, 0.99));
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.62);
+  text-align: center;
+}
+
+.webgl-recovery-card h2 {
+  margin: 0;
+  color: #e0f2fe;
+  font: 900 clamp(17px, 4vw, 21px)/1.25 'Outfit', system-ui, sans-serif;
+  letter-spacing: 0.055em;
+}
+
+.webgl-recovery-copy {
+  margin: 13px 0 22px;
+  color: #cbd5e1;
+  font: 500 14px/1.6 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+.webgl-recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.webgl-recovery-actions button {
+  min-width: 142px;
+  min-height: 46px;
+  padding: 0 16px;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  border-radius: 12px;
+  color: #f8fafc;
+  background: rgba(30, 41, 59, 0.82);
+  font: 800 11px/1 system-ui, sans-serif;
+  letter-spacing: 0.045em;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+.webgl-recovery-actions .webgl-recovery-resume {
+  border-color: rgba(56, 189, 248, 0.58);
+  background: linear-gradient(135deg, #075985, #0e7490);
+}
+
+.webgl-recovery-actions button:disabled {
+  opacity: 0.68;
+  cursor: wait;
+}
+
+.webgl-recovery-actions button:focus-visible {
+  outline: 2px solid #7dd3fc;
+  outline-offset: 3px;
+}
+
+@media (max-width: 420px) {
+  .webgl-recovery-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .webgl-recovery-actions button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .webgl-recovery-overlay,
+  .webgl-recovery-card {
+    animation: none !important;
+    transition: none !important;
+  }
+}

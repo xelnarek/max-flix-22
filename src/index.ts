@@ -39,6 +39,7 @@ import { launchOniricPlatformer } from './oniricPlatformer.ts';
 import { getMenuTabIndexForKey } from './menuTabNavigation.ts';
 import { readSurvivalMapPreference, writeSurvivalMapPreference } from './survivalMapPreference.ts';
 import { getVisibilityPauseAction } from './visibilityPause.ts';
+import { observeWebGLContextRecovery } from './webglContextRecovery.ts';
 // Firestore is only needed for the optional leaderboard. Keep its large SDK
 // outside the initial game/menu load and fetch it when the player opens ranking.
 type FirebaseLeaderboardServices = typeof import('./firebase.ts');
@@ -93,6 +94,7 @@ function portalOverlayLayers(): void {
     'victory-modal',
     'pvp-lobby-modal',
     'pvp-match-end-modal',
+    'webgl-recovery-notice',
   ];
   for (const id of overlayIds) {
     const element = document.getElementById(id);
@@ -674,6 +676,26 @@ class PaleciakiScene extends xb.Script {
     this.fallbackScene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
     this.setupUIAndEngine();
+  }
+
+  /**
+   * A WebGL context loss freezes the renderer independently from gameplay.
+   * Pause the active run before the browser attempts to restore the GPU context.
+   */
+  public pauseForWebGLRecovery(): boolean {
+    if (this.engine.getGameState() !== 'playing') return false;
+    const pauseButton = document.getElementById('btn-top-pause') as HTMLButtonElement | null;
+    if (pauseButton) pauseButton.click();
+    else this.engine.togglePause();
+    return this.engine.getGameState() === 'paused';
+  }
+
+  /** Resume only a run that this recovery flow itself paused, and only on user input. */
+  public resumeAfterWebGLRecovery(shouldResume: boolean): void {
+    if (!shouldResume || this.engine.getGameState() !== 'paused') return;
+    const resumeButton = document.getElementById('btn-resume') as HTMLButtonElement | null;
+    if (resumeButton) resumeButton.click();
+    else this.engine.togglePause();
   }
 
   private setupUIAndEngine() {
@@ -4999,6 +5021,78 @@ async function startApp() {
       if (!renderer) {
         throw new Error('Silnik 3D nie utworzył renderera WebGL. Uruchom grę ponownie w obsługiwanej przeglądarce.');
       }
+
+      // A lost WebGL context otherwise leaves the simulation advancing behind a frozen canvas.
+      // Three.js restores its renderer state; the player explicitly resumes the paused run.
+      const recoveryNotice = document.createElement('aside');
+      recoveryNotice.id = 'webgl-recovery-notice';
+      recoveryNotice.className = 'webgl-recovery-overlay';
+      recoveryNotice.hidden = true;
+      recoveryNotice.setAttribute('role', 'alertdialog');
+      recoveryNotice.setAttribute('aria-modal', 'true');
+      recoveryNotice.setAttribute('aria-live', 'assertive');
+
+      const recoveryCard = document.createElement('div');
+      recoveryCard.className = 'webgl-recovery-card';
+      const recoveryHeading = document.createElement('h2');
+      recoveryHeading.id = 'webgl-recovery-heading';
+      recoveryHeading.textContent = 'PRZYWRACANIE GRAFIKI 3D';
+      recoveryNotice.setAttribute('aria-labelledby', recoveryHeading.id);
+
+      const recoveryCopy = document.createElement('p');
+      recoveryCopy.className = 'webgl-recovery-copy';
+      recoveryCopy.textContent = 'Utracono połączenie z układem graficznym. Rozgrywka zostanie wstrzymana do czasu przywrócenia obrazu.';
+
+      const recoveryActions = document.createElement('div');
+      recoveryActions.className = 'webgl-recovery-actions';
+      const recoveryResume = document.createElement('button');
+      recoveryResume.type = 'button';
+      recoveryResume.className = 'webgl-recovery-resume';
+      recoveryResume.textContent = 'OCZEKIWANIE NA GPU';
+      recoveryResume.disabled = true;
+
+      const recoveryReload = document.createElement('button');
+      recoveryReload.type = 'button';
+      recoveryReload.className = 'webgl-recovery-reload';
+      recoveryReload.textContent = 'ODŚWIEŻ GRĘ';
+      recoveryReload.addEventListener('click', () => window.location.reload());
+
+      recoveryActions.append(recoveryResume, recoveryReload);
+      recoveryCard.append(recoveryHeading, recoveryCopy, recoveryActions);
+      recoveryNotice.appendChild(recoveryCard);
+      document.body.appendChild(recoveryNotice);
+
+      let shouldResumeAfterContextLoss = false;
+      let webglContextRestored = false;
+      recoveryResume.addEventListener('click', () => {
+        if (!webglContextRestored) return;
+        sceneScript.resumeAfterWebGLRecovery(shouldResumeAfterContextLoss);
+        recoveryNotice.hidden = true;
+        recoveryNotice.setAttribute('aria-hidden', 'true');
+      });
+
+      observeWebGLContextRecovery(renderer.domElement, {
+        onLost: () => {
+          shouldResumeAfterContextLoss = sceneScript.pauseForWebGLRecovery();
+          webglContextRestored = false;
+          recoveryHeading.textContent = 'UTRACONO POŁĄCZENIE Z GPU';
+          recoveryCopy.textContent = 'Gra została wstrzymana. Przeglądarka próbuje przywrócić grafikę 3D. Nie zamykaj aplikacji; w razie problemu możesz ją odświeżyć.';
+          recoveryResume.textContent = 'OCZEKIWANIE NA PRZYWRÓCENIE';
+          recoveryResume.disabled = true;
+          recoveryNotice.hidden = false;
+          recoveryNotice.setAttribute('aria-hidden', 'false');
+          portalOverlayLayers();
+          recoveryReload.focus();
+        },
+        onRestored: () => {
+          webglContextRestored = true;
+          recoveryHeading.textContent = 'GRAFIKA 3D PRZYWRÓCONA';
+          recoveryCopy.textContent = 'Silnik graficzny odzyskał połączenie. Sprawdź obraz i wybierz powrót do menu albo wznowienie wstrzymanej rozgrywki.';
+          recoveryResume.textContent = shouldResumeAfterContextLoss ? 'WZNÓW GRĘ' : 'ZAMKNIJ';
+          recoveryResume.disabled = false;
+          recoveryResume.focus();
+        },
+      });
 
       // High fidelity rendering configuration
       {
