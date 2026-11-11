@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System.Collections.Generic;
+using System.Linq;
 using MaxFlix.Unity.Runtime;
 using UnityEditor;
 using UnityEditor.Build;
@@ -43,6 +44,17 @@ namespace MaxFlix.Unity.Editor
                 SkinnedMeshRenderer[] renderers = prefab.GetComponentsInChildren<SkinnedMeshRenderer>(true);
                 if (renderers == null || renderers.Length == 0)
                     failures.Add(modelId + ": imported asset has no SkinnedMeshRenderer.");
+
+                string[] requiredClips = { "Idle", "Walk", "Run", "Death", "Hit" };
+                string[] importedClips = AssetDatabase.LoadAllAssetsAtPath(path)
+                    .OfType<AnimationClip>()
+                    .Select(clip => clip.name)
+                    .ToArray();
+                foreach (string clipName in requiredClips)
+                {
+                    if (!importedClips.Contains(clipName))
+                        failures.Add(modelId + ": missing imported animation clip " + clipName + ".");
+                }
             }
 
             if (failures.Count > 0)

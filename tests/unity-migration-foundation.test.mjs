@@ -293,6 +293,8 @@ test('Unity Player build is blocked when an imported CC0 rig is missing or has n
   assert.ok(audit.includes('IPreprocessBuildWithReport'));
   assert.ok(audit.includes('AssetDatabase.LoadAssetAtPath<GameObject>'));
   assert.ok(audit.includes('GetComponentsInChildren<SkinnedMeshRenderer>(true)'));
+  assert.ok(audit.includes('AssetDatabase.LoadAllAssetsAtPath(path)'));
+  assert.ok(audit.includes('new[] { "Idle", "Walk", "Run", "Death", "Hit" }') || audit.includes('"Idle", "Walk", "Run", "Death", "Hit"'));
   assert.ok(audit.includes('BuildFailedException'));
   assert.ok(audit.includes('Validate imported CC0 character rigs'));
 });
