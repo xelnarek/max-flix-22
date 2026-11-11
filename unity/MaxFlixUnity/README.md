@@ -15,8 +15,9 @@
 6. The editor installer creates Assets/Scenes/Bootstrap.unity and registers it in Build Settings. On the first editor load, the project setup also creates/assigns the URP asset, selects the New Input System backend and configures WebGPU with WebGL 2 fallback for Web builds. Restart the Editor if Unity asks.
 7. If the automatic setup is interrupted, run **Max Flix > Configure URP and New Input System** from the Unity menu to repair the renderer/input configuration.
 8. Run **Max Flix > Validate imported CC0 character rigs**. The audit also runs automatically before a Player build and fails if a model is missing, not skinned or missing Idle/Walk/Run/Death/Hit clips.
-9. Before final release, load every imported rig in the target scenes, record its glTFast shader variants into a ShaderVariantCollection and add it under Graphics > Preloaded Shaders. Enable Strict Shader Variant Matching during QA so stripped variants are visible instead of silently substituted.
-10. Press Play. The main menu appears; choose Survival or Campaign, operator and Survival map.
+9. Run **Max Flix > Build CC0 rig preview scene** to create a separate visual gallery of all 17 imported rigs. This review scene is not added to Player Build Settings and does not replace Bootstrap.
+10. Before final release, load every imported rig in the target scenes, record its glTFast shader variants into a ShaderVariantCollection and add it under Graphics > Preloaded Shaders. Enable Strict Shader Variant Matching during QA so stripped variants are visible instead of silently substituted.
+11. Press Play. The main menu appears; choose Survival or Campaign, operator and Survival map.
 
 The project deliberately does not import or overwrite the old game. New C# systems live beside the old code until their parity tests are approved.
 

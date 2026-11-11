@@ -316,3 +316,15 @@ test('Unity Editor can create a non-release preview scene for the full imported 
   assert.ok(preview.includes('ScenePath = "Assets/Scenes/GobkitRigPreview.unity"'));
   assert.ok(preview.includes('It is not included in Player Build Settings'));
 });
+
+test('Unity rig preview builder saves a separate gallery and never adds it to Player Build Settings', async () => {
+  const [preview, readme] = await Promise.all([
+    read('../unity/MaxFlixUnity/Assets/Editor/GobkitRigPreviewBuilder.cs'),
+    read('../unity/MaxFlixUnity/README.md'),
+  ]);
+  assert.ok(preview.includes('EditorSceneManager.SaveScene(scene, ScenePath)'));
+  assert.ok(preview.includes('PrefabUtility.InstantiatePrefab(prefab, scene)'));
+  assert.ok(preview.includes('Assets/Scenes/GobkitRigPreview.unity'));
+  assert.ok(!preview.includes('EditorBuildSettings.scenes'));
+  assert.ok(readme.includes('Max Flix > Build CC0 rig preview scene'));
+});

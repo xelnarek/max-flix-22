@@ -81,6 +81,7 @@ Pierwszy commit Unity jest **fundamentem migracji i grywalnym wycinkiem technicz
 - Ten sam downloader co dla wersji Three.js może skopiować 17 walidowanych GLB CC0 1.0 do `Assets/Resources/Characters/Gobkit/` i zapisać manifest z SHA-256.
 - Katalog C# zachowuje mapowanie pięciu operatorów i 19 humanoidalnych/stworowych archetypów; wózek widłowy, AGV, dron Piorun i Pomazaniec pozostają osobnymi modelami niehumanoidalnymi.
 - Przed buildem Editor sprawdza, czy każdy model został zaimportowany jako GameObject ze SkinnedMeshRenderer i zawiera wymagane klipy Idle/Walk/Run/Death/Hit; brak modelu/klipu zatrzymuje build Unity z czytelnym komunikatem.
+- Dodano generator oddzielnej sceny podglądowej wszystkich 17 modeli, bez dopisywania jej do listy scen produkcyjnych.
 - **Cieniowanie jest osobną bramką wydania:** glTFast używa shader graphs URP i wariantów zależnych od cech materiału. Po podłączeniu rigów do sceny trzeba wygenerować ShaderVariantCollection z rzeczywistych assetów i dodać ją do Preloaded Shaders. Podczas QA włączyć Strict Shader Variant Matching, aby brakujące warianty nie kończyły się cichym fallbackiem lub różową siatką.
 
 **Granica tego etapu:** pipeline pobiera i importuje zasoby, ale nie podłącza ich jeszcze do PlayerController/EnemyAgent ani Animator Controller. W runtime nadal są proceduralne placeholdery. Trzeba osobno dodać prefab attachment, retargeting klipów, wyposażenie/role props, punkty ataku, skalę i testy animacji na urządzeniu.
