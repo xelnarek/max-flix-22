@@ -254,3 +254,53 @@ test('Unity setup creates URP, configures WebGPU with WebGL2 fallback and enable
   assert.match(setup, /NewInputSystemBackend = 1/);
   assert.match(setup, /activeInputHandler\.intValue = NewInputSystemBackend/);
 });
+
+test('Unity project pins glTFast for importing the shared CC0 GLB character roster', async () => {
+  const manifest = await read('../unity/MaxFlixUnity/Packages/manifest.json');
+  assert.ok(manifest.includes('"com.unity.cloud.gltfast": "6.20.0"'));
+});
+
+test('Unity build stages the same validated CC0 GLB bytes before Unity imports the project', async () => {
+  const [workflow, downloader, ignore] = await Promise.all([
+    read('../.github/workflows/unity-validation.yml'),
+    read('../scripts/fetch-gobkit-assets.mjs'),
+    read('../unity/MaxFlixUnity/.gitignore'),
+  ]);
+  const stage = workflow.indexOf('node scripts/fetch-gobkit-assets.mjs --strict --unity');
+  const build = workflow.indexOf('Compile Unity Web player');
+  assert.ok(stage >= 0 && build > stage);
+  assert.ok(downloader.includes('UNITY_OUTPUT_DIR'));
+  assert.ok(downloader.includes('UNITY_MANIFEST_PATH'));
+  assert.ok(downloader.includes('validateGlbAsset(bytes, id, model.clipNames)'));
+  assert.ok(downloader.includes('writeFile(path.join(UNITY_OUTPUT_DIR, filename), bytes)'));
+  assert.ok(ignore.includes('/Assets/Resources/Characters/Gobkit/'));
+});
+
+test('Unity rig catalog covers all five operators and nineteen humanoid/creature enemies', async () => {
+  const catalog = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/GobkitActorCatalog.cs');
+  for (const model of ['storemanager','firechief','stockclerk','baggagehandler','securityguard','foodcourier','shoplifter','salesrep','officemanager','hazmattech','stitchedbrute','bloodironjuggernaut','nightwitch','androidcommander','werewolfcaptain','forcibleentryfirefighter','bloodirongrunt'])
+    assert.ok(catalog.includes('"' + model + '"'), 'missing model ' + model);
+  for (const operator of ['Marcin','Grzesiek','Dawid','Mateusz','Piotr'])
+    assert.ok(catalog.includes('OperatorId.' + operator));
+  for (const enemy of ['Customer','Walczak','Architect','Inspector','Handlowiec','Monter','EliteWalczakGuard','Kurier','ItalianVendor','CrazyStacker','KingLeto','PanRoman','Serwisant','BosmanKrakow','ZombieWorker','Sebix','MutantGammaForklift','RadioactivePip','CyberSalesman'])
+    assert.ok(catalog.includes('EnemyKind.' + enemy));
+  for (const bespoke of ['Forklift','AgvRobot','PiorunDrone','Pomazaniec'])
+    assert.ok(catalog.includes('case EnemyKind.' + bespoke + ':'));
+});
+
+test('Unity Player build is blocked when an imported CC0 rig is missing or has no skinned mesh', async () => {
+  const audit = await read('../unity/MaxFlixUnity/Assets/Editor/GobkitAssetImportAudit.cs');
+  assert.ok(audit.includes('IPreprocessBuildWithReport'));
+  assert.ok(audit.includes('AssetDatabase.LoadAssetAtPath<GameObject>'));
+  assert.ok(audit.includes('GetComponentsInChildren<SkinnedMeshRenderer>(true)'));
+  assert.ok(audit.includes('BuildFailedException'));
+  assert.ok(audit.includes('Validate imported CC0 character rigs'));
+});
+
+test('Unity migration notes avoid assuming unsupported WebGPU progressive loading or dynamic resolution', async () => {
+  const plan = await read('../docs/UNITY_MIGRATION_PLAN.md');
+  assert.ok(plan.includes('WebGPU nie jest włączone domyślnie'));
+  assert.ok(plan.includes('Nie obsługuje jednak dynamic resolution'));
+  assert.ok(plan.includes('Predictive Back Support'));
+  assert.ok(!plan.includes('Web Player obsługuje Progressive Asset Loading'));
+});

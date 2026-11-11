@@ -5,12 +5,13 @@
 Docelowy silnik: **Unity 6000.6.8f1 (Unity 6.6.8f1)**, wydany 3 listopada 2026 r. Wybrana jest najnowsza wspierana wersja z gałęzi Unity 6.6, a nie wersja Alpha/Beta. Render pipeline: **URP 17.5.0** (dopasowany do Unity 6000.6), z uGUI 2.6.0 i Input System 1.20.1; osobne profile jakości dla Androida, przeglądarki i PC.
 
 Dlaczego ta wersja:
-- Unity 6.6 wprowadza produkcyjną obsługę WebGPU dla Web Player; WebGL 2 pozostaje ścieżką zgodności i może być używany jako fallback.
-- Web Player obsługuje Progressive Asset Loading — można ładować zasoby scenami, zamiast wymuszać pobranie całej zawartości przed rozpoczęciem gry.
-- URP obejmuje urządzenia mobilne, PC i Web; nie wybieramy HDRP, które byłoby niepotrzebnie kosztowne dla Poco F6 i wersji przeglądarkowej.
-- 6000.6.8f1 jest konkretną, przypiętą wersją edytora, nie ruchomym aliasem latest.
+- Unity 6.6 ma produkcyjną obsługę WebGPU w Web Player, ale WebGPU nie jest włączone domyślnie. Projekt jawnie ustawia WebGPU jako pierwszy backend i WebGL 2 jako fallback.
+- WebGPU zapewnia m.in. GPU skinning, compute shaders, indirect rendering i VFX Graph. Nie obsługuje jednak dynamic resolution, async compute ani cubemap arrays; adaptacyjna jakość musi używać profili URP/render scale, a nie zakładać sprzętowego dynamic resolution.
+- Progressive Asset Loading nie jest założeniem dla przypiętego Unity 6000.6.8f1. W tej migracji najpierw używamy osobnych zasobów/scen i sprawdzimy streaming po kompilacji docelowej wersji.
+- URP obejmuje Android, PC i Web; HDRP byłby niepotrzebnie kosztowny dla Poco F6 i Web Player.
+- 6000.6.8f1 jest przypiętą wersją edytora, nie ruchomym aliasem latest.
 
-Unity opisuje aktualizacje wspierane jako produkcyjnie weryfikowane do czasu wydania kolejnej wersji. Dla gry usługowej Unity rekomenduje LTS, ale ten projekt rozpoczyna nową migrację i wymaga najnowszej obsługi WebGPU. Wersja edytora zostaje przypięta; aktualizacja do kolejnego wydania nie będzie automatyczna.
+Unity 6000.6.8f1 ma znaną usterkę Androida: przy jednoczesnym włączeniu Run In Background i Predictive Back Support gest/przycisk Wstecz może zamknąć aplikację po powrocie z tła. Nie włączamy obu ustawień jako wymogu migracji; trzeba przetestować zachowanie Wstecz i wznowienie aplikacji na urządzeniu przed wydaniem.
 
 ## Zasada bezpieczeństwa migracji
 
@@ -73,6 +74,15 @@ Pierwszy commit Unity jest **fundamentem migracji i grywalnym wycinkiem technicz
 - ruch, kamera, HUD, atak podstawowy, przeciwnik oraz podstawowe kolizje;
 - profil uruchomieniowy Web/Android/PC;
 - walidacja w Unity Editor oraz na rzeczywistym Poco F6. (Etap rozpoczęty.)
+
+### Etap 1B — pipeline importu rigów CC0 do Unity (przygotowany w repozytorium)
+
+- Przypięto stabilny importer glTFast 6.20.0 dla Unity 6000.6.
+- Ten sam downloader co dla wersji Three.js może skopiować 17 walidowanych GLB CC0 1.0 do `Assets/Resources/Characters/Gobkit/` i zapisać manifest z SHA-256.
+- Katalog C# zachowuje mapowanie pięciu operatorów i 19 humanoidalnych/stworowych archetypów; wózek widłowy, AGV, dron Piorun i Pomazaniec pozostają osobnymi modelami niehumanoidalnymi.
+- Przed buildem Editor sprawdza, czy każdy model został zaimportowany jako GameObject ze SkinnedMeshRenderer; brak modelu zatrzymuje build Unity z czytelnym komunikatem.
+
+**Granica tego etapu:** pipeline pobiera i importuje zasoby, ale nie podłącza ich jeszcze do PlayerController/EnemyAgent ani Animator Controller. W runtime nadal są proceduralne placeholdery. Trzeba osobno dodać prefab attachment, retargeting klipów, wyposażenie/role props, punkty ataku, skalę i testy animacji na urządzeniu.
 
 ### Etap 2A — pierwsze przeniesienie walki operatorów (wdrożone w kodzie, bez walidacji Unity Editor)
 
@@ -163,7 +173,7 @@ W etapie 2D uzupełniono też dwa źródłowe rzadkie spotkania (Bosman od fali 
 
 ### Etap 6 — optymalizacja i wydanie
 - WebGPU, WebGL 2 fallback, Android ARM64/IL2CPP i PC;
-- progressive asset loading na Web, kompresja tekstur i LOD;
+- streamowanie scen i kompresja tekstur/LOD po potwierdzeniu dostępności mechanizmu w przypiętej wersji Unity;
 - profilowanie CPU/GPU, pamięci, czasu startu i baterii;
 - testy na Poco F6, telefonie słabszej klasy, PC i przeglądarkach;
 - dopiero po spełnieniu bramek: kandydat produkcyjny i przełączenie dystrybucji.
