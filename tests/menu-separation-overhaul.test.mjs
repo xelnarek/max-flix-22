@@ -3,11 +3,12 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL('../' + path, import.meta.url), 'utf8');
-const [html, app, css, hudCss] = await Promise.all([
+const [html, app, css, hudCss, mobileGrid] = await Promise.all([
   read('index.html'),
   read('src/index.ts'),
   read('src/menu-separation-overhaul.css'),
   read('src/mode-hud-polish.css'),
+  read('src/mobile-menu-grid.css'),
 ]);
 
 test('each top-level menu destination has one dedicated panel', () => {
