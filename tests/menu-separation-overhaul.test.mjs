@@ -3,11 +3,12 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL('../' + path, import.meta.url), 'utf8');
-const [html, app, css, hudCss] = await Promise.all([
+const [html, app, css, hudCss, mobileGrid] = await Promise.all([
   read('index.html'),
   read('src/index.ts'),
   read('src/menu-separation-overhaul.css'),
   read('src/mode-hud-polish.css'),
+  read('src/mobile-menu-grid.css'),
 ]);
 
 test('each top-level menu destination has one dedicated panel', () => {
@@ -54,10 +55,10 @@ test('only the active Survival or PvP section reveals its own launch button', ()
   assert.match(css, /#title-screen \.menu-controls-hint\s*\{\s*display:\s*none !important/);
   assert.match(html, /menu-controls-hint-survival/);
   assert.match(html, /menu-controls-hint-pvp/);
-  assert.match(css, /data-active-menu-tab="tab-map"[^\\n]* \.menu-controls-hint/);
-  assert.match(css, /data-active-menu-tab="tab-pvp"[^\\n]* \.menu-controls-hint/);
-  assert.match(css, /data-active-menu-tab="tab-map"[^\\n]* \.menu-controls-hint-survival/);
-  assert.match(css, /data-active-menu-tab="tab-pvp"[^\\n]* \.menu-controls-hint-pvp/);
+  assert.match(css, /data-active-menu-tab="tab-map"[^\n]* \.menu-controls-hint/);
+  assert.match(css, /data-active-menu-tab="tab-pvp"[^\n]* \.menu-controls-hint/);
+  assert.match(css, /data-active-menu-tab="tab-map"[^\n]* \.menu-controls-hint-survival/);
+  assert.match(css, /data-active-menu-tab="tab-pvp"[^\n]* \.menu-controls-hint-pvp/);
 });
 
 test('runtime keeps inactive panels inert and changes the section theme with the selected tab', () => {
@@ -80,13 +81,14 @@ test('Survival and PvP in-game HUDs use separate visual systems and lighter mobi
   assert.match(hudCss, /backdrop-filter: none !important/);
 });
 
-test('menu navigation preserves a desktop rail and scrollable mobile tabs', () => {
+test('menu navigation preserves a scaled desktop rail and responsive touch grid', () => {
   assert.match(css, /@media \(min-width: 761px\) and \(pointer: fine\)/);
   assert.match(css, /flex-direction: column !important/);
   assert.match(css, /overflow-y: auto !important/);
-  assert.match(css, /@media \(max-width: 760px\)/);
-  assert.match(css, /overflow-x: auto !important/);
-  assert.match(css, /min-height: 42px !important/);
+  assert.match(mobileGrid, /grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 92px\), 1fr\)\) !important/);
+  assert.match(mobileGrid, /min-height: clamp\(48px, 11\.5vw, 56px\) !important/);
+  assert.match(mobileGrid, /overflow-x: visible !important/);
+  assert.doesNotMatch(mobileGrid, /overflow-x:\s*auto !important/);
 });
 
 test('mobile menu uses fewer expensive blur effects and reduces hidden panel work', () => {

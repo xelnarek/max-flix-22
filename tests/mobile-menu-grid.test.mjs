@@ -9,15 +9,23 @@ const [html, css] = await Promise.all([
   read('src/mobile-menu-grid.css'),
 ]);
 
-test('mobile menu exposes all eleven destinations as a visible grid without horizontal swiping', () => {
+test('mobile menu exposes all eleven destinations in an adaptive grid without horizontal swiping', () => {
   assert.match(html, /href="\/src\/mobile-menu-grid\.css"/);
   const tabs = [...html.matchAll(/class="menu-tab-btn[^"]*" data-tab="(tab-[^"]+)"/g)];
   assert.equal(tabs.length, 11);
   assert.match(css, /@media \(max-width: 760px\), \(pointer: coarse\)/);
-  assert.match(css, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\) !important/);
+  assert.match(css, /grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 92px\), 1fr\)\) !important/);
   assert.match(css, /overflow-x: visible !important/);
   assert.match(css, /scroll-snap-type: none !important/);
-  assert.doesNotMatch(css, /overflow-x: auto !important/);
+  assert.doesNotMatch(css, /overflow-x:\s*auto !important/);
+});
+
+test('touch menu segments scale their hit area, icon and labels together', () => {
+  assert.match(css, /min-height: clamp\(48px, 11\.5vw, 56px\) !important/);
+  assert.match(css, /font-size: clamp\(7\.5px, 2\.1vw, 9\.25px\) !important/);
+  assert.match(css, /\.menu-tab-btn\.active[\s\S]*?var\(--menu-accent\)/);
+  assert.match(css, /:focus-visible[\s\S]*?outline: 2px solid var\(--menu-accent\)/);
+  assert.match(css, /border-radius: 11px !important/);
 });
 
 test('operator cards stay in a readable two-column grid on phone screens', () => {
@@ -28,7 +36,7 @@ test('operator cards stay in a readable two-column grid on phone screens', () =>
 test('short landscape phones use a compact six-column menu with no carousel rules', () => {
   assert.match(css, /@media \(max-height: 560px\) and \(orientation: landscape\) and \(pointer: coarse\)/);
   assert.match(css, /grid-template-columns: repeat\(6, minmax\(0, 1fr\)\) !important/);
-  assert.match(css, /min-height: 29px !important/);
+  assert.match(css, /min-height: 34px !important/);
 });
 
 test('phone layout presents all menu panels together and turns navigation tiles into section shortcuts', async () => {
