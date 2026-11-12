@@ -456,3 +456,153 @@
     transform: none !important;
   }
 }
+
+
+/* OPERATOR ROSTER REPAIR — cards must stay in normal document flow.
+   Explicit rows prevent the selected card from behaving like a clipped carousel
+   or stretching to fill the entire menu viewport on Android touch browsers. */
+@media (max-width: 760px), (pointer: coarse) {
+  #title-screen #tab-team {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  #title-screen #tab-team .char-grid,
+  #title-screen.mobile-menu-overview #tab-team .char-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-auto-flow: row !important;
+    grid-auto-rows: minmax(158px, auto) !important;
+    align-items: stretch !important;
+    align-content: start !important;
+    justify-content: stretch !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    gap: clamp(8px, 2vw, 12px) !important;
+    overflow: visible !important;
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+    scroll-snap-type: none !important;
+    touch-action: pan-y;
+  }
+
+  #title-screen #tab-team .char-grid > .char-card {
+    display: flex !important;
+    position: relative !important;
+    grid-column: auto !important;
+    grid-row: auto !important;
+    align-self: stretch !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 158px !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 10px 7px 11px !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+
+  /* Centre the fifth operator instead of leaving an awkward half-empty row. */
+  #title-screen #tab-team .char-grid > .char-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1 !important;
+    width: min(100%, calc(50% - 6px)) !important;
+    justify-self: center !important;
+  }
+
+  #title-screen #tab-team .char-card-badge.operator-emblem {
+    flex: 0 0 clamp(54px, 16vw, 66px) !important;
+    width: clamp(54px, 16vw, 66px) !important;
+    height: clamp(54px, 16vw, 66px) !important;
+    margin: 4px 0 6px !important;
+  }
+
+  #title-screen #tab-team .char-card-name {
+    font-size: clamp(11px, 3vw, 13px) !important;
+    line-height: 1.2 !important;
+  }
+
+  #title-screen #tab-team .char-card-role {
+    font-size: clamp(8px, 2.15vw, 9px) !important;
+    line-height: 1.25 !important;
+    overflow-wrap: anywhere;
+  }
+
+  #title-screen #tab-team .char-card-ability,
+  #title-screen #tab-team .char-card-model-label {
+    max-width: 100% !important;
+    font-size: clamp(7px, 1.9vw, 8px) !important;
+    line-height: 1.25 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  #title-screen #tab-team .char-card-model-label {
+    margin-top: 4px !important;
+    padding: 3px 5px !important;
+  }
+
+  /* The detailed profile is a separate full-width section below the roster. */
+  #title-screen #tab-team #char-details-box {
+    display: flex !important;
+    position: relative !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    flex: 0 0 auto !important;
+    align-self: stretch !important;
+    margin: 2px 0 0 !important;
+    box-sizing: border-box !important;
+  }
+}
+
+@media (max-width: 360px) and (orientation: portrait) {
+  #title-screen #tab-team .char-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-auto-rows: minmax(148px, auto) !important;
+    gap: 7px !important;
+  }
+
+  #title-screen #tab-team .char-grid > .char-card {
+    min-height: 148px !important;
+    padding: 8px 5px 9px !important;
+  }
+}
+
+@media (max-height: 560px) and (orientation: landscape) and (pointer: coarse) {
+  #title-screen #tab-team .char-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    grid-auto-rows: minmax(118px, auto) !important;
+    gap: 6px !important;
+  }
+
+  #title-screen #tab-team .char-grid > .char-card {
+    min-height: 118px !important;
+  }
+
+  #title-screen #tab-team .char-grid > .char-card:last-child:nth-child(odd) {
+    grid-column: auto !important;
+    width: 100% !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #title-screen #tab-team .char-card {
+    transition: none !important;
+  }
+}
