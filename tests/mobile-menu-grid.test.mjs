@@ -28,7 +28,27 @@ test('touch menu segments scale their hit area, icon and labels together', () =>
   assert.match(css, /border-radius: 11px !important/);
 });
 
-test('operator cards stay in a readable two-column grid on phone screens', () => {
+test('operator roster is a real two-column grid with natural card heights and no horizontal clipping', () => {
+  const rosterFix = css.slice(css.indexOf('/* OPERATOR ROSTER REPAIR'));
+  assert.match(rosterFix, /#title-screen #tab-team \.char-grid,[\s\S]*?display: grid !important/);
+  assert.match(rosterFix, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\) !important/);
+  assert.match(rosterFix, /grid-auto-flow: row !important/);
+  assert.match(rosterFix, /grid-auto-rows: minmax\(158px, auto\) !important/);
+  assert.match(rosterFix, /height: auto !important/);
+  assert.match(rosterFix, /overflow-x: visible !important/);
+  assert.match(rosterFix, /char-grid > \.char-card[\s\S]*?flex: 0 0 auto !important/);
+  assert.match(rosterFix, /char-card:last-child:nth-child\(odd\)[\s\S]*?justify-self: center !important/);
+  assert.match(rosterFix, /#char-details-box[\s\S]*?width: 100% !important/);
+});
+
+test('operator roster stays compact on narrow portrait and short landscape phones', () => {
+  const rosterFix = css.slice(css.indexOf('/* OPERATOR ROSTER REPAIR'));
+  assert.match(rosterFix, /@media \(max-width: 360px\) and \(orientation: portrait\)/);
+  assert.match(rosterFix, /@media \(max-height: 560px\) and \(orientation: landscape\) and \(pointer: coarse\)/);
+  assert.match(rosterFix, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\) !important/);
+});
+
+test('operator cards remain in a readable two-column grid on phone screens', () => {
   assert.match(css, /#title-screen #tab-team \.char-grid\s*\{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\) !important/);
   assert.match(css, /#title-screen #tab-team \.char-card\s*\{[\s\S]*?min-height: 144px !important/);
 });
