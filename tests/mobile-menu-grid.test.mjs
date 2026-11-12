@@ -16,7 +16,7 @@ test('mobile menu exposes all eleven destinations as a visible grid without hori
   assert.match(css, /@media \(max-width: 760px\), \(pointer: coarse\)/);
   assert.match(css, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\) !important/);
   assert.match(css, /overflow-x: visible !important/);
-  assert.match(css, /scroll-snap-type: none !important/);
+  assert.match(css, /scroll-snap-type: none !important/);\n  assert.match(css, /min-height: clamp\\(48px, 11\\.5vw, 56px\\) !important/);\n  assert.match(css, /font-size: clamp\\(7\\.5px, 2\\.1vw, 9\\.25px\\) !important/);\n  assert.match(css, /\\.menu-tab-btn\\.active[\\s\\S]*?var\\(--menu-accent\\)/);\n  assert.match(css, /:focus-visible[\\s\\S]*?outline: 2px solid var\\(--menu-accent\\)/);
   assert.doesNotMatch(css, /overflow-x: auto !important/);
 });
 
@@ -28,7 +28,7 @@ test('operator cards stay in a readable two-column grid on phone screens', () =>
 test('short landscape phones use a compact six-column menu with no carousel rules', () => {
   assert.match(css, /@media \(max-height: 560px\) and \(orientation: landscape\) and \(pointer: coarse\)/);
   assert.match(css, /grid-template-columns: repeat\(6, minmax\(0, 1fr\)\) !important/);
-  assert.match(css, /min-height: 29px !important/);
+  assert.match(css, /min-height: 34px !important/);
 });
 
 test('phone layout presents all menu panels together and turns navigation tiles into section shortcuts', async () => {
