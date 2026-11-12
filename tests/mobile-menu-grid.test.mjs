@@ -4,9 +4,10 @@ import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL('../' + path, import.meta.url), 'utf8');
 
-const [html, css] = await Promise.all([
+const [html, css, rosterCss] = await Promise.all([
   read('index.html'),
   read('src/mobile-menu-grid.css'),
+  read('src/operator-roster-v2.css'),
 ]);
 
 test('mobile menu exposes all eleven destinations in an adaptive grid without horizontal swiping', () => {
@@ -28,35 +29,39 @@ test('touch menu segments scale their hit area, icon and labels together', () =>
   assert.match(css, /border-radius: 11px !important/);
 });
 
-test('operator roster is a real two-column grid with natural card heights and no horizontal clipping', () => {
+test('operator roster uses a fresh, bounded two-column mobile grid instead of a horizontal rail', () => {
+  assert.match(html, /href="\/src\/operator-roster-v2\.css"/);
+  const mobileCssIndex = html.indexOf('href="/src/mobile-menu-grid.css"');
+  const rosterCssIndex = html.indexOf('href="/src/operator-roster-v2.css"');
+  assert.ok(rosterCssIndex > mobileCssIndex, 'roster overrides must load after legacy menu styles');
+  assert.match(rosterCss, /#title-screen #tab-team > \.char-grid\s*\{/);
+  assert.match(rosterCss, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\) !important/);
+  assert.match(rosterCss, /grid-auto-flow: row !important/);
+  assert.match(rosterCss, /grid-auto-rows: var\(--operator-card-height\) !important/);
+  assert.match(rosterCss, /height: var\(--operator-card-height\) !important/);
+  assert.match(rosterCss, /max-height: var\(--operator-card-height\) !important/);
+  assert.match(rosterCss, /overflow-x: visible !important/);
+  assert.doesNotMatch(rosterCss, /overflow-x:\s*auto !important/);
+});
+
+test('operator cards stay compact, readable and keep mastery labels from stretching the card', () => {
+  assert.match(rosterCss, /\.char-code-tag[\s\S]*?white-space: nowrap !important/);
+  assert.match(rosterCss, /\.char-card-ability[\s\S]*?-webkit-line-clamp: 2 !important/);
+  assert.match(rosterCss, /\.char-card-model-label[\s\S]*?-webkit-line-clamp: 2 !important/);
+  assert.match(rosterCss, /\.char-card-mastery\s*\{[\s\S]*?position: absolute !important/);
+  assert.match(rosterCss, /#char-details-box[\s\S]*?width: 100% !important/);
+});
+
+test('operator cards adapt to tablet, landscape and narrow portrait layouts', () => {
+  assert.match(rosterCss, /@media \(min-width: 641px\) and \(max-width: 760px\) and \(pointer: coarse\)/);
+  assert.match(rosterCss, /@media \(max-height: 560px\) and \(orientation: landscape\) and \(pointer: coarse\)/);
+  assert.match(rosterCss, /@media \(max-width: 360px\) and \(orientation: portrait\)/);
+});
+
+test('existing roster repair keeps the operator profile after the card grid', () => {
   const rosterFix = css.slice(css.indexOf('/* OPERATOR ROSTER REPAIR'));
   assert.match(rosterFix, /#title-screen #tab-team \.char-grid,[\s\S]*?display: grid !important/);
-  assert.match(rosterFix, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\) !important/);
-  assert.match(rosterFix, /grid-auto-flow: row !important/);
-  assert.match(rosterFix, /grid-auto-rows: minmax\(158px, auto\) !important/);
-  assert.match(rosterFix, /height: auto !important/);
-  assert.match(rosterFix, /overflow-x: visible !important/);
-  assert.match(rosterFix, /char-grid > \.char-card[\s\S]*?flex: 0 0 auto !important/);
-  assert.match(rosterFix, /char-card:last-child:nth-child\(odd\)[\s\S]*?justify-self: center !important/);
   assert.match(rosterFix, /#char-details-box[\s\S]*?width: 100% !important/);
-});
-
-test('operator roster stays compact on narrow portrait and short landscape phones', () => {
-  const rosterFix = css.slice(css.indexOf('/* OPERATOR ROSTER REPAIR'));
-  assert.match(rosterFix, /@media \(max-width: 360px\) and \(orientation: portrait\)/);
-  assert.match(rosterFix, /@media \(max-height: 560px\) and \(orientation: landscape\) and \(pointer: coarse\)/);
-  assert.match(rosterFix, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\) !important/);
-});
-
-test('operator cards remain in a readable two-column grid on phone screens', () => {
-  assert.match(css, /#title-screen #tab-team \.char-grid\s*\{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\) !important/);
-  assert.match(css, /#title-screen #tab-team \.char-card\s*\{[\s\S]*?min-height: 144px !important/);
-});
-
-test('short landscape phones use a compact six-column menu with no carousel rules', () => {
-  assert.match(css, /@media \(max-height: 560px\) and \(orientation: landscape\) and \(pointer: coarse\)/);
-  assert.match(css, /grid-template-columns: repeat\(6, minmax\(0, 1fr\)\) !important/);
-  assert.match(css, /min-height: 34px !important/);
 });
 
 test('phone layout presents all menu panels together and turns navigation tiles into section shortcuts', async () => {

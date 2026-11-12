@@ -1,0 +1,264 @@
+/*
+ * OPERATOR ROSTER V2
+ * Isolate the mobile roster from legacy carousel sizing. Every operator card
+ * occupies one bounded grid cell; the detailed profile follows the roster.
+ */
+
+@media (max-width: 760px), (pointer: coarse) {
+  #title-screen #tab-team {
+    display: flex !important;
+    position: relative !important;
+    flex: 0 0 auto !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  #title-screen #tab-team > .char-grid {
+    --operator-card-height: clamp(198px, 51vw, 218px);
+    display: grid !important;
+    position: relative !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-auto-columns: minmax(0, 1fr) !important;
+    grid-auto-flow: row !important;
+    grid-auto-rows: var(--operator-card-height) !important;
+    align-items: stretch !important;
+    align-content: start !important;
+    justify-content: stretch !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    gap: clamp(8px, 2vw, 12px) !important;
+    overflow: visible !important;
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+    transform: none !important;
+    scroll-snap-type: none !important;
+    touch-action: pan-y !important;
+  }
+
+  #title-screen #tab-team > .char-grid > .char-card {
+    display: flex !important;
+    position: relative !important;
+    grid-column: auto !important;
+    grid-row: auto !important;
+    align-self: stretch !important;
+    justify-self: stretch !important;
+    flex: none !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: var(--operator-card-height) !important;
+    max-height: var(--operator-card-height) !important;
+    margin: 0 !important;
+    padding: 9px 7px 8px !important;
+    box-sizing: border-box !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 4px !important;
+    overflow: hidden !important;
+    transform: none !important;
+    text-align: center !important;
+  }
+
+  /* Keep all five operators visible: the fifth card is centred in row three. */
+  #title-screen #tab-team > .char-grid > .char-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1 !important;
+    justify-self: center !important;
+    width: min(100%, calc(50% - 5px)) !important;
+  }
+
+  #title-screen #tab-team .char-code-tag {
+    display: block !important;
+    flex: 0 0 auto !important;
+    width: auto !important;
+    max-width: 100% !important;
+    margin: 0 auto 1px !important;
+    padding: 2px 6px !important;
+    border-radius: 6px !important;
+    font-size: 7px !important;
+    line-height: 1.25 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  #title-screen #tab-team .char-card-badge.operator-emblem {
+    display: block !important;
+    flex: 0 0 clamp(54px, 15vw, 62px) !important;
+    width: clamp(54px, 15vw, 62px) !important;
+    height: clamp(54px, 15vw, 62px) !important;
+    margin: 2px auto 3px !important;
+    padding: 0 !important;
+  }
+
+  #title-screen #tab-team .char-card-name {
+    flex: 0 0 auto !important;
+    max-width: 100% !important;
+    font-size: clamp(11px, 3vw, 13px) !important;
+    line-height: 1.15 !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  #title-screen #tab-team .char-card-role {
+    flex: 0 0 auto !important;
+    max-width: 100% !important;
+    font-size: clamp(7.5px, 2.1vw, 9px) !important;
+    line-height: 1.2 !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  #title-screen #tab-team .char-card-ability {
+    display: -webkit-box !important;
+    flex: 0 1 auto !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    margin-top: 1px !important;
+    overflow: hidden !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 2 !important;
+    font-size: clamp(7px, 1.85vw, 8px) !important;
+    line-height: 1.2 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  #title-screen #tab-team .char-card-model-label {
+    display: -webkit-box !important;
+    flex: 0 0 auto !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 2px auto 0 !important;
+    padding: 3px 6px !important;
+    overflow: hidden !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 2 !important;
+    font-size: clamp(6.5px, 1.8vw, 7.5px) !important;
+    line-height: 1.15 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  #title-screen #tab-team .char-card-mastery {
+    position: absolute !important;
+    top: 7px !important;
+    right: 7px !important;
+    z-index: 2 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 25px !important;
+    min-height: 18px !important;
+    margin: 0 !important;
+    padding: 2px 5px !important;
+    border-radius: 999px !important;
+    font-size: 7px !important;
+    line-height: 1 !important;
+  }
+
+  /* The profile is a separate block below the bounded card grid. */
+  #title-screen #tab-team > #char-details-box {
+    display: flex !important;
+    position: relative !important;
+    flex: 0 0 auto !important;
+    align-self: stretch !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 9px 0 0 !important;
+    padding: 11px !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+  }
+
+  #title-screen #tab-team .arcade-showcase-top {
+    align-items: flex-start !important;
+    gap: 9px !important;
+  }
+
+  #title-screen #tab-team .char-showcase-portrait {
+    flex: 0 0 58px !important;
+    width: 58px !important;
+    height: 58px !important;
+  }
+
+  #title-screen #tab-team .arcade-showcase-meta {
+    min-width: 0 !important;
+    gap: 4px !important;
+  }
+}
+
+/* Touch tablets can use three columns without turning cards into narrow strips. */
+@media (min-width: 641px) and (max-width: 760px) and (pointer: coarse) {
+  #title-screen #tab-team > .char-grid {
+    --operator-card-height: 210px;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  #title-screen #tab-team > .char-grid > .char-card:last-child:nth-child(odd) {
+    grid-column: 2 !important;
+    width: 100% !important;
+  }
+}
+
+/* Short landscape phones: three compact columns, still with bounded cards. */
+@media (max-height: 560px) and (orientation: landscape) and (pointer: coarse) {
+  #title-screen #tab-team > .char-grid {
+    --operator-card-height: 166px;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+
+  #title-screen #tab-team > .char-grid > .char-card {
+    padding: 6px 5px !important;
+  }
+
+  #title-screen #tab-team .char-card-badge.operator-emblem {
+    flex-basis: 46px !important;
+    width: 46px !important;
+    height: 46px !important;
+    margin: 1px auto 2px !important;
+  }
+
+  #title-screen #tab-team .char-card-ability,
+  #title-screen #tab-team .char-card-model-label {
+    font-size: 6.5px !important;
+  }
+
+  #title-screen #tab-team > .char-grid > .char-card:last-child:nth-child(odd) {
+    grid-column: 2 !important;
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 360px) and (orientation: portrait) {
+  #title-screen #tab-team > .char-grid {
+    --operator-card-height: 206px;
+    gap: 7px !important;
+  }
+
+  #title-screen #tab-team > .char-grid > .char-card {
+    padding-inline: 5px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #title-screen #tab-team > .char-grid > .char-card {
+    transition: none !important;
+  }
+}
