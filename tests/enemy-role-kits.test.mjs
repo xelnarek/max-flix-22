@@ -6,6 +6,7 @@ import { ENEMY_VISUAL_PROFILES } from '../src/enemyVisualProfiles.ts';
 import {
   applyEnemyRoleAnatomy,
   applyEnemyRoleSecondaryMotion,
+  clearEnemyRoleSecondaryMotion,
   getEnemyAnatomyProfile,
 } from '../src/enemyAnimationPolish.ts';
 
@@ -136,8 +137,12 @@ test('secondary role motion animates idle and locomotion but never overlays atta
   assert.ok(phase > 0);
   assert.ok(head.quaternion.angleTo(startHead) > 0.001);
   const afterWalk = head.quaternion.clone();
+  clearEnemyRoleSecondaryMotion(root);
+  assert.ok(head.quaternion.angleTo(startHead) < 1e-7,
+    'the additive role pose must be exactly reversible before the next mixer tick');
+  const beforeAttack = head.quaternion.clone();
   phase = applyEnemyRoleSecondaryMotion(root, 'zombie_pracownik', phase, 0.05, 0, 'Attack');
-  assert.ok(head.quaternion.angleTo(afterWalk) < 1e-8,
+  assert.ok(head.quaternion.angleTo(beforeAttack) < 1e-8,
     'one-shot combat pose must not be overwritten by the secondary gait');
   const beforeIdle = spine.quaternion.clone();
   applyEnemyRoleSecondaryMotion(root, 'architect', 0.2, 0.05, 0, 'Idle');
