@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { applyPolyHavenPbrMaps } from './polyHavenTextures.ts';
 import { chooseMakeHumanLocomotion, getMakeHumanPlaybackRate, isMakeHumanVelocityAction, type MakeHumanLocomotionAction } from './makeHumanLocomotion.ts';
 import { dampActorAngle, getActorAnimationInterval, getEnemyRigPlaybackRate } from './actorMotion.ts';
-import { createGobkitEnemyRoleSilhouette } from './gobkitEnemySilhouettes.ts';
+import { createEnemyRoleKit } from './enemyRoleKits.ts';
 import { createMakeHumanActor, MAKEHUMAN_OPERATOR_STYLES, type MakeHumanStyleId } from './makeHumanAssets.ts';
 import {
   clampGobkitActionDuration,
@@ -1994,14 +1994,9 @@ export class PaleciakiGameEngine {
       this.removeAttachedActorVisuals(mesh as THREE.Group);
       this.hideProceduralVisuals(mesh as THREE.Group, overlays);
       this.installActorVisualRoot(mesh as THREE.Group, root);
-      const roleSilhouette = createGobkitEnemyRoleSilhouette(requestedType);
-      if (roleSilhouette) {
-        // The original enemy container sits half a metre above the floor;
-        // role props are authored from the same floor origin as fitted GLB rigs.
-        this.applyHandheldActorShadowBudget(roleSilhouette);
-        roleSilhouette.position.y = -mesh.position.y;
-        mesh.add(roleSilhouette);
-      }
+      // Role equipment is attached to head, torso, right-arm, back and leg bones.
+      // It follows the imported rig instead of floating as a static colour decal.
+      createEnemyRoleKit(requestedType, root);
       enemy.legL = undefined;
       enemy.legR = undefined;
       enemy.armL = undefined;
@@ -2156,12 +2151,23 @@ export class PaleciakiGameEngine {
       } else {
         // Read velocity in the actor's facing frame. Orbiting/flanking enemies can
         // now use strafes/back-steps when the rig has those clips instead of moonwalking.
-        const locomotionAction = chooseMakeHumanLocomotion(
+        const visualProfile = ENEMY_VISUAL_PROFILES[enemy.type];
+        let locomotionAction = chooseMakeHumanLocomotion(
           localVelocityX,
           localVelocityZ,
           false,
           track.locomotionAction,
         );
+        // Large, deliberate, limping and undead enemies do not switch into the
+        // same upright sprint as a courier. Charging remains an explicit Run.
+        if (locomotionAction === 'Run' &&
+            (visualProfile.gaitStyle === 'heavy' ||
+             visualProfile.gaitStyle === 'deliberate' ||
+             visualProfile.gaitStyle === 'precise' ||
+             visualProfile.gaitStyle === 'shambling' ||
+             visualProfile.gaitStyle === 'limping')) {
+          locomotionAction = 'Walk';
+        }
         track.locomotionAction = locomotionAction;
         desired = this.resolveGobkitActionName(track, locomotionAction);
       }
@@ -2177,9 +2183,13 @@ export class PaleciakiGameEngine {
       this.playGobkitAction(track, activeAction);
       if (isMakeHumanVelocityAction(activeAction)) {
         const action = track.actions.get(activeAction);
-        const playbackRate = track.sharedGeometry
+        const basePlaybackRate = track.sharedGeometry
           ? getMakeHumanPlaybackRate(activeAction, localSpeed)
           : getEnemyRigPlaybackRate(activeAction, localSpeed || worldSpeed);
+        const roleCadence = track.sharedGeometry
+          ? 1
+          : ENEMY_GAIT_PRESETS[ENEMY_VISUAL_PROFILES[enemy.type].gaitStyle].rate;
+        const playbackRate = THREE.MathUtils.clamp(basePlaybackRate * roleCadence, 0.65, 1.62);
         if (action) action.setEffectiveTimeScale(playbackRate);
       }
       if (advanceMixer) {
