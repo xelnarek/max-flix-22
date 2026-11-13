@@ -3,6 +3,11 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { ENEMY_ROLE_KIT_TYPES, createEnemyRoleKit } from '../src/enemyRoleKits.ts';
 import { ENEMY_VISUAL_PROFILES } from '../src/enemyVisualProfiles.ts';
+import {
+  applyEnemyRoleAnatomy,
+  applyEnemyRoleSecondaryMotion,
+  getEnemyAnatomyProfile,
+} from '../src/enemyAnimationPolish.ts';
 
 function makeRig() {
   const root = new THREE.Group();
@@ -94,4 +99,54 @@ test('humanoid rig attachments follow the corresponding skeleton joints', () => 
   root.updateMatrixWorld(true);
   const after = headPart.getWorldQuaternion(new THREE.Quaternion());
   assert.ok(before.angleTo(after) > 0.25);
+});
+
+test('enemy anatomy alters cloned rig proportions once without mutating other archetypes', () => {
+  const brute = makeRig();
+  const architect = makeRig();
+  const bruteHead = brute.bones.get('mixamorigHead');
+  const architectHead = architect.bones.get('mixamorigHead');
+  const bruteChest = brute.bones.get('mixamorigSpine2');
+  const architectChest = architect.bones.get('mixamorigSpine2');
+  assert.equal(applyEnemyRoleAnatomy(brute.root, 'walczak'), true);
+  assert.equal(applyEnemyRoleAnatomy(brute.root, 'walczak'), false,
+    'anatomy must never compound when a model attach pass repeats');
+  assert.equal(applyEnemyRoleAnatomy(architect.root, 'architect'), true);
+  assert.ok(bruteHead.scale.x > architectHead.scale.x);
+  assert.ok(bruteChest.scale.x > architectChest.scale.x);
+  assert.ok(getEnemyAnatomyProfile('walczak').shoulderWidth >
+    getEnemyAnatomyProfile('architect').shoulderWidth);
+});
+
+test('zombie anatomy is deliberately asymmetric rather than a mirrored human rig', () => {
+  const { root, bones } = makeRig();
+  assert.equal(applyEnemyRoleAnatomy(root, 'zombie_pracownik'), true);
+  const rightArm = bones.get('mixamorigRightArm');
+  assert.ok(rightArm.scale.x > 1);
+  assert.ok(getEnemyAnatomyProfile('zombie_pracownik').leftArmScale < 1);
+  assert.ok(getEnemyAnatomyProfile('zombie_pracownik').rightArmScale > 1);
+});
+
+test('secondary role motion animates idle and locomotion but never overlays attacks or death', () => {
+  const { root, bones } = makeRig();
+  const head = bones.get('mixamorigHead');
+  const spine = bones.get('mixamorigSpine');
+  const startHead = head.quaternion.clone();
+  let phase = applyEnemyRoleSecondaryMotion(root, 'zombie_pracownik', 0, 0.05, 2.0, 'Walk');
+  assert.ok(phase > 0);
+  assert.ok(head.quaternion.angleTo(startHead) > 0.001);
+  const afterWalk = head.quaternion.clone();
+  phase = applyEnemyRoleSecondaryMotion(root, 'zombie_pracownik', phase, 0.05, 0, 'Attack');
+  assert.ok(head.quaternion.angleTo(afterWalk) < 1e-8,
+    'one-shot combat pose must not be overwritten by the secondary gait');
+  const beforeIdle = spine.quaternion.clone();
+  applyEnemyRoleSecondaryMotion(root, 'architect', 0.2, 0.05, 0, 'Idle');
+  assert.ok(spine.quaternion.angleTo(beforeIdle) > 0.0001,
+    'idle stance should retain low-amplitude breathing/weight shifts');
+});
+
+test('all non-vehicle humanoid archetypes have anatomical tuning', () => {
+  for (const type of ENEMY_ROLE_KIT_TYPES) {
+    assert.ok(getEnemyAnatomyProfile(type), 'missing anatomy profile for ' + type);
+  }
 });
