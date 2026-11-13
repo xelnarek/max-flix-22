@@ -11,6 +11,7 @@ import {
   resolveGobkitActionName,
   shouldKeepGobkitAction,
 } from './gobkitAnimation.ts';
+import { createRigCombatClips, type RigCombatStyle } from './rigCombatClips.ts';
 import { disposePvpObjectTree } from './pvpResourceCleanup.ts';
 import { calculatePvpCameraFrame, calculatePvpCameraTrackingBounds, isPvpPortraitViewport } from './pvpCamera.ts';
 import { createArenaObstacleFootprint, createPvpContactShadowTexture, createPvpFloorTexture, createPvpObstacleTexture } from './pvpTextures.ts';
@@ -1539,12 +1540,19 @@ export class PaleciakiGameEngine {
     gltf: Awaited<ReturnType<typeof loadGobkitModel>>,
     root: THREE.Group,
     initialPosition: THREE.Vector3,
+    combatStyle: RigCombatStyle = 'tool-melee',
   ): GobkitAnimationTrack {
     const mixer = new THREE.AnimationMixer(root);
     const actions = new Map<string, THREE.AnimationAction>();
     for (const clip of gltf.animations) {
       const safeClip = cloneRootMotionFreeClip(clip);
       actions.set(safeClip.name, mixer.clipAction(safeClip));
+    }
+    // The downloaded rigs are guaranteed to contain locomotion/hit/death clips,
+    // but not every pack supplies a readable attack or airborne animation.
+    // Overlay original project-authored clips without changing the source GLBs.
+    for (const clip of createRigCombatClips(root, combatStyle)) {
+      actions.set(clip.name, mixer.clipAction(clip));
     }
     const track: GobkitAnimationTrack = {
       root, mixer, actions, currentAction: '', lastPosition: initialPosition.clone(),
@@ -1999,7 +2007,7 @@ export class PaleciakiGameEngine {
       enemy.armL = undefined;
       enemy.armR = undefined;
       enemy.head = undefined;
-      const track = this.createGobkitAnimationTrack(gltf, root, mesh.position);
+      const track = this.createGobkitAnimationTrack(gltf, root, mesh.position, ENEMY_VISUAL_PROFILES[requestedType].attackStyle);
       this.gobkitEnemyTracks.set(enemy, track);
       this.resumeEnemyAnimationAfterModelAttach(enemy, track);
     } catch (error) {
@@ -11187,17 +11195,32 @@ export class PaleciakiGameEngine {
       const now = performance.now() * 0.001;
       const idlePhase = now * motionProfile.idleRate;
       const airborne = !landed && this.playerPos.y > 0.18;
+      const jumpAscentRatio = airborne
+        ? THREE.MathUtils.clamp(this.playerVel.y / Math.max(1, this.charDef.jumpForce), 0, 1)
+        : 0;
+      const jumpFallRatio = airborne
+        ? THREE.MathUtils.clamp(-this.playerVel.y / 11, 0, 1)
+        : 0;
       const gait = Math.sin(this.walkCycle);
       this.playerGroup.position.copy(this.playerPos);
       this.playerGroup.rotation.y = this.playerRot;
-      this.playerGroup.rotation.x = airborne ? motionProfile.jumpLean : -motionProfile.runLean * motionRatio;
+      this.playerGroup.rotation.x = airborne
+        ? motionProfile.jumpLean * (1 + 0.18 * jumpFallRatio)
+        : -motionProfile.runLean * motionRatio;
       this.playerGroup.rotation.z = Math.sin(idlePhase) * motionProfile.idleSway * (1 - motionRatio) + gait * motionProfile.lateralSway * motionRatio;
       const walkBob = Math.abs(Math.sin(this.walkCycle * 2)) * motionProfile.bodyBob * motionRatio;
       const idleBob = Math.sin(idlePhase * 2) * motionProfile.idleBob * (1 - motionRatio);
       this.playerGroup.position.y += walkBob + idleBob;
       this.playerGroup.scale.lerp(PLAYER_UNIT_SCALE, dt * 8);
+      // Subtle take-off stretch and fall tuck add a readable jump arc without
+      // changing vertical velocity, jump height, collision or air-control values.
+      if (airborne) {
+        this.playerGroup.scale.x *= 1 - 0.014 * jumpAscentRatio;
+        this.playerGroup.scale.y *= 1 + 0.052 * jumpAscentRatio;
+        this.playerGroup.scale.z *= 1 + 0.018 * jumpAscentRatio;
+      }
       if (this.playerLandingTimer > 0 && this.leftLeg && this.rightLeg && this.leftArm && this.rightArm) {
-        const landingPulse = THREE.MathUtils.clamp(this.playerLandingTimer / this.playerLandingDuration, 0, 1);
+        const landingPulse = Math.pow(THREE.MathUtils.clamp(this.playerLandingTimer / this.playerLandingDuration, 0, 1), 1.22);
         this.playerLandingTimer = Math.max(0, this.playerLandingTimer - dt);
         // Compact landing compression with bent knees and a brief arm brace.
         // The pose decays from the rig's cached rest state; no accumulated drift.
@@ -11216,17 +11239,19 @@ export class PaleciakiGameEngine {
         if (this.playerAccessory) this.playerAccessory.rotation.x += 0.12 * landingPulse;
       }
       if (this.playerHead) {
-        this.playerHead.rotation.x = airborne ? motionProfile.jumpLean * -0.35 : Math.sin(idlePhase * 0.5) * 0.018 * (1 - motionRatio);
+        this.playerHead.rotation.x = airborne ? motionProfile.jumpLean * (-0.35 - 0.07 * jumpFallRatio) : Math.sin(idlePhase * 0.5) * 0.018 * (1 - motionRatio);
       }
       if (this.playerAccessory) {
         this.playerAccessory.rotation.x = this.playerAccessoryRestX + gait * motionProfile.toolSwing * motionRatio;
         this.playerAccessory.rotation.z = this.playerAccessoryRestZ + Math.cos(this.walkCycle) * motionProfile.toolRoll * motionRatio;
       }
       if (airborne && this.leftLeg && this.rightLeg && this.leftArm && this.rightArm) {
-        setProceduralLimbPose(this.leftLeg, -motionProfile.jumpKneeTuck);
-        setProceduralLimbPose(this.rightLeg, -motionProfile.jumpKneeTuck * 0.78);
-        setProceduralLimbPose(this.leftArm, -motionProfile.jumpArmLift, motionProfile.jumpArmLift * 0.32);
-        setProceduralLimbPose(this.rightArm, -motionProfile.jumpArmLift * 0.84, -motionProfile.jumpArmLift * 0.32);
+        const kneeTuck = 0.82 + jumpFallRatio * 0.18;
+        const armLift = 0.82 + jumpAscentRatio * 0.18;
+        setProceduralLimbPose(this.leftLeg, -motionProfile.jumpKneeTuck * kneeTuck);
+        setProceduralLimbPose(this.rightLeg, -motionProfile.jumpKneeTuck * 0.78 * kneeTuck);
+        setProceduralLimbPose(this.leftArm, -motionProfile.jumpArmLift * armLift, motionProfile.jumpArmLift * 0.32);
+        setProceduralLimbPose(this.rightArm, -motionProfile.jumpArmLift * 0.84 * armLift, -motionProfile.jumpArmLift * 0.32);
       }
 
       if (this.attackSwingTimer > 0 && this.attackSwingDuration > 0) {
