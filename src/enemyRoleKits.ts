@@ -15,6 +15,14 @@ interface RoleSpec {
   form: 'round' | 'slim' | 'heavy' | 'hunched' | 'robotic' | 'beast' | 'hazmat';
 }
 
+export const ENEMY_ROLE_KIT_TYPES: readonly EnemyType[] = Object.freeze(Object.keys({
+  customer: 1, architect: 1, inspector: 1, kurier: 1, handlowiec: 1,
+  monter: 1, przedstawiciel_włoski: 1, sztaplar_szalony: 1, krol_leto: 1,
+  pan_roman: 1, serwisant: 1, bosman_krakow: 1, zombie_pracownik: 1,
+  sebix_m: 1, mutant_gamma_forklift: 1, radioactive_pip: 1,
+  cyber_salesman: 1, elite_walczak_guard: 1, walczak: 1,
+}) as EnemyType[]);
+
 const ROLE: Partial<Record<EnemyType, RoleSpec>> = Object.freeze({
   customer: {w:.67,h:.54,d:.43,shoulder:.72,head:1.06,main:0x74433a,dark:0x2b2426,accent:0xd93431,metal:0xb8b4a8,gear:'cap',prop:'clipboard',pack:'briefcase',form:'round'},
   architect: {w:.38,h:.59,d:.25,shoulder:.50,head:.94,main:0x343746,dark:0x171923,accent:0xd8b46f,metal:0x9da5b0,gear:'beret',prop:'swatches',pack:'blueprints',form:'slim'},
@@ -312,7 +320,6 @@ function bake(type:EnemyType):THREE.Group|null{
     for(let i=0;i<5;i++)sp(groups,'torso',0xe6bf4e,[-.18+i*.09,.84,.27],[.035,.055,.018],.75);
   }
   if(type==='zombie_pracownik'){
-    for(let i=0;i<5;i++)bx(groups,'torso',0xc4c19c,[0,.88-i*.064,.24],[.36-i*.025,.024,.02],[0,0,i%2?.08:-.08]);
     sp(groups,'head',0xd9f34c,[-.06,1.20,.20],[.032,.03,.02]);sp(groups,'head',0xd9f34c,[.10,1.20,.20],[.032,.03,.02]);
   }
   if(type==='sebix_m'){
@@ -337,6 +344,10 @@ function bake(type:EnemyType):THREE.Group|null{
   const root=new THREE.Group();root.name='enemy-role-kit-'+type;root.userData.enemyRole=type;root.userData.actorRoleSilhouette=true;
   for(const a of anchors){
     const parts:THREE.BufferGeometry[]=[];
+    const sourceMeshes:THREE.Mesh[]=[];
+    groups[a].traverse(o=>{
+      if(o instanceof THREE.Mesh)sourceMeshes.push(o);
+    });
     groups[a].traverse(o=>{
       if(!(o instanceof THREE.Mesh))return;
       const indexed=o.geometry.index?o.geometry:o.geometry.clone();
@@ -352,6 +363,11 @@ function bake(type:EnemyType):THREE.Group|null{
     const merged=mergeGeometries(parts,false);for(const geo of parts)geo.dispose();
     if(!merged)throw new Error('Unable to merge '+type+' '+a+' role kit');
     merged.computeBoundingSphere();
+    for(const sourceMesh of sourceMeshes){
+      sourceMesh.geometry.dispose();
+      const sourceMaterials=Array.isArray(sourceMesh.material)?sourceMesh.material:[sourceMesh.material];
+      sourceMaterials.forEach(sourceMaterial=>sourceMaterial.dispose());
+    }
     const mesh=new THREE.Mesh(merged,sharedKitMaterial);mesh.name='enemy-role-'+type+'-'+a;mesh.castShadow=false;mesh.receiveShadow=false;mesh.frustumCulled=true;
     mesh.userData.gobkitSharedGeometry=true;mesh.userData.actorRoleSilhouette=true;
     groups[a].clear();groups[a].add(mesh);root.add(groups[a]);
