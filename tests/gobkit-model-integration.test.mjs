@@ -289,7 +289,7 @@ test('articulated role kits merge by rig anchor and share immutable crowd geomet
   assert.match(kits, /const templates\s*=\s*new Map<EnemyType,\s*THREE\.Group\s*\|\s*null>\(\)/);
   assert.match(kits, /mesh\.castShadow=false/);
   assert.match(kits, /mesh\.userData\.gobkitSharedGeometry=true/);
-  assert.match(kits, /sharedKitMaterial\.userData\.makeHumanShared=true/);
+  assert.match(kits, /sharedKitMaterial\.userData\.gobkitSharedMaterial\s*=\s*true/);
   assert.match(kits, /template\.clone\(true\)/);
   assert.match(kits, /actorRoot\.userData\.enemyRoleKit=type/);
 });
