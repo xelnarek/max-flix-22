@@ -3,7 +3,7 @@ import { applyPolyHavenPbrMaps } from './polyHavenTextures.ts';
 import { chooseMakeHumanLocomotion, getMakeHumanPlaybackRate, isMakeHumanVelocityAction, type MakeHumanLocomotionAction } from './makeHumanLocomotion.ts';
 import { dampActorAngle, getActorAnimationInterval, getEnemyRigPlaybackRate } from './actorMotion.ts';
 import { createEnemyRoleKit } from './enemyRoleKits.ts';
-import { applyEnemyRoleAnatomy, applyEnemyRoleSecondaryMotion } from './enemyAnimationPolish.ts';
+import { applyEnemyRoleAnatomy, applyEnemyRoleSecondaryMotion, clearEnemyRoleSecondaryMotion } from './enemyAnimationPolish.ts';
 import { createMakeHumanActor, MAKEHUMAN_OPERATOR_STYLES, type MakeHumanStyleId } from './makeHumanAssets.ts';
 import {
   clampGobkitActionDuration,
@@ -2200,6 +2200,7 @@ export class PaleciakiGameEngine {
         track.lastPosition.copy(enemy.mesh.position);
         // Mixer delta is accumulated while an actor is distant, keeping one-shot
         // timing and fade curves stable despite fewer visual evaluations.
+        clearEnemyRoleSecondaryMotion(track.root);
         track.mixer.update(animationDt);
         track.roleMotionPhase = applyEnemyRoleSecondaryMotion(
           track.root,
