@@ -40,7 +40,7 @@ export const CHARACTER_GOBKIT_MODELS: Readonly<Record<CharacterId, GobkitModelId
 
 /**
  * Every humanoid/creature enemy profile points at a locally bundled, animated
- * CC0 Gobkit rig. Role props in gobkitEnemySilhouettes.ts preserve each enemy's
+ * CC0 Gobkit rig. Articulated bone-mounted kits in enemyRoleKits.ts preserve each enemy's
  * identity (architect, BHP, courier, supplier, installer, boss, undead, etc.).
  * Only purpose-built vehicles, the AGV/drone and the bicycle rider keep bespoke
  * non-humanoid meshes from warehouseAssets.ts.
