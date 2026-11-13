@@ -264,33 +264,34 @@ test('playable operators retain the original stylized models in Survival and bot
   assert.match(game, /createEnemyRoleKit\(requestedType, root\)/);
 });
 
-test('CC0 enemy rigs receive a clear caricature silhouette matching their warehouse role', async () => {
-  const silhouettes = await read('../src/gobkitEnemySilhouettes.ts');
+test('CC0 enemy rigs receive articulated, role-specific body shapes and equipment', async () => {
+  const kits = await read('../src/enemyRoleKits.ts');
   const game = await read('../src/game.ts');
   for (const role of ['architect', 'inspector', 'kurier', 'handlowiec', 'customer', 'monter', 'serwisant', 'przedstawiciel_włoski', 'sztaplar_szalony', 'pan_roman', 'sebix_m', 'zombie_pracownik', 'mutant_gamma_forklift', 'radioactive_pip', 'cyber_salesman', 'walczak', 'krol_leto', 'bosman_krakow', 'elite_walczak_guard']) {
-    assert.match(silhouettes, new RegExp("case '" + role + "'"));
+    assert.ok(kits.includes(role + ':'), 'missing geometry profile: ' + role);
   }
-  assert.match(silhouettes, /oversized sample fan/);
-  assert.match(silhouettes, /exposed ribs/);
-  assert.match(silhouettes, /sickly eyes/);
-  assert.match(silhouettes, /Forklift mutant/);
-  assert.match(silhouettes, /Werewolf foreman/);
-  assert.match(silhouettes, /Elite warehouse enforcer/);
-  assert.match(silhouettes, /case 'elite_walczak_guard'/);
-  assert.match(game, /createGobkitEnemyRoleSilhouette/);
-  assert.match(game, /actorRoleSilhouette === true/);
+  assert.match(kits, /case 'wolf'/);
+  assert.match(kits, /case 'gasMask'/);
+  assert.match(kits, /case 'crown'/);
+  assert.match(kits, /case 'forks'/);
+  assert.match(kits, /bone\.attach\(attachment\)/);
+  assert.match(kits, /role-kit-head/);
+  assert.match(kits, /role-kit-rightArm/);
+  assert.match(game, /createEnemyRoleKit\(requestedType, root\)/);
+  assert.match(game, /ENEMY_GAIT_PRESETS\[ENEMY_VISUAL_PROFILES\[enemy\.type\]\.gaitStyle\]/);
 });
 
 
-test('role-specific accessories are merged and cached to keep enemy draw calls bounded', async () => {
-  const silhouettes = await read('../src/gobkitEnemySilhouettes.ts');
-  assert.match(silhouettes, /mergeGeometries\(parts, false\)/);
-  assert.match(silhouettes, /vertexColors: true/);
-  assert.match(silhouettes, /const silhouetteTemplates = new Map<EnemyType, THREE\.Group \| null>\(\)/);
-  assert.match(silhouettes, /mesh\.castShadow = false/);
-  assert.match(silhouettes, /mesh\.userData\.gobkitSharedGeometry = true/);
-  assert.match(silhouettes, /sharedAccessoryMaterial\.userData\.makeHumanShared = true/);
-  assert.match(silhouettes, /const instance = template\.clone\(true\) as THREE\.Group/);
+test('articulated role kits merge by rig anchor and share immutable crowd geometry', async () => {
+  const kits = await read('../src/enemyRoleKits.ts');
+  assert.match(kits, /mergeGeometries\(parts,false\)/);
+  assert.match(kits, /vertexColors:true/);
+  assert.match(kits, /const templates=new Map<EnemyType,THREE\.Group\|null>\(\)/);
+  assert.match(kits, /mesh\.castShadow=false/);
+  assert.match(kits, /mesh\.userData\.gobkitSharedGeometry=true/);
+  assert.match(kits, /sharedKitMaterial\.userData\.makeHumanShared=true/);
+  assert.match(kits, /template\.clone\(true\)/);
+  assert.match(kits, /actorRoot\.userData\.enemyRoleKit=type/);
 });
 
 test('Gobkit build validates the embedded GLB JSON, skeleton, animation clips and checksum before reuse', async () => {
