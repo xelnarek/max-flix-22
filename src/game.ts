@@ -1531,7 +1531,7 @@ export class PaleciakiGameEngine {
           object.userData.gobkitSharedGeometry !== true) object.geometry.dispose();
       const materials = Array.isArray(object.material) ? object.material : [object.material];
       materials.forEach((material) => {
-        if (material.userData.makeHumanShared !== true) material.dispose();
+        if (material.userData.makeHumanShared !== true && material.userData.gobkitSharedMaterial !== true) material.dispose();
       });
     });
   }
@@ -1628,7 +1628,7 @@ export class PaleciakiGameEngine {
       if (object.userData.gobkitAsset === true && object.userData.gobkitSharedGeometry !== true) object.geometry.dispose();
       const materials = Array.isArray(object.material) ? object.material : [object.material];
       for (const material of materials) {
-        if (material.userData.makeHumanShared !== true) material.dispose();
+        if (material.userData.makeHumanShared !== true && material.userData.gobkitSharedMaterial !== true) material.dispose();
       }
     });
   }
@@ -1866,7 +1866,7 @@ export class PaleciakiGameEngine {
       if (!(object instanceof THREE.Mesh)) return;
       const materials = Array.isArray(object.material) ? object.material : [object.material];
       materials.forEach((material) => {
-        if (material.userData.makeHumanShared !== true) material.dispose();
+        if (material.userData.makeHumanShared !== true && material.userData.gobkitSharedMaterial !== true) material.dispose();
       });
     });
   }
