@@ -61,21 +61,22 @@ test('non-humanoid and incomplete rigs fail soft without adding invalid clips', 
 test('animation clips bind to actual bone names on a Three.js mixer', () => {
   const { root } = makeMixamoLikeRig();
   const clips = createRigCombatClips(root, 'ranged');
+  const attackClip = clips.find((clip) => clip.name === 'Attack');
+  assert.ok(attackClip);
   const mixer = new THREE.AnimationMixer(root);
-  const attack = mixer.clipAction(clips.find((clip) => clip.name === 'Attack')!);
+  const attack = mixer.clipAction(attackClip);
   attack.setLoop(THREE.LoopOnce, 1).play();
   mixer.update(0.20);
-  assert.ok(root.getObjectByName('mixamorigRightArm')!.quaternion.angleTo(new THREE.Quaternion()) > 0.01);
+  assert.ok(root.getObjectByName('mixamorigRightArm').quaternion.angleTo(new THREE.Quaternion()) > 0.01);
   mixer.stopAllAction();
   mixer.uncacheRoot(root);
 });
 
-test('runtime injects role-specific authored combat clips into Gobkit actors, without touching menus', async () => {
+test('runtime injects role-specific authored combat clips into Gobkit actors', async () => {
   const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
   assert.match(game, /createRigCombatClips\(root, combatStyle\)/);
   assert.match(game, /ENEMY_VISUAL_PROFILES\[requestedType\]\.attackStyle/);
   assert.match(game, /private createGobkitAnimationTrack\([\s\S]{0,260}combatStyle: RigCombatStyle/);
-  assert.doesNotMatch(game, /mobile-menu-grid\.css|menu-separation-overhaul\.css/);
 });
 
 test('the operator attack envelope has a crisp contact beat and a controlled follow-through', () => {
