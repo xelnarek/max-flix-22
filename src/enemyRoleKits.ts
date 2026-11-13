@@ -47,7 +47,7 @@ const ROLE: Partial<Record<EnemyType, RoleSpec>> = Object.freeze({
 
 const anchors: Anchor[] = ['head','torso','rightArm','back','legs'];
 const sharedKitMaterial = new THREE.MeshStandardMaterial({ color:0xffffff, vertexColors:true, roughness:.67, metalness:.08 });
-sharedKitMaterial.userData.makeHumanShared = true;
+sharedKitMaterial.userData.gobkitSharedMaterial = true;
 const templates = new Map<EnemyType, THREE.Group | null>();
 
 function mat(color:number, metalness=.05, roughness=.72): THREE.MeshStandardMaterial {
