@@ -207,47 +207,47 @@ export function applyEnemyRoleSecondaryMotion(
 
   const applied: AppliedOffset[] = [];
   // Pelvis and chest counter-rotation sells weight transfer without changing root physics.
-  rotate(bones.hips, AXIS_X, wave * gait.legSwing * 0.018 * activity);
-  rotate(bones.hips, AXIS_Z, wave * gait.armSway * 0.08 * activity);
+  rotate(bones.hips, AXIS_X, wave * gait.legSwing * 0.018 * activity, applied);
+  rotate(bones.hips, AXIS_Z, wave * gait.armSway * 0.08 * activity, applied);
   const forwardLean = gaitStyle === 'heavy' ? -0.055 :
     gaitStyle === 'aggressive' ? -0.075 :
     gaitStyle === 'shambling' ? 0.065 :
     gaitStyle === 'brisk' ? -0.035 :
     gaitStyle === 'robotic' ? -0.018 : -0.012;
-  rotate(bones.spine, AXIS_X, forwardLean * activity + wave * 0.012 * activity);
-  rotate(bones.chest, AXIS_Y, wave * gait.armSway * 0.075 * activity);
-  rotate(bones.chest, AXIS_Z, counterWave * gait.armSway * 0.035 * activity);
+  rotate(bones.spine, AXIS_X, forwardLean * activity + wave * 0.012 * activity, applied);
+  rotate(bones.chest, AXIS_Y, wave * gait.armSway * 0.075 * activity, applied);
+  rotate(bones.chest, AXIS_Z, counterWave * gait.armSway * 0.035 * activity, applied);
 
   // A head never moves as a rigid statue: it makes small independent corrections.
   const look = Math.sin(nextPhase * 0.31 + stablePhase(type));
-  rotate(bones.head, AXIS_Y, look * (isIdle ? 0.026 : 0.014) * (gaitStyle === 'robotic' ? 0.45 : 1));
-  rotate(bones.head, AXIS_Z, Math.sin(nextPhase * 0.5) * (gait.headBob * 0.65 + 0.006) * activity);
+  rotate(bones.head, AXIS_Y, look * (isIdle ? 0.026 : 0.014) * (gaitStyle === 'robotic' ? 0.45 : 1), applied);
+  rotate(bones.head, AXIS_Z, Math.sin(nextPhase * 0.5) * (gait.headBob * 0.65 + 0.006) * activity, applied);
 
   // Existing walk clips already swing the limbs. These are deliberately secondary,
   // role-weighted offsets; the zombie's hanging left arm and uneven step remain special.
   const armAmplitude = gait.armSwing * (isIdle ? 0.012 : 0.060) * activity;
   const leftArmBias = asymmetry ? 0.18 : gaitStyle === 'heavy' ? -0.025 : 0;
   const rightArmBias = asymmetry ? -0.08 : gaitStyle === 'aggressive' ? 0.025 : 0;
-  rotate(bones.leftUpperArm, AXIS_Z, wave * armAmplitude + leftArmBias * activity);
-  rotate(bones.rightUpperArm, AXIS_Z, counterWave * armAmplitude + rightArmBias * activity);
+  rotate(bones.leftUpperArm, AXIS_Z, wave * armAmplitude + leftArmBias * activity, applied);
+  rotate(bones.rightUpperArm, AXIS_Z, counterWave * armAmplitude + rightArmBias * activity, applied);
 
   const legAmplitude = gait.legSwing * (isIdle ? 0.006 : 0.032) * activity;
-  rotate(bones.leftThigh, AXIS_X, wave * legAmplitude);
-  rotate(bones.rightThigh, AXIS_X, counterWave * legAmplitude * (asymmetry ? 0.56 : 1));
+  rotate(bones.leftThigh, AXIS_X, wave * legAmplitude, applied);
+  rotate(bones.rightThigh, AXIS_X, counterWave * legAmplitude * (asymmetry ? 0.56 : 1), applied);
 
   if (gaitStyle === 'shambling') {
-    rotate(bones.spine, AXIS_Z, 0.065 * activity);
-    rotate(bones.head, AXIS_Z, 0.038 * activity);
+    rotate(bones.spine, AXIS_Z, 0.065 * activity, applied);
+    rotate(bones.head, AXIS_Z, 0.038 * activity, applied);
   } else if (gaitStyle === 'limping') {
-    rotate(bones.hips, AXIS_Z, 0.048 * wave * activity);
-    rotate(bones.rightThigh, AXIS_X, 0.038 * activity);
+    rotate(bones.hips, AXIS_Z, 0.048 * wave * activity, applied);
+    rotate(bones.rightThigh, AXIS_X, 0.038 * activity, applied);
   } else if (gaitStyle === 'robotic') {
     const servo = Math.sin(nextPhase * 0.5) > 0 ? 1 : -1;
-    rotate(bones.chest, AXIS_Y, servo * 0.012 * activity);
-    rotate(bones.head, AXIS_Y, -servo * 0.008 * activity);
+    rotate(bones.chest, AXIS_Y, servo * 0.012 * activity, applied);
+    rotate(bones.head, AXIS_Y, -servo * 0.008 * activity, applied);
   } else if (gaitStyle === 'theatrical') {
-    rotate(bones.chest, AXIS_Y, Math.sin(nextPhase * 0.4) * 0.045 * activity);
-    rotate(bones.head, AXIS_Y, Math.sin(nextPhase * 0.27 + 1) * 0.038 * activity);
+    rotate(bones.chest, AXIS_Y, Math.sin(nextPhase * 0.4) * 0.045 * activity, applied);
+    rotate(bones.head, AXIS_Y, Math.sin(nextPhase * 0.27 + 1) * 0.038 * activity, applied);
   }
   previousOffsets.set(root, applied);
   return nextPhase;
