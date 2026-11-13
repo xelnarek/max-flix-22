@@ -261,7 +261,7 @@ test('playable operators retain the original stylized models in Survival and bot
   assert.doesNotMatch(game, /void this\.attachMakeHumanEnemyModel/);
   assert.match(game, /ENEMY_VISUAL_PROFILES\[enemy\.type\]\.gobkitModel/);
   assert.match(game, /void this\.attachGobkitEnemyModel\(enemy, modelId\)/);
-  assert.match(game, /createGobkitEnemyRoleSilhouette\(requestedType\)/);
+  assert.match(game, /createEnemyRoleKit\(requestedType, root\)/);
 });
 
 test('CC0 enemy rigs receive a clear caricature silhouette matching their warehouse role', async () => {
