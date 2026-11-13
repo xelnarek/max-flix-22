@@ -60,6 +60,9 @@ const AXIS_X = new THREE.Vector3(1, 0, 0);
 const AXIS_Y = new THREE.Vector3(0, 1, 0);
 const AXIS_Z = new THREE.Vector3(0, 0, 1);
 const ROTATION_OFFSET = new THREE.Quaternion();
+interface AppliedOffset { bone: THREE.Bone; axis: THREE.Vector3; angle: number; }
+const previousOffsets = new WeakMap<THREE.Group, AppliedOffset[]>();
+
 
 function normalize(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -136,10 +139,31 @@ export function applyEnemyRoleAnatomy(root: THREE.Group, type: EnemyType): boole
   return true;
 }
 
-function rotate(bone: THREE.Bone | null, axis: THREE.Vector3, angle: number): void {
+function rotate(
+  bone: THREE.Bone | null,
+  axis: THREE.Vector3,
+  angle: number,
+  record?: AppliedOffset[],
+): void {
   if (!bone || !Number.isFinite(angle) || Math.abs(angle) < 1e-5) return;
   ROTATION_OFFSET.setFromAxisAngle(axis, angle);
   bone.quaternion.multiply(ROTATION_OFFSET).normalize();
+  record?.push({ bone, axis, angle });
+}
+
+/**
+ * Remove only the exact local offsets applied by the previous role-motion tick.
+ * This is called before AnimationMixer.update so bones absent from a source clip
+ * cannot accumulate procedural rotation over time.
+ */
+export function clearEnemyRoleSecondaryMotion(root: THREE.Group): void {
+  const offsets = previousOffsets.get(root);
+  if (!offsets) return;
+  for (let i = offsets.length - 1; i >= 0; i--) {
+    const offset = offsets[i];
+    rotate(offset.bone, offset.axis, -offset.angle);
+  }
+  previousOffsets.delete(root);
 }
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, Number.isFinite(value) ? value : min));
@@ -181,6 +205,7 @@ export function applyEnemyRoleSecondaryMotion(
   const activity = isIdle ? 0.13 : clamp(speed / 2.3, 0.22, 1.15);
   const asymmetry = type === 'zombie_pracownik' ? 1 : 0;
 
+  const applied: AppliedOffset[] = [];
   // Pelvis and chest counter-rotation sells weight transfer without changing root physics.
   rotate(bones.hips, AXIS_X, wave * gait.legSwing * 0.018 * activity);
   rotate(bones.hips, AXIS_Z, wave * gait.armSway * 0.08 * activity);
@@ -224,6 +249,7 @@ export function applyEnemyRoleSecondaryMotion(
     rotate(bones.chest, AXIS_Y, Math.sin(nextPhase * 0.4) * 0.045 * activity);
     rotate(bones.head, AXIS_Y, Math.sin(nextPhase * 0.27 + 1) * 0.038 * activity);
   }
+  previousOffsets.set(root, applied);
   return nextPhase;
 }
 
