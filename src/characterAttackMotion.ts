@@ -29,6 +29,13 @@ export function getCharacterAttackMotionProfile(id: CharacterId): CharacterAttac
 export function getAttackPoseStrength(progress: number): number {
   const t = Number.isFinite(progress) ? Math.max(0, Math.min(1, progress)) : 0;
   if (t <= 0 || t >= 1) return 0;
-  const anticipation = t < 0.22 ? Math.sin((t / 0.22) * Math.PI * 0.5) * 0.16 : 0;
-  return Math.min(1, anticipation + Math.pow(Math.sin(t * Math.PI), 0.9));
+
+  // A short anticipation, decisive contact frame and damped follow-through
+  // read better than a single symmetrical sine wave at the game's isometric scale.
+  const easeOutCubic = (value: number) => 1 - Math.pow(1 - value, 3);
+  const smoothStep = (value: number) => value * value * (3 - 2 * value);
+  if (t < 0.18) return 0.12 * easeOutCubic(t / 0.18);
+  if (t < 0.52) return Math.min(1, 0.12 + 0.92 * easeOutCubic((t - 0.18) / 0.34));
+  if (t < 0.70) return 1 - 0.10 * smoothStep((t - 0.52) / 0.18);
+  return 0.90 * (1 - smoothStep((t - 0.70) / 0.30));
 }

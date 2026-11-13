@@ -122,8 +122,10 @@ export function addProceduralLimbPose(
 export function getProceduralHitPulse(remainingSeconds: number, durationSeconds: number): number {
   if (!Number.isFinite(remainingSeconds) || !Number.isFinite(durationSeconds) || durationSeconds <= 0) return 0;
   const progress = THREE.MathUtils.clamp(1 - remainingSeconds / durationSeconds, 0, 1);
-  const impact = Math.sin(Math.min(1, progress / 0.44) * Math.PI * 0.5);
-  return impact * Math.pow(1 - progress, 0.65);
+  // Fast impact response followed by a longer, smooth recoil recovery.
+  const impact = Math.sin(Math.min(1, progress / 0.30) * Math.PI * 0.5);
+  const recoveryProgress = THREE.MathUtils.clamp((progress - 0.20) / 0.80, 0, 1);
+  return impact * Math.pow(1 - recoveryProgress, 0.82);
 }
 
 /** Apply an additive joint pose while preserving the factory-authored rest angles. */
