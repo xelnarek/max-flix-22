@@ -275,8 +275,8 @@ test('CC0 enemy rigs receive articulated, role-specific body shapes and equipmen
   assert.match(kits, /case 'crown'/);
   assert.match(kits, /case 'forks'/);
   assert.match(kits, /bone\.attach\(attachment\)/);
-  assert.match(kits, /role-kit-head/);
-  assert.match(kits, /role-kit-rightArm/);
+  assert.match(kits, /out\[a\]\.name='role-kit-'\+a/);
+  assert.match(kits, /out\[a\]\.userData\.actorRigAnchor=a/);
   assert.match(game, /createEnemyRoleKit\(requestedType, root\)/);
   assert.match(game, /ENEMY_GAIT_PRESETS\[ENEMY_VISUAL_PROFILES\[enemy\.type\]\.gaitStyle\]/);
 });
@@ -286,7 +286,7 @@ test('articulated role kits merge by rig anchor and share immutable crowd geomet
   const kits = await read('../src/enemyRoleKits.ts');
   assert.match(kits, /mergeGeometries\(parts,false\)/);
   assert.match(kits, /vertexColors:true/);
-  assert.match(kits, /const templates=new Map<EnemyType,THREE\.Group\|null>\(\)/);
+  assert.match(kits, /const templates\s*=\s*new Map<EnemyType,\s*THREE\.Group\s*\|\s*null>\(\)/);
   assert.match(kits, /mesh\.castShadow=false/);
   assert.match(kits, /mesh\.userData\.gobkitSharedGeometry=true/);
   assert.match(kits, /sharedKitMaterial\.userData\.makeHumanShared=true/);
