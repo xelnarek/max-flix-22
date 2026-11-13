@@ -286,6 +286,107 @@ function heldProp(groups:Record<Anchor,THREE.Group>,prop:Prop,accent:number,meta
     default: break;
   }
 }
+function addFaceDetails(groups:Record<Anchor,THREE.Group>,type:EnemyType,s:RoleSpec):void{
+  const {dark,accent,metal}=s;
+  switch(type){
+    case 'customer':
+      // Heavy frown and an unmistakable open complaint shout.
+      bx(groups,'head',0x342729,[-.09,1.245,.176],[.12,.025,.025],[0,0,-.18]);
+      bx(groups,'head',0x342729,[.09,1.245,.176],[.12,.025,.025],[0,0,.18]);
+      sp(groups,'head',0x7c282c,[0,1.105,.185],[.075,.042,.025]);
+      break;
+    case 'architect':
+      // Large dark lenses sit inside the thin frame already authored above.
+      sp(groups,'head',0x27323e,[-.07,1.19,.183],[.052,.047,.012],.16);
+      sp(groups,'head',0x27323e,[.07,1.19,.183],[.052,.047,.012],.16);
+      break;
+    case 'inspector':
+      bx(groups,'head',0x25303a,[0,1.13,.178],[.22,.075,.025]);
+      bx(groups,'head',accent,[0,1.31,.19],[.14,.032,.018]);
+      break;
+    case 'kurier':
+      bx(groups,'head',0xf2ca4e,[0,1.29,.20],[.20,.035,.025]);
+      bx(groups,'head',0x102b42,[-.17,1.18,.04],[.035,.11,.08]);
+      break;
+    case 'handlowiec':
+      // Tie knot and collar separate the suited sales rep from plain uniforms.
+      bx(groups,'head',0x1c2a43,[-.055,1.265,.18],[.07,.035,.018],[0,0,-.2]);
+      bx(groups,'head',0x1c2a43,[.055,1.265,.18],[.07,.035,.018],[0,0,.2]);
+      cn(groups,'torso',accent,[0,.90,.255],.055,.18,[Math.PI,0,0]);
+      break;
+    case 'przedstawiciel_włoski':
+      // Visible moustache and a small polished lapel pin.
+      bx(groups,'head',0x2c211e,[-.055,1.115,.18],[.10,.035,.035],[0,0,-.14]);
+      bx(groups,'head',0x2c211e,[.055,1.115,.18],[.10,.035,.035],[0,0,.14]);
+      sp(groups,'torso',0xe2c06b,[.14,.89,.25],[.035,.035,.018],.75);
+      break;
+    case 'monter':
+      // Integrated work-lamp housing and a bright lens on the helmet.
+      bx(groups,'head',0x202a31,[0,1.315,.19],[.14,.07,.045]);
+      sp(groups,'head',0xf9f1b7,[0,1.32,.22],[.045,.038,.025],.45);
+      break;
+    case 'sztaplar_szalony':
+      bx(groups,'head',0x25292d,[0,1.22,.18],[.28,.06,.035]);
+      bx(groups,'torso',0x25292d,[0,.80,.31],[.46,.035,.02]);
+      break;
+    case 'krol_leto':
+      sp(groups,'head',0x65dce9,[0,1.34,.20],[.075,.075,.035],.72);
+      bx(groups,'torso',0x171a24,[0,.79,.285],[.46,.035,.025],[0,0,0],.6);
+      break;
+    case 'pan_roman':
+      // A white ceramic logo badge and broad apron seam.
+      bx(groups,'torso',0x9daeb2,[0,.87,.278],[.18,.10,.018],[0,0,0],.3);
+      bx(groups,'torso',0xb65c1f,[0,.57,.285],[.49,.025,.018]);
+      break;
+    case 'serwisant':
+      bx(groups,'head',0x202d35,[0,1.30,.19],[.12,.055,.035]);
+      sp(groups,'head',0x36d4d7,[0,1.305,.22],[.035,.027,.018],.35);
+      break;
+    case 'bosman_krakow':
+      bx(groups,'head',0xead7a2,[0,1.26,.19],[.20,.03,.02]);
+      bx(groups,'torso',0x192b48,[0,.76,.285],[.34,.12,.02]);
+      break;
+    case 'zombie_pracownik':
+      // Torn jaw and missing cheek keep the undead face visibly non-human.
+      sp(groups,'head',0x66775c,[.07,1.075,.16],[.12,.075,.11]);
+      bx(groups,'head',0x312629,[-.07,1.095,.20],[.12,.045,.02],[0,0,-.32]);
+      for(let i=0;i<3;i++)cn(groups,'head',0xd8d2bb,[-.11+i*.065,1.07,.225],.022,.075,[Math.PI/2,0,0]);
+      bx(groups,'torso',0x733d36,[.18,.82,.255],[.13,.045,.018],[0,0,.38]);
+      break;
+    case 'sebix_m':
+      bx(groups,'head',0x252225,[-.09,1.22,.17],[.12,.04,.025],[0,0,-.15]);
+      bx(groups,'head',0x252225,[.09,1.22,.17],[.12,.04,.025],[0,0,.15]);
+      tor(groups,'torso',0xd3af48,[0,.99,.21],.19,.012,[Math.PI/2,0,0]);
+      break;
+    case 'mutant_gamma_forklift':
+      sp(groups,'head',0xffc52e,[-.14,1.29,.20],[.06,.06,.035],.45);
+      sp(groups,'head',0xffc52e,[.14,1.29,.20],[.06,.06,.035],.45);
+      bx(groups,'torso',0xf1c52e,[0,.65,.33],[.56,.07,.025]);
+      break;
+    case 'radioactive_pip':
+      bx(groups,'head',0x202a24,[0,1.30,.20],[.30,.055,.04]);
+      sp(groups,'head',0xd9ff57,[0,1.31,.23],[.06,.025,.018],.1);
+      break;
+    case 'cyber_salesman':
+      bx(groups,'head',dark,[0,1.15,.23],[.29,.035,.025],[0,0,0],.7);
+      sp(groups,'head',accent,[0,1.37,.02],[.045,.09,.045],.7);
+      break;
+    case 'elite_walczak_guard':
+      bx(groups,'head',0x9e283b,[0,1.14,.24],[.28,.045,.025],[0,0,0],.45);
+      bx(groups,'torso',0x9e283b,[0,.62,.30],[.37,.055,.025],[0,0,0],.45);
+      break;
+    case 'walczak':
+      cn(groups,'head',0xe6dcc1,[-.075,1.07,.235],.035,.14,[Math.PI/2,0,0]);
+      cn(groups,'head',0xe6dcc1,[.075,1.07,.235],.035,.14,[Math.PI/2,0,0]);
+      for(let i=0;i<4;i++)cn(groups,'torso',dark,[-.26+i*.17,1.08,-.10],.075,.20,[0,0,(i-1.5)*.22]);
+      break;
+    default:
+      // Give any future authored type a clean, readable equipment colour anchor.
+      sp(groups,'head',metal,[0,1.20,.18],[.025,.025,.015],.25);
+      break;
+  }
+}
+
 function findBone(root:THREE.Object3D,anchor:Anchor):THREE.Bone|null{
   const bones:THREE.Bone[]=[];root.traverse(o=>{if(o instanceof THREE.Bone)bones.push(o);});
   const names=bones.map(b=>({bone:b,n:b.name.toLowerCase().replace(/[^a-z0-9]/g,'')}));
@@ -300,6 +401,7 @@ function bake(type:EnemyType):THREE.Group|null{
   const source=new THREE.Group();const groups=newGroups();
   for(const a of anchors)source.add(groups[a]);
   body(groups,type,spec);helmet(groups,spec.gear,spec.accent);backGear(groups,spec.pack,spec.main,spec.accent,spec.metal);heldProp(groups,spec.prop,spec.accent,spec.metal);
+  addFaceDetails(groups,type,spec);
   if(type==='architect'){
     for(let i=0;i<4;i++)bx(groups,'rightArm',[0xf2d67c,0xe5e0d4,0x829caf,0x3f8bb0][i],[.24+i*.06,.83,.18],[.07,.30,.018],[0,0,(i-1.5)*.17]);
     tor(groups,'head',spec.metal,[-.07,1.19,.18],.07,.012);tor(groups,'head',spec.metal,[.07,1.19,.18],.07,.012);
