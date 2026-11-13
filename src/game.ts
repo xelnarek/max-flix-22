@@ -3,6 +3,7 @@ import { applyPolyHavenPbrMaps } from './polyHavenTextures.ts';
 import { chooseMakeHumanLocomotion, getMakeHumanPlaybackRate, isMakeHumanVelocityAction, type MakeHumanLocomotionAction } from './makeHumanLocomotion.ts';
 import { dampActorAngle, getActorAnimationInterval, getEnemyRigPlaybackRate } from './actorMotion.ts';
 import { createEnemyRoleKit } from './enemyRoleKits.ts';
+import { applyEnemyRoleAnatomy, applyEnemyRoleSecondaryMotion } from './enemyAnimationPolish.ts';
 import { createMakeHumanActor, MAKEHUMAN_OPERATOR_STYLES, type MakeHumanStyleId } from './makeHumanAssets.ts';
 import {
   clampGobkitActionDuration,
@@ -312,6 +313,8 @@ interface GobkitAnimationTrack {
   idleVariantCooldown?: number;
   idleVariantIndex?: number;
   idleVariantAction?: string;
+  /** Stable secondary-motion clock for the enemy's role-specific gait. */
+  roleMotionPhase?: number;
   /** Keeps attacks and damage reactions from being overwritten by locomotion next frame. */
   oneShotRemaining: number;
   oneShotPriority: number;
@@ -1984,6 +1987,7 @@ export class PaleciakiGameEngine {
       const root = cloneGobkitModel(gltf);
       const visualProfile = ENEMY_VISUAL_PROFILES[requestedType];
       fitGobkitModel(root, visualProfile.targetHeight, this.threeRenderer?.capabilities.getMaxAnisotropy() ?? 1);
+      applyEnemyRoleAnatomy(root, requestedType);
       this.applyHandheldActorShadowBudget(root);
       root.position.y -= mesh.position.y;
       root.name = 'gobkit-enemy-' + modelId + '-' + enemy.id;
@@ -2197,6 +2201,14 @@ export class PaleciakiGameEngine {
         // Mixer delta is accumulated while an actor is distant, keeping one-shot
         // timing and fade curves stable despite fewer visual evaluations.
         track.mixer.update(animationDt);
+        track.roleMotionPhase = applyEnemyRoleSecondaryMotion(
+          track.root,
+          enemy.type,
+          track.roleMotionPhase ?? 0,
+          animationDt,
+          localSpeed || worldSpeed,
+          activeAction,
+        );
       }
     }
     for (const [enemy, track] of this.gobkitEnemyTracks) {
