@@ -20,7 +20,7 @@ The operator IDs, character stats, attack definitions, passives, abilities, prog
 
 ## Survival enemy roster
 
-All 19 humanoid and creature archetypes use locally bundled, rigged GLB assets. Each imported rig receives a role-specific size, animation track and accessory kit; the previous warehouse-prop model is hidden after the new rig is attached.
+All 19 humanoid and creature archetypes use locally bundled, rigged GLB assets. Each imported rig receives a role-specific size and animation track plus a five-anchor geometry kit mounted to its head, torso, right arm, back and legs. Large body proportions, helmets, armour, tools, backpacks and boss/creature features make the silhouette distinct; equipment follows the animated skeleton instead of floating as a static decal. The previous warehouse-prop model is hidden after the new rig is attached.
 
 | Enemy family | 3D model |
 | --- | --- |
