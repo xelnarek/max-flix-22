@@ -95,6 +95,7 @@ test('Cthulhu phase two cycles through a slam, aimed lash and grab with a readab
   assert.match(game, /private spawnCthulhuGrabEffect/);
   assert.match(game, /cthulhu-player-grab-effect/);
   assert.match(game, /cthulhuSnareTimer/);
+  assert.match(game, /cthulhuSnareTimer - dt \\* 1\\.4/);
   assert.match(game, /MACKI CHTULHU ZAMYKAJĄ SIĘ NA TOBIE/);
 });
 
