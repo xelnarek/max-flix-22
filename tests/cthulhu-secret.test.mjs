@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import * as THREE from 'three';
 import { createCthulhuBossModel } from '../src/cthulhuAssets.ts';
-import { isWithinCthulhuLashLane } from '../src/cthulhuCombat.ts';
+import { getCthulhuPhaseTwoAttack, isWithinCthulhuLashLane } from '../src/cthulhuCombat.ts';
 
 const enemyTypeNames = [
   'walczak', // Reuses the existing major-boss AI/reward contract; the mesh is bespoke Cthulhu.
@@ -18,6 +18,8 @@ test('the Cthulhu model is a distinct articulated multi-part boss with wings and
   assert.ok(built.armL instanceof THREE.Group);
   assert.ok(built.armR instanceof THREE.Group);
   assert.ok(built.head instanceof THREE.Group);
+  assert.equal(built.group.userData.cthulhuArmL, built.armL);
+  assert.equal(built.group.userData.cthulhuArmR, built.armR);
   assert.ok(built.tentacles.length >= 7);
   assert.equal(built.wings.length, 2);
   const meshNames = [];
@@ -75,16 +77,36 @@ test('the phase-two tentacle lash has a directional, dodgeable corridor hit test
   assert.equal(isWithinCthulhuLashLane(0, 8, 0, 0, 0, 3, 15.5, 2.15), true, 'raw aim vectors are normalized');
 });
 
-test('Cthulhu phase two alternates a line telegraph with the circular ground rupture', async () => {
+test('Cthulhu phase two cycles through a slam, aimed lash and grab with a readable snare response', async () => {
   const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
-  assert.match(game, /cthulhuNextAttack !== 'slam'/);
-  assert.match(game, /cthulhuNextAttack = 'slam'/);
-  assert.match(game, /cthulhuNextAttack = 'lash'/);
+  assert.match(game, /getCthulhuPhaseTwoAttack/);
+  assert.match(game, /cthulhuNextAttack = phaseTwoPlan\.nextAttack/);
+  assert.match(game, /cthulhuActiveAttack = 'slam'/);
+  assert.match(game, /cthulhuActiveAttack/);
   assert.match(game, /spawnCthulhuLashTelegraph/);
   assert.match(game, /cthulhuActiveAttack === 'lash'/);
+  assert.match(game, /Lock both aimed moves to the corridor/);
   assert.match(game, /cthulhuLashDirX \?\? dx/);
   assert.match(game, /MACKI CELOWANE — ODSKOCZ W BOK LUB WYSKOCZ/);
   assert.match(game, /isWithinCthulhuLashLane/);
   assert.match(game, /cthulhuStrikeTimer/);
   assert.match(game, /cthulhuTorso/);
+  assert.match(game, /cthulhuActiveAttack === 'grab'/);
+  assert.match(game, /private spawnCthulhuGrabEffect/);
+  assert.match(game, /cthulhu-player-grab-effect/);
+  assert.match(game, /cthulhuSnareTimer/);
+  assert.match(game, /cthulhuSnareTimer - dt \* 1\.4/);
+  assert.match(game, /MACKI CHTULHU ZAMYKAJĄ SIĘ NA TOBIE/);
+});
+
+
+test('Cthulhu phase-two attack selector loops through all three distinct moves', () => {
+  let nextAttack;
+  const sequence = [];
+  for (let index = 0; index < 6; index++) {
+    const plan = getCthulhuPhaseTwoAttack(nextAttack);
+    sequence.push(plan.attack);
+    nextAttack = plan.nextAttack;
+  }
+  assert.deepEqual(sequence, ['lash', 'grab', 'slam', 'lash', 'grab', 'slam']);
 });

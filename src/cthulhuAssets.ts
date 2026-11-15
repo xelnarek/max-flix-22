@@ -362,6 +362,8 @@ export function createCthulhuBossModel(): CthulhuBossModel {
   group.userData.cthulhuAura = aura;
   group.userData.cthulhuTorso = torso;
   group.userData.cthulhuPelvis = pelvis;
+  group.userData.cthulhuArmL = armL;
+  group.userData.cthulhuArmR = armR;
 
   return { group, legL, legR, armL, armR, head, tentacles, wings };
 }

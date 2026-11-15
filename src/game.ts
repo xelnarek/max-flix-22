@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { applyPolyHavenPbrMaps } from './polyHavenTextures.ts';
 import { createCthulhuBossModel } from './cthulhuAssets.ts';
-import { isWithinCthulhuLashLane } from './cthulhuCombat.ts';
+import { getCthulhuPhaseTwoAttack, isWithinCthulhuLashLane } from './cthulhuCombat.ts';
 import { chooseMakeHumanLocomotion, getMakeHumanPlaybackRate, isMakeHumanVelocityAction, type MakeHumanLocomotionAction } from './makeHumanLocomotion.ts';
 import { dampActorAngle, getActorAnimationInterval, getEnemyRigPlaybackRate } from './actorMotion.ts';
 import { createEnemyRoleKit } from './enemyRoleKits.ts';
@@ -613,6 +613,7 @@ export class PaleciakiGameEngine {
   private doublePointsTimer = 0;
   private glueSlowTimer = 0;
   private cementSlowTimer = 0;
+  private cthulhuSnareTimer = 0;
   private heroQuipTimer = 24;
   private marcinWoTPenaltyTimer = 0;
   private outlineMaterial: THREE.ShaderMaterial | null = null;
@@ -2492,6 +2493,7 @@ export class PaleciakiGameEngine {
     this.doublePointsTimer = 0;
     this.glueSlowTimer = 0;
     this.cementSlowTimer = 0;
+    this.cthulhuSnareTimer = 0;
     this.heroQuipTimer = 24 + Math.random() * 8;
     this.attackComboStep = 0;
     this.bulldozerHitCooldowns.clear();
@@ -4995,14 +4997,17 @@ export class PaleciakiGameEngine {
     length: number,
     width: number,
     duration: number,
+    variant: 'lash' | 'grab' = 'lash',
   ): void {
     const lane = new THREE.Group();
-    lane.name = 'cthulhu-phase-two-tentacle-lash-warning';
+    lane.name = variant === 'grab'
+      ? 'cthulhu-phase-two-tentacle-grab-warning'
+      : 'cthulhu-phase-two-tentacle-lash-warning';
     lane.position.set(x + directionX * length * 0.5, 0.065, z + directionZ * length * 0.5);
     lane.rotation.y = Math.atan2(directionX, directionZ);
 
     const fillMaterial = new THREE.MeshBasicMaterial({
-      color: 0x7628b8,
+      color: variant === 'grab' ? 0x166534 : 0x7628b8,
       transparent: true,
       opacity: 0.22,
       depthWrite: false,
@@ -5010,7 +5015,7 @@ export class PaleciakiGameEngine {
       toneMapped: false,
     });
     const edgeMaterial = new THREE.MeshBasicMaterial({
-      color: 0x8df7e1,
+      color: variant === 'grab' ? 0xd9f99d : 0x8df7e1,
       transparent: true,
       opacity: 0.72,
       depthWrite: false,
@@ -5050,6 +5055,63 @@ export class PaleciakiGameEngine {
         edgeMaterial.opacity = 0.48 + pulse * 0.42;
       },
       cleanup: () => this.disposeTemporaryObject(lane),
+    });
+  }
+
+  private spawnCthulhuGrabEffect(x: number, y: number, z: number): void {
+    const grip = new THREE.Group();
+    grip.name = 'cthulhu-player-grab-effect';
+    grip.position.set(x, Math.max(0.04, y - 0.5), z);
+    const materials: THREE.MeshBasicMaterial[] = [];
+
+    for (let index = 0; index < 4; index++) {
+      const startAngle = (index / 4) * Math.PI * 2;
+      const points: THREE.Vector3[] = [];
+      for (let step = 0; step <= 7; step++) {
+        const t = step / 7;
+        const angle = startAngle + t * Math.PI * 1.45;
+        const radius = 0.52 - t * 0.08;
+        points.push(new THREE.Vector3(
+          Math.cos(angle) * radius,
+          0.12 + t * 1.78,
+          Math.sin(angle) * radius,
+        ));
+      }
+      const material = new THREE.MeshBasicMaterial({
+        color: index % 2 === 0 ? 0x46e7c4 : 0xa78bfa,
+        transparent: true,
+        opacity: 0.88,
+        depthWrite: false,
+        toneMapped: false,
+      });
+      materials.push(material);
+      const tendril = new THREE.Mesh(
+        new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 18, 0.062, 5, false),
+        material,
+      );
+      grip.add(tendril);
+      const knot = new THREE.Mesh(
+        new THREE.SphereGeometry(0.105, 7, 6),
+        material,
+      );
+      knot.position.copy(points[points.length - 1]);
+      grip.add(knot);
+    }
+
+    this.levelRoot.add(grip);
+    this.specialEffects.push({
+      mesh: grip,
+      life: 0.82,
+      maxLife: 0.82,
+      grow: 0,
+      spin: 0,
+      update: (dt, progress) => {
+        grip.rotation.y += dt * 1.65;
+        const pulse = 1 + Math.sin(progress * Math.PI * 5) * 0.045;
+        grip.scale.set(pulse, 1, pulse);
+        for (const material of materials) material.opacity = 0.88 * (1 - progress);
+      },
+      cleanup: () => this.disposeTemporaryObject(grip),
     });
   }
 
@@ -7112,6 +7174,8 @@ export class PaleciakiGameEngine {
     const built = createCthulhuBossModel();
     const groundY = 0.22;
     built.group.position.set(x, groundY, z);
+    built.group.scale.setScalar(0.075);
+    built.group.userData.cthulhuRiseTimer = 1.35;
     this.applyHandheldActorShadowBudget(built.group);
     this.levelRoot.add(built.group);
 
@@ -11197,6 +11261,9 @@ export class PaleciakiGameEngine {
     if (this.cementSlowTimer > 0) {
       this.cementSlowTimer = Math.max(0, this.cementSlowTimer - dt);
     }
+    if (this.cthulhuSnareTimer > 0) {
+      this.cthulhuSnareTimer = Math.max(0, this.cthulhuSnareTimer - dt);
+    }
     if (changed) {
       this.callbacks.onPerksUpdate?.(this.activePerks);
     }
@@ -11250,6 +11317,11 @@ export class PaleciakiGameEngine {
       inputZ /= inputLen;
     }
 
+    // Active movement shortens the snare; standing still keeps its full penalty.
+    if (this.cthulhuSnareTimer > 0 && inputLen > 0.18) {
+      this.cthulhuSnareTimer = Math.max(0, this.cthulhuSnareTimer - dt * 1.4);
+    }
+
     let speed = this.charDef.speed * this.characterMasteryBonuses.speedMultiplier * this.getPacingFactor();
     if (this.gameMode === 'survival') {
       speed *= this.survivalMoveMultiplier * getSurvivalMomentumMoveMultiplier(this.survivalMomentum.overdriveRemainingSeconds);
@@ -11286,6 +11358,9 @@ export class PaleciakiGameEngine {
     if (this.cementSlowTimer > 0 && (this.activePerks.kfcBerserk || 0) <= 0 && this.activePerks.speedBoost <= 0) {
       speed *= 0.72;
     }
+    // Cthulhu's grip is a short, dedicated crowd-control effect. Tactical dash
+    // still overrides it, giving the player a reliable escape option.
+    if (this.cthulhuSnareTimer > 0) speed *= 0.42;
 
     const isTacticalDashing = this.survivalDashDurationRemaining > 0;
     if (isTacticalDashing) {
@@ -12929,6 +13004,15 @@ export class PaleciakiGameEngine {
         ? THREE.MathUtils.clamp(1 - strikeTimer / strikeDuration, 0, 1)
         : 1;
       const strikeWave = strikeTimer > 0 ? Math.sin(strikeProgress * Math.PI) : 0;
+      const riseTimer = Number(e.mesh.userData.cthulhuRiseTimer ?? 0);
+      if (riseTimer > 0) {
+        const riseDuration = 1.35;
+        const riseProgress = THREE.MathUtils.clamp(1 - riseTimer / riseDuration, 0, 1);
+        const riseEase = 1 - Math.pow(1 - riseProgress, 3);
+        e.mesh.scale.setScalar(0.075 + riseEase * 0.925);
+        e.mesh.userData.cthulhuRiseTimer = Math.max(0, riseTimer - dt);
+        if (e.mesh.userData.cthulhuRiseTimer <= 0) e.mesh.scale.setScalar(1);
+      }
       if (strikeTimer > 0) {
         e.mesh.userData.cthulhuStrikeTimer = Math.max(0, strikeTimer - dt);
       }
@@ -12955,6 +13039,17 @@ export class PaleciakiGameEngine {
           tentacle.rotation.z = Math.cos(phase * 0.82) * 0.075
             + strikeWave * whipSide * strikeSide * (strikeType === 'lash' ? 0.42 : 0.12);
         }
+      }
+      const cthulhuArmL = e.mesh.userData.cthulhuArmL as THREE.Group | undefined;
+      const cthulhuArmR = e.mesh.userData.cthulhuArmR as THREE.Group | undefined;
+      const grabReach = strikeType === 'grab' ? strikeWave : 0;
+      if (cthulhuArmL) {
+        cthulhuArmL.rotation.x = -grabReach * 0.72;
+        cthulhuArmL.rotation.z = -0.20 - grabReach * 0.42;
+      }
+      if (cthulhuArmR) {
+        cthulhuArmR.rotation.x = -grabReach * 0.72;
+        cthulhuArmR.rotation.z = 0.20 + grabReach * 0.42;
       }
       const cthulhuWings = e.mesh.userData.cthulhuWings as THREE.Group[] | undefined;
       if (cthulhuWings) {
@@ -13129,7 +13224,11 @@ export class PaleciakiGameEngine {
         const isChargingImpact = (e.name.includes('Inwentaryzacja Gigant') || isCthulhuBoss) && e.chargeTimer !== undefined;
         if (isChargingImpact) {
           // Keep a targeted lash visually aligned with the corridor shown on the floor.
-          if (isCthulhuBoss && e.mesh.userData.cthulhuActiveAttack === 'lash') {
+          if (isCthulhuBoss && (
+            e.mesh.userData.cthulhuActiveAttack === 'lash' ||
+            e.mesh.userData.cthulhuActiveAttack === 'grab'
+          )) {
+            // Lock both aimed moves to the corridor shown during their wind-up.
             e.mesh.rotation.y = Math.atan2(
               Number(e.mesh.userData.cthulhuLashDirX ?? dx),
               Number(e.mesh.userData.cthulhuLashDirZ ?? dz),
@@ -13182,26 +13281,34 @@ export class PaleciakiGameEngine {
             if (isCthulhuBoss) {
               const impactRadius = isPhase2 ? 9.8 : 7.4;
               if (e.chargeTimer === undefined) {
-                const useLash = isPhase2 && e.mesh.userData.cthulhuNextAttack !== 'slam';
-                if (useLash) {
-                  // Phase two alternates a targeted lane attack with the circular ground rupture.
+                const phaseTwoPlan = isPhase2
+                  ? getCthulhuPhaseTwoAttack(String(e.mesh.userData.cthulhuNextAttack ?? 'lash'))
+                  : { attack: 'slam' as const, nextAttack: 'lash' as const };
+                const attackType = phaseTwoPlan.attack;
+                if (isPhase2) e.mesh.userData.cthulhuNextAttack = phaseTwoPlan.nextAttack;
+
+                if (attackType === 'lash' || attackType === 'grab') {
                   const aimLength = Math.max(0.1, distToPlayer);
                   const dirX = dx / aimLength;
                   const dirZ = dz / aimLength;
-                  const lashLength = 15.5;
-                  const lashWidth = 4.3;
-                  e.mesh.userData.cthulhuActiveAttack = 'lash';
-                  e.mesh.userData.cthulhuNextAttack = 'slam';
+                  const isGrab = attackType === 'grab';
+                  const attackLength = isGrab ? 12.2 : 15.5;
+                  const attackWidth = isGrab ? 3.0 : 4.3;
+                  e.mesh.userData.cthulhuActiveAttack = attackType;
                   e.mesh.userData.cthulhuLashDirX = dirX;
                   e.mesh.userData.cthulhuLashDirZ = dirZ;
-                  e.mesh.userData.cthulhuLashLength = lashLength;
-                  e.mesh.userData.cthulhuLashWidth = lashWidth;
-                  e.chargeTimer = 0.94;
+                  e.mesh.userData.cthulhuLashLength = attackLength;
+                  e.mesh.userData.cthulhuLashWidth = attackWidth;
+                  e.chargeTimer = isGrab ? 1.08 : 0.94;
                   e.mesh.rotation.y = Math.atan2(dirX, dirZ);
-                  this.spawnCthulhuLashTelegraph(e.x, e.z, dirX, dirZ, lashLength, lashWidth, e.chargeTimer);
-                  this.spawnParticleRing(e.x, 0.16, e.z, 0xa855f7);
+                  this.spawnCthulhuLashTelegraph(
+                    e.x, e.z, dirX, dirZ, attackLength, attackWidth, e.chargeTimer, attackType,
+                  );
+                  this.spawnParticleRing(e.x, 0.16, e.z, isGrab ? 0x22c55e : 0xa855f7);
                   this.emitFloatingToast(
-                    '☠ MACKI CELOWANE — ODSKOCZ W BOK LUB WYSKOCZ!',
+                    isGrab
+                      ? '☠ MACKI CHTULHU ZAMYKAJĄ SIĘ NA TOBIE — ZEJDŹ Z LINII!'
+                      : '☠ MACKI CELOWANE — ODSKOCZ W BOK LUB WYSKOCZ!',
                     e.x,
                     e.y + 2.15,
                     e.z,
@@ -13209,7 +13316,6 @@ export class PaleciakiGameEngine {
                   );
                 } else {
                   e.mesh.userData.cthulhuActiveAttack = 'slam';
-                  if (isPhase2) e.mesh.userData.cthulhuNextAttack = 'lash';
                   // A broad green telegraph gives the player a genuine jump/dodge window.
                   e.chargeTimer = isPhase2 ? 0.72 : 0.98;
                   e.mesh.userData.cthulhuAttackRadius = impactRadius;
@@ -13233,11 +13339,15 @@ export class PaleciakiGameEngine {
               } else {
                 e.chargeTimer = Math.max(0, e.chargeTimer - dt);
                 if (e.chargeTimer <= 0) {
-                  const activeAttack = e.mesh.userData.cthulhuActiveAttack === 'lash' ? 'lash' : 'slam';
+                  const activeAttack = e.mesh.userData.cthulhuActiveAttack === 'lash'
+                    ? 'lash'
+                    : e.mesh.userData.cthulhuActiveAttack === 'grab'
+                      ? 'grab'
+                      : 'slam';
                   e.chargeTimer = undefined;
                   e.mesh.userData.cthulhuActiveAttack = undefined;
                   e.specialActionTimer = cooldown + 0.45;
-                  e.mesh.userData.cthulhuStrikeTimer = activeAttack === 'lash' ? 1.05 : 0.86;
+                  e.mesh.userData.cthulhuStrikeTimer = activeAttack === 'slam' ? 0.86 : 1.05;
                   e.mesh.userData.cthulhuStrikeType = activeAttack;
                   e.mesh.userData.cthulhuStrikeSide = activeAttack === 'lash'
                     ? Number(e.mesh.userData.cthulhuNextStrikeSide ?? 1)
@@ -13250,7 +13360,7 @@ export class PaleciakiGameEngine {
                   this.triggerHitStop(0.075);
                   this.triggerBloomPulse(0.66);
 
-                  if (activeAttack === 'lash') {
+                  if (activeAttack === 'lash' || activeAttack === 'grab') {
                     const dirX = Number(e.mesh.userData.cthulhuLashDirX ?? 0);
                     const dirZ = Number(e.mesh.userData.cthulhuLashDirZ ?? 1);
                     const lashLength = Number(e.mesh.userData.cthulhuLashLength ?? 15.5);
@@ -13277,8 +13387,19 @@ export class PaleciakiGameEngine {
                       lashWidth * 0.5,
                     ) && Math.abs(this.playerPos.y - e.y) < 1.65;
                     if (playerCaught) {
-                      this.takeDamage('☠ MACKI CTHULHU PRZECINAJĄ WYZNACZONY KORYTARZ!');
-                      this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.55, this.playerPos.z, 0xa855f7);
+                      if (activeAttack === 'grab') {
+                        this.cthulhuSnareTimer = Math.max(this.cthulhuSnareTimer, 0.82);
+                        this.playerVel.multiplyScalar(0.36);
+                        this.spawnCthulhuGrabEffect(this.playerPos.x, this.playerPos.y, this.playerPos.z);
+                        this.takeDamage('☠ CTHULHU ZACISKA MACKI — JESTEŚ KRĘPOWANY!');
+                        this.emitFloatingToast(
+                          'MACKI TRZYMAJĄ CIĘ • RUSZAJ SIĘ, BY SIĘ UWOLNIĆ — DASH TEŻ POMAGA',
+                          this.playerPos.x, this.playerPos.y + 1.65, this.playerPos.z, 'damage',
+                        );
+                      } else {
+                        this.takeDamage('☠ MACKI CTHULHU PRZECINAJĄ WYZNACZONY KORYTARZ!');
+                        this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.55, this.playerPos.z, 0xa855f7);
+                      }
                     } else {
                       this.emitFloatingToast('🌊 BICZ MACEK MINĄŁ CIĘ!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'perk');
                     }

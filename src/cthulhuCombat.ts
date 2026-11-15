@@ -28,3 +28,25 @@ export function isWithinCthulhuLashLane(
 
   return along >= minForward && along <= length && across <= halfWidth;
 }
+
+
+export type CthulhuAttackType = 'slam' | 'lash' | 'grab';
+
+/**
+ * Phase two follows a readable three-move rhythm. The returned nextAttack is
+ * stored on the boss so the sequence remains deterministic across frames.
+ */
+export function getCthulhuPhaseTwoAttack(nextAttack?: string): {
+  attack: CthulhuAttackType;
+  nextAttack: CthulhuAttackType;
+} {
+  const attack: CthulhuAttackType = nextAttack === 'slam' || nextAttack === 'grab'
+    ? nextAttack
+    : 'lash';
+  const following: CthulhuAttackType = attack === 'lash'
+    ? 'grab'
+    : attack === 'grab'
+      ? 'slam'
+      : 'lash';
+  return { attack, nextAttack: following };
+}
