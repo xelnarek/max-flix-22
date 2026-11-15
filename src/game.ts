@@ -11317,6 +11317,11 @@ export class PaleciakiGameEngine {
       inputZ /= inputLen;
     }
 
+    // Active movement shortens the snare; standing still keeps its full penalty.
+    if (this.cthulhuSnareTimer > 0 && inputLen > 0.18) {
+      this.cthulhuSnareTimer = Math.max(0, this.cthulhuSnareTimer - dt * 1.4);
+    }
+
     let speed = this.charDef.speed * this.characterMasteryBonuses.speedMultiplier * this.getPacingFactor();
     if (this.gameMode === 'survival') {
       speed *= this.survivalMoveMultiplier * getSurvivalMomentumMoveMultiplier(this.survivalMomentum.overdriveRemainingSeconds);
@@ -13388,7 +13393,7 @@ export class PaleciakiGameEngine {
                         this.spawnCthulhuGrabEffect(this.playerPos.x, this.playerPos.y, this.playerPos.z);
                         this.takeDamage('☠ CTHULHU ZACISKA MACKI — JESTEŚ KRĘPOWANY!');
                         this.emitFloatingToast(
-                          'MACKI TRZYMAJĄ CIĘ • ODBLOKUJ SIĘ RUCHEM LUB UŻYJ DASHU',
+                          'MACKI TRZYMAJĄ CIĘ • RUSZAJ SIĘ, BY SIĘ UWOLNIĆ — DASH TEŻ POMAGA',
                           this.playerPos.x, this.playerPos.y + 1.65, this.playerPos.z, 'damage',
                         );
                       } else {
