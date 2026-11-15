@@ -12855,6 +12855,27 @@ export class PaleciakiGameEngine {
       }
       if (e.shieldRing?.visible) e.shieldRing.rotation.z += dt * 1.25;
       if (e.auraRing) e.auraRing.rotation.z += dt * 0.18;
+      const cthulhuTentacles = e.mesh.userData.cthulhuTentacles as THREE.Group[] | undefined;
+      if (cthulhuTentacles) {
+        for (let index = 0; index < cthulhuTentacles.length; index++) {
+          const tentacle = cthulhuTentacles[index];
+          const phase = e.walkCycle * 0.72 + index * 0.91;
+          tentacle.rotation.x = Math.sin(phase) * 0.10;
+          tentacle.rotation.z = Math.cos(phase * 0.82) * 0.075;
+        }
+      }
+      const cthulhuWings = e.mesh.userData.cthulhuWings as THREE.Group[] | undefined;
+      if (cthulhuWings) {
+        for (let index = 0; index < cthulhuWings.length; index++) {
+          const wing = cthulhuWings[index];
+          const side = index === 0 ? -1 : 1;
+          wing.rotation.z = side * (-0.06 + Math.sin(e.walkCycle * 0.48 + index) * 0.055);
+          wing.rotation.y = side * (-0.10 + Math.sin(e.walkCycle * 0.32 + index) * 0.035);
+        }
+      }
+      const cthulhuAura = e.mesh.userData.cthulhuAura as THREE.Mesh | undefined;
+      if (cthulhuAura) cthulhuAura.rotation.z += dt * 0.42;
+
       if (e.bikeWheels) {
         const wheelRate = dt * (e.state === 'chase' ? 8.5 : 3.4);
         for (let wheelIndex = 0; wheelIndex < e.bikeWheels.length; wheelIndex++) {
@@ -12997,13 +13018,16 @@ export class PaleciakiGameEngine {
           e.speed *= 1.45;
           sound.playSirens();
           this.triggerScreenShake(0.8, 1.0);
-          const bossTitle = e.name.includes('Inwentaryzacja Gigant')
-            ? 'INWENTARYZACJA GIGANT'
-            : e.survivalAuditor ? 'AUDYTOR' : 'NADZORCA ZERO';
+          const bossTitle = e.name.includes('CTHULHU')
+            ? 'CTHULHU • R’LYEH'
+            : e.name.includes('Inwentaryzacja Gigant')
+              ? 'INWENTARYZACJA GIGANT'
+              : e.survivalAuditor ? 'AUDYTOR' : 'NADZORCA ZERO';
           this.emitFloatingToast('🚨 ' + bossTitle + ': TRYB SZAŁU (FAZA 2)!', e.x, e.y + 1.8, e.z, 'damage');
         }
 
-        const isChargingImpact = e.name.includes('Inwentaryzacja Gigant') && e.chargeTimer !== undefined;
+        const isCthulhuBoss = e.name.includes('CTHULHU');
+        const isChargingImpact = (e.name.includes('Inwentaryzacja Gigant') || isCthulhuBoss) && e.chargeTimer !== undefined;
         if (isChargingImpact) {
           // Hold the boss at the marked impact point until the warning resolves.
           e.mesh.rotation.y = Math.atan2(dx, dz);
@@ -13045,9 +13069,57 @@ export class PaleciakiGameEngine {
 
         if (e.specialActionTimer !== undefined) {
           e.specialActionTimer -= dt * survivalAbilityRate;
-          const cooldown = isPhase2 ? 1.8 : 3.0;
+          const cooldown = isCthulhuBoss
+            ? (isPhase2 ? 2.05 : 3.35)
+            : (isPhase2 ? 1.8 : 3.0);
           if (e.specialActionTimer <= 0) {
-            if (e.name.includes('Inwentaryzacja Gigant')) {
+            if (isCthulhuBoss) {
+              const impactRadius = isPhase2 ? 9.8 : 7.4;
+              if (e.chargeTimer === undefined) {
+                // A broad green telegraph gives the player a genuine jump/dodge window.
+                e.chargeTimer = isPhase2 ? 0.72 : 0.98;
+                e.mesh.userData.cthulhuAttackRadius = impactRadius;
+                this.spawnBossImpactTelegraph(
+                  e.x,
+                  e.z,
+                  impactRadius,
+                  isPhase2 ? 0xa855f7 : 0x2dd4bf,
+                  e.chargeTimer,
+                );
+                this.spawnParticleRing(e.x, 0.16, e.z, 0x2dd4bf);
+                this.emitFloatingToast(
+                  isPhase2 ? '☠ CTHULHU ROZRYWA ZASŁONĘ — SKACZ!' : '☠ FALA MACEK — OPUŚĆ ZAZNACZONY KRĄG!',
+                  e.x,
+                  e.y + 2.15,
+                  e.z,
+                  'damage',
+                );
+                sound.playBossWarning();
+              } else {
+                e.chargeTimer = Math.max(0, e.chargeTimer - dt);
+                if (e.chargeTimer <= 0) {
+                  e.chargeTimer = undefined;
+                  e.specialActionTimer = cooldown + 0.45;
+                  this.requestEnemyAttackAnimation(e, 0.74);
+                  this.triggerScreenShake(0.58, 0.40);
+                  this.triggerHitStop(0.075);
+                  this.triggerBloomPulse(0.66);
+                  this.spawnParticleRing(e.x, 0.22, e.z, 0x39f0c6);
+                  this.spawnExplosionParticles(e.x, 0.62, e.z, 0x8b5cf6, 28);
+                  const playerCaught = isWithinBossImpactRadius(
+                    this.playerPos.x, this.playerPos.z, e.x, e.z, impactRadius,
+                  ) && Math.abs(this.playerPos.y - e.y) < 1.8;
+                  if (playerCaught) {
+                    this.takeDamage(isPhase2
+                      ? '☠ CTHULHU ROZRYWA CIĘ FALĄ Z GŁĘBIN!'
+                      : '🐙 MACKI CTHULHU UDERZAJĄ Z POSADZKI!');
+                    this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.55, this.playerPos.z, 0x2dd4bf);
+                  } else {
+                    this.emitFloatingToast('🌊 FALA Z GŁĘBIN MINĘŁA CIĘ!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'perk');
+                  }
+                }
+              }
+            } else if (e.name.includes('Inwentaryzacja Gigant')) {
               if (e.chargeTimer === undefined) {
                 e.chargeTimer = 0.88;
                 this.spawnBossImpactTelegraph(e.x, e.z, 8.7, 0xef4444, 0.88);
