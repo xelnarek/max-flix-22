@@ -81,6 +81,8 @@ test('Cthulhu phase two alternates a line telegraph with the circular ground rup
   assert.match(game, /cthulhuNextAttack = 'slam'/);
   assert.match(game, /cthulhuNextAttack = 'lash'/);
   assert.match(game, /spawnCthulhuLashTelegraph/);
+  assert.match(game, /cthulhuActiveAttack === 'lash'/);
+  assert.match(game, /cthulhuLashDirX \?\? dx/);
   assert.match(game, /MACKI CELOWANE — ODSKOCZ W BOK LUB WYSKOCZ/);
   assert.match(game, /isWithinCthulhuLashLane/);
   assert.match(game, /cthulhuStrikeTimer/);
