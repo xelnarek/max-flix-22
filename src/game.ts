@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { applyPolyHavenPbrMaps } from './polyHavenTextures.ts';
 import { createCthulhuBossModel } from './cthulhuAssets.ts';
+import { isWithinCthulhuLashLane } from './cthulhuCombat.ts';
 import { chooseMakeHumanLocomotion, getMakeHumanPlaybackRate, isMakeHumanVelocityAction, type MakeHumanLocomotionAction } from './makeHumanLocomotion.ts';
 import { dampActorAngle, getActorAnimationInterval, getEnemyRigPlaybackRate } from './actorMotion.ts';
 import { createEnemyRoleKit } from './enemyRoleKits.ts';
@@ -4983,6 +4984,72 @@ export class PaleciakiGameEngine {
         abyss.opacity = 0.62 * (1 - progress);
       },
       cleanup: () => this.disposeTemporaryObject(ritual),
+    });
+  }
+
+  private spawnCthulhuLashTelegraph(
+    x: number,
+    z: number,
+    directionX: number,
+    directionZ: number,
+    length: number,
+    width: number,
+    duration: number,
+  ): void {
+    const lane = new THREE.Group();
+    lane.name = 'cthulhu-phase-two-tentacle-lash-warning';
+    lane.position.set(x + directionX * length * 0.5, 0.065, z + directionZ * length * 0.5);
+    lane.rotation.y = Math.atan2(directionX, directionZ);
+
+    const fillMaterial = new THREE.MeshBasicMaterial({
+      color: 0x7628b8,
+      transparent: true,
+      opacity: 0.22,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      toneMapped: false,
+    });
+    const edgeMaterial = new THREE.MeshBasicMaterial({
+      color: 0x8df7e1,
+      transparent: true,
+      opacity: 0.72,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      toneMapped: false,
+    });
+    const fill = new THREE.Mesh(new THREE.PlaneGeometry(width, length), fillMaterial);
+    fill.rotation.x = -Math.PI / 2;
+    lane.add(fill);
+
+    for (const side of [-1, 1]) {
+      const edge = new THREE.Mesh(new THREE.PlaneGeometry(0.11, length), edgeMaterial);
+      edge.rotation.x = -Math.PI / 2;
+      edge.position.x = side * width * 0.5;
+      lane.add(edge);
+    }
+    for (let marker = 1; marker <= 5; marker++) {
+      const crossbar = new THREE.Mesh(
+        new THREE.PlaneGeometry(width * 0.92, 0.055),
+        edgeMaterial,
+      );
+      crossbar.rotation.x = -Math.PI / 2;
+      crossbar.position.z = -length * 0.5 + marker * length / 6;
+      lane.add(crossbar);
+    }
+
+    this.levelRoot.add(lane);
+    this.specialEffects.push({
+      mesh: lane,
+      life: duration,
+      maxLife: duration,
+      grow: 0,
+      spin: 0,
+      update: (_dt, progress) => {
+        const pulse = 0.65 + Math.sin(progress * Math.PI * 12) * 0.22;
+        fillMaterial.opacity = (0.14 + pulse * 0.13) * (1 - progress * 0.35);
+        edgeMaterial.opacity = 0.48 + pulse * 0.42;
+      },
+      cleanup: () => this.disposeTemporaryObject(lane),
     });
   }
 
@@ -12856,13 +12923,37 @@ export class PaleciakiGameEngine {
       }
       if (e.shieldRing?.visible) e.shieldRing.rotation.z += dt * 1.25;
       if (e.auraRing) e.auraRing.rotation.z += dt * 0.18;
+      const strikeTimer = Number(e.mesh.userData.cthulhuStrikeTimer ?? 0);
+      const strikeDuration = 1.05;
+      const strikeProgress = strikeTimer > 0
+        ? THREE.MathUtils.clamp(1 - strikeTimer / strikeDuration, 0, 1)
+        : 1;
+      const strikeWave = strikeTimer > 0 ? Math.sin(strikeProgress * Math.PI) : 0;
+      if (strikeTimer > 0) {
+        e.mesh.userData.cthulhuStrikeTimer = Math.max(0, strikeTimer - dt);
+      }
+      const strikeSide = Number(e.mesh.userData.cthulhuStrikeSide ?? 1);
+      const strikeType = String(e.mesh.userData.cthulhuStrikeType ?? 'slam');
+      const cthulhuTorso = e.mesh.userData.cthulhuTorso as THREE.Group | undefined;
+      if (cthulhuTorso) {
+        cthulhuTorso.rotation.x = Math.sin(e.walkCycle * 0.44) * 0.026
+          + strikeWave * (strikeType === 'lash' ? -0.24 : 0.36);
+        cthulhuTorso.rotation.z = strikeWave * strikeSide * (strikeType === 'lash' ? 0.30 : 0.08);
+      }
+      const cthulhuPelvis = e.mesh.userData.cthulhuPelvis as THREE.Group | undefined;
+      if (cthulhuPelvis) {
+        cthulhuPelvis.rotation.z = Math.sin(e.walkCycle * 0.58) * 0.035
+          - strikeWave * strikeSide * 0.08;
+      }
       const cthulhuTentacles = e.mesh.userData.cthulhuTentacles as THREE.Group[] | undefined;
       if (cthulhuTentacles) {
         for (let index = 0; index < cthulhuTentacles.length; index++) {
           const tentacle = cthulhuTentacles[index];
           const phase = e.walkCycle * 0.72 + index * 0.91;
-          tentacle.rotation.x = Math.sin(phase) * 0.10;
-          tentacle.rotation.z = Math.cos(phase * 0.82) * 0.075;
+          const whipSide = index % 2 === 0 ? 1 : -1;
+          tentacle.rotation.x = Math.sin(phase) * 0.10 - strikeWave * 0.30;
+          tentacle.rotation.z = Math.cos(phase * 0.82) * 0.075
+            + strikeWave * whipSide * strikeSide * (strikeType === 'lash' ? 0.42 : 0.12);
         }
       }
       const cthulhuWings = e.mesh.userData.cthulhuWings as THREE.Group[] | undefined;
@@ -12870,12 +12961,19 @@ export class PaleciakiGameEngine {
         for (let index = 0; index < cthulhuWings.length; index++) {
           const wing = cthulhuWings[index];
           const side = index === 0 ? -1 : 1;
-          wing.rotation.z = side * (-0.06 + Math.sin(e.walkCycle * 0.48 + index) * 0.055);
+          wing.rotation.z = side * (
+            -0.06 + Math.sin(e.walkCycle * 0.48 + index) * 0.055 - strikeWave * 0.12
+          );
           wing.rotation.y = side * (-0.10 + Math.sin(e.walkCycle * 0.32 + index) * 0.035);
+          wing.rotation.x = strikeWave * 0.16;
         }
       }
       const cthulhuAura = e.mesh.userData.cthulhuAura as THREE.Mesh | undefined;
-      if (cthulhuAura) cthulhuAura.rotation.z += dt * 0.42;
+      if (cthulhuAura) {
+        cthulhuAura.rotation.z += dt * (0.42 + strikeWave * 0.55);
+        const auraScale = 1 + strikeWave * 0.12;
+        cthulhuAura.scale.set(auraScale, auraScale, auraScale);
+      }
 
       if (e.bikeWheels) {
         const wheelRate = dt * (e.state === 'chase' ? 8.5 : 3.4);
@@ -13077,46 +13175,120 @@ export class PaleciakiGameEngine {
             if (isCthulhuBoss) {
               const impactRadius = isPhase2 ? 9.8 : 7.4;
               if (e.chargeTimer === undefined) {
-                // A broad green telegraph gives the player a genuine jump/dodge window.
-                e.chargeTimer = isPhase2 ? 0.72 : 0.98;
-                e.mesh.userData.cthulhuAttackRadius = impactRadius;
-                this.spawnBossImpactTelegraph(
-                  e.x,
-                  e.z,
-                  impactRadius,
-                  isPhase2 ? 0xa855f7 : 0x2dd4bf,
-                  e.chargeTimer,
-                );
-                this.spawnParticleRing(e.x, 0.16, e.z, 0x2dd4bf);
-                this.emitFloatingToast(
-                  isPhase2 ? '☠ CTHULHU ROZRYWA ZASŁONĘ — SKACZ!' : '☠ FALA MACEK — OPUŚĆ ZAZNACZONY KRĄG!',
-                  e.x,
-                  e.y + 2.15,
-                  e.z,
-                  'damage',
-                );
+                const useLash = isPhase2 && e.mesh.userData.cthulhuNextAttack !== 'slam';
+                if (useLash) {
+                  // Phase two alternates a targeted lane attack with the circular ground rupture.
+                  const aimLength = Math.max(0.1, distToPlayer);
+                  const dirX = dx / aimLength;
+                  const dirZ = dz / aimLength;
+                  const lashLength = 15.5;
+                  const lashWidth = 4.3;
+                  e.mesh.userData.cthulhuActiveAttack = 'lash';
+                  e.mesh.userData.cthulhuNextAttack = 'slam';
+                  e.mesh.userData.cthulhuLashDirX = dirX;
+                  e.mesh.userData.cthulhuLashDirZ = dirZ;
+                  e.mesh.userData.cthulhuLashLength = lashLength;
+                  e.mesh.userData.cthulhuLashWidth = lashWidth;
+                  e.chargeTimer = 0.94;
+                  e.mesh.rotation.y = Math.atan2(dirX, dirZ);
+                  this.spawnCthulhuLashTelegraph(e.x, e.z, dirX, dirZ, lashLength, lashWidth, e.chargeTimer);
+                  this.spawnParticleRing(e.x, 0.16, e.z, 0xa855f7);
+                  this.emitFloatingToast(
+                    '☠ MACKI CELOWANE — ODSKOCZ W BOK LUB WYSKOCZ!',
+                    e.x,
+                    e.y + 2.15,
+                    e.z,
+                    'damage',
+                  );
+                } else {
+                  e.mesh.userData.cthulhuActiveAttack = 'slam';
+                  if (isPhase2) e.mesh.userData.cthulhuNextAttack = 'lash';
+                  // A broad green telegraph gives the player a genuine jump/dodge window.
+                  e.chargeTimer = isPhase2 ? 0.72 : 0.98;
+                  e.mesh.userData.cthulhuAttackRadius = impactRadius;
+                  this.spawnBossImpactTelegraph(
+                    e.x,
+                    e.z,
+                    impactRadius,
+                    isPhase2 ? 0xa855f7 : 0x2dd4bf,
+                    e.chargeTimer,
+                  );
+                  this.spawnParticleRing(e.x, 0.16, e.z, 0x2dd4bf);
+                  this.emitFloatingToast(
+                    isPhase2 ? '☠ CTHULHU ROZRYWA ZASŁONĘ — SKACZ!' : '☠ FALA MACEK — OPUŚĆ ZAZNACZONY KRĄG!',
+                    e.x,
+                    e.y + 2.15,
+                    e.z,
+                    'damage',
+                  );
+                }
                 sound.playBossWarning();
               } else {
                 e.chargeTimer = Math.max(0, e.chargeTimer - dt);
                 if (e.chargeTimer <= 0) {
+                  const activeAttack = e.mesh.userData.cthulhuActiveAttack === 'lash' ? 'lash' : 'slam';
                   e.chargeTimer = undefined;
+                  e.mesh.userData.cthulhuActiveAttack = undefined;
                   e.specialActionTimer = cooldown + 0.45;
+                  e.mesh.userData.cthulhuStrikeTimer = activeAttack === 'lash' ? 1.05 : 0.86;
+                  e.mesh.userData.cthulhuStrikeType = activeAttack;
+                  e.mesh.userData.cthulhuStrikeSide = activeAttack === 'lash'
+                    ? Number(e.mesh.userData.cthulhuNextStrikeSide ?? 1)
+                    : 0;
+                  if (activeAttack === 'lash') {
+                    e.mesh.userData.cthulhuNextStrikeSide = -Number(e.mesh.userData.cthulhuNextStrikeSide ?? 1);
+                  }
                   this.requestEnemyAttackAnimation(e, 0.74);
-                  this.triggerScreenShake(0.58, 0.40);
+                  this.triggerScreenShake(activeAttack === 'lash' ? 0.42 : 0.58, activeAttack === 'lash' ? 0.30 : 0.40);
                   this.triggerHitStop(0.075);
                   this.triggerBloomPulse(0.66);
-                  this.spawnParticleRing(e.x, 0.22, e.z, 0x39f0c6);
-                  this.spawnExplosionParticles(e.x, 0.62, e.z, 0x8b5cf6, 28);
-                  const playerCaught = isWithinBossImpactRadius(
-                    this.playerPos.x, this.playerPos.z, e.x, e.z, impactRadius,
-                  ) && Math.abs(this.playerPos.y - e.y) < 1.8;
-                  if (playerCaught) {
-                    this.takeDamage(isPhase2
-                      ? '☠ CTHULHU ROZRYWA CIĘ FALĄ Z GŁĘBIN!'
-                      : '🐙 MACKI CTHULHU UDERZAJĄ Z POSADZKI!');
-                    this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.55, this.playerPos.z, 0x2dd4bf);
+
+                  if (activeAttack === 'lash') {
+                    const dirX = Number(e.mesh.userData.cthulhuLashDirX ?? 0);
+                    const dirZ = Number(e.mesh.userData.cthulhuLashDirZ ?? 1);
+                    const lashLength = Number(e.mesh.userData.cthulhuLashLength ?? 15.5);
+                    const lashWidth = Number(e.mesh.userData.cthulhuLashWidth ?? 4.3);
+                    for (let segment = 1; segment <= 6; segment++) {
+                      const distance = lashLength * segment / 7;
+                      this.spawnExplosionParticles(
+                        e.x + dirX * distance,
+                        0.28,
+                        e.z + dirZ * distance,
+                        segment % 2 ? 0x42e7d0 : 0x9b5cf6,
+                        5,
+                      );
+                    }
+                    this.spawnParticleRing(e.x + dirX * lashLength, 0.18, e.z + dirZ * lashLength, 0xa855f7);
+                    const playerCaught = isWithinCthulhuLashLane(
+                      this.playerPos.x,
+                      this.playerPos.z,
+                      e.x,
+                      e.z,
+                      dirX,
+                      dirZ,
+                      lashLength,
+                      lashWidth * 0.5,
+                    ) && Math.abs(this.playerPos.y - e.y) < 1.65;
+                    if (playerCaught) {
+                      this.takeDamage('☠ MACKI CTHULHU PRZECINAJĄ WYZNACZONY KORYTARZ!');
+                      this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.55, this.playerPos.z, 0xa855f7);
+                    } else {
+                      this.emitFloatingToast('🌊 BICZ MACEK MINĄŁ CIĘ!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'perk');
+                    }
                   } else {
-                    this.emitFloatingToast('🌊 FALA Z GŁĘBIN MINĘŁA CIĘ!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'perk');
+                    this.spawnParticleRing(e.x, 0.22, e.z, 0x39f0c6);
+                    this.spawnExplosionParticles(e.x, 0.62, e.z, 0x8b5cf6, 28);
+                    const playerCaught = isWithinBossImpactRadius(
+                      this.playerPos.x, this.playerPos.z, e.x, e.z, impactRadius,
+                    ) && Math.abs(this.playerPos.y - e.y) < 1.8;
+                    if (playerCaught) {
+                      this.takeDamage(isPhase2
+                        ? '☠ CTHULHU ROZRYWA CIĘ FALĄ Z GŁĘBIN!'
+                        : '🐙 MACKI CTHULHU UDERZAJĄ Z POSADZKI!');
+                      this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.55, this.playerPos.z, 0x2dd4bf);
+                    } else {
+                      this.emitFloatingToast('🌊 FALA Z GŁĘBIN MINĘŁA CIĘ!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'perk');
+                    }
                   }
                 }
               }
