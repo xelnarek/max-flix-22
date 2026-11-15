@@ -38,6 +38,7 @@ import { clampHorizontalPosition } from './arenaBounds.ts';
 import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoint, resolveEnemyPlayerSeparation } from './enemySpacing.ts';
 import { calculateEnemyObstacleAvoidanceVector } from './enemyNavigation.ts';
 import { createEnemyHitReaction, getEnemyHitPulse, getEnemyImpactBurstProfile } from './enemyCombatFeedback.ts';
+import { getEnemyDeathMotionPose, getEnemyDeathMotionProfile } from './enemyDeathMotion.ts';
 import { ENEMY_GAIT_PRESETS, ENEMY_VISUAL_PROFILES } from './enemyVisualProfiles.ts';
 import { addProceduralLimbPose, getProceduralHitPulse, setProceduralJointRotation, setProceduralLimbPose } from './proceduralActorAnimation.ts';
 import { isEffectiveBossLaneDodge, isInsideBossAttackLane, isWithinBossImpactRadius } from './combatTelegraphs.ts';
@@ -12173,9 +12174,7 @@ export class PaleciakiGameEngine {
   private beginEnemyDeathVisual(enemy: EnemyItem): void {
     const mesh = enemy.mesh as THREE.Object3D | undefined;
     if (!mesh) return;
-    const isBoss = isMajorSurvivalBossType(enemy.type) ||
-      enemy.type === 'elite_walczak_guard' || enemy.type === 'sebix_m';
-    const duration = isBoss ? 1.18 : 0.82;
+    const duration = getEnemyDeathMotionProfile(enemy.type).duration;
     if (enemy.hitBaseScale) {
       mesh.scale.set(enemy.hitBaseScale.x, enemy.hitBaseScale.y, enemy.hitBaseScale.z);
       enemy.hitBaseScale = undefined;
@@ -12213,15 +12212,15 @@ export class PaleciakiGameEngine {
     const track = this.gobkitEnemyTracks.get(enemy);
 
     if (!track && rest) {
-      const side = (enemy.aiSlot ?? enemy.id.length) % 2 === 0 ? 1 : -1;
-      const bossLean = isMajorSurvivalBossType(enemy.type) || enemy.type === 'sebix_m' ? 0.50 : 0.32;
-      mesh.rotation.x = rest.rotationX + bossLean * eased;
-      mesh.rotation.z = rest.rotationZ + side * 0.18 * eased;
-      mesh.position.y = rest.positionY - 0.12 * eased;
+      const side: -1 | 1 = (enemy.aiSlot ?? enemy.id.length) % 2 === 0 ? 1 : -1;
+      const deathPose = getEnemyDeathMotionPose(enemy.type, progress, side);
+      mesh.rotation.x = rest.rotationX + deathPose.rotationX;
+      mesh.rotation.z = rest.rotationZ + deathPose.rotationZ;
+      mesh.position.y = rest.positionY + deathPose.drop;
       mesh.scale.set(
-        rest.scaleX * (1 + 0.035 * eased),
-        rest.scaleY * (1 - 0.20 * eased),
-        rest.scaleZ * (1 + 0.035 * eased),
+        rest.scaleX * deathPose.scaleX,
+        rest.scaleY * deathPose.scaleY,
+        rest.scaleZ * deathPose.scaleZ,
       );
     }
 
