@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { applyPolyHavenPbrMaps } from './polyHavenTextures.ts';
+import { createCthulhuBossModel } from './cthulhuAssets.ts';
 import { chooseMakeHumanLocomotion, getMakeHumanPlaybackRate, isMakeHumanVelocityAction, type MakeHumanLocomotionAction } from './makeHumanLocomotion.ts';
 import { dampActorAngle, getActorAnimationInterval, getEnemyRigPlaybackRate } from './actorMotion.ts';
 import { createEnemyRoleKit } from './enemyRoleKits.ts';
@@ -693,6 +694,7 @@ export class PaleciakiGameEngine {
   private survivalMapId: SurvivalMapId = 'warehouse_b4';
   private lastSurvivalMapId: SurvivalMapId | null = null;
   private survivalSecretsFound = 0;
+  private cthulhuSecretSummoned = false;
   private survivalBossesDefeated = 0;
   private survivalSecrets: { id: string; name: string; mesh: THREE.Group; age: number; collected: boolean }[] = [];
   private survivalMapLandmarks: THREE.Group | null = null;
@@ -2402,6 +2404,7 @@ export class PaleciakiGameEngine {
     this.survivalShiftEvent = createSurvivalShiftEventState();
     this.survivalGoldenPalletFound = false;
     this.survivalSecretsFound = 0;
+    this.cthulhuSecretSummoned = false;
     this.survivalBossesDefeated = 0;
     this.survivalPerfectDodges = 0;
     this.survivalCounterattackReady = false;
@@ -4709,7 +4712,127 @@ export class PaleciakiGameEngine {
         beacon.position.set(0, 0.78, 0.18);
         group.add(beacon);
       } else {
-        const coreGeometry = secret.style === 'wz'
+        // The Necronomicon is a physical, collectible relic rather than a HUD-only
+        // icon: a worn leather codex, gold clasps and a living green elder sigil.
+        if (secret.style === 'necronomicon') {
+          const book = new THREE.Group();
+          book.name = 'necronomicon-book';
+          book.position.set(0, 0.18, 0);
+
+          const leather = new THREE.MeshStandardMaterial({
+            color: 0x17111e, roughness: 0.72, metalness: 0.12,
+            emissive: 0x1b0a22, emissiveIntensity: 0.30,
+          });
+          const leatherEdge = new THREE.MeshStandardMaterial({
+            color: 0x3a2430, roughness: 0.58, metalness: 0.22,
+          });
+          const parchment = new THREE.MeshStandardMaterial({
+            color: 0xc6b68a, roughness: 0.90, metalness: 0.02,
+          });
+          const brassBook = new THREE.MeshStandardMaterial({
+            color: 0xb89756, roughness: 0.30, metalness: 0.82,
+            emissive: 0x63430d, emissiveIntensity: 0.24,
+          });
+          const eldritch = new THREE.MeshStandardMaterial({
+            color: 0x69f3c5, roughness: 0.22, metalness: 0.10,
+            emissive: 0x19d7a7, emissiveIntensity: 2.2,
+          });
+
+          const pageBlock = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.105, 0.62), parchment);
+          pageBlock.position.set(0.035, 0.63, 0);
+          book.add(pageBlock);
+
+          const lowerCover = new THREE.Mesh(new THREE.BoxGeometry(0.94, 0.075, 0.75), leather);
+          lowerCover.position.set(0, 0.555, 0);
+          lowerCover.rotation.z = -0.045;
+          book.add(lowerCover);
+          const upperCover = new THREE.Mesh(new THREE.BoxGeometry(0.96, 0.095, 0.77), leather);
+          upperCover.position.set(0, 0.73, 0);
+          upperCover.rotation.z = 0.025;
+          book.add(upperCover);
+
+          const spine = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.63, 4, 8), leatherEdge);
+          spine.position.set(-0.46, 0.64, 0);
+          spine.rotation.x = Math.PI / 2;
+          book.add(spine);
+
+          for (const side of [-1, 1] as const) {
+            for (const depth of [-1, 1] as const) {
+              const corner = new THREE.Mesh(new THREE.OctahedronGeometry(0.085, 0), brassBook);
+              corner.position.set(side * 0.405, 0.79, depth * 0.31);
+              corner.scale.set(1.0, 0.56, 1.0);
+              book.add(corner);
+            }
+          }
+
+          const sigilRing = new THREE.Mesh(new THREE.TorusGeometry(0.225, 0.028, 7, 40), eldritch);
+          sigilRing.position.set(0.02, 0.79, 0.395);
+          book.add(sigilRing);
+          const sigilCore = new THREE.Mesh(new THREE.IcosahedronGeometry(0.145, 1), eldritch);
+          sigilCore.position.set(0.02, 0.79, 0.42);
+          sigilCore.scale.set(1.0, 1.18, 0.44);
+          book.add(sigilCore);
+
+          const glyphs = new THREE.Group();
+          glyphs.name = 'necronomicon-floating-runes';
+          for (let rune = 0; rune < 5; rune++) {
+            const angle = (rune / 5) * Math.PI * 2;
+            const glyph = new THREE.Mesh(new THREE.TetrahedronGeometry(0.08, 0), brassBook);
+            glyph.position.set(Math.cos(angle) * 0.70, 0.90 + Math.sin(angle * 2) * 0.10, Math.sin(angle) * 0.50);
+            glyph.rotation.set(angle * 0.4, angle, angle * 0.7);
+            glyphs.add(glyph);
+          }
+          book.add(glyphs);
+
+          const titlePlate = new THREE.Mesh(new THREE.BoxGeometry(0.69, 0.19, 0.025), leatherEdge);
+          titlePlate.position.set(0, 0.77, 0.405);
+          book.add(titlePlate);
+          const titleCanvas = document.createElement('canvas');
+          titleCanvas.width = 512;
+          titleCanvas.height = 128;
+          const titleContext = titleCanvas.getContext('2d');
+          if (titleContext) {
+            titleContext.fillStyle = '#211622';
+            titleContext.fillRect(0, 0, titleCanvas.width, titleCanvas.height);
+            titleContext.strokeStyle = '#b89756';
+            titleContext.lineWidth = 7;
+            titleContext.strokeRect(5, 5, titleCanvas.width - 10, titleCanvas.height - 10);
+            titleContext.textAlign = 'center';
+            titleContext.textBaseline = 'middle';
+            titleContext.fillStyle = '#e6d6a4';
+            titleContext.font = '900 50px Georgia, serif';
+            titleContext.fillText('NECRONOMICON', 256, 58);
+          }
+          const titleTexture = new THREE.CanvasTexture(titleCanvas);
+          titleTexture.colorSpace = THREE.SRGBColorSpace;
+          titleTexture.anisotropy = 2;
+          group.userData.dynamicTextures = [titleTexture];
+          const titleFace = new THREE.Mesh(
+            new THREE.PlaneGeometry(0.64, 0.15),
+            new THREE.MeshBasicMaterial({ map: titleTexture, toneMapped: false, side: THREE.DoubleSide }),
+          );
+          titleFace.position.set(0, 0.77, 0.421);
+          book.add(titleFace);
+
+          const halo = new THREE.Mesh(
+            new THREE.TorusGeometry(0.83, 0.035, 7, 48),
+            new THREE.MeshBasicMaterial({ color: 0x4df0bd, transparent: true, opacity: 0.78, depthWrite: false }),
+          );
+          halo.rotation.x = Math.PI / 2;
+          halo.position.y = 0.12;
+          group.add(halo);
+          const beacon = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.018, 0.018, 1.55, 6),
+            new THREE.MeshBasicMaterial({ color: 0x5fffd0, transparent: true, opacity: 0.38, depthWrite: false }),
+          );
+          beacon.position.y = 0.96;
+          group.add(beacon);
+          book.rotation.z = -0.09;
+          book.rotation.x = -0.06;
+          group.add(book);
+          group.userData.necronomiconRunes = glyphs;
+        } else {
+          const coreGeometry = secret.style === 'wz'
           ? new THREE.BoxGeometry(0.48, 0.34, 0.12)
           : secret.style === 'cassette'
             ? new THREE.BoxGeometry(0.38, 0.26, 0.22)
@@ -4755,6 +4878,113 @@ export class PaleciakiGameEngine {
     }
   }
 
+  private summonCthulhu(): void {
+    if (this.gameMode !== 'survival' || this.cthulhuSecretSummoned) return;
+    this.cthulhuSecretSummoned = true;
+
+    const forwardX = Math.sin(this.playerRot);
+    const forwardZ = Math.cos(this.playerRot);
+    const spawnX = THREE.MathUtils.clamp(
+      this.playerPos.x + forwardX * 12.5,
+      this.levelBounds.minX + 4.5,
+      this.levelBounds.maxX - 4.5,
+    );
+    const spawnZ = THREE.MathUtils.clamp(
+      this.playerPos.z + forwardZ * 12.5,
+      this.levelBounds.minZ + 4.5,
+      this.levelBounds.maxZ - 4.5,
+    );
+    this.spawnCthulhuArrivalRitual(spawnX, spawnZ);
+    const id = 'necronomicon_cthulhu_' + Math.floor(performance.now());
+    this.addCthulhuBossEnemy(id, spawnX, spawnZ);
+    const boss = this.enemies[this.enemies.length - 1];
+    if (boss?.mesh) {
+      boss.mesh.rotation.y = Math.atan2(this.playerPos.x - spawnX, this.playerPos.z - spawnZ);
+    }
+
+    this.callbacks.onSurvivalAnnouncement?.(
+      'ZAKAZANY TEKST ZOSTAŁ OTWARTY',
+      'CTHULHU • PAN ZATOPIONEGO R’LYEH',
+      'Z kart Necronomiconu sączy się zimna, zielona poświata. Pod posadzką budzi się coś starszego od ludzkiej pamięci. Przetrwaj falę macek, odczytuj znaki ostrzegawcze i uderzaj, gdy pradawny bóg odsłoni rdzeń.',
+    );
+    this.callbacks.onPerkDropBanner?.(
+      'NIE CZYTAJ TEGO NA GŁOS',
+      '☠',
+      'CTHULHU POWSTAJE. Ogromny zasięg macek i pulsująca fala uderzeniowa. W drugiej fazie ataki są szybsze i obejmują większy obszar.',
+      '#42e8c4',
+    );
+    this.emitFloatingToast('☠ NECRONOMICON OTWARTY • CTHULHU NADCHODZI!', this.playerPos.x, this.playerPos.y + 2.0, this.playerPos.z, 'damage');
+    this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.4, this.playerPos.z, 0x28e6c1);
+    this.triggerBloomPulse(0.78);
+    this.triggerScreenShake(0.85, 0.62);
+    this.triggerHitStop(0.12);
+    sound.playSirens();
+    sound.playEasterEgg();
+  }
+
+  private spawnCthulhuArrivalRitual(x: number, z: number): void {
+    const ritual = new THREE.Group();
+    ritual.name = 'cthulhu-rlyeh-summoning-ritual';
+    ritual.position.set(x, 0.035, z);
+    const seaGreen = new THREE.MeshBasicMaterial({
+      color: 0x46f1c6, transparent: true, opacity: 0.92,
+      depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
+    });
+    const abyss = new THREE.MeshBasicMaterial({
+      color: 0x541c7a, transparent: true, opacity: 0.62,
+      depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
+    });
+    const outer = new THREE.Mesh(new THREE.TorusGeometry(4.25, 0.075, 8, 72), seaGreen);
+    outer.rotation.x = Math.PI / 2;
+    outer.position.y = 0.02;
+    ritual.add(outer);
+    const inner = new THREE.Mesh(new THREE.TorusGeometry(3.2, 0.035, 7, 64), abyss);
+    inner.rotation.x = Math.PI / 2;
+    inner.position.y = 0.04;
+    ritual.add(inner);
+    const eye = new THREE.Mesh(new THREE.TorusGeometry(0.86, 0.085, 9, 48), seaGreen);
+    eye.rotation.x = Math.PI / 2;
+    eye.position.y = 0.065;
+    ritual.add(eye);
+
+    const points: THREE.Vector3[] = [];
+    for (const index of [0, 2, 4, 1, 3, 0]) {
+      const angle = -Math.PI / 2 + index * Math.PI * 2 / 5;
+      points.push(new THREE.Vector3(Math.cos(angle) * 2.45, 0.075, Math.sin(angle) * 2.45));
+    }
+    const star = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(points),
+      new THREE.LineBasicMaterial({ color: 0x70ffe0, transparent: true, opacity: 0.86 }),
+    );
+    ritual.add(star);
+    for (let index = 0; index < 6; index++) {
+      const angle = (index / 6) * Math.PI * 2;
+      const pillar = new THREE.Mesh(
+        new THREE.ConeGeometry(0.22, 1.65 + (index % 2) * 0.28, 6),
+        index % 2 ? abyss : seaGreen,
+      );
+      pillar.position.set(Math.cos(angle) * 3.55, 0.78, Math.sin(angle) * 3.55);
+      pillar.rotation.z = Math.cos(angle) * 0.15;
+      ritual.add(pillar);
+    }
+    this.levelRoot.add(ritual);
+    this.specialEffects.push({
+      mesh: ritual,
+      life: 2.35,
+      maxLife: 2.35,
+      grow: 0,
+      spin: 0,
+      update: (dt, progress) => {
+        ritual.rotation.y += dt * (progress < 0.5 ? 0.55 : -0.38);
+        const pulse = 0.82 + Math.sin(progress * Math.PI * 7) * 0.10 + progress * 0.18;
+        ritual.scale.set(pulse, 1, pulse);
+        seaGreen.opacity = 0.94 * (1 - progress * 0.64);
+        abyss.opacity = 0.62 * (1 - progress);
+      },
+      cleanup: () => this.disposeTemporaryObject(ritual),
+    });
+  }
+
   private beginOniricDream() {
     // The collected landmark now opens a real side-scrolling 2D platformer.
     // The main Survival simulation is paused by the UI callback until the
@@ -4777,7 +5007,7 @@ export class PaleciakiGameEngine {
     for (const secret of this.survivalSecrets) {
       if (secret.collected) continue;
       secret.age += dt;
-      secret.mesh.rotation.y += dt * (secret.id === 'oniric_dream' ? 0.16 : 0.65 + (secret.id.length % 3) * 0.12);
+      secret.mesh.rotation.y += dt * (secret.id === 'oniric_dream' ? 0.16 : secret.id === 'necronomicon' ? 0.26 : 0.65 + (secret.id.length % 3) * 0.12);
       secret.mesh.position.y = 0.08 + Math.sin(secret.age * 2.1) * 0.10;
       const distance = Math.hypot(secret.mesh.position.x - this.playerPos.x, secret.mesh.position.z - this.playerPos.z);
       if (distance > 1.35 || Math.abs(secret.mesh.position.y + 0.65 - this.playerPos.y) > 1.45) continue;
@@ -4788,6 +5018,7 @@ export class PaleciakiGameEngine {
       secret.mesh.clear();
       this.survivalSecretsFound++;
       if (secret.id === 'oniric_dream') this.beginOniricDream();
+      if (secret.id === 'necronomicon') this.summonCthulhu();
       this.score += 750;
       this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
       this.callbacks.onSurvivalSecretFound?.(this.survivalMapId, secret.id, secret.name);
