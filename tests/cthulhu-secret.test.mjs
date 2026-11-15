@@ -47,7 +47,7 @@ test('Necronomicon secrets summon a bespoke Cthulhu using the existing boss AI c
 test('the Cthulhu encounter uses a visible wind-up, a dodgeable area attack and a second phase', async () => {
   const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
   assert.match(game, /const isCthulhuBoss = e\.name\.includes\('CTHULHU'\)/);
-  assert.match(game, /isCthulhuBoss \? \(isPhase2 \? 2\.05 : 3\.35\)/);
+  assert.match(game, /const cooldown = isCthulhuBoss\s*\?\s*\(isPhase2 \? 2\.05 : 3\.35\)/);
   assert.match(game, /e\.chargeTimer = isPhase2 \? 0\.72 : 0\.98/);
   assert.match(game, /this\.spawnBossImpactTelegraph\([\s\S]{0,180}impactRadius/);
   assert.match(game, /isWithinBossImpactRadius\([\s\S]{0,140}impactRadius/);
