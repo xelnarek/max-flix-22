@@ -38,6 +38,7 @@ import { clampHorizontalPosition } from './arenaBounds.ts';
 import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoint, resolveEnemyPlayerSeparation } from './enemySpacing.ts';
 import { calculateEnemyObstacleAvoidanceVector } from './enemyNavigation.ts';
 import { createEnemyHitReaction, getEnemyHitPulse, getEnemyImpactBurstProfile } from './enemyCombatFeedback.ts';
+import { getEnemyDeathMotionPose, getEnemyDeathMotionProfile } from './enemyDeathMotion.ts';
 import { ENEMY_GAIT_PRESETS, ENEMY_VISUAL_PROFILES } from './enemyVisualProfiles.ts';
 import { addProceduralLimbPose, getProceduralHitPulse, setProceduralJointRotation, setProceduralLimbPose } from './proceduralActorAnimation.ts';
 import { isEffectiveBossLaneDodge, isInsideBossAttackLane, isWithinBossImpactRadius } from './combatTelegraphs.ts';
@@ -103,6 +104,7 @@ import {
 import { NEUTRAL_CHARACTER_COMBAT_BONUSES, type CharacterCombatBonuses } from './characterProgression.ts';
 import { getCharacterMotionProfile } from './characterMotion.ts';
 import { getAttackPoseStrength, getCharacterAttackMotionProfile } from './characterAttackMotion.ts';
+import { getCharacterHitReactionProfile } from './characterHitReaction.ts';
 import { resolveCharacterIncomingDamage, scaleCharacterBasicAttackDamage, scaleSurvivalOutgoingDamage, scaleSurvivalIncomingDamage, SURVIVAL_HIT_INVULNERABILITY_SECONDS } from './characterBalance.ts';
 import { sound } from './sound.ts';
 import {
@@ -113,6 +115,7 @@ import {
   CollectibleItem,
   DroppedPerkItem,
   EnemyItem,
+  EnemyType,
   GameState,
   HazardItem,
   PerkType,
@@ -1544,6 +1547,7 @@ export class PaleciakiGameEngine {
     root: THREE.Group,
     initialPosition: THREE.Vector3,
     combatStyle: RigCombatStyle = 'tool-melee',
+    enemyType?: EnemyType,
   ): GobkitAnimationTrack {
     const mixer = new THREE.AnimationMixer(root);
     const actions = new Map<string, THREE.AnimationAction>();
@@ -1554,7 +1558,7 @@ export class PaleciakiGameEngine {
     // The downloaded rigs are guaranteed to contain locomotion/hit/death clips,
     // but not every pack supplies a readable attack or airborne animation.
     // Overlay original project-authored clips without changing the source GLBs.
-    for (const clip of createRigCombatClips(root, combatStyle)) {
+    for (const clip of createRigCombatClips(root, combatStyle, enemyType)) {
       actions.set(clip.name, mixer.clipAction(clip));
     }
     const track: GobkitAnimationTrack = {
@@ -2006,7 +2010,13 @@ export class PaleciakiGameEngine {
       enemy.armL = undefined;
       enemy.armR = undefined;
       enemy.head = undefined;
-      const track = this.createGobkitAnimationTrack(gltf, root, mesh.position, ENEMY_VISUAL_PROFILES[requestedType].attackStyle);
+      const track = this.createGobkitAnimationTrack(
+        gltf,
+        root,
+        mesh.position,
+        ENEMY_VISUAL_PROFILES[requestedType].attackStyle,
+        requestedType,
+      );
       this.gobkitEnemyTracks.set(enemy, track);
       this.resumeEnemyAnimationAfterModelAttach(enemy, track);
     } catch (error) {
@@ -2225,7 +2235,7 @@ export class PaleciakiGameEngine {
     this.attackSwingTimer = 0;
     this.specialSwingTimer = 0;
     this.playerHitReactTimer = 0;
-    this.playerHitReactDuration = 0.36;
+    this.playerHitReactDuration = getCharacterHitReactionProfile(this.currentCharacterId).durationSeconds;
     this.playerLandingTimer = 0;
     this.attackCooldownTimer = 0;
     this.playerGobkitSequence++;
@@ -3275,10 +3285,11 @@ export class PaleciakiGameEngine {
       }
       if (this.playerHitReactTimer > 0) {
         const pulse = getProceduralHitPulse(this.playerHitReactTimer, this.playerHitReactDuration);
-        addProceduralLimbPose(this.leftArm, 0.48 * pulse, -0.12 * this.playerHitReactDirection * pulse);
-        addProceduralLimbPose(this.rightArm, 0.48 * pulse, 0.12 * this.playerHitReactDirection * pulse);
-        this.playerGroup.rotation.x += 0.10 * pulse;
-        this.playerGroup.rotation.z += 0.075 * this.playerHitReactDirection * pulse;
+        const reaction = getCharacterHitReactionProfile(this.currentCharacterId);
+        addProceduralLimbPose(this.leftArm, reaction.armRecoil * pulse, -reaction.armRoll * this.playerHitReactDirection * pulse);
+        addProceduralLimbPose(this.rightArm, reaction.armRecoil * pulse, reaction.armRoll * this.playerHitReactDirection * pulse);
+        this.playerGroup.rotation.x += reaction.torsoPitch * pulse;
+        this.playerGroup.rotation.z += reaction.torsoRoll * this.playerHitReactDirection * pulse;
       }
     }
     if (this.playerHitReactTimer > 0) {
@@ -3569,7 +3580,7 @@ export class PaleciakiGameEngine {
       this.spawnParticleRing(hit.x, 1.2, hit.z, 0xef4444);
 
       if (hit.targetSlot === this.pvpSlot) {
-        this.playerHitReactDuration = 0.32;
+        this.playerHitReactDuration = getCharacterHitReactionProfile(this.currentCharacterId).durationSeconds;
         this.playerHitReactTimer = this.playerHitReactDuration;
         this.playerHitReactDirection = hit.sourceSlot === 'p1' ? -1 : 1;
         this.triggerScreenShake(0.16, 0.2);
@@ -11303,10 +11314,13 @@ export class PaleciakiGameEngine {
       // Hit reaction is an additive layer, independent of whether the player is attacking.
       if (this.playerHitReactTimer > 0 && this.playerHitReactDuration > 0) {
         const hit = getProceduralHitPulse(this.playerHitReactTimer, this.playerHitReactDuration);
-        addProceduralLimbPose(this.leftArm, 0.46 * hit, -0.14 * this.playerHitReactDirection * hit);
-        addProceduralLimbPose(this.rightArm, 0.46 * hit, 0.14 * this.playerHitReactDirection * hit);
-        this.playerGroup.rotation.x += 0.065 * hit;
-        this.playerGroup.rotation.z += 0.085 * this.playerHitReactDirection * hit;
+        const reaction = getCharacterHitReactionProfile(this.currentCharacterId);
+        addProceduralLimbPose(this.leftArm, reaction.armRecoil * hit, -reaction.armRoll * this.playerHitReactDirection * hit);
+        addProceduralLimbPose(this.rightArm, reaction.armRecoil * hit, reaction.armRoll * this.playerHitReactDirection * hit);
+        this.playerGroup.rotation.x += reaction.torsoPitch * hit;
+        this.playerGroup.rotation.z += reaction.torsoRoll * this.playerHitReactDirection * hit;
+        if (this.playerHead) this.playerHead.rotation.x -= reaction.headSnap * hit;
+        if (this.playerAccessory) this.playerAccessory.rotation.x += reaction.toolKick * hit;
       }
     }
 
@@ -12165,9 +12179,7 @@ export class PaleciakiGameEngine {
   private beginEnemyDeathVisual(enemy: EnemyItem): void {
     const mesh = enemy.mesh as THREE.Object3D | undefined;
     if (!mesh) return;
-    const isBoss = isMajorSurvivalBossType(enemy.type) ||
-      enemy.type === 'elite_walczak_guard' || enemy.type === 'sebix_m';
-    const duration = isBoss ? 1.18 : 0.82;
+    const duration = getEnemyDeathMotionProfile(enemy.type).duration;
     if (enemy.hitBaseScale) {
       mesh.scale.set(enemy.hitBaseScale.x, enemy.hitBaseScale.y, enemy.hitBaseScale.z);
       enemy.hitBaseScale = undefined;
@@ -12205,15 +12217,15 @@ export class PaleciakiGameEngine {
     const track = this.gobkitEnemyTracks.get(enemy);
 
     if (!track && rest) {
-      const side = (enemy.aiSlot ?? enemy.id.length) % 2 === 0 ? 1 : -1;
-      const bossLean = isMajorSurvivalBossType(enemy.type) || enemy.type === 'sebix_m' ? 0.50 : 0.32;
-      mesh.rotation.x = rest.rotationX + bossLean * eased;
-      mesh.rotation.z = rest.rotationZ + side * 0.18 * eased;
-      mesh.position.y = rest.positionY - 0.12 * eased;
+      const side: -1 | 1 = (enemy.aiSlot ?? enemy.id.length) % 2 === 0 ? 1 : -1;
+      const deathPose = getEnemyDeathMotionPose(enemy.type, progress, side);
+      mesh.rotation.x = rest.rotationX + deathPose.rotationX;
+      mesh.rotation.z = rest.rotationZ + deathPose.rotationZ;
+      mesh.position.y = rest.positionY + deathPose.drop;
       mesh.scale.set(
-        rest.scaleX * (1 + 0.035 * eased),
-        rest.scaleY * (1 - 0.20 * eased),
-        rest.scaleZ * (1 + 0.035 * eased),
+        rest.scaleX * deathPose.scaleX,
+        rest.scaleY * deathPose.scaleY,
+        rest.scaleZ * deathPose.scaleZ,
       );
     }
 
@@ -16193,7 +16205,7 @@ export class PaleciakiGameEngine {
       return;
     }
     this.hp = Math.max(0, this.hp - damageResolution.damage);
-    this.playerHitReactDuration = 0.36;
+    this.playerHitReactDuration = getCharacterHitReactionProfile(this.currentCharacterId).durationSeconds;
     this.playerHitReactTimer = this.playerHitReactDuration;
     this.playerHitReactDirection = this.playerHitReactDirection === 1 ? -1 : 1;
     this.requestGobkitAction(this.playerGobkitTrack, this.hp <= 0 ? 'Death' : 'Hit', 0.34);

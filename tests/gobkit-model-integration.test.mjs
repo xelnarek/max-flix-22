@@ -149,7 +149,7 @@ test('player hit reaction is independent from the attack timer and both use pivo
   assert.match(between, /addProceduralLimbPose\(\s*this\.leftArm/);
   assert.match(between, /\n      \}\s*\n\s*\/\/ Hit reaction is an additive layer/);
   assert.match(game, /this\.playerHitReactTimer = this\.playerHitReactDuration/);
-  assert.match(game, /addProceduralLimbPose\(this\.leftArm, 0\.46 \* hit/);
+  assert.match(game, /addProceduralLimbPose\(this\.leftArm, reaction\.armRecoil \* hit/);
   assert.doesNotMatch(game, /e\.legL\.rotation\.x = Math\.sin\(e\.walkCycle\)/);
   assert.doesNotMatch(game, /const armSwing = Math\.sin\(e\.walkCycle\)/);
 });
@@ -168,7 +168,8 @@ test('defeated enemies remain visible through a short death animation before cle
   assert.match(game, /mesh\.visible = true/);
   assert.match(game, /mesh\.visible = false/);
   assert.match(game, /this\.stopGobkitTrack\(track\)/);
-  assert.match(game, /const duration = isBoss \? 1\.18 : 0\.82/);
+  assert.match(game, /getEnemyDeathMotionProfile\(enemy\.type\)\.duration/);
+  assert.match(game, /getEnemyDeathMotionPose\(enemy\.type, progress, side\)/);
   assert.match(game, /this\.requestGobkitAction\(track, 'Death', duration\)/);
 });
 
@@ -411,7 +412,7 @@ test('late enemy model loads cannot attach to a recycled mesh or changed archety
   assert.match(game, /const visualProfile = ENEMY_VISUAL_PROFILES\[requestedType\]/);
   assert.match(game, /fitGobkitModel\(root, visualProfile\.targetHeight/);
   assert.match(game, /this\.createMakeHumanAnimationTrack\(actor\.root, actor\.clips, mesh\.position/);
-  assert.match(game, /this\.createGobkitAnimationTrack\(gltf, root, mesh\.position/);
+  assert.match(game, /this\.createGobkitAnimationTrack\(\s*gltf,\s*root,\s*mesh\.position/);
 });
 
 
