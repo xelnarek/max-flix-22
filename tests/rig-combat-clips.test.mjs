@@ -39,7 +39,10 @@ test('combat style changes the authored attack silhouette without changing comba
   const melee = createRigCombatClips(meleeRoot, 'tool-melee').find((clip) => clip.name === 'Attack');
   const ranged = createRigCombatClips(rangedRoot, 'ranged').find((clip) => clip.name === 'Attack');
   assert.ok(melee && ranged);
-  assert.notDeepEqual(Array.from(melee.tracks[0].values), Array.from(ranged.tracks[0].values));
+  const meleeLeadArm = melee.tracks.find((track) => track.name === 'mixamorigRightArm.quaternion');
+  const rangedLeadArm = ranged.tracks.find((track) => track.name === 'mixamorigRightArm.quaternion');
+  assert.ok(meleeLeadArm && rangedLeadArm, 'both styles must animate the lead arm');
+  assert.notDeepEqual(Array.from(meleeLeadArm.values), Array.from(rangedLeadArm.values));
 });
 
 test('identical rigs reuse cached clips and model-specific rest poses remain respected', () => {
