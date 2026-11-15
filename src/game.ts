@@ -13219,7 +13219,11 @@ export class PaleciakiGameEngine {
         const isChargingImpact = (e.name.includes('Inwentaryzacja Gigant') || isCthulhuBoss) && e.chargeTimer !== undefined;
         if (isChargingImpact) {
           // Keep a targeted lash visually aligned with the corridor shown on the floor.
-          if (isCthulhuBoss && e.mesh.userData.cthulhuActiveAttack === 'lash') {
+          if (isCthulhuBoss && (
+            e.mesh.userData.cthulhuActiveAttack === 'lash' ||
+            e.mesh.userData.cthulhuActiveAttack === 'grab'
+          )) {
+            // Lock both aimed moves to the corridor shown during their wind-up.
             e.mesh.rotation.y = Math.atan2(
               Number(e.mesh.userData.cthulhuLashDirX ?? dx),
               Number(e.mesh.userData.cthulhuLashDirZ ?? dz),
