@@ -169,3 +169,24 @@ test('Oniric focus trapping skips controls hidden inside the result panel', asyn
   assert.match(source, /querySelectorAll<HTMLButtonElement>\([\s\S]*?button:not\(\[disabled\]\)/);
   assert.match(source, /filter\(\(button\) => !button\.closest\('\[hidden\]'\)\)/);
 });
+
+
+test('Rabbit Hole mobile controls are the topmost hit-testable layer above the global touch HUD', async () => {
+  const source = await readFile(new URL('../src/oniricPlatformer.ts', import.meta.url), 'utf8');
+  const css = await readFile(new URL('../src/index.css', import.meta.url), 'utf8');
+  const mobileOverlayFix = css.slice(css.lastIndexOf('/* The Rabbit Hole dialog must sit above the Survival touch HUD'));
+  assert.match(source, /root\.style\.zIndex = '2147483647'/);
+  assert.match(source, /root\.style\.isolation = 'isolate'/);
+  assert.match(source, /button\.style\.touchAction = 'none'/);
+  assert.match(source, /button\.style\.pointerEvents = 'auto'/);
+  assert.match(source, /button\.setPointerCapture\(event\.pointerId\)/);
+  assert.match(source, /button\.addEventListener\('pointercancel', release\)/);
+  assert.match(mobileOverlayFix, /z-index:\s*2147483647/);
+  assert.match(mobileOverlayFix, /\.oniric-platformer-controls button[\s\S]*?touch-action:\s*none/);
+  assert.match(mobileOverlayFix, /@media \(max-width: 600px\)[\s\S]*?oniric-jump-button/);
+});
+
+test('Rabbit Hole exit clears held touch movement before removing the modal', async () => {
+  const source = await readFile(new URL('../src/oniricPlatformer.ts', import.meta.url), 'utf8');
+  assert.match(source, /const finish = \(\) => \{[\s\S]*?clearHeldInput\(\);[\s\S]*?root\.remove\(\)/);
+});
