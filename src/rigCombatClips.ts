@@ -215,7 +215,6 @@ export function createRigCombatClips(
       add(leadUpper, AXIS_Z, attackTimes, [0, side * 0.08 * load, side * 0.62 * power, side * 0.16 * power, 0]);
       add(leadLower, AXIS_X, attackTimes, [0, -0.06 * load, -0.46 * power, -0.08 * power, 0]);
       add(supportUpper, AXIS_Z, attackTimes, [0, -side * 0.04, -side * 0.18 * power, -side * 0.03, 0]);
-      add(slots.head, AXIS_X, attackTimes, [0, -motion.headDip * 0.3, motion.headDip * 0.62, 0.01, 0]);
     } else {
       const leadUpper = side < 0 ? slots.leftUpperArm : slots.rightUpperArm;
       const supportUpper = side < 0 ? slots.rightUpperArm : slots.leftUpperArm;
