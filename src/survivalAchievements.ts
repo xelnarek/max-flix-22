@@ -45,7 +45,7 @@ export const SURVIVAL_ACHIEVEMENTS: readonly AchievementDefinition[] = [
   { id: 'boss_breaker', title: 'Inspektor do odstrzału', description: 'Pokonaj trzech głównych bossów podczas jednej rozgrywki.', icon: '👔', target: 3, unit: 'bossów', measure: 'bestBossesDefeated' },
   { id: 'map_explorer', title: 'Kartograf zmiany', description: 'Rozegraj mecz na każdej z czterech map.', icon: '🗺️', target: 4, unit: 'mapy', measure: 'mapsVisited' },
   { id: 'secret_hunter', title: 'Łowca sekretów', description: 'Odkryj trzy różne sekrety na dowolnych mapach.', icon: '🔎', target: 3, unit: 'sekrety', measure: 'discoveredSecrets' },
-  { id: 'secret_archive', title: 'Archiwum snów', description: 'Zbierz wszystkie szesnaście sekretów ukrytych na czterech mapach.', icon: '🏆', target: 16, unit: 'sekretów', measure: 'discoveredSecrets' },
+  { id: 'secret_archive', title: 'Archiwum snów', description: 'Zbierz wszystkie dwadzieścia sekretów ukrytych na czterech mapach.', icon: '🏆', target: 20, unit: 'sekretów', measure: 'discoveredSecrets' },
 ] as const;
 
 export function createInitialSurvivalAchievementProgress(): SurvivalAchievementProgress {

@@ -1,5 +1,5 @@
 export type SurvivalMapId = 'warehouse_b4' | 'container_terminal' | 'cold_storage' | 'night_sorting';
-export type SurvivalSecretStyle = 'wz' | 'cassette' | 'capybara' | 'rabbit_hole';
+export type SurvivalSecretStyle = 'wz' | 'cassette' | 'capybara' | 'rabbit_hole' | 'necronomicon';
 
 export interface SurvivalSecretDefinition {
   id: string;
@@ -63,6 +63,7 @@ export const SURVIVAL_MAPS: Readonly<Record<SurvivalMapId, SurvivalMapDefinition
       { id: 'b4_archive', name: 'Tajna kaseta B4', x: 1.5, z: -13.2, style: 'cassette' },
       { id: 'bronze_capybara', name: 'Kapibara z brązu', x: 48, z: -6.5, style: 'capybara' },
       { id: 'oniric_dream', name: 'Oniryczny sen', x: -27, z: 2.4, style: 'rabbit_hole' },
+      { id: 'necronomicon', name: 'Necronomicon', x: 28, z: 10.2, style: 'necronomicon' },
     ],
   },
   container_terminal: {
@@ -88,6 +89,7 @@ export const SURVIVAL_MAPS: Readonly<Record<SurvivalMapId, SurvivalMapDefinition
       { id: 'captains_tape', name: 'Kaseta kapitana portu', x: 0, z: 15.2, style: 'cassette' },
       { id: 'dock_capybara', name: 'Kapibara dokerów', x: 50, z: -5.2, style: 'capybara' },
       { id: 'oniric_dream', name: 'Oniryczny sen', x: 28, z: -1.8, style: 'rabbit_hole' },
+      { id: 'necronomicon', name: 'Necronomicon', x: -28, z: -10.4, style: 'necronomicon' },
     ],
   },
   cold_storage: {
@@ -113,6 +115,7 @@ export const SURVIVAL_MAPS: Readonly<Record<SurvivalMapId, SurvivalMapDefinition
       { id: 'cold_archive', name: 'Kaseta z komory -18°C', x: 0, z: -15.2, style: 'cassette' },
       { id: 'ice_capybara', name: 'Lodowa kapibara', x: 50, z: 5.2, style: 'capybara' },
       { id: 'oniric_dream', name: 'Oniryczny sen', x: -28, z: -1.5, style: 'rabbit_hole' },
+      { id: 'necronomicon', name: 'Necronomicon', x: 28, z: 10.4, style: 'necronomicon' },
     ],
   },
   night_sorting: {
@@ -138,6 +141,7 @@ export const SURVIVAL_MAPS: Readonly<Record<SurvivalMapId, SurvivalMapDefinition
       { id: 'ghost_cassette', name: 'Kaseta z nocnej zmiany', x: 0, z: 15.2, style: 'cassette' },
       { id: 'neon_capybara', name: 'Kapibara neonów', x: 50, z: -5.2, style: 'capybara' },
       { id: 'oniric_dream', name: 'Oniryczny sen', x: 27, z: 2.0, style: 'rabbit_hole' },
+      { id: 'necronomicon', name: 'Necronomicon', x: -27, z: -10.4, style: 'necronomicon' },
     ],
   },
 };

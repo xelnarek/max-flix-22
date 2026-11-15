@@ -76,7 +76,7 @@ test('secret discovery is unique across maps and unlocks hunter and full archive
     progress = recordSurvivalSecretDiscovery(progress, secret.mapId, secret.secretId).progress;
   }
   assert.ok(progress.unlocked.includes('secret_archive'));
-  assert.equal(progress.discoveredSecrets.length, 16);
+  assert.equal(progress.discoveredSecrets.length, 20);
 });
 
 test('progress sanitization rejects corrupt IDs, duplicates and invalid counters', () => {
@@ -108,5 +108,5 @@ test('achievement cards and archive summary expose accurate progress counts', ()
   const summary = getSurvivalAchievementSummary(progress);
   assert.equal(summary.total, 8);
   assert.equal(summary.unlocked, 1);
-  assert.equal(summary.totalSecrets, 16);
+  assert.equal(summary.totalSecrets, 20);
 });
