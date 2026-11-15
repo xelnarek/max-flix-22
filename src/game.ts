@@ -104,6 +104,7 @@ import {
 import { NEUTRAL_CHARACTER_COMBAT_BONUSES, type CharacterCombatBonuses } from './characterProgression.ts';
 import { getCharacterMotionProfile } from './characterMotion.ts';
 import { getAttackPoseStrength, getCharacterAttackMotionProfile } from './characterAttackMotion.ts';
+import { getCharacterHitReactionProfile } from './characterHitReaction.ts';
 import { resolveCharacterIncomingDamage, scaleCharacterBasicAttackDamage, scaleSurvivalOutgoingDamage, scaleSurvivalIncomingDamage, SURVIVAL_HIT_INVULNERABILITY_SECONDS } from './characterBalance.ts';
 import { sound } from './sound.ts';
 import {
@@ -2234,7 +2235,7 @@ export class PaleciakiGameEngine {
     this.attackSwingTimer = 0;
     this.specialSwingTimer = 0;
     this.playerHitReactTimer = 0;
-    this.playerHitReactDuration = 0.36;
+    this.playerHitReactDuration = getCharacterHitReactionProfile(this.currentCharacterId).durationSeconds;
     this.playerLandingTimer = 0;
     this.attackCooldownTimer = 0;
     this.playerGobkitSequence++;
@@ -3284,10 +3285,11 @@ export class PaleciakiGameEngine {
       }
       if (this.playerHitReactTimer > 0) {
         const pulse = getProceduralHitPulse(this.playerHitReactTimer, this.playerHitReactDuration);
-        addProceduralLimbPose(this.leftArm, 0.48 * pulse, -0.12 * this.playerHitReactDirection * pulse);
-        addProceduralLimbPose(this.rightArm, 0.48 * pulse, 0.12 * this.playerHitReactDirection * pulse);
-        this.playerGroup.rotation.x += 0.10 * pulse;
-        this.playerGroup.rotation.z += 0.075 * this.playerHitReactDirection * pulse;
+        const reaction = getCharacterHitReactionProfile(this.currentCharacterId);
+        addProceduralLimbPose(this.leftArm, reaction.armRecoil * pulse, -reaction.armRoll * this.playerHitReactDirection * pulse);
+        addProceduralLimbPose(this.rightArm, reaction.armRecoil * pulse, reaction.armRoll * this.playerHitReactDirection * pulse);
+        this.playerGroup.rotation.x += reaction.torsoPitch * pulse;
+        this.playerGroup.rotation.z += reaction.torsoRoll * this.playerHitReactDirection * pulse;
       }
     }
     if (this.playerHitReactTimer > 0) {
@@ -3578,7 +3580,7 @@ export class PaleciakiGameEngine {
       this.spawnParticleRing(hit.x, 1.2, hit.z, 0xef4444);
 
       if (hit.targetSlot === this.pvpSlot) {
-        this.playerHitReactDuration = 0.32;
+        this.playerHitReactDuration = getCharacterHitReactionProfile(this.currentCharacterId).durationSeconds;
         this.playerHitReactTimer = this.playerHitReactDuration;
         this.playerHitReactDirection = hit.sourceSlot === 'p1' ? -1 : 1;
         this.triggerScreenShake(0.16, 0.2);
@@ -11312,10 +11314,13 @@ export class PaleciakiGameEngine {
       // Hit reaction is an additive layer, independent of whether the player is attacking.
       if (this.playerHitReactTimer > 0 && this.playerHitReactDuration > 0) {
         const hit = getProceduralHitPulse(this.playerHitReactTimer, this.playerHitReactDuration);
-        addProceduralLimbPose(this.leftArm, 0.46 * hit, -0.14 * this.playerHitReactDirection * hit);
-        addProceduralLimbPose(this.rightArm, 0.46 * hit, 0.14 * this.playerHitReactDirection * hit);
-        this.playerGroup.rotation.x += 0.065 * hit;
-        this.playerGroup.rotation.z += 0.085 * this.playerHitReactDirection * hit;
+        const reaction = getCharacterHitReactionProfile(this.currentCharacterId);
+        addProceduralLimbPose(this.leftArm, reaction.armRecoil * hit, -reaction.armRoll * this.playerHitReactDirection * hit);
+        addProceduralLimbPose(this.rightArm, reaction.armRecoil * hit, reaction.armRoll * this.playerHitReactDirection * hit);
+        this.playerGroup.rotation.x += reaction.torsoPitch * hit;
+        this.playerGroup.rotation.z += reaction.torsoRoll * this.playerHitReactDirection * hit;
+        if (this.playerHead) this.playerHead.rotation.x -= reaction.headSnap * hit;
+        if (this.playerAccessory) this.playerAccessory.rotation.x += reaction.toolKick * hit;
       }
     }
 
@@ -16200,7 +16205,7 @@ export class PaleciakiGameEngine {
       return;
     }
     this.hp = Math.max(0, this.hp - damageResolution.damage);
-    this.playerHitReactDuration = 0.36;
+    this.playerHitReactDuration = getCharacterHitReactionProfile(this.currentCharacterId).durationSeconds;
     this.playerHitReactTimer = this.playerHitReactDuration;
     this.playerHitReactDirection = this.playerHitReactDirection === 1 ? -1 : 1;
     this.requestGobkitAction(this.playerGobkitTrack, this.hp <= 0 ? 'Death' : 'Hit', 0.34);
