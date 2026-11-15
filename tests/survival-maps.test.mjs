@@ -53,7 +53,7 @@ test('map definitions provide bounded and distinct hidden secret positions', () 
       assert.ok(secret.z >= -18.2 && secret.z <= 18.2);
       positions.add(secret.x + ':' + secret.z);
     }
-    assert.equal(positions.size, 4);
+    assert.equal(positions.size, 5);
   }
 });
 
