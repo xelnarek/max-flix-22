@@ -16395,6 +16395,22 @@ export class PaleciakiGameEngine {
       }
     }
 
+    if (this.gameMode === 'survival' && e.name.includes('CTHULHU')) {
+      const abyssReward = 6000;
+      this.score += abyssReward;
+      this.callbacks.onSurvivalAnnouncement?.(
+        'R’LYEH ZAPADŁO SIĘ POD FALE',
+        'CTHULHU POKONANY • +6 000 PKT',
+        'Pradawny bóg zniknął w zielonej kipieli. Necronomicon zamknął się sam, a jego znaki zgasły. Na razie.'
+      );
+      this.emitFloatingToast('✦ PRAWDZIWY SEKRET • +6 000 PKT', this.playerPos.x, this.playerPos.y + 2.1, this.playerPos.z, 'combo');
+      this.spawnParticleRing(e.x, e.y + 0.65, e.z, 0x4df0bd);
+      this.spawnExplosionParticles(e.x, e.y + 0.9, e.z, 0x8b5cf6, 42);
+      this.triggerScreenShake(1.25, 0.82);
+      this.triggerBloomPulse(0.8);
+      sound.playEasterEgg();
+    }
+
     if (showToast) {
       this.emitFloatingToast(`+${finalPoints} Pkt Neutralizacja!`, e.x, e.y + 1, e.z, 'points');
     }
@@ -16460,9 +16476,11 @@ export class PaleciakiGameEngine {
       this.spawnExplosionParticles(e.x, e.y + 0.8, e.z, 0xff7a18, 20);
     } else if (e.type === 'walczak' || e.maxHp >= 4) {
       this.callbacks.onBossUpdate?.(e.name, 0, e.maxHp, false);
-      const defeatLine = e.survivalAuditor
-        ? 'AUDYTOR NIEZAPOWIEDZIANY ZNEUTRALIZOWANY! Strefa czerwonej kontroli wygasła!'
-        : e.name.includes('Inwentaryzacja Gigant')
+      const defeatLine = e.name.includes('CTHULHU')
+        ? 'CTHULHU POKONANY! R’LYEH zapada się z powrotem pod fale. Necronomicon milknie — tym razem.'
+        : e.survivalAuditor
+          ? 'AUDYTOR NIEZAPOWIEDZIANY ZNEUTRALIZOWANY! Strefa czerwonej kontroli wygasła!'
+          : e.name.includes('Inwentaryzacja Gigant')
           ? 'INWENTARYZACJA GIGANT ZAMKNIĘTA! Ostatni protokół podpisany!'
           : e.type === 'walczak'
             ? 'NADZORCA ZERO POKONANY! Droga wolna!'
