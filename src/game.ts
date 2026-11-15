@@ -113,6 +113,7 @@ import {
   CollectibleItem,
   DroppedPerkItem,
   EnemyItem,
+  EnemyType,
   GameState,
   HazardItem,
   PerkType,
@@ -1544,6 +1545,7 @@ export class PaleciakiGameEngine {
     root: THREE.Group,
     initialPosition: THREE.Vector3,
     combatStyle: RigCombatStyle = 'tool-melee',
+    enemyType?: EnemyType,
   ): GobkitAnimationTrack {
     const mixer = new THREE.AnimationMixer(root);
     const actions = new Map<string, THREE.AnimationAction>();
@@ -1554,7 +1556,7 @@ export class PaleciakiGameEngine {
     // The downloaded rigs are guaranteed to contain locomotion/hit/death clips,
     // but not every pack supplies a readable attack or airborne animation.
     // Overlay original project-authored clips without changing the source GLBs.
-    for (const clip of createRigCombatClips(root, combatStyle)) {
+    for (const clip of createRigCombatClips(root, combatStyle, enemyType)) {
       actions.set(clip.name, mixer.clipAction(clip));
     }
     const track: GobkitAnimationTrack = {
@@ -2006,7 +2008,13 @@ export class PaleciakiGameEngine {
       enemy.armL = undefined;
       enemy.armR = undefined;
       enemy.head = undefined;
-      const track = this.createGobkitAnimationTrack(gltf, root, mesh.position, ENEMY_VISUAL_PROFILES[requestedType].attackStyle);
+      const track = this.createGobkitAnimationTrack(
+        gltf,
+        root,
+        mesh.position,
+        ENEMY_VISUAL_PROFILES[requestedType].attackStyle,
+        requestedType,
+      );
       this.gobkitEnemyTracks.set(enemy, track);
       this.resumeEnemyAnimationAfterModelAttach(enemy, track);
     } catch (error) {
