@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import * as THREE from 'three';
 import { createCthulhuBossModel } from '../src/cthulhuAssets.ts';
+import { isWithinCthulhuLashLane } from '../src/cthulhuCombat.ts';
 
 const enemyTypeNames = [
   'walczak', // Reuses the existing major-boss AI/reward contract; the mesh is bespoke Cthulhu.
@@ -62,4 +63,28 @@ test('the Necronomicon has its own 3D book geometry, runes and floating aura', a
   assert.match(game, /NECRONOMICON/);
   assert.match(game, /necronomicon-floating-runes/);
   assert.match(game, /new THREE\.TorusGeometry\(0\.83/);
+});
+
+
+test('the phase-two tentacle lash has a directional, dodgeable corridor hit test', () => {
+  assert.equal(isWithinCthulhuLashLane(0, 8, 0, 0, 0, 5), true);
+  assert.equal(isWithinCthulhuLashLane(2.4, 8, 0, 0, 0, 1), false, 'outside the lane width is safe');
+  assert.equal(isWithinCthulhuLashLane(0, -2, 0, 0, 0, 1), false, 'behind the boss is safe');
+  assert.equal(isWithinCthulhuLashLane(0, 18, 0, 0, 0, 1), false, 'outside the reach is safe');
+  assert.equal(isWithinCthulhuLashLane(0, 8, 0, 0, 0, 0), false, 'a zero direction is invalid');
+  assert.equal(isWithinCthulhuLashLane(0, 8, 0, 0, 0, 3, 15.5, 2.15), true, 'raw aim vectors are normalized');
+});
+
+test('Cthulhu phase two alternates a line telegraph with the circular ground rupture', async () => {
+  const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
+  assert.match(game, /cthulhuNextAttack !== 'slam'/);
+  assert.match(game, /cthulhuNextAttack = 'slam'/);
+  assert.match(game, /cthulhuNextAttack = 'lash'/);
+  assert.match(game, /spawnCthulhuLashTelegraph/);
+  assert.match(game, /cthulhuActiveAttack === 'lash'/);
+  assert.match(game, /cthulhuLashDirX \?\? dx/);
+  assert.match(game, /MACKI CELOWANE — ODSKOCZ W BOK LUB WYSKOCZ/);
+  assert.match(game, /isWithinCthulhuLashLane/);
+  assert.match(game, /cthulhuStrikeTimer/);
+  assert.match(game, /cthulhuTorso/);
 });
