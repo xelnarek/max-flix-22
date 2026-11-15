@@ -16,14 +16,14 @@ test('Survival has four distinct playable map definitions with four secrets each
     assert.equal(map.id, mapId);
     assert.ok(map.name.length > 3);
     assert.ok(map.subtitle.length > 3);
-    assert.equal(map.secretLocations.length, 4);
+    assert.equal(map.secretLocations.length, 5);
     names.add(map.name);
     palettes.add([map.backgroundColor, map.floorColor, map.wallColor, map.accentColor].join(':'));
   }
   assert.equal(names.size, 4);
   assert.equal(palettes.size, 4, 'each arena must have its own visual color signature');
-  assert.equal(getSurvivalSecretKeys().length, 16);
-  assert.equal(new Set(getSurvivalSecretKeys()).size, 16);
+  assert.equal(getSurvivalSecretKeys().length, 20);
+  assert.equal(new Set(getSurvivalSecretKeys()).size, 20);
 });
 
 test('random map selection excludes the immediately previous arena', () => {
@@ -64,5 +64,15 @@ test('every map includes the Alice-inspired Oniric Dream rabbit-hole invitation'
     assert.ok(dream, 'missing Oniric Dream on ' + mapId);
     assert.equal(dream.name, 'Oniryczny sen');
     assert.equal(dream.style, 'rabbit_hole');
+  }
+});
+
+
+test('every Survival map includes a separate Necronomicon boss secret', () => {
+  for (const mapId of SURVIVAL_MAP_IDS) {
+    const secret = getSurvivalMapDefinition(mapId).secretLocations.find((entry) => entry.id === 'necronomicon');
+    assert.ok(secret, 'missing Necronomicon on ' + mapId);
+    assert.equal(secret.name, 'Necronomicon');
+    assert.equal(secret.style, 'necronomicon');
   }
 });
