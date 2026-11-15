@@ -7040,6 +7040,47 @@ export class PaleciakiGameEngine {
     });
   }
 
+  private addCthulhuBossEnemy(id: string, x: number, z: number): void {
+    const built = createCthulhuBossModel();
+    const groundY = 0.22;
+    built.group.position.set(x, groundY, z);
+    this.applyHandheldActorShadowBudget(built.group);
+    this.levelRoot.add(built.group);
+
+    // Keep the bespoke model on the existing major-boss AI/reward path, but
+    // never attach Walczak's imported rig or replace this unique silhouette.
+    const health = Math.round(126 + Math.max(0, this.survivalWave - 1) * 4.2);
+    this.enemies.push({
+      id,
+      type: 'walczak',
+      name: 'CTHULHU • PAN ZATOPIONEGO R’LYEH',
+      mesh: built.group,
+      speechMesh: null,
+      x,
+      y: groundY,
+      z,
+      startX: x - 7,
+      endX: x + 7,
+      speed: 1.92,
+      dir: -1,
+      hp: health,
+      maxHp: health,
+      state: 'patrol',
+      stunTimer: 0,
+      shoutTimer: 999,
+      shoutText: '',
+      attackCooldown: 0,
+      walkCycle: 0,
+      legL: built.legL,
+      legR: built.legR,
+      armL: built.armL,
+      armR: built.armR,
+      head: built.head,
+      specialActionTimer: 2.65,
+      bossPhase: 1,
+    });
+  }
+
   private addKrolLetoBossEnemy(id: string, x: number, z: number) {
     const built = createKrolLetoBossModel();
     built.group.position.set(x, 0.6, z);
