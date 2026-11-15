@@ -7615,3 +7615,133 @@ body #touch-controls.manual-aim-mode:not(.hidden) .pvp-control-guide {
     height: 36px !important;
   }
 }
+
+
+/* The Rabbit Hole dialog must sit above the Survival touch HUD on phones.
+   The old HUD uses z-index: 2147483000, which otherwise intercepted every tap. */
+.oniric-platformer-overlay {
+  z-index: 2147483647 !important;
+  isolation: isolate;
+  pointer-events: auto;
+  overscroll-behavior: contain;
+}
+
+.oniric-platformer-card,
+.oniric-platformer-stage,
+.oniric-platformer-controls,
+.oniric-platformer-controls button {
+  pointer-events: auto;
+}
+
+.oniric-platformer-controls {
+  position: relative;
+  z-index: 5;
+  flex-shrink: 0;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.oniric-platformer-controls button {
+  position: relative;
+  z-index: 1;
+  min-height: 56px;
+  touch-action: none !important;
+  pointer-events: auto !important;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.oniric-platformer-controls button.is-pressed {
+  transform: translateY(2px) scale(.97);
+  filter: brightness(1.25);
+  box-shadow: 0 0 0 3px rgba(94, 234, 212, .28), 0 0 20px rgba(45, 212, 191, .32);
+}
+
+@media (max-width: 600px) {
+  .oniric-platformer-overlay {
+    align-items: stretch;
+    overflow-y: auto;
+    touch-action: pan-y;
+  }
+
+  .oniric-platformer-card {
+    width: 100%;
+    max-height: 100%;
+    min-height: 0;
+    grid-template-rows: auto auto minmax(132px, min(44dvh, 420px)) auto auto;
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .oniric-platformer-stage {
+    min-height: 132px;
+  }
+
+  .oniric-platformer-canvas {
+    width: 100%;
+    height: auto;
+    max-height: 44dvh;
+    aspect-ratio: 16 / 9;
+  }
+
+  .oniric-platformer-controls {
+    gap: 10px;
+    width: 100%;
+    justify-content: space-between;
+    padding: 3px 2px 5px;
+  }
+
+  .oniric-direction-pad {
+    gap: 10px;
+  }
+
+  .oniric-direction-pad button {
+    width: clamp(58px, 18vw, 78px);
+    min-height: 58px;
+    font-size: 22px;
+  }
+
+  .oniric-jump-button {
+    min-width: clamp(108px, 32vw, 148px);
+    min-height: 62px !important;
+    font-size: 15px !important;
+  }
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .oniric-platformer-overlay {
+    align-items: flex-start;
+  }
+
+  .oniric-platformer-card {
+    grid-template-rows: auto auto minmax(112px, 1fr) auto;
+    max-height: calc(100dvh - 10px);
+    overflow-y: auto;
+    gap: 4px;
+    padding: 6px;
+  }
+
+  .oniric-platformer-header p,
+  .oniric-platformer-footer {
+    display: none;
+  }
+
+  .oniric-platformer-canvas {
+    max-height: 40dvh;
+  }
+
+  .oniric-platformer-controls button {
+    min-height: 44px;
+  }
+
+  .oniric-direction-pad button {
+    width: 60px;
+  }
+
+  .oniric-jump-button {
+    min-height: 48px !important;
+  }
+}
