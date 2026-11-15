@@ -30,3 +30,14 @@ test('heavy operator braces harder while the fast operator recovers quickest', (
   assert.ok(CHARACTER_HIT_REACTION_PROFILES.dawid.toolKick >
     CHARACTER_HIT_REACTION_PROFILES.marcin.toolKick);
 });
+
+
+test('the game applies the same character-specific reaction profile in campaign and PvP', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
+  assert.match(game, /import \{ getCharacterHitReactionProfile \} from '\.\/characterHitReaction\.ts'/);
+  assert.ok((game.match(/getCharacterHitReactionProfile\(this\.currentCharacterId\)/g) || []).length >= 4);
+  assert.match(game, /reaction\.headSnap \* hit/);
+  assert.match(game, /reaction\.toolKick \* hit/);
+  assert.match(game, /reaction\.torsoRoll \* this\.playerHitReactDirection/);
+});
