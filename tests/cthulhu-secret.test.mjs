@@ -85,6 +85,7 @@ test('Cthulhu phase two cycles through a slam, aimed lash and grab with a readab
   assert.match(game, /cthulhuActiveAttack/);
   assert.match(game, /spawnCthulhuLashTelegraph/);
   assert.match(game, /cthulhuActiveAttack === 'lash'/);
+  assert.match(game, /Lock both aimed moves to the corridor/);
   assert.match(game, /cthulhuLashDirX \?\? dx/);
   assert.match(game, /MACKI CELOWANE — ODSKOCZ W BOK LUB WYSKOCZ/);
   assert.match(game, /isWithinCthulhuLashLane/);
