@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { EnemyType } from '../src/types.ts';
 import {
   ENEMY_DEATH_MOTION_PROFILES,
   getEnemyDeathMotionPose,
