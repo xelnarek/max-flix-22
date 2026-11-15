@@ -252,8 +252,7 @@ export function createRigCombatClips(
     const chestTwist = slots.chest && slots.chest !== torsoBone ? slots.chest : undefined;
     add(slots.pelvis, AXIS_Y, hitTimes, [0, side * 0.12 * stagger, -side * 0.06 * stagger, 0]);
     add(torsoBone, AXIS_X, hitTimes, [0, -0.34 * stagger, 0.12 * stagger, 0]);
-    add(chestTwist, AXIS_Y, hitTimes, [0, -side * 0.15 * stagger, side * 0.04 * stagger, 0]);
-    add(slots.chest, AXIS_Z, hitTimes, [0, 0.08 * stagger, -0.03 * stagger, 0]);
+    add(chestTwist, AXIS_Z, hitTimes, [0, 0.08 * stagger, -0.03 * stagger, 0]);
     add(slots.head, AXIS_X, hitTimes, [0, 0.16 * stagger, -0.06 * stagger, 0]);
     const leftFlinch = side < 0 ? 1 : 0.72;
     const rightFlinch = side > 0 ? 1 : 0.72;
