@@ -4864,6 +4864,7 @@ export class PaleciakiGameEngine {
         const beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 1.1, 5), glow);
         beacon.position.y = 1.22;
         group.add(beacon);
+        }
       }
 
       group.position.set(secret.x, 0.08, secret.z);
