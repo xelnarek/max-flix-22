@@ -168,7 +168,8 @@ test('defeated enemies remain visible through a short death animation before cle
   assert.match(game, /mesh\.visible = true/);
   assert.match(game, /mesh\.visible = false/);
   assert.match(game, /this\.stopGobkitTrack\(track\)/);
-  assert.match(game, /const duration = isBoss \? 1\.18 : 0\.82/);
+  assert.match(game, /getEnemyDeathMotionProfile\(enemy\.type\)\.duration/);
+  assert.match(game, /getEnemyDeathMotionPose\(enemy\.type, progress, side\)/);
   assert.match(game, /this\.requestGobkitAction\(track, 'Death', duration\)/);
 });
 
