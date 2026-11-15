@@ -4912,7 +4912,7 @@ export class PaleciakiGameEngine {
     this.callbacks.onPerkDropBanner?.(
       'NIE CZYTAJ TEGO NA GŁOS',
       '☠',
-      'CTHULHU POWSTAJE. Ogromny zasięg macek i pulsująca fala uderzeniowa. W drugiej fazie ataki są szybsze i obejmują większy obszar.',
+      'CTHULHU POWSTAJE. Omiń szeroki krąg fali uderzeniowej, a z podłużnego korytarza zejść w bok lub wyskocz. W drugiej fazie łączy oba ataki szybciej.',
       '#42e8c4',
     );
     this.emitFloatingToast('☠ NECRONOMICON OTWARTY • CTHULHU NADCHODZI!', this.playerPos.x, this.playerPos.y + 2.0, this.playerPos.z, 'damage');
@@ -13128,8 +13128,15 @@ export class PaleciakiGameEngine {
         const isCthulhuBoss = e.name.includes('CTHULHU');
         const isChargingImpact = (e.name.includes('Inwentaryzacja Gigant') || isCthulhuBoss) && e.chargeTimer !== undefined;
         if (isChargingImpact) {
-          // Hold the boss at the marked impact point until the warning resolves.
-          e.mesh.rotation.y = Math.atan2(dx, dz);
+          // Keep a targeted lash visually aligned with the corridor shown on the floor.
+          if (isCthulhuBoss && e.mesh.userData.cthulhuActiveAttack === 'lash') {
+            e.mesh.rotation.y = Math.atan2(
+              Number(e.mesh.userData.cthulhuLashDirX ?? dx),
+              Number(e.mesh.userData.cthulhuLashDirZ ?? dz),
+            );
+          } else {
+            e.mesh.rotation.y = Math.atan2(dx, dz);
+          }
         } else if (distToPlayer < 14.0) {
           const angle = Math.atan2(dx, dz);
           e.mesh.rotation.y = angle;
