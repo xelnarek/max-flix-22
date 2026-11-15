@@ -89,7 +89,7 @@ export function getEnemyDeathMotionPose(
   return {
     rotationX: motion.fallX * collapse - anticipation,
     rotationZ: motion.rollZ * side * collapse,
-    drop: -motion.drop * settle,
+    drop: settle > 0 ? -motion.drop * settle : 0,
     scaleX: 1 + compression * 0.22,
     scaleY: 1 - compression,
     scaleZ: 1 + compression * 0.22,
