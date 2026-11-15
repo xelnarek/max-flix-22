@@ -205,6 +205,11 @@ export function launchOniricPlatformer(options: {
   const previousBodyOverflow = document.body.style.overflow;
   const root = document.createElement('section');
   root.className = 'oniric-platformer-overlay oniric-pixel-chaos';
+  // Survival's global touch layer intentionally sits above the 3D canvas. The
+  // 2D secret must become the topmost interactive surface while it is open.
+  root.style.zIndex = '2147483647';
+  root.style.isolation = 'isolate';
+  root.style.pointerEvents = 'auto';
   root.setAttribute('role', 'dialog');
   root.setAttribute('aria-modal', 'true');
   root.setAttribute('aria-labelledby', 'oniric-platformer-title');
@@ -604,6 +609,7 @@ export function launchOniricPlatformer(options: {
     document.removeEventListener('visibilitychange', onVisibilityChange);
     document.removeEventListener('keydown', onKeyDown, true);
     document.removeEventListener('keyup', onKeyUp, true);
+    clearHeldInput();
     document.body.style.overflow = previousBodyOverflow;
     root.remove();
     if (previousFocus?.isConnected) previousFocus.focus();
@@ -653,16 +659,26 @@ export function launchOniricPlatformer(options: {
   root.querySelectorAll<HTMLButtonElement>('[data-hold]').forEach((button) => {
     const control = button.dataset.hold;
     if (control !== 'left' && control !== 'right' && control !== 'jump') return;
+    // Do not let page scrolling or the underlying Survival joystick steal a
+    // finger press. Pointer capture keeps held movement alive at the button edge.
+    button.style.touchAction = 'none';
+    button.style.pointerEvents = 'auto';
     button.addEventListener('pointerdown', (event) => {
       event.preventDefault();
       event.stopPropagation();
+      button.classList.add('is-pressed');
       if (control === 'jump') jumpQueued = true;
       else held[control] = true;
-      button.setPointerCapture?.(event.pointerId);
+      try {
+        button.setPointerCapture(event.pointerId);
+      } catch {
+        // Pointer capture is optional; the pointerup/cancel listeners remain a fallback.
+      }
     });
     const release = (event: PointerEvent) => {
       event.preventDefault();
       event.stopPropagation();
+      button.classList.remove('is-pressed');
       if (control !== 'jump') held[control] = false;
     };
     button.addEventListener('pointerup', release);
