@@ -226,9 +226,10 @@ namespace MaxFlix.Unity.Runtime
 
         private void CollectOrb(XpOrb orb)
         {
-            SurvivalMapProfile map = GameContentCatalog.GetMap(GameSession.Current.SelectedMap);
-            float mapXp = Mathf.Clamp(map.XpMultiplier, 0.65f, 1.75f);
-            int amount = Mathf.Max(1, Mathf.RoundToInt(orb.Value * mapXp * _xpGrowthMultiplier));
+            // Orb.Value already includes the biome XP bonus from the enemy's
+            // world-space defeat position. Do not apply the selected start-map
+            // multiplier again when collecting an orb in another biome.
+            int amount = Mathf.Max(1, Mathf.RoundToInt(orb.Value * _xpGrowthMultiplier));
             _xp += amount;
             GameSession.Current.Score += amount * 12;
             GameSession.Current.Coins += Mathf.Max(0, amount / 3);
