@@ -329,3 +329,39 @@ test('retreating while holding fire preserves the boss-facing sprite and keeps l
   assert.equal(state.player.facing, 1, 'the sprite should stay aimed at the boss');
   assert.equal(state.projectiles[0].vx, 282);
 });
+
+test('confirmed player and boss hits create short-lived floating damage values', () => {
+  const playerHit = createCthulhuRetroState();
+  playerHit.introSeconds = 0;
+  playerHit.boss.riseSeconds = 0;
+  playerHit.boss.windup = 0.001;
+  playerHit.boss.attack = 'lash';
+  playerHit.boss.attackCooldown = 100;
+  playerHit.player.x = 120;
+  const playerHp = playerHit.player.hp;
+  stepCthulhuRetroState(playerHit, {}, 1 / 30);
+  assert.ok(playerHit.player.hp < playerHp);
+  assert.ok(playerHit.damageTexts.some((popup) => popup.text.startsWith('−')));
+
+  const bossHit = createCthulhuRetroState();
+  bossHit.introSeconds = 0;
+  bossHit.boss.riseSeconds = 0;
+  bossHit.boss.coreOpenSeconds = 1;
+  bossHit.projectiles.push({
+    x: bossHit.boss.x - 18,
+    y: bossHit.boss.y - 69,
+    vx: 282,
+    vy: 0,
+    life: 1,
+  });
+  stepCthulhuRetroState(bossHit, {}, 1 / 30);
+  assert.ok(bossHit.damageTexts.some((popup) => popup.text === '+22.5'));
+});
+
+test('the vulnerable core and boss warning display timing bars', async () => {
+  const source = await readFile(new URL('../src/cthulhuRetroArena.ts', import.meta.url), 'utf8');
+  assert.match(source, /windowRatio = clamp\(state\.boss\.coreOpenSeconds \/ CTHULHU_RETRO_CORE_OPEN_SECONDS/);
+  assert.match(source, /warningRatio = clamp\(state\.boss\.windup \/ fullWarning/);
+  assert.match(source, /popup\.text/);
+  assert.match(source, /popup\.color/);
+});

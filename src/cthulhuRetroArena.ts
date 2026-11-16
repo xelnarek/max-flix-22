@@ -29,6 +29,14 @@ export interface CthulhuRetroShockwave {
   delaySeconds?: number;
 }
 
+export interface CthulhuRetroDamageText {
+  x: number;
+  y: number;
+  text: string;
+  color: string;
+  life: number;
+}
+
 export interface CthulhuRetroState {
   elapsed: number;
   introSeconds: number;
@@ -66,6 +74,7 @@ export interface CthulhuRetroState {
   };
   projectiles: CthulhuRetroProjectile[];
   shockwaves: CthulhuRetroShockwave[];
+  damageTexts: CthulhuRetroDamageText[];
   hitsTaken: number;
   successfulHits: number;
   screenShake: number;
@@ -99,6 +108,7 @@ export function createCthulhuRetroState(): CthulhuRetroState {
     },
     projectiles: [],
     shockwaves: [],
+    damageTexts: [],
     hitsTaken: 0,
     successfulHits: 0,
     screenShake: 0,
@@ -114,6 +124,13 @@ function takeCthulhuRetroDamage(state: CthulhuRetroState, damage: number): void 
   player.hp = Math.max(0, player.hp - damage);
   player.invulnerability = 0.92;
   state.hitsTaken++;
+  state.damageTexts.push({
+    x: player.x + PLAYER_WIDTH / 2,
+    y: player.y - 5,
+    text: '−' + damage,
+    color: '#ff79aa',
+    life: 0.82,
+  });
   state.damageFlash = 0.24;
   state.screenShake = Math.max(state.screenShake, 0.28);
   if (player.hp <= 0) {
@@ -167,6 +184,12 @@ export function stepCthulhuRetroState(
   state.introSeconds = Math.max(0, state.introSeconds - dt);
   state.screenShake = Math.max(0, state.screenShake - dt);
   state.damageFlash = Math.max(0, state.damageFlash - dt);
+  for (let index = state.damageTexts.length - 1; index >= 0; index--) {
+    const popup = state.damageTexts[index];
+    popup.life -= dt;
+    popup.y -= 19 * dt;
+    if (popup.life <= 0) state.damageTexts.splice(index, 1);
+  }
 
   if (state.boss.defeated) {
     state.boss.deathSeconds += dt;
@@ -246,6 +269,13 @@ export function stepCthulhuRetroState(
       if (boss.coreOpenSeconds > 0 && !boss.defeated) {
         const damage = 15 * CTHULHU_RETRO_CORE_DAMAGE_MULTIPLIER;
         boss.hp = Math.max(0, boss.hp - damage);
+        state.damageTexts.push({
+          x: coreX,
+          y: coreY - 15,
+          text: '+' + damage.toFixed(1),
+          color: '#9bffe0',
+          life: 0.82,
+        });
         boss.hitFlash = 0.20;
         state.successfulHits++;
         state.screenShake = Math.max(state.screenShake, 0.08);
@@ -1002,6 +1032,21 @@ export function launchCthulhuRetroArena(options: {
 
     drawPlayer(ctx, state.elapsed);
 
+    // Floating hit values make the result of each confirmed hit readable
+    // without adding another permanent HUD panel over the small arena.
+    for (const popup of state.damageTexts) {
+      ctx.save();
+      ctx.globalAlpha = clamp(popup.life / 0.22, 0, 1);
+      ctx.font = 'bold 10px monospace';
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(5, 8, 18, .88)';
+      ctx.strokeText(popup.text, popup.x, popup.y);
+      ctx.fillStyle = popup.color;
+      ctx.fillText(popup.text, popup.x, popup.y);
+      ctx.restore();
+    }
+
     if (state.boss.windup > 0 && state.boss.riseSeconds <= 0) {
       const warning = state.boss.attack === 'slam'
         ? 'FALA UDERZENIOWA — SKOCZ!'
@@ -1016,6 +1061,12 @@ export function launchCthulhuRetroArena(options: {
       ctx.font = 'bold 9px monospace';
       ctx.textAlign = 'center';
       ctx.fillText(warning, 240, 25);
+      const fullWarning = state.boss.phase === 2 ? 0.64 : 0.92;
+      const warningRatio = clamp(state.boss.windup / fullWarning, 0, 1);
+      ctx.fillStyle = 'rgba(255, 255, 255, .18)';
+      ctx.fillRect(118, 29, 244, 2);
+      ctx.fillStyle = state.boss.phase === 2 ? '#ff8bd3' : '#9ff3d9';
+      ctx.fillRect(118, 29, 244 * warningRatio, 2);
     }
 
     if (state.boss.coreOpenSeconds > 0) {
@@ -1027,6 +1078,11 @@ export function launchCthulhuRetroArena(options: {
       ctx.font = 'bold 8px monospace';
       ctx.textAlign = 'center';
       ctx.fillText('RDZEN ODKRYTY • ATAKUJ!  +50%', 240, 47);
+      const windowRatio = clamp(state.boss.coreOpenSeconds / CTHULHU_RETRO_CORE_OPEN_SECONDS, 0, 1);
+      ctx.fillStyle = 'rgba(255, 121, 214, .28)';
+      ctx.fillRect(162, 49, 156, 2);
+      ctx.fillStyle = '#ffe9f7';
+      ctx.fillRect(162, 49, 156 * windowRatio, 2);
     }
 
     if (state.boss.defeated) {
