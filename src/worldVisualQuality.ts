@@ -40,7 +40,7 @@ const SURVIVAL_LIGHTING_PROFILES: Readonly<Record<SurvivalMapId, WorldLightingPr
     directionalColor: 0xffe4c4, directionalIntensity: 2.42,
     rimColor: 0x62c6e8, rimIntensity: 1.02,
     fogColor: 0x101b27, fogNear: 50, fogFar: 132,
-    environmentIntensity: 0.46, exposure: 0.99,
+    environmentIntensity: 0.46, exposure: 1.00,
   },
   container_terminal: {
     ambientColor: 0xd5e1eb, ambientIntensity: 0.86,
@@ -48,7 +48,7 @@ const SURVIVAL_LIGHTING_PROFILES: Readonly<Record<SurvivalMapId, WorldLightingPr
     directionalColor: 0xffd8b0, directionalIntensity: 2.34,
     rimColor: 0xf3a15f, rimIntensity: 1.10,
     fogColor: 0x172536, fogNear: 58, fogFar: 146,
-    environmentIntensity: 0.47, exposure: 0.99,
+    environmentIntensity: 0.47, exposure: 1.00,
   },
   cold_storage: {
     ambientColor: 0xc8e5f3, ambientIntensity: 0.88,
@@ -56,15 +56,15 @@ const SURVIVAL_LIGHTING_PROFILES: Readonly<Record<SurvivalMapId, WorldLightingPr
     directionalColor: 0xd8f1ff, directionalIntensity: 2.24,
     rimColor: 0x63d8ed, rimIntensity: 1.16,
     fogColor: 0x0a2638, fogNear: 44, fogFar: 112,
-    environmentIntensity: 0.50, exposure: 0.99,
+    environmentIntensity: 0.50, exposure: 1.00,
   },
   night_sorting: {
-    ambientColor: 0xd8c9e8, ambientIntensity: 0.84,
+    ambientColor: 0xd8c9e8, ambientIntensity: 0.86,
     hemisphereSkyColor: 0xa99acb, hemisphereGroundColor: 0x211b37, hemisphereIntensity: 1.12,
-    directionalColor: 0xffc8df, directionalIntensity: 2.12,
+    directionalColor: 0xffc8df, directionalIntensity: 2.22,
     rimColor: 0xe879c8, rimIntensity: 1.18,
     fogColor: 0x17132b, fogNear: 42, fogFar: 108,
-    environmentIntensity: 0.40, exposure: 0.98,
+    environmentIntensity: 0.40, exposure: 1.00,
   },
 };
 
@@ -136,7 +136,7 @@ const SURVIVAL_SURFACE_PROFILES: Readonly<Record<SurvivalMapId, SurvivalSurfaceP
     barrierRoughness: 0.64, barrierMetalness: 0.16,
   },
   night_sorting: {
-    floorRoughness: 0.86, floorMetalness: 0.055,
+    floorRoughness: 0.92, floorMetalness: 0.055,
     wallRoughness: 0.64, wallMetalness: 0.44,
     trimRoughness: 0.34, trimMetalness: 0.42, trimEmissiveIntensity: 0.22,
     palletColor: 0x533d60, crateColors: [0x50456e, 0x784a65, 0x343550],
