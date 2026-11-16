@@ -248,6 +248,20 @@ test('Unity weapon projectiles collide with environment before damaging enemies 
   assert.match(weapons, /firstEnemyDistance \+ 0\.08f/);
 });
 
+test('Unity Survival HUD shows and updates the live secret count without covering touch controls', async () => {
+  const [hud, pickup] = await Promise.all([
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalSecretPickup.cs'),
+  ]);
+  assert.match(hud, /SEKRETY  0\/20/);
+  assert.match(hud, /public void SetSecretsCount\(int found, int total\)/);
+  assert.match(hud, /secretRect\.anchorMin = secretRect\.anchorMax = new Vector2\(0\.5f, 0f\)/);
+  assert.match(hud, /secretRect\.anchoredPosition = new Vector2\(0f, 12f\)/);
+  assert.match(hud, /Sekrety odkryte: " \+ Mathf\.Clamp\(run\.SecretsFound, 0, 20\) \+ "\/20"/);
+  assert.match(pickup, /GameSession\.Current\.SecretsFound = Mathf\.Clamp\(GameSession\.Current\.SecretsFound \+ 1, 0, 20\)/);
+  assert.match(pickup, /hud\?\.SetSecretsCount\(GameSession\.Current\.SecretsFound, 20\)/);
+});
+
 test('Unity Survival game-over summary reports the number of discovered secrets', async () => {
   const [hud, domain] = await Promise.all([
     read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs'),
