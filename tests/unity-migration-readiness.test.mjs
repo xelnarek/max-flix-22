@@ -90,6 +90,19 @@ test('Unity wave spawning skips obstructed positions instead of using an unsafe 
   assert.doesNotMatch(director, /private Vector3 GetSpawnPosition\(/);
 });
 
+test('Unity Campaign final boss flags can only be earned inside the terminal boss arena', async () => {
+  const [mission, factory] = await Promise.all([
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/CampaignMissionDirector.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs'),
+  ]);
+  assert.match(mission, /FinalBossArenaStartX = 185f/);
+  assert.match(mission, /x >= FinalBossArenaStartX && enemy\.Kind == EnemyKind\.Walczak/);
+  assert.match(mission, /x >= FinalBossArenaStartX && enemy\.Kind == EnemyKind\.KingLeto/);
+  assert.match(factory, /new Vector3\(191f, 0\.05f, 7f\)/);
+  assert.match(factory, /new Vector3\(191f, 0\.05f, -7f\)/);
+  assert.match(factory, /new Vector3\(176f, 0\.05f, 0f\)/);
+});
+
 test('Unity Campaign progress uses a namespaced versioned key and migrates the legacy spelling', async () => {
   const campaign = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/CampaignMissionDirector.cs');
   assert.match(campaign, /paleciaki\.campaign\.maxUnlockedSector\.v1/);
