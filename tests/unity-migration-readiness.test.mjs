@@ -248,6 +248,25 @@ test('Unity weapon projectiles collide with environment before damaging enemies 
   assert.match(weapons, /firstEnemyDistance \+ 0\.08f/);
 });
 
+test('Unity secret archive is permanent, duplicate rewards are blocked, and unfinished challenges remain retryable', async () => {
+  const [pickup, encounter, bootstrap] = await Promise.all([
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalSecretPickup.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalSecretEncounterController.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/MainGameBootstrap.cs'),
+  ]);
+  assert.match(pickup, /GetDiscoveryKey\(WarehouseMapId mapId, string secretId\)/);
+  assert.match(pickup, /GetCompletionKey\(WarehouseMapId mapId, string secretId\)/);
+  assert.match(pickup, /public static int CountDiscovered\(\)/);
+  assert.match(pickup, /PlayerPrefs\.GetInt\(GetDiscoveryKey\(mapId, definition\.Id\), 0\)/);
+  assert.match(pickup, /challengeCompleted/);
+  assert.match(pickup, /alreadyDiscovered && !isReplayableChallenge/);
+  assert.match(pickup, /isReplayableChallenge && challengeCompleted/);
+  assert.match(pickup, /bool firstDiscovery = PlayerPrefs\.GetInt\(discoveryKey, 0\) == 0/);
+  assert.match(pickup, /if \(firstDiscovery\)[\s\S]*?Score \+= 750/);
+  assert.match(bootstrap, /GameSession\.Current\.SecretsFound = SurvivalSecretPickup\.CountDiscovered\(\)/);
+  assert.match(encounter, /SurvivalSecretPickup\.MarkEncounterCompleted\(_sourceMapId, _sourceSecretId\)/);
+});
+
 test('Unity 2D encounter retry resets the common timer and Rabbit Hole camera state', async () => {
   const encounter = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalSecretEncounterController.cs');
   const retry = encounter.slice(encounter.indexOf('private void RetryEncounter()'), encounter.indexOf('private void ReturnWithReward()'));
@@ -269,7 +288,11 @@ test('Unity Survival HUD shows and updates the live secret count without coverin
   assert.match(hud, /secretRect\.anchorMin = secretRect\.anchorMax = new Vector2\(0\.5f, 0f\)/);
   assert.match(hud, /secretRect\.anchoredPosition = new Vector2\(0f, 12f\)/);
   assert.match(hud, /Sekrety odkryte: " \+ Mathf\.Clamp\(run\.SecretsFound, 0, 20\) \+ "\/20"/);
-  assert.match(pickup, /GameSession\.Current\.SecretsFound = Mathf\.Clamp\(GameSession\.Current\.SecretsFound \+ 1, 0, 20\)/);
+  assert.match(pickup, /GameSession\.Current\.SecretsFound = CountDiscovered\(\)/);
+  assert.match(pickup, /public static int CountDiscovered\(\)/);
+  assert.match(pickup, /GetCompletionKey\(mapId, definition\.Id\)/);
+  assert.match(pickup, /challengeCompleted/);
+  assert.match(pickup, /firstDiscovery/);
   assert.match(pickup, /hud\?\.SetSecretsCount\(GameSession\.Current\.SecretsFound, 20\)/);
 });
 
@@ -303,7 +326,11 @@ test('Unity mega-world places all five secrets in each of the four biome coordin
   assert.match(factory, /CreateUnifiedSurvivalSecrets\(\)/);
   assert.match(pickup, /OnTriggerEnter\(Collider other\)/);
   assert.match(pickup, /paleciaki\.survival\.secret\.v1\./);
-  assert.match(pickup, /GameSession\.Current\.SecretsFound = Mathf\.Clamp\(GameSession\.Current\.SecretsFound \+ 1, 0, 20\)/);
+  assert.match(pickup, /GameSession\.Current\.SecretsFound = CountDiscovered\(\)/);
+  assert.match(pickup, /public static int CountDiscovered\(\)/);
+  assert.match(pickup, /GetCompletionKey\(mapId, definition\.Id\)/);
+  assert.match(pickup, /challengeCompleted/);
+  assert.match(pickup, /firstDiscovery/);
 });
 
 test('Unity Rabbit Hole and Necronomicon open separate touch-ready 2D encounters while Survival is paused', async () => {
@@ -311,8 +338,10 @@ test('Unity Rabbit Hole and Necronomicon open separate touch-ready 2D encounters
     read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalSecretPickup.cs'),
     read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalSecretEncounterController.cs'),
   ]);
-  assert.match(pickup, /SurvivalSecretEncounterController\.Open\(player, _definition\.Style\)/);
-  assert.match(encounter, /public static void Open\(PlayerController player, SurvivalSecretStyle style\)/);
+  assert.match(pickup, /SurvivalSecretEncounterController\.Open\(player, _definition\.Style, _mapId, _definition\.Id\)/);
+  assert.match(encounter, /public static void Open\(PlayerController player, SurvivalSecretStyle style,/);
+  assert.match(encounter, /WarehouseMapId mapId, string secretId/);
+  assert.match(encounter, /SurvivalSecretPickup\.MarkEncounterCompleted\(_sourceMapId, _sourceSecretId\)/);
   assert.match(encounter, /GameSession\.SetState\(GameFlowState\.LevelUp\)/);
   assert.match(encounter, /Time\.timeScale = 0f/);
   assert.match(encounter, /private void UpdateRabbitHole\(float dt\)/);
