@@ -130,10 +130,9 @@ namespace MaxFlix.Unity.Runtime
 
             if (_hordeSpawnQueue > 0 && _hordeSpawnTimer <= 0f && alive < cap)
             {
-                SurvivalDifficultyProfile difficulty = GetDifficultyProfile(_currentWave);
                 EnemyKind kind = EnemyArchetypeCatalog.ChooseSurvivalSpawnType(_currentWave, elapsed, Random.value);
                 float angle = _hordeStartAngle + (_hordeSpawned / (float)Mathf.Max(1, _hordeProfile.EnemyCount)) * Mathf.PI * 2f;
-                SpawnEnemy(kind, difficulty, angle, radius);
+                SpawnEnemy(kind, angle, radius);
                 _hordeSpawned++;
                 _hordeSpawnQueue--;
                 _hordeSpawnTimer = _hordeProfile.SpawnIntervalSeconds;
@@ -311,7 +310,7 @@ namespace MaxFlix.Unity.Runtime
             return profile;
         }
 
-        private void SpawnEnemy(EnemyKind kind, SurvivalDifficultyProfile difficulty, float angle, float radius)
+        private void SpawnEnemy(EnemyKind kind, float angle, float radius)
         {
             Vector3 position = GetSpawnPosition(angle, radius);
             SurvivalDifficultyProfile localDifficulty = GetDifficultyProfile(_currentWave, position);
