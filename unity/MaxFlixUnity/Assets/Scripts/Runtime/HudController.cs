@@ -417,13 +417,16 @@ namespace MaxFlix.Unity.Runtime
             int minutes = Mathf.FloorToInt(run.ElapsedSeconds / 60f);
             int seconds = Mathf.FloorToInt(run.ElapsedSeconds % 60f);
             string wave = run.Mode == GameMode.Survival ? "\nNajdalsza fala: " + Mathf.Max(1, run.HighestWave) : string.Empty;
+            string secretReport = run.Mode == GameMode.Survival
+                ? "\nSekrety odkryte: " + Mathf.Clamp(run.SecretsFound, 0, 20) + "/20"
+                : string.Empty;
             string damageReport = run.Mode == GameMode.Survival
                 ? "\n\n" + SurvivalDamageTracker.BuildSummary(5)
                 : string.Empty;
             string summary = "Czas: " + minutes.ToString("00") + ":" + seconds.ToString("00")
                 + "\nEliminacje: " + run.Kills + "    •    Bossowie: " + run.BossesDefeated
                 + "\nWynik: " + run.Score
-                + wave + "\nOperator: " + OperatorCatalog.Get(run.SelectedOperator).DisplayName
+                + wave + secretReport + "\nOperator: " + OperatorCatalog.Get(run.SelectedOperator).DisplayName
                 + damageReport;
             ShowModal("ZMIANA ZAKOŃCZONA", summary,
                 "ZAGRAJ PONOWNIE", RetryRun, "MENU GŁÓWNE", ReturnToMenu);
