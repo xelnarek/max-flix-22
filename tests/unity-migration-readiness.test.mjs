@@ -92,6 +92,17 @@ test('Unity operator support AI ignores defeated and stale targets', async () =>
   assert.match(kit, /unit\.PounceTarget\.IsDefeated/);
 });
 
+test('Unity run teardown invalidates cached enemy instances before the next session', async () => {
+  const [factory, enemy] = await Promise.all([
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs'),
+  ]);
+  assert.match(factory, /EnemyAgent\.InvalidateSpatialCache\(\)/);
+  assert.match(enemy, /public static void InvalidateSpatialCache\(\)/);
+  assert.match(enemy, /SeparationBuckets\.Clear\(\)/);
+  assert.match(enemy, /_nextSeparationRefreshTime = 0f/);
+});
+
 test('Unity run teardown clears persistent in-flight player and enemy projectiles', async () => {
   const [factory, playerShots, enemyShots] = await Promise.all([
     read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs'),
