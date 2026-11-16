@@ -8,6 +8,7 @@ import {
   applyEnemyRoleSecondaryMotion,
   clearEnemyRoleSecondaryMotion,
   getEnemyAnatomyProfile,
+  ENEMY_ROLE_MOTION_ACCENTS,
 } from '../src/enemyAnimationPolish.ts';
 
 function makeRig() {
@@ -154,4 +155,49 @@ test('all non-vehicle humanoid archetypes have anatomical tuning', () => {
   for (const type of ENEMY_ROLE_KIT_TYPES) {
     assert.ok(getEnemyAnatomyProfile(type), 'missing anatomy profile for ' + type);
   }
+});
+
+
+test('all humanoid enemy archetypes carry bounded and distinct role-motion accents', () => {
+  const expected = Object.keys(ENEMY_VISUAL_PROFILES)
+    .filter((type) => !['forklift', 'agv_robot', 'piorun_dron', 'pomazaniec'].includes(type))
+    .sort();
+  assert.deepEqual(Object.keys(ENEMY_ROLE_MOTION_ACCENTS).sort(), expected);
+  const signatures = new Set();
+  for (const [type, profile] of Object.entries(ENEMY_ROLE_MOTION_ACCENTS)) {
+    signatures.add(JSON.stringify(profile));
+    for (const value of Object.values(profile)) {
+      assert.ok(Number.isFinite(value), type + ' motion value must be finite');
+      assert.ok(Math.abs(value) <= 0.20, type + ' motion accent must remain controlled');
+    }
+  }
+  assert.equal(signatures.size, expected.length, 'every role needs a distinct motion signature');
+});
+
+test('beast and hazmat role kits expose a different authored silhouette form', () => {
+  const walczak = makeRig();
+  const mutant = makeRig();
+  const pip = makeRig();
+  const architect = makeRig();
+  const walczakKit = createEnemyRoleKit('walczak', walczak.root);
+  const mutantKit = createEnemyRoleKit('mutant_gamma_forklift', mutant.root);
+  const pipKit = createEnemyRoleKit('radioactive_pip', pip.root);
+  const architectKit = createEnemyRoleKit('architect', architect.root);
+  assert.equal(walczakKit.userData.roleForm, 'beast');
+  assert.equal(mutantKit.userData.roleForm, 'beast');
+  assert.equal(pipKit.userData.roleForm, 'hazmat');
+  assert.equal(architectKit.userData.roleForm, 'slim');
+  for (const kit of [walczakKit, mutantKit, pipKit, architectKit]) {
+    assert.equal(kit.userData.roleKitVersion, 2);
+  }
+});
+
+test('role accents measurably change head and torso motion for the same animation frame', () => {
+  const customer = makeRig();
+  const architect = makeRig();
+  applyEnemyRoleSecondaryMotion(customer.root, 'customer', 0.45, 1 / 30, 0, 'Idle');
+  applyEnemyRoleSecondaryMotion(architect.root, 'architect', 0.45, 1 / 30, 0, 'Idle');
+  const customerHead = customer.bones.get('mixamorigHead').quaternion;
+  const architectHead = architect.bones.get('mixamorigHead').quaternion;
+  assert.ok(customerHead.angleTo(architectHead) > 0.02);
 });

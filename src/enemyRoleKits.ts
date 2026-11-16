@@ -149,6 +149,44 @@ function body(groups:Record<Anchor,THREE.Group>,type:EnemyType,s:RoleSpec):void{
     bx(groups,'torso',s.accent,[0,.82,.235],[w*.45,.07,.018],[0,0,0],.35);
     for(const side of [-1,1])bx(groups,'torso',metal,[side*.28,.98,.06],[.18,.18,.20],[0,0,side*.18],.8);
   }
+  if(s.form==='slim'){
+    // Long, tapered coat fronts give office and sales roles a cleaner outline.
+    bx(groups,'torso',dark,[-w*.22,.60,.15],[w*.15,.40,.035],[0,0,-.08]);
+    bx(groups,'torso',dark,[w*.22,.60,.15],[w*.15,.40,.035],[0,0,.08]);
+    cn(groups,'torso',s.accent,[0,.88,.19],.055,.19,[Math.PI,0,0]);
+    tor(groups,'torso',metal,[0,.58,.19],.15,.008,[Math.PI/2,0,0]);
+  }
+  if(s.form==='beast'){
+    // Raised neck, sloped shoulders and dorsal mane break the human silhouette.
+    sp(groups,'torso',dark,[0,1.03,-.015],[w*.38,.22,d*.48]);
+    sp(groups,'torso',main,[-shoulder*.39,.96,-.005],[.22,.19,.22]);
+    sp(groups,'torso',main,[shoulder*.39,.96,-.005],[.22,.19,.22]);
+    for(let i=0;i<5;i++){
+      const x=(i-2)*.13;
+      cn(groups,'torso',i%2?dark:metal,[x,1.17,-.12],.075,.25,[0,0,(i-2)*-.18]);
+    }
+    for(const side of [-1,1]){
+      sp(groups,'legs',dark,[side*.17,.27,.08],[.145,.20,.17]);
+      cn(groups,'legs',metal,[side*.17,.37,.16],.055,.15,[0,0,side*.24]);
+    }
+  }
+  if(s.form==='hazmat'){
+    // Sealed neck ring, chest canister and warning panels distinguish the toxic suit.
+    tor(groups,'torso',metal,[0,1.02,.025],.22,.035,[Math.PI/2,0,0]);
+    bx(groups,'torso',dark,[0,.78,.235],[w*.64,.31,.045],[0,0,0],.32);
+    bx(groups,'torso',s.accent,[0,.83,.27],[w*.48,.055,.018],[0,0,0],.25);
+    for(const side of [-1,1]){
+      cy(groups,'torso',metal,[side*.17,.72,.27],.035,.035,.20,[0,0,side*.12],.7);
+      bx(groups,'torso',s.accent,[side*.29,.96,.20],[.055,.16,.025],[0,0,side*.12]);
+    }
+    const hose = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(.12,1.11,.18),
+      new THREE.Vector3(.22,1.02,.23),
+      new THREE.Vector3(.24,.88,.27),
+      new THREE.Vector3(.18,.78,.28),
+    ]);
+    part(groups,'torso',new THREE.TubeGeometry(hose,12,.018,6,false),metal,[0,0,0],[1,1,1],[0,0,0],.72);
+  }
   if(type==='zombie_pracownik'){
     for(let i=0;i<5;i++)bx(groups,'torso',0xc2c19b,[0,.88-i*.064,.205],[.38-i*.026,.027,.025],[0,0,i%2?.08:-.08]);
     bx(groups,'torso',0x41513b,[-.14,.87,.22],[.17,.25,.04],[0,0,-.42]);
@@ -443,7 +481,7 @@ function bake(type:EnemyType):THREE.Group|null{
     bx(groups,'rightArm',0x1e2a37,[.42,.69,.275],[.25,.42,.018],[0,0,-.12],.7);
   }
   source.updateMatrixWorld(true);
-  const root=new THREE.Group();root.name='enemy-role-kit-'+type;root.userData.enemyRole=type;root.userData.actorRoleSilhouette=true;
+  const root=new THREE.Group();root.name='enemy-role-kit-'+type;root.userData.enemyRole=type;root.userData.roleForm=spec.form;root.userData.roleKitVersion=2;root.userData.actorRoleSilhouette=true;
   for(const a of anchors){
     const parts:THREE.BufferGeometry[]=[];
     const sourceMeshes:THREE.Mesh[]=[];
@@ -496,7 +534,7 @@ export function createEnemyRoleKit(type:EnemyType,actorRoot:THREE.Group):THREE.G
     if(bone)bone.attach(attachment);else actorRoot.attach(attachment);
   }
   const handle=new THREE.Group();handle.name='enemy-role-kit-handle-'+type;handle.visible=false;
-  handle.userData.actorRoleSilhouette=true;handle.userData.enemyRole=type;actorRoot.add(handle);
+  handle.userData.actorRoleSilhouette=true;handle.userData.enemyRole=type;handle.userData.roleForm=template.userData.roleForm;handle.userData.roleKitVersion=2;actorRoot.add(handle);
   actorRoot.userData.enemyRoleKit=type;
   return handle;
 }

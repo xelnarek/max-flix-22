@@ -41,6 +41,49 @@ const ANATOMY: Readonly<Partial<Record<EnemyType, AnatomyProfile>>> = Object.fre
   walczak: { torsoWidth:1.31, torsoDepth:1.20, shoulderWidth:1.34, headScale:1.12, armBuild:1.26, legBuild:1.18 },
 });
 
+
+export interface EnemyRoleMotionAccent {
+  /** Neutral head angle; positive values create a recognisable role-specific attitude. */
+  readonly headTilt: number;
+  /** Amplitude of independent head tracking while the actor breathes or moves. */
+  readonly headLook: number;
+  /** Lateral torso movement layered over the source locomotion clip. */
+  readonly torsoSway: number;
+  /** Additional forward/back posture bias. */
+  readonly torsoLean: number;
+  /** Low-frequency chest breathing / mechanical pulse. */
+  readonly chestBreath: number;
+  /** Small asymmetry in the resting arm pose. */
+  readonly armAsymmetry: number;
+}
+
+/**
+ * Per-archetype motion accents prevent the shared source rigs from reading as
+ * palette swaps. The source clips still own the main gait and combat actions;
+ * these small additive offsets supply each role's idle attitude and weight.
+ */
+export const ENEMY_ROLE_MOTION_ACCENTS: Readonly<Record<EnemyType, EnemyRoleMotionAccent>> = Object.freeze({
+  customer: { headTilt: 0.035, headLook: 0.13, torsoSway: 0.060, torsoLean: 0.025, chestBreath: 0.020, armAsymmetry: 0.045 },
+  walczak: { headTilt: 0.105, headLook: 0.105, torsoSway: 0.074, torsoLean: -0.105, chestBreath: 0.050, armAsymmetry: 0.105 },
+  architect: { headTilt: -0.075, headLook: 0.17, torsoSway: 0.026, torsoLean: 0.055, chestBreath: 0.012, armAsymmetry: -0.055 },
+  inspector: { headTilt: -0.015, headLook: 0.075, torsoSway: 0.014, torsoLean: -0.025, chestBreath: 0.018, armAsymmetry: -0.012 },
+  handlowiec: { headTilt: 0.045, headLook: 0.12, torsoSway: 0.058, torsoLean: -0.018, chestBreath: 0.014, armAsymmetry: -0.035 },
+  monter: { headTilt: -0.025, headLook: 0.065, torsoSway: 0.025, torsoLean: -0.050, chestBreath: 0.035, armAsymmetry: -0.065 },
+  kurier: { headTilt: -0.010, headLook: 0.085, torsoSway: 0.048, torsoLean: -0.075, chestBreath: 0.028, armAsymmetry: 0.018 },
+  'przedstawiciel_włoski': { headTilt: 0.075, headLook: 0.16, torsoSway: 0.072, torsoLean: -0.015, chestBreath: 0.020, armAsymmetry: 0.055 },
+  sztaplar_szalony: { headTilt: -0.045, headLook: 0.075, torsoSway: 0.032, torsoLean: -0.105, chestBreath: 0.050, armAsymmetry: -0.085 },
+  krol_leto: { headTilt: 0.015, headLook: 0.075, torsoSway: 0.022, torsoLean: -0.085, chestBreath: 0.055, armAsymmetry: -0.085 },
+  pan_roman: { headTilt: 0.055, headLook: 0.105, torsoSway: 0.045, torsoLean: 0.005, chestBreath: 0.018, armAsymmetry: -0.025 },
+  serwisant: { headTilt: -0.035, headLook: 0.18, torsoSway: 0.020, torsoLean: -0.015, chestBreath: 0.014, armAsymmetry: 0.025 },
+  bosman_krakow: { headTilt: -0.005, headLook: 0.060, torsoSway: 0.026, torsoLean: -0.065, chestBreath: 0.045, armAsymmetry: -0.075 },
+  zombie_pracownik: { headTilt: 0.145, headLook: 0.105, torsoSway: 0.085, torsoLean: 0.095, chestBreath: 0.030, armAsymmetry: 0.145 },
+  sebix_m: { headTilt: 0.055, headLook: 0.115, torsoSway: 0.082, torsoLean: -0.045, chestBreath: 0.030, armAsymmetry: 0.075 },
+  mutant_gamma_forklift: { headTilt: 0.085, headLook: 0.095, torsoSway: 0.090, torsoLean: -0.125, chestBreath: 0.065, armAsymmetry: 0.135 },
+  radioactive_pip: { headTilt: 0.060, headLook: 0.155, torsoSway: 0.058, torsoLean: 0.045, chestBreath: 0.050, armAsymmetry: 0.045 },
+  cyber_salesman: { headTilt: -0.005, headLook: 0.105, torsoSway: 0.018, torsoLean: -0.020, chestBreath: 0.035, armAsymmetry: 0.012 },
+  elite_walczak_guard: { headTilt: -0.020, headLook: 0.045, torsoSway: 0.015, torsoLean: -0.070, chestBreath: 0.028, armAsymmetry: -0.095 },
+});
+
 interface RigBones {
   hips: THREE.Bone | null;
   spine: THREE.Bone | null;
@@ -204,6 +247,7 @@ export function applyEnemyRoleSecondaryMotion(
   const counterWave = Math.sin(nextPhase + Math.PI);
   const activity = isIdle ? 0.13 : clamp(speed / 2.3, 0.22, 1.15);
   const asymmetry = type === 'zombie_pracownik' ? 1 : 0;
+  const roleAccent = ENEMY_ROLE_MOTION_ACCENTS[type];
 
   const applied: AppliedOffset[] = [];
   // Pelvis and chest counter-rotation sells weight transfer without changing root physics.
@@ -249,6 +293,24 @@ export function applyEnemyRoleSecondaryMotion(
     rotate(bones.chest, AXIS_Y, Math.sin(nextPhase * 0.4) * 0.045 * activity, applied);
     rotate(bones.head, AXIS_Y, Math.sin(nextPhase * 0.27 + 1) * 0.038 * activity, applied);
   }
+
+  // These offsets are intentionally visible at normal gameplay distance but
+  // remain subordinate to authored clips. Different frequencies keep each
+  // role from sharing the same mechanical head-bob and shoulder rhythm.
+  const roleBreath = Math.sin(nextPhase * 0.47 + stablePhase(type) * 0.35);
+  const roleSway = Math.sin(nextPhase * 0.79 + stablePhase(type));
+  const roleLook = Math.sin(nextPhase * 0.29 + stablePhase(type) * 1.7);
+  const idleWeight = isIdle ? 1 : clamp(speed / 2.3, 0.28, 0.95);
+  const roleWeight = isIdle ? 1 : idleWeight;
+  rotate(bones.spine, AXIS_X, roleAccent.torsoLean * roleWeight, applied);
+  rotate(bones.spine, AXIS_Z, roleSway * roleAccent.torsoSway * roleWeight, applied);
+  rotate(bones.chest, AXIS_X, roleBreath * roleAccent.chestBreath * (0.55 + activity), applied);
+  rotate(bones.head, AXIS_Z, roleAccent.headTilt * roleWeight +
+    roleSway * roleAccent.headTilt * 0.20 * roleWeight, applied);
+  rotate(bones.head, AXIS_Y, roleLook * roleAccent.headLook * roleWeight, applied);
+  rotate(bones.leftUpperArm, AXIS_Z, roleAccent.armAsymmetry * roleWeight, applied);
+  rotate(bones.rightUpperArm, AXIS_Z, -roleAccent.armAsymmetry * 0.42 * roleWeight, applied);
+
   previousOffsets.set(root, applied);
   return nextPhase;
 }
