@@ -74,18 +74,20 @@ export function loadGobkitModel(id: GobkitModelId): Promise<LoadedGobkitModel> {
 
 export function cloneGobkitModel(gltf: LoadedGobkitModel): THREE.Group {
   const root = cloneSkinnedScene(gltf.scene) as THREE.Group;
-  // Skeletons and scene nodes are cloned per actor. Immutable geometry and
-  // texture maps stay shared, while materials are cloned for actor-local tuning
-  // and deterministic cleanup.
+  // Skeletons and scene nodes are unique per actor. Immutable geometry,
+  // textures and base materials stay shared; role equipment and hit effects
+  // use their own materials and therefore remain actor-specific.
   root.traverse((object) => {
     if (!(object instanceof THREE.Mesh)) return;
-    // Skinned actors only animate bones; geometry stays immutable and can be
-    // shared across clones. Per-actor materials remain private for cleanup/tuning.
     object.userData.gobkitAsset = true;
     object.userData.gobkitSharedGeometry = true;
+    const markShared = (material: THREE.Material): THREE.Material => {
+      material.userData.gobkitSharedMaterial = true;
+      return material;
+    };
     object.material = Array.isArray(object.material)
-      ? object.material.map((material) => material.clone())
-      : object.material.clone();
+      ? object.material.map(markShared)
+      : markShared(object.material);
   });
   return root;
 }

@@ -497,10 +497,30 @@ test('enemy archetypes share only the two documented source-rig pairs, never sta
     .map(([model, enemies]) => ({ model, enemies: enemies.sort() }))
     .sort((a, b) => a.model.localeCompare(b.model));
   assert.deepEqual(shared, [
-    { model: 'bloodironjuggernaut', enemies: ['krol_leto', 'mutant_gamma_forklift'] },
     { model: 'bloodirongrunt', enemies: ['elite_walczak_guard', 'sebix_m'] },
+    { model: 'bloodironjuggernaut', enemies: ['krol_leto', 'mutant_gamma_forklift'] },
   ]);
   const game = await read('../src/game.ts');
   assert.match(game, /this\.removeAttachedActorVisuals\(group\);[\s\S]{0,180}root\.visible = true/);
   assert.match(game, /disposeActorOwnedRenderResources\(mesh\)/);
+});
+
+test('Gobkit actor clones keep unique skeleton roots while sharing immutable source geometry and materials', async () => {
+  const { cloneGobkitModel } = await import('../src/gobkitAssets.ts');
+  const source = new THREE.Group();
+  const geometry = new THREE.BoxGeometry();
+  const material = new THREE.MeshStandardMaterial();
+  source.add(new THREE.Mesh(geometry, material));
+  const first = cloneGobkitModel({ scene: source });
+  const second = cloneGobkitModel({ scene: source });
+  const firstMesh = first.children[0];
+  const secondMesh = second.children[0];
+
+  assert.notEqual(first, second);
+  assert.notEqual(firstMesh, secondMesh);
+  assert.equal(firstMesh.geometry, geometry);
+  assert.equal(secondMesh.geometry, geometry);
+  assert.equal(firstMesh.material, material);
+  assert.equal(secondMesh.material, material);
+  assert.equal(material.userData.gobkitSharedMaterial, true);
 });

@@ -1539,8 +1539,8 @@ export class PaleciakiGameEngine {
     track.mixer.stopAllAction();
     track.mixer.uncacheRoot(track.root);
     track.root.removeFromParent();
-    // Each actor owns cloned geometry/materials; maps are shared by the
-    // cached GLTF and deliberately remain alive for the next actor.
+    // Skeletons are actor-local, while cached rig geometry/materials are shared.
+    // Release only unshared (e.g. generated MakeHuman or local override) resources.
     track.root.traverse((object) => {
       if (!(object instanceof THREE.Mesh)) return;
       if (!track.sharedGeometry && object.userData.makeHumanSharedGeometry !== true &&
