@@ -360,6 +360,8 @@ export function createCthulhuBossModel(): CthulhuBossModel {
   group.userData.cthulhuTentacles = tentacles;
   group.userData.cthulhuWings = wings;
   group.userData.cthulhuAura = aura;
+  group.userData.cthulhuHead = head;
+  group.userData.cthulhuSigil = chestSigil;
   group.userData.cthulhuTorso = torso;
   group.userData.cthulhuPelvis = pelvis;
   group.userData.cthulhuArmL = armL;
