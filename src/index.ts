@@ -36,6 +36,7 @@ import {
 } from './survivalAchievements.ts';
 import { SURVIVAL_MAPS, type SurvivalMapId } from './survivalMaps.ts';
 import { launchOniricPlatformer } from './oniricPlatformer.ts';
+import { launchCthulhuRetroArena } from './cthulhuRetroArena.ts';
 import { getMenuTabIndexForKey } from './menuTabNavigation.ts';
 import { readSurvivalMapPreference, writeSurvivalMapPreference } from './survivalMapPreference.ts';
 import { getVisibilityPauseAction } from './visibilityPause.ts';
@@ -1665,6 +1666,28 @@ class PaleciakiScene extends xb.Script {
                     'POWRÓT Z NORKI',
                     'SEKRET ODKRYTY',
                     'Nie udało się zebrać wszystkich zegarków. Rozgrywka magazynowa jest gotowa do wznowienia.',
+                  );
+                }
+                if (activeEngine.getGameState() === 'paused') activeEngine.togglePause();
+              },
+            });
+          }
+
+          if (secretId === 'necronomicon') {
+            const engine = this.engine;
+            if (engine?.getGameState() === 'playing') engine.togglePause();
+
+            launchCthulhuRetroArena({
+              onComplete: (result) => {
+                const activeEngine = this.engine;
+                if (!activeEngine) return;
+                if (result.won) {
+                  activeEngine.grantCthulhuRetroReward(6000);
+                } else {
+                  showSurvivalAnnouncement(
+                    'POWRÓT Z R’LYEH',
+                    'NECRONOMICON MILKNIE',
+                    'Tym razem Cthulhu nie został pokonany. Możesz wrócić do magazynu i kontynuować rozgrywkę.',
                   );
                 }
                 if (activeEngine.getGameState() === 'paused') activeEngine.togglePause();

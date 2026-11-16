@@ -48,19 +48,23 @@ test('the Cthulhu model is a distinct articulated multi-part boss with wings and
   assert.ok(meshNames.length >= 48, 'the boss should be more than a simple recoloured humanoid');
 });
 
-test('Necronomicon secrets summon a bespoke Cthulhu using the existing boss AI contract', async () => {
-  const [game, maps] = await Promise.all([
+test('Necronomicon transitions out of the warehouse into its own retro R’lyeh boss arena', async () => {
+  const [game, index, maps, arena] = await Promise.all([
     readFile(new URL('../src/game.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/survivalMaps.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/cthulhuRetroArena.ts', import.meta.url), 'utf8'),
   ]);
   assert.match(maps, /'necronomicon'/);
   assert.match(game, /if \(secret\.id === 'necronomicon'\) this\.summonCthulhu\(secret\.mesh\.position\.x, secret\.mesh\.position\.z\)/);
   assert.match(game, /private summonCthulhu\(bookX: number, bookZ: number\): void/);
-  assert.match(game, /private addCthulhuBossEnemy\(id: string, x: number, z: number\)/);
-  assert.match(game, /const built = createCthulhuBossModel\(\)/);
-  assert.match(game, /name: 'CTHULHU • PAN ZATOPIONEGO R’LYEH'/);
-  assert.match(game, /this\.spawnCthulhuArrivalRitual\(spawnX, spawnZ\)/);
-  assert.match(game, /cthulhuSecretSummoned/);
+  assert.match(game, /Necronomicon no longer drops a boss into the active warehouse map/);
+  assert.doesNotMatch(game.slice(game.indexOf('  private summonCthulhu('), game.indexOf('  private spawnCthulhuArrivalRitual(')), /addCthulhuBossEnemy/);
+  assert.match(index, /launchCthulhuRetroArena/);
+  assert.match(index, /secretId === 'necronomicon'/);
+  assert.match(index, /grantCthulhuRetroReward\(6000\)/);
+  assert.match(arena, /ZATOPIONE MIASTO R’LYEH/);
+  assert.match(arena, /createCthulhuRetroState/);
   assert.deepEqual(enemyTypeNames, ['walczak']);
 });
 

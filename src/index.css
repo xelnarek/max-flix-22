@@ -7745,3 +7745,254 @@ body #touch-controls.manual-aim-mode:not(.hidden) .pvp-control-guide {
     min-height: 48px !important;
   }
 }
+
+
+/* Necronomicon secret: independent pixel-art boss map, separate from Survival. */
+.cthulhu-retro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  overflow-y: auto;
+  isolation: isolate;
+  pointer-events: auto;
+  overscroll-behavior: contain;
+  background:
+    radial-gradient(ellipse at 78% 18%, rgba(67, 25, 88, .54), transparent 36%),
+    radial-gradient(ellipse at 18% 78%, rgba(20, 142, 126, .16), transparent 42%),
+    #050711;
+  color: #e8f5e8;
+  font-family: "JetBrains Mono", "Courier New", monospace;
+}
+.cthulhu-retro-shell {
+  width: min(1120px, 100%);
+  max-height: calc(100dvh - 16px);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  gap: 9px;
+  padding: clamp(8px, 1.4vw, 16px);
+  overflow-y: auto;
+  border: 2px solid #4a526e;
+  border-radius: 5px;
+  background:
+    linear-gradient(130deg, rgba(24, 20, 45, .98), rgba(6, 20, 29, .98)),
+    #0b1120;
+  box-shadow: 0 0 0 4px #111225, 0 0 46px rgba(74, 231, 196, .14), 12px 12px 0 rgba(0,0,0,.35);
+}
+.cthulhu-retro-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid rgba(115, 241, 209, .30);
+  padding-bottom: 7px;
+}
+.cthulhu-retro-kicker {
+  color: #e66ad0;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .16em;
+}
+.cthulhu-retro-header h2 {
+  margin: 3px 0;
+  color: #8cf5d7;
+  font-size: clamp(15px, 2.8vw, 25px);
+  font-weight: 1000;
+  line-height: 1.1;
+  letter-spacing: .045em;
+  text-shadow: 2px 2px 0 #3d1f55, 0 0 14px rgba(85, 244, 208, .25);
+}
+.cthulhu-retro-header p {
+  margin: 0;
+  color: #a8a4c4;
+  font-size: 9px;
+  letter-spacing: .08em;
+}
+.cthulhu-retro-exit,
+.cthulhu-retro-controls button,
+.cthulhu-retro-result button {
+  min-height: 43px;
+  padding: 8px 12px;
+  border: 2px solid #8a669d;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #352345, #21182f);
+  color: #fff1fa;
+  font: 900 10px/1.2 "JetBrains Mono", "Courier New", monospace;
+  letter-spacing: .04em;
+  box-shadow: 3px 3px 0 #080a13;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.cthulhu-retro-exit:active,
+.cthulhu-retro-controls button.is-pressed {
+  transform: translate(2px, 2px);
+  filter: brightness(1.32);
+  box-shadow: 1px 1px 0 #080a13;
+}
+.cthulhu-retro-hud {
+  display: grid;
+  grid-template-columns: minmax(105px, .7fr) minmax(150px, 1.5fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+.cthulhu-retro-hud > div {
+  display: grid;
+  grid-template-columns: auto minmax(42px, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  color: #b9c9d4;
+  font-size: 8px;
+  font-weight: 900;
+}
+.cthulhu-retro-bar {
+  height: 9px;
+  overflow: hidden;
+  border: 1px solid #5b6679;
+  background: #101422;
+}
+.cthulhu-retro-bar i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #41b99b, #a6f4c7);
+  box-shadow: 0 0 10px rgba(89, 245, 203, .5);
+  transition: width .08s linear;
+}
+.cthulhu-retro-boss-hp .cthulhu-retro-bar i {
+  background: linear-gradient(90deg, #853c91, #f064bd, #ffc1d9);
+  box-shadow: 0 0 10px rgba(236, 92, 193, .56);
+}
+.cthulhu-retro-phase {
+  color: #8cf5d7;
+  font-size: 9px;
+  white-space: nowrap;
+}
+.cthulhu-retro-phase.is-phase-two { color: #ff84d0; text-shadow: 0 0 9px rgba(255, 84, 206, .45); }
+.cthulhu-retro-stage {
+  position: relative;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border: 2px solid #565274;
+  border-radius: 3px;
+  background: #080a19;
+  box-shadow: inset 0 0 24px rgba(85, 239, 205, .12), 0 6px 18px rgba(0,0,0,.42);
+  isolation: isolate;
+}
+.cthulhu-retro-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 58dvh;
+  aspect-ratio: 16 / 9;
+  image-rendering: pixelated;
+  touch-action: none;
+}
+.cthulhu-retro-controls {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.cthulhu-retro-move,
+.cthulhu-retro-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.cthulhu-retro-controls button {
+  min-width: 62px;
+  min-height: 54px;
+  font-size: 12px;
+}
+.cthulhu-retro-controls .cthulhu-retro-fire {
+  min-width: 112px;
+  border-color: #61ecc7;
+  background: linear-gradient(180deg, #176a63, #103d4a);
+  color: #e5fff6;
+  font-size: 13px;
+  text-shadow: 1px 1px #062622;
+}
+.cthulhu-retro-footer {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+  color: #9291b4;
+  font-size: 8px;
+  font-weight: 700;
+}
+.cthulhu-retro-result[hidden] { display: none !important; }
+.cthulhu-retro-result {
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  padding: 18px;
+  background: rgba(4, 7, 19, .92);
+  text-align: center;
+}
+.cthulhu-retro-result strong {
+  color: #9af9d8;
+  font-size: clamp(17px, 4vw, 29px);
+  font-weight: 1000;
+  text-shadow: 3px 3px 0 #4b205d;
+}
+.cthulhu-retro-result span {
+  max-width: 560px;
+  color: #ddd1ea;
+  font-size: 11px;
+  line-height: 1.55;
+}
+.cthulhu-retro-result > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 9px;
+}
+.cthulhu-retro-result button[data-action="return"] {
+  border-color: #6de6bd;
+  background: linear-gradient(180deg, #176a63, #103d4a);
+}
+@media (max-width: 640px) {
+  .cthulhu-retro-overlay { align-items: stretch; padding: max(4px, env(safe-area-inset-top)) 4px max(4px, env(safe-area-inset-bottom)); }
+  .cthulhu-retro-shell { width: 100%; max-height: 100%; gap: 6px; padding: 7px; }
+  .cthulhu-retro-header { align-items: flex-start; }
+  .cthulhu-retro-header h2 { max-width: 230px; font-size: clamp(13px, 4vw, 18px); }
+  .cthulhu-retro-header p { font-size: 7px; }
+  .cthulhu-retro-kicker { font-size: 7px; }
+  .cthulhu-retro-exit { min-height: 38px; max-width: 110px; padding: 6px; font-size: 8px; }
+  .cthulhu-retro-hud { grid-template-columns: 1fr 1.25fr; gap: 5px 8px; }
+  .cthulhu-retro-hud > div { grid-template-columns: auto minmax(32px, 1fr) auto; gap: 4px; font-size: 7px; }
+  .cthulhu-retro-phase { grid-column: 1 / -1; font-size: 8px; }
+  .cthulhu-retro-canvas { max-height: 47dvh; }
+  .cthulhu-retro-controls { gap: 6px; }
+  .cthulhu-retro-move,
+  .cthulhu-retro-actions { gap: 6px; }
+  .cthulhu-retro-controls button { min-width: clamp(46px, 13vw, 61px); min-height: 52px; padding: 6px; font-size: 9px; }
+  .cthulhu-retro-controls .cthulhu-retro-fire { min-width: clamp(78px, 23vw, 110px); font-size: 11px; }
+  .cthulhu-retro-footer { font-size: 7px; }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+  .cthulhu-retro-shell { grid-template-rows: auto auto minmax(120px, 1fr) auto; max-height: calc(100dvh - 8px); gap: 4px; padding: 5px; }
+  .cthulhu-retro-header p,
+  .cthulhu-retro-footer { display: none; }
+  .cthulhu-retro-header h2 { font-size: 15px; }
+  .cthulhu-retro-canvas { max-height: 47dvh; }
+  .cthulhu-retro-controls button { min-height: 42px; }
+}

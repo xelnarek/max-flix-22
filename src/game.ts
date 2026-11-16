@@ -5110,44 +5110,19 @@ export class PaleciakiGameEngine {
     if (this.gameMode !== 'survival' || this.cthulhuSecretSummoned) return;
     this.cthulhuSecretSummoned = true;
 
-    const forwardX = Math.sin(this.playerRot);
-    const forwardZ = Math.cos(this.playerRot);
-    const spawnX = THREE.MathUtils.clamp(
-      this.playerPos.x + forwardX * 12.5,
-      this.levelBounds.minX + 4.5,
-      this.levelBounds.maxX - 4.5,
-    );
-    const spawnZ = THREE.MathUtils.clamp(
-      this.playerPos.z + forwardZ * 12.5,
-      this.levelBounds.minZ + 4.5,
-      this.levelBounds.maxZ - 4.5,
-    );
-    this.spawnNecronomiconOpeningEffect(bookX, bookZ);
-    this.spawnCthulhuArrivalRitual(spawnX, spawnZ);
-    const id = 'necronomicon_cthulhu_' + Math.floor(performance.now());
-    this.addCthulhuBossEnemy(id, spawnX, spawnZ);
-    const boss = this.enemies[this.enemies.length - 1];
-    if (boss?.mesh) {
-      boss.mesh.rotation.y = Math.atan2(this.playerPos.x - spawnX, this.playerPos.z - spawnZ);
-    }
-
+    // Necronomicon no longer drops a boss into the active warehouse map.
+    // The secret transition is handled by the isolated R'lyeh retro arena UI.
+    // Keep the pickup feedback at the relic position; the main simulation is
+    // paused immediately by the secret callback before the dedicated stage opens.
     this.callbacks.onSurvivalAnnouncement?.(
       'ZAKAZANY TEKST ZOSTAŁ OTWARTY',
-      'CTHULHU • PAN ZATOPIONEGO R’LYEH',
-      'Z kart Necronomiconu sączy się zimna, zielona poświata. Pod posadzką budzi się coś starszego od ludzkiej pamięci. Przetrwaj falę macek, odczytuj znaki ostrzegawcze i uderzaj, gdy pradawny bóg odsłoni rdzeń.',
+      'PRZEJŚCIE DO ZATOPIONEGO R’LYEH',
+      'Necronomicon rozrywa ekran. Magazyn znika, a operator zostaje przeniesiony do osobnego, pikselowego miasta pod czarną wodą.',
     );
-    this.callbacks.onPerkDropBanner?.(
-      'NIE CZYTAJ TEGO NA GŁOS',
-      '☠',
-      'CTHULHU POWSTAJE. Omiń szeroki krąg fali uderzeniowej, a z podłużnego korytarza zejść w bok lub wyskocz. W drugiej fazie łączy oba ataki szybciej.',
-      '#42e8c4',
-    );
-    this.emitFloatingToast('☠ NECRONOMICON OTWARTY • CTHULHU NADCHODZI!', this.playerPos.x, this.playerPos.y + 2.0, this.playerPos.z, 'damage');
-    this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.4, this.playerPos.z, 0x28e6c1);
+    this.emitFloatingToast('☠ NECRONOMICON OTWARTY • R’LYEH WZYWA!', bookX, 1.8, bookZ, 'damage');
     this.triggerBloomPulse(0.78);
-    this.triggerScreenShake(0.85, 0.62);
-    this.triggerHitStop(0.12);
-    sound.playSirens();
+    this.triggerScreenShake(0.62, 0.48);
+    this.triggerHitStop(0.10);
     sound.playEasterEgg();
   }
 
@@ -6409,6 +6384,23 @@ export class PaleciakiGameEngine {
     this.callbacks.onHpUpdate(this.hp, this.maxHp);
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
     this.emitFloatingToast('⌚ NAGRODA Z NORKI: +' + bonus + ' PKT • +1 ŻYCIE', this.playerPos.x, this.playerPos.y + 1.6, this.playerPos.z, 'easter-egg');
+    sound.playEasterEgg();
+  }
+
+  public grantCthulhuRetroReward(points = 6000) {
+    if (this.gameMode !== 'survival') return;
+    const bonus = THREE.MathUtils.clamp(Math.round(Number.isFinite(points) ? points : 0), 0, 10000);
+    this.score += bonus;
+    this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+    this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+    this.callbacks.onSurvivalAnnouncement?.(
+      'R’LYEH ZAPADŁO SIĘ POD FALE',
+      'CTHULHU POKONANY • +' + bonus.toLocaleString('pl-PL') + ' PKT',
+      'Rdzeń pradawnego boga zgasł. Zatopione miasto rozsypało się w zielone piksele, a Necronomicon zamknął się sam.',
+    );
+    this.emitFloatingToast('✦ PRAWDZIWY SEKRET • +' + bonus.toLocaleString('pl-PL') + ' PKT', this.playerPos.x, this.playerPos.y + 2.1, this.playerPos.z, 'combo');
+    this.triggerScreenShake(0.72, 0.52);
+    this.triggerBloomPulse(0.72);
     sound.playEasterEgg();
   }
 
