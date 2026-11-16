@@ -1363,19 +1363,23 @@ test('the menu exposes a readable achievement archive and selected map/secret HU
 });
 
 
-test('biome lighting blends smoothly and enemy spawn modifiers use the actual quadrant', async () => {
-  const [game, maps, layout] = await Promise.all([
-    read('../src/game.ts'), read('../src/survivalMaps.ts'), read('../src/survivalWorldLayout.ts')
+test('biome ambience and combat modifiers blend continuously through two-way and four-way seams', async () => {
+  const [game, maps, layout, blend] = await Promise.all([
+    read('../src/game.ts'), read('../src/survivalMaps.ts'), read('../src/survivalWorldLayout.ts'),
+    read('../src/survivalWorldBlend.ts')
   ]);
-  assert.match(game, /private beginSurvivalBiomeLightingTransition\(mapId: SurvivalMapId\)/);
-  assert.match(game, /duration: 4\.5/);
-  assert.match(game, /this\.updateSurvivalBiome\(simDt\)/);
-  assert.match(game, /getSurvivalBiomeIdAtPosition\(x, z, this\.survivalMapId\)/);
-  assert.match(game, /enemy\.survivalXpMultiplier = Math\.min\(1\.8, mapTuned\.xpMultiplier \* waveXpMultiplier\)/);
-  assert.match(game, /bosses receive the map trade-off as well/);
-  assert.match(maps, /title: 'SZYBKI PRZEŁADUNEK'/);
-  assert.match(maps, /title: 'ZMIANA -18°C'/);
+  assert.match(game, /getSurvivalWorldBiomeBlendAtPosition\(this\.playerPos\.x, this\.playerPos\.z\)/);
+  assert.match(game, /getSurvivalWorldLightingProfile\(blend\.weights\)/);
+  assert.match(game, /getSurvivalWorldBackgroundColor\(blend\.weights\)/);
+  assert.match(game, /1 - Math\.exp\(-Math\.max\(0, Math\.min\(dt, 0\.1\)\) \* 3\.4\)/);
+  assert.match(game, /getSurvivalBiomeIdAtPosition\(this\.playerPos\.x, this\.playerPos\.z, this\.survivalMapId\)/);
+  assert.match(game, /applySurvivalWorldCombatModifier\([\s\S]*?x,[\s\S]*?z/);
+  assert.match(game, /bossMapTuned = applySurvivalWorldCombatModifier/);
+  assert.match(maps, /export function applySurvivalWorldCombatModifier/);
+  assert.match(blend, /warehouse_b4: \(1 - eastFactor\) \* \(1 - southFactor\)/);
+  assert.match(blend, /junctionInfluence: xBoundaryInfluence \* zBoundaryInfluence/);
   assert.match(layout, /SURVIVAL_WORLD_BIOME_HYSTERESIS_METERS = 4/);
+  assert.doesNotMatch(game, /survivalBiomeLightingTransition|beginSurvivalBiomeLightingTransition/);
 });
 
 

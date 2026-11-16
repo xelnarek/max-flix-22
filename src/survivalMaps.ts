@@ -1,3 +1,5 @@
+import { getSurvivalWorldBiomeBlendAtPosition } from './survivalWorldBlend.ts';
+
 export type SurvivalMapId = 'warehouse_b4' | 'container_terminal' | 'cold_storage' | 'night_sorting';
 export type SurvivalSecretStyle = 'wz' | 'cassette' | 'capybara' | 'rabbit_hole' | 'necronomicon';
 
@@ -194,5 +196,31 @@ export function applySurvivalMapCombatModifier(
     maxHp: Math.max(1, Math.ceil(baseHp * healthMultiplier)),
     speed: Math.max(0.1, baseSpeed * speedMultiplier),
     xpMultiplier,
+  };
+}
+
+
+/** Weighted biome imprint for enemies that spawn inside an overlap region. */
+export function applySurvivalWorldCombatModifier(
+  stats: { maxHp: number; speed: number },
+  x: number,
+  z: number,
+): { maxHp: number; speed: number; xpMultiplier: number } {
+  const blend = getSurvivalWorldBiomeBlendAtPosition(x, z);
+  const healthMultiplier = SURVIVAL_MAP_IDS.reduce(
+    (sum, id) => sum + SURVIVAL_MAPS[id].combatModifier.healthMultiplier * blend.weights[id], 0,
+  );
+  const speedMultiplier = SURVIVAL_MAP_IDS.reduce(
+    (sum, id) => sum + SURVIVAL_MAPS[id].combatModifier.speedMultiplier * blend.weights[id], 0,
+  );
+  const xpMultiplier = SURVIVAL_MAP_IDS.reduce(
+    (sum, id) => sum + SURVIVAL_MAPS[id].combatModifier.xpMultiplier * blend.weights[id], 0,
+  );
+  const baseHp = Number.isFinite(stats.maxHp) ? Math.max(1, stats.maxHp) : 1;
+  const baseSpeed = Number.isFinite(stats.speed) ? Math.max(0.1, stats.speed) : 0.1;
+  return {
+    maxHp: Math.max(1, Math.ceil(baseHp * Math.min(1.4, Math.max(0.8, healthMultiplier)))),
+    speed: Math.max(0.1, baseSpeed * Math.min(1.25, Math.max(0.75, speedMultiplier))),
+    xpMultiplier: Math.min(1.5, Math.max(1, xpMultiplier)),
   };
 }
