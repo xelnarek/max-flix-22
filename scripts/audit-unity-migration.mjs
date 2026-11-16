@@ -13,7 +13,7 @@ function fail(message) {
 function enumMembers(source, enumName) {
   const block = source.match(new RegExp('public\\s+enum\\s+' + enumName + '\\s*\\{([\\s\\S]*?)\\}'));
   if (!block) throw new Error('Missing C# enum ' + enumName);
-  return [...block[1].matchAll(/^\\s*([A-Za-z][A-Za-z0-9_]*)\\s*=\\s*\\d+/gm)].map((match) => match[1]);
+  return [...block[1].matchAll(/^\s*([A-Za-z][A-Za-z0-9_]*)\s*=\s*\d+/gm)].map((match) => match[1]);
 }
 
 function typeUnionMembers(source, typeName) {
@@ -24,7 +24,7 @@ function typeUnionMembers(source, typeName) {
 
 function sourceMapFloor(source, mapId) {
   const block = source.match(new RegExp('\\b' + mapId + ':\\s*\\{([\\s\\S]*?)\\n  \\},'));
-  const value = block?.[1].match(/floorColor:\\s*(0x[0-9a-f]+)/i)?.[1];
+  const value = block?.[1].match(/floorColor:\s*(0x[0-9a-f]+)/i)?.[1];
   if (!value) throw new Error('Missing source floor colour for ' + mapId);
   return value.toLowerCase();
 }
@@ -34,7 +34,7 @@ function unityMapFloor(source, enumId) {
   const start = source.indexOf(marker);
   if (start < 0) throw new Error('Missing Unity map ' + enumId);
   const block = source.slice(start, start + 1800);
-  const value = block.match(/FloorColor\\s*=\\s*Hex\\((0x[0-9a-f]+)\\)/i)?.[1];
+  const value = block.match(/FloorColor\s*=\s*Hex\((0x[0-9a-f]+)\)/i)?.[1];
   if (!value) throw new Error('Missing Unity floor colour for ' + enumId);
   return value.toLowerCase();
 }
@@ -45,7 +45,6 @@ try {
     manifestText,
     setup,
     domain,
-    operatorCatalog,
     enemyCatalog,
     weaponCatalog,
     contentCatalog,
@@ -62,7 +61,6 @@ try {
     read('unity/MaxFlixUnity/Packages/manifest.json'),
     read('unity/MaxFlixUnity/Assets/Editor/UnityProjectSetup.cs'),
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/GameDomain.cs'),
-    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorCatalog.cs'),
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyArchetypeCatalog.cs'),
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWeaponCatalog.cs'),
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/GameContentCatalog.cs'),
@@ -89,7 +87,7 @@ try {
   }
 
   const operatorIds = typeUnionMembers(sourceTypes, 'CharacterId');
-  const unityOperatorIds = enumMembers(domain, 'OperatorId').map((id) => id.toLowerCase());
+  const unityOperatorIds = enumMembers(domain, 'OperatorId');
   if (operatorIds.length !== 5 || unityOperatorIds.length !== 5) fail('Expected five stable operators on both sides.');
   if (operatorIds.some((id) => !sourceCharacters.includes('  ' + id + ': {'))) fail('A CharacterId has no source character definition.');
 
@@ -101,14 +99,16 @@ try {
   const unityPerkIds = enumMembers(domain, 'PerkKind');
   if (perkIds.length !== 15 || unityPerkIds.length !== 15) fail('Expected 15 stable perk IDs on both sides.');
 
-  const sourceMapIds = [...sourceMaps.match(/SURVIVAL_MAP_IDS[\\s\\S]*?=\\s*\\[([\\s\\S]*?)\\]/)?.[1].matchAll(/'([^']+)'/g) ?? []]
-    .map((match) => match[1]);
+  const sourceMapMatch = sourceMaps.match(/SURVIVAL_MAP_IDS[\s\S]*?=\s*\[([\s\S]*?)\]/);
+  const sourceMapIds = sourceMapMatch
+    ? [...sourceMapMatch[1].matchAll(/'([^']+)'/g)].map((match) => match[1])
+    : [];
   const unityMapIds = enumMembers(domain, 'WarehouseMapId');
   if (sourceMapIds.length !== 4 || unityMapIds.length !== 4) fail('Expected four map IDs on both sides.');
 
   const unityWeaponIds = enumMembers(domain, 'SurvivalWeaponKind');
-  const weaponEntries = [...weaponCatalog.matchAll(/Make\\(SurvivalWeaponKind\\./g)].length;
-  const contentWeaponEntries = [...contentCatalog.matchAll(/Weapon\\(SurvivalWeaponKind\\./g)].length;
+  const weaponEntries = [...weaponCatalog.matchAll(/Make\(SurvivalWeaponKind\./g)].length;
+  const contentWeaponEntries = [...contentCatalog.matchAll(/Weapon\(SurvivalWeaponKind\./g)].length;
   if (unityWeaponIds.length !== 12 || weaponEntries !== 12 || contentWeaponEntries !== 12) {
     fail('Unity must define all 12 stable weapon IDs in both catalogs.');
   }
@@ -139,8 +139,8 @@ try {
   for (const token of expectedWorldTokens) {
     if (!worldLayout.includes(token)) fail('Unity mega-world contract is missing ' + token + '.');
   }
-  if ((worldLayout.match(/new SurvivalBiomeZone\\(/g) || []).length !== 4) fail('Unity mega-world must define four biome zones.');
-  if ((worldLayout.match(/new SurvivalWorldTransition\\(/g) || []).length !== 4) fail('Unity mega-world must define four biome transitions.');
+  if ((worldLayout.match(/new SurvivalBiomeZone\(/g) || []).length !== 4) fail('Unity mega-world must define four biome zones.');
+  if ((worldLayout.match(/new SurvivalWorldTransition\(/g) || []).length !== 4) fail('Unity mega-world must define four biome transitions.');
 
   for (const token of [
     'PlayerSettings.runInBackground = false',
@@ -171,6 +171,7 @@ try {
     fail('Unity README must disclose the Survival mega-map cutover blocker.');
   }
 
+  if (process.exitCode) process.exit(process.exitCode);
   console.log('[Unity migration audit] PASS: editor/package pins, source IDs, floor palettes, four-zone topology contract and release safety gates are consistent.');
   if (connectedWorldIsNotIntegrated) {
     console.log('[Unity migration audit] CUTOVER BLOCKER: Unity Survival still starts one selected arena; the 240 × 80 m four-biome contract is defined but not yet wired into WarehouseWorldFactory.');
