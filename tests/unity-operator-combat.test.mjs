@@ -185,7 +185,7 @@ test('Unity runtime can be initialized in Survival through a mode/map/operator h
   const factory = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs');
   assert.match(bootstrap, /ConfigureNextRun\(GameMode mode, OperatorId operatorId, WarehouseMapId mapId\)/);
   assert.match(bootstrap, /GameSession\.Begin\(mode, operatorId, mapId\)/);
-  assert.match(bootstrap, /WarehouseWorldFactory\.BuildB4Slice\(\)/);
+  assert.match(bootstrap, /WarehouseWorldFactory\.BuildUnifiedSurvivalWorld\(\)/);
   assert.match(factory, /GameSession\.Current\.Mode == GameMode\.Survival/);
   assert.match(factory, /root\.AddComponent<SurvivalWaveDirector>\(\)/);
 });
@@ -323,7 +323,9 @@ test('Unity XP progression has pooled crystals, map XP scaling, level-up drafts 
   assert.match(progression, /_orbPool\.Count >= 48/);
   assert.match(progression, /Life = 32f/);
   assert.match(progression, /1\.6f \* _magnetMultiplier/);
-  assert.match(progression, /map\.XpMultiplier/);
+  assert.match(progression, /GetBlendedXpMultiplier/);
+  assert.match(progression, /orb\.Value \* _xpGrowthMultiplier/);
+  assert.doesNotMatch(progression, /orb\.Value \* mapXp/);
   assert.match(progression, /GetXpRequirement\(_level\)/);
   assert.match(progression, /GameFlowState\.LevelUp/);
   assert.match(progression, /Time\.timeScale = 0f/);
