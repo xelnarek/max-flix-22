@@ -132,10 +132,16 @@ namespace MaxFlix.Unity.Runtime
             {
                 EnemyKind kind = EnemyArchetypeCatalog.ChooseSurvivalSpawnType(_currentWave, elapsed, Random.value);
                 float angle = _hordeStartAngle + (_hordeSpawned / (float)Mathf.Max(1, _hordeProfile.EnemyCount)) * Mathf.PI * 2f;
-                SpawnEnemy(kind, angle, radius);
-                _hordeSpawned++;
-                _hordeSpawnQueue--;
-                _hordeSpawnTimer = _hordeProfile.SpawnIntervalSeconds;
+                if (SpawnEnemy(kind, angle, radius))
+                {
+                    _hordeSpawned++;
+                    _hordeSpawnQueue--;
+                    _hordeSpawnTimer = _hordeProfile.SpawnIntervalSeconds;
+                }
+                else
+                {
+                    _hordeSpawnTimer = 0.20f;
+                }
             }
             else if (_hordeSpawnQueue > 0 && alive >= cap)
             {
@@ -158,9 +164,18 @@ namespace MaxFlix.Unity.Runtime
                 if (_bossWarningRemaining <= 0f && _pendingBossWave > 0)
                 {
                     int wave = _pendingBossWave;
-                    _pendingBossWave = 0;
-                    _lastBossWave = wave;
-                    SpawnMajorBoss(wave);
+                    if (SpawnMajorBoss(wave))
+                    {
+                        _pendingBossWave = 0;
+                        _lastBossWave = wave;
+                    }
+                    else
+                    {
+                        // Do not consume the boss event when every safe spawn
+                        // lane is temporarily blocked by geometry or the horde.
+                        _bossWarningRemaining = 2f;
+                        FindFirstObjectByType<HudController>()?.SetStatus("BOSS CZEKA NA WOLNE MIEJSCE DO WEJŚCIA");
+                    }
                 }
                 return;
             }
@@ -175,22 +190,25 @@ namespace MaxFlix.Unity.Runtime
             FindFirstObjectByType<HudController>()?.SetStatus("UWAGA • " + bossName.ToUpperInvariant() + " ZA 6 SEKUND");
         }
 
-        private void SpawnMajorBoss(int majorBossWave)
+        private bool SpawnMajorBoss(int majorBossWave)
         {
             EnemyKind kind = GetBossKind(majorBossWave);
-            Vector3 spawn = GetSpawnPosition(Random.value * Mathf.PI * 2f, 16f);
+            if (!TryGetSpawnPosition(Random.value * Mathf.PI * 2f, 16f, out Vector3 spawn))
+                return false;
+
             SurvivalDifficultyProfile difficulty = GetDifficultyProfile(_currentWave, spawn);
             EnemyAgent boss = WarehouseWorldFactory.SpawnSurvivalEnemy(
                 _player, kind, spawn,
                 difficulty.EnemyHealthMultiplier,
                 difficulty.EnemySpeedMultiplier,
                 difficulty.EnemyAbilityRateMultiplier);
-            if (boss == null) return;
+            if (boss == null) return false;
 
             boss.name = majorBossWave == 5
                 ? "Inwentaryzacja Gigant • Nadzorca Zero"
                 : GetBossName(majorBossWave);
             FindFirstObjectByType<HudController>()?.SetStatus("BOSS NA HALI • " + boss.name);
+            return true;
         }
 
         private EnemyKind GetBossKind(int majorBossWave)
@@ -237,7 +255,7 @@ namespace MaxFlix.Unity.Runtime
         {
             float angle = Random.value * Mathf.PI * 2f;
             float radius = Random.Range(11.5f, 15.5f);
-            Vector3 spawn = GetSpawnPosition(angle, radius);
+            if (!TryGetSpawnPosition(angle, radius, out Vector3 spawn)) return;
             SurvivalDifficultyProfile localDifficulty = GetDifficultyProfile(_currentWave, spawn);
 
             bool sebixAlreadyActive = (_trackedRareSebix != null && !_trackedRareSebix.IsDefeated)
@@ -308,37 +326,85 @@ namespace MaxFlix.Unity.Runtime
             return profile;
         }
 
-        private void SpawnEnemy(EnemyKind kind, float angle, float radius)
+        private bool SpawnEnemy(EnemyKind kind, float angle, float radius)
         {
-            Vector3 position = GetSpawnPosition(angle, radius);
+            if (!TryGetSpawnPosition(angle, radius, out Vector3 position)) return false;
             SurvivalDifficultyProfile localDifficulty = GetDifficultyProfile(_currentWave, position);
-            WarehouseWorldFactory.SpawnSurvivalEnemy(
+            return WarehouseWorldFactory.SpawnSurvivalEnemy(
                 _player,
                 kind,
                 position,
                 localDifficulty.EnemyHealthMultiplier,
                 localDifficulty.EnemySpeedMultiplier,
-                localDifficulty.EnemyAbilityRateMultiplier);
+                localDifficulty.EnemyAbilityRateMultiplier) != null;
         }
 
-        private Vector3 GetSpawnPosition(float angle, float radius)
+        private bool TryGetSpawnPosition(float angle, float radius, out Vector3 safePosition)
         {
+            safePosition = Vector3.zero;
+            if (_player == null) return false;
+
             Vector3 center = _player.transform.position;
-            for (int attempt = 0; attempt < 16; attempt++)
+            const float clearanceFromPlayer = 4.2f;
+            const float collisionRadius = 0.48f;
+            const float edgeInset = 2.0f;
+
+            // First scan the intended ring, rotating the requested angle and
+            // gently widening its radius to find a clear tile corridor.
+            for (int attempt = 0; attempt < 24; attempt++)
             {
-                float adjustedAngle = angle + attempt * 0.3926991f;
-                float adjustedRadius = radius + (attempt % 3) * 0.7f;
-                Vector3 candidate = center + new Vector3(Mathf.Cos(adjustedAngle), 0f, Mathf.Sin(adjustedAngle)) * adjustedRadius;
-                candidate.y = 0.05f;
-                Vector3 checkCenter = candidate + Vector3.up * 0.88f;
-                candidate = SurvivalWorldLayout.ClampInside(candidate, 2.0f);
-                checkCenter = candidate + Vector3.up * 0.88f;
-                if (!Physics.CheckSphere(checkCenter, 0.48f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
-                    return candidate;
+                float adjustedAngle = angle + attempt * 0.2617994f;
+                float adjustedRadius = Mathf.Max(7f, radius) + (attempt % 4) * 0.85f;
+                Vector3 candidate = center + new Vector3(
+                    Mathf.Cos(adjustedAngle), 0f, Mathf.Sin(adjustedAngle)) * adjustedRadius;
+                candidate = SurvivalWorldLayout.ClampInside(candidate, edgeInset);
+                if (IsSpawnPositionClear(candidate, center, clearanceFromPlayer, collisionRadius))
+                {
+                    safePosition = candidate;
+                    return true;
+                }
             }
 
-            Vector3 fallback = center + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * Mathf.Max(9f, radius);
-            return SurvivalWorldLayout.ClampInside(fallback, 2.0f);
+            // Crowded seams can block a whole side of the ring. Search several
+            // nearby radii before skipping the spawn; never fall back on top of
+            // the player or inside a rack/container collider.
+            float[] radii = { 8f, 11f, 14f, 17f, 20f };
+            for (int ring = 0; ring < radii.Length; ring++)
+            {
+                for (int spoke = 0; spoke < 16; spoke++)
+                {
+                    float candidateAngle = angle + spoke * 0.3926991f;
+                    Vector3 candidate = center + new Vector3(
+                        Mathf.Cos(candidateAngle), 0f, Mathf.Sin(candidateAngle)) * radii[ring];
+                    candidate = SurvivalWorldLayout.ClampInside(candidate, edgeInset);
+                    if (IsSpawnPositionClear(candidate, center, clearanceFromPlayer, collisionRadius))
+                    {
+                        safePosition = candidate;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsSpawnPositionClear(
+            Vector3 candidate,
+            Vector3 playerPosition,
+            float clearanceFromPlayer,
+            float collisionRadius)
+        {
+            Vector3 flatOffset = candidate - playerPosition;
+            flatOffset.y = 0f;
+            if (flatOffset.sqrMagnitude < clearanceFromPlayer * clearanceFromPlayer)
+                return false;
+
+            Vector3 checkCenter = candidate + Vector3.up * 0.88f;
+            return !Physics.CheckSphere(
+                checkCenter,
+                collisionRadius,
+                Physics.DefaultRaycastLayers,
+                QueryTriggerInteraction.Ignore);
         }
 
         private void EnsureHordeRing()
