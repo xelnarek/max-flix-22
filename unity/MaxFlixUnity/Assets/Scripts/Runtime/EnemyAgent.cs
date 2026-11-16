@@ -140,8 +140,8 @@ namespace MaxFlix.Unity.Runtime
             if (_supportShieldRemaining > 0f) balancedDamage *= 0.62f;
             if (balancedDamage <= 0f) return;
 
-            float actualDamage = Mathf.Min(_health, balancedDamage);
-            _health -= balancedDamage;
+            float actualDamage = Mathf.Min(Mathf.Max(0f, _health), balancedDamage);
+            _health = Mathf.Max(0f, _health - balancedDamage);
             if (mode == GameMode.Survival)
             {
                 if (weaponSource.HasValue) SurvivalDamageTracker.RecordWeaponDamage(weaponSource.Value, actualDamage);
