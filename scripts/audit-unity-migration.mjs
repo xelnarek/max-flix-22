@@ -254,7 +254,10 @@ try {
   for (const [, weapon, passive] of evolutionRequirements) {
     if (!availableEvolutionPassives.includes(passive)) fail(weapon + ' evolution passive is not available: ' + passive);
     if (!progressionController.includes('AddPassive(pool, "' + passive + '"')) fail(weapon + ' evolution passive is not offered in drafts: ' + passive);
-    if (!weaponController.includes('case "' + passive + '":')) fail(weapon + ' evolution passive has no implementation in SurvivalWeaponController: ' + passive);
+    if (!weaponController.includes('case "' + passive + '":')
+      && !progressionController.includes('case "' + passive + '":')) {
+      fail(weapon + ' evolution passive has no effect handler: ' + passive);
+    }
   }
 
   for (const token of [
