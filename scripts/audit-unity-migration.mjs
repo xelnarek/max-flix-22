@@ -208,9 +208,16 @@ try {
   for (const token of [
     'GetBlendedEnemyHealthMultiplier(position.x, position.z)',
     'GetBlendedEnemySpeedMultiplier(position.x, position.z)',
+    'TryGetSpawnPosition(',
+    'IsSpawnPositionClear(',
     'SurvivalWorldLayout.ClampInside',
+    'if (SpawnEnemy(kind, angle, radius))',
+    '_bossWarningRemaining = 2f',
   ]) {
-    if (!waveDirector.includes(token)) fail('Survival spawn director is missing world-aware logic: ' + token);
+    if (!waveDirector.includes(token)) fail('Survival spawn director is missing world-aware/safe spawn logic: ' + token);
+  }
+  if (waveDirector.includes('private Vector3 GetSpawnPosition(')) {
+    fail('Survival spawns must not use an unchecked fallback position.');
   }
   if (!progressionController.includes('GetBlendedXpMultiplier')) {
     fail('Survival XP must use the biome blend field instead of switching abruptly at a seam.');
