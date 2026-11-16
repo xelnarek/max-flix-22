@@ -303,10 +303,8 @@ namespace MaxFlix.Unity.Runtime
         private SurvivalDifficultyProfile GetDifficultyProfile(int wave, Vector3 position)
         {
             SurvivalDifficultyProfile profile = SurvivalDifficultyCatalog.GetProfile(wave);
-            WarehouseMapId biome = SurvivalWorldLayout.GetBiomeAtPosition(position.x, position.z);
-            SurvivalMapProfile map = GameContentCatalog.GetMap(biome);
-            profile.EnemyHealthMultiplier *= map.EnemyHealthMultiplier;
-            profile.EnemySpeedMultiplier *= map.EnemySpeedMultiplier;
+            profile.EnemyHealthMultiplier *= GameContentCatalog.GetBlendedEnemyHealthMultiplier(position.x, position.z);
+            profile.EnemySpeedMultiplier *= GameContentCatalog.GetBlendedEnemySpeedMultiplier(position.x, position.z);
             return profile;
         }
 
