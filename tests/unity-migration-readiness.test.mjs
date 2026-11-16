@@ -41,8 +41,54 @@ test('Unity Survival mega-map contract matches the live 240 by 80 metre topology
   assert.match(world, /ColdStorage = east \* south/);
   assert.match(world, /NightSorting = \(1f - east\) \* south/);
   assert.match(source, /minX: -120,[\s\S]*?maxX: 120,[\s\S]*?minZ: -40,[\s\S]*?maxZ: 40/);
-  assert.match(bootstrap, /WarehouseWorldFactory\.BuildB4Slice\(\)/);
-  assert.doesNotMatch(factory, /SurvivalWorldLayout\.Zones|BuildUnifiedSurvivalWorld/);
+  assert.match(bootstrap, /WarehouseWorldFactory\.BuildUnifiedSurvivalWorld\(\)/);
+  assert.match(factory, /foreach \(SurvivalBiomeZone zone in SurvivalWorldLayout\.Zones\)/);
+  assert.match(factory, /segment\.transform\.localPosition = new Vector3\(zone\.Center\.x, 0f, zone\.Center\.y\)/);
+  assert.match(factory, /segment\.transform\.localScale = new Vector3\(2\.4f, 1f, 0\.86f\)/);
+  assert.match(factory, /CreateUnifiedSurvivalPerimeter\(baseMap\)/);
+  assert.match(factory, /BuildBiomeBlendTexture\(transition\)/);
+  assert.match(factory, /GetBlendedFloorColor\(worldX, z\)/);
+  assert.doesNotMatch(factory, /_layoutOffset/);
+});
+
+test('Unity Survival renders smooth seam textures and blends biome gameplay modifiers', async () => {
+  const [factory, environment, waves, progression, catalog, sourceBlend] = await Promise.all([
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalBiomeEnvironment.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWaveDirector.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalProgressionController.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/GameContentCatalog.cs'),
+    read('../src/survivalWorldBlend.ts'),
+  ]);
+  assert.match(factory, /Texture2D BuildBiomeBlendTexture\(SurvivalWorldTransition transition\)/);
+  assert.match(factory, /FilterMode\.Bilinear/);
+  assert.match(factory, /SurvivalWorldLayout\.GetBlendWeights\(x, z\)/);
+  assert.match(factory, /WorldTextures\.Add\(texture\)/);
+  assert.match(environment, /SurvivalWorldLayout\.GetBlendWeights/);
+  assert.match(environment, /_elapsedSinceRefresh/);
+  assert.match(waves, /GetBlendedEnemyHealthMultiplier\(position\.x, position\.z\)/);
+  assert.match(waves, /GetBlendedEnemySpeedMultiplier\(position\.x, position\.z\)/);
+  assert.match(waves, /SurvivalWorldLayout\.ClampInside/);
+  assert.match(progression, /GetBlendedXpMultiplier/);
+  assert.match(catalog, /weights\.WarehouseB4/);
+  assert.match(catalog, /weights\.ContainerTerminal/);
+  assert.match(catalog, /weights\.ColdStorage/);
+  assert.match(catalog, /weights\.NightSorting/);
+  assert.match(sourceBlend, /SURVIVAL_WORLD_BLEND_HALF_WIDTH_METERS = 11/);
+  assert.match(sourceBlend, /SURVIVAL_WORLD_BLEND_HALF_DEPTH_METERS = 11/);
+});
+
+test('Unity procedural map geometry stays inside the intended 120 by 40 metre biome tiles', async () => {
+  const [factory, world] = await Promise.all([
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWorldLayout.cs'),
+  ]);
+  assert.match(factory, /segment\.transform\.localScale = new Vector3\(2\.4f, 1f, 0\.86f\)/);
+  assert.match(factory, /float z = gate \* 14f/);
+  assert.match(factory, /CreateMapLayout\(map, false\)/);
+  assert.match(world, /BiomeHalfWidth = 60f/);
+  assert.match(world, /BiomeHalfDepth = 20f/);
+  assert.match(world, /ClampInside\(Vector3 position, float inset = 1\.5f\)/);
 });
 
 test('Unity project setup guards the known Android resume/back regression and enables paced frames', async () => {
