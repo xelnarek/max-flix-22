@@ -1,0 +1,247 @@
+/* ==========================================================================
+   APP-WIDE POLISH — shared palette and low-overhead UI rendering.
+   Loaded last to unify legacy menu, HUD, modal, Survival and PvP layers.
+   Gameplay canvas colour grading remains owned by the Three.js renderer.
+   ========================================================================== */
+
+:root {
+  --mf-panel: var(--mf-surface);
+  --mf-panel-raised: var(--mf-surface-2);
+  --mf-panel-soft: rgba(14, 25, 36, .82);
+  --mf-border-soft: var(--mf-line);
+  --mf-border-bright: rgba(120, 185, 200, .30);
+  --mf-shadow-panel: 0 10px 26px rgba(0, 0, 0, .26), inset 0 1px 0 rgba(255,255,255,.035);
+  --mf-shadow-hover: 0 12px 28px rgba(0, 0, 0, .30), 0 0 0 1px rgba(120,185,200,.10);
+  --mf-ease: cubic-bezier(.2,.72,.2,1);
+}
+
+html,
+body {
+  background-color: var(--mf-bg);
+  color: var(--mf-text);
+}
+
+::selection {
+  background: rgba(215, 164, 82, .25);
+  color: var(--mf-text);
+}
+
+button,
+input,
+select,
+textarea {
+  color-scheme: dark;
+}
+
+button:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.char-card:focus-visible,
+.zone-card:focus-visible,
+.menu-tab-btn:focus-visible {
+  outline: 2px solid var(--mf-cyan) !important;
+  outline-offset: 3px;
+  box-shadow: var(--mf-focus) !important;
+}
+
+/* Quiet, consistently layered surfaces across every menu and game mode. */
+#title-screen .title-sheet,
+#title-screen .menu-tabs-bar,
+#title-screen .char-details-box,
+#title-screen .leaderboard-container,
+#title-screen .field-guide-panel,
+#title-screen .survival-achievements-panel,
+#title-screen .character-mastery-panel,
+#title-screen .account-progression-panel,
+#title-screen .account-ranks-panel,
+#pause-modal .modal-card,
+#gameover-modal .gameover-card,
+#gameover-modal .gameover-damage-panel,
+#pvp-lobby-modal .pvp-lobby-card,
+#pvp-lobby-modal .pvp-network-box,
+#pvp-lobby-modal .pvp-practice-box,
+#pvp-match-end-modal .pvp-match-end-card,
+#survival-hud .survival-chip,
+#survival-hud .survival-contract,
+#pvp-hud .pvp-player-box,
+#pvp-hud .pvp-center-box {
+  border-color: var(--mf-line-strong);
+  box-shadow: var(--mf-shadow-panel);
+}
+
+#title-screen .title-sheet,
+#pause-modal .modal-card,
+#gameover-modal .gameover-card,
+#pvp-lobby-modal .pvp-lobby-card,
+#pvp-match-end-modal .pvp-match-end-card {
+  background-color: rgba(9, 17, 26, .97);
+}
+
+#title-screen .field-guide-card,
+#title-screen .enemy-guide-card,
+#title-screen .boss-guide-card,
+#title-screen .perk-card,
+#title-screen .survival-map-directory-card,
+#title-screen .char-card,
+#title-screen .zone-card,
+#title-screen .account-rank-section,
+#title-screen .survival-achievement-section {
+  border-color: var(--mf-line);
+  background-color: rgba(15, 27, 39, .94);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .20);
+}
+
+#title-screen .menu-tab-btn {
+  color: var(--mf-muted);
+}
+
+#title-screen .menu-tab-btn.active,
+#title-screen .char-card[aria-pressed="true"],
+#title-screen .zone-card.active,
+#title-screen .survival-map-choice[aria-pressed="true"],
+#title-screen .survival-map-choice.selected,
+#title-screen .survival-map-choice.active,
+#title-screen .pvp-operator-btn[aria-pressed="true"] {
+  color: var(--mf-amber-2) !important;
+  border-color: rgba(215, 164, 82, .55) !important;
+  background:
+    linear-gradient(145deg, rgba(215,164,82,.15), rgba(215,164,82,.055)),
+    rgba(14, 25, 36, .96) !important;
+  box-shadow: inset 0 -2px 0 rgba(215,164,82,.75), 0 8px 20px rgba(0,0,0,.20) !important;
+}
+
+#title-screen .menu-tab-btn:hover,
+#title-screen .char-card:hover,
+#title-screen .zone-card:hover,
+#title-screen .field-guide-card:hover,
+#title-screen .enemy-guide-card:hover,
+#title-screen .perk-card:hover,
+#title-screen .survival-map-directory-card:hover {
+  border-color: rgba(120, 185, 200, .34);
+}
+
+.btn-primary-start {
+  color: #171b1d !important;
+  border: 1px solid rgba(232, 188, 115, .60) !important;
+  background: linear-gradient(135deg, #d7a452, #e4b96f 58%, #c88d42) !important;
+  box-shadow: 0 8px 22px rgba(138, 94, 37, .22), inset 0 1px 0 rgba(255,255,255,.25) !important;
+}
+
+.btn-primary-start:hover {
+  filter: brightness(1.04);
+  box-shadow: 0 10px 24px rgba(138, 94, 37, .25), inset 0 1px 0 rgba(255,255,255,.28) !important;
+}
+
+.top-icon-btn,
+.stat-pill,
+.hero-badge,
+.bottom-dock {
+  border-color: var(--mf-line-strong);
+  background-color: rgba(11, 22, 33, .92);
+  box-shadow: 0 7px 18px rgba(0, 0, 0, .22), inset 0 1px 0 rgba(255,255,255,.035);
+}
+
+.top-icon-btn {
+  transition: background-color .14s ease, border-color .14s ease, transform .14s ease;
+}
+
+.camera-top-btn {
+  border-color: rgba(120, 185, 200, .38);
+  background: linear-gradient(135deg, rgba(41, 100, 116, .72), rgba(11, 22, 33, .95));
+}
+
+.sound-top-btn {
+  border-color: rgba(215, 164, 82, .40);
+  background: linear-gradient(135deg, rgba(119, 82, 37, .72), rgba(11, 22, 33, .95));
+}
+
+.pause-top-btn {
+  border-color: rgba(217, 125, 125, .55);
+  background: linear-gradient(135deg, rgba(130, 58, 61, .92), rgba(79, 31, 36, .96));
+  box-shadow: 0 6px 18px rgba(120, 45, 49, .25);
+}
+
+#survival-hud .survival-chip,
+#survival-hud .survival-contract,
+#pvp-hud .pvp-player-box,
+#pvp-hud .pvp-center-box {
+  background-color: rgba(9, 18, 27, .92);
+  color: var(--mf-text);
+}
+
+/* Keep status colours semantic and restrained rather than neon. */
+:root {
+  --status-success: var(--mf-green);
+  --status-warning: var(--mf-amber);
+  --status-danger: var(--mf-red);
+  --status-info: var(--mf-cyan);
+}
+
+/* Coarse-pointer devices get opaque surfaces instead of many GPU backdrop blurs.
+   This reduces full-screen compositing work during gameplay and menu scrolling. */
+@media (max-width: 900px), (pointer: coarse) {
+  #title-screen .title-sheet,
+  #title-screen .char-card,
+  #title-screen .zone-card,
+  #title-screen .field-guide-card,
+  #title-screen .enemy-guide-card,
+  #title-screen .boss-guide-card,
+  #title-screen .perk-card,
+  #title-screen .survival-map-directory-card,
+  #title-screen .leaderboard-container,
+  #title-screen .char-details-box,
+  #pause-modal .modal-card,
+  #gameover-modal .gameover-card,
+  #pvp-lobby-modal .pvp-lobby-card,
+  #pvp-match-end-modal .pvp-match-end-card {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  #title-screen .title-sheet {
+    background: rgba(8, 16, 25, .985) !important;
+  }
+
+  #title-screen .char-card,
+  #title-screen .zone-card,
+  #title-screen .field-guide-card,
+  #title-screen .enemy-guide-card,
+  #title-screen .boss-guide-card,
+  #title-screen .perk-card,
+  #title-screen .survival-map-directory-card {
+    box-shadow: 0 5px 14px rgba(0, 0, 0, .18);
+  }
+
+  #title-screen .char-card:hover,
+  #title-screen .zone-card:hover,
+  #title-screen .field-guide-card:hover,
+  #title-screen .enemy-guide-card:hover,
+  #title-screen .perk-card:hover,
+  #title-screen .survival-map-directory-card:hover {
+    transform: none;
+  }
+}
+
+@media (hover: none) {
+  #title-screen .char-card:hover,
+  #title-screen .zone-card:hover,
+  #title-screen .field-guide-card:hover,
+  #title-screen .enemy-guide-card:hover,
+  #title-screen .perk-card:hover,
+  #title-screen .survival-map-directory-card:hover {
+    box-shadow: 0 5px 14px rgba(0, 0, 0, .18);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
