@@ -31,18 +31,15 @@ test('enemy spawning uses the shared world bounds after internal partitions are 
   assert.match(layout, /export function getSurvivalWorldBiomeIdAtPosition/);
 });
 
-test('pursuing enemies follow the shortest open portal route into the player biome', async () => {
-  const [game, layout] = await Promise.all([
-    read('src/game.ts'), read('src/survivalWorldLayout.ts')
-  ]);
-  assert.match(game, /const enemyBiomeId = getSurvivalWorldBiomeIdAtPosition\(enemy\.x, enemy\.z, this\.survivalMapId\)/);
-  assert.match(game, /const portalWaypoint = !inHordeRing && enemyBiomeId !== this\.survivalMapId/);
-  assert.match(game, /getSurvivalWorldWaypoint\(enemyBiomeId, this\.survivalMapId, undefined, \{ x: enemy\.x, z: enemy\.z \}\)/);
-  assert.match(game, /if \(!portalWaypoint && steerLength < 0\.72 && engaged\)/);
-  assert.equal((game.match(/const bossPortalWaypoint = this\.gameMode === 'survival'/g) || []).length, 2);
-  assert.match(game, /e, bossPortalWaypoint, this\.survivalObstacles/);
-  assert.match(layout, /export function getSurvivalWorldRoute/);
-  assert.match(layout, /export function getSurvivalWorldWaypoint/);
+test('enemies and Survival bosses steer directly through the continuous world', async () => {
+  const game = await read('src/game.ts');
+  assert.match(game, /const targetX = anchorX \+ Math\.sin\(angle\) \* preferredRadius/);
+  assert.match(game, /const targetZ = anchorZ \+ Math\.cos\(angle\) \* preferredRadius/);
+  assert.doesNotMatch(game, /portalWaypoint|bossPortalWaypoint|getSurvivalWorldWaypoint/);
+  assert.match(game, /this\.gameMode === 'survival' \|\| distToPlayer < 14\.0/);
+  assert.match(game, /this\.gameMode === 'survival' \|\| distToPlayer < 15\.0/);
+  assert.match(game, /this\.survivalObstacles, 5\.4, 1\.25/);
+  assert.match(game, /this\.survivalObstacles, 5\.8, 1\.35/);
 });
 
 test('Survival map textures are per-world clones of the global B4 texture cache', async () => {
@@ -65,14 +62,3 @@ test('all four biome floor blends span each shared edge and the central four-way
   assert.match(game, /isSurvivalWorldTransitionFromNegativeSide\(transition\)/);
 });
 
-
-test('enemies and Survival bosses steer directly through the continuous world instead of old gate waypoints', async () => {
-  const game = await read('src/game.ts');
-  assert.match(game, /const targetX = anchorX \+ Math\.sin\(angle\) \* preferredRadius/);
-  assert.match(game, /const targetZ = anchorZ \+ Math\.cos\(angle\) \* preferredRadius/);
-  assert.doesNotMatch(game, /portalWaypoint|bossPortalWaypoint|getSurvivalWorldWaypoint/);
-  assert.match(game, /this\.gameMode === 'survival' \|\| distToPlayer < 14\.0/);
-  assert.match(game, /this\.gameMode === 'survival' \|\| distToPlayer < 15\.0/);
-  assert.match(game, /this\.survivalObstacles, 5\.4, 1\.25/);
-  assert.match(game, /this\.survivalObstacles, 5\.8, 1\.35/);
-});
