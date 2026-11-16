@@ -106,7 +106,8 @@ test('campaign entry points are retired; only Survival can be started from the a
   assert.doesNotMatch(html, /id="btn-start-game"|data-tab="tab-zones"|data-tab="tab-story"/);
   assert.match(html, /id="btn-start-survival"/);
   assert.doesNotMatch(app, /this\.engine\.startGame\(/);
-  assert.match(app, /this\.engine\.startSurvival\(selectedSurvivalMapId\)/);
+  assert.match(app, /this\.engine\.startSurvival\(\)/);
+  assert.doesNotMatch(app, /selectedSurvivalMapId|readSurvivalMapPreference|writeSurvivalMapPreference/);
   assert.match(game, /private resetSurvivalRun\(\)/);
   assert.doesNotMatch(game, /public startGame\(/);
 });

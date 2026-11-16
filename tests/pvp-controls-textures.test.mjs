@@ -42,9 +42,9 @@ test('Survival reuses the PvP floor, crate, barrier, wall and footprint assets',
     readFile(new URL('../src/pvpTextures.ts', import.meta.url), 'utf8'),
   ]);
   assert.match(game, /const floorTexture = createPvpFloorTexture\(\)/);
-  assert.match(game, /const crateTexture = createPvpObstacleTexture\('crate'\)/);
-  assert.match(game, /const barrierTexture = createPvpObstacleTexture\('barrier'\)/);
-  assert.match(game, /const wallTexture = createPvpObstacleTexture\('wall'\)/);
+  assert.match(game, /options\.surfaceTextures\?\.crate \?\? createPvpObstacleTexture\('crate'\)/);
+  assert.match(game, /options\.surfaceTextures\?\.barrier \?\? createPvpObstacleTexture\('barrier'\)/);
+  assert.match(game, /options\.surfaceTextures\?\.wall \?\? createPvpObstacleTexture\('wall'\)/);
   assert.match(game, /addSurvivalFootprint\(group, 2\.9, 1\.95\)/);
   assert.match(game, /addSurvivalFootprint\(barricade, 2\.45, 1\.25\)/);
   assert.match(game, /this\.survivalArenaInstanceTextures\.add\(texture\)/);

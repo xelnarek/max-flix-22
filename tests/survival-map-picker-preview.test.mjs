@@ -4,20 +4,24 @@ import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
-test('map picker has a dedicated live preview and accurate route labels', async () => {
+test('the connected-world atlas replaces the old map picker preview', async () => {
   const [html, app, css] = await Promise.all([
     read('../index.html'), read('../src/index.ts'), read('../src/menu-layout-fixes.css')
   ]);
-  for (const id of ['survival-map-preview-title', 'survival-map-preview-detail']) {
-    assert.equal((html.match(new RegExp('id="' + id + '"', 'g')) || []).length, 1);
+  const start = html.indexOf('<div id="tab-map" class="tab-panel world-atlas-panel"');
+  const end = html.indexOf('<div id="tab-pvp"', start);
+  assert.ok(start >= 0 && end > start);
+  const panel = html.slice(start, end);
+  for (const label of ['MAGAZYN B4', 'PORT KONTENEROWY 17', 'CHŁODNIA ZERO', 'SORTOWNIA WIDMOWA']) {
+    assert.ok(panel.includes(label), 'missing atlas biome: ' + label);
   }
-  assert.ok(html.includes('4 ARENY • RÓŻNE TRASY'));
-  assert.ok(html.includes('Palety i regały'));
-  assert.ok(html.includes('Kontenery i slalom'));
-  assert.ok(html.includes('Agregaty i lód'));
-  assert.ok(html.includes('Taśmy i neony'));
-  assert.ok(app.includes('survivalMapPreviewTitle.textContent = map.name.toUpperCase()'));
-  assert.ok(app.includes('survivalMapPreviewDetail.textContent = map.description'));
-  assert.ok(css.includes('survival-map-preview'));
-  assert.ok(css.includes('grid-template-columns: repeat(2, minmax(0, 1fr))'));
+  for (const route of ['B4 → PORT 17', 'PORT 17 → CHŁODNIA', 'CHŁODNIA → SORTOWNIA', 'SORTOWNIA → B4']) {
+    assert.ok(panel.includes(route), 'missing transition: ' + route);
+  }
+  assert.match(panel, /4 OTWARTE BRAMY/);
+  assert.match(panel, /BEZ TELEPORTÓW I RESETU ROZGRYWKI/);
+  assert.doesNotMatch(panel, /survival-map-preview|data-survival-map=|survival-map-picker/);
+  assert.doesNotMatch(app, /selectedSurvivalMapId|survivalMapPreviewTitle|survivalMapPreviewDetail/);
+  assert.match(css, /#title-screen #tab-map\.world-atlas-panel\.active/);
+  assert.match(css, /\.mega-map-route-grid/);
 });
