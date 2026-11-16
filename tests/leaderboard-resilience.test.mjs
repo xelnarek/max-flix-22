@@ -35,8 +35,8 @@ test('Firebase ranking operations have finite auth, probe, query and write limit
   assert.match(firebase, /const FIRESTORE_QUERY_TIMEOUT_MS = 12_000/);
   assert.match(firebase, /const FIRESTORE_WRITE_TIMEOUT_MS = 12_000/);
   assert.match(firebase, /authTimeout = setTimeout\(/);
-  assert.match(firebase, /withTimeout\([\s\S]*?getDocsFromServer\\(probeQuery\\)/);
-  assert.match(firebase, /withTimeout\([\s\S]*?getDocsFromServer\\(survivalQuery\\)/);
+  assert.match(firebase, /withTimeout\([\s\S]*?getDocsFromServer\(probeQuery\)/);
+  assert.match(firebase, /withTimeout\([\s\S]*?getDocsFromServer\(survivalQuery\)/);
   assert.match(firebase, /withTimeout\([\s\S]*?setDoc\(doc\(db, collectionPath, cleanId\), payload\)/);
 });
 
@@ -63,7 +63,7 @@ test('leaderboard connectivity probe checks the public Survival collection indep
   const probeEnd = firebase.indexOf('export async function submitScore', probeStart);
   const probe = firebase.slice(probeStart, probeEnd);
   assert.match(probe, /query\(collection\(db, 'leaderboard'\), limit\(1\)\)/);
-  assert.match(probe, /getDocsFromServer\(probeQuery\)/);
+  assert.match(firebase, /withTimeout\([\s\S]*?getDocsFromServer\(probeQuery\)/);
   assert.doesNotMatch(probe, /if \(!currentUser\?\.uid\)/);
 });
 
@@ -73,7 +73,7 @@ test('manual ranking refresh reads Firestore from the server and keeps Survival 
   const start = firebase.indexOf('export async function getTopSurvivalLeaderboard');
   const end = firebase.indexOf('\n}', start) + 2;
   const survivalRead = firebase.slice(start, end);
-  assert.match(survivalRead, /getDocsFromServer\(survivalQuery\)/);
+  assert.match(firebase, /withTimeout\([\s\S]*?getDocsFromServer\(survivalQuery\)/);
   assert.match(firebase, /getDocsFromServer\(q\)/);
   assert.match(survivalRead, /SURVIVAL_LEADERBOARD_CACHE_KEY/);
   assert.match(firebase, /const parseCachedLeaderboard = \(cacheKey = LEADERBOARD_CACHE_KEY\)/);
@@ -111,7 +111,7 @@ test('opening Survival ranking starts anonymous auth without serially waiting fo
   const end = firebase.indexOf('\n}', start) + 2;
   const survivalRead = firebase.slice(start, end);
   assert.match(survivalRead, /void initAuth\(\)\.catch/);
-  assert.match(survivalRead, /getDocsFromServer\(survivalQuery\)/);
+  assert.match(firebase, /withTimeout\([\s\S]*?getDocsFromServer\(survivalQuery\)/);
   assert.doesNotMatch(survivalRead, /await testFirestoreConnection\(\)/);
   assert.match(firebase, /resolve\(user\);[\s\S]*?syncPendingLeaderboardScores\(\)/);
 });
