@@ -54,6 +54,14 @@ namespace MaxFlix.Unity.Runtime
             return _separationCache;
         }
 
+        /// <summary>Invalidate spatial data immediately when a run world is torn down.</summary>
+        public static void InvalidateSpatialCache()
+        {
+            _separationCache = new EnemyAgent[0];
+            SeparationBuckets.Clear();
+            _nextSeparationRefreshTime = 0f;
+        }
+
         public void Initialize(PlayerController target, EnemyKind kind, float healthMultiplier = 1f, float speedMultiplier = 1f, float abilityRateMultiplier = 1f)
         {
             _controller = GetComponent<CharacterController>();
