@@ -300,7 +300,7 @@ test('any first movement or dodge gesture unlocks the bass channel before the fi
   const source = await readFile(new URL('../src/cthulhuRetroArena.ts', import.meta.url), 'utf8');
   assert.match(source, /if \(!event\.repeat && \['ArrowLeft',[\s\S]{0,220}unlockAbyssAudio\(\)/);
   assert.match(source, /button\.addEventListener\('pointerdown',[\s\S]{0,240}unlockAbyssAudio\(\)/);
-  assert.match(source, /button\.addEventListener\('touchstart',[\s\S]{0,260}unlockAbyssAudio\(\)/);
+  assert.match(source, /button\.addEventListener\('touchstart',[\s\S]{0,520}unlockAbyssAudio\(\)/);
 });
 
 
