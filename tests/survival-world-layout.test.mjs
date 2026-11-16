@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   getSurvivalBiomeIdAtPosition, getSurvivalWorldBiome, getSurvivalWorldBiomeBounds,
   getSurvivalWorldBiomeIdAtPosition, getSurvivalWorldRoute, getSurvivalWorldWaypoint,
+  getSurvivalWorldTransitionFootprint, isSurvivalWorldTransitionFromNegativeSide,
   SURVIVAL_WORLD_BIOMES, SURVIVAL_WORLD_BOUNDS, SURVIVAL_WORLD_DEPTH,
   SURVIVAL_WORLD_TRANSITIONS, SURVIVAL_WORLD_WIDTH,
 } from '../src/survivalWorldLayout.ts';
@@ -26,7 +27,7 @@ test('all four portals connect reciprocal open edges and keep their intended wid
   assert.equal(edges('container_terminal').south && edges('cold_storage').north, true);
   assert.equal(edges('cold_storage').west && edges('night_sorting').east, true);
   assert.equal(edges('night_sorting').north && edges('warehouse_b4').south, true);
-  assert.deepEqual(SURVIVAL_WORLD_TRANSITIONS.map((portal) => portal.openingWidth), [26, 36, 26, 36]);
+  assert.deepEqual(SURVIVAL_WORLD_TRANSITIONS.map((portal) => portal.markerSpan), [26, 36, 26, 36]);
 });
 
 test('biome changes are based on global coordinates with stable doorway hysteresis', () => {
@@ -103,4 +104,24 @@ test('route cache returns connected legs for every pair of distinct sectors', ()
       assert.ok(getSurvivalWorldWaypoint(from.id, to.id));
     }
   }
+});
+
+
+test('biome blends cover the full shared edge and use the correct source-side orientation', () => {
+  const footprints = SURVIVAL_WORLD_TRANSITIONS.map(getSurvivalWorldTransitionFootprint);
+  assert.deepEqual(footprints, [
+    { bandWidth: 22, bandDepth: 40, seamWidth: 1.25, seamDepth: 40 },
+    { bandWidth: 120, bandDepth: 22, seamWidth: 120, seamDepth: 1.25 },
+    { bandWidth: 22, bandDepth: 40, seamWidth: 1.25, seamDepth: 40 },
+    { bandWidth: 120, bandDepth: 22, seamWidth: 120, seamDepth: 1.25 },
+  ]);
+  assert.deepEqual(SURVIVAL_WORLD_TRANSITIONS.map(isSurvivalWorldTransitionFromNegativeSide), [true, true, false, false]);
+});
+
+test('enemy portal waypoints preserve the current lane across a fully open shared edge', () => {
+  assert.deepEqual(getSurvivalWorldWaypoint('warehouse_b4', 'container_terminal', undefined, { x: -24, z: -34 }), { x: 7, z: -34 });
+  assert.deepEqual(getSurvivalWorldWaypoint('container_terminal', 'cold_storage', undefined, { x: 111, z: -8 }), { x: 111, z: 7 });
+  assert.deepEqual(getSurvivalWorldWaypoint('cold_storage', 'night_sorting', undefined, { x: 12, z: 34 }), { x: -7, z: 34 });
+  assert.deepEqual(getSurvivalWorldWaypoint('night_sorting', 'warehouse_b4', undefined, { x: -111, z: 8 }), { x: -111, z: -7 });
+  assert.deepEqual(getSurvivalWorldWaypoint('warehouse_b4', 'container_terminal', undefined, { x: -24, z: -99 }), { x: 7, z: -38 });
 });
