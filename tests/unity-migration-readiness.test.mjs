@@ -12,7 +12,7 @@ test('Unity migration audit passes the stable source-data and release-safety con
   });
   assert.match(output, /\[Unity migration audit\] PASS:/);
   assert.match(output, /CUTOVER BLOCKER/);
-  assert.match(output, /four biome zones/);
+  assert.match(output, /four-zone topology contract/);
 });
 
 test('Unity Survival mega-map contract matches the live 240 by 80 metre topology', async () => {
