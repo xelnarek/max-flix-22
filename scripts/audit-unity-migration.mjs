@@ -126,11 +126,11 @@ try {
   }
 
   const expectedWorldTokens = [
-    'MinX = -119.5f',
-    'MaxX = 119.5f',
-    'MinZ = -39.5f',
-    'MaxZ = 39.5f',
-    'BlendHalfWidth = 9f',
+    'MinX = -120f',
+    'MaxX = 120f',
+    'MinZ = -40f',
+    'MaxZ = 40f',
+    'BlendHalfWidth = 11f',
     'LoadingApron',
     'ColdAirlock',
     'ScannerTransfer',
@@ -141,6 +141,17 @@ try {
   }
   if ((worldLayout.match(/new SurvivalBiomeZone\(/g) || []).length !== 4) fail('Unity mega-world must define four biome zones.');
   if ((worldLayout.match(/new SurvivalWorldTransition\(/g) || []).length !== 4) fail('Unity mega-world must define four biome transitions.');
+  for (const token of [
+    'WarehouseMapId.ColdStorage, 60f, 20f',
+    'WarehouseMapId.NightSorting, -60f, 20f',
+    'if (south) return east ? WarehouseMapId.ColdStorage : WarehouseMapId.NightSorting;',
+    'ColdStorage = east * south',
+    'NightSorting = (1f - east) * south',
+    '"port-to-cold"',
+    '"night-to-b4"',
+  ]) {
+    if (!worldLayout.includes(token)) fail('Unity mega-world quadrant/transition mapping drifted: ' + token);
+  }
 
   for (const token of [
     'PlayerSettings.runInBackground = false',
