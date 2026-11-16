@@ -78,6 +78,26 @@ test('Unity Survival renders smooth seam textures and blends biome gameplay modi
   assert.match(sourceBlend, /SURVIVAL_WORLD_BLEND_HALF_DEPTH_METERS = 11/);
 });
 
+test('Unity run teardown clears persistent in-flight player and enemy projectiles', async () => {
+  const [factory, playerShots, enemyShots] = await Promise.all([
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/CombatProjectile.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAttackProjectile.cs'),
+  ]);
+  assert.match(factory, /CombatProjectile\.ClearAllActive\(\)/);
+  assert.match(factory, /EnemyAttackProjectile\.ClearAllActive\(\)/);
+  assert.match(playerShots, /public static void ClearAllActive\(\)/);
+  assert.match(playerShots, /projectile\.ReturnToPool\(\)/);
+  assert.match(enemyShots, /public static void ClearAllActive\(\)/);
+  assert.match(enemyShots, /projectile\.ReturnToPool\(\)/);
+});
+
+test('Unity operator support units are scoped to the active world and Piotr attack uses shared damage scaling', async () => {
+  const kit = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorCombatKit.cs');
+  assert.match(kit, /root\.transform\.SetParent\(_player\.transform\.parent, true\)/);
+  assert.match(kit, /CombatBalanceCatalog\.ScaleCharacterBasicAttackDamage\(1f, _profile\.BasicAttackDamageMultiplier\)/);
+});
+
 test('Unity Survival XP applies the position-based biome bonus exactly once', async () => {
   const [progression, catalog] = await Promise.all([
     read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalProgressionController.cs'),
