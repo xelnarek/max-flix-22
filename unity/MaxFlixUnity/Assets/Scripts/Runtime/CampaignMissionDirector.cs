@@ -131,6 +131,9 @@ namespace MaxFlix.Unity.Runtime
             if (_sectorCGate != null) _sectorCGate.enabled = lockC;
             if (_sectorBGateRenderer != null) _sectorBGateRenderer.enabled = lockB;
             if (_sectorCGateRenderer != null) _sectorCGateRenderer.enabled = lockC;
+            // Navigation snapshots static enabled colliders. Refresh after a
+            // boss unlocks a physical gate so enemies can use the open route.
+            EnemyNavigationWorld.RefreshActive();
         }
 
         private void RefreshStatus(bool force)
