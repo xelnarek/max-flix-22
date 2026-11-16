@@ -165,14 +165,11 @@ namespace MaxFlix.Unity.Runtime
             float back = origin.y - minZ;
             float forward = maxZ - origin.y;
             float minimum = Mathf.Min(Mathf.Min(left, right), Mathf.Min(back, forward));
-            int tieCount = 0;
             int selected = -1;
-            float desiredTie = (actorInstanceId & 1) == 0 ? 0f : float.PositiveInfinity;
             for (int i = 0; i < 4; i++)
             {
                 float distance = i == 0 ? left : i == 1 ? right : i == 2 ? back : forward;
                 if (Mathf.Abs(distance - minimum) >= 0.0001f) continue;
-                tieCount++;
                 if ((actorInstanceId & 1) == 0)
                 {
                     if (selected < 0) selected = i;
