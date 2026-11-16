@@ -103,11 +103,11 @@ namespace MaxFlix.Unity.Runtime
     /// </summary>
     public static class SurvivalWorldLayout
     {
-        public const float MinX = -119.5f;
-        public const float MaxX = 119.5f;
-        public const float MinZ = -39.5f;
-        public const float MaxZ = 39.5f;
-        public const float BlendHalfWidth = 9f;
+        public const float MinX = -120f;
+        public const float MaxX = 120f;
+        public const float MinZ = -40f;
+        public const float MaxZ = 40f;
+        public const float BlendHalfWidth = 11f;
 
         private static readonly SurvivalBiomeZone[] ZoneData =
         {
@@ -115,25 +115,25 @@ namespace MaxFlix.Unity.Runtime
                 SurvivalBiomeEdge.East | SurvivalBiomeEdge.South),
             new SurvivalBiomeZone(WarehouseMapId.ContainerTerminal, 60f, -20f,
                 SurvivalBiomeEdge.West | SurvivalBiomeEdge.South),
-            new SurvivalBiomeZone(WarehouseMapId.ColdStorage, -60f, 20f,
+            new SurvivalBiomeZone(WarehouseMapId.ColdStorage, 60f, 20f,
                 SurvivalBiomeEdge.East | SurvivalBiomeEdge.North),
-            new SurvivalBiomeZone(WarehouseMapId.NightSorting, 60f, 20f,
+            new SurvivalBiomeZone(WarehouseMapId.NightSorting, -60f, 20f,
                 SurvivalBiomeEdge.West | SurvivalBiomeEdge.North)
         };
 
         private static readonly SurvivalWorldTransition[] TransitionData =
         {
             new SurvivalWorldTransition("b4-to-port", WarehouseMapId.WarehouseB4,
-                WarehouseMapId.ContainerTerminal, 0f, -20f, true, 18f, 40f,
+                WarehouseMapId.ContainerTerminal, 0f, -20f, true, 22f, 40f,
                 SurvivalWorldTransitionKind.LoadingApron),
-            new SurvivalWorldTransition("b4-to-cold", WarehouseMapId.WarehouseB4,
-                WarehouseMapId.ColdStorage, -60f, 0f, false, 18f, 120f,
+            new SurvivalWorldTransition("port-to-cold", WarehouseMapId.ContainerTerminal,
+                WarehouseMapId.ColdStorage, 60f, 0f, false, 22f, 120f,
                 SurvivalWorldTransitionKind.ColdAirlock),
-            new SurvivalWorldTransition("port-to-night", WarehouseMapId.ContainerTerminal,
-                WarehouseMapId.NightSorting, 60f, 0f, false, 18f, 120f,
+            new SurvivalWorldTransition("night-to-b4", WarehouseMapId.NightSorting,
+                WarehouseMapId.WarehouseB4, -60f, 0f, false, 22f, 120f,
                 SurvivalWorldTransitionKind.ScannerTransfer),
             new SurvivalWorldTransition("cold-to-night", WarehouseMapId.ColdStorage,
-                WarehouseMapId.NightSorting, 0f, 20f, true, 18f, 40f,
+                WarehouseMapId.NightSorting, 0f, 20f, true, 22f, 40f,
                 SurvivalWorldTransitionKind.FrozenConveyor)
         };
 
@@ -157,7 +157,7 @@ namespace MaxFlix.Unity.Runtime
         {
             bool east = IsFinite(x) && x >= 0f;
             bool south = IsFinite(z) && z >= 0f;
-            if (south) return east ? WarehouseMapId.NightSorting : WarehouseMapId.ColdStorage;
+            if (south) return east ? WarehouseMapId.ColdStorage : WarehouseMapId.NightSorting;
             return east ? WarehouseMapId.ContainerTerminal : WarehouseMapId.WarehouseB4;
         }
 
@@ -172,8 +172,8 @@ namespace MaxFlix.Unity.Runtime
             {
                 WarehouseB4 = (1f - east) * (1f - south),
                 ContainerTerminal = east * (1f - south),
-                ColdStorage = (1f - east) * south,
-                NightSorting = east * south
+                ColdStorage = east * south,
+                NightSorting = (1f - east) * south
             };
         }
 
