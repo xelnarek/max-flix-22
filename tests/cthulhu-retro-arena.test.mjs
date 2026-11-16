@@ -93,7 +93,7 @@ test('slam shockwaves can be jumped over and hit grounded players', () => {
   grounded.boss.attack = 'slam';
   grounded.boss.attackCooldown = 100;
   grounded.player.x = 120;
-  grounded.shockwaves.push({ x: 120 + 190 / 30, life: 1 });
+  grounded.shockwaves.push({ x: 120 + 7 + 190 / 30, life: 1 });
   const groundedHp = grounded.player.hp;
   stepCthulhuRetroState(grounded, {}, 1 / 30);
   assert.ok(grounded.player.hp < groundedHp);
