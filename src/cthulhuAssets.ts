@@ -7,6 +7,8 @@ export interface CthulhuBossModel {
   armL: THREE.Group;
   armR: THREE.Group;
   head: THREE.Group;
+  core: THREE.Mesh;
+  coreHalo: THREE.Mesh;
   tentacles: THREE.Group[];
   wings: THREE.Group[];
 }
@@ -149,6 +151,31 @@ export function createCthulhuBossModel(): CthulhuBossModel {
   );
   chestSigil.scale.set(1, 1.12, 0.55);
   torso.add(chestSigil);
+
+  const coreMaterial = new THREE.MeshStandardMaterial({
+    color: 0x24504b,
+    roughness: 0.20,
+    metalness: 0.28,
+    emissive: 0x0b4b46,
+    emissiveIntensity: 0.38,
+  });
+  const core = mesh(
+    new THREE.SphereGeometry(0.145, 16, 12),
+    coreMaterial,
+    'cthulhu-exposed-elder-core',
+    new THREE.Vector3(0, 0.37, 0.675),
+    new THREE.Vector3(1.0, 1.18, 0.58),
+  );
+  torso.add(core);
+  const coreHalo = mesh(
+    new THREE.TorusGeometry(0.205, 0.022, 7, 36),
+    biolume,
+    'cthulhu-core-iris',
+    new THREE.Vector3(0, 0.37, 0.69),
+  );
+  coreHalo.scale.set(1, 1.08, 0.55);
+  torso.add(coreHalo);
+
   for (let index = 0; index < 3; index++) {
     const rune = mesh(
       new THREE.OctahedronGeometry(0.075 - index * 0.008, 0),
@@ -362,10 +389,12 @@ export function createCthulhuBossModel(): CthulhuBossModel {
   group.userData.cthulhuAura = aura;
   group.userData.cthulhuHead = head;
   group.userData.cthulhuSigil = chestSigil;
+  group.userData.cthulhuCore = core;
+  group.userData.cthulhuCoreHalo = coreHalo;
   group.userData.cthulhuTorso = torso;
   group.userData.cthulhuPelvis = pelvis;
   group.userData.cthulhuArmL = armL;
   group.userData.cthulhuArmR = armR;
 
-  return { group, legL, legR, armL, armR, head, tentacles, wings };
+  return { group, legL, legR, armL, armR, head, core, coreHalo, tentacles, wings };
 }

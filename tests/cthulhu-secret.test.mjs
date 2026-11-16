@@ -3,7 +3,13 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import * as THREE from 'three';
 import { createCthulhuBossModel } from '../src/cthulhuAssets.ts';
-import { getCthulhuPhaseTwoAttack, isWithinCthulhuLashLane } from '../src/cthulhuCombat.ts';
+import {
+  CTHULHU_CORE_DAMAGE_MULTIPLIER,
+  CTHULHU_CORE_OPEN_SECONDS,
+  getCthulhuCoreDamageMultiplier,
+  getCthulhuPhaseTwoAttack,
+  isWithinCthulhuLashLane,
+} from '../src/cthulhuCombat.ts';
 
 const enemyTypeNames = [
   'walczak', // Reuses the existing major-boss AI/reward contract; the mesh is bespoke Cthulhu.
@@ -22,6 +28,10 @@ test('the Cthulhu model is a distinct articulated multi-part boss with wings and
   assert.equal(built.group.userData.cthulhuArmR, built.armR);
   assert.equal(built.group.userData.cthulhuHead, built.head);
   assert.ok(built.group.userData.cthulhuSigil instanceof THREE.Mesh);
+  assert.equal(built.group.userData.cthulhuCore, built.core);
+  assert.equal(built.group.userData.cthulhuCoreHalo, built.coreHalo);
+  assert.equal(built.core.name, 'cthulhu-exposed-elder-core');
+  assert.equal(built.coreHalo.name, 'cthulhu-core-iris');
   assert.ok(built.tentacles.length >= 7);
   assert.equal(built.wings.length, 2);
   const meshNames = [];
@@ -134,4 +144,24 @@ test('the Necronomicon relic animates its book, sigil, halo and individual float
   assert.ok(game.includes('runes.children.forEach((rune, index)'));
   assert.ok(game.includes('rune.position.y = 0.90 + Math.sin(secret.age * 2.3 + index * 1.25)'));
   assert.ok(game.includes('haloMaterial.opacity = 0.66'));
+});
+
+
+test('Cthulhu core exposure lasts for a clear window and rewards damage only while open', () => {
+  assert.equal(CTHULHU_CORE_OPEN_SECONDS, 2.15);
+  assert.equal(CTHULHU_CORE_DAMAGE_MULTIPLIER, 1.5);
+  assert.equal(getCthulhuCoreDamageMultiplier(2.15), 1.5);
+  assert.equal(getCthulhuCoreDamageMultiplier(0.001), 1.5);
+  assert.equal(getCthulhuCoreDamageMultiplier(0), 1);
+  assert.equal(getCthulhuCoreDamageMultiplier(-1), 1);
+  assert.equal(getCthulhuCoreDamageMultiplier(Number.NaN), 1);
+});
+
+test('Cthulhu opens the visible chest core after each resolved attack and scales damage fairly', async () => {
+  const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
+  assert.ok(game.includes('e.mesh.userData.cthulhuCoreOpenTimer = CTHULHU_CORE_OPEN_SECONDS;'));
+  assert.ok(game.includes('RDZEŃ ODSŁONIĘTY • ATAKUJ! +50% OBRAŻEŃ'));
+  assert.ok(game.includes('getCthulhuCoreDamageMultiplier(coreOpenSeconds)'));
+  assert.ok(game.includes('coreMaterial.emissiveIntensity = coreOpen ? 2.35 + corePulse * 1.05'));
+  assert.ok(game.includes("const baseAppliedDamage = this.gameMode === 'survival'"));
 });

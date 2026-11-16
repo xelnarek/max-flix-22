@@ -1,7 +1,12 @@
 import * as THREE from 'three';
 import { applyPolyHavenPbrMaps } from './polyHavenTextures.ts';
 import { createCthulhuBossModel } from './cthulhuAssets.ts';
-import { getCthulhuPhaseTwoAttack, isWithinCthulhuLashLane } from './cthulhuCombat.ts';
+import {
+  CTHULHU_CORE_OPEN_SECONDS,
+  getCthulhuCoreDamageMultiplier,
+  getCthulhuPhaseTwoAttack,
+  isWithinCthulhuLashLane,
+} from './cthulhuCombat.ts';
 import { chooseMakeHumanLocomotion, getMakeHumanPlaybackRate, isMakeHumanVelocityAction, type MakeHumanLocomotionAction } from './makeHumanLocomotion.ts';
 import { dampActorAngle, getActorAnimationInterval, getEnemyRigPlaybackRate } from './actorMotion.ts';
 import { createEnemyRoleKit } from './enemyRoleKits.ts';
@@ -12399,9 +12404,14 @@ export class PaleciakiGameEngine {
     const previousHp = enemy.hp;
     // One shared Survival output nerf keeps every operator, weapon and ability
     // from deleting waves before the enemy director can create real pressure.
-    const appliedDamage = this.gameMode === 'survival'
+    const baseAppliedDamage = this.gameMode === 'survival'
       ? scaleSurvivalOutgoingDamage(amount)
       : amount;
+    const coreOpenSeconds = Number(enemy.mesh.userData.cthulhuCoreOpenTimer ?? 0);
+    const coreDamageMultiplier = enemy.name.includes('CTHULHU')
+      ? getCthulhuCoreDamageMultiplier(coreOpenSeconds)
+      : 1;
+    const appliedDamage = baseAppliedDamage * coreDamageMultiplier;
     enemy.hp = Math.max(0, enemy.hp - appliedDamage);
     const actualDamage = Math.max(0, previousHp - enemy.hp);
     const shouldSpawnImpactBurst = actualDamage > 0 && (enemy.hitReactTimer || 0) <= 0.015;
@@ -13049,6 +13059,28 @@ export class PaleciakiGameEngine {
       if (strikeTimer > 0) {
         e.mesh.userData.cthulhuStrikeTimer = Math.max(0, strikeTimer - dt);
       }
+      const coreTimer = Number(e.mesh.userData.cthulhuCoreOpenTimer ?? 0);
+      const coreOpenTimer = Number.isFinite(coreTimer) ? Math.max(0, coreTimer - dt) : 0;
+      e.mesh.userData.cthulhuCoreOpenTimer = coreOpenTimer;
+      const coreOpen = coreOpenTimer > 0;
+      const corePulse = 0.5 + 0.5 * Math.sin(e.walkCycle * (coreOpen ? 1.45 : 0.78));
+      const cthulhuCore = e.mesh.userData.cthulhuCore as THREE.Mesh | undefined;
+      const cthulhuCoreHalo = e.mesh.userData.cthulhuCoreHalo as THREE.Mesh | undefined;
+      if (cthulhuCore) {
+        const coreMaterial = cthulhuCore.material as THREE.MeshStandardMaterial;
+        coreMaterial.color.setHex(coreOpen ? 0x9affdf : 0x24504b);
+        coreMaterial.emissive.setHex(coreOpen ? 0x39f5cf : 0x0b4b46);
+        coreMaterial.emissiveIntensity = coreOpen ? 2.35 + corePulse * 1.05 : 0.34 + corePulse * 0.08;
+        const coreScale = coreOpen ? 1.16 + corePulse * 0.16 : 0.78 + corePulse * 0.035;
+        cthulhuCore.scale.set(coreScale, coreScale * 1.18, 0.58);
+      }
+      if (cthulhuCoreHalo) {
+        const haloMaterial = cthulhuCoreHalo.material as THREE.MeshStandardMaterial;
+        haloMaterial.emissiveIntensity = coreOpen ? 2.5 + corePulse : 0.42;
+        haloMaterial.color.setHex(coreOpen ? 0x9affdf : 0x65f0d0);
+        const haloScale = coreOpen ? 1.14 + corePulse * 0.12 : 0.82;
+        cthulhuCoreHalo.scale.set(haloScale, haloScale * 1.08, 0.55);
+      }
       const strikeSide = Number(e.mesh.userData.cthulhuStrikeSide ?? 1);
       const strikeType = String(e.mesh.userData.cthulhuStrikeType ?? 'slam');
       const cthulhuHead = e.mesh.userData.cthulhuHead as THREE.Group | undefined;
@@ -13109,10 +13141,15 @@ export class PaleciakiGameEngine {
         for (let index = 0; index < cthulhuWings.length; index++) {
           const wing = cthulhuWings[index];
           const side = index === 0 ? -1 : 1;
+          const phaseTwoWingRate = e.bossPhase === 2 ? 0.82 : 0.48;
+          const phaseTwoWingAmplitude = e.bossPhase === 2 ? 0.115 : 0.055;
           wing.rotation.z = side * (
-            -0.06 + Math.sin(e.walkCycle * 0.48 + index) * 0.055 - strikeWave * 0.12
+            -0.06 + Math.sin(e.walkCycle * phaseTwoWingRate + index) * phaseTwoWingAmplitude
+              - strikeWave * (e.bossPhase === 2 ? 0.19 : 0.12)
           );
-          wing.rotation.y = side * (-0.10 + Math.sin(e.walkCycle * 0.32 + index) * 0.035);
+          wing.rotation.y = side * (
+            -0.10 + Math.sin(e.walkCycle * (e.bossPhase === 2 ? 0.56 : 0.32) + index) * 0.035
+          );
           wing.rotation.x = strikeWave * 0.16;
         }
       }
@@ -13412,6 +13449,14 @@ export class PaleciakiGameEngine {
                   this.triggerScreenShake(activeAttack === 'lash' ? 0.42 : 0.58, activeAttack === 'lash' ? 0.30 : 0.40);
                   this.triggerHitStop(0.075);
                   this.triggerBloomPulse(0.66);
+                  e.mesh.userData.cthulhuCoreOpenTimer = CTHULHU_CORE_OPEN_SECONDS;
+                  this.emitFloatingToast(
+                    'RDZEŃ ODSŁONIĘTY • ATAKUJ! +50% OBRAŻEŃ',
+                    e.x,
+                    e.y + 2.35,
+                    e.z,
+                    'perk',
+                  );
 
                   if (activeAttack === 'lash' || activeAttack === 'grab') {
                     const dirX = Number(e.mesh.userData.cthulhuLashDirX ?? 0);

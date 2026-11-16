@@ -50,3 +50,14 @@ export function getCthulhuPhaseTwoAttack(nextAttack?: string): {
       : 'lash';
   return { attack, nextAttack: following };
 }
+
+
+export const CTHULHU_CORE_OPEN_SECONDS = 2.15;
+export const CTHULHU_CORE_DAMAGE_MULTIPLIER = 1.5;
+
+/** The chest core is vulnerable only during its explicit post-attack opening. */
+export function getCthulhuCoreDamageMultiplier(openSeconds: number): number {
+  return Number.isFinite(openSeconds) && openSeconds > 0
+    ? CTHULHU_CORE_DAMAGE_MULTIPLIER
+    : 1;
+}
