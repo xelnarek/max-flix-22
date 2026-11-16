@@ -162,7 +162,7 @@ export function stepOniricPlatformer(
   // Releasing jump early shortens the arc without making a quick tap ineffective.
   if (!input.jumpHeld && player.vy < -455) player.vy = -455;
   player.animationTime += dt * (Math.abs(player.vx) > 12 ? Math.max(0.25, Math.abs(player.vx) / 70) : 0.42);
-  state.landingSeconds = Math.max(0, state.landingSeconds - dt);
+  player.landingSeconds = Math.max(0, player.landingSeconds - dt);
 
   player.x = clamp(player.x + player.vx * dt, 0, ONIRIC_WORLD_WIDTH - player.width);
   player.y += player.vy * dt;
@@ -181,7 +181,7 @@ export function stepOniricPlatformer(
       break;
     }
   }
-  if (player.onGround && !wasGrounded) state.landingSeconds = 0.17;
+  if (player.onGround && !wasGrounded) player.landingSeconds = 0.17;
 
   if (player.y > ONIRIC_VIEW_HEIGHT + 90) {
     loseOniricLife(state);
