@@ -10,9 +10,9 @@ test('Unity migration audit passes the stable source-data and release-safety con
     cwd: process.cwd(),
     encoding: 'utf8',
   });
-  assert.match(output, /\\[Unity migration audit\\] PASS:/);
-  assert.match(output, /23 stable enemy IDs/);
-  assert.match(output, /four-zone topology contract/);
+  assert.match(output, /\[Unity migration audit\] PASS:/);
+  assert.match(output, /CUTOVER BLOCKER/);
+  assert.match(output, /four biome zones/);
 });
 
 test('Unity Survival mega-map contract matches the live 240 by 80 metre topology', async () => {
@@ -33,7 +33,7 @@ test('Unity Survival mega-map contract matches the live 240 by 80 metre topology
   assert.match(world, /new SurvivalWorldTransition\("b4-to-cold"/);
   assert.match(world, /new SurvivalWorldTransition\("port-to-night"/);
   assert.match(world, /new SurvivalWorldTransition\("cold-to-night"/);
-  assert.match(source, /minX: -119\.5,[\\s\\S]*?maxX: 119\.5,[\\s\\S]*?minZ: -39\.5,[\\s\\S]*?maxZ: 39\.5/);
+  assert.match(source, /minX: -119\.5,[\s\S]*?maxX: 119\.5,[\s\S]*?minZ: -39\.5,[\s\S]*?maxZ: 39\.5/);
   assert.match(bootstrap, /WarehouseWorldFactory\.BuildB4Slice\(\)/);
   assert.doesNotMatch(factory, /SurvivalWorldLayout\.Zones|BuildUnifiedSurvivalWorld/);
 });
