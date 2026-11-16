@@ -144,6 +144,8 @@ try {
   for (const token of [
     'WarehouseMapId.ColdStorage, 60f, 20f',
     'WarehouseMapId.NightSorting, -60f, 20f',
+    'SurvivalBiomeEdge.West | SurvivalBiomeEdge.North',
+    'SurvivalBiomeEdge.East | SurvivalBiomeEdge.North',
     'if (south) return east ? WarehouseMapId.ColdStorage : WarehouseMapId.NightSorting;',
     'ColdStorage = east * south',
     'NightSorting = (1f - east) * south',
