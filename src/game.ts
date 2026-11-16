@@ -13018,6 +13018,25 @@ export class PaleciakiGameEngine {
       }
       const strikeSide = Number(e.mesh.userData.cthulhuStrikeSide ?? 1);
       const strikeType = String(e.mesh.userData.cthulhuStrikeType ?? 'slam');
+      const cthulhuHead = e.mesh.userData.cthulhuHead as THREE.Group | undefined;
+      if (cthulhuHead) {
+        // The head scans independently from the torso, then recoils into each
+        // attack: the model stays alive during idle frames, not only on impact.
+        const idleScan = Math.sin(e.walkCycle * 0.24 + 0.6);
+        const attackRecoil = strikeType === 'grab' ? -0.24 : strikeType === 'lash' ? -0.12 : 0.08;
+        cthulhuHead.rotation.x = -0.025
+          + Math.sin(e.walkCycle * 0.41) * 0.035
+          + strikeWave * attackRecoil;
+        cthulhuHead.rotation.y = idleScan * 0.09
+          + strikeWave * strikeSide * (strikeType === 'lash' ? 0.12 : 0.04);
+        cthulhuHead.rotation.z = Math.cos(e.walkCycle * 0.19) * 0.025
+          + strikeWave * strikeSide * 0.06;
+      }
+      const cthulhuSigil = e.mesh.userData.cthulhuSigil as THREE.Mesh | undefined;
+      if (cthulhuSigil) {
+        const sigilPulse = 1 + 0.035 * (1 + Math.sin(e.walkCycle * 0.92)) + strikeWave * 0.055;
+        cthulhuSigil.scale.set(sigilPulse, sigilPulse * 1.12, 0.55);
+      }
       const cthulhuTorso = e.mesh.userData.cthulhuTorso as THREE.Group | undefined;
       if (cthulhuTorso) {
         cthulhuTorso.rotation.x = Math.sin(e.walkCycle * 0.44) * 0.026
@@ -13043,13 +13062,14 @@ export class PaleciakiGameEngine {
       const cthulhuArmL = e.mesh.userData.cthulhuArmL as THREE.Group | undefined;
       const cthulhuArmR = e.mesh.userData.cthulhuArmR as THREE.Group | undefined;
       const grabReach = strikeType === 'grab' ? strikeWave : 0;
+      const armSway = Math.sin(e.walkCycle * 0.33) * 0.045;
       if (cthulhuArmL) {
-        cthulhuArmL.rotation.x = -grabReach * 0.72;
-        cthulhuArmL.rotation.z = -0.20 - grabReach * 0.42;
+        cthulhuArmL.rotation.x = -armSway - grabReach * 0.72;
+        cthulhuArmL.rotation.z = -0.20 - armSway * 0.35 - grabReach * 0.42;
       }
       if (cthulhuArmR) {
-        cthulhuArmR.rotation.x = -grabReach * 0.72;
-        cthulhuArmR.rotation.z = 0.20 + grabReach * 0.42;
+        cthulhuArmR.rotation.x = armSway - grabReach * 0.72;
+        cthulhuArmR.rotation.z = 0.20 + armSway * 0.35 + grabReach * 0.42;
       }
       const cthulhuWings = e.mesh.userData.cthulhuWings as THREE.Group[] | undefined;
       if (cthulhuWings) {
