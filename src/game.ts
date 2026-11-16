@@ -1975,7 +1975,7 @@ export class PaleciakiGameEngine {
         : sequence === this.playerGobkitSequence && this.playerGroup === group;
       if (!isCurrent || group.parent !== this.levelRoot) return;
       const root = cloneGobkitModel(gltf);
-      fitGobkitModel(root, 1.52, this.threeRenderer?.capabilities.getMaxAnisotropy() ?? 1);
+      fitGobkitModel(root, 1.52, this.threeRenderer?.capabilities.getMaxAnisotropy() ?? 1, gltf.scene);
       this.applyHandheldActorShadowBudget(root);
       root.position.y -= group.position.y;
       root.name = 'gobkit-operator-' + modelId;
@@ -2004,7 +2004,7 @@ export class PaleciakiGameEngine {
           mesh.parent !== this.levelRoot || enemy.state === 'defeated') return;
       const root = cloneGobkitModel(gltf);
       const visualProfile = ENEMY_VISUAL_PROFILES[requestedType];
-      fitGobkitModel(root, visualProfile.targetHeight, this.threeRenderer?.capabilities.getMaxAnisotropy() ?? 1);
+      fitGobkitModel(root, visualProfile.targetHeight, this.threeRenderer?.capabilities.getMaxAnisotropy() ?? 1, gltf.scene);
       applyEnemyRoleAnatomy(root, requestedType);
       this.applyHandheldActorShadowBudget(root);
       root.position.y -= mesh.position.y;

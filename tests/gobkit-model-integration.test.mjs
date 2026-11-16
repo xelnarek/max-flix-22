@@ -507,7 +507,7 @@ test('enemy archetypes share only the two documented source-rig pairs, never sta
 });
 
 test('Gobkit actor clones keep unique skeleton roots while sharing immutable source geometry and materials', async () => {
-  const { cloneGobkitModel } = await import('../src/gobkitAssets.ts');
+  const { cloneGobkitModel, fitGobkitModel } = await import('../src/gobkitAssets.ts');
   const source = new THREE.Group();
   const geometry = new THREE.BoxGeometry();
   const material = new THREE.MeshStandardMaterial();
@@ -524,4 +524,21 @@ test('Gobkit actor clones keep unique skeleton roots while sharing immutable sou
   assert.equal(firstMesh.material, material);
   assert.equal(secondMesh.material, material);
   assert.equal(material.userData.gobkitSharedMaterial, true);
+
+  const originalSetFromObject = THREE.Box3.prototype.setFromObject;
+  let boundsReads = 0;
+  THREE.Box3.prototype.setFromObject = function (...args) {
+    boundsReads++;
+    return originalSetFromObject.apply(this, args);
+  };
+  try {
+    fitGobkitModel(first, 1.4, 1, source);
+    const configuredMaterialVersion = material.version;
+    fitGobkitModel(second, 1.8, 1, source);
+    assert.equal(boundsReads, 1, 'shared source bounds are calculated only once per loaded rig');
+    assert.equal(material.version, configuredMaterialVersion, 'spawning another clone does not dirty the shared shader again');
+    assert.ok(first.scale.x > 0 && second.scale.x > first.scale.x);
+  } finally {
+    THREE.Box3.prototype.setFromObject = originalSetFromObject;
+  }
 });
