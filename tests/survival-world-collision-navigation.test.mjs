@@ -8,7 +8,7 @@ test('only the outer perimeter is walled; every internal biome edge is physicall
   const game = await read('src/game.ts');
   assert.match(game, /private survivalObstacles: \{[^\n]+height\?: number/);
   assert.match(game, /if \(edgeIsOpen\) continue/);
-  assert.match(game, /if \(!edgeIsOpen\) \{[\s\S]*?new THREE\.BoxGeometry\(119, 9\.5, 0\.48\)/);
+  assert.match(game, /if \(edgeIsOpen\) continue;[\s\S]*?new THREE\.BoxGeometry\(119, 9\.5, 0\.48\)/);
   assert.match(game, /if \(!edgeIsOpen\) \{[\s\S]*?new THREE\.BoxGeometry\(0\.65, 9\.5, 40\)/);
   assert.doesNotMatch(game, /new THREE\.BoxGeometry\(42, 9\.5, 0\.48\)/);
   assert.doesNotMatch(game, /new THREE\.BoxGeometry\(0\.65, 9\.5, 7\)/);
