@@ -14,6 +14,8 @@ namespace MaxFlix.Unity.Runtime
 
         public static void DestroyCurrentWorld()
         {
+            CombatProjectile.ClearAllActive();
+            EnemyAttackProjectile.ClearAllActive();
             if (_worldRoot != null) Object.Destroy(_worldRoot.gameObject);
             _worldRoot = null;
             _layoutParent = null;
