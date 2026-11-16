@@ -2,7 +2,24 @@ import type { SurvivalMapId } from './survivalMaps.ts';
 
 export interface SurvivalWorldOpenEdges { west: boolean; east: boolean; north: boolean; south: boolean; }
 export interface SurvivalWorldBiomeLayout { id: SurvivalMapId; centerX: number; centerZ: number; openEdges: SurvivalWorldOpenEdges; }
-export interface SurvivalWorldTransition { id: string; from: SurvivalMapId; to: SurvivalMapId; axis: 'x' | 'z'; centerX: number; centerZ: number; openingWidth: number; }
+export interface SurvivalWorldTransition { id: string; from: SurvivalMapId; to: SurvivalMapId; axis: 'x' | 'z'; centerX: number; centerZ: number; markerSpan: number; }
+
+export interface SurvivalWorldTransitionFootprint { bandWidth: number; bandDepth: number; seamWidth: number; seamDepth: number; }
+
+/** Blend each shared biome edge across its full length, not only through the old central doorway. */
+export function getSurvivalWorldTransitionFootprint(transition: SurvivalWorldTransition): SurvivalWorldTransitionFootprint {
+  const blendWidth = 22;
+  return transition.axis === 'x'
+    ? { bandWidth: blendWidth, bandDepth: SURVIVAL_WORLD_BIOME_HALF_DEPTH * 2, seamWidth: 1.25, seamDepth: SURVIVAL_WORLD_BIOME_HALF_DEPTH * 2 }
+    : { bandWidth: SURVIVAL_WORLD_BIOME_HALF_WIDTH * 2, bandDepth: blendWidth, seamWidth: SURVIVAL_WORLD_BIOME_HALF_WIDTH * 2, seamDepth: 1.25 };
+}
+
+/** True when the source biome lies on the negative X/Z side of the seam texture. */
+export function isSurvivalWorldTransitionFromNegativeSide(transition: SurvivalWorldTransition): boolean {
+  const from = getSurvivalWorldBiome(transition.from);
+  const to = getSurvivalWorldBiome(transition.to);
+  return transition.axis === 'x' ? to.centerX > from.centerX : to.centerZ > from.centerZ;
+}
 
 /** Four existing 120 x 40 m arenas tile one connected 240 x 80 m world. */
 export const SURVIVAL_WORLD_BIOMES: readonly SurvivalWorldBiomeLayout[] = [
@@ -110,6 +127,7 @@ export function getSurvivalWorldWaypoint(
   from: SurvivalMapId,
   to: SurvivalMapId,
   inset = SURVIVAL_WORLD_BIOME_HYSTERESIS_METERS + 3,
+  currentPosition?: { x: number; z: number },
 ): { x: number; z: number } | null {
   const step = getSurvivalWorldRoute(from, to)[0];
   if (!step) return null;
@@ -119,16 +137,27 @@ export function getSurvivalWorldWaypoint(
   const directionX = Math.sign(toBiome.centerX - fromBiome.centerX);
   const directionZ = Math.sign(toBiome.centerZ - fromBiome.centerZ);
   const distance = Math.max(5, inset);
-  return transition.axis === 'x'
-    ? { x: transition.centerX + directionX * distance, z: transition.centerZ }
-    : { x: transition.centerX, z: transition.centerZ + directionZ * distance };
+  if (transition.axis === 'x') {
+    const minZ = transition.centerZ - SURVIVAL_WORLD_BIOME_HALF_DEPTH + 2;
+    const maxZ = transition.centerZ + SURVIVAL_WORLD_BIOME_HALF_DEPTH - 2;
+    const crossingZ = currentPosition && Number.isFinite(currentPosition.z)
+      ? Math.min(maxZ, Math.max(minZ, currentPosition.z))
+      : transition.centerZ;
+    return { x: transition.centerX + directionX * distance, z: crossingZ };
+  }
+  const minX = transition.centerX - SURVIVAL_WORLD_BIOME_HALF_WIDTH + 2;
+  const maxX = transition.centerX + SURVIVAL_WORLD_BIOME_HALF_WIDTH - 2;
+  const crossingX = currentPosition && Number.isFinite(currentPosition.x)
+    ? Math.min(maxX, Math.max(minX, currentPosition.x))
+    : transition.centerX;
+  return { x: crossingX, z: transition.centerZ + directionZ * distance };
 }
 
 export const SURVIVAL_WORLD_TRANSITIONS: readonly SurvivalWorldTransition[] = [
-  { id: 'b4-to-port', from: 'warehouse_b4', to: 'container_terminal', axis: 'x', centerX: 0, centerZ: -20, openingWidth: 26 },
-  { id: 'port-to-cold', from: 'container_terminal', to: 'cold_storage', axis: 'z', centerX: 60, centerZ: 0, openingWidth: 36 },
-  { id: 'cold-to-night', from: 'cold_storage', to: 'night_sorting', axis: 'x', centerX: 0, centerZ: 20, openingWidth: 26 },
-  { id: 'night-to-b4', from: 'night_sorting', to: 'warehouse_b4', axis: 'z', centerX: -60, centerZ: 0, openingWidth: 36 },
+  { id: 'b4-to-port', from: 'warehouse_b4', to: 'container_terminal', axis: 'x', centerX: 0, centerZ: -20, markerSpan: 26 },
+  { id: 'port-to-cold', from: 'container_terminal', to: 'cold_storage', axis: 'z', centerX: 60, centerZ: 0, markerSpan: 36 },
+  { id: 'cold-to-night', from: 'cold_storage', to: 'night_sorting', axis: 'x', centerX: 0, centerZ: 20, markerSpan: 26 },
+  { id: 'night-to-b4', from: 'night_sorting', to: 'warehouse_b4', axis: 'z', centerX: -60, centerZ: 0, markerSpan: 36 },
 ];
 
 export function getSurvivalWorldBiome(mapId: SurvivalMapId): SurvivalWorldBiomeLayout {
