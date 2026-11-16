@@ -329,9 +329,14 @@ export function launchOniricPlatformer(options: {
   const held = { left: false, right: false, jump: false };
   const keyHeld = { left: false, right: false, jump: false };
   const activePointers = new Map<number, { control: 'left' | 'right' | 'jump'; button: HTMLButtonElement }>();
+  // Keep native Touch Events as a second input path for Android WebViews and
+  // browser builds where pointer capture is interrupted by fullscreen changes.
+  // Pointer and touch maps are separate because their identifiers can overlap.
+  const activeTouches = new Map<number, { control: 'left' | 'right' | 'jump'; button: HTMLButtonElement }>();
   const syncHeldControl = (control: 'left' | 'right' | 'jump') => {
     const pointerHeld = Array.from(activePointers.values()).some((entry) => entry.control === control);
-    held[control] = keyHeld[control] || pointerHeld;
+    const touchHeld = Array.from(activeTouches.values()).some((entry) => entry.control === control);
+    held[control] = keyHeld[control] || pointerHeld || touchHeld;
     root.querySelector<HTMLButtonElement>(`[data-hold="${control}"]`)
       ?.classList.toggle('is-pressed', held[control]);
   };
@@ -704,6 +709,7 @@ export function launchOniricPlatformer(options: {
 
   const clearHeldInput = () => {
     activePointers.clear();
+    activeTouches.clear();
     for (const control of ['left', 'right', 'jump'] as const) {
       keyHeld[control] = false;
       held[control] = false;
@@ -730,6 +736,8 @@ export function launchOniricPlatformer(options: {
     window.removeEventListener('resize', resize);
     window.removeEventListener('pointerup', releasePointer, true);
     window.removeEventListener('pointercancel', releasePointer, true);
+    window.removeEventListener('touchend', releaseTouch, true);
+    window.removeEventListener('touchcancel', releaseTouch, true);
     window.removeEventListener('blur', onWindowBlur);
     document.removeEventListener('visibilitychange', onVisibilityChange);
     document.removeEventListener('keydown', onKeyDown, true);
@@ -808,6 +816,15 @@ export function launchOniricPlatformer(options: {
     syncHeldControl(owner.control);
   };
 
+  const releaseTouch = (event: TouchEvent) => {
+    for (const touch of Array.from(event.changedTouches)) {
+      const owner = activeTouches.get(touch.identifier);
+      if (!owner) continue;
+      activeTouches.delete(touch.identifier);
+      syncHeldControl(owner.control);
+    }
+  };
+
   root.querySelectorAll<HTMLButtonElement>('[data-hold]').forEach((button) => {
     const control = button.dataset.hold;
     if (control !== 'left' && control !== 'right' && control !== 'jump') return;
@@ -827,11 +844,25 @@ export function launchOniricPlatformer(options: {
         // Window-level pointerup/pointercancel listeners below are the fallback.
       }
     });
+    // Native touch fallback is deliberately independent from pointer capture.
+    // Modern browsers may report both paths for one gesture; the shared held
+    // state is an OR across both maps, so one path cannot release the other.
+    button.addEventListener('touchstart', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      for (const touch of Array.from(event.changedTouches)) {
+        activeTouches.set(touch.identifier, { control, button });
+      }
+      syncHeldControl(control);
+      if (control === 'jump' && event.changedTouches.length > 0) jumpQueued = true;
+    }, { passive: false });
     button.addEventListener('lostpointercapture', releasePointer);
     button.addEventListener('contextmenu', (event) => event.preventDefault());
   });
   window.addEventListener('pointerup', releasePointer, true);
   window.addEventListener('pointercancel', releasePointer, true);
+  window.addEventListener('touchend', releaseTouch, { capture: true, passive: false });
+  window.addEventListener('touchcancel', releaseTouch, { capture: true, passive: false });
 
   root.querySelector('[data-action="exit"]')?.addEventListener('click', finish);
   returnButton.addEventListener('click', finish);

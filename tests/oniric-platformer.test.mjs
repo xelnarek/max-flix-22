@@ -257,3 +257,19 @@ test('Rabbit Hole touch input tracks multiple pointers and releases them outside
   assert.match(source, /activePointers\.delete\(event\.pointerId\)/);
   assert.match(source, /window\.removeEventListener\('pointerup', releasePointer, true\)/);
 });
+
+
+test('Rabbit Hole has a native Android touch fallback independent from pointer capture', async () => {
+  const source = await readFile(new URL('../src/oniricPlatformer.ts', import.meta.url), 'utf8');
+  assert.match(source, /const activeTouches = new Map<number/);
+  assert.match(source, /const touchHeld = Array\.from\(activeTouches\.values\(\)\)/);
+  assert.match(source, /held\[control\] = keyHeld\[control\] \|\| pointerHeld \|\| touchHeld/);
+  assert.match(source, /button\.addEventListener\('touchstart',[\s\S]*?event\.preventDefault\(\)/);
+  assert.match(source, /activeTouches\.set\(touch\.identifier/);
+  assert.match(source, /const releaseTouch = \(event: TouchEvent\)/);
+  assert.match(source, /window\.addEventListener\('touchend', releaseTouch/);
+  assert.match(source, /window\.addEventListener\('touchcancel', releaseTouch/);
+  assert.match(source, /activeTouches\.clear\(\)/);
+  assert.match(source, /window\.removeEventListener\('touchend', releaseTouch, true\)/);
+  assert.match(source, /window\.removeEventListener\('touchcancel', releaseTouch, true\)/);
+});
