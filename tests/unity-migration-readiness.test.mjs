@@ -248,6 +248,17 @@ test('Unity weapon projectiles collide with environment before damaging enemies 
   assert.match(weapons, /firstEnemyDistance \+ 0\.08f/);
 });
 
+test('Unity enemy navigation includes conveyor belts that exceed the player step height', async () => {
+  const [navigation, factory] = await Promise.all([
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyNavigationWorld.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs'),
+  ]);
+  assert.match(navigation, /value\.max\.y < 0\.35f/);
+  assert.match(navigation, /value\.size\.y < 0\.35f/);
+  assert.match(factory, /new Vector3\(3\.7f, 0\.48f, 28f\)/);
+  assert.match(factory, /private static void CreateNightSortingLayout/);
+});
+
 test('Unity melee, ranged and charger attacks respect warehouse obstacle line of sight', async () => {
   const [navigation, enemy] = await Promise.all([
     read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyNavigationWorld.cs'),
