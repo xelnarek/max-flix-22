@@ -71,10 +71,11 @@ namespace MaxFlix.Unity.Runtime
                 PlayerPrefs.Save();
             }
 
-            GameSession.Current.SecretsFound++;
+            GameSession.Current.SecretsFound = Mathf.Clamp(GameSession.Current.SecretsFound + 1, 0, 20);
             GameSession.Current.Score += 750;
             GameSession.Current.Coins += 5;
             HudController hud = FindFirstObjectByType<HudController>();
+            hud?.SetSecretsCount(GameSession.Current.SecretsFound, 20);
             hud?.SetStatus("SEKRET ODKRYTY • " + _definition.DisplayName.ToUpperInvariant() + " • +750 PKT");
 
             // Special relics launch a genuinely independent full-screen 2D
