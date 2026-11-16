@@ -712,6 +712,12 @@ namespace MaxFlix.Unity.Runtime
                 {
                     Shader shader = Shader.Find("Universal Render Pipeline/Lit");
                     if (shader == null) shader = Shader.Find("Standard");
+                    if (shader == null)
+                    {
+                        Debug.LogError("No compatible lit shader is available for Survival weapon projectiles.");
+                        Destroy(created);
+                        return null;
+                    }
                     _sharedMaterial = new Material(shader) { enableInstancing = true };
                     if (_sharedMaterial.HasProperty(EmissionColorId)) _sharedMaterial.EnableKeyword("_EMISSION");
                 }
