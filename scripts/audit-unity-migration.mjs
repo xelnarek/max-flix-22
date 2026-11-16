@@ -54,6 +54,9 @@ try {
     worldLayout,
     worldFactory,
     bootstrap,
+    biomeEnvironment,
+    waveDirector,
+    progressionController,
     unityWorkflow,
     unityReadme,
   ] = await Promise.all([
@@ -70,6 +73,9 @@ try {
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWorldLayout.cs'),
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs'),
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/MainGameBootstrap.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalBiomeEnvironment.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWaveDirector.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalProgressionController.cs'),
     read('.github/workflows/unity-validation.yml'),
     read('unity/MaxFlixUnity/README.md'),
   ]);
@@ -176,21 +182,58 @@ try {
     fail('Unity workflow must not publish to Google Play or GitHub Pages automatically.');
   }
 
-  const survivalFactory = worldFactory.slice(worldFactory.indexOf('public static PlayerController BuildB4Slice()'));
-  const startUsesSingleArena = bootstrap.includes('WarehouseWorldFactory.BuildB4Slice()');
-  const connectedWorldIsNotIntegrated = startUsesSingleArena
-    && !survivalFactory.includes('SurvivalWorldLayout.Zones')
-    && !survivalFactory.includes('BuildUnifiedSurvivalWorld');
-  if (!unityReadme.includes('does **not** yet compose the live four-biome 240 × 80 m mega-world')) {
-    fail('Unity README must disclose the Survival mega-map cutover blocker.');
+  if (!bootstrap.includes('WarehouseWorldFactory.BuildUnifiedSurvivalWorld()')) {
+    fail('MainGameBootstrap must start Survival in the connected mega-world.');
+  }
+  for (const token of [
+    'public static PlayerController BuildUnifiedSurvivalWorld()',
+    'foreach (SurvivalBiomeZone zone in SurvivalWorldLayout.Zones)',
+    'segment.transform.localPosition = new Vector3(zone.Center.x, 0f, zone.Center.y)',
+    'segment.transform.localScale = new Vector3(2.4f, 1f, 0.86f)',
+    'CreateUnifiedSurvivalFloors()',
+    'CreateUnifiedSurvivalTransitions()',
+    'CreateUnifiedSurvivalPerimeter(baseMap)',
+    'BuildBiomeBlendTexture(transition)',
+    'GetBlendedFloorColor(worldX, z)',
+    'transform.localPosition = position',
+  ]) {
+    if (!worldFactory.includes(token)) fail('Connected Survival world factory is missing required implementation: ' + token);
+  }
+  for (const token of [
+    'GetBlendedEnemyHealthMultiplier(position.x, position.z)',
+    'GetBlendedEnemySpeedMultiplier(position.x, position.z)',
+    'SurvivalWorldLayout.ClampInside',
+  ]) {
+    if (!waveDirector.includes(token)) fail('Survival spawn director is missing world-aware logic: ' + token);
+  }
+  if (!progressionController.includes('GetBlendedXpMultiplier')) {
+    fail('Survival XP must use the biome blend field instead of switching abruptly at a seam.');
+  }
+  for (const token of [
+    'SurvivalWorldLayout.GetBlendWeights',
+    'RefreshIntervalSeconds',
+    'RenderSettings.fogColor',
+  ]) {
+    if (!biomeEnvironment.includes(token)) fail('Biome ambience controller is missing continuous visual blending: ' + token);
+  }
+  for (const token of [
+    'GetBlendedEnemyHealthMultiplier',
+    'GetBlendedEnemySpeedMultiplier',
+    'GetBlendedXpMultiplier',
+    'weights.WarehouseB4',
+    'weights.ContainerTerminal',
+    'weights.ColdStorage',
+    'weights.NightSorting',
+  ]) {
+    if (!contentCatalog.includes(token)) fail('Game content catalog is missing weighted biome modifier blending: ' + token);
+  }
+  if (!unityReadme.includes('BuildUnifiedSurvivalWorld')) {
+    fail('Unity README must describe the connected Survival mega-world implementation.');
   }
 
   if (process.exitCode) process.exit(process.exitCode);
-  console.log('[Unity migration audit] PASS: editor/package pins, source IDs, floor palettes, four-zone topology contract and release safety gates are consistent.');
-  if (connectedWorldIsNotIntegrated) {
-    console.log('[Unity migration audit] CUTOVER BLOCKER: Unity Survival still starts one selected arena; the 240 × 80 m four-biome contract is defined but not yet wired into WarehouseWorldFactory.');
-  }
-  console.log('[Unity migration audit] CUTOVER BLOCKER: Unity Editor compilation, rig attachment/retargeting, PvP, account/cloud services, ads/UMP, full secrets/events and device QA are still required.');
+  console.log('[Unity migration audit] PASS: editor/package pins, source IDs, floor palettes, connected world generation, weighted biome modifiers and release safety gates are consistent.');
+  console.log('[Unity migration audit] CUTOVER BLOCKER: Unity Editor compilation/playtesting, rig attachment/retargeting, PvP, account/cloud services, ads/UMP, full secrets/events and device QA are still required.');
 } catch (error) {
   fail(String(error));
 }
