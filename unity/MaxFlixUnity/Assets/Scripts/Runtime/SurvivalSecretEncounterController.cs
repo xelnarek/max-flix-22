@@ -700,20 +700,22 @@ namespace MaxFlix.Unity.Runtime
             _nextBossAttack = _nextBossAttack == BossAttack.Slam
                 ? BossAttack.Lash : _nextBossAttack == BossAttack.Lash ? BossAttack.Grab : BossAttack.Slam;
             _cthulhuStrikeWindup = _cthulhuPhase == 2 ? 0.62f : 0.82f;
-            if (_bossAttack == BossAttack.Grab)
+            if (_bossAttack == BossAttack.Grab || _bossAttack == BossAttack.Lash)
             {
-                _bossGrabX = Mathf.Clamp(_cthulhuPlayerX + Random.Range(-150f, 150f), 60f, 590f);
+                _bossGrabX = Mathf.Clamp(_cthulhuPlayerX + Random.Range(-155f, 155f), 60f, 590f);
                 if (_cthulhuGrabMarker != null)
                 {
                     _cthulhuGrabMarker.anchoredPosition = new Vector2(_bossGrabX - 450f, -133f);
+                    _cthulhuGrabMarker.sizeDelta = new Vector2(
+                        _bossAttack == BossAttack.Grab ? 42f : 118f, 5f);
                     _cthulhuGrabMarker.gameObject.SetActive(true);
                 }
-                _statusHud.text = "TELEGRAPH CHWYTU • WYJDŹ Z CZERWONEJ STREFY";
+                _statusHud.text = _bossAttack == BossAttack.Grab
+                    ? "TELEGRAPH CHWYTU • WYJDŹ Z CZERWONEJ STREFY"
+                    : "TELEGRAPH CIĘCIA • OPUŚĆ ZAZNACZONY PAS";
             }
-            else if (_bossAttack == BossAttack.Slam)
-                _statusHud.text = "TELEGRAPH FALI • PRZYGOTUJ SKOK";
             else
-                _statusHud.text = "TELEGRAPH MACEK • SKOK LUB UNIK";
+                _statusHud.text = "TELEGRAPH FALI • PRZYGOTUJ SKOK";
         }
 
         private void ResolveBossAttack()
@@ -731,9 +733,9 @@ namespace MaxFlix.Unity.Runtime
                     break;
                 case BossAttack.Lash:
                     if (_cthulhuJumpHeight < 43f && _cthulhuDodgeRemaining <= 0f
-                        && _cthulhuPlayerX < 590f)
+                        && Mathf.Abs(_cthulhuPlayerX - _bossGrabX) < 61f)
                         DamageCthulhuPlayer(_cthulhuPhase == 2 ? 38f : 32f);
-                    _statusHud.text = "CIĘCIE MACEK • SKOK LUB UNIK";
+                    _statusHud.text = "CIĘCIE MACEK • ZAZNACZONY PAS UDERZENIA";
                     break;
                 default:
                     if (_cthulhuJumpHeight < 12f && _cthulhuDodgeRemaining <= 0f
