@@ -48,9 +48,11 @@ test('Unity menu uses the Paleciaki brand and respects Android safe areas', asyn
 
 test('Unity menu sizes map and operator cards from the actual safe viewport width', async () => {
   const menu = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/MainMenuController.cs');
-  assert.match(menu, /float available = Mathf\.Max\(260f, Screen\.safeArea\.width \/ scale - 48f\)/);
+  assert.match(menu, /float available = Mathf\.Max\(160f, Screen\.safeArea\.width \/ scale \* 0\.89f - 36f\)/);
   assert.match(menu, /float innerWidth = available - grid\.padding\.horizontal/);
-  assert.match(menu, /float cellWidth = Mathf\.Max\(124f, innerWidth \/ columns\)/);
+  assert.match(menu, /float cellWidth = Mathf\.Max\(72f, innerWidth \/ columns\)/);
+  assert.match(menu, /viewportBottom/);
+  assert.match(menu, /compactScale/);
 });
 
 test('Campaign clearly reports its fixed mega-map and disables the Survival map picker', async () => {
