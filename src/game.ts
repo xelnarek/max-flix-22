@@ -61,7 +61,7 @@ import { applySurvivalMapCombatModifier, getSurvivalMapDefinition, SURVIVAL_MAPS
 import { getCampaignLightingProfile, getSurvivalLightingProfile, getSurvivalSurfaceProfile, PVP_LIGHTING_PROFILE, type WorldLightingProfile } from './worldVisualQuality.ts';
 import { getSurvivalMapRouteFeatures } from './survivalMapLayouts.ts';
 import { createSurvivalWorldDressing } from './survivalWorldDressing.ts';
-import { getSurvivalBiomeIdAtPosition, getSurvivalWorldBiome, getSurvivalWorldBiomeIdAtPosition, getSurvivalWorldTransitionFootprint, getSurvivalWorldWaypoint, isSurvivalWorldTransitionFromNegativeSide, SURVIVAL_WORLD_BIOME_HALF_DEPTH, SURVIVAL_WORLD_BIOME_HALF_WIDTH, SURVIVAL_WORLD_BIOMES, SURVIVAL_WORLD_BOUNDS, SURVIVAL_WORLD_START_BIOME, SURVIVAL_WORLD_TRANSITIONS, type SurvivalWorldOpenEdges } from './survivalWorldLayout.ts';
+import { getSurvivalBiomeIdAtPosition, getSurvivalWorldBiome, getSurvivalWorldBiomeIdAtPosition, getSurvivalWorldTransitionFootprint, isSurvivalWorldTransitionFromNegativeSide, SURVIVAL_WORLD_BIOME_HALF_DEPTH, SURVIVAL_WORLD_BIOME_HALF_WIDTH, SURVIVAL_WORLD_BIOMES, SURVIVAL_WORLD_BOUNDS, SURVIVAL_WORLD_START_BIOME, SURVIVAL_WORLD_TRANSITIONS, type SurvivalWorldOpenEdges } from './survivalWorldLayout.ts';
 import { chooseCampaignNearbyRewardSpawnPoint } from './campaignRewards.ts';
 import { chooseNearbySpawnPoint } from './arenaSpawn.ts';
 import { chooseSurvivalEnemySpawnType } from './survivalEnemySpawns.ts';
@@ -13153,21 +13153,19 @@ export class PaleciakiGameEngine {
 
     // Ranged attackers try to hold a useful firing lane instead of walking into melee range.
     if (!inHordeRing && engaged && role === 'ranged' && distanceToPlayer < preferredRadius - 1.0) preferredRadius += 1.0;
-    const enemyBiomeId = getSurvivalWorldBiomeIdAtPosition(enemy.x, enemy.z, this.survivalMapId);
-    const portalWaypoint = !inHordeRing && enemyBiomeId !== this.survivalMapId
-      ? getSurvivalWorldWaypoint(enemyBiomeId, this.survivalMapId, undefined, { x: enemy.x, z: enemy.z })
-      : null;
-    const targetX = portalWaypoint?.x ?? (anchorX + Math.sin(angle) * preferredRadius);
-    const targetZ = portalWaypoint?.z ?? (anchorZ + Math.cos(angle) * preferredRadius * (inHordeRing ? 0.62 : 1));
+    // With every internal biome edge physically open, enemies steer directly across the world.
+    // Their flank/formation angle remains intact and global obstacle avoidance handles cover.
+    const targetX = anchorX + Math.sin(angle) * preferredRadius;
+    const targetZ = anchorZ + Math.cos(angle) * preferredRadius * (inHordeRing ? 0.62 : 1);
     let steerX = targetX - enemy.x;
     let steerZ = targetZ - enemy.z;
     const steerLength = Math.hypot(steerX, steerZ);
 
-    if (!portalWaypoint && steerLength < 0.72 && engaged) {
+    if (steerLength < 0.72 && engaged) {
       const orbitSign = enemy.aiOrbitSign || 1;
       steerX = Math.cos(angle) * orbitSign;
       steerZ = -Math.sin(angle) * orbitSign;
-    } else if (!portalWaypoint && steerLength < 0.72 && !engaged) {
+    } else if (steerLength < 0.72 && !engaged) {
       steerX = Math.cos(angle);
       steerZ = -Math.sin(angle);
     }
@@ -14169,14 +14167,6 @@ export class PaleciakiGameEngine {
 
         const isCthulhuBoss = e.name.includes('CTHULHU');
         const isChargingImpact = (e.name.includes('Inwentaryzacja Gigant') || isCthulhuBoss) && e.chargeTimer !== undefined;
-        const bossPortalWaypoint = this.gameMode === 'survival'
-          ? getSurvivalWorldWaypoint(
-              getSurvivalWorldBiomeIdAtPosition(e.x, e.z, this.survivalMapId),
-              this.survivalMapId,
-              undefined,
-              { x: e.x, z: e.z },
-            )
-          : null;
         if (isChargingImpact) {
           // Keep a targeted lash visually aligned with the corridor shown on the floor.
           if (isCthulhuBoss && (
@@ -14191,26 +14181,20 @@ export class PaleciakiGameEngine {
           } else {
             e.mesh.rotation.y = Math.atan2(dx, dz);
           }
-        } else if (bossPortalWaypoint) {
-          const avoidance = calculateEnemyObstacleAvoidanceVector(
-            e, bossPortalWaypoint, this.survivalObstacles, 5.4, 1.25,
-          );
-          let moveX = bossPortalWaypoint.x - e.x + avoidance.x * 0.85;
-          let moveZ = bossPortalWaypoint.z - e.z + avoidance.z * 0.85;
-          const moveLength = Math.hypot(moveX, moveZ) || 1;
-          moveX /= moveLength;
-          moveZ /= moveLength;
-          e.x += moveX * e.speed * dt;
-          e.z += moveZ * e.speed * dt;
-          e.mesh.rotation.y = Math.atan2(moveX, moveZ);
-        } else if (distToPlayer < 14.0) {
+        } else if (this.gameMode === 'survival' || distToPlayer < 14.0) {
           const angle = Math.atan2(dx, dz);
           e.mesh.rotation.y = angle;
           if (this.gameMode === 'survival') {
             const side = e.aiOrbitSign || 1;
             const invDist = 1 / Math.max(0.1, distToPlayer);
-            e.x += ((dx * invDist) * 0.72 + (dz * invDist) * 0.46 * side) * e.speed * dt;
-            e.z += ((dz * invDist) * 0.72 - (dx * invDist) * 0.46 * side) * e.speed * dt;
+            const avoidance = calculateEnemyObstacleAvoidanceVector(
+              e, { x: this.playerPos.x, z: this.playerPos.z }, this.survivalObstacles, 5.4, 1.25,
+            );
+            const moveX = (dx * invDist) * 0.72 + (dz * invDist) * 0.46 * side + avoidance.x * 0.9;
+            const moveZ = (dz * invDist) * 0.72 - (dx * invDist) * 0.46 * side + avoidance.z * 0.9;
+            const moveLength = Math.hypot(moveX, moveZ) || 1;
+            e.x += (moveX / moveLength) * e.speed * dt;
+            e.z += (moveZ / moveLength) * e.speed * dt;
           } else {
             const avoidance = calculateEnemyObstacleAvoidanceVector(
               e,
@@ -14438,37 +14422,23 @@ export class PaleciakiGameEngine {
           this.emitFloatingToast('🔥 DYREKTOR WIDMO: OSTATECZNE ZWOLNIENIE!', e.x, e.y + 1.8, e.z, 'damage');
         }
 
-        const bossPortalWaypoint = this.gameMode === 'survival'
-          ? getSurvivalWorldWaypoint(
-              getSurvivalWorldBiomeIdAtPosition(e.x, e.z, this.survivalMapId),
-              this.survivalMapId,
-              undefined,
-              { x: e.x, z: e.z },
-            )
-          : null;
         if (e.chargeTimer !== undefined) {
           // Keep the boss aligned with the committed lane while the warning is visible.
           e.mesh.rotation.y = e.chargeDir ?? Math.atan2(dx, dz);
-        } else if (bossPortalWaypoint) {
-          const avoidance = calculateEnemyObstacleAvoidanceVector(
-            e, bossPortalWaypoint, this.survivalObstacles, 5.8, 1.35,
-          );
-          let moveX = bossPortalWaypoint.x - e.x + avoidance.x * 0.85;
-          let moveZ = bossPortalWaypoint.z - e.z + avoidance.z * 0.85;
-          const moveLength = Math.hypot(moveX, moveZ) || 1;
-          moveX /= moveLength;
-          moveZ /= moveLength;
-          e.x += moveX * e.speed * dt;
-          e.z += moveZ * e.speed * dt;
-          e.mesh.rotation.y = Math.atan2(moveX, moveZ);
-        } else if (distToPlayer < 15.0) {
+        } else if (this.gameMode === 'survival' || distToPlayer < 15.0) {
           const angle = Math.atan2(dx, dz);
           e.mesh.rotation.y = angle;
           if (this.gameMode === 'survival') {
             const side = e.aiOrbitSign || -1;
             const invDist = 1 / Math.max(0.1, distToPlayer);
-            e.x += ((dx * invDist) * 0.68 + (dz * invDist) * 0.52 * side) * e.speed * dt;
-            e.z += ((dz * invDist) * 0.68 - (dx * invDist) * 0.52 * side) * e.speed * dt;
+            const avoidance = calculateEnemyObstacleAvoidanceVector(
+              e, { x: this.playerPos.x, z: this.playerPos.z }, this.survivalObstacles, 5.8, 1.35,
+            );
+            const moveX = (dx * invDist) * 0.68 + (dz * invDist) * 0.52 * side + avoidance.x * 0.9;
+            const moveZ = (dz * invDist) * 0.68 - (dx * invDist) * 0.52 * side + avoidance.z * 0.9;
+            const moveLength = Math.hypot(moveX, moveZ) || 1;
+            e.x += (moveX / moveLength) * e.speed * dt;
+            e.z += (moveZ / moveLength) * e.speed * dt;
           } else {
             const avoidance = calculateEnemyObstacleAvoidanceVector(
               e,

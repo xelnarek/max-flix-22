@@ -64,3 +64,15 @@ test('all four biome floor blends span each shared edge and the central four-way
   assert.match(game, /survival-biome-four-way-blend/);
   assert.match(game, /isSurvivalWorldTransitionFromNegativeSide\(transition\)/);
 });
+
+
+test('enemies and Survival bosses steer directly through the continuous world instead of old gate waypoints', async () => {
+  const game = await read('src/game.ts');
+  assert.match(game, /const targetX = anchorX \+ Math\.sin\(angle\) \* preferredRadius/);
+  assert.match(game, /const targetZ = anchorZ \+ Math\.cos\(angle\) \* preferredRadius/);
+  assert.doesNotMatch(game, /portalWaypoint|bossPortalWaypoint|getSurvivalWorldWaypoint/);
+  assert.match(game, /this\.gameMode === 'survival' \|\| distToPlayer < 14\.0/);
+  assert.match(game, /this\.gameMode === 'survival' \|\| distToPlayer < 15\.0/);
+  assert.match(game, /this\.survivalObstacles, 5\.4, 1\.25/);
+  assert.match(game, /this\.survivalObstacles, 5\.8, 1\.35/);
+});
