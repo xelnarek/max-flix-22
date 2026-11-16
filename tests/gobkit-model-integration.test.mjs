@@ -483,3 +483,24 @@ test('jump and landing transitions use available clips on fallback operator rigs
   assert.match(game, /!airborne && track\.wasAirborne && track\.actions\.has\('Land'\)/);
   assert.match(game, /track\.wasAirborne = airborne/);
 });
+
+test('enemy archetypes share only the two documented source-rig pairs, never stack two rigs on one entity', async () => {
+  const { ENEMY_GOBKIT_MODELS } = await import('../src/gobkitAssets.ts');
+  const byModel = new Map();
+  for (const [enemy, model] of Object.entries(ENEMY_GOBKIT_MODELS)) {
+    const group = byModel.get(model) || [];
+    group.push(enemy);
+    byModel.set(model, group);
+  }
+  const shared = [...byModel.entries()]
+    .filter(([, enemies]) => enemies.length > 1)
+    .map(([model, enemies]) => ({ model, enemies: enemies.sort() }))
+    .sort((a, b) => a.model.localeCompare(b.model));
+  assert.deepEqual(shared, [
+    { model: 'bloodironjuggernaut', enemies: ['krol_leto', 'mutant_gamma_forklift'] },
+    { model: 'bloodirongrunt', enemies: ['elite_walczak_guard', 'sebix_m'] },
+  ]);
+  const game = await read('../src/game.ts');
+  assert.match(game, /this\.removeAttachedActorVisuals\(group\);[\s\S]{0,180}root\.visible = true/);
+  assert.match(game, /disposeActorOwnedRenderResources\(mesh\)/);
+});

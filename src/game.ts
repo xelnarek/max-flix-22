@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { disposeActorOwnedRenderResources } from './actorResourceDisposal.ts';
 import { applyPolyHavenPbrMaps } from './polyHavenTextures.ts';
 import { createCthulhuBossModel } from './cthulhuAssets.ts';
 import {
@@ -1683,6 +1684,10 @@ export class PaleciakiGameEngine {
   }
 
   private installActorVisualRoot(group: THREE.Group, root: THREE.Group): void {
+    // Enforce the one-rig-per-entity invariant at the final installation boundary.
+    // This also protects against future async attachment paths being added without
+    // remembering to remove a previous imported rig first.
+    this.removeAttachedActorVisuals(group);
     root.visible = true;
     // Mark the whole imported subtree, not only its wrapper, so any later
     // fallback-visibility pass cannot accidentally hide the newly installed rig.
@@ -6420,21 +6425,23 @@ export class PaleciakiGameEngine {
   private disposeEnemyModel(enemy: EnemyItem) {
     const mesh = enemy.mesh as THREE.Object3D | undefined;
     if (!mesh) return;
-    this.levelRoot.remove(mesh);
 
-    // Release per-enemy GPU geometry/material resources after the entity is gone.
-    // Textures are intentionally not disposed here because asset textures may be shared.
-    const geometries = new Set<THREE.BufferGeometry>();
-    const materials = new Set<THREE.Material>();
-    mesh.traverse((object) => {
-      const renderable = object as THREE.Mesh;
-      if (renderable.geometry) geometries.add(renderable.geometry);
-      const material = renderable.material;
-      if (Array.isArray(material)) material.forEach((item) => materials.add(item));
-      else if (material) materials.add(material);
-    });
-    geometries.forEach((geometry) => geometry.dispose());
-    materials.forEach((material) => material.dispose());
+    // Stop and uncache the mixer before removing the entity. Gobkit/role-kit
+    // geometries are shared by all clones of a cached rig and must stay alive.
+    const track = this.gobkitEnemyTracks.get(enemy);
+    if (track) {
+      this.stopGobkitTrack(track);
+      this.gobkitEnemyTracks.delete(enemy);
+    }
+    this.activeEnemyAnimationScratch.delete(enemy);
+    this.enemyPendingAttackUntil.delete(enemy);
+    this.enemyAttackAnimationUntil.delete(enemy);
+    delete mesh.userData.actorVisualRoot;
+
+    this.levelRoot.remove(mesh);
+    // Release only resources owned by this instance. Shared GLB and role-kit
+    // geometry/materials are deliberately preserved for surviving enemies.
+    disposeActorOwnedRenderResources(mesh);
   }
 
   private clearOperatorCompanions() {
