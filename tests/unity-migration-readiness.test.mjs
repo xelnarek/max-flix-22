@@ -267,6 +267,19 @@ test('Unity secret archive is permanent, duplicate rewards are blocked, and unfi
   assert.match(encounter, /SurvivalSecretPickup\.MarkEncounterCompleted\(_sourceMapId, _sourceSecretId\)/);
 });
 
+test('Unity secret victory rewards cannot be bypassed through the header exit button', async () => {
+  const encounter = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalSecretEncounterController.cs');
+  const close = encounter.slice(encounter.indexOf('private void CloseWithoutReward()'),
+    encounter.indexOf('private Image CreateProgressBar'));
+  assert.match(close, /GrantRewardIfWon\(\)/);
+  const reward = encounter.slice(encounter.indexOf('private void GrantRewardIfWon()'),
+    encounter.indexOf('private void ReturnWithReward()'));
+  assert.match(reward, /if \(_rewardGranted \|\| !_won/);
+  assert.match(reward, /MarkEncounterCompleted/);
+  assert.match(reward, /GameSession\.Current\.Score \+= 6000/);
+  assert.match(reward, /GameSession\.Current\.Score \+= 1200 \+ _rabbitCollected \* 250/);
+});
+
 test('Unity 2D encounter retry resets the common timer and Rabbit Hole camera state', async () => {
   const encounter = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalSecretEncounterController.cs');
   const retry = encounter.slice(encounter.indexOf('private void RetryEncounter()'), encounter.indexOf('private void ReturnWithReward()'));
