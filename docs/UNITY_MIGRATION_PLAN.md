@@ -13,6 +13,16 @@ Dlaczego ta wersja:
 
 Unity 6000.6.8f1 ma znaną usterkę Androida: przy jednoczesnym włączeniu Run In Background i Predictive Back Support gest/przycisk Wstecz może zamknąć aplikację po powrocie z tła. Nie włączamy obu ustawień jako wymogu migracji; trzeba przetestować zachowanie Wstecz i wznowienie aplikacji na urządzeniu przed wydaniem.
 
+## Status przygotowania — 16 listopada 2026
+
+Projekt Unity ma przypięty edytor i pakiety, bazowy runtime, katalogi danych, generator sceny startowej, pipeline importu modeli CC0 oraz ręczny workflow buildów WebGL/Android. Dodano też kontrolę ustawień przed buildem i kontrakt współrzędnych czterech biomów.
+
+**To nie jest jeszcze gotowa migracja produktu.** Nie ma potwierdzonego builda Unity Player z Unity Editor w CI, ponieważ do GitHub Actions nie dodano licencji Unity. Kod Unity nie został w tej sesji skompilowany przez Unity Editor ani uruchomiony na Poco F6.
+
+Najważniejsza różnica funkcjonalna: bieżący `MainGameBootstrap` uruchamia Survival przez `WarehouseWorldFactory.BuildB4Slice()`, a ta metoda generuje jedną wybraną arenę o granicach około 52 × 52 m. Produkcyjna wersja Three.js ma jeden świat 240 × 80 m z czterema połączonymi biomami. Nowy `SurvivalWorldLayout.cs` przechowuje już odpowiadającą mu topologię, ale jej połączenie z generatorami geometrii, kolizjami, spawnem, sekretami i oświetleniem pozostaje obowiązkowym zadaniem przed cutoverem.
+
+Przed przełączeniem produkcji obowiązkowe są: Unity Editor compile, pełna kompozycja mega-mapy Survival, podłączenie/retargeting 17 rigów CC0, funkcjonalny PvP z istniejącym serwerem, synchronizacja Firebase i ranking, reklamy/UMP, wszystkie sekrety i eventy oraz testy wydajności i wznowienia aplikacji na rzeczywistych urządzeniach.
+
 ## Zasada bezpieczeństwa migracji
 
 **Nie zastępujemy działającej gry Three.js w miejscu.** Obecny projekt, serwer PvP, Firebase, GitHub Pages i Android pozostają produkcyjnym punktem odniesienia. Unity powstaje równolegle w katalogu unity/MaxFlixUnity. Nie zmieniamy routingu, domeny, linku do gry ani konfiguracji Google Play na Unity, dopóki buildy Unity nie przejdą wszystkich bramek zgodności.
