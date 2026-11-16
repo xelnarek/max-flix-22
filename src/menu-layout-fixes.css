@@ -1038,7 +1038,7 @@
 
 
 /* Static atlas for the connected Survival world. */
-#title-screen #tab-map.world-atlas-panel {
+#title-screen #tab-map.world-atlas-panel.active {
   display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start;
   gap: clamp(8px, 1.1vw, 13px); width: 100%; min-width: 0;
 }
