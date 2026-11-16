@@ -32,7 +32,7 @@ namespace MaxFlix.Unity.Runtime
 
         public static MainMenuController Create(MainGameBootstrap owner, GameMode mode, OperatorId operatorId, WarehouseMapId mapId)
         {
-            EnsureEventSystem();
+            UiEventSystemInstaller.Ensure();
 
             GameObject canvasObject = new GameObject("Paleciaki Main Menu", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             Canvas canvas = canvasObject.GetComponent<Canvas>();
@@ -73,18 +73,25 @@ namespace MaxFlix.Unity.Runtime
             safeRoot.offsetMax = Vector2.zero;
             safeAreaObject.AddComponent<SafeAreaLayout>();
 
+            float canvasScale = Mathf.Max(0.5f, _canvas.scaleFactor);
+            float safeWidth = Screen.safeArea.width / canvasScale;
+            float safeHeight = Screen.safeArea.height / canvasScale;
+            float compactScale = Mathf.Clamp(safeHeight / 520f, 0.55f, 1f);
+
             CreateText(safeRoot, "PALECIAKI!", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0.5f, 1f), new Vector2(0f, -28f), new Vector2(900f, 66f),
-                46, TextAnchor.MiddleCenter, new Color(0.97f, 0.98f, 1f));
+                new Vector2(0.5f, 1f), new Vector2(0f, -28f * compactScale), new Vector2(900f, 66f * compactScale),
+                Mathf.RoundToInt(46f * compactScale), TextAnchor.MiddleCenter, new Color(0.97f, 0.98f, 1f));
             CreateText(safeRoot, "MAGAZYN CHAOSU  •  SURVIVAL I KAMPANIA", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0.5f, 1f), new Vector2(0f, -93f), new Vector2(900f, 36f),
-                17, TextAnchor.MiddleCenter, new Color(0.48f, 0.78f, 0.92f));
+                new Vector2(0.5f, 1f), new Vector2(0f, -93f * compactScale), new Vector2(900f, 36f * compactScale),
+                Mathf.RoundToInt(17f * compactScale), TextAnchor.MiddleCenter, new Color(0.48f, 0.78f, 0.92f));
 
             GameObject scrollObject = new GameObject("Menu scroll viewport", typeof(RectTransform), typeof(Image), typeof(Mask), typeof(ScrollRect));
             RectTransform viewport = scrollObject.GetComponent<RectTransform>();
             viewport.SetParent(safeRoot, false);
-            viewport.anchorMin = new Vector2(0.055f, 0.145f);
-            viewport.anchorMax = new Vector2(0.945f, 0.83f);
+            float viewportBottom = Mathf.Clamp((190f * compactScale + 18f) / Mathf.Max(1f, safeHeight), 0.18f, 0.52f);
+            float viewportTop = Mathf.Clamp(1f - 135f / Mathf.Max(1f, safeHeight), 0.52f, 0.83f);
+            viewport.anchorMin = new Vector2(0.055f, viewportBottom);
+            viewport.anchorMax = new Vector2(0.945f, Mathf.Max(viewportBottom + 0.12f, viewportTop));
             viewport.offsetMin = Vector2.zero;
             viewport.offsetMax = Vector2.zero;
             Image viewportImage = scrollObject.GetComponent<Image>();
@@ -128,17 +135,16 @@ namespace MaxFlix.Unity.Runtime
             AddSectionTitle(content, "03  •  WYBIERZ MAPĘ");
             AddMapGrid(content, portrait);
 
-            float canvasScale = Mathf.Max(0.5f, _canvas.scaleFactor);
-            float safeWidth = Screen.safeArea.width / canvasScale;
             _selectionSummary = CreateText(safeRoot, string.Empty, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0.5f, 0f), new Vector2(0f, 142f),
-                new Vector2(Mathf.Max(260f, Mathf.Min(1120f, safeWidth - 32f)), 48f),
-                14, TextAnchor.MiddleCenter, new Color(0.72f, 0.83f, 0.91f));
+                new Vector2(0.5f, 0f), new Vector2(0f, 142f * compactScale),
+                new Vector2(Mathf.Clamp(safeWidth - 24f, 200f, 1120f), 48f * compactScale),
+                Mathf.Max(11, Mathf.RoundToInt(14f * compactScale)), TextAnchor.MiddleCenter,
+                new Color(0.72f, 0.83f, 0.91f));
 
             _startButton = CreateButton(safeRoot, "ROZPOCZNIJ SURVIVAL", new Vector2(0.5f, 0f),
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 42f),
-                new Vector2(Mathf.Max(280f, Mathf.Min(560f, safeWidth - 32f)), 78f),
-                new Color(0.10f, 0.55f, 0.40f, 1f), 24,
+                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 42f * compactScale),
+                new Vector2(Mathf.Clamp(safeWidth - 24f, 200f, 560f), 78f * compactScale),
+                new Color(0.10f, 0.55f, 0.40f, 1f), Mathf.Max(14, Mathf.RoundToInt(24f * compactScale)),
                 StartSelectedRun);
 
             RefreshSelection();
@@ -197,10 +203,11 @@ namespace MaxFlix.Unity.Runtime
             grid.padding = new RectOffset(4, 4, 4, 4);
             grid.childAlignment = TextAnchor.MiddleCenter;
             float scale = Mathf.Max(0.5f, _canvas.scaleFactor);
-            // A fixed 230-unit minimum pushes two-column cards outside narrow phone viewports.
-            float available = Mathf.Max(260f, Screen.safeArea.width / scale - 48f);
+            // Match the actual 89% viewport width; never enforce a card minimum
+            // wider than a narrow phone can display in its two-column grids.
+            float available = Mathf.Max(160f, Screen.safeArea.width / scale * 0.89f - 36f);
             float innerWidth = available - grid.padding.horizontal - (columns - 1) * grid.spacing.x;
-            float cellWidth = Mathf.Max(124f, innerWidth / columns);
+            float cellWidth = Mathf.Max(72f, innerWidth / columns);
             grid.cellSize = new Vector2(cellWidth, cellHeight);
             return grid;
         }
@@ -237,9 +244,12 @@ namespace MaxFlix.Unity.Runtime
             button.colors = colors;
             if (action != null) button.onClick.AddListener(action);
 
+            int cardFontSize = grid.cellSize.x < 92f ? 13
+                : grid.cellSize.x < 116f ? 15
+                : grid.cellSize.y > 135f ? 17 : 19;
             Text text = CreateText(rect, label, Vector2.zero, Vector2.zero,
                 new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero,
-                grid.cellSize.y > 135f ? 17 : 19, TextAnchor.MiddleCenter,
+                cardFontSize, TextAnchor.MiddleCenter,
                 enabled ? Color.white : new Color(0.66f, 0.69f, 0.73f));
             text.rectTransform.anchorMin = Vector2.zero;
             text.rectTransform.anchorMax = Vector2.one;
@@ -400,12 +410,5 @@ namespace MaxFlix.Unity.Runtime
             return button;
         }
 
-        private static void EnsureEventSystem()
-        {
-            if (FindFirstObjectByType<EventSystem>() != null) return;
-            GameObject eventSystem = new GameObject("EventSystem", typeof(EventSystem));
-            InputSystemUIInputModule module = eventSystem.AddComponent<InputSystemUIInputModule>();
-            module.pointerBehavior = UIPointerBehavior.SingleMouseOrPenButMultiTouchAndTrack;
-        }
     }
 }

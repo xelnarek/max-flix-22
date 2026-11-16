@@ -25,6 +25,17 @@ namespace MaxFlix.Unity.Runtime
 
         public static int PooledCount { get { return Pool.Count; } }
 
+        /// <summary>Clear shots that target the player being removed with the current run.</summary>
+        public static void ClearAllActive()
+        {
+            for (int i = 0; i < Pool.Count; i++)
+            {
+                EnemyAttackProjectile projectile = Pool[i];
+                if (projectile != null && projectile._initialized)
+                    projectile.ReturnToPool();
+            }
+        }
+
         public static void Prewarm(int requestedCount = DefaultPrewarmCount)
         {
             int count = Mathf.Clamp(requestedCount, 0, PoolLimit);

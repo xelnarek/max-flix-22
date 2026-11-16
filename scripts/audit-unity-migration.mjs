@@ -54,6 +54,19 @@ try {
     worldLayout,
     worldFactory,
     bootstrap,
+    biomeEnvironment,
+    waveDirector,
+    progressionController,
+    weaponController,
+    secretPickup,
+    secretEncounter,
+    gameDomain,
+    menuController,
+    uiEventSystemInstaller,
+    hudController,
+    enemyNavigationWorld,
+    enemyAgent,
+    campaignMission,
     unityWorkflow,
     unityReadme,
   ] = await Promise.all([
@@ -70,6 +83,19 @@ try {
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWorldLayout.cs'),
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs'),
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/MainGameBootstrap.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalBiomeEnvironment.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWaveDirector.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalProgressionController.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWeaponController.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalSecretPickup.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalSecretEncounterController.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/GameDomain.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/MainMenuController.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/UiEventSystemInstaller.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyNavigationWorld.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/CampaignMissionDirector.cs'),
     read('.github/workflows/unity-validation.yml'),
     read('unity/MaxFlixUnity/README.md'),
   ]);
@@ -176,21 +202,194 @@ try {
     fail('Unity workflow must not publish to Google Play or GitHub Pages automatically.');
   }
 
-  const survivalFactory = worldFactory.slice(worldFactory.indexOf('public static PlayerController BuildB4Slice()'));
-  const startUsesSingleArena = bootstrap.includes('WarehouseWorldFactory.BuildB4Slice()');
-  const connectedWorldIsNotIntegrated = startUsesSingleArena
-    && !survivalFactory.includes('SurvivalWorldLayout.Zones')
-    && !survivalFactory.includes('BuildUnifiedSurvivalWorld');
-  if (!unityReadme.includes('does **not** yet compose the live four-biome 240 × 80 m mega-world')) {
-    fail('Unity README must disclose the Survival mega-map cutover blocker.');
+  if (!bootstrap.includes('WarehouseWorldFactory.BuildUnifiedSurvivalWorld()')) {
+    fail('MainGameBootstrap must start Survival in the connected mega-world.');
+  }
+  for (const token of [
+    'public static PlayerController BuildUnifiedSurvivalWorld()',
+    'foreach (SurvivalBiomeZone zone in SurvivalWorldLayout.Zones)',
+    'segment.transform.localPosition = new Vector3(zone.Center.x, 0f, zone.Center.y)',
+    'segment.transform.localScale = new Vector3(2.4f, 1f, 0.86f)',
+    'CreateUnifiedSurvivalFloors()',
+    'CreateUnifiedSurvivalTransitions()',
+    'CreateUnifiedSurvivalPerimeter(baseMap)',
+    'BuildBiomeBlendTexture(transition)',
+    'GetBlendedFloorColor(worldX, z)',
+    'transform.localPosition = position',
+  ]) {
+    if (!worldFactory.includes(token)) fail('Connected Survival world factory is missing required implementation: ' + token);
+  }
+  for (const token of [
+    'GetBlendedEnemyHealthMultiplier(position.x, position.z)',
+    'GetBlendedEnemySpeedMultiplier(position.x, position.z)',
+    'TryGetSpawnPosition(',
+    'IsSpawnPositionClear(',
+    'SurvivalWorldLayout.ClampInside',
+    'if (SpawnEnemy(kind, angle, radius))',
+    '_bossWarningRemaining = 2f',
+  ]) {
+    if (!waveDirector.includes(token)) fail('Survival spawn director is missing world-aware/safe spawn logic: ' + token);
+  }
+  if (waveDirector.includes('private Vector3 GetSpawnPosition(')) {
+    fail('Survival spawns must not use an unchecked fallback position.');
+  }
+  if (!progressionController.includes('GetBlendedXpMultiplier')) {
+    fail('Survival XP must use the biome blend field instead of switching abruptly at a seam.');
+  }
+  for (const token of [
+    'SphereCastNonAlloc(',
+    '_worldHitBuffer',
+    'GetComponentInParent<EnemyAgent>() != null',
+    'worldHitDistance < firstEnemyDistance',
+  ]) {
+    if (!weaponController.includes(token)) fail('Survival projectiles must respect world obstruction collisions: ' + token);
+  }
+  for (const token of [
+    'SurvivalWorldLayout.GetBlendWeights',
+    'RefreshIntervalSeconds',
+    'RenderSettings.fogColor',
+  ]) {
+    if (!biomeEnvironment.includes(token)) fail('Biome ambience controller is missing continuous visual blending: ' + token);
+  }
+  if (!gameDomain.includes('Necronomicon = 4')) fail('Unity domain must keep the stable Necronomicon secret style ID.');
+  const secretMapBlocks = [...contentCatalog.matchAll(/Secrets = new\[\]\s*\{([\s\S]*?)\}/g)];
+  if (secretMapBlocks.length !== 4) fail('Unity Survival must define one secret catalogue per biome.');
+  for (let index = 0; index < secretMapBlocks.length; index++) {
+    const secretsInBiome = [...secretMapBlocks[index][1].matchAll(/Secret\("/g)].length;
+    if (secretsInBiome !== 5) fail('Each Unity Survival biome must contain exactly five secrets; biome index ' + index + ' has ' + secretsInBiome + '.');
+  }
+  for (const token of [
+    'CreateUnifiedSurvivalSecrets()',
+    'zone.Center.x + definition.Position.x',
+    'zone.Center.y + definition.Position.y',
+  ]) {
+    if (!worldFactory.includes(token)) fail('Unity world factory is missing connected-world secret placement: ' + token);
+  }
+  for (const token of [
+    '[RequireComponent(typeof(SphereCollider), typeof(Rigidbody))]',
+    'OnTriggerEnter(Collider other)',
+    'body.isKinematic = true',
+    'body.useGravity = false',
+    'CollisionDetectionMode.ContinuousSpeculative',
+    'PlayerPrefs.SetInt(discoveryKey, 1)',
+    'GameSession.Current.SecretsFound = CountDiscovered()',
+    'public static int CountDiscovered()',
+    'GetCompletionKey(mapId, definition.Id)',
+    'GameSession.Current.Score += 750',
+    'SurvivalSecretEncounterController.Open(player, _definition.Style, _mapId, _definition.Id)',
+    'challengeCompleted',
+    'firstDiscovery',
+  ]) {
+    if (!secretPickup.includes(token)) fail('Unity Survival secret pickup is missing collection/persistence behaviour: ' + token);
+  }
+  for (const token of [
+    'public void SetSecretsCount(int found, int total)',
+    'SEKRETY  0/20',
+    'secretRect.anchorMin = secretRect.anchorMax = new Vector2(0.5f, 0f)',
+    'Sekrety odkryte: ',
+    'Mathf.Clamp(run.SecretsFound, 0, 20)',
+  ]) {
+    if (!hudController.includes(token)) fail('Unity Survival HUD is missing its live/summary secret counter: ' + token);
+  }
+  if (!secretPickup.includes('hud?.SetSecretsCount(GameSession.Current.SecretsFound, 20)')) {
+    fail('Secret pickup must update the live Survival HUD counter immediately.');
+  }
+
+  if (!bootstrap.includes('GameSession.Current.SecretsFound = SurvivalSecretPickup.CountDiscovered()')) {
+    fail('Unity Survival startup must hydrate the permanent 20-secret archive count.');
+  }
+  for (const token of [
+    'public static void Open(PlayerController player, SurvivalSecretStyle style,',
+    'WarehouseMapId mapId, string secretId)',
+    'SurvivalSecretPickup.MarkEncounterCompleted(_sourceMapId, _sourceSecretId)',
+    'GameSession.SetState(GameFlowState.LevelUp)',
+    'Time.timeScale = 0f',
+    'private void UpdateRabbitHole(float dt)',
+    'private void UpdateNecronomicon(float dt)',
+    'private enum BossAttack { Slam, Lash, Grab }',
+    '_cthulhuBossOpen = 2.15f',
+    'GameSession.Current.Score += 6000',
+    '_rabbitCollected == 3',
+  ]) {
+    if (!secretEncounter.includes(token)) fail('Unity standalone 2D secret encounter is missing required mechanics: ' + token);
+  }
+
+  const evolutionPassiveBlock = weaponCatalog.match(/private static readonly string\[\] PassiveIds\s*=\s*\{([\s\S]*?)\};/);
+  const availableEvolutionPassives = evolutionPassiveBlock
+    ? [...evolutionPassiveBlock[1].matchAll(/"([^"]+)"/g)].map((match) => match[1])
+    : [];
+  const evolutionRequirements = [...weaponCatalog.matchAll(/Make\(SurvivalWeaponKind\.([A-Za-z0-9_]+),[^\n]*,\s*"([a-z_]+)"\),?/g)];
+  if (evolutionRequirements.length !== 12) fail('All 12 Unity Survival weapons must define an evolution passive requirement.');
+  for (const [, weapon, passive] of evolutionRequirements) {
+    if (!availableEvolutionPassives.includes(passive)) fail(weapon + ' evolution passive is not available: ' + passive);
+    if (!progressionController.includes('AddPassive(pool, "' + passive + '"')) fail(weapon + ' evolution passive is not offered in drafts: ' + passive);
+    if (!weaponController.includes('case "' + passive + '":')
+      && !progressionController.includes('case "' + passive + '":')) {
+      fail(weapon + ' evolution passive has no effect handler: ' + passive);
+    }
+  }
+
+  for (const token of [
+    'GetBlendedEnemyHealthMultiplier',
+    'GetBlendedEnemySpeedMultiplier',
+    'GetBlendedXpMultiplier',
+    'weights.WarehouseB4',
+    'weights.ContainerTerminal',
+    'weights.ColdStorage',
+    'weights.NightSorting',
+  ]) {
+    if (!contentCatalog.includes(token)) fail('Game content catalog is missing weighted biome modifier blending: ' + token);
+  }
+  if (!unityReadme.includes('BuildUnifiedSurvivalWorld')) {
+    fail('Unity README must describe the connected Survival mega-world implementation.');
+  }
+  for (const token of [
+    'UiEventSystemInstaller.Ensure()',
+    'Mathf.Clamp(safeWidth - 24f, 200f, 560f)',
+    'Mathf.Max(72f, innerWidth / columns)',
+    'viewportBottom',
+  ]) {
+    if (!menuController.includes(token)) fail('Unity main menu is missing a narrow-screen layout safeguard: ' + token);
+  }
+  for (const token of [
+    'GetComponents<BaseInputModule>()',
+    'module.enabled = false',
+    'SingleMouseOrPenButMultiTouchAndTrack',
+  ]) {
+    if (!uiEventSystemInstaller.includes(token)) fail('Unity EventSystem installer is missing the New Input System fallback: ' + token);
+  }
+  if (!hudController.includes('UiEventSystemInstaller.Ensure()')) {
+    fail('Unity HUD must share the resilient touch/pointer input module setup.');
+  }
+  for (const token of [
+    'EnemyNavigationWorld navigation = root.AddComponent<EnemyNavigationWorld>()',
+    'navigation.Initialize(_worldRoot)',
+  ]) {
+    if (!worldFactory.includes(token)) fail('Unity world factory is missing obstacle navigation initialization: ' + token);
+  }
+  for (const token of [
+    'EnemyNavigationWorld.GetObstacleAvoidanceVector(',
+    'Vector3.Dot(direction, targetDirection) > 0.35f',
+    'HasClearAttackLine()',
+    '&& HasClearAttackLine()',
+  ]) {
+    if (!enemyAgent.includes(token)) fail('Unity enemy movement is missing obstacle avoidance / line-of-sight safeguards: ' + token);
+  }
+  for (const token of [
+    'private bool HasClearPath(',
+    'SpatialCellSize = 8f',
+    '_obstacleCells',
+    'TryRayBoxEntry',
+  ]) {
+    if (!enemyNavigationWorld.includes(token)) fail('Unity obstacle navigation is missing its spatial broad phase: ' + token);
+  }
+  if (!campaignMission.includes('EnemyNavigationWorld.RefreshActive()')) {
+    fail('Campaign navigation cache must refresh when physical boss-gated doors change state.');
   }
 
   if (process.exitCode) process.exit(process.exitCode);
-  console.log('[Unity migration audit] PASS: editor/package pins, source IDs, floor palettes, four-zone topology contract and release safety gates are consistent.');
-  if (connectedWorldIsNotIntegrated) {
-    console.log('[Unity migration audit] CUTOVER BLOCKER: Unity Survival still starts one selected arena; the 240 × 80 m four-biome contract is defined but not yet wired into WarehouseWorldFactory.');
-  }
-  console.log('[Unity migration audit] CUTOVER BLOCKER: Unity Editor compilation, rig attachment/retargeting, PvP, account/cloud services, ads/UMP, full secrets/events and device QA are still required.');
+  console.log('[Unity migration audit] PASS: editor/package pins, source IDs, floor palettes, connected world generation, weighted biome modifiers and release safety gates are consistent.');
+  console.log('[Unity migration audit] CUTOVER BLOCKER: Unity Editor compilation/playtesting, rig attachment/retargeting, PvP, account/cloud services, ads/UMP, remaining bonus-event and achievement parity, and device QA are still required.');
 } catch (error) {
   fail(String(error));
 }

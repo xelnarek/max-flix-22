@@ -46,7 +46,8 @@ namespace MaxFlix.Unity.Runtime
         Wz = 0,
         Cassette = 1,
         Capybara = 2,
-        RabbitHole = 3
+        RabbitHole = 3,
+        Necronomicon = 4
     }
 
     public enum CollectibleKind
@@ -160,6 +161,7 @@ namespace MaxFlix.Unity.Runtime
         public int Kills;
         public int BossesDefeated;
         public int HighestWave;
+        public int SecretsFound;
         public float ElapsedSeconds;
     }
 

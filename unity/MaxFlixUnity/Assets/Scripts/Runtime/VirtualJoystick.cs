@@ -10,6 +10,7 @@ namespace MaxFlix.Unity.Runtime
 
         private RectTransform _root;
         private Vector2 _value;
+        private int _activePointerId = int.MinValue;
 
         public Vector2 Value { get { return _value; } }
 
@@ -22,7 +23,7 @@ namespace MaxFlix.Unity.Runtime
         {
             if (float.IsNaN(value) || float.IsInfinity(value)) return;
             movementRadius = Mathf.Clamp(value, 1f, 256f);
-            if (_value.sqrMagnitude > 0.0001f)
+            if (handle != null && _value.sqrMagnitude > 0.0001f)
                 handle.anchoredPosition = _value * movementRadius;
         }
 
@@ -34,12 +35,16 @@ namespace MaxFlix.Unity.Runtime
 
         public void OnPointerDown(PointerEventData eventData)
         {
+            // Lock the joystick to the first finger. Additional touch pointers
+            // can operate jump/attack/ability without stealing or resetting it.
+            if (_activePointerId != int.MinValue) return;
+            _activePointerId = eventData.pointerId;
             OnDrag(eventData);
         }
 
         public void OnDrag(PointerEventData eventData)
         {
-            if (_root == null || handle == null) return;
+            if (_activePointerId != eventData.pointerId || _root == null || handle == null) return;
 
             if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
                     _root, eventData.position, eventData.pressEventCamera, out Vector2 localPoint))
@@ -53,6 +58,7 @@ namespace MaxFlix.Unity.Runtime
 
         public void OnPointerUp(PointerEventData eventData)
         {
+            if (_activePointerId != eventData.pointerId) return;
             ResetStick();
         }
 
@@ -63,6 +69,7 @@ namespace MaxFlix.Unity.Runtime
 
         private void ResetStick()
         {
+            _activePointerId = int.MinValue;
             _value = Vector2.zero;
             if (handle != null) handle.anchoredPosition = Vector2.zero;
         }

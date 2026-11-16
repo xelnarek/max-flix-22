@@ -65,7 +65,8 @@ namespace MaxFlix.Unity.Runtime
                             Secret("golden_wz", "Złota WZ-tka", -48f, 6.5f, SurvivalSecretStyle.Wz),
                             Secret("b4_archive", "Tajna kaseta B4", 1.5f, -13.2f, SurvivalSecretStyle.Cassette),
                             Secret("bronze_capybara", "Kapibara z brązu", 48f, -6.5f, SurvivalSecretStyle.Capybara),
-                            Secret("oniric_dream", "Oniryczny sen", -27f, 2.4f, SurvivalSecretStyle.RabbitHole)
+                            Secret("oniric_dream", "Oniryczny sen", -27f, 2.4f, SurvivalSecretStyle.RabbitHole),
+                            Secret("necronomicon", "Necronomicon", 28f, 10.2f, SurvivalSecretStyle.Necronomicon)
                         }
                     }
                 },
@@ -90,7 +91,8 @@ namespace MaxFlix.Unity.Runtime
                             Secret("manifest_17", "Tajny manifest 17", -50f, 5.2f, SurvivalSecretStyle.Wz),
                             Secret("captains_tape", "Kaseta kapitana portu", 0f, 15.2f, SurvivalSecretStyle.Cassette),
                             Secret("dock_capybara", "Kapibara dokerów", 50f, -5.2f, SurvivalSecretStyle.Capybara),
-                            Secret("oniric_dream", "Oniryczny sen", 28f, -1.8f, SurvivalSecretStyle.RabbitHole)
+                            Secret("oniric_dream", "Oniryczny sen", 28f, -1.8f, SurvivalSecretStyle.RabbitHole),
+                            Secret("necronomicon", "Necronomicon", -28f, -10.4f, SurvivalSecretStyle.Necronomicon)
                         }
                     }
                 },
@@ -115,7 +117,8 @@ namespace MaxFlix.Unity.Runtime
                             Secret("frozen_wz", "Zamarznięta WZ-tka", -50f, -5.2f, SurvivalSecretStyle.Wz),
                             Secret("cold_archive", "Kaseta z komory -18°C", 0f, -15.2f, SurvivalSecretStyle.Cassette),
                             Secret("ice_capybara", "Lodowa kapibara", 50f, 5.2f, SurvivalSecretStyle.Capybara),
-                            Secret("oniric_dream", "Oniryczny sen", -28f, -1.5f, SurvivalSecretStyle.RabbitHole)
+                            Secret("oniric_dream", "Oniryczny sen", -28f, -1.5f, SurvivalSecretStyle.RabbitHole),
+                            Secret("necronomicon", "Necronomicon", 28f, 10.4f, SurvivalSecretStyle.Necronomicon)
                         }
                     }
                 },
@@ -140,7 +143,8 @@ namespace MaxFlix.Unity.Runtime
                             Secret("night_manifest", "Manifest po północy", -50f, 5.2f, SurvivalSecretStyle.Wz),
                             Secret("ghost_cassette", "Kaseta z nocnej zmiany", 0f, 15.2f, SurvivalSecretStyle.Cassette),
                             Secret("neon_capybara", "Kapibara neonów", 50f, -5.2f, SurvivalSecretStyle.Capybara),
-                            Secret("oniric_dream", "Oniryczny sen", 27f, 2f, SurvivalSecretStyle.RabbitHole)
+                            Secret("oniric_dream", "Oniryczny sen", 27f, 2f, SurvivalSecretStyle.RabbitHole),
+                            Secret("necronomicon", "Necronomicon", -27f, -10.4f, SurvivalSecretStyle.Necronomicon)
                         }
                     }
                 }
@@ -183,6 +187,46 @@ namespace MaxFlix.Unity.Runtime
         {
             if (Weapons.TryGetValue(id, out SurvivalWeaponProfile profile)) return profile;
             return Weapons[SurvivalWeaponKind.PalletCannon];
+        }
+
+        public static float GetBlendedEnemyHealthMultiplier(float x, float z)
+        {
+            return BlendMapMetric(x, z, 0);
+        }
+
+        public static float GetBlendedEnemySpeedMultiplier(float x, float z)
+        {
+            return BlendMapMetric(x, z, 1);
+        }
+
+        public static float GetBlendedXpMultiplier(float x, float z)
+        {
+            return BlendMapMetric(x, z, 2);
+        }
+
+        private static float BlendMapMetric(float x, float z, int metric)
+        {
+            SurvivalBiomeBlendWeights weights = SurvivalWorldLayout.GetBlendWeights(x, z);
+            float total = Mathf.Max(0.0001f, weights.Total);
+            float b4 = ReadMapMetric(WarehouseMapId.WarehouseB4, metric);
+            float port = ReadMapMetric(WarehouseMapId.ContainerTerminal, metric);
+            float cold = ReadMapMetric(WarehouseMapId.ColdStorage, metric);
+            float night = ReadMapMetric(WarehouseMapId.NightSorting, metric);
+            return (b4 * weights.WarehouseB4
+                + port * weights.ContainerTerminal
+                + cold * weights.ColdStorage
+                + night * weights.NightSorting) / total;
+        }
+
+        private static float ReadMapMetric(WarehouseMapId id, int metric)
+        {
+            SurvivalMapProfile map = Maps[id];
+            switch (metric)
+            {
+                case 0: return map.EnemyHealthMultiplier;
+                case 1: return map.EnemySpeedMultiplier;
+                default: return map.XpMultiplier;
+            }
         }
 
         private static SurvivalSecretDefinition Secret(string id, string name, float x, float z, SurvivalSecretStyle style)

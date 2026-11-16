@@ -103,18 +103,20 @@ test('Unity migration is staged and does not replace the current production depl
 
 
 test('Unity gameplay and UI use the pinned New Input System without legacy Input calls', async () => {
-  const [player, camera, hud, setup, readme] = await Promise.all([
+  const [player, camera, hud, uiInstaller, setup, readme] = await Promise.all([
     read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/PlayerController.cs'),
     read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/CameraFollowRig.cs'),
     read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/UiEventSystemInstaller.cs'),
     read('../unity/MaxFlixUnity/Assets/Editor/UnityProjectSetup.cs'),
     read('../unity/MaxFlixUnity/README.md'),
   ]);
   assert.match(player, /Keyboard\.current/);
   assert.match(player, /Gamepad\.current/);
   assert.match(camera, /Mouse\.current/);
-  assert.match(hud, /InputSystemUIInputModule/);
-  assert.match(hud, /SingleMouseOrPenButMultiTouchAndTrack/);
+  assert.match(hud, /UiEventSystemInstaller\.Ensure\(\)/);
+  assert.match(uiInstaller, /InputSystemUIInputModule/);
+  assert.match(uiInstaller, /SingleMouseOrPenButMultiTouchAndTrack/);
   assert.match(setup, /NewInputSystemBackend = 1/);
   assert.match(setup, /GraphicsDeviceType\.WebGPU/);
   assert.match(setup, /GraphicsDeviceType\.OpenGLES3/);

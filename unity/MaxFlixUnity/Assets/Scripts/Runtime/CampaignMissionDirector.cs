@@ -8,10 +8,12 @@ namespace MaxFlix.Unity.Runtime
     /// </summary>
     public sealed class CampaignMissionDirector : MonoBehaviour
     {
-        private const string UnlockedSectorKey = "maxFlizUnlockedSector";
+        private const string UnlockedSectorKey = "paleciaki.campaign.maxUnlockedSector.v1";
+        private const string LegacyUnlockedSectorKey = "maxFlizUnlockedSector";
         private const int RequiredVipOrders = 4;
         private const float SectorBStartX = 36f;
         private const float SectorCStartX = 116f;
+        private const float FinalBossArenaStartX = 185f;
         private const float FinishGateX = 201.2f;
 
         private PlayerController _player;
@@ -44,7 +46,16 @@ namespace MaxFlix.Unity.Runtime
         {
             _player = player;
             _hud = hud;
-            _maxUnlockedSector = Mathf.Clamp(PlayerPrefs.GetInt(UnlockedSectorKey, 1), 1, 3);
+            bool hasVersionedProgress = PlayerPrefs.HasKey(UnlockedSectorKey);
+            int storedProgress = hasVersionedProgress
+                ? PlayerPrefs.GetInt(UnlockedSectorKey, 1)
+                : PlayerPrefs.GetInt(LegacyUnlockedSectorKey, 1);
+            _maxUnlockedSector = Mathf.Clamp(storedProgress, 1, 3);
+            if (!hasVersionedProgress && PlayerPrefs.HasKey(LegacyUnlockedSectorKey))
+            {
+                PlayerPrefs.SetInt(UnlockedSectorKey, _maxUnlockedSector);
+                PlayerPrefs.Save();
+            }
             ApplyGateState();
             RefreshStatus(true);
         }
@@ -76,12 +87,12 @@ namespace MaxFlix.Unity.Runtime
             {
                 UnlockSector(3);
             }
-            else if (x >= SectorCStartX && enemy.Kind == EnemyKind.Walczak)
+            else if (x >= FinalBossArenaStartX && enemy.Kind == EnemyKind.Walczak)
             {
                 _finalWalczakDefeated = true;
                 RefreshStatus(true);
             }
-            else if (x >= SectorCStartX && enemy.Kind == EnemyKind.KingLeto)
+            else if (x >= FinalBossArenaStartX && enemy.Kind == EnemyKind.KingLeto)
             {
                 _finalKingLetoDefeated = true;
                 RefreshStatus(true);
@@ -120,6 +131,9 @@ namespace MaxFlix.Unity.Runtime
             if (_sectorCGate != null) _sectorCGate.enabled = lockC;
             if (_sectorBGateRenderer != null) _sectorBGateRenderer.enabled = lockB;
             if (_sectorCGateRenderer != null) _sectorCGateRenderer.enabled = lockC;
+            // Navigation snapshots static enabled colliders. Refresh after a
+            // boss unlocks a physical gate so enemies can use the open route.
+            EnemyNavigationWorld.RefreshActive();
         }
 
         private void RefreshStatus(bool force)

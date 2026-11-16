@@ -15,13 +15,15 @@ Unity 6000.6.8f1 ma znaną usterkę Androida: przy jednoczesnym włączeniu Run 
 
 ## Status przygotowania — 16 listopada 2026
 
-Projekt Unity ma przypięty edytor i pakiety, bazowy runtime, katalogi danych, generator sceny startowej, pipeline importu modeli CC0 oraz ręczny workflow buildów WebGL/Android. Dodano też kontrolę ustawień przed buildem i kontrakt współrzędnych czterech biomów.
+Projekt Unity ma przypięty edytor i pakiety, bazowy runtime, katalogi danych, generator sceny startowej, pipeline importu modeli CC0 oraz ręczny workflow buildów WebGL/Android. Dodano też kontrolę ustawień przed buildem i kontrakt współrzędnych czterech biomów. W gałęzi `feat/unity-survival-mega-world-cutover` wykonano drugi etap integracji Survival.
 
-**To nie jest jeszcze gotowa migracja produktu.** Nie ma potwierdzonego builda Unity Player z Unity Editor w CI, ponieważ do GitHub Actions nie dodano licencji Unity. Kod Unity nie został w tej sesji skompilowany przez Unity Editor ani uruchomiony na Poco F6.
+**To nadal nie jest gotowa migracja produktu.** Nie ma potwierdzonego builda Unity Player z Unity Editor w CI, ponieważ do GitHub Actions nie dodano licencji Unity. Kod Unity nie został w tej sesji skompilowany przez Unity Editor ani uruchomiony na Poco F6.
 
-Najważniejsza różnica funkcjonalna: bieżący `MainGameBootstrap` uruchamia Survival przez `WarehouseWorldFactory.BuildB4Slice()`, a ta metoda generuje jedną wybraną arenę o granicach około 52 × 52 m. Produkcyjna wersja Three.js ma jeden świat 240 × 80 m z czterema połączonymi biomami. Nowy `SurvivalWorldLayout.cs` przechowuje już odpowiadającą mu topologię, ale jej połączenie z generatorami geometrii, kolizjami, spawnem, sekretami i oświetleniem pozostaje obowiązkowym zadaniem przed cutoverem.
+**Mega-mapa Survival jest teraz podłączona w kodzie gałęzi roboczej:** `MainGameBootstrap` kieruje Survival do `BuildUnifiedSurvivalWorld()`, a `WarehouseWorldFactory` układa cztery sektory 120 × 40 m w jeden trwały świat 240 × 80 m. Geometria proceduralna jest osadzana w korzeniach sektorów i skalowana do ich rozmiarów; usunięto wewnętrzne granice aren i pozostawiono jeden obrys zewnętrzny. Cztery pasma przejściowe używają tekstur 64 × 64 generowanych z biliniowego pola wag biomów. Kolor posadzki, fog/ambient/key light oraz mnożniki HP/szybkości przeciwników i XP są ważone po pozycji w świecie. Poprawiono też rozmieszczenie bramek Sortowni Widmowej.
 
-Przed przełączeniem produkcji obowiązkowe są: Unity Editor compile, pełna kompozycja mega-mapy Survival, podłączenie/retargeting 17 rigów CC0, funkcjonalny PvP z istniejącym serwerem, synchronizacja Firebase i ranking, reklamy/UMP, wszystkie sekrety i eventy oraz testy wydajności i wznowienia aplikacji na rzeczywistych urządzeniach.
+To implementacja źródłowa, a nie dowód działania: wymagane są kompilacja w przypiętym Unity Editor, Play Mode przez wszystkie przejścia, kontrola kolizji/światła/z-fightingu, AI/spawnów oraz test wydajności. Geometria proceduralna nie jest jeszcze gwarantowaną zgodnością przeszkód 1:1 z Three.js.
+
+Przed przełączeniem produkcji obowiązkowe są: Unity Editor compile i runtime test nowej mega-mapy, podłączenie/retargeting 17 rigów CC0, funkcjonalny PvP z istniejącym serwerem, synchronizacja Firebase i ranking, reklamy/UMP, wszystkie sekrety i eventy oraz testy wydajności i wznowienia aplikacji na rzeczywistych urządzeniach.
 
 ## Zasada bezpieczeństwa migracji
 
@@ -56,7 +58,7 @@ Pierwszy commit Unity jest **fundamentem migracji i grywalnym wycinkiem technicz
 | Sterowanie | src/virtualJoystick.ts, src/touchControlLayout.ts, src/uiViewport.ts, src/visibilityPause.ts | New Input System, ekranowe joysticki i przyciski, mysz/klawiatura/gamepad, bez nakładania kontrolek |
 | Kamera i jakość | src/renderQuality.ts, src/worldVisualQuality.ts, src/selectiveBloom.ts, src/bloomPolicy.ts | Cinemachine/rig kamery, URP Volume, dynamiczna skala renderowania, LOD, pooling i profile urządzeń |
 | Audio i intro | src/sound.ts, src/cinematicIntro.ts | AudioMixer, pule audio, intro, dialogi i redukcja ruchu |
-| Sekrety i minigra | src/oniricPlatformer.ts, src/game.ts | Sekret Króliczej Nory z osobnym trybem 2D, wydarzenia specjalne, MafiKapibary i Pomazaniec |
+| Sekrety i minigra | src/oniricPlatformer.ts, src/cthulhuRetroArena.ts, src/cthulhuCombat.ts, src/survivalMaps.ts, src/game.ts | 20 pickupów w czterech biomach, osobne minigry 2D Rabbit Hole i Necronomicon/Cthulhu, wydarzenia specjalne, MafiKapibary i Pomazaniec |
 | PWA i aktualizacje | src/pwaUpdateNotice.ts, public/sw.js, public/manifest.webmanifest | Bezpośredni odpowiednik nie jest wymagany w natywnej aplikacji; Web Player otrzyma wersjonowanie i informację o aktualizacji |
 
 ## Kolejność prac i bramki
@@ -137,6 +139,16 @@ W podetapie 2B dodano katalog wszystkich 23 identyfikatorów przeciwników (z ro
 W etapie 2D uzupełniono też dwa źródłowe rzadkie spotkania (Bosman od fali 6 z szansą 4%, Sebix od fali 8 z szansą 6,5%), limit pojedynczej aktywnej instancji każdego oraz równomierne rozmieszczenie wejścia hordy. AI otrzymało współdzielony cache przestrzenny i separację, aby ograniczać nakładanie przeciwników w tłumie.
 
 
+
+### Etap 3C — sekrety Survival i osobne areny 2D (zaimplementowane w kodzie, bez walidacji Unity Editor)
+
+- Każdy z czterech biomów ma pięć fizycznych pickupów w lokalizacjach zgodnych z `src/survivalMaps.ts`: WZ-tka, kaseta, kapibara, Rabbit Hole i Necronomicon.
+- Pickup zapisuje odkrycie pod wersjonowanym kluczem PlayerPrefs, podnosi licznik sekretów rundy i daje +750 punktów.
+- Rabbit Hole otwiera niezależną planszę 2D z checkpointami, hazardami, trzema zegarkami, trzema życiami i limitem 68 sekund. Zwycięstwo przyznaje punkty i dodatkowy maksymalny punkt zdrowia.
+- Necronomicon otwiera niezależny pojedynek z Cthulhu: 180 HP, dwie fazy, ataki Slam/Lash/Grab z czytelnymi strefami ostrzeżeń, unik i okno podatności rdzenia trwające 2,15 s. Zwycięstwo daje +6000 punktów.
+- Oba interfejsy używają New Input System, obsługują dotyk i klawiaturę oraz zatrzymują symulację 3D bez niszczenia aktywnego świata.
+
+**Ograniczenia:** to pierwszy port mechanik do natywnych ekranów Unity, a nie kopia piksel-po-pikselu. Brakuje dokładnego audio/animacji/tempa źródłowych gier, pełnego archiwum osiągnięć i pozostałych wydarzeń specjalnych. Kompilacja w Unity Editor i test na telefonie są nadal obowiązkowe.
 
 ### Etap 3B — grywalna kampania Unity: trzy sektory, bramy bossów i dostawa VIP
 

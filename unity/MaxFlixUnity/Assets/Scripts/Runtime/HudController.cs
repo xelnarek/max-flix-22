@@ -11,6 +11,7 @@ namespace MaxFlix.Unity.Runtime
     {
         private Text _statusText;
         private Text _healthText;
+        private Text _secretText;
         private Text _helpText;
         private Text _abilityButtonLabel;
         private Button _abilityButton;
@@ -40,7 +41,7 @@ namespace MaxFlix.Unity.Runtime
 
         public static HudController Create(PlayerController player, Action retryAction, Action returnToMenuAction)
         {
-            EnsureEventSystem();
+            UiEventSystemInstaller.Ensure();
 
             GameObject canvasObject = new GameObject("Max Flix HUD", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             Canvas canvas = canvasObject.GetComponent<Canvas>();
@@ -75,6 +76,13 @@ namespace MaxFlix.Unity.Runtime
         public void SetStatus(string status)
         {
             if (_statusText != null) _statusText.text = status;
+        }
+
+        public void SetSecretsCount(int found, int total)
+        {
+            if (_secretText == null) return;
+            int safeTotal = Mathf.Max(0, total);
+            _secretText.text = "SEKRETY  " + Mathf.Clamp(found, 0, safeTotal) + "/" + safeTotal;
         }
 
         public void SetAbilityState(float remaining, float maximum)
@@ -122,6 +130,17 @@ namespace MaxFlix.Unity.Runtime
             _healthText.rectTransform.anchorMin = new Vector2(1f, 1f);
             _healthText.rectTransform.anchorMax = new Vector2(1f, 1f);
             _healthText.rectTransform.pivot = new Vector2(1f, 1f);
+
+            if (GameSession.Current != null && GameSession.Current.Mode == GameMode.Survival)
+            {
+                _secretText = CreateText(root, "SEKRETY  0/20",
+                    Vector2.zero, new Vector2(260f, 30f), 16, TextAnchor.MiddleCenter);
+                RectTransform secretRect = _secretText.rectTransform;
+                secretRect.anchorMin = secretRect.anchorMax = new Vector2(0.5f, 0f);
+                secretRect.pivot = new Vector2(0.5f, 0f);
+                secretRect.anchoredPosition = new Vector2(0f, 12f);
+                SetSecretsCount(GameSession.Current.SecretsFound, 20);
+            }
 
             _helpText = CreateText(root, "PC: WASD / SPACE / J / E   •   EKRAN: joystick + SKOK + ATAK + SPECJALNA",
                 new Vector2(0f, -98f), new Vector2(1040f, 42f), 17, TextAnchor.MiddleCenter);
@@ -417,13 +436,16 @@ namespace MaxFlix.Unity.Runtime
             int minutes = Mathf.FloorToInt(run.ElapsedSeconds / 60f);
             int seconds = Mathf.FloorToInt(run.ElapsedSeconds % 60f);
             string wave = run.Mode == GameMode.Survival ? "\nNajdalsza fala: " + Mathf.Max(1, run.HighestWave) : string.Empty;
+            string secretReport = run.Mode == GameMode.Survival
+                ? "\nSekrety odkryte: " + Mathf.Clamp(run.SecretsFound, 0, 20) + "/20"
+                : string.Empty;
             string damageReport = run.Mode == GameMode.Survival
                 ? "\n\n" + SurvivalDamageTracker.BuildSummary(5)
                 : string.Empty;
             string summary = "Czas: " + minutes.ToString("00") + ":" + seconds.ToString("00")
                 + "\nEliminacje: " + run.Kills + "    •    Bossowie: " + run.BossesDefeated
                 + "\nWynik: " + run.Score
-                + wave + "\nOperator: " + OperatorCatalog.Get(run.SelectedOperator).DisplayName
+                + wave + secretReport + "\nOperator: " + OperatorCatalog.Get(run.SelectedOperator).DisplayName
                 + damageReport;
             ShowModal("ZMIANA ZAKOŃCZONA", summary,
                 "ZAGRAJ PONOWNIE", RetryRun, "MENU GŁÓWNE", ReturnToMenu);
@@ -448,7 +470,8 @@ namespace MaxFlix.Unity.Runtime
             if (_modalOverlay != null) Destroy(_modalOverlay);
             _modalOverlay = new GameObject("Game modal overlay", typeof(RectTransform), typeof(Image));
             RectTransform overlayRect = _modalOverlay.GetComponent<RectTransform>();
-            overlayRect.SetParent(transform, false);
+            RectTransform modalHost = _safeAreaRoot != null ? _safeAreaRoot : (RectTransform)transform;
+            overlayRect.SetParent(modalHost, false);
             overlayRect.anchorMin = Vector2.zero;
             overlayRect.anchorMax = Vector2.one;
             overlayRect.offsetMin = Vector2.zero;
@@ -462,35 +485,52 @@ namespace MaxFlix.Unity.Runtime
             panelRect.anchorMax = new Vector2(0.5f, 0.5f);
             panelRect.pivot = new Vector2(0.5f, 0.5f);
             panelRect.anchoredPosition = Vector2.zero;
-            Canvas rootCanvas = GetComponent<Canvas>();
-            float scaleFactor = rootCanvas != null ? Mathf.Max(0.35f, rootCanvas.scaleFactor) : 1f;
-            float availableWidth = Screen.width / scaleFactor - 36f;
-            float availableHeight = Screen.height / scaleFactor - 36f;
+            float availableWidth = Mathf.Max(1f, modalHost.rect.width - 24f);
+            float availableHeight = Mathf.Max(1f, modalHost.rect.height - 24f);
             float panelWidth = Mathf.Min(820f, availableWidth);
             float panelHeight = Mathf.Min(520f, availableHeight);
-            panelRect.sizeDelta = new Vector2(Mathf.Max(300f, panelWidth), Mathf.Max(310f, panelHeight));
+            panelRect.sizeDelta = new Vector2(panelWidth, panelHeight);
             panel.GetComponent<Image>().color = new Color(0.055f, 0.085f, 0.12f, 0.99f);
             Outline border = panel.GetComponent<Outline>();
             border.effectColor = new Color(0.20f, 0.49f, 0.64f, 0.95f);
             border.effectDistance = new Vector2(2f, -2f);
 
-            Text titleText = CreateText(panelRect, title, new Vector2(0f, -30f), new Vector2(590f, 58f), 30, TextAnchor.MiddleCenter);
+            int titleFontSize = Mathf.RoundToInt(Mathf.Clamp(panelWidth * 0.048f, 16f, 30f));
+            Text titleText = CreateText(panelRect, title, new Vector2(0f, -22f),
+                new Vector2(Mathf.Max(1f, panelWidth - 32f), 54f), titleFontSize, TextAnchor.MiddleCenter);
             titleText.rectTransform.anchorMin = new Vector2(0.5f, 1f);
             titleText.rectTransform.anchorMax = new Vector2(0.5f, 1f);
             titleText.rectTransform.pivot = new Vector2(0.5f, 1f);
             bool isDamageReport = body.Contains("OBRAŻENIA WG ŹRÓDŁA");
-            Text bodyText = CreateText(panelRect, body, new Vector2(0f, -112f),
-                new Vector2(panelWidth - 64f, isDamageReport ? panelHeight - 230f : panelHeight - 245f),
-                isDamageReport ? 16 : 20, TextAnchor.MiddleCenter);
+            float bodyHeight = Mathf.Max(70f, panelHeight - 230f);
+            Text bodyText = CreateText(panelRect, body, new Vector2(0f, -96f),
+                new Vector2(Mathf.Max(1f, panelWidth - 32f), bodyHeight),
+                isDamageReport ? 14 : Mathf.RoundToInt(Mathf.Clamp(panelWidth * 0.043f, 13f, 19f)),
+                TextAnchor.MiddleCenter);
             bodyText.rectTransform.anchorMin = new Vector2(0.5f, 1f);
             bodyText.rectTransform.anchorMax = new Vector2(0.5f, 1f);
             bodyText.rectTransform.pivot = new Vector2(0.5f, 1f);
-            CreateAnchoredButton(panelRect, primaryLabel, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(1f, 0.5f), new Vector2(-8f, 54f), new Vector2(Mathf.Min(270f, panelWidth * 0.39f), 68f),
-                new Color(0.10f, 0.52f, 0.40f, 1f), 18, primaryAction);
-            CreateAnchoredButton(panelRect, secondaryLabel, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 0.5f), new Vector2(8f, 54f), new Vector2(Mathf.Min(270f, panelWidth * 0.39f), 68f),
-                new Color(0.19f, 0.27f, 0.37f, 1f), 18, secondaryAction);
+
+            if (panelWidth < 560f)
+            {
+                float buttonWidth = Mathf.Max(1f, panelWidth - 32f);
+                CreateAnchoredButton(panelRect, primaryLabel, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                    new Vector2(0.5f, 0.5f), new Vector2(0f, 56f), new Vector2(buttonWidth, 48f),
+                    new Color(0.10f, 0.52f, 0.40f, 1f), 15, primaryAction);
+                CreateAnchoredButton(panelRect, secondaryLabel, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                    new Vector2(0.5f, 0.5f), new Vector2(0f, 112f), new Vector2(buttonWidth, 48f),
+                    new Color(0.19f, 0.27f, 0.37f, 1f), 15, secondaryAction);
+            }
+            else
+            {
+                float buttonWidth = Mathf.Min(270f, panelWidth * 0.39f);
+                CreateAnchoredButton(panelRect, primaryLabel, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                    new Vector2(1f, 0.5f), new Vector2(-8f, 54f), new Vector2(buttonWidth, 68f),
+                    new Color(0.10f, 0.52f, 0.40f, 1f), 18, primaryAction);
+                CreateAnchoredButton(panelRect, secondaryLabel, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                    new Vector2(0f, 0.5f), new Vector2(8f, 54f), new Vector2(buttonWidth, 68f),
+                    new Color(0.19f, 0.27f, 0.37f, 1f), 18, secondaryAction);
+            }
         }
 
         private static Text CreateText(RectTransform parent, string value, Vector2 anchoredPosition, Vector2 size, int fontSize, TextAnchor alignment)
@@ -572,13 +612,6 @@ namespace MaxFlix.Unity.Runtime
             return button;
         }
 
-        private static void EnsureEventSystem()
-        {
-            if (FindFirstObjectByType<EventSystem>() != null) return;
-            GameObject eventSystem = new GameObject("EventSystem", typeof(EventSystem));
-            InputSystemUIInputModule inputModule = eventSystem.AddComponent<InputSystemUIInputModule>();
-            inputModule.pointerBehavior = UIPointerBehavior.SingleMouseOrPenButMultiTouchAndTrack;
-        }
 
         private void OnDestroy()
         {

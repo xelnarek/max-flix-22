@@ -18,7 +18,6 @@ namespace MaxFlix.Unity.Runtime
         private PlayerController _player;
         private LineRenderer _hordeRing;
         private SurvivalHordeProfile _hordeProfile;
-        private SurvivalMapProfile _mapProfile;
         private bool _isMobile;
         private int _adaptiveTier;
         private int _currentWave = 1;
@@ -43,8 +42,6 @@ namespace MaxFlix.Unity.Runtime
             _player = player;
             _isMobile = SystemInfo.deviceType == DeviceType.Handheld || Screen.width < 900;
             _hordeProfile = SurvivalHordeCatalog.GetProfile(_isMobile);
-            _mapProfile = GameContentCatalog.GetMap(GameSession.Current != null
-                ? GameSession.Current.SelectedMap : WarehouseMapId.WarehouseB4);
             _currentWave = 1;
             _trackedRareSebix = null;
             _trackedRareBosman = null;
@@ -100,7 +97,7 @@ namespace MaxFlix.Unity.Runtime
             }
 
             for (int i = 0; i < groupSize; i++)
-                SpawnRegularSurvivalEnemy(profile, elapsed);
+                SpawnRegularSurvivalEnemy(elapsed);
 
             _spawnTimer = profile.SpawnIntervalSeconds;
         }
@@ -133,13 +130,18 @@ namespace MaxFlix.Unity.Runtime
 
             if (_hordeSpawnQueue > 0 && _hordeSpawnTimer <= 0f && alive < cap)
             {
-                SurvivalDifficultyProfile difficulty = GetDifficultyProfile(_currentWave);
                 EnemyKind kind = EnemyArchetypeCatalog.ChooseSurvivalSpawnType(_currentWave, elapsed, Random.value);
                 float angle = _hordeStartAngle + (_hordeSpawned / (float)Mathf.Max(1, _hordeProfile.EnemyCount)) * Mathf.PI * 2f;
-                SpawnEnemy(kind, difficulty, angle, radius);
-                _hordeSpawned++;
-                _hordeSpawnQueue--;
-                _hordeSpawnTimer = _hordeProfile.SpawnIntervalSeconds;
+                if (SpawnEnemy(kind, angle, radius))
+                {
+                    _hordeSpawned++;
+                    _hordeSpawnQueue--;
+                    _hordeSpawnTimer = _hordeProfile.SpawnIntervalSeconds;
+                }
+                else
+                {
+                    _hordeSpawnTimer = 0.20f;
+                }
             }
             else if (_hordeSpawnQueue > 0 && alive >= cap)
             {
@@ -162,9 +164,18 @@ namespace MaxFlix.Unity.Runtime
                 if (_bossWarningRemaining <= 0f && _pendingBossWave > 0)
                 {
                     int wave = _pendingBossWave;
-                    _pendingBossWave = 0;
-                    _lastBossWave = wave;
-                    SpawnMajorBoss(wave);
+                    if (SpawnMajorBoss(wave))
+                    {
+                        _pendingBossWave = 0;
+                        _lastBossWave = wave;
+                    }
+                    else
+                    {
+                        // Do not consume the boss event when every safe spawn
+                        // lane is temporarily blocked by geometry or the horde.
+                        _bossWarningRemaining = 2f;
+                        FindFirstObjectByType<HudController>()?.SetStatus("BOSS CZEKA NA WOLNE MIEJSCE DO WEJŚCIA");
+                    }
                 }
                 return;
             }
@@ -179,22 +190,25 @@ namespace MaxFlix.Unity.Runtime
             FindFirstObjectByType<HudController>()?.SetStatus("UWAGA • " + bossName.ToUpperInvariant() + " ZA 6 SEKUND");
         }
 
-        private void SpawnMajorBoss(int majorBossWave)
+        private bool SpawnMajorBoss(int majorBossWave)
         {
             EnemyKind kind = GetBossKind(majorBossWave);
-            SurvivalDifficultyProfile difficulty = GetDifficultyProfile(_currentWave);
-            Vector3 spawn = GetSpawnPosition(Random.value * Mathf.PI * 2f, 16f);
+            if (!TryGetSpawnPosition(Random.value * Mathf.PI * 2f, 16f, out Vector3 spawn))
+                return false;
+
+            SurvivalDifficultyProfile difficulty = GetDifficultyProfile(_currentWave, spawn);
             EnemyAgent boss = WarehouseWorldFactory.SpawnSurvivalEnemy(
                 _player, kind, spawn,
                 difficulty.EnemyHealthMultiplier,
                 difficulty.EnemySpeedMultiplier,
                 difficulty.EnemyAbilityRateMultiplier);
-            if (boss == null) return;
+            if (boss == null) return false;
 
             boss.name = majorBossWave == 5
                 ? "Inwentaryzacja Gigant • Nadzorca Zero"
                 : GetBossName(majorBossWave);
             FindFirstObjectByType<HudController>()?.SetStatus("BOSS NA HALI • " + boss.name);
+            return true;
         }
 
         private EnemyKind GetBossKind(int majorBossWave)
@@ -237,11 +251,12 @@ namespace MaxFlix.Unity.Runtime
             return count;
         }
 
-        private void SpawnRegularSurvivalEnemy(SurvivalDifficultyProfile difficulty, float elapsed)
+        private void SpawnRegularSurvivalEnemy(float elapsed)
         {
             float angle = Random.value * Mathf.PI * 2f;
             float radius = Random.Range(11.5f, 15.5f);
-            Vector3 spawn = GetSpawnPosition(angle, radius);
+            if (!TryGetSpawnPosition(angle, radius, out Vector3 spawn)) return;
+            SurvivalDifficultyProfile localDifficulty = GetDifficultyProfile(_currentWave, spawn);
 
             bool sebixAlreadyActive = (_trackedRareSebix != null && !_trackedRareSebix.IsDefeated)
                 || HasActiveEnemyKind(EnemyKind.Sebix);
@@ -249,9 +264,9 @@ namespace MaxFlix.Unity.Runtime
             {
                 EnemyAgent sebix = WarehouseWorldFactory.SpawnSurvivalEnemy(
                     _player, EnemyKind.Sebix, spawn,
-                    difficulty.EnemyHealthMultiplier,
-                    difficulty.EnemySpeedMultiplier,
-                    difficulty.EnemyAbilityRateMultiplier);
+                    localDifficulty.EnemyHealthMultiplier,
+                    localDifficulty.EnemySpeedMultiplier,
+                    localDifficulty.EnemyAbilityRateMultiplier);
                 if (sebix != null)
                 {
                     _trackedRareSebix = sebix;
@@ -267,9 +282,9 @@ namespace MaxFlix.Unity.Runtime
             {
                 EnemyAgent bosman = WarehouseWorldFactory.SpawnSurvivalEnemy(
                     _player, EnemyKind.BosmanKrakow, spawn,
-                    difficulty.EnemyHealthMultiplier,
-                    difficulty.EnemySpeedMultiplier,
-                    difficulty.EnemyAbilityRateMultiplier);
+                    localDifficulty.EnemyHealthMultiplier,
+                    localDifficulty.EnemySpeedMultiplier,
+                    localDifficulty.EnemyAbilityRateMultiplier);
                 if (bosman != null)
                 {
                     _trackedRareBosman = bosman;
@@ -283,9 +298,9 @@ namespace MaxFlix.Unity.Runtime
                 _currentWave, elapsed, Random.value);
             WarehouseWorldFactory.SpawnSurvivalEnemy(
                 _player, kind, spawn,
-                difficulty.EnemyHealthMultiplier,
-                difficulty.EnemySpeedMultiplier,
-                difficulty.EnemyAbilityRateMultiplier);
+                localDifficulty.EnemyHealthMultiplier,
+                localDifficulty.EnemySpeedMultiplier,
+                localDifficulty.EnemyAbilityRateMultiplier);
         }
 
         private bool HasActiveEnemyKind(EnemyKind kind)
@@ -298,44 +313,98 @@ namespace MaxFlix.Unity.Runtime
 
         private SurvivalDifficultyProfile GetDifficultyProfile(int wave)
         {
+            // Spawn cadence and group composition remain global. Biome modifiers
+            // are applied per actor at the actual spawn coordinate.
+            return SurvivalDifficultyCatalog.GetProfile(wave);
+        }
+
+        private SurvivalDifficultyProfile GetDifficultyProfile(int wave, Vector3 position)
+        {
             SurvivalDifficultyProfile profile = SurvivalDifficultyCatalog.GetProfile(wave);
-            if (_mapProfile != null)
-            {
-                profile.EnemyHealthMultiplier *= _mapProfile.EnemyHealthMultiplier;
-                profile.EnemySpeedMultiplier *= _mapProfile.EnemySpeedMultiplier;
-            }
+            profile.EnemyHealthMultiplier *= GameContentCatalog.GetBlendedEnemyHealthMultiplier(position.x, position.z);
+            profile.EnemySpeedMultiplier *= GameContentCatalog.GetBlendedEnemySpeedMultiplier(position.x, position.z);
             return profile;
         }
 
-        private void SpawnEnemy(EnemyKind kind, SurvivalDifficultyProfile difficulty, float angle, float radius)
+        private bool SpawnEnemy(EnemyKind kind, float angle, float radius)
         {
-            Vector3 position = GetSpawnPosition(angle, radius);
-            WarehouseWorldFactory.SpawnSurvivalEnemy(
+            if (!TryGetSpawnPosition(angle, radius, out Vector3 position)) return false;
+            SurvivalDifficultyProfile localDifficulty = GetDifficultyProfile(_currentWave, position);
+            return WarehouseWorldFactory.SpawnSurvivalEnemy(
                 _player,
                 kind,
                 position,
-                difficulty.EnemyHealthMultiplier,
-                difficulty.EnemySpeedMultiplier,
-                difficulty.EnemyAbilityRateMultiplier);
+                localDifficulty.EnemyHealthMultiplier,
+                localDifficulty.EnemySpeedMultiplier,
+                localDifficulty.EnemyAbilityRateMultiplier) != null;
         }
 
-        private Vector3 GetSpawnPosition(float angle, float radius)
+        private bool TryGetSpawnPosition(float angle, float radius, out Vector3 safePosition)
         {
+            safePosition = Vector3.zero;
+            if (_player == null) return false;
+
             Vector3 center = _player.transform.position;
-            for (int attempt = 0; attempt < 16; attempt++)
+            const float clearanceFromPlayer = 4.2f;
+            const float collisionRadius = 0.48f;
+            const float edgeInset = 2.0f;
+
+            // First scan the intended ring, rotating the requested angle and
+            // gently widening its radius to find a clear tile corridor.
+            for (int attempt = 0; attempt < 24; attempt++)
             {
-                float adjustedAngle = angle + attempt * 0.3926991f;
-                float adjustedRadius = radius + (attempt % 3) * 0.7f;
-                Vector3 candidate = center + new Vector3(Mathf.Cos(adjustedAngle), 0f, Mathf.Sin(adjustedAngle)) * adjustedRadius;
-                candidate.y = 0.05f;
-                Vector3 checkCenter = candidate + Vector3.up * 0.88f;
-                if (!Physics.CheckSphere(checkCenter, 0.48f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
-                    return candidate;
+                float adjustedAngle = angle + attempt * 0.2617994f;
+                float adjustedRadius = Mathf.Max(7f, radius) + (attempt % 4) * 0.85f;
+                Vector3 candidate = center + new Vector3(
+                    Mathf.Cos(adjustedAngle), 0f, Mathf.Sin(adjustedAngle)) * adjustedRadius;
+                candidate = SurvivalWorldLayout.ClampInside(candidate, edgeInset);
+                if (IsSpawnPositionClear(candidate, center, clearanceFromPlayer, collisionRadius))
+                {
+                    safePosition = candidate;
+                    return true;
+                }
             }
 
-            Vector3 fallback = center + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * Mathf.Max(9f, radius);
-            fallback.y = 0.05f;
-            return fallback;
+            // Crowded seams can block a whole side of the ring. Search several
+            // nearby radii before skipping the spawn; never fall back on top of
+            // the player or inside a rack/container collider.
+            float[] radii = { 8f, 11f, 14f, 17f, 20f };
+            for (int ring = 0; ring < radii.Length; ring++)
+            {
+                for (int spoke = 0; spoke < 16; spoke++)
+                {
+                    float candidateAngle = angle + spoke * 0.3926991f;
+                    Vector3 candidate = center + new Vector3(
+                        Mathf.Cos(candidateAngle), 0f, Mathf.Sin(candidateAngle)) * radii[ring];
+                    candidate = SurvivalWorldLayout.ClampInside(candidate, edgeInset);
+                    if (IsSpawnPositionClear(candidate, center, clearanceFromPlayer, collisionRadius))
+                    {
+                        safePosition = candidate;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsSpawnPositionClear(
+            Vector3 candidate,
+            Vector3 playerPosition,
+            float clearanceFromPlayer,
+            float collisionRadius)
+        {
+            Vector3 flatOffset = candidate - playerPosition;
+            flatOffset.y = 0f;
+            if (flatOffset.sqrMagnitude < clearanceFromPlayer * clearanceFromPlayer)
+                return false;
+
+            Vector3 checkCenter = candidate + Vector3.up * 0.88f;
+            return !Physics.CheckSphere(
+                checkCenter,
+                collisionRadius,
+                Physics.DefaultRaycastLayers,
+                QueryTriggerInteraction.Ignore);
         }
 
         private void EnsureHordeRing()
@@ -356,9 +425,16 @@ namespace MaxFlix.Unity.Runtime
             {
                 Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
                 if (shader == null) shader = Shader.Find("Sprites/Default");
-                _ringMaterial = new Material(shader) { enableInstancing = true };
+                if (shader != null)
+                    _ringMaterial = new Material(shader) { enableInstancing = true };
             }
-            _hordeRing.sharedMaterial = _ringMaterial;
+            if (_ringMaterial != null)
+                _hordeRing.sharedMaterial = _ringMaterial;
+            else
+            {
+                _hordeRing.enabled = false;
+                Debug.LogError("No compatible unlit shader is available for the Survival horde warning ring.");
+            }
         }
 
         private void DrawHordeRing(float radius, float progress)

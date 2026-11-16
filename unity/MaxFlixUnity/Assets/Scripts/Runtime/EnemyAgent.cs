@@ -54,6 +54,14 @@ namespace MaxFlix.Unity.Runtime
             return _separationCache;
         }
 
+        /// <summary>Invalidate spatial data immediately when a run world is torn down.</summary>
+        public static void InvalidateSpatialCache()
+        {
+            _separationCache = new EnemyAgent[0];
+            SeparationBuckets.Clear();
+            _nextSeparationRefreshTime = 0f;
+        }
+
         public void Initialize(PlayerController target, EnemyKind kind, float healthMultiplier = 1f, float speedMultiplier = 1f, float abilityRateMultiplier = 1f)
         {
             _controller = GetComponent<CharacterController>();
@@ -132,8 +140,8 @@ namespace MaxFlix.Unity.Runtime
             if (_supportShieldRemaining > 0f) balancedDamage *= 0.62f;
             if (balancedDamage <= 0f) return;
 
-            float actualDamage = Mathf.Min(_health, balancedDamage);
-            _health -= balancedDamage;
+            float actualDamage = Mathf.Min(Mathf.Max(0f, _health), balancedDamage);
+            _health = Mathf.Max(0f, _health - balancedDamage);
             if (mode == GameMode.Survival)
             {
                 if (weaponSource.HasValue) SurvivalDamageTracker.RecordWeaponDamage(weaponSource.Value, actualDamage);
@@ -237,6 +245,14 @@ namespace MaxFlix.Unity.Runtime
             UpdateHitFlash(deltaTime);
         }
 
+        private bool HasClearAttackLine()
+        {
+            if (_target == null) return false;
+            Vector3 origin = transform.position + Vector3.up * 0.88f;
+            Vector3 target = _target.transform.position + Vector3.up * 0.82f;
+            return EnemyNavigationWorld.HasClearLineToTarget(origin, target, 0.12f);
+        }
+
         private void TickMelee(float deltaTime, Vector3 direction, float distance)
         {
             if (distance > _attackRange)
@@ -245,6 +261,13 @@ namespace MaxFlix.Unity.Runtime
                     Move(direction * (_moveSpeed * _phaseTwoMoveMultiplier * _slowMultiplier), deltaTime);
                 else
                     TickPatrol(deltaTime);
+                Face(direction, deltaTime);
+                return;
+            }
+
+            if (!HasClearAttackLine())
+            {
+                Move(direction * (_moveSpeed * _phaseTwoMoveMultiplier * _slowMultiplier), deltaTime);
                 Face(direction, deltaTime);
                 return;
             }
@@ -259,7 +282,8 @@ namespace MaxFlix.Unity.Runtime
         private void TickRanged(float deltaTime, Vector3 direction, float distance)
         {
             float preferredRange = _attackRange;
-            if (distance > preferredRange * 1.12f)
+            bool clearAttackLine = HasClearAttackLine();
+            if (!clearAttackLine || distance > preferredRange * 1.12f)
                 Move(direction * (_moveSpeed * _slowMultiplier), deltaTime);
             else if (distance < preferredRange * 0.58f)
                 Move(-direction * (_moveSpeed * 0.72f * _slowMultiplier), deltaTime);
@@ -270,7 +294,7 @@ namespace MaxFlix.Unity.Runtime
             }
 
             Face(direction, deltaTime);
-            if (_attackTimer <= 0f)
+            if (clearAttackLine && _attackTimer <= 0f)
             {
                 FireRangedAttack(direction);
                 _attackTimer = _attackInterval / _abilityRateMultiplier * (_phaseTwo ? 0.78f : 1f);
@@ -294,7 +318,13 @@ namespace MaxFlix.Unity.Runtime
                 shielded++;
             }
 
-            if (shielded == 0) FireRangedAttack(direction);
+            if (shielded == 0)
+            {
+                if (HasClearAttackLine())
+                    FireRangedAttack(direction);
+                else
+                    Move(direction * (_moveSpeed * 0.82f * _slowMultiplier), deltaTime);
+            }
             _attackTimer = _attackInterval / _abilityRateMultiplier * (_phaseTwo ? 0.85f : 1f);
         }
 
@@ -312,6 +342,13 @@ namespace MaxFlix.Unity.Runtime
 
             if (_attackTimer <= 0f && distance <= _aggroRange)
             {
+                if (!HasClearAttackLine())
+                {
+                    Move(direction * (_moveSpeed * _phaseTwoMoveMultiplier * _slowMultiplier), deltaTime);
+                    Face(direction, deltaTime);
+                    return;
+                }
+
                 _chargeWindupRemaining = _profile.IsBoss ? 0.82f : 0.62f;
                 _attackTimer = _attackInterval / _abilityRateMultiplier * (_phaseTwo ? 0.76f : 1f);
             }
@@ -326,7 +363,8 @@ namespace MaxFlix.Unity.Runtime
             {
                 Vector3 offset = _target.transform.position - transform.position;
                 offset.y = 0f;
-                if (offset.sqrMagnitude <= (_attackRange + 0.5f) * (_attackRange + 0.5f))
+                if (offset.sqrMagnitude <= (_attackRange + 0.5f) * (_attackRange + 0.5f)
+                    && HasClearAttackLine())
                 {
                     _target.ApplyDamage(_attackDamage * (_profile.IsBoss ? 1.35f : 1f));
                     _chargeHitApplied = true;
@@ -430,8 +468,14 @@ namespace MaxFlix.Unity.Runtime
             playerOffset.y = 0f;
             float playerDistance = playerOffset.magnitude;
             const float playerClearance = 1.15f;
-            if (playerDistance > 0.001f && playerDistance < playerClearance)
-                force += playerOffset / playerDistance * ((playerClearance - playerDistance) / playerClearance) * 1.35f;
+            if (playerDistance < playerClearance)
+            {
+                Vector3 playerSeparationDirection = playerDistance > 0.001f
+                    ? playerOffset / playerDistance
+                    : (GetInstanceID() < _target.GetInstanceID() ? Vector3.right : Vector3.left);
+                float penetration = (playerClearance - playerDistance) / playerClearance;
+                force += playerSeparationDirection * penetration * 1.35f;
+            }
 
             if (force.sqrMagnitude < 0.0001f) return;
             Vector3 velocity = Vector3.ClampMagnitude(force * 3.4f, 3.8f);
@@ -442,7 +486,36 @@ namespace MaxFlix.Unity.Runtime
         private void Move(Vector3 horizontalVelocity, float deltaTime)
         {
             if (_controller == null) return;
+
             Vector3 velocity = horizontalVelocity;
+            velocity.y = 0f;
+            if (_target != null && velocity.sqrMagnitude > 0.0001f)
+            {
+                Vector3 toTarget = _target.transform.position - transform.position;
+                toTarget.y = 0f;
+                Vector3 direction = velocity.normalized;
+                Vector3 targetDirection = toTarget.sqrMagnitude > 0.0001f
+                    ? toTarget.normalized : Vector3.zero;
+
+                // Only steer actors that are actually advancing towards the
+                // player. Retreat, knockback and deliberate lateral movement
+                // remain untouched unless the actor is already inside a rack.
+                bool advancing = Vector3.Dot(direction, targetDirection) > 0.35f;
+                if (advancing)
+                {
+                    Vector3 avoidance = EnemyNavigationWorld.GetObstacleAvoidanceVector(
+                        transform.position,
+                        _target.transform.position,
+                        GetInstanceID(),
+                        (_controller != null ? _controller.radius : 0.34f) + 0.8f);
+                    if (avoidance.sqrMagnitude > 0.0001f)
+                    {
+                        float speed = velocity.magnitude;
+                        velocity = (direction + avoidance * 0.82f).normalized * speed;
+                    }
+                }
+            }
+
             velocity.y = -2f;
             _controller.Move(velocity * deltaTime);
         }

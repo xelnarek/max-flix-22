@@ -54,6 +54,24 @@ namespace MaxFlix.Unity.Runtime
             }
         }
 
+        /// <summary>
+        /// Projectiles live under a DontDestroyOnLoad pool root. Deactivate every
+        /// in-flight projectile before a run is torn down so old shots cannot
+        /// damage the next player/run or remain frozen in the main menu.
+        /// </summary>
+        public static void ClearAllActive()
+        {
+            foreach (List<CombatProjectile> items in Pools.Values)
+            {
+                for (int i = 0; i < items.Count; i++)
+                {
+                    CombatProjectile projectile = items[i];
+                    if (projectile != null && projectile._pooledActive)
+                        projectile.ReturnToPool();
+                }
+            }
+        }
+
         public static void Prewarm(int perShape = 3)
         {
             int count = Mathf.Clamp(perShape, 0, PoolLimitPerShape);

@@ -185,7 +185,7 @@ test('Unity runtime can be initialized in Survival through a mode/map/operator h
   const factory = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs');
   assert.match(bootstrap, /ConfigureNextRun\(GameMode mode, OperatorId operatorId, WarehouseMapId mapId\)/);
   assert.match(bootstrap, /GameSession\.Begin\(mode, operatorId, mapId\)/);
-  assert.match(bootstrap, /WarehouseWorldFactory\.BuildB4Slice\(\)/);
+  assert.match(bootstrap, /WarehouseWorldFactory\.BuildUnifiedSurvivalWorld\(\)/);
   assert.match(factory, /GameSession\.Current\.Mode == GameMode\.Survival/);
   assert.match(factory, /root\.AddComponent<SurvivalWaveDirector>\(\)/);
 });
@@ -237,10 +237,9 @@ test('selected Survival map changes environment art and applies its health/speed
   assert.match(factory, /Container 17/);
   assert.match(factory, /Cold-room compressor bank/);
   assert.match(factory, /Sortation conveyor belt/);
-  assert.match(director, /_mapProfile = GameContentCatalog\.GetMap/);
-  assert.match(director, /profile\.EnemyHealthMultiplier \*= _mapProfile\.EnemyHealthMultiplier/);
-  assert.match(director, /profile\.EnemySpeedMultiplier \*= _mapProfile\.EnemySpeedMultiplier/);
-  assert.match(director, /GetDifficultyProfile\(_currentWave\)/);
+  assert.match(director, /GetBlendedEnemyHealthMultiplier\(position\.x, position\.z\)/);
+  assert.match(director, /GetBlendedEnemySpeedMultiplier\(position\.x, position\.z\)/);
+  assert.match(director, /GetDifficultyProfile\(_currentWave, spawn\)/);
 });
 
 test('Unity HUD provides a real pause/resume, game-over summary, retry and return-to-menu flow', async () => {
@@ -323,7 +322,9 @@ test('Unity XP progression has pooled crystals, map XP scaling, level-up drafts 
   assert.match(progression, /_orbPool\.Count >= 48/);
   assert.match(progression, /Life = 32f/);
   assert.match(progression, /1\.6f \* _magnetMultiplier/);
-  assert.match(progression, /map\.XpMultiplier/);
+  assert.match(progression, /GetBlendedXpMultiplier/);
+  assert.match(progression, /orb\.Value \* _xpGrowthMultiplier/);
+  assert.doesNotMatch(progression, /orb\.Value \* mapXp/);
   assert.match(progression, /GetXpRequirement\(_level\)/);
   assert.match(progression, /GameFlowState\.LevelUp/);
   assert.match(progression, /Time\.timeScale = 0f/);
@@ -332,7 +333,7 @@ test('Unity XP progression has pooled crystals, map XP scaling, level-up drafts 
   assert.match(progression, /fallback_repair/);
   assert.match(progression, /fallback_credits/);
   assert.match(progression, /fallback_overdrive/);
-  assert.match(progression, /wasBossReward/);
+  assert.match(progression, /_pendingBossRewardCount/);
   assert.match(progression, /Text description = CreateText\(rect, card\.Description,[\s\S]*?Vector2\.zero, 17, TextAnchor\.MiddleCenter/);
   assert.match(player, /SetSurvivalMoveMultiplier/);
   assert.match(player, /IncreaseMaxHealth/);
@@ -348,7 +349,8 @@ test('Unity Survival damage ledger reports only applied HP damage by operator an
   const hud = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs');
   assert.match(tracker, /RecordWeaponDamage/);
   assert.match(tracker, /RecordOperatorDamage/);
-  assert.match(enemy, /float actualDamage = Mathf\.Min\(_health, balancedDamage\)/);
+  assert.match(enemy, /float actualDamage = Mathf\.Min\(Mathf\.Max\(0f, _health\), balancedDamage\)/);
+  assert.match(enemy, /_health = Mathf\.Max\(0f, _health - balancedDamage\)/);
   assert.match(tracker, /BuildSummary\(int maximumLines = 5\)/);
   assert.match(enemy, /SurvivalDamageTracker\.RecordWeaponDamage\(weaponSource\.Value, actualDamage\)/);
   assert.match(enemy, /SurvivalDamageTracker\.RecordOperatorDamage\(actualDamage\)/);
@@ -369,7 +371,7 @@ test('Unity Survival damage report attributes effective damage and displays perc
   assert.match(tracker, /RecordOperatorDamage/);
   assert.match(tracker, /rows\[i\]\.Value \/ _totalDamage \* 100f/);
   assert.match(tracker, /BuildSummary\(int maximumLines = 5\)/);
-  assert.match(enemy, /float actualDamage = Mathf\.Min\(_health, balancedDamage\)/);
+  assert.match(enemy, /float actualDamage = Mathf\.Min\(Mathf\.Max\(0f, _health\), balancedDamage\)/);
   assert.match(enemy, /SurvivalDamageTracker\.RecordWeaponDamage\(weaponSource\.Value, actualDamage\)/);
   assert.match(enemy, /SurvivalDamageTracker\.RecordOperatorDamage\(actualDamage\)/);
   assert.match(weapons, /ApplyWeaponHit/);
@@ -401,7 +403,10 @@ test('Unity Survival draft is responsive, has a valid text factory call, and blo
   assert.match(progression, /Text description = CreateText\(rect, card\.Description,[\s\S]*?Vector2\.zero, 17, TextAnchor\.MiddleCenter/);
   assert.match(progression, /bool canReroll = _rerolls > 0 && !_isBossReward/);
   assert.match(progression, /portrait \? 1 : Mathf\.Min\(3/);
-  assert.match(progression, /Mathf\.Clamp\(availableHeight \/ Mathf\.Max\(1, _currentCards\.Count\), 108f, 154f\)/);
+  assert.match(progression, /Mathf\.Clamp\(availableHeight \/ Mathf\.Max\(1, _currentCards\.Count\), 96f, 140f\)/);
+  assert.match(progression, /safeAreaObject\.AddComponent<SafeAreaLayout>\(\)/);
+  assert.match(progression, /UiEventSystemInstaller\.Ensure\(\)/);
+  assert.match(progression, /Mathf\.Max\(120f, width\)/);
   assert.match(progression, /GameFlowState\.LevelUp/);
   assert.match(hud, /GameFlowState\.Paused/);
   assert.match(hud, /GameFlowState\.GameOver/);
@@ -448,6 +453,20 @@ test('Unity enemy AI separates nearby enemies and preserves clearance around the
   assert.match(agent, /desiredDistance = \(_profile != null && _profile\.IsBoss \? 1\.48f : 1\.12f\)/);
   assert.match(agent, /const float playerClearance = 1\.15f/);
   assert.match(agent, /Vector3\.ClampMagnitude\(force \* 3\.4f, 3\.8f\)/);
+});
+
+test('Unity boss upgrade rewards are queued if an XP draft already owns the pause state', async () => {
+  const progression = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalProgressionController.cs');
+  const openBoss = progression.slice(progression.indexOf('private void OpenBossReward()'), progression.indexOf('private void RollCards'));
+  const closeDraft = progression.slice(progression.indexOf('private void CloseDraft()'), progression.indexOf('private void UpdateHud()'));
+  assert.match(openBoss, /_pendingBossRewardCount = Mathf\.Min\(8, _pendingBossRewardCount \+ 1\)/);
+  assert.match(openBoss, /BeginLevelUp\(true\)/);
+  assert.match(closeDraft, /if \(_pendingBossRewardCount > 0\)/);
+  assert.match(closeDraft, /_pendingBossRewardCount--/);
+  assert.match(closeDraft, /BeginLevelUp\(true\)/);
+  assert.match(openBoss, /GameFlowState\.GameOver \|\| state == GameFlowState\.Victory/);
+  assert.match(closeDraft, /if \(_xp >= _xpToNext\)/);
+  assert.doesNotMatch(closeDraft, /!wasBossReward/);
 });
 
 test('Unity only opens legendary boss rewards for the three rotating major Survival bosses', async () => {

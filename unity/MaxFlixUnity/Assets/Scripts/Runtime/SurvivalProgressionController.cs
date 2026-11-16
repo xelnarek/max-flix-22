@@ -53,7 +53,11 @@ namespace MaxFlix.Unity.Runtime
         private int _rerolls;
         private float _xpGrowthMultiplier = 1f;
         private float _magnetMultiplier = 1f;
+        private float _coinMultiplier = 1f;
+        private float _healthRegenPerSecond;
+        private float _healthRegenAccumulator;
         private bool _isBossReward;
+        private int _pendingBossRewardCount;
         private bool _isPromotion;
 
         public int Level { get { return _level; } }
@@ -72,8 +76,12 @@ namespace MaxFlix.Unity.Runtime
             _xpToNext = SurvivalWeaponCatalog.GetXpRequirement(_level);
             _kills = 0;
             _rerolls = 0;
+            _pendingBossRewardCount = 0;
             _xpGrowthMultiplier = 1f;
             _magnetMultiplier = 1f;
+            _coinMultiplier = 1f;
+            _healthRegenPerSecond = 0f;
+            _healthRegenAccumulator = 0f;
             _passiveStacks.Clear();
             _orbs.Clear();
             _currentCards.Clear();
@@ -92,7 +100,10 @@ namespace MaxFlix.Unity.Runtime
                 || enemy.Kind == EnemyKind.CyberSalesman;
             int baseXp = profile.IsBoss ? 8 : mutatedElite ? 6 : profile.BaseHealth >= 4 ? 3 : 1;
             if (_kills > 0 && _kills % 8 == 0) baseXp += 2;
-            SpawnXpOrb(enemy.transform.position + Vector3.up * 0.45f, baseXp);
+            float biomeXpMultiplier = GameContentCatalog.GetBlendedXpMultiplier(
+                enemy.transform.position.x, enemy.transform.position.z);
+            int biomeXp = Mathf.Max(1, Mathf.CeilToInt(baseXp * biomeXpMultiplier));
+            SpawnXpOrb(enemy.transform.position + Vector3.up * 0.45f, biomeXp);
 
             bool majorBoss = enemy.Kind == EnemyKind.Walczak
                 || enemy.Kind == EnemyKind.KingLeto
@@ -109,6 +120,16 @@ namespace MaxFlix.Unity.Runtime
                 return;
 
             float deltaTime = Time.deltaTime;
+            if (_healthRegenPerSecond > 0f && _player.CurrentHealth < _player.MaxHealth)
+            {
+                _healthRegenAccumulator += deltaTime;
+                if (_healthRegenAccumulator >= 1f)
+                {
+                    float heal = _healthRegenPerSecond * _healthRegenAccumulator;
+                    _healthRegenAccumulator = 0f;
+                    _player.RestoreHealth(heal);
+                }
+            }
             Vector3 playerPosition = _player.transform.position;
             float pickupRadius = 1.6f * _magnetMultiplier;
 
@@ -163,7 +184,8 @@ namespace MaxFlix.Unity.Runtime
             if (orb.Root == null)
             {
                 XpOrb closest = FindClosestOrb(position);
-                if (closest != null) closest.Value = Mathf.Min(40, closest.Value + value);
+                if (closest != null)
+                closest.Value = (int)Math.Min(int.MaxValue, (long)closest.Value + value);
                 return;
             }
             orb.Root.transform.position = position;
@@ -208,6 +230,12 @@ namespace MaxFlix.Unity.Runtime
                 {
                     Shader shader = Shader.Find("Universal Render Pipeline/Lit");
                     if (shader == null) shader = Shader.Find("Standard");
+                    if (shader == null)
+                    {
+                        Debug.LogError("No compatible lit shader is available for Survival XP crystals.");
+                        Destroy(created);
+                        return null;
+                    }
                     _orbMaterial = new Material(shader) { enableInstancing = true };
                 }
                 renderer.sharedMaterial = _orbMaterial;
@@ -223,12 +251,14 @@ namespace MaxFlix.Unity.Runtime
 
         private void CollectOrb(XpOrb orb)
         {
-            SurvivalMapProfile map = GameContentCatalog.GetMap(GameSession.Current.SelectedMap);
-            float mapXp = Mathf.Clamp(map.XpMultiplier, 0.65f, 1.75f);
-            int amount = Mathf.Max(1, Mathf.RoundToInt(orb.Value * mapXp * _xpGrowthMultiplier));
+            // Orb.Value already includes the biome XP bonus from the enemy's
+            // world-space defeat position. Do not apply the selected start-map
+            // multiplier again when collecting an orb in another biome.
+            int amount = Mathf.Max(1, Mathf.RoundToInt(orb.Value * _xpGrowthMultiplier));
             _xp += amount;
             GameSession.Current.Score += amount * 12;
-            GameSession.Current.Coins += Mathf.Max(0, amount / 3);
+            int coinReward = Mathf.Max(0, Mathf.FloorToInt(amount / 3f * _coinMultiplier));
+            GameSession.Current.Coins += coinReward;
             if (orb.Root != null) orb.Root.SetActive(false);
             UpdateHud();
 
@@ -265,8 +295,20 @@ namespace MaxFlix.Unity.Runtime
 
         private void OpenBossReward()
         {
-            if (_draftCanvas != null || GameSession.Current == null
-                || GameSession.Current.State != GameFlowState.Playing) return;
+            if (GameSession.Current == null) return;
+            GameFlowState state = GameSession.Current.State;
+            if (state == GameFlowState.GameOver || state == GameFlowState.Victory
+                || state == GameFlowState.MainMenu)
+                return;
+
+            if (_draftCanvas != null || state != GameFlowState.Playing)
+            {
+                // An AOE can defeat multiple bosses in the same frame that an
+                // XP draft pauses the simulation. Keep one reward for every
+                // defeated major boss instead of collapsing them into a bool.
+                _pendingBossRewardCount = Mathf.Min(8, _pendingBossRewardCount + 1);
+                return;
+            }
             BeginLevelUp(true);
         }
 
@@ -329,6 +371,8 @@ namespace MaxFlix.Unity.Runtime
             AddPassive(pool, "range", "ZASIĘG AUDYTU", "+8% zasięgu automatycznego namierzania broni.", "◎", 4);
             AddPassive(pool, "growth", "PREMIA ZA NORMĘ", "+18% doświadczenia z kryształów.", "↗", 3);
             AddPassive(pool, "armor", "PALETA OCHRONNA", "Osłona pochłania następne trafienie.", "▤", 4);
+            AddPassive(pool, "scavenger", "ZŁOMIARZ ZMIANY", "+15% monet z kryształów XP.", "¤", 4);
+            AddPassive(pool, "regen", "REGENERACJA", "Odzyskujesz zdrowie w trakcie zmiany.", "✚", 3);
 
             if (excluded != null) pool.RemoveAll(card => excluded.Contains(card.Id));
             if (pool.Count == 0)
@@ -411,7 +455,7 @@ namespace MaxFlix.Unity.Runtime
 
         private void BuildDraftUi()
         {
-            EnsureEventSystem();
+            UiEventSystemInstaller.Ensure();
             _draftCanvas = new GameObject("Survival level-up draft", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             Canvas canvas = _draftCanvas.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -425,11 +469,20 @@ namespace MaxFlix.Unity.Runtime
             Image shade = _draftCanvas.AddComponent<Image>();
             shade.color = new Color(0.01f, 0.02f, 0.04f, 0.86f);
 
+            GameObject safeAreaObject = new GameObject("Draft safe area", typeof(RectTransform));
+            RectTransform safeRoot = safeAreaObject.GetComponent<RectTransform>();
+            safeRoot.SetParent(root, false);
+            safeRoot.anchorMin = Vector2.zero;
+            safeRoot.anchorMax = Vector2.one;
+            safeRoot.offsetMin = Vector2.zero;
+            safeRoot.offsetMax = Vector2.zero;
+            safeAreaObject.AddComponent<SafeAreaLayout>();
+
             GameObject panel = new GameObject("Draft panel", typeof(RectTransform), typeof(Image), typeof(Outline));
             RectTransform panelRect = panel.GetComponent<RectTransform>();
-            panelRect.SetParent(root, false);
-            panelRect.anchorMin = new Vector2(0.04f, 0.07f);
-            panelRect.anchorMax = new Vector2(0.96f, 0.93f);
+            panelRect.SetParent(safeRoot, false);
+            panelRect.anchorMin = new Vector2(0.035f, 0.045f);
+            panelRect.anchorMax = new Vector2(0.965f, 0.955f);
             panelRect.offsetMin = Vector2.zero;
             panelRect.offsetMax = Vector2.zero;
             panel.GetComponent<Image>().color = new Color(0.045f, 0.075f, 0.11f, 0.99f);
@@ -440,14 +493,19 @@ namespace MaxFlix.Unity.Runtime
             string title = _isBossReward ? "NAGRODA BOSS-A" : _isPromotion
                 ? "AWANS RANGI • " + RankName
                 : "ROZWÓJ OPERATORA • POZIOM " + _level;
-            _draftTitle = CreateText(panelRect, title, new Vector2(0.5f, 1f), new Vector2(0f, -24f),
-                new Vector2(980f, 62f), 34, TextAnchor.MiddleCenter, Color.white);
+            Canvas.ForceUpdateCanvases();
+            float panelWidth = Mathf.Max(1f, panelRect.rect.width);
+            _draftTitle = CreateText(panelRect, title, new Vector2(0.5f, 1f), new Vector2(0f, -22f),
+                new Vector2(panelWidth - 32f, 56f), Mathf.RoundToInt(Mathf.Clamp(panelWidth * 0.026f, 18f, 34f)),
+                TextAnchor.MiddleCenter, Color.white);
             _draftSubtitle = CreateText(panelRect,
                 _isBossReward ? "Pokonanie bossa daje wybór legendarnego ulepszenia." :
                 "Wybierz jeden moduł. Symulacja jest wstrzymana do podjęcia decyzji.",
-                new Vector2(0.5f, 1f), new Vector2(0f, -88f), new Vector2(1000f, 42f),
-                18, TextAnchor.MiddleCenter, new Color(0.65f, 0.78f, 0.88f));
+                new Vector2(0.5f, 1f), new Vector2(0f, -82f), new Vector2(panelWidth - 40f, 38f),
+                Mathf.RoundToInt(Mathf.Clamp(panelWidth * 0.014f, 13f, 18f)),
+                TextAnchor.MiddleCenter, new Color(0.65f, 0.78f, 0.88f));
 
+            Canvas.ForceUpdateCanvases();
             CreateCardGrid(panelRect);
             CreateBottomControls(panelRect);
         }
@@ -470,11 +528,15 @@ namespace MaxFlix.Unity.Runtime
             grid.spacing = new Vector2(14f, 14f);
             grid.padding = new RectOffset(3, 3, 3, 3);
             float scale = Mathf.Max(0.5f, _draftCanvas.GetComponent<Canvas>().scaleFactor);
-            float availableWidth = Screen.width / scale * 0.88f - 30f;
+            float safeWidth = Screen.safeArea.width / scale;
+            float safeHeight = Screen.safeArea.height / scale;
+            float availableWidth = Mathf.Max(120f, safeWidth * 0.84f - 30f);
             float width = portrait ? availableWidth : (availableWidth - (columns - 1) * 14f) / columns;
-            float availableHeight = Screen.height / scale * 0.60f;
-            float height = portrait ? Mathf.Clamp(availableHeight / Mathf.Max(1, _currentCards.Count), 108f, 154f) : Mathf.Clamp(availableHeight, 210f, 300f);
-            grid.cellSize = new Vector2(Mathf.Max(210f, width), height);
+            float availableHeight = safeHeight * 0.48f;
+            float height = portrait
+                ? Mathf.Clamp(availableHeight / Mathf.Max(1, _currentCards.Count), 96f, 140f)
+                : Mathf.Clamp(availableHeight, 180f, 300f);
+            grid.cellSize = new Vector2(Mathf.Max(120f, width), height);
 
             foreach (SurvivalUpgradeCard card in _currentCards)
                 CreateUpgradeButton(gridRect, grid, card);
@@ -500,9 +562,10 @@ namespace MaxFlix.Unity.Runtime
             outline.effectColor = accent;
             outline.effectDistance = new Vector2(2f, -2f);
 
+            int cardTitleSize = Mathf.RoundToInt(Mathf.Clamp(grid.cellSize.x * 0.055f, 14f, grid.cellSize.y > 180f ? 24f : 20f));
             Text title = CreateText(rect, card.Icon + "  " + card.Title,
                 new Vector2(0.5f, 1f), new Vector2(0f, -14f),
-                new Vector2(0f, 58f), grid.cellSize.y > 180f ? 24 : 21,
+                new Vector2(0f, 58f), cardTitleSize,
                 TextAnchor.MiddleCenter, accent);
             title.rectTransform.anchorMin = new Vector2(0f, 1f);
             title.rectTransform.anchorMax = new Vector2(1f, 1f);
@@ -516,6 +579,7 @@ namespace MaxFlix.Unity.Runtime
             description.rectTransform.anchorMax = new Vector2(1f, 1f);
             description.rectTransform.offsetMin = new Vector2(14f, 12f);
             description.rectTransform.offsetMax = new Vector2(-14f, -70f);
+            description.fontSize = Mathf.RoundToInt(Mathf.Clamp(grid.cellSize.x * 0.038f, 12f, 17f));
             description.fontStyle = FontStyle.Normal;
             description.alignment = TextAnchor.MiddleCenter;
             description.raycastTarget = false;
@@ -523,15 +587,19 @@ namespace MaxFlix.Unity.Runtime
 
         private void CreateBottomControls(RectTransform panelRect)
         {
+            float width = Mathf.Max(1f, panelRect.rect.width);
+            float buttonWidth = Mathf.Clamp(width * 0.24f, 170f, 280f);
             Text progress = CreateText(panelRect,
                 "XP  " + _xp + "/" + _xpToNext + "    •    " + RankName + "    •    PRZERZUTY " + _rerolls,
-                new Vector2(0.5f, 0f), new Vector2(0f, 20f),
-                new Vector2(900f, 34f), 16, TextAnchor.MiddleCenter, new Color(0.66f, 0.80f, 0.90f));
+                new Vector2(0.5f, 0f), new Vector2(0f, 18f),
+                new Vector2(Mathf.Max(1f, width - 40f), 34f),
+                Mathf.RoundToInt(Mathf.Clamp(width * 0.012f, 12f, 16f)),
+                TextAnchor.MiddleCenter, new Color(0.66f, 0.80f, 0.90f));
 
             bool canReroll = _rerolls > 0 && !_isBossReward;
             _rerollButton = CreateButton(panelRect,
                 canReroll ? "PRZERZUĆ (" + _rerolls + ")" : "PRZERZUT NIEDOSTĘPNY",
-                new Vector2(0.5f, 0f), new Vector2(0f, 66f), new Vector2(280f, 62f),
+                new Vector2(0.5f, 0f), new Vector2(0f, 66f), new Vector2(buttonWidth, 54f),
                 new Color(0.18f, 0.27f, 0.37f, 1f), delegate { RerollCards(); }, canReroll);
             _rerollLabel = _rerollButton.GetComponentInChildren<Text>();
             if (_rerollLabel != null) _rerollLabel.text = canReroll ? "PRZERZUĆ (" + _rerolls + ")" : "PRZERZUT NIEDOSTĘPNY";
@@ -610,6 +678,12 @@ namespace MaxFlix.Unity.Runtime
                     case "armor":
                         _player.GrantSurvivalShield(1);
                         break;
+                    case "scavenger":
+                        _coinMultiplier = Mathf.Min(2.0f, _coinMultiplier * (1f + 0.15f * strength));
+                        break;
+                    case "regen":
+                        _healthRegenPerSecond = Mathf.Min(0.22f, _healthRegenPerSecond + 0.045f * strength);
+                        break;
                 }
             }
 
@@ -631,7 +705,6 @@ namespace MaxFlix.Unity.Runtime
 
         private void CloseDraft()
         {
-            bool wasBossReward = _isBossReward;
             if (_draftCanvas != null) Destroy(_draftCanvas);
             _draftCanvas = null;
             _isBossReward = false;
@@ -640,7 +713,16 @@ namespace MaxFlix.Unity.Runtime
             GameSession.SetState(GameFlowState.Playing);
             UpdateHud();
 
-            if (!wasBossReward && _xp >= _xpToNext)
+            if (_pendingBossRewardCount > 0)
+            {
+                _pendingBossRewardCount--;
+                BeginLevelUp(true);
+                return;
+            }
+
+            // XP may have crossed more than one rank threshold during a multi-kill.
+            // Continue drafts after every selection, including after the boss reward.
+            if (_xp >= _xpToNext)
                 BeginLevelUp(false);
         }
 
@@ -718,14 +800,6 @@ namespace MaxFlix.Unity.Runtime
             text.rectTransform.anchoredPosition = Vector2.zero;
             text.rectTransform.sizeDelta = Vector2.zero;
             return button;
-        }
-
-        private static void EnsureEventSystem()
-        {
-            if (FindFirstObjectByType<EventSystem>() != null) return;
-            GameObject eventSystem = new GameObject("EventSystem", typeof(EventSystem));
-            InputSystemUIInputModule module = eventSystem.AddComponent<InputSystemUIInputModule>();
-            module.pointerBehavior = UIPointerBehavior.SingleMouseOrPenButMultiTouchAndTrack;
         }
 
         private void OnDestroy()

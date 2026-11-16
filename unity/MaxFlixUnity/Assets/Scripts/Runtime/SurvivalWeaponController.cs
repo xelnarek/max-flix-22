@@ -68,6 +68,7 @@ namespace MaxFlix.Unity.Runtime
         private readonly List<ShotState> _activeShots = new List<ShotState>();
         private readonly Dictionary<PrimitiveType, List<GameObject>> _pool = new Dictionary<PrimitiveType, List<GameObject>>();
         private readonly MaterialPropertyBlock _propertyBlock = new MaterialPropertyBlock();
+        private readonly RaycastHit[] _worldHitBuffer = new RaycastHit[24];
         private EnemyAgent[] _enemyCache = new EnemyAgent[0];
         private PlayerController _player;
         private HudController _hud;
@@ -548,12 +549,40 @@ namespace MaxFlix.Unity.Runtime
                         shot.Root.transform.Rotate(Vector3.up, shot.SpinSpeed * deltaTime * 45f, Space.Self);
                 }
 
-                if (shot.RicochetsRemaining > 0 && Mathf.Abs(position.z) > 17.5f)
+                if (shot.RicochetsRemaining > 0)
                 {
-                    shot.Velocity.z *= -1f;
-                    position.z = Mathf.Sign(position.z) * 17.4f;
-                    shot.Root.transform.position = position;
-                    shot.RicochetsRemaining--;
+                    const float worldEdgeInset = 1.5f;
+                    bool bounced = false;
+                    if (position.x < SurvivalWorldLayout.MinX + worldEdgeInset)
+                    {
+                        shot.Velocity.x = Mathf.Abs(shot.Velocity.x);
+                        position.x = SurvivalWorldLayout.MinX + worldEdgeInset;
+                        bounced = true;
+                    }
+                    else if (position.x > SurvivalWorldLayout.MaxX - worldEdgeInset)
+                    {
+                        shot.Velocity.x = -Mathf.Abs(shot.Velocity.x);
+                        position.x = SurvivalWorldLayout.MaxX - worldEdgeInset;
+                        bounced = true;
+                    }
+                    else if (position.z < SurvivalWorldLayout.MinZ + worldEdgeInset)
+                    {
+                        shot.Velocity.z = Mathf.Abs(shot.Velocity.z);
+                        position.z = SurvivalWorldLayout.MinZ + worldEdgeInset;
+                        bounced = true;
+                    }
+                    else if (position.z > SurvivalWorldLayout.MaxZ - worldEdgeInset)
+                    {
+                        shot.Velocity.z = -Mathf.Abs(shot.Velocity.z);
+                        position.z = SurvivalWorldLayout.MaxZ - worldEdgeInset;
+                        bounced = true;
+                    }
+
+                    if (bounced)
+                    {
+                        shot.Root.transform.position = position;
+                        shot.RicochetsRemaining--;
+                    }
                 }
 
                 if (shot.Returning || shot.Orbiting)
@@ -570,6 +599,12 @@ namespace MaxFlix.Unity.Runtime
         {
             Vector3 segment = to - from;
             float segmentLengthSquared = segment.sqrMagnitude;
+            float segmentLength = Mathf.Sqrt(Mathf.Max(0f, segmentLengthSquared));
+            Vector3 segmentDirection = segmentLength > 0.0001f ? segment / segmentLength : Vector3.zero;
+
+            EnemyAgent firstEnemy = null;
+            Vector3 firstEnemyPosition = Vector3.zero;
+            float firstEnemyDistance = float.PositiveInfinity;
             for (int i = 0; i < _enemyCache.Length; i++)
             {
                 EnemyAgent enemy = _enemyCache[i];
@@ -581,35 +616,90 @@ namespace MaxFlix.Unity.Runtime
                 Vector3 closest = from + segment * projection;
                 if ((enemyPosition - closest).sqrMagnitude > shot.HitRadius * shot.HitRadius) continue;
 
+                float hitDistance = projection * segmentLength;
+                if (hitDistance >= firstEnemyDistance) continue;
+                firstEnemy = enemy;
+                firstEnemyPosition = enemy.transform.position;
+                firstEnemyDistance = hitDistance;
+            }
+
+            // Projectiles must stop at racks, containers and gates instead of
+            // passing through the environment to damage actors on the far side.
+            // The reusable buffer keeps this check allocation-free per shot/frame.
+            float worldHitDistance = float.PositiveInfinity;
+            Vector3 worldImpactPoint = to;
+            if (segmentLength > 0.0001f)
+            {
+                int hitCount = Physics.SphereCastNonAlloc(
+                    from,
+                    Mathf.Clamp(shot.HitRadius * 0.16f, 0.07f, 0.16f),
+                    segmentDirection,
+                    _worldHitBuffer,
+                    segmentLength,
+                    Physics.DefaultRaycastLayers,
+                    QueryTriggerInteraction.Ignore);
+
+                for (int i = 0; i < hitCount; i++)
+                {
+                    Collider collider = _worldHitBuffer[i].collider;
+                    if (collider == null
+                        || collider.GetComponentInParent<EnemyAgent>() != null
+                        || collider.GetComponentInParent<PlayerController>() != null)
+                        continue;
+
+                    float hitDistance = _worldHitBuffer[i].distance;
+                    if (hitDistance >= worldHitDistance) continue;
+                    worldHitDistance = hitDistance;
+                    worldImpactPoint = _worldHitBuffer[i].point;
+                }
+            }
+
+            if (worldHitDistance < firstEnemyDistance)
+            {
+                shot.Root.transform.position = worldImpactPoint;
                 if (shot.AoeRadius > 0.05f)
-                {
-                    ApplyAreaDamage(enemy.transform.position, shot.AoeRadius, shot.Damage,
-                        shot.StunSeconds, shot.SlowSeconds, shot.SlowMultiplier, shot.Knockback, null, shot.WeaponId);
-                    if (shot.Ignites && !enemy.IsDefeated)
-                        enemy.ApplyWeaponHit(0.35f, 0f, 1.4f, 0.78f, Vector3.zero, shot.WeaponId);
-                }
-                else
-                    ApplyHit(enemy, shot);
-
-                shot.HitTargets.Add(enemy.GetInstanceID());
-                if (shot.PierceRemaining > 0)
-                {
-                    shot.PierceRemaining--;
-                    if (shot.Boomerang) shot.PierceRemaining = Mathf.Max(shot.PierceRemaining, 0);
-                    continue;
-                }
-
-                if (shot.Boomerang && !shot.Returning)
-                {
-                    shot.Returning = true;
-                    shot.HitTargets.Clear();
-                    return;
-                }
-
+                    ApplyAreaDamage(worldImpactPoint, shot.AoeRadius, shot.Damage,
+                        shot.StunSeconds, shot.SlowSeconds, shot.SlowMultiplier,
+                        shot.Knockback, null, shot.WeaponId);
                 shot.RemainingLife = 0f;
                 DeactivateShot(shot);
                 return;
             }
+
+            if (firstEnemy == null) return;
+
+            shot.Root.transform.position = segmentLength > 0.0001f
+                ? from + segmentDirection * Mathf.Min(segmentLength, firstEnemyDistance + 0.08f)
+                : to;
+            if (shot.AoeRadius > 0.05f)
+            {
+                ApplyAreaDamage(firstEnemyPosition, shot.AoeRadius, shot.Damage,
+                    shot.StunSeconds, shot.SlowSeconds, shot.SlowMultiplier,
+                    shot.Knockback, null, shot.WeaponId);
+                if (shot.Ignites && !firstEnemy.IsDefeated)
+                    firstEnemy.ApplyWeaponHit(0.35f, 0f, 1.4f, 0.78f, Vector3.zero, shot.WeaponId);
+            }
+            else
+            {
+                ApplyHit(firstEnemy, shot);
+            }
+
+            shot.HitTargets.Add(firstEnemy.GetInstanceID());
+            if (shot.PierceRemaining > 0)
+            {
+                shot.PierceRemaining--;
+                return;
+            }
+
+            if (shot.Boomerang && !shot.Returning)
+            {
+                shot.Returning = true;
+                shot.HitTargets.Clear();
+                return;
+            }
+
+            shot.RemainingLife = 0f;
+            DeactivateShot(shot);
         }
 
         private void ApplyHit(EnemyAgent enemy, ShotState shot)
@@ -684,6 +774,12 @@ namespace MaxFlix.Unity.Runtime
                 {
                     Shader shader = Shader.Find("Universal Render Pipeline/Lit");
                     if (shader == null) shader = Shader.Find("Standard");
+                    if (shader == null)
+                    {
+                        Debug.LogError("No compatible lit shader is available for Survival weapon projectiles.");
+                        Destroy(created);
+                        return null;
+                    }
                     _sharedMaterial = new Material(shader) { enableInstancing = true };
                     if (_sharedMaterial.HasProperty(EmissionColorId)) _sharedMaterial.EnableKeyword("_EMISSION");
                 }

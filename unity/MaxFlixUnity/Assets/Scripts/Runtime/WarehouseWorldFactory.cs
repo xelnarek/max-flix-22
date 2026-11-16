@@ -6,12 +6,33 @@ namespace MaxFlix.Unity.Runtime
     public static class WarehouseWorldFactory
     {
         private static Transform _worldRoot;
+        private static Transform _layoutParent;
+        private static bool _isBuildingUnifiedSurvivalWorld;
         private static readonly Dictionary<string, Material> MaterialCache = new Dictionary<string, Material>();
+        private static readonly List<Material> WorldMaterials = new List<Material>();
+        private static readonly List<Texture2D> WorldTextures = new List<Texture2D>();
 
         public static void DestroyCurrentWorld()
         {
-            if (_worldRoot != null) Object.Destroy(_worldRoot.gameObject);
+            CombatProjectile.ClearAllActive();
+            EnemyAttackProjectile.ClearAllActive();
+            EnemyAgent.InvalidateSpatialCache();
+            if (_worldRoot != null)
+            {
+                SurvivalPerformanceGovernor governor = _worldRoot.GetComponent<SurvivalPerformanceGovernor>();
+                governor?.Shutdown();
+                Object.Destroy(_worldRoot.gameObject);
+            }
             _worldRoot = null;
+            _layoutParent = null;
+            _isBuildingUnifiedSurvivalWorld = false;
+
+            foreach (Material material in WorldMaterials)
+                if (material != null) Object.Destroy(material);
+            foreach (Texture2D texture in WorldTextures)
+                if (texture != null) Object.Destroy(texture);
+            WorldMaterials.Clear();
+            WorldTextures.Clear();
         }
 
         public static PlayerController BuildCampaignMegaMap()
@@ -19,6 +40,8 @@ namespace MaxFlix.Unity.Runtime
             SurvivalMapProfile theme = GameContentCatalog.GetMap(WarehouseMapId.WarehouseB4);
             GameObject root = new GameObject("KAMPANIA • WIELKA MAPA B4");
             _worldRoot = root.transform;
+            _layoutParent = _worldRoot;
+            _isBuildingUnifiedSurvivalWorld = false;
             CreateLighting(theme);
             CreateCampaignMegaMapGeometry(theme);
 
@@ -28,6 +51,9 @@ namespace MaxFlix.Unity.Runtime
 
             CampaignMissionDirector mission = root.AddComponent<CampaignMissionDirector>();
             mission.ConfigureGates(gateB, gateC);
+
+            EnemyNavigationWorld navigation = root.AddComponent<EnemyNavigationWorld>();
+            navigation.Initialize(_worldRoot);
 
             PlayerController player = CreateOperator(
                 OperatorCatalog.Get(GameSession.Current.SelectedOperator),
@@ -159,15 +185,262 @@ namespace MaxFlix.Unity.Runtime
             collectible.Initialize(mission);
         }
 
+        /// <summary>
+        /// Builds the four legacy 120 x 40 m Survival sectors in one persistent
+        /// 240 x 80 m coordinate space. Sector decoration is translated into
+        /// global coordinates; only the outside perimeter is bounded.
+        /// </summary>
+        public static PlayerController BuildUnifiedSurvivalWorld()
+        {
+            if (GameSession.Current == null) return null;
+
+            GameObject root = new GameObject("SURVIVAL • WSPÓLNY ŚWIAT 240 × 80 m");
+            _worldRoot = root.transform;
+            _layoutParent = _worldRoot;
+            _isBuildingUnifiedSurvivalWorld = true;
+
+            SurvivalMapProfile baseMap = GameContentCatalog.GetMap(WarehouseMapId.WarehouseB4);
+            CreateLighting(baseMap);
+            CreateUnifiedSurvivalFloors();
+            CreateUnifiedSurvivalTransitions();
+            CreateUnifiedSurvivalPerimeter(baseMap);
+
+            foreach (SurvivalBiomeZone zone in SurvivalWorldLayout.Zones)
+            {
+                SurvivalMapProfile map = GameContentCatalog.GetMap(zone.MapId);
+                GameObject segment = new GameObject(map.DisplayName + " • segment 120 × 40 m");
+                segment.transform.SetParent(_worldRoot, false);
+                segment.transform.localPosition = new Vector3(zone.Center.x, 0f, zone.Center.y);
+                // The authored procedural layouts were designed in a compact
+                // local arena. Scale their local X/Z into the 120 × 40 m tile
+                // without scaling character height or changing global gameplay coordinates.
+                segment.transform.localScale = new Vector3(2.4f, 1f, 0.86f);
+                _layoutParent = segment.transform;
+                CreateMapLayout(map, false);
+            }
+
+            CreateUnifiedSurvivalSecrets();
+            _layoutParent = _worldRoot;
+            _isBuildingUnifiedSurvivalWorld = false;
+            CreateUnifiedBiomeAccentLights();
+
+            EnemyNavigationWorld navigation = root.AddComponent<EnemyNavigationWorld>();
+            navigation.Initialize(_worldRoot);
+
+            CombatProjectile.Prewarm(3);
+            EnemyAttackProjectile.Prewarm(12);
+            Vector2 spawnCenter = SurvivalWorldLayout.GetZoneCenter(GameSession.Current.SelectedMap);
+            PlayerController player = CreateOperator(
+                OperatorCatalog.Get(GameSession.Current.SelectedOperator),
+                new Vector3(spawnCenter.x, 0.1f, spawnCenter.y - 9f));
+            CreateCamera(player.transform);
+
+            root.AddComponent<SurvivalWeaponController>();
+            root.AddComponent<SurvivalProgressionController>();
+            root.AddComponent<SurvivalPerformanceGovernor>();
+            SurvivalWaveDirector director = root.AddComponent<SurvivalWaveDirector>();
+            director.Initialize(player);
+
+            SurvivalBiomeEnvironment environment = root.AddComponent<SurvivalBiomeEnvironment>();
+            environment.Initialize(player.transform);
+            return player;
+        }
+
+        private static void CreateUnifiedSurvivalSecrets()
+        {
+            foreach (SurvivalBiomeZone zone in SurvivalWorldLayout.Zones)
+            {
+                SurvivalMapProfile map = GameContentCatalog.GetMap(zone.MapId);
+                if (map.Secrets == null) continue;
+
+                foreach (SurvivalSecretDefinition definition in map.Secrets)
+                {
+                    // Secret coordinates are already authored in biome world
+                    // units by src/survivalMaps.ts; do not apply the procedural
+                    // geometry scale to these world-space collectible offsets.
+                    GameObject pickup = new GameObject(
+                        "SEKRET • " + map.DisplayName + " • " + definition.DisplayName);
+                    pickup.transform.SetParent(_worldRoot, false);
+                    pickup.transform.position = new Vector3(
+                        zone.Center.x + definition.Position.x,
+                        0.05f,
+                        zone.Center.y + definition.Position.y);
+                    SphereCollider trigger = pickup.AddComponent<SphereCollider>();
+                    trigger.isTrigger = true;
+                    trigger.radius = 1.35f;
+                    SurvivalSecretPickup secret = pickup.AddComponent<SurvivalSecretPickup>();
+                    secret.Initialize(zone.MapId, definition);
+                }
+            }
+        }
+
+        private static void CreateUnifiedSurvivalFloors()
+        {
+            foreach (SurvivalBiomeZone zone in SurvivalWorldLayout.Zones)
+            {
+                SurvivalMapProfile map = GameContentCatalog.GetMap(zone.MapId);
+                GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                floor.name = map.DisplayName + " • sektor 120 × 40 m";
+                floor.transform.SetParent(_worldRoot, false);
+                floor.transform.position = new Vector3(zone.Center.x, -0.3f, zone.Center.y);
+                floor.transform.localScale = new Vector3(
+                    SurvivalWorldLayout.BiomeHalfWidth * 2f,
+                    0.6f,
+                    SurvivalWorldLayout.BiomeHalfDepth * 2f);
+                ApplyMaterial(floor, GetMapFloorColor(map.Id), 0.84f, 0.10f);
+            }
+        }
+
+        private static void CreateUnifiedSurvivalTransitions()
+        {
+            int transitionIndex = 0;
+            foreach (SurvivalWorldTransition transition in SurvivalWorldLayout.Transitions)
+            {
+                Vector3 size = transition.RunsAlongX
+                    ? new Vector3(transition.Width, 0.028f, transition.Length)
+                    : new Vector3(transition.Length, 0.028f, transition.Width);
+                Texture2D texture = BuildBiomeBlendTexture(transition);
+                Material material = BuildBiomeBlendMaterial(texture);
+                GameObject band = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                band.name = "PRZEJŚCIE BIOMU • " + transition.Id;
+                band.transform.SetParent(_worldRoot, false);
+                band.transform.position = new Vector3(
+                    transition.Center.x, 0.024f + transitionIndex * 0.001f, transition.Center.y);
+                band.transform.rotation = Quaternion.Euler(-90f, 0f, 0f);
+                band.transform.localScale = new Vector3(size.x, size.z, 1f);
+                Collider collider = band.GetComponent<Collider>();
+                if (collider != null) Object.Destroy(collider);
+                Renderer renderer = band.GetComponent<Renderer>();
+                if (renderer != null && material != null)
+                {
+                    renderer.sharedMaterial = material;
+                    renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    renderer.receiveShadows = false;
+                }
+                transitionIndex++;
+            }
+        }
+
+        private static Texture2D BuildBiomeBlendTexture(SurvivalWorldTransition transition)
+        {
+            const int resolution = 64;
+            Texture2D texture = new Texture2D(resolution, resolution, TextureFormat.RGBA32, false, false);
+            texture.name = "Biome blend • " + transition.Id;
+            texture.wrapMode = TextureWrapMode.Clamp;
+            texture.filterMode = FilterMode.Bilinear;
+            Color[] pixels = new Color[resolution * resolution];
+
+            float minX = transition.Center.x - (transition.RunsAlongX ? transition.Width : transition.Length) * 0.5f;
+            float maxZ = transition.Center.y + (transition.RunsAlongX ? transition.Length : transition.Width) * 0.5f;
+            float width = transition.RunsAlongX ? transition.Width : transition.Length;
+            float depth = transition.RunsAlongX ? transition.Length : transition.Width;
+
+            for (int y = 0; y < resolution; y++)
+            {
+                float z = maxZ - (y / (float)(resolution - 1)) * depth;
+                for (int x = 0; x < resolution; x++)
+                {
+                    float worldX = minX + (x / (float)(resolution - 1)) * width;
+                    pixels[y * resolution + x] = GetBlendedFloorColor(worldX, z);
+                }
+            }
+
+            texture.SetPixels(pixels);
+            texture.Apply(false, true);
+            WorldTextures.Add(texture);
+            return texture;
+        }
+
+        private static Color GetBlendedFloorColor(float x, float z)
+        {
+            SurvivalBiomeBlendWeights weights = SurvivalWorldLayout.GetBlendWeights(x, z);
+            Color b4 = GetMapFloorColor(WarehouseMapId.WarehouseB4);
+            Color port = GetMapFloorColor(WarehouseMapId.ContainerTerminal);
+            Color cold = GetMapFloorColor(WarehouseMapId.ColdStorage);
+            Color night = GetMapFloorColor(WarehouseMapId.NightSorting);
+            float total = Mathf.Max(0.0001f, weights.Total);
+            return (
+                b4 * weights.WarehouseB4
+                + port * weights.ContainerTerminal
+                + cold * weights.ColdStorage
+                + night * weights.NightSorting
+            ) / total;
+        }
+
+        private static Color GetMapFloorColor(WarehouseMapId mapId)
+        {
+            SurvivalMapProfile map = GameContentCatalog.GetMap(mapId);
+            return Color.Lerp(map.FloorColor, map.WallColor, 0.68f);
+        }
+
+        private static Material BuildBiomeBlendMaterial(Texture2D texture)
+        {
+            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader == null) shader = Shader.Find("Unlit/Texture");
+            if (shader == null) shader = Shader.Find("Standard");
+
+            if (shader == null)
+            {
+                Debug.LogError("No compatible unlit shader is available for the Survival biome transition texture.");
+                return null;
+            }
+
+            Material material = new Material(shader);
+            if (material.HasProperty("_BaseMap")) material.SetTexture("_BaseMap", texture);
+            if (material.HasProperty("_MainTex")) material.SetTexture("_MainTex", texture);
+            if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", Color.white);
+            if (material.HasProperty("_Color")) material.SetColor("_Color", Color.white);
+            material.name = "Biome transition • bilinear floor blend";
+            WorldMaterials.Add(material);
+            return material;
+        }
+
+        private static void CreateUnifiedSurvivalPerimeter(SurvivalMapProfile theme)
+        {
+            Color boundary = Color.Lerp(theme.WallColor, theme.BackgroundColor, 0.16f);
+            CreateBox("SURVIVAL • granica zachodnia", new Vector3(SurvivalWorldLayout.MinX - 0.35f, 2.5f, 0f),
+                new Vector3(0.7f, 5f, SurvivalWorldLayout.MaxZ - SurvivalWorldLayout.MinZ + 1.4f), boundary);
+            CreateBox("SURVIVAL • granica wschodnia", new Vector3(SurvivalWorldLayout.MaxX + 0.35f, 2.5f, 0f),
+                new Vector3(0.7f, 5f, SurvivalWorldLayout.MaxZ - SurvivalWorldLayout.MinZ + 1.4f), boundary);
+            CreateBox("SURVIVAL • granica południowa", new Vector3(0f, 2.5f, SurvivalWorldLayout.MinZ - 0.35f),
+                new Vector3(SurvivalWorldLayout.MaxX - SurvivalWorldLayout.MinX + 1.4f, 5f, 0.7f), boundary);
+            CreateBox("SURVIVAL • granica północna", new Vector3(0f, 2.5f, SurvivalWorldLayout.MaxZ + 0.35f),
+                new Vector3(SurvivalWorldLayout.MaxX - SurvivalWorldLayout.MinX + 1.4f, 5f, 0.7f), boundary);
+        }
+
+        private static void CreateUnifiedBiomeAccentLights()
+        {
+            foreach (SurvivalBiomeZone zone in SurvivalWorldLayout.Zones)
+            {
+                SurvivalMapProfile map = GameContentCatalog.GetMap(zone.MapId);
+                GameObject lightObject = new GameObject(map.DisplayName + " • światło strefowe");
+                lightObject.transform.SetParent(_worldRoot, false);
+                lightObject.transform.position = new Vector3(zone.Center.x, 7.5f, zone.Center.y);
+                Light light = lightObject.AddComponent<Light>();
+                light.type = LightType.Point;
+                light.range = 38f;
+                light.intensity = 1.0f;
+                light.color = map.AccentColor;
+                light.shadows = LightShadows.None;
+            }
+        }
+
         public static PlayerController BuildB4Slice()
         {
+            if (GameSession.Current != null && GameSession.Current.Mode == GameMode.Survival)
+                return BuildUnifiedSurvivalWorld();
+
             SurvivalMapProfile map = GameContentCatalog.GetMap(GameSession.Current.SelectedMap);
             GameObject root = new GameObject(map.DisplayName + " • Unity World");
             _worldRoot = root.transform;
+            _layoutParent = _worldRoot;
 
             CreateLighting(map);
             CreateFloor(map);
             CreateMapLayout(map);
+
+            EnemyNavigationWorld navigation = root.AddComponent<EnemyNavigationWorld>();
+            navigation.Initialize(_worldRoot);
 
             CombatProjectile.Prewarm(3);
             PlayerController player = CreateOperator(OperatorCatalog.Get(GameSession.Current.SelectedOperator), new Vector3(0f, 0.1f, -9f));
@@ -283,9 +556,9 @@ namespace MaxFlix.Unity.Runtime
             CreateBox("Cross aisle line", new Vector3(0f, 0.014f, 0f), new Vector3(42f, 0.02f, 0.07f), Color.Lerp(map.AccentColor, Color.white, 0.32f));
         }
 
-        private static void CreateMapLayout(SurvivalMapProfile map)
+        private static void CreateMapLayout(SurvivalMapProfile map, bool includeBounds = true)
         {
-            CreateWorldBounds(map);
+            if (includeBounds) CreateWorldBounds(map);
             switch (map.Id)
             {
                 case WarehouseMapId.ContainerTerminal:
@@ -376,8 +649,11 @@ namespace MaxFlix.Unity.Runtime
         private static void CreateColdStorageLayout(SurvivalMapProfile map)
         {
             CreateSafetyLanes(map);
-            CreateBox("Cold room • insulated north wall", new Vector3(0f, 2.15f, 23.5f), new Vector3(47f, 4.3f, 0.44f), map.WallColor);
-            CreateBox("Cold room • insulated south wall", new Vector3(0f, 2.15f, -23.5f), new Vector3(47f, 4.3f, 0.44f), map.WallColor);
+            if (!_isBuildingUnifiedSurvivalWorld)
+            {
+                CreateBox("Cold room • insulated north wall", new Vector3(0f, 2.15f, 23.5f), new Vector3(47f, 4.3f, 0.44f), map.WallColor);
+                CreateBox("Cold room • insulated south wall", new Vector3(0f, 2.15f, -23.5f), new Vector3(47f, 4.3f, 0.44f), map.WallColor);
+            }
             for (int side = -1; side <= 1; side += 2)
             {
                 CreateBox("Refrigerant trunk pipe", new Vector3(side * 21.5f, 3.75f, 0f),
@@ -424,7 +700,9 @@ namespace MaxFlix.Unity.Runtime
             }
             for (int gate = -1; gate <= 1; gate++)
             {
-                float z = -15f + gate * 14f;
+                // Three evenly spaced transfer arches; the former -15 + gate*14
+                // formula put the first arch at -29 m, outside a 40 m biome tile.
+                float z = gate * 14f;
                 CreateBox("Scanner gate • left post", new Vector3(-5.8f, 1.9f, z),
                     new Vector3(0.18f, 3.8f, 0.18f), map.AccentColor);
                 CreateBox("Scanner gate • right post", new Vector3(5.8f, 1.9f, z),
@@ -624,8 +902,9 @@ namespace MaxFlix.Unity.Runtime
         {
             GameObject box = GameObject.CreatePrimitive(PrimitiveType.Cube);
             box.name = objectName;
-            box.transform.SetParent(_worldRoot, false);
-            box.transform.position = position;
+            Transform parent = _layoutParent != null ? _layoutParent : _worldRoot;
+            box.transform.SetParent(parent, false);
+            box.transform.localPosition = position;
             box.transform.localScale = scale;
             ApplyMaterial(box, color, roughness, 0.10f);
             return box;
@@ -652,6 +931,11 @@ namespace MaxFlix.Unity.Runtime
             {
                 Shader shader = Shader.Find("Universal Render Pipeline/Lit");
                 if (shader == null) shader = Shader.Find("Standard");
+                if (shader == null)
+                {
+                    Debug.LogError("No compatible lit shader is available for warehouse world geometry.");
+                    return;
+                }
                 material = new Material(shader);
                 material.color = color;
                 if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 1f - roughness);

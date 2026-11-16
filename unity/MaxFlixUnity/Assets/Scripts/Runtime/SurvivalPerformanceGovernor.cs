@@ -130,14 +130,25 @@ namespace MaxFlix.Unity.Runtime
             QualitySettings.shadowResolution = ShadowResolution.Low;
         }
 
-        private void OnDestroy()
+        /// <summary>
+        /// Restore global quality/frame pacing synchronously before a replacement
+        /// run world is created. Unity Destroy is deferred until end-of-frame, so
+        /// relying only on OnDestroy lets the old governor reset the new run.
+        /// </summary>
+        public void Shutdown()
         {
             if (!_initialized) return;
+            _initialized = false;
             Application.targetFrameRate = _baselineTargetFrameRate;
             QualitySettings.vSyncCount = _baselineVsyncCount;
             QualitySettings.lodBias = _baselineLodBias;
             QualitySettings.shadowDistance = _baselineShadowDistance;
             QualitySettings.shadowResolution = _baselineShadowResolution;
+        }
+
+        private void OnDestroy()
+        {
+            Shutdown();
         }
     }
 }
