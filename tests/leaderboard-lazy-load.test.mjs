@@ -12,7 +12,8 @@ test('Firebase leaderboard SDK is split out of the initial game entry', () => {
 
 test('leaderboard services load only after opening the leaderboard or submitting a score', () => {
   assert.match(index, /if \(targetId === 'tab-leaderboard'\) \{\s*leaderboardHasBeenOpened = true;\s*renderLeaderboard\(\);/);
-  assert.match(index, /const services = await loadFirebaseLeaderboardServices\(\);\s*const probeConnected = await services\.ensureLeaderboardServices\(\);\s*const topScores = await services\.getTopSurvivalLeaderboard\(15\);\s*const readStatus = services\.getSurvivalLeaderboardReadStatus\(\);/);
+  assert.match(index, /const services = await loadFirebaseLeaderboardServices\(\);\s*const topScores = await services\.getTopSurvivalLeaderboard\(15\);\s*const readStatus = services\.getSurvivalLeaderboardReadStatus\(\);/);
+  assert.doesNotMatch(index, /await services\.ensureLeaderboardServices\(\)/);
   assert.match(index, /const services = await loadFirebaseLeaderboardServices\(\);\s*const result = await services\.submitScore\(/);
   const bootSection = index.slice(
     index.indexOf("bindScoreSubmission('btn-submit-score'"),
