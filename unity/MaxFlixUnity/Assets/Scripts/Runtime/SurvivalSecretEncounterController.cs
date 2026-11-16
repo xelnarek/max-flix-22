@@ -44,6 +44,7 @@ namespace MaxFlix.Unity.Runtime
         {
             public float X;
             public float Y;
+            public float VerticalSpeed;
             public RectTransform Visual;
         }
 
@@ -116,6 +117,8 @@ namespace MaxFlix.Unity.Runtime
         private float _cthulhuBossHp = 180f;
         private float _cthulhuBossOpen;
         private float _cthulhuBossWindup = 2.2f;
+        private float _cthulhuStrikeWindup;
+        private RectTransform _cthulhuGrabMarker;
         private float _cthulhuBossDeath;
         private float _encounterElapsed;
         private BossAttack _bossAttack = BossAttack.Slam;
@@ -342,6 +345,10 @@ namespace MaxFlix.Unity.Runtime
                     Vector2.one, new Color(0.93f, 0.36f, 0.53f)).rectTransform;
                 _hazards.Add(cup);
             }
+            CreateImage(_stage, "White rabbit invitation guide", new Vector2(-270f, -105f),
+                new Vector2(25f, 46f), new Color(0.95f, 0.94f, 0.89f)).raycastTarget = false;
+            CreateImage(_stage, "Rabbit invitation sign", new Vector2(-220f, -112f),
+                new Vector2(38f, 50f), new Color(0.23f, 0.12f, 0.29f)).raycastTarget = false;
             _rabbitPlayerVisual = CreateImage(_stage, "Rabbit-hole operator", Vector2.zero,
                 new Vector2(26f, 40f), new Color(0.26f, 0.75f, 0.91f)).rectTransform;
             CreateImage(_rabbitPlayerVisual, "Operator helmet", new Vector2(0f, 16f),
@@ -403,6 +410,10 @@ namespace MaxFlix.Unity.Runtime
             _cthulhuCoreVisual = CreateImage(_cthulhuBossVisual, "Elder core",
                 new Vector2(-4f, 22f), new Vector2(35f, 35f),
                 new Color(0.23f, 0.95f, 0.72f)).rectTransform;
+            _cthulhuGrabMarker = CreateImage(_stage, "Grab target warning",
+                new Vector2(-300f, -133f), new Vector2(42f, 5f),
+                new Color(1f, 0.25f, 0.43f, 0.9f)).rectTransform;
+            _cthulhuGrabMarker.gameObject.SetActive(false);
             CreateImage(_cthulhuCoreVisual, "Core pupil", Vector2.zero,
                 new Vector2(12f, 20f), new Color(0.025f, 0.10f, 0.075f)).raycastTarget = false;
 
@@ -604,18 +615,36 @@ namespace MaxFlix.Unity.Runtime
 
             if (_attackHeld && _cthulhuAttackCooldown <= 0f)
             {
-                Projectile shot = new Projectile { X = _cthulhuPlayerX + 18f, Y = _cthulhuJumpHeight + 45f };
+                float startX = _cthulhuPlayerX + 18f;
+                float startY = -143f + _cthulhuJumpHeight + 45f;
+                const float coreScreenY = -17f;
+                float travelSeconds = Mathf.Max(0.12f, (735f - startX) / 330f);
+                Projectile shot = new Projectile
+                {
+                    X = startX,
+                    Y = startY,
+                    VerticalSpeed = (coreScreenY - startY) / travelSeconds
+                };
                 shot.Visual = CreateImage(_stage, "Elder-god counter projectile", Vector2.zero,
                     new Vector2(15f, 7f), new Color(0.45f, 1f, 0.74f)).rectTransform;
                 _projectiles.Add(shot);
                 _cthulhuAttackCooldown = 0.36f;
             }
 
-            _cthulhuBossWindup -= dt;
-            if (_cthulhuBossWindup <= 0f && _cthulhuBossHp > 0f)
+            if (_cthulhuStrikeWindup > 0f)
             {
-                ResolveBossAttack();
-                _cthulhuBossWindup = _cthulhuPhase == 2 ? 1.55f : 2.55f;
+                _cthulhuStrikeWindup = Mathf.Max(0f, _cthulhuStrikeWindup - dt);
+                if (_cthulhuStrikeWindup <= 0f && _cthulhuBossHp > 0f)
+                {
+                    ResolveBossAttack();
+                    _cthulhuBossWindup = _cthulhuPhase == 2 ? 1.55f : 2.55f;
+                    if (_cthulhuGrabMarker != null) _cthulhuGrabMarker.gameObject.SetActive(false);
+                }
+            }
+            else if (_cthulhuBossHp > 0f)
+            {
+                _cthulhuBossWindup -= dt;
+                if (_cthulhuBossWindup <= 0f) BeginBossTelegraph();
             }
 
             UpdateShockwaves(dt);
@@ -632,8 +661,17 @@ namespace MaxFlix.Unity.Runtime
             }
 
             if (_cthulhuBossHp <= 90f) _cthulhuPhase = 2;
+            if (_cthulhuGrabMarker != null && _cthulhuStrikeWindup > 0f)
+                _cthulhuGrabMarker.anchoredPosition = new Vector2(_bossGrabX - 450f, -133f);
             if (_cthulhuCoreVisual != null)
+            {
                 _cthulhuCoreVisual.localScale = Vector3.one * (0.88f + Mathf.Sin(_encounterElapsed * 4f) * 0.12f);
+                Image coreImage = _cthulhuCoreVisual.GetComponent<Image>();
+                if (coreImage != null)
+                    coreImage.color = _cthulhuBossOpen > 0f
+                        ? new Color(0.40f, 1f, 0.78f)
+                        : new Color(0.09f, 0.30f, 0.27f);
+            }
             if (_cthulhuBossVisual != null)
                 _cthulhuBossVisual.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(_encounterElapsed * 1.3f) * 1.8f);
             if (_cthulhuPlayerVisual != null)
@@ -642,11 +680,30 @@ namespace MaxFlix.Unity.Runtime
             SetHud();
         }
 
-        private void ResolveBossAttack()
+        private void BeginBossTelegraph()
         {
             _bossAttack = _nextBossAttack;
             _nextBossAttack = _nextBossAttack == BossAttack.Slam
                 ? BossAttack.Lash : _nextBossAttack == BossAttack.Lash ? BossAttack.Grab : BossAttack.Slam;
+            _cthulhuStrikeWindup = _cthulhuPhase == 2 ? 0.62f : 0.82f;
+            if (_bossAttack == BossAttack.Grab)
+            {
+                _bossGrabX = Mathf.Clamp(_cthulhuPlayerX + Random.Range(-150f, 150f), 60f, 590f);
+                if (_cthulhuGrabMarker != null)
+                {
+                    _cthulhuGrabMarker.anchoredPosition = new Vector2(_bossGrabX - 450f, -133f);
+                    _cthulhuGrabMarker.gameObject.SetActive(true);
+                }
+                _statusHud.text = "TELEGRAPH CHWYTU • WYJDŹ Z CZERWONEJ STREFY";
+            }
+            else if (_bossAttack == BossAttack.Slam)
+                _statusHud.text = "TELEGRAPH FALI • PRZYGOTUJ SKOK";
+            else
+                _statusHud.text = "TELEGRAPH MACEK • SKOK LUB UNIK";
+        }
+
+        private void ResolveBossAttack()
+        {
             _cthulhuBossOpen = 2.15f;
 
             switch (_bossAttack)
@@ -665,11 +722,10 @@ namespace MaxFlix.Unity.Runtime
                     _statusHud.text = "CIĘCIE MACEK • SKOK LUB UNIK";
                     break;
                 default:
-                    _bossGrabX = Mathf.Clamp(_cthulhuPlayerX, 60f, 590f);
                     if (_cthulhuJumpHeight < 12f && _cthulhuDodgeRemaining <= 0f
-                        && Mathf.Abs(_cthulhuPlayerX - _bossGrabX) < 26f)
+                        && Mathf.Abs(_cthulhuPlayerX - _bossGrabX) < 34f)
                         DamageCthulhuPlayer(_cthulhuPhase == 2 ? 46f : 40f);
-                    _statusHud.text = "CHWYT STAREGO BOGA • ZMIENIAJ POZYCJĘ";
+                    _statusHud.text = "CHWYT STAREGO BOGA • STREFA ZAMKNIĘTA";
                     break;
             }
         }
@@ -717,10 +773,12 @@ namespace MaxFlix.Unity.Runtime
             {
                 Projectile shot = _projectiles[i];
                 shot.X += 330f * dt;
-                shot.Visual.anchoredPosition = new Vector2(shot.X - 450f, -143f + shot.Y);
+                shot.Y += shot.VerticalSpeed * dt;
+                shot.Visual.anchoredPosition = new Vector2(shot.X - 450f, shot.Y);
                 if (shot.X >= 735f)
                 {
-                    if (_cthulhuBossOpen > 0f && _cthulhuBossHp > 0f)
+                    if (_cthulhuBossOpen > 0f && _cthulhuBossHp > 0f
+                        && Mathf.Abs(shot.Y - -17f) <= 20f)
                     {
                         float damage = 22.5f;
                         _cthulhuBossHp = Mathf.Max(0f, _cthulhuBossHp - damage);
@@ -823,7 +881,7 @@ namespace MaxFlix.Unity.Runtime
                 _cthulhuPlayerHp = 100f; _cthulhuPlayerInvulnerability = 0f;
                 _cthulhuDodgeRemaining = _cthulhuDodgeCooldown = _cthulhuAttackCooldown = 0f;
                 _cthulhuBossHp = 180f; _cthulhuBossOpen = 0f; _cthulhuBossWindup = 2.2f;
-                _cthulhuBossDeath = 0f; _cthulhuPhase = 1;
+                _cthulhuStrikeWindup = 0f; _cthulhuBossDeath = 0f; _cthulhuPhase = 1;
                 _bossAttack = BossAttack.Slam; _nextBossAttack = BossAttack.Lash;
                 _encounterElapsed = 0f;
                 BuildNecronomicon();
