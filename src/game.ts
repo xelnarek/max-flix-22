@@ -4890,6 +4890,134 @@ export class PaleciakiGameEngine {
     }
   }
 
+  private spawnNecronomiconOpeningEffect(x: number, z: number): void {
+    const effect = new THREE.Group();
+    effect.name = 'necronomicon-opening-cinematic';
+    effect.position.set(x, 0.035, z);
+
+    const leather = new THREE.MeshStandardMaterial({
+      color: 0x241725, roughness: 0.48, metalness: 0.18,
+      emissive: 0x160c1b, emissiveIntensity: 0.34,
+    });
+    const leatherTrim = new THREE.MeshStandardMaterial({
+      color: 0xb18b4a, roughness: 0.3, metalness: 0.82,
+      emissive: 0x4c3210, emissiveIntensity: 0.26,
+    });
+    const parchment = new THREE.MeshStandardMaterial({
+      color: 0xcbbd91, roughness: 0.92, metalness: 0.02,
+      emissive: 0x372b18, emissiveIntensity: 0.08,
+    });
+    const sigilMaterial = new THREE.MeshStandardMaterial({
+      color: 0x58f2c8, roughness: 0.24, metalness: 0.18,
+      emissive: 0x1de9b8, emissiveIntensity: 0.8,
+    });
+    const book = new THREE.Group();
+    book.name = 'necronomicon-opening-book';
+    book.position.y = 0.42;
+    effect.add(book);
+
+    const lowerCover = new THREE.Mesh(new THREE.BoxGeometry(1.02, 0.09, 0.82), leather);
+    lowerCover.position.y = 0.0;
+    book.add(lowerCover);
+    const pageBlock = new THREE.Mesh(new THREE.BoxGeometry(0.91, 0.11, 0.72), parchment);
+    pageBlock.position.y = 0.075;
+    book.add(pageBlock);
+
+    const spine = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.66, 4, 8), leatherTrim);
+    spine.rotation.x = Math.PI / 2;
+    spine.position.set(-0.49, 0.035, 0);
+    book.add(spine);
+
+    const lidPivot = new THREE.Group();
+    lidPivot.name = 'necronomicon-opening-hinged-cover';
+    lidPivot.position.set(0, 0.12, -0.37);
+    book.add(lidPivot);
+    const upperCover = new THREE.Mesh(new THREE.BoxGeometry(1.04, 0.095, 0.78), leather);
+    upperCover.position.set(0, 0.02, 0.37);
+    lidPivot.add(upperCover);
+    const coverTrim = new THREE.Mesh(new THREE.BoxGeometry(0.91, 0.025, 0.67), leatherTrim);
+    coverTrim.position.set(0, 0.071, 0.37);
+    lidPivot.add(coverTrim);
+
+    const coverSigil = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.034, 7, 32), sigilMaterial);
+    coverSigil.rotation.x = Math.PI / 2;
+    coverSigil.position.set(0, 0.092, 0.37);
+    lidPivot.add(coverSigil);
+    const coverEye = new THREE.Mesh(new THREE.IcosahedronGeometry(0.13, 1), sigilMaterial);
+    coverEye.position.set(0, 0.105, 0.37);
+    coverEye.scale.set(1, 1.2, 0.5);
+    lidPivot.add(coverEye);
+
+    const pageLines = new THREE.Group();
+    pageLines.name = 'necronomicon-opening-page-glyphs';
+    const ink = new THREE.MeshBasicMaterial({ color: 0x3b4536, transparent: true, opacity: 0.64 });
+    for (let line = 0; line < 5; line++) {
+      const stroke = new THREE.Mesh(new THREE.BoxGeometry(0.42 + (line % 2) * 0.16, 0.009, 0.018), ink);
+      stroke.position.set(-0.03, 0.137, -0.19 + line * 0.085);
+      stroke.rotation.y = (line % 2 ? -1 : 1) * 0.08;
+      pageLines.add(stroke);
+    }
+    book.add(pageLines);
+
+    const runes = new THREE.Group();
+    runes.name = 'necronomicon-opening-runes';
+    for (let index = 0; index < 6; index++) {
+      const angle = index / 6 * Math.PI * 2;
+      const rune = new THREE.Mesh(new THREE.OctahedronGeometry(0.095, 0), leatherTrim);
+      rune.position.set(Math.cos(angle) * 0.96, 0.58 + Math.sin(angle * 2) * 0.12, Math.sin(angle) * 0.82);
+      rune.rotation.set(angle * 0.5, angle, angle * 0.3);
+      runes.add(rune);
+    }
+    effect.add(runes);
+
+    const groundRingMaterial = new THREE.MeshBasicMaterial({
+      color: 0x49f1c6, transparent: true, opacity: 0.78,
+      depthWrite: false, toneMapped: false,
+    });
+    const groundRing = new THREE.Mesh(new THREE.TorusGeometry(1.18, 0.035, 7, 48), groundRingMaterial);
+    groundRing.rotation.x = Math.PI / 2;
+    groundRing.position.y = 0.04;
+    effect.add(groundRing);
+
+    this.levelRoot.add(effect);
+    let burstDone = false;
+    this.specialEffects.push({
+      mesh: effect,
+      life: 2.05,
+      maxLife: 2.05,
+      grow: 0,
+      spin: 0,
+      update: (dt, progress) => {
+        const open = THREE.MathUtils.clamp((progress - 0.06) / 0.62, 0, 1);
+        const eased = open * open * (3 - 2 * open);
+        lidPivot.rotation.x = -2.05 * eased;
+        coverSigil.rotation.z += dt * (0.8 + eased * 1.6);
+        book.rotation.y = Math.sin(progress * 3.6) * 0.10;
+        book.position.y = 0.42 + Math.sin(progress * Math.PI) * 0.12;
+        runes.rotation.y += dt * 0.9;
+        runes.children.forEach((rune, index) => {
+          rune.rotation.x += dt * (0.55 + index * 0.06);
+          rune.rotation.y -= dt * (0.7 + index * 0.05);
+          rune.position.y = 0.58 + Math.sin(progress * 7 + index * 0.9) * 0.16 + eased * 0.48;
+        });
+        sigilMaterial.emissiveIntensity = 0.8 + eased * 2.8 + Math.sin(progress * 18) * 0.24;
+        const dissolve = THREE.MathUtils.clamp((progress - 0.76) / 0.24, 0, 1);
+        book.scale.setScalar(1 - dissolve * 0.94);
+        book.position.y += dissolve * 0.4;
+        groundRing.scale.setScalar(1 + progress * 3.2);
+        groundRingMaterial.opacity = Math.max(0, 0.78 * (1 - progress));
+        effect.rotation.y += dt * 0.12;
+        if (progress > 0.82 && !burstDone) {
+          burstDone = true;
+          this.spawnParticleRing(x, 0.5, z, 0x48f0c6);
+          this.spawnExplosionParticles(x, 0.72, z, 0x4df0bd, 18);
+          this.triggerBloomPulse(0.5);
+        }
+      },
+      cleanup: () => this.disposeTemporaryObject(effect),
+    });
+  }
+
   private summonCthulhu(): void {
     if (this.gameMode !== 'survival' || this.cthulhuSecretSummoned) return;
     this.cthulhuSecretSummoned = true;
@@ -4906,6 +5034,7 @@ export class PaleciakiGameEngine {
       this.levelBounds.minZ + 4.5,
       this.levelBounds.maxZ - 4.5,
     );
+    this.spawnNecronomiconOpeningEffect(this.playerPos.x, this.playerPos.z);
     this.spawnCthulhuArrivalRitual(spawnX, spawnZ);
     const id = 'necronomicon_cthulhu_' + Math.floor(performance.now());
     this.addCthulhuBossEnemy(id, spawnX, spawnZ);
@@ -4969,6 +5098,44 @@ export class PaleciakiGameEngine {
       new THREE.LineBasicMaterial({ color: 0x70ffe0, transparent: true, opacity: 0.86 }),
     );
     ritual.add(star);
+
+    const runeMaterial = new THREE.MeshBasicMaterial({
+      color: 0xa2ffe9, transparent: true, opacity: 0.92,
+      depthWrite: false, toneMapped: false,
+    });
+    const ritualGlyphs = new THREE.Group();
+    ritualGlyphs.name = 'cthulhu-rlyeh-ritual-glyphs';
+    for (let index = 0; index < 6; index++) {
+      const angle = index / 6 * Math.PI * 2;
+      const glyph = new THREE.Mesh(new THREE.OctahedronGeometry(0.16, 0), runeMaterial);
+      glyph.position.set(Math.cos(angle) * 2.52, 0.12, Math.sin(angle) * 2.52);
+      glyph.rotation.set(angle * 0.5, angle, angle * 0.25);
+      ritualGlyphs.add(glyph);
+    }
+    ritual.add(ritualGlyphs);
+
+    const orbit = new THREE.Mesh(
+      new THREE.TorusGeometry(1.62, 0.026, 6, 56),
+      new THREE.MeshBasicMaterial({
+        color: 0x85fbe0, transparent: true, opacity: 0.82,
+        depthWrite: false, toneMapped: false,
+      }),
+    );
+    orbit.rotation.x = Math.PI / 2;
+    orbit.position.y = 0.085;
+    ritual.add(orbit);
+
+    const centralEye = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(0.28, 1),
+      new THREE.MeshBasicMaterial({
+        color: 0x7affd8, transparent: true, opacity: 0.88,
+        emissive: 0x20e5b8, emissiveIntensity: 1.8,
+        depthWrite: false, toneMapped: false,
+      }),
+    );
+    centralEye.position.y = 0.34;
+    ritual.add(centralEye);
+
     for (let index = 0; index < 6; index++) {
       const angle = (index / 6) * Math.PI * 2;
       const pillar = new THREE.Mesh(
@@ -4987,13 +5154,130 @@ export class PaleciakiGameEngine {
       grow: 0,
       spin: 0,
       update: (dt, progress) => {
-        ritual.rotation.y += dt * (progress < 0.5 ? 0.55 : -0.38);
+        ritual.rotation.y += dt * (progress < 0.5 ? 0.72 : -0.52);
+        ritualGlyphs.rotation.y -= dt * 0.92;
+        ritualGlyphs.children.forEach((glyph, index) => {
+          glyph.rotation.x += dt * (0.4 + index * 0.05);
+          glyph.rotation.z += dt * (0.62 + index * 0.04);
+          glyph.position.y = 0.12 + Math.sin(progress * 18 + index) * 0.12;
+        });
+        orbit.rotation.z += dt * 1.1;
+        orbit.scale.setScalar(1 + Math.sin(progress * Math.PI * 8) * 0.08);
+        centralEye.rotation.x += dt * 0.8;
+        centralEye.rotation.y -= dt * 1.25;
+        const eyePulse = 0.82 + Math.sin(progress * Math.PI * 10) * 0.18;
+        centralEye.scale.setScalar(eyePulse);
         const pulse = 0.82 + Math.sin(progress * Math.PI * 7) * 0.10 + progress * 0.18;
         ritual.scale.set(pulse, 1, pulse);
         seaGreen.opacity = 0.94 * (1 - progress * 0.64);
         abyss.opacity = 0.62 * (1 - progress);
+        runeMaterial.opacity = 0.92 * (1 - progress * 0.78);
       },
       cleanup: () => this.disposeTemporaryObject(ritual),
+    });
+  }
+
+  private spawnRlyehCollapse(x: number, y: number, z: number): void {
+    const ruins = new THREE.Group();
+    ruins.name = 'rlyeh-sunken-ruins-collapse';
+    ruins.position.set(x, 0.02, z);
+
+    const stone = new THREE.MeshStandardMaterial({
+      color: 0x263c43, roughness: 0.86, metalness: 0.12,
+      emissive: 0x071c26, emissiveIntensity: 0.28,
+    });
+    const darkStone = new THREE.MeshStandardMaterial({
+      color: 0x101e2b, roughness: 0.92, metalness: 0.08,
+    });
+    const abyssWater = new THREE.MeshBasicMaterial({
+      color: 0x0b8e82, transparent: true, opacity: 0.58,
+      depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
+    });
+    const seaGlow = new THREE.MeshBasicMaterial({
+      color: 0x55f5d0, transparent: true, opacity: 0.86,
+      depthWrite: false, toneMapped: false,
+    });
+
+    const water = new THREE.Mesh(new THREE.CircleGeometry(4.55, 40), abyssWater);
+    water.rotation.x = -Math.PI / 2;
+    water.position.y = 0.025;
+    ruins.add(water);
+
+    const dais = new THREE.Mesh(new THREE.CylinderGeometry(3.65, 3.95, 0.32, 40), stone);
+    dais.position.y = 0.20;
+    ruins.add(dais);
+
+    const fractureRing = new THREE.Mesh(new THREE.TorusGeometry(3.35, 0.085, 8, 64), seaGlow);
+    fractureRing.rotation.x = Math.PI / 2;
+    fractureRing.position.y = 0.39;
+    ruins.add(fractureRing);
+
+    const towers: THREE.Group[] = [];
+    for (let index = 0; index < 8; index++) {
+      const angle = index / 8 * Math.PI * 2;
+      const tower = new THREE.Group();
+      tower.name = 'rlyeh-collapsing-obelisk-' + index;
+      tower.position.set(Math.cos(angle) * 3.05, 0.34, Math.sin(angle) * 3.05);
+      tower.rotation.y = -angle;
+      const shaft = new THREE.Mesh(
+        new THREE.BoxGeometry(0.58 + (index % 2) * 0.08, 1.45 + (index % 3) * 0.18, 0.58),
+        stone,
+      );
+      shaft.position.y = 0.78;
+      shaft.rotation.z = (index % 2 ? -1 : 1) * 0.055;
+      tower.add(shaft);
+      const crown = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.56, 4), darkStone);
+      crown.position.y = 1.72 + (index % 3) * 0.08;
+      crown.rotation.y = Math.PI / 4;
+      tower.add(crown);
+      towers.push(tower);
+      ruins.add(tower);
+    }
+
+    const outerSurge = new THREE.Mesh(new THREE.TorusGeometry(4.35, 0.12, 8, 64), seaGlow);
+    outerSurge.rotation.x = Math.PI / 2;
+    outerSurge.position.y = 0.11;
+    ruins.add(outerSurge);
+    const innerSurge = new THREE.Mesh(new THREE.TorusGeometry(1.55, 0.075, 8, 48), seaGlow);
+    innerSurge.rotation.x = Math.PI / 2;
+    innerSurge.position.y = 0.15;
+    ruins.add(innerSurge);
+
+    this.levelRoot.add(ruins);
+    this.spawnParticleRing(x, y + 0.45, z, 0x4df0bd);
+    this.triggerScreenShake(1.0, 0.72);
+    let burstDone = false;
+    this.specialEffects.push({
+      mesh: ruins,
+      life: 4.1,
+      maxLife: 4.1,
+      grow: 0,
+      spin: 0,
+      update: (dt, progress) => {
+        const collapse = THREE.MathUtils.clamp((progress - 0.08) / 0.78, 0, 1);
+        const eased = collapse * collapse * (3 - 2 * collapse);
+        ruins.position.y = 0.02 - eased * 1.95;
+        ruins.rotation.y += dt * (0.08 + eased * 0.72);
+        ruins.scale.set(1 + progress * 0.10, 1, 1 + progress * 0.10);
+        dais.rotation.y += dt * (0.06 + eased * 0.3);
+        towers.forEach((tower, index) => {
+          const localCollapse = THREE.MathUtils.clamp((collapse - (index % 3) * 0.055) / 0.72, 0, 1);
+          tower.rotation.z = Math.sin(index * 1.7) * localCollapse * 0.42;
+          tower.rotation.x = Math.cos(index * 1.3) * localCollapse * 0.30;
+          tower.position.y = 0.34 - localCollapse * (0.3 + (index % 2) * 0.18);
+        });
+        outerSurge.scale.setScalar(1 + progress * 4.4);
+        innerSurge.scale.setScalar(1 + progress * 6.0);
+        seaGlow.opacity = Math.max(0, 0.86 * (1 - progress * 0.94));
+        abyssWater.opacity = 0.58 * (1 - progress * 0.42);
+        if (progress > 0.3 && !burstDone) {
+          burstDone = true;
+          this.spawnExplosionParticles(x, y + 0.55, z, 0x37e8c4, 26);
+          this.spawnParticleRing(x, 0.25, z, 0x7cddff);
+          this.triggerBloomPulse(0.66);
+        }
+      },
+      cleanup: () => this.disposeTemporaryObject(ruins),
     });
   }
 
@@ -12637,7 +12921,9 @@ export class PaleciakiGameEngine {
   private beginEnemyDeathVisual(enemy: EnemyItem): void {
     const mesh = enemy.mesh as THREE.Object3D | undefined;
     if (!mesh) return;
-    const duration = getEnemyDeathMotionProfile(enemy.type).duration;
+    const isCthulhuDeath = enemy.name.includes('CTHULHU');
+    const duration = isCthulhuDeath ? 3.4 : getEnemyDeathMotionProfile(enemy.type).duration;
+    if (isCthulhuDeath) mesh.userData.cthulhuDeathBaseRotationY = mesh.rotation.y;
     if (enemy.hitBaseScale) {
       mesh.scale.set(enemy.hitBaseScale.x, enemy.hitBaseScale.y, enemy.hitBaseScale.z);
       enemy.hitBaseScale = undefined;
@@ -12675,16 +12961,38 @@ export class PaleciakiGameEngine {
     const track = this.gobkitEnemyTracks.get(enemy);
 
     if (!track && rest) {
-      const side: -1 | 1 = (enemy.aiSlot ?? enemy.id.length) % 2 === 0 ? 1 : -1;
-      const deathPose = getEnemyDeathMotionPose(enemy.type, progress, side);
-      mesh.rotation.x = rest.rotationX + deathPose.rotationX;
-      mesh.rotation.z = rest.rotationZ + deathPose.rotationZ;
-      mesh.position.y = rest.positionY + deathPose.drop;
-      mesh.scale.set(
-        rest.scaleX * deathPose.scaleX,
-        rest.scaleY * deathPose.scaleY,
-        rest.scaleZ * deathPose.scaleZ,
-      );
+      if (enemy.name.includes('CTHULHU')) {
+        // The elder god loses control of its limbs, turns toward the abyss and
+        // sinks beneath the floor instead of using the ordinary humanoid fall.
+        const baseRotationY = Number(mesh.userData.cthulhuDeathBaseRotationY ?? mesh.rotation.y);
+        const dissolve = THREE.MathUtils.clamp(progress * 1.12, 0, 0.985);
+        const remaining = 1 - dissolve;
+        mesh.rotation.x = rest.rotationX + eased * 0.72;
+        mesh.rotation.y = baseRotationY + progress * 1.75;
+        mesh.rotation.z = rest.rotationZ + Math.sin(progress * Math.PI * 2.2) * 0.16 * (1 - progress);
+        mesh.position.y = rest.positionY + Math.sin(progress * Math.PI) * 0.42 - eased * 1.38;
+        mesh.scale.set(
+          rest.scaleX * remaining,
+          rest.scaleY * remaining,
+          rest.scaleZ * remaining,
+        );
+        const tentacles = mesh.userData.cthulhuTentacles as THREE.Group[] | undefined;
+        tentacles?.forEach((tentacle, index) => {
+          tentacle.rotation.x = progress * (0.36 + (index % 3) * 0.08);
+          tentacle.rotation.z = Math.sin(progress * Math.PI + index * 0.72) * 0.22;
+        });
+      } else {
+        const side: -1 | 1 = (enemy.aiSlot ?? enemy.id.length) % 2 === 0 ? 1 : -1;
+        const deathPose = getEnemyDeathMotionPose(enemy.type, progress, side);
+        mesh.rotation.x = rest.rotationX + deathPose.rotationX;
+        mesh.rotation.z = rest.rotationZ + deathPose.rotationZ;
+        mesh.position.y = rest.positionY + deathPose.drop;
+        mesh.scale.set(
+          rest.scaleX * deathPose.scaleX,
+          rest.scaleY * deathPose.scaleY,
+          rest.scaleZ * deathPose.scaleZ,
+        );
+      }
     }
 
     if (timer <= 0) {
@@ -16797,11 +17105,14 @@ export class PaleciakiGameEngine {
     if (this.gameMode === 'survival' && e.name.includes('CTHULHU')) {
       const abyssReward = 6000;
       this.score += abyssReward;
+      this.callbacks.onBossUpdate?.(e.name, 0, e.maxHp, false);
       this.callbacks.onSurvivalAnnouncement?.(
         'R’LYEH ZAPADŁO SIĘ POD FALE',
         'CTHULHU POKONANY • +6 000 PKT',
-        'Pradawny bóg zniknął w zielonej kipieli. Necronomicon zamknął się sam, a jego znaki zgasły. Na razie.'
+        'Pradawny bóg traci blask, a kamienne miasto rozpada się i tonie. Necronomicon zamyka się sam. Na razie.'
       );
+      this.sayQuote('R’LYEH ZAPADA SIĘ POD FALE. Nawet pradawny bóg nie wytrzymał zmiany nocnej.');
+      this.spawnRlyehCollapse(e.x, e.y, e.z);
       this.emitFloatingToast('✦ PRAWDZIWY SEKRET • +6 000 PKT', this.playerPos.x, this.playerPos.y + 2.1, this.playerPos.z, 'combo');
       this.spawnParticleRing(e.x, e.y + 0.65, e.z, 0x4df0bd);
       this.spawnExplosionParticles(e.x, e.y + 0.9, e.z, 0x8b5cf6, 42);
@@ -16873,7 +17184,7 @@ export class PaleciakiGameEngine {
       this.spawnParticleRing(e.x, e.y + 0.7, e.z, 0xf97316);
       this.spawnParticleRing(e.x, e.y + 1.35, e.z, 0xef4444);
       this.spawnExplosionParticles(e.x, e.y + 0.8, e.z, 0xff7a18, 20);
-    } else if (e.type === 'walczak' || e.maxHp >= 4) {
+    } else if (!e.name.includes('CTHULHU') && (e.type === 'walczak' || e.maxHp >= 4)) {
       this.callbacks.onBossUpdate?.(e.name, 0, e.maxHp, false);
       const defeatLine = e.name.includes('CTHULHU')
         ? 'CTHULHU POKONANY! R’LYEH zapada się z powrotem pod fale. Necronomicon milknie — tym razem.'
@@ -16901,7 +17212,7 @@ export class PaleciakiGameEngine {
       this.levelRoot.add(mesh);
       this.specialEffects.push({ mesh, life: 1.2, maxLife: 1.2, grow: 12.0, spin: 15.0, disposeOnRemove: true });
       this.spawnExplosionParticles(e.x, e.y + 1.1, e.z, 0xfbbf24, 28);
-    } else {
+    } else if (!e.name.includes('CTHULHU')) {
       // A compact shard burst gives ordinary enemies a visible but lightweight hit-confirm.
       const impactColor = e.type === 'pomazaniec' ? 0xf472b6 : e.id.includes('sebix') ? 0xf97316 : 0x38bdf8;
       this.spawnCompactImpact(e.x, e.y + 0.62, e.z, impactColor);

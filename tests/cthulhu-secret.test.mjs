@@ -170,3 +170,32 @@ test('Cthulhu opens the visible chest core after each resolved attack and scales
   assert.ok(game.includes('coreMaterial.emissiveIntensity = coreOpen ? 2.35 + corePulse * 1.05'));
   assert.ok(game.includes("const baseAppliedDamage = this.gameMode === 'survival'"));
 });
+
+test('the Necronomicon pickup plays a hinged opening cinematic with rising runes before the boss reveal', async () => {
+  const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
+  assert.match(game, /private spawnNecronomiconOpeningEffect\(x: number, z: number\): void/);
+  assert.match(game, /this\.spawnNecronomiconOpeningEffect\(this\.playerPos\.x, this\.playerPos\.z\)/);
+  assert.match(game, /necronomicon-opening-hinged-cover/);
+  assert.match(game, /lidPivot\.rotation\.x = -2\.05 \* eased/);
+  assert.match(game, /necronomicon-opening-runes/);
+  assert.match(game, /burstDone/);
+});
+
+test('R’lyeh summoning ritual now has orbiting glyphs and a pulsing central eye', async () => {
+  const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
+  assert.match(game, /cthulhu-rlyeh-ritual-glyphs/);
+  assert.match(game, /const centralEye = new THREE\.Mesh/);
+  assert.match(game, /centralEye\.rotation\.y -= dt \* 1\.25/);
+  assert.match(game, /runeMaterial\.opacity = 0\.92 \* \(1 - progress \* 0\.78\)/);
+});
+
+test('Cthulhu has a bespoke sinking death animation and a collapsing R’lyeh finale, not the generic boss burst', async () => {
+  const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
+  assert.match(game, /const isCthulhuDeath = enemy\.name\.includes\('CTHULHU'\)/);
+  assert.match(game, /enemy\.deathVisualDuration = duration/);
+  assert.match(game, /mesh\.position\.y = rest\.positionY \+ Math\.sin\(progress \* Math\.PI\) \* 0\.42 - eased \* 1\.38/);
+  assert.match(game, /private spawnRlyehCollapse\(x: number, y: number, z: number\): void/);
+  assert.match(game, /rlyeh-sunken-ruins-collapse/);
+  assert.match(game, /this\.spawnRlyehCollapse\(e\.x, e\.y, e\.z\)/);
+  assert.match(game, /!e\.name\.includes\('CTHULHU'\) && \(e\.type === 'walczak'/);
+});
