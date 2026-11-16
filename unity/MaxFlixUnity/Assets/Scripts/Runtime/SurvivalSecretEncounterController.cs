@@ -191,11 +191,11 @@ namespace MaxFlix.Unity.Runtime
             CreateImage(safe, "Header accent", new Vector2(0f, 252f),
                 new Vector2(900f, 3f), accent).raycastTarget = false;
 
-            _title = CreateText(safe, "Secret title", new Vector2(0f, 222f),
-                new Vector2(860f, 42f), 26, TextAnchor.MiddleCenter, Color.white);
-            _subtitle = CreateText(safe, "Secret subtitle", new Vector2(0f, 190f),
-                new Vector2(860f, 25f), 13, TextAnchor.MiddleCenter, accent);
-            _statusHud = CreateText(safe, "Secret status", new Vector2(0f, 157f),
+            _title = CreateText(safe, "Secret title", new Vector2(-55f, 222f),
+                new Vector2(680f, 42f), 26, TextAnchor.MiddleCenter, Color.white);
+            _subtitle = CreateText(safe, "Secret subtitle", new Vector2(-55f, 190f),
+                new Vector2(680f, 25f), 13, TextAnchor.MiddleCenter, accent);
+            _statusHud = CreateText(safe, "Secret status", new Vector2(0f, 118f),
                 new Vector2(860f, 22f), 13, TextAnchor.MiddleCenter, new Color(0.82f, 0.88f, 0.94f));
 
             GameObject stageObject = new GameObject("Independent 2D encounter viewport",
@@ -215,8 +215,8 @@ namespace MaxFlix.Unity.Runtime
 
             CreateButton(safe, "Back to warehouse", "WRÓĆ DO MAGAZYNU",
                 new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f),
-                new Vector2(380f, 222f), new Vector2(180f, 40f),
-                new Color(0.18f, 0.23f, 0.32f), 13, CloseWithoutReward);
+                new Vector2(400f, 222f), new Vector2(150f, 40f),
+                new Color(0.18f, 0.23f, 0.32f), 12, CloseWithoutReward);
 
             CreateHoldButton(safe, "Left", "◀", new Vector2(-335f, -222f),
                 new Vector2(76f, 58f), new Color(0.15f, 0.25f, 0.38f),
