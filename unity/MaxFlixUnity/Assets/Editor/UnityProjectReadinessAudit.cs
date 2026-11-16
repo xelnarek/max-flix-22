@@ -94,6 +94,16 @@ namespace MaxFlix.Unity.Editor
                 && SurvivalWorldLayout.GetBiomeAtPosition(-60f, 20f) == WarehouseMapId.NightSorting,
                 "Survival biome quadrants do not match the live Three.js world.", failures);
             Check(
+                SurvivalWorldLayout.Zones.Any(z => z.MapId == WarehouseMapId.ColdStorage
+                    && z.Center == new Vector2(60f, 20f)
+                    && (z.OpenEdges & SurvivalBiomeEdge.West) == SurvivalBiomeEdge.West
+                    && (z.OpenEdges & SurvivalBiomeEdge.North) == SurvivalBiomeEdge.North)
+                && SurvivalWorldLayout.Zones.Any(z => z.MapId == WarehouseMapId.NightSorting
+                    && z.Center == new Vector2(-60f, 20f)
+                    && (z.OpenEdges & SurvivalBiomeEdge.East) == SurvivalBiomeEdge.East
+                    && (z.OpenEdges & SurvivalBiomeEdge.North) == SurvivalBiomeEdge.North),
+                "Survival north-biome positions or reciprocal portal openings do not match the source layout.", failures);
+            Check(
                 SurvivalWorldLayout.Transitions.Any(t => t.Id == "b4-to-port"
                     && t.From == WarehouseMapId.WarehouseB4 && t.To == WarehouseMapId.ContainerTerminal
                     && t.Center == new Vector2(0f, -20f) && t.Width == 22f)
