@@ -292,7 +292,7 @@ test('Unity mega-world places all five secrets in each of the four biome coordin
   assert.match(factory, /CreateUnifiedSurvivalSecrets\(\)/);
   assert.match(pickup, /OnTriggerEnter\(Collider other\)/);
   assert.match(pickup, /paleciaki\.survival\.secret\.v1\./);
-  assert.match(pickup, /GameSession\.Current\.SecretsFound\+\+/);
+  assert.match(pickup, /GameSession\.Current\.SecretsFound = Mathf\.Clamp\(GameSession\.Current\.SecretsFound \+ 1, 0, 20\)/);
 });
 
 test('Unity Rabbit Hole and Necronomicon open separate touch-ready 2D encounters while Survival is paused', async () => {
