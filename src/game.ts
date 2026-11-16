@@ -4842,31 +4842,114 @@ export class PaleciakiGameEngine {
           group.userData.necronomiconSigil = sigilRing;
           group.userData.necronomiconRunes = glyphs;
           group.userData.necronomiconHalo = halo;
+        } else if (secret.style === 'capybara') {
+          // Low, broad bronze capybara with a blunt muzzle, small ears and four
+          // short feet. Keep it readable at the normal pickup camera distance.
+          const capybara = new THREE.Group();
+          capybara.name = 'bronze-capybara-statue';
+          const bronzeBody = new THREE.MeshStandardMaterial({
+            color: 0x9b713c, roughness: 0.32, metalness: 0.78,
+            emissive: 0x3a2109, emissiveIntensity: 0.16,
+          });
+          const bronzeLight = new THREE.MeshStandardMaterial({
+            color: 0xc49a59, roughness: 0.28, metalness: 0.82,
+            emissive: 0x4a2d0d, emissiveIntensity: 0.12,
+          });
+          const patina = new THREE.MeshStandardMaterial({
+            color: 0x315b50, roughness: 0.54, metalness: 0.48,
+            emissive: 0x0b3028, emissiveIntensity: 0.12,
+          });
+          const darkEye = new THREE.MeshStandardMaterial({
+            color: 0x171c1c, roughness: 0.24, metalness: 0.18,
+          });
+
+          const body = new THREE.Mesh(new THREE.SphereGeometry(0.42, 16, 12), bronzeBody);
+          body.name = 'capybara-rounded-body';
+          body.position.set(0, 0.52, -0.04);
+          body.scale.set(0.93, 0.76, 1.28);
+          capybara.add(body);
+
+          const chest = new THREE.Mesh(new THREE.SphereGeometry(0.29, 14, 10), bronzeLight);
+          chest.name = 'capybara-chest';
+          chest.position.set(0, 0.58, 0.25);
+          chest.scale.set(1.0, 0.95, 0.92);
+          capybara.add(chest);
+
+          const head = new THREE.Mesh(new THREE.SphereGeometry(0.30, 16, 12), bronzeLight);
+          head.name = 'capybara-head';
+          head.position.set(0, 0.75, 0.46);
+          head.scale.set(1.0, 0.92, 0.94);
+          capybara.add(head);
+
+          const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.19, 14, 10), bronzeBody);
+          muzzle.name = 'capybara-blunt-muzzle';
+          muzzle.position.set(0, 0.63, 0.70);
+          muzzle.scale.set(1.18, 0.72, 0.94);
+          capybara.add(muzzle);
+
+          const nose = new THREE.Mesh(new THREE.SphereGeometry(0.055, 9, 7), patina);
+          nose.name = 'capybara-nose';
+          nose.position.set(0, 0.69, 0.87);
+          capybara.add(nose);
+
+          for (const side of [-1, 1] as const) {
+            const ear = new THREE.Mesh(new THREE.SphereGeometry(0.075, 9, 7), bronzeBody);
+            ear.name = side < 0 ? 'capybara-left-ear' : 'capybara-right-ear';
+            ear.position.set(side * 0.215, 0.98, 0.40);
+            ear.scale.set(0.88, 0.68, 0.72);
+            capybara.add(ear);
+
+            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), darkEye);
+            eye.name = side < 0 ? 'capybara-left-eye' : 'capybara-right-eye';
+            eye.position.set(side * 0.205, 0.82, 0.69);
+            capybara.add(eye);
+          }
+
+          for (const side of [-1, 1] as const) {
+            for (const z of [-0.31, 0.28] as const) {
+              const foot = new THREE.Mesh(
+                new THREE.CapsuleGeometry(0.075, 0.16, 3, 7),
+                bronzeBody,
+              );
+              foot.name = 'capybara-short-leg';
+              foot.position.set(side * 0.235, 0.20, z);
+              foot.rotation.x = -0.12;
+              capybara.add(foot);
+            }
+          }
+
+          const tail = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), bronzeLight);
+          tail.name = 'capybara-tail';
+          tail.position.set(0, 0.43, -0.57);
+          capybara.add(tail);
+
+          const breastMedallion = new THREE.Mesh(
+            new THREE.TorusGeometry(0.105, 0.018, 6, 20),
+            patina,
+          );
+          breastMedallion.name = 'capybara-bronze-medallion';
+          breastMedallion.position.set(0, 0.59, 0.515);
+          breastMedallion.scale.set(1, 1.0, 0.55);
+          capybara.add(breastMedallion);
+          group.add(capybara);
         } else {
           const coreGeometry = secret.style === 'wz'
-          ? new THREE.BoxGeometry(0.48, 0.34, 0.12)
-          : secret.style === 'cassette'
-            ? new THREE.BoxGeometry(0.38, 0.26, 0.22)
-            : new THREE.IcosahedronGeometry(0.29, 1);
-        const core = new THREE.Mesh(coreGeometry, gold);
-        core.position.y = 0.76;
-        group.add(core);
-        if (secret.style === 'wz') {
-          const folded = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.11, 0.15), dark);
-          folded.position.set(0.12, 0.78, 0.02);
-          group.add(folded);
-        } else if (secret.style === 'cassette') {
-          const reelA = new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.018, 5, 10), dark);
-          const reelB = reelA.clone();
-          reelA.position.set(-0.09, 0.76, 0.12);
-          reelB.position.set(0.09, 0.76, 0.12);
-          group.add(reelA, reelB);
-        } else {
-          const earA = new THREE.Mesh(new THREE.ConeGeometry(0.10, 0.20, 5), gold);
-          const earB = earA.clone();
-          earA.position.set(-0.16, 1.02, 0);
-          earB.position.set(0.16, 1.02, 0);
-          group.add(earA, earB);
+            ? new THREE.BoxGeometry(0.48, 0.34, 0.12)
+            : new THREE.BoxGeometry(0.38, 0.26, 0.22);
+          const core = new THREE.Mesh(coreGeometry, gold);
+          core.position.y = 0.76;
+          group.add(core);
+          if (secret.style === 'wz') {
+            const folded = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.11, 0.15), dark);
+            folded.position.set(0.12, 0.78, 0.02);
+            group.add(folded);
+          } else {
+            const reelA = new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.018, 5, 10), dark);
+            const reelB = reelA.clone();
+            reelA.position.set(-0.09, 0.76, 0.12);
+            reelB.position.set(0.09, 0.76, 0.12);
+            group.add(reelA, reelB);
+          }
         }
         const ring = new THREE.Mesh(new THREE.TorusGeometry(0.56, 0.035, 6, 18), glow);
         ring.rotation.x = Math.PI / 2;

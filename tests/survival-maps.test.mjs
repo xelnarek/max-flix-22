@@ -7,7 +7,7 @@ import {
   SURVIVAL_MAP_IDS,
 } from '../src/survivalMaps.ts';
 
-test('Survival has four distinct playable map definitions with four secrets each', () => {
+test('Survival has four distinct playable maps with five fixed secrets each', () => {
   assert.equal(SURVIVAL_MAP_IDS.length, 4);
   const names = new Set();
   const palettes = new Set();
@@ -74,5 +74,14 @@ test('every Survival map includes a separate Necronomicon boss secret', () => {
     assert.ok(secret, 'missing Necronomicon on ' + mapId);
     assert.equal(secret.name, 'Necronomicon');
     assert.equal(secret.style, 'necronomicon');
+  }
+});
+
+test('every arena contains the same five collectible secret families', () => {
+  const expected = new Set(['wz', 'cassette', 'capybara', 'rabbit_hole', 'necronomicon']);
+  for (const mapId of SURVIVAL_MAP_IDS) {
+    const secrets = getSurvivalMapDefinition(mapId).secretLocations;
+    assert.equal(secrets.length, 5);
+    assert.deepEqual(new Set(secrets.map((secret) => secret.style)), expected);
   }
 });

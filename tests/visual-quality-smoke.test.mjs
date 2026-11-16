@@ -283,13 +283,13 @@ test('Oniric Dream pauses the 3D run, rewards a completed platformer and resumes
   assert.match(platformer, /data-action="return"/);
 });
  
-test('the Survival archive directory exposes all four arenas and the sixteen-secret total', async () => {
+test('the Survival archive directory exposes four arenas and all twenty fixed secrets', async () => {
   const [html, css] = await Promise.all([read('../index.html'), read('../src/index.css')]);
   for (const mapId of ['warehouse_b4', 'container_terminal', 'cold_storage', 'night_sorting']) {
     assert.ok(html.includes('data-map-visited="' + mapId + '"'), 'missing map directory entry: ' + mapId);
   }
-  assert.match(html, /SEKRETY 0 \/ 16/);
-  assert.match(html, /SEKRETY 0\/4/, 'the in-game HUD must start with four secrets per map');
+  assert.match(html, /SEKRETY 0 \/ 20/);
+  assert.match(html, /SEKRETY 0\/5/, 'the in-game HUD must start with four secrets per map');
   assert.match(css, /\.map-night\s*\{/);
   assert.match(css, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
 });
@@ -309,4 +309,23 @@ test('the field guide documents the Necronomicon secret without changing menu na
   assert.match(secretsSection, /field-guide-card-grid three-col/);
   assert.equal((html.match(/class="menu-tab-btn/g) || []).length, 11, 'all existing menu tabs must remain');
   assert.ok(html.includes('id="tab-field-guide"'), 'the existing Field Guide tab must remain');
+});
+
+test('the map-secret guide documents all five fixed secrets separately from bonus events', async () => {
+  const [html, game] = await Promise.all([read('../index.html'), read('../src/game.ts')]);
+  const sectionStart = html.indexOf('<span class="field-guide-index">09</span>');
+  const sectionEnd = html.indexOf('</section>', sectionStart);
+  assert.ok(sectionStart >= 0 && sectionEnd > sectionStart);
+  const section = html.slice(sectionStart, sectionEnd);
+  for (const cardClass of [
+    'map-wz-secret-card', 'map-cassette-secret-card', 'capybara-secret-card',
+    'oniric-secret-card', 'necronomicon-secret-card',
+  ]) assert.ok(section.includes(cardClass), 'missing field guide entry: ' + cardClass);
+  assert.match(section, /20 wpisów w archiwum/);
+  assert.match(section, /68% szansy/);
+  assert.match(section, /po 2:15/);
+  assert.match(game, /bronze-capybara-statue/);
+  assert.match(game, /capybara-blunt-muzzle/);
+  assert.match(game, /capybara-nose/);
+  assert.doesNotMatch(game, /earA = new THREE\.Mesh\(new THREE\.ConeGeometry\(0\.10, 0\.20, 5\), gold\)/);
 });

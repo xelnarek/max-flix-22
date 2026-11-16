@@ -230,7 +230,7 @@
         <div class="survival-hud-main">
           <div class="survival-hud-kicker" aria-label="Wybrana mapa i sekrety">
             <span id="survival-map-name" class="survival-map-name" title="Wybrana losowo arena">MAGAZYN B4</span>
-            <span id="survival-secret-count" class="survival-secret-count">SEKRETY 0/4</span>
+            <span id="survival-secret-count" class="survival-secret-count">SEKRETY 0/5</span>
           </div>
           <div class="survival-metrics">
             <div class="survival-chip time-chip"><span class="survival-chip-label">CZAS</span><strong id="survival-time">00:00</strong></div>
@@ -1023,10 +1023,14 @@
                   <article class="field-guide-card secret"><span class="field-guide-icon">📁</span><h4>Teczka z premią Nadzorcy Zero</h4><p>Ukryty obiekt specjalny. Nadzorca Zero twierdzi, że w środku są dokumenty do podpisu. Lepiej nie sprawdzać.</p></article>
                   <article class="field-guide-card secret"><span class="field-guide-icon">☕</span><h4>Zapomniany automat z 1998 roku</h4><p>Relikt przerwy kawowej sprzed ery terminali. Nikt nie wie, czy kawa działa, ale automat nadal pobiera drobne.</p></article>
                   <article class="field-guide-card secret"><span class="field-guide-icon">👑</span><h4>Złoty tron kierownika</h4><p>Najbardziej niepraktyczny mebel w kompleksie. Sekret pojawia się poza główną trasą i nagradza eksplorację.</p></article>
-                  <article class="field-guide-card secret pomazaniec-secret-card"><span class="field-guide-icon">🚲</span><h4>Tabliczka „POMAZANIEC”</h4><p>Jednorazowy sekret Survival. Po 2 minutach i 15 sekundach rowerzysta może pojawić się na obrzeżu areny. Zbliżenie do niego uruchamia pięcioosobowy rajd na rowerkach i ostrzał lizakami.</p><small>ODKRYJ • PODEJDŹ • PRZETRWAJ • ODBIERZ PREMIĘ</small></article>
+                  <article class="field-guide-card secret map-wz-secret-card"><span class="field-guide-icon">📄</span><h4>WZ-tka / manifest zmiany</h4><p>Stały sekret każdej mapy. Nazwa dokumentu zmienia się wraz z areną — od Złotej WZ-tki po Manifest po północy. Podniesienie daje +750 punktów i zapisuje odkrycie w archiwum.</p></article>
+                  <article class="field-guide-card secret map-cassette-secret-card"><span class="field-guide-icon">📼</span><h4>Kaseta archiwalna</h4><p>Ukryta kaseta otrzymuje nazwę pasującą do mapy, na której ją znaleziono. To jeden z pięciu stałych sekretów areny: +750 punktów i wpis do archiwum.</p></article>
+                  <article class="field-guide-card secret capybara-secret-card"><span class="field-guide-icon">🦫</span><h4>Kapibara z brązu</h4><p>Metalowa figurka występuje w wariancie dopasowanym do każdej z czterech aren. Znajdź ją poza główną trasą i podejdź, aby zdobyć +750 punktów oraz odkrycie w archiwum.</p></article>
+                  <article class="field-guide-card secret oniric-secret-card"><span class="field-guide-icon">🐇</span><h4>Oniryczny sen • Norka Królika</h4><p>Podążaj za białym królikiem i wejdź do oznaczonej norki. Uruchomisz osobny etap platformowy 2D: zbierz trzy zegarki w 68 sekund, pilnując trzech żyć. Za ukończenie czeka dodatkowa premia punktowa i życie.</p><small>3 ZEGARKI • 68 SEKUND • 3 ŻYCIA</small></article>
+                  <article class="field-guide-card secret pomazaniec-secret-card"><span class="field-guide-icon">🚲</span><h4>Tabliczka „POMAZANIEC”</h4><p>Jednorazowy sekret Survival. Dokładnie po 2 minutach i 15 sekundach na obrzeżu areny pojawia się rowerzysta. Zbliżenie do niego uruchamia pięcioosobowy rajd na rowerkach i ostrzał lizakami.</p><small>ODKRYJ • PODEJDŹ • PRZETRWAJ • ODBIERZ PREMIĘ</small></article>
                   <article class="field-guide-card secret necronomicon-secret-card"><span class="field-guide-icon">📕</span><h4>Necronomicon • Wezwanie Cthulhu</h4><p>Zakazana księga ukryta na każdej z czterech aren Survival. Podniesienie jej rozpoczyna rytuał i przywołuje Cthulhu. Obserwuj ostrzeżenia ataków: omijaj krąg uderzenia i schodź z linii macek. Po każdym rozstrzygniętym ataku rdzeń bossa pozostaje odsłonięty przez 2,15 s — wtedy otrzymuje o 50% większe obrażenia.</p><small>SEKRETNY BOSS • NAGRODA ZA POKONANIE: +6 000 PKT</small></article>
                 </div>
-                <div class="field-guide-callout"><strong>Warunek sekretu:</strong> raz na bieg, od 3. fali gra losuje możliwość pojawienia się obiektu (68% szansy). Jeśli sekret się pojawi, szukaj go na obrzeżach areny. Bossowie zostawiają skrzynie z łupem i dodatkowe XP.</div>
+                <div class="field-guide-callout"><strong>Jak liczone są sekrety:</strong> każda arena ma 5 stałych obiektów do odkrycia — dokument, kasetę, kapibarę, norkę królika i Necronomicon. Cztery mapy dają łącznie 20 wpisów w archiwum. Osobno, od 3. fali raz na bieg losowany jest jeden z trzech dodatkowych obiektów: teczka, automat lub złoty tron (68% szansy). Niezależny znacznik Pomazańca pojawia się po 2:15; podejdź do niego, aby uruchomić rajd. Bossowie zostawiają skrzynie z łupem i dodatkowe XP.</div>
               </section>
 
               <section class="field-guide-section field-guide-last">
@@ -1150,7 +1154,7 @@
                   <div class="survival-achievements-total"><strong id="survival-achievements-count">0 / 8</strong><span>ZDOBYTE</span></div>
                 </div>
                 <div class="survival-achievements-summary-track"><span id="survival-achievements-fill"></span></div>
-                <div id="survival-secret-archive-count" class="survival-secret-archive-count">SEKRETY 0 / 16</div>
+                <div id="survival-secret-archive-count" class="survival-secret-archive-count">SEKRETY 0 / 20</div>
               </section>
 
               <section class="survival-map-directory" aria-label="Mapy Survival">
