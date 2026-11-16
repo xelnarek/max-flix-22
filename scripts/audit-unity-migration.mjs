@@ -268,12 +268,25 @@ try {
   for (const token of [
     'OnTriggerEnter(Collider other)',
     'PlayerPrefs.SetInt(discoveryKey, 1)',
-    'GameSession.Current.SecretsFound++',
+    'GameSession.Current.SecretsFound = Mathf.Clamp(GameSession.Current.SecretsFound + 1, 0, 20)',
     'GameSession.Current.Score += 750',
     'SurvivalSecretEncounterController.Open(player, _definition.Style)',
   ]) {
     if (!secretPickup.includes(token)) fail('Unity Survival secret pickup is missing collection/persistence behaviour: ' + token);
   }
+  for (const token of [
+    'public void SetSecretsCount(int found, int total)',
+    'SEKRETY  0/20',
+    'secretRect.anchorMin = secretRect.anchorMax = new Vector2(0.5f, 0f)',
+    'Sekrety odkryte: ',
+    'Mathf.Clamp(run.SecretsFound, 0, 20)',
+  ]) {
+    if (!hudController.includes(token)) fail('Unity Survival HUD is missing its live/summary secret counter: ' + token);
+  }
+  if (!secretPickup.includes('hud?.SetSecretsCount(GameSession.Current.SecretsFound, 20)')) {
+    fail('Secret pickup must update the live Survival HUD counter immediately.');
+  }
+
   for (const token of [
     'public static void Open(PlayerController player, SurvivalSecretStyle style)',
     'GameSession.SetState(GameFlowState.LevelUp)',
