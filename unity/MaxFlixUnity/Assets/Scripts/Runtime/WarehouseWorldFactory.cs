@@ -268,7 +268,7 @@ namespace MaxFlix.Unity.Runtime
                 Collider collider = band.GetComponent<Collider>();
                 if (collider != null) Object.Destroy(collider);
                 Renderer renderer = band.GetComponent<Renderer>();
-                if (renderer != null)
+                if (renderer != null && material != null)
                 {
                     renderer.sharedMaterial = material;
                     renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -335,6 +335,12 @@ namespace MaxFlix.Unity.Runtime
             Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
             if (shader == null) shader = Shader.Find("Unlit/Texture");
             if (shader == null) shader = Shader.Find("Standard");
+
+            if (shader == null)
+            {
+                Debug.LogError("No compatible unlit shader is available for the Survival biome transition texture.");
+                return null;
+            }
 
             Material material = new Material(shader);
             if (material.HasProperty("_BaseMap")) material.SetTexture("_BaseMap", texture);
@@ -879,6 +885,11 @@ namespace MaxFlix.Unity.Runtime
             {
                 Shader shader = Shader.Find("Universal Render Pipeline/Lit");
                 if (shader == null) shader = Shader.Find("Standard");
+                if (shader == null)
+                {
+                    Debug.LogError("No compatible lit shader is available for warehouse world geometry.");
+                    return;
+                }
                 material = new Material(shader);
                 material.color = color;
                 if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 1f - roughness);
