@@ -159,6 +159,13 @@ export function createCthulhuBossModel(): CthulhuBossModel {
     emissive: 0x0b4b46,
     emissiveIntensity: 0.38,
   });
+  const coreHaloMaterial = new THREE.MeshStandardMaterial({
+    color: 0x24504b,
+    roughness: 0.28,
+    metalness: 0.18,
+    emissive: 0x0b4b46,
+    emissiveIntensity: 0.42,
+  });
   const core = mesh(
     new THREE.SphereGeometry(0.145, 16, 12),
     coreMaterial,
@@ -169,7 +176,7 @@ export function createCthulhuBossModel(): CthulhuBossModel {
   torso.add(core);
   const coreHalo = mesh(
     new THREE.TorusGeometry(0.205, 0.022, 7, 36),
-    biolume,
+    coreHaloMaterial,
     'cthulhu-core-iris',
     new THREE.Vector3(0, 0.37, 0.69),
   );

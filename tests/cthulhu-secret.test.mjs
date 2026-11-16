@@ -32,6 +32,11 @@ test('the Cthulhu model is a distinct articulated multi-part boss with wings and
   assert.equal(built.group.userData.cthulhuCoreHalo, built.coreHalo);
   assert.equal(built.core.name, 'cthulhu-exposed-elder-core');
   assert.equal(built.coreHalo.name, 'cthulhu-core-iris');
+  assert.notEqual(
+    built.coreHalo.material,
+    built.group.userData.cthulhuSigil.material,
+    'core animation must not recolour the boss-wide shared bioluminescent material',
+  );
   assert.ok(built.tentacles.length >= 7);
   assert.equal(built.wings.length, 2);
   const meshNames = [];
