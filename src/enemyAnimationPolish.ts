@@ -62,7 +62,7 @@ export interface EnemyRoleMotionAccent {
  * palette swaps. The source clips still own the main gait and combat actions;
  * these small additive offsets supply each role's idle attitude and weight.
  */
-export const ENEMY_ROLE_MOTION_ACCENTS: Readonly<Record<EnemyType, EnemyRoleMotionAccent>> = Object.freeze({
+export const ENEMY_ROLE_MOTION_ACCENTS: Readonly<Partial<Record<EnemyType, EnemyRoleMotionAccent>>> = Object.freeze({
   customer: { headTilt: 0.035, headLook: 0.13, torsoSway: 0.060, torsoLean: 0.025, chestBreath: 0.020, armAsymmetry: 0.045 },
   walczak: { headTilt: 0.105, headLook: 0.105, torsoSway: 0.074, torsoLean: -0.105, chestBreath: 0.050, armAsymmetry: 0.105 },
   architect: { headTilt: -0.075, headLook: 0.17, torsoSway: 0.026, torsoLean: 0.055, chestBreath: 0.012, armAsymmetry: -0.055 },
@@ -82,6 +82,15 @@ export const ENEMY_ROLE_MOTION_ACCENTS: Readonly<Record<EnemyType, EnemyRoleMoti
   radioactive_pip: { headTilt: 0.060, headLook: 0.155, torsoSway: 0.058, torsoLean: 0.045, chestBreath: 0.050, armAsymmetry: 0.045 },
   cyber_salesman: { headTilt: -0.005, headLook: 0.105, torsoSway: 0.018, torsoLean: -0.020, chestBreath: 0.035, armAsymmetry: 0.012 },
   elite_walczak_guard: { headTilt: -0.020, headLook: 0.045, torsoSway: 0.015, torsoLean: -0.070, chestBreath: 0.028, armAsymmetry: -0.095 },
+});
+
+const DEFAULT_ENEMY_ROLE_MOTION_ACCENT: EnemyRoleMotionAccent = Object.freeze({
+  headTilt: 0,
+  headLook: 0.055,
+  torsoSway: 0.015,
+  torsoLean: -0.01,
+  chestBreath: 0.01,
+  armAsymmetry: 0,
 });
 
 interface RigBones {
@@ -247,7 +256,7 @@ export function applyEnemyRoleSecondaryMotion(
   const counterWave = Math.sin(nextPhase + Math.PI);
   const activity = isIdle ? 0.13 : clamp(speed / 2.3, 0.22, 1.15);
   const asymmetry = type === 'zombie_pracownik' ? 1 : 0;
-  const roleAccent = ENEMY_ROLE_MOTION_ACCENTS[type];
+  const roleAccent = ENEMY_ROLE_MOTION_ACCENTS[type] ?? DEFAULT_ENEMY_ROLE_MOTION_ACCENT;
 
   const applied: AppliedOffset[] = [];
   // Pelvis and chest counter-rotation sells weight transfer without changing root physics.
