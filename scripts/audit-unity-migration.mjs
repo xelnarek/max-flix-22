@@ -57,6 +57,9 @@ try {
     biomeEnvironment,
     waveDirector,
     progressionController,
+    menuController,
+    uiEventSystemInstaller,
+    hudController,
     unityWorkflow,
     unityReadme,
   ] = await Promise.all([
@@ -76,6 +79,9 @@ try {
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalBiomeEnvironment.cs'),
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWaveDirector.cs'),
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalProgressionController.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/MainMenuController.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/UiEventSystemInstaller.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs'),
     read('.github/workflows/unity-validation.yml'),
     read('unity/MaxFlixUnity/README.md'),
   ]);
@@ -229,6 +235,24 @@ try {
   }
   if (!unityReadme.includes('BuildUnifiedSurvivalWorld')) {
     fail('Unity README must describe the connected Survival mega-world implementation.');
+  }
+  for (const token of [
+    'UiEventSystemInstaller.Ensure()',
+    'Mathf.Clamp(safeWidth - 24f, 200f, 560f)',
+    'Mathf.Max(72f, innerWidth / columns)',
+    'viewportBottom',
+  ]) {
+    if (!menuController.includes(token)) fail('Unity main menu is missing a narrow-screen layout safeguard: ' + token);
+  }
+  for (const token of [
+    'GetComponents<BaseInputModule>()',
+    'module.enabled = false',
+    'SingleMouseOrPenButMultiTouchAndTrack',
+  ]) {
+    if (!uiEventSystemInstaller.includes(token)) fail('Unity EventSystem installer is missing the New Input System fallback: ' + token);
+  }
+  if (!hudController.includes('UiEventSystemInstaller.Ensure()')) {
+    fail('Unity HUD must share the resilient touch/pointer input module setup.');
   }
 
   if (process.exitCode) process.exit(process.exitCode);
