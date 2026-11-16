@@ -918,32 +918,39 @@ namespace MaxFlix.Unity.Runtime
             SetHud();
         }
 
+        private void GrantRewardIfWon()
+        {
+            if (_rewardGranted || !_won || GameSession.Current == null || _player == null) return;
+            SurvivalSecretPickup.MarkEncounterCompleted(_sourceMapId, _sourceSecretId);
+            if (_mode == EncounterMode.RabbitHole)
+            {
+                GameSession.Current.Score += 1200 + _rabbitCollected * 250;
+                // IncreaseMaxHealth already grants one point of current HP.
+                // Do not apply a second heal for the same extra-life reward.
+                _player.IncreaseMaxHealth(1);
+                FindFirstObjectByType<HudController>()?.SetStatus("NORKA KRÓLIKA • +1 MAKS. HP I ODNOWIONE ŻYCIE");
+            }
+            else
+            {
+                GameSession.Current.Score += 6000;
+                FindFirstObjectByType<HudController>()?.SetStatus("NECRONOMICON • CTHULHU POKONANY • +6000 PKT");
+            }
+            _rewardGranted = true;
+        }
+
         private void ReturnWithReward()
         {
-            if (!_rewardGranted && _won && GameSession.Current != null && _player != null)
-            {
-                SurvivalSecretPickup.MarkEncounterCompleted(_sourceMapId, _sourceSecretId);
-                if (_mode == EncounterMode.RabbitHole)
-                {
-                    GameSession.Current.Score += 1200 + _rabbitCollected * 250;
-                    // IncreaseMaxHealth already grants one point of current HP.
-                    // Do not apply a second heal for the same extra-life reward.
-                    _player.IncreaseMaxHealth(1);
-                    FindFirstObjectByType<HudController>()?.SetStatus("NORKA KRÓLIKA • +1 MAKS. HP I ODNOWIONE ŻYCIE");
-                }
-                else
-                {
-                    GameSession.Current.Score += 6000;
-                    FindFirstObjectByType<HudController>()?.SetStatus("NECRONOMICON • CTHULHU POKONANY • +6000 PKT");
-                }
-                _rewardGranted = true;
-            }
+            GrantRewardIfWon();
             CloseWithoutReward();
         }
 
         private void CloseWithoutReward()
         {
             if (_closed) return;
+            // The top-level back button is available during and after combat.
+            // Never let it discard an earned challenge reward if the player
+            // exits immediately after the victory animation.
+            GrantRewardIfWon();
             _closed = true;
             Time.timeScale = 1f;
             if (GameSession.Current != null && GameSession.Current.State == GameFlowState.LevelUp)
