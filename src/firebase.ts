@@ -6,7 +6,7 @@ import {
   collection,
   doc,
   setDoc,
-  getDocs,
+  getDocsFromServer,
   query,
   orderBy,
   where,
@@ -66,6 +66,7 @@ const safeStorage = {
 };
 
 const LEADERBOARD_CACHE_KEY = 'maxfliz_cached_leaderboard';
+const SURVIVAL_LEADERBOARD_CACHE_KEY = 'maxfliz_cached_survival_leaderboard';
 const PENDING_LEADERBOARD_KEY = 'maxfliz_pending_score_submissions';
 
 interface PendingLeaderboardWrite {
@@ -73,9 +74,9 @@ interface PendingLeaderboardWrite {
   payload: Omit<LeaderboardEntry, 'id' | 'syncStatus'>;
 }
 
-const parseCachedLeaderboard = (): LeaderboardEntry[] => {
+const parseCachedLeaderboard = (cacheKey = LEADERBOARD_CACHE_KEY): LeaderboardEntry[] => {
   try {
-    const raw = safeStorage.getItem(LEADERBOARD_CACHE_KEY);
+    const raw = safeStorage.getItem(cacheKey);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed)
@@ -106,15 +107,30 @@ const persistPendingLeaderboardWrites = (writes: PendingLeaderboardWrite[]): voi
   safeStorage.setItem(PENDING_LEADERBOARD_KEY, JSON.stringify(writes));
 };
 
-const cacheLeaderboardEntries = (entries: readonly LeaderboardEntry[]): void => {
-  const merged = mergeLeaderboardEntries(entries, parseCachedLeaderboard());
-  safeStorage.setItem(LEADERBOARD_CACHE_KEY, JSON.stringify(getLeaderboardSlice(merged, 30)));
+const cacheLeaderboardEntries = (
+  entries: readonly LeaderboardEntry[],
+  cacheKey = LEADERBOARD_CACHE_KEY,
+): void => {
+  const merged = mergeLeaderboardEntries(entries, parseCachedLeaderboard(cacheKey));
+  safeStorage.setItem(cacheKey, JSON.stringify(getLeaderboardSlice(merged, 30)));
 };
 
 export type LeaderboardSubmitResult = {
   id: string;
   status: 'online' | 'queued';
 };
+
+export interface SurvivalLeaderboardReadStatus {
+  source: 'firestore' | 'cache';
+  errorCode?: string;
+}
+
+let survivalLeaderboardReadStatus: SurvivalLeaderboardReadStatus = { source: 'cache' };
+
+/** Reports whether the latest Survival ranking was read from the server or a local fallback. */
+export function getSurvivalLeaderboardReadStatus(): SurvivalLeaderboardReadStatus {
+  return { ...survivalLeaderboardReadStatus };
+}
 
 // Singleton Pattern for Firebase Services
 class FirebaseServicesSingleton {
@@ -272,6 +288,11 @@ export function initAuth(): Promise<User | null> {
       if (!user && retryOnFailure) authPromise = null;
       unsubscribe?.();
       resolve(user);
+      if (user) {
+        void Promise.resolve().then(() => syncPendingLeaderboardScores()).catch((error) => {
+          console.warn('[Firebase:Leaderboard] ⚠️ Nie udało się automatycznie opróżnić kolejki po logowaniu:', error);
+        });
+      }
     };
 
     const subscription = onAuthStateChanged(auth, (user) => {
@@ -385,7 +406,7 @@ export async function testFirestoreConnection(): Promise<boolean> {
     // successful connection and does not require anonymous sign-in.
     const probeQuery = query(collection(db, 'leaderboard'), limit(1));
     await withTimeout(
-      getDocs(probeQuery),
+      getDocsFromServer(probeQuery),
       FIRESTORE_PROBE_TIMEOUT_MS,
       'Public Firestore leaderboard probe',
     );
@@ -503,9 +524,11 @@ export async function submitScore(
       'Leaderboard score write',
     );
     persistPendingLeaderboardWrites(pending.filter((item) => item.id !== cleanId));
-    cacheLeaderboardEntries([
-      normalizeLeaderboardEntry({ ...payload, id: cleanId, syncStatus: 'online' }),
-    ]);
+    const confirmedEntry = normalizeLeaderboardEntry({ ...payload, id: cleanId, syncStatus: 'online' });
+    cacheLeaderboardEntries([confirmedEntry]);
+    if (confirmedEntry.mode === 'survival') {
+      cacheLeaderboardEntries([confirmedEntry], SURVIVAL_LEADERBOARD_CACHE_KEY);
+    }
     return { id: cleanId, status: 'online' };
   } catch (error) {
     console.warn('[Firebase:Leaderboard] ⚠️ Brak potwierdzenia zapisu online; wynik trafia do kolejki synchronizacji.');
@@ -518,9 +541,11 @@ export async function submitScore(
       throw new Error('Nie udało się zapisać wyniku online ani utrwalić lokalnej kolejki.');
     }
 
-    cacheLeaderboardEntries([
-      normalizeLeaderboardEntry({ ...payload, id: cleanId, syncStatus: 'pending' }),
-    ]);
+    const queuedEntry = normalizeLeaderboardEntry({ ...payload, id: cleanId, syncStatus: 'pending' });
+    cacheLeaderboardEntries([queuedEntry]);
+    if (queuedEntry.mode === 'survival') {
+      cacheLeaderboardEntries([queuedEntry], SURVIVAL_LEADERBOARD_CACHE_KEY);
+    }
     return { id: cleanId, status: 'queued' };
   }
 }
@@ -585,7 +610,13 @@ export async function syncPendingLeaderboardScores(): Promise<number> {
   }
 
   persistPendingLeaderboardWrites(remaining);
-  if (acknowledged.length) cacheLeaderboardEntries(acknowledged);
+  if (acknowledged.length) {
+    cacheLeaderboardEntries(acknowledged);
+    cacheLeaderboardEntries(
+      acknowledged.filter((entry) => entry.mode === 'survival'),
+      SURVIVAL_LEADERBOARD_CACHE_KEY,
+    );
+  }
   return acknowledged.length;
 }
 
@@ -612,7 +643,7 @@ export async function getTopLeaderboard(maxEntries = 15): Promise<LeaderboardEnt
     // cross-mode comparator. Mode labels do not split the default global ranking.
     const q = query(collection(db, collectionPath), orderBy('score', 'desc'), limit(Math.max(100, maxEntries)));
     const snapshot = await withTimeout(
-      getDocs(q),
+      getDocsFromServer(q),
       FIRESTORE_QUERY_TIMEOUT_MS,
       'Global leaderboard query',
     );
@@ -660,6 +691,12 @@ export async function getTopSurvivalLeaderboard(maxEntries = 15): Promise<Leader
   const collectionPath = 'leaderboard';
   const safeMaxEntries = Number.isFinite(maxEntries) ? Math.max(0, Math.floor(maxEntries)) : 15;
 
+  // The authoritative server query below is also the connectivity check. Start
+  // anonymous auth in parallel so a slow sign-in never blocks public ranking reads.
+  void initAuth().catch((error) => {
+    console.warn('[Firebase:Auth] ⚠️ Sesja rankingu wymaga ponowienia; odczyt publiczny trwa dalej:', error);
+  });
+
   try {
     // Public leaderboard reads do not require an authenticated session. Avoid
     // starting a second anonymous-auth timeout after the boot probe has failed;
@@ -684,7 +721,7 @@ export async function getTopSurvivalLeaderboard(maxEntries = 15): Promise<Leader
       where('mode', '==', 'survival'),
     );
     const snapshot = await withTimeout(
-      getDocs(survivalQuery),
+      getDocsFromServer(survivalQuery),
       FIRESTORE_QUERY_TIMEOUT_MS,
       'Survival leaderboard query',
     );
@@ -709,17 +746,25 @@ export async function getTopSurvivalLeaderboard(maxEntries = 15): Promise<Leader
       .filter((entry) => entry.mode === 'survival');
     const merged = mergeLeaderboardEntries(cloudEntries, pendingEntries);
     const survivalEntries = getSurvivalLeaderboardSlice(merged, Math.max(30, safeMaxEntries));
+    survivalLeaderboardReadStatus = { source: 'firestore' };
 
-    // This key is the offline fallback for the single public Survival mode.
-    // Store its own slice instead of allowing legacy Campaign rows to crowd it.
-    safeStorage.setItem(LEADERBOARD_CACHE_KEY, JSON.stringify(getLeaderboardSlice(survivalEntries, 30)));
+    // Keep Survival's offline snapshot separate so it cannot overwrite the
+    // global/Campaign cache or be overwritten by a global ranking refresh.
+    cacheLeaderboardEntries(survivalEntries, SURVIVAL_LEADERBOARD_CACHE_KEY);
     console.log(`[Firebase:Leaderboard] ✅ Survival: ${cloudEntries.length} online + ${pendingEntries.length} oczekujących.`);
     return getSurvivalLeaderboardSlice(survivalEntries, safeMaxEntries);
   } catch (error) {
-    console.error('[Firebase:Leaderboard] ⚠️ Nie udało się pobrać Survival — używam lokalnego cache.');
+    const errorCode = (error as { code?: string })?.code || 'unknown_code';
+    survivalLeaderboardReadStatus = { source: 'cache', errorCode };
+    console.error('[Firebase:Leaderboard] ⚠️ Nie udało się pobrać Survival z serwera — używam lokalnego cache.');
     handleFirestoreError(error, OperationType.LIST, collectionPath);
 
-    const cachedEntries = parseCachedLeaderboard().filter((entry) => entry.mode === 'survival');
+    // Read the dedicated cache first, then include Survival rows from the
+    // original shared cache for installs upgrading from older game builds.
+    const cachedEntries = mergeLeaderboardEntries(
+      parseCachedLeaderboard(SURVIVAL_LEADERBOARD_CACHE_KEY).filter((entry) => entry.mode === 'survival'),
+      parseCachedLeaderboard().filter((entry) => entry.mode === 'survival'),
+    );
     const pendingEntries = parsePendingLeaderboardWrites()
       .map((item) => normalizeLeaderboardEntry({ ...item.payload, id: item.id, syncStatus: 'pending' }))
       .filter((entry) => entry.mode === 'survival');

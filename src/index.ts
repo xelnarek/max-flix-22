@@ -2245,24 +2245,26 @@ class PaleciakiScene extends xb.Script {
         btnRefreshLeaderboard.textContent = '⏳ Odświeżanie...';
       }
 
-      updateFirestoreStatusUI('checking', 'Testowanie połączenia...');
+      const hasExistingRows = leaderboardList.childElementCount > 0;
+      updateFirestoreStatusUI('checking', 'Odświeżanie rankingu z Firestore...');
       leaderboardLoading.classList.remove('hidden');
-      leaderboardLoading.textContent = 'Łączenie z bazą Firebase Firestore...';
-      leaderboardList.classList.add('hidden');
-      leaderboardList.innerHTML = '';
+      leaderboardLoading.textContent = hasExistingRows
+        ? 'Aktualizuję ranking. Poprzednie wyniki pozostają widoczne.'
+        : 'Łączenie z bazą Firebase Firestore...';
+      if (!hasExistingRows) leaderboardList.classList.add('hidden');
 
       try {
         const services = await loadFirebaseLeaderboardServices();
-        const isConnected = await services.ensureLeaderboardServices();
-        if (isConnected) {
-          updateFirestoreStatusUI('online', 'Baza Firestore: Online');
-        } else {
-          updateFirestoreStatusUI('offline', 'Baza Firestore: Tryb Offline');
-        }
-
         const topScores = await services.getTopSurvivalLeaderboard(15);
+        const readStatus = services.getSurvivalLeaderboardReadStatus();
+        const isConnected = readStatus.source === 'firestore';
+        updateFirestoreStatusUI(
+          isConnected ? 'online' : 'offline',
+          isConnected ? 'Firestore: ranking pobrany z serwera' : `Firestore: pokazano zapis lokalny (${readStatus.errorCode || 'brak połączenia'})`,
+        );
         leaderboardLoading.classList.add('hidden');
         leaderboardList.classList.remove('hidden');
+        leaderboardList.replaceChildren();
 
         if (topScores.length === 0) {
           const emptyState = isConnected
@@ -2323,7 +2325,10 @@ class PaleciakiScene extends xb.Script {
       } catch (err) {
         updateFirestoreStatusUI('offline', 'Baza Firestore: Błąd połączenia');
         leaderboardLoading.classList.remove('hidden');
-        leaderboardLoading.textContent = '❌ Nie udało się pobrać rankingu. Sprawdź połączenie z bazą Firebase.';
+        leaderboardLoading.textContent = leaderboardList.childElementCount > 0
+          ? '⚠️ Odświeżenie nie powiodło się. Zachowano ostatnio wyświetlone wyniki.'
+          : '❌ Nie udało się pobrać rankingu. Sprawdź połączenie z bazą Firebase.';
+        leaderboardList.classList.toggle('hidden', leaderboardList.childElementCount === 0);
         console.warn('Leaderboard error:', err);
 
         if (btnRefreshLeaderboard) {
