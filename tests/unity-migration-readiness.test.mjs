@@ -248,6 +248,32 @@ test('Unity weapon projectiles collide with environment before damaging enemies 
   assert.match(weapons, /firstEnemyDistance \+ 0\.08f/);
 });
 
+test('Unity player initialization clears stale damage, movement, jump and defeated state', async () => {
+  const player = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/PlayerController.cs');
+  const initialize = player.slice(player.indexOf('public void Initialize('), player.indexOf('public void RequestJump()'));
+  for (const token of [
+    '_verticalSpeed = 0f',
+    '_hitInvulnerabilityRemaining = 0f',
+    '_incomingDamageRemainder = 0f',
+    '_survivalMoveMultiplier = 1f',
+    '_survivalDefenseMultiplier = 1f',
+    '_survivalShieldCharges = 0',
+    '_jumpRequested = false',
+    '_airJumpUsed = false',
+    '_attackRequested = false',
+    '_abilityRequested = false',
+    '_defeated = false',
+    '_currentHealth = MaxHealth',
+  ]) assert.ok(initialize.includes(token), 'missing player run-state reset: ' + token);
+});
+
+test('Unity enemy overkill clamps health to zero but records only actual remaining HP', async () => {
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  assert.match(enemy, /float actualDamage = Mathf\.Min\(Mathf\.Max\(0f, _health\), balancedDamage\)/);
+  assert.match(enemy, /_health = Mathf\.Max\(0f, _health - balancedDamage\)/);
+  assert.match(enemy, /RecordWeaponDamage\(weaponSource\.Value, actualDamage\)/);
+});
+
 test('Unity enemy navigation includes conveyor belts that exceed the player step height', async () => {
   const [navigation, factory] = await Promise.all([
     read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyNavigationWorld.cs'),
