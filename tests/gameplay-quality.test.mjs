@@ -1295,13 +1295,13 @@ test('Survival assembles four physical biome sections into one connected world',
   assert.match(game, /this\.platforms\[index\]\.z \+= biome\.centerZ/);
   assert.match(game, /openEdges\.north/);
   assert.match(game, /openEdges\.east/);
-  assert.match(game, /survival-biome-seam-/);
-  assert.match(game, /survival-biome-gateway-posts/);
+  assert.match(game, /survival-biome-transition-/);
+  assert.match(game, /survival-biome-four-way-blend/);
+  assert.doesNotMatch(game, /survival-biome-gateway-posts|survival-biome-gateway-beams|survival-biome-seam-/);
   assert.match(game, /this\.disposeTemporaryObject\(worldRoot\)/);
   assert.match(layout, /SURVIVAL_WORLD_WIDTH/);
   assert.match(layout, /SURVIVAL_WORLD_DEPTH/);
-  assert.match(layout, /markerSpan: 26/);
-  assert.match(layout, /markerSpan: 36/);
+  assert.match(layout, /SURVIVAL_WORLD_BLEND_HALF_WIDTH_METERS/);
   assert.match(game, /if \(edgeIsOpen\) continue/);
   assert.match(game, /survival-biome-four-way-blend/);
   assert.match(maps, /secretLocations:/);
@@ -1596,4 +1596,19 @@ test('directional projectiles orient to velocity and enemy tracer bursts stay wi
   assert.match(game, /this\.particlePool\.acquire\('sphere', trailColor, 0\.052, 0\.62\)/);
   assert.match(game, /p\.mesh\.rotation\.y = Math\.atan2\(p\.vel\.x, p\.vel\.z\)/);
   assert.match(game, /this\.particles\.length < handheldParticleBudget/);
+});
+
+
+test('Survival floor palettes avoid white glare and the boundary renderer fades into native PBR texture', async () => {
+  const [maps, game, visual] = await Promise.all([
+    read('../src/survivalMaps.ts'), read('../src/game.ts'), read('../src/worldVisualQuality.ts')
+  ]);
+  assert.match(maps, /floorColor: 0x77736a/);
+  assert.match(maps, /floorColor: 0x756f65/);
+  assert.match(maps, /floorColor: 0x647983/);
+  assert.match(maps, /floorColor: 0x5b5365/);
+  assert.match(visual, /floorRoughness: 0\.90, floorMetalness: 0\.045/);
+  assert.match(game, /world\.influence \* \(0\.88 \+ edgeVariation\)/);
+  assert.match(game, /getSurvivalWorldFloorColor\(blend\.weights\)/);
+  assert.doesNotMatch(game, /new THREE\.PlaneGeometry\(1\.25, 40\)|seamColor/);
 });
