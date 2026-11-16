@@ -78,6 +78,12 @@ test('Unity Survival renders smooth seam textures and blends biome gameplay modi
   assert.match(sourceBlend, /SURVIVAL_WORLD_BLEND_HALF_DEPTH_METERS = 11/);
 });
 
+test('Unity operator support AI ignores defeated and stale targets', async () => {
+  const kit = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorCombatKit.cs');
+  assert.match(kit, /if \(enemy == null \|\| enemy\.IsDefeated\) continue/);
+  assert.match(kit, /unit\.PounceTarget\.IsDefeated/);
+});
+
 test('Unity run teardown clears persistent in-flight player and enemy projectiles', async () => {
   const [factory, playerShots, enemyShots] = await Promise.all([
     read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs'),
