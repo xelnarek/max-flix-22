@@ -268,9 +268,13 @@ try {
   for (const token of [
     'OnTriggerEnter(Collider other)',
     'PlayerPrefs.SetInt(discoveryKey, 1)',
-    'GameSession.Current.SecretsFound = Mathf.Clamp(GameSession.Current.SecretsFound + 1, 0, 20)',
+    'GameSession.Current.SecretsFound = CountDiscovered()',
+    'public static int CountDiscovered()',
+    'GetCompletionKey(mapId, definition.Id)',
     'GameSession.Current.Score += 750',
-    'SurvivalSecretEncounterController.Open(player, _definition.Style)',
+    'SurvivalSecretEncounterController.Open(player, _definition.Style, _mapId, _definition.Id)',
+    'challengeCompleted',
+    'firstDiscovery',
   ]) {
     if (!secretPickup.includes(token)) fail('Unity Survival secret pickup is missing collection/persistence behaviour: ' + token);
   }
@@ -287,8 +291,13 @@ try {
     fail('Secret pickup must update the live Survival HUD counter immediately.');
   }
 
+  if (!bootstrap.includes('GameSession.Current.SecretsFound = SurvivalSecretPickup.CountDiscovered()')) {
+    fail('Unity Survival startup must hydrate the permanent 20-secret archive count.');
+  }
   for (const token of [
-    'public static void Open(PlayerController player, SurvivalSecretStyle style)',
+    'public static void Open(PlayerController player, SurvivalSecretStyle style,',
+    'WarehouseMapId mapId, string secretId)',
+    'SurvivalSecretPickup.MarkEncounterCompleted(_sourceMapId, _sourceSecretId)',
     'GameSession.SetState(GameFlowState.LevelUp)',
     'Time.timeScale = 0f',
     'private void UpdateRabbitHole(float dt)',
