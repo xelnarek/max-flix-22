@@ -46,10 +46,23 @@ namespace MaxFlix.Unity.Runtime
             _combatKit = GetComponent<OperatorCombatKit>();
             if (_combatKit == null) _combatKit = gameObject.AddComponent<OperatorCombatKit>();
             _combatKit.Initialize(this, hud, _profile);
-            _bonusMaxHealth = 0;
+            // Reset every transient run-state value so reinitialization cannot
+            // inherit partial damage, fractional damage debt, jump state or
+            // invulnerability from a previous life/session.
+            _verticalSpeed = 0f;
+            _attackCooldown = 0f;
+            _currentHealth = 0f;
+            _hitInvulnerabilityRemaining = 0f;
+            _incomingDamageRemainder = 0f;
             _survivalMoveMultiplier = 1f;
             _survivalDefenseMultiplier = 1f;
+            _bonusMaxHealth = 0;
             _survivalShieldCharges = 0;
+            _jumpRequested = false;
+            _airJumpUsed = false;
+            _attackRequested = false;
+            _abilityRequested = false;
+            _defeated = false;
             _currentHealth = MaxHealth;
             _hud?.SetHealth(_currentHealth, MaxHealth);
         }
