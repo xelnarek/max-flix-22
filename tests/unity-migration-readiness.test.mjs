@@ -90,6 +90,12 @@ test('Unity wave spawning skips obstructed positions instead of using an unsafe 
   assert.doesNotMatch(director, /private Vector3 GetSpawnPosition\(/);
 });
 
+test('Unity XP pool overflow merges all earned value without a small per-crystal cap', async () => {
+  const progression = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalProgressionController.cs');
+  assert.match(progression, /Math\.Min\(int\.MaxValue, \(long\)closest\.Value \+ value\)/);
+  assert.doesNotMatch(progression, /Mathf\.Min\(40, closest\.Value \+ value\)/);
+});
+
 test('Unity run replacement restores quality synchronously before the old world is destroyed', async () => {
   const [factory, governor] = await Promise.all([
     read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs'),
