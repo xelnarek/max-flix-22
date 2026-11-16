@@ -33,10 +33,10 @@ namespace MaxFlix.Unity.Editor
         [MenuItem("Max Flix/Run migration readiness audit")]
         public static void ValidateFromMenu()
         {
-            Validate(false, BuildTarget.NoTarget);
+            Validate(false, null);
         }
 
-        private static void Validate(bool failBuild, BuildTarget target)
+        private static void Validate(bool failBuild, BuildTarget? target)
         {
             List<string> failures = new List<string>();
             Check(
@@ -127,7 +127,7 @@ namespace MaxFlix.Unity.Editor
                 && Mathf.Abs(hub.NightSorting - 0.25f) < 0.0001f,
                 "Four-way Survival biome blend must be normalized at the world hub.", failures);
 
-            if (target == BuildTarget.WebGL)
+            if (target.HasValue && target.Value == BuildTarget.WebGL)
             {
                 GraphicsDeviceType[] apis = PlayerSettings.GetGraphicsAPIs(BuildTarget.WebGL);
                 Check(apis.Length >= 2
