@@ -185,6 +185,46 @@ namespace MaxFlix.Unity.Runtime
             return Weapons[SurvivalWeaponKind.PalletCannon];
         }
 
+        public static float GetBlendedEnemyHealthMultiplier(float x, float z)
+        {
+            return BlendMapMetric(x, z, 0);
+        }
+
+        public static float GetBlendedEnemySpeedMultiplier(float x, float z)
+        {
+            return BlendMapMetric(x, z, 1);
+        }
+
+        public static float GetBlendedXpMultiplier(float x, float z)
+        {
+            return BlendMapMetric(x, z, 2);
+        }
+
+        private static float BlendMapMetric(float x, float z, int metric)
+        {
+            SurvivalBiomeBlendWeights weights = SurvivalWorldLayout.GetBlendWeights(x, z);
+            float total = Mathf.Max(0.0001f, weights.Total);
+            float b4 = ReadMapMetric(WarehouseMapId.WarehouseB4, metric);
+            float port = ReadMapMetric(WarehouseMapId.ContainerTerminal, metric);
+            float cold = ReadMapMetric(WarehouseMapId.ColdStorage, metric);
+            float night = ReadMapMetric(WarehouseMapId.NightSorting, metric);
+            return (b4 * weights.WarehouseB4
+                + port * weights.ContainerTerminal
+                + cold * weights.ColdStorage
+                + night * weights.NightSorting) / total;
+        }
+
+        private static float ReadMapMetric(WarehouseMapId id, int metric)
+        {
+            SurvivalMapProfile map = Maps[id];
+            switch (metric)
+            {
+                case 0: return map.EnemyHealthMultiplier;
+                case 1: return map.EnemySpeedMultiplier;
+                default: return map.XpMultiplier;
+            }
+        }
+
         private static SurvivalSecretDefinition Secret(string id, string name, float x, float z, SurvivalSecretStyle style)
         {
             return new SurvivalSecretDefinition
