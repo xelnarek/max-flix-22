@@ -54,6 +54,7 @@ namespace MaxFlix.Unity.Runtime
         private float _xpGrowthMultiplier = 1f;
         private float _magnetMultiplier = 1f;
         private bool _isBossReward;
+        private bool _pendingBossReward;
         private bool _isPromotion;
 
         public int Level { get { return _level; } }
@@ -72,6 +73,7 @@ namespace MaxFlix.Unity.Runtime
             _xpToNext = SurvivalWeaponCatalog.GetXpRequirement(_level);
             _kills = 0;
             _rerolls = 0;
+            _pendingBossReward = false;
             _xpGrowthMultiplier = 1f;
             _magnetMultiplier = 1f;
             _passiveStacks.Clear();
@@ -275,8 +277,14 @@ namespace MaxFlix.Unity.Runtime
 
         private void OpenBossReward()
         {
-            if (_draftCanvas != null || GameSession.Current == null
-                || GameSession.Current.State != GameFlowState.Playing) return;
+            if (GameSession.Current == null) return;
+            if (_draftCanvas != null || GameSession.Current.State != GameFlowState.Playing)
+            {
+                // An AOE can defeat a boss in the same frame that another kill
+                // opens an XP draft. Preserve the boss reward instead of dropping it.
+                _pendingBossReward = true;
+                return;
+            }
             BeginLevelUp(true);
         }
 
@@ -665,7 +673,6 @@ namespace MaxFlix.Unity.Runtime
 
         private void CloseDraft()
         {
-            bool wasBossReward = _isBossReward;
             if (_draftCanvas != null) Destroy(_draftCanvas);
             _draftCanvas = null;
             _isBossReward = false;
@@ -674,7 +681,16 @@ namespace MaxFlix.Unity.Runtime
             GameSession.SetState(GameFlowState.Playing);
             UpdateHud();
 
-            if (!wasBossReward && _xp >= _xpToNext)
+            if (_pendingBossReward)
+            {
+                _pendingBossReward = false;
+                BeginLevelUp(true);
+                return;
+            }
+
+            // XP may have crossed more than one rank threshold during a multi-kill.
+            // Continue drafts after every selection, including after the boss reward.
+            if (_xp >= _xpToNext)
                 BeginLevelUp(false);
         }
 
