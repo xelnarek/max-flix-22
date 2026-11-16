@@ -211,6 +211,12 @@ namespace MaxFlix.Unity.Runtime
                 {
                     Shader shader = Shader.Find("Universal Render Pipeline/Lit");
                     if (shader == null) shader = Shader.Find("Standard");
+                    if (shader == null)
+                    {
+                        Debug.LogError("No compatible lit shader is available for Survival XP crystals.");
+                        Destroy(created);
+                        return null;
+                    }
                     _orbMaterial = new Material(shader) { enableInstancing = true };
                 }
                 renderer.sharedMaterial = _orbMaterial;
