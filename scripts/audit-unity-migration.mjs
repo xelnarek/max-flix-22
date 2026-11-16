@@ -266,7 +266,11 @@ try {
     if (!worldFactory.includes(token)) fail('Unity world factory is missing connected-world secret placement: ' + token);
   }
   for (const token of [
+    '[RequireComponent(typeof(SphereCollider), typeof(Rigidbody))]',
     'OnTriggerEnter(Collider other)',
+    'body.isKinematic = true',
+    'body.useGravity = false',
+    'CollisionDetectionMode.ContinuousSpeculative',
     'PlayerPrefs.SetInt(discoveryKey, 1)',
     'GameSession.Current.SecretsFound = CountDiscovered()',
     'public static int CountDiscovered()',
