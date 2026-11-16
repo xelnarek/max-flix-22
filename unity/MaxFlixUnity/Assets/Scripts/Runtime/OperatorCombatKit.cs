@@ -142,7 +142,7 @@ namespace MaxFlix.Unity.Runtime
                 case OperatorId.Piotr:
                 {
                     SpawnProjectile(origin, transform.forward, PrimitiveType.Cube,
-                        _profile.SecondaryColor, _profile.BasicAttackDamageMultiplier,
+                        _profile.SecondaryColor, CombatBalanceCatalog.ScaleCharacterBasicAttackDamage(1f, _profile.BasicAttackDamageMultiplier),
                         15f, 5, 0f, 0f, 1f, 0.7f, true, 6.5f);
                     _hud?.SetStatus("GRZECHOTKA B4 • RZUT I POWRÓT");
                     break;
@@ -242,6 +242,8 @@ namespace MaxFlix.Unity.Runtime
         {
             GameObject root = new GameObject(style == SupportStyle.Tank
                 ? "WZ-404 escort" : style == SupportStyle.Cat ? "Miau-critical support" : "MafiKapibara guard");
+            if (_player != null && _player.transform.parent != null)
+                root.transform.SetParent(_player.transform.parent, true);
             root.transform.position = transform.position + Vector3.up * 0.45f;
             BuildSupportVisual(root.transform, style, color, index);
             _supportUnits.Add(new SupportUnit
@@ -416,6 +418,11 @@ namespace MaxFlix.Unity.Runtime
                 {
                     Shader shader = Shader.Find("Universal Render Pipeline/Lit");
                     if (shader == null) shader = Shader.Find("Standard");
+                    if (shader == null)
+                    {
+                        Debug.LogError("No compatible shader is available for operator support-unit visuals.");
+                        return;
+                    }
                     material = new Material(shader) { color = color, enableInstancing = true };
                     SupportMaterials.Add(key, material);
                 }
