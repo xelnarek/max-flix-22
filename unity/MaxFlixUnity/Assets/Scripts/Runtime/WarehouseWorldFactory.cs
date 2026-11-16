@@ -16,6 +16,7 @@ namespace MaxFlix.Unity.Runtime
         {
             CombatProjectile.ClearAllActive();
             EnemyAttackProjectile.ClearAllActive();
+            EnemyAgent.InvalidateSpatialCache();
             if (_worldRoot != null) Object.Destroy(_worldRoot.gameObject);
             _worldRoot = null;
             _layoutParent = null;
