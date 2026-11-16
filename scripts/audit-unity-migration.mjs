@@ -168,6 +168,7 @@ try {
   }
 
   if (!unityWorkflow.includes('workflow_dispatch:')) fail('Unity Player workflow must stay manually dispatched until cutover is approved.');
+  if (/^\s{2}push:/m.test(unityWorkflow)) fail('Unity builds must stay manual-only until activation credentials are configured.');
   for (const secret of ['UNITY_LICENSE', 'UNITY_EMAIL', 'UNITY_PASSWORD']) {
     if (!unityWorkflow.includes('secrets.' + secret)) fail('Unity build must remain license-gated by ' + secret + '.');
   }

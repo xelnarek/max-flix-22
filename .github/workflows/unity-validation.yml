@@ -1,15 +1,8 @@
 name: Unity 6.6 WebGL and Android build
 
 on:
-  # Build a WebGL smoke player automatically whenever the Unity runtime,
-  # its validated asset staging pipeline, or this workflow changes on main.
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/unity-validation.yml'
-      - 'scripts/fetch-gobkit-assets.mjs'
-      - 'scripts/glbValidation.mjs'
-      - 'unity/MaxFlixUnity/**'
+  # Manual gate until private Unity activation credentials are configured.
+  # Source-data and topology contracts remain protected by the normal CI audit.
   workflow_dispatch:
     inputs:
       target:
