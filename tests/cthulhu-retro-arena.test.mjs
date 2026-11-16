@@ -289,8 +289,8 @@ test('boss shots always face right toward the weak point, even after retreating 
 
 test('the input code unlocks audio on the gesture and builds a layered bass impact', async () => {
   const source = await readFile(new URL('../src/cthulhuRetroArena.ts', import.meta.url), 'utf8');
-  assert.match(source, /if \\(!event\\.repeat\\) unlockAbyssAudio\\(\\)/);
-  assert.match(source, /const punch = audio\\.createOscillator\\(\\)/);
-  assert.match(source, /punch\\.frequency\\.setValueAtTime\\(142/);
-  assert.match(source, /sub\\.frequency\\.setValueAtTime\\(46/);
+  assert.match(source, /if \(!event\.repeat\) unlockAbyssAudio\(\)/);
+  assert.match(source, /const punch = audio\.createOscillator\(\)/);
+  assert.match(source, /punch\.frequency\.setValueAtTime\(142/);
+  assert.match(source, /sub\.frequency\.setValueAtTime\(46/);
 });
