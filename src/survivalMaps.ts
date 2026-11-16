@@ -57,7 +57,7 @@ export const SURVIVAL_MAPS: Readonly<Record<SurvivalMapId, SurvivalMapDefinition
     },
     backgroundColor: 0x080f1c,
     fogColor: 0x080f1c,
-    floorColor: 0xffffff,
+    floorColor: 0x77736a,
     wallColor: 0x1c2c3d,
     accentColor: 0xf59e0b,
     secretLocations: [
@@ -83,7 +83,7 @@ export const SURVIVAL_MAPS: Readonly<Record<SurvivalMapId, SurvivalMapDefinition
     },
     backgroundColor: 0x101a28,
     fogColor: 0x172536,
-    floorColor: 0xc8d2dc,
+    floorColor: 0x756f65,
     wallColor: 0x26394c,
     accentColor: 0xfb923c,
     secretLocations: [
@@ -109,7 +109,7 @@ export const SURVIVAL_MAPS: Readonly<Record<SurvivalMapId, SurvivalMapDefinition
     },
     backgroundColor: 0x061725,
     fogColor: 0x0a2638,
-    floorColor: 0xc5f0ff,
+    floorColor: 0x647983,
     wallColor: 0x17364a,
     accentColor: 0x67e8f9,
     secretLocations: [
@@ -135,7 +135,7 @@ export const SURVIVAL_MAPS: Readonly<Record<SurvivalMapId, SurvivalMapDefinition
     },
     backgroundColor: 0x090817,
     fogColor: 0x17132b,
-    floorColor: 0x30223d,
+    floorColor: 0x5b5365,
     wallColor: 0x362047,
     accentColor: 0xf472b6,
     secretLocations: [
