@@ -25,6 +25,8 @@ export interface CthulhuRetroProjectile {
 export interface CthulhuRetroShockwave {
   x: number;
   life: number;
+  /** Delay before this wave starts travelling; used to space the phase-two double slam. */
+  delaySeconds?: number;
 }
 
 export interface CthulhuRetroState {
@@ -128,8 +130,10 @@ function resolveCthulhuRetroAttack(state: CthulhuRetroState): void {
   boss.attackCooldown = boss.phase === 2 ? 0.92 : 1.38;
   boss.hitFlash = 0.10;
   if (boss.attack === 'slam') {
-    state.shockwaves.push({ x: boss.x - 28, life: 2.3 });
-    if (boss.phase === 2) state.shockwaves.push({ x: boss.x + 16, life: 2.3 });
+    state.shockwaves.push({ x: boss.x - 28, life: 2.3, delaySeconds: 0 });
+    // The follow-up must arrive after the first hit's invulnerability window.
+    // This makes phase II a genuine two-jump rhythm instead of one merged hit.
+    if (boss.phase === 2) state.shockwaves.push({ x: boss.x + 16, life: 2.3, delaySeconds: 0.98 });
     state.screenShake = Math.max(state.screenShake, boss.phase === 2 ? 0.34 : 0.24);
     return;
   }
@@ -264,11 +268,19 @@ export function stepCthulhuRetroState(
 
   for (let index = state.shockwaves.length - 1; index >= 0; index--) {
     const wave = state.shockwaves[index];
+    if ((wave.delaySeconds ?? 0) > 0) {
+      wave.delaySeconds = Math.max(0, (wave.delaySeconds ?? 0) - dt);
+      continue;
+    }
+    const previousX = wave.x;
     wave.x -= (boss.phase === 2 ? 224 : 190) * dt;
     wave.life -= dt;
     const playerCenter = player.x + PLAYER_WIDTH / 2;
     const isGroundedForWave = player.y > CTHULHU_RETRO_FLOOR - PLAYER_HEIGHT - 9;
-    if (Math.abs(wave.x - playerCenter) <= 6 && isGroundedForWave) {
+    // Swept collision prevents fast waves tunnelling through the player on
+    // 30 FPS devices or after a brief frame-time spike.
+    const crossedPlayer = previousX >= playerCenter - 6 && wave.x <= playerCenter + 6;
+    if (crossedPlayer && isGroundedForWave) {
       takeCthulhuRetroDamage(state, 30);
       state.shockwaves.splice(index, 1);
       continue;

@@ -142,7 +142,7 @@ test('three boss attacks cycle through slam, lash and grab', () => {
   assert.deepEqual(sequence, ['slam', 'lash', 'grab']);
 });
 
-test('the phase-two slam sends a second shockwave so the finale has a harder rhythm', () => {
+test('the phase-two slam sends a delayed second shockwave for a genuine double-jump rhythm', () => {
   const state = createCthulhuRetroState();
   state.introSeconds = 0;
   state.boss.phase = 2;
@@ -152,6 +152,22 @@ test('the phase-two slam sends a second shockwave so the finale has a harder rhy
   stepCthulhuRetroState(state, {}, 1 / 30);
   assert.equal(state.shockwaves.length, 2);
   assert.ok(state.shockwaves[1].x > state.shockwaves[0].x, 'the second wave should follow the first');
+  assert.ok(state.shockwaves[1].delaySeconds >= 0.9, 'the second wave must be spaced beyond the first hit');
+  const secondStart = state.shockwaves[1].x;
+  stepCthulhuRetroState(state, {}, 1 / 30);
+  assert.equal(state.shockwaves[1].x, secondStart, 'the follow-up must wait before travelling');
+});
+
+test('shockwave collision uses a swept segment so waves cannot tunnel through the player at low frame rates', () => {
+  const state = createCthulhuRetroState();
+  state.introSeconds = 0;
+  state.boss.riseSeconds = 0;
+  state.boss.attackCooldown = 100;
+  state.player.x = 120;
+  state.shockwaves.push({ x: 120 + 7 + 224 / 30, life: 1 });
+  const hp = state.player.hp;
+  stepCthulhuRetroState(state, {}, 1 / 30);
+  assert.ok(state.player.hp < hp, 'a wave crossing the player between frames must still hit');
 });
 
 test('the boss death animation sinks Cthulhu and lets R’lyeh collapse before the result panel', () => {
