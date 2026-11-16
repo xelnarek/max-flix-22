@@ -213,6 +213,29 @@ test('Unity procedural map geometry stays inside the intended 120 by 40 metre bi
   assert.match(world, /ClampInside\(Vector3 position, float inset = 1\.5f\)/);
 });
 
+test('Unity melee, ranged and charger attacks respect warehouse obstacle line of sight', async () => {
+  const [navigation, enemy] = await Promise.all([
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyNavigationWorld.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs'),
+  ]);
+  assert.match(navigation, /public static bool HasClearLineToTarget/);
+  assert.match(navigation, /private bool HasClearPath/);
+  assert.match(navigation, /_obstacleCells/);
+  assert.match(enemy, /private bool HasClearAttackLine\(\)/);
+  assert.match(enemy, /if \(!HasClearAttackLine\(\)\)/);
+  assert.match(enemy, /clearAttackLine && _attackTimer <= 0f/);
+  assert.match(enemy, /&& HasClearAttackLine\(\)/);
+});
+
+test('Unity navigation uses an 8 metre spatial broad phase instead of scanning every collider per actor', async () => {
+  const navigation = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyNavigationWorld.cs');
+  assert.match(navigation, /SpatialCellSize = 8f/);
+  assert.match(navigation, /Dictionary<Vector2Int, List<int>> _obstacleCells/);
+  assert.match(navigation, /_seenObstacleVersion\[i\] == _queryVersion/);
+  assert.match(navigation, /_seenObstacleVersion\[index\] == _queryVersion/);
+  assert.match(navigation, /RefreshObstacles\(\)/);
+});
+
 test('Unity enemy navigation snapshots world colliders and steers around expanded obstacles', async () => {
   const [navigation, enemy, factory, campaign] = await Promise.all([
     read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyNavigationWorld.cs'),
