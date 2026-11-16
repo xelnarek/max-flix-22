@@ -177,6 +177,7 @@ test('the Necronomicon pickup plays a hinged opening cinematic with rising runes
   assert.match(game, /this\.spawnNecronomiconOpeningEffect\(this\.playerPos\.x, this\.playerPos\.z\)/);
   assert.match(game, /necronomicon-opening-hinged-cover/);
   assert.match(game, /lidPivot\.rotation\.x = -2\.05 \* eased/);
+  assert.match(game, /book\.position\.y = 0\.42 \+ Math\.sin\(progress \* Math\.PI\) \* 0\.12 \+ dissolve \* 0\.4/);
   assert.match(game, /necronomicon-opening-runes/);
   assert.match(game, /burstDone/);
 });
@@ -185,6 +186,7 @@ test('R’lyeh summoning ritual now has orbiting glyphs and a pulsing central ey
   const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
   assert.match(game, /cthulhu-rlyeh-ritual-glyphs/);
   assert.match(game, /const centralEye = new THREE\.Mesh/);
+  assert.match(game, /new THREE\.MeshStandardMaterial\(\{[\s\S]{0,180}emissive: 0x20e5b8/);
   assert.match(game, /centralEye\.rotation\.y -= dt \* 1\.25/);
   assert.match(game, /runeMaterial\.opacity = 0\.92 \* \(1 - progress \* 0\.78\)/);
 });

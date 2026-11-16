@@ -4993,7 +4993,6 @@ export class PaleciakiGameEngine {
         lidPivot.rotation.x = -2.05 * eased;
         coverSigil.rotation.z += dt * (0.8 + eased * 1.6);
         book.rotation.y = Math.sin(progress * 3.6) * 0.10;
-        book.position.y = 0.42 + Math.sin(progress * Math.PI) * 0.12;
         runes.rotation.y += dt * 0.9;
         runes.children.forEach((rune, index) => {
           rune.rotation.x += dt * (0.55 + index * 0.06);
@@ -5003,7 +5002,7 @@ export class PaleciakiGameEngine {
         sigilMaterial.emissiveIntensity = 0.8 + eased * 2.8 + Math.sin(progress * 18) * 0.24;
         const dissolve = THREE.MathUtils.clamp((progress - 0.76) / 0.24, 0, 1);
         book.scale.setScalar(1 - dissolve * 0.94);
-        book.position.y += dissolve * 0.4;
+        book.position.y = 0.42 + Math.sin(progress * Math.PI) * 0.12 + dissolve * 0.4;
         groundRing.scale.setScalar(1 + progress * 3.2);
         groundRingMaterial.opacity = Math.max(0, 0.78 * (1 - progress));
         effect.rotation.y += dt * 0.12;
@@ -5127,10 +5126,10 @@ export class PaleciakiGameEngine {
 
     const centralEye = new THREE.Mesh(
       new THREE.IcosahedronGeometry(0.28, 1),
-      new THREE.MeshBasicMaterial({
-        color: 0x7affd8, transparent: true, opacity: 0.88,
+      new THREE.MeshStandardMaterial({
+        color: 0x7affd8, roughness: 0.24, metalness: 0.16,
         emissive: 0x20e5b8, emissiveIntensity: 1.8,
-        depthWrite: false, toneMapped: false,
+        transparent: true, opacity: 0.88, depthWrite: false,
       }),
     );
     centralEye.position.y = 0.34;
