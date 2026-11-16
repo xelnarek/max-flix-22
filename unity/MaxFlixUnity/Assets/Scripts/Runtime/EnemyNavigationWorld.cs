@@ -243,7 +243,10 @@ namespace MaxFlix.Unity.Runtime
                 Bounds value = collider.bounds;
                 // Ignore floor tiles/markings and overhead trusses. Keep only
                 // objects whose volume blocks an upright warehouse actor.
-                if (value.max.y < 0.82f || value.min.y > 2.25f || value.size.y < 0.55f)
+                // Include conveyor belts and low warehouse equipment that
+                // the 0.30 m CharacterController step cannot climb. Ignore
+                // thin floor paint and harmless low-profile trim.
+                if (value.max.y < 0.35f || value.min.y > 2.25f || value.size.y < 0.35f)
                     continue;
                 // The outer perimeter is a hard world bound, not a routeable
                 // obstacle; steering should never send enemies around it.
