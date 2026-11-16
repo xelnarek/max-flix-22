@@ -431,12 +431,6 @@
               </span>
               <span class="tab-label">OPERATORZY</span>
             </button>
-            <button class="menu-tab-btn" data-tab="tab-map" aria-controls="tab-map" aria-label="Wybór mapy Survival">
-              <span class="tab-icon" aria-hidden="true">
-                <svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg>
-              </span>
-              <span class="tab-label">WYBÓR MAPY</span>
-            </button>
             <button class="menu-tab-btn pvp-menu-tab" data-tab="tab-pvp" aria-controls="tab-pvp" aria-label="Arena PvP 1 na 1">
               <span class="tab-icon" aria-hidden="true">
                 <svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m4 4 6 6m-3-8 5 5m8 9-6-6m8 4-5-5M5 19l4-4m-2 7 5-5m7-12-4 4m7-2-5 5"/></svg>
@@ -1150,14 +1144,14 @@
               <section class="survival-achievements-hero">
                 <div class="survival-achievements-kicker">ARCHIWUM OPERACYJNE / POSTĘPY</div>
                 <div class="survival-achievements-heading">
-                  <div><h2 id="survival-achievements-title">OSIĄGNIĘCIA I SEKRETY</h2><p>Postęp zapisuje się lokalnie na tym urządzeniu. Odkrywaj mapy, szukaj ukrytych przedmiotów i kończ kolejne zmiany.</p></div>
+                  <div><h2 id="survival-achievements-title">OSIĄGNIĘCIA I SEKRETY</h2><p>Postęp zapisuje się lokalnie na tym urządzeniu. Odkrywaj cztery połączone biomy, szukaj ukrytych przedmiotów i kończ kolejne zmiany.</p></div>
                   <div class="survival-achievements-total"><strong id="survival-achievements-count">0 / 8</strong><span>ZDOBYTE</span></div>
                 </div>
                 <div class="survival-achievements-summary-track"><span id="survival-achievements-fill"></span></div>
                 <div id="survival-secret-archive-count" class="survival-secret-archive-count">SEKRETY 0 / 20</div>
               </section>
 
-              <section class="survival-map-directory" aria-label="Mapy Survival">
+              <section class="survival-map-directory" aria-label="Biomy wspólnego świata Survival">
                 <article class="survival-map-directory-card map-warehouse"><span>01 / SKŁAD</span><strong>MAGAZYN B4</strong><small>Wielka hala paletowa</small><em data-map-visited="warehouse_b4">NIEODKRYTA</em></article>
                 <article class="survival-map-directory-card map-port"><span>02 / PORT</span><strong>PORT KONTENEROWY 17</strong><small>Slalom kontenerów i suwnica</small><em data-map-visited="container_terminal">NIEODKRYTA</em></article>
                 <article class="survival-map-directory-card map-cold"><span>03 / CHŁODNIA</span><strong>CHŁODNIA ZERO</strong><small>Agregaty i rury chłodnicze</small><em data-map-visited="cold_storage">NIEODKRYTA</em></article>
@@ -1224,24 +1218,6 @@
               </div>
               </section>
             </div>
-            <div id="tab-map" class="tab-panel map-selection-panel" aria-label="Wybór mapy Survival">
-              <section id="survival-map-picker" class="survival-map-picker menu-map-picker-frame" aria-label="Wybór mapy Survival">
-              <div class="survival-map-picker-heading">
-                <strong>WYBIERZ ARENĘ</strong>
-                <span>4 ARENY • RÓŻNE TRASY</span>
-              </div>
-              <div class="survival-map-picker-options" role="group" aria-label="Dostępne areny">
-                <button type="button" class="survival-map-choice is-selected" data-survival-map="random" aria-pressed="true"><span>🎲</span><strong>LOSOWA</strong><small>Rotacja aren</small></button>
-                <button type="button" class="survival-map-choice" data-survival-map="warehouse_b4" aria-pressed="false"><span>🏭</span><strong>MAGAZYN B4</strong><small>Palety i regały</small></button>
-                <button type="button" class="survival-map-choice map-port-choice" data-survival-map="container_terminal" aria-pressed="false"><span>🚢</span><strong>PORT 17</strong><small>Kontenery i slalom</small></button>
-                <button type="button" class="survival-map-choice map-cold-choice" data-survival-map="cold_storage" aria-pressed="false"><span>❄️</span><strong>CHŁODNIA ZERO</strong><small>Agregaty i lód</small></button>
-                <button type="button" class="survival-map-choice map-night-choice" data-survival-map="night_sorting" aria-pressed="false"><span>🌙</span><strong>SORTOWNIA WIDMOWA</strong><small>Taśmy i neony</small></button>
-              </div>
-              <div class="survival-map-preview" aria-live="polite"><strong id="survival-map-preview-title">ROTACJA AREN</strong><span id="survival-map-preview-detail">Losowanie bez powtórzenia poprzedniej mapy. Każda arena ma własny układ osłon.</span></div>
-              <p id="survival-map-picker-hint" class="survival-map-picker-hint">Wybierz kafelek, aby zobaczyć zasady i charakter trasy.</p>
-              </section>
-            </div>
-
             <div id="tab-pvp" class="tab-panel pvp-menu-panel" aria-label="Ustawienia i zasady areny PvP">
               <section class="pvp-menu-hero">
                 <div class="pvp-menu-kicker">TRYB KOMPETYCYJNY / 01 VS 01</div>
