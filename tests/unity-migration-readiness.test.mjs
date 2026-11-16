@@ -207,6 +207,15 @@ test('Unity procedural map geometry stays inside the intended 120 by 40 metre bi
   assert.match(world, /ClampInside\(Vector3 position, float inset = 1\.5f\)/);
 });
 
+test('Unity virtual joystick keeps one touch pointer and ignores unrelated finger release', async () => {
+  const joystick = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/VirtualJoystick.cs');
+  assert.match(joystick, /private int _activePointerId = int\.MinValue/);
+  assert.match(joystick, /if \(_activePointerId != int\.MinValue\) return/);
+  assert.match(joystick, /_activePointerId = eventData\.pointerId/);
+  assert.match(joystick, /if \(_activePointerId != eventData\.pointerId\) return/);
+  assert.match(joystick, /_activePointerId = int\.MinValue/);
+});
+
 test('Unity UI always routes touch and pointer input through the New Input System', async () => {
   const [installer, menu, hud] = await Promise.all([
     read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/UiEventSystemInstaller.cs'),
