@@ -248,6 +248,17 @@ test('Unity weapon projectiles collide with environment before damaging enemies 
   assert.match(weapons, /firstEnemyDistance \+ 0\.08f/);
 });
 
+test('Unity 2D encounter retry resets the common timer and Rabbit Hole camera state', async () => {
+  const encounter = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalSecretEncounterController.cs');
+  const retry = encounter.slice(encounter.indexOf('private void RetryEncounter()'), encounter.indexOf('private void ReturnWithReward()'));
+  assert.match(retry, /_encounterElapsed = 0f/);
+  assert.match(retry, /_rabbitCameraX = 0f/);
+  assert.match(retry, /_rabbitAnimation = 0f/);
+  assert.match(retry, /_rabbitTime = 68f/);
+  assert.match(retry, /_cthulhuBossHp = 180f/);
+  assert.doesNotMatch(retry, /_encounterElapsed = 0f[\s\S]*?_encounterElapsed = 0f/);
+});
+
 test('Unity Survival HUD shows and updates the live secret count without covering touch controls', async () => {
   const [hud, pickup] = await Promise.all([
     read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs'),
