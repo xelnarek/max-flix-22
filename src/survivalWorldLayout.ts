@@ -3,17 +3,17 @@ import { SURVIVAL_WORLD_BLEND_HALF_DEPTH_METERS, SURVIVAL_WORLD_BLEND_HALF_WIDTH
 
 export interface SurvivalWorldOpenEdges { west: boolean; east: boolean; north: boolean; south: boolean; }
 export interface SurvivalWorldBiomeLayout { id: SurvivalMapId; centerX: number; centerZ: number; openEdges: SurvivalWorldOpenEdges; }
-export interface SurvivalWorldTransition { id: string; from: SurvivalMapId; to: SurvivalMapId; axis: 'x' | 'z'; centerX: number; centerZ: number; markerSpan: number; }
+export interface SurvivalWorldTransition { id: string; from: SurvivalMapId; to: SurvivalMapId; axis: 'x' | 'z'; centerX: number; centerZ: number; }
 
-export interface SurvivalWorldTransitionFootprint { bandWidth: number; bandDepth: number; seamWidth: number; seamDepth: number; }
+export interface SurvivalWorldTransitionFootprint { bandWidth: number; bandDepth: number; }
 
-/** Blend each shared biome edge across its full length, not only through the old central doorway. */
+/** Full-length biome transition bands, matching the spatial blend field. */
 export function getSurvivalWorldTransitionFootprint(transition: SurvivalWorldTransition): SurvivalWorldTransitionFootprint {
   const blendWidth = SURVIVAL_WORLD_BLEND_HALF_WIDTH_METERS * 2;
   const blendDepth = SURVIVAL_WORLD_BLEND_HALF_DEPTH_METERS * 2;
   return transition.axis === 'x'
-    ? { bandWidth: blendWidth, bandDepth: SURVIVAL_WORLD_BIOME_HALF_DEPTH * 2, seamWidth: 1.25, seamDepth: SURVIVAL_WORLD_BIOME_HALF_DEPTH * 2 }
-    : { bandWidth: SURVIVAL_WORLD_BIOME_HALF_WIDTH * 2, bandDepth: blendDepth, seamWidth: SURVIVAL_WORLD_BIOME_HALF_WIDTH * 2, seamDepth: 1.25 };
+    ? { bandWidth: blendWidth, bandDepth: SURVIVAL_WORLD_BIOME_HALF_DEPTH * 2 }
+    : { bandWidth: SURVIVAL_WORLD_BIOME_HALF_WIDTH * 2, bandDepth: blendDepth };
 }
 
 /** True when the source biome lies on the negative X/Z side of the seam texture. */
@@ -156,10 +156,10 @@ export function getSurvivalWorldWaypoint(
 }
 
 export const SURVIVAL_WORLD_TRANSITIONS: readonly SurvivalWorldTransition[] = [
-  { id: 'b4-to-port', from: 'warehouse_b4', to: 'container_terminal', axis: 'x', centerX: 0, centerZ: -20, markerSpan: 26 },
-  { id: 'port-to-cold', from: 'container_terminal', to: 'cold_storage', axis: 'z', centerX: 60, centerZ: 0, markerSpan: 36 },
-  { id: 'cold-to-night', from: 'cold_storage', to: 'night_sorting', axis: 'x', centerX: 0, centerZ: 20, markerSpan: 26 },
-  { id: 'night-to-b4', from: 'night_sorting', to: 'warehouse_b4', axis: 'z', centerX: -60, centerZ: 0, markerSpan: 36 },
+  { id: 'b4-to-port', from: 'warehouse_b4', to: 'container_terminal', axis: 'x', centerX: 0, centerZ: -20 },
+  { id: 'port-to-cold', from: 'container_terminal', to: 'cold_storage', axis: 'z', centerX: 60, centerZ: 0 },
+  { id: 'cold-to-night', from: 'cold_storage', to: 'night_sorting', axis: 'x', centerX: 0, centerZ: 20 },
+  { id: 'night-to-b4', from: 'night_sorting', to: 'warehouse_b4', axis: 'z', centerX: -60, centerZ: 0 },
 ];
 
 export function getSurvivalWorldBiome(mapId: SurvivalMapId): SurvivalWorldBiomeLayout {
