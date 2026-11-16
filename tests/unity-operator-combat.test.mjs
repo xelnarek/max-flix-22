@@ -401,7 +401,10 @@ test('Unity Survival draft is responsive, has a valid text factory call, and blo
   assert.match(progression, /Text description = CreateText\(rect, card\.Description,[\s\S]*?Vector2\.zero, 17, TextAnchor\.MiddleCenter/);
   assert.match(progression, /bool canReroll = _rerolls > 0 && !_isBossReward/);
   assert.match(progression, /portrait \? 1 : Mathf\.Min\(3/);
-  assert.match(progression, /Mathf\.Clamp\(availableHeight \/ Mathf\.Max\(1, _currentCards\.Count\), 108f, 154f\)/);
+  assert.match(progression, /Mathf\.Clamp\(availableHeight \/ Mathf\.Max\(1, _currentCards\.Count\), 96f, 140f\)/);
+  assert.match(progression, /safeAreaObject\.AddComponent<SafeAreaLayout>\(\)/);
+  assert.match(progression, /UiEventSystemInstaller\.Ensure\(\)/);
+  assert.match(progression, /Mathf\.Max\(120f, width\)/);
   assert.match(progression, /GameFlowState\.LevelUp/);
   assert.match(hud, /GameFlowState\.Paused/);
   assert.match(hud, /GameFlowState\.GameOver/);
