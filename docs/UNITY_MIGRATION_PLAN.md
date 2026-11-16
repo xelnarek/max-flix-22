@@ -35,7 +35,7 @@ Pierwszy commit Unity jest **fundamentem migracji i grywalnym wycinkiem technicz
 | Ataki i balans | src/combatBalance.ts, src/archeroMechanics.ts, src/enemyCombatFeedback.ts, src/particlePool.ts | Wspólne reguły obrażeń, pociski, trafienia krytyczne, pooling, hit-stop, recoil i efekty trafień |
 | Kampania | src/campaignRewards.ts, src/game.ts | Sceny kampanii, cele poziomów, nagrody, przejścia sektorów, bossowie |
 | Survival | src/survival*.ts | Director fal, spawn, mutatory, trudność, wydarzenia, kontrakty, konwoje, koalicje, morale, wsparcie, bossowie i nagrody |
-| Mapy Survival | src/survivalMaps.ts, src/survivalMapLayouts.ts, src/survivalMapPreference.ts | Cztery osobne sceny/Addressables: B4, terminal kontenerowy, chłodnia, sortownia nocna; własne kolizje, oświetlenie i materiały |
+| Mega-mapa Survival | src/survivalWorldLayout.ts, src/survivalMaps.ts, src/survivalMapLayouts.ts | Jeden świat 240 × 80 m, cztery sektory 120 × 40 m, globalne współrzędne kolizji, otwarte przejścia, strefowe oświetlenie i modyfikatory |
 | System rozwoju | src/characterProgression.ts, src/accountProgression.ts, src/survivalProgression.ts | Mistrzostwo operatorów, talenty konta, rangi, XP i bezpieczne wersjonowanie zapisów |
 | PvP — reguły | src/pvpArena.ts, src/pvpAim.ts, src/pvpCamera.ts, src/pvpBotTactics.ts | Identyczna symulacja walki, celowanie ręczne, dash, cooldowny, pickupy, boty i wyniki |
 | PvP — transport i serwer | src/pvpClient.ts, src/server/pvpServer.ts, src/server/standalone.ts | Zachowujemy istniejący serwer Node/WebSocket i protokół; tworzymy klienta C# z takim samym kontraktem |
@@ -194,3 +194,8 @@ W etapie 2D uzupełniono też dwa źródłowe rzadkie spotkania (Bosman od fali 
 ## Świadome ograniczenia pierwszego etapu
 
 Pierwszy wycinek Unity jest prototypem technicznym. Nie zawiera jeszcze pełnej Kampanii, całego Survival, PvP, Firebase, rankingów, reklam, wszystkich bossów, broni, wydarzeń i menu. Nie wolno oznaczać migracji jako zakończonej, dopóki nie przejdą powyższe kryteria.
+
+
+## Mega-mapa Survival — zakres portu Unity
+
+Aktywny runtime Three.js składa B4, Port 17, Chłodnię Zero i Sortownię Widmową w jedną przestrzeń 240 × 80 m. Unity ma odwzorować ten sam układ jako jeden trwały root świata, z identycznymi środkami sektorów, otwartymi przejściami, globalnymi współrzędnymi kolizji/platform/sekretów oraz płynnymi zmianami oświetlenia. Ta aktualizacja nie oznacza ukończenia portu Unity ani przełączenia produkcyjnego startu na Unity — to pozostaje osobną bramką po kompilacji i testach funkcjonalnych.

@@ -24,17 +24,21 @@ test('all eleven menu destinations remain available as buttons and panels', () =
   assert.match(layout, /grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/);
 });
 
-test('the active tab owns its content and the persistent map picker has been removed from the shared shell', () => {
+test('the active atlas tab owns its content and the shared launch action remains below it', () => {
   assert.match(layout, /\.menu-tab-content-area\s*\{[\s\S]*?overflow-y:\s*auto !important/);
   assert.match(layout, /\.title-sheet\s*\{[\s\S]*?overflow:\s*hidden !important/);
   assert.match(layout, /\.menu-fixed-bottom-bar\s*\{[\s\S]*?position:\s*static !important/);
-  const picker = html.indexOf('<section id="survival-map-picker"');
-  const mapPanel = html.indexOf('<div id="tab-map" class="tab-panel map-selection-panel"');
+  const mapPanel = html.indexOf('<div id="tab-map" class="tab-panel world-atlas-panel"');
   const content = html.indexOf('<div class="menu-tab-content-area">');
-  const launch = html.indexOf('<div class="menu-fixed-bottom-bar">', picker);
-  assert.ok(content >= 0 && mapPanel > content && picker > mapPanel);
-  assert.ok(launch > picker);
+  const launch = html.indexOf('<div class="menu-fixed-bottom-bar">', mapPanel);
+  assert.ok(content >= 0 && mapPanel > content && launch > mapPanel);
   assert.match(html, /data-tab="tab-map"/);
+  assert.match(html, /ATLAS ŚWIATA/);
+  assert.match(html, /JEDEN ŚWIAT\. CZTERY BIOMY\./);
+  assert.doesNotMatch(html, /id="survival-map-picker"|data-survival-map=/);
+  for (const biome of ['MAGAZYN B4', 'PORT KONTENEROWY 17', 'CHŁODNIA ZERO', 'SORTOWNIA WIDMOWA']) {
+    assert.ok(html.includes(biome), 'missing atlas biome: ' + biome);
+  }
 });
 
 
@@ -53,11 +57,9 @@ test('menu tabs expose tab semantics and runtime keyboard navigation without dup
   assert.match(navigation, /End/);
 });
 
-test('selected Survival arena is restored from browser storage and persisted after manual selection', async () => {
+test('the menu no longer persists a selected Survival arena', async () => {
   const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
-  const preference = await readFile(new URL('../src/survivalMapPreference.ts', import.meta.url), 'utf8');
-  assert.match(app, /readSurvivalMapPreference\(window\.localStorage\)/);
-  assert.match(app, /writeSurvivalMapPreference\(window\.localStorage, selectedSurvivalMapId\)/);
-  assert.match(app, /applySurvivalMapChoice\(selectedSurvivalMapId \|\| 'random', false\)/);
-  assert.match(preference, /paleciaki\.menu\.survivalMap\.v1/);
+  assert.doesNotMatch(app, /selectedSurvivalMapId|readSurvivalMapPreference|writeSurvivalMapPreference/);
+  assert.match(app, /this\.engine\.startSurvival\(\)/);
+  assert.doesNotMatch(html, /data-survival-map=|id="survival-map-picker"/);
 });

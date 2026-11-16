@@ -8,22 +8,18 @@ const [html, css] = await Promise.all([
   read('src/menu-layout-fixes.css'),
 ]);
 
-test('Survival map selector lives only inside its dedicated menu tab and never overlays other panels', () => {
-  assert.equal((html.match(/id="survival-map-picker"/g) || []).length, 1);
+test('the Survival atlas lives in its dedicated tab and never overlays other panels', () => {
+  assert.equal((html.match(/id="tab-map"/g) || []).length, 1);
   const contentStart = html.indexOf('<div class="menu-tab-content-area">');
-  const mapPanelStart = html.indexOf('<div id="tab-map" class="tab-panel map-selection-panel"');
-  const pickerStart = html.indexOf('<section id="survival-map-picker"');
-  const pickerEnd = html.indexOf('</section>', pickerStart);
-  const contentEnd = html.indexOf('\n          </div>\n\n          <div class="menu-fixed-bottom-bar">', pickerEnd);
-  const startBar = html.indexOf('<div class="menu-fixed-bottom-bar">', pickerEnd);
-  assert.ok(contentStart >= 0 && mapPanelStart > contentStart, 'map tab must be nested inside the scrollable tab content');
-  assert.ok(pickerStart > mapPanelStart && pickerEnd > pickerStart && contentEnd > pickerEnd, 'map controls must remain inside the map tab');
-  assert.ok(startBar > contentEnd, 'launch action remains a separate row below tab content');
-  assert.match(html, /data-tab="tab-map"/);
-  assert.doesNotMatch(html.slice(contentEnd, startBar), /survival-map-picker/);
-  for (const map of ['random', 'warehouse_b4', 'container_terminal', 'cold_storage', 'night_sorting']) {
-    assert.ok(html.includes('data-survival-map="' + map + '"'), 'missing map ' + map);
+  const mapStart = html.indexOf('<div id="tab-map" class="tab-panel world-atlas-panel"');
+  const pvpStart = html.indexOf('<div id="tab-pvp"');
+  const launchBar = html.indexOf('<div class="menu-fixed-bottom-bar">', pvpStart);
+  assert.ok(contentStart >= 0 && mapStart > contentStart && pvpStart > mapStart && launchBar > pvpStart);
+  const panel = html.slice(mapStart, pvpStart);
+  for (const name of ['MAGAZYN B4', 'PORT KONTENEROWY 17', 'CHŁODNIA ZERO', 'SORTOWNIA WIDMOWA']) {
+    assert.ok(panel.includes(name));
   }
+  assert.doesNotMatch(panel, /data-survival-map=|survival-map-picker/);
 });
 
 test('audio controls and related information share one dedicated outer settings frame', () => {
@@ -45,12 +41,11 @@ test('audio controls and related information share one dedicated outer settings 
   assert.equal((html.match(/class="audio-settings-frame"/g) || []).length, 1);
 });
 
-test('the map frame is scoped to its own tab and uses a visible mobile grid', () => {
-  assert.match(css, /#title-screen #tab-map[\s\S]*?\.menu-map-picker-frame/);
+test('the mega-map atlas is scoped to its own tab with a responsive biome grid', () => {
+  assert.match(css, /#title-screen #tab-map\.world-atlas-panel/);
+  assert.match(css, /\.mega-map-biome-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
   assert.match(css, /\.menu-fixed-bottom-bar\s*\{[\s\S]*?position:\s*static !important/);
-  assert.match(css, /@media \(max-width:\s*640px\)[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
-  assert.match(css, /data-survival-map="random"\]\s*\{[\s\S]*?grid-column:\s*1 \/ -1/);
-  assert.doesNotMatch(css, /\.menu-fixed-bottom-bar\s*\{[^}]*position:\s*sticky/s);
+  assert.match(css, /\.mega-map-route-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
 });
 
 test('operator selection cards and portraits have enough area on desktop and phones', () => {
@@ -69,10 +64,9 @@ test('audio settings have one visible frame and compact touch-friendly slider ro
   assert.match(css, /input\[type="range"\][\s\S]*?min-height:\s*32px/);
 });
 
-test('short landscape menus reduce vertical density without transform scaling', () => {
+test('short landscape atlas avoids vertical overflow without transform scaling', () => {
   const landscape = css.slice(css.indexOf('@media (max-height: 560px) and (orientation: landscape)'));
   assert.match(landscape, /\.menu-top-header\s*\{[\s\S]*?padding:/);
-  assert.match(landscape, /\.survival-map-picker-options\s*\{[\s\S]*?repeat\(5, minmax\(0, 1fr\)\)/);
   assert.match(landscape, /\.audio-settings-frame \.audio-slider-row\s*\{[\s\S]*?min-height:\s*42px/);
   assert.doesNotMatch(landscape, /transform:\s*scale/);
 });

@@ -3,36 +3,36 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL('../' + path, import.meta.url), 'utf8');
-const [html, css, layout] = await Promise.all([
-  read('index.html'),
-  read('src/index.css'),
-  read('src/menu-layout-fixes.css'),
+const [html, layout] = await Promise.all([
+  read('index.html'), read('src/menu-layout-fixes.css'),
 ]);
 
-test('Survival map picker exposes random and all four named arenas in the same menu', () => {
-  const ids = ['random', 'warehouse_b4', 'container_terminal', 'cold_storage', 'night_sorting'];
-  for (const id of ids) assert.ok(html.includes('data-survival-map="' + id + '"'), 'missing selectable map: ' + id);
+test('the Survival atlas presents four static biome sectors in one menu destination', () => {
+  const start = html.indexOf('<div id="tab-map" class="tab-panel world-atlas-panel"');
+  const end = html.indexOf('<div id="tab-pvp"', start);
+  assert.ok(start >= 0 && end > start);
+  const panel = html.slice(start, end);
+  for (const name of ['MAGAZYN B4', 'PORT KONTENEROWY 17', 'CHŁODNIA ZERO', 'SORTOWNIA WIDMOWA']) {
+    assert.ok(panel.includes(name), 'missing atlas biome: ' + name);
+  }
+  for (const route of ['B4 → PORT 17', 'PORT 17 → CHŁODNIA', 'CHŁODNIA → SORTOWNIA', 'SORTOWNIA → B4']) {
+    assert.ok(panel.includes(route), 'missing route: ' + route);
+  }
+  assert.doesNotMatch(panel, /data-survival-map=|survival-map-picker/);
 });
 
-test('desktop keeps a five-column map picker', () => {
-  assert.match(css, /\.survival-map-picker-options\s*\{[^}]*grid-template-columns:\s*repeat\(5,\s*minmax\(0,\s*1fr\)\)/s);
-  assert.match(layout, /\.survival-map-picker-options\s*\{[\s\S]*?grid-template-columns:\s*repeat\(5,\s*minmax\(0,\s*1fr\)\)/);
+test('desktop and mobile atlas grids remain legible inside the scrollable menu', () => {
+  assert.match(layout, /\.mega-map-biome-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(layout, /\.mega-map-route-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
+  const mobileLayout = layout.slice(layout.lastIndexOf('@media (max-width: 760px)'));
+  assert.match(mobileLayout, /\.mega-map-route-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+  assert.doesNotMatch(mobileLayout, /position:\s*sticky/);
 });
 
-test('the final mobile stylesheet shows every map in a two-column grid and removes the hidden swipe strip', () => {
-  const mobile = layout.slice(layout.lastIndexOf('@media (max-width: 760px)'));
-  assert.match(mobile, /\.menu-tabs-bar\s*\{[\s\S]*?display:\s*grid !important/);
-  assert.match(mobile, /grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/);
-  assert.match(mobile, /\.survival-map-picker-options\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
-  assert.match(mobile, /data-survival-map="random"[\s\S]*?grid-column:\s*1 \/ -1/);
-  assert.match(mobile, /\.menu-fixed-bottom-bar\s*\{[\s\S]*?position:\s*static !important/);
-  assert.doesNotMatch(mobile, /position:\s*sticky/);
-});
-
-test('the final linked menu stylesheet is loaded after the older global and visual styles', () => {
+test('menu styles remain ordered after base and visual styles', () => {
   const menuStylesheet = html.indexOf('href="/src/menu-layout-fixes.css"');
   const visualStylesheet = html.indexOf('href="/src/visual-polish.css"');
   const baseStylesheet = html.indexOf('href="/src/index.css"');
   assert.ok(baseStylesheet >= 0 && visualStylesheet > baseStylesheet);
-  assert.ok(menuStylesheet > visualStylesheet, 'menu overrides must be the last linked stylesheet');
+  assert.ok(menuStylesheet > visualStylesheet);
 });

@@ -30,16 +30,16 @@ test('character selection and descriptions stay inside the operator panel', () =
   assert.doesNotMatch(operators, /survival-map-picker|pvp-menu-hero|btn-open-pvp/);
 });
 
-test('Survival map selection is isolated from the dedicated PvP configuration entry', () => {
+test('the Survival atlas is isolated from the dedicated PvP configuration entry', () => {
   const mapStart = html.indexOf('<div id="tab-map"');
   const pvpStart = html.indexOf('<div id="tab-pvp"');
   const contentEnd = html.indexOf('<div class="menu-fixed-bottom-bar">', pvpStart);
   assert.ok(mapStart >= 0 && pvpStart > mapStart && contentEnd > pvpStart);
   const survivalPanel = html.slice(mapStart, pvpStart);
   const pvpPanel = html.slice(pvpStart, contentEnd);
-  assert.match(survivalPanel, /id="survival-map-picker"/);
-  assert.match(survivalPanel, /data-survival-map=/);
-  assert.doesNotMatch(survivalPanel, /pvp-menu-feature-grid|id="pvp-operator-picker"/);
+  assert.match(survivalPanel, /JEDEN ŚWIAT\. CZTERY BIOMY\./);
+  assert.match(survivalPanel, /MAGAZYN B4|PORT KONTENEROWY 17/);
+  assert.doesNotMatch(survivalPanel, /survival-map-picker|data-survival-map=|id="pvp-operator-picker"/);
   assert.match(pvpPanel, /RĘCZNE CELOWANIE AKTYWNE/);
   assert.match(pvpPanel, /RÓWNE WARUNKI/);
   assert.match(pvpPanel, /POJEDYNEK LUB TRENING/);
