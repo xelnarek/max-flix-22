@@ -7996,3 +7996,50 @@ body #touch-controls.manual-aim-mode:not(.hidden) .pvp-control-guide {
   .cthulhu-retro-canvas { max-height: 47dvh; }
   .cthulhu-retro-controls button { min-height: 42px; }
 }
+
+
+/* R'lyeh boss controls: large touch targets with explicit hold / cooldown state. */
+.cthulhu-retro-overlay { animation: cthulhu-retro-portal-in .44s steps(5, end) both; }
+@keyframes cthulhu-retro-portal-in {
+  0% { opacity: 0; filter: saturate(2.2) hue-rotate(48deg); }
+  32% { opacity: .72; filter: saturate(1.8) hue-rotate(-18deg); }
+  58% { opacity: .88; filter: saturate(1.4) hue-rotate(15deg); }
+  100% { opacity: 1; filter: none; }
+}
+.cthulhu-retro-controls button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 68px;
+  min-height: 58px;
+  transition: filter .12s ease, opacity .12s ease, border-color .12s ease;
+}
+.cthulhu-retro-controls button small {
+  color: #a8f3df;
+  font: 800 7px/1 "JetBrains Mono", "Courier New", monospace;
+  letter-spacing: .08em;
+}
+.cthulhu-retro-controls button.is-cooldown {
+  border-color: #745d7d;
+  color: #b0a6bd;
+  background: linear-gradient(180deg, #272334, #191927);
+}
+.cthulhu-retro-controls button.is-cooldown small { color: #f4a5d8; }
+.cthulhu-retro-controls .cthulhu-retro-fire { min-width: 124px; min-height: 58px; }
+.cthulhu-retro-controls .cthulhu-retro-fire small { color: #9af5da; }
+.cthulhu-retro-result button:focus-visible,
+.cthulhu-retro-controls button:focus-visible,
+.cthulhu-retro-exit:focus-visible {
+  outline: 3px solid #f8b3e2;
+  outline-offset: 3px;
+}
+@media (max-width: 640px) {
+  .cthulhu-retro-controls button { min-width: clamp(48px, 13vw, 62px); min-height: 56px; }
+  .cthulhu-retro-controls .cthulhu-retro-fire { min-width: clamp(84px, 24vw, 112px); }
+  .cthulhu-retro-controls button small { font-size: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cthulhu-retro-overlay { animation: none; }
+}

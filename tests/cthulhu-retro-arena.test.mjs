@@ -33,6 +33,7 @@ test('Cthulhu is a huge multi-part pixel boss with two combat phases', () => {
   assert.equal(source.boss.hp, CTHULHU_RETRO_BOSS_MAX_HP);
   assert.equal(source.boss.phase, 1);
   assert.equal(source.boss.x, 382);
+  assert.equal(source.boss.nextAttack, 'slam', 'the first boss move should be the readable ground slam');
   assert.ok(source.boss.maxHp > source.player.maxHp);
   assert.equal(getCthulhuRetroPhaseLabel(1), 'FAZA I • PRZEBUDZENIE');
   assert.equal(getCthulhuRetroPhaseLabel(2), 'FAZA II • GNIEW GŁĘBIN');
@@ -141,13 +142,46 @@ test('three boss attacks cycle through slam, lash and grab', () => {
   assert.deepEqual(sequence, ['slam', 'lash', 'grab']);
 });
 
+test('the phase-two slam sends a second shockwave so the finale has a harder rhythm', () => {
+  const state = createCthulhuRetroState();
+  state.introSeconds = 0;
+  state.boss.phase = 2;
+  state.boss.riseSeconds = 0;
+  state.boss.windup = 0.001;
+  state.boss.attack = 'slam';
+  stepCthulhuRetroState(state, {}, 1 / 30);
+  assert.equal(state.shockwaves.length, 2);
+  assert.ok(state.shockwaves[1].x > state.shockwaves[0].x, 'the second wave should follow the first');
+});
+
+test('the boss death animation sinks Cthulhu and lets R’lyeh collapse before the result panel', () => {
+  const state = createCthulhuRetroState();
+  state.introSeconds = 0;
+  state.boss.coreOpenSeconds = 1;
+  state.boss.hp = 15;
+  state.projectiles.push({ x: state.boss.x - 18, y: state.boss.y - 69, vx: 282, vy: 0, life: 1 });
+  stepCthulhuRetroState(state, {}, 1 / 30);
+  assert.equal(state.boss.defeated, true);
+  assert.equal(state.won, true);
+  assert.equal(state.finished, false, 'the pixel collapse should play before returning the result');
+  for (let frame = 0; frame < 68 && !state.finished; frame++) {
+    stepCthulhuRetroState(state, {}, 1 / 30);
+  }
+  assert.equal(state.finished, true);
+  assert.equal(state.won, true);
+  assert.ok(state.boss.deathSeconds >= 2.25);
+});
+
 test('the player and boss both have a real win/loss end state', () => {
   const defeated = createCthulhuRetroState();
   defeated.introSeconds = 0;
   defeated.boss.coreOpenSeconds = 1;
   defeated.boss.hp = 15;
   defeated.projectiles.push({ x: defeated.boss.x - 18, y: defeated.boss.y - 69, vx: 282, life: 1 });
+  defeated.projectiles[0].vy = 0;
   stepCthulhuRetroState(defeated, {}, 1 / 30);
+  assert.equal(defeated.boss.defeated, true);
+  for (let frame = 0; frame < 68 && !defeated.finished; frame++) stepCthulhuRetroState(defeated, {}, 1 / 30);
   assert.equal(defeated.finished, true);
   assert.equal(defeated.won, true);
 
@@ -176,6 +210,8 @@ test('the retro map controls work with keyboard, multiple pointers and native An
   assert.match(source, /event\.code === 'Escape'/);
   assert.match(source, /data-hold="attack"/);
   assert.match(source, /data-hold="dodge"/);
+  assert.match(source, /data-dodge-status/);
+  assert.match(source, /unlockAbyssAudio/);
 });
 
 test('the dedicated boss attack has a synthesized deep-bass impact and pixel-art render pass', async () => {
@@ -220,4 +256,41 @@ test('jumping also avoids the telegraphed grasp, while a grounded operator is ca
   const airborneHp = airborne.player.hp;
   stepCthulhuRetroState(airborne, {}, 1 / 30);
   assert.equal(airborne.player.hp, airborneHp);
+});
+
+
+test('the opening boss attack is a ground slam, followed by lash and grab', () => {
+  const state = createCthulhuRetroState();
+  state.introSeconds = 0;
+  state.boss.riseSeconds = 0;
+  state.boss.attackCooldown = 0;
+  stepCthulhuRetroState(state, {}, 1 / 30);
+  assert.equal(state.boss.attack, 'slam');
+  assert.ok(state.boss.windup > 0);
+  state.boss.windup = 0.001;
+  stepCthulhuRetroState(state, {}, 1 / 30);
+  assert.equal(state.shockwaves.length, 1);
+  state.boss.strikeSeconds = 0;
+  state.boss.attackCooldown = 0;
+  state.boss.windup = 0;
+  stepCthulhuRetroState(state, {}, 1 / 30);
+  assert.equal(state.boss.attack, 'lash');
+});
+
+test('boss shots always face right toward the weak point, even after retreating left', () => {
+  const state = createCthulhuRetroState();
+  state.introSeconds = 0;
+  state.player.facing = -1;
+  stepCthulhuRetroState(state, { attackHeld: true }, 1 / 60);
+  assert.equal(state.player.facing, 1);
+  assert.equal(state.projectiles[0].vx, 282);
+  assert.ok(state.projectiles[0].vy < 0);
+});
+
+test('the input code unlocks audio on the gesture and builds a layered bass impact', async () => {
+  const source = await readFile(new URL('../src/cthulhuRetroArena.ts', import.meta.url), 'utf8');
+  assert.match(source, /if \\(!event\\.repeat\\) unlockAbyssAudio\\(\\)/);
+  assert.match(source, /const punch = audio\\.createOscillator\\(\\)/);
+  assert.match(source, /punch\\.frequency\\.setValueAtTime\\(142/);
+  assert.match(source, /sub\\.frequency\\.setValueAtTime\\(46/);
 });

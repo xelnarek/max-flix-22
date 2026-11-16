@@ -60,6 +60,7 @@ export interface CthulhuRetroState {
     hitFlash: number;
     riseSeconds: number;
     defeated: boolean;
+    deathSeconds: number;
   };
   projectiles: CthulhuRetroProjectile[];
   shockwaves: CthulhuRetroShockwave[];
@@ -91,8 +92,8 @@ export function createCthulhuRetroState(): CthulhuRetroState {
       x: 382, y: CTHULHU_RETRO_FLOOR, hp: CTHULHU_RETRO_BOSS_MAX_HP,
       maxHp: CTHULHU_RETRO_BOSS_MAX_HP, phase: 1, windup: 0,
       attackCooldown: 0.28, strikeSeconds: 0, coreOpenSeconds: 0,
-      attack: 'slam', nextAttack: 'lash', grabX: 66, hitFlash: 0,
-      riseSeconds: 1.45, defeated: false,
+      attack: 'slam', nextAttack: 'slam', grabX: 66, hitFlash: 0,
+      riseSeconds: 1.45, defeated: false, deathSeconds: 0,
     },
     projectiles: [],
     shockwaves: [],
@@ -128,15 +129,21 @@ function resolveCthulhuRetroAttack(state: CthulhuRetroState): void {
   boss.hitFlash = 0.10;
   if (boss.attack === 'slam') {
     state.shockwaves.push({ x: boss.x - 28, life: 2.3 });
-    state.screenShake = Math.max(state.screenShake, 0.24);
+    if (boss.phase === 2) state.shockwaves.push({ x: boss.x + 16, life: 2.3 });
+    state.screenShake = Math.max(state.screenShake, boss.phase === 2 ? 0.34 : 0.24);
     return;
   }
   if (boss.attack === 'lash') {
     const playerAboveLash = player.y < CTHULHU_RETRO_FLOOR - PLAYER_HEIGHT - 23;
-    if (!playerAboveLash && player.x < boss.x - 18) takeCthulhuRetroDamage(state, 32);
+    if (!playerAboveLash && player.x < boss.x - (boss.phase === 2 ? 12 : 18)) {
+      takeCthulhuRetroDamage(state, boss.phase === 2 ? 38 : 32);
+    }
     return;
   }
-  if (player.grounded && Math.abs(player.x - boss.grabX) <= 18) takeCthulhuRetroDamage(state, 40);
+  const grabRange = boss.phase === 2 ? 24 : 18;
+  if (player.grounded && Math.abs(player.x - boss.grabX) <= grabRange) {
+    takeCthulhuRetroDamage(state, boss.phase === 2 ? 46 : 40);
+  }
 }
 
 /**
@@ -156,6 +163,16 @@ export function stepCthulhuRetroState(
   state.introSeconds = Math.max(0, state.introSeconds - dt);
   state.screenShake = Math.max(0, state.screenShake - dt);
   state.damageFlash = Math.max(0, state.damageFlash - dt);
+
+  if (state.boss.defeated) {
+    state.boss.deathSeconds += dt;
+    state.screenShake = Math.max(state.screenShake, (1 - clamp(state.boss.deathSeconds / 2.25, 0, 1)) * 0.18);
+    if (state.boss.deathSeconds >= 2.25) {
+      state.finished = true;
+      state.won = true;
+    }
+    return state;
+  }
 
   const player = state.player;
   const boss = state.boss;
@@ -178,9 +195,9 @@ export function stepCthulhuRetroState(
   }
 
   if (player.dodgeSeconds > 0) {
-    player.x += (direction || player.facing) * 154 * dt;
+    player.x += (direction || player.facing) * 178 * dt;
   } else {
-    player.x += direction * 106 * dt;
+    player.x += direction * 122 * dt;
   }
   player.x = clamp(player.x, 24, PLAYER_MAX_X);
   player.vy = Math.min(290, player.vy + 520 * dt);
@@ -194,6 +211,7 @@ export function stepCthulhuRetroState(
   }
 
   if (input.attackHeld && player.attackCooldown <= 0 && state.introSeconds <= 1.7) {
+    player.facing = 1;
     const projectileY = player.y + 11;
     const travelTime = Math.max(0.12, (boss.x - player.x) / 282);
     const targetCoreY = boss.y + BOSS_CORE_Y_OFFSET;
@@ -229,8 +247,10 @@ export function stepCthulhuRetroState(
         state.screenShake = Math.max(state.screenShake, 0.08);
         if (boss.hp <= 0) {
           boss.defeated = true;
-          state.finished = true;
+          boss.deathSeconds = 0;
           state.won = true;
+          state.projectiles.length = 0;
+          state.shockwaves.length = 0;
         }
       }
       state.projectiles.splice(index, 1);
@@ -311,7 +331,7 @@ export function launchCthulhuRetroArena(options: {
     '  </div>',
     '  <div class="cthulhu-retro-controls" aria-label="Sterowanie walką z Cthulhu">',
     '    <div class="cthulhu-retro-move"><button type="button" data-hold="left" aria-label="W lewo">◀</button><button type="button" data-hold="right" aria-label="W prawo">▶</button></div>',
-    '    <div class="cthulhu-retro-actions"><button type="button" data-hold="dodge" aria-label="Unik i skok">UNIK</button><button type="button" class="cthulhu-retro-fire" data-hold="attack" aria-label="Atakuj">ATAK ✦</button></div>',
+    '    <div class="cthulhu-retro-actions"><button type="button" data-hold="dodge" aria-label="Unik i skok"><span>UNIK</span><small data-dodge-status>GOTOWY</small></button><button type="button" class="cthulhu-retro-fire" data-hold="attack" aria-label="Przytrzymaj, aby atakować"><span>ATAK ✦</span><small>PRZYTRZYMAJ</small></button></div>',
     '  </div>',
     '  <footer class="cthulhu-retro-footer"><span>PC: A/D lub ←/→ • SPACJA / SHIFT = UNIK • J / K / X = ATAK</span><span>Telefon: przesuń operatora, unikaj telegraphów, atakuj odsłonięty rdzeń</span></footer>',
     '</div>',
@@ -329,6 +349,8 @@ export function launchCthulhuRetroArena(options: {
   const bossBar = root.querySelector<HTMLElement>('[data-boss-bar]');
   const bossHp = root.querySelector<HTMLElement>('[data-boss-hp]');
   const phaseLabel = root.querySelector<HTMLElement>('[data-phase]');
+  const dodgeButton = root.querySelector<HTMLButtonElement>('[data-hold="dodge"]');
+  const dodgeStatus = root.querySelector<HTMLElement>('[data-dodge-status]');
   const resultPanel = root.querySelector<HTMLElement>('.cthulhu-retro-result');
   const resultTitle = root.querySelector<HTMLElement>('[data-result-title]');
   const resultCopy = root.querySelector<HTMLElement>('[data-result-copy]');
@@ -336,7 +358,7 @@ export function launchCthulhuRetroArena(options: {
   const returnButton = root.querySelector<HTMLButtonElement>('[data-action="return"]');
 
   if (!canvas || !output || !pixel || !playerBar || !playerHp || !bossBar || !bossHp ||
-      !phaseLabel || !resultPanel || !resultTitle || !resultCopy || !retryButton || !returnButton) {
+      !phaseLabel || !dodgeButton || !dodgeStatus || !resultPanel || !resultTitle || !resultCopy || !retryButton || !returnButton) {
     root.remove();
     options.onComplete({ won: false, hitsTaken: 0, successfulHits: 0 });
     return;
@@ -351,33 +373,62 @@ export function launchCthulhuRetroArena(options: {
     try {
       if (audio.state === 'suspended') void audio.resume();
       const now = audio.currentTime;
-      const oscillator = audio.createOscillator();
+      const safeStrength = clamp(Number.isFinite(strength) ? strength : 1, 0, 1.8);
+
+      // Sub layer supplies weight; mid-bass and a short transient keep the
+      // impact audible on phone speakers that cannot reproduce deep sub tones.
       const sub = audio.createOscillator();
-      const gain = audio.createGain();
+      const body = audio.createOscillator();
+      const punch = audio.createOscillator();
       const subGain = audio.createGain();
-      oscillator.type = 'sawtooth';
-      oscillator.frequency.setValueAtTime(74, now);
-      oscillator.frequency.exponentialRampToValueAtTime(31, now + 0.34);
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(0.16 * strength, now + 0.025);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.52);
+      const bodyGain = audio.createGain();
+      const punchGain = audio.createGain();
+      const bodyFilter = audio.createBiquadFilter();
+      bodyFilter.type = 'lowpass';
+      bodyFilter.frequency.setValueAtTime(185, now);
+      bodyFilter.Q.setValueAtTime(0.72, now);
+
       sub.type = 'sine';
-      sub.frequency.setValueAtTime(43, now);
-      sub.frequency.exponentialRampToValueAtTime(25, now + 0.48);
+      sub.frequency.setValueAtTime(46, now);
+      sub.frequency.exponentialRampToValueAtTime(24, now + 0.56);
       subGain.gain.setValueAtTime(0.0001, now);
-      subGain.gain.exponentialRampToValueAtTime(0.24 * strength, now + 0.035);
-      subGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.58);
-      oscillator.connect(gain);
+      subGain.gain.exponentialRampToValueAtTime(0.22 * safeStrength, now + 0.035);
+      subGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.66);
+
+      body.type = 'sawtooth';
+      body.frequency.setValueAtTime(88, now);
+      body.frequency.exponentialRampToValueAtTime(38, now + 0.38);
+      bodyGain.gain.setValueAtTime(0.0001, now);
+      bodyGain.gain.exponentialRampToValueAtTime(0.105 * safeStrength, now + 0.018);
+      bodyGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.52);
+
+      punch.type = 'triangle';
+      punch.frequency.setValueAtTime(142, now);
+      punch.frequency.exponentialRampToValueAtTime(58, now + 0.12);
+      punchGain.gain.setValueAtTime(0.0001, now);
+      punchGain.gain.exponentialRampToValueAtTime(0.075 * safeStrength, now + 0.008);
+      punchGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+
       sub.connect(subGain);
-      gain.connect(audio.destination);
+      body.connect(bodyFilter);
+      bodyFilter.connect(bodyGain);
+      punch.connect(punchGain);
       subGain.connect(audio.destination);
-      oscillator.start(now);
+      bodyGain.connect(audio.destination);
+      punchGain.connect(audio.destination);
       sub.start(now);
-      oscillator.stop(now + 0.54);
-      sub.stop(now + 0.60);
+      body.start(now);
+      punch.start(now);
+      sub.stop(now + 0.68);
+      body.stop(now + 0.54);
+      punch.stop(now + 0.20);
     } catch {
       // Audio is a cosmetic layer; gameplay never depends on Web Audio support.
     }
+  };
+
+  const unlockAbyssAudio = () => {
+    if (audio?.state === 'suspended') void audio.resume();
   };
 
   let state = createCthulhuRetroState();
@@ -530,13 +581,16 @@ export function launchCthulhuRetroArena(options: {
 
   const drawBoss = (ctx: CanvasRenderingContext2D, now: number) => {
     const boss = state.boss;
-    const rise = 1 - boss.riseSeconds / 1.45;
-    const y = boss.y + boss.riseSeconds * 45;
+    const deathProgress = clamp(boss.deathSeconds / 2.25, 0, 1);
+    const deathEase = deathProgress * deathProgress;
+    const y = boss.y + boss.riseSeconds * 45 + deathEase * 78;
     const pulse = Math.sin(now * (boss.phase === 2 ? 6 : 3.4));
-    const wingFlap = Math.sin(now * (boss.phase === 2 ? 5.2 : 2.5)) * (boss.phase === 2 ? 9 : 5);
+    const wingFlap = Math.sin(now * (boss.phase === 2 ? 5.2 : 2.5)) * (boss.phase === 2 ? 9 : 5) * (1 - deathProgress);
     const vulnerable = boss.coreOpenSeconds > 0;
     ctx.save();
-    ctx.translate(boss.x, y);
+    ctx.translate(boss.x + Math.sin(deathProgress * 13) * 5, y);
+    ctx.rotate(deathEase * 0.13);
+    ctx.globalAlpha = 1 - deathProgress * 0.88;
 
     // The wings span almost the entire right half of the playfield.
     ctx.fillStyle = boss.phase === 2 ? '#3d1c53' : '#162a3d';
@@ -588,9 +642,9 @@ export function launchCthulhuRetroArena(options: {
     ctx.fillStyle = '#1a2534';
     ctx.fillRect(-19, -133, 11, 10);
     ctx.fillRect(9, -133, 11, 10);
-    ctx.fillStyle = '#b7ffb0';
-    ctx.shadowColor = '#8bffbd';
-    ctx.shadowBlur = 10;
+    ctx.fillStyle = boss.phase === 2 ? '#fff0a8' : '#b7ffb0';
+    ctx.shadowColor = boss.phase === 2 ? '#ff58d0' : '#8bffbd';
+    ctx.shadowBlur = boss.phase === 2 ? 16 : 10;
     ctx.fillRect(-16, -131, 5, 5);
     ctx.fillRect(12, -131, 5, 5);
     ctx.shadowBlur = 0;
@@ -814,7 +868,114 @@ export function launchCthulhuRetroArena(options: {
       ctx.globalAlpha = 1;
     }
 
+    // Attack telegraphs use the same threat zones as the damage checks below.
+    // Slam = ground lane, lash = low horizontal sweep, grab = locked player column.
+    if (state.boss.windup > 0 && state.boss.riseSeconds <= 0) {
+      const boss = state.boss;
+      const totalWindup = boss.phase === 2 ? 0.64 : 0.92;
+      const charge = clamp(1 - boss.windup / totalWindup, 0, 1);
+      const pulse = 0.48 + Math.sin(state.elapsed * 23) * 0.22 + charge * 0.18;
+      ctx.save();
+      if (boss.attack === 'slam') {
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle = '#ff5db8';
+        ctx.fillRect(0, CTHULHU_RETRO_FLOOR - 3, boss.x - 20, 2);
+        ctx.fillRect(boss.x - 42, CTHULHU_RETRO_FLOOR - 9, 30, 7);
+        ctx.strokeStyle = '#ffc0e4';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(boss.x - 28, CTHULHU_RETRO_FLOOR - 2, 17 + charge * 11, 4, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (boss.attack === 'lash') {
+        const sweep = ctx.createLinearGradient(0, CTHULHU_RETRO_FLOOR - 18, boss.x, CTHULHU_RETRO_FLOOR - 18);
+        sweep.addColorStop(0, 'rgba(255, 79, 186, .08)');
+        sweep.addColorStop(0.55, 'rgba(255, 79, 186, .42)');
+        sweep.addColorStop(1, 'rgba(255, 215, 235, .95)');
+        ctx.strokeStyle = sweep;
+        ctx.lineWidth = 13 + pulse * 5;
+        ctx.beginPath();
+        ctx.moveTo(5, CTHULHU_RETRO_FLOOR - 18);
+        ctx.bezierCurveTo(boss.x * 0.28, CTHULHU_RETRO_FLOOR - 34, boss.x * 0.72, CTHULHU_RETRO_FLOOR - 7, boss.x - 30, CTHULHU_RETRO_FLOOR - 18);
+        ctx.stroke();
+        ctx.strokeStyle = '#ffd5ed';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(8, CTHULHU_RETRO_FLOOR - 32);
+        ctx.lineTo(boss.x - 24, CTHULHU_RETRO_FLOOR - 32);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else {
+        const lockX = boss.grabX + PLAYER_WIDTH / 2;
+        ctx.globalAlpha = 0.40 + charge * 0.50;
+        ctx.strokeStyle = '#ff68d2';
+        ctx.fillStyle = 'rgba(230, 73, 177, .16)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 3]);
+        ctx.strokeRect(lockX - 15, CTHULHU_RETRO_FLOOR - 54, 30, 52);
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.arc(lockX, CTHULHU_RETRO_FLOOR - 59, 8 + charge * 7, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillRect(lockX - 1, CTHULHU_RETRO_FLOOR - 62, 2, 6);
+      }
+      ctx.restore();
+    }
+
     drawBoss(ctx, state.elapsed);
+
+    // Strike silhouettes distinguish the tentacle sweep and the reaching grab.
+    if (state.boss.strikeSeconds > 0 && state.boss.attack === 'lash') {
+      const impact = 1 - state.boss.strikeSeconds / 0.32;
+      ctx.save();
+      ctx.globalAlpha = 1 - impact * 0.35;
+      ctx.strokeStyle = '#e75cbd';
+      ctx.lineWidth = 11 - impact * 3;
+      ctx.shadowColor = '#ff6ed2';
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      ctx.moveTo(state.boss.x - 35, CTHULHU_RETRO_FLOOR - 36);
+      ctx.bezierCurveTo(state.boss.x * 0.72, CTHULHU_RETRO_FLOOR - 54, state.boss.x * 0.25, CTHULHU_RETRO_FLOOR - 8, 5, CTHULHU_RETRO_FLOOR - 26);
+      ctx.stroke();
+      ctx.restore();
+    } else if (state.boss.strikeSeconds > 0 && state.boss.attack === 'grab') {
+      const targetX = state.boss.grabX + PLAYER_WIDTH / 2;
+      ctx.save();
+      ctx.globalAlpha = state.boss.strikeSeconds / 0.32;
+      ctx.strokeStyle = '#f5a4e6';
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.moveTo(state.boss.x - 34, CTHULHU_RETRO_FLOOR - 60);
+      ctx.quadraticCurveTo(targetX + 55, CTHULHU_RETRO_FLOOR - 93, targetX, CTHULHU_RETRO_FLOOR - 17);
+      ctx.moveTo(state.boss.x - 42, CTHULHU_RETRO_FLOOR - 40);
+      ctx.quadraticCurveTo(targetX - 44, CTHULHU_RETRO_FLOOR - 75, targetX, CTHULHU_RETRO_FLOOR - 17);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    if (state.boss.defeated) {
+      const collapse = clamp(state.boss.deathSeconds / 2.25, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = collapse * 0.75;
+      ctx.strokeStyle = '#ff63d5';
+      ctx.lineWidth = 2;
+      for (let crack = 0; crack < 7; crack++) {
+        const x = 20 + crack * 69;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x + Math.sin(state.elapsed * 7 + crack) * 10, 72 + crack * 7);
+        ctx.lineTo(x - 9, 96 + crack * 8);
+        ctx.stroke();
+      }
+      for (let pixel = 0; pixel < 38; pixel++) {
+        const drift = (state.boss.deathSeconds * (18 + pixel % 7) + pixel * 13) % 155;
+        const px = state.boss.x - 88 + (pixel * 37 % 176);
+        const py = 60 + drift + Math.sin(state.elapsed * 5 + pixel) * 4;
+        ctx.fillStyle = pixel % 2 ? '#6ff4d0' : '#e65fc4';
+        ctx.fillRect(px, py, 2 + pixel % 3, 2 + pixel % 2);
+      }
+      ctx.restore();
+    }
 
     for (const projectile of state.projectiles) {
       ctx.save();
@@ -854,6 +1015,18 @@ export function launchCthulhuRetroArena(options: {
       ctx.font = 'bold 8px monospace';
       ctx.textAlign = 'center';
       ctx.fillText('RDZEN ODKRYTY • ATAKUJ!  +50%', 240, 47);
+    }
+
+    if (state.boss.defeated) {
+      const collapse = clamp(state.boss.deathSeconds / 2.25, 0, 1);
+      ctx.fillStyle = 'rgba(5, 6, 18, ' + (0.50 + collapse * 0.28) + ')';
+      ctx.fillRect(86, 14, 308, 24);
+      ctx.strokeStyle = '#72f0cb';
+      ctx.strokeRect(86, 14, 308, 24);
+      ctx.fillStyle = '#eafff7';
+      ctx.font = 'bold 10px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('R’LYEH PĘKA • CTHULHU TONIE', 240, 29);
     }
 
     if (state.boss.phase === 2) {
@@ -899,6 +1072,12 @@ export function launchCthulhuRetroArena(options: {
     bossHp.textContent = Math.ceil(state.boss.hp) + ' / ' + state.boss.maxHp;
     phaseLabel.textContent = getCthulhuRetroPhaseLabel(state.boss.phase);
     phaseLabel.classList.toggle('is-phase-two', state.boss.phase === 2);
+    const dodgeRemaining = state.player.dodgeCooldown;
+    dodgeStatus.textContent = dodgeRemaining > 0 ? dodgeRemaining.toFixed(1) + ' s' : 'GOTOWY';
+    dodgeButton.classList.toggle('is-cooldown', dodgeRemaining > 0);
+    dodgeButton.setAttribute('aria-label', dodgeRemaining > 0
+      ? 'Unik odnowi się za ' + dodgeRemaining.toFixed(1) + ' sekundy'
+      : 'Unik i skok — gotowy');
   };
 
   const showResult = () => {
@@ -998,7 +1177,7 @@ export function launchCthulhuRetroArena(options: {
     }
     if (['KeyJ', 'KeyK', 'KeyX', 'KeyF', 'Numpad0'].includes(event.code)) {
       keyHeld.attack = true; syncControl('attack');
-      playAbyssBass(0.10);
+      if (!event.repeat) unlockAbyssAudio();
     }
     if (['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD', 'Space', 'ArrowUp', 'KeyW', 'ShiftLeft', 'ShiftRight', 'KeyQ', 'KeyJ', 'KeyK', 'KeyX', 'KeyF', 'Numpad0'].includes(event.code)) {
       event.preventDefault(); event.stopPropagation();
@@ -1044,7 +1223,7 @@ export function launchCthulhuRetroArena(options: {
       activePointers.set(event.pointerId, { control });
       syncControl(control);
       if (control === 'dodge') dodgeQueued = true;
-      if (control === 'attack') playAbyssBass(0.12);
+      if (control === 'attack') unlockAbyssAudio();
       try { button.setPointerCapture(event.pointerId); } catch { /* global release remains available */ }
     });
     button.addEventListener('touchstart', (event) => {
@@ -1052,7 +1231,7 @@ export function launchCthulhuRetroArena(options: {
       for (const touch of Array.from(event.changedTouches)) activeTouches.set(touch.identifier, { control });
       syncControl(control);
       if (control === 'dodge' && event.changedTouches.length > 0) dodgeQueued = true;
-      if (control === 'attack') playAbyssBass(0.12);
+      if (control === 'attack') unlockAbyssAudio();
     }, { passive: false });
     button.addEventListener('lostpointercapture', releasePointer);
     button.addEventListener('contextmenu', (event) => event.preventDefault());
@@ -1083,7 +1262,9 @@ export function launchCthulhuRetroArena(options: {
     const previousCoreOpen = state.boss.coreOpenSeconds;
     const previousWindup = state.boss.windup;
     const previousHp = state.boss.hp;
+    const previousPlayerHp = state.player.hp;
     const previousPhase = state.boss.phase;
+    const previousBossDefeated = state.boss.defeated;
     const previousProjectileCount = state.projectiles.length;
     stepCthulhuRetroState(state, {
       left: held.left,
@@ -1097,9 +1278,10 @@ export function launchCthulhuRetroArena(options: {
       playAbyssBass(state.boss.phase === 2 ? 1.45 : 1.0);
     }
     if (state.projectiles.length > previousProjectileCount) playAbyssBass(0.10);
-    if (state.boss.hp < previousHp) playAbyssBass(0.22);
+    if (state.boss.hp < previousHp) playAbyssBass(0.28);
+    if (state.player.hp < previousPlayerHp) playAbyssBass(0.46);
     if (state.boss.phase !== previousPhase) playAbyssBass(1.3);
-    if (state.won && !state.boss.defeated) state.boss.defeated = true;
+    if (!previousBossDefeated && state.boss.defeated) playAbyssBass(1.8);
     const hudTick = Math.floor(state.elapsed * 10);
     if (hudTick !== lastHudTick || previousCoreOpen !== state.boss.coreOpenSeconds) {
       lastHudTick = hudTick;
