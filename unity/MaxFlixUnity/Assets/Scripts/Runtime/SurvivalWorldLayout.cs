@@ -116,9 +116,9 @@ namespace MaxFlix.Unity.Runtime
             new SurvivalBiomeZone(WarehouseMapId.ContainerTerminal, 60f, -20f,
                 SurvivalBiomeEdge.West | SurvivalBiomeEdge.South),
             new SurvivalBiomeZone(WarehouseMapId.ColdStorage, 60f, 20f,
-                SurvivalBiomeEdge.East | SurvivalBiomeEdge.North),
+                SurvivalBiomeEdge.West | SurvivalBiomeEdge.North),
             new SurvivalBiomeZone(WarehouseMapId.NightSorting, -60f, 20f,
-                SurvivalBiomeEdge.West | SurvivalBiomeEdge.North)
+                SurvivalBiomeEdge.East | SurvivalBiomeEdge.North)
         };
 
         private static readonly SurvivalWorldTransition[] TransitionData =
