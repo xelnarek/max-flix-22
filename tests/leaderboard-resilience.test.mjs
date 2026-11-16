@@ -74,6 +74,7 @@ test('manual ranking refresh reads Firestore from the server and keeps Survival 
   const end = firebase.indexOf('\n}', start) + 2;
   const survivalRead = firebase.slice(start, end);
   assert.match(survivalRead, /getDocsFromServer\(survivalQuery\)/);
+  assert.match(firebase, /getDocsFromServer\(q\)/);
   assert.match(survivalRead, /SURVIVAL_LEADERBOARD_CACHE_KEY/);
   assert.match(firebase, /const parseCachedLeaderboard = \(cacheKey = LEADERBOARD_CACHE_KEY\)/);
   assert.match(firebase, /getSurvivalLeaderboardReadStatus/);
