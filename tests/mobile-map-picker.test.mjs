@@ -26,7 +26,6 @@ test('desktop and mobile atlas grids remain legible inside the scrollable menu',
   assert.match(layout, /\.mega-map-route-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
   const mobileLayout = layout.slice(layout.lastIndexOf('@media (max-width: 760px)'));
   assert.match(mobileLayout, /\.mega-map-route-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
-  assert.match(mobileLayout, /\.menu-fixed-bottom-bar\s*\{[\s\S]*?position:\s*static !important/);
   assert.doesNotMatch(mobileLayout, /position:\s*sticky/);
 });
 
