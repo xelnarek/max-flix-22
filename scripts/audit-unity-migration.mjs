@@ -276,8 +276,18 @@ try {
   for (const token of [
     'EnemyNavigationWorld.GetObstacleAvoidanceVector(',
     'Vector3.Dot(direction, targetDirection) > 0.35f',
+    'HasClearAttackLine()',
+    '&& HasClearAttackLine()',
   ]) {
-    if (!enemyAgent.includes(token)) fail('Unity enemy movement is missing obstacle avoidance steering: ' + token);
+    if (!enemyAgent.includes(token)) fail('Unity enemy movement is missing obstacle avoidance / line-of-sight safeguards: ' + token);
+  }
+  for (const token of [
+    'private bool HasClearPath(',
+    'SpatialCellSize = 8f',
+    '_obstacleCells',
+    'TryRayBoxEntry',
+  ]) {
+    if (!enemyNavigationWorld.includes(token)) fail('Unity obstacle navigation is missing its spatial broad phase: ' + token);
   }
   if (!campaignMission.includes('EnemyNavigationWorld.RefreshActive()')) {
     fail('Campaign navigation cache must refresh when physical boss-gated doors change state.');
