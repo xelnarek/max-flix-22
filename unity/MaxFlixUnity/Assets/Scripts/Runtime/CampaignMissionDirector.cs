@@ -13,6 +13,7 @@ namespace MaxFlix.Unity.Runtime
         private const int RequiredVipOrders = 4;
         private const float SectorBStartX = 36f;
         private const float SectorCStartX = 116f;
+        private const float FinalBossArenaStartX = 185f;
         private const float FinishGateX = 201.2f;
 
         private PlayerController _player;
@@ -86,12 +87,12 @@ namespace MaxFlix.Unity.Runtime
             {
                 UnlockSector(3);
             }
-            else if (x >= SectorCStartX && enemy.Kind == EnemyKind.Walczak)
+            else if (x >= FinalBossArenaStartX && enemy.Kind == EnemyKind.Walczak)
             {
                 _finalWalczakDefeated = true;
                 RefreshStatus(true);
             }
-            else if (x >= SectorCStartX && enemy.Kind == EnemyKind.KingLeto)
+            else if (x >= FinalBossArenaStartX && enemy.Kind == EnemyKind.KingLeto)
             {
                 _finalKingLetoDefeated = true;
                 RefreshStatus(true);
