@@ -88,23 +88,23 @@ namespace MaxFlix.Unity.Runtime
 
             if (nearestIndex < 0) return Vector3.zero;
 
-            Vector2[] corners =
-            {
-                new Vector2(nearestMinX - WaypointPadding, nearestMinZ - WaypointPadding),
-                new Vector2(nearestMinX - WaypointPadding, nearestMaxZ + WaypointPadding),
-                new Vector2(nearestMaxX + WaypointPadding, nearestMinZ - WaypointPadding),
-                new Vector2(nearestMaxX + WaypointPadding, nearestMaxZ + WaypointPadding)
-            };
-
-            int[] preferredOrder = (actorInstanceId & 1) == 0
-                ? new[] { 0, 2, 1, 3 }
-                : new[] { 3, 1, 2, 0 };
-
-            Vector2 waypoint = corners[preferredOrder[0]];
+            Vector2 corner0 = new Vector2(nearestMinX - WaypointPadding, nearestMinZ - WaypointPadding);
+            Vector2 corner1 = new Vector2(nearestMinX - WaypointPadding, nearestMaxZ + WaypointPadding);
+            Vector2 corner2 = new Vector2(nearestMaxX + WaypointPadding, nearestMinZ - WaypointPadding);
+            Vector2 corner3 = new Vector2(nearestMaxX + WaypointPadding, nearestMaxZ + WaypointPadding);
+            Vector2 waypoint = (actorInstanceId & 1) == 0 ? corner0 : corner3;
             float bestRouteLength = float.PositiveInfinity;
-            for (int i = 0; i < preferredOrder.Length; i++)
+            for (int i = 0; i < 4; i++)
             {
-                Vector2 corner = corners[preferredOrder[i]];
+                int cornerIndex;
+                if ((actorInstanceId & 1) == 0)
+                    cornerIndex = i == 0 ? 0 : i == 1 ? 2 : i == 2 ? 1 : 3;
+                else
+                    cornerIndex = i == 0 ? 3 : i == 1 ? 1 : i == 2 ? 2 : 0;
+
+                Vector2 corner = cornerIndex == 0 ? corner0
+                    : cornerIndex == 1 ? corner1
+                    : cornerIndex == 2 ? corner2 : corner3;
                 float routeLength = Vector2.Distance(origin, corner) + Vector2.Distance(target, corner);
                 if (routeLength >= bestRouteLength - Epsilon) continue;
                 bestRouteLength = routeLength;
@@ -160,21 +160,29 @@ namespace MaxFlix.Unity.Runtime
             float maxZ,
             int actorInstanceId)
         {
-            float[] distances =
+            float left = origin.x - minX;
+            float right = maxX - origin.x;
+            float back = origin.y - minZ;
+            float forward = maxZ - origin.y;
+            float minimum = Mathf.Min(Mathf.Min(left, right), Mathf.Min(back, forward));
+            int tieCount = 0;
+            int selected = -1;
+            float desiredTie = (actorInstanceId & 1) == 0 ? 0f : float.PositiveInfinity;
+            for (int i = 0; i < 4; i++)
             {
-                origin.x - minX,
-                maxX - origin.x,
-                origin.y - minZ,
-                maxZ - origin.y
-            };
-            float minimum = distances[0];
-            for (int i = 1; i < distances.Length; i++)
-                minimum = Mathf.Min(minimum, distances[i]);
-
-            List<int> tied = new List<int>(4);
-            for (int i = 0; i < distances.Length; i++)
-                if (Mathf.Abs(distances[i] - minimum) < 0.0001f) tied.Add(i);
-            int selected = tied[(actorInstanceId & 1) == 0 ? 0 : tied.Count - 1];
+                float distance = i == 0 ? left : i == 1 ? right : i == 2 ? back : forward;
+                if (Mathf.Abs(distance - minimum) >= 0.0001f) continue;
+                tieCount++;
+                if ((actorInstanceId & 1) == 0)
+                {
+                    if (selected < 0) selected = i;
+                }
+                else
+                {
+                    selected = i;
+                }
+            }
+            if (selected < 0) selected = 0;
             switch (selected)
             {
                 case 0: return Vector3.left * 1.7f;
