@@ -32,7 +32,7 @@ namespace MaxFlix.Unity.Runtime
 
         public static MainMenuController Create(MainGameBootstrap owner, GameMode mode, OperatorId operatorId, WarehouseMapId mapId)
         {
-            EnsureEventSystem();
+            UiEventSystemInstaller.Ensure();
 
             GameObject canvasObject = new GameObject("Paleciaki Main Menu", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             Canvas canvas = canvasObject.GetComponent<Canvas>();
@@ -400,12 +400,5 @@ namespace MaxFlix.Unity.Runtime
             return button;
         }
 
-        private static void EnsureEventSystem()
-        {
-            if (FindFirstObjectByType<EventSystem>() != null) return;
-            GameObject eventSystem = new GameObject("EventSystem", typeof(EventSystem));
-            InputSystemUIInputModule module = eventSystem.AddComponent<InputSystemUIInputModule>();
-            module.pointerBehavior = UIPointerBehavior.SingleMouseOrPenButMultiTouchAndTrack;
-        }
     }
 }
