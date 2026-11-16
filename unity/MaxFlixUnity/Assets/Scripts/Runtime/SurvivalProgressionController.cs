@@ -92,9 +92,8 @@ namespace MaxFlix.Unity.Runtime
                 || enemy.Kind == EnemyKind.CyberSalesman;
             int baseXp = profile.IsBoss ? 8 : mutatedElite ? 6 : profile.BaseHealth >= 4 ? 3 : 1;
             if (_kills > 0 && _kills % 8 == 0) baseXp += 2;
-            WarehouseMapId biome = SurvivalWorldLayout.GetBiomeAtPosition(
+            float biomeXpMultiplier = GameContentCatalog.GetBlendedXpMultiplier(
                 enemy.transform.position.x, enemy.transform.position.z);
-            float biomeXpMultiplier = GameContentCatalog.GetMap(biome).XpMultiplier;
             int biomeXp = Mathf.Max(1, Mathf.CeilToInt(baseXp * biomeXpMultiplier));
             SpawnXpOrb(enemy.transform.position + Vector3.up * 0.45f, biomeXp);
 
