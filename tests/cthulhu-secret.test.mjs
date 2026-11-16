@@ -54,8 +54,8 @@ test('Necronomicon secrets summon a bespoke Cthulhu using the existing boss AI c
     readFile(new URL('../src/survivalMaps.ts', import.meta.url), 'utf8'),
   ]);
   assert.match(maps, /'necronomicon'/);
-  assert.match(game, /if \(secret\.id === 'necronomicon'\) this\.summonCthulhu\(\)/);
-  assert.match(game, /private summonCthulhu\(\): void/);
+  assert.match(game, /if \(secret\.id === 'necronomicon'\) this\.summonCthulhu\(secret\.mesh\.position\.x, secret\.mesh\.position\.z\)/);
+  assert.match(game, /private summonCthulhu\(bookX: number, bookZ: number\): void/);
   assert.match(game, /private addCthulhuBossEnemy\(id: string, x: number, z: number\)/);
   assert.match(game, /const built = createCthulhuBossModel\(\)/);
   assert.match(game, /name: 'CTHULHU • PAN ZATOPIONEGO R’LYEH'/);
@@ -174,7 +174,7 @@ test('Cthulhu opens the visible chest core after each resolved attack and scales
 test('the Necronomicon pickup plays a hinged opening cinematic with rising runes before the boss reveal', async () => {
   const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
   assert.match(game, /private spawnNecronomiconOpeningEffect\(x: number, z: number\): void/);
-  assert.match(game, /this\.spawnNecronomiconOpeningEffect\(this\.playerPos\.x, this\.playerPos\.z\)/);
+  assert.match(game, /this\.spawnNecronomiconOpeningEffect\(bookX, bookZ\)/);
   assert.match(game, /necronomicon-opening-hinged-cover/);
   assert.match(game, /lidPivot\.rotation\.x = -2\.05 \* eased/);
   assert.match(game, /book\.position\.y = 0\.42 \+ Math\.sin\(progress \* Math\.PI\) \* 0\.12 \+ dissolve \* 0\.4/);

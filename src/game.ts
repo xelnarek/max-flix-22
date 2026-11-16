@@ -5017,7 +5017,7 @@ export class PaleciakiGameEngine {
     });
   }
 
-  private summonCthulhu(): void {
+  private summonCthulhu(bookX: number, bookZ: number): void {
     if (this.gameMode !== 'survival' || this.cthulhuSecretSummoned) return;
     this.cthulhuSecretSummoned = true;
 
@@ -5033,7 +5033,7 @@ export class PaleciakiGameEngine {
       this.levelBounds.minZ + 4.5,
       this.levelBounds.maxZ - 4.5,
     );
-    this.spawnNecronomiconOpeningEffect(this.playerPos.x, this.playerPos.z);
+    this.spawnNecronomiconOpeningEffect(bookX, bookZ);
     this.spawnCthulhuArrivalRitual(spawnX, spawnZ);
     const id = 'necronomicon_cthulhu_' + Math.floor(performance.now());
     this.addCthulhuBossEnemy(id, spawnX, spawnZ);
@@ -5469,7 +5469,7 @@ export class PaleciakiGameEngine {
       secret.mesh.clear();
       this.survivalSecretsFound++;
       if (secret.id === 'oniric_dream') this.beginOniricDream();
-      if (secret.id === 'necronomicon') this.summonCthulhu();
+      if (secret.id === 'necronomicon') this.summonCthulhu(secret.mesh.position.x, secret.mesh.position.z);
       this.score += 750;
       this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
       this.callbacks.onSurvivalSecretFound?.(this.survivalMapId, secret.id, secret.name);
