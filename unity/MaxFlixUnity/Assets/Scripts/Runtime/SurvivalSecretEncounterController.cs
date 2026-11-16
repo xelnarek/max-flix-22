@@ -81,7 +81,9 @@ namespace MaxFlix.Unity.Runtime
         private bool _leftHeld;
         private bool _rightHeld;
         private bool _actionHeld;
+        private bool _actionPointerHeld;
         private bool _attackHeld;
+        private bool _attackPointerHeld;
         private bool _actionPressed;
         private bool _closed;
         private bool _resultShown;
@@ -226,7 +228,7 @@ namespace MaxFlix.Unity.Runtime
                     new Vector2(124f, 58f), new Color(0.47f, 0.18f, 0.62f), pressed =>
                     {
                         if (pressed) _actionPressed = true;
-                        _actionHeld = pressed;
+                        _actionPointerHeld = pressed;
                     });
                 _primaryHud = CreateText(safe, "Rabbit HUD", new Vector2(-260f, 155f),
                     new Vector2(300f, 24f), 14, TextAnchor.MiddleLeft, Color.white);
@@ -239,11 +241,11 @@ namespace MaxFlix.Unity.Runtime
                     new Vector2(118f, 58f), new Color(0.13f, 0.43f, 0.40f), pressed =>
                     {
                         if (pressed) _actionPressed = true;
-                        _actionHeld = pressed;
+                        _actionPointerHeld = pressed;
                     });
                 CreateHoldButton(safe, "Attack", "ATAK ●", new Vector2(300f, -222f),
                     new Vector2(124f, 58f), new Color(0.55f, 0.15f, 0.28f),
-                    pressed => _attackHeld = pressed);
+                    pressed => _attackPointerHeld = pressed);
                 _primaryHud = CreateText(safe, "Operator health", new Vector2(-270f, 155f),
                     new Vector2(310f, 22f), 13, TextAnchor.MiddleLeft, Color.white);
                 _secondaryHud = CreateText(safe, "Boss health", new Vector2(270f, 155f),
@@ -445,8 +447,8 @@ namespace MaxFlix.Unity.Runtime
                 : keyboard.spaceKey.isPressed || keyboard.leftShiftKey.isPressed);
             bool keyboardAttackHeld = keyboard != null && (keyboard.jKey.isPressed || keyboard.enterKey.isPressed);
             _actionPressed = _actionPressed || keyboardActionPressed;
-            _actionHeld = _actionHeld || keyboardActionHeld;
-            _attackHeld = _attackHeld || keyboardAttackHeld;
+            _actionHeld = _actionPointerHeld || keyboardActionHeld;
+            _attackHeld = _attackPointerHeld || keyboardAttackHeld;
 
             float deltaTime = Mathf.Clamp(Time.unscaledDeltaTime, 0f, 1f / 30f);
             if (deltaTime <= 0f) return;
@@ -846,7 +848,7 @@ namespace MaxFlix.Unity.Runtime
             _resultShown = true;
             _won = won;
             _resultPanel.SetActive(true);
-            _leftHeld = _rightHeld = _actionHeld = _attackHeld = false;
+            _leftHeld = _rightHeld = _actionHeld = _actionPointerHeld = _attackHeld = _attackPointerHeld = false;
             Transform resultTransform = _resultPanel.transform;
             Text[] texts = resultTransform.GetComponentsInChildren<Text>(true);
             foreach (Text text in texts)
@@ -870,7 +872,7 @@ namespace MaxFlix.Unity.Runtime
             _resultPanel.SetActive(false);
             _won = false;
             _rewardGranted = false;
-            _leftHeld = _rightHeld = _actionHeld = _attackHeld = _actionPressed = false;
+            _leftHeld = _rightHeld = _actionHeld = _actionPointerHeld = _attackHeld = _attackPointerHeld = _actionPressed = false;
             _platforms.Clear();
             _watches.Clear();
             _hazards.Clear();
