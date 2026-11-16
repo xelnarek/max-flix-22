@@ -17,6 +17,112 @@ export const SURVIVAL_WORLD_WIDTH = SURVIVAL_WORLD_BOUNDS.maxX - SURVIVAL_WORLD_
 export const SURVIVAL_WORLD_DEPTH = SURVIVAL_WORLD_BOUNDS.maxZ - SURVIVAL_WORLD_BOUNDS.minZ;
 export const SURVIVAL_WORLD_START_BIOME: SurvivalMapId = 'warehouse_b4';
 export const SURVIVAL_WORLD_BIOME_HYSTERESIS_METERS = 4;
+export const SURVIVAL_WORLD_BIOME_HALF_WIDTH = 60;
+export const SURVIVAL_WORLD_BIOME_HALF_DEPTH = 20;
+
+export interface SurvivalWorldBiomeBounds {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+}
+
+/** World-space bounds for one authored 120 x 40 m sector. */
+export function getSurvivalWorldBiomeBounds(mapId: SurvivalMapId): SurvivalWorldBiomeBounds {
+  const biome = getSurvivalWorldBiome(mapId);
+  return {
+    minX: biome.centerX - SURVIVAL_WORLD_BIOME_HALF_WIDTH,
+    maxX: biome.centerX + SURVIVAL_WORLD_BIOME_HALF_WIDTH,
+    minZ: biome.centerZ - SURVIVAL_WORLD_BIOME_HALF_DEPTH,
+    maxZ: biome.centerZ + SURVIVAL_WORLD_BIOME_HALF_DEPTH,
+  };
+}
+
+/** Strict quadrant identity for actors; player-only hysteresis is separate. */
+export function getSurvivalWorldBiomeIdAtPosition(
+  x: number,
+  z: number,
+  fallback: SurvivalMapId = SURVIVAL_WORLD_START_BIOME,
+): SurvivalMapId {
+  if (!Number.isFinite(x) || !Number.isFinite(z)) return fallback;
+  if (x >= 0 && z < 0) return 'container_terminal';
+  if (x >= 0 && z >= 0) return 'cold_storage';
+  if (x < 0 && z >= 0) return 'night_sorting';
+  return 'warehouse_b4';
+}
+
+export interface SurvivalWorldRouteStep {
+  from: SurvivalMapId;
+  to: SurvivalMapId;
+  transition: SurvivalWorldTransition;
+}
+
+const survivalWorldRouteCache = new Map<string, readonly SurvivalWorldRouteStep[]>();
+
+/** Shortest route through the four reciprocal, bidirectional sector portals. */
+export function getSurvivalWorldRoute(
+  from: SurvivalMapId,
+  to: SurvivalMapId,
+): readonly SurvivalWorldRouteStep[] {
+  if (from === to) return [];
+  const key = from + '>' + to;
+  const cached = survivalWorldRouteCache.get(key);
+  if (cached) return cached;
+
+  const queue: SurvivalMapId[] = [from];
+  const visited = new Set<SurvivalMapId>([from]);
+  const previous = new Map<SurvivalMapId, SurvivalWorldRouteStep>();
+
+  while (queue.length > 0 && !visited.has(to)) {
+    const current = queue.shift()!;
+    for (const transition of SURVIVAL_WORLD_TRANSITIONS) {
+      const next = transition.from === current
+        ? transition.to
+        : transition.to === current
+          ? transition.from
+          : null;
+      if (!next || visited.has(next)) continue;
+      visited.add(next);
+      previous.set(next, { from: current, to: next, transition });
+      queue.push(next);
+    }
+  }
+
+  const route: SurvivalWorldRouteStep[] = [];
+  let cursor = to;
+  while (cursor !== from) {
+    const step = previous.get(cursor);
+    if (!step) {
+      const empty: readonly SurvivalWorldRouteStep[] = [];
+      survivalWorldRouteCache.set(key, empty);
+      return empty;
+    }
+    route.unshift(step);
+    cursor = step.from;
+  }
+  const result = Object.freeze(route.slice());
+  survivalWorldRouteCache.set(key, result);
+  return result;
+}
+
+/** Safe intermediate target a few metres beyond the first open portal. */
+export function getSurvivalWorldWaypoint(
+  from: SurvivalMapId,
+  to: SurvivalMapId,
+  inset = SURVIVAL_WORLD_BIOME_HYSTERESIS_METERS + 3,
+): { x: number; z: number } | null {
+  const step = getSurvivalWorldRoute(from, to)[0];
+  if (!step) return null;
+  const { transition } = step;
+  const fromBiome = getSurvivalWorldBiome(step.from);
+  const toBiome = getSurvivalWorldBiome(step.to);
+  const directionX = Math.sign(toBiome.centerX - fromBiome.centerX);
+  const directionZ = Math.sign(toBiome.centerZ - fromBiome.centerZ);
+  const distance = Math.max(5, inset);
+  return transition.axis === 'x'
+    ? { x: transition.centerX + directionX * distance, z: transition.centerZ }
+    : { x: transition.centerX, z: transition.centerZ + directionZ * distance };
+}
 
 export const SURVIVAL_WORLD_TRANSITIONS: readonly SurvivalWorldTransition[] = [
   { id: 'b4-to-port', from: 'warehouse_b4', to: 'container_terminal', axis: 'x', centerX: 0, centerZ: -20, openingWidth: 26 },

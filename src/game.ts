@@ -61,7 +61,7 @@ import { applySurvivalMapCombatModifier, getSurvivalMapDefinition, SURVIVAL_MAPS
 import { getCampaignLightingProfile, getSurvivalLightingProfile, getSurvivalSurfaceProfile, PVP_LIGHTING_PROFILE, type WorldLightingProfile } from './worldVisualQuality.ts';
 import { getSurvivalMapRouteFeatures } from './survivalMapLayouts.ts';
 import { createSurvivalWorldDressing } from './survivalWorldDressing.ts';
-import { getSurvivalBiomeIdAtPosition, getSurvivalWorldBiome, SURVIVAL_WORLD_BIOMES, SURVIVAL_WORLD_BOUNDS, SURVIVAL_WORLD_START_BIOME, SURVIVAL_WORLD_TRANSITIONS, type SurvivalWorldOpenEdges } from './survivalWorldLayout.ts';
+import { getSurvivalBiomeIdAtPosition, getSurvivalWorldBiome, getSurvivalWorldBiomeBounds, getSurvivalWorldBiomeIdAtPosition, getSurvivalWorldWaypoint, SURVIVAL_WORLD_BIOMES, SURVIVAL_WORLD_BOUNDS, SURVIVAL_WORLD_START_BIOME, SURVIVAL_WORLD_TRANSITIONS, type SurvivalWorldOpenEdges } from './survivalWorldLayout.ts';
 import { chooseCampaignNearbyRewardSpawnPoint } from './campaignRewards.ts';
 import { chooseNearbySpawnPoint } from './arenaSpawn.ts';
 import { chooseSurvivalEnemySpawnType } from './survivalEnemySpawns.ts';
@@ -934,7 +934,7 @@ export class PaleciakiGameEngine {
   private currentLevelId = 1;
   private levelRoot = new THREE.Group();
   private platforms: PlatformBlock[] = [];
-  private survivalObstacles: { x: number; z: number; halfWidth: number; halfDepth: number }[] = [];
+  private survivalObstacles: { x: number; z: number; halfWidth: number; halfDepth: number; height?: number }[] = [];
   private campaignEnemyObstacles: { x: number; z: number; halfWidth: number; halfDepth: number }[] = [];
   private collectibles: CollectibleItem[] = [];
   private droppedPerks: DroppedPerkItem[] = [];
@@ -3643,10 +3643,10 @@ export class PaleciakiGameEngine {
     this.platforms = [];
 
     const sharedSurfaceTextures = {
-      floor: createPvpFloorTexture(),
-      crate: createPvpObstacleTexture('crate'),
-      barrier: createPvpObstacleTexture('barrier'),
-      wall: createPvpObstacleTexture('wall'),
+      floor: createPvpFloorTexture().clone(),
+      crate: createPvpObstacleTexture('crate').clone(),
+      barrier: createPvpObstacleTexture('barrier').clone(),
+      wall: createPvpObstacleTexture('wall').clone(),
     };
     // These maps are shared by four biome sections; register them once in the
     // arena-owned resource set so a map reset releases them without touching cache assets.
@@ -3971,11 +3971,11 @@ export class PaleciakiGameEngine {
       (openEdges.east && x > 47.5 && Math.abs(z) < 13 + margin);
     // Survival reuses the generated industrial floor and warehouse surface maps from PvP.
     // Map-specific colours tint the common assets without creating a second texture system.
-    const floorTexture = options.surfaceTextures?.floor ?? createPvpFloorTexture();
+    const floorTexture = options.surfaceTextures?.floor ?? createPvpFloorTexture().clone();
     floorTexture.repeat.set(3, 4);
-    const crateTexture = options.surfaceTextures?.crate ?? createPvpObstacleTexture('crate');
-    const barrierTexture = options.surfaceTextures?.barrier ?? createPvpObstacleTexture('barrier');
-    const wallTexture = options.surfaceTextures?.wall ?? createPvpObstacleTexture('wall');
+    const crateTexture = options.surfaceTextures?.crate ?? createPvpObstacleTexture('crate').clone();
+    const barrierTexture = options.surfaceTextures?.barrier ?? createPvpObstacleTexture('barrier').clone();
+    const wallTexture = options.surfaceTextures?.wall ?? createPvpObstacleTexture('wall').clone();
     const surfaceProfile = getSurvivalSurfaceProfile(mapId);
     const floorMaterial = new THREE.MeshStandardMaterial({
       map: floorTexture, color: mapDefinition.floorColor,
@@ -4117,23 +4117,33 @@ export class PaleciakiGameEngine {
     }
 
     // Internal north/south edges are split around a 36 m walkable opening.
+    // One footprint feeds camera occlusion, player collision and enemy navigation.
     for (const zSide of [-1, 1]) {
       const edgeIsOpen = zSide < 0 ? openEdges.north : openEdges.south;
       if (edgeIsOpen) {
         for (const segmentSide of [-1, 1]) {
           const wallSegment = new THREE.Mesh(new THREE.BoxGeometry(42, 9.5, 0.48), wallMaterial);
-          wallSegment.position.set(segmentSide * 39, 4.75, zSide * 19.65);
+          const wallX = segmentSide * 39;
+          const wallZ = zSide * 19.65;
+          wallSegment.position.set(wallX, 4.75, wallZ);
           this.registerCameraOccluder(wallSegment);
           this.levelRoot.add(wallSegment);
+          this.survivalObstacles.push({
+            x: wallX, z: wallZ, halfWidth: 21, halfDepth: 0.24, height: 9.5,
+          });
           const stripeSegment = new THREE.Mesh(new THREE.BoxGeometry(42, 0.12, 0.52), trimMaterial);
-          stripeSegment.position.set(segmentSide * 39, 0.09, zSide * 19.25);
+          stripeSegment.position.set(wallX, 0.09, zSide * 19.25);
           this.levelRoot.add(stripeSegment);
         }
       } else {
         const sideWall = new THREE.Mesh(new THREE.BoxGeometry(119, 9.5, 0.48), wallMaterial);
-        sideWall.position.set(0, 4.75, zSide * 19.65);
+        const wallZ = zSide * 19.65;
+        sideWall.position.set(0, 4.75, wallZ);
         this.registerCameraOccluder(sideWall);
         this.levelRoot.add(sideWall);
+        this.survivalObstacles.push({
+          x: 0, z: wallZ, halfWidth: 59.5, halfDepth: 0.24, height: 9.5,
+        });
         const warningStripe = new THREE.Mesh(new THREE.BoxGeometry(119, 0.12, 0.52), trimMaterial);
         warningStripe.position.set(0, 0.09, zSide * 19.25);
         this.levelRoot.add(warningStripe);
@@ -4152,15 +4162,24 @@ export class PaleciakiGameEngine {
       if (edgeIsOpen) {
         for (const segmentSide of [-1, 1]) {
           const wallSegment = new THREE.Mesh(new THREE.BoxGeometry(0.65, 9.5, 7), wallMaterial);
-          wallSegment.position.set(side * 59.35, 4.75, segmentSide * 16.5);
+          const wallX = side * 59.35;
+          const wallZ = segmentSide * 16.5;
+          wallSegment.position.set(wallX, 4.75, wallZ);
           this.registerCameraOccluder(wallSegment);
           this.levelRoot.add(wallSegment);
+          this.survivalObstacles.push({
+            x: wallX, z: wallZ, halfWidth: 0.325, halfDepth: 3.5, height: 9.5,
+          });
         }
       } else {
         const endWall = new THREE.Mesh(new THREE.BoxGeometry(0.65, 9.5, 40), wallMaterial);
-        endWall.position.set(side * 59.35, 4.75, 0);
+        const wallX = side * 59.35;
+        endWall.position.set(wallX, 4.75, 0);
         this.registerCameraOccluder(endWall);
         this.levelRoot.add(endWall);
+        this.survivalObstacles.push({
+          x: wallX, z: 0, halfWidth: 0.325, halfDepth: 20, height: 9.5,
+        });
       }
 
       // Structural columns and compact high-bay lighting make the new wings read as real warehouse space.
@@ -11527,22 +11546,27 @@ export class PaleciakiGameEngine {
   }
 
   private getSurvivalSpawnPoint(): { x: number; z: number } {
-    // Sample the arena perimeter, reject rack/cargo intersections, then prefer
-    // a clear arrival lane. During dense waves, select the least crowded valid
-    // point instead of repeatedly placing new actors on top of one another.
+    // A world-wide bound alone allows spawns behind a wall in a neighbouring
+    // biome. Restrict arrivals to the player's currently reachable sector.
+    const biomeBounds = getSurvivalWorldBiomeBounds(this.survivalMapId);
+    const minX = Math.max(this.levelBounds.minX + 2.5, biomeBounds.minX + 2.5);
+    const maxX = Math.min(this.levelBounds.maxX - 2.5, biomeBounds.maxX - 2.5);
+    const minZ = Math.max(this.levelBounds.minZ + 1.5, biomeBounds.minZ + 1.5);
+    const maxZ = Math.min(this.levelBounds.maxZ - 1.5, biomeBounds.maxZ - 1.5);
+    // Sample the local sector perimeter, rejecting cargo, walls and occupied lanes.
     const candidates: { x: number; z: number }[] = [];
     for (let attempt = 0; attempt < 12; attempt++) {
       const angle = Math.random() * Math.PI * 2;
       const radius = 18 + Math.random() * 5;
       const x = THREE.MathUtils.clamp(
         this.playerPos.x + Math.cos(angle) * radius,
-        this.levelBounds.minX + 2.5,
-        this.levelBounds.maxX - 2.5
+        minX,
+        maxX
       );
       const z = THREE.MathUtils.clamp(
         this.playerPos.z + Math.sin(angle) * radius,
-        this.levelBounds.minZ + 1.5,
-        this.levelBounds.maxZ - 1.5
+        minZ,
+        maxZ
       );
       const blocked = this.survivalObstacles.some((obstacle) =>
         Math.abs(x - obstacle.x) < obstacle.halfWidth + 1.2 &&
@@ -11558,12 +11582,6 @@ export class PaleciakiGameEngine {
     // enemy beside the operator. Search deterministic perimeter fallbacks,
     // preferring clear points at least 12 units away from the player.
     const fallbackCandidates: { x: number; z: number }[] = [];
-    const insetX = Math.min(2.5, (this.levelBounds.maxX - this.levelBounds.minX) / 2);
-    const insetZ = Math.min(1.5, (this.levelBounds.maxZ - this.levelBounds.minZ) / 2);
-    const minX = this.levelBounds.minX + insetX;
-    const maxX = this.levelBounds.maxX - insetX;
-    const minZ = this.levelBounds.minZ + insetZ;
-    const maxZ = this.levelBounds.maxZ - insetZ;
     const midX = (minX + maxX) / 2;
     const midZ = (minZ + maxZ) / 2;
     fallbackCandidates.push(
@@ -12326,9 +12344,10 @@ export class PaleciakiGameEngine {
     let landed = false;
     const pRadius = 0.28;
 
-    // Ground-level crate stacks and staging racks in the enlarged Survival wings have real collision.
-    if (this.gameMode === 'survival' && this.playerPos.y < 1.0) {
+    // Full-height boundary walls stay solid; low cargo remains jumpable as before.
+    if (this.gameMode === 'survival') {
       for (const obstacle of this.survivalObstacles) {
+        if (this.playerPos.y >= (obstacle.height ?? 1.0)) continue;
         const dx = nextX - obstacle.x;
         const dz = nextZ - obstacle.z;
         const overlapX = obstacle.halfWidth + pRadius - Math.abs(dx);
@@ -13103,17 +13122,21 @@ export class PaleciakiGameEngine {
 
     // Ranged attackers try to hold a useful firing lane instead of walking into melee range.
     if (!inHordeRing && engaged && role === 'ranged' && distanceToPlayer < preferredRadius - 1.0) preferredRadius += 1.0;
-    const targetX = anchorX + Math.sin(angle) * preferredRadius;
-    const targetZ = anchorZ + Math.cos(angle) * preferredRadius * (inHordeRing ? 0.62 : 1);
+    const enemyBiomeId = getSurvivalWorldBiomeIdAtPosition(enemy.x, enemy.z, this.survivalMapId);
+    const portalWaypoint = !inHordeRing && enemyBiomeId !== this.survivalMapId
+      ? getSurvivalWorldWaypoint(enemyBiomeId, this.survivalMapId)
+      : null;
+    const targetX = portalWaypoint?.x ?? (anchorX + Math.sin(angle) * preferredRadius);
+    const targetZ = portalWaypoint?.z ?? (anchorZ + Math.cos(angle) * preferredRadius * (inHordeRing ? 0.62 : 1));
     let steerX = targetX - enemy.x;
     let steerZ = targetZ - enemy.z;
     const steerLength = Math.hypot(steerX, steerZ);
 
-    if (steerLength < 0.72 && engaged) {
+    if (!portalWaypoint && steerLength < 0.72 && engaged) {
       const orbitSign = enemy.aiOrbitSign || 1;
       steerX = Math.cos(angle) * orbitSign;
       steerZ = -Math.sin(angle) * orbitSign;
-    } else if (steerLength < 0.72 && !engaged) {
+    } else if (!portalWaypoint && steerLength < 0.72 && !engaged) {
       steerX = Math.cos(angle);
       steerZ = -Math.sin(angle);
     }
@@ -14115,6 +14138,12 @@ export class PaleciakiGameEngine {
 
         const isCthulhuBoss = e.name.includes('CTHULHU');
         const isChargingImpact = (e.name.includes('Inwentaryzacja Gigant') || isCthulhuBoss) && e.chargeTimer !== undefined;
+        const bossPortalWaypoint = this.gameMode === 'survival'
+          ? getSurvivalWorldWaypoint(
+              getSurvivalWorldBiomeIdAtPosition(e.x, e.z, this.survivalMapId),
+              this.survivalMapId,
+            )
+          : null;
         if (isChargingImpact) {
           // Keep a targeted lash visually aligned with the corridor shown on the floor.
           if (isCthulhuBoss && (
@@ -14129,6 +14158,18 @@ export class PaleciakiGameEngine {
           } else {
             e.mesh.rotation.y = Math.atan2(dx, dz);
           }
+        } else if (bossPortalWaypoint) {
+          const avoidance = calculateEnemyObstacleAvoidanceVector(
+            e, bossPortalWaypoint, this.survivalObstacles, 5.4, 1.25,
+          );
+          let moveX = bossPortalWaypoint.x - e.x + avoidance.x * 0.85;
+          let moveZ = bossPortalWaypoint.z - e.z + avoidance.z * 0.85;
+          const moveLength = Math.hypot(moveX, moveZ) || 1;
+          moveX /= moveLength;
+          moveZ /= moveLength;
+          e.x += moveX * e.speed * dt;
+          e.z += moveZ * e.speed * dt;
+          e.mesh.rotation.y = Math.atan2(moveX, moveZ);
         } else if (distToPlayer < 14.0) {
           const angle = Math.atan2(dx, dz);
           e.mesh.rotation.y = angle;
@@ -14364,9 +14405,27 @@ export class PaleciakiGameEngine {
           this.emitFloatingToast('🔥 DYREKTOR WIDMO: OSTATECZNE ZWOLNIENIE!', e.x, e.y + 1.8, e.z, 'damage');
         }
 
+        const bossPortalWaypoint = this.gameMode === 'survival'
+          ? getSurvivalWorldWaypoint(
+              getSurvivalWorldBiomeIdAtPosition(e.x, e.z, this.survivalMapId),
+              this.survivalMapId,
+            )
+          : null;
         if (e.chargeTimer !== undefined) {
           // Keep the boss aligned with the committed lane while the warning is visible.
           e.mesh.rotation.y = e.chargeDir ?? Math.atan2(dx, dz);
+        } else if (bossPortalWaypoint) {
+          const avoidance = calculateEnemyObstacleAvoidanceVector(
+            e, bossPortalWaypoint, this.survivalObstacles, 5.8, 1.35,
+          );
+          let moveX = bossPortalWaypoint.x - e.x + avoidance.x * 0.85;
+          let moveZ = bossPortalWaypoint.z - e.z + avoidance.z * 0.85;
+          const moveLength = Math.hypot(moveX, moveZ) || 1;
+          moveX /= moveLength;
+          moveZ /= moveLength;
+          e.x += moveX * e.speed * dt;
+          e.z += moveZ * e.speed * dt;
+          e.mesh.rotation.y = Math.atan2(moveX, moveZ);
         } else if (distToPlayer < 15.0) {
           const angle = Math.atan2(dx, dz);
           e.mesh.rotation.y = angle;
