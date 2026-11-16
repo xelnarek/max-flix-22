@@ -108,6 +108,12 @@ namespace MaxFlix.Unity.Editor
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
             PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel26;
             PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevel36;
+            // Unity 6000.6.8f1 has a known Android resume/back regression when
+            // Run In Background and Predictive Back are enabled together.
+            // Keep the app lifecycle deterministic until this is re-tested on-device.
+            PlayerSettings.runInBackground = false;
+            PlayerSettings.Android.predictiveBackSupport = false;
+            PlayerSettings.Android.optimizedFramePacing = true;
 
             // The game is designed around a landscape playfield on desktop and mobile.
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.LandscapeLeft;
