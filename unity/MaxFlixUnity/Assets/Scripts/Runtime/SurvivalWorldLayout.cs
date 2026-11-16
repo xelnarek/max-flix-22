@@ -108,6 +108,25 @@ namespace MaxFlix.Unity.Runtime
         public const float MinZ = -40f;
         public const float MaxZ = 40f;
         public const float BlendHalfWidth = 11f;
+        public const float BiomeHalfWidth = 60f;
+        public const float BiomeHalfDepth = 20f;
+
+        public static Vector2 GetZoneCenter(WarehouseMapId mapId)
+        {
+            foreach (SurvivalBiomeZone zone in ZoneData)
+                if (zone.MapId == mapId) return zone.Center;
+            return ZoneData[0].Center;
+        }
+
+        /// <summary>Clamp actors to the playable interior, clear of the perimeter colliders.</summary>
+        public static Vector3 ClampInside(Vector3 position, float inset = 1.5f)
+        {
+            float safeInset = Mathf.Clamp(inset, 0f, 8f);
+            position.x = Mathf.Clamp(position.x, MinX + safeInset, MaxX - safeInset);
+            position.z = Mathf.Clamp(position.z, MinZ + safeInset, MaxZ - safeInset);
+            position.y = Mathf.Max(0.05f, position.y);
+            return position;
+        }
 
         private static readonly SurvivalBiomeZone[] ZoneData =
         {
