@@ -168,7 +168,8 @@ namespace MaxFlix.Unity.Runtime
             if (orb.Root == null)
             {
                 XpOrb closest = FindClosestOrb(position);
-                if (closest != null) closest.Value = Mathf.Min(40, closest.Value + value);
+                if (closest != null)
+                closest.Value = (int)Math.Min(int.MaxValue, (long)closest.Value + value);
                 return;
             }
             orb.Root.transform.position = position;
