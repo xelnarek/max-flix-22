@@ -35,6 +35,8 @@ test('Unity Survival mega-map contract matches the live 240 by 80 metre topology
   assert.match(world, /new SurvivalWorldTransition\("cold-to-night"/);
   assert.match(world, /WarehouseMapId\.ColdStorage, 60f, 20f/);
   assert.match(world, /WarehouseMapId\.NightSorting, -60f, 20f/);
+  assert.match(world, /WarehouseMapId\.ColdStorage, 60f, 20f,[\s\S]*?SurvivalBiomeEdge\.West \| SurvivalBiomeEdge\.North/);
+  assert.match(world, /WarehouseMapId\.NightSorting, -60f, 20f,[\s\S]*?SurvivalBiomeEdge\.East \| SurvivalBiomeEdge\.North/);
   assert.match(world, /if \(south\) return east \? WarehouseMapId\.ColdStorage : WarehouseMapId\.NightSorting/);
   assert.match(world, /ColdStorage = east \* south/);
   assert.match(world, /NightSorting = \(1f - east\) \* south/);
