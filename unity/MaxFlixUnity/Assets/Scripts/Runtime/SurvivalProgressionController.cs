@@ -53,6 +53,9 @@ namespace MaxFlix.Unity.Runtime
         private int _rerolls;
         private float _xpGrowthMultiplier = 1f;
         private float _magnetMultiplier = 1f;
+        private float _coinMultiplier = 1f;
+        private float _healthRegenPerSecond;
+        private float _healthRegenAccumulator;
         private bool _isBossReward;
         private bool _pendingBossReward;
         private bool _isPromotion;
@@ -76,6 +79,9 @@ namespace MaxFlix.Unity.Runtime
             _pendingBossReward = false;
             _xpGrowthMultiplier = 1f;
             _magnetMultiplier = 1f;
+            _coinMultiplier = 1f;
+            _healthRegenPerSecond = 0f;
+            _healthRegenAccumulator = 0f;
             _passiveStacks.Clear();
             _orbs.Clear();
             _currentCards.Clear();
@@ -114,6 +120,16 @@ namespace MaxFlix.Unity.Runtime
                 return;
 
             float deltaTime = Time.deltaTime;
+            if (_healthRegenPerSecond > 0f && _player.CurrentHealth < _player.MaxHealth)
+            {
+                _healthRegenAccumulator += deltaTime;
+                if (_healthRegenAccumulator >= 1f)
+                {
+                    float heal = _healthRegenPerSecond * _healthRegenAccumulator;
+                    _healthRegenAccumulator = 0f;
+                    _player.RestoreHealth(heal);
+                }
+            }
             Vector3 playerPosition = _player.transform.position;
             float pickupRadius = 1.6f * _magnetMultiplier;
 
@@ -241,7 +257,8 @@ namespace MaxFlix.Unity.Runtime
             int amount = Mathf.Max(1, Mathf.RoundToInt(orb.Value * _xpGrowthMultiplier));
             _xp += amount;
             GameSession.Current.Score += amount * 12;
-            GameSession.Current.Coins += Mathf.Max(0, amount / 3);
+            int coinReward = Mathf.Max(0, Mathf.FloorToInt(amount / 3f * _coinMultiplier));
+            GameSession.Current.Coins += coinReward;
             if (orb.Root != null) orb.Root.SetActive(false);
             UpdateHud();
 
@@ -348,6 +365,8 @@ namespace MaxFlix.Unity.Runtime
             AddPassive(pool, "range", "ZASIĘG AUDYTU", "+8% zasięgu automatycznego namierzania broni.", "◎", 4);
             AddPassive(pool, "growth", "PREMIA ZA NORMĘ", "+18% doświadczenia z kryształów.", "↗", 3);
             AddPassive(pool, "armor", "PALETA OCHRONNA", "Osłona pochłania następne trafienie.", "▤", 4);
+            AddPassive(pool, "scavenger", "ZŁOMIARZ ZMIANY", "+15% monet z kryształów XP.", "¤", 4);
+            AddPassive(pool, "regen", "REGENERACJA", "Odzyskujesz zdrowie w trakcie zmiany.", "✚", 3);
 
             if (excluded != null) pool.RemoveAll(card => excluded.Contains(card.Id));
             if (pool.Count == 0)
@@ -652,6 +671,12 @@ namespace MaxFlix.Unity.Runtime
                         break;
                     case "armor":
                         _player.GrantSurvivalShield(1);
+                        break;
+                    case "scavenger":
+                        _coinMultiplier = Mathf.Min(2.0f, _coinMultiplier * (1f + 0.15f * strength));
+                        break;
+                    case "regen":
+                        _healthRegenPerSecond = Mathf.Min(0.22f, _healthRegenPerSecond + 0.045f * strength);
                         break;
                 }
             }
