@@ -58,10 +58,10 @@ import { getSurvivalBossVariant, isMajorSurvivalBossType, shouldSpawnBosmanKrako
 import { applySurvivalWaveMutator, getSurvivalWaveMutator } from './survivalWaveMutators.ts';
 import { getSurvivalConvoyHazardCount } from './survivalConvoy.ts';
 import { applySurvivalWorldCombatModifier, getSurvivalMapDefinition, SURVIVAL_MAPS, SURVIVAL_MAP_IDS, type SurvivalMapId } from './survivalMaps.ts';
-import { getCampaignLightingProfile, getSurvivalLightingProfile, getSurvivalWorldBackgroundColor, getSurvivalWorldLightingProfile, getSurvivalSurfaceProfile, PVP_LIGHTING_PROFILE, type WorldLightingProfile } from './worldVisualQuality.ts';
+import { getCampaignLightingProfile, getSurvivalLightingProfile, getSurvivalWorldBackgroundColor, getSurvivalWorldFloorColor, getSurvivalWorldLightingProfile, getSurvivalSurfaceProfile, PVP_LIGHTING_PROFILE, type WorldLightingProfile } from './worldVisualQuality.ts';
 import { getSurvivalMapRouteFeatures } from './survivalMapLayouts.ts';
 import { createSurvivalWorldDressing } from './survivalWorldDressing.ts';
-import { getSurvivalBiomeIdAtPosition, getSurvivalWorldBiome, getSurvivalWorldTransitionFootprint, isSurvivalWorldTransitionFromNegativeSide, SURVIVAL_WORLD_BIOME_HALF_DEPTH, SURVIVAL_WORLD_BIOME_HALF_WIDTH, SURVIVAL_WORLD_BIOMES, SURVIVAL_WORLD_BOUNDS, SURVIVAL_WORLD_START_BIOME, SURVIVAL_WORLD_TRANSITIONS, type SurvivalWorldOpenEdges } from './survivalWorldLayout.ts';
+import { getSurvivalBiomeIdAtPosition, getSurvivalWorldBiome, getSurvivalWorldTransitionFootprint, SURVIVAL_WORLD_BIOME_HALF_DEPTH, SURVIVAL_WORLD_BIOME_HALF_WIDTH, SURVIVAL_WORLD_BIOMES, SURVIVAL_WORLD_BOUNDS, SURVIVAL_WORLD_START_BIOME, SURVIVAL_WORLD_TRANSITIONS, type SurvivalWorldOpenEdges } from './survivalWorldLayout.ts';
 import { getSurvivalWorldBiomeBlendAtPosition } from './survivalWorldBlend.ts';
 import { chooseCampaignNearbyRewardSpawnPoint } from './campaignRewards.ts';
 import { chooseNearbySpawnPoint } from './arenaSpawn.ts';
@@ -3698,227 +3698,145 @@ export class PaleciakiGameEngine {
   }
 
   private buildSurvivalWorldTransitions() {
-    const cssColor = (hex: number) => '#' + hex.toString(16).padStart(6, '0');
-    for (const transition of SURVIVAL_WORLD_TRANSITIONS) {
-      const fromMap = getSurvivalMapDefinition(transition.from);
-      const toMap = getSurvivalMapDefinition(transition.to);
+    /**
+     * A world-space texture blend sits over the native PBR concrete.
+     * Alpha fades to zero over 22 m, so base grain stays visible; muted linear-light
+     * colour, slab joints, tiny scuffs and irregular edge noise avoid a flat colour bar.
+     */
+    const createTerrainBlendTexture = (
+      width: number,
+      height: number,
+      sampleWorldPosition: (u: number, v: number) => { x: number; z: number; influence: number },
+      salt: number,
+    ) => {
       const canvas = document.createElement('canvas');
-      canvas.width = 512;
-      canvas.height = 256;
+      canvas.width = width;
+      canvas.height = height;
       const context = canvas.getContext('2d');
+      if (!context) return null;
+      const image = context.createImageData(width, height);
+      const hash = (x: number, z: number, extra = 0) => {
+        let value = Math.imul(Math.floor(x * 374761393) ^ Math.floor(z * 668265263) ^ (salt + extra * 1442695041), 1274126177);
+        value = Math.imul(value ^ (value >>> 13), 2246822519);
+        return ((value ^ (value >>> 16)) >>> 0) / 4294967295;
+      };
+      const positiveMod = (value: number, modulus: number) => ((value % modulus) + modulus) % modulus;
 
-      if (context) {
-        const gradient = transition.axis === 'x'
-          ? context.createLinearGradient(0, 0, canvas.width, 0)
-          : context.createLinearGradient(0, 0, 0, canvas.height);
-        const fromOnNegativeSide = isSurvivalWorldTransitionFromNegativeSide(transition);
-        gradient.addColorStop(0, cssColor(fromOnNegativeSide ? fromMap.floorColor : toMap.floorColor));
-        gradient.addColorStop(1, cssColor(fromOnNegativeSide ? toMap.floorColor : fromMap.floorColor));
-        context.fillStyle = gradient;
-        context.fillRect(0, 0, canvas.width, canvas.height);
+      for (let py = 0; py < height; py++) {
+        const v = py / Math.max(1, height - 1);
+        for (let px = 0; px < width; px++) {
+          const u = px / Math.max(1, width - 1);
+          const world = sampleWorldPosition(u, v);
+          const blend = getSurvivalWorldBiomeBlendAtPosition(world.x, world.z);
+          const color = getSurvivalWorldFloorColor(blend.weights);
+          const slabX = positiveMod(world.x + 240, 4.2);
+          const slabZ = positiveMod(world.z + 240, 4.2);
+          const nearSlabJoint = Math.min(slabX, 4.2 - slabX, slabZ, 4.2 - slabZ) < 0.035;
+          const cellNoise = hash(Math.floor(world.x / 1.35), Math.floor(world.z / 1.35));
+          const grain = hash(px, py, 7);
+          const broadWear = Math.sin(world.x * 0.72 + world.z * 0.31 + salt) * 1.7
+            + Math.sin(world.x * 0.21 - world.z * 0.54 + salt * 0.3) * 1.2;
+          const stainCellX = positiveMod(world.x / 1.35 + 0.5, 1) - 0.5;
+          const stainCellZ = positiveMod(world.z / 1.35 + 0.5, 1) - 0.5;
+          const stain = cellNoise > 0.925 && Math.abs(stainCellX) < 0.16 && Math.abs(stainCellZ) < 0.24 ? -8 : 0;
+          const jointShade = nearSlabJoint ? -5 : 0;
+          const noise = (grain - 0.5) * 6 + (cellNoise - 0.5) * 4 + broadWear + stain + jointShade;
+          const offset = (py * width + px) * 4;
+          image.data[offset] = THREE.MathUtils.clamp(((color >> 16) & 255) + noise, 0, 255);
+          image.data[offset + 1] = THREE.MathUtils.clamp(((color >> 8) & 255) + noise, 0, 255);
+          image.data[offset + 2] = THREE.MathUtils.clamp((color & 255) + noise, 0, 255);
 
-        let seed = transition.id.split('').reduce((value, char) => value * 31 + char.charCodeAt(0), 17) >>> 0;
-        const random = () => {
-          seed = (seed * 1664525 + 1013904223) >>> 0;
-          return seed / 0x100000000;
-        };
-        for (let mark = 0; mark < 760; mark++) {
-          context.fillStyle = random() > 0.5 ? 'rgba(12,20,28,0.13)' : 'rgba(235,243,248,0.16)';
-          const size = 0.6 + random() * 2.2;
-          context.fillRect(random() * canvas.width, random() * canvas.height, size, size);
+          // Irregular but continuous fade: no sharp doorway edge and no white strip.
+          const edgeVariation = (hash(Math.floor(world.x * 2), Math.floor(world.z * 2), 13) - 0.5) * 0.08;
+          const alpha = THREE.MathUtils.clamp(world.influence * (0.88 + edgeVariation), 0, 0.92);
+          image.data[offset + 3] = Math.round(alpha * 255);
         }
-        context.strokeStyle = 'rgba(20,32,42,0.30)';
-        context.lineWidth = 3;
-        if (transition.axis === 'x') {
-          for (let x = 64; x < canvas.width; x += 96) {
-            context.beginPath();
-            context.moveTo(x, 0);
-            context.lineTo(x, canvas.height);
-            context.stroke();
-          }
-        } else {
-          for (let y = 44; y < canvas.height; y += 72) {
-            context.beginPath();
-            context.moveTo(0, y);
-            context.lineTo(canvas.width, y);
-            context.stroke();
-          }
-        }
-        const accent = transition.to === 'cold_storage' ? '#a9efff'
-          : transition.to === 'night_sorting' ? '#f472b6'
-            : transition.to === 'container_terminal' ? '#f59e0b' : '#62c6e8';
-        context.save();
-        context.globalAlpha = 0.56;
-        context.strokeStyle = accent;
-        context.lineWidth = 8;
-        context.setLineDash([34, 22]);
-        context.beginPath();
-        if (transition.axis === 'x') {
-          context.moveTo(canvas.width / 2, 0);
-          context.lineTo(canvas.width / 2, canvas.height);
-        } else {
-          context.moveTo(0, canvas.height / 2);
-          context.lineTo(canvas.width, canvas.height / 2);
-        }
-        context.stroke();
-        context.restore();
       }
-
+      context.putImageData(image, 0, 0);
       const texture = new THREE.CanvasTexture(canvas);
       texture.colorSpace = THREE.SRGBColorSpace;
-      texture.anisotropy = 2;
-      const footprint = getSurvivalWorldTransitionFootprint(transition);
-      const transitionMaterial = new THREE.MeshStandardMaterial({
-        map: texture, roughness: 0.86, metalness: 0.08,
-        polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
+      texture.anisotropy = 4;
+      texture.generateMipmaps = true;
+      texture.needsUpdate = true;
+      return texture;
+    };
+
+    const makeBlendSurface = (
+      name: string,
+      width: number,
+      depth: number,
+      position: { x: number; z: number },
+      texture: THREE.CanvasTexture,
+    ) => {
+      const material = new THREE.MeshStandardMaterial({
+        map: texture,
+        color: 0xffffff,
+        roughness: 0.96,
+        metalness: 0.015,
+        transparent: true,
+        opacity: 1,
+        alphaTest: 0.006,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+        polygonOffsetUnits: -2,
       });
-      const transitionSurface = new THREE.Mesh(new THREE.PlaneGeometry(footprint.bandWidth, footprint.bandDepth), transitionMaterial);
-      transitionSurface.name = 'survival-biome-transition-' + transition.id;
-      transitionSurface.rotation.x = -Math.PI / 2;
-      transitionSurface.position.set(transition.centerX, 0.008, transition.centerZ);
-      transitionSurface.castShadow = false;
-      transitionSurface.receiveShadow = false;
-      this.survivalArenaInstanceGeometries.add(transitionSurface.geometry);
-      this.survivalArenaInstanceMaterials.add(transitionMaterial);
+      const surface = new THREE.Mesh(new THREE.PlaneGeometry(width, depth), material);
+      surface.name = name;
+      surface.rotation.x = -Math.PI / 2;
+      surface.position.set(position.x, name === 'survival-biome-four-way-blend' ? 0.013 : 0.008, position.z);
+      surface.castShadow = false;
+      surface.receiveShadow = false;
+      surface.renderOrder = 2;
+      this.survivalArenaInstanceGeometries.add(surface.geometry);
+      this.survivalArenaInstanceMaterials.add(material);
       this.survivalArenaInstanceTextures.add(texture);
-      this.levelRoot.add(transitionSurface);
+      this.levelRoot.add(surface);
+    };
 
-      // Fill the 1 m floor discontinuity along the entire shared biome boundary.
-      const seamWidth = footprint.seamWidth;
-      const seamDepth = footprint.seamDepth;
-      const seamColor = new THREE.Color(fromMap.floorColor).lerp(new THREE.Color(toMap.floorColor), 0.5);
-      const seamMaterial = new THREE.MeshStandardMaterial({
-        color: seamColor, roughness: 0.78, metalness: 0.12,
-      });
-      const seam = new THREE.Mesh(new THREE.PlaneGeometry(seamWidth, seamDepth), seamMaterial);
-      seam.name = 'survival-biome-seam-' + transition.id;
-      seam.rotation.x = -Math.PI / 2;
-      seam.position.set(transition.centerX, -0.006, transition.centerZ);
-      seam.castShadow = false;
-      seam.receiveShadow = true;
-      this.survivalArenaInstanceGeometries.add(seam.geometry);
-      this.survivalArenaInstanceMaterials.add(seamMaterial);
-      this.levelRoot.add(seam);
-      this.platforms.push({
-        x: transition.centerX,
-        y: 0,
-        z: transition.centerZ,
-        width: seamWidth,
-        height: 0.2,
-        depth: seamDepth,
-        type: 'floor',
-      });
-    }
-
-    // Four-way bilinear floor blend prevents a hard colour corner where the four sectors meet.
-    const junctionCanvas = document.createElement('canvas');
-    junctionCanvas.width = 192;
-    junctionCanvas.height = 192;
-    const junctionContext = junctionCanvas.getContext('2d');
-    if (junctionContext) {
-      const palette = [
-        getSurvivalMapDefinition('warehouse_b4').floorColor,
-        getSurvivalMapDefinition('container_terminal').floorColor,
-        getSurvivalMapDefinition('night_sorting').floorColor,
-        getSurvivalMapDefinition('cold_storage').floorColor,
-      ].map((hex) => ({ r: (hex >> 16) & 255, g: (hex >> 8) & 255, b: hex & 255 }));
-      const mixChannel = (a: number, b: number, amount: number) => a + (b - a) * amount;
-      const image = junctionContext.createImageData(junctionCanvas.width, junctionCanvas.height);
-      for (let y = 0; y < junctionCanvas.height; y++) {
-        const vertical = y / (junctionCanvas.height - 1);
-        for (let x = 0; x < junctionCanvas.width; x++) {
-          const horizontal = x / (junctionCanvas.width - 1);
-          const top = {
-            r: mixChannel(palette[0].r, palette[1].r, horizontal),
-            g: mixChannel(palette[0].g, palette[1].g, horizontal),
-            b: mixChannel(palette[0].b, palette[1].b, horizontal),
+    for (const transition of SURVIVAL_WORLD_TRANSITIONS) {
+      const footprint = getSurvivalWorldTransitionFootprint(transition);
+      const width = transition.axis === 'x' ? 256 : 768;
+      const height = transition.axis === 'x' ? 512 : 192;
+      const texture = createTerrainBlendTexture(
+        width,
+        height,
+        (u, v) => {
+          const x = transition.centerX + (u - 0.5) * footprint.bandWidth;
+          const z = transition.centerZ + (v - 0.5) * footprint.bandDepth;
+          const blend = getSurvivalWorldBiomeBlendAtPosition(x, z);
+          return {
+            x, z,
+            influence: transition.axis === 'x' ? blend.xBoundaryInfluence : blend.zBoundaryInfluence,
           };
-          const bottom = {
-            r: mixChannel(palette[2].r, palette[3].r, horizontal),
-            g: mixChannel(palette[2].g, palette[3].g, horizontal),
-            b: mixChannel(palette[2].b, palette[3].b, horizontal),
-          };
-          const offset = (y * junctionCanvas.width + x) * 4;
-          image.data[offset] = Math.round(mixChannel(top.r, bottom.r, vertical));
-          image.data[offset + 1] = Math.round(mixChannel(top.g, bottom.g, vertical));
-          image.data[offset + 2] = Math.round(mixChannel(top.b, bottom.b, vertical));
-          image.data[offset + 3] = 255;
-        }
-      }
-      junctionContext.putImageData(image, 0, 0);
-      const junctionTexture = new THREE.CanvasTexture(junctionCanvas);
-      junctionTexture.colorSpace = THREE.SRGBColorSpace;
-      junctionTexture.anisotropy = 2;
-      const junctionMaterial = new THREE.MeshStandardMaterial({ map: junctionTexture, roughness: 0.82, metalness: 0.10 });
-      const junction = new THREE.Mesh(new THREE.PlaneGeometry(22, 22), junctionMaterial);
-      junction.name = 'survival-biome-four-way-blend';
-      junction.rotation.x = -Math.PI / 2;
-      junction.position.set(0, 0.014, 0);
-      junction.castShadow = false;
-      junction.receiveShadow = false;
-      this.survivalArenaInstanceGeometries.add(junction.geometry);
-      this.survivalArenaInstanceMaterials.add(junctionMaterial);
-      this.survivalArenaInstanceTextures.add(junctionTexture);
-      this.levelRoot.add(junction);
-    }
-
-    // Biome markers are decorative only; player and enemies can cross the full shared edge.
-    const postMaterial = new THREE.MeshStandardMaterial({
-      color: 0xffffff, metalness: 0.62, roughness: 0.34,
-      emissive: 0x17212b, emissiveIntensity: 0.20,
-    });
-    const posts = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), postMaterial, 8);
-    posts.name = 'survival-biome-gateway-posts';
-    const beamMaterial = new THREE.MeshStandardMaterial({
-      color: 0xffffff, metalness: 0.72, roughness: 0.30,
-      emissive: 0x17212b, emissiveIntensity: 0.28,
-    });
-    const beams = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), beamMaterial, 4);
-    beams.name = 'survival-biome-gateway-beams';
-    const transform = new THREE.Object3D();
-    let postIndex = 0;
-
-    for (let index = 0; index < SURVIVAL_WORLD_TRANSITIONS.length; index++) {
-      const transition = SURVIVAL_WORLD_TRANSITIONS[index];
-      const accent = new THREE.Color(getSurvivalMapDefinition(transition.to).accentColor);
-      const halfOpening = transition.markerSpan / 2;
-      const positions = transition.axis === 'x'
-        ? [
-            { x: transition.centerX, z: transition.centerZ - halfOpening },
-            { x: transition.centerX, z: transition.centerZ + halfOpening },
-          ]
-        : [
-            { x: transition.centerX - halfOpening, z: transition.centerZ },
-            { x: transition.centerX + halfOpening, z: transition.centerZ },
-          ];
-
-      for (const point of positions) {
-        transform.position.set(point.x, 2.75, point.z);
-        transform.rotation.set(0, 0, 0);
-        transform.scale.set(0.58, 5.5, 0.58);
-        transform.updateMatrix();
-        posts.setMatrixAt(postIndex, transform.matrix);
-        posts.setColorAt(postIndex, accent);
-        postIndex++;
-      }
-      transform.position.set(transition.centerX, 5.55, transition.centerZ);
-      transform.rotation.set(0, 0, 0);
-      transform.scale.set(
-        transition.axis === 'x' ? 0.56 : transition.markerSpan,
-        0.36,
-        transition.axis === 'x' ? transition.markerSpan : 0.56,
+        },
+        transition.id.split('').reduce((value, char) => Math.imul(value ^ char.charCodeAt(0), 16777619), 2166136261) >>> 0,
       );
-      transform.updateMatrix();
-      beams.setMatrixAt(index, transform.matrix);
-      beams.setColorAt(index, accent);
+      if (!texture) continue;
+      makeBlendSurface(
+        'survival-biome-transition-' + transition.id,
+        footprint.bandWidth,
+        footprint.bandDepth,
+        { x: transition.centerX, z: transition.centerZ },
+        texture,
+      );
     }
 
-    posts.instanceMatrix.needsUpdate = true;
-    beams.instanceMatrix.needsUpdate = true;
-    if (posts.instanceColor) posts.instanceColor.needsUpdate = true;
-    if (beams.instanceColor) beams.instanceColor.needsUpdate = true;
-    this.addSurvivalArenaInstance(posts);
-    this.addSurvivalArenaInstance(beams);
+    // The central 22 × 22 m tile uses all four biome weights and fades on both axes.
+    const junctionTexture = createTerrainBlendTexture(
+      384,
+      384,
+      (u, v) => {
+        const x = (u - 0.5) * 22;
+        const z = (v - 0.5) * 22;
+        const blend = getSurvivalWorldBiomeBlendAtPosition(x, z);
+        return { x, z, influence: blend.junctionInfluence };
+      },
+      0x4b494f,
+    );
+    if (junctionTexture) {
+      makeBlendSurface('survival-biome-four-way-blend', 22, 22, { x: 0, z: 0 }, junctionTexture);
+    }
   }
 
   /** Follow the spatially weighted biome palette instead of starting a timer at a hard seam. */
@@ -4036,7 +3954,7 @@ export class PaleciakiGameEngine {
       group.add(footprint);
     };
 
-    const floorGeometry = new THREE.PlaneGeometry(23.5, 40);
+    const floorGeometry = new THREE.PlaneGeometry(24, 40);
     this.survivalArenaInstanceGeometries.add(floorGeometry);
     const centerFloorGeometry = new THREE.PlaneGeometry(72, 40);
     this.survivalArenaInstanceGeometries.add(centerFloorGeometry);
@@ -4149,10 +4067,10 @@ export class PaleciakiGameEngine {
     for (const side of [-1, 1]) {
       const bayFloor = new THREE.Mesh(floorGeometry, floorMaterial);
       bayFloor.rotation.x = -Math.PI / 2;
-      bayFloor.position.set(side * 47.75, -0.015, 0);
+      bayFloor.position.set(side * 48, -0.015, 0);
       bayFloor.receiveShadow = true;
       this.levelRoot.add(bayFloor);
-      this.platforms.push({ x: side * 47.75, y: 0, z: 0, width: 23.5, height: 0.2, depth: 40, type: 'floor' });
+      this.platforms.push({ x: side * 48, y: 0, z: 0, width: 24, height: 0.2, depth: 40, type: 'floor' });
 
       const edgeIsOpen = side < 0 ? openEdges.west : openEdges.east;
       if (!edgeIsOpen) {

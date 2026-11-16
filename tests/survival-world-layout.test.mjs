@@ -27,7 +27,7 @@ test('all four portals connect reciprocal open edges and keep their intended wid
   assert.equal(edges('container_terminal').south && edges('cold_storage').north, true);
   assert.equal(edges('cold_storage').west && edges('night_sorting').east, true);
   assert.equal(edges('night_sorting').north && edges('warehouse_b4').south, true);
-  assert.deepEqual(SURVIVAL_WORLD_TRANSITIONS.map((portal) => portal.markerSpan), [26, 36, 26, 36]);
+  assert.deepEqual(SURVIVAL_WORLD_TRANSITIONS.map((portal) => portal.axis), ['x', 'z', 'x', 'z']);
 });
 
 test('biome changes are based on global coordinates with stable doorway hysteresis', () => {
@@ -110,10 +110,10 @@ test('route cache returns connected legs for every pair of distinct sectors', ()
 test('biome blends cover the full shared edge and use the correct source-side orientation', () => {
   const footprints = SURVIVAL_WORLD_TRANSITIONS.map(getSurvivalWorldTransitionFootprint);
   assert.deepEqual(footprints, [
-    { bandWidth: 22, bandDepth: 40, seamWidth: 1.25, seamDepth: 40 },
-    { bandWidth: 120, bandDepth: 22, seamWidth: 120, seamDepth: 1.25 },
-    { bandWidth: 22, bandDepth: 40, seamWidth: 1.25, seamDepth: 40 },
-    { bandWidth: 120, bandDepth: 22, seamWidth: 120, seamDepth: 1.25 },
+    { bandWidth: 22, bandDepth: 40 },
+    { bandWidth: 120, bandDepth: 22 },
+    { bandWidth: 22, bandDepth: 40 },
+    { bandWidth: 120, bandDepth: 22 },
   ]);
   assert.deepEqual(SURVIVAL_WORLD_TRANSITIONS.map(isSurvivalWorldTransitionFromNegativeSide), [true, true, false, false]);
 });

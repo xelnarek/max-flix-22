@@ -35,36 +35,36 @@ export interface SurvivalSurfaceProfile {
 /** Four restrained lighting moods: readable silhouettes first, atmosphere second. */
 const SURVIVAL_LIGHTING_PROFILES: Readonly<Record<SurvivalMapId, WorldLightingProfile>> = {
   warehouse_b4: {
-    ambientColor: 0xdde7ef, ambientIntensity: 0.92,
-    hemisphereSkyColor: 0xb6d8ec, hemisphereGroundColor: 0x2b3d4c, hemisphereIntensity: 1.34,
-    directionalColor: 0xffe4c4, directionalIntensity: 2.72,
-    rimColor: 0x62c6e8, rimIntensity: 1.16,
+    ambientColor: 0xdde7ef, ambientIntensity: 0.86,
+    hemisphereSkyColor: 0xb6d8ec, hemisphereGroundColor: 0x2b3d4c, hemisphereIntensity: 1.20,
+    directionalColor: 0xffe4c4, directionalIntensity: 2.42,
+    rimColor: 0x62c6e8, rimIntensity: 1.02,
     fogColor: 0x101b27, fogNear: 50, fogFar: 132,
-    environmentIntensity: 0.48, exposure: 1.07,
+    environmentIntensity: 0.46, exposure: 1.00,
   },
   container_terminal: {
-    ambientColor: 0xd5e1eb, ambientIntensity: 0.94,
-    hemisphereSkyColor: 0x9fc9e4, hemisphereGroundColor: 0x263747, hemisphereIntensity: 1.30,
-    directionalColor: 0xffd8b0, directionalIntensity: 2.62,
-    rimColor: 0xf3a15f, rimIntensity: 1.28,
+    ambientColor: 0xd5e1eb, ambientIntensity: 0.86,
+    hemisphereSkyColor: 0x9fc9e4, hemisphereGroundColor: 0x263747, hemisphereIntensity: 1.18,
+    directionalColor: 0xffd8b0, directionalIntensity: 2.34,
+    rimColor: 0xf3a15f, rimIntensity: 1.10,
     fogColor: 0x172536, fogNear: 58, fogFar: 146,
-    environmentIntensity: 0.50, exposure: 1.08,
+    environmentIntensity: 0.47, exposure: 1.00,
   },
   cold_storage: {
-    ambientColor: 0xc8e5f3, ambientIntensity: 0.98,
-    hemisphereSkyColor: 0x91cbe9, hemisphereGroundColor: 0x1b3a50, hemisphereIntensity: 1.34,
-    directionalColor: 0xd8f1ff, directionalIntensity: 2.46,
-    rimColor: 0x63d8ed, rimIntensity: 1.34,
+    ambientColor: 0xc8e5f3, ambientIntensity: 0.88,
+    hemisphereSkyColor: 0x91cbe9, hemisphereGroundColor: 0x1b3a50, hemisphereIntensity: 1.22,
+    directionalColor: 0xd8f1ff, directionalIntensity: 2.24,
+    rimColor: 0x63d8ed, rimIntensity: 1.16,
     fogColor: 0x0a2638, fogNear: 44, fogFar: 112,
-    environmentIntensity: 0.54, exposure: 1.06,
+    environmentIntensity: 0.50, exposure: 1.00,
   },
   night_sorting: {
-    ambientColor: 0xd8c9e8, ambientIntensity: 0.90,
-    hemisphereSkyColor: 0xa99acb, hemisphereGroundColor: 0x211b37, hemisphereIntensity: 1.23,
-    directionalColor: 0xffc8df, directionalIntensity: 2.34,
-    rimColor: 0xe879c8, rimIntensity: 1.42,
+    ambientColor: 0xd8c9e8, ambientIntensity: 0.86,
+    hemisphereSkyColor: 0xa99acb, hemisphereGroundColor: 0x211b37, hemisphereIntensity: 1.12,
+    directionalColor: 0xffc8df, directionalIntensity: 2.22,
+    rimColor: 0xe879c8, rimIntensity: 1.18,
     fogColor: 0x17132b, fogNear: 42, fogFar: 108,
-    environmentIntensity: 0.42, exposure: 1.07,
+    environmentIntensity: 0.40, exposure: 1.00,
   },
 };
 
@@ -115,28 +115,28 @@ export const PVP_LIGHTING_PROFILE: WorldLightingProfile & { backgroundColor: num
 
 const SURVIVAL_SURFACE_PROFILES: Readonly<Record<SurvivalMapId, SurvivalSurfaceProfile>> = {
   warehouse_b4: {
-    floorRoughness: 0.66, floorMetalness: 0.12,
+    floorRoughness: 0.86, floorMetalness: 0.035,
     wallRoughness: 0.74, wallMetalness: 0.28,
     trimRoughness: 0.48, trimMetalness: 0.24, trimEmissiveIntensity: 0.08,
     palletColor: 0x76513a, crateColors: [0x526274, 0x98652e, 0x394b5e],
     barrierRoughness: 0.72, barrierMetalness: 0.12,
   },
   container_terminal: {
-    floorRoughness: 0.74, floorMetalness: 0.22,
+    floorRoughness: 0.88, floorMetalness: 0.045,
     wallRoughness: 0.66, wallMetalness: 0.42,
     trimRoughness: 0.42, trimMetalness: 0.36, trimEmissiveIntensity: 0.14,
     palletColor: 0x795034, crateColors: [0x61778a, 0xa66a3c, 0x40566b],
     barrierRoughness: 0.68, barrierMetalness: 0.22,
   },
   cold_storage: {
-    floorRoughness: 0.48, floorMetalness: 0.22,
+    floorRoughness: 0.90, floorMetalness: 0.045,
     wallRoughness: 0.56, wallMetalness: 0.34,
     trimRoughness: 0.36, trimMetalness: 0.28, trimEmissiveIntensity: 0.18,
     palletColor: 0x7894a3, crateColors: [0x9cbac7, 0x708c9a, 0x526f7e],
     barrierRoughness: 0.64, barrierMetalness: 0.16,
   },
   night_sorting: {
-    floorRoughness: 0.54, floorMetalness: 0.34,
+    floorRoughness: 0.92, floorMetalness: 0.055,
     wallRoughness: 0.64, wallMetalness: 0.44,
     trimRoughness: 0.34, trimMetalness: 0.42, trimEmissiveIntensity: 0.22,
     palletColor: 0x533d60, crateColors: [0x50456e, 0x784a65, 0x343550],
@@ -217,6 +217,22 @@ export function getSurvivalWorldBackgroundColor(weights: SurvivalWorldBiomeBlend
   const channels = [0, 0, 0];
   for (const mapId of SURVIVAL_MAP_IDS) {
     const hex = getSurvivalMapDefinition(mapId).backgroundColor;
+    const weight = weights[mapId];
+    channels[0] += srgbChannelToLinear((hex >> 16) & 255) * weight;
+    channels[1] += srgbChannelToLinear((hex >> 8) & 255) * weight;
+    channels[2] += srgbChannelToLinear(hex & 255) * weight;
+  }
+  return (Math.round(linearChannelToSrgb(channels[0])) << 16)
+    | (Math.round(linearChannelToSrgb(channels[1])) << 8)
+    | Math.round(linearChannelToSrgb(channels[2]));
+}
+
+
+/** World-space floor albedo, mixed in linear light to avoid pale/white transition bands. */
+export function getSurvivalWorldFloorColor(weights: SurvivalWorldBiomeBlendWeights): number {
+  const channels = [0, 0, 0];
+  for (const mapId of SURVIVAL_MAP_IDS) {
+    const hex = getSurvivalMapDefinition(mapId).floorColor;
     const weight = weights[mapId];
     channels[0] += srgbChannelToLinear((hex >> 16) & 255) * weight;
     channels[1] += srgbChannelToLinear((hex >> 8) & 255) * weight;
