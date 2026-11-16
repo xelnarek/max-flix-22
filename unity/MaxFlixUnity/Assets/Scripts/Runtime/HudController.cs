@@ -448,7 +448,8 @@ namespace MaxFlix.Unity.Runtime
             if (_modalOverlay != null) Destroy(_modalOverlay);
             _modalOverlay = new GameObject("Game modal overlay", typeof(RectTransform), typeof(Image));
             RectTransform overlayRect = _modalOverlay.GetComponent<RectTransform>();
-            overlayRect.SetParent(transform, false);
+            RectTransform modalHost = _safeAreaRoot != null ? _safeAreaRoot : (RectTransform)transform;
+            overlayRect.SetParent(modalHost, false);
             overlayRect.anchorMin = Vector2.zero;
             overlayRect.anchorMax = Vector2.one;
             overlayRect.offsetMin = Vector2.zero;
@@ -462,35 +463,52 @@ namespace MaxFlix.Unity.Runtime
             panelRect.anchorMax = new Vector2(0.5f, 0.5f);
             panelRect.pivot = new Vector2(0.5f, 0.5f);
             panelRect.anchoredPosition = Vector2.zero;
-            Canvas rootCanvas = GetComponent<Canvas>();
-            float scaleFactor = rootCanvas != null ? Mathf.Max(0.35f, rootCanvas.scaleFactor) : 1f;
-            float availableWidth = Screen.width / scaleFactor - 36f;
-            float availableHeight = Screen.height / scaleFactor - 36f;
+            float availableWidth = Mathf.Max(1f, modalHost.rect.width - 24f);
+            float availableHeight = Mathf.Max(1f, modalHost.rect.height - 24f);
             float panelWidth = Mathf.Min(820f, availableWidth);
             float panelHeight = Mathf.Min(520f, availableHeight);
-            panelRect.sizeDelta = new Vector2(Mathf.Max(300f, panelWidth), Mathf.Max(310f, panelHeight));
+            panelRect.sizeDelta = new Vector2(panelWidth, panelHeight);
             panel.GetComponent<Image>().color = new Color(0.055f, 0.085f, 0.12f, 0.99f);
             Outline border = panel.GetComponent<Outline>();
             border.effectColor = new Color(0.20f, 0.49f, 0.64f, 0.95f);
             border.effectDistance = new Vector2(2f, -2f);
 
-            Text titleText = CreateText(panelRect, title, new Vector2(0f, -30f), new Vector2(590f, 58f), 30, TextAnchor.MiddleCenter);
+            int titleFontSize = Mathf.RoundToInt(Mathf.Clamp(panelWidth * 0.048f, 16f, 30f));
+            Text titleText = CreateText(panelRect, title, new Vector2(0f, -22f),
+                new Vector2(Mathf.Max(1f, panelWidth - 32f), 54f), titleFontSize, TextAnchor.MiddleCenter);
             titleText.rectTransform.anchorMin = new Vector2(0.5f, 1f);
             titleText.rectTransform.anchorMax = new Vector2(0.5f, 1f);
             titleText.rectTransform.pivot = new Vector2(0.5f, 1f);
             bool isDamageReport = body.Contains("OBRAŻENIA WG ŹRÓDŁA");
-            Text bodyText = CreateText(panelRect, body, new Vector2(0f, -112f),
-                new Vector2(panelWidth - 64f, isDamageReport ? panelHeight - 230f : panelHeight - 245f),
-                isDamageReport ? 16 : 20, TextAnchor.MiddleCenter);
+            float bodyHeight = Mathf.Max(70f, panelHeight - 230f);
+            Text bodyText = CreateText(panelRect, body, new Vector2(0f, -96f),
+                new Vector2(Mathf.Max(1f, panelWidth - 32f), bodyHeight),
+                isDamageReport ? 14 : Mathf.RoundToInt(Mathf.Clamp(panelWidth * 0.043f, 13f, 19f)),
+                TextAnchor.MiddleCenter);
             bodyText.rectTransform.anchorMin = new Vector2(0.5f, 1f);
             bodyText.rectTransform.anchorMax = new Vector2(0.5f, 1f);
             bodyText.rectTransform.pivot = new Vector2(0.5f, 1f);
-            CreateAnchoredButton(panelRect, primaryLabel, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(1f, 0.5f), new Vector2(-8f, 54f), new Vector2(Mathf.Min(270f, panelWidth * 0.39f), 68f),
-                new Color(0.10f, 0.52f, 0.40f, 1f), 18, primaryAction);
-            CreateAnchoredButton(panelRect, secondaryLabel, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 0.5f), new Vector2(8f, 54f), new Vector2(Mathf.Min(270f, panelWidth * 0.39f), 68f),
-                new Color(0.19f, 0.27f, 0.37f, 1f), 18, secondaryAction);
+
+            if (panelWidth < 560f)
+            {
+                float buttonWidth = Mathf.Max(1f, panelWidth - 32f);
+                CreateAnchoredButton(panelRect, primaryLabel, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                    new Vector2(0.5f, 0.5f), new Vector2(0f, 56f), new Vector2(buttonWidth, 48f),
+                    new Color(0.10f, 0.52f, 0.40f, 1f), 15, primaryAction);
+                CreateAnchoredButton(panelRect, secondaryLabel, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                    new Vector2(0.5f, 0.5f), new Vector2(0f, 112f), new Vector2(buttonWidth, 48f),
+                    new Color(0.19f, 0.27f, 0.37f, 1f), 15, secondaryAction);
+            }
+            else
+            {
+                float buttonWidth = Mathf.Min(270f, panelWidth * 0.39f);
+                CreateAnchoredButton(panelRect, primaryLabel, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                    new Vector2(1f, 0.5f), new Vector2(-8f, 54f), new Vector2(buttonWidth, 68f),
+                    new Color(0.10f, 0.52f, 0.40f, 1f), 18, primaryAction);
+                CreateAnchoredButton(panelRect, secondaryLabel, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                    new Vector2(0f, 0.5f), new Vector2(8f, 54f), new Vector2(buttonWidth, 68f),
+                    new Color(0.19f, 0.27f, 0.37f, 1f), 18, secondaryAction);
+            }
         }
 
         private static Text CreateText(RectTransform parent, string value, Vector2 anchoredPosition, Vector2 size, int fontSize, TextAnchor alignment)
