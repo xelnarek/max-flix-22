@@ -245,6 +245,18 @@ try {
   ]) {
     if (!biomeEnvironment.includes(token)) fail('Biome ambience controller is missing continuous visual blending: ' + token);
   }
+  const evolutionPassiveBlock = weaponCatalog.match(/private static readonly string\[\] PassiveIds\s*=\s*\{([\s\S]*?)\};/);
+  const availableEvolutionPassives = evolutionPassiveBlock
+    ? [...evolutionPassiveBlock[1].matchAll(/"([^"]+)"/g)].map((match) => match[1])
+    : [];
+  const evolutionRequirements = [...weaponCatalog.matchAll(/Make\(SurvivalWeaponKind\.([A-Za-z0-9_]+),[^\n]*,\s*"([a-z_]+)"\),?/g)];
+  if (evolutionRequirements.length !== 12) fail('All 12 Unity Survival weapons must define an evolution passive requirement.');
+  for (const [, weapon, passive] of evolutionRequirements) {
+    if (!availableEvolutionPassives.includes(passive)) fail(weapon + ' evolution passive is not available: ' + passive);
+    if (!progressionController.includes('AddPassive(pool, "' + passive + '"')) fail(weapon + ' evolution passive is not offered in drafts: ' + passive);
+    if (!progressionController.includes('case "' + passive + '":')) fail(weapon + ' evolution passive has no implementation: ' + passive);
+  }
+
   for (const token of [
     'GetBlendedEnemyHealthMultiplier',
     'GetBlendedEnemySpeedMultiplier',
