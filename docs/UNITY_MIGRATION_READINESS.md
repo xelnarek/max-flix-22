@@ -16,7 +16,7 @@ This work prepares a safer, repeatable path: source-data contracts are audited i
 - Before a Player build, Unity checks its URP assignment, Bootstrap scene, Android identity, IL2CPP/ARM64, API 26/36, landscape orientation, Android frame pacing, the WebGPU/WebGL 2 API order, and stable content-catalog counts.
 - The same five operator IDs, 23 enemy IDs, 15 perk IDs, four map IDs and twelve weapon IDs are checked against the TypeScript reference data by `npm run audit:unity`.
 - Unity biome floor colours now match the live game instead of using the earlier pale/white values.
-- The C# topology contract records the live 240 × 80 m Survival world: four biome centres, four open shared edges, four 18 m transition bands and bilinear blend weights.
+- The C# topology contract records the live 240 × 80 m Survival world: four biome centres, four open shared edges, four 22 m transition bands and bilinear blend weights.
 
 ## Blocking gaps before feature parity
 
