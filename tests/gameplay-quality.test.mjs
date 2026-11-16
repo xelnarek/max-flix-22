@@ -1300,8 +1300,10 @@ test('Survival assembles four physical biome sections into one connected world',
   assert.match(game, /this\.disposeTemporaryObject\(worldRoot\)/);
   assert.match(layout, /SURVIVAL_WORLD_WIDTH/);
   assert.match(layout, /SURVIVAL_WORLD_DEPTH/);
-  assert.match(layout, /openingWidth: 26/);
-  assert.match(layout, /openingWidth: 36/);
+  assert.match(layout, /markerSpan: 26/);
+  assert.match(layout, /markerSpan: 36/);
+  assert.match(game, /if \(edgeIsOpen\) continue/);
+  assert.match(game, /survival-biome-four-way-blend/);
   assert.match(maps, /secretLocations:/);
 });
 
