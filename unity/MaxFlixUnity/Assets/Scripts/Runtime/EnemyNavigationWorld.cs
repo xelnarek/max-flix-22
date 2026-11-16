@@ -49,6 +49,69 @@ namespace MaxFlix.Unity.Runtime
                 actorPosition, targetPosition, actorInstanceId, clearance);
         }
 
+        public static bool HasClearLineToTarget(
+            Vector3 actorPosition,
+            Vector3 targetPosition,
+            float clearance = 0.12f)
+        {
+            return _active == null || _active.HasClearPath(actorPosition, targetPosition, clearance);
+        }
+
+        private bool HasClearPath(Vector3 actorPosition, Vector3 targetPosition, float clearance)
+        {
+            if (_obstacles.Length == 0) return true;
+            Vector2 origin = new Vector2(actorPosition.x, actorPosition.z);
+            Vector2 target = new Vector2(targetPosition.x, targetPosition.z);
+            Vector2 delta = target - origin;
+            float distance = delta.magnitude;
+            if (distance < Epsilon) return true;
+
+            Vector2 direction = delta / distance;
+            float safeClearance = Mathf.Max(0f, clearance);
+            int minCellX = Mathf.FloorToInt((Mathf.Min(origin.x, target.x) - safeClearance) / SpatialCellSize);
+            int maxCellX = Mathf.FloorToInt((Mathf.Max(origin.x, target.x) + safeClearance) / SpatialCellSize);
+            int minCellZ = Mathf.FloorToInt((Mathf.Min(origin.y, target.y) - safeClearance) / SpatialCellSize);
+            int maxCellZ = Mathf.FloorToInt((Mathf.Max(origin.y, target.y) + safeClearance) / SpatialCellSize);
+
+            unchecked { _queryVersion++; }
+            if (_queryVersion == 0)
+            {
+                System.Array.Clear(_seenObstacleVersion, 0, _seenObstacleVersion.Length);
+                _queryVersion = 1;
+            }
+
+            for (int cellX = minCellX; cellX <= maxCellX; cellX++)
+            {
+                for (int cellZ = minCellZ; cellZ <= maxCellZ; cellZ++)
+                {
+                    if (!_obstacleCells.TryGetValue(new Vector2Int(cellX, cellZ), out List<int> candidates))
+                        continue;
+
+                    for (int candidateIndex = 0; candidateIndex < candidates.Count; candidateIndex++)
+                    {
+                        int index = candidates[candidateIndex];
+                        if (index < 0 || index >= _obstacles.Length || _seenObstacleVersion[index] == _queryVersion)
+                            continue;
+                        _seenObstacleVersion[index] = _queryVersion;
+
+                        Bounds obstacle = _obstacles[index];
+                        float minX = obstacle.min.x - safeClearance;
+                        float maxX = obstacle.max.x + safeClearance;
+                        float minZ = obstacle.min.z - safeClearance;
+                        float maxZ = obstacle.max.z + safeClearance;
+                        if (origin.x >= minX && origin.x <= maxX
+                            && origin.y >= minZ && origin.y <= maxZ)
+                            return false;
+                        if (TryRayBoxEntry(origin, direction, distance,
+                            minX, maxX, minZ, maxZ, out _))
+                            return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
         private Vector3 CalculateObstacleAvoidance(
             Vector3 actorPosition,
             Vector3 targetPosition,
