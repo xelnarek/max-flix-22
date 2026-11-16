@@ -7,7 +7,7 @@ namespace MaxFlix.Unity.Runtime
     /// World-space pickup for one of the five stable secrets in every Survival
     /// biome. Each object owns one trigger; its low-poly prop is collider-free.
     /// </summary>
-    [RequireComponent(typeof(SphereCollider))]
+    [RequireComponent(typeof(SphereCollider), typeof(Rigidbody))]
     public sealed class SurvivalSecretPickup : MonoBehaviour
     {
         private static readonly Dictionary<long, Material> Materials = new Dictionary<long, Material>();
@@ -68,6 +68,17 @@ namespace MaxFlix.Unity.Runtime
             trigger.isTrigger = true;
             trigger.radius = 1.35f;
             trigger.center = new Vector3(0f, 0.9f, 0f);
+
+            // Unity trigger callbacks need a Rigidbody on at least one side.
+            // The operator uses a CharacterController, so make the pickup the
+            // kinematic side of the trigger pair; it must never be pushed or
+            // affected by gravity while the player walks through it.
+            Rigidbody body = GetComponent<Rigidbody>();
+            body.isKinematic = true;
+            body.useGravity = false;
+            body.detectCollisions = true;
+            body.constraints = RigidbodyConstraints.FreezeAll;
+            body.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
 
             bool isReplayableChallenge = definition.Style == SurvivalSecretStyle.RabbitHole
                 || definition.Style == SurvivalSecretStyle.Necronomicon;
