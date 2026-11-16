@@ -415,7 +415,7 @@ namespace MaxFlix.Unity.Runtime
 
         private void BuildDraftUi()
         {
-            EnsureEventSystem();
+            UiEventSystemInstaller.Ensure();
             _draftCanvas = new GameObject("Survival level-up draft", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             Canvas canvas = _draftCanvas.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -429,11 +429,20 @@ namespace MaxFlix.Unity.Runtime
             Image shade = _draftCanvas.AddComponent<Image>();
             shade.color = new Color(0.01f, 0.02f, 0.04f, 0.86f);
 
+            GameObject safeAreaObject = new GameObject("Draft safe area", typeof(RectTransform));
+            RectTransform safeRoot = safeAreaObject.GetComponent<RectTransform>();
+            safeRoot.SetParent(root, false);
+            safeRoot.anchorMin = Vector2.zero;
+            safeRoot.anchorMax = Vector2.one;
+            safeRoot.offsetMin = Vector2.zero;
+            safeRoot.offsetMax = Vector2.zero;
+            safeAreaObject.AddComponent<SafeAreaLayout>();
+
             GameObject panel = new GameObject("Draft panel", typeof(RectTransform), typeof(Image), typeof(Outline));
             RectTransform panelRect = panel.GetComponent<RectTransform>();
-            panelRect.SetParent(root, false);
-            panelRect.anchorMin = new Vector2(0.04f, 0.07f);
-            panelRect.anchorMax = new Vector2(0.96f, 0.93f);
+            panelRect.SetParent(safeRoot, false);
+            panelRect.anchorMin = new Vector2(0.035f, 0.045f);
+            panelRect.anchorMax = new Vector2(0.965f, 0.955f);
             panelRect.offsetMin = Vector2.zero;
             panelRect.offsetMax = Vector2.zero;
             panel.GetComponent<Image>().color = new Color(0.045f, 0.075f, 0.11f, 0.99f);
@@ -444,14 +453,19 @@ namespace MaxFlix.Unity.Runtime
             string title = _isBossReward ? "NAGRODA BOSS-A" : _isPromotion
                 ? "AWANS RANGI • " + RankName
                 : "ROZWÓJ OPERATORA • POZIOM " + _level;
-            _draftTitle = CreateText(panelRect, title, new Vector2(0.5f, 1f), new Vector2(0f, -24f),
-                new Vector2(980f, 62f), 34, TextAnchor.MiddleCenter, Color.white);
+            Canvas.ForceUpdateCanvases();
+            float panelWidth = Mathf.Max(1f, panelRect.rect.width);
+            _draftTitle = CreateText(panelRect, title, new Vector2(0.5f, 1f), new Vector2(0f, -22f),
+                new Vector2(panelWidth - 32f, 56f), Mathf.RoundToInt(Mathf.Clamp(panelWidth * 0.026f, 18f, 34f)),
+                TextAnchor.MiddleCenter, Color.white);
             _draftSubtitle = CreateText(panelRect,
                 _isBossReward ? "Pokonanie bossa daje wybór legendarnego ulepszenia." :
                 "Wybierz jeden moduł. Symulacja jest wstrzymana do podjęcia decyzji.",
-                new Vector2(0.5f, 1f), new Vector2(0f, -88f), new Vector2(1000f, 42f),
-                18, TextAnchor.MiddleCenter, new Color(0.65f, 0.78f, 0.88f));
+                new Vector2(0.5f, 1f), new Vector2(0f, -82f), new Vector2(panelWidth - 40f, 38f),
+                Mathf.RoundToInt(Mathf.Clamp(panelWidth * 0.014f, 13f, 18f)),
+                TextAnchor.MiddleCenter, new Color(0.65f, 0.78f, 0.88f));
 
+            Canvas.ForceUpdateCanvases();
             CreateCardGrid(panelRect);
             CreateBottomControls(panelRect);
         }
@@ -474,11 +488,15 @@ namespace MaxFlix.Unity.Runtime
             grid.spacing = new Vector2(14f, 14f);
             grid.padding = new RectOffset(3, 3, 3, 3);
             float scale = Mathf.Max(0.5f, _draftCanvas.GetComponent<Canvas>().scaleFactor);
-            float availableWidth = Screen.width / scale * 0.88f - 30f;
+            float safeWidth = Screen.safeArea.width / scale;
+            float safeHeight = Screen.safeArea.height / scale;
+            float availableWidth = Mathf.Max(120f, safeWidth * 0.84f - 30f);
             float width = portrait ? availableWidth : (availableWidth - (columns - 1) * 14f) / columns;
-            float availableHeight = Screen.height / scale * 0.60f;
-            float height = portrait ? Mathf.Clamp(availableHeight / Mathf.Max(1, _currentCards.Count), 108f, 154f) : Mathf.Clamp(availableHeight, 210f, 300f);
-            grid.cellSize = new Vector2(Mathf.Max(210f, width), height);
+            float availableHeight = safeHeight * 0.48f;
+            float height = portrait
+                ? Mathf.Clamp(availableHeight / Mathf.Max(1, _currentCards.Count), 96f, 140f)
+                : Mathf.Clamp(availableHeight, 180f, 300f);
+            grid.cellSize = new Vector2(Mathf.Max(120f, width), height);
 
             foreach (SurvivalUpgradeCard card in _currentCards)
                 CreateUpgradeButton(gridRect, grid, card);
@@ -504,9 +522,10 @@ namespace MaxFlix.Unity.Runtime
             outline.effectColor = accent;
             outline.effectDistance = new Vector2(2f, -2f);
 
+            int cardTitleSize = Mathf.RoundToInt(Mathf.Clamp(grid.cellSize.x * 0.055f, 14f, grid.cellSize.y > 180f ? 24f : 20f));
             Text title = CreateText(rect, card.Icon + "  " + card.Title,
                 new Vector2(0.5f, 1f), new Vector2(0f, -14f),
-                new Vector2(0f, 58f), grid.cellSize.y > 180f ? 24 : 21,
+                new Vector2(0f, 58f), cardTitleSize,
                 TextAnchor.MiddleCenter, accent);
             title.rectTransform.anchorMin = new Vector2(0f, 1f);
             title.rectTransform.anchorMax = new Vector2(1f, 1f);
@@ -520,6 +539,7 @@ namespace MaxFlix.Unity.Runtime
             description.rectTransform.anchorMax = new Vector2(1f, 1f);
             description.rectTransform.offsetMin = new Vector2(14f, 12f);
             description.rectTransform.offsetMax = new Vector2(-14f, -70f);
+            description.fontSize = Mathf.RoundToInt(Mathf.Clamp(grid.cellSize.x * 0.038f, 12f, 17f));
             description.fontStyle = FontStyle.Normal;
             description.alignment = TextAnchor.MiddleCenter;
             description.raycastTarget = false;
@@ -527,15 +547,19 @@ namespace MaxFlix.Unity.Runtime
 
         private void CreateBottomControls(RectTransform panelRect)
         {
+            float width = Mathf.Max(1f, panelRect.rect.width);
+            float buttonWidth = Mathf.Clamp(width * 0.24f, 170f, 280f);
             Text progress = CreateText(panelRect,
                 "XP  " + _xp + "/" + _xpToNext + "    •    " + RankName + "    •    PRZERZUTY " + _rerolls,
-                new Vector2(0.5f, 0f), new Vector2(0f, 20f),
-                new Vector2(900f, 34f), 16, TextAnchor.MiddleCenter, new Color(0.66f, 0.80f, 0.90f));
+                new Vector2(0.5f, 0f), new Vector2(0f, 18f),
+                new Vector2(Mathf.Max(1f, width - 40f), 34f),
+                Mathf.RoundToInt(Mathf.Clamp(width * 0.012f, 12f, 16f)),
+                TextAnchor.MiddleCenter, new Color(0.66f, 0.80f, 0.90f));
 
             bool canReroll = _rerolls > 0 && !_isBossReward;
             _rerollButton = CreateButton(panelRect,
                 canReroll ? "PRZERZUĆ (" + _rerolls + ")" : "PRZERZUT NIEDOSTĘPNY",
-                new Vector2(0.5f, 0f), new Vector2(0f, 66f), new Vector2(280f, 62f),
+                new Vector2(0.5f, 0f), new Vector2(0f, 66f), new Vector2(buttonWidth, 54f),
                 new Color(0.18f, 0.27f, 0.37f, 1f), delegate { RerollCards(); }, canReroll);
             _rerollLabel = _rerollButton.GetComponentInChildren<Text>();
             if (_rerollLabel != null) _rerollLabel.text = canReroll ? "PRZERZUĆ (" + _rerolls + ")" : "PRZERZUT NIEDOSTĘPNY";
@@ -722,14 +746,6 @@ namespace MaxFlix.Unity.Runtime
             text.rectTransform.anchoredPosition = Vector2.zero;
             text.rectTransform.sizeDelta = Vector2.zero;
             return button;
-        }
-
-        private static void EnsureEventSystem()
-        {
-            if (FindFirstObjectByType<EventSystem>() != null) return;
-            GameObject eventSystem = new GameObject("EventSystem", typeof(EventSystem));
-            InputSystemUIInputModule module = eventSystem.AddComponent<InputSystemUIInputModule>();
-            module.pointerBehavior = UIPointerBehavior.SingleMouseOrPenButMultiTouchAndTrack;
         }
 
         private void OnDestroy()
