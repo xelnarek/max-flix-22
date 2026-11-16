@@ -15,7 +15,7 @@ namespace MaxFlix.Unity.Runtime
 
         private Transform _player;
         private Light _keyLight;
-        private float _refreshRemaining;
+        private float _elapsedSinceRefresh;
 
         public void Initialize(Transform player)
         {
@@ -40,10 +40,11 @@ namespace MaxFlix.Unity.Runtime
         private void LateUpdate()
         {
             if (_player == null) return;
-            _refreshRemaining -= Time.deltaTime;
-            if (_refreshRemaining > 0f) return;
-            _refreshRemaining = RefreshIntervalSeconds;
-            float blend = 1f - Mathf.Exp(-BlendSharpness * Time.deltaTime);
+            _elapsedSinceRefresh += Time.deltaTime;
+            if (_elapsedSinceRefresh < RefreshIntervalSeconds) return;
+            float elapsed = _elapsedSinceRefresh;
+            _elapsedSinceRefresh = 0f;
+            float blend = 1f - Mathf.Exp(-BlendSharpness * elapsed);
             ApplyBlend(blend);
         }
 
