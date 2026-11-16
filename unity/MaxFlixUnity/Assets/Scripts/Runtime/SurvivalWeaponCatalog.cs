@@ -50,7 +50,7 @@ namespace MaxFlix.Unity.Runtime
             Make(SurvivalWeaponKind.DiamondSaw, "Tarcza diamentowa", "TARCZA RYKOSZETU", "Ostrze przebija linię przeciwników i odbija się od granicy areny.", "◈", 9.7f, 55f, new Color(0.13f, 0.83f, 0.92f), "range"),
             Make(SurvivalWeaponKind.GlueMine, "Mina Mapei", "MAPEI BLACKOUT", "Mina obszarowa spowalniająca i rozbijająca szyk wrogów.", "●", 11.3f, 80f, new Color(0.65f, 0.49f, 0.98f), "magnet"),
             Make(SurvivalWeaponKind.KfcBomber, "Kubełek bombowy", "KUBEŁEK FURII", "Pocisk obszarowy z efektem podpalenia celów.", "✦", 12.7f, 105f, new Color(0.94f, 0.27f, 0.27f), "scavenger"),
-            Make(SurvivalWeaponKind.PiorunDrone, "Dron Piorun", "PIORUN CHAIN MK II", "Szybki pocisk samonaprowadzający z dodatkowym przebiciem.", "⬡", 10.4f, 130f, new Color(0.22f, 0.74f, 0.97f), "drone"),
+            Make(SurvivalWeaponKind.PiorunDrone, "Dron Piorun", "PIORUN CHAIN MK II", "Szybki pocisk samonaprowadzający z dodatkowym przebiciem.", "⬡", 10.4f, 130f, new Color(0.22f, 0.74f, 0.97f), "range"),
             Make(SurvivalWeaponKind.ForkliftBolter, "Nitownica UDT", "NITOWNICA OBLĘŻNICZA", "Wąski, bardzo szybki pocisk przebijający kilka celów.", "⟡", 7.0f, 155f, new Color(0.98f, 0.75f, 0.14f), "rapid"),
             Make(SurvivalWeaponKind.ScannerPulse, "Impuls skanera B4", "SKANER TOTALNY", "Namierzający impuls przebijający zwartą formację.", "⌁", 9.0f, 180f, new Color(0.40f, 0.91f, 0.97f), "range"),
             Make(SurvivalWeaponKind.OrbitBlades, "Wirujące tarcze", "ORBITALNA STREFA BHP", "Ostrza krążące wokół operatora i chroniące bliski dystans.", "⚙", 14.5f, 205f, new Color(0.53f, 0.94f, 0.68f), "armor"),
@@ -63,7 +63,7 @@ namespace MaxFlix.Unity.Runtime
         private static readonly string[] PassiveIds =
         {
             "damage", "rapid", "critical", "critical_damage", "boots", "magnet",
-            "reinforced", "medkit", "range", "growth", "armor"
+            "reinforced", "medkit", "range", "growth", "armor", "scavenger", "regen"
         };
 
         public static SurvivalWeaponProfile[] GetAll()
