@@ -21,6 +21,8 @@ This work prepares a safer, repeatable path: source-data contracts are audited i
 - Four transition overlays are generated from 64 × 64 textures sampled from the same bilinear biome weights. Floor colour, fog, ambient lighting and directional-light tint can blend across the seams without scene changes.
 - Enemy health/speed multipliers are weighted at the actual spawn position; XP bonuses are weighted at the enemy defeat position. Wave/horde spawn points are clamped to the 240 × 80 m bounds and checked against colliders.
 - Fixed the Night Sorting scanner-gate placement formula so all three gates are evenly spaced inside the 40 m biome depth instead of placing one gate outside the sector.
+- Ported the complete five-secret catalogue into each biome (20 pickups total), including the previously absent Necronomicon style. Pickups use the canonical biome world offsets, award +750 points, save discovery keys and increment the run secret count.
+- Added independent touch/keyboard 2D encounters: Rabbit Hole platformer (three lives, three watches, checkpoints, hazards, 68-second timer) and Necronomicon/Cthulhu boss fight (180 HP, two phases, three telegraphed attacks, timed vulnerable core and victory reward). Both run over a paused Survival world and return the player to the same 3D session.
 
 ## Blocking gaps before feature parity
 
@@ -40,7 +42,7 @@ The strict pipeline stages and validates 17 CC0 GLB rigs. The runtime still uses
 - Firebase/Google sign-in, cloud saves, account talents/ranks and leaderboard.
 - AdMob rewarded/interstitial integration and UMP privacy flow.
 - Full Survival contracts, mutators, wave events, all weapon/passive semantics, all enemy special behaviours, bosses and rewards.
-- Necronomicon, Rabbit Hole, all secret triggers, bonus events and full achievement tracking.
+- Full achievement archive, remaining bonus events and exact 1:1 art/audio/timing parity for the first-pass Rabbit Hole and Necronomicon encounters.
 - Complete UI/menu parity and device-specific touch layout checks.
 - Actual Unity Editor compile, WebGL/WebGPU and WebGL2 fallback test, Android IL2CPP/AAB build, install, suspend/resume/back-button test, and sustained-performance test on Poco F6 plus a lower-tier Android device.
 - Play-mode validation of the new mega-world in Unity: sector edges, transformed colliders, all transition routes, floor texture orientation, overlap/z-fighting, world bounds, horde spawn distribution, enemy separation and 60 FPS behaviour.
@@ -68,7 +70,7 @@ Then open **Actions → Unity 6.6 WebGL and Android build** and manually dispatc
 2. Activate the Unity build workflow and produce a real WebGL Player.
 3. Fix every Unity Editor compiler/import error; run the project readiness menu command.
 4. Compile the feature branch in Unity Editor and run the readiness audit; fix every compile/import/build-preflight error.
-5. Play-test the connected mega-world in Editor: check floor transitions, collider gaps, wall bounds, enemy paths, spawn ring, secrets/pickups, camera and lighting through every seam.
+5. Play-test the connected mega-world and all 20 secret pickups in Editor: check floor transitions, collider gaps, wall bounds, enemy paths, spawn ring, all four Rabbit Hole locations, all four Necronomicon locations, UI touch targets, boss attack telegraphs and reward/return flow, camera and lighting through every seam.
 6. Wire actual CC0 rigs and verify all required clips/material variants.
 7. Finish feature parity for Campaign, Survival, secrets, account, leaderboard, PvP and ads/UMP.
 8. Build and install Android ARM64 APK; test multitouch, landscape, pause, background/resume, Android Back and WebView/WebGL browser fallback.
