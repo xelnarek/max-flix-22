@@ -12,7 +12,7 @@ test('Unity migration audit passes the stable source-data and release-safety con
   });
   assert.match(output, /\[Unity migration audit\] PASS:/);
   assert.match(output, /CUTOVER BLOCKER/);
-  assert.match(output, /four-zone topology contract/);
+  assert.match(output, /connected world generation/);
 });
 
 test('Unity Survival mega-map contract matches the live 240 by 80 metre topology', async () => {
@@ -89,6 +89,31 @@ test('Unity procedural map geometry stays inside the intended 120 by 40 metre bi
   assert.match(world, /BiomeHalfWidth = 60f/);
   assert.match(world, /BiomeHalfDepth = 20f/);
   assert.match(world, /ClampInside\(Vector3 position, float inset = 1\.5f\)/);
+});
+
+test('Unity UI always routes touch and pointer input through the New Input System', async () => {
+  const [installer, menu, hud] = await Promise.all([
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/UiEventSystemInstaller.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/MainMenuController.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs'),
+  ]);
+  assert.match(installer, /GetComponent<InputSystemUIInputModule>/);
+  assert.match(installer, /GetComponents<BaseInputModule>/);
+  assert.match(installer, /module\.enabled = false/);
+  assert.match(installer, /SingleMouseOrPenButMultiTouchAndTrack/);
+  assert.match(menu, /UiEventSystemInstaller\.Ensure\(\)/);
+  assert.match(hud, /UiEventSystemInstaller\.Ensure\(\)/);
+});
+
+test('Unity main menu sizes cards and footer inside narrow safe areas', async () => {
+  const menu = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/MainMenuController.cs');
+  assert.match(menu, /Screen\.safeArea\.width \/ canvasScale/);
+  assert.match(menu, /Mathf\.Clamp\(safeWidth - 24f, 200f, 1120f\)/);
+  assert.match(menu, /Mathf\.Clamp\(safeWidth - 24f, 200f, 560f\)/);
+  assert.match(menu, /Screen\.safeArea\.width \/ scale \* 0\.89f - 36f/);
+  assert.match(menu, /Mathf\.Max\(72f, innerWidth \/ columns\)/);
+  assert.match(menu, /viewportBottom/);
+  assert.match(menu, /compactScale/);
 });
 
 test('Unity project setup guards the known Android resume/back regression and enables paced frames', async () => {
