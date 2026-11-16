@@ -161,6 +161,7 @@ namespace MaxFlix.Unity.Runtime
         public int Kills;
         public int BossesDefeated;
         public int HighestWave;
+        public int SecretsFound;
         public float ElapsedSeconds;
     }
 
