@@ -68,7 +68,7 @@ namespace MaxFlix.Unity.Runtime
             GameSession.Begin(mode, operatorId, mapId);
             PlayerController player = mode == GameMode.Campaign
                 ? WarehouseWorldFactory.BuildCampaignMegaMap()
-                : WarehouseWorldFactory.BuildB4Slice();
+                : WarehouseWorldFactory.BuildUnifiedSurvivalWorld();
             _hud = HudController.Create(
                 player,
                 RestartLastRun,
