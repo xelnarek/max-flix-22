@@ -90,6 +90,17 @@ test('Unity wave spawning skips obstructed positions instead of using an unsafe 
   assert.doesNotMatch(director, /private Vector3 GetSpawnPosition\(/);
 });
 
+test('Unity run replacement restores quality synchronously before the old world is destroyed', async () => {
+  const [factory, governor] = await Promise.all([
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalPerformanceGovernor.cs'),
+  ]);
+  assert.match(factory, /governor\?\.Shutdown\(\)/);
+  assert.match(governor, /public void Shutdown\(\)/);
+  assert.match(governor, /_initialized = false/);
+  assert.match(governor, /private void OnDestroy\(\)[\s\S]*?Shutdown\(\)/);
+});
+
 test('Unity Campaign final boss flags can only be earned inside the terminal boss arena', async () => {
   const [mission, factory] = await Promise.all([
     read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/CampaignMissionDirector.cs'),
