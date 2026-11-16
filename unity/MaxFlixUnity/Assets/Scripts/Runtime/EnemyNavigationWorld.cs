@@ -12,12 +12,16 @@ namespace MaxFlix.Unity.Runtime
     public sealed class EnemyNavigationWorld : MonoBehaviour
     {
         private const float DefaultLookAhead = 4.2f;
-        private const float DefaultClearance = 0.8f;
+        private const float SpatialCellSize = 8f;
         private const float WaypointPadding = 0.55f;
         private const float Epsilon = 0.000001f;
 
         private static EnemyNavigationWorld _active;
         private Bounds[] _obstacles = new Bounds[0];
+        private readonly Dictionary<Vector2Int, List<int>> _obstacleCells =
+            new Dictionary<Vector2Int, List<int>>(128);
+        private int[] _seenObstacleVersion = new int[0];
+        private int _queryVersion;
         private Transform _worldRoot;
 
         public void Initialize(Transform worldRoot)
@@ -41,6 +45,16 @@ namespace MaxFlix.Unity.Runtime
             if (_active == null || _active._obstacles.Length == 0)
                 return Vector3.zero;
 
+            return _active.CalculateObstacleAvoidance(
+                actorPosition, targetPosition, actorInstanceId, clearance);
+        }
+
+        private Vector3 CalculateObstacleAvoidance(
+            Vector3 actorPosition,
+            Vector3 targetPosition,
+            int actorInstanceId,
+            float clearance)
+        {
             Vector2 origin = new Vector2(actorPosition.x, actorPosition.z);
             Vector2 target = new Vector2(targetPosition.x, targetPosition.z);
             Vector2 toTarget = target - origin;
@@ -52,6 +66,19 @@ namespace MaxFlix.Unity.Runtime
             if (maxDistance < Epsilon) return Vector3.zero;
 
             float safeClearance = Mathf.Max(0f, clearance);
+            Vector2 end = origin + direction * maxDistance;
+            int minCellX = Mathf.FloorToInt((Mathf.Min(origin.x, end.x) - safeClearance) / SpatialCellSize);
+            int maxCellX = Mathf.FloorToInt((Mathf.Max(origin.x, end.x) + safeClearance) / SpatialCellSize);
+            int minCellZ = Mathf.FloorToInt((Mathf.Min(origin.y, end.y) - safeClearance) / SpatialCellSize);
+            int maxCellZ = Mathf.FloorToInt((Mathf.Max(origin.y, end.y) + safeClearance) / SpatialCellSize);
+
+            unchecked { _queryVersion++; }
+            if (_queryVersion == 0)
+            {
+                System.Array.Clear(_seenObstacleVersion, 0, _seenObstacleVersion.Length);
+                _queryVersion = 1;
+            }
+
             int nearestIndex = -1;
             float nearestHitDistance = float.PositiveInfinity;
             float nearestMinX = 0f;
@@ -59,31 +86,45 @@ namespace MaxFlix.Unity.Runtime
             float nearestMinZ = 0f;
             float nearestMaxZ = 0f;
 
-            for (int i = 0; i < _active._obstacles.Length; i++)
+            for (int cellX = minCellX; cellX <= maxCellX; cellX++)
             {
-                Bounds obstacle = _active._obstacles[i];
-                float minX = obstacle.min.x - safeClearance;
-                float maxX = obstacle.max.x + safeClearance;
-                float minZ = obstacle.min.z - safeClearance;
-                float maxZ = obstacle.max.z + safeClearance;
-
-                if (origin.x >= minX && origin.x <= maxX
-                    && origin.y >= minZ && origin.y <= maxZ)
+                for (int cellZ = minCellZ; cellZ <= maxCellZ; cellZ++)
                 {
-                    return GetInsideObstacleEscape(origin, minX, maxX, minZ, maxZ, actorInstanceId);
+                    if (!_obstacleCells.TryGetValue(new Vector2Int(cellX, cellZ), out List<int> candidates))
+                        continue;
+
+                    for (int candidateIndex = 0; candidateIndex < candidates.Count; candidateIndex++)
+                    {
+                        int i = candidates[candidateIndex];
+                        if (i < 0 || i >= _obstacles.Length || _seenObstacleVersion[i] == _queryVersion)
+                            continue;
+                        _seenObstacleVersion[i] = _queryVersion;
+
+                        Bounds obstacle = _obstacles[i];
+                        float minX = obstacle.min.x - safeClearance;
+                        float maxX = obstacle.max.x + safeClearance;
+                        float minZ = obstacle.min.z - safeClearance;
+                        float maxZ = obstacle.max.z + safeClearance;
+
+                        if (origin.x >= minX && origin.x <= maxX
+                            && origin.y >= minZ && origin.y <= maxZ)
+                        {
+                            return GetInsideObstacleEscape(origin, minX, maxX, minZ, maxZ, actorInstanceId);
+                        }
+
+                        if (!TryRayBoxEntry(origin, direction, maxDistance,
+                            minX, maxX, minZ, maxZ, out float hitDistance))
+                            continue;
+
+                        if (hitDistance >= nearestHitDistance) continue;
+                        nearestIndex = i;
+                        nearestHitDistance = hitDistance;
+                        nearestMinX = minX;
+                        nearestMaxX = maxX;
+                        nearestMinZ = minZ;
+                        nearestMaxZ = maxZ;
+                    }
                 }
-
-                if (!TryRayBoxEntry(origin, direction, maxDistance,
-                    minX, maxX, minZ, maxZ, out float hitDistance))
-                    continue;
-
-                if (hitDistance >= nearestHitDistance) continue;
-                nearestIndex = i;
-                nearestHitDistance = hitDistance;
-                nearestMinX = minX;
-                nearestMaxX = maxX;
-                nearestMinZ = minZ;
-                nearestMaxZ = maxZ;
             }
 
             if (nearestIndex < 0) return Vector3.zero;
@@ -150,6 +191,31 @@ namespace MaxFlix.Unity.Runtime
             }
 
             _obstacles = bounds.ToArray();
+            _obstacleCells.Clear();
+            _seenObstacleVersion = new int[_obstacles.Length];
+            _queryVersion = 0;
+
+            for (int i = 0; i < _obstacles.Length; i++)
+            {
+                Bounds obstacle = _obstacles[i];
+                int minCellX = Mathf.FloorToInt(obstacle.min.x / SpatialCellSize);
+                int maxCellX = Mathf.FloorToInt(obstacle.max.x / SpatialCellSize);
+                int minCellZ = Mathf.FloorToInt(obstacle.min.z / SpatialCellSize);
+                int maxCellZ = Mathf.FloorToInt(obstacle.max.z / SpatialCellSize);
+                for (int cellX = minCellX; cellX <= maxCellX; cellX++)
+                {
+                    for (int cellZ = minCellZ; cellZ <= maxCellZ; cellZ++)
+                    {
+                        Vector2Int key = new Vector2Int(cellX, cellZ);
+                        if (!_obstacleCells.TryGetValue(key, out List<int> bucket))
+                        {
+                            bucket = new List<int>(8);
+                            _obstacleCells.Add(key, bucket);
+                        }
+                        bucket.Add(i);
+                    }
+                }
+            }
         }
 
         private static Vector3 GetInsideObstacleEscape(
@@ -242,6 +308,9 @@ namespace MaxFlix.Unity.Runtime
             if (_active == this) _active = null;
             _worldRoot = null;
             _obstacles = new Bounds[0];
+            _obstacleCells.Clear();
+            _seenObstacleVersion = new int[0];
+            _queryVersion = 0;
         }
     }
 }
