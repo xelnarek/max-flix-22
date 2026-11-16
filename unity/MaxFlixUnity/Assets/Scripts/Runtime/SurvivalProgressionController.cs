@@ -57,7 +57,7 @@ namespace MaxFlix.Unity.Runtime
         private float _healthRegenPerSecond;
         private float _healthRegenAccumulator;
         private bool _isBossReward;
-        private bool _pendingBossReward;
+        private int _pendingBossRewardCount;
         private bool _isPromotion;
 
         public int Level { get { return _level; } }
@@ -76,7 +76,7 @@ namespace MaxFlix.Unity.Runtime
             _xpToNext = SurvivalWeaponCatalog.GetXpRequirement(_level);
             _kills = 0;
             _rerolls = 0;
-            _pendingBossReward = false;
+            _pendingBossRewardCount = 0;
             _xpGrowthMultiplier = 1f;
             _magnetMultiplier = 1f;
             _coinMultiplier = 1f;
@@ -296,11 +296,17 @@ namespace MaxFlix.Unity.Runtime
         private void OpenBossReward()
         {
             if (GameSession.Current == null) return;
-            if (_draftCanvas != null || GameSession.Current.State != GameFlowState.Playing)
+            GameFlowState state = GameSession.Current.State;
+            if (state == GameFlowState.GameOver || state == GameFlowState.Victory
+                || state == GameFlowState.MainMenu)
+                return;
+
+            if (_draftCanvas != null || state != GameFlowState.Playing)
             {
-                // An AOE can defeat a boss in the same frame that another kill
-                // opens an XP draft. Preserve the boss reward instead of dropping it.
-                _pendingBossReward = true;
+                // An AOE can defeat multiple bosses in the same frame that an
+                // XP draft pauses the simulation. Keep one reward for every
+                // defeated major boss instead of collapsing them into a bool.
+                _pendingBossRewardCount = Mathf.Min(8, _pendingBossRewardCount + 1);
                 return;
             }
             BeginLevelUp(true);
@@ -707,9 +713,9 @@ namespace MaxFlix.Unity.Runtime
             GameSession.SetState(GameFlowState.Playing);
             UpdateHud();
 
-            if (_pendingBossReward)
+            if (_pendingBossRewardCount > 0)
             {
-                _pendingBossReward = false;
+                _pendingBossRewardCount--;
                 BeginLevelUp(true);
                 return;
             }
