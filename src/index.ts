@@ -2255,13 +2255,9 @@ class PaleciakiScene extends xb.Script {
 
       try {
         const services = await loadFirebaseLeaderboardServices();
-        const probeConnected = await services.ensureLeaderboardServices();
         const topScores = await services.getTopSurvivalLeaderboard(15);
         const readStatus = services.getSurvivalLeaderboardReadStatus();
         const isConnected = readStatus.source === 'firestore';
-        if (probeConnected && !isConnected) {
-          console.warn('[Firebase:Leaderboard] Probe połączenia przeszedł, ale odczyt rankingu wymagał lokalnego fallbacku.', readStatus.errorCode);
-        }
         updateFirestoreStatusUI(
           isConnected ? 'online' : 'offline',
           isConnected ? 'Firestore: ranking pobrany z serwera' : `Firestore: pokazano zapis lokalny (${readStatus.errorCode || 'brak połączenia'})`,
