@@ -1,4 +1,5 @@
 import type { SurvivalMapId } from './survivalMaps.ts';
+import { getSurvivalBiomeWeights } from './survivalWorldLayout.ts';
 
 export interface WorldLightingProfile {
   ambientColor: number;
@@ -142,6 +143,36 @@ const SURVIVAL_SURFACE_PROFILES: Readonly<Record<SurvivalMapId, SurvivalSurfaceP
     barrierRoughness: 0.62, barrierMetalness: 0.22,
   },
 };
+
+/** Smoothly blends light colour, fog and scalar intensity across the 18 m seams. */
+export function getBlendedSurvivalLightingProfile(x: number, z: number): WorldLightingProfile {
+  const weights = getSurvivalBiomeWeights(x, z);
+  const entries = Object.entries(weights) as [SurvivalMapId, number][];
+  const colorKeys = new Set<keyof WorldLightingProfile>([
+    'ambientColor', 'hemisphereSkyColor', 'hemisphereGroundColor',
+    'directionalColor', 'rimColor', 'fogColor',
+  ]);
+  const result = {} as WorldLightingProfile;
+  for (const key of Object.keys(SURVIVAL_LIGHTING_PROFILES.warehouse_b4) as (keyof WorldLightingProfile)[]) {
+    if (colorKeys.has(key)) {
+      let red = 0, green = 0, blue = 0;
+      for (const [mapId, weight] of entries) {
+        const hex = SURVIVAL_LIGHTING_PROFILES[mapId][key] as number;
+        red += ((hex >> 16) & 0xff) * weight;
+        green += ((hex >> 8) & 0xff) * weight;
+        blue += (hex & 0xff) * weight;
+      }
+      result[key] = (((Math.round(red) & 0xff) << 16) |
+        ((Math.round(green) & 0xff) << 8) |
+        (Math.round(blue) & 0xff)) as never;
+    } else {
+      let value = 0;
+      for (const [mapId, weight] of entries) value += SURVIVAL_LIGHTING_PROFILES[mapId][key] * weight;
+      result[key] = value as never;
+    }
+  }
+  return result;
+}
 
 export function getSurvivalLightingProfile(mapId: SurvivalMapId): WorldLightingProfile {
   return SURVIVAL_LIGHTING_PROFILES[mapId] ?? SURVIVAL_LIGHTING_PROFILES.warehouse_b4;
