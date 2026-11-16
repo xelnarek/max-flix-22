@@ -456,7 +456,36 @@ namespace MaxFlix.Unity.Runtime
         private void Move(Vector3 horizontalVelocity, float deltaTime)
         {
             if (_controller == null) return;
+
             Vector3 velocity = horizontalVelocity;
+            velocity.y = 0f;
+            if (_target != null && velocity.sqrMagnitude > 0.0001f)
+            {
+                Vector3 toTarget = _target.transform.position - transform.position;
+                toTarget.y = 0f;
+                Vector3 direction = velocity.normalized;
+                Vector3 targetDirection = toTarget.sqrMagnitude > 0.0001f
+                    ? toTarget.normalized : Vector3.zero;
+
+                // Only steer actors that are actually advancing towards the
+                // player. Retreat, knockback and deliberate lateral movement
+                // remain untouched unless the actor is already inside a rack.
+                bool advancing = Vector3.Dot(direction, targetDirection) > 0.35f;
+                if (advancing)
+                {
+                    Vector3 avoidance = EnemyNavigationWorld.GetObstacleAvoidanceVector(
+                        transform.position,
+                        _target.transform.position,
+                        GetInstanceID(),
+                        (_controller != null ? _controller.radius : 0.34f) + 0.8f);
+                    if (avoidance.sqrMagnitude > 0.0001f)
+                    {
+                        float speed = velocity.magnitude;
+                        velocity = (direction + avoidance * 0.82f).normalized * speed;
+                    }
+                }
+            }
+
             velocity.y = -2f;
             _controller.Move(velocity * deltaTime);
         }
