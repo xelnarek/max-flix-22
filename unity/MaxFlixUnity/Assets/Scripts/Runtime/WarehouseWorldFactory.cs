@@ -52,6 +52,9 @@ namespace MaxFlix.Unity.Runtime
             CampaignMissionDirector mission = root.AddComponent<CampaignMissionDirector>();
             mission.ConfigureGates(gateB, gateC);
 
+            EnemyNavigationWorld navigation = root.AddComponent<EnemyNavigationWorld>();
+            navigation.Initialize(_worldRoot);
+
             PlayerController player = CreateOperator(
                 OperatorCatalog.Get(GameSession.Current.SelectedOperator),
                 new Vector3(-32f, 0.1f, 0f));
@@ -219,6 +222,9 @@ namespace MaxFlix.Unity.Runtime
             _layoutParent = _worldRoot;
             _isBuildingUnifiedSurvivalWorld = false;
             CreateUnifiedBiomeAccentLights();
+
+            EnemyNavigationWorld navigation = root.AddComponent<EnemyNavigationWorld>();
+            navigation.Initialize(_worldRoot);
 
             CombatProjectile.Prewarm(3);
             EnemyAttackProjectile.Prewarm(12);
@@ -403,6 +409,9 @@ namespace MaxFlix.Unity.Runtime
             CreateLighting(map);
             CreateFloor(map);
             CreateMapLayout(map);
+
+            EnemyNavigationWorld navigation = root.AddComponent<EnemyNavigationWorld>();
+            navigation.Initialize(_worldRoot);
 
             CombatProjectile.Prewarm(3);
             PlayerController player = CreateOperator(OperatorCatalog.Get(GameSession.Current.SelectedOperator), new Vector3(0f, 0.1f, -9f));
