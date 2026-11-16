@@ -248,6 +248,52 @@ test('Unity weapon projectiles collide with environment before damaging enemies 
   assert.match(weapons, /firstEnemyDistance \+ 0\.08f/);
 });
 
+test('Unity mega-world places all five secrets in each of the four biome coordinate frames', async () => {
+  const [catalog, domain, factory, pickup] = await Promise.all([
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/GameContentCatalog.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/GameDomain.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalSecretPickup.cs'),
+  ]);
+  assert.match(domain, /Necronomicon = 4/);
+  const mapBlocks = [...catalog.matchAll(/Secrets = new\[\]\s*\{([\s\S]*?)\}/g)];
+  assert.equal(mapBlocks.length, 4);
+  for (const [index, block] of mapBlocks.entries())
+    assert.equal((block[1].match(/Secret\("/g) || []).length, 5, 'biome ' + index + ' needs five secrets');
+  assert.equal((catalog.match(/Secret\("necronomicon"/g) || []).length, 4);
+  assert.match(factory, /foreach \(SurvivalSecretDefinition definition in map\.Secrets\)/);
+  assert.match(factory, /zone\.Center\.x \+ definition\.Position\.x/);
+  assert.match(factory, /zone\.Center\.y \+ definition\.Position\.y/);
+  assert.match(factory, /CreateUnifiedSurvivalSecrets\(\)/);
+  assert.match(pickup, /OnTriggerEnter\(Collider other\)/);
+  assert.match(pickup, /paleciaki\.survival\.secret\.v1\./);
+  assert.match(pickup, /GameSession\.Current\.SecretsFound\+\+/);
+});
+
+test('Unity Rabbit Hole and Necronomicon open separate touch-ready 2D encounters while Survival is paused', async () => {
+  const [pickup, encounter] = await Promise.all([
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalSecretPickup.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalSecretEncounterController.cs'),
+  ]);
+  assert.match(pickup, /SurvivalSecretEncounterController\.Open\(player, _definition\.Style\)/);
+  assert.match(encounter, /public static void Open\(PlayerController player, SurvivalSecretStyle style\)/);
+  assert.match(encounter, /GameSession\.SetState\(GameFlowState\.LevelUp\)/);
+  assert.match(encounter, /Time\.timeScale = 0f/);
+  assert.match(encounter, /private void UpdateRabbitHole\(float dt\)/);
+  assert.match(encounter, /private void UpdateNecronomicon\(float dt\)/);
+  assert.match(encounter, /private enum BossAttack \{ Slam, Lash, Grab \}/);
+  assert.match(encounter, /private const float RabbitScale = 0\.64f/);
+  assert.match(encounter, /_rabbitTime = 68f/);
+  assert.match(encounter, /_rabbitLives = 3/);
+  assert.match(encounter, /_rabbitCollected == 3/);
+  assert.match(encounter, /_cthulhuBossHp = 180f/);
+  assert.match(encounter, /_cthulhuBossOpen = 2\.15f/);
+  assert.match(encounter, /GameSession\.Current\.Score \+= 6000/);
+  assert.match(encounter, /_player\.IncreaseMaxHealth\(1\)/);
+  assert.match(encounter, /CreateHoldButton/);
+  assert.match(encounter, /Keyboard\.current/);
+});
+
 test('Unity player initialization clears stale damage, movement, jump and defeated state', async () => {
   const player = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/PlayerController.cs');
   const initialize = player.slice(player.indexOf('public void Initialize('), player.indexOf('public void RequestJump()'));
