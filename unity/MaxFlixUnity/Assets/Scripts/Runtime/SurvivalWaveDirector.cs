@@ -425,9 +425,16 @@ namespace MaxFlix.Unity.Runtime
             {
                 Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
                 if (shader == null) shader = Shader.Find("Sprites/Default");
-                _ringMaterial = new Material(shader) { enableInstancing = true };
+                if (shader != null)
+                    _ringMaterial = new Material(shader) { enableInstancing = true };
             }
-            _hordeRing.sharedMaterial = _ringMaterial;
+            if (_ringMaterial != null)
+                _hordeRing.sharedMaterial = _ringMaterial;
+            else
+            {
+                _hordeRing.enabled = false;
+                Debug.LogError("No compatible unlit shader is available for the Survival horde warning ring.");
+            }
         }
 
         private void DrawHordeRing(float radius, float progress)
