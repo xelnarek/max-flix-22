@@ -1165,6 +1165,9 @@ export function launchCthulhuRetroArena(options: {
       finish();
       return;
     }
+    if (!event.repeat && ['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD', 'Space', 'ArrowUp', 'KeyW', 'ShiftLeft', 'ShiftRight', 'KeyQ', 'KeyJ', 'KeyK', 'KeyX', 'KeyF', 'Numpad0'].includes(event.code)) {
+      unlockAbyssAudio();
+    }
     if (['ArrowLeft', 'KeyA'].includes(event.code)) {
       keyHeld.left = true; syncControl('left');
     }
@@ -1177,7 +1180,6 @@ export function launchCthulhuRetroArena(options: {
     }
     if (['KeyJ', 'KeyK', 'KeyX', 'KeyF', 'Numpad0'].includes(event.code)) {
       keyHeld.attack = true; syncControl('attack');
-      if (!event.repeat) unlockAbyssAudio();
     }
     if (['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD', 'Space', 'ArrowUp', 'KeyW', 'ShiftLeft', 'ShiftRight', 'KeyQ', 'KeyJ', 'KeyK', 'KeyX', 'KeyF', 'Numpad0'].includes(event.code)) {
       event.preventDefault(); event.stopPropagation();
@@ -1223,7 +1225,7 @@ export function launchCthulhuRetroArena(options: {
       activePointers.set(event.pointerId, { control });
       syncControl(control);
       if (control === 'dodge') dodgeQueued = true;
-      if (control === 'attack') unlockAbyssAudio();
+      unlockAbyssAudio();
       try { button.setPointerCapture(event.pointerId); } catch { /* global release remains available */ }
     });
     button.addEventListener('touchstart', (event) => {
@@ -1231,7 +1233,7 @@ export function launchCthulhuRetroArena(options: {
       for (const touch of Array.from(event.changedTouches)) activeTouches.set(touch.identifier, { control });
       syncControl(control);
       if (control === 'dodge' && event.changedTouches.length > 0) dodgeQueued = true;
-      if (control === 'attack') unlockAbyssAudio();
+      unlockAbyssAudio();
     }, { passive: false });
     button.addEventListener('lostpointercapture', releasePointer);
     button.addEventListener('contextmenu', (event) => event.preventDefault());
