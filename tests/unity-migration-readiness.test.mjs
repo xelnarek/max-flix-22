@@ -213,6 +213,17 @@ test('Unity procedural map geometry stays inside the intended 120 by 40 metre bi
   assert.match(world, /ClampInside\(Vector3 position, float inset = 1\.5f\)/);
 });
 
+test('Unity weapon projectiles collide with environment before damaging enemies behind walls', async () => {
+  const weapons = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWeaponController.cs');
+  assert.match(weapons, /RaycastHit\[\] _worldHitBuffer = new RaycastHit\[24\]/);
+  assert.match(weapons, /Physics\.SphereCastNonAlloc\(/);
+  assert.match(weapons, /GetComponentInParent<EnemyAgent>\(\) != null/);
+  assert.match(weapons, /GetComponentInParent<PlayerController>\(\) != null/);
+  assert.match(weapons, /worldHitDistance < firstEnemyDistance/);
+  assert.match(weapons, /ApplyAreaDamage\(worldImpactPoint, shot\.AoeRadius/);
+  assert.match(weapons, /firstEnemyDistance \+ 0\.08f/);
+});
+
 test('Unity melee, ranged and charger attacks respect warehouse obstacle line of sight', async () => {
   const [navigation, enemy] = await Promise.all([
     read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyNavigationWorld.cs'),
