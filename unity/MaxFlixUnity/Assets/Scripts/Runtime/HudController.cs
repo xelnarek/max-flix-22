@@ -11,6 +11,7 @@ namespace MaxFlix.Unity.Runtime
     {
         private Text _statusText;
         private Text _healthText;
+        private Text _secretText;
         private Text _helpText;
         private Text _abilityButtonLabel;
         private Button _abilityButton;
@@ -77,6 +78,13 @@ namespace MaxFlix.Unity.Runtime
             if (_statusText != null) _statusText.text = status;
         }
 
+        public void SetSecretsCount(int found, int total)
+        {
+            if (_secretText == null) return;
+            int safeTotal = Mathf.Max(0, total);
+            _secretText.text = "SEKRETY  " + Mathf.Clamp(found, 0, safeTotal) + "/" + safeTotal;
+        }
+
         public void SetAbilityState(float remaining, float maximum)
         {
             if (_abilityButton == null || _abilityButtonLabel == null) return;
@@ -122,6 +130,13 @@ namespace MaxFlix.Unity.Runtime
             _healthText.rectTransform.anchorMin = new Vector2(1f, 1f);
             _healthText.rectTransform.anchorMax = new Vector2(1f, 1f);
             _healthText.rectTransform.pivot = new Vector2(1f, 1f);
+
+            if (GameSession.Current != null && GameSession.Current.Mode == GameMode.Survival)
+            {
+                _secretText = CreateText(root, "SEKRETY  0/20",
+                    new Vector2(24f, -84f), new Vector2(260f, 30f), 16, TextAnchor.MiddleLeft);
+                SetSecretsCount(GameSession.Current.SecretsFound, 20);
+            }
 
             _helpText = CreateText(root, "PC: WASD / SPACE / J / E   •   EKRAN: joystick + SKOK + ATAK + SPECJALNA",
                 new Vector2(0f, -98f), new Vector2(1040f, 42f), 17, TextAnchor.MiddleCenter);
