@@ -925,10 +925,10 @@ namespace MaxFlix.Unity.Runtime
             if (_mode == EncounterMode.RabbitHole)
             {
                 GameSession.Current.Score += 1200 + _rabbitCollected * 250;
-                // IncreaseMaxHealth already grants one point of current HP.
-                // Do not apply a second heal for the same extra-life reward.
-                _player.IncreaseMaxHealth(1);
-                FindFirstObjectByType<HudController>()?.SetStatus("NORKA KRÓLIKA • +1 MAKS. HP I ODNOWIONE ŻYCIE");
+                // The source game grants one current HP, not a permanent
+                // maximum-health increase. Keep the operator's base max HP intact.
+                _player.RestoreHealth(1f);
+                FindFirstObjectByType<HudController>()?.SetStatus("NORKA KRÓLIKA • +1 HP");
             }
             else
             {
