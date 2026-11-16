@@ -333,7 +333,7 @@ test('Unity XP progression has pooled crystals, map XP scaling, level-up drafts 
   assert.match(progression, /fallback_repair/);
   assert.match(progression, /fallback_credits/);
   assert.match(progression, /fallback_overdrive/);
-  assert.match(progression, /wasBossReward/);
+  assert.match(progression, /_pendingBossReward/);
   assert.match(progression, /Text description = CreateText\(rect, card\.Description,[\s\S]*?Vector2\.zero, 17, TextAnchor\.MiddleCenter/);
   assert.match(player, /SetSurvivalMoveMultiplier/);
   assert.match(player, /IncreaseMaxHealth/);
@@ -452,6 +452,19 @@ test('Unity enemy AI separates nearby enemies and preserves clearance around the
   assert.match(agent, /desiredDistance = \(_profile != null && _profile\.IsBoss \? 1\.48f : 1\.12f\)/);
   assert.match(agent, /const float playerClearance = 1\.15f/);
   assert.match(agent, /Vector3\.ClampMagnitude\(force \* 3\.4f, 3\.8f\)/);
+});
+
+test('Unity boss upgrade rewards are queued if an XP draft already owns the pause state', async () => {
+  const progression = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalProgressionController.cs');
+  const openBoss = progression.slice(progression.indexOf('private void OpenBossReward()'), progression.indexOf('private void RollCards'));
+  const closeDraft = progression.slice(progression.indexOf('private void CloseDraft()'), progression.indexOf('private void UpdateHud()'));
+  assert.match(openBoss, /_pendingBossReward = true/);
+  assert.match(openBoss, /BeginLevelUp\(true\)/);
+  assert.match(closeDraft, /if \(_pendingBossReward\)/);
+  assert.match(closeDraft, /_pendingBossReward = false/);
+  assert.match(closeDraft, /BeginLevelUp\(true\)/);
+  assert.match(closeDraft, /if \(_xp >= _xpToNext\)/);
+  assert.doesNotMatch(closeDraft, /!wasBossReward/);
 });
 
 test('Unity only opens legendary boss rewards for the three rotating major Survival bosses', async () => {
