@@ -371,7 +371,10 @@ test('Unity Rabbit Hole and Necronomicon open separate touch-ready 2D encounters
   assert.match(encounter, /_cthulhuBossHp = 180f/);
   assert.match(encounter, /_cthulhuBossOpen = 2\.15f/);
   assert.match(encounter, /GameSession\.Current\.Score \+= 6000/);
-  assert.match(encounter, /_player\.IncreaseMaxHealth\(1\)/);
+  assert.match(encounter, /_player\.RestoreHealth\(1f\)/);
+  const rabbitReward = encounter.slice(encounter.indexOf('if (_mode == EncounterMode.RabbitHole)'),
+    encounter.indexOf('else\n            {\n                GameSession.Current.Score += 6000'));
+  assert.doesNotMatch(rabbitReward, /IncreaseMaxHealth/);
   assert.match(encounter, /CreateHoldButton/);
   assert.match(encounter, /Keyboard\.current/);
 });
