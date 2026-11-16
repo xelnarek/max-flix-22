@@ -217,8 +217,8 @@ test('the retro map controls work with keyboard, multiple pointers and native An
 test('the dedicated boss attack has a synthesized deep-bass impact and pixel-art render pass', async () => {
   const source = await readFile(new URL('../src/cthulhuRetroArena.ts', import.meta.url), 'utf8');
   assert.match(source, /const playAbyssBass =/);
-  assert.match(source, /frequency\.setValueAtTime\(43/);
-  assert.match(source, /subGain\.gain\.exponentialRampToValueAtTime/);
+  assert.match(source, /sub\.frequency\.setValueAtTime\(46/);
+  assert.match(source, /punchGain\.gain\.exponentialRampToValueAtTime/);
   assert.match(source, /pixelCanvas\.width = CTHULHU_RETRO_WIDTH/);
   assert.match(source, /output\.drawImage\(pixelCanvas, 0, 0, canvas\.width, canvas\.height\)/);
 });
