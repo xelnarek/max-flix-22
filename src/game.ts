@@ -57,11 +57,12 @@ import { createSurvivalBossRewardOptions } from './survivalBossRewards.ts';
 import { getSurvivalBossVariant, isMajorSurvivalBossType, shouldSpawnBosmanKrakow } from './survivalEncounters.ts';
 import { applySurvivalWaveMutator, getSurvivalWaveMutator } from './survivalWaveMutators.ts';
 import { getSurvivalConvoyHazardCount } from './survivalConvoy.ts';
-import { applySurvivalMapCombatModifier, getSurvivalMapDefinition, SURVIVAL_MAPS, SURVIVAL_MAP_IDS, type SurvivalMapId } from './survivalMaps.ts';
-import { getCampaignLightingProfile, getSurvivalLightingProfile, getSurvivalSurfaceProfile, PVP_LIGHTING_PROFILE, type WorldLightingProfile } from './worldVisualQuality.ts';
+import { applySurvivalWorldCombatModifier, getSurvivalMapDefinition, SURVIVAL_MAPS, SURVIVAL_MAP_IDS, type SurvivalMapId } from './survivalMaps.ts';
+import { getCampaignLightingProfile, getSurvivalLightingProfile, getSurvivalWorldBackgroundColor, getSurvivalWorldLightingProfile, getSurvivalSurfaceProfile, PVP_LIGHTING_PROFILE, type WorldLightingProfile } from './worldVisualQuality.ts';
 import { getSurvivalMapRouteFeatures } from './survivalMapLayouts.ts';
 import { createSurvivalWorldDressing } from './survivalWorldDressing.ts';
-import { getSurvivalBiomeIdAtPosition, getSurvivalWorldBiome, getSurvivalWorldBiomeIdAtPosition, getSurvivalWorldTransitionFootprint, isSurvivalWorldTransitionFromNegativeSide, SURVIVAL_WORLD_BIOME_HALF_DEPTH, SURVIVAL_WORLD_BIOME_HALF_WIDTH, SURVIVAL_WORLD_BIOMES, SURVIVAL_WORLD_BOUNDS, SURVIVAL_WORLD_START_BIOME, SURVIVAL_WORLD_TRANSITIONS, type SurvivalWorldOpenEdges } from './survivalWorldLayout.ts';
+import { getSurvivalBiomeIdAtPosition, getSurvivalWorldBiome, getSurvivalWorldTransitionFootprint, isSurvivalWorldTransitionFromNegativeSide, SURVIVAL_WORLD_BIOME_HALF_DEPTH, SURVIVAL_WORLD_BIOME_HALF_WIDTH, SURVIVAL_WORLD_BIOMES, SURVIVAL_WORLD_BOUNDS, SURVIVAL_WORLD_START_BIOME, SURVIVAL_WORLD_TRANSITIONS, type SurvivalWorldOpenEdges } from './survivalWorldLayout.ts';
+import { getSurvivalWorldBiomeBlendAtPosition } from './survivalWorldBlend.ts';
 import { chooseCampaignNearbyRewardSpawnPoint } from './campaignRewards.ts';
 import { chooseNearbySpawnPoint } from './arenaSpawn.ts';
 import { chooseSurvivalEnemySpawnType } from './survivalEnemySpawns.ts';
@@ -704,7 +705,6 @@ export class PaleciakiGameEngine {
   private survivalMapId: SurvivalMapId = SURVIVAL_WORLD_START_BIOME;
   private survivalWorldRoot: THREE.Group | null = null;
   private readonly survivalBiomeTargetColors = { ambient: new THREE.Color(), hemisphereSky: new THREE.Color(), hemisphereGround: new THREE.Color(), directional: new THREE.Color(), rim: new THREE.Color(), fog: new THREE.Color(), background: new THREE.Color() };
-  private survivalBiomeLightingTransition: { from: WorldLightingProfile; to: WorldLightingProfile; fromBackground: number; toBackground: number; elapsed: number; duration: number } | null = null;
   private survivalSecretsFound = 0;
   private cthulhuSecretSummoned = false;
   private survivalBossesDefeated = 0;
@@ -2538,7 +2538,6 @@ export class PaleciakiGameEngine {
     this.sectorGates = [null, null, null, null];
     const startBiome = getSurvivalWorldBiome(mapOverride ?? SURVIVAL_WORLD_START_BIOME);
     this.survivalMapId = startBiome.id;
-    this.survivalBiomeLightingTransition = null;
     const survivalMap = getSurvivalMapDefinition(this.survivalMapId);
     this.levelBounds = { ...SURVIVAL_WORLD_BOUNDS };
     this.sectorGates.forEach((gate) => { if (gate) gate.visible = false; });
@@ -3922,95 +3921,53 @@ export class PaleciakiGameEngine {
     this.addSurvivalArenaInstance(beams);
   }
 
-  private captureCurrentSurvivalLighting(): WorldLightingProfile {
-    const fog = this.scene.fog instanceof THREE.Fog ? this.scene.fog : null;
-    return {
-      ambientColor: this.ambientLight.color.getHex(),
-      ambientIntensity: this.ambientLight.intensity,
-      hemisphereSkyColor: this.hemiLight.color.getHex(),
-      hemisphereGroundColor: this.hemiLight.groundColor.getHex(),
-      hemisphereIntensity: this.hemiLight.intensity,
-      directionalColor: this.dirLight.color.getHex(),
-      directionalIntensity: this.dirLight.intensity,
-      rimColor: this.rimLight.color.getHex(),
-      rimIntensity: this.rimLight.intensity,
-      fogColor: fog?.color.getHex() ?? getSurvivalMapDefinition(this.survivalMapId).fogColor,
-      fogNear: fog?.near ?? 44,
-      fogFar: fog?.far ?? 112,
-      environmentIntensity: this.environmentIntensity,
-      exposure: this.baseToneMappingExposure,
-    };
-  }
-
-  private beginSurvivalBiomeLightingTransition(mapId: SurvivalMapId) {
-    const map = getSurvivalMapDefinition(mapId);
-    this.survivalBiomeLightingTransition = {
-      from: this.captureCurrentSurvivalLighting(),
-      to: getSurvivalLightingProfile(mapId),
-      fromBackground: this.scene.background instanceof THREE.Color
-        ? this.scene.background.getHex()
-        : getSurvivalMapDefinition(this.survivalMapId).backgroundColor,
-      toBackground: map.backgroundColor,
-      elapsed: 0,
-      duration: 4.5,
-    };
-    this.survivalMapId = mapId;
-    this.callbacks.onSurvivalAnnouncement?.('NOWY BIOM • ' + map.name.toUpperCase(), map.subtitle, map.description);
-    this.emitFloatingToast('STREFA: ' + map.name.toUpperCase(), this.playerPos.x, this.playerPos.y + 1.7, this.playerPos.z, 'combo');
-    this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
-  }
-
-  private updateSurvivalBiomeLighting(dt: number) {
-    const transition = this.survivalBiomeLightingTransition;
-    if (!transition) return;
-    transition.elapsed = Math.min(transition.duration, transition.elapsed + Math.max(0, dt));
-    const linear = transition.elapsed / transition.duration;
-    const amount = linear * linear * (3 - 2 * linear);
-    const from = transition.from;
-    const to = transition.to;
-
-    this.ambientLight.color.setHex(from.ambientColor)
-      .lerp(this.survivalBiomeTargetColors.ambient.setHex(to.ambientColor), amount);
-    this.ambientLight.intensity = THREE.MathUtils.lerp(from.ambientIntensity, to.ambientIntensity, amount);
-    this.hemiLight.color.setHex(from.hemisphereSkyColor)
-      .lerp(this.survivalBiomeTargetColors.hemisphereSky.setHex(to.hemisphereSkyColor), amount);
-    this.hemiLight.groundColor.setHex(from.hemisphereGroundColor)
-      .lerp(this.survivalBiomeTargetColors.hemisphereGround.setHex(to.hemisphereGroundColor), amount);
-    this.hemiLight.intensity = THREE.MathUtils.lerp(from.hemisphereIntensity, to.hemisphereIntensity, amount);
-    this.dirLight.color.setHex(from.directionalColor)
-      .lerp(this.survivalBiomeTargetColors.directional.setHex(to.directionalColor), amount);
-    this.dirLight.intensity = THREE.MathUtils.lerp(from.directionalIntensity, to.directionalIntensity, amount);
-    this.rimLight.color.setHex(from.rimColor)
-      .lerp(this.survivalBiomeTargetColors.rim.setHex(to.rimColor), amount);
-    this.rimLight.intensity = THREE.MathUtils.lerp(from.rimIntensity, to.rimIntensity, amount);
-
+  /** Follow the spatially weighted biome palette instead of starting a timer at a hard seam. */
+  private updateSurvivalBiomeLighting(profile: ReturnType<typeof getSurvivalWorldLightingProfile>, backgroundColor: number, dt: number) {
+    // A short exponential response tracks a moving player without a visible snap or
+    // a fixed-duration transition that can lag behind rapid boundary crossings.
+    const amount = 1 - Math.exp(-Math.max(0, Math.min(dt, 0.1)) * 3.4);
+    this.ambientLight.color.lerp(this.survivalBiomeTargetColors.ambient.setHex(profile.ambientColor), amount);
+    this.ambientLight.intensity = THREE.MathUtils.lerp(this.ambientLight.intensity, profile.ambientIntensity, amount);
+    this.hemiLight.color.lerp(this.survivalBiomeTargetColors.hemisphereSky.setHex(profile.hemisphereSkyColor), amount);
+    this.hemiLight.groundColor.lerp(this.survivalBiomeTargetColors.hemisphereGround.setHex(profile.hemisphereGroundColor), amount);
+    this.hemiLight.intensity = THREE.MathUtils.lerp(this.hemiLight.intensity, profile.hemisphereIntensity, amount);
+    this.dirLight.color.lerp(this.survivalBiomeTargetColors.directional.setHex(profile.directionalColor), amount);
+    this.dirLight.intensity = THREE.MathUtils.lerp(this.dirLight.intensity, profile.directionalIntensity, amount);
+    this.rimLight.color.lerp(this.survivalBiomeTargetColors.rim.setHex(profile.rimColor), amount);
+    this.rimLight.intensity = THREE.MathUtils.lerp(this.rimLight.intensity, profile.rimIntensity, amount);
     if (this.scene.fog instanceof THREE.Fog) {
-      this.scene.fog.color.setHex(from.fogColor)
-        .lerp(this.survivalBiomeTargetColors.fog.setHex(to.fogColor), amount);
-      this.scene.fog.near = THREE.MathUtils.lerp(from.fogNear, to.fogNear, amount);
-      this.scene.fog.far = THREE.MathUtils.lerp(from.fogFar, to.fogFar, amount);
+      this.scene.fog.color.lerp(this.survivalBiomeTargetColors.fog.setHex(profile.fogColor), amount);
+      this.scene.fog.near = THREE.MathUtils.lerp(this.scene.fog.near, profile.fogNear, amount);
+      this.scene.fog.far = THREE.MathUtils.lerp(this.scene.fog.far, profile.fogFar, amount);
     }
-    this.environmentIntensity = THREE.MathUtils.lerp(from.environmentIntensity, to.environmentIntensity, amount);
+    this.environmentIntensity = THREE.MathUtils.lerp(this.environmentIntensity, profile.environmentIntensity, amount);
     (this.scene as any).environmentIntensity = this.environmentIntensity;
-    this.baseToneMappingExposure = THREE.MathUtils.lerp(from.exposure, to.exposure, amount);
+    this.baseToneMappingExposure = THREE.MathUtils.lerp(this.baseToneMappingExposure, profile.exposure, amount);
     if (this.threeRenderer) this.threeRenderer.toneMappingExposure = this.baseToneMappingExposure;
     if (this.scene.background instanceof THREE.Color) {
-      this.scene.background.setHex(transition.fromBackground)
-        .lerp(this.survivalBiomeTargetColors.background.setHex(transition.toBackground), amount);
-    }
-
-    if (linear >= 1) {
-      this.applySurvivalMapLighting(this.survivalMapId);
-      this.scene.background = new THREE.Color(transition.toBackground);
-      this.survivalBiomeLightingTransition = null;
+      this.scene.background.lerp(this.survivalBiomeTargetColors.background.setHex(backgroundColor), amount);
+    } else {
+      this.scene.background = new THREE.Color(backgroundColor);
     }
   }
 
   private updateSurvivalBiome(dt: number) {
     if (this.gameMode !== 'survival' || this.oniricDreamCameraActive || this.oniricDreamRemainingSeconds > 0) return;
+    // Ambience, fog and contrast follow actual overlap weights, not a discrete quadrant.
+    const blend = getSurvivalWorldBiomeBlendAtPosition(this.playerPos.x, this.playerPos.z);
+    const lighting = getSurvivalWorldLightingProfile(blend.weights);
+    const background = getSurvivalWorldBackgroundColor(blend.weights);
+    this.updateSurvivalBiomeLighting(lighting, background, dt);
+
+    // The active biome remains hysteretic for gameplay labels and announcements.
     const nextBiome = getSurvivalBiomeIdAtPosition(this.playerPos.x, this.playerPos.z, this.survivalMapId);
-    if (nextBiome !== this.survivalMapId) this.beginSurvivalBiomeLightingTransition(nextBiome);
-    this.updateSurvivalBiomeLighting(dt);
+    if (nextBiome !== this.survivalMapId) {
+      this.survivalMapId = nextBiome;
+      const map = getSurvivalMapDefinition(nextBiome);
+      this.callbacks.onSurvivalAnnouncement?.('NOWY BIOM • ' + map.name.toUpperCase(), map.subtitle, map.description);
+      this.emitFloatingToast('STREFA: ' + map.name.toUpperCase(), this.playerPos.x, this.playerPos.y + 1.7, this.playerPos.z, 'combo');
+      this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+    }
   }
 
   private buildSurvivalArenaExpansion(mapId: SurvivalMapId, options: { resetObstacles?: boolean; finalize?: boolean; openEdges?: SurvivalWorldOpenEdges; surfaceTextures?: { floor: THREE.Texture; crate: THREE.Texture; barrier: THREE.Texture; wall: THREE.Texture } } = {}) {
@@ -7055,7 +7012,6 @@ export class PaleciakiGameEngine {
       worldRoot.removeFromParent();
       this.disposeTemporaryObject(worldRoot);
     }
-    this.survivalBiomeLightingTransition = null;
     // Release pickup-owned GPU resources before clearing the level graph.
     // These models have per-instance geometries/materials; only explicitly
     // marked dynamic textures are disposed, never shared asset textures.
@@ -11782,10 +11738,10 @@ export class PaleciakiGameEngine {
 
     // Map identities are gameplay modifiers, not only scenery palettes. Compose
     // them after the timed wave rule; bosses receive the map trade-off as well.
-    const spawnBiomeId = getSurvivalBiomeIdAtPosition(x, z, this.survivalMapId);
-    const mapTuned = applySurvivalMapCombatModifier(
+    const mapTuned = applySurvivalWorldCombatModifier(
       { maxHp: enemy.maxHp, speed: enemy.speed },
-      spawnBiomeId
+      x,
+      z,
     );
     enemy.maxHp = mapTuned.maxHp;
     enemy.hp = mapTuned.maxHp;
@@ -11846,9 +11802,12 @@ export class PaleciakiGameEngine {
         : variant === 'bosman_krakow'
           ? Math.round(58 + wave * 3.2)
           : Math.round(46 + wave * 3.1);
-      boss.maxHp = baseHp;
-      boss.hp = boss.maxHp;
       boss.speed *= (variant === 'bosman_krakow' ? 0.82 : 0.86) * (1 + Math.min(0.38, wave * 0.012));
+      const bossMapTuned = applySurvivalWorldCombatModifier({ maxHp: baseHp, speed: boss.speed }, x, z);
+      boss.maxHp = bossMapTuned.maxHp;
+      boss.hp = boss.maxHp;
+      boss.speed = bossMapTuned.speed;
+      boss.survivalXpMultiplier = bossMapTuned.xpMultiplier;
       boss.startX = this.levelBounds.minX + 2.5;
       boss.endX = this.levelBounds.maxX - 2.5;
       boss.specialActionTimer = variant === 'bosman_krakow' ? 2.3 : 2.0;

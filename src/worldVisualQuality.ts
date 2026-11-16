@@ -1,4 +1,5 @@
-import type { SurvivalMapId } from './survivalMaps.ts';
+import { getSurvivalMapDefinition, SURVIVAL_MAP_IDS, type SurvivalMapId } from './survivalMaps.ts';
+import type { SurvivalWorldBiomeBlendWeights } from './survivalWorldBlend.ts';
 
 export interface WorldLightingProfile {
   ambientColor: number;
@@ -154,4 +155,74 @@ export function getCampaignLightingProfile(sector: number): WorldLightingProfile
 
 export function getSurvivalSurfaceProfile(mapId: SurvivalMapId): SurvivalSurfaceProfile {
   return SURVIVAL_SURFACE_PROFILES[mapId] ?? SURVIVAL_SURFACE_PROFILES.warehouse_b4;
+}
+
+
+type SurvivalLightingColorKey =
+  | 'ambientColor' | 'hemisphereSkyColor' | 'hemisphereGroundColor'
+  | 'directionalColor' | 'rimColor' | 'fogColor';
+
+function srgbChannelToLinear(channel: number): number {
+  const value = channel / 255;
+  return value <= 0.04045 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
+}
+function linearChannelToSrgb(channel: number): number {
+  const value = Math.max(0, channel);
+  return 255 * (value <= 0.0031308 ? value * 12.92 : 1.055 * Math.pow(value, 1 / 2.4) - 0.055);
+}
+
+/** Weighted colour blend in linear-light space avoids dark seams between palettes. */
+function blendSurvivalHexColor(weights: SurvivalWorldBiomeBlendWeights, key: SurvivalLightingColorKey): number {
+  const channels = [0, 0, 0];
+  for (const mapId of SURVIVAL_MAP_IDS) {
+    const hex = SURVIVAL_LIGHTING_PROFILES[mapId][key];
+    const weight = weights[mapId];
+    channels[0] += srgbChannelToLinear((hex >> 16) & 255) * weight;
+    channels[1] += srgbChannelToLinear((hex >> 8) & 255) * weight;
+    channels[2] += srgbChannelToLinear(hex & 255) * weight;
+  }
+  return (Math.round(linearChannelToSrgb(channels[0])) << 16)
+    | (Math.round(linearChannelToSrgb(channels[1])) << 8)
+    | Math.round(linearChannelToSrgb(channels[2]));
+}
+function blendSurvivalScalar(
+  weights: SurvivalWorldBiomeBlendWeights,
+  key: Exclude<keyof WorldLightingProfile, SurvivalLightingColorKey>,
+): number {
+  return SURVIVAL_MAP_IDS.reduce((sum, id) => sum + SURVIVAL_LIGHTING_PROFILES[id][key] * weights[id], 0);
+}
+
+/** Lighting target at a world coordinate, including two-way and four-way overlaps. */
+export function getSurvivalWorldLightingProfile(weights: SurvivalWorldBiomeBlendWeights): WorldLightingProfile {
+  return {
+    ambientColor: blendSurvivalHexColor(weights, 'ambientColor'),
+    ambientIntensity: blendSurvivalScalar(weights, 'ambientIntensity'),
+    hemisphereSkyColor: blendSurvivalHexColor(weights, 'hemisphereSkyColor'),
+    hemisphereGroundColor: blendSurvivalHexColor(weights, 'hemisphereGroundColor'),
+    hemisphereIntensity: blendSurvivalScalar(weights, 'hemisphereIntensity'),
+    directionalColor: blendSurvivalHexColor(weights, 'directionalColor'),
+    directionalIntensity: blendSurvivalScalar(weights, 'directionalIntensity'),
+    rimColor: blendSurvivalHexColor(weights, 'rimColor'),
+    rimIntensity: blendSurvivalScalar(weights, 'rimIntensity'),
+    fogColor: blendSurvivalHexColor(weights, 'fogColor'),
+    fogNear: blendSurvivalScalar(weights, 'fogNear'),
+    fogFar: blendSurvivalScalar(weights, 'fogFar'),
+    environmentIntensity: blendSurvivalScalar(weights, 'environmentIntensity'),
+    exposure: blendSurvivalScalar(weights, 'exposure'),
+  };
+}
+
+/** Background is mixed with the same bilinear weights as world lighting. */
+export function getSurvivalWorldBackgroundColor(weights: SurvivalWorldBiomeBlendWeights): number {
+  const channels = [0, 0, 0];
+  for (const mapId of SURVIVAL_MAP_IDS) {
+    const hex = getSurvivalMapDefinition(mapId).backgroundColor;
+    const weight = weights[mapId];
+    channels[0] += srgbChannelToLinear((hex >> 16) & 255) * weight;
+    channels[1] += srgbChannelToLinear((hex >> 8) & 255) * weight;
+    channels[2] += srgbChannelToLinear(hex & 255) * weight;
+  }
+  return (Math.round(linearChannelToSrgb(channels[0])) << 16)
+    | (Math.round(linearChannelToSrgb(channels[1])) << 8)
+    | Math.round(linearChannelToSrgb(channels[2]));
 }
