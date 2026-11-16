@@ -324,7 +324,11 @@ test('Unity mega-world places all five secrets in each of the four biome coordin
   assert.match(factory, /zone\.Center\.x \+ definition\.Position\.x/);
   assert.match(factory, /zone\.Center\.y \+ definition\.Position\.y/);
   assert.match(factory, /CreateUnifiedSurvivalSecrets\(\)/);
+  assert.match(pickup, /\[RequireComponent\(typeof\(SphereCollider\), typeof\(Rigidbody\)\)\]/);
   assert.match(pickup, /OnTriggerEnter\(Collider other\)/);
+  assert.match(pickup, /body\.isKinematic = true/);
+  assert.match(pickup, /body\.useGravity = false/);
+  assert.match(pickup, /CollisionDetectionMode\.ContinuousSpeculative/);
   assert.match(pickup, /paleciaki\.survival\.secret\.v1\./);
   assert.match(pickup, /GameSession\.Current\.SecretsFound = CountDiscovered\(\)/);
   assert.match(pickup, /public static int CountDiscovered\(\)/);
