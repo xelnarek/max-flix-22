@@ -17,7 +17,12 @@ namespace MaxFlix.Unity.Runtime
             CombatProjectile.ClearAllActive();
             EnemyAttackProjectile.ClearAllActive();
             EnemyAgent.InvalidateSpatialCache();
-            if (_worldRoot != null) Object.Destroy(_worldRoot.gameObject);
+            if (_worldRoot != null)
+            {
+                SurvivalPerformanceGovernor governor = _worldRoot.GetComponent<SurvivalPerformanceGovernor>();
+                governor?.Shutdown();
+                Object.Destroy(_worldRoot.gameObject);
+            }
             _worldRoot = null;
             _layoutParent = null;
             _isBuildingUnifiedSurvivalWorld = false;
