@@ -288,6 +288,11 @@ export function initAuth(): Promise<User | null> {
       if (!user && retryOnFailure) authPromise = null;
       unsubscribe?.();
       resolve(user);
+      if (user) {
+        void Promise.resolve().then(() => syncPendingLeaderboardScores()).catch((error) => {
+          console.warn('[Firebase:Leaderboard] ⚠️ Nie udało się automatycznie opróżnić kolejki po logowaniu:', error);
+        });
+      }
     };
 
     const subscription = onAuthStateChanged(auth, (user) => {
@@ -685,6 +690,12 @@ export async function getTopLeaderboard(maxEntries = 15): Promise<LeaderboardEnt
 export async function getTopSurvivalLeaderboard(maxEntries = 15): Promise<LeaderboardEntry[]> {
   const collectionPath = 'leaderboard';
   const safeMaxEntries = Number.isFinite(maxEntries) ? Math.max(0, Math.floor(maxEntries)) : 15;
+
+  // The authoritative server query below is also the connectivity check. Start
+  // anonymous auth in parallel so a slow sign-in never blocks public ranking reads.
+  void initAuth().catch((error) => {
+    console.warn('[Firebase:Auth] ⚠️ Sesja rankingu wymaga ponowienia; odczyt publiczny trwa dalej:', error);
+  });
 
   try {
     // Public leaderboard reads do not require an authenticated session. Avoid
