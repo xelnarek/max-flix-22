@@ -342,6 +342,13 @@ namespace MaxFlix.Unity.Runtime
 
             if (_attackTimer <= 0f && distance <= _aggroRange)
             {
+                if (!HasClearAttackLine())
+                {
+                    Move(direction * (_moveSpeed * _phaseTwoMoveMultiplier * _slowMultiplier), deltaTime);
+                    Face(direction, deltaTime);
+                    return;
+                }
+
                 _chargeWindupRemaining = _profile.IsBoss ? 0.82f : 0.62f;
                 _attackTimer = _attackInterval / _abilityRateMultiplier * (_phaseTwo ? 0.76f : 1f);
             }
@@ -356,7 +363,8 @@ namespace MaxFlix.Unity.Runtime
             {
                 Vector3 offset = _target.transform.position - transform.position;
                 offset.y = 0f;
-                if (offset.sqrMagnitude <= (_attackRange + 0.5f) * (_attackRange + 0.5f))
+                if (offset.sqrMagnitude <= (_attackRange + 0.5f) * (_attackRange + 0.5f)
+                    && HasClearAttackLine())
                 {
                     _target.ApplyDamage(_attackDamage * (_profile.IsBoss ? 1.35f : 1f));
                     _chargeHitApplied = true;
