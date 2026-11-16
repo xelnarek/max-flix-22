@@ -8,7 +8,8 @@ namespace MaxFlix.Unity.Runtime
     /// </summary>
     public sealed class CampaignMissionDirector : MonoBehaviour
     {
-        private const string UnlockedSectorKey = "maxFlizUnlockedSector";
+        private const string UnlockedSectorKey = "paleciaki.campaign.maxUnlockedSector.v1";
+        private const string LegacyUnlockedSectorKey = "maxFlizUnlockedSector";
         private const int RequiredVipOrders = 4;
         private const float SectorBStartX = 36f;
         private const float SectorCStartX = 116f;
@@ -44,7 +45,16 @@ namespace MaxFlix.Unity.Runtime
         {
             _player = player;
             _hud = hud;
-            _maxUnlockedSector = Mathf.Clamp(PlayerPrefs.GetInt(UnlockedSectorKey, 1), 1, 3);
+            bool hasVersionedProgress = PlayerPrefs.HasKey(UnlockedSectorKey);
+            int storedProgress = hasVersionedProgress
+                ? PlayerPrefs.GetInt(UnlockedSectorKey, 1)
+                : PlayerPrefs.GetInt(LegacyUnlockedSectorKey, 1);
+            _maxUnlockedSector = Mathf.Clamp(storedProgress, 1, 3);
+            if (!hasVersionedProgress && PlayerPrefs.HasKey(LegacyUnlockedSectorKey))
+            {
+                PlayerPrefs.SetInt(UnlockedSectorKey, _maxUnlockedSector);
+                PlayerPrefs.Save();
+            }
             ApplyGateState();
             RefreshStatus(true);
         }
