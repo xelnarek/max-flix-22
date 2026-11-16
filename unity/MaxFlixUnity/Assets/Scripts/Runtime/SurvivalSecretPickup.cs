@@ -10,7 +10,7 @@ namespace MaxFlix.Unity.Runtime
     [RequireComponent(typeof(SphereCollider))]
     public sealed class SurvivalSecretPickup : MonoBehaviour
     {
-        private static readonly Dictionary<int, Material> Materials = new Dictionary<int, Material>();
+        private static readonly Dictionary<long, Material> Materials = new Dictionary<long, Material>();
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
         private static readonly int EmissionId = Shader.PropertyToID("_EmissionColor");
@@ -184,7 +184,9 @@ namespace MaxFlix.Unity.Runtime
             if (renderer == null) return;
 
             Color32 rgba = color;
-            int key = rgba.r << 24 | rgba.g << 16 | rgba.b << 8 | rgba.a | (emissive ? 1 : 0);
+            uint packedColor = ((uint)rgba.r << 24) | ((uint)rgba.g << 16)
+                | ((uint)rgba.b << 8) | rgba.a;
+            long key = ((long)packedColor << 1) | (emissive ? 1L : 0L);
             if (!Materials.TryGetValue(key, out Material material))
             {
                 Shader shader = Shader.Find("Universal Render Pipeline/Lit");
