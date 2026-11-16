@@ -3784,7 +3784,7 @@ export class PaleciakiGameEngine {
       const surface = new THREE.Mesh(new THREE.PlaneGeometry(width, depth), material);
       surface.name = name;
       surface.rotation.x = -Math.PI / 2;
-      surface.position.set(position.x, 0.009, position.z);
+      surface.position.set(position.x, name === 'survival-biome-four-way-blend' ? 0.013 : 0.008, position.z);
       surface.castShadow = false;
       surface.receiveShadow = false;
       surface.renderOrder = 2;
