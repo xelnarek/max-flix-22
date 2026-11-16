@@ -22,18 +22,23 @@ test('Unity Survival mega-map contract matches the live 240 by 80 metre topology
     read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/MainGameBootstrap.cs'),
     read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs'),
   ]);
-  for (const token of ['MinX = -119.5f', 'MaxX = 119.5f', 'MinZ = -39.5f', 'MaxZ = 39.5f']) {
+  for (const token of ['MinX = -120f', 'MaxX = 120f', 'MinZ = -40f', 'MaxZ = 40f']) {
     assert.ok(world.includes(token), 'missing world bound: ' + token);
   }
   for (const id of ['WarehouseB4', 'ContainerTerminal', 'ColdStorage', 'NightSorting']) {
     assert.ok(world.includes('WarehouseMapId.' + id));
   }
-  assert.match(world, /BlendHalfWidth = 9f/);
+  assert.match(world, /BlendHalfWidth = 11f/);
   assert.match(world, /new SurvivalWorldTransition\("b4-to-port"/);
-  assert.match(world, /new SurvivalWorldTransition\("b4-to-cold"/);
-  assert.match(world, /new SurvivalWorldTransition\("port-to-night"/);
+  assert.match(world, /new SurvivalWorldTransition\("port-to-cold"/);
+  assert.match(world, /new SurvivalWorldTransition\("night-to-b4"/);
   assert.match(world, /new SurvivalWorldTransition\("cold-to-night"/);
-  assert.match(source, /minX: -119\.5,[\s\S]*?maxX: 119\.5,[\s\S]*?minZ: -39\.5,[\s\S]*?maxZ: 39\.5/);
+  assert.match(world, /WarehouseMapId\.ColdStorage, 60f, 20f/);
+  assert.match(world, /WarehouseMapId\.NightSorting, -60f, 20f/);
+  assert.match(world, /if \(south\) return east \? WarehouseMapId\.ColdStorage : WarehouseMapId\.NightSorting/);
+  assert.match(world, /ColdStorage = east \* south/);
+  assert.match(world, /NightSorting = \(1f - east\) \* south/);
+  assert.match(source, /minX: -120,[\s\S]*?maxX: 120,[\s\S]*?minZ: -40,[\s\S]*?maxZ: 40/);
   assert.match(bootstrap, /WarehouseWorldFactory\.BuildB4Slice\(\)/);
   assert.doesNotMatch(factory, /SurvivalWorldLayout\.Zones|BuildUnifiedSurvivalWorld/);
 });
