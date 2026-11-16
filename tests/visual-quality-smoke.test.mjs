@@ -293,3 +293,20 @@ test('the Survival archive directory exposes all four arenas and the sixteen-sec
   assert.match(css, /\.map-night\s*\{/);
   assert.match(css, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
 });
+
+test('the field guide documents the Necronomicon secret without changing menu navigation or layout', async () => {
+  const html = await read('../index.html');
+  const sectionStart = html.indexOf('<span class="field-guide-index">09</span>');
+  const sectionEnd = html.indexOf('</section>', sectionStart);
+  assert.ok(sectionStart >= 0 && sectionEnd > sectionStart, 'the existing secrets section should remain intact');
+  const secretsSection = html.slice(sectionStart, sectionEnd);
+  assert.equal((secretsSection.match(/class="field-guide-card secret necronomicon-secret-card"/g) || []).length, 1);
+  assert.match(secretsSection, /Necronomicon • Wezwanie Cthulhu/);
+  assert.match(secretsSection, /na każdej z czterech aren Survival/);
+  assert.match(secretsSection, /2,15 s/);
+  assert.match(secretsSection, /o 50% większe obrażenia/);
+  assert.match(secretsSection, /\+6 000 PKT/);
+  assert.match(secretsSection, /field-guide-card-grid three-col/);
+  assert.equal((html.match(/class="menu-tab-btn/g) || []).length, 11, 'all existing menu tabs must remain');
+  assert.ok(html.includes('id="tab-field-guide"'), 'the existing Field Guide tab must remain');
+});
