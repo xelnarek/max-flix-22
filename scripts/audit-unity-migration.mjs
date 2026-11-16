@@ -60,6 +60,9 @@ try {
     menuController,
     uiEventSystemInstaller,
     hudController,
+    enemyNavigationWorld,
+    enemyAgent,
+    campaignMission,
     unityWorkflow,
     unityReadme,
   ] = await Promise.all([
@@ -82,6 +85,9 @@ try {
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/MainMenuController.cs'),
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/UiEventSystemInstaller.cs'),
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyNavigationWorld.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/CampaignMissionDirector.cs'),
     read('.github/workflows/unity-validation.yml'),
     read('unity/MaxFlixUnity/README.md'),
   ]);
@@ -260,6 +266,21 @@ try {
   }
   if (!hudController.includes('UiEventSystemInstaller.Ensure()')) {
     fail('Unity HUD must share the resilient touch/pointer input module setup.');
+  }
+  for (const token of [
+    'EnemyNavigationWorld navigation = root.AddComponent<EnemyNavigationWorld>()',
+    'navigation.Initialize(_worldRoot)',
+  ]) {
+    if (!worldFactory.includes(token)) fail('Unity world factory is missing obstacle navigation initialization: ' + token);
+  }
+  for (const token of [
+    'EnemyNavigationWorld.GetObstacleAvoidanceVector(',
+    'Vector3.Dot(direction, targetDirection) > 0.35f',
+  ]) {
+    if (!enemyAgent.includes(token)) fail('Unity enemy movement is missing obstacle avoidance steering: ' + token);
+  }
+  if (!campaignMission.includes('EnemyNavigationWorld.RefreshActive()')) {
+    fail('Campaign navigation cache must refresh when physical boss-gated doors change state.');
   }
 
   if (process.exitCode) process.exit(process.exitCode);
