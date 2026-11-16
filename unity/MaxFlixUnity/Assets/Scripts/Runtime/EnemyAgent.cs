@@ -245,6 +245,14 @@ namespace MaxFlix.Unity.Runtime
             UpdateHitFlash(deltaTime);
         }
 
+        private bool HasClearAttackLine()
+        {
+            if (_target == null) return false;
+            Vector3 origin = transform.position + Vector3.up * 0.88f;
+            Vector3 target = _target.transform.position + Vector3.up * 0.82f;
+            return EnemyNavigationWorld.HasClearLineToTarget(origin, target, 0.12f);
+        }
+
         private void TickMelee(float deltaTime, Vector3 direction, float distance)
         {
             if (distance > _attackRange)
@@ -253,6 +261,13 @@ namespace MaxFlix.Unity.Runtime
                     Move(direction * (_moveSpeed * _phaseTwoMoveMultiplier * _slowMultiplier), deltaTime);
                 else
                     TickPatrol(deltaTime);
+                Face(direction, deltaTime);
+                return;
+            }
+
+            if (!HasClearAttackLine())
+            {
+                Move(direction * (_moveSpeed * _phaseTwoMoveMultiplier * _slowMultiplier), deltaTime);
                 Face(direction, deltaTime);
                 return;
             }
@@ -267,7 +282,8 @@ namespace MaxFlix.Unity.Runtime
         private void TickRanged(float deltaTime, Vector3 direction, float distance)
         {
             float preferredRange = _attackRange;
-            if (distance > preferredRange * 1.12f)
+            bool clearAttackLine = HasClearAttackLine();
+            if (!clearAttackLine || distance > preferredRange * 1.12f)
                 Move(direction * (_moveSpeed * _slowMultiplier), deltaTime);
             else if (distance < preferredRange * 0.58f)
                 Move(-direction * (_moveSpeed * 0.72f * _slowMultiplier), deltaTime);
@@ -278,7 +294,7 @@ namespace MaxFlix.Unity.Runtime
             }
 
             Face(direction, deltaTime);
-            if (_attackTimer <= 0f)
+            if (clearAttackLine && _attackTimer <= 0f)
             {
                 FireRangedAttack(direction);
                 _attackTimer = _attackInterval / _abilityRateMultiplier * (_phaseTwo ? 0.78f : 1f);
@@ -302,7 +318,13 @@ namespace MaxFlix.Unity.Runtime
                 shielded++;
             }
 
-            if (shielded == 0) FireRangedAttack(direction);
+            if (shielded == 0)
+            {
+                if (HasClearAttackLine())
+                    FireRangedAttack(direction);
+                else
+                    Move(direction * (_moveSpeed * 0.82f * _slowMultiplier), deltaTime);
+            }
             _attackTimer = _attackInterval / _abilityRateMultiplier * (_phaseTwo ? 0.85f : 1f);
         }
 
