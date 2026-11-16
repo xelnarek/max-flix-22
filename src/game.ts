@@ -58,7 +58,7 @@ import { getSurvivalBossVariant, isMajorSurvivalBossType, shouldSpawnBosmanKrako
 import { applySurvivalWaveMutator, getSurvivalWaveMutator } from './survivalWaveMutators.ts';
 import { getSurvivalConvoyHazardCount } from './survivalConvoy.ts';
 import { applySurvivalWorldCombatModifier, getSurvivalMapDefinition, SURVIVAL_MAPS, SURVIVAL_MAP_IDS, type SurvivalMapId } from './survivalMaps.ts';
-import { getCampaignLightingProfile, getSurvivalLightingProfile, getSurvivalWorldBackgroundColor, getSurvivalWorldLightingProfile, getSurvivalSurfaceProfile, PVP_LIGHTING_PROFILE } from './worldVisualQuality.ts';
+import { getCampaignLightingProfile, getSurvivalLightingProfile, getSurvivalWorldBackgroundColor, getSurvivalWorldLightingProfile, getSurvivalSurfaceProfile, PVP_LIGHTING_PROFILE, type WorldLightingProfile } from './worldVisualQuality.ts';
 import { getSurvivalMapRouteFeatures } from './survivalMapLayouts.ts';
 import { createSurvivalWorldDressing } from './survivalWorldDressing.ts';
 import { getSurvivalBiomeIdAtPosition, getSurvivalWorldBiome, getSurvivalWorldTransitionFootprint, isSurvivalWorldTransitionFromNegativeSide, SURVIVAL_WORLD_BIOME_HALF_DEPTH, SURVIVAL_WORLD_BIOME_HALF_WIDTH, SURVIVAL_WORLD_BIOMES, SURVIVAL_WORLD_BOUNDS, SURVIVAL_WORLD_START_BIOME, SURVIVAL_WORLD_TRANSITIONS, type SurvivalWorldOpenEdges } from './survivalWorldLayout.ts';

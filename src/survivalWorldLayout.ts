@@ -1,5 +1,5 @@
 import type { SurvivalMapId } from './survivalMaps.ts';
-import { SURVIVAL_WORLD_BLEND_HALF_WIDTH_METERS } from './survivalWorldBlend.ts';
+import { SURVIVAL_WORLD_BLEND_HALF_DEPTH_METERS, SURVIVAL_WORLD_BLEND_HALF_WIDTH_METERS } from './survivalWorldBlend.ts';
 
 export interface SurvivalWorldOpenEdges { west: boolean; east: boolean; north: boolean; south: boolean; }
 export interface SurvivalWorldBiomeLayout { id: SurvivalMapId; centerX: number; centerZ: number; openEdges: SurvivalWorldOpenEdges; }
@@ -10,9 +10,10 @@ export interface SurvivalWorldTransitionFootprint { bandWidth: number; bandDepth
 /** Blend each shared biome edge across its full length, not only through the old central doorway. */
 export function getSurvivalWorldTransitionFootprint(transition: SurvivalWorldTransition): SurvivalWorldTransitionFootprint {
   const blendWidth = SURVIVAL_WORLD_BLEND_HALF_WIDTH_METERS * 2;
+  const blendDepth = SURVIVAL_WORLD_BLEND_HALF_DEPTH_METERS * 2;
   return transition.axis === 'x'
     ? { bandWidth: blendWidth, bandDepth: SURVIVAL_WORLD_BIOME_HALF_DEPTH * 2, seamWidth: 1.25, seamDepth: SURVIVAL_WORLD_BIOME_HALF_DEPTH * 2 }
-    : { bandWidth: SURVIVAL_WORLD_BIOME_HALF_WIDTH * 2, bandDepth: blendWidth, seamWidth: SURVIVAL_WORLD_BIOME_HALF_WIDTH * 2, seamDepth: 1.25 };
+    : { bandWidth: SURVIVAL_WORLD_BIOME_HALF_WIDTH * 2, bandDepth: blendDepth, seamWidth: SURVIVAL_WORLD_BIOME_HALF_WIDTH * 2, seamDepth: 1.25 };
 }
 
 /** True when the source biome lies on the negative X/Z side of the seam texture. */
