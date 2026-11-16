@@ -183,7 +183,7 @@ export function stepCthulhuRetroState(
   player.animation += dt * (Math.abs(Number(Boolean(input.right)) - Number(Boolean(input.left))) > 0 ? 9 : 2.2);
 
   const direction = Number(Boolean(input.right)) - Number(Boolean(input.left));
-  if (direction !== 0) player.facing = direction as -1 | 1;
+  if (direction !== 0 && !input.attackHeld) player.facing = direction as -1 | 1;
 
   if (input.dodgePressed && player.dodgeCooldown <= 0 && state.introSeconds <= 1.7) {
     player.dodgeSeconds = 0.42;

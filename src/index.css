@@ -8043,3 +8043,22 @@ body #touch-controls.manual-aim-mode:not(.hidden) .pvp-control-guide {
 @media (prefers-reduced-motion: reduce) {
   .cthulhu-retro-overlay { animation: none; }
 }
+
+
+/* Compact landscape treatment: keep the arena visible above the mobile action row. */
+@media (max-height: 560px) and (orientation: landscape) {
+  .cthulhu-retro-shell {
+    grid-template-rows: auto auto minmax(100px, 1fr) auto;
+    max-height: calc(100dvh - 8px);
+    gap: 4px;
+    padding: 5px;
+  }
+  .cthulhu-retro-header p,
+  .cthulhu-retro-footer { display: none; }
+  .cthulhu-retro-canvas { max-height: 42dvh; }
+  .cthulhu-retro-controls button {
+    min-height: 40px;
+    padding: 4px 8px;
+  }
+  .cthulhu-retro-controls button small { font-size: 6px; }
+}

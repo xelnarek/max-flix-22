@@ -302,3 +302,14 @@ test('any first movement or dodge gesture unlocks the bass channel before the fi
   assert.match(source, /button\.addEventListener\('pointerdown',[\s\S]{0,240}unlockAbyssAudio\(\)/);
   assert.match(source, /button\.addEventListener\('touchstart',[\s\S]{0,260}unlockAbyssAudio\(\)/);
 });
+
+
+test('retreating while holding fire preserves the boss-facing sprite and keeps leftward movement responsive', () => {
+  const state = createCthulhuRetroState();
+  state.introSeconds = 0;
+  const startX = state.player.x;
+  stepCthulhuRetroState(state, { left: true, attackHeld: true }, 1 / 60);
+  assert.ok(state.player.x < startX, 'the operator must still retreat while firing');
+  assert.equal(state.player.facing, 1, 'the sprite should stay aimed at the boss');
+  assert.equal(state.projectiles[0].vx, 282);
+});
