@@ -134,7 +134,11 @@ namespace MaxFlix.Unity.Runtime
             if (GameSession.Current != null && GameSession.Current.Mode == GameMode.Survival)
             {
                 _secretText = CreateText(root, "SEKRETY  0/20",
-                    new Vector2(24f, -84f), new Vector2(260f, 30f), 16, TextAnchor.MiddleLeft);
+                    Vector2.zero, new Vector2(260f, 30f), 16, TextAnchor.MiddleCenter);
+                RectTransform secretRect = _secretText.rectTransform;
+                secretRect.anchorMin = secretRect.anchorMax = new Vector2(0.5f, 0f);
+                secretRect.pivot = new Vector2(0.5f, 0f);
+                secretRect.anchoredPosition = new Vector2(0f, 12f);
                 SetSecretsCount(GameSession.Current.SecretsFound, 20);
             }
 
