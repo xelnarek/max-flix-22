@@ -4833,7 +4833,10 @@ export class PaleciakiGameEngine {
           book.rotation.z = -0.09;
           book.rotation.x = -0.06;
           group.add(book);
+          group.userData.necronomiconBook = book;
+          group.userData.necronomiconSigil = sigilRing;
           group.userData.necronomiconRunes = glyphs;
+          group.userData.necronomiconHalo = halo;
         } else {
           const coreGeometry = secret.style === 'wz'
           ? new THREE.BoxGeometry(0.48, 0.34, 0.12)
@@ -5139,6 +5142,36 @@ export class PaleciakiGameEngine {
       secret.age += dt;
       secret.mesh.rotation.y += dt * (secret.id === 'oniric_dream' ? 0.16 : secret.id === 'necronomicon' ? 0.26 : 0.65 + (secret.id.length % 3) * 0.12);
       secret.mesh.position.y = 0.08 + Math.sin(secret.age * 2.1) * 0.10;
+      if (secret.id === 'necronomicon') {
+        const book = secret.mesh.userData.necronomiconBook as THREE.Group | undefined;
+        const sigil = secret.mesh.userData.necronomiconSigil as THREE.Mesh | undefined;
+        const runes = secret.mesh.userData.necronomiconRunes as THREE.Group | undefined;
+        const halo = secret.mesh.userData.necronomiconHalo as THREE.Mesh | undefined;
+        if (book) {
+          book.rotation.z = -0.09 + Math.sin(secret.age * 1.45) * 0.025;
+          book.rotation.x = -0.06 + Math.sin(secret.age * 1.08) * 0.018;
+        }
+        if (sigil) {
+          sigil.rotation.z += dt * 0.72;
+          const pulse = 0.94 + Math.sin(secret.age * 3.2) * 0.06;
+          sigil.scale.setScalar(pulse);
+        }
+        if (runes) {
+          runes.rotation.y += dt * 0.48;
+          runes.children.forEach((rune, index) => {
+            rune.rotation.x += dt * (0.38 + index * 0.045);
+            rune.rotation.y += dt * (0.52 + index * 0.06);
+            rune.position.y = 0.90 + Math.sin(secret.age * 2.3 + index * 1.25) * 0.12;
+          });
+        }
+        if (halo) {
+          halo.rotation.y += dt * 0.42;
+          const haloPulse = 1 + Math.sin(secret.age * 2.7) * 0.06;
+          halo.scale.set(haloPulse, 1, haloPulse);
+          const haloMaterial = halo.material as THREE.MeshBasicMaterial;
+          haloMaterial.opacity = 0.66 + (Math.sin(secret.age * 2.7) + 1) * 0.12;
+        }
+      }
       const distance = Math.hypot(secret.mesh.position.x - this.playerPos.x, secret.mesh.position.z - this.playerPos.z);
       if (distance > 1.35 || Math.abs(secret.mesh.position.y + 0.65 - this.playerPos.y) > 1.45) continue;
 
