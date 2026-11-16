@@ -57,6 +57,7 @@ try {
     biomeEnvironment,
     waveDirector,
     progressionController,
+    weaponController,
     menuController,
     uiEventSystemInstaller,
     hudController,
@@ -82,6 +83,7 @@ try {
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalBiomeEnvironment.cs'),
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWaveDirector.cs'),
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalProgressionController.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWeaponController.cs'),
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/MainMenuController.cs'),
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/UiEventSystemInstaller.cs'),
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs'),
@@ -227,6 +229,14 @@ try {
   }
   if (!progressionController.includes('GetBlendedXpMultiplier')) {
     fail('Survival XP must use the biome blend field instead of switching abruptly at a seam.');
+  }
+  for (const token of [
+    'SphereCastNonAlloc(',
+    '_worldHitBuffer',
+    'GetComponentInParent<EnemyAgent>() != null',
+    'worldHitDistance < firstEnemyDistance',
+  ]) {
+    if (!weaponController.includes(token)) fail('Survival projectiles must respect world obstruction collisions: ' + token);
   }
   for (const token of [
     'SurvivalWorldLayout.GetBlendWeights',
