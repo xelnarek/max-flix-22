@@ -6,7 +6,6 @@ import {
   collection,
   doc,
   setDoc,
-  getDocs,
   getDocsFromServer,
   query,
   orderBy,
