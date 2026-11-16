@@ -349,7 +349,8 @@ test('Unity Survival damage ledger reports only applied HP damage by operator an
   const hud = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs');
   assert.match(tracker, /RecordWeaponDamage/);
   assert.match(tracker, /RecordOperatorDamage/);
-  assert.match(enemy, /float actualDamage = Mathf\.Min\(_health, balancedDamage\)/);
+  assert.match(enemy, /float actualDamage = Mathf\.Min\(Mathf\.Max\(0f, _health\), balancedDamage\)/);
+  assert.match(enemy, /_health = Mathf\.Max\(0f, _health - balancedDamage\)/);
   assert.match(tracker, /BuildSummary\(int maximumLines = 5\)/);
   assert.match(enemy, /SurvivalDamageTracker\.RecordWeaponDamage\(weaponSource\.Value, actualDamage\)/);
   assert.match(enemy, /SurvivalDamageTracker\.RecordOperatorDamage\(actualDamage\)/);
@@ -370,7 +371,7 @@ test('Unity Survival damage report attributes effective damage and displays perc
   assert.match(tracker, /RecordOperatorDamage/);
   assert.match(tracker, /rows\[i\]\.Value \/ _totalDamage \* 100f/);
   assert.match(tracker, /BuildSummary\(int maximumLines = 5\)/);
-  assert.match(enemy, /float actualDamage = Mathf\.Min\(_health, balancedDamage\)/);
+  assert.match(enemy, /float actualDamage = Mathf\.Min\(Mathf\.Max\(0f, _health\), balancedDamage\)/);
   assert.match(enemy, /SurvivalDamageTracker\.RecordWeaponDamage\(weaponSource\.Value, actualDamage\)/);
   assert.match(enemy, /SurvivalDamageTracker\.RecordOperatorDamage\(actualDamage\)/);
   assert.match(weapons, /ApplyWeaponHit/);
