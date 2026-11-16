@@ -14,6 +14,8 @@ namespace MaxFlix.Unity.Runtime
         {
             if (_worldRoot != null) Object.Destroy(_worldRoot.gameObject);
             _worldRoot = null;
+            _layoutOffset = Vector3.zero;
+            _isBuildingUnifiedSurvivalWorld = false;
         }
 
         public static PlayerController BuildCampaignMegaMap()
