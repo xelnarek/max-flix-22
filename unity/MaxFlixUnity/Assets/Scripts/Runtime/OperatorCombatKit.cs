@@ -300,7 +300,7 @@ namespace MaxFlix.Unity.Runtime
 
                     if (unit.PounceTarget != null)
                     {
-                        if (unit.PounceTarget == null || Time.time > unit.PounceUntil)
+                        if (unit.PounceTarget == null || unit.PounceTarget.IsDefeated || Time.time > unit.PounceUntil)
                         {
                             unit.PounceTarget = null;
                         }
@@ -362,7 +362,7 @@ namespace MaxFlix.Unity.Runtime
             Vector3 position = transform.position;
             foreach (EnemyAgent enemy in _enemyCache)
             {
-                if (enemy == null) continue;
+                if (enemy == null || enemy.IsDefeated) continue;
                 float sqrDistance = (enemy.transform.position - position).sqrMagnitude;
                 if (sqrDistance >= bestDistance) continue;
                 bestDistance = sqrDistance;
