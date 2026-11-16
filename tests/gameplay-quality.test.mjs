@@ -1282,43 +1282,52 @@ test('Survival draft adds Crimsonland radiation and Archero ricochet builds with
   assert.match(combat, /export function getSurvivalRadiationProfile/);
 });
 
-test('Survival chooses among four playable map identities and does not immediately repeat a map', async () => {
-  const [game, maps] = await Promise.all([read('../src/game.ts'), read('../src/survivalMaps.ts')]);
-  assert.match(game, /chooseRandomSurvivalMap\(this\.lastSurvivalMapId, Math\.random\(\)\)/);
-  assert.match(game, /buildSurvivalArenaExpansion\(this\.survivalMapId\)/);
-  assert.match(game, /private buildSurvivalMapLandmarks\(mapId: SurvivalMapId\)/);
-  assert.match(game, /mapId === 'container_terminal'[\s\S]*?mapId === 'cold_storage'[\s\S]*?mapId === 'night_sorting'/);
-  assert.match(game, /this\.survivalObstacles\.push\(\{ x: position\.x, z: position\.z/);
-  assert.match(game, /private spawnSurvivalSecrets\(mapId: SurvivalMapId\)/);
-  assert.match(game, /private updateSurvivalSecrets\(dt: number\)/);
-  assert.match(game, /onSurvivalSecretFound\?\./);
-  assert.match(maps, /'warehouse_b4' \| 'container_terminal' \| 'cold_storage' \| 'night_sorting'/);
-  assert.match(maps, /export function chooseRandomSurvivalMap/);
+test('Survival assembles four physical biome sections into one connected world', async () => {
+  const [game, layout, maps] = await Promise.all([
+    read('../src/game.ts'), read('../src/survivalWorldLayout.ts'), read('../src/survivalMaps.ts')
+  ]);
+  assert.match(game, /this\.buildConnectedSurvivalWorld\(\)/);
+  assert.match(game, /private buildConnectedSurvivalWorld\(\)/);
+  assert.match(game, /resetObstacles: false/);
+  assert.match(game, /sectionRoot\.position\.set\(biome\.centerX, 0, biome\.centerZ\)/);
+  assert.match(game, /this\.survivalObstacles\[index\]\.x \+= biome\.centerX/);
+  assert.match(game, /this\.platforms\[index\]\.z \+= biome\.centerZ/);
+  assert.match(game, /openEdges\.north/);
+  assert.match(game, /openEdges\.east/);
+  assert.match(game, /survival-biome-seam-/);
+  assert.match(game, /survival-biome-gateway-posts/);
+  assert.match(game, /this\.disposeTemporaryObject\(worldRoot\)/);
+  assert.match(layout, /SURVIVAL_WORLD_WIDTH/);
+  assert.match(layout, /SURVIVAL_WORLD_DEPTH/);
+  assert.match(layout, /openingWidth: 26/);
+  assert.match(layout, /openingWidth: 36/);
   assert.match(maps, /secretLocations:/);
 });
 
-test('Survival menu lets players explicitly choose one of the four actual arenas', async () => {
+test('Survival atlas replaces the arena selector and starts in the B4 quadrant', async () => {
   const [html, app, game] = await Promise.all([
     read('../index.html'), read('../src/index.ts'), read('../src/game.ts')
   ]);
-  for (const mapId of ['random', 'warehouse_b4', 'container_terminal', 'cold_storage', 'night_sorting']) {
-    assert.ok(html.includes('data-survival-map="' + mapId + '"'), 'missing map selector option: ' + mapId);
-  }
-  assert.match(app, /let selectedSurvivalMapId: SurvivalMapId \| null = \(\(\) => \{/);
-  assert.match(app, /readSurvivalMapPreference\(window\.localStorage\)/);
-  assert.match(app, /this\.engine\.startSurvival\(selectedSurvivalMapId\)/);
-  assert.match(game, /public startSurvival\(mapOverride: SurvivalMapId \| null = null\)/);
-  assert.match(game, /this\.survivalMapId = mapOverride \|\| chooseRandomSurvivalMap/);
+  assert.match(html, /id="tab-map" class="tab-panel world-atlas-panel"/);
+  assert.match(html, /JEDEN ŚWIAT\. CZTERY BIOMY\./);
+  assert.doesNotMatch(html, /data-survival-map=|id="survival-map-picker"/);
+  assert.doesNotMatch(app, /selectedSurvivalMapId|readSurvivalMapPreference|writeSurvivalMapPreference/);
+  assert.match(app, /this\.engine\.startSurvival\(\)/);
+  assert.match(game, /this\.survivalMapId = startBiome\.id/);
+  assert.match(game, /this\.levelBounds = \{ \.\.\.SURVIVAL_WORLD_BOUNDS \}/);
+  assert.match(game, /this\.playerPos\.set\(startBiome\.centerX, 0\.5, startBiome\.centerZ\)/);
 });
 
-test('Survival secrets are collectible, score-bearing and released during map cleanup', async () => {
+test('world-wide Survival secrets keep their source biome and are disposed with the connected world', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /this\.updateSurvivalSecrets\(simDt\)/);
   assert.match(game, /distance > 1\.35/);
   assert.match(game, /this\.survivalSecretsFound\+\+/);
   assert.match(game, /this\.score \+= 750/);
   assert.match(game, /this\.disposeObjectResources\(secret\.mesh\)/);
-  assert.match(game, /totalSecrets: getSurvivalMapDefinition\(this\.survivalMapId\)\.secretLocations\.length/);
+  assert.match(game, /spawnSurvivalSecrets\(biome\.id, \{ x: biome\.centerX, z: biome\.centerZ \}, false\)/);
+  assert.match(game, /onSurvivalSecretFound\?\.\(secret\.mapId, secret\.id, secret\.name\)/);
+  assert.match(game, /totalSecrets: SURVIVAL_MAP_IDS\.reduce/);
 });
 
 test('Survival main boss victories are tracked separately from ordinary enemy eliminations', async () => {
@@ -1351,16 +1360,19 @@ test('the menu exposes a readable achievement archive and selected map/secret HU
 });
 
 
-test('Survival arena modifiers produce distinct, bounded combat trade-offs and compose with wave rules', async () => {
-  const [game, maps] = await Promise.all([read('../src/game.ts'), read('../src/survivalMaps.ts')]);
-  assert.match(game, /applySurvivalMapCombatModifier/);
-  assert.match(game, /const mapModifier = survivalMap\.combatModifier/);
-  assert.match(game, /this\.callbacks\.onSurvivalAnnouncement\?\.\([\s\S]*?mapModifier\.title[\s\S]*?mapModifier\.description/);
+test('biome lighting blends smoothly and enemy spawn modifiers use the actual quadrant', async () => {
+  const [game, maps, layout] = await Promise.all([
+    read('../src/game.ts'), read('../src/survivalMaps.ts'), read('../src/survivalWorldLayout.ts')
+  ]);
+  assert.match(game, /private beginSurvivalBiomeLightingTransition\(mapId: SurvivalMapId\)/);
+  assert.match(game, /duration: 4\.5/);
+  assert.match(game, /this\.updateSurvivalBiome\(simDt\)/);
+  assert.match(game, /getSurvivalBiomeIdAtPosition\(x, z, this\.survivalMapId\)/);
   assert.match(game, /enemy\.survivalXpMultiplier = Math\.min\(1\.8, mapTuned\.xpMultiplier \* waveXpMultiplier\)/);
   assert.match(game, /bosses receive the map trade-off as well/);
   assert.match(maps, /title: 'SZYBKI PRZEŁADUNEK'/);
   assert.match(maps, /title: 'ZMIANA -18°C'/);
-  assert.match(maps, /export function applySurvivalMapCombatModifier/);
+  assert.match(layout, /SURVIVAL_WORLD_BIOME_HYSTERESIS_METERS = 4/);
 });
 
 

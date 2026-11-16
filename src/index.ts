@@ -38,7 +38,6 @@ import { SURVIVAL_MAPS, type SurvivalMapId } from './survivalMaps.ts';
 import { launchOniricPlatformer } from './oniricPlatformer.ts';
 import { launchCthulhuRetroArena } from './cthulhuRetroArena.ts';
 import { getMenuTabIndexForKey } from './menuTabNavigation.ts';
-import { readSurvivalMapPreference, writeSurvivalMapPreference } from './survivalMapPreference.ts';
 import { getVisibilityPauseAction } from './visibilityPause.ts';
 import { observeWebGLContextRecovery } from './webglContextRecovery.ts';
 // Firestore is only needed for the optional leaderboard. Keep its large SDK
@@ -2517,62 +2516,6 @@ class PaleciakiScene extends xb.Script {
     });
 
     let startingGame = false;
-    let selectedSurvivalMapId: SurvivalMapId | null = (() => {
-      try {
-        return readSurvivalMapPreference(window.localStorage);
-      } catch {
-        return null;
-      }
-    })();
-    const survivalMapPicker = document.getElementById('survival-map-picker');
-    const survivalMapPickerHint = document.getElementById('survival-map-picker-hint');
-    const survivalMapPreviewTitle = document.getElementById('survival-map-preview-title');
-    const survivalMapPreviewDetail = document.getElementById('survival-map-preview-detail');
-
-    const applySurvivalMapChoice = (choice: string, persist: boolean) => {
-      const mapButton = Array.from(
-        survivalMapPicker?.querySelectorAll<HTMLButtonElement>('[data-survival-map]') || []
-      ).find((option) => option.dataset.survivalMap === choice);
-      if (!mapButton) return;
-
-      if (choice === 'random') {
-        selectedSurvivalMapId = null;
-        if (survivalMapPreviewTitle) survivalMapPreviewTitle.textContent = 'ROTACJA AREN';
-        if (survivalMapPreviewDetail) survivalMapPreviewDetail.textContent = 'Losowanie bez powtórzenia poprzedniej mapy. Każda arena ma własny układ osłon i tras.';
-        if (survivalMapPickerHint) survivalMapPickerHint.textContent = 'Losowanie wybierze jedną z czterech aren.';
-      } else if (Object.prototype.hasOwnProperty.call(SURVIVAL_MAPS, choice)) {
-        selectedSurvivalMapId = choice as SurvivalMapId;
-        const map = SURVIVAL_MAPS[selectedSurvivalMapId];
-        if (survivalMapPreviewTitle) survivalMapPreviewTitle.textContent = map.name.toUpperCase() + ' • ' + map.subtitle;
-        if (survivalMapPreviewDetail) survivalMapPreviewDetail.textContent = map.description;
-        if (survivalMapPickerHint) survivalMapPickerHint.textContent = map.combatModifier.title + ' • ' + map.combatModifier.description;
-      } else {
-        return;
-      }
-
-      survivalMapPicker?.querySelectorAll<HTMLButtonElement>('[data-survival-map]').forEach((option) => {
-        const active = option === mapButton;
-        option.classList.toggle('is-selected', active);
-        option.setAttribute('aria-pressed', String(active));
-      });
-
-      if (persist) {
-        try {
-          writeSurvivalMapPreference(window.localStorage, selectedSurvivalMapId);
-        } catch {
-          // The menu remains usable when browser storage is restricted.
-        }
-      }
-    };
-
-    // Restore the last arena on return to the menu; first launch still defaults to rotation.
-    applySurvivalMapChoice(selectedSurvivalMapId || 'random', false);
-    survivalMapPicker?.addEventListener('click', (event) => {
-      const button = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>('[data-survival-map]');
-      if (!button || !survivalMapPicker.contains(button)) return;
-      applySurvivalMapChoice(button.dataset.survivalMap || 'random', true);
-    });
-
     const doStartSurvival = async (e?: Event) => {
       if (startingGame) return;
       if (e) {
@@ -2622,7 +2565,7 @@ class PaleciakiScene extends xb.Script {
         // Restore the Survival-specific ability label/icon after leaving PvP.
         updateCharacterUI(this.selectedCharId);
       this.gameSessionGeneration++;
-      this.engine.startSurvival(selectedSurvivalMapId);
+      this.engine.startSurvival();
         // Re-assert visibility and exclusive mode after the scene transition.
         setTouchControlsMode('survival');
         setTouchControlsVisibility(true);
@@ -2995,7 +2938,7 @@ class PaleciakiScene extends xb.Script {
       setTouchControlsMode('survival');
       this.masteryAwardedForRun = false;
       this.gameSessionGeneration++;
-      this.engine.startSurvival(selectedSurvivalMapId);
+      this.engine.startSurvival();
       setTouchControlsMode('survival');
       setTouchControlsVisibility(true);
     });
@@ -3042,7 +2985,7 @@ class PaleciakiScene extends xb.Script {
       setTouchControlsMode('survival');
       this.masteryAwardedForRun = false;
       this.gameSessionGeneration++;
-      this.engine.startSurvival(selectedSurvivalMapId);
+      this.engine.startSurvival();
         // Re-assert visibility and exclusive mode after the scene transition.
         setTouchControlsMode('survival');
         setTouchControlsVisibility(true);
