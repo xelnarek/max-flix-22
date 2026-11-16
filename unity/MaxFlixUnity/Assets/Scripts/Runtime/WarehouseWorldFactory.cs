@@ -219,6 +219,7 @@ namespace MaxFlix.Unity.Runtime
                 CreateMapLayout(map, false);
             }
 
+            CreateUnifiedSurvivalSecrets();
             _layoutParent = _worldRoot;
             _isBuildingUnifiedSurvivalWorld = false;
             CreateUnifiedBiomeAccentLights();
@@ -243,6 +244,34 @@ namespace MaxFlix.Unity.Runtime
             SurvivalBiomeEnvironment environment = root.AddComponent<SurvivalBiomeEnvironment>();
             environment.Initialize(player.transform);
             return player;
+        }
+
+        private static void CreateUnifiedSurvivalSecrets()
+        {
+            foreach (SurvivalBiomeZone zone in SurvivalWorldLayout.Zones)
+            {
+                SurvivalMapProfile map = GameContentCatalog.GetMap(zone.MapId);
+                if (map.Secrets == null) continue;
+
+                foreach (SurvivalSecretDefinition definition in map.Secrets)
+                {
+                    // Secret coordinates are already authored in biome world
+                    // units by src/survivalMaps.ts; do not apply the procedural
+                    // geometry scale to these world-space collectible offsets.
+                    GameObject pickup = new GameObject(
+                        "SEKRET • " + map.DisplayName + " • " + definition.DisplayName);
+                    pickup.transform.SetParent(_worldRoot, false);
+                    pickup.transform.position = new Vector3(
+                        zone.Center.x + definition.Position.x,
+                        0.05f,
+                        zone.Center.y + definition.Position.y);
+                    SphereCollider trigger = pickup.AddComponent<SphereCollider>();
+                    trigger.isTrigger = true;
+                    trigger.radius = 1.35f;
+                    SurvivalSecretPickup secret = pickup.AddComponent<SurvivalSecretPickup>();
+                    secret.Initialize(zone.MapId, definition);
+                }
+            }
         }
 
         private static void CreateUnifiedSurvivalFloors()
