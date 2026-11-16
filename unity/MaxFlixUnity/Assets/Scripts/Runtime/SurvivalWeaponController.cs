@@ -548,12 +548,40 @@ namespace MaxFlix.Unity.Runtime
                         shot.Root.transform.Rotate(Vector3.up, shot.SpinSpeed * deltaTime * 45f, Space.Self);
                 }
 
-                if (shot.RicochetsRemaining > 0 && Mathf.Abs(position.z) > 17.5f)
+                if (shot.RicochetsRemaining > 0)
                 {
-                    shot.Velocity.z *= -1f;
-                    position.z = Mathf.Sign(position.z) * 17.4f;
-                    shot.Root.transform.position = position;
-                    shot.RicochetsRemaining--;
+                    const float worldEdgeInset = 1.5f;
+                    bool bounced = false;
+                    if (position.x < SurvivalWorldLayout.MinX + worldEdgeInset)
+                    {
+                        shot.Velocity.x = Mathf.Abs(shot.Velocity.x);
+                        position.x = SurvivalWorldLayout.MinX + worldEdgeInset;
+                        bounced = true;
+                    }
+                    else if (position.x > SurvivalWorldLayout.MaxX - worldEdgeInset)
+                    {
+                        shot.Velocity.x = -Mathf.Abs(shot.Velocity.x);
+                        position.x = SurvivalWorldLayout.MaxX - worldEdgeInset;
+                        bounced = true;
+                    }
+                    else if (position.z < SurvivalWorldLayout.MinZ + worldEdgeInset)
+                    {
+                        shot.Velocity.z = Mathf.Abs(shot.Velocity.z);
+                        position.z = SurvivalWorldLayout.MinZ + worldEdgeInset;
+                        bounced = true;
+                    }
+                    else if (position.z > SurvivalWorldLayout.MaxZ - worldEdgeInset)
+                    {
+                        shot.Velocity.z = -Mathf.Abs(shot.Velocity.z);
+                        position.z = SurvivalWorldLayout.MaxZ - worldEdgeInset;
+                        bounced = true;
+                    }
+
+                    if (bounced)
+                    {
+                        shot.Root.transform.position = position;
+                        shot.RicochetsRemaining--;
+                    }
                 }
 
                 if (shot.Returning || shot.Orbiting)
