@@ -21,6 +21,45 @@ namespace MaxFlix.Unity.Runtime
         private bool _collected;
         private float _age;
 
+        public static string GetDiscoveryKey(WarehouseMapId mapId, string secretId)
+        {
+            return "paleciaki.survival.secret.v1."
+                + mapId.ToString().ToLowerInvariant() + "." + secretId;
+        }
+
+        private static string GetCompletionKey(WarehouseMapId mapId, string secretId)
+        {
+            return GetDiscoveryKey(mapId, secretId) + ".completed";
+        }
+
+        public static int CountDiscovered()
+        {
+            int count = 0;
+            WarehouseMapId[] mapIds =
+            {
+                WarehouseMapId.WarehouseB4,
+                WarehouseMapId.ContainerTerminal,
+                WarehouseMapId.ColdStorage,
+                WarehouseMapId.NightSorting
+            };
+            foreach (WarehouseMapId mapId in mapIds)
+            {
+                SurvivalMapProfile map = GameContentCatalog.GetMap(mapId);
+                if (map.Secrets == null) continue;
+                foreach (SurvivalSecretDefinition definition in map.Secrets)
+                    if (PlayerPrefs.GetInt(GetDiscoveryKey(mapId, definition.Id), 0) != 0)
+                        count++;
+            }
+            return Mathf.Clamp(count, 0, 20);
+        }
+
+        public static void MarkEncounterCompleted(WarehouseMapId mapId, string secretId)
+        {
+            if (string.IsNullOrWhiteSpace(secretId)) return;
+            PlayerPrefs.SetInt(GetCompletionKey(mapId, secretId), 1);
+            PlayerPrefs.Save();
+        }
+
         public void Initialize(WarehouseMapId mapId, SurvivalSecretDefinition definition)
         {
             _mapId = mapId;
@@ -29,6 +68,22 @@ namespace MaxFlix.Unity.Runtime
             trigger.isTrigger = true;
             trigger.radius = 1.35f;
             trigger.center = new Vector3(0f, 0.9f, 0f);
+
+            bool isReplayableChallenge = definition.Style == SurvivalSecretStyle.RabbitHole
+                || definition.Style == SurvivalSecretStyle.Necronomicon;
+            bool alreadyDiscovered = PlayerPrefs.GetInt(GetDiscoveryKey(mapId, definition.Id), 0) != 0;
+            bool challengeCompleted = PlayerPrefs.GetInt(GetCompletionKey(mapId, definition.Id), 0) != 0;
+            // Ordinary collectibles disappear permanently once archived.
+            // Special encounters remain available after a loss/early exit, but
+            // disappear after their own challenge has actually been completed.
+            if ((alreadyDiscovered && !isReplayableChallenge)
+                || (isReplayableChallenge && challengeCompleted))
+            {
+                _collected = true;
+                trigger.enabled = false;
+                Destroy(gameObject);
+                return;
+            }
 
             _visualRoot = new GameObject("Visual • " + definition.Id).transform;
             _visualRoot.SetParent(transform, false);
@@ -63,27 +118,35 @@ namespace MaxFlix.Unity.Runtime
             SphereCollider trigger = GetComponent<SphereCollider>();
             if (trigger != null) trigger.enabled = false;
 
-            string discoveryKey = "paleciaki.survival.secret.v1."
-                + _mapId.ToString().ToLowerInvariant() + "." + _definition.Id;
-            if (PlayerPrefs.GetInt(discoveryKey, 0) == 0)
+            string discoveryKey = GetDiscoveryKey(_mapId, _definition.Id);
+            bool firstDiscovery = PlayerPrefs.GetInt(discoveryKey, 0) == 0;
+            if (firstDiscovery)
             {
                 PlayerPrefs.SetInt(discoveryKey, 1);
                 PlayerPrefs.Save();
             }
 
-            GameSession.Current.SecretsFound = Mathf.Clamp(GameSession.Current.SecretsFound + 1, 0, 20);
-            GameSession.Current.Score += 750;
-            GameSession.Current.Coins += 5;
+            GameSession.Current.SecretsFound = CountDiscovered();
             HudController hud = FindFirstObjectByType<HudController>();
+            if (firstDiscovery)
+            {
+                GameSession.Current.Score += 750;
+                GameSession.Current.Coins += 5;
+                hud?.SetStatus("SEKRET ODKRYTY • " + _definition.DisplayName.ToUpperInvariant() + " • +750 PKT");
+            }
+            else
+            {
+                hud?.SetStatus("POWTÓRKA SEKRETU • " + _definition.DisplayName.ToUpperInvariant());
+            }
             hud?.SetSecretsCount(GameSession.Current.SecretsFound, 20);
-            hud?.SetStatus("SEKRET ODKRYTY • " + _definition.DisplayName.ToUpperInvariant() + " • +750 PKT");
 
             // Special relics launch a genuinely independent full-screen 2D
-            // encounter. The warehouse remains loaded but fully paused beneath it.
+            // encounter. A failed or abandoned challenge remains available
+            // in the next run; only a victory archives that challenge as done.
             if (_definition.Style == SurvivalSecretStyle.RabbitHole
                 || _definition.Style == SurvivalSecretStyle.Necronomicon)
             {
-                SurvivalSecretEncounterController.Open(player, _definition.Style);
+                SurvivalSecretEncounterController.Open(player, _definition.Style, _mapId, _definition.Id);
             }
 
             Destroy(gameObject);
