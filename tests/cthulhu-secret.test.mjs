@@ -20,6 +20,8 @@ test('the Cthulhu model is a distinct articulated multi-part boss with wings and
   assert.ok(built.head instanceof THREE.Group);
   assert.equal(built.group.userData.cthulhuArmL, built.armL);
   assert.equal(built.group.userData.cthulhuArmR, built.armR);
+  assert.equal(built.group.userData.cthulhuHead, built.head);
+  assert.ok(built.group.userData.cthulhuSigil instanceof THREE.Mesh);
   assert.ok(built.tentacles.length >= 7);
   assert.equal(built.wings.length, 2);
   const meshNames = [];
@@ -109,4 +111,14 @@ test('Cthulhu phase-two attack selector loops through all three distinct moves',
     nextAttack = plan.nextAttack;
   }
   assert.deepEqual(sequence, ['lash', 'grab', 'slam', 'lash', 'grab', 'slam']);
+});
+
+test('Cthulhu idle and attack animation now articulate its head, arms and living sigil', async () => {
+  const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
+  assert.match(game, /const cthulhuHead = e\\.mesh\\.userData\\.cthulhuHead/);
+  assert.match(game, /cthulhuHead\\.rotation\\.y = idleScan/);
+  assert.match(game, /const armSway = Math\\.sin\\(e\\.walkCycle \\* 0\\.33\\)/);
+  assert.match(game, /cthulhuArmL\\.rotation\\.x = -armSway/);
+  assert.match(game, /cthulhuArmR\\.rotation\\.x = armSway/);
+  assert.match(game, /cthulhuSigil\\.scale\\.set\\(sigilPulse/);
 });
