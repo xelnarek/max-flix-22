@@ -33,6 +33,9 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Audit Unity migration contracts and cutover blockers
+        run: npm run audit:unity
+
       - name: Full automated regression suite
         run: npm test
 
