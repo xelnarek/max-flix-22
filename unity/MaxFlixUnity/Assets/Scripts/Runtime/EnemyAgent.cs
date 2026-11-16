@@ -430,8 +430,14 @@ namespace MaxFlix.Unity.Runtime
             playerOffset.y = 0f;
             float playerDistance = playerOffset.magnitude;
             const float playerClearance = 1.15f;
-            if (playerDistance > 0.001f && playerDistance < playerClearance)
-                force += playerOffset / playerDistance * ((playerClearance - playerDistance) / playerClearance) * 1.35f;
+            if (playerDistance < playerClearance)
+            {
+                Vector3 playerSeparationDirection = playerDistance > 0.001f
+                    ? playerOffset / playerDistance
+                    : (GetInstanceID() < _target.GetInstanceID() ? Vector3.right : Vector3.left);
+                float penetration = (playerClearance - playerDistance) / playerClearance;
+                force += playerSeparationDirection * penetration * 1.35f;
+            }
 
             if (force.sqrMagnitude < 0.0001f) return;
             Vector3 velocity = Vector3.ClampMagnitude(force * 3.4f, 3.8f);
