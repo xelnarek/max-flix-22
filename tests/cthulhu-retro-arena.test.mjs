@@ -180,9 +180,44 @@ test('the retro map controls work with keyboard, multiple pointers and native An
 
 test('the dedicated boss attack has a synthesized deep-bass impact and pixel-art render pass', async () => {
   const source = await readFile(new URL('../src/cthulhuRetroArena.ts', import.meta.url), 'utf8');
-  assert.match(source, /function playAbyssBass/);
+  assert.match(source, /const playAbyssBass =/);
   assert.match(source, /frequency\\.setValueAtTime\\(43/);
   assert.match(source, /subGain\\.gain\\.exponentialRampToValueAtTime/);
   assert.match(source, /pixelCanvas\\.width = CTHULHU_RETRO_WIDTH/);
   assert.match(source, /output\\.drawImage\\(pixelCanvas, 0, 0, canvas\\.width, canvas\\.height\\)/);
+});
+
+test('player shots angle toward the giant chest core instead of flying below the boss', () => {
+  const state = createCthulhuRetroState();
+  state.introSeconds = 0;
+  stepCthulhuRetroState(state, { attackHeld: true }, 1 / 60);
+  assert.equal(state.projectiles.length, 1);
+  assert.ok(state.projectiles[0].vy < 0, 'the shot must rise from the operator toward the elevated chest core');
+  assert.ok(Math.abs(state.projectiles[0].vy) < 190);
+});
+
+test('jumping also avoids the telegraphed grasp, while a grounded operator is caught', () => {
+  const grounded = createCthulhuRetroState();
+  grounded.introSeconds = 0;
+  grounded.boss.riseSeconds = 0;
+  grounded.boss.windup = 0.001;
+  grounded.boss.attack = 'grab';
+  grounded.boss.grabX = grounded.player.x;
+  grounded.boss.attackCooldown = 100;
+  const hp = grounded.player.hp;
+  stepCthulhuRetroState(grounded, {}, 1 / 30);
+  assert.ok(grounded.player.hp < hp);
+
+  const airborne = createCthulhuRetroState();
+  airborne.introSeconds = 0;
+  airborne.boss.riseSeconds = 0;
+  airborne.boss.windup = 0.001;
+  airborne.boss.attack = 'grab';
+  airborne.boss.grabX = airborne.player.x;
+  airborne.boss.attackCooldown = 100;
+  airborne.player.y -= 35;
+  airborne.player.grounded = false;
+  const airborneHp = airborne.player.hp;
+  stepCthulhuRetroState(airborne, {}, 1 / 30);
+  assert.equal(airborne.player.hp, airborneHp);
 });

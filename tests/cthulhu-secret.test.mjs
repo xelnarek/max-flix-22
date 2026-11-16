@@ -175,15 +175,13 @@ test('Cthulhu opens the visible chest core after each resolved attack and scales
   assert.ok(game.includes("const baseAppliedDamage = this.gameMode === 'survival'"));
 });
 
-test('the Necronomicon pickup plays a hinged opening cinematic with rising runes before the boss reveal', async () => {
-  const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
-  assert.match(game, /private spawnNecronomiconOpeningEffect\(x: number, z: number\): void/);
-  assert.match(game, /this\.spawnNecronomiconOpeningEffect\(bookX, bookZ\)/);
-  assert.match(game, /necronomicon-opening-hinged-cover/);
-  assert.match(game, /lidPivot\.rotation\.x = -2\.05 \* eased/);
-  assert.match(game, /book\.position\.y = 0\.42 \+ Math\.sin\(progress \* Math\.PI\) \* 0\.12 \+ dissolve \* 0\.4/);
-  assert.match(game, /necronomicon-opening-runes/);
-  assert.match(game, /burstDone/);
+test('the Necronomicon opens inside the dedicated R’lyeh arena with a book and orbiting runes', async () => {
+  const arena = await readFile(new URL('../src/cthulhuRetroArena.ts', import.meta.url), 'utf8');
+  assert.match(arena, /Necronomicon remains visible for the opening seconds/);
+  assert.match(arena, /ctx\.translate\(250, 203/);
+  assert.match(arena, /for \(let rune = 0; rune < 6; rune\+\+\)/);
+  assert.match(arena, /NECRONOMICON OTWIERA BRAME/);
+  assert.match(arena, /ZATOPIONE MIASTO R’LYEH/);
 });
 
 test('R’lyeh summoning ritual now has orbiting glyphs and a pulsing central eye', async () => {

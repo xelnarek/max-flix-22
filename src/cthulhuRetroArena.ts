@@ -18,6 +18,7 @@ export interface CthulhuRetroProjectile {
   x: number;
   y: number;
   vx: number;
+  vy: number;
   life: number;
 }
 
@@ -88,8 +89,8 @@ export function createCthulhuRetroState(): CthulhuRetroState {
     },
     boss: {
       x: 382, y: CTHULHU_RETRO_FLOOR, hp: CTHULHU_RETRO_BOSS_MAX_HP,
-      maxHp: CTHULHU_RETRO_BOSS_MAX_HP, phase: 1, windup: 1.05,
-      attackCooldown: 0, strikeSeconds: 0, coreOpenSeconds: 0,
+      maxHp: CTHULHU_RETRO_BOSS_MAX_HP, phase: 1, windup: 0,
+      attackCooldown: 0.28, strikeSeconds: 0, coreOpenSeconds: 0,
       attack: 'slam', nextAttack: 'lash', grabX: 66, hitFlash: 0,
       riseSeconds: 1.45, defeated: false,
     },
@@ -135,7 +136,7 @@ function resolveCthulhuRetroAttack(state: CthulhuRetroState): void {
     if (!playerAboveLash && player.x < boss.x - 18) takeCthulhuRetroDamage(32);
     return;
   }
-  if (Math.abs(player.x - boss.grabX) <= 18) takeCthulhuRetroDamage(40);
+  if (player.grounded && Math.abs(player.x - boss.grabX) <= 18) takeCthulhuRetroDamage(40);
 }
 
 /**
@@ -193,10 +194,14 @@ export function stepCthulhuRetroState(
   }
 
   if (input.attackHeld && player.attackCooldown <= 0 && state.introSeconds <= 1.7) {
+    const projectileY = player.y + 11;
+    const travelTime = Math.max(0.12, (boss.x - player.x) / 282);
+    const targetCoreY = boss.y + BOSS_CORE_Y_OFFSET;
     state.projectiles.push({
       x: player.x + (player.facing > 0 ? PLAYER_WIDTH : 0),
-      y: player.y + 11,
+      y: projectileY,
       vx: 282,
+      vy: clamp((targetCoreY - projectileY) / travelTime, -190, 125),
       life: 1.8,
     });
     player.attackCooldown = 0.36;
@@ -210,6 +215,7 @@ export function stepCthulhuRetroState(
   for (let index = state.projectiles.length - 1; index >= 0; index--) {
     const projectile = state.projectiles[index];
     projectile.x += projectile.vx * dt;
+    projectile.y += (projectile.vy || 0) * dt;
     projectile.life -= dt;
     const coreX = boss.x + BOSS_CORE_X_OFFSET;
     const coreY = boss.y + BOSS_CORE_Y_OFFSET;
@@ -379,7 +385,6 @@ export function launchCthulhuRetroArena(options: {
   let lastFrame = 0;
   let lastHudTick = -1;
   let completed = false;
-  let bassAttackSequence = 0;
   const held = { left: false, right: false, dodge: false, attack: false };
   const keyHeld = { left: false, right: false, dodge: false, attack: false };
   const activePointers = new Map<number, { control: 'left' | 'right' | 'dodge' | 'attack' }>();
@@ -1072,7 +1077,6 @@ export function launchCthulhuRetroArena(options: {
   updateHud();
   drawScene();
 
-  let lastBassSequenceAttack = '';
   const frame = (now: number) => {
     const dt = lastFrame ? Math.min(1 / 30, Math.max(0, (now - lastFrame) / 1000)) : 1 / 60;
     lastFrame = now;
@@ -1080,6 +1084,7 @@ export function launchCthulhuRetroArena(options: {
     const previousWindup = state.boss.windup;
     const previousHp = state.boss.hp;
     const previousPhase = state.boss.phase;
+    const previousProjectileCount = state.projectiles.length;
     stepCthulhuRetroState(state, {
       left: held.left,
       right: held.right,
@@ -1090,8 +1095,8 @@ export function launchCthulhuRetroArena(options: {
 
     if (state.boss.strikeSeconds > 0 && previousWindup > 0 && state.boss.windup <= 0) {
       playAbyssBass(state.boss.phase === 2 ? 1.45 : 1.0);
-      lastBassSequenceAttack = state.boss.attack;
     }
+    if (state.projectiles.length > previousProjectileCount) playAbyssBass(0.10);
     if (state.boss.hp < previousHp) playAbyssBass(0.22);
     if (state.boss.phase !== previousPhase) playAbyssBass(1.3);
     if (state.won && !state.boss.defeated) state.boss.defeated = true;
@@ -1105,6 +1110,5 @@ export function launchCthulhuRetroArena(options: {
     if (!completed && !state.finished) rafId = window.requestAnimationFrame(frame);
     else rafId = 0;
   };
-  void lastBassSequenceAttack;
   rafId = window.requestAnimationFrame(frame);
 }
