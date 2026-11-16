@@ -73,7 +73,7 @@ const CAMPAIGN_LIGHTING_PROFILES: Readonly<Record<1 | 2 | 3 | 4, WorldLightingPr
     ambientColor: 0xcbdde9, ambientIntensity: 0.90,
     hemisphereSkyColor: 0xa9cedf, hemisphereGroundColor: 0x36475d, hemisphereIntensity: 1.25,
     directionalColor: 0xe8d7c1, directionalIntensity: 2.46,
-    rimColor: 0x78b9c8, rimIntensity: 1.12,
+    rimColor: 0x9384b5, rimIntensity: 1.12,
     fogColor: 0x15283a, fogNear: 34, fogFar: 125,
     environmentIntensity: 0.52, exposure: 1.00,
   },
