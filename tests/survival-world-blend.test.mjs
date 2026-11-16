@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getSurvivalWorldBiomeBlendAtPosition } from '../src/survivalWorldBlend.ts';
 import { applySurvivalWorldCombatModifier } from '../src/survivalMaps.ts';
-import { getSurvivalWorldBackgroundColor, getSurvivalWorldLightingProfile } from '../src/worldVisualQuality.ts';
+import { getSurvivalWorldBackgroundColor, getSurvivalWorldFloorColor, getSurvivalWorldLightingProfile, getSurvivalSurfaceProfile } from '../src/worldVisualQuality.ts';
 import { SURVIVAL_WORLD_TRANSITIONS, getSurvivalWorldTransitionFootprint } from '../src/survivalWorldLayout.ts';
 
 const closeTo = (actual, expected, epsilon = 1e-8) => assert.ok(Math.abs(actual - expected) <= epsilon, `expected ${actual} to be close to ${expected}`);
@@ -79,9 +79,38 @@ test('lighting, fog and background use the same spatial blend as biome geometry'
 
 test('rendered transition bands share the same 22 m width as the spatial blend field', () => {
   assert.deepEqual(SURVIVAL_WORLD_TRANSITIONS.map(getSurvivalWorldTransitionFootprint), [
-    { bandWidth: 22, bandDepth: 40, seamWidth: 1.25, seamDepth: 40 },
-    { bandWidth: 120, bandDepth: 22, seamWidth: 120, seamDepth: 1.25 },
-    { bandWidth: 22, bandDepth: 40, seamWidth: 1.25, seamDepth: 40 },
-    { bandWidth: 120, bandDepth: 22, seamWidth: 120, seamDepth: 1.25 },
+    { bandWidth: 22, bandDepth: 40 },
+    { bandWidth: 120, bandDepth: 22 },
+    { bandWidth: 22, bandDepth: 40 },
+    { bandWidth: 120, bandDepth: 22 },
   ]);
+});
+
+
+test('floor albedo remains muted and each biome keeps a restrained material response', () => {
+  const pureB4 = getSurvivalWorldFloorColor({ warehouse_b4: 1, container_terminal: 0, cold_storage: 0, night_sorting: 0 });
+  const pureCold = getSurvivalWorldFloorColor({ warehouse_b4: 0, container_terminal: 0, cold_storage: 1, night_sorting: 0 });
+  const junction = getSurvivalWorldFloorColor(getSurvivalWorldBiomeBlendAtPosition(0, 0).weights);
+  assert.notEqual(pureB4, 0xffffff);
+  assert.notEqual(pureCold, 0xc5f0ff);
+  assert.notEqual(pureB4, pureCold);
+  assert.ok(((pureB4 >> 16) & 255) < 150);
+  assert.ok(((junction >> 16) & 255) < 150);
+  for (const id of ['warehouse_b4', 'container_terminal', 'cold_storage', 'night_sorting']) {
+    const surface = getSurvivalSurfaceProfile(id);
+    assert.ok(surface.floorRoughness >= 0.84);
+    assert.ok(surface.floorMetalness <= 0.06);
+  }
+});
+
+test('the transition blend texture uses a fading alpha mask and low-contrast floor detail', async () => {
+  const game = await (await import('node:fs/promises')).readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
+  assert.match(game, /createTerrainBlendTexture/);
+  assert.match(game, /context\.createImageData\(width, height\)/);
+  assert.match(game, /image\.data\[offset \+ 3\] = Math\.round\(alpha \* 255\)/);
+  assert.match(game, /const nearSlabJoint =/);
+  assert.match(game, /const stain =/);
+  assert.match(game, /roughness: 0\.96/);
+  assert.match(game, /depthWrite: false/);
+  assert.doesNotMatch(game, /survival-biome-gateway-posts|survival-biome-gateway-beams/);
 });
