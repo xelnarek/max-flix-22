@@ -60,6 +60,7 @@ import { getSurvivalConvoyHazardCount } from './survivalConvoy.ts';
 import { applySurvivalMapCombatModifier, chooseRandomSurvivalMap, getSurvivalMapDefinition, type SurvivalMapId } from './survivalMaps.ts';
 import { getCampaignLightingProfile, getSurvivalLightingProfile, getSurvivalSurfaceProfile, PVP_LIGHTING_PROFILE, type WorldLightingProfile } from './worldVisualQuality.ts';
 import { getSurvivalMapRouteFeatures } from './survivalMapLayouts.ts';
+import { createSurvivalWorldDressing } from './survivalWorldDressing.ts';
 import { chooseCampaignNearbyRewardSpawnPoint } from './campaignRewards.ts';
 import { chooseNearbySpawnPoint } from './arenaSpawn.ts';
 import { chooseSurvivalEnemySpawnType } from './survivalEnemySpawns.ts';
@@ -962,6 +963,8 @@ export class PaleciakiGameEngine {
     disposeOnRemove?: boolean;
     gravity?: number;
     spin?: number;
+    trailTimer?: number;
+    trailColor?: number;
   }[] = [];
   private readonly survivalArenaInstances: THREE.InstancedMesh[] = [];
   private readonly survivalArenaInstanceGeometries = new Set<THREE.BufferGeometry>();
@@ -4202,6 +4205,13 @@ export class PaleciakiGameEngine {
     root.name = 'survival-map-landmarks-' + mapId;
     this.survivalMapLandmarks = root;
     this.levelRoot.add(root);
+
+    // Static anomaly dressing is built once per map, shares instanced debris,
+    // and registers only the large UFO hull as a navigation/camera obstacle.
+    const anomalies = createSurvivalWorldDressing(mapId);
+    root.add(anomalies.group);
+    for (const obstacle of anomalies.obstacles) this.survivalObstacles.push(obstacle);
+    this.registerCameraOccludersInGroup(anomalies.group, 0.18);
 
     if (mapId === 'cold_storage') {
       for (const point of [{ x: -44, z: 12.5 }, { x: 44, z: -12.5 }]) {
@@ -10223,15 +10233,31 @@ export class PaleciakiGameEngine {
   private disposeTemporaryObject(object: THREE.Object3D) {
     const geometries = new Set<THREE.BufferGeometry>();
     const materials = new Set<THREE.Material>();
+    const ownedTextures = new Set<THREE.Texture>();
+    const textureSlots = [
+      'map', 'alphaMap', 'aoMap', 'bumpMap', 'displacementMap',
+      'emissiveMap', 'lightMap', 'metalnessMap', 'normalMap', 'roughnessMap',
+    ];
     object.traverse((child) => {
       const mesh = child as THREE.Mesh;
       if (mesh.geometry) geometries.add(mesh.geometry);
-      const material = mesh.material;
-      if (Array.isArray(material)) material.forEach((entry) => materials.add(entry));
-      else if (material) materials.add(material);
+      const attached = mesh.material;
+      const attachedMaterials = Array.isArray(attached) ? attached : attached ? [attached] : [];
+      for (const material of attachedMaterials) {
+        materials.add(material);
+        // Most scene textures are shared asset-cache resources. Only generated
+        // map-dressing textures explicitly marked by their owner are disposable.
+        for (const slot of textureSlots) {
+          const texture = (material as unknown as Record<string, unknown>)[slot];
+          if (texture instanceof THREE.Texture && texture.userData.disposeOnObjectCleanup === true) {
+            ownedTextures.add(texture);
+          }
+        }
+      }
     });
     geometries.forEach((geometry) => geometry.dispose());
     materials.forEach((material) => material.dispose());
+    ownedTextures.forEach((texture) => texture.dispose());
   }
 
   private createPomazaniecRiderModel(variant: number, withSign = false): {
@@ -10583,6 +10609,8 @@ export class PaleciakiGameEngine {
       kind: 'pomazaniec_lollipop',
       gravity: 1.35,
       spin: 8.5,
+      trailTimer: 0,
+      trailColor: 0xf472b6,
     });
     sound.playLollipopThrow();
   }
@@ -10606,6 +10634,8 @@ export class PaleciakiGameEngine {
       kind: 'sebix_brick',
       gravity: 2.15,
       spin: 5.2,
+      trailTimer: 0,
+      trailColor: 0xf97316,
     });
     sound.playWhistle();
     this.emitFloatingToast('🧱 OPERATOR TURBO RZUCA CEGŁĄ!', x, y+0.45, z, 'damage');
@@ -14722,6 +14752,11 @@ export class PaleciakiGameEngine {
       }
       if (p.spinSpeed) {
         p.mesh.rotation.y += p.spinSpeed * dt;
+      } else if (!p.orbiting && p.vel.lengthSq() > 0.01) {
+        // Directional shots keep their nose on the actual velocity vector,
+        // including homing and returning projectiles, instead of sliding sideways.
+        const horizontalSpeedSq = p.vel.x * p.vel.x + p.vel.z * p.vel.z;
+        if (horizontalSpeedSq > 0.0001) p.mesh.rotation.y = Math.atan2(p.vel.x, p.vel.z);
       }
       if (p.weaponId) {
         p.trailTimer = (p.trailTimer ?? 0) - dt;
@@ -14914,9 +14949,32 @@ export class PaleciakiGameEngine {
       ep.life -= dt;
       if (ep.gravity) ep.vel.y -= ep.gravity * dt;
       ep.mesh.position.addScaledVector(ep.vel, dt);
+      const horizontalSpeedSq = ep.vel.x * ep.vel.x + ep.vel.z * ep.vel.z;
+      if (horizontalSpeedSq > 0.0001) ep.mesh.rotation.y = Math.atan2(ep.vel.x, ep.vel.z);
       if (ep.spin) {
         ep.mesh.rotation.z += ep.spin * dt;
         ep.mesh.rotation.x += ep.spin * 0.32 * dt;
+      }
+
+      // Enemy shots get a short pooled tracer. The shared particle budget keeps
+      // volleys readable without allocating geometry/materials per frame.
+      ep.trailTimer = (ep.trailTimer ?? 0) - dt;
+      const trailInterval = this.adaptivePerformanceTier >= 2 ? 0.30
+        : this.adaptivePerformanceTier === 1 ? 0.19 : 0.12;
+      const handheldParticleBudget = this.isHandheldViewport
+        ? (this.adaptivePerformanceTier >= 2 ? 14 : this.adaptivePerformanceTier === 1 ? 24 : 36)
+        : 75;
+      if (ep.trailTimer <= 0 && ep.life > 0.12 && this.particles.length < handheldParticleBudget) {
+        const trailColor = ep.trailColor ?? (ep.isDyscyplinarka ? 0xef4444 : 0x67e8f9);
+        const trail = this.particlePool.acquire('sphere', trailColor, 0.052, 0.62);
+        if (trail) {
+          trail.position.copy(ep.mesh.position);
+          this.levelRoot.add(trail);
+          const drift = ep.vel.clone().multiplyScalar(-0.085);
+          drift.y += 0.045;
+          this.particles.push({ mesh: trail, vel: drift, life: 0.18, maxLife: 0.18, baseScale: 0.052 });
+        }
+        ep.trailTimer = trailInterval;
       }
 
       const dist = Math.hypot(ep.mesh.position.x - this.playerPos.x, ep.mesh.position.z - this.playerPos.z);

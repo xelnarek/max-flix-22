@@ -57,6 +57,43 @@ export interface EnemyRoleMotionAccent {
   readonly armAsymmetry: number;
 }
 
+export interface EnemyCombatMotionProfile {
+  readonly attackWindup: number;
+  readonly attackFollowThrough: number;
+  readonly hitStagger: number;
+}
+
+/** Short, bounded action accents keep attacks and impacts distinct by role. */
+export const ENEMY_COMBAT_MOTION_PROFILES: Readonly<Partial<Record<EnemyType, EnemyCombatMotionProfile>>> = Object.freeze({
+  customer: { attackWindup: 0.055, attackFollowThrough: 0.105, hitStagger: 0.075 },
+  walczak: { attackWindup: 0.125, attackFollowThrough: 0.185, hitStagger: 0.052 },
+  architect: { attackWindup: 0.045, attackFollowThrough: 0.072, hitStagger: 0.105 },
+  inspector: { attackWindup: 0.065, attackFollowThrough: 0.085, hitStagger: 0.082 },
+  handlowiec: { attackWindup: 0.052, attackFollowThrough: 0.12, hitStagger: 0.088 },
+  monter: { attackWindup: 0.085, attackFollowThrough: 0.14, hitStagger: 0.065 },
+  kurier: { attackWindup: 0.048, attackFollowThrough: 0.115, hitStagger: 0.085 },
+  'przedstawiciel_włoski': { attackWindup: 0.05, attackFollowThrough: 0.135, hitStagger: 0.095 },
+  sztaplar_szalony: { attackWindup: 0.105, attackFollowThrough: 0.17, hitStagger: 0.055 },
+  krol_leto: { attackWindup: 0.14, attackFollowThrough: 0.19, hitStagger: 0.045 },
+  pan_roman: { attackWindup: 0.072, attackFollowThrough: 0.11, hitStagger: 0.073 },
+  serwisant: { attackWindup: 0.06, attackFollowThrough: 0.095, hitStagger: 0.08 },
+  bosman_krakow: { attackWindup: 0.11, attackFollowThrough: 0.15, hitStagger: 0.05 },
+  zombie_pracownik: { attackWindup: 0.09, attackFollowThrough: 0.155, hitStagger: 0.13 },
+  sebix_m: { attackWindup: 0.10, attackFollowThrough: 0.18, hitStagger: 0.075 },
+  mutant_gamma_forklift: { attackWindup: 0.15, attackFollowThrough: 0.20, hitStagger: 0.04 },
+  radioactive_pip: { attackWindup: 0.075, attackFollowThrough: 0.125, hitStagger: 0.09 },
+  cyber_salesman: { attackWindup: 0.082, attackFollowThrough: 0.10, hitStagger: 0.06 },
+  elite_walczak_guard: { attackWindup: 0.12, attackFollowThrough: 0.165, hitStagger: 0.042 },
+});
+
+const DEFAULT_ENEMY_COMBAT_MOTION_PROFILE: EnemyCombatMotionProfile = Object.freeze({
+  attackWindup: 0.06, attackFollowThrough: 0.11, hitStagger: 0.08,
+});
+
+export function getEnemyCombatMotionProfile(type: EnemyType): Readonly<EnemyCombatMotionProfile> {
+  return ENEMY_COMBAT_MOTION_PROFILES[type] ?? DEFAULT_ENEMY_COMBAT_MOTION_PROFILE;
+}
+
 /**
  * Per-archetype motion accents prevent the shared source rigs from reading as
  * palette swaps. The source clips still own the main gait and combat actions;
@@ -248,17 +285,46 @@ export function applyEnemyRoleSecondaryMotion(
   const isIdle = action === 'Idle';
   const isMoving = action === 'Walk' || action === 'Run' ||
     action === 'WalkBackward' || action === 'StrafeLeft' || action === 'StrafeRight';
-  if (!isIdle && !isMoving) return phase;
+  const isAttack = action === 'Attack';
+  const isHit = action === 'Hit';
+  if (!isIdle && !isMoving && !isAttack && !isHit) return phase;
 
-  const tempo = gait.rate * (isIdle ? 0.42 : clamp(speed / 2.2, 0.62, 1.75));
+  const tempo = gait.rate * (isIdle ? 0.42 : isMoving ? clamp(speed / 2.2, 0.62, 1.75) : isAttack ? 1.35 : 1.7);
   const nextPhase = phase + deltaSeconds * tempo * Math.PI * 2;
   const wave = Math.sin(nextPhase);
   const counterWave = Math.sin(nextPhase + Math.PI);
-  const activity = isIdle ? 0.13 : clamp(speed / 2.3, 0.22, 1.15);
+  const activity = isIdle ? 0.13 : isMoving ? clamp(speed / 2.3, 0.22, 1.15) : 1;
+  const combatProfile = getEnemyCombatMotionProfile(type);
   const asymmetry = type === 'zombie_pracownik' ? 1 : 0;
   const roleAccent = ENEMY_ROLE_MOTION_ACCENTS[type] ?? DEFAULT_ENEMY_ROLE_MOTION_ACCENT;
 
   const applied: AppliedOffset[] = [];
+
+  // The source clip owns the main pose; these small reversible offsets add
+  // anticipation, follow-through and a role-specific reaction to confirmed hits.
+  if (isAttack) {
+    const beat = Math.sin(nextPhase * 1.9 + stablePhase(type) * 0.35);
+    const follow = Math.max(0, beat);
+    rotate(bones.spine, AXIS_X, -combatProfile.attackWindup * (0.42 + follow * 0.58), applied);
+    rotate(bones.chest, AXIS_X, combatProfile.attackFollowThrough * (0.10 + follow * 0.90), applied);
+    rotate(bones.chest, AXIS_Z, counterWave * combatProfile.attackFollowThrough * 0.24, applied);
+    rotate(bones.rightUpperArm, AXIS_X, -combatProfile.attackWindup * 0.72 + follow * combatProfile.attackFollowThrough * 0.42, applied);
+    rotate(bones.leftUpperArm, AXIS_X, -combatProfile.attackWindup * 0.25 - follow * combatProfile.attackFollowThrough * 0.18, applied);
+    rotate(bones.head, AXIS_Y, -wave * combatProfile.attackWindup * 0.32, applied);
+    previousOffsets.set(root, applied);
+    return nextPhase;
+  }
+  if (isHit) {
+    const stagger = 0.72 + Math.max(0, wave) * 0.28;
+    rotate(bones.spine, AXIS_X, combatProfile.hitStagger * stagger, applied);
+    rotate(bones.chest, AXIS_X, combatProfile.hitStagger * 0.46 * stagger, applied);
+    rotate(bones.head, AXIS_Z, -combatProfile.hitStagger * 0.40 * stagger, applied);
+    rotate(bones.leftUpperArm, AXIS_Z, -combatProfile.hitStagger * 0.62 * stagger, applied);
+    rotate(bones.rightUpperArm, AXIS_Z, combatProfile.hitStagger * 0.62 * stagger, applied);
+    previousOffsets.set(root, applied);
+    return nextPhase;
+  }
+
   // Pelvis and chest counter-rotation sells weight transfer without changing root physics.
   rotate(bones.hips, AXIS_X, wave * gait.legSwing * 0.018 * activity, applied);
   rotate(bones.hips, AXIS_Z, wave * gait.armSway * 0.08 * activity, applied);

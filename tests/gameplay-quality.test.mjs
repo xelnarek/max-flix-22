@@ -1570,3 +1570,11 @@ test('Survival wave director reuses candidate buffers and avoids callback churn 
   assert.doesNotMatch(method, /\breturn;/);
   assert.match(method, /for \(let wheelIndex = 0; wheelIndex < e\.bikeWheels\.length; wheelIndex\+\+\)/);
 });
+
+test('directional projectiles orient to velocity and enemy tracer bursts stay within the pooled budget', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /ep\.mesh\.rotation\.y = Math\.atan2\(ep\.vel\.x, ep\.vel\.z\)/);
+  assert.match(game, /this\.particlePool\.acquire\('sphere', trailColor, 0\.052, 0\.62\)/);
+  assert.match(game, /p\.mesh\.rotation\.y = Math\.atan2\(p\.vel\.x, p\.vel\.z\)/);
+  assert.match(game, /this\.particles\.length < handheldParticleBudget/);
+});

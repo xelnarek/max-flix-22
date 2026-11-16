@@ -9,6 +9,7 @@ import {
   clearEnemyRoleSecondaryMotion,
   getEnemyAnatomyProfile,
   ENEMY_ROLE_MOTION_ACCENTS,
+  getEnemyCombatMotionProfile,
 } from '../src/enemyAnimationPolish.ts';
 
 function makeRig() {
@@ -143,8 +144,11 @@ test('secondary role motion animates idle and locomotion but never overlays atta
     'the additive role pose must be exactly reversible before the next mixer tick');
   const beforeAttack = head.quaternion.clone();
   phase = applyEnemyRoleSecondaryMotion(root, 'zombie_pracownik', phase, 0.05, 0, 'Attack');
-  assert.ok(head.quaternion.angleTo(beforeAttack) < 1e-8,
-    'one-shot combat pose must not be overwritten by the secondary gait');
+  assert.ok(head.quaternion.angleTo(beforeAttack) > 0.001,
+    'the additive attack brace should complement, not replace, the source attack clip');
+  clearEnemyRoleSecondaryMotion(root);
+  assert.ok(head.quaternion.angleTo(beforeAttack) < 1e-7,
+    'the attack accent must be exactly reversible before the next mixer tick');
   const beforeIdle = spine.quaternion.clone();
   applyEnemyRoleSecondaryMotion(root, 'architect', 0.2, 0.05, 0, 'Idle');
   assert.ok(spine.quaternion.angleTo(beforeIdle) > 0.0001,
@@ -200,4 +204,19 @@ test('role accents measurably change head and torso motion for the same animatio
   const customerHead = customer.bones.get('mixamorigHead').quaternion;
   const architectHead = architect.bones.get('mixamorigHead').quaternion;
   assert.ok(customerHead.angleTo(architectHead) > 0.02);
+});
+
+
+test('every animated enemy role has bounded wind-up, follow-through and hit-stagger accents', () => {
+  const types = Object.keys(ENEMY_VISUAL_PROFILES).filter((type) =>
+    !['forklift', 'agv_robot', 'piorun_dron', 'pomazaniec'].includes(type)
+  );
+  const profiles = types.map((type) => getEnemyCombatMotionProfile(type));
+  assert.equal(profiles.length, 19);
+  assert.ok(new Set(profiles.map((profile) => JSON.stringify(profile))).size >= 18);
+  for (const profile of profiles) {
+    assert.ok(profile.attackWindup >= 0.03 && profile.attackWindup <= 0.16);
+    assert.ok(profile.attackFollowThrough >= 0.07 && profile.attackFollowThrough <= 0.21);
+    assert.ok(profile.hitStagger >= 0.035 && profile.hitStagger <= 0.14);
+  }
 });
