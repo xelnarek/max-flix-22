@@ -66,5 +66,6 @@ test('Unity production cutover remains blocked while the Three.js game stays pro
   assert.match(plan, /240 × 80 m/);
   assert.match(readme, /current Three\.js game remains the production build/);
   assert.match(workflow, /workflow_dispatch:/);
+  assert.doesNotMatch(workflow, /^\\s{2}push:/m);
   assert.doesNotMatch(workflow, /upload-google-play|deploy-pages/);
 });
