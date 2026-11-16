@@ -170,10 +170,10 @@ test('the retro map controls work with keyboard, multiple pointers and native An
   const source = await readFile(new URL('../src/cthulhuRetroArena.ts', import.meta.url), 'utf8');
   assert.match(source, /const activePointers = new Map<number/);
   assert.match(source, /const activeTouches = new Map<number/);
-  assert.match(source, /button\\.addEventListener\\('touchstart'/);
-  assert.match(source, /window\\.addEventListener\\('touchend', releaseTouch/);
-  assert.match(source, /window\\.addEventListener\\('pointerup', releasePointer/);
-  assert.match(source, /event\\.code === 'Escape'/);
+  assert.match(source, /button\.addEventListener\('touchstart'/);
+  assert.match(source, /window\.addEventListener\('touchend', releaseTouch/);
+  assert.match(source, /window\.addEventListener\('pointerup', releasePointer/);
+  assert.match(source, /event\.code === 'Escape'/);
   assert.match(source, /data-hold="attack"/);
   assert.match(source, /data-hold="dodge"/);
 });
@@ -181,10 +181,10 @@ test('the retro map controls work with keyboard, multiple pointers and native An
 test('the dedicated boss attack has a synthesized deep-bass impact and pixel-art render pass', async () => {
   const source = await readFile(new URL('../src/cthulhuRetroArena.ts', import.meta.url), 'utf8');
   assert.match(source, /const playAbyssBass =/);
-  assert.match(source, /frequency\\.setValueAtTime\\(43/);
-  assert.match(source, /subGain\\.gain\\.exponentialRampToValueAtTime/);
-  assert.match(source, /pixelCanvas\\.width = CTHULHU_RETRO_WIDTH/);
-  assert.match(source, /output\\.drawImage\\(pixelCanvas, 0, 0, canvas\\.width, canvas\\.height\\)/);
+  assert.match(source, /frequency\.setValueAtTime\(43/);
+  assert.match(source, /subGain\.gain\.exponentialRampToValueAtTime/);
+  assert.match(source, /pixelCanvas\.width = CTHULHU_RETRO_WIDTH/);
+  assert.match(source, /output\.drawImage\(pixelCanvas, 0, 0, canvas\.width, canvas\.height\)/);
 });
 
 test('player shots angle toward the giant chest core instead of flying below the boss', () => {

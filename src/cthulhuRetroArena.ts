@@ -133,10 +133,10 @@ function resolveCthulhuRetroAttack(state: CthulhuRetroState): void {
   }
   if (boss.attack === 'lash') {
     const playerAboveLash = player.y < CTHULHU_RETRO_FLOOR - PLAYER_HEIGHT - 23;
-    if (!playerAboveLash && player.x < boss.x - 18) takeCthulhuRetroDamage(32);
+    if (!playerAboveLash && player.x < boss.x - 18) takeCthulhuRetroDamage(state, 32);
     return;
   }
-  if (player.grounded && Math.abs(player.x - boss.grabX) <= 18) takeCthulhuRetroDamage(40);
+  if (player.grounded && Math.abs(player.x - boss.grabX) <= 18) takeCthulhuRetroDamage(state, 40);
 }
 
 /**
@@ -249,7 +249,7 @@ export function stepCthulhuRetroState(
     const playerCenter = player.x + PLAYER_WIDTH / 2;
     const isGroundedForWave = player.y > CTHULHU_RETRO_FLOOR - PLAYER_HEIGHT - 9;
     if (Math.abs(wave.x - playerCenter) <= 6 && isGroundedForWave) {
-      takeCthulhuRetroDamage(30);
+      takeCthulhuRetroDamage(state, 30);
       state.shockwaves.splice(index, 1);
       continue;
     }
