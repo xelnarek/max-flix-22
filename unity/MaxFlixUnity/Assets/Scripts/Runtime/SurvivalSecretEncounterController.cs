@@ -887,12 +887,15 @@ namespace MaxFlix.Unity.Runtime
             for (int i = _stage.childCount - 1; i >= 0; i--)
                 Destroy(_stage.GetChild(i).gameObject);
 
+            _encounterElapsed = 0f;
             if (_mode == EncounterMode.RabbitHole)
             {
                 _rabbitX = 76f; _rabbitY = 410f; _rabbitVx = _rabbitVy = 0f;
                 _rabbitGrounded = true; _rabbitTime = 68f; _rabbitInvulnerable = 0f;
                 _rabbitJumpBuffer = _rabbitCoyote = 0f; _rabbitCheckpointX = 76f;
                 _rabbitCheckpointY = 456f; _rabbitLives = 3; _rabbitCollected = 0;
+                _rabbitCameraX = 0f;
+                _rabbitAnimation = 0f;
                 BuildRabbitHole();
             }
             else
@@ -903,7 +906,6 @@ namespace MaxFlix.Unity.Runtime
                 _cthulhuBossHp = 180f; _cthulhuBossOpen = 0f; _cthulhuBossWindup = 2.2f;
                 _cthulhuStrikeWindup = 0f; _cthulhuBossDeath = 0f; _cthulhuPhase = 1;
                 _bossAttack = BossAttack.Slam; _nextBossAttack = BossAttack.Lash;
-                _encounterElapsed = 0f;
                 BuildNecronomicon();
             }
             SetHud();
