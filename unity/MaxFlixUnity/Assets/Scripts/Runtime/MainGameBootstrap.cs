@@ -66,6 +66,8 @@ namespace MaxFlix.Unity.Runtime
             _lastMap = mapId;
 
             GameSession.Begin(mode, operatorId, mapId);
+            if (mode == GameMode.Survival && GameSession.Current != null)
+                GameSession.Current.SecretsFound = SurvivalSecretPickup.CountDiscovered();
             PlayerController player = mode == GameMode.Campaign
                 ? WarehouseWorldFactory.BuildCampaignMegaMap()
                 : WarehouseWorldFactory.BuildUnifiedSurvivalWorld();
