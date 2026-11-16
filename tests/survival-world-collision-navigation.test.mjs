@@ -57,8 +57,12 @@ test('all four biome floor blends span each shared edge and the central four-way
   assert.match(layout, /export function getSurvivalWorldTransitionFootprint/);
   assert.match(layout, /bandDepth: SURVIVAL_WORLD_BIOME_HALF_DEPTH \* 2/);
   assert.match(layout, /bandWidth: SURVIVAL_WORLD_BIOME_HALF_WIDTH \* 2/);
-  assert.match(game, /new THREE\.PlaneGeometry\(footprint\.bandWidth, footprint\.bandDepth\)/);
+  assert.match(game, /new THREE\.PlaneGeometry\(width, depth\)/);
   assert.match(game, /survival-biome-four-way-blend/);
-  assert.match(game, /isSurvivalWorldTransitionFromNegativeSide\(transition\)/);
+  assert.match(game, /influence: blend\.junctionInfluence/);
+  assert.match(game, /floorGeometry = new THREE\.PlaneGeometry\(24, 40\)/);
+  assert.match(game, /bayFloor\.position\.set\(side \* 48/);
+  assert.match(game, /width: 24, height: 0\.2, depth: 40/);
+  assert.doesNotMatch(game, /survival-biome-seam-/);
 });
 
