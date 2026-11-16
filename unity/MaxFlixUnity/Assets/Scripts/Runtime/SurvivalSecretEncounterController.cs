@@ -436,13 +436,25 @@ namespace MaxFlix.Unity.Runtime
         private void Update()
         {
             if (_closed || _resultShown) return;
+            Keyboard keyboard = Keyboard.current;
+            bool keyboardActionPressed = keyboard != null && (_mode == EncounterMode.RabbitHole
+                ? keyboard.spaceKey.wasPressedThisFrame
+                : keyboard.spaceKey.wasPressedThisFrame || keyboard.leftShiftKey.wasPressedThisFrame);
+            bool keyboardActionHeld = keyboard != null && (_mode == EncounterMode.RabbitHole
+                ? keyboard.spaceKey.isPressed
+                : keyboard.spaceKey.isPressed || keyboard.leftShiftKey.isPressed);
+            bool keyboardAttackHeld = keyboard != null && (keyboard.jKey.isPressed || keyboard.enterKey.isPressed);
+            _actionPressed = _actionPressed || keyboardActionPressed;
+            _actionHeld = _actionHeld || keyboardActionHeld;
+            _attackHeld = _attackHeld || keyboardAttackHeld;
+
             float deltaTime = Mathf.Clamp(Time.unscaledDeltaTime, 0f, 1f / 30f);
             if (deltaTime <= 0f) return;
+            _encounterElapsed += deltaTime;
 
             if (_mode == EncounterMode.RabbitHole) UpdateRabbitHole(deltaTime);
             else UpdateNecronomicon(deltaTime);
 
-            _encounterElapsed += deltaTime;
             _actionPressed = false;
         }
 
