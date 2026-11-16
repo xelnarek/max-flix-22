@@ -87,6 +87,27 @@ namespace MaxFlix.Unity.Editor
             Check(SurvivalWorldLayout.Zones.Count == 4 && SurvivalWorldLayout.Transitions.Count == 4,
                 "Unity's Survival topology contract must contain four zones and four adjacent transitions.", failures);
 
+            Check(
+                SurvivalWorldLayout.GetBiomeAtPosition(-60f, -20f) == WarehouseMapId.WarehouseB4
+                && SurvivalWorldLayout.GetBiomeAtPosition(60f, -20f) == WarehouseMapId.ContainerTerminal
+                && SurvivalWorldLayout.GetBiomeAtPosition(60f, 20f) == WarehouseMapId.ColdStorage
+                && SurvivalWorldLayout.GetBiomeAtPosition(-60f, 20f) == WarehouseMapId.NightSorting,
+                "Survival biome quadrants do not match the live Three.js world.", failures);
+            Check(
+                SurvivalWorldLayout.Transitions.Any(t => t.Id == "b4-to-port"
+                    && t.From == WarehouseMapId.WarehouseB4 && t.To == WarehouseMapId.ContainerTerminal
+                    && t.Center == new Vector2(0f, -20f) && t.Width == 22f)
+                && SurvivalWorldLayout.Transitions.Any(t => t.Id == "port-to-cold"
+                    && t.From == WarehouseMapId.ContainerTerminal && t.To == WarehouseMapId.ColdStorage
+                    && t.Center == new Vector2(60f, 0f) && t.Width == 22f)
+                && SurvivalWorldLayout.Transitions.Any(t => t.Id == "cold-to-night"
+                    && t.From == WarehouseMapId.ColdStorage && t.To == WarehouseMapId.NightSorting
+                    && t.Center == new Vector2(0f, 20f) && t.Width == 22f)
+                && SurvivalWorldLayout.Transitions.Any(t => t.Id == "night-to-b4"
+                    && t.From == WarehouseMapId.NightSorting && t.To == WarehouseMapId.WarehouseB4
+                    && t.Center == new Vector2(-60f, 0f) && t.Width == 22f),
+                "Survival transition endpoints or 22 m blend-band widths do not match the source layout.", failures);
+
             SurvivalBiomeBlendWeights hub = SurvivalWorldLayout.GetBlendWeights(0f, 0f);
             Check(
                 Mathf.Abs(hub.Total - 1f) < 0.0001f
