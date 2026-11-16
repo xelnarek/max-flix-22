@@ -19,7 +19,18 @@ export interface OniricCollectible {
 }
 
 export interface OniricPlatformerState {
-  player: { x: number; y: number; vx: number; vy: number; width: number; height: number; onGround: boolean };
+  player: {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    width: number;
+    height: number;
+    onGround: boolean;
+    facing: -1 | 1;
+    animationTime: number;
+    landingSeconds: number;
+  };
   lives: number;
   collected: boolean[];
   remainingSeconds: number;
@@ -27,6 +38,8 @@ export interface OniricPlatformerState {
   checkpointTop: number;
   invulnerableSeconds: number;
   elapsedSeconds: number;
+  jumpBufferSeconds: number;
+  coyoteSeconds: number;
   finished: boolean;
   won: boolean;
 }
@@ -35,6 +48,7 @@ export interface OniricPlatformerInput {
   left?: boolean;
   right?: boolean;
   jumpPressed?: boolean;
+  jumpHeld?: boolean;
 }
 
 export interface OniricPlatformerResult {
@@ -82,7 +96,10 @@ const overlaps = (aX: number, aY: number, aW: number, aH: number, bX: number, bY
 
 export function createOniricPlatformerState(): OniricPlatformerState {
   return {
-    player: { x: 76, y: 410, vx: 0, vy: 0, width: 30, height: 46, onGround: true },
+    player: {
+      x: 76, y: 410, vx: 0, vy: 0, width: 30, height: 46, onGround: true,
+      facing: 1, animationTime: 0, landingSeconds: 0,
+    },
     lives: 3,
     collected: ONIRIC_COLLECTIBLES.map(() => false),
     remainingSeconds: 68,
@@ -90,6 +107,8 @@ export function createOniricPlatformerState(): OniricPlatformerState {
     checkpointTop: 456,
     invulnerableSeconds: 0,
     elapsedSeconds: 0,
+    jumpBufferSeconds: 0,
+    coyoteSeconds: 0,
     finished: false,
     won: false,
   };
@@ -113,19 +132,38 @@ export function stepOniricPlatformer(
   state.invulnerableSeconds = Math.max(0, state.invulnerableSeconds - dt);
 
   const player = state.player;
+  const wasGrounded = player.onGround;
   const direction = Number(Boolean(input.right)) - Number(Boolean(input.left));
-  const targetSpeed = direction * 268;
-  const blend = Math.min(1, dt * 12);
-  player.vx += (targetSpeed - player.vx) * blend;
+  if (direction !== 0) player.facing = direction as -1 | 1;
 
-  if (input.jumpPressed && player.onGround) {
-    player.vy = -540;
+  // Responsive acceleration with a slightly stronger, predictable release.
+  const targetSpeed = direction * 300;
+  const blend = 1 - Math.exp(-(direction === 0 ? 22 : 18) * dt);
+  player.vx += (targetSpeed - player.vx) * blend;
+  if (direction === 0 && Math.abs(player.vx) < 3) player.vx = 0;
+
+  // A short input buffer and coyote window make jumps reliable on touchscreens.
+  state.jumpBufferSeconds = input.jumpPressed
+    ? 0.14
+    : Math.max(0, state.jumpBufferSeconds - dt);
+  state.coyoteSeconds = player.onGround
+    ? 0.11
+    : Math.max(0, state.coyoteSeconds - dt);
+  if (state.jumpBufferSeconds > 0 && (player.onGround || state.coyoteSeconds > 0)) {
+    player.vy = -560;
     player.onGround = false;
+    state.jumpBufferSeconds = 0;
+    state.coyoteSeconds = 0;
   }
 
-  const previousY = player.y;
-  const previousBottom = previousY + player.height;
-  player.vy = Math.min(860, player.vy + 1420 * dt);
+  const previousBottom = player.y + player.height;
+  const gravity = input.jumpHeld && player.vy < 0 ? 900 : 1420;
+  player.vy = Math.min(860, player.vy + gravity * dt);
+  // Releasing jump early shortens the arc without making a quick tap ineffective.
+  if (!input.jumpHeld && player.vy < -455) player.vy = -455;
+  player.animationTime += dt * (Math.abs(player.vx) > 12 ? Math.max(0.25, Math.abs(player.vx) / 70) : 0.42);
+  state.landingSeconds = Math.max(0, state.landingSeconds - dt);
+
   player.x = clamp(player.x + player.vx * dt, 0, ONIRIC_WORLD_WIDTH - player.width);
   player.y += player.vy * dt;
   player.onGround = false;
@@ -143,6 +181,7 @@ export function stepOniricPlatformer(
       break;
     }
   }
+  if (player.onGround && !wasGrounded) state.landingSeconds = 0.17;
 
   if (player.y > ONIRIC_VIEW_HEIGHT + 90) {
     loseOniricLife(state);
@@ -196,6 +235,9 @@ function loseOniricLife(state: OniricPlatformerState) {
   state.player.vx = 0;
   state.player.vy = 0;
   state.player.onGround = true;
+  state.player.landingSeconds = 0;
+  state.jumpBufferSeconds = 0;
+  state.coyoteSeconds = 0;
 }
 
 export function launchOniricPlatformer(options: {
@@ -284,7 +326,15 @@ export function launchOniricPlatformer(options: {
   let lastFrame = 0;
   let jumpQueued = false;
   let completedCallback = false;
-  const held = { left: false, right: false };
+  const held = { left: false, right: false, jump: false };
+  const keyHeld = { left: false, right: false, jump: false };
+  const activePointers = new Map<number, { control: 'left' | 'right' | 'jump'; button: HTMLButtonElement }>();
+  const syncHeldControl = (control: 'left' | 'right' | 'jump') => {
+    const pointerHeld = Array.from(activePointers.values()).some((entry) => entry.control === control);
+    held[control] = keyHeld[control] || pointerHeld;
+    root.querySelector<HTMLButtonElement>(`[data-hold="${control}"]`)
+      ?.classList.toggle('is-pressed', held[control]);
+  };
   const resize = () => {
     const ratio = Math.min(1.5, Math.max(1, window.devicePixelRatio || 1));
     canvas.width = Math.round(ONIRIC_VIEW_WIDTH * ratio);
@@ -487,28 +537,93 @@ export function launchOniricPlatformer(options: {
     // Player avatar: original little warehouse operator in a reflective vest.
     const p = state.player;
     const px = p.x - cameraX;
+    const stride = p.onGround
+      ? Math.sin(p.animationTime * 11) * Math.min(1, Math.abs(p.vx) / 90)
+      : 0;
+    const airbornePose = !p.onGround ? (p.vy < 0 ? -0.52 : 0.34) : 0;
+    const landingPulse = clamp(p.landingSeconds / 0.17, 0, 1);
+
+    // A soft ground shadow makes the jump height readable on the small phone canvas.
+    activeContext!.save();
+    activeContext!.globalAlpha = 0.22;
+    activeContext!.fillStyle = '#020617';
+    activeContext!.beginPath();
+    activeContext!.ellipse(
+      px + p.width / 2,
+      p.y + p.height + 2,
+      14 + (p.onGround ? 0 : 7),
+      4,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    activeContext!.fill();
+    activeContext!.restore();
+
     activeContext!.save();
     activeContext!.translate(px + p.width / 2, p.y + p.height / 2);
+    activeContext!.scale(p.facing * (1 + landingPulse * 0.09), 1 - landingPulse * 0.13);
+    activeContext!.rotate(airbornePose * 0.11 + Math.max(-0.12, Math.min(0.12, p.vx / 900)));
     if (state.invulnerableSeconds > 0 && Math.floor(pulse * 16) % 2 === 0) activeContext!.globalAlpha = 0.45;
-    activeContext!.fillStyle = '#0f172a';
-    activeContext!.fillRect(-12, 8, 9, 15);
-    activeContext!.fillRect(3, 8, 9, 15);
+
+    const drawLimb = (
+      x: number, y: number, angle: number, length: number, width: number,
+      fill: string, endFill?: string,
+    ) => {
+      activeContext!.save();
+      activeContext!.translate(x, y);
+      activeContext!.rotate(angle);
+      activeContext!.fillStyle = fill;
+      activeContext!.beginPath();
+      activeContext!.roundRect(-width / 2, 0, width, length, Math.min(3, width / 2));
+      activeContext!.fill();
+      if (endFill) {
+        activeContext!.fillStyle = endFill;
+        activeContext!.fillRect(-width / 2 - 1, length - 5, width + 2, 6);
+      }
+      activeContext!.restore();
+    };
+
+    const legSwing = stride * 0.62 + airbornePose * 0.20;
+    drawLimb(-6, 8, legSwing, 15, 7, '#334155', '#111827');
+    drawLimb(6, 8, -legSwing, 15, 7, '#1e293b', '#111827');
+    drawLimb(-11, -8, -stride * 0.40 + airbornePose * 0.55, 14, 6, '#c2410c', '#111827');
+    drawLimb(11, -8, stride * 0.40 - airbornePose * 0.55, 14, 6, '#ea580c', '#111827');
+
+    // Reflective warehouse vest, radio and work trousers are deliberately legible at phone size.
+    activeContext!.fillStyle = '#1e293b';
+    activeContext!.fillRect(-14, -10, 6, 15);
     activeContext!.fillStyle = '#f97316';
-    activeContext!.fillRect(-13, -9, 26, 22);
+    activeContext!.beginPath();
+    activeContext!.roundRect(-11, -10, 22, 21, 4);
+    activeContext!.fill();
     activeContext!.fillStyle = '#fde68a';
-    activeContext!.fillRect(-10, -5, 20, 4);
+    activeContext!.fillRect(-8, -6, 16, 3);
+    activeContext!.fillRect(-8, 3, 16, 3);
+    activeContext!.fillStyle = '#fff7ed';
+    activeContext!.fillRect(-3, -8, 2, 17);
+    activeContext!.fillRect(5, -8, 2, 17);
+    activeContext!.fillStyle = '#334155';
+    activeContext!.fillRect(-9, 8, 18, 4);
+    activeContext!.fillStyle = '#0f172a';
+    activeContext!.fillRect(7, -7, 4, 7);
+    activeContext!.fillStyle = '#38bdf8';
+    activeContext!.fillRect(8, -6, 2, 2);
+
+    // Face and hard hat; tiny highlights keep the operator from reading as a flat icon.
     activeContext!.fillStyle = '#f1c7a5';
     activeContext!.beginPath();
-    activeContext!.arc(0, -18, 12, 0, Math.PI * 2);
+    activeContext!.arc(0, -19, 10, 0, Math.PI * 2);
     activeContext!.fill();
-    activeContext!.fillStyle = '#fbbf24';
-    activeContext!.fillRect(-14, -31, 28, 7);
-    activeContext!.fillRect(-10, -36, 20, 7);
+    activeContext!.fillStyle = '#7c2d12';
+    activeContext!.fillRect(6, -21, 2, 2);
     activeContext!.fillStyle = '#1e293b';
-    activeContext!.fillRect(4, -20, 3, 3);
-    activeContext!.fillStyle = '#2563eb';
-    activeContext!.fillRect(-8, 21, 8, 4);
-    activeContext!.fillRect(3, 21, 8, 4);
+    activeContext!.fillRect(4, -20, 2, 2);
+    activeContext!.fillStyle = '#fbbf24';
+    activeContext!.fillRect(-14, -31, 28, 5);
+    activeContext!.fillRect(-10, -36, 20, 7);
+    activeContext!.fillStyle = '#fde68a';
+    activeContext!.fillRect(-7, -37, 14, 2);
     activeContext!.restore();
 
     activeContext!.fillStyle = 'rgba(15,23,42,.72)';
@@ -553,9 +668,7 @@ export function launchOniricPlatformer(options: {
   const resetRun = () => {
     restartPixelChaos();
     state = createOniricPlatformerState();
-    held.left = false;
-    held.right = false;
-    jumpQueued = false;
+    clearHeldInput();
     lastFrame = 0;
     resultPanel.hidden = true;
     updateHud();
@@ -568,7 +681,12 @@ export function launchOniricPlatformer(options: {
     const dt = lastFrame ? Math.min(1 / 30, Math.max(0, (now - lastFrame) / 1000)) : 1 / 60;
     lastFrame = now;
     if (!state.finished) {
-      stepOniricPlatformer(state, { left: held.left, right: held.right, jumpPressed: jumpQueued }, dt);
+      stepOniricPlatformer(state, {
+        left: held.left,
+        right: held.right,
+        jumpPressed: jumpQueued,
+        jumpHeld: held.jump,
+      }, dt);
       jumpQueued = false;
       const second = Math.ceil(state.remainingSeconds);
       if (second !== lastHudSecond) {
@@ -585,8 +703,13 @@ export function launchOniricPlatformer(options: {
   };
 
   const clearHeldInput = () => {
-    held.left = false;
-    held.right = false;
+    activePointers.clear();
+    for (const control of ['left', 'right', 'jump'] as const) {
+      keyHeld[control] = false;
+      held[control] = false;
+      root.querySelector<HTMLButtonElement>(`[data-hold="${control}"]`)
+        ?.classList.remove('is-pressed');
+    }
     jumpQueued = false;
   };
 
@@ -605,6 +728,8 @@ export function launchOniricPlatformer(options: {
     window.cancelAnimationFrame(rafId);
     window.clearTimeout(pixelChaosTimer);
     window.removeEventListener('resize', resize);
+    window.removeEventListener('pointerup', releasePointer, true);
+    window.removeEventListener('pointercancel', releasePointer, true);
     window.removeEventListener('blur', onWindowBlur);
     document.removeEventListener('visibilitychange', onVisibilityChange);
     document.removeEventListener('keydown', onKeyDown, true);
@@ -638,9 +763,19 @@ export function launchOniricPlatformer(options: {
       }
       return;
     }
-    if (['ArrowLeft', 'KeyA'].includes(event.code)) held.left = true;
-    if (['ArrowRight', 'KeyD'].includes(event.code)) held.right = true;
-    if (['Space', 'ArrowUp', 'KeyW'].includes(event.code) && !event.repeat) jumpQueued = true;
+    if (['ArrowLeft', 'KeyA'].includes(event.code)) {
+      keyHeld.left = true;
+      syncHeldControl('left');
+    }
+    if (['ArrowRight', 'KeyD'].includes(event.code)) {
+      keyHeld.right = true;
+      syncHeldControl('right');
+    }
+    if (['Space', 'ArrowUp', 'KeyW'].includes(event.code)) {
+      keyHeld.jump = true;
+      syncHeldControl('jump');
+      if (!event.repeat) jumpQueued = true;
+    }
     if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'KeyA', 'KeyD', 'KeyW', 'Space', 'Escape'].includes(event.code)) {
       event.preventDefault();
       event.stopPropagation();
@@ -648,44 +783,55 @@ export function launchOniricPlatformer(options: {
     if (event.code === 'Escape') finish();
   };
   const onKeyUp = (event: KeyboardEvent) => {
-    if (['ArrowLeft', 'KeyA'].includes(event.code)) held.left = false;
-    if (['ArrowRight', 'KeyD'].includes(event.code)) held.right = false;
+    if (['ArrowLeft', 'KeyA'].includes(event.code)) {
+      keyHeld.left = false;
+      syncHeldControl('left');
+    }
+    if (['ArrowRight', 'KeyD'].includes(event.code)) {
+      keyHeld.right = false;
+      syncHeldControl('right');
+    }
+    if (['Space', 'ArrowUp', 'KeyW'].includes(event.code)) {
+      keyHeld.jump = false;
+      syncHeldControl('jump');
+    }
     if (['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD', 'Space', 'ArrowUp', 'KeyW'].includes(event.code)) {
       event.preventDefault();
       event.stopPropagation();
     }
   };
 
+  const releasePointer = (event: PointerEvent) => {
+    const owner = activePointers.get(event.pointerId);
+    if (!owner) return;
+    activePointers.delete(event.pointerId);
+    syncHeldControl(owner.control);
+  };
+
   root.querySelectorAll<HTMLButtonElement>('[data-hold]').forEach((button) => {
     const control = button.dataset.hold;
     if (control !== 'left' && control !== 'right' && control !== 'jump') return;
-    // Do not let page scrolling or the underlying Survival joystick steal a
-    // finger press. Pointer capture keeps held movement alive at the button edge.
+    // Keep the secret independent from the Survival joystick, even when pointer
+    // capture is unavailable or Android sends pointerup outside the button.
     button.style.touchAction = 'none';
     button.style.pointerEvents = 'auto';
     button.addEventListener('pointerdown', (event) => {
       event.preventDefault();
       event.stopPropagation();
-      button.classList.add('is-pressed');
+      activePointers.set(event.pointerId, { control, button });
+      syncHeldControl(control);
       if (control === 'jump') jumpQueued = true;
-      else held[control] = true;
       try {
         button.setPointerCapture(event.pointerId);
       } catch {
-        // Pointer capture is optional; the pointerup/cancel listeners remain a fallback.
+        // Window-level pointerup/pointercancel listeners below are the fallback.
       }
     });
-    const release = (event: PointerEvent) => {
-      event.preventDefault();
-      event.stopPropagation();
-      button.classList.remove('is-pressed');
-      if (control !== 'jump') held[control] = false;
-    };
-    button.addEventListener('pointerup', release);
-    button.addEventListener('pointercancel', release);
-    button.addEventListener('lostpointercapture', release);
+    button.addEventListener('lostpointercapture', releasePointer);
     button.addEventListener('contextmenu', (event) => event.preventDefault());
   });
+  window.addEventListener('pointerup', releasePointer, true);
+  window.addEventListener('pointercancel', releasePointer, true);
 
   root.querySelector('[data-action="exit"]')?.addEventListener('click', finish);
   returnButton.addEventListener('click', finish);
