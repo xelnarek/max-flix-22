@@ -213,6 +213,25 @@ test('Unity procedural map geometry stays inside the intended 120 by 40 metre bi
   assert.match(world, /ClampInside\(Vector3 position, float inset = 1\.5f\)/);
 });
 
+test('Unity enemy navigation snapshots world colliders and steers around expanded obstacles', async () => {
+  const [navigation, enemy, factory, campaign] = await Promise.all([
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyNavigationWorld.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/CampaignMissionDirector.cs'),
+  ]);
+  assert.match(navigation, /GetComponentsInChildren<Collider>\(true\)/);
+  assert.match(navigation, /collider\.isTrigger/);
+  assert.match(navigation, /TryRayBoxEntry/);
+  assert.match(navigation, /WaypointPadding/);
+  assert.match(navigation, /GetInsideObstacleEscape/);
+  assert.match(navigation, /DefaultLookAhead = 4\.2f/);
+  assert.match(enemy, /EnemyNavigationWorld\.GetObstacleAvoidanceVector/);
+  assert.match(enemy, /Vector3\.Dot\(direction, targetDirection\) > 0\.35f/);
+  assert.match(factory, /navigation\.Initialize\(_worldRoot\)/);
+  assert.match(campaign, /EnemyNavigationWorld\.RefreshActive\(\)/);
+});
+
 test('Unity virtual joystick keeps one touch pointer and ignores unrelated finger release', async () => {
   const joystick = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/VirtualJoystick.cs');
   assert.match(joystick, /private int _activePointerId = int\.MinValue/);
