@@ -122,3 +122,16 @@ test('Cthulhu idle and attack animation now articulate its head, arms and living
   assert.ok(game.includes('cthulhuArmR.rotation.x = armSway'));
   assert.ok(game.includes('cthulhuSigil.scale.set(sigilPulse'));
 });
+
+test('the Necronomicon relic animates its book, sigil, halo and individual floating runes', async () => {
+  const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
+  assert.ok(game.includes('group.userData.necronomiconBook = book;'));
+  assert.ok(game.includes('group.userData.necronomiconSigil = sigilRing;'));
+  assert.ok(game.includes('group.userData.necronomiconRunes = glyphs;'));
+  assert.ok(game.includes('group.userData.necronomiconHalo = halo;'));
+  assert.ok(game.includes('book.rotation.z = -0.09 + Math.sin(secret.age * 1.45)'));
+  assert.ok(game.includes('sigil.rotation.z += dt * 0.72'));
+  assert.ok(game.includes('runes.children.forEach((rune, index)'));
+  assert.ok(game.includes('rune.position.y = 0.90 + Math.sin(secret.age * 2.3 + index * 1.25)'));
+  assert.ok(game.includes('haloMaterial.opacity = 0.66'));
+});
