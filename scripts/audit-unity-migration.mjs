@@ -389,7 +389,7 @@ try {
 
   if (process.exitCode) process.exit(process.exitCode);
   console.log('[Unity migration audit] PASS: editor/package pins, source IDs, floor palettes, connected world generation, weighted biome modifiers and release safety gates are consistent.');
-  console.log('[Unity migration audit] CUTOVER BLOCKER: Unity Editor compilation/playtesting, rig attachment/retargeting, PvP, account/cloud services, ads/UMP, full secrets/events and device QA are still required.');
+  console.log('[Unity migration audit] CUTOVER BLOCKER: Unity Editor compilation/playtesting, rig attachment/retargeting, PvP, account/cloud services, ads/UMP, remaining bonus-event and achievement parity, and device QA are still required.');
 } catch (error) {
   fail(String(error));
 }
