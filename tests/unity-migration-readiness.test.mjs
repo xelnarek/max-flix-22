@@ -53,7 +53,7 @@ test('Unity project setup guards the known Android resume/back regression and en
   assert.match(setup, /PlayerSettings\.runInBackground = false/);
   assert.match(setup, /PlayerSettings\.Android\.predictiveBackSupport = false/);
   assert.match(setup, /PlayerSettings\.Android\.optimizedFramePacing = true/);
-  assert.match(readme, /Migration foundation/);
+  assert.match(readme, /migration foundation/);
 });
 
 test('Unity production cutover remains blocked while the Three.js game stays production', async () => {
