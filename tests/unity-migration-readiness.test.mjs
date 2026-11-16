@@ -248,6 +248,17 @@ test('Unity weapon projectiles collide with environment before damaging enemies 
   assert.match(weapons, /firstEnemyDistance \+ 0\.08f/);
 });
 
+test('Unity Survival game-over summary reports the number of discovered secrets', async () => {
+  const [hud, domain] = await Promise.all([
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/GameDomain.cs'),
+  ]);
+  assert.match(domain, /public int SecretsFound/);
+  assert.match(hud, /string secretReport = run\.Mode == GameMode\.Survival/);
+  assert.match(hud, /Sekrety odkryte: " \+ Mathf\.Clamp\(run\.SecretsFound, 0, 20\) \+ "\/20"/);
+  assert.match(hud, /wave \+ secretReport \+ "\\nOperator:/);
+});
+
 test('Unity mega-world places all five secrets in each of the four biome coordinate frames', async () => {
   const [catalog, domain, factory, pickup] = await Promise.all([
     read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/GameContentCatalog.cs'),
