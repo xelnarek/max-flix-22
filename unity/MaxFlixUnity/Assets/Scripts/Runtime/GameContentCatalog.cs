@@ -132,7 +132,7 @@ namespace MaxFlix.Unity.Runtime
                         XpMultiplier = 1.15f,
                         BackgroundColor = Hex(0x090817),
                         FogColor = Hex(0x17132b),
-                        FloorColor = Hex(0x30223d),
+                        FloorColor = Hex(0x5b5365),
                         WallColor = Hex(0x362047),
                         AccentColor = Hex(0xf472b6),
                         Secrets = new[]
