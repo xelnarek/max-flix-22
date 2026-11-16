@@ -107,7 +107,7 @@ export const PVP_LIGHTING_PROFILE: WorldLightingProfile & { backgroundColor: num
   ambientColor: 0xcbdce9, ambientIntensity: 0.86,
   hemisphereSkyColor: 0x91bddc, hemisphereGroundColor: 0x15283a, hemisphereIntensity: 1.22,
   directionalColor: 0xe9d0b5, directionalIntensity: 2.48,
-  rimColor: 0x78b9c8, rimIntensity: 1.34,
+  rimColor: 0x55c5ed, rimIntensity: 1.34,
   fogColor: 0x0d1c2b, fogNear: 58, fogFar: 148,
   environmentIntensity: 0.44, exposure: 1.00,
   backgroundColor: 0x08121e,
