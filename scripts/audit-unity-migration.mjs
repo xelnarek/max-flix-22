@@ -58,6 +58,9 @@ try {
     waveDirector,
     progressionController,
     weaponController,
+    secretPickup,
+    secretEncounter,
+    gameDomain,
     menuController,
     uiEventSystemInstaller,
     hudController,
@@ -84,6 +87,9 @@ try {
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWaveDirector.cs'),
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalProgressionController.cs'),
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWeaponController.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalSecretPickup.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalSecretEncounterController.cs'),
+    read('unity/MaxFlixUnity/Assets/Scripts/Runtime/GameDomain.cs'),
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/MainMenuController.cs'),
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/UiEventSystemInstaller.cs'),
     read('unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs'),
@@ -245,6 +251,43 @@ try {
   ]) {
     if (!biomeEnvironment.includes(token)) fail('Biome ambience controller is missing continuous visual blending: ' + token);
   }
+  if (!gameDomain.includes('Necronomicon = 4')) fail('Unity domain must keep the stable Necronomicon secret style ID.');
+  const secretMapBlocks = [...contentCatalog.matchAll(/Secrets = new\[\]\s*\{([\s\S]*?)\}/g)];
+  if (secretMapBlocks.length !== 4) fail('Unity Survival must define one secret catalogue per biome.');
+  for (let index = 0; index < secretMapBlocks.length; index++) {
+    const secretsInBiome = [...secretMapBlocks[index][1].matchAll(/Secret\("/g)].length;
+    if (secretsInBiome !== 5) fail('Each Unity Survival biome must contain exactly five secrets; biome index ' + index + ' has ' + secretsInBiome + '.');
+  }
+  for (const token of [
+    'CreateUnifiedSurvivalSecrets()',
+    'zone.Center.x + definition.Position.x',
+    'zone.Center.y + definition.Position.y',
+  ]) {
+    if (!worldFactory.includes(token)) fail('Unity world factory is missing connected-world secret placement: ' + token);
+  }
+  for (const token of [
+    'OnTriggerEnter(Collider other)',
+    'PlayerPrefs.SetInt(discoveryKey, 1)',
+    'GameSession.Current.SecretsFound++',
+    'GameSession.Current.Score += 750',
+    'SurvivalSecretEncounterController.Open(player, _definition.Style)',
+  ]) {
+    if (!secretPickup.includes(token)) fail('Unity Survival secret pickup is missing collection/persistence behaviour: ' + token);
+  }
+  for (const token of [
+    'public static void Open(PlayerController player, SurvivalSecretStyle style)',
+    'GameSession.SetState(GameFlowState.LevelUp)',
+    'Time.timeScale = 0f',
+    'private void UpdateRabbitHole(float dt)',
+    'private void UpdateNecronomicon(float dt)',
+    'private enum BossAttack { Slam, Lash, Grab }',
+    '_cthulhuBossOpen = 2.15f',
+    'GameSession.Current.Score += 6000',
+    '_rabbitCollected == 3',
+  ]) {
+    if (!secretEncounter.includes(token)) fail('Unity standalone 2D secret encounter is missing required mechanics: ' + token);
+  }
+
   const evolutionPassiveBlock = weaponCatalog.match(/private static readonly string\[\] PassiveIds\s*=\s*\{([\s\S]*?)\};/);
   const availableEvolutionPassives = evolutionPassiveBlock
     ? [...evolutionPassiveBlock[1].matchAll(/"([^"]+)"/g)].map((match) => match[1])
