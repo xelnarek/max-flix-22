@@ -13,10 +13,10 @@ using UnityEngine.Rendering.Universal;
 namespace MaxFlix.Unity.Editor
 {
     /// <summary>
-    /// Fails a Unity Player build when its core project settings or stable
-    /// source-data contracts drift. It deliberately does not claim gameplay
-    /// parity: the connected Survival mega-world and several live services
-    /// remain separate cutover gates.
+    /// Fails a Unity Player build when core project settings or stable
+    /// source-data contracts drift. The four-biome world is now wired into the
+    /// runtime factory, but only a real Editor build and device playtest can
+    /// validate collision, navigation, visual blending and release behaviour.
     /// </summary>
     public sealed class UnityProjectReadinessAudit : IPreprocessBuildWithReport
     {
@@ -118,6 +118,20 @@ namespace MaxFlix.Unity.Editor
                     && t.Center == new Vector2(-60f, 0f) && t.Width == 22f),
                 "Survival transition endpoints or 22 m blend-band widths do not match the source layout.", failures);
 
+            Check(
+                Mathf.Abs(SurvivalWorldLayout.BiomeHalfWidth * 2f - 120f) < 0.001f
+                && Mathf.Abs(SurvivalWorldLayout.BiomeHalfDepth * 2f - 40f) < 0.001f
+                && SurvivalWorldLayout.Contains(-120f, -40f)
+                && SurvivalWorldLayout.Contains(120f, 40f)
+                && !SurvivalWorldLayout.Contains(120.1f, 0f),
+                "The connected Survival world must tile the exact 240 × 80 m outer bounds.", failures);
+            Check(
+                SurvivalWorldLayout.GetZoneCenter(WarehouseMapId.WarehouseB4) == new Vector2(-60f, -20f)
+                && SurvivalWorldLayout.GetZoneCenter(WarehouseMapId.ContainerTerminal) == new Vector2(60f, -20f)
+                && SurvivalWorldLayout.GetZoneCenter(WarehouseMapId.ColdStorage) == new Vector2(60f, 20f)
+                && SurvivalWorldLayout.GetZoneCenter(WarehouseMapId.NightSorting) == new Vector2(-60f, 20f),
+                "Biome spawn centres must match the source world quadrants.", failures);
+
             SurvivalBiomeBlendWeights hub = SurvivalWorldLayout.GetBlendWeights(0f, 0f);
             Check(
                 Mathf.Abs(hub.Total - 1f) < 0.0001f
@@ -147,14 +161,12 @@ namespace MaxFlix.Unity.Editor
 
             Debug.Log("[Max Flix] Unity project configuration and stable catalog contracts passed.");
 
-            // This is intentionally a warning rather than a compile blocker:
-            // the technical Unity slice can be built for review, but it is not
-            // allowed to replace the production build until these gaps close.
+            // A green configuration audit is not a release approval. The
+            // Editor build and real-device runtime path remain mandatory.
             Debug.LogWarning(
-                "[Max Flix] CUTOVER BLOCKER: SurvivalWorldLayout is the canonical 240 x 80 m four-biome contract, "
-                + "but WarehouseWorldFactory.BuildB4Slice still creates one selected arena. "
-                + "Connect the four zones, transitions, world-space collision/navigation, dynamic biome modifiers, "
-                + "secrets and lighting before calling Unity feature-complete.");
+                "[Max Flix] CUTOVER BLOCKER: the connected Survival mega-world is wired in source but still needs "
+                + "a real Unity Editor compile, visual/collision/navigation playtest and sustained device QA. "
+                + "Rig attachment/retargeting, PvP, account/cloud services, ads/UMP and full secrets/events also remain.");
         }
 
         private static void Check(bool condition, string failure, List<string> failures)
