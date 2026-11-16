@@ -333,7 +333,7 @@ test('Unity XP progression has pooled crystals, map XP scaling, level-up drafts 
   assert.match(progression, /fallback_repair/);
   assert.match(progression, /fallback_credits/);
   assert.match(progression, /fallback_overdrive/);
-  assert.match(progression, /_pendingBossReward/);
+  assert.match(progression, /_pendingBossRewardCount/);
   assert.match(progression, /Text description = CreateText\(rect, card\.Description,[\s\S]*?Vector2\.zero, 17, TextAnchor\.MiddleCenter/);
   assert.match(player, /SetSurvivalMoveMultiplier/);
   assert.match(player, /IncreaseMaxHealth/);
@@ -458,11 +458,12 @@ test('Unity boss upgrade rewards are queued if an XP draft already owns the paus
   const progression = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalProgressionController.cs');
   const openBoss = progression.slice(progression.indexOf('private void OpenBossReward()'), progression.indexOf('private void RollCards'));
   const closeDraft = progression.slice(progression.indexOf('private void CloseDraft()'), progression.indexOf('private void UpdateHud()'));
-  assert.match(openBoss, /_pendingBossReward = true/);
+  assert.match(openBoss, /_pendingBossRewardCount = Mathf\.Min\(8, _pendingBossRewardCount \+ 1\)/);
   assert.match(openBoss, /BeginLevelUp\(true\)/);
-  assert.match(closeDraft, /if \(_pendingBossReward\)/);
-  assert.match(closeDraft, /_pendingBossReward = false/);
+  assert.match(closeDraft, /if \(_pendingBossRewardCount > 0\)/);
+  assert.match(closeDraft, /_pendingBossRewardCount--/);
   assert.match(closeDraft, /BeginLevelUp\(true\)/);
+  assert.match(openBoss, /GameFlowState\.GameOver \|\| state == GameFlowState\.Victory/);
   assert.match(closeDraft, /if \(_xp >= _xpToNext\)/);
   assert.doesNotMatch(closeDraft, /!wasBossReward/);
 });
