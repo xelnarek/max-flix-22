@@ -3662,8 +3662,11 @@ export class PaleciakiGameEngine {
     const platformStart = this.platforms.length;
     this.levelRoot = zoneRoot;
 
-    this.buildSurvivalArenaChunkContents(mapId, zone.openEdges);
-    this.levelRoot = mainRoot;
+    try {
+      this.buildSurvivalArenaChunkContents(mapId, zone.openEdges);
+    } finally {
+      this.levelRoot = mainRoot;
+    }
     mainRoot.add(zoneRoot);
     zoneRoot.updateMatrixWorld(true);
 
@@ -4106,9 +4109,9 @@ export class PaleciakiGameEngine {
       for (let post = 0; post < 2; post++) {
         const side = post === 0 ? -1 : 1;
         transform.position.set(
-          transition.axis === 'x' ? transition.centerX : transition.centerX + side * transition.width * 0.55,
+          transition.axis === 'x' ? transition.centerX + side * transition.width * 0.55 : transition.centerX,
           1.95,
-          transition.axis === 'x' ? transition.centerZ + side * transition.width * 0.55 : transition.centerZ,
+          transition.axis === 'x' ? transition.centerZ : transition.centerZ + side * transition.width * 0.55,
         );
         transform.rotation.set(0, 0, 0);
         transform.scale.set(1, 1, 1);
