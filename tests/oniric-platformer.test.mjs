@@ -127,7 +127,11 @@ test('the finished Oniric level stops its animation loop until retry', async () 
 
 test('Oniric releases held controls on focus loss and app backgrounding', async () => {
   const source = await readFile(new URL('../src/oniricPlatformer.ts', import.meta.url), 'utf8');
-  assert.match(source, /const clearHeldInput = \(\) => \{[\s\S]*?held\.left = false;[\s\S]*?held\.right = false;[\s\S]*?jumpQueued = false;/);
+  assert.match(source, /const clearHeldInput = \(\) => \{[\s\S]*?activePointers\.clear\(\);[\s\S]*?for \(const control of \['left', 'right', 'jump'\]/);
+  assert.match(source, /window\.addEventListener\('blur', onWindowBlur\)/);
+  assert.match(source, /document\.addEventListener\('visibilitychange', onVisibilityChange\)/);
+  assert.match(source, /window\.removeEventListener\('blur', onWindowBlur\)/);
+  assert.match(source, /document\.removeEventListener\('visibilitychange', onVisibilityChange\)/);
   assert.match(source, /window\.addEventListener\('blur', onWindowBlur\)/);
   assert.match(source, /document\.addEventListener\('visibilitychange', onVisibilityChange\)/);
   assert.match(source, /window\.removeEventListener\('blur', onWindowBlur\)/);
@@ -180,7 +184,10 @@ test('Rabbit Hole mobile controls are the topmost hit-testable layer above the g
   assert.match(source, /button\.style\.touchAction = 'none'/);
   assert.match(source, /button\.style\.pointerEvents = 'auto'/);
   assert.match(source, /button\.setPointerCapture\(event\.pointerId\)/);
-  assert.match(source, /button\.addEventListener\('pointercancel', release\)/);
+  assert.match(source, /activePointers\.set\(event\.pointerId/);
+  assert.match(source, /window\.addEventListener\('pointerup', releasePointer, true\)/);
+  assert.match(source, /window\.addEventListener\('pointercancel', releasePointer, true\)/);
+  assert.match(source, /window\.removeEventListener\('pointercancel', releasePointer, true\)/);
   assert.match(mobileOverlayFix, /z-index:\s*2147483647/);
   assert.match(mobileOverlayFix, /\.oniric-platformer-controls button[\s\S]*?touch-action:\s*none/);
   assert.match(mobileOverlayFix, /@media \(max-width: 600px\)[\s\S]*?oniric-jump-button/);
@@ -189,4 +196,64 @@ test('Rabbit Hole mobile controls are the topmost hit-testable layer above the g
 test('Rabbit Hole exit clears held touch movement before removing the modal', async () => {
   const source = await readFile(new URL('../src/oniricPlatformer.ts', import.meta.url), 'utf8');
   assert.match(source, /const finish = \(\) => \{[\s\S]*?clearHeldInput\(\);[\s\S]*?root\.remove\(\)/);
+});
+
+test('the Rabbit Hole operator has coyote time and buffers a jump just before landing', () => {
+  const coyote = createOniricPlatformerState();
+  coyote.player.x = 345;
+  coyote.player.vx = 300;
+  stepOniricPlatformer(coyote, { right: true }, 1 / 60);
+  assert.equal(coyote.player.onGround, false, 'the first ledge should be left before the next input');
+  stepOniricPlatformer(coyote, { jumpPressed: true, jumpHeld: true }, 1 / 60);
+  assert.ok(coyote.player.vy < 0, 'a jump just after leaving the ledge should still trigger');
+
+  const buffered = createOniricPlatformerState();
+  buffered.player.x = 440;
+  buffered.player.y = 330;
+  buffered.player.vy = 420;
+  buffered.player.onGround = false;
+  buffered.jumpBufferSeconds = 0.12;
+  for (let frame = 0; frame < 8 && !buffered.player.onGround; frame++) {
+    stepOniricPlatformer(buffered, {}, 1 / 60);
+  }
+  assert.equal(buffered.player.onGround, true, 'the operator should land on the next platform');
+  stepOniricPlatformer(buffered, { jumpHeld: true }, 1 / 60);
+  assert.ok(buffered.player.vy < 0, 'a buffered touch jump should fire on landing');
+});
+
+test('holding jump gives a higher arc and releasing it early keeps a shorter, controllable jump', () => {
+  const tap = createOniricPlatformerState();
+  const held = createOniricPlatformerState();
+  stepOniricPlatformer(tap, { jumpPressed: true, jumpHeld: false }, 1 / 60);
+  stepOniricPlatformer(held, { jumpPressed: true, jumpHeld: true }, 1 / 60);
+  for (let frame = 0; frame < 7; frame++) {
+    stepOniricPlatformer(tap, {}, 1 / 60);
+    stepOniricPlatformer(held, { jumpHeld: true }, 1 / 60);
+  }
+  assert.ok(held.player.y < tap.player.y, 'a held jump should rise higher than a quick tap');
+  assert.ok(tap.player.y < 410, 'a quick tap should still produce a useful jump');
+});
+
+test('the Rabbit Hole operator sprite animates its gait, facing and landing response', async () => {
+  const source = await readFile(new URL('../src/oniricPlatformer.ts', import.meta.url), 'utf8');
+  const state = createOniricPlatformerState();
+  stepOniricPlatformer(state, { right: true }, 1 / 60);
+  assert.equal(state.player.facing, 1);
+  assert.ok(state.player.animationTime > 0);
+  stepOniricPlatformer(state, { left: true }, 1 / 60);
+  assert.equal(state.player.facing, -1);
+  assert.match(source, /const legSwing = stride/);
+  assert.match(source, /const landingPulse = clamp\(p\.landingSeconds/);
+  assert.match(source, /activeContext!\.ellipse\([\s\S]*?p\.onGround \? 0 : 7/);
+  assert.match(source, /activeContext!\.scale\(p\.facing/);
+});
+
+test('Rabbit Hole touch input tracks multiple pointers and releases them outside the control surface', async () => {
+  const source = await readFile(new URL('../src/oniricPlatformer.ts', import.meta.url), 'utf8');
+  assert.match(source, /const activePointers = new Map<number/);
+  assert.match(source, /const syncHeldControl =/);
+  assert.match(source, /window\.addEventListener\('pointerup', releasePointer, true\)/);
+  assert.match(source, /window\.addEventListener\('pointercancel', releasePointer, true\)/);
+  assert.match(source, /activePointers\.delete\(event\.pointerId\)/);
+  assert.match(source, /window\.removeEventListener\('pointerup', releasePointer, true\)/);
 });
