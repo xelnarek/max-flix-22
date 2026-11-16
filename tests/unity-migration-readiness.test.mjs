@@ -78,6 +78,41 @@ test('Unity Survival renders smooth seam textures and blends biome gameplay modi
   assert.match(sourceBlend, /SURVIVAL_WORLD_BLEND_HALF_DEPTH_METERS = 11/);
 });
 
+test('Unity Survival XP applies the position-based biome bonus exactly once', async () => {
+  const [progression, catalog] = await Promise.all([
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalProgressionController.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/GameContentCatalog.cs'),
+  ]);
+  assert.match(progression, /GetBlendedXpMultiplier\(/);
+  assert.match(progression, /orb\.Value \* _xpGrowthMultiplier/);
+  assert.doesNotMatch(progression, /orb\.Value \* mapXp/);
+  assert.match(catalog, /GetBlendedXpMultiplier/);
+});
+
+test('Unity Survival weapon ricochets use the full mega-world bounds, not the old arena edge', async () => {
+  const weapons = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWeaponController.cs');
+  assert.match(weapons, /SurvivalWorldLayout\.MinX \+ worldEdgeInset/);
+  assert.match(weapons, /SurvivalWorldLayout\.MaxX - worldEdgeInset/);
+  assert.match(weapons, /SurvivalWorldLayout\.MinZ \+ worldEdgeInset/);
+  assert.match(weapons, /SurvivalWorldLayout\.MaxZ - worldEdgeInset/);
+  assert.doesNotMatch(weapons, /Mathf\.Abs\(position\.z\) > 17\.5f/);
+});
+
+test('Unity enemy separation recovers from exact overlap with the player', async () => {
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  assert.match(enemy, /playerDistance < playerClearance/);
+  assert.match(enemy, /GetInstanceID\(\) < _target\.GetInstanceID\(\) \? Vector3\.right : Vector3\.left/);
+});
+
+test('Unity modal dialogs fit the safe area and stack buttons on narrow screens', async () => {
+  const hud = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/HudController.cs');
+  assert.match(hud, /overlayRect\.SetParent\(modalHost, false\)/);
+  assert.match(hud, /modalHost\.rect\.width - 24f/);
+  assert.match(hud, /modalHost\.rect\.height - 24f/);
+  assert.match(hud, /if \(panelWidth < 560f\)/);
+  assert.match(hud, /new Vector2\(buttonWidth, 48f\)/);
+});
+
 test('Unity procedural map geometry stays inside the intended 120 by 40 metre biome tiles', async () => {
   const [factory, world] = await Promise.all([
     read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs'),
