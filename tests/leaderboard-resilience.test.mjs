@@ -63,6 +63,42 @@ test('leaderboard connectivity probe checks the public Survival collection indep
   const probeEnd = firebase.indexOf('export async function submitScore', probeStart);
   const probe = firebase.slice(probeStart, probeEnd);
   assert.match(probe, /query\(collection\(db, 'leaderboard'\), limit\(1\)\)/);
-  assert.match(probe, /getDocs\(probeQuery\)/);
+  assert.match(probe, /getDocsFromServer\(probeQuery\)/);
   assert.doesNotMatch(probe, /if \(!currentUser\?\.uid\)/);
+});
+
+
+test('manual ranking refresh reads Firestore from the server and keeps Survival cache isolated', async () => {
+  const firebase = await read('../src/firebase.ts');
+  const start = firebase.indexOf('export async function getTopSurvivalLeaderboard');
+  const end = firebase.indexOf('\n}', start) + 2;
+  const survivalRead = firebase.slice(start, end);
+  assert.match(survivalRead, /getDocsFromServer\(survivalQuery\)/);
+  assert.match(survivalRead, /SURVIVAL_LEADERBOARD_CACHE_KEY/);
+  assert.match(firebase, /const parseCachedLeaderboard = \(cacheKey = LEADERBOARD_CACHE_KEY\)/);
+  assert.match(firebase, /getSurvivalLeaderboardReadStatus/);
+  assert.match(survivalRead, /survivalLeaderboardReadStatus = \{ source: 'firestore' \}/);
+  assert.match(survivalRead, /survivalLeaderboardReadStatus = \{ source: 'cache', errorCode \}/);
+});
+
+test('a Survival refresh does not erase the shared Campaign/global ranking cache', async () => {
+  const firebase = await read('../src/firebase.ts');
+  const start = firebase.indexOf('export async function getTopSurvivalLeaderboard');
+  const end = firebase.indexOf('\n}', start) + 2;
+  const survivalRead = firebase.slice(start, end);
+  assert.match(survivalRead, /cacheLeaderboardEntries\(survivalEntries, SURVIVAL_LEADERBOARD_CACHE_KEY\)/);
+  assert.doesNotMatch(survivalRead, /safeStorage\.setItem\(LEADERBOARD_CACHE_KEY/);
+  assert.match(survivalRead, /parseCachedLeaderboard\(\)\.filter\(\(entry\) => entry\.mode === 'survival'\)/);
+});
+
+test('ranking refresh keeps the previous board visible until a fresh response arrives', async () => {
+  const app = await read('../src/index.ts');
+  const start = app.indexOf('const renderLeaderboard = async');
+  const end = app.indexOf("btnRefreshLeaderboard?.addEventListener", start);
+  const render = app.slice(start, end);
+  assert.match(render, /const hasExistingRows = leaderboardList\.childElementCount > 0/);
+  assert.match(render, /if \(!hasExistingRows\) leaderboardList\.classList\.add\('hidden'\)/);
+  assert.match(render, /leaderboardList\.replaceChildren\(\)/);
+  assert.match(render, /Zachowano ostatnio wyświetlone wyniki/);
+  assert.match(render, /getSurvivalLeaderboardReadStatus\(\)/);
 });
