@@ -5,6 +5,8 @@
 **Initial scope:** B4 warehouse vertical slice / migration foundation  
 **Production status:** prototype only — the current Three.js game remains the production build.
 
+> **Cutover warning (2026-11-16):** this repository is a migration foundation, not a replacement build. Unity Survival still calls `BuildB4Slice()` and therefore creates one selected standalone arena; it does **not** yet compose the live four-biome 240 × 80 m mega-world. `SurvivalWorldLayout.cs` now records the exact zone/transition contract, but it is not yet wired into `WarehouseWorldFactory`. Imported Gobkit rigs are validated but runtime player/enemy prefabs still use procedural placeholders. PvP, Firebase, account sync, leaderboard, ads/UMP and the complete secret/event catalogue are not cutover-ready.
+
 ## Open
 
 1. Install Unity Hub.
