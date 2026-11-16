@@ -58,7 +58,7 @@ Pierwszy commit Unity jest **fundamentem migracji i grywalnym wycinkiem technicz
 | Sterowanie | src/virtualJoystick.ts, src/touchControlLayout.ts, src/uiViewport.ts, src/visibilityPause.ts | New Input System, ekranowe joysticki i przyciski, mysz/klawiatura/gamepad, bez nakładania kontrolek |
 | Kamera i jakość | src/renderQuality.ts, src/worldVisualQuality.ts, src/selectiveBloom.ts, src/bloomPolicy.ts | Cinemachine/rig kamery, URP Volume, dynamiczna skala renderowania, LOD, pooling i profile urządzeń |
 | Audio i intro | src/sound.ts, src/cinematicIntro.ts | AudioMixer, pule audio, intro, dialogi i redukcja ruchu |
-| Sekrety i minigra | src/oniricPlatformer.ts, src/game.ts | Sekret Króliczej Nory z osobnym trybem 2D, wydarzenia specjalne, MafiKapibary i Pomazaniec |
+| Sekrety i minigra | src/oniricPlatformer.ts, src/cthulhuRetroArena.ts, src/cthulhuCombat.ts, src/survivalMaps.ts, src/game.ts | 20 pickupów w czterech biomach, osobne minigry 2D Rabbit Hole i Necronomicon/Cthulhu, wydarzenia specjalne, MafiKapibary i Pomazaniec |
 | PWA i aktualizacje | src/pwaUpdateNotice.ts, public/sw.js, public/manifest.webmanifest | Bezpośredni odpowiednik nie jest wymagany w natywnej aplikacji; Web Player otrzyma wersjonowanie i informację o aktualizacji |
 
 ## Kolejność prac i bramki
@@ -139,6 +139,16 @@ W podetapie 2B dodano katalog wszystkich 23 identyfikatorów przeciwników (z ro
 W etapie 2D uzupełniono też dwa źródłowe rzadkie spotkania (Bosman od fali 6 z szansą 4%, Sebix od fali 8 z szansą 6,5%), limit pojedynczej aktywnej instancji każdego oraz równomierne rozmieszczenie wejścia hordy. AI otrzymało współdzielony cache przestrzenny i separację, aby ograniczać nakładanie przeciwników w tłumie.
 
 
+
+### Etap 3C — sekrety Survival i osobne areny 2D (zaimplementowane w kodzie, bez walidacji Unity Editor)
+
+- Każdy z czterech biomów ma pięć fizycznych pickupów w lokalizacjach zgodnych z `src/survivalMaps.ts`: WZ-tka, kaseta, kapibara, Rabbit Hole i Necronomicon.
+- Pickup zapisuje odkrycie pod wersjonowanym kluczem PlayerPrefs, podnosi licznik sekretów rundy i daje +750 punktów.
+- Rabbit Hole otwiera niezależną planszę 2D z checkpointami, hazardami, trzema zegarkami, trzema życiami i limitem 68 sekund. Zwycięstwo przyznaje punkty i dodatkowy maksymalny punkt zdrowia.
+- Necronomicon otwiera niezależny pojedynek z Cthulhu: 180 HP, dwie fazy, ataki Slam/Lash/Grab z czytelnymi strefami ostrzeżeń, unik i okno podatności rdzenia trwające 2,15 s. Zwycięstwo daje +6000 punktów.
+- Oba interfejsy używają New Input System, obsługują dotyk i klawiaturę oraz zatrzymują symulację 3D bez niszczenia aktywnego świata.
+
+**Ograniczenia:** to pierwszy port mechanik do natywnych ekranów Unity, a nie kopia piksel-po-pikselu. Brakuje dokładnego audio/animacji/tempa źródłowych gier, pełnego archiwum osiągnięć i pozostałych wydarzeń specjalnych. Kompilacja w Unity Editor i test na telefonie są nadal obowiązkowe.
 
 ### Etap 3B — grywalna kampania Unity: trzy sektory, bramy bossów i dostawa VIP
 
