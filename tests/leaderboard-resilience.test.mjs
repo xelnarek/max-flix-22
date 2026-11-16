@@ -103,3 +103,15 @@ test('ranking refresh keeps the previous board visible until a fresh response ar
   assert.match(render, /Zachowano ostatnio wyświetlone wyniki/);
   assert.match(render, /getSurvivalLeaderboardReadStatus\(\)/);
 });
+
+
+test('opening Survival ranking starts anonymous auth without serially waiting for a separate probe', async () => {
+  const firebase = await read('../src/firebase.ts');
+  const start = firebase.indexOf('export async function getTopSurvivalLeaderboard');
+  const end = firebase.indexOf('\n}', start) + 2;
+  const survivalRead = firebase.slice(start, end);
+  assert.match(survivalRead, /void initAuth\(\)\.catch/);
+  assert.match(survivalRead, /getDocsFromServer\(survivalQuery\)/);
+  assert.doesNotMatch(survivalRead, /await testFirestoreConnection\(\)/);
+  assert.match(firebase, /resolve\(user\);[\s\S]*?syncPendingLeaderboardScores\(\)/);
+});
