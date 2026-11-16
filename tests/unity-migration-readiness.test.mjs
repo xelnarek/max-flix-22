@@ -90,6 +90,27 @@ test('Unity wave spawning skips obstructed positions instead of using an unsafe 
   assert.doesNotMatch(director, /private Vector3 GetSpawnPosition\(/);
 });
 
+test('Every Unity Survival weapon evolution requires an obtainable and implemented passive', async () => {
+  const [catalog, progression] = await Promise.all([
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWeaponCatalog.cs'),
+    read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalProgressionController.cs'),
+  ]);
+  const passiveBlock = catalog.match(/private static readonly string\[\] PassiveIds\s*=\s*\{([\s\S]*?)\};/);
+  assert.ok(passiveBlock, 'missing passive ID catalogue');
+  const passiveIds = new Set([...passiveBlock[1].matchAll(/"([^"]+)"/g)].map(match => match[1]));
+  const profiles = [...catalog.matchAll(/Make\(SurvivalWeaponKind\.([A-Za-z0-9_]+),[^\n]*,\s*"([a-z_]+)"\),?/g)];
+  assert.equal(profiles.length, 12, 'all 12 weapons need an evolution passive');
+  for (const [, weapon, passive] of profiles) {
+    assert.ok(passiveIds.has(passive), weapon + ' evolution passive is not in PassiveIds: ' + passive);
+    assert.ok(progression.includes('AddPassive(pool, "' + passive + '"'),
+      weapon + ' evolution passive is not offered in drafts: ' + passive);
+    assert.ok(progression.includes('case "' + passive + '":'),
+      weapon + ' evolution passive has no effect handler: ' + passive);
+  }
+  assert.match(progression, /_healthRegenPerSecond/);
+  assert.match(progression, /_coinMultiplier/);
+});
+
 test('Unity XP pool overflow merges all earned value without a small per-crystal cap', async () => {
   const progression = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalProgressionController.cs');
   assert.match(progression, /Math\.Min\(int\.MaxValue, \(long\)closest\.Value \+ value\)/);
