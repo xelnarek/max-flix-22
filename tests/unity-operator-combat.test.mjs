@@ -237,10 +237,9 @@ test('selected Survival map changes environment art and applies its health/speed
   assert.match(factory, /Container 17/);
   assert.match(factory, /Cold-room compressor bank/);
   assert.match(factory, /Sortation conveyor belt/);
-  assert.match(director, /_mapProfile = GameContentCatalog\.GetMap/);
-  assert.match(director, /profile\.EnemyHealthMultiplier \*= _mapProfile\.EnemyHealthMultiplier/);
-  assert.match(director, /profile\.EnemySpeedMultiplier \*= _mapProfile\.EnemySpeedMultiplier/);
-  assert.match(director, /GetDifficultyProfile\(_currentWave\)/);
+  assert.match(director, /GetBlendedEnemyHealthMultiplier\(position\.x, position\.z\)/);
+  assert.match(director, /GetBlendedEnemySpeedMultiplier\(position\.x, position\.z\)/);
+  assert.match(director, /GetDifficultyProfile\(_currentWave, spawn\)/);
 });
 
 test('Unity HUD provides a real pause/resume, game-over summary, retry and return-to-menu flow', async () => {
