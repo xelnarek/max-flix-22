@@ -78,6 +78,18 @@ test('Unity Survival renders smooth seam textures and blends biome gameplay modi
   assert.match(sourceBlend, /SURVIVAL_WORLD_BLEND_HALF_DEPTH_METERS = 11/);
 });
 
+test('Unity wave spawning skips obstructed positions instead of using an unsafe fallback', async () => {
+  const director = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/SurvivalWaveDirector.cs');
+  assert.match(director, /private bool TryGetSpawnPosition\(/);
+  assert.match(director, /private static bool IsSpawnPositionClear\(/);
+  assert.match(director, /clearanceFromPlayer/);
+  assert.match(director, /Physics\.CheckSphere/);
+  assert.match(director, /if \(SpawnEnemy\(kind, angle, radius\)\)/);
+  assert.match(director, /_hordeSpawnTimer = 0\.20f/);
+  assert.match(director, /BOSS CZEKA NA WOLNE MIEJSCE DO WEJŚCIA/);
+  assert.doesNotMatch(director, /private Vector3 GetSpawnPosition\(/);
+});
+
 test('Unity Campaign progress uses a namespaced versioned key and migrates the legacy spelling', async () => {
   const campaign = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/CampaignMissionDirector.cs');
   assert.match(campaign, /paleciaki\.campaign\.maxUnlockedSector\.v1/);
