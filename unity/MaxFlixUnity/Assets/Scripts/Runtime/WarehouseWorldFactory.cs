@@ -1,2 +1,934 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace MaxFlix.Unity.Runtime
+{
+    public static class WarehouseWorldFactory
+    {
+        private static Transform _worldRoot;
+        private static Transform _layoutParent;
+        private static bool _isBuildingUnifiedSurvivalWorld;
+        private static readonly Dictionary<string, Material> MaterialCache = new Dictionary<string, Material>();
+        private static readonly List<Material> WorldMaterials = new List<Material>();
+        private static readonly List<Texture2D> WorldTextures = new List<Texture2D>();
+
+        public static void DestroyCurrentWorld()
+        {
+            CombatProjectile.ClearAllActive();
+            EnemyAttackProjectile.ClearAllActive();
+            EnemyAgent.InvalidateSpatialCache();
+            if (_worldRoot != null)
+            {
+                SurvivalPerformanceGovernor governor = _worldRoot.GetComponent<SurvivalPerformanceGovernor>();
+                governor?.Shutdown();
+                Object.Destroy(_worldRoot.gameObject);
+            }
+            _worldRoot = null;
+            _layoutParent = null;
+            _isBuildingUnifiedSurvivalWorld = false;
+
+            foreach (Material material in WorldMaterials)
+                if (material != null) Object.Destroy(material);
+            foreach (Texture2D texture in WorldTextures)
+                if (texture != null) Object.Destroy(texture);
+            WorldMaterials.Clear();
+            WorldTextures.Clear();
+        }
+
+        public static PlayerController BuildCampaignMegaMap()
+        {
+            SurvivalMapProfile theme = GameContentCatalog.GetMap(WarehouseMapId.WarehouseB4);
+            GameObject root = new GameObject("KAMPANIA • WIELKA MAPA B4");
+            _worldRoot = root.transform;
+            _layoutParent = _worldRoot;
+            _isBuildingUnifiedSurvivalWorld = false;
+            CreateLighting(theme);
+            CreateCampaignMegaMapGeometry(theme);
+
+            BoxCollider gateB = CreateCampaignGate("Brama do sektora B", 36f, new Color(0.10f, 0.68f, 0.92f));
+            BoxCollider gateC = CreateCampaignGate("Brama do sektora C", 116f, new Color(0.78f, 0.42f, 0.95f));
+            CreateCampaignExit(theme);
+
+            CampaignMissionDirector mission = root.AddComponent<CampaignMissionDirector>();
+            mission.ConfigureGates(gateB, gateC);
+
+            EnemyNavigationWorld navigation = root.AddComponent<EnemyNavigationWorld>();
+            navigation.Initialize(_worldRoot);
+
+            PlayerController player = CreateOperator(
+                OperatorCatalog.Get(GameSession.Current.SelectedOperator),
+                new Vector3(-32f, 0.1f, 0f));
+            CreateCamera(player.transform);
+
+            SpawnSurvivalEnemy(player, EnemyKind.Customer, new Vector3(-19f, 0.05f, -7f));
+            SpawnSurvivalEnemy(player, EnemyKind.Inspector, new Vector3(7f, 0.05f, 8f));
+            SpawnSurvivalEnemy(player, EnemyKind.AgvRobot, new Vector3(25f, 0.05f, 5f));
+            SpawnSurvivalEnemy(player, EnemyKind.Monter, new Vector3(-3f, 0.05f, 12f));
+            SpawnSurvivalEnemy(player, EnemyKind.BosmanKrakow, new Vector3(22f, 0.05f, 0f), 1.35f, 1f);
+
+            SpawnSurvivalEnemy(player, EnemyKind.Handlowiec, new Vector3(55f, 0.05f, -9f));
+            SpawnSurvivalEnemy(player, EnemyKind.Architect, new Vector3(72f, 0.05f, 8f));
+            SpawnSurvivalEnemy(player, EnemyKind.Kurier, new Vector3(86f, 0.05f, -8f));
+            SpawnSurvivalEnemy(player, EnemyKind.AgvRobot, new Vector3(109f, 0.05f, 7f));
+            SpawnSurvivalEnemy(player, EnemyKind.BosmanKrakow, new Vector3(91f, 0.05f, 10f), 1.15f, 1f);
+            SpawnSurvivalEnemy(player, EnemyKind.KingLeto, new Vector3(99f, 0.05f, 0f), 1.35f, 1f);
+
+            SpawnSurvivalEnemy(player, EnemyKind.ZombieWorker, new Vector3(142f, 0.05f, -10f));
+            SpawnSurvivalEnemy(player, EnemyKind.EliteWalczakGuard, new Vector3(157f, 0.05f, 10f));
+            SpawnSurvivalEnemy(player, EnemyKind.Kurier, new Vector3(174f, 0.05f, -11f));
+            SpawnSurvivalEnemy(player, EnemyKind.BosmanKrakow, new Vector3(176f, 0.05f, 0f), 1.15f, 1f);
+            SpawnSurvivalEnemy(player, EnemyKind.KingLeto, new Vector3(191f, 0.05f, 7f), 1.45f, 1f);
+            SpawnSurvivalEnemy(player, EnemyKind.Walczak, new Vector3(191f, 0.05f, -7f), 1.45f, 1f);
+            SpawnSurvivalEnemy(player, EnemyKind.CyberSalesman, new Vector3(149f, 0.05f, 0f));
+
+            CreateCampaignVipPickup(new Vector3(-8f, 0.85f, 12f), mission, new Color(0.98f, 0.72f, 0.22f));
+            CreateCampaignVipPickup(new Vector3(63f, 0.85f, -2f), mission, new Color(0.98f, 0.72f, 0.22f));
+            CreateCampaignVipPickup(new Vector3(82f, 0.85f, 13f), mission, new Color(0.98f, 0.72f, 0.22f));
+            CreateCampaignVipPickup(new Vector3(143f, 0.85f, 5f), mission, new Color(0.98f, 0.72f, 0.22f));
+            CreateCampaignVipPickup(new Vector3(181f, 0.85f, 13f), mission, new Color(0.98f, 0.72f, 0.22f));
+            return player;
+        }
+
+        private static void CreateCampaignMegaMapGeometry(SurvivalMapProfile theme)
+        {
+            CreateBox("Sektor A • posadzka B4", new Vector3(0f, -0.3f, 0f), new Vector3(72f, 0.6f, 40f), theme.FloorColor, 0.86f);
+            CreateBox("Sektor B • posadzka showroom SPA", new Vector3(76f, -0.3f, 0f), new Vector3(80f, 0.6f, 40f), Color.Lerp(theme.FloorColor, new Color(0.40f, 0.28f, 0.48f), 0.24f), 0.80f);
+            CreateBox("Sektor C • posadzka terminal VIP", new Vector3(161f, -0.3f, 0f), new Vector3(90f, 0.6f, 44f), Color.Lerp(theme.FloorColor, new Color(0.34f, 0.38f, 0.43f), 0.32f), 0.78f);
+
+            Color wall = Color.Lerp(theme.WallColor, Color.black, 0.18f);
+            CreateBox("Campaign north safety wall", new Vector3(85f, 2.8f, -20.4f), new Vector3(244f, 5.6f, 0.65f), wall);
+            CreateBox("Campaign south safety wall", new Vector3(85f, 2.8f, 20.4f), new Vector3(244f, 5.6f, 0.65f), wall);
+            CreateBox("Campaign start boundary", new Vector3(-36.4f, 2.8f, 0f), new Vector3(0.7f, 5.6f, 41f), wall);
+            CreateBox("Campaign terminal boundary", new Vector3(206.4f, 2.8f, 0f), new Vector3(0.7f, 5.6f, 45f), wall);
+
+            CreateCampaignFloorGuides(-32f, 32f, theme.AccentColor);
+            CreateCampaignFloorGuides(40f, 112f, new Color(0.35f, 0.66f, 0.92f));
+            CreateCampaignFloorGuides(120f, 202f, new Color(0.94f, 0.60f, 0.20f));
+
+            for (int x = -24; x <= 192; x += 24)
+            {
+                CreateBox("Campaign high-bay cross truss", new Vector3(x, 8.2f, 0f), new Vector3(0.24f, 0.24f, 35f), Color.Lerp(wall, Color.white, 0.20f));
+                CreateBox("Campaign high-bay north post", new Vector3(x, 3.85f, -17.2f), new Vector3(0.24f, 7.7f, 0.24f), wall);
+                CreateBox("Campaign high-bay south post", new Vector3(x, 3.85f, 17.2f), new Vector3(0.24f, 7.7f, 0.24f), wall);
+            }
+
+            // Sector A: recognisable B4 rack aisles and pallet staging.
+            CreateRackBay(new Vector3(-26f, 0f, -12f), 2, theme);
+            CreateRackBay(new Vector3(-4f, 0f, -12f), 2, theme);
+            CreatePalletStack(new Vector3(-25f, 0f, 8f));
+            CreatePalletStack(new Vector3(-12f, 0f, 13f));
+            CreatePalletStack(new Vector3(9f, 0f, 11f));
+            CreateBox("B4 dispatch desk", new Vector3(24f, 1.0f, -14.8f), new Vector3(4.4f, 2f, 1.4f), Color.Lerp(theme.WallColor, Color.white, 0.12f));
+
+            // Sector B: showroom presentation plinths, display fixtures and service islands.
+            Color spa = new Color(0.48f, 0.39f, 0.56f);
+            for (int display = 0; display < 4; display++)
+            {
+                float x = 51f + display * 18f;
+                float z = display % 2 == 0 ? -12f : 12f;
+                CreateBox("SPA showroom display plinth", new Vector3(x, 0.28f, z), new Vector3(7.2f, 0.56f, 3.4f), spa);
+                CreateBox("SPA marble display", new Vector3(x, 1.0f, z), new Vector3(5.0f, 0.9f, 2.2f), Color.Lerp(theme.FloorColor, Color.white, 0.56f), 0.28f);
+                CreateBox("SPA brass display trim", new Vector3(x, 1.48f, z), new Vector3(5.2f, 0.08f, 2.35f), new Color(0.76f, 0.56f, 0.24f), 0.32f);
+            }
+            CreateRackBay(new Vector3(57f, 0f, -16f), 2, theme);
+            CreateRackBay(new Vector3(93f, 0f, -16f), 2, theme);
+            CreateBox("SPA service counter", new Vector3(76f, 0.65f, 16.5f), new Vector3(12f, 1.3f, 1.4f), Color.Lerp(spa, Color.white, 0.2f));
+
+            // Sector C: terminal container lanes, dock structures and VIP loading apron.
+            CreateContainer("Campaign terminal • container 01", new Vector3(140f, 1.4f, -13f), 0f, new Color(0.70f, 0.27f, 0.15f), theme.AccentColor);
+            CreateContainer("Campaign terminal • container 02", new Vector3(159f, 1.4f, 13f), 90f, new Color(0.14f, 0.40f, 0.58f), theme.AccentColor);
+            CreateContainer("Campaign terminal • container 03", new Vector3(178f, 1.4f, -13f), 0f, new Color(0.18f, 0.46f, 0.30f), theme.AccentColor);
+            CreateBox("Campaign terminal • loading canopy", new Vector3(188f, 5.3f, 18f), new Vector3(32f, 0.34f, 0.42f), new Color(0.84f, 0.48f, 0.18f));
+            CreateBox("Campaign terminal • dock post left", new Vector3(173f, 2.7f, 18f), new Vector3(0.4f, 5.4f, 0.4f), wall);
+            CreateBox("Campaign terminal • dock post right", new Vector3(203f, 2.7f, 18f), new Vector3(0.4f, 5.4f, 0.4f), wall);
+        }
+
+        private static void CreateCampaignFloorGuides(float startX, float endX, Color color)
+        {
+            for (float x = startX; x <= endX; x += 3.2f)
+            {
+                CreateBox("Campaign safety lane • north", new Vector3(x, 0.014f, -10.2f), new Vector3(2.0f, 0.022f, 0.075f), color);
+                CreateBox("Campaign safety lane • south", new Vector3(x, 0.014f, 10.2f), new Vector3(2.0f, 0.022f, 0.075f), color);
+            }
+        }
+
+        private static BoxCollider CreateCampaignGate(string label, float x, Color accent)
+        {
+            CreateBox(label + " • left post", new Vector3(x, 2.6f, -15.6f), new Vector3(0.68f, 5.2f, 0.8f), Color.Lerp(accent, Color.black, 0.42f));
+            CreateBox(label + " • right post", new Vector3(x, 2.6f, 15.6f), new Vector3(0.68f, 5.2f, 0.8f), Color.Lerp(accent, Color.black, 0.42f));
+            CreateBox(label + " • lintel", new Vector3(x, 5.15f, 0f), new Vector3(0.82f, 0.42f, 31.8f), accent);
+            GameObject barrier = CreateBox(label + " • force field", new Vector3(x, 2.2f, 0f), new Vector3(0.3f, 4.4f, 30.6f), Color.Lerp(accent, Color.white, 0.18f), 0.25f);
+            return barrier.GetComponent<BoxCollider>();
+        }
+
+        private static void CreateCampaignExit(SurvivalMapProfile theme)
+        {
+            Color gold = new Color(0.95f, 0.66f, 0.19f);
+            CreateBox("Campaign exit • left pillar", new Vector3(201f, 2.65f, -15.2f), new Vector3(0.7f, 5.3f, 0.7f), gold);
+            CreateBox("Campaign exit • right pillar", new Vector3(201f, 2.65f, 15.2f), new Vector3(0.7f, 5.3f, 0.7f), gold);
+            CreateBox("Campaign exit • header", new Vector3(201f, 5.25f, 0f), new Vector3(0.9f, 0.45f, 31f), gold);
+            CreateBox("Campaign exit • delivery van", new Vector3(204.2f, 0.95f, 0f), new Vector3(3.2f, 1.9f, 2.4f), Color.Lerp(theme.AccentColor, Color.white, 0.18f));
+            CreateBox("Campaign exit • van windshield", new Vector3(202.45f, 1.35f, 0f), new Vector3(0.06f, 0.85f, 1.65f), new Color(0.18f, 0.43f, 0.58f));
+        }
+
+        private static void CreateCampaignVipPickup(Vector3 position, CampaignMissionDirector mission, Color color)
+        {
+            GameObject pickup = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            pickup.name = "Zamówienie VIP • do odbioru";
+            pickup.transform.SetParent(_worldRoot, false);
+            pickup.transform.position = position;
+            pickup.transform.localScale = Vector3.one * 0.72f;
+            SphereCollider collider = pickup.GetComponent<SphereCollider>();
+            collider.isTrigger = true;
+            ApplyMaterial(pickup, color, 0.22f, 0.44f);
+            CampaignVipPickup collectible = pickup.AddComponent<CampaignVipPickup>();
+            collectible.Initialize(mission);
+        }
+
+        /// <summary>
+        /// Builds the four legacy 120 x 40 m Survival sectors in one persistent
+        /// 240 x 80 m coordinate space. Sector decoration is translated into
+        /// global coordinates; only the outside perimeter is bounded.
+        /// </summary>
+        public static PlayerController BuildUnifiedSurvivalWorld()
+        {
+            if (GameSession.Current == null) return null;
+
+            GameObject root = new GameObject("SURVIVAL • WSPÓLNY ŚWIAT 240 × 80 m");
+            _worldRoot = root.transform;
+            _layoutParent = _worldRoot;
+            _isBuildingUnifiedSurvivalWorld = true;
+
+            SurvivalMapProfile baseMap = GameContentCatalog.GetMap(WarehouseMapId.WarehouseB4);
+            CreateLighting(baseMap);
+            CreateUnifiedSurvivalFloors();
+            CreateUnifiedSurvivalTransitions();
+            CreateUnifiedSurvivalPerimeter(baseMap);
+
+            foreach (SurvivalBiomeZone zone in SurvivalWorldLayout.Zones)
+            {
+                SurvivalMapProfile map = GameContentCatalog.GetMap(zone.MapId);
+                GameObject segment = new GameObject(map.DisplayName + " • segment 120 × 40 m");
+                segment.transform.SetParent(_worldRoot, false);
+                segment.transform.localPosition = new Vector3(zone.Center.x, 0f, zone.Center.y);
+                // The authored procedural layouts were designed in a compact
+                // local arena. Scale their local X/Z into the 120 × 40 m tile
+                // without scaling character height or changing global gameplay coordinates.
+                segment.transform.localScale = new Vector3(2.4f, 1f, 0.86f);
+                _layoutParent = segment.transform;
+                CreateMapLayout(map, false);
+            }
+
+            _layoutParent = _worldRoot;
+            _isBuildingUnifiedSurvivalWorld = false;
+            CreateUnifiedBiomeAccentLights();
+
+            EnemyNavigationWorld navigation = root.AddComponent<EnemyNavigationWorld>();
+            navigation.Initialize(_worldRoot);
+
+            CombatProjectile.Prewarm(3);
+            EnemyAttackProjectile.Prewarm(12);
+            Vector2 spawnCenter = SurvivalWorldLayout.GetZoneCenter(GameSession.Current.SelectedMap);
+            PlayerController player = CreateOperator(
+                OperatorCatalog.Get(GameSession.Current.SelectedOperator),
+                new Vector3(spawnCenter.x, 0.1f, spawnCenter.y - 9f));
+            CreateCamera(player.transform);
+
+            root.AddComponent<SurvivalWeaponController>();
+            root.AddComponent<SurvivalProgressionController>();
+            root.AddComponent<SurvivalPerformanceGovernor>();
+            SurvivalWaveDirector director = root.AddComponent<SurvivalWaveDirector>();
+            director.Initialize(player);
+
+            SurvivalBiomeEnvironment environment = root.AddComponent<SurvivalBiomeEnvironment>();
+            environment.Initialize(player.transform);
+            return player;
+        }
+
         private static void CreateUnifiedSurvivalFloors()
         {
+            foreach (SurvivalBiomeZone zone in SurvivalWorldLayout.Zones)
+            {
+                SurvivalMapProfile map = GameContentCatalog.GetMap(zone.MapId);
+                GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                floor.name = map.DisplayName + " • sektor 120 × 40 m";
+                floor.transform.SetParent(_worldRoot, false);
+                floor.transform.position = new Vector3(zone.Center.x, -0.3f, zone.Center.y);
+                floor.transform.localScale = new Vector3(
+                    SurvivalWorldLayout.BiomeHalfWidth * 2f,
+                    0.6f,
+                    SurvivalWorldLayout.BiomeHalfDepth * 2f);
+                ApplyMaterial(floor, GetMapFloorColor(map.Id), 0.84f, 0.10f);
+            }
+        }
+
+        private static void CreateUnifiedSurvivalTransitions()
+        {
+            int transitionIndex = 0;
+            foreach (SurvivalWorldTransition transition in SurvivalWorldLayout.Transitions)
+            {
+                Vector3 size = transition.RunsAlongX
+                    ? new Vector3(transition.Width, 0.028f, transition.Length)
+                    : new Vector3(transition.Length, 0.028f, transition.Width);
+                Texture2D texture = BuildBiomeBlendTexture(transition);
+                Material material = BuildBiomeBlendMaterial(texture);
+                GameObject band = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                band.name = "PRZEJŚCIE BIOMU • " + transition.Id;
+                band.transform.SetParent(_worldRoot, false);
+                band.transform.position = new Vector3(
+                    transition.Center.x, 0.024f + transitionIndex * 0.001f, transition.Center.y);
+                band.transform.rotation = Quaternion.Euler(-90f, 0f, 0f);
+                band.transform.localScale = new Vector3(size.x, size.z, 1f);
+                Collider collider = band.GetComponent<Collider>();
+                if (collider != null) Object.Destroy(collider);
+                Renderer renderer = band.GetComponent<Renderer>();
+                if (renderer != null && material != null)
+                {
+                    renderer.sharedMaterial = material;
+                    renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    renderer.receiveShadows = false;
+                }
+                transitionIndex++;
+            }
+        }
+
+        private static Texture2D BuildBiomeBlendTexture(SurvivalWorldTransition transition)
+        {
+            const int resolution = 64;
+            Texture2D texture = new Texture2D(resolution, resolution, TextureFormat.RGBA32, false, false);
+            texture.name = "Biome blend • " + transition.Id;
+            texture.wrapMode = TextureWrapMode.Clamp;
+            texture.filterMode = FilterMode.Bilinear;
+            Color[] pixels = new Color[resolution * resolution];
+
+            float minX = transition.Center.x - (transition.RunsAlongX ? transition.Width : transition.Length) * 0.5f;
+            float maxZ = transition.Center.y + (transition.RunsAlongX ? transition.Length : transition.Width) * 0.5f;
+            float width = transition.RunsAlongX ? transition.Width : transition.Length;
+            float depth = transition.RunsAlongX ? transition.Length : transition.Width;
+
+            for (int y = 0; y < resolution; y++)
+            {
+                float z = maxZ - (y / (float)(resolution - 1)) * depth;
+                for (int x = 0; x < resolution; x++)
+                {
+                    float worldX = minX + (x / (float)(resolution - 1)) * width;
+                    pixels[y * resolution + x] = GetBlendedFloorColor(worldX, z);
+                }
+            }
+
+            texture.SetPixels(pixels);
+            texture.Apply(false, true);
+            WorldTextures.Add(texture);
+            return texture;
+        }
+
+        private static Color GetBlendedFloorColor(float x, float z)
+        {
+            SurvivalBiomeBlendWeights weights = SurvivalWorldLayout.GetBlendWeights(x, z);
+            Color b4 = GetMapFloorColor(WarehouseMapId.WarehouseB4);
+            Color port = GetMapFloorColor(WarehouseMapId.ContainerTerminal);
+            Color cold = GetMapFloorColor(WarehouseMapId.ColdStorage);
+            Color night = GetMapFloorColor(WarehouseMapId.NightSorting);
+            float total = Mathf.Max(0.0001f, weights.Total);
+            return (
+                b4 * weights.WarehouseB4
+                + port * weights.ContainerTerminal
+                + cold * weights.ColdStorage
+                + night * weights.NightSorting
+            ) / total;
+        }
+
+        private static Color GetMapFloorColor(WarehouseMapId mapId)
+        {
+            SurvivalMapProfile map = GameContentCatalog.GetMap(mapId);
+            return Color.Lerp(map.FloorColor, map.WallColor, 0.68f);
+        }
+
+        private static Material BuildBiomeBlendMaterial(Texture2D texture)
+        {
+            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader == null) shader = Shader.Find("Unlit/Texture");
+            if (shader == null) shader = Shader.Find("Standard");
+
+            if (shader == null)
+            {
+                Debug.LogError("No compatible unlit shader is available for the Survival biome transition texture.");
+                return null;
+            }
+
+            Material material = new Material(shader);
+            if (material.HasProperty("_BaseMap")) material.SetTexture("_BaseMap", texture);
+            if (material.HasProperty("_MainTex")) material.SetTexture("_MainTex", texture);
+            if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", Color.white);
+            if (material.HasProperty("_Color")) material.SetColor("_Color", Color.white);
+            material.name = "Biome transition • bilinear floor blend";
+            WorldMaterials.Add(material);
+            return material;
+        }
+
+        private static void CreateUnifiedSurvivalPerimeter(SurvivalMapProfile theme)
+        {
+            Color boundary = Color.Lerp(theme.WallColor, theme.BackgroundColor, 0.16f);
+            CreateBox("SURVIVAL • granica zachodnia", new Vector3(SurvivalWorldLayout.MinX - 0.35f, 2.5f, 0f),
+                new Vector3(0.7f, 5f, SurvivalWorldLayout.MaxZ - SurvivalWorldLayout.MinZ + 1.4f), boundary);
+            CreateBox("SURVIVAL • granica wschodnia", new Vector3(SurvivalWorldLayout.MaxX + 0.35f, 2.5f, 0f),
+                new Vector3(0.7f, 5f, SurvivalWorldLayout.MaxZ - SurvivalWorldLayout.MinZ + 1.4f), boundary);
+            CreateBox("SURVIVAL • granica południowa", new Vector3(0f, 2.5f, SurvivalWorldLayout.MinZ - 0.35f),
+                new Vector3(SurvivalWorldLayout.MaxX - SurvivalWorldLayout.MinX + 1.4f, 5f, 0.7f), boundary);
+            CreateBox("SURVIVAL • granica północna", new Vector3(0f, 2.5f, SurvivalWorldLayout.MaxZ + 0.35f),
+                new Vector3(SurvivalWorldLayout.MaxX - SurvivalWorldLayout.MinX + 1.4f, 5f, 0.7f), boundary);
+        }
+
+        private static void CreateUnifiedBiomeAccentLights()
+        {
+            foreach (SurvivalBiomeZone zone in SurvivalWorldLayout.Zones)
+            {
+                SurvivalMapProfile map = GameContentCatalog.GetMap(zone.MapId);
+                GameObject lightObject = new GameObject(map.DisplayName + " • światło strefowe");
+                lightObject.transform.SetParent(_worldRoot, false);
+                lightObject.transform.position = new Vector3(zone.Center.x, 7.5f, zone.Center.y);
+                Light light = lightObject.AddComponent<Light>();
+                light.type = LightType.Point;
+                light.range = 38f;
+                light.intensity = 1.0f;
+                light.color = map.AccentColor;
+                light.shadows = LightShadows.None;
+            }
+        }
+
+        public static PlayerController BuildB4Slice()
+        {
+            if (GameSession.Current != null && GameSession.Current.Mode == GameMode.Survival)
+                return BuildUnifiedSurvivalWorld();
+
+            SurvivalMapProfile map = GameContentCatalog.GetMap(GameSession.Current.SelectedMap);
+            GameObject root = new GameObject(map.DisplayName + " • Unity World");
+            _worldRoot = root.transform;
+            _layoutParent = _worldRoot;
+
+            CreateLighting(map);
+            CreateFloor(map);
+            CreateMapLayout(map);
+
+            EnemyNavigationWorld navigation = root.AddComponent<EnemyNavigationWorld>();
+            navigation.Initialize(_worldRoot);
+
+            CombatProjectile.Prewarm(3);
+            PlayerController player = CreateOperator(OperatorCatalog.Get(GameSession.Current.SelectedOperator), new Vector3(0f, 0.1f, -9f));
+            CreateCamera(player.transform);
+            if (GameSession.Current.Mode == GameMode.Survival)
+            {
+                EnemyAttackProjectile.Prewarm(12);
+                root.AddComponent<SurvivalWeaponController>();
+                root.AddComponent<SurvivalProgressionController>();
+                root.AddComponent<SurvivalPerformanceGovernor>();
+                SurvivalWaveDirector director = root.AddComponent<SurvivalWaveDirector>();
+                director.Initialize(player);
+            }
+            else
+            {
+                CreateTrainingEnemies(player);
+            }
+            return player;
+        }
+
+        private static void CreateLighting(SurvivalMapProfile map)
+        {
+            Color sky = Color.Lerp(map.BackgroundColor, Color.white, 0.24f);
+            Color equator = Color.Lerp(map.WallColor, map.AccentColor, 0.12f);
+            Color ground = Color.Lerp(map.BackgroundColor, Color.black, 0.18f);
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = sky;
+            RenderSettings.ambientEquatorColor = equator;
+            RenderSettings.ambientGroundColor = ground;
+            RenderSettings.fog = true;
+            RenderSettings.fogColor = map.FogColor;
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogStartDistance = 32f;
+            RenderSettings.fogEndDistance = 82f;
+
+            GameObject keyLight = new GameObject("B4 key light");
+            keyLight.transform.SetParent(_worldRoot, false);
+            keyLight.transform.rotation = Quaternion.Euler(48f, -32f, 0f);
+            Light directional = keyLight.AddComponent<Light>();
+            directional.type = LightType.Directional;
+            directional.intensity = 1.25f;
+            directional.color = Color.Lerp(new Color(1f, 0.86f, 0.68f), map.AccentColor, 0.10f);
+            directional.shadows = LightShadows.Soft;
+
+            GameObject fillLight = new GameObject("B4 cool fill");
+            fillLight.transform.SetParent(_worldRoot, false);
+            fillLight.transform.position = new Vector3(-10f, 8f, -2f);
+            Light fill = fillLight.AddComponent<Light>();
+            fill.type = LightType.Point;
+            fill.range = 22f;
+            fill.intensity = 2.2f;
+            fill.color = Color.Lerp(new Color(0.36f, 0.66f, 0.95f), map.AccentColor, 0.28f);
+            fill.shadows = LightShadows.None;
+        }
+
+        private static void CreateFloor(SurvivalMapProfile map)
+        {
+            GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = map.DisplayName + " • posadzka";
+            floor.transform.SetParent(_worldRoot, false);
+            floor.transform.position = new Vector3(0f, -0.3f, 0f);
+            floor.transform.localScale = new Vector3(52f, 0.6f, 52f);
+            Color floorTone = Color.Lerp(map.FloorColor, map.WallColor, 0.68f);
+            ApplyMaterial(floor, floorTone, 0.84f, 0.10f);
+        }
+
+        private static void CreateRackBay(Vector3 origin, int bays, SurvivalMapProfile map)
+        {
+            Color steel = Color.Lerp(map.WallColor, Color.white, 0.18f);
+            Color orange = map.AccentColor;
+            for (int bay = 0; bay < bays; bay++)
+            {
+                float x = origin.x + bay * 2.4f;
+                CreateBox("Rack upright", new Vector3(x, 1.65f, origin.z), new Vector3(0.18f, 3.3f, 0.18f), steel);
+                CreateBox("Rack upright", new Vector3(x + 2.2f, 1.65f, origin.z), new Vector3(0.18f, 3.3f, 0.18f), steel);
+                for (int level = 0; level < 3; level++)
+                {
+                    float y = 0.55f + level * 1.12f;
+                    CreateBox("Orange rack beam", new Vector3(x + 1.1f, y, origin.z), new Vector3(2.25f, 0.13f, 0.24f), orange);
+                    CreatePallet(new Vector3(x + 1.1f, y + 0.30f, origin.z));
+                }
+            }
+            CreateBox("Rack top cross brace", origin + new Vector3(bays * 2.4f - 1.0f, 3.15f, 0f), new Vector3(bays * 2.4f, 0.12f, 0.18f), steel);
+        }
+
+        private static void CreatePallet(Vector3 center)
+        {
+            Color timber = new Color(0.47f, 0.32f, 0.20f);
+            CreateBox("Pallet deck", center, new Vector3(1.45f, 0.15f, 1.05f), timber);
+            for (int i = -1; i <= 1; i++)
+                CreateBox("Pallet runner", center + new Vector3(i * 0.50f, -0.12f, 0f), new Vector3(0.16f, 0.10f, 0.95f), new Color(0.30f, 0.21f, 0.14f));
+            CreateBox("Wrapped freight", center + new Vector3(0f, 0.58f, 0f), new Vector3(1.18f, 1.0f, 0.86f), new Color(0.63f, 0.72f, 0.79f), 0.34f);
+        }
+
+        private static void CreatePalletStack(Vector3 position)
+        {
+            for (int level = 0; level < 2; level++)
+            {
+                Vector3 center = position + new Vector3(0f, level * 0.75f, 0f);
+                CreateBox("Staged pallet", center, new Vector3(1.55f, 0.16f, 1.15f), new Color(0.45f, 0.31f, 0.20f));
+            }
+        }
+
+        private static void CreateSafetyLanes(SurvivalMapProfile map)
+        {
+            Color amber = Color.Lerp(map.AccentColor, new Color(1f, 0.65f, 0.14f), 0.32f);
+            for (int z = -20; z <= 20; z += 5)
+            {
+                CreateBox("Pedestrian lane marking", new Vector3(-20.5f, 0.012f, z), new Vector3(0.12f, 0.02f, 2.3f), amber);
+                CreateBox("Pedestrian lane marking", new Vector3(20.5f, 0.012f, z), new Vector3(0.12f, 0.02f, 2.3f), amber);
+            }
+            CreateBox("Central route line", new Vector3(0f, 0.014f, 0f), new Vector3(0.07f, 0.02f, 43f), Color.Lerp(map.AccentColor, Color.white, 0.18f));
+            CreateBox("Cross aisle line", new Vector3(0f, 0.014f, 0f), new Vector3(42f, 0.02f, 0.07f), Color.Lerp(map.AccentColor, Color.white, 0.32f));
+        }
+
+        private static void CreateMapLayout(SurvivalMapProfile map, bool includeBounds = true)
+        {
+            if (includeBounds) CreateWorldBounds(map);
+            switch (map.Id)
+            {
+                case WarehouseMapId.ContainerTerminal:
+                    CreateContainerTerminalLayout(map);
+                    break;
+                case WarehouseMapId.ColdStorage:
+                    CreateColdStorageLayout(map);
+                    break;
+                case WarehouseMapId.NightSorting:
+                    CreateNightSortingLayout(map);
+                    break;
+                default:
+                    CreateB4Layout(map);
+                    break;
+            }
+        }
+
+        private static void CreateWorldBounds(SurvivalMapProfile map)
+        {
+            Color boundary = Color.Lerp(map.WallColor, map.BackgroundColor, 0.20f);
+            CreateBox("Arena boundary • north", new Vector3(0f, 1.65f, 25.5f), new Vector3(51f, 3.3f, 0.6f), boundary);
+            CreateBox("Arena boundary • south", new Vector3(0f, 1.65f, -25.5f), new Vector3(51f, 3.3f, 0.6f), boundary);
+            CreateBox("Arena boundary • east", new Vector3(25.5f, 1.65f, 0f), new Vector3(0.6f, 3.3f, 51f), boundary);
+            CreateBox("Arena boundary • west", new Vector3(-25.5f, 1.65f, 0f), new Vector3(0.6f, 3.3f, 51f), boundary);
+        }
+
+        private static void CreateB4Layout(SurvivalMapProfile map)
+        {
+            CreateRackBay(new Vector3(-16f, 0f, 3.5f), 3, map);
+            CreateRackBay(new Vector3(8.8f, 0f, 3.5f), 3, map);
+            CreateSafetyLanes(map);
+            CreatePalletStack(new Vector3(-17f, 0f, -13f));
+            CreatePalletStack(new Vector3(17f, 0f, -13f));
+            CreatePalletStack(new Vector3(-17f, 0f, 15f));
+            CreatePalletStack(new Vector3(17f, 0f, 15f));
+            CreateBox("B4 dock shutter left", new Vector3(-22.5f, 1.7f, 19f), new Vector3(0.12f, 3.2f, 4.2f), map.WallColor);
+            CreateBox("B4 dock shutter right", new Vector3(22.5f, 1.7f, 19f), new Vector3(0.12f, 3.2f, 4.2f), map.WallColor);
+            CreateBox("B4 dock header", new Vector3(0f, 3.4f, 21.2f), new Vector3(44f, 0.22f, 0.22f), map.AccentColor);
+            CreateBox("B4 overhead aisle sign", new Vector3(0f, 4.0f, 4f), new Vector3(4.8f, 0.48f, 0.14f), Color.Lerp(map.WallColor, Color.white, 0.35f));
+        }
+
+        private static void CreateContainerTerminalLayout(SurvivalMapProfile map)
+        {
+            CreateSafetyLanes(map);
+            CreateContainer("Container 17 • A01", new Vector3(-15f, 1.4f, -15f), 0f, new Color(0.70f, 0.27f, 0.15f), map.AccentColor);
+            CreateContainer("Container 17 • A02", new Vector3(-15f, 1.4f, -5.5f), 0f, new Color(0.14f, 0.40f, 0.58f), map.AccentColor);
+            CreateContainer("Container 17 • B01", new Vector3(15f, 1.4f, 3.5f), 0f, new Color(0.14f, 0.40f, 0.58f), map.AccentColor);
+            CreateContainer("Container 17 • B02", new Vector3(15f, 1.4f, 13f), 0f, new Color(0.70f, 0.27f, 0.15f), map.AccentColor);
+            CreateContainer("Container 17 • C01", new Vector3(-7.8f, 1.4f, 14.5f), 90f, new Color(0.18f, 0.46f, 0.30f), map.AccentColor);
+            CreateContainer("Container 17 • C02", new Vector3(7.8f, 1.4f, -14.5f), 90f, new Color(0.78f, 0.55f, 0.16f), map.AccentColor);
+            CreateBox("Ship-to-shore crane • main beam", new Vector3(0f, 5.2f, 22f), new Vector3(43f, 0.38f, 0.48f), map.AccentColor);
+            CreateBox("Ship-to-shore crane • left leg", new Vector3(-20.5f, 2.6f, 22f), new Vector3(0.42f, 5.2f, 0.48f), map.WallColor);
+            CreateBox("Ship-to-shore crane • right leg", new Vector3(20.5f, 2.6f, 22f), new Vector3(0.42f, 5.2f, 0.48f), map.WallColor);
+            CreateBox("Quay safety strip", new Vector3(0f, 0.02f, 20f), new Vector3(40f, 0.035f, 0.32f), new Color(1f, 0.68f, 0.12f));
+        }
+
+        private static void CreateContainer(string label, Vector3 center, float yaw, Color bodyColor, Color trimColor)
+        {
+            Vector3 size = new Vector3(4.2f, 2.8f, 7.8f);
+            GameObject body = CreateBox(label, center, size, bodyColor, 0.82f);
+            body.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            for (int side = -1; side <= 1; side += 2)
+            {
+                for (int rib = -3; rib <= 3; rib++)
+                {
+                    Vector3 offset = body.transform.rotation * new Vector3(side * (size.x * 0.5f + 0.055f), 0f, rib * 1.05f);
+                    GameObject ribObject = CreateBox(label + " • rib", center + offset, new Vector3(0.11f, 2.58f, 0.12f),
+                        Color.Lerp(bodyColor, Color.white, 0.22f), 0.72f);
+                    ribObject.transform.rotation = body.transform.rotation;
+                }
+                Vector3 panelOffset = body.transform.rotation * new Vector3(0f, 0.94f, side * (size.z * 0.5f + 0.04f));
+                GameObject panel = CreateBox(label + " • manifest panel", center + panelOffset,
+                    new Vector3(1.35f, 0.32f, 0.07f), trimColor, 0.48f);
+                panel.transform.rotation = body.transform.rotation;
+            }
+            for (int x = -1; x <= 1; x += 2)
+            {
+                for (int z = -1; z <= 1; z += 2)
+                {
+                    Vector3 offset = body.transform.rotation * new Vector3(x * (size.x * 0.5f - 0.12f), 0f, z * (size.z * 0.5f - 0.12f));
+                    GameObject corner = CreateBox(label + " • corner casting", center + offset,
+                        new Vector3(0.16f, 2.7f, 0.16f), trimColor, 0.62f);
+                    corner.transform.rotation = body.transform.rotation;
+                }
+            }
+        }
+
+        private static void CreateColdStorageLayout(SurvivalMapProfile map)
+        {
+            CreateSafetyLanes(map);
+            if (!_isBuildingUnifiedSurvivalWorld)
+            {
+                CreateBox("Cold room • insulated north wall", new Vector3(0f, 2.15f, 23.5f), new Vector3(47f, 4.3f, 0.44f), map.WallColor);
+                CreateBox("Cold room • insulated south wall", new Vector3(0f, 2.15f, -23.5f), new Vector3(47f, 4.3f, 0.44f), map.WallColor);
+            }
+            for (int side = -1; side <= 1; side += 2)
+            {
+                CreateBox("Refrigerant trunk pipe", new Vector3(side * 21.5f, 3.75f, 0f),
+                    new Vector3(0.18f, 0.18f, 44f), map.AccentColor);
+                for (int section = 0; section < 4; section++)
+                {
+                    float z = -15f + section * 10f;
+                    float unitX = side * 18.8f;
+                    CreateBox("Cold-room compressor bank", new Vector3(unitX, 1.25f, z),
+                        new Vector3(3.0f, 2.5f, 3.2f), Color.Lerp(map.WallColor, Color.white, 0.12f));
+                    CreateBox("Compressor grille", new Vector3(unitX - side * 1.54f, 1.25f, z),
+                        new Vector3(0.07f, 1.6f, 2.45f), map.AccentColor);
+                    CreateBox("Compressor status light", new Vector3(unitX - side * 1.59f, 2.18f, z),
+                        new Vector3(0.08f, 0.22f, 0.55f), Color.white);
+                    CreateBox("Freezer warning decal", new Vector3(side * 22.65f, 2.1f, z),
+                        new Vector3(0.06f, 0.34f, 0.72f), new Color(0.25f, 0.85f, 1f));
+                }
+            }
+            CreateRackBay(new Vector3(-12f, 0f, 3f), 2, map);
+            CreateRackBay(new Vector3(7.2f, 0f, 3f), 2, map);
+            CreateBox("Ice lane • west", new Vector3(-2.8f, 0.018f, 0f),
+                new Vector3(0.06f, 0.025f, 42f), Color.Lerp(map.AccentColor, Color.white, 0.28f));
+            CreateBox("Ice lane • east", new Vector3(2.8f, 0.018f, 0f),
+                new Vector3(0.06f, 0.025f, 42f), Color.Lerp(map.AccentColor, Color.white, 0.28f));
+            CreateBox("Cold room ceiling rail", new Vector3(0f, 4.65f, 0f),
+                new Vector3(42f, 0.12f, 0.16f), Color.Lerp(map.WallColor, Color.white, 0.32f));
+        }
+
+        private static void CreateNightSortingLayout(SurvivalMapProfile map)
+        {
+            CreateSafetyLanes(map);
+            for (int lane = -1; lane <= 1; lane += 2)
+            {
+                float x = lane * 10.8f;
+                CreateBox("Sortation conveyor belt", new Vector3(x, 0.47f, 0f),
+                    new Vector3(3.7f, 0.48f, 28f), Color.Lerp(map.WallColor, Color.black, 0.24f));
+                CreateBox("Conveyor neon guide • inner", new Vector3(x - lane * 1.92f, 0.75f, 0f),
+                    new Vector3(0.07f, 0.07f, 27.8f), map.AccentColor);
+                CreateBox("Conveyor neon guide • outer", new Vector3(x + lane * 1.92f, 0.75f, 0f),
+                    new Vector3(0.07f, 0.07f, 27.8f), Color.Lerp(map.AccentColor, Color.white, 0.35f));
+                for (int roller = -12; roller <= 12; roller += 3)
+                    CreateBox("Conveyor roller marker", new Vector3(x, 0.73f, roller),
+                        new Vector3(3.35f, 0.045f, 0.10f), Color.Lerp(map.WallColor, Color.white, 0.48f));
+            }
+            for (int gate = -1; gate <= 1; gate++)
+            {
+                // Three evenly spaced transfer arches; the former -15 + gate*14
+                // formula put the first arch at -29 m, outside a 40 m biome tile.
+                float z = gate * 14f;
+                CreateBox("Scanner gate • left post", new Vector3(-5.8f, 1.9f, z),
+                    new Vector3(0.18f, 3.8f, 0.18f), map.AccentColor);
+                CreateBox("Scanner gate • right post", new Vector3(5.8f, 1.9f, z),
+                    new Vector3(0.18f, 3.8f, 0.18f), map.AccentColor);
+                CreateBox("Scanner gate • header", new Vector3(0f, 3.82f, z),
+                    new Vector3(11.8f, 0.18f, 0.18f), map.AccentColor);
+                CreateBox("Scanner gate • status bar", new Vector3(0f, 3.55f, z),
+                    new Vector3(0.86f, 0.07f, 0.08f), Color.white);
+            }
+            CreateBox("Sortation control tower", new Vector3(20f, 2.2f, 19f),
+                new Vector3(3.2f, 4.4f, 3.0f), map.WallColor);
+            CreateBox("Sortation control window", new Vector3(18.32f, 2.65f, 19f),
+                new Vector3(0.08f, 1.1f, 1.85f), map.AccentColor);
+        }
+
+        private static PlayerController CreateOperator(OperatorProfile profile, Vector3 position)
+        {
+            GameObject player = new GameObject(profile.DisplayName);
+            player.transform.SetParent(_worldRoot, false);
+            player.transform.position = position;
+
+            CharacterController controller = player.AddComponent<CharacterController>();
+            controller.height = 1.78f;
+            controller.radius = 0.34f;
+            controller.center = new Vector3(0f, 0.89f, 0f);
+            controller.stepOffset = 0.3f;
+            controller.slopeLimit = 48f;
+
+            BuildOperatorVisual(player.transform, profile);
+            return player.AddComponent<PlayerController>();
+        }
+
+        private static void BuildOperatorVisual(Transform root, OperatorProfile profile)
+        {
+            Color dark = new Color(0.10f, 0.15f, 0.21f);
+            CreateVisualPart(root, PrimitiveType.Capsule, "Torso / safety vest", new Vector3(0f, 0.83f, 0f), new Vector3(0.62f, 0.68f, 0.38f), profile.PrimaryColor);
+            CreateVisualPart(root, PrimitiveType.Cube, "Reflective vest band", new Vector3(0f, 0.90f, 0.205f), new Vector3(0.60f, 0.09f, 0.025f), profile.SecondaryColor);
+            CreateVisualPart(root, PrimitiveType.Sphere, "Head", new Vector3(0f, 1.55f, 0f), new Vector3(0.35f, 0.40f, 0.34f), new Color(0.84f, 0.66f, 0.53f));
+            CreateVisualPart(root, PrimitiveType.Sphere, "Helmet shell", new Vector3(0f, 1.76f, 0f), new Vector3(0.42f, 0.19f, 0.42f), profile.SecondaryColor);
+            CreateVisualPart(root, PrimitiveType.Cube, "Helmet brim", new Vector3(0f, 1.70f, 0.06f), new Vector3(0.48f, 0.05f, 0.46f), profile.SecondaryColor);
+            CreateVisualPart(root, PrimitiveType.Cube, "Radio pack", new Vector3(-0.31f, 0.96f, -0.13f), new Vector3(0.12f, 0.22f, 0.13f), dark);
+            CreateVisualPart(root, PrimitiveType.Cube, "Operator ID", new Vector3(0.19f, 1.13f, 0.21f), new Vector3(0.15f, 0.11f, 0.025f), profile.SecondaryColor);
+
+            Transform leftShoulder = CreatePivot(root, "Left shoulder", new Vector3(-0.34f, 1.20f, 0f));
+            Transform rightShoulder = CreatePivot(root, "Right shoulder", new Vector3(0.34f, 1.20f, 0f));
+            BuildArm(leftShoulder, "Left arm", profile.PrimaryColor);
+            BuildArm(rightShoulder, "Right arm", profile.PrimaryColor);
+
+            Transform leftHip = CreatePivot(root, "Left hip", new Vector3(-0.16f, 0.50f, 0f));
+            Transform rightHip = CreatePivot(root, "Right hip", new Vector3(0.16f, 0.50f, 0f));
+            BuildLeg(leftHip, "Left leg", dark);
+            BuildLeg(rightHip, "Right leg", dark);
+
+            OperatorAnimationRig animationRig = root.gameObject.AddComponent<OperatorAnimationRig>();
+            animationRig.Initialize(leftShoulder, rightShoulder, leftHip, rightHip, profile);
+
+            if (profile.Id == OperatorId.Marcin)
+                CreateVisualPart(rightShoulder, PrimitiveType.Cube, "B4 ERP tablet", new Vector3(0.02f, -0.32f, 0.24f), new Vector3(0.22f, 0.16f, 0.035f), new Color(0.10f, 0.55f, 0.86f));
+            else if (profile.Id == OperatorId.Grzesiek)
+                CreateVisualPart(rightShoulder, PrimitiveType.Cylinder, "Training dumbbell", new Vector3(0f, -0.32f, 0.22f), new Vector3(0.13f, 0.42f, 0.13f), new Color(0.13f, 0.18f, 0.21f));
+            else if (profile.Id == OperatorId.Dawid)
+                CreateVisualPart(rightShoulder, PrimitiveType.Cylinder, "Stretch film roll", new Vector3(0f, -0.34f, 0.22f), new Vector3(0.16f, 0.24f, 0.16f), new Color(0.78f, 0.86f, 0.91f));
+            else if (profile.Id == OperatorId.Mateusz)
+                CreateVisualPart(rightShoulder, PrimitiveType.Cube, "Taser", new Vector3(0f, -0.32f, 0.24f), new Vector3(0.19f, 0.13f, 0.25f), new Color(0.48f, 0.20f, 0.86f));
+            else
+                CreateVisualPart(rightShoulder, PrimitiveType.Cube, "Ratchet wrench", new Vector3(0f, -0.33f, 0.22f), new Vector3(0.12f, 0.46f, 0.09f), new Color(0.75f, 0.80f, 0.85f));
+        }
+
+        private static Transform CreatePivot(Transform parent, string name, Vector3 localPosition)
+        {
+            GameObject pivot = new GameObject(name);
+            pivot.transform.SetParent(parent, false);
+            pivot.transform.localPosition = localPosition;
+            return pivot.transform;
+        }
+
+        private static void BuildArm(Transform pivot, string name, Color color)
+        {
+            CreateVisualPart(pivot, PrimitiveType.Capsule, name, new Vector3(0f, -0.19f, 0f), new Vector3(0.20f, 0.31f, 0.20f), color);
+            CreateVisualPart(pivot, PrimitiveType.Sphere, name + " hand", new Vector3(0f, -0.39f, 0.04f), new Vector3(0.15f, 0.15f, 0.15f), new Color(0.84f, 0.66f, 0.53f));
+        }
+
+        private static void BuildLeg(Transform pivot, string name, Color color)
+        {
+            CreateVisualPart(pivot, PrimitiveType.Capsule, name, new Vector3(0f, -0.22f, 0f), new Vector3(0.22f, 0.34f, 0.22f), color);
+            CreateVisualPart(pivot, PrimitiveType.Cube, name + " boot", new Vector3(0f, -0.43f, 0.08f), new Vector3(0.22f, 0.12f, 0.36f), new Color(0.20f, 0.15f, 0.12f));
+        }
+
+        private static void CreateTrainingEnemies(PlayerController player)
+        {
+            CreateEnemy(new Vector3(-5f, 0.05f, 4f), player, EnemyKind.Customer);
+            CreateEnemy(new Vector3(6f, 0.05f, 8f), player, EnemyKind.AgvRobot);
+            CreateEnemy(new Vector3(10f, 0.05f, -1f), player, EnemyKind.Inspector);
+        }
+
+        public static EnemyAgent SpawnSurvivalEnemy(PlayerController player, EnemyKind kind, Vector3 position,
+            float healthMultiplier, float speedMultiplier, float abilityRateMultiplier)
+        {
+            if (_worldRoot == null || player == null) return null;
+            return CreateEnemy(position, player, kind, healthMultiplier, speedMultiplier, abilityRateMultiplier);
+        }
+
+        private static EnemyAgent CreateEnemy(Vector3 position, PlayerController player, EnemyKind kind,
+            float healthMultiplier = 1f, float speedMultiplier = 1f, float abilityRateMultiplier = 1f)
+        {
+            EnemyArchetypeProfile profile = EnemyArchetypeCatalog.Get(kind);
+            if (profile.IsHazardOnly) return null;
+
+            GameObject enemy = new GameObject(profile.DisplayName + " • B4");
+            enemy.transform.SetParent(_worldRoot, false);
+            enemy.transform.position = position;
+
+            bool boss = profile.IsBoss;
+            CharacterController controller = enemy.AddComponent<CharacterController>();
+            controller.height = boss ? 2.05f : 1.65f;
+            controller.radius = boss ? 0.48f : 0.34f;
+            controller.center = new Vector3(0f, controller.height * 0.5f, 0f);
+            Color skin = new Color(0.76f, 0.58f, 0.45f);
+
+            if (kind == EnemyKind.AgvRobot)
+            {
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "AGV chassis", new Vector3(0f, 0.42f, 0f), new Vector3(0.92f, 0.56f, 0.78f), profile.AccentColor);
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "AGV sensor rail", new Vector3(0f, 0.78f, 0f), new Vector3(0.72f, 0.08f, 0.16f), new Color(0.12f, 0.20f, 0.26f));
+                CreateVisualPart(enemy.transform, PrimitiveType.Sphere, "AGV scanning eye", new Vector3(0f, 0.57f, 0.42f), new Vector3(0.25f, 0.10f, 0.06f), new Color(0.25f, 0.94f, 1f));
+                for (int side = -1; side <= 1; side += 2)
+                    CreateVisualPart(enemy.transform, PrimitiveType.Cylinder, "AGV wheel", new Vector3(side * 0.48f, 0.18f, 0f), new Vector3(0.15f, 0.18f, 0.15f), new Color(0.08f, 0.10f, 0.13f));
+            }
+            else
+            {
+                float bodyScale = boss ? 1.20f : 1f;
+                CreateVisualPart(enemy.transform, PrimitiveType.Capsule, "Enemy torso", new Vector3(0f, 0.78f * bodyScale, 0f), new Vector3(0.65f * bodyScale, 0.68f * bodyScale, 0.38f * bodyScale), profile.AccentColor);
+                CreateVisualPart(enemy.transform, PrimitiveType.Sphere, "Enemy head", new Vector3(0f, 1.47f * bodyScale, 0f), new Vector3(0.34f * bodyScale, 0.37f * bodyScale, 0.33f * bodyScale), skin);
+                CreateVisualPart(enemy.transform, PrimitiveType.Sphere, "Enemy helmet", new Vector3(0f, 1.68f * bodyScale, 0f), new Vector3(0.42f * bodyScale, 0.18f * bodyScale, 0.42f * bodyScale), profile.AccentColor);
+
+                if (kind == EnemyKind.Inspector)
+                {
+                    CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Inspector visor", new Vector3(0f, 1.52f, 0.18f), new Vector3(0.42f, 0.06f, 0.08f), new Color(0.94f, 0.76f, 0.22f));
+                    CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Inspection clipboard", new Vector3(0.44f, 0.84f, 0.20f), new Vector3(0.22f, 0.34f, 0.06f), new Color(0.40f, 0.28f, 0.16f));
+                }
+            }
+
+            if (kind == EnemyKind.Kurier || kind == EnemyKind.PanRoman)
+            {
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Delivery backpack", new Vector3(0f, 0.88f, -0.27f), new Vector3(0.40f, 0.45f, 0.27f), new Color(0.10f, 0.20f, 0.28f));
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Backpack label", new Vector3(0f, 0.90f, -0.415f), new Vector3(0.23f, 0.12f, 0.025f), new Color(0.92f, 0.72f, 0.25f));
+            }
+            else if (kind == EnemyKind.CyberSalesman)
+            {
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Cyber visor", new Vector3(0f, 1.48f, 0.19f), new Vector3(0.50f, 0.12f, 0.07f), new Color(0.08f, 0.95f, 1f));
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Holographic offer", new Vector3(0.48f, 1.02f, 0.16f), new Vector3(0.42f, 0.42f, 0.035f), new Color(0.12f, 0.85f, 0.92f));
+            }
+            else if (kind == EnemyKind.RadioactivePip || kind == EnemyKind.MutantGammaForklift)
+            {
+                CreateVisualPart(enemy.transform, PrimitiveType.Sphere, "Radiation core", new Vector3(0f, 0.90f, 0.24f), new Vector3(0.27f, 0.27f, 0.09f), new Color(0.35f, 1f, 0.18f));
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Radiation warning", new Vector3(0f, 1.48f, 0.19f), new Vector3(0.42f, 0.07f, 0.07f), new Color(0.92f, 1f, 0.14f));
+            }
+            else if (kind == EnemyKind.CrazyStacker || kind == EnemyKind.EliteWalczakGuard)
+            {
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Forklift guard plate", new Vector3(0f, 0.72f, 0.27f), new Vector3(0.76f, 0.30f, 0.12f), new Color(0.12f, 0.15f, 0.18f));
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Hazard stripe", new Vector3(0f, 0.72f, 0.34f), new Vector3(0.62f, 0.08f, 0.025f), new Color(1f, 0.68f, 0.12f));
+            }
+            else if (kind == EnemyKind.Sebix || kind == EnemyKind.Walczak || kind == EnemyKind.KingLeto || kind == EnemyKind.BosmanKrakow)
+            {
+                for (int side = -1; side <= 1; side += 2)
+                    CreateVisualPart(enemy.transform, PrimitiveType.Cylinder, "Boss shoulder armor", new Vector3(side * 0.46f, 1.08f, 0f), new Vector3(0.24f, 0.28f, 0.24f), new Color(0.12f, 0.16f, 0.22f));
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Boss chest insignia", new Vector3(0f, 0.95f, 0.22f), new Vector3(0.24f, 0.24f, 0.06f), profile.AccentColor);
+            }
+            else if (kind == EnemyKind.PiorunDrone)
+            {
+                CreateVisualPart(enemy.transform, PrimitiveType.Sphere, "Drone core", new Vector3(0f, 1.25f, 0f), new Vector3(0.50f, 0.34f, 0.52f), profile.AccentColor);
+                CreateVisualPart(enemy.transform, PrimitiveType.Sphere, "Drone sensor eye", new Vector3(0f, 1.28f, 0.26f), new Vector3(0.22f, 0.12f, 0.06f), new Color(0.85f, 1f, 1f));
+                for (int i = 0; i < 4; i++)
+                {
+                    float angle = i * Mathf.PI * 0.5f;
+                    Vector3 arm = new Vector3(Mathf.Cos(angle), 1.28f, Mathf.Sin(angle)) * 0.48f;
+                    CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Drone rotor arm", arm, new Vector3(0.48f, 0.07f, 0.08f), new Color(0.12f, 0.18f, 0.23f));
+                    CreateVisualPart(enemy.transform, PrimitiveType.Cylinder, "Drone rotor", arm + new Vector3(Mathf.Cos(angle) * 0.30f, 0.06f, Mathf.Sin(angle) * 0.30f), new Vector3(0.22f, 0.035f, 0.22f), new Color(0.82f, 0.90f, 0.96f));
+                }
+            }
+            else if (kind == EnemyKind.Monter)
+            {
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Tool belt", new Vector3(0f, 0.54f, 0.20f), new Vector3(0.68f, 0.16f, 0.12f), new Color(0.13f, 0.11f, 0.09f));
+                CreateVisualPart(enemy.transform, PrimitiveType.Cylinder, "Wrench", new Vector3(0.40f, 0.88f, 0.20f), new Vector3(0.07f, 0.26f, 0.07f), new Color(0.65f, 0.71f, 0.76f));
+            }
+            else if (kind == EnemyKind.Pomazaniec)
+            {
+                CreateVisualPart(enemy.transform, PrimitiveType.Cylinder, "Bike front wheel", new Vector3(0f, 0.18f, 0.48f), new Vector3(0.32f, 0.055f, 0.32f), new Color(0.10f, 0.12f, 0.16f));
+                CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Bike frame", new Vector3(0f, 0.42f, 0.02f), new Vector3(0.10f, 0.10f, 0.72f), new Color(0.92f, 0.16f, 0.45f));
+            }
+
+            EnemyAgent agent = enemy.AddComponent<EnemyAgent>();
+            agent.Initialize(player, kind, healthMultiplier, speedMultiplier, abilityRateMultiplier);
+            return agent;
+        }
+
+        private static GameObject CreateBox(string objectName, Vector3 position, Vector3 scale, Color color, float roughness = 0.65f)
+        {
+            GameObject box = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            box.name = objectName;
+            Transform parent = _layoutParent != null ? _layoutParent : _worldRoot;
+            box.transform.SetParent(parent, false);
+            box.transform.localPosition = position;
+            box.transform.localScale = scale;
+            ApplyMaterial(box, color, roughness, 0.10f);
+            return box;
+        }
+
+        private static void CreateVisualPart(Transform parent, PrimitiveType primitive, string partName, Vector3 localPosition, Vector3 localScale, Color color)
+        {
+            GameObject part = GameObject.CreatePrimitive(primitive);
+            part.name = partName;
+            part.transform.SetParent(parent, false);
+            part.transform.localPosition = localPosition;
+            part.transform.localScale = localScale;
+            Collider collider = part.GetComponent<Collider>();
+            if (collider != null) Object.Destroy(collider);
+            ApplyMaterial(part, color, 0.48f, 0.08f);
+        }
+
+        private static void ApplyMaterial(GameObject target, Color color, float roughness, float metalness)
+        {
+            Renderer renderer = target.GetComponent<Renderer>();
+            if (renderer == null) return;
+            string key = ColorUtility.ToHtmlStringRGBA(color) + "_" + Mathf.RoundToInt(roughness * 100f) + "_" + Mathf.RoundToInt(metalness * 100f);
+            if (!MaterialCache.TryGetValue(key, out Material material))
+            {
+                Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+                if (shader == null) shader = Shader.Find("Standard");
+                if (shader == null)
+                {
+                    Debug.LogError("No compatible lit shader is available for warehouse world geometry.");
+                    return;
+                }
+                material = new Material(shader);
+                material.color = color;
+                if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 1f - roughness);
+                if (material.HasProperty("_Metallic")) material.SetFloat("_Metallic", metalness);
+                MaterialCache.Add(key, material);
+            }
+            renderer.sharedMaterial = material;
+        }
+
+        private static void CreateCamera(Transform target)
+        {
+            GameObject cameraObject = new GameObject("Main Camera");
+            cameraObject.tag = "MainCamera";
+            cameraObject.transform.SetParent(_worldRoot, false);
+            cameraObject.transform.position = target.position + new Vector3(0f, 7.8f, -9.5f);
+            Camera camera = cameraObject.AddComponent<Camera>();
+            camera.fieldOfView = 56f;
+            camera.nearClipPlane = 0.08f;
+            camera.farClipPlane = 150f;
+            cameraObject.AddComponent<AudioListener>();
+            CameraFollowRig rig = cameraObject.AddComponent<CameraFollowRig>();
+            rig.SetTarget(target);
+        }
+    }
+}
