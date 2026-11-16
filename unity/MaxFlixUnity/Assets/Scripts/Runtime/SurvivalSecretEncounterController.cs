@@ -209,6 +209,9 @@ namespace MaxFlix.Unity.Runtime
             Image stageImage = stageObject.GetComponent<Image>();
             stageImage.color = Color.white;
             stageObject.GetComponent<Mask>().showMaskGraphic = true;
+            // The live status strip is created before the masked viewport; move
+            // it above the mask so telegraphs and pickup hints stay readable.
+            _statusHud.transform.SetAsLastSibling();
 
             CreateButton(safe, "Back to warehouse", "WRÓĆ DO MAGAZYNU",
                 new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f),
@@ -415,6 +418,7 @@ namespace MaxFlix.Unity.Runtime
             _cthulhuGrabMarker = CreateImage(_stage, "Grab target warning",
                 new Vector2(-300f, -133f), new Vector2(42f, 5f),
                 new Color(1f, 0.25f, 0.43f, 0.9f)).rectTransform;
+            _cthulhuGrabMarker.gameObject.SetActive(false);
             _cthulhuGrabMarker.gameObject.SetActive(false);
             CreateImage(_cthulhuCoreVisual, "Core pupil", Vector2.zero,
                 new Vector2(12f, 20f), new Color(0.025f, 0.10f, 0.075f)).raycastTarget = false;
