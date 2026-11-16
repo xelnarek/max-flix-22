@@ -4932,6 +4932,13 @@ export class PaleciakiGameEngine {
           breastMedallion.scale.set(1, 1.0, 0.55);
           capybara.add(breastMedallion);
           group.add(capybara);
+          const ring = new THREE.Mesh(new THREE.TorusGeometry(0.56, 0.035, 6, 18), glow);
+          ring.rotation.x = Math.PI / 2;
+          ring.position.y = 0.12;
+          group.add(ring);
+          const beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 1.1, 5), glow);
+          beacon.position.y = 1.22;
+          group.add(beacon);
         } else {
           const coreGeometry = secret.style === 'wz'
             ? new THREE.BoxGeometry(0.48, 0.34, 0.12)
@@ -4950,14 +4957,13 @@ export class PaleciakiGameEngine {
             reelB.position.set(0.09, 0.76, 0.12);
             group.add(reelA, reelB);
           }
-        }
-        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.56, 0.035, 6, 18), glow);
-        ring.rotation.x = Math.PI / 2;
-        ring.position.y = 0.12;
-        group.add(ring);
-        const beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 1.1, 5), glow);
-        beacon.position.y = 1.22;
-        group.add(beacon);
+          const ring = new THREE.Mesh(new THREE.TorusGeometry(0.56, 0.035, 6, 18), glow);
+          ring.rotation.x = Math.PI / 2;
+          ring.position.y = 0.12;
+          group.add(ring);
+          const beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 1.1, 5), glow);
+          beacon.position.y = 1.22;
+          group.add(beacon);
         }
       }
 
