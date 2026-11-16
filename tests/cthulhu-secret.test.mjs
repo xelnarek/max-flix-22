@@ -115,10 +115,10 @@ test('Cthulhu phase-two attack selector loops through all three distinct moves',
 
 test('Cthulhu idle and attack animation now articulate its head, arms and living sigil', async () => {
   const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
-  assert.match(game, /const cthulhuHead = e\\.mesh\\.userData\\.cthulhuHead/);
-  assert.match(game, /cthulhuHead\\.rotation\\.y = idleScan/);
-  assert.match(game, /const armSway = Math\\.sin\\(e\\.walkCycle \\* 0\\.33\\)/);
-  assert.match(game, /cthulhuArmL\\.rotation\\.x = -armSway/);
-  assert.match(game, /cthulhuArmR\\.rotation\\.x = armSway/);
-  assert.match(game, /cthulhuSigil\\.scale\\.set\\(sigilPulse/);
+  assert.ok(game.includes('const cthulhuHead = e.mesh.userData.cthulhuHead as THREE.Group | undefined;'));
+  assert.ok(game.includes('cthulhuHead.rotation.y = idleScan'));
+  assert.ok(game.includes('const armSway = Math.sin(e.walkCycle * 0.33)'));
+  assert.ok(game.includes('cthulhuArmL.rotation.x = -armSway'));
+  assert.ok(game.includes('cthulhuArmR.rotation.x = armSway'));
+  assert.ok(game.includes('cthulhuSigil.scale.set(sigilPulse'));
 });
