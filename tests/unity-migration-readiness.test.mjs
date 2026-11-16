@@ -213,7 +213,7 @@ test('Unity production cutover remains blocked while the Three.js game stays pro
     read('../unity/MaxFlixUnity/README.md'),
     read('../.github/workflows/unity-validation.yml'),
   ]);
-  assert.match(plan, /To nie jest jeszcze gotowa migracja produktu/);
+  assert.match(plan, /To nadal nie jest gotowa migracja produktu/);
   assert.match(plan, /240 × 80 m/);
   assert.match(readme, /current Three\.js game remains the production build/);
   assert.match(workflow, /workflow_dispatch:/);
