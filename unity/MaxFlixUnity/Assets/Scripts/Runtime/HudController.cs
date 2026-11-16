@@ -40,7 +40,7 @@ namespace MaxFlix.Unity.Runtime
 
         public static HudController Create(PlayerController player, Action retryAction, Action returnToMenuAction)
         {
-            EnsureEventSystem();
+            UiEventSystemInstaller.Ensure();
 
             GameObject canvasObject = new GameObject("Max Flix HUD", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             Canvas canvas = canvasObject.GetComponent<Canvas>();
@@ -572,13 +572,6 @@ namespace MaxFlix.Unity.Runtime
             return button;
         }
 
-        private static void EnsureEventSystem()
-        {
-            if (FindFirstObjectByType<EventSystem>() != null) return;
-            GameObject eventSystem = new GameObject("EventSystem", typeof(EventSystem));
-            InputSystemUIInputModule inputModule = eventSystem.AddComponent<InputSystemUIInputModule>();
-            inputModule.pointerBehavior = UIPointerBehavior.SingleMouseOrPenButMultiTouchAndTrack;
-        }
 
         private void OnDestroy()
         {
