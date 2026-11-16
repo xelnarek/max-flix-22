@@ -106,7 +106,8 @@ test('campaign entry points are retired; only Survival can be started from the a
   assert.doesNotMatch(html, /id="btn-start-game"|data-tab="tab-zones"|data-tab="tab-story"/);
   assert.match(html, /id="btn-start-survival"/);
   assert.doesNotMatch(app, /this\.engine\.startGame\(/);
-  assert.match(app, /this\.engine\.startSurvival\(selectedSurvivalMapId\)/);
+  assert.match(app, /this\.engine\.startSurvival\(\)/);
+  assert.doesNotMatch(app, /selectedSurvivalMapId|survivalMapPicker|readSurvivalMapPreference/);
   assert.match(game, /private resetSurvivalRun\(\)/);
   assert.doesNotMatch(game, /public startGame\(/);
 });
@@ -1282,33 +1283,40 @@ test('Survival draft adds Crimsonland radiation and Archero ricochet builds with
   assert.match(combat, /export function getSurvivalRadiationProfile/);
 });
 
-test('Survival chooses among four playable map identities and does not immediately repeat a map', async () => {
-  const [game, maps] = await Promise.all([read('../src/game.ts'), read('../src/survivalMaps.ts')]);
-  assert.match(game, /chooseRandomSurvivalMap\(this\.lastSurvivalMapId, Math\.random\(\)\)/);
-  assert.match(game, /buildSurvivalArenaExpansion\(this\.survivalMapId\)/);
-  assert.match(game, /private buildSurvivalMapLandmarks\(mapId: SurvivalMapId\)/);
-  assert.match(game, /mapId === 'container_terminal'[\s\S]*?mapId === 'cold_storage'[\s\S]*?mapId === 'night_sorting'/);
-  assert.match(game, /this\.survivalObstacles\.push\(\{ x: position\.x, z: position\.z/);
-  assert.match(game, /private spawnSurvivalSecrets\(mapId: SurvivalMapId\)/);
-  assert.match(game, /private updateSurvivalSecrets\(dt: number\)/);
-  assert.match(game, /onSurvivalSecretFound\?\./);
-  assert.match(maps, /'warehouse_b4' \| 'container_terminal' \| 'cold_storage' \| 'night_sorting'/);
-  assert.match(maps, /export function chooseRandomSurvivalMap/);
-  assert.match(maps, /secretLocations:/);
+test('Survival composes every legacy map layout into one connected world', async () => {
+  const [game, maps, world] = await Promise.all([
+    read('../src/game.ts'), read('../src/survivalMaps.ts'), read('../src/survivalWorldLayout.ts')
+  ]);
+  assert.doesNotMatch(game, /chooseRandomSurvivalMap|lastSurvivalMapId/);
+  assert.match(game, /this\.buildUnifiedSurvivalWorld\(\)/);
+  assert.match(game, /for \(const zone of SURVIVAL_BIOME_ZONES\)/);
+  assert.match(game, /this\.buildSurvivalArenaExpansion\(zone\.mapId, zone\)/);
+  assert.match(game, /private buildSurvivalWorldTransitions\(\)/);
+  assert.match(game, /this\.levelBounds = \{ \.\.\.SURVIVAL_WORLD_BOUNDS \}/);
+  assert.match(game, /private updateSurvivalBiomeContext\(dt: number\)/);
+  assert.match(game, /getBlendedSurvivalLightingProfile\(this\.playerPos\.x, this\.playerPos\.z\)/);
+  assert.match(game, /private spawnSurvivalSecrets\(mapId: SurvivalMapId, offsetX: number, offsetZ: number\)/);
+  assert.match(game, /totalSecrets: this\.survivalSecrets\.length/);
+  for (const mapId of ['warehouse_b4', 'container_terminal', 'cold_storage', 'night_sorting']) {
+    assert.ok(maps.includes("'" + mapId + "'"));
+    assert.ok(world.includes("mapId: '" + mapId + "'"));
+  }
+  for (const kind of ['loading_apron', 'cold_airlock', 'scanner_transfer', 'frozen_conveyor']) {
+    assert.ok(world.includes("kind: '" + kind + "'"));
+  }
 });
 
-test('Survival menu lets players explicitly choose one of the four actual arenas', async () => {
+test('Survival starts in the single connected world and no longer exposes a map picker', async () => {
   const [html, app, game] = await Promise.all([
     read('../index.html'), read('../src/index.ts'), read('../src/game.ts')
   ]);
-  for (const mapId of ['random', 'warehouse_b4', 'container_terminal', 'cold_storage', 'night_sorting']) {
-    assert.ok(html.includes('data-survival-map="' + mapId + '"'), 'missing map selector option: ' + mapId);
-  }
-  assert.match(app, /let selectedSurvivalMapId: SurvivalMapId \| null = \(\(\) => \{/);
-  assert.match(app, /readSurvivalMapPreference\(window\.localStorage\)/);
-  assert.match(app, /this\.engine\.startSurvival\(selectedSurvivalMapId\)/);
+  assert.doesNotMatch(html, /data-tab="tab-map"|id="tab-map"|survival-map-picker|data-survival-map=/);
+  assert.match(html, /aria-label="Biomy wspólnego świata Survival"/);
+  assert.doesNotMatch(app, /selectedSurvivalMapId|survivalMapPicker|readSurvivalMapPreference|writeSurvivalMapPreference/);
+  assert.match(app, /this\.engine\.startSurvival\(\)/);
   assert.match(game, /public startSurvival\(mapOverride: SurvivalMapId \| null = null\)/);
-  assert.match(game, /this\.survivalMapId = mapOverride \|\| chooseRandomSurvivalMap/);
+  assert.match(game, /void mapOverride/);
+  assert.match(game, /this\.buildUnifiedSurvivalWorld\(\)/);
 });
 
 test('Survival secrets are collectible, score-bearing and released during map cleanup', async () => {
@@ -1318,7 +1326,7 @@ test('Survival secrets are collectible, score-bearing and released during map cl
   assert.match(game, /this\.survivalSecretsFound\+\+/);
   assert.match(game, /this\.score \+= 750/);
   assert.match(game, /this\.disposeObjectResources\(secret\.mesh\)/);
-  assert.match(game, /totalSecrets: getSurvivalMapDefinition\(this\.survivalMapId\)\.secretLocations\.length/);
+  assert.match(game, /totalSecrets: this\.survivalSecrets\.length/);
 });
 
 test('Survival main boss victories are tracked separately from ordinary enemy eliminations', async () => {

@@ -518,7 +518,7 @@ test('PvP HUD shows each operator ability that the arena actually executes and r
   const pvpStart = app.indexOf('this.engine.startPvp(session, localOp, remoteOp)');
   assert.ok(pvpStart > presentationStart);
   assert.ok(app.indexOf('applyPvpAbilityPresentation(localOp)', pvpStart) > pvpStart);
-  const survivalStart = app.indexOf('this.engine.startSurvival(selectedSurvivalMapId)');
+  const survivalStart = app.indexOf('this.engine.startSurvival()');
   const restoreStart = app.lastIndexOf('updateCharacterUI(this.selectedCharId)', survivalStart);
   assert.ok(restoreStart >= 0 && restoreStart < survivalStart, 'Survival should restore its own ability label/icon');
   for (const label of [
