@@ -58,6 +58,8 @@ namespace MaxFlix.Unity.Runtime
 
         private EncounterMode _mode;
         private PlayerController _player;
+        private WarehouseMapId _sourceMapId;
+        private string _sourceSecretId;
         private Canvas _canvas;
         private RectTransform _stage;
         private GameObject _resultPanel;
@@ -129,9 +131,11 @@ namespace MaxFlix.Unity.Runtime
         private int _cthulhuPhase = 1;
         private float _rabbitAnimation;
 
-        public static void Open(PlayerController player, SurvivalSecretStyle style)
+        public static void Open(PlayerController player, SurvivalSecretStyle style,
+            WarehouseMapId mapId, string secretId)
         {
             if (_active != null || player == null || player.IsDefeated
+                || string.IsNullOrWhiteSpace(secretId)
                 || GameSession.Current == null || GameSession.Current.Mode != GameMode.Survival)
                 return;
 
@@ -140,13 +144,16 @@ namespace MaxFlix.Unity.Runtime
             GameObject host = new GameObject("SEKRET • osobna arena 2D");
             _active = host.AddComponent<SurvivalSecretEncounterController>();
             _active.Initialize(player, style == SurvivalSecretStyle.Necronomicon
-                ? EncounterMode.Necronomicon : EncounterMode.RabbitHole);
+                ? EncounterMode.Necronomicon : EncounterMode.RabbitHole, mapId, secretId);
         }
 
-        private void Initialize(PlayerController player, EncounterMode mode)
+        private void Initialize(PlayerController player, EncounterMode mode,
+            WarehouseMapId mapId, string secretId)
         {
             _player = player;
             _mode = mode;
+            _sourceMapId = mapId;
+            _sourceSecretId = secretId;
             UiEventSystemInstaller.Ensure();
             BuildShell();
             if (_mode == EncounterMode.RabbitHole) BuildRabbitHole();
@@ -915,6 +922,7 @@ namespace MaxFlix.Unity.Runtime
         {
             if (!_rewardGranted && _won && GameSession.Current != null && _player != null)
             {
+                SurvivalSecretPickup.MarkEncounterCompleted(_sourceMapId, _sourceSecretId);
                 if (_mode == EncounterMode.RabbitHole)
                 {
                     GameSession.Current.Score += 1200 + _rabbitCollected * 250;
