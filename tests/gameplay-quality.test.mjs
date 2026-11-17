@@ -1684,7 +1684,7 @@ test('Mateusz Operator 04 tears the nine-month contract and runs enemy-only AI c
   assert.match(game, /private spawnMateuszContractRip\(\)/);
   assert.match(game, /UMOWA NA 9 MIESIĘCY • ROZDARTA/);
   assert.match(game, /private updateEnemyFactionBrawl\(enemy: EnemyItem, dt: number\)/);
-  assert.match(game, /this\.enemySpatialIndex\.query\(enemy\.x, enemy\.z, nearestDistance\)/);
+  assert.match(game, /this\.enemySpatialIndex\.query\(enemy\.x, enemy\.z, 21\.5\)/);
   assert.match(game, /this\.damageEnemy\(target, damage, enemy\.x, enemy\.z, null\)/);
   assert.match(game, /damageSource !== null/);
   assert.match(types, /aiFactionBrawlTarget\?: EnemyItem/);
