@@ -340,9 +340,19 @@ namespace MaxFlix.Unity.Runtime
 
         private void Update()
         {
-            if (_defeated || _target == null || _target.IsDefeated || _profile == null
-                || GameSession.Current == null
-                || GameSession.Current.State != GameFlowState.Playing) return;
+            if (_defeated || _profile == null) return;
+
+            if (_target == null || _target.IsDefeated || GameSession.Current == null
+                || GameSession.Current.State != GameFlowState.Playing)
+            {
+                if (_factionBrawlTint)
+                {
+                    _factionBrawlTint = false;
+                    ClearFactionBrawlVisual();
+                    SetHitTint(false);
+                }
+                return;
+            }
 
             float deltaTime = Time.deltaTime;
             _attackTimer -= deltaTime;
@@ -358,26 +368,35 @@ namespace MaxFlix.Unity.Runtime
                 _knockbackVelocity = Vector3.MoveTowards(_knockbackVelocity, Vector3.zero, 18f * deltaTime);
             }
 
+            bool factionBrawlActive = IsFactionBrawlActive;
+            if (factionBrawlActive)
+            {
+                if (!_factionBrawlTint)
+                {
+                    _factionBrawlTint = true;
+                    SetHitTint(_hitFlashTimer > 0f);
+                }
+                TickFactionBrawlVisual(deltaTime);
+            }
+            else if (_factionBrawlTint)
+            {
+                _factionBrawlTint = false;
+                ClearFactionBrawlVisual();
+                SetHitTint(_hitFlashTimer > 0f);
+            }
+
+            // Visual state must tick/expire even while the enemy is stunned.
             if (_stunRemaining > 0f)
             {
                 UpdateHitFlash(deltaTime);
                 return;
             }
 
-            if (IsFactionBrawlActive)
+            if (factionBrawlActive)
             {
-                _factionBrawlTint = true;
-                SetHitTint(_hitFlashTimer > 0f);
-                TickFactionBrawlVisual(deltaTime);
                 TickFactionBrawl(deltaTime);
                 UpdateHitFlash(deltaTime);
                 return;
-            }
-            if (_factionBrawlTint)
-            {
-                _factionBrawlTint = false;
-                ClearFactionBrawlVisual();
-                SetHitTint(_hitFlashTimer > 0f);
             }
 
             Vector3 offset = _target.transform.position - transform.position;
