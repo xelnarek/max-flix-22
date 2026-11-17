@@ -1702,6 +1702,23 @@ test('enemy faction brawl has a bounded timer and restores normal targeting afte
 });
 
 
+test('Mateusz faction brawl distributes target assignments instead of dogpiling the nearest enemy', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /private readonly enemyFactionBrawlTargetLoads = new Map<string, number>\(\)/);
+  assert.match(game, /this\.enemyFactionBrawlTargetLoads\.clear\(\);[\s\S]*?for \(const attacker of this\.enemies\)/);
+
+  const start = game.indexOf('private updateEnemyFactionBrawl');
+  const end = game.indexOf('private damageEnemy', start);
+  assert.ok(start >= 0 && end > start, 'faction brawl targeting method should exist');
+  const tactics = game.slice(start, end);
+  assert.match(tactics, /previousLoad <= 1/);
+  assert.match(tactics, /assignedAttackers \* 2\.1/);
+  assert.match(tactics, /score < bestScore - 0\.001/);
+  assert.match(tactics, /candidate\.id < target\.id/);
+  assert.match(tactics, /this\.enemyFactionBrawlTargetLoads\.set\([\s\S]*?target\.id/);
+  assert.match(tactics, /enemy\.aiFactionBrawlRetargetTimer = 0\.24/);
+});
+
 test('44cm special visual uses articulated joints, a detailed closed fist and pulsing target-locked rockets', async () => {
   const game = await read('../src/game.ts');
   const armStart = game.indexOf('private spawnGrzesiekShockwave(): void');
