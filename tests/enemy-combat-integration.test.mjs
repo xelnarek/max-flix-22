@@ -11,6 +11,7 @@ test('enemy pursuit has an arrival dead-zone and does not orbit around a reached
   assert.match(tactics, /const atFormationSlot = steerLength < 0\.24/);
   assert.match(tactics, /const arrivalScale = atFormationSlot/);
   assert.match(tactics, /const movementSpeed = speed \* arrivalScale/);
+  assert.match(tactics, /getEnemyPlayerContactDistance\(enemy\.type\) \+ 0\.08/);
   assert.doesNotMatch(tactics, /steerLength < 0\.72 && engaged/);
   assert.match(tactics, /role === 'bruiser' \|\| role === 'flanker'[\s\S]*?defaultEngageRadius/);
 });
