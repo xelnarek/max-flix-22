@@ -565,7 +565,7 @@ test('Survival crowd steering blends stable pursuit, formation spacing and obsta
   assert.match(tactics, /calculateStableEnemySteering\(/);
   assert.match(tactics, /steeringInput\.previous\.x = enemy\.aiSteerX \?\? 0/);
   assert.match(tactics, /steeringInput\.previous\.z = enemy\.aiSteerZ \?\? 0/);
-  assert.match(tactics, /separationWeight: 0\.72/);
+  assert.match(tactics, /steeringInput\.separationWeight = 0\.72/);
   assert.match(tactics, /enemy\.aiSteerX = steerX/);
   assert.match(tactics, /getEnemyEngageRadius\(role\)/);
   assert.doesNotMatch(tactics, /for \(const obstacle of this\.survivalObstacles\)/);
