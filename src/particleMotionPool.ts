@@ -23,7 +23,10 @@ export class ParticleMotionStatePool {
   private readonly owned = new WeakSet<ParticleMotionState>();
   private readonly available = new WeakSet<ParticleMotionState>();
 
-  constructor(private readonly maxStates = 75) {
+  private readonly maxStates: number;
+
+  constructor(maxStates = 75) {
+    this.maxStates = maxStates;
     if (!Number.isInteger(maxStates) || maxStates < 1) {
       throw new RangeError('ParticleMotionStatePool capacity must be a positive integer.');
     }
