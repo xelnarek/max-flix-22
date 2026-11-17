@@ -140,6 +140,9 @@ export interface EnemyItem {
   aiCoalitionLeaderId?: string;
   aiCoalitionRole?: 'bruiser' | 'flanker' | 'ranged' | 'support';
   aiFormationRadius?: number;
+  /** Smoothed horizontal steering direction; avoids frame-to-frame crowd jitter. */
+  aiSteerX?: number;
+  aiSteerZ?: number;
   aiCoalitionSize?: number;
   /** Brief movement disruption after a Survival squad loses its leader. */
   aiMoraleBreakTimer?: number;

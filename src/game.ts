@@ -45,6 +45,9 @@ import {
 import { clampHorizontalPosition } from './arenaBounds.ts';
 import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoint, resolveEnemyPlayerSeparation } from './enemySpacing.ts';
 import { calculateEnemyObstacleAvoidanceVector } from './enemyNavigation.ts';
+import { calculateStableEnemySteering, getEnemyEngageRadius } from './enemySteering.ts';
+import { getEnemyPlayerContactDistance, resolvePlayerMovementAgainstEnemies } from './enemyPlayerCollision.ts';
+import { findFirstProjectileBodyImpact, findFirstProjectileEnemyImpact } from './projectileImpact.ts';
 import { createEnemyHitReaction, getEnemyHitPulse, getEnemyImpactBurstProfile } from './enemyCombatFeedback.ts';
 import { getEnemyDeathMotionPose, getEnemyDeathMotionProfile } from './enemyDeathMotion.ts';
 import { ENEMY_GAIT_PRESETS, ENEMY_VISUAL_PROFILES } from './enemyVisualProfiles.ts';
@@ -12239,7 +12242,27 @@ export class PaleciakiGameEngine {
       }
     }
 
-    // Re-apply the gate after platform carry (notably conveyors), then commit.
+    // Living enemies are solid bodies on the same floor band. Use a swept
+    // circle so fast joystick movement cannot pass through them; preserve the
+    // tangential component so the player can naturally strafe around a crowd.
+    const contactY = landed ? this.playerPos.y : nextY;
+    const playerContact = resolvePlayerMovementAgainstEnemies(
+      { x: this.playerPos.x, z: this.playerPos.z },
+      { x: nextX, z: nextZ },
+      contactY,
+      this.enemies,
+    );
+    if (playerContact.collided) {
+      nextX = playerContact.x;
+      nextZ = playerContact.z;
+      const inwardVelocity = this.playerVel.x * playerContact.normalX + this.playerVel.z * playerContact.normalZ;
+      if (inwardVelocity < 0) {
+        this.playerVel.x -= playerContact.normalX * inwardVelocity;
+        this.playerVel.z -= playerContact.normalZ * inwardVelocity;
+      }
+    }
+
+    // Re-apply the gate after platform carry and crowd contact, then commit.
     if (campaignGateBoundary !== null && nextX > campaignGateBoundary) {
       nextX = campaignGateBoundary;
       this.playerVel.x = 0;
@@ -12919,45 +12942,40 @@ export class PaleciakiGameEngine {
     const anchorX = inHordeRing ? this.survivalSurgeCenterX : this.playerPos.x;
     const anchorZ = inHordeRing ? this.survivalSurgeCenterZ : this.playerPos.z;
     const anchorAngle = enemy.aiFlankAngle ?? Math.atan2(enemy.x - anchorX, enemy.z - anchorZ);
-    const drift = Math.sin(this.survivalElapsed * 0.62 + slot * 1.7) * (engaged ? 0.10 : 0.10);
+    // Engaged enemies keep their assigned lane. Patrol formations drift slowly,
+    // avoiding the old alternating left/right wobble at close range.
+    const drift = engaged ? 0 : Math.sin(this.survivalElapsed * 0.42 + slot * 1.7) * 0.035;
     const angle = anchorAngle + drift;
 
-    // Ring members follow the visible contracting perimeter instead of all
-    // selecting the same close-range target and collapsing onto the player.
-    const defaultEngageRadius = role === 'support' ? 5.5 : role === 'ranged' ? 7.7 : role === 'bruiser' ? 2.25 : 3.0;
+    // Do not target a radius inside the physical body-contact distance; otherwise
+    // the AI and overlap resolver would push against each other every frame.
+    const defaultEngageRadius = Math.max(
+      getEnemyEngageRadius(role),
+      getEnemyPlayerContactDistance(enemy.type) + 0.08,
+    );
     const assignedFormationRadius = Number.isFinite(enemy.aiFormationRadius)
-      ? THREE.MathUtils.clamp(enemy.aiFormationRadius as number, 2.0, 8.2)
+      ? THREE.MathUtils.clamp(enemy.aiFormationRadius as number, 1.0, 8.2)
       : defaultEngageRadius;
     let preferredRadius = inHordeRing
       ? this.survivalSurgeCurrentRadius
       : engaged
-        ? assignedFormationRadius
+        ? (role === 'bruiser' || role === 'flanker'
+          ? defaultEngageRadius
+          : Math.max(defaultEngageRadius, Math.min(assignedFormationRadius, defaultEngageRadius + 0.9)))
         : role === 'support' ? 15.0 : role === 'ranged' ? 14.0 : 12.6;
 
-    // Ranged attackers try to hold a useful firing lane instead of walking into melee range.
-    if (!inHordeRing && engaged && role === 'ranged' && distanceToPlayer < preferredRadius - 1.0) preferredRadius += 1.0;
-    // With every internal biome edge physically open, enemies steer directly across the world.
-    // Their flank/formation angle remains intact and global obstacle avoidance handles cover.
+    if (!inHordeRing && engaged && role === 'ranged' && distanceToPlayer < preferredRadius - 1.0) {
+      preferredRadius += 1.0;
+    }
     const targetX = anchorX + Math.sin(angle) * preferredRadius;
     const targetZ = anchorZ + Math.cos(angle) * preferredRadius * (inHordeRing ? 0.62 : 1);
     let steerX = targetX - enemy.x;
     let steerZ = targetZ - enemy.z;
     const steerLength = Math.hypot(steerX, steerZ);
 
-    if (steerLength < 0.72 && engaged) {
-      const orbitSign = enemy.aiOrbitSign || 1;
-      steerX = Math.cos(angle) * orbitSign;
-      steerZ = -Math.sin(angle) * orbitSign;
-    } else if (steerLength < 0.72 && !engaged) {
-      steerX = Math.cos(angle);
-      steerZ = -Math.sin(angle);
-    }
-
     const nearbyEnemies = this.enemySpatialIndex.query(enemy.x, enemy.z, 4.1);
     const separation = calculateEnemySeparationVector(enemy, nearbyEnemies, 2.6, this.enemySeparationScratch);
-    const separationX = separation.x;
-    const separationZ = separation.z;
-
+    const separationLength = Math.hypot(separation.x, separation.z);
     const obstacleAvoidance = calculateEnemyObstacleAvoidanceVector(
       enemy,
       { x: targetX, z: targetZ },
@@ -12965,18 +12983,32 @@ export class PaleciakiGameEngine {
       4.6,
       0.8,
     );
-    steerX += separationX * 3.0 + obstacleAvoidance.x * 1.25;
-    steerZ += separationZ * 3.0 + obstacleAvoidance.z * 1.25;
     const isTelegraphingRangedBoss = enemy.chargeTimer !== undefined &&
       (enemy.type === 'bosman_krakow' || (enemy.type === 'agv_robot' && enemy.name.includes('AGV-9 SENTINEL')));
-    if (isTelegraphingRangedBoss) {
-      // Keep the emitter at the origin shown by the locked attack lane.
-      steerX = 0;
-      steerZ = 0;
-    }
-    const steerMagnitude = Math.hypot(steerX, steerZ) || 1;
-    steerX /= steerMagnitude;
-    steerZ /= steerMagnitude;
+
+    // Arrival dead-zone replaces the old orbit correction. Once an actor has
+    // reached its formation lane it holds still; a real crowd overlap may still
+    // trigger a small, smoothed sidestep.
+    const atFormationSlot = steerLength < 0.24;
+    const steering = isTelegraphingRangedBoss || (atFormationSlot && separationLength < 0.34)
+      ? { x: 0, z: 0 }
+      : calculateStableEnemySteering({
+          chase: steerLength > 0.24 ? { x: steerX, z: steerZ } : separation,
+          separation,
+          avoidance: obstacleAvoidance,
+          previous: { x: enemy.aiSteerX ?? 0, z: enemy.aiSteerZ ?? 0 },
+          dt,
+          separationWeight: 0.72,
+          avoidanceWeight: 0.78,
+          response: 6.5,
+        });
+    steerX = steering.x;
+    steerZ = steering.z;
+    enemy.aiSteerX = steerX;
+    enemy.aiSteerZ = steerZ;
+    const arrivalScale = atFormationSlot
+      ? (separationLength >= 0.34 ? 0.28 : 0)
+      : THREE.MathUtils.clamp((steerLength - 0.12) / 0.95, 0, 1);
 
     const roleSpeed = role === 'bruiser' ? 0.82 : role === 'flanker' ? 1.12 : role === 'support' ? 0.88 : 0.94;
     const waveSpeed = 1 + Math.min(0.18, Math.max(0, this.survivalWave - 1) * 0.009);
@@ -12986,9 +13018,10 @@ export class PaleciakiGameEngine {
       : 1;
     const moraleBreak = getSurvivalMoraleBreakMultiplier(enemy.aiMoraleBreakTimer ?? 0);
     const speed = enemy.speed * roleSpeed * waveSpeed * pressureSpeed * commandBoost * moraleBreak;
+    const movementSpeed = speed * arrivalScale;
 
-    enemy.x = THREE.MathUtils.clamp(enemy.x + steerX * speed * dt, this.levelBounds.minX + 1.2, this.levelBounds.maxX - 1.2);
-    enemy.z = THREE.MathUtils.clamp(enemy.z + steerZ * speed * dt, this.levelBounds.minZ + 1.0, this.levelBounds.maxZ - 1.0);
+    enemy.x = THREE.MathUtils.clamp(enemy.x + steerX * movementSpeed * dt, this.levelBounds.minX + 1.2, this.levelBounds.maxX - 1.2);
+    enemy.z = THREE.MathUtils.clamp(enemy.z + steerZ * movementSpeed * dt, this.levelBounds.minZ + 1.0, this.levelBounds.maxZ - 1.0);
     enemy.mesh.rotation.y = Math.atan2(this.playerPos.x - enemy.x, this.playerPos.z - enemy.z);
     enemy.mesh.position.set(enemy.x, enemy.y, enemy.z);
     enemy.state = engaged ? 'chase' : 'patrol';
@@ -13232,10 +13265,14 @@ export class PaleciakiGameEngine {
       : enemy.type === 'sebix_m'
         ? 1.4
         : 0.8;
+    // Use the same body clearance as player movement. Keeping both sides on
+    // one radius prevents an enemy being pushed outward and the player being
+    // pushed back in the following frame (the source of contact jitter).
+    const contactDistance = Math.min(minimumDistance, getEnemyPlayerContactDistance(enemy.type));
     const resolved = resolveEnemyPlayerSeparation(
       enemy,
       { x: this.playerPos.x, z: this.playerPos.z },
-      minimumDistance,
+      contactDistance,
       bounds,
       inset,
     );
@@ -14326,13 +14363,31 @@ export class PaleciakiGameEngine {
               4.6,
               0.8,
             );
-            let moveX = dx / Math.max(0.1, distToPlayer) + separation.x * 1.2 + avoidance.x * 1.05;
-            let moveZ = dz / Math.max(0.1, distToPlayer) + separation.z * 1.2 + avoidance.z * 1.05;
-            const moveLength = Math.hypot(moveX, moveZ) || 1;
-            moveX /= moveLength;
-            moveZ /= moveLength;
-            e.x += moveX * chaseSpeed * dt;
-            e.z += moveZ * chaseSpeed * dt;
+            const attackDistance = Math.max(1.10, getEnemyPlayerContactDistance(e.type) + 0.10);
+            const inContactLane = distToPlayer <= attackDistance + 0.08;
+            const separationLength = Math.hypot(separation.x, separation.z);
+            const move = inContactLane && separationLength < 0.34
+              ? { x: 0, z: 0 }
+              : calculateStableEnemySteering({
+                  chase: inContactLane ? separation : { x: dx, z: dz },
+                  separation,
+                  avoidance: inContactLane ? { x: 0, z: 0 } : avoidance,
+                  previous: { x: e.aiSteerX ?? 0, z: e.aiSteerZ ?? 0 },
+                  dt,
+                  separationWeight: inContactLane ? 0.52 : 0.82,
+                  avoidanceWeight: inContactLane ? 0.0 : 0.88,
+                  response: 7.2,
+                });
+            e.aiSteerX = move.x;
+            e.aiSteerZ = move.z;
+            // Slow down smoothly while approaching the contact band. Once in
+            // reach, hold a stable attack position and only sidestep real crowd
+            // pressure instead of vibrating at a target point beyond melee range.
+            const arrivalScale = inContactLane
+              ? THREE.MathUtils.clamp(separationLength * 0.42, 0, 0.22)
+              : THREE.MathUtils.clamp((distToPlayer - attackDistance) / 0.95, 0, 1);
+            e.x += move.x * chaseSpeed * arrivalScale * dt;
+            e.z += move.z * chaseSpeed * arrivalScale * dt;
           } else {
             e.alerted = false;
             e.state = 'patrol';
@@ -15080,7 +15135,13 @@ export class PaleciakiGameEngine {
             }
             sound.playSmack();
             if (p.weaponProjectile) {
-              this.spawnCompactImpact(e.x, e.y + 0.72, e.z, p.weaponId ? SURVIVAL_DAMAGE_WEAPONS[p.weaponId].color : 0x7dd3fc);
+              const impactColor = p.weaponId ? SURVIVAL_DAMAGE_WEAPONS[p.weaponId].color : 0x7dd3fc;
+              this.spawnCompactImpact(e.x, e.y + 0.72, e.z, impactColor);
+              // A restrained hit-stop cue makes each shot feel connected without
+              // shaking the camera on every pellet or overwhelming mobile play.
+              if (this.gameMode === 'survival' && !this.isHandheldViewport) {
+                this.triggerScreenShake(0.045, 0.035);
+              }
             } else {
               this.triggerBloomPulse(0.1);
               this.cameraShake = 0.25;
@@ -15172,6 +15233,9 @@ export class PaleciakiGameEngine {
     for (let i = this.enemyProjectiles.length - 1; i >= 0; i--) {
       const ep = this.enemyProjectiles[i];
       ep.life -= dt;
+      const previousX = ep.mesh.position.x;
+      const previousY = ep.mesh.position.y;
+      const previousZ = ep.mesh.position.z;
       if (ep.gravity) ep.vel.y -= ep.gravity * dt;
       ep.mesh.position.addScaledVector(ep.vel, dt);
       const horizontalSpeedSq = ep.vel.x * ep.vel.x + ep.vel.z * ep.vel.z;
@@ -15202,8 +15266,33 @@ export class PaleciakiGameEngine {
         ep.trailTimer = trailInterval;
       }
 
-      const dist = Math.hypot(ep.mesh.position.x - this.playerPos.x, ep.mesh.position.z - this.playerPos.z);
-      if (dist < 0.85 && Math.abs(ep.mesh.position.y - this.playerPos.y) < 1.0) {
+      // Swept vertical-cylinder collision chooses the actual first body
+      // contact, so a target behind the operator cannot consume a shot that
+      // should already have hit the player.
+      const projectileStart = { x: previousX, y: previousY, z: previousZ };
+      const projectileEnd = { x: ep.mesh.position.x, y: ep.mesh.position.y, z: ep.mesh.position.z };
+      const playerImpact = findFirstProjectileBodyImpact(
+        projectileStart,
+        projectileEnd,
+        { x: this.playerPos.x, y: this.playerPos.y + 0.55, z: this.playerPos.z },
+        0.85,
+        1.0,
+      );
+      const enemyImpact = findFirstProjectileEnemyImpact(projectileStart, projectileEnd, this.enemies);
+      if (enemyImpact && (!playerImpact || enemyImpact.t < playerImpact.t)) {
+        const impactColor = ep.trailColor ?? (ep.isDyscyplinarka ? 0xef4444 : 0x67e8f9);
+        ep.mesh.position.set(enemyImpact.x, enemyImpact.y, enemyImpact.z);
+        this.spawnCompactImpact(enemyImpact.x, enemyImpact.y, enemyImpact.z, impactColor);
+        this.spawnParticleRing(enemyImpact.actor.x, enemyImpact.actor.y + 0.58, enemyImpact.actor.z, impactColor);
+        this.levelRoot.remove(ep.mesh);
+        if (ep.kind === 'pomazaniec_lollipop' || ep.kind === 'sebix_brick' || ep.disposeOnRemove) this.disposeTemporaryObject(ep.mesh);
+        this.enemyProjectiles.splice(i, 1);
+        continue;
+      }
+      if (playerImpact) {
+        const impactX = playerImpact.x;
+        const impactY = playerImpact.y;
+        const impactZ = playerImpact.z;
         if (ep.isDyscyplinarka) {
           if (this.activePerks.shield) {
             this.activePerks.shield = false;
@@ -15230,6 +15319,13 @@ export class PaleciakiGameEngine {
         } else {
           this.takeDamage('Trafiło Cię wezwanie wyjaśniające od Nadzorcy Zero!');
         }
+        // A compact, directional impact confirms that the shot terminated on
+        // the player rather than passing through the model.
+        const impactColor = ep.trailColor ?? (ep.isDyscyplinarka ? 0xef4444 : 0x67e8f9);
+        this.spawnCompactImpact(impactX, impactY, impactZ, impactColor);
+        this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.55, this.playerPos.z, impactColor);
+        this.triggerBloomPulse(0.10);
+        this.triggerScreenShake(0.10, 0.08);
         this.levelRoot.remove(ep.mesh);
         if (ep.kind === 'pomazaniec_lollipop' || ep.kind === 'sebix_brick' || ep.disposeOnRemove) this.disposeTemporaryObject(ep.mesh);
         this.enemyProjectiles.splice(i, 1);

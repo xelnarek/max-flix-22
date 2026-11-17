@@ -415,11 +415,14 @@ test('Survival spawn candidates prefer clear lanes and fall back to the least cr
   assert.match(spacing, /nearestSquared > bestNearestSquared/);
 });
 
-test('campaign chase and Survival steering both apply enemy separation', async () => {
+test('campaign chase and Survival steering both apply stable enemy separation', async () => {
   const game = await read('../src/game.ts');
   assert.ok((game.match(/calculateEnemySeparationVector\(/g) || []).length >= 2);
-  assert.match(game, /moveX = dx \/ Math\.max\(0\.1, distToPlayer\) \+ separation\.x \* 1\.2/);
-  assert.match(game, /const separationX = separation\.x/);
+  assert.ok((game.match(/calculateStableEnemySteering\(/g) || []).length >= 2);
+  assert.match(game, /separationWeight: inContactLane \? 0\.52 : 0\.82/);
+  assert.match(game, /separationWeight: 0\.72/);
+  assert.match(game, /e\.aiSteerX = move\.x/);
+  assert.match(game, /enemy\.aiSteerX = steerX/);
 });
 
 
@@ -552,16 +555,20 @@ test('campaign bosses use warehouse obstacle-aware pursuit without moving during
 });
 
 
-test('Survival crowd steering routes toward its formation target around obstacles', async () => {
+test('Survival crowd steering blends stable pursuit, formation spacing and obstacle avoidance', async () => {
   const game = await read('../src/game.ts');
   const start = game.indexOf('private updateSurvivalEnemyTactics');
   const end = game.indexOf('private damageEnemy', start);
   assert.ok(start >= 0 && end > start, 'Survival tactics method should be present');
   const tactics = game.slice(start, end);
   assert.match(tactics, /calculateEnemyObstacleAvoidanceVector\([\s\S]*?\{ x: targetX, z: targetZ \}[\s\S]*?this\.survivalObstacles[\s\S]*?4\.6[\s\S]*?0\.8/);
-  assert.match(tactics, /steerX \+= separationX \* 3\.0 \+ obstacleAvoidance\.x \* 1\.25/);
+  assert.match(tactics, /calculateStableEnemySteering\(/);
+  assert.match(tactics, /previous: \{ x: enemy\.aiSteerX \?\? 0, z: enemy\.aiSteerZ \?\? 0 \}/);
+  assert.match(tactics, /separationWeight: 0\.72/);
+  assert.match(tactics, /enemy\.aiSteerX = steerX/);
+  assert.match(tactics, /getEnemyEngageRadius\(role\)/);
   assert.doesNotMatch(tactics, /for \(const obstacle of this\.survivalObstacles\)/);
-  assert.match(tactics, /if \(isTelegraphingRangedBoss\) \{[\s\S]*?steerX = 0;[\s\S]*?steerZ = 0/);
+  assert.match(tactics, /isTelegraphingRangedBoss \|\| \(atFormationSlot && separationLength < 0\.34\)\s*\?\s*\{ x: 0, z: 0 \}/);
 });
 
 
