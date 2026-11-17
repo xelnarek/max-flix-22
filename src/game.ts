@@ -636,6 +636,10 @@ export class PaleciakiGameEngine {
   private dofBlurMaterial: THREE.ShaderMaterial | null = null;
   private bulldozerHitCooldowns = new Map<string, number>();
   private globalEnemyShoutCooldown = 0;
+  /** Remaining duration of Mateusz's enemy-only faction brawl. */
+  private enemyFactionBrawlRemaining = 0;
+  /** Reused target-load snapshot prevents the whole brawl from dogpiling one enemy. */
+  private readonly enemyFactionBrawlTargetLoads = new Map<string, number>();
   // Re-evaluate the nearest enemies in short slices instead of allocating/sorting every rendered frame.
   private waveDirectorCooldown = 0;
   private activeChaserIds = new Set<string>();
@@ -1011,6 +1015,12 @@ export class PaleciakiGameEngine {
     boomerang?: boolean;
     returning?: boolean;
     homing?: boolean;
+    homingTarget?: EnemyItem;
+    homingRetargetTimer?: number;
+    homingRange?: number;
+    homingTurnRate?: number;
+    homingTrail?: boolean;
+    homingTrailColor?: number;
     weaponProjectile?: boolean;
     disposeOnRemove?: boolean;
     aoeRadius?: number;
@@ -1053,16 +1063,6 @@ export class PaleciakiGameEngine {
     cooldown: number;
     dustTimer: number;
   } | null = null;
-  private mateuszCats: {
-    group: THREE.Group;
-    tail: THREE.Group;
-    life: number;
-    maxLife: number;
-    attackCooldown: number;
-    orbitAngle: number;
-    pounceTimer: number;
-    pounceTarget: THREE.Vector3 | null;
-  }[] = [];
   private mafiCapybaras: {
     group: THREE.Group;
     life: number;
@@ -6672,11 +6672,6 @@ export class PaleciakiGameEngine {
       this.disposeTemporaryObject(this.marcinTank.group);
       this.marcinTank = null;
     }
-    for (const cat of this.mateuszCats) {
-      this.levelRoot.remove(cat.group);
-      this.disposeTemporaryObject(cat.group);
-    }
-    this.mateuszCats = [];
   }
 
   private registerCameraOccluder(mesh: THREE.Mesh, fadeOpacity = 0.18, fadeRadius = 0) {
@@ -6797,6 +6792,7 @@ export class PaleciakiGameEngine {
   }
 
   private clearLevel() {
+    this.enemyFactionBrawlRemaining = 0;
     this.restoreCameraOccluders();
     if (this.survivalSightlineMarker) {
       this.survivalSightlineMarker.removeFromParent();
@@ -9506,7 +9502,6 @@ export class PaleciakiGameEngine {
       this.updateRandomSpawners(simDt);
       this.updateEnemies(simDt);
       this.updateMarcinTank(simDt);
-      this.updateMateuszCats(simDt);
       this.updateMafiCapybaras(simDt);
       if (this.manualAimEnabled) {
         // PvP shots are spawned by the authoritative room after one explicit tap.
@@ -13134,12 +13129,162 @@ export class PaleciakiGameEngine {
     }
   }
 
+  private setEnemyFactionBrawlVisual(enemy: EnemyItem, active: boolean, dt: number): void {
+    if (!enemy.mesh) return;
+    const existingRing = enemy.mesh.userData.factionBrawlRing as THREE.Mesh | undefined;
+    const existingMarker = enemy.mesh.userData.factionBrawlMarker as THREE.Mesh | undefined;
+    if (!active) {
+      if (existingRing) {
+        enemy.mesh.remove(existingRing);
+        existingRing.geometry.dispose();
+        (existingRing.material as THREE.Material).dispose();
+        delete enemy.mesh.userData.factionBrawlRing;
+      }
+      if (existingMarker) {
+        enemy.mesh.remove(existingMarker);
+        existingMarker.geometry.dispose();
+        (existingMarker.material as THREE.Material).dispose();
+        delete enemy.mesh.userData.factionBrawlMarker;
+      }
+      return;
+    }
+
+    let ring = existingRing;
+    if (!ring) {
+      const ringMaterial = new THREE.MeshBasicMaterial({
+        color: 0xe879f9, transparent: true, opacity: 0.82, depthWrite: false,
+      });
+      ring = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.052, 7, 26), ringMaterial);
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = 0.055;
+      enemy.mesh.add(ring);
+      enemy.mesh.userData.factionBrawlRing = ring;
+    }
+    const pulse = 0.94 + Math.sin(performance.now() * 0.010 + enemy.walkCycle) * 0.09;
+    ring.rotation.z += dt * 1.9;
+    ring.scale.setScalar(pulse);
+    (ring.material as THREE.MeshBasicMaterial).opacity = 0.62 + pulse * 0.22;
+
+    let marker = existingMarker;
+    if (!marker) {
+      marker = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.15, 0),
+        new THREE.MeshBasicMaterial({ color: 0xf0abfc, transparent: true, opacity: 0.92, depthWrite: false }),
+      );
+      marker.position.set(0, 1.72, 0);
+      enemy.mesh.add(marker);
+      enemy.mesh.userData.factionBrawlMarker = marker;
+    }
+    marker.rotation.y += dt * 3.2;
+    marker.rotation.x = Math.sin(performance.now() * 0.006 + enemy.walkCycle) * 0.20;
+    marker.scale.setScalar(0.88 + Math.sin(performance.now() * 0.012 + enemy.walkCycle) * 0.14);
+  }
+
+  private updateEnemyFactionBrawl(enemy: EnemyItem, dt: number): void {
+    enemy.aiFactionBrawlRetargetTimer = Math.max(0, (enemy.aiFactionBrawlRetargetTimer ?? 0) - dt);
+    let target = enemy.aiFactionBrawlTarget ?? null;
+    if (!target || target.state === 'defeated' || enemy.aiFactionBrawlRetargetTimer <= 0) {
+      // Release this attacker's old slot before scoring new targets.
+      if (target) {
+        const previousLoad = this.enemyFactionBrawlTargetLoads.get(target.id) ?? 0;
+        if (previousLoad <= 1) this.enemyFactionBrawlTargetLoads.delete(target.id);
+        else this.enemyFactionBrawlTargetLoads.set(target.id, previousLoad - 1);
+      }
+
+      let bestScore = Number.POSITIVE_INFINITY;
+      target = null;
+      const nearby = this.enemySpatialIndex.query(enemy.x, enemy.z, 21.5);
+      for (const candidate of nearby) {
+        if (candidate === enemy || candidate.state === 'defeated' || !candidate.mesh) continue;
+        if (Math.abs(candidate.y - enemy.y) > 2.0) continue;
+        const distance = Math.hypot(candidate.x - enemy.x, candidate.z - enemy.z);
+        if (distance > 21.5) continue;
+
+        // A lightly weighted assignment penalty spreads attackers across the
+        // available opponents without making them abandon a much closer fight.
+        const assignedAttackers = this.enemyFactionBrawlTargetLoads.get(candidate.id) ?? 0;
+        const score = distance + assignedAttackers * 2.1;
+        if (
+          score < bestScore - 0.001 ||
+          (Math.abs(score - bestScore) <= 0.001 && (!target || candidate.id < target.id))
+        ) {
+          bestScore = score;
+          target = candidate;
+        }
+      }
+
+      enemy.aiFactionBrawlTarget = target ?? undefined;
+      if (target) {
+        this.enemyFactionBrawlTargetLoads.set(
+          target.id,
+          (this.enemyFactionBrawlTargetLoads.get(target.id) ?? 0) + 1,
+        );
+      }
+      enemy.aiFactionBrawlRetargetTimer = 0.24;
+    }
+
+    // A lone survivor waits out the effect instead of reverting to player combat.
+    if (!target) {
+      enemy.state = 'patrol';
+      enemy.lastKnownPlayerPos = null;
+      return;
+    }
+
+    const dx = target.x - enemy.x;
+    const dz = target.z - enemy.z;
+    const distance = Math.hypot(dx, dz);
+    const directionX = distance > 0.001 ? dx / distance : 0;
+    const directionZ = distance > 0.001 ? dz / distance : 1;
+    enemy.mesh.rotation.y = Math.atan2(directionX, directionZ);
+    enemy.lastKnownPlayerPos = null;
+    enemy.state = 'chase';
+
+    const contactRange = enemy.type === 'piorun_dron' ? 2.8 : 1.42;
+    if (distance > contactRange) {
+      let moveX = directionX;
+      let moveZ = directionZ;
+      if (this.gameMode === 'campaign') {
+        const avoidance = calculateEnemyObstacleAvoidanceVector(
+          enemy, { x: target.x, z: target.z }, this.campaignEnemyObstacles, 3.2, 0.72,
+        );
+        moveX += avoidance.x * 0.78;
+        moveZ += avoidance.z * 0.78;
+        const length = Math.hypot(moveX, moveZ) || 1;
+        moveX /= length;
+        moveZ /= length;
+      }
+      const speed = Math.min(9.5, enemy.speed * (enemy.surgeRunner ? 0.94 : 0.78));
+      enemy.x += moveX * speed * dt;
+      enemy.z += moveZ * speed * dt;
+      this.clampEnemyToArena(enemy);
+      enemy.mesh.position.set(enemy.x, enemy.y, enemy.z);
+      return;
+    }
+
+    enemy.attackCooldown = Math.max(0, enemy.attackCooldown - dt);
+    if (enemy.attackCooldown > 0) return;
+    enemy.attackPoseDuration = enemy.type === 'piorun_dron' ? 0.30 : 0.38;
+    enemy.attackPoseTimer = enemy.attackPoseDuration;
+    enemy.attackPoseSide = enemy.id.length % 2 === 0 ? 1 : -1;
+    const isHeavy = isMajorSurvivalBossType(enemy.type) || enemy.type === 'sebix_m';
+    const damage = isHeavy ? 1.10 : 0.68;
+    this.damageEnemy(target, damage, enemy.x, enemy.z, null);
+    target.hitReactTimer = Math.max(target.hitReactTimer ?? 0, 0.16);
+    if (target.hp <= 0) {
+      this.defeatEnemy(target, 220, false);
+      this.emitFloatingToast('WRÓG ELIMINUJE WROGA', target.x, target.y + 1.25, target.z, 'combo');
+    }
+    enemy.attackCooldown = isHeavy ? 0.78 : 0.92;
+    this.spawnExplosionParticles(target.x, target.y + 0.68, target.z, 0xd946ef, 7);
+    this.spawnCompactImpact(target.x, target.y + 0.66, target.z, 0xe879f9);
+  }
+
   private damageEnemy(
     enemy: EnemyItem,
     amount: number,
     sourceX = this.playerPos.x,
     sourceZ = this.playerPos.z,
-    damageSource: SurvivalDamageSource = 'ability',
+    damageSource: SurvivalDamageSource | null = 'ability',
   ): number {
     if (enemy.state === 'defeated' || !Number.isFinite(amount) || amount <= 0) return enemy.hp;
     if (enemy.shieldActive) {
@@ -13162,7 +13307,7 @@ export class PaleciakiGameEngine {
     enemy.hp = Math.max(0, enemy.hp - appliedDamage);
     const actualDamage = Math.max(0, previousHp - enemy.hp);
     const shouldSpawnImpactBurst = actualDamage > 0 && (enemy.hitReactTimer || 0) <= 0.015;
-    if (this.gameMode === 'survival' && actualDamage > 0) {
+    if (this.gameMode === 'survival' && actualDamage > 0 && damageSource !== null) {
       recordSurvivalDamage(this.survivalDamageStats, damageSource, actualDamage);
       if (previousHp > 0 && enemy.hp <= 0) {
         recordSurvivalKill(this.survivalDamageStats, damageSource);
@@ -13473,6 +13618,23 @@ export class PaleciakiGameEngine {
   }
 
   private updateEnemies(dt: number) {
+    this.enemyFactionBrawlRemaining = Math.max(0, this.enemyFactionBrawlRemaining - dt);
+    const factionBrawlActive = this.enemyFactionBrawlRemaining > 0;
+    this.enemyFactionBrawlTargetLoads.clear();
+    if (factionBrawlActive) {
+      // Seed the reusable load map from valid assignments. Retargets below update
+      // it immediately, so enemies processed later in this same frame see the
+      // new distribution rather than all choosing the same nearest opponent.
+      for (const attacker of this.enemies) {
+        if (attacker.state === 'defeated') continue;
+        const assignedTarget = attacker.aiFactionBrawlTarget;
+        if (!assignedTarget || assignedTarget.state === 'defeated') continue;
+        this.enemyFactionBrawlTargetLoads.set(
+          assignedTarget.id,
+          (this.enemyFactionBrawlTargetLoads.get(assignedTarget.id) ?? 0) + 1,
+        );
+      }
+    }
     const survivalAbilityRate = this.gameMode === 'survival'
       ? getSurvivalDifficultyProfile(this.survivalWave).enemyAbilityRateMultiplier
       : 1;
@@ -13636,6 +13798,7 @@ export class PaleciakiGameEngine {
         continue;
       }
       if (!e.mesh) continue;
+      this.setEnemyFactionBrawlVisual(e, factionBrawlActive, dt);
       this.applyHandheldActorShadowBudget(e.mesh);
       const facingAtFrameStart = e.mesh.rotation.y;
 
@@ -13993,6 +14156,11 @@ export class PaleciakiGameEngine {
           e.state = 'searching';
           e.searchTimer = 2.5;
         }
+        continue;
+      }
+
+      if (factionBrawlActive) {
+        this.updateEnemyFactionBrawl(e, dt);
         continue;
       }
 
@@ -15096,18 +15264,31 @@ export class PaleciakiGameEngine {
         p.vel.lerp(toPlayer, dt * 9.0);
       }
 
-      // Homing logic (Operator 04's DualSense RGB discs)
+      // Homing missiles honour an individual enemy lock, then reacquire through the spatial index.
       if (p.homing) {
-        let nearest: EnemyItem | null = null;
-        let minDist = 11.0;
-        // The enemy grid is rebuilt before projectile simulation; only nearby cells can contain a valid homing target.
-        const nearbyTargets = this.enemySpatialIndex.query(p.mesh.position.x, p.mesh.position.z, minDist);
-        for (const e of nearbyTargets) {
-          if (e.state === 'defeated') continue;
-          const d = Math.hypot(e.x - p.mesh.position.x, e.z - p.mesh.position.z);
-          if (d < minDist) {
-            minDist = d;
-            nearest = e;
+        const homingRange = p.homingRange ?? 11.0;
+        let nearest = p.homingTarget ?? null;
+        if (nearest && (nearest.state === 'defeated'
+          || Math.hypot(nearest.x - p.mesh.position.x, nearest.z - p.mesh.position.z) > homingRange * 1.35)) {
+          nearest = null;
+          p.homingTarget = undefined;
+        }
+        if (!nearest) {
+          p.homingRetargetTimer = Math.max(0, (p.homingRetargetTimer ?? 0) - dt);
+          if (p.homingRetargetTimer <= 0) {
+            let minDist = homingRange;
+            const nearbyTargets = this.enemySpatialIndex.query(p.mesh.position.x, p.mesh.position.z, homingRange);
+            for (const candidate of nearbyTargets) {
+              if (candidate.state === 'defeated') continue;
+              const distance = Math.hypot(candidate.x - p.mesh.position.x, candidate.z - p.mesh.position.z);
+              if (distance < minDist) {
+                minDist = distance;
+                nearest = candidate;
+              }
+            }
+            p.homingTarget = nearest ?? undefined;
+            // Empty arenas do not force five rockets to scan the spatial index every rendered frame.
+            p.homingRetargetTimer = nearest ? 0.12 : 0.20;
           }
         }
         if (nearest) {
@@ -15115,7 +15296,15 @@ export class PaleciakiGameEngine {
             .set(nearest.x - p.mesh.position.x, 0, nearest.z - p.mesh.position.z)
             .normalize()
             .multiplyScalar(p.vel.length());
-          p.vel.lerp(desired, dt * 8.5);
+          p.vel.lerp(desired, dt * (p.homingTurnRate ?? 8.5));
+        }
+      }
+
+      if (p.homingTrail) {
+        p.trailTimer = (p.trailTimer ?? 0) - dt;
+        if (p.trailTimer <= 0) {
+          this.spawnCompactImpact(p.mesh.position.x, p.mesh.position.y, p.mesh.position.z, p.homingTrailColor ?? 0x67e8f9);
+          p.trailTimer = this.adaptivePerformanceTier >= 2 ? 0.38 : this.adaptivePerformanceTier === 1 ? 0.25 : 0.15;
         }
       }
 
@@ -15143,6 +15332,13 @@ export class PaleciakiGameEngine {
         const horizontalSpeedSq = p.vel.x * p.vel.x + p.vel.z * p.vel.z;
         if (horizontalSpeedSq > 0.0001) p.mesh.rotation.y = Math.atan2(p.vel.x, p.vel.z);
       }
+      if (p.homing) {
+        const exhaust = p.mesh.userData.exhaust as THREE.Mesh | undefined;
+        const exhaustCore = p.mesh.userData.exhaustCore as THREE.Mesh | undefined;
+        if (exhaust) exhaust.scale.setScalar(0.88 + Math.sin(performance.now() * 0.045 + p.mesh.position.x) * 0.20);
+        if (exhaustCore) exhaustCore.scale.setScalar(0.78 + Math.sin(performance.now() * 0.062 + p.mesh.position.z) * 0.28);
+      }
+
       if (p.weaponId) {
         p.trailTimer = (p.trailTimer ?? 0) - dt;
         const trailInterval = this.adaptivePerformanceTier >= 2 ? 0.34 : this.adaptivePerformanceTier === 1 ? 0.24 : 0.15;
@@ -15234,6 +15430,11 @@ export class PaleciakiGameEngine {
               if (e.shieldRing) e.shieldRing.visible = false;
             }
             this.damageEnemy(e, baseDmg, p.mesh.position.x, p.mesh.position.z, projectileDamageSource);
+            if (p.homingTrail) {
+              const impactColor = p.homingTrailColor ?? 0x34d399;
+              this.spawnExplosionParticles(e.x, e.y + 0.42, e.z, impactColor, 9);
+              this.spawnParticleRing(e.x, e.y + 0.12, e.z, impactColor);
+            }
             if (this.gameMode === 'survival' && p.criticalBurstState && !p.criticalBurstState.consumed) {
               p.criticalBurstState.consumed = true;
               this.applySurvivalCriticalShrapnel(e, baseDmg, projectileDamageSource);
@@ -15266,7 +15467,7 @@ export class PaleciakiGameEngine {
             // AoE shockwave on hit (Operator 01's WZ Binder Stamp)
             if (p.aoeRadius && p.aoeRadius > 0) {
               if (p.weaponProjectile) this.spawnCompactImpact(e.x, e.y + 0.36, e.z, p.weaponId ? SURVIVAL_DAMAGE_WEAPONS[p.weaponId].color : 0xf59e0b);
-              else this.spawnParticleRing(e.x, e.y + 0.4, e.z, 0xf59e0b);
+              else this.spawnParticleRing(e.x, e.y + 0.4, e.z, p.homingTrailColor ?? 0xf59e0b);
               for (const other of this.enemies) {
                 if (other.id !== e.id && other.state !== 'defeated') {
                   if (Math.hypot(other.x - e.x, other.z - e.z) <= p.aoeRadius) {
@@ -15481,152 +15682,289 @@ export class PaleciakiGameEngine {
     }
   }
 
-  private spawnGrzesiekShockwave() {
-    // 1. Ground Shockwaves
-    const geo = new THREE.TorusGeometry(0.9, 0.12, 14, 48);
-    const mat = new THREE.MeshBasicMaterial({
-      color: 0x4ade80,
-      transparent: true,
-      opacity: 0.9,
-      side: THREE.DoubleSide,
-    });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.rotation.x = Math.PI / 2;
-    mesh.position.set(this.playerPos.x, this.playerPos.y + 0.12, this.playerPos.z);
-    mesh.scale.setScalar(0.2);
-    this.levelRoot.add(mesh);
-    this.specialEffects.push({ mesh, life: 0.7, maxLife: 0.7, grow: 7.5, spin: 9.0, disposeOnRemove: true });
+  private spawnGrzesiekShockwave(): void {
+    const origin = new THREE.Vector3(this.playerPos.x, this.playerPos.y, this.playerPos.z);
+    const forward = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
 
-    const ring2 = new THREE.Mesh(
-      new THREE.TorusGeometry(1.2, 0.08, 12, 32),
-      new THREE.MeshBasicMaterial({ color: 0x86efac, transparent: true, opacity: 0.65, side: THREE.DoubleSide })
-    );
-    ring2.rotation.x = Math.PI / 2;
-    ring2.position.set(this.playerPos.x, this.playerPos.y + 0.12, this.playerPos.z);
-    ring2.scale.setScalar(0.18);
-    this.levelRoot.add(ring2);
-    this.specialEffects.push({ mesh: ring2, life: 0.6, maxLife: 0.6, grow: 8.5, spin: -7.0, disposeOnRemove: true });
+    const createShockRing = (radius: number, tube: number, color: number, duration: number, startScale: number, endScale: number) => {
+      const material = new THREE.MeshBasicMaterial({
+        color, transparent: true, opacity: 0.94, side: THREE.DoubleSide, depthWrite: false,
+      });
+      const mesh = new THREE.Mesh(new THREE.TorusGeometry(radius, tube, 10, 44), material);
+      mesh.rotation.x = Math.PI / 2;
+      mesh.position.set(origin.x, origin.y + 0.10, origin.z);
+      mesh.scale.setScalar(startScale);
+      this.levelRoot.add(mesh);
+      this.specialEffects.push({
+        mesh, life: duration, maxLife: duration, grow: 0, spin: 0, disposeOnRemove: true,
+        update: (_dt, progress) => {
+          const eased = 1 - Math.pow(1 - progress, 2.4);
+          mesh.scale.setScalar(THREE.MathUtils.lerp(startScale, endScale, eased));
+          material.opacity = 0.94 * Math.pow(1 - progress, 1.35);
+          mesh.position.y = origin.y + 0.10 + progress * 0.06;
+        },
+      });
+    };
 
-    // 2. GIANT ROTATING & SQUEEZING MECHANICAL CRUSHER ARM (ŚCIŚK ZAGŁADY)
+    createShockRing(0.92, 0.105, 0x4ade80, 0.72, 0.12, 7.8);
+    createShockRing(1.18, 0.055, 0xc7f9df, 0.88, 0.08, 9.0);
+
     const armGroup = new THREE.Group();
-    armGroup.position.set(this.playerPos.x, this.playerPos.y + 1.1, this.playerPos.z);
+    armGroup.name = 'grzesiek-44cm-muscular-fist';
+    armGroup.position.copy(origin).addScaledVector(forward, 0.10);
+    armGroup.position.y += 0.46;
+    armGroup.rotation.y = this.playerRot;
 
-    const steelMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.2 });
-    const greenMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, metalness: 0.5, roughness: 0.3, emissive: 0x15803d, emissiveIntensity: 0.5 });
-    const chromeMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.1 });
-    const teethMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.7, roughness: 0.2, emissive: 0xeab308, emissiveIntensity: 0.4 });
+    const skin = new THREE.MeshStandardMaterial({ color: 0xd69a73, roughness: 0.76 });
+    const muscle = new THREE.MeshStandardMaterial({ color: 0xe8ad84, roughness: 0.68 });
+    const highlight = new THREE.MeshStandardMaterial({ color: 0xf3c3a0, roughness: 0.62 });
+    const shadowSkin = new THREE.MeshStandardMaterial({ color: 0x99563f, roughness: 0.84 });
+    const veinMat = new THREE.MeshStandardMaterial({ color: 0xb87556, roughness: 0.82 });
+    const band = new THREE.MeshStandardMaterial({
+      color: 0x14532d, roughness: 0.30, metalness: 0.56, emissive: 0x16a34a, emissiveIntensity: 0.52,
+    });
+    const steel = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.86, roughness: 0.20 });
+    const darkSteel = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.78, roughness: 0.28 });
 
-    // Base Turret
-    const baseMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 0.3, 16), steelMat);
-    armGroup.add(baseMesh);
+    const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.47, 16, 12), skin);
+    shoulder.scale.set(1.10, 0.98, 1.02);
+    shoulder.position.set(-0.34, 0.68, -0.05);
+    armGroup.add(shoulder);
 
-    // Boom arm
-    const boomGroup = new THREE.Group();
-    boomGroup.position.set(0, 0.15, 0);
+    const upperArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.31, 0.82, 6, 12), muscle);
+    upperArm.rotation.x = Math.PI / 2;
+    upperArm.position.set(-0.12, 0.56, 0.42);
+    armGroup.add(upperArm);
 
-    const boomMesh = new THREE.Mesh(new THREE.BoxGeometry(0.22, 1.2, 0.22), greenMat);
-    boomMesh.position.set(0, 0.6, 0.2);
-    boomMesh.rotation.x = 0.4;
-    boomGroup.add(boomMesh);
+    const bicep = new THREE.Mesh(new THREE.SphereGeometry(0.39, 16, 12), muscle);
+    bicep.scale.set(1.08, 0.94, 1.32);
+    bicep.position.set(-0.12, 0.77, 0.36);
+    armGroup.add(bicep);
+    const bicepHighlight = new THREE.Mesh(new THREE.SphereGeometry(0.19, 12, 9), highlight);
+    bicepHighlight.scale.set(0.72, 0.32, 1.35);
+    bicepHighlight.position.set(-0.17, 0.91, 0.38);
+    armGroup.add(bicepHighlight);
+    const tricep = new THREE.Mesh(new THREE.SphereGeometry(0.25, 12, 9), shadowSkin);
+    tricep.scale.set(0.92, 0.72, 1.22);
+    tricep.position.set(-0.13, 0.43, 0.48);
+    armGroup.add(tricep);
 
-    // Hydraulic cylinder
-    const cylMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.8, 12), chromeMat);
-    cylMesh.position.set(0, 0.5, 0.05);
-    cylMesh.rotation.x = 0.4;
-    boomGroup.add(cylMesh);
+    const elbowPivot = new THREE.Group();
+    elbowPivot.name = '44cm-elbow-joint';
+    elbowPivot.position.set(0.02, 0.24, 0.84);
+    armGroup.add(elbowPivot);
 
-    // Forearm
-    const forearmGroup = new THREE.Group();
-    forearmGroup.position.set(0, 1.1, 0.5);
+    const forearm = new THREE.Mesh(new THREE.CapsuleGeometry(0.30, 0.76, 6, 12), skin);
+    forearm.rotation.x = Math.PI / 2;
+    forearm.position.set(0, 0.015, 0.34);
+    elbowPivot.add(forearm);
+    const forearmMuscle = new THREE.Mesh(new THREE.SphereGeometry(0.31, 14, 10), muscle);
+    forearmMuscle.scale.set(0.96, 0.88, 1.48);
+    forearmMuscle.position.set(0, 0.14, 0.34);
+    elbowPivot.add(forearmMuscle);
+    const forearmHighlight = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 8), highlight);
+    forearmHighlight.scale.set(0.65, 0.28, 1.25);
+    forearmHighlight.position.set(-0.13, 0.26, 0.34);
+    elbowPivot.add(forearmHighlight);
 
-    const forearmMesh = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.9, 0.2), steelMat);
-    forearmMesh.position.set(0, 0.4, 0.2);
-    forearmMesh.rotation.x = -0.5;
-    forearmGroup.add(forearmMesh);
+    const addStriation = (start: THREE.Vector3, end: THREE.Vector3, radius: number) => {
+      const direction = new THREE.Vector3().subVectors(end, start);
+      const mesh = new THREE.Mesh(new THREE.CapsuleGeometry(radius, direction.length(), 4, 7), veinMat);
+      mesh.position.copy(start).add(end).multiplyScalar(0.5);
+      mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+      armGroup.add(mesh);
+    };
+    addStriation(new THREE.Vector3(-0.36, 0.70, 0.32), new THREE.Vector3(-0.28, 0.88, 0.58), 0.026);
+    addStriation(new THREE.Vector3(0.08, 0.65, 0.31), new THREE.Vector3(0.12, 0.84, 0.54), 0.021);
 
-    // Squeezing Pincer Jaws
-    const clawBaseGroup = new THREE.Group();
-    clawBaseGroup.position.set(0, 0.8, 0.4);
+    const wristGuard = new THREE.Mesh(new THREE.TorusGeometry(0.275, 0.066, 9, 24), band);
+    wristGuard.position.set(0, -0.005, 0.72);
+    wristGuard.rotation.x = 0;
+    elbowPivot.add(wristGuard);
+    const steelRim = new THREE.Mesh(new THREE.TorusGeometry(0.277, 0.027, 7, 24), steel);
+    steelRim.position.set(0, -0.005, 0.80);
+    steelRim.rotation.x = 0;
+    elbowPivot.add(steelRim);
 
-    const clawHub = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 12), greenMat);
-    clawBaseGroup.add(clawHub);
+    const fist = new THREE.Group();
+    fist.name = '44cm-clenched-fist';
+    fist.position.set(0, -0.045, 0.98);
+    elbowPivot.add(fist);
+    const palm = new THREE.Mesh(new THREE.SphereGeometry(0.34, 16, 12), skin);
+    palm.scale.set(1.17, 0.93, 1.10);
+    fist.add(palm);
+    for (let index = 0; index < 4; index++) {
+      const x = -0.225 + index * 0.15;
+      const finger = new THREE.Mesh(new THREE.CapsuleGeometry(0.079, 0.22, 4, 8), muscle);
+      finger.rotation.x = Math.PI / 2;
+      finger.rotation.z = (index - 1.5) * -0.08;
+      finger.position.set(x, 0.035, 0.13);
+      fist.add(finger);
+      const knuckle = new THREE.Mesh(new THREE.SphereGeometry(0.095, 10, 8), highlight);
+      knuckle.position.set(x, 0.155, 0.205);
+      fist.add(knuckle);
+      const crease = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.018, 0.012), shadowSkin);
+      crease.position.set(x, 0.16, 0.285);
+      fist.add(crease);
+    }
+    const thumb = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.27, 5, 8), skin);
+    thumb.position.set(0.31, -0.015, 0.06);
+    thumb.rotation.set(0.30, 0.05, -0.92);
+    fist.add(thumb);
+    const knucklePlate = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.105, 0.075), steel);
+    knucklePlate.position.set(0, 0.18, 0.30);
+    fist.add(knucklePlate);
+    const plateRivets = new THREE.MeshStandardMaterial({ color: 0x22c55e, emissive: 0x16a34a, emissiveIntensity: 0.75, metalness: 0.58 });
+    for (let index = 0; index < 4; index++) {
+      const rivet = new THREE.Mesh(new THREE.SphereGeometry(0.027, 7, 6), plateRivets);
+      rivet.position.set(-0.195 + index * 0.13, 0.19, 0.342);
+      fist.add(rivet);
+    }
+    const fistBrace = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.10, 0.29), darkSteel);
+    fistBrace.position.set(0, -0.18, 0.08);
+    fist.add(fistBrace);
 
-    // Left Jaw
-    const leftJaw = new THREE.Group();
-    const leftJawBar = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.7, 0.15), steelMat);
-    leftJawBar.position.set(-0.25, 0.35, 0);
-    leftJawBar.rotation.z = -0.2;
-    leftJaw.add(leftJawBar);
-
-    const leftTeeth = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.3, 0.12), teethMat);
-    leftTeeth.position.set(-0.15, 0.6, 0.08);
-    leftJaw.add(leftTeeth);
-    clawBaseGroup.add(leftJaw);
-
-    // Right Jaw
-    const rightJaw = new THREE.Group();
-    const rightJawBar = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.7, 0.15), steelMat);
-    rightJawBar.position.set(0.25, 0.35, 0);
-    rightJawBar.rotation.z = 0.2;
-    rightJaw.add(rightJawBar);
-
-    const rightTeeth = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.3, 0.12), teethMat);
-    rightTeeth.position.set(0.15, 0.6, 0.08);
-    rightJaw.add(rightTeeth);
-    clawBaseGroup.add(rightJaw);
-
-    forearmGroup.add(clawBaseGroup);
-    boomGroup.add(forearmGroup);
-    armGroup.add(boomGroup);
-
-    armGroup.scale.setScalar(1.6);
+    armGroup.scale.setScalar(1.22);
     this.levelRoot.add(armGroup);
-
     let sparkTimer = 0;
-
+    let rocketsLaunched = false;
+    let impactBurstDone = false;
     this.specialEffects.push({
       mesh: armGroup,
-      life: 0.9,
-      maxLife: 0.9,
+      life: 0.98,
+      maxLife: 0.98,
       disposeOnRemove: true,
       grow: 0,
       spin: 0,
       update: (dt: number, progress: number) => {
-        // High-speed rotation around Y-axis
-        armGroup.rotation.y += dt * 18.0;
+        const smooth = (value: number) => {
+          const t = THREE.MathUtils.clamp(value, 0, 1);
+          return t * t * (3 - 2 * t);
+        };
+        const anticipation = 1 - smooth(progress / 0.34);
+        const strike = smooth((progress - 0.27) / 0.22);
+        const followThrough = smooth((progress - 0.47) / 0.18);
+        const recovery = smooth((progress - 0.76) / 0.24);
 
-        // Dynamic heavy slam arc
-        armGroup.rotation.x = Math.sin(progress * Math.PI) * 0.5;
+        armGroup.position.set(
+          this.playerPos.x + Math.sin(this.playerRot) * (0.10 + strike * 0.42),
+          this.playerPos.y + 0.46 + anticipation * 0.10 + Math.sin(progress * Math.PI) * 0.12,
+          this.playerPos.z + Math.cos(this.playerRot) * (0.10 + strike * 0.42),
+        );
+        armGroup.rotation.y = this.playerRot;
+        armGroup.rotation.x = -0.18 - anticipation * 0.12 + strike * 0.26 - followThrough * 0.09;
+        elbowPivot.rotation.x = THREE.MathUtils.lerp(-0.92, 0.18, strike) + Math.sin(progress * Math.PI * 2) * 0.035;
+        fist.rotation.x = THREE.MathUtils.lerp(0.20, -0.32, strike) + followThrough * 0.12;
+        bicep.scale.y = 0.94 + anticipation * 0.10 + strike * 0.08;
+        armGroup.scale.setScalar(1.22 + Math.sin(progress * Math.PI) * 0.08 - recovery * 0.20);
 
-        // SQUEEZING / PINCHING CLAW ACTION (Obracające się i ściskające ramię):
-        const closeAmount = Math.max(0, Math.sin(progress * Math.PI)); 
-        leftJaw.rotation.z = closeAmount * 0.85;
-        rightJaw.rotation.z = -closeAmount * 0.85;
-
-        // Glowing teeth intensity
-        teethMat.emissiveIntensity = 0.4 + closeAmount * 1.8;
-
-        // Energy sparks burst during peak crush
-        if (progress > 0.2 && progress < 0.8) {
+        if (!rocketsLaunched && progress >= 0.39) {
+          rocketsLaunched = true;
+          this.spawnGrzesiekHomingRockets();
+          if (!impactBurstDone) {
+            impactBurstDone = true;
+            const hitX = armGroup.position.x + Math.sin(this.playerRot) * 1.95;
+            const hitZ = armGroup.position.z + Math.cos(this.playerRot) * 1.95;
+            this.spawnExplosionParticles(hitX, armGroup.position.y + 0.42, hitZ, 0x86efac, 16);
+            this.spawnParticleRing(hitX, 0.16, hitZ, 0x4ade80);
+            this.triggerScreenShake(0.48, 0.30);
+            this.triggerBloomPulse(0.52);
+          }
+        }
+        if (progress > 0.23 && progress < 0.72) {
           sparkTimer += dt;
-          if (sparkTimer > 0.04) {
+          if (sparkTimer >= 0.075) {
             sparkTimer = 0;
-            this.spawnParticleRing(
-              armGroup.position.x + (Math.random() - 0.5) * 0.8,
-              armGroup.position.y + 1.2,
-              armGroup.position.z + (Math.random() - 0.5) * 0.8,
-              0x4ade80
+            const side = (Math.random() - 0.5) * 0.78;
+            this.spawnCompactImpact(
+              armGroup.position.x + Math.sin(this.playerRot) * (1.0 + Math.random() * 0.45) + Math.cos(this.playerRot) * side,
+              armGroup.position.y + 0.24 + Math.random() * 0.35,
+              armGroup.position.z + Math.cos(this.playerRot) * (1.0 + Math.random() * 0.45) - Math.sin(this.playerRot) * side,
+              0x4ade80,
             );
           }
         }
-
-        // Smooth scale fade out near end
-        if (progress > 0.7) {
-          const fade = (1 - progress) / 0.3;
-          armGroup.scale.setScalar(1.6 * fade);
-        }
       },
     });
+  }
+
+  private spawnGrzesiekHomingRockets(): void {
+    const targets = this.enemies
+      .filter((enemy) => enemy.state !== 'defeated' && !!enemy.mesh)
+      .sort((a, b) =>
+        Math.hypot(a.x - this.playerPos.x, a.z - this.playerPos.z)
+        - Math.hypot(b.x - this.playerPos.x, b.z - this.playerPos.z));
+    const forward = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
+    const right = new THREE.Vector3(Math.cos(this.playerRot), 0, -Math.sin(this.playerRot));
+
+    for (let index = 0; index < 5; index++) {
+      const rocket = new THREE.Group();
+      rocket.name = 'grzesiek-homing-rocket-' + (index + 1);
+      const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.82, roughness: 0.22 });
+      const accentMaterial = new THREE.MeshStandardMaterial({
+        color: 0x22c55e, metalness: 0.42, roughness: 0.25, emissive: 0x16a34a, emissiveIntensity: 1.25,
+      });
+      const flameMaterial = new THREE.MeshBasicMaterial({ color: 0x67e8f9 });
+      const hotCoreMaterial = new THREE.MeshBasicMaterial({ color: 0xd1fae5 });
+      const rocketMetalMaterial = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.88, roughness: 0.24 });
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.12, 0.72, 10), bodyMaterial);
+      body.rotation.x = Math.PI / 2;
+      rocket.add(body);
+      const nose = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.34, 10), accentMaterial);
+      nose.rotation.x = Math.PI / 2;
+      nose.position.z = 0.50;
+      rocket.add(nose);
+      const rearNozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.15, 0.16, 10), rocketMetalMaterial);
+      rearNozzle.rotation.x = Math.PI / 2;
+      rearNozzle.position.z = -0.40;
+      rocket.add(rearNozzle);
+      const exhaust = new THREE.Mesh(new THREE.SphereGeometry(0.092, 9, 7), flameMaterial);
+      exhaust.position.z = -0.50;
+      rocket.add(exhaust);
+      const exhaustCore = new THREE.Mesh(new THREE.SphereGeometry(0.052, 8, 6), hotCoreMaterial);
+      exhaustCore.position.z = -0.54;
+      rocket.add(exhaustCore);
+      const band = new THREE.Mesh(new THREE.TorusGeometry(0.112, 0.018, 6, 16), accentMaterial);
+      band.position.z = 0.10;
+      rocket.add(band);
+      for (let fin = 0; fin < 4; fin++) {
+        const finMesh = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.22, 0.28), accentMaterial);
+        const angle = fin * Math.PI / 2;
+        finMesh.position.set(Math.sin(angle) * 0.12, Math.cos(angle) * 0.12, -0.30);
+        finMesh.rotation.z = angle;
+        rocket.add(finMesh);
+      }
+      const lateral = (index - 2) * 0.24;
+      rocket.position.copy(this.playerPos)
+        .add(new THREE.Vector3(0, 0.90 + (index % 2) * 0.10, 0))
+        .addScaledVector(forward, 0.82)
+        .addScaledVector(right, lateral);
+      rocket.rotation.y = this.playerRot;
+      rocket.userData.exhaust = exhaust;
+      rocket.userData.exhaustCore = exhaustCore;
+      this.levelRoot.add(rocket);
+      const target = targets.length > 0 ? targets[index % targets.length] : null;
+      this.projectiles.push({
+        mesh: rocket,
+        vel: forward.clone().multiplyScalar(13.4).addScaledVector(right, (index - 2) * 0.48),
+        life: 3.8,
+        maxLife: 3.8,
+        damage: 2,
+        pierce: 0,
+        aoeRadius: 1.55,
+        stunDuration: 0.32,
+        homing: true,
+        homingTarget: target ?? undefined,
+        homingRetargetTimer: 0,
+        homingRange: 28,
+        homingTurnRate: 6.8,
+        homingTrail: true,
+        homingTrailColor: 0x34d399,
+        disposeOnRemove: true,
+        hitIds: new Set<string>(),
+      });
+    }
+    this.emitFloatingToast('44 CM ZAGŁADY • 5 RAKIET NAMIERZAJĄCYCH', this.playerPos.x, this.playerPos.y + 1.55, this.playerPos.z, 'combo');
   }
 
   private spawnCompactImpact(x: number, y: number, z: number, color: number) {
@@ -16179,192 +16517,205 @@ export class PaleciakiGameEngine {
     this.spawnParticleRing(start.x, start.y, start.z, 0xfbbf24);
   }
 
-  private createMateuszCatModel(index: number): { group: THREE.Group; tail: THREE.Group } {
+  private spawnMateuszContractRip(): void {
     const group = new THREE.Group();
-    group.name = 'mateusz_cat_companion_' + index;
-    const furPalette = [0xd97706, 0x1f2937, 0xe2e8f0];
-    const fur = new THREE.MeshStandardMaterial({ color: furPalette[index % furPalette.length], roughness: 0.9 });
-    const furLight = new THREE.MeshStandardMaterial({ color: index === 2 ? 0xf8fafc : 0xfbbf24, roughness: 0.86 });
-    const pink = new THREE.MeshStandardMaterial({ color: 0xf9a8d4, roughness: 0.65 });
-    const dark = new THREE.MeshBasicMaterial({ color: 0x0f172a });
-    const cyan = new THREE.MeshStandardMaterial({ color: 0x67e8f9, emissive: 0x0891b2, emissiveIntensity: 0.7 });
-    const amber = new THREE.MeshStandardMaterial({ color: 0xfbbf24, emissive: 0xd97706, emissiveIntensity: 0.35 });
-    const body = new THREE.Mesh(new THREE.SphereGeometry(0.31, 12, 9), fur);
-    body.scale.set(1.0, 0.80, 1.35);
-    body.position.y = 0.38;
-    group.add(body);
-    const chest = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 8), furLight);
-    chest.scale.set(0.82, 1.05, 0.62);
-    chest.position.set(0, 0.36, 0.32);
-    group.add(chest);
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.25, 12, 10), fur);
-    head.position.set(0, 0.69, 0.43);
-    group.add(head);
-    for (const side of [-1, 1]) {
-      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.095, 0.25, 7), fur);
-      ear.position.set(side * 0.16, 0.91, 0.40);
-      ear.rotation.z = side * -0.22;
-      group.add(ear);
-      const innerEar = new THREE.Mesh(new THREE.ConeGeometry(0.047, 0.14, 6), pink);
-      innerEar.position.set(side * 0.16, 0.91, 0.438);
-      innerEar.rotation.z = side * -0.22;
-      group.add(innerEar);
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), dark);
-      eye.position.set(side * 0.09, 0.72, 0.655);
-      group.add(eye);
-      for (let whisker = 0; whisker < 2; whisker++) {
-        const line = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.22, 5), furLight);
-        line.position.set(side * (0.17 + whisker * 0.015), 0.60 - whisker * 0.045, 0.64);
-        line.rotation.z = side * (Math.PI / 2 + 0.14 * (whisker ? -1 : 1));
-        line.rotation.x = Math.PI / 2;
-        group.add(line);
+    group.name = 'mateusz-nine-month-contract-rip';
+    const makePageTexture = (side: 'left' | 'right'): THREE.CanvasTexture => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 320;
+      canvas.height = 448;
+      const context = canvas.getContext('2d');
+      if (context) {
+        const gradient = context.createLinearGradient(0, 0, 320, 448);
+        gradient.addColorStop(0, '#fff9e9');
+        gradient.addColorStop(1, '#eadfca');
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, 320, 448);
+        context.strokeStyle = '#475569';
+        context.lineWidth = 8;
+        context.strokeRect(12, 12, 296, 424);
+        context.fillStyle = '#7f1d1d';
+        context.fillRect(18, 18, 284, 10);
+        context.fillStyle = '#172033';
+        context.textAlign = 'center';
+        context.font = 'bold 27px sans-serif';
+        context.fillText(side === 'left' ? 'UMOWA O PRACĘ' : 'ROZWIĄZANIE', 160, 76);
+        context.font = 'bold 24px sans-serif';
+        context.fillText('NA 9 MIESIĘCY', 160, 116);
+        context.strokeStyle = '#94a3b8';
+        context.lineWidth = 2;
+        for (let line = 0; line < 5; line++) {
+          context.beginPath();
+          context.moveTo(42, 160 + line * 34);
+          context.lineTo(278, 160 + line * 34);
+          context.stroke();
+        }
+        context.fillStyle = '#334155';
+        context.font = '16px sans-serif';
+        context.fillText('§ 9  •  OKRES UMOWY', 160, 151);
+        context.fillText(side === 'left' ? 'PODPIS PRACOWNIKA' : 'PODPIS UNIEWAŻNIONY', 160, 344);
+        context.beginPath();
+        context.moveTo(58, 366);
+        context.lineTo(262, 366);
+        context.stroke();
+        context.strokeStyle = '#b91c1c';
+        context.lineWidth = 7;
+        context.beginPath();
+        context.ellipse(160, 260, 82, 42, -0.10, 0, Math.PI * 2);
+        context.stroke();
+        context.fillStyle = '#b91c1c';
+        context.font = 'bold 29px sans-serif';
+        context.save();
+        context.translate(160, 268);
+        context.rotate(-0.10);
+        context.fillText(side === 'left' ? 'NIEWAŻNE' : 'ROZDARTA', 0, 0);
+        context.restore();
+        context.fillStyle = '#64748b';
+        context.font = '12px sans-serif';
+        context.fillText('ARCHIWUM B4  /  EGZEMPLARZ 09', 160, 410);
       }
-    }
-    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), pink);
-    nose.position.set(0, 0.63, 0.68);
-    group.add(nose);
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.userData.disposeOnObjectCleanup = true;
+      return texture;
+    };
 
-    for (const side of [-1, 1]) {
-      for (const z of [-0.02, 0.54]) {
-        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.075, 0.27, 8), fur);
-        leg.position.set(side * 0.19, 0.17, z);
-        group.add(leg);
-      }
-    }
-    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.032, 6, 14), cyan);
-    collar.position.set(0, 0.55, 0.35);
-    collar.rotation.x = Math.PI / 2;
-    group.add(collar);
-    const bell = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), amber);
-    bell.position.set(0, 0.50, 0.50);
-    group.add(bell);
-
-    const tail = new THREE.Group();
-    tail.position.set(0, 0.43, -0.35);
-    const tailCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(0, 0.10, -0.17),
-      new THREE.Vector3(0, 0.31, -0.27),
-      new THREE.Vector3(0, 0.44, -0.14),
-    ]);
-    const tailMesh = new THREE.Mesh(new THREE.TubeGeometry(tailCurve, 10, 0.045, 6, false), fur);
-    tail.add(tailMesh);
-    group.add(tail);
-
-    group.traverse((object) => {
-      const mesh = object as THREE.Mesh;
-      if (mesh.isMesh) {
-        mesh.castShadow = true;
-        mesh.receiveShadow = false;
-      }
+    const leftPivot = new THREE.Group();
+    const rightPivot = new THREE.Group();
+    leftPivot.position.x = -0.02;
+    rightPivot.position.x = 0.02;
+    const leftPageMaterial = new THREE.MeshBasicMaterial({
+      map: makePageTexture('left'), side: THREE.DoubleSide, transparent: true, opacity: 1, depthWrite: false,
     });
-    return { group, tail };
-  }
+    const rightPageMaterial = new THREE.MeshBasicMaterial({
+      map: makePageTexture('right'), side: THREE.DoubleSide, transparent: true, opacity: 1, depthWrite: false,
+    });
+    const leftPage = new THREE.Mesh(new THREE.PlaneGeometry(0.50, 1.02), leftPageMaterial);
+    const rightPage = new THREE.Mesh(new THREE.PlaneGeometry(0.50, 1.02), rightPageMaterial);
+    leftPage.position.x = -0.25;
+    rightPage.position.x = 0.25;
+    leftPivot.add(leftPage);
+    rightPivot.add(rightPage);
+    group.add(leftPivot, rightPivot);
 
-  private spawnMateuszCats() {
-    for (const cat of this.mateuszCats) {
-      this.levelRoot.remove(cat.group);
-      this.disposeTemporaryObject(cat.group);
-    }
-    this.mateuszCats = [];
-    const duration = this.gameMode === 'survival' ? 6.5 : 9.5;
-    for (let index = 0; index < 3; index++) {
-      const built = this.createMateuszCatModel(index);
-      const angle = this.playerRot + (index / 3) * Math.PI * 2;
-      built.group.position.set(
-        this.playerPos.x + Math.sin(angle) * 1.65,
-        0.08,
-        this.playerPos.z + Math.cos(angle) * 1.65
-      );
-      built.group.rotation.y = angle + Math.PI;
-      this.levelRoot.add(built.group);
-      this.mateuszCats.push({
-        group: built.group,
-        tail: built.tail,
-        life: duration,
-        maxLife: duration,
-        attackCooldown: 0.35 + index * 0.28,
-        orbitAngle: (index / 3) * Math.PI * 2,
-        pounceTimer: 0,
-        pounceTarget: null,
+    const tear = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0, -0.51, 0.018), new THREE.Vector3(-0.06, -0.31, 0.018),
+        new THREE.Vector3(0.055, -0.10, 0.018), new THREE.Vector3(-0.055, 0.10, 0.018),
+        new THREE.Vector3(0.06, 0.31, 0.018), new THREE.Vector3(-0.025, 0.51, 0.018),
+      ]),
+      new THREE.LineBasicMaterial({ color: 0xb91c1c, transparent: true, opacity: 1, linewidth: 2 }),
+    );
+    group.add(tear);
+
+    // Little paper fibres split away from the tear instead of making the document simply slide apart.
+    const paperShards: { mesh: THREE.Mesh; velocity: THREE.Vector3; spin: THREE.Vector3; phase: number }[] = [];
+    const shardMaterial = new THREE.MeshBasicMaterial({ color: 0xfff1d2, side: THREE.DoubleSide, transparent: true, opacity: 1 });
+    for (let index = 0; index < 6; index++) {
+      const shard = new THREE.Mesh(new THREE.TetrahedronGeometry(0.075 + (index % 3) * 0.018, 0), shardMaterial.clone());
+      shard.position.set((index - 2.5) * 0.012, (index % 2 ? 1 : -1) * 0.06, 0.045);
+      group.add(shard);
+      paperShards.push({
+        mesh: shard,
+        velocity: new THREE.Vector3((index - 2.5) * 0.48, 0.55 + (index % 3) * 0.18, (index % 2 ? 1 : -1) * 0.12),
+        spin: new THREE.Vector3(3 + index * 0.35, 4 + index * 0.25, 5 + index * 0.3),
+        phase: index * 0.035,
       });
     }
-    this.sayQuote('KOCIA ARMIA ONLINE! Trzy futrzaste jednostki bojowe: Miau, Miau i Miau-Critical!');
-    this.callbacks.onPerkDropBanner?.(
-      'KOCIA ARMIA ONLINE • 3× MIAU-CRITICAL',
-      '🐈',
-      'Trzy koty orbitują wokół Volta, doskakują do przeciwników i zadają obrażenia przez kilka sekund.',
-      '#67e8f9'
-    );
-    this.emitFloatingToast('🐈🐈🐈 TRZY KOTY • MIAU-CRITICAL!', this.playerPos.x, this.playerPos.y + 1.55, this.playerPos.z, 'combo');
-    this.triggerBloomPulse(0.26);
-    this.triggerScreenShake(0.16, 0.10);
-    this.spawnParticleRing(this.playerPos.x, 0.22, this.playerPos.z, 0x67e8f9);
-    sound.playCatPounce();
-  }
 
-  private updateMateuszCats(dt: number) {
-    for (let index = this.mateuszCats.length - 1; index >= 0; index--) {
-      const cat = this.mateuszCats[index];
-      cat.life -= dt;
-      if (cat.life <= 0) {
-        this.levelRoot.remove(cat.group);
-        this.disposeTemporaryObject(cat.group);
-        this.mateuszCats.splice(index, 1);
-        continue;
-      }
-
-      cat.orbitAngle += dt * (cat.pounceTimer > 0 ? 0.65 : 1.15);
-      const angle = this.playerRot + cat.orbitAngle;
-      const baseX = this.playerPos.x + Math.sin(angle) * 1.72;
-      const baseZ = this.playerPos.z + Math.cos(angle) * 1.72;
-      let targetX = baseX;
-      let targetZ = baseZ;
-      let jumpHeight = 0;
-      if (cat.pounceTimer > 0 && cat.pounceTarget) {
-        cat.pounceTimer = Math.max(0, cat.pounceTimer - dt);
-        const progress = 1 - cat.pounceTimer / 0.42;
-        const reach = progress < 0.58 ? progress / 0.58 : (1 - progress) / 0.42;
-        const weight = THREE.MathUtils.clamp(reach, 0, 1);
-        targetX = THREE.MathUtils.lerp(baseX, cat.pounceTarget.x, weight);
-        targetZ = THREE.MathUtils.lerp(baseZ, cat.pounceTarget.z, weight);
-        jumpHeight = Math.sin(Math.PI * THREE.MathUtils.clamp(progress, 0, 1)) * 0.62;
-        if (cat.pounceTimer <= 0) cat.pounceTarget = null;
-      }
-
-      cat.group.position.x = THREE.MathUtils.lerp(cat.group.position.x, targetX, Math.min(1, dt * 8.5));
-      cat.group.position.z = THREE.MathUtils.lerp(cat.group.position.z, targetZ, Math.min(1, dt * 8.5));
-      cat.group.position.y = 0.08 + jumpHeight + Math.sin(performance.now() * 0.008 + index * 2.1) * 0.035;
-      cat.group.rotation.y = Math.atan2(this.playerPos.x - cat.group.position.x, this.playerPos.z - cat.group.position.z);
-      cat.tail.rotation.x = Math.sin(performance.now() * 0.006 + index) * 0.42;
-      if (cat.life < 0.8) cat.group.scale.setScalar(Math.max(0.05, cat.life / 0.8));
-
-      cat.attackCooldown -= dt;
-      if (cat.attackCooldown > 0 || cat.pounceTimer > 0) continue;
-      let target: EnemyItem | null = null;
-      let nearest = 10.5;
-      for (const enemy of this.enemies) {
-        if (enemy.state === 'defeated' || !enemy.mesh?.visible) continue;
-        const distance = Math.hypot(enemy.x - cat.group.position.x, enemy.z - cat.group.position.z);
-        if (distance < nearest) {
-          nearest = distance;
-          target = enemy;
-        }
-      }
-      if (!target) continue;
-      const damage = this.scaleSurvivalDamage(1);
-      this.damageEnemy(target, damage, cat.group.position.x, cat.group.position.z);
-      target.stunTimer = Math.max(target.stunTimer, 0.28);
-      if (target.hp <= 0) this.defeatEnemy(target, 220, false);
-      cat.pounceTarget = new THREE.Vector3(target.x, 0.08, target.z);
-      cat.pounceTimer = 0.42;
-      cat.attackCooldown = 1.28 + index * 0.17;
-      this.spawnParticleRing(target.x, target.y + 0.28, target.z, index === 0 ? 0xfbbf24 : index === 1 ? 0x67e8f9 : 0xf9a8d4);
-      this.emitFloatingToast('🐈 MIAU-CRITICAL! -' + damage + ' HP', target.x, target.y + 1.15, target.z, 'damage');
-      sound.playCatPounce();
+    const titleCanvas = document.createElement('canvas');
+    titleCanvas.width = 640;
+    titleCanvas.height = 144;
+    const titleContext = titleCanvas.getContext('2d');
+    if (titleContext) {
+      titleContext.fillStyle = 'rgba(15, 23, 42, 0.94)';
+      titleContext.fillRect(0, 0, 640, 144);
+      titleContext.strokeStyle = '#e879f9';
+      titleContext.lineWidth = 7;
+      titleContext.strokeRect(5, 5, 630, 134);
+      titleContext.fillStyle = '#fdf4ff';
+      titleContext.font = 'bold 48px sans-serif';
+      titleContext.textAlign = 'center';
+      titleContext.fillText('MAM WYJEBANE', 320, 61);
+      titleContext.font = 'bold 23px sans-serif';
+      titleContext.fillStyle = '#f9a8d4';
+      titleContext.fillText('UMOWA NA 9 MIESIĘCY • ROZDARTA', 320, 105);
     }
-  }
+    const titleTexture = new THREE.CanvasTexture(titleCanvas);
+    titleTexture.colorSpace = THREE.SRGBColorSpace;
+    titleTexture.userData.disposeOnObjectCleanup = true;
+    const titleMaterial = new THREE.MeshBasicMaterial({
+      map: titleTexture, transparent: true, opacity: 1, depthWrite: false,
+    });
+    const title = new THREE.Mesh(new THREE.PlaneGeometry(2.05, 0.46), titleMaterial);
+    title.position.set(0, 0.90, 0.055);
+    group.add(title);
 
+    group.position.set(
+      this.playerPos.x + Math.sin(this.playerRot) * 1.30,
+      this.playerPos.y + 1.05,
+      this.playerPos.z + Math.cos(this.playerRot) * 1.30,
+    );
+    group.rotation.y = this.playerRot;
+    this.levelRoot.add(group);
+    this.spawnParticleRing(this.playerPos.x, 0.16, this.playerPos.z, 0xd946ef);
+
+    let splitBurst = false;
+    this.specialEffects.push({
+      mesh: group,
+      life: 1.42,
+      maxLife: 1.42,
+      grow: 0,
+      spin: 0,
+      update: (_dt, progress) => {
+        const smooth = (value: number) => {
+          const t = THREE.MathUtils.clamp(value, 0, 1);
+          return t * t * (3 - 2 * t);
+        };
+        const tension = 1 - smooth(progress / 0.20);
+        const split = smooth((progress - 0.10) / 0.42);
+        const flutter = Math.sin(progress * 42) * tension * 0.022;
+        leftPivot.position.x = -0.02 - split * 0.60 - flutter;
+        rightPivot.position.x = 0.02 + split * 0.60 + flutter;
+        leftPivot.position.y = Math.sin(progress * Math.PI * 1.4) * 0.20 + tension * 0.025;
+        rightPivot.position.y = Math.sin(progress * Math.PI * 1.65 + 0.4) * 0.17 - tension * 0.02;
+        leftPivot.rotation.z = split * 0.62 + flutter * 3.2;
+        rightPivot.rotation.z = -split * 0.62 - flutter * 3.2;
+        leftPivot.rotation.y = split * 0.24;
+        rightPivot.rotation.y = -split * 0.24;
+        title.position.y = 0.90 + Math.sin(progress * Math.PI) * 0.20;
+        title.scale.setScalar(0.94 + Math.sin(progress * Math.PI) * 0.08);
+
+        const shardProgress = smooth((progress - 0.20) / 0.55);
+        for (const shard of paperShards) {
+          const travel = Math.max(0, shardProgress - shard.phase);
+          shard.mesh.position.x = shard.velocity.x * travel;
+          shard.mesh.position.y = shard.velocity.y * travel - travel * travel * 0.58;
+          shard.mesh.position.z = 0.045 + shard.velocity.z * travel;
+          shard.mesh.rotation.x += shard.spin.x * 0.016;
+          shard.mesh.rotation.y += shard.spin.y * 0.016;
+          shard.mesh.rotation.z += shard.spin.z * 0.016;
+          const shardFade = Math.max(0, 1 - Math.max(0, progress - 0.62) / 0.30);
+          (shard.mesh.material as THREE.MeshBasicMaterial).opacity = shardFade;
+          shard.mesh.scale.setScalar(Math.max(0.001, shardFade));
+        }
+
+        const fade = Math.max(0, 1 - Math.max(0, progress - 0.68) / 0.32);
+        leftPageMaterial.opacity = fade;
+        rightPageMaterial.opacity = fade;
+        titleMaterial.opacity = fade;
+        (tear.material as THREE.LineBasicMaterial).opacity = fade;
+        if (!splitBurst && progress > 0.48) {
+          splitBurst = true;
+          this.spawnExplosionParticles(group.position.x, group.position.y, group.position.z, 0xd946ef, 18);
+          this.spawnParticleRing(this.playerPos.x, 0.12, this.playerPos.z, 0xe879f9);
+          this.triggerBloomPulse(0.42);
+          this.triggerScreenShake(0.26, 0.17);
+        }
+      },
+      cleanup: () => this.disposeTemporaryObject(group),
+    });
+  }
 
   private createMafiCapybaraModel(index: number): THREE.Group {
     const group = new THREE.Group();
@@ -17255,7 +17606,7 @@ export class PaleciakiGameEngine {
       const forward = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
       this.playerPos.x += forward.x * 1.8;
       this.playerPos.z += forward.z * 1.8;
-      this.sayQuote('ŚCIŚK ZAGŁADY 44CM + TRYB TARANA! Z drogi śledzie, Operator 02 jedzie!');
+      this.sayQuote('44 CM ZAGŁADY! PIĘŚĆ WCHODZI, PIĘĆ RAKIET NAMIERZA!');
       sound.playSciskCrush();
       this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.5, this.playerPos.z, 0x4ade80);
       this.enemies.forEach((e) => {
@@ -17272,7 +17623,7 @@ export class PaleciakiGameEngine {
           e.state = 'stunned';
           this.cameraShake = 0.65;
           this.spawnParticleRing(e.x, e.y + 0.6, e.z, 0x86efac);
-          this.emitFloatingToast('-' + Math.ceil(3 * abilityDamageMultiplier) + ' HP ŚCISK 44CM!', e.x, e.y + 0.8, e.z, 'damage');
+          this.emitFloatingToast('-' + Math.ceil(3 * abilityDamageMultiplier) + ' HP • IMPACT 44 CM!', e.x, e.y + 0.8, e.z, 'damage');
           if (e.hp <= 0) {
             this.defeatEnemy(e, 300, false);
           }
@@ -17320,9 +17671,19 @@ export class PaleciakiGameEngine {
       });
       this.emitFloatingToast('🧱 SALWA GRESU 120x280 + ⚡ Kubełek Mocy!', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
     } else if (this.currentCharacterId === 'mateusz') {
-      this.activatePerk('espresso_boost', this.gameMode === 'survival' ? 3.5 : 7);
-      this.activatePerk('vibram_boots', this.gameMode === 'survival' ? 3.5 : 8);
-      this.spawnMateuszCats();
+      this.enemyFactionBrawlRemaining = this.gameMode === 'survival' ? 7.5 : 9.0;
+      this.spawnMateuszContractRip();
+      this.sayQuote('MAM WYJEBANE! UMOWA NA 9 MIESIĘCY ROZDARTA. TERAZ WYJAŚNIJCIE TO MIĘDZY SOBĄ!');
+      this.callbacks.onPerkDropBanner?.(
+        'MAM WYJEBANE • UMOWA ROZDARTA',
+        '📄',
+        'Przeciwnicy przez chwilę atakują się nawzajem zamiast operatora. Efekt trwa 9 sekund (7,5 sekundy w Survival).',
+        '#d946ef',
+      );
+      this.emitFloatingToast('MAM WYJEBANE • WROGOWIE WALCZĄ ZE SOBĄ!', this.playerPos.x, this.playerPos.y + 1.55, this.playerPos.z, 'combo');
+      this.triggerBloomPulse(0.48);
+      this.triggerScreenShake(0.28, 0.18);
+      sound.playAttackWhoosh();
     } else if (this.currentCharacterId === 'piotr') {
       this.attackSwingDuration = 0.3;
       this.attackSwingTimer = this.attackSwingDuration;

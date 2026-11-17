@@ -155,6 +155,9 @@ export interface EnemyItem {
   aiRetreatTimer?: number;
   aiRetreatCooldownTimer?: number;
   aiCoalitionSize?: number;
+  /** Temporary enemy target while Mateusz's contract effect forces enemy-only combat. */
+  aiFactionBrawlTarget?: EnemyItem;
+  aiFactionBrawlRetargetTimer?: number;
   /** Brief movement disruption after a Survival squad loses its leader. */
   aiMoraleBreakTimer?: number;
   /** Cooldown for an Inspector support pulse in Survival coalitions. */

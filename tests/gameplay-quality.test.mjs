@@ -754,13 +754,12 @@ test('temporary special-effect meshes release generated GPU resources when their
 
   const checks = [
     { label: 'fire patch', marker: 'life: 0.58,\n      maxLife: 0.58,\n      disposeOnRemove: true,' },
-    { label: 'first shockwave ring', marker: 'this.specialEffects.push({ mesh, life: 0.7, maxLife: 0.7, grow: 7.5, spin: 9.0, disposeOnRemove: true });' },
-    { label: 'second shockwave ring', marker: 'this.specialEffects.push({ mesh: ring2, life: 0.6, maxLife: 0.6, grow: 8.5, spin: -7.0, disposeOnRemove: true });' },
-    { label: 'Grzesiek claw', marker: 'mesh: armGroup,\n      life: 0.9,\n      maxLife: 0.9,\n      disposeOnRemove: true,' },
+    { label: '44cm expanding shock rings', marker: /const createShockRing =[\s\S]*?disposeOnRemove: true[\s\S]*?createShockRing\(0\.92[\s\S]*?createShockRing\(1\.18/ },
+    { label: 'Grzesiek articulated fist', marker: /mesh: armGroup,[\s\S]*?life: 0\.98,[\s\S]*?disposeOnRemove: true/ },
     { label: 'fireball flash', marker: 'mesh: flash,\n      life: 0.45,\n      maxLife: 0.45,\n      disposeOnRemove: true,' },
     { label: 'boss defeat ring', marker: 'this.specialEffects.push({ mesh, life: 1.2, maxLife: 1.2, grow: 12.0, spin: 15.0, disposeOnRemove: true });' },
   ];
-  for (const item of checks) assert.ok(game.includes(item.marker), item.label + ' should opt into resource disposal');
+  for (const item of checks) assert.ok(typeof item.marker === 'string' ? game.includes(item.marker) : item.marker.test(game), item.label + ' should opt into resource disposal');
 
   const updateStart = game.indexOf('private updateSpecialEffects(dt: number)');
   const updateEnd = game.indexOf('\n  private ', updateStart + 10);
@@ -1651,4 +1650,102 @@ test('Survival flankers intercept the operator path while wounded enemies retrea
   assert.match(game, /movementSpeed = speed \* arrivalScale \* retreatSpeedMultiplier/);
   assert.match(types, /aiRetreatTimer\?: number/);
   assert.match(types, /aiRetreatCooldownTimer\?: number/);
+});
+
+
+// Regression coverage for the two operator-specific abilities added in this change.
+test('Grzesiek Operator 02 launches exactly five target-locked missiles from the muscular 44cm fist', async () => {
+  const [game, characters, html] = await Promise.all([
+    read('../src/game.ts'), read('../src/characters.ts'), read('../index.html')
+  ]);
+  const launchStart = game.indexOf('private spawnGrzesiekHomingRockets()');
+  const launchEnd = game.indexOf('private spawnCompactImpact(', launchStart);
+  assert.ok(launchStart >= 0 && launchEnd > launchStart);
+  const launch = game.slice(launchStart, launchEnd);
+  assert.match(launch, /for \(let index = 0; index < 5; index\+\+\)/);
+  assert.match(launch, /homing: true/);
+  assert.match(launch, /homingTarget: target/);
+  assert.match(launch, /homingRange: 28/);
+  assert.match(launch, /homingTrail: true/);
+  assert.match(launch, /homingRetargetTimer: 0/);
+  assert.match(game, /homingRetargetTimer = Math\.max\(0, \(p\.homingRetargetTimer \?\? 0\) - dt\)/);
+  assert.match(game, /grzesiek-44cm-muscular-fist/);
+  assert.match(game, /bicep/);
+  assert.match(game, /clenched|knuckle/i);
+  assert.match(characters, /abilityName: '44 CM ZAGŁADY/);
+  assert.match(html, /5 rakiet samonaprowadzających/);
+});
+
+test('Mateusz Operator 04 tears the nine-month contract and runs enemy-only AI combat without cats', async () => {
+  const [game, types, characters, html] = await Promise.all([
+    read('../src/game.ts'), read('../src/types.ts'), read('../src/characters.ts'), read('../index.html')
+  ]);
+  assert.match(characters, /abilityName: 'MAM WYJEBANE/);
+  assert.match(characters, /9 sekund \(7,5 sekundy w Survival\)/);
+  assert.match(html, /MAM WYJEBANE/);
+  assert.match(game, /private spawnMateuszContractRip\(\)/);
+  assert.match(game, /UMOWA NA 9 MIESIĘCY • ROZDARTA/);
+  assert.match(game, /private updateEnemyFactionBrawl\(enemy: EnemyItem, dt: number\)/);
+  assert.match(game, /this\.enemySpatialIndex\.query\(enemy\.x, enemy\.z, 21\.5\)/);
+  assert.match(game, /this\.damageEnemy\(target, damage, enemy\.x, enemy\.z, null\)/);
+  assert.match(game, /damageSource !== null/);
+  assert.match(types, /aiFactionBrawlTarget\?: EnemyItem/);
+  assert.doesNotMatch(game, /mateuszCats|spawnMateuszCats|updateMateuszCats/);
+  assert.doesNotMatch(characters, /KOCIA ARMIA|MIAU-CRITICAL/);
+});
+
+test('enemy faction brawl has a bounded timer and restores normal targeting after expiry', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /this\.enemyFactionBrawlRemaining = this\.gameMode === 'survival' \? 7\.5 : 9\.0/);
+  assert.match(game, /this\.enemyFactionBrawlRemaining = Math\.max\(0, this\.enemyFactionBrawlRemaining - dt\)/);
+  assert.match(game, /if \(factionBrawlActive\) \{\s*this\.updateEnemyFactionBrawl\(e, dt\);\s*continue;/);
+  assert.match(game, /if \(!active\) \{\s*if \(existingRing\)/);
+  assert.match(game, /factionBrawlMarker/);
+});
+
+
+test('Mateusz faction brawl distributes target assignments instead of dogpiling the nearest enemy', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /private readonly enemyFactionBrawlTargetLoads = new Map<string, number>\(\)/);
+  assert.match(game, /this\.enemyFactionBrawlTargetLoads\.clear\(\);[\s\S]*?for \(const attacker of this\.enemies\)/);
+
+  const start = game.indexOf('private updateEnemyFactionBrawl');
+  const end = game.indexOf('private damageEnemy', start);
+  assert.ok(start >= 0 && end > start, 'faction brawl targeting method should exist');
+  const tactics = game.slice(start, end);
+  assert.match(tactics, /previousLoad <= 1/);
+  assert.match(tactics, /assignedAttackers \* 2\.1/);
+  assert.match(tactics, /score < bestScore - 0\.001/);
+  assert.match(tactics, /candidate\.id < target\.id/);
+  assert.match(tactics, /this\.enemyFactionBrawlTargetLoads\.set\([\s\S]*?target\.id/);
+  assert.match(tactics, /enemy\.aiFactionBrawlRetargetTimer = 0\.24/);
+});
+
+test('44cm special visual uses articulated joints, a detailed closed fist and pulsing target-locked rockets', async () => {
+  const game = await read('../src/game.ts');
+  const armStart = game.indexOf('private spawnGrzesiekShockwave(): void');
+  const armEnd = game.indexOf('private spawnCompactImpact(', armStart);
+  assert.ok(armStart >= 0 && armEnd > armStart);
+  const visual = game.slice(armStart, armEnd);
+  assert.match(visual, /name = '44cm-elbow-joint'/);
+  assert.match(visual, /name = '44cm-clenched-fist'/);
+  assert.match(visual, /Raised knuckle|knucklePlate|finger/i);
+  assert.match(visual, /elbowPivot\.rotation\.x/);
+  assert.match(visual, /fist\.rotation\.x/);
+  assert.match(visual, /triggerScreenShake\(0\.48, 0\.30\)/);
+  assert.match(visual, /homingTrailColor: 0x34d399/);
+  assert.match(visual, /rocket\.userData\.exhaust/);
+});
+
+test('Mateusz contract tear uses animated paper fibres, a staggered rip and owned texture cleanup', async () => {
+  const game = await read('../src/game.ts');
+  const start = game.indexOf('private spawnMateuszContractRip(): void');
+  const end = game.indexOf('private createMafiCapybaraModel(', start);
+  assert.ok(start >= 0 && end > start);
+  const visual = game.slice(start, end);
+  assert.match(visual, /paperShards/);
+  assert.match(visual, /shard\.velocity/);
+  assert.match(visual, /progress \* 42/);
+  assert.match(visual, /disposeOnObjectCleanup = true/);
+  assert.match(visual, /spawnExplosionParticles\(group\.position/);
 });

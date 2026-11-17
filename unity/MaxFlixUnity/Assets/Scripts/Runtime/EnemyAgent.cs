@@ -33,6 +33,17 @@ namespace MaxFlix.Unity.Runtime
         private bool _chargeHitApplied;
         private bool _phaseTwo;
         private bool _defeated;
+        private bool _factionBrawlTint;
+        private GameObject _factionBrawlVisualRoot;
+        private LineRenderer _factionBrawlRing;
+        private Transform _factionBrawlMarker;
+        private EnemyAgent _factionBrawlTarget;
+        private float _factionBrawlRetargetRemaining;
+        private float _factionBrawlAttackFlashRemaining;
+        private static readonly Dictionary<int, int> _factionBrawlTargetLoads =
+            new Dictionary<int, int>(64);
+        private static int _factionBrawlLoadSnapshotFrame = -1;
+        private static float _factionBrawlUntil;
         private Renderer[] _renderers;
         private MaterialPropertyBlock _propertyBlock;
         private static EnemyAgent[] _separationCache = new EnemyAgent[0];
@@ -42,6 +53,7 @@ namespace MaxFlix.Unity.Runtime
         private static float _nextSeparationRefreshTime;
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
+        private static Material _factionBrawlMaterial;
 
         public bool IsDefeated { get { return _defeated; } }
         public EnemyKind Kind { get { return _profile != null ? _profile.Id : EnemyKind.Customer; } }
@@ -60,6 +72,70 @@ namespace MaxFlix.Unity.Runtime
             _separationCache = new EnemyAgent[0];
             SeparationBuckets.Clear();
             _nextSeparationRefreshTime = 0f;
+            _factionBrawlTargetLoads.Clear();
+            _factionBrawlLoadSnapshotFrame = -1;
+            _factionBrawlUntil = 0f;
+        }
+
+        /// <summary>Redirects every live enemy toward another enemy, never the player.</summary>
+        public static void TriggerFactionBrawl(float durationSeconds)
+        {
+            float safeDuration = Mathf.Clamp(durationSeconds, 1f, 12f);
+            _factionBrawlUntil = Mathf.Max(_factionBrawlUntil, Time.time + safeDuration);
+            RefreshSeparationIndex();
+            _factionBrawlTargetLoads.Clear();
+            _factionBrawlLoadSnapshotFrame = -1;
+            foreach (EnemyAgent agent in _separationCache)
+            {
+                if (agent == null || agent._defeated) continue;
+                agent._factionBrawlTarget = null;
+                agent._factionBrawlRetargetRemaining = 0f;
+            }
+        }
+
+        public static bool IsFactionBrawlActive
+        {
+            get { return Time.time < _factionBrawlUntil; }
+        }
+
+        /// <summary>
+        /// Builds one target-load snapshot per rendered frame. Retargets in that frame
+        /// update the snapshot incrementally, keeping the assignment spread coherent.
+        /// </summary>
+        private static void RefreshFactionBrawlTargetLoadsForFrame()
+        {
+            if (_factionBrawlLoadSnapshotFrame == Time.frameCount) return;
+            _factionBrawlLoadSnapshotFrame = Time.frameCount;
+            _factionBrawlTargetLoads.Clear();
+            RefreshSeparationIndex();
+
+            foreach (EnemyAgent attacker in _separationCache)
+            {
+                if (attacker == null || attacker._defeated) continue;
+                EnemyAgent assignedTarget = attacker._factionBrawlTarget;
+                if (assignedTarget == null || assignedTarget._defeated || assignedTarget == attacker) continue;
+
+                int targetId = assignedTarget.GetInstanceID();
+                int load;
+                _factionBrawlTargetLoads.TryGetValue(targetId, out load);
+                _factionBrawlTargetLoads[targetId] = load + 1;
+            }
+        }
+
+        private static int GetFactionBrawlTargetLoad(EnemyAgent target)
+        {
+            if (target == null || target._defeated) return 0;
+            int load;
+            return _factionBrawlTargetLoads.TryGetValue(target.GetInstanceID(), out load) ? load : 0;
+        }
+
+        private static void AdjustFactionBrawlTargetLoad(EnemyAgent target, int delta)
+        {
+            if (target == null || delta == 0) return;
+            int targetId = target.GetInstanceID();
+            int nextLoad = GetFactionBrawlTargetLoad(target) + delta;
+            if (nextLoad <= 0) _factionBrawlTargetLoads.Remove(targetId);
+            else _factionBrawlTargetLoads[targetId] = nextLoad;
         }
 
         public void Initialize(PlayerController target, EnemyKind kind, float healthMultiplier = 1f, float speedMultiplier = 1f, float abilityRateMultiplier = 1f)
@@ -96,6 +172,174 @@ namespace MaxFlix.Unity.Runtime
         public void ApplyDamage(float damage)
         {
             ApplyCombatHit(damage, 0f, 0f, 1f, Vector3.zero);
+        }
+
+        /// <summary>Enemy-vs-enemy damage does not count as operator or weapon damage in Survival.</summary>
+        public void ApplyFactionDamage(float damage, Vector3 knockbackVelocity)
+        {
+            if (_defeated || float.IsNaN(damage) || float.IsInfinity(damage) || damage <= 0f) return;
+            float applied = damage;
+            if (_supportShieldRemaining > 0f) applied *= 0.62f;
+            if (applied <= 0f) return;
+            _health = Mathf.Max(0f, _health - applied);
+            _hitFlashTimer = 0.16f;
+            _knockbackVelocity += Vector3.ClampMagnitude(knockbackVelocity, 6.5f);
+            if (_profile != null && _profile.IsBoss && !_phaseTwo && _health <= MaxHealth * 0.5f)
+            {
+                _phaseTwo = true;
+                _phaseTwoMoveMultiplier = 1.22f;
+                _attackTimer = Mathf.Min(_attackTimer, _attackInterval / _abilityRateMultiplier * 0.35f);
+            }
+            if (_health <= 0f) Defeat();
+        }
+
+        private void TickFactionBrawlVisual(float deltaTime)
+        {
+            if (_factionBrawlVisualRoot == null)
+            {
+                _factionBrawlVisualRoot = new GameObject("Enemy faction-brawl marker");
+                _factionBrawlVisualRoot.transform.SetParent(transform, false);
+                _factionBrawlVisualRoot.transform.localPosition = Vector3.zero;
+
+                GameObject ringObject = new GameObject("Magenta target ring");
+                ringObject.transform.SetParent(_factionBrawlVisualRoot.transform, false);
+                ringObject.transform.localPosition = new Vector3(0f, 0.06f, 0f);
+                _factionBrawlRing = ringObject.AddComponent<LineRenderer>();
+                _factionBrawlRing.useWorldSpace = false;
+                _factionBrawlRing.loop = true;
+                _factionBrawlRing.positionCount = 32;
+                _factionBrawlRing.widthMultiplier = 0.052f;
+                _factionBrawlRing.numCapVertices = 2;
+                _factionBrawlRing.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                _factionBrawlRing.receiveShadows = false;
+                for (int i = 0; i < 32; i++)
+                {
+                    float angle = (float)i / 32f * Mathf.PI * 2f;
+                    _factionBrawlRing.SetPosition(i, new Vector3(Mathf.Cos(angle) * 0.64f, 0f, Mathf.Sin(angle) * 0.64f));
+                }
+
+                GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                marker.name = "Enemy-on-enemy status marker";
+                marker.transform.SetParent(_factionBrawlVisualRoot.transform, false);
+                marker.transform.localPosition = new Vector3(0f, 1.75f, 0f);
+                marker.transform.localScale = Vector3.one * 0.16f;
+                Collider markerCollider = marker.GetComponent<Collider>();
+                if (markerCollider != null) Destroy(markerCollider);
+                _factionBrawlMarker = marker.transform;
+
+                if (_factionBrawlMaterial == null)
+                {
+                    Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+                    if (shader == null) shader = Shader.Find("Unlit/Color");
+                    if (shader == null) shader = Shader.Find("Standard");
+                    if (shader != null)
+                    {
+                        _factionBrawlMaterial = new Material(shader)
+                        {
+                            color = new Color(0.91f, 0.32f, 0.96f),
+                            enableInstancing = true
+                        };
+                        if (_factionBrawlMaterial.HasProperty("_EmissionColor"))
+                        {
+                            _factionBrawlMaterial.EnableKeyword("_EMISSION");
+                            _factionBrawlMaterial.SetColor("_EmissionColor", new Color(0.72f, 0.10f, 0.94f) * 1.4f);
+                        }
+                    }
+                }
+                if (_factionBrawlRing != null) _factionBrawlRing.sharedMaterial = _factionBrawlMaterial;
+                Renderer markerRenderer = marker.GetComponent<Renderer>();
+                if (markerRenderer != null) markerRenderer.sharedMaterial = _factionBrawlMaterial;
+            }
+
+            _factionBrawlAttackFlashRemaining = Mathf.Max(0f, _factionBrawlAttackFlashRemaining - deltaTime);
+            float attackFlash = _factionBrawlAttackFlashRemaining > 0f
+                ? (1f - _factionBrawlAttackFlashRemaining / 0.16f) * 0.42f
+                : 0f;
+            float pulse = 0.92f + Mathf.Sin(Time.time * 11f + GetInstanceID() * 0.01f) * 0.10f + attackFlash;
+            if (_factionBrawlRing != null) _factionBrawlRing.widthMultiplier = 0.042f + pulse * 0.018f;
+            if (_factionBrawlMarker != null)
+            {
+                _factionBrawlMarker.Rotate(Vector3.up, 210f * deltaTime, Space.Self);
+                _factionBrawlMarker.localScale = Vector3.one * (0.13f + pulse * 0.055f);
+            }
+        }
+
+        private void ClearFactionBrawlVisual()
+        {
+            _factionBrawlAttackFlashRemaining = 0f;
+            if (_factionBrawlVisualRoot != null) Destroy(_factionBrawlVisualRoot);
+            _factionBrawlVisualRoot = null;
+            _factionBrawlRing = null;
+            _factionBrawlMarker = null;
+        }
+
+        private void TickFactionBrawl(float deltaTime)
+        {
+            _factionBrawlRetargetRemaining = Mathf.Max(0f, _factionBrawlRetargetRemaining - deltaTime);
+            if (_factionBrawlTarget == null || _factionBrawlTarget.IsDefeated || _factionBrawlRetargetRemaining <= 0f)
+            {
+                RefreshFactionBrawlTargetLoadsForFrame();
+                EnemyAgent previousTarget = _factionBrawlTarget;
+                if (previousTarget != null && !previousTarget.IsDefeated)
+                    AdjustFactionBrawlTargetLoad(previousTarget, -1);
+                _factionBrawlTarget = null;
+
+                float bestScore = float.PositiveInfinity;
+                const float maxTargetDistance = 21.5f;
+                foreach (EnemyAgent candidate in _separationCache)
+                {
+                    if (candidate == null || candidate == this || candidate.IsDefeated) continue;
+                    Vector3 offset = candidate.transform.position - transform.position;
+                    offset.y = 0f;
+                    float sqrDistance = offset.sqrMagnitude;
+                    if (sqrDistance >= maxTargetDistance * maxTargetDistance) continue;
+
+                    float distance = Mathf.Sqrt(sqrDistance);
+                    float score = distance + GetFactionBrawlTargetLoad(candidate) * 2.1f;
+                    bool winsTie = _factionBrawlTarget == null
+                        || candidate.GetInstanceID() < _factionBrawlTarget.GetInstanceID();
+                    if (score < bestScore - 0.001f
+                        || (Mathf.Abs(score - bestScore) <= 0.001f && winsTie))
+                    {
+                        bestScore = score;
+                        _factionBrawlTarget = candidate;
+                    }
+                }
+
+                if (_factionBrawlTarget != null)
+                    AdjustFactionBrawlTargetLoad(_factionBrawlTarget, 1);
+                _factionBrawlRetargetRemaining = 0.24f;
+            }
+            if (_factionBrawlTarget == null)
+            {
+                _attackTimer = Mathf.Max(_attackTimer, 0.12f);
+                return;
+            }
+
+            Vector3 offsetToEnemy = _factionBrawlTarget.transform.position - transform.position;
+            offsetToEnemy.y = 0f;
+            float distance = offsetToEnemy.magnitude;
+            Vector3 direction = distance > 0.001f ? offsetToEnemy / distance : transform.forward;
+            Face(direction, deltaTime);
+            const float contactRange = 1.55f;
+            if (distance > contactRange)
+            {
+                Vector3 avoidance = EnemyNavigationWorld.GetObstacleAvoidanceVector(
+                    transform.position, _factionBrawlTarget.transform.position,
+                    GetInstanceID(), (_controller != null ? _controller.radius : 0.34f) + 0.55f);
+                Vector3 travel = (direction + avoidance * 0.78f).normalized;
+                Vector3 velocity = travel * (_moveSpeed * _phaseTwoMoveMultiplier * 0.82f * _slowMultiplier);
+                velocity.y = -2f;
+                if (_controller != null) _controller.Move(velocity * deltaTime);
+                return;
+            }
+            if (_attackTimer <= 0f)
+            {
+                float brawlDamage = _profile != null && _profile.IsBoss ? _attackDamage * 0.58f : _attackDamage * 0.72f;
+                _factionBrawlTarget.ApplyFactionDamage(brawlDamage, direction * 0.72f + Vector3.up * 0.12f);
+                _factionBrawlAttackFlashRemaining = 0.16f;
+                _attackTimer = _attackInterval / _abilityRateMultiplier * 1.12f;
+            }
         }
 
         public void GrantSupportShield(float duration)
@@ -173,9 +417,19 @@ namespace MaxFlix.Unity.Runtime
 
         private void Update()
         {
-            if (_defeated || _target == null || _target.IsDefeated || _profile == null
-                || GameSession.Current == null
-                || GameSession.Current.State != GameFlowState.Playing) return;
+            if (_defeated || _profile == null) return;
+
+            if (_target == null || _target.IsDefeated || GameSession.Current == null
+                || GameSession.Current.State != GameFlowState.Playing)
+            {
+                if (_factionBrawlTint)
+                {
+                    _factionBrawlTint = false;
+                    ClearFactionBrawlVisual();
+                    SetHitTint(false);
+                }
+                return;
+            }
 
             float deltaTime = Time.deltaTime;
             _attackTimer -= deltaTime;
@@ -191,8 +445,33 @@ namespace MaxFlix.Unity.Runtime
                 _knockbackVelocity = Vector3.MoveTowards(_knockbackVelocity, Vector3.zero, 18f * deltaTime);
             }
 
+            bool factionBrawlActive = IsFactionBrawlActive;
+            if (factionBrawlActive)
+            {
+                if (!_factionBrawlTint)
+                {
+                    _factionBrawlTint = true;
+                    SetHitTint(_hitFlashTimer > 0f);
+                }
+                TickFactionBrawlVisual(deltaTime);
+            }
+            else if (_factionBrawlTint)
+            {
+                _factionBrawlTint = false;
+                ClearFactionBrawlVisual();
+                SetHitTint(_hitFlashTimer > 0f);
+            }
+
+            // Visual state must tick/expire even while the enemy is stunned.
             if (_stunRemaining > 0f)
             {
+                UpdateHitFlash(deltaTime);
+                return;
+            }
+
+            if (factionBrawlActive)
+            {
+                TickFactionBrawl(deltaTime);
                 UpdateHitFlash(deltaTime);
                 return;
             }
@@ -532,6 +811,7 @@ namespace MaxFlix.Unity.Runtime
         {
             if (_defeated) return;
             _defeated = true;
+            ClearFactionBrawlVisual();
             if (_controller != null) _controller.enabled = false;
             if (_renderers != null)
             {
@@ -569,8 +849,9 @@ namespace MaxFlix.Unity.Runtime
         {
             if (_renderers == null) return;
             Color tint = active
-                ? new Color(1f, 0.48f, 0.32f, 1f)
-                : (_supportShieldRemaining > 0f ? new Color(0.42f, 0.76f, 1f, 1f) : Color.white);
+                ? (_factionBrawlTint ? new Color(0.86f, 0.30f, 0.94f, 1f) : new Color(1f, 0.48f, 0.32f, 1f))
+                : (_factionBrawlTint ? new Color(0.72f, 0.30f, 0.84f, 1f)
+                    : (_supportShieldRemaining > 0f ? new Color(0.42f, 0.76f, 1f, 1f) : Color.white));
             foreach (Renderer renderer in _renderers)
             {
                 if (renderer == null) continue;

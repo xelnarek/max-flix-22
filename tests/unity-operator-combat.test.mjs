@@ -22,8 +22,12 @@ test('Unity operator abilities preserve source cooldown and mode-specific summon
     assert.ok(catalog.includes('AbilityCooldownSeconds = ' + cooldown), 'missing cooldown ' + cooldown);
   }
   assert.match(kit, /mode == GameMode\.Survival \? 6f : 8f/);
-  assert.match(kit, /mode == GameMode\.Survival \? 6\.5f : 9\.5f/);
-  assert.match(kit, /DamageNearbyEnemies\(5\.2f, 3f/);
+  assert.match(kit, /EnemyAgent\.TriggerFactionBrawl\(mode == GameMode\.Survival \? 7\.5f : 9f\)/);
+  assert.match(kit, /BeginGrzesiekArm\(\)/);
+  assert.match(kit, /BeginContractRipEffect\(\)/);
+  assert.match(kit, /for \(int i = 0; i < 5; i\+\+\)/);
+  assert.match(kit, /OperatorHomingRocket\.Spawn/);
+  assert.doesNotMatch(kit, /SupportStyle\.Cat|KOCIA ARMIA|Miau-critical|PounceTarget/);
   assert.match(kit, /for \(int i = -2; i <= 2; i\+\+\)/);
   assert.match(kit, /SpawnSupport\(SupportStyle\.Capybara, i, 8\.5f/);
 });
@@ -645,4 +649,108 @@ test('Unity editor bootstraps URP and the New Input System automatically', async
   assert.match(setup, /GraphicsSettings\.defaultRenderPipeline = pipeline/);
   assert.match(setup, /PlayerSettings\.SetGraphicsAPIs\(/);
   assert.match(setup, /GraphicsDeviceType\.WebGPU, GraphicsDeviceType\.OpenGLES3/);
+});
+
+
+test('Unity Mateusz brawl redirects enemy AI and excludes enemy damage from player statistics', async () => {
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  assert.match(enemy, /TriggerFactionBrawl\(float durationSeconds\)/);
+  assert.match(enemy, /bool factionBrawlActive = IsFactionBrawlActive/);
+  assert.match(enemy, /if \(factionBrawlActive\)/);
+  assert.match(enemy, /TickFactionBrawl\(deltaTime\)/);
+  assert.match(enemy, /_factionBrawlTarget\.ApplyFactionDamage/);
+  assert.match(enemy, /ApplyFactionDamage\(float damage/);
+  assert.match(enemy, /Enemy-vs-enemy damage/);
+  assert.match(enemy, /_factionBrawlUntil/);
+});
+
+
+
+test('Unity Mateusz brawl spreads attackers across enemy targets with a frame-cached load snapshot', async () => {
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  assert.match(enemy, /Dictionary<int, int> _factionBrawlTargetLoads/);
+  assert.match(enemy, /_factionBrawlLoadSnapshotFrame = -1/);
+  assert.match(enemy, /private static void RefreshFactionBrawlTargetLoadsForFrame\(\)/);
+  assert.match(enemy, /if \(_factionBrawlLoadSnapshotFrame == Time\.frameCount\) return/);
+  assert.match(enemy, /foreach \(EnemyAgent attacker in _separationCache\)/);
+  assert.match(enemy, /private static int GetFactionBrawlTargetLoad\(EnemyAgent target\)/);
+  assert.match(enemy, /private static void AdjustFactionBrawlTargetLoad\(EnemyAgent target, int delta\)/);
+  assert.match(enemy, /float score = distance \+ GetFactionBrawlTargetLoad\(candidate\) \* 2\.1f/);
+  assert.match(enemy, /candidate\.GetInstanceID\(\) < _factionBrawlTarget\.GetInstanceID\(\)/);
+  assert.match(enemy, /AdjustFactionBrawlTargetLoad\(_factionBrawlTarget, 1\)/);
+  assert.match(enemy, /AdjustFactionBrawlTargetLoad\(previousTarget, -1\)/);
+});
+
+test('Unity Grzesiek missile component has homing, target reacquisition and bounded blast damage', async () => {
+  const rocket = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorHomingRocket.cs');
+  assert.match(rocket, /Vector3\.RotateTowards/);
+  assert.match(rocket, /FindClosestTarget\(28f\)/);
+  assert.match(rocket, /_blastRadius/);
+  assert.match(rocket, /enemy\.ApplyCombatHit\(_damage \* falloff/);
+  assert.match(rocket, /TrailRenderer/);
+  assert.match(rocket, /_exhaustGlow\.localScale/);
+  assert.match(rocket, /_retargetRemaining = _target != null \? 0\.12f : 0\.20f/);
+  assert.match(rocket, /Rocket stabilizer/);
+  assert.match(rocket, /OperatorImpactBurst\.Spawn/);
+});
+
+
+test('Unity 44cm arm has articulated elbow/fist animation and a shared impact burst', async () => {
+  const kit = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorCombatKit.cs');
+  const burst = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorImpactBurst.cs');
+  assert.match(kit, /_grzesiekElbowPivot\.localRotation/);
+  assert.match(kit, /_grzesiekFistPivot\.localRotation/);
+  assert.match(kit, /if \(_player\.IsDefeated\)[\s\S]*?CleanupTransientSkillVisuals\(\)/);
+  assert.match(kit, /private void CleanupTransientSkillVisuals\(\)/);
+  assert.match(kit, /Biceps peak|Biceps muscle/);
+  assert.match(kit, /Raised knuckle/);
+  assert.match(kit, /OperatorImpactBurst\.Spawn/);
+  assert.match(kit, /if \(!_contractImpactDone && progress > 0\.43f\)/);
+  assert.match(kit, /_contractImpactDone = false/);
+  assert.match(burst, /Expanding impact ring/);
+  assert.match(burst, /Impact fragment/);
+  assert.match(burst, /BuildRingMesh\(\)/);
+  assert.match(burst, /GetSharedRingMesh\(\)/);
+  assert.match(burst, /private static Mesh _sharedRingMesh/);
+  assert.match(burst, /triangles\[triangleIndex\+\+\] = a \+ 1;[\s\S]*?triangles\[triangleIndex\+\+\] = b;/);
+});
+
+test('Unity nine-month contract has two-sided lettering, animated paper fibres and a tear impact', async () => {
+  const kit = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorCombatKit.cs');
+  assert.match(kit, /CreateContractTextFace\(parent, value, localPosition, color, false\)/);
+  assert.match(kit, /CreateContractTextFace\(parent, value,[\s\S]*?true\)/);
+  assert.match(kit, /_contractFragments/);
+  assert.match(kit, /fragmentProgress/);
+  assert.match(kit, /OperatorImpactBurst\.Spawn/);
+});
+
+test('Unity enemy faction brawl exposes a visible timed marker and removes it on expiry or defeat', async () => {
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  assert.match(enemy, /Magenta target ring/);
+  assert.match(enemy, /Enemy-on-enemy status marker/);
+  assert.match(enemy, /TickFactionBrawlVisual\(deltaTime\)/);
+  assert.match(enemy, /ClearFactionBrawlVisual\(\)/);
+  assert.match(enemy, /_factionBrawlAttackFlashRemaining/);
+  assert.match(enemy, /attackFlash/);
+  assert.match(enemy, /private void Defeat\(\)[\s\S]*?ClearFactionBrawlVisual\(\)/);
+});
+
+
+test('Unity faction-brawl visuals activate and expire before stun can short-circuit enemy AI', async () => {
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  const updateStart = enemy.indexOf('private void Update()');
+  const stunCheck = enemy.indexOf('if (_stunRemaining > 0f)', updateStart);
+  const visualTick = enemy.indexOf('TickFactionBrawlVisual(deltaTime)', updateStart);
+  const expiryCleanup = enemy.indexOf('ClearFactionBrawlVisual()', updateStart);
+  const brawlCombat = enemy.indexOf('TickFactionBrawl(deltaTime)', updateStart);
+
+  assert.ok(updateStart >= 0, 'EnemyAgent.Update must exist');
+  assert.ok(visualTick > updateStart && visualTick < stunCheck,
+    'the brawl marker must continue animating while an enemy is stunned');
+  assert.ok(expiryCleanup > updateStart && expiryCleanup < stunCheck,
+    'the brawl marker and tint must be removed on expiry before the stun early-return');
+  assert.ok(brawlCombat > stunCheck,
+    'stunned enemies must not execute enemy-vs-enemy combat');
+  assert.match(enemy, /if \(_target == null \|\| _target\.IsDefeated \|\| GameSession\.Current == null[\s\S]*?ClearFactionBrawlVisual\(\)/,
+    'inactive gameplay must also clean up the temporary brawl visual');
 });

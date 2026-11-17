@@ -57,8 +57,8 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     damageTakenMultiplier: 0.92,
     passiveName: 'Hantla 44 cm — Rzut Siłacza',
     passiveDescription: 'Podstawowy atak to ciężki rzut hantlem. Co trzeci rzut jest mocniejszy, przebija kilku przeciwników i odrzuca ich na boki.',
-    abilityName: 'Ścisk Zagłady 44cm + Tryb Tarana',
-    abilityDescription: 'Wzywa obracające się hydrauliczne ramię miażdżące o sile 44 ton (3 HP obrażeń obszarowych) oraz aktywuje na 6 sekund Tryb Tarana – rozjeżdżasz wrogów samym biegiem!',
+    abilityName: '44 CM ZAGŁADY • SALWA 5 RAKIET',
+    abilityDescription: 'Na ułamek sekundy pojawia się ogromne, umięśnione ramię z zaciśniętą pięścią. W chwili uderzenia wystrzeliwuje dokładnie 5 rakiet samonaprowadzających: każda blokuje osobny cel, a przy mniejszej liczbie wrogów ostrzał skupia się na dostępnych przeciwnikach. Tryb Tarana trwa 6 sekund.',
     abilityCooldown: 12.0,
     voiceLines: [
       'Ściskam, bo muszę! To nie jest agresja, to czysta logistyczna potrzeba!',
@@ -135,8 +135,8 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     damageTakenMultiplier: 1.08,
     passiveName: 'Paralizator — Impuls Trzech Elektrod',
     passiveDescription: 'Podstawowy atak wystrzeliwuje impuls paralizatora. Trafienie elektryzuje i spowalnia cel; co dziewiąte trafienie uruchamia Speedrun (+Sprint i Nietykalność)!',
-    abilityName: 'KOCIA ARMIA ONLINE • 3× MIAU-CRITICAL',
-    abilityDescription: 'Operator 04 przywołuje dokładnie trzy bojowe koty w gamingowych obrożach. Przez 9,5 sekundy (6,5 w Survival) krążą wokół niego, doskakują do przeciwników i zadają im obrażenia. Każdy pounce kończy się błyskiem pazurów i komunikatem MIAU-CRITICAL.',
+    abilityName: 'MAM WYJEBANE • UMOWA NA 9 MIESIĘCY',
+    abilityDescription: 'Operator 04 demonstracyjnie rozrywa umowę na 9 miesięcy. Przez 9 sekund (7,5 sekundy w Survival) wrogowie przestają atakować gracza i zwracają się przeciwko sobie, wybierając najbliższego innego przeciwnika. Po zakończeniu efektu ich normalne zachowanie wraca automatycznie.',
     abilityCooldown: 16.0,
     voiceLines: [
       'Pad mi się rozładował! Kto zajumał kabel USB-C z salonu?!',
@@ -148,7 +148,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
       'Ten wózek widłowy ma hitboxy jak w gra fantasy!',
       'Spawn-kill na klientach to moja specjalność!'
     ],
-    bio: 'Łowca platyn, specjalista od padów i człowiek, który potrafi porównać każdą zmianę na magazynie do poziomu trudności w grze. Umowę na dziewięć miesięcy traktuje jak długi quest poboczny, a każdy kolejny dzień odhacza z precyzją speedrunnera. W showroomie ma mentalne stanowisko gamingowe, a w głowie mapę wszystkich skrótów, które pozwalają ominąć nudne obowiązki. W walce stawia na mobilność, impulsy elektryczne i kocią asystę. Gdy słyszy „lag”, najpierw sprawdza ping, a dopiero później, czy to przypadkiem nie wózek AGV.',
+    bio: 'Łowca platyn, specjalista od padów i człowiek, który potrafi porównać każdą zmianę na magazynie do poziomu trudności w grze. Umowę na dziewięć miesięcy traktuje jak długi quest poboczny, a każdy kolejny dzień odhacza z precyzją speedrunnera. W showroomie ma mentalne stanowisko gamingowe, a w głowie mapę wszystkich skrótów, które pozwalają ominąć nudne obowiązki. W walce stawia na mobilność, impulsy elektryczne i przejęcie kontroli nad chaosem, gdy rozrywa umowę i zmusza przeciwników do walki między sobą. Gdy słyszy „lag”, najpierw sprawdza ping, a dopiero później, czy to przypadkiem nie wózek AGV.',
     stats: {
       speed: 5,
       jump: 4,
