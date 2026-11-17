@@ -14338,20 +14338,31 @@ export class PaleciakiGameEngine {
               4.6,
               0.8,
             );
-            const move = calculateStableEnemySteering({
-              chase: { x: dx, z: dz },
-              separation,
-              avoidance,
-              previous: { x: e.aiSteerX ?? 0, z: e.aiSteerZ ?? 0 },
-              dt,
-              separationWeight: 0.82,
-              avoidanceWeight: 0.88,
-              response: 7.2,
-            });
+            const attackDistance = Math.max(1.10, getEnemyPlayerContactDistance(e.type) + 0.10);
+            const inContactLane = distToPlayer <= attackDistance + 0.08;
+            const separationLength = Math.hypot(separation.x, separation.z);
+            const move = inContactLane && separationLength < 0.34
+              ? { x: 0, z: 0 }
+              : calculateStableEnemySteering({
+                  chase: inContactLane ? separation : { x: dx, z: dz },
+                  separation,
+                  avoidance: inContactLane ? { x: 0, z: 0 } : avoidance,
+                  previous: { x: e.aiSteerX ?? 0, z: e.aiSteerZ ?? 0 },
+                  dt,
+                  separationWeight: inContactLane ? 0.52 : 0.82,
+                  avoidanceWeight: inContactLane ? 0.0 : 0.88,
+                  response: 7.2,
+                });
             e.aiSteerX = move.x;
             e.aiSteerZ = move.z;
-            e.x += move.x * chaseSpeed * dt;
-            e.z += move.z * chaseSpeed * dt;
+            // Slow down smoothly while approaching the contact band. Once in
+            // reach, hold a stable attack position and only sidestep real crowd
+            // pressure instead of vibrating at a target point beyond melee range.
+            const arrivalScale = inContactLane
+              ? THREE.MathUtils.clamp(separationLength * 0.42, 0, 0.22)
+              : THREE.MathUtils.clamp((distToPlayer - attackDistance) / 0.95, 0, 1);
+            e.x += move.x * chaseSpeed * arrivalScale * dt;
+            e.z += move.z * chaseSpeed * arrivalScale * dt;
           } else {
             e.alerted = false;
             e.state = 'patrol';
