@@ -754,9 +754,8 @@ test('temporary special-effect meshes release generated GPU resources when their
 
   const checks = [
     { label: 'fire patch', marker: 'life: 0.58,\n      maxLife: 0.58,\n      disposeOnRemove: true,' },
-    { label: 'first 44cm shockwave ring', marker: /this\.specialEffects\.push\(\{ mesh: ring, life: 0\.7, maxLife: 0\.7, grow: 7\.5, spin: 9\.0, disposeOnRemove: true \}\)/ },
-    { label: 'second 44cm shockwave ring', marker: /this\.specialEffects\.push\(\{ mesh: innerRing, life: 0\.62, maxLife: 0\.62, grow: 8\.2, spin: -7\.0, disposeOnRemove: true \}\)/ },
-    { label: 'Grzesiek claw', marker: 'mesh: armGroup,\n      life: 0.9,\n      maxLife: 0.9,\n      disposeOnRemove: true,' },
+    { label: '44cm expanding shock rings', marker: /createShockRing\(0\.92, 0\.105,[\s\S]*?createShockRing\(1\.18, 0\.055/ },
+    { label: 'Grzesiek articulated fist', marker: /mesh: armGroup,[\s\S]*?life: 0\.98,[\s\S]*?disposeOnRemove: true/ },
     { label: 'fireball flash', marker: 'mesh: flash,\n      life: 0.45,\n      maxLife: 0.45,\n      disposeOnRemove: true,' },
     { label: 'boss defeat ring', marker: 'this.specialEffects.push({ mesh, life: 1.2, maxLife: 1.2, grow: 12.0, spin: 15.0, disposeOnRemove: true });' },
   ];
@@ -1698,5 +1697,36 @@ test('enemy faction brawl has a bounded timer and restores normal targeting afte
   assert.match(game, /this\.enemyFactionBrawlRemaining = this\.gameMode === 'survival' \? 7\.5 : 9\.0/);
   assert.match(game, /this\.enemyFactionBrawlRemaining = Math\.max\(0, this\.enemyFactionBrawlRemaining - dt\)/);
   assert.match(game, /if \(factionBrawlActive\) \{\s*this\.updateEnemyFactionBrawl\(e, dt\);\s*continue;/);
-  assert.match(game, /if \(!active\) \{\s*if \(existing\)/);
+  assert.match(game, /if \(!active\) \{\s*if \(existingRing\)/);
+  assert.match(game, /factionBrawlMarker/);
+});
+
+
+test('44cm special visual uses articulated joints, a detailed closed fist and pulsing target-locked rockets', async () => {
+  const game = await read('../src/game.ts');
+  const armStart = game.indexOf('private spawnGrzesiekShockwave(): void');
+  const armEnd = game.indexOf('private spawnCompactImpact(', armStart);
+  assert.ok(armStart >= 0 && armEnd > armStart);
+  const visual = game.slice(armStart, armEnd);
+  assert.match(visual, /name = '44cm-elbow-joint'/);
+  assert.match(visual, /name = '44cm-clenched-fist'/);
+  assert.match(visual, /Raised knuckle|knucklePlate|finger/i);
+  assert.match(visual, /elbowPivot\.rotation\.x/);
+  assert.match(visual, /fist\.rotation\.x/);
+  assert.match(visual, /triggerScreenShake\(0\.48, 0\.30\)/);
+  assert.match(visual, /homingTrailColor: 0x34d399/);
+  assert.match(visual, /rocket\.userData\.exhaust/);
+});
+
+test('Mateusz contract tear uses animated paper fibres, a staggered rip and owned texture cleanup', async () => {
+  const game = await read('../src/game.ts');
+  const start = game.indexOf('private spawnMateuszContractRip(): void');
+  const end = game.indexOf('private createMafiCapybaraModel(', start);
+  assert.ok(start >= 0 && end > start);
+  const visual = game.slice(start, end);
+  assert.match(visual, /paperShards/);
+  assert.match(visual, /shard\.velocity/);
+  assert.match(visual, /progress \* 42/);
+  assert.match(visual, /disposeOnObjectCleanup = true/);
+  assert.match(visual, /spawnExplosionParticles\(group\.position/);
 });
