@@ -148,6 +148,9 @@ export interface EnemyItem {
   aiDodgeTimer?: number;
   aiDodgeX?: number;
   aiDodgeZ?: number;
+  /** Short tactical retreat state for wounded Survival enemies. */
+  aiRetreatTimer?: number;
+  aiRetreatCooldownTimer?: number;
   aiCoalitionSize?: number;
   /** Brief movement disruption after a Survival squad loses its leader. */
   aiMoraleBreakTimer?: number;
