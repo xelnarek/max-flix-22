@@ -1667,6 +1667,8 @@ test('Grzesiek Operator 02 launches exactly five target-locked missiles from the
   assert.match(launch, /homingTarget: target/);
   assert.match(launch, /homingRange: 28/);
   assert.match(launch, /homingTrail: true/);
+  assert.match(launch, /homingRetargetTimer: 0/);
+  assert.match(game, /homingRetargetTimer = Math\.max\(0, \(p\.homingRetargetTimer \?\? 0\) - dt\)/);
   assert.match(game, /grzesiek-44cm-muscular-fist/);
   assert.match(game, /bicep/);
   assert.match(game, /clenched|knuckle/i);
