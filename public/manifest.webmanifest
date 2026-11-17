@@ -1,7 +1,7 @@
 {
   "id": "./",
   "name": "Warehouse MaDDnes",
-  "short_name": "Warehouse",
+  "short_name": "MaDDnes",
   "description": "3D magazynowa gra akcji: Survival PvE, hordy i bossowie oraz osobna arena PvP 1v1.",
   "lang": "pl",
   "start_url": "./",
@@ -20,7 +20,7 @@
   ],
   "icons": [
     {
-      "src": "./icons/b4-icon.svg",
+      "src": "./icons/warehouse-maddnes-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"

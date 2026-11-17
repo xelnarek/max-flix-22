@@ -142,9 +142,12 @@ test('Google Play service-account helper validates credentials and enables inter
 });
 
 test('Play Store artwork sources and CI exports meet the listing image dimensions', async () => {
-  const [iconSvg, iconBackgroundSvg, featureSvg, artworkScript, workflow, listingText] = await Promise.all([
+  const [html, iconSvg, iconForegroundSvg, iconBackgroundSvg, pwaIconSvg, featureSvg, artworkScript, workflow, listingText] = await Promise.all([
+    read('../index.html'),
     read('../resources/icon-only.svg'),
+    read('../resources/icon-foreground.svg'),
     read('../resources/icon-background.svg'),
+    read('../public/icons/warehouse-maddnes-icon.svg'),
     read('../play-store/feature-graphic.svg'),
     read('../scripts/prepare-play-store-artwork.mjs'),
     read('../.github/workflows/android-release.yml'),
@@ -153,8 +156,17 @@ test('Play Store artwork sources and CI exports meet the listing image dimension
   const listing = JSON.parse(listingText);
 
   assert.match(iconSvg, /width="1024" height="1024"/);
+  assert.match(iconSvg, /id="warehouse-maddnes-emblem"/);
+  assert.match(iconSvg, /Warehouse MaDDnes/);
+  assert.match(iconForegroundSvg, /id="warehouse-maddnes-emblem"/);
+  assert.match(pwaIconSvg, /Warehouse MaDDnes/);
+  assert.ok(html.includes('href="./icons/warehouse-maddnes-icon.svg"'));
   assert.match(iconBackgroundSvg, /<rect width="1024" height="1024" fill="url\(#bg\)"/);
   assert.match(featureSvg, /width="1024" height="500"/);
+  assert.match(featureSvg, /3D ARCADE • WAREHOUSE SURVIVAL/);
+  assert.match(featureSvg, /Arena PvP 1v1/);
+  assert.doesNotMatch(featureSvg, /KAMPANIA|Kampania 3D/);
+  assert.equal(featureSvg.split('>SURVIVAL</text>').length - 1, 1, 'the feature graphic should show Survival only once');
   assert.match(artworkScript, /rsvg-convert/);
   assert.match(artworkScript, /--width', '512'[\s\S]*?--height', '512'/);
   assert.match(artworkScript, /--width', '1024'[\s\S]*?--height', '500'/);

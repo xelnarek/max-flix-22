@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Warehouse MaDDnes</title>
+  <desc id="desc">Industrial crate on a warehouse forklift with neon-blue forks and an electric impact mark.</desc>
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#ffe5a8"/><stop offset=".48" stop-color="#f2b75d"/><stop offset="1" stop-color="#a85b2a"/></linearGradient>
+    <linearGradient id="cyan" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b9f5ff"/><stop offset="1" stop-color="#168eae"/></linearGradient>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#153d50"/><stop offset=".54" stop-color="#081b2b"/><stop offset="1" stop-color="#030911"/></linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".38" r=".62"><stop stop-color="#287c90" stop-opacity=".78"/><stop offset="1" stop-color="#07131d" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="190" fill="url(#bg)"/>
+  <rect width="1024" height="1024" rx="190" fill="url(#glow)"/>
+  <g fill="none" stroke="#8dd9e5" stroke-opacity=".11" stroke-width="9"><path d="M64 250h896M64 512h896M64 774h896M250 64v896M512 64v896M774 64v896"/></g>
+  <path d="M0 855 1024 620v404H0Z" fill="#02080f" opacity=".44"/>
+  <g id="warehouse-maddnes-emblem" stroke-linejoin="round" stroke-linecap="round">
+  <ellipse cx="520" cy="836" rx="316" ry="36" fill="#000" opacity=".28"/>
+  <!-- Forklift mast and forks -->
+  <path d="M205 682V260q0-39 39-39h88" fill="none" stroke="url(#cyan)" stroke-width="34"/>
+  <path d="M246 260v412M282 268v360" fill="none" stroke="#b9f3fb" stroke-opacity=".78" stroke-width="12"/>
+  <path d="M220 342h118M220 400h118M220 458h118" stroke="#58b9cf" stroke-width="9" opacity=".62"/>
+  <path d="M226 675H813" stroke="#d6f7fa" stroke-width="26"/>
+  <path d="M245 705h154l44 36H260zM585 705h205l-38 36H604z" fill="url(#cyan)" stroke="#c8f8ff" stroke-width="10"/>
+  <!-- Industrial crate -->
+  <path d="M284 350 527 218 778 356 527 502Z" fill="url(#gold)" stroke="#fff0c9" stroke-width="17"/>
+  <path d="M284 350v267l243 142V502Z" fill="#a95f2d" stroke="#f3c477" stroke-width="16"/>
+  <path d="M527 502v257l251-142V356Z" fill="#754321" stroke="#e0a65c" stroke-width="16"/>
+  <path d="M326 374 527 488v216L326 586Z" fill="#bd783a" opacity=".68"/>
+  <path d="M527 518v190l209-118V399Z" fill="#8b5128" opacity=".6"/>
+  <path d="M364 382 527 476M364 382v183M568 492 718 407" stroke="#ffe7bd" stroke-opacity=".48" stroke-width="12"/>
+  <!-- Branded stencil on the crate -->
+  <path d="M387 529 420 548v71l-33-19zM420 548l42-24v73l-42 22zM462 524l36 20v72l-36-19z" fill="#f6dca8" opacity=".88"/>
+  <path d="M573 565 604 547l30 18-31 19zM604 584v42l-31-18v-43M634 565v42l-30 19v-42" fill="#f5bd67" opacity=".9"/>
+  <path d="M554 658h166" stroke="#f5bd67" stroke-width="10" opacity=".75"/>
+  <!-- Warning chevrons -->
+  <path d="m688 340 20-12 19 11-20 12zM688 374l20-12 19 11-20 12zM688 408l20-12 19 11-20 12z" fill="#f7c66e" opacity=".9"/>
+  <!-- Wheels and hub caps -->
+  <circle cx="316" cy="793" r="58" fill="#071522" stroke="#79d9e8" stroke-width="19"/>
+  <circle cx="316" cy="793" r="21" fill="#f4bd67" stroke="#ffe7ad" stroke-width="7"/>
+  <circle cx="740" cy="793" r="58" fill="#071522" stroke="#79d9e8" stroke-width="19"/>
+  <circle cx="740" cy="793" r="21" fill="#f4bd67" stroke="#ffe7ad" stroke-width="7"/>
+  <path d="M316 753v80M276 793h80M740 753v80M700 793h80" stroke="#d3e9ef" stroke-opacity=".42" stroke-width="7"/>
+  <!-- Electric impact -->
+  <path d="m753 158-89 146h73l-56 123 160-191h-81z" fill="#fff0ae" stroke="#f3b84f" stroke-width="15"/>
+  <path d="m786 205-45 76" stroke="#fff" stroke-width="8" opacity=".72"/>
+</g>
+  <rect x="14" y="14" width="996" height="996" rx="178" fill="none" stroke="#a5e8ef" stroke-opacity=".34" stroke-width="12"/>
+  <path d="M82 142h190M82 178h112M750 856h190" stroke="#f4bd67" stroke-opacity=".48" stroke-width="10" stroke-linecap="round"/>
+</svg>
