@@ -126,8 +126,11 @@ test('floating toast projection keeps one scratch vector and avoids redundant di
   const updaterEnd = app.indexOf('const showPerkDropBanner', updaterStart);
   assert.ok(updaterStart >= 0 && updaterEnd > updaterStart);
   const updater = app.slice(updaterStart, updaterEnd);
-  assert.match(updater, /const tempVec = toastProjectionScratch/);
-  assert.doesNotMatch(updater, /new THREE\.Vector3\(\)/);
-  assert.match(updater, /if \(t\.element\.style\.display !== 'none'\)/);
-  assert.match(updater, /if \(t\.element\.style\.display !== 'flex'\)/);
+  const callbackStart = updater.indexOf('(this as any)._updateToasts =');
+  assert.ok(callbackStart >= 0, 'toast updater callback should exist');
+  const callback = updater.slice(callbackStart);
+  assert.match(callback, /const tempVec = toastProjectionScratch/);
+  assert.doesNotMatch(callback, /new THREE\\.Vector3\\(\\)/);
+  assert.match(callback, /if \\(t\\.element\\.style\\.display !== 'none'\\)/);
+  assert.match(callback, /if \\(t\\.element\\.style\\.display !== 'flex'\\)/);
 });
