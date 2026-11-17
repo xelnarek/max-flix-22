@@ -3814,7 +3814,8 @@ export class PaleciakiGameEngine {
     const wallTexture = options.surfaceTextures?.wall ?? createPvpObstacleTexture('wall').clone();
     const surfaceProfile = getSurvivalSurfaceProfile(mapId);
     const floorMaterial = new THREE.MeshStandardMaterial({
-      map: floorTexture, color: mapDefinition.floorColor,
+      // Keep the PBR underlay neutral across every sector; the continuous atlas above owns biome colour.
+      map: floorTexture, color: 0x77736a,
       roughness: surfaceProfile.floorRoughness, metalness: surfaceProfile.floorMetalness,
     });
     applyIndustrialPbr(floorMaterial, 0.018);
