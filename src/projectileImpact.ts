@@ -13,6 +13,7 @@ export interface MutableProjectileSegmentPoint {
 }
 
 export interface ProjectileActorImpact {
+  readonly actor?: EnemyContactBody;
   readonly t: number;
   readonly x: number;
   readonly y: number;
