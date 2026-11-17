@@ -12942,13 +12942,35 @@ export class PaleciakiGameEngine {
     const anchorX = inHordeRing ? this.survivalSurgeCenterX : this.playerPos.x;
     const anchorZ = inHordeRing ? this.survivalSurgeCenterZ : this.playerPos.z;
     const anchorAngle = enemy.aiFlankAngle ?? Math.atan2(enemy.x - anchorX, enemy.z - anchorZ);
+    // Engaged enemies keep their assigned lane. Patrol formations drift slowly,
+    // avoiding the old alternating left/right wobble at close range.
     const drift = engaged ? 0 : Math.sin(this.survivalElapsed * 0.42 + slot * 1.7) * 0.035;
     const angle = anchorAngle + drift;
 
-    // Ring members follow the visible contracting perimeter instead of all
-    // selecting the same close-range target and collapsing onto the player.
+    const defaultEngageRadius = getEnemyEngageRadius(role);
+    const assignedFormationRadius = Number.isFinite(enemy.aiFormationRadius)
+      ? THREE.MathUtils.clamp(enemy.aiFormationRadius as number, 1.0, 8.2)
+      : defaultEngageRadius;
+    let preferredRadius = inHordeRing
+      ? this.survivalSurgeCurrentRadius
+      : engaged
+        ? (role === 'bruiser' || role === 'flanker'
+          ? defaultEngageRadius
+          : Math.max(defaultEngageRadius, Math.min(assignedFormationRadius, defaultEngageRadius + 0.9)))
+        : role === 'support' ? 15.0 : role === 'ranged' ? 14.0 : 12.6;
+
+    if (!inHordeRing && engaged && role === 'ranged' && distanceToPlayer < preferredRadius - 1.0) {
+      preferredRadius += 1.0;
+    }
+    const targetX = anchorX + Math.sin(angle) * preferredRadius;
+    const targetZ = anchorZ + Math.cos(angle) * preferredRadius * (inHordeRing ? 0.62 : 1);
+    let steerX = targetX - enemy.x;
+    let steerZ = targetZ - enemy.z;
+    const steerLength = Math.hypot(steerX, steerZ);
+
     const nearbyEnemies = this.enemySpatialIndex.query(enemy.x, enemy.z, 4.1);
     const separation = calculateEnemySeparationVector(enemy, nearbyEnemies, 2.6, this.enemySeparationScratch);
+    const separationLength = Math.hypot(separation.x, separation.z);
     const obstacleAvoidance = calculateEnemyObstacleAvoidanceVector(
       enemy,
       { x: targetX, z: targetZ },
@@ -12958,10 +12980,10 @@ export class PaleciakiGameEngine {
     );
     const isTelegraphingRangedBoss = enemy.chargeTimer !== undefined &&
       (enemy.type === 'bosman_krakow' || (enemy.type === 'agv_robot' && enemy.name.includes('AGV-9 SENTINEL')));
-    // Arrival dead-zone replaces the old tangent-orbit correction. Close
-    // enemies stop cleanly; only a real crowd overlap can still request a
-    // small lateral correction. This removes the visible idle foot-shuffle.
-    const separationLength = Math.hypot(separation.x, separation.z);
+
+    // Arrival dead-zone replaces the old orbit correction. Once an actor has
+    // reached its formation lane it holds still; a real crowd overlap may still
+    // trigger a small, smoothed sidestep.
     const atFormationSlot = steerLength < 0.24;
     const steering = isTelegraphingRangedBoss || (atFormationSlot && separationLength < 0.34)
       ? { x: 0, z: 0 }
@@ -12985,16 +13007,14 @@ export class PaleciakiGameEngine {
 
     const roleSpeed = role === 'bruiser' ? 0.82 : role === 'flanker' ? 1.12 : role === 'support' ? 0.88 : 0.94;
     const waveSpeed = 1 + Math.min(0.18, Math.max(0, this.survivalWave - 1) * 0.009);
-    const pressureSpeed = engaged ? 1 : 0.48;    const roleSpeed = role === 'bruiser' ? 0.82 : role === 'flanker' ? 1.12 : role === 'support' ? 0.88 : 0.94;
-    const waveSpeed = 1 + Math.min(0.18, Math.max(0, this.survivalWave - 1) * 0.009);
     const pressureSpeed = engaged ? 1 : 0.48;
     const commandBoost = enemy.aiCommandBoostTimer && enemy.aiCommandBoostTimer > 0
       ? THREE.MathUtils.clamp(enemy.aiCommandBoostMultiplier ?? 1, 1, 1.25)
       : 1;
     const moraleBreak = getSurvivalMoraleBreakMultiplier(enemy.aiMoraleBreakTimer ?? 0);
     const speed = enemy.speed * roleSpeed * waveSpeed * pressureSpeed * commandBoost * moraleBreak;
-
     const movementSpeed = speed * arrivalScale;
+
     enemy.x = THREE.MathUtils.clamp(enemy.x + steerX * movementSpeed * dt, this.levelBounds.minX + 1.2, this.levelBounds.maxX - 1.2);
     enemy.z = THREE.MathUtils.clamp(enemy.z + steerZ * movementSpeed * dt, this.levelBounds.minZ + 1.0, this.levelBounds.maxZ - 1.0);
     enemy.mesh.rotation.y = Math.atan2(this.playerPos.x - enemy.x, this.playerPos.z - enemy.z);
