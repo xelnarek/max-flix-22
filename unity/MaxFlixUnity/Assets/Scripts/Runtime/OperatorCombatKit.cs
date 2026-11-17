@@ -44,7 +44,12 @@ namespace MaxFlix.Unity.Runtime
         private GameObject _grzesiekArmRoot;
         private float _grzesiekArmRemaining;
         private bool _grzesiekArmImpactDone;
+        private Transform _grzesiekElbowPivot;
+        private Transform _grzesiekFistPivot;
+        private Transform _grzesiekBicep;
         private GameObject _contractEffectRoot;
+        private readonly List<Transform> _contractFragments = new List<Transform>(6);
+        private readonly List<Vector3> _contractFragmentDirections = new List<Vector3>(6);
         private Transform _contractLeft;
         private Transform _contractRight;
         private float _contractEffectRemaining;
@@ -247,29 +252,106 @@ namespace MaxFlix.Unity.Runtime
         private void BeginGrzesiekArm()
         {
             if (_grzesiekArmRoot != null) Destroy(_grzesiekArmRoot);
-            _grzesiekArmRoot = new GameObject("Grzesiek 44cm muscular fist");
+            _grzesiekArmRoot = new GameObject("Grzesiek 44cm articulated muscular fist");
             Transform parent = _player != null ? _player.transform.parent : null;
             if (parent != null) _grzesiekArmRoot.transform.SetParent(parent, true);
             _grzesiekArmRemaining = 1.05f;
             _grzesiekArmImpactDone = false;
+
             Transform root = _grzesiekArmRoot.transform;
             Color skin = new Color(0.78f, 0.48f, 0.33f);
             Color muscle = new Color(0.91f, 0.64f, 0.46f);
+            Color highlight = new Color(0.98f, 0.75f, 0.58f);
             Color shadow = new Color(0.48f, 0.23f, 0.18f);
+            Color vein = new Color(0.67f, 0.35f, 0.28f);
             Color band = new Color(0.08f, 0.32f, 0.18f);
             Color metal = new Color(0.74f, 0.82f, 0.89f);
-            CreatePart(root, PrimitiveType.Sphere, "Massive shoulder", new Vector3(-0.36f, 0.68f, -0.02f), new Vector3(0.94f, 0.86f, 0.90f), skin);
-            CreatePart(root, PrimitiveType.Capsule, "Upper arm", new Vector3(-0.10f, 0.50f, 0.46f), new Vector3(0.68f, 1.18f, 0.66f), muscle);
-            CreatePart(root, PrimitiveType.Sphere, "Biceps peak", new Vector3(-0.12f, 0.80f, 0.36f), new Vector3(0.82f, 0.78f, 1.10f), muscle);
-            CreatePart(root, PrimitiveType.Sphere, "Biceps definition", new Vector3(-0.10f, 0.48f, 0.40f), new Vector3(0.48f, 0.30f, 0.72f), shadow);
-            CreatePart(root, PrimitiveType.Capsule, "Thick forearm", new Vector3(0.02f, 0.24f, 1.06f), new Vector3(0.70f, 1.10f, 0.70f), skin);
-            CreatePart(root, PrimitiveType.Sphere, "Forearm muscle", new Vector3(0.02f, 0.40f, 1.04f), new Vector3(0.64f, 0.58f, 0.98f), muscle);
-            CreatePart(root, PrimitiveType.Cylinder, "Wrist guard", new Vector3(0.02f, 0.22f, 1.48f), new Vector3(0.62f, 0.16f, 0.62f), band);
-            CreatePart(root, PrimitiveType.Sphere, "Closed fist palm", new Vector3(0.02f, 0.18f, 1.78f), new Vector3(0.82f, 0.72f, 0.82f), skin);
+            Color darkMetal = new Color(0.20f, 0.27f, 0.35f);
+
+            CreatePart(root, PrimitiveType.Sphere, "Massive shoulder", new Vector3(-0.36f, 0.68f, -0.04f),
+                new Vector3(0.98f, 0.90f, 0.98f), skin);
+            CreatePart(root, PrimitiveType.Capsule, "Upper arm", new Vector3(-0.10f, 0.52f, 0.43f),
+                new Vector3(0.68f, 1.18f, 0.68f), muscle);
+            _grzesiekBicep = new GameObject("Biceps peak").transform;
+            _grzesiekBicep.SetParent(root, false);
+            _grzesiekBicep.localPosition = new Vector3(-0.12f, 0.79f, 0.36f);
+            CreatePart(_grzesiekBicep, PrimitiveType.Sphere, "Biceps muscle", Vector3.zero,
+                new Vector3(0.84f, 0.78f, 1.12f), muscle);
+            CreatePart(_grzesiekBicep, PrimitiveType.Sphere, "Biceps highlight", new Vector3(-0.02f, 0.13f, 0.04f),
+                new Vector3(0.46f, 0.22f, 0.78f), highlight);
+            CreatePart(root, PrimitiveType.Sphere, "Triceps contour", new Vector3(-0.11f, 0.43f, 0.48f),
+                new Vector3(0.48f, 0.30f, 0.72f), shadow);
+
+            GameObject elbowObject = new GameObject("44cm elbow pivot");
+            _grzesiekElbowPivot = elbowObject.transform;
+            _grzesiekElbowPivot.SetParent(root, false);
+            _grzesiekElbowPivot.localPosition = new Vector3(0.02f, 0.24f, 0.84f);
+            Transform elbow = _grzesiekElbowPivot;
+            GameObject forearmObject = new GameObject("Thick forearm");
+            Transform forearm = forearmObject.transform;
+            forearm.SetParent(elbow, false);
+            forearm.localPosition = new Vector3(0f, 0.02f, 0.33f);
+            forearm.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            CreatePart(forearm, PrimitiveType.Capsule, "Forearm body", Vector3.zero,
+                new Vector3(0.68f, 1.08f, 0.68f), skin);
+            CreatePart(elbow, PrimitiveType.Sphere, "Forearm muscle", new Vector3(0f, 0.13f, 0.34f),
+                new Vector3(0.64f, 0.58f, 0.98f), muscle);
+            CreatePart(elbow, PrimitiveType.Sphere, "Forearm highlight", new Vector3(-0.12f, 0.22f, 0.36f),
+                new Vector3(0.22f, 0.16f, 0.70f), highlight);
+
+            Transform veinA = new GameObject("Bicep vein A").transform;
+            veinA.SetParent(root, false);
+            veinA.localPosition = new Vector3(-0.34f, 0.73f, 0.47f);
+            veinA.localRotation = Quaternion.Euler(0f, 0f, -18f);
+            CreatePart(veinA, PrimitiveType.Capsule, "Muscle striation", Vector3.zero,
+                new Vector3(0.055f, 0.34f, 0.055f), vein);
+            Transform veinB = new GameObject("Bicep vein B").transform;
+            veinB.SetParent(root, false);
+            veinB.localPosition = new Vector3(0.05f, 0.68f, 0.44f);
+            veinB.localRotation = Quaternion.Euler(0f, 0f, 14f);
+            CreatePart(veinB, PrimitiveType.Capsule, "Muscle striation", Vector3.zero,
+                new Vector3(0.045f, 0.27f, 0.045f), vein);
+
+            GameObject wrist = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            wrist.name = "Green steel wrist guard";
+            wrist.transform.SetParent(elbow, false);
+            wrist.transform.localPosition = new Vector3(0f, -0.005f, 0.72f);
+            wrist.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            wrist.transform.localScale = new Vector3(0.62f, 0.08f, 0.62f);
+            Collider wristCollider = wrist.GetComponent<Collider>();
+            if (wristCollider != null) Destroy(wristCollider);
+            Renderer wristRenderer = wrist.GetComponent<Renderer>();
+            if (wristRenderer != null) wristRenderer.sharedMaterial = GetSupportMaterial(band);
+            CreatePart(elbow, PrimitiveType.Cylinder, "Steel wrist rim", new Vector3(0f, -0.005f, 0.80f),
+                new Vector3(0.58f, 0.035f, 0.58f), metal);
+
+            GameObject fistObject = new GameObject("44cm clenched fist pivot");
+            _grzesiekFistPivot = fistObject.transform;
+            _grzesiekFistPivot.SetParent(elbow, false);
+            _grzesiekFistPivot.localPosition = new Vector3(0f, -0.045f, 0.98f);
+            Transform fist = _grzesiekFistPivot;
+            CreatePart(fist, PrimitiveType.Sphere, "Closed fist palm", Vector3.zero,
+                new Vector3(0.84f, 0.73f, 0.86f), skin);
             for (int knuckle = 0; knuckle < 4; knuckle++)
-                CreatePart(root, PrimitiveType.Sphere, "Clenched knuckle " + (knuckle + 1), new Vector3(-0.25f + knuckle * 0.17f, 0.34f, 2.00f), new Vector3(0.24f, 0.22f, 0.20f), muscle);
-            CreatePart(root, PrimitiveType.Capsule, "Thumb locked over fist", new Vector3(0.35f, 0.02f, 1.78f), new Vector3(0.22f, 0.48f, 0.22f), skin);
-            CreatePart(root, PrimitiveType.Cube, "44cm knuckle plate", new Vector3(0.02f, 0.34f, 2.08f), new Vector3(0.72f, 0.12f, 0.10f), metal);
+            {
+                float x = -0.25f + knuckle * 0.17f;
+                CreatePart(fist, PrimitiveType.Capsule, "Curled finger " + (knuckle + 1),
+                    new Vector3(x, 0.035f, 0.12f), new Vector3(0.17f, 0.28f, 0.17f), muscle);
+                CreatePart(fist, PrimitiveType.Sphere, "Raised knuckle " + (knuckle + 1),
+                    new Vector3(x, 0.17f, 0.23f), new Vector3(0.22f, 0.20f, 0.18f), highlight);
+                CreatePart(fist, PrimitiveType.Cube, "Knuckle crease " + (knuckle + 1),
+                    new Vector3(x, 0.18f, 0.325f), new Vector3(0.08f, 0.018f, 0.012f), shadow);
+            }
+            CreatePart(fist, PrimitiveType.Capsule, "Thumb locked over fist",
+                new Vector3(0.32f, -0.015f, 0.04f), new Vector3(0.22f, 0.48f, 0.22f), skin);
+            CreatePart(fist, PrimitiveType.Cube, "44cm steel knuckle plate",
+                new Vector3(0f, 0.19f, 0.32f), new Vector3(0.74f, 0.12f, 0.10f), metal);
+            for (int rivet = 0; rivet < 4; rivet++)
+                CreatePart(fist, PrimitiveType.Sphere, "Green knuckle rivet " + (rivet + 1),
+                    new Vector3(-0.22f + rivet * 0.145f, 0.20f, 0.385f),
+                    Vector3.one * 0.055f, band);
+            CreatePart(fist, PrimitiveType.Cube, "Fist underside brace",
+                new Vector3(0f, -0.20f, 0.06f), new Vector3(0.20f, 0.10f, 0.28f), darkMetal);
         }
 
         private void TickGrzesiekArm(float deltaTime)
@@ -277,24 +359,42 @@ namespace MaxFlix.Unity.Runtime
             if (_grzesiekArmRemaining <= 0f) return;
             _grzesiekArmRemaining = Mathf.Max(0f, _grzesiekArmRemaining - deltaTime);
             if (_grzesiekArmRoot == null) return;
+
             float progress = 1f - _grzesiekArmRemaining / 1.05f;
-            float strike = Mathf.Clamp01((progress - 0.30f) / 0.28f);
-            float recover = Mathf.Clamp01((progress - 0.72f) / 0.28f);
+            float anticipation = 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(progress / 0.34f));
+            float strike = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((progress - 0.27f) / 0.22f));
+            float followThrough = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((progress - 0.47f) / 0.18f));
+            float recover = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((progress - 0.76f) / 0.24f));
+
             Transform root = _grzesiekArmRoot.transform;
-            root.position = transform.position + transform.forward * (0.28f + strike * 0.26f) + Vector3.up * 0.42f;
-            root.rotation = transform.rotation * Quaternion.Euler(Mathf.Lerp(-26f, 18f, strike), 0f, 0f);
-            root.localScale = Vector3.one * (1.48f * (1f - recover * 0.88f));
-            if (!_grzesiekArmImpactDone && progress >= 0.36f)
+            root.position = transform.position + transform.forward * (0.14f + strike * 0.42f) + Vector3.up * 0.44f;
+            root.rotation = transform.rotation * Quaternion.Euler(-10f - anticipation * 8f + strike * 14f - followThrough * 5f, 0f, 0f);
+            root.localScale = Vector3.one * (1.36f + Mathf.Sin(progress * Mathf.PI) * 0.08f - recover * 0.18f);
+            if (_grzesiekElbowPivot != null)
+                _grzesiekElbowPivot.localRotation = Quaternion.Euler(Mathf.Lerp(-52f, 12f, strike) + Mathf.Sin(progress * Mathf.PI * 2f) * 2.5f, 0f, 0f);
+            if (_grzesiekFistPivot != null)
+                _grzesiekFistPivot.localRotation = Quaternion.Euler(Mathf.Lerp(18f, -24f, strike) + followThrough * 8f, 0f, 0f);
+            if (_grzesiekBicep != null)
+                _grzesiekBicep.localScale = new Vector3(1f, 1f + anticipation * 0.10f + strike * 0.08f, 1f);
+
+            if (!_grzesiekArmImpactDone && progress >= 0.39f)
             {
                 _grzesiekArmImpactDone = true;
+                Vector3 hitPoint = transform.position + transform.forward * 1.9f + Vector3.up * 0.18f;
                 DamageNearbyEnemies(4.6f, 1.55f, 0.42f, 4.8f);
+                OperatorImpactBurst.Spawn(_player != null ? _player.transform.parent : transform.parent,
+                    hitPoint, _profile.SecondaryColor, 1.65f);
                 SpawnFiveHomingRockets();
                 _hud?.SetStatus("44 CM ZAGŁADY • 5 RAKIET W LOCIE");
             }
+
             if (_grzesiekArmRemaining <= 0f)
             {
                 Destroy(_grzesiekArmRoot);
                 _grzesiekArmRoot = null;
+                _grzesiekElbowPivot = null;
+                _grzesiekFistPivot = null;
+                _grzesiekBicep = null;
             }
         }
 
@@ -324,6 +424,8 @@ namespace MaxFlix.Unity.Runtime
         private void BeginContractRipEffect()
         {
             if (_contractEffectRoot != null) Destroy(_contractEffectRoot);
+            _contractFragments.Clear();
+            _contractFragmentDirections.Clear();
             _contractEffectRoot = new GameObject("Mateusz 9 month contract rip");
             Transform parent = _player != null ? _player.transform.parent : null;
             if (parent != null) _contractEffectRoot.transform.SetParent(parent, true);
@@ -331,26 +433,79 @@ namespace MaxFlix.Unity.Runtime
             _contractRight = new GameObject("Contract right half").transform;
             _contractLeft.SetParent(_contractEffectRoot.transform, false);
             _contractRight.SetParent(_contractEffectRoot.transform, false);
+
             Color paper = new Color(1f, 0.94f, 0.78f);
+            Color paperShadow = new Color(0.82f, 0.74f, 0.58f);
             Color ink = new Color(0.10f, 0.14f, 0.22f);
-            CreatePart(_contractLeft, PrimitiveType.Cube, "Contract page left", new Vector3(-0.23f, 0f, 0f), new Vector3(0.46f, 0.78f, 0.035f), paper);
-            CreatePart(_contractRight, PrimitiveType.Cube, "Contract page right", new Vector3(0.23f, 0f, 0f), new Vector3(0.46f, 0.78f, 0.035f), paper);
-            CreateContractText(_contractLeft, "UMOWA\nNA 9 MIESIĘCY", new Vector3(-0.23f, 0.03f, 0.035f), ink);
-            CreateContractText(_contractRight, "ROZDARTA\nMAM WYJEBANE", new Vector3(0.23f, 0.03f, 0.035f), new Color(0.58f, 0.08f, 0.30f));
-            CreatePart(_contractEffectRoot.transform, PrimitiveType.Cube, "Red torn center edge", new Vector3(0f, 0f, 0.06f), new Vector3(0.035f, 0.84f, 0.04f), new Color(0.72f, 0.10f, 0.16f));
-            CreateContractText(_contractEffectRoot.transform, "MAM WYJEBANE", new Vector3(0f, 0.68f, 0.08f), new Color(0.93f, 0.48f, 0.95f));
-            _contractEffectRemaining = 1.35f;
+            Color red = new Color(0.72f, 0.10f, 0.16f);
+            CreatePart(_contractLeft, PrimitiveType.Cube, "Contract page left", new Vector3(-0.23f, 0f, 0f),
+                new Vector3(0.46f, 0.82f, 0.035f), paper);
+            CreatePart(_contractRight, PrimitiveType.Cube, "Contract page right", new Vector3(0.23f, 0f, 0f),
+                new Vector3(0.46f, 0.82f, 0.035f), paper);
+            CreatePart(_contractLeft, PrimitiveType.Cube, "Left page header line", new Vector3(-0.23f, 0.30f, 0.026f),
+                new Vector3(0.34f, 0.025f, 0.012f), red);
+            CreatePart(_contractRight, PrimitiveType.Cube, "Right page header line", new Vector3(0.23f, 0.30f, 0.026f),
+                new Vector3(0.34f, 0.025f, 0.012f), red);
+            for (int line = 0; line < 4; line++)
+            {
+                float y = 0.13f - line * 0.12f;
+                CreatePart(_contractLeft, PrimitiveType.Cube, "Contract text line L" + line,
+                    new Vector3(-0.23f, y, 0.027f), new Vector3(0.33f, 0.012f, 0.01f), paperShadow);
+                CreatePart(_contractRight, PrimitiveType.Cube, "Contract text line R" + line,
+                    new Vector3(0.23f, y, 0.027f), new Vector3(0.33f, 0.012f, 0.01f), paperShadow);
+            }
+            CreateContractText(_contractLeft, "UMOWA\nNA 9 MIESIĘCY", new Vector3(-0.23f, 0.02f, 0.05f), ink);
+            CreateContractText(_contractRight, "ROZWIĄZANIE\nROZDARTA", new Vector3(0.23f, 0.02f, 0.05f), red);
+            CreateContractText(_contractLeft, "PODPIS PRACOWNIKA", new Vector3(-0.23f, -0.31f, 0.05f), ink);
+            CreateContractText(_contractRight, "EGZEMPLARZ 09", new Vector3(0.23f, -0.31f, 0.05f), ink);
+            CreatePart(_contractLeft, PrimitiveType.Cylinder, "Left red cancellation seal",
+                new Vector3(-0.23f, -0.12f, 0.052f), new Vector3(0.19f, 0.018f, 0.19f), red);
+            CreatePart(_contractRight, PrimitiveType.Cylinder, "Right red cancellation seal",
+                new Vector3(0.23f, -0.12f, 0.052f), new Vector3(0.19f, 0.018f, 0.19f), red);
+            CreatePart(_contractEffectRoot.transform, PrimitiveType.Cube, "Torn centre seam",
+                new Vector3(0f, 0f, 0.06f), new Vector3(0.035f, 0.88f, 0.04f), red);
+            CreateContractText(_contractEffectRoot.transform, "MAM WYJEBANE",
+                new Vector3(0f, 0.72f, 0.10f), new Color(0.93f, 0.48f, 0.95f));
+
+            // Small paper fibres kick outward on the rip; they are children of the
+            // temporary root so every fragment is cleaned up with the document.
+            for (int i = 0; i < 6; i++)
+            {
+                float direction = (i - 2.5f) * 0.18f;
+                GameObject fragment = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                fragment.name = "Contract torn paper fibre " + (i + 1);
+                fragment.transform.SetParent(_contractEffectRoot.transform, false);
+                fragment.transform.localPosition = new Vector3(direction * 0.05f, (i % 2 == 0 ? 0.08f : -0.08f), 0.08f);
+                fragment.transform.localScale = new Vector3(0.08f, 0.018f, 0.012f);
+                fragment.transform.localRotation = Quaternion.Euler(0f, 0f, (i - 2.5f) * 9f);
+                Collider fragmentCollider = fragment.GetComponent<Collider>();
+                if (fragmentCollider != null) Destroy(fragmentCollider);
+                Renderer fragmentRenderer = fragment.GetComponent<Renderer>();
+                if (fragmentRenderer != null) fragmentRenderer.sharedMaterial = GetSupportMaterial(i % 2 == 0 ? paper : paperShadow);
+                _contractFragments.Add(fragment.transform);
+                Vector3 away = new Vector3((i - 2.5f) * 0.24f, 0.55f + (i % 3) * 0.12f, (i % 2 == 0 ? 0.14f : -0.14f)).normalized;
+                _contractFragmentDirections.Add(away);
+            }
+
+            _contractEffectRemaining = 1.48f;
             TickContractEffect(0f);
         }
 
-        private static void CreateContractText(Transform parent, string value, Vector3 localPosition, Color color)
+        private void CreateContractText(Transform parent, string value, Vector3 localPosition, Color color)
+        {
+            CreateContractTextFace(parent, value, localPosition, color, false);
+            CreateContractTextFace(parent, value, new Vector3(localPosition.x, localPosition.y, -localPosition.z), color, true);
+        }
+
+        private static void CreateContractTextFace(Transform parent, string value, Vector3 localPosition, Color color, bool reverse)
         {
             GameObject label = new GameObject("Contract lettering");
             label.transform.SetParent(parent, false);
             label.transform.localPosition = localPosition;
+            if (reverse) label.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
             TextMesh text = label.AddComponent<TextMesh>();
             text.text = value;
-            text.fontSize = 34;
+            text.fontSize = 30;
             text.characterSize = 0.045f;
             text.anchor = TextAnchor.MiddleCenter;
             text.alignment = TextAlignment.Center;
@@ -362,26 +517,52 @@ namespace MaxFlix.Unity.Runtime
         {
             if (_contractEffectRemaining <= 0f || _contractEffectRoot == null) return;
             _contractEffectRemaining = Mathf.Max(0f, _contractEffectRemaining - deltaTime);
-            float progress = 1f - _contractEffectRemaining / 1.35f;
-            float split = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((progress - 0.08f) / 0.62f));
-            _contractEffectRoot.transform.position = transform.position + transform.forward * 1.25f + Vector3.up * (1.02f + Mathf.Sin(progress * Mathf.PI) * 0.16f);
+            float progress = 1f - _contractEffectRemaining / 1.48f;
+            float tension = 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(progress / 0.20f));
+            float split = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((progress - 0.10f) / 0.44f));
+            float flutter = Mathf.Sin(progress * 42f) * tension * 0.025f;
+
+            _contractEffectRoot.transform.position = transform.position + transform.forward * 1.25f
+                + Vector3.up * (1.02f + Mathf.Sin(progress * Mathf.PI) * 0.18f);
             _contractEffectRoot.transform.rotation = transform.rotation;
             if (_contractLeft != null)
             {
-                _contractLeft.localPosition = new Vector3(-split * 0.52f, Mathf.Sin(progress * Mathf.PI) * 0.12f, 0f);
-                _contractLeft.localRotation = Quaternion.Euler(0f, 0f, -split * 30f);
+                _contractLeft.localPosition = new Vector3(-split * 0.58f - flutter, Mathf.Sin(progress * Mathf.PI * 1.35f) * 0.15f, 0f);
+                _contractLeft.localRotation = Quaternion.Euler(0f, split * 16f, -split * 34f - flutter * 40f);
             }
             if (_contractRight != null)
             {
-                _contractRight.localPosition = new Vector3(split * 0.52f, Mathf.Sin(progress * Mathf.PI) * 0.10f, 0f);
-                _contractRight.localRotation = Quaternion.Euler(0f, 0f, split * 30f);
+                _contractRight.localPosition = new Vector3(split * 0.58f + flutter, Mathf.Sin(progress * Mathf.PI * 1.55f + 0.3f) * 0.13f, 0f);
+                _contractRight.localRotation = Quaternion.Euler(0f, -split * 16f, split * 34f + flutter * 40f);
             }
+
+            float fragmentProgress = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((progress - 0.18f) / 0.56f));
+            for (int i = 0; i < _contractFragments.Count; i++)
+            {
+                Transform fragment = _contractFragments[i];
+                if (fragment == null) continue;
+                Vector3 direction = _contractFragmentDirections[i];
+                fragment.localPosition = new Vector3(direction.x * fragmentProgress * 0.80f,
+                    direction.y * fragmentProgress * 0.62f - fragmentProgress * fragmentProgress * 0.24f,
+                    0.08f + direction.z * fragmentProgress);
+                fragment.localRotation *= Quaternion.Euler(160f * deltaTime, (120f + i * 20f) * deltaTime, 220f * deltaTime);
+                float scale = Mathf.Max(0.001f, 1f - Mathf.Clamp01((progress - 0.68f) / 0.30f));
+                fragment.localScale = new Vector3(0.08f, 0.018f, 0.012f) * scale;
+            }
+
+            if (progress > 0.43f && progress < 0.50f && _contractEffectRemaining > 0f)
+                OperatorImpactBurst.Spawn(_player != null ? _player.transform.parent : transform.parent,
+                    transform.position + transform.forward * 1.10f + Vector3.up * 0.12f,
+                    new Color(0.84f, 0.22f, 0.88f), 1.20f);
+
             if (_contractEffectRemaining <= 0f)
             {
                 Destroy(_contractEffectRoot);
                 _contractEffectRoot = null;
                 _contractLeft = null;
                 _contractRight = null;
+                _contractFragments.Clear();
+                _contractFragmentDirections.Clear();
             }
         }
 
@@ -551,6 +732,8 @@ namespace MaxFlix.Unity.Runtime
             _supportUnits.Clear();
             if (_grzesiekArmRoot != null) Destroy(_grzesiekArmRoot);
             if (_contractEffectRoot != null) Destroy(_contractEffectRoot);
+            _contractFragments.Clear();
+            _contractFragmentDirections.Clear();
         }
     }
 }
