@@ -561,7 +561,7 @@ test('Survival crowd steering blends stable pursuit, formation spacing and obsta
   const end = game.indexOf('private damageEnemy', start);
   assert.ok(start >= 0 && end > start, 'Survival tactics method should be present');
   const tactics = game.slice(start, end);
-  assert.match(tactics, /calculateEnemyObstacleAvoidanceVector\([\s\S]*?\{ x: targetX, z: targetZ \}[\s\S]*?this\.survivalObstacles[\s\S]*?4\.6[\s\S]*?0\.8/);
+  assert.match(tactics, /calculateEnemyObstacleAvoidanceVector\([\s\S]*?\{ x: movementTargetX, z: movementTargetZ \}[\s\S]*?this\.survivalObstacles[\s\S]*?4\.6[\s\S]*?0\.8/);
   assert.match(tactics, /calculateStableEnemySteering\(/);
   assert.match(tactics, /previous: \{ x: enemy\.aiSteerX \?\? 0, z: enemy\.aiSteerZ \?\? 0 \}/);
   assert.match(tactics, /separationWeight: 0\.72/);
