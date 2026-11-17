@@ -12246,11 +12246,25 @@ export class PaleciakiGameEngine {
     // circle so fast joystick movement cannot pass through them; preserve the
     // tangential component so the player can naturally strafe around a crowd.
     const contactY = landed ? this.playerPos.y : nextY;
+    const movementDeltaX = nextX - this.playerPos.x;
+    const movementDeltaZ = nextZ - this.playerPos.z;
+    // The grid is refreshed in updateEnemies after movement input. Reuse the
+    // previous frame's buckets here, but expand the swept query by 2.1 m so
+    // actors that moved between refreshes remain in the candidate set. Object
+    // references still expose their current coordinates to the exact solver.
+    const collisionCandidates = this.enemies.length >= 12 &&
+      this.enemySpatialIndexCachedCount === this.enemies.length
+      ? this.enemySpatialIndex.query(
+          (this.playerPos.x + nextX) * 0.5,
+          (this.playerPos.z + nextZ) * 0.5,
+          Math.hypot(movementDeltaX, movementDeltaZ) * 0.5 + 2.1,
+        )
+      : this.enemies;
     const playerContact = resolvePlayerMovementAgainstEnemies(
       { x: this.playerPos.x, z: this.playerPos.z },
       { x: nextX, z: nextZ },
       contactY,
-      this.enemies,
+      collisionCandidates,
     );
     if (playerContact.collided) {
       nextX = playerContact.x;
@@ -15278,7 +15292,17 @@ export class PaleciakiGameEngine {
         0.85,
         1.0,
       );
-      const enemyImpact = findFirstProjectileEnemyImpact(projectileStart, projectileEnd, this.enemies);
+      const projectileDeltaX = projectileEnd.x - projectileStart.x;
+      const projectileDeltaZ = projectileEnd.z - projectileStart.z;
+      const projectileCandidates = this.enemies.length >= 12 &&
+        this.enemySpatialIndexCachedCount === this.enemies.length
+        ? this.enemySpatialIndex.query(
+            (projectileStart.x + projectileEnd.x) * 0.5,
+            (projectileStart.z + projectileEnd.z) * 0.5,
+            Math.hypot(projectileDeltaX, projectileDeltaZ) * 0.5 + 1.9,
+          )
+        : this.enemies;
+      const enemyImpact = findFirstProjectileEnemyImpact(projectileStart, projectileEnd, projectileCandidates);
       if (enemyImpact && (!playerImpact || enemyImpact.t < playerImpact.t)) {
         const impactColor = ep.trailColor ?? (ep.isDyscyplinarka ? 0xef4444 : 0x67e8f9);
         ep.mesh.position.set(enemyImpact.x, enemyImpact.y, enemyImpact.z);
