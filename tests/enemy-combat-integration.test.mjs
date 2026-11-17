@@ -47,3 +47,24 @@ test('campaign melee AI closes into attack range and holds without contact jitte
   assert.match(campaign, /separationLength < 0\.34/);
   assert.match(campaign, /e\.x \+= move\.x \* chaseSpeed \* arrivalScale \* dt/);
 });
+
+test('large enemy crowds use a conservative spatial broadphase for player contact', () => {
+  const start = game.indexOf('const contactY = landed ? this.playerPos.y : nextY');
+  const end = game.indexOf('// Re-apply the gate after platform carry and crowd contact', start);
+  const contact = game.slice(start, end);
+  assert.match(contact, /this\.enemySpatialIndexCachedCount === this\.enemies\.length/);
+  assert.match(contact, /this\.enemySpatialIndex\.query\(/);
+  assert.match(contact, /Math\.hypot\(movementDeltaX, movementDeltaZ\) \* 0\.5 \+ 2\.1/);
+  assert.match(contact, /: this\.enemies/);
+  assert.match(contact, /resolvePlayerMovementAgainstEnemies\([\s\S]*?collisionCandidates/);
+});
+
+test('large hostile projectile crowds use the segment spatial broadphase before exact impact tests', () => {
+  const start = game.indexOf('const projectileStart = { x: previousX, y: previousY, z: previousZ }');
+  const end = game.indexOf('if (enemyImpact &&', start);
+  const collision = game.slice(start, end);
+  assert.match(collision, /this\.enemySpatialIndexCachedCount === this\.enemies\.length/);
+  assert.match(collision, /this\.enemySpatialIndex\.query\(/);
+  assert.match(collision, /Math\.hypot\(projectileDeltaX, projectileDeltaZ\) \* 0\.5 \+ 1\.9/);
+  assert.match(collision, /findFirstProjectileEnemyImpact\(projectileStart, projectileEnd, projectileCandidates\)/);
+});
