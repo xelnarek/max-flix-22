@@ -13128,29 +13128,53 @@ export class PaleciakiGameEngine {
 
   private setEnemyFactionBrawlVisual(enemy: EnemyItem, active: boolean, dt: number): void {
     if (!enemy.mesh) return;
-    const existing = enemy.mesh.userData.factionBrawlRing as THREE.Mesh | undefined;
+    const existingRing = enemy.mesh.userData.factionBrawlRing as THREE.Mesh | undefined;
+    const existingMarker = enemy.mesh.userData.factionBrawlMarker as THREE.Mesh | undefined;
     if (!active) {
-      if (existing) {
-        enemy.mesh.remove(existing);
-        existing.geometry.dispose();
-        (existing.material as THREE.Material).dispose();
+      if (existingRing) {
+        enemy.mesh.remove(existingRing);
+        existingRing.geometry.dispose();
+        (existingRing.material as THREE.Material).dispose();
         delete enemy.mesh.userData.factionBrawlRing;
+      }
+      if (existingMarker) {
+        enemy.mesh.remove(existingMarker);
+        existingMarker.geometry.dispose();
+        (existingMarker.material as THREE.Material).dispose();
+        delete enemy.mesh.userData.factionBrawlMarker;
       }
       return;
     }
-    let ring = existing;
+
+    let ring = existingRing;
     if (!ring) {
-      ring = new THREE.Mesh(
-        new THREE.TorusGeometry(0.58, 0.045, 6, 22),
-        new THREE.MeshBasicMaterial({ color: 0xd946ef, transparent: true, opacity: 0.72, depthWrite: false }),
-      );
+      const ringMaterial = new THREE.MeshBasicMaterial({
+        color: 0xe879f9, transparent: true, opacity: 0.82, depthWrite: false,
+      });
+      ring = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.052, 7, 26), ringMaterial);
       ring.rotation.x = -Math.PI / 2;
       ring.position.y = 0.055;
       enemy.mesh.add(ring);
       enemy.mesh.userData.factionBrawlRing = ring;
     }
-    ring.rotation.z += dt * 1.25;
-    ring.scale.setScalar(0.92 + Math.sin(performance.now() * 0.009 + enemy.walkCycle) * 0.08);
+    const pulse = 0.94 + Math.sin(performance.now() * 0.010 + enemy.walkCycle) * 0.09;
+    ring.rotation.z += dt * 1.9;
+    ring.scale.setScalar(pulse);
+    (ring.material as THREE.MeshBasicMaterial).opacity = 0.62 + pulse * 0.22;
+
+    let marker = existingMarker;
+    if (!marker) {
+      marker = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.15, 0),
+        new THREE.MeshBasicMaterial({ color: 0xf0abfc, transparent: true, opacity: 0.92, depthWrite: false }),
+      );
+      marker.position.set(0, 1.72, 0);
+      enemy.mesh.add(marker);
+      enemy.mesh.userData.factionBrawlMarker = marker;
+    }
+    marker.rotation.y += dt * 3.2;
+    marker.rotation.x = Math.sin(performance.now() * 0.006 + enemy.walkCycle) * 0.20;
+    marker.scale.setScalar(0.88 + Math.sin(performance.now() * 0.012 + enemy.walkCycle) * 0.14);
   }
 
   private updateEnemyFactionBrawl(enemy: EnemyItem, dt: number): void {
@@ -13225,7 +13249,8 @@ export class PaleciakiGameEngine {
       this.emitFloatingToast('WRÓG ELIMINUJE WROGA', target.x, target.y + 1.25, target.z, 'combo');
     }
     enemy.attackCooldown = isHeavy ? 0.78 : 0.92;
-    this.spawnCompactImpact(target.x, target.y + 0.66, target.z, 0xd946ef);
+    this.spawnExplosionParticles(target.x, target.y + 0.68, target.z, 0xd946ef, 7);
+    this.spawnCompactImpact(target.x, target.y + 0.66, target.z, 0xe879f9);
   }
 
   private damageEnemy(
@@ -16450,37 +16475,61 @@ export class PaleciakiGameEngine {
     group.name = 'mateusz-nine-month-contract-rip';
     const makePageTexture = (side: 'left' | 'right'): THREE.CanvasTexture => {
       const canvas = document.createElement('canvas');
-      canvas.width = 256;
-      canvas.height = 384;
+      canvas.width = 320;
+      canvas.height = 448;
       const context = canvas.getContext('2d');
       if (context) {
-        context.fillStyle = '#fff3d6';
-        context.fillRect(0, 0, 256, 384);
-        context.strokeStyle = '#334155';
-        context.lineWidth = 7;
-        context.strokeRect(12, 12, 232, 360);
+        const gradient = context.createLinearGradient(0, 0, 320, 448);
+        gradient.addColorStop(0, '#fff9e9');
+        gradient.addColorStop(1, '#eadfca');
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, 320, 448);
+        context.strokeStyle = '#475569';
+        context.lineWidth = 8;
+        context.strokeRect(12, 12, 296, 424);
+        context.fillStyle = '#7f1d1d';
+        context.fillRect(18, 18, 284, 10);
         context.fillStyle = '#172033';
         context.textAlign = 'center';
-        context.font = 'bold 25px sans-serif';
-        context.fillText(side === 'left' ? 'UMOWA' : 'ROZWIĄZANIE', 128, 64);
-        context.font = 'bold 20px sans-serif';
-        context.fillText(side === 'left' ? 'NA 9 MIESIĘCY' : 'STOSUNKU PRACY', 128, 108);
+        context.font = 'bold 27px sans-serif';
+        context.fillText(side === 'left' ? 'UMOWA O PRACĘ' : 'ROZWIĄZANIE', 160, 76);
+        context.font = 'bold 24px sans-serif';
+        context.fillText('NA 9 MIESIĘCY', 160, 116);
+        context.strokeStyle = '#94a3b8';
+        context.lineWidth = 2;
+        for (let line = 0; line < 5; line++) {
+          context.beginPath();
+          context.moveTo(42, 160 + line * 34);
+          context.lineTo(278, 160 + line * 34);
+          context.stroke();
+        }
+        context.fillStyle = '#334155';
         context.font = '16px sans-serif';
-        context.fillText('KOMPLEKS B4', 128, 160);
-        context.fillText('§ 9 — KONIEC', 128, 192);
-        context.fillStyle = '#b91c1c';
-        context.font = 'bold 28px sans-serif';
-        context.save();
-        context.translate(128, 280);
-        context.rotate(-0.12);
+        context.fillText('§ 9  •  OKRES UMOWY', 160, 151);
+        context.fillText(side === 'left' ? 'PODPIS PRACOWNIKA' : 'PODPIS UNIEWAŻNIONY', 160, 344);
+        context.beginPath();
+        context.moveTo(58, 366);
+        context.lineTo(262, 366);
+        context.stroke();
         context.strokeStyle = '#b91c1c';
-        context.lineWidth = 5;
-        context.strokeRect(-88, -30, 176, 56);
-        context.fillText(side === 'left' ? 'NIEWAŻNE' : 'ROZDARTA', 0, 10);
+        context.lineWidth = 7;
+        context.beginPath();
+        context.ellipse(160, 260, 82, 42, -0.10, 0, Math.PI * 2);
+        context.stroke();
+        context.fillStyle = '#b91c1c';
+        context.font = 'bold 29px sans-serif';
+        context.save();
+        context.translate(160, 268);
+        context.rotate(-0.10);
+        context.fillText(side === 'left' ? 'NIEWAŻNE' : 'ROZDARTA', 0, 0);
         context.restore();
+        context.fillStyle = '#64748b';
+        context.font = '12px sans-serif';
+        context.fillText('ARCHIWUM B4  /  EGZEMPLARZ 09', 160, 410);
       }
       const texture = new THREE.CanvasTexture(canvas);
       texture.colorSpace = THREE.SRGBColorSpace;
+      texture.userData.disposeOnObjectCleanup = true;
       return texture;
     };
 
@@ -16488,86 +16537,133 @@ export class PaleciakiGameEngine {
     const rightPivot = new THREE.Group();
     leftPivot.position.x = -0.02;
     rightPivot.position.x = 0.02;
-    const leftPageMaterial = new THREE.MeshBasicMaterial({ map: makePageTexture('left'), side: THREE.DoubleSide, transparent: true, opacity: 1 });
-    const rightPageMaterial = new THREE.MeshBasicMaterial({ map: makePageTexture('right'), side: THREE.DoubleSide, transparent: true, opacity: 1 });
-    const leftPage = new THREE.Mesh(new THREE.PlaneGeometry(0.47, 0.92), leftPageMaterial);
-    const rightPage = new THREE.Mesh(new THREE.PlaneGeometry(0.47, 0.92), rightPageMaterial);
-    leftPage.position.x = -0.235;
-    rightPage.position.x = 0.235;
+    const leftPageMaterial = new THREE.MeshBasicMaterial({
+      map: makePageTexture('left'), side: THREE.DoubleSide, transparent: true, opacity: 1, depthWrite: false,
+    });
+    const rightPageMaterial = new THREE.MeshBasicMaterial({
+      map: makePageTexture('right'), side: THREE.DoubleSide, transparent: true, opacity: 1, depthWrite: false,
+    });
+    const leftPage = new THREE.Mesh(new THREE.PlaneGeometry(0.50, 1.02), leftPageMaterial);
+    const rightPage = new THREE.Mesh(new THREE.PlaneGeometry(0.50, 1.02), rightPageMaterial);
+    leftPage.position.x = -0.25;
+    rightPage.position.x = 0.25;
     leftPivot.add(leftPage);
     rightPivot.add(rightPage);
     group.add(leftPivot, rightPivot);
 
     const tear = new THREE.Line(
       new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(0, -0.47, 0.012), new THREE.Vector3(-0.055, -0.23, 0.012),
-        new THREE.Vector3(0.05, -0.02, 0.012), new THREE.Vector3(-0.045, 0.18, 0.012),
-        new THREE.Vector3(0.025, 0.46, 0.012),
+        new THREE.Vector3(0, -0.51, 0.018), new THREE.Vector3(-0.06, -0.31, 0.018),
+        new THREE.Vector3(0.055, -0.10, 0.018), new THREE.Vector3(-0.055, 0.10, 0.018),
+        new THREE.Vector3(0.06, 0.31, 0.018), new THREE.Vector3(-0.025, 0.51, 0.018),
       ]),
-      new THREE.LineBasicMaterial({ color: 0xb91c1c, transparent: true, opacity: 0.95 }),
+      new THREE.LineBasicMaterial({ color: 0xb91c1c, transparent: true, opacity: 1, linewidth: 2 }),
     );
     group.add(tear);
 
+    // Little paper fibres split away from the tear instead of making the document simply slide apart.
+    const paperShards: { mesh: THREE.Mesh; velocity: THREE.Vector3; spin: THREE.Vector3; phase: number }[] = [];
+    const shardMaterial = new THREE.MeshBasicMaterial({ color: 0xfff1d2, side: THREE.DoubleSide, transparent: true, opacity: 1 });
+    for (let index = 0; index < 6; index++) {
+      const shard = new THREE.Mesh(new THREE.TetrahedronGeometry(0.075 + (index % 3) * 0.018, 0), shardMaterial.clone());
+      shard.position.set((index - 2.5) * 0.012, (index % 2 ? 1 : -1) * 0.06, 0.045);
+      group.add(shard);
+      paperShards.push({
+        mesh: shard,
+        velocity: new THREE.Vector3((index - 2.5) * 0.48, 0.55 + (index % 3) * 0.18, (index % 2 ? 1 : -1) * 0.12),
+        spin: new THREE.Vector3(3 + index * 0.35, 4 + index * 0.25, 5 + index * 0.3),
+        phase: index * 0.035,
+      });
+    }
+
     const titleCanvas = document.createElement('canvas');
-    titleCanvas.width = 512;
-    titleCanvas.height = 128;
+    titleCanvas.width = 640;
+    titleCanvas.height = 144;
     const titleContext = titleCanvas.getContext('2d');
     if (titleContext) {
-      titleContext.fillStyle = 'rgba(15, 23, 42, 0.92)';
-      titleContext.fillRect(0, 0, 512, 128);
+      titleContext.fillStyle = 'rgba(15, 23, 42, 0.94)';
+      titleContext.fillRect(0, 0, 640, 144);
       titleContext.strokeStyle = '#e879f9';
-      titleContext.lineWidth = 6;
-      titleContext.strokeRect(4, 4, 504, 120);
+      titleContext.lineWidth = 7;
+      titleContext.strokeRect(5, 5, 630, 134);
       titleContext.fillStyle = '#fdf4ff';
-      titleContext.font = 'bold 38px sans-serif';
+      titleContext.font = 'bold 48px sans-serif';
       titleContext.textAlign = 'center';
-      titleContext.fillText('MAM WYJEBANE', 256, 55);
-      titleContext.font = 'bold 20px sans-serif';
+      titleContext.fillText('MAM WYJEBANE', 320, 61);
+      titleContext.font = 'bold 23px sans-serif';
       titleContext.fillStyle = '#f9a8d4';
-      titleContext.fillText('UMOWA NA 9 MIESIĘCY • ROZDARTA', 256, 91);
+      titleContext.fillText('UMOWA NA 9 MIESIĘCY  •  ROZDARTA', 320, 105);
     }
     const titleTexture = new THREE.CanvasTexture(titleCanvas);
     titleTexture.colorSpace = THREE.SRGBColorSpace;
-    const titleMaterial = new THREE.MeshBasicMaterial({ map: titleTexture, transparent: true, opacity: 1, depthWrite: false });
-    const title = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 0.48), titleMaterial);
-    title.position.set(0, 0.82, 0.05);
+    titleTexture.userData.disposeOnObjectCleanup = true;
+    const titleMaterial = new THREE.MeshBasicMaterial({
+      map: titleTexture, transparent: true, opacity: 1, depthWrite: false,
+    });
+    const title = new THREE.Mesh(new THREE.PlaneGeometry(2.05, 0.46), titleMaterial);
+    title.position.set(0, 0.90, 0.055);
     group.add(title);
 
     group.position.set(
-      this.playerPos.x + Math.sin(this.playerRot) * 1.2,
+      this.playerPos.x + Math.sin(this.playerRot) * 1.30,
       this.playerPos.y + 1.05,
-      this.playerPos.z + Math.cos(this.playerRot) * 1.2,
+      this.playerPos.z + Math.cos(this.playerRot) * 1.30,
     );
     group.rotation.y = this.playerRot;
     this.levelRoot.add(group);
     this.spawnParticleRing(this.playerPos.x, 0.16, this.playerPos.z, 0xd946ef);
+
     let splitBurst = false;
     this.specialEffects.push({
       mesh: group,
-      life: 1.28,
-      maxLife: 1.28,
+      life: 1.42,
+      maxLife: 1.42,
       grow: 0,
       spin: 0,
       update: (_dt, progress) => {
-        const split = THREE.MathUtils.clamp((progress - 0.08) / 0.58, 0, 1);
-        const eased = split * split * (3 - 2 * split);
-        leftPivot.position.x = -0.02 - eased * 0.54;
-        rightPivot.position.x = 0.02 + eased * 0.54;
-        leftPivot.rotation.z = eased * 0.48;
-        rightPivot.rotation.z = -eased * 0.48;
-        leftPivot.position.y = Math.sin(progress * Math.PI) * 0.22;
-        rightPivot.position.y = Math.sin(progress * Math.PI) * 0.18;
-        title.position.y = 0.82 + Math.sin(progress * Math.PI) * 0.18;
-        const fade = Math.max(0, 1 - Math.max(0, progress - 0.58) / 0.42);
+        const smooth = (value: number) => {
+          const t = THREE.MathUtils.clamp(value, 0, 1);
+          return t * t * (3 - 2 * t);
+        };
+        const tension = 1 - smooth(progress / 0.20);
+        const split = smooth((progress - 0.10) / 0.42);
+        const flutter = Math.sin(progress * 42) * tension * 0.022;
+        leftPivot.position.x = -0.02 - split * 0.60 - flutter;
+        rightPivot.position.x = 0.02 + split * 0.60 + flutter;
+        leftPivot.position.y = Math.sin(progress * Math.PI * 1.4) * 0.20 + tension * 0.025;
+        rightPivot.position.y = Math.sin(progress * Math.PI * 1.65 + 0.4) * 0.17 - tension * 0.02;
+        leftPivot.rotation.z = split * 0.62 + flutter * 3.2;
+        rightPivot.rotation.z = -split * 0.62 - flutter * 3.2;
+        leftPivot.rotation.y = split * 0.24;
+        rightPivot.rotation.y = -split * 0.24;
+        title.position.y = 0.90 + Math.sin(progress * Math.PI) * 0.20;
+        title.scale.setScalar(0.94 + Math.sin(progress * Math.PI) * 0.08);
+
+        const shardProgress = smooth((progress - 0.20) / 0.55);
+        for (const shard of paperShards) {
+          const travel = Math.max(0, shardProgress - shard.phase);
+          shard.mesh.position.x = shard.velocity.x * travel;
+          shard.mesh.position.y = shard.velocity.y * travel - travel * travel * 0.58;
+          shard.mesh.position.z = 0.045 + shard.velocity.z * travel;
+          shard.mesh.rotation.x += shard.spin.x * 0.016;
+          shard.mesh.rotation.y += shard.spin.y * 0.016;
+          shard.mesh.rotation.z += shard.spin.z * 0.016;
+          const shardFade = Math.max(0, 1 - Math.max(0, progress - 0.62) / 0.30);
+          (shard.mesh.material as THREE.MeshBasicMaterial).opacity = shardFade;
+          shard.mesh.scale.setScalar(Math.max(0.001, shardFade));
+        }
+
+        const fade = Math.max(0, 1 - Math.max(0, progress - 0.68) / 0.32);
         leftPageMaterial.opacity = fade;
         rightPageMaterial.opacity = fade;
         titleMaterial.opacity = fade;
         (tear.material as THREE.LineBasicMaterial).opacity = fade;
-        if (!splitBurst && progress > 0.54) {
+        if (!splitBurst && progress > 0.48) {
           splitBurst = true;
-          this.spawnExplosionParticles(group.position.x, group.position.y, group.position.z, 0xd946ef, 14);
-          this.triggerBloomPulse(0.36);
-          this.triggerScreenShake(0.22, 0.15);
+          this.spawnExplosionParticles(group.position.x, group.position.y, group.position.z, 0xd946ef, 18);
+          this.spawnParticleRing(this.playerPos.x, 0.12, this.playerPos.z, 0xe879f9);
+          this.triggerBloomPulse(0.42);
+          this.triggerScreenShake(0.26, 0.17);
         }
       },
       cleanup: () => this.disposeTemporaryObject(group),
