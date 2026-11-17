@@ -70,7 +70,7 @@ test('large hostile projectile crowds use the segment spatial broadphase before 
 });
 
 test('Survival enemies scan for incoming player shots and commit a short role-weighted sidestep', async () => {
-  const types = await read('../src/types.ts');
+  const types = await readFile(new URL('../src/types.ts', import.meta.url), 'utf8');
   const start = game.indexOf('private updateSurvivalEnemyTactics');
   const end = game.indexOf('private damageEnemy', start);
   const tactics = game.slice(start, end);
