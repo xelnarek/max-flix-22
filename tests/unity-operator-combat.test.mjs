@@ -659,7 +659,7 @@ test('Unity Mateusz brawl redirects enemy AI and excludes enemy damage from play
   assert.match(enemy, /TickFactionBrawl\(deltaTime\)/);
   assert.match(enemy, /_factionBrawlTarget\.ApplyFactionDamage/);
   assert.match(enemy, /ApplyFactionDamage\(float damage/);
-  assert.match(enemy, /Enemy-versus-enemy damage/);
+  assert.match(enemy, /Enemy-vs-enemy damage/);
   assert.match(enemy, /_factionBrawlUntil/);
 });
 
