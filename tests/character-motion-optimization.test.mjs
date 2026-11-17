@@ -105,3 +105,32 @@ test('handheld actor shadow budget removes per-rig shadow casters and reduces ma
   assert.match(game, /this\.applyHandheldActorShadowBudget\(root\)/);
 });
 
+
+
+test('enemy role secondary motion reuses per-rig offset buffers instead of allocating per mixer tick', async () => {
+  const polish = await read('../src/enemyAnimationPolish.ts');
+  assert.match(polish, /interface AppliedOffsetBuffer/);
+  assert.match(polish, /const previousOffsets = new WeakMap<THREE\.Group, AppliedOffsetBuffer>/);
+  assert.match(polish, /function getAppliedOffsetBuffer\(root: THREE\.Group\)/);
+  assert.match(polish, /const applied = getAppliedOffsetBuffer\(root\)/);
+  assert.match(polish, /const index = record\.used\+\+/);
+  assert.match(polish, /offset\.bone = bone;[\s\S]*?offset\.axis = axis;[\s\S]*?offset\.angle = angle;/);
+  assert.match(polish, /offsets\.used = 0/);
+  assert.doesNotMatch(polish, /const applied: AppliedOffset\[\] = \[\]/);
+  assert.match(polish, /const stablePhaseCache = new Map<EnemyType, number>\(\)/);
+});
+
+test('floating toast projection keeps one scratch vector and avoids redundant display writes', async () => {
+  const app = await read('../src/index.ts');
+  const updaterStart = app.indexOf('const toastProjectionScratch = new THREE.Vector3()');
+  const updaterEnd = app.indexOf('const showPerkDropBanner', updaterStart);
+  assert.ok(updaterStart >= 0 && updaterEnd > updaterStart);
+  const updater = app.slice(updaterStart, updaterEnd);
+  const callbackStart = updater.indexOf('(this as any)._updateToasts =');
+  assert.ok(callbackStart >= 0, 'toast updater callback should exist');
+  const callback = updater.slice(callbackStart);
+  assert.match(callback, /const tempVec = toastProjectionScratch/);
+  assert.doesNotMatch(callback, /new THREE\\.Vector3\\(\\)/);
+  assert.ok(callback.includes("if (t.element.style.display !== 'none')"));
+  assert.ok(callback.includes("if (t.element.style.display !== 'flex')"));
+});
