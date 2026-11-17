@@ -82,6 +82,7 @@ import { getSurvivalCommanderProfile, selectSurvivalCommanderTargets } from './s
 import { advanceSurvivalCommanderTiming } from './survivalCommanderTiming.ts';
 import { getSurvivalLeaderLossTargets, getSurvivalMoraleBreakMultiplier, SURVIVAL_LEADER_LOSS_BREAK_SECONDS } from './survivalMorale.ts';
 import { selectSurvivalSupportPulseTargets, SURVIVAL_SUPPORT_PULSE_RADIUS, SURVIVAL_SUPPORT_PULSE_INTERVAL_SECONDS, SURVIVAL_SUPPORT_SHIELD_SECONDS } from './survivalSupport.ts';
+import { advanceSurvivalRetreatState, getSurvivalFlankInterceptOffset, getSurvivalRetreatTarget } from './survivalTactics.ts';
 import { getSurvivalProgressionInfo, getSurvivalPromotionRarityFloor, getSurvivalXpRequirement } from './survivalProgression.ts';
 import { createSurvivalXpStreakState, registerSurvivalXpPickup, type SurvivalXpStreakState } from './survivalXpStreak.ts';
 import { advanceSurvivalShiftEvent, createSurvivalShiftEventState, registerSurvivalShiftEventAction, type SurvivalShiftEvent, type SurvivalShiftEventAction, type SurvivalShiftEventState } from './survivalShiftEvents.ts';
@@ -12974,8 +12975,25 @@ export class PaleciakiGameEngine {
     const engaged = this.activeChaserIds.has(enemy.id) || enemy.type === 'pomazaniec' || !!enemy.surgeRunner;
     const slot = enemy.aiSlot || 0;
     const inHordeRing = !!enemy.surgeRunner && this.survivalSurgeTimeLeft > 0;
-    const anchorX = inHordeRing ? this.survivalSurgeCenterX : this.playerPos.x;
-    const anchorZ = inHordeRing ? this.survivalSurgeCenterZ : this.playerPos.z;
+    const retreat = advanceSurvivalRetreatState({
+      role,
+      hp: enemy.hp,
+      maxHp: enemy.maxHp,
+      distanceToPlayer,
+      retreatTimer: enemy.aiRetreatTimer ?? 0,
+      retreatCooldown: enemy.aiRetreatCooldownTimer ?? 0,
+      dt,
+    });
+    enemy.aiRetreatTimer = retreat.remainingSeconds;
+    enemy.aiRetreatCooldownTimer = retreat.cooldownRemaining;
+    const isRetreating = retreat.active;
+    if (retreat.started) this.spawnParticleRing(enemy.x, enemy.y + 0.16, enemy.z, 0xf59e0b);
+
+    const flankIntercept = engaged && !inHordeRing
+      ? getSurvivalFlankInterceptOffset(role, { x: this.playerVel.x, z: this.playerVel.z })
+      : { x: 0, z: 0 };
+    const anchorX = inHordeRing ? this.survivalSurgeCenterX : this.playerPos.x + flankIntercept.x;
+    const anchorZ = inHordeRing ? this.survivalSurgeCenterZ : this.playerPos.z + flankIntercept.z;
     const anchorAngle = enemy.aiFlankAngle ?? Math.atan2(enemy.x - anchorX, enemy.z - anchorZ);
     // Engaged enemies keep their assigned lane. Patrol formations drift slowly,
     // avoiding the old alternating left/right wobble at close range.
@@ -12999,11 +13017,23 @@ export class PaleciakiGameEngine {
           : Math.max(defaultEngageRadius, Math.min(assignedFormationRadius, defaultEngageRadius + 0.9)))
         : role === 'support' ? 15.0 : role === 'ranged' ? 14.0 : 12.6;
 
-    if (!inHordeRing && engaged && role === 'ranged' && distanceToPlayer < preferredRadius - 1.0) {
+    if (!isRetreating && !inHordeRing && engaged && role === 'ranged' && distanceToPlayer < preferredRadius - 1.0) {
       preferredRadius += 1.0;
     }
-    const targetX = anchorX + Math.sin(angle) * preferredRadius;
-    const targetZ = anchorZ + Math.cos(angle) * preferredRadius * (inHordeRing ? 0.62 : 1);
+    let targetX = anchorX + Math.sin(angle) * preferredRadius;
+    let targetZ = anchorZ + Math.cos(angle) * preferredRadius * (inHordeRing ? 0.62 : 1);
+    if (isRetreating) {
+      const retreatTarget = getSurvivalRetreatTarget({
+        role,
+        playerX: this.playerPos.x,
+        playerZ: this.playerPos.z,
+        enemyX: enemy.x,
+        enemyZ: enemy.z,
+        slot,
+      });
+      targetX = retreatTarget.x;
+      targetZ = retreatTarget.z;
+    }
     let steerX = targetX - enemy.x;
     let steerZ = targetZ - enemy.z;
     const steerLength = Math.hypot(steerX, steerZ);
@@ -13075,12 +13105,13 @@ export class PaleciakiGameEngine {
     const roleSpeed = role === 'bruiser' ? 0.82 : role === 'flanker' ? 1.12 : role === 'support' ? 0.88 : 0.94;
     const waveSpeed = 1 + Math.min(0.18, Math.max(0, this.survivalWave - 1) * 0.009);
     const pressureSpeed = engaged ? 1 : 0.48;
+    const retreatSpeedMultiplier = isRetreating ? 1.16 : 1;
     const commandBoost = enemy.aiCommandBoostTimer && enemy.aiCommandBoostTimer > 0
       ? THREE.MathUtils.clamp(enemy.aiCommandBoostMultiplier ?? 1, 1, 1.25)
       : 1;
     const moraleBreak = getSurvivalMoraleBreakMultiplier(enemy.aiMoraleBreakTimer ?? 0);
     const speed = enemy.speed * roleSpeed * waveSpeed * pressureSpeed * commandBoost * moraleBreak;
-    const movementSpeed = speed * arrivalScale;
+    const movementSpeed = speed * arrivalScale * retreatSpeedMultiplier;
 
     enemy.x = THREE.MathUtils.clamp(enemy.x + steerX * movementSpeed * dt, this.levelBounds.minX + 1.2, this.levelBounds.maxX - 1.2);
     enemy.z = THREE.MathUtils.clamp(enemy.z + steerZ * movementSpeed * dt, this.levelBounds.minZ + 1.0, this.levelBounds.maxZ - 1.0);
