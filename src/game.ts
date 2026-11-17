@@ -12947,28 +12947,6 @@ export class PaleciakiGameEngine {
 
     // Ring members follow the visible contracting perimeter instead of all
     // selecting the same close-range target and collapsing onto the player.
-    const defaultEngageRadius = getEnemyEngageRadius(role);
-    const assignedFormationRadius = Number.isFinite(enemy.aiFormationRadius)
-      ? THREE.MathUtils.clamp(enemy.aiFormationRadius as number, 1.0, 8.2)
-      : defaultEngageRadius;
-    let preferredRadius = inHordeRing
-      ? this.survivalSurgeCurrentRadius
-      : engaged
-        ? (role === 'bruiser' || role === 'flanker'
-          ? defaultEngageRadius
-          : Math.max(defaultEngageRadius, Math.min(assignedFormationRadius, defaultEngageRadius + 0.9)))
-        : role === 'support' ? 15.0 : role === 'ranged' ? 14.0 : 12.6;
-
-    // Ranged attackers try to hold a useful firing lane instead of walking into melee range.
-    if (!inHordeRing && engaged && role === 'ranged' && distanceToPlayer < preferredRadius - 1.0) preferredRadius += 1.0;
-    // With every internal biome edge physically open, enemies steer directly across the world.
-    // Their flank/formation angle remains intact and global obstacle avoidance handles cover.
-    const targetX = anchorX + Math.sin(angle) * preferredRadius;
-    const targetZ = anchorZ + Math.cos(angle) * preferredRadius * (inHordeRing ? 0.62 : 1);
-    let steerX = targetX - enemy.x;
-    let steerZ = targetZ - enemy.z;
-    const steerLength = Math.hypot(steerX, steerZ);
-
     const nearbyEnemies = this.enemySpatialIndex.query(enemy.x, enemy.z, 4.1);
     const separation = calculateEnemySeparationVector(enemy, nearbyEnemies, 2.6, this.enemySeparationScratch);
     const obstacleAvoidance = calculateEnemyObstacleAvoidanceVector(
@@ -12983,7 +12961,7 @@ export class PaleciakiGameEngine {
     // Arrival dead-zone replaces the old tangent-orbit correction. Close
     // enemies stop cleanly; only a real crowd overlap can still request a
     // small lateral correction. This removes the visible idle foot-shuffle.
-    const separationLength = Math.hypot(separationX, separationZ);
+    const separationLength = Math.hypot(separation.x, separation.z);
     const atFormationSlot = steerLength < 0.24;
     const steering = isTelegraphingRangedBoss || (atFormationSlot && separationLength < 0.34)
       ? { x: 0, z: 0 }
@@ -13006,6 +12984,8 @@ export class PaleciakiGameEngine {
       : THREE.MathUtils.clamp((steerLength - 0.12) / 0.95, 0, 1);
 
     const roleSpeed = role === 'bruiser' ? 0.82 : role === 'flanker' ? 1.12 : role === 'support' ? 0.88 : 0.94;
+    const waveSpeed = 1 + Math.min(0.18, Math.max(0, this.survivalWave - 1) * 0.009);
+    const pressureSpeed = engaged ? 1 : 0.48;    const roleSpeed = role === 'bruiser' ? 0.82 : role === 'flanker' ? 1.12 : role === 'support' ? 0.88 : 0.94;
     const waveSpeed = 1 + Math.min(0.18, Math.max(0, this.survivalWave - 1) * 0.009);
     const pressureSpeed = engaged ? 1 : 0.48;
     const commandBoost = enemy.aiCommandBoostTimer && enemy.aiCommandBoostTimer > 0
