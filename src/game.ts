@@ -15733,11 +15733,11 @@ export class PaleciakiGameEngine {
 
     const wristGuard = new THREE.Mesh(new THREE.TorusGeometry(0.275, 0.066, 9, 24), band);
     wristGuard.position.set(0, -0.005, 0.72);
-    wristGuard.rotation.x = Math.PI / 2;
+    wristGuard.rotation.x = 0;
     elbowPivot.add(wristGuard);
     const steelRim = new THREE.Mesh(new THREE.TorusGeometry(0.277, 0.027, 7, 24), steel);
     steelRim.position.set(0, -0.005, 0.80);
-    steelRim.rotation.x = Math.PI / 2;
+    steelRim.rotation.x = 0;
     elbowPivot.add(steelRim);
 
     const fist = new THREE.Group();
