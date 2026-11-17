@@ -60,13 +60,16 @@ test('large enemy crowds use a conservative spatial broadphase for player contac
 });
 
 test('large hostile projectile crowds use the segment spatial broadphase before exact impact tests', () => {
-  const start = game.indexOf('const projectileStart = { x: previousX, y: previousY, z: previousZ }');
+  const start = game.indexOf('const projectileStart = this.enemyProjectileStartScratch;');
+  assert.notEqual(start, -1, 'enemy projectile sweep must use reusable start-point storage');
   const end = game.indexOf('if (enemyImpact &&', start);
   const collision = game.slice(start, end);
-  assert.match(collision, /this\.enemySpatialIndexCachedCount === this\.enemies\.length/);
-  assert.match(collision, /this\.enemySpatialIndex\.query\(/);
-  assert.match(collision, /Math\.hypot\(projectileDeltaX, projectileDeltaZ\) \* 0\.5 \+ 1\.9/);
-  assert.match(collision, /findFirstProjectileEnemyImpact\(projectileStart, projectileEnd, projectileCandidates\)/);
+  assert.match(collision, /projectileStart\\.x = previousX;[\\s\\S]*projectileStart\\.y = previousY;[\\s\\S]*projectileStart\\.z = previousZ;/);
+  assert.match(collision, /projectileEnd\\.x = ep\\.mesh\\.position\\.x;[\\s\\S]*projectileEnd\\.z = ep\\.mesh\\.position\\.z;/);
+  assert.match(collision, /this\\.enemySpatialIndexCachedCount === this\\.enemies\\.length/);
+  assert.match(collision, /this\\.enemySpatialIndex\\.query\\(/);
+  assert.match(collision, /Math\\.hypot\\(projectileDeltaX, projectileDeltaZ\\) \\* 0\\.5 \\+ 1\\.9/);
+  assert.match(collision, /findFirstProjectileEnemyImpact\\([\\s\\S]*?projectileCandidates,[\\s\\S]*?this\\.enemyProjectileEnemyImpactScratch/);
 });
 
 test('Survival enemies scan for incoming player shots and commit a short role-weighted sidestep', async () => {
