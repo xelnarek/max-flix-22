@@ -552,16 +552,20 @@ test('campaign bosses use warehouse obstacle-aware pursuit without moving during
 });
 
 
-test('Survival crowd steering routes toward its formation target around obstacles', async () => {
+test('Survival crowd steering blends stable pursuit, formation spacing and obstacle avoidance', async () => {
   const game = await read('../src/game.ts');
   const start = game.indexOf('private updateSurvivalEnemyTactics');
   const end = game.indexOf('private damageEnemy', start);
   assert.ok(start >= 0 && end > start, 'Survival tactics method should be present');
   const tactics = game.slice(start, end);
   assert.match(tactics, /calculateEnemyObstacleAvoidanceVector\([\s\S]*?\{ x: targetX, z: targetZ \}[\s\S]*?this\.survivalObstacles[\s\S]*?4\.6[\s\S]*?0\.8/);
-  assert.match(tactics, /steerX \+= separationX \* 3\.0 \+ obstacleAvoidance\.x \* 1\.25/);
+  assert.match(tactics, /calculateStableEnemySteering\(/);
+  assert.match(tactics, /previous: \{ x: enemy\.aiSteerX \?\? 0, z: enemy\.aiSteerZ \?\? 0 \}/);
+  assert.match(tactics, /separationWeight: 0\.72/);
+  assert.match(tactics, /enemy\.aiSteerX = steerX/);
+  assert.match(tactics, /getEnemyEngageRadius\(role\)/);
   assert.doesNotMatch(tactics, /for \(const obstacle of this\.survivalObstacles\)/);
-  assert.match(tactics, /if \(isTelegraphingRangedBoss\) \{[\s\S]*?steerX = 0;[\s\S]*?steerZ = 0/);
+  assert.match(tactics, /isTelegraphingRangedBoss\s*\?\s*\{ x: 0, z: 0 \}/);
 });
 
 
