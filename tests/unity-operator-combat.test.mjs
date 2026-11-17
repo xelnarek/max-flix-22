@@ -707,6 +707,7 @@ test('Unity 44cm arm has articulated elbow/fist animation and a shared impact bu
   assert.match(burst, /Expanding impact ring/);
   assert.match(burst, /Impact fragment/);
   assert.match(burst, /BuildRingMesh\(\)/);
+  assert.match(burst, /triangles\[triangleIndex\+\+\] = a \+ 1;[\s\S]*?triangles\[triangleIndex\+\+\] = b;/);
 });
 
 test('Unity nine-month contract has two-sided lettering, animated paper fibres and a tear impact', async () => {
