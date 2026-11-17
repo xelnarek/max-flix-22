@@ -571,7 +571,7 @@ test('Survival crowd steering blends stable pursuit, formation spacing and obsta
   assert.doesNotMatch(tactics, /for \(const obstacle of this\.survivalObstacles\)/);
   assert.match(tactics, /const shouldHoldFormation = atFormationSlot && separationLength < 0\.34 && !hasProjectileDodge/);
   assert.match(tactics, /isTelegraphingRangedBoss \|\| shouldHoldFormation/);
-  assert.match(tactics, /calculateEnemyProjectileDodge\(enemy, this\.projectiles/);
+  assert.match(tactics, /calculateEnemyProjectileDodge\([\s\S]*?enemy,[\s\S]*?this\.projectiles,[\s\S]*?0\.72,[\s\S]*?1\.02,[\s\S]*?0\.95,[\s\S]*?this\.enemyProjectileDodgeScanScratch/);
   assert.match(tactics, /const projectileDodge = this\.enemyProjectileDodgeScratch/);
   assert.match(tactics, /steeringInput\.evasionWeight = evasionWeight/);
   assert.match(game, /evasion: this\.enemyProjectileDodgeScratch/);
