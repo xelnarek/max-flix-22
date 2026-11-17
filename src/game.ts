@@ -15084,7 +15084,13 @@ export class PaleciakiGameEngine {
             }
             sound.playSmack();
             if (p.weaponProjectile) {
-              this.spawnCompactImpact(e.x, e.y + 0.72, e.z, p.weaponId ? SURVIVAL_DAMAGE_WEAPONS[p.weaponId].color : 0x7dd3fc);
+              const impactColor = p.weaponId ? SURVIVAL_DAMAGE_WEAPONS[p.weaponId].color : 0x7dd3fc;
+              this.spawnCompactImpact(e.x, e.y + 0.72, e.z, impactColor);
+              // A restrained hit-stop cue makes each shot feel connected without
+              // shaking the camera on every pellet or overwhelming mobile play.
+              if (this.gameMode === 'survival' && !this.isHandheldViewport) {
+                this.triggerScreenShake(0.045, 0.035);
+              }
             } else {
               this.triggerBloomPulse(0.1);
               this.cameraShake = 0.25;
