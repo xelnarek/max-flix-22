@@ -725,6 +725,8 @@ test('Unity enemy faction brawl exposes a visible timed marker and removes it on
   assert.match(enemy, /Enemy-on-enemy status marker/);
   assert.match(enemy, /TickFactionBrawlVisual\(deltaTime\)/);
   assert.match(enemy, /ClearFactionBrawlVisual\(\)/);
+  assert.match(enemy, /_factionBrawlAttackFlashRemaining/);
+  assert.match(enemy, /attackFlash/);
   assert.match(enemy, /private void Defeat\(\)[\s\S]*?ClearFactionBrawlVisual\(\)/);
 });
 
