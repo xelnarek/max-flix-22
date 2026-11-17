@@ -27,11 +27,31 @@ export function dampActorAngle(current: number, target: number, responsiveness: 
 /**
  * Distance-based mixer cadence. Nearby combat remains full-rate; distant visible
  * enemies use a bounded lower cadence while their accumulated time stays correct.
+ * The squared-distance variant avoids a square root in the per-enemy update loop.
  */
+export function getActorAnimationIntervalFromDistanceSquared(
+  distanceSquared: number,
+  handheld = false
+): number {
+  if (!Number.isFinite(distanceSquared) || distanceSquared <= 81) return 0;
+  if (distanceSquared <= 289) return handheld ? 1 / 30 : 1 / 45;
+  return handheld ? 1 / 24 : 1 / 30;
+}
+
 export function getActorAnimationInterval(distance: number, handheld = false): number {
   if (!Number.isFinite(distance) || distance <= 9) return 0;
-  if (distance <= 17) return handheld ? 1 / 30 : 1 / 45;
-  return handheld ? 1 / 24 : 1 / 30;
+  return getActorAnimationIntervalFromDistanceSquared(distance * distance, handheld);
+}
+
+/** Decide whether a throttled actor needs an animation tick this frame. */
+export function shouldAdvanceActorAnimation(
+  interval: number,
+  accumulatedDt: number,
+  force = false
+): boolean {
+  if (force || interval <= 0) return true;
+  if (!Number.isFinite(interval) || !Number.isFinite(accumulatedDt)) return false;
+  return accumulatedDt + 1e-6 >= interval;
 }
 
 /** Restrained cadence correction for imported enemy rigs; independent of AI speed. */
