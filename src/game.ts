@@ -110,6 +110,8 @@ import {
   SURVIVAL_AUTO_AIM_RANGE_METERS,
 } from './combatBalance.ts';
 import { ParticleMeshPool, type ParticleShape } from './particlePool.ts';
+import { ParticleMotionStatePool, type ParticleMotionState } from './particleMotionPool.ts';
+
 import { applyPerfectDodgeCounterattack, getSurvivalDashCooldownSeconds, getSurvivalDashProgress, rollSurvivalCriticalDamage } from './archeroMechanics.ts';
 import { advanceSurvivalMomentum, createSurvivalMomentumState, getSurvivalMomentumDamageMultiplier, getSurvivalMomentumMoveMultiplier, getSurvivalMomentumRateMultiplier, registerSurvivalKill, type SurvivalMomentumState } from './survivalMomentum.ts';
 import { selectSurvivalAutoTarget } from './survivalTargeting.ts';
@@ -314,6 +316,29 @@ function cloneRootMotionFreeClip(sourceClip: THREE.AnimationClip): THREE.Animati
   });
   return new THREE.AnimationClip(sourceClip.name, sourceClip.duration, tracks, sourceClip.blendMode);
 }
+
+const PARTICLE_STATE_CAPACITY = 75;
+
+const SURVIVAL_WEAPON_MUZZLE_PARTICLE_PATTERNS: Readonly<Record<SurvivalDamageWeaponId, {
+  shape: ParticleShape;
+  count: number;
+  size: number;
+  speed: number;
+  spread: number;
+}>> = Object.freeze({
+  pallet_cannon: { shape: 'flat-box', count: 5, size: 0.115, speed: 4.8, spread: 0.22 },
+  diamond_saw: { shape: 'octahedron', count: 4, size: 0.095, speed: 5.8, spread: 0.62 },
+  glue_mine: { shape: 'sphere', count: 3, size: 0.14, speed: 2.6, spread: 0.34 },
+  kfc_bomber: { shape: 'tetrahedron', count: 4, size: 0.12, speed: 5.0, spread: 0.46 },
+  piorun_drone: { shape: 'octahedron', count: 3, size: 0.10, speed: 4.7, spread: 0.18 },
+  forklift_bolter: { shape: 'flat-box', count: 3, size: 0.075, speed: 8.0, spread: 0.16 },
+  scanner_pulse: { shape: 'box', count: 3, size: 0.075, speed: 7.2, spread: 0.24 },
+  orbit_blades: { shape: 'tetrahedron', count: 4, size: 0.085, speed: 3.0, spread: 0.95 },
+  calacatta_shards: { shape: 'tetrahedron', count: 5, size: 0.105, speed: 6.0, spread: 0.82 },
+  steam_bomb: { shape: 'sphere', count: 4, size: 0.13, speed: 3.4, spread: 0.38 },
+  forklift_horn: { shape: 'flat-box', count: 6, size: 0.095, speed: 3.6, spread: Math.PI * 2 },
+  wz_boomerang: { shape: 'octahedron', count: 4, size: 0.105, speed: 5.5, spread: 0.7 },
+});
 
 interface GobkitAnimationTrack {
   root: THREE.Group;
@@ -983,17 +1008,13 @@ export class PaleciakiGameEngine {
   private readonly survivalArenaInstanceMaterials = new Set<THREE.Material>();
   private readonly survivalArenaInstanceTextures = new Set<THREE.Texture>();
   private readonly survivalArenaLabelMaterials = new Map<string, THREE.MeshBasicMaterial>();
-  private particles: {
-    mesh: THREE.Mesh;
-    vel: THREE.Vector3;
-    life: number;
-    maxLife: number;
-    gravity?: number;
-    baseScale?: number;
-    rotVel?: THREE.Vector3;
-  }[] = [];
+  // Active indices are preallocated too; a burst never grows the particle array.
+  private readonly particles: Array<ParticleMotionState | undefined> = new Array<ParticleMotionState | undefined>(PARTICLE_STATE_CAPACITY);
+  private particleCount = 0;
+  private readonly particleStatePool = new ParticleMotionStatePool(PARTICLE_STATE_CAPACITY);
+  private readonly particleColorScratch = new THREE.Color();
   // One bounded pool owns all short-lived combat-fragment geometry/materials.
-  private readonly particlePool = new ParticleMeshPool(75);
+  private readonly particlePool = new ParticleMeshPool(PARTICLE_STATE_CAPACITY);
   private particlePoolDisposed = false;
 
   /** Release pooled GPU resources when this engine is permanently torn down. */
@@ -6924,8 +6945,7 @@ export class PaleciakiGameEngine {
     this.survivalXpGems = [];
     this.hazards = [];
     this.explosiveBarrels = [];
-    for (const particle of this.particles) this.particlePool.release(particle.mesh);
-    this.particles = [];
+    this.clearParticles();
     this.enemies = [];
     this.activeChaserIds.clear();
     this.waveDirectorCooldown = 0;
@@ -9641,27 +9661,22 @@ export class PaleciakiGameEngine {
   private spawnSurvivalWeaponMuzzleFx(weapon: SurvivalWeaponState, target: EnemyItem): void {
     const weaponId = weapon.id as SurvivalDamageWeaponId;
     const meta = SURVIVAL_DAMAGE_WEAPONS[weaponId];
-    const pattern: Record<SurvivalDamageWeaponId, { shape: ParticleShape; count: number; size: number; speed: number; spread: number }> = {
-      pallet_cannon: { shape: 'flat-box', count: 5, size: 0.115, speed: 4.8, spread: 0.22 },
-      diamond_saw: { shape: 'octahedron', count: 4, size: 0.095, speed: 5.8, spread: 0.62 },
-      glue_mine: { shape: 'sphere', count: 3, size: 0.14, speed: 2.6, spread: 0.34 },
-      kfc_bomber: { shape: 'tetrahedron', count: 4, size: 0.12, speed: 5.0, spread: 0.46 },
-      piorun_drone: { shape: 'octahedron', count: 3, size: 0.10, speed: 4.7, spread: 0.18 },
-      forklift_bolter: { shape: 'flat-box', count: 3, size: 0.075, speed: 8.0, spread: 0.16 },
-      scanner_pulse: { shape: 'box', count: 3, size: 0.075, speed: 7.2, spread: 0.24 },
-      orbit_blades: { shape: 'tetrahedron', count: 4, size: 0.085, speed: 3.0, spread: 0.95 },
-      calacatta_shards: { shape: 'tetrahedron', count: 5, size: 0.105, speed: 6.0, spread: 0.82 },
-      steam_bomb: { shape: 'sphere', count: 4, size: 0.13, speed: 3.4, spread: 0.38 },
-      forklift_horn: { shape: 'flat-box', count: 6, size: 0.095, speed: 3.6, spread: Math.PI * 2 },
-      wz_boomerang: { shape: 'octahedron', count: 4, size: 0.105, speed: 5.5, spread: 0.7 },
-    };
-    const visual = pattern[weaponId];
+    const visual = SURVIVAL_WEAPON_MUZZLE_PARTICLE_PATTERNS[weaponId];
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
     const count = Math.min(visual.count, isMobile ? (this.adaptivePerformanceTier >= 2 ? 2 : this.adaptivePerformanceTier === 1 ? 3 : visual.count) : visual.count);
-    const forward = new THREE.Vector3(target.x - this.playerPos.x, 0, target.z - this.playerPos.z);
-    if (forward.lengthSq() < 0.001) forward.set(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
-    forward.normalize();
-    const right = new THREE.Vector3(forward.z, 0, -forward.x);
+    let forwardX = target.x - this.playerPos.x;
+    let forwardZ = target.z - this.playerPos.z;
+    const forwardLengthSq = forwardX * forwardX + forwardZ * forwardZ;
+    if (forwardLengthSq < 0.001) {
+      forwardX = Math.sin(this.playerRot);
+      forwardZ = Math.cos(this.playerRot);
+    } else {
+      const inverseLength = 1 / Math.sqrt(forwardLengthSq);
+      forwardX *= inverseLength;
+      forwardZ *= inverseLength;
+    }
+    const rightX = forwardZ;
+    const rightZ = -forwardX;
 
     for (let index = 0; index < count; index++) {
       const lane = count <= 1 ? 0 : (index / (count - 1)) * 2 - 1;
@@ -9671,24 +9686,32 @@ export class PaleciakiGameEngine {
       mesh.rotation.set(index * 0.55, index * 0.8, index * 0.35);
       this.levelRoot.add(mesh);
 
-      let velocity: THREE.Vector3;
+      let velocityX: number;
+      let velocityY: number;
+      let velocityZ: number;
       if (weaponId === 'forklift_horn') {
         const angle = (index / count) * Math.PI * 2;
-        velocity = new THREE.Vector3(Math.cos(angle) * visual.speed, 0.75, Math.sin(angle) * visual.speed);
+        velocityX = Math.cos(angle) * visual.speed;
+        velocityY = 0.75;
+        velocityZ = Math.sin(angle) * visual.speed;
       } else {
-        velocity = forward.clone().multiplyScalar(visual.speed)
-          .addScaledVector(right, lane * visual.spread)
-          .add(new THREE.Vector3(0, 0.75 + (index % 2) * 0.45, 0));
+        const spread = lane * visual.spread;
+        velocityX = forwardX * visual.speed + rightX * spread;
+        velocityY = 0.75 + (index % 2) * 0.45;
+        velocityZ = forwardZ * visual.speed + rightZ * spread;
       }
-      this.particles.push({
+      this.addParticle(
         mesh,
-        vel: velocity,
-        life: weapon.evolved ? 0.48 : 0.38,
-        maxLife: weapon.evolved ? 0.48 : 0.38,
-        gravity: 1.2,
-        baseScale: visual.size,
-        rotVel: new THREE.Vector3(4 + index, 5 + index * 0.6, 3 + index * 0.4),
-      });
+        velocityX,
+        velocityY,
+        velocityZ,
+        weapon.evolved ? 0.48 : 0.38,
+        1.2,
+        visual.size,
+        4 + index,
+        5 + index * 0.6,
+        3 + index * 0.4,
+      );
     }
   }
 
@@ -9706,10 +9729,12 @@ export class PaleciakiGameEngine {
     mesh.position.copy(projectile.mesh.position);
     mesh.rotation.set(0.25, 0.5, 0.15);
     this.levelRoot.add(mesh);
-    const velocity = projectile.vel.lengthSq() > 0.01
-      ? projectile.vel.clone().normalize().multiplyScalar(-0.48)
-      : new THREE.Vector3(0, 0.18, 0);
-    this.particles.push({ mesh, vel: velocity, life: 0.22, maxLife: 0.22, baseScale: size });
+    const velocityLengthSq = projectile.vel.lengthSq();
+    const velocityScale = velocityLengthSq > 0.01 ? -0.48 / Math.sqrt(velocityLengthSq) : 0;
+    const velocityX = projectile.vel.x * velocityScale;
+    const velocityY = velocityLengthSq > 0.01 ? projectile.vel.y * velocityScale : 0.18;
+    const velocityZ = projectile.vel.z * velocityScale;
+    this.addParticle(mesh, velocityX, velocityY, velocityZ, 0.22, null, size);
   }
 
   private fireSurvivalWeapon(weapon: SurvivalWeaponState, target: EnemyItem) {
@@ -13427,19 +13452,18 @@ export class PaleciakiGameEngine {
       const speed = profile.particleSpeed * (0.9 + (index % 2) * 0.12);
       mesh.position.set(enemy.x, enemy.y + 0.62, enemy.z);
       this.levelRoot.add(mesh);
-      this.particles.push({
+      this.addParticle(
         mesh,
-        vel: new THREE.Vector3(
-          dx * speed + sideX * sideSpread,
-          0.72 + (index % 2) * 0.22,
-          dz * speed + sideZ * sideSpread,
-        ),
-        life: profile.duration,
-        maxLife: profile.duration,
-        gravity: 2.8,
-        baseScale: profile.particleScale,
-        rotVel: new THREE.Vector3(5 + index, 6 + index * 0.7, 4 + index * 0.5),
-      });
+        dx * speed + sideX * sideSpread,
+        0.72 + (index % 2) * 0.22,
+        dz * speed + sideZ * sideSpread,
+        profile.duration,
+        2.8,
+        profile.particleScale,
+        5 + index,
+        6 + index * 0.7,
+        4 + index * 0.5,
+      );
     }
   }
 
@@ -15626,15 +15650,21 @@ export class PaleciakiGameEngine {
       const handheldParticleBudget = this.isHandheldViewport
         ? (this.adaptivePerformanceTier >= 2 ? 14 : this.adaptivePerformanceTier === 1 ? 24 : 36)
         : 75;
-      if (ep.trailTimer <= 0 && ep.life > 0.12 && this.particles.length < handheldParticleBudget) {
+      if (ep.trailTimer <= 0 && ep.life > 0.12 && this.particleCount < handheldParticleBudget) {
         const trailColor = ep.trailColor ?? (ep.isDyscyplinarka ? 0xef4444 : 0x67e8f9);
         const trail = this.particlePool.acquire('sphere', trailColor, 0.052, 0.62);
         if (trail) {
           trail.position.copy(ep.mesh.position);
           this.levelRoot.add(trail);
-          const drift = ep.vel.clone().multiplyScalar(-0.085);
-          drift.y += 0.045;
-          this.particles.push({ mesh: trail, vel: drift, life: 0.18, maxLife: 0.18, baseScale: 0.052 });
+          this.addParticle(
+            trail,
+            ep.vel.x * -0.085,
+            ep.vel.y * -0.085 + 0.045,
+            ep.vel.z * -0.085,
+            0.18,
+            null,
+            0.052,
+          );
         }
         ep.trailTimer = trailInterval;
       }
@@ -16123,45 +16153,124 @@ export class PaleciakiGameEngine {
       mesh.position.set(x, y, z);
       mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
       this.levelRoot.add(mesh);
-      this.particles.push({
+      this.addParticle(
         mesh,
-        vel: new THREE.Vector3(Math.cos(angle) * 1.5, 0.75 + i * 0.16, Math.sin(angle) * 1.5),
-        life: 0.28,
-        maxLife: 0.28,
-        gravity: 1.8,
+        Math.cos(angle) * 1.5,
+        0.75 + i * 0.16,
+        Math.sin(angle) * 1.5,
+        0.28,
+        1.8,
         baseScale,
-        rotVel: new THREE.Vector3(5 + Math.random() * 4, 4 + Math.random() * 5, 3 + Math.random() * 4),
-      });
+        5 + Math.random() * 4,
+        4 + Math.random() * 5,
+        3 + Math.random() * 4,
+      );
     }
+  }
+
+  private addParticle(
+    mesh: THREE.Mesh,
+    velocityX: number,
+    velocityY: number,
+    velocityZ: number,
+    life: number,
+    gravity: number | null,
+    baseScale: number,
+    rotationX = 0,
+    rotationY = 0,
+    rotationZ = 0,
+  ): boolean {
+    if (this.particleCount >= PARTICLE_STATE_CAPACITY) {
+      this.particlePool.release(mesh);
+      return false;
+    }
+
+    const particle = this.particleStatePool.acquire();
+    if (!particle) {
+      this.particlePool.release(mesh);
+      return false;
+    }
+
+    particle.mesh = mesh;
+    particle.vel.set(velocityX, velocityY, velocityZ);
+    particle.life = life;
+    particle.maxLife = life;
+    particle.hasGravity = gravity !== null;
+    particle.gravity = gravity ?? 0;
+    particle.baseScale = baseScale;
+    particle.hasRotation = rotationX !== 0 || rotationY !== 0 || rotationZ !== 0;
+    particle.rotVel.set(rotationX, rotationY, rotationZ);
+    this.particles[this.particleCount++] = particle;
+    return true;
+  }
+
+  private releaseParticleState(particle: ParticleMotionState): void {
+    const mesh = particle.mesh;
+    if (mesh) this.particlePool.release(mesh);
+    this.particleStatePool.release(particle);
+  }
+
+  /** O(1) swap removal keeps the fixed active array allocation-free. */
+  private removeParticleAt(index: number): void {
+    if (index < 0 || index >= this.particleCount) return;
+    const particle = this.particles[index];
+    const lastIndex = --this.particleCount;
+    if (index !== lastIndex) this.particles[index] = this.particles[lastIndex];
+    this.particles[lastIndex] = undefined;
+    if (particle) this.releaseParticleState(particle);
+  }
+
+  private clearParticles(): void {
+    for (let i = 0; i < this.particleCount; i++) {
+      const particle = this.particles[i];
+      this.particles[i] = undefined;
+      if (particle) this.releaseParticleState(particle);
+    }
+    this.particleCount = 0;
+  }
+
+  private trimParticleBudget(maxBudget: number): void {
+    const excess = this.particleCount - maxBudget;
+    if (excess <= 0) return;
+
+    // The oldest particles are sacrificed first, preserving the existing visual
+    // budget policy; compact the fixed array once instead of allocating via splice.
+    for (let i = 0; i < excess; i++) {
+      const particle = this.particles[i];
+      if (particle) this.releaseParticleState(particle);
+    }
+    this.particles.copyWithin(0, excess, this.particleCount);
+    const nextCount = this.particleCount - excess;
+    for (let i = nextCount; i < this.particleCount; i++) this.particles[i] = undefined;
+    this.particleCount = nextCount;
   }
 
   private updateParticles(dt: number) {
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
     const maxBudget = isMobile ? (this.adaptivePerformanceTier >= 2 ? 14 : this.adaptivePerformanceTier === 1 ? 24 : 36) : 75;
-    if (this.particles.length > maxBudget) {
-      const excess = this.particles.splice(0, this.particles.length - maxBudget);
-      excess.forEach((particle) => this.particlePool.release(particle.mesh));
-    }
+    if (this.particleCount > maxBudget) this.trimParticleBudget(maxBudget);
 
-    for (let i = this.particles.length - 1; i >= 0; i--) {
+    for (let i = this.particleCount - 1; i >= 0; i--) {
       const pt = this.particles[i];
+      if (!pt?.mesh) {
+        this.removeParticleAt(i);
+        continue;
+      }
+
       pt.life -= dt;
-      if (pt.gravity !== undefined) pt.vel.y -= pt.gravity * dt;
+      if (pt.hasGravity) pt.vel.y -= pt.gravity * dt;
       pt.mesh.position.addScaledVector(pt.vel, dt);
-      if (pt.rotVel) {
+      if (pt.hasRotation) {
         pt.mesh.rotation.x += pt.rotVel.x * dt;
         pt.mesh.rotation.y += pt.rotVel.y * dt;
         pt.mesh.rotation.z += pt.rotVel.z * dt;
       }
       const lifeRatio = THREE.MathUtils.clamp(pt.life / pt.maxLife, 0, 1);
-      pt.mesh.scale.setScalar((pt.baseScale ?? 1) * Math.max(0.001, lifeRatio));
+      pt.mesh.scale.setScalar(pt.baseScale * Math.max(0.001, lifeRatio));
       const material = pt.mesh.material as THREE.MeshBasicMaterial;
       if (material.transparent) material.opacity = lifeRatio * 0.96;
 
-      if (pt.life <= 0) {
-        this.particlePool.release(pt.mesh);
-        this.particles.splice(i, 1);
-      }
+      if (pt.life <= 0) this.removeParticleAt(i);
     }
   }
 
@@ -18107,13 +18216,15 @@ export class PaleciakiGameEngine {
       if (!shard) break;
       shard.position.set(x, y + 0.3, z);
       this.levelRoot.add(shard);
-      this.particles.push({
-        mesh: shard,
-        vel: new THREE.Vector3(Math.cos(angle) * speed, 2.5 + Math.random() * 3.5, Math.sin(angle) * speed),
-        life: 0.6,
-        maxLife: 0.6,
-        baseScale: 0.08,
-      });
+      this.addParticle(
+        shard,
+        Math.cos(angle) * speed,
+        2.5 + Math.random() * 3.5,
+        Math.sin(angle) * speed,
+        0.6,
+        null,
+        0.08,
+      );
     }
 
     // 2. Fireball impact flash
@@ -18199,13 +18310,15 @@ export class PaleciakiGameEngine {
         if (ember) {
           ember.position.set(ex, p.y + 0.3, ez);
           this.levelRoot.add(ember);
-          this.particles.push({
-            mesh: ember,
-            vel: new THREE.Vector3((Math.random() - 0.5) * 0.8, 1.8 + Math.random() * 1.5, (Math.random() - 0.5) * 0.8),
-            life: 0.5,
-            maxLife: 0.5,
-            baseScale: 0.08,
-          });
+          this.addParticle(
+            ember,
+            (Math.random() - 0.5) * 0.8,
+            1.8 + Math.random() * 1.5,
+            (Math.random() - 0.5) * 0.8,
+            0.5,
+            null,
+            0.08,
+          );
         }
       }
 
@@ -18612,48 +18725,46 @@ export class PaleciakiGameEngine {
     if (!mesh) return;
     mesh.position.set(x, y + 0.1, z);
     this.levelRoot.add(mesh);
-    this.particles.push({
+    this.addParticle(
       mesh,
-      vel: new THREE.Vector3((Math.random() - 0.5) * 1.5, Math.random() * 0.8 + 0.2, (Math.random() - 0.5) * 1.5),
-      life: 0.4,
-      maxLife: 0.4,
-      baseScale: 0.08,
-    });
+      (Math.random() - 0.5) * 1.5,
+      Math.random() * 0.8 + 0.2,
+      (Math.random() - 0.5) * 1.5,
+      0.4,
+      null,
+      0.08,
+    );
   }
 
   private spawnParticleRing(x: number, y: number, z: number, color = 0x38bdf8) {
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
     const num = isMobile ? (this.adaptivePerformanceTier >= 2 ? 4 : this.adaptivePerformanceTier === 1 ? 6 : 8) : 14;
-    const lightColor = new THREE.Color(color);
     for (let i = 0; i < num; i++) {
       const angle = (i / num) * Math.PI * 2;
       const size = 0.085 + Math.random() * 0.065;
       const shape: ParticleShape = i % 3 === 0 ? 'octahedron' : 'tetrahedron';
       const baseScale = size * (0.75 + Math.random() * 0.65);
-      const tint = lightColor.clone().offsetHSL(0, 0, i % 2 === 0 ? 0.12 : -0.055);
+      const tint = this.particleColorScratch.set(color).offsetHSL(0, 0, i % 2 === 0 ? 0.12 : -0.055);
       const mesh = this.particlePool.acquire(shape, tint, baseScale, 0.96);
       if (!mesh) continue;
 
       mesh.position.set(x, y, z);
       mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
       this.levelRoot.add(mesh);
-      this.particles.push({
+      const ringSpeedX = 3.4 + Math.random() * 1.4;
+      const ringSpeedZ = 3.4 + Math.random() * 1.4;
+      this.addParticle(
         mesh,
-        vel: new THREE.Vector3(
-          Math.cos(angle) * (3.4 + Math.random() * 1.4),
-          0.7 + Math.random() * 1.65,
-          Math.sin(angle) * (3.4 + Math.random() * 1.4)
-        ),
-        life: 0.62,
-        maxLife: 0.62,
-        gravity: 3.6,
+        Math.cos(angle) * ringSpeedX,
+        0.7 + Math.random() * 1.65,
+        Math.sin(angle) * ringSpeedZ,
+        0.62,
+        3.6,
         baseScale,
-        rotVel: new THREE.Vector3(
-          (Math.random() - 0.5) * 11,
-          (Math.random() - 0.5) * 14,
-          (Math.random() - 0.5) * 11
-        ),
-      });
+        (Math.random() - 0.5) * 11,
+        (Math.random() - 0.5) * 14,
+        (Math.random() - 0.5) * 11,
+      );
     }
   }
 
@@ -18661,7 +18772,6 @@ export class PaleciakiGameEngine {
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
     const mobileBurstCap = this.adaptivePerformanceTier >= 2 ? 4 : this.adaptivePerformanceTier === 1 ? 7 : 10;
     const actualCount = isMobile ? Math.min(mobileBurstCap, count) : Math.min(28, count);
-    const baseColor = new THREE.Color(color);
     for (let i = 0; i < actualCount; i++) {
       const size = 0.075 + Math.random() * 0.105;
       let shape: ParticleShape;
@@ -18676,7 +18786,7 @@ export class PaleciakiGameEngine {
         shapeScale = 1.15;
       }
       const baseScale = size * shapeScale * (0.7 + Math.random() * 0.8);
-      const tint = baseColor.clone().offsetHSL(0, 0, (Math.random() - 0.5) * 0.18);
+      const tint = this.particleColorScratch.set(color).offsetHSL(0, 0, (Math.random() - 0.5) * 0.18);
       const mesh = this.particlePool.acquire(shape, tint, baseScale, 0.96);
       if (!mesh) continue;
 
@@ -18685,19 +18795,18 @@ export class PaleciakiGameEngine {
       this.levelRoot.add(mesh);
       const angle = Math.random() * Math.PI * 2;
       const speed = 2.2 + Math.random() * 4.8;
-      this.particles.push({
+      this.addParticle(
         mesh,
-        vel: new THREE.Vector3(Math.cos(angle) * speed, 1.4 + Math.random() * 3.8, Math.sin(angle) * speed),
-        life: 0.74,
-        maxLife: 0.74,
-        gravity: 4.5,
+        Math.cos(angle) * speed,
+        1.4 + Math.random() * 3.8,
+        Math.sin(angle) * speed,
+        0.74,
+        4.5,
         baseScale,
-        rotVel: new THREE.Vector3(
-          (Math.random() - 0.5) * 13,
-          (Math.random() - 0.5) * 16,
-          (Math.random() - 0.5) * 13
-        ),
-      });
+        (Math.random() - 0.5) * 13,
+        (Math.random() - 0.5) * 16,
+        (Math.random() - 0.5) * 13,
+      );
     }
   }
 

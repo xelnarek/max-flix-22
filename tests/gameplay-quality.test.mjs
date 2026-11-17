@@ -1608,7 +1608,7 @@ test('directional projectiles orient to velocity and enemy tracer bursts stay wi
   assert.match(game, /ep\.mesh\.rotation\.y = Math\.atan2\(ep\.vel\.x, ep\.vel\.z\)/);
   assert.match(game, /this\.particlePool\.acquire\('sphere', trailColor, 0\.052, 0\.62\)/);
   assert.match(game, /p\.mesh\.rotation\.y = Math\.atan2\(p\.vel\.x, p\.vel\.z\)/);
-  assert.match(game, /this\.particles\.length < handheldParticleBudget/);
+  assert.match(game, /this\.particleCount < handheldParticleBudget/);
 });
 
 
