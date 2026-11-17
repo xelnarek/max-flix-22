@@ -419,7 +419,7 @@ test('campaign chase and Survival steering both apply stable enemy separation', 
   const game = await read('../src/game.ts');
   assert.ok((game.match(/calculateEnemySeparationVector\(/g) || []).length >= 2);
   assert.ok((game.match(/calculateStableEnemySteering\(/g) || []).length >= 2);
-  assert.match(game, /separationWeight: 0\.82/);
+  assert.match(game, /separationWeight: inContactLane \? 0\.52 : 0\.82/);
   assert.match(game, /separationWeight: 0\.72/);
   assert.match(game, /e\.aiSteerX = move\.x/);
   assert.match(game, /enemy\.aiSteerX = steerX/);
