@@ -47,7 +47,7 @@ import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoi
 import { calculateEnemyObstacleAvoidanceVector } from './enemyNavigation.ts';
 import { calculateStableEnemySteering, getEnemyEngageRadius } from './enemySteering.ts';
 import { getEnemyPlayerContactDistance, resolvePlayerMovementAgainstEnemies } from './enemyPlayerCollision.ts';
-import { findFirstProjectileEnemyImpact } from './projectileImpact.ts';
+import { findFirstProjectileBodyImpact, findFirstProjectileEnemyImpact } from './projectileImpact.ts';
 import { createEnemyHitReaction, getEnemyHitPulse, getEnemyImpactBurstProfile } from './enemyCombatFeedback.ts';
 import { getEnemyDeathMotionPose, getEnemyDeathMotionProfile } from './enemyDeathMotion.ts';
 import { ENEMY_GAIT_PRESETS, ENEMY_VISUAL_PROFILES } from './enemyVisualProfiles.ts';
@@ -15266,33 +15266,20 @@ export class PaleciakiGameEngine {
         ep.trailTimer = trailInterval;
       }
 
-      // Swept player collision: fast enemy shots must stop on the operator
-      // even when a low-FPS frame moves the projectile completely through them.
-      const segmentX = ep.mesh.position.x - previousX;
-      const segmentY = ep.mesh.position.y - previousY;
-      const segmentZ = ep.mesh.position.z - previousZ;
-      const segmentLengthSq = segmentX * segmentX + segmentY * segmentY + segmentZ * segmentZ;
-      const projection = segmentLengthSq > 1e-6
-        ? THREE.MathUtils.clamp(
-            ((this.playerPos.x - previousX) * segmentX +
-              (this.playerPos.y + 0.55 - previousY) * segmentY +
-              (this.playerPos.z - previousZ) * segmentZ) / segmentLengthSq,
-            0, 1,
-          )
-        : 0;
-      const impactX = previousX + segmentX * projection;
-      const impactY = previousY + segmentY * projection;
-      const impactZ = previousZ + segmentZ * projection;
-      const dist = Math.hypot(impactX - this.playerPos.x, impactZ - this.playerPos.z);
-      const hitsPlayer = dist < 0.85 && Math.abs(impactY - (this.playerPos.y + 0.55)) < 1.0;
-      // Enemy fire is also intercepted by the first body in its path. The
-      // owner is ignored by the swept helper while the projectile exits it.
-      const enemyImpact = findFirstProjectileEnemyImpact(
-        { x: previousX, y: previousY, z: previousZ },
-        { x: ep.mesh.position.x, y: ep.mesh.position.y, z: ep.mesh.position.z },
-        this.enemies,
+      // Swept vertical-cylinder collision chooses the actual first body
+      // contact, so a target behind the operator cannot consume a shot that
+      // should already have hit the player.
+      const projectileStart = { x: previousX, y: previousY, z: previousZ };
+      const projectileEnd = { x: ep.mesh.position.x, y: ep.mesh.position.y, z: ep.mesh.position.z };
+      const playerImpact = findFirstProjectileBodyImpact(
+        projectileStart,
+        projectileEnd,
+        { x: this.playerPos.x, y: this.playerPos.y + 0.55, z: this.playerPos.z },
+        0.85,
+        1.0,
       );
-      if (enemyImpact && (!hitsPlayer || enemyImpact.t < projection)) {
+      const enemyImpact = findFirstProjectileEnemyImpact(projectileStart, projectileEnd, this.enemies);
+      if (enemyImpact && (!playerImpact || enemyImpact.t < playerImpact.t)) {
         const impactColor = ep.trailColor ?? (ep.isDyscyplinarka ? 0xef4444 : 0x67e8f9);
         ep.mesh.position.set(enemyImpact.x, enemyImpact.y, enemyImpact.z);
         this.spawnCompactImpact(enemyImpact.x, enemyImpact.y, enemyImpact.z, impactColor);
@@ -15302,7 +15289,10 @@ export class PaleciakiGameEngine {
         this.enemyProjectiles.splice(i, 1);
         continue;
       }
-      if (hitsPlayer) {
+      if (playerImpact) {
+        const impactX = playerImpact.x;
+        const impactY = playerImpact.y;
+        const impactZ = playerImpact.z;
         if (ep.isDyscyplinarka) {
           if (this.activePerks.shield) {
             this.activePerks.shield = false;
