@@ -669,7 +669,10 @@ test('Unity Grzesiek missile component has homing, target reacquisition and boun
   assert.match(rocket, /FindClosestTarget\(28f\)/);
   assert.match(rocket, /_blastRadius/);
   assert.match(rocket, /enemy\.ApplyCombatHit\(_damage \* falloff/);
-  assert.match(rocket, /TrailRenderer/);\n  assert.match(rocket, /_exhaustGlow\.localScale/);\n  assert.match(rocket, /Rocket stabilizer \" \+ \(i \+ 1\)/);\n  assert.match(rocket, /OperatorImpactBurst\.Spawn/);
+  assert.match(rocket, /TrailRenderer/);
+  assert.match(rocket, /_exhaustGlow\.localScale/);
+  assert.match(rocket, /Rocket stabilizer \" \+ \(i \+ 1\)/);
+  assert.match(rocket, /OperatorImpactBurst\.Spawn/);
 });
 
 
