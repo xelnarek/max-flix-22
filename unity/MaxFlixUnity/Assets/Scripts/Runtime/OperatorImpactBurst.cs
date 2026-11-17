@@ -180,12 +180,14 @@ namespace MaxFlix.Unity.Runtime
                 {
                     int a = i * (sides + 1) + j;
                     int b = a + sides + 1;
+                    // Keep outward-facing winding so the low-poly torus remains visible
+                    // with back-face culling enabled by the active render pipeline.
                     triangles[triangleIndex++] = a;
-                    triangles[triangleIndex++] = b;
                     triangles[triangleIndex++] = a + 1;
                     triangles[triangleIndex++] = b;
+                    triangles[triangleIndex++] = b;
+                    triangles[triangleIndex++] = a + 1;
                     triangles[triangleIndex++] = b + 1;
-                    triangles[triangleIndex++] = a + 1;
                 }
             }
 
