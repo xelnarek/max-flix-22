@@ -77,7 +77,7 @@ test('lighting, fog and background use the same spatial blend as biome geometry'
   assert.equal(pureB4.fogColor, referenceB4.fogColor);
 });
 
-test('rendered transition bands share the same 22 m width as the spatial blend field', () => {
+test('shared biome seam metadata retains the same 22 m overlap width as the spatial blend field', () => {
   assert.deepEqual(SURVIVAL_WORLD_TRANSITIONS.map(getSurvivalWorldTransitionFootprint), [
     { bandWidth: 22, bandDepth: 40 },
     { bandWidth: 120, bandDepth: 22 },
