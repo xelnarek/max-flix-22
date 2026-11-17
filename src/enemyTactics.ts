@@ -30,6 +30,11 @@ export interface EnemyDodgeActor extends EnemyTacticalPoint {
   readonly y: number;
 }
 
+export interface MutableEnemyTacticalVelocity {
+  x: number;
+  z: number;
+}
+
 const finite = (value: number): boolean => Number.isFinite(value);
 
 function clamp(value: number, min: number, max: number): number {
@@ -118,13 +123,18 @@ export function calculateEnemyProjectileDodge(
   maxLookAheadSeconds = 0.72,
   collisionRadius = 1.02,
   verticalTolerance = 0.95,
+  out: MutableEnemyTacticalVelocity = { x: 0, z: 0 },
 ): EnemyTacticalVelocity {
+  out.x = 0;
+  out.z = 0;
   if (
-    ![actor.x, actor.y, actor.z, maxLookAheadSeconds, collisionRadius, verticalTolerance].every(finite) ||
+    !finite(actor.x) || !finite(actor.y) || !finite(actor.z) ||
+    !finite(maxLookAheadSeconds) || !finite(collisionRadius) ||
+    !finite(verticalTolerance) ||
     maxLookAheadSeconds <= 0 ||
     collisionRadius <= 0
   ) {
-    return { x: 0, z: 0 };
+    return out;
   }
 
   const lookAhead = Math.min(1.0, maxLookAheadSeconds);
@@ -141,7 +151,8 @@ export function calculateEnemyProjectileDodge(
     const velocity = projectile.vel;
     if (
       !position || !velocity || projectile.orbiting || projectile.hitIds?.has(actor.id) ||
-      ![position.x, position.y, position.z, velocity.x, velocity.y, velocity.z].every(finite)
+      !finite(position.x) || !finite(position.y) || !finite(position.z) ||
+      !finite(velocity.x) || !finite(velocity.y) || !finite(velocity.z)
     ) continue;
 
     const speedSquared = velocity.x * velocity.x + velocity.z * velocity.z;
@@ -181,5 +192,7 @@ export function calculateEnemyProjectileDodge(
     bestDodgeZ = perpendicularZ * side * strength;
   }
 
-  return { x: bestDodgeX, z: bestDodgeZ };
+  out.x = bestDodgeX;
+  out.z = bestDodgeZ;
+  return out;
 }

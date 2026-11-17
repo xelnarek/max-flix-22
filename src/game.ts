@@ -614,6 +614,7 @@ export class PaleciakiGameEngine {
   private readonly enemySeparationScratch = { x: 0, z: 0 };
   private readonly enemyObstacleAvoidanceScratch = { x: 0, z: 0 };
   private readonly enemyProjectileDodgeScratch = { x: 0, z: 0 };
+  private readonly enemyProjectileDodgeScanScratch = { x: 0, z: 0 };
   private readonly enemySteeringOutputScratch = { x: 0, z: 0 };
   private readonly enemySteeringInputScratch = {
     chase: { x: 0, z: 0 },
@@ -13149,7 +13150,14 @@ export class PaleciakiGameEngine {
     enemy.aiDodgeTimer = Math.max(0, (enemy.aiDodgeTimer ?? 0) - dt);
     if (!isTelegraphingRangedBoss && enemy.aiDodgeScanTimer <= 0) {
       enemy.aiDodgeScanTimer = 0.12;
-      const dodge = calculateEnemyProjectileDodge(enemy, this.projectiles, 0.72, 1.02, 0.95);
+      const dodge = calculateEnemyProjectileDodge(
+        enemy,
+        this.projectiles,
+        0.72,
+        1.02,
+        0.95,
+        this.enemyProjectileDodgeScanScratch,
+      );
       if (Math.hypot(dodge.x, dodge.z) > 0.08) {
         enemy.aiDodgeX = dodge.x;
         enemy.aiDodgeZ = dodge.z;
