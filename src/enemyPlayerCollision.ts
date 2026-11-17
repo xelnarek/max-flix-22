@@ -86,9 +86,19 @@ export function resolvePlayerMovementAgainstEnemies(
         const endX = x - enemy.x;
         const endZ = z - enemy.z;
         const endProjection = endX * nx + endZ * nz;
-        if (endProjection >= radius + 0.012) continue;
-        x = enemy.x + nx * (radius + 0.012);
-        z = enemy.z + nz * (radius + 0.012);
+        if (endX * endX + endZ * endZ >= radius * radius && endProjection >= radius) continue;
+        // Preserve tangential movement when a previous frame ended a fraction
+        // inside the radius due to floating-point tolerance. Dropping the
+        // remainder here makes a player feel glued to an enemy flank.
+        let slideX = x - start.x;
+        let slideZ = z - start.z;
+        const inward = slideX * nx + slideZ * nz;
+        if (inward < 0) {
+          slideX -= nx * inward;
+          slideZ -= nz * inward;
+        }
+        x = enemy.x + nx * (radius + 0.012) + slideX;
+        z = enemy.z + nz * (radius + 0.012) + slideZ;
       } else {
         const dx = x - start.x;
         const dz = z - start.z;
