@@ -61,8 +61,14 @@ test('imported enemy rigs use directional locomotion, bounded cadence and distan
   const end = game.indexOf('private ', start + 12);
   const method = game.slice(start, end);
   assert.match(game, /animationAccumulator\?: number/);
-  assert.match(method, /getActorAnimationInterval\(distanceToPlayer, this\.isHandheldViewport\)/);
+  assert.match(method, /getActorAnimationIntervalFromDistanceSquared\(distanceSquared, this\.isHandheldViewport\)/);
   assert.match(method, /const accumulatedDt = \(track\.animationAccumulator \?\? 0\) \+ dt/);
+  assert.match(method, /shouldAdvanceActorAnimation\(interval, accumulatedDt, forceAnimationUpdate\)/);
+  assert.match(method, /if \(!advanceMixer\) \{[\s\S]*?track\.animationAccumulator = accumulatedDt;[\s\S]*?continue;/);
+  assert.ok(method.indexOf('if (!advanceMixer)') < method.indexOf('enemy.mesh.getWorldQuaternion'),
+    'distance-throttled actors must skip quaternion and velocity work until their animation tick');
+  assert.match(method, /timedOneShotActive = Number\.isFinite\(track\.oneShotRemaining\) && track\.oneShotRemaining > 0/);
+  assert.match(method, /wantsDeathTransition = enemy\.state === 'defeated'[\s\S]*?getGobkitActionPriority\('Death'\)/);
   assert.match(method, /track\.mixer\.update\(animationDt\)/);
   assert.match(method, /chooseMakeHumanLocomotion\(\s*localVelocityX,\s*localVelocityZ/);
   assert.match(method, /getEnemyRigPlaybackRate\(activeAction, localSpeed \|\| worldSpeed\)/);

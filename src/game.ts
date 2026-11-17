@@ -9,7 +9,7 @@ import {
   isWithinCthulhuLashLane,
 } from './cthulhuCombat.ts';
 import { chooseMakeHumanLocomotion, getMakeHumanPlaybackRate, isMakeHumanVelocityAction, type MakeHumanLocomotionAction } from './makeHumanLocomotion.ts';
-import { dampActorAngle, getActorAnimationInterval, getEnemyRigPlaybackRate } from './actorMotion.ts';
+import { dampActorAngle, getActorAnimationIntervalFromDistanceSquared, getEnemyRigPlaybackRate, shouldAdvanceActorAnimation } from './actorMotion.ts';
 import { createEnemyRoleKit } from './enemyRoleKits.ts';
 import { applyEnemyRoleAnatomy, applyEnemyRoleSecondaryMotion, clearEnemyRoleSecondaryMotion } from './enemyAnimationPolish.ts';
 import { createMakeHumanActor, MAKEHUMAN_OPERATOR_STYLES, type MakeHumanStyleId } from './makeHumanAssets.ts';
@@ -2173,12 +2173,39 @@ export class PaleciakiGameEngine {
         continue;
       }
 
-      const distanceToPlayer = Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z);
-      const interval = getActorAnimationInterval(distanceToPlayer, this.isHandheldViewport);
+      // Use squared distance and defer expensive world-space transforms until
+      // this actor's LOD tick is due. Nearby or reacting actors still update now.
+      const distanceX = enemy.x - this.playerPos.x;
+      const distanceZ = enemy.z - this.playerPos.z;
+      const distanceSquared = distanceX * distanceX + distanceZ * distanceZ;
+      const interval = getActorAnimationIntervalFromDistanceSquared(distanceSquared, this.isHandheldViewport);
       const accumulatedDt = (track.animationAccumulator ?? 0) + dt;
-      const advanceMixer = interval <= 0 || accumulatedDt + 1e-6 >= interval;
+
+      const hitReactionActive = enemy.state !== 'defeated' && (
+        (enemy.hitReactTimer || 0) > 0.015 ||
+        enemy.state === 'stunned' ||
+        enemy.stunTimer > 0
+      );
+      const wantsHitTransition = hitReactionActive &&
+        track.currentAction !== this.resolveGobkitActionName(track, 'Hit');
+      const wantsChargeTransition = enemy.state === 'charging' &&
+        track.currentAction !== this.resolveGobkitActionName(track, 'Run');
+      const wantsDeathTransition = enemy.state === 'defeated' &&
+        track.oneShotPriority < getGobkitActionPriority('Death');
+      const timedOneShotActive = Number.isFinite(track.oneShotRemaining) && track.oneShotRemaining > 0;
+      const forceAnimationUpdate = wantsHitTransition || wantsChargeTransition ||
+        wantsDeathTransition || timedOneShotActive;
+
+      const advanceMixer = shouldAdvanceActorAnimation(interval, accumulatedDt, forceAnimationUpdate);
+      if (!advanceMixer) {
+        // Keep the physical origin unchanged: the next LOD tick measures the
+        // complete displacement over the accumulated animation interval.
+        track.animationAccumulator = accumulatedDt;
+        continue;
+      }
+
       const animationDt = accumulatedDt;
-      track.animationAccumulator = advanceMixer ? 0 : accumulatedDt;
+      track.animationAccumulator = 0;
 
       displacement.copy(enemy.mesh.position).sub(track.lastPosition);
       displacement.y = 0;
