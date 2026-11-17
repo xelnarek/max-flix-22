@@ -2,6 +2,15 @@ import * as THREE from 'three';
 
 export type FloatingToastType = 'points' | 'vip' | 'easter-egg' | 'damage' | 'perk' | 'combo';
 
+const TOAST_CLASS_NAMES: Readonly<Record<FloatingToastType, string>> = Object.freeze({
+  points: 'floating-score-toast points',
+  vip: 'floating-score-toast vip',
+  'easter-egg': 'floating-score-toast easter-egg',
+  damage: 'floating-score-toast damage',
+  perk: 'floating-score-toast perk',
+  combo: 'floating-score-toast combo',
+});
+
 export interface FloatingToastEntry {
   element: HTMLElement;
   worldPos: THREE.Vector3;
@@ -78,14 +87,23 @@ export class FloatingToastPool {
     duration: number
   ): FloatingToastEntry | null {
     if (this.disposed || this.availableEntries === 0) return null;
-    if (![x, y, z, duration].every(Number.isFinite) || duration <= 0) return null;
+    if (
+      !Number.isFinite(x) ||
+      !Number.isFinite(y) ||
+      !Number.isFinite(z) ||
+      !Number.isFinite(duration) ||
+      duration <= 0
+    ) return null;
 
     const entryIndex = --this.availableEntries;
     const entry = this.available[entryIndex];
     this.available[entryIndex] = undefined;
-    if (!entry) return null;
+    if (!entry) {
+      this.availableEntries++;
+      return null;
+    }
 
-    entry.element.className = `floating-score-toast ${type}`;
+    entry.element.className = TOAST_CLASS_NAMES[type];
     entry.element.textContent = text;
     entry.element.style.display = 'flex';
     entry.element.style.opacity = '1';
