@@ -1654,6 +1654,7 @@ test('Survival flankers intercept the operator path while wounded enemies retrea
 });
 
 
+// Regression coverage for the two operator-specific abilities added in this change.
 test('Grzesiek Operator 02 launches exactly five target-locked missiles from the muscular 44cm fist', async () => {
   const [game, characters, html] = await Promise.all([
     read('../src/game.ts'), read('../src/characters.ts'), read('../index.html')
