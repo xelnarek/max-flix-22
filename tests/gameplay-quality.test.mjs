@@ -1750,3 +1750,23 @@ test('Mateusz contract tear uses animated paper fibres, a staggered rip and owne
   assert.match(visual, /disposeOnObjectCleanup = true/);
   assert.match(visual, /spawnExplosionParticles\(group\.position/);
 });
+
+
+test('Campaign and Survival run a scale-aware enemy body-overlap solver after AI movement', async () => {
+  const [game, spacing, types] = await Promise.all([
+    read('../src/game.ts'), read('../src/enemySpacing.ts'), read('../src/types.ts')
+  ]);
+  assert.match(types, /collisionRadius\?: number/);
+  assert.match(spacing, /ENEMY_BODY_RADII/);
+  assert.match(spacing, /resolveEnemyCrowdOverlaps/);
+  assert.match(spacing, /MAX_ENEMY_BODY_RADIUS/);
+  assert.match(game, /enemy\.collisionRadius = getEnemyCollisionRadius\(requestedType, Math\.max\(modelSize\.x, modelSize\.z\) \* 0\.44\)/);
+  assert.match(game, /solveEnemyCrowdOverlaps\(this\.enemies, this\.enemySpatialIndex, bounds, 0\.16, 2, 0\.52\)/);
+  const updateStart = game.indexOf('private updateEnemies(dt: number)');
+  const updateEnd = game.indexOf('private resolveEnemyCrowdOverlaps(): void', updateStart);
+  assert.ok(updateStart >= 0 && updateEnd > updateStart);
+  const update = game.slice(updateStart, updateEnd);
+  assert.ok(update.lastIndexOf('this.resolveEnemyCrowdOverlaps()') > update.lastIndexOf('for (const e of this.enemies)'));
+  assert.match(game, /enemy\.mesh\.position\.x = enemy\.x/);
+  assert.match(game, /enemy\.mesh\.position\.z = enemy\.z/);
+});

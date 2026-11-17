@@ -43,7 +43,7 @@ import {
   type PvpHitEvent,
 } from './pvpArena.ts';
 import { clampHorizontalPosition } from './arenaBounds.ts';
-import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoint, resolveEnemyPlayerSeparation } from './enemySpacing.ts';
+import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoint, getEnemyCollisionRadius, resolveEnemyPlayerSeparation, resolveEnemyCrowdOverlaps as solveEnemyCrowdOverlaps } from './enemySpacing.ts';
 import { calculateEnemyObstacleAvoidanceVector } from './enemyNavigation.ts';
 import { calculateStableEnemySteering, getEnemyEngageRadius } from './enemySteering.ts';
 import { calculateEnemyProjectileDodge, predictEnemyAimPoint } from './enemyTactics.ts';
@@ -2025,6 +2025,11 @@ export class PaleciakiGameEngine {
       const visualProfile = ENEMY_VISUAL_PROFILES[requestedType];
       fitGobkitModel(root, visualProfile.targetHeight, this.threeRenderer?.capabilities.getMaxAnisotropy() ?? 1, gltf.scene);
       applyEnemyRoleAnatomy(root, requestedType);
+      // Refine the body footprint from the fitted visible rig without letting
+      // weapons and decorative equipment inflate the type-specific hitbox.
+      const modelBounds = new THREE.Box3().setFromObject(root);
+      const modelSize = modelBounds.getSize(new THREE.Vector3());
+      enemy.collisionRadius = getEnemyCollisionRadius(requestedType, Math.max(modelSize.x, modelSize.z) * 0.44);
       this.applyHandheldActorShadowBudget(root);
       root.position.y -= mesh.position.y;
       root.name = 'gobkit-enemy-' + modelId + '-' + enemy.id;
@@ -14899,6 +14904,27 @@ export class PaleciakiGameEngine {
         this.resolveEnemyPlayerOverlap(e, contactRadius);
       }
     }
+
+    // Resolve body intersections after all AI movement, including knockback,
+    // dashes and late formation corrections. Shared by Campaign and Survival.
+    this.resolveEnemyCrowdOverlaps();
+  }
+
+  private resolveEnemyCrowdOverlaps(): void {
+    const bounds = this.gameMode === 'survival'
+      ? this.levelBounds
+      : { minX: -34.5, maxX: 204.5, minZ: -21.0, maxZ: 21.0 };
+    solveEnemyCrowdOverlaps(this.enemies, this.enemySpatialIndex, bounds, 0.16, 2, 0.52);
+
+    // Keep authoritative coordinates, rendered rigs and next-frame broadphase aligned.
+    for (const enemy of this.enemies) {
+      if (enemy.state === 'defeated' || !enemy.mesh) continue;
+      this.clampEnemyToArena(enemy);
+      enemy.mesh.position.x = enemy.x;
+      enemy.mesh.position.z = enemy.z;
+    }
+    this.enemySpatialIndexCachedCount = this.enemies.length;
+    this.enemySpatialIndexNextRefreshAt = performance.now() + (this.isHandheldViewport ? 24 : 0);
   }
 
   private spawnPenaltyNotice(x: number, y: number, z: number) {
