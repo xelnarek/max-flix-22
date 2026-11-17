@@ -52,14 +52,18 @@ test('Survival map textures are per-world clones of the global B4 texture cache'
 });
 
 
-test('all four biome floor blends span each shared edge and the central four-way junction', async () => {
-  const [game, layout] = await Promise.all([read('src/game.ts'), read('src/survivalWorldLayout.ts')]);
-  assert.match(layout, /export function getSurvivalWorldTransitionFootprint/);
-  assert.match(layout, /bandDepth: SURVIVAL_WORLD_BIOME_HALF_DEPTH \* 2/);
-  assert.match(layout, /bandWidth: SURVIVAL_WORLD_BIOME_HALF_WIDTH \* 2/);
+test('one world-space floor atlas spans all four biomes and the central four-way junction', async () => {
+  const [game, atlas, layout] = await Promise.all([
+    read('src/game.ts'), read('src/survivalFloorAtlas.ts'), read('src/survivalWorldLayout.ts')
+  ]);
+  assert.match(game, /createSurvivalFloorAtlasTexture\(/);
+  assert.match(game, /surface\.name = 'survival-biome-floor-atlas'/);
   assert.match(game, /new THREE\.PlaneGeometry\(width, depth\)/);
-  assert.match(game, /survival-biome-four-way-blend/);
-  assert.match(game, /influence: blend\.junctionInfluence/);
+  assert.match(game, /SURVIVAL_WORLD_BOUNDS\.maxX - SURVIVAL_WORLD_BOUNDS\.minX/);
+  assert.match(atlas, /getSurvivalWorldBiomeBlendAtPosition\(safeX, safeZ\)/);
+  assert.match(atlas, /blend\.weights\[mapId\]/);
+  assert.match(atlas, /junction|four-way|four biome/i);
+  assert.match(layout, /minX: -120, maxX: 120, minZ: -40, maxZ: 40/);
   assert.match(game, /floorGeometry = new THREE\.PlaneGeometry\(24, 40\)/);
   assert.match(game, /bayFloor\.position\.set\(side \* 48/);
   assert.match(game, /width: 24, height: 0\.2, depth: 40/);
