@@ -48,3 +48,13 @@ test('large enemies have a larger physical collision distance than regular enemi
   assert.ok(getEnemyPlayerContactDistance('walczak') > getEnemyPlayerContactDistance('inspector'));
   assert.ok(getEnemyPlayerContactDistance('agv_robot') > getEnemyPlayerContactDistance('kurier'));
 });
+
+test('shallow contact overlap still permits the player to slide along the enemy body', () => {
+  const enemy = { id: 'guard', type: 'inspector', x: 0, y: 0.5, z: 0, state: 'chase' };
+  const result = resolvePlayerMovementAgainstEnemies(
+    { x: -0.97, z: 0 }, { x: -0.97, z: 1.0 }, 0.5, [enemy],
+  );
+  assert.equal(result.collided, true);
+  assert.ok(result.z > 0.8, 'tangential movement should not be erased by contact correction');
+  assert.ok(Math.hypot(result.x, result.z) >= getEnemyPlayerContactDistance(enemy.type));
+});
