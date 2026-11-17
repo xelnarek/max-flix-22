@@ -12989,11 +12989,15 @@ export class PaleciakiGameEngine {
     const isRetreating = retreat.active;
     if (retreat.started) this.spawnParticleRing(enemy.x, enemy.y + 0.16, enemy.z, 0xf59e0b);
 
-    const flankIntercept = engaged && !inHordeRing
+    const desiredFlankIntercept = engaged && !inHordeRing
       ? getSurvivalFlankInterceptOffset(role, { x: this.playerVel.x, z: this.playerVel.z })
       : { x: 0, z: 0 };
-    const anchorX = inHordeRing ? this.survivalSurgeCenterX : this.playerPos.x + flankIntercept.x;
-    const anchorZ = inHordeRing ? this.survivalSurgeCenterZ : this.playerPos.z + flankIntercept.z;
+    // Smooth the lead point so quick joystick reversals do not make flankers
+    // snap between interception lanes.
+    enemy.aiFlankLeadX = THREE.MathUtils.damp(enemy.aiFlankLeadX ?? 0, desiredFlankIntercept.x, 5.8, dt);
+    enemy.aiFlankLeadZ = THREE.MathUtils.damp(enemy.aiFlankLeadZ ?? 0, desiredFlankIntercept.z, 5.8, dt);
+    const anchorX = inHordeRing ? this.survivalSurgeCenterX : this.playerPos.x + enemy.aiFlankLeadX;
+    const anchorZ = inHordeRing ? this.survivalSurgeCenterZ : this.playerPos.z + enemy.aiFlankLeadZ;
     const anchorAngle = enemy.aiFlankAngle ?? Math.atan2(enemy.x - anchorX, enemy.z - anchorZ);
     // Engaged enemies keep their assigned lane. Patrol formations drift slowly,
     // avoiding the old alternating left/right wobble at close range.
