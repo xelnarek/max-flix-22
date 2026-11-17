@@ -1632,3 +1632,19 @@ test('Survival floor atlas uses four muted surface signatures with smooth biome-
   assert.match(atlas, /valueNoise/);
   assert.doesNotMatch(game, /new THREE\.PlaneGeometry\(1\.25, 40\)|seamColor/);
 });
+
+test('Survival flankers intercept the operator path while wounded enemies retreat according to their combat role', async () => {
+  const tactics = await read('../src/survivalTactics.ts');
+  const types = await read('../src/types.ts');
+  const game = await read('../src/game.ts');
+  assert.match(tactics, /getSurvivalFlankInterceptOffset/);
+  assert.match(tactics, /advanceSurvivalRetreatState/);
+  assert.match(tactics, /getSurvivalRetreatTarget/);
+  assert.match(game, /getSurvivalFlankInterceptOffset\(role, \{ x: this\.playerVel\.x, z: this\.playerVel\.z \}\)/);
+  assert.match(game, /enemy\.aiRetreatTimer = retreat\.remainingSeconds/);
+  assert.match(game, /enemy\.aiRetreatCooldownTimer = retreat\.cooldownRemaining/);
+  assert.match(game, /if \(isRetreating\) \{[\s\S]*?getSurvivalRetreatTarget/);
+  assert.match(game, /movementSpeed = speed \* arrivalScale \* retreatSpeedMultiplier/);
+  assert.match(types, /aiRetreatTimer\?: number/);
+  assert.match(types, /aiRetreatCooldownTimer\?: number/);
+});
