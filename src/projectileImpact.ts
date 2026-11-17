@@ -14,6 +14,10 @@ export interface ProjectileActorImpact {
   readonly z: number;
 }
 
+export interface ProjectileEnemyImpact extends ProjectileActorImpact {
+  readonly actor: EnemyContactBody;
+}
+
 /**
  * First intersection of a swept projectile segment with a vertical body
  * cylinder. Horizontal circle and vertical tolerance intervals are intersected
@@ -85,7 +89,7 @@ export function findFirstProjectileEnemyImpact(
   end: ProjectileSegmentPoint,
   enemies: readonly EnemyContactBody[],
   verticalTolerance = 0.9,
-): ProjectileActorImpact | null {
+): ProjectileEnemyImpact | null {
   if (![start.x, start.y, start.z, end.x, end.y, end.z, verticalTolerance].every(Number.isFinite)) return null;
   let owner: EnemyContactBody | null = null;
   let ownerDistanceSq = Number.POSITIVE_INFINITY;
