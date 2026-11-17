@@ -1641,10 +1641,10 @@ test('Survival flankers intercept the operator path while wounded enemies retrea
   assert.match(tactics, /advanceSurvivalRetreatState/);
   assert.match(tactics, /getSurvivalRetreatTarget/);
   assert.match(game, /getSurvivalFlankInterceptOffset\(role, \{ x: this\.playerVel\.x, z: this\.playerVel\.z \}\)/);
-  assert.match(game, /enemy\\.aiFlankLeadX = THREE\\.MathUtils\\.damp/);
-  assert.match(game, /enemy\\.aiFlankLeadZ = THREE\\.MathUtils\\.damp/);
-  assert.match(types, /aiFlankLeadX\\?: number/);
-  assert.match(types, /aiFlankLeadZ\\?: number/);
+  assert.match(game, /enemy\.aiFlankLeadX = THREE\.MathUtils\.damp/);
+  assert.match(game, /enemy\.aiFlankLeadZ = THREE\.MathUtils\.damp/);
+  assert.match(types, /aiFlankLeadX\?: number/);
+  assert.match(types, /aiFlankLeadZ\?: number/);
   assert.match(game, /enemy\.aiRetreatTimer = retreat\.remainingSeconds/);
   assert.match(game, /enemy\.aiRetreatCooldownTimer = retreat\.cooldownRemaining/);
   assert.match(game, /if \(isRetreating\) \{[\s\S]*?getSurvivalRetreatTarget/);
