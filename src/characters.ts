@@ -136,7 +136,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     passiveName: 'Paralizator — Impuls Trzech Elektrod',
     passiveDescription: 'Podstawowy atak wystrzeliwuje impuls paralizatora. Trafienie elektryzuje i spowalnia cel; co dziewiąte trafienie uruchamia Speedrun (+Sprint i Nietykalność)!',
     abilityName: 'MAM WYJEBANE • UMOWA NA 9 MIESIĘCY',
-    abilityDescription: 'Mateusz demonstracyjnie rozrywa umowę na 9 miesięcy. Przez 9 sekund (7,5 sekundy w Survival) wrogowie przestają atakować gracza i zwracają się przeciwko sobie, wybierając najbliższego innego przeciwnika. Po zakończeniu efektu ich normalne zachowanie wraca automatycznie.',
+    abilityDescription: 'Operator 04 demonstracyjnie rozrywa umowę na 9 miesięcy. Przez 9 sekund (7,5 sekundy w Survival) wrogowie przestają atakować gracza i zwracają się przeciwko sobie, wybierając najbliższego innego przeciwnika. Po zakończeniu efektu ich normalne zachowanie wraca automatycznie.',
     abilityCooldown: 16.0,
     voiceLines: [
       'Pad mi się rozładował! Kto zajumał kabel USB-C z salonu?!',
