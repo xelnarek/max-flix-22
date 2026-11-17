@@ -47,7 +47,7 @@ import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoi
 import { calculateEnemyObstacleAvoidanceVector } from './enemyNavigation.ts';
 import { calculateStableEnemySteering, getEnemyEngageRadius } from './enemySteering.ts';
 import { calculateEnemyProjectileDodge, predictEnemyAimPoint } from './enemyTactics.ts';
-import { getEnemyPlayerContactDistance, resolvePlayerMovementAgainstEnemies } from './enemyPlayerCollision.ts';
+import { getEnemyPlayerContactDistance, projectVelocityOutOfEnemyContacts, resolvePlayerMovementAgainstEnemies } from './enemyPlayerCollision.ts';
 import { findFirstProjectileBodyImpact, findFirstProjectileEnemyImpact } from './projectileImpact.ts';
 import { createEnemyHitReaction, getEnemyHitPulse, getEnemyImpactBurstProfile } from './enemyCombatFeedback.ts';
 import { getEnemyDeathMotionPose, getEnemyDeathMotionProfile } from './enemyDeathMotion.ts';
@@ -12291,11 +12291,12 @@ export class PaleciakiGameEngine {
     if (playerContact.collided) {
       nextX = playerContact.x;
       nextZ = playerContact.z;
-      const inwardVelocity = this.playerVel.x * playerContact.normalX + this.playerVel.z * playerContact.normalZ;
-      if (inwardVelocity < 0) {
-        this.playerVel.x -= playerContact.normalX * inwardVelocity;
-        this.playerVel.z -= playerContact.normalZ * inwardVelocity;
-      }
+      const contactNormals = playerContact.contactNormals ?? [
+        { x: playerContact.normalX, z: playerContact.normalZ },
+      ];
+      const projectedVelocity = projectVelocityOutOfEnemyContacts(this.playerVel, contactNormals);
+      this.playerVel.x = projectedVelocity.x;
+      this.playerVel.z = projectedVelocity.z;
     }
 
     // Re-apply the gate after platform carry and crowd contact, then commit.
