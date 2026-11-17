@@ -11,12 +11,12 @@ namespace MaxFlix.Unity.Runtime
     public sealed class OperatorImpactBurst : MonoBehaviour
     {
         private static readonly Dictionary<int, Material> MaterialCache = new Dictionary<int, Material>();
+        private static Mesh _sharedRingMesh;
 
         private Transform _ring;
         private Transform _core;
         private readonly List<Transform> _shards = new List<Transform>(4);
         private readonly List<Vector3> _directions = new List<Vector3>(4);
-        private Mesh _ringMesh;
         private float _age;
         private float _life = 0.48f;
         private float _radius = 1.2f;
@@ -40,8 +40,7 @@ namespace MaxFlix.Unity.Runtime
             ringObject.transform.localPosition = new Vector3(0f, 0.055f, 0f);
             _ring = ringObject.transform;
             MeshFilter filter = ringObject.AddComponent<MeshFilter>();
-            _ringMesh = BuildRingMesh();
-            filter.sharedMesh = _ringMesh;
+            filter.sharedMesh = GetSharedRingMesh();
             MeshRenderer ringRenderer = ringObject.AddComponent<MeshRenderer>();
             ringRenderer.sharedMaterial = material;
             ringRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -120,11 +119,6 @@ namespace MaxFlix.Unity.Runtime
             if (_age >= _life) Destroy(gameObject);
         }
 
-        private void OnDestroy()
-        {
-            if (_ringMesh != null) Destroy(_ringMesh);
-        }
-
         private static Material GetSharedMaterial(Color color)
         {
             Color32 rgba = color;
@@ -148,6 +142,12 @@ namespace MaxFlix.Unity.Runtime
             }
             MaterialCache[key] = material;
             return material;
+        }
+
+        private static Mesh GetSharedRingMesh()
+        {
+            if (_sharedRingMesh == null) _sharedRingMesh = BuildRingMesh();
+            return _sharedRingMesh;
         }
 
         private static Mesh BuildRingMesh()
