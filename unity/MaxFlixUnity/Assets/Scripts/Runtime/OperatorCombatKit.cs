@@ -689,6 +689,24 @@ namespace MaxFlix.Unity.Runtime
             }
         }
 
+        private static Material GetSupportMaterial(Color color)
+        {
+            Color32 rgba = color;
+            int key = (rgba.r << 24) | (rgba.g << 16) | (rgba.b << 8) | rgba.a;
+            if (SupportMaterials.TryGetValue(key, out Material material) && material != null) return material;
+
+            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null) shader = Shader.Find("Standard");
+            if (shader == null)
+            {
+                Debug.LogError("No compatible shader is available for operator visuals.");
+                return null;
+            }
+            material = new Material(shader) { color = color, enableInstancing = true };
+            SupportMaterials[key] = material;
+            return material;
+        }
+
         private static void CreatePart(Transform parent, PrimitiveType type, string name, Vector3 localPosition, Vector3 scale, Color color)
         {
             GameObject part = GameObject.CreatePrimitive(type);
@@ -699,24 +717,7 @@ namespace MaxFlix.Unity.Runtime
             Collider collider = part.GetComponent<Collider>();
             if (collider != null) Destroy(collider);
             Renderer renderer = part.GetComponent<Renderer>();
-            if (renderer != null)
-            {
-                Color32 rgba = color;
-                int key = (rgba.r << 24) | (rgba.g << 16) | (rgba.b << 8) | rgba.a;
-                if (!SupportMaterials.TryGetValue(key, out Material material))
-                {
-                    Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-                    if (shader == null) shader = Shader.Find("Standard");
-                    if (shader == null)
-                    {
-                        Debug.LogError("No compatible shader is available for operator support-unit visuals.");
-                        return;
-                    }
-                    material = new Material(shader) { color = color, enableInstancing = true };
-                    SupportMaterials.Add(key, material);
-                }
-                renderer.sharedMaterial = material;
-            }
+            if (renderer != null) renderer.sharedMaterial = GetSupportMaterial(color);
         }
 
         private void UpdateAbilityHud()
