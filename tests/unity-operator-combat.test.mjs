@@ -707,6 +707,8 @@ test('Unity 44cm arm has articulated elbow/fist animation and a shared impact bu
   assert.match(burst, /Expanding impact ring/);
   assert.match(burst, /Impact fragment/);
   assert.match(burst, /BuildRingMesh\(\)/);
+  assert.match(burst, /GetSharedRingMesh\(\)/);
+  assert.match(burst, /private static Mesh _sharedRingMesh/);
   assert.match(burst, /triangles\[triangleIndex\+\+\] = a \+ 1;[\s\S]*?triangles\[triangleIndex\+\+\] = b;/);
 });
 
