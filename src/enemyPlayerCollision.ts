@@ -9,12 +9,19 @@ export interface EnemyContactBody {
   readonly state?: string;
 }
 
+export interface EnemyContactNormal {
+  readonly x: number;
+  readonly z: number;
+}
+
 export interface PlayerMovementContactResult {
   readonly x: number;
   readonly z: number;
   readonly collided: boolean;
   readonly normalX: number;
   readonly normalZ: number;
+  /** Every distinct contact plane touched during this movement solve. */
+  readonly contactNormals?: readonly EnemyContactNormal[];
 }
 
 /** Model-to-model separation distance used consistently by AI and player movement. */
@@ -55,6 +62,7 @@ export function resolvePlayerMovementAgainstEnemies(
   let collided = false;
   let normalX = 0;
   let normalZ = 0;
+  let contactNormals: EnemyContactNormal[] | undefined;
   const safeClearance = Math.max(0.4, verticalClearance);
 
   // Two stable passes resolve a player moving into a close pack without
@@ -133,8 +141,46 @@ export function resolvePlayerMovementAgainstEnemies(
       collided = true;
       normalX = nx;
       normalZ = nz;
+      if (!contactNormals) contactNormals = [];
+      if (!contactNormals.some((normal) => normal.x * nx + normal.z * nz > 0.995)) {
+        contactNormals.push({ x: nx, z: nz });
+      }
     }
   }
 
-  return { x, z, collided, normalX, normalZ };
+  return { x, z, collided, normalX, normalZ, contactNormals };
+}
+
+/**
+ * Projects horizontal momentum out of every active enemy contact plane.
+ * Repeated passes handle corners and tight crowds where one projection can
+ * otherwise reintroduce inward velocity against a second body.
+ */
+export function projectVelocityOutOfEnemyContacts(
+  velocity: { readonly x: number; readonly z: number },
+  normals: readonly EnemyContactNormal[],
+): { x: number; z: number } {
+  let x = Number.isFinite(velocity.x) ? velocity.x : 0;
+  let z = Number.isFinite(velocity.z) ? velocity.z : 0;
+  if (normals.length === 0) return { x, z };
+
+  const passes = Math.max(2, Math.min(8, normals.length * 2));
+  for (let pass = 0; pass < passes; pass++) {
+    let changed = false;
+    for (const normal of normals) {
+      if (!Number.isFinite(normal.x) || !Number.isFinite(normal.z)) continue;
+      const length = Math.hypot(normal.x, normal.z);
+      if (length < 1e-6) continue;
+      const nx = normal.x / length;
+      const nz = normal.z / length;
+      const inward = x * nx + z * nz;
+      if (inward >= -1e-7) continue;
+      x -= nx * inward;
+      z -= nz * inward;
+      changed = true;
+    }
+    if (!changed) break;
+  }
+
+  return { x, z };
 }

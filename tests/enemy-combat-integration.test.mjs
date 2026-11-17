@@ -19,7 +19,7 @@ test('enemy pursuit has an arrival dead-zone and does not orbit around a reached
 test('player movement blocks on enemy bodies and slides instead of tunnelling', () => {
   assert.match(game, /resolvePlayerMovementAgainstEnemies\(/);
   assert.match(game, /const contactY = landed \? this\.playerPos\.y : nextY/);
-  assert.match(game, /const inwardVelocity = this\.playerVel\.x \* playerContact\.normalX/);
+  assert.match(game, /projectVelocityOutOfEnemyContacts\(this\.playerVel, contactNormals\)/);
   assert.match(game, /getEnemyPlayerContactDistance\(enemy\.type\)/);
 });
 
