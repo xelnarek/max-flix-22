@@ -72,7 +72,18 @@ namespace MaxFlix.Unity.Runtime
 
         public void Tick(float deltaTime)
         {
-            if (_profile == null || _player == null || _player.IsDefeated) return;
+            if (_profile == null || _player == null)
+            {
+                CleanupTransientSkillVisuals();
+                return;
+            }
+            if (_player.IsDefeated)
+            {
+                CleanupTransientSkillVisuals();
+                _ramRemaining = 0f;
+                _sprintRemaining = 0f;
+                return;
+            }
 
             _abilityCooldownRemaining = Mathf.Max(0f, _abilityCooldownRemaining - deltaTime);
             _enemyCache = EnemyAgent.GetCachedAgents();
@@ -739,15 +750,33 @@ namespace MaxFlix.Unity.Runtime
             _hud.SetAbilityState(_abilityCooldownRemaining, _abilityCooldownDuration);
         }
 
-        private void OnDestroy()
+        private void CleanupTransientSkillVisuals()
         {
             for (int i = 0; i < _supportUnits.Count; i++)
                 if (_supportUnits[i].Root != null) Destroy(_supportUnits[i].Root);
             _supportUnits.Clear();
+
             if (_grzesiekArmRoot != null) Destroy(_grzesiekArmRoot);
+            _grzesiekArmRoot = null;
+            _grzesiekElbowPivot = null;
+            _grzesiekFistPivot = null;
+            _grzesiekBicep = null;
+            _grzesiekArmRemaining = 0f;
+            _grzesiekArmImpactDone = false;
+
             if (_contractEffectRoot != null) Destroy(_contractEffectRoot);
+            _contractEffectRoot = null;
+            _contractLeft = null;
+            _contractRight = null;
             _contractFragments.Clear();
             _contractFragmentDirections.Clear();
+            _contractEffectRemaining = 0f;
+            _contractImpactDone = false;
+        }
+
+        private void OnDestroy()
+        {
+            CleanupTransientSkillVisuals();
         }
     }
 }
