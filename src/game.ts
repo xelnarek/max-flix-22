@@ -638,6 +638,8 @@ export class PaleciakiGameEngine {
   private globalEnemyShoutCooldown = 0;
   /** Remaining duration of Mateusz's enemy-only faction brawl. */
   private enemyFactionBrawlRemaining = 0;
+  /** Reused target-load snapshot prevents the whole brawl from dogpiling one enemy. */
+  private readonly enemyFactionBrawlTargetLoads = new Map<string, number>();
   // Re-evaluate the nearest enemies in short slices instead of allocating/sorting every rendered frame.
   private waveDirectorCooldown = 0;
   private activeChaserIds = new Set<string>();
@@ -13181,19 +13183,42 @@ export class PaleciakiGameEngine {
     enemy.aiFactionBrawlRetargetTimer = Math.max(0, (enemy.aiFactionBrawlRetargetTimer ?? 0) - dt);
     let target = enemy.aiFactionBrawlTarget ?? null;
     if (!target || target.state === 'defeated' || enemy.aiFactionBrawlRetargetTimer <= 0) {
-      let nearestDistance = 21.5;
+      // Release this attacker's old slot before scoring new targets.
+      if (target) {
+        const previousLoad = this.enemyFactionBrawlTargetLoads.get(target.id) ?? 0;
+        if (previousLoad <= 1) this.enemyFactionBrawlTargetLoads.delete(target.id);
+        else this.enemyFactionBrawlTargetLoads.set(target.id, previousLoad - 1);
+      }
+
+      let bestScore = Number.POSITIVE_INFINITY;
       target = null;
-      const nearby = this.enemySpatialIndex.query(enemy.x, enemy.z, nearestDistance);
+      const nearby = this.enemySpatialIndex.query(enemy.x, enemy.z, 21.5);
       for (const candidate of nearby) {
         if (candidate === enemy || candidate.state === 'defeated' || !candidate.mesh) continue;
         if (Math.abs(candidate.y - enemy.y) > 2.0) continue;
         const distance = Math.hypot(candidate.x - enemy.x, candidate.z - enemy.z);
-        if (distance < nearestDistance) {
-          nearestDistance = distance;
+        if (distance > 21.5) continue;
+
+        // A lightly weighted assignment penalty spreads attackers across the
+        // available opponents without making them abandon a much closer fight.
+        const assignedAttackers = this.enemyFactionBrawlTargetLoads.get(candidate.id) ?? 0;
+        const score = distance + assignedAttackers * 2.1;
+        if (
+          score < bestScore - 0.001 ||
+          (Math.abs(score - bestScore) <= 0.001 && (!target || candidate.id < target.id))
+        ) {
+          bestScore = score;
           target = candidate;
         }
       }
+
       enemy.aiFactionBrawlTarget = target ?? undefined;
+      if (target) {
+        this.enemyFactionBrawlTargetLoads.set(
+          target.id,
+          (this.enemyFactionBrawlTargetLoads.get(target.id) ?? 0) + 1,
+        );
+      }
       enemy.aiFactionBrawlRetargetTimer = 0.24;
     }
 
@@ -13594,6 +13619,21 @@ export class PaleciakiGameEngine {
   private updateEnemies(dt: number) {
     this.enemyFactionBrawlRemaining = Math.max(0, this.enemyFactionBrawlRemaining - dt);
     const factionBrawlActive = this.enemyFactionBrawlRemaining > 0;
+    this.enemyFactionBrawlTargetLoads.clear();
+    if (factionBrawlActive) {
+      // Seed the reusable load map from valid assignments. Retargets below update
+      // it immediately, so enemies processed later in this same frame see the
+      // new distribution rather than all choosing the same nearest opponent.
+      for (const attacker of this.enemies) {
+        if (attacker.state === 'defeated') continue;
+        const assignedTarget = attacker.aiFactionBrawlTarget;
+        if (!assignedTarget || assignedTarget.state === 'defeated') continue;
+        this.enemyFactionBrawlTargetLoads.set(
+          assignedTarget.id,
+          (this.enemyFactionBrawlTargetLoads.get(assignedTarget.id) ?? 0) + 1,
+        );
+      }
+    }
     const survivalAbilityRate = this.gameMode === 'survival'
       ? getSurvivalDifficultyProfile(this.survivalWave).enemyAbilityRateMultiplier
       : 1;
