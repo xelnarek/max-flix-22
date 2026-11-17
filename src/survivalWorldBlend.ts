@@ -66,8 +66,8 @@ function createBlend(eastFactor: number, southFactor: number, xBoundaryInfluence
 
 /**
  * Spatially blend four rectangular biomes instead of switching ambience at a
- * single coordinate. The 22 m transition bands match the rendered floor overlays.
- * Bilinear blending makes the central intersection a genuine four-way overlap.
+ * single coordinate. Its 22 m overlap field drives the connected floor atlas and
+ * world lighting; bilinear blending makes the centre a genuine four-way overlap.
  */
 export function getSurvivalWorldBiomeBlendAtPosition(x: number, z: number): SurvivalWorldBiomeBlend {
   const safeX = Number.isFinite(x) ? x : -SURVIVAL_WORLD_BLEND_HALF_WIDTH_METERS * 2;
