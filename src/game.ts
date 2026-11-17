@@ -112,7 +112,6 @@ import {
 import { ParticleMeshPool, type ParticleShape } from './particlePool.ts';
 import { ParticleMotionStatePool, type ParticleMotionState } from './particleMotionPool.ts';
 
-const PARTICLE_STATE_CAPACITY = 75;
 import { applyPerfectDodgeCounterattack, getSurvivalDashCooldownSeconds, getSurvivalDashProgress, rollSurvivalCriticalDamage } from './archeroMechanics.ts';
 import { advanceSurvivalMomentum, createSurvivalMomentumState, getSurvivalMomentumDamageMultiplier, getSurvivalMomentumMoveMultiplier, getSurvivalMomentumRateMultiplier, registerSurvivalKill, type SurvivalMomentumState } from './survivalMomentum.ts';
 import { selectSurvivalAutoTarget } from './survivalTargeting.ts';
@@ -317,6 +316,29 @@ function cloneRootMotionFreeClip(sourceClip: THREE.AnimationClip): THREE.Animati
   });
   return new THREE.AnimationClip(sourceClip.name, sourceClip.duration, tracks, sourceClip.blendMode);
 }
+
+const PARTICLE_STATE_CAPACITY = 75;
+
+const SURVIVAL_WEAPON_MUZZLE_PARTICLE_PATTERNS: Readonly<Record<SurvivalDamageWeaponId, {
+  shape: ParticleShape;
+  count: number;
+  size: number;
+  speed: number;
+  spread: number;
+}>> = Object.freeze({
+  pallet_cannon: { shape: 'flat-box', count: 5, size: 0.115, speed: 4.8, spread: 0.22 },
+  diamond_saw: { shape: 'octahedron', count: 4, size: 0.095, speed: 5.8, spread: 0.62 },
+  glue_mine: { shape: 'sphere', count: 3, size: 0.14, speed: 2.6, spread: 0.34 },
+  kfc_bomber: { shape: 'tetrahedron', count: 4, size: 0.12, speed: 5.0, spread: 0.46 },
+  piorun_drone: { shape: 'octahedron', count: 3, size: 0.10, speed: 4.7, spread: 0.18 },
+  forklift_bolter: { shape: 'flat-box', count: 3, size: 0.075, speed: 8.0, spread: 0.16 },
+  scanner_pulse: { shape: 'box', count: 3, size: 0.075, speed: 7.2, spread: 0.24 },
+  orbit_blades: { shape: 'tetrahedron', count: 4, size: 0.085, speed: 3.0, spread: 0.95 },
+  calacatta_shards: { shape: 'tetrahedron', count: 5, size: 0.105, speed: 6.0, spread: 0.82 },
+  steam_bomb: { shape: 'sphere', count: 4, size: 0.13, speed: 3.4, spread: 0.38 },
+  forklift_horn: { shape: 'flat-box', count: 6, size: 0.095, speed: 3.6, spread: Math.PI * 2 },
+  wz_boomerang: { shape: 'octahedron', count: 4, size: 0.105, speed: 5.5, spread: 0.7 },
+});
 
 interface GobkitAnimationTrack {
   root: THREE.Group;
@@ -9639,21 +9661,7 @@ export class PaleciakiGameEngine {
   private spawnSurvivalWeaponMuzzleFx(weapon: SurvivalWeaponState, target: EnemyItem): void {
     const weaponId = weapon.id as SurvivalDamageWeaponId;
     const meta = SURVIVAL_DAMAGE_WEAPONS[weaponId];
-    const pattern: Record<SurvivalDamageWeaponId, { shape: ParticleShape; count: number; size: number; speed: number; spread: number }> = {
-      pallet_cannon: { shape: 'flat-box', count: 5, size: 0.115, speed: 4.8, spread: 0.22 },
-      diamond_saw: { shape: 'octahedron', count: 4, size: 0.095, speed: 5.8, spread: 0.62 },
-      glue_mine: { shape: 'sphere', count: 3, size: 0.14, speed: 2.6, spread: 0.34 },
-      kfc_bomber: { shape: 'tetrahedron', count: 4, size: 0.12, speed: 5.0, spread: 0.46 },
-      piorun_drone: { shape: 'octahedron', count: 3, size: 0.10, speed: 4.7, spread: 0.18 },
-      forklift_bolter: { shape: 'flat-box', count: 3, size: 0.075, speed: 8.0, spread: 0.16 },
-      scanner_pulse: { shape: 'box', count: 3, size: 0.075, speed: 7.2, spread: 0.24 },
-      orbit_blades: { shape: 'tetrahedron', count: 4, size: 0.085, speed: 3.0, spread: 0.95 },
-      calacatta_shards: { shape: 'tetrahedron', count: 5, size: 0.105, speed: 6.0, spread: 0.82 },
-      steam_bomb: { shape: 'sphere', count: 4, size: 0.13, speed: 3.4, spread: 0.38 },
-      forklift_horn: { shape: 'flat-box', count: 6, size: 0.095, speed: 3.6, spread: Math.PI * 2 },
-      wz_boomerang: { shape: 'octahedron', count: 4, size: 0.105, speed: 5.5, spread: 0.7 },
-    };
-    const visual = pattern[weaponId];
+    const visual = SURVIVAL_WEAPON_MUZZLE_PARTICLE_PATTERNS[weaponId];
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
     const count = Math.min(visual.count, isMobile ? (this.adaptivePerformanceTier >= 2 ? 2 : this.adaptivePerformanceTier === 1 ? 3 : visual.count) : visual.count);
     let forwardX = target.x - this.playerPos.x;
