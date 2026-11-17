@@ -78,7 +78,7 @@ test('Survival enemies scan for incoming player shots and commit a short role-we
   const start = game.indexOf('private updateSurvivalEnemyTactics');
   const end = game.indexOf('private damageEnemy', start);
   const tactics = game.slice(start, end);
-  assert.match(tactics, /calculateEnemyProjectileDodge\(enemy, this\.projectiles, 0\.72, 1\.02, 0\.95\)/);
+  assert.match(tactics, /calculateEnemyProjectileDodge\([\s\S]*?0\.72,[\s\S]*?1\.02,[\s\S]*?0\.95,[\s\S]*?this\.enemyProjectileDodgeScanScratch/);
   assert.match(tactics, /enemy\.aiDodgeScanTimer = 0\.12/);
   assert.match(tactics, /enemy\.aiDodgeTimer = 0\.28/);
   assert.match(tactics, /evasionWeight = role === 'bruiser'/);

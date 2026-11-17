@@ -86,3 +86,33 @@ test('invalid actor data and empty projectile lists safely return no dodge', () 
     { x: 0, z: 0 },
   );
 });
+
+test('projectile dodge reuses caller-owned output and clears stale dodge when no projectile threatens', () => {
+  const actor = { id: 'guard-reused', x: 0, y: 0.5, z: 0 };
+  const shot = {
+    mesh: { position: { x: -4, y: 1.12, z: 0 } },
+    vel: { x: 8, y: 0, z: 0 },
+  };
+  const out = { x: 77, z: -55 };
+  const dodge = calculateEnemyProjectileDodge(actor, [shot], 0.72, 1.02, 0.95, out);
+  assert.strictEqual(dodge, out);
+  assert.ok(Math.abs(dodge.z) > 0.4);
+
+  const clear = calculateEnemyProjectileDodge(actor, [], 0.72, 1.02, 0.95, out);
+  assert.strictEqual(clear, out);
+  assert.deepEqual(clear, { x: 0, z: 0 });
+});
+
+test('projectile dodge scratch resets before rejecting invalid actor data', () => {
+  const out = { x: 12, z: -9 };
+  const result = calculateEnemyProjectileDodge(
+    { id: 'guard-bad-reused', x: Number.NaN, y: 0.5, z: 0 },
+    [],
+    0.72,
+    1.02,
+    0.95,
+    out,
+  );
+  assert.strictEqual(result, out);
+  assert.deepEqual(result, { x: 0, z: 0 });
+});
