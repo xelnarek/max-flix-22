@@ -158,7 +158,12 @@ export function getSurvivalFlankInterceptOffset(
  */
 export function getSurvivalRetreatTarget(input: SurvivalRetreatTargetInput): SurvivalTacticalPoint {
   const values = [input.playerX, input.playerZ, input.enemyX, input.enemyZ, input.slot];
-  if (!values.every(finite)) return { x: input.enemyX, z: input.enemyZ };
+  if (!values.every(finite)) {
+    return {
+      x: finite(input.enemyX) ? input.enemyX : finite(input.playerX) ? input.playerX : 0,
+      z: finite(input.enemyZ) ? input.enemyZ : finite(input.playerZ) ? input.playerZ : 0,
+    };
+  }
 
   const profile = RETREAT_PROFILES[input.role];
   const dx = input.enemyX - input.playerX;
