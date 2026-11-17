@@ -33,6 +33,10 @@ namespace MaxFlix.Unity.Runtime
         private bool _chargeHitApplied;
         private bool _phaseTwo;
         private bool _defeated;
+        private bool _factionBrawlTint;
+        private EnemyAgent _factionBrawlTarget;
+        private float _factionBrawlRetargetRemaining;
+        private static float _factionBrawlUntil;
         private Renderer[] _renderers;
         private MaterialPropertyBlock _propertyBlock;
         private static EnemyAgent[] _separationCache = new EnemyAgent[0];
@@ -60,6 +64,20 @@ namespace MaxFlix.Unity.Runtime
             _separationCache = new EnemyAgent[0];
             SeparationBuckets.Clear();
             _nextSeparationRefreshTime = 0f;
+            _factionBrawlUntil = 0f;
+        }
+
+        /// <summary>Redirects every live enemy toward another enemy, never the player.</summary>
+        public static void TriggerFactionBrawl(float durationSeconds)
+        {
+            float safeDuration = Mathf.Clamp(durationSeconds, 1f, 12f);
+            _factionBrawlUntil = Mathf.Max(_factionBrawlUntil, Time.time + safeDuration);
+            RefreshSeparationIndex();
+        }
+
+        public static bool IsFactionBrawlActive
+        {
+            get { return Time.time < _factionBrawlUntil; }
         }
 
         public void Initialize(PlayerController target, EnemyKind kind, float healthMultiplier = 1f, float speedMultiplier = 1f, float abilityRateMultiplier = 1f)
@@ -96,6 +114,76 @@ namespace MaxFlix.Unity.Runtime
         public void ApplyDamage(float damage)
         {
             ApplyCombatHit(damage, 0f, 0f, 1f, Vector3.zero);
+        }
+
+        /// <summary>Enemy-vs-enemy damage does not count as operator or weapon damage in Survival.</summary>
+        public void ApplyFactionDamage(float damage, Vector3 knockbackVelocity)
+        {
+            if (_defeated || float.IsNaN(damage) || float.IsInfinity(damage) || damage <= 0f) return;
+            float applied = damage;
+            if (_supportShieldRemaining > 0f) applied *= 0.62f;
+            if (applied <= 0f) return;
+            _health = Mathf.Max(0f, _health - applied);
+            _hitFlashTimer = 0.16f;
+            _knockbackVelocity += Vector3.ClampMagnitude(knockbackVelocity, 6.5f);
+            if (_profile != null && _profile.IsBoss && !_phaseTwo && _health <= MaxHealth * 0.5f)
+            {
+                _phaseTwo = true;
+                _phaseTwoMoveMultiplier = 1.22f;
+                _attackTimer = Mathf.Min(_attackTimer, _attackInterval / _abilityRateMultiplier * 0.35f);
+            }
+            if (_health <= 0f) Defeat();
+        }
+
+        private void TickFactionBrawl(float deltaTime)
+        {
+            _factionBrawlRetargetRemaining = Mathf.Max(0f, _factionBrawlRetargetRemaining - deltaTime);
+            if (_factionBrawlTarget == null || _factionBrawlTarget.IsDefeated || _factionBrawlRetargetRemaining <= 0f)
+            {
+                _factionBrawlTarget = null;
+                RefreshSeparationIndex();
+                float bestDistance = 21.5f * 21.5f;
+                foreach (EnemyAgent candidate in _separationCache)
+                {
+                    if (candidate == null || candidate == this || candidate.IsDefeated) continue;
+                    Vector3 offset = candidate.transform.position - transform.position;
+                    offset.y = 0f;
+                    float sqrDistance = offset.sqrMagnitude;
+                    if (sqrDistance >= bestDistance) continue;
+                    bestDistance = sqrDistance;
+                    _factionBrawlTarget = candidate;
+                }
+                _factionBrawlRetargetRemaining = 0.24f;
+            }
+            if (_factionBrawlTarget == null)
+            {
+                _attackTimer = Mathf.Max(_attackTimer, 0.12f);
+                return;
+            }
+
+            Vector3 offsetToEnemy = _factionBrawlTarget.transform.position - transform.position;
+            offsetToEnemy.y = 0f;
+            float distance = offsetToEnemy.magnitude;
+            Vector3 direction = distance > 0.001f ? offsetToEnemy / distance : transform.forward;
+            Face(direction, deltaTime);
+            const float contactRange = 1.55f;
+            if (distance > contactRange)
+            {
+                Vector3 avoidance = EnemyNavigationWorld.GetObstacleAvoidanceVector(
+                    transform.position, _factionBrawlTarget.transform.position,
+                    GetInstanceID(), (_controller != null ? _controller.radius : 0.34f) + 0.55f);
+                Vector3 travel = (direction + avoidance * 0.78f).normalized;
+                Vector3 velocity = travel * (_moveSpeed * _phaseTwoMoveMultiplier * 0.82f * _slowMultiplier);
+                velocity.y = -2f;
+                if (_controller != null) _controller.Move(velocity * deltaTime);
+                return;
+            }
+            if (_attackTimer <= 0f)
+            {
+                float brawlDamage = _profile != null && _profile.IsBoss ? _attackDamage * 0.58f : _attackDamage * 0.72f;
+                _factionBrawlTarget.ApplyFactionDamage(brawlDamage, direction * 0.72f + Vector3.up * 0.12f);
+                _attackTimer = _attackInterval / _abilityRateMultiplier * 1.12f;
+            }
         }
 
         public void GrantSupportShield(float duration)
@@ -195,6 +283,20 @@ namespace MaxFlix.Unity.Runtime
             {
                 UpdateHitFlash(deltaTime);
                 return;
+            }
+
+            if (IsFactionBrawlActive)
+            {
+                _factionBrawlTint = true;
+                SetHitTint(_hitFlashTimer > 0f);
+                TickFactionBrawl(deltaTime);
+                UpdateHitFlash(deltaTime);
+                return;
+            }
+            if (_factionBrawlTint)
+            {
+                _factionBrawlTint = false;
+                SetHitTint(_hitFlashTimer > 0f);
             }
 
             Vector3 offset = _target.transform.position - transform.position;
@@ -569,8 +671,9 @@ namespace MaxFlix.Unity.Runtime
         {
             if (_renderers == null) return;
             Color tint = active
-                ? new Color(1f, 0.48f, 0.32f, 1f)
-                : (_supportShieldRemaining > 0f ? new Color(0.42f, 0.76f, 1f, 1f) : Color.white);
+                ? (_factionBrawlTint ? new Color(0.86f, 0.30f, 0.94f, 1f) : new Color(1f, 0.48f, 0.32f, 1f))
+                : (_factionBrawlTint ? new Color(0.72f, 0.30f, 0.84f, 1f)
+                    : (_supportShieldRemaining > 0f ? new Color(0.42f, 0.76f, 1f, 1f) : Color.white));
             foreach (Renderer renderer in _renderers)
             {
                 if (renderer == null) continue;

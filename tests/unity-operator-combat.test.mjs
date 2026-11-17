@@ -22,8 +22,12 @@ test('Unity operator abilities preserve source cooldown and mode-specific summon
     assert.ok(catalog.includes('AbilityCooldownSeconds = ' + cooldown), 'missing cooldown ' + cooldown);
   }
   assert.match(kit, /mode == GameMode\.Survival \? 6f : 8f/);
-  assert.match(kit, /mode == GameMode\.Survival \? 6\.5f : 9\.5f/);
-  assert.match(kit, /DamageNearbyEnemies\(5\.2f, 3f/);
+  assert.match(kit, /EnemyAgent\.TriggerFactionBrawl\(mode == GameMode\.Survival \? 7\.5f : 9f\)/);
+  assert.match(kit, /BeginGrzesiekArm\(\)/);
+  assert.match(kit, /BeginContractRipEffect\(\)/);
+  assert.match(kit, /for \(int i = 0; i < 5; i\+\+\)/);
+  assert.match(kit, /OperatorHomingRocket\.Spawn/);
+  assert.doesNotMatch(kit, /SupportStyle\.Cat|KOCIA ARMIA|Miau-critical|PounceTarget/);
   assert.match(kit, /for \(int i = -2; i <= 2; i\+\+\)/);
   assert.match(kit, /SpawnSupport\(SupportStyle\.Capybara, i, 8\.5f/);
 });
@@ -645,4 +649,25 @@ test('Unity editor bootstraps URP and the New Input System automatically', async
   assert.match(setup, /GraphicsSettings\.defaultRenderPipeline = pipeline/);
   assert.match(setup, /PlayerSettings\.SetGraphicsAPIs\(/);
   assert.match(setup, /GraphicsDeviceType\.WebGPU, GraphicsDeviceType\.OpenGLES3/);
+});
+
+
+test('Unity Mateusz brawl redirects enemy AI and excludes enemy damage from player statistics', async () => {
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  assert.match(enemy, /TriggerFactionBrawl\(float durationSeconds\)/);
+  assert.match(enemy, /if \(IsFactionBrawlActive\)/);
+  assert.match(enemy, /TickFactionBrawl\(deltaTime\)/);
+  assert.match(enemy, /_factionBrawlTarget\.ApplyFactionDamage/);
+  assert.match(enemy, /ApplyFactionDamage\(float damage/);
+  assert.match(enemy, /Enemy-versus-enemy damage/);
+  assert.match(enemy, /_factionBrawlUntil/);
+});
+
+test('Unity Grzesiek missile component has homing, target reacquisition and bounded blast damage', async () => {
+  const rocket = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorHomingRocket.cs');
+  assert.match(rocket, /Vector3\.RotateTowards/);
+  assert.match(rocket, /FindClosestTarget\(28f\)/);
+  assert.match(rocket, /_blastRadius/);
+  assert.match(rocket, /enemy\.ApplyCombatHit\(_damage \* falloff/);
+  assert.match(rocket, /TrailRenderer/);
 });

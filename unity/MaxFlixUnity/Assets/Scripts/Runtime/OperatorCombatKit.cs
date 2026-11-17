@@ -10,7 +10,7 @@ namespace MaxFlix.Unity.Runtime
     /// </summary>
     public sealed class OperatorCombatKit : MonoBehaviour
     {
-        private enum SupportStyle { Tank, Cat, Capybara }
+        private enum SupportStyle { Tank, Capybara }
 
         private sealed class SupportUnit
         {
@@ -19,8 +19,6 @@ namespace MaxFlix.Unity.Runtime
             public int Index;
             public float ExpiresAt;
             public float NextAttackAt;
-            public EnemyAgent PounceTarget;
-            public float PounceUntil;
         }
 
         private readonly List<SupportUnit> _supportUnits = new List<SupportUnit>();
@@ -43,6 +41,13 @@ namespace MaxFlix.Unity.Runtime
         private float _shieldRemaining;
         private float _ramRemaining;
         private float _ramDamageCooldown;
+        private GameObject _grzesiekArmRoot;
+        private float _grzesiekArmRemaining;
+        private bool _grzesiekArmImpactDone;
+        private GameObject _contractEffectRoot;
+        private Transform _contractLeft;
+        private Transform _contractRight;
+        private float _contractEffectRemaining;
 
         public float MovementMultiplier { get { return _sprintRemaining > 0f ? 1.28f : (_ramRemaining > 0f ? 1.18f : 1f); } }
         public bool IsInvulnerable { get { return _invulnerabilityRemaining > 0f; } }
@@ -70,6 +75,8 @@ namespace MaxFlix.Unity.Runtime
             _shieldRemaining = Mathf.Max(0f, _shieldRemaining - deltaTime);
             _ramRemaining = Mathf.Max(0f, _ramRemaining - deltaTime);
             _ramDamageCooldown = Mathf.Max(0f, _ramDamageCooldown - deltaTime);
+            TickGrzesiekArm(deltaTime);
+            TickContractEffect(deltaTime);
 
             if (_ramRemaining > 0f && _ramDamageCooldown <= 0f)
             {
@@ -176,9 +183,9 @@ namespace MaxFlix.Unity.Runtime
                     break;
 
                 case OperatorId.Grzesiek:
-                    DamageNearbyEnemies(5.2f, 3f, 0.6f, 5.4f);
+                    BeginGrzesiekArm();
                     _ramRemaining = 6f;
-                    _hud?.SetStatus("ŚCISK ZAGŁADY • TRYB TARANA 6 S");
+                    _hud?.SetStatus("44 CM ZAGŁADY • PIĘŚĆ + 5 RAKIET");
                     break;
 
                 case OperatorId.Dawid:
@@ -195,10 +202,9 @@ namespace MaxFlix.Unity.Runtime
                     break;
 
                 case OperatorId.Mateusz:
-                    float catDuration = mode == GameMode.Survival ? 6.5f : 9.5f;
-                    for (int i = 0; i < 3; i++)
-                        SpawnSupport(SupportStyle.Cat, i, catDuration, _profile.SecondaryColor);
-                    _hud?.SetStatus("KOCIA ARMIA ONLINE • 3× MIAU-CRITICAL");
+                    EnemyAgent.TriggerFactionBrawl(mode == GameMode.Survival ? 7.5f : 9f);
+                    BeginContractRipEffect();
+                    _hud?.SetStatus("MAM WYJEBANE • UMOWA NA 9 MIESIĘCY ROZDARTA");
                     break;
 
                 case OperatorId.Piotr:
@@ -238,10 +244,151 @@ namespace MaxFlix.Unity.Runtime
             }
         }
 
+        private void BeginGrzesiekArm()
+        {
+            if (_grzesiekArmRoot != null) Destroy(_grzesiekArmRoot);
+            _grzesiekArmRoot = new GameObject("Grzesiek 44cm muscular fist");
+            Transform parent = _player != null ? _player.transform.parent : null;
+            if (parent != null) _grzesiekArmRoot.transform.SetParent(parent, true);
+            _grzesiekArmRemaining = 1.05f;
+            _grzesiekArmImpactDone = false;
+            Transform root = _grzesiekArmRoot.transform;
+            Color skin = new Color(0.78f, 0.48f, 0.33f);
+            Color muscle = new Color(0.91f, 0.64f, 0.46f);
+            Color shadow = new Color(0.48f, 0.23f, 0.18f);
+            Color band = new Color(0.08f, 0.32f, 0.18f);
+            Color metal = new Color(0.74f, 0.82f, 0.89f);
+            CreatePart(root, PrimitiveType.Sphere, "Massive shoulder", new Vector3(-0.36f, 0.68f, -0.02f), new Vector3(0.94f, 0.86f, 0.90f), skin);
+            CreatePart(root, PrimitiveType.Capsule, "Upper arm", new Vector3(-0.10f, 0.50f, 0.46f), new Vector3(0.68f, 1.18f, 0.66f), muscle);
+            CreatePart(root, PrimitiveType.Sphere, "Biceps peak", new Vector3(-0.12f, 0.80f, 0.36f), new Vector3(0.82f, 0.78f, 1.10f), muscle);
+            CreatePart(root, PrimitiveType.Sphere, "Biceps definition", new Vector3(-0.10f, 0.48f, 0.40f), new Vector3(0.48f, 0.30f, 0.72f), shadow);
+            CreatePart(root, PrimitiveType.Capsule, "Thick forearm", new Vector3(0.02f, 0.24f, 1.06f), new Vector3(0.70f, 1.10f, 0.70f), skin);
+            CreatePart(root, PrimitiveType.Sphere, "Forearm muscle", new Vector3(0.02f, 0.40f, 1.04f), new Vector3(0.64f, 0.58f, 0.98f), muscle);
+            CreatePart(root, PrimitiveType.Cylinder, "Wrist guard", new Vector3(0.02f, 0.22f, 1.48f), new Vector3(0.62f, 0.16f, 0.62f), band);
+            CreatePart(root, PrimitiveType.Sphere, "Closed fist palm", new Vector3(0.02f, 0.18f, 1.78f), new Vector3(0.82f, 0.72f, 0.82f), skin);
+            for (int knuckle = 0; knuckle < 4; knuckle++)
+                CreatePart(root, PrimitiveType.Sphere, "Clenched knuckle " + (knuckle + 1), new Vector3(-0.25f + knuckle * 0.17f, 0.34f, 2.00f), new Vector3(0.24f, 0.22f, 0.20f), muscle);
+            CreatePart(root, PrimitiveType.Capsule, "Thumb locked over fist", new Vector3(0.35f, 0.02f, 1.78f), new Vector3(0.22f, 0.48f, 0.22f), skin);
+            CreatePart(root, PrimitiveType.Cube, "44cm knuckle plate", new Vector3(0.02f, 0.34f, 2.08f), new Vector3(0.72f, 0.12f, 0.10f), metal);
+        }
+
+        private void TickGrzesiekArm(float deltaTime)
+        {
+            if (_grzesiekArmRemaining <= 0f) return;
+            _grzesiekArmRemaining = Mathf.Max(0f, _grzesiekArmRemaining - deltaTime);
+            if (_grzesiekArmRoot == null) return;
+            float progress = 1f - _grzesiekArmRemaining / 1.05f;
+            float strike = Mathf.Clamp01((progress - 0.30f) / 0.28f);
+            float recover = Mathf.Clamp01((progress - 0.72f) / 0.28f);
+            Transform root = _grzesiekArmRoot.transform;
+            root.position = transform.position + transform.forward * (0.28f + strike * 0.26f) + Vector3.up * 0.42f;
+            root.rotation = transform.rotation * Quaternion.Euler(Mathf.Lerp(-26f, 18f, strike), 0f, 0f);
+            root.localScale = Vector3.one * (1.48f * (1f - recover * 0.88f));
+            if (!_grzesiekArmImpactDone && progress >= 0.36f)
+            {
+                _grzesiekArmImpactDone = true;
+                DamageNearbyEnemies(4.6f, 1.55f, 0.42f, 4.8f);
+                SpawnFiveHomingRockets();
+                _hud?.SetStatus("44 CM ZAGŁADY • 5 RAKIET W LOCIE");
+            }
+            if (_grzesiekArmRemaining <= 0f)
+            {
+                Destroy(_grzesiekArmRoot);
+                _grzesiekArmRoot = null;
+            }
+        }
+
+        private void SpawnFiveHomingRockets()
+        {
+            HashSet<EnemyAgent> assigned = new HashSet<EnemyAgent>();
+            for (int i = 0; i < 5; i++)
+            {
+                EnemyAgent target = null;
+                float bestDistance = 28f * 28f;
+                foreach (EnemyAgent candidate in _enemyCache)
+                {
+                    if (candidate == null || candidate.IsDefeated || assigned.Contains(candidate)) continue;
+                    float sqrDistance = (candidate.transform.position - transform.position).sqrMagnitude;
+                    if (sqrDistance >= bestDistance) continue;
+                    bestDistance = sqrDistance;
+                    target = candidate;
+                }
+                if (target != null) assigned.Add(target);
+                Quaternion spread = Quaternion.Euler(0f, (i - 2) * 7f, 0f);
+                Vector3 direction = (spread * transform.forward + Vector3.up * 0.035f).normalized;
+                Vector3 origin = transform.position + Vector3.up * 1.02f + transform.forward * 0.46f + transform.right * ((i - 2) * 0.18f);
+                OperatorHomingRocket.Spawn(_player != null ? _player.transform.parent : transform.parent, origin, direction, target, _profile.SecondaryColor, 1.35f, 17.5f, 5.8f, 1.45f, 3.4f);
+            }
+        }
+
+        private void BeginContractRipEffect()
+        {
+            if (_contractEffectRoot != null) Destroy(_contractEffectRoot);
+            _contractEffectRoot = new GameObject("Mateusz 9 month contract rip");
+            Transform parent = _player != null ? _player.transform.parent : null;
+            if (parent != null) _contractEffectRoot.transform.SetParent(parent, true);
+            _contractLeft = new GameObject("Contract left half").transform;
+            _contractRight = new GameObject("Contract right half").transform;
+            _contractLeft.SetParent(_contractEffectRoot.transform, false);
+            _contractRight.SetParent(_contractEffectRoot.transform, false);
+            Color paper = new Color(1f, 0.94f, 0.78f);
+            Color ink = new Color(0.10f, 0.14f, 0.22f);
+            CreatePart(_contractLeft, PrimitiveType.Cube, "Contract page left", new Vector3(-0.23f, 0f, 0f), new Vector3(0.46f, 0.78f, 0.035f), paper);
+            CreatePart(_contractRight, PrimitiveType.Cube, "Contract page right", new Vector3(0.23f, 0f, 0f), new Vector3(0.46f, 0.78f, 0.035f), paper);
+            CreateContractText(_contractLeft, "UMOWA\nNA 9 MIESIĘCY", new Vector3(-0.23f, 0.03f, 0.035f), ink);
+            CreateContractText(_contractRight, "ROZDARTA\nMAM WYJEBANE", new Vector3(0.23f, 0.03f, 0.035f), new Color(0.58f, 0.08f, 0.30f));
+            CreatePart(_contractEffectRoot.transform, PrimitiveType.Cube, "Red torn center edge", new Vector3(0f, 0f, 0.06f), new Vector3(0.035f, 0.84f, 0.04f), new Color(0.72f, 0.10f, 0.16f));
+            CreateContractText(_contractEffectRoot.transform, "MAM WYJEBANE", new Vector3(0f, 0.68f, 0.08f), new Color(0.93f, 0.48f, 0.95f));
+            _contractEffectRemaining = 1.35f;
+            TickContractEffect(0f);
+        }
+
+        private static void CreateContractText(Transform parent, string value, Vector3 localPosition, Color color)
+        {
+            GameObject label = new GameObject("Contract lettering");
+            label.transform.SetParent(parent, false);
+            label.transform.localPosition = localPosition;
+            TextMesh text = label.AddComponent<TextMesh>();
+            text.text = value;
+            text.fontSize = 34;
+            text.characterSize = 0.045f;
+            text.anchor = TextAnchor.MiddleCenter;
+            text.alignment = TextAlignment.Center;
+            text.color = color;
+            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        }
+
+        private void TickContractEffect(float deltaTime)
+        {
+            if (_contractEffectRemaining <= 0f || _contractEffectRoot == null) return;
+            _contractEffectRemaining = Mathf.Max(0f, _contractEffectRemaining - deltaTime);
+            float progress = 1f - _contractEffectRemaining / 1.35f;
+            float split = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((progress - 0.08f) / 0.62f));
+            _contractEffectRoot.transform.position = transform.position + transform.forward * 1.25f + Vector3.up * (1.02f + Mathf.Sin(progress * Mathf.PI) * 0.16f);
+            _contractEffectRoot.transform.rotation = transform.rotation;
+            if (_contractLeft != null)
+            {
+                _contractLeft.localPosition = new Vector3(-split * 0.52f, Mathf.Sin(progress * Mathf.PI) * 0.12f, 0f);
+                _contractLeft.localRotation = Quaternion.Euler(0f, 0f, -split * 30f);
+            }
+            if (_contractRight != null)
+            {
+                _contractRight.localPosition = new Vector3(split * 0.52f, Mathf.Sin(progress * Mathf.PI) * 0.10f, 0f);
+                _contractRight.localRotation = Quaternion.Euler(0f, 0f, split * 30f);
+            }
+            if (_contractEffectRemaining <= 0f)
+            {
+                Destroy(_contractEffectRoot);
+                _contractEffectRoot = null;
+                _contractLeft = null;
+                _contractRight = null;
+            }
+        }
+
         private void SpawnSupport(SupportStyle style, int index, float duration, Color color)
         {
             GameObject root = new GameObject(style == SupportStyle.Tank
-                ? "WZ-404 escort" : style == SupportStyle.Cat ? "Miau-critical support" : "MafiKapibara guard");
+                ? "WZ-404 escort" : "MafiKapibara guard");
             if (_player != null && _player.transform.parent != null)
                 root.transform.SetParent(_player.transform.parent, true);
             root.transform.position = transform.position + Vector3.up * 0.45f;
@@ -287,37 +434,6 @@ namespace MaxFlix.Unity.Runtime
                             unit.NextAttackAt = Time.time + 0.82f;
                         }
                     }
-                }
-                else if (unit.Style == SupportStyle.Cat)
-                {
-                    float angle = Time.time * 2.15f + unit.Index * (Mathf.PI * 2f / 3f);
-                    desired = transform.position + new Vector3(Mathf.Cos(angle), 0.12f, Mathf.Sin(angle)) * 1.55f;
-                    if (unit.PounceTarget == null && target != null && Time.time >= unit.NextAttackAt)
-                    {
-                        unit.PounceTarget = target;
-                        unit.PounceUntil = Time.time + 0.65f;
-                    }
-
-                    if (unit.PounceTarget != null)
-                    {
-                        if (unit.PounceTarget == null || unit.PounceTarget.IsDefeated || Time.time > unit.PounceUntil)
-                        {
-                            unit.PounceTarget = null;
-                        }
-                        else
-                        {
-                            Vector3 pounce = unit.PounceTarget.transform.position + Vector3.up * 0.28f;
-                            unit.Root.transform.position = Vector3.MoveTowards(unit.Root.transform.position, pounce, 10f * Time.deltaTime);
-                            if (Vector3.Distance(unit.Root.transform.position, pounce) < 1.1f)
-                            {
-                                unit.PounceTarget.ApplyCombatHit(1.55f, 0.16f, 0f, 1f, transform.forward * 0.7f);
-                                unit.PounceTarget = null;
-                                unit.NextAttackAt = Time.time + 1.1f;
-                            }
-                            continue;
-                        }
-                    }
-                    unit.Root.transform.position = Vector3.Lerp(unit.Root.transform.position, desired, 1f - Mathf.Exp(-8f * Time.deltaTime));
                 }
                 else
                 {
@@ -381,14 +497,6 @@ namespace MaxFlix.Unity.Runtime
                 for (int side = -1; side <= 1; side += 2)
                     CreatePart(root, PrimitiveType.Cube, "WZ track", new Vector3(side * 0.53f, 0.12f, 0f), new Vector3(0.22f, 0.18f, 1.05f), new Color(0.08f, 0.10f, 0.11f));
             }
-            else if (style == SupportStyle.Cat)
-            {
-                CreatePart(root, PrimitiveType.Sphere, "Cat body", new Vector3(0f, 0.20f, 0f), new Vector3(0.58f, 0.42f, 0.78f), color);
-                CreatePart(root, PrimitiveType.Sphere, "Cat head", new Vector3(0f, 0.54f, 0.28f), new Vector3(0.48f, 0.42f, 0.42f), color);
-                CreatePart(root, PrimitiveType.Cylinder, "Cat left ear", new Vector3(-0.15f, 0.83f, 0.29f), new Vector3(0.16f, 0.28f, 0.16f), color);
-                CreatePart(root, PrimitiveType.Cylinder, "Cat right ear", new Vector3(0.15f, 0.83f, 0.29f), new Vector3(0.16f, 0.28f, 0.16f), color);
-                CreatePart(root, PrimitiveType.Sphere, "Cat visor", new Vector3(0f, 0.56f, 0.48f), new Vector3(0.25f, 0.09f, 0.04f), Color.black);
-            }
             else
             {
                 CreatePart(root, PrimitiveType.Capsule, "Capybara body", new Vector3(0f, 0.30f, 0f), new Vector3(0.65f, 0.55f, 0.95f), new Color(0.48f, 0.30f, 0.18f));
@@ -441,6 +549,8 @@ namespace MaxFlix.Unity.Runtime
             for (int i = 0; i < _supportUnits.Count; i++)
                 if (_supportUnits[i].Root != null) Destroy(_supportUnits[i].Root);
             _supportUnits.Clear();
+            if (_grzesiekArmRoot != null) Destroy(_grzesiekArmRoot);
+            if (_contractEffectRoot != null) Destroy(_contractEffectRoot);
         }
     }
 }

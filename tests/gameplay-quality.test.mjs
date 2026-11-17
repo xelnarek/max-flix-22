@@ -1652,3 +1652,50 @@ test('Survival flankers intercept the operator path while wounded enemies retrea
   assert.match(types, /aiRetreatTimer\?: number/);
   assert.match(types, /aiRetreatCooldownTimer\?: number/);
 });
+
+
+test('Grzesiek Operator 02 launches exactly five target-locked missiles from the muscular 44cm fist', async () => {
+  const [game, characters, html] = await Promise.all([
+    read('../src/game.ts'), read('../src/characters.ts'), read('../index.html')
+  ]);
+  const launchStart = game.indexOf('private spawnGrzesiekHomingRockets()');
+  const launchEnd = game.indexOf('private spawnCompactImpact(', launchStart);
+  assert.ok(launchStart >= 0 && launchEnd > launchStart);
+  const launch = game.slice(launchStart, launchEnd);
+  assert.match(launch, /for \(let index = 0; index < 5; index\+\+\)/);
+  assert.match(launch, /homing: true/);
+  assert.match(launch, /homingTarget: target/);
+  assert.match(launch, /homingRange: 28/);
+  assert.match(launch, /homingTrail: true/);
+  assert.match(game, /grzesiek-44cm-muscular-fist/);
+  assert.match(game, /bicep/);
+  assert.match(game, /clenched|knuckle/i);
+  assert.match(characters, /abilityName: '44 CM ZAGŁADY/);
+  assert.match(html, /5 rakiet samonaprowadzających/);
+});
+
+test('Mateusz Operator 04 tears the nine-month contract and runs enemy-only AI combat without cats', async () => {
+  const [game, types, characters, html] = await Promise.all([
+    read('../src/game.ts'), read('../src/types.ts'), read('../src/characters.ts'), read('../index.html')
+  ]);
+  assert.match(characters, /abilityName: 'MAM WYJEBANE/);
+  assert.match(characters, /9 sekund \(7,5 sekundy w Survival\)/);
+  assert.match(html, /MAM WYJEBANE/);
+  assert.match(game, /private spawnMateuszContractRip\(\)/);
+  assert.match(game, /UMOWA NA 9 MIESIĘCY • ROZDARTA/);
+  assert.match(game, /private updateEnemyFactionBrawl\(enemy: EnemyItem, dt: number\)/);
+  assert.match(game, /this\.enemySpatialIndex\.query\(enemy\.x, enemy\.z, nearestDistance\)/);
+  assert.match(game, /this\.damageEnemy\(target, damage, enemy\.x, enemy\.z, null\)/);
+  assert.match(game, /damageSource !== null/);
+  assert.match(types, /aiFactionBrawlTarget\?: EnemyItem/);
+  assert.doesNotMatch(game, /mateuszCats|spawnMateuszCats|updateMateuszCats/);
+  assert.doesNotMatch(characters, /KOCIA ARMIA|MIAU-CRITICAL/);
+});
+
+test('enemy faction brawl has a bounded timer and restores normal targeting after expiry', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /this\.enemyFactionBrawlRemaining = this\.gameMode === 'survival' \? 7\.5 : 9\.0/);
+  assert.match(game, /this\.enemyFactionBrawlRemaining = Math\.max\(0, this\.enemyFactionBrawlRemaining - dt\)/);
+  assert.match(game, /if \(factionBrawlActive\) \{\s*this\.updateEnemyFactionBrawl\(e, dt\);\s*continue;/);
+  assert.match(game, /if \(!active\) \{\s*if \(existing\)/);
+});
