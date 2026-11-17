@@ -140,6 +140,9 @@ export interface EnemyItem {
   aiCoalitionLeaderId?: string;
   aiCoalitionRole?: 'bruiser' | 'flanker' | 'ranged' | 'support';
   aiFormationRadius?: number;
+  /** Smoothed future interception offset for moving-player flank pressure. */
+  aiFlankLeadX?: number;
+  aiFlankLeadZ?: number;
   /** Smoothed horizontal steering direction; avoids frame-to-frame crowd jitter. */
   aiSteerX?: number;
   aiSteerZ?: number;
