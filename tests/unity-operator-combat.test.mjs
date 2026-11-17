@@ -656,7 +656,6 @@ test('Unity Mateusz brawl redirects enemy AI and excludes enemy damage from play
   const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
   assert.match(enemy, /TriggerFactionBrawl\(float durationSeconds\)/);
   assert.match(enemy, /bool factionBrawlActive = IsFactionBrawlActive/);
-  assert.match(enemy, /if \\(factionBrawlActive\\)/);
   assert.match(enemy, /if \(factionBrawlActive\)/);
   assert.match(enemy, /TickFactionBrawl\(deltaTime\)/);
   assert.match(enemy, /_factionBrawlTarget\.ApplyFactionDamage/);
