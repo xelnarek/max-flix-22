@@ -15176,6 +15176,9 @@ export class PaleciakiGameEngine {
     for (let i = this.enemyProjectiles.length - 1; i >= 0; i--) {
       const ep = this.enemyProjectiles[i];
       ep.life -= dt;
+      const previousX = ep.mesh.position.x;
+      const previousY = ep.mesh.position.y;
+      const previousZ = ep.mesh.position.z;
       if (ep.gravity) ep.vel.y -= ep.gravity * dt;
       ep.mesh.position.addScaledVector(ep.vel, dt);
       const horizontalSpeedSq = ep.vel.x * ep.vel.x + ep.vel.z * ep.vel.z;
@@ -15206,8 +15209,25 @@ export class PaleciakiGameEngine {
         ep.trailTimer = trailInterval;
       }
 
-      const dist = Math.hypot(ep.mesh.position.x - this.playerPos.x, ep.mesh.position.z - this.playerPos.z);
-      if (dist < 0.85 && Math.abs(ep.mesh.position.y - this.playerPos.y) < 1.0) {
+      // Swept player collision: fast enemy shots must stop on the operator
+      // even when a low-FPS frame moves the projectile completely through them.
+      const segmentX = ep.mesh.position.x - previousX;
+      const segmentY = ep.mesh.position.y - previousY;
+      const segmentZ = ep.mesh.position.z - previousZ;
+      const segmentLengthSq = segmentX * segmentX + segmentY * segmentY + segmentZ * segmentZ;
+      const projection = segmentLengthSq > 1e-6
+        ? THREE.MathUtils.clamp(
+            ((this.playerPos.x - previousX) * segmentX +
+              (this.playerPos.y + 0.55 - previousY) * segmentY +
+              (this.playerPos.z - previousZ) * segmentZ) / segmentLengthSq,
+            0, 1,
+          )
+        : 0;
+      const impactX = previousX + segmentX * projection;
+      const impactY = previousY + segmentY * projection;
+      const impactZ = previousZ + segmentZ * projection;
+      const dist = Math.hypot(impactX - this.playerPos.x, impactZ - this.playerPos.z);
+      if (dist < 0.85 && Math.abs(impactY - (this.playerPos.y + 0.55)) < 1.0) {
         if (ep.isDyscyplinarka) {
           if (this.activePerks.shield) {
             this.activePerks.shield = false;
@@ -15234,6 +15254,13 @@ export class PaleciakiGameEngine {
         } else {
           this.takeDamage('Trafiło Cię wezwanie wyjaśniające od Nadzorcy Zero!');
         }
+        // A compact, directional impact confirms that the shot terminated on
+        // the player rather than passing through the model.
+        const impactColor = ep.trailColor ?? (ep.isDyscyplinarka ? 0xef4444 : 0x67e8f9);
+        this.spawnCompactImpact(impactX, impactY, impactZ, impactColor);
+        this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.55, this.playerPos.z, impactColor);
+        this.triggerBloomPulse(0.10);
+        this.triggerScreenShake(0.10, 0.08);
         this.levelRoot.remove(ep.mesh);
         if (ep.kind === 'pomazaniec_lollipop' || ep.kind === 'sebix_brick' || ep.disposeOnRemove) this.disposeTemporaryObject(ep.mesh);
         this.enemyProjectiles.splice(i, 1);
