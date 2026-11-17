@@ -152,10 +152,12 @@ test('Unity Campaign progress uses a namespaced versioned key and migrates the l
   assert.match(campaign, /PlayerPrefs\.SetInt\(UnlockedSectorKey, _maxUnlockedSector\)/);
 });
 
-test('Unity operator support AI ignores defeated and stale targets', async () => {
+test('Unity remaining operator support AI ignores expired units and defeated targets', async () => {
   const kit = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorCombatKit.cs');
+  assert.match(kit, /if \(unit\.Root == null \|\| Time\.time >= unit\.ExpiresAt\)/);
+  assert.match(kit, /FindClosestEnemy\(unit\.Style == SupportStyle\.Tank \? 22f : 13f\)/);
   assert.match(kit, /if \(enemy == null \|\| enemy\.IsDefeated\) continue/);
-  assert.match(kit, /unit\.PounceTarget\.IsDefeated/);
+  assert.doesNotMatch(kit, /PounceTarget|PounceUntil|SupportStyle\.Cat|KOCIA ARMIA/);
 });
 
 test('Unity run teardown invalidates cached enemy instances before the next session', async () => {
