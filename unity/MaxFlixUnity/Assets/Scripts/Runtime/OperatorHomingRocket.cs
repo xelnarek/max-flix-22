@@ -12,6 +12,7 @@ namespace MaxFlix.Unity.Runtime
         private float _turnRate;
         private float _blastRadius;
         private float _life;
+        private float _retargetRemaining;
         private bool _detonated;
         private Transform _exhaustGlow;
         private Transform _exhaustCore;
@@ -111,7 +112,16 @@ namespace MaxFlix.Unity.Runtime
             if (_detonated) return;
             float dt = Time.deltaTime;
             _life -= dt;
-            if (_target == null || _target.IsDefeated) _target = FindClosestTarget(28f);
+            if (_target == null || _target.IsDefeated)
+            {
+                _retargetRemaining = Mathf.Max(0f, _retargetRemaining - dt);
+                if (_retargetRemaining <= 0f)
+                {
+                    _target = FindClosestTarget(28f);
+                    // When the arena is empty, wait briefly before another broadphase scan.
+                    _retargetRemaining = _target != null ? 0.12f : 0.20f;
+                }
+            }
             if (_target != null)
             {
                 Vector3 aim = _target.transform.position + Vector3.up * 0.62f - transform.position;
