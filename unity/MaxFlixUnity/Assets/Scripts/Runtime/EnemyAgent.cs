@@ -39,6 +39,7 @@ namespace MaxFlix.Unity.Runtime
         private Transform _factionBrawlMarker;
         private EnemyAgent _factionBrawlTarget;
         private float _factionBrawlRetargetRemaining;
+        private float _factionBrawlAttackFlashRemaining;
         private static readonly Dictionary<int, int> _factionBrawlTargetLoads =
             new Dictionary<int, int>(64);
         private static int _factionBrawlLoadSnapshotFrame = -1;
@@ -250,7 +251,11 @@ namespace MaxFlix.Unity.Runtime
                 if (markerRenderer != null) markerRenderer.sharedMaterial = _factionBrawlMaterial;
             }
 
-            float pulse = 0.92f + Mathf.Sin(Time.time * 11f + GetInstanceID() * 0.01f) * 0.10f;
+            _factionBrawlAttackFlashRemaining = Mathf.Max(0f, _factionBrawlAttackFlashRemaining - deltaTime);
+            float attackFlash = _factionBrawlAttackFlashRemaining > 0f
+                ? (1f - _factionBrawlAttackFlashRemaining / 0.16f) * 0.42f
+                : 0f;
+            float pulse = 0.92f + Mathf.Sin(Time.time * 11f + GetInstanceID() * 0.01f) * 0.10f + attackFlash;
             if (_factionBrawlRing != null) _factionBrawlRing.widthMultiplier = 0.042f + pulse * 0.018f;
             if (_factionBrawlMarker != null)
             {
@@ -331,6 +336,7 @@ namespace MaxFlix.Unity.Runtime
             {
                 float brawlDamage = _profile != null && _profile.IsBoss ? _attackDamage * 0.58f : _attackDamage * 0.72f;
                 _factionBrawlTarget.ApplyFactionDamage(brawlDamage, direction * 0.72f + Vector3.up * 0.12f);
+                _factionBrawlAttackFlashRemaining = 0.16f;
                 _attackTimer = _attackInterval / _abilityRateMultiplier * 1.12f;
             }
         }
