@@ -150,7 +150,23 @@ const AXIS_Y = new THREE.Vector3(0, 1, 0);
 const AXIS_Z = new THREE.Vector3(0, 0, 1);
 const ROTATION_OFFSET = new THREE.Quaternion();
 interface AppliedOffset { bone: THREE.Bone; axis: THREE.Vector3; angle: number; }
-const previousOffsets = new WeakMap<THREE.Group, AppliedOffset[]>();
+interface AppliedOffsetBuffer {
+  readonly entries: AppliedOffset[];
+  used: number;
+}
+const previousOffsets = new WeakMap<THREE.Group, AppliedOffsetBuffer>();
+
+/** Keep one reusable reversible-offset buffer per rig instead of allocating a
+ * new array and one object for every animated joint on every mixer tick. */
+function getAppliedOffsetBuffer(root: THREE.Group): AppliedOffsetBuffer {
+  let buffer = previousOffsets.get(root);
+  if (!buffer) {
+    buffer = { entries: [], used: 0 };
+    previousOffsets.set(root, buffer);
+  }
+  buffer.used = 0;
+  return buffer;
+}
 
 
 function normalize(name: string): string {
@@ -232,12 +248,23 @@ function rotate(
   bone: THREE.Bone | null,
   axis: THREE.Vector3,
   angle: number,
-  record?: AppliedOffset[],
+  record?: AppliedOffsetBuffer,
 ): void {
   if (!bone || !Number.isFinite(angle) || Math.abs(angle) < 1e-5) return;
   ROTATION_OFFSET.setFromAxisAngle(axis, angle);
   bone.quaternion.multiply(ROTATION_OFFSET).normalize();
-  record?.push({ bone, axis, angle });
+  if (!record) return;
+
+  const index = record.used++;
+  let offset = record.entries[index];
+  if (!offset) {
+    offset = { bone, axis, angle };
+    record.entries.push(offset);
+  } else {
+    offset.bone = bone;
+    offset.axis = axis;
+    offset.angle = angle;
+  }
 }
 
 /**
@@ -247,20 +274,28 @@ function rotate(
  */
 export function clearEnemyRoleSecondaryMotion(root: THREE.Group): void {
   const offsets = previousOffsets.get(root);
-  if (!offsets) return;
-  for (let i = offsets.length - 1; i >= 0; i--) {
-    const offset = offsets[i];
+  if (!offsets || offsets.used === 0) return;
+  for (let i = offsets.used - 1; i >= 0; i--) {
+    const offset = offsets.entries[i];
     rotate(offset.bone, offset.axis, -offset.angle);
   }
-  previousOffsets.delete(root);
+  // Retain the buffer and its entries for the next animation tick. WeakMap
+  // ownership still lets the whole buffer disappear with its rig.
+  offsets.used = 0;
 }
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, Number.isFinite(value) ? value : min));
 }
+const stablePhaseCache = new Map<EnemyType, number>();
+
 function stablePhase(type: EnemyType): number {
+  const cached = stablePhaseCache.get(type);
+  if (cached !== undefined) return cached;
   let hash = 0;
   for (let i = 0; i < type.length; i++) hash = (hash * 31 + type.charCodeAt(i)) | 0;
-  return ((hash >>> 0) % 997) / 997 * Math.PI * 2;
+  const phase = ((hash >>> 0) % 997) / 997 * Math.PI * 2;
+  stablePhaseCache.set(type, phase);
+  return phase;
 }
 
 /**
@@ -298,7 +333,7 @@ export function applyEnemyRoleSecondaryMotion(
   const asymmetry = type === 'zombie_pracownik' ? 1 : 0;
   const roleAccent = ENEMY_ROLE_MOTION_ACCENTS[type] ?? DEFAULT_ENEMY_ROLE_MOTION_ACCENT;
 
-  const applied: AppliedOffset[] = [];
+  const applied = getAppliedOffsetBuffer(root);
 
   // The source clip owns the main pose; these small reversible offsets add
   // anticipation, follow-through and a role-specific reaction to confirmed hits.

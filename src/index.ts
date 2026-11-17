@@ -985,8 +985,11 @@ class PaleciakiScene extends xb.Script {
       });
     };
 
+    // This updater runs once per rendered frame. Keep its projection scratch
+    // vector outside the callback so active toast count never drives allocations.
+    const toastProjectionScratch = new THREE.Vector3();
     (this as any)._updateToasts = (dt: number) => {
-      const tempVec = new THREE.Vector3();
+      const tempVec = toastProjectionScratch;
       const screenW = window.innerWidth;
       const screenH = window.innerHeight;
 
@@ -1013,11 +1016,11 @@ class PaleciakiScene extends xb.Script {
           tempVec.y < -1.3 ||
           tempVec.y > 1.3
         ) {
-          t.element.style.display = 'none';
+          if (t.element.style.display !== 'none') t.element.style.display = 'none';
           continue;
         }
 
-        t.element.style.display = 'flex';
+        if (t.element.style.display !== 'flex') t.element.style.display = 'flex';
         const sx = (tempVec.x * 0.5 + 0.5) * screenW;
         const sy = (-(tempVec.y * 0.5) + 0.5) * screenH;
 
