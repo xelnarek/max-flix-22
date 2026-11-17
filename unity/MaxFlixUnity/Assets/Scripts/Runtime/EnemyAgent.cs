@@ -34,6 +34,9 @@ namespace MaxFlix.Unity.Runtime
         private bool _phaseTwo;
         private bool _defeated;
         private bool _factionBrawlTint;
+        private GameObject _factionBrawlVisualRoot;
+        private LineRenderer _factionBrawlRing;
+        private Transform _factionBrawlMarker;
         private EnemyAgent _factionBrawlTarget;
         private float _factionBrawlRetargetRemaining;
         private static float _factionBrawlUntil;
@@ -46,6 +49,7 @@ namespace MaxFlix.Unity.Runtime
         private static float _nextSeparationRefreshTime;
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
+        private static Material _factionBrawlMaterial;
 
         public bool IsDefeated { get { return _defeated; } }
         public EnemyKind Kind { get { return _profile != null ? _profile.Id : EnemyKind.Customer; } }
@@ -133,6 +137,81 @@ namespace MaxFlix.Unity.Runtime
                 _attackTimer = Mathf.Min(_attackTimer, _attackInterval / _abilityRateMultiplier * 0.35f);
             }
             if (_health <= 0f) Defeat();
+        }
+
+        private void TickFactionBrawlVisual(float deltaTime)
+        {
+            if (_factionBrawlVisualRoot == null)
+            {
+                _factionBrawlVisualRoot = new GameObject("Enemy faction-brawl marker");
+                _factionBrawlVisualRoot.transform.SetParent(transform, false);
+                _factionBrawlVisualRoot.transform.localPosition = Vector3.zero;
+
+                GameObject ringObject = new GameObject("Magenta target ring");
+                ringObject.transform.SetParent(_factionBrawlVisualRoot.transform, false);
+                ringObject.transform.localPosition = new Vector3(0f, 0.06f, 0f);
+                _factionBrawlRing = ringObject.AddComponent<LineRenderer>();
+                _factionBrawlRing.useWorldSpace = false;
+                _factionBrawlRing.loop = true;
+                _factionBrawlRing.positionCount = 32;
+                _factionBrawlRing.widthMultiplier = 0.052f;
+                _factionBrawlRing.numCapVertices = 2;
+                _factionBrawlRing.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                _factionBrawlRing.receiveShadows = false;
+                for (int i = 0; i < 32; i++)
+                {
+                    float angle = (float)i / 32f * Mathf.PI * 2f;
+                    _factionBrawlRing.SetPosition(i, new Vector3(Mathf.Cos(angle) * 0.64f, 0f, Mathf.Sin(angle) * 0.64f));
+                }
+
+                GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                marker.name = "Enemy-on-enemy status marker";
+                marker.transform.SetParent(_factionBrawlVisualRoot.transform, false);
+                marker.transform.localPosition = new Vector3(0f, 1.75f, 0f);
+                marker.transform.localScale = Vector3.one * 0.16f;
+                Collider markerCollider = marker.GetComponent<Collider>();
+                if (markerCollider != null) Destroy(markerCollider);
+                _factionBrawlMarker = marker.transform;
+
+                if (_factionBrawlMaterial == null)
+                {
+                    Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+                    if (shader == null) shader = Shader.Find("Unlit/Color");
+                    if (shader == null) shader = Shader.Find("Standard");
+                    if (shader != null)
+                    {
+                        _factionBrawlMaterial = new Material(shader)
+                        {
+                            color = new Color(0.91f, 0.32f, 0.96f),
+                            enableInstancing = true
+                        };
+                        if (_factionBrawlMaterial.HasProperty("_EmissionColor"))
+                        {
+                            _factionBrawlMaterial.EnableKeyword("_EMISSION");
+                            _factionBrawlMaterial.SetColor("_EmissionColor", new Color(0.72f, 0.10f, 0.94f) * 1.4f);
+                        }
+                    }
+                }
+                if (_factionBrawlRing != null) _factionBrawlRing.sharedMaterial = _factionBrawlMaterial;
+                Renderer markerRenderer = marker.GetComponent<Renderer>();
+                if (markerRenderer != null) markerRenderer.sharedMaterial = _factionBrawlMaterial;
+            }
+
+            float pulse = 0.92f + Mathf.Sin(Time.time * 11f + GetInstanceID() * 0.01f) * 0.10f;
+            if (_factionBrawlRing != null) _factionBrawlRing.widthMultiplier = 0.042f + pulse * 0.018f;
+            if (_factionBrawlMarker != null)
+            {
+                _factionBrawlMarker.Rotate(Vector3.up, 210f * deltaTime, Space.Self);
+                _factionBrawlMarker.localScale = Vector3.one * (0.13f + pulse * 0.055f);
+            }
+        }
+
+        private void ClearFactionBrawlVisual()
+        {
+            if (_factionBrawlVisualRoot != null) Destroy(_factionBrawlVisualRoot);
+            _factionBrawlVisualRoot = null;
+            _factionBrawlRing = null;
+            _factionBrawlMarker = null;
         }
 
         private void TickFactionBrawl(float deltaTime)
@@ -289,6 +368,7 @@ namespace MaxFlix.Unity.Runtime
             {
                 _factionBrawlTint = true;
                 SetHitTint(_hitFlashTimer > 0f);
+                TickFactionBrawlVisual(deltaTime);
                 TickFactionBrawl(deltaTime);
                 UpdateHitFlash(deltaTime);
                 return;
@@ -296,6 +376,7 @@ namespace MaxFlix.Unity.Runtime
             if (_factionBrawlTint)
             {
                 _factionBrawlTint = false;
+                ClearFactionBrawlVisual();
                 SetHitTint(_hitFlashTimer > 0f);
             }
 
@@ -634,6 +715,7 @@ namespace MaxFlix.Unity.Runtime
         {
             if (_defeated) return;
             _defeated = true;
+            ClearFactionBrawlVisual();
             if (_controller != null) _controller.enabled = false;
             if (_renderers != null)
             {
