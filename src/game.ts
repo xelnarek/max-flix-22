@@ -12947,7 +12947,12 @@ export class PaleciakiGameEngine {
     const drift = engaged ? 0 : Math.sin(this.survivalElapsed * 0.42 + slot * 1.7) * 0.035;
     const angle = anchorAngle + drift;
 
-    const defaultEngageRadius = getEnemyEngageRadius(role);
+    // Do not target a radius inside the physical body-contact distance; otherwise
+    // the AI and overlap resolver would push against each other every frame.
+    const defaultEngageRadius = Math.max(
+      getEnemyEngageRadius(role),
+      getEnemyPlayerContactDistance(enemy.type) + 0.08,
+    );
     const assignedFormationRadius = Number.isFinite(enemy.aiFormationRadius)
       ? THREE.MathUtils.clamp(enemy.aiFormationRadius as number, 1.0, 8.2)
       : defaultEngageRadius;
