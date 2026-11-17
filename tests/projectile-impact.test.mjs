@@ -39,3 +39,28 @@ test('nearest segment intersection wins even when input actor order is reversed'
   );
   assert.equal(hit?.actor.id, 'near');
 });
+
+test('player body collision wins over a friendly enemy standing just behind the operator', async () => {
+  const { findFirstProjectileBodyImpact } = await import('../src/projectileImpact.ts');
+  const start = { x: -2, y: 1.05, z: 0 };
+  const end = { x: 2, y: 1.05, z: 0 };
+  const player = findFirstProjectileBodyImpact(start, end, { x: 0, y: 1.05, z: 0 }, 0.85, 1.0);
+  const enemy = findFirstProjectileBodyImpact(start, end, { x: 1.0, y: 1.05, z: 0 }, 0.66, 0.9);
+  assert.ok(player);
+  assert.ok(enemy);
+  assert.ok(player.t < enemy.t, 'the shot must stop on the player before reaching an enemy behind them');
+});
+
+test('projectile body impact handles vertical travel through the body height window', async () => {
+  const { findFirstProjectileBodyImpact } = await import('../src/projectileImpact.ts');
+  const hit = findFirstProjectileBodyImpact(
+    { x: 0, y: 3, z: 0 },
+    { x: 0, y: 0, z: 0 },
+    { x: 0, y: 0.5, z: 0 },
+    0.85,
+    0.5,
+  );
+  assert.ok(hit);
+  assert.ok(hit.t > 0 && hit.t < 1);
+  assert.ok(Math.abs(hit.y - 0.5) <= 0.5);
+});
