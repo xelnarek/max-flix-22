@@ -53,6 +53,7 @@ namespace MaxFlix.Unity.Runtime
         private Transform _contractLeft;
         private Transform _contractRight;
         private float _contractEffectRemaining;
+        private bool _contractImpactDone;
 
         public float MovementMultiplier { get { return _sprintRemaining > 0f ? 1.28f : (_ramRemaining > 0f ? 1.18f : 1f); } }
         public bool IsInvulnerable { get { return _invulnerabilityRemaining > 0f; } }
@@ -324,6 +325,8 @@ namespace MaxFlix.Unity.Runtime
             if (wristRenderer != null) wristRenderer.sharedMaterial = GetSupportMaterial(band);
             CreatePart(elbow, PrimitiveType.Cylinder, "Steel wrist rim", new Vector3(0f, -0.005f, 0.80f),
                 new Vector3(0.58f, 0.035f, 0.58f), metal);
+            Transform wristRim = elbow.Find("Steel wrist rim");
+            if (wristRim != null) wristRim.localRotation = Quaternion.Euler(90f, 0f, 0f);
 
             GameObject fistObject = new GameObject("44cm clenched fist pivot");
             _grzesiekFistPivot = fistObject.transform;
@@ -494,6 +497,7 @@ namespace MaxFlix.Unity.Runtime
             }
 
             _contractEffectRemaining = 1.48f;
+            _contractImpactDone = false;
             TickContractEffect(0f);
         }
 
@@ -556,10 +560,13 @@ namespace MaxFlix.Unity.Runtime
                 fragment.localScale = new Vector3(0.08f, 0.018f, 0.012f) * scale;
             }
 
-            if (progress > 0.43f && progress < 0.50f && _contractEffectRemaining > 0f)
+            if (!_contractImpactDone && progress > 0.43f)
+            {
+                _contractImpactDone = true;
                 OperatorImpactBurst.Spawn(_player != null ? _player.transform.parent : transform.parent,
                     transform.position + transform.forward * 1.10f + Vector3.up * 0.12f,
                     new Color(0.84f, 0.22f, 0.88f), 1.20f);
+            }
 
             if (_contractEffectRemaining <= 0f)
             {
