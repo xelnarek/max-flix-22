@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { removeAtSwap } from './swapRemove.ts';
 import { disposeActorOwnedRenderResources } from './actorResourceDisposal.ts';
 import { applyPolyHavenPbrMaps } from './polyHavenTextures.ts';
 import { createCthulhuBossModel } from './cthulhuAssets.ts';
@@ -15341,7 +15342,7 @@ export class PaleciakiGameEngine {
         if (distBack < 0.75) {
           this.levelRoot.remove(p.mesh);
           if (p.weaponProjectile || p.disposeOnRemove) this.disposeTemporaryObject(p.mesh);
-          this.projectiles.splice(i, 1);
+          removeAtSwap(this.projectiles, i);
           continue;
         }
         toPlayer.normalize().multiplyScalar(17.5);
@@ -15623,7 +15624,7 @@ export class PaleciakiGameEngine {
       if (destroyProj || p.life <= 0) {
         this.levelRoot.remove(p.mesh);
         if (p.weaponProjectile || p.disposeOnRemove) this.disposeTemporaryObject(p.mesh);
-        this.projectiles.splice(i, 1);
+        removeAtSwap(this.projectiles, i);
       }
     }
 
@@ -15699,7 +15700,7 @@ export class PaleciakiGameEngine {
         this.spawnParticleRing(enemyImpact.actor.x, enemyImpact.actor.y + 0.58, enemyImpact.actor.z, impactColor);
         this.levelRoot.remove(ep.mesh);
         if (ep.kind === 'pomazaniec_lollipop' || ep.kind === 'sebix_brick' || ep.disposeOnRemove) this.disposeTemporaryObject(ep.mesh);
-        this.enemyProjectiles.splice(i, 1);
+        removeAtSwap(this.enemyProjectiles, i);
         continue;
       }
       if (playerImpact) {
@@ -15741,14 +15742,14 @@ export class PaleciakiGameEngine {
         this.triggerScreenShake(0.10, 0.08);
         this.levelRoot.remove(ep.mesh);
         if (ep.kind === 'pomazaniec_lollipop' || ep.kind === 'sebix_brick' || ep.disposeOnRemove) this.disposeTemporaryObject(ep.mesh);
-        this.enemyProjectiles.splice(i, 1);
+        removeAtSwap(this.enemyProjectiles, i);
         continue;
       }
 
       if (ep.life <= 0) {
         this.levelRoot.remove(ep.mesh);
         if (ep.kind === 'pomazaniec_lollipop' || ep.kind === 'sebix_brick' || ep.disposeOnRemove) this.disposeTemporaryObject(ep.mesh);
-        this.enemyProjectiles.splice(i, 1);
+        removeAtSwap(this.enemyProjectiles, i);
       }
     }
   }
