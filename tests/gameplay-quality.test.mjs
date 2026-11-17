@@ -561,7 +561,7 @@ test('Survival crowd steering blends stable pursuit, formation spacing and obsta
   const end = game.indexOf('private damageEnemy', start);
   assert.ok(start >= 0 && end > start, 'Survival tactics method should be present');
   const tactics = game.slice(start, end);
-  assert.match(tactics, /calculateEnemyObstacleAvoidanceVector\([\s\S]*?\{ x: targetX, z: targetZ \}[\s\S]*?this\.survivalObstacles[\s\S]*?4\.6[\s\S]*?0\.8/);
+  assert.match(tactics, /calculateEnemyObstacleAvoidanceVector\([\s\S]*?\{ x: movementTargetX, z: movementTargetZ \}[\s\S]*?this\.survivalObstacles[\s\S]*?4\.6[\s\S]*?0\.8/);
   assert.match(tactics, /calculateStableEnemySteering\(/);
   assert.match(tactics, /previous: \{ x: enemy\.aiSteerX \?\? 0, z: enemy\.aiSteerZ \?\? 0 \}/);
   assert.match(tactics, /separationWeight: 0\.72/);
@@ -1631,4 +1631,24 @@ test('Survival floor atlas uses four muted surface signatures with smooth biome-
   assert.match(atlas, /image\.data\[offset \+ 3\] = Math\.round\(sample\.alpha \* 255\)/);
   assert.match(atlas, /valueNoise/);
   assert.doesNotMatch(game, /new THREE\.PlaneGeometry\(1\.25, 40\)|seamColor/);
+});
+
+test('Survival flankers intercept the operator path while wounded enemies retreat according to their combat role', async () => {
+  const tactics = await read('../src/survivalTactics.ts');
+  const types = await read('../src/types.ts');
+  const game = await read('../src/game.ts');
+  assert.match(tactics, /getSurvivalFlankInterceptOffset/);
+  assert.match(tactics, /advanceSurvivalRetreatState/);
+  assert.match(tactics, /getSurvivalRetreatTarget/);
+  assert.match(game, /getSurvivalFlankInterceptOffset\(role, \{ x: this\.playerVel\.x, z: this\.playerVel\.z \}\)/);
+  assert.match(game, /enemy\.aiFlankLeadX = THREE\.MathUtils\.damp/);
+  assert.match(game, /enemy\.aiFlankLeadZ = THREE\.MathUtils\.damp/);
+  assert.match(types, /aiFlankLeadX\?: number/);
+  assert.match(types, /aiFlankLeadZ\?: number/);
+  assert.match(game, /enemy\.aiRetreatTimer = retreat\.remainingSeconds/);
+  assert.match(game, /enemy\.aiRetreatCooldownTimer = retreat\.cooldownRemaining/);
+  assert.match(game, /if \(isRetreating\) \{[\s\S]*?getSurvivalRetreatTarget/);
+  assert.match(game, /movementSpeed = speed \* arrivalScale \* retreatSpeedMultiplier/);
+  assert.match(types, /aiRetreatTimer\?: number/);
+  assert.match(types, /aiRetreatCooldownTimer\?: number/);
 });
