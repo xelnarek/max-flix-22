@@ -1017,6 +1017,7 @@ export class PaleciakiGameEngine {
     homingRange?: number;
     homingTurnRate?: number;
     homingTrail?: boolean;
+    homingTrailColor?: number;
     weaponProjectile?: boolean;
     disposeOnRemove?: boolean;
     aoeRadius?: number;
@@ -15231,8 +15232,8 @@ export class PaleciakiGameEngine {
       if (p.homingTrail) {
         p.trailTimer = (p.trailTimer ?? 0) - dt;
         if (p.trailTimer <= 0) {
-          this.spawnCompactImpact(p.mesh.position.x, p.mesh.position.y, p.mesh.position.z, 0x67e8f9);
-          p.trailTimer = this.adaptivePerformanceTier >= 2 ? 0.42 : this.adaptivePerformanceTier === 1 ? 0.30 : 0.20;
+          this.spawnCompactImpact(p.mesh.position.x, p.mesh.position.y, p.mesh.position.z, p.homingTrailColor ?? 0x67e8f9);
+          p.trailTimer = this.adaptivePerformanceTier >= 2 ? 0.38 : this.adaptivePerformanceTier === 1 ? 0.25 : 0.15;
         }
       }
 
@@ -15260,6 +15261,13 @@ export class PaleciakiGameEngine {
         const horizontalSpeedSq = p.vel.x * p.vel.x + p.vel.z * p.vel.z;
         if (horizontalSpeedSq > 0.0001) p.mesh.rotation.y = Math.atan2(p.vel.x, p.vel.z);
       }
+      if (p.homing) {
+        const exhaust = p.mesh.userData.exhaust as THREE.Mesh | undefined;
+        const exhaustCore = p.mesh.userData.exhaustCore as THREE.Mesh | undefined;
+        if (exhaust) exhaust.scale.setScalar(0.88 + Math.sin(performance.now() * 0.045 + p.mesh.position.x) * 0.20);
+        if (exhaustCore) exhaustCore.scale.setScalar(0.78 + Math.sin(performance.now() * 0.062 + p.mesh.position.z) * 0.28);
+      }
+
       if (p.weaponId) {
         p.trailTimer = (p.trailTimer ?? 0) - dt;
         const trailInterval = this.adaptivePerformanceTier >= 2 ? 0.34 : this.adaptivePerformanceTier === 1 ? 0.24 : 0.15;
@@ -15351,6 +15359,11 @@ export class PaleciakiGameEngine {
               if (e.shieldRing) e.shieldRing.visible = false;
             }
             this.damageEnemy(e, baseDmg, p.mesh.position.x, p.mesh.position.z, projectileDamageSource);
+            if (p.homingTrail) {
+              const impactColor = p.homingTrailColor ?? 0x34d399;
+              this.spawnExplosionParticles(e.x, e.y + 0.42, e.z, impactColor, 9);
+              this.spawnParticleRing(e.x, e.y + 0.12, e.z, impactColor);
+            }
             if (this.gameMode === 'survival' && p.criticalBurstState && !p.criticalBurstState.consumed) {
               p.criticalBurstState.consumed = true;
               this.applySurvivalCriticalShrapnel(e, baseDmg, projectileDamageSource);
@@ -15383,7 +15396,7 @@ export class PaleciakiGameEngine {
             // AoE shockwave on hit (Operator 01's WZ Binder Stamp)
             if (p.aoeRadius && p.aoeRadius > 0) {
               if (p.weaponProjectile) this.spawnCompactImpact(e.x, e.y + 0.36, e.z, p.weaponId ? SURVIVAL_DAMAGE_WEAPONS[p.weaponId].color : 0xf59e0b);
-              else this.spawnParticleRing(e.x, e.y + 0.4, e.z, 0xf59e0b);
+              else this.spawnParticleRing(e.x, e.y + 0.4, e.z, p.homingTrailColor ?? 0xf59e0b);
               for (const other of this.enemies) {
                 if (other.id !== e.id && other.state !== 'defeated') {
                   if (Math.hypot(other.x - e.x, other.z - e.z) <= p.aoeRadius) {
@@ -15599,119 +15612,203 @@ export class PaleciakiGameEngine {
   }
 
   private spawnGrzesiekShockwave(): void {
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(0.9, 0.12, 12, 42),
-      new THREE.MeshBasicMaterial({ color: 0x4ade80, transparent: true, opacity: 0.92, side: THREE.DoubleSide, depthWrite: false }),
-    );
-    ring.rotation.x = Math.PI / 2;
-    ring.position.set(this.playerPos.x, this.playerPos.y + 0.12, this.playerPos.z);
-    ring.scale.setScalar(0.18);
-    this.levelRoot.add(ring);
-    this.specialEffects.push({ mesh: ring, life: 0.7, maxLife: 0.7, grow: 7.5, spin: 9.0, disposeOnRemove: true });
+    const origin = new THREE.Vector3(this.playerPos.x, this.playerPos.y, this.playerPos.z);
+    const forward = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
 
-    const innerRing = new THREE.Mesh(
-      new THREE.TorusGeometry(1.2, 0.07, 8, 32),
-      new THREE.MeshBasicMaterial({ color: 0xa7f3d0, transparent: true, opacity: 0.68, side: THREE.DoubleSide, depthWrite: false }),
-    );
-    innerRing.rotation.x = Math.PI / 2;
-    innerRing.position.set(this.playerPos.x, this.playerPos.y + 0.14, this.playerPos.z);
-    innerRing.scale.setScalar(0.16);
-    this.levelRoot.add(innerRing);
-    this.specialEffects.push({ mesh: innerRing, life: 0.62, maxLife: 0.62, grow: 8.2, spin: -7.0, disposeOnRemove: true });
+    const createShockRing = (radius: number, tube: number, color: number, duration: number, startScale: number, endScale: number) => {
+      const material = new THREE.MeshBasicMaterial({
+        color, transparent: true, opacity: 0.94, side: THREE.DoubleSide, depthWrite: false,
+      });
+      const mesh = new THREE.Mesh(new THREE.TorusGeometry(radius, tube, 10, 44), material);
+      mesh.rotation.x = Math.PI / 2;
+      mesh.position.set(origin.x, origin.y + 0.10, origin.z);
+      mesh.scale.setScalar(startScale);
+      this.levelRoot.add(mesh);
+      this.specialEffects.push({
+        mesh, life: duration, maxLife: duration, grow: 0, spin: 0, disposeOnRemove: true,
+        update: (_dt, progress) => {
+          const eased = 1 - Math.pow(1 - progress, 2.4);
+          mesh.scale.setScalar(THREE.MathUtils.lerp(startScale, endScale, eased));
+          material.opacity = 0.94 * Math.pow(1 - progress, 1.35);
+          mesh.position.y = origin.y + 0.10 + progress * 0.06;
+        },
+      });
+    };
+
+    createShockRing(0.92, 0.105, 0x4ade80, 0.72, 0.12, 7.8);
+    createShockRing(1.18, 0.055, 0xc7f9df, 0.88, 0.08, 9.0);
 
     const armGroup = new THREE.Group();
     armGroup.name = 'grzesiek-44cm-muscular-fist';
-    armGroup.position.set(this.playerPos.x, this.playerPos.y + 0.55, this.playerPos.z);
+    armGroup.position.copy(origin).addScaledVector(forward, 0.10);
+    armGroup.position.y += 0.46;
     armGroup.rotation.y = this.playerRot;
-    const skin = new THREE.MeshStandardMaterial({ color: 0xd69a73, roughness: 0.74 });
-    const muscle = new THREE.MeshStandardMaterial({ color: 0xe8ad84, roughness: 0.68 });
-    const shadowSkin = new THREE.MeshStandardMaterial({ color: 0x9f5c42, roughness: 0.82 });
-    const band = new THREE.MeshStandardMaterial({ color: 0x14532d, roughness: 0.34, metalness: 0.48, emissive: 0x16a34a, emissiveIntensity: 0.42 });
-    const steel = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.82, roughness: 0.22 });
 
-    const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.46, 12, 10), skin);
-    shoulder.scale.set(1.05, 0.94, 1.04);
-    shoulder.position.set(-0.34, 0.70, -0.03);
+    const skin = new THREE.MeshStandardMaterial({ color: 0xd69a73, roughness: 0.76 });
+    const muscle = new THREE.MeshStandardMaterial({ color: 0xe8ad84, roughness: 0.68 });
+    const highlight = new THREE.MeshStandardMaterial({ color: 0xf3c3a0, roughness: 0.62 });
+    const shadowSkin = new THREE.MeshStandardMaterial({ color: 0x99563f, roughness: 0.84 });
+    const veinMat = new THREE.MeshStandardMaterial({ color: 0xb87556, roughness: 0.82 });
+    const band = new THREE.MeshStandardMaterial({
+      color: 0x14532d, roughness: 0.30, metalness: 0.56, emissive: 0x16a34a, emissiveIntensity: 0.52,
+    });
+    const steel = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.86, roughness: 0.20 });
+    const darkSteel = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.78, roughness: 0.28 });
+
+    const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.47, 16, 12), skin);
+    shoulder.scale.set(1.10, 0.98, 1.02);
+    shoulder.position.set(-0.34, 0.68, -0.05);
     armGroup.add(shoulder);
-    const upperArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.31, 0.78, 5, 10), muscle);
+
+    const upperArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.31, 0.82, 6, 12), muscle);
     upperArm.rotation.x = Math.PI / 2;
-    upperArm.position.set(-0.12, 0.58, 0.43);
+    upperArm.position.set(-0.12, 0.56, 0.42);
     armGroup.add(upperArm);
-    const bicep = new THREE.Mesh(new THREE.SphereGeometry(0.39, 12, 10), muscle);
-    bicep.scale.set(1.04, 0.94, 1.25);
-    bicep.position.set(-0.12, 0.78, 0.35);
+
+    const bicep = new THREE.Mesh(new THREE.SphereGeometry(0.39, 16, 12), muscle);
+    bicep.scale.set(1.08, 0.94, 1.32);
+    bicep.position.set(-0.12, 0.77, 0.36);
     armGroup.add(bicep);
-    const bicepShadow = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), shadowSkin);
-    bicepShadow.scale.set(1.0, 0.55, 1.3);
-    bicepShadow.position.set(-0.12, 0.50, 0.43);
-    armGroup.add(bicepShadow);
-    const forearm = new THREE.Mesh(new THREE.CapsuleGeometry(0.30, 0.76, 5, 10), skin);
+    const bicepHighlight = new THREE.Mesh(new THREE.SphereGeometry(0.19, 12, 9), highlight);
+    bicepHighlight.scale.set(0.72, 0.32, 1.35);
+    bicepHighlight.position.set(-0.17, 0.91, 0.38);
+    armGroup.add(bicepHighlight);
+    const tricep = new THREE.Mesh(new THREE.SphereGeometry(0.25, 12, 9), shadowSkin);
+    tricep.scale.set(0.92, 0.72, 1.22);
+    tricep.position.set(-0.13, 0.43, 0.48);
+    armGroup.add(tricep);
+
+    const elbowPivot = new THREE.Group();
+    elbowPivot.name = '44cm-elbow-joint';
+    elbowPivot.position.set(0.02, 0.24, 0.84);
+    armGroup.add(elbowPivot);
+
+    const forearm = new THREE.Mesh(new THREE.CapsuleGeometry(0.30, 0.76, 6, 12), skin);
     forearm.rotation.x = Math.PI / 2;
-    forearm.position.set(0.02, 0.24, 1.05);
-    armGroup.add(forearm);
-    const forearmMuscle = new THREE.Mesh(new THREE.SphereGeometry(0.31, 12, 9), muscle);
-    forearmMuscle.scale.set(0.95, 0.82, 1.5);
-    forearmMuscle.position.set(0.02, 0.38, 1.04);
-    armGroup.add(forearmMuscle);
-    const wristBand = new THREE.Mesh(new THREE.TorusGeometry(0.27, 0.065, 8, 18), band);
-    wristBand.position.set(0.02, 0.22, 1.48);
-    wristBand.rotation.x = Math.PI / 2;
-    armGroup.add(wristBand);
+    forearm.position.set(0, 0.015, 0.34);
+    elbowPivot.add(forearm);
+    const forearmMuscle = new THREE.Mesh(new THREE.SphereGeometry(0.31, 14, 10), muscle);
+    forearmMuscle.scale.set(0.96, 0.88, 1.48);
+    forearmMuscle.position.set(0, 0.14, 0.34);
+    elbowPivot.add(forearmMuscle);
+    const forearmHighlight = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 8), highlight);
+    forearmHighlight.scale.set(0.65, 0.28, 1.25);
+    forearmHighlight.position.set(-0.13, 0.26, 0.34);
+    elbowPivot.add(forearmHighlight);
+
+    const addStriation = (start: THREE.Vector3, end: THREE.Vector3, radius: number) => {
+      const direction = new THREE.Vector3().subVectors(end, start);
+      const mesh = new THREE.Mesh(new THREE.CapsuleGeometry(radius, direction.length(), 4, 7), veinMat);
+      mesh.position.copy(start).add(end).multiplyScalar(0.5);
+      mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+      armGroup.add(mesh);
+    };
+    addStriation(new THREE.Vector3(-0.36, 0.70, 0.32), new THREE.Vector3(-0.28, 0.88, 0.58), 0.026);
+    addStriation(new THREE.Vector3(0.08, 0.65, 0.31), new THREE.Vector3(0.12, 0.84, 0.54), 0.021);
+
+    const wristGuard = new THREE.Mesh(new THREE.TorusGeometry(0.275, 0.066, 9, 24), band);
+    wristGuard.position.set(0, -0.005, 0.72);
+    wristGuard.rotation.x = Math.PI / 2;
+    elbowPivot.add(wristGuard);
+    const steelRim = new THREE.Mesh(new THREE.TorusGeometry(0.277, 0.027, 7, 24), steel);
+    steelRim.position.set(0, -0.005, 0.80);
+    steelRim.rotation.x = Math.PI / 2;
+    elbowPivot.add(steelRim);
+
     const fist = new THREE.Group();
-    fist.position.set(0.02, 0.19, 1.75);
-    const palm = new THREE.Mesh(new THREE.SphereGeometry(0.34, 12, 9), skin);
-    palm.scale.set(1.12, 0.88, 1.05);
+    fist.name = '44cm-clenched-fist';
+    fist.position.set(0, -0.045, 0.98);
+    elbowPivot.add(fist);
+    const palm = new THREE.Mesh(new THREE.SphereGeometry(0.34, 16, 12), skin);
+    palm.scale.set(1.17, 0.93, 1.10);
     fist.add(palm);
     for (let index = 0; index < 4; index++) {
-      const knuckle = new THREE.Mesh(new THREE.SphereGeometry(0.105, 8, 7), muscle);
-      knuckle.position.set(-0.22 + index * 0.145, 0.16, 0.22);
+      const x = -0.225 + index * 0.15;
+      const finger = new THREE.Mesh(new THREE.CapsuleGeometry(0.079, 0.22, 4, 8), muscle);
+      finger.rotation.x = Math.PI / 2;
+      finger.rotation.z = (index - 1.5) * -0.08;
+      finger.position.set(x, 0.035, 0.13);
+      fist.add(finger);
+      const knuckle = new THREE.Mesh(new THREE.SphereGeometry(0.095, 10, 8), highlight);
+      knuckle.position.set(x, 0.155, 0.205);
       fist.add(knuckle);
+      const crease = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.018, 0.012), shadowSkin);
+      crease.position.set(x, 0.16, 0.285);
+      fist.add(crease);
     }
-    const thumb = new THREE.Mesh(new THREE.CapsuleGeometry(0.095, 0.25, 4, 7), skin);
-    thumb.position.set(0.31, -0.02, 0.05);
-    thumb.rotation.z = -0.86;
-    thumb.rotation.x = 0.34;
+    const thumb = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.27, 5, 8), skin);
+    thumb.position.set(0.31, -0.015, 0.06);
+    thumb.rotation.set(0.30, 0.05, -0.92);
     fist.add(thumb);
-    const knuckleGuard = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.11, 0.07), steel);
-    knuckleGuard.position.set(0, 0.17, 0.30);
-    fist.add(knuckleGuard);
-    armGroup.add(fist);
+    const knucklePlate = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.105, 0.075), steel);
+    knucklePlate.position.set(0, 0.18, 0.30);
+    fist.add(knucklePlate);
+    const plateRivets = new THREE.MeshStandardMaterial({ color: 0x22c55e, emissive: 0x16a34a, emissiveIntensity: 0.75, metalness: 0.58 });
+    for (let index = 0; index < 4; index++) {
+      const rivet = new THREE.Mesh(new THREE.SphereGeometry(0.027, 7, 6), plateRivets);
+      rivet.position.set(-0.195 + index * 0.13, 0.19, 0.342);
+      fist.add(rivet);
+    }
+    const fistBrace = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.10, 0.29), darkSteel);
+    fistBrace.position.set(0, -0.18, 0.08);
+    fist.add(fistBrace);
 
-    armGroup.scale.setScalar(1.42);
+    armGroup.scale.setScalar(1.22);
     this.levelRoot.add(armGroup);
     let sparkTimer = 0;
     let rocketsLaunched = false;
+    let impactBurstDone = false;
     this.specialEffects.push({
       mesh: armGroup,
-      life: 0.9,
-      maxLife: 0.9,
+      life: 0.98,
+      maxLife: 0.98,
       disposeOnRemove: true,
       grow: 0,
       spin: 0,
       update: (dt: number, progress: number) => {
-        const windup = THREE.MathUtils.clamp(progress / 0.30, 0, 1);
-        const strike = THREE.MathUtils.clamp((progress - 0.30) / 0.28, 0, 1);
-        const recover = THREE.MathUtils.clamp((progress - 0.70) / 0.30, 0, 1);
-        armGroup.rotation.x = THREE.MathUtils.lerp(-0.42, 0.30, strike) + windup * 0.10;
-        armGroup.position.y = this.playerPos.y + 0.48 + Math.sin(progress * Math.PI) * 0.18;
-        armGroup.position.x = this.playerPos.x + Math.sin(this.playerRot) * (0.12 + strike * 0.24);
-        armGroup.position.z = this.playerPos.z + Math.cos(this.playerRot) * (0.12 + strike * 0.24);
-        armGroup.scale.setScalar(1.42 * (1 - recover * 0.88));
-        if (!rocketsLaunched && progress >= 0.36) {
+        const smooth = (value: number) => {
+          const t = THREE.MathUtils.clamp(value, 0, 1);
+          return t * t * (3 - 2 * t);
+        };
+        const anticipation = 1 - smooth(progress / 0.34);
+        const strike = smooth((progress - 0.27) / 0.22);
+        const followThrough = smooth((progress - 0.47) / 0.18);
+        const recovery = smooth((progress - 0.76) / 0.24);
+
+        armGroup.position.set(
+          this.playerPos.x + Math.sin(this.playerRot) * (0.10 + strike * 0.42),
+          this.playerPos.y + 0.46 + anticipation * 0.10 + Math.sin(progress * Math.PI) * 0.12,
+          this.playerPos.z + Math.cos(this.playerRot) * (0.10 + strike * 0.42),
+        );
+        armGroup.rotation.y = this.playerRot;
+        armGroup.rotation.x = -0.18 - anticipation * 0.12 + strike * 0.26 - followThrough * 0.09;
+        elbowPivot.rotation.x = THREE.MathUtils.lerp(-0.92, 0.18, strike) + Math.sin(progress * Math.PI * 2) * 0.035;
+        fist.rotation.x = THREE.MathUtils.lerp(0.20, -0.32, strike) + followThrough * 0.12;
+        bicep.scale.y = 0.94 + anticipation * 0.10 + strike * 0.08;
+        armGroup.scale.setScalar(1.22 + Math.sin(progress * Math.PI) * 0.08 - recovery * 0.20);
+
+        if (!rocketsLaunched && progress >= 0.39) {
           rocketsLaunched = true;
           this.spawnGrzesiekHomingRockets();
-          this.spawnExplosionParticles(armGroup.position.x, armGroup.position.y + 0.55, armGroup.position.z + 0.9, 0x86efac, 12);
-          this.triggerScreenShake(0.42, 0.28);
-          this.triggerBloomPulse(0.42);
+          if (!impactBurstDone) {
+            impactBurstDone = true;
+            const hitX = armGroup.position.x + Math.sin(this.playerRot) * 1.95;
+            const hitZ = armGroup.position.z + Math.cos(this.playerRot) * 1.95;
+            this.spawnExplosionParticles(hitX, armGroup.position.y + 0.42, hitZ, 0x86efac, 16);
+            this.spawnParticleRing(hitX, 0.16, hitZ, 0x4ade80);
+            this.triggerScreenShake(0.48, 0.30);
+            this.triggerBloomPulse(0.52);
+          }
         }
-        if (progress > 0.30 && progress < 0.72) {
+        if (progress > 0.23 && progress < 0.72) {
           sparkTimer += dt;
-          if (sparkTimer >= 0.11) {
+          if (sparkTimer >= 0.075) {
             sparkTimer = 0;
+            const side = (Math.random() - 0.5) * 0.78;
             this.spawnCompactImpact(
-              armGroup.position.x + (Math.random() - 0.5) * 0.65,
-              armGroup.position.y + 0.35,
-              armGroup.position.z + (Math.random() - 0.5) * 0.65,
+              armGroup.position.x + Math.sin(this.playerRot) * (1.0 + Math.random() * 0.45) + Math.cos(this.playerRot) * side,
+              armGroup.position.y + 0.24 + Math.random() * 0.35,
+              armGroup.position.z + Math.cos(this.playerRot) * (1.0 + Math.random() * 0.45) - Math.sin(this.playerRot) * side,
               0x4ade80,
             );
           }
@@ -15732,47 +15829,65 @@ export class PaleciakiGameEngine {
     for (let index = 0; index < 5; index++) {
       const rocket = new THREE.Group();
       rocket.name = 'grzesiek-homing-rocket-' + (index + 1);
-      const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.76, roughness: 0.24 });
-      const accentMaterial = new THREE.MeshStandardMaterial({ color: 0x22c55e, metalness: 0.36, roughness: 0.28, emissive: 0x16a34a, emissiveIntensity: 1.1 });
+      const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.82, roughness: 0.22 });
+      const accentMaterial = new THREE.MeshStandardMaterial({
+        color: 0x22c55e, metalness: 0.42, roughness: 0.25, emissive: 0x16a34a, emissiveIntensity: 1.25,
+      });
       const flameMaterial = new THREE.MeshBasicMaterial({ color: 0x67e8f9 });
-      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.105, 0.62, 8), bodyMaterial);
+      const hotCoreMaterial = new THREE.MeshBasicMaterial({ color: 0xd1fae5 });
+      const rocketMetalMaterial = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.88, roughness: 0.24 });
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.12, 0.72, 10), bodyMaterial);
       body.rotation.x = Math.PI / 2;
       rocket.add(body);
-      const nose = new THREE.Mesh(new THREE.ConeGeometry(0.115, 0.28, 8), accentMaterial);
+      const nose = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.34, 10), accentMaterial);
       nose.rotation.x = Math.PI / 2;
-      nose.position.z = 0.43;
+      nose.position.z = 0.50;
       rocket.add(nose);
-      const exhaust = new THREE.Mesh(new THREE.SphereGeometry(0.085, 7, 6), flameMaterial);
-      exhaust.position.z = -0.34;
+      const rearNozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.15, 0.16, 10), rocketMetalMaterial);
+      rearNozzle.rotation.x = Math.PI / 2;
+      rearNozzle.position.z = -0.40;
+      rocket.add(rearNozzle);
+      const exhaust = new THREE.Mesh(new THREE.SphereGeometry(0.092, 9, 7), flameMaterial);
+      exhaust.position.z = -0.50;
       rocket.add(exhaust);
-      for (let fin = 0; fin < 3; fin++) {
-        const finMesh = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.20, 0.23), accentMaterial);
-        finMesh.position.set(0, fin === 0 ? 0.13 : -0.13, -0.20);
-        finMesh.rotation.z = fin * (Math.PI * 2 / 3);
+      const exhaustCore = new THREE.Mesh(new THREE.SphereGeometry(0.052, 8, 6), hotCoreMaterial);
+      exhaustCore.position.z = -0.54;
+      rocket.add(exhaustCore);
+      const band = new THREE.Mesh(new THREE.TorusGeometry(0.112, 0.018, 6, 16), accentMaterial);
+      band.position.z = 0.10;
+      rocket.add(band);
+      for (let fin = 0; fin < 4; fin++) {
+        const finMesh = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.22, 0.28), accentMaterial);
+        const angle = fin * Math.PI / 2;
+        finMesh.position.set(Math.sin(angle) * 0.12, Math.cos(angle) * 0.12, -0.30);
+        finMesh.rotation.z = angle;
         rocket.add(finMesh);
       }
-      const lateral = (index - 2) * 0.22;
+      const lateral = (index - 2) * 0.24;
       rocket.position.copy(this.playerPos)
-        .add(new THREE.Vector3(0, 0.90 + (index % 2) * 0.08, 0))
-        .addScaledVector(forward, 0.78)
+        .add(new THREE.Vector3(0, 0.90 + (index % 2) * 0.10, 0))
+        .addScaledVector(forward, 0.82)
         .addScaledVector(right, lateral);
       rocket.rotation.y = this.playerRot;
+      rocket.userData.exhaust = exhaust;
+      rocket.userData.exhaustCore = exhaustCore;
       this.levelRoot.add(rocket);
       const target = targets.length > 0 ? targets[index % targets.length] : null;
       this.projectiles.push({
         mesh: rocket,
-        vel: forward.clone().multiplyScalar(12.5).addScaledVector(right, (index - 2) * 0.42),
-        life: 3.6,
-        maxLife: 3.6,
+        vel: forward.clone().multiplyScalar(13.4).addScaledVector(right, (index - 2) * 0.48),
+        life: 3.8,
+        maxLife: 3.8,
         damage: 2,
         pierce: 0,
-        aoeRadius: 1.45,
-        stunDuration: 0.28,
+        aoeRadius: 1.55,
+        stunDuration: 0.32,
         homing: true,
         homingTarget: target ?? undefined,
         homingRange: 28,
-        homingTurnRate: 6.2,
+        homingTurnRate: 6.8,
         homingTrail: true,
+        homingTrailColor: 0x34d399,
         disposeOnRemove: true,
         hitIds: new Set<string>(),
       });
