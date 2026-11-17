@@ -39,8 +39,8 @@ test('Unity joystick origin and thumb travel remain centered and bounded after H
 
 test('Unity menu uses the Paleciaki brand and respects Android safe areas', async () => {
   const menu = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/MainMenuController.cs');
-  assert.match(menu, /CreateText\(safeRoot, "PALECIAKI!"/);
-  assert.match(menu, /MAGAZYN CHAOSU/);
+  assert.match(menu, /CreateText\(safeRoot, "WAREHOUSE"/);
+  assert.match(menu, /MaDDnes/);
   assert.match(menu, /safeAreaObject\.AddComponent<SafeAreaLayout>\(\)/);
   assert.match(menu, /Screen\.safeArea\.width/);
   assert.doesNotMatch(menu, /Mathf\.Max\(230f,/);

@@ -56,7 +56,8 @@ test('cinematic intro stages its title reveal over a richer animated warehouse s
   assert.match(intro, /drawForklift\(ctx, w, h, seconds, forkliftAmount\)/);
   assert.match(intro, /drawAtmosphere\(ctx, w, h, seconds\)/);
   assert.match(intro, /drawHorde\(ctx, w, h, horde, seconds\)/);
-  assert.match(intro, /PALECIAKI!/);
+  assert.match(intro, /WAREHOUSE/);
+  assert.match(intro, /MaDDnes/);
   assert.match(intro, /UWAGA: ZMIANA WYMKNĘŁA SIĘ SPOD KONTROLI/);
   assert.match(intro, /private readonly duration = 11\.8/);
   assert.match(intro, /is-title-reveal/);

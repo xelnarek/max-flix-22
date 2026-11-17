@@ -43,16 +43,16 @@
 <g font-family="DejaVu Sans, sans-serif">
   <rect x="50" y="54" width="360" height="34" rx="17" fill="#163c4d" stroke="#5bb9c8" stroke-opacity=".55"/>
   <circle cx="72" cy="71" r="5" fill="#efb45d"/>
-  <text x="88" y="77" fill="#a9dce5" font-size="13" font-weight="700" letter-spacing="2.2">3D ARCADE • MAGAZYNOWY CHAOS</text>
-  <text x="48" y="190" fill="#fff2d8" font-size="82" font-weight="900" letter-spacing="-5">PALECIAKI!</text>
-  <text x="52" y="251" fill="#f4bf6b" font-size="40" font-weight="900" letter-spacing="3">MAGAZYN CHAOSU</text>
+  <text x="88" y="77" fill="#a9dce5" font-size="13" font-weight="700" letter-spacing="2.2">3D ARCADE • WAREHOUSE SURVIVAL</text>
+  <text x="48" y="190" fill="#fff2d8" font-size="74" font-weight="900" letter-spacing="-3">WAREHOUSE</text>
+  <text x="52" y="251" fill="#f4bf6b" font-size="58" font-weight="900" letter-spacing="2">MaDDnes</text>
   <path d="M52 281H410" stroke="#75c8d8" stroke-opacity=".55" stroke-width="3"/>
-  <text x="54" y="322" fill="#e1edf0" font-size="22" font-weight="700">Kampania 3D. Survival. Ewolucje broni.</text>
-  <text x="54" y="359" fill="#a8c6ce" font-size="17" font-weight="500">Zbieraj perki, unikaj hord i przetrwaj zmianę.</text>
+  <text x="54" y="322" fill="#e1edf0" font-size="22" font-weight="700">Survival 3D. Arena PvP 1v1. Ewolucje broni.</text>
+  <text x="54" y="359" fill="#a8c6ce" font-size="17" font-weight="500">Przetrwaj fale, rozwijaj operatora i zdominuj arenę.</text>
   <g transform="translate(52 400)">
-    <rect width="105" height="35" rx="17" fill="#173c4e" stroke="#5dbacb" stroke-opacity=".45"/><text x="52" y="23" text-anchor="middle" fill="#d4f6fb" font-size="12" font-weight="800" letter-spacing="1.3">KAMPANIA</text>
-    <rect x="116" width="104" height="35" rx="17" fill="#173c4e" stroke="#5dbacb" stroke-opacity=".45"/><text x="168" y="23" text-anchor="middle" fill="#d4f6fb" font-size="12" font-weight="800" letter-spacing="1.3">SURVIVAL</text>
-    <rect x="231" width="126" height="35" rx="17" fill="#49331f" stroke="#d9a85f" stroke-opacity=".7"/><text x="294" y="23" text-anchor="middle" fill="#ffe1a8" font-size="12" font-weight="800" letter-spacing="1.3">ULEPSZENIA</text>
+    <rect width="105" height="35" rx="17" fill="#173c4e" stroke="#5dbacb" stroke-opacity=".45"/><text x="52" y="23" text-anchor="middle" fill="#d4f6fb" font-size="12" font-weight="800" letter-spacing="1.3">SURVIVAL</text>
+    <rect x="116" width="104" height="35" rx="17" fill="#173c4e" stroke="#5dbacb" stroke-opacity=".45"/><text x="168" y="23" text-anchor="middle" fill="#d4f6fb" font-size="12" font-weight="800" letter-spacing="1.3">PVP 1v1</text>
+    <rect x="231" width="126" height="35" rx="17" fill="#49331f" stroke="#d9a85f" stroke-opacity=".7"/><text x="294" y="23" text-anchor="middle" fill="#ffe1a8" font-size="12" font-weight="800" letter-spacing="1.3">EVOLUCJE</text>
   </g>
 </g>
 <rect x="0" y="0" width="7" height="500" fill="#eeb566" opacity=".8"/>

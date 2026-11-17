@@ -1,8 +1,8 @@
-# Google Play — gotowość wydawnicza: Paleciaki! Magazyn Chaosu
+# Google Play — gotowość wydawnicza: Warehouse MaDDnes
 
 ## Przygotowanie techniczne wykonane w repozytorium
 
-- Publiczna nazwa, opis i metadane produktu: **Paleciaki! Magazyn Chaosu**.
+- Publiczna nazwa, opis i metadane produktu: **Warehouse MaDDnes**.
 - Odczyt rankingu jest publiczny, a tworzenie wpisów wymaga aktywnej sesji Firebase Authentication (w tej aplikacji anonimowej) i ścisłego schematu Firestore. Gdy logowanie nie działa, wynik pozostaje w lokalnej kolejce. To blokuje całkowicie nieuwierzytelnione zapisy, ale **nie jest ochroną anty-cheat**: klient może zmodyfikować wynik przed wysłaniem.
 - Nowe 11,8-sekundowe intro Canvas 2D: dynamiczny najazd, alarm, wózek, nadciągająca horda, prezentacja operatorów i plansza tytułowa. Bez zewnętrznego pliku wideo.
 - Manifest PWA, kolor motywu, ikona SVG i strona awaryjna offline z nowym brandingiem.

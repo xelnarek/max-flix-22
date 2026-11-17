@@ -99,7 +99,7 @@ namespace MaxFlix.Unity.Editor
         private static void ConfigureApplicationIdentity()
         {
             PlayerSettings.companyName = "Paleciaki";
-            PlayerSettings.productName = "Paleciaki! Magazyn Chaosu";
+            PlayerSettings.productName = "Warehouse MaDDnes";
             PlayerSettings.bundleVersion = "0.2.0";
             PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, AndroidApplicationId);
 

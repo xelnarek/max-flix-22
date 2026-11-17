@@ -16,7 +16,7 @@ command -v gh >/dev/null 2>&1 || fail "Zainstaluj GitHub CLI (gh) i zaloguj się
 command -v node >/dev/null 2>&1 || fail "Wymagany jest Node.js do walidacji pliku JSON."
 gh auth status --hostname github.com >/dev/null 2>&1 || fail "Brak aktywnego logowania GitHub CLI."
 
-printf '\nPaleciaki! Magazyn Chaosu — konfiguracja uploadu do Google Play Internal testing\n'
+printf '\nWarehouse MaDDnes — konfiguracja uploadu do Google Play Internal testing\n'
 printf 'Repozytorium: %s\n\n' "$REPOSITORY"
 
 # Do not enable the upload until all four Android signing secrets already exist.

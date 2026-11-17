@@ -1,7 +1,7 @@
 /* Conservative app-shell cache. Remote services and game data are never cached. */
 const requestedBuildId = new URL(self.location.href).searchParams.get('build') || 'dev';
 const BUILD_ID = /^[a-zA-Z0-9_-]{1,64}$/.test(requestedBuildId) ? requestedBuildId : 'dev';
-const CACHE_NAME = `paleciaki-magazyn-chaosu-shell-${BUILD_ID}`;
+const CACHE_NAME = `warehouse-maddnes-shell-${BUILD_ID}`;
 const OFFLINE_URL = './offline.html';
 const MAX_CACHEABLE_BYTES = 6 * 1024 * 1024;
 
@@ -10,7 +10,7 @@ self.addEventListener('install', (event) => {
 });
 self.addEventListener('activate', (event) => {
   event.waitUntil(caches.keys().then((keys) => Promise.all(
-    keys.filter((key) => (key.startsWith('operacja-b4-') || key.startsWith('paleciaki-magazyn-chaosu-shell-')) && key !== CACHE_NAME).map((key) => caches.delete(key))
+    keys.filter((key) => (key.startsWith('operacja-b4-') || key.startsWith('paleciaki-magazyn-chaosu-shell-') || key.startsWith('warehouse-maddnes-shell-')) && key !== CACHE_NAME).map((key) => caches.delete(key))
   )).then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', (event) => {
