@@ -104,7 +104,7 @@ test('main game tick caps frame delta and routes floating labels through the poo
   const source = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
   assert.match(source, /const dt = Math\.min\(Math\.max\(rawDt \|\| 0\.016, 0\.001\), 0\.05\)/);
   assert.match(source, /new FloatingToastPool\(popupsLayer, 36\)/);
-  assert.match(source, /floatingToastPool\.releaseAt\(i\)/);
+  assert.match(source, /floatingToastPool\.releaseAt\(i\);\s*\/\/ Reverse iteration[\s\S]*?continue;/);
   assert.doesNotMatch(source, /activeToasts\.push\(/);
   assert.doesNotMatch(source, /activeToasts\.splice\(/);
 });

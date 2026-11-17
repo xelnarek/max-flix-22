@@ -989,8 +989,7 @@ class PaleciakiScene extends xb.Script {
 
         if (t.age >= t.maxAge) {
           floatingToastPool.releaseAt(i);
-          // releaseAt compacts by moving the last active entry into this slot.
-          i++;
+          // Reverse iteration has already visited any entry swapped from the tail.
           continue;
         }
 
