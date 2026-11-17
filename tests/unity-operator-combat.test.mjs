@@ -684,6 +684,8 @@ test('Unity 44cm arm has articulated elbow/fist animation and a shared impact bu
   assert.match(kit, /Biceps peak|Biceps muscle/);
   assert.match(kit, /Raised knuckle/);
   assert.match(kit, /OperatorImpactBurst\.Spawn/);
+  assert.match(kit, /if \(!_contractImpactDone && progress > 0\.43f\)/);
+  assert.match(kit, /_contractImpactDone = false/);
   assert.match(burst, /Expanding impact ring/);
   assert.match(burst, /Impact fragment/);
   assert.match(burst, /BuildRingMesh\(\)/);
