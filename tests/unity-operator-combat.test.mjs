@@ -655,12 +655,30 @@ test('Unity editor bootstraps URP and the New Input System automatically', async
 test('Unity Mateusz brawl redirects enemy AI and excludes enemy damage from player statistics', async () => {
   const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
   assert.match(enemy, /TriggerFactionBrawl\(float durationSeconds\)/);
-  assert.match(enemy, /if \(IsFactionBrawlActive\)/);
+  assert.match(enemy, /bool factionBrawlActive = IsFactionBrawlActive/);
+  assert.match(enemy, /if \(factionBrawlActive\)/);
   assert.match(enemy, /TickFactionBrawl\(deltaTime\)/);
   assert.match(enemy, /_factionBrawlTarget\.ApplyFactionDamage/);
   assert.match(enemy, /ApplyFactionDamage\(float damage/);
   assert.match(enemy, /Enemy-vs-enemy damage/);
   assert.match(enemy, /_factionBrawlUntil/);
+});
+
+
+
+test('Unity Mateusz brawl spreads attackers across enemy targets with a frame-cached load snapshot', async () => {
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  assert.match(enemy, /Dictionary<int, int> _factionBrawlTargetLoads/);
+  assert.match(enemy, /_factionBrawlLoadSnapshotFrame = -1/);
+  assert.match(enemy, /private static void RefreshFactionBrawlTargetLoadsForFrame\(\)/);
+  assert.match(enemy, /if \(_factionBrawlLoadSnapshotFrame == Time\.frameCount\) return/);
+  assert.match(enemy, /foreach \(EnemyAgent attacker in _separationCache\)/);
+  assert.match(enemy, /private static int GetFactionBrawlTargetLoad\(EnemyAgent target\)/);
+  assert.match(enemy, /private static void AdjustFactionBrawlTargetLoad\(EnemyAgent target, int delta\)/);
+  assert.match(enemy, /float score = distance \+ GetFactionBrawlTargetLoad\(candidate\) \* 2\.1f/);
+  assert.match(enemy, /candidate\.GetInstanceID\(\) < _factionBrawlTarget\.GetInstanceID\(\)/);
+  assert.match(enemy, /AdjustFactionBrawlTargetLoad\(_factionBrawlTarget, 1\)/);
+  assert.match(enemy, /AdjustFactionBrawlTargetLoad\(previousTarget, -1\)/);
 });
 
 test('Unity Grzesiek missile component has homing, target reacquisition and bounded blast damage', async () => {

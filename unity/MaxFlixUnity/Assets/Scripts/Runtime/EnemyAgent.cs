@@ -39,6 +39,9 @@ namespace MaxFlix.Unity.Runtime
         private Transform _factionBrawlMarker;
         private EnemyAgent _factionBrawlTarget;
         private float _factionBrawlRetargetRemaining;
+        private static readonly Dictionary<int, int> _factionBrawlTargetLoads =
+            new Dictionary<int, int>(64);
+        private static int _factionBrawlLoadSnapshotFrame = -1;
         private static float _factionBrawlUntil;
         private Renderer[] _renderers;
         private MaterialPropertyBlock _propertyBlock;
@@ -68,6 +71,8 @@ namespace MaxFlix.Unity.Runtime
             _separationCache = new EnemyAgent[0];
             SeparationBuckets.Clear();
             _nextSeparationRefreshTime = 0f;
+            _factionBrawlTargetLoads.Clear();
+            _factionBrawlLoadSnapshotFrame = -1;
             _factionBrawlUntil = 0f;
         }
 
@@ -77,11 +82,59 @@ namespace MaxFlix.Unity.Runtime
             float safeDuration = Mathf.Clamp(durationSeconds, 1f, 12f);
             _factionBrawlUntil = Mathf.Max(_factionBrawlUntil, Time.time + safeDuration);
             RefreshSeparationIndex();
+            _factionBrawlTargetLoads.Clear();
+            _factionBrawlLoadSnapshotFrame = -1;
+            foreach (EnemyAgent agent in _separationCache)
+            {
+                if (agent == null || agent._defeated) continue;
+                agent._factionBrawlTarget = null;
+                agent._factionBrawlRetargetRemaining = 0f;
+            }
         }
 
         public static bool IsFactionBrawlActive
         {
             get { return Time.time < _factionBrawlUntil; }
+        }
+
+        /// <summary>
+        /// Builds one target-load snapshot per rendered frame. Retargets in that frame
+        /// update the snapshot incrementally, keeping the assignment spread coherent.
+        /// </summary>
+        private static void RefreshFactionBrawlTargetLoadsForFrame()
+        {
+            if (_factionBrawlLoadSnapshotFrame == Time.frameCount) return;
+            _factionBrawlLoadSnapshotFrame = Time.frameCount;
+            _factionBrawlTargetLoads.Clear();
+            RefreshSeparationIndex();
+
+            foreach (EnemyAgent attacker in _separationCache)
+            {
+                if (attacker == null || attacker._defeated) continue;
+                EnemyAgent assignedTarget = attacker._factionBrawlTarget;
+                if (assignedTarget == null || assignedTarget._defeated || assignedTarget == attacker) continue;
+
+                int targetId = assignedTarget.GetInstanceID();
+                int load;
+                _factionBrawlTargetLoads.TryGetValue(targetId, out load);
+                _factionBrawlTargetLoads[targetId] = load + 1;
+            }
+        }
+
+        private static int GetFactionBrawlTargetLoad(EnemyAgent target)
+        {
+            if (target == null || target._defeated) return 0;
+            int load;
+            return _factionBrawlTargetLoads.TryGetValue(target.GetInstanceID(), out load) ? load : 0;
+        }
+
+        private static void AdjustFactionBrawlTargetLoad(EnemyAgent target, int delta)
+        {
+            if (target == null || delta == 0) return;
+            int targetId = target.GetInstanceID();
+            int nextLoad = GetFactionBrawlTargetLoad(target) + delta;
+            if (nextLoad <= 0) _factionBrawlTargetLoads.Remove(targetId);
+            else _factionBrawlTargetLoads[targetId] = nextLoad;
         }
 
         public void Initialize(PlayerController target, EnemyKind kind, float healthMultiplier = 1f, float speedMultiplier = 1f, float abilityRateMultiplier = 1f)
@@ -219,19 +272,36 @@ namespace MaxFlix.Unity.Runtime
             _factionBrawlRetargetRemaining = Mathf.Max(0f, _factionBrawlRetargetRemaining - deltaTime);
             if (_factionBrawlTarget == null || _factionBrawlTarget.IsDefeated || _factionBrawlRetargetRemaining <= 0f)
             {
+                RefreshFactionBrawlTargetLoadsForFrame();
+                EnemyAgent previousTarget = _factionBrawlTarget;
+                if (previousTarget != null && !previousTarget.IsDefeated)
+                    AdjustFactionBrawlTargetLoad(previousTarget, -1);
                 _factionBrawlTarget = null;
-                RefreshSeparationIndex();
-                float bestDistance = 21.5f * 21.5f;
+
+                float bestScore = float.PositiveInfinity;
+                const float maxTargetDistance = 21.5f;
                 foreach (EnemyAgent candidate in _separationCache)
                 {
                     if (candidate == null || candidate == this || candidate.IsDefeated) continue;
                     Vector3 offset = candidate.transform.position - transform.position;
                     offset.y = 0f;
                     float sqrDistance = offset.sqrMagnitude;
-                    if (sqrDistance >= bestDistance) continue;
-                    bestDistance = sqrDistance;
-                    _factionBrawlTarget = candidate;
+                    if (sqrDistance >= maxTargetDistance * maxTargetDistance) continue;
+
+                    float distance = Mathf.Sqrt(sqrDistance);
+                    float score = distance + GetFactionBrawlTargetLoad(candidate) * 2.1f;
+                    bool winsTie = _factionBrawlTarget == null
+                        || candidate.GetInstanceID() < _factionBrawlTarget.GetInstanceID();
+                    if (score < bestScore - 0.001f
+                        || (Mathf.Abs(score - bestScore) <= 0.001f && winsTie))
+                    {
+                        bestScore = score;
+                        _factionBrawlTarget = candidate;
+                    }
                 }
+
+                if (_factionBrawlTarget != null)
+                    AdjustFactionBrawlTargetLoad(_factionBrawlTarget, 1);
                 _factionBrawlRetargetRemaining = 0.24f;
             }
             if (_factionBrawlTarget == null)
