@@ -56,10 +56,10 @@ export function calculateStableEnemySteering(input: EnemySteeringInput): Horizon
 /** Role-specific engagement distance: melee closes to contact; ranged units hold a firing lane. */
 export function getEnemyEngageRadius(role: 'bruiser' | 'flanker' | 'ranged' | 'support' | 'standard'): number {
   switch (role) {
-    case 'bruiser': return 1.18;
-    case 'flanker': return 1.32;
+    case 'bruiser': return 1.08;
+    case 'flanker': return 1.18;
     case 'ranged': return 7.7;
     case 'support': return 5.5;
-    default: return 1.48;
+    default: return 1.15;
   }
 }
