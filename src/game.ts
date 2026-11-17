@@ -1062,6 +1062,12 @@ export class PaleciakiGameEngine {
     maxLife: number;
     cooldown: number;
     dustTimer: number;
+    target: EnemyItem | null;
+    targetScanTimer: number;
+    deployTimer: number;
+    recoilTimer: number;
+    lastX: number;
+    lastZ: number;
   } | null = null;
   private mafiCapybaras: {
     group: THREE.Group;
@@ -1071,8 +1077,10 @@ export class PaleciakiGameEngine {
     attackCooldown: number;
     pounceTimer: number;
     pounceTarget: THREE.Vector3 | null;
+    target: EnemyItem | null;
     index: number;
   }[] = [];
+  private readonly mafiCapybaraTargetLoads = new Map<string, number>();
   private bimberMolotovs: {
     mesh: THREE.Group;
     pos: THREE.Vector3;
@@ -15348,11 +15356,18 @@ export class PaleciakiGameEngine {
         }
       }
 
-      // Ricochet off Z corridor walls (Operator 03's 45-degree diamond blade & tiles)
-      if (p.ricochet && Math.abs(p.mesh.position.z) > 17.5) {
-        p.vel.z *= -1;
-        p.mesh.position.z = Math.sign(p.mesh.position.z) * 17.4;
-        this.spawnParticleRing(p.mesh.position.x, p.mesh.position.y, p.mesh.position.z, 0xd97706);
+      // Dawid's ceramic blades ricochet at the active mode boundary. Survival is a
+      // connected 240x80 m world; the old +/-17.5 m clamp teleported tiles back to B4.
+      if (p.ricochet) {
+        const minRicochetZ = this.gameMode === 'survival' ? SURVIVAL_WORLD_BOUNDS.minZ : -17.5;
+        const maxRicochetZ = this.gameMode === 'survival' ? SURVIVAL_WORLD_BOUNDS.maxZ : 17.5;
+        if (p.mesh.position.z < minRicochetZ || p.mesh.position.z > maxRicochetZ) {
+          p.vel.z *= -1;
+          p.mesh.position.z = p.mesh.position.z < minRicochetZ
+            ? minRicochetZ + 0.6
+            : maxRicochetZ - 0.6;
+          this.spawnParticleRing(p.mesh.position.x, p.mesh.position.y, p.mesh.position.z, 0xd97706);
+        }
       }
 
       // Operator 03 passive: projectiles collect grouts & items along their path!
@@ -15896,56 +15911,134 @@ export class PaleciakiGameEngine {
         - Math.hypot(b.x - this.playerPos.x, b.z - this.playerPos.z));
     const forward = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
     const right = new THREE.Vector3(Math.cos(this.playerRot), 0, -Math.sin(this.playerRot));
+    const skinTones = [0xd69a73, 0xe0a27a, 0xc98c68, 0xe4ad83, 0xd49770];
 
     for (let index = 0; index < 5; index++) {
-      const rocket = new THREE.Group();
-      rocket.name = 'grzesiek-homing-rocket-' + (index + 1);
-      const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.82, roughness: 0.22 });
-      const accentMaterial = new THREE.MeshStandardMaterial({
-        color: 0x22c55e, metalness: 0.42, roughness: 0.25, emissive: 0x16a34a, emissiveIntensity: 1.25,
+      // The projectile IS the arm: shoulder, bicep, tricep, veined forearm and clenched fist.
+      // It flies fist-first and has no conventional missile tube, cone or fins.
+      const arm = new THREE.Group();
+      arm.name = 'grzesiek-homing-muscle-arm-' + (index + 1);
+      const skin = new THREE.MeshStandardMaterial({ color: skinTones[index], roughness: 0.72 });
+      const muscle = new THREE.MeshStandardMaterial({ color: 0xe8ad84, roughness: 0.64 });
+      const muscleShade = new THREE.MeshStandardMaterial({ color: 0xa65f48, roughness: 0.82 });
+      const vein = new THREE.MeshStandardMaterial({ color: 0x9f4b54, roughness: 0.74, metalness: 0.04 });
+      const highlight = new THREE.MeshStandardMaterial({ color: 0xf5c7a2, roughness: 0.58 });
+      const cuff = new THREE.MeshStandardMaterial({
+        color: 0x14532d, metalness: 0.72, roughness: 0.26,
+        emissive: 0x16a34a, emissiveIntensity: 0.44,
       });
-      const flameMaterial = new THREE.MeshBasicMaterial({ color: 0x67e8f9 });
-      const hotCoreMaterial = new THREE.MeshBasicMaterial({ color: 0xd1fae5 });
-      const rocketMetalMaterial = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.88, roughness: 0.24 });
-      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.12, 0.72, 10), bodyMaterial);
-      body.rotation.x = Math.PI / 2;
-      rocket.add(body);
-      const nose = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.34, 10), accentMaterial);
-      nose.rotation.x = Math.PI / 2;
-      nose.position.z = 0.50;
-      rocket.add(nose);
-      const rearNozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.15, 0.16, 10), rocketMetalMaterial);
-      rearNozzle.rotation.x = Math.PI / 2;
-      rearNozzle.position.z = -0.40;
-      rocket.add(rearNozzle);
-      const exhaust = new THREE.Mesh(new THREE.SphereGeometry(0.092, 9, 7), flameMaterial);
-      exhaust.position.z = -0.50;
-      rocket.add(exhaust);
-      const exhaustCore = new THREE.Mesh(new THREE.SphereGeometry(0.052, 8, 6), hotCoreMaterial);
-      exhaustCore.position.z = -0.54;
-      rocket.add(exhaustCore);
-      const band = new THREE.Mesh(new THREE.TorusGeometry(0.112, 0.018, 6, 16), accentMaterial);
-      band.position.z = 0.10;
-      rocket.add(band);
-      for (let fin = 0; fin < 4; fin++) {
-        const finMesh = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.22, 0.28), accentMaterial);
-        const angle = fin * Math.PI / 2;
-        finMesh.position.set(Math.sin(angle) * 0.12, Math.cos(angle) * 0.12, -0.30);
-        finMesh.rotation.z = angle;
-        rocket.add(finMesh);
+      const energy = new THREE.MeshBasicMaterial({ color: 0x4ade80, toneMapped: false });
+      const energyCore = new THREE.MeshBasicMaterial({ color: 0xd1fae5, toneMapped: false });
+
+      const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.205, 12, 9), skin);
+      shoulder.scale.set(1.10, 1.02, 1.18);
+      shoulder.position.set(0, 0, -0.55);
+      arm.add(shoulder);
+      const upperArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.145, 0.42, 4, 8), skin);
+      upperArm.rotation.x = Math.PI / 2;
+      upperArm.position.set(0, 0, -0.31);
+      arm.add(upperArm);
+
+      const bicep = new THREE.Mesh(new THREE.SphereGeometry(0.17, 12, 9), muscle);
+      bicep.scale.set(1.10, 1.02, 1.42);
+      bicep.position.set(-0.025, 0.045, -0.29);
+      arm.add(bicep);
+      const bicepPeak = new THREE.Mesh(new THREE.SphereGeometry(0.10, 10, 7), highlight);
+      bicepPeak.scale.set(0.82, 0.34, 1.38);
+      bicepPeak.position.set(-0.055, 0.155, -0.30);
+      arm.add(bicepPeak);
+      const tricep = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), muscleShade);
+      tricep.scale.set(1.0, 0.86, 1.28);
+      tricep.position.set(0.035, -0.085, -0.32);
+      arm.add(tricep);
+
+      const forearm = new THREE.Mesh(new THREE.CapsuleGeometry(0.135, 0.40, 4, 8), skin);
+      forearm.rotation.x = Math.PI / 2;
+      forearm.position.set(0, 0.005, 0.12);
+      arm.add(forearm);
+      const forearmMass = new THREE.Mesh(new THREE.SphereGeometry(0.145, 12, 8), muscle);
+      forearmMass.scale.set(1.03, 1.02, 1.48);
+      forearmMass.position.set(0, 0.045, 0.13);
+      arm.add(forearmMass);
+
+      // Raised vein cords catch the light along both upper and lower muscle groups.
+      const addVein = (points: THREE.Vector3[], radius: number) => {
+        const curve = new THREE.CatmullRomCurve3(points);
+        arm.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 8, radius, 4, false), vein));
+      };
+      addVein([
+        new THREE.Vector3(-0.12, 0.12, -0.48), new THREE.Vector3(-0.09, 0.17, -0.36),
+        new THREE.Vector3(-0.045, 0.18, -0.22), new THREE.Vector3(-0.025, 0.12, -0.08),
+      ], 0.010);
+      addVein([
+        new THREE.Vector3(0.10, 0.10, -0.46), new THREE.Vector3(0.075, 0.15, -0.32),
+        new THREE.Vector3(0.11, 0.16, -0.19), new THREE.Vector3(0.085, 0.12, -0.06),
+      ], 0.009);
+      addVein([
+        new THREE.Vector3(-0.075, 0.13, 0.015), new THREE.Vector3(-0.10, 0.17, 0.12),
+        new THREE.Vector3(-0.065, 0.17, 0.25), new THREE.Vector3(-0.025, 0.11, 0.36),
+      ], 0.009);
+      addVein([
+        new THREE.Vector3(0.075, 0.13, 0.015), new THREE.Vector3(0.10, 0.17, 0.12),
+        new THREE.Vector3(0.065, 0.17, 0.25), new THREE.Vector3(0.025, 0.11, 0.36),
+      ], 0.008);
+
+      const wristBand = new THREE.Mesh(new THREE.TorusGeometry(0.132, 0.027, 7, 18), cuff);
+      wristBand.position.z = 0.38;
+      arm.add(wristBand);
+      const wristHighlight = new THREE.Mesh(new THREE.TorusGeometry(0.132, 0.012, 6, 18), highlight);
+      wristHighlight.position.z = 0.405;
+      arm.add(wristHighlight);
+
+      const fist = new THREE.Group();
+      fist.name = 'muscular-clenched-fist';
+      fist.position.set(0, 0, 0.54);
+      arm.add(fist);
+      const palm = new THREE.Mesh(new THREE.SphereGeometry(0.205, 12, 9), skin);
+      palm.scale.set(1.06, 0.94, 1.15);
+      palm.position.z = 0.07;
+      fist.add(palm);
+      for (let fingerIndex = 0; fingerIndex < 4; fingerIndex++) {
+        const fingerX = -0.145 + fingerIndex * 0.096;
+        const finger = new THREE.Mesh(new THREE.CapsuleGeometry(0.048, 0.125, 3, 7), muscle);
+        finger.rotation.x = Math.PI / 2;
+        finger.rotation.z = (fingerIndex - 1.5) * -0.07;
+        finger.position.set(fingerX, 0.055, 0.19);
+        fist.add(finger);
+        const knuckle = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), highlight);
+        knuckle.position.set(fingerX, 0.105, 0.245);
+        fist.add(knuckle);
       }
+      const thumb = new THREE.Mesh(new THREE.CapsuleGeometry(0.052, 0.16, 3, 7), skin);
+      thumb.position.set(0.20, -0.01, 0.11);
+      thumb.rotation.set(0.22, 0.05, -0.78);
+      fist.add(thumb);
+
+      const exhaust = new THREE.Mesh(new THREE.SphereGeometry(0.12, 9, 7), energy);
+      exhaust.position.set(0, 0, -0.67);
+      arm.add(exhaust);
+      const exhaustCore = new THREE.Mesh(new THREE.SphereGeometry(0.065, 8, 6), energyCore);
+      exhaustCore.position.set(0, 0, -0.72);
+      arm.add(exhaustCore);
+      const energyRing = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.018, 6, 16), energy);
+      energyRing.position.z = -0.62;
+      arm.add(energyRing);
+
       const lateral = (index - 2) * 0.24;
-      rocket.position.copy(this.playerPos)
+      arm.position.copy(this.playerPos)
         .add(new THREE.Vector3(0, 0.90 + (index % 2) * 0.10, 0))
         .addScaledVector(forward, 0.82)
         .addScaledVector(right, lateral);
-      rocket.rotation.y = this.playerRot;
-      rocket.userData.exhaust = exhaust;
-      rocket.userData.exhaustCore = exhaustCore;
-      this.levelRoot.add(rocket);
+      arm.rotation.y = this.playerRot;
+      arm.rotation.z = (index - 2) * 0.035;
+      arm.scale.setScalar(0.82);
+      arm.userData.exhaust = exhaust;
+      arm.userData.exhaustCore = exhaustCore;
+      this.levelRoot.add(arm);
+
       const target = targets.length > 0 ? targets[index % targets.length] : null;
       this.projectiles.push({
-        mesh: rocket,
+        mesh: arm,
         vel: forward.clone().multiplyScalar(13.4).addScaledVector(right, (index - 2) * 0.48),
         life: 3.8,
         maxLife: 3.8,
@@ -15964,7 +16057,7 @@ export class PaleciakiGameEngine {
         hitIds: new Set<string>(),
       });
     }
-    this.emitFloatingToast('44 CM ZAGŁADY • 5 RAKIET NAMIERZAJĄCYCH', this.playerPos.x, this.playerPos.y + 1.55, this.playerPos.z, 'combo');
+    this.emitFloatingToast('44 CM ZAGŁADY • 5 LATAJĄCYCH RAMION NAPROWADZAJĄCYCH', this.playerPos.x, this.playerPos.y + 1.55, this.playerPos.z, 'combo');
   }
 
   private spawnCompactImpact(x: number, y: number, z: number, color: number) {
@@ -16406,9 +16499,10 @@ export class PaleciakiGameEngine {
     const forward = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
     built.group.position.set(
       this.playerPos.x - forward.x * 2.6,
-      0.06,
+      -0.22,
       this.playerPos.z - forward.z * 2.6
     );
+    built.group.scale.setScalar(0.76);
     built.group.rotation.y = this.playerRot;
     this.levelRoot.add(built.group);
     const duration = this.gameMode === 'survival' ? 6.0 : 8.0;
@@ -16420,6 +16514,12 @@ export class PaleciakiGameEngine {
       maxLife: duration,
       cooldown: 0.45,
       dustTimer: 0,
+      target: null,
+      targetScanTimer: 0,
+      deployTimer: 0.46,
+      recoilTimer: 0,
+      lastX: built.group.position.x,
+      lastZ: built.group.position.z,
     };
     this.sayQuote('KONWÓJ WZ-404! DO BOJU! Zajmijcie pozycje, artyleria system ERP wjeżdża!');
     this.callbacks.onPerkDropBanner?.(
@@ -16448,72 +16548,132 @@ export class PaleciakiGameEngine {
       return;
     }
 
-    const forward = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
-    const desiredX = this.playerPos.x - forward.x * 2.6;
-    const desiredZ = this.playerPos.z - forward.z * 2.6;
-    tank.group.position.x = THREE.MathUtils.lerp(tank.group.position.x, desiredX, Math.min(1, dt * 2.8));
-    tank.group.position.z = THREE.MathUtils.lerp(tank.group.position.z, desiredZ, Math.min(1, dt * 2.8));
-    tank.group.position.y = 0.06 + Math.sin(performance.now() * 0.004) * 0.018;
-    tank.group.rotation.y = THREE.MathUtils.lerp(tank.group.rotation.y, this.playerRot, Math.min(1, dt * 2.2));
-    tank.tracks.forEach((track) => { track.rotation.x += dt * 5.5; });
+    // Frame-rate independent follow and a short deployment lift sell the tank's weight.
+    const forwardX = Math.sin(this.playerRot);
+    const forwardZ = Math.cos(this.playerRot);
+    const desiredX = this.playerPos.x - forwardX * 2.6;
+    const desiredZ = this.playerPos.z - forwardZ * 2.6;
+    const followAlpha = 1 - Math.exp(-2.8 * Math.max(0, dt));
+    tank.group.position.x = THREE.MathUtils.lerp(tank.group.position.x, desiredX, followAlpha);
+    tank.group.position.z = THREE.MathUtils.lerp(tank.group.position.z, desiredZ, followAlpha);
 
-    let target: EnemyItem | null = null;
-    let nearest = 23.5;
-    for (const enemy of this.enemies) {
-      if (enemy.state === 'defeated' || !enemy.mesh?.visible) continue;
-      const distance = Math.hypot(enemy.x - tank.group.position.x, enemy.z - tank.group.position.z);
-      if (distance < nearest) {
-        nearest = distance;
-        target = enemy;
+    if (tank.deployTimer > 0) tank.deployTimer = Math.max(0, tank.deployTimer - dt);
+    const deployProgress = THREE.MathUtils.clamp(1 - tank.deployTimer / 0.46, 0, 1);
+    const deployEase = deployProgress * deployProgress * (3 - 2 * deployProgress);
+    tank.group.scale.setScalar(THREE.MathUtils.lerp(0.76, 1, deployEase));
+    tank.group.position.y = THREE.MathUtils.lerp(-0.22, 0.06, deployEase) +
+      Math.sin(performance.now() * 0.004) * 0.012;
+
+    tank.group.rotation.y = dampActorAngle(tank.group.rotation.y, this.playerRot, 5.2, dt);
+    const travelled = Math.hypot(tank.group.position.x - tank.lastX, tank.group.position.z - tank.lastZ);
+    tank.lastX = tank.group.position.x;
+    tank.lastZ = tank.group.position.z;
+    for (const track of tank.tracks) track.rotation.x += travelled * 2.4;
+
+    tank.recoilTimer = Math.max(0, tank.recoilTimer - dt);
+    const recoilProgress = THREE.MathUtils.clamp(tank.recoilTimer / 0.16, 0, 1);
+    tank.turret.position.z = -0.06 - Math.sin(recoilProgress * Math.PI) * 0.18;
+
+    // The tank rebuilds its target choice about 4.5 times per second, not every frame.
+    // Invalid/dead targets are discarded immediately.
+    const lockedTarget = tank.target;
+    const targetInvalid = !lockedTarget || lockedTarget.state === 'defeated' ||
+      !lockedTarget.mesh?.visible ||
+      Math.hypot(lockedTarget.x - tank.group.position.x, lockedTarget.z - tank.group.position.z) > 25;
+    tank.targetScanTimer = Math.max(0, tank.targetScanTimer - dt);
+    if (targetInvalid || tank.targetScanTimer <= 0) {
+      let bestScore = Number.POSITIVE_INFINITY;
+      let nextTarget: EnemyItem | null = null;
+      for (const enemy of this.enemies) {
+        if (enemy.state === 'defeated' || !enemy.mesh?.visible) continue;
+        const tankDistance = Math.hypot(enemy.x - tank.group.position.x, enemy.z - tank.group.position.z);
+        if (tankDistance > 23.5) continue;
+        const playerDistance = Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z);
+        const isElite = enemy.maxHp >= 12 || enemy.type === 'walczak' ||
+          enemy.type === 'krol_leto' || enemy.type === 'bosman_krakow' || enemy.type === 'sebix_m';
+        const score = tankDistance + playerDistance * 0.12 -
+          (playerDistance <= 5.8 ? 2.6 : 0) - (isElite ? 1.25 : 0);
+        if (score < bestScore - 0.001 ||
+            (Math.abs(score - bestScore) <= 0.001 && (!nextTarget || enemy.id < nextTarget.id))) {
+          bestScore = score;
+          nextTarget = enemy;
+        }
       }
+      tank.target = nextTarget;
+      tank.targetScanTimer = 0.22;
     }
-    if (!target) return;
 
+    const target = tank.target;
+    if (!target) return;
     const aimX = target.x - tank.group.position.x;
     const aimZ = target.z - tank.group.position.z;
     const worldAngle = Math.atan2(aimX, aimZ);
-    tank.turret.rotation.y = THREE.MathUtils.lerp(
+    tank.turret.rotation.y = dampActorAngle(
       tank.turret.rotation.y,
       worldAngle - tank.group.rotation.y,
-      Math.min(1, dt * 5.5)
+      7.5,
+      dt
     );
 
     tank.cooldown -= dt;
-    if (tank.cooldown > 0) return;
+    if (tank.cooldown > 0 || tank.deployTimer > 0.08) return;
     tank.cooldown = this.gameMode === 'survival' ? 1.35 : 1.05;
 
-    const direction = new THREE.Vector3(aimX, target.y + 0.65 - (tank.group.position.y + 1.02), aimZ);
+    const direction = new THREE.Vector3(
+      aimX,
+      target.y + 0.65 - (tank.group.position.y + 1.02),
+      aimZ
+    );
     if (direction.lengthSq() < 0.001) return;
     direction.normalize();
+
     const shell = new THREE.Group();
+    shell.name = 'wz404-erp-cannon-shell';
     const shellMat = new THREE.MeshStandardMaterial({
-      color: 0xfbbf24, emissive: 0xf97316, emissiveIntensity: 1.4, roughness: 0.26, metalness: 0.36,
+      color: 0xfbbf24,
+      emissive: 0xf97316,
+      emissiveIntensity: 1.25,
+      roughness: 0.27,
+      metalness: 0.42,
     });
-    const core = new THREE.Mesh(new THREE.SphereGeometry(0.19, 10, 8), shellMat);
-    const collar = new THREE.Mesh(
-      new THREE.TorusGeometry(0.20, 0.035, 6, 12),
-      new THREE.MeshBasicMaterial({ color: 0xfff7ae })
-    );
-    collar.rotation.x = Math.PI / 2;
-    shell.add(core, collar);
-    const start = tank.group.position.clone().add(new THREE.Vector3(0, 1.12, 0)).addScaledVector(direction, 1.18);
+    const hotMat = new THREE.MeshBasicMaterial({ color: 0xfff7ae, toneMapped: false });
+    const core = new THREE.Mesh(new THREE.SphereGeometry(0.15, 9, 7), shellMat);
+    core.scale.set(0.88, 0.88, 1.42);
+    shell.add(core);
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.10, 0.34, 8), shellMat);
+    shaft.rotation.x = Math.PI / 2;
+    shaft.position.z = -0.10;
+    shell.add(shaft);
+    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.105, 0.22, 8), hotMat);
+    nose.rotation.x = Math.PI / 2;
+    nose.position.z = 0.25;
+    shell.add(nose);
+    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.022, 6, 14), hotMat);
+    collar.position.z = -0.20;
+    shell.add(collar);
+
+    const start = tank.group.position.clone()
+      .add(new THREE.Vector3(0, 1.12, 0))
+      .addScaledVector(direction, 1.18);
     shell.position.copy(start);
     this.levelRoot.add(shell);
-    const damage = this.gameMode === 'survival' ? 2 : 3;
     this.projectiles.push({
       mesh: shell,
       vel: direction.multiplyScalar(23),
       life: 2.2,
       maxLife: 2.2,
-      damage,
+      damage: this.gameMode === 'survival' ? 2 : 3,
       pierce: 0,
       aoeRadius: 1.7,
       stunDuration: 0.7,
       weaponProjectile: true,
+      disposeOnRemove: true,
       hitIds: new Set<string>(),
     });
+    tank.recoilTimer = 0.16;
     sound.playTankCannon();
     this.triggerScreenShake(0.10, 0.07);
+    this.spawnCompactImpact(start.x, start.y, start.z, 0xffd166);
     this.spawnParticleRing(start.x, start.y, start.z, 0xfbbf24);
   }
 
@@ -16612,7 +16772,7 @@ export class PaleciakiGameEngine {
     const paperShards: { mesh: THREE.Mesh; velocity: THREE.Vector3; spin: THREE.Vector3; phase: number }[] = [];
     const shardMaterial = new THREE.MeshBasicMaterial({ color: 0xfff1d2, side: THREE.DoubleSide, transparent: true, opacity: 1 });
     for (let index = 0; index < 6; index++) {
-      const shard = new THREE.Mesh(new THREE.TetrahedronGeometry(0.075 + (index % 3) * 0.018, 0), shardMaterial.clone());
+      const shard = new THREE.Mesh(new THREE.TetrahedronGeometry(0.075 + (index % 3) * 0.018, 0), shardMaterial);
       shard.position.set((index - 2.5) * 0.012, (index % 2 ? 1 : -1) * 0.06, 0.045);
       group.add(shard);
       paperShards.push({
@@ -16651,6 +16811,18 @@ export class PaleciakiGameEngine {
     title.position.set(0, 0.90, 0.055);
     group.add(title);
 
+    const ripPulseMaterial = new THREE.MeshBasicMaterial({
+      color: 0xe879f9,
+      transparent: true,
+      opacity: 0.84,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    const ripPulse = new THREE.Mesh(new THREE.TorusGeometry(0.86, 0.042, 7, 48), ripPulseMaterial);
+    ripPulse.rotation.x = Math.PI / 2;
+    ripPulse.position.set(0, -1.45, 0.02);
+    group.add(ripPulse);
+
     group.position.set(
       this.playerPos.x + Math.sin(this.playerRot) * 1.30,
       this.playerPos.y + 1.05,
@@ -16667,7 +16839,7 @@ export class PaleciakiGameEngine {
       maxLife: 1.42,
       grow: 0,
       spin: 0,
-      update: (_dt, progress) => {
+      update: (dt, progress) => {
         const smooth = (value: number) => {
           const t = THREE.MathUtils.clamp(value, 0, 1);
           return t * t * (3 - 2 * t);
@@ -16685,6 +16857,9 @@ export class PaleciakiGameEngine {
         rightPivot.rotation.y = -split * 0.24;
         title.position.y = 0.90 + Math.sin(progress * Math.PI) * 0.20;
         title.scale.setScalar(0.94 + Math.sin(progress * Math.PI) * 0.08);
+        const pulseProgress = smooth((progress - 0.12) / 0.70);
+        ripPulse.scale.setScalar(THREE.MathUtils.lerp(0.12, 2.75, pulseProgress));
+        ripPulseMaterial.opacity = 0.84 * (1 - pulseProgress);
 
         const shardProgress = smooth((progress - 0.20) / 0.55);
         for (const shard of paperShards) {
@@ -16692,9 +16867,9 @@ export class PaleciakiGameEngine {
           shard.mesh.position.x = shard.velocity.x * travel;
           shard.mesh.position.y = shard.velocity.y * travel - travel * travel * 0.58;
           shard.mesh.position.z = 0.045 + shard.velocity.z * travel;
-          shard.mesh.rotation.x += shard.spin.x * 0.016;
-          shard.mesh.rotation.y += shard.spin.y * 0.016;
-          shard.mesh.rotation.z += shard.spin.z * 0.016;
+          shard.mesh.rotation.x += shard.spin.x * dt;
+          shard.mesh.rotation.y += shard.spin.y * dt;
+          shard.mesh.rotation.z += shard.spin.z * dt;
           const shardFade = Math.max(0, 1 - Math.max(0, progress - 0.62) / 0.30);
           (shard.mesh.material as THREE.MeshBasicMaterial).opacity = shardFade;
           shard.mesh.scale.setScalar(Math.max(0.001, shardFade));
@@ -17139,6 +17314,7 @@ export class PaleciakiGameEngine {
         attackCooldown: 0.22 + index * 0.2,
         pounceTimer: 0,
         pounceTarget: null,
+        target: null,
         index,
       });
     }
@@ -17156,6 +17332,17 @@ export class PaleciakiGameEngine {
 
   private updateMafiCapybaras(dt: number) {
     if (this.mafiCapybaras.length === 0) return;
+
+    const targetLoads = this.mafiCapybaraTargetLoads;
+    targetLoads.clear();
+    for (const companion of this.mafiCapybaras) {
+      const assigned = companion.target;
+      if (!assigned || assigned.state === 'defeated' || !assigned.mesh?.visible) {
+        companion.target = null;
+        continue;
+      }
+      targetLoads.set(assigned.id, (targetLoads.get(assigned.id) ?? 0) + 1);
+    }
 
     const forwardX = Math.sin(this.playerRot);
     const forwardZ = Math.cos(this.playerRot);
@@ -17222,6 +17409,12 @@ export class PaleciakiGameEngine {
 
       // Select the most dangerous nearby enemy, not simply the closest model
       // to this companion. Enemies threatening the player get first priority.
+      const previousTarget = capybara.target;
+      if (previousTarget) {
+        const previousLoad = targetLoads.get(previousTarget.id) ?? 0;
+        if (previousLoad <= 1) targetLoads.delete(previousTarget.id);
+        else targetLoads.set(previousTarget.id, previousLoad - 1);
+      }
       let target: EnemyItem | null = null;
       let nearest = 15.5;
       let bestThreatScore = Number.POSITIVE_INFINITY;
@@ -17244,14 +17437,21 @@ export class PaleciakiGameEngine {
           guardDistance * 0.28 +
           (isElite ? -1.2 : 0) +
           (isMajorBoss ? -0.75 : 0) +
-          flankBias;
-        if (threatScore < bestThreatScore) {
+          flankBias +
+          (targetLoads.get(enemy.id) ?? 0) * 4.2;
+        if (threatScore < bestThreatScore - 0.001 ||
+            (Math.abs(threatScore - bestThreatScore) <= 0.001 && (!target || enemy.id < target.id))) {
           bestThreatScore = threatScore;
           nearest = guardDistance;
           target = enemy;
         }
       }
-      if (!target) continue;
+      if (!target) {
+        capybara.target = null;
+        continue;
+      }
+      capybara.target = target;
+      targetLoads.set(target.id, (targetLoads.get(target.id) ?? 0) + 1);
 
       capybara.group.rotation.y = Math.atan2(
         target.x - capybara.group.position.x,
@@ -17270,9 +17470,10 @@ export class PaleciakiGameEngine {
 
         // One low-poly tracer keeps the shot readable at half the object count.
         const tracer = new THREE.Mesh(
-          new THREE.SphereGeometry(0.075, 7, 5),
+          new THREE.CapsuleGeometry(0.038, 0.24, 2, 6),
           new THREE.MeshBasicMaterial({ color: 0xffd166, toneMapped: false })
         );
+        tracer.rotation.x = Math.PI / 2;
         tracer.name = 'mafi_carbine_tracer';
         tracer.scale.set(0.9, 0.9, 1.8);
         tracer.position.copy(muzzlePosition);
@@ -17292,6 +17493,7 @@ export class PaleciakiGameEngine {
           hitIds: new Set<string>(),
         });
         capybara.attackCooldown = capybara.index === 0 ? 0.72 : 0.88;
+        this.spawnCompactImpact(muzzlePosition.x, muzzlePosition.y, muzzlePosition.z, 0xffd166);
         this.spawnParticleRing(muzzlePosition.x, muzzlePosition.y, muzzlePosition.z, 0xfbbf24);
         sound.playAttackWhoosh();
         continue;
@@ -17314,6 +17516,7 @@ export class PaleciakiGameEngine {
       capybara.pounceTarget = new THREE.Vector3(target.x, groundY, target.z);
       capybara.pounceTimer = 0.52;
       capybara.attackCooldown = capybara.index === 1 ? 1.02 : 1.24;
+      this.spawnCompactImpact(target.x, target.y + 0.58, target.z, capybara.index === 1 ? 0xef4444 : 0xfbbf24);
       this.spawnParticleRing(target.x, target.y + 0.42, target.z, capybara.index === 1 ? 0xef4444 : 0xfbbf24);
       if (interceptingPlayer || target.maxHp >= 12) {
         this.emitFloatingToast(
@@ -17633,28 +17836,63 @@ export class PaleciakiGameEngine {
       this.activatePerk('hardhat', this.gameMode === 'survival' ? 4.5 : 15);
       // Operator 03 also drops a fresh KFC bucket right in front of him!
       const fwd = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
+      const bucketX = this.playerPos.x + fwd.x * 2.2;
+      const bucketZ = this.playerPos.z + fwd.z * 2.2;
       this.addKfcBucketItem(
         `dawid_kfc_${Date.now()}`,
-        this.playerPos.x + fwd.x * 2.2,
+        this.gameMode === 'survival'
+          ? THREE.MathUtils.clamp(bucketX, SURVIVAL_WORLD_BOUNDS.minX + 2, SURVIVAL_WORLD_BOUNDS.maxX - 2)
+          : bucketX,
         0.45,
-        THREE.MathUtils.clamp(this.playerPos.z + fwd.z * 2.2, -15, 15)
+        this.gameMode === 'survival'
+          ? THREE.MathUtils.clamp(bucketZ, SURVIVAL_WORLD_BOUNDS.minZ + 2, SURVIVAL_WORLD_BOUNDS.maxZ - 2)
+          : THREE.MathUtils.clamp(bucketZ, -15, 15)
       );
       this.sayQuote('JA WIEM LEPIEJ! Salwa 5 płyt Marmur B4 120x280 pod kątem 45° + świeży Kubełek Mocy!');
       sound.playAttackWhoosh();
       const angles = this.gameMode === 'survival' ? [-0.22, 0, 0.22] : [-0.5, -0.25, 0, 0.25, 0.5];
-      angles.forEach((offsetAngle) => {
+      this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.18, this.playerPos.z, 0xd97706);
+      angles.forEach((offsetAngle, index) => {
         const rot = this.playerRot + offsetAngle;
         const forward = new THREE.Vector3(Math.sin(rot), 0, Math.cos(rot));
-        const tileGeo = new THREE.BoxGeometry(0.85, 0.12, 0.55);
-        const tileMat = new THREE.MeshStandardMaterial({
-          color: 0xf8fafc,
-          emissive: 0xd97706,
-          emissiveIntensity: 0.65,
-          metalness: 0.8,
-          roughness: 0.2,
+        const tile = new THREE.Group();
+        tile.name = 'dawid-marmur-b4-porcelain-' + (index + 1);
+        const ceramic = new THREE.MeshStandardMaterial({
+          color: 0xd9d4c7, emissive: 0x9a6b31, emissiveIntensity: 0.16,
+          metalness: 0.22, roughness: 0.34,
         });
-        const tile = new THREE.Mesh(tileGeo, tileMat);
-        tile.position.set(this.playerPos.x, this.playerPos.y + 0.65, this.playerPos.z).addScaledVector(forward, 0.65);
+        const brass = new THREE.MeshStandardMaterial({
+          color: 0xa8792f, emissive: 0x7c4a12, emissiveIntensity: 0.28,
+          metalness: 0.72, roughness: 0.24,
+        });
+        const glaze = new THREE.MeshStandardMaterial({
+          color: 0xf4eee0, metalness: 0.28, roughness: 0.20,
+          emissive: 0xf59e0b, emissiveIntensity: 0.12,
+        });
+        tile.add(new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.13, 0.64), ceramic));
+        const topGlaze = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.018, 0.48), glaze);
+        topGlaze.position.y = 0.073;
+        tile.add(topGlaze);
+        const diamond = new THREE.Mesh(new THREE.BoxGeometry(0.31, 0.012, 0.31), brass);
+        diamond.rotation.y = Math.PI / 4;
+        diamond.position.y = 0.09;
+        tile.add(diamond);
+        const edgeFrame = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.BoxGeometry(0.96, 0.15, 0.68)),
+          new THREE.LineBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.92 })
+        );
+        tile.add(edgeFrame);
+        for (const cornerX of [-0.38, 0.38]) {
+          for (const cornerZ of [-0.24, 0.24]) {
+            const rivet = new THREE.Mesh(new THREE.SphereGeometry(0.035, 7, 5), brass);
+            rivet.position.set(cornerX, 0.094, cornerZ);
+            tile.add(rivet);
+          }
+        }
+        tile.position.set(this.playerPos.x, this.playerPos.y + 0.65, this.playerPos.z)
+          .addScaledVector(forward, 0.65);
+        tile.rotation.y = rot;
+        tile.rotation.z = (index % 2 === 0 ? 1 : -1) * 0.10;
         this.levelRoot.add(tile);
         this.projectiles.push({
           mesh: tile,
@@ -17666,6 +17904,8 @@ export class PaleciakiGameEngine {
           ricochet: true,
           collectItems: true,
           spinSpeed: 12.0,
+          homingTrail: true,
+          homingTrailColor: 0xf59e0b,
           hitIds: new Set(),
         });
       });
