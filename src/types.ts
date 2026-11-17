@@ -143,6 +143,11 @@ export interface EnemyItem {
   /** Smoothed horizontal steering direction; avoids frame-to-frame crowd jitter. */
   aiSteerX?: number;
   aiSteerZ?: number;
+  /** Low-frequency projectile threat scan and committed sidestep intent. */
+  aiDodgeScanTimer?: number;
+  aiDodgeTimer?: number;
+  aiDodgeX?: number;
+  aiDodgeZ?: number;
   aiCoalitionSize?: number;
   /** Brief movement disruption after a Survival squad loses its leader. */
   aiMoraleBreakTimer?: number;

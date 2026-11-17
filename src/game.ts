@@ -46,6 +46,7 @@ import { clampHorizontalPosition } from './arenaBounds.ts';
 import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoint, resolveEnemyPlayerSeparation } from './enemySpacing.ts';
 import { calculateEnemyObstacleAvoidanceVector } from './enemyNavigation.ts';
 import { calculateStableEnemySteering, getEnemyEngageRadius } from './enemySteering.ts';
+import { calculateEnemyProjectileDodge, predictEnemyAimPoint } from './enemyTactics.ts';
 import { getEnemyPlayerContactDistance, resolvePlayerMovementAgainstEnemies } from './enemyPlayerCollision.ts';
 import { findFirstProjectileBodyImpact, findFirstProjectileEnemyImpact } from './projectileImpact.ts';
 import { createEnemyHitReaction, getEnemyHitPulse, getEnemyImpactBurstProfile } from './enemyCombatFeedback.ts';
@@ -10791,6 +10792,24 @@ export class PaleciakiGameEngine {
     }
   }
 
+  private predictPlayerAimPoint(
+    originX: number,
+    originZ: number,
+    projectileSpeed: number,
+    targetX = this.playerPos.x,
+    targetZ = this.playerPos.z,
+    leadFraction = 0.68,
+  ): { x: number; z: number } {
+    return predictEnemyAimPoint(
+      { x: originX, z: originZ },
+      { x: targetX, z: targetZ },
+      { x: this.playerVel.x, z: this.playerVel.z },
+      projectileSpeed,
+      leadFraction,
+      0.62,
+    );
+  }
+
   private spawnPomazaniecLollipop(x: number, y: number, z: number, targetX: number, targetZ: number, variant: number) {
     const colors = [0xf43f5e, 0xf472b6, 0x8b5cf6, 0x22c55e, 0xf59e0b];
     const color = colors[variant % colors.length];
@@ -10813,7 +10832,8 @@ export class PaleciakiGameEngine {
 
     candy.position.set(x, y, z);
     this.levelRoot.add(candy);
-    const direction = new THREE.Vector3(targetX - x, 0.10, targetZ - z).normalize();
+    const aim = this.predictPlayerAimPoint(x, z, 7.6, targetX, targetZ, 0.64);
+    const direction = new THREE.Vector3(aim.x - x, 0.10, aim.z - z).normalize();
     this.enemyProjectiles.push({
       mesh: candy,
       vel: direction.multiplyScalar(7.6),
@@ -10838,7 +10858,8 @@ export class PaleciakiGameEngine {
     group.add(stripe);
     group.position.set(x,y,z);
     this.levelRoot.add(group);
-    const direction = new THREE.Vector3(targetX-x,0.22,targetZ-z).normalize();
+    const aim = this.predictPlayerAimPoint(x, z, 7.2, targetX, targetZ, 0.62);
+    const direction = new THREE.Vector3(aim.x-x,0.22,aim.z-z).normalize();
     this.enemyProjectiles.push({
       mesh: group as unknown as THREE.Mesh,
       vel: direction.multiplyScalar(7.2),
@@ -13000,28 +13021,55 @@ export class PaleciakiGameEngine {
     const isTelegraphingRangedBoss = enemy.chargeTimer !== undefined &&
       (enemy.type === 'bosman_krakow' || (enemy.type === 'agv_robot' && enemy.name.includes('AGV-9 SENTINEL')));
 
-    // Arrival dead-zone replaces the old orbit correction. Once an actor has
-    // reached its formation lane it holds still; a real crowd overlap may still
-    // trigger a small, smoothed sidestep.
+    // Scan on a short cadence instead of testing every projectile for every
+    // enemy on every frame. Keep the last dodge direction briefly so the
+    // actor commits to a sidestep instead of changing sides frame by frame.
+    enemy.aiDodgeScanTimer = Math.max(0, (enemy.aiDodgeScanTimer ?? 0) - dt);
+    enemy.aiDodgeTimer = Math.max(0, (enemy.aiDodgeTimer ?? 0) - dt);
+    if (!isTelegraphingRangedBoss && enemy.aiDodgeScanTimer <= 0) {
+      enemy.aiDodgeScanTimer = 0.12;
+      const dodge = calculateEnemyProjectileDodge(enemy, this.projectiles, 0.72, 1.02, 0.95);
+      if (Math.hypot(dodge.x, dodge.z) > 0.08) {
+        enemy.aiDodgeX = dodge.x;
+        enemy.aiDodgeZ = dodge.z;
+        enemy.aiDodgeTimer = 0.28;
+      }
+    }
+    const projectileDodge = !isTelegraphingRangedBoss && (enemy.aiDodgeTimer ?? 0) > 0
+      ? { x: enemy.aiDodgeX ?? 0, z: enemy.aiDodgeZ ?? 0 }
+      : { x: 0, z: 0 };
+    const hasProjectileDodge = Math.hypot(projectileDodge.x, projectileDodge.z) > 0.08;
+    const evasionWeight = role === 'bruiser' ? 0.48
+      : role === 'flanker' ? 0.92
+        : role === 'ranged' ? 1.18
+          : 1.08;
+
+    // Arrival dead-zone replaces the old orbit correction. A reached slot is
+    // held unless crowd pressure or a real incoming shot requires movement.
     const atFormationSlot = steerLength < 0.24;
-    const steering = isTelegraphingRangedBoss || (atFormationSlot && separationLength < 0.34)
+    const shouldHoldFormation = atFormationSlot && separationLength < 0.34 && !hasProjectileDodge;
+    const steering = isTelegraphingRangedBoss || shouldHoldFormation
       ? { x: 0, z: 0 }
       : calculateStableEnemySteering({
-          chase: steerLength > 0.24 ? { x: steerX, z: steerZ } : separation,
+          chase: steerLength > 0.24
+            ? { x: steerX, z: steerZ }
+            : separationLength >= 0.34 ? separation : projectileDodge,
           separation,
           avoidance: obstacleAvoidance,
+          evasion: projectileDodge,
+          evasionWeight,
           previous: { x: enemy.aiSteerX ?? 0, z: enemy.aiSteerZ ?? 0 },
           dt,
           separationWeight: 0.72,
           avoidanceWeight: 0.78,
-          response: 6.5,
+          response: hasProjectileDodge ? 10.5 : 6.5,
         });
     steerX = steering.x;
     steerZ = steering.z;
     enemy.aiSteerX = steerX;
     enemy.aiSteerZ = steerZ;
     const arrivalScale = atFormationSlot
-      ? (separationLength >= 0.34 ? 0.28 : 0)
+      ? hasProjectileDodge ? 0.76 : separationLength >= 0.34 ? 0.28 : 0
       : THREE.MathUtils.clamp((steerLength - 0.12) / 0.95, 0, 1);
 
     const roleSpeed = role === 'bruiser' ? 0.82 : role === 'flanker' ? 1.12 : role === 'support' ? 0.88 : 0.94;
@@ -14644,7 +14692,8 @@ export class PaleciakiGameEngine {
     const mesh = createPenaltyNoticeProjectile();
     mesh.position.set(x, y, z);
     this.levelRoot.add(mesh);
-    const dir = new THREE.Vector3(this.playerPos.x - x, 0, this.playerPos.z - z).normalize();
+    const aim = this.predictPlayerAimPoint(x, z, 7.5);
+    const dir = new THREE.Vector3(aim.x - x, 0, aim.z - z).normalize();
     this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.multiplyScalar(7.5), life: 3.5 });
     sound.playWhistle();
   }
@@ -14655,9 +14704,10 @@ export class PaleciakiGameEngine {
     (mesh.material as THREE.MeshStandardMaterial).color.setHex(0xef4444);
     mesh.position.set(x, y, z);
     this.levelRoot.add(mesh);
+    const aim = Number.isFinite(lockedDirection) ? null : this.predictPlayerAimPoint(x, z, 10.0);
     const dir = Number.isFinite(lockedDirection)
       ? new THREE.Vector3(Math.sin(lockedDirection as number), 0, Math.cos(lockedDirection as number))
-      : new THREE.Vector3(this.playerPos.x - x, 0, this.playerPos.z - z).normalize();
+      : new THREE.Vector3((aim?.x ?? this.playerPos.x) - x, 0, (aim?.z ?? this.playerPos.z) - z).normalize();
     this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.multiplyScalar(10.0), life: 3.5, isDyscyplinarka: true });
     sound.playWhistle();
   }
@@ -14666,7 +14716,8 @@ export class PaleciakiGameEngine {
     const mesh = createSanitarywareProjectile();
     mesh.position.set(x, y, z);
     this.levelRoot.add(mesh);
-    const dir = new THREE.Vector3(this.playerPos.x - x, 0.2, this.playerPos.z - z).normalize();
+    const aim = this.predictPlayerAimPoint(x, z, 8.2);
+    const dir = new THREE.Vector3(aim.x - x, 0.2, aim.z - z).normalize();
     this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.multiplyScalar(8.2), life: 3.5 });
     sound.playWoosh();
   }
@@ -14675,9 +14726,10 @@ export class PaleciakiGameEngine {
     const mesh = createSparkZapProjectile();
     mesh.position.set(x, y, z);
     this.levelRoot.add(mesh);
+    const aim = Number.isFinite(lockedDirection) ? null : this.predictPlayerAimPoint(x, z, 9.5);
     const dir = Number.isFinite(lockedDirection)
       ? new THREE.Vector3(Math.sin(lockedDirection as number), 0.1, Math.cos(lockedDirection as number))
-      : new THREE.Vector3(this.playerPos.x - x, 0.1, this.playerPos.z - z).normalize();
+      : new THREE.Vector3((aim?.x ?? this.playerPos.x) - x, 0.1, (aim?.z ?? this.playerPos.z) - z).normalize();
     this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.normalize().multiplyScalar(9.5), life: 3.0 });
     sound.playElectricalSparks();
   }
@@ -14686,9 +14738,10 @@ export class PaleciakiGameEngine {
     const mesh = createOdprawaClipboardProjectile();
     mesh.position.set(x, y, z);
     this.levelRoot.add(mesh);
+    const aim = Number.isFinite(lockedDirection) ? null : this.predictPlayerAimPoint(x, z, 10.0);
     const dir = Number.isFinite(lockedDirection)
       ? new THREE.Vector3(Math.sin(lockedDirection as number), 0.1, Math.cos(lockedDirection as number))
-      : new THREE.Vector3(this.playerPos.x - x, 0.1, this.playerPos.z - z).normalize();
+      : new THREE.Vector3((aim?.x ?? this.playerPos.x) - x, 0.1, (aim?.z ?? this.playerPos.z) - z).normalize();
     this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.normalize().multiplyScalar(10.0), life: 4.0, isDyscyplinarka: true });
     sound.playWhistle();
     this.triggerScreenShake(0.4, 0.3);

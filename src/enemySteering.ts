@@ -5,9 +5,11 @@ export interface EnemySteeringInput {
   readonly separation?: HorizontalVector;
   readonly avoidance?: HorizontalVector;
   readonly previous?: HorizontalVector;
+  readonly evasion?: HorizontalVector;
   readonly dt: number;
   readonly separationWeight?: number;
   readonly avoidanceWeight?: number;
+  readonly evasionWeight?: number;
   readonly response?: number;
 }
 
@@ -22,10 +24,11 @@ export function calculateStableEnemySteering(input: EnemySteeringInput): Horizon
   const baseZ = chaseZ / chaseLength;
   const separationWeight = Math.max(0, safe(input.separationWeight ?? 0.9));
   const avoidanceWeight = Math.max(0, safe(input.avoidanceWeight ?? 0.85));
+  const evasionWeight = Math.max(0, safe(input.evasionWeight ?? 1.0));
   let desiredX = baseX * 1.15 + safe(input.separation?.x) * separationWeight +
-    safe(input.avoidance?.x) * avoidanceWeight;
+    safe(input.avoidance?.x) * avoidanceWeight + safe(input.evasion?.x) * evasionWeight;
   let desiredZ = baseZ * 1.15 + safe(input.separation?.z) * separationWeight +
-    safe(input.avoidance?.z) * avoidanceWeight;
+    safe(input.avoidance?.z) * avoidanceWeight + safe(input.evasion?.z) * evasionWeight;
   const forward = desiredX * baseX + desiredZ * baseZ;
   if (forward < 0.28) {
     desiredX += baseX * (0.28 - forward);
