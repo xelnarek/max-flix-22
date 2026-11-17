@@ -45,6 +45,7 @@ import {
 import { clampHorizontalPosition } from './arenaBounds.ts';
 import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoint, resolveEnemyPlayerSeparation } from './enemySpacing.ts';
 import { calculateEnemyObstacleAvoidanceVector } from './enemyNavigation.ts';
+import { calculateStableEnemySteering, getEnemyEngageRadius } from './enemySteering.ts';
 import { createEnemyHitReaction, getEnemyHitPulse, getEnemyImpactBurstProfile } from './enemyCombatFeedback.ts';
 import { getEnemyDeathMotionPose, getEnemyDeathMotionProfile } from './enemyDeathMotion.ts';
 import { ENEMY_GAIT_PRESETS, ENEMY_VISUAL_PROFILES } from './enemyVisualProfiles.ts';
