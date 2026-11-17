@@ -103,20 +103,20 @@ export class CinematicIntroManager {
     overlay.className = 'cinematic-intro-overlay';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute('aria-label', 'Paleciaki! Magazyn Chaosu — animowana odprawa przed grą');
+    overlay.setAttribute('aria-label', 'Warehouse MaDDnes — animowana odprawa przed grą');
     overlay.innerHTML = `
       <canvas class="cinematic-intro-canvas" aria-hidden="true"></canvas>
       <div class="cinematic-intro-vignette" aria-hidden="true"></div>
       <div class="cinematic-intro-top">
-        <div class="cinematic-intro-brand"><span class="cinematic-live-dot"></span> PALECIAKI! <span>•</span> ZMIANA 03</div>
+        <div class="cinematic-intro-brand"><span class="cinematic-live-dot"></span> WAREHOUSE <span>•</span> NIGHT SHIFT</div>
         <div class="cinematic-intro-status"><span id="cinematic-intro-scene">SYSTEM ONLINE</span><span id="cinematic-intro-time">00:00</span></div>
         <button id="cinematic-intro-skip" class="cinematic-intro-skip" type="button">POMIŃ ODPRAWĘ <span aria-hidden="true">↗</span></button>
       </div>
       <div class="cinematic-intro-copy">
-        <div class="cinematic-intro-kicker">3D ARCADE • MAGAZYNOWA ROZWAŁKA</div>
-        <h1>PALECIAKI!</h1>
-        <div class="cinematic-intro-subtitle">MAGAZYN <span>CHAOSU</span></div>
-        <p>Za dnia palety. Po godzinach — hordy. Zbieraj perki, rozwijaj broń i przetrwaj zmianę. BHP? Dzisiaj ma wolne.</p>
+        <div class="cinematic-intro-kicker">3D ARCADE • INDUSTRIAL SURVIVAL</div>
+        <h1>WAREHOUSE</h1>
+        <div class="cinematic-intro-subtitle">MaDDnes</div>
+        <p>Po godzinach magazyn przejmuje chaos. Zbieraj perki, rozwijaj broń i przetrwaj zmianę. BHP? Dzisiaj ma wolne.</p>
         <div class="cinematic-intro-tags"><span>SURVIVAL 3D</span><span>SURVIVAL • HORDY</span><span>PERKI • EWOLUCJE</span></div>
       </div>
       <div class="cinematic-intro-bottom">

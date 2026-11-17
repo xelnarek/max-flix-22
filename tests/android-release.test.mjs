@@ -25,10 +25,10 @@ test('Android CI caches Gradle and retries transient network failures across nat
   assert.match(retry, /exit "\$status"/);
 });
 
-test('Android wrapper targets the selected Paleciaki package and built web assets', async () => {
+test('Android wrapper targets the selected Warehouse MaDDnes package and built web assets', async () => {
   const config = JSON.parse(await read('../capacitor.config.json'));
   assert.equal(config.appId, 'pl.paleciaki.magazynchaosu');
-  assert.equal(config.appName, 'Paleciaki! Magazyn Chaosu');
+  assert.equal(config.appName, 'Warehouse MaDDnes');
   assert.equal(config.webDir, 'dist');
   assert.equal(config.android.allowMixedContent, false);
 });

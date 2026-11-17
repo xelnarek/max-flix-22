@@ -1068,7 +1068,7 @@ test('cinematic intro is a real Canvas 2D boot sequence and returns to the Survi
   assert.match(intro, /prefers-reduced-motion/);
   assert.match(intro, /drawWarehouse/);
   assert.doesNotMatch(html, /btn-open-cinematic-intro|btn-open-story-modal/);
-  assert.match(html, /PALECIAKI! <span>MAGAZYN<\/span><em>CHAOSU<\/em>/);
+  assert.match(html, /WAREHOUSE <span>MaDDnes<\/span>/);
   assert.match(css, /\.cinematic-intro-overlay/);
   assert.doesNotMatch(css, /pixel-intro-overlay|pixel-vhs-header/);
 });

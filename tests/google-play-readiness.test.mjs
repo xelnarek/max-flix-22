@@ -10,16 +10,16 @@ test('mobile install metadata is complete and points to project-relative assets'
     read('../index.html'),
   ]);
   const manifest = JSON.parse(manifestText);
-  assert.equal(manifest.name, 'Paleciaki! Magazyn Chaosu');
-  assert.equal(manifest.short_name, 'Paleciaki!');
+  assert.equal(manifest.name, 'Warehouse MaDDnes');
+  assert.equal(manifest.short_name, 'Warehouse');
   assert.equal(manifest.display, 'standalone');
   assert.equal(manifest.start_url, './');
   assert.equal(manifest.scope, './');
   assert.ok(manifest.icons.some((icon) => icon.src === './icons/b4-icon.svg'));
   assert.match(html, /rel="manifest" href="\.\/manifest\.webmanifest"/);
   assert.match(html, /theme-color/);
-  assert.match(html, /<meta name="application-name" content="Paleciaki! Magazyn Chaosu" \/>/);
-  assert.match(html, /<meta name="apple-mobile-web-app-title" content="Paleciaki! Magazyn Chaosu" \/>/);
+  assert.match(html, /<meta name="application-name" content="Warehouse MaDDnes" \/>/);
+  assert.match(html, /<meta name="apple-mobile-web-app-title" content="Warehouse MaDDnes" \/>/);
   assert.equal((html.match(/<meta name="theme-color"/g) || []).length, 1);
   assert.doesNotMatch(html, /content="Operacja B4"/);
 });

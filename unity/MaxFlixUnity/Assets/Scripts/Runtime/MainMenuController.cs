@@ -78,10 +78,10 @@ namespace MaxFlix.Unity.Runtime
             float safeHeight = Screen.safeArea.height / canvasScale;
             float compactScale = Mathf.Clamp(safeHeight / 520f, 0.55f, 1f);
 
-            CreateText(safeRoot, "PALECIAKI!", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+            CreateText(safeRoot, "WAREHOUSE", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0.5f, 1f), new Vector2(0f, -28f * compactScale), new Vector2(900f, 66f * compactScale),
                 Mathf.RoundToInt(46f * compactScale), TextAnchor.MiddleCenter, new Color(0.97f, 0.98f, 1f));
-            CreateText(safeRoot, "MAGAZYN CHAOSU  •  SURVIVAL I KAMPANIA", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+            CreateText(safeRoot, "MaDDnes  •  SURVIVAL  •  PVP 1v1", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0.5f, 1f), new Vector2(0f, -93f * compactScale), new Vector2(900f, 36f * compactScale),
                 Mathf.RoundToInt(17f * compactScale), TextAnchor.MiddleCenter, new Color(0.48f, 0.78f, 0.92f));
 

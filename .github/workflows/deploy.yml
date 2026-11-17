@@ -1,4 +1,4 @@
-name: Deploy Paleciaki! Magazyn Chaosu to GitHub Pages
+name: Deploy Warehouse MaDDnes to GitHub Pages
 
 on:
   push:

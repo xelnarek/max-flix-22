@@ -13,8 +13,8 @@
  <path d="m188-280-76 124h65l-48 115 165-201h-73z" fill="#fff0aa" stroke="#f5b84f" stroke-width="12" stroke-linejoin="round"/>
 </g>
 <g font-family="system-ui, sans-serif" text-anchor="middle">
- <text x="512" y="782" fill="#fff4dc" font-size="96" font-weight="1000" letter-spacing="-5">PALECIAKI!</text>
- <text x="512" y="866" fill="#f5bd64" font-size="43" font-weight="900" letter-spacing="9">MAGAZYN CHAOSU</text>
- <text x="512" y="925" fill="#a7c7d1" font-size="22" font-weight="800" letter-spacing="6">KAMPANIA • SURVIVAL • HORDY</text>
+ <text x="512" y="782" fill="#fff4dc" font-size="82" font-weight="1000" letter-spacing="-3">WAREHOUSE</text>
+ <text x="512" y="866" fill="#f5bd64" font-size="74" font-weight="900" letter-spacing="5">MaDDnes</text>
+ <text x="512" y="925" fill="#a7c7d1" font-size="22" font-weight="800" letter-spacing="6">SURVIVAL • HORDY • EVOLUCJE BRONI</text>
 </g>
 </svg>

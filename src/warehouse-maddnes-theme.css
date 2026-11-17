@@ -1,0 +1,189 @@
+/* Warehouse MaDDnes — industrial arcade menu system. The layout stays touch-first. */
+#title-screen {
+  --wm-ink: #07111b;
+  --wm-panel: rgba(9, 20, 31, .96);
+  --wm-line: rgba(133, 178, 196, .22);
+  --wm-cyan: #6bd7e8;
+  --wm-amber: #f4bd67;
+}
+#title-screen .title-backdrop {
+  background: radial-gradient(ellipse at 50% 8%, rgba(53,132,151,.22), transparent 48%),
+    radial-gradient(ellipse at 8% 92%, rgba(190,119,53,.10), transparent 34%),
+    linear-gradient(135deg, rgba(3,9,15,.94), rgba(7,19,29,.98) 55%, rgba(4,11,18,.98)) !important;
+}
+#title-screen .title-sheet {
+  width: 100% !important; max-width: min(1120px,100vw) !important;
+  padding: clamp(10px,1.6vw,20px) !important; gap: clamp(7px,1vw,12px) !important;
+  border: 1px solid rgba(119,180,197,.20) !important; border-radius: 22px !important;
+  background: linear-gradient(155deg,rgba(17,35,49,.97),rgba(7,17,27,.97) 58%,rgba(8,19,29,.98)) !important;
+  box-shadow: 0 28px 80px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.055) !important;
+}
+#title-screen .menu-top-header {
+  position: relative; overflow: hidden; width: 100%;
+  align-items: center !important; gap: 5px !important;
+  padding: clamp(10px,1.5vw,18px) 12px 13px !important;
+  border: 1px solid rgba(108,174,190,.19); border-radius: 16px;
+  background: radial-gradient(ellipse at 50% -20%,rgba(85,180,194,.20),transparent 62%),
+    linear-gradient(180deg,rgba(14,33,46,.95),rgba(7,17,27,.90));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 12px 28px rgba(0,0,0,.18);
+}
+#title-screen .menu-top-header::before {
+  content: ""; position: absolute; left: 14px; right: 14px; bottom: 0; height: 1px;
+  background: linear-gradient(90deg,transparent,rgba(107,215,232,.42),rgba(244,189,103,.40),transparent);
+  pointer-events: none;
+}
+#title-screen .brand-badge-pill {
+  padding: 5px 12px !important; border: 1px solid rgba(107,215,232,.34) !important;
+  border-radius: 999px !important; background: rgba(4,15,24,.72) !important;
+  color: #bcecf1 !important; font: 800 9px/1.3 "JetBrains Mono",monospace !important;
+  letter-spacing: .16em !important; box-shadow: 0 0 18px rgba(72,177,196,.10),inset 0 1px 0 rgba(255,255,255,.05);
+}
+#title-screen .menu-game-title {
+  margin: 2px 0 0 !important; color: #f8fbfc !important;
+  font: 900 clamp(29px,4.1vw,48px)/.98 "Space Grotesk","Outfit",sans-serif !important;
+  letter-spacing: -.055em !important; text-transform: none;
+  text-shadow: 0 5px 22px rgba(0,0,0,.36),0 0 28px rgba(107,215,232,.12) !important;
+  -webkit-text-fill-color: #f8fbfc !important;
+}
+#title-screen .menu-game-title span {
+  color: #f4bd67 !important;
+  background: linear-gradient(105deg,#fff0cf 0%,#f5c16d 42%,#e59a48 100%);
+  background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent !important;
+  text-shadow: none;
+}
+#title-screen .menu-game-subtitle {
+  margin-top: 2px !important; color: #a9c3ce !important;
+  font: 700 clamp(8px,.88vw,10px)/1.45 "JetBrains Mono",monospace !important;
+  letter-spacing: .105em !important; text-shadow: none !important;
+}
+#title-screen .menu-release-strip { margin-top: 6px !important; gap: 6px !important; align-items: center; justify-content: center; }
+#title-screen .menu-release-strip > span {
+  border: 1px solid rgba(137,174,190,.17) !important; border-radius: 5px !important;
+  background: rgba(5,14,22,.70) !important; color: #9eb6c2 !important;
+  font: 700 8px/1.25 "JetBrains Mono",monospace !important; letter-spacing: .035em;
+}
+#title-screen .menu-release-strip .menu-release-pill {
+  border-color: rgba(244,189,103,.34) !important; background: rgba(125,76,31,.18) !important; color: #f2c47e !important;
+}
+#title-screen .menu-tabs-bar {
+  padding: 6px !important; gap: 5px !important; border: 1px solid rgba(125,171,189,.18) !important;
+  border-radius: 13px !important; background: linear-gradient(180deg,rgba(5,15,24,.96),rgba(10,22,33,.96)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04),0 8px 22px rgba(0,0,0,.18) !important;
+}
+#title-screen .menu-tab-btn {
+  min-height: 44px !important; border: 1px solid transparent !important; border-radius: 9px !important;
+  color: #a9bec8 !important; background: transparent !important;
+  transition: background 160ms ease,border-color 160ms ease,color 160ms ease,transform 160ms ease !important;
+}
+#title-screen .menu-tab-btn:hover { border-color: rgba(107,215,232,.20) !important; background: rgba(107,215,232,.07) !important; color: #eaf8fa !important; }
+#title-screen .menu-tab-btn.active {
+  border-color: rgba(107,215,232,.30) !important;
+  background: linear-gradient(135deg,rgba(48,132,150,.20),rgba(244,189,103,.07)) !important;
+  color: #dff9fb !important; box-shadow: inset 0 -2px 0 #6bd7e8,0 5px 18px rgba(0,0,0,.20) !important;
+}
+#title-screen #tab-team .char-grid { gap: clamp(8px,1vw,13px) !important; }
+#title-screen #tab-team .char-card {
+  position: relative; isolation: isolate; min-width: 0;
+  min-height: clamp(186px,21vh,224px) !important; padding: 12px 9px 14px !important; gap: 6px !important; overflow: hidden;
+  border: 1px solid rgba(126,165,184,.22) !important; border-radius: 15px !important;
+  background: linear-gradient(155deg,rgba(20,39,54,.96),rgba(7,17,28,.98) 72%) !important;
+  box-shadow: 0 10px 25px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.045) !important;
+  transition: transform 170ms ease,border-color 170ms ease,box-shadow 170ms ease,background 170ms ease !important;
+}
+#title-screen #tab-team .char-card::before {
+  content: ""; position: absolute; z-index: -1; inset: 0 0 auto; height: 3px;
+  background: linear-gradient(90deg,transparent,var(--operator-accent,#6bd7e8),transparent); opacity: .58;
+}
+#title-screen #tab-team .char-card::after {
+  content: ""; position: absolute; z-index: -1; width: 120px; height: 120px; top: -78px; right: -65px;
+  border-radius: 50%; background: var(--operator-accent,#6bd7e8); opacity: .055; filter: blur(14px); pointer-events: none;
+}
+#title-screen #tab-team .char-card:hover {
+  transform: translateY(-2px); border-color: color-mix(in srgb,var(--operator-accent,#6bd7e8) 52%,#193244) !important;
+}
+#title-screen #tab-team .char-card.active,
+#title-screen #tab-team .char-card[aria-pressed="true"] {
+  border-color: color-mix(in srgb,var(--operator-accent,#6bd7e8) 68%,#f4bd67) !important;
+  background: radial-gradient(ellipse at 50% 0%,color-mix(in srgb,var(--operator-accent,#6bd7e8) 17%,transparent),transparent 64%),
+    linear-gradient(155deg,rgba(22,43,58,.99),rgba(7,17,27,.99) 76%) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb,var(--operator-accent,#6bd7e8) 24%,transparent),
+    0 12px 28px rgba(0,0,0,.34),0 0 24px color-mix(in srgb,var(--operator-accent,#6bd7e8) 13%,transparent),
+    inset 0 1px 0 rgba(255,255,255,.08) !important;
+}
+#title-screen #tab-team .char-card-badge.operator-emblem {
+  display: grid !important; place-items: center; flex: 0 0 clamp(82px,7.3vw,96px) !important;
+  width: clamp(82px,7.3vw,96px) !important; height: clamp(82px,7.3vw,96px) !important;
+  margin: 4px 0 6px !important; padding: 2px !important; overflow: hidden;
+  border: 2px solid color-mix(in srgb,var(--operator-accent,#6bd7e8) 64%,transparent) !important;
+  border-radius: 18px !important; background: linear-gradient(145deg,rgba(17,39,54,.98),rgba(5,13,22,.98)) !important;
+  box-shadow: 0 8px 20px rgba(0,0,0,.30),0 0 16px color-mix(in srgb,var(--operator-accent,#6bd7e8) 16%,transparent),
+    inset 0 1px 0 rgba(255,255,255,.12);
+}
+#title-screen #tab-team .char-card-badge.operator-emblem .operator-portrait {
+  width: 100% !important; height: 100% !important; border-radius: 13px !important;
+  image-rendering: pixelated; filter: saturate(1.15) contrast(1.08) drop-shadow(0 2px 5px rgba(0,0,0,.30));
+}
+#title-screen #tab-team .char-card-name {
+  color: #f5f8fa !important; font: 900 clamp(12px,1.05vw,15px)/1.15 "Space Grotesk","Outfit",sans-serif !important;
+  letter-spacing: .015em; text-wrap: balance;
+}
+#title-screen #tab-team .char-card-role {
+  color: var(--operator-accent,#f4bd67) !important; font: 800 clamp(8px,.72vw,10px)/1.3 "JetBrains Mono",monospace !important;
+  letter-spacing: .035em; text-wrap: balance;
+}
+#title-screen #tab-team .char-card-ability {
+  max-width: 100%; color: #9eb5c0 !important; font: 600 clamp(7px,.65vw,9px)/1.35 "Plus Jakarta Sans",sans-serif !important;
+  text-wrap: balance;
+}
+#title-screen #tab-team .char-code-tag {
+  align-self: flex-start; border: 1px solid rgba(129,174,192,.18); border-radius: 4px;
+  padding: 3px 5px; background: rgba(2,10,17,.58); color: #8eaab6; font: 700 7px/1.2 "JetBrains Mono",monospace;
+  letter-spacing: .08em;
+}
+#title-screen #tab-team .char-details-box {
+  border: 1px solid rgba(124,174,190,.24) !important; border-radius: 15px !important;
+  background: radial-gradient(ellipse at 0 0,rgba(79,159,176,.10),transparent 50%),linear-gradient(145deg,rgba(9,23,35,.97),rgba(5,13,21,.97)) !important;
+  box-shadow: 0 12px 28px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.045) !important;
+}
+#title-screen .menu-fixed-bottom-bar {
+  border-top-color: rgba(118,171,190,.20) !important;
+  background: linear-gradient(180deg,rgba(8,18,28,.86),rgba(4,11,18,.98)) !important;
+}
+#title-screen .btn-primary-start {
+  border: 1px solid rgba(255,211,145,.45) !important; background: linear-gradient(105deg,#e7a84e,#f6cd7d 52%,#d8893d) !important;
+  color: #1b1b18 !important; box-shadow: 0 8px 22px rgba(179,111,42,.22),inset 0 1px 0 rgba(255,255,255,.38) !important;
+}
+#title-screen .btn-primary-start:hover { filter: brightness(1.06); transform: translateY(-1px); }
+@media (min-width: 641px) and (max-width: 900px) {
+  #title-screen #tab-team .char-grid { grid-template-columns: repeat(3,minmax(0,1fr)) !important; }
+  #title-screen #tab-team .char-card-badge.operator-emblem { width: 78px !important; height: 78px !important; flex-basis: 78px !important; }
+}
+@media (max-width: 640px) {
+  #title-screen .title-sheet {
+    border-radius: 0 !important; border-left: 0 !important; border-right: 0 !important;
+    padding: max(7px,env(safe-area-inset-top)) 8px max(7px,env(safe-area-inset-bottom)) !important; gap: 6px !important;
+  }
+  #title-screen .menu-top-header { padding: 7px 5px 8px !important; border-radius: 12px; gap: 3px !important; }
+  #title-screen .brand-badge-pill { padding: 3px 8px !important; font-size: 7px !important; letter-spacing: .10em !important; }
+  #title-screen .menu-game-title { font-size: clamp(24px,7vw,34px) !important; letter-spacing: -.05em !important; }
+  #title-screen .menu-game-subtitle { max-width: 100%; font-size: 6.8px !important; letter-spacing: .055em !important; }
+  #title-screen .menu-release-strip { gap: 3px !important; margin-top: 3px !important; }
+  #title-screen .menu-release-strip > span { min-height: 15px; padding: 2px 4px !important; font-size: 5.8px !important; }
+  #title-screen .menu-tabs-bar { border-radius: 10px !important; padding: 3px !important; }
+  #title-screen .menu-tab-btn { min-height: 32px !important; border-radius: 7px !important; font-size: 7px !important; }
+  #title-screen #tab-team .char-card { min-height: 166px !important; padding: 8px 5px 9px !important; gap: 4px !important; border-radius: 11px !important; }
+  #title-screen #tab-team .char-card-badge.operator-emblem {
+    width: clamp(58px,16vw,70px) !important; height: clamp(58px,16vw,70px) !important;
+    flex-basis: clamp(58px,16vw,70px) !important; margin: 1px 0 3px !important; border-radius: 12px !important;
+  }
+  #title-screen #tab-team .char-card-badge.operator-emblem .operator-portrait { border-radius: 8px !important; }
+  #title-screen #tab-team .char-card-name { font-size: clamp(10px,2.9vw,12px) !important; }
+  #title-screen #tab-team .char-card-role { font-size: clamp(6.7px,1.8vw,8px) !important; }
+  #title-screen #tab-team .char-card-ability { font-size: clamp(6px,1.6vw,7.2px) !important; -webkit-line-clamp: 2; }
+  #title-screen #tab-team .char-details-box { border-radius: 11px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #title-screen .menu-tab-btn, #title-screen #tab-team .char-card, #title-screen .btn-primary-start {
+    transition: none !important; animation: none !important; transform: none !important;
+  }
+}

@@ -52,7 +52,7 @@ namespace MaxFlix.Unity.Editor
 
             Check(PlayerSettings.companyName == "Paleciaki",
                 "Company name must remain Paleciaki.", failures);
-            Check(PlayerSettings.productName == "Paleciaki! Magazyn Chaosu",
+            Check(PlayerSettings.productName == "Warehouse MaDDnes",
                 "Product name does not match the shipping app identity.", failures);
             Check(PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.Android) == AndroidApplicationId,
                 "Android application ID must remain " + AndroidApplicationId + ".", failures);

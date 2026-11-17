@@ -442,7 +442,7 @@ const operatorPortrait = (id: CharacterId): string => {
       <!-- Face & Hair -->
       <rect x="5" y="11" width="3" height="4" fill="#3e2723"/>
       <rect x="24" y="11" width="3" height="4" fill="#3e2723"/>
-      <rect x="8" y="11" width="16" height="9" fill="#fcd34d"/>
+      <rect x="8" y="11" width="16" height="9" fill="#edc19b"/>
       <!-- Glasses (Cyan Wireframe) -->
       <rect x="9" y="13" width="5" height="4" fill="#075985"/>
       <rect x="10" y="14" width="3" height="2" fill="#38bdf8"/>
@@ -478,7 +478,7 @@ const operatorPortrait = (id: CharacterId): string => {
       <rect x="7" y="6" width="18" height="3" fill="#22c55e"/>
       <rect x="9" y="7" width="14" height="1" fill="#86efac"/>
       <!-- Face & Stubble Jaw -->
-      <rect x="8" y="9" width="16" height="11" fill="#fcd34d"/>
+      <rect x="8" y="9" width="16" height="11" fill="#dba27c"/>
       <rect x="8" y="16" width="16" height="4" fill="#d97706" opacity="0.4"/>
       <!-- Eyes & Heavy Brows -->
       <rect x="9" y="11" width="5" height="2" fill="#1c1917"/>
@@ -490,7 +490,7 @@ const operatorPortrait = (id: CharacterId): string => {
       <rect x="13" y="17" width="6" height="1" fill="#78350f"/>
       <!-- Tank Top & Body -->
       <rect x="6" y="20" width="20" height="11" fill="#15803d"/>
-      <rect x="12" y="20" width="8" height="4" fill="#fcd34d"/>
+      <rect x="12" y="20" width="8" height="4" fill="#dba27c"/>
       <!-- Massive Flexed 44cm Bicep -->
       <rect x="22" y="14" width="7" height="6" fill="#f59e0b"/>
       <rect x="24" y="13" width="5" height="8" fill="#fbbf24"/>
@@ -508,7 +508,7 @@ const operatorPortrait = (id: CharacterId): string => {
       <rect x="6" y="7" width="20" height="3" fill="#f97316"/>
       <rect x="4" y="9" width="5" height="2" fill="#c2410c"/> <!-- Cap Strap -->
       <!-- Face -->
-      <rect x="8" y="10" width="16" height="10" fill="#fcd34d"/>
+      <rect x="8" y="10" width="16" height="10" fill="#d6a17d"/>
       <!-- Yellow Safety Goggles -->
       <rect x="7" y="11" width="18" height="5" fill="#ca8a04"/>
       <rect x="8" y="12" width="7" height="3" fill="#fef08a"/>
@@ -538,7 +538,7 @@ const operatorPortrait = (id: CharacterId): string => {
       <!-- RGB Headset Band -->
       <rect x="9" y="3" width="14" height="2" fill="#ec4899"/>
       <!-- Face & Bangs -->
-      <rect x="9" y="10" width="14" height="9" fill="#fcd34d"/>
+      <rect x="9" y="10" width="14" height="9" fill="#e5b79a"/>
       <rect x="10" y="9" width="4" height="3" fill="#3b0764"/>
       <rect x="18" y="9" width="4" height="2" fill="#3b0764"/>
       <!-- RGB Earcups & Mic Boom -->
@@ -571,7 +571,7 @@ const operatorPortrait = (id: CharacterId): string => {
       <!-- Face & Grizzled Hair -->
       <rect x="7" y="10" width="3" height="4" fill="#78716c"/>
       <rect x="22" y="10" width="3" height="4" fill="#78716c"/>
-      <rect x="9" y="10" width="14" height="10" fill="#fcd34d"/>
+      <rect x="9" y="10" width="14" height="10" fill="#d4a486"/>
       <!-- Stern Eyes & Brows -->
       <rect x="10" y="12" width="4" height="1" fill="#44403c"/>
       <rect x="18" y="12" width="4" height="1" fill="#44403c"/>
@@ -595,6 +595,13 @@ const operatorPortrait = (id: CharacterId): string => {
     `;
   }
 
+  const signatureDetails: Record<CharacterId, string> = {
+    marcin: '<path d="M9 17h5m4 0h5M13 20h6" stroke="#9f674d" stroke-width="0.7"/><path d="M7 22h18" stroke="#9bd6e7" stroke-opacity=".42" stroke-width=".8"/><path d="M24 22h5" stroke="#fff4d3" stroke-opacity=".75" stroke-width=".8"/>',
+    grzesiek: '<path d="M25 15l-2 2 2 1-2 2M24 17l-1 .5M27 18l-2 1" fill="none" stroke="#8b3d32" stroke-width=".9"/><path d="M23 14l3-1" stroke="#ffe2bf" stroke-width=".8"/><path d="M8 24h16" stroke="#bbf7d0" stroke-opacity=".38" stroke-width=".8"/>',
+    dawid: '<path d="M8 12h5m6 0h5M10 14h3m7 0h3" stroke="#fff9dc" stroke-opacity=".9" stroke-width=".8"/><path d="M23 6l2-2 2 2" fill="none" stroke="#fff2cf" stroke-width=".8"/><path d="M23 23l5 5" stroke="#a3b4c0" stroke-width=".7"/>',
+    mateusz: '<path d="M5 11v5M27 11v5" stroke="#a5f3fc" stroke-width="1"/><path d="M6 18h4l2 2" fill="none" stroke="#67e8f9" stroke-width=".9"/><path d="M19 24l-2 3h2l-1 2 4-5h-2z" fill="#fde68a"/>',
+    piotr: '<path d="M10 17h4m4 0h4" stroke="#292524" stroke-width="1"/><path d="M8 6l4-1m10 1-4-1" stroke="#ffb4a9" stroke-width=".8"/><path d="M24 13v7m-2-7h4" stroke="#e2e8f0" stroke-width=".8"/>'
+  };
   return [
     '<svg class="operator-portrait pixel-art-portrait" viewBox="0 0 32 32" role="img" aria-label="Portret pixel art ' + m.name + '" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">',
     '<defs>',
@@ -612,7 +619,10 @@ const operatorPortrait = (id: CharacterId): string => {
     '<line x1="0" y1="20" x2="32" y2="20" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1"/>',
     '<line x1="0" y1="24" x2="32" y2="24" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1"/>',
     '<line x1="0" y1="28" x2="32" y2="28" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1"/>',
+    '<circle cx="16" cy="12" r="13" fill="' + m.accent + '" opacity=".08"/>',
     pixelLayers,
+    signatureDetails[id] || '',
+    '<path d="M2 22H30" stroke="#ffffff" stroke-opacity=".045" stroke-width=".5"/>',
     '</g>',
     '<!-- Arcade Neon Corner Accents -->',
     '<path d="M2 5V2H5M27 2H30V5M30 27V30H27M5 30H2V27" fill="none" stroke="' + m.secondary + '" stroke-width="1.2" shape-rendering="crispEdges"/>',
@@ -4843,7 +4853,7 @@ const injectThemeStyles = () => {
 };
 
 async function startApp() {
-  console.log('%c[App:Boot] 🚀 Start gry Paleciaki! Magazyn Chaosu...', 'color: #38bdf8; font-weight: bold;');
+  console.log('%c[App:Boot] 🚀 Start gry Warehouse MaDDnes...', 'color: #38bdf8; font-weight: bold;');
   injectThemeStyles();
 
   // The touch layer must not be a descendant of the WebGL shell: Android
@@ -5002,7 +5012,7 @@ async function startApp() {
 
     console.log('[App:Boot] 🛠️ Inicjalizacja silnika 3D (XR Blocks Core)...');
     const options = new xb.Options();
-    options.setAppTitle('Paleciaki! Magazyn Chaosu');
+    options.setAppTitle('Warehouse MaDDnes');
     
     // Explicitly disable all AR/XR features for desktop-only gameplay
     options.reticles.enabled = false;

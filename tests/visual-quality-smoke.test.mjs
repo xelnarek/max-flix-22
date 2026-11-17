@@ -6,9 +6,26 @@ const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
 test('game identity is consistently renamed in the title screen and engine boot', async () => {
   const [html, app] = await Promise.all([read('../index.html'), read('../src/index.ts')]);
-  assert.match(html, /<title>Paleciaki! Magazyn Chaosu<\/title>/);
-  assert.match(html, /PALECIAKI![\s\S]*MAGAZYN[\s\S]*CHAOSU/);
-  assert.match(app, /setAppTitle\('Paleciaki! Magazyn Chaosu'\)/);
+  assert.match(html, /<title>Warehouse MaDDnes<\/title>/);
+  assert.match(html, /WAREHOUSE[\s\S]*MaDDnes/);
+  assert.match(app, /setAppTitle\('Warehouse MaDDnes'\)/);
+});
+
+
+test('Warehouse MaDDnes menu uses the refined industrial theme and detailed operator portraits', async () => {
+  const [html, app, theme] = await Promise.all([
+    read('../index.html'),
+    read('../src/index.ts'),
+    read('../src/warehouse-maddnes-theme.css'),
+  ]);
+  assert.ok(html.includes('Warehouse MaDDnes'));
+  assert.ok(html.includes('WAREHOUSE <span>MaDDnes</span>'));
+  assert.ok(html.includes('warehouse-maddnes-theme.css'));
+  assert.ok(app.includes('const signatureDetails: Record<CharacterId, string>'));
+  assert.ok(theme.includes('#title-screen #tab-team .char-card.active'));
+  assert.ok(theme.includes('#title-screen #tab-team .char-card-badge.operator-emblem'));
+  assert.ok(theme.includes('@media (max-width: 640px)'));
+  assert.ok(theme.includes('prefers-reduced-motion: reduce'));
 });
 
 test('the five playable operator cards receive individual retro pixel-art portraits', async () => {

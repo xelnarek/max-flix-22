@@ -17,7 +17,7 @@ command -v keytool >/dev/null 2>&1 || fail "Nie znaleziono keytool. Zainstaluj J
 command -v base64 >/dev/null 2>&1 || fail "Nie znaleziono narzędzia base64."
 gh auth status --hostname github.com >/dev/null 2>&1 || fail "Brak aktywnego logowania GitHub CLI. Uruchom: gh auth login"
 
-printf '\nPaleciaki! Magazyn Chaosu — konfiguracja podpisywania AAB\n'
+printf '\nWarehouse MaDDnes — konfiguracja podpisywania AAB\n'
 printf 'Repozytorium: %s\n\n' "$REPOSITORY"
 read -r -p "Ścieżka do pliku .jks: " KEYSTORE_PATH
 KEYSTORE_PATH="${KEYSTORE_PATH/#\~/$HOME}"
