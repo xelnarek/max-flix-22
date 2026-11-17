@@ -94,6 +94,8 @@ export interface EnemyItem {
   x: number;
   y: number;
   z: number;
+  /** Horizontal body radius in world metres; refined after a GLB rig is fitted. */
+  collisionRadius?: number;
   startX: number;
   endX: number;
   speed: number;

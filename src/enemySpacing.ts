@@ -3,6 +3,14 @@ export interface EnemySpacingActor {
   readonly x: number;
   readonly z: number;
   readonly state?: string;
+  readonly type?: string;
+  readonly collisionRadius?: number;
+  readonly y?: number;
+}
+
+export interface MutableEnemySpacingActor extends EnemySpacingActor {
+  x: number;
+  z: number;
 }
 
 export interface HorizontalVector {
@@ -291,3 +299,109 @@ export function chooseSpacedSpawnPoint(
 
   return best;
 }
+
+/** Horizontal body radii in world metres for the visible gameplay silhouette. */
+const ENEMY_BODY_RADII: Readonly<Record<string, number>> = Object.freeze({
+  customer: 0.58, walczak: 1.02, forklift: 1.18, architect: 0.56,
+  inspector: 0.59, agv_robot: 0.74, handlowiec: 0.58, monter: 0.60,
+  piorun_dron: 0.46, elite_walczak_guard: 0.72, kurier: 0.60,
+  'przedstawiciel_włoski': 0.59, sztaplar_szalony: 0.68, krol_leto: 1.08,
+  pan_roman: 0.65, serwisant: 0.58, bosman_krakow: 0.86,
+  zombie_pracownik: 0.64, pomazaniec: 0.78, sebix_m: 0.74,
+  mutant_gamma_forklift: 1.08, radioactive_pip: 0.66, cyber_salesman: 0.70,
+});
+
+export const MAX_ENEMY_BODY_RADIUS = 1.45;
+
+/** Resolve a safe gameplay radius, optionally refined from a fitted rig. */
+export function getEnemyCollisionRadius(type: string, measuredRadius?: number): number {
+  const base = ENEMY_BODY_RADII[type] ?? 0.60;
+  if (!Number.isFinite(measuredRadius)) return base;
+  const measured = Math.max(0.42, Math.min(MAX_ENEMY_BODY_RADIUS, measuredRadius as number));
+  return Math.max(base * 0.82, Math.min(base * 1.22, measured));
+}
+
+/**
+ * Final deterministic crowd collision pass. Tactical steering still controls
+ * formation and grouping; this resolves actual body footprints after movement.
+ */
+export function resolveEnemyCrowdOverlaps<T extends MutableEnemySpacingActor>(
+  actors: readonly T[],
+  spatialIndex: EnemySpatialIndex<T>,
+  bounds: HorizontalArenaBounds,
+  clearance = 0.16,
+  passes = 2,
+  maximumCorrectionPerPass = 0.52,
+): number {
+  if (![bounds.minX, bounds.maxX, bounds.minZ, bounds.maxZ].every(Number.isFinite)) return 0;
+  const safeClearance = Number.isFinite(clearance) ? Math.max(0.06, Math.min(0.5, clearance)) : 0.16;
+  const safePasses = Number.isFinite(passes) ? Math.max(1, Math.min(4, Math.floor(passes))) : 2;
+  const maxCorrection = Number.isFinite(maximumCorrectionPerPass)
+    ? Math.max(0.08, Math.min(0.8, maximumCorrectionPerPass))
+    : 0.52;
+  const minX = Math.min(bounds.minX, bounds.maxX);
+  const maxX = Math.max(bounds.minX, bounds.maxX);
+  const minZ = Math.min(bounds.minZ, bounds.maxZ);
+  const maxZ = Math.max(bounds.minZ, bounds.maxZ);
+  let correctedPairs = 0;
+
+  for (let pass = 0; pass < safePasses; pass++) {
+    // Refresh between passes so crossing a grid cell cannot hide a contact.
+    spatialIndex.rebuild(actors);
+    for (const self of actors) {
+      if (self.state === 'defeated' || !Number.isFinite(self.x) || !Number.isFinite(self.z)) continue;
+      const selfRadius = getEnemyCollisionRadius(self.type ?? '', self.collisionRadius);
+      const nearby = spatialIndex.query(
+        self.x,
+        self.z,
+        selfRadius + MAX_ENEMY_BODY_RADIUS + safeClearance + maxCorrection,
+      );
+
+      for (const other of nearby) {
+        if (other.id <= self.id || other.state === 'defeated') continue;
+        if (![other.x, other.z].every(Number.isFinite)) continue;
+        // Drones and ground enemies may pass above/below one another.
+        if (Number.isFinite(self.y) && Number.isFinite(other.y) &&
+            Math.abs((self.y as number) - (other.y as number)) >= 1.15) continue;
+
+        const otherRadius = getEnemyCollisionRadius(other.type ?? '', other.collisionRadius);
+        const minimumDistance = selfRadius + otherRadius + safeClearance;
+        let dx = self.x - other.x;
+        let dz = self.z - other.z;
+        const distanceSquared = dx * dx + dz * dz;
+        if (distanceSquared >= minimumDistance * minimumDistance) continue;
+
+        let distance = Math.sqrt(distanceSquared);
+        if (distance < 1e-5) {
+          const angle = stablePairAngle(self.id, other.id);
+          const sign = self.id < other.id ? 1 : -1;
+          dx = Math.cos(angle) * sign;
+          dz = Math.sin(angle) * sign;
+          distance = 0;
+        } else {
+          dx /= distance;
+          dz /= distance;
+        }
+
+        const penetration = minimumDistance - distance;
+        const correction = Math.min(maxCorrection, penetration * 0.72);
+        const selfMass = selfRadius * selfRadius;
+        const otherMass = otherRadius * otherRadius;
+        const totalMass = Math.max(1e-5, selfMass + otherMass);
+        // The smaller body yields more; large bosses and vehicles stay planted.
+        const selfShare = otherMass / totalMass;
+        const otherShare = selfMass / totalMass;
+        const selfInset = Math.min(selfRadius * 0.72, (maxX - minX) * 0.25, (maxZ - minZ) * 0.25);
+        const otherInset = Math.min(otherRadius * 0.72, (maxX - minX) * 0.25, (maxZ - minZ) * 0.25);
+
+        self.x = Math.max(minX + selfInset, Math.min(maxX - selfInset, self.x + dx * correction * selfShare));
+        self.z = Math.max(minZ + selfInset, Math.min(maxZ - selfInset, self.z + dz * correction * selfShare));
+        other.x = Math.max(minX + otherInset, Math.min(maxX - otherInset, other.x - dx * correction * otherShare));
+        other.z = Math.max(minZ + otherInset, Math.min(maxZ - otherInset, other.z - dz * correction * otherShare));
+        correctedPairs++;
+      }
+    }
+  }
+  return correctedPairs;
+}
+

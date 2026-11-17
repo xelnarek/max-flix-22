@@ -4,6 +4,8 @@ import {
   EnemySpatialIndex,
   calculateEnemySeparationVector,
   chooseSpacedSpawnPoint,
+  getEnemyCollisionRadius,
+  resolveEnemyCrowdOverlaps,
   resolveEnemyPlayerSeparation,
 } from '../src/enemySpacing.ts';
 
@@ -232,4 +234,60 @@ test('Pomazaniec event spawn declines to choose a point when the whole arena is 
     [{ x: 0, z: 0, halfWidth: 20, halfDepth: 20 }],
     [],
   ), null);
+});
+
+
+test('body radii distinguish regular enemies from bulky bosses and vehicles', () => {
+  assert.ok(getEnemyCollisionRadius('walczak') > getEnemyCollisionRadius('customer'));
+  assert.ok(getEnemyCollisionRadius('forklift') > getEnemyCollisionRadius('kurier'));
+  assert.ok(getEnemyCollisionRadius('piorun_dron') < getEnemyCollisionRadius('customer'));
+});
+
+test('crowd solver separates coincident regular enemies deterministically', () => {
+  const actors = [
+    { id: 'enemy-a', type: 'customer', x: 0, y: 0.4, z: 0 },
+    { id: 'enemy-b', type: 'kurier', x: 0, y: 0.4, z: 0 },
+  ];
+  const firstPairs = resolveEnemyCrowdOverlaps(actors, new EnemySpatialIndex(4), testArena, 0.16, 3, 0.52);
+  assert.ok(firstPairs > 0);
+  assert.ok(Math.hypot(actors[0].x - actors[1].x, actors[0].z - actors[1].z) >= 1.2);
+  const first = actors.map(({x,z})=>({x,z}));
+  const again = [
+    { id: 'enemy-a', type: 'customer', x: 0, y: 0.4, z: 0 },
+    { id: 'enemy-b', type: 'kurier', x: 0, y: 0.4, z: 0 },
+  ];
+  resolveEnemyCrowdOverlaps(again, new EnemySpatialIndex(4), testArena, 0.16, 3, 0.52);
+  assert.deepEqual(again.map(({x,z})=>({x,z})), first);
+});
+
+test('bulky bosses reserve more room and remain inside arena bounds', () => {
+  const actors = [
+    { id: 'boss', type: 'walczak', x: 0, y: 0.6, z: 0 },
+    { id: 'small', type: 'kurier', x: 0.2, y: 0.4, z: 0 },
+  ];
+  resolveEnemyCrowdOverlaps(actors, new EnemySpatialIndex(4), testArena, 0.16, 5, 0.52);
+  const distance = Math.hypot(actors[0].x - actors[1].x, actors[0].z - actors[1].z);
+  assert.ok(distance >= getEnemyCollisionRadius('walczak') + getEnemyCollisionRadius('kurier') + 0.10);
+  for (const actor of actors) {
+    assert.ok(actor.x >= testArena.minX && actor.x <= testArena.maxX);
+    assert.ok(actor.z >= testArena.minZ && actor.z <= testArena.maxZ);
+  }
+});
+
+test('crowd solver ignores defeated and vertically separated actors', () => {
+  const actors = [
+    { id: 'ground', type: 'customer', x: 0, y: 0.4, z: 0 },
+    { id: 'drone', type: 'piorun_dron', x: 0, y: 1.9, z: 0 },
+    { id: 'dead', type: 'customer', x: 0, y: 0.4, z: 0, state: 'defeated' },
+  ];
+  resolveEnemyCrowdOverlaps(actors, new EnemySpatialIndex(4), testArena, 0.16, 2, 0.52);
+  assert.deepEqual({x:actors[0].x,z:actors[0].z},{x:0,z:0});
+  assert.deepEqual({x:actors[1].x,z:actors[1].z},{x:0,z:0});
+  assert.deepEqual({x:actors[2].x,z:actors[2].z},{x:0,z:0});
+});
+
+test('fitted visual footprints stay within a safe archetype-specific range', () => {
+  const radius = getEnemyCollisionRadius('customer', 50);
+  assert.ok(radius < 0.8);
+  assert.ok(radius >= getEnemyCollisionRadius('customer'));
 });
