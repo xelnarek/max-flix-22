@@ -266,6 +266,7 @@ namespace MaxFlix.Unity.Runtime
 
         private void ClearFactionBrawlVisual()
         {
+            _factionBrawlAttackFlashRemaining = 0f;
             if (_factionBrawlVisualRoot != null) Destroy(_factionBrawlVisualRoot);
             _factionBrawlVisualRoot = null;
             _factionBrawlRing = null;
