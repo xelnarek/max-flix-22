@@ -689,6 +689,7 @@ test('Unity Grzesiek missile component has homing, target reacquisition and boun
   assert.match(rocket, /enemy\.ApplyCombatHit\(_damage \* falloff/);
   assert.match(rocket, /TrailRenderer/);
   assert.match(rocket, /_exhaustGlow\.localScale/);
+  assert.match(rocket, /_retargetRemaining = _target != null \? 0\.12f : 0\.20f/);
   assert.match(rocket, /Rocket stabilizer/);
   assert.match(rocket, /OperatorImpactBurst\.Spawn/);
 });
@@ -699,6 +700,8 @@ test('Unity 44cm arm has articulated elbow/fist animation and a shared impact bu
   const burst = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorImpactBurst.cs');
   assert.match(kit, /_grzesiekElbowPivot\.localRotation/);
   assert.match(kit, /_grzesiekFistPivot\.localRotation/);
+  assert.match(kit, /if \(_player\.IsDefeated\)[\s\S]*?CleanupTransientSkillVisuals\(\)/);
+  assert.match(kit, /private void CleanupTransientSkillVisuals\(\)/);
   assert.match(kit, /Biceps peak|Biceps muscle/);
   assert.match(kit, /Raised knuckle/);
   assert.match(kit, /OperatorImpactBurst\.Spawn/);
