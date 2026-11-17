@@ -755,7 +755,7 @@ test('temporary special-effect meshes release generated GPU resources when their
   const checks = [
     { label: 'fire patch', marker: 'life: 0.58,\n      maxLife: 0.58,\n      disposeOnRemove: true,' },
     { label: 'first 44cm shockwave ring', marker: /this\.specialEffects\.push\(\{ mesh: ring, life: 0\.7, maxLife: 0\.7, grow: 7\.5, spin: 9\.0, disposeOnRemove: true \}\)/ },
-    { label: 'second 44cm shockwave ring', marker: /this\.specialEffects\.push\(\{ mesh: innerRing, life: 0\.62, maxLife: 0\.62, grow: 8\.2, spin: -7\.0, disposeOnRemove: true \}\) },
+    { label: 'second 44cm shockwave ring', marker: /this\.specialEffects\.push\(\{ mesh: innerRing, life: 0\.62, maxLife: 0\.62, grow: 8\.2, spin: -7\.0, disposeOnRemove: true \}\)/ },
     { label: 'Grzesiek claw', marker: 'mesh: armGroup,\n      life: 0.9,\n      maxLife: 0.9,\n      disposeOnRemove: true,' },
     { label: 'fireball flash', marker: 'mesh: flash,\n      life: 0.45,\n      maxLife: 0.45,\n      disposeOnRemove: true,' },
     { label: 'boss defeat ring', marker: 'this.specialEffects.push({ mesh, life: 1.2, maxLife: 1.2, grow: 12.0, spin: 15.0, disposeOnRemove: true });' },
