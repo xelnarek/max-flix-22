@@ -13024,8 +13024,10 @@ export class PaleciakiGameEngine {
     if (!isRetreating && !inHordeRing && engaged && role === 'ranged' && distanceToPlayer < preferredRadius - 1.0) {
       preferredRadius += 1.0;
     }
-    let targetX = anchorX + Math.sin(angle) * preferredRadius;
-    let targetZ = anchorZ + Math.cos(angle) * preferredRadius * (inHordeRing ? 0.62 : 1);
+    const targetX = anchorX + Math.sin(angle) * preferredRadius;
+    const targetZ = anchorZ + Math.cos(angle) * preferredRadius * (inHordeRing ? 0.62 : 1);
+    let movementTargetX = targetX;
+    let movementTargetZ = targetZ;
     if (isRetreating) {
       const retreatTarget = getSurvivalRetreatTarget({
         role,
@@ -13035,11 +13037,11 @@ export class PaleciakiGameEngine {
         enemyZ: enemy.z,
         slot,
       });
-      targetX = retreatTarget.x;
-      targetZ = retreatTarget.z;
+      movementTargetX = retreatTarget.x;
+      movementTargetZ = retreatTarget.z;
     }
-    let steerX = targetX - enemy.x;
-    let steerZ = targetZ - enemy.z;
+    let steerX = movementTargetX - enemy.x;
+    let steerZ = movementTargetZ - enemy.z;
     const steerLength = Math.hypot(steerX, steerZ);
 
     const nearbyEnemies = this.enemySpatialIndex.query(enemy.x, enemy.z, 4.1);
@@ -13047,7 +13049,7 @@ export class PaleciakiGameEngine {
     const separationLength = Math.hypot(separation.x, separation.z);
     const obstacleAvoidance = calculateEnemyObstacleAvoidanceVector(
       enemy,
-      { x: targetX, z: targetZ },
+      { x: movementTargetX, z: movementTargetZ },
       this.survivalObstacles,
       4.6,
       0.8,
