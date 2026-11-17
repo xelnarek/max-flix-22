@@ -110,7 +110,7 @@ export function findFirstProjectileEnemyImpact(
     }
   }
 
-  let first: ProjectileActorImpact | null = null;
+  let first: ProjectileEnemyImpact | null = null;
   for (const actor of enemies) {
     if (actor === owner || actor.state === 'defeated' || ![actor.x, actor.y, actor.z].every(Number.isFinite)) continue;
     const hit = findFirstProjectileBodyImpact(
