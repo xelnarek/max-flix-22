@@ -26,7 +26,7 @@ test('player movement blocks on enemy bodies and slides instead of tunnelling', 
 test('hostile projectiles stop at the first enemy body or the player along the swept segment', () => {
   assert.match(game, /findFirstProjectileEnemyImpact\(/);
   assert.match(game, /enemyImpact && \(!playerImpact \|\| enemyImpact\.t < playerImpact\.t\)/);
-  assert.match(game, /if \(hitsPlayer\)/);
+  assert.match(game, /if \(playerImpact\)/);
   assert.match(game, /this\.spawnCompactImpact\(enemyImpact\.x, enemyImpact\.y, enemyImpact\.z, impactColor\)/);
   assert.match(game, /previousX, y: previousY, z: previousZ/);
 });
