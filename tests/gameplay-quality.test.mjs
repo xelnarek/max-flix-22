@@ -419,8 +419,8 @@ test('campaign chase and Survival steering both apply stable enemy separation', 
   const game = await read('../src/game.ts');
   assert.ok((game.match(/calculateEnemySeparationVector\(/g) || []).length >= 2);
   assert.ok((game.match(/calculateStableEnemySteering\(/g) || []).length >= 2);
-  assert.match(game, /separationWeight: inContactLane \? 0\.52 : 0\.82/);
-  assert.match(game, /separationWeight: 0\.72/);
+  assert.match(game, /steeringInput\.separationWeight = inContactLane \? 0\.52 : 0\.82/);
+  assert.match(game, /steeringInput\.separationWeight = 0\.72/);
   assert.match(game, /e\.aiSteerX = move\.x/);
   assert.match(game, /enemy\.aiSteerX = steerX/);
 });
@@ -563,15 +563,18 @@ test('Survival crowd steering blends stable pursuit, formation spacing and obsta
   const tactics = game.slice(start, end);
   assert.match(tactics, /calculateEnemyObstacleAvoidanceVector\([\s\S]*?\{ x: movementTargetX, z: movementTargetZ \}[\s\S]*?this\.survivalObstacles[\s\S]*?4\.6[\s\S]*?0\.8/);
   assert.match(tactics, /calculateStableEnemySteering\(/);
-  assert.match(tactics, /previous: \{ x: enemy\.aiSteerX \?\? 0, z: enemy\.aiSteerZ \?\? 0 \}/);
-  assert.match(tactics, /separationWeight: 0\.72/);
+  assert.match(tactics, /steeringInput\.previous\.x = enemy\.aiSteerX \?\? 0/);
+  assert.match(tactics, /steeringInput\.previous\.z = enemy\.aiSteerZ \?\? 0/);
+  assert.match(tactics, /steeringInput\.separationWeight = 0\.72/);
   assert.match(tactics, /enemy\.aiSteerX = steerX/);
   assert.match(tactics, /getEnemyEngageRadius\(role\)/);
   assert.doesNotMatch(tactics, /for \(const obstacle of this\.survivalObstacles\)/);
   assert.match(tactics, /const shouldHoldFormation = atFormationSlot && separationLength < 0\.34 && !hasProjectileDodge/);
   assert.match(tactics, /isTelegraphingRangedBoss \|\| shouldHoldFormation/);
   assert.match(tactics, /calculateEnemyProjectileDodge\(enemy, this\.projectiles/);
-  assert.match(tactics, /evasion: projectileDodge/);
+  assert.match(tactics, /const projectileDodge = this\.enemyProjectileDodgeScratch/);
+  assert.match(tactics, /steeringInput\.evasionWeight = evasionWeight/);
+  assert.match(game, /evasion: this\.enemyProjectileDodgeScratch/);
 });
 
 

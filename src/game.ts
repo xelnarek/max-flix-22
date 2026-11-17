@@ -613,6 +613,20 @@ export class PaleciakiGameEngine {
   private readonly enemyProjectileEnemyImpactScratch: ProjectileEnemyImpactScratch = { t: 0, x: 0, y: 0, z: 0, actor: null };
   private readonly enemySeparationScratch = { x: 0, z: 0 };
   private readonly enemyObstacleAvoidanceScratch = { x: 0, z: 0 };
+  private readonly enemyProjectileDodgeScratch = { x: 0, z: 0 };
+  private readonly enemySteeringOutputScratch = { x: 0, z: 0 };
+  private readonly enemySteeringInputScratch = {
+    chase: { x: 0, z: 0 },
+    separation: this.enemySeparationScratch,
+    avoidance: this.enemyObstacleAvoidanceScratch,
+    previous: { x: 0, z: 0 },
+    evasion: this.enemyProjectileDodgeScratch,
+    dt: 0,
+    separationWeight: 0,
+    avoidanceWeight: 0,
+    evasionWeight: 0,
+    response: 0,
+  };
   private readonly cameraOcclusionWorldPosition = new THREE.Vector3();
   private readonly cameraOcclusionRaycaster = new THREE.Raycaster();
   private readonly cameraOcclusionHits: THREE.Intersection<THREE.Object3D>[] = [];
@@ -13142,9 +13156,14 @@ export class PaleciakiGameEngine {
         enemy.aiDodgeTimer = 0.28;
       }
     }
-    const projectileDodge = !isTelegraphingRangedBoss && (enemy.aiDodgeTimer ?? 0) > 0
-      ? { x: enemy.aiDodgeX ?? 0, z: enemy.aiDodgeZ ?? 0 }
-      : { x: 0, z: 0 };
+    const projectileDodge = this.enemyProjectileDodgeScratch;
+    if (!isTelegraphingRangedBoss && (enemy.aiDodgeTimer ?? 0) > 0) {
+      projectileDodge.x = enemy.aiDodgeX ?? 0;
+      projectileDodge.z = enemy.aiDodgeZ ?? 0;
+    } else {
+      projectileDodge.x = 0;
+      projectileDodge.z = 0;
+    }
     const hasProjectileDodge = Math.hypot(projectileDodge.x, projectileDodge.z) > 0.08;
     const evasionWeight = role === 'bruiser' ? 0.48
       : role === 'flanker' ? 0.92
@@ -13155,22 +13174,31 @@ export class PaleciakiGameEngine {
     // held unless crowd pressure or a real incoming shot requires movement.
     const atFormationSlot = steerLength < 0.24;
     const shouldHoldFormation = atFormationSlot && separationLength < 0.34 && !hasProjectileDodge;
-    const steering = isTelegraphingRangedBoss || shouldHoldFormation
-      ? { x: 0, z: 0 }
-      : calculateStableEnemySteering({
-          chase: steerLength > 0.24
-            ? { x: steerX, z: steerZ }
-            : separationLength >= 0.34 ? separation : projectileDodge,
-          separation,
-          avoidance: obstacleAvoidance,
-          evasion: projectileDodge,
-          evasionWeight,
-          previous: { x: enemy.aiSteerX ?? 0, z: enemy.aiSteerZ ?? 0 },
-          dt,
-          separationWeight: 0.72,
-          avoidanceWeight: 0.78,
-          response: hasProjectileDodge ? 10.5 : 6.5,
-        });
+    const steering = this.enemySteeringOutputScratch;
+    if (isTelegraphingRangedBoss || shouldHoldFormation) {
+      steering.x = 0;
+      steering.z = 0;
+    } else {
+      const steeringInput = this.enemySteeringInputScratch;
+      if (steerLength > 0.24) {
+        steeringInput.chase.x = steerX;
+        steeringInput.chase.z = steerZ;
+      } else if (separationLength >= 0.34) {
+        steeringInput.chase.x = separation.x;
+        steeringInput.chase.z = separation.z;
+      } else {
+        steeringInput.chase.x = projectileDodge.x;
+        steeringInput.chase.z = projectileDodge.z;
+      }
+      steeringInput.previous.x = enemy.aiSteerX ?? 0;
+      steeringInput.previous.z = enemy.aiSteerZ ?? 0;
+      steeringInput.dt = dt;
+      steeringInput.separationWeight = 0.72;
+      steeringInput.avoidanceWeight = 0.78;
+      steeringInput.evasionWeight = evasionWeight;
+      steeringInput.response = hasProjectileDodge ? 10.5 : 6.5;
+      calculateStableEnemySteering(steeringInput, steering);
+    }
     steerX = steering.x;
     steerZ = steering.z;
     enemy.aiSteerX = steerX;
@@ -14707,18 +14735,29 @@ export class PaleciakiGameEngine {
             const attackDistance = Math.max(1.10, getEnemyPlayerContactDistance(e.type) + 0.10);
             const inContactLane = distToPlayer <= attackDistance + 0.08;
             const separationLength = Math.hypot(separation.x, separation.z);
-            const move = inContactLane && separationLength < 0.34
-              ? { x: 0, z: 0 }
-              : calculateStableEnemySteering({
-                  chase: inContactLane ? separation : { x: dx, z: dz },
-                  separation,
-                  avoidance: inContactLane ? { x: 0, z: 0 } : avoidance,
-                  previous: { x: e.aiSteerX ?? 0, z: e.aiSteerZ ?? 0 },
-                  dt,
-                  separationWeight: inContactLane ? 0.52 : 0.82,
-                  avoidanceWeight: inContactLane ? 0.0 : 0.88,
-                  response: 7.2,
-                });
+            const move = this.enemySteeringOutputScratch;
+            if (inContactLane && separationLength < 0.34) {
+              move.x = 0;
+              move.z = 0;
+            } else {
+              const steeringInput = this.enemySteeringInputScratch;
+              steeringInput.chase.x = inContactLane ? separation.x : dx;
+              steeringInput.chase.z = inContactLane ? separation.z : dz;
+              steeringInput.previous.x = e.aiSteerX ?? 0;
+              steeringInput.previous.z = e.aiSteerZ ?? 0;
+              steeringInput.evasion.x = 0;
+              steeringInput.evasion.z = 0;
+              if (inContactLane) {
+                this.enemyObstacleAvoidanceScratch.x = 0;
+                this.enemyObstacleAvoidanceScratch.z = 0;
+              }
+              steeringInput.dt = dt;
+              steeringInput.separationWeight = inContactLane ? 0.52 : 0.82;
+              steeringInput.avoidanceWeight = inContactLane ? 0.0 : 0.88;
+              steeringInput.evasionWeight = 0;
+              steeringInput.response = 7.2;
+              calculateStableEnemySteering(steeringInput, move);
+            }
             e.aiSteerX = move.x;
             e.aiSteerZ = move.z;
             // Slow down smoothly while approaching the contact band. Once in

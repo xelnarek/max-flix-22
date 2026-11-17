@@ -82,7 +82,9 @@ test('Survival enemies scan for incoming player shots and commit a short role-we
   assert.match(tactics, /enemy\.aiDodgeScanTimer = 0\.12/);
   assert.match(tactics, /enemy\.aiDodgeTimer = 0\.28/);
   assert.match(tactics, /evasionWeight = role === 'bruiser'/);
-  assert.match(tactics, /evasion: projectileDodge/);
+  assert.match(tactics, /const projectileDodge = this\.enemyProjectileDodgeScratch/);
+  assert.match(tactics, /steeringInput\.evasionWeight = evasionWeight/);
+  assert.match(game, /evasion: this\.enemyProjectileDodgeScratch/);
   assert.match(tactics, /hasProjectileDodge \? 0\.76/);
   assert.match(types, /aiDodgeScanTimer\?: number/);
 });
