@@ -337,6 +337,8 @@ namespace MaxFlix.Unity.Runtime
                 float x = -0.25f + knuckle * 0.17f;
                 CreatePart(fist, PrimitiveType.Capsule, "Curled finger " + (knuckle + 1),
                     new Vector3(x, 0.035f, 0.12f), new Vector3(0.17f, 0.28f, 0.17f), muscle);
+                Transform fingerPart = fist.Find("Curled finger " + (knuckle + 1));
+                if (fingerPart != null) fingerPart.localRotation = Quaternion.Euler(90f, 0f, (knuckle - 1.5f) * -4f);
                 CreatePart(fist, PrimitiveType.Sphere, "Raised knuckle " + (knuckle + 1),
                     new Vector3(x, 0.17f, 0.23f), new Vector3(0.22f, 0.20f, 0.18f), highlight);
                 CreatePart(fist, PrimitiveType.Cube, "Knuckle crease " + (knuckle + 1),
@@ -460,8 +462,12 @@ namespace MaxFlix.Unity.Runtime
             CreateContractText(_contractRight, "EGZEMPLARZ 09", new Vector3(0.23f, -0.31f, 0.05f), ink);
             CreatePart(_contractLeft, PrimitiveType.Cylinder, "Left red cancellation seal",
                 new Vector3(-0.23f, -0.12f, 0.052f), new Vector3(0.19f, 0.018f, 0.19f), red);
+            Transform leftSeal = _contractLeft.Find("Left red cancellation seal");
+            if (leftSeal != null) leftSeal.localRotation = Quaternion.Euler(90f, 0f, 0f);
             CreatePart(_contractRight, PrimitiveType.Cylinder, "Right red cancellation seal",
                 new Vector3(0.23f, -0.12f, 0.052f), new Vector3(0.19f, 0.018f, 0.19f), red);
+            Transform rightSeal = _contractRight.Find("Right red cancellation seal");
+            if (rightSeal != null) rightSeal.localRotation = Quaternion.Euler(90f, 0f, 0f);
             CreatePart(_contractEffectRoot.transform, PrimitiveType.Cube, "Torn centre seam",
                 new Vector3(0f, 0f, 0.06f), new Vector3(0.035f, 0.88f, 0.04f), red);
             CreateContractText(_contractEffectRoot.transform, "MAM WYJEBANE",
