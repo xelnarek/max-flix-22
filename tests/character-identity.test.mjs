@@ -104,7 +104,7 @@ test('engine drives class-specific attack poses and low-cost footprint effects',
   const { readFile } = await import('node:fs/promises');
   const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
   assert.match(game, /getCharacterAttackMotionProfile\(charId\)\.durationSeconds/);
-  assert.match(game, /getAttackPoseStrength\(progress\)/);
+  assert.match(game, /getAttackPoseStrength\(progress,\s*attackProfile\)/);
   assert.match(game, /attackProfile\.leftArmX/);
   assert.match(game, /attackProfile\.torsoTwist/);
   assert.match(game, /stepProfile\.footstepColor/);

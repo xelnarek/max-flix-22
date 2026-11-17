@@ -87,3 +87,6 @@ test('contact velocity projection preserves tangent and outward momentum', () =>
   const outward = projectVelocityOutOfEnemyContacts({ x: 2, z: 0 }, [{ x: 1, z: 0 }]);
   assert.deepEqual(outward, { x: 2, z: 0 });
 });
+
+test('high-speed movement cannot tunnel through a living enemy',()=>{const e={id:'fast-blocker',type:'inspector',x:0,y:0.5,z:0,state:'chase'},r=resolvePlayerMovementAgainstEnemies({x:-8,z:0},{x:8,z:0},0.5,[e]);assert.equal(r.collided,true);assert.ok(r.x<0);assert.ok(Math.hypot(r.x-e.x,r.z-e.z)>=getEnemyPlayerContactDistance(e.type)-1e-5);});
+test('crowd collision result is independent of enemy array order',()=>{const es=[{id:'b-front',type:'inspector',x:0.1,y:0.5,z:-0.75,state:'chase'},{id:'a-left',type:'forklift',x:-0.7,y:0.5,z:0.55,state:'chase'},{id:'c-rear',type:'kurier',x:0.9,y:0.5,z:1.25,state:'chase'}],s={x:-3,z:-2},d={x:3,z:2.5},a=resolvePlayerMovementAgainstEnemies(s,d,0.5,es),b=resolvePlayerMovementAgainstEnemies(s,d,0.5,[...es].reverse());assert.ok(Math.abs(a.x-b.x)<1e-9);assert.ok(Math.abs(a.z-b.z)<1e-9);assert.deepEqual(a.contactNormals,b.contactNormals);});

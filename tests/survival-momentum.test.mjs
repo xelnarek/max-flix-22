@@ -8,6 +8,7 @@ import {
   getSurvivalMomentumRateMultiplier,
   registerSurvivalKill,
   SURVIVAL_KILL_STREAK_TARGET,
+  SURVIVAL_COMBO_REWARD_THRESHOLD,
   SURVIVAL_KILL_STREAK_WINDOW_SECONDS,
   SURVIVAL_OVERDRIVE_COOLDOWN_SECONDS,
   SURVIVAL_OVERDRIVE_DURATION_SECONDS,
@@ -61,3 +62,6 @@ test('Overdrive boosts remain modest, deterministic and bounded', () => {
   assert.equal(getSurvivalMomentumDamageMultiplier(Number.NaN), 1);
   assert.equal(getSurvivalMomentumMoveMultiplier(-5), 1);
 });
+
+test('three quick eliminations grant a modest chain bonus before Overdrive',()=>{let state=createSurvivalMomentumState(),result;for(let i=0;i<SURVIVAL_COMBO_REWARD_THRESHOLD;i++){result=registerSurvivalKill(state);state=result.state;}assert.equal(result.comboMilestone,3);assert.equal(result.overdriveStarted,false);assert.equal(state.killStreak,3);assert.equal(getSurvivalMomentumRateMultiplier(0,3),1.06);assert.equal(getSurvivalMomentumDamageMultiplier(0,3),1.04);assert.equal(getSurvivalMomentumMoveMultiplier(0,3),1.025);});
+test('the sixth elimination still activates the original Overdrive',()=>{let state=createSurvivalMomentumState(),result;for(let i=0;i<SURVIVAL_KILL_STREAK_TARGET;i++){result=registerSurvivalKill(state);state=result.state;}assert.equal(result.overdriveStarted,true);assert.equal(result.comboMilestone,SURVIVAL_KILL_STREAK_TARGET);assert.equal(getSurvivalMomentumRateMultiplier(state.overdriveRemainingSeconds,state.killStreak),1.18);assert.equal(getSurvivalMomentumDamageMultiplier(state.overdriveRemainingSeconds,state.killStreak),1.12);assert.equal(getSurvivalMomentumMoveMultiplier(state.overdriveRemainingSeconds,state.killStreak),1.07);});
