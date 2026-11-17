@@ -1,75 +1,13 @@
-export interface EnemyHitReaction {
-  duration: number;
-  strength: number;
-  impulseX: number;
-  impulseZ: number;
+import type {EnemyType}from'./types.ts';
+export interface EnemyHitReaction{duration:number;strength:number;impulseX:number;impulseZ:number;}
+type EnemyHitStyle='light'|'standard'|'heavy'|'boss';
+function getEnemyHitStyle(enemy:EnemyType|boolean=false):EnemyHitStyle{if(enemy===true||['walczak','krol_leto','bosman_krakow','sebix_m'].includes(enemy as string))return'boss';if(['forklift','agv_robot','sztaplar_szalony','mutant_gamma_forklift'].includes(enemy as string))return'heavy';if(['kurier','piorun_dron','pomazaniec','serwisant'].includes(enemy as string))return'light';return'standard';}
+export function createEnemyHitReaction(enemyX:number,enemyZ:number,sourceX:number,sourceZ:number,damage:number,enemy:EnemyType|boolean=false):EnemyHitReaction{
+ const style=getEnemyHitStyle(enemy),dx=Number.isFinite(enemyX-sourceX)?enemyX-sourceX:0,dz=Number.isFinite(enemyZ-sourceZ)?enemyZ-sourceZ:0,d=Math.hypot(dx,dz),nx=d>0.0001?dx/d:1,nz=d>0.0001?dz/d:0,dmg=Number.isFinite(damage)?Math.max(0,damage):0,scale=Math.min(1.4,0.8+dmg*0.12);
+ const duration=style==='boss'?0.18:style==='heavy'?0.28:style==='light'?0.19:0.24,maxS=style==='boss'?0.105:style==='heavy'?0.155:style==='light'?0.22:0.18,baseS=style==='boss'?0.073:style==='heavy'?0.088:style==='light'?0.112:0.095,baseI=style==='boss'?0.32:style==='heavy'?0.36:style==='light'?0.66:0.58,scaleI=style==='boss'?0.04:style==='heavy'?0.06:style==='light'?0.10:0.14;
+ const impulse=style==='boss'?Math.min(0.56,0.32+dmg*0.04):style==='heavy'?Math.min(0.68,baseI+dmg*scaleI):style==='light'?Math.min(1.0,baseI+dmg*scaleI):Math.min(1.2,baseI+dmg*scaleI);
+ return{duration,strength:Math.min(maxS,baseS*scale),impulseX:nx*impulse,impulseZ:nz*impulse};
 }
-
-/** Create a short, bounded recoil and squash response for a confirmed hit. */
-export function createEnemyHitReaction(
-  enemyX: number,
-  enemyZ: number,
-  sourceX: number,
-  sourceZ: number,
-  damage: number,
-  isBoss = false,
-): EnemyHitReaction {
-  const dx = Number.isFinite(enemyX - sourceX) ? enemyX - sourceX : 0;
-  const dz = Number.isFinite(enemyZ - sourceZ) ? enemyZ - sourceZ : 0;
-  const distance = Math.hypot(dx, dz);
-  const directionX = distance > 0.0001 ? dx / distance : 1;
-  const directionZ = distance > 0.0001 ? dz / distance : 0;
-  const safeDamage = Number.isFinite(damage) ? Math.max(0, damage) : 0;
-  const damageScale = Math.min(1.4, 0.8 + safeDamage * 0.12);
-  const strength = Math.min(isBoss ? 0.105 : 0.18, (isBoss ? 0.073 : 0.095) * damageScale);
-  const impulse = isBoss
-    ? Math.min(0.56, 0.32 + safeDamage * 0.04)
-    : Math.min(1.2, 0.58 + safeDamage * 0.14);
-
-  return {
-    duration: isBoss ? 0.18 : 0.24,
-    strength,
-    impulseX: directionX * impulse,
-    impulseZ: directionZ * impulse,
-  };
-}
-
-/** Smooth 0..1 pulse envelope; 0 at both ends and 1 at the midpoint. */
-export function getEnemyHitPulse(timer: number, duration: number): number {
-  if (!Number.isFinite(timer) || !Number.isFinite(duration) || duration <= 0 || timer <= 0) return 0;
-  const progress = Math.max(0, Math.min(1, timer / duration));
-  if (progress <= 0 || progress >= 1) return 0;
-  return Math.sin(progress * Math.PI);
-}
-
-
-export interface EnemyImpactBurstProfile {
-  particleCount: number;
-  particleScale: number;
-  particleSpeed: number;
-  duration: number;
-}
-
-/** Bounded hit sparks; mobile quality tiers reduce particle count, never combat feedback. */
-export function getEnemyImpactBurstProfile(
-  damage: number,
-  isBoss = false,
-  isMobile = false,
-  effectsTier = 0,
-): EnemyImpactBurstProfile {
-  const safeDamage = Number.isFinite(damage) ? Math.max(0, damage) : 0;
-  const tier = Number.isFinite(effectsTier)
-    ? Math.max(0, Math.min(2, Math.floor(effectsTier)))
-    : 1;
-  const intensity = Math.min(1.45, 0.82 + Math.min(8, safeDamage) * 0.075);
-  const particleCount = isMobile
-    ? (tier >= 2 ? 1 : tier === 1 ? 2 : isBoss ? 3 : 2)
-    : (isBoss ? 5 : safeDamage >= 3 ? 4 : 3);
-
-  return {
-    particleCount,
-    particleScale: (0.044 + intensity * 0.018) * (isBoss ? 1.12 : 1),
-    particleSpeed: Math.min(4.2, 2.25 + intensity * 1.2),
-    duration: isBoss ? 0.24 : 0.19,
-  };
-}
+export function getEnemyHitPulse(timer:number,duration:number,enemy:EnemyType|boolean=false):number{if(!Number.isFinite(timer)||!Number.isFinite(duration)||duration<=0||timer<=0)return 0;const p=Math.max(0,Math.min(1,1-timer/duration));if(p<=0||p>=1)return 0;const style=getEnemyHitStyle(enemy),base=Math.sin(p*Math.PI),exp=style==='light'?0.72:style==='heavy'?1.48:style==='boss'?0.88:1;return Math.pow(base,exp);}
+export interface EnemyImpactBurstProfile{particleCount:number;particleScale:number;particleSpeed:number;duration:number;}
+export function getEnemyImpactBurstProfile(damage:number,isBoss=false,isMobile=false,effectsTier=0):EnemyImpactBurstProfile{const d=Number.isFinite(damage)?Math.max(0,damage):0,tier=Number.isFinite(effectsTier)?Math.max(0,Math.min(2,Math.floor(effectsTier))):1,intensity=Math.min(1.45,0.82+Math.min(8,d)*0.075),count=isMobile?(tier>=2?1:tier===1?2:isBoss?3:2):(isBoss?5:d>=3?4:3);return{particleCount:count,particleScale:(0.044+intensity*0.018)*(isBoss?1.12:1),particleSpeed:Math.min(4.2,2.25+intensity*1.2),duration:isBoss?0.24:0.19};}

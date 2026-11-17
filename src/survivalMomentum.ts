@@ -6,6 +6,7 @@ export interface SurvivalMomentumState {
 }
 
 export const SURVIVAL_KILL_STREAK_TARGET = 6;
+export const SURVIVAL_COMBO_REWARD_THRESHOLD = 3;
 export const SURVIVAL_KILL_STREAK_WINDOW_SECONDS = 4.5;
 export const SURVIVAL_OVERDRIVE_DURATION_SECONDS = 6;
 export const SURVIVAL_OVERDRIVE_COOLDOWN_SECONDS = 24;
@@ -42,7 +43,7 @@ export function advanceSurvivalMomentum(
 /** Register one confirmed Survival elimination; a chain never pauses or stacks its own cooldown. */
 export function registerSurvivalKill(
   state: SurvivalMomentumState
-): { state: SurvivalMomentumState; overdriveStarted: boolean } {
+): { state: SurvivalMomentumState; overdriveStarted: boolean; comboMilestone: number } {
   const activeWindow = finiteSeconds(state.killStreakRemainingSeconds);
   const killStreak = activeWindow > 0
     ? Math.max(0, Math.floor(Number.isFinite(state.killStreak) ? state.killStreak : 0)) + 1
@@ -58,6 +59,7 @@ export function registerSurvivalKill(
         overdriveCooldownRemainingSeconds: SURVIVAL_OVERDRIVE_COOLDOWN_SECONDS,
       },
       overdriveStarted: true,
+      comboMilestone: SURVIVAL_KILL_STREAK_TARGET,
     };
   }
 
@@ -71,17 +73,11 @@ export function registerSurvivalKill(
       overdriveCooldownRemainingSeconds: cooldown,
     },
     overdriveStarted: false,
+    comboMilestone: killStreak === SURVIVAL_COMBO_REWARD_THRESHOLD ? SURVIVAL_COMBO_REWARD_THRESHOLD : 0,
   };
 }
 
-export function getSurvivalMomentumRateMultiplier(overdriveRemainingSeconds: number): number {
-  return finiteSeconds(overdriveRemainingSeconds) > 0 ? 1.18 : 1;
-}
-
-export function getSurvivalMomentumDamageMultiplier(overdriveRemainingSeconds: number): number {
-  return finiteSeconds(overdriveRemainingSeconds) > 0 ? 1.12 : 1;
-}
-
-export function getSurvivalMomentumMoveMultiplier(overdriveRemainingSeconds: number): number {
-  return finiteSeconds(overdriveRemainingSeconds) > 0 ? 1.07 : 1;
-}
+function activeCombo(killStreak:number):boolean{return Number.isFinite(killStreak)&&Math.floor(killStreak)>=SURVIVAL_COMBO_REWARD_THRESHOLD;}
+export function getSurvivalMomentumRateMultiplier(overdriveRemainingSeconds:number,killStreak=0):number{if(finiteSeconds(overdriveRemainingSeconds)>0)return 1.18;return activeCombo(killStreak)?1.06:1;}
+export function getSurvivalMomentumDamageMultiplier(overdriveRemainingSeconds:number,killStreak=0):number{if(finiteSeconds(overdriveRemainingSeconds)>0)return 1.12;return activeCombo(killStreak)?1.04:1;}
+export function getSurvivalMomentumMoveMultiplier(overdriveRemainingSeconds:number,killStreak=0):number{if(finiteSeconds(overdriveRemainingSeconds)>0)return 1.07;return activeCombo(killStreak)?1.025:1;}

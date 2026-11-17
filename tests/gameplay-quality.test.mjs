@@ -1264,10 +1264,11 @@ test('Survival can trigger a temporary forklift convoy event with a mobile-safe 
 test('Crimsonland-style Survival Overdrive is chained, timed and surfaced in the existing compact HUD', async () => {
   const [game, app] = await Promise.all([read('../src/game.ts'), read('../src/index.ts')]);
   assert.match(game, /registerSurvivalKill\(this\.survivalMomentum\)/);
+  assert.match(game, /momentumResult\.comboMilestone === 3/);
   assert.match(game, /advanceSurvivalMomentum\(this\.survivalMomentum, simDt\)/);
-  assert.match(game, /getSurvivalMomentumDamageMultiplier\(this\.survivalMomentum\.overdriveRemainingSeconds\)/);
-  assert.match(game, /getSurvivalMomentumMoveMultiplier\(this\.survivalMomentum\.overdriveRemainingSeconds\)/);
-  assert.match(game, /getSurvivalMomentumRateMultiplier\(this\.survivalMomentum\.overdriveRemainingSeconds\)/);
+  assert.match(game, /getSurvivalMomentumDamageMultiplier\(this\.survivalMomentum\.overdriveRemainingSeconds,\s*this\.survivalMomentum\.killStreak\)/);
+  assert.match(game, /getSurvivalMomentumMoveMultiplier\(this\.survivalMomentum\.overdriveRemainingSeconds,\s*this\.survivalMomentum\.killStreak\)/);
+  assert.match(game, /getSurvivalMomentumRateMultiplier\(this\.survivalMomentum\.overdriveRemainingSeconds,\s*this\.survivalMomentum\.killStreak\)/);
   assert.match(game, /selectSurvivalAutoTarget\([\s\S]*?this\.enemies[\s\S]*?SURVIVAL_AUTO_AIM_RANGE_METERS \* this\.survivalRangeMultiplier/);
   assert.match(game, /killStreak: this\.survivalMomentum\.killStreak/);
   assert.match(game, /overdriveRemainingSeconds: this\.survivalMomentum\.overdriveRemainingSeconds/);

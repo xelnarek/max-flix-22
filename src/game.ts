@@ -831,7 +831,7 @@ export class PaleciakiGameEngine {
     // Rounded integer damage avoids fractional HP while allowing damage upgrades
     // to cross a meaningful breakpoint for one-damage weapons after several stacks.
     return this.gameMode === 'survival'
-      ? Math.max(1, Math.round(baseDamage * this.survivalDamageMultiplier * getSurvivalMomentumDamageMultiplier(this.survivalMomentum.overdriveRemainingSeconds)))
+      ? Math.max(1, Math.round(baseDamage * this.survivalDamageMultiplier * getSurvivalMomentumDamageMultiplier(this.survivalMomentum.overdriveRemainingSeconds, this.survivalMomentum.killStreak)))
       : baseDamage;
   }
 
@@ -9561,7 +9561,7 @@ export class PaleciakiGameEngine {
   private updateSurvivalAutoCombat(dt: number) {
     if (this.state !== 'playing' || this.gameMode !== 'survival' || this.manualAimEnabled) return;
 
-    const momentumRate = getSurvivalMomentumRateMultiplier(this.survivalMomentum.overdriveRemainingSeconds);
+    const momentumRate = getSurvivalMomentumRateMultiplier(this.survivalMomentum.overdriveRemainingSeconds, this.survivalMomentum.killStreak);
     const oniricRate = this.oniricDreamRemainingSeconds > 0 ? 1.30 : 1;
     this.survivalWeaponDispatchCooldown = Math.max(0, this.survivalWeaponDispatchCooldown - dt * momentumRate * oniricRate);
 
@@ -12001,7 +12001,7 @@ export class PaleciakiGameEngine {
 
     let speed = this.charDef.speed * this.characterMasteryBonuses.speedMultiplier * this.getPacingFactor();
     if (this.gameMode === 'survival') {
-      speed *= this.survivalMoveMultiplier * getSurvivalMomentumMoveMultiplier(this.survivalMomentum.overdriveRemainingSeconds);
+      speed *= this.survivalMoveMultiplier * getSurvivalMomentumMoveMultiplier(this.survivalMomentum.overdriveRemainingSeconds, this.survivalMomentum.killStreak);
       if (this.oniricDreamRemainingSeconds > 0) speed *= 1.20;
     }
     if (this.marcinWoTPenaltyTimer > 0) {
@@ -12419,7 +12419,7 @@ export class PaleciakiGameEngine {
       if (this.attackSwingTimer > 0 && this.attackSwingDuration > 0) {
         const attackProfile = getCharacterAttackMotionProfile(this.currentCharacterId);
         const progress = THREE.MathUtils.clamp(1 - this.attackSwingTimer / this.attackSwingDuration, 0, 1);
-        const strike = getAttackPoseStrength(progress);
+        const strike = getAttackPoseStrength(progress, attackProfile);
         addProceduralLimbPose(
           this.rightArm,
           attackProfile.rightArmX * strike,
@@ -13413,8 +13413,7 @@ export class PaleciakiGameEngine {
 
   private triggerEnemyHitReaction(enemy: EnemyItem, damage: number, sourceX: number, sourceZ: number): void {
     if (!enemy.mesh?.scale) return;
-    const isBoss = enemy.type === 'walczak' || enemy.type === 'krol_leto' || enemy.type === 'bosman_krakow' || enemy.type === 'sebix_m';
-    const reaction = createEnemyHitReaction(enemy.x, enemy.z, sourceX, sourceZ, damage, isBoss);
+    const reaction = createEnemyHitReaction(enemy.x, enemy.z, sourceX, sourceZ, damage, enemy.type);
     if (!enemy.hitBaseScale) {
       enemy.hitBaseScale = {
         x: enemy.mesh.scale.x,
@@ -13457,7 +13456,7 @@ export class PaleciakiGameEngine {
     const timer = Math.max(0, (enemy.hitReactTimer || 0) - dt);
     enemy.hitReactTimer = timer;
     if (timer > 0 && enemy.hitBaseScale) {
-      const pulse = getEnemyHitPulse(timer, enemy.hitReactDuration || 0.21);
+      const pulse = getEnemyHitPulse(timer, enemy.hitReactDuration || 0.21, enemy.type);
       const squash = pulse * (enemy.hitReactStrength || 0.08);
       enemy.mesh.scale.set(
         enemy.hitBaseScale.x * (1 + squash * 0.45),
@@ -13960,7 +13959,7 @@ export class PaleciakiGameEngine {
           }
         }
         const hitPulse = (e.hitReactTimer || 0) > 0.015
-          ? getEnemyHitPulse(e.hitReactTimer || 0, e.hitReactDuration || 0.21)
+          ? getEnemyHitPulse(e.hitReactTimer || 0, e.hitReactDuration || 0.21, e.type)
           : 0;
         leftArmX += hitPulse * 0.58;
         rightArmX += hitPulse * 0.58;
@@ -18235,6 +18234,11 @@ export class PaleciakiGameEngine {
       this.registerSurvivalShiftEventAction('combo', this.comboStreak);
       const momentumResult = registerSurvivalKill(this.survivalMomentum);
       this.survivalMomentum = momentumResult.state;
+      if (momentumResult.comboMilestone === 3) {
+        this.emitFloatingToast('SERIA 3! ŁAŃCUCH ELIMINACJI', this.playerPos.x, this.playerPos.y + 1.65, this.playerPos.z, 'combo');
+        this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.28, this.playerPos.z, 0x38bdf8);
+        sound.playPickup(1);
+      }
       if (momentumResult.overdriveStarted) {
         this.emitFloatingToast('⚡ OVERDRIVE B4! SERIA 6 ELIMINACJI', this.playerPos.x, this.playerPos.y + 1.85, this.playerPos.z, 'combo');
         this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.35, this.playerPos.z, 0xfbbf24);
