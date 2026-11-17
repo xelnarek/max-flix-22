@@ -12920,14 +12920,14 @@ export class PaleciakiGameEngine {
     const anchorX = inHordeRing ? this.survivalSurgeCenterX : this.playerPos.x;
     const anchorZ = inHordeRing ? this.survivalSurgeCenterZ : this.playerPos.z;
     const anchorAngle = enemy.aiFlankAngle ?? Math.atan2(enemy.x - anchorX, enemy.z - anchorZ);
-    const drift = Math.sin(this.survivalElapsed * 0.62 + slot * 1.7) * (engaged ? 0.10 : 0.10);
+    const drift = engaged ? 0 : Math.sin(this.survivalElapsed * 0.42 + slot * 1.7) * 0.035;
     const angle = anchorAngle + drift;
 
     // Ring members follow the visible contracting perimeter instead of all
     // selecting the same close-range target and collapsing onto the player.
-    const defaultEngageRadius = role === 'support' ? 5.5 : role === 'ranged' ? 7.7 : role === 'bruiser' ? 2.25 : 3.0;
+    const defaultEngageRadius = getEnemyEngageRadius(role);
     const assignedFormationRadius = Number.isFinite(enemy.aiFormationRadius)
-      ? THREE.MathUtils.clamp(enemy.aiFormationRadius as number, 2.0, 8.2)
+      ? THREE.MathUtils.clamp(enemy.aiFormationRadius as number, 1.5, 8.2)
       : defaultEngageRadius;
     let preferredRadius = inHordeRing
       ? this.survivalSurgeCurrentRadius
@@ -12945,20 +12945,8 @@ export class PaleciakiGameEngine {
     let steerZ = targetZ - enemy.z;
     const steerLength = Math.hypot(steerX, steerZ);
 
-    if (steerLength < 0.72 && engaged) {
-      const orbitSign = enemy.aiOrbitSign || 1;
-      steerX = Math.cos(angle) * orbitSign;
-      steerZ = -Math.sin(angle) * orbitSign;
-    } else if (steerLength < 0.72 && !engaged) {
-      steerX = Math.cos(angle);
-      steerZ = -Math.sin(angle);
-    }
-
     const nearbyEnemies = this.enemySpatialIndex.query(enemy.x, enemy.z, 4.1);
     const separation = calculateEnemySeparationVector(enemy, nearbyEnemies, 2.6, this.enemySeparationScratch);
-    const separationX = separation.x;
-    const separationZ = separation.z;
-
     const obstacleAvoidance = calculateEnemyObstacleAvoidanceVector(
       enemy,
       { x: targetX, z: targetZ },
@@ -12966,18 +12954,26 @@ export class PaleciakiGameEngine {
       4.6,
       0.8,
     );
-    steerX += separationX * 3.0 + obstacleAvoidance.x * 1.25;
-    steerZ += separationZ * 3.0 + obstacleAvoidance.z * 1.25;
     const isTelegraphingRangedBoss = enemy.chargeTimer !== undefined &&
       (enemy.type === 'bosman_krakow' || (enemy.type === 'agv_robot' && enemy.name.includes('AGV-9 SENTINEL')));
-    if (isTelegraphingRangedBoss) {
-      // Keep the emitter at the origin shown by the locked attack lane.
-      steerX = 0;
-      steerZ = 0;
-    }
-    const steerMagnitude = Math.hypot(steerX, steerZ) || 1;
-    steerX /= steerMagnitude;
-    steerZ /= steerMagnitude;
+    // Once an enemy reaches its assigned slot it holds position instead of
+    // orbiting around it; this removes the visible stop-start vibration.
+    const steering = isTelegraphingRangedBoss
+      ? { x: 0, z: 0 }
+      : calculateStableEnemySteering({
+          chase: steerLength > 0.16 ? { x: steerX, z: steerZ } : separation,
+          separation,
+          avoidance: obstacleAvoidance,
+          previous: { x: enemy.aiSteerX ?? 0, z: enemy.aiSteerZ ?? 0 },
+          dt,
+          separationWeight: 0.72,
+          avoidanceWeight: 0.78,
+          response: 6.5,
+        });
+    steerX = steering.x;
+    steerZ = steering.z;
+    enemy.aiSteerX = steerX;
+    enemy.aiSteerZ = steerZ;
 
     const roleSpeed = role === 'bruiser' ? 0.82 : role === 'flanker' ? 1.12 : role === 'support' ? 0.88 : 0.94;
     const waveSpeed = 1 + Math.min(0.18, Math.max(0, this.survivalWave - 1) * 0.009);
@@ -14327,13 +14323,20 @@ export class PaleciakiGameEngine {
               4.6,
               0.8,
             );
-            let moveX = dx / Math.max(0.1, distToPlayer) + separation.x * 1.2 + avoidance.x * 1.05;
-            let moveZ = dz / Math.max(0.1, distToPlayer) + separation.z * 1.2 + avoidance.z * 1.05;
-            const moveLength = Math.hypot(moveX, moveZ) || 1;
-            moveX /= moveLength;
-            moveZ /= moveLength;
-            e.x += moveX * chaseSpeed * dt;
-            e.z += moveZ * chaseSpeed * dt;
+            const move = calculateStableEnemySteering({
+              chase: { x: dx, z: dz },
+              separation,
+              avoidance,
+              previous: { x: e.aiSteerX ?? 0, z: e.aiSteerZ ?? 0 },
+              dt,
+              separationWeight: 0.82,
+              avoidanceWeight: 0.88,
+              response: 7.2,
+            });
+            e.aiSteerX = move.x;
+            e.aiSteerZ = move.z;
+            e.x += move.x * chaseSpeed * dt;
+            e.z += move.z * chaseSpeed * dt;
           } else {
             e.alerted = false;
             e.state = 'patrol';
