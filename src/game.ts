@@ -1016,6 +1016,7 @@ export class PaleciakiGameEngine {
     returning?: boolean;
     homing?: boolean;
     homingTarget?: EnemyItem;
+    homingRetargetTimer?: number;
     homingRange?: number;
     homingTurnRate?: number;
     homingTrail?: boolean;
@@ -15273,17 +15274,22 @@ export class PaleciakiGameEngine {
           p.homingTarget = undefined;
         }
         if (!nearest) {
-          let minDist = homingRange;
-          const nearbyTargets = this.enemySpatialIndex.query(p.mesh.position.x, p.mesh.position.z, homingRange);
-          for (const candidate of nearbyTargets) {
-            if (candidate.state === 'defeated') continue;
-            const distance = Math.hypot(candidate.x - p.mesh.position.x, candidate.z - p.mesh.position.z);
-            if (distance < minDist) {
-              minDist = distance;
-              nearest = candidate;
+          p.homingRetargetTimer = Math.max(0, (p.homingRetargetTimer ?? 0) - dt);
+          if (p.homingRetargetTimer <= 0) {
+            let minDist = homingRange;
+            const nearbyTargets = this.enemySpatialIndex.query(p.mesh.position.x, p.mesh.position.z, homingRange);
+            for (const candidate of nearbyTargets) {
+              if (candidate.state === 'defeated') continue;
+              const distance = Math.hypot(candidate.x - p.mesh.position.x, candidate.z - p.mesh.position.z);
+              if (distance < minDist) {
+                minDist = distance;
+                nearest = candidate;
+              }
             }
+            p.homingTarget = nearest ?? undefined;
+            // Empty arenas do not force five rockets to scan the spatial index every rendered frame.
+            p.homingRetargetTimer = nearest ? 0.12 : 0.20;
           }
-          p.homingTarget = nearest ?? undefined;
         }
         if (nearest) {
           const desired = this.projectileSteeringScratch
@@ -15949,6 +15955,7 @@ export class PaleciakiGameEngine {
         stunDuration: 0.32,
         homing: true,
         homingTarget: target ?? undefined,
+        homingRetargetTimer: 0,
         homingRange: 28,
         homingTurnRate: 6.8,
         homingTrail: true,
