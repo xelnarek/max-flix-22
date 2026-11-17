@@ -16592,7 +16592,7 @@ export class PaleciakiGameEngine {
       titleContext.fillText('MAM WYJEBANE', 320, 61);
       titleContext.font = 'bold 23px sans-serif';
       titleContext.fillStyle = '#f9a8d4';
-      titleContext.fillText('UMOWA NA 9 MIESIĘCY  •  ROZDARTA', 320, 105);
+      titleContext.fillText('UMOWA NA 9 MIESIĘCY • ROZDARTA', 320, 105);
     }
     const titleTexture = new THREE.CanvasTexture(titleCanvas);
     titleTexture.colorSpace = THREE.SRGBColorSpace;
