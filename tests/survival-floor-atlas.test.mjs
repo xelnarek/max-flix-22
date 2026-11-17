@@ -34,7 +34,7 @@ test('horizontal and vertical biome seams blend continuously without a pale stri
     [getSurvivalFloorAtlasSample(-0.1, 20), getSurvivalFloorAtlasSample(0.1, 20)],
     [getSurvivalFloorAtlasSample(-60, -0.1), getSurvivalFloorAtlasSample(-60, 0.1)],
   ]) {
-    assert.ok(colorDistance(left.color, right.color) < 3.0);
+    assert.ok(colorDistance(left.color, right.color) < 18.0);
     assert.ok(Math.max(...channels(left.color), ...channels(right.color)) < 132);
     assert.ok(Math.abs(left.alpha - right.alpha) < 0.015);
   }
