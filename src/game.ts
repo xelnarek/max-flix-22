@@ -58,10 +58,11 @@ import { getSurvivalBossVariant, isMajorSurvivalBossType, shouldSpawnBosmanKrako
 import { applySurvivalWaveMutator, getSurvivalWaveMutator } from './survivalWaveMutators.ts';
 import { getSurvivalConvoyHazardCount } from './survivalConvoy.ts';
 import { applySurvivalWorldCombatModifier, getSurvivalMapDefinition, SURVIVAL_MAPS, SURVIVAL_MAP_IDS, type SurvivalMapId } from './survivalMaps.ts';
-import { getCampaignLightingProfile, getSurvivalLightingProfile, getSurvivalWorldBackgroundColor, getSurvivalWorldFloorColor, getSurvivalWorldLightingProfile, getSurvivalSurfaceProfile, PVP_LIGHTING_PROFILE, type WorldLightingProfile } from './worldVisualQuality.ts';
+import { getCampaignLightingProfile, getSurvivalLightingProfile, getSurvivalWorldBackgroundColor, getSurvivalWorldLightingProfile, getSurvivalSurfaceProfile, PVP_LIGHTING_PROFILE, type WorldLightingProfile } from './worldVisualQuality.ts';
 import { getSurvivalMapRouteFeatures } from './survivalMapLayouts.ts';
+import { createSurvivalFloorAtlasTexture } from './survivalFloorAtlas.ts';
 import { createSurvivalWorldDressing } from './survivalWorldDressing.ts';
-import { getSurvivalBiomeIdAtPosition, getSurvivalWorldBiome, getSurvivalWorldTransitionFootprint, SURVIVAL_WORLD_BIOME_HALF_DEPTH, SURVIVAL_WORLD_BIOME_HALF_WIDTH, SURVIVAL_WORLD_BIOMES, SURVIVAL_WORLD_BOUNDS, SURVIVAL_WORLD_START_BIOME, SURVIVAL_WORLD_TRANSITIONS, type SurvivalWorldOpenEdges } from './survivalWorldLayout.ts';
+import { getSurvivalBiomeIdAtPosition, getSurvivalWorldBiome, SURVIVAL_WORLD_BIOME_HALF_DEPTH, SURVIVAL_WORLD_BIOME_HALF_WIDTH, SURVIVAL_WORLD_BIOMES, SURVIVAL_WORLD_BOUNDS, SURVIVAL_WORLD_START_BIOME, type SurvivalWorldOpenEdges } from './survivalWorldLayout.ts';
 import { getSurvivalWorldBiomeBlendAtPosition } from './survivalWorldBlend.ts';
 import { chooseCampaignNearbyRewardSpawnPoint } from './campaignRewards.ts';
 import { chooseNearbySpawnPoint } from './arenaSpawn.ts';
@@ -3698,145 +3699,49 @@ export class PaleciakiGameEngine {
   }
 
   private buildSurvivalWorldTransitions() {
-    /**
-     * A world-space texture blend sits over the native PBR concrete.
-     * Alpha fades to zero over 22 m, so base grain stays visible; muted linear-light
-     * colour, slab joints, tiny scuffs and irregular edge noise avoid a flat colour bar.
-     */
-    const createTerrainBlendTexture = (
-      width: number,
-      height: number,
-      sampleWorldPosition: (u: number, v: number) => { x: number; z: number; influence: number },
-      salt: number,
-    ) => {
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const context = canvas.getContext('2d');
-      if (!context) return null;
-      const image = context.createImageData(width, height);
-      const hash = (x: number, z: number, extra = 0) => {
-        let value = Math.imul(Math.floor(x * 374761393) ^ Math.floor(z * 668265263) ^ (salt + extra * 1442695041), 1274126177);
-        value = Math.imul(value ^ (value >>> 13), 2246822519);
-        return ((value ^ (value >>> 16)) >>> 0) / 4294967295;
-      };
-      const positiveMod = (value: number, modulus: number) => ((value % modulus) + modulus) % modulus;
-
-      for (let py = 0; py < height; py++) {
-        const v = py / Math.max(1, height - 1);
-        for (let px = 0; px < width; px++) {
-          const u = px / Math.max(1, width - 1);
-          const world = sampleWorldPosition(u, v);
-          const blend = getSurvivalWorldBiomeBlendAtPosition(world.x, world.z);
-          const color = getSurvivalWorldFloorColor(blend.weights);
-          const slabX = positiveMod(world.x + 240, 4.2);
-          const slabZ = positiveMod(world.z + 240, 4.2);
-          const nearSlabJoint = Math.min(slabX, 4.2 - slabX, slabZ, 4.2 - slabZ) < 0.035;
-          const cellNoise = hash(Math.floor(world.x / 1.35), Math.floor(world.z / 1.35));
-          const grain = hash(px, py, 7);
-          const broadWear = Math.sin(world.x * 0.72 + world.z * 0.31 + salt) * 1.7
-            + Math.sin(world.x * 0.21 - world.z * 0.54 + salt * 0.3) * 1.2;
-          const stainCellX = positiveMod(world.x / 1.35 + 0.5, 1) - 0.5;
-          const stainCellZ = positiveMod(world.z / 1.35 + 0.5, 1) - 0.5;
-          const stain = cellNoise > 0.925 && Math.abs(stainCellX) < 0.16 && Math.abs(stainCellZ) < 0.24 ? -8 : 0;
-          const jointShade = nearSlabJoint ? -5 : 0;
-          const noise = (grain - 0.5) * 6 + (cellNoise - 0.5) * 4 + broadWear + stain + jointShade;
-          const offset = (py * width + px) * 4;
-          image.data[offset] = THREE.MathUtils.clamp(((color >> 16) & 255) + noise, 0, 255);
-          image.data[offset + 1] = THREE.MathUtils.clamp(((color >> 8) & 255) + noise, 0, 255);
-          image.data[offset + 2] = THREE.MathUtils.clamp((color & 255) + noise, 0, 255);
-
-          // Irregular but continuous fade: no sharp doorway edge and no white strip.
-          const edgeVariation = (hash(Math.floor(world.x * 2), Math.floor(world.z * 2), 13) - 0.5) * 0.08;
-          const alpha = THREE.MathUtils.clamp(world.influence * (0.88 + edgeVariation), 0, 0.92);
-          image.data[offset + 3] = Math.round(alpha * 255);
-        }
-      }
-      context.putImageData(image, 0, 0);
-      const texture = new THREE.CanvasTexture(canvas);
-      texture.colorSpace = THREE.SRGBColorSpace;
-      texture.anisotropy = 4;
-      texture.generateMipmaps = true;
-      texture.needsUpdate = true;
-      return texture;
-    };
-
-    const makeBlendSurface = (
-      name: string,
-      width: number,
-      depth: number,
-      position: { x: number; z: number },
-      texture: THREE.CanvasTexture,
-    ) => {
-      const material = new THREE.MeshStandardMaterial({
-        map: texture,
-        color: 0xffffff,
-        roughness: 0.96,
-        metalness: 0.015,
-        transparent: true,
-        opacity: 1,
-        alphaTest: 0.006,
-        depthWrite: false,
-        polygonOffset: true,
-        polygonOffsetFactor: -2,
-        polygonOffsetUnits: -2,
-      });
-      const surface = new THREE.Mesh(new THREE.PlaneGeometry(width, depth), material);
-      surface.name = name;
-      surface.rotation.x = -Math.PI / 2;
-      surface.position.set(position.x, name === 'survival-biome-four-way-blend' ? 0.013 : 0.008, position.z);
-      surface.castShadow = false;
-      surface.receiveShadow = false;
-      surface.renderOrder = 2;
-      this.survivalArenaInstanceGeometries.add(surface.geometry);
-      this.survivalArenaInstanceMaterials.add(material);
-      this.survivalArenaInstanceTextures.add(texture);
-      this.levelRoot.add(surface);
-    };
-
-    for (const transition of SURVIVAL_WORLD_TRANSITIONS) {
-      const footprint = getSurvivalWorldTransitionFootprint(transition);
-      const width = transition.axis === 'x' ? 256 : 768;
-      const height = transition.axis === 'x' ? 512 : 192;
-      const texture = createTerrainBlendTexture(
-        width,
-        height,
-        (u, v) => {
-          const x = transition.centerX + (u - 0.5) * footprint.bandWidth;
-          const z = transition.centerZ + (v - 0.5) * footprint.bandDepth;
-          const blend = getSurvivalWorldBiomeBlendAtPosition(x, z);
-          return {
-            x, z,
-            influence: transition.axis === 'x' ? blend.xBoundaryInfluence : blend.zBoundaryInfluence,
-          };
-        },
-        transition.id.split('').reduce((value, char) => Math.imul(value ^ char.charCodeAt(0), 16777619), 2166136261) >>> 0,
-      );
-      if (!texture) continue;
-      makeBlendSurface(
-        'survival-biome-transition-' + transition.id,
-        footprint.bandWidth,
-        footprint.bandDepth,
-        { x: transition.centerX, z: transition.centerZ },
-        texture,
-      );
-    }
-
-    // The central 22 × 22 m tile uses all four biome weights and fades on both axes.
-    const junctionTexture = createTerrainBlendTexture(
-      384,
-      384,
-      (u, v) => {
-        const x = (u - 0.5) * 22;
-        const z = (v - 0.5) * 22;
-        const blend = getSurvivalWorldBiomeBlendAtPosition(x, z);
-        return { x, z, influence: blend.junctionInfluence };
-      },
-      0x4b494f,
+    // One continuous world-space atlas replaces four separate floor overlays.
+    // It blends distinct industrial surfaces using the same bilinear field as
+    // biome lighting, so the seams and the central junction have no hard edge.
+    const texture = createSurvivalFloorAtlasTexture(
+      this.isHandheldViewport ? 1024 : 1536,
+      this.isHandheldViewport ? 342 : 512,
     );
-    if (junctionTexture) {
-      makeBlendSurface('survival-biome-four-way-blend', 22, 22, { x: 0, z: 0 }, junctionTexture);
+    if (!texture) {
+      console.warn('[Survival:World] Floor atlas unavailable; keeping the four PBR base floors.');
+      return;
     }
+
+    const material = new THREE.MeshStandardMaterial({
+      map: texture,
+      color: 0xffffff,
+      roughness: 0.97,
+      metalness: 0.015,
+      transparent: true,
+      opacity: 1,
+      alphaTest: 0.006,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    });
+    const width = SURVIVAL_WORLD_BOUNDS.maxX - SURVIVAL_WORLD_BOUNDS.minX;
+    const depth = SURVIVAL_WORLD_BOUNDS.maxZ - SURVIVAL_WORLD_BOUNDS.minZ;
+    const surface = new THREE.Mesh(new THREE.PlaneGeometry(width, depth), material);
+    surface.name = 'survival-biome-floor-atlas';
+    surface.rotation.x = -Math.PI / 2;
+    surface.position.set(
+      (SURVIVAL_WORLD_BOUNDS.minX + SURVIVAL_WORLD_BOUNDS.maxX) * 0.5,
+      0.008,
+      (SURVIVAL_WORLD_BOUNDS.minZ + SURVIVAL_WORLD_BOUNDS.maxZ) * 0.5,
+    );
+    surface.castShadow = false;
+    surface.receiveShadow = false;
+    surface.renderOrder = 2;
+
+    this.survivalArenaInstanceGeometries.add(surface.geometry);
+    this.survivalArenaInstanceMaterials.add(material);
+    this.survivalArenaInstanceTextures.add(texture);
+    this.levelRoot.add(surface);
   }
 
   /** Follow the spatially weighted biome palette instead of starting a timer at a hard seam. */
@@ -3909,7 +3814,8 @@ export class PaleciakiGameEngine {
     const wallTexture = options.surfaceTextures?.wall ?? createPvpObstacleTexture('wall').clone();
     const surfaceProfile = getSurvivalSurfaceProfile(mapId);
     const floorMaterial = new THREE.MeshStandardMaterial({
-      map: floorTexture, color: mapDefinition.floorColor,
+      // Keep the PBR underlay neutral across every sector; the continuous atlas above owns biome colour.
+      map: floorTexture, color: 0x77736a,
       roughness: surfaceProfile.floorRoughness, metalness: surfaceProfile.floorMetalness,
     });
     applyIndustrialPbr(floorMaterial, 0.018);

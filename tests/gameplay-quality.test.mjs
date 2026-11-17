@@ -1283,9 +1283,10 @@ test('Survival draft adds Crimsonland radiation and Archero ricochet builds with
   assert.match(combat, /export function getSurvivalRadiationProfile/);
 });
 
-test('Survival assembles four physical biome sections into one connected world', async () => {
-  const [game, layout, maps] = await Promise.all([
-    read('../src/game.ts'), read('../src/survivalWorldLayout.ts'), read('../src/survivalMaps.ts')
+test('Survival assembles four physical biome sections into one connected world with one floor atlas', async () => {
+  const [game, layout, maps, atlas] = await Promise.all([
+    read('../src/game.ts'), read('../src/survivalWorldLayout.ts'), read('../src/survivalMaps.ts'),
+    read('../src/survivalFloorAtlas.ts')
   ]);
   assert.match(game, /this\.buildConnectedSurvivalWorld\(\)/);
   assert.match(game, /private buildConnectedSurvivalWorld\(\)/);
@@ -1295,15 +1296,17 @@ test('Survival assembles four physical biome sections into one connected world',
   assert.match(game, /this\.platforms\[index\]\.z \+= biome\.centerZ/);
   assert.match(game, /openEdges\.north/);
   assert.match(game, /openEdges\.east/);
-  assert.match(game, /survival-biome-transition-/);
-  assert.match(game, /survival-biome-four-way-blend/);
+  assert.match(game, /createSurvivalFloorAtlasTexture\(/);
+  assert.match(game, /surface\.name = 'survival-biome-floor-atlas'/);
+  assert.doesNotMatch(game, /survival-biome-transition-|survival-biome-four-way-blend/);
   assert.doesNotMatch(game, /survival-biome-gateway-posts|survival-biome-gateway-beams|survival-biome-seam-/);
   assert.match(game, /this\.disposeTemporaryObject\(worldRoot\)/);
   assert.match(layout, /SURVIVAL_WORLD_WIDTH/);
   assert.match(layout, /SURVIVAL_WORLD_DEPTH/);
   assert.match(layout, /SURVIVAL_WORLD_BLEND_HALF_WIDTH_METERS/);
   assert.match(game, /if \(edgeIsOpen\) continue/);
-  assert.match(game, /survival-biome-four-way-blend/);
+  assert.match(atlas, /getSurvivalWorldBiomeBlendAtPosition\(safeX, safeZ\)/);
+  assert.match(atlas, /blend\.weights\[mapId\]/);
   assert.match(maps, /secretLocations:/);
 });
 
@@ -1599,16 +1602,23 @@ test('directional projectiles orient to velocity and enemy tracer bursts stay wi
 });
 
 
-test('Survival floor palettes avoid white glare and the boundary renderer fades into native PBR texture', async () => {
-  const [maps, game, visual] = await Promise.all([
-    read('../src/survivalMaps.ts'), read('../src/game.ts'), read('../src/worldVisualQuality.ts')
+test('Survival floor atlas uses four muted surface signatures with smooth biome-weighted blending', async () => {
+  const [maps, game, visual, atlas] = await Promise.all([
+    read('../src/survivalMaps.ts'), read('../src/game.ts'), read('../src/worldVisualQuality.ts'),
+    read('../src/survivalFloorAtlas.ts')
   ]);
   assert.match(maps, /floorColor: 0x77736a/);
   assert.match(maps, /floorColor: 0x756f65/);
   assert.match(maps, /floorColor: 0x647983/);
   assert.match(maps, /floorColor: 0x5b5365/);
   assert.match(visual, /floorRoughness: 0\.90, floorMetalness: 0\.045/);
-  assert.match(game, /world\.influence \* \(0\.88 \+ edgeVariation\)/);
-  assert.match(game, /getSurvivalWorldFloorColor\(blend\.weights\)/);
+  assert.match(game, /surface\.name = 'survival-biome-floor-atlas'/);
+  assert.match(atlas, /warehouse_b4: \[78, 75, 68\]/);
+  assert.match(atlas, /container_terminal: \[67, 69, 66\]/);
+  assert.match(atlas, /cold_storage: \[59, 79, 88\]/);
+  assert.match(atlas, /night_sorting: \[58, 52, 69\]/);
+  assert.match(atlas, /alpha: Math\.max\(0, Math\.min\(0\.76, 0\.68 \+ blend\.blendAmount \* 0\.08\)\)/);
+  assert.match(atlas, /image\.data\[offset \+ 3\] = Math\.round\(sample\.alpha \* 255\)/);
+  assert.match(atlas, /valueNoise/);
   assert.doesNotMatch(game, /new THREE\.PlaneGeometry\(1\.25, 40\)|seamColor/);
 });

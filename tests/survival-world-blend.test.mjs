@@ -77,7 +77,7 @@ test('lighting, fog and background use the same spatial blend as biome geometry'
   assert.equal(pureB4.fogColor, referenceB4.fogColor);
 });
 
-test('rendered transition bands share the same 22 m width as the spatial blend field', () => {
+test('shared biome seam metadata retains the same 22 m overlap width as the spatial blend field', () => {
   assert.deepEqual(SURVIVAL_WORLD_TRANSITIONS.map(getSurvivalWorldTransitionFootprint), [
     { bandWidth: 22, bandDepth: 40 },
     { bandWidth: 120, bandDepth: 22 },
@@ -103,14 +103,17 @@ test('floor albedo remains muted and each biome keeps a restrained material resp
   }
 });
 
-test('the transition blend texture uses a fading alpha mask and low-contrast floor detail', async () => {
+test('the connected floor atlas uses weighted alpha and low-contrast surface detail', async () => {
+  const atlas = await (await import('node:fs/promises')).readFile(new URL('../src/survivalFloorAtlas.ts', import.meta.url), 'utf8');
   const game = await (await import('node:fs/promises')).readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
-  assert.match(game, /createTerrainBlendTexture/);
-  assert.match(game, /context\.createImageData\(width, height\)/);
-  assert.match(game, /image\.data\[offset \+ 3\] = Math\.round\(alpha \* 255\)/);
-  assert.match(game, /const nearSlabJoint =/);
-  assert.match(game, /const stain =/);
-  assert.match(game, /roughness: 0\.96/);
+  assert.match(atlas, /context\.createImageData\(safeWidth, safeHeight\)/);
+  assert.match(atlas, /image\.data\[offset \+ 3\] = Math\.round\(sample\.alpha \* 255\)/);
+  assert.match(atlas, /getSurvivalWorldBiomeBlendAtPosition\(safeX, safeZ\)/);
+  assert.match(atlas, /const jointShade =/);
+  assert.match(atlas, /const aggregate =/);
+  assert.match(atlas, /const frostLine =/);
+  assert.match(atlas, /const grooveShade =/);
+  assert.match(game, /roughness: 0\.97/);
   assert.match(game, /depthWrite: false/);
   assert.doesNotMatch(game, /survival-biome-gateway-posts|survival-biome-gateway-beams/);
 });
