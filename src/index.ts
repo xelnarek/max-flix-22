@@ -40,6 +40,7 @@ import { launchCthulhuRetroArena } from './cthulhuRetroArena.ts';
 import { getMenuTabIndexForKey } from './menuTabNavigation.ts';
 import { getVisibilityPauseAction } from './visibilityPause.ts';
 import { observeWebGLContextRecovery } from './webglContextRecovery.ts';
+import { FloatingToastPool } from './floatingToastPool.ts';
 // Firestore is only needed for the optional leaderboard. Keep its large SDK
 // outside the initial game/menu load and fetch it when the player opens ranking.
 type FirebaseLeaderboardServices = typeof import('./firebase.ts');
@@ -865,14 +866,10 @@ class PaleciakiScene extends xb.Script {
       this.resizeObserver.observe(container);
     }
 
-    interface ActiveToast {
-      element: HTMLElement;
-      worldPos: THREE.Vector3;
-      type: string;
-      age: number;
-      maxAge: number;
-    }
-    const activeToasts: ActiveToast[] = [];
+    const popupsLayer = document.getElementById('floating-popups-layer');
+    // Prewarm a fixed set of floating combat labels. Reusing nodes and vectors
+    // avoids per-hit DOM/Three.js allocation during long Survival waves.
+    const floatingToastPool = popupsLayer ? new FloatingToastPool(popupsLayer, 36) : null;
     let globalLastDialogueTime = 0;
 
     const createDialogueCard = (text: string, speakerType: string, side: 'left' | 'right' = 'right', speakerName?: string) => {
@@ -972,44 +969,28 @@ class PaleciakiScene extends xb.Script {
         return;
       }
 
-      const popupsLayer = document.getElementById('floating-popups-layer');
-      if (!popupsLayer) return;
-
-      const toast = document.createElement('div');
-      toast.className = `floating-score-toast ${type}`;
-      toast.textContent = text;
-      toast.style.position = 'absolute';
-      toast.style.top = '0';
-      toast.style.left = '0';
-      toast.style.willChange = 'transform, opacity';
-      popupsLayer.appendChild(toast);
-
       const duration = type === 'damage' ? 0.7 : type === 'easter-egg' ? 3.6 : type === 'combo' ? 2.0 : 1.6;
-
-      activeToasts.push({
-        element: toast,
-        worldPos: new THREE.Vector3(x, y, z),
-        type,
-        age: 0,
-        maxAge: duration,
-      });
+      floatingToastPool?.acquire(text, x, y, z, type, duration);
     };
 
-    // This updater runs once per rendered frame. Keep its projection scratch
-    // vector outside the callback so active toast count never drives allocations.
+    // The projection scratch is created once; each active toast reuses its
+    // preallocated world vector and pooled DOM element for its whole lifetime.
     const toastProjectionScratch = new THREE.Vector3();
     (this as any)._updateToasts = (dt: number) => {
+      if (!floatingToastPool) return;
+      const activeToasts = floatingToastPool.active;
       const tempVec = toastProjectionScratch;
       const screenW = window.innerWidth;
       const screenH = window.innerHeight;
 
-      for (let i = activeToasts.length - 1; i >= 0; i--) {
-        const t = activeToasts[i];
+      for (let i = floatingToastPool.activeCount - 1; i >= 0; i--) {
+        const t = activeToasts[i]!;
         t.age += dt;
 
         if (t.age >= t.maxAge) {
-          t.element.remove();
-          activeToasts.splice(i, 1);
+          floatingToastPool.releaseAt(i);
+          // releaseAt compacts by moving the last active entry into this slot.
+          i++;
           continue;
         }
 
@@ -3584,7 +3565,7 @@ class PaleciakiScene extends xb.Script {
     }
     this.lastLoopTick = performance.now();
     const rawDt = xb.getDeltaTime();
-    const dt = Math.min(Math.max(rawDt || 0.016, 0.001), 0.08);
+    const dt = Math.min(Math.max(rawDt || 0.016, 0.001), 0.05);
 
     // 1. Particle System Rotation (from top update)
     if (this.particleSystem) {
