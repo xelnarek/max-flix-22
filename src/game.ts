@@ -612,6 +612,7 @@ export class PaleciakiGameEngine {
   private readonly enemyProjectileBodyImpactScratch: ProjectileImpactScratch = { t: 0, x: 0, y: 0, z: 0 };
   private readonly enemyProjectileEnemyImpactScratch: ProjectileEnemyImpactScratch = { t: 0, x: 0, y: 0, z: 0, actor: null };
   private readonly enemySeparationScratch = { x: 0, z: 0 };
+  private readonly enemyObstacleAvoidanceScratch = { x: 0, z: 0 };
   private readonly cameraOcclusionWorldPosition = new THREE.Vector3();
   private readonly cameraOcclusionRaycaster = new THREE.Raycaster();
   private readonly cameraOcclusionHits: THREE.Intersection<THREE.Object3D>[] = [];
@@ -13123,7 +13124,7 @@ export class PaleciakiGameEngine {
       this.survivalObstacles,
       4.6,
       0.8,
-    );
+    this.enemyObstacleAvoidanceScratch);
     const isTelegraphingRangedBoss = enemy.chargeTimer !== undefined &&
       (enemy.type === 'bosman_krakow' || (enemy.type === 'agv_robot' && enemy.name.includes('AGV-9 SENTINEL')));
 
@@ -13320,7 +13321,7 @@ export class PaleciakiGameEngine {
       if (this.gameMode === 'campaign') {
         const avoidance = calculateEnemyObstacleAvoidanceVector(
           enemy, { x: target.x, z: target.z }, this.campaignEnemyObstacles, 3.2, 0.72,
-        );
+        this.enemyObstacleAvoidanceScratch);
         moveX += avoidance.x * 0.78;
         moveZ += avoidance.z * 0.78;
         const length = Math.hypot(moveX, moveZ) || 1;
@@ -14270,7 +14271,7 @@ export class PaleciakiGameEngine {
           const sdist = Math.hypot(sdx, sdz);
           if (sdist > 0.5) {
             const avoidance = this.gameMode === 'campaign'
-              ? calculateEnemyObstacleAvoidanceVector(e, e.lastKnownPlayerPos, this.campaignEnemyObstacles, 3.8, 0.75)
+              ? calculateEnemyObstacleAvoidanceVector(e, e.lastKnownPlayerPos, this.campaignEnemyObstacles, 3.8, 0.75, this.enemyObstacleAvoidanceScratch)
               : { x: 0, z: 0 };
             let searchX = sdx / sdist + avoidance.x * 0.9;
             let searchZ = sdz / sdist + avoidance.z * 0.9;
@@ -14349,7 +14350,7 @@ export class PaleciakiGameEngine {
             const invDist = 1 / Math.max(0.1, distToPlayer);
             const avoidance = calculateEnemyObstacleAvoidanceVector(
               e, { x: this.playerPos.x, z: this.playerPos.z }, this.survivalObstacles, 5.4, 1.25,
-            );
+            this.enemyObstacleAvoidanceScratch);
             const moveX = (dx * invDist) * 0.72 + (dz * invDist) * 0.46 * side + avoidance.x * 0.9;
             const moveZ = (dz * invDist) * 0.72 - (dx * invDist) * 0.46 * side + avoidance.z * 0.9;
             const moveLength = Math.hypot(moveX, moveZ) || 1;
@@ -14362,7 +14363,7 @@ export class PaleciakiGameEngine {
               this.campaignEnemyObstacles,
               5.4,
               1.25,
-            );
+            this.enemyObstacleAvoidanceScratch);
             let bossMoveX = dx / Math.max(0.1, distToPlayer) + avoidance.x * 1.0;
             let bossMoveZ = dz / Math.max(0.1, distToPlayer) + avoidance.z * 1.0;
             const bossMoveLength = Math.hypot(bossMoveX, bossMoveZ) || 1;
@@ -14593,7 +14594,7 @@ export class PaleciakiGameEngine {
             const invDist = 1 / Math.max(0.1, distToPlayer);
             const avoidance = calculateEnemyObstacleAvoidanceVector(
               e, { x: this.playerPos.x, z: this.playerPos.z }, this.survivalObstacles, 5.8, 1.35,
-            );
+            this.enemyObstacleAvoidanceScratch);
             const moveX = (dx * invDist) * 0.68 + (dz * invDist) * 0.52 * side + avoidance.x * 0.9;
             const moveZ = (dz * invDist) * 0.68 - (dx * invDist) * 0.52 * side + avoidance.z * 0.9;
             const moveLength = Math.hypot(moveX, moveZ) || 1;
@@ -14606,7 +14607,7 @@ export class PaleciakiGameEngine {
               this.campaignEnemyObstacles,
               5.8,
               1.35,
-            );
+            this.enemyObstacleAvoidanceScratch);
             let bossMoveX = dx / Math.max(0.1, distToPlayer) + avoidance.x * 1.0;
             let bossMoveZ = dz / Math.max(0.1, distToPlayer) + avoidance.z * 1.0;
             const bossMoveLength = Math.hypot(bossMoveX, bossMoveZ) || 1;
@@ -14702,7 +14703,7 @@ export class PaleciakiGameEngine {
               this.campaignEnemyObstacles,
               4.6,
               0.8,
-            );
+            this.enemyObstacleAvoidanceScratch);
             const attackDistance = Math.max(1.10, getEnemyPlayerContactDistance(e.type) + 0.10);
             const inContactLane = distToPlayer <= attackDistance + 0.08;
             const separationLength = Math.hypot(separation.x, separation.z);

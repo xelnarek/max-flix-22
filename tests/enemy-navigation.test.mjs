@@ -55,3 +55,43 @@ test('invalid obstacle records are ignored without producing non-finite steering
   );
   assert.deepEqual(steer, { x: 0, z: 0 });
 });
+
+test('campaign navigation reuses its output vector and clears stale values on a clear path', () => {
+  const out = { x: 99, z: 99 };
+  const actor = { id: 'enemy-reused', x: 0, z: -8 };
+  const blocked = calculateEnemyObstacleAvoidanceVector(
+    actor,
+    { x: 0, z: 8 },
+    [{ x: 0, z: 0, halfWidth: 2, halfDepth: 2 }],
+    8,
+    0.8,
+    out,
+  );
+  assert.strictEqual(blocked, out);
+  assert.ok(Math.hypot(blocked.x, blocked.z) > 0.8);
+
+  const clear = calculateEnemyObstacleAvoidanceVector(
+    actor,
+    { x: 8, z: -8 },
+    [],
+    8,
+    0.8,
+    out,
+  );
+  assert.strictEqual(clear, out);
+  assert.deepEqual(clear, { x: 0, z: 0 });
+});
+
+test('obstacle navigation ignores invalid dimensions while keeping reusable output finite', () => {
+  const out = { x: 7, z: -4 };
+  const result = calculateEnemyObstacleAvoidanceVector(
+    { id: 'enemy-invalid-obstacle', x: 0, z: -5 },
+    { x: 0, z: 5 },
+    [{ x: 0, z: 0, halfWidth: Number.NaN, halfDepth: 4 }],
+    8,
+    0.8,
+    out,
+  );
+  assert.strictEqual(result, out);
+  assert.deepEqual(result, { x: 0, z: 0 });
+});
