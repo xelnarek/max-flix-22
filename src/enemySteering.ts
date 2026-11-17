@@ -13,7 +13,7 @@ export interface EnemySteeringInput {
 
 /** Blend pursuit, crowd separation and cover avoidance without force cancellation or frame-to-frame jitter. */
 export function calculateStableEnemySteering(input: EnemySteeringInput): HorizontalVector {
-  const safe = (value: number) => Number.isFinite(value) ? value : 0;
+  const safe = (value: number | undefined) => Number.isFinite(value) ? value as number : 0;
   const chaseX = safe(input.chase.x);
   const chaseZ = safe(input.chase.z);
   const chaseLength = Math.hypot(chaseX, chaseZ);
