@@ -1654,7 +1654,7 @@ test('Survival flankers intercept the operator path while wounded enemies retrea
 
 
 // Regression coverage for the two operator-specific abilities added in this change.
-test('Grzesiek Operator 02 launches exactly five target-locked missiles from the muscular 44cm fist', async () => {
+test('Grzesiek Operator 02 launches exactly five target-locked muscular arm projectiles', async () => {
   const [game, characters, html] = await Promise.all([
     read('../src/game.ts'), read('../src/characters.ts'), read('../index.html')
   ]);
@@ -1673,7 +1673,7 @@ test('Grzesiek Operator 02 launches exactly five target-locked missiles from the
   assert.match(game, /bicep/);
   assert.match(game, /clenched|knuckle/i);
   assert.match(characters, /abilityName: '44 CM ZAGŁADY/);
-  assert.match(html, /5 rakiet samonaprowadzających/);
+  assert.match(html, /5 latających ramion/);
 });
 
 test('Mateusz Operator 04 tears the nine-month contract and runs enemy-only AI combat without cats', async () => {
@@ -1734,7 +1734,7 @@ test('44cm special visual uses articulated joints, a detailed closed fist and pu
   assert.match(visual, /fist\.rotation\.x/);
   assert.match(visual, /triggerScreenShake\(0\.48, 0\.30\)/);
   assert.match(visual, /homingTrailColor: 0x34d399/);
-  assert.match(visual, /rocket\.userData\.exhaust/);
+  assert.match(visual, /arm\.userData\.exhaust/);
 });
 
 test('Mateusz contract tear uses animated paper fibres, a staggered rip and owned texture cleanup', async () => {

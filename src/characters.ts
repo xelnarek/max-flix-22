@@ -57,8 +57,8 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     damageTakenMultiplier: 0.92,
     passiveName: 'Hantla 44 cm — Rzut Siłacza',
     passiveDescription: 'Podstawowy atak to ciężki rzut hantlem. Co trzeci rzut jest mocniejszy, przebija kilku przeciwników i odrzuca ich na boki.',
-    abilityName: '44 CM ZAGŁADY • SALWA 5 RAKIET',
-    abilityDescription: 'Na ułamek sekundy pojawia się ogromne, umięśnione ramię z zaciśniętą pięścią. W chwili uderzenia wystrzeliwuje dokładnie 5 rakiet samonaprowadzających: każda blokuje osobny cel, a przy mniejszej liczbie wrogów ostrzał skupia się na dostępnych przeciwnikach. Tryb Tarana trwa 6 sekund.',
+    abilityName: '44 CM ZAGŁADY • PIĘĆ LATAJĄCYCH RAMION',
+    abilityDescription: 'Ogromna, umięśniona pięść rozpoczyna uderzenie, po którym dokładnie 5 pełnych mięśni i żył ramion wystrzeliwuje pięściami do przodu. Każde ramię osobno naprowadza się na cel i eksploduje przy trafieniu. Jeśli wrogów jest mniej niż pięć, dostępne cele są ponownie wybierane. Tryb Tarana trwa 6 sekund.',
     abilityCooldown: 12.0,
     voiceLines: [
       'Ściskam, bo muszę! To nie jest agresja, to czysta logistyczna potrzeba!',
@@ -97,7 +97,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     passiveName: 'Rolka Stretch — Owinięcie Problemu',
     passiveDescription: 'Podstawowy atak wyrzuca rolkę folii stretch. Trafiony przeciwnik zostaje spowolniony i na krótko owinięty folią; co trzeci rzut rozrzuca dodatkowe pasma.',
     abilityName: 'Salwa Marmurowa Wielkiego Formatu',
-    abilityDescription: 'Wyrzuca 5 gigantycznych rykoszetujących płyt gresowych, aktywuje Kask BHP oraz zrzuca gorący Kubełek Mocy (+HP i Furia Energetyczna)!',
+    abilityDescription: 'Wyrzuca wachlarz ciężkich, obracających się płyt gresowych z ceramicznym szkliwem i mosiężnym dekorem (5 w Kampanii, 3 w Survival). Płyty przebijają wrogów, odbijają się od granicy świata Survival i zgarniają przedmioty z toru lotu. Aktywuje Kask BHP i zrzuca Kubełek Mocy.',
     abilityCooldown: 13.0,
     voiceLines: [
       'Ja wiem lepiej, jak kłaść ten gres! Nadzorca Zero nie ma zielonego pojęcia!',
@@ -136,7 +136,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     passiveName: 'Paralizator — Impuls Trzech Elektrod',
     passiveDescription: 'Podstawowy atak wystrzeliwuje impuls paralizatora. Trafienie elektryzuje i spowalnia cel; co dziewiąte trafienie uruchamia Speedrun (+Sprint i Nietykalność)!',
     abilityName: 'MAM WYJEBANE • UMOWA NA 9 MIESIĘCY',
-    abilityDescription: 'Operator 04 demonstracyjnie rozrywa umowę na 9 miesięcy. Przez 9 sekund (7,5 sekundy w Survival) wrogowie przestają atakować gracza i zwracają się przeciwko sobie, wybierając najbliższego innego przeciwnika. Po zakończeniu efektu ich normalne zachowanie wraca automatycznie.',
+    abilityDescription: 'Operator 04 rozrywa umowę na 9 miesięcy, a fala zerwania rozchodzi się po podłożu. Przez 9 sekund (7,5 sekundy w Survival) przeciwnicy walczą między sobą, rozkładając ataki na różne cele zamiast skupiać się na jednym. Po zakończeniu efektu wracają do normalnego zachowania.',
     abilityCooldown: 16.0,
     voiceLines: [
       'Pad mi się rozładował! Kto zajumał kabel USB-C z salonu?!',
@@ -175,7 +175,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     passiveName: 'Weteran B4 — Droga Powrotna',
     passiveDescription: 'Operator 05 ma stały podwójny skok i 100% szansy na drop perków. Klucz grzechotkowy wraca po rzucie, więc dobrze ustawiony tor pozwala przeciąć linię wrogów również podczas powrotu.',
     abilityName: 'Rytuał MafiKapibar — Pentagram B4',
-    abilityDescription: 'Operator 05 rozświetla podłoże wielkim pentagramem, którego wybuch odrzuca i ogłusza pobliskich wrogów. Trzy większe MafiKapibary trzymają szyk V za operatorem: Don i hybrydowy ochroniarz kryją lewe i prawe skrzydło karabinami, a środkowy egzekutor z dwiema pałkami pilnuje odwrotu. Cała trójka priorytetowo przechwytuje wrogów zagrażających operatorowi.',
+    abilityDescription: 'Operator 05 aktywuje wielki pentagram B4: impuls zrywa tarcze, zadaje obrażenia i ogłusza wrogów w promieniu. Trzy większe MafiKapibary trzymają szyk V za operatorem — dwaj ochroniarze kryją skrzydła, a egzekutor z pałkami osłania tyły. Dobierają różne cele, a cała trójka priorytetowo przechwytuje wrogów zagrażających operatorowi.',
     abilityCooldown: 16.5,
     voiceLines: [
       'Rytuał B4! MafiKapibary, przejmijcie tę zmianę!',
