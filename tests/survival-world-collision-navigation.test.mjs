@@ -49,6 +49,7 @@ test('Survival map textures are per-world clones of the global B4 texture cache'
   assert.match(game, /barrier: createPvpObstacleTexture\('barrier'\)\.clone\(\)/);
   assert.match(game, /wall: createPvpObstacleTexture\('wall'\)\.clone\(\)/);
   assert.match(game, /options\.surfaceTextures\?\.floor \?\? createPvpFloorTexture\(\)\.clone\(\)/);
+  assert.match(game, /map: floorTexture, color: 0x77736a/);
 });
 
 
