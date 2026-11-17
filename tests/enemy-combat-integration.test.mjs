@@ -68,3 +68,26 @@ test('large hostile projectile crowds use the segment spatial broadphase before 
   assert.match(collision, /Math\.hypot\(projectileDeltaX, projectileDeltaZ\) \* 0\.5 \+ 1\.9/);
   assert.match(collision, /findFirstProjectileEnemyImpact\(projectileStart, projectileEnd, projectileCandidates\)/);
 });
+
+test('Survival enemies scan for incoming player shots and commit a short role-weighted sidestep', () => {
+  const start = game.indexOf('private updateSurvivalEnemyTactics');
+  const end = game.indexOf('private damageEnemy', start);
+  const tactics = game.slice(start, end);
+  assert.match(tactics, /calculateEnemyProjectileDodge\(enemy, this\.projectiles, 0\.72, 1\.02, 0\.95\)/);
+  assert.match(tactics, /enemy\.aiDodgeScanTimer = 0\.12/);
+  assert.match(tactics, /enemy\.aiDodgeTimer = 0\.28/);
+  assert.match(tactics, /evasionWeight = role === 'bruiser'/);
+  assert.match(tactics, /evasion: projectileDodge/);
+  assert.match(tactics, /hasProjectileDodge \? 0\.76/);
+  assert.match(game, /aiDodgeScanTimer\?: number/);
+});
+
+test('ordinary enemy projectiles lead a moving operator while locked boss telegraphs keep their committed lane', () => {
+  assert.match(game, /private predictPlayerAimPoint\(/);
+  assert.match(game, /predictEnemyAimPoint\(/);
+  assert.match(game, /this\.predictPlayerAimPoint\(x, z, 7\.6, targetX, targetZ, 0\.64\)/);
+  assert.match(game, /this\.predictPlayerAimPoint\(x, z, 7\.2, targetX, targetZ, 0\.62\)/);
+  assert.match(game, /const aim = this\.predictPlayerAimPoint\(x, z, 7\.5\)/);
+  assert.match(game, /Number\.isFinite\(lockedDirection\) \? null : this\.predictPlayerAimPoint/);
+  assert.match(game, /Math\.sin\(lockedDirection as number\)/);
+});
