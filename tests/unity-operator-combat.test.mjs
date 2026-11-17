@@ -708,3 +708,23 @@ test('Unity enemy faction brawl exposes a visible timed marker and removes it on
   assert.match(enemy, /ClearFactionBrawlVisual\(\)/);
   assert.match(enemy, /private void Defeat\(\)[\s\S]*?ClearFactionBrawlVisual\(\)/);
 });
+
+
+test('Unity faction-brawl visuals activate and expire before stun can short-circuit enemy AI', async () => {
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  const updateStart = enemy.indexOf('private void Update()');
+  const stunCheck = enemy.indexOf('if (_stunRemaining > 0f)', updateStart);
+  const visualTick = enemy.indexOf('TickFactionBrawlVisual(deltaTime)', updateStart);
+  const expiryCleanup = enemy.indexOf('ClearFactionBrawlVisual()', updateStart);
+  const brawlCombat = enemy.indexOf('TickFactionBrawl(deltaTime)', updateStart);
+
+  assert.ok(updateStart >= 0, 'EnemyAgent.Update must exist');
+  assert.ok(visualTick > updateStart && visualTick < stunCheck,
+    'the brawl marker must continue animating while an enemy is stunned');
+  assert.ok(expiryCleanup > updateStart && expiryCleanup < stunCheck,
+    'the brawl marker and tint must be removed on expiry before the stun early-return');
+  assert.ok(brawlCombat > stunCheck,
+    'stunned enemies must not execute enemy-vs-enemy combat');
+  assert.match(enemy, /if \(_target == null \|\| _target\.IsDefeated \|\| GameSession\.Current == null[\s\S]*?ClearFactionBrawlVisual\(\)/,
+    'inactive gameplay must also clean up the temporary brawl visual');
+});
