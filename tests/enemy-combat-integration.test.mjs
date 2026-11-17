@@ -35,3 +35,14 @@ test('hostile and friendly shot impacts have a visible pooled contact response',
   assert.match(game, /this\.spawnParticleRing\(this\.playerPos\.x, this\.playerPos\.y \+ 0\.55, this\.playerPos\.z, impactColor\)/);
   assert.match(game, /this\.spawnCompactImpact\(e\.x, e\.y \+ 0\.72, e\.z/);
 });
+
+test('campaign melee AI closes into attack range and holds without contact jitter', () => {
+  const start = game.indexOf('// Dynamic Chase / Tracking AI for ground enemies');
+  const end = game.indexOf('// The Sentinel commits to a visible lane', start);
+  const campaign = game.slice(start, end);
+  assert.match(campaign, /const attackDistance = Math\.max\(1\.10, getEnemyPlayerContactDistance\(e\.type\) \+ 0\.10\)/);
+  assert.match(campaign, /const inContactLane = distToPlayer <= attackDistance \+ 0\.08/);
+  assert.match(campaign, /const arrivalScale = inContactLane/);
+  assert.match(campaign, /separationLength < 0\.34/);
+  assert.match(campaign, /e\.x \+= move\.x \* chaseSpeed \* arrivalScale \* dt/);
+});
