@@ -73,7 +73,7 @@ test('imported enemy rigs use directional locomotion, bounded cadence and distan
 test('homing and high-speed projectile collision use the enemy broad phase and reusable steering state', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /projectileSteeringScratch = new THREE\.Vector3\(\)/);
-  assert.match(game, /enemySpatialIndex\\.query\\(p\\.mesh\\.position\\.x, p\\.mesh\\.position\\.z, homingRange\\)/);
+  assert.match(game, /enemySpatialIndex\.query\(p\.mesh\.position\.x, p\.mesh\.position\.z, homingRange\)/);
   assert.match(game, /const toPlayer = this\.projectileSteeringScratch\.set\(/);
   assert.match(game, /const broadphaseRadius = Math\.sqrt\(segmentLengthSq\) \* 0\.5 \+ 1\.65/);
   assert.match(game, /closest point on this frame's movement segment/);
