@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace MaxFlix.Unity.Runtime
 {
-    /// <summary>Lightweight homing missile for Grzesiek's 44cm Zagłady ability.</summary>
+    /// <summary>Readable low-poly guided missile with a visible exhaust and bounded splash damage.</summary>
     public sealed class OperatorHomingRocket : MonoBehaviour
     {
         private EnemyAgent _target;
@@ -13,9 +13,14 @@ namespace MaxFlix.Unity.Runtime
         private float _blastRadius;
         private float _life;
         private bool _detonated;
+        private Transform _exhaustGlow;
+        private Transform _exhaustCore;
+        private TrailRenderer _trail;
+
         private static Material _bodyMaterial;
         private static Material _accentMaterial;
         private static Material _flameMaterial;
+        private static Material _metalMaterial;
 
         public static OperatorHomingRocket Spawn(Transform parent, Vector3 origin, Vector3 direction,
             EnemyAgent target, Color color, float damage, float speed, float turnRate, float blastRadius, float lifetime)
@@ -40,19 +45,47 @@ namespace MaxFlix.Unity.Runtime
             _blastRadius = Mathf.Clamp(blastRadius, 0.5f, 3.5f);
             _life = Mathf.Clamp(lifetime, 0.5f, 6f);
             EnsureMaterials(color);
-            CreatePart(PrimitiveType.Capsule, "Rocket metal body", new Vector3(0f, 0f, -0.02f),
-                new Vector3(0.18f, 0.55f, 0.18f), _bodyMaterial, Quaternion.Euler(90f, 0f, 0f));
-            CreatePart(PrimitiveType.Sphere, "Rocket nose", new Vector3(0f, 0f, 0.34f),
-                new Vector3(0.17f, 0.22f, 0.17f), _accentMaterial);
-            CreatePart(PrimitiveType.Sphere, "Rocket exhaust", new Vector3(0f, 0f, -0.36f),
-                new Vector3(0.12f, 0.12f, 0.18f), _flameMaterial);
-            for (int i = 0; i < 3; i++)
+
+            CreatePart(PrimitiveType.Capsule, "Rocket armored body", new Vector3(0f, 0f, -0.02f),
+                new Vector3(0.18f, 0.62f, 0.18f), _bodyMaterial, Quaternion.Euler(90f, 0f, 0f));
+            CreatePart(PrimitiveType.Sphere, "Rocket reinforced nose", new Vector3(0f, 0f, 0.34f),
+                new Vector3(0.18f, 0.22f, 0.18f), _accentMaterial);
+            CreatePart(PrimitiveType.Cylinder, "Rocket nose band", new Vector3(0f, 0f, 0.17f),
+                new Vector3(0.19f, 0.045f, 0.19f), _metalMaterial, Quaternion.Euler(90f, 0f, 0f));
+            CreatePart(PrimitiveType.Cylinder, "Rocket exhaust nozzle", new Vector3(0f, 0f, -0.38f),
+                new Vector3(0.22f, 0.12f, 0.22f), _metalMaterial, Quaternion.Euler(90f, 0f, 0f));
+
+            for (int i = 0; i < 4; i++)
             {
-                float angle = i * 120f;
-                Vector3 offset = Quaternion.Euler(0f, 0f, angle) * new Vector3(0.13f, 0f, -0.22f);
-                CreatePart(PrimitiveType.Cube, "Rocket stabilizer", offset, new Vector3(0.055f, 0.20f, 0.20f),
-                    _accentMaterial, Quaternion.Euler(0f, 0f, angle));
+                float angle = i * 90f;
+                Vector3 offset = Quaternion.Euler(0f, 0f, angle) * new Vector3(0.13f, 0f, -0.25f);
+                CreatePart(PrimitiveType.Cube, "Rocket stabilizer " + (i + 1), offset,
+                    new Vector3(0.055f, 0.22f, 0.24f), _accentMaterial, Quaternion.Euler(0f, 0f, angle));
             }
+
+            GameObject exhaust = new GameObject("Rocket pulsing exhaust");
+            exhaust.transform.SetParent(transform, false);
+            exhaust.transform.localPosition = new Vector3(0f, 0f, -0.49f);
+            _exhaustGlow = exhaust.transform;
+            GameObject core = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            core.name = "Rocket hot core";
+            core.transform.SetParent(transform, false);
+            core.transform.localPosition = new Vector3(0f, 0f, -0.51f);
+            core.transform.localScale = Vector3.one * 0.095f;
+            Collider coreCollider = core.GetComponent<Collider>();
+            if (coreCollider != null) Destroy(coreCollider);
+            Renderer coreRenderer = core.GetComponent<Renderer>();
+            if (coreRenderer != null) coreRenderer.sharedMaterial = _flameMaterial;
+            _exhaustCore = core.transform;
+            GameObject glow = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            glow.name = "Rocket exhaust glow";
+            glow.transform.SetParent(exhaust.transform, false);
+            glow.transform.localScale = new Vector3(0.16f, 0.16f, 0.28f);
+            Collider glowCollider = glow.GetComponent<Collider>();
+            if (glowCollider != null) Destroy(glowCollider);
+            Renderer glowRenderer = glow.GetComponent<Renderer>();
+            if (glowRenderer != null) glowRenderer.sharedMaterial = _accentMaterial;
+
             SphereCollider collider = gameObject.AddComponent<SphereCollider>();
             collider.isTrigger = true;
             collider.radius = 0.24f;
@@ -60,16 +93,17 @@ namespace MaxFlix.Unity.Runtime
             body.isKinematic = true;
             body.useGravity = false;
             body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-            TrailRenderer trail = gameObject.AddComponent<TrailRenderer>();
-            trail.time = 0.22f;
-            trail.minVertexDistance = 0.08f;
-            trail.startWidth = 0.13f;
-            trail.endWidth = 0.015f;
-            trail.material = _accentMaterial;
-            trail.startColor = new Color(color.r, color.g, color.b, 0.9f);
-            trail.endColor = new Color(color.r, color.g, color.b, 0f);
-            trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            trail.receiveShadows = false;
+
+            _trail = gameObject.AddComponent<TrailRenderer>();
+            _trail.time = 0.34f;
+            _trail.minVertexDistance = 0.055f;
+            _trail.startWidth = 0.15f;
+            _trail.endWidth = 0.008f;
+            _trail.material = _accentMaterial;
+            _trail.startColor = new Color(color.r, color.g, color.b, 0.95f);
+            _trail.endColor = new Color(color.r, color.g, color.b, 0f);
+            _trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            _trail.receiveShadows = false;
         }
 
         private void Update()
@@ -84,8 +118,13 @@ namespace MaxFlix.Unity.Runtime
                 if (aim.sqrMagnitude > 0.01f)
                     _direction = Vector3.RotateTowards(_direction, aim.normalized, _turnRate * dt, 0f).normalized;
             }
+
             transform.position += _direction * (_speed * dt);
             if (_direction.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(_direction);
+            float pulse = 0.84f + Mathf.Sin(Time.time * 38f + transform.position.x * 0.7f) * 0.18f;
+            if (_exhaustGlow != null) _exhaustGlow.localScale = new Vector3(1f, 1f, pulse);
+            if (_exhaustCore != null) _exhaustCore.localScale = Vector3.one * (0.085f + pulse * 0.035f);
+
             if (_target != null && Vector3.Distance(transform.position, _target.transform.position + Vector3.up * 0.62f) < 0.72f)
             {
                 Detonate();
@@ -122,6 +161,12 @@ namespace MaxFlix.Unity.Runtime
         {
             if (_detonated) return;
             _detonated = true;
+            if (_trail != null)
+            {
+                _trail.emitting = false;
+                _trail.Clear();
+            }
+
             Vector3 center = transform.position;
             foreach (EnemyAgent enemy in EnemyAgent.GetCachedAgents())
             {
@@ -131,18 +176,15 @@ namespace MaxFlix.Unity.Runtime
                 if (distance > _blastRadius) continue;
                 Vector3 push = distance > 0.01f ? offset / distance : _direction;
                 float falloff = Mathf.Lerp(1f, 0.58f, Mathf.Clamp01(distance / _blastRadius));
-                enemy.ApplyCombatHit(_damage * falloff, 0.22f, 0f, 1f, push * 2.5f);
+                enemy.ApplyCombatHit(_damage * falloff, 0.26f, 0f, 1f, push * 2.8f);
             }
-            GameObject flash = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            flash.name = "Rocket impact flash";
-            flash.transform.position = center;
-            flash.transform.localScale = Vector3.one * 0.36f;
-            Collider flashCollider = flash.GetComponent<Collider>();
-            if (flashCollider != null) Destroy(flashCollider);
-            Renderer renderer = flash.GetComponent<Renderer>();
-            if (renderer != null) renderer.sharedMaterial = _accentMaterial;
-            Destroy(flash, 0.12f);
-            Destroy(gameObject);
+
+            OperatorImpactBurst.Spawn(transform.parent, center, new Color(0.22f, 0.92f, 0.58f), _blastRadius);
+            foreach (Renderer renderer in GetComponentsInChildren<Renderer>())
+                if (renderer != null) renderer.enabled = false;
+            Collider ownCollider = GetComponent<Collider>();
+            if (ownCollider != null) ownCollider.enabled = false;
+            Destroy(gameObject, 0.04f);
         }
 
         private void CreatePart(PrimitiveType type, string partName, Vector3 position, Vector3 scale,
@@ -162,16 +204,18 @@ namespace MaxFlix.Unity.Runtime
 
         private static void EnsureMaterials(Color accent)
         {
-            if (_bodyMaterial != null && _accentMaterial != null && _flameMaterial != null) return;
+            if (_bodyMaterial != null && _accentMaterial != null && _flameMaterial != null && _metalMaterial != null) return;
             Shader shader = Shader.Find("Universal Render Pipeline/Lit");
             if (shader == null) shader = Shader.Find("Standard");
             if (shader == null) return;
             if (_bodyMaterial == null) _bodyMaterial = new Material(shader)
-                { color = new Color(0.15f, 0.20f, 0.27f), metallic = 0.78f, smoothness = 0.74f, enableInstancing = true };
+                { color = new Color(0.15f, 0.20f, 0.27f), metallic = 0.82f, smoothness = 0.78f, enableInstancing = true };
             if (_accentMaterial == null) _accentMaterial = new Material(shader)
-                { color = accent, metallic = 0.32f, smoothness = 0.62f, enableInstancing = true };
+                { color = accent, metallic = 0.42f, smoothness = 0.68f, enableInstancing = true };
             if (_flameMaterial == null) _flameMaterial = new Material(shader)
-                { color = new Color(0.35f, 0.88f, 1f), enableInstancing = true };
+                { color = new Color(0.44f, 0.95f, 1f), enableInstancing = true };
+            if (_metalMaterial == null) _metalMaterial = new Material(shader)
+                { color = new Color(0.60f, 0.69f, 0.78f), metallic = 0.90f, smoothness = 0.82f, enableInstancing = true };
         }
     }
 }
