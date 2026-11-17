@@ -669,5 +669,37 @@ test('Unity Grzesiek missile component has homing, target reacquisition and boun
   assert.match(rocket, /FindClosestTarget\(28f\)/);
   assert.match(rocket, /_blastRadius/);
   assert.match(rocket, /enemy\.ApplyCombatHit\(_damage \* falloff/);
-  assert.match(rocket, /TrailRenderer/);
+  assert.match(rocket, /TrailRenderer/);\n  assert.match(rocket, /_exhaustGlow\.localScale/);\n  assert.match(rocket, /Rocket stabilizer \" \+ \(i \+ 1\)/);\n  assert.match(rocket, /OperatorImpactBurst\.Spawn/);
+});
+
+
+test('Unity 44cm arm has articulated elbow/fist animation and a shared impact burst', async () => {
+  const kit = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorCombatKit.cs');
+  const burst = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorImpactBurst.cs');
+  assert.match(kit, /_grzesiekElbowPivot\.localRotation/);
+  assert.match(kit, /_grzesiekFistPivot\.localRotation/);
+  assert.match(kit, /Biceps peak|Biceps muscle/);
+  assert.match(kit, /Raised knuckle/);
+  assert.match(kit, /OperatorImpactBurst\.Spawn/);
+  assert.match(burst, /Expanding impact ring/);
+  assert.match(burst, /Impact fragment/);
+  assert.match(burst, /BuildRingMesh\(\)/);
+});
+
+test('Unity nine-month contract has two-sided lettering, animated paper fibres and a tear impact', async () => {
+  const kit = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/OperatorCombatKit.cs');
+  assert.match(kit, /CreateContractTextFace\(parent, value, localPosition, color, false\)/);
+  assert.match(kit, /CreateContractTextFace\(parent, value,[\s\S]*?true\)/);
+  assert.match(kit, /_contractFragments/);
+  assert.match(kit, /fragmentProgress/);
+  assert.match(kit, /OperatorImpactBurst\.Spawn/);
+});
+
+test('Unity enemy faction brawl exposes a visible timed marker and removes it on expiry or defeat', async () => {
+  const enemy = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyAgent.cs');
+  assert.match(enemy, /Magenta target ring/);
+  assert.match(enemy, /Enemy-on-enemy status marker/);
+  assert.match(enemy, /TickFactionBrawlVisual\(deltaTime\)/);
+  assert.match(enemy, /ClearFactionBrawlVisual\(\)/);
+  assert.match(enemy, /private void Defeat\(\)[\s\S]*?ClearFactionBrawlVisual\(\)/);
 });
