@@ -49,7 +49,7 @@ import { calculateEnemyObstacleAvoidanceVector } from './enemyNavigation.ts';
 import { calculateStableEnemySteering, getEnemyEngageRadius } from './enemySteering.ts';
 import { calculateEnemyProjectileDodge, predictEnemyAimPoint } from './enemyTactics.ts';
 import { getEnemyPlayerContactDistance, projectVelocityOutOfEnemyContacts, resolvePlayerMovementAgainstEnemies } from './enemyPlayerCollision.ts';
-import { findFirstProjectileBodyImpact, findFirstProjectileEnemyImpact } from './projectileImpact.ts';
+import { findFirstProjectileBodyImpact, findFirstProjectileEnemyImpact, type MutableProjectileSegmentPoint, type ProjectileEnemyImpactScratch, type ProjectileImpactScratch } from './projectileImpact.ts';
 import { createEnemyHitReaction, getEnemyHitPulse, getEnemyImpactBurstProfile } from './enemyCombatFeedback.ts';
 import { getEnemyDeathMotionPose, getEnemyDeathMotionProfile } from './enemyDeathMotion.ts';
 import { ENEMY_GAIT_PRESETS, ENEMY_VISUAL_PROFILES } from './enemyVisualProfiles.ts';
@@ -603,6 +603,14 @@ export class PaleciakiGameEngine {
   private readonly desiredLookAtPosition = new THREE.Vector3();
   // Shared synchronous scratch state: no per-frame Vector3/Quaternion churn for actors or homing shots.
   private readonly projectileSteeringScratch = new THREE.Vector3();
+  // Reused swept-collision records: enemy volleys can test several bodies per frame.
+  private readonly enemyProjectileStartScratch: MutableProjectileSegmentPoint = { x: 0, y: 0, z: 0 };
+  private readonly enemyProjectileEndScratch: MutableProjectileSegmentPoint = { x: 0, y: 0, z: 0 };
+  private readonly enemyProjectilePlayerTargetScratch: MutableProjectileSegmentPoint = { x: 0, y: 0, z: 0 };
+  private readonly enemyProjectileEnemyTargetScratch: MutableProjectileSegmentPoint = { x: 0, y: 0, z: 0 };
+  private readonly enemyProjectilePlayerImpactScratch: ProjectileImpactScratch = { t: 0, x: 0, y: 0, z: 0 };
+  private readonly enemyProjectileBodyImpactScratch: ProjectileImpactScratch = { t: 0, x: 0, y: 0, z: 0 };
+  private readonly enemyProjectileEnemyImpactScratch: ProjectileEnemyImpactScratch = { t: 0, x: 0, y: 0, z: 0, actor: null };
   private readonly enemySeparationScratch = { x: 0, z: 0 };
   private readonly cameraOcclusionWorldPosition = new THREE.Vector3();
   private readonly cameraOcclusionRaycaster = new THREE.Raycaster();
@@ -15673,14 +15681,25 @@ export class PaleciakiGameEngine {
       // Swept vertical-cylinder collision chooses the actual first body
       // contact, so a target behind the operator cannot consume a shot that
       // should already have hit the player.
-      const projectileStart = { x: previousX, y: previousY, z: previousZ };
-      const projectileEnd = { x: ep.mesh.position.x, y: ep.mesh.position.y, z: ep.mesh.position.z };
+      const projectileStart = this.enemyProjectileStartScratch;
+      projectileStart.x = previousX;
+      projectileStart.y = previousY;
+      projectileStart.z = previousZ;
+      const projectileEnd = this.enemyProjectileEndScratch;
+      projectileEnd.x = ep.mesh.position.x;
+      projectileEnd.y = ep.mesh.position.y;
+      projectileEnd.z = ep.mesh.position.z;
+      const playerTarget = this.enemyProjectilePlayerTargetScratch;
+      playerTarget.x = this.playerPos.x;
+      playerTarget.y = this.playerPos.y + 0.55;
+      playerTarget.z = this.playerPos.z;
       const playerImpact = findFirstProjectileBodyImpact(
         projectileStart,
         projectileEnd,
-        { x: this.playerPos.x, y: this.playerPos.y + 0.55, z: this.playerPos.z },
+        playerTarget,
         0.85,
         1.0,
+        this.enemyProjectilePlayerImpactScratch,
       );
       const projectileDeltaX = projectileEnd.x - projectileStart.x;
       const projectileDeltaZ = projectileEnd.z - projectileStart.z;
@@ -15692,7 +15711,15 @@ export class PaleciakiGameEngine {
             Math.hypot(projectileDeltaX, projectileDeltaZ) * 0.5 + 1.9,
           )
         : this.enemies;
-      const enemyImpact = findFirstProjectileEnemyImpact(projectileStart, projectileEnd, projectileCandidates);
+      const enemyImpact = findFirstProjectileEnemyImpact(
+        projectileStart,
+        projectileEnd,
+        projectileCandidates,
+        0.9,
+        this.enemyProjectileEnemyImpactScratch,
+        this.enemyProjectileEnemyTargetScratch,
+        this.enemyProjectileBodyImpactScratch,
+      );
       if (enemyImpact && (!playerImpact || enemyImpact.t < playerImpact.t)) {
         const impactColor = ep.trailColor ?? (ep.isDyscyplinarka ? 0xef4444 : 0x67e8f9);
         ep.mesh.position.set(enemyImpact.x, enemyImpact.y, enemyImpact.z);

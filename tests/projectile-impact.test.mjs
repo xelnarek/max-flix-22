@@ -64,3 +64,41 @@ test('projectile body impact handles vertical travel through the body height win
   assert.ok(hit.t > 0 && hit.t < 1);
   assert.ok(Math.abs(hit.y - 0.5) <= 0.5);
 });
+
+test('body impact reuses a caller-owned output record', async () => {
+  const { findFirstProjectileBodyImpact } = await import('../src/projectileImpact.ts');
+  const scratch = { t: -1, x: -1, y: -1, z: -1 };
+  const hit = findFirstProjectileBodyImpact(
+    { x: -2, y: 1.05, z: 0 },
+    { x: 2, y: 1.05, z: 0 },
+    { x: 0, y: 1.05, z: 0 },
+    0.85,
+    1.0,
+    scratch,
+  );
+  assert.strictEqual(hit, scratch);
+  assert.ok(hit);
+  assert.ok(hit.t > 0 && hit.t < 0.5);
+});
+
+test('enemy impact reuses output and target/body scratch records without changing earliest-hit selection', () => {
+  const near = { id: 'near', type: 'inspector', x: 0, y: 0.5, z: 0, state: 'chase' };
+  const far = { id: 'far', type: 'walczak', x: 3, y: 0.5, z: 0, state: 'chase' };
+  const output = { t: 0, x: 0, y: 0, z: 0, actor: null };
+  const target = { x: 0, y: 0, z: 0 };
+  const bodyImpact = { t: 0, x: 0, y: 0, z: 0 };
+  const hit = findFirstProjectileEnemyImpact(
+    { x: -4, y: 1.12, z: 0 },
+    { x: 5, y: 1.12, z: 0 },
+    [far, near],
+    0.9,
+    output,
+    target,
+    bodyImpact,
+  );
+  assert.strictEqual(hit, output);
+  assert.equal(hit?.actor.id, 'near');
+  assert.equal(target.x, near.x);
+  assert.equal(target.y, near.y + 0.62);
+  assert.ok(hit && hit.t > 0 && hit.t < 0.5);
+});

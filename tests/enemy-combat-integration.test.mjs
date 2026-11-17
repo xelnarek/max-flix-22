@@ -28,7 +28,8 @@ test('hostile projectiles stop at the first enemy body or the player along the s
   assert.match(game, /enemyImpact && \(!playerImpact \|\| enemyImpact\.t < playerImpact\.t\)/);
   assert.match(game, /if \(playerImpact\)/);
   assert.match(game, /this\.spawnCompactImpact\(enemyImpact\.x, enemyImpact\.y, enemyImpact\.z, impactColor\)/);
-  assert.match(game, /previousX, y: previousY, z: previousZ/);
+  assert.match(game, /const projectileStart = this\.enemyProjectileStartScratch;/);
+  assert.match(game, /projectileStart\.x = previousX;[\s\S]*projectileStart\.y = previousY;[\s\S]*projectileStart\.z = previousZ;/);
 });
 
 test('hostile and friendly shot impacts have a visible pooled contact response', () => {
@@ -60,13 +61,16 @@ test('large enemy crowds use a conservative spatial broadphase for player contac
 });
 
 test('large hostile projectile crowds use the segment spatial broadphase before exact impact tests', () => {
-  const start = game.indexOf('const projectileStart = { x: previousX, y: previousY, z: previousZ }');
+  const start = game.indexOf('const projectileStart = this.enemyProjectileStartScratch;');
+  assert.notEqual(start, -1, 'enemy projectile sweep must use reusable start-point storage');
   const end = game.indexOf('if (enemyImpact &&', start);
   const collision = game.slice(start, end);
+  assert.match(collision, /projectileStart\.x = previousX;[\s\S]*projectileStart\.y = previousY;[\s\S]*projectileStart\.z = previousZ;/);
+  assert.match(collision, /projectileEnd\.x = ep\.mesh\.position\.x;[\s\S]*projectileEnd\.z = ep\.mesh\.position\.z;/);
   assert.match(collision, /this\.enemySpatialIndexCachedCount === this\.enemies\.length/);
   assert.match(collision, /this\.enemySpatialIndex\.query\(/);
   assert.match(collision, /Math\.hypot\(projectileDeltaX, projectileDeltaZ\) \* 0\.5 \+ 1\.9/);
-  assert.match(collision, /findFirstProjectileEnemyImpact\(projectileStart, projectileEnd, projectileCandidates\)/);
+  assert.match(collision, /findFirstProjectileEnemyImpact\([\s\S]*?projectileCandidates,[\s\S]*?this\.enemyProjectileEnemyImpactScratch/);
 });
 
 test('Survival enemies scan for incoming player shots and commit a short role-weighted sidestep', async () => {
