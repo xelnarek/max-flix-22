@@ -69,7 +69,8 @@ test('large hostile projectile crowds use the segment spatial broadphase before 
   assert.match(collision, /findFirstProjectileEnemyImpact\(projectileStart, projectileEnd, projectileCandidates\)/);
 });
 
-test('Survival enemies scan for incoming player shots and commit a short role-weighted sidestep', () => {
+test('Survival enemies scan for incoming player shots and commit a short role-weighted sidestep', async () => {
+  const types = await read('../src/types.ts');
   const start = game.indexOf('private updateSurvivalEnemyTactics');
   const end = game.indexOf('private damageEnemy', start);
   const tactics = game.slice(start, end);
@@ -79,7 +80,7 @@ test('Survival enemies scan for incoming player shots and commit a short role-we
   assert.match(tactics, /evasionWeight = role === 'bruiser'/);
   assert.match(tactics, /evasion: projectileDodge/);
   assert.match(tactics, /hasProjectileDodge \? 0\.76/);
-  assert.match(game, /aiDodgeScanTimer\?: number/);
+  assert.match(types, /aiDodgeScanTimer\?: number/);
 });
 
 test('ordinary enemy projectiles lead a moving operator while locked boss telegraphs keep their committed lane', () => {
