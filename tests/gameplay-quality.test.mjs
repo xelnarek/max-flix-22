@@ -415,11 +415,14 @@ test('Survival spawn candidates prefer clear lanes and fall back to the least cr
   assert.match(spacing, /nearestSquared > bestNearestSquared/);
 });
 
-test('campaign chase and Survival steering both apply enemy separation', async () => {
+test('campaign chase and Survival steering both apply stable enemy separation', async () => {
   const game = await read('../src/game.ts');
   assert.ok((game.match(/calculateEnemySeparationVector\(/g) || []).length >= 2);
-  assert.match(game, /moveX = dx \/ Math\.max\(0\.1, distToPlayer\) \+ separation\.x \* 1\.2/);
-  assert.match(game, /const separationX = separation\.x/);
+  assert.ok((game.match(/calculateStableEnemySteering\(/g) || []).length >= 2);
+  assert.match(game, /separationWeight: 0\.82/);
+  assert.match(game, /separationWeight: 0\.72/);
+  assert.match(game, /e\.aiSteerX = move\.x/);
+  assert.match(game, /enemy\.aiSteerX = steerX/);
 });
 
 
