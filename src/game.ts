@@ -14458,7 +14458,9 @@ export class PaleciakiGameEngine {
         }
         let bestScore = Number.POSITIVE_INFINITY;
         let nextTarget: EnemyItem | null = null;
-        for (const candidate of this.enemies) {
+        // Retarget within the existing 25m combat envelope, not the whole horde.
+        const nearbyEnemies = this.enemySpatialIndex.query(rival.x, rival.z, 26);
+        for (const candidate of nearbyEnemies) {
           if (candidate.state === 'defeated' || !candidate.mesh) continue;
           if (Math.abs(candidate.y - rival.baseY) > 4.2) continue;
           const distance = Math.hypot(candidate.x - rival.x, candidate.z - rival.z);
@@ -18324,7 +18326,13 @@ export class PaleciakiGameEngine {
     if (targetInvalid || tank.targetScanTimer <= 0) {
       let bestScore = Number.POSITIVE_INFINITY;
       let nextTarget: EnemyItem | null = null;
-      for (const enemy of this.enemies) {
+      // Reuse the crowd broadphase; keep the tank's exact 23.5m firing radius.
+      const nearbyEnemies = this.enemySpatialIndex.query(
+        tank.group.position.x,
+        tank.group.position.z,
+        24.5,
+      );
+      for (const enemy of nearbyEnemies) {
         if (enemy.state === 'defeated' || !enemy.mesh?.visible) continue;
         const tankDistance = Math.hypot(enemy.x - tank.group.position.x, enemy.z - tank.group.position.z);
         if (tankDistance > 23.5) continue;
@@ -19159,7 +19167,13 @@ export class PaleciakiGameEngine {
       let target: EnemyItem | null = null;
       let nearest = 15.5;
       let bestThreatScore = Number.POSITIVE_INFINITY;
-      for (const enemy of this.enemies) {
+      // Query candidates around this guard, then preserve the exact combat radius.
+      const nearbyEnemies = this.enemySpatialIndex.query(
+        capybara.group.position.x,
+        capybara.group.position.z,
+        16.5,
+      );
+      for (const enemy of nearbyEnemies) {
         if (enemy.state === 'defeated' || !enemy.mesh?.visible) continue;
         const guardDistance = Math.hypot(enemy.x - capybara.group.position.x, enemy.z - capybara.group.position.z);
         if (guardDistance > 15.5) continue;
