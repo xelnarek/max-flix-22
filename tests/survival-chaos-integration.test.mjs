@@ -9,6 +9,8 @@ test('Survival levels offer a separate B4 roulette every third level after the r
   assert.match(game, /this\.survivalChaosRoulettePending = this\.survivalLevel % 3 === 0/);
   assert.match(game, /this\.callbacks\.onSurvivalLevelUp\?\.\(\[\], 'chaos-roulette'\)/);
   assert.match(game, /public spinSurvivalChaosRoulette\(\): boolean/);
+  assert.match(game, /public getSurvivalChaosRouletteLastResult\(\)/);
+  assert.match(game, /survivalChaosRouletteLastResult = \{ kind: outcome, title: selected.title, icon: selected.icon \}/);
   assert.match(game, /rollSurvivalChaosRoulette\(Math\.random\(\)\)/);
   assert.match(app, /isChaosRoulette/);
   assert.match(app, /spinSurvivalChaosRoulette\(\)/);
@@ -61,7 +63,13 @@ test('twelve roulette outcomes have concrete handlers for loot, control, overdri
   assert.match(game, /ELITA B4 • KONTROLER/);
   assert.match(game, /ELITA B4 • KURIER/);
   assert.match(app, /Dwanaście możliwych wyników automatu/);
-  assert.match(app, /machine\.innerHTML = '<span>💎<\/span><span>⚡<\/span><span>☢️<\/span><span>👾<\/span>'/);
+  assert.match(app, /survival-chaos-reels/);
+  assert.match(app, /survival-chaos-reel-symbol/);
+  assert.match(app, /window\.setInterval/);
+  assert.match(app, /stopAt = reducedMotion \? \[80, 150, 220\] : \[1420, 1960, 2520\]/);
+  assert.match(app, /getSurvivalChaosRouletteLastResult\(\)/);
+  assert.match(app, /rewardStyles/);
+  assert.match(app, /NAGRODA WYLOSOWANA/);
 });
 
 test('bullet nova projectiles make a physical splash impact and time-lock visual work is capped', async () => {
