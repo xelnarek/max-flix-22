@@ -95,59 +95,93 @@ export class B4AssetLoader {
       overlay.id = 'asset-loader-overlay';
       overlay.className = 'asset-loader-overlay';
       overlay.innerHTML = `
-        <div class="loader-modal-card">
-          <div class="loader-icon-spinner" id="loader-spinner-icon">🏗️</div>
-          <div class="loader-header">CENTRUM B4 3D LOGISTICS ENGINE</div>
-          <div class="loader-subtitle" id="loader-subtitle">Inicjalizacja zasobów 3D, tekstur i silnika fizyki...</div>
-          
-          <div class="loader-categories-grid">
-            <div class="loader-category-pill" id="cat-pill-textures">
-              <span class="cat-icon">🎨</span>
-              <div class="cat-info">
-                <span class="cat-name">Tekstury</span>
-                <span class="cat-count" id="cat-count-textures">0/23</span>
-              </div>
-            </div>
-            <div class="loader-category-pill" id="cat-pill-models">
-              <span class="cat-icon">🗿</span>
-              <div class="cat-info">
-                <span class="cat-name">Modele 3D</span>
-                <span class="cat-count" id="cat-count-models">NA ŻĄDANIE</span>
-              </div>
-            </div>
-            <div class="loader-category-pill" id="cat-pill-audio">
-              <span class="cat-icon">🔊</span>
-              <div class="cat-info">
-                <span class="cat-name">Audio</span>
-                <span class="cat-count" id="cat-count-audio">PO DOTKNIĘCIU</span>
-              </div>
-            </div>
-            <div class="loader-category-pill" id="cat-pill-engine">
-              <span class="cat-icon">⚙️</span>
-              <div class="cat-info">
-                <span class="cat-name">Silnik 3D</span>
-                <span class="cat-count" id="cat-count-engine">OK</span>
-              </div>
-            </div>
+<div class="loader-modal-card loader-maddnes-card">
+        <div class="loader-brand-row">
+          <div class="loader-art" aria-hidden="true">
+            <svg viewBox="0 0 180 124" focusable="false">
+              <defs>
+                <linearGradient id="loader-forklift-gold" x1="0" x2="1" y1="0" y2="1">
+                  <stop offset="0" stop-color="#ffe39a"/><stop offset="1" stop-color="#d97706"/>
+                </linearGradient>
+                <linearGradient id="loader-forklift-blue" x1="0" x2="1" y1="0" y2="1">
+                  <stop offset="0" stop-color="#8be7f2"/><stop offset="1" stop-color="#167e9b"/>
+                </linearGradient>
+              </defs>
+              <path d="M12 103h156" stroke="#39536a" stroke-width="4" stroke-linecap="round"/>
+              <path d="M18 109h144" stroke="#e8a72b" stroke-width="2" stroke-dasharray="13 8"/>
+              <path d="M42 83h78l13 15H31z" fill="#27384a" stroke="#7891a5" stroke-width="2"/>
+              <path d="M60 79V48h37l14 31" fill="none" stroke="url(#loader-forklift-blue)" stroke-width="8" stroke-linejoin="round"/>
+              <path d="M71 48V25h38l17 54" fill="none" stroke="#84d9e9" stroke-width="5" stroke-linejoin="round"/>
+              <path d="M107 79h25V28h8v72h-8V38" fill="none" stroke="#d7e3ec" stroke-width="5" stroke-linejoin="round"/>
+              <path d="M113 28h34M113 38h34" stroke="#e9a72b" stroke-width="4" stroke-linecap="round"/>
+              <rect x="30" y="57" width="40" height="27" rx="5" fill="url(#loader-forklift-gold)" stroke="#ffe6ad" stroke-width="2"/>
+              <path d="M39 64h22M39 72h22" stroke="#8c4a11" stroke-width="2" opacity=".8"/>
+              <path d="M78 33h19" stroke="#ffedbd" stroke-width="4" stroke-linecap="round"/>
+              <circle cx="47" cy="96" r="10" fill="#101b29" stroke="#8ca2b4" stroke-width="3"/>
+              <circle cx="47" cy="96" r="3" fill="#eeb340"/>
+              <circle cx="112" cy="96" r="10" fill="#101b29" stroke="#8ca2b4" stroke-width="3"/>
+              <circle cx="112" cy="96" r="3" fill="#eeb340"/>
+              <path d="M145 20l7-10 7 10-7 10z" fill="#55d5e5"/>
+              <path d="M22 31l5-7 5 7-5 7z" fill="#fbbf24"/>
+              <path d="M142 66l4-4 4 4-4 4z" fill="#c084fc"/>
+            </svg>
+            <span class="loader-icon-spinner" id="loader-spinner-icon">🏗️</span>
           </div>
-
-          <div class="loader-track">
-            <div id="loader-fill" class="loader-fill" style="width: 0%"></div>
-          </div>
-
-          <div class="loader-meta">
-            <div class="loader-status-col">
-              <span id="loader-category-badge" class="loader-category-badge badge-engine">SYSTEM</span>
-              <span id="loader-status-text" class="loader-status-text">Inicjalizacja systemu...</span>
-            </div>
-            <span id="loader-percent" class="loader-percent tabular-nums">0%</span>
-          </div>
-
-          <div class="loader-tip-box">
-            <span class="tip-icon">💡</span>
-            <span id="loader-tip-text" class="tip-text">Wskazówka: Zbieraj worki z fugą i złote palety, by zdobywać punkty i odblokować premie zmiany!</span>
+          <div class="loader-brand-copy">
+            <div class="loader-kicker">CENTRUM B4 • ZMIANA W TOKU</div>
+            <div class="loader-header">WAREHOUSE <span>MaDDnes</span></div>
+            <div class="loader-subtitle" id="loader-subtitle">Odpalamy silniki, kompletujemy ekipę i sprawdzamy, czy ktoś pilnuje BHP.</div>
           </div>
         </div>
+
+        <div class="loader-categories-grid" aria-label="Status przygotowania gry">
+          <div class="loader-category-pill" id="cat-pill-textures">
+            <span class="cat-icon">🧱</span>
+            <div class="cat-info">
+              <span class="cat-name">Otoczenie B4</span>
+              <span class="cat-count" id="cat-count-textures">0/23</span>
+            </div>
+          </div>
+          <div class="loader-category-pill" id="cat-pill-models">
+            <span class="cat-icon">🧟</span>
+            <div class="cat-info">
+              <span class="cat-name">Ekipa 3D</span>
+              <span class="cat-count" id="cat-count-models">NA ŻĄDANIE</span>
+            </div>
+          </div>
+          <div class="loader-category-pill" id="cat-pill-audio">
+            <span class="cat-icon">📻</span>
+            <div class="cat-info">
+              <span class="cat-name">Radiowęzeł</span>
+              <span class="cat-count" id="cat-count-audio">PO DOTKNIĘCIU</span>
+            </div>
+          </div>
+          <div class="loader-category-pill" id="cat-pill-engine">
+            <span class="cat-icon">⚙️</span>
+            <div class="cat-info">
+              <span class="cat-name">Gotowość zmiany</span>
+              <span class="cat-count" id="cat-count-engine">OK</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="loader-track" role="progressbar" aria-label="Postęp uruchamiania gry" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div id="loader-fill" class="loader-fill" style="width: 0%"></div>
+        </div>
+
+        <div class="loader-meta">
+          <div class="loader-status-col">
+            <span id="loader-category-badge" class="loader-category-badge badge-engine">SYSTEM</span>
+            <span id="loader-status-text" class="loader-status-text">Przygotowanie stanowiska...</span>
+          </div>
+          <span id="loader-percent" class="loader-percent tabular-nums">0%</span>
+        </div>
+
+        <div class="loader-tip-box">
+          <span class="tip-icon">💡</span>
+          <span id="loader-tip-text" class="tip-text">Wskazówka: nie stój na torze sztaplarki. Regulamin BHP jest krótki, a respawn jeszcze krótszy.</span>
+        </div>
+      </div>
       `;
       document.body.appendChild(overlay);
     }
