@@ -74,7 +74,7 @@ import { getSurvivalBiomeIdAtPosition, getSurvivalWorldBiome, SURVIVAL_WORLD_BIO
 import { getSurvivalWorldBiomeBlendAtPosition } from './survivalWorldBlend.ts';
 import { chooseCampaignNearbyRewardSpawnPoint } from './campaignRewards.ts';
 import { chooseNearbySpawnPoint } from './arenaSpawn.ts';
-import { chooseSurvivalEnemySpawnType } from './survivalEnemySpawns.ts';
+import { chooseSurvivalEnemySpawnType, SURVIVAL_SPAWN_VARIETY_MEMORY, type SurvivalEnemySpawnType } from './survivalEnemySpawns.ts';
 import { findNextReadyWeaponIndex, getNextWeaponDispatchCursor } from './survivalWeaponDispatch.ts';
 import { buildSurvivalDamageReport, createSurvivalDamageStats, getSurvivalWeaponDamageSource, recordSurvivalDamage, recordSurvivalKill, SURVIVAL_DAMAGE_WEAPONS, type SurvivalDamageReport, type SurvivalDamageSource, type SurvivalDamageWeaponId, type SurvivalDamageStats } from './survivalDamageStats.ts';
 import { getSurvivalDifficultyProfile } from './survivalDifficulty.ts';
@@ -790,6 +790,7 @@ export class PaleciakiGameEngine {
   private pendingPvpHitEvents: PvpHitEvent[] = [];
   private survivalElapsed = 0;
   private survivalSpawnTimer = 0;
+  private survivalRecentSpawnTypes: SurvivalEnemySpawnType[] = [];
   private survivalSurgeTimeLeft = 0;
   private survivalSurgeSpawnQueue = 0;
   private survivalSurgeSpawnTimer = 0;
@@ -2562,6 +2563,7 @@ export class PaleciakiGameEngine {
     this.threatTier = 0;
     this.survivalElapsed = 0;
     this.survivalSpawnTimer = 0;
+    this.survivalRecentSpawnTypes = [];
     this.survivalSurgeTimeLeft = 0;
     this.survivalSurgeSpawnQueue = 0;
     this.survivalSurgeSpawnTimer = 0;
@@ -11519,7 +11521,9 @@ export class PaleciakiGameEngine {
     } else if (allowSpecialEncounters && shouldSpawnBosmanKrakow(wave, Math.random(), bosmanAlreadyActive)) {
       this.addBosmanKrakowBossEnemy(id, x, z);
     } else {
-      const spawnType = chooseSurvivalEnemySpawnType(wave, this.survivalElapsed, Math.random());
+      const spawnType = chooseSurvivalEnemySpawnType(wave, this.survivalElapsed, Math.random(), this.survivalRecentSpawnTypes);
+      this.survivalRecentSpawnTypes.push(spawnType);
+      if (this.survivalRecentSpawnTypes.length > SURVIVAL_SPAWN_VARIETY_MEMORY) this.survivalRecentSpawnTypes.shift();
       switch (spawnType) {
         case 'zombie_pracownik':
           this.addZombieWorkerEnemy(id, x, minZ, maxZ, 'Zombie-Magazynier — głodny po nocnej zmianie');

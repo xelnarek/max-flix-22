@@ -20,6 +20,9 @@ export type SurvivalEnemySpawnType = Extract<EnemyType,
   | 'cyber_salesman'
 >;
 
+/** Per-run memory used only by regular random Survival deliveries. */
+export const SURVIVAL_SPAWN_VARIETY_MEMORY = 2;
+
 export interface SurvivalEnemySpawnWeight {
   readonly type: SurvivalEnemySpawnType;
   readonly minWave: number;
@@ -70,6 +73,17 @@ export function getSurvivalEnemySpawnWeights(
   ).map((entry) => ({ ...entry }));
 }
 
+function isRecentSurvivalSpawnType(
+  type: SurvivalEnemySpawnType,
+  recentTypes: readonly SurvivalEnemySpawnType[],
+): boolean {
+  const firstRecentIndex = Math.max(0, recentTypes.length - SURVIVAL_SPAWN_VARIETY_MEMORY);
+  for (let index = firstRecentIndex; index < recentTypes.length; index += 1) {
+    if (recentTypes[index] === type) return true;
+  }
+  return false;
+}
+
 /**
  * Weighted, deterministic selection from the unlocked regular roster.
  * roll=0 selects the first eligible archetype; values approach 1 select the
@@ -79,16 +93,33 @@ export function chooseSurvivalEnemySpawnType(
   wave: number,
   elapsedSeconds: number,
   roll: number,
+  recentTypes: readonly SurvivalEnemySpawnType[] = [],
 ): SurvivalEnemySpawnType {
   const eligible = getSurvivalEnemySpawnWeights(wave, elapsedSeconds);
   if (eligible.length === 0) return 'zombie_pracownik';
-  const totalWeight = eligible.reduce((total, entry) => total + entry.weight, 0);
+
+  // Avoid the two most recent regular deliveries without allocating a Set or
+  // filtered pool in the gameplay spawn path. Fall back when all are recent.
+  let variedTotalWeight = 0;
+  for (const entry of eligible) {
+    if (!isRecentSurvivalSpawnType(entry.type, recentTypes)) variedTotalWeight += entry.weight;
+  }
+  const useVarietyPool = variedTotalWeight > 0 && recentTypes.length > 0;
+  let totalWeight = variedTotalWeight;
+  if (!useVarietyPool) {
+    totalWeight = 0;
+    for (const entry of eligible) totalWeight += entry.weight;
+  }
+
   const safeRoll = Number.isFinite(roll) ? Math.max(0, Math.min(0.999999999, roll)) : 0.5;
   const target = safeRoll * totalWeight;
   let cumulative = 0;
+  let fallbackType = eligible[eligible.length - 1].type;
   for (const entry of eligible) {
+    if (useVarietyPool && isRecentSurvivalSpawnType(entry.type, recentTypes)) continue;
+    fallbackType = entry.type;
     cumulative += entry.weight;
     if (target < cumulative) return entry.type;
   }
-  return eligible[eligible.length - 1].type;
+  return fallbackType;
 }

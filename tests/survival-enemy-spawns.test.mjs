@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import {
   chooseSurvivalEnemySpawnType,
   getSurvivalEnemySpawnWeights,
@@ -47,4 +48,29 @@ test('bosses and one-time event enemies are kept out of the standard random pool
     assert.equal(eligible.includes(type), false, type);
   }
   assert.equal(chooseSurvivalEnemySpawnType(1, 0, Number.NaN), 'sztaplar_szalony');
+});
+
+
+test('regular deliveries avoid repeating either of the last two unlocked archetypes', () => {
+  const recent = ['zombie_pracownik', 'kurier'];
+  assert.equal(chooseSurvivalEnemySpawnType(1, 0, 0, recent), 'sztaplar_szalony');
+  assert.notEqual(chooseSurvivalEnemySpawnType(1, 0, 0, recent), recent[0]);
+  assert.notEqual(chooseSurvivalEnemySpawnType(1, 0, 0, recent), recent[1]);
+});
+
+test('spawn variety falls back to the full roster when every unlocked archetype is recent', () => {
+  const allEarly = getSurvivalEnemySpawnWeights(1, 0).map((entry) => entry.type);
+  assert.equal(chooseSurvivalEnemySpawnType(1, 0, 0, allEarly), chooseSurvivalEnemySpawnType(1, 0, 0));
+});
+
+test('invalid recent history is harmless and special encounters remain outside the regular pool', () => {
+  assert.equal(chooseSurvivalEnemySpawnType(1, 0, 0, ['walczak', 'pomazaniec']), 'zombie_pracownik');
+});
+
+test('Survival spawn history is reset, bounded and used only by regular deliveries', async () => {
+  const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
+  assert.match(game, /private survivalRecentSpawnTypes: SurvivalEnemySpawnType\[\] = \[\]/);
+  assert.match(game, /this\.survivalRecentSpawnTypes = \[\]/);
+  assert.match(game, /chooseSurvivalEnemySpawnType\(wave, this\.survivalElapsed, Math\.random\(\), this\.survivalRecentSpawnTypes\)/);
+  assert.match(game, /this\.survivalRecentSpawnTypes\.push\(spawnType\);[\s\S]*?if \(this\.survivalRecentSpawnTypes\.length > SURVIVAL_SPAWN_VARIETY_MEMORY\) this\.survivalRecentSpawnTypes\.shift\(\)/);
 });
