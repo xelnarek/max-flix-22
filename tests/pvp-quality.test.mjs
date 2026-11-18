@@ -316,8 +316,8 @@ test('Survival is harder to trivialize, combat HUD stops covering the arena, and
     readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
   ]);
-  assert.match(balance, /SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER = 0\.76/);
-  assert.match(balance, /SURVIVAL_INCOMING_DAMAGE_MULTIPLIER = 1\.30/);
+  assert.match(balance, /SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER = 0\.92/);
+  assert.match(balance, /SURVIVAL_INCOMING_DAMAGE_MULTIPLIER = 1\.10/);
   assert.match(balance, /SURVIVAL_HIT_INVULNERABILITY_SECONDS = 0\.78/);
   assert.match(game, /scaleSurvivalOutgoingDamage\(amount\)/);
   assert.match(game, /damageSource === 'ability'/);
