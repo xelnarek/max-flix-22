@@ -327,7 +327,7 @@ test('Survival is harder to trivialize, combat HUD stops covering the arena, and
   assert.match(game, /getSurvivalWaveSpawnTuning\(/);
   assert.match(game, /const groupSize = Math\.min\(spawnTuning\.groupSize, enemyCap - aliveCount\)/);
   assert.match(game, /performanceBudget\.groupCap/);
-  assert.match(difficulty, /spawnIntervalSeconds: Math\.max\(2\.95/);
+  assert.match(difficulty, /spawnIntervalSeconds: Math\.max\(4\.55/);
   assert.match(difficulty, /enemySpeedMultiplier: 1 \+/);
   assert.match(html, /id="btn-menu-pause" class="btn-modal pause-exit-button"[^>]*>WYJDŹ DO MENU/);
   assert.match(html, /aria-modal="true"/);
