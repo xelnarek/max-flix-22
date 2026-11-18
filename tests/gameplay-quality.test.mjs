@@ -1223,6 +1223,9 @@ test('MafiKapibar enforcers fire arcade tracers and retain heavy baton melee com
   assert.match(update, /pierce: capybara\.index === 0 \? 1 : 0/);
   assert.match(update, /scaleSurvivalDamage\(capybara\.index === 1 \? \(targetIsMajorBoss \? 4 : 3\) : targetIsMajorBoss \? 3 : 2\)/);
   assert.match(update, /MAFIA OCHRANIA OPERATORA/);
+  assert.match(update, /this\.enemySpatialIndex\.query\(\s*capybara\.group\.position\.x,\s*capybara\.group\.position\.z,\s*16\.5/);
+  assert.match(update, /for \(const enemy of nearbyEnemies\)/);
+  assert.match(update, /if \(guardDistance > 15\.5\) continue/);
 });
 
 test('mobile performance tiers limit crowd, particles and shadow refresh under load', async () => {
@@ -1744,6 +1747,16 @@ test('Mateusz heroes have independent targets, movement, combat styles and owned
   assert.match(game, /style === 'gamma-slam'/);
   assert.match(game, /this\.updateMateuszRivals\(simDt\)/);
   assert.match(game, /private clearMateuszRivals\(\)/);
+  const start = game.indexOf('private updateMateuszRivals');
+  const end = game.indexOf('private updateEnemyFactionBrawl', start);
+  assert.ok(start >= 0 && end > start, 'Mateusz target update should exist');
+  const update = game.slice(start, end);
+  assert.match(update, /this\.enemySpatialIndex\.query\(rival\.x, rival\.z, 26\)/);
+  assert.match(update, /for \(const candidate of nearbyEnemies\)/);
+  assert.match(update, /if \(distance > 25\) continue/);
+  assert.doesNotMatch(update, /for \(const candidate of this\.enemies\)/);
+  assert.doesNotMatch(game.slice(game.indexOf('private updateMarcinTank'), game.indexOf('private spawnMateuszContractRip')), /for \(const enemy of this\.enemies\)/);
+  assert.doesNotMatch(game.slice(game.indexOf('private updateMarcinTank'), game.indexOf('private spawnMateuszContractRip')), /this\.enemySpatialIndex\.query\(tank\.group\.position\.x, tank\.group\.position\.z, 24\.5\)/);
   assert.doesNotMatch(game, /aiMateuszAllyTimer|updateMateuszAlly|selectMateuszRecruitOrders/);
 });
 
