@@ -53,3 +53,37 @@ test('the four-way junction mixes all biome materials and returns finite bounded
     assert.ok(edge.alpha >= 0 && edge.alpha <= 1);
   }
 });
+
+test('the four arenas have visible, biome-specific painted floor markings', () => {
+  const samples = [
+    { lane: getSurvivalFloorAtlasSample(-60, -5.1), plain: getSurvivalFloorAtlasSample(-60, -6.8), channel: 'amber' },
+    { lane: getSurvivalFloorAtlasSample(60, -7.3), plain: getSurvivalFloorAtlasSample(60, -4.0), channel: 'amber' },
+    { lane: getSurvivalFloorAtlasSample(30, 20), plain: getSurvivalFloorAtlasSample(34.2, 20), channel: 'ice' },
+    { lane: getSurvivalFloorAtlasSample(-60, 20), plain: getSurvivalFloorAtlasSample(-60, 22.2), channel: 'scanner' },
+  ];
+  for (const { lane, plain, channel } of samples) {
+    const laneRgb = channels(lane.color);
+    const plainRgb = channels(plain.color);
+    if (channel === 'amber') {
+      assert.ok(laneRgb[0] - plainRgb[0] >= 8, channel + ' marking should lift red');
+      assert.ok(laneRgb[1] - plainRgb[1] >= 5, channel + ' marking should lift green');
+    } else if (channel === 'ice') {
+      assert.ok(laneRgb[2] - plainRgb[2] >= 8, channel + ' marking should lift blue');
+    } else {
+      assert.ok(laneRgb[0] - plainRgb[0] >= 8, channel + ' marking should lift red');
+      assert.ok(laneRgb[2] - plainRgb[2] >= 10, channel + ' marking should lift blue');
+    }
+  }
+});
+
+test('painted floor markings stay within the existing dark industrial exposure budget', () => {
+  const points = [
+    [-60, -5.1], [60, -7.3], [30, 20], [-60, 20],
+    [-48, -2.7], [108, -7.3], [90, 36.2], [-24, 37.25],
+  ];
+  for (const [x, z] of points) {
+    const rgb = channels(getSurvivalFloorAtlasSample(x, z).color);
+    assert.ok(Math.max(...rgb) <= 132, 'floor markings must not become a pale emissive patch');
+    assert.ok(rgb.every((channel) => Number.isFinite(channel) && channel >= 0));
+  }
+});
