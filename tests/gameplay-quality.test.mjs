@@ -1421,8 +1421,8 @@ test('biome ambience and combat modifiers blend continuously through two-way and
   assert.match(game, /applySurvivalWorldCombatModifier\([\s\S]*?x,[\s\S]*?z/);
   assert.match(game, /bossMapTuned = applySurvivalWorldCombatModifier/);
   assert.match(maps, /export function applySurvivalWorldCombatModifier/);
-  assert.match(blend, /warehouse_b4: \(1 - eastFactor\) \* \(1 - southFactor\)/);
-  assert.match(blend, /junctionInfluence: xBoundaryInfluence \* zBoundaryInfluence/);
+  assert.match(blend, /weights\.warehouse_b4 = \(1 - eastFactor\) \* \(1 - southFactor\)/);
+  assert.match(blend, /out\.junctionInfluence = xBoundaryInfluence \* zBoundaryInfluence/);
   assert.match(layout, /SURVIVAL_WORLD_BIOME_HYSTERESIS_METERS = 4/);
   assert.doesNotMatch(game, /survivalBiomeLightingTransition|beginSurvivalBiomeLightingTransition/);
 });
