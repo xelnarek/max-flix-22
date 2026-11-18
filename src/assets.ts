@@ -17,14 +17,14 @@ export interface AssetItem {
 }
 
 const WAREHOUSE_TIPS = [
-  'Wskazówka: Zbieraj worki z fugą i złote palety, by zdobywać punkty i odblokować premie zmiany!',
-  'Wózek widłowy z sektora B4 nie wybacza błędów BHP — przeskakuj go w odpowiednim momencie!',
+  'Zbieraj kryształy XP — pełny pasek daje wybór ulepszenia, a nie kolejne zebranie do KPI.',
+  'Nie stój na torze sztaplarki. Wózek nie zna pojęcia „pierwszeństwo operatora”.',
   'Impuls audytu ogłusza wrogów i zatrzymuje pojazdy w promieniu 4 metrów.',
-  'Operator 02 z łatwością rozbija palety z towarem i przeszkody.',
-  'Energetyczny napój natychmiast odnawia punkty BHP bohatera.',
-  'Uważaj na Nadzorcę Zero w Sektorze 3 — w drugiej fazie wpada w szał!',
-  'Spieki wielkoformatowe Marmur B4 120x280 w Showroomie wymagają podwójnej ostrożności.',
-  'Przycisk C przełącza dynamiczną kamerę 3D: rzut izometryczny lub akcję zza pleców.'
+  'Łącz broń i pasywki. Dobre combo robi większą robotę niż samotny bohater z segregatorem.',
+  'Złota paleta to premia zmiany. Zwykła paleta to nadal nie jest tarcza balistyczna.',
+  'Nadzorca Zero przyspiesza w drugiej fazie. Zachowaj unik na moment, w którym naprawdę go potrzebujesz.',
+  'W Survivalu zmiana fali potrafi zmienić zasady dostawy. Czytaj kontrakt przed ruszeniem do walki.',
+  'W PvP celuj prawym drążkiem, ustaw kierunek i naciśnij STRZAŁ w chwili przejścia znacznika.'
 ];
 
 export class B4AssetLoader {
@@ -265,6 +265,7 @@ export class B4AssetLoader {
 
     if (this.fillElem) {
       this.fillElem.style.width = `${this.progress}%`;
+      this.fillElem.parentElement?.setAttribute('aria-valuenow', String(Math.round(this.progress)));
     }
     if (this.textElem) {
       this.textElem.textContent = message;
