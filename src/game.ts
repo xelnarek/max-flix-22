@@ -50,6 +50,7 @@ import { calculateStableEnemySteering, getEnemyEngageRadius } from './enemySteer
 import { calculateEnemyProjectileDodge, predictEnemyAimPoint } from './enemyTactics.ts';
 import { getCampaignEnemyFlankProfile, getCampaignEnemyFlankVector, resolveCampaignEnemyFlankSide } from './enemyCampaignTactics.ts';
 import { advanceEnemyAttackTelegraph, getEnemyRangedAttackTelegraphProfile } from './enemyAttackTelegraphs.ts';
+import { getEnemyMeleeTelegraphProfile, type EnemyMeleeTelegraphProfile } from './enemyMeleeTelegraphs.ts';
 import { getEnemyPlayerContactDistance, projectVelocityOutOfEnemyContacts, resolvePlayerMovementAgainstEnemies } from './enemyPlayerCollision.ts';
 import { findFirstProjectileBodyImpact, findFirstProjectileEnemyImpact, type MutableProjectileSegmentPoint, type ProjectileEnemyImpactScratch, type ProjectileImpactScratch } from './projectileImpact.ts';
 import { createEnemyHitReaction, getEnemyHitPulse, getEnemyImpactBurstProfile } from './enemyCombatFeedback.ts';
@@ -732,6 +733,8 @@ export class PaleciakiGameEngine {
   private bulldozerHitCooldowns = new Map<string, number>();
   private globalEnemyShoutCooldown = 0;
   private globalEnemyTelegraphToastCooldown = 0;
+  /** Bounded per-frame warning budget prevents a melee crowd from filling the floor with lanes. */
+  private readonly activeEnemyMeleeTelegraphIds = new Set<string>();
   /** Remaining duration of Mateusz's enemy-only faction brawl. */
   private enemyFactionBrawlRemaining = 0;
   /** Reused target-load snapshot prevents the whole brawl from dogpiling one enemy. */
@@ -6967,6 +6970,7 @@ export class PaleciakiGameEngine {
 
   private clearLevel() {
     this.enemyFactionBrawlRemaining = 0;
+    this.activeEnemyMeleeTelegraphIds.clear();
     this.clearMateuszRivals();
     this.restoreCameraOccluders();
     if (this.survivalSightlineMarker) {
@@ -14468,6 +14472,9 @@ export class PaleciakiGameEngine {
     if (actualDamage > 0 && enemy.aiRangedWindupTimer !== undefined) {
       this.cancelEnemyRangedAttackTelegraph(enemy, true);
     }
+    if (actualDamage > 0 && (enemy.aiMeleeWindupTimer !== undefined || enemy.aiMeleeStrikePending)) {
+      this.cancelEnemyMeleeAttackTelegraph(enemy, true);
+    }
     const shouldSpawnImpactBurst = actualDamage > 0 && (enemy.hitReactTimer || 0) <= 0.015;
     if (this.gameMode === 'survival' && actualDamage > 0 && damageSource !== null) {
       recordSurvivalDamage(this.survivalDamageStats, damageSource, actualDamage);
@@ -14679,6 +14686,99 @@ export class PaleciakiGameEngine {
     }
   }
 
+  private beginEnemyMeleeAttackTelegraph(
+    enemy: EnemyItem,
+    profile: Readonly<EnemyMeleeTelegraphProfile>,
+    distance: number,
+  ): boolean {
+    if (
+      !enemy.mesh || enemy.state === 'defeated' || enemy.stunTimer > 0 ||
+      enemy.aiMeleeWindupTimer !== undefined || enemy.aiMeleeStrikePending ||
+      ![enemy.x, enemy.z, this.playerPos.x, this.playerPos.z, distance].every(Number.isFinite)
+    ) return false;
+
+    const platformLimit = this.isHandheldViewport ? 2 : 4;
+    if (this.activeEnemyMeleeTelegraphIds.size >= platformLimit) return false;
+
+    const direction = Math.atan2(this.playerPos.x - enemy.x, this.playerPos.z - enemy.z);
+    const laneLength = THREE.MathUtils.clamp(distance + 0.38, 1.5, 3.8);
+    enemy.aiMeleeWindupTimer = profile.windupSeconds;
+    enemy.aiMeleeWindupDuration = profile.windupSeconds;
+    enemy.aiMeleeLockedDirection = direction;
+    enemy.mesh.rotation.y = direction;
+    enemy.aiMeleeTelegraphMesh = this.spawnBossLaneTelegraph(
+      enemy.x,
+      enemy.z,
+      direction,
+      laneLength,
+      profile.laneWidth,
+      profile.color,
+      profile.windupSeconds + 0.22,
+    );
+    this.activeEnemyMeleeTelegraphIds.add(enemy.id);
+
+    // The procedural strike peaks at 60% of this pose, aligned with the end of the warning.
+    this.requestEnemyAttackAnimation(enemy, profile.windupSeconds / 0.60);
+    if (this.globalEnemyTelegraphToastCooldown <= 0) {
+      this.emitFloatingToast(profile.warningText, enemy.x, enemy.y + 1.15, enemy.z, 'damage');
+      this.globalEnemyTelegraphToastCooldown = 1.15;
+      sound.playAlert();
+    }
+    return true;
+  }
+
+  /** Resolves a committed melee wind-up without allowing a long frame to skip its dodge window. */
+  private advanceEnemyMeleeAttackTelegraph(enemy: EnemyItem, dt: number): boolean {
+    if (enemy.aiMeleeWindupTimer === undefined) return false;
+    const profile = getEnemyMeleeTelegraphProfile(enemy.type);
+    if (!profile) {
+      this.cancelEnemyMeleeAttackTelegraph(enemy);
+      return false;
+    }
+    const timing = advanceEnemyAttackTelegraph(
+      enemy.aiMeleeWindupTimer,
+      enemy.aiMeleeWindupDuration ?? 0,
+      dt,
+    );
+    enemy.aiMeleeWindupTimer = timing.remainingSeconds;
+    if (!timing.completed) return false;
+
+    this.clearEnemyMeleeTelegraphVisual(enemy);
+    enemy.aiMeleeWindupTimer = undefined;
+    enemy.aiMeleeWindupDuration = undefined;
+    enemy.aiMeleeStrikePending = true;
+    return true;
+  }
+
+  private clearEnemyMeleeTelegraphVisual(enemy: EnemyItem): void {
+    const telegraph = enemy.aiMeleeTelegraphMesh as THREE.Group | undefined;
+    if (telegraph) {
+      const effectIndex = this.specialEffects.findIndex((effect) => effect.mesh === telegraph);
+      if (effectIndex >= 0) {
+        const [effect] = this.specialEffects.splice(effectIndex, 1);
+        if (effect.cleanup) effect.cleanup();
+        else if (effect.disposeOnRemove) this.disposeTemporaryObject(effect.mesh);
+      } else if (telegraph.parent) {
+        this.disposeTemporaryObject(telegraph);
+      }
+    }
+    enemy.aiMeleeTelegraphMesh = undefined;
+    this.activeEnemyMeleeTelegraphIds.delete(enemy.id);
+  }
+
+  private cancelEnemyMeleeAttackTelegraph(enemy: EnemyItem, applyRecoveryDelay = false): void {
+    const wasActive = enemy.aiMeleeWindupTimer !== undefined || enemy.aiMeleeStrikePending;
+    this.clearEnemyMeleeTelegraphVisual(enemy);
+    enemy.aiMeleeWindupTimer = undefined;
+    enemy.aiMeleeWindupDuration = undefined;
+    enemy.aiMeleeLockedDirection = undefined;
+    enemy.aiMeleeStrikePending = false;
+    if (applyRecoveryDelay && wasActive) {
+      const cooldown = getEnemyMeleeTelegraphProfile(enemy.type)?.cooldownSeconds ?? 1.0;
+      enemy.aiMeleeCooldownTimer = Math.max(enemy.aiMeleeCooldownTimer ?? 0, cooldown);
+    }
+  }
+
   private updateEnemyHitReaction(enemy: EnemyItem, dt: number): void {
     if (!enemy.mesh) return;
 
@@ -14770,6 +14870,7 @@ export class PaleciakiGameEngine {
     const mesh = enemy.mesh as THREE.Object3D | undefined;
     if (!mesh) return;
     if (enemy.aiRangedWindupTimer !== undefined) this.cancelEnemyRangedAttackTelegraph(enemy);
+    if (enemy.aiMeleeWindupTimer !== undefined || enemy.aiMeleeStrikePending) this.cancelEnemyMeleeAttackTelegraph(enemy);
     const isCthulhuDeath = enemy.name.includes('CTHULHU');
     const duration = isCthulhuDeath ? 3.4 : getEnemyDeathMotionProfile(enemy.type).duration;
     if (isCthulhuDeath) mesh.userData.cthulhuDeathBaseRotationY = mesh.rotation.y;
@@ -15038,6 +15139,7 @@ export class PaleciakiGameEngine {
         continue;
       }
       if (!e.mesh) continue;
+      e.aiMeleeCooldownTimer = Math.max(0, (e.aiMeleeCooldownTimer ?? 0) - dt);
       if (e.survivalEliteInsignia) {
         e.survivalEliteInsignia.rotation.y += dt * (e.survivalEliteSpinSpeed ?? 0.8);
       }
@@ -15073,6 +15175,7 @@ export class PaleciakiGameEngine {
 
       // Distance culling: skip heavy updates for distant non-boss enemies
       if (distToPlayer > 26.0 && !isMajorSurvivalBossType(e.type) && e.type !== 'sebix_m') {
+        if (e.aiMeleeWindupTimer !== undefined || e.aiMeleeStrikePending) this.cancelEnemyMeleeAttackTelegraph(e);
         if (e.mesh.visible) e.mesh.visible = false;
         continue;
       }
@@ -15396,6 +15499,7 @@ export class PaleciakiGameEngine {
 
       if (e.stunTimer > 0) {
         if (e.aiRangedWindupTimer !== undefined) this.cancelEnemyRangedAttackTelegraph(e, true);
+        if (e.aiMeleeWindupTimer !== undefined || e.aiMeleeStrikePending) this.cancelEnemyMeleeAttackTelegraph(e, true);
         // Let the commander inspect the stun before the early return so the
         // player can interrupt a boss order during its visible wind-up.
         if (this.gameMode === 'survival') this.updateSurvivalCommanderPulse(e, dt);
@@ -15409,6 +15513,7 @@ export class PaleciakiGameEngine {
 
       if (factionBrawlActive) {
         if (e.aiRangedWindupTimer !== undefined) this.cancelEnemyRangedAttackTelegraph(e, true);
+        if (e.aiMeleeWindupTimer !== undefined || e.aiMeleeStrikePending) this.cancelEnemyMeleeAttackTelegraph(e, true);
         this.updateEnemyFactionBrawl(e, dt);
         continue;
       }
@@ -15833,7 +15938,11 @@ export class PaleciakiGameEngine {
         }
         this.callbacks.onBossUpdate?.(e.name, e.hp, e.maxHp, true, e.bossPhase);
       } else {
-        if (e.type === 'sebix_m') {
+        if (e.aiMeleeWindupTimer !== undefined) {
+          this.advanceEnemyMeleeAttackTelegraph(e, dt);
+          e.mesh.rotation.y = e.aiMeleeLockedDirection ?? Math.atan2(dx, dz);
+          e.mesh.position.set(e.x, e.y, e.z);
+        } else if (e.type === 'sebix_m') {
           this.updateSebixBehaviour(e,dt,distToPlayer,dx,dz);
         } else if (e.type === 'bosman_krakow' && e.chargeTimer !== undefined) {
           e.mesh.rotation.y = e.chargeDir ?? Math.atan2(dx, dz);
@@ -16011,7 +16120,7 @@ export class PaleciakiGameEngine {
               this.beginEnemyRangedAttackTelegraph(e);
             }
           }
-        } else if (e.type === 'inspector' && e.specialActionTimer !== undefined) {
+        } else if (e.type === 'inspector' && e.specialActionTimer !== undefined && e.aiMeleeWindupTimer === undefined && !e.aiMeleeStrikePending) {
           e.specialActionTimer -= dt * survivalAbilityRate;
           if (e.specialActionTimer <= 0 && distToPlayer < 6.5) {
             e.specialActionTimer = 2.8;
@@ -16047,7 +16156,7 @@ export class PaleciakiGameEngine {
               this.beginEnemyRangedAttackTelegraph(e);
             }
           }
-        } else if (e.type === 'mutant_gamma_forklift' && e.specialActionTimer !== undefined) {
+        } else if (e.type === 'mutant_gamma_forklift' && e.specialActionTimer !== undefined && e.aiMeleeWindupTimer === undefined && !e.aiMeleeStrikePending) {
           e.specialActionTimer -= dt * survivalAbilityRate;
           if (e.specialActionTimer <= 0) {
             e.specialActionTimer = 2.8;
@@ -16056,7 +16165,7 @@ export class PaleciakiGameEngine {
             this.emitFloatingToast('☣️ SKAŻENIE GAMMA!', e.x, e.y + 1.2, e.z, 'damage');
             sound.playElectricalSparks();
           }
-        } else if (e.type === 'radioactive_pip' && e.specialActionTimer !== undefined) {
+        } else if (e.type === 'radioactive_pip' && e.specialActionTimer !== undefined && e.aiMeleeWindupTimer === undefined && !e.aiMeleeStrikePending) {
           e.specialActionTimer -= dt * survivalAbilityRate;
           if (e.specialActionTimer <= 0 && distToPlayer < 9.5) {
             e.specialActionTimer = 3.4;
@@ -16119,7 +16228,9 @@ export class PaleciakiGameEngine {
       // bounds; keep the rendered mesh and hit-test position in sync.
       this.clampEnemyToArena(e);
       const turnResponsiveness = isMajorSurvivalBossType(e.type) || e.type === 'sebix_m' ? 13 : 19;
-      e.mesh.rotation.y = dampActorAngle(facingAtFrameStart, e.mesh.rotation.y, turnResponsiveness, dt);
+      e.mesh.rotation.y = e.aiMeleeWindupTimer !== undefined || e.aiMeleeStrikePending
+        ? (e.aiMeleeLockedDirection ?? e.mesh.rotation.y)
+        : dampActorAngle(facingAtFrameStart, e.mesh.rotation.y, turnResponsiveness, dt);
 
       // Check collision with player
       const dist = Math.hypot(e.x - this.playerPos.x, e.z - this.playerPos.z);
@@ -16129,13 +16240,43 @@ export class PaleciakiGameEngine {
       }
       const hitRadius = e.type === 'sebix_m' ? (e.dashTimer && e.dashTimer > 0 ? 1.85 : 1.35) : isMajorSurvivalBossType(e.type) ? 1.5 : e.type === 'elite_walczak_guard' ? 1.3 : 1.1;
       const contactRadius = hitRadius + 0.18;
+      const meleeProfile = getEnemyMeleeTelegraphProfile(e.type);
+      const meleeCounterActive = (this.activePerks.bulldozer || 0) > 0 ||
+        this.marcinReclamationTimer > 0 || this.grzesiekCrushTimer > 0;
+      const stompApproach = dist < hitRadius && this.playerVel.y < -0.8 &&
+        this.playerPos.y > e.y + 0.35;
       let stompedThisFrame = false;
+
+      // Commit to a readable lane just before body contact. The extra reach is
+      // only a warning trigger; the actual hit still uses the original contact radius.
+      if (
+        meleeProfile && !meleeCounterActive && !stompApproach &&
+        e.state !== 'defeated' && e.stunTimer <= 0 &&
+        Math.abs(e.y - this.playerPos.y) < 1.1 &&
+        e.aiMeleeWindupTimer === undefined && !e.aiMeleeStrikePending &&
+        (e.aiMeleeCooldownTimer ?? 0) <= 0 &&
+        dist <= contactRadius + meleeProfile.reachMeters
+      ) {
+        this.beginEnemyMeleeAttackTelegraph(e, meleeProfile, dist);
+      }
+
+      const meleeStrikeReady = meleeProfile !== null && e.aiMeleeStrikePending === true;
+      let meleeStrikeConnected = false;
+      if (meleeStrikeReady && meleeProfile) {
+        e.aiMeleeStrikePending = false;
+        e.aiMeleeLockedDirection = undefined;
+        e.aiMeleeCooldownTimer = Math.max(e.aiMeleeCooldownTimer ?? 0, meleeProfile.cooldownSeconds);
+      }
 
       if (dist < contactRadius) {
         // 1. STOMP MECHANIC (Naskok z góry). Preserve the original stomp radius;
         // the slightly wider contact radius only compensates for model clearance.
         if (dist < hitRadius && this.playerVel.y < -0.8 && this.playerPos.y > e.y + 0.35) {
           stompedThisFrame = true;
+          if (meleeStrikeReady) meleeStrikeConnected = true;
+          if (e.aiMeleeWindupTimer !== undefined || e.aiMeleeStrikePending) {
+            this.cancelEnemyMeleeAttackTelegraph(e);
+          }
           const bounceForce = e.type === 'agv_robot' ? this.charDef.jumpForce * 1.3 : this.charDef.jumpForce * 0.95;
           this.playerVel.y = bounceForce;
           sound.playBounce();
@@ -16153,43 +16294,62 @@ export class PaleciakiGameEngine {
             e.state = 'stunned';
           }
         } else if (Math.abs(e.y - this.playerPos.y) < 1.1) {
-          // Horizontal contact triggers one readable enemy strike, not an arm animation restart on every frame.
-          if (e.state !== 'stunned') this.requestEnemyAttackAnimation(e, 0.48);
-          if ((this.activePerks.bulldozer || 0) > 0) {
-            const nowMs = performance.now();
-            const lastHit = this.bulldozerHitCooldowns.get(e.id) || 0;
-            if (nowMs - lastHit > 550) {
-              this.bulldozerHitCooldowns.set(e.id, nowMs);
-              this.damageEnemy(e, this.scaleSurvivalDamage(3));
-              e.stunTimer = 2.2;
-              e.state = 'stunned';
-              sound.playSmack();
-              this.triggerScreenShake(0.45, 0.25);
-              this.spawnParticleRing(e.x, e.y + 0.8, e.z, 0xfacc15);
-              this.emitFloatingToast('🚜 TARAN PALECIAKIEM! -3 HP!', e.x, e.y + 1.2, e.z, 'combo');
-              if (e.hp <= 0) this.defeatEnemy(e, 300, true);
-            }
-          } else if (this.marcinReclamationTimer > 0) {
-            e.stunTimer = 2.5;
-            e.state = 'stunned';
-            this.emitFloatingToast('🛡️ AUDYT BHP!', e.x, e.y + 1, e.z, 'perk');
-          } else if (this.grzesiekCrushTimer > 0) {
-            this.damageEnemy(e, this.scaleSurvivalDamage(3), this.playerPos.x, this.playerPos.z, 'ability');
-            this.emitFloatingToast('-3 HP ŚCISK!', e.x, e.y + 1, e.z, 'damage');
-            if (e.hp <= 0) this.defeatEnemy(e, 280, true);
-          } else if (e.type === 'krol_leto') {
-            if (this.activePerks.shield) {
-              this.activePerks.shield = false;
-              this.invulnerableTimer = 1.2;
-              sound.playShieldBreak();
-              this.sayQuote('Kask BHP zamortyzował atak Dyrektora Widmo!');
-            } else {
-              this.takeDamage('🚨 ZWOLNIENIE DYSCYPLINARNE NA HITA OD DYREKTORA WIDMO!');
-            }
+          if (meleeProfile && !meleeStrikeReady && !meleeCounterActive) {
+            // The enemy has reached striking distance but must finish its warning first.
           } else {
-            this.takeDamage(`Zaatakował Cię: ${e.name}!`);
+            if (meleeStrikeReady) meleeStrikeConnected = true;
+            // Profiled melee rigs already played the full wind-up; all other
+            // enemies retain their original immediate-contact animation.
+            if (!meleeProfile && e.state !== 'stunned') this.requestEnemyAttackAnimation(e, 0.48);
+            if ((this.activePerks.bulldozer || 0) > 0) {
+              const nowMs = performance.now();
+              const lastHit = this.bulldozerHitCooldowns.get(e.id) || 0;
+              if (nowMs - lastHit > 550) {
+                this.bulldozerHitCooldowns.set(e.id, nowMs);
+                this.damageEnemy(e, this.scaleSurvivalDamage(3));
+                e.stunTimer = 2.2;
+                e.state = 'stunned';
+                sound.playSmack();
+                this.triggerScreenShake(0.45, 0.25);
+                this.spawnParticleRing(e.x, e.y + 0.8, e.z, 0xfacc15);
+                this.emitFloatingToast('🚜 TARAN PALECIAKIEM! -3 HP!', e.x, e.y + 1.2, e.z, 'combo');
+                if (e.hp <= 0) this.defeatEnemy(e, 300, true);
+              }
+            } else if (this.marcinReclamationTimer > 0) {
+              if (e.aiMeleeWindupTimer !== undefined || e.aiMeleeStrikePending) {
+                this.cancelEnemyMeleeAttackTelegraph(e);
+              }
+              e.stunTimer = 2.5;
+              e.state = 'stunned';
+              this.emitFloatingToast('🛡️ AUDYT BHP!', e.x, e.y + 1, e.z, 'perk');
+            } else if (this.grzesiekCrushTimer > 0) {
+              this.damageEnemy(e, this.scaleSurvivalDamage(3), this.playerPos.x, this.playerPos.z, 'ability');
+              this.emitFloatingToast('-3 HP ŚCISK!', e.x, e.y + 1, e.z, 'damage');
+              if (e.hp <= 0) this.defeatEnemy(e, 280, true);
+            } else if (e.type === 'krol_leto') {
+              if (this.activePerks.shield) {
+                this.activePerks.shield = false;
+                this.invulnerableTimer = 1.2;
+                sound.playShieldBreak();
+                this.sayQuote('Kask BHP zamortyzował atak Dyrektora Widmo!');
+              } else {
+                this.takeDamage('🚨 ZWOLNIENIE DYSCYPLINARNE NA HITA OD DYREKTORA WIDMO!');
+              }
+            } else {
+              this.takeDamage(`Zaatakował Cię: ${e.name}!`);
+            }
           }
         }
+      }
+
+      if (meleeStrikeReady && !meleeStrikeConnected) {
+        this.emitFloatingToast(
+          meleeProfile.missText,
+          this.playerPos.x,
+          this.playerPos.y + 1.15,
+          this.playerPos.z,
+          'perk',
+        );
       }
 
       // Contact damage uses the small model-clearance margin above, so enemies
