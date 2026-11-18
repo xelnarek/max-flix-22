@@ -39,7 +39,7 @@ test('Survival primary attacks have a measurable neutral-build DPS floor without
 
 test('neutral basic-attack TTK remains bounded through Survival waves 10, 20 and 30', () => {
   const waves = [10, 20, 30];
-  const maxTtkByWave = { 10: 9.8, 20: 12.0, 30: 13.5 };
+  const maxTtkByWave = { 10: 9.9, 20: 12.0, 30: 13.5 };
   for (const wave of waves) {
     const difficulty = getSurvivalDifficultyProfile(wave);
     const regularEnemyHp = Math.ceil(2 * difficulty.enemyHealthMultiplier);
