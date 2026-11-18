@@ -128,9 +128,9 @@ test('regular ranged enemies telegraph a locked shot and stop moving during wind
 
 test('Campaign melee roles use stable side-entry steering that fades before contact', async () => {
   const [game, tactics, types] = await Promise.all([
-    read('../src/game.ts'),
-    read('../src/enemyCampaignTactics.ts'),
-    read('../src/types.ts'),
+    readFile(new URL('../src/game.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/enemyCampaignTactics.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/types.ts', import.meta.url), 'utf8'),
   ]);
   const campaignStart = game.indexOf('// Dynamic Chase / Tracking AI for ground enemies');
   const campaignEnd = game.indexOf('// The Sentinel commits to a visible lane', campaignStart);
