@@ -1694,7 +1694,7 @@ test('Mateusz Operator 04 recruits a temporary autonomous team and keeps the con
     read('../src/game.ts'), read('../src/types.ts'), read('../src/characters.ts'), read('../index.html')
   ]);
   assert.match(characters, /abilityName: 'EKIPA PRZEJĘTA/);
-  assert.match(characters, /12 sekund \(10 sekund w Survival\)/);
+  assert.match(characters, /12 sekund \(11 sekund w Survival\)/);
   assert.match(html, /EKIPA PRZEJĘTA/);
   assert.match(game, /private spawnMateuszContractRip\(\)/);
   assert.match(game, /private updateMateuszAlly\(enemy: EnemyItem, dt: number\)/);
@@ -1703,6 +1703,15 @@ test('Mateusz Operator 04 recruits a temporary autonomous team and keeps the con
   assert.match(game, /damageSource !== null/);
   assert.match(types, /aiMateuszAllyRole\?:/);
   assert.doesNotMatch(game, /mateuszCats|spawnMateuszCats|updateMateuszCats/);
+});
+
+test('Mateusz recruited squad has stronger role damage and an 11-second Survival window', async () => {
+  const game = await read('../src/game.ts');
+  const characters = await read('../src/characters.ts');
+  assert.ok(game.includes("10.5, 3, this.gameMode === 'survival' ? 11 : 12"));
+  assert.ok(game.includes("this.gameMode === 'survival' ? 11 : 12"));
+  assert.ok(game.includes("const damage=role==='bruiser'?1.85:role==='flanker'?1.24:role==='support'?0.80:1.02;"));
+  assert.ok(characters.includes('(11 sekund w Survival)'));
 });
 
 test('Mateusz recruited allies have bounded lifetime and restore hostile AI after expiry', async () => {
