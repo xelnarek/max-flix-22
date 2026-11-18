@@ -92,7 +92,7 @@ test('elite delivery assigns distinct roles, visible identity markers and a brea
   assert.match(game, /role: 'controller'/);
   assert.match(game, /role: 'courier'/);
   assert.match(game, /enemy\.survivalEliteInsignia = createSurvivalEliteInsignia\(profile\.role\)/);
-  assert.match(game, /enemy\.survivalEliteInsignia\.rotation\.y \+= dt/);
+  assert.match(game, /e\.survivalEliteInsignia\.rotation\.y \+= dt/);
   assert.match(game, /enemy\.shieldActive = true;[\s\S]*?enemy\.supportShieldTimer = 5/);
   assert.match(game, /enemy\.mesh\.add\(shieldRing\)/);
   assert.match(types, /survivalEliteRole\?: 'controller' \| 'courier'/);
