@@ -1577,33 +1577,63 @@ class PaleciakiScene extends xb.Script {
             survivalSkipBtn.disabled = snapshot.skips <= 0;
           }
         },
-        onSurvivalLevelUp: (options: SurvivalUpgradeOption[], context: 'levelup' | 'rank-up' | 'boss-reward' = 'levelup') => {
+        onSurvivalLevelUp: (options: SurvivalUpgradeOption[], context: 'levelup' | 'rank-up' | 'boss-reward' | 'chaos-roulette' = 'levelup') => {
           if (!survivalUpgradeOptions || !survivalLevelUp) return;
           const isBossReward = context === 'boss-reward';
           const isRankUp = context === 'rank-up';
+          const isChaosRoulette = context === 'chaos-roulette';
           const currentRank = survivalRankElem?.textContent || 'OPERATOR';
           survivalLevelUp.dataset.mode = context;
           const titleElement = document.getElementById('survival-levelup-title');
           const descriptionElement = document.getElementById('survival-levelup-desc');
           const iconElement = document.getElementById('survival-levelup-icon');
           const hintElement = document.getElementById('survival-levelup-hint');
-          if (titleElement) titleElement.textContent = isBossReward
-            ? 'NAGRODA ZA POKONANIE BOSS-A'
-            : isRankUp ? 'AWANS RANGI: ' + currentRank : 'AWANS OPERATORA';
-          if (descriptionElement) descriptionElement.textContent = isBossReward
-            ? 'Boss pokonany. Wybierz jedno z trzech legendarnych wzmocnień: moc, rozwój broni albo obronę.'
-            : isRankUp
-              ? 'Awansujesz do rangi ' + currentRank + '. Jedna karta ma gwarantowaną wyższą rzadkość, a zapas przerzutów zwiększono o 1.'
-              : 'Wybierz jeden z trzech modułów. Rzadkie, epickie i legendarne wersje wzmacniają ten sam efekt.';
-          if (iconElement) iconElement.textContent = isBossReward ? '🏆' : isRankUp ? '🎖️' : '⬆';
-          if (hintElement) hintElement.textContent = isBossReward
-            ? 'Nagroda jest obowiązkowa i nie podlega przerzuceniu ani pominięciu. Akcja pozostaje wstrzymana do wyboru.'
-            : isRankUp
-              ? 'Awans co 5 poziomów: karta ma co najmniej Rare, Epic lub Legendary zależnie od rangi. Dodatkowy przerzut jest ograniczony do 3.'
-              : 'Wybór zatrzymuje akcję. Rzadkość wzmacnia efekt; legendarna broń może odblokować się na wyższym poziomie.';
-          survivalRerollBtn?.classList.toggle('hidden', isBossReward);
-          survivalSkipBtn?.classList.toggle('hidden', isBossReward);
+          if (titleElement) titleElement.textContent = isChaosRoulette
+            ? 'JEDNORĘKI BANDYTA B4'
+            : isBossReward
+              ? 'NAGRODA ZA POKONANIE BOSS-A'
+              : isRankUp ? 'AWANS RANGI: ' + currentRank : 'AWANS OPERATORA';
+          if (descriptionElement) descriptionElement.textContent = isChaosRoulette
+            ? 'Co trzeci poziom: zakręć i zdaj się na los. Możesz zdobyć broń, skill, osłonę, wybuch, leczenie… albo nieproszoną dostawę przeciwników.'
+            : isBossReward
+              ? 'Boss pokonany. Wybierz jedno z trzech legendarnych wzmocnień: moc, rozwój broni albo obronę.'
+              : isRankUp
+                ? 'Awansujesz do rangi ' + currentRank + '. Jedna karta ma gwarantowaną wyższą rzadkość, a zapas przerzutów zwiększono o 1.'
+                : 'Wybierz jeden z trzech modułów. Rzadkie, epickie i legendarne wersje wzmacniają ten sam efekt.';
+          if (iconElement) iconElement.textContent = isChaosRoulette ? '🎰' : isBossReward ? '🏆' : isRankUp ? '🎖️' : '⬆';
+          if (hintElement) hintElement.textContent = isChaosRoulette
+            ? 'To jednorazowy spin, bez przerzutu i bez cofania wyniku. W puli są także przeciwnicy — automat nie zna litości.'
+            : isBossReward
+              ? 'Nagroda jest obowiązkowa i nie podlega przerzuceniu ani pominięciu. Akcja pozostaje wstrzymana do wyboru.'
+              : isRankUp
+                ? 'Awans co 5 poziomów: karta ma co najmniej Rare, Epic lub Legendary zależnie od rangi. Dodatkowy przerzut jest ograniczony do 3.'
+                : 'Wybór zatrzymuje akcję. Rzadkość wzmacnia efekt; legendarna broń może odblokować się na wyższym poziomie.';
+          survivalRerollBtn?.classList.toggle('hidden', isBossReward || isChaosRoulette);
+          survivalSkipBtn?.classList.toggle('hidden', isBossReward || isChaosRoulette);
           survivalUpgradeOptions.replaceChildren();
+          if (isChaosRoulette) {
+            const machine = document.createElement('div');
+            machine.className = 'survival-chaos-machine';
+            machine.innerHTML = '<span>📦</span><span>☢️</span><span>👾</span>';
+            machine.setAttribute('aria-label', 'Losowa pula nagród i zdarzeń');
+            const spinButton = document.createElement('button');
+            spinButton.type = 'button';
+            spinButton.className = 'survival-chaos-spin';
+            spinButton.textContent = '🎰 ZAKRĘĆ AUTOMATEM';
+            spinButton.addEventListener('click', () => {
+              spinButton.disabled = true;
+              spinButton.textContent = 'LOSOWANIE…';
+              if (this.engine.spinSurvivalChaosRoulette()) {
+                survivalLevelUp.classList.add('hidden');
+              } else {
+                spinButton.disabled = false;
+                spinButton.textContent = '🎰 ZAKRĘĆ AUTOMATEM';
+              }
+            });
+            survivalUpgradeOptions.append(machine, spinButton);
+            survivalLevelUp.classList.remove('hidden');
+            return;
+          }
           for (const option of options) {
             const card = document.createElement('button');
             card.type = 'button';
