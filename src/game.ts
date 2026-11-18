@@ -2392,6 +2392,7 @@ export class PaleciakiGameEngine {
 
     private rebuildPlayerMesh() {
     // A fresh operator rig starts from a neutral pose even after game-over/retry.
+    this.clearRadiationFieldAura();
     this.attackSwingTimer = 0;
     this.specialSwingTimer = 0;
     this.playerHitReactTimer = 0;
@@ -2648,6 +2649,7 @@ export class PaleciakiGameEngine {
       arcDrone: 0,
       xpSurge: 0,
       damageWard: 0,
+      radiationField: 0,
     };
     this.timedEventCooldown = 16.0;
     this.doublePointsTimer = 0;
@@ -12244,8 +12246,6 @@ export class PaleciakiGameEngine {
       new THREE.TorusGeometry(0.94, 0.065, 8, 36),
       new THREE.MeshBasicMaterial({
         color: 0x65f36b,
-        emissive: 0x2cae48,
-        emissiveIntensity: 0.42,
         transparent: true,
         opacity: 0.54,
         depthWrite: false,
