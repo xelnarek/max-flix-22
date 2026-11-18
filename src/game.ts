@@ -18091,6 +18091,15 @@ export class PaleciakiGameEngine {
       return;
     }
     if (this.state !== 'playing' || this.abilityCooldownState.remainingSeconds > 0.0001) return;
+    const mateuszRecruitOrders = this.currentCharacterId === 'mateusz'
+      ? selectMateuszRecruitOrders(this.enemies.map(enemy => ({
+          id: enemy.id, type: enemy.type, x: enemy.x, y: enemy.y, z: enemy.z, state: enemy.state,
+        })), this.playerPos.x, this.playerPos.y, this.playerPos.z, 10.5, 3, this.gameMode === 'survival' ? 10 : 12)
+      : [];
+    if (this.currentCharacterId === 'mateusz' && mateuszRecruitOrders.length === 0) {
+      this.emitFloatingToast('BRAK PRZECIWNIKÓW W ZASIĘGU PRZEJĘCIA', this.playerPos.x, this.playerPos.y + 1.35, this.playerPos.z, 'perk');
+      return;
+    }
     const cooldownSeconds = getAbilityCooldownSeconds(this.charDef.abilityCooldown, this.gameMode) *
       this.characterMasteryBonuses.abilityCooldownMultiplier *
       (this.gameMode === 'survival' ? this.survivalAbilityCooldownMultiplier : 1);
@@ -18223,9 +18232,7 @@ export class PaleciakiGameEngine {
       this.emitFloatingToast('🧱 SALWA GRESU 120x280 + ⚡ Kubełek Mocy!', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
     } else if (this.currentCharacterId === 'mateusz') {
       const duration = this.gameMode === 'survival' ? 10 : 12;
-      const orders = selectMateuszRecruitOrders(this.enemies.map(enemy => ({
-        id: enemy.id, type: enemy.type, x: enemy.x, y: enemy.y, z: enemy.z, state: enemy.state,
-      })), this.playerPos.x, this.playerPos.y, this.playerPos.z, 10.5, 3, duration);
+      const orders = mateuszRecruitOrders;
       let recruited = 0;
       for (const order of orders) {
         const ally = this.enemies.find(enemy => enemy.id === order.enemyId);
