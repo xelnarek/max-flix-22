@@ -1947,3 +1947,16 @@ test('PvP projectile visual sync reuses its active-ID buffer and immutable perk 
   assert.match(update, /PVP_PERK_COLORS\[perk\.type\] \?\? 0xfacc15/);
   assert.doesNotMatch(update, /const colors: Record<string, number>/);
 });
+
+test('Survival per-frame biome lighting uses reusable blend and profile scratch buffers', async () => {
+  const game = await read('../src/game.ts');
+  const start = game.indexOf('private updateSurvivalBiome(dt: number)');
+  const end = game.indexOf('private buildSurvivalArenaExpansion', start);
+  assert.ok(start >= 0 && end > start, 'Survival biome update method should exist');
+  const update = game.slice(start, end);
+  assert.match(update, /updateSurvivalWorldBiomeBlendAtPosition\([\s\S]*?this\.survivalBiomeBlendScratch/);
+  assert.match(update, /updateSurvivalWorldLightingProfile\([\s\S]*?this\.survivalWorldLightingScratch/);
+  assert.doesNotMatch(update, /getSurvivalWorldBiomeBlendAtPosition|getSurvivalWorldLightingProfile/);
+  assert.match(game, /private readonly survivalBiomeBlendScratch = createSurvivalWorldBiomeBlendScratch\(\)/);
+  assert.match(game, /private readonly survivalWorldLightingScratch = createWorldLightingProfileScratch\(\)/);
+});
