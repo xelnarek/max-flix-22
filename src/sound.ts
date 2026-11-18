@@ -454,6 +454,40 @@ class SoundEngine {
     osc.stop(t + 0.3);
   }
 
+  /** Clean, positive PvP hit-confirm: a compact low impact plus a bright tick. */
+  public playPvpHitConfirm() {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+
+    const t = this.ctx.currentTime;
+    const bus = this.effectsBus ?? this.ctx.destination;
+
+    const impact = this.ctx.createOscillator();
+    const impactGain = this.ctx.createGain();
+    impact.type = 'triangle';
+    impact.frequency.setValueAtTime(310, t);
+    impact.frequency.exponentialRampToValueAtTime(122, t + 0.105);
+    impactGain.gain.setValueAtTime(0.19, t);
+    impactGain.gain.exponentialRampToValueAtTime(0.001, t + 0.13);
+    impact.connect(impactGain);
+    impactGain.connect(bus);
+    impact.start(t);
+    impact.stop(t + 0.14);
+
+    const tick = this.ctx.createOscillator();
+    const tickGain = this.ctx.createGain();
+    tick.type = 'sine';
+    tick.frequency.setValueAtTime(920, t + 0.012);
+    tick.frequency.exponentialRampToValueAtTime(560, t + 0.064);
+    tickGain.gain.setValueAtTime(0.075, t + 0.012);
+    tickGain.gain.exponentialRampToValueAtTime(0.001, t + 0.075);
+    tick.connect(tickGain);
+    tickGain.connect(bus);
+    tick.start(t + 0.012);
+    tick.stop(t + 0.08);
+  }
+
   public playExplosion() {
     if (this.isMuted) return;
     this.initCtx();

@@ -3767,7 +3767,9 @@ export class PaleciakiGameEngine {
       const hitText = `-${Math.ceil(hit.damage)} HP`;
       this.callbacks.onFloatingText?.(hitText, hit.x, 1.8, hit.z, 'damage');
       if (!playedHitSound) {
-        sound.playSmack();
+        const confirmedLocalHit = hit.sourceSlot === this.pvpSlot && hit.targetSlot !== this.pvpSlot;
+        if (confirmedLocalHit) sound.playPvpHitConfirm();
+        else sound.playSmack();
         playedHitSound = true;
       }
       this.spawnParticleRing(hit.x, 1.2, hit.z, 0xef4444);
@@ -20136,6 +20138,13 @@ export class PaleciakiGameEngine {
       baseOffsetX = 0.0;
       baseOffsetY = 15.8;
       baseOffsetZ = 10.2;
+      // Portrait Survival was leaving operators and their hit reactions too
+      // small on modern phones. Bring the camera in gently, while preserving
+      // enough perimeter visibility to read incoming volleys and enemy flanks.
+      if (this.gameMode === 'survival' && this.viewportAspect < 0.78) {
+        baseOffsetY = 14.6;
+        baseOffsetZ = 9.55;
+      }
     }
     // Survival uses the same low oblique follow camera; never force a near-vertical overhead view.
 
