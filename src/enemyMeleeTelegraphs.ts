@@ -25,11 +25,11 @@ const PROFILES: Readonly<Partial<Record<EnemyType, EnemyMeleeTelegraphProfile>>>
     warningText: 'INSPEKTOR PODNOSI PAŁKĘ BHP — USTĄP!', missText: 'UNIK! KONTROLA CHYBIONA!',
   },
   kurier: {
-    windupSeconds: 0.36, reachMeters: 0.88, laneWidth: 0.92, color: 0xf97316, cooldownSeconds: 1.25,
+    windupSeconds: 0.36, reachMeters: 0.88, laneWidth: 0.92, color: 0xec4899, cooldownSeconds: 1.25,
     warningText: 'KURIER RUSZA Z PACZKĄ — ZEJDŹ Z TORU!', missText: 'UNIK! PACZKA POLECIAŁA OBOK!',
   },
   monter: {
-    windupSeconds: 0.51, reachMeters: 0.72, laneWidth: 1.35, color: 0x22c55e, cooldownSeconds: 1.40,
+    windupSeconds: 0.50, reachMeters: 0.72, laneWidth: 1.35, color: 0x22c55e, cooldownSeconds: 1.40,
     warningText: 'MONTER PODNOSI CIĘŻKIE NARZĘDZIE!', missText: 'UNIK! NARZĘDZIE UDERZYŁO W POWIETRZE!',
   },
   sztaplar_szalony: {
