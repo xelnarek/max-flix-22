@@ -581,7 +581,10 @@ test('Survival crowd steering blends stable pursuit, formation spacing and obsta
   assert.doesNotMatch(tactics, /for \(const obstacle of this\.survivalObstacles\)/);
   assert.match(tactics, /const shouldHoldFormation = atFormationSlot && separationLength < 0\.34 && !hasProjectileDodge/);
   assert.match(tactics, /isTelegraphingRangedBoss \|\| shouldHoldFormation/);
-  assert.match(tactics, /calculateEnemyProjectileDodge\([\s\S]*?enemy,[\s\S]*?this\.projectiles,[\s\S]*?0\.72,[\s\S]*?1\.02,[\s\S]*?0\.95,[\s\S]*?this\.enemyProjectileDodgeScanScratch/);
+  assert.match(tactics, /const nearbyProjectiles = this\\.enemyProjectileThreatIndex\\.query\\([\\s\\S]*?enemy\\.x,[\\s\\S]*?enemy\\.z,[\\s\\S]*?0\\.72,[\\s\\S]*?1\\.02/);
+  assert.match(tactics, /calculateEnemyProjectileDodge\\([\\s\\S]*?enemy,[\\s\\S]*?nearbyProjectiles,[\\s\\S]*?0\\.72,[\\s\\S]*?1\\.02,[\\s\\S]*?0\\.95,[\\s\\S]*?this\\.enemyProjectileDodgeScanScratch/);
+  assert.match(game, /this\\.enemyProjectileThreatIndex\\.rebuild\\(this\\.projectiles\\)/);
+  assert.match(game, /enemyProjectileThreatIndexNextRefreshAt/);
   assert.match(tactics, /const projectileDodge = this\.enemyProjectileDodgeScratch/);
   assert.match(tactics, /steeringInput\.evasionWeight = evasionWeight/);
   assert.match(game, /evasion: this\.enemyProjectileDodgeScratch/);
