@@ -99,6 +99,24 @@ function createMutatorContract(
         'Zbierz ' + target + ' XP z kryształów upuszczanych przez ciężki konwój.',
       );
     }
+    case 'ramp_overload': {
+      const target = 9 + Math.min(5, tier);
+      return make(
+        'eliminations',
+        'ROZŁADUJ PRZECIĄŻONĄ RAMPĘ',
+        target,
+        'Zlikwiduj ' + target + ' jednostek z dużych dostaw, zanim zablokują przejście.',
+      );
+    }
+    case 'express_dispatch': {
+      const target = 3 + Math.min(3, Math.floor(tier / 2));
+      return make(
+        'combo',
+        'PRZECHWYĆ EKSPRESOWĄ DOSTAWĘ',
+        target,
+        'Zbuduj serię eliminacji ×' + target + ' podczas szybkich, mniejszych dostaw.',
+      );
+    }
     default:
       return null;
   }
