@@ -1766,10 +1766,18 @@ export class PaleciakiGameEngine {
       if (!(object instanceof THREE.Mesh)) return;
       // Gobkit clones own their geometry; MakeHuman body/wearable geometry and
       // equipment geometry are cache-shared and must remain available to peers.
-      if (object.userData.gobkitAsset === true && object.userData.gobkitSharedGeometry !== true) object.geometry.dispose();
+      if (
+        object.userData.actorLodSharedGeometry !== true &&
+        object.userData.gobkitAsset === true &&
+        object.userData.gobkitSharedGeometry !== true
+      ) object.geometry.dispose();
       const materials = Array.isArray(object.material) ? object.material : [object.material];
       for (const material of materials) {
-        if (material.userData.makeHumanShared !== true && material.userData.gobkitSharedMaterial !== true) material.dispose();
+        if (
+          material.userData.makeHumanShared !== true &&
+          material.userData.gobkitSharedMaterial !== true &&
+          material.userData.actorLodSharedMaterial !== true
+        ) material.dispose();
       }
     });
   }
@@ -1820,7 +1828,39 @@ export class PaleciakiGameEngine {
     fullRoot.visible = true;
   }
 
+  /**
+   * Apply high-quality oblique texture filtering once when an imported rig is
+   * attached. MakeHuman and role-wearable assets can arrive after the world
+   * texture pass, so they need their own bounded anisotropy setup.
+   */
+  private applyActorTextureQuality(root: THREE.Object3D): void {
+    if (root.userData.actorTextureQualityApplied === true) return;
+    const renderer = this.threeRenderer;
+    if (!renderer) return;
+    const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
+    const targetAnisotropy = Math.max(1, Math.min(maxAnisotropy, this.isHandheldViewport ? 10 : 16));
+    const textureSlots = [
+      'map', 'alphaMap', 'aoMap', 'bumpMap', 'displacementMap',
+      'emissiveMap', 'lightMap', 'metalnessMap', 'normalMap', 'roughnessMap',
+    ];
+    root.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      for (const material of materials) {
+        for (const slot of textureSlots) {
+          const texture = (material as any)[slot];
+          if (texture instanceof THREE.Texture && texture.anisotropy < targetAnisotropy) {
+            texture.anisotropy = targetAnisotropy;
+            texture.needsUpdate = true;
+          }
+        }
+      }
+    });
+    root.userData.actorTextureQualityApplied = true;
+  }
+
   private installActorVisualRoot(group: THREE.Group, root: THREE.Group): void {
+    this.applyActorTextureQuality(root);
     // Enforce the one-rig-per-entity invariant at the final installation boundary.
     // This also protects against future async attachment paths being added without
     // remembering to remove a previous imported rig first.
@@ -2301,12 +2341,21 @@ export class PaleciakiGameEngine {
       const lodProxy = enemy.mesh.userData.actorLodProxyRoot as THREE.Group | undefined;
       const fullVisual = enemy.mesh.userData.actorVisualRoot as THREE.Group | undefined;
       if (lodProxy && fullVisual) {
+        const now = performance.now();
+        const pendingAttackUntil = this.enemyPendingAttackUntil.get(enemy) ?? 0;
+        const attackAnimationUntil = this.enemyAttackAnimationUntil.get(enemy) ?? 0;
         const combatCritical =
           enemy.state === 'charging' ||
           enemy.state === 'defeated' ||
           enemy.state === 'stunned' ||
           (enemy.hitReactTimer || 0) > 0.015 ||
           (enemy.stunTimer || 0) > 0 ||
+          (enemy.attackPoseTimer || 0) > 0 ||
+          (enemy.aiRangedWindupTimer || 0) > 0 ||
+          (enemy.aiMeleeWindupTimer || 0) > 0 ||
+          (enemy.aiCommanderWindupTimer || 0) > 0 ||
+          pendingAttackUntil > now ||
+          attackAnimationUntil > now ||
           (track.oneShotRemaining || 0) > 0;
         const useProxy = shouldUseEnemyVisualLodProxy(
           distanceSquared,
