@@ -44,6 +44,10 @@ function safeMultiplier(value: number): number {
   return Number.isFinite(value) ? Math.max(0.25, Math.min(2, value)) : 1;
 }
 
+function safeChanceMultiplier(value: number): number {
+  return Number.isFinite(value) ? Math.max(0, Math.min(2, value)) : 1;
+}
+
 /**
  * Regular workers no longer drop XP on every kill. Heavy/elite enemies are
  * better sources; milestone kills and bosses remain guaranteed rewards.
@@ -59,7 +63,7 @@ export function rollSurvivalXpDrop(
 ): SurvivalXpDropResult | null {
   const profile = getSurvivalXpDropProfile(type);
   const isMilestone = Number.isFinite(milestoneBonus) && milestoneBonus > 0;
-  const chance = Math.min(1, profile.chance * safeMultiplier(anomalyChanceMultiplier));
+  const chance = Math.min(1, profile.chance * safeChanceMultiplier(anomalyChanceMultiplier));
   if (!isMilestone && safeRoll(chanceRoll) >= chance) return null;
 
   const range = profile.maxValue - profile.minValue + 1;
