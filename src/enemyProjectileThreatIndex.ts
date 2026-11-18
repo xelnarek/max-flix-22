@@ -24,7 +24,7 @@ interface IndexedProjectile extends EnemyIncomingProjectile {
  */
 export class EnemyProjectileThreatIndex<T extends IndexedProjectile = IndexedProjectile> {
   private readonly cellSize: number;
-  private readonly cells = new Map<string, T[]>();
+  private readonly cells = new Map<number, T[]>();
   private readonly bucketPool: T[][] = [];
   private readonly queryBuffer: T[] = [];
   private nextReusableBucket = 0;
@@ -119,7 +119,9 @@ export class EnemyProjectileThreatIndex<T extends IndexedProjectile = IndexedPro
     return this.queryBuffer;
   }
 
-  private cellKey(cellX: number, cellZ: number): string {
-    return cellX + ',' + cellZ;
+  // Pack signed grid coordinates into one numeric key. Arena coordinates are
+  // well inside the exact integer range, so Map lookups avoid per-query strings.
+  private cellKey(cellX: number, cellZ: number): number {
+    return cellX * 0x100000000 + (cellZ >>> 0);
   }
 }

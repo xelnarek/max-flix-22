@@ -587,6 +587,8 @@ test('Survival crowd steering blends stable pursuit, formation spacing and obsta
   assert.match(game, /enemyProjectileThreatIndexNextRefreshAt/);
   assert.match(game, /const projectileCountChanged = this\.projectiles\.length !== this\.enemyProjectileThreatIndexCachedCount/);
   assert.match(game, /this\.isHandheldViewport \? 40 : 32/);
+  assert.match(game, /const minimumProjectileIndexRefreshMs = this\.isHandheldViewport \? 24 : 16/);
+  assert.match(game, /projectileCountChanged && \([\s\S]*?enemyProjectileThreatIndexLastRefreshAt/);
   assert.match(tactics, /const projectileDodge = this\.enemyProjectileDodgeScratch/);
   assert.match(tactics, /steeringInput\.evasionWeight = evasionWeight/);
   assert.match(game, /evasion: this\.enemyProjectileDodgeScratch/);
