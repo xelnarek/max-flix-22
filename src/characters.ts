@@ -131,7 +131,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     className: 'ELEKTRYCZNY SPEEDRUNNER',
     combatIdentity: 'najszybszy operator • paralizator ogłusza • tylko 3 HP',
     movementIdentity: 'Błyskawiczny start i hamowanie • szybkie zmiany kierunku',
-    basicAttackDamageMultiplier: 0.98,
+    basicAttackDamageMultiplier: 1.05,
     damageTakenMultiplier: 1.08,
     passiveName: 'Paralizator — Impuls Trzech Elektrod',
     passiveDescription: 'Podstawowy atak wystrzeliwuje impuls paralizatora. Trafienie elektryzuje i spowalnia cel; co dziewiąte trafienie uruchamia Speedrun (+Sprint i Nietykalność)!',

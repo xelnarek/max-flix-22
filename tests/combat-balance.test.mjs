@@ -32,7 +32,7 @@ test('Survival basic attacks recover quickly while preserving role-based cadence
   const cooldowns = characters.map((character) => getBaseAttackCooldownSeconds(character, 'survival'));
   for (const character of characters) {
     assert.equal(getBaseAttackCooldownSeconds(character, 'survival'), SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS[character]);
-    assert.ok(SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS[character] >= 1.9);
+    assert.ok(SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS[character] >= 1.65);
     assert.ok(SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS[character] <= 2.4);
   }
   assert.equal(new Set(cooldowns).size, characters.length);

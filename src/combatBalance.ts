@@ -1,4 +1,5 @@
 import type { CharacterId } from './types.ts';
+import { scaleCharacterBasicAttackDamage, SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER } from './characterBalance.ts';
 
 export type CombatGameMode = 'campaign' | 'survival' | 'pvp';
 
@@ -23,12 +24,71 @@ export const CAMPAIGN_ATTACK_COOLDOWN_SECONDS: Readonly<Record<CharacterId, numb
 // Faster control weapons recover slightly sooner; the heavy dumbbell and
 // returning wrench trade cadence for stronger hits and multi-pass coverage.
 export const SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS: Readonly<Record<CharacterId, number>> = Object.freeze({
-  marcin: 2.10,
-  grzesiek: 2.28,
-  dawid: 2.08,
-  mateusz: 2.00,
-  piotr: 2.34,
+  marcin: 1.90,
+  grzesiek: 2.05,
+  dawid: 1.88,
+  mateusz: 1.65,
+  piotr: 2.10,
 });
+/** Survival-only primary-attack lift; campaign damage and auto-weapons are unchanged. */
+export const SURVIVAL_PRIMARY_ATTACK_DAMAGE_MULTIPLIER = 1.15;
+
+export interface PrimaryAttackDamageProfile {
+  readonly regular: number;
+  readonly finisher: number;
+}
+
+/** The regular / regular / finisher base-damage loop used by the five operators. */
+export const PRIMARY_ATTACK_DAMAGE_PROFILE: Readonly<Record<CharacterId, PrimaryAttackDamageProfile>> = Object.freeze({
+  marcin: { regular: 1, finisher: 2 },
+  grzesiek: { regular: 2, finisher: 3 },
+  dawid: { regular: 1, finisher: 2 },
+  mateusz: { regular: 1, finisher: 2 },
+  piotr: { regular: 2, finisher: 3 },
+});
+
+export function getPrimaryAttackBaseDamage(characterId: CharacterId, isFinisher: boolean, bonusDamage = 0): number {
+  const profile = PRIMARY_ATTACK_DAMAGE_PROFILE[characterId] ?? PRIMARY_ATTACK_DAMAGE_PROFILE.marcin;
+  const bonus = Number.isFinite(bonusDamage) ? Math.max(0, bonusDamage) : 0;
+  return (isFinisher ? profile.finisher : profile.regular) + bonus;
+}
+
+/**
+ * Neutral-build DPS estimate from the real three-hit combo, class multiplier,
+ * attack cadence and Survival damage pipeline. It excludes upgrades, crits,
+ * auto-weapons, skills and enemy-specific resistances.
+ */
+export function estimatePrimaryAttackDps(characterId: CharacterId, characterDamageMultiplier: number, mode: CombatGameMode): number {
+  const profile = PRIMARY_ATTACK_DAMAGE_PROFILE[characterId] ?? PRIMARY_ATTACK_DAMAGE_PROFILE.marcin;
+  const damageFactor = mode === 'survival' ? SURVIVAL_PRIMARY_ATTACK_DAMAGE_MULTIPLIER : 1;
+  const outgoingFactor = mode === 'survival' ? SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER : 1;
+  const combo = [profile.regular, profile.regular, profile.finisher];
+  const averageDamage = combo.reduce((sum, rawDamage) => {
+    const baseDamage = Math.max(1, Math.round(rawDamage));
+    return sum + scaleCharacterBasicAttackDamage(baseDamage, characterDamageMultiplier * damageFactor) * outgoingFactor;
+  }, 0) / combo.length;
+  return averageDamage / getBaseAttackCooldownSeconds(characterId, mode);
+}
+
+/** Conservative TTK estimate: assume each hit may wait one full attack interval. */
+export function estimatePrimaryAttackTtkSeconds(enemyHp: number, characterId: CharacterId, characterDamageMultiplier: number, mode: CombatGameMode): number {
+  if (!Number.isFinite(enemyHp) || enemyHp <= 0) return 0;
+  const profile = PRIMARY_ATTACK_DAMAGE_PROFILE[characterId] ?? PRIMARY_ATTACK_DAMAGE_PROFILE.marcin;
+  const damageFactor = mode === 'survival' ? SURVIVAL_PRIMARY_ATTACK_DAMAGE_MULTIPLIER : 1;
+  const outgoingFactor = mode === 'survival' ? SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER : 1;
+  const combo = [profile.regular, profile.regular, profile.finisher];
+  const cooldown = getBaseAttackCooldownSeconds(characterId, mode);
+  let remainingHp = enemyHp;
+  let attacks = 0;
+  while (remainingHp > 0 && attacks < 1000) {
+    const baseDamage = Math.max(1, Math.round(combo[attacks % combo.length]));
+    const hitDamage = scaleCharacterBasicAttackDamage(baseDamage, characterDamageMultiplier * damageFactor) * outgoingFactor;
+    if (hitDamage <= 0) return Number.POSITIVE_INFINITY;
+    remainingHp -= hitDamage;
+    attacks++;
+  }
+  return attacks >= 1000 ? Number.POSITIVE_INFINITY : attacks * cooldown;
+}
 export const SURVIVAL_AUTO_AIM_RANGE_METERS = 22;
 
 // Effective forward reach is measured from the operator's centre to the target.
