@@ -67,6 +67,7 @@ import { getSurvivalBossVariant, isMajorSurvivalBossType, shouldSpawnBosmanKrako
 import { applySurvivalWaveMutator, getSurvivalWaveMutator, getSurvivalWaveSpawnTuning } from './survivalWaveMutators.ts';
 import { getSurvivalConvoyHazardCount } from './survivalConvoy.ts';
 import { applySurvivalWorldCombatModifier, getSurvivalMapDefinition, SURVIVAL_MAPS, SURVIVAL_MAP_IDS, type SurvivalMapId } from './survivalMaps.ts';
+import { evaluateCampaignStars, getCampaignStageDefinition, type CampaignStageDefinition, type CampaignStageId } from './campaignProgression.ts';
 import { getCampaignLightingProfile, getSurvivalLightingProfile, getSurvivalWorldBackgroundColor, getSurvivalWorldLightingProfile, getSurvivalSurfaceProfile, PVP_LIGHTING_PROFILE, type WorldLightingProfile } from './worldVisualQuality.ts';
 import { getSurvivalMapRouteFeatures } from './survivalMapLayouts.ts';
 import { createSurvivalFloorAtlasTexture } from './survivalFloorAtlas.ts';
@@ -289,6 +290,7 @@ export interface SurvivalSnapshot {
   contract: SurvivalContractState;
   event: SurvivalShiftEvent | null;
   weapons: Array<{ id: SurvivalWeaponId; name: string; icon: string; level: number; evolved: boolean }>;
+  campaignStageId: CampaignStageId | null; campaignStageTitle: string | null; campaignRemainingSeconds: number | null; campaignGoalKills: number | null; campaignBossSpawned: boolean; campaignSuccess: boolean; campaignStars: number;
 }
 
 export interface GameCallbacks {
@@ -792,6 +794,12 @@ export class PaleciakiGameEngine {
   private lastPvpHitEventId = 0;
   private pendingPvpHitEvents: PvpHitEvent[] = [];
   private survivalElapsed = 0;
+  private campaignStage: CampaignStageDefinition | null = null;
+  private campaignBossScheduled = false;
+  private campaignBossSpawned = false;
+  private campaignBossEnemyId: string | null = null;
+  private campaignStageCompleted = false;
+  private campaignStars = 0;
   private survivalSpawnTimer = 0;
   private survivalRecentSpawnTypes: SurvivalEnemySpawnType[] = [];
   private survivalSurgeTimeLeft = 0;
@@ -2657,6 +2665,12 @@ export class PaleciakiGameEngine {
     this.activeChaserIds.clear();
     this.threatTier = 0;
     this.survivalElapsed = 0;
+    this.campaignStage = null;
+    this.campaignBossScheduled = false;
+    this.campaignBossSpawned = false;
+    this.campaignBossEnemyId = null;
+    this.campaignStageCompleted = false;
+    this.campaignStars = 0;
     this.survivalSpawnTimer = 0;
     this.survivalRecentSpawnTypes = [];
     this.survivalSurgeTimeLeft = 0;
@@ -2872,6 +2886,22 @@ export class PaleciakiGameEngine {
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
     this.callbacks.onSurvivalAnnouncement?.('MEGA-MAPA • CZTERY BIOMY', 'START: ' + survivalMap.name.toUpperCase(), 'Jedna mapa 240 × 80 m. Cztery sektory łączy otwarta pętla przejść; fale, sekrety i postęp pozostają aktywne podczas przemieszczania.');
     this.emitFloatingToast('MEGA-MAPA • START W ' + survivalMap.name.toUpperCase(), this.playerPos.x, this.playerPos.y + 1.8, this.playerPos.z, 'combo');
+  }
+
+  /** Start a compact campaign mission using the existing Survival combat loop. */
+  public startCampaignStage(stageId: CampaignStageId): boolean {
+    const stage = getCampaignStageDefinition(stageId);
+    if (!stage) return false;
+    this.startSurvival(stage.mapId);
+    this.campaignStage = stage;
+    this.campaignBossScheduled = false;
+    this.campaignBossSpawned = false;
+    this.campaignBossEnemyId = null;
+    this.campaignStageCompleted = false;
+    this.campaignStars = 0;
+    this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+    this.callbacks.onSurvivalAnnouncement?.('KAMPANIA ZMIAN • ETAP ' + stage.order + '/5', stage.title.toUpperCase(), stage.objective + ' Boss pojawi się po około ' + stage.bossSpawnAtSeconds + ' sekundach. Premia: ' + stage.bonusKillTarget + ' eliminacji i ' + stage.bonusPerfectDodges + ' perfekcyjny unik/uny.');
+    return true;
   }
 
   public startPvp(session: IPvpSession, localOperatorId: CharacterId, remoteOperatorId: CharacterId) {
@@ -6451,6 +6481,13 @@ export class PaleciakiGameEngine {
         level: weapon.level,
         evolved: Boolean(weapon.evolved),
       })),
+      campaignStageId: this.campaignStage?.id ?? null,
+      campaignStageTitle: this.campaignStage?.title ?? null,
+      campaignRemainingSeconds: this.campaignStage ? Math.max(0, Math.ceil(this.campaignStage.durationSeconds - this.survivalElapsed)) : null,
+      campaignGoalKills: this.campaignStage?.bonusKillTarget ?? null,
+      campaignBossSpawned: this.campaignBossSpawned,
+      campaignSuccess: this.campaignStageCompleted,
+      campaignStars: this.campaignStars,
     };
   }
 
@@ -10225,7 +10262,7 @@ export class PaleciakiGameEngine {
     // The Easter egg is advertised as 15 real seconds, so keep its lifetime
     // aligned with the visual overlay regardless of the selected game speed.
     this.oniricDreamRemainingSeconds = Math.max(0, this.oniricDreamRemainingSeconds - dt / this.timeScale);
-    if (!this.survivalPomazaniecSpawned && this.survivalElapsed >= 135) {
+    if (!this.campaignStage && !this.survivalPomazaniecSpawned && this.survivalElapsed >= 135) {
       this.spawnSurvivalPomazaniecMarker();
     }
     this.updateSurvivalPomazaniecMarker(dt);
@@ -10240,12 +10277,17 @@ export class PaleciakiGameEngine {
       sound.playAlert();
     }
     if (this.survivalElapsed >= this.survivalNextSurgeAt) this.beginSurvivalHordeSurge();
-    if (this.survivalElapsed >= 180 && !this.survivalMiniBossSpawned) {
+    if (!this.campaignStage && this.survivalElapsed >= 180 && !this.survivalMiniBossSpawned) {
       this.survivalMiniBossSpawned = true;
       this.spawnSurvivalAuditor();
     }
     this.updateSurvivalAuditorAura(dt);
-    const nextWave = 1 + Math.floor(this.survivalElapsed / 60);
+    if (this.campaignStage && !this.campaignStageCompleted && this.campaignBossEnemyId) {
+      const campaignBoss = this.enemies.find((enemy) => enemy.id === this.campaignBossEnemyId);
+      if (campaignBoss?.state === 'defeated') { this.completeCampaignStage(); return; }
+    }
+    const waveIntervalSeconds = this.campaignStage?.waveIntervalSeconds ?? 60;
+    const nextWave = 1 + Math.floor(this.survivalElapsed / waveIntervalSeconds);
     if (nextWave > this.survivalWave) {
       const previousWaveKills = Math.max(0, this.survivalKills - this.survivalWaveStartKills);
       const waveClearBonus = getSurvivalWaveClearBonus(this.survivalWave, previousWaveKills);
@@ -10295,44 +10337,29 @@ export class PaleciakiGameEngine {
       }
     }
 
-    // First major boss at 05:00; later boss cycles recur every five minutes.
-    const majorBossWave = Math.floor(this.survivalElapsed / 300) * 5;
-    const activeSurvivalBoss = this.enemies.some((enemy) =>
-      (enemy.type === 'walczak' || enemy.type === 'krol_leto' ||
-        enemy.type === 'bosman_krakow' || enemy.type === 'sebix_m') &&
-      enemy.state !== 'defeated'
-    );
-    const upcomingBossVariant = getSurvivalBossVariant(majorBossWave);
-    if (
-      this.survivalElapsed >= 300 &&
-      this.survivalBossWave !== majorBossWave &&
-      this.survivalPendingBossWave !== majorBossWave &&
-      !activeSurvivalBoss
-    ) {
-      this.survivalPendingBossWave = majorBossWave;
-      this.survivalBossWarningTimer = 6.0;
-      this.emitFloatingToast(
-        majorBossWave === 5 ? 'INWENTARYZACJA GIGANT — ZA 6 SEKUND!' :
-          upcomingBossVariant === 'bosman_krakow' ? 'BOSMAN KRAKÓW — ZA 6 SEKUND!' :
-          upcomingBossVariant === 'krol_leto' ? 'DYREKTOR WIDMO — ZA 6 SEKUND!' : 'NADZORCA ZERO — ZA 6 SEKUND!',
-        this.playerPos.x, this.playerPos.y + 2.0, this.playerPos.z, 'damage'
-      );
-      this.callbacks.onPerkDropBanner?.(
-        majorBossWave === 5 ? 'INWENTARYZACJA GIGANT • 6 SEKUND' :
-          upcomingBossVariant === 'bosman_krakow' ? 'BOSMAN KRAKÓW • 6 SEKUND' :
-          upcomingBossVariant === 'krol_leto' ? 'DYREKTOR WIDMO • 6 SEKUND' : 'NADZORCA ZERO • 6 SEKUND',
-        upcomingBossVariant === 'bosman_krakow' ? '⚓' : upcomingBossVariant === 'krol_leto' ? '👑' : '👔',
-        majorBossWave === 5
-          ? 'Nadchodzi Inwentaryzacja Gigant. Przygotuj się na szarżę i szeroką falę uderzeniową.'
-          : upcomingBossVariant === 'bosman_krakow'
-            ? 'Dowódca rampy używa falowych odpraw i ostrzału z dystansu. Wykorzystaj przerwy między salwami.'
-            : upcomingBossVariant === 'krol_leto'
-              ? 'Dyrektor Widmo miesza ataki obszarowe z presją dystansową. Nie stój w czerwonych polach.'
-              : 'Nadzorca Zero naciska z bliska i przyspiesza po utracie połowy zdrowia. Zbieraj XP i przygotuj unik.',
-        '#ef4444'
-      );
-      sound.playBossWarning();
-      this.triggerScreenShake(0.24, 0.12);
+    if (this.campaignStage) {
+      if (!this.campaignBossScheduled && this.survivalElapsed >= this.campaignStage.bossSpawnAtSeconds) {
+        this.campaignBossScheduled = true;
+        this.survivalPendingBossWave = this.campaignStage.bossWave;
+        this.survivalBossWarningTimer = 3.8;
+        this.callbacks.onSurvivalAnnouncement?.('KONTROLA KOŃCOWA', this.campaignStage.bossTitle.toUpperCase() + ' NADCHODZI', 'Ostatnia faza etapu. Wykorzystaj ulepszenia, utrzymuj dystans i przygotuj unik.');
+        this.emitFloatingToast('⚠ ' + this.campaignStage.bossTitle.toUpperCase() + ' • ZA CHWILĘ!', this.playerPos.x, this.playerPos.y + 2.0, this.playerPos.z, 'damage');
+        sound.playBossWarning();
+        this.triggerScreenShake(0.24, 0.12);
+      }
+    } else {
+      // Endless Survival keeps its original five-minute boss cadence.
+      const majorBossWave = Math.floor(this.survivalElapsed / 300) * 5;
+      const activeSurvivalBoss = this.enemies.some((enemy) => (enemy.type === 'walczak' || enemy.type === 'krol_leto' || enemy.type === 'bosman_krakow' || enemy.type === 'sebix_m') && enemy.state !== 'defeated');
+      const upcomingBossVariant = getSurvivalBossVariant(majorBossWave);
+      if (this.survivalElapsed >= 300 && this.survivalBossWave !== majorBossWave && this.survivalPendingBossWave !== majorBossWave && !activeSurvivalBoss) {
+        this.survivalPendingBossWave = majorBossWave;
+        this.survivalBossWarningTimer = 6.0;
+        this.emitFloatingToast(majorBossWave === 5 ? 'INWENTARYZACJA GIGANT — ZA 6 SEKUND!' : upcomingBossVariant === 'bosman_krakow' ? 'BOSMAN KRAKÓW — ZA 6 SEKUND!' : upcomingBossVariant === 'krol_leto' ? 'DYREKTOR WIDMO — ZA 6 SEKUND!' : 'NADZORCA ZERO — ZA 6 SEKUND!', this.playerPos.x, this.playerPos.y + 2.0, this.playerPos.z, 'damage');
+        this.callbacks.onPerkDropBanner?.(majorBossWave === 5 ? 'INWENTARYZACJA GIGANT • 6 SEKUND' : upcomingBossVariant === 'bosman_krakow' ? 'BOSMAN KRAKÓW • 6 SEKUND' : upcomingBossVariant === 'krol_leto' ? 'DYREKTOR WIDMO • 6 SEKUND' : 'NADZORCA ZERO • 6 SEKUND', upcomingBossVariant === 'bosman_krakow' ? '⚓' : upcomingBossVariant === 'krol_leto' ? '👑' : '👔', majorBossWave === 5 ? 'Nadchodzi Inwentaryzacja Gigant. Przygotuj się na szarżę i szeroką falę uderzeniową.' : upcomingBossVariant === 'bosman_krakow' ? 'Dowódca rampy używa falowych odpraw i ostrzału z dystansu. Wykorzystaj przerwy między salwami.' : upcomingBossVariant === 'krol_leto' ? 'Dyrektor Widmo miesza ataki obszarowe z presją dystansową. Nie stój w czerwonych polach.' : 'Nadzorca Zero naciska z bliska i przyspiesza po utracie połowy zdrowia. Zbieraj XP i przygotuj unik.', '#ef4444');
+        sound.playBossWarning();
+        this.triggerScreenShake(0.24, 0.12);
+      }
     }
     if (this.survivalBossWarningTimer > 0) {
       this.survivalBossWarningTimer = Math.max(0, this.survivalBossWarningTimer - dt);
@@ -10341,6 +10368,16 @@ export class PaleciakiGameEngine {
         this.survivalPendingBossWave = 0;
         this.survivalBossWave = bossWave;
         this.spawnSurvivalBoss(bossWave);
+        if (this.campaignStage) {
+          const boss = this.enemies[this.enemies.length - 1];
+          if (boss && isMajorSurvivalBossType(boss.type)) {
+            boss.maxHp = Math.max(1, Math.round(boss.maxHp * this.campaignStage.bossHpMultiplier));
+            boss.hp = boss.maxHp;
+            this.campaignBossEnemyId = boss.id;
+            this.campaignBossSpawned = true;
+            this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+          }
+        }
       }
     }
 
@@ -10438,6 +10475,19 @@ export class PaleciakiGameEngine {
     }
   }
 
+
+  private completeCampaignStage() {
+    const stage = this.campaignStage;
+    if (!stage || this.campaignStageCompleted || this.state !== 'playing') return;
+    this.campaignStageCompleted = true;
+    this.campaignStars = evaluateCampaignStars(stage, { bossDefeated: true, kills: this.survivalKills, perfectDodges: this.survivalPerfectDodges });
+    this.state = 'gameover';
+    this.playerVel.set(0, 0, 0);
+    sound.stopMusic();
+    sound.playWin();
+    const stars = '★'.repeat(this.campaignStars) + '☆'.repeat(3 - this.campaignStars);
+    this.callbacks.onGameOver('ETAP ZALICZONY • ' + stage.title.toUpperCase() + ' • ' + stars + ' • BOSS POKONANY');
+  }
 
   private clearSurvivalSurgeRing() {
     if (!this.survivalSurgeRing) return;
