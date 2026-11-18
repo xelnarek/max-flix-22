@@ -102,11 +102,18 @@ test('every enemy type has a distinct locomotion style preset tuned to its role'
   assert.equal(module.ENEMY_VISUAL_PROFILES.krol_leto.gaitStyle, 'heavy');
   assert.equal(module.ENEMY_VISUAL_PROFILES.piorun_dron.gaitStyle, 'hovering');
   assert.equal(module.ENEMY_VISUAL_PROFILES.forklift.gaitStyle, 'rolling');
+  assert.equal(module.ENEMY_VISUAL_PROFILES.customer.gaitStyle, 'nervous');
+  assert.equal(module.ENEMY_VISUAL_PROFILES.handlowiec.gaitStyle, 'swagger');
+  assert.equal(module.ENEMY_VISUAL_PROFILES.monter.gaitStyle, 'braced');
+  assert.equal(module.ENEMY_VISUAL_PROFILES.walczak.gaitStyle, 'stalking');
+  assert.equal(module.ENEMY_VISUAL_PROFILES.pan_roman.gaitStyle, 'uneven');
   assert.match(profilesSource, /ENEMY_GAIT_PRESETS/);
   assert.match(game, /const gaitPreset = ENEMY_GAIT_PRESETS\[visualProfile\.gaitStyle\]/);
   assert.match(game, /visualProfile\.gaitStyle === 'shambling'/);
   assert.match(game, /visualProfile\.gaitStyle === 'limping'/);
   assert.match(game, /visualProfile\.gaitStyle === 'robotic'/);
+  assert.match(game, /const actionProgress = activeClipAction && activeClipDuration > 0/);
+  assert.match(game, /activeAction,\s*actionProgress,/);
 });
 
 test('each imported enemy rig is role-mapped, correctly fitted and attached to the live enemy container', async () => {
