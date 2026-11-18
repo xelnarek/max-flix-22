@@ -91,6 +91,10 @@ export const CAMPAIGN_BOSS_SIGNATURES: Readonly<Record<CampaignStageId, Campaign
   },
 } as const;
 
+export function getCampaignBossSignature(stageId: CampaignStageId): CampaignBossSignature {
+  return CAMPAIGN_BOSS_SIGNATURES[stageId];
+}
+
 function sanitizeVolleyIndex(value: number): number {
   return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
 }
