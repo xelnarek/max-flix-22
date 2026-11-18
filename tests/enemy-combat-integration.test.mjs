@@ -107,3 +107,18 @@ test('enemy projectiles are slower, less accurate and have longer enemy attack w
   assert.match(game, /missDistance = ENEMY_PROJECTILE_AIM_ERROR_METERS/);
   assert.match(game, /SURVIVAL_ENEMY_SPECIAL_RATE_MULTIPLIER/);
 });
+
+test('regular ranged enemies telegraph a locked shot and stop moving during wind-up', () => {
+  assert.match(game, /private beginEnemyRangedAttackTelegraph\(enemy: EnemyItem\)/);
+  assert.match(game, /private advanceEnemyRangedAttackTelegraph\(enemy: EnemyItem, dt: number\)/);
+  assert.match(game, /private cancelEnemyRangedAttackTelegraph\(enemy: EnemyItem/);
+  assert.match(game, /enemy\.aiRangedLockedDirection = direction/);
+  assert.match(game, /spawnBossLaneTelegraph\([\s\S]*?profile\.laneWidth[\s\S]*?profile\.windupSeconds/);
+  assert.match(game, /const isTelegraphingRangedBoss = enemy\.aiRangedWindupTimer !== undefined/);
+  assert.match(game, /e\.aiRangedWindupTimer !== undefined[\s\S]*?advanceEnemyRangedAttackTelegraph/);
+  assert.match(game, /spawnPenaltyNotice\(e\.x, e\.y \+ 0\.8, e\.z, release\.direction\)/);
+  assert.match(game, /spawnSanitarywareProjectile\(e\.x, e\.y \+ 0\.8, e\.z, release\.direction\)/);
+  assert.match(game, /spawnSparkZapProjectile\(e\.x, e\.y \+ 0\.8, e\.z, release\.direction\)/);
+  assert.match(game, /if \(actualDamage > 0 && enemy\.aiRangedWindupTimer !== undefined\)/);
+  assert.match(game, /if \(e\.aiRangedWindupTimer !== undefined\) this\.cancelEnemyRangedAttackTelegraph\(e, true\)/);
+});
