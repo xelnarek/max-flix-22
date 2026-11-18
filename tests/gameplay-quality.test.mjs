@@ -1974,3 +1974,20 @@ test('Wave Director leader-loss scan reuses sets and enemy records without mappi
   assert.match(game, /private readonly survivalMoraleLivingIdsScratch = new Set<string>\(\)/);
   assert.match(game, /private readonly survivalMoraleAffectedIdsScratch = new Set<string>\(\)/);
 });
+
+test('Survival difficulty profile is cached by wave across director and enemy updates', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /private cachedSurvivalDifficultyWave = 0/);
+  assert.match(game, /private cachedSurvivalDifficultyProfile: ReturnType<typeof getSurvivalDifficultyProfile> \| null = null/);
+  const start = game.indexOf('private getCurrentSurvivalDifficultyProfile()');
+  const end = game.indexOf('private updateSurvivalDirector', start);
+  assert.ok(start >= 0 && end > start, 'difficulty profile cache helper should exist');
+  const helper = game.slice(start, end);
+  assert.match(helper, /this\.cachedSurvivalDifficultyWave !== this\.survivalWave/);
+  assert.match(helper, /this\.cachedSurvivalDifficultyProfile = getSurvivalDifficultyProfile\(this\.survivalWave\)/);
+  assert.match(helper, /return this\.cachedSurvivalDifficultyProfile/);
+  assert.equal((game.match(/this\.getCurrentSurvivalDifficultyProfile\(\)/g) || []).length, 2,
+    'the Survival director and enemy update should share the cached profile');
+  assert.equal((game.match(/getSurvivalDifficultyProfile\(this\.survivalWave\)/g) || []).length, 1,
+    'the allocating profile factory should run only inside the cache invalidation branch');
+});
