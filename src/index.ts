@@ -3229,6 +3229,13 @@ class PaleciakiScene extends xb.Script {
       }
       this.gameSessionGeneration++;
       this.engine.startTitle();
+      // Campaign results promise a direct route back to the stage board.
+      // Reuse the existing menu activation path so desktop tabs, mobile
+      // overview scrolling and ARIA/inert state stay synchronized.
+      if (lastCampaignStageId) {
+        const campaignMapTab = menuTabButtons.find((button) => button.getAttribute('data-tab') === 'tab-map');
+        if (campaignMapTab) activateMenuTab(campaignMapTab);
+      }
       void showInterstitialAfterRun();
     });
 
