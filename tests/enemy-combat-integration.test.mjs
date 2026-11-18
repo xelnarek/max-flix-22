@@ -166,6 +166,19 @@ test('regular melee enemies use role-specific wind-up lanes and delayed contact 
   assert.match(game, /activeEnemyMeleeTelegraphIds\.size >= platformLimit/);
 });
 
+test('ordinary melee attacks hold position briefly after impact and player damage interrupts recovery', () => {
+  assert.match(game, /e\.aiMeleeRecoveryTimer = Math\.max\(0, \(e\.aiMeleeRecoveryTimer \?\? 0\) - dt\)/);
+  assert.match(game, /e\.aiMeleeRecoveryTimer = Math\.max\(e\.aiMeleeRecoveryTimer \?\? 0, meleeProfile\.recoverySeconds\)/);
+  assert.match(game, /else if \(\(e\.aiMeleeRecoveryTimer \?\? 0\) > 0\)[\s\S]*?e\.mesh\.position\.set\(e\.x, e\.y, e\.z\)/);
+  assert.match(game, /actualDamage > 0 && \(enemy\.aiMeleeRecoveryTimer \?\? 0\) > 0[\s\S]*?enemy\.aiMeleeRecoveryTimer = 0/);
+});
+
+test('Inspector, Gamma Mutant and Pip special actions wait until melee recovery ends', () => {
+  assert.match(game, /e\.type === 'inspector'[^\n]*e\.aiMeleeRecoveryTimer \?\? 0\) <= 0/);
+  assert.match(game, /e\.type === 'mutant_gamma_forklift'[^\n]*e\.aiMeleeRecoveryTimer \?\? 0\) <= 0/);
+  assert.match(game, /e\.type === 'radioactive_pip'[^\n]*e\.aiMeleeRecoveryTimer \?\? 0\) <= 0/);
+});
+
 test('bosses and purpose-built ranged/mechanical archetypes retain their existing contact path', async () => {
   const melee = await readFile(new URL('../src/enemyMeleeTelegraphs.ts', import.meta.url), 'utf8');
   for (const excluded of [
