@@ -166,6 +166,8 @@ export interface EnemyItem {
   aiMeleeTelegraphMesh?: any;
   aiMeleeStrikePending?: boolean;
   aiMeleeCooldownTimer?: number;
+  /** Brief movement lock for the follow-through after an ordinary melee strike. */
+  aiMeleeRecoveryTimer?: number;
   /** Low-frequency projectile threat scan and committed sidestep intent. */
   aiDodgeScanTimer?: number;
   aiDodgeTimer?: number;
