@@ -95,6 +95,8 @@ import { getSurvivalPerformanceBudget } from './survivalPerformanceBudget.ts';
 import { createSurvivalEliteInsignia } from './survivalEliteVisuals.ts';
 import { rollSurvivalChaosRoulette, type SurvivalChaosRouletteKind } from './survivalChaosRoulette.ts';
 import { createSurvivalXpStreakState, registerSurvivalXpPickup, type SurvivalXpStreakState } from './survivalXpStreak.ts';
+import { advanceSurvivalAnomaly, createSurvivalAnomalyState, getSurvivalAnomalyModifiers, type SurvivalAnomalyState } from './survivalAnomalies.ts';
+import { rollSurvivalXpDrop } from './survivalXpDrops.ts';
 import { advanceSurvivalShiftEvent, createSurvivalShiftEventState, registerSurvivalShiftEventAction, type SurvivalShiftEvent, type SurvivalShiftEventAction, type SurvivalShiftEventState } from './survivalShiftEvents.ts';
 import { advanceSurvivalContract, createSurvivalContract, registerSurvivalContractAction, type SurvivalContractAction, type SurvivalContractState } from './survivalContracts.ts';
 import {
@@ -142,7 +144,7 @@ import { NEUTRAL_CHARACTER_COMBAT_BONUSES, type CharacterCombatBonuses } from '.
 import { getCharacterMotionProfile } from './characterMotion.ts';
 import { getAttackPoseStrength, getCharacterAttackMotionProfile } from './characterAttackMotion.ts';
 import { getCharacterHitReactionProfile } from './characterHitReaction.ts';
-import { resolveCharacterIncomingDamage, scaleCharacterBasicAttackDamage, scaleSurvivalOutgoingDamage, scaleSurvivalIncomingDamage, CHARACTER_ABILITY_DAMAGE_MULTIPLIER, SURVIVAL_HIT_INVULNERABILITY_SECONDS } from './characterBalance.ts';
+import { resolveCharacterIncomingDamage, scaleCharacterBasicAttackDamage, scaleSurvivalOutgoingDamage, scaleSurvivalIncomingDamage, CHARACTER_ABILITY_DAMAGE_MULTIPLIER, SURVIVAL_HIT_INVULNERABILITY_SECONDS, SURVIVAL_ABILITY_DURATION_MULTIPLIER } from './characterBalance.ts';
 import { sound } from './sound.ts';
 import {
   ActivePerks,
@@ -812,6 +814,7 @@ export class PaleciakiGameEngine {
   private survivalKills = 0;
   private survivalContract: SurvivalContractState = createSurvivalContract(1);
   private survivalShiftEvent: SurvivalShiftEventState = createSurvivalShiftEventState();
+  private survivalAnomaly: SurvivalAnomalyState = createSurvivalAnomalyState();
   private survivalGoldenPalletFound = false;
   private survivalMapId: SurvivalMapId = SURVIVAL_WORLD_START_BIOME;
   private survivalWorldRoot: THREE.Group | null = null;
@@ -2672,6 +2675,7 @@ export class PaleciakiGameEngine {
     this.survivalKills = 0;
     this.survivalContract = createSurvivalContract(1);
     this.survivalShiftEvent = createSurvivalShiftEventState();
+    this.survivalAnomaly = createSurvivalAnomalyState();
     this.survivalGoldenPalletFound = false;
     this.survivalSecretsFound = 0;
     this.cthulhuSecretSummoned = false;
@@ -10184,6 +10188,30 @@ export class PaleciakiGameEngine {
     this.survivalContract = contractClock.state;
     const eventClock = advanceSurvivalShiftEvent(this.survivalShiftEvent, this.survivalElapsed, dt);
     this.survivalShiftEvent = eventClock.state;
+    const anomalyNeedsSelection = !this.survivalAnomaly.active && this.survivalElapsed >= this.survivalAnomaly.nextAt;
+    const anomalyWillExpire = Boolean(this.survivalAnomaly.active && this.survivalAnomaly.active.remainingSeconds <= dt);
+    const anomalyClock = advanceSurvivalAnomaly(
+      this.survivalAnomaly,
+      this.survivalElapsed,
+      dt,
+      anomalyNeedsSelection ? Math.random() : 0.5,
+      anomalyNeedsSelection ? Math.random() : 0.5,
+      anomalyWillExpire ? Math.random() : 0.5,
+    );
+    this.survivalAnomaly = anomalyClock.state;
+    if (anomalyClock.started) {
+      this.callbacks.onSurvivalAnnouncement?.(
+        'LOSOWE ZDARZENIE MAGAZYNOWE',
+        anomalyClock.started.title,
+        anomalyClock.started.description + ' Efekt potrwa około ' + Math.ceil(anomalyClock.started.durationSeconds) + ' sekund. Nie daj się zaskoczyć.',
+      );
+      this.emitFloatingToast('⚠ ZDARZENIE: ' + anomalyClock.started.title, this.playerPos.x, this.playerPos.y + 1.95, this.playerPos.z, 'damage');
+      sound.playBossWarning();
+    }
+    if (anomalyClock.expired) {
+      this.emitFloatingToast('ZDARZENIE ZAKOŃCZONE • ZMIANA ZASAD', this.playerPos.x, this.playerPos.y + 1.65, this.playerPos.z, 'combo');
+      sound.playAlert();
+    }
     if (eventClock.started) {
       this.callbacks.onSurvivalAnnouncement?.('EVENT MAGAZYNOWY', eventClock.started.title, eventClock.started.description + ' Masz 34 sekundy.');
       this.emitFloatingToast('EVENT: ' + eventClock.started.title, this.playerPos.x, this.playerPos.y + 1.85, this.playerPos.z, 'combo');
@@ -10362,9 +10390,10 @@ export class PaleciakiGameEngine {
     } else {
       this.survivalSpawnTimer -= dt;
       if (this.survivalSpawnTimer <= 0 && aliveCount < enemyCap) {
+        const anomalyModifiers = getSurvivalAnomalyModifiers(this.survivalAnomaly);
         const spawnTuning = getSurvivalWaveSpawnTuning(
-          difficultyProfile.spawnIntervalSeconds,
-          4 + Math.floor(this.survivalWave * 0.38) + difficultyProfile.extraGroupSize,
+          difficultyProfile.spawnIntervalSeconds * anomalyModifiers.spawnIntervalMultiplier,
+          Math.max(1, 4 + Math.floor(this.survivalWave * 0.38) + difficultyProfile.extraGroupSize + anomalyModifiers.enemyGroupSizeBonus),
           waveMutator,
           performanceBudget.groupCap,
         );
@@ -11699,7 +11728,8 @@ export class PaleciakiGameEngine {
       enemy.mesh.position.set(x, enemy.y, z);
     }
     const difficultyProfile = getSurvivalDifficultyProfile(wave);
-    enemy.maxHp = Math.max(1, Math.ceil(enemy.maxHp * difficultyProfile.enemyHealthMultiplier));
+    const anomalyHealthMultiplier = getSurvivalAnomalyModifiers(this.survivalAnomaly).enemyHealthMultiplier;
+    enemy.maxHp = Math.max(1, Math.ceil(enemy.maxHp * difficultyProfile.enemyHealthMultiplier * anomalyHealthMultiplier));
     enemy.hp = enemy.maxHp;
     enemy.speed *= difficultyProfile.enemySpeedMultiplier;
 
@@ -11893,7 +11923,8 @@ export class PaleciakiGameEngine {
       if (distance < 1.25) {
         const streak = registerSurvivalXpPickup(this.survivalXpStreak, this.survivalElapsed);
         this.survivalXpStreak = streak.state;
-        const xpValue = Math.max(1, Math.round(gem.value * this.survivalXpMultiplier * ((this.activePerks.xpSurge || 0) > 0 ? 1.5 : 1) * streak.multiplier));
+        const anomalyXpMultiplier = getSurvivalAnomalyModifiers(this.survivalAnomaly).xpPickupMultiplier;
+        const xpValue = Math.max(1, Math.round(gem.value * this.survivalXpMultiplier * anomalyXpMultiplier * ((this.activePerks.xpSurge || 0) > 0 ? 1.5 : 1) * streak.multiplier));
         if (streak.perfectChainNow) {
           const chainBonus = 350 + this.survivalWave * 25;
           this.score += chainBonus;
@@ -12533,6 +12564,7 @@ export class PaleciakiGameEngine {
     let speed = this.charDef.speed * this.characterMasteryBonuses.speedMultiplier * this.getPacingFactor();
     if (this.gameMode === 'survival') {
       speed *= this.survivalMoveMultiplier * getSurvivalMomentumMoveMultiplier(this.survivalMomentum.overdriveRemainingSeconds, this.survivalMomentum.killStreak);
+      speed *= getSurvivalAnomalyModifiers(this.survivalAnomaly).playerMoveMultiplier;
       if (this.oniricDreamRemainingSeconds > 0) speed *= 1.20;
     }
     if (this.marcinWoTPenaltyTimer > 0) {
@@ -13965,9 +13997,9 @@ export class PaleciakiGameEngine {
     this.mateuszRivalsRemainingSeconds = 0;
   }
 
-  private spawnMateuszRivals(): void {
+  private spawnMateuszRivals(durationMultiplier = 1): void {
     this.clearMateuszRivals();
-    const duration = this.gameMode === 'survival' ? 13 : 14;
+    const duration = (this.gameMode === 'survival' ? 13 : 14) * Math.max(0.1, durationMultiplier);
     this.mateuszRivalsRemainingSeconds = duration;
     const baseY = Math.max(0, this.playerPos.y - 0.5);
     MATEUSZ_RIVAL_ROSTER.forEach((definition, index) => {
@@ -14413,7 +14445,7 @@ export class PaleciakiGameEngine {
     // Survival keeps a moderate shared output scalar. Explicit operator skills
     // get a small extra bump; hazards and passive environmental damage do not.
     const baseAppliedDamage = this.gameMode === 'survival'
-      ? scaleSurvivalOutgoingDamage(amount)
+      ? scaleSurvivalOutgoingDamage(amount) * getSurvivalAnomalyModifiers(this.survivalAnomaly).playerDamageDealtMultiplier
       : amount;
     const abilityDamageMultiplier = damageSource === 'ability'
       ? CHARACTER_ABILITY_DAMAGE_MULTIPLIER
@@ -14934,7 +14966,9 @@ export class PaleciakiGameEngine {
       }
     }
     const survivalAbilityRate = this.gameMode === 'survival'
-      ? getSurvivalDifficultyProfile(this.survivalWave).enemyAbilityRateMultiplier * SURVIVAL_ENEMY_SPECIAL_RATE_MULTIPLIER
+      ? getSurvivalDifficultyProfile(this.survivalWave).enemyAbilityRateMultiplier *
+        SURVIVAL_ENEMY_SPECIAL_RATE_MULTIPLIER *
+        getSurvivalAnomalyModifiers(this.survivalAnomaly).enemyAbilityRateMultiplier
       : 1;
     if (this.globalEnemyShoutCooldown > 0) {
       this.globalEnemyShoutCooldown -= dt;
@@ -17603,7 +17637,7 @@ export class PaleciakiGameEngine {
       ? (this.gameMode === 'survival' ? 0.90 : 0.94)
       : 1;
     this.attackCooldownTimer = baseAttackCooldown *
-      (this.gameMode === 'survival' ? this.survivalAttackRateMultiplier : 1) *
+      (this.gameMode === 'survival' ? this.survivalAttackRateMultiplier * getSurvivalAnomalyModifiers(this.survivalAnomaly).attackCooldownMultiplier : 1) *
       attackHasteFactor;
     this.attackSwingDuration = getCharacterAttackMotionProfile(charId).durationSeconds;
     this.attackSwingTimer = this.attackSwingDuration;
@@ -17956,7 +17990,7 @@ export class PaleciakiGameEngine {
     return { group, turret, tracks };
   }
 
-  private spawnMarcinTank() {
+  private spawnMarcinTank(durationMultiplier = 1) {
     if (this.marcinTank) {
       this.levelRoot.remove(this.marcinTank.group);
       this.disposeTemporaryObject(this.marcinTank.group);
@@ -17972,7 +18006,7 @@ export class PaleciakiGameEngine {
     built.group.scale.setScalar(0.76);
     built.group.rotation.y = this.playerRot;
     this.levelRoot.add(built.group);
-    const duration = this.gameMode === 'survival' ? 6.0 : 8.0;
+    const duration = (this.gameMode === 'survival' ? 6.0 : 8.0) * Math.max(0.1, durationMultiplier);
     this.marcinTank = {
       group: built.group,
       turret: built.turret,
@@ -18718,7 +18752,7 @@ export class PaleciakiGameEngine {
     });
   }
 
-  private spawnMafiCapybaras(abilityDamageMultiplier: number) {
+  private spawnMafiCapybaras(abilityDamageMultiplier: number, durationMultiplier = 1) {
     for (const capybara of this.mafiCapybaras) {
       this.levelRoot.remove(capybara.group);
       this.disposeTemporaryObject(capybara.group);
@@ -18752,7 +18786,7 @@ export class PaleciakiGameEngine {
       this.emitFloatingToast('✦ PENTAGRAM B4 • -' + burstDamage + ' HP', enemy.x, enemy.y + 1.0, enemy.z, 'damage');
     }
 
-    const duration = this.gameMode === 'survival' ? 12.0 : 15.0;
+    const duration = (this.gameMode === 'survival' ? 12.0 : 15.0) * Math.max(0.1, durationMultiplier);
     const formationForwardX = Math.sin(this.playerRot);
     const formationForwardZ = Math.cos(this.playerRot);
     const formationRightX = Math.cos(this.playerRot);
@@ -19248,13 +19282,17 @@ export class PaleciakiGameEngine {
       return;
     }
     if (this.state !== 'playing' || this.abilityCooldownState.remainingSeconds > 0.0001) return;
+    const anomalyModifiers = this.gameMode === 'survival' ? getSurvivalAnomalyModifiers(this.survivalAnomaly) : null;
+    const abilityDurationScale = this.gameMode === 'survival'
+      ? SURVIVAL_ABILITY_DURATION_MULTIPLIER * (anomalyModifiers?.abilityDurationMultiplier ?? 1)
+      : 1;
     const cooldownSeconds = getAbilityCooldownSeconds(this.charDef.abilityCooldown, this.gameMode) *
       this.characterMasteryBonuses.abilityCooldownMultiplier *
-      (this.gameMode === 'survival' ? this.survivalAbilityCooldownMultiplier : 1);
+      (this.gameMode === 'survival' ? this.survivalAbilityCooldownMultiplier * (anomalyModifiers?.abilityCooldownMultiplier ?? 1) : 1);
     this.abilityCooldownState = createAbilityCooldown(cooldownSeconds);
     this.updateAbilityCooldown(0, true);
     this.sayAbilityShout();
-    this.specialSwingTimer = 0.86;
+    this.specialSwingTimer = 0.86 * abilityDurationScale;
     this.requestGobkitAction(this.playerGobkitTrack, 'Special', this.specialSwingTimer);
     const abilityDamageMultiplier = this.gameMode === 'survival'
       ? Math.min(1.5, this.survivalDamageMultiplier * 1.10) : 1;
@@ -19267,12 +19305,12 @@ export class PaleciakiGameEngine {
       // The WZ-404 is a temporary autonomous support unit, not a one-frame visual burst.
       this.hp = Math.min(this.maxHp, this.hp + 1);
       this.callbacks.onHpUpdate(this.hp, this.maxHp);
-      this.activatePerk('order_magnet', 8);
-      this.spawnMarcinTank();
+      this.activatePerk('order_magnet', 8 * abilityDurationScale);
+      this.spawnMarcinTank(abilityDurationScale);
     } else if (this.currentCharacterId === 'grzesiek') {
-      this.grzesiekCrushTimer = 0.9;
-      this.grzesiekCrushPulse = 1.0;
-      this.activatePerk('golden_paleciak', this.gameMode === 'survival' ? 2.6 : 6);
+      this.grzesiekCrushTimer = 0.9 * abilityDurationScale;
+      this.grzesiekCrushPulse = 1.0 * abilityDurationScale;
+      this.activatePerk('golden_paleciak', (this.gameMode === 'survival' ? 2.6 : 6) * abilityDurationScale);
       this.spawnGrzesiekShockwave();
       const forward = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
       this.playerPos.x += forward.x * 1.8;
@@ -19300,7 +19338,7 @@ export class PaleciakiGameEngine {
         }
       });
     } else if (this.currentCharacterId === 'dawid') {
-      this.activatePerk('hardhat', this.gameMode === 'survival' ? 4.5 : 15);
+      this.activatePerk('hardhat', (this.gameMode === 'survival' ? 4.5 : 15) * abilityDurationScale);
       // Operator 03 also drops a fresh KFC bucket right in front of him!
       const fwd = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
       const bucketX = this.playerPos.x + fwd.x * 2.2;
@@ -19364,7 +19402,7 @@ export class PaleciakiGameEngine {
           mesh: tile,
           disposeOnRemove: true,
           vel: forward.multiplyScalar(17.5),
-          life: 1.45,
+          life: 1.45 * abilityDurationScale,
           damage: this.gameMode === 'survival' ? 1 : 2,
           damageSource: 'ability',
           pierce: this.gameMode === 'survival' ? 1 : 4,
@@ -19378,12 +19416,12 @@ export class PaleciakiGameEngine {
       });
       this.emitFloatingToast('🧱 SALWA GRESU 120x280 + ⚡ Kubełek Mocy!', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
     } else if (this.currentCharacterId === 'mateusz') {
-      this.spawnMateuszRivals();
+      this.spawnMateuszRivals(abilityDurationScale);
     } else if (this.currentCharacterId === 'piotr') {
       this.attackSwingDuration = 0.3;
       this.attackSwingTimer = this.attackSwingDuration;
       if (this.rightArm) this.rightArm.rotation.x = -1.15;
-      this.spawnMafiCapybaras(abilityDamageMultiplier);
+      this.spawnMafiCapybaras(abilityDamageMultiplier, abilityDurationScale);
     }
   }
 
@@ -19711,10 +19749,17 @@ export class PaleciakiGameEngine {
       const waveXpMultiplier = Number.isFinite(rawXpMultiplier)
         ? THREE.MathUtils.clamp(rawXpMultiplier as number, 1, 1.75)
         : 1;
-      const baseXpDrop = Math.max(1, Math.round((e.maxHp >= 4 ? 3 : 1) * waveXpMultiplier));
-      // Merge the small milestone bonus into the normal gem instead of spawning
-      // two overlapping pickups at exactly the same coordinates.
-      this.spawnSurvivalXpGem(e.x, e.y, e.z, baseXpDrop + (isShiftMilestone ? 2 : 0));
+      const anomalyXp = getSurvivalAnomalyModifiers(this.survivalAnomaly);
+      const xpDrop = rollSurvivalXpDrop(
+        e.type,
+        Math.random(),
+        Math.random(),
+        waveXpMultiplier,
+        anomalyXp.xpDropChanceMultiplier,
+        anomalyXp.xpValueMultiplier,
+        isShiftMilestone ? 2 : 0,
+      );
+      if (xpDrop) this.spawnSurvivalXpGem(e.x, e.y, e.z, xpDrop.value);
       if (isShiftMilestone) {
         this.spawnParticleRing(e.x, e.y + 0.7, e.z, 0x38bdf8);
         this.emitFloatingToast('📦 NORMA ZMIANY x8 — BONUS +2 XP DO ZEBRANIA!', e.x, e.y + 1.8, e.z, 'combo');
@@ -19913,7 +19958,7 @@ export class PaleciakiGameEngine {
     }
 
     const incomingAmount = this.gameMode === 'survival'
-      ? scaleSurvivalIncomingDamage(amount)
+      ? scaleSurvivalIncomingDamage(amount) * getSurvivalAnomalyModifiers(this.survivalAnomaly).playerDamageTakenMultiplier
       : amount;
     const damageResolution = resolveCharacterIncomingDamage(
       incomingAmount,
