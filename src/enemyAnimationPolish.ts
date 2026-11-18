@@ -341,9 +341,9 @@ export function getEnemyCombatMotionEnvelope(
   const progress = clamp(actionProgress, 0, 1);
   if (action === 'Attack') {
     return {
-      windup: pulseMotion(progress, 0.01, 0.22, 0.56),
-      impact: pulseMotion(progress, 0.24, 0.47, 0.74),
-      recovery: pulseMotion(progress, 0.48, 0.78, 1),
+      windup: pulseMotion(progress, 0.01, 0.22, 0.43),
+      impact: pulseMotion(progress, 0.27, 0.47, 0.70),
+      recovery: pulseMotion(progress, 0.58, 0.78, 0.99),
     };
   }
   if (action === 'Hit') {
