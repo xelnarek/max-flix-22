@@ -67,7 +67,7 @@ import { getSurvivalBossVariant, isMajorSurvivalBossType, shouldSpawnBosmanKrako
 import { applySurvivalWaveMutator, getSurvivalWaveMutator, getSurvivalWaveSpawnTuning } from './survivalWaveMutators.ts';
 import { getSurvivalConvoyHazardCount } from './survivalConvoy.ts';
 import { applySurvivalWorldCombatModifier, getSurvivalMapDefinition, SURVIVAL_MAPS, SURVIVAL_MAP_IDS, type SurvivalMapId } from './survivalMaps.ts';
-import { evaluateCampaignStars, getCampaignStageDefinition, type CampaignStageDefinition, type CampaignStageId } from './campaignProgression.ts';
+import { evaluateCampaignStars, getCampaignRewardDefinition, getCampaignStageDefinition, type CampaignRewardId, type CampaignStageDefinition, type CampaignStageId } from './campaignProgression.ts';
 import { getCampaignLightingProfile, getSurvivalLightingProfile, getSurvivalWorldBackgroundColor, getSurvivalWorldLightingProfile, getSurvivalSurfaceProfile, PVP_LIGHTING_PROFILE, type WorldLightingProfile } from './worldVisualQuality.ts';
 import { getSurvivalMapRouteFeatures } from './survivalMapLayouts.ts';
 import { createSurvivalFloorAtlasTexture } from './survivalFloorAtlas.ts';
@@ -2889,7 +2889,7 @@ export class PaleciakiGameEngine {
   }
 
   /** Start a compact campaign mission using the existing Survival combat loop. */
-  public startCampaignStage(stageId: CampaignStageId): boolean {
+  public startCampaignStage(stageId: CampaignStageId, rewardId: CampaignRewardId | null = null): boolean {
     const stage = getCampaignStageDefinition(stageId);
     if (!stage) return false;
     this.startSurvival(stage.mapId);
@@ -2899,6 +2899,40 @@ export class PaleciakiGameEngine {
     this.campaignBossEnemyId = null;
     this.campaignStageCompleted = false;
     this.campaignStars = 0;
+
+    // Carry-over rewards are deliberately scoped to Campaign. startSurvival()
+    // has already reset the build, so a selected card affects exactly this stage.
+    const reward = getCampaignRewardDefinition(rewardId);
+    if (reward) {
+      switch (reward.effect) {
+        case 'armor':
+          this.maxHp = Math.min(this.charDef.maxHp + 1, this.maxHp + 1);
+          this.hp = Math.min(this.maxHp, this.hp + 1);
+          this.callbacks.onHpUpdate(this.hp, this.maxHp);
+          break;
+        case 'damage':
+          this.survivalDamageMultiplier = Math.min(1.80, this.survivalDamageMultiplier * 1.12);
+          break;
+        case 'rapid':
+          this.survivalAttackRateMultiplier = Math.max(0.78, this.survivalAttackRateMultiplier * 0.92);
+          this.survivalWeaponReloadMultiplier = Math.max(0.72, this.survivalWeaponReloadMultiplier * 0.92);
+          break;
+        case 'xp':
+          this.survivalXpMultiplier = Math.min(2.40, this.survivalXpMultiplier * 1.20);
+          break;
+        case 'mobility':
+          this.survivalMoveMultiplier = Math.min(1.30, this.survivalMoveMultiplier * 1.08);
+          this.survivalDashCooldownMultiplier = Math.max(0.50, this.survivalDashCooldownMultiplier * 0.92);
+          break;
+        case 'reserve':
+          this.survivalRerolls = Math.min(4, this.survivalRerolls + 1);
+          this.survivalSkips = Math.min(3, this.survivalSkips + 1);
+          break;
+      }
+      this.callbacks.onSurvivalAnnouncement?.('NAGRODA PRZENIESIONA', reward.title.toUpperCase(), reward.description + '. Bonus działa w tym etapie Kampanii.');
+      this.emitFloatingToast(reward.icon + ' NAGRODA: ' + reward.title.toUpperCase(), this.playerPos.x, this.playerPos.y + 1.85, this.playerPos.z, 'perk');
+    }
+
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
     this.callbacks.onSurvivalAnnouncement?.('KAMPANIA ZMIAN • ETAP ' + stage.order + '/5', stage.title.toUpperCase(), stage.objective + ' Boss pojawi się po około ' + stage.bossSpawnAtSeconds + ' sekundach. Premia: ' + stage.bonusKillTarget + ' eliminacji i ' + stage.bonusPerfectDodges + ' perfekcyjny unik/uny.');
     return true;
