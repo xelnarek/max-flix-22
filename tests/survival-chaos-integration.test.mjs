@@ -56,9 +56,12 @@ test('twelve roulette outcomes have concrete handlers for loot, control, overdri
   assert.match(game, /private triggerSurvivalTimeLock\(\)/);
   assert.match(game, /private spawnSurvivalEliteDelivery\(\)/);
   assert.match(game, /enemy\.stunTimer = Math\.max\(enemy\.stunTimer, isBoss \? 0\.82 : 1\.8\)/);
+  assert.match(game, /enemy\.state = 'stunned'/);
+  assert.match(game, /DOSTAWA PRIORYTETOWA ×/);
   assert.match(game, /ELITA B4 • KONTROLER/);
   assert.match(game, /ELITA B4 • KURIER/);
   assert.match(app, /Dwanaście możliwych wyników automatu/);
+  assert.match(app, /machine\.innerHTML = '<span>💎<\/span><span>⚡<\/span><span>☢️<\/span><span>👾<\/span>'/);
 });
 
 test('bullet nova projectiles make a physical splash impact and time-lock visual work is capped', async () => {
