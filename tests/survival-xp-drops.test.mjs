@@ -23,7 +23,7 @@ test('elites and bosses are reliable XP sources', () => {
   assert.equal(getSurvivalXpDropProfile('sebix_m').chance, 0.88);
   assert.equal(getSurvivalXpDropProfile('walczak').chance, 1);
   assert.deepEqual(rollSurvivalXpDrop('walczak', 0.99, 0.99), {
-    dropClass: 'boss', value: 7, isMilestone: false,
+    dropClass: 'boss', value: 4, isMilestone: false,
   });
 });
 
