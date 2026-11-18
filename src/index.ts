@@ -35,6 +35,7 @@ import {
   updateSurvivalAchievementProgress,
 } from './survivalAchievements.ts';
 import { SURVIVAL_MAPS, type SurvivalMapId } from './survivalMaps.ts';
+import { CAMPAIGN_STAGES, createInitialCampaignProgress, getCampaignStageDefinition, getNextCampaignStageId, readCampaignProgress, recordCampaignStageResult, writeCampaignProgress, type CampaignProgress, type CampaignStageId } from './campaignProgression.ts';
 import { launchOniricPlatformer } from './oniricPlatformer.ts';
 import { launchCthulhuRetroArena } from './cthulhuRetroArena.ts';
 import { getMenuTabIndexForKey } from './menuTabNavigation.ts';
@@ -715,6 +716,35 @@ class PaleciakiScene extends xb.Script {
   private setupUIAndEngine() {
     let renderCharacterMasteryPanel: (id: CharacterId) => void = () => {};
     let renderAccountProgressionPanels: () => void = () => {};
+    let campaignProgress: CampaignProgress;
+    try { campaignProgress = readCampaignProgress(window.localStorage); } catch { campaignProgress = createInitialCampaignProgress(); }
+    let selectedCampaignStageId: CampaignStageId | null = null;
+    let lastCampaignStageId: CampaignStageId | null = null;
+    let nextCampaignStageId: CampaignStageId | null = null;
+    const saveCampaignProgress = () => { try { writeCampaignProgress(window.localStorage, campaignProgress); } catch { /* Keep current session progress when storage is unavailable. */ } };
+    const renderCampaignBoard = () => {
+      const unlocked = new Set(campaignProgress.unlockedStageIds);
+      const completed = CAMPAIGN_STAGES.filter((stage) => (campaignProgress.completedStages[stage.id]?.bestStars ?? 0) > 0).length;
+      const status = document.getElementById('campaign-board-progress');
+      if (status) status.textContent = 'ODKRYTE ETAPY: ' + unlocked.size + '/' + CAMPAIGN_STAGES.length + ' • UKOŃCZONE: ' + completed + '/' + CAMPAIGN_STAGES.length;
+      for (const button of document.querySelectorAll<HTMLButtonElement>('[data-campaign-stage]')) {
+        const id = button.dataset.campaignStage as CampaignStageId | undefined;
+        if (!id) continue;
+        const stage = getCampaignStageDefinition(id);
+        if (!stage) continue;
+        const available = unlocked.has(id), result = campaignProgress.completedStages[id];
+        button.disabled = !available;
+        button.classList.toggle('is-locked', !available);
+        button.classList.toggle('is-complete', Boolean(result?.bestStars));
+        button.setAttribute('aria-disabled', String(!available));
+        const label = button.querySelector<HTMLElement>('.campaign-stage-status');
+        const stars = button.querySelector<HTMLElement>('.campaign-stage-stars');
+        if (label) label.textContent = result?.bestStars ? 'UKOŃCZONO • ' + (result.completions > 1 ? result.completions + ' PRÓBY' : 'REKORD ZAPISANY') : available ? 'DOSTĘPNY' : 'ZABLOKOWANY';
+        if (stars) stars.textContent = '★'.repeat(result?.bestStars ?? 0) + '☆'.repeat(3 - (result?.bestStars ?? 0));
+        button.title = available ? stage.objective : 'Najpierw ukończ poprzedni etap.';
+      }
+    };
+    renderCampaignBoard();
     const handleResize = () => {
       // visualViewport reflects the usable viewport on mobile browsers when browser chrome changes size.
       const width = Math.max(1, Math.round(window.visualViewport?.width || window.innerWidth));
@@ -1296,6 +1326,19 @@ class PaleciakiScene extends xb.Script {
           // Freeze the ended run's data before any retry can start a new run.
           const snapshot = this.engine.getSurvivalSnapshot();
           const damageReport = this.engine.getSurvivalDamageReport();
+          lastCampaignStageId = snapshot.campaignStageId;
+          nextCampaignStageId = null;
+          if (snapshot.campaignStageId && snapshot.campaignSuccess) {
+            campaignProgress = recordCampaignStageResult(campaignProgress, snapshot.campaignStageId, { bossDefeated: true, kills: snapshot.kills, elapsedSeconds: snapshot.elapsedSeconds, perfectDodges: snapshot.perfectDodges });
+            saveCampaignProgress();
+            nextCampaignStageId = getNextCampaignStageId(campaignProgress, snapshot.campaignStageId);
+            renderCampaignBoard();
+          }
+          const resultRetryButton = document.getElementById('btn-retry');
+          if (resultRetryButton) resultRetryButton.textContent = snapshot.campaignStageId ? (nextCampaignStageId ? 'NASTĘPNY ETAP' : 'POWTÓRZ ETAP') : 'SPRÓBUJ PONOWNIE';
+          const resultMenuButton = document.getElementById('btn-menu-gameover');
+          if (resultMenuButton) resultMenuButton.textContent = snapshot.campaignStageId ? 'MAPA KAMPANII' : 'MENU GŁÓWNE';
+          survivalRankingPanel?.classList.toggle('hidden', !isSurvivalResult || Boolean(snapshot.campaignStageId));
 
           // Paint the death/result screen before optional progression, local
           // persistence and damage-report rendering run on the main thread.
@@ -1314,16 +1357,22 @@ class PaleciakiScene extends xb.Script {
             finalTime.textContent = minutes + ':' + String(seconds).padStart(2, '0');
           }
           if (finalMode) {
-            finalMode.textContent = endedMode === 'pvp'
-              ? 'ARENA PvP'
-              : endedMode === 'campaign'
-                ? 'KAMPANIA'
-                : 'SURVIVAL SHIFT';
+            finalMode.textContent = snapshot.campaignStageId
+              ? 'KAMPANIA ZMIAN'
+              : endedMode === 'pvp'
+                ? 'ARENA PvP'
+                : endedMode === 'campaign'
+                  ? 'KAMPANIA'
+                  : 'SURVIVAL SHIFT';
           }
           if (runDetail) {
-            runDetail.textContent = isSurvivalResult
-              ? `FALA ${snapshot.wave} • ${snapshot.kills} ELIMINACJI • POZIOM ${snapshot.level}`
-              : endedMode === 'pvp'
+            runDetail.textContent = snapshot.campaignStageId
+              ? (snapshot.campaignSuccess
+                ? (snapshot.campaignStageTitle ?? 'ETAP') + ' • ' + '★'.repeat(snapshot.campaignStars) + '☆'.repeat(3 - snapshot.campaignStars) + ' • ' + snapshot.kills + ' ELIMINACJI'
+                : (snapshot.campaignStageTitle ?? 'ETAP') + ' • PRÓBA NIEUDANA • ' + snapshot.kills + ' ELIMINACJI')
+              : isSurvivalResult
+                ? `FALA ${snapshot.wave} • ${snapshot.kills} ELIMINACJI • POZIOM ${snapshot.level}`
+                : endedMode === 'pvp'
                 ? `POJEDYNEK 1v1 • WYNIK ${endedScore.toLocaleString('pl-PL')} PKT`
                 : `KAMPANIA • WYNIK ${endedScore.toLocaleString('pl-PL')} PKT`;
           }
@@ -1484,6 +1533,17 @@ class PaleciakiScene extends xb.Script {
         },
         onSurvivalUpdate: (snapshot: SurvivalSnapshot) => {
           trackSurvivalAchievementSnapshot(snapshot);
+          const campaignHud = document.getElementById('campaign-stage-hud');
+          campaignHud?.classList.toggle('hidden', !snapshot.campaignStageId);
+          if (snapshot.campaignStageId) {
+            const stage = getCampaignStageDefinition(snapshot.campaignStageId);
+            const title = document.getElementById('campaign-stage-title');
+            const progress = document.getElementById('campaign-stage-progress');
+            const clock = document.getElementById('campaign-stage-clock');
+            if (title && stage) title.textContent = 'ETAP ' + stage.order + '/5 • ' + stage.title.toUpperCase();
+            if (progress && stage) progress.textContent = (snapshot.campaignBossSpawned ? stage.bossTitle.toUpperCase() : 'ELIMINACJE ' + snapshot.kills + '/' + stage.bonusKillTarget) + ' • UNIKI ' + snapshot.perfectDodges + '/' + stage.bonusPerfectDodges;
+            if (clock && snapshot.campaignRemainingSeconds !== null) { const left = Math.max(0, snapshot.campaignRemainingSeconds); clock.textContent = 'CEL ' + String(Math.floor(left / 60)).padStart(2,'0') + ':' + String(left % 60).padStart(2,'0'); }
+          }
           const mapNameElem = document.getElementById('survival-map-name');
           if (mapNameElem) {
             mapNameElem.textContent = snapshot.mapName.toUpperCase();
@@ -2699,7 +2759,15 @@ class PaleciakiScene extends xb.Script {
         // Restore the Survival-specific ability label/icon after leaving PvP.
         updateCharacterUI(this.selectedCharId);
       this.gameSessionGeneration++;
-      this.engine.startSurvival();
+      if (selectedCampaignStageId) {
+        const chosenStage = selectedCampaignStageId;
+        selectedCampaignStageId = null;
+        if (!this.engine.startCampaignStage(chosenStage)) throw new Error('Nie udało się uruchomić etapu kampanii.');
+      } else {
+        lastCampaignStageId = null;
+        nextCampaignStageId = null;
+        this.engine.startSurvival();
+      }
         // Re-assert visibility and exclusive mode after the scene transition.
         setTouchControlsMode('survival');
         setTouchControlsVisibility(true);
@@ -2786,11 +2854,24 @@ class PaleciakiScene extends xb.Script {
       }
     });
 
-    bindTap(document.getElementById('btn-start-survival'), doStartSurvival);
+    bindTap(document.getElementById('btn-start-survival'), (event) => {
+      selectedCampaignStageId = null;
+      doStartSurvival(event);
+    });
+    document.querySelectorAll<HTMLButtonElement>('[data-campaign-stage]').forEach((button) => {
+      bindTap(button, (event) => {
+        event.preventDefault();
+        const id = button.dataset.campaignStage as CampaignStageId | undefined;
+        if (!id || !campaignProgress.unlockedStageIds.includes(id)) return;
+        selectedCampaignStageId = id;
+        doStartSurvival(event);
+      });
+    });
 
     window.addEventListener('keydown', (e) => {
       if (titleScreen && !titleScreen.classList.contains('hidden')) {
         if (e.code === 'Enter' || e.code === 'Space') {
+          selectedCampaignStageId = null;
           doStartSurvival();
           e.preventDefault();
         }
@@ -3119,7 +3200,13 @@ class PaleciakiScene extends xb.Script {
       setTouchControlsMode('survival');
       this.masteryAwardedForRun = false;
       this.gameSessionGeneration++;
-      this.engine.startSurvival();
+      const retryStageId = nextCampaignStageId ?? lastCampaignStageId;
+      if (retryStageId) {
+        this.engine.startCampaignStage(retryStageId);
+        nextCampaignStageId = null;
+      } else {
+        this.engine.startSurvival();
+      }
         // Re-assert visibility and exclusive mode after the scene transition.
         setTouchControlsMode('survival');
         setTouchControlsVisibility(true);
