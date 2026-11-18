@@ -30,7 +30,7 @@ export function getSurvivalDifficultyProfile(wave: number): SurvivalDifficultyPr
   const waveIndex = currentWave - 1;
   return {
     enemyHealthMultiplier: 1.45 + Math.min(2.55, waveIndex * 0.09),
-    enemySpeedMultiplier: 1 + Math.min(0.14, waveIndex * 0.005),
+    enemySpeedMultiplier: Number((1 + Math.min(0.14, waveIndex * 0.005)).toFixed(2)),
     spawnIntervalSeconds: Math.max(4.55, 5.15 - waveIndex * 0.025),
     extraGroupSize: Math.min(6, Math.floor(waveIndex / 3)),
     enemyAbilityRateMultiplier: Number((1.18 + Math.min(0.78, waveIndex * 0.025)).toFixed(2)),
