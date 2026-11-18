@@ -65,7 +65,7 @@ test('twelve roulette outcomes have concrete handlers for loot, control, overdri
   assert.match(game, /ELITA B4 • KURIER/);
   assert.match(app, /Dwanaście możliwych wyników automatu/);
   assert.match(app, /survival-chaos-reels/);
-  assert.match(css, /survival-chaos-marquee \\.survival-chaos-lamp/);
+  assert.match(css, /survival-chaos-marquee \.survival-chaos-lamp/);
   assert.match(app, /survival-chaos-reel-symbol/);
   assert.match(app, /window\.setInterval/);
   assert.match(app, /stopAt = reducedMotion \? \[80, 150, 220\] : \[1420, 1960, 2520\]/);
