@@ -15,7 +15,7 @@ test('all five operators have deliberately different movement, jump, attack and 
   assert.ok(CHARACTERS.dawid.jumpForce > CHARACTERS.grzesiek.jumpForce);
   assert.ok(CHARACTERS.grzesiek.basicAttackDamageMultiplier > CHARACTERS.mateusz.basicAttackDamageMultiplier);
   assert.ok(CHARACTERS.mateusz.basicAttackDamageMultiplier >= 1.05, 'Mateusz has an even, competitive fast attack');
-  assert.equal(CHARACTER_ABILITY_DAMAGE_MULTIPLIER, 1.65);
+  assert.equal(CHARACTER_ABILITY_DAMAGE_MULTIPLIER, 1.48);
   assert.equal(SURVIVAL_PRIMARY_ATTACK_DAMAGE_MULTIPLIER, 1.28);
   assert.deepEqual(SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS, { marcin: 1.72, grzesiek: 1.88, dawid: 1.70, mateusz: 1.48, piotr: 1.92 });
   assert.ok(CHARACTERS.marcin.damageTakenMultiplier < CHARACTERS.mateusz.damageTakenMultiplier);

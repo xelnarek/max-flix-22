@@ -82,7 +82,7 @@ import { buildSurvivalCoalitionOrders, getSurvivalCoalitionRole } from './surviv
 import { getSurvivalCommanderProfile, selectSurvivalCommanderTargets } from './survivalCommander.ts';
 import { advanceSurvivalCommanderTiming } from './survivalCommanderTiming.ts';
 import { getSurvivalLeaderLossTargets, getSurvivalMoraleBreakMultiplier, SURVIVAL_LEADER_LOSS_BREAK_SECONDS } from './survivalMorale.ts';
-import { MATEUSZ_RIVAL_ROSTER, getMateuszRivalSpawnOffset, type MateuszRivalDefinition } from './mateuszRivals.ts';
+import { MATEUSZ_RIVAL_ROSTER, getMateuszRivalSpawnOffset, getMateuszRivalDamageMultiplier, type MateuszRivalDefinition } from './mateuszRivals.ts';
 import { selectSurvivalSupportPulseTargets, SURVIVAL_SUPPORT_PULSE_RADIUS, SURVIVAL_SUPPORT_PULSE_INTERVAL_SECONDS, SURVIVAL_SUPPORT_SHIELD_SECONDS } from './survivalSupport.ts';
 import { advanceSurvivalRetreatState, getSurvivalFlankInterceptOffset, getSurvivalRetreatTarget } from './survivalTactics.ts';
 import { getSurvivalProgressionInfo, getSurvivalPromotionRarityFloor, getSurvivalXpRequirement } from './survivalProgression.ts';
@@ -13362,129 +13362,178 @@ export class PaleciakiGameEngine {
     const root = new THREE.Group();
     root.name = 'mateusz-rival-' + definition.id;
     root.userData.mateuszRivalId = definition.id;
-    const primary = new THREE.MeshStandardMaterial({ color: definition.primaryColor, roughness: 0.42, metalness: 0.28 });
-    const secondary = new THREE.MeshStandardMaterial({ color: definition.secondaryColor, roughness: 0.38, metalness: 0.42 });
+
+    const primary = new THREE.MeshStandardMaterial({
+      color: definition.primaryColor, roughness: 0.43,
+      metalness: definition.id === 'iron-man' ? 0.62 : 0.18,
+    });
+    const secondary = new THREE.MeshStandardMaterial({
+      color: definition.secondaryColor, roughness: 0.40, metalness: 0.34,
+    });
     const accent = new THREE.MeshStandardMaterial({
       color: definition.accentColor, emissive: definition.accentColor,
-      emissiveIntensity: 0.72, roughness: 0.25, metalness: 0.22,
+      emissiveIntensity: 0.56, roughness: 0.26, metalness: 0.24,
     });
-    const dark = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.62, metalness: 0.18 });
-    const white = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.32, metalness: 0.12 });
-    const gold = new THREE.MeshStandardMaterial({ color: 0xfbbf24, roughness: 0.32, metalness: 0.72 });
+    const dark = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.72, metalness: 0.12 });
+    const white = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.32, metalness: 0.08 });
+    const gold = new THREE.MeshStandardMaterial({ color: 0xfbbf24, roughness: 0.34, metalness: 0.68 });
+
     const add = (
       parent: THREE.Object3D,
       geometry: THREE.BufferGeometry,
       material: THREE.Material,
       x: number, y: number, z: number,
       sx = 1, sy = 1, sz = 1,
+      name = '',
     ): THREE.Mesh => {
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.set(x, y, z);
       mesh.scale.set(sx, sy, sz);
       mesh.castShadow = false;
       mesh.receiveShadow = false;
+      if (name) mesh.name = name;
       parent.add(mesh);
       return mesh;
     };
 
     const teamRing = add(
-      root, new THREE.TorusGeometry(0.52, 0.035, 6, 22),
-      new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.82, depthWrite: false }),
-      0, 0.055, 0,
+      root, new THREE.TorusGeometry(0.52, 0.035, 6, 24),
+      new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.76, depthWrite: false }),
+      0, 0.055, 0, 1, 1, 1, 'rival-team-ring',
     );
     teamRing.rotation.x = -Math.PI / 2;
     root.userData.teamRing = teamRing;
 
+    // Rounded torso and layered chest armour replace the generic rectangular block.
     const torso = new THREE.Group();
     torso.position.set(0, 1.08, 0);
     root.add(torso);
-    add(torso, new THREE.BoxGeometry(0.66, 0.78, 0.36), primary, 0, 0, 0);
-    add(torso, new THREE.BoxGeometry(0.54, 0.13, 0.39), secondary, 0, -0.27, 0.015);
-    add(torso, new THREE.BoxGeometry(0.70, 0.16, 0.40), secondary, 0, 0.29, 0);
+    add(torso, new THREE.CapsuleGeometry(0.285, 0.43, 4, 12), primary, 0, 0, 0, 1, 1, 0.82, 'rival-rounded-torso');
+    add(torso, new THREE.SphereGeometry(0.19, 14, 10), secondary, 0, 0.11, 0.19, 1.42, 0.76, 0.34, 'rival-chest-plate');
+    const belt = add(torso, new THREE.TorusGeometry(0.205, 0.035, 6, 18), secondary, 0, -0.27, 0, 1, 1, 0.86, 'rival-utility-belt');
+    belt.rotation.x = Math.PI / 2;
+    add(torso, new THREE.BoxGeometry(0.13, 0.085, 0.045), gold, 0, -0.27, 0.205, 1, 1, 1, 'rival-belt-buckle');
 
     const head = new THREE.Group();
-    head.position.set(0, 1.78, 0.015);
+    head.position.set(0, 1.80, 0.015);
     root.add(head);
-    add(head, new THREE.SphereGeometry(0.235, 12, 10), primary, 0, 0, 0, 1, 1.12, 0.94);
+    const headMaterial = definition.id === 'batman' ? dark : primary;
+    add(head, new THREE.SphereGeometry(0.235, 16, 12), headMaterial, 0, 0, 0, 1, 1.10, 0.94, 'rival-head');
 
     const arms: [THREE.Group, THREE.Group] = [new THREE.Group(), new THREE.Group()];
     for (let sideIndex = 0; sideIndex < 2; sideIndex++) {
       const side = sideIndex === 0 ? -1 : 1;
       const arm = arms[sideIndex];
-      arm.position.set(side * 0.46, 1.40, 0);
+      arm.position.set(side * 0.43, 1.40, 0);
       root.add(arm);
-      add(arm, new THREE.CylinderGeometry(0.135, 0.16, 0.42, 9), secondary, 0, -0.20, 0);
-      add(arm, new THREE.CylinderGeometry(0.105, 0.135, 0.39, 9), primary, 0, -0.50, 0.015);
-      add(arm, new THREE.SphereGeometry(0.13, 9, 7), primary, 0, -0.75, 0.045, 1.05, 0.92, 1.15);
+      add(arm, new THREE.CapsuleGeometry(0.125, 0.29, 4, 10), secondary, 0, -0.17, 0, 1, 1, 1, 'rival-upper-arm');
+      add(arm, new THREE.SphereGeometry(0.105, 10, 8), secondary, 0, -0.35, 0.01, 1, 1, 1, 'rival-elbow');
+      add(arm, new THREE.CapsuleGeometry(0.105, 0.26, 4, 10), primary, 0, -0.48, 0.015, 1, 1, 1, 'rival-forearm');
+      add(arm, new THREE.SphereGeometry(0.13, 12, 9), primary, 0, -0.68, 0.06, 1.10, 0.92, 1.12, 'rival-fist');
     }
 
     const legs: [THREE.Group, THREE.Group] = [new THREE.Group(), new THREE.Group()];
     for (let sideIndex = 0; sideIndex < 2; sideIndex++) {
       const side = sideIndex === 0 ? -1 : 1;
       const leg = legs[sideIndex];
-      leg.position.set(side * 0.20, 0.76, 0);
+      leg.position.set(side * 0.19, 0.78, 0);
       root.add(leg);
-      add(leg, new THREE.BoxGeometry(0.23, 0.43, 0.27), secondary, 0, -0.20, 0);
-      add(leg, new THREE.BoxGeometry(0.25, 0.17, 0.40), dark, 0, -0.47, 0.055);
+      add(leg, new THREE.CapsuleGeometry(0.13, 0.25, 4, 10), secondary, 0, -0.15, 0, 1, 1, 1, 'rival-thigh');
+      add(leg, new THREE.SphereGeometry(0.105, 10, 8), primary, 0, -0.31, 0.015, 1, 1, 1, 'rival-knee');
+      add(leg, new THREE.CapsuleGeometry(0.105, 0.23, 4, 10), primary, 0, -0.43, 0.01, 1, 1, 1, 'rival-shin');
+      add(leg, new THREE.BoxGeometry(0.25, 0.14, 0.38), dark, 0, -0.61, 0.075, 1, 1, 1, 'rival-boot');
+    }
+
+    // Small shoulder caps and chest insignia improve silhouette separation from the horde.
+    for (const side of [-1, 1]) {
+      add(torso, new THREE.SphereGeometry(0.145, 12, 9), secondary,
+        side * 0.34, 0.26, 0.015, 1.25, 0.86, 0.95, 'rival-shoulder-shell');
     }
 
     let cape: THREE.Mesh | null = null;
     if (definition.id === 'iron-man') {
-      const reactor = add(torso, new THREE.CylinderGeometry(0.145, 0.145, 0.055, 14), accent, 0, 0.035, 0.205);
+      const reactor = add(torso, new THREE.CylinderGeometry(0.13, 0.13, 0.055, 18), accent,
+        0, 0.075, 0.245, 1, 1, 1, 'iron-man-arc-reactor');
       reactor.rotation.x = Math.PI / 2;
-      const reactorRim = add(torso, new THREE.TorusGeometry(0.17, 0.025, 6, 16), gold, 0, 0.035, 0.225);
+      const reactorRim = add(torso, new THREE.TorusGeometry(0.16, 0.024, 7, 20), gold,
+        0, 0.075, 0.26, 1, 1, 1, 'iron-man-reactor-rim');
       reactorRim.rotation.x = Math.PI / 2;
-      add(head, new THREE.BoxGeometry(0.30, 0.14, 0.035), gold, 0, -0.035, 0.195);
-      for (const side of [-1, 1]) add(head, new THREE.BoxGeometry(0.095, 0.025, 0.025), accent, side * 0.09, 0.035, 0.218);
-      for (const arm of arms) add(arm, new THREE.SphereGeometry(0.075, 8, 6), accent, 0, -0.77, 0.13);
-    } else if (definition.id === 'hulk') {
-      root.scale.setScalar(1.14);
-      torso.scale.set(1.24, 1.14, 1.12);
+      add(head, new THREE.SphereGeometry(0.17, 14, 10), secondary, 0, -0.075, 0.145, 1.02, 0.68, 0.42, 'iron-man-gold-faceplate');
+      add(head, new THREE.BoxGeometry(0.25, 0.025, 0.025), accent, 0, 0.035, 0.205, 1, 1, 1, 'iron-man-visor');
       for (const arm of arms) {
+        add(arm, new THREE.SphereGeometry(0.078, 10, 8), accent, 0, -0.69, 0.155, 1, 1, 0.62, 'iron-man-repulsor');
+      }
+      for (const leg of legs) add(leg, new THREE.SphereGeometry(0.045, 8, 6), accent, 0, -0.53, 0.11, 1, 1, 0.55, 'iron-man-boot-thruster');
+    } else if (definition.id === 'hulk') {
+      root.scale.setScalar(1.16);
+      torso.scale.set(1.33, 1.18, 1.16);
+      for (const arm of arms) {
+        arm.scale.set(1.36, 1.32, 1.30);
         const upperArm = arm.children[0];
         if (upperArm instanceof THREE.Mesh) upperArm.material = primary;
-        arm.scale.set(1.28, 1.20, 1.25);
-        add(arm, new THREE.SphereGeometry(0.20, 9, 7), primary, 0, -0.78, 0.05);
+        const fist = arm.children[3];
+        if (fist instanceof THREE.Mesh) fist.scale.set(1.55, 1.42, 1.48);
       }
-      // Dark cropped hair, broad brow and heavy green shoulders make Hulk readable
-      // at the default elevated camera distance.
-      add(head, new THREE.SphereGeometry(0.25, 10, 8), dark, 0, 0.16, -0.035, 1.25, 0.42, 0.95);
-      add(torso, new THREE.BoxGeometry(0.69, 0.22, 0.39), secondary, 0, -0.37, 0.015);
-      add(torso, new THREE.BoxGeometry(0.16, 0.11, 0.035), gold, 0, -0.37, 0.22);
+      for (const side of [-1, 1]) {
+        add(torso, new THREE.SphereGeometry(0.17, 12, 10), primary, side * 0.13, 0.12, 0.19, 1.22, 0.78, 0.42, 'hulk-pectoral');
+      }
+      add(torso, new THREE.CapsuleGeometry(0.24, 0.16, 3, 10), secondary, 0, -0.34, 0, 1.05, 0.75, 0.88, 'hulk-purple-shorts');
+      add(head, new THREE.SphereGeometry(0.245, 12, 9), dark, 0, 0.16, -0.04, 1.20, 0.42, 0.96, 'hulk-cropped-hair');
+      add(head, new THREE.BoxGeometry(0.30, 0.045, 0.035), dark, 0, 0.045, 0.19, 1, 1, 1, 'hulk-heavy-brow');
+      add(torso, new THREE.BoxGeometry(0.18, 0.13, 0.045), gold, 0, -0.34, 0.205, 1, 1, 1, 'hulk-shorts-fastener');
     } else if (definition.id === 'spider-man') {
-      add(torso, new THREE.BoxGeometry(0.48, 0.42, 0.045), secondary, 0, 0.03, 0.205);
-      add(torso, new THREE.SphereGeometry(0.10, 8, 7), dark, 0, 0.035, 0.252, 0.72, 1.25, 0.48);
-      add(head, new THREE.BoxGeometry(0.34, 0.11, 0.035), secondary, 0, 0.015, 0.185);
+      add(torso, new THREE.SphereGeometry(0.16, 14, 10), secondary, 0, 0.02, 0.22, 1.12, 1.30, 0.28, 'spider-man-red-chest');
+      add(head, new THREE.SphereGeometry(0.17, 14, 10), secondary, 0, -0.045, 0.13, 1.02, 0.90, 0.58, 'spider-man-mask');
       for (const side of [-1, 1]) {
-        const eye = add(head, new THREE.SphereGeometry(0.065, 8, 6), white, side * 0.105, 0.02, 0.208, 1.0, 0.58, 0.35);
+        const eye = add(head, new THREE.SphereGeometry(0.072, 12, 8), white, side * 0.095, 0.025, 0.205, 1.0, 0.58, 0.42, 'spider-man-lens');
         eye.rotation.z = side * -0.20;
+        const cuff = add(arms[side === -1 ? 0 : 1], new THREE.TorusGeometry(0.112, 0.018, 5, 14), white, 0, -0.49, 0.02, 1, 1, 1, 'spider-man-web-shooter');
+        cuff.rotation.x = Math.PI / 2;
       }
-      for (const arm of arms) add(arm, new THREE.TorusGeometry(0.105, 0.022, 5, 12), white, 0, -0.52, 0.07);
+      const webPoints = new Float32Array([
+        -0.15, 0.19, 0.255, 0, 0.12, 0.255,
+        0, 0.12, 0.255, 0.15, 0.19, 0.255,
+        -0.15, 0.19, 0.255, 0, -0.02, 0.255,
+        0, -0.02, 0.255, 0.15, 0.19, 0.255,
+        -0.11, 0.08, 0.258, 0.11, 0.08, 0.258,
+        -0.13, 0.02, 0.258, 0.13, 0.02, 0.258,
+        0, 0.18, 0.258, 0, -0.13, 0.258,
+      ]);
+      const webGeometry = new THREE.BufferGeometry();
+      webGeometry.setAttribute('position', new THREE.BufferAttribute(webPoints, 3));
+      const webLines = new THREE.LineSegments(webGeometry, new THREE.LineBasicMaterial({ color: 0xf8fafc, transparent: true, opacity: 0.80 }));
+      webLines.name = 'spider-web-emblem';
+      torso.add(webLines);
+      add(torso, new THREE.SphereGeometry(0.07, 10, 8), dark, 0, 0.10, 0.275, 0.72, 1.15, 0.32, 'spider-chest-mark');
     } else if (definition.id === 'storm') {
-      add(head, new THREE.SphereGeometry(0.29, 10, 8), white, 0, 0.055, -0.045, 1.03, 1.12, 1.02);
-      add(torso, new THREE.BoxGeometry(0.42, 0.11, 0.405), gold, 0, -0.26, 0.005);
-      cape = add(root, new THREE.PlaneGeometry(0.92, 1.18), new THREE.MeshStandardMaterial({
-        color: 0x2563eb, emissive: 0x1d4ed8, emissiveIntensity: 0.12,
-        side: THREE.DoubleSide, transparent: true, opacity: 0.82, roughness: 0.5,
-      }), 0, 1.18, -0.245);
-      cape.rotation.x = 0.10;
+      add(head, new THREE.SphereGeometry(0.28, 14, 10), white, 0, 0.14, -0.04, 1.05, 1.10, 1.04, 'storm-white-hair');
       for (const side of [-1, 1]) {
-        const bolt = add(torso, new THREE.TorusGeometry(0.12, 0.028, 5, 10), accent, side * 0.30, 0.23, 0.17);
-        bolt.rotation.x = Math.PI / 2;
+        add(head, new THREE.CapsuleGeometry(0.065, 0.22, 4, 8), white, side * 0.205, -0.035, -0.055, 1, 1, 1, 'storm-hair-lock');
+      }
+      const tiara = add(head, new THREE.TorusGeometry(0.16, 0.022, 6, 18), gold, 0, 0.10, 0.06, 1, 1, 1, 'storm-tiara');
+      tiara.rotation.x = Math.PI / 2;
+      cape = add(root, new THREE.PlaneGeometry(1.12, 1.40), new THREE.MeshStandardMaterial({
+        color: 0x2563eb, emissive: 0x1d4ed8, emissiveIntensity: 0.10,
+        side: THREE.DoubleSide, transparent: true, opacity: 0.82, roughness: 0.48,
+      }), 0, 1.18, -0.25, 1, 1, 1, 'storm-cape');
+      cape.rotation.x = 0.08;
+      add(torso, new THREE.BoxGeometry(0.43, 0.09, 0.04), gold, 0, -0.26, 0.22, 1, 1, 1, 'storm-gold-belt');
+      for (const side of [-1, 1]) {
+        add(torso, new THREE.TorusGeometry(0.105, 0.022, 5, 12), accent, side * 0.30, 0.18, 0.17, 1, 1, 1, 'storm-lightning-cuff');
       }
     } else if (definition.id === 'batman') {
-      cape = add(root, new THREE.PlaneGeometry(1.12, 1.34), new THREE.MeshStandardMaterial({
+      cape = add(root, new THREE.PlaneGeometry(1.18, 1.48), new THREE.MeshStandardMaterial({
         color: 0x111827, roughness: 0.92, side: THREE.DoubleSide,
-      }), 0, 1.12, -0.255);
+      }), 0, 1.15, -0.27, 1, 1, 1, 'batman-cape');
       cape.rotation.x = 0.06;
-      add(torso, new THREE.BoxGeometry(0.46, 0.105, 0.045), gold, 0, -0.29, 0.20);
-      add(torso, new THREE.BoxGeometry(0.42, 0.12, 0.04), dark, 0, 0.04, 0.207);
-      add(torso, new THREE.BoxGeometry(0.21, 0.055, 0.035), gold, 0, -0.29, 0.23);
       for (const side of [-1, 1]) {
-        const ear = add(head, new THREE.ConeGeometry(0.065, 0.24, 5), dark, side * 0.14, 0.225, -0.01);
-        ear.rotation.z = side * -0.16;
+        const ear = add(head, new THREE.ConeGeometry(0.06, 0.26, 6), dark, side * 0.14, 0.235, -0.015, 1, 1, 1, 'batman-cowl-ear');
+        ear.rotation.z = side * -0.14;
+        add(head, new THREE.SphereGeometry(0.064, 10, 8), white, side * 0.09, 0.015, 0.204, 1.0, 0.38, 0.36, 'batman-eye-slit');
       }
-      for (const side of [-1, 1]) add(head, new THREE.BoxGeometry(0.085, 0.025, 0.025), white, side * 0.09, 0.015, 0.21);
+      add(torso, new THREE.SphereGeometry(0.12, 12, 9), gold, 0, 0.12, 0.235, 1.18, 0.62, 0.28, 'batman-chest-emblem');
+      add(torso, new THREE.BoxGeometry(0.40, 0.12, 0.05), gold, 0, -0.27, 0.205, 1, 1, 1, 'batman-utility-belt');
+      add(head, new THREE.SphereGeometry(0.16, 12, 8), dark, 0, -0.10, 0.08, 0.98, 0.64, 0.78, 'batman-cowl-mask');
     }
 
     root.traverse((object) => { object.userData.mateuszRivalOwned = true; });
@@ -13594,7 +13643,8 @@ export class PaleciakiGameEngine {
   ): void {
     if (target.state === 'defeated') return;
     const previousHp = target.hp;
-    this.damageEnemy(target, damage, sourceX, sourceZ, 'ability');
+    const modeDamageScale = getMateuszRivalDamageMultiplier(this.gameMode === 'survival' ? 'survival' : 'campaign');
+    this.damageEnemy(target, damage * modeDamageScale, sourceX, sourceZ, 'ability');
     if (target.hp >= previousHp) return;
     target.stunTimer = Math.max(target.stunTimer, stunSeconds);
     target.state = 'stunned';
@@ -13661,9 +13711,9 @@ export class PaleciakiGameEngine {
         if (projectile.style === 'lightning-chain' && target.state !== 'defeated') {
           let chained = 0;
           for (const candidate of this.enemies) {
-            if (candidate === target || candidate.state === 'defeated' || !candidate.mesh || chained >= 2) continue;
-            if (Math.hypot(candidate.x - impactX, candidate.z - impactZ) > 5.0) continue;
-            this.applyMateuszRivalHit(candidate, projectile.damage * 0.48, projectile.stunSeconds * 0.65, impactX, impactZ, projectile.color);
+            if (candidate === target || candidate.state === 'defeated' || !candidate.mesh || chained >= 1) continue;
+            if (Math.hypot(candidate.x - impactX, candidate.z - impactZ) > 4.5) continue;
+            this.applyMateuszRivalHit(candidate, projectile.damage * 0.36, projectile.stunSeconds * 0.55, impactX, impactZ, projectile.color);
             chained++;
           }
           this.spawnParticleRing(impactX, target.y + 0.55, impactZ, projectile.color);
@@ -13693,9 +13743,9 @@ export class PaleciakiGameEngine {
       this.applyMateuszRivalHit(target, definition.damage, definition.stunSeconds, actor.x, actor.z, definition.accentColor);
       let splashHits = 0;
       for (const candidate of this.enemies) {
-        if (candidate === target || candidate.state === 'defeated' || !candidate.mesh || splashHits >= 3) continue;
-        if (Math.hypot(candidate.x - target.x, candidate.z - target.z) > 3.8) continue;
-        this.applyMateuszRivalHit(candidate, definition.damage * 0.42, 0.38, actor.x, actor.z, definition.accentColor);
+        if (candidate === target || candidate.state === 'defeated' || !candidate.mesh || splashHits >= 2) continue;
+        if (Math.hypot(candidate.x - target.x, candidate.z - target.z) > 3.25) continue;
+        this.applyMateuszRivalHit(candidate, definition.damage * 0.30, 0.30, actor.x, actor.z, definition.accentColor);
         splashHits++;
       }
       this.spawnParticleRing(target.x, target.y + 0.12, target.z, definition.accentColor);
