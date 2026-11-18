@@ -144,3 +144,43 @@ test('Campaign melee roles use stable side-entry steering that fades before cont
   assert.match(types, /aiCampaignFlankSide\?: -1 \| 1/);
   assert.match(tactics, /profile\.lateralBias \* smoothstep\(approachProgress\)/);
 });
+
+test('regular melee enemies use role-specific wind-up lanes and delayed contact resolution', async () => {
+  const melee = await readFile(new URL('../src/enemyMeleeTelegraphs.ts', import.meta.url), 'utf8');
+  const expected = [
+    'customer', 'architect', 'inspector', 'kurier', 'monter',
+    'sztaplar_szalony', 'elite_walczak_guard', 'zombie_pracownik',
+    'mutant_gamma_forklift', 'radioactive_pip',
+  ];
+  for (const type of expected) {
+    assert.match(melee, new RegExp(type.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ':'));
+  }
+  assert.match(game, /private beginEnemyMeleeAttackTelegraph\(/);
+  assert.match(game, /private advanceEnemyMeleeAttackTelegraph\(/);
+  assert.match(game, /private cancelEnemyMeleeAttackTelegraph\(/);
+  assert.match(game, /e\.aiMeleeWindupTimer !== undefined[\s\S]*?advanceEnemyMeleeAttackTelegraph\(e, dt\)/);
+  assert.match(game, /dist <= contactRadius \+ meleeProfile\.reachMeters/);
+  assert.match(game, /if \(meleeProfile && !meleeStrikeReady && !meleeCounterActive\)/);
+  assert.match(game, /if \(meleeStrikeReady && !meleeStrikeConnected\)/);
+  assert.match(game, /actualDamage > 0 && \(enemy\.aiMeleeWindupTimer !== undefined \|\| enemy\.aiMeleeStrikePending\)/);
+  assert.match(game, /activeEnemyMeleeTelegraphIds\.size >= platformLimit/);
+});
+
+test('bosses and purpose-built ranged/mechanical archetypes retain their existing contact path', async () => {
+  const melee = await readFile(new URL('../src/enemyMeleeTelegraphs.ts', import.meta.url), 'utf8');
+  for (const excluded of [
+    'walczak', 'forklift', 'agv_robot', 'handlowiec', 'piorun_dron',
+    'przedstawiciel_włoski', 'krol_leto', 'pan_roman', 'serwisant',
+    'bosman_krakow', 'pomazaniec', 'sebix_m', 'cyber_salesman',
+  ]) {
+    assert.doesNotMatch(melee, new RegExp('^\\s*' + excluded.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ':', 'm'));
+  }
+  assert.match(game, /if \(!meleeProfile && e\.state !== 'stunned'\) this\.requestEnemyAttackAnimation\(e, 0\.48\)/);
+  assert.match(game, /e\.type === 'krol_leto'[\s\S]*?this\.takeDamage\('🚨 ZWOLNIENIE DYSCYPLINARNE/);
+});
+
+test('special Inspector, Gamma Mutant and Pip abilities never overlap committed melee wind-up', () => {
+  assert.match(game, /e\.type === 'inspector' && e\.specialActionTimer !== undefined && e\.aiMeleeWindupTimer === undefined && !e\.aiMeleeStrikePending/);
+  assert.match(game, /e\.type === 'mutant_gamma_forklift' && e\.specialActionTimer !== undefined && e\.aiMeleeWindupTimer === undefined && !e\.aiMeleeStrikePending/);
+  assert.match(game, /e\.type === 'radioactive_pip' && e\.specialActionTimer !== undefined && e\.aiMeleeWindupTimer === undefined && !e\.aiMeleeStrikePending/);
+});
