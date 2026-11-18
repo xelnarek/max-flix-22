@@ -213,28 +213,6 @@ class SoundEngine {
     });
   }
 
-  public playCoffeePowerup() {
-    if (this.isMuted) return;
-    this.initCtx();
-    if (!this.ctx) return;
-
-    const t = this.ctx.currentTime;
-    // Ascending arpeggio + cheerful fanfare
-    [392, 523, 659, 784, 1046].forEach((f, i) => {
-      const osc = this.ctx!.createOscillator();
-      const gain = this.ctx!.createGain();
-      const st = t + i * 0.05;
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(f, st);
-      gain.gain.setValueAtTime(0.2, st);
-      gain.gain.exponentialRampToValueAtTime(0.01, st + 0.15);
-      osc.connect(gain);
-      gain.connect(this.effectsBus ?? this.ctx!.destination);
-      osc.start(st);
-      osc.stop(st + 0.16);
-    });
-  }
-
   public playWoosh() {
     if (this.isMuted) return;
     this.initCtx();
@@ -453,59 +431,6 @@ class SoundEngine {
   }
 
   /** Soft paw-tap, quick whisker swoosh and a playful meow chirp for a cat pounce. */
-  public playCatPounce() {
-    if (this.isMuted) return;
-    this.initCtx();
-    if (!this.ctx) return;
-    const start = this.ctx.currentTime;
-    const paw = this.ctx.createOscillator();
-    const pawGain = this.ctx.createGain();
-    paw.type = 'sine';
-    paw.frequency.setValueAtTime(190, start);
-    paw.frequency.exponentialRampToValueAtTime(72, start + 0.10);
-    pawGain.gain.setValueAtTime(0.0001, start);
-    pawGain.gain.exponentialRampToValueAtTime(0.12, start + 0.008);
-    pawGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.13);
-    paw.connect(pawGain);
-    pawGain.connect(this.effectsBus ?? this.ctx.destination);
-    paw.start(start);
-    paw.stop(start + 0.14);
-
-    const meow = this.ctx.createOscillator();
-    const meowGain = this.ctx.createGain();
-    meow.type = 'triangle';
-    meow.frequency.setValueAtTime(680 + Math.random() * 150, start + 0.035);
-    meow.frequency.exponentialRampToValueAtTime(1040 + Math.random() * 120, start + 0.12);
-    meow.frequency.exponentialRampToValueAtTime(520, start + 0.24);
-    meowGain.gain.setValueAtTime(0.0001, start + 0.035);
-    meowGain.gain.exponentialRampToValueAtTime(0.075, start + 0.06);
-    meowGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.25);
-    meow.connect(meowGain);
-    meowGain.connect(this.effectsBus ?? this.ctx.destination);
-    meow.start(start + 0.035);
-    meow.stop(start + 0.26);
-  }
-
-  public playHonk() {
-    if (this.isMuted) return;
-    this.initCtx();
-    if (!this.ctx) return;
-
-    const t = this.ctx.currentTime;
-    [329.6, 415.3].forEach((freq) => {
-      const osc = this.ctx!.createOscillator();
-      const gain = this.ctx!.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(freq, t);
-      gain.gain.setValueAtTime(0.22, t);
-      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.26);
-      osc.connect(gain);
-      gain.connect(this.effectsBus ?? this.ctx!.destination);
-      osc.start(t);
-      osc.stop(t + 0.28);
-    });
-  }
-
   public playHit() {
     if (this.isMuted) return;
     this.initCtx();
@@ -878,39 +803,6 @@ class SoundEngine {
     osc.stop(t + 0.18);
   }
 
-  public playReclamation() {
-    if (this.isMuted) return;
-    this.initCtx();
-    if (!this.ctx) return;
-    const t = this.ctx.currentTime;
-
-    // Executive stamp drop (low frequency rumble + heavy impact)
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(220, t);
-    osc.frequency.exponentialRampToValueAtTime(35, t + 0.4);
-    gain.gain.setValueAtTime(0.5, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
-    osc.connect(gain);
-    gain.connect(this.effectsBus ?? this.ctx.destination);
-    osc.start(t);
-    osc.stop(t + 0.42);
-
-    // Metallic seal resonance
-    const metallic = this.ctx.createOscillator();
-    const mGain = this.ctx.createGain();
-    metallic.type = 'triangle';
-    metallic.frequency.setValueAtTime(1470, t + 0.05);
-    metallic.frequency.exponentialRampToValueAtTime(735, t + 0.45);
-    mGain.gain.setValueAtTime(0.3, t + 0.05);
-    mGain.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
-    metallic.connect(mGain);
-    mGain.connect(this.effectsBus ?? this.ctx.destination);
-    metallic.start(t + 0.05);
-    metallic.stop(t + 0.47);
-  }
-
   public playSciskCrush() {
     if (this.isMuted) return;
     this.initCtx();
@@ -1072,13 +964,6 @@ class SoundEngine {
     osc.stop(t + 0.86);
   }
 
-  public playGlassBreak() {
-    if (this.isMuted) return;
-    this.initCtx();
-    if (!this.ctx) return;
-    this.playGlassShatter();
-  }
-
   public playSirens() {
     if (this.isMuted) return;
     this.initCtx();
@@ -1163,33 +1048,6 @@ class SoundEngine {
     });
   }
 
-  public playApplause() {
-    if (this.isMuted) return;
-    this.initCtx();
-    if (!this.ctx) return;
-    const t = this.ctx.currentTime;
-
-    // Victory fanfare + clapping taps
-    [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((freq, idx) => {
-      const osc = this.ctx!.createOscillator();
-      const gain = this.ctx!.createGain();
-      const st = t + idx * 0.08;
-
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, st);
-
-      gain.gain.setValueAtTime(0.28, st);
-      gain.gain.exponentialRampToValueAtTime(0.001, st + 0.4);
-
-      osc.connect(gain);
-      gain.connect(this.effectsBus ?? this.ctx!.destination);
-
-      osc.start(st);
-      osc.stop(st + 0.42);
-    });
-  }
-
-  /** A short, playful bicycle-bell/chiptune sting for the once-per-run secret encounter. */
   public playPomazaniecEntrance() {
     if (this.isMuted) return;
     this.initCtx();

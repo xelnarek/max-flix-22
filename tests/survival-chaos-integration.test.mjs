@@ -75,13 +75,16 @@ test('bullet nova projectiles make a physical splash impact and time-lock visual
   assert.match(budget, /timeLockImpactLimit: 18/);
 });
 
-test('each operator special gets a short bespoke limb follow-through and Mateusz calls his squad', async () => {
-  const game = await read('../src/game.ts');
+test('each operator special keeps its bespoke limb follow-through and Mateusz shout identity', async () => {
+  const [game, shouts] = await Promise.all([
+    read('../src/game.ts'), read('../src/characterAbilityShouts.ts')
+  ]);
   assert.match(game, /if \(this\.specialSwingTimer > 0 && this\.currentCharacterId !== 'grzesiek'\)/);
   for (const id of ['marcin', 'dawid', 'mateusz', 'piotr']) {
     assert.ok(game.includes("this.currentCharacterId === '" + id + "'"));
   }
-  assert.match(game, /MULTIWERŚUM, ZBIÓRKA!/);
+  assert.match(shouts, /Multiwersum, wejście na serwer/);
+  assert.match(shouts, /Avengers i Liga/);
 });
 
 test('elite delivery assigns distinct roles, visible identity markers and a breakable timed controller shield', async () => {

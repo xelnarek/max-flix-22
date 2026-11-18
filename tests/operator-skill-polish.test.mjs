@@ -89,14 +89,16 @@ test('Piotr MafiKapibar bodyguards balance targets and add readable muzzle/melee
 });
 
 
-test('all operator specials now trigger an action-specific shout and a readable procedural follow-through', async () => {
-  const [game, characters] = await Promise.all([
-    read('../src/game.ts'), read('../src/characters.ts')
+test('all operator specials use their own shout pool and a readable procedural follow-through', async () => {
+  const [game, characters, shouts] = await Promise.all([
+    read('../src/game.ts'), read('../src/characters.ts'), read('../src/characterAbilityShouts.ts')
   ]);
   assert.match(game, /this\.specialSwingTimer = 0\.86/);
+  assert.match(game, /this\.sayAbilityShout\(\)/);
   assert.match(game, /if \(this\.specialSwingTimer > 0 && this\.currentCharacterId !== 'grzesiek'\)/);
   for (const id of ['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr']) {
     assert.ok(characters.includes(id + ': {'), 'missing operator profile: ' + id);
+    assert.match(shouts, new RegExp('^  ' + id + ': \\[', 'm'));
   }
-  assert.ok(game.includes("this.sayQuote('MULTIWERŚUM, ZBIÓRKA!"), 'Mateusz must call his summoned squad');
+  assert.match(shouts, /Multiwersum, wejście na serwer/);
 });
