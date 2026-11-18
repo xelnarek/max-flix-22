@@ -1211,8 +1211,8 @@ test('mobile performance tiers limit crowd, particles and shadow refresh under l
   assert.match(app, /getAdaptiveEffectsTier/);
   assert.match(app, /setAdaptivePerformanceTier\(nextEffectsTier\)/);
   assert.match(game, /public setAdaptivePerformanceTier\(tier: number\)/);
-  assert.match(game, /mobileEnemyCap = this\.adaptivePerformanceTier >= 2 \? 13 : this\.adaptivePerformanceTier === 1 \? 16 : 18/);
-  assert.match(game, /const groupLimit = isMobile \? \(this\.adaptivePerformanceTier >= 2 \? 3 : this\.adaptivePerformanceTier === 1 \? 4 : 5\) : 7/);
+  assert.match(game, /mobileEnemyCap = this\.adaptivePerformanceTier >= 2 \? 16 : this\.adaptivePerformanceTier === 1 \? 20 : 22/);
+  assert.match(game, /const groupLimit = isMobile[\s\S]*?this\.adaptivePerformanceTier >= 2 \? 5 : this\.adaptivePerformanceTier === 1 \? 7 : 8[\s\S]*?: 10/);
   assert.match(game, /const maxBudget = isMobile \? \(this\.adaptivePerformanceTier >= 2 \? 14 : this\.adaptivePerformanceTier === 1 \? 24 : 36\) : 75/);
   assert.match(game, /const num = isMobile \? \(this\.adaptivePerformanceTier >= 2 \? 4 : this\.adaptivePerformanceTier === 1 \? 6 : 8\) : 14/);
   assert.match(game, /const mobileBurstCap = this\.adaptivePerformanceTier >= 2 \? 4 : this\.adaptivePerformanceTier === 1 \? 7 : 10/);
@@ -1516,7 +1516,7 @@ test('game-over screen reports actual Survival HP damage by weapon, basic attack
   assert.match(game, /this\.damageEnemy\(enemy, weaponDamage, this\.playerPos\.x, this\.playerPos\.z, weaponDamageSource\)/);
   assert.match(game, /damageSource: 'basic_attack'/);
   assert.match(app, /snapshot\.rankName/);
-  assert.match(app, /context: 'levelup' \| 'rank-up' \| 'boss-reward'/);
+  assert.match(app, /context: 'levelup' \| 'rank-up' \| 'boss-reward' \| 'chaos-roulette'/);
   assert.match(app, /AWANS RANGI:/);
   assert.match(app, /this\.engine\.getSurvivalDamageReport\(\)/);
   assert.match(app, /entry\.percentage\.toLocaleString\('pl-PL'/);
@@ -1536,7 +1536,7 @@ test('Survival levels promote operators every five levels and preserve banked XP
   assert.match(game, /this\.survivalXp >= this\.survivalXpToNext\) this\.beginSurvivalLevelUp\(\)/);
   assert.match(game, /this\.survivalRankUpPending \? 'rank-up' : 'levelup'/);
   assert.match(app, /snapshot\.rankName/);
-  assert.match(app, /context: 'levelup' \\| 'rank-up' \\| 'boss-reward'/);
+  assert.match(app, /context: 'levelup' \\| 'rank-up' \\| 'boss-reward' \\| 'chaos-roulette'/);
   assert.match(app, /AWANS RANGI:/);
 });
 
@@ -1558,7 +1558,7 @@ test('Survival raises enemy pressure gradually and keeps mobile horde caps as a 
   assert.match(game, /enemy\.speed \*= difficultyProfile\.enemySpeedMultiplier/);
   assert.match(game, /this\.survivalSpawnTimer = difficultyProfile\.spawnIntervalSeconds/);
   assert.match(game, /e\.specialActionTimer -= dt \* survivalAbilityRate/);
-  assert.match(game, /const mobileEnemyCap = this\.adaptivePerformanceTier >= 2 \? 13/);
+  assert.match(game, /const mobileEnemyCap = this\.adaptivePerformanceTier >= 2 \? 16/);
   assert.match(difficulty, /spawnIntervalSeconds: Math\.max\(3\.0/);
   assert.match(difficulty, /enemyAbilityRateMultiplier: Number\(\(1\.10 \+/);
 });
