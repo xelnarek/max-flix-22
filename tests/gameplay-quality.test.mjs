@@ -1871,3 +1871,29 @@ test('campaign result menu action returns directly to the campaign stage board',
   assert.match(handler, /menuTabButtons\.find\(\(button\) => button\.getAttribute\('data-tab'\) === 'tab-map'\)/);
   assert.match(handler, /activateMenuTab\(campaignMapTab\)/);
 });
+
+test('campaign reward drafts render after a clear and are consumed only by their target stage', async () => {
+  const [game, app, html, campaignCss] = await Promise.all([
+    read('../src/game.ts'),
+    read('../src/index.ts'),
+    read('../index.html'),
+    read('../src/campaign-mode.css'),
+  ]);
+  assert.match(game, /public startCampaignStage\(stageId: CampaignStageId, rewardId: CampaignRewardId \| null = null\)/);
+  assert.match(game, /getCampaignRewardDefinition\(rewardId\)/);
+  assert.match(game, /case 'armor':[\s\S]*?this\.maxHp = Math\.min\(this\.charDef\.maxHp \+ 1/);
+  assert.match(game, /case 'damage':[\s\S]*?this\.survivalDamageMultiplier = Math\.min\(1\.80/);
+  assert.match(game, /case 'rapid':[\s\S]*?this\.survivalAttackRateMultiplier/);
+  assert.match(game, /case 'xp':[\s\S]*?this\.survivalXpMultiplier/);
+  assert.match(game, /case 'mobility':[\s\S]*?this\.survivalMoveMultiplier/);
+  assert.match(game, /case 'reserve':[\s\S]*?this\.survivalRerolls/);
+  assert.match(app, /getCampaignRewardChoices\(snapshot\.campaignStageId, completions\)/);
+  assert.match(app, /setPendingCampaignReward\(campaignProgress, nextCampaignStageId, defaultReward\.id\)/);
+  assert.match(app, /consumePendingCampaignReward\(campaignProgress, stageId\)/);
+  assert.match(app, /startCampaignStage\(chosenStage, campaignRewardId\)/);
+  assert.match(app, /startCampaignStage\(retryStageId, campaignRewardId\)/);
+  assert.match(html, /id="campaign-reward-panel"/);
+  assert.match(html, /id="campaign-reward-options"/);
+  assert.match(campaignCss, /\.campaign-reward-card\.is-selected/);
+  assert.match(campaignCss, /@media\(max-width:760px\)[\s\S]*?\.campaign-reward-grid\{grid-template-columns:1fr/);
+});
