@@ -48,6 +48,7 @@ import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoi
 import { calculateEnemyObstacleAvoidanceVector } from './enemyNavigation.ts';
 import { calculateStableEnemySteering, getEnemyEngageRadius } from './enemySteering.ts';
 import { calculateEnemyProjectileDodge, predictEnemyAimPoint } from './enemyTactics.ts';
+import { advanceEnemyAttackTelegraph, getEnemyRangedAttackTelegraphProfile } from './enemyAttackTelegraphs.ts';
 import { getEnemyPlayerContactDistance, projectVelocityOutOfEnemyContacts, resolvePlayerMovementAgainstEnemies } from './enemyPlayerCollision.ts';
 import { findFirstProjectileBodyImpact, findFirstProjectileEnemyImpact, type MutableProjectileSegmentPoint, type ProjectileEnemyImpactScratch, type ProjectileImpactScratch } from './projectileImpact.ts';
 import { createEnemyHitReaction, getEnemyHitPulse, getEnemyImpactBurstProfile } from './enemyCombatFeedback.ts';
@@ -729,6 +730,7 @@ export class PaleciakiGameEngine {
   private dofBlurMaterial: THREE.ShaderMaterial | null = null;
   private bulldozerHitCooldowns = new Map<string, number>();
   private globalEnemyShoutCooldown = 0;
+  private globalEnemyTelegraphToastCooldown = 0;
   /** Remaining duration of Mateusz's enemy-only faction brawl. */
   private enemyFactionBrawlRemaining = 0;
   /** Reused target-load snapshot prevents the whole brawl from dogpiling one enemy. */
@@ -11000,7 +11002,9 @@ export class PaleciakiGameEngine {
     };
   }
 
-  private spawnPomazaniecLollipop(x: number, y: number, z: number, targetX: number, targetZ: number, variant: number) {
+  private spawnPomazaniecLollipop(
+    x: number, y: number, z: number, targetX: number, targetZ: number, variant: number, lockedDirection?: number,
+  ) {
     const colors = [0xf43f5e, 0xf472b6, 0x8b5cf6, 0x22c55e, 0xf59e0b];
     const color = colors[variant % colors.length];
     const candy = new THREE.Mesh(
@@ -11023,8 +11027,12 @@ export class PaleciakiGameEngine {
     candy.position.set(x, y, z);
     this.levelRoot.add(candy);
     const projectileSpeed = getEnemyProjectileSpeed(7.6);
-    const aim = this.predictPlayerAimPoint(x, z, projectileSpeed, targetX, targetZ, 0.64);
-    const direction = new THREE.Vector3(aim.x - x, 0.10, aim.z - z).normalize();
+    const aim = Number.isFinite(lockedDirection)
+      ? null
+      : this.predictPlayerAimPoint(x, z, projectileSpeed, targetX, targetZ, 0.64);
+    const direction = Number.isFinite(lockedDirection)
+      ? new THREE.Vector3(Math.sin(lockedDirection as number), 0.10, Math.cos(lockedDirection as number)).normalize()
+      : new THREE.Vector3((aim?.x ?? targetX) - x, 0.10, (aim?.z ?? targetZ) - z).normalize();
     this.enemyProjectiles.push({
       mesh: candy,
       vel: direction.multiplyScalar(projectileSpeed),
@@ -11198,6 +11206,7 @@ export class PaleciakiGameEngine {
       },
       cleanup: () => this.disposeTemporaryObject(group),
     });
+    return group;
   }
 
   /** Red expanding floor ring marking a boss's fixed-position area attack. */
@@ -13639,8 +13648,9 @@ export class PaleciakiGameEngine {
       4.6,
       0.8,
     this.enemyObstacleAvoidanceScratch);
-    const isTelegraphingRangedBoss = enemy.chargeTimer !== undefined &&
-      (enemy.type === 'bosman_krakow' || (enemy.type === 'agv_robot' && enemy.name.includes('AGV-9 SENTINEL')));
+    const isTelegraphingRangedBoss = enemy.aiRangedWindupTimer !== undefined ||
+      (enemy.chargeTimer !== undefined &&
+        (enemy.type === 'bosman_krakow' || (enemy.type === 'agv_robot' && enemy.name.includes('AGV-9 SENTINEL'))));
 
     // Scan on a short cadence instead of testing every projectile for every
     // enemy on every frame. Keep the last dodge direction briefly so the
@@ -13727,7 +13737,9 @@ export class PaleciakiGameEngine {
 
     enemy.x = THREE.MathUtils.clamp(enemy.x + steerX * movementSpeed * dt, this.levelBounds.minX + 1.2, this.levelBounds.maxX - 1.2);
     enemy.z = THREE.MathUtils.clamp(enemy.z + steerZ * movementSpeed * dt, this.levelBounds.minZ + 1.0, this.levelBounds.maxZ - 1.0);
-    enemy.mesh.rotation.y = Math.atan2(this.playerPos.x - enemy.x, this.playerPos.z - enemy.z);
+    enemy.mesh.rotation.y = enemy.aiRangedWindupTimer !== undefined
+      ? (enemy.aiRangedLockedDirection ?? Math.atan2(this.playerPos.x - enemy.x, this.playerPos.z - enemy.z))
+      : Math.atan2(this.playerPos.x - enemy.x, this.playerPos.z - enemy.z);
     enemy.mesh.position.set(enemy.x, enemy.y, enemy.z);
     enemy.state = engaged ? 'chase' : 'patrol';
 
@@ -14452,6 +14464,9 @@ export class PaleciakiGameEngine {
     const appliedDamage = baseAppliedDamage * abilityDamageMultiplier * coreDamageMultiplier;
     enemy.hp = Math.max(0, enemy.hp - appliedDamage);
     const actualDamage = Math.max(0, previousHp - enemy.hp);
+    if (actualDamage > 0 && enemy.aiRangedWindupTimer !== undefined) {
+      this.cancelEnemyRangedAttackTelegraph(enemy, true);
+    }
     const shouldSpawnImpactBurst = actualDamage > 0 && (enemy.hitReactTimer || 0) <= 0.015;
     if (this.gameMode === 'survival' && actualDamage > 0 && damageSource !== null) {
       recordSurvivalDamage(this.survivalDamageStats, damageSource, actualDamage);
@@ -14587,6 +14602,82 @@ export class PaleciakiGameEngine {
     }
   }
 
+  private beginEnemyRangedAttackTelegraph(enemy: EnemyItem): boolean {
+    const profile = getEnemyRangedAttackTelegraphProfile(enemy.type);
+    if (!profile || !enemy.mesh || ![enemy.x, enemy.z, this.playerPos.x, this.playerPos.z].every(Number.isFinite)) {
+      return false;
+    }
+
+    const direction = Math.atan2(this.playerPos.x - enemy.x, this.playerPos.z - enemy.z);
+    const distance = Math.hypot(this.playerPos.x - enemy.x, this.playerPos.z - enemy.z);
+    const laneLength = THREE.MathUtils.clamp(distance + 1.4, 2.8, 15.5);
+    enemy.aiRangedWindupTimer = profile.windupSeconds;
+    enemy.aiRangedWindupDuration = profile.windupSeconds;
+    enemy.aiRangedLockedDirection = direction;
+    enemy.mesh.rotation.y = direction;
+    enemy.aiRangedTelegraphMesh = this.spawnBossLaneTelegraph(
+      enemy.x,
+      enemy.z,
+      direction,
+      laneLength,
+      profile.laneWidth,
+      profile.color,
+      profile.windupSeconds,
+      enemy,
+    );
+    this.requestEnemyAttackAnimation(enemy, profile.windupSeconds);
+
+    // The lane is per-attacker; radio text and warning sound are globally throttled.
+    if (this.globalEnemyTelegraphToastCooldown <= 0) {
+      this.emitFloatingToast(profile.warningText, enemy.x, enemy.y + 1.25, enemy.z, 'damage');
+      this.globalEnemyTelegraphToastCooldown = 1.15;
+      sound.playAlert();
+    }
+    return true;
+  }
+
+  /** Returns the committed aim only after the warning finishes. */
+  private advanceEnemyRangedAttackTelegraph(enemy: EnemyItem, dt: number): { direction: number } | null {
+    if (enemy.aiRangedWindupTimer === undefined) return null;
+    const timing = advanceEnemyAttackTelegraph(
+      enemy.aiRangedWindupTimer,
+      enemy.aiRangedWindupDuration ?? 0,
+      dt,
+    );
+    enemy.aiRangedWindupTimer = timing.remainingSeconds;
+    if (!timing.completed) return null;
+
+    const release = {
+      direction: enemy.aiRangedLockedDirection ?? enemy.mesh?.rotation?.y ?? 0,
+    };
+    enemy.aiRangedWindupTimer = undefined;
+    enemy.aiRangedWindupDuration = undefined;
+    enemy.aiRangedLockedDirection = undefined;
+    enemy.aiRangedTelegraphMesh = undefined;
+    return release;
+  }
+
+  private cancelEnemyRangedAttackTelegraph(enemy: EnemyItem, applyRecoveryDelay = false): void {
+    const telegraph = enemy.aiRangedTelegraphMesh as THREE.Group | undefined;
+    if (telegraph) {
+      const effectIndex = this.specialEffects.findIndex((effect) => effect.mesh === telegraph);
+      if (effectIndex >= 0) {
+        const [effect] = this.specialEffects.splice(effectIndex, 1);
+        if (effect.cleanup) effect.cleanup();
+        else if (effect.disposeOnRemove) this.disposeTemporaryObject(effect.mesh);
+      } else if (telegraph.parent) {
+        this.disposeTemporaryObject(telegraph);
+      }
+    }
+    enemy.aiRangedWindupTimer = undefined;
+    enemy.aiRangedWindupDuration = undefined;
+    enemy.aiRangedLockedDirection = undefined;
+    enemy.aiRangedTelegraphMesh = undefined;
+    if (applyRecoveryDelay) {
+      enemy.specialActionTimer = Math.max(enemy.specialActionTimer ?? 0, 0.82);
+    }
+  }
+
   private updateEnemyHitReaction(enemy: EnemyItem, dt: number): void {
     if (!enemy.mesh) return;
 
@@ -14677,6 +14768,7 @@ export class PaleciakiGameEngine {
   private beginEnemyDeathVisual(enemy: EnemyItem): void {
     const mesh = enemy.mesh as THREE.Object3D | undefined;
     if (!mesh) return;
+    if (enemy.aiRangedWindupTimer !== undefined) this.cancelEnemyRangedAttackTelegraph(enemy);
     const isCthulhuDeath = enemy.name.includes('CTHULHU');
     const duration = isCthulhuDeath ? 3.4 : getEnemyDeathMotionProfile(enemy.type).duration;
     if (isCthulhuDeath) mesh.userData.cthulhuDeathBaseRotationY = mesh.rotation.y;
@@ -14784,6 +14876,9 @@ export class PaleciakiGameEngine {
       : 1;
     if (this.globalEnemyShoutCooldown > 0) {
       this.globalEnemyShoutCooldown -= dt;
+    }
+    if (this.globalEnemyTelegraphToastCooldown > 0) {
+      this.globalEnemyTelegraphToastCooldown = Math.max(0, this.globalEnemyTelegraphToastCooldown - dt);
     }
 
     // Progressive pressure: unlock more simultaneous attackers as a run develops.
@@ -15299,6 +15394,7 @@ export class PaleciakiGameEngine {
       }
 
       if (e.stunTimer > 0) {
+        if (e.aiRangedWindupTimer !== undefined) this.cancelEnemyRangedAttackTelegraph(e, true);
         // Let the commander inspect the stun before the early return so the
         // player can interrupt a boss order during its visible wind-up.
         if (this.gameMode === 'survival') this.updateSurvivalCommanderPulse(e, dt);
@@ -15311,6 +15407,7 @@ export class PaleciakiGameEngine {
       }
 
       if (factionBrawlActive) {
+        if (e.aiRangedWindupTimer !== undefined) this.cancelEnemyRangedAttackTelegraph(e, true);
         this.updateEnemyFactionBrawl(e, dt);
         continue;
       }
@@ -15741,6 +15838,9 @@ export class PaleciakiGameEngine {
           e.mesh.rotation.y = e.chargeDir ?? Math.atan2(dx, dz);
         } else if (this.gameMode === 'survival') {
           this.updateSurvivalEnemyTactics(e, dt, distToPlayer);
+        } else if (e.aiRangedWindupTimer !== undefined) {
+          e.mesh.rotation.y = e.aiRangedLockedDirection ?? Math.atan2(dx, dz);
+          e.mesh.position.set(e.x, e.y, e.z);
         } else {
           // Dynamic Chase / Tracking AI for ground enemies
           const chaseRadius =
@@ -15865,22 +15965,36 @@ export class PaleciakiGameEngine {
 
         // The tiny riders keep their distance and throw visible, arcing lollipops.
         if (e.type === 'pomazaniec' && e.specialActionTimer !== undefined) {
-          e.specialActionTimer -= dt * survivalAbilityRate;
-          if (e.specialActionTimer <= 0 && distToPlayer < 13.0) {
-            e.specialActionTimer = 4.35 + Math.random() * 1.25;
-            e.mesh.rotation.y = Math.atan2(dx, dz);
-            e.mesh.rotation.x = -0.08;
-            this.requestEnemyAttackAnimation(e, 0.42);
-            this.spawnPomazaniecLollipop(e.x, e.y + 1.03, e.z, this.playerPos.x, this.playerPos.z, e.aiSlot || 0);
+          if (e.aiRangedWindupTimer !== undefined) {
+            const release = this.advanceEnemyRangedAttackTelegraph(e, dt);
+            if (release) {
+              e.specialActionTimer = 4.35 + Math.random() * 1.25;
+              e.mesh.rotation.y = release.direction;
+              e.mesh.rotation.x = -0.08;
+              this.spawnPomazaniecLollipop(
+                e.x, e.y + 1.03, e.z, this.playerPos.x, this.playerPos.z, e.aiSlot || 0, release.direction,
+              );
+            }
+          } else {
+            e.specialActionTimer -= dt * survivalAbilityRate;
+            if (e.specialActionTimer <= 0 && distToPlayer < 13.0) {
+              this.beginEnemyRangedAttackTelegraph(e);
+            }
           }
         } else if ((e.type === 'handlowiec' || e.type === 'przedstawiciel_włoski') && e.specialActionTimer !== undefined) {
-          e.specialActionTimer -= dt * survivalAbilityRate;
-          if (e.specialActionTimer <= 0 && distToPlayer < 9.0) {
-            e.specialActionTimer = 2.8;
-            this.requestEnemyAttackAnimation(e, 0.46);
-            this.spawnPenaltyNotice(e.x, e.y + 0.8, e.z);
-            const msg = e.type === 'przedstawiciel_włoski' ? '🇮🇹 ARMATURA DE LUX!' : '📑 OFERTA RABATOWA!';
-            this.emitFloatingToast(msg, e.x, e.y + 1.2, e.z, 'damage');
+          if (e.aiRangedWindupTimer !== undefined) {
+            const release = this.advanceEnemyRangedAttackTelegraph(e, dt);
+            if (release) {
+              e.specialActionTimer = 2.8;
+              this.spawnPenaltyNotice(e.x, e.y + 0.8, e.z, release.direction);
+              const msg = e.type === 'przedstawiciel_włoski' ? '🇮🇹 ARMATURA DE LUX!' : '📑 OFERTA RABATOWA!';
+              this.emitFloatingToast(msg, e.x, e.y + 1.2, e.z, 'damage');
+            }
+          } else {
+            e.specialActionTimer -= dt * survivalAbilityRate;
+            if (e.specialActionTimer <= 0 && distToPlayer < 9.0) {
+              this.beginEnemyRangedAttackTelegraph(e);
+            }
           }
         } else if (e.type === 'inspector' && e.specialActionTimer !== undefined) {
           e.specialActionTimer -= dt * survivalAbilityRate;
@@ -15891,20 +16005,32 @@ export class PaleciakiGameEngine {
             this.emitFloatingToast('🚨 KONTROLA BHP!', e.x, e.y + 1.2, e.z, 'damage');
           }
         } else if (e.type === 'pan_roman' && e.specialActionTimer !== undefined) {
-          e.specialActionTimer -= dt * survivalAbilityRate;
-          if (e.specialActionTimer <= 0 && distToPlayer < 10.0) {
-            e.specialActionTimer = 2.5;
-            this.requestEnemyAttackAnimation(e, 0.50);
-            this.spawnSanitarywareProjectile(e.x, e.y + 0.8, e.z);
-            this.emitFloatingToast('📦 UMYWALKA W DRODZE!', e.x, e.y + 1.2, e.z, 'damage');
+          if (e.aiRangedWindupTimer !== undefined) {
+            const release = this.advanceEnemyRangedAttackTelegraph(e, dt);
+            if (release) {
+              e.specialActionTimer = 2.5;
+              this.spawnSanitarywareProjectile(e.x, e.y + 0.8, e.z, release.direction);
+              this.emitFloatingToast('📦 UMYWALKA W DRODZE!', e.x, e.y + 1.2, e.z, 'damage');
+            }
+          } else {
+            e.specialActionTimer -= dt * survivalAbilityRate;
+            if (e.specialActionTimer <= 0 && distToPlayer < 10.0) {
+              this.beginEnemyRangedAttackTelegraph(e);
+            }
           }
         } else if (e.type === 'serwisant' && e.specialActionTimer !== undefined) {
-          e.specialActionTimer -= dt * survivalAbilityRate;
-          if (e.specialActionTimer <= 0 && distToPlayer < 8.5) {
-            e.specialActionTimer = 2.2;
-            this.requestEnemyAttackAnimation(e, 0.42);
-            this.spawnSparkZapProjectile(e.x, e.y + 0.8, e.z);
-            this.emitFloatingToast('⚡ ISKRA SERWISU!', e.x, e.y + 1.2, e.z, 'damage');
+          if (e.aiRangedWindupTimer !== undefined) {
+            const release = this.advanceEnemyRangedAttackTelegraph(e, dt);
+            if (release) {
+              e.specialActionTimer = 2.2;
+              this.spawnSparkZapProjectile(e.x, e.y + 0.8, e.z, release.direction);
+              this.emitFloatingToast('⚡ ISKRA SERWISU!', e.x, e.y + 1.2, e.z, 'damage');
+            }
+          } else {
+            e.specialActionTimer -= dt * survivalAbilityRate;
+            if (e.specialActionTimer <= 0 && distToPlayer < 8.5) {
+              this.beginEnemyRangedAttackTelegraph(e);
+            }
           }
         } else if (e.type === 'mutant_gamma_forklift' && e.specialActionTimer !== undefined) {
           e.specialActionTimer -= dt * survivalAbilityRate;
@@ -15925,13 +16051,19 @@ export class PaleciakiGameEngine {
             sound.playSirens();
           }
         } else if (e.type === 'cyber_salesman' && e.specialActionTimer !== undefined) {
-          e.specialActionTimer -= dt * survivalAbilityRate;
-          if (e.specialActionTimer <= 0 && distToPlayer < 10.0) {
-            e.specialActionTimer = 2.4;
-            this.requestEnemyAttackAnimation(e, 0.48);
-            this.spawnPenaltyNotice(e.x, e.y + 0.8, e.z);
-            this.emitFloatingToast('💻 CYBER-KATALOG 3.0!', e.x, e.y + 1.2, e.z, 'damage');
-            sound.playAttackWhoosh();
+          if (e.aiRangedWindupTimer !== undefined) {
+            const release = this.advanceEnemyRangedAttackTelegraph(e, dt);
+            if (release) {
+              e.specialActionTimer = 2.4;
+              this.spawnPenaltyNotice(e.x, e.y + 0.8, e.z, release.direction);
+              this.emitFloatingToast('💻 CYBER-KATALOG 3.0!', e.x, e.y + 1.2, e.z, 'damage');
+              sound.playAttackWhoosh();
+            }
+          } else {
+            e.specialActionTimer -= dt * survivalAbilityRate;
+            if (e.specialActionTimer <= 0 && distToPlayer < 10.0) {
+              this.beginEnemyRangedAttackTelegraph(e);
+            }
           }
         } else if (e.type === 'bosman_krakow' && e.specialActionTimer !== undefined) {
           const isPhase2 = e.hp <= e.maxHp * 0.5;
@@ -16077,13 +16209,15 @@ export class PaleciakiGameEngine {
     this.enemySpatialIndexNextRefreshAt = performance.now() + (this.isHandheldViewport ? 24 : 0);
   }
 
-  private spawnPenaltyNotice(x: number, y: number, z: number) {
+  private spawnPenaltyNotice(x: number, y: number, z: number, lockedDirection?: number) {
     const mesh = createPenaltyNoticeProjectile();
     mesh.position.set(x, y, z);
     this.levelRoot.add(mesh);
     const projectileSpeed = getEnemyProjectileSpeed(7.5);
-    const aim = this.predictPlayerAimPoint(x, z, projectileSpeed);
-    const dir = new THREE.Vector3(aim.x - x, 0, aim.z - z).normalize();
+    const aim = Number.isFinite(lockedDirection) ? null : this.predictPlayerAimPoint(x, z, projectileSpeed);
+    const dir = Number.isFinite(lockedDirection)
+      ? new THREE.Vector3(Math.sin(lockedDirection as number), 0, Math.cos(lockedDirection as number))
+      : new THREE.Vector3((aim?.x ?? this.playerPos.x) - x, 0, (aim?.z ?? this.playerPos.z) - z).normalize();
     this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.multiplyScalar(projectileSpeed), life: 3.5 });
     sound.playWhistle();
   }
@@ -16103,13 +16237,15 @@ export class PaleciakiGameEngine {
     sound.playWhistle();
   }
 
-  private spawnSanitarywareProjectile(x: number, y: number, z: number) {
+  private spawnSanitarywareProjectile(x: number, y: number, z: number, lockedDirection?: number) {
     const mesh = createSanitarywareProjectile();
     mesh.position.set(x, y, z);
     this.levelRoot.add(mesh);
     const projectileSpeed = getEnemyProjectileSpeed(8.2);
-    const aim = this.predictPlayerAimPoint(x, z, projectileSpeed);
-    const dir = new THREE.Vector3(aim.x - x, 0.2, aim.z - z).normalize();
+    const aim = Number.isFinite(lockedDirection) ? null : this.predictPlayerAimPoint(x, z, projectileSpeed);
+    const dir = Number.isFinite(lockedDirection)
+      ? new THREE.Vector3(Math.sin(lockedDirection as number), 0.2, Math.cos(lockedDirection as number))
+      : new THREE.Vector3((aim?.x ?? this.playerPos.x) - x, 0.2, (aim?.z ?? this.playerPos.z) - z).normalize();
     this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.multiplyScalar(projectileSpeed), life: 3.5 });
     sound.playWoosh();
   }

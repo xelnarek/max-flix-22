@@ -152,6 +152,11 @@ export interface EnemyItem {
   /** Smoothed horizontal steering direction; avoids frame-to-frame crowd jitter. */
   aiSteerX?: number;
   aiSteerZ?: number;
+  /** Locked-aim, interruptible wind-up for regular ranged attacks. */
+  aiRangedWindupTimer?: number;
+  aiRangedWindupDuration?: number;
+  aiRangedLockedDirection?: number;
+  aiRangedTelegraphMesh?: any;
   /** Low-frequency projectile threat scan and committed sidestep intent. */
   aiDodgeScanTimer?: number;
   aiDodgeTimer?: number;
