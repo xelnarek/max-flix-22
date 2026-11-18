@@ -31,3 +31,12 @@ This pass uses the existing role-matched Gobkit GLB rigs and the original proced
 - The lateral bias is distance-weighted and fades to zero before the existing melee contact band. Crowd separation, obstacle avoidance, arrival slowdown and attack range remain authoritative.
 - Survival keeps its separate wave-director coalition and pincer system. Ranged specialists and vehicles keep their existing direct firing/charge lanes.
 - No movement speed, HP, damage, attack cooldown or collision values are changed.
+
+
+
+## Interruptible melee contact
+- Ten ordinary archetypes have their own wind-up, warning-lane width and colour, start reach and recovery interval.
+- The attacker locks its facing direction and holds position during the warning. Damage resolves only at the end of the wind-up.
+- Stepping outside the contact radius or changing floor height before impact causes a miss; confirmed damage or stun interrupts the committed strike.
+- Concurrent warning lanes are capped at two on mobile and four on desktop to preserve floor readability and frame budget.
+- Bosses, dedicated ranged/mechanical actors and stomp/Bulldozer/Marcin/Grzesiek counterplay retain their existing rules. Damage and HP values are unchanged.
