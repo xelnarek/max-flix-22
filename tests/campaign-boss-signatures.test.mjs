@@ -20,7 +20,7 @@ test('signature attack windows are readable and intervals stay bounded', () => {
   for (const signature of Object.values(CAMPAIGN_BOSS_SIGNATURES)) {
     assert.ok(signature.windupSeconds >= 0.9 && signature.windupSeconds <= 1.5);
     assert.ok(signature.intervalSeconds >= 12 && signature.intervalSeconds <= 19);
-    assert.ok(signature.initialDelaySeconds >= 5 && signature.initialDelaySeconds <= 7);
+    assert.ok(signature.initialDelaySeconds >= 7 && signature.initialDelaySeconds <= 9);
     assert.ok(signature.maxShots >= 2 && signature.maxShots <= 5);
     assert.ok(signature.warning.length > 20);
   }
