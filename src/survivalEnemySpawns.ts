@@ -20,6 +20,8 @@ export type SurvivalEnemySpawnType = Extract<EnemyType,
   | 'cyber_salesman'
 >;
 
+export const SURVIVAL_SPAWN_VARIETY_MEMORY = 2;
+
 export interface SurvivalEnemySpawnWeight {
   readonly type: SurvivalEnemySpawnType;
   readonly minWave: number;
@@ -79,16 +81,23 @@ export function chooseSurvivalEnemySpawnType(
   wave: number,
   elapsedSeconds: number,
   roll: number,
+  recentTypes: readonly SurvivalEnemySpawnType[] = [],
 ): SurvivalEnemySpawnType {
   const eligible = getSurvivalEnemySpawnWeights(wave, elapsedSeconds);
   if (eligible.length === 0) return 'zombie_pracownik';
-  const totalWeight = eligible.reduce((total, entry) => total + entry.weight, 0);
+
+  // Avoid the last two regular archetypes inside a delivery group. If every
+  // unlocked type is in the recent window, fall back to the full roster.
+  const recent = new Set(recentTypes.slice(-SURVIVAL_SPAWN_VARIETY_MEMORY));
+  const varied = recent.size > 0 ? eligible.filter((entry) => !recent.has(entry.type)) : eligible;
+  const pool = varied.length > 0 ? varied : eligible;
+  const totalWeight = pool.reduce((total, entry) => total + entry.weight, 0);
   const safeRoll = Number.isFinite(roll) ? Math.max(0, Math.min(0.999999999, roll)) : 0.5;
   const target = safeRoll * totalWeight;
   let cumulative = 0;
-  for (const entry of eligible) {
+  for (const entry of pool) {
     cumulative += entry.weight;
     if (target < cumulative) return entry.type;
   }
-  return eligible[eligible.length - 1].type;
+  return pool[pool.length - 1].type;
 }
