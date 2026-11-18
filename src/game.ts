@@ -13471,7 +13471,7 @@ export class PaleciakiGameEngine {
     amount: number,
     sourceX = this.playerPos.x,
     sourceZ = this.playerPos.z,
-    damageSource: SurvivalDamageSource | null = 'ability',
+    damageSource: SurvivalDamageSource | null = null,
   ): number {
     if (enemy.state === 'defeated' || (enemy.aiMateuszAllyTimer ?? 0) > 0 || !Number.isFinite(amount) || amount <= 0) return enemy.hp;
     if (enemy.shieldActive) {
@@ -17596,7 +17596,7 @@ export class PaleciakiGameEngine {
       if (distance > ritualRadius || Math.abs(enemy.y - this.playerPos.y) > 2.0) continue;
 
       enemy.shieldActive = false;
-      this.damageEnemy(enemy, burstDamage, this.playerPos.x, this.playerPos.z);
+      this.damageEnemy(enemy, burstDamage, this.playerPos.x, this.playerPos.z, 'ability');
       if (enemy.hp <= 0) {
         this.defeatEnemy(enemy, 320, false);
       } else {
@@ -17829,7 +17829,7 @@ export class PaleciakiGameEngine {
       target.shieldActive = false;
       const targetIsMajorBoss = target.type === 'walczak' || target.type === 'krol_leto' || target.type === 'bosman_krakow';
       const damage = this.scaleSurvivalDamage(capybara.index === 1 ? (targetIsMajorBoss ? 4 : 3) : targetIsMajorBoss ? 3 : 2);
-      this.damageEnemy(target, damage, capybara.group.position.x, capybara.group.position.z);
+      this.damageEnemy(target, damage, capybara.group.position.x, capybara.group.position.z, 'ability');
       if (target.hp <= 0) {
         this.defeatEnemy(target, 300, false);
       } else {
@@ -18153,7 +18153,7 @@ export class PaleciakiGameEngine {
         if (dist < 5.6 && dirDot > -0.35) {
           e.shieldActive = false;
           const damage = Math.ceil(3 * abilityDamageMultiplier);
-          this.damageEnemy(e, damage);
+          this.damageEnemy(e, damage, this.playerPos.x, this.playerPos.z, 'ability');
           e.stunTimer = this.gameMode === 'survival' ? 0.9 : 2.0;
           e.state = 'stunned';
           this.cameraShake = 0.65;
