@@ -14,10 +14,15 @@ test('PvP client sends at the room tick rate and only shows match-end once', asy
   assert.match(game, /if \(!this\.pvpMatchEndHandled\)/);
 });
 
-test('online session handles static hosting, bounded retries and does not restart the arena on every snapshot', async () => {
-  const client = await readFile(new URL('../src/pvpClient.ts', import.meta.url), 'utf8');
+test('online session delegates platform-specific static hosting to the tested URL resolver', async () => {
+  const [client, resolver] = await Promise.all([
+    readFile(new URL('../src/pvpClient.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pvpSocketUrl.ts', import.meta.url), 'utf8'),
+  ]);
   assert.match(client, /VITE_PVP_WS_URL/);
-  assert.match(client, /isGitHubPages/);
+  assert.match(client, /resolvePvpSocketUrl/);
+  assert.match(resolver, /isPagesHost/);
+  assert.match(resolver, /isCapacitorAndroidOrigin/);
   assert.match(client, /MAX_CONNECT_ATTEMPTS = 3/);
   assert.match(client, /CONNECT_TIMEOUT_MS = 75_000/);
   assert.match(client, /RETRY_CONNECT_TIMEOUT_MS = 12_000/);
