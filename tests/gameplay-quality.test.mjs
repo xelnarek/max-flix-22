@@ -1705,13 +1705,13 @@ test('Mateusz Operator 04 recruits a temporary autonomous team and keeps the con
   assert.doesNotMatch(game, /mateuszCats|spawnMateuszCats|updateMateuszCats/);
 });
 
-test('enemy faction brawl has a bounded timer and restores normal targeting after expiry', async () => {
+test('Mateusz recruited allies have bounded lifetime and restore hostile AI after expiry', async () => {
   const game = await read('../src/game.ts');
-  assert.match(game, /this\.enemyFactionBrawlRemaining = this\.gameMode === 'survival' \? 7\.5 : 9\.0/);
-  assert.match(game, /this\.enemyFactionBrawlRemaining = Math\.max\(0, this\.enemyFactionBrawlRemaining - dt\)/);
-  assert.match(game, /if \(factionBrawlActive\) \{\s*this\.updateEnemyFactionBrawl\(e, dt\);\s*continue;/);
-  assert.match(game, /if \(!active\) \{\s*if \(existingRing\)/);
-  assert.match(game, /factionBrawlMarker/);
+  assert.match(game, /ally\.aiMateuszAllyTimer = order\.durationSeconds/);
+  assert.match(game, /enemy\.aiMateuszAllyTimer = Math\.max\(0, remaining - dt\)/);
+  assert.match(game, /if \(this\.updateMateuszAlly\(e, dt\)\) continue/);
+  assert.match(game, /private setMateuszAllyVisual\(enemy: EnemyItem, active: boolean, dt: number\)/);
+  assert.match(game, /if \(!active\) \{[\s\S]*?mateuszAllyRing/);
 });
 
 
