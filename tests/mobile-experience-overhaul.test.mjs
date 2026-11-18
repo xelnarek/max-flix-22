@@ -100,3 +100,14 @@ test('PvP scoreboard uses individual operator portraits and exposes hidden state
   assert.match(app, /p1Avatar\.innerHTML = operatorPortrait\(state\.p1\.operatorId\)/);
   assert.match(app, /p2Avatar\.innerHTML = operatorPortrait\(state\.p2\.operatorId\)/);
 });
+
+test('PvP audio distinguishes a confirmed local hit from damage received', async () => {
+  const [game, sound] = await Promise.all([
+    read('../src/game.ts'), read('../src/sound.ts')
+  ]);
+  assert.match(game, /const confirmedLocalHit = hit\.sourceSlot === this\.pvpSlot && hit\.targetSlot !== this\.pvpSlot/);
+  assert.match(game, /if \(confirmedLocalHit\) sound\.playPvpHitConfirm\(\);\s*else sound\.playSmack\(\)/);
+  assert.match(sound, /public playPvpHitConfirm\(\)/);
+  assert.match(sound, /impact\.frequency\.exponentialRampToValueAtTime\(122, t \+ 0\.105\)/);
+  assert.match(sound, /tick\.frequency\.setValueAtTime\(920, t \+ 0\.012\)/);
+});
