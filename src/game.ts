@@ -1090,6 +1090,7 @@ export class PaleciakiGameEngine {
   private readonly enemyProjectileThreatIndex = new EnemyProjectileThreatIndex();
   private enemyProjectileThreatIndexNextRefreshAt = 0;
   private enemyProjectileThreatIndexCachedCount = -1;
+  private enemyProjectileThreatIndexLastRefreshAt = 0;
   /** Per-enemy wall-clock gate prevents contact attacks from restarting their animation every frame. */
   private readonly enemyAttackAnimationUntil = new WeakMap<EnemyItem, number>();
   /** Keeps a short attack window when an enemy strikes before its async rig finishes loading. */
@@ -15348,12 +15349,20 @@ export class PaleciakiGameEngine {
       this.enemySpatialIndexCachedCount = this.enemies.length;
       this.enemySpatialIndexNextRefreshAt = this.isHandheldViewport ? spatialIndexNow + 24 : spatialIndexNow;
     }
-    // Rebuild at a bounded cadence, and immediately when projectile count changes
-    // so newly fired volleys enter the broadphase before the next dodge scan.
+    // Rebuild at a bounded cadence. Projectile-count changes can request an
+    // early refresh, but a minimum interval prevents busy volleys from turning
+    // this broadphase back into a per-frame full-array scan.
     const projectileCountChanged = this.projectiles.length !== this.enemyProjectileThreatIndexCachedCount;
-    if (projectileCountChanged || spatialIndexNow >= this.enemyProjectileThreatIndexNextRefreshAt) {
+    const minimumProjectileIndexRefreshMs = this.isHandheldViewport ? 24 : 16;
+    const projectileIndexRefreshDue = spatialIndexNow >= this.enemyProjectileThreatIndexNextRefreshAt;
+    const projectileStructureRefreshDue = projectileCountChanged && (
+      this.enemyProjectileThreatIndexLastRefreshAt === 0 ||
+      spatialIndexNow - this.enemyProjectileThreatIndexLastRefreshAt >= minimumProjectileIndexRefreshMs
+    );
+    if (projectileIndexRefreshDue || projectileStructureRefreshDue) {
       this.enemyProjectileThreatIndex.rebuild(this.projectiles);
       this.enemyProjectileThreatIndexCachedCount = this.projectiles.length;
+      this.enemyProjectileThreatIndexLastRefreshAt = spatialIndexNow;
       this.enemyProjectileThreatIndexNextRefreshAt = spatialIndexNow + (this.isHandheldViewport ? 40 : 32);
     }
 
