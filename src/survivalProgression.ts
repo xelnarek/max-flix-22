@@ -29,10 +29,11 @@ function safeLevel(value: number): number {
 export function getSurvivalXpRequirement(level: number): number {
   const current = safeLevel(level);
 
-  // Keep the first upgrade quick and shave 10% from the old long-run curve.
-  if (current === 1) return 9;
-  if (current === 2) return 15;
-  return Math.max(12, Math.round((10 + current * 3) * 0.90));
+  // Early upgrades still arrive within a few minutes, but cannot flood the
+  // run before enemy groups and weapon choices have had time to matter.
+  if (current === 1) return 16;
+  if (current === 2) return 22;
+  return Math.max(22, Math.round((10 + current * 3) * 1.30));
 }
 
 /** The player's current named rank and the next promotion checkpoint. */

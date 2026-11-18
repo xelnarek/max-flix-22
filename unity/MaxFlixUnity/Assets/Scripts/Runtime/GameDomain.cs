@@ -80,7 +80,10 @@ namespace MaxFlix.Unity.Runtime
         ForkliftHorn = 11,
         NightShiftEspresso = 12,
         GoldenWz = 13,
-        PalletGuard = 14
+        PalletGuard = 14,
+        RadioactiveField = 15,
+        CrimsonBurst = 16,
+        BulletNova = 17
     }
 
     public enum SurvivalWeaponKind

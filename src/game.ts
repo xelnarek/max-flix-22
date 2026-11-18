@@ -86,6 +86,8 @@ import { MATEUSZ_RIVAL_ROSTER, getMateuszRivalSpawnOffset, getMateuszRivalDamage
 import { selectSurvivalSupportPulseTargets, SURVIVAL_SUPPORT_PULSE_RADIUS, SURVIVAL_SUPPORT_PULSE_INTERVAL_SECONDS, SURVIVAL_SUPPORT_SHIELD_SECONDS } from './survivalSupport.ts';
 import { advanceSurvivalRetreatState, getSurvivalFlankInterceptOffset, getSurvivalRetreatTarget } from './survivalTactics.ts';
 import { getSurvivalProgressionInfo, getSurvivalPromotionRarityFloor, getSurvivalXpRequirement } from './survivalProgression.ts';
+import { getSurvivalEnemySizeProfile } from './survivalEnemyScale.ts';
+import { rollSurvivalChaosRoulette } from './survivalChaosRoulette.ts';
 import { createSurvivalXpStreakState, registerSurvivalXpPickup, type SurvivalXpStreakState } from './survivalXpStreak.ts';
 import { advanceSurvivalShiftEvent, createSurvivalShiftEventState, registerSurvivalShiftEventAction, type SurvivalShiftEvent, type SurvivalShiftEventAction, type SurvivalShiftEventState } from './survivalShiftEvents.ts';
 import { advanceSurvivalContract, createSurvivalContract, registerSurvivalContractAction, type SurvivalContractAction, type SurvivalContractState } from './survivalContracts.ts';
@@ -295,7 +297,7 @@ export interface GameCallbacks {
   onSurvivalAnnouncement?: (title: string, subtitle: string, detail: string) => void;
   onSurvivalUpdate?: (snapshot: SurvivalSnapshot) => void;
   onSurvivalSecretFound?: (mapId: SurvivalMapId, secretId: string, secretName: string) => void;
-  onSurvivalLevelUp?: (options: SurvivalUpgradeOption[], context?: 'levelup' | 'rank-up' | 'boss-reward') => void;
+  onSurvivalLevelUp?: (options: SurvivalUpgradeOption[], context?: 'levelup' | 'rank-up' | 'boss-reward' | 'chaos-roulette') => void;
   onSurvivalDashUpdate?: (progress: number, ready: boolean, remainingSeconds: number) => void;
   onPvpUpdate?: (state: PvpArenaState, localSlot: 'p1' | 'p2') => void;
   onPvpMatchEnd?: (state: PvpArenaState, localSlot: 'p1' | 'p2') => void;
@@ -815,6 +817,7 @@ export class PaleciakiGameEngine {
   private survivalWaveStartKills = 0;
   private survivalLevel = 1;
   private survivalRankUpPending = false;
+  private survivalChaosRoulettePending = false;
   private survivalXp = 0;
   private survivalXpToNext = 6;
   private survivalXpStreak: SurvivalXpStreakState = createSurvivalXpStreakState();
@@ -871,6 +874,8 @@ export class PaleciakiGameEngine {
   private survivalPomazaniecMarker: THREE.Group | null = null;
   private survivalPomazaniecMarkerPulse = 0;
   private armorBlockCooldown = 0;
+  private radiationFieldCooldown = 0;
+  private radiationFieldAura: THREE.Mesh | null = null;
   private survivalPendingOptions: SurvivalUpgradeOption[] = [];
   private survivalXpGems: { mesh: THREE.Mesh; value: number; life: number; phase: number }[] = [];
   // Every XP pickup shares these GPU resources instead of allocating a geometry/material per kill.
@@ -2387,6 +2392,7 @@ export class PaleciakiGameEngine {
 
     private rebuildPlayerMesh() {
     // A fresh operator rig starts from a neutral pose even after game-over/retry.
+    this.clearRadiationFieldAura();
     this.attackSwingTimer = 0;
     this.specialSwingTimer = 0;
     this.playerHitReactTimer = 0;
@@ -2566,6 +2572,7 @@ export class PaleciakiGameEngine {
     this.survivalWaveStartKills = 0;
     this.survivalLevel = 1;
     this.survivalRankUpPending = false;
+    this.survivalChaosRoulettePending = false;
     this.survivalXp = 0;
     this.survivalXpToNext = getSurvivalXpRequirement(1);
     this.survivalXpStreak = createSurvivalXpStreakState();
@@ -2612,6 +2619,9 @@ export class PaleciakiGameEngine {
     this.survivalPomazaniecCompleted = false;
     this.survivalPomazaniecMarkerPulse = 0;
     this.armorBlockCooldown = 0;
+    this.radiationFieldCooldown = 0;
+    this.clearRadiationFieldAura();
+    this.survivalChaosRoulettePending = false;
     this.survivalPendingOptions = [];
     this.survivalBossRewardPending = false;
     this.marcinReclamationTimer = 0;
@@ -2639,6 +2649,7 @@ export class PaleciakiGameEngine {
       arcDrone: 0,
       xpSurge: 0,
       damageWard: 0,
+      radiationField: 0,
     };
     this.timedEventCooldown = 16.0;
     this.doublePointsTimer = 0;
@@ -6469,11 +6480,21 @@ export class PaleciakiGameEngine {
     this.survivalPendingOptions = [];
     this.survivalBossRewardPending = false;
     this.survivalRankUpPending = false;
-    this.state = 'playing';
-    sound.startMusic();
     this.emitFloatingToast(choice.rarityLabel + ' MODUŁ: ' + choice.title, this.playerPos.x, this.playerPos.y + 1.6, this.playerPos.z, 'perk');
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
 
+    // Every third level grants a separate one-armed-bandit result after the
+    // normal operator draft. The simulation remains paused until the spin.
+    if (this.survivalChaosRoulettePending) {
+      this.survivalPendingOptions = [];
+      this.state = 'levelup';
+      sound.stopMusic();
+      this.callbacks.onSurvivalLevelUp?.([], 'chaos-roulette');
+      return true;
+    }
+
+    this.state = 'playing';
+    sound.startMusic();
     if (this.survivalXp >= this.survivalXpToNext) {
       this.beginSurvivalLevelUp();
     }
@@ -10177,8 +10198,10 @@ export class PaleciakiGameEngine {
     const difficultyProfile = getSurvivalDifficultyProfile(this.survivalWave);
     const pomazaniecRaidActive = this.survivalPomazaniecTriggered && !this.survivalPomazaniecCompleted;
     const surgeActive = this.survivalSurgeTimeLeft > 0;
-    const mobileEnemyCap = this.adaptivePerformanceTier >= 2 ? 13 : this.adaptivePerformanceTier === 1 ? 16 : 18;
-    const enemyCap = (isMobile ? mobileEnemyCap : 34) +
+    // Keep more bodies on screen without abandoning the adaptive mobile budget.
+    // On a capable phone such as Poco F6 the baseline is 22; weaker tiers step down.
+    const mobileEnemyCap = this.adaptivePerformanceTier >= 2 ? 16 : this.adaptivePerformanceTier === 1 ? 20 : 22;
+    const enemyCap = (isMobile ? mobileEnemyCap : 42) +
       (pomazaniecRaidActive ? (isMobile ? 3 : 5) : 0) +
       (surgeActive ? (isMobile ? (this.adaptivePerformanceTier >= 2 ? 2 : this.adaptivePerformanceTier === 1 ? 3 : 4) : 6) : 0);
     const aliveCount = this.enemies.reduce((count, enemy) => count + (enemy.state === 'defeated' ? 0 : 1), 0);
@@ -10216,8 +10239,14 @@ export class PaleciakiGameEngine {
     } else {
       this.survivalSpawnTimer -= dt;
       if (this.survivalSpawnTimer <= 0 && aliveCount < enemyCap) {
-        const groupLimit = isMobile ? (this.adaptivePerformanceTier >= 2 ? 3 : this.adaptivePerformanceTier === 1 ? 4 : 5) : 7;
-        const groupSize = Math.min(groupLimit, 3 + Math.floor(this.survivalWave * 0.34) + difficultyProfile.extraGroupSize, enemyCap - aliveCount);
+        const groupLimit = isMobile
+          ? (this.adaptivePerformanceTier >= 2 ? 5 : this.adaptivePerformanceTier === 1 ? 7 : 8)
+          : 10;
+        const groupSize = Math.min(
+          groupLimit,
+          4 + Math.floor(this.survivalWave * 0.38) + difficultyProfile.extraGroupSize,
+          enemyCap - aliveCount,
+        );
         for (let i = 0; i < groupSize; i++) this.spawnSurvivalEnemy(this.survivalWave);
         this.survivalSpawnTimer = difficultyProfile.spawnIntervalSeconds;
       }
@@ -11767,7 +11796,25 @@ export class PaleciakiGameEngine {
         '#38bdf8'
       );
     }
+    this.applySurvivalEnemySize(enemy);
     enemy.shoutTimer = 2.0 + Math.random() * 4.0;
+  }
+
+  /** Add readable small and giant variants while keeping their hitboxes in step. */
+  private applySurvivalEnemySize(enemy: EnemyItem): void {
+    if (!enemy.mesh || isMajorSurvivalBossType(enemy.type) || enemy.type === 'sebix_m') return;
+    const profile = getSurvivalEnemySizeProfile(Math.random());
+    if (profile.scaleMultiplier === 1) return;
+
+    enemy.mesh.scale.multiplyScalar(profile.scaleMultiplier);
+    enemy.collisionRadius = getEnemyCollisionRadius(enemy.type, enemy.collisionRadius) * profile.scaleMultiplier;
+    enemy.maxHp = Math.max(1, Math.ceil(enemy.maxHp * profile.healthMultiplier));
+    enemy.hp = enemy.maxHp;
+    enemy.speed = Math.max(0.7, enemy.speed * profile.speedMultiplier);
+    if (profile.label) {
+      enemy.name = profile.label + ' • ' + enemy.name;
+      enemy.shoutText = profile.label + ': ' + enemy.shoutText;
+    }
   }
 
   private spawnSurvivalBoss(wave: number) {
@@ -11904,6 +11951,7 @@ export class PaleciakiGameEngine {
     if (this.gameMode !== 'survival' || this.state !== 'playing') return;
     this.survivalXp = Math.max(0, this.survivalXp - this.survivalXpToNext);
     this.survivalLevel++;
+    this.survivalChaosRoulettePending = this.survivalLevel % 3 === 0;
     this.survivalXpToNext = getSurvivalXpRequirement(this.survivalLevel);
     const progression = getSurvivalProgressionInfo(this.survivalLevel);
     this.survivalRankUpPending = progression.isPromotion;
@@ -11923,6 +11971,142 @@ export class PaleciakiGameEngine {
       this.survivalRankUpPending ? 'rank-up' : 'levelup',
     );
     sound.playAbility(this.currentCharacterId);
+  }
+
+  /** Spin the B4 machine once, only after the normal third-level draft. */
+  public spinSurvivalChaosRoulette(): boolean {
+    if (
+      this.gameMode !== 'survival' ||
+      this.state !== 'levelup' ||
+      !this.survivalChaosRoulettePending
+    ) return false;
+
+    const outcome = rollSurvivalChaosRoulette(Math.random());
+    const finishSpin = (title: string, detail: string, icon = '🎰'): boolean => {
+      this.survivalChaosRoulettePending = false;
+      this.survivalPendingOptions = [];
+      this.state = 'playing';
+      sound.startMusic();
+      this.emitFloatingToast(icon + ' RNG B4: ' + title, this.playerPos.x, this.playerPos.y + 1.85, this.playerPos.z, 'combo');
+      this.callbacks.onSurvivalAnnouncement?.('JEDNORĘKI BANDYTA B4', title, detail);
+      this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+      if (this.survivalXp >= this.survivalXpToNext) this.beginSurvivalLevelUp();
+      return true;
+    };
+
+    switch (outcome) {
+      case 'skill': {
+        this.survivalPendingOptions = this.rollSurvivalUpgradeOptions();
+        if (this.survivalPendingOptions.length > 0) {
+          const selected = this.survivalPendingOptions[Math.floor(Math.random() * this.survivalPendingOptions.length)];
+          this.survivalChaosRoulettePending = false;
+          this.emitFloatingToast('🎰 WYGRANA: ' + selected.title, this.playerPos.x, this.playerPos.y + 2.1, this.playerPos.z, 'combo');
+          return this.chooseSurvivalUpgrade(selected.id);
+        }
+        const fallback = AVAILABLE_PERKS[Math.floor(Math.random() * AVAILABLE_PERKS.length)];
+        this.activatePerk(fallback.id, fallback.duration || 20);
+        return finishSpin(fallback.name, fallback.description, fallback.icon);
+      }
+      case 'perk': {
+        const perk = AVAILABLE_PERKS[Math.floor(Math.random() * AVAILABLE_PERKS.length)];
+        this.activatePerk(perk.id, perk.duration || 20);
+        return finishSpin(perk.name, perk.description, perk.icon);
+      }
+      case 'shield':
+        this.activatePerk('radioactive_field', 10);
+        return finishSpin('POLE OCHRONNE GAMMA B4', 'Zielona osłona pochłania jedno trafienie co 0,85 sekundy przez 10 sekund.', '☢️');
+      case 'heal': {
+        const healed = Math.min(this.maxHp - this.hp, 2);
+        this.hp = Math.min(this.maxHp, this.hp + 2);
+        this.callbacks.onHpUpdate(this.hp, this.maxHp);
+        if (healed <= 0) this.activatePerk('hardhat', 20);
+        return finishSpin(healed > 0 ? 'AWARYJNA KAWA +2 HP' : 'ZAPASOWY KASK BHP', healed > 0 ? 'Odzyskano dwa punkty zdrowia.' : 'Pełne zdrowie — zamiast leczenia otrzymujesz jednorazową tarczę.', '☕');
+      }
+      case 'explosion': {
+        const hits = this.triggerSurvivalCrimsonExplosion(8.2, 5);
+        return finishSpin('CRIMSON BLAST!', 'Wybuch trafił ' + hits + ' przeciwników w promieniu 8,2 m.', '💥');
+      }
+      case 'nova': {
+        this.triggerSurvivalBulletNova();
+        return finishSpin('NOVA POCISKÓW', 'Rozproszona salwa poleciała we wszystkich kierunkach.', '✹');
+      }
+      case 'enemy_pack': {
+        const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
+        const cap = isMobile
+          ? (this.adaptivePerformanceTier >= 2 ? 16 : this.adaptivePerformanceTier === 1 ? 20 : 22)
+          : 42;
+        const alive = this.enemies.reduce((count, enemy) => count + (enemy.state === 'defeated' ? 0 : 1), 0);
+        const count = Math.min(3, Math.max(0, cap - alive));
+        for (let index = 0; index < count; index++) this.spawnSurvivalEnemy(this.survivalWave);
+        return finishSpin(count > 0 ? 'DOSTAWA 3 NIEPROSZONYCH GOŚCI' : 'MAGAZYN PEŁNY — NIC NIE DOJECHAŁO',
+          count > 0 ? 'Wylosowano dodatkowych przeciwników. Nie było ich w zamówieniu, ale już są.' : 'Limit bezpieczeństwa urządzenia jest już osiągnięty.', '👾');
+      }
+      default:
+        this.activatePerk('crimson_burst', 0);
+        return finishSpin('NIEZNANY ŁADUNEK', 'Automat wyrzucił awaryjny wybuch. Reklamacje przyjmujemy na bramie 404.', '💥');
+    }
+  }
+
+  /** Bounded area burst inspired by Crimsonland; uses the normal damage/death pipeline. */
+  private triggerSurvivalCrimsonExplosion(radius: number, damage: number): number {
+    const x = this.playerPos.x;
+    const z = this.playerPos.z;
+    const mobile = this.isHandheldViewport;
+    this.spawnExplosionParticles(x, 0.18, z, 0xff6938, mobile ? 18 : 26);
+    this.spawnParticleRing(x, 0.24, z, 0xff8a46);
+    this.triggerScreenShake(0.38, 0.24);
+    this.triggerBloomPulse(0.42);
+    sound.playBossWarning();
+
+    let hits = 0;
+    for (const enemy of this.enemies) {
+      if (enemy.state === 'defeated') continue;
+      if (Math.hypot(enemy.x - x, enemy.z - z) > radius) continue;
+      enemy.shieldActive = false;
+      this.damageEnemy(enemy, damage, x, z, 'ability');
+      hits++;
+      if (enemy.hp <= 0) this.defeatEnemy(enemy, 260, true);
+      else {
+        enemy.stunTimer = Math.max(enemy.stunTimer, 0.55);
+        enemy.state = 'stunned';
+      }
+    }
+    return hits;
+  }
+
+  /** A real expanding ring of collision-enabled projectiles, not a decorative particle circle. */
+  private triggerSurvivalBulletNova(): void {
+    const count = this.isHandheldViewport
+      ? (this.adaptivePerformanceTier >= 2 ? 10 : this.adaptivePerformanceTier === 1 ? 14 : 16)
+      : 20;
+    const angleOffset = Math.random() * Math.PI * 2;
+    const geometry = new THREE.SphereGeometry(0.14, 8, 6);
+    const material = new THREE.MeshBasicMaterial({ color: 0xffd166, toneMapped: false });
+    for (let index = 0; index < count; index++) {
+      const angle = angleOffset + index / count * Math.PI * 2;
+      const direction = new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
+      const mesh = new THREE.Mesh(geometry.clone(), material.clone());
+      mesh.position.set(this.playerPos.x + direction.x * 0.8, this.playerPos.y + 0.78, this.playerPos.z + direction.z * 0.8);
+      this.levelRoot.add(mesh);
+      this.projectiles.push({
+        mesh,
+        vel: direction.multiplyScalar(14),
+        life: 1.35,
+        maxLife: 1.35,
+        damage: 2.4,
+        damageSource: 'ability',
+        pierce: 1,
+        disposeOnRemove: true,
+        hitIds: new Set(),
+        homingTrail: true,
+        homingTrailColor: 0xffa34a,
+      });
+    }
+    material.dispose();
+    geometry.dispose();
+    this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.45, this.playerPos.z, 0xffd166);
+    sound.playAttackWhoosh();
+    this.triggerBloomPulse(0.34);
   }
 
   private beginSurvivalBossReward(bossName: string) {
@@ -12045,6 +12229,37 @@ export class PaleciakiGameEngine {
     }
   }
 
+  private clearRadiationFieldAura(): void {
+    const aura = this.radiationFieldAura;
+    if (!aura) return;
+    aura.parent?.remove(aura);
+    aura.geometry.dispose();
+    const material = aura.material;
+    if (Array.isArray(material)) material.forEach((entry) => entry.dispose());
+    else material.dispose();
+    this.radiationFieldAura = null;
+  }
+
+  private ensureRadiationFieldAura(): void {
+    if (!this.playerGroup || this.radiationFieldAura) return;
+    const aura = new THREE.Mesh(
+      new THREE.TorusGeometry(0.94, 0.065, 8, 36),
+      new THREE.MeshBasicMaterial({
+        color: 0x65f36b,
+        transparent: true,
+        opacity: 0.54,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    );
+    aura.name = 'survival-radioactive-protection-field';
+    aura.rotation.x = Math.PI / 2;
+    aura.position.y = 0.53;
+    aura.renderOrder = 8;
+    this.playerGroup.add(aura);
+    this.radiationFieldAura = aura;
+  }
+
   private updatePerkTimers(dt: number) {
     let changed = false;
     if (this.activePerks.doubleJump > 0) {
@@ -12071,6 +12286,22 @@ export class PaleciakiGameEngine {
     if ((this.activePerks.arcDrone || 0) > 0) { this.activePerks.arcDrone = Math.max(0, (this.activePerks.arcDrone || 0) - dt); changed = true; }
     if ((this.activePerks.xpSurge || 0) > 0) { this.activePerks.xpSurge = Math.max(0, (this.activePerks.xpSurge || 0) - dt); changed = true; }
     if ((this.activePerks.damageWard || 0) > 0) { this.activePerks.damageWard = Math.max(0, (this.activePerks.damageWard || 0) - dt); changed = true; }
+    if ((this.activePerks.radiationField || 0) > 0) {
+      this.activePerks.radiationField = Math.max(0, (this.activePerks.radiationField || 0) - dt);
+      changed = true;
+      if (this.radiationFieldAura) {
+        const time = performance.now() * 0.006;
+        const strength = 0.96 + Math.sin(time) * 0.08;
+        this.radiationFieldAura.scale.setScalar(strength);
+        this.radiationFieldAura.rotation.z += dt * 0.72;
+        const material = this.radiationFieldAura.material as THREE.MeshBasicMaterial;
+        material.opacity = 0.34 + (this.activePerks.radiationField / 10) * 0.25 + Math.sin(time * 1.7) * 0.07;
+      }
+    } else if (this.radiationFieldAura) {
+      this.clearRadiationFieldAura();
+      changed = true;
+    }
+    if (this.radiationFieldCooldown > 0) this.radiationFieldCooldown = Math.max(0, this.radiationFieldCooldown - dt);
     if (this.armorBlockCooldown > 0) this.armorBlockCooldown = Math.max(0, this.armorBlockCooldown - dt);
     if (this.doublePointsTimer > 0) {
       this.doublePointsTimer = Math.max(0, this.doublePointsTimer - dt);
@@ -12216,6 +12447,26 @@ export class PaleciakiGameEngine {
         setProceduralLimbPose(this.rightLeg, 0);
         setProceduralLimbPose(this.leftArm, 0, 0);
         setProceduralLimbPose(this.rightArm, 0, 0);
+      }
+    }
+
+    if (this.specialSwingTimer > 0 && this.currentCharacterId !== 'grzesiek') {
+      const phase = THREE.MathUtils.clamp(1 - this.specialSwingTimer / 0.86, 0, 1);
+      const strike = Math.sin(phase * Math.PI);
+      const anticipation = 1 - THREE.MathUtils.smoothstep(phase, 0.02, 0.34);
+      const followThrough = THREE.MathUtils.smoothstep(phase, 0.24, 0.78);
+      if (this.currentCharacterId === 'marcin') {
+        setProceduralLimbPose(this.rightArm, -0.68 - anticipation * 0.58 + strike * 0.62 - followThrough * 0.28, -0.12);
+        setProceduralLimbPose(this.leftArm, -0.18 - strike * 0.28, 0.16 + strike * 0.12);
+      } else if (this.currentCharacterId === 'dawid') {
+        setProceduralLimbPose(this.leftArm, -0.88 - anticipation * 0.36 + strike * 0.62, 0.42 - strike * 0.22);
+        setProceduralLimbPose(this.rightArm, -0.92 - anticipation * 0.36 + strike * 0.62, -0.42 + strike * 0.22);
+      } else if (this.currentCharacterId === 'mateusz') {
+        setProceduralLimbPose(this.rightArm, -0.52 - anticipation * 0.52 - strike * 0.32, -0.34 + strike * 0.34);
+        setProceduralLimbPose(this.leftArm, -0.42 - anticipation * 0.24 + strike * 0.18, 0.38 - strike * 0.18);
+      } else if (this.currentCharacterId === 'piotr') {
+        setProceduralLimbPose(this.rightArm, -0.86 - anticipation * 0.46 + strike * 0.70, -0.48 - strike * 0.30);
+        setProceduralLimbPose(this.leftArm, -0.20 - strike * 0.16, 0.30 + strike * 0.18);
       }
     }
 
@@ -18631,7 +18882,7 @@ export class PaleciakiGameEngine {
       (this.gameMode === 'survival' ? this.survivalAbilityCooldownMultiplier : 1);
     this.abilityCooldownState = createAbilityCooldown(cooldownSeconds);
     this.updateAbilityCooldown(0, true);
-    this.specialSwingTimer = 0.72;
+    this.specialSwingTimer = 0.86;
     this.requestGobkitAction(this.playerGobkitTrack, 'Special', this.specialSwingTimer);
     const abilityDamageMultiplier = this.gameMode === 'survival'
       ? Math.min(1.5, this.survivalDamageMultiplier * 1.10) : 1;
@@ -18758,6 +19009,7 @@ export class PaleciakiGameEngine {
       });
       this.emitFloatingToast('🧱 SALWA GRESU 120x280 + ⚡ Kubełek Mocy!', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
     } else if (this.currentCharacterId === 'mateusz') {
+      this.sayQuote('MULTIWERŚUM, ZBIÓRKA! Pięciu bohaterów, zero nadgodzin — panowie, macie własne cele!');
       this.spawnMateuszRivals();
     } else if (this.currentCharacterId === 'piotr') {
       this.attackSwingDuration = 0.3;
@@ -19261,6 +19513,15 @@ export class PaleciakiGameEngine {
 
     if (this.marcinReclamationTimer > 0) {
       this.triggerScreenShake(0.2, 0.2);
+      return;
+    }
+
+    if ((this.activePerks.radiationField || 0) > 0 && this.radiationFieldCooldown <= 0) {
+      this.radiationFieldCooldown = 0.85;
+      this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.85, this.playerPos.z, 0x65f36b);
+      this.emitFloatingToast('☢️ POLE GAMMA POCHŁONĘŁO TRAFIENIE!', this.playerPos.x, this.playerPos.y + 1.45, this.playerPos.z, 'perk');
+      sound.playShieldBreak();
+      this.triggerScreenShake(0.16, 0.12);
       return;
     }
 
@@ -19832,6 +20093,17 @@ export class PaleciakiGameEngine {
       this.activePerks.shield = true;
       sound.playShieldBreak();
       this.sayQuote('BARYKADA EURO! Teraz nawet reklamacja odbije się od palety!');
+    } else if (perkId === 'radioactive_field') {
+      this.activePerks.radiationField = Math.max(this.activePerks.radiationField || 0, duration);
+      this.radiationFieldCooldown = 0;
+      this.ensureRadiationFieldAura();
+      this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.45, this.playerPos.z, 0x65f36b);
+      sound.playElectricalSparks();
+      this.sayQuote('POLE GAMMA B4! Zielona osłona aktywna. Tym razem promieniowanie jest po naszej stronie!');
+    } else if (perkId === 'crimson_burst') {
+      this.triggerSurvivalCrimsonExplosion(8.2, 5);
+    } else if (perkId === 'bullet_nova') {
+      this.triggerSurvivalBulletNova();
     }
 
     this.callbacks.onPerksUpdate?.(this.activePerks);

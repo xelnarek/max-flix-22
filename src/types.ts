@@ -277,6 +277,8 @@ export interface ActivePerks {
   arcDrone?: number;
   xpSurge?: number;
   damageWard?: number;
+  /** Temporary pulsing field; absorbs one hit per short recharge window. */
+  radiationField?: number;
 }
 
 export type PerkType =
@@ -294,7 +296,10 @@ export type PerkType =
   | 'forklift_horn'
   | 'night_shift_espresso'
   | 'golden_wz'
-  | 'pallet_guard';
+  | 'pallet_guard'
+  | 'radioactive_field'
+  | 'crimson_burst'
+  | 'bullet_nova';
 
 export interface PerkDef {
   id: PerkType;
@@ -440,6 +445,28 @@ export const AVAILABLE_PERKS: PerkDef[] = [
     icon: '🛡️',
     color: 0x65a30d,
     duration: 18,
+  },
+  {
+    id: 'radioactive_field',
+    name: 'Pole Ochronne Gamma B4',
+    description: 'Przez 10 sekund zielone pole pochłania jedno trafienie co 0,85 sekundy. Nie jest to pełna nietykalność.',
+    icon: '☢️',
+    color: 0x65f36b,
+    duration: 10,
+  },
+  {
+    id: 'crimson_burst',
+    name: 'Crimson Blast — Odprawa Ostateczna',
+    description: 'Natychmiastowy wybuch wokół operatora rani i krótko ogłusza pobliskich przeciwników.',
+    icon: '💥',
+    color: 0xff6538,
+  },
+  {
+    id: 'bullet_nova',
+    name: 'Nova Pocisków B4',
+    description: 'Wystrzeliwuje wachlarz pocisków we wszystkich kierunkach. Każdy może trafić przeciwnika na swojej drodze.',
+    icon: '✹',
+    color: 0xffc857,
   },
 ];
 

@@ -123,7 +123,7 @@ try {
 
   const perkIds = typeUnionMembers(sourceTypes, 'PerkType');
   const unityPerkIds = enumMembers(domain, 'PerkKind');
-  if (perkIds.length !== 15 || unityPerkIds.length !== 15) fail('Expected 15 stable perk IDs on both sides.');
+  if (perkIds.length !== 18 || unityPerkIds.length !== 18) fail('Expected 18 stable perk IDs on both sides.');
 
   const sourceMapMatch = sourceMaps.match(/SURVIVAL_MAP_IDS[\s\S]*?=\s*\[([\s\S]*?)\]/);
   const sourceMapIds = sourceMapMatch
