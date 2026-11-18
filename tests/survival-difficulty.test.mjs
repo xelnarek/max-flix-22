@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import { getSurvivalDifficultyProfile } from '../src/survivalDifficulty.ts';
 import { scaleSurvivalOutgoingDamage, scaleSurvivalIncomingDamage, SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER, SURVIVAL_HIT_INVULNERABILITY_SECONDS } from '../src/characterBalance.ts';
 
-test('Survival applies stronger pressure from the opening wave and scales monotonically', () => {
+test('Survival adds a small opening pressure bump and scales difficulty monotonically', () => {
   const early = getSurvivalDifficultyProfile(1);
   const middle = getSurvivalDifficultyProfile(10);
   const late = getSurvivalDifficultyProfile(30);
-  assert.equal(early.enemyHealthMultiplier, 1.28);
+  assert.equal(early.enemyHealthMultiplier, 1.33);
   assert.equal(early.enemySpeedMultiplier, 1);
-  assert.equal(early.spawnIntervalSeconds, 5.5);
-  assert.equal(early.enemyAbilityRateMultiplier, 1.1);
+  assert.equal(early.spawnIntervalSeconds, 5.35);
+  assert.equal(early.enemyAbilityRateMultiplier, 1.12);
   assert.ok(middle.enemyHealthMultiplier > early.enemyHealthMultiplier);
   assert.ok(late.enemyHealthMultiplier > middle.enemyHealthMultiplier);
   assert.ok(middle.enemySpeedMultiplier > early.enemySpeedMultiplier);
@@ -21,13 +21,15 @@ test('Survival applies stronger pressure from the opening wave and scales monoto
   assert.deepEqual(getSurvivalDifficultyProfile(Number.NaN), early);
 });
 
-test('late-game difficulty is capped while enemy groups and attack cadence stay bounded', () => {
+test('the small difficulty increase leaves movement tuning intact and keeps late-game values bounded', () => {
+  const early = getSurvivalDifficultyProfile(1);
   const late = getSurvivalDifficultyProfile(1000);
-  assert.equal(late.enemyHealthMultiplier, 3.38);
+  assert.equal(early.enemySpeedMultiplier, 1);
+  assert.equal(late.enemyHealthMultiplier, 3.48);
   assert.equal(late.enemySpeedMultiplier, 1.55);
-  assert.equal(late.spawnIntervalSeconds, 3);
+  assert.equal(late.spawnIntervalSeconds, 2.95);
   assert.equal(late.extraGroupSize, 6);
-  assert.equal(late.enemyAbilityRateMultiplier, 1.7);
+  assert.equal(late.enemyAbilityRateMultiplier, 1.74);
 });
 
 test('every Survival operator receives a stronger outgoing damage and increased incoming pressure', () => {
