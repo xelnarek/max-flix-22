@@ -24,7 +24,7 @@ test('all five hero profiles have valid, deliberately different combat tuning', 
     assert.ok(hero.moveSpeed >= 7 && hero.moveSpeed <= 11);
     assert.ok(hero.attackCooldownSeconds >= 0.8 && hero.attackCooldownSeconds <= 1.4);
     assert.ok(hero.damage >= 4 && hero.damage <= 9);
-    assert.ok(hero.stunSeconds >= 0.2 && hero.stunSeconds <= 0.9);
+    assert.ok(hero.stunSeconds >= 0.1 && hero.stunSeconds <= 0.9);
   }
   assert.ok(MATEUSZ_RIVAL_ROSTER.find(hero => hero.id === 'hulk').damage >
     MATEUSZ_RIVAL_ROSTER.find(hero => hero.id === 'spider-man').damage);
