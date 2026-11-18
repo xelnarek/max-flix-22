@@ -36,6 +36,6 @@ test('every eighth elimination remains a guaranteed milestone crystal', () => {
 test('wave and anomaly bonuses stack but remain bounded', () => {
   const result = rollSurvivalXpDrop('sztaplar_szalony', 0.1, 0.99, 1.5, 1.6, 1.18);
   assert.equal(result?.value, 5);
-  assert.equal(rollSurvivalXpDrop('kurier', 0.05, 0.5, 1, 0, 1)?.value, 1);
+  assert.equal(rollSurvivalXpDrop('kurier', 0.05, 0.5, 1, 0, 1), null);
   assert.equal(rollSurvivalXpDrop('kurier', Number.NaN, Number.NaN, Number.NaN), null);
 });
