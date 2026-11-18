@@ -3284,6 +3284,21 @@ html[data-ui-landscape-touch="true"] .story-modal-card .story-slide {
   text-align: center;
   text-shadow: 0 0 12px rgba(251,191,36,.48);
 }
+.survival-chaos-machine .survival-chaos-marquee .survival-chaos-lamp {
+  display: block;
+  place-items: initial;
+  width: 7px;
+  height: 7px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #facc15;
+  font-size: 0;
+  box-shadow: 0 0 8px #facc15, 0 0 16px rgba(250,204,21,.6);
+  animation: survival-chaos-lamp 0.72s steps(2, end) infinite;
+}
+.survival-chaos-machine .survival-chaos-marquee .survival-chaos-lamp:last-child { animation-delay: .36s; }
 .survival-chaos-lamp {
   width: 7px;
   height: 7px;
