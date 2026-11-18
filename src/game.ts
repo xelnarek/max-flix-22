@@ -12088,9 +12088,9 @@ export class PaleciakiGameEngine {
       case 'elite_delivery': {
         const delivered = this.spawnSurvivalEliteDelivery();
         return finishSpin(
-          delivered > 0 ? 'DOSTAWA PRIORYTETOWA' : 'ELITARNA DOSTAWA ZABLOKOWANA',
+          delivered > 0 ? 'DOSTAWA PRIORYTETOWA ×' + delivered : 'ELITARNA DOSTAWA ZABLOKOWANA',
           delivered > 0
-            ? 'Przyjechała elita: ciężki kontroler i szybki kurier. Mają odmienne tempo, gabaryty i odporność.'
+            ? 'Pakiet ma dwa profile: ciężkiego kontrolera i szybkiego kuriera. Bieżący poziom wydajności dopuścił ' + delivered + ' jednostki.'
             : 'Limit urządzenia nie pozwolił dodać kolejnych wrogów.',
           '🚨',
         );
@@ -12136,7 +12136,7 @@ export class PaleciakiGameEngine {
       if (enemy.state === 'defeated') continue;
       const isBoss = isMajorSurvivalBossType(enemy.type) || enemy.type === 'sebix_m';
       enemy.stunTimer = Math.max(enemy.stunTimer, isBoss ? 0.82 : 1.8);
-      if (!isBoss) enemy.state = 'stunned';
+      enemy.state = 'stunned';
       if (impactRings < budget.timeLockImpactLimit) {
         this.spawnParticleRing(enemy.x, enemy.y + 0.48, enemy.z, 0x7dd3fc);
         impactRings++;
