@@ -79,13 +79,13 @@ test('device render profiles cap mobile GPU work and preserve desktop quality', 
   assert.equal(balanced.shadowsEnabled, false);
   assert.equal(balanced.softShadows, false);
   assert.equal(balanced.bloomEnabled, false);
-  assert.equal(balanced.pixelRatioCap, 1.36);
-  assert.equal(balanced.survivalPixelRatioCap, 1.16);
+  assert.equal(balanced.pixelRatioCap, 1.44);
+  assert.equal(balanced.survivalPixelRatioCap, 1.25);
 
   const high = getDeviceRenderProfile(true, 8, 8);
   assert.equal(high.tier, 'mobile-high');
-  assert.equal(high.pixelRatioCap, 1.78);
-  assert.equal(high.survivalPixelRatioCap, 1.44);
+  assert.equal(high.pixelRatioCap, 1.90);
+  assert.equal(high.survivalPixelRatioCap, 1.55);
   assert.equal(high.shadowsEnabled, false);
   assert.equal(high.bloomEnabled, true);
 
@@ -107,4 +107,15 @@ test('pixel ratio transitions apply the 0.9 and 0.8 tiers without reacting to ti
   assert.equal(shouldApplyPixelRatioChange(0.9, 0.8), true);
   assert.equal(shouldApplyPixelRatioChange(1, 0.98), false);
   assert.equal(shouldApplyPixelRatioChange(Number.NaN, 0.9), false);
+});
+
+
+test('balanced and high-density mobile profiles retain more native detail without removing adaptive FPS relief', async () => {
+  const { getDeviceRenderProfile, getAdaptiveRenderScale } = await import('../src/renderQuality.ts');
+  const balanced = getDeviceRenderProfile(true, 6, 6);
+  const high = getDeviceRenderProfile(true, 8, 8);
+  assert.ok(balanced.survivalPixelRatioCap > 1.16);
+  assert.ok(high.survivalPixelRatioCap > balanced.survivalPixelRatioCap);
+  assert.equal(getAdaptiveRenderScale(39, true, 1, 0, true), 0.72);
+  assert.equal(getAdaptiveRenderScale(60, true, 1, 0, true), 1);
 });
