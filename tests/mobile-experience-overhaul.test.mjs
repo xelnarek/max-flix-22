@@ -89,3 +89,10 @@ test('combat quality systems remain wired: swept shots, obstacle blocking, teleg
   assert.match(game, /updateGobkitAnimations\(/);
   assert.match(animation, /shouldKeepGobkitAction/);
 });
+
+test('PvP scoreboard uses individual operator portraits and exposes hidden state accessibly', async () => {
+  const app = await read('../src/index.ts');
+  assert.match(app, /pvpHud\?\.setAttribute\('aria-hidden', String\(!activePvp\)\)/);
+  assert.match(app, /p1Avatar\.innerHTML = operatorPortrait\(state\.p1\.operatorId\)/);
+  assert.match(app, /p2Avatar\.innerHTML = operatorPortrait\(state\.p2\.operatorId\)/);
+});
