@@ -14475,6 +14475,10 @@ export class PaleciakiGameEngine {
     if (actualDamage > 0 && (enemy.aiMeleeWindupTimer !== undefined || enemy.aiMeleeStrikePending)) {
       this.cancelEnemyMeleeAttackTelegraph(enemy, true);
     }
+    // A confirmed player hit interrupts the brief post-swing recovery as well.
+    if (actualDamage > 0 && (enemy.aiMeleeRecoveryTimer ?? 0) > 0) {
+      enemy.aiMeleeRecoveryTimer = 0;
+    }
     const shouldSpawnImpactBurst = actualDamage > 0 && (enemy.hitReactTimer || 0) <= 0.015;
     if (this.gameMode === 'survival' && actualDamage > 0 && damageSource !== null) {
       recordSurvivalDamage(this.survivalDamageStats, damageSource, actualDamage);
@@ -15140,6 +15144,7 @@ export class PaleciakiGameEngine {
       }
       if (!e.mesh) continue;
       e.aiMeleeCooldownTimer = Math.max(0, (e.aiMeleeCooldownTimer ?? 0) - dt);
+      e.aiMeleeRecoveryTimer = Math.max(0, (e.aiMeleeRecoveryTimer ?? 0) - dt);
       if (e.survivalEliteInsignia) {
         e.survivalEliteInsignia.rotation.y += dt * (e.survivalEliteSpinSpeed ?? 0.8);
       }
@@ -15942,6 +15947,9 @@ export class PaleciakiGameEngine {
           this.advanceEnemyMeleeAttackTelegraph(e, dt);
           e.mesh.rotation.y = e.aiMeleeLockedDirection ?? Math.atan2(dx, dz);
           e.mesh.position.set(e.x, e.y, e.z);
+        } else if ((e.aiMeleeRecoveryTimer ?? 0) > 0) {
+          // Keep the committed strike planted through its short follow-through.
+          e.mesh.position.set(e.x, e.y, e.z);
         } else if (e.type === 'sebix_m') {
           this.updateSebixBehaviour(e,dt,distToPlayer,dx,dz);
         } else if (e.type === 'bosman_krakow' && e.chargeTimer !== undefined) {
@@ -16120,7 +16128,7 @@ export class PaleciakiGameEngine {
               this.beginEnemyRangedAttackTelegraph(e);
             }
           }
-        } else if (e.type === 'inspector' && e.specialActionTimer !== undefined && e.aiMeleeWindupTimer === undefined && !e.aiMeleeStrikePending) {
+        } else if (e.type === 'inspector' && e.specialActionTimer !== undefined && e.aiMeleeWindupTimer === undefined && !e.aiMeleeStrikePending && (e.aiMeleeRecoveryTimer ?? 0) <= 0) {
           e.specialActionTimer -= dt * survivalAbilityRate;
           if (e.specialActionTimer <= 0 && distToPlayer < 6.5) {
             e.specialActionTimer = 2.8;
@@ -16156,7 +16164,7 @@ export class PaleciakiGameEngine {
               this.beginEnemyRangedAttackTelegraph(e);
             }
           }
-        } else if (e.type === 'mutant_gamma_forklift' && e.specialActionTimer !== undefined && e.aiMeleeWindupTimer === undefined && !e.aiMeleeStrikePending) {
+        } else if (e.type === 'mutant_gamma_forklift' && e.specialActionTimer !== undefined && e.aiMeleeWindupTimer === undefined && !e.aiMeleeStrikePending && (e.aiMeleeRecoveryTimer ?? 0) <= 0) {
           e.specialActionTimer -= dt * survivalAbilityRate;
           if (e.specialActionTimer <= 0) {
             e.specialActionTimer = 2.8;
@@ -16165,7 +16173,7 @@ export class PaleciakiGameEngine {
             this.emitFloatingToast('☣️ SKAŻENIE GAMMA!', e.x, e.y + 1.2, e.z, 'damage');
             sound.playElectricalSparks();
           }
-        } else if (e.type === 'radioactive_pip' && e.specialActionTimer !== undefined && e.aiMeleeWindupTimer === undefined && !e.aiMeleeStrikePending) {
+        } else if (e.type === 'radioactive_pip' && e.specialActionTimer !== undefined && e.aiMeleeWindupTimer === undefined && !e.aiMeleeStrikePending && (e.aiMeleeRecoveryTimer ?? 0) <= 0) {
           e.specialActionTimer -= dt * survivalAbilityRate;
           if (e.specialActionTimer <= 0 && distToPlayer < 9.5) {
             e.specialActionTimer = 3.4;
@@ -16254,7 +16262,7 @@ export class PaleciakiGameEngine {
         e.stunTimer <= 0 &&
         Math.abs(e.y - this.playerPos.y) < 1.1 &&
         e.aiMeleeWindupTimer === undefined && !e.aiMeleeStrikePending &&
-        (e.aiMeleeCooldownTimer ?? 0) <= 0 &&
+        (e.aiMeleeRecoveryTimer ?? 0) <= 0 && (e.aiMeleeCooldownTimer ?? 0) <= 0 &&
         dist <= contactRadius + meleeProfile.reachMeters
       ) {
         this.beginEnemyMeleeAttackTelegraph(e, meleeProfile, dist);
@@ -16266,6 +16274,7 @@ export class PaleciakiGameEngine {
         e.aiMeleeStrikePending = false;
         e.aiMeleeLockedDirection = undefined;
         e.aiMeleeCooldownTimer = Math.max(e.aiMeleeCooldownTimer ?? 0, meleeProfile.cooldownSeconds);
+        e.aiMeleeRecoveryTimer = Math.max(e.aiMeleeRecoveryTimer ?? 0, meleeProfile.recoverySeconds);
       }
 
       if (dist < contactRadius) {
