@@ -196,7 +196,9 @@ function setTouchControlsMode(mode: TouchControlsMode): void {
     root.classList.toggle('survival-mode', activeSurvival);
   }
 
-  document.getElementById('pvp-hud')?.classList.toggle('hidden', !activePvp);
+  const pvpHud = document.getElementById('pvp-hud');
+  pvpHud?.classList.toggle('hidden', !activePvp);
+  pvpHud?.setAttribute('aria-hidden', String(!activePvp));
   document.getElementById('survival-hud')?.classList.toggle('hidden', !activeSurvival);
 
   if (!activePvp) {
@@ -4643,7 +4645,10 @@ class PaleciakiScene extends xb.Script {
     if (p1Text) p1Text.textContent = `${Math.max(0, Math.ceil(state.p1.hp))} / ${state.p1.maxHp}`;
     if (p1Name) p1Name.textContent = state.p1.nickname + (localSlot === 'p1' ? ' (TY)' : '');
     if (p1Role) p1Role.textContent = CHARACTERS[state.p1.operatorId]?.role.toUpperCase() || 'OPERATOR';
-    if (p1Avatar) p1Avatar.textContent = (CHARACTERS[state.p1.operatorId] as any)?.icon || '👷‍♂️';
+    if (p1Avatar) {
+      p1Avatar.innerHTML = operatorPortrait(state.p1.operatorId);
+      p1Avatar.setAttribute('aria-label', CHARACTERS[state.p1.operatorId]?.name || 'Gracz 1');
+    }
 
     const p1Dot0 = document.getElementById('p1-dot-0');
     const p1Dot1 = document.getElementById('p1-dot-1');
@@ -4659,7 +4664,10 @@ class PaleciakiScene extends xb.Script {
     if (p2Text) p2Text.textContent = `${Math.max(0, Math.ceil(state.p2.hp))} / ${state.p2.maxHp}`;
     if (p2Name) p2Name.textContent = (localSlot === 'p2' ? '(TY) ' : '') + state.p2.nickname;
     if (p2Role) p2Role.textContent = CHARACTERS[state.p2.operatorId]?.role.toUpperCase() || 'OPERATOR';
-    if (p2Avatar) p2Avatar.textContent = (CHARACTERS[state.p2.operatorId] as any)?.icon || '🔧';
+    if (p2Avatar) {
+      p2Avatar.innerHTML = operatorPortrait(state.p2.operatorId);
+      p2Avatar.setAttribute('aria-label', CHARACTERS[state.p2.operatorId]?.name || 'Gracz 2');
+    }
 
     const p2Dot0 = document.getElementById('p2-dot-0');
     const p2Dot1 = document.getElementById('p2-dot-1');
