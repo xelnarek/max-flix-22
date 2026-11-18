@@ -12,4 +12,4 @@ services:
       - key: NODE_ENV
         value: production
       - key: PVP_ALLOWED_ORIGINS
-        value: https://xelnarek.github.io
+        value: "https://xelnarek.github.io,https://localhost,capacitor://localhost"
