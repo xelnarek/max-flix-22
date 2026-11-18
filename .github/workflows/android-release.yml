@@ -72,6 +72,7 @@ jobs:
           ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID }}
           VITE_ADMOB_REWARDED_ID: ${{ vars.VITE_ADMOB_REWARDED_ID }}
           VITE_ADMOB_INTERSTITIAL_ID: ${{ vars.VITE_ADMOB_INTERSTITIAL_ID }}
+          VITE_PVP_WS_URL: ${{ vars.VITE_PVP_WS_URL || 'wss://paleciaki-pvp.onrender.com/pvp-ws' }}
         run: npm run build
 
       - name: Install pinned Capacitor toolchain
