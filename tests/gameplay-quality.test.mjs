@@ -1411,8 +1411,10 @@ test('biome ambience and combat modifiers blend continuously through two-way and
     read('../src/game.ts'), read('../src/survivalMaps.ts'), read('../src/survivalWorldLayout.ts'),
     read('../src/survivalWorldBlend.ts')
   ]);
-  assert.match(game, /getSurvivalWorldBiomeBlendAtPosition\(this\.playerPos\.x, this\.playerPos\.z\)/);
-  assert.match(game, /getSurvivalWorldLightingProfile\(blend\.weights\)/);
+  assert.match(game, /updateSurvivalWorldBiomeBlendAtPosition\([\s\S]*?this\.playerPos\.x,[\s\S]*?this\.playerPos\.z,[\s\S]*?this\.survivalBiomeBlendScratch/);
+  assert.match(game, /updateSurvivalWorldLightingProfile\([\s\S]*?blend\.weights,[\s\S]*?this\.survivalWorldLightingScratch/);
+  assert.match(game, /private readonly survivalBiomeBlendScratch = createSurvivalWorldBiomeBlendScratch\(\)/);
+  assert.match(game, /private readonly survivalWorldLightingScratch = createWorldLightingProfileScratch\(\)/);
   assert.match(game, /getSurvivalWorldBackgroundColor\(blend\.weights\)/);
   assert.match(game, /1 - Math\.exp\(-Math\.max\(0, Math\.min\(dt, 0\.1\)\) \* 3\.4\)/);
   assert.match(game, /getSurvivalBiomeIdAtPosition\(this\.playerPos\.x, this\.playerPos\.z, this\.survivalMapId\)/);
