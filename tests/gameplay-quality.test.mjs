@@ -1149,7 +1149,7 @@ test('Piotr ultimate is a pentagram MafiKapibar summon, not a Molotov throw', as
   const abilityEnd = game.indexOf('private throwBimberMolotov', abilityStart);
   assert.ok(abilityStart >= 0 && abilityEnd > abilityStart, 'character ability dispatcher should exist');
   const ability = game.slice(abilityStart, abilityEnd);
-  assert.match(ability, /this\.spawnMafiCapybaras\(abilityDamageMultiplier\)/);
+  assert.match(ability, /this\.spawnMafiCapybaras\(abilityDamageMultiplier, abilityDurationScale\)/);
   assert.doesNotMatch(ability, /throwBimberMolotov/);
   assert.match(game, /private spawnMafiPentagramEffect\(groundY: number\)/);
   assert.match(game, /new THREE\.Line\(starGeometry, starLineMaterial\)/);
