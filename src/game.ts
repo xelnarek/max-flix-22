@@ -2905,6 +2905,13 @@ export class PaleciakiGameEngine {
   }
 
   public startPvp(session: IPvpSession, localOperatorId: CharacterId, remoteOperatorId: CharacterId) {
+    // A previous campaign result must never leak into PvP result snapshots.
+    this.campaignStage = null;
+    this.campaignBossScheduled = false;
+    this.campaignBossSpawned = false;
+    this.campaignBossEnemyId = null;
+    this.campaignStageCompleted = false;
+    this.campaignStars = 0;
     this.clearLevel();
     this.gameMode = 'pvp';
     this.scene.background = new THREE.Color(PVP_LIGHTING_PROFILE.backgroundColor);
@@ -11897,6 +11904,7 @@ export class PaleciakiGameEngine {
       if (wave === 5) boss.name = 'Inwentaryzacja Gigant • Nadzorca Zero';
       else if (variant === 'bosman_krakow') boss.name = 'Bosman Kraków • Dowódca rampy';
       else if (variant === 'krol_leto') boss.name = 'Dyrektor Widmo • Kontroler terminala';
+      if (this.campaignStage) boss.name = this.campaignStage.bossTitle;
 
       const baseHp = wave === 5
         ? 78

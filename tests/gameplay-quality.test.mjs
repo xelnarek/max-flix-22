@@ -113,6 +113,9 @@ test('legacy campaign startGame entry points stay retired while the new mission 
   assert.doesNotMatch(app, /selectedSurvivalMapId|readSurvivalMapPreference|writeSurvivalMapPreference/);
   assert.match(game, /private resetSurvivalRun\(\)/);
   assert.doesNotMatch(game, /public startGame\(/);
+  const pvpStart = game.slice(game.indexOf('public startPvp('), game.indexOf('public setLastPvpState('));
+  assert.match(pvpStart, /this\.campaignStage = null/);
+  assert.match(game, /if \(this\.campaignStage\) boss\.name = this\.campaignStage\.bossTitle/);
 });
 test('camera fades perimeter walls by ray intersection and individual Survival lamps when the operator stands below', async () => {
   const game = await read('../src/game.ts');
