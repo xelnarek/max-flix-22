@@ -48,3 +48,20 @@ test('bosses and one-time event enemies are kept out of the standard random pool
   }
   assert.equal(chooseSurvivalEnemySpawnType(1, 0, Number.NaN), 'sztaplar_szalony');
 });
+
+
+test('regular deliveries avoid repeating either of the last two unlocked archetypes', () => {
+  const recent = ['zombie_pracownik', 'kurier'];
+  assert.equal(chooseSurvivalEnemySpawnType(1, 0, 0, recent), 'sztaplar_szalony');
+  assert.notEqual(chooseSurvivalEnemySpawnType(1, 0, 0, recent), recent[0]);
+  assert.notEqual(chooseSurvivalEnemySpawnType(1, 0, 0, recent), recent[1]);
+});
+
+test('spawn variety falls back to the full roster when every unlocked archetype is recent', () => {
+  const allEarly = getSurvivalEnemySpawnWeights(1, 0).map((entry) => entry.type);
+  assert.equal(chooseSurvivalEnemySpawnType(1, 0, 0, allEarly), chooseSurvivalEnemySpawnType(1, 0, 0));
+});
+
+test('invalid recent history is harmless and special encounters remain outside the regular pool', () => {
+  assert.equal(chooseSurvivalEnemySpawnType(1, 0, 0, ['walczak', 'pomazaniec']), 'zombie_pracownik');
+});
