@@ -13305,7 +13305,7 @@ export class PaleciakiGameEngine {
     if(!allyRing){allyRing=new THREE.Mesh(new THREE.TorusGeometry(0.58,0.055,7,24),new THREE.MeshBasicMaterial({color:0x22d3ee,transparent:true,opacity:0.9,depthWrite:false}));allyRing.rotation.x=-Math.PI/2;allyRing.position.y=0.06;enemy.mesh.add(allyRing);enemy.mesh.userData.mateuszAllyRing=allyRing;}
     allyRing.rotation.z+=dt*0.85;allyRing.scale.setScalar(0.94+Math.sin(performance.now()*0.008+enemy.walkCycle)*0.07);
     let allyMarker=marker;
-    if(!allyMarker){allyMarker=new THREE.Mesh(new THREE.OctahedronGeometry(0.13,0),new THREE.MeshBasicMaterial({color:0x67e8f9,emissive:0x0891b2,emissiveIntensity:0.55,depthWrite:false}));allyMarker.position.set(0,1.78,0);enemy.mesh.add(allyMarker);enemy.mesh.userData.mateuszAllyMarker=allyMarker;}
+    if(!allyMarker){allyMarker=new THREE.Mesh(new THREE.OctahedronGeometry(0.13,0),new THREE.MeshBasicMaterial({color:0x67e8f9,depthWrite:false}));allyMarker.position.set(0,1.78,0);enemy.mesh.add(allyMarker);enemy.mesh.userData.mateuszAllyMarker=allyMarker;}
     allyMarker.rotation.y+=dt*2.2;
   }
 
