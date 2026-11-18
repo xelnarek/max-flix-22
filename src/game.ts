@@ -63,7 +63,7 @@ import { chooseSurvivalEventSpawnPoint } from './survivalSpawn.ts';
 import { getSurvivalUpgradeRarityMeta, getSurvivalWeaponInitialLevel, getSurvivalWeaponUpgradeSteps, promoteSurvivalUpgradeRarity, rollSurvivalUpgradeRarity, type SurvivalUpgradeRarity } from './survivalRarity.ts';
 import { createSurvivalBossRewardOptions } from './survivalBossRewards.ts';
 import { getSurvivalBossVariant, isMajorSurvivalBossType, shouldSpawnBosmanKrakow } from './survivalEncounters.ts';
-import { applySurvivalWaveMutator, getSurvivalWaveMutator } from './survivalWaveMutators.ts';
+import { applySurvivalWaveMutator, getSurvivalWaveMutator, getSurvivalWaveSpawnTuning } from './survivalWaveMutators.ts';
 import { getSurvivalConvoyHazardCount } from './survivalConvoy.ts';
 import { applySurvivalWorldCombatModifier, getSurvivalMapDefinition, SURVIVAL_MAPS, SURVIVAL_MAP_IDS, type SurvivalMapId } from './survivalMaps.ts';
 import { getCampaignLightingProfile, getSurvivalLightingProfile, getSurvivalWorldBackgroundColor, getSurvivalWorldLightingProfile, getSurvivalSurfaceProfile, PVP_LIGHTING_PROFILE, type WorldLightingProfile } from './worldVisualQuality.ts';
@@ -10222,6 +10222,7 @@ export class PaleciakiGameEngine {
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
     const hordeSettings = getSurvivalHordeSettings(isMobile);
     const difficultyProfile = getSurvivalDifficultyProfile(this.survivalWave);
+    const waveMutator = getSurvivalWaveMutator(this.survivalWave);
     const pomazaniecRaidActive = this.survivalPomazaniecTriggered && !this.survivalPomazaniecCompleted;
     const surgeActive = this.survivalSurgeTimeLeft > 0;
     // Crowd and temporary visual bursts share one adaptive device budget.
@@ -10264,13 +10265,15 @@ export class PaleciakiGameEngine {
     } else {
       this.survivalSpawnTimer -= dt;
       if (this.survivalSpawnTimer <= 0 && aliveCount < enemyCap) {
-        const groupSize = Math.min(
-          performanceBudget.groupCap,
+        const spawnTuning = getSurvivalWaveSpawnTuning(
+          difficultyProfile.spawnIntervalSeconds,
           4 + Math.floor(this.survivalWave * 0.38) + difficultyProfile.extraGroupSize,
-          enemyCap - aliveCount,
+          waveMutator,
+          performanceBudget.groupCap,
         );
+        const groupSize = Math.min(spawnTuning.groupSize, enemyCap - aliveCount);
         for (let i = 0; i < groupSize; i++) this.spawnSurvivalEnemy(this.survivalWave);
-        this.survivalSpawnTimer = difficultyProfile.spawnIntervalSeconds;
+        this.survivalSpawnTimer = spawnTuning.spawnIntervalSeconds;
       }
     }
 
