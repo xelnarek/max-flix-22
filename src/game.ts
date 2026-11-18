@@ -15581,16 +15581,6 @@ export class PaleciakiGameEngine {
                     const dirZ = Number(e.mesh.userData.cthulhuLashDirZ ?? 1);
                     const lashLength = Number(e.mesh.userData.cthulhuLashLength ?? 15.5);
                     const lashWidth = Number(e.mesh.userData.cthulhuLashWidth ?? 4.3);
-                    for (let segment = 1; segment <= 6; segment++) {
-                      const distance = lashLength * segment / 7;
-                      this.spawnExplosionParticles(
-                        e.x + dirX * distance,
-                        0.28,
-                        e.z + dirZ * distance,
-                        segment % 2 ? 0x42e7d0 : 0x9b5cf6,
-                        5,
-                      );
-                    }
                     const playerCaught = isWithinCthulhuLashLane(
                       this.playerPos.x,
                       this.playerPos.z,
