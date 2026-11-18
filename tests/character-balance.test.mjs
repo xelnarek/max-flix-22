@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CHARACTERS } from '../src/characters.ts';
 import { resolveCharacterIncomingDamage, scaleCharacterBasicAttackDamage, CHARACTER_ABILITY_DAMAGE_MULTIPLIER } from '../src/characterBalance.ts';
+import { SURVIVAL_PRIMARY_ATTACK_DAMAGE_MULTIPLIER, SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS } from '../src/combatBalance.ts';
 
 test('all five operators have deliberately different movement, jump, attack and HP profiles', () => {
   assert.deepEqual(Object.keys(CHARACTERS), ['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr']);
@@ -15,6 +16,8 @@ test('all five operators have deliberately different movement, jump, attack and 
   assert.ok(CHARACTERS.grzesiek.basicAttackDamageMultiplier > CHARACTERS.mateusz.basicAttackDamageMultiplier);
   assert.ok(CHARACTERS.mateusz.basicAttackDamageMultiplier >= 0.95, 'Mateusz no longer has an overly weak signature attack');
   assert.equal(CHARACTER_ABILITY_DAMAGE_MULTIPLIER, 1.10);
+  assert.equal(SURVIVAL_PRIMARY_ATTACK_DAMAGE_MULTIPLIER, 1.15);
+  assert.deepEqual(SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS, { marcin: 1.90, grzesiek: 2.05, dawid: 1.88, mateusz: 1.80, piotr: 2.10 });
   assert.ok(CHARACTERS.marcin.damageTakenMultiplier < CHARACTERS.mateusz.damageTakenMultiplier);
   for (const character of Object.values(CHARACTERS)) {
     assert.ok(character.speed >= 6 && character.speed <= 10);
