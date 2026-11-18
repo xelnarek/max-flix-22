@@ -1,9 +1,11 @@
 /** Shared Survival tuning applied to every operator, including weapons and abilities. */
-export const SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER = 0.92;
+export const SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER = 0.88;
 /** Signature skills are deliberately powerful, not just 10% stronger than primary attacks. */
-export const CHARACTER_ABILITY_DAMAGE_MULTIPLIER = 1.48;
-export const SURVIVAL_INCOMING_DAMAGE_MULTIPLIER = 1.10;
-export const SURVIVAL_HIT_INVULNERABILITY_SECONDS = 0.78;
+export const CHARACTER_ABILITY_DAMAGE_MULTIPLIER = 1.38;
+export const SURVIVAL_INCOMING_DAMAGE_MULTIPLIER = 1.16;
+export const SURVIVAL_HIT_INVULNERABILITY_SECONDS = 0.72;
+/** Temporary operator summons, combat perks and skill projectiles are shorter in Survival. */
+export const SURVIVAL_ABILITY_DURATION_MULTIPLIER = 0.88;
 
 export function scaleSurvivalOutgoingDamage(amount: number): number {
   return Number.isFinite(amount) ? Math.max(0, amount) * SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER : 0;
