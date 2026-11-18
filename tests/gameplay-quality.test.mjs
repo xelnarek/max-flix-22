@@ -1836,3 +1836,16 @@ test('late-loaded actor rigs apply anisotropic texture filtering and retain comb
   assert.match(cleanup, /actorLodSharedGeometry/);
   assert.match(cleanup, /actorLodSharedMaterial/);
 });
+
+
+test('Survival enemy XP is tiered and random rather than guaranteed on every elimination', async () => {
+  const [game, drops] = await Promise.all([
+    read('../src/game.ts'), read('../src/survivalXpDrops.ts')
+  ]);
+  assert.match(game, /rollSurvivalXpDrop\(\s*e\.type/);
+  assert.match(game, /if \(xpDrop\) this\.spawnSurvivalXpGem/);
+  assert.match(drops, /regular', chance: 0\.32/);
+  assert.match(drops, /heavy', chance: 0\.56/);
+  assert.match(drops, /elite', chance: 0\.88/);
+  assert.match(drops, /boss', chance: 1/);
+});
