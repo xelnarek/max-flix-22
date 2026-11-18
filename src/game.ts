@@ -69,12 +69,12 @@ import { applySurvivalWaveMutator, getSurvivalWaveMutator, getSurvivalWaveSpawnT
 import { getSurvivalConvoyHazardCount } from './survivalConvoy.ts';
 import { applySurvivalWorldCombatModifier, getSurvivalMapDefinition, SURVIVAL_MAPS, SURVIVAL_MAP_IDS, type SurvivalMapId } from './survivalMaps.ts';
 import { evaluateCampaignStars, getCampaignRewardDefinition, getCampaignStageDefinition, type CampaignRewardId, type CampaignStageDefinition, type CampaignStageId } from './campaignProgression.ts';
-import { getCampaignLightingProfile, getSurvivalLightingProfile, getSurvivalWorldBackgroundColor, getSurvivalWorldLightingProfile, getSurvivalSurfaceProfile, PVP_LIGHTING_PROFILE, type WorldLightingProfile } from './worldVisualQuality.ts';
+import { createWorldLightingProfileScratch, getCampaignLightingProfile, getSurvivalLightingProfile, getSurvivalWorldBackgroundColor, getSurvivalSurfaceProfile, updateSurvivalWorldLightingProfile, PVP_LIGHTING_PROFILE, type WorldLightingProfile } from './worldVisualQuality.ts';
 import { getSurvivalMapRouteFeatures } from './survivalMapLayouts.ts';
 import { createSurvivalFloorAtlasTexture } from './survivalFloorAtlas.ts';
 import { createSurvivalWorldDressing } from './survivalWorldDressing.ts';
 import { getSurvivalBiomeIdAtPosition, getSurvivalWorldBiome, SURVIVAL_WORLD_BIOME_HALF_DEPTH, SURVIVAL_WORLD_BIOME_HALF_WIDTH, SURVIVAL_WORLD_BIOMES, SURVIVAL_WORLD_BOUNDS, SURVIVAL_WORLD_START_BIOME, type SurvivalWorldOpenEdges } from './survivalWorldLayout.ts';
-import { getSurvivalWorldBiomeBlendAtPosition } from './survivalWorldBlend.ts';
+import { createSurvivalWorldBiomeBlendScratch, updateSurvivalWorldBiomeBlendAtPosition } from './survivalWorldBlend.ts';
 import { chooseCampaignNearbyRewardSpawnPoint } from './campaignRewards.ts';
 import { chooseNearbySpawnPoint } from './arenaSpawn.ts';
 import { chooseSurvivalEnemySpawnType, SURVIVAL_SPAWN_VARIETY_MEMORY, type SurvivalEnemySpawnType } from './survivalEnemySpawns.ts';
@@ -851,6 +851,9 @@ export class PaleciakiGameEngine {
   private survivalMapId: SurvivalMapId = SURVIVAL_WORLD_START_BIOME;
   private survivalWorldRoot: THREE.Group | null = null;
   private readonly survivalBiomeTargetColors = { ambient: new THREE.Color(), hemisphereSky: new THREE.Color(), hemisphereGround: new THREE.Color(), directional: new THREE.Color(), rim: new THREE.Color(), fog: new THREE.Color(), background: new THREE.Color() };
+  /** Reused spatial blend/profile buffers for Survival's per-frame ambience update. */
+  private readonly survivalBiomeBlendScratch = createSurvivalWorldBiomeBlendScratch();
+  private readonly survivalWorldLightingScratch = createWorldLightingProfileScratch();
   private survivalSecretsFound = 0;
   private cthulhuSecretSummoned = false;
   private survivalBossesDefeated = 0;
@@ -4120,7 +4123,7 @@ export class PaleciakiGameEngine {
   }
 
   /** Follow the spatially weighted biome palette instead of starting a timer at a hard seam. */
-  private updateSurvivalBiomeLighting(profile: ReturnType<typeof getSurvivalWorldLightingProfile>, backgroundColor: number, dt: number) {
+  private updateSurvivalBiomeLighting(profile: WorldLightingProfile, backgroundColor: number, dt: number) {
     // A short exponential response tracks a moving player without a visible snap or
     // a fixed-duration transition that can lag behind rapid boundary crossings.
     const amount = 1 - Math.exp(-Math.max(0, Math.min(dt, 0.1)) * 3.4);
@@ -4152,8 +4155,15 @@ export class PaleciakiGameEngine {
   private updateSurvivalBiome(dt: number) {
     if (this.gameMode !== 'survival' || this.oniricDreamCameraActive || this.oniricDreamRemainingSeconds > 0) return;
     // Ambience, fog and contrast follow actual overlap weights, not a discrete quadrant.
-    const blend = getSurvivalWorldBiomeBlendAtPosition(this.playerPos.x, this.playerPos.z);
-    const lighting = getSurvivalWorldLightingProfile(blend.weights);
+    const blend = updateSurvivalWorldBiomeBlendAtPosition(
+      this.playerPos.x,
+      this.playerPos.z,
+      this.survivalBiomeBlendScratch,
+    );
+    const lighting = updateSurvivalWorldLightingProfile(
+      blend.weights,
+      this.survivalWorldLightingScratch,
+    );
     const background = getSurvivalWorldBackgroundColor(blend.weights);
     this.updateSurvivalBiomeLighting(lighting, background, dt);
 
