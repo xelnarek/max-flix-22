@@ -3767,7 +3767,9 @@ export class PaleciakiGameEngine {
       const hitText = `-${Math.ceil(hit.damage)} HP`;
       this.callbacks.onFloatingText?.(hitText, hit.x, 1.8, hit.z, 'damage');
       if (!playedHitSound) {
-        sound.playSmack();
+        const confirmedLocalHit = hit.sourceSlot === this.pvpSlot && hit.targetSlot !== this.pvpSlot;
+        if (confirmedLocalHit) sound.playPvpHitConfirm();
+        else sound.playSmack();
         playedHitSound = true;
       }
       this.spawnParticleRing(hit.x, 1.2, hit.z, 0xef4444);
