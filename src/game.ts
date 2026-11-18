@@ -20136,6 +20136,13 @@ export class PaleciakiGameEngine {
       baseOffsetX = 0.0;
       baseOffsetY = 15.8;
       baseOffsetZ = 10.2;
+      // Portrait Survival was leaving operators and their hit reactions too
+      // small on modern phones. Bring the camera in gently, while preserving
+      // enough perimeter visibility to read incoming volleys and enemy flanks.
+      if (this.gameMode === 'survival' && this.viewportAspect < 0.78) {
+        baseOffsetY = 14.6;
+        baseOffsetZ = 9.55;
+      }
     }
     // Survival uses the same low oblique follow camera; never force a near-vertical overhead view.
 
