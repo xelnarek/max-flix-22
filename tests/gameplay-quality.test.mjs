@@ -1680,31 +1680,38 @@ test('Grzesiek Operator 02 launches exactly five target-locked muscular arm proj
   assert.match(html, /5 latających ramion/);
 });
 
-test('Mateusz Operator 04 tears the nine-month contract and runs enemy-only AI combat without cats', async () => {
+test('Mateusz Operator 04 recruits nearby enemies into an autonomous ally squad', async () => {
+ const {readFile}=await import('node:fs/promises');
+ const game=await readFile(new URL('../src/game.ts',import.meta.url),'utf8');
+ const chars=await readFile(new URL('../src/characters.ts',import.meta.url),'utf8');
+ assert.match(game,/selectMateuszRecruitOrders\(/);assert.match(game,/private updateMateuszAlly\(/);
+ assert.match(game,/aiMateuszAllyTimer/);assert.match(game,/SOJUSZNIK ELIMINUJE WROGA/);
+ assert.match(chars,/EKIPA PRZEJĘTA • ZMIANA STRON/);
+});
+
+test('Mateusz Operator 04 recruits a temporary autonomous team and keeps the contract visual', async () => {
   const [game, types, characters, html] = await Promise.all([
     read('../src/game.ts'), read('../src/types.ts'), read('../src/characters.ts'), read('../index.html')
   ]);
-  assert.match(characters, /abilityName: 'MAM WYJEBANE/);
-  assert.match(characters, /9 sekund \(7,5 sekundy w Survival\)/);
-  assert.match(html, /MAM WYJEBANE/);
+  assert.match(characters, /abilityName: 'EKIPA PRZEJĘTA/);
+  assert.match(characters, /12 sekund \(10 sekund w Survival\)/);
+  assert.match(html, /EKIPA PRZEJĘTA/);
   assert.match(game, /private spawnMateuszContractRip\(\)/);
-  assert.match(game, /UMOWA NA 9 MIESIĘCY • ROZDARTA/);
-  assert.match(game, /private updateEnemyFactionBrawl\(enemy: EnemyItem, dt: number\)/);
-  assert.match(game, /this\.enemySpatialIndex\.query\(enemy\.x, enemy\.z, 21\.5\)/);
-  assert.match(game, /this\.damageEnemy\(target, damage, enemy\.x, enemy\.z, null\)/);
+  assert.match(game, /private updateMateuszAlly\(enemy: EnemyItem, dt: number\)/);
+  assert.match(game, /selectMateuszRecruitOrders\(/);
+  assert.match(game, /aiMateuszAllyTimer/);
   assert.match(game, /damageSource !== null/);
-  assert.match(types, /aiFactionBrawlTarget\?: EnemyItem/);
+  assert.match(types, /aiMateuszAllyRole\?:/);
   assert.doesNotMatch(game, /mateuszCats|spawnMateuszCats|updateMateuszCats/);
-  assert.doesNotMatch(characters, /KOCIA ARMIA|MIAU-CRITICAL/);
 });
 
-test('enemy faction brawl has a bounded timer and restores normal targeting after expiry', async () => {
+test('Mateusz recruited allies have bounded lifetime and restore hostile AI after expiry', async () => {
   const game = await read('../src/game.ts');
-  assert.match(game, /this\.enemyFactionBrawlRemaining = this\.gameMode === 'survival' \? 7\.5 : 9\.0/);
-  assert.match(game, /this\.enemyFactionBrawlRemaining = Math\.max\(0, this\.enemyFactionBrawlRemaining - dt\)/);
-  assert.match(game, /if \(factionBrawlActive\) \{\s*this\.updateEnemyFactionBrawl\(e, dt\);\s*continue;/);
-  assert.match(game, /if \(!active\) \{\s*if \(existingRing\)/);
-  assert.match(game, /factionBrawlMarker/);
+  assert.match(game, /ally\.aiMateuszAllyTimer = order\.durationSeconds/);
+  assert.ok(game.includes('enemy.aiMateuszAllyTimer=Math.max(0,remaining-dt)'));
+  assert.match(game, /if \(this\.updateMateuszAlly\(e, dt\)\) continue/);
+  assert.match(game, /private setMateuszAllyVisual\(enemy: EnemyItem, active: boolean, dt: number\)/);
+  assert.match(game, /if \(!active\) \{[\s\S]*?mateuszAllyRing/);
 });
 
 

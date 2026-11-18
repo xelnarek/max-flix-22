@@ -82,6 +82,7 @@ import { buildSurvivalCoalitionOrders, getSurvivalCoalitionRole } from './surviv
 import { getSurvivalCommanderProfile, selectSurvivalCommanderTargets } from './survivalCommander.ts';
 import { advanceSurvivalCommanderTiming } from './survivalCommanderTiming.ts';
 import { getSurvivalLeaderLossTargets, getSurvivalMoraleBreakMultiplier, SURVIVAL_LEADER_LOSS_BREAK_SECONDS } from './survivalMorale.ts';
+import { selectMateuszRecruitOrders, getMateuszAllyRole } from './mateuszSquad.ts';
 import { selectSurvivalSupportPulseTargets, SURVIVAL_SUPPORT_PULSE_RADIUS, SURVIVAL_SUPPORT_PULSE_INTERVAL_SECONDS, SURVIVAL_SUPPORT_SHIELD_SECONDS } from './survivalSupport.ts';
 import { advanceSurvivalRetreatState, getSurvivalFlankInterceptOffset, getSurvivalRetreatTarget } from './survivalTactics.ts';
 import { getSurvivalProgressionInfo, getSurvivalPromotionRarityFloor, getSurvivalXpRequirement } from './survivalProgression.ts';
@@ -13291,6 +13292,77 @@ export class PaleciakiGameEngine {
     marker.scale.setScalar(0.88 + Math.sin(performance.now() * 0.012 + enemy.walkCycle) * 0.14);
   }
 
+  private setMateuszAllyVisual(enemy: EnemyItem, active: boolean, dt: number): void {
+    if (!enemy.mesh) return;
+    const ring=enemy.mesh.userData.mateuszAllyRing as THREE.Mesh|undefined;
+    const marker=enemy.mesh.userData.mateuszAllyMarker as THREE.Mesh|undefined;
+    if(!active){
+      if(ring){enemy.mesh.remove(ring);ring.geometry.dispose();(ring.material as THREE.Material).dispose();delete enemy.mesh.userData.mateuszAllyRing;}
+      if(marker){enemy.mesh.remove(marker);marker.geometry.dispose();(marker.material as THREE.Material).dispose();delete enemy.mesh.userData.mateuszAllyMarker;}
+      return;
+    }
+    let allyRing=ring;
+    if(!allyRing){allyRing=new THREE.Mesh(new THREE.TorusGeometry(0.58,0.055,7,24),new THREE.MeshBasicMaterial({color:0x22d3ee,transparent:true,opacity:0.9,depthWrite:false}));allyRing.rotation.x=-Math.PI/2;allyRing.position.y=0.06;enemy.mesh.add(allyRing);enemy.mesh.userData.mateuszAllyRing=allyRing;}
+    allyRing.rotation.z+=dt*0.85;allyRing.scale.setScalar(0.94+Math.sin(performance.now()*0.008+enemy.walkCycle)*0.07);
+    let allyMarker=marker;
+    if(!allyMarker){allyMarker=new THREE.Mesh(new THREE.OctahedronGeometry(0.13,0),new THREE.MeshBasicMaterial({color:0x67e8f9,depthWrite:false}));allyMarker.position.set(0,1.78,0);enemy.mesh.add(allyMarker);enemy.mesh.userData.mateuszAllyMarker=allyMarker;}
+    allyMarker.rotation.y+=dt*2.2;
+  }
+
+  private updateMateuszAlly(enemy: EnemyItem, dt: number): boolean {
+    const remaining=enemy.aiMateuszAllyTimer??0;
+    if(remaining<=0){if(enemy.aiMateuszAllyRole){enemy.aiMateuszAllyRole=undefined;enemy.aiMateuszAllyTarget=undefined;this.setMateuszAllyVisual(enemy,false,dt);}return false;}
+    enemy.aiMateuszAllyTimer=Math.max(0,remaining-dt);
+    if(enemy.aiMateuszAllyTimer<=0){enemy.aiMateuszAllyRole=undefined;enemy.aiMateuszAllyTarget=undefined;this.setMateuszAllyVisual(enemy,false,dt);this.emitFloatingToast('SOJUSZNIK WRACA DO SWOJEJ ZMIANY',enemy.x,enemy.y+1.2,enemy.z,'perk');return false;}
+    this.setMateuszAllyVisual(enemy,true,dt);
+    enemy.lastKnownPlayerPos=null;enemy.state='chase';
+    enemy.aiMateuszAllyRetargetTimer=Math.max(0,(enemy.aiMateuszAllyRetargetTimer??0)-dt);
+    let target=enemy.aiMateuszAllyTarget??null;
+    if(!target||target.state==='defeated'||(target.aiMateuszAllyTimer??0)>0||enemy.aiMateuszAllyRetargetTimer<=0){
+      target=null;let best=Number.POSITIVE_INFINITY;
+      for(const candidate of this.enemySpatialIndex.query(enemy.x,enemy.z,18)){
+        if(candidate===enemy||candidate.state==='defeated'||!candidate.mesh||(candidate.aiMateuszAllyTimer??0)>0||Math.abs(candidate.y-enemy.y)>2)continue;
+        const distance=Math.hypot(candidate.x-enemy.x,candidate.z-enemy.z);
+        if(distance>18)continue;
+        const score=distance+((candidate.type==='sebix_m'||isMajorSurvivalBossType(candidate.type))?-1.2:0);
+        if(score<best){best=score;target=candidate;}
+      }
+      enemy.aiMateuszAllyTarget=target??undefined;enemy.aiMateuszAllyRetargetTimer=0.42;
+    }
+    const role=enemy.aiMateuszAllyRole??getMateuszAllyRole(enemy.type);
+    enemy.aiMateuszAllyAttackCooldown=Math.max(0,(enemy.aiMateuszAllyAttackCooldown??0)-dt);
+    if(role==='support'){
+      enemy.aiMateuszAllySupportTimer=Math.max(0,(enemy.aiMateuszAllySupportTimer??0)-dt);
+      if(enemy.aiMateuszAllySupportTimer<=0&&Math.hypot(enemy.x-this.playerPos.x,enemy.z-this.playerPos.z)<10){
+        this.hp=Math.min(this.maxHp,this.hp+1);this.callbacks.onHpUpdate(this.hp,this.maxHp);enemy.aiMateuszAllySupportTimer=6.5;
+        this.spawnParticleRing(this.playerPos.x,this.playerPos.y+0.45,this.playerPos.z,0x34d399);
+        this.emitFloatingToast('SOJUSZNIK WSPARCIA: +1 HP',this.playerPos.x,this.playerPos.y+1.15,this.playerPos.z,'perk');
+      }
+    }
+    if(!target){
+      const fx=this.playerPos.x-enemy.x,fz=this.playerPos.z-enemy.z,fd=Math.hypot(fx,fz);
+      if(fd>4.8){enemy.x+=fx/fd*enemy.speed*0.78*dt;enemy.z+=fz/fd*enemy.speed*0.78*dt;}
+      enemy.mesh.position.set(enemy.x,enemy.y,enemy.z);return true;
+    }
+    const dx=target.x-enemy.x,dz=target.z-enemy.z,distance=Math.hypot(dx,dz),dirX=distance>0.001?dx/distance:0,dirZ=distance>0.001?dz/distance:1;
+    enemy.mesh.rotation.y=Math.atan2(dirX,dirZ);
+    const ranged=role==='ranged'||role==='support',desired=role==='support'?8:role==='ranged'?7.2:1.5;
+    if(ranged&&distance<desired-1.3){enemy.x-=dirX*enemy.speed*0.72*dt;enemy.z-=dirZ*enemy.speed*0.72*dt;}
+    else if(distance>(ranged?desired:1.5)){
+      let mx=dirX,mz=dirZ;
+      if(role==='flanker'&&distance<7){const side=enemy.id.length%2===0?1:-1;mx+=-dirZ*side*0.48;mz+=dirX*side*0.48;}
+      const length=Math.hypot(mx,mz)||1,speed=enemy.speed*(role==='bruiser'?1.18:role==='flanker'?1.32:0.82);
+      enemy.x+=mx/length*speed*dt;enemy.z+=mz/length*speed*dt;
+    }else if(enemy.aiMateuszAllyAttackCooldown<=0&&distance<=(ranged?10.5:2)){
+      const damage=role==='bruiser'?1.65:role==='flanker'?1.12:role==='support'?0.72:0.92;
+      this.damageEnemy(target,damage,enemy.x,enemy.z,null);target.hitReactTimer=Math.max(target.hitReactTimer??0,0.16);
+      if(target.hp<=0){this.defeatEnemy(target,180,false);this.emitFloatingToast('SOJUSZNIK ELIMINUJE WROGA',target.x,target.y+1.2,target.z,'combo');enemy.aiMateuszAllyTarget=undefined;}
+      else this.spawnCompactImpact(target.x,target.y+0.65,target.z,role==='bruiser'?0xf59e0b:0x22d3ee);
+      enemy.aiMateuszAllyAttackCooldown=role==='bruiser'?0.82:role==='flanker'?0.62:1.25;
+    }
+    this.clampEnemyToArena(enemy);enemy.mesh.position.set(enemy.x,enemy.y,enemy.z);return true;
+  }
+
   private updateEnemyFactionBrawl(enemy: EnemyItem, dt: number): void {
     enemy.aiFactionBrawlRetargetTimer = Math.max(0, (enemy.aiFactionBrawlRetargetTimer ?? 0) - dt);
     let target = enemy.aiFactionBrawlTarget ?? null;
@@ -13397,7 +13469,7 @@ export class PaleciakiGameEngine {
     sourceZ = this.playerPos.z,
     damageSource: SurvivalDamageSource | null = 'ability',
   ): number {
-    if (enemy.state === 'defeated' || !Number.isFinite(amount) || amount <= 0) return enemy.hp;
+    if (enemy.state === 'defeated' || (enemy.aiMateuszAllyTimer ?? 0) > 0 || !Number.isFinite(amount) || amount <= 0) return enemy.hp;
     if (enemy.shieldActive) {
       this.clearSurvivalSupportShield(enemy);
       this.spawnParticleRing(enemy.x, enemy.y + 0.65, enemy.z, 0x38bdf8);
@@ -13783,7 +13855,7 @@ export class PaleciakiGameEngine {
       activeCandidates.length = 0;
 
       for (const e of this.enemies) {
-        if (e.state === 'defeated' || !e.mesh) continue;
+        if (e.state === 'defeated' || !e.mesh || (e.aiMateuszAllyTimer ?? 0) > 0) continue;
         const d = Math.hypot(this.playerPos.x - e.x, this.playerPos.z - e.z);
         if (d > 26.0 && !isMajorSurvivalBossType(e.type) && e.type !== 'sebix_m') {
           if (e.mesh.visible) e.mesh.visible = false;
@@ -14255,6 +14327,8 @@ export class PaleciakiGameEngine {
         }
         e.threatRing.visible = (e.state === 'chase' || e.state === 'charging') && distToPlayer < 14;
       }
+
+      if (this.updateMateuszAlly(e, dt)) continue;
 
       if (e.stunTimer > 0) {
         // Let the commander inspect the stun before the early return so the
@@ -18017,6 +18091,15 @@ export class PaleciakiGameEngine {
       return;
     }
     if (this.state !== 'playing' || this.abilityCooldownState.remainingSeconds > 0.0001) return;
+    const mateuszRecruitOrders = this.currentCharacterId === 'mateusz'
+      ? selectMateuszRecruitOrders(this.enemies.map(enemy => ({
+          id: enemy.id, type: enemy.type, x: enemy.x, y: enemy.y, z: enemy.z, state: enemy.state,
+        })), this.playerPos.x, this.playerPos.y, this.playerPos.z, 10.5, 3, this.gameMode === 'survival' ? 10 : 12)
+      : [];
+    if (this.currentCharacterId === 'mateusz' && mateuszRecruitOrders.length === 0) {
+      this.emitFloatingToast('BRAK PRZECIWNIKÓW W ZASIĘGU PRZEJĘCIA', this.playerPos.x, this.playerPos.y + 1.35, this.playerPos.z, 'perk');
+      return;
+    }
     const cooldownSeconds = getAbilityCooldownSeconds(this.charDef.abilityCooldown, this.gameMode) *
       this.characterMasteryBonuses.abilityCooldownMultiplier *
       (this.gameMode === 'survival' ? this.survivalAbilityCooldownMultiplier : 1);
@@ -18148,18 +18231,33 @@ export class PaleciakiGameEngine {
       });
       this.emitFloatingToast('🧱 SALWA GRESU 120x280 + ⚡ Kubełek Mocy!', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
     } else if (this.currentCharacterId === 'mateusz') {
-      this.enemyFactionBrawlRemaining = this.gameMode === 'survival' ? 7.5 : 9.0;
+      const duration = this.gameMode === 'survival' ? 10 : 12;
+      const orders = mateuszRecruitOrders;
+      let recruited = 0;
+      for (const order of orders) {
+        const ally = this.enemies.find(enemy => enemy.id === order.enemyId);
+        if (!ally || ally.state === 'defeated') continue;
+        ally.aiMateuszAllyTimer = order.durationSeconds;
+        ally.aiMateuszAllyRole = order.role;
+        ally.aiMateuszAllyTarget = undefined;
+        ally.aiMateuszAllyRetargetTimer = 0;
+        ally.aiMateuszAllyAttackCooldown = 0.2 + recruited * 0.18;
+        ally.aiMateuszAllySupportTimer = 2 + recruited * 0.7;
+        ally.aiFactionBrawlTarget = undefined;
+        ally.stunTimer = 0;
+        ally.state = 'chase';
+        recruited++;
+        this.spawnParticleRing(ally.x, ally.y + 0.55, ally.z, 0x22d3ee);
+      }
       this.spawnMateuszContractRip();
-      this.sayQuote('MAM WYJEBANE! UMOWA NA 9 MIESIĘCY ROZDARTA. TERAZ WYJAŚNIJCIE TO MIĘDZY SOBĄ!');
-      this.callbacks.onPerkDropBanner?.(
-        'MAM WYJEBANE • UMOWA ROZDARTA',
-        '📄',
-        'Przeciwnicy przez chwilę atakują się nawzajem zamiast operatora. Efekt trwa 9 sekund (7,5 sekundy w Survival).',
-        '#d946ef',
-      );
-      this.emitFloatingToast('MAM WYJEBANE • WROGOWIE WALCZĄ ZE SOBĄ!', this.playerPos.x, this.playerPos.y + 1.55, this.playerPos.z, 'combo');
+      this.sayQuote(recruited ? 'EKIPA PRZEJĘTA! ZMIANA STRON! TERAZ WALCZYMY RAZEM!' : 'BRAK CHĘTNYCH W ZASIĘGU! NASTĘPNYM RAZEM PRZEJMUJEMY CAŁĄ ZMIANĘ!');
+      this.callbacks.onPerkDropBanner?.('EKIPA PRZEJĘTA • ZMIANA STRON','⚡🤝',
+        recruited ? recruited + ' sojuszników walczy autonomicznie przez ' + duration + ' s: taran, flanker, strzelec i wsparcie.' : 'Brak przeciwników w promieniu 10,5 m.',
+        '#22d3ee');
+      this.emitFloatingToast(recruited ? '🤝 ' + recruited + ' SOJUSZNIKÓW DOŁĄCZA DO DRUŻYNY!' : 'BRAK CELÓW DO PRZEJĘCIA',
+        this.playerPos.x,this.playerPos.y+1.55,this.playerPos.z,'combo');
       this.triggerBloomPulse(0.48);
-      this.triggerScreenShake(0.28, 0.18);
+      this.triggerScreenShake(0.28,0.18);
       sound.playAttackWhoosh();
     } else if (this.currentCharacterId === 'piotr') {
       this.attackSwingDuration = 0.3;

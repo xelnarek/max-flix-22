@@ -157,6 +157,13 @@ export interface EnemyItem {
   aiRetreatTimer?: number;
   aiRetreatCooldownTimer?: number;
   aiCoalitionSize?: number;
+  /** Temporary recruited ally state for Mateusz's autonomous squad ability. */
+  aiMateuszAllyTimer?: number;
+  aiMateuszAllyRole?: 'bruiser' | 'flanker' | 'ranged' | 'support';
+  aiMateuszAllyTarget?: EnemyItem;
+  aiMateuszAllyRetargetTimer?: number;
+  aiMateuszAllyAttackCooldown?: number;
+  aiMateuszAllySupportTimer?: number;
   /** Temporary enemy target while Mateusz's contract effect forces enemy-only combat. */
   aiFactionBrawlTarget?: EnemyItem;
   aiFactionBrawlRetargetTimer?: number;
