@@ -349,3 +349,21 @@ test('the map-secret guide documents all five fixed secrets separately from bonu
   assert.match(game, /capybara-nose/);
   assert.doesNotMatch(game, /earA = new THREE\.Mesh\(new THREE\.ConeGeometry\(0\.10, 0\.20, 5\), gold\)/);
 });
+
+
+test('playable operators use five role-coloured gloves with hand-attached knuckle guards', async () => {
+  const source = await read('../src/warehouseAssets.ts');
+  const start = source.indexOf('export function createCharacterModel(def: CharacterDef)');
+  const end = source.indexOf(String.fromCharCode(10) + 'export function ', start + 10);
+  assert.ok(start >= 0 && end > start, 'playable character model factory should exist');
+  const model = source.slice(start, end);
+  assert.match(model, /const gloveColors: Record<CharacterId, number>/);
+  for (const id of ['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr']) {
+    assert.match(model, new RegExp(id + ': 0x[0-9a-f]{6}'));
+  }
+  assert.match(model, /const addGloveBack = \(hand: THREE\.Mesh\)/);
+  assert.match(model, /hand\.add\(knuckleGuard\)/);
+  assert.match(model, /hand\.add\(reflectiveTab\)/);
+  assert.match(model, /leftArmMesh\.add\(leftHand\);\s*addGloveBack\(leftHand\)/);
+  assert.match(model, /rightArmMesh\.add\(rightHand\);\s*addGloveBack\(rightHand\)/);
+});

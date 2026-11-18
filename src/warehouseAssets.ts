@@ -1462,15 +1462,48 @@ export function createCharacterModel(def: CharacterDef): {
   rightArmMesh.castShadow = true;
   rightArm.add(rightArmMesh);
 
-  // Hands
+  // Role-coloured warehouse gloves keep the hands readable during swings.
+  const gloveColors: Record<CharacterId, number> = {
+    marcin: 0x1e3a8a,
+    grzesiek: 0x166534,
+    dawid: 0x9a3412,
+    mateusz: 0x5b21b6,
+    piotr: 0x7f1d1d,
+  };
+  const gloveMat = new THREE.MeshStandardMaterial({
+    color: gloveColors[def.id],
+    roughness: 0.82,
+    metalness: 0.035,
+  });
   const handGeo = new THREE.BoxGeometry(0.09, 0.09, 0.09);
-  const leftHand = new THREE.Mesh(handGeo, skinMat);
+  const addGloveBack = (hand: THREE.Mesh) => {
+    // The domed knuckle guard and narrow reflective tab are parented to the
+    // hand mesh, so they follow the animated arm without a detached prop rig.
+    const knuckleGuard = new THREE.Mesh(
+      new THREE.SphereGeometry(0.038, 10, 7),
+      armorMat,
+    );
+    knuckleGuard.scale.set(1.10, 0.55, 0.42);
+    knuckleGuard.position.set(0, 0.022, 0.044);
+    knuckleGuard.castShadow = false;
+    hand.add(knuckleGuard);
+
+    const reflectiveTab = new THREE.Mesh(
+      new THREE.BoxGeometry(0.052, 0.012, 0.009),
+      silverReflectMat,
+    );
+    reflectiveTab.position.set(0, -0.022, 0.047);
+    hand.add(reflectiveTab);
+  };
+  const leftHand = new THREE.Mesh(handGeo, gloveMat);
   leftHand.position.set(0, -0.18, 0);
   leftArmMesh.add(leftHand);
+  addGloveBack(leftHand);
 
-  const rightHand = new THREE.Mesh(handGeo, skinMat);
+  const rightHand = new THREE.Mesh(handGeo, gloveMat);
   rightHand.position.set(0, -0.18, 0);
   rightArmMesh.add(rightHand);
+  addGloveBack(rightHand);
 
   // Wrist guards and reflective bands follow each forearm.
   for (const armMesh of [leftArmMesh, rightArmMesh]) {
