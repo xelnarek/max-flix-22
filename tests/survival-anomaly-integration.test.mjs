@@ -28,7 +28,7 @@ test('XP collection and level-up flow uses chance-based enemy drops and anomaly 
   assert.match(game, /rollSurvivalXpDrop\(\s*e\.type/);
   assert.match(game, /anomalyXp\.xpDropChanceMultiplier/);
   assert.match(game, /anomalyXp\.xpValueMultiplier/);
-  assert.match(game, /anomalyXp\.xpPickupMultiplier/);
+  assert.match(game, /anomalyXpMultiplier/);
   assert.match(game, /if \(xpDrop\) this\.spawnSurvivalXpGem/);
 });
 
