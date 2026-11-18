@@ -10,7 +10,9 @@ export type SurvivalAnomalyId =
   | 'coffee_overdrive'
   | 'broken_scales'
   | 'safety_bonus'
-  | 'inventory_lock';
+  | 'inventory_lock'
+  | 'overflow_loading'
+  | 'maintenance_window';
 
 export interface SurvivalAnomaly {
   readonly id: SurvivalAnomalyId;
@@ -127,6 +129,41 @@ const TEMPLATES: readonly SurvivalAnomalyTemplate[] = Object.freeze([
     description: 'Blokada magazynu! Przeciwnicy są wytrzymalsi, a operator wolniej ładuje umiejętność specjalną',
     weight: 6,
     modifiers: { ...NEUTRAL, enemyHealthMultiplier: 1.14, abilityCooldownMultiplier: 1.16, playerMoveMultiplier: 0.92 },
+  },
+  {
+    id: 'overflow_loading',
+    title: 'PRZECIĄŻONY ZAŁADUNEK',
+    description: 'Alarm na rampie! Większe grupy przyjeżdżają szybciej, przeciwnicy częściej używają specjalnych akcji i mocniej uderzają. W zamian kryształy XP wypadają częściej i mają wyższą wartość.',
+    weight: 6,
+    modifiers: {
+      ...NEUTRAL,
+      enemyHealthMultiplier: 1.16,
+      enemyAbilityRateMultiplier: 1.12,
+      spawnIntervalMultiplier: 0.88,
+      enemyGroupSizeBonus: 2,
+      playerDamageTakenMultiplier: 1.12,
+      xpDropChanceMultiplier: 1.28,
+      xpValueMultiplier: 1.28,
+    },
+  },
+  {
+    id: 'maintenance_window',
+    title: 'OKNO SERWISOWE B4',
+    description: 'Serwis odciąża linię. Wrogowie nacierają rzadziej i wolniej reagują, a operator zyskuje krótsze odnowienie ataków i umiejętności oraz lepszą ochronę.',
+    weight: 6,
+    modifiers: {
+      ...NEUTRAL,
+      enemyHealthMultiplier: 0.94,
+      enemyAbilityRateMultiplier: 0.88,
+      spawnIntervalMultiplier: 1.16,
+      enemyGroupSizeBonus: -1,
+      playerDamageDealtMultiplier: 1.08,
+      playerDamageTakenMultiplier: 0.86,
+      attackCooldownMultiplier: 0.94,
+      abilityCooldownMultiplier: 0.92,
+      abilityDurationMultiplier: 1.06,
+      xpPickupMultiplier: 1.12,
+    },
   },
 ] as const);
 
