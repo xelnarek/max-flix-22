@@ -148,7 +148,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
       'Ten wózek widłowy ma hitboxy jak w gra fantasy!',
       'Spawn-kill na klientach to moja specjalność!'
     ],
-    bio: 'Łowca platyn, specjalista od padów i człowiek, który potrafi porównać każdą zmianę na magazynie do poziomu trudności w grze. Umowę na dziewięć miesięcy traktuje jak długi quest poboczny, a każdy kolejny dzień odhacza z precyzją speedrunnera. W showroomie ma mentalne stanowisko gamingowe, a w głowie mapę wszystkich skrótów, które pozwalają ominąć nudne obowiązki. W walce stawia na mobilność, impulsy elektryczne i przejęcie kontroli nad chaosem, gdy przejmuje pobliskich przeciwników do własnej ekipy, która walczy autonomicznie według różnych ról. Gdy słyszy „lag”, najpierw sprawdza ping, a dopiero później, czy to przypadkiem nie wózek AGV.',
+    bio: 'Łowca platyn, specjalista od padów i człowiek, który potrafi porównać każdą zmianę na magazynie do poziomu trudności w grze. Umowę na dziewięć miesięcy traktuje jak długi quest poboczny, a każdy kolejny dzień odhacza z precyzją speedrunnera. W showroomie ma mentalne stanowisko gamingowe, a w głowie mapę wszystkich skrótów, które pozwalają ominąć nudne obowiązki. W walce stawia na mobilność i impulsy elektryczne, a jego specjalny sygnał otwiera przejście dla pięciu autonomicznych bohaterów multiwersum: Iron Mana, Hulka, Spider-Mana, Storm i Batmana. Gdy słyszy „lag”, najpierw sprawdza ping, a dopiero później, czy to przypadkiem nie wózek AGV.',
     stats: {
       speed: 5,
       jump: 4,
