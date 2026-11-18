@@ -48,6 +48,7 @@ import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoi
 import { calculateEnemyObstacleAvoidanceVector } from './enemyNavigation.ts';
 import { calculateStableEnemySteering, getEnemyEngageRadius } from './enemySteering.ts';
 import { calculateEnemyProjectileDodge, predictEnemyAimPoint } from './enemyTactics.ts';
+import { EnemyProjectileThreatIndex } from './enemyProjectileThreatIndex.ts';
 import { getCampaignEnemyFlankProfile, getCampaignEnemyFlankVector, resolveCampaignEnemyFlankSide } from './enemyCampaignTactics.ts';
 import { advanceEnemyAttackTelegraph, getEnemyRangedAttackTelegraphProfile } from './enemyAttackTelegraphs.ts';
 import { getEnemyMeleeTelegraphProfile, type EnemyMeleeTelegraphProfile } from './enemyMeleeTelegraphs.ts';
@@ -1083,6 +1084,8 @@ export class PaleciakiGameEngine {
   /** Deterministic sequence used to add a readable, dodgeable error to hostile aim. */
   private enemyAimShotSequence = 0;
   private readonly enemySpatialIndex = new EnemySpatialIndex<EnemyItem>(4.0);
+  private readonly enemyProjectileThreatIndex = new EnemyProjectileThreatIndex(5.0);
+  private enemyProjectileThreatIndexNextRefreshAt = 0;
   private enemySpatialIndexNextRefreshAt = 0;
   private enemySpatialIndexCachedCount = -1;
   /** Per-enemy wall-clock gate prevents contact attacks from restarting their animation every frame. */
@@ -13862,9 +13865,16 @@ export class PaleciakiGameEngine {
     enemy.aiDodgeTimer = Math.max(0, (enemy.aiDodgeTimer ?? 0) - dt);
     if (!isTelegraphingRangedBoss && enemy.aiDodgeScanTimer <= 0) {
       enemy.aiDodgeScanTimer = 0.12;
+      const nearbyProjectiles = this.enemyProjectileThreatIndex.query(
+        enemy.x,
+        enemy.z,
+        0.72,
+        1.02,
+        this.isHandheldViewport ? 0.04 : 0.018,
+      );
       const dodge = calculateEnemyProjectileDodge(
         enemy,
-        this.projectiles,
+        nearbyProjectiles,
         0.72,
         1.02,
         0.95,
@@ -15335,6 +15345,14 @@ export class PaleciakiGameEngine {
       this.enemySpatialIndex.rebuild(this.enemies);
       this.enemySpatialIndexCachedCount = this.enemies.length;
       this.enemySpatialIndexNextRefreshAt = this.isHandheldViewport ? spatialIndexNow + 24 : spatialIndexNow;
+    }
+
+    // Player projectiles use a second broadphase for enemy evasion. The grid is
+    // refreshed at the same handheld cadence as the crowd index; each query
+    // includes a conservative movement margin for shots since the last refresh.
+    if (!this.isHandheldViewport || spatialIndexNow >= this.enemyProjectileThreatIndexNextRefreshAt) {
+      this.enemyProjectileThreatIndex.rebuild(this.projectiles);
+      this.enemyProjectileThreatIndexNextRefreshAt = this.isHandheldViewport ? spatialIndexNow + 24 : spatialIndexNow;
     }
 
     for (const e of this.enemies) {
