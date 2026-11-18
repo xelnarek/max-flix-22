@@ -53,13 +53,30 @@ function valueNoise(x: number, z: number): number {
   return (top + (bottom - top) * sz) * 2 - 1;
 }
 
+function softBand(distance: number, halfWidth: number, feather: number): number {
+  const safeDistance = Math.max(0, Number.isFinite(distance) ? distance : Number.POSITIVE_INFINITY);
+  const start = Math.max(0, halfWidth);
+  const end = start + Math.max(0.001, feather);
+  const t = Math.max(0, Math.min(1, (safeDistance - start) / (end - start)));
+  return 1 - t * t * (3 - 2 * t);
+}
+
 function getBiomeFloorColor(mapId: SurvivalMapId, x: number, z: number): number {
   const base = FLOOR_BASE[mapId];
-  const grain = valueNoise(x * 0.78, z * 0.78) * 2.2
-    + valueNoise(x * 2.4 + 17, z * 2.4 - 9) * 1.0;
+  const grain = valueNoise(x * 0.78, z * 0.78) * 3.2
+    + valueNoise(x * 2.4 + 17, z * 2.4 - 9) * 1.4;
   let red = base[0] + grain;
   let green = base[1] + grain;
   let blue = base[2] + grain;
+  const centre = mapId === 'warehouse_b4'
+    ? { x: -60, z: -20 }
+    : mapId === 'container_terminal'
+      ? { x: 60, z: -20 }
+      : mapId === 'cold_storage'
+        ? { x: 60, z: 20 }
+        : { x: -60, z: 20 };
+  const localX = x - centre.x;
+  const localZ = z - centre.z;
 
   if (mapId === 'warehouse_b4') {
     // Worn concrete: broad slab joints, tyre rub and old oil marks.
@@ -67,11 +84,16 @@ function getBiomeFloorColor(mapId: SurvivalMapId, x: number, z: number): number 
     const slabZ = positiveMod(z + 240, 4.2);
     const joint = Math.min(slabX, 4.2 - slabX, slabZ, 4.2 - slabZ);
     const jointShade = joint < 0.045 ? -7 : joint < 0.10 ? -2.5 : 0;
-    const tyreRub = Math.sin((x + z * 0.38) * 0.21) * 1.15;
+    const tyreRub = Math.sin((x + z * 0.38) * 0.21) * 1.25;
     const oil = valueNoise(x * 0.22 - 31, z * 0.22 + 8) > 0.72 ? -3.2 : 0;
-    red += jointShade + tyreRub + oil + 1.2;
-    green += jointShade + tyreRub + oil;
-    blue += jointShade + tyreRub + oil - 1.4;
+    const dockLane = softBand(Math.abs(Math.abs(localZ) - 14.9), 0.16, 0.18)
+      * (positiveMod(localX + 60, 7.2) < 4.4 ? 1 : 0);
+    const hazardBand = softBand(Math.abs(Math.abs(localZ) - 17.25), 0.11, 0.16);
+    const hazardDash = positiveMod(localX + 60, 1.55) < 0.78 ? 1 : 0;
+    const hazardPaint = hazardBand * hazardDash;
+    red += jointShade + tyreRub + oil + 1.2 + dockLane * 15 + hazardPaint * 10;
+    green += jointShade + tyreRub + oil + dockLane * 11 + hazardPaint * 7;
+    blue += jointShade + tyreRub + oil - 1.4 - dockLane * 2 - hazardPaint * 2;
   } else if (mapId === 'container_terminal') {
     // Dark asphalt with faded loading lanes and aggregate patches.
     const laneDistance = Math.min(Math.abs(z + 30), Math.abs(z + 10));
@@ -80,9 +102,12 @@ function getBiomeFloorColor(mapId: SurvivalMapId, x: number, z: number): number 
     const aggregate = valueNoise(x * 1.55 + 42, z * 1.55 - 4);
     const crack = Math.abs(Math.sin(x * 0.83 + Math.sin(z * 0.37) * 0.8));
     const crackShade = crack < 0.035 ? -4 : 0;
-    red += crackShade + aggregate * 2.0 + paint * 5.0;
-    green += crackShade + aggregate * 2.0 + paint * 3.8;
-    blue += crackShade + aggregate * 1.8 + paint * 0.8;
+    const containerLane = softBand(Math.abs(Math.abs(localZ) - 12.7), 0.16, 0.18)
+      * (positiveMod(localX + 60, 9.4) < 5.8 ? 1 : 0);
+    const dockStopLine = softBand(Math.abs(Math.abs(localX) - 48), 0.12, 0.12);
+    red += crackShade + aggregate * 2.0 + paint * 5.0 + containerLane * 17 + dockStopLine * 9;
+    green += crackShade + aggregate * 2.0 + paint * 3.8 + containerLane * 12 + dockStopLine * 8;
+    blue += crackShade + aggregate * 1.8 + paint * 0.8 - containerLane * 2 + dockStopLine * 5;
   } else if (mapId === 'cold_storage') {
     // Blue-grey sealed concrete with fine frost fractures, never a white floor.
     const panelX = positiveMod(x + 240, 8.0);
@@ -91,18 +116,26 @@ function getBiomeFloorColor(mapId: SurvivalMapId, x: number, z: number): number 
     const frostLine = Math.abs(Math.sin(x * 0.68 + Math.sin(z * 0.51) * 0.42));
     const frost = frostLine < 0.032 ? 1 : 0;
     const seam = panelJoint < 0.035 ? -4.5 : 0;
-    red += seam + frost * 2.0;
-    green += seam + frost * 7.0;
-    blue += seam + frost * 9.0;
+    const freezerLaneDistance = Math.min(...[-30, -10, 10, 30].map((laneX) => Math.abs(localX - laneX)));
+    const freezerLane = softBand(freezerLaneDistance, 0.13, 0.20);
+    const frostRail = softBand(Math.abs(Math.abs(localZ) - 16.2), 0.10, 0.16);
+    red += seam + frost * 2.0 + freezerLane * 6 + frostRail * 3;
+    green += seam + frost * 7.0 + freezerLane * 15 + frostRail * 10;
+    blue += seam + frost * 9.0 + freezerLane * 22 + frostRail * 19;
   } else {
     // Graphite rubber floor with subdued scan grooves and violet signal reflections.
     const groove = positiveMod(z + 40, 3.6);
     const grooveShade = groove < 0.055 || groove > 3.545 ? -4.0 : 0;
-    const scan = positiveMod(x + 120, 13.5) < 0.13 && positiveMod(z + 40, 9) < 4.2 ? 1 : 0;
-    const wear = Math.sin(z * 1.18 + Math.sin(x * 0.13)) * 1.2;
-    red += grooveShade + wear + scan * 4.5;
-    green += grooveShade + wear - scan * 0.6;
-    blue += grooveShade + wear + scan * 5.0;
+    const scan = positiveMod(localX + 60, 13.5) < 0.13 && positiveMod(localZ + 20, 9) < 4.2 ? 1 : 0;
+    const scanPhase = positiveMod(localZ + 18, 4.5);
+    const scanDistance = Math.min(scanPhase, 4.5 - scanPhase);
+    const scannerTrack = softBand(scanDistance, 0.11, 0.14);
+    const scannerDash = positiveMod(localX + 60, 18) < 10 ? 1 : 0;
+    const scanPaint = scannerTrack * scannerDash;
+    const wear = Math.sin(localZ * 1.18 + Math.sin(localX * 0.13)) * 1.35;
+    red += grooveShade + wear + scan * 4.5 + scanPaint * 16;
+    green += grooveShade + wear - scan * 0.6 - scanPaint * 3;
+    blue += grooveShade + wear + scan * 5.0 + scanPaint * 21;
   }
 
   return (clampByte(red) << 16) | (clampByte(green) << 8) | clampByte(blue);
@@ -146,8 +179,10 @@ export function getSurvivalFloorAtlasSample(x: number, z: number): SurvivalFloor
 
 /**
  * Creates one world-space texture spanning all four connected Survival sectors.
- * The atlas is intentionally dark and low-contrast so floor details remain
- * readable under gameplay lighting and never flash pale at biome boundaries.
+ * Each biome now has a legible painted floor language: B4 dock bays and hazard
+ * striping, port traffic lanes, cold-room frost rails, and night-sorter scan
+ * tracks. Markings are sampled in local biome space and blended continuously
+ * at the same boundaries as the underlying material and lighting.
  */
 export function createSurvivalFloorAtlasTexture(width: number, height: number): THREE.CanvasTexture | null {
   const safeWidth = Math.max(32, Math.min(2048, Math.floor(Number.isFinite(width) ? width : 1024)));
