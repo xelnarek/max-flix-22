@@ -137,8 +137,8 @@ export function getDeviceRenderProfile(
       tier: 'mobile-high',
       // Higher-density 1.5K/AMOLED phones retain more native detail; measured FPS
       // still steps down when a large Survival wave saturates the GPU.
-      pixelRatioCap: 1.78,
-      survivalPixelRatioCap: 1.44,
+      pixelRatioCap: 1.90,
+      survivalPixelRatioCap: 1.55,
       shadowsEnabled: false,
       softShadows: false,
       // Reserve selective bloom for phones with strong CPU/GPU headroom.
@@ -148,8 +148,10 @@ export function getDeviceRenderProfile(
 
   return {
     tier: 'mobile-balanced',
-    pixelRatioCap: 1.36,
-    survivalPixelRatioCap: 1.16,
+    // A sharper baseline for current mid/high-density phones. FPS
+    // sampling still steps down immediately when a dense wave saturates GPU.
+    pixelRatioCap: 1.44,
+    survivalPixelRatioCap: 1.25,
     shadowsEnabled: false,
     softShadows: false,
     bloomEnabled: false,
