@@ -49,7 +49,7 @@ const PROFILES: Readonly<Partial<Record<EnemyType, EnemyMeleeTelegraphProfile>>>
     warningText: 'MUTANT ŁADUJE CIĘŻKI CIOS — UCIEKAJ Z LINII!', missText: 'UNIK! MUTANT NIE TRAFIŁ!',
   },
   radioactive_pip: {
-    windupSeconds: 0.58, reachMeters: 0.82, laneWidth: 1.35, color: 0xa3e635, cooldownSeconds: 1.60,
+    windupSeconds: 0.54, reachMeters: 0.82, laneWidth: 1.35, color: 0xa3e635, cooldownSeconds: 1.60,
     warningText: 'PIP WYKONUJE SKAŻONY ZAMACH — ODSKOCZ!', missText: 'UNIK! PIP NIE DOSIĘGNĄŁ!',
   },
 });
