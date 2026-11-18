@@ -16,9 +16,11 @@ function safeWave(value: number): number {
 }
 
 /**
- * A more demanding Survival curve:
- * - Enemies begin at full movement speed and arrive more frequently from wave 1.
- * - Their health and special-attack cadence increase as the run progresses.
+ * A controlled Survival difficulty curve:
+ * - Enemy health and arrival cadence start slightly higher than before.
+ * - Enemy movement speed is intentionally unchanged to preserve readable dodges.
+ * - Attack cooldowns tighten only a little; visible projectile speed and wind-up
+ *   windows are not modified here.
  * - Groups grow every three waves, while the device-specific live-enemy cap
  *   remains the final performance guardrail on handheld hardware.
  * - All values have explicit limits so late runs stay predictable.
@@ -27,10 +29,10 @@ export function getSurvivalDifficultyProfile(wave: number): SurvivalDifficultyPr
   const currentWave = safeWave(wave);
   const waveIndex = currentWave - 1;
   return {
-    enemyHealthMultiplier: 1.28 + Math.min(2.1, waveIndex * 0.085),
+    enemyHealthMultiplier: 1.33 + Math.min(2.15, waveIndex * 0.086),
     enemySpeedMultiplier: 1 + Math.min(0.55, waveIndex * 0.018),
-    spawnIntervalSeconds: Math.max(3.0, 5.5 - waveIndex * 0.11),
+    spawnIntervalSeconds: Math.max(2.95, 5.35 - waveIndex * 0.11),
     extraGroupSize: Math.min(6, Math.floor(waveIndex / 3)),
-    enemyAbilityRateMultiplier: Number((1.10 + Math.min(0.60, waveIndex * 0.02)).toFixed(2)),
+    enemyAbilityRateMultiplier: Number((1.12 + Math.min(0.62, waveIndex * 0.02)).toFixed(2)),
   };
 }
