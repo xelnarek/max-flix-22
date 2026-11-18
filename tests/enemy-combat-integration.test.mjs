@@ -89,12 +89,16 @@ test('Survival enemies scan for incoming player shots and commit a short role-we
   assert.match(types, /aiDodgeScanTimer\?: number/);
 });
 
-test('ordinary enemy projectiles lead a moving operator while locked boss telegraphs keep their committed lane', () => {
+test('enemy projectiles retain velocity lead and use the shared 8% speed reduction', async () => {
+  const combat = await readFile(new URL('../src/combatBalance.ts', import.meta.url), 'utf8');
   assert.match(game, /private predictPlayerAimPoint\(/);
   assert.match(game, /predictEnemyAimPoint\(/);
-  assert.match(game, /this\.predictPlayerAimPoint\(x, z, 7\.6, targetX, targetZ, 0\.64\)/);
-  assert.match(game, /this\.predictPlayerAimPoint\(x, z, 7\.2, targetX, targetZ, 0\.62\)/);
-  assert.match(game, /const aim = this\.predictPlayerAimPoint\(x, z, 7\.5\)/);
+  for (const speed of ['7\\.6', '7\\.2', '7\\.5', '10\\.0', '8\\.2', '9\\.5']) {
+    assert.match(game, new RegExp('getEnemyProjectileSpeed\\(' + speed + '\\)'));
+  }
   assert.match(game, /Number\.isFinite\(lockedDirection\) \? null : this\.predictPlayerAimPoint/);
   assert.match(game, /Math\.sin\(lockedDirection as number\)/);
+  assert.match(combat, /ENEMY_PROJECTILE_SPEED_MULTIPLIER = 0\.92/);
+  assert.match(game, /enemy\.attackCooldown = isHeavy \? 0\.88 : 1\.04/);
+  assert.match(game, /SURVIVAL_ENEMY_SPECIAL_RATE_MULTIPLIER/);
 });
