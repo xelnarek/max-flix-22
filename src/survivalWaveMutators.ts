@@ -1,4 +1,4 @@
-export type SurvivalWaveMutatorId = 'standard' | 'rush' | 'armored' | 'supply' | 'swarm' | 'convoy';
+export type SurvivalWaveMutatorId = 'standard' | 'rush' | 'armored' | 'supply' | 'swarm' | 'convoy' | 'ramp_overload' | 'express_dispatch';
 
 export interface SurvivalWaveMutator {
   id: SurvivalWaveMutatorId;
@@ -96,9 +96,35 @@ const MUTATORS: readonly SurvivalWaveMutator[] = [
     spawnIntervalMultiplier: 1.14,
     groupSizeBonus: -1,
   },
+  {
+    id: 'ramp_overload',
+    title: 'PRZECIĄŻENIE RAMPY',
+    label: 'DUŻE GRUPY • DŁUŻSZE ODSTĘPY',
+    description: 'Rampa zbiera większe dostawy w jedną falę. Jednostki są nieco wytrzymalsze, ale pojawiają się rzadziej — przygotuj atak obszarowy i kontrolę przejścia.',
+    icon: '🚛',
+    color: '#f97316',
+    healthMultiplier: 1.08,
+    speedMultiplier: 0.94,
+    xpMultiplier: 1.45,
+    spawnIntervalMultiplier: 1.22,
+    groupSizeBonus: 3,
+  },
+  {
+    id: 'express_dispatch',
+    title: 'EKSPRESOWA SORTOWNIA',
+    label: 'SZYBKIE • MNIEJSZE DOSTAWY',
+    description: 'Lekkie jednostki pędzą przez sortownię. Grupy są mniejsze, ale przyjeżdżają znacznie częściej i poruszają się szybciej.',
+    icon: '⚡',
+    color: '#22d3ee',
+    healthMultiplier: 0.88,
+    speedMultiplier: 1.22,
+    xpMultiplier: 1.40,
+    spawnIntervalMultiplier: 0.82,
+    groupSizeBonus: -1,
+  },
 ] as const;
 
-/** Waves 1–2 are the baseline. From wave 3, five distinct warehouse shifts rotate. */
+/** Waves 1–2 are the baseline. From wave 3, seven distinct warehouse shifts rotate. */
 export function getSurvivalWaveMutator(wave: number): SurvivalWaveMutator {
   const safeWave = Number.isFinite(wave) ? Math.max(1, Math.floor(wave)) : 1;
   if (safeWave < 3) return STANDARD;
