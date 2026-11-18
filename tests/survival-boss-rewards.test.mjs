@@ -67,8 +67,8 @@ test('boss rewards pause Survival, trigger on boss defeat and cannot be bypassed
   assert.ok(game.includes("this.survivalBossRewardPending || this.survivalSkips <= 0"));
   assert.ok(game.includes("this.survivalBossRewardPending ||"));
   assert.ok(app.includes("context: 'levelup' | 'rank-up' | 'boss-reward' | 'chaos-roulette' = 'levelup'"));
-  assert.ok(app.includes("survivalRerollBtn?.classList.toggle('hidden', isBossReward)"));
-  assert.ok(app.includes("survivalSkipBtn?.classList.toggle('hidden', isBossReward)"));
+  assert.ok(app.includes("survivalRerollBtn?.classList.toggle('hidden', isBossReward || isChaosRoulette)"));
+  assert.ok(app.includes("survivalSkipBtn?.classList.toggle('hidden', isBossReward || isChaosRoulette)"));
   assert.ok(html.includes('id="survival-levelup-title"'));
   assert.ok(css.includes('#survival-levelup[data-mode="boss-reward"] .survival-upgrade-actions'));
 });
