@@ -40,3 +40,9 @@ This pass uses the existing role-matched Gobkit GLB rigs and the original proced
 - Stepping outside the contact radius or changing floor height before impact causes a miss; confirmed damage or stun interrupts the committed strike.
 - Concurrent warning lanes are capped at two on mobile and four on desktop to preserve floor readability and frame budget.
 - Bosses, dedicated ranged/mechanical actors and stomp/Bulldozer/Marcin/Grzesiek counterplay retain their existing rules. Damage and HP values are unchanged.
+
+
+## Ordinary melee follow-through recovery
+- Ten regular melee archetypes receive a short role-specific planted recovery after a committed hit or miss; heavier attacks recover longer than fast courier swings.
+- Recovery temporarily holds horizontal pursuit and delays overlapping special actions for Inspector, Gamma Mutant and Pip.
+- Confirmed player damage interrupts the recovery, preserving hit-stagger and counterplay. Existing HP, strike damage and base attack cooldowns are unchanged.
