@@ -69,11 +69,24 @@ test('rebuild drops removed, orbiting, slow and malformed projectiles while reus
   assert.deepEqual(index.query(0, 0), []);
 });
 
+test('invalid projectile coordinates and velocities are excluded from the index', () => {
+  const index = new EnemyProjectileThreatIndex(5);
+  const invalidHeight = shot(0, 0, 8, 0, Number.NaN);
+  const invalidHorizontalVelocity = shot(2, 2, Number.POSITIVE_INFINITY, 0);
+  const invalidVerticalVelocity = shot(4, 4, 8, 0);
+  invalidVerticalVelocity.vel.y = Number.NEGATIVE_INFINITY;
+
+  index.rebuild([invalidHeight, invalidHorizontalVelocity, invalidVerticalVelocity]);
+  assert.equal(index.size, 0);
+  assert.deepEqual(index.query(0, 0), []);
+});
+
 test('invalid query inputs and empty indexes return an empty reusable result', () => {
   const index = new EnemyProjectileThreatIndex(5);
   assert.deepEqual(index.query(Number.NaN, 0), []);
   index.rebuild([shot(0, 0, 8, 0)]);
   assert.deepEqual(index.query(0, 0, Number.NaN), []);
+  assert.deepEqual(index.query(Number.POSITIVE_INFINITY, 0), []);
   index.rebuild([]);
   assert.deepEqual(index.query(0, 0), []);
 });
