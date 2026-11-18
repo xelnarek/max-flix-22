@@ -1708,7 +1708,7 @@ test('Mateusz Operator 04 recruits a temporary autonomous team and keeps the con
 test('Mateusz recruited allies have bounded lifetime and restore hostile AI after expiry', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /ally\.aiMateuszAllyTimer = order\.durationSeconds/);
-  assert.match(game, /enemy\.aiMateuszAllyTimer\\s*=\\s*Math\\.max\\(0,\\s*remaining\\s*-\\s*dt\\)/);
+  assert.ok(game.includes('enemy.aiMateuszAllyTimer=Math.max(0,remaining-dt)'));
   assert.match(game, /if \(this\.updateMateuszAlly\(e, dt\)\) continue/);
   assert.match(game, /private setMateuszAllyVisual\(enemy: EnemyItem, active: boolean, dt: number\)/);
   assert.match(game, /if \(!active\) \{[\s\S]*?mateuszAllyRing/);
