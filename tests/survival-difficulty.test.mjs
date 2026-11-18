@@ -34,7 +34,7 @@ test('the small difficulty increase leaves movement tuning intact and keeps late
 
 test('every Survival operator receives a stronger outgoing damage and increased incoming pressure', () => {
   assert.equal(SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER, 0.88);
-  assert.ok(Math.abs(scaleSurvivalOutgoingDamage(10) - 9.2) < 1e-9);
+  assert.ok(Math.abs(scaleSurvivalOutgoingDamage(10) - 8.8) < 1e-9);
   assert.equal(scaleSurvivalIncomingDamage(1), 1.16);
   assert.equal(SURVIVAL_HIT_INVULNERABILITY_SECONDS, 0.72);
   assert.equal(scaleSurvivalOutgoingDamage(-5), 0);
