@@ -940,7 +940,7 @@ test('each boss warning stores its owner-specific lane dimensions for dodge vali
   const calls = game.match(/this\.spawnBossLaneTelegraph\([^;]+\);/g) || [];
   assert.ok(calls.length >= 4, 'expected multiple boss lane telegraphs');
   for (const call of calls) {
-    assert.match(call, /,\s*(?:enemy|e)\);$/, 'each lane warning must attach its enemy owner');
+    assert.match(call, /,\s*(?:enemy|e),?\s*\);$/, 'each lane warning must attach its enemy owner');
   }
 });
 
