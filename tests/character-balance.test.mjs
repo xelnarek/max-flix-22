@@ -14,10 +14,10 @@ test('all five operators have deliberately different movement, jump, attack and 
   assert.ok(CHARACTERS.mateusz.speed > CHARACTERS.marcin.speed);
   assert.ok(CHARACTERS.dawid.jumpForce > CHARACTERS.grzesiek.jumpForce);
   assert.ok(CHARACTERS.grzesiek.basicAttackDamageMultiplier > CHARACTERS.mateusz.basicAttackDamageMultiplier);
-  assert.ok(CHARACTERS.mateusz.basicAttackDamageMultiplier >= 0.95, 'Mateusz no longer has an overly weak signature attack');
+  assert.ok(CHARACTERS.mateusz.basicAttackDamageMultiplier >= 1.05, 'Mateusz has an even, competitive fast attack');
   assert.equal(CHARACTER_ABILITY_DAMAGE_MULTIPLIER, 1.10);
   assert.equal(SURVIVAL_PRIMARY_ATTACK_DAMAGE_MULTIPLIER, 1.15);
-  assert.deepEqual(SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS, { marcin: 1.90, grzesiek: 2.05, dawid: 1.88, mateusz: 1.80, piotr: 2.10 });
+  assert.deepEqual(SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS, { marcin: 1.90, grzesiek: 2.05, dawid: 1.88, mateusz: 1.65, piotr: 2.10 });
   assert.ok(CHARACTERS.marcin.damageTakenMultiplier < CHARACTERS.mateusz.damageTakenMultiplier);
   for (const character of Object.values(CHARACTERS)) {
     assert.ok(character.speed >= 6 && character.speed <= 10);
