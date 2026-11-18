@@ -89,7 +89,7 @@ test('Survival enemies scan for incoming player shots and commit a short role-we
   assert.match(types, /aiDodgeScanTimer\?: number/);
 });
 
-test('enemy projectiles retain predictive aim and use a shared 8% slowdown', async () => {
+test('enemy projectiles are slower, less accurate and have longer enemy attack windows', async () => {
   const combat = await readFile(new URL('../src/combatBalance.ts', import.meta.url), 'utf8');
   assert.match(game, /private predictPlayerAimPoint\(/);
   assert.match(game, /predictEnemyAimPoint\(/);
@@ -98,7 +98,12 @@ test('enemy projectiles retain predictive aim and use a shared 8% slowdown', asy
   }
   assert.match(game, /Number\.isFinite\(lockedDirection\) \? null : this\.predictPlayerAimPoint/);
   assert.match(game, /Math\.sin\(lockedDirection as number\)/);
-  assert.match(combat, /ENEMY_PROJECTILE_SPEED_MULTIPLIER = 0\.92/);
-  assert.match(game, /enemy\.attackCooldown = isHeavy \? 0\.88 : 1\.04/);
+  assert.match(combat, /ENEMY_PROJECTILE_SPEED_MULTIPLIER = 0\.76/);
+  assert.match(combat, /ENEMY_PROJECTILE_AIM_LEAD_MULTIPLIER = 0\.42/);
+  assert.match(combat, /ENEMY_PROJECTILE_AIM_ERROR_METERS = 0\.78/);
+  assert.match(combat, /ENEMY_MOVEMENT_SPEED_MULTIPLIER = 0\.88/);
+  assert.match(game, /enemy\.attackCooldown = isHeavy \? 1\.02 : 1\.18/);
+  assert.match(game, /leadFraction \* ENEMY_PROJECTILE_AIM_LEAD_MULTIPLIER/);
+  assert.match(game, /missDistance = ENEMY_PROJECTILE_AIM_ERROR_METERS/);
   assert.match(game, /SURVIVAL_ENEMY_SPECIAL_RATE_MULTIPLIER/);
 });
