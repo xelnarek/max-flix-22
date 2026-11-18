@@ -20,7 +20,7 @@ The operator IDs, character stats, attack definitions, passives, abilities, prog
 
 ## Survival enemy roster
 
-All 19 humanoid and creature archetypes use locally bundled, rigged GLB assets. Each imported rig receives a role-specific size and animation track plus a five-anchor geometry kit mounted to its head, torso, right arm, back and legs. Large body proportions, helmets, armour, tools, backpacks and boss/creature features make the silhouette distinct; equipment follows the animated skeleton instead of floating as a static decal. The previous warehouse-prop model is hidden after the new rig is attached.
+All 19 humanoid and creature archetypes use locally bundled, rigged GLB assets. Each imported rig receives role-specific proportions on the torso, neck, shoulders, arms, forearms, hips, thighs and calves where those joints exist, plus a five-anchor geometry kit mounted to its head, torso, right arm, back and legs. Large body proportions, helmets, armour, tools, backpacks and boss/creature features make the silhouette distinct; equipment follows the animated skeleton instead of floating as a static decal. The previous warehouse-prop model is hidden after the new rig is attached.
 
 | Enemy family | 3D model |
 | --- | --- |
@@ -54,7 +54,8 @@ The forklift, AGV robot, Piorun drone and Pomazaniec bicycle rider remain purpos
 - Geometry and materials are cloned per actor so normal character/despawn cleanup cannot destroy another actor's rig. Texture maps remain shared.
 - The model is fitted to a consistent world height and grounded against the existing actor origin.
 - Existing UI markers, health bars, shadows, nameplates, PvP markers and enemy telegraphs are preserved.
-- Named clips are cross-faded according to actor state. PvP's local and remote operator slots use the same selected model mapping.
+- Named clips are cross-faded according to actor state. Enemy wind-up, contact and follow-through accents are synchronized to the active Attack clip time; hit stagger decays into recovery instead of free-running with the walk cycle.
+- Enemy locomotion has distinct gait signatures for nervous, swaggering, braced, uneven and stalking roles alongside the existing heavy, brisk, precise, robotic and undead styles. PvP's local and remote operator slots use the same selected model mapping.
 - If a model fails to load in a non-strict development session, the existing procedural actor stays visible.
 
 ## Build behaviour
