@@ -10,12 +10,13 @@ import {
   getEnemyAnatomyProfile,
   ENEMY_ROLE_MOTION_ACCENTS,
   getEnemyCombatMotionProfile,
+  getEnemyCombatMotionEnvelope,
 } from '../src/enemyAnimationPolish.ts';
 
 function makeRig() {
   const root = new THREE.Group();
   const bones = new Map();
-  for (const name of ['mixamorigHips', 'mixamorigSpine', 'mixamorigSpine2', 'mixamorigHead', 'mixamorigRightArm']) {
+  for (const name of ['mixamorigHips', 'mixamorigSpine', 'mixamorigSpine2', 'mixamorigHead', 'mixamorigNeck', 'mixamorigRightArm', 'mixamorigLeftForeArm', 'mixamorigRightForeArm', 'mixamorigLeftLowerLeg', 'mixamorigRightLowerLeg']) {
     const bone = new THREE.Bone();
     bone.name = name;
     root.add(bone);
@@ -153,6 +154,44 @@ test('secondary role motion animates idle and locomotion but never overlays atta
   applyEnemyRoleSecondaryMotion(root, 'architect', 0.2, 0.05, 0, 'Idle');
   assert.ok(spine.quaternion.angleTo(beforeIdle) > 0.0001,
     'idle stance should retain low-amplitude breathing/weight shifts');
+});
+
+
+test('role anatomy also scales neck, forearms, hips and calves when the imported rig exposes them', () => {
+  const { root, bones } = makeRig();
+  assert.equal(applyEnemyRoleAnatomy(root, 'monter'), true);
+  assert.ok(bones.get('mixamorigNeck').scale.x > 1);
+  assert.ok(bones.get('mixamorigLeftForeArm').scale.x > 1);
+  assert.ok(bones.get('mixamorigRightForeArm').scale.x > 1);
+  assert.ok(bones.get('mixamorigLeftLowerLeg').scale.x > 1);
+  assert.ok(bones.get('mixamorigHips').scale.x > 1);
+  assert.equal(applyEnemyRoleAnatomy(root, 'monter'), false,
+    'secondary anatomical proportions must never compound');
+});
+
+test('attack accents are synchronized to wind-up, contact and recovery clip phases', () => {
+  const start = getEnemyCombatMotionEnvelope('Attack', 0);
+  const windup = getEnemyCombatMotionEnvelope('Attack', 0.22);
+  const contact = getEnemyCombatMotionEnvelope('Attack', 0.47);
+  const recovery = getEnemyCombatMotionEnvelope('Attack', 0.78);
+  const end = getEnemyCombatMotionEnvelope('Attack', 1);
+  assert.equal(start.windup + start.impact + start.recovery, 0);
+  assert.ok(windup.windup > 0.99 && windup.impact < 0.1);
+  assert.ok(contact.impact > 0.99 && contact.windup < 0.1);
+  assert.ok(recovery.recovery > 0.99 && recovery.impact < 0.1);
+  assert.equal(end.windup + end.impact + end.recovery, 0);
+  for (const envelope of [start, windup, contact, recovery, end]) {
+    for (const value of Object.values(envelope)) assert.ok(value >= 0 && value <= 1);
+  }
+});
+
+test('hit stagger decays into recovery instead of looping with the locomotion phase', () => {
+  const early = getEnemyCombatMotionEnvelope('Hit', 0.05);
+  const middle = getEnemyCombatMotionEnvelope('Hit', 0.5);
+  const late = getEnemyCombatMotionEnvelope('Hit', 1);
+  assert.ok(early.impact > middle.impact);
+  assert.equal(late.impact, 0);
+  assert.ok(late.recovery > middle.recovery);
 });
 
 test('all non-vehicle humanoid archetypes have anatomical tuning', () => {
