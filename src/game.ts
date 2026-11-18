@@ -13737,7 +13737,9 @@ export class PaleciakiGameEngine {
 
     enemy.x = THREE.MathUtils.clamp(enemy.x + steerX * movementSpeed * dt, this.levelBounds.minX + 1.2, this.levelBounds.maxX - 1.2);
     enemy.z = THREE.MathUtils.clamp(enemy.z + steerZ * movementSpeed * dt, this.levelBounds.minZ + 1.0, this.levelBounds.maxZ - 1.0);
-    enemy.mesh.rotation.y = Math.atan2(this.playerPos.x - enemy.x, this.playerPos.z - enemy.z);
+    enemy.mesh.rotation.y = enemy.aiRangedWindupTimer !== undefined
+      ? (enemy.aiRangedLockedDirection ?? Math.atan2(this.playerPos.x - enemy.x, this.playerPos.z - enemy.z))
+      : Math.atan2(this.playerPos.x - enemy.x, this.playerPos.z - enemy.z);
     enemy.mesh.position.set(enemy.x, enemy.y, enemy.z);
     enemy.state = engaged ? 'chase' : 'patrol';
 
@@ -15405,6 +15407,7 @@ export class PaleciakiGameEngine {
       }
 
       if (factionBrawlActive) {
+        if (e.aiRangedWindupTimer !== undefined) this.cancelEnemyRangedAttackTelegraph(e, true);
         this.updateEnemyFactionBrawl(e, dt);
         continue;
       }
