@@ -1452,7 +1452,7 @@ button:disabled { cursor: not-allowed !important; filter: grayscale(.35); opacit
 /* B4 chaos roulette: arcade slot-machine reward, readable on touch screens. */
 .survival-chaos-machine {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   align-items: center;
   justify-items: center;
@@ -1469,7 +1469,7 @@ button:disabled { cursor: not-allowed !important; filter: grayscale(.35); opacit
   place-items: center;
   min-width: 0;
   width: 100%;
-  min-height: 76px;
+  min-height: 64px;
   border-radius: 12px;
   background: rgba(5, 12, 20, 0.72);
   border: 1px solid rgba(148, 163, 184, 0.20);
@@ -3234,3 +3234,8 @@ html[data-ui-landscape-touch="true"] .story-modal-card .story-slide {
   }
 }
 
+
+@media (max-width: 480px) {
+  .survival-chaos-machine { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 12px; }
+  .survival-chaos-machine span { min-height: 54px; }
+}
