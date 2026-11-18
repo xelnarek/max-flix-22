@@ -432,6 +432,13 @@ const CAMPAIGN_ARENA_BOUNDS = Object.freeze({
   maxZ: 21.0,
 });
 
+const PVP_PERK_COLORS: Readonly<Record<string, number>> = Object.freeze({
+  power: 0xef4444,
+  sprint: 0x38bdf8,
+  shield: 0x22c55e,
+  rapid: 0xa78bfa,
+});
+
 export class PaleciakiGameEngine {
   public static readonly ENEMY_QUOTES: Record<string, string[]> = {
     customer: [
@@ -800,6 +807,8 @@ export class PaleciakiGameEngine {
   private pvpAimSweepCenterAngle = Math.PI / 2;
   private pvpLocalMarker: THREE.Group | null = null;
   private pvpProjectileMeshes = new Map<string, THREE.Mesh>();
+  /** Reused membership scratch; updatePvpMode clears and fills it every sync. */
+  private readonly pvpProjectileActiveIds = new Set<string>();
   private pvpArenaRoot: THREE.Group | null = null;
   private pvpWantFire = false;
   private pvpWantDash = false;
@@ -3849,7 +3858,8 @@ export class PaleciakiGameEngine {
       this.pvpAimSweepPointer.visible = roundActive;
     }
 
-    const activeIds = new Set<string>();
+    const activeIds = this.pvpProjectileActiveIds;
+    activeIds.clear();
     for (const proj of state.projectiles) {
       activeIds.add(proj.id);
       let mesh = this.pvpProjectileMeshes.get(proj.id);
@@ -3911,8 +3921,7 @@ export class PaleciakiGameEngine {
       this.pvpPerkMesh.visible = perk.active;
       if (perk.active) {
         this.pvpPerkMesh.position.set(perk.x, 0, perk.z); this.pvpPerkMesh.rotation.y += dt * 1.45;
-        const colors: Record<string, number> = { power: 0xef4444, sprint: 0x38bdf8, shield: 0x22c55e, rapid: 0xa78bfa };
-        const color = colors[perk.type] || 0xfacc15;
+        const color = PVP_PERK_COLORS[perk.type] ?? 0xfacc15;
         if (this.pvpPerkLabelContext && this.pvpPerkLabel && this.pvpPerkLabelLastType !== perk.type) {
           const ctx = this.pvpPerkLabelContext;
           ctx.clearRect(0, 0, 320, 72);
