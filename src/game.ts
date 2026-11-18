@@ -56,6 +56,7 @@ import { findFirstProjectileBodyImpact, findFirstProjectileEnemyImpact, type Mut
 import { createEnemyHitReaction, getEnemyHitPulse, getEnemyImpactBurstProfile } from './enemyCombatFeedback.ts';
 import { getEnemyDeathMotionPose, getEnemyDeathMotionProfile } from './enemyDeathMotion.ts';
 import { ENEMY_GAIT_PRESETS, ENEMY_VISUAL_PROFILES } from './enemyVisualProfiles.ts';
+import { createEnemyVisualLodProxy, shouldUseEnemyVisualLodProxy, updateEnemyVisualLodProxy } from './enemyVisualLod.ts';
 import { addProceduralLimbPose, getProceduralHitPulse, setProceduralJointRotation, setProceduralLimbPose } from './proceduralActorAnimation.ts';
 import { isEffectiveBossLaneDodge, isInsideBossAttackLane, isWithinBossImpactRadius } from './combatTelegraphs.ts';
 import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
@@ -1765,10 +1766,18 @@ export class PaleciakiGameEngine {
       if (!(object instanceof THREE.Mesh)) return;
       // Gobkit clones own their geometry; MakeHuman body/wearable geometry and
       // equipment geometry are cache-shared and must remain available to peers.
-      if (object.userData.gobkitAsset === true && object.userData.gobkitSharedGeometry !== true) object.geometry.dispose();
+      if (
+        object.userData.actorLodSharedGeometry !== true &&
+        object.userData.gobkitAsset === true &&
+        object.userData.gobkitSharedGeometry !== true
+      ) object.geometry.dispose();
       const materials = Array.isArray(object.material) ? object.material : [object.material];
       for (const material of materials) {
-        if (material.userData.makeHumanShared !== true && material.userData.gobkitSharedMaterial !== true) material.dispose();
+        if (
+          material.userData.makeHumanShared !== true &&
+          material.userData.gobkitSharedMaterial !== true &&
+          material.userData.actorLodSharedMaterial !== true
+        ) material.dispose();
       }
     });
   }
@@ -1797,6 +1806,7 @@ export class PaleciakiGameEngine {
     // attachment. Each overlay owns its own geometry/materials.
     for (const child of [...group.children]) {
       const isActorRoot = child.userData.actorVisualRoot === true ||
+        child.userData.actorLodProxy === true ||
         /^(makehuman|gobkit)-(operator|enemy)-/.test(child.name);
       if (isActorRoot || child.userData.actorRoleSilhouette === true) {
         this.disposeUntrackedActorVisualRoot(child);
@@ -1806,7 +1816,51 @@ export class PaleciakiGameEngine {
     delete group.userData.actorVisualRoot;
   }
 
+  private installEnemyVisualLodProxy(enemy: EnemyItem, fullRoot: THREE.Group): void {
+    const mesh = enemy.mesh;
+    if (!(mesh instanceof THREE.Group)) return;
+    const previous = mesh.userData.actorLodProxyRoot as THREE.Group | undefined;
+    previous?.removeFromParent();
+    const proxy = createEnemyVisualLodProxy(enemy.type);
+    mesh.add(proxy);
+    mesh.userData.actorLodProxyRoot = proxy;
+    mesh.userData.actorVisualRoot = fullRoot;
+    fullRoot.visible = true;
+  }
+
+  /**
+   * Apply high-quality oblique texture filtering once when an imported rig is
+   * attached. MakeHuman and role-wearable assets can arrive after the world
+   * texture pass, so they need their own bounded anisotropy setup.
+   */
+  private applyActorTextureQuality(root: THREE.Object3D): void {
+    if (root.userData.actorTextureQualityApplied === true) return;
+    const renderer = this.threeRenderer;
+    if (!renderer) return;
+    const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
+    const targetAnisotropy = Math.max(1, Math.min(maxAnisotropy, this.isHandheldViewport ? 10 : 16));
+    const textureSlots = [
+      'map', 'alphaMap', 'aoMap', 'bumpMap', 'displacementMap',
+      'emissiveMap', 'lightMap', 'metalnessMap', 'normalMap', 'roughnessMap',
+    ];
+    root.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      for (const material of materials) {
+        for (const slot of textureSlots) {
+          const texture = (material as any)[slot];
+          if (texture instanceof THREE.Texture && texture.anisotropy < targetAnisotropy) {
+            texture.anisotropy = targetAnisotropy;
+            texture.needsUpdate = true;
+          }
+        }
+      }
+    });
+    root.userData.actorTextureQualityApplied = true;
+  }
+
   private installActorVisualRoot(group: THREE.Group, root: THREE.Group): void {
+    this.applyActorTextureQuality(root);
     // Enforce the one-rig-per-entity invariant at the final installation boundary.
     // This also protects against future async attachment paths being added without
     // remembering to remove a previous imported rig first.
@@ -2069,6 +2123,7 @@ export class PaleciakiGameEngine {
       this.removeAttachedActorVisuals(mesh as THREE.Group);
       this.hideProceduralVisuals(mesh as THREE.Group, overlays);
       this.installActorVisualRoot(mesh as THREE.Group, actor.root);
+      this.installEnemyVisualLodProxy(enemy, actor.root);
       enemy.legL = undefined;
       enemy.legR = undefined;
       enemy.armL = undefined;
@@ -2144,6 +2199,7 @@ export class PaleciakiGameEngine {
       this.removeAttachedActorVisuals(mesh as THREE.Group);
       this.hideProceduralVisuals(mesh as THREE.Group, overlays);
       this.installActorVisualRoot(mesh as THREE.Group, root);
+      this.installEnemyVisualLodProxy(enemy, root);
       // Role equipment is attached to head, torso, right-arm, back and leg bones.
       // It follows the imported rig instead of floating as a static colour decal.
       createEnemyRoleKit(requestedType, root);
@@ -2282,6 +2338,42 @@ export class PaleciakiGameEngine {
       const distanceX = enemy.x - this.playerPos.x;
       const distanceZ = enemy.z - this.playerPos.z;
       const distanceSquared = distanceX * distanceX + distanceZ * distanceZ;
+      const lodProxy = enemy.mesh.userData.actorLodProxyRoot as THREE.Group | undefined;
+      const fullVisual = enemy.mesh.userData.actorVisualRoot as THREE.Group | undefined;
+      if (lodProxy && fullVisual) {
+        const now = performance.now();
+        const pendingAttackUntil = this.enemyPendingAttackUntil.get(enemy) ?? 0;
+        const attackAnimationUntil = this.enemyAttackAnimationUntil.get(enemy) ?? 0;
+        const combatCritical =
+          enemy.state === 'charging' ||
+          enemy.state === 'defeated' ||
+          enemy.state === 'stunned' ||
+          (enemy.hitReactTimer || 0) > 0.015 ||
+          (enemy.stunTimer || 0) > 0 ||
+          (enemy.attackPoseTimer || 0) > 0 ||
+          (enemy.aiRangedWindupTimer || 0) > 0 ||
+          (enemy.aiMeleeWindupTimer || 0) > 0 ||
+          (enemy.aiCommanderWindupTimer || 0) > 0 ||
+          pendingAttackUntil > now ||
+          attackAnimationUntil > now ||
+          (track.oneShotRemaining || 0) > 0;
+        const useProxy = shouldUseEnemyVisualLodProxy(
+          distanceSquared,
+          this.isHandheldViewport,
+          lodProxy.visible,
+          combatCritical,
+        );
+        lodProxy.visible = useProxy;
+        fullVisual.visible = !useProxy;
+        if (useProxy) {
+          updateEnemyVisualLodProxy(lodProxy, enemy.walkCycle || this.activeElapsedSeconds, enemy.state !== 'patrol');
+          // Do not spend CPU advancing a hidden skinned rig. Keep its origin current
+          // so it resumes without a position spike when the full model returns.
+          track.lastPosition.copy(enemy.mesh.position);
+          track.animationAccumulator = 0;
+          continue;
+        }
+      }
       const interval = getActorAnimationIntervalFromDistanceSquared(distanceSquared, this.isHandheldViewport);
       const accumulatedDt = (track.animationAccumulator ?? 0) + dt;
 

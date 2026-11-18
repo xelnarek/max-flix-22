@@ -449,7 +449,10 @@ test('ranged and special enemy attacks release only after their wind-up or commi
 test('orphan imported rigs are cleaned without disposing shared MakeHuman assets', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /private disposeUntrackedActorVisualRoot\(root: THREE\.Object3D\)/);
-  assert.match(game, /if \(object\.userData\.gobkitAsset === true && object\.userData\.gobkitSharedGeometry !== true\) object\.geometry\.dispose\(\)/);
+  assert.match(game, /object\.userData\.gobkitAsset === true/);
+  assert.match(game, /object\.userData\.gobkitSharedGeometry !== true/);
+  assert.match(game, /object\.userData\.actorLodSharedGeometry !== true/);
+  assert.match(game, /material\.userData\.actorLodSharedMaterial !== true/);
   assert.match(game, /material\.userData\.makeHumanShared !== true/);
   assert.match(game, /this\.disposeUntrackedActorVisualRoot\(child\)/);
 });
