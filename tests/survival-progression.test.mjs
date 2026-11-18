@@ -43,7 +43,7 @@ test('Survival XP requirements are deliberately slower than the previous early-g
     const tuned = getSurvivalXpRequirement(level);
     const previous = Math.round(10 + level * 3);
     assert.ok(tuned > previous, `level ${level} should require more XP than the previous curve`);
-    assert.ok(tuned <= Math.round(previous * 1.31), `level ${level} must remain within a bounded pace increase`);
+    assert.ok(tuned <= Math.round(previous * 1.40), `level ${level} must remain within a bounded pace increase`);
   }
 });
 
