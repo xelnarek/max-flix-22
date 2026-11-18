@@ -159,6 +159,13 @@ export interface EnemyItem {
   aiRangedWindupDuration?: number;
   aiRangedLockedDirection?: number;
   aiRangedTelegraphMesh?: any;
+  /** Locked, interruptible wind-up and delayed resolution for ordinary melee contact strikes. */
+  aiMeleeWindupTimer?: number;
+  aiMeleeWindupDuration?: number;
+  aiMeleeLockedDirection?: number;
+  aiMeleeTelegraphMesh?: any;
+  aiMeleeStrikePending?: boolean;
+  aiMeleeCooldownTimer?: number;
   /** Low-frequency projectile threat scan and committed sidestep intent. */
   aiDodgeScanTimer?: number;
   aiDodgeTimer?: number;

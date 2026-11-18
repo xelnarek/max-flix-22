@@ -540,7 +540,7 @@ test('campaign bosses use warehouse obstacle-aware pursuit without moving during
   const game = await read('../src/game.ts');
   const walczakStart = game.indexOf("} else if (e.type === 'walczak')");
   const letoStart = game.indexOf("} else if (e.type === 'krol_leto')", walczakStart);
-  const genericStart = game.indexOf("      } else {\n        if (e.type === 'sebix_m')", letoStart);
+  const genericStart = game.indexOf("      } else {\n        if (e.aiMeleeWindupTimer !== undefined)", letoStart);
   assert.ok(walczakStart >= 0 && letoStart > walczakStart && genericStart > letoStart);
   const walczak = game.slice(walczakStart, letoStart);
   const leto = game.slice(letoStart, genericStart);
@@ -938,8 +938,9 @@ test('each boss warning stores its owner-specific lane dimensions for dodge vali
   assert.match(game, /owner\.chargeLaneLength = safeLength/);
   assert.match(game, /owner\.chargeLaneWidth = safeWidth/);
   const calls = game.match(/this\.spawnBossLaneTelegraph\([^;]+\);/g) || [];
-  assert.ok(calls.length >= 4, 'expected multiple boss lane telegraphs');
-  for (const call of calls) {
+  const bossCalls = calls.filter((call) => !call.includes('profile.windupSeconds + 0.22'));
+  assert.ok(bossCalls.length >= 4, 'expected multiple boss lane telegraphs');
+  for (const call of bossCalls) {
     assert.match(call, /,\s*(?:enemy|e),?\s*\);$/, 'each lane warning must attach its enemy owner');
   }
 });
