@@ -141,6 +141,8 @@ export interface EnemyItem {
   aiSlot?: number;
   aiFlankAngle?: number;
   aiOrbitSign?: number;
+  /** Stable left/right approach lane assigned once for Campaign flankers. */
+  aiCampaignFlankSide?: -1 | 1;
   /** Low-frequency Survival coalition assignment from the wave director. */
   aiCoalitionId?: number;
   aiCoalitionLeaderId?: string;

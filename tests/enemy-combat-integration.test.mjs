@@ -124,3 +124,23 @@ test('regular ranged enemies telegraph a locked shot and stop moving during wind
   assert.match(game, /if \(actualDamage > 0 && enemy\.aiRangedWindupTimer !== undefined\)/);
   assert.match(game, /if \(e\.aiRangedWindupTimer !== undefined\) this\.cancelEnemyRangedAttackTelegraph\(e, true\)/);
 });
+
+
+test('Campaign melee roles use stable side-entry steering that fades before contact', async () => {
+  const [game, tactics, types] = await Promise.all([
+    readFile(new URL('../src/game.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/enemyCampaignTactics.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/types.ts', import.meta.url), 'utf8'),
+  ]);
+  const campaignStart = game.indexOf('// Dynamic Chase / Tracking AI for ground enemies');
+  const campaignEnd = game.indexOf('// The Sentinel commits to a visible lane', campaignStart);
+  const campaign = game.slice(campaignStart, campaignEnd);
+  assert.match(game, /getCampaignEnemyFlankProfile, getCampaignEnemyFlankVector, resolveCampaignEnemyFlankSide/);
+  assert.match(campaign, /e\.aiCampaignFlankSide = resolveCampaignEnemyFlankSide\(e\.id\)/);
+  assert.match(campaign, /getCampaignEnemyFlankVector\([\s\S]*?attackDistance,[\s\S]*?e\.aiCampaignFlankSide \?\? 1/);
+  assert.match(campaign, /steeringInput\.chase\.x = inContactLane \? separation\.x : flankVector\.x/);
+  assert.match(campaign, /steeringInput\.chase\.z = inContactLane \? separation\.z : flankVector\.z/);
+  assert.match(campaign, /const attackDistance = Math\.max\(1\.10, getEnemyPlayerContactDistance\(e\.type\) \+ 0\.10\)/);
+  assert.match(types, /aiCampaignFlankSide\?: -1 \| 1/);
+  assert.match(tactics, /profile\.lateralBias \* smoothstep\(approachProgress\)/);
+});

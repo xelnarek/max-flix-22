@@ -48,6 +48,7 @@ import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoi
 import { calculateEnemyObstacleAvoidanceVector } from './enemyNavigation.ts';
 import { calculateStableEnemySteering, getEnemyEngageRadius } from './enemySteering.ts';
 import { calculateEnemyProjectileDodge, predictEnemyAimPoint } from './enemyTactics.ts';
+import { getCampaignEnemyFlankProfile, getCampaignEnemyFlankVector, resolveCampaignEnemyFlankSide } from './enemyCampaignTactics.ts';
 import { advanceEnemyAttackTelegraph, getEnemyRangedAttackTelegraphProfile } from './enemyAttackTelegraphs.ts';
 import { getEnemyPlayerContactDistance, projectVelocityOutOfEnemyContacts, resolvePlayerMovementAgainstEnemies } from './enemyPlayerCollision.ts';
 import { findFirstProjectileBodyImpact, findFirstProjectileEnemyImpact, type MutableProjectileSegmentPoint, type ProjectileEnemyImpactScratch, type ProjectileImpactScratch } from './projectileImpact.ts';
@@ -15884,6 +15885,18 @@ export class PaleciakiGameEngine {
             this.enemyObstacleAvoidanceScratch);
             const attackDistance = Math.max(1.10, getEnemyPlayerContactDistance(e.type) + 0.10);
             const inContactLane = distToPlayer <= attackDistance + 0.08;
+            const flankProfile = getCampaignEnemyFlankProfile(e.type);
+            if (flankProfile && e.aiCampaignFlankSide !== -1 && e.aiCampaignFlankSide !== 1) {
+              e.aiCampaignFlankSide = resolveCampaignEnemyFlankSide(e.id);
+            }
+            const flankVector = getCampaignEnemyFlankVector(
+              e.type,
+              dx,
+              dz,
+              distToPlayer,
+              attackDistance,
+              e.aiCampaignFlankSide ?? 1,
+            );
             const separationLength = Math.hypot(separation.x, separation.z);
             const move = this.enemySteeringOutputScratch;
             if (inContactLane && separationLength < 0.34) {
@@ -15891,8 +15904,10 @@ export class PaleciakiGameEngine {
               move.z = 0;
             } else {
               const steeringInput = this.enemySteeringInputScratch;
-              steeringInput.chase.x = inContactLane ? separation.x : dx;
-              steeringInput.chase.z = inContactLane ? separation.z : dz;
+              // A role-specific lateral approach creates staggered side entries.
+              // It fades before contact so the original melee hold/dead-zone remains authoritative.
+              steeringInput.chase.x = inContactLane ? separation.x : flankVector.x;
+              steeringInput.chase.z = inContactLane ? separation.z : flankVector.z;
               steeringInput.previous.x = e.aiSteerX ?? 0;
               steeringInput.previous.z = e.aiSteerZ ?? 0;
               steeringInput.evasion.x = 0;
