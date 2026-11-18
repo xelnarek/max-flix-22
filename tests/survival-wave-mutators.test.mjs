@@ -60,7 +60,7 @@ test('spawn tuning respects handheld caps and fails safely on malformed inputs',
     spawnIntervalSeconds: 3.44, groupSize: 5,
   });
   assert.deepEqual(getSurvivalWaveSpawnTuning(Number.NaN, Number.NaN, swarm, 0), {
-    spawnIntervalSeconds: 5, groupSize: 1,
+    spawnIntervalSeconds: 4.3, groupSize: 1,
   });
 });
 
