@@ -1568,7 +1568,7 @@ test('Survival raises enemy pressure gradually and keeps mobile horde caps as a 
   assert.match(game, /performanceBudget\.groupCap/);
   assert.match(game, /e\.specialActionTimer -= dt \* survivalAbilityRate/);
   assert.match(game, /getSurvivalPerformanceBudget\(isMobile, this\.adaptivePerformanceTier\)/);
-  assert.match(difficulty, /spawnIntervalSeconds: Math\.max\(2\.95/);
+  assert.match(difficulty, /spawnIntervalSeconds: Math\.max\(4\.55/);
   assert.match(difficulty, /enemyAbilityRateMultiplier: Number\(\(1\.12 \+/);
 });
 
