@@ -1,4 +1,5 @@
 import type { CharacterId } from './types.ts';
+import { resolvePvpSocketUrl } from './pvpSocketUrl.ts';
 import {
   createInitialPvpArenaState,
   resetPvpRound,
@@ -140,22 +141,12 @@ export class PvpNetworkSession implements IPvpSession {
   }
 
   private getSocketUrl(): string | null {
-    const configuredUrl = import.meta.env.VITE_PVP_WS_URL?.trim();
-    // Production Render endpoint supplied for the live PvP service.
-    // VITE_PVP_WS_URL remains an optional build-time override.
-    const productionUrl = 'wss://paleciaki-pvp.onrender.com/pvp-ws';
-    const isGitHubPages = /\.github\.io$/i.test(window.location.hostname);
-
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const url = configuredUrl || (isGitHubPages ? productionUrl : `${protocol}//${window.location.host}/pvp-ws`);
-    try {
-      const parsed = new URL(url, window.location.href);
-      if (parsed.protocol !== 'ws:' && parsed.protocol !== 'wss:') return null;
-      if (window.location.protocol === 'https:' && parsed.protocol !== 'wss:') return null;
-      return parsed.toString();
-    } catch {
-      return null;
-    }
+    return resolvePvpSocketUrl({
+      configuredUrl: import.meta.env.VITE_PVP_WS_URL,
+      hostname: window.location.hostname,
+      host: window.location.host,
+      protocol: window.location.protocol,
+    });
   }
 
   private connect() {
