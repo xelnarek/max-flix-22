@@ -12062,12 +12062,17 @@ export class PaleciakiGameEngine {
         const gemCount = 4;
         for (let index = 0; index < gemCount; index++) {
           const angle = index / gemCount * Math.PI * 2;
-          this.spawnSurvivalXpGem(
+          const gemX = THREE.MathUtils.clamp(
             this.playerPos.x + Math.cos(angle) * 2.0,
-            this.playerPos.y,
-            this.playerPos.z + Math.sin(angle) * 2.0,
-            2,
+            this.levelBounds.minX + 1.2,
+            this.levelBounds.maxX - 1.2,
           );
+          const gemZ = THREE.MathUtils.clamp(
+            this.playerPos.z + Math.sin(angle) * 2.0,
+            this.levelBounds.minZ + 1.2,
+            this.levelBounds.maxZ - 1.2,
+          );
+          this.spawnSurvivalXpGem(gemX, this.playerPos.y, gemZ, 2);
         }
         this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.45, this.playerPos.z, 0xfbbf24);
         sound.playEasterEgg();
