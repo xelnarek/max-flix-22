@@ -13572,7 +13572,6 @@ export class PaleciakiGameEngine {
       );
       this.requestEnemyAttackAnimation(boss, 0.58);
       this.spawnParticleRing(boss.x, boss.y + 0.55, boss.z, 0xf59e0b);
-      sound.playWhistle();
       return;
     }
 
