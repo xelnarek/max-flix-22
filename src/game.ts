@@ -88,6 +88,7 @@ import { advanceSurvivalRetreatState, getSurvivalFlankInterceptOffset, getSurviv
 import { getSurvivalProgressionInfo, getSurvivalPromotionRarityFloor, getSurvivalXpRequirement } from './survivalProgression.ts';
 import { getSurvivalEnemySizeProfile } from './survivalEnemyScale.ts';
 import { getSurvivalPerformanceBudget } from './survivalPerformanceBudget.ts';
+import { createSurvivalEliteInsignia } from './survivalEliteVisuals.ts';
 import { rollSurvivalChaosRoulette } from './survivalChaosRoulette.ts';
 import { createSurvivalXpStreakState, registerSurvivalXpPickup, type SurvivalXpStreakState } from './survivalXpStreak.ts';
 import { advanceSurvivalShiftEvent, createSurvivalShiftEventState, registerSurvivalShiftEventAction, type SurvivalShiftEvent, type SurvivalShiftEventAction, type SurvivalShiftEventState } from './survivalShiftEvents.ts';
@@ -2056,7 +2057,7 @@ export class PaleciakiGameEngine {
       actor.root.name = 'makehuman-enemy-' + style + '-' + enemy.id;
       const overlays = [
         enemy.hpBar, enemy.hpFill, enemy.threatRing, enemy.shieldRing, enemy.auraRing,
-        enemy.speechMesh, enemy.propeller, ...(enemy.bikeWheels || []),
+        enemy.survivalEliteInsignia, enemy.speechMesh, enemy.propeller, ...(enemy.bikeWheels || []),
       ].filter((object): object is THREE.Object3D => object instanceof THREE.Object3D);
       this.removeAttachedActorVisuals(mesh as THREE.Group);
       this.hideProceduralVisuals(mesh as THREE.Group, overlays);
@@ -2131,7 +2132,7 @@ export class PaleciakiGameEngine {
       root.name = 'gobkit-enemy-' + modelId + '-' + enemy.id;
       const overlays = [
         enemy.hpBar, enemy.hpFill, enemy.threatRing, enemy.shieldRing,
-        enemy.auraRing, enemy.speechMesh, enemy.propeller, ...(enemy.bikeWheels || []),
+        enemy.auraRing, enemy.survivalEliteInsignia, enemy.speechMesh, enemy.propeller, ...(enemy.bikeWheels || []),
       ].filter((object): object is THREE.Object3D => object instanceof THREE.Object3D);
       this.removeAttachedActorVisuals(mesh as THREE.Group);
       this.hideProceduralVisuals(mesh as THREE.Group, overlays);
@@ -11619,20 +11620,21 @@ export class PaleciakiGameEngine {
     )[0] ?? { x: midX, z: midZ };
   }
 
-  private spawnSurvivalEnemy(wave: number) {
+  private spawnSurvivalEnemy(wave: number, options: { allowSpecialEncounters?: boolean } = {}) {
     const { x, z } = this.getSurvivalSpawnPoint();
     const id = 'survival_enemy_' + Math.floor(performance.now()) + '_' + Math.floor(Math.random() * 100000);
     const minZ = THREE.MathUtils.clamp(z - 2.2, this.levelBounds.minZ + 0.5, this.levelBounds.maxZ - 0.5);
     const maxZ = THREE.MathUtils.clamp(z + 2.2, this.levelBounds.minZ + 0.5, this.levelBounds.maxZ - 0.5);
     // Rare specials remain independent of the regular weighted roster and are
     // still limited to one live instance each.
+    const allowSpecialEncounters = options.allowSpecialEncounters !== false;
     const sebixAlreadyActive = this.enemies.some((enemy) => enemy.type === 'sebix_m' && enemy.state !== 'defeated');
     const bosmanAlreadyActive = this.enemies.some((enemy) =>
       enemy.type === 'bosman_krakow' && enemy.state !== 'defeated'
     );
-    if (wave >= 8 && !sebixAlreadyActive && Math.random() < 0.065) {
+    if (allowSpecialEncounters && wave >= 8 && !sebixAlreadyActive && Math.random() < 0.065) {
       this.addSebixEnemy(id, x, minZ, maxZ);
-    } else if (shouldSpawnBosmanKrakow(wave, Math.random(), bosmanAlreadyActive)) {
+    } else if (allowSpecialEncounters && shouldSpawnBosmanKrakow(wave, Math.random(), bosmanAlreadyActive)) {
       this.addBosmanKrakowBossEnemy(id, x, z);
     } else {
       const spawnType = chooseSurvivalEnemySpawnType(wave, this.survivalElapsed, Math.random());
@@ -12156,7 +12158,7 @@ export class PaleciakiGameEngine {
     return affected;
   }
 
-  /** Two differently tuned silhouettes make the elite delivery readable at a glance. */
+  /** Elite deliveries always use two readable regular-enemy roles, never a random boss. */
   private spawnSurvivalEliteDelivery(): number {
     const budget = getSurvivalPerformanceBudget(this.isHandheldViewport, this.adaptivePerformanceTier);
     const alive = this.enemies.reduce((count, enemy) => count + (enemy.state === 'defeated' ? 0 : 1), 0);
@@ -12164,23 +12166,49 @@ export class PaleciakiGameEngine {
     let delivered = 0;
 
     for (let index = 0; index < count; index++) {
-      this.spawnSurvivalEnemy(this.survivalWave);
+      this.spawnSurvivalEnemy(this.survivalWave, { allowSpecialEncounters: false });
       const enemy = this.enemies[this.enemies.length - 1];
       if (!enemy || enemy.state === 'defeated') continue;
-      delivered++;
       if (isMajorSurvivalBossType(enemy.type) || enemy.type === 'sebix_m') continue;
 
       const profile = index === 0
-        ? { scale: 1.18, health: 1.45, speed: 0.88, label: 'ELITA B4 • KONTROLER' }
-        : { scale: 0.94, health: 1.12, speed: 1.18, label: 'ELITA B4 • KURIER' };
-      if (enemy.mesh) enemy.mesh.scale.multiplyScalar(profile.scale);
+        ? { role: 'controller' as const, scale: 1.18, health: 1.38, speed: 0.88, label: 'ELITA B4 • KONTROLER' }
+        : { role: 'courier' as const, scale: 0.94, health: 1.12, speed: 1.18, label: 'ELITA B4 • KURIER' };
+      if (enemy.mesh) {
+        enemy.mesh.scale.multiplyScalar(profile.scale);
+        enemy.survivalEliteInsignia = createSurvivalEliteInsignia(profile.role);
+        enemy.mesh.add(enemy.survivalEliteInsignia);
+        enemy.survivalEliteSpinSpeed = profile.role === 'controller' ? 0.62 : 1.42;
+      }
+      enemy.survivalEliteRole = profile.role;
       enemy.collisionRadius = getEnemyCollisionRadius(enemy.type, enemy.collisionRadius) * profile.scale;
       enemy.maxHp = Math.max(1, Math.ceil(enemy.maxHp * profile.health));
       enemy.hp = enemy.maxHp;
       enemy.speed = Math.max(0.7, enemy.speed * profile.speed);
       enemy.name = profile.label + ' • ' + enemy.name;
       enemy.shoutText = profile.label + ': ' + enemy.shoutText;
-      this.spawnParticleRing(enemy.x, enemy.y + 0.55, enemy.z, index === 0 ? 0xfb923c : 0xfacc15);
+
+      // The controller carries a timed one-hit shield. It can be broken by
+      // any direct hit, but expires after five seconds if the player avoids it.
+      if (profile.role === 'controller' && enemy.mesh) {
+        enemy.shieldActive = true;
+        enemy.supportShieldTimer = 5;
+        if (!enemy.shieldRing) {
+          const shieldRing = new THREE.Mesh(this.survivalShieldRingGeometry, this.survivalShieldRingMaterial);
+          shieldRing.position.y = 0.82;
+          shieldRing.renderOrder = 4;
+          enemy.mesh.add(shieldRing);
+          enemy.shieldRing = shieldRing;
+        } else {
+          enemy.shieldRing.visible = true;
+        }
+      }
+
+      delivered++;
+      this.spawnParticleRing(
+        enemy.x, enemy.y + 0.55, enemy.z,
+        profile.role === 'controller' ? 0xf97316 : 0xfacc15,
+      );
     }
 
     return delivered;
@@ -14896,6 +14924,9 @@ export class PaleciakiGameEngine {
         continue;
       }
       if (!e.mesh) continue;
+      if (e.survivalEliteInsignia) {
+        e.survivalEliteInsignia.rotation.y += dt * (e.survivalEliteSpinSpeed ?? 0.8);
+      }
       if (!e.mesh.userData.combatSpeedTuned) {
         e.speed = Math.max(0.8, e.speed * ENEMY_MOVEMENT_SPEED_MULTIPLIER);
         e.mesh.userData.combatSpeedTuned = true;

@@ -128,6 +128,10 @@ export interface EnemyItem {
   hpFill?: any;
   threatRing?: any;
   shieldRing?: any;
+  /** Role and lightweight animated marker for a roulette-delivered Survival elite. */
+  survivalEliteRole?: 'controller' | 'courier';
+  survivalEliteInsignia?: any;
+  survivalEliteSpinSpeed?: number;
   bikeWheels?: any[];
   propeller?: any;
   rageTime?: number;

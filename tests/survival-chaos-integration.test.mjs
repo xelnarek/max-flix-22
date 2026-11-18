@@ -83,3 +83,20 @@ test('each operator special gets a short bespoke limb follow-through and Mateusz
   }
   assert.match(game, /MULTIWERŚUM, ZBIÓRKA!/);
 });
+
+test('elite delivery assigns distinct roles, visible identity markers and a breakable timed controller shield', async () => {
+  const [game, types, visuals] = await Promise.all([
+    read('../src/game.ts'), read('../src/types.ts'), read('../src/survivalEliteVisuals.ts')
+  ]);
+  assert.match(game, /spawnSurvivalEnemy\(this\.survivalWave, \{ allowSpecialEncounters: false \}\)/);
+  assert.match(game, /role: 'controller'/);
+  assert.match(game, /role: 'courier'/);
+  assert.match(game, /enemy\.survivalEliteInsignia = createSurvivalEliteInsignia\(profile\.role\)/);
+  assert.match(game, /e\.survivalEliteInsignia\.rotation\.y \+= dt/);
+  assert.match(game, /enemy\.shieldActive = true;[\s\S]*?enemy\.supportShieldTimer = 5/);
+  assert.match(game, /enemy\.mesh\.add\(shieldRing\)/);
+  assert.match(types, /survivalEliteRole\?: 'controller' \| 'courier'/);
+  assert.match(types, /survivalEliteInsignia\?: any/);
+  assert.match(visuals, /ELITE_ROLE_VISUALS/);
+  assert.match(game, /enemy\.survivalEliteInsignia, enemy\.speechMesh/);
+});
