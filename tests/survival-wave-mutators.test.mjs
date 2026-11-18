@@ -6,7 +6,7 @@ import {
   getSurvivalWaveSpawnTuning,
 } from '../src/survivalWaveMutators.ts';
 
-test('Survival shifts rotate five readable tactical mutators from wave three', () => {
+test('Survival shifts rotate seven readable tactical mutators from wave three', () => {
   assert.equal(getSurvivalWaveMutator(1).id, 'standard');
   assert.equal(getSurvivalWaveMutator(2).id, 'standard');
   assert.equal(getSurvivalWaveMutator(3).id, 'rush');
@@ -14,9 +14,10 @@ test('Survival shifts rotate five readable tactical mutators from wave three', (
   assert.equal(getSurvivalWaveMutator(5).id, 'supply');
   assert.equal(getSurvivalWaveMutator(6).id, 'swarm');
   assert.equal(getSurvivalWaveMutator(7).id, 'convoy');
-  assert.equal(getSurvivalWaveMutator(8).id, 'rush');
-  assert.equal(getSurvivalWaveMutator(9).id, 'armored');
-  assert.equal(getSurvivalWaveMutator(10).id, 'supply');
+  assert.equal(getSurvivalWaveMutator(8).id, 'ramp_overload');
+  assert.equal(getSurvivalWaveMutator(9).id, 'express_dispatch');
+  assert.equal(getSurvivalWaveMutator(10).id, 'rush');
+  assert.equal(getSurvivalWaveMutator(11).id, 'armored');
 });
 
 test('Rush shift trades a little enemy health for faster pressure', () => {
@@ -73,4 +74,24 @@ test('invalid waves fall back to standard and malformed stats stay finite', () =
     ),
     { maxHp: 1, speed: 0.118, xpMultiplier: 1.05 },
   );
+});
+
+test('Ramp overload trades less frequent arrivals for larger, sturdier and richer groups', () => {
+  const mutator = getSurvivalWaveMutator(8);
+  assert.deepEqual(applySurvivalWaveMutator({ maxHp: 20, speed: 2 }, mutator), {
+    maxHp: 22, speed: 1.88, xpMultiplier: 1.45,
+  });
+  assert.deepEqual(getSurvivalWaveSpawnTuning(4, 6, mutator, 8), {
+    spawnIntervalSeconds: 4.88, groupSize: 8,
+  });
+});
+
+test('Express dispatch trades group size and health for faster movement and delivery cadence', () => {
+  const mutator = getSurvivalWaveMutator(9);
+  assert.deepEqual(applySurvivalWaveMutator({ maxHp: 20, speed: 2 }, mutator), {
+    maxHp: 18, speed: 2.44, xpMultiplier: 1.4,
+  });
+  assert.deepEqual(getSurvivalWaveSpawnTuning(4, 6, mutator, 8), {
+    spawnIntervalSeconds: 3.28, groupSize: 5,
+  });
 });
