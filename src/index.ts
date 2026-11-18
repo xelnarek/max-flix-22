@@ -875,6 +875,11 @@ class PaleciakiScene extends xb.Script {
     const createDialogueCard = (text: string, speakerType: string, side: 'left' | 'right' = 'right', speakerName?: string) => {
       const containerElem = document.getElementById('dialogue-container');
       if (!containerElem) return;
+      // A timed event card owns the top information lane. Drop chatter while it
+      // is visible instead of stacking radio captions over the event objective.
+      const activeEvent = document.getElementById('survival-event-announcement');
+      if (activeEvent?.classList.contains('is-visible')) return;
+      containerElem.classList.remove('covered-by-event');
 
       const now = Date.now();
       // Anti-spam: enforce global cooldown so dialogues don't stack and clutter the screen
@@ -1048,6 +1053,7 @@ class PaleciakiScene extends xb.Script {
 
     const hideSurvivalAnnouncement = () => {
       const announcement = document.getElementById('survival-event-announcement');
+      document.getElementById('dialogue-container')?.classList.remove('covered-by-event');
       if (!announcement) return;
       clearTimeout((announcement as any)._timeout);
       announcement.classList.add('hidden');
@@ -1065,6 +1071,7 @@ class PaleciakiScene extends xb.Script {
       titleElement.textContent = title;
       subtitleElement.textContent = subtitle;
       detailElement.textContent = detail;
+      document.getElementById('dialogue-container')?.classList.add('covered-by-event');
       clearTimeout((announcement as any)._timeout);
       announcement.classList.add('hidden');
       announcement.classList.remove('is-visible');
@@ -1074,7 +1081,8 @@ class PaleciakiScene extends xb.Script {
       (announcement as any)._timeout = window.setTimeout(() => {
         announcement.classList.add('hidden');
         announcement.classList.remove('is-visible');
-      }, 6100);
+        document.getElementById('dialogue-container')?.classList.remove('covered-by-event');
+      }, 5100);
     };
 
 
@@ -4137,7 +4145,14 @@ class PaleciakiScene extends xb.Script {
       bossHudBar?.classList.add('hidden');
       hudPerksRow?.classList.add('hidden');
 
+      // The arena scoreboard is a viewport HUD, not scene content. Portal it
+      // beside the already-portaled touch controls so WebGL/transform stacking
+      // contexts cannot bury it behind the canvas on mobile browsers.
+      if (pvpHud && pvpHud.parentElement !== document.body) {
+        document.body.appendChild(pvpHud);
+      }
       pvpHud?.classList.remove('hidden');
+      pvpHud?.setAttribute('aria-hidden', 'false');
       hudBottom?.classList.remove('hidden');
       if (desktopPvpFireButton) {
         if (!desktopAttackPresentation) {
