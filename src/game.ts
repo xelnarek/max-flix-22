@@ -88,7 +88,7 @@ import { buildSurvivalCoalitionOrders, getSurvivalCoalitionRole } from './surviv
 import { getSurvivalCommanderProfile, selectSurvivalCommanderTargets } from './survivalCommander.ts';
 import { getCampaignBossSignature, getCampaignBossVolley, type CampaignBossProjectileKind } from './campaignBossSignatures.ts';
 import { advanceSurvivalCommanderTiming } from './survivalCommanderTiming.ts';
-import { getSurvivalLeaderLossTargets, getSurvivalMoraleBreakMultiplier, SURVIVAL_LEADER_LOSS_BREAK_SECONDS } from './survivalMorale.ts';
+import { updateSurvivalLeaderLossTargets, getSurvivalMoraleBreakMultiplier, SURVIVAL_LEADER_LOSS_BREAK_SECONDS } from './survivalMorale.ts';
 import { MATEUSZ_RIVAL_ROSTER, getMateuszRivalSpawnOffset, getMateuszRivalDamageMultiplier, type MateuszRivalDefinition } from './mateuszRivals.ts';
 import { selectSurvivalSupportPulseTargets, SURVIVAL_SUPPORT_PULSE_RADIUS, SURVIVAL_SUPPORT_PULSE_INTERVAL_SECONDS, SURVIVAL_SUPPORT_SHIELD_SECONDS } from './survivalSupport.ts';
 import { advanceSurvivalRetreatState, getSurvivalFlankInterceptOffset, getSurvivalRetreatTarget } from './survivalTactics.ts';
@@ -774,6 +774,9 @@ export class PaleciakiGameEngine {
   private readonly waveDirectorCandidateScratch: { enemy: EnemyItem; dist: number }[] = [];
   private readonly waveDirectorCoalitionCandidateScratch: EnemyItem[] = [];
   private readonly waveDirectorEnemyByIdScratch = new Map<string, EnemyItem>();
+  /** Reused membership sets for the 180 ms leader-loss check. */
+  private readonly survivalMoraleLivingIdsScratch = new Set<string>();
+  private readonly survivalMoraleAffectedIdsScratch = new Set<string>();
   private threatTier = 0;
 
   // Survival is the default game mode, PvP Arena is the 1v1 multiplayer mode.
@@ -15294,14 +15297,11 @@ export class PaleciakiGameEngine {
       if (survivalMode) {
         // Before rebuilding assignments, detect any living members whose previous
         // coordinator has fallen. The response is short and deliberately mild.
-        const leaderLossTargets = new Set(getSurvivalLeaderLossTargets(
-          this.enemies.map((enemy) => ({
-            id: enemy.id,
-            state: enemy.state,
-            coalitionId: enemy.aiCoalitionId,
-            leaderId: enemy.aiCoalitionLeaderId,
-          })),
-        ));
+        const leaderLossTargets = updateSurvivalLeaderLossTargets(
+          this.enemies,
+          this.survivalMoraleLivingIdsScratch,
+          this.survivalMoraleAffectedIdsScratch,
+        );
         if (leaderLossTargets.size > 0) {
           for (const enemy of this.enemies) {
             if (!leaderLossTargets.has(enemy.id)) continue;
