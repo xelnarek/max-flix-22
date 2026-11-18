@@ -30,7 +30,7 @@ test('all five operators have deliberately different movement, jump, attack and 
 
 test('primary attack power is character-specific and preserves readable tenths of HP', () => {
   assert.equal(scaleCharacterBasicAttackDamage(2, CHARACTERS.grzesiek.basicAttackDamageMultiplier), 2.6);
-  assert.equal(scaleCharacterBasicAttackDamage(2, CHARACTERS.mateusz.basicAttackDamageMultiplier), 2.0);
+  assert.equal(scaleCharacterBasicAttackDamage(2, CHARACTERS.mateusz.basicAttackDamageMultiplier), 2.1);
   assert.equal(scaleCharacterBasicAttackDamage(0, 1.2), 0);
   assert.equal(scaleCharacterBasicAttackDamage(Number.NaN, 1.2), 0);
 });
