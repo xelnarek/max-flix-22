@@ -1680,6 +1680,15 @@ test('Grzesiek Operator 02 launches exactly five target-locked muscular arm proj
   assert.match(html, /5 latających ramion/);
 });
 
+test('Mateusz Operator 04 recruits nearby enemies into an autonomous ally squad', async () => {
+ const {readFile}=await import('node:fs/promises');
+ const game=await readFile(new URL('../src/game.ts',import.meta.url),'utf8');
+ const chars=await readFile(new URL('../src/characters.ts',import.meta.url),'utf8');
+ assert.match(game,/selectMateuszRecruitOrders\\(/);assert.match(game,/private updateMateuszAlly\\(/);
+ assert.match(game,/aiMateuszAllyTimer/);assert.match(game,/SOJUSZNIK ELIMINUJE WROGA/);
+ assert.match(chars,/EKIPA PRZEJĘTA • ZMIANA STRON/);
+});
+
 test('Mateusz Operator 04 tears the nine-month contract and runs enemy-only AI combat without cats', async () => {
   const [game, types, characters, html] = await Promise.all([
     read('../src/game.ts'), read('../src/types.ts'), read('../src/characters.ts'), read('../index.html')

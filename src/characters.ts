@@ -135,8 +135,8 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     damageTakenMultiplier: 1.08,
     passiveName: 'Paralizator — Impuls Trzech Elektrod',
     passiveDescription: 'Podstawowy atak wystrzeliwuje impuls paralizatora. Trafienie elektryzuje i spowalnia cel; co dziewiąte trafienie uruchamia Speedrun (+Sprint i Nietykalność)!',
-    abilityName: 'MAM WYJEBANE • UMOWA NA 9 MIESIĘCY',
-    abilityDescription: 'Operator 04 rozrywa umowę na 9 miesięcy, a fala zerwania rozchodzi się po podłożu. Przez 9 sekund (7,5 sekundy w Survival) przeciwnicy walczą między sobą, rozkładając ataki na różne cele zamiast skupiać się na jednym. Po zakończeniu efektu wracają do normalnego zachowania.',
+    abilityName: 'EKIPA PRZEJĘTA • ZMIANA STRON',
+    abilityDescription: 'Przejmuje do 3 pobliskich przeciwników na 12 sekund (10 sekund w Survival). Każdy walczy samodzielnie: taran przebija front, flanker obchodzi cele, strzelec trzyma dystans, a wsparcie osłania ekipę i leczy operatora. Nie orbitują wokół gracza — samodzielnie wybierają cele i walczą po jego stronie.',
     abilityCooldown: 16.0,
     voiceLines: [
       'Pad mi się rozładował! Kto zajumał kabel USB-C z salonu?!',
@@ -148,7 +148,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
       'Ten wózek widłowy ma hitboxy jak w gra fantasy!',
       'Spawn-kill na klientach to moja specjalność!'
     ],
-    bio: 'Łowca platyn, specjalista od padów i człowiek, który potrafi porównać każdą zmianę na magazynie do poziomu trudności w grze. Umowę na dziewięć miesięcy traktuje jak długi quest poboczny, a każdy kolejny dzień odhacza z precyzją speedrunnera. W showroomie ma mentalne stanowisko gamingowe, a w głowie mapę wszystkich skrótów, które pozwalają ominąć nudne obowiązki. W walce stawia na mobilność, impulsy elektryczne i przejęcie kontroli nad chaosem, gdy rozrywa umowę i zmusza przeciwników do walki między sobą. Gdy słyszy „lag”, najpierw sprawdza ping, a dopiero później, czy to przypadkiem nie wózek AGV.',
+    bio: 'Łowca platyn, specjalista od padów i człowiek, który potrafi porównać każdą zmianę na magazynie do poziomu trudności w grze. Umowę na dziewięć miesięcy traktuje jak długi quest poboczny, a każdy kolejny dzień odhacza z precyzją speedrunnera. W showroomie ma mentalne stanowisko gamingowe, a w głowie mapę wszystkich skrótów, które pozwalają ominąć nudne obowiązki. W walce stawia na mobilność, impulsy elektryczne i przejęcie kontroli nad chaosem, gdy przejmuje pobliskich przeciwników do własnej ekipy, która walczy autonomicznie według różnych ról. Gdy słyszy „lag”, najpierw sprawdza ping, a dopiero później, czy to przypadkiem nie wózek AGV.',
     stats: {
       speed: 5,
       jump: 4,
