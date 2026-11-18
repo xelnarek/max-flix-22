@@ -72,6 +72,7 @@ test('twelve roulette outcomes have concrete handlers for loot, control, overdri
   assert.match(app, /getSurvivalChaosRouletteLastResult\(\)/);
   assert.match(app, /rewardStyles/);
   assert.match(app, /NAGRODA WYLOSOWANA/);
+  assert.match(app, /}, 2300\)/);
 });
 
 test('bullet nova projectiles make a physical splash impact and time-lock visual work is capped', async () => {
