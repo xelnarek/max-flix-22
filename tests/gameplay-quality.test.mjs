@@ -82,7 +82,7 @@ test('Endless has a distinct launch path while campaign stages start independent
   assert.match(app, /bindTap\(document\.getElementById\('btn-start-survival'\), \(event\) =>/);
   assert.match(app, /selectedCampaignStageId = null;[\s\S]*?doStartSurvival\(event\)/);
   assert.match(app, /this\.engine\.startCampaignStage\(chosenStage, campaignRewardId\)/);
-  assert.doesNotMatch(app, /this\\.engine\\.startCampaignStage\\(chosenStage\\)/);
+  assert.doesNotMatch(app, /this\.engine\.startCampaignStage\(chosenStage\)/);
   assert.match(app, /doStartSurvival\(\);/);
   assert.match(game, /private resetSurvivalRun\(\)/);
   assert.match(game, /this\.resetSurvivalRun\(\)/);
