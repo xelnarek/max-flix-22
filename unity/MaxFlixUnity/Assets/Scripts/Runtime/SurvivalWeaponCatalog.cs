@@ -172,9 +172,9 @@ namespace MaxFlix.Unity.Runtime
         public static int GetXpRequirement(int level)
         {
             int current = Mathf.Max(1, level);
-            if (current == 1) return 9;
-            if (current == 2) return 15;
-            return Mathf.Max(12, Mathf.RoundToInt((10f + current * 3f) * 0.90f));
+            if (current == 1) return 16;
+            if (current == 2) return 22;
+            return Mathf.Max(22, Mathf.RoundToInt((10f + current * 3f) * 1.30f));
         }
 
         public static string GetRankName(int level)
