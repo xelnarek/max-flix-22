@@ -2,6 +2,14 @@ import type { SurvivalMapId } from './survivalMaps.ts';
 
 export type CampaignStageId = 'b4_intro' | 'port_17' | 'cold_zero' | 'night_sorting' | 'final_audit';
 export type CampaignRewardId = 'reinforced_vest' | 'damage_core' | 'rapid_loader' | 'xp_manifest' | 'mobility_boots' | 'reserve_crate';
+export type CampaignMasteryMetric = 'perfect_dodges' | 'kill_streak' | 'xp_streak' | 'operator_level';
+
+export interface CampaignMasteryObjective {
+  metric: CampaignMasteryMetric;
+  target: number;
+  label: string;
+  description: string;
+}
 
 export interface CampaignStageDefinition {
   id: CampaignStageId;
@@ -14,7 +22,7 @@ export interface CampaignStageDefinition {
   bossWave: number;
   bossHpMultiplier: number;
   bonusKillTarget: number;
-  bonusPerfectDodges: number;
+  mastery: CampaignMasteryObjective;
   bossTitle: string;
   objective: string;
   reward: string;
@@ -31,11 +39,51 @@ export interface CampaignRewardDefinition {
 export const CAMPAIGN_PROGRESS_STORAGE_KEY = 'warehouse-maddnes.campaign.progress.v1';
 
 export const CAMPAIGN_STAGES: readonly CampaignStageDefinition[] = [
-  { id: 'b4_intro', order: 1, title: 'Magazyn B4', mapId: 'warehouse_b4', durationSeconds: 90, waveIntervalSeconds: 30, bossSpawnAtSeconds: 52, bossWave: 6, bossHpMultiplier: 0.72, bonusKillTarget: 10, bonusPerfectDodges: 1, bossTitle: 'Nadzorca Rampy', objective: 'Utrzymaj aleję B4 i pokonaj Nadzorcę Rampy.', reward: 'Odblokowanie Portu Kontenerowego 17' },
-  { id: 'port_17', order: 2, title: 'Port Kontenerowy 17', mapId: 'container_terminal', durationSeconds: 120, waveIntervalSeconds: 30, bossSpawnAtSeconds: 72, bossWave: 10, bossHpMultiplier: 0.70, bonusKillTarget: 14, bonusPerfectDodges: 1, bossTitle: 'Dyrektor Widmo', objective: 'Przebij się przez plac przeładunkowy i pokonaj Dyrektora Widmo.', reward: 'Odblokowanie Chłodni Zero' },
-  { id: 'cold_zero', order: 3, title: 'Chłodnia Zero', mapId: 'cold_storage', durationSeconds: 150, waveIntervalSeconds: 35, bossSpawnAtSeconds: 92, bossWave: 15, bossHpMultiplier: 0.65, bonusKillTarget: 19, bonusPerfectDodges: 2, bossTitle: 'Bosman Kraków', objective: 'Przetrwaj mroźne strefy i pokonaj Bosmana Kraków.', reward: 'Odblokowanie Sortowni Widmowej' },
-  { id: 'night_sorting', order: 4, title: 'Sortownia Widmowa', mapId: 'night_sorting', durationSeconds: 180, waveIntervalSeconds: 40, bossSpawnAtSeconds: 116, bossWave: 20, bossHpMultiplier: 0.72, bonusKillTarget: 25, bonusPerfectDodges: 2, bossTitle: 'Nadzorca Zero', objective: 'Unikaj skanerów i pokonaj Nadzorcę Zero.', reward: 'Odblokowanie Audytu Końcowego' },
-  { id: 'final_audit', order: 5, title: 'Audyt Końcowy', mapId: 'night_sorting', durationSeconds: 210, waveIntervalSeconds: 42, bossSpawnAtSeconds: 142, bossWave: 25, bossHpMultiplier: 0.76, bonusKillTarget: 31, bonusPerfectDodges: 3, bossTitle: 'Dyrektor Ostateczny', objective: 'Połącz wszystkie umiejętności i pokonaj Dyrektora Ostatecznego.', reward: 'Odznaka Mistrza Zmiany' },
+  {
+    id: 'b4_intro', order: 1, title: 'Magazyn B4', mapId: 'warehouse_b4',
+    durationSeconds: 90, waveIntervalSeconds: 30, bossSpawnAtSeconds: 52,
+    bossWave: 6, bossHpMultiplier: 0.72, bonusKillTarget: 10,
+    mastery: { metric: 'perfect_dodges', target: 1, label: 'PERFEKCYJNY UNIK', description: 'Wykonaj 1 perfekcyjny unik' },
+    bossTitle: 'Nadzorca Rampy',
+    objective: 'Utrzymaj aleję B4 i pokonaj Nadzorcę Rampy.',
+    reward: 'Odblokowanie Portu Kontenerowego 17',
+  },
+  {
+    id: 'port_17', order: 2, title: 'Port Kontenerowy 17', mapId: 'container_terminal',
+    durationSeconds: 120, waveIntervalSeconds: 30, bossSpawnAtSeconds: 72,
+    bossWave: 10, bossHpMultiplier: 0.70, bonusKillTarget: 14,
+    mastery: { metric: 'kill_streak', target: 6, label: 'SERIA ELIMINACJI', description: 'Zbuduj serię 6 eliminacji' },
+    bossTitle: 'Dyrektor Widmo',
+    objective: 'Przebij się przez plac przeładunkowy i pokonaj Dyrektora Widmo.',
+    reward: 'Odblokowanie Chłodni Zero',
+  },
+  {
+    id: 'cold_zero', order: 3, title: 'Chłodnia Zero', mapId: 'cold_storage',
+    durationSeconds: 150, waveIntervalSeconds: 35, bossSpawnAtSeconds: 92,
+    bossWave: 15, bossHpMultiplier: 0.65, bonusKillTarget: 19,
+    mastery: { metric: 'xp_streak', target: 3, label: 'ŁAŃCUCH XP', description: 'Zbierz 3 kryształy XP w krótkim łańcuchu' },
+    bossTitle: 'Bosman Kraków',
+    objective: 'Przetrwaj mroźne strefy i pokonaj Bosmana Kraków.',
+    reward: 'Odblokowanie Sortowni Widmowej',
+  },
+  {
+    id: 'night_sorting', order: 4, title: 'Sortownia Widmowa', mapId: 'night_sorting',
+    durationSeconds: 180, waveIntervalSeconds: 40, bossSpawnAtSeconds: 116,
+    bossWave: 20, bossHpMultiplier: 0.72, bonusKillTarget: 25,
+    mastery: { metric: 'operator_level', target: 4, label: 'AWANS OPERATORA', description: 'Osiągnij poziom 4 przed walką z bossem' },
+    bossTitle: 'Nadzorca Zero',
+    objective: 'Unikaj skanerów i pokonaj Nadzorcę Zero.',
+    reward: 'Odblokowanie Audytu Końcowego',
+  },
+  {
+    id: 'final_audit', order: 5, title: 'Audyt Końcowy', mapId: 'night_sorting',
+    durationSeconds: 210, waveIntervalSeconds: 42, bossSpawnAtSeconds: 142,
+    bossWave: 25, bossHpMultiplier: 0.76, bonusKillTarget: 31,
+    mastery: { metric: 'perfect_dodges', target: 3, label: 'SERIA UNIKÓW', description: 'Wykonaj 3 perfekcyjne uniki' },
+    bossTitle: 'Dyrektor Ostateczny',
+    objective: 'Połącz wszystkie umiejętności i pokonaj Dyrektora Ostatecznego.',
+    reward: 'Odznaka Mistrza Zmiany',
+  },
 ] as const;
 
 export const CAMPAIGN_REWARDS: readonly CampaignRewardDefinition[] = [
@@ -51,6 +99,7 @@ export type CampaignStageResult = {
   bestStars: number;
   bestKills: number;
   bestTimeSeconds: number;
+  bestMasteryValue: number;
   completions: number;
 };
 
@@ -60,6 +109,22 @@ export interface CampaignProgress {
   completedStages: Partial<Record<CampaignStageId, CampaignStageResult>>;
   pendingRewardId: CampaignRewardId | null;
   pendingRewardStageId: CampaignStageId | null;
+}
+
+export interface CampaignMasteryStats {
+  perfectDodges?: number;
+  killStreak?: number;
+  xpStreak?: number;
+  level?: number;
+}
+
+export interface CampaignMasteryProgress {
+  metric: CampaignMasteryMetric;
+  label: string;
+  description: string;
+  value: number;
+  target: number;
+  completed: boolean;
 }
 
 export function getCampaignStageDefinition(id: CampaignStageId | string | null | undefined): CampaignStageDefinition | null {
@@ -93,6 +158,29 @@ function isCampaignRewardId(value: unknown): value is CampaignRewardId {
   return typeof value === 'string' && CAMPAIGN_REWARDS.some((reward) => reward.id === value);
 }
 
+export function getCampaignMasteryProgress(
+  stage: CampaignStageDefinition,
+  stats: CampaignMasteryStats,
+): CampaignMasteryProgress {
+  const objective = stage.mastery;
+  let value = 0;
+  switch (objective.metric) {
+    case 'perfect_dodges': value = safeInt(stats.perfectDodges); break;
+    case 'kill_streak': value = safeInt(stats.killStreak); break;
+    case 'xp_streak': value = safeInt(stats.xpStreak); break;
+    case 'operator_level': value = safeInt(stats.level, 1); break;
+  }
+  const target = safeInt(objective.target, 1, 100000);
+  return {
+    metric: objective.metric,
+    label: objective.label,
+    description: objective.description,
+    value,
+    target,
+    completed: value >= target,
+  };
+}
+
 export function sanitizeCampaignProgress(value: unknown): CampaignProgress {
   if (!value || typeof value !== 'object') return createInitialCampaignProgress();
 
@@ -112,6 +200,8 @@ export function sanitizeCampaignProgress(value: unknown): CampaignProgress {
       bestStars: stars,
       bestKills: safeInt(entry.bestKills),
       bestTimeSeconds: safeInt(entry.bestTimeSeconds),
+      // Older v1 saves did not store the mastery objective value.
+      bestMasteryValue: safeInt(entry.bestMasteryValue),
       completions: Math.max(1, safeInt(entry.completions)),
     };
   }
@@ -158,14 +248,12 @@ export function writeCampaignProgress(storage: Pick<Storage, 'setItem'>, value: 
 
 export function evaluateCampaignStars(
   stage: CampaignStageDefinition,
-  result: { bossDefeated: boolean; kills: number; perfectDodges: number },
+  result: { bossDefeated: boolean; kills: number } & CampaignMasteryStats,
 ): number {
   if (!result.bossDefeated) return 0;
   const kills = safeInt(result.kills);
-  const dodges = safeInt(result.perfectDodges);
   if (kills < stage.bonusKillTarget) return 1;
-  if (dodges < stage.bonusPerfectDodges) return 2;
-  return 3;
+  return getCampaignMasteryProgress(stage, result).completed ? 3 : 2;
 }
 
 /** Return three repeatable, unique reward choices for this clear. */
@@ -213,7 +301,7 @@ export function consumePendingCampaignReward(
 export function recordCampaignStageResult(
   value: unknown,
   id: CampaignStageId,
-  result: { bossDefeated: boolean; kills: number; elapsedSeconds: number; perfectDodges: number },
+  result: { bossDefeated: boolean; kills: number; elapsedSeconds: number } & CampaignMasteryStats,
 ): CampaignProgress {
   const progress = sanitizeCampaignProgress(value);
   const index = CAMPAIGN_STAGES.findIndex((stage) => stage.id === id);
@@ -223,12 +311,14 @@ export function recordCampaignStageResult(
   const stars = evaluateCampaignStars(stage, result);
   if (!stars) return progress;
 
+  const mastery = getCampaignMasteryProgress(stage, result);
   const previous = progress.completedStages[id];
   const elapsed = Math.max(1, safeInt(result.elapsedSeconds));
   progress.completedStages[id] = {
     bestStars: Math.max(previous?.bestStars ?? 0, stars),
     bestKills: Math.max(previous?.bestKills ?? 0, safeInt(result.kills)),
     bestTimeSeconds: previous?.bestTimeSeconds ? Math.min(previous.bestTimeSeconds, elapsed) : elapsed,
+    bestMasteryValue: Math.max(previous?.bestMasteryValue ?? 0, mastery.value),
     completions: (previous?.completions ?? 0) + 1,
   };
 

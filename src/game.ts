@@ -97,7 +97,7 @@ import { getSurvivalEnemySizeProfile } from './survivalEnemyScale.ts';
 import { getSurvivalPerformanceBudget } from './survivalPerformanceBudget.ts';
 import { createSurvivalEliteInsignia } from './survivalEliteVisuals.ts';
 import { rollSurvivalChaosRoulette, type SurvivalChaosRouletteKind } from './survivalChaosRoulette.ts';
-import { createSurvivalXpStreakState, registerSurvivalXpPickup, type SurvivalXpStreakState } from './survivalXpStreak.ts';
+import { createSurvivalXpStreakState, getSurvivalXpStreakTier, registerSurvivalXpPickup, type SurvivalXpStreakState } from './survivalXpStreak.ts';
 import { advanceSurvivalAnomaly, createSurvivalAnomalyState, getSurvivalAnomalyModifiers, type SurvivalAnomalyState } from './survivalAnomalies.ts';
 import { rollSurvivalXpDrop } from './survivalXpDrops.ts';
 import { advanceSurvivalShiftEvent, createSurvivalShiftEventState, registerSurvivalShiftEventAction, type SurvivalShiftEvent, type SurvivalShiftEventAction, type SurvivalShiftEventState } from './survivalShiftEvents.ts';
@@ -2971,7 +2971,7 @@ export class PaleciakiGameEngine {
     }
 
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
-    this.callbacks.onSurvivalAnnouncement?.('KAMPANIA ZMIAN • ETAP ' + stage.order + '/5', stage.title.toUpperCase(), stage.objective + ' Boss pojawi się po około ' + stage.bossSpawnAtSeconds + ' sekundach. Premia: ' + stage.bonusKillTarget + ' eliminacji i ' + stage.bonusPerfectDodges + ' perfekcyjny unik/uny.');
+    this.callbacks.onSurvivalAnnouncement?.('KAMPANIA ZMIAN • ETAP ' + stage.order + '/5', stage.title.toUpperCase(), stage.objective + ' Boss pojawi się po około ' + stage.bossSpawnAtSeconds + ' sekundach. Cel 3★: ' + stage.mastery.description + '. Wymagane eliminacje: ' + stage.bonusKillTarget + '.');
     return true;
   }
 
@@ -6554,7 +6554,7 @@ export class PaleciakiGameEngine {
       nextRankLevel: progression.nextRankLevel,
       xp: this.survivalXp,
       xpToNext: this.survivalXpToNext,
-      xpStreak: this.survivalXpStreak.count,
+      xpStreak: getSurvivalXpStreakTier(this.survivalXpStreak, this.survivalElapsed),
       aliveEnemies: this.enemies.reduce((count, enemy) => count + (enemy.state === 'defeated' ? 0 : 1), 0),
       rerolls: this.survivalRerolls,
       skips: this.survivalSkips,
@@ -10565,7 +10565,14 @@ export class PaleciakiGameEngine {
     const stage = this.campaignStage;
     if (!stage || this.campaignStageCompleted || this.state !== 'playing') return;
     this.campaignStageCompleted = true;
-    this.campaignStars = evaluateCampaignStars(stage, { bossDefeated: true, kills: this.survivalKills, perfectDodges: this.survivalPerfectDodges });
+    this.campaignStars = evaluateCampaignStars(stage, {
+      bossDefeated: true,
+      kills: this.survivalKills,
+      perfectDodges: this.survivalPerfectDodges,
+      killStreak: this.survivalMomentum.killStreak,
+      xpStreak: getSurvivalXpStreakTier(this.survivalXpStreak, this.survivalElapsed),
+      level: this.survivalLevel,
+    });
     this.state = 'gameover';
     this.playerVel.set(0, 0, 0);
     sound.stopMusic();

@@ -36,7 +36,7 @@ import {
   updateSurvivalAchievementProgress,
 } from './survivalAchievements.ts';
 import { SURVIVAL_MAPS, type SurvivalMapId } from './survivalMaps.ts';
-import { CAMPAIGN_STAGES, createInitialCampaignProgress, consumePendingCampaignReward, getCampaignRewardChoices, getCampaignStageDefinition, getNextCampaignStageId, readCampaignProgress, recordCampaignStageResult, setPendingCampaignReward, writeCampaignProgress, type CampaignProgress, type CampaignRewardDefinition, type CampaignRewardId, type CampaignStageId } from './campaignProgression.ts';
+import { CAMPAIGN_STAGES, createInitialCampaignProgress, consumePendingCampaignReward, getCampaignMasteryProgress, getCampaignRewardChoices, getCampaignStageDefinition, getNextCampaignStageId, readCampaignProgress, recordCampaignStageResult, setPendingCampaignReward, writeCampaignProgress, type CampaignProgress, type CampaignRewardDefinition, type CampaignRewardId, type CampaignStageId } from './campaignProgression.ts';
 import { launchOniricPlatformer } from './oniricPlatformer.ts';
 import { launchCthulhuRetroArena } from './cthulhuRetroArena.ts';
 import { getMenuTabIndexForKey } from './menuTabNavigation.ts';
@@ -808,9 +808,14 @@ class PaleciakiScene extends xb.Script {
         button.setAttribute('aria-disabled', String(!available));
         const label = button.querySelector<HTMLElement>('.campaign-stage-status');
         const stars = button.querySelector<HTMLElement>('.campaign-stage-stars');
+        const description = button.querySelector<HTMLElement>('small');
         if (label) label.textContent = result?.bestStars ? 'UKOŃCZONO • ' + (result.completions > 1 ? result.completions + ' PRÓBY' : 'REKORD ZAPISANY') : available ? 'DOSTĘPNY' : 'ZABLOKOWANY';
         if (stars) stars.textContent = '★'.repeat(result?.bestStars ?? 0) + '☆'.repeat(3 - (result?.bestStars ?? 0));
-        button.title = available ? stage.objective : 'Najpierw ukończ poprzedni etap.';
+        if (description) {
+          const masteryRecord = result?.bestMasteryValue ? ' • REKORD CELU: ' + result.bestMasteryValue : '';
+          description.textContent = stage.objective + ' 3★: ' + stage.mastery.description + masteryRecord;
+        }
+        button.title = available ? stage.objective + ' Cel 3★: ' + stage.mastery.description : 'Najpierw ukończ poprzedni etap.';
       }
     };
     renderCampaignBoard();
@@ -1401,7 +1406,15 @@ class PaleciakiScene extends xb.Script {
           campaignRewardTargetStageId = null;
           campaignRewardSelectionId = null;
           if (snapshot.campaignStageId && snapshot.campaignSuccess) {
-            campaignProgress = recordCampaignStageResult(campaignProgress, snapshot.campaignStageId, { bossDefeated: true, kills: snapshot.kills, elapsedSeconds: snapshot.elapsedSeconds, perfectDodges: snapshot.perfectDodges });
+            campaignProgress = recordCampaignStageResult(campaignProgress, snapshot.campaignStageId, {
+              bossDefeated: true,
+              kills: snapshot.kills,
+              elapsedSeconds: snapshot.elapsedSeconds,
+              perfectDodges: snapshot.perfectDodges,
+              killStreak: snapshot.killStreak,
+              xpStreak: snapshot.xpStreak,
+              level: snapshot.level,
+            });
             nextCampaignStageId = getNextCampaignStageId(campaignProgress, snapshot.campaignStageId);
             if (nextCampaignStageId) {
               const completions = campaignProgress.completedStages[snapshot.campaignStageId]?.completions ?? 1;
@@ -1627,7 +1640,19 @@ class PaleciakiScene extends xb.Script {
             const progress = document.getElementById('campaign-stage-progress');
             const clock = document.getElementById('campaign-stage-clock');
             if (title && stage) title.textContent = 'ETAP ' + stage.order + '/5 • ' + stage.title.toUpperCase();
-            if (progress && stage) progress.textContent = (snapshot.campaignBossSpawned ? stage.bossTitle.toUpperCase() : 'ELIMINACJE ' + snapshot.kills + '/' + stage.bonusKillTarget) + ' • UNIKI ' + snapshot.perfectDodges + '/' + stage.bonusPerfectDodges;
+            if (progress && stage) {
+              const mastery = getCampaignMasteryProgress(stage, {
+                perfectDodges: snapshot.perfectDodges,
+                killStreak: snapshot.killStreak,
+                xpStreak: snapshot.xpStreak,
+                level: snapshot.level,
+              });
+              const primaryGoal = snapshot.campaignBossSpawned
+                ? stage.bossTitle.toUpperCase()
+                : 'ELIMINACJE ' + snapshot.kills + '/' + stage.bonusKillTarget;
+              progress.textContent = primaryGoal + ' • ' + mastery.label + ' ' + mastery.value + '/' + mastery.target;
+              progress.title = mastery.description + ' • ' + mastery.value + '/' + mastery.target;
+            }
             if (clock && snapshot.campaignRemainingSeconds !== null) { const left = Math.max(0, snapshot.campaignRemainingSeconds); clock.textContent = 'CEL ' + String(Math.floor(left / 60)).padStart(2,'0') + ':' + String(left % 60).padStart(2,'0'); }
           }
           const mapNameElem = document.getElementById('survival-map-name');
