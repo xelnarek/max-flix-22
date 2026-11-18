@@ -1860,3 +1860,14 @@ test('Survival enemy XP is tiered and random rather than guaranteed on every eli
   assert.match(drops, /elite', chance: 0\.88/);
   assert.match(drops, /boss', chance: 1/);
 });
+
+test('campaign result menu action returns directly to the campaign stage board', async () => {
+  const app = await read('../src/index.ts');
+  const start = app.indexOf("bindTap(document.getElementById('btn-menu-gameover')");
+  const end = app.indexOf("const bindScoreSubmission", start);
+  assert.ok(start >= 0 && end > start, 'campaign result menu handler must exist');
+  const handler = app.slice(start, end);
+  assert.match(handler, /if \(lastCampaignStageId\)/);
+  assert.match(handler, /menuTabButtons\.find\(\(button\) => button\.getAttribute\('data-tab'\) === 'tab-map'\)/);
+  assert.match(handler, /activateMenuTab\(campaignMapTab\)/);
+});
