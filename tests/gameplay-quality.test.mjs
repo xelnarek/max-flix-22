@@ -110,7 +110,7 @@ test('legacy campaign startGame entry points stay retired while the new mission 
   assert.match(html, /id="btn-start-survival"/);
   assert.doesNotMatch(app, /this\.engine\.startGame\(/);
   assert.match(app, /this\.engine\.startSurvival\(\)/);
-  assert.match(app, /this\.engine\.startCampaignStage\(chosenStage\)/);
+  assert.match(app, /this\.engine\.startCampaignStage\(chosenStage, campaignRewardId\)/);
   assert.doesNotMatch(app, /selectedSurvivalMapId|readSurvivalMapPreference|writeSurvivalMapPreference/);
   assert.match(game, /private resetSurvivalRun\(\)/);
   assert.doesNotMatch(game, /public startGame\(/);
