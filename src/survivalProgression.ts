@@ -33,7 +33,7 @@ export function getSurvivalXpRequirement(level: number): number {
   // run before enemy groups and weapon choices have had time to matter.
   if (current === 1) return 22;
   if (current === 2) return 30;
-  return Math.max(30, Math.round((16 + current * 3.3) * 1.28));
+  return Math.max(30, Math.round((14 + current * 3.3) * 1.30));
 }
 
 /** The player's current named rank and the next promotion checkpoint. */
