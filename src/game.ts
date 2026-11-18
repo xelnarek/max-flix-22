@@ -14621,6 +14621,7 @@ export class PaleciakiGameEngine {
       profile.laneWidth,
       profile.color,
       profile.windupSeconds,
+      enemy,
     );
     this.requestEnemyAttackAnimation(enemy, profile.windupSeconds);
 
