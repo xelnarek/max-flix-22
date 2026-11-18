@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import {
   chooseSurvivalEnemySpawnType,
   getSurvivalEnemySpawnWeights,
@@ -64,4 +65,12 @@ test('spawn variety falls back to the full roster when every unlocked archetype 
 
 test('invalid recent history is harmless and special encounters remain outside the regular pool', () => {
   assert.equal(chooseSurvivalEnemySpawnType(1, 0, 0, ['walczak', 'pomazaniec']), 'zombie_pracownik');
+});
+
+test('Survival spawn history is reset, bounded and used only by regular deliveries', async () => {
+  const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
+  assert.match(game, /private survivalRecentSpawnTypes: SurvivalEnemySpawnType\[\] = \[\]/);
+  assert.match(game, /this\.survivalRecentSpawnTypes = \[\]/);
+  assert.match(game, /chooseSurvivalEnemySpawnType\(wave, this\.survivalElapsed, Math\.random\(\), this\.survivalRecentSpawnTypes\)/);
+  assert.match(game, /this\.survivalRecentSpawnTypes\.push\(spawnType\);[\s\S]*?if \(this\.survivalRecentSpawnTypes\.length > SURVIVAL_SPAWN_VARIETY_MEMORY\) this\.survivalRecentSpawnTypes\.shift\(\)/);
 });
