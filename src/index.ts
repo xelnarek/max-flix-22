@@ -23,6 +23,7 @@ import { SelectiveBloomPipeline } from './selectiveBloom.ts';
 import { ThreeClickTrigger } from './menuInteraction.ts';
 import { calculateUiViewport, shouldShowTouchControls } from './uiViewport.ts';
 import { getAdaptiveEffectsTier, getAdaptiveRenderScale, getDeviceRenderProfile, shouldApplyPixelRatioChange, type AdaptiveEffectsTier } from './renderQuality.ts';
+import { summarizeRenderWindowMetrics } from './renderTelemetry.ts';
 import { calculateVirtualJoystickInput } from './virtualJoystick.ts';
 
 import { clampTouchJoystickOrigin } from './touchControlLayout.ts';
@@ -677,6 +678,9 @@ class PaleciakiScene extends xb.Script {
   private adaptiveRecoverySince: number = 0;
   private adaptiveEffectsTier: AdaptiveEffectsTier = 0;
   private adaptiveEffectsRecoverySince: number = 0;
+  private telemetryRenderer: THREE.WebGLRenderer | null = null;
+  private renderTelemetryFrames: number = 0;
+  private lastRenderTelemetryAt: number = 0;
   private resetTouchJoystick: (() => void) | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private lastAdaptiveQualityAt: number = 0;
@@ -3990,6 +3994,45 @@ class PaleciakiScene extends xb.Script {
     this.selectiveBloom?.resize(width, height, renderer.getPixelRatio());
   }
 
+  /**
+   * Sample WebGLRenderer.info in bounded one-second windows. autoReset=false
+   * lets Three.js include every pass (including selective bloom) in the same
+   * window; reset() is called here, not per-frame. Metrics stay local in DOM
+   * data attributes and are intended for QA/devtools, never uploaded.
+   */
+  private updateRenderDiagnostics(now: number) {
+    const candidate = xb.core?.renderer;
+    const renderer = candidate instanceof THREE.WebGLRenderer ? candidate : null;
+    if (!renderer) return;
+
+    if (renderer !== this.telemetryRenderer) {
+      this.telemetryRenderer = renderer;
+      renderer.info.autoReset = false;
+      renderer.info.reset();
+      this.renderTelemetryFrames = 0;
+      this.lastRenderTelemetryAt = now;
+    }
+
+    this.renderTelemetryFrames++;
+    if (now - this.lastRenderTelemetryAt < 1000) return;
+
+    const metrics = summarizeRenderWindowMetrics(renderer.info, this.renderTelemetryFrames);
+    const root = document.documentElement;
+    root.dataset.gpuCallsPerFrame = metrics.callsPerFrame.toFixed(1);
+    root.dataset.gpuTrianglesPerFrame = metrics.trianglesPerFrame.toFixed(1);
+    root.dataset.gpuLinesPerFrame = metrics.linesPerFrame.toFixed(1);
+    root.dataset.gpuPointsPerFrame = metrics.pointsPerFrame.toFixed(1);
+    root.dataset.gpuGeometries = String(metrics.geometries);
+    root.dataset.gpuTextures = String(metrics.textures);
+    root.dataset.gpuSampleFrames = String(this.renderTelemetryFrames);
+
+    // Clear accumulated counters once per diagnostic window. The renderer's
+    // automatic reset remains disabled so multiple passes are included.
+    renderer.info.reset();
+    this.renderTelemetryFrames = 0;
+    this.lastRenderTelemetryAt = now;
+  }
+
   private tick(dt: number) {
     this.frameCount++;
     const now = performance.now();
@@ -4012,6 +4055,7 @@ class PaleciakiScene extends xb.Script {
     }
 
     this.updateAdaptiveRenderQuality(now);
+    this.updateRenderDiagnostics(now);
 
     try {
       if (this.cinematicIntro && this.cinematicIntro.isRunning()) {
