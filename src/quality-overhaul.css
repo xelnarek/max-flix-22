@@ -359,3 +359,23 @@ body > #pvp-hud .pvp-player-avatar svg {
   object-fit: contain;
   filter: drop-shadow(0 2px 3px rgba(0,0,0,.34));
 }
+
+
+/* The timing sweep is an intentional firing mechanic; explain it at the point of use. */
+.pvp-control-guide {
+  flex-wrap: wrap;
+  row-gap: 5px;
+  max-width: min(94vw, 680px);
+}
+.pvp-guide-hint {
+  flex: 1 0 100%;
+  color: #f8d68b;
+  font: 800 8px/1.25 'JetBrains Mono', monospace;
+  letter-spacing: .06em;
+  text-align: center;
+  text-shadow: 0 2px 5px rgba(0,0,0,.9);
+}
+@media (max-width: 600px) {
+  .pvp-control-guide { max-width: calc(100vw - 16px); gap: 5px; }
+  .pvp-guide-hint { font-size: 7px; letter-spacing: .03em; }
+}
