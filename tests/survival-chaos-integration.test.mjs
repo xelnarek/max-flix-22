@@ -63,7 +63,7 @@ test('twelve roulette outcomes have concrete handlers for loot, control, overdri
   assert.match(game, /DOSTAWA PRIORYTETOWA ×/);
   assert.match(game, /ELITA B4 • KONTROLER/);
   assert.match(game, /ELITA B4 • KURIER/);
-  assert.match(app, /Dwanaście możliwych wyników automatu/);
+  assert.match(app, /Trzy obracające się bębny, dwanaście możliwych wyników, jeden spin/);
   assert.match(app, /survival-chaos-reels/);
   assert.match(css, /survival-chaos-marquee \.survival-chaos-lamp/);
   assert.match(app, /survival-chaos-reel-symbol/);
