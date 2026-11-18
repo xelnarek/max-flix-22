@@ -20,7 +20,7 @@ test('the connected-world atlas replaces the old map picker preview', async () =
   }
   assert.match(panel, /4 OTWARTE BRAMY/);
   assert.match(panel, /BEZ TELEPORTÓW I RESETU ROZGRYWKI/);
-  for (const id of ['b4_intro', 'port_17', 'cold_zero', 'night_sorting', 'final_audit']) assert.ok(panel.includes('data-campaign-stage=' + id));
+  for (const id of ['b4_intro', 'port_17', 'cold_zero', 'night_sorting', 'final_audit']) assert.ok(panel.includes('data-campaign-stage="' + id + '"'));
   assert.match(panel, /KAMPANIA ZMIAN/);
   assert.match(panel, /1–3 GWIAZDKI ZA WYNIK/);
   assert.doesNotMatch(panel, /survival-map-preview|data-survival-map=|survival-map-picker/);

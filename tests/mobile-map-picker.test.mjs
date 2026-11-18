@@ -18,7 +18,7 @@ test('the map tab exposes a saved stage campaign and connected-world atlas', () 
   for (const route of ['B4 → PORT 17', 'PORT 17 → CHŁODNIA', 'CHŁODNIA → SORTOWNIA', 'SORTOWNIA → B4']) {
     assert.ok(panel.includes(route), 'missing route: ' + route);
   }
-  for (const id of ['b4_intro', 'port_17', 'cold_zero', 'night_sorting', 'final_audit']) assert.ok(panel.includes('data-campaign-stage=' + id), 'missing stage: ' + id);
+  for (const id of ['b4_intro', 'port_17', 'cold_zero', 'night_sorting', 'final_audit']) assert.ok(panel.includes('data-campaign-stage="' + id + '"'), 'missing stage: ' + id);
   assert.match(panel, /KAMPANIA ZMIAN/);
   assert.doesNotMatch(panel, /data-survival-map=|survival-map-picker/);
 });

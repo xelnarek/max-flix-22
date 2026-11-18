@@ -75,11 +75,13 @@ test('campaign map receives instanced warehouse structure without per-frame crea
   assert.match(game, /private disposeSurvivalArenaInstances\(\)/);
 });
 
-test('Survival is the only public start path and boots without building a campaign level', async () => {
+test('Endless has a distinct launch path while campaign stages start independently', async () => {
   const [app, html, game] = await Promise.all([read('../src/index.ts'), read('../index.html'), read('../src/game.ts')]);
   assert.match(html, /id="btn-start-survival"/);
   assert.doesNotMatch(html, /id="btn-start-game"|id="story-intro-modal"|data-tab="tab-zones"/);
-  assert.match(app, /bindTap\(document\.getElementById\('btn-start-survival'\), doStartSurvival\)/);
+  assert.match(app, /bindTap\(document\.getElementById\('btn-start-survival'\), \(event\) =>/);
+  assert.match(app, /selectedCampaignStageId = null;[\s\S]*?doStartSurvival\(event\)/);
+  assert.match(app, /this\.engine\.startCampaignStage\(chosenStage\)/);
   assert.match(app, /doStartSurvival\(\);/);
   assert.match(game, /private resetSurvivalRun\(\)/);
   assert.match(game, /this\.resetSurvivalRun\(\)/);
@@ -99,7 +101,7 @@ test('device-aware viewport profile is applied immediately after the renderer be
   assert.match(viewport, /export function calculateUiViewport/);
 });
 
-test('campaign entry points are retired; only Survival can be started from the app', async () => {
+test('legacy campaign startGame entry points stay retired while the new mission flow is explicit', async () => {
   const [app, html, game] = await Promise.all([
     read('../src/index.ts'), read('../index.html'), read('../src/game.ts')
   ]);
@@ -107,6 +109,7 @@ test('campaign entry points are retired; only Survival can be started from the a
   assert.match(html, /id="btn-start-survival"/);
   assert.doesNotMatch(app, /this\.engine\.startGame\(/);
   assert.match(app, /this\.engine\.startSurvival\(\)/);
+  assert.match(app, /this\.engine\.startCampaignStage\(chosenStage\)/);
   assert.doesNotMatch(app, /selectedSurvivalMapId|readSurvivalMapPreference|writeSurvivalMapPreference/);
   assert.match(game, /private resetSurvivalRun\(\)/);
   assert.doesNotMatch(game, /public startGame\(/);
@@ -225,8 +228,9 @@ test('camera zoom is bounded, smooth, synchronized and supports two-finger pinch
 
 test('Survival menu copy stays synchronized with the actual 60-second wave clock', async () => {
   const [game, html] = await Promise.all([read('../src/game.ts'), read('../index.html')]);
-  assert.match(game, /const nextWave = 1 \+ Math\.floor\(this\.survivalElapsed \/ 60\)/);
-  assert.match(html, /AUTO-ATAK • FALE CO 60 S/);
+  assert.match(game, /const waveIntervalSeconds = this\.campaignStage\?\.waveIntervalSeconds \?\? 60/);
+  assert.match(game, /const nextWave = 1 \+ Math\.floor\(this\.survivalElapsed \/ waveIntervalSeconds\)/);
+  assert.match(html, /ENDLESS • BEZ LIMITU CZASU • FALE CO 60 S/);
   assert.doesNotMatch(html, /FALE CO 42 S/);
 });
 

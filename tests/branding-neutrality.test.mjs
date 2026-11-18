@@ -39,15 +39,20 @@ test('public identity and operator labels are generic', async () => {
   assert.doesNotMatch(app, /launchCampaignGame|doStartGame|id="btn-start-game"|story-intro-modal/);
 });
 
-test('the public UI exposes Survival only', async () => {
+test('the public UI exposes Endless Survival and a separate stage campaign', async () => {
   const html = await read('../index.html');
   const app = await read('../src/index.ts');
   assert.match(html, /id="btn-start-survival"/);
-  assert.doesNotMatch(html, /id="btn-start-game"|data-tab="tab-zones"|data-tab="tab-story"|id="story-intro-modal"|KAMPANIA|kampania|kampanię|btn-open-cinematic-intro/i);
+  assert.doesNotMatch(html, /id="btn-start-game"|data-tab="tab-zones"|data-tab="tab-story"|id="story-intro-modal"|btn-open-cinematic-intro/i);
+  assert.match(html, /data-campaign-stage="b4_intro"/);
+  assert.match(html, /KAMPANIA ZMIAN/);
+  assert.match(html, /ENDLESS • BEZ LIMITU CZASU/);
   assert.match(html, /RANKING GLOBALNY • SURVIVAL/);
   assert.doesNotMatch(html, /RANKING GLOBALNY • .*KAMPANIA/i);
   assert.doesNotMatch(app, /launchCampaignGame|doStartGame|id="btn-start-game"|story-intro-modal/);
-  assert.match(app, /bindTap\(document\.getElementById\('btn-start-survival'\), doStartSurvival\)/);
+  assert.match(app, /bindTap\(document\.getElementById\('btn-start-survival'\), \(event\) =>/);
+  assert.match(app, /this\.engine\.startCampaignStage\(chosenStage\)/);
+  assert.match(app, /this\.engine\.startSurvival\(\)/);
 });
 
 test('Survival reset is internal and never constructs a campaign level', async () => {
