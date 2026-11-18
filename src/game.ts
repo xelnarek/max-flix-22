@@ -101,6 +101,8 @@ import {
 } from './abilityCooldown.ts';
 import {
   getAbilityCooldownSeconds,
+  getEnemyProjectileSpeed,
+  SURVIVAL_ENEMY_SPECIAL_RATE_MULTIPLIER,
   getBaseAttackCooldownSeconds,
   getPiotrBoomerangMaxLifeSeconds,
   getPrimaryAttackLifetimeSeconds,
@@ -126,7 +128,7 @@ import { NEUTRAL_CHARACTER_COMBAT_BONUSES, type CharacterCombatBonuses } from '.
 import { getCharacterMotionProfile } from './characterMotion.ts';
 import { getAttackPoseStrength, getCharacterAttackMotionProfile } from './characterAttackMotion.ts';
 import { getCharacterHitReactionProfile } from './characterHitReaction.ts';
-import { resolveCharacterIncomingDamage, scaleCharacterBasicAttackDamage, scaleSurvivalOutgoingDamage, scaleSurvivalIncomingDamage, SURVIVAL_HIT_INVULNERABILITY_SECONDS } from './characterBalance.ts';
+import { resolveCharacterIncomingDamage, scaleCharacterBasicAttackDamage, scaleSurvivalOutgoingDamage, scaleSurvivalIncomingDamage, SURVIVAL_ABILITY_DAMAGE_MULTIPLIER, SURVIVAL_HIT_INVULNERABILITY_SECONDS } from './characterBalance.ts';
 import { sound } from './sound.ts';
 import {
   ActivePerks,
@@ -10919,11 +10921,12 @@ export class PaleciakiGameEngine {
 
     candy.position.set(x, y, z);
     this.levelRoot.add(candy);
-    const aim = this.predictPlayerAimPoint(x, z, 7.6, targetX, targetZ, 0.64);
+    const projectileSpeed = getEnemyProjectileSpeed(7.6);
+    const aim = this.predictPlayerAimPoint(x, z, projectileSpeed, targetX, targetZ, 0.64);
     const direction = new THREE.Vector3(aim.x - x, 0.10, aim.z - z).normalize();
     this.enemyProjectiles.push({
       mesh: candy,
-      vel: direction.multiplyScalar(7.6),
+      vel: direction.multiplyScalar(projectileSpeed),
       life: 3.1,
       kind: 'pomazaniec_lollipop',
       gravity: 1.35,
@@ -10945,11 +10948,12 @@ export class PaleciakiGameEngine {
     group.add(stripe);
     group.position.set(x,y,z);
     this.levelRoot.add(group);
-    const aim = this.predictPlayerAimPoint(x, z, 7.2, targetX, targetZ, 0.62);
+    const projectileSpeed = getEnemyProjectileSpeed(7.2);
+    const aim = this.predictPlayerAimPoint(x, z, projectileSpeed, targetX, targetZ, 0.62);
     const direction = new THREE.Vector3(aim.x-x,0.22,aim.z-z).normalize();
     this.enemyProjectiles.push({
       mesh: group as unknown as THREE.Mesh,
-      vel: direction.multiplyScalar(7.2),
+      vel: direction.multiplyScalar(projectileSpeed),
       life: 3.0,
       kind: 'sebix_brick',
       gravity: 2.15,
@@ -13354,7 +13358,7 @@ export class PaleciakiGameEngine {
       const length=Math.hypot(mx,mz)||1,speed=enemy.speed*(role==='bruiser'?1.18:role==='flanker'?1.32:0.82);
       enemy.x+=mx/length*speed*dt;enemy.z+=mz/length*speed*dt;
     }else if(enemy.aiMateuszAllyAttackCooldown<=0&&distance<=(ranged?10.5:2)){
-      const damage=role==='bruiser'?1.65:role==='flanker'?1.12:role==='support'?0.72:0.92;
+      const damage=role==='bruiser'?1.85:role==='flanker'?1.24:role==='support'?0.80:1.02;
       this.damageEnemy(target,damage,enemy.x,enemy.z,null);target.hitReactTimer=Math.max(target.hitReactTimer??0,0.16);
       if(target.hp<=0){this.defeatEnemy(target,180,false);this.emitFloatingToast('SOJUSZNIK ELIMINUJE WROGA',target.x,target.y+1.2,target.z,'combo');enemy.aiMateuszAllyTarget=undefined;}
       else this.spawnCompactImpact(target.x,target.y+0.65,target.z,role==='bruiser'?0xf59e0b:0x22d3ee);
@@ -13457,7 +13461,7 @@ export class PaleciakiGameEngine {
       this.defeatEnemy(target, 220, false);
       this.emitFloatingToast('WRÓG ELIMINUJE WROGA', target.x, target.y + 1.25, target.z, 'combo');
     }
-    enemy.attackCooldown = isHeavy ? 0.78 : 0.92;
+    enemy.attackCooldown = isHeavy ? 0.88 : 1.04;
     this.spawnExplosionParticles(target.x, target.y + 0.68, target.z, 0xd946ef, 7);
     this.spawnCompactImpact(target.x, target.y + 0.66, target.z, 0xe879f9);
   }
@@ -13477,16 +13481,19 @@ export class PaleciakiGameEngine {
       return enemy.hp;
     }
     const previousHp = enemy.hp;
-    // One shared Survival output nerf keeps every operator, weapon and ability
-    // from deleting waves before the enemy director can create real pressure.
+    // Survival keeps a moderate shared output scalar; a separate skill factor
+    // prevents special abilities from feeling underpowered without inflating basic attacks.
     const baseAppliedDamage = this.gameMode === 'survival'
       ? scaleSurvivalOutgoingDamage(amount)
       : amount;
+    const abilityDamageMultiplier = this.gameMode === 'survival' && damageSource === 'ability'
+      ? SURVIVAL_ABILITY_DAMAGE_MULTIPLIER
+      : 1;
     const coreOpenSeconds = Number(enemy.mesh.userData.cthulhuCoreOpenTimer ?? 0);
     const coreDamageMultiplier = enemy.name.includes('CTHULHU')
       ? getCthulhuCoreDamageMultiplier(coreOpenSeconds)
       : 1;
-    const appliedDamage = baseAppliedDamage * coreDamageMultiplier;
+    const appliedDamage = baseAppliedDamage * abilityDamageMultiplier * coreDamageMultiplier;
     enemy.hp = Math.max(0, enemy.hp - appliedDamage);
     const actualDamage = Math.max(0, previousHp - enemy.hp);
     const shouldSpawnImpactBurst = actualDamage > 0 && (enemy.hitReactTimer || 0) <= 0.015;
@@ -13817,7 +13824,7 @@ export class PaleciakiGameEngine {
       }
     }
     const survivalAbilityRate = this.gameMode === 'survival'
-      ? getSurvivalDifficultyProfile(this.survivalWave).enemyAbilityRateMultiplier
+      ? getSurvivalDifficultyProfile(this.survivalWave).enemyAbilityRateMultiplier * SURVIVAL_ENEMY_SPECIAL_RATE_MULTIPLIER
       : 1;
     if (this.globalEnemyShoutCooldown > 0) {
       this.globalEnemyShoutCooldown -= dt;
@@ -15113,9 +15120,10 @@ export class PaleciakiGameEngine {
     const mesh = createPenaltyNoticeProjectile();
     mesh.position.set(x, y, z);
     this.levelRoot.add(mesh);
-    const aim = this.predictPlayerAimPoint(x, z, 7.5);
+    const projectileSpeed = getEnemyProjectileSpeed(7.5);
+    const aim = this.predictPlayerAimPoint(x, z, projectileSpeed);
     const dir = new THREE.Vector3(aim.x - x, 0, aim.z - z).normalize();
-    this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.multiplyScalar(7.5), life: 3.5 });
+    this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.multiplyScalar(projectileSpeed), life: 3.5 });
     sound.playWhistle();
   }
 
@@ -15125,11 +15133,12 @@ export class PaleciakiGameEngine {
     (mesh.material as THREE.MeshStandardMaterial).color.setHex(0xef4444);
     mesh.position.set(x, y, z);
     this.levelRoot.add(mesh);
-    const aim = Number.isFinite(lockedDirection) ? null : this.predictPlayerAimPoint(x, z, 10.0);
+    const projectileSpeed = getEnemyProjectileSpeed(10.0);
+    const aim = Number.isFinite(lockedDirection) ? null : this.predictPlayerAimPoint(x, z, projectileSpeed);
     const dir = Number.isFinite(lockedDirection)
       ? new THREE.Vector3(Math.sin(lockedDirection as number), 0, Math.cos(lockedDirection as number))
       : new THREE.Vector3((aim?.x ?? this.playerPos.x) - x, 0, (aim?.z ?? this.playerPos.z) - z).normalize();
-    this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.multiplyScalar(10.0), life: 3.5, isDyscyplinarka: true });
+    this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.multiplyScalar(projectileSpeed), life: 3.5, isDyscyplinarka: true });
     sound.playWhistle();
   }
 
@@ -15137,9 +15146,10 @@ export class PaleciakiGameEngine {
     const mesh = createSanitarywareProjectile();
     mesh.position.set(x, y, z);
     this.levelRoot.add(mesh);
-    const aim = this.predictPlayerAimPoint(x, z, 8.2);
+    const projectileSpeed = getEnemyProjectileSpeed(8.2);
+    const aim = this.predictPlayerAimPoint(x, z, projectileSpeed);
     const dir = new THREE.Vector3(aim.x - x, 0.2, aim.z - z).normalize();
-    this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.multiplyScalar(8.2), life: 3.5 });
+    this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.multiplyScalar(projectileSpeed), life: 3.5 });
     sound.playWoosh();
   }
 
@@ -15147,11 +15157,12 @@ export class PaleciakiGameEngine {
     const mesh = createSparkZapProjectile();
     mesh.position.set(x, y, z);
     this.levelRoot.add(mesh);
-    const aim = Number.isFinite(lockedDirection) ? null : this.predictPlayerAimPoint(x, z, 9.5);
+    const projectileSpeed = getEnemyProjectileSpeed(9.5);
+    const aim = Number.isFinite(lockedDirection) ? null : this.predictPlayerAimPoint(x, z, projectileSpeed);
     const dir = Number.isFinite(lockedDirection)
       ? new THREE.Vector3(Math.sin(lockedDirection as number), 0.1, Math.cos(lockedDirection as number))
       : new THREE.Vector3((aim?.x ?? this.playerPos.x) - x, 0.1, (aim?.z ?? this.playerPos.z) - z).normalize();
-    this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.normalize().multiplyScalar(9.5), life: 3.0 });
+    this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.normalize().multiplyScalar(projectileSpeed), life: 3.0 });
     sound.playElectricalSparks();
   }
 
@@ -15159,11 +15170,12 @@ export class PaleciakiGameEngine {
     const mesh = createOdprawaClipboardProjectile();
     mesh.position.set(x, y, z);
     this.levelRoot.add(mesh);
-    const aim = Number.isFinite(lockedDirection) ? null : this.predictPlayerAimPoint(x, z, 10.0);
+    const projectileSpeed = getEnemyProjectileSpeed(10.0);
+    const aim = Number.isFinite(lockedDirection) ? null : this.predictPlayerAimPoint(x, z, projectileSpeed);
     const dir = Number.isFinite(lockedDirection)
       ? new THREE.Vector3(Math.sin(lockedDirection as number), 0.1, Math.cos(lockedDirection as number))
       : new THREE.Vector3((aim?.x ?? this.playerPos.x) - x, 0.1, (aim?.z ?? this.playerPos.z) - z).normalize();
-    this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.normalize().multiplyScalar(10.0), life: 4.0, isDyscyplinarka: true });
+    this.enemyProjectiles.push({ mesh, disposeOnRemove: true, vel: dir.normalize().multiplyScalar(projectileSpeed), life: 4.0, isDyscyplinarka: true });
     sound.playWhistle();
     this.triggerScreenShake(0.4, 0.3);
   }
@@ -18094,7 +18106,7 @@ export class PaleciakiGameEngine {
     const mateuszRecruitOrders = this.currentCharacterId === 'mateusz'
       ? selectMateuszRecruitOrders(this.enemies.map(enemy => ({
           id: enemy.id, type: enemy.type, x: enemy.x, y: enemy.y, z: enemy.z, state: enemy.state,
-        })), this.playerPos.x, this.playerPos.y, this.playerPos.z, 10.5, 3, this.gameMode === 'survival' ? 10 : 12)
+        })), this.playerPos.x, this.playerPos.y, this.playerPos.z, 10.5, 3, this.gameMode === 'survival' ? 11 : 12)
       : [];
     if (this.currentCharacterId === 'mateusz' && mateuszRecruitOrders.length === 0) {
       this.emitFloatingToast('BRAK PRZECIWNIKÓW W ZASIĘGU PRZEJĘCIA', this.playerPos.x, this.playerPos.y + 1.35, this.playerPos.z, 'perk');
@@ -18231,7 +18243,7 @@ export class PaleciakiGameEngine {
       });
       this.emitFloatingToast('🧱 SALWA GRESU 120x280 + ⚡ Kubełek Mocy!', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
     } else if (this.currentCharacterId === 'mateusz') {
-      const duration = this.gameMode === 'survival' ? 10 : 12;
+      const duration = this.gameMode === 'survival' ? 11 : 12;
       const orders = mateuszRecruitOrders;
       let recruited = 0;
       for (const order of orders) {
