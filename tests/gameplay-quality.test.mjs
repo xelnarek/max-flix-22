@@ -1705,6 +1705,15 @@ test('Mateusz Operator 04 recruits a temporary autonomous team and keeps the con
   assert.doesNotMatch(game, /mateuszCats|spawnMateuszCats|updateMateuszCats/);
 });
 
+test('Mateusz recruits have stronger role damage and an 11-second Survival duration', async () => {
+  const game = await read('../src/game.ts');
+  const characters = await read('../src/characters.ts');
+  assert.ok(game.includes("10.5, 3, this.gameMode === 'survival' ? 11 : 12"));
+  assert.ok(game.includes("this.gameMode === 'survival' ? 11 : 12"));
+  assert.ok(game.includes("const damage=role==='bruiser'?1.85:role==='flanker'?1.24:role==='support'?0.80:1.02;"));
+  assert.ok(characters.includes('(11 sekund w Survival)'));
+});
+
 test('Mateusz recruited allies have bounded lifetime and restore hostile AI after expiry', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /ally\.aiMateuszAllyTimer = order\.durationSeconds/);
