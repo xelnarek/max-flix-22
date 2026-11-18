@@ -846,6 +846,9 @@ export class PaleciakiGameEngine {
   private survivalCleanupTimer = 4;
   private survivalUiTimer = 0;
   private survivalWave = 1;
+  /** Difficulty profile changes only when the Survival wave changes. */
+  private cachedSurvivalDifficultyWave = 0;
+  private cachedSurvivalDifficultyProfile: ReturnType<typeof getSurvivalDifficultyProfile> | null = null;
   private survivalKills = 0;
   private survivalContract: SurvivalContractState = createSurvivalContract(1);
   private survivalShiftEvent: SurvivalShiftEventState = createSurvivalShiftEventState();
@@ -10304,6 +10307,15 @@ export class PaleciakiGameEngine {
     sound.playAttackWhoosh();
   }
 
+  /** Reuse the immutable wave profile across frames; only a new wave invalidates it. */
+  private getCurrentSurvivalDifficultyProfile(): ReturnType<typeof getSurvivalDifficultyProfile> {
+    if (!this.cachedSurvivalDifficultyProfile || this.cachedSurvivalDifficultyWave !== this.survivalWave) {
+      this.cachedSurvivalDifficultyProfile = getSurvivalDifficultyProfile(this.survivalWave);
+      this.cachedSurvivalDifficultyWave = this.survivalWave;
+    }
+    return this.cachedSurvivalDifficultyProfile;
+  }
+
   private updateSurvivalDirector(dt: number) {
     this.survivalElapsed += dt;
     const contractClock = advanceSurvivalContract(this.survivalContract, dt);
@@ -10468,7 +10480,7 @@ export class PaleciakiGameEngine {
 
     const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
     const hordeSettings = getSurvivalHordeSettings(isMobile);
-    const difficultyProfile = getSurvivalDifficultyProfile(this.survivalWave);
+    const difficultyProfile = this.getCurrentSurvivalDifficultyProfile();
     const waveMutator = getSurvivalWaveMutator(this.survivalWave);
     const pomazaniecRaidActive = this.survivalPomazaniecTriggered && !this.survivalPomazaniecCompleted;
     const surgeActive = this.survivalSurgeTimeLeft > 0;
@@ -15236,7 +15248,7 @@ export class PaleciakiGameEngine {
       }
     }
     const survivalAbilityRate = this.gameMode === 'survival'
-      ? getSurvivalDifficultyProfile(this.survivalWave).enemyAbilityRateMultiplier *
+      ? this.getCurrentSurvivalDifficultyProfile().enemyAbilityRateMultiplier *
         SURVIVAL_ENEMY_SPECIAL_RATE_MULTIPLIER *
         getSurvivalAnomalyModifiers(this.survivalAnomaly).enemyAbilityRateMultiplier
       : 1;
