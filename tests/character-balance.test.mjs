@@ -13,6 +13,7 @@ test('all five operators have deliberately different movement, jump, attack and 
   assert.ok(CHARACTERS.mateusz.speed > CHARACTERS.marcin.speed);
   assert.ok(CHARACTERS.dawid.jumpForce > CHARACTERS.grzesiek.jumpForce);
   assert.ok(CHARACTERS.grzesiek.basicAttackDamageMultiplier > CHARACTERS.mateusz.basicAttackDamageMultiplier);
+  assert.ok(CHARACTERS.mateusz.basicAttackDamageMultiplier >= 0.95, 'Mateusz no longer has an overly weak signature attack');
   assert.ok(CHARACTERS.marcin.damageTakenMultiplier < CHARACTERS.mateusz.damageTakenMultiplier);
   for (const character of Object.values(CHARACTERS)) {
     assert.ok(character.speed >= 6 && character.speed <= 10);
@@ -25,7 +26,7 @@ test('all five operators have deliberately different movement, jump, attack and 
 
 test('primary attack power is character-specific and preserves readable tenths of HP', () => {
   assert.equal(scaleCharacterBasicAttackDamage(2, CHARACTERS.grzesiek.basicAttackDamageMultiplier), 2.6);
-  assert.equal(scaleCharacterBasicAttackDamage(2, CHARACTERS.mateusz.basicAttackDamageMultiplier), 1.8);
+  assert.equal(scaleCharacterBasicAttackDamage(2, CHARACTERS.mateusz.basicAttackDamageMultiplier), 2.0);
   assert.equal(scaleCharacterBasicAttackDamage(0, 1.2), 0);
   assert.equal(scaleCharacterBasicAttackDamage(Number.NaN, 1.2), 0);
 });
