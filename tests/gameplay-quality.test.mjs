@@ -1802,3 +1802,21 @@ test('Campaign and Survival run a scale-aware enemy body-overlap solver after AI
   assert.match(game, /enemy\.mesh\.position\.x = enemy\.x/);
   assert.match(game, /enemy\.mesh\.position\.z = enemy\.z/);
 });
+
+
+test('enemy distance LOD swaps imported skinned rigs for one-mesh silhouettes and preserves combat-critical animation', async () => {
+  const [game, lod] = await Promise.all([
+    read('../src/game.ts'), read('../src/enemyVisualLod.ts')
+  ]);
+  assert.match(game, /installEnemyVisualLodProxy\(enemy, actor\.root\)/);
+  assert.match(game, /installEnemyVisualLodProxy\(enemy, root\)/);
+  assert.match(game, /shouldUseEnemyVisualLodProxy\(/);
+  assert.match(game, /lodProxy\.visible = useProxy/);
+  assert.match(game, /fullVisual\.visible = !useProxy/);
+  assert.match(game, /enemy\.state === 'charging'[\s\S]*?enemy\.state === 'defeated'[\s\S]*?enemy\.state === 'stunned'/);
+  assert.match(game, /if \(useProxy\)[\s\S]*?track\.animationAccumulator = 0/);
+  assert.match(game, /child\.userData\.actorLodProxy === true/);
+  assert.match(lod, /mergeGeometries\(parts, false\)/);
+  assert.match(lod, /vertexColors: true/);
+  assert.match(lod, /mesh\.castShadow = false/);
+});
