@@ -48,6 +48,7 @@ import { EnemySpatialIndex, calculateEnemySeparationVector, chooseSpacedSpawnPoi
 import { calculateEnemyObstacleAvoidanceVector } from './enemyNavigation.ts';
 import { calculateStableEnemySteering, getEnemyEngageRadius } from './enemySteering.ts';
 import { calculateEnemyProjectileDodge, predictEnemyAimPoint } from './enemyTactics.ts';
+import { EnemyProjectileThreatIndex } from './enemyProjectileThreatIndex.ts';
 import { getCampaignEnemyFlankProfile, getCampaignEnemyFlankVector, resolveCampaignEnemyFlankSide } from './enemyCampaignTactics.ts';
 import { advanceEnemyAttackTelegraph, getEnemyRangedAttackTelegraphProfile } from './enemyAttackTelegraphs.ts';
 import { getEnemyMeleeTelegraphProfile, type EnemyMeleeTelegraphProfile } from './enemyMeleeTelegraphs.ts';
@@ -1085,6 +1086,10 @@ export class PaleciakiGameEngine {
   private readonly enemySpatialIndex = new EnemySpatialIndex<EnemyItem>(4.0);
   private enemySpatialIndexNextRefreshAt = 0;
   private enemySpatialIndexCachedCount = -1;
+  /** Nearby player shots only; exact swept-path tests remain in enemyTactics. */
+  private readonly enemyProjectileThreatIndex = new EnemyProjectileThreatIndex();
+  private enemyProjectileThreatIndexNextRefreshAt = 0;
+  private enemyProjectileThreatIndexCachedCount = -1;
   /** Per-enemy wall-clock gate prevents contact attacks from restarting their animation every frame. */
   private readonly enemyAttackAnimationUntil = new WeakMap<EnemyItem, number>();
   /** Keeps a short attack window when an enemy strikes before its async rig finishes loading. */
@@ -13862,9 +13867,16 @@ export class PaleciakiGameEngine {
     enemy.aiDodgeTimer = Math.max(0, (enemy.aiDodgeTimer ?? 0) - dt);
     if (!isTelegraphingRangedBoss && enemy.aiDodgeScanTimer <= 0) {
       enemy.aiDodgeScanTimer = 0.12;
+      const nearbyProjectiles = this.enemyProjectileThreatIndex.query(
+        enemy.x,
+        enemy.z,
+        0.72,
+        1.02,
+        0.06,
+      );
       const dodge = calculateEnemyProjectileDodge(
         enemy,
-        this.projectiles,
+        nearbyProjectiles,
         0.72,
         1.02,
         0.95,
@@ -15335,6 +15347,14 @@ export class PaleciakiGameEngine {
       this.enemySpatialIndex.rebuild(this.enemies);
       this.enemySpatialIndexCachedCount = this.enemies.length;
       this.enemySpatialIndexNextRefreshAt = this.isHandheldViewport ? spatialIndexNow + 24 : spatialIndexNow;
+    }
+    // Rebuild at a bounded cadence, and immediately when projectile count changes
+    // so newly fired volleys enter the broadphase before the next dodge scan.
+    const projectileCountChanged = this.projectiles.length !== this.enemyProjectileThreatIndexCachedCount;
+    if (projectileCountChanged || spatialIndexNow >= this.enemyProjectileThreatIndexNextRefreshAt) {
+      this.enemyProjectileThreatIndex.rebuild(this.projectiles);
+      this.enemyProjectileThreatIndexCachedCount = this.projectiles.length;
+      this.enemyProjectileThreatIndexNextRefreshAt = spatialIndexNow + (this.isHandheldViewport ? 40 : 32);
     }
 
     for (const e of this.enemies) {
