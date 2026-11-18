@@ -63,6 +63,8 @@ test('wave contracts reinforce the active tactical mutator', () => {
     { wave: 5, mutator: 'supply', kind: 'xp', target: 8, title: 'ZABEZPIECZ ZŁOTY ŁADUNEK' },
     { wave: 6, mutator: 'swarm', kind: 'eliminations', target: 11, title: 'OCZYŚĆ ALEJKĘ SZTURMU' },
     { wave: 7, mutator: 'convoy', kind: 'xp', target: 5, title: 'ODZYSKAJ ŁADUNEK KONWOJU' },
+    { wave: 8, mutator: 'ramp_overload', kind: 'eliminations', target: 11, title: 'ROZŁADUJ PRZECIĄŻONĄ RAMPĘ' },
+    { wave: 9, mutator: 'express_dispatch', kind: 'combo', target: 4, title: 'PRZECHWYĆ EKSPRESOWĄ DOSTAWĘ' },
   ];
   for (const expected of cases) {
     const contract = createSurvivalContract(expected.wave, expected.mutator);
