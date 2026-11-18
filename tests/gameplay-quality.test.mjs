@@ -1478,7 +1478,9 @@ test('Survival random enemy roster makes every regular archetype selectable afte
   const [game, roster, targeting] = await Promise.all([
     read('../src/game.ts'), read('../src/survivalEnemySpawns.ts'), read('../src/survivalTargeting.ts')
   ]);
-  assert.match(game, /chooseSurvivalEnemySpawnType\(wave, this\.survivalElapsed, Math\.random\(\)\)/);
+  assert.match(game, /chooseSurvivalEnemySpawnType\(wave, this\.survivalElapsed, Math\.random\(\), this\.survivalRecentSpawnTypes\)/);
+  assert.match(game, /private survivalRecentSpawnTypes: SurvivalEnemySpawnType\[\] = \[\]/);
+  assert.match(game, /SURVIVAL_SPAWN_VARIETY_MEMORY/);
   for (const type of ['zombie_pracownik', 'kurier', 'sztaplar_szalony', 'monter', 'inspector', 'handlowiec', 'customer', 'architect', 'przedstawiciel_włoski', 'serwisant', 'agv_robot', 'pan_roman', 'piorun_dron', 'elite_walczak_guard']) {
     assert.ok(game.includes("case '" + type + "':"), 'missing Survival spawn constructor mapping: ' + type);
   }
