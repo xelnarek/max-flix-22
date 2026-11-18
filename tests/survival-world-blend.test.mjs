@@ -117,3 +117,20 @@ test('the connected floor atlas uses weighted alpha and low-contrast surface det
   assert.match(game, /depthWrite: false/);
   assert.doesNotMatch(game, /survival-biome-gateway-posts|survival-biome-gateway-beams/);
 });
+
+test('reusable biome blend scratch preserves numeric results and object identity', async () => {
+  const {
+    createSurvivalWorldBiomeBlendScratch,
+    getSurvivalWorldBiomeBlendAtPosition,
+    updateSurvivalWorldBiomeBlendAtPosition,
+  } = await import('../src/survivalWorldBlend.ts');
+  const scratch = createSurvivalWorldBiomeBlendScratch();
+  const weights = scratch.weights;
+  const cases = [[-80, -30], [-5.5, -30], [0, 0], [5.5, 30], [80, 30], [Number.NaN, Number.POSITIVE_INFINITY]];
+  for (const [x, z] of cases) {
+    const result = updateSurvivalWorldBiomeBlendAtPosition(x, z, scratch);
+    assert.equal(result, scratch);
+    assert.equal(result.weights, weights);
+    assert.deepEqual(result, getSurvivalWorldBiomeBlendAtPosition(x, z));
+  }
+});

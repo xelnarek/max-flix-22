@@ -32,36 +32,88 @@ function smoothstep(edge0: number, edge1: number, value: number): number {
   return t * t * (3 - 2 * t);
 }
 
-function createBlend(eastFactor: number, southFactor: number, xBoundaryInfluence: number, zBoundaryInfluence: number): SurvivalWorldBiomeBlend {
-  const weights: Record<SurvivalMapId, number> = {
-    warehouse_b4: (1 - eastFactor) * (1 - southFactor),
-    container_terminal: eastFactor * (1 - southFactor),
-    cold_storage: eastFactor * southFactor,
-    night_sorting: (1 - eastFactor) * southFactor,
+export type MutableSurvivalWorldBiomeBlend = Omit<SurvivalWorldBiomeBlend, 'weights'> & {
+  weights: Record<SurvivalMapId, number>;
+};
+
+/** Create a reusable output object for the per-frame Survival lighting path. */
+export function createSurvivalWorldBiomeBlendScratch(): MutableSurvivalWorldBiomeBlend {
+  return {
+    weights: {
+      warehouse_b4: 1,
+      container_terminal: 0,
+      cold_storage: 0,
+      night_sorting: 0,
+    },
+    eastFactor: 0,
+    southFactor: 0,
+    xBoundaryInfluence: 0,
+    zBoundaryInfluence: 0,
+    junctionInfluence: 0,
+    blendAmount: 0,
+    dominantBiomeId: MAP_ORDER[0],
+    boundaryKind: 'interior',
+    isBlending: false,
   };
-  const total = MAP_ORDER.reduce((sum, id) => sum + weights[id], 0);
+}
+
+function writeBlend(
+  out: MutableSurvivalWorldBiomeBlend,
+  eastFactor: number,
+  southFactor: number,
+  xBoundaryInfluence: number,
+  zBoundaryInfluence: number,
+): MutableSurvivalWorldBiomeBlend {
+  const weights = out.weights;
+  weights.warehouse_b4 = (1 - eastFactor) * (1 - southFactor);
+  weights.container_terminal = eastFactor * (1 - southFactor);
+  weights.cold_storage = eastFactor * southFactor;
+  weights.night_sorting = (1 - eastFactor) * southFactor;
+
+  const total = weights.warehouse_b4 + weights.container_terminal + weights.cold_storage + weights.night_sorting;
   if (total > 0 && Math.abs(total - 1) > 1e-9) {
     for (const id of MAP_ORDER) weights[id] /= total;
   }
+
   let dominantBiomeId = MAP_ORDER[0];
-  for (const id of MAP_ORDER.slice(1)) {
-    if (weights[id] > weights[dominantBiomeId]) dominantBiomeId = id;
+  let maximumWeight = weights[dominantBiomeId];
+  for (let index = 1; index < MAP_ORDER.length; index++) {
+    const id = MAP_ORDER[index];
+    const weight = weights[id];
+    if (weight > maximumWeight) {
+      maximumWeight = weight;
+      dominantBiomeId = id;
+    }
   }
-  const blendAmount = clamp01(1 - Math.max(...MAP_ORDER.map((id) => weights[id])));
+
+  const blendAmount = clamp01(1 - maximumWeight);
   const nearX = xBoundaryInfluence > 0.015;
   const nearZ = zBoundaryInfluence > 0.015;
-  const boundaryKind: SurvivalWorldBoundaryKind = nearX && nearZ
-    ? 'four-way'
-    : nearX
-      ? 'x-seam'
-      : nearZ
-        ? 'z-seam'
-        : 'interior';
-  return {
-    weights, eastFactor, southFactor, xBoundaryInfluence, zBoundaryInfluence,
-    junctionInfluence: xBoundaryInfluence * zBoundaryInfluence,
-    blendAmount, dominantBiomeId, boundaryKind, isBlending: blendAmount > 1e-4,
-  };
+  out.eastFactor = eastFactor;
+  out.southFactor = southFactor;
+  out.xBoundaryInfluence = xBoundaryInfluence;
+  out.zBoundaryInfluence = zBoundaryInfluence;
+  out.junctionInfluence = xBoundaryInfluence * zBoundaryInfluence;
+  out.blendAmount = blendAmount;
+  out.dominantBiomeId = dominantBiomeId;
+  out.boundaryKind = nearX && nearZ ? 'four-way' : nearX ? 'x-seam' : nearZ ? 'z-seam' : 'interior';
+  out.isBlending = blendAmount > 1e-4;
+  return out;
+}
+
+/** Update a previously created biome blend result without allocating objects or arrays. */
+export function updateSurvivalWorldBiomeBlendAtPosition(
+  x: number,
+  z: number,
+  out: MutableSurvivalWorldBiomeBlend,
+): MutableSurvivalWorldBiomeBlend {
+  const safeX = Number.isFinite(x) ? x : -SURVIVAL_WORLD_BLEND_HALF_WIDTH_METERS * 2;
+  const safeZ = Number.isFinite(z) ? z : -SURVIVAL_WORLD_BLEND_HALF_DEPTH_METERS * 2;
+  const eastFactor = smoothstep(-SURVIVAL_WORLD_BLEND_HALF_WIDTH_METERS, SURVIVAL_WORLD_BLEND_HALF_WIDTH_METERS, safeX);
+  const southFactor = smoothstep(-SURVIVAL_WORLD_BLEND_HALF_DEPTH_METERS, SURVIVAL_WORLD_BLEND_HALF_DEPTH_METERS, safeZ);
+  const xBoundaryInfluence = 1 - smoothstep(0, SURVIVAL_WORLD_BLEND_HALF_WIDTH_METERS, Math.abs(safeX));
+  const zBoundaryInfluence = 1 - smoothstep(0, SURVIVAL_WORLD_BLEND_HALF_DEPTH_METERS, Math.abs(safeZ));
+  return writeBlend(out, eastFactor, southFactor, xBoundaryInfluence, zBoundaryInfluence);
 }
 
 /**
@@ -70,11 +122,5 @@ function createBlend(eastFactor: number, southFactor: number, xBoundaryInfluence
  * world lighting; bilinear blending makes the centre a genuine four-way overlap.
  */
 export function getSurvivalWorldBiomeBlendAtPosition(x: number, z: number): SurvivalWorldBiomeBlend {
-  const safeX = Number.isFinite(x) ? x : -SURVIVAL_WORLD_BLEND_HALF_WIDTH_METERS * 2;
-  const safeZ = Number.isFinite(z) ? z : -SURVIVAL_WORLD_BLEND_HALF_DEPTH_METERS * 2;
-  const eastFactor = smoothstep(-SURVIVAL_WORLD_BLEND_HALF_WIDTH_METERS, SURVIVAL_WORLD_BLEND_HALF_WIDTH_METERS, safeX);
-  const southFactor = smoothstep(-SURVIVAL_WORLD_BLEND_HALF_DEPTH_METERS, SURVIVAL_WORLD_BLEND_HALF_DEPTH_METERS, safeZ);
-  const xBoundaryInfluence = 1 - smoothstep(0, SURVIVAL_WORLD_BLEND_HALF_WIDTH_METERS, Math.abs(safeX));
-  const zBoundaryInfluence = 1 - smoothstep(0, SURVIVAL_WORLD_BLEND_HALF_DEPTH_METERS, Math.abs(safeZ));
-  return createBlend(eastFactor, southFactor, xBoundaryInfluence, zBoundaryInfluence);
+  return updateSurvivalWorldBiomeBlendAtPosition(x, z, createSurvivalWorldBiomeBlendScratch());
 }

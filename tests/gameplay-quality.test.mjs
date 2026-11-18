@@ -1411,16 +1411,18 @@ test('biome ambience and combat modifiers blend continuously through two-way and
     read('../src/game.ts'), read('../src/survivalMaps.ts'), read('../src/survivalWorldLayout.ts'),
     read('../src/survivalWorldBlend.ts')
   ]);
-  assert.match(game, /getSurvivalWorldBiomeBlendAtPosition\(this\.playerPos\.x, this\.playerPos\.z\)/);
-  assert.match(game, /getSurvivalWorldLightingProfile\(blend\.weights\)/);
+  assert.match(game, /updateSurvivalWorldBiomeBlendAtPosition\([\s\S]*?this\.playerPos\.x,[\s\S]*?this\.playerPos\.z,[\s\S]*?this\.survivalBiomeBlendScratch/);
+  assert.match(game, /updateSurvivalWorldLightingProfile\([\s\S]*?blend\.weights,[\s\S]*?this\.survivalWorldLightingScratch/);
+  assert.match(game, /private readonly survivalBiomeBlendScratch = createSurvivalWorldBiomeBlendScratch\(\)/);
+  assert.match(game, /private readonly survivalWorldLightingScratch = createWorldLightingProfileScratch\(\)/);
   assert.match(game, /getSurvivalWorldBackgroundColor\(blend\.weights\)/);
   assert.match(game, /1 - Math\.exp\(-Math\.max\(0, Math\.min\(dt, 0\.1\)\) \* 3\.4\)/);
   assert.match(game, /getSurvivalBiomeIdAtPosition\(this\.playerPos\.x, this\.playerPos\.z, this\.survivalMapId\)/);
   assert.match(game, /applySurvivalWorldCombatModifier\([\s\S]*?x,[\s\S]*?z/);
   assert.match(game, /bossMapTuned = applySurvivalWorldCombatModifier/);
   assert.match(maps, /export function applySurvivalWorldCombatModifier/);
-  assert.match(blend, /warehouse_b4: \(1 - eastFactor\) \* \(1 - southFactor\)/);
-  assert.match(blend, /junctionInfluence: xBoundaryInfluence \* zBoundaryInfluence/);
+  assert.match(blend, /weights\.warehouse_b4 = \(1 - eastFactor\) \* \(1 - southFactor\)/);
+  assert.match(blend, /out\.junctionInfluence = xBoundaryInfluence \* zBoundaryInfluence/);
   assert.match(layout, /SURVIVAL_WORLD_BIOME_HYSTERESIS_METERS = 4/);
   assert.doesNotMatch(game, /survivalBiomeLightingTransition|beginSurvivalBiomeLightingTransition/);
 });
@@ -1946,4 +1948,17 @@ test('PvP projectile visual sync reuses its active-ID buffer and immutable perk 
   assert.match(game, /const PVP_PERK_COLORS: Readonly<Record<string, number>> = Object\.freeze\(/);
   assert.match(update, /PVP_PERK_COLORS\[perk\.type\] \?\? 0xfacc15/);
   assert.doesNotMatch(update, /const colors: Record<string, number>/);
+});
+
+test('Survival per-frame biome lighting uses reusable blend and profile scratch buffers', async () => {
+  const game = await read('../src/game.ts');
+  const start = game.indexOf('private updateSurvivalBiome(dt: number)');
+  const end = game.indexOf('private buildSurvivalArenaExpansion', start);
+  assert.ok(start >= 0 && end > start, 'Survival biome update method should exist');
+  const update = game.slice(start, end);
+  assert.match(update, /updateSurvivalWorldBiomeBlendAtPosition\([\s\S]*?this\.survivalBiomeBlendScratch/);
+  assert.match(update, /updateSurvivalWorldLightingProfile\([\s\S]*?this\.survivalWorldLightingScratch/);
+  assert.doesNotMatch(update, /getSurvivalWorldBiomeBlendAtPosition|getSurvivalWorldLightingProfile/);
+  assert.match(game, /private readonly survivalBiomeBlendScratch = createSurvivalWorldBiomeBlendScratch\(\)/);
+  assert.match(game, /private readonly survivalWorldLightingScratch = createWorldLightingProfileScratch\(\)/);
 });
