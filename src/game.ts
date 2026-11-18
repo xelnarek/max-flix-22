@@ -4572,7 +4572,7 @@ export class PaleciakiGameEngine {
     }
   }
 
-  private buildSurvivalMapLandmarks(mapId: SurvivalMapId, _openEdges: SurvivalWorldOpenEdges = { west: false, east: false, north: false, south: false }) {
+  private buildSurvivalMapLandmarks(mapId: SurvivalMapId, openEdges: SurvivalWorldOpenEdges = { west: false, east: false, north: false, south: false }) {
     const root = new THREE.Group();
     root.name = 'survival-map-landmarks-' + mapId;
     this.levelRoot.add(root);
@@ -4853,14 +4853,6 @@ export class PaleciakiGameEngine {
       routingMarks.receiveShadow = false;
       root.add(routingMarks);
 
-      const statusSign = new THREE.Mesh(
-        new THREE.PlaneGeometry(8.6, 1.55),
-        this.getSurvivalArenaLabelMaterial('SORTOWNIA WIDMOWA  //  ZMIANA 03', '#f0abfc'),
-      );
-      statusSign.position.set(0, 6.3, -19.36);
-      statusSign.castShadow = false;
-      statusSign.receiveShadow = false;
-      root.add(statusSign);
       for (const x of [-42, -14, 14, 42]) {
         const beacon = new THREE.PointLight(0xa855f7, 1.15, 15);
         beacon.position.set(x, 6.0, 16.8);
@@ -4931,6 +4923,61 @@ export class PaleciakiGameEngine {
     // Containers, cold-room shells, gantry beams and loading shutters are
     // discovered by their real bounds; decorative floor strips stay untouched.
     this.registerCameraOccludersInGroup(root, 0.14);
+
+    // Every connected biome gets one readable identity plate. The sign sits
+    // on the closed outer wall, leaving both shared portal approaches open.
+    const signProfiles: Record<SurvivalMapId, { label: string; accent: string; subtitle: string }> = {
+      warehouse_b4: {
+        label: 'MAGAZYN B4',
+        accent: '#f4b544',
+        subtitle: 'DOKI 01–06  •  WYSOKIE SKŁADOWANIE',
+      },
+      container_terminal: {
+        label: 'PORT KONTENEROWY 17',
+        accent: '#fb923c',
+        subtitle: 'PLAC PRZEŁADUNKOWY  •  DOKI 17–24',
+      },
+      cold_storage: {
+        label: 'CHŁODNIA ZERO  •  -18°C',
+        accent: '#67e8f9',
+        subtitle: 'KONTROLA TEMPERATURY  •  STREFA MROŹNICZA',
+      },
+      night_sorting: {
+        label: 'SORTOWNIA WIDMOWA',
+        accent: '#f0abfc',
+        subtitle: 'LINIE SKANERÓW  •  NOCNY PRZERZUT',
+      },
+    };
+    const signProfile = signProfiles[mapId];
+    const signSide = openEdges.north ? 1 : -1;
+    const signGroup = new THREE.Group();
+    signGroup.name = 'survival-zone-sign-' + mapId;
+    signGroup.position.set(0, 6.25, signSide * 19.34);
+    signGroup.rotation.y = signSide > 0 ? Math.PI : 0;
+
+    const backingMaterial = new THREE.MeshStandardMaterial({
+      color: 0x101a27, metalness: 0.68, roughness: 0.40,
+    });
+    const backing = new THREE.Mesh(
+      new THREE.BoxGeometry(10.9, 1.92, 0.22),
+      backingMaterial,
+    );
+    backing.castShadow = false;
+    backing.receiveShadow = false;
+    signGroup.add(backing);
+    this.survivalArenaInstanceGeometries.add(backing.geometry);
+    this.survivalArenaInstanceMaterials.add(backingMaterial);
+
+    const signFace = new THREE.Mesh(
+      new THREE.PlaneGeometry(10.35, 1.48),
+      this.getSurvivalArenaLabelMaterial(signProfile.label, signProfile.accent, signProfile.subtitle),
+    );
+    signFace.position.z = 0.12;
+    signFace.castShadow = false;
+    signFace.receiveShadow = false;
+    signGroup.add(signFace);
+    this.survivalArenaInstanceGeometries.add(signFace.geometry);
+    root.add(signGroup);
   }
 
   private registerCameraOccludersInGroup(root: THREE.Object3D, fadeOpacity = 0.14) {
@@ -5961,11 +6008,15 @@ export class PaleciakiGameEngine {
     this.survivalArenaInstanceMaterials.clear();
     for (const texture of this.survivalArenaInstanceTextures) texture.dispose();
     this.survivalArenaInstanceTextures.clear();
+    for (const material of this.survivalArenaLabelMaterials.values()) {
+      material.map?.dispose();
+      material.dispose();
+    }
     this.survivalArenaLabelMaterials.clear();
   }
 
-  private getSurvivalArenaLabelMaterial(label: string, accent: string) {
-    const key = label + ':' + accent;
+  private getSurvivalArenaLabelMaterial(label: string, accent: string, subtitle = 'CENTRUM B4  •  LOGISTYKA') {
+    const key = label + ':' + accent + ':' + subtitle;
     const existing = this.survivalArenaLabelMaterials.get(key);
     if (existing) return existing;
 
@@ -5992,7 +6043,7 @@ export class PaleciakiGameEngine {
     context.fillText(label, 276, 65, 420);
     context.fillStyle = '#a9bdce';
     context.font = '700 17px Arial, sans-serif';
-    context.fillText('CENTRUM B4  •  LOGISTYKA', 276, 112, 420);
+    context.fillText(subtitle, 276, 112, 420);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
