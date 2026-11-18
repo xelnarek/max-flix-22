@@ -25,7 +25,7 @@ test('primary attack damage profiles match the live regular/regular/finisher com
 });
 
 test('Survival primary attacks have a measurable neutral-build DPS floor without changing Campaign', () => {
-  assert.equal(SURVIVAL_PRIMARY_ATTACK_DAMAGE_MULTIPLIER, 1.28);
+  assert.equal(SURVIVAL_PRIMARY_ATTACK_DAMAGE_MULTIPLIER, 1.16);
   for (const id of ids) {
     const profile = CHARACTERS[id];
     const survivalDps = estimatePrimaryAttackDps(id, profile.basicAttackDamageMultiplier, 'survival');
