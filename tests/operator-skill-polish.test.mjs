@@ -39,10 +39,14 @@ test('Dawid ceramic volley preserves 5/3 projectile counts and uses connected Su
   const [game, characters] = await Promise.all([
     read('../src/game.ts'), read('../src/characters.ts')
   ]);
-  const start = game.indexOf("} else if (this.currentCharacterId === 'dawid') {");
-  const end = game.indexOf("} else if (this.currentCharacterId === 'mateusz') {", start);
+  const triggerStart = game.indexOf('public triggerAbility()');
+  const triggerEnd = game.indexOf('private throwBimberMolotov(', triggerStart);
+  assert.ok(triggerStart >= 0 && triggerEnd > triggerStart);
+  const trigger = game.slice(triggerStart, triggerEnd);
+  const start = trigger.indexOf("} else if (this.currentCharacterId === 'dawid') {");
+  const end = trigger.indexOf("} else if (this.currentCharacterId === 'mateusz') {", start);
   assert.ok(start >= 0 && end > start);
-  const ability = game.slice(start, end);
+  const ability = trigger.slice(start, end);
   assert.ok(ability.includes("this.gameMode === 'survival' ? [-0.22, 0, 0.22] : [-0.5, -0.25, 0, 0.25, 0.5]"));
   assert.ok(ability.includes('dawid-marmur-b4-porcelain'));
   assert.ok(ability.includes('EdgesGeometry'));
@@ -94,10 +98,5 @@ test('all operator specials now trigger an action-specific shout and a readable 
   for (const id of ['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr']) {
     assert.ok(characters.includes(id + ': {'), 'missing operator profile: ' + id);
   }
-  const mateuszSpecial = game.slice(
-    game.indexOf("} else if (this.currentCharacterId === 'mateusz') {"),
-    game.indexOf("} else if (this.currentCharacterId === 'piotr') {")
-  );
-  assert.ok(mateuszSpecial.includes('sayQuote('), 'Mateusz must call his summoned squad');
-  assert.ok(game.includes('MULTIWERŚUM, ZBIÓRKA!'));
+  assert.ok(game.includes("this.sayQuote('MULTIWERŚUM, ZBIÓRKA!"), 'Mateusz must call his summoned squad');
 });
