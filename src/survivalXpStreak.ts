@@ -12,8 +12,8 @@ export interface SurvivalXpStreakResult {
   perfectChainNow: boolean;
 }
 
-const STREAK_WINDOW_SECONDS = 5.25;
-const STREAK_MULTIPLIERS = [1, 1.08, 1.16, 1.25, 1.35, 1.45] as const;
+const STREAK_WINDOW_SECONDS = 4.5;
+const STREAK_MULTIPLIERS = [1, 1.03, 1.06, 1.10, 1.15, 1.20] as const;
 
 export function createSurvivalXpStreakState(): SurvivalXpStreakState {
   return { count: 0, lastPickupAt: Number.NEGATIVE_INFINITY, perfectRewardClaimed: false };
