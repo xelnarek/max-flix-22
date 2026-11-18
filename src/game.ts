@@ -13441,10 +13441,14 @@ export class PaleciakiGameEngine {
       root.scale.setScalar(1.14);
       torso.scale.set(1.24, 1.14, 1.12);
       for (const arm of arms) {
+        const upperArm = arm.children[0];
+        if (upperArm instanceof THREE.Mesh) upperArm.material = primary;
         arm.scale.set(1.28, 1.20, 1.25);
         add(arm, new THREE.SphereGeometry(0.20, 9, 7), primary, 0, -0.78, 0.05);
       }
-      add(head, new THREE.SphereGeometry(0.25, 10, 8), secondary, 0, 0.16, -0.035, 1.25, 0.42, 0.95);
+      // Dark cropped hair, broad brow and heavy green shoulders make Hulk readable
+      // at the default elevated camera distance.
+      add(head, new THREE.SphereGeometry(0.25, 10, 8), dark, 0, 0.16, -0.035, 1.25, 0.42, 0.95);
       add(torso, new THREE.BoxGeometry(0.69, 0.22, 0.39), secondary, 0, -0.37, 0.015);
       add(torso, new THREE.BoxGeometry(0.16, 0.11, 0.035), gold, 0, -0.37, 0.22);
     } else if (definition.id === 'spider-man') {
