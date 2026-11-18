@@ -18,3 +18,9 @@ This pass uses the existing role-matched Gobkit GLB rigs and the original proced
 - No MakeHuman assets, downloader, rig, manifests or models are used or changed by this pass.
 - No menu, roster, HUD, settings or navigation files are changed.
 - No physics, jump force, movement speed, damage, cooldowns, hitboxes, enemy AI or progression values are changed.
+
+## Regular ranged enemy counterplay
+- Pomazaniec, Handlowiec, Przedstawiciel Włoski, Pan Roman, Serwisant and Cyber Salesman show role-coloured floor lanes before releasing ranged attacks.
+- The aim direction is locked when the warning begins and drives the projectile at release, so the shot does not bend after the tell.
+- Confirmed HP damage or stun interrupts the wind-up, removes its warning and applies a short recovery delay.
+- The bounded warning timer tolerates frame hitches. Damage, projectile speed, cooldown values and enemy HP remain unchanged.
