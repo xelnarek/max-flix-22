@@ -111,3 +111,13 @@ test('PvP audio distinguishes a confirmed local hit from damage received', async
   assert.match(sound, /impact\.frequency\.exponentialRampToValueAtTime\(122, t \+ 0\.105\)/);
   assert.match(sound, /tick\.frequency\.setValueAtTime\(920, t \+ 0\.012\)/);
 });
+
+test('PvP touchscreen guide explains the timing-sweep fire window instead of implying aim-assist', async () => {
+  const [html, aimTests] = await Promise.all([
+    read('../index.html'), read('../tests/pvp-aim.test.mjs')
+  ]);
+  assert.match(html, /PRAWY: CELOWANIE/);
+  assert.match(html, /STRZEL, GDY ZNACZNIK ŁUKU POKRYJE SIĘ Z CELEM/);
+  assert.match(html, /role="group" aria-label="Sterowanie trybu PvP"/);
+  assert.match(aimTests, /getPvpSweepAimAngle/);
+});
