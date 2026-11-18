@@ -17,7 +17,7 @@ This pass uses the existing role-matched Gobkit GLB rigs and the original proced
 ## Scope and invariants
 - No MakeHuman assets, downloader, rig, manifests or models are used or changed by this pass.
 - No menu, roster, HUD, settings or navigation files are changed.
-- No physics, jump force, movement speed, damage, cooldowns, hitboxes, enemy AI or progression values are changed.
+- The animation-only layer does not alter player physics, jump force, movement speed, damage, cooldowns, hitboxes or progression. The explicitly documented ranged-counterplay and Campaign-flank sections below describe the limited enemy-AI changes in this follow-up series.
 
 ## Regular ranged enemy counterplay
 - Pomazaniec, Handlowiec, Przedstawiciel Włoski, Pan Roman, Serwisant and Cyber Salesman show role-coloured floor lanes before releasing ranged attacks.
