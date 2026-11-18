@@ -24,3 +24,10 @@ This pass uses the existing role-matched Gobkit GLB rigs and the original proced
 - The aim direction is locked when the warning begins and drives the projectile at release, so the shot does not bend after the tell.
 - Confirmed HP damage or stun interrupts the wind-up, removes its warning and applies a short recovery delay.
 - The bounded warning timer tolerates frame hitches. Damage, projectile speed, cooldown values and enemy HP remain unchanged.
+
+
+## Campaign side-entry AI
+- Selected melee archetypes receive a deterministic left/right approach lane. Fast roles such as Kurier, Sebix and Zombie use a stronger lateral approach; heavy roles retain only a restrained offset.
+- The lateral bias is distance-weighted and fades to zero before the existing melee contact band. Crowd separation, obstacle avoidance, arrival slowdown and attack range remain authoritative.
+- Survival keeps its separate wave-director coalition and pincer system. Ranged specialists and vehicles keep their existing direct firing/charge lanes.
+- No movement speed, HP, damage, attack cooldown or collision values are changed.
