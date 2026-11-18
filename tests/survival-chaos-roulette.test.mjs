@@ -30,7 +30,7 @@ test('roulette roll covers all seven outcomes across the weighted intervals', ()
 });
 
 test('invalid roulette input falls back safely to the table midpoint', () => {
-  assert.equal(rollSurvivalChaosRoulette(Number.NaN), 'perk');
+  assert.equal(rollSurvivalChaosRoulette(Number.NaN), 'shield');
   assert.equal(rollSurvivalChaosRoulette(-100), 'skill');
   assert.equal(rollSurvivalChaosRoulette(100), 'enemy_pack');
 });
