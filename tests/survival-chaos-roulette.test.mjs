@@ -43,3 +43,21 @@ test('invalid roulette input falls back safely to the table midpoint', () => {
   assert.equal(rollSurvivalChaosRoulette(-100), 'skill');
   assert.equal(rollSurvivalChaosRoulette(100), 'elite_delivery');
 });
+
+test('roulette reel feedback is synchronized to the three stop events and final reward class', async () => {
+  const [ui, sound, style] = await Promise.all([
+    import('node:fs/promises').then(({ readFile }) => readFile(new URL('../src/index.ts', import.meta.url), 'utf8')),
+    import('node:fs/promises').then(({ readFile }) => readFile(new URL('../src/sound.ts', import.meta.url), 'utf8')),
+    import('node:fs/promises').then(({ readFile }) => readFile(new URL('../src/visual-polish.css', import.meta.url), 'utf8')),
+  ]);
+  assert.match(ui, /sound\.playRouletteSpin\(\)/);
+  assert.match(ui, /sound\.playRouletteStop\(index\)/);
+  assert.match(ui, /sound\.playRouletteResult\(isRisk\)/);
+  assert.match(ui, /const isRisk = result\.kind === 'enemy_pack' \|\| result\.kind === 'elite_delivery'/);
+  assert.match(sound, /public playRouletteSpin\(\)/);
+  assert.match(sound, /public playRouletteStop\(reelIndex: number\)/);
+  assert.match(sound, /public playRouletteResult\(isRisk = false\)/);
+  assert.match(style, /survival-chaos-machine\.is-jackpot/);
+  assert.match(style, /survival-chaos-machine\.is-risk/);
+  assert.match(style, /survival-chaos-machine \.survival-chaos-reel-symbol\.is-locked/);
+});
