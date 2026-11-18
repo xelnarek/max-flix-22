@@ -1560,7 +1560,10 @@ test('Survival raises enemy pressure gradually and keeps mobile horde caps as a 
   const [game, difficulty] = await Promise.all([read('../src/game.ts'), read('../src/survivalDifficulty.ts')]);
   assert.match(game, /enemy\.maxHp \* difficultyProfile\.enemyHealthMultiplier/);
   assert.match(game, /enemy\.speed \*= difficultyProfile\.enemySpeedMultiplier/);
-  assert.match(game, /this\.survivalSpawnTimer = difficultyProfile\.spawnIntervalSeconds/);
+  assert.match(game, /const waveMutator = getSurvivalWaveMutator\(this\.survivalWave\)/);
+  assert.match(game, /getSurvivalWaveSpawnTuning\(/);
+  assert.match(game, /this\.survivalSpawnTimer = spawnTuning\.spawnIntervalSeconds/);
+  assert.match(game, /performanceBudget\.groupCap/);
   assert.match(game, /e\.specialActionTimer -= dt \* survivalAbilityRate/);
   assert.match(game, /getSurvivalPerformanceBudget\(isMobile, this\.adaptivePerformanceTier\)/);
   assert.match(difficulty, /spawnIntervalSeconds: Math\.max\(2\.95/);
