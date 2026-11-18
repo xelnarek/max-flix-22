@@ -1694,7 +1694,7 @@ test('Mateusz Operator 04 recruits a temporary autonomous team and keeps the con
     read('../src/game.ts'), read('../src/types.ts'), read('../src/characters.ts'), read('../index.html')
   ]);
   assert.match(characters, /abilityName: 'EKIPA PRZEJĘTA/);
-  assert.match(characters, /12 sekund \(10 sekund w Survival\)/);
+  assert.match(characters, /12 sekund \(11 sekund w Survival\)/);
   assert.match(html, /EKIPA PRZEJĘTA/);
   assert.match(game, /private spawnMateuszContractRip\(\)/);
   assert.match(game, /private updateMateuszAlly\(enemy: EnemyItem, dt: number\)/);
