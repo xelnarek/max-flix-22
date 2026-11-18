@@ -315,6 +315,8 @@ test('Survival is harder to trivialize, combat HUD stops covering the arena, and
   assert.match(balance, /SURVIVAL_INCOMING_DAMAGE_MULTIPLIER = 1\.30/);
   assert.match(balance, /SURVIVAL_HIT_INVULNERABILITY_SECONDS = 0\.78/);
   assert.match(game, /scaleSurvivalOutgoingDamage\(amount\)/);
+  assert.match(game, /damageSource === 'ability'/);
+  assert.match(game, /damageSource: SurvivalDamageSource \| null = null/);
   assert.match(game, /scaleSurvivalIncomingDamage\(amount\)/);
   assert.match(game, /SURVIVAL_HIT_INVULNERABILITY_SECONDS/);
   assert.match(game, /const groupSize = Math\.min\(groupLimit, 3 \+/);
