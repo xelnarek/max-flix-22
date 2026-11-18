@@ -473,7 +473,9 @@ test('every eighth Survival kill grants a small collectable XP milestone reward'
   assert.ok(start >= 0 && end > start, 'eight-kill milestone block should exist');
   const milestone = game.slice(start, end);
   assert.match(milestone, /const isShiftMilestone = this\.survivalKills % 8 === 0/);
-  assert.match(milestone, /baseXpDrop \+ \(isShiftMilestone \? 2 : 0\)/);
+  assert.match(milestone, /const xpDrop = rollSurvivalXpDrop\(/);
+  assert.match(milestone, /isShiftMilestone \? 2 : 0/);
+  assert.match(milestone, /if \(xpDrop\) this\.spawnSurvivalXpGem/);
   assert.doesNotMatch(milestone, /spawnSurvivalXpGem\(e\.x, e\.y, e\.z, 2\)/);
   assert.match(milestone, /NORMA ZMIANY x8 — BONUS \+2 XP DO ZEBRANIA/);
 });
@@ -1232,7 +1234,9 @@ test('Survival wave modifiers announce a tactical shift and change enemy stats a
   assert.match(game, /applySurvivalWaveMutator\([\s\S]*?maxHp: enemy\.maxHp,[\s\S]*?speed: enemy\.speed/);
   assert.match(game, /enemy\.survivalXpMultiplier = tuned\.xpMultiplier/);
   assert.match(game, /const waveXpMultiplier = Number\.isFinite\(rawXpMultiplier\)/);
-  assert.match(game, /baseXpDrop = Math\.max\(1, Math\.round\(\(e\.maxHp >= 4 \? 3 : 1\) \* waveXpMultiplier\)\)/);
+  assert.match(game, /rollSurvivalXpDrop\(\s*e\.type/);
+  assert.match(game, /anomalyXp\.xpDropChanceMultiplier/);
+  assert.match(game, /anomalyXp\.xpValueMultiplier/);
   assert.match(game, /waveMutator\.id === 'armored'[\s\S]*?enemy\.shieldActive = true[\s\S]*?enemy\.shieldRing = shieldRing/);
   assert.match(types, /survivalXpMultiplier\?: number/);
 });
@@ -1569,7 +1573,7 @@ test('Survival raises enemy pressure gradually and keeps mobile horde caps as a 
   assert.match(game, /e\.specialActionTimer -= dt \* survivalAbilityRate/);
   assert.match(game, /getSurvivalPerformanceBudget\(isMobile, this\.adaptivePerformanceTier\)/);
   assert.match(difficulty, /spawnIntervalSeconds: Math\.max\(4\.55/);
-  assert.match(difficulty, /enemyAbilityRateMultiplier: Number\(\(1\.12 \+/);
+  assert.match(difficulty, /enemyAbilityRateMultiplier: Number\(\(1\.18 \+/);
 });
 
 test('high-density projectile collision uses a broad-phase grid and retains swept-segment hit checks', async () => {
@@ -1708,9 +1712,9 @@ test('Mateusz summons exactly five separate Marvel/DC hero models', async () => 
   for (const modelDetail of ['iron-man-arc-reactor', 'hulk-purple-shorts', 'spider-web-emblem', 'storm-white-hair', 'batman-cowl-ear']) {
     assert.ok(game.includes(modelDetail), 'missing distinct 3D detail: ' + modelDetail);
   }
-  assert.match(game, /private spawnMateuszRivals\(\)/);
+  assert.match(game, /private spawnMateuszRivals\(durationMultiplier = 1\)/);
   assert.match(game, /MATEUSZ_RIVAL_ROSTER\.forEach/);
-  assert.match(game, /this\.spawnMateuszRivals\(\)/);
+  assert.match(game, /this\.spawnMateuszRivals\(abilityDurationScale\)/);
   assert.match(characters, /MULTIUNIWERSUM • PIĘCIU BOHATERÓW/);
 });
 
