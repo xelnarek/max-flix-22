@@ -27,7 +27,7 @@ export const SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS: Readonly<Record<CharacterId
   marcin: 1.90,
   grzesiek: 2.05,
   dawid: 1.88,
-  mateusz: 1.80,
+  mateusz: 1.65,
   piotr: 2.10,
 });
 /** Survival-only primary-attack lift; campaign damage and auto-weapons are unchanged. */
