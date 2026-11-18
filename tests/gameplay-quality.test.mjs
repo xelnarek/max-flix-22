@@ -1820,3 +1820,19 @@ test('enemy distance LOD swaps imported skinned rigs for one-mesh silhouettes an
   assert.match(lod, /vertexColors: true/);
   assert.match(lod, /mesh\.castShadow = false/);
 });
+
+
+test('late-loaded actor rigs apply anisotropic texture filtering and retain combat-critical proxy exits', async () => {
+  const [game, cleanup] = await Promise.all([
+    read('../src/game.ts'), read('../src/actorResourceDisposal.ts')
+  ]);
+  assert.match(game, /private applyActorTextureQuality\(root: THREE\.Object3D\)/);
+  assert.match(game, /Math\.min\(maxAnisotropy, this\.isHandheldViewport \? 10 : 16\)/);
+  assert.match(game, /this\.applyActorTextureQuality\(root\)/);
+  assert.match(game, /enemy\.aiRangedWindupTimer/);
+  assert.match(game, /enemy\.aiMeleeWindupTimer/);
+  assert.match(game, /pendingAttackUntil > now/);
+  assert.match(game, /attackAnimationUntil > now/);
+  assert.match(cleanup, /actorLodSharedGeometry/);
+  assert.match(cleanup, /actorLodSharedMaterial/);
+});
