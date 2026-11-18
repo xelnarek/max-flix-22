@@ -1614,21 +1614,113 @@ class PaleciakiScene extends xb.Script {
           if (isChaosRoulette) {
             const machine = document.createElement('div');
             machine.className = 'survival-chaos-machine';
-            machine.innerHTML = '<span>💎</span><span>⚡</span><span>☢️</span><span>👾</span>';
-            machine.setAttribute('aria-label', 'Dwanaście możliwych wyników automatu: łupy, premie, kontrola tłumu i ryzyko dodatkowych przeciwników');
+            machine.innerHTML = `
+              <div class="survival-chaos-marquee" aria-hidden="true">
+                <span class="survival-chaos-lamp"></span>
+                <strong>MAGAZYN B4 • JACKPOT ZMIANY</strong>
+                <span class="survival-chaos-lamp"></span>
+              </div>
+              <div class="survival-chaos-reels" aria-hidden="true">
+                <div class="survival-chaos-reel-window"><span class="survival-chaos-reel-symbol">💎</span></div>
+                <div class="survival-chaos-reel-window"><span class="survival-chaos-reel-symbol">⚡</span></div>
+                <div class="survival-chaos-reel-window"><span class="survival-chaos-reel-symbol">☢️</span></div>
+              </div>
+              <div class="survival-chaos-machine-caption">12 WYNIKÓW <i>•</i> JEDEN SPIN <i>•</i> BEZ PRZERZUTU</div>
+              <div class="survival-chaos-result" aria-live="polite">NAGRODA CZEKA NA LOS</div>
+            `;
+            machine.setAttribute('aria-label', 'Jednoręki bandyta B4. Trzy obracające się bębny, dwanaście możliwych wyników, jeden spin');
+            const reelSymbols = [
+              { icon: '💎', accent: '#38bdf8' }, { icon: '⚡', accent: '#facc15' },
+              { icon: '☢️', accent: '#4ade80' }, { icon: '👾', accent: '#fb7185' },
+              { icon: '🛡️', accent: '#22c55e' }, { icon: '❤️', accent: '#f87171' },
+              { icon: '💥', accent: '#fb923c' }, { icon: '✹', accent: '#c084fc' },
+              { icon: '✨', accent: '#67e8f9' }, { icon: '🪙', accent: '#fbbf24' },
+              { icon: '⏱️', accent: '#93c5fd' }, { icon: '🚨', accent: '#f43f5e' },
+            ];
+            const rewardStyles: Record<string, { category: string; accent: string }> = {
+              skill: { category: 'ULEPSZENIE', accent: '#38bdf8' },
+              perk: { category: 'PERK SPECJALNY', accent: '#c084fc' },
+              shield: { category: 'OSŁONA GAMMA', accent: '#4ade80' },
+              heal: { category: 'RATUNEK HP', accent: '#fb7185' },
+              explosion: { category: 'WYBUCH', accent: '#fb923c' },
+              nova: { category: 'NOVA', accent: '#d8b4fe' },
+              enemy_pack: { category: 'NIEPROSZENI GOŚCIE', accent: '#fb7185' },
+              xp_rain: { category: 'DESZCZ XP', accent: '#67e8f9' },
+              overdrive: { category: 'OVERDRIVE', accent: '#facc15' },
+              bounty: { category: 'PREMIA', accent: '#fbbf24' },
+              time_lock: { category: 'ZAMROŻENIE FALI', accent: '#93c5fd' },
+              elite_delivery: { category: 'DOSTAWA ELITY', accent: '#f43f5e' },
+            };
+            const reelNodes = Array.from(machine.querySelectorAll<HTMLElement>('.survival-chaos-reel-symbol'));
+            const resultNode = machine.querySelector<HTMLElement>('.survival-chaos-result');
             const spinButton = document.createElement('button');
             spinButton.type = 'button';
             spinButton.className = 'survival-chaos-spin';
             spinButton.textContent = '🎰 ZAKRĘĆ AUTOMATEM';
+            spinButton.setAttribute('aria-label', 'Uruchom losowanie jednorękiego bandyty');
             spinButton.addEventListener('click', () => {
+              if (spinButton.disabled) return;
               spinButton.disabled = true;
               spinButton.textContent = 'LOSOWANIE…';
-              if (this.engine.spinSurvivalChaosRoulette()) {
-                survivalLevelUp.classList.add('hidden');
-              } else {
-                spinButton.disabled = false;
-                spinButton.textContent = '🎰 ZAKRĘĆ AUTOMATEM';
+              machine.classList.remove('is-jackpot', 'is-risk', 'has-result');
+              machine.classList.add('is-spinning');
+              if (resultNode) {
+                resultNode.textContent = 'BĘBNY W RUCHU…';
+                resultNode.classList.remove('is-visible');
               }
+
+              const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+              const stopAt = reducedMotion ? [80, 150, 220] : [1420, 1960, 2520];
+              let stoppedReels = 0;
+              reelNodes.forEach((reel, index) => {
+                reel.classList.remove('is-locked');
+                const tick = window.setInterval(() => {
+                  const symbol = reelSymbols[Math.floor(Math.random() * reelSymbols.length)];
+                  reel.textContent = symbol.icon;
+                  reel.style.setProperty('--reel-accent', symbol.accent);
+                }, reducedMotion ? 160 : 72);
+                window.setTimeout(() => {
+                  window.clearInterval(tick);
+                  reel.classList.add('is-locked');
+                  stoppedReels += 1;
+                  if (stoppedReels !== reelNodes.length) return;
+
+                  const spun = this.engine.spinSurvivalChaosRoulette();
+                  const result = this.engine.getSurvivalChaosRouletteLastResult();
+                  if (!spun || !result) {
+                    machine.classList.remove('is-spinning');
+                    spinButton.disabled = false;
+                    spinButton.textContent = '🎰 SPRÓBUJ JESZCZE RAZ';
+                    if (resultNode) resultNode.textContent = 'AUTOMAT NIE ZŁAPAŁ SYGNAŁU';
+                    return;
+                  }
+
+                  const style = rewardStyles[result.kind] || { category: 'WYNIK B4', accent: '#fbbf24' };
+                  machine.style.setProperty('--roulette-accent', style.accent);
+                  machine.dataset.result = result.kind;
+                  machine.classList.remove('is-spinning');
+                  machine.classList.add('has-result', result.kind === 'enemy_pack' || result.kind === 'elite_delivery' ? 'is-risk' : 'is-jackpot');
+                  reelNodes.forEach((node) => {
+                    node.textContent = result.icon;
+                    node.style.setProperty('--reel-accent', style.accent);
+                    node.classList.add('is-locked');
+                  });
+                  if (resultNode) {
+                    resultNode.textContent = result.icon + ' ' + result.title + '  •  ' + style.category;
+                    resultNode.classList.add('is-visible');
+                  }
+                  spinButton.textContent = result.kind === 'enemy_pack' || result.kind === 'elite_delivery'
+                    ? '⚠️ WYNIK LOSOWANIA'
+                    : '🏆 NAGRODA WYLOSOWANA';
+                  survivalLevelUp.classList.add('roulette-reveal');
+                  window.setTimeout(() => {
+                    if (survivalLevelUp.dataset.mode === 'chaos-roulette') {
+                      survivalLevelUp.classList.add('hidden');
+                      survivalLevelUp.classList.remove('roulette-reveal');
+                    }
+                  }, 1320);
+                }, stopAt[index]);
+              });
             });
             survivalUpgradeOptions.append(machine, spinButton);
             survivalLevelUp.classList.remove('hidden');
