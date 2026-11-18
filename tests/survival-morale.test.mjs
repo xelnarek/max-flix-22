@@ -53,9 +53,34 @@ test('morale break is wired only into Survival coalition updates and has typed t
     readFile(new URL('../src/game.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/types.ts', import.meta.url), 'utf8'),
   ]);
-  assert.ok(game.includes('getSurvivalLeaderLossTargets('));
+  assert.ok(game.includes('updateSurvivalLeaderLossTargets('));
   assert.ok(game.includes('getSurvivalMoraleBreakMultiplier(enemy.aiMoraleBreakTimer ?? 0)'));
   assert.ok(game.includes('enemy.aiMoraleBreakTimer = Math.max('));
+  assert.ok(game.includes('private readonly survivalMoraleLivingIdsScratch = new Set<string>()'));
+  assert.ok(game.includes('private readonly survivalMoraleAffectedIdsScratch = new Set<string>()'));
   assert.ok(game.includes('e.aiMoraleBreakTimer = Math.max(0, (e.aiMoraleBreakTimer ?? 0) - dt)'));
   assert.ok(types.includes('aiMoraleBreakTimer?: number'));
+});
+
+test('reusable leader-loss buffers preserve pure results, identity and clear stale membership', async () => {
+  const { updateSurvivalLeaderLossTargets } = await import('../src/survivalMorale.ts');
+  const living = new Set(['stale-living']);
+  const affected = new Set(['stale-affected']);
+  const units = [
+    { id: 'leader', state: 'defeated', coalitionId: 4, leaderId: 'leader' },
+    { id: 'bruiser', state: 'chase', coalitionId: 4, leaderId: 'leader' },
+    { id: 'ranged', state: 'patrol', coalitionId: 4, leaderId: 'leader' },
+    { id: 'dead-member', state: 'defeated', coalitionId: 4, leaderId: 'leader' },
+  ];
+  const result = updateSurvivalLeaderLossTargets(units, living, affected);
+  assert.equal(result, affected);
+  assert.deepEqual([...living].sort(), ['bruiser', 'ranged']);
+  assert.deepEqual([...affected].sort(), ['bruiser', 'ranged']);
+  assert.deepEqual([...affected].sort(), getSurvivalLeaderLossTargets(units));
+
+  updateSurvivalLeaderLossTargets([
+    { id: 'new-leader', state: 'chase', coalitionId: 8, leaderId: 'new-leader' },
+  ], living, affected);
+  assert.deepEqual([...living], ['new-leader']);
+  assert.equal(affected.size, 0, 'previous leader-loss targets must not survive into the next wave-director slice');
 });
