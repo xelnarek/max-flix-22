@@ -316,9 +316,9 @@ test('Survival is harder to trivialize, combat HUD stops covering the arena, and
     readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
   ]);
-  assert.match(balance, /SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER = 0\.92/);
-  assert.match(balance, /SURVIVAL_INCOMING_DAMAGE_MULTIPLIER = 1\.10/);
-  assert.match(balance, /SURVIVAL_HIT_INVULNERABILITY_SECONDS = 0\.78/);
+  assert.match(balance, /SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER = 0\.88/);
+  assert.match(balance, /SURVIVAL_INCOMING_DAMAGE_MULTIPLIER = 1\.16/);
+  assert.match(balance, /SURVIVAL_HIT_INVULNERABILITY_SECONDS = 0\.72/);
   assert.match(game, /scaleSurvivalOutgoingDamage\(amount\)/);
   assert.match(game, /damageSource === 'ability'/);
   assert.ok(game.includes('damageSource: SurvivalDamageSource | null = null'));
@@ -327,8 +327,8 @@ test('Survival is harder to trivialize, combat HUD stops covering the arena, and
   assert.match(game, /getSurvivalWaveSpawnTuning\(/);
   assert.match(game, /const groupSize = Math\.min\(spawnTuning\.groupSize, enemyCap - aliveCount\)/);
   assert.match(game, /performanceBudget\.groupCap/);
-  assert.match(difficulty, /spawnIntervalSeconds: Math\.max\(2\.95/);
-  assert.match(difficulty, /enemySpeedMultiplier: 1 \+/);
+  assert.match(difficulty, /spawnIntervalSeconds: Math\.max\(4\.55/);
+  assert.match(difficulty, /enemySpeedMultiplier: Number\(\(1 \+/);
   assert.match(html, /id="btn-menu-pause" class="btn-modal pause-exit-button"[^>]*>WYJDŹ DO MENU/);
   assert.match(html, /aria-modal="true"/);
   assert.match(app, /const exitPausedRunToMenu = \(\) =>/);

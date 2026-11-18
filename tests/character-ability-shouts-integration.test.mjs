@@ -10,7 +10,7 @@ test('all five character abilities use the randomized shout dispatcher instead o
   ]);
   assert.match(game, /private sayAbilityShout\(\): void/);
   assert.match(game, /selectCharacterAbilityShout\(\s*characterId,\s*Math\.random\(\),\s*this\.lastAbilityShoutIndexes\.get\(characterId\)/);
-  assert.match(game, /this\.sayAbilityShout\(\);[\s\S]*?this\.specialSwingTimer = 0\.86/);
+  assert.match(game, /this\.sayAbilityShout\(\);[\s\S]*?this\.specialSwingTimer = 0\.86 \* abilityDurationScale/);
   for (const id of ['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr']) {
     assert.match(shouts, new RegExp('^  ' + id + ': \\[', 'm'));
   }

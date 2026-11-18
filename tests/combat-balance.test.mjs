@@ -106,7 +106,7 @@ test('Piotr boomerang reaches its outbound target before beginning its return', 
 test('hostile combat is slower and less accurate without removing readable warning windows', () => {
   assert.equal(ENEMY_PROJECTILE_SPEED_MULTIPLIER, 0.76);
   assert.equal(ENEMY_MOVEMENT_SPEED_MULTIPLIER, 0.88);
-  assert.equal(SURVIVAL_ENEMY_SPECIAL_RATE_MULTIPLIER, 0.80);
+  assert.equal(SURVIVAL_ENEMY_SPECIAL_RATE_MULTIPLIER, 0.90);
   assert.equal(ENEMY_PROJECTILE_AIM_LEAD_MULTIPLIER, 0.42);
   assert.equal(ENEMY_PROJECTILE_AIM_ERROR_METERS, 0.78);
   assert.equal(getEnemyProjectileSpeed(10), 7.6);

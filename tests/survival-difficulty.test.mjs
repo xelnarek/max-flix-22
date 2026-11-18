@@ -7,10 +7,10 @@ test('Survival adds a small opening pressure bump and scales difficulty monotoni
   const early = getSurvivalDifficultyProfile(1);
   const middle = getSurvivalDifficultyProfile(10);
   const late = getSurvivalDifficultyProfile(30);
-  assert.equal(early.enemyHealthMultiplier, 1.33);
+  assert.equal(early.enemyHealthMultiplier, 1.45);
   assert.equal(early.enemySpeedMultiplier, 1);
-  assert.equal(early.spawnIntervalSeconds, 5.35);
-  assert.equal(early.enemyAbilityRateMultiplier, 1.12);
+  assert.equal(early.spawnIntervalSeconds, 5.15);
+  assert.equal(early.enemyAbilityRateMultiplier, 1.18);
   assert.ok(middle.enemyHealthMultiplier > early.enemyHealthMultiplier);
   assert.ok(late.enemyHealthMultiplier > middle.enemyHealthMultiplier);
   assert.ok(middle.enemySpeedMultiplier > early.enemySpeedMultiplier);
@@ -25,18 +25,18 @@ test('the small difficulty increase leaves movement tuning intact and keeps late
   const early = getSurvivalDifficultyProfile(1);
   const late = getSurvivalDifficultyProfile(1000);
   assert.equal(early.enemySpeedMultiplier, 1);
-  assert.equal(late.enemyHealthMultiplier, 3.48);
-  assert.equal(late.enemySpeedMultiplier, 1.55);
-  assert.equal(late.spawnIntervalSeconds, 2.95);
+  assert.equal(late.enemyHealthMultiplier, 4.0);
+  assert.equal(late.enemySpeedMultiplier, 1.14);
+  assert.equal(late.spawnIntervalSeconds, 4.55);
   assert.equal(late.extraGroupSize, 6);
-  assert.equal(late.enemyAbilityRateMultiplier, 1.74);
+  assert.equal(late.enemyAbilityRateMultiplier, 1.96);
 });
 
 test('every Survival operator receives a stronger outgoing damage and increased incoming pressure', () => {
-  assert.equal(SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER, 0.92);
-  assert.ok(Math.abs(scaleSurvivalOutgoingDamage(10) - 9.2) < 1e-9);
-  assert.equal(scaleSurvivalIncomingDamage(1), 1.1);
-  assert.equal(SURVIVAL_HIT_INVULNERABILITY_SECONDS, 0.78);
+  assert.equal(SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER, 0.88);
+  assert.ok(Math.abs(scaleSurvivalOutgoingDamage(10) - 8.8) < 1e-9);
+  assert.equal(scaleSurvivalIncomingDamage(1), 1.16);
+  assert.equal(SURVIVAL_HIT_INVULNERABILITY_SECONDS, 0.72);
   assert.equal(scaleSurvivalOutgoingDamage(-5), 0);
   assert.equal(scaleSurvivalIncomingDamage(Number.NaN), 0);
 });

@@ -4,7 +4,7 @@ import { scaleCharacterBasicAttackDamage, SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER } 
 export type CombatGameMode = 'campaign' | 'survival' | 'pvp';
 
 /** Enemy specials keep wave pressure but create a slightly longer response window. */
-export const SURVIVAL_ENEMY_SPECIAL_RATE_MULTIPLIER = 0.80;
+export const SURVIVAL_ENEMY_SPECIAL_RATE_MULTIPLIER = 0.90;
 /** A clear 24% projectile slowdown opens a real dodge window on mobile. */
 export const ENEMY_PROJECTILE_SPEED_MULTIPLIER = 0.76;
 /** Hostile locomotion is reduced once per spawned actor in both Campaign and Survival. */
@@ -37,7 +37,7 @@ export const SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS: Readonly<Record<CharacterId
   piotr: 1.92,
 });
 /** Survival-only primary-attack lift; campaign damage and auto-weapons are unchanged. */
-export const SURVIVAL_PRIMARY_ATTACK_DAMAGE_MULTIPLIER = 1.28;
+export const SURVIVAL_PRIMARY_ATTACK_DAMAGE_MULTIPLIER = 1.16;
 
 export interface PrimaryAttackDamageProfile {
   readonly regular: number;

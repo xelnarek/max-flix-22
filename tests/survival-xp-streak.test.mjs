@@ -21,7 +21,7 @@ test('rapid pickups increase the XP multiplier in bounded steps', () => {
     state = result.state;
     multipliers.push(result.multiplier);
   }
-  assert.deepEqual(multipliers, [1, 1.08, 1.16, 1.25, 1.35, 1.45, 1.45, 1.45]);
+  assert.deepEqual(multipliers, [1, 1.03, 1.06, 1.10, 1.15, 1.20, 1.20, 1.20]);
   assert.equal(getSurvivalXpStreakTier(state, 18), 6);
 });
 
@@ -45,8 +45,8 @@ test('invalid and backwards timestamps cannot create a free chain', () => {
 test('streak display expires after the pickup window', () => {
   const first = registerSurvivalXpPickup(createSurvivalXpStreakState(), 10);
   const second = registerSurvivalXpPickup(first.state, 11);
-  assert.equal(getSurvivalXpStreakTier(second.state, 16.25), 2);
-  assert.equal(getSurvivalXpStreakTier(second.state, 16.26), 0);
+  assert.equal(getSurvivalXpStreakTier(second.state, 15.5), 2);
+  assert.equal(getSurvivalXpStreakTier(second.state, 15.51), 0);
 });
 
 test('the sixth consecutive pickup triggers one perfect-chain reward only once', () => {
