@@ -87,6 +87,7 @@ import { selectSurvivalSupportPulseTargets, SURVIVAL_SUPPORT_PULSE_RADIUS, SURVI
 import { advanceSurvivalRetreatState, getSurvivalFlankInterceptOffset, getSurvivalRetreatTarget } from './survivalTactics.ts';
 import { getSurvivalProgressionInfo, getSurvivalPromotionRarityFloor, getSurvivalXpRequirement } from './survivalProgression.ts';
 import { getSurvivalEnemySizeProfile } from './survivalEnemyScale.ts';
+import { getSurvivalPerformanceBudget } from './survivalPerformanceBudget.ts';
 import { rollSurvivalChaosRoulette } from './survivalChaosRoulette.ts';
 import { createSurvivalXpStreakState, registerSurvivalXpPickup, type SurvivalXpStreakState } from './survivalXpStreak.ts';
 import { advanceSurvivalShiftEvent, createSurvivalShiftEventState, registerSurvivalShiftEventAction, type SurvivalShiftEvent, type SurvivalShiftEventAction, type SurvivalShiftEventState } from './survivalShiftEvents.ts';
@@ -10198,10 +10199,9 @@ export class PaleciakiGameEngine {
     const difficultyProfile = getSurvivalDifficultyProfile(this.survivalWave);
     const pomazaniecRaidActive = this.survivalPomazaniecTriggered && !this.survivalPomazaniecCompleted;
     const surgeActive = this.survivalSurgeTimeLeft > 0;
-    // Keep more bodies on screen without abandoning the adaptive mobile budget.
-    // On a capable phone such as Poco F6 the baseline is 22; weaker tiers step down.
-    const mobileEnemyCap = this.adaptivePerformanceTier >= 2 ? 16 : this.adaptivePerformanceTier === 1 ? 20 : 22;
-    const enemyCap = (isMobile ? mobileEnemyCap : 42) +
+    // Crowd and temporary visual bursts share one adaptive device budget.
+    const performanceBudget = getSurvivalPerformanceBudget(isMobile, this.adaptivePerformanceTier);
+    const enemyCap = performanceBudget.enemyCap +
       (pomazaniecRaidActive ? (isMobile ? 3 : 5) : 0) +
       (surgeActive ? (isMobile ? (this.adaptivePerformanceTier >= 2 ? 2 : this.adaptivePerformanceTier === 1 ? 3 : 4) : 6) : 0);
     const aliveCount = this.enemies.reduce((count, enemy) => count + (enemy.state === 'defeated' ? 0 : 1), 0);
@@ -10239,11 +10239,8 @@ export class PaleciakiGameEngine {
     } else {
       this.survivalSpawnTimer -= dt;
       if (this.survivalSpawnTimer <= 0 && aliveCount < enemyCap) {
-        const groupLimit = isMobile
-          ? (this.adaptivePerformanceTier >= 2 ? 5 : this.adaptivePerformanceTier === 1 ? 7 : 8)
-          : 10;
         const groupSize = Math.min(
-          groupLimit,
+          performanceBudget.groupCap,
           4 + Math.floor(this.survivalWave * 0.38) + difficultyProfile.extraGroupSize,
           enemyCap - aliveCount,
         );
@@ -12031,15 +12028,77 @@ export class PaleciakiGameEngine {
         return finishSpin('NOVA POCISKÓW', 'Rozproszona salwa poleciała we wszystkich kierunkach.', '✹');
       }
       case 'enemy_pack': {
-        const isMobile = window.innerWidth < 900 || ('ontouchstart' in window);
-        const cap = isMobile
-          ? (this.adaptivePerformanceTier >= 2 ? 16 : this.adaptivePerformanceTier === 1 ? 20 : 22)
-          : 42;
+        const budget = getSurvivalPerformanceBudget(this.isHandheldViewport, this.adaptivePerformanceTier);
         const alive = this.enemies.reduce((count, enemy) => count + (enemy.state === 'defeated' ? 0 : 1), 0);
-        const count = Math.min(3, Math.max(0, cap - alive));
+        const count = Math.min(budget.maxRouletteExtraEnemies, Math.max(0, budget.enemyCap - alive));
         for (let index = 0; index < count; index++) this.spawnSurvivalEnemy(this.survivalWave);
-        return finishSpin(count > 0 ? 'DOSTAWA 3 NIEPROSZONYCH GOŚCI' : 'MAGAZYN PEŁNY — NIC NIE DOJECHAŁO',
-          count > 0 ? 'Wylosowano dodatkowych przeciwników. Nie było ich w zamówieniu, ale już są.' : 'Limit bezpieczeństwa urządzenia jest już osiągnięty.', '👾');
+        return finishSpin(
+          count > 0 ? 'DOSTAWA ' + count + ' NIEPROSZONYCH GOŚCI' : 'MAGAZYN PEŁNY — NIC NIE DOJECHAŁO',
+          count > 0
+            ? 'Automat dorzucił ' + count + ' przeciwników. Limit urządzenia nadal obowiązuje.'
+            : 'Limit bezpieczeństwa urządzenia jest już osiągnięty.',
+          '👾',
+        );
+      }
+      case 'xp_rain': {
+        const count = this.triggerSurvivalXpRain();
+        return finishSpin(
+          'DESZCZ KRYSZTAŁÓW XP',
+          'Na arenie pojawiło się ' + count + ' kryształów doświadczenia. Zbierz je, aby szybciej rozwinąć operatora.',
+          '💎',
+        );
+      }
+      case 'overdrive':
+        this.activatePerk('night_shift_espresso', 20);
+        return finishSpin(
+          'OVERDRIVE NOCNEJ ZMIANY',
+          'Przez 20 sekund operator porusza się szybciej i atakuje częściej.',
+          '⚡',
+        );
+      case 'bounty': {
+        const bonus = 1250;
+        this.score += bonus;
+        this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+        const gemCount = 4;
+        for (let index = 0; index < gemCount; index++) {
+          const angle = index / gemCount * Math.PI * 2;
+          const gemX = THREE.MathUtils.clamp(
+            this.playerPos.x + Math.cos(angle) * 2.0,
+            this.levelBounds.minX + 1.2,
+            this.levelBounds.maxX - 1.2,
+          );
+          const gemZ = THREE.MathUtils.clamp(
+            this.playerPos.z + Math.sin(angle) * 2.0,
+            this.levelBounds.minZ + 1.2,
+            this.levelBounds.maxZ - 1.2,
+          );
+          this.spawnSurvivalXpGem(gemX, this.playerPos.y, gemZ, 2);
+        }
+        this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.45, this.playerPos.z, 0xfbbf24);
+        sound.playEasterEgg();
+        return finishSpin(
+          'PREMIA ZA NORMĘ +1 250 PKT',
+          'Wypłata specjalna weszła na konto. Do tego cztery kryształy XP czekają blisko operatora.',
+          '🪙',
+        );
+      }
+      case 'time_lock': {
+        const affected = this.triggerSurvivalTimeLock();
+        return finishSpin(
+          'ZATRZYMANIE CZASU B4',
+          'Przerwano ataki ' + affected + ' przeciwników. Zwykli wrogowie są ogłuszeni przez 1,8 sekundy; bossowie krócej.',
+          '⏱️',
+        );
+      }
+      case 'elite_delivery': {
+        const delivered = this.spawnSurvivalEliteDelivery();
+        return finishSpin(
+          delivered > 0 ? 'DOSTAWA PRIORYTETOWA ×' + delivered : 'ELITARNA DOSTAWA ZABLOKOWANA',
+          delivered > 0
+            ? 'Pakiet ma dwa profile: ciężkiego kontrolera i szybkiego kuriera. Bieżący poziom wydajności dopuścił ' + delivered + ' jednostki.'
+            : 'Limit urządzenia nie pozwolił dodać kolejnych wrogów.',
+          '🚨',
+        );
       }
       default:
         this.activatePerk('crimson_burst', 0);
@@ -12047,12 +12106,92 @@ export class PaleciakiGameEngine {
     }
   }
 
+  /** Spread readable XP pickups in a bounded ring around the operator. */
+  private triggerSurvivalXpRain(): number {
+    const budget = getSurvivalPerformanceBudget(this.isHandheldViewport, this.adaptivePerformanceTier);
+    const count = budget.xpRainGemCount;
+    const angleOffset = Math.random() * Math.PI * 2;
+    for (let index = 0; index < count; index++) {
+      const angle = angleOffset + index / count * Math.PI * 2;
+      const radius = 2.4 + Math.random() * 1.5;
+      const x = THREE.MathUtils.clamp(
+        this.playerPos.x + Math.cos(angle) * radius,
+        this.levelBounds.minX + 1.2,
+        this.levelBounds.maxX - 1.2,
+      );
+      const z = THREE.MathUtils.clamp(
+        this.playerPos.z + Math.sin(angle) * radius,
+        this.levelBounds.minZ + 1.2,
+        this.levelBounds.maxZ - 1.2,
+      );
+      this.spawnSurvivalXpGem(x, this.playerPos.y, z, 2 + Math.floor(Math.random() * 3));
+    }
+    this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.5, this.playerPos.z, 0xa78bfa);
+    this.triggerBloomPulse(0.28);
+    sound.playPerkPickup();
+    return count;
+  }
+
+  /** Short crowd-wide interrupt; bosses receive a shorter stagger, not a hard lock. */
+  private triggerSurvivalTimeLock(): number {
+    const budget = getSurvivalPerformanceBudget(this.isHandheldViewport, this.adaptivePerformanceTier);
+    let affected = 0;
+    let impactRings = 0;
+    for (const enemy of this.enemies) {
+      if (enemy.state === 'defeated') continue;
+      const isBoss = isMajorSurvivalBossType(enemy.type) || enemy.type === 'sebix_m';
+      enemy.stunTimer = Math.max(enemy.stunTimer, isBoss ? 0.82 : 1.8);
+      enemy.state = 'stunned';
+      if (impactRings < budget.timeLockImpactLimit) {
+        this.spawnParticleRing(enemy.x, enemy.y + 0.48, enemy.z, 0x7dd3fc);
+        impactRings++;
+      }
+      affected++;
+    }
+    this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.48, this.playerPos.z, 0x38bdf8);
+    this.triggerScreenShake(0.20, 0.14);
+    this.triggerBloomPulse(0.36);
+    sound.playElectricalSparks();
+    this.triggerHitStop(0.055);
+    return affected;
+  }
+
+  /** Two differently tuned silhouettes make the elite delivery readable at a glance. */
+  private spawnSurvivalEliteDelivery(): number {
+    const budget = getSurvivalPerformanceBudget(this.isHandheldViewport, this.adaptivePerformanceTier);
+    const alive = this.enemies.reduce((count, enemy) => count + (enemy.state === 'defeated' ? 0 : 1), 0);
+    const count = Math.min(2, budget.maxRouletteExtraEnemies, Math.max(0, budget.enemyCap - alive));
+    let delivered = 0;
+
+    for (let index = 0; index < count; index++) {
+      this.spawnSurvivalEnemy(this.survivalWave);
+      const enemy = this.enemies[this.enemies.length - 1];
+      if (!enemy || enemy.state === 'defeated') continue;
+      delivered++;
+      if (isMajorSurvivalBossType(enemy.type) || enemy.type === 'sebix_m') continue;
+
+      const profile = index === 0
+        ? { scale: 1.18, health: 1.45, speed: 0.88, label: 'ELITA B4 • KONTROLER' }
+        : { scale: 0.94, health: 1.12, speed: 1.18, label: 'ELITA B4 • KURIER' };
+      if (enemy.mesh) enemy.mesh.scale.multiplyScalar(profile.scale);
+      enemy.collisionRadius = getEnemyCollisionRadius(enemy.type, enemy.collisionRadius) * profile.scale;
+      enemy.maxHp = Math.max(1, Math.ceil(enemy.maxHp * profile.health));
+      enemy.hp = enemy.maxHp;
+      enemy.speed = Math.max(0.7, enemy.speed * profile.speed);
+      enemy.name = profile.label + ' • ' + enemy.name;
+      enemy.shoutText = profile.label + ': ' + enemy.shoutText;
+      this.spawnParticleRing(enemy.x, enemy.y + 0.55, enemy.z, index === 0 ? 0xfb923c : 0xfacc15);
+    }
+
+    return delivered;
+  }
+
   /** Bounded area burst inspired by Crimsonland; uses the normal damage/death pipeline. */
   private triggerSurvivalCrimsonExplosion(radius: number, damage: number): number {
     const x = this.playerPos.x;
     const z = this.playerPos.z;
-    const mobile = this.isHandheldViewport;
-    this.spawnExplosionParticles(x, 0.18, z, 0xff6938, mobile ? 18 : 26);
+    const budget = getSurvivalPerformanceBudget(this.isHandheldViewport, this.adaptivePerformanceTier);
+    this.spawnExplosionParticles(x, 0.18, z, 0xff6938, budget.explosionParticleCount);
     this.spawnParticleRing(x, 0.24, z, 0xff8a46);
     this.triggerScreenShake(0.38, 0.24);
     this.triggerBloomPulse(0.42);
@@ -12076,9 +12215,8 @@ export class PaleciakiGameEngine {
 
   /** A real expanding ring of collision-enabled projectiles, not a decorative particle circle. */
   private triggerSurvivalBulletNova(): void {
-    const count = this.isHandheldViewport
-      ? (this.adaptivePerformanceTier >= 2 ? 10 : this.adaptivePerformanceTier === 1 ? 14 : 16)
-      : 20;
+    const budget = getSurvivalPerformanceBudget(this.isHandheldViewport, this.adaptivePerformanceTier);
+    const count = budget.novaProjectileCount;
     const angleOffset = Math.random() * Math.PI * 2;
     const geometry = new THREE.SphereGeometry(0.14, 8, 6);
     const material = new THREE.MeshBasicMaterial({ color: 0xffd166, toneMapped: false });
@@ -12096,6 +12234,9 @@ export class PaleciakiGameEngine {
         damage: 2.4,
         damageSource: 'ability',
         pierce: 1,
+        // The nova produces small physical splash impacts rather than a ring that only looks explosive.
+        aoeRadius: 1.35,
+        stunDuration: 0.32,
         disposeOnRemove: true,
         hitIds: new Set(),
         homingTrail: true,

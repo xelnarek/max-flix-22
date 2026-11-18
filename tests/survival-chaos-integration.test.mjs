@@ -14,10 +14,18 @@ test('Survival levels offer a separate B4 roulette every third level after the r
   assert.match(app, /spinSurvivalChaosRoulette\(\)/);
 });
 
-test('Survival crowds grow within device caps and receive collision-aware size variants', async () => {
-  const game = await read('../src/game.ts');
-  assert.match(game, /adaptivePerformanceTier >= 2 \? 16 : this\.adaptivePerformanceTier === 1 \? 20 : 22/);
-  assert.match(game, /adaptivePerformanceTier >= 2 \? 5 : this\.adaptivePerformanceTier === 1 \? 7 : 8/);
+test('Survival crowds, spawn batches and combat effects use one adaptive device budget', async () => {
+  const [game, budget] = await Promise.all([
+    read('../src/game.ts'), read('../src/survivalPerformanceBudget.ts')
+  ]);
+  assert.match(game, /getSurvivalPerformanceBudget\(isMobile, this\.adaptivePerformanceTier\)/);
+  assert.match(game, /performanceBudget\.enemyCap/);
+  assert.match(game, /performanceBudget\.groupCap/);
+  assert.match(game, /budget\.novaProjectileCount/);
+  assert.match(game, /budget\.explosionParticleCount/);
+  assert.match(budget, /enemyCap: 22/);
+  assert.match(budget, /enemyCap: 20/);
+  assert.match(budget, /enemyCap: 16/);
   assert.match(game, /private applySurvivalEnemySize\(enemy: EnemyItem\)/);
   assert.match(game, /enemy\.collisionRadius = getEnemyCollisionRadius/);
   assert.match(game, /enemy\.mesh\.scale\.multiplyScalar\(profile\.scaleMultiplier\)/);
@@ -34,6 +42,37 @@ test('rare combat drops use existing perk pickup cleanup and a live protective a
   assert.match(game, /private triggerSurvivalCrimsonExplosion/);
   assert.match(game, /private triggerSurvivalBulletNova/);
   assert.match(game, /damageSource: 'ability'[\s\S]*?homingTrailColor: 0xffa34a/);
+});
+
+test('twelve roulette outcomes have concrete handlers for loot, control, overdrive and elite delivery', async () => {
+  const [game, roulette, app] = await Promise.all([
+    read('../src/game.ts'), read('../src/survivalChaosRoulette.ts'), read('../src/index.ts')
+  ]);
+  for (const outcome of ['xp_rain', 'overdrive', 'bounty', 'time_lock', 'elite_delivery']) {
+    assert.ok(roulette.includes("'" + outcome + "'"), 'missing roulette outcome ' + outcome);
+    assert.ok(game.includes("case '" + outcome + "'"), 'missing gameplay handler ' + outcome);
+  }
+  assert.match(game, /private triggerSurvivalXpRain\(\)/);
+  assert.match(game, /private triggerSurvivalTimeLock\(\)/);
+  assert.match(game, /private spawnSurvivalEliteDelivery\(\)/);
+  assert.match(game, /enemy\.stunTimer = Math\.max\(enemy\.stunTimer, isBoss \? 0\.82 : 1\.8\)/);
+  assert.match(game, /enemy\.state = 'stunned'/);
+  assert.match(game, /DOSTAWA PRIORYTETOWA ×/);
+  assert.match(game, /ELITA B4 • KONTROLER/);
+  assert.match(game, /ELITA B4 • KURIER/);
+  assert.match(app, /Dwanaście możliwych wyników automatu/);
+  assert.match(app, /machine\.innerHTML = '<span>💎<\/span><span>⚡<\/span><span>☢️<\/span><span>👾<\/span>'/);
+});
+
+test('bullet nova projectiles make a physical splash impact and time-lock visual work is capped', async () => {
+  const [game, budget] = await Promise.all([
+    read('../src/game.ts'), read('../src/survivalPerformanceBudget.ts')
+  ]);
+  assert.match(game, /aoeRadius: 1\.35/);
+  assert.match(game, /stunDuration: 0\.32/);
+  assert.match(game, /impactRings < budget\.timeLockImpactLimit/);
+  assert.match(budget, /timeLockImpactLimit: 5/);
+  assert.match(budget, /timeLockImpactLimit: 18/);
 });
 
 test('each operator special gets a short bespoke limb follow-through and Mateusz calls his squad', async () => {

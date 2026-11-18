@@ -1211,8 +1211,9 @@ test('mobile performance tiers limit crowd, particles and shadow refresh under l
   assert.match(app, /getAdaptiveEffectsTier/);
   assert.match(app, /setAdaptivePerformanceTier\(nextEffectsTier\)/);
   assert.match(game, /public setAdaptivePerformanceTier\(tier: number\)/);
-  assert.match(game, /mobileEnemyCap = this\.adaptivePerformanceTier >= 2 \? 16 : this\.adaptivePerformanceTier === 1 \? 20 : 22/);
-  assert.match(game, /const groupLimit = isMobile[\s\S]*?this\.adaptivePerformanceTier >= 2 \? 5 : this\.adaptivePerformanceTier === 1 \? 7 : 8[\s\S]*?: 10/);
+  assert.match(game, /getSurvivalPerformanceBudget\(isMobile, this\.adaptivePerformanceTier\)/);
+  assert.match(game, /performanceBudget\.enemyCap/);
+  assert.match(game, /performanceBudget\.groupCap/);
   assert.match(game, /const maxBudget = isMobile \? \(this\.adaptivePerformanceTier >= 2 \? 14 : this\.adaptivePerformanceTier === 1 \? 24 : 36\) : 75/);
   assert.match(game, /const num = isMobile \? \(this\.adaptivePerformanceTier >= 2 \? 4 : this\.adaptivePerformanceTier === 1 \? 6 : 8\) : 14/);
   assert.match(game, /const mobileBurstCap = this\.adaptivePerformanceTier >= 2 \? 4 : this\.adaptivePerformanceTier === 1 \? 7 : 10/);
@@ -1558,7 +1559,7 @@ test('Survival raises enemy pressure gradually and keeps mobile horde caps as a 
   assert.match(game, /enemy\.speed \*= difficultyProfile\.enemySpeedMultiplier/);
   assert.match(game, /this\.survivalSpawnTimer = difficultyProfile\.spawnIntervalSeconds/);
   assert.match(game, /e\.specialActionTimer -= dt \* survivalAbilityRate/);
-  assert.match(game, /const mobileEnemyCap = this\.adaptivePerformanceTier >= 2 \? 16/);
+  assert.match(game, /getSurvivalPerformanceBudget\(isMobile, this\.adaptivePerformanceTier\)/);
   assert.match(difficulty, /spawnIntervalSeconds: Math\.max\(3\.0/);
   assert.match(difficulty, /enemyAbilityRateMultiplier: Number\(\(1\.10 \+/);
 });
