@@ -30,9 +30,9 @@ test('late-game difficulty is capped while enemy groups and attack cadence stay 
   assert.equal(late.enemyAbilityRateMultiplier, 1.7);
 });
 
-test('every Survival operator receives a moderate outgoing damage boost and increased incoming pressure', () => {
-  assert.equal(SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER, 0.68);
-  assert.ok(Math.abs(scaleSurvivalOutgoingDamage(10) - 6.8) < 1e-9);
+test('every Survival operator receives a stronger outgoing damage and increased incoming pressure', () => {
+  assert.equal(SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER, 0.76);
+  assert.ok(Math.abs(scaleSurvivalOutgoingDamage(10) - 7.6) < 1e-9);
   assert.equal(scaleSurvivalIncomingDamage(1), 1.3);
   assert.equal(SURVIVAL_HIT_INVULNERABILITY_SECONDS, 0.78);
   assert.equal(scaleSurvivalOutgoingDamage(-5), 0);
