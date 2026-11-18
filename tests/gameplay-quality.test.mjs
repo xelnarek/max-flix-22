@@ -1608,12 +1608,16 @@ test('Survival wave director reuses candidate buffers and avoids callback churn 
   assert.match(method, /for \(let wheelIndex = 0; wheelIndex < e\.bikeWheels\.length; wheelIndex\+\+\)/);
 });
 
-test('directional projectiles orient to velocity and enemy tracer bursts stay within the pooled budget', async () => {
+test('directional projectiles orient to velocity without leaving hostile tracer afterglow', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /ep\.mesh\.rotation\.y = Math\.atan2\(ep\.vel\.x, ep\.vel\.z\)/);
-  assert.match(game, /this\.particlePool\.acquire\('sphere', trailColor, 0\.052, 0\.62\)/);
   assert.match(game, /p\.mesh\.rotation\.y = Math\.atan2\(p\.vel\.x, p\.vel\.z\)/);
-  assert.match(game, /this\.particleCount < handheldParticleBudget/);
+  const hostileStart = game.indexOf('for (let i = this.enemyProjectiles.length - 1;');
+  const hostileEnd = game.indexOf('\n  private updateSpecialEffects', hostileStart);
+  assert.ok(hostileStart >= 0 && hostileEnd > hostileStart, 'hostile projectile update remains active');
+  const hostileUpdate = game.slice(hostileStart, hostileEnd);
+  assert.doesNotMatch(hostileUpdate, /trailTimer|trailColor|particlePool\.acquire/);
+  assert.doesNotMatch(game, /spawnSebixFireTrail/);
 });
 
 
