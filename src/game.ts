@@ -92,7 +92,7 @@ import { getSurvivalProgressionInfo, getSurvivalPromotionRarityFloor, getSurviva
 import { getSurvivalEnemySizeProfile } from './survivalEnemyScale.ts';
 import { getSurvivalPerformanceBudget } from './survivalPerformanceBudget.ts';
 import { createSurvivalEliteInsignia } from './survivalEliteVisuals.ts';
-import { rollSurvivalChaosRoulette } from './survivalChaosRoulette.ts';
+import { rollSurvivalChaosRoulette, type SurvivalChaosRouletteKind } from './survivalChaosRoulette.ts';
 import { createSurvivalXpStreakState, registerSurvivalXpPickup, type SurvivalXpStreakState } from './survivalXpStreak.ts';
 import { advanceSurvivalShiftEvent, createSurvivalShiftEventState, registerSurvivalShiftEventAction, type SurvivalShiftEvent, type SurvivalShiftEventAction, type SurvivalShiftEventState } from './survivalShiftEvents.ts';
 import { advanceSurvivalContract, createSurvivalContract, registerSurvivalContractAction, type SurvivalContractAction, type SurvivalContractState } from './survivalContracts.ts';
@@ -827,6 +827,7 @@ export class PaleciakiGameEngine {
   private survivalLevel = 1;
   private survivalRankUpPending = false;
   private survivalChaosRoulettePending = false;
+  private survivalChaosRouletteLastResult: { kind: SurvivalChaosRouletteKind; title: string; icon: string } | null = null;
   private survivalXp = 0;
   private survivalXpToNext = 6;
   private survivalXpStreak: SurvivalXpStreakState = createSurvivalXpStreakState();
@@ -1083,8 +1084,6 @@ export class PaleciakiGameEngine {
     disposeOnRemove?: boolean;
     gravity?: number;
     spin?: number;
-    trailTimer?: number;
-    trailColor?: number;
   }[] = [];
   private readonly survivalArenaInstances: THREE.InstancedMesh[] = [];
   private readonly survivalArenaInstanceGeometries = new Set<THREE.BufferGeometry>();
@@ -2591,6 +2590,7 @@ export class PaleciakiGameEngine {
     this.survivalLevel = 1;
     this.survivalRankUpPending = false;
     this.survivalChaosRoulettePending = false;
+    this.survivalChaosRouletteLastResult = null;
     this.survivalXp = 0;
     this.survivalXpToNext = getSurvivalXpRequirement(1);
     this.survivalXpStreak = createSurvivalXpStreakState();
@@ -2640,6 +2640,7 @@ export class PaleciakiGameEngine {
     this.radiationFieldCooldown = 0;
     this.clearRadiationFieldAura();
     this.survivalChaosRoulettePending = false;
+    this.survivalChaosRouletteLastResult = null;
     this.survivalPendingOptions = [];
     this.survivalBossRewardPending = false;
     this.marcinReclamationTimer = 0;
@@ -11096,8 +11097,6 @@ export class PaleciakiGameEngine {
       kind: 'pomazaniec_lollipop',
       gravity: 1.35,
       spin: 8.5,
-      trailTimer: 0,
-      trailColor: 0xf472b6,
     });
     sound.playLollipopThrow();
   }
@@ -11123,76 +11122,9 @@ export class PaleciakiGameEngine {
       kind: 'sebix_brick',
       gravity: 2.15,
       spin: 5.2,
-      trailTimer: 0,
-      trailColor: 0xf97316,
     });
     sound.playWhistle();
     this.emitFloatingToast('🧱 OPERATOR TURBO RZUCA CEGŁĄ!', x, y+0.45, z, 'damage');
-  }
-
-  private spawnSebixFireTrail(x: number, z: number, direction: number) {
-    // A short-lived ground scorch with three rising tongues of orange/red flame.
-    // Geometry and materials are unique to this patch and disposed at the end of its life.
-    const group = new THREE.Group();
-    group.position.set(x, 0.035, z);
-    group.rotation.y = direction;
-
-    const groundMaterial = new THREE.MeshBasicMaterial({
-      color: 0xf97316,
-      transparent: true,
-      opacity: 0.62,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    });
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 1.5), groundMaterial);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = 0.005;
-    group.add(ground);
-
-    const flameColors = [0xf97316, 0xef4444, 0xfacc15];
-    flameColors.forEach((color, index) => {
-      const flameMaterial = new THREE.MeshBasicMaterial({
-        color,
-        transparent: true,
-        opacity: 0.76 - index * 0.12,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      });
-      const tongue = new THREE.Mesh(new THREE.ConeGeometry(0.12 + index * 0.025, 0.42 + index * 0.08, 6), flameMaterial);
-      tongue.position.set((index - 1) * 0.19, 0.19 + index * 0.025, (index - 1) * 0.27);
-      tongue.rotation.z = (index - 1) * 0.3;
-      tongue.rotation.x = (index - 1) * 0.12;
-      group.add(tongue);
-    });
-
-    this.levelRoot.add(group);
-    this.specialEffects.push({
-      mesh: group,
-      life: 0.58,
-      maxLife: 0.58,
-      disposeOnRemove: true,
-      grow: 0,
-      spin: 0,
-      update: (_dt, progress) => {
-        const fade = Math.max(0, 1 - progress);
-        group.scale.set(0.86 + progress * 0.24, 0.75 + progress * 0.2, 0.86 + progress * 0.24);
-        group.children.forEach((child) => {
-          const mesh = child as THREE.Mesh;
-          const material = mesh.material as THREE.MeshBasicMaterial;
-          material.opacity = fade * (mesh === ground ? 0.62 : 0.76);
-        });
-      },
-      cleanup: () => {
-        group.traverse((object) => {
-          const mesh = object as THREE.Mesh;
-          if (!mesh.isMesh) return;
-          mesh.geometry.dispose();
-          const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-          materials.forEach((material) => material.dispose());
-        });
-      },
-    });
   }
 
   /**
@@ -11340,11 +11272,6 @@ export class PaleciakiGameEngine {
       enemy.z += Math.cos(dir) * enemy.speed * 2.45 * dt;
       enemy.mesh.rotation.y = dir;
       enemy.mesh.position.set(enemy.x,enemy.y,enemy.z);
-      enemy.trailTimer = (enemy.trailTimer || 0)-dt;
-      if ((enemy.trailTimer || 0) <= 0) {
-        enemy.trailTimer = 0.105;
-        this.spawnSebixFireTrail(enemy.x, enemy.z, dir);
-      }
       if (enemy.dashTimer <= 0) {
         enemy.state = 'chase';
         enemy.specialActionTimer = 4.2;
@@ -11382,10 +11309,6 @@ export class PaleciakiGameEngine {
         return;
       }
       enemy.trailTimer = (enemy.trailTimer || 0)-dt;
-      if ((enemy.trailTimer || 0) <= 0) {
-        enemy.trailTimer = 0.24;
-        this.spawnSebixFireTrail(enemy.x, enemy.z, enemy.mesh.rotation.y);
-      }
     } else {
       enemy.specialActionTimer = (enemy.specialActionTimer ?? 0)-dt;
       if (distance < 16 && (enemy.specialActionTimer || 0) <= 0) {
@@ -12055,6 +11978,11 @@ export class PaleciakiGameEngine {
     sound.playAbility(this.currentCharacterId);
   }
 
+  /** Last resolved result, read by the slot-machine reveal after the gameplay effect is applied. */
+  public getSurvivalChaosRouletteLastResult(): { kind: SurvivalChaosRouletteKind; title: string; icon: string } | null {
+    return this.survivalChaosRouletteLastResult;
+  }
+
   /** Spin the B4 machine once, only after the normal third-level draft. */
   public spinSurvivalChaosRoulette(): boolean {
     if (
@@ -12064,7 +11992,9 @@ export class PaleciakiGameEngine {
     ) return false;
 
     const outcome = rollSurvivalChaosRoulette(Math.random());
+    this.survivalChaosRouletteLastResult = null;
     const finishSpin = (title: string, detail: string, icon = '🎰'): boolean => {
+      this.survivalChaosRouletteLastResult = { kind: outcome, title, icon };
       this.survivalChaosRoulettePending = false;
       this.survivalPendingOptions = [];
       this.state = 'playing';
@@ -12081,6 +12011,7 @@ export class PaleciakiGameEngine {
         this.survivalPendingOptions = this.rollSurvivalUpgradeOptions();
         if (this.survivalPendingOptions.length > 0) {
           const selected = this.survivalPendingOptions[Math.floor(Math.random() * this.survivalPendingOptions.length)];
+          this.survivalChaosRouletteLastResult = { kind: outcome, title: selected.title, icon: selected.icon };
           this.survivalChaosRoulettePending = false;
           this.emitFloatingToast('🎰 WYGRANA: ' + selected.title, this.playerPos.x, this.playerPos.y + 2.1, this.playerPos.z, 'combo');
           return this.chooseSurvivalUpgrade(selected.id);
@@ -17119,33 +17050,6 @@ export class PaleciakiGameEngine {
         ep.mesh.rotation.x += ep.spin * 0.32 * dt;
       }
 
-      // Enemy shots get a short pooled tracer. The shared particle budget keeps
-      // volleys readable without allocating geometry/materials per frame.
-      ep.trailTimer = (ep.trailTimer ?? 0) - dt;
-      const trailInterval = this.adaptivePerformanceTier >= 2 ? 0.30
-        : this.adaptivePerformanceTier === 1 ? 0.19 : 0.12;
-      const handheldParticleBudget = this.isHandheldViewport
-        ? (this.adaptivePerformanceTier >= 2 ? 14 : this.adaptivePerformanceTier === 1 ? 24 : 36)
-        : 75;
-      if (ep.trailTimer <= 0 && ep.life > 0.12 && this.particleCount < handheldParticleBudget) {
-        const trailColor = ep.trailColor ?? (ep.isDyscyplinarka ? 0xef4444 : 0x67e8f9);
-        const trail = this.particlePool.acquire('sphere', trailColor, 0.052, 0.62);
-        if (trail) {
-          trail.position.copy(ep.mesh.position);
-          this.levelRoot.add(trail);
-          this.addParticle(
-            trail,
-            ep.vel.x * -0.085,
-            ep.vel.y * -0.085 + 0.045,
-            ep.vel.z * -0.085,
-            0.18,
-            null,
-            0.052,
-          );
-        }
-        ep.trailTimer = trailInterval;
-      }
-
       // Swept vertical-cylinder collision chooses the actual first body
       // contact, so a target behind the operator cannot consume a shot that
       // should already have hit the player.
@@ -17189,10 +17093,9 @@ export class PaleciakiGameEngine {
         this.enemyProjectileBodyImpactScratch,
       );
       if (enemyImpact && (!playerImpact || enemyImpact.t < playerImpact.t)) {
-        const impactColor = ep.trailColor ?? (ep.isDyscyplinarka ? 0xef4444 : 0x67e8f9);
+        const impactColor = 0xe2e8f0;
         ep.mesh.position.set(enemyImpact.x, enemyImpact.y, enemyImpact.z);
         this.spawnCompactImpact(enemyImpact.x, enemyImpact.y, enemyImpact.z, impactColor);
-        this.spawnParticleRing(enemyImpact.actor.x, enemyImpact.actor.y + 0.58, enemyImpact.actor.z, impactColor);
         this.levelRoot.remove(ep.mesh);
         if (ep.kind === 'pomazaniec_lollipop' || ep.kind === 'sebix_brick' || ep.disposeOnRemove) this.disposeTemporaryObject(ep.mesh);
         removeAtSwap(this.enemyProjectiles, i);
@@ -17214,14 +17117,11 @@ export class PaleciakiGameEngine {
           }
         } else if (ep.kind === 'pomazaniec_lollipop') {
           this.takeDamage('🍭 Trafił Cię lizak wystrzelony przez Pomazańca!');
-          this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.55, this.playerPos.z, 0xf472b6);
           this.triggerBloomPulse(0.16);
           sound.playLollipopHit();
           this.emitFloatingToast('🍭 LIZAK PROSTO W CZOŁO!', this.playerPos.x, this.playerPos.y + 1.25, this.playerPos.z, 'damage');
         } else if (ep.kind === 'sebix_brick') {
           this.takeDamage('🧱 Operator Turbo trafił Cię cegłą z nocnej zmiany!');
-          this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.55, this.playerPos.z, 0xf97316);
-          this.spawnExplosionParticles(this.playerPos.x,0.18,this.playerPos.z,0xff7a18,8);
           this.triggerScreenShake(0.26,0.16);
           sound.playSmack();
           this.emitFloatingToast('🧱 CEGŁA PROSTO W KASK!', this.playerPos.x, this.playerPos.y + 1.25, this.playerPos.z, 'damage');
@@ -17230,9 +17130,8 @@ export class PaleciakiGameEngine {
         }
         // A compact, directional impact confirms that the shot terminated on
         // the player rather than passing through the model.
-        const impactColor = ep.trailColor ?? (ep.isDyscyplinarka ? 0xef4444 : 0x67e8f9);
+        const impactColor = 0xe2e8f0;
         this.spawnCompactImpact(impactX, impactY, impactZ, impactColor);
-        this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.55, this.playerPos.z, impactColor);
         this.triggerBloomPulse(0.10);
         this.triggerScreenShake(0.10, 0.08);
         this.levelRoot.remove(ep.mesh);
