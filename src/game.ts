@@ -129,6 +129,7 @@ import { applyPerfectDodgeCounterattack, getSurvivalDashCooldownSeconds, getSurv
 import { advanceSurvivalMomentum, createSurvivalMomentumState, getSurvivalMomentumDamageMultiplier, getSurvivalMomentumMoveMultiplier, getSurvivalMomentumRateMultiplier, registerSurvivalKill, type SurvivalMomentumState } from './survivalMomentum.ts';
 import { selectSurvivalAutoTarget } from './survivalTargeting.ts';
 import { CHARACTERS } from './characters.ts';
+import { selectCharacterAbilityShout } from './characterAbilityShouts.ts';
 import {
   CHARACTER_GOBKIT_MODELS, ENEMY_GOBKIT_MODELS, cloneGobkitModel,
   fitGobkitModel, loadGobkitModel, type GobkitModelId,
@@ -217,7 +218,6 @@ import {
   getShowroomWallTexture,
   getTerminalGraniteFloorTexture,
   getHazardStripeTexture,
-  getB4LogoTexture,
   getWallTexture,
   createKfcBucketCollectible,
   createZombieWorkerEnemyModel,
@@ -613,6 +613,7 @@ export class PaleciakiGameEngine {
   private characterFootstepTimer = 0;
   private walkCycle = 0;
   private speechBubbleTimer = 0;
+  private readonly lastAbilityShoutIndexes = new Map<CharacterId, number>();
   private levelStartTime = 0;
   private activeElapsedSeconds = 0;
   private cameraShake = 0;
@@ -2829,6 +2830,14 @@ export class PaleciakiGameEngine {
   }
 
   public triggerPvpAbility() {
+    const local = this.pvpSlot === 'p1'
+      ? this.lastPvpState?.p1
+      : this.pvpSlot === 'p2'
+        ? this.lastPvpState?.p2
+        : null;
+    if (!this.pvpWantAbility && local && local.abilityCooldownTimer <= 0.0001) {
+      this.sayAbilityShout();
+    }
     this.pvpWantAbility = true;
   }
 
@@ -19054,6 +19063,7 @@ export class PaleciakiGameEngine {
       (this.gameMode === 'survival' ? this.survivalAbilityCooldownMultiplier : 1);
     this.abilityCooldownState = createAbilityCooldown(cooldownSeconds);
     this.updateAbilityCooldown(0, true);
+    this.sayAbilityShout();
     this.specialSwingTimer = 0.86;
     this.requestGobkitAction(this.playerGobkitTrack, 'Special', this.specialSwingTimer);
     const abilityDamageMultiplier = this.gameMode === 'survival'
@@ -19069,7 +19079,6 @@ export class PaleciakiGameEngine {
       this.callbacks.onHpUpdate(this.hp, this.maxHp);
       this.activatePerk('order_magnet', 8);
       this.spawnMarcinTank();
-      this.sayQuote('KONWÓJ WZ-404! DO BOJU! To nie jest samouczek — wsparcie ciężkie wjeżdża na halę!');
     } else if (this.currentCharacterId === 'grzesiek') {
       this.grzesiekCrushTimer = 0.9;
       this.grzesiekCrushPulse = 1.0;
@@ -19078,7 +19087,6 @@ export class PaleciakiGameEngine {
       const forward = new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
       this.playerPos.x += forward.x * 1.8;
       this.playerPos.z += forward.z * 1.8;
-      this.sayQuote('44 CM ZAGŁADY! PIĘŚĆ WCHODZI, PIĘĆ RAKIET NAMIERZA!');
       sound.playSciskCrush();
       this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.5, this.playerPos.z, 0x4ade80);
       this.enemies.forEach((e) => {
@@ -19117,7 +19125,6 @@ export class PaleciakiGameEngine {
           ? THREE.MathUtils.clamp(bucketZ, SURVIVAL_WORLD_BOUNDS.minZ + 2, SURVIVAL_WORLD_BOUNDS.maxZ - 2)
           : THREE.MathUtils.clamp(bucketZ, -15, 15)
       );
-      this.sayQuote('JA WIEM LEPIEJ! Salwa 5 płyt Marmur B4 120x280 pod kątem 45° + świeży Kubełek Mocy!');
       sound.playAttackWhoosh();
       const angles = this.gameMode === 'survival' ? [-0.22, 0, 0.22] : [-0.5, -0.25, 0, 0.25, 0.5];
       this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.18, this.playerPos.z, 0xd97706);
@@ -19181,13 +19188,11 @@ export class PaleciakiGameEngine {
       });
       this.emitFloatingToast('🧱 SALWA GRESU 120x280 + ⚡ Kubełek Mocy!', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
     } else if (this.currentCharacterId === 'mateusz') {
-      this.sayQuote('MULTIWERŚUM, ZBIÓRKA! Pięciu bohaterów, zero nadgodzin — panowie, macie własne cele!');
       this.spawnMateuszRivals();
     } else if (this.currentCharacterId === 'piotr') {
       this.attackSwingDuration = 0.3;
       this.attackSwingTimer = this.attackSwingDuration;
       if (this.rightArm) this.rightArm.rotation.x = -1.15;
-      this.sayQuote('RYTUAŁ MAFIKAPIBAR! Pentagram B4 otwiera przejście. Rodzina, do roboty!');
       this.spawnMafiCapybaras(abilityDamageMultiplier);
     }
   }
@@ -19915,6 +19920,17 @@ export class PaleciakiGameEngine {
         (Math.random() - 0.5) * 13,
       );
     }
+  }
+
+  private sayAbilityShout(): void {
+    const characterId = this.currentCharacterId;
+    const selected = selectCharacterAbilityShout(
+      characterId,
+      Math.random(),
+      this.lastAbilityShoutIndexes.get(characterId),
+    );
+    this.lastAbilityShoutIndexes.set(characterId, selected.index);
+    this.sayQuote(selected.text);
   }
 
   private sayQuote(quote: string) {
