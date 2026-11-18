@@ -209,3 +209,16 @@ test('special Inspector, Gamma Mutant and Pip abilities never overlap committed 
   assert.match(game, /e\.type === 'mutant_gamma_forklift' && e\.specialActionTimer !== undefined && e\.aiMeleeWindupTimer === undefined && !e\.aiMeleeStrikePending/);
   assert.match(game, /e\.type === 'radioactive_pip' && e\.specialActionTimer !== undefined && e\.aiMeleeWindupTimer === undefined && !e\.aiMeleeStrikePending/);
 });
+
+
+test('distant visual LOD never changes hostile projectile, collision or damage logic', () => {
+  const lodStart = game.indexOf('private updateGobkitAnimations(dt: number)');
+  const lodEnd = game.indexOf('private rebuildPlayerMesh()', lodStart);
+  const animation = game.slice(lodStart, lodEnd);
+  assert.match(animation, /shouldUseEnemyVisualLodProxy/);
+  assert.match(animation, /combatCritical/);
+  assert.match(animation, /track\.lastPosition\.copy\(enemy\.mesh\.position\)/);
+  assert.match(game, /getEnemyCollisionRadius\(requestedType/);
+  assert.match(game, /resolvePlayerMovementAgainstEnemies\(/);
+  assert.match(game, /findFirstProjectileEnemyImpact\(/);
+});
