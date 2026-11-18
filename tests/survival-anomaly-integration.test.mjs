@@ -47,5 +47,5 @@ test('XP requirement progression rises materially above the old fast early thres
   const progression = await read('../src/survivalProgression.ts');
   assert.match(progression, /if \(current === 1\) return 22/);
   assert.match(progression, /if \(current === 2\) return 30/);
-  assert.match(progression, /16 \+ current \* 3\.3/);
+  assert.match(progression, /14 \+ current \* 3\.3/);
 });
