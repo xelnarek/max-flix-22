@@ -6551,7 +6551,7 @@ export class PaleciakiGameEngine {
       nextRankLevel: progression.nextRankLevel,
       xp: this.survivalXp,
       xpToNext: this.survivalXpToNext,
-      xpStreak: this.survivalXpStreak.count,
+      xpStreak: getSurvivalXpStreakTier(this.survivalXpStreak, this.survivalElapsed),
       aliveEnemies: this.enemies.reduce((count, enemy) => count + (enemy.state === 'defeated' ? 0 : 1), 0),
       rerolls: this.survivalRerolls,
       skips: this.survivalSkips,
