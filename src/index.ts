@@ -1594,7 +1594,7 @@ class PaleciakiScene extends xb.Script {
               ? 'NAGRODA ZA POKONANIE BOSS-A'
               : isRankUp ? 'AWANS RANGI: ' + currentRank : 'AWANS OPERATORA';
           if (descriptionElement) descriptionElement.textContent = isChaosRoulette
-            ? 'Co trzeci poziom: zakręć i zdaj się na los. Możesz zdobyć broń, skill, osłonę, wybuch, leczenie… albo nieproszoną dostawę przeciwników.'
+            ? 'Co trzeci poziom: 12 możliwych wyników — ulepszenie, perk, deszcz XP, overdrive, premia punktowa, zamrożenie fali, wybuch, nova, osłona, leczenie albo elitarna/nieproszona dostawa.'
             : isBossReward
               ? 'Boss pokonany. Wybierz jedno z trzech legendarnych wzmocnień: moc, rozwój broni albo obronę.'
               : isRankUp
@@ -1602,7 +1602,7 @@ class PaleciakiScene extends xb.Script {
                 : 'Wybierz jeden z trzech modułów. Rzadkie, epickie i legendarne wersje wzmacniają ten sam efekt.';
           if (iconElement) iconElement.textContent = isChaosRoulette ? '🎰' : isBossReward ? '🏆' : isRankUp ? '🎖️' : '⬆';
           if (hintElement) hintElement.textContent = isChaosRoulette
-            ? 'To jednorazowy spin, bez przerzutu i bez cofania wyniku. W puli są także przeciwnicy — automat nie zna litości.'
+            ? 'Jeden spin, bez cofania wyniku. Łącznie 9% puli stanowi nieproszona dostawa wrogów; pozostałe pola oferują premie, kontrolę tłumu i łupy.'
             : isBossReward
               ? 'Nagroda jest obowiązkowa i nie podlega przerzuceniu ani pominięciu. Akcja pozostaje wstrzymana do wyboru.'
               : isRankUp
@@ -1614,8 +1614,8 @@ class PaleciakiScene extends xb.Script {
           if (isChaosRoulette) {
             const machine = document.createElement('div');
             machine.className = 'survival-chaos-machine';
-            machine.innerHTML = '<span>📦</span><span>☢️</span><span>👾</span>';
-            machine.setAttribute('aria-label', 'Losowa pula nagród i zdarzeń');
+            machine.innerHTML = '<span>💎</span><span>⚡</span><span>☢️</span><span>👾</span>';
+            machine.setAttribute('aria-label', 'Dwanaście możliwych wyników automatu: łupy, premie, kontrola tłumu i ryzyko dodatkowych przeciwników');
             const spinButton = document.createElement('button');
             spinButton.type = 'button';
             spinButton.className = 'survival-chaos-spin';
