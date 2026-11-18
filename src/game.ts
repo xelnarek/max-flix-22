@@ -16251,7 +16251,7 @@ export class PaleciakiGameEngine {
       // only a warning trigger; the actual hit still uses the original contact radius.
       if (
         meleeProfile && !meleeCounterActive && !stompApproach &&
-        e.state !== 'defeated' && e.stunTimer <= 0 &&
+        e.stunTimer <= 0 &&
         Math.abs(e.y - this.playerPos.y) < 1.1 &&
         e.aiMeleeWindupTimer === undefined && !e.aiMeleeStrikePending &&
         (e.aiMeleeCooldownTimer ?? 0) <= 0 &&
