@@ -1418,8 +1418,9 @@ test('Survival wave director assigns enemy coalitions with a leader, pincer lane
   assert.match(game, /if \(enemy\.surgeRunner && this\.survivalSurgeTimeLeft > 0\) continue/);
   assert.match(game, /buildSurvivalCoalitionOrders\(\s*coalitionCandidates/);
   assert.match(game, /this\.waveDirectorEnemyByIdScratch/);
-  assert.match(game, /const isCoalitionLeader = e\.aiCoalitionLeaderId === e\.id/);
-  assert.match(game, /isCoalitionLeader \? 0xfbbf24/);
+  // Coalition leader identity remains a gameplay/AI property, not a coloured floor halo.
+  assert.doesNotMatch(game, /Ground Threat Ring for actively chasing enemies/);
+  assert.doesNotMatch(game, /e\.threatRing = ringMesh/);
   assert.match(types, /aiCoalitionId\?: number/);
   assert.match(types, /aiCoalitionLeaderId\?: string/);
   assert.match(types, /aiCoalitionRole\?: 'bruiser' \| 'flanker' \| 'ranged' \| 'support'/);
