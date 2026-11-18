@@ -213,6 +213,92 @@ class SoundEngine {
     });
   }
 
+  /** Short arcade sweep and restrained mechanical ticks for the B4 slot-machine spin. */
+  public playRouletteSpin() {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+
+    const context = this.ctx;
+    const bus = this.effectsBus ?? context.destination;
+    const start = context.currentTime;
+    const sweep = context.createOscillator();
+    const sweepGain = context.createGain();
+    sweep.type = 'sawtooth';
+    sweep.frequency.setValueAtTime(135, start);
+    sweep.frequency.exponentialRampToValueAtTime(690, start + 1.18);
+    sweepGain.gain.setValueAtTime(0.0001, start);
+    sweepGain.gain.linearRampToValueAtTime(0.075, start + 0.10);
+    sweepGain.gain.exponentialRampToValueAtTime(0.0001, start + 1.24);
+    sweep.connect(sweepGain);
+    sweepGain.connect(bus);
+    sweep.start(start);
+    sweep.stop(start + 1.26);
+
+    for (let index = 0; index < 5; index++) {
+      const tickStart = start + 0.12 + index * 0.19;
+      const tick = context.createOscillator();
+      const tickGain = context.createGain();
+      tick.type = 'square';
+      tick.frequency.setValueAtTime(430 + index * 54, tickStart);
+      tickGain.gain.setValueAtTime(0.0001, tickStart);
+      tickGain.gain.linearRampToValueAtTime(0.022, tickStart + 0.006);
+      tickGain.gain.exponentialRampToValueAtTime(0.0001, tickStart + 0.045);
+      tick.connect(tickGain);
+      tickGain.connect(bus);
+      tick.start(tickStart);
+      tick.stop(tickStart + 0.05);
+    }
+  }
+
+  /** A distinct, short detent click; later reels use a slightly higher pitch. */
+  public playRouletteStop(reelIndex: number) {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+
+    const context = this.ctx;
+    const start = context.currentTime;
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    const safeIndex = Number.isFinite(reelIndex) ? Math.max(0, Math.min(2, Math.floor(reelIndex))) : 0;
+    oscillator.type = 'triangle';
+    oscillator.frequency.setValueAtTime(310 + safeIndex * 105, start);
+    oscillator.frequency.exponentialRampToValueAtTime(145 + safeIndex * 35, start + 0.085);
+    gain.gain.setValueAtTime(0.16, start);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.11);
+    oscillator.connect(gain);
+    gain.connect(this.effectsBus ?? context.destination);
+    oscillator.start(start);
+    oscillator.stop(start + 0.12);
+  }
+
+  /** A bright major reward chord, or a lower warning chord for hostile deliveries. */
+  public playRouletteResult(isRisk = false) {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+
+    const context = this.ctx;
+    const bus = this.effectsBus ?? context.destination;
+    const start = context.currentTime;
+    const notes = isRisk ? [196, 155.56, 130.81] : [523.25, 659.25, 783.99, 1046.5];
+    notes.forEach((frequency, index) => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      const noteStart = start + index * (isRisk ? 0.075 : 0.045);
+      oscillator.type = isRisk ? 'triangle' : 'sine';
+      oscillator.frequency.setValueAtTime(frequency, noteStart);
+      gain.gain.setValueAtTime(0.0001, noteStart);
+      gain.gain.linearRampToValueAtTime(isRisk ? 0.075 : 0.12, noteStart + 0.018);
+      gain.gain.exponentialRampToValueAtTime(0.0001, noteStart + (isRisk ? 0.24 : 0.38));
+      oscillator.connect(gain);
+      gain.connect(bus);
+      oscillator.start(noteStart);
+      oscillator.stop(noteStart + (isRisk ? 0.25 : 0.39));
+    });
+  }
+
   public playWoosh() {
     if (this.isMuted) return;
     this.initCtx();
