@@ -9,6 +9,10 @@ interface AnatomyProfile {
   headScale: number;
   armBuild: number;
   legBuild: number;
+  neckScale?: number;
+  forearmBuild?: number;
+  calfBuild?: number;
+  hipWidth?: number;
   leftArmScale?: number;
   rightArmScale?: number;
   leftLegScale?: number;
@@ -20,25 +24,25 @@ interface AnatomyProfile {
  * multipliers, not absolute bone scales, so the source skeleton remains intact.
  */
 const ANATOMY: Readonly<Partial<Record<EnemyType, AnatomyProfile>>> = Object.freeze({
-  customer: { torsoWidth:1.08, torsoDepth:1.08, shoulderWidth:1.04, headScale:1.04, armBuild:1.02, legBuild:.98 },
-  architect: { torsoWidth:.91, torsoDepth:.94, shoulderWidth:.88, headScale:1.02, armBuild:.94, legBuild:1.02 },
-  inspector: { torsoWidth:1.08, torsoDepth:1.04, shoulderWidth:1.12, headScale:1.00, armBuild:1.06, legBuild:1.02 },
-  kurier: { torsoWidth:.96, torsoDepth:.94, shoulderWidth:.96, headScale:.98, armBuild:.98, legBuild:1.04 },
-  handlowiec: { torsoWidth:.91, torsoDepth:.93, shoulderWidth:.91, headScale:1.02, armBuild:.94, legBuild:1.00 },
-  monter: { torsoWidth:1.10, torsoDepth:1.06, shoulderWidth:1.13, headScale:1.01, armBuild:1.08, legBuild:1.04 },
-  'przedstawiciel_włoski': { torsoWidth:.93, torsoDepth:.93, shoulderWidth:.92, headScale:1.02, armBuild:.96, legBuild:1.00 },
-  sztaplar_szalony: { torsoWidth:1.18, torsoDepth:1.12, shoulderWidth:1.20, headScale:.98, armBuild:1.12, legBuild:1.08 },
-  krol_leto: { torsoWidth:1.22, torsoDepth:1.13, shoulderWidth:1.25, headScale:1.09, armBuild:1.16, legBuild:1.12 },
-  pan_roman: { torsoWidth:1.13, torsoDepth:1.08, shoulderWidth:1.10, headScale:1.04, armBuild:1.06, legBuild:1.02 },
-  serwisant: { torsoWidth:.98, torsoDepth:.97, shoulderWidth:.99, headScale:1.00, armBuild:1.00, legBuild:1.00 },
-  bosman_krakow: { torsoWidth:1.23, torsoDepth:1.10, shoulderWidth:1.24, headScale:1.04, armBuild:1.13, legBuild:1.09 },
-  zombie_pracownik: { torsoWidth:1.00, torsoDepth:1.04, shoulderWidth:1.00, headScale:1.03, armBuild:1.04, legBuild:.98, leftArmScale:.84, rightArmScale:1.12, leftLegScale:.93 },
-  sebix_m: { torsoWidth:1.16, torsoDepth:1.08, shoulderWidth:1.17, headScale:1.00, armBuild:1.10, legBuild:1.05 },
-  mutant_gamma_forklift: { torsoWidth:1.30, torsoDepth:1.18, shoulderWidth:1.32, headScale:1.08, armBuild:1.22, legBuild:1.16 },
-  radioactive_pip: { torsoWidth:1.11, torsoDepth:1.14, shoulderWidth:1.10, headScale:1.02, armBuild:1.05, legBuild:1.03 },
-  cyber_salesman: { torsoWidth:1.08, torsoDepth:1.00, shoulderWidth:1.11, headScale:1.02, armBuild:1.08, legBuild:1.04 },
-  elite_walczak_guard: { torsoWidth:1.20, torsoDepth:1.12, shoulderWidth:1.24, headScale:1.00, armBuild:1.18, legBuild:1.10 },
-  walczak: { torsoWidth:1.31, torsoDepth:1.20, shoulderWidth:1.34, headScale:1.12, armBuild:1.26, legBuild:1.18 },
+  customer: { torsoWidth:1.08, torsoDepth:1.08, shoulderWidth:1.04, headScale:1.04, armBuild:1.02, legBuild:.98 , neckScale:1.02, forearmBuild:1.02, calfBuild:0.98, hipWidth:1.04},
+  architect: { torsoWidth:.91, torsoDepth:.94, shoulderWidth:.88, headScale:1.02, armBuild:.94, legBuild:1.02 , neckScale:0.96, forearmBuild:0.92, calfBuild:0.97, hipWidth:0.92},
+  inspector: { torsoWidth:1.08, torsoDepth:1.04, shoulderWidth:1.12, headScale:1.00, armBuild:1.06, legBuild:1.02 , neckScale:1.02, forearmBuild:1.08, calfBuild:1.02, hipWidth:1.08},
+  kurier: { torsoWidth:.96, torsoDepth:.94, shoulderWidth:.96, headScale:.98, armBuild:.98, legBuild:1.04 , neckScale:0.98, forearmBuild:0.96, calfBuild:1.06, hipWidth:0.96},
+  handlowiec: { torsoWidth:.91, torsoDepth:.93, shoulderWidth:.91, headScale:1.02, armBuild:.94, legBuild:1.00 , neckScale:0.96, forearmBuild:0.92, calfBuild:1, hipWidth:0.92},
+  monter: { torsoWidth:1.10, torsoDepth:1.06, shoulderWidth:1.13, headScale:1.01, armBuild:1.08, legBuild:1.04 , neckScale:1.02, forearmBuild:1.12, calfBuild:1.08, hipWidth:1.08},
+  'przedstawiciel_włoski': { torsoWidth:.93, torsoDepth:.93, shoulderWidth:.92, headScale:1.02, armBuild:.96, legBuild:1.00 , neckScale:0.98, forearmBuild:0.94, calfBuild:0.98, hipWidth:0.92},
+  sztaplar_szalony: { torsoWidth:1.18, torsoDepth:1.12, shoulderWidth:1.20, headScale:.98, armBuild:1.12, legBuild:1.08 , neckScale:1, forearmBuild:1.14, calfBuild:1.12, hipWidth:1.16},
+  krol_leto: { torsoWidth:1.22, torsoDepth:1.13, shoulderWidth:1.25, headScale:1.09, armBuild:1.16, legBuild:1.12 , neckScale:1.12, forearmBuild:1.18, calfBuild:1.18, hipWidth:1.18},
+  pan_roman: { torsoWidth:1.13, torsoDepth:1.08, shoulderWidth:1.10, headScale:1.04, armBuild:1.06, legBuild:1.02 , neckScale:1.02, forearmBuild:1.08, calfBuild:1.06, hipWidth:1.1},
+  serwisant: { torsoWidth:.98, torsoDepth:.97, shoulderWidth:.99, headScale:1.00, armBuild:1.00, legBuild:1.00 , neckScale:1, forearmBuild:1, calfBuild:1, hipWidth:1},
+  bosman_krakow: { torsoWidth:1.23, torsoDepth:1.10, shoulderWidth:1.24, headScale:1.04, armBuild:1.13, legBuild:1.09 , neckScale:1.06, forearmBuild:1.15, calfBuild:1.08, hipWidth:1.15},
+  zombie_pracownik: { torsoWidth:1.00, torsoDepth:1.04, shoulderWidth:1.00, headScale:1.03, armBuild:1.04, legBuild:.98, leftArmScale:.84, rightArmScale:1.12, leftLegScale:.93 , neckScale:1.1, forearmBuild:1.06, calfBuild:0.92, hipWidth:1},
+  sebix_m: { torsoWidth:1.16, torsoDepth:1.08, shoulderWidth:1.17, headScale:1.00, armBuild:1.10, legBuild:1.05 , neckScale:1, forearmBuild:1.1, calfBuild:1.05, hipWidth:1.12},
+  mutant_gamma_forklift: { torsoWidth:1.30, torsoDepth:1.18, shoulderWidth:1.32, headScale:1.08, armBuild:1.22, legBuild:1.16 , neckScale:1.14, forearmBuild:1.24, calfBuild:1.18, hipWidth:1.22},
+  radioactive_pip: { torsoWidth:1.11, torsoDepth:1.14, shoulderWidth:1.10, headScale:1.02, armBuild:1.05, legBuild:1.03 , neckScale:1.08, forearmBuild:1.1, calfBuild:1, hipWidth:1.04},
+  cyber_salesman: { torsoWidth:1.08, torsoDepth:1.00, shoulderWidth:1.11, headScale:1.02, armBuild:1.08, legBuild:1.04 , neckScale:1.06, forearmBuild:1.08, calfBuild:1.05, hipWidth:1.08},
+  elite_walczak_guard: { torsoWidth:1.20, torsoDepth:1.12, shoulderWidth:1.24, headScale:1.00, armBuild:1.18, legBuild:1.10 , neckScale:1.04, forearmBuild:1.18, calfBuild:1.12, hipWidth:1.18},
+  walczak: { torsoWidth:1.31, torsoDepth:1.20, shoulderWidth:1.34, headScale:1.12, armBuild:1.26, legBuild:1.18 , neckScale:1.14, forearmBuild:1.28, calfBuild:1.22, hipWidth:1.25},
 });
 
 
@@ -135,12 +139,17 @@ interface RigBones {
   spine: THREE.Bone | null;
   chest: THREE.Bone | null;
   head: THREE.Bone | null;
+  neck: THREE.Bone | null;
   leftShoulder: THREE.Bone | null;
   rightShoulder: THREE.Bone | null;
   leftUpperArm: THREE.Bone | null;
   rightUpperArm: THREE.Bone | null;
+  leftForearm: THREE.Bone | null;
+  rightForearm: THREE.Bone | null;
   leftThigh: THREE.Bone | null;
   rightThigh: THREE.Bone | null;
+  leftCalf: THREE.Bone | null;
+  rightCalf: THREE.Bone | null;
 }
 
 const rigCache = new WeakMap<THREE.Group, RigBones>();
@@ -184,13 +193,17 @@ function findRigBones(root: THREE.Group): RigBones {
   const entries = all.map((bone) => ({ bone, name: normalize(bone.name) }));
   const first = (match: (name: string) => boolean): THREE.Bone | null =>
     entries.find((entry) => match(entry.name))?.bone || null;
-  const side = (which: 'left' | 'right', kind: 'shoulder' | 'upperArm' | 'thigh'): THREE.Bone | null =>
+  const side = (which: 'left' | 'right', kind: 'shoulder' | 'upperArm' | 'forearm' | 'thigh' | 'calf'): THREE.Bone | null =>
     entries.find(({ name }) => sideMatch(name, which) && (
       kind === 'shoulder'
         ? name.includes('shoulder') || name.includes('clavicle')
         : kind === 'upperArm'
           ? name.includes('upperarm') || (name.includes('arm') && !name.includes('lower') && !name.includes('fore') && !name.includes('hand'))
-          : name.includes('thigh') || name.includes('upleg') || name.includes('upperleg')
+          : kind === 'forearm'
+            ? name.includes('forearm') || name.includes('lowerarm')
+            : kind === 'thigh'
+              ? name.includes('thigh') || name.includes('upleg') || name.includes('upperleg')
+              : name.includes('calf') || name.includes('lowerleg') || name.includes('shin')
     ))?.bone || null;
   const spine = first((name) => name.includes('spine') && !name.includes('spine2') && !name.includes('spine3')) ||
     first((name) => name.includes('pelvis') || name === 'hips' || name.endsWith('hips'));
@@ -201,12 +214,17 @@ function findRigBones(root: THREE.Group): RigBones {
     spine,
     chest,
     head: first((name) => name === 'head' || name.endsWith('head')),
+    neck: first((name) => name.includes('neck')),
     leftShoulder: side('left', 'shoulder'),
     rightShoulder: side('right', 'shoulder'),
     leftUpperArm: side('left', 'upperArm'),
     rightUpperArm: side('right', 'upperArm'),
+    leftForearm: side('left', 'forearm'),
+    rightForearm: side('right', 'forearm'),
     leftThigh: side('left', 'thigh'),
     rightThigh: side('right', 'thigh'),
+    leftCalf: side('left', 'calf'),
+    rightCalf: side('right', 'calf'),
   };
   rigCache.set(root, bones);
   return bones;
@@ -240,6 +258,15 @@ export function applyEnemyRoleAnatomy(root: THREE.Group, type: EnemyType): boole
   multiplyBoneScale(bones.leftThigh, profile.legBuild * (profile.leftLegScale ?? 1));
   multiplyBoneScale(bones.rightThigh, profile.legBuild);
   if (bones.head) bones.head.scale.multiplyScalar(profile.headScale);
+  if (bones.neck) bones.neck.scale.multiplyScalar(profile.neckScale ?? 1);
+  if (bones.hips && bones.hips !== bones.spine) {
+    const hipWidth = profile.hipWidth ?? 1;
+    multiplyBoneScale(bones.hips, hipWidth, 1, hipWidth);
+  }
+  multiplyBoneScale(bones.leftForearm, profile.forearmBuild ?? 1);
+  multiplyBoneScale(bones.rightForearm, profile.forearmBuild ?? 1);
+  multiplyBoneScale(bones.leftCalf, profile.calfBuild ?? 1);
+  multiplyBoneScale(bones.rightCalf, profile.calfBuild ?? 1);
   root.updateMatrixWorld(true);
   return true;
 }
@@ -288,6 +315,47 @@ function clamp(value: number, min: number, max: number): number {
 }
 const stablePhaseCache = new Map<EnemyType, number>();
 
+
+export interface EnemyCombatMotionEnvelope {
+  readonly windup: number;
+  readonly impact: number;
+  readonly recovery: number;
+}
+
+function smoothMotion(value: number): number {
+  const t = clamp(value, 0, 1);
+  return t * t * (3 - 2 * t);
+}
+
+function pulseMotion(progress: number, start: number, peak: number, end: number): number {
+  if (progress <= start || progress >= end) return 0;
+  if (progress < peak) return smoothMotion((progress - start) / Math.max(0.001, peak - start));
+  return 1 - smoothMotion((progress - peak) / Math.max(0.001, end - peak));
+}
+
+/** Normalized, clip-time combat envelope: load, contact and follow-through occur in order. */
+export function getEnemyCombatMotionEnvelope(
+  action: string,
+  actionProgress = 0.5,
+): EnemyCombatMotionEnvelope {
+  const progress = clamp(actionProgress, 0, 1);
+  if (action === 'Attack') {
+    return {
+      windup: pulseMotion(progress, 0.01, 0.22, 0.43),
+      impact: pulseMotion(progress, 0.27, 0.47, 0.70),
+      recovery: pulseMotion(progress, 0.58, 0.78, 0.99),
+    };
+  }
+  if (action === 'Hit') {
+    return {
+      windup: 0,
+      impact: 1 - smoothMotion(progress / 0.9),
+      recovery: smoothMotion((progress - 0.24) / 0.76),
+    };
+  }
+  return { windup: 0, impact: 0, recovery: 0 };
+}
+
 function stablePhase(type: EnemyType): number {
   const cached = stablePhaseCache.get(type);
   if (cached !== undefined) return cached;
@@ -311,6 +379,7 @@ export function applyEnemyRoleSecondaryMotion(
   deltaSeconds: number,
   speed: number,
   action: string,
+  actionProgress = 0.5,
 ): number {
   if (!Number.isFinite(deltaSeconds) || deltaSeconds <= 0) return phase;
   const bones = findRigBones(root);
@@ -330,6 +399,7 @@ export function applyEnemyRoleSecondaryMotion(
   const counterWave = Math.sin(nextPhase + Math.PI);
   const activity = isIdle ? 0.13 : isMoving ? clamp(speed / 2.3, 0.22, 1.15) : 1;
   const combatProfile = getEnemyCombatMotionProfile(type);
+  const combatEnvelope = getEnemyCombatMotionEnvelope(action, actionProgress);
   const asymmetry = type === 'zombie_pracownik' ? 1 : 0;
   const roleAccent = ENEMY_ROLE_MOTION_ACCENTS[type] ?? DEFAULT_ENEMY_ROLE_MOTION_ACCENT;
 
@@ -338,24 +408,36 @@ export function applyEnemyRoleSecondaryMotion(
   // The source clip owns the main pose; these small reversible offsets add
   // anticipation, follow-through and a role-specific reaction to confirmed hits.
   if (isAttack) {
-    const beat = Math.sin(nextPhase * 1.9 + stablePhase(type) * 0.35);
-    const follow = Math.max(0, beat);
-    rotate(bones.spine, AXIS_X, -combatProfile.attackWindup * (0.42 + follow * 0.58), applied);
-    rotate(bones.chest, AXIS_X, combatProfile.attackFollowThrough * (0.10 + follow * 0.90), applied);
-    rotate(bones.chest, AXIS_Z, counterWave * combatProfile.attackFollowThrough * 0.24, applied);
-    rotate(bones.rightUpperArm, AXIS_X, -combatProfile.attackWindup * 0.72 + follow * combatProfile.attackFollowThrough * 0.42, applied);
-    rotate(bones.leftUpperArm, AXIS_X, -combatProfile.attackWindup * 0.25 - follow * combatProfile.attackFollowThrough * 0.18, applied);
-    rotate(bones.head, AXIS_Y, -wave * combatProfile.attackWindup * 0.32, applied);
+    const { windup, impact, recovery } = combatEnvelope;
+    // The secondary brace follows the imported/generated Attack clip itself:
+    // load first, a crisp contact accent second, then a restrained recovery.
+    rotate(bones.spine, AXIS_X,
+      -combatProfile.attackWindup * 0.72 * windup +
+      combatProfile.attackFollowThrough * 0.16 * impact, applied);
+    rotate(bones.chest, AXIS_X,
+      combatProfile.attackFollowThrough * (0.42 * impact + 0.18 * recovery), applied);
+    rotate(bones.chest, AXIS_Z,
+      (impact - recovery * 0.42) * combatProfile.attackFollowThrough * 0.20, applied);
+    rotate(bones.rightUpperArm, AXIS_X,
+      -combatProfile.attackWindup * 0.64 * windup +
+      combatProfile.attackFollowThrough * 0.28 * impact, applied);
+    rotate(bones.leftUpperArm, AXIS_X,
+      -combatProfile.attackWindup * 0.26 * windup -
+      combatProfile.attackFollowThrough * 0.16 * recovery, applied);
+    rotate(bones.head, AXIS_Y,
+      -(impact - windup * 0.35) * combatProfile.attackWindup * 0.24, applied);
     previousOffsets.set(root, applied);
     return nextPhase;
   }
   if (isHit) {
-    const stagger = 0.72 + Math.max(0, wave) * 0.28;
+    const stagger = combatEnvelope.impact;
+    const settle = combatEnvelope.recovery;
     rotate(bones.spine, AXIS_X, combatProfile.hitStagger * stagger, applied);
-    rotate(bones.chest, AXIS_X, combatProfile.hitStagger * 0.46 * stagger, applied);
-    rotate(bones.head, AXIS_Z, -combatProfile.hitStagger * 0.40 * stagger, applied);
-    rotate(bones.leftUpperArm, AXIS_Z, -combatProfile.hitStagger * 0.62 * stagger, applied);
-    rotate(bones.rightUpperArm, AXIS_Z, combatProfile.hitStagger * 0.62 * stagger, applied);
+    rotate(bones.spine, AXIS_Z, -combatProfile.hitStagger * 0.14 * settle, applied);
+    rotate(bones.chest, AXIS_X, combatProfile.hitStagger * 0.56 * stagger, applied);
+    rotate(bones.head, AXIS_Z, -combatProfile.hitStagger * 0.55 * stagger, applied);
+    rotate(bones.leftUpperArm, AXIS_Z, -combatProfile.hitStagger * 0.70 * stagger, applied);
+    rotate(bones.rightUpperArm, AXIS_Z, combatProfile.hitStagger * 0.70 * stagger, applied);
     previousOffsets.set(root, applied);
     return nextPhase;
   }
@@ -365,6 +447,11 @@ export function applyEnemyRoleSecondaryMotion(
   rotate(bones.hips, AXIS_Z, wave * gait.armSway * 0.08 * activity, applied);
   const forwardLean = gaitStyle === 'heavy' ? -0.055 :
     gaitStyle === 'aggressive' ? -0.075 :
+    gaitStyle === 'stalking' ? -0.10 :
+    gaitStyle === 'braced' ? -0.048 :
+    gaitStyle === 'nervous' ? -0.028 :
+    gaitStyle === 'swagger' ? -0.008 :
+    gaitStyle === 'uneven' ? 0.035 :
     gaitStyle === 'shambling' ? 0.065 :
     gaitStyle === 'brisk' ? -0.035 :
     gaitStyle === 'robotic' ? -0.018 : -0.012;
@@ -402,6 +489,29 @@ export function applyEnemyRoleSecondaryMotion(
   } else if (gaitStyle === 'theatrical') {
     rotate(bones.chest, AXIS_Y, Math.sin(nextPhase * 0.4) * 0.045 * activity, applied);
     rotate(bones.head, AXIS_Y, Math.sin(nextPhase * 0.27 + 1) * 0.038 * activity, applied);
+  } else if (gaitStyle === 'nervous') {
+    const twitch = Math.sin(nextPhase * 2.25 + stablePhase(type));
+    rotate(bones.chest, AXIS_Z, twitch * 0.024 * activity, applied);
+    rotate(bones.head, AXIS_Y, Math.sin(nextPhase * 1.55) * 0.045 * activity, applied);
+    rotate(bones.leftUpperArm, AXIS_X, Math.max(0, twitch) * 0.045 * activity, applied);
+  } else if (gaitStyle === 'swagger') {
+    const hipRoll = Math.sin(nextPhase * 0.62 + stablePhase(type));
+    rotate(bones.hips, AXIS_Z, hipRoll * 0.075 * activity, applied);
+    rotate(bones.chest, AXIS_Z, -hipRoll * 0.040 * activity, applied);
+    rotate(bones.head, AXIS_Z, 0.022 * activity, applied);
+  } else if (gaitStyle === 'braced') {
+    rotate(bones.chest, AXIS_X, -0.026 * activity, applied);
+    rotate(bones.leftUpperArm, AXIS_Z, -0.028 * activity, applied);
+    rotate(bones.rightUpperArm, AXIS_Z, 0.028 * activity, applied);
+  } else if (gaitStyle === 'uneven') {
+    rotate(bones.hips, AXIS_Z, wave * 0.070 * activity, applied);
+    rotate(bones.spine, AXIS_Z, counterWave * 0.035 * activity, applied);
+    rotate(bones.leftThigh, AXIS_X, wave * 0.025 * activity, applied);
+    rotate(bones.rightThigh, AXIS_X, counterWave * 0.048 * activity, applied);
+  } else if (gaitStyle === 'stalking') {
+    rotate(bones.spine, AXIS_X, -0.028 * activity, applied);
+    rotate(bones.chest, AXIS_X, 0.014 * activity, applied);
+    rotate(bones.head, AXIS_X, 0.022 * activity, applied);
   }
 
   // These offsets are intentionally visible at normal gameplay distance but

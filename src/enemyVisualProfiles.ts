@@ -29,7 +29,12 @@ export type EnemyGaitStyle =
   | 'shambling'
   | 'compact'
   | 'aggressive'
-  | 'limping';
+  | 'limping'
+  | 'nervous'
+  | 'swagger'
+  | 'braced'
+  | 'uneven'
+  | 'stalking';
 
 export interface EnemyGaitPreset {
   /** Base gait-cycle multiplier during movement. */
@@ -57,6 +62,11 @@ export const ENEMY_GAIT_PRESETS: Readonly<Record<EnemyGaitStyle, EnemyGaitPreset
   compact: { rate: 1.22, legSwing: 0.38, armSwing: 0.32, armSway: 0.16, headBob: 0.025 },
   aggressive: { rate: 1.17, legSwing: 0.64, armSwing: 0.52, armSway: 0.08, headBob: 0.055 },
   limping: { rate: 0.88, legSwing: 0.48, armSwing: 0.28, armSway: 0.07, headBob: 0.06 },
+  nervous: { rate: 1.28, legSwing: 0.36, armSwing: 0.57, armSway: 0.26, headBob: 0.052 },
+  swagger: { rate: 1.02, legSwing: 0.34, armSwing: 0.48, armSway: 0.31, headBob: 0.034 },
+  braced: { rate: 0.86, legSwing: 0.48, armSwing: 0.36, armSway: 0.07, headBob: 0.045 },
+  uneven: { rate: 0.78, legSwing: 0.56, armSwing: 0.32, armSway: 0.14, headBob: 0.07 },
+  stalking: { rate: 0.88, legSwing: 0.48, armSwing: 0.40, armSway: 0.08, headBob: 0.058 },
 });
 
 export interface EnemyVisualProfile {
@@ -82,7 +92,7 @@ export interface EnemyVisualProfile {
  */
 export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfile>> = Object.freeze({
   customer: {
-    gaitStyle: 'theatrical',
+    gaitStyle: 'nervous',
     gobkitModel: 'shoplifter',
     fallbackFactory: 'createCustomerEnemyModel',
     category: 'warehouse-caricature',
@@ -91,7 +101,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Przesadnie ekspresyjny klient z reklamacją, fakturą i wielką teczką',
   },
   walczak: {
-    gaitStyle: 'heavy',
+    gaitStyle: 'stalking',
     fallbackFactory: 'createWalczakBossModel',
     gobkitModel: 'werewolfcaptain',
     category: 'boss-creature',
@@ -134,7 +144,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Niski autonomiczny robot AGV z czujnikami, światłami i pancernym zderzakiem',
   },
   handlowiec: {
-    gaitStyle: 'theatrical',
+    gaitStyle: 'swagger',
     gobkitModel: 'salesrep',
     fallbackFactory: 'createHandlowiecEnemyModel',
     category: 'warehouse-caricature',
@@ -143,7 +153,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Handlowiec w przesadnym garniturze z teczką, krawatem i gadżetem reklamowym',
   },
   monter: {
-    gaitStyle: 'deliberate',
+    gaitStyle: 'braced',
     gobkitModel: 'forcibleentryfirefighter',
     fallbackFactory: 'createMonterEnemyModel',
     category: 'warehouse-caricature',
@@ -160,7 +170,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Latający dron patrolowy z czterema wirnikami, reflektorem i emiterem iskier',
   },
   elite_walczak_guard: {
-    gaitStyle: 'heavy',
+    gaitStyle: 'braced',
     fallbackFactory: 'createEliteGuardEnemyModel',
     gobkitModel: 'bloodirongrunt',
     category: 'boss-creature',
@@ -178,7 +188,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Kurier z ogromnym termicznym plecakiem, paczkami i czapką dostawczą',
   },
   'przedstawiciel_włoski': {
-    gaitStyle: 'theatrical',
+    gaitStyle: 'swagger',
     gobkitModel: 'storemanager',
     fallbackFactory: 'createItalianVendorEnemyModel',
     category: 'warehouse-caricature',
@@ -205,7 +215,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Monstrualny król-magazynu w ciężkim pancerzu z koroną i energią bossów',
   },
   pan_roman: {
-    gaitStyle: 'deliberate',
+    gaitStyle: 'uneven',
     gobkitModel: 'stockclerk',
     fallbackFactory: 'createPanRomanEnemyModel',
     category: 'warehouse-caricature',
@@ -223,7 +233,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Serwisant z narzędziami, miernikiem i technicznym pasem',
   },
   bosman_krakow: {
-    gaitStyle: 'heavy',
+    gaitStyle: 'braced',
     gobkitModel: 'securityguard',
     fallbackFactory: 'createBosmanKrakowBossModel',
     category: 'warehouse-caricature',
@@ -258,7 +268,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Przerysowany osiłek bez koszulki, w krótkich spodenkach, z agresywną miną i cegłami',
   },
   mutant_gamma_forklift: {
-    gaitStyle: 'heavy',
+    gaitStyle: 'uneven',
     fallbackFactory: 'createMutantGammaForkliftModel',
     gobkitModel: 'bloodironjuggernaut',
     category: 'mutant',

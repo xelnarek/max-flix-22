@@ -2342,7 +2342,10 @@ export class PaleciakiGameEngine {
              visualProfile.gaitStyle === 'deliberate' ||
              visualProfile.gaitStyle === 'precise' ||
              visualProfile.gaitStyle === 'shambling' ||
-             visualProfile.gaitStyle === 'limping')) {
+             visualProfile.gaitStyle === 'limping' ||
+             visualProfile.gaitStyle === 'braced' ||
+             visualProfile.gaitStyle === 'uneven' ||
+             visualProfile.gaitStyle === 'stalking')) {
           locomotionAction = 'Walk';
         }
         track.locomotionAction = locomotionAction;
@@ -2375,6 +2378,11 @@ export class PaleciakiGameEngine {
         // timing and fade curves stable despite fewer visual evaluations.
         clearEnemyRoleSecondaryMotion(track.root);
         track.mixer.update(animationDt);
+        const activeClipAction = track.actions.get(activeAction);
+        const activeClipDuration = activeClipAction?.getClip().duration ?? 0;
+        const actionProgress = activeClipAction && activeClipDuration > 0
+          ? THREE.MathUtils.clamp(activeClipAction.time / activeClipDuration, 0, 1)
+          : 0.5;
         track.roleMotionPhase = applyEnemyRoleSecondaryMotion(
           track.root,
           enemy.type,
@@ -2382,6 +2390,7 @@ export class PaleciakiGameEngine {
           animationDt,
           localSpeed || worldSpeed,
           activeAction,
+          actionProgress,
         );
       }
     }
