@@ -1684,7 +1684,7 @@ test('Mateusz Operator 04 recruits nearby enemies into an autonomous ally squad'
  const {readFile}=await import('node:fs/promises');
  const game=await readFile(new URL('../src/game.ts',import.meta.url),'utf8');
  const chars=await readFile(new URL('../src/characters.ts',import.meta.url),'utf8');
- assert.match(game,/selectMateuszRecruitOrders\(/);assert.match(game,/private updateMateuszAlly\\(/);
+ assert.match(game,/selectMateuszRecruitOrders\(/);assert.match(game,/private updateMateuszAlly\(/);
  assert.match(game,/aiMateuszAllyTimer/);assert.match(game,/SOJUSZNIK ELIMINUJE WROGA/);
  assert.match(chars,/EKIPA PRZEJĘTA • ZMIANA STRON/);
 });
