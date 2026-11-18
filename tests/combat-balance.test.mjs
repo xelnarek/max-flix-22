@@ -7,6 +7,12 @@ import {
   PIOTR_BOOMERANG_OUTBOUND_LIFETIME_FRACTION,
   SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS,
   SURVIVAL_AUTO_AIM_RANGE_METERS,
+  ENEMY_PROJECTILE_SPEED_MULTIPLIER,
+  ENEMY_MOVEMENT_SPEED_MULTIPLIER,
+  ENEMY_PROJECTILE_AIM_LEAD_MULTIPLIER,
+  ENEMY_PROJECTILE_AIM_ERROR_METERS,
+  SURVIVAL_ENEMY_SPECIAL_RATE_MULTIPLIER,
+  getEnemyProjectileSpeed,
   SURVIVAL_WEAPON_DISPATCH_COOLDOWN_SECONDS,
   SURVIVAL_WEAPON_INITIAL_RELOAD_FACTOR,
   SURVIVAL_WEAPON_UNLOCK_SECONDS,
@@ -32,7 +38,7 @@ test('Survival basic attacks recover quickly while preserving role-based cadence
   const cooldowns = characters.map((character) => getBaseAttackCooldownSeconds(character, 'survival'));
   for (const character of characters) {
     assert.equal(getBaseAttackCooldownSeconds(character, 'survival'), SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS[character]);
-    assert.ok(SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS[character] >= 1.65);
+    assert.ok(SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS[character] >= 1.48);
     assert.ok(SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS[character] <= 2.4);
   }
   assert.equal(new Set(cooldowns).size, characters.length);
@@ -94,4 +100,15 @@ test('Piotr boomerang reaches its outbound target before beginning its return', 
     PRIMARY_ATTACK_ORIGIN_OFFSET_METERS;
   assert.ok(Math.abs(outboundReach - PRIMARY_ATTACK_RANGE_METERS.piotr) < 1e-9);
   assert.ok(maxLife > 1.9);
+});
+
+
+test('hostile combat is slower and less accurate without removing readable warning windows', () => {
+  assert.equal(ENEMY_PROJECTILE_SPEED_MULTIPLIER, 0.76);
+  assert.equal(ENEMY_MOVEMENT_SPEED_MULTIPLIER, 0.88);
+  assert.equal(SURVIVAL_ENEMY_SPECIAL_RATE_MULTIPLIER, 0.80);
+  assert.equal(ENEMY_PROJECTILE_AIM_LEAD_MULTIPLIER, 0.42);
+  assert.equal(ENEMY_PROJECTILE_AIM_ERROR_METERS, 0.78);
+  assert.equal(getEnemyProjectileSpeed(10), 7.6);
+  assert.equal(getEnemyProjectileSpeed(Number.NaN), 0);
 });
