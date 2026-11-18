@@ -13739,7 +13739,7 @@ export class PaleciakiGameEngine {
         let bestScore = Number.POSITIVE_INFINITY;
         let nextTarget: EnemyItem | null = null;
         for (const candidate of this.enemies) {
-          if (candidate.state === 'defeated' || !candidate.mesh || (candidate.aiMateuszAllyTimer ?? 0) > 0) continue;
+          if (candidate.state === 'defeated' || !candidate.mesh) continue;
           if (Math.abs(candidate.y - rival.baseY) > 4.2) continue;
           const distance = Math.hypot(candidate.x - rival.x, candidate.z - rival.z);
           if (distance > 25) continue;
@@ -13937,7 +13937,7 @@ export class PaleciakiGameEngine {
     sourceZ = this.playerPos.z,
     damageSource: SurvivalDamageSource | null = null,
   ): number {
-    if (enemy.state === 'defeated' || (enemy.aiMateuszAllyTimer ?? 0) > 0 || !Number.isFinite(amount) || amount <= 0) return enemy.hp;
+    if (enemy.state === 'defeated' || !Number.isFinite(amount) || amount <= 0) return enemy.hp;
     if (enemy.shieldActive) {
       this.clearSurvivalSupportShield(enemy);
       this.spawnParticleRing(enemy.x, enemy.y + 0.65, enemy.z, 0x38bdf8);
@@ -14326,7 +14326,7 @@ export class PaleciakiGameEngine {
       activeCandidates.length = 0;
 
       for (const e of this.enemies) {
-        if (e.state === 'defeated' || !e.mesh || (e.aiMateuszAllyTimer ?? 0) > 0) continue;
+        if (e.state === 'defeated' || !e.mesh) continue;
         const d = Math.hypot(this.playerPos.x - e.x, this.playerPos.z - e.z);
         if (d > 26.0 && !isMajorSurvivalBossType(e.type) && e.type !== 'sebix_m') {
           if (e.mesh.visible) e.mesh.visible = false;
