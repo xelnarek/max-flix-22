@@ -2,7 +2,7 @@
 
 ## Zakres i metoda
 
-Przejrzano wspólny dispatcher umiejętności, importy głównych entrypointów `src/game.ts` i `src/index.ts`, wywołania publicznych metod `src/sound.ts`, użycie tekstur w `src/warehouseAssets.ts`, konfigurację TypeScript oraz manifesty zależności. Kandidat do natychmiastowego usunięcia musiał nie mieć żadnego wywołania poza własną deklaracją w kodzie produkcyjnym.
+Przejrzano wspólny dispatcher umiejętności, importy głównych entrypointów `src/game.ts` i `src/index.ts`, wywołania publicznych metod `src/sound.ts`, użycie tekstur w `src/warehouseAssets.ts`, konfigurację TypeScript oraz manifesty zależności. Kandydat do natychmiastowego usunięcia musiał nie mieć żadnego wywołania poza własną deklaracją w kodzie produkcyjnym.
 
 ## Zmiany wykonane w tym pakiecie
 
