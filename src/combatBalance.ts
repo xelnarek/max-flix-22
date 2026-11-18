@@ -2,6 +2,16 @@ import type { CharacterId } from './types.ts';
 
 export type CombatGameMode = 'campaign' | 'survival' | 'pvp';
 
+/** Enemy special attacks retain wave pressure, but fire slightly less often. */
+export const SURVIVAL_ENEMY_SPECIAL_RATE_MULTIPLIER = 0.92;
+/** Small reaction window increase: enemy shots travel 8% slower in every mode. */
+export const ENEMY_PROJECTILE_SPEED_MULTIPLIER = 0.92;
+
+export function getEnemyProjectileSpeed(baseSpeed: number): number {
+  const safeSpeed = Number.isFinite(baseSpeed) ? Math.max(0, baseSpeed) : 0;
+  return safeSpeed * ENEMY_PROJECTILE_SPEED_MULTIPLIER;
+}
+
 export const CAMPAIGN_ATTACK_COOLDOWN_SECONDS: Readonly<Record<CharacterId, number>> = Object.freeze({
   marcin: 1.05,
   grzesiek: 1.22,
