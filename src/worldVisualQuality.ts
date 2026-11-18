@@ -191,7 +191,12 @@ function blendSurvivalScalar(
   weights: SurvivalWorldBiomeBlendWeights,
   key: Exclude<keyof WorldLightingProfile, SurvivalLightingColorKey>,
 ): number {
-  return SURVIVAL_MAP_IDS.reduce((sum, id) => sum + SURVIVAL_LIGHTING_PROFILES[id][key] * weights[id], 0);
+  let total = 0;
+  for (let index = 0; index < SURVIVAL_MAP_IDS.length; index++) {
+    const id = SURVIVAL_MAP_IDS[index];
+    total += SURVIVAL_LIGHTING_PROFILES[id][key] * weights[id];
+  }
+  return total;
 }
 
 /** Create an output profile once, then update it by reference in the frame loop. */
