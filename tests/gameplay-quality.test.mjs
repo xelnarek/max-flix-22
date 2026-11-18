@@ -1962,3 +1962,15 @@ test('Survival per-frame biome lighting uses reusable blend and profile scratch 
   assert.match(game, /private readonly survivalBiomeBlendScratch = createSurvivalWorldBiomeBlendScratch\(\)/);
   assert.match(game, /private readonly survivalWorldLightingScratch = createWorldLightingProfileScratch\(\)/);
 });
+
+test('Wave Director leader-loss scan reuses sets and enemy records without mapping the horde', async () => {
+  const game = await read('../src/game.ts');
+  const start = game.indexOf('const leaderLossTargets = updateSurvivalLeaderLossTargets(');
+  const end = game.indexOf('if (leaderLossTargets.size > 0)', start);
+  assert.ok(start >= 0 && end > start, 'leader-loss selection should exist inside the wave director');
+  const update = game.slice(start, end);
+  assert.match(update, /updateSurvivalLeaderLossTargets\(\s*this\.enemies,\s*this\.survivalMoraleLivingIdsScratch,\s*this\.survivalMoraleAffectedIdsScratch/);
+  assert.doesNotMatch(update, /this\.enemies\.map\(/);
+  assert.match(game, /private readonly survivalMoraleLivingIdsScratch = new Set<string>\(\)/);
+  assert.match(game, /private readonly survivalMoraleAffectedIdsScratch = new Set<string>\(\)/);
+});
