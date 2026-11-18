@@ -11308,7 +11308,6 @@ export class PaleciakiGameEngine {
         sound.playBossWarning();
         return;
       }
-      enemy.trailTimer = (enemy.trailTimer || 0)-dt;
     } else {
       enemy.specialActionTimer = (enemy.specialActionTimer ?? 0)-dt;
       if (distance < 16 && (enemy.specialActionTimer || 0) <= 0) {
