@@ -186,7 +186,9 @@ test('ranged enemy attack poses start with launch recoil and relax after the sho
   assert.match(game, /Projectile attacks are requested on the launch frame/);
   assert.match(game, /const reach = -0\.82 \* Math\.pow\(1 - progress, 1\.45\)/);
   assert.match(game, /const recoilRoll = 0\.07 \* Math\.pow\(1 - progress, 1\.2\)/);
-  assert.match(game, /this\.requestEnemyAttackAnimation\(e, 0\.50\)/);
+  assert.match(game, /this\.beginEnemyRangedAttackTelegraph\(e\)/);
+  assert.match(game, /this\.requestEnemyAttackAnimation\(enemy, profile\.windupSeconds\)/);
+  assert.match(game, /this\.advanceEnemyRangedAttackTelegraph\(enemy, dt\)/);
 });
 
 test('rebuilding an operator clears previous run attack and hit poses', async () => {
@@ -424,23 +426,22 @@ test('late enemy model loads cannot attach to a recycled mesh or changed archety
 });
 
 
-test('ranged and special enemy attacks request visible attack poses at projectile launch', async () => {
+test('ranged and special enemy attacks release only after their wind-up or committed boss charge', async () => {
   const game = await read('../src/game.ts');
   for (const marker of [
-    'spawnPenaltyNotice(e.x, e.y + 1.2, e.z)',
-    'spawnDyscyplinarkaNotice(e.x, e.y + 1.2, e.z, lockedDirection)',
-    'spawnSparkZapProjectile(e.x, e.y + 0.75, e.z, lockedDirection)',
-    'spawnPomazaniecLollipop(e.x, e.y + 1.03, e.z',
-    'spawnSanitarywareProjectile(e.x, e.y + 0.8, e.z)',
-    'spawnOdprawaClipboardProjectile(e.x, e.y + 1.0, e.z, lockedDirection)',
-    'spawnSebixBrick(enemy.x,enemy.y+1.35',
+    'this.spawnPenaltyNotice(e.x, e.y + 1.2, e.z)',
+    'this.spawnDyscyplinarkaNotice(e.x, e.y + 1.2, e.z, lockedDirection)',
+    'this.spawnSparkZapProjectile(e.x, e.y + 0.75, e.z, lockedDirection)',
+    'this.spawnPomazaniecLollipop(',
+    'this.spawnSanitarywareProjectile(e.x, e.y + 0.8, e.z, release.direction)',
+    'this.spawnOdprawaClipboardProjectile(e.x, e.y + 1.0, e.z, lockedDirection)',
+    'this.spawnSebixBrick(enemy.x,enemy.y+1.35',
   ]) {
-    const index = game.indexOf(marker);
-    assert.ok(index >= 0, 'missing ranged/special attack: ' + marker);
-    const context = game.slice(Math.max(0, index - 260), index);
-    assert.match(context, /requestEnemyAttackAnimation\((e|enemy),/,
-      'attack animation must be requested before: ' + marker);
+    assert.ok(game.includes(marker), 'missing ranged/special release: ' + marker);
   }
+  assert.match(game, /this\.requestEnemyAttackAnimation\(enemy, profile\.windupSeconds\)/);
+  assert.match(game, /const release = this\.advanceEnemyRangedAttackTelegraph\(e, dt\)/);
+  assert.match(game, /this\.beginEnemyRangedAttackTelegraph\(e\)/);
 });
 
 
