@@ -38,7 +38,7 @@ export const CAMPAIGN_BOSS_SIGNATURES: Readonly<Record<CampaignStageId, Campaign
     projectileKind: 'penalty',
     intervalSeconds: 15.2,
     windupSeconds: 1.08,
-    initialDelaySeconds: 5.8,
+    initialDelaySeconds: 8.0,
     maxShots: 3,
   },
   port_17: {
@@ -50,7 +50,7 @@ export const CAMPAIGN_BOSS_SIGNATURES: Readonly<Record<CampaignStageId, Campaign
     projectileKind: 'dyscyplinarka',
     intervalSeconds: 16.0,
     windupSeconds: 1.18,
-    initialDelaySeconds: 6.2,
+    initialDelaySeconds: 8.4,
     maxShots: 2,
   },
   cold_zero: {
@@ -62,7 +62,7 @@ export const CAMPAIGN_BOSS_SIGNATURES: Readonly<Record<CampaignStageId, Campaign
     projectileKind: 'clipboard',
     intervalSeconds: 18.0,
     windupSeconds: 1.36,
-    initialDelaySeconds: 6.6,
+    initialDelaySeconds: 8.8,
     maxShots: 5,
   },
   night_sorting: {
@@ -74,7 +74,7 @@ export const CAMPAIGN_BOSS_SIGNATURES: Readonly<Record<CampaignStageId, Campaign
     projectileKind: 'spark',
     intervalSeconds: 14.8,
     windupSeconds: 0.98,
-    initialDelaySeconds: 5.4,
+    initialDelaySeconds: 7.6,
     maxShots: 3,
   },
   final_audit: {
@@ -86,7 +86,7 @@ export const CAMPAIGN_BOSS_SIGNATURES: Readonly<Record<CampaignStageId, Campaign
     projectileKind: 'dyscyplinarka',
     intervalSeconds: 13.4,
     windupSeconds: 1.08,
-    initialDelaySeconds: 5.0,
+    initialDelaySeconds: 8.2,
     maxShots: 5,
   },
 } as const;
