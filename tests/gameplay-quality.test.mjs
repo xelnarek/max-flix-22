@@ -1755,8 +1755,14 @@ test('Mateusz heroes have independent targets, movement, combat styles and owned
   assert.match(update, /for \(const candidate of nearbyEnemies\)/);
   assert.match(update, /if \(distance > 25\) continue/);
   assert.doesNotMatch(update, /for \(const candidate of this\.enemies\)/);
-  assert.doesNotMatch(game.slice(game.indexOf('private updateMarcinTank'), game.indexOf('private spawnMateuszContractRip')), /for \(const enemy of this\.enemies\)/);
-  assert.doesNotMatch(game.slice(game.indexOf('private updateMarcinTank'), game.indexOf('private spawnMateuszContractRip')), /this\.enemySpatialIndex\.query\(tank\.group\.position\.x, tank\.group\.position\.z, 24\.5\)/);
+  const tankStart = game.indexOf('private updateMarcinTank');
+  const tankEnd = game.indexOf('private spawnMateuszContractRip', tankStart);
+  assert.ok(tankStart >= 0 && tankEnd > tankStart, 'tank targeting method should exist');
+  const tankUpdate = game.slice(tankStart, tankEnd);
+  assert.match(tankUpdate, /this\.enemySpatialIndex\.query\(\s*tank\.group\.position\.x,\s*tank\.group\.position\.z,\s*24\.5/);
+  assert.match(tankUpdate, /for \(const enemy of nearbyEnemies\)/);
+  assert.match(tankUpdate, /if \(tankDistance > 23\.5\) continue/);
+  assert.doesNotMatch(tankUpdate, /for \(const enemy of this\.enemies\)/);
   assert.doesNotMatch(game, /aiMateuszAllyTimer|updateMateuszAlly|selectMateuszRecruitOrders/);
 });
 
