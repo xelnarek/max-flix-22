@@ -85,6 +85,7 @@ import { chooseSurvivalRicochetTarget, getSurvivalRadiationProfile, getSurvivalR
 import { getSurvivalShrapnelProfile } from './survivalShrapnel.ts';
 import { buildSurvivalCoalitionOrders, getSurvivalCoalitionRole } from './survivalCoalition.ts';
 import { getSurvivalCommanderProfile, selectSurvivalCommanderTargets } from './survivalCommander.ts';
+import { getCampaignBossSignature, getCampaignBossVolley, type CampaignBossProjectileKind } from './campaignBossSignatures.ts';
 import { advanceSurvivalCommanderTiming } from './survivalCommanderTiming.ts';
 import { getSurvivalLeaderLossTargets, getSurvivalMoraleBreakMultiplier, SURVIVAL_LEADER_LOSS_BREAK_SECONDS } from './survivalMorale.ts';
 import { MATEUSZ_RIVAL_ROSTER, getMateuszRivalSpawnOffset, getMateuszRivalDamageMultiplier, type MateuszRivalDefinition } from './mateuszRivals.ts';
@@ -13504,8 +13505,125 @@ export class PaleciakiGameEngine {
     return enemy.aiCoalitionRole ?? getSurvivalCoalitionRole(enemy.type);
   }
 
+  private updateCampaignBossSignature(boss: EnemyItem, dt: number): void {
+    const stage = this.campaignStage;
+    if (!stage || boss.id !== this.campaignBossEnemyId || !boss.mesh) return;
+
+    const signature = getCampaignBossSignature(stage.id);
+    const stateKey = 'campaignBossSignatureRuntime';
+    type SignatureRuntime = {
+      cooldownRemaining: number;
+      windupRemaining: number;
+      lockedDirection: number;
+      volleyIndex: number;
+    };
+    let runtime = boss.mesh.userData[stateKey] as SignatureRuntime | undefined;
+    if (!runtime) {
+      runtime = {
+        cooldownRemaining: signature.initialDelaySeconds,
+        windupRemaining: 0,
+        lockedDirection: Math.atan2(this.playerPos.x - boss.x, this.playerPos.z - boss.z),
+        volleyIndex: 0,
+      };
+      boss.mesh.userData[stateKey] = runtime;
+    }
+
+    // A stun during the readable wind-up cancels the complete volley.
+    if ((boss.stunTimer ?? 0) > 0) {
+      if (runtime.windupRemaining > 0) {
+        runtime.windupRemaining = 0;
+        runtime.cooldownRemaining = Math.max(runtime.cooldownRemaining, signature.intervalSeconds * 0.55);
+        this.callbacks.onSurvivalAnnouncement?.(
+          'KONTRA UDANA',
+          signature.title.toUpperCase(),
+          'Przerwano specjalny atak przed wystrzeleniem salwy.',
+        );
+        sound.playShieldBreak();
+      }
+      return;
+    }
+
+    if (runtime.windupRemaining > 0) {
+      runtime.windupRemaining = Math.max(0, runtime.windupRemaining - dt);
+      if (runtime.windupRemaining > 0) return;
+
+      const phase = boss.bossPhase ?? 1;
+      const volley = getCampaignBossVolley(signature, runtime.volleyIndex, phase);
+      const count = Math.min(signature.maxShots, volley.angleOffsets.length);
+      for (let index = 0; index < count; index += 1) {
+        const lateralIndex = index - (count - 1) * 0.5;
+        const lateralOffset = lateralIndex * volley.lateralSpacing;
+        const originX = boss.x + Math.cos(runtime.lockedDirection) * lateralOffset;
+        const originZ = boss.z - Math.sin(runtime.lockedDirection) * lateralOffset;
+        const shotDirection = runtime.lockedDirection + (volley.angleOffsets[index] ?? 0);
+        this.spawnCampaignBossSignatureProjectile(
+          volley.projectileKind,
+          originX,
+          boss.y + 1.15,
+          originZ,
+          shotDirection,
+        );
+      }
+
+      runtime.volleyIndex += 1;
+      runtime.cooldownRemaining = Math.max(
+        10.8,
+        signature.intervalSeconds * (phase >= 2 ? 0.88 : 1),
+      );
+      this.requestEnemyAttackAnimation(boss, 0.58);
+      this.spawnParticleRing(boss.x, boss.y + 0.55, boss.z, 0xf59e0b);
+      return;
+    }
+
+    runtime.cooldownRemaining = Math.max(0, runtime.cooldownRemaining - dt);
+    if (runtime.cooldownRemaining > 0) return;
+
+    const distance = Math.hypot(this.playerPos.x - boss.x, this.playerPos.z - boss.z);
+    if (!Number.isFinite(distance) || distance > 26) {
+      runtime.cooldownRemaining = 1.25;
+      return;
+    }
+
+    runtime.lockedDirection = Math.atan2(this.playerPos.x - boss.x, this.playerPos.z - boss.z);
+    runtime.windupRemaining = signature.windupSeconds;
+    this.requestEnemyAttackAnimation(boss, 0.48);
+    this.spawnParticleRing(boss.x, boss.y + 0.42, boss.z, 0xfbbf24);
+    this.callbacks.onSurvivalAnnouncement?.(
+      signature.callout,
+      signature.title.toUpperCase(),
+      signature.warning + ' Przerwij przygotowanie, ogłuszając bossa.',
+    );
+    sound.playBossWarning();
+  }
+
+  private spawnCampaignBossSignatureProjectile(
+    kind: CampaignBossProjectileKind,
+    x: number,
+    y: number,
+    z: number,
+    lockedDirection: number,
+  ): void {
+    switch (kind) {
+      case 'penalty':
+        this.spawnPenaltyNotice(x, y, z, lockedDirection);
+        break;
+      case 'dyscyplinarka':
+        this.spawnDyscyplinarkaNotice(x, y, z, lockedDirection);
+        break;
+      case 'clipboard':
+        this.spawnOdprawaClipboardProjectile(x, y, z, lockedDirection);
+        break;
+      case 'spark':
+        this.spawnSparkZapProjectile(x, y, z, lockedDirection);
+        break;
+    }
+  }
+
   private updateSurvivalCommanderPulse(boss: EnemyItem, dt: number): void {
     if (this.gameMode !== 'survival' || boss.state === 'defeated') return;
+    if (this.campaignStage && boss.id === this.campaignBossEnemyId) {
+      this.updateCampaignBossSignature(boss, dt);
+    }
     const profile = getSurvivalCommanderProfile(boss.type, boss.bossPhase ?? 1);
     if (!profile) return;
 
