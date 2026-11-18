@@ -13,6 +13,10 @@ test('B4 roulette exposes twelve reward/risk classes and a bounded weighted tabl
   ]);
   assert.equal(SURVIVAL_CHAOS_ROULETTE_TABLE.reduce((sum, entry) => sum + entry.weight, 0), 100);
   assert.ok(SURVIVAL_CHAOS_ROULETTE_TABLE.every((entry) => Number.isInteger(entry.weight) && entry.weight > 0));
+  const enemyRisk = SURVIVAL_CHAOS_ROULETTE_TABLE
+    .filter((entry) => entry.kind === 'enemy_pack' || entry.kind === 'elite_delivery')
+    .reduce((sum, entry) => sum + entry.weight, 0);
+  assert.equal(enemyRisk, 9, 'unwanted enemy deliveries should remain a 9% combined risk');
 });
 
 test('roulette roll boundaries select the first and final outcomes deterministically', () => {
