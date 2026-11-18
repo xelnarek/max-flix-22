@@ -100,7 +100,10 @@ function sanitizeVolleyIndex(value: number): number {
 }
 
 function boundedOffsets(values: readonly number[], phase: number): number[] {
-  const spread = phase >= 2 ? 1.12 : 1;
+  // Keep the same attack vocabulary and projectile count, but make enrage
+  // meaningfully tighten the safe gaps. The hard +/-0.72 radian cap prevents
+  // patterns from turning into an unavoidable full-screen fan.
+  const spread = phase >= 2 ? 1.30 : 1;
   return values.slice(0, 5).map((value) => {
     const scaled = value * spread;
     return Math.max(-0.72, Math.min(0.72, scaled));

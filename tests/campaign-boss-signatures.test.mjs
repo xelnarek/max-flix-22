@@ -54,14 +54,18 @@ test('final audit alternates a wide paperwork fan and a narrow electric crossfir
   assert.deepEqual(third, first);
 });
 
-test('enraged phase widens patterns within the hard angle and shot caps', () => {
+test('enraged phase widens each existing pattern without adding projectiles or changing its identity', () => {
   for (const signature of Object.values(CAMPAIGN_BOSS_SIGNATURES)) {
     for (const volleyIndex of [0, 1, 2, 3]) {
       const normal = getCampaignBossVolley(signature, volleyIndex, 1);
       const enraged = getCampaignBossVolley(signature, volleyIndex, 2);
+      const laterEnraged = getCampaignBossVolley(signature, volleyIndex, 3);
       assert.equal(enraged.angleOffsets.length, normal.angleOffsets.length);
+      assert.equal(enraged.projectileKind, normal.projectileKind);
       assert.ok(enraged.angleOffsets.every((angle) => Number.isFinite(angle) && Math.abs(angle) <= 0.72));
       assert.ok(enraged.lateralSpacing <= 0.68);
+      assert.ok(enraged.angleOffsets.some((angle, index) => Math.abs(angle) > Math.abs(normal.angleOffsets[index]) + 1e-6));
+      assert.deepEqual(laterEnraged, enraged, 'phase escalation remains capped and predictable');
     }
   }
 });
