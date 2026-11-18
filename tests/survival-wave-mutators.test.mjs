@@ -50,7 +50,7 @@ test('Premium convoy trades group frequency for tougher, richer enemies', () => 
     maxHp: 24, speed: 1.84, xpMultiplier: 1.65,
   });
   assert.deepEqual(getSurvivalWaveSpawnTuning(4, 6, mutator, 8), {
-    spawnIntervalSeconds: 4.5600000000000005, groupSize: 5,
+    spawnIntervalSeconds: 4.56, groupSize: 5,
   });
 });
 
