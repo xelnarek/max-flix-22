@@ -77,3 +77,25 @@ test('invalid query inputs and empty indexes return an empty reusable result', (
   index.rebuild([]);
   assert.deepEqual(index.query(0, 0), []);
 });
+
+test('numeric cell keys separate negative and positive world quadrants', () => {
+  const projectiles = [
+    shot(-80, -80, 8, 0),
+    shot(-80, 80, 0, 8),
+    shot(80, -80, 0, -8),
+    shot(80, 80, -8, 0),
+  ];
+  const index = new EnemyProjectileThreatIndex(5);
+  index.rebuild(projectiles);
+  for (let i = 0; i < projectiles.length; i++) {
+    const candidate = index.query(
+      projectiles[i].mesh.position.x,
+      projectiles[i].mesh.position.z,
+      0.1,
+      0.5,
+      0.02,
+    );
+    assert.ok(candidate.includes(projectiles[i]), 'projectile in quadrant ' + i + ' remains indexed');
+    assert.equal(candidate.length, 1, 'distant quadrants must not collide into one numeric key');
+  }
+});
