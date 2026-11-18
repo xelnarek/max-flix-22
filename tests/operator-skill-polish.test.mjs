@@ -83,3 +83,21 @@ test('Piotr MafiKapibar bodyguards balance targets and add readable muzzle/melee
   assert.ok(game.includes('spawnCompactImpact(target.x, target.y + 0.58'));
   assert.ok(characters.includes('Dobierają różne cele'));
 });
+
+
+test('all operator specials now trigger an action-specific shout and a readable procedural follow-through', async () => {
+  const [game, characters] = await Promise.all([
+    read('../src/game.ts'), read('../src/characters.ts')
+  ]);
+  assert.match(game, /this\.specialSwingTimer = 0\.86/);
+  assert.match(game, /if \(this\.specialSwingTimer > 0 && this\.currentCharacterId !== 'grzesiek'\)/);
+  for (const id of ['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr']) {
+    assert.ok(characters.includes(id + ': {'), 'missing operator profile: ' + id);
+  }
+  const mateuszSpecial = game.slice(
+    game.indexOf("} else if (this.currentCharacterId === 'mateusz') {"),
+    game.indexOf("} else if (this.currentCharacterId === 'piotr') {")
+  );
+  assert.ok(mateuszSpecial.includes('sayQuote('), 'Mateusz must call his summoned squad');
+  assert.ok(game.includes('MULTIWERŚUM, ZBIÓRKA!'));
+});
