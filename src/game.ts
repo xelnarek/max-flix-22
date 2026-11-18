@@ -419,6 +419,19 @@ interface MateuszRivalProjectile {
   life: number;
 }
 
+const MAFI_CAPYBARA_FORMATION_SLOTS = Object.freeze([
+  Object.freeze({ lateral: -2.05, forward: -0.55 }),
+  Object.freeze({ lateral: 0, forward: -2.45 }),
+  Object.freeze({ lateral: 2.05, forward: -0.55 }),
+] as const);
+
+const CAMPAIGN_ARENA_BOUNDS = Object.freeze({
+  minX: -34.5,
+  maxX: 204.5,
+  minZ: -21.0,
+  maxZ: 21.0,
+});
+
 export class PaleciakiGameEngine {
   public static readonly ENEMY_QUOTES: Record<string, string[]> = {
     customer: [
@@ -1080,6 +1093,8 @@ export class PaleciakiGameEngine {
   /** Five independent Marvel/DC allies owned by Mateusz's special ability. */
   private mateuszRivals: ActiveMateuszRival[] = [];
   private mateuszRivalProjectiles: MateuszRivalProjectile[] = [];
+  /** Reused target-load accounting; avoids a Map allocation every active ally frame. */
+  private readonly mateuszRivalTargetLoads = new Map<string, number>();
   private mateuszRivalsRemainingSeconds = 0;
   /** Deterministic sequence used to add a readable, dodgeable error to hostile aim. */
   private enemyAimShotSequence = 0;
@@ -14433,7 +14448,8 @@ export class PaleciakiGameEngine {
       return;
     }
 
-    const targetLoads = new Map<string, number>();
+    const targetLoads = this.mateuszRivalTargetLoads;
+    targetLoads.clear();
     for (const rival of this.mateuszRivals) {
       if (rival.target && rival.target.state !== 'defeated') {
         targetLoads.set(rival.target.id, (targetLoads.get(rival.target.id) ?? 0) + 1);
@@ -14442,7 +14458,7 @@ export class PaleciakiGameEngine {
 
     const bounds = this.gameMode === 'survival'
       ? this.levelBounds
-      : { minX: -34.5, maxX: 204.5, minZ: -21.0, maxZ: 21.0 };
+      : CAMPAIGN_ARENA_BOUNDS;
 
     for (const rival of this.mateuszRivals) {
       rival.lifeRemaining = this.mateuszRivalsRemainingSeconds;
@@ -19099,11 +19115,7 @@ export class PaleciakiGameEngine {
     const rightZ = -Math.sin(this.playerRot);
     // Stable bodyguard V: two ranged flankers cover the sides while the
     // dual-baton enforcer protects the rear approach. No idle orbiting.
-    const formationSlots = [
-      { lateral: -2.05, forward: -0.55 },
-      { lateral: 0, forward: -2.45 },
-      { lateral: 2.05, forward: -0.55 },
-    ] as const;
+    const formationSlots = MAFI_CAPYBARA_FORMATION_SLOTS;
 
     for (let index = this.mafiCapybaras.length - 1; index >= 0; index--) {
       const capybara = this.mafiCapybaras[index];

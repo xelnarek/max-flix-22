@@ -1224,7 +1224,9 @@ test('MafiKapibar enforcers fire arcade tracers and retain heavy baton melee com
   assert.match(update, /scaleSurvivalDamage\(capybara\.index === 1 \? \(targetIsMajorBoss \? 4 : 3\) : targetIsMajorBoss \? 3 : 2\)/);
   assert.match(update, /MAFIA OCHRANIA OPERATORA/);
   assert.match(update, /this\.enemySpatialIndex\.query\(\s*capybara\.group\.position\.x,\s*capybara\.group\.position\.z,\s*16\.5/);
+  assert.match(update, /const formationSlots = MAFI_CAPYBARA_FORMATION_SLOTS/);
   assert.match(update, /for \(const enemy of nearbyEnemies\)/);
+  assert.match(game, /const MAFI_CAPYBARA_FORMATION_SLOTS = Object\.freeze\(/);
   assert.match(update, /if \(guardDistance > 15\.5\) continue/);
 });
 
@@ -1752,6 +1754,12 @@ test('Mateusz heroes have independent targets, movement, combat styles and owned
   assert.ok(start >= 0 && end > start, 'Mateusz target update should exist');
   const update = game.slice(start, end);
   assert.match(update, /this\.enemySpatialIndex\.query\(rival\.x, rival\.z, 26\)/);
+  assert.match(update, /const targetLoads = this\.mateuszRivalTargetLoads/);
+  assert.match(update, /targetLoads\.clear\(\)/);
+  assert.doesNotMatch(update, /new Map<string, number>\(\)/);
+  assert.match(update, /CAMPAIGN_ARENA_BOUNDS/);
+  assert.match(game, /private readonly mateuszRivalTargetLoads = new Map<string, number>\(\)/);
+  assert.match(game, /const MAFI_CAPYBARA_FORMATION_SLOTS = Object\.freeze\(/);
   assert.match(update, /for \(const candidate of nearbyEnemies\)/);
   assert.match(update, /if \(distance > 25\) continue/);
   assert.doesNotMatch(update, /for \(const candidate of this\.enemies\)/);
