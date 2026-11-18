@@ -3240,3 +3240,214 @@ html[data-ui-landscape-touch="true"] .story-modal-card .story-slide {
   .survival-chaos-machine { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 12px; }
   .survival-chaos-machine span { min-height: 54px; }
 }
+
+
+/* B4 slot machine: three rolling reels with a colour-coded reward reveal. */
+.survival-chaos-machine {
+  position: relative;
+  display: flex !important;
+  flex-direction: column;
+  gap: 12px;
+  width: min(520px, 100%);
+  box-sizing: border-box;
+  padding: 16px 14px 13px;
+  overflow: hidden;
+  border: 1px solid rgba(251, 191, 36, .5);
+  border-radius: 18px;
+  background:
+    radial-gradient(ellipse at 50% -30%, rgba(245, 158, 11, .2), transparent 60%),
+    linear-gradient(155deg, rgba(8, 19, 32, .99), rgba(36, 24, 34, .98));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 12px 36px rgba(0,0,0,.45), 0 0 24px rgba(245,158,11,.10);
+  isolation: isolate;
+}
+.survival-chaos-machine::before,
+.survival-chaos-machine::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--roulette-accent, #fbbf24), #fff7cc, var(--roulette-accent, #fbbf24), transparent);
+  opacity: .9;
+  pointer-events: none;
+}
+.survival-chaos-machine::before { top: 0; }
+.survival-chaos-machine::after { bottom: 0; }
+.survival-chaos-marquee {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  color: #fde68a;
+  font: 900 10px/1.2 "JetBrains Mono", monospace;
+  letter-spacing: .14em;
+  text-align: center;
+  text-shadow: 0 0 12px rgba(251,191,36,.48);
+}
+.survival-chaos-lamp {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: #facc15;
+  box-shadow: 0 0 8px #facc15, 0 0 16px rgba(250,204,21,.6);
+  animation: survival-chaos-lamp 0.72s steps(2, end) infinite;
+}
+.survival-chaos-lamp:last-child { animation-delay: .36s; }
+@keyframes survival-chaos-lamp {
+  50% { opacity: .25; transform: scale(.72); }
+}
+.survival-chaos-reels {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  padding: 9px;
+  border: 1px solid rgba(251,191,36,.36);
+  border-radius: 13px;
+  background: linear-gradient(180deg, rgba(2,7,14,.98), rgba(15,23,42,.96));
+  box-shadow: inset 0 5px 14px rgba(0,0,0,.58), 0 4px 12px rgba(0,0,0,.24);
+}
+.survival-chaos-reel-window {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  height: 86px;
+  overflow: hidden;
+  border: 1px solid rgba(148,163,184,.28);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(30,41,59,.84), rgba(4,12,22,.98));
+  box-shadow: inset 0 0 16px rgba(0,0,0,.72), 0 0 8px rgba(56,189,248,.06);
+}
+.survival-chaos-reel-window::before,
+.survival-chaos-reel-window::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255,255,255,.12);
+  z-index: 1;
+  pointer-events: none;
+}
+.survival-chaos-reel-window::before { top: 7px; }
+.survival-chaos-reel-window::after { bottom: 7px; }
+.survival-chaos-machine .survival-chaos-reel-symbol {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--reel-accent, #e2e8f0);
+  font-size: clamp(38px, 9vw, 52px);
+  line-height: 1;
+  text-shadow: 0 0 14px color-mix(in srgb, var(--reel-accent, #e2e8f0) 55%, transparent);
+  filter: drop-shadow(0 3px 2px rgba(0,0,0,.45));
+  animation: none;
+  transform: translateY(0);
+  transition: color .16s ease, text-shadow .16s ease;
+}
+.survival-chaos-machine.is-spinning .survival-chaos-reel-symbol:not(.is-locked) {
+  animation: survival-chaos-reel-jitter .10s linear infinite alternate;
+  filter: blur(.45px) drop-shadow(0 0 10px var(--reel-accent, #fbbf24));
+}
+@keyframes survival-chaos-reel-jitter {
+  from { transform: translateY(-7px) scale(.94); }
+  to { transform: translateY(7px) scale(1.06); }
+}
+.survival-chaos-machine .survival-chaos-reel-symbol.is-locked {
+  animation: survival-chaos-reel-stop .24s cubic-bezier(.16,1.4,.3,1) both;
+}
+@keyframes survival-chaos-reel-stop {
+  0% { transform: scale(.76); filter: blur(2px) brightness(1.7); }
+  65% { transform: scale(1.16); }
+  100% { transform: scale(1); filter: blur(0) brightness(1.25); }
+}
+.survival-chaos-machine-caption {
+  color: #8ca4b8;
+  font: 800 8px/1.2 "JetBrains Mono", monospace;
+  letter-spacing: .11em;
+  text-align: center;
+}
+.survival-chaos-machine-caption i {
+  padding: 0 4px;
+  color: #fbbf24;
+  font-style: normal;
+}
+.survival-chaos-result {
+  min-height: 33px;
+  display: grid;
+  place-items: center;
+  padding: 8px 10px;
+  border: 1px solid rgba(148,163,184,.16);
+  border-radius: 9px;
+  background: rgba(2,8,18,.72);
+  color: #dbeafe;
+  font: 900 10px/1.35 "Space Grotesk", sans-serif;
+  letter-spacing: .035em;
+  text-align: center;
+  opacity: .76;
+  transition: all .22s ease;
+}
+.survival-chaos-result.is-visible {
+  border-color: color-mix(in srgb, var(--roulette-accent, #fbbf24) 78%, transparent);
+  background: color-mix(in srgb, var(--roulette-accent, #fbbf24) 12%, rgba(2,8,18,.94));
+  color: #fff;
+  opacity: 1;
+  text-shadow: 0 0 13px color-mix(in srgb, var(--roulette-accent, #fbbf24) 65%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--roulette-accent, #fbbf24) 22%, transparent), inset 0 0 16px rgba(255,255,255,.035);
+}
+.survival-chaos-machine.is-jackpot {
+  border-color: color-mix(in srgb, var(--roulette-accent) 80%, white);
+  box-shadow: inset 0 0 28px color-mix(in srgb, var(--roulette-accent) 16%, transparent), 0 0 28px color-mix(in srgb, var(--roulette-accent) 34%, transparent);
+  animation: survival-chaos-jackpot .52s ease-in-out 2;
+}
+.survival-chaos-machine.is-risk {
+  border-color: #fb7185;
+  box-shadow: inset 0 0 22px rgba(244,63,94,.14), 0 0 24px rgba(244,63,94,.25);
+}
+.survival-chaos-machine.has-result .survival-chaos-reel-window {
+  border-color: color-mix(in srgb, var(--roulette-accent) 75%, white);
+  box-shadow: inset 0 0 18px color-mix(in srgb, var(--roulette-accent) 14%, transparent), 0 0 12px color-mix(in srgb, var(--roulette-accent) 32%, transparent);
+}
+@keyframes survival-chaos-jackpot {
+  0%, 100% { filter: brightness(1); transform: scale(1); }
+  50% { filter: brightness(1.32); transform: scale(1.012); }
+}
+.survival-chaos-spin {
+  min-height: 54px;
+  border: 1px solid rgba(253,224,71,.82);
+  border-radius: 14px;
+  background: linear-gradient(115deg, #92400e, #d97706 48%, #a16207);
+  color: #fffbea;
+  font: 950 12px/1 "Space Grotesk", sans-serif;
+  letter-spacing: .09em;
+  text-shadow: 0 1px 2px rgba(0,0,0,.38);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.24), 0 7px 20px rgba(217,119,6,.28), 0 0 18px rgba(251,191,36,.14);
+  transition: transform .12s ease, filter .12s ease;
+}
+.survival-chaos-spin:active:not(:disabled) { transform: translateY(2px) scale(.985); filter: brightness(1.12); }
+.survival-chaos-spin:disabled { opacity: .92; filter: saturate(.82); }
+#survival-levelup.roulette-reveal .survival-levelup-title {
+  color: #fef3c7;
+  text-shadow: 0 0 14px rgba(251,191,36,.28);
+}
+@media (max-width: 480px) {
+  .survival-chaos-machine { gap: 9px; padding: 12px 10px 10px; }
+  .survival-chaos-reels { gap: 6px; padding: 7px; }
+  .survival-chaos-reel-window { height: 74px; }
+  .survival-chaos-machine-caption { font-size: 7px; letter-spacing: .08em; }
+  .survival-chaos-marquee { font-size: 8px; letter-spacing: .09em; }
+  .survival-chaos-result { font-size: 9px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .survival-chaos-lamp,
+  .survival-chaos-machine.is-spinning .survival-chaos-reel-symbol:not(.is-locked),
+  .survival-chaos-machine.is-jackpot {
+    animation: none !important;
+  }
+}
