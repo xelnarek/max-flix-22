@@ -4,9 +4,15 @@ import { scaleCharacterBasicAttackDamage, SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER } 
 export type CombatGameMode = 'campaign' | 'survival' | 'pvp';
 
 /** Enemy specials keep wave pressure but create a slightly longer response window. */
-export const SURVIVAL_ENEMY_SPECIAL_RATE_MULTIPLIER = 0.92;
-/** A measured 8% slowdown gives the player more time to read and dodge enemy shots. */
-export const ENEMY_PROJECTILE_SPEED_MULTIPLIER = 0.92;
+export const SURVIVAL_ENEMY_SPECIAL_RATE_MULTIPLIER = 0.80;
+/** A clear 24% projectile slowdown opens a real dodge window on mobile. */
+export const ENEMY_PROJECTILE_SPEED_MULTIPLIER = 0.76;
+/** Hostile locomotion is reduced once per spawned actor in both Campaign and Survival. */
+export const ENEMY_MOVEMENT_SPEED_MULTIPLIER = 0.88;
+/** Reduce perfect velocity-leading; enemy volleys should be dodged, not magnetised to the player. */
+export const ENEMY_PROJECTILE_AIM_LEAD_MULTIPLIER = 0.42;
+/** Deterministic lateral aim error prevents ordinary shots from tracking a moving player perfectly. */
+export const ENEMY_PROJECTILE_AIM_ERROR_METERS = 0.78;
 
 export function getEnemyProjectileSpeed(baseSpeed: number): number {
   const safeSpeed = Number.isFinite(baseSpeed) ? Math.max(0, baseSpeed) : 0;
@@ -24,14 +30,14 @@ export const CAMPAIGN_ATTACK_COOLDOWN_SECONDS: Readonly<Record<CharacterId, numb
 // Faster control weapons recover slightly sooner; the heavy dumbbell and
 // returning wrench trade cadence for stronger hits and multi-pass coverage.
 export const SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS: Readonly<Record<CharacterId, number>> = Object.freeze({
-  marcin: 1.90,
-  grzesiek: 2.05,
-  dawid: 1.88,
-  mateusz: 1.65,
-  piotr: 2.10,
+  marcin: 1.72,
+  grzesiek: 1.88,
+  dawid: 1.70,
+  mateusz: 1.48,
+  piotr: 1.92,
 });
 /** Survival-only primary-attack lift; campaign damage and auto-weapons are unchanged. */
-export const SURVIVAL_PRIMARY_ATTACK_DAMAGE_MULTIPLIER = 1.15;
+export const SURVIVAL_PRIMARY_ATTACK_DAMAGE_MULTIPLIER = 1.28;
 
 export interface PrimaryAttackDamageProfile {
   readonly regular: number;

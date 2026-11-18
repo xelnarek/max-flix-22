@@ -1,7 +1,7 @@
 /** Shared Survival tuning applied to every operator, including weapons and abilities. */
-export const SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER = 0.68;
-/** A modest 10% boost to operator signature abilities in Campaign and Survival. */
-export const CHARACTER_ABILITY_DAMAGE_MULTIPLIER = 1.10;
+export const SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER = 0.76;
+/** Signature skills are deliberately powerful, not just 10% stronger than primary attacks. */
+export const CHARACTER_ABILITY_DAMAGE_MULTIPLIER = 1.65;
 export const SURVIVAL_INCOMING_DAMAGE_MULTIPLIER = 1.30;
 export const SURVIVAL_HIT_INVULNERABILITY_SECONDS = 0.78;
 

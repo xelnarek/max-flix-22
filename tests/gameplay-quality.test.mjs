@@ -1680,49 +1680,45 @@ test('Grzesiek Operator 02 launches exactly five target-locked muscular arm proj
   assert.match(html, /5 latających ramion/);
 });
 
-test('Mateusz Operator 04 recruits nearby enemies into an autonomous ally squad', async () => {
- const {readFile}=await import('node:fs/promises');
- const game=await readFile(new URL('../src/game.ts',import.meta.url),'utf8');
- const chars=await readFile(new URL('../src/characters.ts',import.meta.url),'utf8');
- assert.match(game,/selectMateuszRecruitOrders\(/);assert.match(game,/private updateMateuszAlly\(/);
- assert.match(game,/aiMateuszAllyTimer/);assert.match(game,/SOJUSZNIK ELIMINUJE WROGA/);
- assert.match(chars,/EKIPA PRZEJĘTA • ZMIANA STRON/);
-});
-
-test('Mateusz Operator 04 recruits a temporary autonomous team and keeps the contract visual', async () => {
-  const [game, types, characters, html] = await Promise.all([
-    read('../src/game.ts'), read('../src/types.ts'), read('../src/characters.ts'), read('../index.html')
+test('Mateusz summons exactly five separate Marvel/DC hero models', async () => {
+  const [game, characters, rosterModule] = await Promise.all([
+    read('../src/game.ts'), read('../src/characters.ts'), import('../src/mateuszRivals.ts')
   ]);
-  assert.match(characters, /abilityName: 'EKIPA PRZEJĘTA/);
-  assert.match(characters, /12 sekund \(11 sekund w Survival\)/);
-  assert.match(html, /EKIPA PRZEJĘTA/);
+  const roster = rosterModule.MATEUSZ_RIVAL_ROSTER;
+  assert.equal(roster.length, 5);
+  assert.deepEqual(roster.map(hero => hero.id), ['iron-man', 'hulk', 'spider-man', 'storm', 'batman']);
+  assert.equal(roster.filter(hero => hero.universe === 'MARVEL').length, 4);
+  assert.equal(roster.filter(hero => hero.universe === 'DC').length, 1);
+  assert.equal(new Set(roster.map(hero => hero.style)).size, 5);
+  assert.match(game, /private createMateuszRivalModel\(/);
+  assert.match(game, /private spawnMateuszRivals\(\)/);
+  assert.match(game, /MATEUSZ_RIVAL_ROSTER\.forEach/);
+  assert.match(game, /this\.spawnMateuszRivals\(\)/);
+  assert.match(characters, /MULTIUNIWERSUM • PIĘCIU BOHATERÓW/);
+});
+
+test('Mateusz heroes have independent targets, movement, combat styles and owned projectiles', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /private updateMateuszRivals\(dt: number\)/);
+  assert.match(game, /private attackWithMateuszRival\(/);
+  assert.match(game, /private updateMateuszRivalProjectiles\(dt: number\)/);
+  assert.match(game, /targetLoads\.set\(nextTarget\.id/);
+  assert.match(game, /assigned \* 4\.8/);
+  assert.match(game, /style === 'lightning-chain'/);
+  assert.match(game, /style === 'gamma-slam'/);
+  assert.match(game, /this\.updateMateuszRivals\(simDt\)/);
+  assert.match(game, /private clearMateuszRivals\(\)/);
+  assert.doesNotMatch(game, /aiMateuszAllyTimer|updateMateuszAlly|selectMateuszRecruitOrders/);
+});
+
+test('Mateusz multiverse squad and projectiles are removed safely when the run ends', async () => {
+  const game = await read('../src/game.ts');
   assert.match(game, /private spawnMateuszContractRip\(\)/);
-  assert.match(game, /private updateMateuszAlly\(enemy: EnemyItem, dt: number\)/);
-  assert.match(game, /selectMateuszRecruitOrders\(/);
-  assert.match(game, /aiMateuszAllyTimer/);
-  assert.match(game, /damageSource !== null/);
-  assert.match(types, /aiMateuszAllyRole\?:/);
-  assert.doesNotMatch(game, /mateuszCats|spawnMateuszCats|updateMateuszCats/);
+  assert.match(game, /this\.spawnMateuszContractRip\(\)/);
+  assert.match(game, /this\.clearMateuszRivals\(\);/);
+  assert.match(game, /this\.disposeTemporaryObject\(rival\.root\)/);
+  assert.match(game, /this\.disposeTemporaryObject\(projectile\.mesh\)/);
 });
-
-test('Mateusz recruited squad has stronger role damage and an 11-second Survival window', async () => {
-  const game = await read('../src/game.ts');
-  const characters = await read('../src/characters.ts');
-  assert.ok(game.includes("10.5, 3, this.gameMode === 'survival' ? 11 : 12"));
-  assert.ok(game.includes("this.gameMode === 'survival' ? 11 : 12"));
-  assert.ok(game.includes("const damage=role==='bruiser'?1.85:role==='flanker'?1.24:role==='support'?0.80:1.02;"));
-  assert.ok(characters.includes('(11 sekund w Survival)'));
-});
-
-test('Mateusz recruited allies have bounded lifetime and restore hostile AI after expiry', async () => {
-  const game = await read('../src/game.ts');
-  assert.match(game, /ally\.aiMateuszAllyTimer = order\.durationSeconds/);
-  assert.ok(game.includes('enemy.aiMateuszAllyTimer=Math.max(0,remaining-dt)'));
-  assert.match(game, /if \(this\.updateMateuszAlly\(e, dt\)\) continue/);
-  assert.match(game, /private setMateuszAllyVisual\(enemy: EnemyItem, active: boolean, dt: number\)/);
-  assert.match(game, /if \(!active\) \{[\s\S]*?mateuszAllyRing/);
-});
-
 
 test('Mateusz faction brawl distributes target assignments instead of dogpiling the nearest enemy', async () => {
   const game = await read('../src/game.ts');

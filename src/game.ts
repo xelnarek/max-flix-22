@@ -82,7 +82,7 @@ import { buildSurvivalCoalitionOrders, getSurvivalCoalitionRole } from './surviv
 import { getSurvivalCommanderProfile, selectSurvivalCommanderTargets } from './survivalCommander.ts';
 import { advanceSurvivalCommanderTiming } from './survivalCommanderTiming.ts';
 import { getSurvivalLeaderLossTargets, getSurvivalMoraleBreakMultiplier, SURVIVAL_LEADER_LOSS_BREAK_SECONDS } from './survivalMorale.ts';
-import { selectMateuszRecruitOrders, getMateuszAllyRole } from './mateuszSquad.ts';
+import { MATEUSZ_RIVAL_ROSTER, getMateuszRivalSpawnOffset, type MateuszRivalDefinition } from './mateuszRivals.ts';
 import { selectSurvivalSupportPulseTargets, SURVIVAL_SUPPORT_PULSE_RADIUS, SURVIVAL_SUPPORT_PULSE_INTERVAL_SECONDS, SURVIVAL_SUPPORT_SHIELD_SECONDS } from './survivalSupport.ts';
 import { advanceSurvivalRetreatState, getSurvivalFlankInterceptOffset, getSurvivalRetreatTarget } from './survivalTactics.ts';
 import { getSurvivalProgressionInfo, getSurvivalPromotionRarityFloor, getSurvivalXpRequirement } from './survivalProgression.ts';
@@ -103,6 +103,9 @@ import {
   getAbilityCooldownSeconds,
   getEnemyProjectileSpeed,
   SURVIVAL_ENEMY_SPECIAL_RATE_MULTIPLIER,
+  ENEMY_MOVEMENT_SPEED_MULTIPLIER,
+  ENEMY_PROJECTILE_AIM_LEAD_MULTIPLIER,
+  ENEMY_PROJECTILE_AIM_ERROR_METERS,
   SURVIVAL_PRIMARY_ATTACK_DAMAGE_MULTIPLIER,
   getPrimaryAttackBaseDamage,
   getBaseAttackCooldownSeconds,
@@ -370,6 +373,36 @@ interface GobkitAnimationTrack {
   oneShotRemaining: number;
   oneShotPriority: number;
   oneShotAction: string;
+}
+
+interface ActiveMateuszRival {
+  readonly definition: MateuszRivalDefinition;
+  readonly root: THREE.Group;
+  readonly torso: THREE.Group;
+  readonly arms: [THREE.Group, THREE.Group];
+  readonly legs: [THREE.Group, THREE.Group];
+  readonly cape: THREE.Mesh | null;
+  readonly formationOffset: { x: number; z: number };
+  target: EnemyItem | null;
+  x: number;
+  z: number;
+  baseY: number;
+  lifeRemaining: number;
+  retargetTimer: number;
+  attackCooldown: number;
+  walkPhase: number;
+  attackPose: number;
+}
+
+interface MateuszRivalProjectile {
+  readonly mesh: THREE.Mesh;
+  target: EnemyItem;
+  readonly style: MateuszRivalDefinition['style'];
+  readonly speed: number;
+  readonly damage: number;
+  readonly stunSeconds: number;
+  readonly color: number;
+  life: number;
 }
 
 export class PaleciakiGameEngine {
@@ -1014,6 +1047,12 @@ export class PaleciakiGameEngine {
     exploded: boolean;
   }[] = [];
   private enemies: EnemyItem[] = [];
+  /** Five independent Marvel/DC allies owned by Mateusz's special ability. */
+  private mateuszRivals: ActiveMateuszRival[] = [];
+  private mateuszRivalProjectiles: MateuszRivalProjectile[] = [];
+  private mateuszRivalsRemainingSeconds = 0;
+  /** Deterministic sequence used to add a readable, dodgeable error to hostile aim. */
+  private enemyAimShotSequence = 0;
   private readonly enemySpatialIndex = new EnemySpatialIndex<EnemyItem>(4.0);
   private enemySpatialIndexNextRefreshAt = 0;
   private enemySpatialIndexCachedCount = -1;
@@ -6884,6 +6923,7 @@ export class PaleciakiGameEngine {
 
   private clearLevel() {
     this.enemyFactionBrawlRemaining = 0;
+    this.clearMateuszRivals();
     this.restoreCameraOccluders();
     if (this.survivalSightlineMarker) {
       this.survivalSightlineMarker.removeFromParent();
@@ -9591,6 +9631,7 @@ export class PaleciakiGameEngine {
       }
       this.updateRandomSpawners(simDt);
       this.updateEnemies(simDt);
+      this.updateMateuszRivals(simDt);
       this.updateMarcinTank(simDt);
       this.updateMafiCapybaras(simDt);
       if (this.manualAimEnabled) {
@@ -10891,14 +10932,27 @@ export class PaleciakiGameEngine {
     targetZ = this.playerPos.z,
     leadFraction = 0.68,
   ): { x: number; z: number } {
-    return predictEnemyAimPoint(
+    const predicted = predictEnemyAimPoint(
       { x: originX, z: originZ },
       { x: targetX, z: targetZ },
       { x: this.playerVel.x, z: this.playerVel.z },
       projectileSpeed,
-      leadFraction,
-      0.62,
+      leadFraction * ENEMY_PROJECTILE_AIM_LEAD_MULTIPLIER,
+      0.34,
     );
+    const dx = predicted.x - originX;
+    const dz = predicted.z - originZ;
+    const distance = Math.hypot(dx, dz);
+    if (distance < 0.001) return predicted;
+    const shotIndex = this.enemyAimShotSequence++;
+    const errorScale = 0.66 + (shotIndex % 3) * 0.16;
+    const missDistance = ENEMY_PROJECTILE_AIM_ERROR_METERS * errorScale *
+      Math.min(1.15, 0.58 + distance / 18);
+    const side = shotIndex % 2 === 0 ? 1 : -1;
+    return {
+      x: predicted.x + (dz / distance) * missDistance * side,
+      z: predicted.z - (dx / distance) * missDistance * side,
+    };
   }
 
   private spawnPomazaniecLollipop(x: number, y: number, z: number, targetX: number, targetZ: number, variant: number) {
@@ -13298,75 +13352,487 @@ export class PaleciakiGameEngine {
     marker.scale.setScalar(0.88 + Math.sin(performance.now() * 0.012 + enemy.walkCycle) * 0.14);
   }
 
-  private setMateuszAllyVisual(enemy: EnemyItem, active: boolean, dt: number): void {
-    if (!enemy.mesh) return;
-    const ring=enemy.mesh.userData.mateuszAllyRing as THREE.Mesh|undefined;
-    const marker=enemy.mesh.userData.mateuszAllyMarker as THREE.Mesh|undefined;
-    if(!active){
-      if(ring){enemy.mesh.remove(ring);ring.geometry.dispose();(ring.material as THREE.Material).dispose();delete enemy.mesh.userData.mateuszAllyRing;}
-      if(marker){enemy.mesh.remove(marker);marker.geometry.dispose();(marker.material as THREE.Material).dispose();delete enemy.mesh.userData.mateuszAllyMarker;}
-      return;
+  private createMateuszRivalModel(definition: MateuszRivalDefinition): {
+    root: THREE.Group;
+    torso: THREE.Group;
+    arms: [THREE.Group, THREE.Group];
+    legs: [THREE.Group, THREE.Group];
+    cape: THREE.Mesh | null;
+  } {
+    const root = new THREE.Group();
+    root.name = 'mateusz-rival-' + definition.id;
+    root.userData.mateuszRivalId = definition.id;
+    const primary = new THREE.MeshStandardMaterial({ color: definition.primaryColor, roughness: 0.42, metalness: 0.28 });
+    const secondary = new THREE.MeshStandardMaterial({ color: definition.secondaryColor, roughness: 0.38, metalness: 0.42 });
+    const accent = new THREE.MeshStandardMaterial({
+      color: definition.accentColor, emissive: definition.accentColor,
+      emissiveIntensity: 0.72, roughness: 0.25, metalness: 0.22,
+    });
+    const dark = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.62, metalness: 0.18 });
+    const white = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.32, metalness: 0.12 });
+    const gold = new THREE.MeshStandardMaterial({ color: 0xfbbf24, roughness: 0.32, metalness: 0.72 });
+    const add = (
+      parent: THREE.Object3D,
+      geometry: THREE.BufferGeometry,
+      material: THREE.Material,
+      x: number, y: number, z: number,
+      sx = 1, sy = 1, sz = 1,
+    ): THREE.Mesh => {
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(x, y, z);
+      mesh.scale.set(sx, sy, sz);
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
+      parent.add(mesh);
+      return mesh;
+    };
+
+    const teamRing = add(
+      root, new THREE.TorusGeometry(0.52, 0.035, 6, 22),
+      new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.82, depthWrite: false }),
+      0, 0.055, 0,
+    );
+    teamRing.rotation.x = -Math.PI / 2;
+    root.userData.teamRing = teamRing;
+
+    const torso = new THREE.Group();
+    torso.position.set(0, 1.08, 0);
+    root.add(torso);
+    add(torso, new THREE.BoxGeometry(0.66, 0.78, 0.36), primary, 0, 0, 0);
+    add(torso, new THREE.BoxGeometry(0.54, 0.13, 0.39), secondary, 0, -0.27, 0.015);
+    add(torso, new THREE.BoxGeometry(0.70, 0.16, 0.40), secondary, 0, 0.29, 0);
+
+    const head = new THREE.Group();
+    head.position.set(0, 1.78, 0.015);
+    root.add(head);
+    add(head, new THREE.SphereGeometry(0.235, 12, 10), primary, 0, 0, 0, 1, 1.12, 0.94);
+
+    const arms: [THREE.Group, THREE.Group] = [new THREE.Group(), new THREE.Group()];
+    for (let sideIndex = 0; sideIndex < 2; sideIndex++) {
+      const side = sideIndex === 0 ? -1 : 1;
+      const arm = arms[sideIndex];
+      arm.position.set(side * 0.46, 1.40, 0);
+      root.add(arm);
+      add(arm, new THREE.CylinderGeometry(0.135, 0.16, 0.42, 9), secondary, 0, -0.20, 0);
+      add(arm, new THREE.CylinderGeometry(0.105, 0.135, 0.39, 9), primary, 0, -0.50, 0.015);
+      add(arm, new THREE.SphereGeometry(0.13, 9, 7), primary, 0, -0.75, 0.045, 1.05, 0.92, 1.15);
     }
-    let allyRing=ring;
-    if(!allyRing){allyRing=new THREE.Mesh(new THREE.TorusGeometry(0.58,0.055,7,24),new THREE.MeshBasicMaterial({color:0x22d3ee,transparent:true,opacity:0.9,depthWrite:false}));allyRing.rotation.x=-Math.PI/2;allyRing.position.y=0.06;enemy.mesh.add(allyRing);enemy.mesh.userData.mateuszAllyRing=allyRing;}
-    allyRing.rotation.z+=dt*0.85;allyRing.scale.setScalar(0.94+Math.sin(performance.now()*0.008+enemy.walkCycle)*0.07);
-    let allyMarker=marker;
-    if(!allyMarker){allyMarker=new THREE.Mesh(new THREE.OctahedronGeometry(0.13,0),new THREE.MeshBasicMaterial({color:0x67e8f9,depthWrite:false}));allyMarker.position.set(0,1.78,0);enemy.mesh.add(allyMarker);enemy.mesh.userData.mateuszAllyMarker=allyMarker;}
-    allyMarker.rotation.y+=dt*2.2;
+
+    const legs: [THREE.Group, THREE.Group] = [new THREE.Group(), new THREE.Group()];
+    for (let sideIndex = 0; sideIndex < 2; sideIndex++) {
+      const side = sideIndex === 0 ? -1 : 1;
+      const leg = legs[sideIndex];
+      leg.position.set(side * 0.20, 0.76, 0);
+      root.add(leg);
+      add(leg, new THREE.BoxGeometry(0.23, 0.43, 0.27), secondary, 0, -0.20, 0);
+      add(leg, new THREE.BoxGeometry(0.25, 0.17, 0.40), dark, 0, -0.47, 0.055);
+    }
+
+    let cape: THREE.Mesh | null = null;
+    if (definition.id === 'iron-man') {
+      const reactor = add(torso, new THREE.CylinderGeometry(0.145, 0.145, 0.055, 14), accent, 0, 0.035, 0.205);
+      reactor.rotation.x = Math.PI / 2;
+      const reactorRim = add(torso, new THREE.TorusGeometry(0.17, 0.025, 6, 16), gold, 0, 0.035, 0.225);
+      reactorRim.rotation.x = Math.PI / 2;
+      add(head, new THREE.BoxGeometry(0.30, 0.14, 0.035), gold, 0, -0.035, 0.195);
+      for (const side of [-1, 1]) add(head, new THREE.BoxGeometry(0.095, 0.025, 0.025), accent, side * 0.09, 0.035, 0.218);
+      for (const arm of arms) add(arm, new THREE.SphereGeometry(0.075, 8, 6), accent, 0, -0.77, 0.13);
+    } else if (definition.id === 'hulk') {
+      root.scale.setScalar(1.14);
+      torso.scale.set(1.24, 1.14, 1.12);
+      for (const arm of arms) {
+        const upperArm = arm.children[0];
+        if (upperArm instanceof THREE.Mesh) upperArm.material = primary;
+        arm.scale.set(1.28, 1.20, 1.25);
+        add(arm, new THREE.SphereGeometry(0.20, 9, 7), primary, 0, -0.78, 0.05);
+      }
+      // Dark cropped hair, broad brow and heavy green shoulders make Hulk readable
+      // at the default elevated camera distance.
+      add(head, new THREE.SphereGeometry(0.25, 10, 8), dark, 0, 0.16, -0.035, 1.25, 0.42, 0.95);
+      add(torso, new THREE.BoxGeometry(0.69, 0.22, 0.39), secondary, 0, -0.37, 0.015);
+      add(torso, new THREE.BoxGeometry(0.16, 0.11, 0.035), gold, 0, -0.37, 0.22);
+    } else if (definition.id === 'spider-man') {
+      add(torso, new THREE.BoxGeometry(0.48, 0.42, 0.045), secondary, 0, 0.03, 0.205);
+      add(torso, new THREE.SphereGeometry(0.10, 8, 7), dark, 0, 0.035, 0.252, 0.72, 1.25, 0.48);
+      add(head, new THREE.BoxGeometry(0.34, 0.11, 0.035), secondary, 0, 0.015, 0.185);
+      for (const side of [-1, 1]) {
+        const eye = add(head, new THREE.SphereGeometry(0.065, 8, 6), white, side * 0.105, 0.02, 0.208, 1.0, 0.58, 0.35);
+        eye.rotation.z = side * -0.20;
+      }
+      for (const arm of arms) add(arm, new THREE.TorusGeometry(0.105, 0.022, 5, 12), white, 0, -0.52, 0.07);
+    } else if (definition.id === 'storm') {
+      add(head, new THREE.SphereGeometry(0.29, 10, 8), white, 0, 0.055, -0.045, 1.03, 1.12, 1.02);
+      add(torso, new THREE.BoxGeometry(0.42, 0.11, 0.405), gold, 0, -0.26, 0.005);
+      cape = add(root, new THREE.PlaneGeometry(0.92, 1.18), new THREE.MeshStandardMaterial({
+        color: 0x2563eb, emissive: 0x1d4ed8, emissiveIntensity: 0.12,
+        side: THREE.DoubleSide, transparent: true, opacity: 0.82, roughness: 0.5,
+      }), 0, 1.18, -0.245);
+      cape.rotation.x = 0.10;
+      for (const side of [-1, 1]) {
+        const bolt = add(torso, new THREE.TorusGeometry(0.12, 0.028, 5, 10), accent, side * 0.30, 0.23, 0.17);
+        bolt.rotation.x = Math.PI / 2;
+      }
+    } else if (definition.id === 'batman') {
+      cape = add(root, new THREE.PlaneGeometry(1.12, 1.34), new THREE.MeshStandardMaterial({
+        color: 0x111827, roughness: 0.92, side: THREE.DoubleSide,
+      }), 0, 1.12, -0.255);
+      cape.rotation.x = 0.06;
+      add(torso, new THREE.BoxGeometry(0.46, 0.105, 0.045), gold, 0, -0.29, 0.20);
+      add(torso, new THREE.BoxGeometry(0.42, 0.12, 0.04), dark, 0, 0.04, 0.207);
+      add(torso, new THREE.BoxGeometry(0.21, 0.055, 0.035), gold, 0, -0.29, 0.23);
+      for (const side of [-1, 1]) {
+        const ear = add(head, new THREE.ConeGeometry(0.065, 0.24, 5), dark, side * 0.14, 0.225, -0.01);
+        ear.rotation.z = side * -0.16;
+      }
+      for (const side of [-1, 1]) add(head, new THREE.BoxGeometry(0.085, 0.025, 0.025), white, side * 0.09, 0.015, 0.21);
+    }
+
+    root.traverse((object) => { object.userData.mateuszRivalOwned = true; });
+    return { root, torso, arms, legs, cape };
   }
 
-  private updateMateuszAlly(enemy: EnemyItem, dt: number): boolean {
-    const remaining=enemy.aiMateuszAllyTimer??0;
-    if(remaining<=0){if(enemy.aiMateuszAllyRole){enemy.aiMateuszAllyRole=undefined;enemy.aiMateuszAllyTarget=undefined;this.setMateuszAllyVisual(enemy,false,dt);}return false;}
-    enemy.aiMateuszAllyTimer=Math.max(0,remaining-dt);
-    if(enemy.aiMateuszAllyTimer<=0){enemy.aiMateuszAllyRole=undefined;enemy.aiMateuszAllyTarget=undefined;this.setMateuszAllyVisual(enemy,false,dt);this.emitFloatingToast('SOJUSZNIK WRACA DO SWOJEJ ZMIANY',enemy.x,enemy.y+1.2,enemy.z,'perk');return false;}
-    this.setMateuszAllyVisual(enemy,true,dt);
-    enemy.lastKnownPlayerPos=null;enemy.state='chase';
-    enemy.aiMateuszAllyRetargetTimer=Math.max(0,(enemy.aiMateuszAllyRetargetTimer??0)-dt);
-    let target=enemy.aiMateuszAllyTarget??null;
-    if(!target||target.state==='defeated'||(target.aiMateuszAllyTimer??0)>0||enemy.aiMateuszAllyRetargetTimer<=0){
-      target=null;let best=Number.POSITIVE_INFINITY;
-      for(const candidate of this.enemySpatialIndex.query(enemy.x,enemy.z,18)){
-        if(candidate===enemy||candidate.state==='defeated'||!candidate.mesh||(candidate.aiMateuszAllyTimer??0)>0||Math.abs(candidate.y-enemy.y)>2)continue;
-        const distance=Math.hypot(candidate.x-enemy.x,candidate.z-enemy.z);
-        if(distance>18)continue;
-        const score=distance+((candidate.type==='sebix_m'||isMajorSurvivalBossType(candidate.type))?-1.2:0);
-        if(score<best){best=score;target=candidate;}
+  private clearMateuszRivals(): void {
+    for (const projectile of this.mateuszRivalProjectiles) {
+      this.levelRoot.remove(projectile.mesh);
+      this.disposeTemporaryObject(projectile.mesh);
+    }
+    this.mateuszRivalProjectiles = [];
+    for (const rival of this.mateuszRivals) {
+      this.levelRoot.remove(rival.root);
+      this.disposeTemporaryObject(rival.root);
+    }
+    this.mateuszRivals = [];
+    this.mateuszRivalsRemainingSeconds = 0;
+  }
+
+  private spawnMateuszRivals(): void {
+    this.clearMateuszRivals();
+    const duration = this.gameMode === 'survival' ? 13 : 14;
+    this.mateuszRivalsRemainingSeconds = duration;
+    const baseY = Math.max(0, this.playerPos.y - 0.5);
+    MATEUSZ_RIVAL_ROSTER.forEach((definition, index) => {
+      const model = this.createMateuszRivalModel(definition);
+      const offset = getMateuszRivalSpawnOffset(index);
+      const x = this.playerPos.x + offset.x;
+      const z = this.playerPos.z + offset.z;
+      model.root.position.set(x, baseY, z);
+      model.root.rotation.y = Math.atan2(this.playerPos.x - x, this.playerPos.z - z);
+      this.levelRoot.add(model.root);
+      this.mateuszRivals.push({
+        definition,
+        root: model.root,
+        torso: model.torso,
+        arms: model.arms,
+        legs: model.legs,
+        cape: model.cape,
+        formationOffset: offset,
+        target: null,
+        x,
+        z,
+        baseY,
+        lifeRemaining: duration,
+        retargetTimer: index * 0.045,
+        attackCooldown: 0.22 + index * 0.10,
+        walkPhase: index * 0.72,
+        attackPose: 0,
+      });
+      this.spawnParticleRing(x, baseY + 0.08, z, definition.accentColor);
+    });
+    this.spawnMateuszContractRip();
+    this.sayQuote('MULTIUNIWERSUM! AVENGERS I LIGA SPRAWIEDLIWOŚCI — PIĘĆ OSÓB, JEDEN CEL!');
+    this.callbacks.onPerkDropBanner?.(
+      'MULTIUNIWERSUM • PIĘCIU BOHATERÓW',
+      '✦',
+      'Iron Man, Hulk, Spider-Man, Storm i Batman walczą niezależnie. Każdy wybiera własny cel i używa innego ataku.',
+      '#67e8f9',
+    );
+    this.emitFloatingToast('✦ 5 BOHATERÓW MARVEL + DC DOŁĄCZA DO WALKI!', this.playerPos.x, this.playerPos.y + 1.6, this.playerPos.z, 'combo');
+    this.triggerBloomPulse(0.58);
+    this.triggerScreenShake(0.34, 0.22);
+    sound.playAttackWhoosh();
+  }
+
+  private launchMateuszRivalProjectile(actor: ActiveMateuszRival, target: EnemyItem): void {
+    const style = actor.definition.style;
+    const geometry = style === 'repulsor'
+      ? new THREE.SphereGeometry(0.19, 10, 8)
+      : style === 'lightning-chain'
+        ? new THREE.OctahedronGeometry(0.22, 0)
+        : new THREE.TorusGeometry(0.18, 0.038, 6, 14);
+    const material = new THREE.MeshStandardMaterial({
+      color: actor.definition.accentColor,
+      emissive: actor.definition.accentColor,
+      emissiveIntensity: 1.25,
+      metalness: style === 'batarang' ? 0.68 : 0.18,
+      roughness: 0.24,
+      toneMapped: false,
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.name = 'mateusz-rival-projectile-' + actor.definition.id;
+    mesh.position.set(actor.x, actor.baseY + 1.24, actor.z);
+    mesh.castShadow = false;
+    this.levelRoot.add(mesh);
+    this.mateuszRivalProjectiles.push({
+      mesh,
+      target,
+      style,
+      speed: style === 'repulsor' ? 22 : style === 'lightning-chain' ? 20 : 24,
+      damage: actor.definition.damage,
+      stunSeconds: actor.definition.stunSeconds,
+      color: actor.definition.accentColor,
+      life: 1.75,
+    });
+  }
+
+  private applyMateuszRivalHit(
+    target: EnemyItem,
+    damage: number,
+    stunSeconds: number,
+    sourceX: number,
+    sourceZ: number,
+    color: number,
+  ): void {
+    if (target.state === 'defeated') return;
+    const previousHp = target.hp;
+    this.damageEnemy(target, damage, sourceX, sourceZ, 'ability');
+    if (target.hp >= previousHp) return;
+    target.stunTimer = Math.max(target.stunTimer, stunSeconds);
+    target.state = 'stunned';
+    target.hitReactTimer = Math.max(target.hitReactTimer ?? 0, 0.20);
+    if (target.hp <= 0) {
+      this.defeatEnemy(target, 260, false);
+      this.emitFloatingToast('SOJUSZNIK ELIMINUJE WROGA', target.x, target.y + 1.25, target.z, 'combo');
+    } else {
+      this.spawnCompactImpact(target.x, target.y + 0.72, target.z, color);
+    }
+  }
+
+  private updateMateuszRivalProjectiles(dt: number): void {
+    for (let index = this.mateuszRivalProjectiles.length - 1; index >= 0; index--) {
+      const projectile = this.mateuszRivalProjectiles[index];
+      projectile.life -= dt;
+      let target = projectile.target;
+      if (target.state === 'defeated' || !target.mesh) {
+        let nearest: EnemyItem | null = null;
+        let nearestDistance = 22;
+        for (const candidate of this.enemies) {
+          if (candidate.state === 'defeated' || !candidate.mesh) continue;
+          const distance = Math.hypot(candidate.x - projectile.mesh.position.x, candidate.z - projectile.mesh.position.z);
+          if (distance < nearestDistance) {
+            nearest = candidate;
+            nearestDistance = distance;
+          }
+        }
+        if (!nearest) {
+          this.levelRoot.remove(projectile.mesh);
+          this.disposeTemporaryObject(projectile.mesh);
+          this.mateuszRivalProjectiles.splice(index, 1);
+          continue;
+        }
+        projectile.target = target = nearest;
       }
-      enemy.aiMateuszAllyTarget=target??undefined;enemy.aiMateuszAllyRetargetTimer=0.42;
-    }
-    const role=enemy.aiMateuszAllyRole??getMateuszAllyRole(enemy.type);
-    enemy.aiMateuszAllyAttackCooldown=Math.max(0,(enemy.aiMateuszAllyAttackCooldown??0)-dt);
-    if(role==='support'){
-      enemy.aiMateuszAllySupportTimer=Math.max(0,(enemy.aiMateuszAllySupportTimer??0)-dt);
-      if(enemy.aiMateuszAllySupportTimer<=0&&Math.hypot(enemy.x-this.playerPos.x,enemy.z-this.playerPos.z)<10){
-        this.hp=Math.min(this.maxHp,this.hp+1);this.callbacks.onHpUpdate(this.hp,this.maxHp);enemy.aiMateuszAllySupportTimer=6.5;
-        this.spawnParticleRing(this.playerPos.x,this.playerPos.y+0.45,this.playerPos.z,0x34d399);
-        this.emitFloatingToast('SOJUSZNIK WSPARCIA: +1 HP',this.playerPos.x,this.playerPos.y+1.15,this.playerPos.z,'perk');
+
+      const dx = target.x - projectile.mesh.position.x;
+      const dz = target.z - projectile.mesh.position.z;
+      const dy = target.y + 0.68 - projectile.mesh.position.y;
+      const distance = Math.hypot(dx, dy, dz);
+      if (distance > 0.0001) {
+        const directionX = dx / distance;
+        const directionY = dy / distance;
+        const directionZ = dz / distance;
+        projectile.mesh.position.x += directionX * projectile.speed * dt;
+        projectile.mesh.position.y += directionY * projectile.speed * dt;
+        projectile.mesh.position.z += directionZ * projectile.speed * dt;
+        projectile.mesh.rotation.y = Math.atan2(directionX, directionZ);
+        projectile.mesh.rotation.x += dt * 7.5;
+      }
+
+      if (distance <= projectile.speed * dt + 0.72) {
+        const impactX = target.x;
+        const impactZ = target.z;
+        this.applyMateuszRivalHit(
+          target,
+          projectile.damage,
+          projectile.stunSeconds,
+          projectile.mesh.position.x,
+          projectile.mesh.position.z,
+          projectile.color,
+        );
+        if (projectile.style === 'lightning-chain' && target.state !== 'defeated') {
+          let chained = 0;
+          for (const candidate of this.enemies) {
+            if (candidate === target || candidate.state === 'defeated' || !candidate.mesh || chained >= 2) continue;
+            if (Math.hypot(candidate.x - impactX, candidate.z - impactZ) > 5.0) continue;
+            this.applyMateuszRivalHit(candidate, projectile.damage * 0.48, projectile.stunSeconds * 0.65, impactX, impactZ, projectile.color);
+            chained++;
+          }
+          this.spawnParticleRing(impactX, target.y + 0.55, impactZ, projectile.color);
+        }
+        this.levelRoot.remove(projectile.mesh);
+        this.disposeTemporaryObject(projectile.mesh);
+        this.mateuszRivalProjectiles.splice(index, 1);
+      } else if (projectile.life <= 0) {
+        this.levelRoot.remove(projectile.mesh);
+        this.disposeTemporaryObject(projectile.mesh);
+        this.mateuszRivalProjectiles.splice(index, 1);
       }
     }
-    if(!target){
-      const fx=this.playerPos.x-enemy.x,fz=this.playerPos.z-enemy.z,fd=Math.hypot(fx,fz);
-      if(fd>4.8){enemy.x+=fx/fd*enemy.speed*0.78*dt;enemy.z+=fz/fd*enemy.speed*0.78*dt;}
-      enemy.mesh.position.set(enemy.x,enemy.y,enemy.z);return true;
+  }
+
+  private attackWithMateuszRival(actor: ActiveMateuszRival, target: EnemyItem): void {
+    const definition = actor.definition;
+    actor.attackCooldown = definition.attackCooldownSeconds;
+    actor.attackPose = 1;
+    if (definition.style === 'repulsor' || definition.style === 'lightning-chain' || definition.style === 'batarang') {
+      this.launchMateuszRivalProjectile(actor, target);
+      this.spawnCompactImpact(actor.x, actor.baseY + 1.25, actor.z, definition.accentColor);
+      return;
     }
-    const dx=target.x-enemy.x,dz=target.z-enemy.z,distance=Math.hypot(dx,dz),dirX=distance>0.001?dx/distance:0,dirZ=distance>0.001?dz/distance:1;
-    enemy.mesh.rotation.y=Math.atan2(dirX,dirZ);
-    const ranged=role==='ranged'||role==='support',desired=role==='support'?8:role==='ranged'?7.2:1.5;
-    if(ranged&&distance<desired-1.3){enemy.x-=dirX*enemy.speed*0.72*dt;enemy.z-=dirZ*enemy.speed*0.72*dt;}
-    else if(distance>(ranged?desired:1.5)){
-      let mx=dirX,mz=dirZ;
-      if(role==='flanker'&&distance<7){const side=enemy.id.length%2===0?1:-1;mx+=-dirZ*side*0.48;mz+=dirX*side*0.48;}
-      const length=Math.hypot(mx,mz)||1,speed=enemy.speed*(role==='bruiser'?1.18:role==='flanker'?1.32:0.82);
-      enemy.x+=mx/length*speed*dt;enemy.z+=mz/length*speed*dt;
-    }else if(enemy.aiMateuszAllyAttackCooldown<=0&&distance<=(ranged?10.5:2)){
-      const damage=role==='bruiser'?1.85:role==='flanker'?1.24:role==='support'?0.80:1.02;
-      this.damageEnemy(target,damage,enemy.x,enemy.z,null);target.hitReactTimer=Math.max(target.hitReactTimer??0,0.16);
-      if(target.hp<=0){this.defeatEnemy(target,180,false);this.emitFloatingToast('SOJUSZNIK ELIMINUJE WROGA',target.x,target.y+1.2,target.z,'combo');enemy.aiMateuszAllyTarget=undefined;}
-      else this.spawnCompactImpact(target.x,target.y+0.65,target.z,role==='bruiser'?0xf59e0b:0x22d3ee);
-      enemy.aiMateuszAllyAttackCooldown=role==='bruiser'?0.82:role==='flanker'?0.62:1.25;
+
+    if (definition.style === 'gamma-slam') {
+      this.applyMateuszRivalHit(target, definition.damage, definition.stunSeconds, actor.x, actor.z, definition.accentColor);
+      let splashHits = 0;
+      for (const candidate of this.enemies) {
+        if (candidate === target || candidate.state === 'defeated' || !candidate.mesh || splashHits >= 3) continue;
+        if (Math.hypot(candidate.x - target.x, candidate.z - target.z) > 3.8) continue;
+        this.applyMateuszRivalHit(candidate, definition.damage * 0.42, 0.38, actor.x, actor.z, definition.accentColor);
+        splashHits++;
+      }
+      this.spawnParticleRing(target.x, target.y + 0.12, target.z, definition.accentColor);
+      this.triggerScreenShake(0.16, 0.11);
+      return;
     }
-    this.clampEnemyToArena(enemy);enemy.mesh.position.set(enemy.x,enemy.y,enemy.z);return true;
+
+    // Spider-Man closes the final gap with a fast web-assisted strike and brief snare.
+    this.applyMateuszRivalHit(target, definition.damage, definition.stunSeconds, actor.x, actor.z, definition.accentColor);
+    this.spawnParticleRing(target.x, target.y + 0.58, target.z, definition.accentColor);
+  }
+
+  private updateMateuszRivals(dt: number): void {
+    if (this.mateuszRivals.length === 0 && this.mateuszRivalProjectiles.length === 0) return;
+    this.mateuszRivalsRemainingSeconds = Math.max(0, this.mateuszRivalsRemainingSeconds - dt);
+    if (this.mateuszRivalsRemainingSeconds <= 0) {
+      this.clearMateuszRivals();
+      this.emitFloatingToast('DRUŻYNA MULTIUNIWERSUM KOŃCZY ZMIANĘ', this.playerPos.x, this.playerPos.y + 1.35, this.playerPos.z, 'perk');
+      return;
+    }
+
+    const targetLoads = new Map<string, number>();
+    for (const rival of this.mateuszRivals) {
+      if (rival.target && rival.target.state !== 'defeated') {
+        targetLoads.set(rival.target.id, (targetLoads.get(rival.target.id) ?? 0) + 1);
+      }
+    }
+
+    const bounds = this.gameMode === 'survival'
+      ? this.levelBounds
+      : { minX: -34.5, maxX: 204.5, minZ: -21.0, maxZ: 21.0 };
+
+    for (const rival of this.mateuszRivals) {
+      rival.lifeRemaining = this.mateuszRivalsRemainingSeconds;
+      rival.retargetTimer = Math.max(0, rival.retargetTimer - dt);
+      rival.attackCooldown = Math.max(0, rival.attackCooldown - dt);
+      rival.attackPose = Math.max(0, rival.attackPose - dt * 3.8);
+      const currentTarget = rival.target;
+      if (!currentTarget || currentTarget.state === 'defeated' || !currentTarget.mesh || rival.retargetTimer <= 0) {
+        if (currentTarget) {
+          const previousLoad = targetLoads.get(currentTarget.id) ?? 0;
+          if (previousLoad <= 1) targetLoads.delete(currentTarget.id);
+          else targetLoads.set(currentTarget.id, previousLoad - 1);
+        }
+        let bestScore = Number.POSITIVE_INFINITY;
+        let nextTarget: EnemyItem | null = null;
+        for (const candidate of this.enemies) {
+          if (candidate.state === 'defeated' || !candidate.mesh) continue;
+          if (Math.abs(candidate.y - rival.baseY) > 4.2) continue;
+          const distance = Math.hypot(candidate.x - rival.x, candidate.z - rival.z);
+          if (distance > 25) continue;
+          const assigned = targetLoads.get(candidate.id) ?? 0;
+          const isElite = candidate.maxHp >= 12 || isMajorSurvivalBossType(candidate.type) || candidate.type === 'sebix_m';
+          const score = distance + assigned * 4.8 - (isElite ? 1.6 : 0);
+          if (score < bestScore) {
+            bestScore = score;
+            nextTarget = candidate;
+          }
+        }
+        rival.target = nextTarget;
+        rival.retargetTimer = 0.34;
+        if (nextTarget) targetLoads.set(nextTarget.id, (targetLoads.get(nextTarget.id) ?? 0) + 1);
+      }
+
+      const target = rival.target;
+      let moveX = 0;
+      let moveZ = 0;
+      let moving = false;
+      if (target && target.state !== 'defeated') {
+        const dx = target.x - rival.x;
+        const dz = target.z - rival.z;
+        const distance = Math.hypot(dx, dz);
+        const directionX = distance > 0.001 ? dx / distance : 0;
+        const directionZ = distance > 0.001 ? dz / distance : 1;
+        rival.root.rotation.y = Math.atan2(directionX, directionZ);
+
+        if (rival.definition.preferredRangeMeters > 3) {
+          if (distance > rival.definition.preferredRangeMeters + 0.9) {
+            moveX = directionX;
+            moveZ = directionZ;
+          } else if (distance < rival.definition.preferredRangeMeters - 1.35) {
+            moveX = -directionX * 0.72;
+            moveZ = -directionZ * 0.72;
+          } else {
+            const side = rival.definition.id === 'storm' ? -1 : rival.definition.id === 'batman' ? 1 : 0;
+            moveX = -directionZ * side * 0.12;
+            moveZ = directionX * side * 0.12;
+          }
+        } else if (distance > rival.definition.attackRangeMeters * 0.82) {
+          moveX = directionX;
+          moveZ = directionZ;
+        }
+        if (rival.attackCooldown <= 0 && distance <= rival.definition.attackRangeMeters) {
+          this.attackWithMateuszRival(rival, target);
+        }
+      } else {
+        const desiredX = this.playerPos.x + rival.formationOffset.x;
+        const desiredZ = this.playerPos.z + rival.formationOffset.z;
+        const dx = desiredX - rival.x;
+        const dz = desiredZ - rival.z;
+        const followDistance = Math.hypot(dx, dz);
+        if (followDistance > 1.15) {
+          moveX = dx / followDistance;
+          moveZ = dz / followDistance;
+        }
+        const faceX = this.playerPos.x - rival.x;
+        const faceZ = this.playerPos.z - rival.z;
+        rival.root.rotation.y = Math.atan2(faceX, faceZ);
+      }
+
+      const moveLength = Math.hypot(moveX, moveZ);
+      if (moveLength > 0.001) {
+        const speed = rival.definition.moveSpeed * Math.min(1, moveLength);
+        rival.x = THREE.MathUtils.clamp(rival.x + moveX / moveLength * speed * dt, bounds.minX + 1.0, bounds.maxX - 1.0);
+        rival.z = THREE.MathUtils.clamp(rival.z + moveZ / moveLength * speed * dt, bounds.minZ + 1.0, bounds.maxZ - 1.0);
+        moving = true;
+      }
+
+      rival.walkPhase += dt * (moving ? 8.2 : 2.0);
+      const gait = moving ? Math.sin(rival.walkPhase) * 0.58 : 0;
+      rival.legs[0].rotation.x = gait;
+      rival.legs[1].rotation.x = -gait;
+      rival.arms[0].rotation.x = -gait * 0.72 - rival.attackPose * 0.82;
+      rival.arms[1].rotation.x = gait * 0.72 - rival.attackPose * 0.82;
+      rival.arms[0].rotation.z = -0.06 - rival.attackPose * 0.16;
+      rival.arms[1].rotation.z = 0.06 + rival.attackPose * 0.16;
+      rival.torso.rotation.x = -rival.attackPose * 0.10 + Math.sin(rival.walkPhase * 0.5) * (moving ? 0.025 : 0.012);
+      if (rival.cape) {
+        rival.cape.rotation.z = Math.sin(rival.walkPhase * 0.45) * (moving ? 0.075 : 0.025);
+        rival.cape.rotation.x = 0.08 + Math.sin(rival.walkPhase * 0.36) * (moving ? 0.06 : 0.02);
+      }
+      rival.root.position.set(rival.x, rival.baseY, rival.z);
+      const ring = rival.root.userData.teamRing as THREE.Mesh | undefined;
+      if (ring) ring.rotation.z += dt * 0.45;
+    }
+
+    this.updateMateuszRivalProjectiles(dt);
   }
 
   private updateEnemyFactionBrawl(enemy: EnemyItem, dt: number): void {
@@ -13463,7 +13929,7 @@ export class PaleciakiGameEngine {
       this.defeatEnemy(target, 220, false);
       this.emitFloatingToast('WRÓG ELIMINUJE WROGA', target.x, target.y + 1.25, target.z, 'combo');
     }
-    enemy.attackCooldown = isHeavy ? 0.88 : 1.04;
+    enemy.attackCooldown = isHeavy ? 1.02 : 1.18;
     this.spawnExplosionParticles(target.x, target.y + 0.68, target.z, 0xd946ef, 7);
     this.spawnCompactImpact(target.x, target.y + 0.66, target.z, 0xe879f9);
   }
@@ -13475,7 +13941,7 @@ export class PaleciakiGameEngine {
     sourceZ = this.playerPos.z,
     damageSource: SurvivalDamageSource | null = null,
   ): number {
-    if (enemy.state === 'defeated' || (enemy.aiMateuszAllyTimer ?? 0) > 0 || !Number.isFinite(amount) || amount <= 0) return enemy.hp;
+    if (enemy.state === 'defeated' || !Number.isFinite(amount) || amount <= 0) return enemy.hp;
     if (enemy.shieldActive) {
       this.clearSurvivalSupportShield(enemy);
       this.spawnParticleRing(enemy.x, enemy.y + 0.65, enemy.z, 0x38bdf8);
@@ -13864,7 +14330,7 @@ export class PaleciakiGameEngine {
       activeCandidates.length = 0;
 
       for (const e of this.enemies) {
-        if (e.state === 'defeated' || !e.mesh || (e.aiMateuszAllyTimer ?? 0) > 0) continue;
+        if (e.state === 'defeated' || !e.mesh) continue;
         const d = Math.hypot(this.playerPos.x - e.x, this.playerPos.z - e.z);
         if (d > 26.0 && !isMajorSurvivalBossType(e.type) && e.type !== 'sebix_m') {
           if (e.mesh.visible) e.mesh.visible = false;
@@ -13988,6 +14454,10 @@ export class PaleciakiGameEngine {
         continue;
       }
       if (!e.mesh) continue;
+      if (!e.mesh.userData.combatSpeedTuned) {
+        e.speed = Math.max(0.8, e.speed * ENEMY_MOVEMENT_SPEED_MULTIPLIER);
+        e.mesh.userData.combatSpeedTuned = true;
+      }
       this.setEnemyFactionBrawlVisual(e, factionBrawlActive, dt);
       this.applyHandheldActorShadowBudget(e.mesh);
       const facingAtFrameStart = e.mesh.rotation.y;
@@ -14336,8 +14806,6 @@ export class PaleciakiGameEngine {
         }
         e.threatRing.visible = (e.state === 'chase' || e.state === 'charging') && distToPlayer < 14;
       }
-
-      if (this.updateMateuszAlly(e, dt)) continue;
 
       if (e.stunTimer > 0) {
         // Let the commander inspect the stun before the early return so the
@@ -16990,6 +17458,7 @@ export class PaleciakiGameEngine {
       life: 2.2,
       maxLife: 2.2,
       damage: this.gameMode === 'survival' ? 2 : 3,
+      damageSource: 'ability',
       pierce: 0,
       aoeRadius: 1.7,
       stunDuration: 0.7,
@@ -18107,15 +18576,6 @@ export class PaleciakiGameEngine {
       return;
     }
     if (this.state !== 'playing' || this.abilityCooldownState.remainingSeconds > 0.0001) return;
-    const mateuszRecruitOrders = this.currentCharacterId === 'mateusz'
-      ? selectMateuszRecruitOrders(this.enemies.map(enemy => ({
-          id: enemy.id, type: enemy.type, x: enemy.x, y: enemy.y, z: enemy.z, state: enemy.state,
-        })), this.playerPos.x, this.playerPos.y, this.playerPos.z, 10.5, 3, this.gameMode === 'survival' ? 11 : 12)
-      : [];
-    if (this.currentCharacterId === 'mateusz' && mateuszRecruitOrders.length === 0) {
-      this.emitFloatingToast('BRAK PRZECIWNIKÓW W ZASIĘGU PRZEJĘCIA', this.playerPos.x, this.playerPos.y + 1.35, this.playerPos.z, 'perk');
-      return;
-    }
     const cooldownSeconds = getAbilityCooldownSeconds(this.charDef.abilityCooldown, this.gameMode) *
       this.characterMasteryBonuses.abilityCooldownMultiplier *
       (this.gameMode === 'survival' ? this.survivalAbilityCooldownMultiplier : 1);
@@ -18124,7 +18584,7 @@ export class PaleciakiGameEngine {
     this.specialSwingTimer = 0.72;
     this.requestGobkitAction(this.playerGobkitTrack, 'Special', this.specialSwingTimer);
     const abilityDamageMultiplier = this.gameMode === 'survival'
-      ? Math.min(1.2, this.survivalDamageMultiplier * 0.78) : 1;
+      ? Math.min(1.5, this.survivalDamageMultiplier * 1.10) : 1;
 
     sound.playAbility(this.currentCharacterId);
     this.cameraShake = 0.45;
@@ -18236,6 +18696,7 @@ export class PaleciakiGameEngine {
           vel: forward.multiplyScalar(17.5),
           life: 1.45,
           damage: this.gameMode === 'survival' ? 1 : 2,
+          damageSource: 'ability',
           pierce: this.gameMode === 'survival' ? 1 : 4,
           ricochet: true,
           collectItems: true,
@@ -18247,34 +18708,7 @@ export class PaleciakiGameEngine {
       });
       this.emitFloatingToast('🧱 SALWA GRESU 120x280 + ⚡ Kubełek Mocy!', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
     } else if (this.currentCharacterId === 'mateusz') {
-      const duration = this.gameMode === 'survival' ? 11 : 12;
-      const orders = mateuszRecruitOrders;
-      let recruited = 0;
-      for (const order of orders) {
-        const ally = this.enemies.find(enemy => enemy.id === order.enemyId);
-        if (!ally || ally.state === 'defeated') continue;
-        ally.aiMateuszAllyTimer = order.durationSeconds;
-        ally.aiMateuszAllyRole = order.role;
-        ally.aiMateuszAllyTarget = undefined;
-        ally.aiMateuszAllyRetargetTimer = 0;
-        ally.aiMateuszAllyAttackCooldown = 0.2 + recruited * 0.18;
-        ally.aiMateuszAllySupportTimer = 2 + recruited * 0.7;
-        ally.aiFactionBrawlTarget = undefined;
-        ally.stunTimer = 0;
-        ally.state = 'chase';
-        recruited++;
-        this.spawnParticleRing(ally.x, ally.y + 0.55, ally.z, 0x22d3ee);
-      }
-      this.spawnMateuszContractRip();
-      this.sayQuote(recruited ? 'EKIPA PRZEJĘTA! ZMIANA STRON! TERAZ WALCZYMY RAZEM!' : 'BRAK CHĘTNYCH W ZASIĘGU! NASTĘPNYM RAZEM PRZEJMUJEMY CAŁĄ ZMIANĘ!');
-      this.callbacks.onPerkDropBanner?.('EKIPA PRZEJĘTA • ZMIANA STRON','⚡🤝',
-        recruited ? recruited + ' sojuszników walczy autonomicznie przez ' + duration + ' s: taran, flanker, strzelec i wsparcie.' : 'Brak przeciwników w promieniu 10,5 m.',
-        '#22d3ee');
-      this.emitFloatingToast(recruited ? '🤝 ' + recruited + ' SOJUSZNIKÓW DOŁĄCZA DO DRUŻYNY!' : 'BRAK CELÓW DO PRZEJĘCIA',
-        this.playerPos.x,this.playerPos.y+1.55,this.playerPos.z,'combo');
-      this.triggerBloomPulse(0.48);
-      this.triggerScreenShake(0.28,0.18);
-      sound.playAttackWhoosh();
+      this.spawnMateuszRivals();
     } else if (this.currentCharacterId === 'piotr') {
       this.attackSwingDuration = 0.3;
       this.attackSwingTimer = this.attackSwingDuration;
