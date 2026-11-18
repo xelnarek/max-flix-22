@@ -2844,7 +2844,14 @@ class PaleciakiScene extends xb.Script {
       if (selectedCampaignStageId) {
         const chosenStage = selectedCampaignStageId;
         selectedCampaignStageId = null;
-        if (!this.engine.startCampaignStage(chosenStage)) throw new Error('Nie udało się uruchomić etapu kampanii.');
+        const campaignRewardId = consumeCampaignRewardForStage(chosenStage);
+        lastCampaignStageId = null;
+        nextCampaignStageId = null;
+        campaignRewardChoices = [];
+        campaignRewardTargetStageId = null;
+        campaignRewardSelectionId = null;
+        renderCampaignRewardPanel();
+        if (!this.engine.startCampaignStage(chosenStage, campaignRewardId)) throw new Error('Nie udało się uruchomić etapu kampanii.');
       } else {
         lastCampaignStageId = null;
         nextCampaignStageId = null;
@@ -3284,8 +3291,13 @@ class PaleciakiScene extends xb.Script {
       this.gameSessionGeneration++;
       const retryStageId = nextCampaignStageId ?? lastCampaignStageId;
       if (retryStageId) {
-        this.engine.startCampaignStage(retryStageId);
+        const campaignRewardId = consumeCampaignRewardForStage(retryStageId);
+        this.engine.startCampaignStage(retryStageId, campaignRewardId);
         nextCampaignStageId = null;
+        campaignRewardChoices = [];
+        campaignRewardTargetStageId = null;
+        campaignRewardSelectionId = null;
+        renderCampaignRewardPanel();
       } else {
         this.engine.startSurvival();
       }
