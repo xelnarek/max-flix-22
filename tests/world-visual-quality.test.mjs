@@ -56,3 +56,22 @@ test('PvP has its own neutral-blue and warm-key lighting profile', () => {
   assert.ok(PVP_LIGHTING_PROFILE.rimIntensity > PVP_LIGHTING_PROFILE.ambientIntensity);
   assert.ok(PVP_LIGHTING_PROFILE.exposure >= 1 && PVP_LIGHTING_PROFILE.exposure <= 1.08);
 });
+
+test('reusable world-lighting scratch matches the pure profile API without replacing its object', async () => {
+  const {
+    createWorldLightingProfileScratch,
+    getSurvivalWorldLightingProfile,
+    updateSurvivalWorldLightingProfile,
+  } = await import('../src/worldVisualQuality.ts');
+  const scratch = createWorldLightingProfileScratch();
+  const blendCases = [
+    { warehouse_b4: 1, container_terminal: 0, cold_storage: 0, night_sorting: 0 },
+    { warehouse_b4: 0.5, container_terminal: 0.5, cold_storage: 0, night_sorting: 0 },
+    { warehouse_b4: 0.25, container_terminal: 0.25, cold_storage: 0.25, night_sorting: 0.25 },
+  ];
+  for (const weights of blendCases) {
+    const result = updateSurvivalWorldLightingProfile(weights, scratch);
+    assert.equal(result, scratch);
+    assert.deepEqual(result, getSurvivalWorldLightingProfile(weights));
+  }
+});
