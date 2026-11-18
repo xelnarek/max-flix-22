@@ -52,7 +52,8 @@ test('enemy contact attacks use a gated full-body Attack action instead of resta
   assert.match(game, /enemyAttackAnimationUntil = new WeakMap<EnemyItem, number>/);
   assert.match(game, /private requestEnemyAttackAnimation\(enemy: EnemyItem, durationSeconds = 0\.48\)/);
   assert.match(game, /this\.enemyAttackAnimationUntil\.set\(enemy, now \+ 720\)/);
-  assert.match(game, /if \(e\.state !== 'stunned'\) this\.requestEnemyAttackAnimation\(e, 0\.48\)/);
+  assert.match(game, /if \(!meleeProfile && e\.state !== 'stunned'\) this\.requestEnemyAttackAnimation\(e, 0\.48\)/);
+  assert.match(game, /this\.beginEnemyMeleeAttackTelegraph\(e, meleeProfile, dist\)/);
 });
 
 test('imported enemy rigs use directional locomotion, bounded cadence and distance-based mixer LOD', async () => {
