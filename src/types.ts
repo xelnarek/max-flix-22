@@ -135,7 +135,6 @@ export interface EnemyItem {
   bikeWheels?: any[];
   propeller?: any;
   rageTime?: number;
-  trailTimer?: number;
   dashTimer?: number;
   // Stable formation data for Survival's encirclement director.
   aiSlot?: number;

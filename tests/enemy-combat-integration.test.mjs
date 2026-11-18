@@ -32,10 +32,22 @@ test('hostile projectiles stop at the first enemy body or the player along the s
   assert.match(game, /projectileStart\.x = previousX;[\s\S]*projectileStart\.y = previousY;[\s\S]*projectileStart\.z = previousZ;/);
 });
 
-test('hostile and friendly shot impacts have a visible pooled contact response', () => {
+test('hostile and friendly shot impacts retain a compact neutral contact response', () => {
   assert.match(game, /this\.spawnCompactImpact\(impactX, impactY, impactZ, impactColor\)/);
-  assert.match(game, /this\.spawnParticleRing\(this\.playerPos\.x, this\.playerPos\.y \+ 0\.55, this\.playerPos\.z, impactColor\)/);
+  assert.match(game, /const impactColor = 0xe2e8f0/);
   assert.match(game, /this\.spawnCompactImpact\(e\.x, e\.y \+ 0\.72, e\.z/);
+});
+
+test('enemy attacks do not leave coloured projectile trails or glowing ground scorch marks', () => {
+  assert.doesNotMatch(game, /private spawnSebixFireTrail/);
+  assert.doesNotMatch(game, /this\.spawnSebixFireTrail/);
+  const start = game.indexOf('for (let i = this.enemyProjectiles.length - 1;');
+  const end = game.indexOf('\n  private updateSpecialEffects', start);
+  assert.ok(start >= 0 && end > start, 'hostile projectile update must remain present');
+  const hostileUpdate = game.slice(start, end);
+  assert.doesNotMatch(hostileUpdate, /trailTimer|trailColor|spawnParticleRing/);
+  assert.match(hostileUpdate, /spawnCompactImpact/);
+  assert.match(hostileUpdate, /this\.levelRoot\.remove\(ep\.mesh\)/);
 });
 
 test('campaign melee AI closes into attack range and holds without contact jitter', () => {

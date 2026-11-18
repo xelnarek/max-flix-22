@@ -9,6 +9,8 @@ test('Survival levels offer a separate B4 roulette every third level after the r
   assert.match(game, /this\.survivalChaosRoulettePending = this\.survivalLevel % 3 === 0/);
   assert.match(game, /this\.callbacks\.onSurvivalLevelUp\?\.\(\[\], 'chaos-roulette'\)/);
   assert.match(game, /public spinSurvivalChaosRoulette\(\): boolean/);
+  assert.match(game, /public getSurvivalChaosRouletteLastResult\(\)/);
+  assert.match(game, /survivalChaosRouletteLastResult = \{ kind: outcome, title: selected.title, icon: selected.icon \}/);
   assert.match(game, /rollSurvivalChaosRoulette\(Math\.random\(\)\)/);
   assert.match(app, /isChaosRoulette/);
   assert.match(app, /spinSurvivalChaosRoulette\(\)/);
@@ -45,8 +47,9 @@ test('rare combat drops use existing perk pickup cleanup and a live protective a
 });
 
 test('twelve roulette outcomes have concrete handlers for loot, control, overdrive and elite delivery', async () => {
-  const [game, roulette, app] = await Promise.all([
-    read('../src/game.ts'), read('../src/survivalChaosRoulette.ts'), read('../src/index.ts')
+  const [game, roulette, app, css] = await Promise.all([
+    read('../src/game.ts'), read('../src/survivalChaosRoulette.ts'), read('../src/index.ts'),
+    read('../src/visual-polish.css')
   ]);
   for (const outcome of ['xp_rain', 'overdrive', 'bounty', 'time_lock', 'elite_delivery']) {
     assert.ok(roulette.includes("'" + outcome + "'"), 'missing roulette outcome ' + outcome);
@@ -60,8 +63,16 @@ test('twelve roulette outcomes have concrete handlers for loot, control, overdri
   assert.match(game, /DOSTAWA PRIORYTETOWA ×/);
   assert.match(game, /ELITA B4 • KONTROLER/);
   assert.match(game, /ELITA B4 • KURIER/);
-  assert.match(app, /Dwanaście możliwych wyników automatu/);
-  assert.match(app, /machine\.innerHTML = '<span>💎<\/span><span>⚡<\/span><span>☢️<\/span><span>👾<\/span>'/);
+  assert.match(app, /Trzy obracające się bębny, dwanaście możliwych wyników, jeden spin/);
+  assert.match(app, /survival-chaos-reels/);
+  assert.match(css, /survival-chaos-marquee \.survival-chaos-lamp/);
+  assert.match(app, /survival-chaos-reel-symbol/);
+  assert.match(app, /window\.setInterval/);
+  assert.match(app, /stopAt = reducedMotion \? \[80, 150, 220\] : \[1420, 1960, 2520\]/);
+  assert.match(app, /getSurvivalChaosRouletteLastResult\(\)/);
+  assert.match(app, /rewardStyles/);
+  assert.match(app, /NAGRODA WYLOSOWANA/);
+  assert.match(app, /}, 2300\)/);
 });
 
 test('bullet nova projectiles make a physical splash impact and time-lock visual work is capped', async () => {
