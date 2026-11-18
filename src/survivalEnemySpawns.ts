@@ -20,6 +20,7 @@ export type SurvivalEnemySpawnType = Extract<EnemyType,
   | 'cyber_salesman'
 >;
 
+/** Per-run memory used only by regular random Survival deliveries. */
 export const SURVIVAL_SPAWN_VARIETY_MEMORY = 2;
 
 export interface SurvivalEnemySpawnWeight {
