@@ -1,5 +1,7 @@
 /** Shared Survival tuning applied to every operator, including weapons and abilities. */
-export const SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER = 0.62;
+export const SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER = 0.68;
+/** Dedicated 10% bump for operator skills; basic attacks and weapons use their own tuning. */
+export const SURVIVAL_ABILITY_DAMAGE_MULTIPLIER = 1.10;
 export const SURVIVAL_INCOMING_DAMAGE_MULTIPLIER = 1.30;
 export const SURVIVAL_HIT_INVULNERABILITY_SECONDS = 0.78;
 
