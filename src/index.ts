@@ -1718,7 +1718,7 @@ class PaleciakiScene extends xb.Script {
                       survivalLevelUp.classList.add('hidden');
                       survivalLevelUp.classList.remove('roulette-reveal');
                     }
-                  }, 1320);
+                  }, 2300);
                 }, stopAt[index]);
               });
             });
