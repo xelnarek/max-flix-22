@@ -47,8 +47,9 @@ test('rare combat drops use existing perk pickup cleanup and a live protective a
 });
 
 test('twelve roulette outcomes have concrete handlers for loot, control, overdrive and elite delivery', async () => {
-  const [game, roulette, app] = await Promise.all([
-    read('../src/game.ts'), read('../src/survivalChaosRoulette.ts'), read('../src/index.ts')
+  const [game, roulette, app, css] = await Promise.all([
+    read('../src/game.ts'), read('../src/survivalChaosRoulette.ts'), read('../src/index.ts'),
+    read('../src/visual-polish.css')
   ]);
   for (const outcome of ['xp_rain', 'overdrive', 'bounty', 'time_lock', 'elite_delivery']) {
     assert.ok(roulette.includes("'" + outcome + "'"), 'missing roulette outcome ' + outcome);
