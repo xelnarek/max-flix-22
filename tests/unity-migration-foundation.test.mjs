@@ -151,7 +151,7 @@ test('Unity domain catalog preserves the exact legacy content IDs and four Survi
 
   for (const item of ['Grout', 'TileBox', 'Coffee', 'VipItem', 'Espresso', 'Magnet', 'GoldenCutter', 'KfcBucket', 'Carrara', 'EasterEgg'])
     assert.ok(domain.includes(item), 'missing collectible ID: ' + item);
-  for (const item of ['Hardhat', 'VibramBoots', 'OrderMagnet', 'EspressoBoost', 'GoldenPaleciak', 'StretchArmor', 'AttackHaste', 'ArcDrone', 'XpSurge', 'DamageWard', 'ForkliftHorn', 'NightShiftEspresso', 'GoldenWz', 'PalletGuard'])
+  for (const item of ['Hardhat', 'VibramBoots', 'OrderMagnet', 'EspressoBoost', 'KfcBucket', 'GoldenPaleciak', 'StretchArmor', 'AttackHaste', 'ArcDrone', 'XpSurge', 'DamageWard', 'ForkliftHorn', 'NightShiftEspresso', 'GoldenWz', 'PalletGuard', 'RadioactiveField', 'CrimsonBurst', 'BulletNova'])
     assert.ok(domain.includes(item), 'missing perk ID: ' + item);
   for (const weapon of ['PalletCannon', 'DiamondSaw', 'GlueMine', 'KfcBomber', 'PiorunDrone', 'ForkliftBolter', 'ScannerPulse', 'OrbitBlades', 'CalacattaShards', 'SteamBomb', 'ForkliftHorn', 'WzBoomerang'])
     assert.ok(domain.includes(weapon), 'missing Survival weapon ID: ' + weapon);
