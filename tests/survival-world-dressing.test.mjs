@@ -44,3 +44,44 @@ test('world dressing joins the active map root and owned procedural textures are
   assert.match(module, /new THREE\.InstancedMesh/);
   assert.match(module, /ufo-alien-energy-cell-prop/);
 });
+
+
+test('all four connected Survival biomes have readable wall-mounted identity signage', async () => {
+  const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
+  const landmarksStart = game.indexOf('private buildSurvivalMapLandmarks(');
+  const landmarksEnd = game.indexOf('\n  private registerCameraOccludersInGroup', landmarksStart);
+  assert.ok(landmarksStart >= 0 && landmarksEnd > landmarksStart);
+  const landmarks = game.slice(landmarksStart, landmarksEnd);
+  for (const label of [
+    "label: 'MAGAZYN B4'",
+    "label: 'PORT KONTENEROWY 17'",
+    "label: 'CHŁODNIA ZERO  •  -18°C'",
+    "label: 'SORTOWNIA WIDMOWA'",
+  ]) assert.ok(landmarks.includes(label), 'missing biome identity: ' + label);
+  assert.match(landmarks, /const signSide = openEdges\.north \? 1 : -1/);
+  assert.match(landmarks, /signGroup\.rotation\.y = signSide > 0 \? Math\.PI : 0/);
+  assert.match(landmarks, /this\.registerCameraOccludersInGroup\(root, 0\.14\);[\s\S]*?root\.add\(signGroup\)/);
+  assert.match(landmarks, /this\.survivalArenaInstanceGeometries\.add\(signFace\.geometry\)/);
+});
+
+test('map signage uses map-specific subtitles and releases cached GPU textures on teardown', async () => {
+  const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
+  assert.match(game, /private getSurvivalArenaLabelMaterial\(label: string, accent: string, subtitle = 'CENTRUM B4  •  LOGISTYKA'\)/);
+  assert.match(game, /const key = label \+ ':' \+ accent \+ ':' \+ subtitle/);
+  assert.match(game, /context\.fillText\(subtitle, 276, 112, 420\)/);
+  assert.match(game, /for \(const material of this\.survivalArenaLabelMaterials\.values\(\)\) \{\s*material\.map\?\.dispose\(\);\s*material\.dispose\(\);/);
+});
+
+test('enemy role kits add PPE knee pads and steel-toe details without increasing draw calls', async () => {
+  const source = await readFile(new URL('../src/enemyRoleKits.ts', import.meta.url), 'utf8');
+  const start = source.indexOf('function body(');
+  const end = source.indexOf('\nfunction backGear(', start);
+  assert.ok(start >= 0 && end > start, 'enemy role body builder should exist');
+  const body = source.slice(start, end);
+  assert.match(body, /Warehouse PPE: sculpted knee pads/);
+  assert.match(body, /for\(const side of \[-1,1\]\)/);
+  assert.match(body, /sp\(groups,'legs',dark,\[side\*\.14,\.245,\.228\]/);
+  assert.match(body, /bx\(groups,'legs',s\.accent,\[side\*\.14,\.245,\.271\]/);
+  assert.match(body, /sp\(groups,'legs',metal,\[side\*\.14,\.105,\.236\]/);
+  assert.match(source, /mergeGeometries\(parts,false\)/);
+});

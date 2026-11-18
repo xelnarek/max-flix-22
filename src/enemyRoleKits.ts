@@ -135,6 +135,16 @@ function body(groups:Record<Anchor,THREE.Group>,type:EnemyType,s:RoleSpec):void{
   bx(groups,'legs',dark,[.14,.17,.06],[.19,.24,.34]);
   bx(groups,'legs',metal,[-.14,.105,.13],[.18,.055,.12],[0,0,0],.5);
   bx(groups,'legs',metal,[.14,.105,.13],[.18,.055,.12],[0,0,0],.5);
+
+  // Warehouse PPE: sculpted knee pads, reflective role-coloured marks and
+  // steel-toe caps. Geometry is merged into the existing legs anchor below,
+  // so the extra silhouette detail adds no per-part draw calls.
+  for(const side of [-1,1]){
+    sp(groups,'legs',dark,[side*.14,.245,.228],[.098,.063,.045],.12);
+    bx(groups,'legs',s.accent,[side*.14,.245,.271],[.072,.018,.012],[0,0,0],.2);
+    sp(groups,'legs',metal,[side*.14,.105,.236],[.092,.048,.075],.72);
+    bx(groups,'legs',dark,[side*.14,.055,.16],[.19,.035,.22],[0,0,0],.02);
+  }
   if(s.form==='round')sp(groups,'torso',0xc89b78,[0,.73,.13],[w*.38,.23,.18]);
   if(s.form==='hunched'){
     sp(groups,'torso',0x69754d,[-.05,.87,.02],[w*.32,.27,.23]);
