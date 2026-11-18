@@ -1932,3 +1932,18 @@ test('campaign reward drafts render after a clear and are consumed only by their
   assert.match(campaignCss, /\.campaign-reward-card\.is-selected/);
   assert.match(campaignCss, /@media\(max-width:760px\)[\s\S]*?\.campaign-reward-grid\{grid-template-columns:1fr/);
 });
+
+test('PvP projectile visual sync reuses its active-ID buffer and immutable perk palette', async () => {
+  const game = await read('../src/game.ts');
+  const start = game.indexOf('private updatePvpMode(dt: number)');
+  const end = game.indexOf('private buildConnectedSurvivalWorld()', start);
+  assert.ok(start >= 0 && end > start, 'PvP update method should exist');
+  const update = game.slice(start, end);
+  assert.match(game, /private readonly pvpProjectileActiveIds = new Set<string>\(\)/);
+  assert.match(update, /const activeIds = this\.pvpProjectileActiveIds/);
+  assert.match(update, /activeIds\.clear\(\)/);
+  assert.doesNotMatch(update, /new Set<string>\(\)/);
+  assert.match(game, /const PVP_PERK_COLORS: Readonly<Record<string, number>> = Object\.freeze\(/);
+  assert.match(update, /PVP_PERK_COLORS\[perk\.type\] \?\? 0xfacc15/);
+  assert.doesNotMatch(update, /const colors: Record<string, number>/);
+});
