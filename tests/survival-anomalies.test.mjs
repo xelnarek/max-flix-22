@@ -62,3 +62,43 @@ test('malformed clocks and random rolls stay finite and safe', () => {
   assert.equal(result.started, null);
   assert.equal(result.state.active, null);
 });
+
+test('overflow loading is a high-risk, high-reward anomaly with bounded stacked pressure', () => {
+  const started = advanceSurvivalAnomaly(createSurvivalAnomalyState(), 42, 0, 0.94, 0.5, 0.5);
+  assert.equal(started.started?.id, 'overflow_loading');
+  const modifiers = getSurvivalAnomalyModifiers(started.state);
+  assert.equal(modifiers.enemyHealthMultiplier, 1.16);
+  assert.equal(modifiers.enemyAbilityRateMultiplier, 1.12);
+  assert.equal(modifiers.spawnIntervalMultiplier, 0.88);
+  assert.equal(modifiers.enemyGroupSizeBonus, 2);
+  assert.equal(modifiers.playerDamageTakenMultiplier, 1.12);
+  assert.equal(modifiers.xpDropChanceMultiplier, 1.28);
+  assert.equal(modifiers.xpValueMultiplier, 1.28);
+});
+
+test('maintenance window temporarily changes the risk-reward balance in the operator favour', () => {
+  const definition = getSurvivalAnomalyDefinition('maintenance_window');
+  assert.equal(definition?.modifiers.enemyHealthMultiplier, 0.94);
+  assert.equal(definition?.modifiers.enemyAbilityRateMultiplier, 0.88);
+  assert.equal(definition?.modifiers.spawnIntervalMultiplier, 1.16);
+  assert.equal(definition?.modifiers.enemyGroupSizeBonus, -1);
+  assert.equal(definition?.modifiers.playerDamageDealtMultiplier, 1.08);
+  assert.equal(definition?.modifiers.playerDamageTakenMultiplier, 0.86);
+  assert.equal(definition?.modifiers.attackCooldownMultiplier, 0.94);
+  assert.equal(definition?.modifiers.abilityCooldownMultiplier, 0.92);
+  assert.equal(definition?.modifiers.abilityDurationMultiplier, 1.06);
+  assert.equal(definition?.modifiers.xpPickupMultiplier, 1.12);
+  const started = advanceSurvivalAnomaly(createSurvivalAnomalyState(), 42, 0, 0.999, 0.5, 0.5);
+  assert.equal(started.started?.id, 'maintenance_window');
+});
+
+test('new anomalies remain inside the existing event duration and anti-repeat rules', () => {
+  const first = advanceSurvivalAnomaly(createSurvivalAnomalyState(), 42, 0, 0.94, 0.5, 0.5);
+  assert.equal(first.started?.id, 'overflow_loading');
+  const duration = first.started?.durationSeconds ?? 0;
+  assert.ok(duration >= 20 && duration <= 30);
+  const expired = advanceSurvivalAnomaly(first.state, 72, 30, 0.5, 0.5, 0);
+  const second = advanceSurvivalAnomaly(expired.state, expired.state.nextAt, 0, 0.999, 0.5, 0.5);
+  assert.equal(second.started?.id, 'maintenance_window');
+  assert.notEqual(second.started?.id, first.started?.id);
+});
