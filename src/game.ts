@@ -15066,7 +15066,7 @@ export class PaleciakiGameEngine {
             e.state = 'stunned';
             this.emitFloatingToast('🛡️ AUDYT BHP!', e.x, e.y + 1, e.z, 'perk');
           } else if (this.grzesiekCrushTimer > 0) {
-            this.damageEnemy(e, this.scaleSurvivalDamage(3));
+            this.damageEnemy(e, this.scaleSurvivalDamage(3), this.playerPos.x, this.playerPos.z, 'ability');
             this.emitFloatingToast('-3 HP ŚCISK!', e.x, e.y + 1, e.z, 'damage');
             if (e.hp <= 0) this.defeatEnemy(e, 280, true);
           } else if (e.type === 'krol_leto') {
