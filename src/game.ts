@@ -8559,7 +8559,6 @@ export class PaleciakiGameEngine {
       armR:built.armR,
       specialActionTimer:2.4,
       rageTime:0,
-      trailTimer:0,
       dashTimer:0,
     });
   }
