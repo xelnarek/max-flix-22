@@ -103,6 +103,8 @@ import {
   getAbilityCooldownSeconds,
   getEnemyProjectileSpeed,
   SURVIVAL_ENEMY_SPECIAL_RATE_MULTIPLIER,
+  SURVIVAL_PRIMARY_ATTACK_DAMAGE_MULTIPLIER,
+  getPrimaryAttackBaseDamage,
   getBaseAttackCooldownSeconds,
   getPiotrBoomerangMaxLifeSeconds,
   getPrimaryAttackLifetimeSeconds,
@@ -15612,8 +15614,9 @@ export class PaleciakiGameEngine {
       const adjustedProjectileDamage =
         this.scaleSurvivalDamage(p.damage ?? (this.charDef.id === 'dawid' ? 2 : 1)) *
         berserkMult * (p.chainDamageMultiplier || 1);
+      const primaryDamageFactor = this.gameMode === 'survival' ? SURVIVAL_PRIMARY_ATTACK_DAMAGE_MULTIPLIER : 1;
       const baseDmg = projectileDamageSource === 'basic_attack'
-        ? scaleCharacterBasicAttackDamage(adjustedProjectileDamage, this.charDef.basicAttackDamageMultiplier * this.characterMasteryBonuses.attackMultiplier)
+        ? scaleCharacterBasicAttackDamage(adjustedProjectileDamage, this.charDef.basicAttackDamageMultiplier * this.characterMasteryBonuses.attackMultiplier * primaryDamageFactor)
         : Math.max(1, Math.round(adjustedProjectileDamage));
       const segmentX = p.mesh.position.x - previousProjectileX;
       const segmentY = p.mesh.position.y - previousProjectileY;
@@ -15705,8 +15708,9 @@ export class PaleciakiGameEngine {
               for (const other of this.enemies) {
                 if (other.id !== e.id && other.state !== 'defeated') {
                   if (Math.hypot(other.x - e.x, other.z - e.z) <= p.aoeRadius) {
+                    const primaryDamageFactor = this.gameMode === 'survival' ? SURVIVAL_PRIMARY_ATTACK_DAMAGE_MULTIPLIER : 1;
                     const splashDamage = projectileDamageSource === 'basic_attack'
-                      ? scaleCharacterBasicAttackDamage(this.scaleSurvivalDamage(1), this.charDef.basicAttackDamageMultiplier * this.characterMasteryBonuses.attackMultiplier)
+                      ? scaleCharacterBasicAttackDamage(this.scaleSurvivalDamage(1), this.charDef.basicAttackDamageMultiplier * this.characterMasteryBonuses.attackMultiplier * primaryDamageFactor)
                       : this.scaleSurvivalDamage(1);
                     this.damageEnemy(other, splashDamage, e.x, e.z, projectileDamageSource);
                     other.stunTimer = Math.max(other.stunTimer, this.gameMode === 'survival' ? 0.22 : (p.stunDuration || 1.2));
@@ -16501,7 +16505,7 @@ export class PaleciakiGameEngine {
         disposeOnRemove: true,
         vel: forward.clone().multiplyScalar(14.2),
         life: getPrimaryAttackLifetimeSeconds('marcin', 14.2),
-        damage: (isThirdCombo ? 2 : 1) + (campaignCounterattackReady ? 1 : 0),
+        damage: getPrimaryAttackBaseDamage(charId, isThirdCombo, campaignCounterattackReady ? 1 : 0),
         pierce: isThirdCombo ? 2 : 1,
         aoeRadius: isThirdCombo ? 1.55 : 1.0,
         stunDuration: isThirdCombo ? 1.15 : 0.55,
@@ -16540,7 +16544,7 @@ export class PaleciakiGameEngine {
         disposeOnRemove: true,
         vel: forward.clone().multiplyScalar(14.6),
         life: getPrimaryAttackLifetimeSeconds('grzesiek', 14.6),
-        damage: (isThirdCombo ? 3 : 2) + (campaignCounterattackReady ? 1 : 0),
+        damage: getPrimaryAttackBaseDamage(charId, isThirdCombo, campaignCounterattackReady ? 1 : 0),
         pierce: isThirdCombo ? 3 : 1,
         stunDuration: 0.65,
         spinSpeed: 13.0,
@@ -16570,7 +16574,7 @@ export class PaleciakiGameEngine {
         disposeOnRemove: true,
         vel: forward.clone().multiplyScalar(14.8),
         life: getPrimaryAttackLifetimeSeconds('dawid', 14.8),
-        damage: (isThirdCombo ? 2 : 1) + (campaignCounterattackReady ? 1 : 0),
+        damage: getPrimaryAttackBaseDamage(charId, isThirdCombo, campaignCounterattackReady ? 1 : 0),
         pierce: isThirdCombo ? 3 : 2,
         slowOnHit: true,
         stunDuration: isThirdCombo ? 1.2 : 0.7,
@@ -16602,7 +16606,7 @@ export class PaleciakiGameEngine {
         disposeOnRemove: true,
         vel: forward.clone().multiplyScalar(19.5),
         life: getPrimaryAttackLifetimeSeconds('mateusz', 19.5),
-        damage: (isThirdCombo ? 2 : 1) + (campaignCounterattackReady ? 1 : 0),
+        damage: getPrimaryAttackBaseDamage(charId, isThirdCombo, campaignCounterattackReady ? 1 : 0),
         pierce: 1,
         slowOnHit: true,
         stunDuration: isThirdCombo ? 1.65 : 1.0,
@@ -16654,7 +16658,7 @@ export class PaleciakiGameEngine {
         vel: forward.clone().multiplyScalar(22.5),
         life: getPiotrBoomerangMaxLifeSeconds(22.5),
         maxLife: getPiotrBoomerangMaxLifeSeconds(22.5),
-        damage: (isThirdCombo ? 3 : 2) + (campaignCounterattackReady ? 1 : 0),
+        damage: getPrimaryAttackBaseDamage(charId, isThirdCombo, campaignCounterattackReady ? 1 : 0),
         pierce: isThirdCombo ? 4 : 2,
         boomerang: true,
         stunDuration: 0.48,
