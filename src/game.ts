@@ -5778,73 +5778,21 @@ export class PaleciakiGameEngine {
     });
   }
 
+  /**
+   * Cthulhu attack corridors are resolved by independent combat geometry.
+   * Floor warning artwork is disabled to prevent coloured map afterglow.
+   */
   private spawnCthulhuLashTelegraph(
-    x: number,
-    z: number,
-    directionX: number,
-    directionZ: number,
-    length: number,
-    width: number,
-    duration: number,
-    variant: 'lash' | 'grab' = 'lash',
+    _x: number,
+    _z: number,
+    _directionX: number,
+    _directionZ: number,
+    _length: number,
+    _width: number,
+    _duration: number,
+    _variant: 'lash' | 'grab' = 'lash',
   ): void {
-    const lane = new THREE.Group();
-    lane.name = variant === 'grab'
-      ? 'cthulhu-phase-two-tentacle-grab-warning'
-      : 'cthulhu-phase-two-tentacle-lash-warning';
-    lane.position.set(x + directionX * length * 0.5, 0.065, z + directionZ * length * 0.5);
-    lane.rotation.y = Math.atan2(directionX, directionZ);
-
-    const fillMaterial = new THREE.MeshBasicMaterial({
-      color: variant === 'grab' ? 0x166534 : 0x7628b8,
-      transparent: true,
-      opacity: 0.22,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-      toneMapped: false,
-    });
-    const edgeMaterial = new THREE.MeshBasicMaterial({
-      color: variant === 'grab' ? 0xd9f99d : 0x8df7e1,
-      transparent: true,
-      opacity: 0.72,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-      toneMapped: false,
-    });
-    const fill = new THREE.Mesh(new THREE.PlaneGeometry(width, length), fillMaterial);
-    fill.rotation.x = -Math.PI / 2;
-    lane.add(fill);
-
-    for (const side of [-1, 1]) {
-      const edge = new THREE.Mesh(new THREE.PlaneGeometry(0.11, length), edgeMaterial);
-      edge.rotation.x = -Math.PI / 2;
-      edge.position.x = side * width * 0.5;
-      lane.add(edge);
-    }
-    for (let marker = 1; marker <= 5; marker++) {
-      const crossbar = new THREE.Mesh(
-        new THREE.PlaneGeometry(width * 0.92, 0.055),
-        edgeMaterial,
-      );
-      crossbar.rotation.x = -Math.PI / 2;
-      crossbar.position.z = -length * 0.5 + marker * length / 6;
-      lane.add(crossbar);
-    }
-
-    this.levelRoot.add(lane);
-    this.specialEffects.push({
-      mesh: lane,
-      life: duration,
-      maxLife: duration,
-      grow: 0,
-      spin: 0,
-      update: (_dt, progress) => {
-        const pulse = 0.65 + Math.sin(progress * Math.PI * 12) * 0.22;
-        fillMaterial.opacity = (0.14 + pulse * 0.13) * (1 - progress * 0.35);
-        edgeMaterial.opacity = 0.48 + pulse * 0.42;
-      },
-      cleanup: () => this.disposeTemporaryObject(lane),
-    });
+    // Deliberately no floor decal, glow or lane particles.
   }
 
   private spawnCthulhuGrabEffect(x: number, y: number, z: number): void {
@@ -10571,14 +10519,7 @@ export class PaleciakiGameEngine {
     auditor.specialActionTimer = 2.6;
     auditor.bossPhase = 1;
     auditor.survivalAuditor = true;
-    const auraRing = new THREE.Mesh(
-      new THREE.RingGeometry(8.2, 8.48, 64),
-      new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.42, side: THREE.DoubleSide, depthWrite: false })
-    );
-    auraRing.rotation.x = -Math.PI / 2;
-    auraRing.position.y = 0.055;
-    auditor.mesh.add(auraRing);
-    auditor.auraRing = auraRing;
+    // Distance-based Auditor influence remains active without a floor aura.
     this.callbacks.onBossUpdate?.(auditor.name, auditor.hp, auditor.maxHp, true, 1);
     this.callbacks.onSurvivalAnnouncement?.(
       'AUDYTOR NIEZAPOWIEDZIANY',
@@ -10586,7 +10527,6 @@ export class PaleciakiGameEngine {
       'Czerwona strefa wzmacnia pobliskich przeciwników. Zlikwiduj Audytora albo wyciągnij hordę poza jego aurę.'
     );
     this.emitFloatingToast('📋 AUDYT BEZ ZAPOWIEDZI!', x, 2.15, z, 'damage');
-    this.spawnParticleRing(x, 0.18, z, 0xef4444);
     this.triggerScreenShake(0.48, 0.42);
     this.triggerBloomPulse(0.38);
     sound.playBossWarning();
@@ -11130,106 +11070,41 @@ export class PaleciakiGameEngine {
    * A short-lived floor lane gives a readable dodge window before a directional
    * boss projectile. One InstancedMesh keeps the signal to a single draw call.
    */
+  /**
+   * Preserve the committed lane dimensions for perfect-dodge validation,
+   * but do not render an emissive or coloured floor lane.
+   */
   private spawnBossLaneTelegraph(
-    x: number,
-    z: number,
-    direction: number,
+    _x: number,
+    _z: number,
+    _direction: number,
     length: number,
     width: number,
-    color: number,
-    duration: number,
+    _color: number,
+    _duration: number,
     owner?: EnemyItem
-  ) {
+  ): null {
     const safeLength = Math.max(1, Number.isFinite(length) ? length : 1);
     const safeWidth = Math.max(0.5, Number.isFinite(width) ? width : 0.5);
     if (owner) {
       owner.chargeLaneLength = safeLength;
       owner.chargeLaneWidth = safeWidth;
     }
-    const life = THREE.MathUtils.clamp(Number.isFinite(duration) ? duration : 0.6, 0.2, 1.5);
-    const group = new THREE.Group();
-    group.position.set(x, 0.065, z);
-    group.rotation.y = Number.isFinite(direction) ? direction : 0;
-
-    const material = new THREE.MeshBasicMaterial({
-      color,
-      transparent: true,
-      opacity: 0.26,
-      depthWrite: false,
-      toneMapped: false,
-      side: THREE.DoubleSide,
-    });
-    const barGeometry = new THREE.BoxGeometry(1, 0.025, 1);
-    const bars = new THREE.InstancedMesh(barGeometry, material, 6);
-    const dummy = new THREE.Object3D();
-    const placements = [
-      { x: 0, z: safeLength * 0.5, sx: safeWidth, sz: safeLength },
-      { x: -safeWidth * 0.5, z: safeLength * 0.5, sx: 0.075, sz: safeLength },
-      { x: safeWidth * 0.5, z: safeLength * 0.5, sx: 0.075, sz: safeLength },
-      { x: 0, z: safeLength * 0.25, sx: safeWidth * 0.82, sz: 0.065 },
-      { x: 0, z: safeLength * 0.5, sx: safeWidth * 0.82, sz: 0.065 },
-      { x: 0, z: safeLength * 0.75, sx: safeWidth * 0.82, sz: 0.065 },
-    ];
-    placements.forEach((placement, index) => {
-      dummy.position.set(placement.x, 0, placement.z);
-      dummy.rotation.set(0, 0, 0);
-      dummy.scale.set(placement.sx, 1, placement.sz);
-      dummy.updateMatrix();
-      bars.setMatrixAt(index, dummy.matrix);
-    });
-    bars.instanceMatrix.needsUpdate = true;
-    group.add(bars);
-    this.levelRoot.add(group);
-    this.specialEffects.push({
-      mesh: group,
-      life,
-      maxLife: life,
-      grow: 0,
-      spin: 0,
-      update: (_dt, progress) => {
-        const fade = 1 - progress;
-        material.opacity = 0.13 + fade * (0.12 + Math.sin(progress * Math.PI * 8) * 0.07);
-        group.scale.x = 1 + Math.sin(progress * Math.PI * 6) * 0.035;
-      },
-      cleanup: () => this.disposeTemporaryObject(group),
-    });
-    return group;
+    return null;
   }
 
-  /** Red expanding floor ring marking a boss's fixed-position area attack. */
-  private spawnBossImpactTelegraph(x: number, z: number, radius: number, color: number, duration: number) {
-    const safeRadius = Math.max(0.5, Number.isFinite(radius) ? radius : 0.5);
-    const life = THREE.MathUtils.clamp(Number.isFinite(duration) ? duration : 0.6, 0.2, 1.5);
-    const group = new THREE.Group();
-    group.position.set(x, 0.075, z);
-    const material = new THREE.MeshBasicMaterial({
-      color,
-      transparent: true,
-      opacity: 0.76,
-      depthWrite: false,
-      toneMapped: false,
-      side: THREE.DoubleSide,
-    });
-    const ring = new THREE.Mesh(
-      new THREE.RingGeometry(Math.max(0.1, safeRadius - 0.18), safeRadius, 64),
-      material
-    );
-    ring.rotation.x = -Math.PI / 2;
-    group.add(ring);
-    this.levelRoot.add(group);
-    this.specialEffects.push({
-      mesh: group,
-      life,
-      maxLife: life,
-      grow: 0,
-      spin: 0,
-      update: (_dt, progress) => {
-        const pulse = 1 + Math.sin(progress * Math.PI * 8) * 0.018;
-        group.scale.set(pulse, 1, pulse);
-        material.opacity = 0.24 + (1 - progress) * 0.52;
-      },
-      cleanup: () => this.disposeTemporaryObject(group),
-    });
+  /**
+   * Area attacks retain their timer and hit-radius checks; their floor ring
+   * is intentionally not rendered.
+   */
+  private spawnBossImpactTelegraph(
+    _x: number,
+    _z: number,
+    _radius: number,
+    _color: number,
+    _duration: number,
+  ): void {
+    // Deliberately no coloured floor ring.
   }
 
   private updateSebixBehaviour(enemy: EnemyItem, dt: number, distance: number, dx: number, dz: number) {
@@ -11302,7 +11177,6 @@ export class PaleciakiGameEngine {
         enemy.chargeDir = Math.atan2(dx,dz);
         enemy.state = 'charging';
         this.spawnBossLaneTelegraph(enemy.x, enemy.z, enemy.chargeDir, 12.5, 2.6, 0xef4444, 0.72, enemy);
-        this.spawnParticleRing(enemy.x,0.12,enemy.z,0xef4444);
         this.emitFloatingToast('🔥 OPERATOR TURBO ŁADUJE TARAN — ZEJDŹ Z LINII!',enemy.x,enemy.y+2.2,enemy.z,'damage');
         sound.playBossWarning();
         return;
@@ -15313,7 +15187,6 @@ export class PaleciakiGameEngine {
         if (e.supportShieldTimer <= 0) this.clearSurvivalSupportShield(e);
       }
       if (e.shieldRing?.visible) e.shieldRing.rotation.z += dt * 1.25;
-      if (e.auraRing) e.auraRing.rotation.z += dt * 0.18;
       const strikeTimer = Number(e.mesh.userData.cthulhuStrikeTimer ?? 0);
       const strikeDuration = 1.05;
       const strikeProgress = strikeTimer > 0
@@ -15441,47 +15314,6 @@ export class PaleciakiGameEngine {
       }
       if (e.propeller) e.propeller.rotation.y += dt * (e.state === 'chase' ? 34 : 18);
       if (e.type === 'pomazaniec') e.mesh.rotation.x = THREE.MathUtils.lerp(e.mesh.rotation.x, 0, Math.min(1, dt * 3.2));
-      // Ground Threat Ring for actively chasing enemies
-      if (!e.threatRing && e.type !== 'piorun_dron') {
-        const isCoalitionLeader = e.aiCoalitionLeaderId === e.id;
-        const isMoraleBroken = (e.aiMoraleBreakTimer ?? 0) > 0;
-        const baseRingColor = e.surgeRunner ? 0xf59e0b : e.type === 'pomazaniec' ? 0xec4899 : 0xef4444;
-        const ringMesh = new THREE.Mesh(
-          new THREE.RingGeometry(0.42, 0.54, 20),
-          new THREE.MeshBasicMaterial({
-            color: isMoraleBroken ? 0xfb923c : isCoalitionLeader ? 0xfbbf24 : baseRingColor,
-            transparent: true,
-            opacity: isMoraleBroken ? 0.9 : isCoalitionLeader ? 0.82 : 0.65,
-            side: THREE.DoubleSide,
-            depthWrite: false,
-          })
-        );
-        ringMesh.rotation.x = -Math.PI / 2;
-        ringMesh.position.y = 0.04;
-        ringMesh.userData.coalitionLeader = isCoalitionLeader;
-        ringMesh.userData.coalitionMoraleBroken = isMoraleBroken;
-        e.threatRing = ringMesh;
-        e.mesh.add(ringMesh);
-      }
-      if (e.threatRing) {
-        const isCoalitionLeader = e.aiCoalitionLeaderId === e.id;
-        const isMoraleBroken = (e.aiMoraleBreakTimer ?? 0) > 0;
-        if (
-          e.threatRing.userData.coalitionLeader !== isCoalitionLeader ||
-          e.threatRing.userData.coalitionMoraleBroken !== isMoraleBroken
-        ) {
-          const ringMaterial = e.threatRing.material as THREE.MeshBasicMaterial;
-          const baseRingColor = e.surgeRunner ? 0xf59e0b : e.type === 'pomazaniec' ? 0xec4899 : 0xef4444;
-          ringMaterial.color.setHex(
-            isMoraleBroken ? 0xfb923c : isCoalitionLeader ? 0xfbbf24 : baseRingColor,
-          );
-          ringMaterial.opacity = isMoraleBroken ? 0.9 : isCoalitionLeader ? 0.82 : 0.65;
-          e.threatRing.userData.coalitionLeader = isCoalitionLeader;
-          e.threatRing.userData.coalitionMoraleBroken = isMoraleBroken;
-        }
-        e.threatRing.visible = (e.state === 'chase' || e.state === 'charging') && distToPlayer < 14;
-      }
-
       if (e.stunTimer > 0) {
         if (e.aiRangedWindupTimer !== undefined) this.cancelEnemyRangedAttackTelegraph(e, true);
         if (e.aiMeleeWindupTimer !== undefined || e.aiMeleeStrikePending) this.cancelEnemyMeleeAttackTelegraph(e, true);
@@ -15682,7 +15514,6 @@ export class PaleciakiGameEngine {
                   this.spawnCthulhuLashTelegraph(
                     e.x, e.z, dirX, dirZ, attackLength, attackWidth, e.chargeTimer, attackType,
                   );
-                  this.spawnParticleRing(e.x, 0.16, e.z, isGrab ? 0x22c55e : 0xa855f7);
                   this.emitFloatingToast(
                     isGrab
                       ? '☠ MACKI CHTULHU ZAMYKAJĄ SIĘ NA TOBIE — ZEJDŹ Z LINII!'
@@ -15704,7 +15535,6 @@ export class PaleciakiGameEngine {
                     isPhase2 ? 0xa855f7 : 0x2dd4bf,
                     e.chargeTimer,
                   );
-                  this.spawnParticleRing(e.x, 0.16, e.z, 0x2dd4bf);
                   this.emitFloatingToast(
                     isPhase2 ? '☠ CTHULHU ROZRYWA ZASŁONĘ — SKACZ!' : '☠ FALA MACEK — OPUŚĆ ZAZNACZONY KRĄG!',
                     e.x,
@@ -15761,7 +15591,6 @@ export class PaleciakiGameEngine {
                         5,
                       );
                     }
-                    this.spawnParticleRing(e.x + dirX * lashLength, 0.18, e.z + dirZ * lashLength, 0xa855f7);
                     const playerCaught = isWithinCthulhuLashLane(
                       this.playerPos.x,
                       this.playerPos.z,
@@ -15790,8 +15619,6 @@ export class PaleciakiGameEngine {
                       this.emitFloatingToast('🌊 BICZ MACEK MINĄŁ CIĘ!', this.playerPos.x, this.playerPos.y + 1.3, this.playerPos.z, 'perk');
                     }
                   } else {
-                    this.spawnParticleRing(e.x, 0.22, e.z, 0x39f0c6);
-                    this.spawnExplosionParticles(e.x, 0.62, e.z, 0x8b5cf6, 28);
                     const playerCaught = isWithinBossImpactRadius(
                       this.playerPos.x, this.playerPos.z, e.x, e.z, impactRadius,
                     ) && Math.abs(this.playerPos.y - e.y) < 1.8;
@@ -15810,7 +15637,6 @@ export class PaleciakiGameEngine {
               if (e.chargeTimer === undefined) {
                 e.chargeTimer = 0.88;
                 this.spawnBossImpactTelegraph(e.x, e.z, 8.7, 0xef4444, 0.88);
-                this.spawnParticleRing(e.x, 0.16, e.z, 0xef4444);
                 this.emitFloatingToast('⚠️ INWENTARYZACJA GIGANT — UDERZENIE ZA CHWILĘ!', e.x, e.y + 1.8, e.z, 'damage');
                 sound.playBossWarning();
               } else {
@@ -15822,8 +15648,6 @@ export class PaleciakiGameEngine {
                   this.triggerScreenShake(0.78, 0.48);
                   this.triggerHitStop(0.09);
                   this.triggerBloomPulse(0.52);
-                  this.spawnParticleRing(e.x, 0.2, e.z, 0xf97316);
-                  this.spawnExplosionParticles(e.x, 0.55, e.z, 0xfbbf24, 24);
                   if (isWithinBossImpactRadius(this.playerPos.x, this.playerPos.z, e.x, e.z, 8.7)) {
                     this.takeDamage('💥 FALA UDERZENIOWA INWENTARYZACJI GIGANT!');
                   }
@@ -16057,7 +15881,6 @@ export class PaleciakiGameEngine {
               e.chargeTimer = 0.9;
               e.chargeDir = Math.atan2(dx, dz);
               this.spawnBossLaneTelegraph(e.x, e.z, e.chargeDir, 14.0, 1.8, 0xef4444, 0.9, e);
-              this.spawnParticleRing(e.x, 0.24, e.z, 0xef4444);
               this.emitFloatingToast('AGV-9: ŁADOWANIE IMPULSU — ZEJDŹ Z LINII!', e.x, e.y + 1.2, e.z, 'damage');
               sound.playBossWarning();
             } else {
@@ -16149,7 +15972,6 @@ export class PaleciakiGameEngine {
           if (e.specialActionTimer <= 0) {
             e.specialActionTimer = 2.8;
             this.requestEnemyAttackAnimation(e, 0.60);
-            this.spawnParticleRing(e.x, 0.15, e.z, 0x4ade80);
             this.emitFloatingToast('☣️ SKAŻENIE GAMMA!', e.x, e.y + 1.2, e.z, 'damage');
             sound.playElectricalSparks();
           }
@@ -16158,7 +15980,6 @@ export class PaleciakiGameEngine {
           if (e.specialActionTimer <= 0 && distToPlayer < 9.5) {
             e.specialActionTimer = 3.4;
             this.requestEnemyAttackAnimation(e, 0.60);
-            this.spawnParticleRing(e.x, 0.25, e.z, 0x84cc16);
             this.emitFloatingToast('☢️ PROTOKÓŁ SKAŻENIA PIP!', e.x, e.y + 1.2, e.z, 'damage');
             sound.playSirens();
           }
