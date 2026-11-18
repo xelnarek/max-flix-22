@@ -35,7 +35,7 @@ import {
   updateSurvivalAchievementProgress,
 } from './survivalAchievements.ts';
 import { SURVIVAL_MAPS, type SurvivalMapId } from './survivalMaps.ts';
-import { CAMPAIGN_STAGES, createInitialCampaignProgress, getCampaignStageDefinition, getNextCampaignStageId, readCampaignProgress, recordCampaignStageResult, writeCampaignProgress, type CampaignProgress, type CampaignStageId } from './campaignProgression.ts';
+import { CAMPAIGN_STAGES, createInitialCampaignProgress, consumePendingCampaignReward, getCampaignRewardChoices, getCampaignStageDefinition, getNextCampaignStageId, readCampaignProgress, recordCampaignStageResult, setPendingCampaignReward, writeCampaignProgress, type CampaignProgress, type CampaignRewardDefinition, type CampaignRewardId, type CampaignStageId } from './campaignProgression.ts';
 import { launchOniricPlatformer } from './oniricPlatformer.ts';
 import { launchCthulhuRetroArena } from './cthulhuRetroArena.ts';
 import { getMenuTabIndexForKey } from './menuTabNavigation.ts';
@@ -721,7 +721,72 @@ class PaleciakiScene extends xb.Script {
     let selectedCampaignStageId: CampaignStageId | null = null;
     let lastCampaignStageId: CampaignStageId | null = null;
     let nextCampaignStageId: CampaignStageId | null = null;
+    let campaignRewardChoices: CampaignRewardDefinition[] = [];
+    let campaignRewardTargetStageId: CampaignStageId | null = null;
+    let campaignRewardSelectionId: CampaignRewardId | null = null;
     const saveCampaignProgress = () => { try { writeCampaignProgress(window.localStorage, campaignProgress); } catch { /* Keep current session progress when storage is unavailable. */ } };
+    const consumeCampaignRewardForStage = (stageId: CampaignStageId): CampaignRewardId | null => {
+      const consumed = consumePendingCampaignReward(campaignProgress, stageId);
+      campaignProgress = consumed.progress;
+      if (consumed.rewardId) saveCampaignProgress();
+      return consumed.rewardId;
+    };
+    const renderCampaignRewardPanel = () => {
+      const panel = document.getElementById('campaign-reward-panel');
+      const optionsRoot = document.getElementById('campaign-reward-options');
+      const note = document.getElementById('campaign-reward-note');
+      const visible = Boolean(campaignRewardTargetStageId && campaignRewardChoices.length);
+      panel?.classList.toggle('hidden', !visible);
+      if (!optionsRoot) return;
+      optionsRoot.replaceChildren();
+      if (!visible) return;
+
+      for (const reward of campaignRewardChoices) {
+        const selected = reward.id === campaignRewardSelectionId;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'campaign-reward-card' + (selected ? ' is-selected' : '');
+        button.dataset.campaignReward = reward.id;
+        button.setAttribute('aria-pressed', String(selected));
+
+        const icon = document.createElement('span');
+        icon.className = 'campaign-reward-icon';
+        icon.textContent = reward.icon;
+        const copy = document.createElement('span');
+        copy.className = 'campaign-reward-copy';
+        const title = document.createElement('strong');
+        title.textContent = reward.title;
+        const description = document.createElement('small');
+        description.textContent = reward.description;
+        copy.append(title, description);
+        const state = document.createElement('span');
+        state.className = 'campaign-reward-state';
+        state.textContent = selected ? 'WYBRANO' : 'WYBIERZ';
+        button.append(icon, copy, state);
+        optionsRoot.append(button);
+      }
+
+      if (note) {
+        const selectedReward = campaignRewardChoices.find((reward) => reward.id === campaignRewardSelectionId);
+        note.textContent = selectedReward
+          ? 'Wybrano: ' + selectedReward.title + '. Premia zostanie zastosowana przy rozpoczęciu następnego etapu.'
+          : 'Wybierz jedną premię dla następnego etapu.';
+      }
+    };
+
+    document.getElementById('campaign-reward-options')?.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const button = target.closest<HTMLButtonElement>('[data-campaign-reward]');
+      const rewardId = button?.dataset.campaignReward as CampaignRewardId | undefined;
+      const stageId = campaignRewardTargetStageId;
+      if (!rewardId || !stageId || !campaignRewardChoices.some((reward) => reward.id === rewardId)) return;
+      campaignRewardSelectionId = rewardId;
+      campaignProgress = setPendingCampaignReward(campaignProgress, stageId, rewardId);
+      saveCampaignProgress();
+      renderCampaignRewardPanel();
+    });
+
     const renderCampaignBoard = () => {
       const unlocked = new Set(campaignProgress.unlockedStageIds);
       const completed = CAMPAIGN_STAGES.filter((stage) => (campaignProgress.completedStages[stage.id]?.bestStars ?? 0) > 0).length;
