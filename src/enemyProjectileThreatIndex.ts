@@ -57,9 +57,16 @@ export class EnemyProjectileThreatIndex<T extends IndexedProjectile = IndexedPro
     for (const projectile of projectiles) {
       const position = projectile.mesh?.position;
       const velocity = projectile.vel;
+      // Keep this scalar-only: this method runs repeatedly during combat and
+      // temporary validation arrays become avoidable garbage on large volleys.
       if (
         projectile.orbiting || !position || !velocity ||
-        ![position.x, position.y, position.z, velocity.x, velocity.y, velocity.z].every(Number.isFinite)
+        !Number.isFinite(position.x) ||
+        !Number.isFinite(position.y) ||
+        !Number.isFinite(position.z) ||
+        !Number.isFinite(velocity.x) ||
+        !Number.isFinite(velocity.y) ||
+        !Number.isFinite(velocity.z)
       ) continue;
 
       const speed = Math.hypot(velocity.x, velocity.z);
@@ -94,9 +101,15 @@ export class EnemyProjectileThreatIndex<T extends IndexedProjectile = IndexedPro
     stalenessSeconds = 0.04,
   ): readonly T[] {
     this.queryBuffer.length = 0;
+    // Scalar-only validation avoids allocating a temporary array per enemy scan.
     if (
-      ![x, z, lookAheadSeconds, collisionRadius, stalenessSeconds].every(Number.isFinite) ||
-      this.maxHorizontalSpeed <= 0 || this.cells.size === 0
+      !Number.isFinite(x) ||
+      !Number.isFinite(z) ||
+      !Number.isFinite(lookAheadSeconds) ||
+      !Number.isFinite(collisionRadius) ||
+      !Number.isFinite(stalenessSeconds) ||
+      this.maxHorizontalSpeed <= 0 ||
+      this.cells.size === 0
     ) return this.queryBuffer;
 
     const lookAhead = Math.max(0, Math.min(1.0, lookAheadSeconds));
