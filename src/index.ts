@@ -1393,12 +1393,29 @@ class PaleciakiScene extends xb.Script {
           const damageReport = this.engine.getSurvivalDamageReport();
           lastCampaignStageId = snapshot.campaignStageId;
           nextCampaignStageId = null;
+          campaignRewardChoices = [];
+          campaignRewardTargetStageId = null;
+          campaignRewardSelectionId = null;
           if (snapshot.campaignStageId && snapshot.campaignSuccess) {
             campaignProgress = recordCampaignStageResult(campaignProgress, snapshot.campaignStageId, { bossDefeated: true, kills: snapshot.kills, elapsedSeconds: snapshot.elapsedSeconds, perfectDodges: snapshot.perfectDodges });
-            saveCampaignProgress();
             nextCampaignStageId = getNextCampaignStageId(campaignProgress, snapshot.campaignStageId);
+            if (nextCampaignStageId) {
+              const completions = campaignProgress.completedStages[snapshot.campaignStageId]?.completions ?? 1;
+              campaignRewardChoices = getCampaignRewardChoices(snapshot.campaignStageId, completions);
+              campaignRewardTargetStageId = nextCampaignStageId;
+              const savedReward = campaignProgress.pendingRewardStageId === nextCampaignStageId
+                ? campaignRewardChoices.find((reward) => reward.id === campaignProgress.pendingRewardId)
+                : undefined;
+              const defaultReward = savedReward ?? campaignRewardChoices[0];
+              if (defaultReward) {
+                campaignRewardSelectionId = defaultReward.id;
+                campaignProgress = setPendingCampaignReward(campaignProgress, nextCampaignStageId, defaultReward.id);
+              }
+            }
+            saveCampaignProgress();
             renderCampaignBoard();
           }
+          renderCampaignRewardPanel();
           const resultRetryButton = document.getElementById('btn-retry');
           if (resultRetryButton) resultRetryButton.textContent = snapshot.campaignStageId ? (nextCampaignStageId ? 'NASTĘPNY ETAP' : 'POWTÓRZ ETAP') : 'SPRÓBUJ PONOWNIE';
           const resultMenuButton = document.getElementById('btn-menu-gameover');
