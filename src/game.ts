@@ -10138,7 +10138,8 @@ export class PaleciakiGameEngine {
       }
       this.survivalWave = nextWave;
       this.survivalWaveStartKills = this.survivalKills;
-      this.survivalContract = createSurvivalContract(this.survivalWave);
+      const waveMutator = getSurvivalWaveMutator(this.survivalWave);
+      this.survivalContract = createSurvivalContract(this.survivalWave, waveMutator.id);
       this.emitFloatingToast(
         'FALA ' + this.survivalWave + ' • KONTRAKT: ' + this.survivalContract.title,
         this.playerPos.x, this.playerPos.y + 1.75, this.playerPos.z, 'combo'
@@ -10146,8 +10147,8 @@ export class PaleciakiGameEngine {
       sound.playAlert();
 
       // A rotating shift rule changes the tactical shape of every third wave.
-      // It is announced once at the transition and never interrupts gameplay.
-      const waveMutator = getSurvivalWaveMutator(this.survivalWave);
+      // Its contract is generated above so the objective matches the active rule.
+      // The announcement never interrupts gameplay.
       if (waveMutator.id !== 'standard') {
         this.callbacks.onSurvivalAnnouncement?.(
           waveMutator.title,

@@ -1,3 +1,5 @@
+import type { SurvivalWaveMutatorId } from './survivalWaveMutators.ts';
+
 export type SurvivalContractKind = 'eliminations' | 'xp' | 'combo';
 export type SurvivalContractAction = SurvivalContractKind;
 
@@ -29,10 +31,90 @@ function safeAmount(value: number): number {
   return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
 }
 
-/** Three attainable, different goals rotate with each warehouse shift. */
-export function createSurvivalContract(wave: number): SurvivalContractState {
+function createMutatorContract(
+  wave: number,
+  tier: number,
+  mutatorId: SurvivalWaveMutatorId,
+): SurvivalContractState | null {
+  const make = (
+    kind: SurvivalContractKind,
+    title: string,
+    target: number,
+    description: string,
+  ): SurvivalContractState => ({
+    wave,
+    kind,
+    title,
+    description,
+    target,
+    progress: 0,
+    remainingSeconds: CONTRACT_DURATION_SECONDS,
+    completed: false,
+    expired: false,
+  });
+
+  switch (mutatorId) {
+    case 'rush': {
+      const target = 3 + Math.min(3, Math.floor(tier / 2));
+      return make(
+        'combo',
+        'SERIA SZYBKIEJ ZMIANY',
+        target,
+        'Zbuduj serię eliminacji ×' + target + ' w jednym combo podczas szybkiego natarcia.',
+      );
+    }
+    case 'armored': {
+      const target = 7 + tier * 2;
+      return make(
+        'eliminations',
+        'ROZBIJ PANCERNĄ ZMIANĘ',
+        target,
+        'Zlikwiduj ' + target + ' przeciwników. Uważaj na jednostki z aktywną osłoną.',
+      );
+    }
+    case 'supply': {
+      const target = 6 + tier * 2;
+      return make(
+        'xp',
+        'ZABEZPIECZ ZŁOTY ŁADUNEK',
+        target,
+        'Zbierz ' + target + ' XP z kryształów. Premia dostawy zwiększa wartość łupu.',
+      );
+    }
+    case 'swarm': {
+      const target = 9 + tier * 2;
+      return make(
+        'eliminations',
+        'OCZYŚĆ ALEJKĘ SZTURMU',
+        target,
+        'Zlikwiduj ' + target + ' przeciwników ze szturmu paletowego, zanim zajmą alejki.',
+      );
+    }
+    case 'convoy': {
+      const target = 4 + Math.min(4, Math.floor(tier * 0.75));
+      return make(
+        'xp',
+        'ODZYSKAJ ŁADUNEK KONWOJU',
+        target,
+        'Zbierz ' + target + ' XP z kryształów upuszczanych przez ciężki konwój.',
+      );
+    }
+    default:
+      return null;
+  }
+}
+
+/** Three attainable goals rotate by default; active wave rules can supply a matching objective. */
+export function createSurvivalContract(
+  wave: number,
+  mutatorId?: SurvivalWaveMutatorId,
+): SurvivalContractState {
   const safe = safeWave(wave);
   const tier = Math.floor((safe - 1) / 3);
+  if (mutatorId && mutatorId !== 'standard') {
+    const themed = createMutatorContract(safe, tier, mutatorId);
+    if (themed) return themed;
+  }
   const cycle = (safe - 1) % 3;
 
   if (cycle === 0) {

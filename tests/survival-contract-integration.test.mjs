@@ -7,7 +7,8 @@ const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 test('Survival contracts are connected to real kills, collected XP and combo chains', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /advanceSurvivalContract\(this\.survivalContract, dt\)/);
-  assert.match(game, /this\.survivalContract = createSurvivalContract\(this\.survivalWave\)/);
+  assert.match(game, /const waveMutator = getSurvivalWaveMutator\(this\.survivalWave\)/);
+  assert.match(game, /this\.survivalContract = createSurvivalContract\(this\.survivalWave, waveMutator\.id\)/);
   assert.match(game, /registerSurvivalContractAction\('eliminations', 1\)/);
   assert.match(game, /registerSurvivalContractAction\('combo', this\.comboStreak\)/);
   assert.match(game, /registerSurvivalContractAction\('xp', xpValue\)/);

@@ -55,3 +55,28 @@ test('invalid time and action values cannot create non-finite progress', () => {
   assert.equal(registerSurvivalContractAction(state, 'eliminations', Number.NaN).state.progress, 0);
   assert.equal(advanceSurvivalContract(state, -2).state.remainingSeconds, 60);
 });
+
+test('wave contracts reinforce the active tactical mutator', () => {
+  const cases = [
+    { wave: 3, mutator: 'rush', kind: 'combo', target: 3, title: 'SERIA SZYBKIEJ ZMIANY' },
+    { wave: 4, mutator: 'armored', kind: 'eliminations', target: 9, title: 'ROZBIJ PANCERNĄ ZMIANĘ' },
+    { wave: 5, mutator: 'supply', kind: 'xp', target: 8, title: 'ZABEZPIECZ ZŁOTY ŁADUNEK' },
+    { wave: 6, mutator: 'swarm', kind: 'eliminations', target: 11, title: 'OCZYŚĆ ALEJKĘ SZTURMU' },
+    { wave: 7, mutator: 'convoy', kind: 'xp', target: 5, title: 'ODZYSKAJ ŁADUNEK KONWOJU' },
+  ];
+  for (const expected of cases) {
+    const contract = createSurvivalContract(expected.wave, expected.mutator);
+    assert.equal(contract.kind, expected.kind);
+    assert.equal(contract.target, expected.target);
+    assert.equal(contract.title, expected.title);
+    assert.equal(contract.remainingSeconds, 60);
+    assert.equal(contract.completed, false);
+    assert.equal(contract.expired, false);
+  }
+});
+
+test('standard waves retain the existing contract rotation', () => {
+  assert.equal(createSurvivalContract(1, 'standard').kind, 'eliminations');
+  assert.equal(createSurvivalContract(2, 'standard').kind, 'xp');
+  assert.equal(createSurvivalContract(3, 'standard').kind, 'combo');
+});
