@@ -16,7 +16,11 @@ test('the branded loader keeps one progress system and every asset callback targ
     'loader-tip-text',
   ]) {
     assert.equal((html.match(new RegExp('id="' + id + '"', 'g')) || []).length, 1, id);
-    assert.ok(assets.includes('id="' + id + '"'), 'fallback loader missing ' + id);
+    if (id === 'asset-loader-overlay') {
+      assert.match(assets, /overlay\.id = 'asset-loader-overlay'/);
+    } else {
+      assert.ok(assets.includes('id="' + id + '"'), 'fallback loader missing ' + id);
+    }
   }
   assert.match(html, /WAREHOUSE\s*<span>MaDDnes<\/span>/);
   assert.match(html, /loader-art/);
