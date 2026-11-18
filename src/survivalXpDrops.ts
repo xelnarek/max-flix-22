@@ -30,8 +30,8 @@ const HEAVY_TYPES: ReadonlySet<EnemyType> = new Set([
 ]);
 
 export function getSurvivalXpDropProfile(type: EnemyType): SurvivalXpDropProfile {
-  if (BOSS_TYPES.has(type)) return { dropClass: 'boss', chance: 1, minValue: 5, maxValue: 7 };
-  if (ELITE_TYPES.has(type)) return { dropClass: 'elite', chance: 0.88, minValue: 3, maxValue: 4 };
+  if (BOSS_TYPES.has(type)) return { dropClass: 'boss', chance: 1, minValue: 3, maxValue: 4 };
+  if (ELITE_TYPES.has(type)) return { dropClass: 'elite', chance: 0.88, minValue: 2, maxValue: 3 };
   if (HEAVY_TYPES.has(type)) return { dropClass: 'heavy', chance: 0.56, minValue: 2, maxValue: 3 };
   return { dropClass: 'regular', chance: 0.32, minValue: 1, maxValue: 2 };
 }
