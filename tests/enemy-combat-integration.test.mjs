@@ -115,6 +115,8 @@ test('regular ranged enemies telegraph a locked shot and stop moving during wind
   assert.match(game, /enemy\.aiRangedLockedDirection = direction/);
   assert.match(game, /spawnBossLaneTelegraph\([\s\S]*?profile\.laneWidth[\s\S]*?profile\.windupSeconds/);
   assert.match(game, /const isTelegraphingRangedBoss = enemy\.aiRangedWindupTimer !== undefined/);
+  assert.match(game, /enemy\.mesh\.rotation\.y = enemy\.aiRangedWindupTimer !== undefined/);
+  assert.match(game, /if \(factionBrawlActive\) \{[\s\S]*?cancelEnemyRangedAttackTelegraph\(e, true\)/);
   assert.match(game, /e\.aiRangedWindupTimer !== undefined[\s\S]*?advanceEnemyRangedAttackTelegraph/);
   assert.match(game, /spawnPenaltyNotice\(e\.x, e\.y \+ 0\.8, e\.z, release\.direction\)/);
   assert.match(game, /spawnSanitarywareProjectile\(e\.x, e\.y \+ 0\.8, e\.z, release\.direction\)/);
