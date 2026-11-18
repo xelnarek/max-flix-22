@@ -1691,7 +1691,7 @@ test('Mateusz summons exactly five separate Marvel/DC hero models', async () => 
   assert.equal(roster.filter(hero => hero.universe === 'DC').length, 1);
   assert.equal(new Set(roster.map(hero => hero.style)).size, 5);
   assert.match(game, /private createMateuszRivalModel\(/);
-  assert.match(game, /new THREE\\.CapsuleGeometry\\(0\\.285, 0\\.43, 4, 12\\)/);
+  assert.match(game, /new THREE\.CapsuleGeometry\(0\.285, 0\.43, 4, 12\)/);
   for (const modelDetail of ['iron-man-arc-reactor', 'hulk-purple-shorts', 'spider-web-emblem', 'storm-white-hair', 'batman-cowl-ear']) {
     assert.ok(game.includes(modelDetail), 'missing distinct 3D detail: ' + modelDetail);
   }
