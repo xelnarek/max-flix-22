@@ -1674,6 +1674,7 @@ class PaleciakiScene extends xb.Script {
               spinButton.textContent = 'LOSOWANIE…';
               machine.classList.remove('is-jackpot', 'is-risk', 'has-result');
               machine.classList.add('is-spinning');
+              sound.playRouletteSpin();
               if (resultNode) {
                 resultNode.textContent = 'BĘBNY W RUCHU…';
                 resultNode.classList.remove('is-visible');
@@ -1692,6 +1693,7 @@ class PaleciakiScene extends xb.Script {
                 window.setTimeout(() => {
                   window.clearInterval(tick);
                   reel.classList.add('is-locked');
+                  sound.playRouletteStop(index);
                   stoppedReels += 1;
                   if (stoppedReels !== reelNodes.length) return;
 
@@ -1709,7 +1711,9 @@ class PaleciakiScene extends xb.Script {
                   machine.style.setProperty('--roulette-accent', style.accent);
                   machine.dataset.result = result.kind;
                   machine.classList.remove('is-spinning');
-                  machine.classList.add('has-result', result.kind === 'enemy_pack' || result.kind === 'elite_delivery' ? 'is-risk' : 'is-jackpot');
+                  const isRisk = result.kind === 'enemy_pack' || result.kind === 'elite_delivery';
+                  machine.classList.add('has-result', isRisk ? 'is-risk' : 'is-jackpot');
+                  sound.playRouletteResult(isRisk);
                   reelNodes.forEach((node) => {
                     node.textContent = result.icon;
                     node.style.setProperty('--reel-accent', style.accent);
