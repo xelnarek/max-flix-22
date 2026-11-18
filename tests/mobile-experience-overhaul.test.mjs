@@ -61,3 +61,31 @@ test('loader and radio presentation honour system reduced-motion settings', asyn
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(css, /loader-icon-spinner/);
 });
+
+test('portrait Survival camera framing makes operators more readable without changing Campaign or PvP', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /this\.gameMode === 'survival' && this\.viewportAspect < 0\.78/);
+  assert.match(game, /baseOffsetY = 14\.6;\s*baseOffsetZ = 9\.55/);
+  assert.match(game, /cameraMode === 'iso'[\s\S]*?baseOffsetY = 15\.8;\s*baseOffsetZ = 10\.2/);
+});
+
+test('combat quality systems remain wired: swept shots, obstacle blocking, telegraphed AI and role animations', async () => {
+  const [game, arena, impact, telegraphs, animation] = await Promise.all([
+    read('../src/game.ts'),
+    read('../src/pvpArena.ts'),
+    read('../src/projectileImpact.ts'),
+    read('../src/enemyMeleeTelegraphs.ts'),
+    read('../src/gobkitAnimation.ts'),
+  ]);
+  assert.match(game, /findFirstProjectileEnemyImpact\(/);
+  assert.match(game, /findFirstProjectileBodyImpact\(/);
+  assert.match(arena, /firstProjectileObstacleHit\(/);
+  assert.match(arena, /pointSegmentDistanceSq\(/);
+  assert.match(impact, /horizontalStart[\s\S]*?verticalStart/);
+  assert.match(telegraphs, /warningText/);
+  assert.match(game, /advanceEnemyAttackTelegraph\(/);
+  assert.match(game, /advanceEnemyMeleeAttackTelegraph\(/);
+  assert.match(game, /calculateEnemyProjectileDodge\(/);
+  assert.match(game, /updateGobkitAnimations\(/);
+  assert.match(animation, /shouldKeepGobkitAction/);
+});
