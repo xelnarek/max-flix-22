@@ -13533,7 +13533,11 @@ export class PaleciakiGameEngine {
       if (runtime.windupRemaining > 0) {
         runtime.windupRemaining = 0;
         runtime.cooldownRemaining = Math.max(runtime.cooldownRemaining, signature.intervalSeconds * 0.55);
-        this.emitFloatingToast('🛑 ROZKAZ BOSSA PRZERWANY • DOBRA KONTRA!', boss.x, boss.y + 2.0, boss.z, 'perk');
+        this.callbacks.onSurvivalAnnouncement?.(
+          'KONTRA UDANA',
+          signature.title.toUpperCase(),
+          'Przerwano specjalny atak przed wystrzeleniem salwy.',
+        );
         sound.playShieldBreak();
       }
       return;
@@ -13568,13 +13572,6 @@ export class PaleciakiGameEngine {
       );
       this.requestEnemyAttackAnimation(boss, 0.58);
       this.spawnParticleRing(boss.x, boss.y + 0.55, boss.z, 0xf59e0b);
-      this.emitFloatingToast(
-        '⚠ ' + signature.callout + ' • ' + count + ' TORÓW OSTRZAŁU!',
-        boss.x,
-        boss.y + 2.0,
-        boss.z,
-        'damage',
-      );
       sound.playWhistle();
       return;
     }
@@ -13592,12 +13589,10 @@ export class PaleciakiGameEngine {
     runtime.windupRemaining = signature.windupSeconds;
     this.requestEnemyAttackAnimation(boss, 0.48);
     this.spawnParticleRing(boss.x, boss.y + 0.42, boss.z, 0xfbbf24);
-    this.emitFloatingToast(
-      '🚨 ' + signature.title.toUpperCase() + ': ' + signature.warning,
-      boss.x,
-      boss.y + 2.05,
-      boss.z,
-      'damage',
+    this.callbacks.onSurvivalAnnouncement?.(
+      signature.callout,
+      signature.title.toUpperCase(),
+      signature.warning + ' Przerwij przygotowanie, ogłuszając bossa.',
     );
     sound.playBossWarning();
   }
