@@ -234,7 +234,8 @@ test('Survival menu copy stays synchronized with the actual 60-second wave clock
   const [game, html] = await Promise.all([read('../src/game.ts'), read('../index.html')]);
   assert.match(game, /const waveIntervalSeconds = this\.campaignStage\?\.waveIntervalSeconds \?\? 60/);
   assert.match(game, /const nextWave = 1 \+ Math\.floor\(this\.survivalElapsed \/ waveIntervalSeconds\)/);
-  assert.match(html, /ENDLESS • BEZ LIMITU CZASU • FALE CO 60 S/);
+  assert.match(html, /data-mode="survival"/);
+  assert.match(html, /BEZ LIMITU • FALE CO 60 S/);
   assert.doesNotMatch(html, /FALE CO 42 S/);
 });
 
