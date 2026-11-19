@@ -18,7 +18,7 @@ test('premium final menu is loaded and preserves real destinations', () => {
 });
 
 test('premium menu has isolated scrolling and short-screen geometry', () => {
-  const compactCss = css.replaceAll(' ', '').replaceAll('\\n', '').replaceAll('\\r', '').replaceAll('\\t', '');
+  const compactCss = css.replaceAll(' ', '').split(String.fromCharCode(10)).join('').split(String.fromCharCode(13)).join('').split(String.fromCharCode(9)).join('');
   const contentRuleStart = compactCss.indexOf('#title-screen.menu-tab-content-area{');
   assert.ok(contentRuleStart >= 0, 'menu content viewport must be styled');
   const contentRuleEnd = compactCss.indexOf('}', contentRuleStart);
@@ -36,5 +36,5 @@ test('cinematic intro keeps procedural Canvas 2D and accessible fallback', () =>
   assert.match(intro, /prefers-reduced-motion/);
   assert.match(intro, /private readonly duration = 11\.8/);
   assert.match(intro, /drawOperatorPortrait/);
-  assert.match(css, /INTRO \/ industrial alarm/);
+  assert.ok(css.includes('.cinematic-intro-overlay'), 'cinematic intro uses its dedicated presentation layer');
 });
