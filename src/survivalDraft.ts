@@ -389,9 +389,13 @@ export function getSurvivalDraftSynergyHint(
       progress: getSynergyProgress(id, synergy, context, planned),
     }))
     .filter(({ synergy, progress }) =>
-      safeCount(getStacks(context)[synergy.partner]) > 0 ||
-      planned.has(synergy.partner) ||
-      progress.willComplete
+      !progress.wasComplete &&
+      progress.bonus > 0 &&
+      (
+        safeCount(getStacks(context)[synergy.partner]) > 0 ||
+        planned.has(synergy.partner) ||
+        progress.willComplete
+      )
     )
     .sort((a, b) => b.progress.bonus - a.progress.bonus);
 
