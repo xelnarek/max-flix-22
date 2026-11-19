@@ -117,7 +117,9 @@ test('clamped live stick footprint never reaches the Survival or PvP action dock
         touchX: viewport.width,
         touchY: viewport.height,
       });
-      const radius = Math.max(126, Math.min(148, viewport.width * 0.36)) * 0.5;
+      const minJoystick = Math.max(100, Math.min(118, viewport.width * 0.32));
+      const maxJoystick = Math.max(minJoystick, Math.max(116, Math.min(148, viewport.width * 0.38)));
+      const radius = Math.max(minJoystick, Math.min(maxJoystick, viewport.width * 0.36)) * 0.5;
       assert.ok(point.x + radius <= geometry.actionDock.left - 8,
         mode + ' active stick touches the action dock at ' + viewport.width + 'x' + viewport.height);
       assert.ok(point.y + radius <= viewport.height - 12);
@@ -152,8 +154,10 @@ test('compact-landscape PvP fire circle stays at least 10px above the idle joyst
       viewportHeight: viewport.height,
       mode: 'pvp',
     });
-    const idleJoystickTop = viewport.height - Math.max(82, 12 + 76)
-      - Math.max(126, Math.min(148, viewport.width * 0.36)) * 0.5;
+    const minJoystick = Math.max(100, Math.min(118, viewport.width * 0.32));
+    const maxJoystick = Math.max(minJoystick, Math.max(116, Math.min(148, viewport.width * 0.38)));
+    const joystickSize = Math.max(minJoystick, Math.min(maxJoystick, viewport.width * 0.36));
+    const idleJoystickTop = viewport.height - Math.max(82, 12 + 76) - joystickSize * 0.5;
     assert.ok(geometry.fireControl);
     assert.ok(geometry.fireControl.bottom <= idleJoystickTop - 10,
       'fire control overlaps idle joystick at ' + viewport.width + 'x' + viewport.height);
