@@ -807,9 +807,33 @@ class PaleciakiScene extends xb.Script {
 
     const renderCampaignBoard = () => {
       const unlocked = new Set(campaignProgress.unlockedStageIds);
-      const completed = CAMPAIGN_STAGES.filter((stage) => (campaignProgress.completedStages[stage.id]?.bestStars ?? 0) > 0).length;
+      const completedStages = CAMPAIGN_STAGES.filter((stage) => (campaignProgress.completedStages[stage.id]?.bestStars ?? 0) > 0);
+      const completed = completedStages.length;
       const status = document.getElementById('campaign-board-progress');
       if (status) status.textContent = 'ODKRYTE ETAPY: ' + unlocked.size + '/' + CAMPAIGN_STAGES.length + ' • UKOŃCZONE: ' + completed + '/' + CAMPAIGN_STAGES.length;
+
+      // Continue at the first unlocked stage that has not been cleared yet.
+      // If the whole story is complete, offer a replay of the final mission.
+      const allComplete = completed === CAMPAIGN_STAGES.length;
+      const continueStage = CAMPAIGN_STAGES.find((stage) => unlocked.has(stage.id) && !campaignProgress.completedStages[stage.id]?.bestStars)
+        ?? (allComplete ? CAMPAIGN_STAGES[CAMPAIGN_STAGES.length - 1] : [...CAMPAIGN_STAGES].reverse().find((stage) => unlocked.has(stage.id)))
+        ?? CAMPAIGN_STAGES[0];
+      const continueButton = document.getElementById('btn-campaign-continue') as HTMLButtonElement | null;
+      const continueTitle = document.getElementById('campaign-continue-title');
+      const continueSubtitle = document.getElementById('campaign-continue-subtitle');
+      if (continueButton) {
+        const isInitialStart = completed === 0 && continueStage.order === 1;
+        continueButton.disabled = !unlocked.has(continueStage.id);
+        continueButton.setAttribute('aria-label', (allComplete ? 'Powtórz finał kampanii' : isInitialStart ? 'Rozpocznij kampanię' : 'Kontynuuj kampanię')
+          + ': etap ' + continueStage.order + ', ' + continueStage.title);
+        if (continueTitle) continueTitle.textContent = allComplete ? 'POWTÓRZ FINAŁ' : isInitialStart ? 'ROZPOCZNIJ KAMPANIĘ' : 'KONTYNUUJ KAMPANIĘ';
+        if (continueSubtitle) {
+          const bestStars = campaignProgress.completedStages[continueStage.id]?.bestStars ?? 0;
+          continueSubtitle.textContent = 'ETAP ' + String(continueStage.order).padStart(2, '0') + ' • ' + continueStage.title.toUpperCase()
+            + (allComplete ? ' • WSZYSTKIE MISJE UKOŃCZONE' : bestStars ? ' • POWTÓRKA / POPRAWA WYNIKU' : ' • NASTĘPNA MISJA');
+        }
+      }
+
       for (const button of document.querySelectorAll<HTMLButtonElement>('[data-campaign-stage]')) {
         const id = button.dataset.campaignStage as CampaignStageId | undefined;
         if (!id) continue;
@@ -3028,6 +3052,18 @@ class PaleciakiScene extends xb.Script {
       event.preventDefault();
       const campaignTab = menuTabButtons.find((tab) => tab.getAttribute('data-tab') === 'tab-map');
       if (campaignTab) activateMenuTab(campaignTab);
+    });
+
+    bindTap(document.getElementById('btn-campaign-continue'), (event) => {
+      event.preventDefault();
+      const unlocked = new Set(campaignProgress.unlockedStageIds);
+      const allComplete = CAMPAIGN_STAGES.every((stage) => (campaignProgress.completedStages[stage.id]?.bestStars ?? 0) > 0);
+      const nextStage = CAMPAIGN_STAGES.find((stage) => unlocked.has(stage.id) && !campaignProgress.completedStages[stage.id]?.bestStars)
+        ?? (allComplete ? CAMPAIGN_STAGES[CAMPAIGN_STAGES.length - 1] : [...CAMPAIGN_STAGES].reverse().find((stage) => unlocked.has(stage.id)))
+        ?? CAMPAIGN_STAGES[0];
+      if (!nextStage || !unlocked.has(nextStage.id)) return;
+      selectedCampaignStageId = nextStage.id;
+      void doStartSurvival(event);
     });
 
     bindTap(document.getElementById('btn-start-survival'), (event) => {
