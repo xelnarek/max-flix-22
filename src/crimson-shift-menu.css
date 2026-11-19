@@ -288,3 +288,6 @@
     transition:none !important; animation:none !important;
   }
 }
+
+/* Keep the mode row's established responsive grid contract explicit. */
+#title-screen .menu-mode-grid { align-items:stretch !important; gap:clamp(7px,1vw,12px) !important; }
