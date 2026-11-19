@@ -18,7 +18,7 @@ test('public identity and operator labels are generic', async () => {
   const listing = JSON.parse(listingText);
   const manifest = JSON.parse(manifestText);
   assert.match(html, /<title>MAX FLIX 22<\/title>/);
-  assert.match(html, /SURVIVAL • HORDY • EWOLUCJE BRONI/);
+  assert.match(html, /CRIMSON SHIFT/);
   assert.match(metadataText, /"name": "Warehouse MaDDnes"/);
   const publishedDescriptions = [metadata.description, listing.shortDescription, listing.fullDescription, manifest.description].join('\\n');
   assert.match(publishedDescriptions, /Survival PvE/);
