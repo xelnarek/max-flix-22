@@ -2412,7 +2412,7 @@ export class PaleciakiGameEngine {
           pendingAttackUntil > now ||
           attackAnimationUntil > now ||
           (track.oneShotRemaining || 0) > 0;
-        const useProxy = shouldUseEnemyVisualLodProxy(
+        const useProxy = enemy.state !== 'defeated' && shouldUseEnemyVisualLodProxy(
           distanceSquared,
           this.isHandheldViewport,
           lodProxy.visible,
@@ -12202,6 +12202,26 @@ export class PaleciakiGameEngine {
   }
 
   /** Spin the B4 machine once, only after the normal third-level draft. */
+  /** Clear hostile shots through the normal ownership/disposal path for a defensive jackpot. */
+  private clearSurvivalEnemyProjectiles(): number {
+    let cleared = 0;
+    for (let index = this.enemyProjectiles.length - 1; index >= 0; index--) {
+      const projectile = this.enemyProjectiles[index];
+      if (!projectile) continue;
+      this.levelRoot.remove(projectile.mesh);
+      if (
+        projectile.kind === 'pomazaniec_lollipop' ||
+        projectile.kind === 'sebix_brick' ||
+        projectile.disposeOnRemove
+      ) {
+        this.disposeTemporaryObject(projectile.mesh);
+      }
+      this.enemyProjectiles.splice(index, 1);
+      cleared++;
+    }
+    return cleared;
+  }
+
   public spinSurvivalChaosRoulette(): boolean {
     if (
       this.gameMode !== 'survival' ||
@@ -12333,6 +12353,67 @@ export class PaleciakiGameEngine {
             : 'Limit urządzenia nie pozwolił dodać kolejnych wrogów.',
           '🚨',
         );
+      }
+      case 'magnet_surge':
+        this.activatePerk('order_magnet', 18);
+        return finishSpin('MAGNES PALETOWY • TURBO', 'Przez 18 sekund zasięg przyciągania kryształów XP i łupu jest mocno zwiększony.', '🧲');
+      case 'xp_surge':
+        this.activatePerk('xp_surge', 20);
+        return finishSpin('DOPALACZ DOŚWIADCZENIA', 'Przez 20 sekund każdy zebrany kryształ XP ma zwiększoną wartość.', '📈');
+      case 'golden_crate': {
+        const bonus = 650 + Math.floor(Math.random() * 901);
+        const gemCount = 3 + Math.floor(Math.random() * 3);
+        this.score += bonus;
+        this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+        for (let index = 0; index < gemCount; index++) {
+          const angle = Math.random() * Math.PI * 2;
+          const radius = 1.8 + Math.random() * 2.2;
+          const x = THREE.MathUtils.clamp(this.playerPos.x + Math.cos(angle) * radius, this.levelBounds.minX + 1.2, this.levelBounds.maxX - 1.2);
+          const z = THREE.MathUtils.clamp(this.playerPos.z + Math.sin(angle) * radius, this.levelBounds.minZ + 1.2, this.levelBounds.maxZ - 1.2);
+          this.spawnSurvivalXpGem(x, this.playerPos.y, z, 2 + Math.floor(Math.random() * 3));
+        }
+        this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.45, this.playerPos.z, 0xfbbf24);
+        sound.playEasterEgg();
+        return finishSpin('ZŁOTA PALETA • +' + bonus + ' PKT', 'Losowa premia ' + bonus + ' punktów i ' + gemCount + ' kryształy XP wypadły ze złotej skrzyni.', '📦');
+      }
+      case 'hazard_clear': {
+        const cleared = this.clearSurvivalEnemyProjectiles();
+        this.activatePerk('damage_ward', 12);
+        this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.48, this.playerPos.z, 0x67e8f9);
+        sound.playElectricalSparks();
+        return finishSpin('CZYSZCZENIE ZAGROŻEŃ', 'Usunięto ' + cleared + ' aktywnych pocisków przeciwników. Dodatkowo przez 12 sekund działa osłona obrażeń.', '🧹');
+      }
+      case 'double_or_nothing': {
+        if (Math.random() < 0.55) {
+          const bonus = 1600 + Math.floor(Math.random() * 901);
+          const gems = this.triggerSurvivalXpRain();
+          this.score += bonus;
+          this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+          return finishSpin('PODWÓJNA WYGRANA • +' + bonus + ' PKT', 'Ryzyko się opłaciło: premia ' + bonus + ' punktów i dodatkowy deszcz ' + gems + ' kryształów XP.', '🎲');
+        }
+        const delivered = this.spawnSurvivalEliteDelivery();
+        return finishSpin(
+          delivered > 0 ? 'RYZYKO PRZEGRANE • ELITA ×' + delivered : 'RYZYKO PRZEGRANE • ALARM B4',
+          delivered > 0 ? 'Drugi rzut RNG wypadł źle. Na arenę wjechała elitarna para: kontroler i kurier.' : 'Drugi rzut RNG wypadł źle. Limit wrogów blokuje dostawę, ale premia przepada.',
+          '🎲',
+        );
+      }
+      case 'weapon_draft': {
+        const weaponOptions = this.rollSurvivalUpgradeOptions().filter((option) =>
+          option.id.startsWith('weapon_unlock:') ||
+          option.id.startsWith('weapon_upgrade:') ||
+          option.id.startsWith('weapon_evolve:')
+        );
+        if (weaponOptions.length > 0) {
+          this.survivalPendingOptions = weaponOptions;
+          const selected = weaponOptions[Math.floor(Math.random() * weaponOptions.length)];
+          this.survivalChaosRouletteLastResult = { kind: outcome, title: selected.title, icon: selected.icon };
+          this.survivalChaosRoulettePending = false;
+          this.emitFloatingToast('🎰 SKRZYNIA BRONI: ' + selected.title, this.playerPos.x, this.playerPos.y + 2.1, this.playerPos.z, 'combo');
+          return this.chooseSurvivalUpgrade(selected.id);
+        }
+        const count = this.triggerSurvivalXpRain();
+        return finishSpin('MAGAZYN BRONI PUSTY • XP', 'Nie było dostępnej nowej broni ani ulepszenia. Zamiast tego automat wydał ' + count + ' kryształów XP.', '🔧');
       }
       default:
         this.activatePerk('crimson_burst', 0);
@@ -15262,9 +15343,19 @@ export class PaleciakiGameEngine {
     enemy.mesh.position.z = resolved.z;
   }
 
+  /** Keep one render representation during death: the full rig, never its LOD proxy. */
+  private lockEnemyDeathVisualToSingleRig(mesh: THREE.Object3D): void {
+    const lodProxy = mesh.userData.actorLodProxyRoot as THREE.Group | undefined;
+    const fullVisual = mesh.userData.actorVisualRoot as THREE.Group | undefined;
+    if (lodProxy) lodProxy.visible = false;
+    if (fullVisual) fullVisual.visible = true;
+    mesh.userData.actorDeathVisualLocked = true;
+  }
+
   private beginEnemyDeathVisual(enemy: EnemyItem): void {
     const mesh = enemy.mesh as THREE.Object3D | undefined;
     if (!mesh) return;
+    this.lockEnemyDeathVisualToSingleRig(mesh);
     if (enemy.aiRangedWindupTimer !== undefined) this.cancelEnemyRangedAttackTelegraph(enemy);
     if (enemy.aiMeleeWindupTimer !== undefined || enemy.aiMeleeStrikePending) this.cancelEnemyMeleeAttackTelegraph(enemy);
     const isCthulhuDeath = enemy.name.includes('CTHULHU');
@@ -15298,6 +15389,7 @@ export class PaleciakiGameEngine {
   private updateDefeatedEnemyVisual(enemy: EnemyItem, dt: number): void {
     const mesh = enemy.mesh as THREE.Object3D | undefined;
     if (!mesh || !mesh.visible) return;
+    this.lockEnemyDeathVisualToSingleRig(mesh);
     const timer = Math.max(0, (enemy.deathVisualTimer || 0) - dt);
     enemy.deathVisualTimer = timer;
     const duration = Math.max(0.1, enemy.deathVisualDuration || 0.82);
@@ -15342,7 +15434,12 @@ export class PaleciakiGameEngine {
     }
 
     if (timer <= 0) {
+      const lodProxy = mesh.userData.actorLodProxyRoot as THREE.Group | undefined;
+      const fullVisual = mesh.userData.actorVisualRoot as THREE.Group | undefined;
+      if (lodProxy) lodProxy.visible = false;
+      if (fullVisual) fullVisual.visible = false;
       mesh.visible = false;
+      delete mesh.userData.actorDeathVisualLocked;
       if (track) {
         this.stopGobkitTrack(track);
         this.gobkitEnemyTracks.delete(enemy);
