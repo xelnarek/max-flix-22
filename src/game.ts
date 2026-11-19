@@ -15168,7 +15168,9 @@ export class PaleciakiGameEngine {
       profile.windupSeconds + 0.12,
     );
     this.activeEnemyAttackTelegraphIds.add(enemy.id);
-    this.requestEnemyAttackAnimation(enemy, profile.windupSeconds);
+    // The authored Attack clip reaches its impact keyframe at 60% of its duration.
+    // Stretch it so that the wind-up warning ends on that exact contact frame.
+    this.requestEnemyAttackAnimation(enemy, profile.windupSeconds / 0.60);
 
     // Per-attacker direction cues are always visible; radio text and sound stay globally throttled.
     if (this.globalEnemyTelegraphToastCooldown <= 0) {
