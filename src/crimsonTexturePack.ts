@@ -8,7 +8,7 @@ export type CrimsonTextureId =
   | 'containerSteel'
   | 'rustedSteel'
   | 'palletTimber'
-  | 'hazardChevron';
+  | 'hazardChevron'\n  | 'coldFrost'\n  | 'rackUpright'\n  | 'plasticPallet'\n  | 'floorWear'\n  | 'floorMarkings';
 
 const TEXTURE_PATHS: Readonly<Record<CrimsonTextureId, string>> = Object.freeze({
   b4Concrete: 'assets/crimson-textures/floors/b4-worn-concrete.svg',
@@ -18,7 +18,7 @@ const TEXTURE_PATHS: Readonly<Record<CrimsonTextureId, string>> = Object.freeze(
   containerSteel: 'assets/crimson-textures/props/container-corrugated-steel.svg',
   rustedSteel: 'assets/crimson-textures/props/rusted-steel-plate.svg',
   palletTimber: 'assets/crimson-textures/props/pallet-timber.svg',
-  hazardChevron: 'assets/crimson-textures/props/hazard-chevron.svg',
+  hazardChevron: 'assets/crimson-textures/props/hazard-chevron.svg',\n  coldFrost: 'assets/crimson-textures/props/cold-frosted-metal.svg',\n  rackUpright: 'assets/crimson-textures/props/rack-upright-blue.svg',\n  plasticPallet: 'assets/crimson-textures/props/pallet-plastic-blue.svg',\n  floorWear: 'assets/crimson-textures/decals/floor-wear-overlay.svg',\n  floorMarkings: 'assets/crimson-textures/decals/warehouse-floor-markings.svg',
 });
 
 const loader = new THREE.TextureLoader();
