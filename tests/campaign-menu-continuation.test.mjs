@@ -4,6 +4,33 @@ import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL('../' + path, import.meta.url), 'utf8');
 
+test('all three game modes are always presented together and reuse the existing launch handlers', async () => {
+  const [html, app, css] = await Promise.all([
+    read('index.html'),
+    read('src/index.ts'),
+    read('src/menu-premium-refresh.css'),
+  ]);
+  const selectorStart = html.indexOf('<section class="menu-mode-selector"');
+  const selectorEnd = html.indexOf('</section>', selectorStart);
+  const tabsStart = html.indexOf('<div class="menu-tabs-bar">', selectorStart);
+  assert.ok(selectorStart >= 0 && selectorEnd > selectorStart && tabsStart > selectorEnd);
+  const selector = html.slice(selectorStart, selectorEnd);
+  for (const [id, mode] of [
+    ['btn-start-survival', 'survival'],
+    ['btn-open-campaign', 'campaign'],
+    ['btn-open-pvp', 'pvp'],
+  ]) {
+    assert.equal((html.match(new RegExp('id="' + id + '"', 'g')) || []).length, 1, id + ' should be unique');
+    assert.match(selector, new RegExp('id="' + id + '"[^>]*data-mode="' + mode + '"'));
+  }
+  assert.match(app, /bindTap\(document\.getElementById\('btn-start-survival'\)/);
+  assert.match(app, /bindTap\(document\.getElementById\('btn-open-campaign'\)/);
+  assert.match(app, /bindPvpTap\(btnOpenPvp, openLobby\)/);
+  assert.match(css, /\.menu-mode-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.menu-mode-grid\s*\{\s*grid-template-columns:\s*1fr/);
+  assert.doesNotMatch(html, /<div class="menu-cta-row">/);
+});
+
 test('campaign menu exposes a clear continue action and loads its premium visual layer last', async () => {
   const [html, css] = await Promise.all([
     read('index.html'),
