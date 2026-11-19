@@ -20385,7 +20385,7 @@ export class PaleciakiGameEngine {
       if (xpDrop) {
         this.survivalXpDropMissStreak = 0;
         if (xpDrop.isPityDrop) {
-          this.emitFloatingToast('📦 ŁUP AWARYJNY • OCHRONA PRZED PECHem', e.x, e.y + 1.6, e.z, 'perk');
+          this.emitFloatingToast('📦 ŁUP AWARYJNY • PECH POKONANY', e.x, e.y + 1.6, e.z, 'perk');
           this.spawnParticleRing(e.x, e.y + 0.55, e.z, 0x38bdf8);
         }
       } else {
