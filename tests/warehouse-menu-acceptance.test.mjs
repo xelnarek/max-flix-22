@@ -76,3 +76,62 @@ test('reduced-motion preferences are respected by the final layer', async () => 
   assert.match(finalPass, /prefers-reduced-motion:\s*reduce/);
   assert.match(finalPass, /transition: none !important/);
 });
+
+
+test('all menu segments receive the unified card and grid treatment', async () => {
+  const css = await read('../src/warehouse-maddnes-unified-menu.css');
+  const finalPass = css.slice(css.lastIndexOf('SEGMENT FINISH'));
+  const required = [
+    '.combat-guide-banner',
+    '.enemies-guide-grid',
+    '.perk-shop-grid',
+    '.field-guide-card-grid',
+    '.account-tree-grid',
+    '.character-talent-grid',
+    '.survival-achievement-grid',
+    '.campaign-stage-grid',
+    '.mega-map-biome-grid',
+    '.mega-map-route-grid',
+    '.leaderboard-item',
+    '.audio-slider-row',
+  ];
+  for (const selector of required) {
+    assert.ok(finalPass.includes(selector), 'missing segment polish: ' + selector);
+  }
+});
+
+test('segment card grids protect long copy and avoid fixed-width overflow', async () => {
+  const css = await read('../src/warehouse-maddnes-unified-menu.css');
+  const finalPass = css.slice(css.lastIndexOf('SEGMENT FINISH'));
+  assert.match(finalPass, /grid-template-columns: repeat\(auto-fit,minmax\(min\(100%,220px\),1fr\)\)/);
+  assert.match(finalPass, /overflow-wrap: anywhere/);
+  assert.match(finalPass, /min-width: 0 !important/);
+  assert.match(finalPass, /max-width: 100% !important/);
+});
+
+test('perk activation keeps a minimum touch target and adapts to phone and tablet layouts', async () => {
+  const css = await read('../src/warehouse-maddnes-unified-menu.css');
+  const finalPass = css.slice(css.lastIndexOf('SEGMENT FINISH'));
+  assert.match(finalPass, /min-height: 38px/);
+  assert.match(finalPass, /@media \(max-width: 640px\), \(pointer: coarse\)/);
+  assert.match(finalPass, /@media \(min-width: 641px\) and \(max-width: 900px\) and \(pointer: coarse\)/);
+  assert.match(finalPass, /min-height: 42px/);
+});
+
+test('settings audio sliders keep labels, range controls and values aligned on touch screens', async () => {
+  const css = await read('../src/warehouse-maddnes-unified-menu.css');
+  const finalPass = css.slice(css.lastIndexOf('SEGMENT FINISH'));
+  assert.match(finalPass, /audio-slider-row[\s\S]{0,450}grid-template-columns/);
+  assert.match(finalPass, /audio-slider-row input\[type="range"\]/);
+  assert.match(finalPass, /audio-slider-row output/);
+  assert.match(finalPass, /touch-action: pan-x/);
+});
+
+test('account progression, rank and leaderboard data remain in bounded responsive cards', async () => {
+  const css = await read('../src/warehouse-maddnes-unified-menu.css');
+  const finalPass = css.slice(css.lastIndexOf('SEGMENT FINISH'));
+  assert.match(finalPass, /account-progression-summary/);
+  assert.match(finalPass, /account-rank-track > \*/);
+  assert.match(finalPass, /leaderboard-item[\s\S]{0,260}grid-template-columns/);
+  assert.match(finalPass, /account-cloud-sync-row[\s\S]{0,220}flex-wrap: wrap/);
+});
