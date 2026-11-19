@@ -55,3 +55,18 @@ test('all per-event limits remain positive and finite', () => {
     }
   }
 });
+
+test('performance budgets reuse frozen profiles for each device/tier combination', () => {
+  const desktopA = getSurvivalPerformanceBudget(false, 0);
+  const desktopB = getSurvivalPerformanceBudget(false, 2);
+  const mobile0A = getSurvivalPerformanceBudget(true, 0);
+  const mobile0B = getSurvivalPerformanceBudget(true, 0);
+  const mobile1 = getSurvivalPerformanceBudget(true, 1);
+  const mobile2 = getSurvivalPerformanceBudget(true, 2);
+  assert.equal(desktopA, desktopB);
+  assert.equal(mobile0A, mobile0B);
+  assert.notEqual(mobile0A, mobile1);
+  assert.notEqual(mobile1, mobile2);
+  assert.notEqual(mobile2, desktopA);
+  for (const profile of [desktopA, mobile0A, mobile1, mobile2]) assert.ok(Object.isFrozen(profile));
+});
