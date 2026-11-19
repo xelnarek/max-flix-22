@@ -10619,7 +10619,6 @@ export class PaleciakiGameEngine {
       const payout = 650 + stage.order * 125;
       this.score += payout;
       this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
-      this.spawnSurvivalXpGem(this.playerPos.x + 1.1, this.playerPos.y, this.playerPos.z + 0.85, 5);
       this.emitFloatingToast('✦ ZLECENIE SPECJALNE • +' + payout + ' PKT • DODATKOWA KARTA', this.playerPos.x, this.playerPos.y + 2.1, this.playerPos.z, 'easter-egg');
       this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.58, this.playerPos.z, 0xfbbf24);
       this.triggerBloomPulse(0.52);
