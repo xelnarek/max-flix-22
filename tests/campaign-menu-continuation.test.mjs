@@ -26,6 +26,8 @@ test('all three game modes are always presented together and reuse the existing 
   assert.match(app, /bindTap\(document\.getElementById\('btn-start-survival'\)/);
   assert.match(app, /bindTap\(document\.getElementById\('btn-open-campaign'\)/);
   assert.match(app, /bindPvpTap\(btnOpenPvp, openLobby\)/);
+  assert.match(app, /target\?\.closest\('button, a, input, textarea, select, \[role="button"\], \[contenteditable="true"\]'\)/);
+  assert.match(css, /#title-screen #btn-start-survival\.menu-mode-card/);
   assert.match(css, /\.menu-mode-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
   assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.menu-mode-grid\s*\{\s*grid-template-columns:\s*1fr/);
   assert.doesNotMatch(html, /<div class="menu-cta-row">/);
