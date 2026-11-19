@@ -103,7 +103,7 @@ export class CinematicIntroManager {
     overlay.className = 'cinematic-intro-overlay';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute('aria-label', 'Warehouse MaDDnes — animowana odprawa przed grą');
+    overlay.setAttribute('aria-label', 'MAX FLIX 22 — animowana odprawa CRIMSON SHIFT');
     overlay.innerHTML = `
       <canvas class="cinematic-intro-canvas" aria-hidden="true"></canvas>
       <div class="cinematic-intro-vignette" aria-hidden="true"></div>
@@ -114,15 +114,15 @@ export class CinematicIntroManager {
       </div>
       <div class="cinematic-intro-copy">
         <div class="cinematic-intro-kicker">CRIMSON SHIFT • ARCADE SURVIVAL</div>
-        <h1>WAREHOUSE</h1>
-        <div class="cinematic-intro-subtitle">MaDDnes</div>
-        <p>Po zamknięciu hali zaczyna się druga zmiana. Zbieraj moduły, rozwijaj arsenał i przetrwaj noc. Procedury? Zaginęły w systemie.</p>
+        <h1>MAX FLIX</h1>
+        <div class="cinematic-intro-subtitle">22 / CRIMSON SHIFT</div>
+        <p>Druga zmiana właśnie wymknęła się spod kontroli. Zbieraj moduły, rozwijaj arsenał i przetrwaj kolejne fale. Procedury? Zaginęły w systemie.</p>
         <div class="cinematic-intro-tags"><span>SURVIVAL 3D</span><span>KAMPANIA • 5 MISJI</span><span>ARENA PvP • 1v1</span></div>
       </div>
       <div class="cinematic-intro-bottom">
         <div class="cinematic-intro-progress"><span id="cinematic-intro-progress"></span></div>
         <div class="cinematic-intro-bottom-row">
-          <span>SEKTOR B4 <b> / </b> ZMIANA NOCNA</span>
+          <span>SEKTOR B4 <b> / </b> CRIMSON SHIFT</span>
           <button id="cinematic-intro-play" type="button">ODPAL ZMIANĘ <span aria-hidden="true">→</span></button>
         </div>
       </div>`;
@@ -207,15 +207,15 @@ export class CinematicIntroManager {
     const impact = Math.max(0, 1 - Math.abs(seconds - 3.55) / 0.26);
 
     const bg = ctx.createLinearGradient(0, 0, w, h);
-    bg.addColorStop(0, '#17211f');
-    bg.addColorStop(0.48, '#293630');
-    bg.addColorStop(1, '#090f10');
+    bg.addColorStop(0, '#15090c');
+    bg.addColorStop(0.48, '#321016');
+    bg.addColorStop(1, '#08080b');
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, w, h);
 
     const warehouseGlow = ctx.createRadialGradient(w * 0.52, h * 0.38, 0, w * 0.52, h * 0.38, w * 0.72);
-    warehouseGlow.addColorStop(0, 'rgba(160,166,128,0.22)');
-    warehouseGlow.addColorStop(0.45, 'rgba(75,103,83,0.18)');
+    warehouseGlow.addColorStop(0, 'rgba(177,24,34,0.26)');
+    warehouseGlow.addColorStop(0.45, 'rgba(90,17,26,0.18)');
     warehouseGlow.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = warehouseGlow;
     ctx.fillRect(0, 0, w, h);
@@ -369,9 +369,9 @@ export class CinematicIntroManager {
 
     const beamX = w * (0.2 + 0.6 * ((Math.sin(t * 0.5) + 1) / 2));
     const beam = ctx.createLinearGradient(beamX - w * 0.08, 0, beamX + w * 0.08, h * 0.72);
-    beam.addColorStop(0, 'rgba(142,170,152,0)');
-    beam.addColorStop(0.5, 'rgba(142,170,152,0.09)');
-    beam.addColorStop(1, 'rgba(142,170,152,0)');
+    beam.addColorStop(0, 'rgba(225,42,50,0)');
+    beam.addColorStop(0.5, 'rgba(225,42,50,0.11)');
+    beam.addColorStop(1, 'rgba(225,42,50,0)');
     ctx.fillStyle = beam;
     ctx.fillRect(0, 0, w, h * 0.8);
     ctx.restore();
@@ -926,7 +926,7 @@ export class CinematicIntroManager {
       const y = h * (0.16 + ((i * 0.137 + Math.sin(t * 0.42 + i) * 0.025) % 0.76));
       const pulse = 0.18 + (Math.sin(t * 2.2 + i * 1.7) + 1) * 0.12;
       ctx.globalAlpha = pulse;
-      ctx.fillStyle = i % 5 === 0 ? '#f6bd61' : '#9ed4e7';
+      ctx.fillStyle = i % 5 === 0 ? '#ff625b' : '#90a4b4';
       ctx.beginPath();
       ctx.arc(x, y, 0.8 + (i % 3) * 0.45, 0, Math.PI * 2);
       ctx.fill();
@@ -939,9 +939,9 @@ export class CinematicIntroManager {
     const centerY = h * 0.49;
     const radius = w * (0.13 + amount * 0.43);
     const light = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
-    light.addColorStop(0, 'rgba(255,190,83,' + (0.3 * amount) + ')');
-    light.addColorStop(0.42, 'rgba(48,163,190,' + (0.16 * amount) + ')');
-    light.addColorStop(1, 'rgba(39,139,173,0)');
+    light.addColorStop(0, 'rgba(255,72,65,' + (0.3 * amount) + ')');
+    light.addColorStop(0.42, 'rgba(165,30,39,' + (0.16 * amount) + ')');
+    light.addColorStop(1, 'rgba(93,15,23,0)');
     ctx.fillStyle = light;
     ctx.fillRect(0, 0, w, h);
 
@@ -949,15 +949,15 @@ export class CinematicIntroManager {
     ctx.globalAlpha = amount * 0.74;
     ctx.translate(centerX, centerY);
     ctx.rotate(-0.08 + Math.sin(t * 1.8) * 0.018);
-    ctx.strokeStyle = '#f7bf65';
+    ctx.strokeStyle = '#ff6b62';
     ctx.lineWidth = Math.max(2, w / 650);
-    ctx.shadowColor = '#f5a623';
+    ctx.shadowColor = '#e12c32';
     ctx.shadowBlur = w * 0.025;
     ctx.strokeRect(-w * 0.41, -h * 0.27, w * 0.82, h * 0.54);
     ctx.shadowBlur = 0;
 
     // Moving hazard chevrons act as a bold transition into the title card.
-    ctx.strokeStyle = 'rgba(255,215,145,' + (0.35 + amount * 0.42) + ')';
+    ctx.strokeStyle = 'rgba(255,111,103,' + (0.35 + amount * 0.42) + ')';
     ctx.lineWidth = Math.max(2, w / 720);
     for (let i = -4; i <= 4; i++) {
       const x = i * w * 0.075 + Math.sin(t * 1.2) * w * 0.012;
