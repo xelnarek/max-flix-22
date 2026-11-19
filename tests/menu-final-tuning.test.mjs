@@ -16,7 +16,11 @@ test('final menu polish is loaded last and preserves the three launch actions', 
 });
 
 test('responsive menu keeps every destination reachable and content scrolling isolated', () => {
-  assert.match(css, /grid-template-areas:[\\s\\S]*"header header"[\\s\\S]*"modes modes"[\\s\\S]*"navigation content"/);
+  const gridAreas = css.match(/grid-template-areas:\s*([\s\S]*?)!important/);
+  assert.ok(gridAreas, 'title sheet must keep explicit grid areas');
+  for (const area of ['"header header"', '"modes modes"', '"navigation content"', '"footer footer"']) {
+    assert.ok(gridAreas[1].includes(area), 'missing title-sheet grid area: ' + area);
+  }
   assert.match(css, /\.menu-tab-content-area[^}]*overflow-y: auto/s);
   assert.match(css, /@media \(max-width: 900px\)/);
   assert.match(css, /@media \(max-width: 760px\)/);
