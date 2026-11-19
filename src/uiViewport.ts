@@ -12,8 +12,9 @@ const clamp = (value: number, min: number, max: number): number =>
   Math.max(min, Math.min(max, Number.isFinite(value) ? value : min));
 
 /**
- * Produces a stable UI density profile from the usable viewport.
- * It deliberately treats touch-landscape phones differently from desktop.
+ * Produces one application-wide scale profile from the usable viewport.
+ * The profile is applied to the menu, overlays, HUD and touch controls, not
+ * only to the renderer or the title screen.
  */
 export function calculateUiViewport(
   rawWidth: number,
@@ -28,8 +29,11 @@ export function calculateUiViewport(
   const widthFit = width / referenceWidth;
   const heightFit = height / referenceHeight;
   const fit = Math.min(widthFit, heightFit);
-  const scale = clamp(fit, isTouch ? 0.82 : 0.84, isTouch ? 1.10 : 1.12);
-  const fontScale = clamp(Math.sqrt(scale), 0.90, 1.08);
+  // Keep a small but usable minimum instead of allowing short windows to
+  // collapse the interface. The same factor is used for type and geometry so
+  // hit targets, text and panels remain proportionate across every screen.
+  const scale = clamp(fit, 0.88, isTouch ? 1.10 : 1.12);
+  const fontScale = scale;
   // Never force a 320px minimum on narrow phones: that creates horizontal overflow.
   const panelMaxWidth = Math.round(Math.max(1, Math.min(width - (isTouch ? 16 : 40), 1240)));
 

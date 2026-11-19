@@ -24,6 +24,23 @@ const finiteOr = (value: number | undefined, fallback: number): number =>
 const clamp = (value: number, min: number, max: number): number =>
   Math.max(min, Math.min(max, value));
 
+/**
+ * Keep the rendered stick size in sync with the live pointer footprint.
+ * Smaller screens may use a smaller ring, while larger screens retain the
+ * familiar 128–148px target.
+ */
+const resolveJoystickSize = (width: number, requested?: number): number => {
+  const minimum = clamp(width * 0.32, 100, 118);
+  const maximum = Math.max(minimum, clamp(width * 0.38, 116, 148));
+  return clamp(finiteOr(requested, width * 0.36), minimum, maximum);
+};
+
+const resolveFireButtonSize = (
+  width: number,
+  height: number,
+  requested?: number,
+): number => clamp(finiteOr(requested, Math.min(width * 0.20, height * 0.22)), 58, 88);
+
 const makeRect = (left: number, top: number, width: number, height: number): TouchControlRect => ({
   left,
   top,
@@ -59,7 +76,7 @@ export function calculateTouchControlGeometry(input: {
   const safeBottom = Math.max(0, finiteOr(input.safeBottom, 12));
   const actionButtonSize = clamp(finiteOr(input.actionButtonSize, width * 0.15), 54, 68);
   const actionGap = clamp(finiteOr(input.actionGap, 8), 4, 12);
-  const joystickSize = clamp(finiteOr(input.joystickSize, width * 0.36), 126, 148);
+  const joystickSize = resolveJoystickSize(width, input.joystickSize);
   const joystickZoneWidth = Math.min(
     width * (input.mode === 'pvp' ? 0.46 : 0.48),
     input.mode === 'pvp' ? 300 : 320,
@@ -90,11 +107,7 @@ export function calculateTouchControlGeometry(input: {
     Math.min(actionHeight, height),
   );
 
-  const fireButtonSize = clamp(
-    finiteOr(input.fireButtonSize, height <= 430 ? 68 : 78),
-    60,
-    88,
-  );
+  const fireButtonSize = resolveFireButtonSize(width, height, input.fireButtonSize);
   const idleFireTop = compactLandscape
     ? Math.max(0, height - Math.max(170, safeBottom + 160) - fireButtonSize)
     : Math.max(0, joystickZoneTop - fireButtonSize - 10);
@@ -139,9 +152,9 @@ export function clampTouchJoystickOrigin(input: {
   const height = Math.max(1, finiteOr(input.viewportHeight, 1));
   const safeLeft = Math.max(0, finiteOr(input.safeLeft, 0));
   const safeBottom = Math.max(0, finiteOr(input.safeBottom, 12));
-  const joystickSize = clamp(finiteOr(input.joystickSize, width * 0.36), 126, 148);
+  const joystickSize = resolveJoystickSize(width, input.joystickSize);
   const radius = joystickSize * 0.5;
-  const fireButtonSize = clamp(finiteOr(input.fireButtonSize, height <= 430 ? 68 : 78), 60, 88);
+  const fireButtonSize = resolveFireButtonSize(width, height, input.fireButtonSize);
   const fireGap = Math.max(0, finiteOr(input.fireGap, 10));
   const topHudClearance = Math.max(0, finiteOr(input.topHudClearance, 84));
   const reserveFireButton = input.reserveFireButton ?? input.mode === 'pvp';

@@ -8,6 +8,15 @@ test('modern phone portrait uses a near-native menu scale', () => {
   assert.equal(profile.landscapeTouch, false);
 });
 
+test('global scaling keeps compact devices readable and uses one factor for type and geometry', () => {
+  const narrow = calculateUiViewport(320, 568, true);
+  const tablet = calculateUiViewport(1024, 768, true);
+  assert.equal(narrow.scale, 0.88);
+  assert.equal(narrow.fontScale, narrow.scale);
+  assert.equal(tablet.fontScale, tablet.scale);
+  assert.ok(tablet.scale > narrow.scale);
+});
+
 test('short and narrow touch screens switch to compact density', () => {
   const profile = calculateUiViewport(360, 620, true);
   assert.equal(profile.density, 'compact');
