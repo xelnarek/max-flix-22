@@ -34,3 +34,17 @@ test('vertical navigation keys also move through the desktop side rail', () => {
   assert.equal(getMenuTabIndexForKey('ArrowDown', 10, 11), 0);
   assert.equal(getMenuTabIndexForKey('ArrowUp', 10, 11), 9);
 });
+
+test('horizontal navigation ignores vertical arrows when the rail is horizontal', () => {
+  assert.equal(getMenuTabIndexForKey('ArrowRight', 0, 11, 'horizontal'), 1);
+  assert.equal(getMenuTabIndexForKey('ArrowLeft', 0, 11, 'horizontal'), 10);
+  assert.equal(getMenuTabIndexForKey('ArrowDown', 0, 11, 'horizontal'), null);
+  assert.equal(getMenuTabIndexForKey('ArrowUp', 0, 11, 'horizontal'), null);
+});
+
+test('vertical navigation ignores horizontal arrows when the rail is vertical', () => {
+  assert.equal(getMenuTabIndexForKey('ArrowDown', 0, 11, 'vertical'), 1);
+  assert.equal(getMenuTabIndexForKey('ArrowUp', 0, 11, 'vertical'), 10);
+  assert.equal(getMenuTabIndexForKey('ArrowRight', 0, 11, 'vertical'), null);
+  assert.equal(getMenuTabIndexForKey('ArrowLeft', 0, 11, 'vertical'), null);
+});
