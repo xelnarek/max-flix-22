@@ -12,3 +12,9 @@
   .campaign-reward-grid.has-bonus{grid-template-columns:1fr}
   .campaign-reward-grid.has-bonus .campaign-reward-card{min-height:62px;padding:8px 10px}
 }
+
+/* Campaign is a primary mode, not a hidden subsection of the atlas. */
+.btn-campaign-chip{border-color:rgba(251,191,36,.62)!important;background:linear-gradient(115deg,rgba(120,75,12,.32),rgba(35,42,54,.96))!important;color:#fde68a!important;box-shadow:0 0 0 1px rgba(251,191,36,.10),0 5px 18px rgba(180,120,20,.12)}
+.btn-campaign-chip:hover{border-color:rgba(253,230,138,.9)!important;filter:brightness(1.12)}
+.campaign-menu-tab .tab-label{color:#fcd34d}
+.campaign-menu-tab.active{border-color:rgba(251,191,36,.55)}
