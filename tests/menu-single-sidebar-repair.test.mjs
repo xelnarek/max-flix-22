@@ -16,7 +16,8 @@ test('single-sidebar repair is the final menu layout layer', () => {
   );
   assert.match(css, /grid-template-areas:[\s\S]*"header header"[\s\S]*"modes modes"[\s\S]*"navigation content"/);
   assert.match(css, /\.menu-tabs-bar\s*\{[\s\S]*flex-direction:\s*column !important/);
-  assert.match(css, /\.menu-mobile-segments\s*\{\s*display:\s*none !important/);
+  assert.doesNotMatch(html, /menu-mobile-segments|menu-mobile-segment/);
+  assert.ok(!css.includes('.menu-nav-group[hidden]'));
 });
 
 test('all eleven destinations stay in one vertical navigation rail', () => {
@@ -35,17 +36,21 @@ test('exactly one destination panel is active and inactive panels are hidden', (
   assert.match(css, /\.tab-panel\.active\s*\{\s*display:\s*flex !important/);
 });
 
-test('operator portraits and details have bounded non-overlapping geometry', () => {
+test('operator portraits, details, stats and mastery layout are bounded on narrow screens', () => {
   assert.match(css, /\.char-card\s*\{[\s\S]*grid-template-areas:[\s\S]*"portrait code mastery"[\s\S]*"portrait name name"/);
   assert.match(css, /\.char-card-badge\.operator-emblem\s*\{[\s\S]*position:\s*relative !important/);
   assert.match(css, /\.char-card-badge\.operator-emblem :is\(svg, img, \.operator-portrait\)\s*\{[\s\S]*position:\s*static !important/);
   assert.match(css, /\.char-card-mastery\s*\{[\s\S]*position:\s*static !important/);
   assert.match(css, /#char-details-box[\s\S]*overflow:\s*visible !important/);
+  assert.match(css, /\.arcade-showcase-meta\s*\{[\s\S]*min-width:\s*0 !important/);
+  assert.match(css, /\.stat-bar-row\s*\{[\s\S]*grid-template-columns:\s*minmax\(76px, auto\) minmax\(36px, 1fr\) auto !important/);
+  assert.match(css, /\.character-talent-grid\s*\{[\s\S]*grid-template-columns:\s*repeat\(auto-fit/);
+  assert.match(css, /@media \(max-width: 380px\)[\s\S]*\.stat-bar-row/);
 });
 
 
 test('the selected category is indicated without hiding other sidebar groups', () => {
-  assert.match(app, /group\.dataset\.activeGroup = String\(group\.dataset\.menuGroup === segment\.id\)/);
+  assert.ok(app.includes(`group.dataset.activeGroup = String(group.dataset.menuGroup === owningSegment?.id)`));
   assert.match(app, /group\.hidden = false;/);
   assert.match(css, /\.menu-nav-group\[data-active-group="true"\]/);
   assert.match(css, /\.menu-nav-group\[data-active-group="true"\] \.menu-nav-group-label::before/);

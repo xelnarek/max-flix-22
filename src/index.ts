@@ -41,7 +41,7 @@ import { launchOniricPlatformer } from './oniricPlatformer.ts';
 import { launchCthulhuRetroArena } from './cthulhuRetroArena.ts';
 import { getMenuTabIndexForKey } from './menuTabNavigation.ts';
 import { MenuScrollMemory } from './menuScrollMemory.ts';
-import { getMenuSegmentForTab, MENU_SEGMENTS, type MenuSegmentId } from './menuSegments.ts';
+import { getMenuSegmentForTab } from './menuSegments.ts';
 import { getVisibilityPauseAction } from './visibilityPause.ts';
 import { observeWebGLContextRecovery } from './webglContextRecovery.ts';
 import { FloatingToastPool } from './floatingToastPool.ts';
@@ -2729,14 +2729,11 @@ class PaleciakiScene extends xb.Script {
     menuTabList?.setAttribute('role', 'navigation');
     menuTabList?.setAttribute('aria-label', 'Nawigacja menu głównego');
     const menuTabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.menu-tab-btn'));
-    const menuMobileSegmentButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.menu-mobile-segment'));
     const menuNavigationGroups = Array.from(document.querySelectorAll<HTMLElement>('.menu-nav-group'));
     let currentMenuTargetId = menuTabButtons.find((button) => button.classList.contains('active'))?.getAttribute('data-tab') || 'tab-team';
-    let activeMobileSegmentId: MenuSegmentId = getMenuSegmentForTab(currentMenuTargetId)?.id || 'play';
     const menuScrollMemory = new MenuScrollMemory();
     const menuContentArea = document.querySelector<HTMLElement>('.menu-tab-content-area');
     const menuRootElement = document.getElementById('title-screen');
-    let setActiveMobileSegment: (segmentId: MenuSegmentId) => void = () => undefined;
     if (menuRootElement) menuRootElement.dataset.menuDensity = 'compact';
 
     // One persistent density control keeps long reference copy out of the way
@@ -2823,27 +2820,48 @@ class PaleciakiScene extends xb.Script {
     // One selected destination owns the content viewport on every device.
     // Mobile no longer expands eleven panels into one long dashboard.
     const syncMenuPanelPresentation = (targetId: string) => {
-      const titleScreenRoot = document.getElementById('title-screen');
-      if (titleScreenRoot) titleScreenRoot.dataset.activeMenuTab = targetId;
+      const owningSegment = getMenuSegmentForTab(targetId);
+      if (menuRootElement) {
+        menuRootElement.dataset.activeMenuTab = targetId;
+        if (owningSegment) menuRootElement.dataset.activeMenuSegment = owningSegment.id;
+      }
       menuTabList?.setAttribute('role', 'navigation');
+      menuTabList?.setAttribute('aria-label', 'Nawigacja menu głównego');
 
+      // This is screen navigation, not an ARIA tab widget. Native buttons stay
+      // in the normal focus order and expose the current destination as a page.
       menuTabButtons.forEach((button) => {
         const active = button.getAttribute('data-tab') === targetId;
         button.classList.toggle('active', active);
-        button.setAttribute('role', 'tab');
+        button.removeAttribute('role');
         button.removeAttribute('aria-pressed');
-        button.setAttribute('aria-selected', String(active));
         button.setAttribute('aria-controls', button.getAttribute('data-tab') || '');
-        button.tabIndex = active ? 0 : -1;
+        if (active) button.setAttribute('aria-current', 'page');
+        else button.removeAttribute('aria-current');
+      });
+
+      // All four labelled groups remain visible; only the destination panel
+      // changes. Groups keep their semantic group role from the HTML markup.
+      menuNavigationGroups.forEach((group, index) => {
+        group.hidden = false;
+        group.inert = false;
+        group.setAttribute('role', 'group');
+        group.setAttribute('aria-hidden', 'false');
+        const groupLabel = group.querySelector<HTMLElement>('.menu-nav-group-label');
+        if (groupLabel) {
+          groupLabel.id = groupLabel.id || `menu-group-label-${group.dataset.menuGroup || index}`;
+          group.setAttribute('aria-labelledby', groupLabel.id);
+        }
+        group.dataset.activeGroup = String(group.dataset.menuGroup === owningSegment?.id);
       });
 
       document.querySelectorAll<HTMLElement>('.tab-panel').forEach((panel) => {
         const active = panel.id === targetId;
-        const controllingTab = menuTabButtons.find((button) => button.getAttribute('data-tab') === panel.id);
+        const controllingButton = menuTabButtons.find((button) => button.getAttribute('data-tab') === panel.id);
         panel.classList.toggle('active', active);
-        panel.setAttribute('role', 'tabpanel');
+        panel.setAttribute('role', 'region');
         panel.setAttribute('aria-hidden', String(!active));
-        if (controllingTab) panel.setAttribute('aria-labelledby', controllingTab.id);
+        if (controllingButton) panel.setAttribute('aria-labelledby', controllingButton.id);
         panel.removeAttribute('aria-label');
         panel.inert = !active;
       });
@@ -2865,8 +2883,6 @@ class PaleciakiScene extends xb.Script {
         menuScrollMemory.save(currentMenuTargetId, menuContentArea.scrollTop);
       }
       currentMenuTargetId = targetId;
-      const owningSegment = getMenuSegmentForTab(targetId);
-      if (owningSegment) setActiveMobileSegment(owningSegment.id);
       ensureMenuTabVisible(selectedTab);
 
       // The selected section owns the accent color and mode-specific launch action.
@@ -2883,62 +2899,21 @@ class PaleciakiScene extends xb.Script {
       }
     };
 
-    // Keep every destination visible in the left rail at every viewport size.
-    // Selecting a tab changes only its matching content panel; groups are visual
-    // labels and never act as a second navigation layer.
-    setActiveMobileSegment = (segmentId: MenuSegmentId) => {
-      const segment = MENU_SEGMENTS.find((item) => item.id === segmentId);
-      if (!segment) return;
-
-      activeMobileSegmentId = segment.id;
-      if (menuRootElement) menuRootElement.dataset.activeMenuSegment = segment.id;
-
-      menuMobileSegmentButtons.forEach((button) => {
-        const active = button.dataset.menuSegment === segment.id;
-        button.classList.toggle('active', active);
-        button.setAttribute('aria-pressed', String(active));
-      });
-
-      menuNavigationGroups.forEach((group) => {
-        group.hidden = false;
-        group.inert = false;
-        group.dataset.activeGroup = String(group.dataset.menuGroup === segment.id);
-        group.setAttribute('aria-hidden', 'false');
-        group.setAttribute('role', 'tablist');
-        group.setAttribute('aria-orientation', 'vertical');
-      });
-    };
-
-    menuMobileSegmentButtons.forEach((button) => {
-      button.addEventListener('click', () => {
-        const segmentId = button.dataset.menuSegment as MenuSegmentId | undefined;
-        const segment = MENU_SEGMENTS.find((item) => item.id === segmentId);
-        if (!segment) return;
-
-        setActiveMobileSegment(segment.id);
-        const firstTab = menuTabButtons.find((tab) => tab.dataset.tab === segment.tabIds[0]);
-        if (!firstTab) return;
-        activateMenuTab(firstTab);
-        firstTab.focus();
-      });
-    });
-
     menuTabButtons.forEach((tabBtn, index) => {
       const targetId = tabBtn.getAttribute('data-tab');
       tabBtn.id = tabBtn.id || (targetId ? 'menu-' + targetId : 'menu-tab-' + index);
-      tabBtn.setAttribute('role', 'tab');
       if (targetId) {
         tabBtn.setAttribute('aria-controls', targetId);
         const panel = document.getElementById(targetId);
-        panel?.setAttribute('role', 'tabpanel');
+        panel?.setAttribute('role', 'region');
         panel?.setAttribute('aria-labelledby', tabBtn.id);
         panel?.setAttribute('tabindex', '0');
         panel?.setAttribute('aria-hidden', String(!panel.classList.contains('active')));
         if (panel) panel.inert = !panel.classList.contains('active');
       }
       const initiallyActive = tabBtn.getAttribute('data-tab') === currentMenuTargetId;
-      tabBtn.setAttribute('aria-selected', String(initiallyActive));
-      tabBtn.tabIndex = initiallyActive ? 0 : -1;
+      if (initiallyActive) tabBtn.setAttribute('aria-current', 'page');
+      else tabBtn.removeAttribute('aria-current');
 
       // A native click is generated for touch input; a second touchend handler
       // caused the same selection and lazy panel work to run twice on phones.
@@ -2960,7 +2935,6 @@ class PaleciakiScene extends xb.Script {
       });
     });
 
-    setActiveMobileSegment(activeMobileSegmentId);
     syncMenuPanelPresentation(currentMenuTargetId);
 
     document.querySelectorAll<HTMLElement>('.char-card').forEach((card) => {
