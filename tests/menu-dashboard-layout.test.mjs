@@ -49,20 +49,20 @@ test('the active atlas tab owns its content and the shared launch action remains
 test('left navigation uses native destination buttons, one active region and vertical keyboard shortcuts', async () => {
   const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
   const navigation = await readFile(new URL('../src/menuTabNavigation.ts', import.meta.url), 'utf8');
-  assert.match(app, /menuTabList\\?\\.setAttribute\\('role', 'navigation'\\)/);
-  assert.match(app, /group\\.setAttribute\\('role', 'group'\\)/);
-  assert.match(app, /button\\.setAttribute\\('aria-current', 'page'\\)/);
-  assert.match(app, /panel\\.setAttribute\\('role', 'region'\\)/);
-  assert.match(app, /panel\\.inert = !active/);
-  assert.match(app, /getMenuTabIndexForKey\\(event\\.key, currentNavigationIndex, navigationTabs\\.length, 'vertical'\\)/);
-  assert.match(app, /const navigationTabs = menuTabButtons/);
-  assert.doesNotMatch(app, /setAttribute\\('role', 'tab'\\)|setAttribute\\('role', 'tabpanel'\\)|aria-selected/);
+  assert.ok(app.includes("menuTabList?.setAttribute('role', 'navigation')"));
+  assert.ok(app.includes("group.setAttribute('role', 'group')"));
+  assert.ok(app.includes("button.setAttribute('aria-current', 'page')"));
+  assert.ok(app.includes("panel.setAttribute('role', 'region')"));
+  assert.ok(app.includes("panel.inert = !active"));
+  assert.ok(app.includes("getMenuTabIndexForKey(event.key, currentNavigationIndex, navigationTabs.length, 'vertical')"));
+  assert.ok(app.includes("const navigationTabs = menuTabButtons"));
+  assert.doesNotMatch(app, /setAttribute\('role', 'tab'\)|setAttribute\('role', 'tabpanel'\)|aria-selected/);
   assert.doesNotMatch(app, /menuMobileSegmentButtons|activeMobileSegmentId|setActiveMobileSegment/);
-  assert.doesNotMatch(app, /addEventListener\\('touchend'/);
-  assert.match(navigation, /ArrowDown/);
-  assert.match(navigation, /ArrowUp/);
-  assert.match(navigation, /Home/);
-  assert.match(navigation, /End/);
+  assert.doesNotMatch(app, /addEventListener\('touchend'/);
+  assert.ok(navigation.includes("ArrowDown"));
+  assert.ok(navigation.includes("ArrowUp"));
+  assert.ok(navigation.includes("Home"));
+  assert.ok(navigation.includes("End"));
 });
 
 test('the menu no longer persists a selected Survival arena', async () => {
