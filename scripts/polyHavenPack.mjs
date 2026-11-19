@@ -8,3 +8,8 @@ export function makePolyHavenMapUrl(assetId,map,resolution='2k'){
  return 'https://dl.polyhaven.org/file/ph-assets/Textures/png/'+resolution+'/'+assetId+'/'+assetId+'_'+map+'_'+resolution+'.png';
 }
 export function isPng(bytes){return Buffer.isBuffer(bytes)&&bytes.length>8&&bytes.subarray(0,8).equals(PNG_SIGNATURE);}
+
+export function getPolyHavenResolutions(preferredResolution) {
+ const preferred = preferredResolution === '1k' ? '1k' : '2k';
+ return preferred === '1k' ? ['1k'] : ['2k', '1k'];
+}
