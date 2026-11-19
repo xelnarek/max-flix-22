@@ -2208,8 +2208,8 @@ export class PaleciakiGameEngine {
       actor.root.name = 'makehuman-enemy-' + style + '-' + enemy.id;
       const overlays = [
         enemy.hpBar, enemy.hpFill, enemy.threatRing, enemy.shieldRing, enemy.auraRing,
-        enemy.survivalEliteInsignia, enemy.speechMesh, enemy.propeller,
-        enemy.aiRangedTelegraphMesh, enemy.aiMeleeTelegraphMesh, ...(enemy.bikeWheels || []),
+        enemy.survivalEliteInsignia, enemy.speechMesh,
+        enemy.aiRangedTelegraphMesh, enemy.aiMeleeTelegraphMesh,
       ].filter((object): object is THREE.Object3D => object instanceof THREE.Object3D);
       this.removeAttachedActorVisuals(mesh as THREE.Group);
       removeLegacyEnemyBodyVisuals(mesh as THREE.Group, overlays);
@@ -2220,6 +2220,9 @@ export class PaleciakiGameEngine {
       enemy.armL = undefined;
       enemy.armR = undefined;
       enemy.head = undefined;
+      // These were child parts of the retired procedural body, not HUD overlays.
+      enemy.propeller = undefined;
+      enemy.bikeWheels = undefined;
       const track = this.createMakeHumanAnimationTrack(actor.root, actor.clips, mesh.position, actor.style);
       this.gobkitEnemyTracks.set(enemy, track);
       this.resumeEnemyAnimationAfterModelAttach(enemy, track);
@@ -2321,6 +2324,9 @@ export class PaleciakiGameEngine {
       enemy.armL = undefined;
       enemy.armR = undefined;
       enemy.head = undefined;
+      // These were child parts of the retired procedural body, not HUD overlays.
+      enemy.propeller = undefined;
+      enemy.bikeWheels = undefined;
       const track = this.createGobkitAnimationTrack(
         gltf,
         root,
