@@ -8,8 +8,10 @@ export function getMenuTabIndexForKey(
 
   switch (key) {
     case 'ArrowRight':
+    case 'ArrowDown':
       return (currentIndex + 1) % tabCount;
     case 'ArrowLeft':
+    case 'ArrowUp':
       return (currentIndex - 1 + tabCount) % tabCount;
     case 'Home':
       return 0;
