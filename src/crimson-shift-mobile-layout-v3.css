@@ -348,16 +348,14 @@
     letter-spacing: .015em;
   }
 
-  #title-screen .menu-tab-btn.active,
-  #title-screen .menu-tab-btn[aria-selected="true"] {
+  #title-screen .menu-tab-btn.active {
     border-color: rgba(248, 83, 76, .68) !important;
     background: linear-gradient(110deg, rgba(121, 26, 33, .50), rgba(35, 13, 17, .94)) !important;
     color: #fff3ef !important;
     box-shadow: inset 3px 0 0 #eb3d42 !important;
   }
 
-  #title-screen .menu-tab-btn.active .tab-icon,
-  #title-screen .menu-tab-btn[aria-selected="true"] .tab-icon {
+  #title-screen .menu-tab-btn.active .tab-icon {
     color: #ff827b !important;
   }
 
