@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { SurvivalMapId } from './survivalMaps.ts';
+import type { SurvivalMapId } from './survivalMaps.ts';\nimport { createCrimsonRack, createCrimsonPalletStack, createCrimsonBarrelCluster, createCrimsonConveyor, createCrimsonColdCompressor, createCrimsonContainer } from './crimsonEnvironmentPack.ts';
 
 export interface SurvivalWorldObstacle {
   x: number;
@@ -326,7 +326,7 @@ export function createSurvivalWorldDressing(mapId: SurvivalMapId): {
     pit.position.set(crater.x, 0, crater.z);
     group.add(pit);
   }
-  if (layout.ufo) {
+  // Crimson industrial set dressing: fixed, low-count hero props with explicit footprints.\n  const addProp = (prop: THREE.Group, x: number, z: number, halfWidth: number, halfDepth: number, rotation = 0) => {\n    prop.position.set(x, 0, z); prop.rotation.y = rotation; group.add(prop);\n    obstacles.push({ x, z, halfWidth, halfDepth });\n  };\n  if (mapId === 'warehouse_b4') {\n    addProp(createCrimsonRack(5.2, 3.4, 1.35), -41, 12.8, 2.7, 0.9);\n    addProp(createCrimsonPalletStack(0.88), 36.5, -13.2, 1.06, 0.69, -0.18);\n    addProp(createCrimsonBarrelCluster(), 43, 13.4, 0.9, 0.95);\n  } else if (mapId === 'container_terminal') {\n    addProp(createCrimsonContainer(6.2, 2.35, 2.45, 0x7d3540), -43, 12.8, 3.2, 1.3, Math.PI / 2);\n    addProp(createCrimsonContainer(5.4, 2.35, 2.45, 0x315c78), 39, -13.2, 2.8, 1.3, Math.PI / 2);\n    addProp(createCrimsonBarrelCluster(), -32, -13.2, 0.9, 0.95);\n  } else if (mapId === 'cold_storage') {\n    addProp(createCrimsonColdCompressor(), -42, -12.2, 1.45, 0.92);\n    addProp(createCrimsonColdCompressor(), 35, 12.2, 1.45, 0.92, Math.PI);\n    addProp(createCrimsonPalletStack(0.8), -27, 12.6, 0.98, 0.64);\n  } else if (mapId === 'night_sorting') {\n    addProp(createCrimsonConveyor(5.8, 1.35), 39, -12.5, 3.0, 0.75, Math.PI / 2);\n    addProp(createCrimsonConveyor(4.6, 1.35), -40, 12.5, 2.4, 0.75, Math.PI / 2);\n    addProp(createCrimsonBarrelCluster(), 28, 13.1, 0.9, 0.95);\n  }\n  if (layout.ufo) {
     const wreck = createCrashedUfo();
     wreck.position.set(layout.ufo.x, 0, layout.ufo.z);
     wreck.rotation.y = layout.ufo.rotation;
