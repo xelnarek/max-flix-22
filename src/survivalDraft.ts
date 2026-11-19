@@ -299,7 +299,8 @@ export function getSurvivalDraftSynergyHint(
   if (weapon) {
     const passive = WEAPON_EVOLUTION_PASSIVES[weapon.weaponId];
     const passiveStacks = passive ? safeCount(getStacks(context)[passive]) : 0;
-    if (weapon.kind !== 'evolve' && passive && passiveStacks > 0) {
+    const passivePlanned = passive ? plannedIds.includes(passive) : false;
+    if (weapon.kind !== 'evolve' && passive && (passiveStacks > 0 || passivePlanned)) {
       const labels: Readonly<Record<string, string>> = {
         damage: 'Wzmocniona amunicja',
         range: 'Zasięg audytu',
@@ -311,7 +312,8 @@ export function getSurvivalDraftSynergyHint(
         regen: 'Przerwa regeneracyjna',
         growth: 'Premia za normę',
       };
-      return 'SYNERGIA BRONI: masz już moduł „' + (labels[passive] || passive) + '”, potrzebny do jej ewolucji.';
+      const source = passivePlanned ? 'wybierasz teraz moduł „' : 'masz już moduł „';
+      return 'SYNERGIA BRONI: ' + source + (labels[passive] || passive) + '”, potrzebny do jej ewolucji.';
     }
     if (weapon.kind === 'evolve') return 'EWOLUCJA GOTOWA: wymagane połączenie broni i modułu jest już kompletne.';
   }
