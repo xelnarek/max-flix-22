@@ -3056,6 +3056,7 @@ class PaleciakiScene extends xb.Script {
 
     bindTap(document.getElementById('btn-campaign-continue'), (event) => {
       event.preventDefault();
+      if (startingGame) return;
       const unlocked = new Set(campaignProgress.unlockedStageIds);
       const allComplete = CAMPAIGN_STAGES.every((stage) => (campaignProgress.completedStages[stage.id]?.bestStars ?? 0) > 0);
       const nextStage = CAMPAIGN_STAGES.find((stage) => unlocked.has(stage.id) && !campaignProgress.completedStages[stage.id]?.bestStars)
@@ -3067,12 +3068,14 @@ class PaleciakiScene extends xb.Script {
     });
 
     bindTap(document.getElementById('btn-start-survival'), (event) => {
+      if (startingGame) return;
       selectedCampaignStageId = null;
       doStartSurvival(event);
     });
     document.querySelectorAll<HTMLButtonElement>('[data-campaign-stage]').forEach((button) => {
       bindTap(button, (event) => {
         event.preventDefault();
+        if (startingGame) return;
         const id = button.dataset.campaignStage as CampaignStageId | undefined;
         if (!id || !campaignProgress.unlockedStageIds.includes(id)) return;
         selectedCampaignStageId = id;
