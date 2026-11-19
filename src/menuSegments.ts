@@ -8,7 +8,8 @@ export interface MenuSegmentDefinition {
 
 /**
  * The menu is organized by the four real destinations groups already present
- * in index.html. Keep this list as the single mapping used by mobile navigation.
+ * in index.html. Keep this mapping for the active category marker in the
+ * persistent left navigation rail.
  */
 export const MENU_SEGMENTS: readonly MenuSegmentDefinition[] = [
   { id: 'play', label: 'ROZGRYWKA', tabIds: ['tab-team', 'tab-map', 'tab-pvp'] },
