@@ -32,7 +32,23 @@ export function removeLegacyEnemyBodyVisuals(
   container: THREE.Group,
   preservedRoots: readonly THREE.Object3D[] = [],
 ): number {
+  container.updateWorldMatrix(true, false);
   for (const preserved of preservedRoots) {
+    // A status marker can be parented to a legacy body part. Detach it first,
+    // preserving its world transform, so pruning the old body cannot hide it.
+    let ancestor = preserved.parent;
+    let belongsToContainer = false;
+    while (ancestor) {
+      if (ancestor === container) {
+        belongsToContainer = true;
+        break;
+      }
+      ancestor = ancestor.parent;
+    }
+    if (belongsToContainer && preserved.parent !== container) {
+      preserved.updateWorldMatrix(true, false);
+      container.attach(preserved);
+    }
     preserved.traverse((object) => { object.userData.gobkitKeep = true; });
   }
 
