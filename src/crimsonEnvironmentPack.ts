@@ -28,7 +28,7 @@ function cylinder(parent: THREE.Group, radiusTop: number, radiusBottom: number, 
 export function createCrimsonRack(width = 5.4, height = 3.6, depth = 1.45): THREE.Group {
   const g = new THREE.Group(); g.name = 'crimson-rack-3bay';
   const upright = mat(0x315d83, 0.46, 0.62), beam = mat(0xd36a32, 0.52, 0.42);
-  const deck = mat(0x687887, 0.72, 0.55), bolt = mat(0xb4bdc5, 0.3, 0.88);
+  applyCrimsonTexture(upright, 'rackUpright', 1, 2, 0.48);\n  const deck = mat(0x687887, 0.72, 0.55), bolt = mat(0xb4bdc5, 0.3, 0.88);
   const halfW = width / 2, halfD = depth / 2;
   const postGeo = new THREE.BoxGeometry(0.13, height, 0.14);
   for (const x of [-halfW, -halfW / 3, halfW / 3, halfW]) {
@@ -78,7 +78,7 @@ export function createCrimsonPalletStack(scale = 1): THREE.Group {
   box(g, [2.02, 1.12, 1.42], [0, 0.82, 0], carton);
   box(g, [2.08, 0.035, 1.48], [0, 1.38, 0], strap);
   for (const x of [-0.72, 0.72]) box(g, [0.065, 1.08, 1.48], [x, 0.82, 0], strap);
-  const film = mesh(new THREE.BoxGeometry(2.08, 1.16, 1.48), wrap, 0, 0.82, 0, g, false);
+  applyCrimsonTexture(wrap as THREE.MeshStandardMaterial, 'plasticPallet', 1.2, 1.2, 0.24);\n  const film = mesh(new THREE.BoxGeometry(2.08, 1.16, 1.48), wrap, 0, 0.82, 0, g, false);
   film.material.side = THREE.DoubleSide;
   g.scale.setScalar(scale);
   g.userData.collisionFootprint = { halfWidth: 1.2 * scale, halfDepth: 0.78 * scale };
@@ -122,7 +122,7 @@ export function createCrimsonConveyor(length = 5.2, width = 1.45): THREE.Group {
 export function createCrimsonColdCompressor(): THREE.Group {
   const g = new THREE.Group(); g.name = 'crimson-cold-compressor';
   const shell = mat(0x8ca9b2, 0.52, 0.28), dark = mat(0x263b49, 0.62, 0.42), ice = mat(0x8be2ef, 0.28, 0.2), red = mat(0xb33e46, 0.42, 0.22);
-  box(g, [2.6, 1.45, 1.55], [0, 0.78, 0], shell);
+  applyCrimsonTexture(shell, 'coldFrost', 1.4, 1.0, 0.34);\n  box(g, [2.6, 1.45, 1.55], [0, 0.78, 0], shell);
   box(g, [2.64, 0.12, 1.6], [0, 0.08, 0], dark);
   cylinder(g, 0.42, 0.42, 0.08, [0.42, 0.82, 0.79], dark, 24);
   for (let i = 0; i < 8; i++) {
@@ -141,7 +141,7 @@ export function createCrimsonColdCompressor(): THREE.Group {
 export function createCrimsonContainer(length = 6.0, height = 2.35, depth = 2.45, paint = 0x7e343d): THREE.Group {
   const g = new THREE.Group(); g.name = 'crimson-iso-container';
   const shell = mat(paint, 0.62, 0.55), rib = mat(0x293642, 0.5, 0.72), casting = mat(0xa4adb3, 0.34, 0.82);
-  box(g, [length, height, depth], [0, height / 2, 0], shell);
+  applyCrimsonTexture(shell, 'containerSteel', Math.max(1, length / 2), 1.2, 0.62);\n  box(g, [length, height, depth], [0, height / 2, 0], shell);
   const count = Math.max(18, Math.floor(length * 5));
   for (let i = 0; i <= count; i++) {
     const x = -length / 2 + i * length / count;
