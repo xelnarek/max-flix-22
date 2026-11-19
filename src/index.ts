@@ -1848,10 +1848,10 @@ class PaleciakiScene extends xb.Script {
                 <div class="survival-chaos-reel-window"><span class="survival-chaos-reel-symbol">⚡</span></div>
                 <div class="survival-chaos-reel-window"><span class="survival-chaos-reel-symbol">☢️</span></div>
               </div>
-              <div class="survival-chaos-machine-caption">12 WYNIKÓW <i>•</i> JEDEN SPIN <i>•</i> BEZ PRZERZUTU</div>
+              <div class="survival-chaos-machine-caption">18 WYNIKÓW <i>•</i> WIĘCEJ RNG <i>•</i> JEDEN SPIN</div>
               <div class="survival-chaos-result" aria-live="polite">NAGRODA CZEKA NA LOS</div>
             `;
-            machine.setAttribute('aria-label', 'Jednoręki bandyta B4. Trzy obracające się bębny, dwanaście możliwych wyników, jeden spin');
+            machine.setAttribute('aria-label', 'Jednoręki bandyta B4. Trzy obracające się bębny, osiemnaście możliwych wyników, jeden spin');
             const reelSymbols = [
               { icon: '💎', accent: '#38bdf8' }, { icon: '⚡', accent: '#facc15' },
               { icon: '☢️', accent: '#4ade80' }, { icon: '👾', accent: '#fb7185' },
@@ -1859,6 +1859,9 @@ class PaleciakiScene extends xb.Script {
               { icon: '💥', accent: '#fb923c' }, { icon: '✹', accent: '#c084fc' },
               { icon: '✨', accent: '#67e8f9' }, { icon: '🪙', accent: '#fbbf24' },
               { icon: '⏱️', accent: '#93c5fd' }, { icon: '🚨', accent: '#f43f5e' },
+              { icon: '🧲', accent: '#60a5fa' }, { icon: '📈', accent: '#a3e635' },
+              { icon: '📦', accent: '#fbbf24' }, { icon: '🧹', accent: '#67e8f9' },
+              { icon: '🎲', accent: '#fb7185' }, { icon: '🔧', accent: '#cbd5e1' },
             ];
             const rewardStyles: Record<string, { category: string; accent: string }> = {
               skill: { category: 'ULEPSZENIE', accent: '#38bdf8' },
@@ -1873,6 +1876,12 @@ class PaleciakiScene extends xb.Script {
               bounty: { category: 'PREMIA', accent: '#fbbf24' },
               time_lock: { category: 'ZAMROŻENIE FALI', accent: '#93c5fd' },
               elite_delivery: { category: 'DOSTAWA ELITY', accent: '#f43f5e' },
+              magnet_surge: { category: 'MAGNES TURBO', accent: '#60a5fa' },
+              xp_surge: { category: 'DOPALACZ XP', accent: '#a3e635' },
+              golden_crate: { category: 'ZŁOTA PALETA', accent: '#fbbf24' },
+              hazard_clear: { category: 'CZYSZCZENIE ZAGROŻEŃ', accent: '#67e8f9' },
+              double_or_nothing: { category: 'PODWÓJNE ALBO NIC', accent: '#fb7185' },
+              weapon_draft: { category: 'SKRZYNIA BRONI', accent: '#cbd5e1' },
             };
             const reelNodes = Array.from(machine.querySelectorAll<HTMLElement>('.survival-chaos-reel-symbol'));
             const resultNode = machine.querySelector<HTMLElement>('.survival-chaos-result');
@@ -1924,7 +1933,7 @@ class PaleciakiScene extends xb.Script {
                   machine.style.setProperty('--roulette-accent', style.accent);
                   machine.dataset.result = result.kind;
                   machine.classList.remove('is-spinning');
-                  const isRisk = result.kind === 'enemy_pack' || result.kind === 'elite_delivery';
+                  const isRisk = result.kind === 'enemy_pack' || result.kind === 'elite_delivery' || result.kind === 'double_or_nothing';
                   machine.classList.add('has-result', isRisk ? 'is-risk' : 'is-jackpot');
                   sound.playRouletteResult(isRisk);
                   reelNodes.forEach((node) => {
@@ -3013,6 +3022,12 @@ class PaleciakiScene extends xb.Script {
       if (event.key === 'Escape' && capybaraModal && !capybaraModal.classList.contains('hidden')) {
         closeCapybaraMeeting();
       }
+    });
+
+    bindTap(document.getElementById('btn-open-campaign'), (event) => {
+      event.preventDefault();
+      const campaignTab = menuTabButtons.find((tab) => tab.getAttribute('data-tab') === 'tab-map');
+      if (campaignTab) activateMenuTab(campaignTab);
     });
 
     bindTap(document.getElementById('btn-start-survival'), (event) => {
