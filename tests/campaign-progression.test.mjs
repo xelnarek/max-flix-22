@@ -3,9 +3,12 @@ import assert from 'node:assert/strict';
 import {
   CAMPAIGN_STAGES,
   CAMPAIGN_PROGRESS_STORAGE_KEY,
+  consumePendingCampaignXpBonus,
   createInitialCampaignProgress,
   evaluateCampaignStars,
   getCampaignMasteryProgress,
+  getCampaignSideOrderProgress,
+  getCampaignRewardChoices,
   getNextCampaignStageId,
   readCampaignProgress,
   recordCampaignStageResult,
@@ -107,4 +110,104 @@ test('sanitizer prevents gaps in the unlock sequence', () => {
     completedStages: { b4_intro: { bestStars: 1, bestKills: 2, bestTimeSeconds: 75, completions: 1 } },
   });
   assert.deepEqual(progress.unlockedStageIds, ['b4_intro', 'port_17']);
+});
+
+test('every campaign mission has one distinct optional field order', () => {
+  const metrics = CAMPAIGN_STAGES.map((stage) => stage.sideOrder.metric);
+  assert.deepEqual(metrics, ['xp_pickups', 'kill_streak', 'secrets_found', 'player_hp_percent', 'boss_kill_seconds']);
+});
+
+test('field orders are optional until boss victory and apply direction-aware thresholds', () => {
+  const [b4, port, cold, night, final] = CAMPAIGN_STAGES;
+  assert.equal(getCampaignSideOrderProgress(b4, { xpPickups: 5, bossDefeated: false }).completed, false);
+  assert.equal(getCampaignSideOrderProgress(b4, { xpPickups: 4, bossDefeated: true }).completed, false);
+  assert.equal(getCampaignSideOrderProgress(b4, { xpPickups: 5, bossDefeated: true }).completed, true);
+  assert.equal(getCampaignSideOrderProgress(port, { killStreak: 8, bossDefeated: true }).completed, false);
+  assert.equal(getCampaignSideOrderProgress(port, { killStreak: 9, bossDefeated: true }).completed, true);
+  assert.equal(getCampaignSideOrderProgress(cold, { secretsFound: 1, bossDefeated: true }).completed, true);
+  assert.equal(getCampaignSideOrderProgress(night, { playerHpPercent: 59, bossDefeated: true }).completed, false);
+  assert.equal(getCampaignSideOrderProgress(night, { playerHpPercent: 60, bossDefeated: true }).completed, true);
+  assert.equal(getCampaignSideOrderProgress(final, { bossKillSeconds: 36, bossDefeated: true }).completed, false);
+  assert.equal(getCampaignSideOrderProgress(final, { bossKillSeconds: 35, bossDefeated: true }).completed, true);
+  assert.equal(getCampaignSideOrderProgress(final, { bossKillSeconds: 35.01, bossDefeated: true }).completed, false);
+  assert.equal(getCampaignSideOrderProgress(final, { bossKillSeconds: 20, bossDefeated: false }).completed, false);
+});
+
+test('a completed field order unlocks one extra unique supply choice', () => {
+  const standard = getCampaignRewardChoices('b4_intro', 1);
+  const bonus = getCampaignRewardChoices('b4_intro', 1, true);
+  assert.equal(standard.length, 3);
+  assert.equal(bonus.length, 4);
+  assert.deepEqual(bonus.slice(0, 3).map((reward) => reward.id), standard.map((reward) => reward.id));
+  assert.equal(new Set(bonus.map((reward) => reward.id)).size, 4);
+  assert.ok(!standard.some((reward) => reward.id === bonus[3].id));
+});
+
+test('field-order records preserve completion and the best qualifying metric', () => {
+  let progress = createInitialCampaignProgress();
+  progress = recordCampaignStageResult(progress, 'b4_intro', {
+    bossDefeated: true, kills: 10, elapsedSeconds: 72, perfectDodges: 1, xpPickups: 5,
+  });
+  assert.equal(progress.completedStages.b4_intro?.bestSideOrderCompleted, true);
+  assert.equal(progress.completedStages.b4_intro?.bestSideOrderValue, 5);
+  progress = recordCampaignStageResult(progress, 'b4_intro', {
+    bossDefeated: true, kills: 8, elapsedSeconds: 80, perfectDodges: 0, xpPickups: 3,
+  });
+  assert.equal(progress.completedStages.b4_intro?.bestSideOrderCompleted, true);
+  assert.equal(progress.completedStages.b4_intro?.bestSideOrderValue, 5);
+});
+
+test('field-order XP bonus is saved for one exact next stage and consumed only once', () => {
+  let progress = createInitialCampaignProgress();
+  progress = recordCampaignStageResult(progress, 'b4_intro', {
+    bossDefeated: true, kills: 10, elapsedSeconds: 72, perfectDodges: 1, xpPickups: 5,
+  });
+  assert.equal(progress.pendingBonusXpStageId, 'port_17');
+  assert.equal(progress.pendingBonusXp, 5);
+
+  const storage = new Map();
+  const storageApi = { getItem: (key) => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) };
+  assert.equal(writeCampaignProgress(storageApi, progress), true);
+  progress = readCampaignProgress(storageApi);
+  assert.equal(progress.pendingBonusXp, 5);
+
+  const unrelated = consumePendingCampaignXpBonus(progress, 'cold_zero');
+  assert.equal(unrelated.bonusXp, 0);
+  assert.equal(unrelated.progress.pendingBonusXp, 5);
+
+  const consumed = consumePendingCampaignXpBonus(unrelated.progress, 'port_17');
+  assert.equal(consumed.bonusXp, 5);
+  assert.equal(consumed.progress.pendingBonusXp, 0);
+  assert.equal(consumed.progress.pendingBonusXpStageId, null);
+  assert.equal(consumePendingCampaignXpBonus(consumed.progress, 'port_17').bonusXp, 0);
+});
+
+test('time-based field order keeps the fastest qualifying boss clear', () => {
+  let progress = createInitialCampaignProgress();
+  for (const [index, stage] of CAMPAIGN_STAGES.slice(0, 4).entries()) {
+    progress = recordCampaignStageResult(progress, stage.id, {
+      bossDefeated: true,
+      kills: stage.bonusKillTarget,
+      elapsedSeconds: stage.durationSeconds - 5,
+      perfectDodges: 3,
+      xpStreak: 3,
+      level: 4,
+      killStreak: 10,
+      xpPickups: 12,
+      secretsFound: 1,
+      playerHpPercent: 85,
+      bossKillSeconds: 20,
+    });
+    const nextStage = CAMPAIGN_STAGES[index + 1];
+    if (nextStage) progress = consumePendingCampaignXpBonus(progress, nextStage.id).progress;
+  }
+  assert.ok(progress.unlockedStageIds.includes('final_audit'));
+  for (const bossKillSeconds of [30, 24, 36]) {
+    progress = recordCampaignStageResult(progress, 'final_audit', {
+      bossDefeated: true, kills: 31, elapsedSeconds: 200, perfectDodges: 3, xpPickups: 12,
+      bossKillSeconds,
+    });
+  }
+  assert.equal(progress.completedStages.final_audit?.bestSideOrderCompleted, true);
+  assert.equal(progress.completedStages.final_audit?.bestSideOrderValue, 24);
 });

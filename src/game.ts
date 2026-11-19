@@ -68,7 +68,7 @@ import { getSurvivalBossVariant, isMajorSurvivalBossType, shouldSpawnBosmanKrako
 import { applySurvivalWaveMutator, getSurvivalWaveMutator, getSurvivalWaveSpawnTuning } from './survivalWaveMutators.ts';
 import { getSurvivalConvoyHazardCount } from './survivalConvoy.ts';
 import { applySurvivalWorldCombatModifier, getSurvivalMapDefinition, SURVIVAL_MAPS, SURVIVAL_MAP_IDS, type SurvivalMapId } from './survivalMaps.ts';
-import { evaluateCampaignStars, getCampaignRewardDefinition, getCampaignStageDefinition, type CampaignRewardId, type CampaignStageDefinition, type CampaignStageId } from './campaignProgression.ts';
+import { evaluateCampaignStars, getCampaignSideOrderProgress, getCampaignRewardDefinition, getCampaignStageDefinition, type CampaignRewardId, type CampaignStageDefinition, type CampaignStageId } from './campaignProgression.ts';
 import { createWorldLightingProfileScratch, getCampaignLightingProfile, getSurvivalLightingProfile, getSurvivalWorldBackgroundColor, getSurvivalSurfaceProfile, updateSurvivalWorldLightingProfile, PVP_LIGHTING_PROFILE, type WorldLightingProfile } from './worldVisualQuality.ts';
 import { getSurvivalMapRouteFeatures } from './survivalMapLayouts.ts';
 import { createSurvivalFloorAtlasTexture } from './survivalFloorAtlas.ts';
@@ -288,11 +288,11 @@ export interface SurvivalSnapshot {
   aliveEnemies: number; rerolls: number; skips: number; activeHazards: number;
   killStreak: number; overdriveRemainingSeconds: number;
   mapId: SurvivalMapId; mapName: string; mapSubtitle: string;
-  secretsFound: number; totalSecrets: number; bossesDefeated: number;
+  secretsFound: number; totalSecrets: number; bossesDefeated: number; xpPickups: number; playerHpPercent: number;
   contract: SurvivalContractState;
   event: SurvivalShiftEvent | null;
   weapons: Array<{ id: SurvivalWeaponId; name: string; icon: string; level: number; evolved: boolean }>;
-  campaignStageId: CampaignStageId | null; campaignStageTitle: string | null; campaignRemainingSeconds: number | null; campaignGoalKills: number | null; campaignBossSpawned: boolean; campaignSuccess: boolean; campaignStars: number;
+  campaignStageId: CampaignStageId | null; campaignStageTitle: string | null; campaignRemainingSeconds: number | null; campaignGoalKills: number | null; campaignBossSpawned: boolean; campaignSuccess: boolean; campaignStars: number; campaignSideOrderCompleted: boolean; campaignSideOrderValue: number; campaignBossKillSeconds: number;
 }
 
 export interface GameCallbacks {
@@ -827,6 +827,9 @@ export class PaleciakiGameEngine {
   private campaignBossEnemyId: string | null = null;
   private campaignStageCompleted = false;
   private campaignStars = 0;
+  private campaignSideOrderCompleted = false;
+  private campaignSideOrderValue = 0;
+  private campaignBossSpawnedAtSeconds = 0;
   private survivalSpawnTimer = 0;
   private survivalRecentSpawnTypes: SurvivalEnemySpawnType[] = [];
   private survivalSurgeTimeLeft = 0;
@@ -861,6 +864,7 @@ export class PaleciakiGameEngine {
   private readonly survivalBiomeBlendScratch = createSurvivalWorldBiomeBlendScratch();
   private readonly survivalWorldLightingScratch = createWorldLightingProfileScratch();
   private survivalSecretsFound = 0;
+  private survivalXpPickups = 0;
   private cthulhuSecretSummoned = false;
   private survivalBossesDefeated = 0;
   private survivalSecrets: { id: string; name: string; mapId: SurvivalMapId; mesh: THREE.Group; age: number; collected: boolean }[] = [];
@@ -2711,6 +2715,9 @@ export class PaleciakiGameEngine {
     this.campaignBossEnemyId = null;
     this.campaignStageCompleted = false;
     this.campaignStars = 0;
+    this.campaignSideOrderCompleted = false;
+    this.campaignSideOrderValue = 0;
+    this.campaignBossSpawnedAtSeconds = 0;
     this.survivalSpawnTimer = 0;
     this.survivalRecentSpawnTypes = [];
     this.survivalSurgeTimeLeft = 0;
@@ -2732,6 +2739,7 @@ export class PaleciakiGameEngine {
     this.survivalAnomaly = createSurvivalAnomalyState();
     this.survivalGoldenPalletFound = false;
     this.survivalSecretsFound = 0;
+    this.survivalXpPickups = 0;
     this.cthulhuSecretSummoned = false;
     this.survivalBossesDefeated = 0;
     this.survivalPerfectDodges = 0;
@@ -2929,7 +2937,7 @@ export class PaleciakiGameEngine {
   }
 
   /** Start a compact campaign mission using the existing Survival combat loop. */
-  public startCampaignStage(stageId: CampaignStageId, rewardId: CampaignRewardId | null = null): boolean {
+  public startCampaignStage(stageId: CampaignStageId, rewardId: CampaignRewardId | null = null, bonusXp = 0): boolean {
     const stage = getCampaignStageDefinition(stageId);
     if (!stage) return false;
     this.startSurvival(stage.mapId);
@@ -2939,6 +2947,9 @@ export class PaleciakiGameEngine {
     this.campaignBossEnemyId = null;
     this.campaignStageCompleted = false;
     this.campaignStars = 0;
+    this.campaignSideOrderCompleted = false;
+    this.campaignSideOrderValue = 0;
+    this.campaignBossSpawnedAtSeconds = 0;
 
     // Carry-over rewards are deliberately scoped to Campaign. startSurvival()
     // has already reset the build, so a selected card affects exactly this stage.
@@ -2973,8 +2984,19 @@ export class PaleciakiGameEngine {
       this.emitFloatingToast(reward.icon + ' NAGRODA: ' + reward.title.toUpperCase(), this.playerPos.x, this.playerPos.y + 1.85, this.playerPos.z, 'perk');
     }
 
+    const safeBonusXp = Number.isFinite(bonusXp) ? Math.max(0, Math.min(12, Math.floor(bonusXp))) : 0;
+    this.survivalXp = Math.min(Math.max(0, this.survivalXpToNext - 1), this.survivalXp + safeBonusXp);
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
-    this.callbacks.onSurvivalAnnouncement?.('KAMPANIA ZMIAN • ETAP ' + stage.order + '/5', stage.title.toUpperCase(), stage.objective + ' Boss pojawi się po około ' + stage.bossSpawnAtSeconds + ' sekundach. Cel 3★: ' + stage.mastery.description + '. Wymagane eliminacje: ' + stage.bonusKillTarget + '.');
+    this.callbacks.onSurvivalAnnouncement?.(
+      'KAMPANIA ZMIAN • ETAP ' + stage.order + '/5',
+      stage.title.toUpperCase(),
+      stage.objective + ' Boss pojawi się po około ' + stage.bossSpawnAtSeconds + ' sekundach. Cel 3★: ' + stage.mastery.description
+        + '. Zlecenie specjalne: ' + stage.sideOrder.description + '. Eliminacje do 2★: ' + stage.bonusKillTarget
+        + (safeBonusXp > 0 ? '. Premia z poprzedniego zlecenia: +' + safeBonusXp + ' XP na start.' : '.')
+    );
+    if (safeBonusXp > 0) {
+      this.emitFloatingToast('📦 PREMIA ZA POPRZEDNIE ZLECENIE • +' + safeBonusXp + ' XP', this.playerPos.x, this.playerPos.y + 1.9, this.playerPos.z, 'perk');
+    }
     return true;
   }
 
@@ -2986,6 +3008,9 @@ export class PaleciakiGameEngine {
     this.campaignBossEnemyId = null;
     this.campaignStageCompleted = false;
     this.campaignStars = 0;
+    this.campaignSideOrderCompleted = false;
+    this.campaignSideOrderValue = 0;
+    this.campaignBossSpawnedAtSeconds = 0;
     this.clearLevel();
     this.gameMode = 'pvp';
     this.scene.background = new THREE.Color(PVP_LIGHTING_PROFILE.backgroundColor);
@@ -6549,6 +6574,8 @@ export class PaleciakiGameEngine {
       secretsFound: this.survivalSecretsFound,
       totalSecrets: SURVIVAL_MAP_IDS.reduce((total, mapId) => total + SURVIVAL_MAPS[mapId].secretLocations.length, 0),
       bossesDefeated: this.survivalBossesDefeated,
+      xpPickups: this.survivalXpPickups,
+      playerHpPercent: this.maxHp > 0 ? Math.round((this.hp / this.maxHp) * 100) : 0,
       contract: { ...this.survivalContract },
       event: this.survivalShiftEvent.active ? { ...this.survivalShiftEvent.active } : null,
       level: this.survivalLevel,
@@ -6576,6 +6603,9 @@ export class PaleciakiGameEngine {
       campaignBossSpawned: this.campaignBossSpawned,
       campaignSuccess: this.campaignStageCompleted,
       campaignStars: this.campaignStars,
+      campaignSideOrderCompleted: this.campaignSideOrderCompleted,
+      campaignSideOrderValue: this.campaignSideOrderValue,
+      campaignBossKillSeconds: this.campaignBossSpawnedAtSeconds > 0 ? Math.max(0, Math.ceil(this.survivalElapsed - this.campaignBossSpawnedAtSeconds)) : 0,
     };
   }
 
@@ -10472,6 +10502,7 @@ export class PaleciakiGameEngine {
             boss.hp = boss.maxHp;
             this.campaignBossEnemyId = boss.id;
             this.campaignBossSpawned = true;
+            this.campaignBossSpawnedAtSeconds = this.survivalElapsed;
             this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
           }
         }
@@ -10577,15 +10608,41 @@ export class PaleciakiGameEngine {
     const stage = this.campaignStage;
     if (!stage || this.campaignStageCompleted || this.state !== 'playing') return;
     this.campaignStageCompleted = true;
-    this.campaignStars = evaluateCampaignStars(stage, {
+    const campaignStats = {
       bossDefeated: true,
       kills: this.survivalKills,
       perfectDodges: this.survivalPerfectDodges,
       killStreak: this.survivalMomentum.killStreak,
       xpStreak: getSurvivalXpStreakTier(this.survivalXpStreak, this.survivalElapsed),
       level: this.survivalLevel,
+    };
+    this.campaignStars = evaluateCampaignStars(stage, campaignStats);
+    const sideOrder = getCampaignSideOrderProgress(stage, {
+      xpPickups: this.survivalXpPickups,
+      killStreak: this.survivalMomentum.killStreak,
+      secretsFound: this.survivalSecretsFound,
+      playerHpPercent: this.maxHp > 0 ? (this.hp / this.maxHp) * 100 : 0,
+      bossKillSeconds: this.campaignBossSpawnedAtSeconds > 0
+        ? this.survivalElapsed - this.campaignBossSpawnedAtSeconds
+        : 0,
+      bossDefeated: true,
     });
-    this.state = 'gameover';
+    this.campaignSideOrderCompleted = sideOrder.completed;
+    this.campaignSideOrderValue = sideOrder.value;
+    if (sideOrder.completed) {
+      const payout = 650 + stage.order * 125;
+      this.score += payout;
+      this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
+      this.emitFloatingToast('✦ ZLECENIE SPECJALNE • +' + payout + ' PKT • DODATKOWA KARTA', this.playerPos.x, this.playerPos.y + 2.1, this.playerPos.z, 'easter-egg');
+      this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.58, this.playerPos.z, 0xfbbf24);
+      this.triggerBloomPulse(0.52);
+      sound.playEasterEgg();
+      this.callbacks.onSurvivalAnnouncement?.(
+        'ZLECENIE SPECJALNE ZALICZONE',
+        sideOrder.label + ' • BONUS ' + payout + ' PKT',
+        'Centrala przyznała dodatkową kartę zaopatrzenia do wyboru przed kolejnym etapem.',
+      );
+    }
     this.playerVel.set(0, 0, 0);
     sound.stopMusic();
     sound.playWin();
@@ -12076,6 +12133,7 @@ export class PaleciakiGameEngine {
       }
 
       if (distance < 1.25) {
+        this.survivalXpPickups++;
         const streak = registerSurvivalXpPickup(this.survivalXpStreak, this.survivalElapsed);
         this.survivalXpStreak = streak.state;
         const anomalyXpMultiplier = getSurvivalAnomalyModifiers(this.survivalAnomaly).xpPickupMultiplier;

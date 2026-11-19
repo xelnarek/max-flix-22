@@ -262,7 +262,7 @@
 
       <div id="survival-hud" class="survival-hud hidden" aria-live="polite">
         <div class="survival-hud-main">
-          <div id="campaign-stage-hud" class="campaign-stage-hud hidden" aria-live="polite"><div><strong id="campaign-stage-title">ETAP 1/5 • MAGAZYN B4</strong><span id="campaign-stage-progress">POKONAJ BOSSA</span></div><b id="campaign-stage-clock">CEL 01:30</b></div>
+          <div id="campaign-stage-hud" class="campaign-stage-hud hidden" aria-live="polite"><div><strong id="campaign-stage-title">ETAP 1/5 • MAGAZYN B4</strong><span id="campaign-stage-progress">POKONAJ BOSSA</span><span id="campaign-stage-order">ZLECENIE SPECJALNE • DODATKOWA NAGRODA</span></div><b id="campaign-stage-clock">CEL 01:30</b></div>
           <div class="survival-hud-kicker" aria-label="Wybrana mapa i sekrety">
             <span id="survival-map-name" class="survival-map-name" title="Wybrana losowo arena">MAGAZYN B4</span>
             <span id="survival-secret-count" class="survival-secret-count">SEKRETY 0/5</span>
@@ -1262,7 +1262,7 @@
             </div>
             <div id="tab-map" class="tab-panel world-atlas-panel" aria-label="Kampania i atlas połączonej mega-mapy">
               <section class="campaign-board" aria-labelledby="campaign-board-title">
-                <div class="campaign-board-heading"><div><span class="campaign-board-kicker">TRYB FABULARNY • KRÓTKIE PRÓBY</span><h2 id="campaign-board-title">KAMPANIA ZMIAN</h2><p>Pięć krótkich etapów z różnymi celami mistrzowskimi. Boss kończy misję; eliminacje dają 2. gwiazdkę, a unikalne zadanie etapu — 3. Orientacyjnie 1:30–3:30; nagrody przechodzą do kolejnej misji.</p></div><div class="campaign-board-stats"><strong id="campaign-board-progress">ODKRYTE ETAPY: 1/5</strong><span>1–3 GWIAZDKI ZA WYNIK</span></div></div>
+                <div class="campaign-board-heading"><div><span class="campaign-board-kicker">TRYB FABULARNY • KRÓTKIE PRÓBY</span><h2 id="campaign-board-title">KAMPANIA ZMIAN</h2><p>Pięć krótkich etapów z różnymi celami mistrzowskimi i tajnymi zleceniami. Boss kończy misję; eliminacje dają 2. gwiazdkę, a unikalne zadanie — 3. Zlecenie specjalne zapewnia dodatkowe punkty, XP i czwartą kartę zaopatrzenia.</p></div><div class="campaign-board-stats"><strong id="campaign-board-progress">ODKRYTE ETAPY: 1/5</strong><span>1–3 GWIAZDKI ZA WYNIK</span></div></div>
                 <div class="campaign-stage-grid" aria-label="Wybór etapu kampanii">
                   <button type="button" class="campaign-stage-card" data-campaign-stage="b4_intro"><span class="campaign-stage-top"><span>01 / START</span><span class="campaign-stage-status">DOSTĘPNY</span></span><strong>MAGAZYN B4</strong><small>Przejmij główną aleję i pokonaj Nadzorcę Rampy.</small><span class="campaign-stage-bottom"><span class="campaign-stage-stars">☆☆☆</span><span>~ 1:30</span></span></button>
                   <button type="button" class="campaign-stage-card is-locked" data-campaign-stage="port_17" disabled aria-disabled="true"><span class="campaign-stage-top"><span>02 / PORT</span><span class="campaign-stage-status">ZABLOKOWANY</span></span><strong>PORT KONTENEROWY 17</strong><small>Przebij się przez plac i pokonaj Dyrektora Widmo.</small><span class="campaign-stage-bottom"><span class="campaign-stage-stars">☆☆☆</span><span>~ 2:00</span></span></button>
@@ -1270,7 +1270,7 @@
                   <button type="button" class="campaign-stage-card is-locked" data-campaign-stage="night_sorting" disabled aria-disabled="true"><span class="campaign-stage-top"><span>04 / NOCNA ZMIANA</span><span class="campaign-stage-status">ZABLOKOWANY</span></span><strong>SORTOWNIA WIDMOWA</strong><small>Unikaj skanerów i pokonaj Nadzorcę Zero.</small><span class="campaign-stage-bottom"><span class="campaign-stage-stars">☆☆☆</span><span>~ 3:00</span></span></button>
                   <button type="button" class="campaign-stage-card campaign-stage-final is-locked" data-campaign-stage="final_audit" disabled aria-disabled="true"><span class="campaign-stage-top"><span>05 / FINAŁ</span><span class="campaign-stage-status">ZABLOKOWANY</span></span><strong>AUDYT KOŃCOWY</strong><small>Najtrudniejsza próba i odznaka Mistrza Zmiany.</small><span class="campaign-stage-bottom"><span class="campaign-stage-stars">☆☆☆</span><span>~ 3:30</span></span></button>
                 </div>
-                <div class="campaign-board-footer"><span>⭐ 1: BOSS • ⭐⭐ LIMIT ELIMINACJI • ⭐⭐⭐ PERFEKCYJNE UNIKI</span><span>POSTĘP ZAPISUJE SIĘ NA URZĄDZENIU</span></div>
+                <div class="campaign-board-footer"><span>⭐ BOSS • ⭐⭐ ELIMINACJE • ⭐⭐⭐ CEL MISTRZOWSKI • ✦ ZLECENIE SPECJALNE</span><span>POSTĘP I REKORDY ZAPISUJĄ SIĘ NA URZĄDZENIU</span></div>
               </section>
               <section class="pvp-menu-hero mega-map-hero">
                 <div class="pvp-menu-kicker">SURVIVAL / 240 × 80 METRÓW / 4 BIOMY</div>
@@ -1401,11 +1401,11 @@
           <section id="campaign-reward-panel" class="campaign-reward-panel hidden" aria-labelledby="campaign-reward-title">
             <div class="campaign-reward-heading">
               <div>
-                <span class="campaign-reward-kicker">ŁUP PO POKONANIU BOSSA</span>
+                <span class="campaign-reward-kicker">ŁUP I ZAOPATRZENIE PO POKONANIU BOSSA</span>
                 <h3 id="campaign-reward-title">WYBIERZ BONUS NA NASTĘPNY ETAP</h3>
-                <p>Jedna z trzech premii przejdzie z Tobą do kolejnej misji. Wybór zapisuje się automatycznie.</p>
+                <p>Wybierz premię na kolejny etap. Zaliczenie tajnego zlecenia odblokowuje czwartą kartę wyboru.</p>
               </div>
-              <span class="campaign-reward-count">3 KARTY • 1 WYBÓR</span>
+              <span id="campaign-reward-count" class="campaign-reward-count">3 KARTY • 1 WYBÓR</span>
             </div>
             <div id="campaign-reward-options" class="campaign-reward-grid" role="group" aria-label="Wybór nagrody kampanii"></div>
             <p id="campaign-reward-note" class="campaign-reward-note" role="status" aria-live="polite">Domyślnie wybrano pierwszą kartę. Możesz zmienić ją przed rozpoczęciem następnego etapu.</p>
