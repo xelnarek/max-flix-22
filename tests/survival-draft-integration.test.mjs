@@ -35,3 +35,42 @@ test('the weapon offer still requires the actual time unlock and passive pairing
   assert.match(draft, /this\.survivalElapsed >= 210/);
   assert.match(draft, /this\.survivalUpgradeStacks\[definition\.evolutionPassive\]/);
 });
+
+
+test('every draft synergy matches the exact passive thresholds used by the live evolution unlocks', async () => {
+  const game = await read('../src/game.ts');
+  const draft = await read('../src/survivalDraft.ts');
+  const requirements = [
+    { id: 'ultimate_charge_chain', game: /stacks\.ability \|\| 0\) >= 3 && \(stacks\.rapid \|\| 0\) >= 2/, draft: /ability: \[\{ partner: 'rapid', selfRequired: 3, partnerRequired: 2/ },
+    { id: 'critical_protocol', game: /stacks\.critical \|\| 0\) >= 3 && \(stacks\.critical_damage \|\| 0\) >= 2/, draft: /critical: \[\{ partner: 'critical_damage', selfRequired: 3, partnerRequired: 2/ },
+    { id: 'ghost_protocol', game: /stacks\.dash \|\| 0\) >= 3 && \(stacks\.boots \|\| 0\) >= 2/, draft: /dash: \[\{ partner: 'boots', selfRequired: 3, partnerRequired: 2/ },
+    { id: 'overdrive', game: /stacks\.damage \|\| 0\) >= 3 && \(stacks\.rapid \|\| 0\) >= 2/, draft: /damage: \[\{ partner: 'rapid', selfRequired: 3, partnerRequired: 2/ },
+    { id: 'piorun_mk2', game: /stacks\.drone \|\| 0\) >= 2 && \(stacks\.range \|\| 0\) >= 2/, draft: /drone: \[\{ partner: 'range', selfRequired: 2, partnerRequired: 2/ },
+    { id: 'premium_logistics', game: /stacks\.growth \|\| 0\) >= 2 && \(stacks\.scavenger \|\| 0\) >= 2/, draft: /growth: \[\{ partner: 'scavenger', selfRequired: 2, partnerRequired: 2/ },
+    { id: 'bhp_fortress', game: /stacks\.regen \|\| 0\) >= 2 && \(stacks\.armor \|\| 0\) >= 2/, draft: /regen: \[\{ partner: 'armor', selfRequired: 2, partnerRequired: 2/ },
+    { id: 'chain_reactor', game: /stacks\.ricochet \|\| 0\) >= 2 && \(stacks\.radiation \|\| 0\) >= 2/, draft: /ricochet: \[[\s\S]*?partner: 'radiation', selfRequired: 2, partnerRequired: 2/ },
+    { id: 'crystal_cascade', game: /stacks\.shrapnel \|\| 0\) >= 2 && \(stacks\.ricochet \|\| 0\) >= 2/, draft: /partner: 'shrapnel', selfRequired: 2, partnerRequired: 2/ },
+  ];
+  for (const requirement of requirements) {
+    assert.match(game, requirement.game, requirement.id + ' live unlock condition');
+    assert.match(draft, requirement.draft, requirement.id + ' draft requirement');
+  }
+});
+
+
+test('weapon unlock draft synergies use the same evolution passive as the live weapon definitions', async () => {
+  const game = await read('../src/game.ts');
+  const draft = await read('../src/survivalDraft.ts');
+  const start = game.indexOf('const SURVIVAL_WEAPON_DEFS:');
+  const end = game.indexOf('\n};', start);
+  const mapStart = draft.indexOf('const WEAPON_EVOLUTION_PASSIVES:');
+  const mapEnd = draft.indexOf('\n});', mapStart);
+  assert.ok(start >= 0 && end > start && mapStart >= 0 && mapEnd > mapStart);
+  const definitions = game.slice(start, end);
+  const draftMap = draft.slice(mapStart, mapEnd);
+  const weapons = [...definitions.matchAll(/(?:^\s*)([a-z0-9_]+): \{[^}]*evolutionPassive: '([a-z0-9_]+)'/gm)];
+  assert.equal(weapons.length, 12);
+  for (const [, weaponId, passiveId] of weapons) {
+    assert.match(draftMap, new RegExp(weaponId + ": '" + passiveId + "'"));
+  }
+});
