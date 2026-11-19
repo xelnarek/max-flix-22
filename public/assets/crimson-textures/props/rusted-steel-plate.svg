@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><defs>
+<filter id="noise" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".72" numOctaves="3" seed="19" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="table" tableValues="0 .18"/></feComponentTransfer></filter>
+<filter id="fine" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves="2" seed="7" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+<linearGradient id="edge" x2="0" y2="1"><stop stop-color="#fff" stop-opacity=".08"/><stop offset=".5" stop-color="#000" stop-opacity=".02"/><stop offset="1" stop-color="#000" stop-opacity=".18"/></linearGradient>
+</defs>
+<rect width="1024" height="1024" fill="#393638"/><rect width="1024" height="1024" filter="url(#fine)" opacity=".6"/>
+<g fill="#8b4937" opacity=".72"><path d="M0 0h180q-32 100-90 150T0 240zM1024 0H820q45 85 112 130t92 160zM0 1024V820q92-35 125-105t55-90v399zM1024 1024H850q-22-98-90-140t-42-130h306z"/><ellipse cx="500" cy="510" rx="190" ry="100" opacity=".24"/></g>
+<g fill="#b97850" opacity=".32"><circle cx="220" cy="260" r="38"/><circle cx="770" cy="340" r="54"/><circle cx="410" cy="820" r="45"/><circle cx="900" cy="890" r="28"/></g>
+<g stroke="#12171b" stroke-width="8" fill="none" opacity=".65"><path d="M0 0H1024V1024H0Z"/><path d="M80 80H944V944H80Z"/></g>
+<g fill="#a9b1b4"><circle cx="80" cy="80" r="12"/><circle cx="944" cy="80" r="12"/><circle cx="80" cy="944" r="12"/><circle cx="944" cy="944" r="12"/></g>
+<rect width="1024" height="1024" filter="url(#noise)" opacity=".4"/></svg>
