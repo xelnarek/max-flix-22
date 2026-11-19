@@ -11,7 +11,7 @@ test('Survival levels offer a separate B4 roulette every third level after the r
   assert.match(game, /public spinSurvivalChaosRoulette\(\): boolean/);
   assert.match(game, /public getSurvivalChaosRouletteLastResult\(\)/);
   assert.match(game, /survivalChaosRouletteLastResult = \{ kind: outcome, title: selected.title, icon: selected.icon \}/);
-  assert.match(game, /rollSurvivalChaosRoulette\(Math\.random\(\)\)/);
+  assert.match(game, /rollSurvivalChaosRoulette\(Math\.random\(\), this\.survivalChaosRouletteRecentKinds\)/);
   assert.match(app, /isChaosRoulette/);
   assert.match(app, /spinSurvivalChaosRoulette\(\)/);
 });
@@ -64,8 +64,11 @@ test('eighteen roulette outcomes have concrete handlers for loot, control, weapo
   assert.match(game, /private clearSurvivalEnemyProjectiles\(\)/);
   assert.match(game, /this\.activatePerk\('order_magnet', 18\)/);
   assert.match(game, /this\.activatePerk\('xp_surge', 20\)/);
-  assert.match(game, /650 \+ Math\.floor\(Math\.random\(\) \* 901\)/);
+  assert.match(game, /650 \+ Math\.floor\(Math\.random\(\) \* 1551\)/);
   assert.match(game, /if \(Math\.random\(\) < 0\.55\)/);
+  assert.match(game, /const maxDelivery = Math\.max\(1, Math\.floor\(budget\.maxRouletteExtraEnemies\)\)/);
+  assert.match(game, /const requestedCount = 1 \+ Math\.floor\(Math\.random\(\) \* maxDelivery\)/);
+  assert.ok(game.includes('this.survivalChaosRouletteRecentKinds = [...this.survivalChaosRouletteRecentKinds.slice(-1), outcome]'));
   assert.match(game, /weaponOptions = this\.rollSurvivalUpgradeOptions\(\)\.filter/);
   assert.match(game, /enemy\.stunTimer = Math\.max\(enemy\.stunTimer, isBoss \? 0\.82 : 1\.8\)/);
   assert.match(game, /enemy\.state = 'stunned'/);
@@ -122,4 +125,12 @@ test('elite delivery assigns distinct roles, visible identity markers and a brea
   assert.match(types, /survivalEliteInsignia\?: any/);
   assert.match(visuals, /ELITE_ROLE_VISUALS/);
   assert.match(game, /enemy\.survivalEliteInsignia, enemy\.speechMesh/);
+});
+
+
+test('roulette history is bounded to two results and resets between Survival runs', async () => {
+  const game = await read('../src/game.ts');
+  assert.ok(game.includes('private survivalChaosRouletteRecentKinds: SurvivalChaosRouletteKind[] = []'));
+  assert.equal((game.match(/this\.survivalChaosRouletteRecentKinds = \[\];/g) || []).length, 2);
+  assert.ok(game.includes('this.survivalChaosRouletteRecentKinds = [...this.survivalChaosRouletteRecentKinds.slice(-1), outcome]'));
 });
