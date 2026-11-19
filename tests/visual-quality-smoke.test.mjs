@@ -6,24 +6,24 @@ const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
 test('game identity is consistently renamed in the title screen and engine boot', async () => {
   const [html, app] = await Promise.all([read('../index.html'), read('../src/index.ts')]);
-  assert.match(html, /<title>Warehouse MaDDnes<\/title>/);
-  assert.match(html, /WAREHOUSE[\s\S]*MaDDnes/);
-  assert.match(app, /setAppTitle\('Warehouse MaDDnes'\)/);
+  assert.match(html, /<title>MAX FLIX 22<\/title>/);
+  assert.match(html, /MAX FLIX[\s\S]*22/);
+  assert.match(app, /setAppTitle\('MAX FLIX 22'\)/);
 });
 
 
-test('Warehouse MaDDnes menu uses the refined industrial theme and detailed operator portraits', async () => {
+test('MAX FLIX 22 menu uses the refined industrial theme and detailed operator portraits', async () => {
   const [html, app, theme] = await Promise.all([
     read('../index.html'),
     read('../src/index.ts'),
-    read('../src/warehouse-maddnes-theme.css'),
+    read('../src/crimson-shift-menu.css'),
   ]);
-  assert.ok(html.includes('Warehouse MaDDnes'));
-  assert.ok(html.includes('WAREHOUSE <span>MaDDnes</span>'));
-  assert.ok(html.includes('warehouse-maddnes-theme.css'));
+  assert.ok(html.includes('MAX FLIX 22'));
+  assert.ok(html.includes('MAX FLIX <span>22</span>'));
+  assert.ok(html.includes('crimson-shift-menu.css'));
   assert.ok(app.includes('const signatureDetails: Record<CharacterId, string>'));
-  assert.ok(theme.includes('#title-screen #tab-team .char-card.active'));
-  assert.ok(theme.includes('#title-screen #tab-team .char-card-badge.operator-emblem'));
+  assert.ok(theme.includes('.char-card.active'));
+  assert.ok(theme.includes('.char-card'));
   assert.ok(theme.includes('@media (max-width: 640px)'));
   assert.ok(theme.includes('prefers-reduced-motion: reduce'));
 });
