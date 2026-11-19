@@ -951,3 +951,412 @@
     animation: none !important;
   }
 }
+
+
+/* -------------------------------------------------------------------------
+   SEGMENT FINISH — consistent art direction for every destination panel.
+   Cards stay data-driven: this layer changes only presentation and layout.
+   ------------------------------------------------------------------------- */
+#title-screen .tab-panel {
+  color: var(--wmx-text) !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  overflow-wrap: anywhere;
+}
+#title-screen .tab-panel :is(.combat-guide-banner,.perks-panel-header,.field-guide-hero,.leaderboard-container,.account-progression-hero,.account-ranks-hero,.survival-achievements-hero,.settings-hero,.campaign-board,.mega-map-hero,.pvp-menu-hero) {
+  border: 1px solid var(--wmx-line-strong) !important;
+  border-radius: 15px !important;
+  background:
+    radial-gradient(ellipse at 95% 0%, rgba(145,184,162,.10), transparent 44%),
+    linear-gradient(145deg, rgba(31,45,38,.96), rgba(14,21,18,.985)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.045), 0 12px 28px rgba(0,0,0,.19) !important;
+}
+#title-screen .tab-panel :is(.combat-guide-title,.perks-panel-title,.enemy-guide-directory-kicker,.field-guide-kicker,.settings-kicker,.account-progression-kicker,.survival-achievements-kicker,.campaign-board-kicker,.pvp-menu-kicker) {
+  color: var(--wmx-brass) !important;
+  letter-spacing: .12em !important;
+  font-weight: 800 !important;
+}
+#title-screen .tab-panel :is(.combat-guide-banner p,.perks-panel-desc,.field-guide-hero p,.enemy-guide-directory-heading p,.account-progression-hero p,.account-ranks-hero p,.survival-achievements-hero p,.settings-hero p,.campaign-board p,.pvp-menu-hero p) {
+  color: var(--wmx-muted) !important;
+  line-height: 1.5 !important;
+  overflow-wrap: anywhere !important;
+}
+#title-screen .tab-panel :is(.field-guide-section,.survival-achievement-section,.account-rank-section,.audio-mixer-card,.settings-note,.mega-map-route,.mega-map-transition-note,.account-tree-instructions) {
+  min-width: 0 !important;
+  border: 1px solid var(--wmx-line) !important;
+  border-radius: 13px !important;
+  background: linear-gradient(145deg, rgba(30,43,36,.72), rgba(14,21,18,.88)) !important;
+  padding: clamp(10px,1.6vw,16px) !important;
+}
+#title-screen .tab-panel :is(.field-guide-section-head h3,.account-rank-section-heading strong,.survival-achievement-section-heading strong,.mega-map-route-heading strong,.audio-mixer-heading strong) {
+  color: #eee9db !important;
+  letter-spacing: .045em !important;
+}
+#title-screen .tab-panel :is(.field-guide-section-head p,.field-guide-callout,.account-progression-footnote,.survival-achievement-section-heading span,.mega-map-route-grid small,.audio-mixer-heading span) {
+  color: var(--wmx-muted) !important;
+  line-height: 1.45 !important;
+  overflow-wrap: anywhere !important;
+}
+#title-screen .tab-panel :is(.field-guide-index,.field-guide-stamp,.field-guide-icon,.enemy-guide-badge,.perk-card-icon,.account-rank-emblem,.method-icon,.survival-achievements-total,.account-level-transponder) {
+  border: 1px solid rgba(212,183,124,.25) !important;
+  border-radius: 11px !important;
+  background: linear-gradient(145deg, rgba(212,183,124,.12), rgba(145,184,162,.055)) !important;
+  color: var(--wmx-brass) !important;
+}
+
+/* Card grids: fixed minimums, no squeezed columns or sideways overflow. */
+#title-screen .tab-panel :is(.enemies-guide-grid,.perk-shop-grid,.field-guide-card-grid,.account-tree-grid,.character-talent-grid,.survival-achievement-grid,.campaign-stage-grid,.mega-map-biome-grid,.mega-map-route-grid,.survival-map-directory) {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit,minmax(min(100%,220px),1fr)) !important;
+  align-items: stretch !important;
+  gap: clamp(8px,1.35vw,13px) !important;
+  min-width: 0 !important;
+  width: 100% !important;
+}
+#title-screen .tab-panel .field-guide-card-grid.four-col {
+  grid-template-columns: repeat(auto-fit,minmax(min(100%,175px),1fr)) !important;
+}
+#title-screen .tab-panel .field-guide-card-grid.two-col {
+  grid-template-columns: repeat(auto-fit,minmax(min(100%,280px),1fr)) !important;
+}
+#title-screen .tab-panel :is(.field-guide-card,.enemy-guide-card,.perk-card,.campaign-stage-card,.survival-map-directory-card,.account-tree-grid > *,.character-talent-grid > *,.survival-achievement-grid > *, .mega-map-biome-grid > *) {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  border: 1px solid var(--wmx-line) !important;
+  border-radius: 12px !important;
+  background: linear-gradient(145deg, rgba(36,49,41,.93), rgba(15,23,19,.985)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 8px 18px rgba(0,0,0,.14) !important;
+}
+#title-screen .tab-panel :is(.field-guide-card h4,.enemy-guide-title,.perk-card-title,.campaign-stage-card > strong,.survival-map-directory-card strong,.account-tree-grid > * strong,.character-talent-grid > * strong,.survival-achievement-grid > * strong) {
+  color: #f0eee5 !important;
+  font-weight: 800 !important;
+  line-height: 1.25 !important;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+#title-screen .tab-panel :is(.field-guide-card p,.enemy-guide-desc,.perk-card-desc,.campaign-stage-card small,.survival-map-directory-card small,.account-tree-grid > * p,.character-talent-grid > * p,.survival-achievement-grid > * p) {
+  color: #aeb8ad !important;
+  font-size: 12px !important;
+  line-height: 1.48 !important;
+  overflow-wrap: anywhere !important;
+}
+#title-screen .tab-panel :is(.field-guide-card small,.enemy-sig,.perk-source-tag,.campaign-stage-status,.campaign-stage-bottom,.survival-map-directory-card em) {
+  color: #b8c5b7 !important;
+  font-size: 10px !important;
+  line-height: 1.35 !important;
+  overflow-wrap: anywhere !important;
+}
+#title-screen .tab-panel .campaign-stage-card {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 9px !important;
+  padding: 12px !important;
+  text-align: left !important;
+}
+#title-screen .tab-panel .campaign-stage-card .campaign-stage-bottom {
+  margin-top: auto !important;
+  padding-top: 8px !important;
+  border-top: 1px solid var(--wmx-line) !important;
+}
+#title-screen .tab-panel .campaign-stage-card.is-locked {
+  opacity: .56 !important;
+  filter: saturate(.55) !important;
+}
+#title-screen .tab-panel .campaign-stage-card:not(:disabled):hover {
+  border-color: rgba(212,183,124,.48) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Combat directory and loot cards. */
+#title-screen .combat-guide-methods {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit,minmax(min(100%,220px),1fr)) !important;
+  gap: 8px !important;
+}
+#title-screen .combat-method {
+  min-width: 0 !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+  padding: 10px !important;
+  border: 1px solid var(--wmx-line) !important;
+  border-radius: 10px !important;
+  background: rgba(255,255,255,.025) !important;
+}
+#title-screen .combat-method .method-text { min-width: 0 !important; }
+#title-screen .combat-method strong { color: #eae7dc !important; line-height: 1.35 !important; }
+#title-screen .combat-method span:not(.method-icon) { color: var(--wmx-muted) !important; line-height: 1.45 !important; }
+#title-screen .enemy-guide-directory-heading {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: end !important;
+  justify-content: space-between !important;
+  gap: 8px 14px !important;
+  min-width: 0 !important;
+}
+#title-screen .enemy-guide-directory-heading h2 { color: var(--wmx-text) !important; }
+#title-screen .enemies-guide-grid .enemy-guide-card { padding: 12px !important; }
+#title-screen .perk-card { padding: 12px !important; }
+#title-screen .perk-card-top {
+  display: grid !important;
+  grid-template-columns: 42px minmax(0,1fr) auto !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+#title-screen .perk-card-head-info { min-width: 0 !important; }
+#title-screen .perk-card-icon { width: 40px !important; height: 40px !important; display: grid !important; place-items: center !important; }
+#title-screen .btn-perk-activate {
+  min-width: 82px !important;
+  min-height: 38px !important;
+  padding: 7px 10px !important;
+  border: 1px solid rgba(212,183,124,.32) !important;
+  border-radius: 9px !important;
+  background: rgba(212,183,124,.09) !important;
+  color: #e7d4aa !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+}
+#title-screen .perk-card-desc { padding-top: 10px !important; }
+
+/* Tactical field guide: editorial sections and map/route cards. */
+#title-screen .field-guide-heading-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 10px 16px !important;
+}
+#title-screen .field-guide-heading-row > div:first-child { min-width: 0 !important; flex: 1 1 300px !important; }
+#title-screen .field-guide-metrics {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit,minmax(100px,1fr)) !important;
+  gap: 7px !important;
+}
+#title-screen .field-guide-metrics > div {
+  min-width: 0 !important;
+  padding: 9px 7px !important;
+  border: 1px solid var(--wmx-line) !important;
+  border-radius: 9px !important;
+  background: rgba(255,255,255,.025) !important;
+}
+#title-screen .field-guide-metrics strong { color: var(--wmx-brass) !important; font-variant-numeric: tabular-nums; }
+#title-screen .field-guide-metrics span { color: var(--wmx-muted) !important; }
+#title-screen .field-guide-section-head {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+}
+#title-screen .field-guide-section-head > div { min-width: 0 !important; flex: 1 1 auto !important; }
+#title-screen .field-guide-section-head h3 { color: #eeeadd !important; }
+#title-screen .field-guide-section-head p { color: var(--wmx-muted) !important; }
+#title-screen .mega-map-route-grid > div {
+  min-width: 0 !important;
+  padding: 10px !important;
+  border: 1px solid var(--wmx-line) !important;
+  border-radius: 9px !important;
+  background: rgba(255,255,255,.025) !important;
+}
+#title-screen .mega-map-route-grid strong { color: #e7d8b8 !important; }
+#title-screen .survival-map-directory-card {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 5px !important;
+  padding: 12px !important;
+}
+#title-screen .survival-map-directory-card em {
+  margin-top: auto !important;
+  font-style: normal !important;
+  letter-spacing: .06em !important;
+}
+
+/* Profile, rank, achievements and leaderboard. */
+#title-screen .account-progression-heading,
+#title-screen .account-ranks-hero .account-progression-heading,
+#title-screen .survival-achievements-heading {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px 16px !important;
+}
+#title-screen .account-progression-heading > div:first-child,
+#title-screen .survival-achievements-heading > div:first-child { min-width: 0 !important; flex: 1 1 260px !important; }
+#title-screen .account-progression-summary {
+  display: grid !important;
+  grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+  gap: 8px !important;
+}
+#title-screen .account-progression-summary > *,
+#title-screen .account-current-rank-card,
+#title-screen .account-rank-bonuses,
+#title-screen .account-cloud-sync-row {
+  min-width: 0 !important;
+  border: 1px solid var(--wmx-line) !important;
+  border-radius: 10px !important;
+  background: rgba(255,255,255,.03) !important;
+}
+#title-screen .account-cloud-sync-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 9px !important;
+}
+#title-screen .account-cloud-sync-row > span { flex: 1 1 220px !important; min-width: 0 !important; color: var(--wmx-muted) !important; }
+#title-screen .account-cloud-sync-button { min-height: 42px !important; }
+#title-screen .account-rank-section-heading {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: space-between !important;
+  gap: 7px 12px !important;
+}
+#title-screen .account-rank-track {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit,minmax(min(100%,190px),1fr)) !important;
+  gap: 8px !important;
+  overflow: visible !important;
+  padding: 2px !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+#title-screen .account-rank-track > * {
+  min-width: 0 !important;
+  border: 1px solid var(--wmx-line) !important;
+  border-radius: 10px !important;
+  background: rgba(255,255,255,.03) !important;
+  padding: 9px !important;
+}
+#title-screen .account-rank-track > *.active,
+#title-screen .account-rank-track > *[aria-current="step"] {
+  border-color: rgba(212,183,124,.52) !important;
+  background: rgba(212,183,124,.075) !important;
+}
+#title-screen .leaderboard-header-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 8px 12px !important;
+}
+#title-screen .leaderboard-title { flex: 1 1 200px !important; color: var(--wmx-text) !important; }
+#title-screen .firestore-status-badge { color: var(--wmx-muted) !important; }
+#title-screen .leaderboard-item {
+  display: grid !important;
+  grid-template-columns: 42px minmax(0,1fr) auto !important;
+  gap: 9px !important;
+  align-items: center !important;
+  padding: 10px !important;
+  border-radius: 10px !important;
+}
+
+/* Settings: readable controls, stable labels and thumb-sized range inputs. */
+#title-screen .audio-settings-frame { padding: clamp(10px,1.7vw,18px) !important; }
+#title-screen .settings-hero { min-width: 0 !important; margin-bottom: 12px !important; }
+#title-screen .audio-mixer-card { padding: clamp(10px,1.5vw,16px) !important; }
+#title-screen .audio-mixer-heading {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+}
+#title-screen .audio-slider-row {
+  display: grid !important;
+  grid-template-columns: minmax(130px,1fr) minmax(80px,1.5fr) 48px !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 12px 0 !important;
+  border-bottom: 1px solid var(--wmx-line) !important;
+}
+#title-screen .audio-slider-row label { min-width: 0 !important; color: #e9e6dc !important; }
+#title-screen .audio-slider-row label small { display: block !important; color: var(--wmx-muted) !important; line-height: 1.35 !important; }
+#title-screen .audio-slider-row input[type="range"] {
+  width: 100% !important;
+  min-width: 0 !important;
+  accent-color: var(--wmx-mint) !important;
+  touch-action: pan-x !important;
+}
+#title-screen .audio-slider-row output {
+  color: var(--wmx-brass) !important;
+  text-align: right !important;
+  font-variant-numeric: tabular-nums !important;
+}
+#title-screen .audio-mixer-footer {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  padding-top: 10px !important;
+}
+#title-screen .audio-reset-btn {
+  min-height: 42px !important;
+  padding: 8px 11px !important;
+  border: 1px solid var(--wmx-line-strong) !important;
+  border-radius: 9px !important;
+  color: var(--wmx-text) !important;
+  background: rgba(255,255,255,.04) !important;
+}
+
+/* Touch layout: keep descriptions readable and controls easy to hit. */
+@media (max-width: 640px), (pointer: coarse) {
+  #title-screen .tab-panel { gap: 10px !important; }
+  #title-screen .tab-panel :is(.combat-guide-banner,.field-guide-hero,.account-progression-hero,.account-ranks-hero,.survival-achievements-hero,.settings-hero,.campaign-board,.pvp-menu-hero) {
+    border-radius: 12px !important;
+  }
+  #title-screen .tab-panel :is(.enemies-guide-grid,.perk-shop-grid,.field-guide-card-grid,.account-tree-grid,.character-talent-grid,.survival-achievement-grid,.campaign-stage-grid,.mega-map-biome-grid,.mega-map-route-grid) {
+    grid-template-columns: minmax(0,1fr) !important;
+    gap: 8px !important;
+  }
+  #title-screen .tab-panel .field-guide-card-grid.four-col,
+  #title-screen .tab-panel .field-guide-card-grid.two-col {
+    grid-template-columns: minmax(0,1fr) !important;
+  }
+  #title-screen .perk-card-top {
+    grid-template-columns: 36px minmax(0,1fr) !important;
+    gap: 8px !important;
+  }
+  #title-screen .perk-card-top .btn-perk-activate {
+    grid-column: 1 / -1 !important;
+    justify-self: end !important;
+    min-width: 108px !important;
+    min-height: 42px !important;
+  }
+  #title-screen .perk-card-icon { width: 34px !important; height: 34px !important; }
+  #title-screen .combat-guide-methods { grid-template-columns: minmax(0,1fr) !important; }
+  #title-screen .field-guide-metrics { grid-template-columns: repeat(3,minmax(0,1fr)) !important; }
+  #title-screen .survival-map-directory { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+  #title-screen .audio-slider-row {
+    grid-template-columns: minmax(0,1fr) 42px !important;
+    gap: 8px !important;
+  }
+  #title-screen .audio-slider-row label { grid-column: 1 / -1 !important; }
+  #title-screen .audio-slider-row input[type="range"] { grid-column: 1 !important; grid-row: 2 !important; }
+  #title-screen .audio-slider-row output { grid-column: 2 !important; grid-row: 2 !important; }
+  #title-screen .account-progression-summary { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+  #title-screen .account-cloud-sync-button { flex: 1 1 130px !important; }
+  #title-screen .leaderboard-header-row { align-items: stretch !important; }
+  #title-screen .leaderboard-header-row .btn-refresh-pill { min-height: 40px !important; }
+  #title-screen .leaderboard-item {
+    grid-template-columns: 32px minmax(0,1fr) auto !important;
+    gap: 7px !important;
+    padding: 8px !important;
+  }
+}
+@media (max-width: 380px) and (orientation: portrait) {
+  #title-screen .tab-panel :is(.survival-map-directory,.field-guide-metrics,.account-progression-summary) {
+    grid-template-columns: minmax(0,1fr) !important;
+  }
+  #title-screen .audio-reset-btn { width: 100% !important; }
+}
+@media (min-width: 641px) and (pointer: fine) {
+  #title-screen .tab-panel .field-guide-card-grid.three-col { grid-template-columns: repeat(3,minmax(0,1fr)) !important; }
+  #title-screen .tab-panel .field-guide-card-grid.four-col { grid-template-columns: repeat(4,minmax(0,1fr)) !important; }
+  #title-screen .tab-panel .field-guide-card-grid.two-col { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #title-screen .tab-panel :is(.field-guide-card,.enemy-guide-card,.perk-card,.campaign-stage-card,.survival-map-directory-card) {
+    transition: none !important;
+    transform: none !important;
+  }
+}
