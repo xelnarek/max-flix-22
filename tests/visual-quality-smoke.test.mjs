@@ -24,8 +24,8 @@ test('MAX FLIX 22 menu uses the refined industrial theme and detailed operator p
   assert.ok(app.includes('const signatureDetails: Record<CharacterId, string>'));
   assert.ok(theme.includes('.char-card.active'));
   assert.ok(theme.includes('.char-card'));
-  assert.ok(theme.includes('@media (max-width: 640px)'));
-  assert.ok(theme.includes('prefers-reduced-motion: reduce'));
+  assert.ok(theme.includes('@media (max-width:760px)'));
+  assert.ok(theme.includes('prefers-reduced-motion:reduce'));
 });
 
 test('the five playable operator cards receive individual retro pixel-art portraits', async () => {
