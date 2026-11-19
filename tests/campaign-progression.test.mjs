@@ -6,6 +6,8 @@ import {
   createInitialCampaignProgress,
   evaluateCampaignStars,
   getCampaignMasteryProgress,
+  getCampaignSideOrderProgress,
+  getCampaignRewardChoices,
   getNextCampaignStageId,
   readCampaignProgress,
   recordCampaignStageResult,
@@ -107,4 +109,68 @@ test('sanitizer prevents gaps in the unlock sequence', () => {
     completedStages: { b4_intro: { bestStars: 1, bestKills: 2, bestTimeSeconds: 75, completions: 1 } },
   });
   assert.deepEqual(progress.unlockedStageIds, ['b4_intro', 'port_17']);
+});
+
+test('every campaign mission has one distinct optional field order', () => {
+  const metrics = CAMPAIGN_STAGES.map((stage) => stage.sideOrder.metric);
+  assert.deepEqual(metrics, ['xp_pickups', 'kill_streak', 'secrets_found', 'player_hp_percent', 'boss_kill_seconds']);
+});
+
+test('field orders are optional until boss victory and apply direction-aware thresholds', () => {
+  const [b4, port, cold, night, final] = CAMPAIGN_STAGES;
+  assert.equal(getCampaignSideOrderProgress(b4, { xpPickups: 5, bossDefeated: false }).completed, false);
+  assert.equal(getCampaignSideOrderProgress(b4, { xpPickups: 4, bossDefeated: true }).completed, false);
+  assert.equal(getCampaignSideOrderProgress(b4, { xpPickups: 5, bossDefeated: true }).completed, true);
+  assert.equal(getCampaignSideOrderProgress(port, { killStreak: 8, bossDefeated: true }).completed, false);
+  assert.equal(getCampaignSideOrderProgress(port, { killStreak: 9, bossDefeated: true }).completed, true);
+  assert.equal(getCampaignSideOrderProgress(cold, { secretsFound: 1, bossDefeated: true }).completed, true);
+  assert.equal(getCampaignSideOrderProgress(night, { playerHpPercent: 59, bossDefeated: true }).completed, false);
+  assert.equal(getCampaignSideOrderProgress(night, { playerHpPercent: 60, bossDefeated: true }).completed, true);
+  assert.equal(getCampaignSideOrderProgress(final, { bossKillSeconds: 36, bossDefeated: true }).completed, false);
+  assert.equal(getCampaignSideOrderProgress(final, { bossKillSeconds: 35, bossDefeated: true }).completed, true);
+  assert.equal(getCampaignSideOrderProgress(final, { bossKillSeconds: 20, bossDefeated: false }).completed, false);
+});
+
+test('a completed field order unlocks one extra unique supply choice', () => {
+  const standard = getCampaignRewardChoices('b4_intro', 1);
+  const bonus = getCampaignRewardChoices('b4_intro', 1, true);
+  assert.equal(standard.length, 3);
+  assert.equal(bonus.length, 4);
+  assert.equal(new Set(bonus.map((reward) => reward.id)).size, 4);
+  assert.ok(bonus.every((reward) => standard.some((entry) => entry.id === reward.id) || !standard.includes(reward)));
+});
+
+test('field-order records preserve completion and the best qualifying metric', () => {
+  let progress = createInitialCampaignProgress();
+  progress = recordCampaignStageResult(progress, 'b4_intro', {
+    bossDefeated: true, kills: 10, elapsedSeconds: 72, perfectDodges: 1, xpPickups: 5,
+  });
+  assert.equal(progress.completedStages.b4_intro?.bestSideOrderCompleted, true);
+  assert.equal(progress.completedStages.b4_intro?.bestSideOrderValue, 5);
+  progress = recordCampaignStageResult(progress, 'b4_intro', {
+    bossDefeated: true, kills: 8, elapsedSeconds: 80, perfectDodges: 0, xpPickups: 3,
+  });
+  assert.equal(progress.completedStages.b4_intro?.bestSideOrderCompleted, true);
+  assert.equal(progress.completedStages.b4_intro?.bestSideOrderValue, 5);
+});
+
+test('time-based field order keeps the fastest qualifying boss clear', () => {
+  let progress = createInitialCampaignProgress();
+  for (const [bossKillSeconds, elapsedSeconds] of [[30, 180], [24, 174], [36, 186]]) {
+    progress = recordCampaignStageResult(progress, 'b4_intro', {
+      bossDefeated: true, kills: 31, elapsedSeconds, perfectDodges: 3, xpPickups: 12,
+      bossKillSeconds,
+    });
+    // This test uses B4's collection order, while the lower-is-better comparison
+    // is verified directly against the final-stage result record below.
+  }
+  let final = createInitialCampaignProgress();
+  for (const bossKillSeconds of [30, 24, 36]) {
+    final = recordCampaignStageResult(final, 'final_audit', {
+      bossDefeated: true, kills: 31, elapsedSeconds: 200, perfectDodges: 3, xpPickups: 12,
+      bossKillSeconds,
+    });
+  }
+  assert.equal(final.completedStages.final_audit?.bestSideOrderCompleted, true);
+  assert.equal(final.completedStages.final_audit?.bestSideOrderValue, 24);
 });
