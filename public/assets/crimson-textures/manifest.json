@@ -1,6 +1,6 @@
 {
   "name": "MAX FLIX 22 — Crimson Texture Pack",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "branch": "feature/crimson-texture-pack-v1",
   "renderer": "Three.js 0.186 / Vite / WebGL",
   "coordinateSystem": "top-down 3D arena",
@@ -60,6 +60,41 @@
       "format": "SVG",
       "tileable": true,
       "role": "environment-material"
+    },
+    {
+      "file": "assets/crimson-textures/decals/floor-wear-overlay.svg",
+      "resolution": "1024x1024",
+      "format": "SVG",
+      "tileable": true,
+      "role": "surface-detail-overlay"
+    },
+    {
+      "file": "assets/crimson-textures/decals/warehouse-floor-markings.svg",
+      "resolution": "1024x1024",
+      "format": "SVG",
+      "tileable": true,
+      "role": "floor-marking-pattern"
+    },
+    {
+      "file": "assets/crimson-textures/props/cold-frosted-metal.svg",
+      "resolution": "1024x1024",
+      "format": "SVG",
+      "tileable": true,
+      "role": "cold-storage-metal"
+    },
+    {
+      "file": "assets/crimson-textures/props/rack-upright-blue.svg",
+      "resolution": "512x1024",
+      "format": "SVG",
+      "tileable": true,
+      "role": "rack-upright-material"
+    },
+    {
+      "file": "assets/crimson-textures/props/pallet-plastic-blue.svg",
+      "resolution": "1024x1024",
+      "format": "SVG",
+      "tileable": true,
+      "role": "plastic-pallet-material"
     }
   ],
   "materialPolicy": {
@@ -68,5 +103,54 @@
     "wrap": "THREE.RepeatWrapping",
     "anisotropy": 4
   },
-  "integration": "Additive pack. Does not replace the current procedural Survival floor atlas or existing B4 visual atlases. Runtime hookup should be tested on Android before switching map materials."
+  "integration": "Additive pack. Does not replace the current procedural Survival floor atlas or existing B4 visual atlases. Runtime hookup should be tested on Android before switching map materials.",
+  "environmentModels": [
+    {
+      "id": "crimson-rack-3bay",
+      "factory": "createCrimsonRack",
+      "role": "three-bay selective pallet racking"
+    },
+    {
+      "id": "crimson-wrapped-pallet-stack",
+      "factory": "createCrimsonPalletStack",
+      "role": "wrapped mixed cargo pallet"
+    },
+    {
+      "id": "crimson-drum-cluster",
+      "factory": "createCrimsonBarrelCluster",
+      "role": "industrial drum cluster"
+    },
+    {
+      "id": "crimson-roller-conveyor",
+      "factory": "createCrimsonConveyor",
+      "role": "low-profile conveyor"
+    },
+    {
+      "id": "crimson-cold-compressor",
+      "factory": "createCrimsonColdCompressor",
+      "role": "refrigeration unit"
+    },
+    {
+      "id": "crimson-iso-container",
+      "factory": "createCrimsonContainer",
+      "role": "corrugated ISO container"
+    }
+  ],
+  "enemyModels": [
+    {
+      "id": "crimson-enemy-stalker",
+      "factory": "createCrimsonEnemyModel('stalker')",
+      "role": "fast melee silhouette"
+    },
+    {
+      "id": "crimson-enemy-armored-foreman",
+      "factory": "createCrimsonEnemyModel('armoredForeman')",
+      "role": "armored heavy silhouette"
+    },
+    {
+      "id": "crimson-enemy-toxic-inspector",
+      "factory": "createCrimsonEnemyModel('toxicInspector')",
+      "role": "toxic ranged silhouette"
+    }
+  ]
 }
