@@ -19,7 +19,7 @@ test('premium final menu is loaded and preserves real destinations', () => {
 
 test('premium menu has isolated scrolling and short-screen geometry', () => {
   assert.match(css, /\.menu-tab-content-area[^}]*overflow-y:\s*auto/s);
-  assert.match(css, /@media \(max-width: 900px\)/);
+  assert.match(css, /@media \(max-width: 1100px\)/);
   assert.match(css, /@media \(max-width: 760px\)/);
   assert.match(css, /@media \(max-height: 560px\) and \(orientation: landscape\) and \(pointer: coarse\)/);
   assert.match(css, /prefers-reduced-motion: reduce/);
@@ -30,5 +30,5 @@ test('cinematic intro keeps procedural Canvas 2D and accessible fallback', () =>
   assert.match(intro, /prefers-reduced-motion/);
   assert.match(intro, /private readonly duration = 11\.8/);
   assert.match(intro, /drawOperatorPortrait/);
-  assert.match(css, /Cinematic intro: premium industrial reveal/);
+  assert.match(css, /INTRO \/ industrial alarm/);
 });
