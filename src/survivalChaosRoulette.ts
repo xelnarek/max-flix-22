@@ -33,16 +33,27 @@ export const SURVIVAL_CHAOS_ROULETTE_TABLE: readonly SurvivalChaosRouletteEntry[
   { kind: 'weapon_draft', weight: 2 },
 ];
 
-export function rollSurvivalChaosRoulette(roll: number): SurvivalChaosRouletteKind {
+/**
+ * Roll against the weighted table while avoiding the two most recent results.
+ * Remaining weights are re-normalized, so no outcome receives a hidden fixed
+ * probability bonus. Empty/invalid history falls back to the full table.
+ */
+export function rollSurvivalChaosRoulette(
+  roll: number,
+  recentKinds: readonly SurvivalChaosRouletteKind[] = [],
+): SurvivalChaosRouletteKind {
   const safeRoll = Number.isFinite(roll)
     ? Math.max(0, Math.min(0.999999999, roll))
     : 0.5;
-  const totalWeight = SURVIVAL_CHAOS_ROULETTE_TABLE.reduce((sum, entry) => sum + entry.weight, 0);
+  const recent = new Set(recentKinds.slice(-2));
+  const eligible = SURVIVAL_CHAOS_ROULETTE_TABLE.filter((entry) => !recent.has(entry.kind));
+  const pool = eligible.length > 0 ? eligible : SURVIVAL_CHAOS_ROULETTE_TABLE;
+  const totalWeight = pool.reduce((sum, entry) => sum + entry.weight, 0);
   const target = safeRoll * totalWeight;
   let cumulative = 0;
-  for (const entry of SURVIVAL_CHAOS_ROULETTE_TABLE) {
+  for (const entry of pool) {
     cumulative += entry.weight;
     if (target < cumulative) return entry.kind;
   }
-  return SURVIVAL_CHAOS_ROULETTE_TABLE[SURVIVAL_CHAOS_ROULETTE_TABLE.length - 1].kind;
+  return pool[pool.length - 1].kind;
 }
