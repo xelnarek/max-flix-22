@@ -136,8 +136,9 @@ test('a completed field order unlocks one extra unique supply choice', () => {
   const bonus = getCampaignRewardChoices('b4_intro', 1, true);
   assert.equal(standard.length, 3);
   assert.equal(bonus.length, 4);
+  assert.deepEqual(bonus.slice(0, 3).map((reward) => reward.id), standard.map((reward) => reward.id));
   assert.equal(new Set(bonus.map((reward) => reward.id)).size, 4);
-  assert.ok(bonus.every((reward) => standard.some((entry) => entry.id === reward.id) || !standard.includes(reward)));
+  assert.ok(!standard.some((reward) => reward.id === bonus[3].id));
 });
 
 test('field-order records preserve completion and the best qualifying metric', () => {
@@ -156,21 +157,28 @@ test('field-order records preserve completion and the best qualifying metric', (
 
 test('time-based field order keeps the fastest qualifying boss clear', () => {
   let progress = createInitialCampaignProgress();
-  for (const [bossKillSeconds, elapsedSeconds] of [[30, 180], [24, 174], [36, 186]]) {
-    progress = recordCampaignStageResult(progress, 'b4_intro', {
-      bossDefeated: true, kills: 31, elapsedSeconds, perfectDodges: 3, xpPickups: 12,
-      bossKillSeconds,
+  for (const stage of CAMPAIGN_STAGES.slice(0, 4)) {
+    progress = recordCampaignStageResult(progress, stage.id, {
+      bossDefeated: true,
+      kills: stage.bonusKillTarget,
+      elapsedSeconds: stage.durationSeconds - 5,
+      perfectDodges: 3,
+      xpStreak: 3,
+      level: 4,
+      killStreak: 10,
+      xpPickups: 12,
+      secretsFound: 1,
+      playerHpPercent: 85,
+      bossKillSeconds: 20,
     });
-    // This test uses B4's collection order, while the lower-is-better comparison
-    // is verified directly against the final-stage result record below.
   }
-  let final = createInitialCampaignProgress();
+  assert.ok(progress.unlockedStageIds.includes('final_audit'));
   for (const bossKillSeconds of [30, 24, 36]) {
-    final = recordCampaignStageResult(final, 'final_audit', {
+    progress = recordCampaignStageResult(progress, 'final_audit', {
       bossDefeated: true, kills: 31, elapsedSeconds: 200, perfectDodges: 3, xpPickups: 12,
       bossKillSeconds,
     });
   }
-  assert.equal(final.completedStages.final_audit?.bestSideOrderCompleted, true);
-  assert.equal(final.completedStages.final_audit?.bestSideOrderValue, 24);
+  assert.equal(progress.completedStages.final_audit?.bestSideOrderCompleted, true);
+  assert.equal(progress.completedStages.final_audit?.bestSideOrderValue, 24);
 });
