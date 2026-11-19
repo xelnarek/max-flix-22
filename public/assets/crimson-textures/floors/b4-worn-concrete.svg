@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><defs>
+<filter id="noise" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".72" numOctaves="3" seed="19" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="table" tableValues="0 .18"/></feComponentTransfer></filter>
+<filter id="fine" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves="2" seed="7" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+<linearGradient id="edge" x2="0" y2="1"><stop stop-color="#fff" stop-opacity=".08"/><stop offset=".5" stop-color="#000" stop-opacity=".02"/><stop offset="1" stop-color="#000" stop-opacity=".18"/></linearGradient>
+</defs>
+<rect width="1024" height="1024" fill="#55514c"/><rect width="1024" height="1024" filter="url(#fine)" opacity=".38"/>
+<g fill="none" stroke="#28282a"><path d="M0 0H1024M0 0V1024" stroke-width="9" opacity=".65"/><path d="M0 12H1024M12 0V1024" stroke="#9a9183" stroke-width="2" opacity=".22"/></g>
+<g fill="#252629" opacity=".22"><ellipse cx="180" cy="280" rx="118" ry="47"/><ellipse cx="750" cy="690" rx="150" ry="62"/><ellipse cx="520" cy="430" rx="88" ry="34"/></g>
+<g fill="#b6a995" opacity=".22"><circle cx="74" cy="148" r="5"/><circle cx="390" cy="88" r="3"/><circle cx="850" cy="260" r="6"/><circle cx="620" cy="890" r="4"/><circle cx="280" cy="760" r="5"/><circle cx="930" cy="920" r="3"/></g>
+<path d="M0 0H1024V1024H0Z" fill="url(#edge)"/><rect width="1024" height="1024" filter="url(#noise)" opacity=".6"/></svg>

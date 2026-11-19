@@ -489,6 +489,26 @@ function bake(type:EnemyType):THREE.Group|null{
   if(type==='elite_walczak_guard'){
     bx(groups,'rightArm',0x667a88,[.42,.69,.23],[.33,.52,.075],[0,0,-.12],.75);
     bx(groups,'rightArm',0x1e2a37,[.42,.69,.275],[.25,.42,.018],[0,0,-.12],.7);
+    // Crimson shift: reinforced shoulder cap, warning stripe and illuminated shield boss.
+    bx(groups,'torso',0x8f3441,[-.34,1.02,.12],[.22,.20,.25],[0,0,-.18],.62);
+    for(let i=0;i<3;i++)bx(groups,'rightArm',0xe4a13b,[.42,.60+i*.11,.30],[.20,.035,.025],[0,0,-.12],.28);
+    sp(groups,'rightArm',0xffd27a,[.42,.70,.325],[.075,.075,.025],.38);
+  }
+  if(type==='zombie_pracownik'){
+    // Torn hi-vis remains, exposed dark plating and asymmetrical claw guards.
+    bx(groups,'torso',0x542c32,[.22,.73,.24],[.19,.30,.055],[0,0,-.16],.22);
+    bx(groups,'torso',0xb23a43,[-.20,.88,.245],[.16,.09,.025],[0,0,.22],.12);
+    for(const side of [-1,1])cn(groups,'rightArm',0xd5c6a8,[side*.42,.54,.20],.07,.22,[0,0,side*.34]);
+  }
+  if(type==='radioactive_pip'){
+    // Distinct twin filter canisters, hazard bands and luminous status lens.
+    for(const side of [-1,1]){
+      cy(groups,'back',0x344b37,[side*.23,.82,-.27],.095,.12,.46,[Math.PI/2,0,0],.55);
+      tor(groups,'back',0xc5e65a,[side*.23,.82,-.27],.105,.018,[Math.PI/2,0,0]);
+      sp(groups,'head',0xbaff5a,[side*.105,1.18,.23],[.045,.04,.025],.12);
+    }
+    bx(groups,'torso',0xd2d9a0,[0,.63,.29],[.34,.055,.018],[0,0,0],.12);
+    bx(groups,'torso',0x27372a,[0,.63,.31],[.12,.055,.012],[0,0,0],.12);
   }
   source.updateMatrixWorld(true);
   const root=new THREE.Group();root.name='enemy-role-kit-'+type;root.userData.enemyRole=type;root.userData.roleForm=spec.form;root.userData.roleKitVersion=2;root.userData.actorRoleSilhouette=true;
