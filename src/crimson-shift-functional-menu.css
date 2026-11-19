@@ -1,0 +1,59 @@
+/* MAX FLIX 22 — CRIMSON SHIFT / functional menu finish */
+#title-screen .menu-tab-content-area{position:relative}
+#title-screen .menu-density-toolbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:36px;margin:-2px 0 10px;padding:5px 8px;border:1px solid rgba(225,65,62,.24);border-radius:9px;background:linear-gradient(100deg,rgba(29,13,17,.97),rgba(10,9,11,.96));box-shadow:0 6px 18px rgba(0,0,0,.25);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+#title-screen .menu-density-label{color:#c7aaa8;font:800 9px/1 "JetBrains Mono",monospace;letter-spacing:.14em}
+#title-screen .menu-density-toggle{min-height:28px;padding:5px 10px;border:1px solid rgba(255,99,91,.42);border-radius:7px;background:rgba(126,17,27,.32);color:#ffe8e4;font:800 9px/1 "JetBrains Mono",monospace;letter-spacing:.06em;cursor:pointer;touch-action:manipulation}
+#title-screen .menu-density-toggle:hover,#title-screen .menu-density-toggle:focus-visible{border-color:#ff746c;background:rgba(155,24,33,.52)}
+#title-screen .tab-panel{gap:clamp(7px,.9vw,12px)!important}
+#title-screen[data-menu-density="compact"] .tab-panel :is(.enemy-guide-desc,.perk-card-desc,.field-guide-card p,.campaign-stage-desc,.campaign-board-heading p,.mega-map-biome-card p,.pvp-menu-feature-card p,.char-details-bio,.setting-description,.account-progression-copy){display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden!important}
+#title-screen[data-menu-density="compact"] .tab-panel :is(.enemy-guide-card,.perk-card,.field-guide-card,.campaign-stage-card,.survival-map-directory-card,.pvp-menu-feature-card,.achievement-card,.leaderboard-item,.settings-card,.settings-section){min-width:0!important;padding:clamp(8px,1vw,12px)!important}
+#title-screen[data-menu-density="compact"] .tab-panel :is(.enemies-guide-grid,.perk-shop-grid,.field-guide-card-grid,.campaign-stage-grid,.mega-map-biome-grid,.mega-map-route-grid,.survival-achievement-grid,.account-tree-grid,.character-talent-grid){display:grid!important;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))!important;align-items:stretch;gap:clamp(7px,.9vw,11px)!important}
+#title-screen #tab-team>.char-grid{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;align-items:stretch;gap:clamp(6px,.8vw,10px)!important}
+#title-screen #tab-team>.char-grid>.char-card{display:grid!important;grid-template-rows:auto 34px auto auto!important;justify-items:center;align-content:start;gap:3px!important;min-width:0!important;min-height:108px!important;height:auto!important;padding:7px 5px!important;text-align:center}
+#title-screen #tab-team .char-card-badge,#title-screen #tab-team .operator-emblem{display:grid!important;place-items:center!important;width:32px!important;height:32px!important;min-width:32px!important;margin:0!important;border-radius:9px!important;font-size:18px!important}
+#title-screen #tab-team .char-card-badge svg,#title-screen #tab-team .operator-emblem svg{width:24px!important;height:24px!important;max-width:24px!important;max-height:24px!important}
+#title-screen #tab-team .char-code-tag{justify-self:center;font-size:7px!important;line-height:1.1!important}
+#title-screen #tab-team .char-card-name{max-width:100%;font-size:clamp(9px,1vw,12px)!important;line-height:1.12!important;overflow-wrap:anywhere}
+#title-screen #tab-team .char-card-role{max-width:100%;font-size:7px!important;line-height:1.2!important;overflow-wrap:anywhere}
+#title-screen #tab-team .char-card-ability,#title-screen #tab-team .char-card-model-label{display:none!important}
+#title-screen #tab-team .char-card-mastery{position:absolute;top:5px;right:5px;min-width:18px;padding:2px 4px;border-radius:5px;font:800 7px/1 "JetBrains Mono",monospace}
+#title-screen #tab-team .char-details-box{margin-top:7px!important;padding:clamp(9px,1.2vw,15px)!important;gap:7px!important}
+#title-screen #tab-team .char-detail-view-nav{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 3px;padding-bottom:7px;border-bottom:1px solid rgba(225,65,62,.2)}
+#title-screen #tab-team .char-detail-view-btn{flex:1 1 90px;min-height:34px;padding:6px 9px;border:1px solid rgba(213,103,96,.26);border-radius:7px;background:rgba(255,255,255,.025);color:#c7b8b6;font:800 8px/1.1 "JetBrains Mono",monospace;letter-spacing:.08em}
+#title-screen #tab-team .char-detail-view-btn.active,#title-screen #tab-team .char-detail-view-btn[aria-pressed="true"]{color:#fff4f0;border-color:rgba(255,98,91,.65);background:linear-gradient(110deg,rgba(145,20,30,.48),rgba(42,12,17,.86));box-shadow:inset 0 -2px 0 #e12c32}
+#title-screen #tab-team .char-details-box[data-char-view="profile"] :is(.char-details-attack,.char-details-skill,.char-details-passive){display:none!important}
+#title-screen #tab-team .char-details-box[data-char-view="abilities"] :is(.char-details-bio,.char-stats-container,.character-mastery-panel){display:none!important}
+#title-screen #tab-team .char-details-box[data-char-view="mastery"] :is(.char-details-bio,.char-details-attack,.char-details-skill,.char-details-passive,.char-stats-container){display:none!important}
+#title-screen .tab-panel :is(article,section,.card,.settings-group,.setting-row){min-width:0!important;max-width:100%}
+#title-screen .tab-panel :is(h1,h2,h3,h4,p,small,strong,label,span){overflow-wrap:anywhere}
+#title-screen .tab-panel :is(img,svg,canvas,video){max-width:100%}
+#title-screen :is(button,input,select,textarea){max-width:100%}
+#title-screen .menu-tab-content-area,#title-screen .menu-tabs-bar{scrollbar-width:thin;scrollbar-color:rgba(225,65,62,.42) rgba(255,255,255,.035)}
+@media(max-width:760px){
+#title-screen .menu-density-toolbar{min-height:32px;margin-bottom:7px}
+#title-screen .menu-density-label{font-size:8px}
+#title-screen .menu-density-toggle{min-height:28px;font-size:8px}
+#title-screen #tab-team>.char-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:5px!important}
+#title-screen #tab-team>.char-grid>.char-card{min-height:88px!important;grid-template-rows:auto 28px auto auto!important;padding:5px 4px!important}
+#title-screen #tab-team .char-card-badge,#title-screen #tab-team .operator-emblem{width:27px!important;height:27px!important;min-width:27px!important}
+#title-screen #tab-team .char-card-badge svg,#title-screen #tab-team .operator-emblem svg{width:21px!important;height:21px!important}
+#title-screen #tab-team .char-card-name{font-size:9px!important}
+#title-screen #tab-team .char-card-role{font-size:6.5px!important}
+#title-screen #tab-team .char-details-title{font-size:14px!important}
+#title-screen #tab-team .char-details-bio,#title-screen #tab-team .char-details-attack,#title-screen #tab-team .char-details-skill,#title-screen #tab-team .char-details-passive{font-size:10px!important;line-height:1.42!important}
+}
+@media(max-width:380px){
+#title-screen #tab-team>.char-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+#title-screen #tab-team>.char-grid>.char-card{min-height:82px!important}
+#title-screen #tab-team .char-code-tag{font-size:6px!important}
+#title-screen #tab-team .char-card-role{font-size:6px!important}
+#title-screen .menu-tab-btn{min-width:56px!important}
+}
+@media(max-height:560px) and (orientation:landscape) and (pointer:coarse){
+#title-screen .menu-density-toolbar{min-height:26px;padding:3px 7px;margin-bottom:4px}
+#title-screen #tab-team>.char-grid{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+#title-screen #tab-team>.char-grid>.char-card{min-height:70px!important;grid-template-rows:auto 22px auto!important;padding:3px!important}
+#title-screen #tab-team .char-card-badge,#title-screen #tab-team .operator-emblem{width:21px!important;height:21px!important;min-width:21px!important}
+#title-screen #tab-team .char-card-role{display:none!important}
+}
+@media(prefers-reduced-motion:reduce){#title-screen .char-card,#title-screen .menu-density-toggle,#title-screen .char-detail-view-btn{transition:none!important;animation:none!important}}
