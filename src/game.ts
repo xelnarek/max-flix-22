@@ -15033,8 +15033,6 @@ export class PaleciakiGameEngine {
     }
 
     const direction = Math.atan2(this.playerPos.x - enemy.x, this.playerPos.z - enemy.z);
-    const distance = Math.hypot(this.playerPos.x - enemy.x, this.playerPos.z - enemy.z);
-    const laneLength = THREE.MathUtils.clamp(distance + 1.4, 2.8, 15.5);
     enemy.aiRangedWindupTimer = profile.windupSeconds;
     enemy.aiRangedWindupDuration = profile.windupSeconds;
     enemy.aiRangedLockedDirection = direction;
@@ -15109,7 +15107,6 @@ export class PaleciakiGameEngine {
     }
 
     const direction = Math.atan2(this.playerPos.x - enemy.x, this.playerPos.z - enemy.z);
-    const laneLength = THREE.MathUtils.clamp(distance + 0.38, 1.5, 3.8);
     enemy.aiMeleeWindupTimer = profile.windupSeconds;
     enemy.aiMeleeWindupDuration = profile.windupSeconds;
     enemy.aiMeleeLockedDirection = direction;
