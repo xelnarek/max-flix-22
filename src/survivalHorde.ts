@@ -5,22 +5,33 @@ export interface HordeRingPoint {
 }
 
 export interface SurvivalHordeSettings {
-  enemyCount: number;
-  durationSeconds: number;
-  spawnIntervalSeconds: number;
-  initialRadius: number;
-  finalRadius: number;
+  readonly enemyCount: number;
+  readonly durationSeconds: number;
+  readonly spawnIntervalSeconds: number;
+  readonly initialRadius: number;
+  readonly finalRadius: number;
 }
 
+/** Shared immutable profiles: the director reads these every frame. */
+const MOBILE_HORDE_SETTINGS: Readonly<SurvivalHordeSettings> = Object.freeze({
+  enemyCount: 12,
+  durationSeconds: 18,
+  spawnIntervalSeconds: 0.48,
+  initialRadius: 13.4,
+  finalRadius: 6.8,
+});
+
+const DESKTOP_HORDE_SETTINGS: Readonly<SurvivalHordeSettings> = Object.freeze({
+  enemyCount: 16,
+  durationSeconds: 18,
+  spawnIntervalSeconds: 0.48,
+  initialRadius: 13.4,
+  finalRadius: 6.8,
+});
+
 /** A contained, short event keeps the ring readable on mobile and desktop. */
-export function getSurvivalHordeSettings(isMobile: boolean): SurvivalHordeSettings {
-  return {
-    enemyCount: isMobile ? 12 : 16,
-    durationSeconds: 18,
-    spawnIntervalSeconds: 0.48,
-    initialRadius: 13.4,
-    finalRadius: 6.8,
-  };
+export function getSurvivalHordeSettings(isMobile: boolean): Readonly<SurvivalHordeSettings> {
+  return isMobile ? MOBILE_HORDE_SETTINGS : DESKTOP_HORDE_SETTINGS;
 }
 
 /** Evenly distributes each horde member around a shared perimeter. */
