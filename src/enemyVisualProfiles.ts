@@ -1,5 +1,8 @@
 import type { EnemyType } from './types.ts';
 import type { GobkitModelId } from './gobkitAssets.ts';
+import { BASE44_ENEMY_ASSETS } from './base44EnemyAssets.js';
+
+export type Base44EnemyModelId = keyof typeof BASE44_ENEMY_ASSETS;
 
 export type EnemyVisualCategory =
   | 'warehouse-caricature'
@@ -74,6 +77,8 @@ export interface EnemyVisualProfile {
   readonly fallbackFactory: string;
   /** Optional locally packaged rigged asset; procedural fallback stays available. */
   readonly gobkitModel?: GobkitModelId;
+  /** User-authored Base44 model preferred over the existing Gobkit rig. */
+  readonly base44Model?: Base44EnemyModelId;
   readonly category: EnemyVisualCategory;
   readonly attackStyle: EnemyAttackStyle;
   /** Distinct locomotion gait for procedural rigs; vehicles/drones use non-foot styles. */
@@ -104,6 +109,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     gaitStyle: 'stalking',
     fallbackFactory: 'createWalczakBossModel',
     gobkitModel: 'werewolfcaptain',
+    base44Model: 'kapibara_mafioso',
     category: 'boss-creature',
     attackStyle: 'heavy-melee',
     targetHeight: 1.96,
@@ -146,6 +152,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
   handlowiec: {
     gaitStyle: 'swagger',
     gobkitModel: 'salesrep',
+    base44Model: 'ksiegowy_otchlani',
     fallbackFactory: 'createHandlowiecEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'ranged',
@@ -164,6 +171,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
   piorun_dron: {
     gaitStyle: 'hovering',
     fallbackFactory: 'createPiorunDronModel',
+    base44Model: 'turbo_golab',
     category: 'machine',
     attackStyle: 'ranged',
     targetHeight: 0.82,
@@ -209,6 +217,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     gaitStyle: 'heavy',
     fallbackFactory: 'createKrolLetoBossModel',
     gobkitModel: 'bloodironjuggernaut',
+    base44Model: 'pierogowy_kolos',
     category: 'boss-creature',
     attackStyle: 'heavy-melee',
     targetHeight: 2.12,
@@ -217,6 +226,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
   pan_roman: {
     gaitStyle: 'uneven',
     gobkitModel: 'stockclerk',
+    base44Model: 'janusz_rakietnik',
     fallbackFactory: 'createPanRomanEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'ranged',
@@ -261,6 +271,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
   sebix_m: {
     gaitStyle: 'aggressive',
     gobkitModel: 'bloodirongrunt',
+    base44Model: 'parowkowy_berserker',
     fallbackFactory: 'createSebixEnemyModel',
     category: 'warehouse-caricature',
     attackStyle: 'heavy-melee',
