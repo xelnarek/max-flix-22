@@ -22,9 +22,9 @@ test('responsive menu keeps every destination reachable and content scrolling is
     assert.ok(gridAreas[1].includes(area), 'missing title-sheet grid area: ' + area);
   }
   assert.match(css, /\.menu-tab-content-area[^}]*overflow-y: auto/s);
-  assert.ok(css.includes('@media (max-width: 900px)'), 'missing tablet/phone breakpoint');
-  assert.ok(css.includes('@media (max-width: 760px)'), 'missing touch-menu breakpoint');
-  assert.ok(css.includes('@media (max-height: 560px) and (orientation: landscape) and (pointer: coarse)'), 'missing compact landscape breakpoint');
+  assert.match(css, /@media\\s*\\(\\s*max-width\\s*:\\s*900px\\s*\\)/, 'missing tablet/phone breakpoint');
+  assert.match(css, /@media\\s*\\(\\s*max-width\\s*:\\s*760px\\s*\\)/, 'missing touch-menu breakpoint');
+  assert.match(css, /@media\\s*\\(\\s*max-height\\s*:\\s*560px\\s*\\)\\s*and\\s*\\(\\s*orientation\\s*:\\s*landscape\\s*\\)\\s*and\\s*\\(\\s*pointer\\s*:\\s*coarse\\s*\\)/, 'missing compact landscape breakpoint');
 });
 
 test('menu retains keyboard focus visibility and honors reduced motion', () => {
