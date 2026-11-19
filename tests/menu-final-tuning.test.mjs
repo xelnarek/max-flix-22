@@ -22,7 +22,12 @@ test('responsive menu keeps every destination reachable and content scrolling is
   for (const area of ['"header header"', '"modes modes"', '"navigation content"']) {
     assert.ok(gridAreas[1].includes(area), 'missing title-sheet grid area: ' + area);
   }
-  assert.match(css, /\.menu-tab-content-area[^}]*overflow-y: auto/s);
+  const compactCss = css.replaceAll(' ', '').replaceAll('\\n', '').replaceAll('\\r', '').replaceAll('\\t', '');
+  const contentRuleStart = compactCss.indexOf('#title-screen.menu-tab-content-area{');
+  assert.ok(contentRuleStart >= 0, 'menu content viewport must be styled');
+  const contentRuleEnd = compactCss.indexOf('}', contentRuleStart);
+  assert.ok(compactCss.slice(contentRuleStart, contentRuleEnd).includes('overflow-y:auto'),
+    'menu content viewport must own vertical scrolling');
   assert.ok(html.indexOf('/src/warehouse-maddnes-unified-menu.css') > html.indexOf('/src/menu-final-tuning.css'),
     'the responsive acceptance layer must load after the legacy menu stylesheet');
   const responsiveTokens = responsiveCss.replaceAll(' ', '').replaceAll('\n', '').replaceAll('\r', '').replaceAll('\t', '');
@@ -33,6 +38,7 @@ test('responsive menu keeps every destination reachable and content scrolling is
 });
 
 test('menu retains keyboard focus visibility and honors reduced motion', () => {
-  assert.match(css, /:focus-visible/);
-  assert.match(css, /prefers-reduced-motion: reduce/);
+  const compactCss = css.replaceAll(' ', '').replaceAll('\\n', '').replaceAll('\\r', '').replaceAll('\\t', '');
+  assert.ok(compactCss.includes(':focus-visible'), 'keyboard focus styling is required');
+  assert.ok(compactCss.includes('@media(prefers-reduced-motion:reduce)'), 'reduced-motion styling is required');
 });
