@@ -20,8 +20,8 @@ test('mobile install metadata is complete and points to project-relative assets'
   assert.ok(html.includes('rel="apple-touch-icon" href="./icons/warehouse-maddnes-icon.svg"'));
   assert.match(html, /rel="manifest" href="\.\/manifest\.webmanifest"/);
   assert.match(html, /theme-color/);
-  assert.match(html, /<meta name="application-name" content="Warehouse MaDDnes" \/>/);
-  assert.match(html, /<meta name="apple-mobile-web-app-title" content="Warehouse MaDDnes" \/>/);
+  assert.match(html, /<meta name="application-name" content="MAX FLIX 22" \/>/);
+  assert.match(html, /<meta name="apple-mobile-web-app-title" content="MAX FLIX 22" \/>/);
   assert.equal((html.match(/<meta name="theme-color"/g) || []).length, 1);
   assert.doesNotMatch(html, /content="Operacja B4"/);
 });
