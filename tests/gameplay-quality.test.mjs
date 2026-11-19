@@ -1924,11 +1924,11 @@ test('campaign reward drafts render after a clear and are consumed only by their
   assert.match(game, /case 'xp':[\s\S]*?this\.survivalXpMultiplier/);
   assert.match(game, /case 'mobility':[\s\S]*?this\.survivalMoveMultiplier/);
   assert.match(game, /case 'reserve':[\s\S]*?this\.survivalRerolls/);
-  assert.match(app, /getCampaignRewardChoices(snapshot.campaignStageId, completions, savedStageResult?.bestSideOrderCompleted === true)/);
+  assert.match(app, /getCampaignRewardChoices\(snapshot\.campaignStageId, completions, savedStageResult\?\.bestSideOrderCompleted === true\)/);
   assert.match(app, /setPendingCampaignReward\(campaignProgress, nextCampaignStageId, defaultReward\.id\)/);
-  assert.match(app, /consumePendingCampaignReward(campaignProgress, stageId)/);
-  assert.match(app, /startCampaignStage(chosenStage, campaignRewardId, campaignBonusXp)/);
-  assert.match(app, /startCampaignStage(retryStageId, campaignRewardId, campaignBonusXp)/);
+  assert.match(app, /consumePendingCampaignReward\(campaignProgress, stageId\)/);
+  assert.match(app, /startCampaignStage\(chosenStage, campaignRewardId, campaignBonusXp\)/);
+  assert.match(app, /startCampaignStage\(retryStageId, campaignRewardId, campaignBonusXp\)/);
   assert.match(html, /id="campaign-reward-panel"/);
   assert.match(html, /id="campaign-reward-options"/);
   assert.match(campaignCss, /\.campaign-reward-card\.is-selected/);
@@ -1950,7 +1950,7 @@ test('campaign field orders are tracked and their XP bonus is stage-scoped', asy
   assert.match(app, /consumeCampaignXpBonusForStage\(chosenStage\)/);
   assert.match(app, /consumeCampaignXpBonusForStage\(retryStageId\)/);
   assert.match(campaign, /pendingBonusXpStageId !== stageId/);
-  assert.match(campaign, /getCampaignRewardChoices\(stageId, completionNumber = 1, includeBonusChoice = false\)/);
+  assert.match(campaign, /getCampaignRewardChoices\(stageId: CampaignStageId, completionNumber = 1, includeBonusChoice = false\)/);
 });
 
 test('PvP projectile visual sync reuses its active-ID buffer and immutable perk palette', async () => {
