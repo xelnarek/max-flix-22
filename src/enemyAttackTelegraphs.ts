@@ -40,6 +40,17 @@ export function getEnemyRangedAttackTelegraphProfile(
   return PROFILES[type] ?? null;
 }
 
+/** Keep the number of simultaneous enemy attack cues readable on small screens. */
+export function getEnemyAttackTelegraphConcurrencyLimit(isHandheld: boolean): number {
+  return isHandheld ? 2 : 4;
+}
+
+/** Reject malformed counts rather than accidentally opening an unlimited warning budget. */
+export function hasEnemyAttackTelegraphCapacity(activeCount: number, isHandheld: boolean): boolean {
+  if (!Number.isFinite(activeCount)) return false;
+  return Math.max(0, Math.floor(activeCount)) < getEnemyAttackTelegraphConcurrencyLimit(isHandheld);
+}
+
 export interface EnemyAttackTelegraphTick {
   readonly remainingSeconds: number;
   readonly progress: number;
