@@ -2904,8 +2904,8 @@ class PaleciakiScene extends xb.Script {
         group.inert = false;
         group.dataset.activeGroup = String(group.dataset.menuGroup === segment.id);
         group.setAttribute('aria-hidden', 'false');
-        group.setAttribute('role', 'group');
-        group.removeAttribute('aria-orientation');
+        group.setAttribute('role', 'tablist');
+        group.setAttribute('aria-orientation', 'vertical');
       });
     };
 
