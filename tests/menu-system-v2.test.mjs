@@ -89,15 +89,15 @@ test('Field Manual has a complete responsive card system for its four section wi
   ]) {
     assert.ok(css.includes(selector), 'missing Field Manual layout rule: ' + selector);
   }
-  assert.match(guide, /<div><strong>7<\\/strong><span>eventów<\\/span><\\/div>/);
+  assert.match(guide, /<div><strong>7<\/strong><span>eventów<\/span><\/div>/);
   assert.match(guide, /WYDARZENIA MAGAZYNOWE • 7 SCENARIUSZY/);
 });
 
 test('global leaderboard uses the menu content viewport instead of a nested vertical scroller', () => {
-  assert.match(css, /#title-screen #tab-leaderboard \\.leaderboard-list\\s*\\{[\\s\\S]*?max-height:\\s*none !important;[\\s\\S]*?overflow:\\s*visible !important/);
+  assert.match(css, /#title-screen #tab-leaderboard \.leaderboard-list\s*\{[\s\S]*?max-height:\s*none !important;[\s\S]*?overflow:\s*visible !important/);
 });
 
 test('coarse-pointer devices wider than 900 CSS pixels retain the desktop menu geometry', () => {
-  assert.match(css, /@media \\(max-width: 900px\\) \\{/);
-  assert.doesNotMatch(css, /@media \\(pointer: coarse\\)\\s*\\{/);
+  assert.match(css, /@media \(max-width: 900px\) \{/);
+  assert.doesNotMatch(css, /@media \(pointer: coarse\)\s*\{/);
 });
