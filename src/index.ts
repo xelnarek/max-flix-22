@@ -41,6 +41,7 @@ import { launchOniricPlatformer } from './oniricPlatformer.ts';
 import { launchCthulhuRetroArena } from './cthulhuRetroArena.ts';
 import { getMenuTabIndexForKey } from './menuTabNavigation.ts';
 import { MenuScrollMemory } from './menuScrollMemory.ts';
+import { getMenuSegmentForTab, MENU_SEGMENTS, type MenuSegmentId } from './menuSegments.ts';
 import { getVisibilityPauseAction } from './visibilityPause.ts';
 import { observeWebGLContextRecovery } from './webglContextRecovery.ts';
 import { FloatingToastPool } from './floatingToastPool.ts';
@@ -2723,15 +2724,19 @@ class PaleciakiScene extends xb.Script {
     });
 
     const menuTabList = document.querySelector<HTMLElement>('.menu-tabs-bar');
-    const desktopMenuNavigationQuery = window.matchMedia('(min-width: 901px)');
-    menuTabList?.setAttribute('role', 'tablist');
-    menuTabList?.setAttribute('aria-label', 'Sekcje menu głównego');
-    menuTabList?.setAttribute('aria-orientation', desktopMenuNavigationQuery.matches ? 'vertical' : 'horizontal');
+    const desktopMenuNavigationQuery = window.matchMedia('(min-width: 1101px)');
+    const mobileMenuSegmentQuery = window.matchMedia('(max-width: 1100px)');
+    menuTabList?.setAttribute('role', 'navigation');
+    menuTabList?.setAttribute('aria-label', 'Nawigacja menu głównego');
     const menuTabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.menu-tab-btn'));
+    const menuMobileSegmentButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.menu-mobile-segment'));
+    const menuNavigationGroups = Array.from(document.querySelectorAll<HTMLElement>('.menu-nav-group'));
     let currentMenuTargetId = menuTabButtons.find((button) => button.classList.contains('active'))?.getAttribute('data-tab') || 'tab-team';
+    let activeMobileSegmentId: MenuSegmentId = getMenuSegmentForTab(currentMenuTargetId)?.id || 'play';
     const menuScrollMemory = new MenuScrollMemory();
     const menuContentArea = document.querySelector<HTMLElement>('.menu-tab-content-area');
     const menuRootElement = document.getElementById('title-screen');
+    let setActiveMobileSegment: (segmentId: MenuSegmentId) => void = () => undefined;
     if (menuRootElement) menuRootElement.dataset.menuDensity = 'compact';
 
     // One persistent density control keeps long reference copy out of the way
@@ -2824,8 +2829,7 @@ class PaleciakiScene extends xb.Script {
     const syncMenuPanelPresentation = (targetId: string) => {
       const titleScreenRoot = document.getElementById('title-screen');
       if (titleScreenRoot) titleScreenRoot.dataset.activeMenuTab = targetId;
-      menuTabList?.setAttribute('role', 'tablist');
-      menuTabList?.setAttribute('aria-orientation', desktopMenuNavigationQuery.matches ? 'vertical' : 'horizontal');
+      menuTabList?.setAttribute('role', 'navigation');
 
       menuTabButtons.forEach((button) => {
         const active = button.getAttribute('data-tab') === targetId;
@@ -2865,6 +2869,8 @@ class PaleciakiScene extends xb.Script {
         menuScrollMemory.save(currentMenuTargetId, menuContentArea.scrollTop);
       }
       currentMenuTargetId = targetId;
+      const owningSegment = getMenuSegmentForTab(targetId);
+      if (owningSegment) setActiveMobileSegment(owningSegment.id);
       ensureMenuTabVisible(selectedTab);
 
       // The selected section owns the accent color and mode-specific launch action.
@@ -2881,7 +2887,46 @@ class PaleciakiScene extends xb.Script {
       }
     };
 
-    menuTabButtons.forEach((tabBtn, index) => {
+    // On touch layouts, navigation is hierarchical: choose one of the four
+    // real game sections first, then choose a destination inside that section.
+    setActiveMobileSegment = (segmentId: MenuSegmentId) => {
+      const segment = MENU_SEGMENTS.find((item) => item.id === segmentId);
+      if (!segment) return;
+
+      activeMobileSegmentId = segment.id;
+      if (menuRootElement) menuRootElement.dataset.activeMenuSegment = segment.id;
+
+      menuMobileSegmentButtons.forEach((button) => {
+        const active = button.dataset.menuSegment === segment.id;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+      });
+
+      menuNavigationGroups.forEach((group) => {
+        const visible = !mobileMenuSegmentQuery.matches || group.dataset.menuGroup === segment.id;
+        group.hidden = !visible;
+        group.inert = !visible;
+        group.setAttribute('aria-hidden', String(!visible));
+        group.setAttribute('role', 'tablist');
+        group.setAttribute('aria-orientation', desktopMenuNavigationQuery.matches ? 'vertical' : 'horizontal');
+      });
+    };
+
+    menuMobileSegmentButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const segmentId = button.dataset.menuSegment as MenuSegmentId | undefined;
+        const segment = MENU_SEGMENTS.find((item) => item.id === segmentId);
+        if (!segment) return;
+
+        setActiveMobileSegment(segment.id);
+        const firstTab = menuTabButtons.find((tab) => tab.dataset.tab === segment.tabIds[0]);
+        if (!firstTab) return;
+        activateMenuTab(firstTab);
+        firstTab.focus();
+      });
+    });
+
+    menuTabButtons.forEach((tabBtn) => {
       const targetId = tabBtn.getAttribute('data-tab');
       tabBtn.id = tabBtn.id || (targetId ? 'menu-' + targetId : 'menu-tab-' + index);
       tabBtn.setAttribute('role', 'tab');
@@ -2905,10 +2950,14 @@ class PaleciakiScene extends xb.Script {
         ensureMenuTabVisible(tabBtn);
       });
       tabBtn.addEventListener('keydown', (event: KeyboardEvent) => {
-        const nextIndex = getMenuTabIndexForKey(event.key, index, menuTabButtons.length, desktopMenuNavigationQuery.matches ? 'vertical' : 'horizontal');
+        const navigationTabs = mobileMenuSegmentQuery.matches
+          ? menuTabButtons.filter((candidate) => getMenuSegmentForTab(candidate.dataset.tab || '')?.id === activeMobileSegmentId)
+          : menuTabButtons;
+        const currentNavigationIndex = navigationTabs.indexOf(tabBtn);
+        const nextIndex = getMenuTabIndexForKey(event.key, currentNavigationIndex, navigationTabs.length, desktopMenuNavigationQuery.matches ? 'vertical' : 'horizontal');
         if (nextIndex === null) return;
         event.preventDefault();
-        const nextTab = menuTabButtons[nextIndex];
+        const nextTab = navigationTabs[nextIndex];
         if (!nextTab) return;
         activateMenuTab(nextTab);
         nextTab.focus();
@@ -2916,8 +2965,13 @@ class PaleciakiScene extends xb.Script {
       });
     });
 
+    setActiveMobileSegment(activeMobileSegmentId);
     syncMenuPanelPresentation(currentMenuTargetId);
-    desktopMenuNavigationQuery.addEventListener('change', () => syncMenuPanelPresentation(currentMenuTargetId));
+    desktopMenuNavigationQuery.addEventListener('change', () => {
+      setActiveMobileSegment(activeMobileSegmentId);
+      syncMenuPanelPresentation(currentMenuTargetId);
+    });
+    mobileMenuSegmentQuery.addEventListener('change', () => setActiveMobileSegment(activeMobileSegmentId));
 
     document.querySelectorAll<HTMLElement>('.char-card').forEach((card) => {
       card.setAttribute('role', 'button');
