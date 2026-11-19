@@ -1360,3 +1360,26 @@
     transform: none !important;
   }
 }
+
+/* Touch tablets keep a balanced two-column content density. */
+@media (min-width: 641px) and (max-width: 900px) and (pointer: coarse) {
+  #title-screen .tab-panel :is(.enemies-guide-grid,.perk-shop-grid,.field-guide-card-grid,.account-tree-grid,.character-talent-grid,.survival-achievement-grid,.campaign-stage-grid,.mega-map-biome-grid,.mega-map-route-grid) {
+    grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+  }
+  #title-screen .tab-panel .field-guide-card-grid.four-col {
+    grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+  }
+  #title-screen .tab-panel .field-guide-card-grid.two-col {
+    grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+  }
+  #title-screen .tab-panel .perk-card-top {
+    grid-template-columns: 38px minmax(0,1fr) !important;
+  }
+  #title-screen .tab-panel .perk-card-top .btn-perk-activate {
+    grid-column: 2 !important;
+    justify-self: start !important;
+  }
+  #title-screen .tab-panel .audio-slider-row {
+    grid-template-columns: minmax(150px,1fr) minmax(120px,1.2fr) 48px !important;
+  }
+}
