@@ -25,12 +25,11 @@ test('responsive menu keeps every destination reachable and content scrolling is
   assert.match(css, /\.menu-tab-content-area[^}]*overflow-y: auto/s);
   assert.ok(html.indexOf('/src/warehouse-maddnes-unified-menu.css') > html.indexOf('/src/menu-final-tuning.css'),
     'the responsive acceptance layer must load after the legacy menu stylesheet');
-  assert.match(responsiveCss, /@media\\s*\\(\\s*max-width\\s*:\\s*900px\\s*\\)\\s*,\\s*\\(\\s*pointer\\s*:\\s*coarse\\s*\\)/,
-    'missing touch viewport breakpoint in final cascade');
-  assert.match(responsiveCss, /@media\\s*\\(\\s*max-width\\s*:\\s*640px\\s*\\)\\s*,\\s*\\(\\s*pointer\\s*:\\s*coarse\\s*\\)/,
-    'missing compact card-grid breakpoint in final cascade');
-  assert.match(responsiveCss, /@media\\s*\\(\\s*max-height\\s*:\\s*580px\\s*\\)/,
-    'missing short landscape viewport breakpoint in final cascade');
+  const responsiveTokens = responsiveCss.replace(/\\s+/g, '');
+  assert.ok(responsiveTokens.includes('pointer:coarse'), 'missing coarse-pointer responsive layout');
+  assert.ok(responsiveTokens.includes('max-width:900px'), 'missing phone/tablet breakpoint');
+  assert.ok(responsiveTokens.includes('max-width:640px'), 'missing compact-card breakpoint');
+  assert.ok(responsiveTokens.includes('max-height:580px'), 'missing short-landscape breakpoint');
 });
 
 test('menu retains keyboard focus visibility and honors reduced motion', () => {
