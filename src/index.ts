@@ -2724,8 +2724,8 @@ class PaleciakiScene extends xb.Script {
     });
 
     const menuTabList = document.querySelector<HTMLElement>('.menu-tabs-bar');
-    const desktopMenuNavigationQuery = window.matchMedia('(min-width: 1101px)');
-    const mobileMenuSegmentQuery = window.matchMedia('(max-width: 1100px)');
+    const desktopMenuNavigationQuery = window.matchMedia('(min-width: 901px)');
+    const mobileMenuSegmentQuery = window.matchMedia('(max-width: 900px)');
     menuTabList?.setAttribute('role', 'navigation');
     menuTabList?.setAttribute('aria-label', 'Nawigacja menu głównego');
     const menuTabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.menu-tab-btn'));
