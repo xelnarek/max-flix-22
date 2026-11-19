@@ -66,7 +66,10 @@ test('existing roster repair keeps the operator profile after the card grid', ()
 
 test('mobile menu uses real tabs and keeps exactly one panel active', async () => {
   const app = await read('src/index.ts');
-  assert.match(app, /menuTabList\?\.setAttribute\('role', 'tablist'\)/);
+  assert.match(app, /menuTabList\?\.setAttribute\('role', 'navigation'\)/);
+  assert.match(app, /group\.setAttribute\('role', 'tablist'\)/);
+  assert.match(app, /group\.hidden = !visible/);
+  assert.match(app, /mobileMenuSegmentQuery\.addEventListener\('change'/);
   assert.match(app, /button\.setAttribute\('role', 'tab'\)/);
   assert.match(app, /button\.setAttribute\('aria-selected', String\(active\)\)/);
   assert.match(app, /panel\.classList\.toggle\('active', active\)/);
