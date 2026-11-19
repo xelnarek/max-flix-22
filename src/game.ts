@@ -1125,6 +1125,9 @@ export class PaleciakiGameEngine {
   private readonly enemySpatialIndex = new EnemySpatialIndex<EnemyItem>(4.0);
   private enemySpatialIndexNextRefreshAt = 0;
   private enemySpatialIndexCachedCount = -1;
+  /** Handheld crowd correction is capped to the spatial-index refresh cadence. */
+  private enemyCrowdResolutionNextAt = 0;
+  private enemyCrowdResolutionCachedCount = -1;
   /** Nearby player shots only; exact swept-path tests remain in enemyTactics. */
   private readonly enemyProjectileThreatIndex = new EnemyProjectileThreatIndex();
   private enemyProjectileThreatIndexNextRefreshAt = 0;
@@ -16892,6 +16895,16 @@ export class PaleciakiGameEngine {
   }
 
   private resolveEnemyCrowdOverlaps(): void {
+    const now = performance.now();
+    const enemyCountChanged = this.enemies.length !== this.enemyCrowdResolutionCachedCount;
+    // Handheld broadphase is already refreshed at ~42 Hz. Re-running both
+    // separation passes at 60–120 Hz only rebuilds the same grid repeatedly.
+    // Keep player/enemy contact and AI steering per-frame; throttle only this
+    // final visual-body correction. Spawns/despawns still force an immediate pass.
+    if (this.isHandheldViewport && !enemyCountChanged && now < this.enemyCrowdResolutionNextAt) return;
+    this.enemyCrowdResolutionCachedCount = this.enemies.length;
+    this.enemyCrowdResolutionNextAt = this.isHandheldViewport ? now + 24 : now;
+
     const bounds = this.gameMode === 'survival'
       ? this.levelBounds
       : { minX: -34.5, maxX: 204.5, minZ: -21.0, maxZ: 21.0 };
@@ -16905,7 +16918,7 @@ export class PaleciakiGameEngine {
       enemy.mesh.position.z = enemy.z;
     }
     this.enemySpatialIndexCachedCount = this.enemies.length;
-    this.enemySpatialIndexNextRefreshAt = performance.now() + (this.isHandheldViewport ? 24 : 0);
+    this.enemySpatialIndexNextRefreshAt = this.isHandheldViewport ? now + 24 : now;
   }
 
   private spawnPenaltyNotice(x: number, y: number, z: number, lockedDirection?: number) {
