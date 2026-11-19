@@ -187,7 +187,7 @@ test('ranged enemy attack poses start with launch recoil and relax after the sho
   assert.match(game, /const reach = -0\.82 \* Math\.pow\(1 - progress, 1\.45\)/);
   assert.match(game, /const recoilRoll = 0\.07 \* Math\.pow\(1 - progress, 1\.2\)/);
   assert.match(game, /this\.beginEnemyRangedAttackTelegraph\(e\)/);
-  assert.match(game, /this\.requestEnemyAttackAnimation\(enemy, profile\.windupSeconds\)/);
+  assert.match(game, /this\.requestEnemyAttackAnimation\(enemy, profile\.windupSeconds\s*\/\s*0\.60\)/);
   assert.match(game, /private advanceEnemyRangedAttackTelegraph\(enemy: EnemyItem, dt: number\)/);
   assert.match(game, /this\.advanceEnemyRangedAttackTelegraph\(e, dt\)/);
 });
