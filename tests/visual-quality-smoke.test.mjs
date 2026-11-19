@@ -128,7 +128,10 @@ test('main-menu navigation, Survival and PvP use separate vector-icon entry acti
   const menuIcons = [...html.matchAll(/<span class="tab-icon"[^>]*>([\s\S]*?)<\/span>/g)].map((match) => match[1]);
   assert.equal(menuIcons.length, 11, 'every top-level menu destination needs an icon');
   assert.ok(menuIcons.every((icon) => icon.includes('<svg')), 'all eleven menu tabs use consistent vector icons');
-  assert.ok(survivalStart >= 0 && html.slice(survivalStart, survivalStart + 800).includes('menu-cta-icon'));
+  assert.ok(survivalStart >= 0 && html.slice(survivalStart, survivalStart + 800).includes('menu-mode-card-icon'));
+  const modeCards = [...html.matchAll(/<button id="btn-(?:start-survival|open-campaign|open-pvp)"[\\s\\S]*?<\\/button>/g)].map((match) => match[0]);
+  assert.equal(modeCards.length, 3, 'all three game modes should be present as launch cards');
+  assert.ok(modeCards.every((card) => card.includes('<svg')), 'all three game mode cards should use matching vector glyphs');
   assert.ok(html.includes('id="btn-open-pvp"') && html.includes('data-tab="tab-pvp"'));
   assert.ok(html.includes('id="tab-pvp"') && html.includes('RĘCZNE CELOWANIE AKTYWNE'));
   assert.doesNotMatch(html, /btn-start-game|btn-open-story-modal|btn-open-cinematic-intro/);
