@@ -28,5 +28,5 @@ test('bad-luck protection preserves original base enemy drop chances', async () 
   assert.match(drops, /elite', chance: 0\.88/);
   assert.match(drops, /boss', chance: 1/);
   assert.match(drops, /getPityThreshold/);
-  assert.match(drops, /A zero chance anomaly remains an intentional hard block/);
+  assert.match(drops, /anomaly remains an intentional hard block and cannot be bypassed/);
 });
