@@ -108,12 +108,12 @@ export class CinematicIntroManager {
       <canvas class="cinematic-intro-canvas" aria-hidden="true"></canvas>
       <div class="cinematic-intro-vignette" aria-hidden="true"></div>
       <div class="cinematic-intro-top">
-        <div class="cinematic-intro-brand"><span class="cinematic-live-dot"></span> WAREHOUSE <span>•</span> INDUSTRIAL NOIR</div>
+        <div class="cinematic-intro-brand"><span class="cinematic-live-dot"></span> MAX FLIX 22 <span>•</span> CRIMSON SHIFT</div>
         <div class="cinematic-intro-status"><span id="cinematic-intro-scene">SYSTEM ONLINE</span><span id="cinematic-intro-time">00:00</span></div>
         <button id="cinematic-intro-skip" class="cinematic-intro-skip" type="button">POMIŃ ODPRAWĘ <span aria-hidden="true">↗</span></button>
       </div>
       <div class="cinematic-intro-copy">
-        <div class="cinematic-intro-kicker">INDUSTRIAL NOIR • ARCADE SURVIVAL</div>
+        <div class="cinematic-intro-kicker">CRIMSON SHIFT • ARCADE SURVIVAL</div>
         <h1>WAREHOUSE</h1>
         <div class="cinematic-intro-subtitle">MaDDnes</div>
         <p>Po zamknięciu hali zaczyna się druga zmiana. Zbieraj moduły, rozwijaj arsenał i przetrwaj noc. Procedury? Zaginęły w systemie.</p>
