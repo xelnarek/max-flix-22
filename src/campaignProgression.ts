@@ -3,10 +3,19 @@ import type { SurvivalMapId } from './survivalMaps.ts';
 export type CampaignStageId = 'b4_intro' | 'port_17' | 'cold_zero' | 'night_sorting' | 'final_audit';
 export type CampaignRewardId = 'reinforced_vest' | 'damage_core' | 'rapid_loader' | 'xp_manifest' | 'mobility_boots' | 'reserve_crate';
 export type CampaignMasteryMetric = 'perfect_dodges' | 'kill_streak' | 'xp_streak' | 'operator_level';
+export type CampaignSideOrderMetric = 'xp_pickups' | 'kill_streak' | 'secrets_found' | 'player_hp_percent' | 'boss_kill_seconds';
 
 export interface CampaignMasteryObjective {
   metric: CampaignMasteryMetric;
   target: number;
+  label: string;
+  description: string;
+}
+
+export interface CampaignSideOrderDefinition {
+  metric: CampaignSideOrderMetric;
+  target: number;
+  direction: 'at_least' | 'at_most';
   label: string;
   description: string;
 }
@@ -23,6 +32,7 @@ export interface CampaignStageDefinition {
   bossHpMultiplier: number;
   bonusKillTarget: number;
   mastery: CampaignMasteryObjective;
+  sideOrder: CampaignSideOrderDefinition;
   bossTitle: string;
   objective: string;
   reward: string;
@@ -44,6 +54,7 @@ export const CAMPAIGN_STAGES: readonly CampaignStageDefinition[] = [
     durationSeconds: 90, waveIntervalSeconds: 30, bossSpawnAtSeconds: 52,
     bossWave: 6, bossHpMultiplier: 0.72, bonusKillTarget: 10,
     mastery: { metric: 'perfect_dodges', target: 1, label: 'PERFEKCYJNY UNIK', description: 'Wykonaj 1 perfekcyjny unik' },
+    sideOrder: { metric: 'xp_pickups', target: 5, direction: 'at_least', label: 'DODATKOWY ZAŁADUNEK', description: 'Zbierz 5 kryształów doświadczenia przed końcem misji' },
     bossTitle: 'Nadzorca Rampy',
     objective: 'Utrzymaj aleję B4 i pokonaj Nadzorcę Rampy.',
     reward: 'Odblokowanie Portu Kontenerowego 17',
@@ -53,6 +64,7 @@ export const CAMPAIGN_STAGES: readonly CampaignStageDefinition[] = [
     durationSeconds: 120, waveIntervalSeconds: 30, bossSpawnAtSeconds: 72,
     bossWave: 10, bossHpMultiplier: 0.70, bonusKillTarget: 14,
     mastery: { metric: 'kill_streak', target: 6, label: 'SERIA ELIMINACJI', description: 'Zbuduj serię 6 eliminacji' },
+    sideOrder: { metric: 'kill_streak', target: 9, direction: 'at_least', label: 'CZYSTY PLAC', description: 'Zbuduj serię 9 eliminacji bez przerwania combo' },
     bossTitle: 'Dyrektor Widmo',
     objective: 'Przebij się przez plac przeładunkowy i pokonaj Dyrektora Widmo.',
     reward: 'Odblokowanie Chłodni Zero',
@@ -62,6 +74,7 @@ export const CAMPAIGN_STAGES: readonly CampaignStageDefinition[] = [
     durationSeconds: 150, waveIntervalSeconds: 35, bossSpawnAtSeconds: 92,
     bossWave: 15, bossHpMultiplier: 0.65, bonusKillTarget: 19,
     mastery: { metric: 'xp_streak', target: 3, label: 'ŁAŃCUCH XP', description: 'Zbierz 3 kryształy XP w krótkim łańcuchu' },
+    sideOrder: { metric: 'secrets_found', target: 1, direction: 'at_least', label: 'ZAGINIONY ŁADUNEK', description: 'Odnajdź co najmniej jeden ukryty obiekt w chłodni' },
     bossTitle: 'Bosman Kraków',
     objective: 'Przetrwaj mroźne strefy i pokonaj Bosmana Kraków.',
     reward: 'Odblokowanie Sortowni Widmowej',
@@ -71,6 +84,7 @@ export const CAMPAIGN_STAGES: readonly CampaignStageDefinition[] = [
     durationSeconds: 180, waveIntervalSeconds: 40, bossSpawnAtSeconds: 116,
     bossWave: 20, bossHpMultiplier: 0.72, bonusKillTarget: 25,
     mastery: { metric: 'operator_level', target: 4, label: 'AWANS OPERATORA', description: 'Osiągnij poziom 4 przed walką z bossem' },
+    sideOrder: { metric: 'player_hp_percent', target: 60, direction: 'at_least', label: 'CZYSTA KONTROLA', description: 'Pokonaj Nadzorcę Zero, zachowując co najmniej 60% HP' },
     bossTitle: 'Nadzorca Zero',
     objective: 'Unikaj skanerów i pokonaj Nadzorcę Zero.',
     reward: 'Odblokowanie Audytu Końcowego',
@@ -80,6 +94,7 @@ export const CAMPAIGN_STAGES: readonly CampaignStageDefinition[] = [
     durationSeconds: 210, waveIntervalSeconds: 42, bossSpawnAtSeconds: 142,
     bossWave: 25, bossHpMultiplier: 0.76, bonusKillTarget: 31,
     mastery: { metric: 'perfect_dodges', target: 3, label: 'SERIA UNIKÓW', description: 'Wykonaj 3 perfekcyjne uniki' },
+    sideOrder: { metric: 'boss_kill_seconds', target: 35, direction: 'at_most', label: 'SZYBKI AUDYT', description: 'Pokonaj Dyrektora Ostatecznego w maksymalnie 35 sekund od wejścia na arenę' },
     bossTitle: 'Dyrektor Ostateczny',
     objective: 'Połącz wszystkie umiejętności i pokonaj Dyrektora Ostatecznego.',
     reward: 'Odznaka Mistrza Zmiany',
@@ -100,6 +115,8 @@ export type CampaignStageResult = {
   bestKills: number;
   bestTimeSeconds: number;
   bestMasteryValue: number;
+  bestSideOrderCompleted: boolean;
+  bestSideOrderValue: number;
   completions: number;
 };
 
@@ -116,6 +133,25 @@ export interface CampaignMasteryStats {
   killStreak?: number;
   xpStreak?: number;
   level?: number;
+}
+
+export interface CampaignSideOrderStats {
+  xpPickups?: number;
+  killStreak?: number;
+  secretsFound?: number;
+  playerHpPercent?: number;
+  bossKillSeconds?: number;
+  bossDefeated?: boolean;
+}
+
+export interface CampaignSideOrderProgress {
+  metric: CampaignSideOrderMetric;
+  label: string;
+  description: string;
+  value: number;
+  target: number;
+  direction: 'at_least' | 'at_most';
+  completed: boolean;
 }
 
 export interface CampaignMasteryProgress {
@@ -181,6 +217,36 @@ export function getCampaignMasteryProgress(
   };
 }
 
+export function getCampaignSideOrderProgress(
+  stage: CampaignStageDefinition,
+  stats: CampaignSideOrderStats,
+): CampaignSideOrderProgress {
+  const order = stage.sideOrder;
+  let value = 0;
+  switch (order.metric) {
+    case 'xp_pickups': value = safeInt(stats.xpPickups); break;
+    case 'kill_streak': value = safeInt(stats.killStreak); break;
+    case 'secrets_found': value = safeInt(stats.secretsFound); break;
+    case 'player_hp_percent': value = safeInt(stats.playerHpPercent, 0, 100); break;
+    case 'boss_kill_seconds': value = safeInt(stats.bossKillSeconds, 0, 3600); break;
+  }
+  const target = safeInt(order.target, 1, 100000);
+  const completed = Boolean(stats.bossDefeated) && (
+    order.direction === 'at_least'
+      ? value >= target
+      : value > 0 && value <= target
+  );
+  return {
+    metric: order.metric,
+    label: order.label,
+    description: order.description,
+    value,
+    target,
+    direction: order.direction,
+    completed,
+  };
+}
+
 export function sanitizeCampaignProgress(value: unknown): CampaignProgress {
   if (!value || typeof value !== 'object') return createInitialCampaignProgress();
 
@@ -202,6 +268,8 @@ export function sanitizeCampaignProgress(value: unknown): CampaignProgress {
       bestTimeSeconds: safeInt(entry.bestTimeSeconds),
       // Older v1 saves did not store the mastery objective value.
       bestMasteryValue: safeInt(entry.bestMasteryValue),
+      bestSideOrderCompleted: entry.bestSideOrderCompleted === true,
+      bestSideOrderValue: safeInt(entry.bestSideOrderValue, 0, 3600),
       completions: Math.max(1, safeInt(entry.completions)),
     };
   }
@@ -257,14 +325,15 @@ export function evaluateCampaignStars(
 }
 
 /** Return three repeatable, unique reward choices for this clear. */
-export function getCampaignRewardChoices(stageId: CampaignStageId, completionNumber = 1): CampaignRewardDefinition[] {
+export function getCampaignRewardChoices(stageId: CampaignStageId, completionNumber = 1, includeBonusChoice = false): CampaignRewardDefinition[] {
   const stage = getCampaignStageDefinition(stageId);
   if (!stage) return [];
   const pool = [...CAMPAIGN_REWARDS];
   let seed = (stage.order * 7919 + safeInt(completionNumber, 1, 100000) * 104729) >>> 0;
   const choices: CampaignRewardDefinition[] = [];
 
-  while (choices.length < 3 && pool.length > 0) {
+  const choiceCount = includeBonusChoice ? 4 : 3;
+  while (choices.length < choiceCount && pool.length > 0) {
     seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
     const index = seed % pool.length;
     choices.push(pool.splice(index, 1)[0]!);
@@ -301,7 +370,7 @@ export function consumePendingCampaignReward(
 export function recordCampaignStageResult(
   value: unknown,
   id: CampaignStageId,
-  result: { bossDefeated: boolean; kills: number; elapsedSeconds: number } & CampaignMasteryStats,
+  result: { bossDefeated: boolean; kills: number; elapsedSeconds: number } & CampaignMasteryStats & CampaignSideOrderStats,
 ): CampaignProgress {
   const progress = sanitizeCampaignProgress(value);
   const index = CAMPAIGN_STAGES.findIndex((stage) => stage.id === id);
@@ -312,6 +381,7 @@ export function recordCampaignStageResult(
   if (!stars) return progress;
 
   const mastery = getCampaignMasteryProgress(stage, result);
+  const sideOrder = getCampaignSideOrderProgress(stage, result);
   const previous = progress.completedStages[id];
   const elapsed = Math.max(1, safeInt(result.elapsedSeconds));
   progress.completedStages[id] = {
@@ -319,6 +389,14 @@ export function recordCampaignStageResult(
     bestKills: Math.max(previous?.bestKills ?? 0, safeInt(result.kills)),
     bestTimeSeconds: previous?.bestTimeSeconds ? Math.min(previous.bestTimeSeconds, elapsed) : elapsed,
     bestMasteryValue: Math.max(previous?.bestMasteryValue ?? 0, mastery.value),
+    bestSideOrderCompleted: Boolean(previous?.bestSideOrderCompleted || sideOrder.completed),
+    bestSideOrderValue: sideOrder.completed
+      ? (previous?.bestSideOrderCompleted && stage.sideOrder.direction === 'at_most'
+        ? Math.min(previous.bestSideOrderValue || sideOrder.value, sideOrder.value)
+        : previous?.bestSideOrderCompleted
+          ? Math.max(previous.bestSideOrderValue, sideOrder.value)
+          : sideOrder.value)
+      : (previous?.bestSideOrderValue ?? 0),
     completions: (previous?.completions ?? 0) + 1,
   };
 
