@@ -25,8 +25,13 @@ test('all six Base44 GLBs are registered and mapped onto existing live enemy arc
   assert.equal(Object.keys(BASE44_ENEMY_ASSETS).length, 6);
   for (const [enemyType, modelId] of Object.entries(expected)) {
     assert.equal(profiles.ENEMY_VISUAL_PROFILES[enemyType].base44Model, modelId);
-    assert.ok(profiles.ENEMY_VISUAL_PROFILES[enemyType].gobkitModel,
-      enemyType + ' must retain its original fallback rig');
+    const profile = profiles.ENEMY_VISUAL_PROFILES[enemyType];
+    assert.ok(profile.gobkitModel || profile.fallbackFactory,
+      enemyType + ' must retain its original fallback model');
+    if (enemyType === 'piorun_dron') {
+      assert.equal(profile.fallbackFactory, 'createPiorunDronModel');
+      assert.equal(profile.gobkitModel, undefined);
+    }
     assert.equal(registry.GOBKIT_MODEL_FILES[modelId], BASE44_ENEMY_ASSETS[modelId].file);
     assert.match(BASE44_ENEMY_ASSETS[modelId].url, /^https:\/\/media\.base44\.com\//);
   }
