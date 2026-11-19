@@ -2902,6 +2902,7 @@ class PaleciakiScene extends xb.Script {
       menuNavigationGroups.forEach((group) => {
         group.hidden = false;
         group.inert = false;
+        group.dataset.activeGroup = String(group.dataset.menuGroup === segment.id);
         group.setAttribute('aria-hidden', 'false');
         group.setAttribute('role', 'group');
         group.removeAttribute('aria-orientation');
