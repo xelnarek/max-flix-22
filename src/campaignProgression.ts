@@ -228,7 +228,7 @@ export function getCampaignSideOrderProgress(
     case 'kill_streak': value = safeInt(stats.killStreak); break;
     case 'secrets_found': value = safeInt(stats.secretsFound); break;
     case 'player_hp_percent': value = safeInt(stats.playerHpPercent, 0, 100); break;
-    case 'boss_kill_seconds': value = safeInt(stats.bossKillSeconds, 0, 3600); break;
+    case 'boss_kill_seconds': value = safeInt(Number.isFinite(stats.bossKillSeconds) ? Math.ceil(stats.bossKillSeconds as number) : 0, 0, 3600); break;
   }
   const target = safeInt(order.target, 1, 100000);
   const completed = Boolean(stats.bossDefeated) && (
