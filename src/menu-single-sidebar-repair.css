@@ -1,0 +1,747 @@
+/*
+ * MAX FLIX 22 — SINGLE SIDEBAR REPAIR
+ * Final geometry and roster layer. One vertical navigation rail is always
+ * visible; selecting a destination reveals exactly one matching panel.
+ * This file intentionally supersedes legacy horizontal/grouped menu rules.
+ */
+
+#title-screen .title-sheet {
+  box-sizing: border-box !important;
+  display: grid !important;
+  grid-template-columns: clamp(188px, 17vw, 226px) minmax(0, 1fr) !important;
+  grid-template-rows: auto auto minmax(0, 1fr) auto !important;
+  grid-template-areas:
+    "header header"
+    "modes modes"
+    "navigation content"
+    "footer footer" !important;
+  width: min(1480px, calc(100vw - 20px)) !important;
+  height: min(940px, calc(100dvh - 20px)) !important;
+  max-width: 1480px !important;
+  max-height: calc(100dvh - 20px) !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  gap: clamp(8px, 1vw, 13px) !important;
+  overflow: hidden !important;
+}
+
+#title-screen .menu-tabs-bar {
+  grid-area: navigation !important;
+  display: flex !important;
+  flex: 0 0 auto !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  margin: 0 !important;
+  padding: 9px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  scrollbar-gutter: stable !important;
+  -webkit-overflow-scrolling: touch !important;
+  border: 1px solid rgba(192, 104, 98, .24) !important;
+  border-radius: 13px !important;
+  background: linear-gradient(180deg, rgba(15, 13, 16, .98), rgba(8, 9, 12, .99)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 8px 22px rgba(0,0,0,.18) !important;
+  touch-action: pan-y !important;
+}
+
+#title-screen .menu-mobile-segments {
+  display: none !important;
+}
+
+#title-screen .menu-nav-group,
+#title-screen .menu-nav-group[hidden] {
+  display: grid !important;
+  flex: 0 0 auto !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  align-content: start !important;
+  gap: 4px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+#title-screen .menu-nav-group + .menu-nav-group {
+  margin-top: 3px !important;
+  padding-top: 8px !important;
+  border-top: 1px solid rgba(201, 112, 106, .16) !important;
+}
+
+#title-screen .menu-nav-group-label {
+  display: block !important;
+  margin: 0 0 3px !important;
+  padding: 0 7px 2px !important;
+  color: #8c7778 !important;
+  font: 800 8px/1.25 "JetBrains Mono", monospace !important;
+  letter-spacing: .11em !important;
+}
+
+#title-screen .menu-tab-btn {
+  display: flex !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 42px !important;
+  margin: 0 !important;
+  padding: 7px 8px !important;
+  border: 1px solid transparent !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  color: #aa9d9c !important;
+  font: 800 9px/1.2 "JetBrains Mono", monospace !important;
+  letter-spacing: .025em !important;
+  text-align: left !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  box-shadow: none !important;
+  transform: none !important;
+  scroll-margin: 8px !important;
+  touch-action: manipulation !important;
+}
+
+#title-screen .menu-tab-btn .tab-icon,
+#title-screen .menu-tab-btn .ui-svg-icon {
+  display: grid !important;
+  flex: 0 0 20px !important;
+  place-items: center !important;
+  width: 20px !important;
+  height: 20px !important;
+  margin: 0 !important;
+  color: currentColor !important;
+}
+
+#title-screen .menu-tab-btn .tab-icon svg,
+#title-screen .menu-tab-btn .ui-svg-icon {
+  display: block !important;
+  width: 18px !important;
+  height: 18px !important;
+  max-width: 18px !important;
+  max-height: 18px !important;
+}
+
+#title-screen .menu-tab-btn .tab-label {
+  display: block !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  color: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  text-align: left !important;
+  overflow-wrap: anywhere !important;
+}
+
+#title-screen .menu-tab-btn:hover {
+  color: #fff0ed !important;
+  border-color: rgba(229, 135, 127, .27) !important;
+  background: rgba(239, 65, 63, .07) !important;
+}
+
+#title-screen .menu-tab-btn.active,
+#title-screen .menu-tab-btn[aria-selected="true"] {
+  color: #fff2ef !important;
+  border-color: rgba(255, 95, 85, .58) !important;
+  background: linear-gradient(100deg, rgba(143, 31, 37, .42), rgba(47, 16, 20, .64)) !important;
+  box-shadow: inset 3px 0 0 #ef4545, 0 4px 12px rgba(0,0,0,.18) !important;
+}
+
+#title-screen .menu-tab-content-area {
+  grid-area: content !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: clamp(9px, 1vw, 14px) !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior-y: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-gutter: stable !important;
+  touch-action: pan-y !important;
+}
+
+#title-screen .tab-panel,
+#title-screen .tab-panel:not(.active) {
+  display: none !important;
+}
+
+#title-screen .tab-panel.active {
+  display: flex !important;
+  flex: 0 0 auto !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 2px 2px 16px !important;
+  gap: 12px !important;
+  overflow: visible !important;
+}
+
+#title-screen .tab-panel > *,
+#title-screen .tab-panel :is(section, article, div) {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+#title-screen .tab-panel :is(img, svg, canvas, video) {
+  max-width: 100%;
+}
+
+/* Operator selector: predictable card geometry, no carousel, no absolute
+   portraits, and no fixed card heights that can crop or overlap content. */
+#title-screen #tab-team > .char-grid {
+  display: grid !important;
+  position: relative !important;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 188px), 1fr)) !important;
+  grid-auto-flow: row !important;
+  grid-auto-rows: minmax(112px, auto) !important;
+  align-items: stretch !important;
+  align-content: start !important;
+  justify-content: stretch !important;
+  gap: 9px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 0 8px !important;
+  overflow: visible !important;
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+  transform: none !important;
+  scroll-snap-type: none !important;
+  touch-action: pan-y !important;
+}
+
+#title-screen #tab-team > .char-grid > .char-card {
+  display: grid !important;
+  position: relative !important;
+  isolation: isolate !important;
+  grid-template-columns: 54px minmax(0, 1fr) auto !important;
+  grid-template-rows: auto auto auto auto auto !important;
+  grid-template-areas:
+    "portrait code mastery"
+    "portrait name name"
+    "portrait role role"
+    "portrait ability ability"
+    "model model model" !important;
+  align-items: center !important;
+  align-content: center !important;
+  justify-items: stretch !important;
+  gap: 3px 9px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: 112px !important;
+  height: auto !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 9px !important;
+  overflow: hidden !important;
+  border-radius: 10px !important;
+  text-align: left !important;
+  transform: none !important;
+  box-sizing: border-box !important;
+}
+
+#title-screen #tab-team .char-code-tag {
+  grid-area: code !important;
+  align-self: center !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 2px 0 !important;
+  font: 800 7px/1.2 "JetBrains Mono", monospace !important;
+  letter-spacing: .035em !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+}
+
+#title-screen #tab-team .char-card-badge.operator-emblem {
+  grid-area: portrait !important;
+  display: grid !important;
+  position: relative !important;
+  place-items: center !important;
+  align-self: center !important;
+  flex: 0 0 50px !important;
+  width: 50px !important;
+  height: 50px !important;
+  min-width: 50px !important;
+  min-height: 50px !important;
+  max-width: 50px !important;
+  max-height: 50px !important;
+  margin: 0 !important;
+  padding: 2px !important;
+  overflow: hidden !important;
+  border-radius: 9px !important;
+  box-sizing: border-box !important;
+  transform: none !important;
+}
+
+#title-screen #tab-team .char-card-badge.operator-emblem :is(svg, img, .operator-portrait) {
+  display: block !important;
+  position: static !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  margin: 0 !important;
+  object-fit: contain !important;
+  transform: none !important;
+}
+
+#title-screen #tab-team .char-card-name {
+  grid-area: name !important;
+  display: block !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  font: 900 12px/1.15 "Space Grotesk", "Outfit", sans-serif !important;
+  overflow-wrap: anywhere !important;
+  text-wrap: pretty !important;
+}
+
+#title-screen #tab-team .char-card-role {
+  grid-area: role !important;
+  display: block !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  font: 800 7px/1.25 "JetBrains Mono", monospace !important;
+  overflow-wrap: anywhere !important;
+}
+
+#title-screen #tab-team .char-card-ability {
+  grid-area: ability !important;
+  display: -webkit-box !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 2 !important;
+  font-size: 8px !important;
+  line-height: 1.25 !important;
+  overflow-wrap: anywhere !important;
+}
+
+#title-screen #tab-team .char-card-model-label {
+  grid-area: model !important;
+  display: block !important;
+  position: static !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  margin: 3px 0 0 !important;
+  padding-top: 4px !important;
+  border-top: 1px solid rgba(201,112,106,.12) !important;
+  color: #9c8583 !important;
+  font: 700 7px/1.2 "JetBrains Mono", monospace !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+#title-screen #tab-team .char-card-mastery {
+  grid-area: mastery !important;
+  display: inline-flex !important;
+  position: static !important;
+  align-self: center !important;
+  justify-self: end !important;
+  min-width: 22px !important;
+  min-height: 18px !important;
+  margin: 0 !important;
+  padding: 2px 5px !important;
+  border-radius: 999px !important;
+  font: 800 7px/1 "JetBrains Mono", monospace !important;
+}
+
+#title-screen #tab-team #char-details-box,
+#title-screen #tab-team .char-details-box,
+#title-screen #tab-team .arcade-hero-showcase {
+  display: flex !important;
+  position: relative !important;
+  flex: 0 0 auto !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  overflow: visible !important;
+}
+
+#title-screen #tab-team .arcade-showcase-top {
+  display: grid !important;
+  grid-template-columns: 62px minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+#title-screen #tab-team .char-showcase-portrait {
+  display: grid !important;
+  place-items: center !important;
+  flex: 0 0 58px !important;
+  width: 58px !important;
+  height: 58px !important;
+  min-width: 58px !important;
+  max-width: 58px !important;
+  overflow: hidden !important;
+  border-radius: 10px !important;
+}
+
+#title-screen #tab-team .char-showcase-portrait :is(svg, img, canvas) {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+}
+
+#title-screen :is(.menu-tab-btn, .char-card, .char-detail-view-btn) {
+  animation: none !important;
+  transition: border-color .15s ease, background-color .15s ease, color .15s ease !important;
+}
+
+@media (max-width: 900px) {
+  #title-screen .title-sheet {
+    grid-template-columns: clamp(112px, 27vw, 176px) minmax(0, 1fr) !important;
+    grid-template-rows: auto auto minmax(0, 1fr) auto !important;
+    grid-template-areas:
+      "header header"
+      "modes modes"
+      "navigation content"
+      "footer footer" !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 7px !important;
+    gap: 7px !important;
+    border-radius: 13px !important;
+  }
+
+  #title-screen .menu-top-header,
+  #title-screen .menu-mode-selector,
+  #title-screen .menu-tabs-bar,
+  #title-screen .menu-tab-content-area {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+
+  #title-screen .menu-top-header {
+    grid-area: header !important;
+    min-height: 0 !important;
+    padding: 5px 6px 7px !important;
+  }
+
+  #title-screen .menu-game-title {
+    font-size: clamp(19px, 5vw, 28px) !important;
+    line-height: 1 !important;
+  }
+
+  #title-screen .menu-game-subtitle {
+    font-size: 8px !important;
+    line-height: 1.25 !important;
+  }
+
+  #title-screen .menu-release-strip {
+    max-width: 38vw !important;
+    gap: 3px !important;
+  }
+
+  #title-screen .menu-mode-selector {
+    grid-area: modes !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 5px !important;
+    min-height: 0 !important;
+    padding: 6px !important;
+  }
+
+  #title-screen .menu-mode-selector-heading {
+    display: flex !important;
+    align-items: baseline !important;
+    justify-content: space-between !important;
+    gap: 6px !important;
+    margin: 0 0 4px !important;
+  }
+
+  #title-screen .menu-mode-selector-heading h2 {
+    font-size: 12px !important;
+  }
+
+  #title-screen .menu-mode-selector-heading p,
+  #title-screen .menu-mode-card-kicker,
+  #title-screen .menu-mode-card-copy small {
+    display: none !important;
+  }
+
+  #title-screen .menu-mode-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+  }
+
+  #title-screen .menu-mode-card,
+  #title-screen .menu-mode-card[data-mode="pvp"] {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: 24px auto auto !important;
+    grid-column: auto !important;
+    justify-items: center !important;
+    align-items: center !important;
+    gap: 3px !important;
+    min-width: 0 !important;
+    min-height: 62px !important;
+    height: auto !important;
+    padding: 5px 3px !important;
+    border-radius: 8px !important;
+    text-align: center !important;
+  }
+
+  #title-screen .menu-mode-card-icon {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    width: 23px !important;
+    height: 23px !important;
+  }
+
+  #title-screen .menu-mode-card-copy {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    justify-items: center !important;
+    text-align: center !important;
+  }
+
+  #title-screen .menu-mode-card-copy strong {
+    font-size: clamp(8px, 2.35vw, 11px) !important;
+    line-height: 1.08 !important;
+    text-align: center !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  #title-screen .menu-mode-card-action {
+    grid-column: 1 !important;
+    grid-row: 3 !important;
+    justify-content: center !important;
+    padding: 2px 0 0 !important;
+    font-size: 6px !important;
+    line-height: 1.05 !important;
+    text-align: center !important;
+  }
+
+  #title-screen .menu-tabs-bar {
+    grid-area: navigation !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    align-self: stretch !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    gap: 6px !important;
+    padding: 5px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    border-radius: 9px !important;
+    touch-action: pan-y !important;
+  }
+
+  #title-screen .menu-nav-group,
+  #title-screen .menu-nav-group[hidden] {
+    display: grid !important;
+    flex: 0 0 auto !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 3px !important;
+  }
+
+  #title-screen .menu-nav-group-label {
+    display: block !important;
+    padding: 0 3px 2px !important;
+    font-size: 6.5px !important;
+    letter-spacing: .04em !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  #title-screen .menu-tab-btn {
+    display: flex !important;
+    justify-content: flex-start !important;
+    gap: 5px !important;
+    min-height: 39px !important;
+    padding: 5px 4px !important;
+    border-radius: 6px !important;
+    font-size: 7px !important;
+    line-height: 1.1 !important;
+    letter-spacing: 0 !important;
+    text-align: left !important;
+  }
+
+  #title-screen .menu-tab-btn .tab-icon,
+  #title-screen .menu-tab-btn .ui-svg-icon {
+    flex: 0 0 15px !important;
+    width: 15px !important;
+    height: 15px !important;
+  }
+
+  #title-screen .menu-tab-btn .tab-icon svg,
+  #title-screen .menu-tab-btn .ui-svg-icon {
+    width: 14px !important;
+    height: 14px !important;
+    max-width: 14px !important;
+    max-height: 14px !important;
+  }
+
+  #title-screen .menu-tab-btn .tab-label {
+    text-align: left !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  #title-screen .menu-tab-content-area {
+    grid-area: content !important;
+    display: block !important;
+    align-self: stretch !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    padding: 7px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    border-radius: 9px !important;
+    touch-action: pan-y !important;
+  }
+
+  #title-screen #tab-team > .char-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-auto-rows: minmax(100px, auto) !important;
+    gap: 7px !important;
+  }
+
+  #title-screen #tab-team > .char-grid > .char-card {
+    grid-template-columns: 46px minmax(0, 1fr) auto !important;
+    min-height: 96px !important;
+    padding: 7px !important;
+    gap: 3px 7px !important;
+  }
+
+  #title-screen #tab-team .char-card-badge.operator-emblem {
+    flex-basis: 42px !important;
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    min-height: 42px !important;
+    max-width: 42px !important;
+    max-height: 42px !important;
+  }
+
+  #title-screen #tab-team .char-card-name {
+    font-size: 11px !important;
+  }
+
+  #title-screen #tab-team .char-card-role,
+  #title-screen #tab-team .char-card-ability {
+    font-size: 7px !important;
+  }
+
+  #title-screen .tab-panel.active {
+    min-height: 0 !important;
+    gap: 9px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  #title-screen .title-sheet {
+    grid-template-columns: 104px minmax(0, 1fr) !important;
+    gap: 5px !important;
+    padding: 5px !important;
+  }
+
+  #title-screen .menu-tab-btn {
+    min-height: 37px !important;
+    gap: 4px !important;
+    padding-inline: 3px !important;
+    font-size: 6.5px !important;
+  }
+
+  #title-screen .menu-nav-group-label {
+    font-size: 6px !important;
+  }
+
+  #title-screen .menu-tab-content-area {
+    padding: 5px !important;
+  }
+}
+
+@media (max-height: 620px) and (max-width: 900px) {
+  #title-screen .title-sheet {
+    gap: 4px !important;
+    padding-block: 4px !important;
+  }
+
+  #title-screen .menu-top-header {
+    padding-block: 3px 5px !important;
+  }
+
+  #title-screen .menu-game-subtitle,
+  #title-screen .menu-release-strip > span:not(.menu-release-pill) {
+    display: none !important;
+  }
+
+  #title-screen .menu-mode-selector {
+    padding: 4px !important;
+    gap: 3px !important;
+  }
+
+  #title-screen .menu-mode-card,
+  #title-screen .menu-mode-card[data-mode="pvp"] {
+    min-height: 52px !important;
+    padding: 3px !important;
+  }
+
+  #title-screen .menu-tab-btn {
+    min-height: 33px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #title-screen .menu-tab-btn,
+  #title-screen .char-card,
+  #title-screen .char-detail-view-btn {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}
