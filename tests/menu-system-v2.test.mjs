@@ -58,7 +58,7 @@ test('all screen sizes use one native left navigation with four always-visible l
   assert.ok(app.includes("panel.setAttribute('role', 'region')"));
   assert.doesNotMatch(app, /setAttribute\('role', 'tab'\)|setAttribute\('role', 'tabpanel'\)|aria-selected/);
   assert.match(repair, /#title-screen \.menu-tabs-bar\s*\{[\s\S]*?flex-direction: column !important/);
-  assert.ok(!repair.includes('.menu-nav-group[hidden]'), 'navigation groups must not have hidden-state overrides');
+  assert.ok(!repair.includes('.menu-nav-group[hidden]'), 'navigation groups must not have hidden-state display overrides');
   assert.ok(repair.includes("grid-template-columns: clamp(122px, 31vw, 188px) minmax(0, 1fr) !important;"));
 });
 
