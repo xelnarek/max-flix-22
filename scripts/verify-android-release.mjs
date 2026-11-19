@@ -92,6 +92,23 @@ const artifacts = Object.fromEntries(await Promise.all(Object.entries(outputs).m
   },
 ])));
 
+const polyHavenManifestPath = resolve('public/assets/polyhaven/manifest.json');
+const polyHavenManifest = existsSync(polyHavenManifestPath)
+  ? JSON.parse(readFileSync(polyHavenManifestPath, 'utf8'))
+  : null;
+const polyHavenAssets = Object.values(polyHavenManifest?.assets ?? {});
+const polyHavenMaps = polyHavenAssets.flatMap((asset) => Object.values(asset.maps ?? {}));
+const polyHavenBytes = polyHavenMaps.reduce((total, map) => total + (Number(map.bytes) || 0), 0);
+const texturePack = polyHavenAssets.length
+  ? {
+      materials: polyHavenAssets.length,
+      maps: polyHavenMaps.length,
+      resolutions: [...new Set(polyHavenAssets.map((asset) => asset.resolution).filter(Boolean))].sort(),
+      bytes: polyHavenBytes,
+      megabytes: Number((polyHavenBytes / (1024 * 1024)).toFixed(1)),
+    }
+  : null;
+
 const report = {
   schemaVersion: 1,
   app: { applicationId, versionName, versionCode, minSdk, compileSdk, targetSdk },
@@ -104,6 +121,7 @@ const report = {
     playStoreUploadReady: signingConfigured && bundleSigned,
   },
   artifacts,
+  texturePack,
   blockers: signingConfigured && bundleSigned
     ? ['Verify Play Console declarations, privacy policy, store listing, and physical-device testing before rollout.']
     : ['AAB is unsigned. Configure all four Android upload-signing secrets before uploading to Google Play.'],
@@ -123,6 +141,7 @@ const summary = [
   '| Android SDK | compile ' + compileSdk + ' / target ' + targetSdk + ' / min ' + minSdk + ' |',
   '| AAB signature | ' + (bundleSigned ? 'verified' : 'unsigned') + ' |',
   '| Release APK | ' + (artifacts.releaseApk ? 'built and signed' : 'not built (no upload key configured)') + ' |',
+  '| PBR texture pack | ' + (texturePack ? texturePack.materials + ' materials / ' + texturePack.maps + ' maps / ' + texturePack.resolutions.join(', ') + ' / ' + texturePack.megabytes + ' MB' : 'manifest not found') + ' |',
   '| Google Play upload-ready | ' + (report.build.playStoreUploadReady ? 'yes' : 'no — signing key required') + ' |',
   '',
   'SHA-256:',
