@@ -1877,6 +1877,11 @@ export class PaleciakiGameEngine {
     const previous = mesh.userData.actorLodProxyRoot as THREE.Group | undefined;
     previous?.removeFromParent();
     const proxy = createEnemyVisualLodProxy(enemy.type);
+    // A GLB may finish loading after this enemy has already been defeated.
+    // Never expose both the new proxy and the full rig during that async attach.
+    const deathVisualLocked = enemy.state === 'defeated' || mesh.userData.actorDeathVisualLocked === true;
+    if (deathVisualLocked) mesh.userData.actorDeathVisualLocked = true;
+    proxy.visible = !deathVisualLocked;
     mesh.add(proxy);
     mesh.userData.actorLodProxyRoot = proxy;
     mesh.userData.actorVisualRoot = fullRoot;
@@ -2412,12 +2417,15 @@ export class PaleciakiGameEngine {
           pendingAttackUntil > now ||
           attackAnimationUntil > now ||
           (track.oneShotRemaining || 0) > 0;
-        const useProxy = enemy.state !== 'defeated' && shouldUseEnemyVisualLodProxy(
+        const deathVisualLocked = enemy.state === 'defeated' || enemy.mesh.userData.actorDeathVisualLocked === true;
+        if (deathVisualLocked) enemy.mesh.userData.actorDeathVisualLocked = true;
+        const useProxy = !deathVisualLocked && shouldUseEnemyVisualLodProxy(
           distanceSquared,
           this.isHandheldViewport,
           lodProxy.visible,
           combatCritical,
         );
+        // During death the full animated rig is the only renderable body.
         lodProxy.visible = useProxy;
         fullVisual.visible = !useProxy;
         if (useProxy) {
