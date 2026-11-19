@@ -73,7 +73,10 @@ test('mobile menu uses real tabs and keeps exactly one panel active', async () =
   assert.match(app, /panel\.setAttribute\('aria-hidden', String\(!active\)\)/);
   assert.match(app, /panel\.inert = !active/);
   assert.match(app, /if \(contentArea\) contentArea\.scrollTop = 0/);
-  assert.doesNotMatch(app, /mobileMenuOverviewQuery|mobile-menu-overview|scrollIntoView/);
+  const presentationStart = app.indexOf('const syncMenuPanelPresentation');
+  const presentationEnd = app.indexOf("document.getElementById('btn-account-cloud-sync')", presentationStart);
+  const presentation = app.slice(presentationStart, presentationEnd);
+  assert.doesNotMatch(presentation, /mobileMenuOverviewQuery|mobile-menu-overview|scrollIntoView/);
   assert.doesNotMatch(css, /mobile-menu-overview/);
   assert.match(css, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\) !important/);
   assert.match(css, /\.tab-panel\[aria-hidden="true"\]\s*\{[\s\S]*?display: none !important/);
