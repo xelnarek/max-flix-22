@@ -551,3 +551,403 @@
   .asset-loader-overlay .loader-header { font-size: clamp(17px,5vw,23px) !important; }
   .asset-loader-overlay .loader-subtitle { font-size: 10px !important; line-height: 1.35 !important; }
 }
+
+
+/* -------------------------------------------------------------------------
+   RESPONSIVE ACCEPTANCE PASS
+   Keep the sheet inside the real safe viewport after global UI zoom. On
+   phones, trade the tall 2+1 mode stack for three compact, legible choices.
+   The four navigation groups stay visible; only the selected content pane
+   owns vertical scrolling.
+   ------------------------------------------------------------------------- */
+#title-screen {
+  font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+#title-screen .title-sheet {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  box-sizing: border-box !important;
+}
+#title-screen .menu-top-header,
+#title-screen .menu-mode-selector,
+#title-screen .menu-tabs-bar,
+#title-screen .menu-tab-content-area {
+  min-width: 0 !important;
+}
+#title-screen .tab-panel :is(h1,h2,h3,h4) {
+  font-family: 'Space Grotesk', 'Outfit', sans-serif !important;
+  line-height: 1.16 !important;
+  text-wrap: balance;
+}
+#title-screen .tab-panel :is(p,li,.description,.section-description) {
+  font-size: clamp(11px, .82rem, 13px);
+  line-height: 1.48;
+  overflow-wrap: anywhere;
+}
+#title-screen .tab-panel :is(.muted,small,.eyebrow,.meta,.helper-text) {
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+#title-screen :is(button,[role="button"],input,select) {
+  -webkit-tap-highlight-color: transparent;
+}
+#title-screen :is(button,[role="button"]):focus-visible {
+  outline: 2px solid rgba(220,190,133,.95) !important;
+  outline-offset: 2px !important;
+  z-index: 2;
+}
+
+@media (max-width: 900px), (pointer: coarse) {
+  #title-screen .title-sheet {
+    width: min(
+      calc((100vw - 20px - env(safe-area-inset-left) - env(safe-area-inset-right)) / var(--ui-scale)),
+      calc(1240px / var(--ui-scale))
+    ) !important;
+    height: calc(
+      (100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / var(--ui-scale)
+    ) !important;
+    max-height: calc(
+      (100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / var(--ui-scale)
+    ) !important;
+    min-height: 0 !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+    grid-template-rows: auto auto auto minmax(0, 1fr) !important;
+    overflow: hidden !important;
+    box-shadow: 0 16px 46px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.05) !important;
+  }
+
+  #title-screen .menu-top-header {
+    min-height: 54px !important;
+    padding: 7px 11px !important;
+    border-radius: 13px !important;
+  }
+  #title-screen .menu-game-title {
+    font-size: clamp(20px, 5.6vw, 27px) !important;
+    line-height: 1 !important;
+  }
+  #title-screen .menu-game-subtitle {
+    font-size: clamp(8px, 1.9vw, 10px) !important;
+    line-height: 1.2 !important;
+  }
+  #title-screen .menu-release-strip {
+    gap: 5px !important;
+    flex-wrap: wrap !important;
+  }
+  #title-screen .menu-release-strip > span:not(.menu-release-pill) {
+    display: none !important;
+  }
+  #title-screen .btn-intro-chip {
+    min-height: 30px !important;
+    padding: 5px 10px !important;
+    font-size: 9px !important;
+  }
+
+  #title-screen .menu-mode-selector {
+    min-height: 0 !important;
+    padding: 7px 8px !important;
+    border-radius: 13px !important;
+  }
+  #title-screen .menu-mode-selector-heading {
+    display: grid !important;
+    grid-template-columns: minmax(0,1fr) auto !important;
+    align-items: center !important;
+    gap: 2px 8px !important;
+    margin-bottom: 6px !important;
+  }
+  #title-screen .menu-mode-selector-heading .menu-mode-eyebrow {
+    font-size: 8px !important;
+    letter-spacing: .12em !important;
+  }
+  #title-screen .menu-mode-selector-heading h2 {
+    font-size: 13px !important;
+    line-height: 1.1 !important;
+  }
+  #title-screen .menu-mode-selector-heading p { display: none !important; }
+
+  #title-screen .menu-mode-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3,minmax(0,1fr)) !important;
+    align-items: stretch !important;
+    gap: clamp(5px,1.2vw,9px) !important;
+  }
+  #title-screen .menu-mode-card,
+  #title-screen .menu-mode-card[data-mode="pvp"] {
+    display: grid !important;
+    grid-column: auto !important;
+    grid-template-columns: 27px minmax(0,1fr) !important;
+    grid-template-rows: minmax(0,1fr) !important;
+    align-items: center !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+    min-height: 72px !important;
+    height: 100% !important;
+    padding: 7px !important;
+    border-radius: 11px !important;
+  }
+  #title-screen .menu-mode-card-icon {
+    width: 26px !important;
+    height: 26px !important;
+    border-radius: 8px !important;
+  }
+  #title-screen .menu-mode-card-copy {
+    display: grid !important;
+    align-content: center !important;
+    gap: 3px !important;
+    min-width: 0 !important;
+  }
+  #title-screen .menu-mode-card-kicker,
+  #title-screen .menu-mode-card-copy small,
+  #title-screen .menu-mode-card-action {
+    display: none !important;
+  }
+  #title-screen .menu-mode-card-copy strong {
+    display: block !important;
+    font-size: clamp(9px,2.55vw,12px) !important;
+    line-height: 1.12 !important;
+    letter-spacing: .015em !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  #title-screen .menu-tabs-bar {
+    display: grid !important;
+    grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+    align-content: start !important;
+    gap: 6px !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    padding: 6px !important;
+    overflow: visible !important;
+  }
+  #title-screen .menu-nav-group {
+    display: grid !important;
+    grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+    align-content: start !important;
+    align-items: stretch !important;
+    gap: 4px !important;
+    min-width: 0 !important;
+    padding: 6px !important;
+    border-radius: 10px !important;
+  }
+  #title-screen .menu-nav-group-label {
+    display: block !important;
+    grid-column: 1 / -1 !important;
+    margin: 0 2px 3px !important;
+    font-size: 8px !important;
+    line-height: 1.2 !important;
+    letter-spacing: .11em !important;
+  }
+  #title-screen .menu-tab-btn {
+    display: grid !important;
+    grid-template-columns: 17px minmax(0,1fr) !important;
+    align-items: center !important;
+    justify-content: stretch !important;
+    gap: 5px !important;
+    min-width: 0 !important;
+    min-height: 40px !important;
+    height: 100% !important;
+    padding: 5px 5px !important;
+    border-radius: 8px !important;
+    font-size: clamp(8px,2.05vw,9.5px) !important;
+    line-height: 1.15 !important;
+    text-align: left !important;
+  }
+  #title-screen .menu-tab-btn .tab-icon,
+  #title-screen .menu-tab-btn .ui-svg-icon {
+    display: grid !important;
+    place-items: center !important;
+    width: 17px !important;
+    height: 17px !important;
+    flex: 0 0 17px !important;
+  }
+  #title-screen .menu-tab-btn .tab-label {
+    display: block !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    font-size: inherit !important;
+    line-height: 1.15 !important;
+    letter-spacing: 0 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    text-overflow: clip !important;
+  }
+  #title-screen .menu-tab-content-area {
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    padding: 9px 9px calc(14px + env(safe-area-inset-bottom)) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-gutter: stable;
+  }
+  #title-screen .tab-panel { gap: 12px !important; }
+  #title-screen .tab-panel > :is(h2,h3,.section-title,.panel-heading) {
+    margin-bottom: 2px !important;
+    font-size: clamp(15px,3.6vw,19px) !important;
+  }
+
+  /* Operator rail stays compact; the selected operator details get the space. */
+  #title-screen #tab-team > .char-grid {
+    display: flex !important;
+    gap: 7px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 2px 1px 8px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scroll-snap-type: x proximity !important;
+    overscroll-behavior-x: contain !important;
+    touch-action: pan-x !important;
+  }
+  #title-screen #tab-team > .char-grid > .char-card {
+    flex: 0 0 clamp(94px,24vw,116px) !important;
+    min-width: 0 !important;
+    min-height: 84px !important;
+    padding: 7px 6px !important;
+    scroll-snap-align: start !important;
+  }
+  #title-screen #tab-team .char-card-badge.operator-emblem {
+    flex-basis: 32px !important;
+    width: 32px !important;
+    height: 32px !important;
+    max-width: 32px !important;
+    max-height: 32px !important;
+    margin: 0 auto 4px !important;
+  }
+  #title-screen #tab-team .char-card-name {
+    font-size: 10px !important;
+    line-height: 1.15 !important;
+  }
+  #title-screen #tab-team .char-card-role {
+    font-size: 8px !important;
+    line-height: 1.2 !important;
+  }
+  #title-screen #tab-team .char-card-ability { display: none !important; }
+  #title-screen #tab-team #char-details-box {
+    margin-top: 7px !important;
+    padding: 10px !important;
+  }
+  #title-screen #tab-team .char-showcase-portrait {
+    flex-basis: 48px !important;
+    width: 48px !important;
+    height: 48px !important;
+  }
+
+  .asset-loader-overlay {
+    padding:
+      max(10px, env(safe-area-inset-top))
+      max(10px, env(safe-area-inset-right))
+      max(10px, env(safe-area-inset-bottom))
+      max(10px, env(safe-area-inset-left)) !important;
+  }
+  .asset-loader-overlay .loader-modal-card.loader-maddnes-card {
+    width: min(620px, calc(100vw - 20px - env(safe-area-inset-left) - env(safe-area-inset-right))) !important;
+    max-width: 100% !important;
+    max-height: calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+  .game-modal {
+    padding:
+      max(10px, env(safe-area-inset-top))
+      max(10px, env(safe-area-inset-right))
+      max(10px, env(safe-area-inset-bottom))
+      max(10px, env(safe-area-inset-left)) !important;
+  }
+  .game-modal > .modal-card {
+    width: min(100%, 680px) !important;
+    max-width: 100% !important;
+    max-height: calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+  }
+  .game-modal :is(.btn-modal,.btn-submit-score) {
+    min-height: 44px !important;
+    touch-action: manipulation !important;
+  }
+}
+
+@media (max-width: 420px) and (orientation: portrait) {
+  #title-screen .brand-badge-pill { display: none !important; }
+  #title-screen .menu-top-header { min-height: 48px !important; }
+  #title-screen .menu-game-title { font-size: clamp(18px,5.3vw,23px) !important; }
+  #title-screen .menu-game-subtitle { font-size: 7px !important; }
+  #title-screen .menu-mode-selector { padding: 6px !important; }
+  #title-screen .menu-mode-selector-heading { margin-bottom: 5px !important; }
+  #title-screen .menu-mode-card,
+  #title-screen .menu-mode-card[data-mode="pvp"] {
+    min-height: 64px !important;
+    padding: 6px !important;
+    grid-template-columns: 23px minmax(0,1fr) !important;
+    gap: 4px !important;
+  }
+  #title-screen .menu-mode-card-icon { width: 22px !important; height: 22px !important; }
+  #title-screen .menu-mode-card-copy strong { font-size: clamp(8.5px,2.35vw,10px) !important; }
+  #title-screen .menu-tab-btn { min-height: 38px !important; padding: 5px 4px !important; }
+}
+
+@media (max-height: 580px) and (orientation: landscape) and (pointer: coarse) {
+  #title-screen .title-sheet {
+    height: calc(
+      (100dvh - 12px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / var(--ui-scale)
+    ) !important;
+    max-height: calc(
+      (100dvh - 12px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / var(--ui-scale)
+    ) !important;
+    padding: 6px !important;
+    gap: 5px !important;
+  }
+  #title-screen .menu-top-header { min-height: 36px !important; padding: 3px 8px !important; }
+  #title-screen .menu-game-title { font-size: clamp(16px,3.2vw,22px) !important; }
+  #title-screen .menu-game-subtitle,
+  #title-screen .menu-release-strip { display: none !important; }
+  #title-screen .menu-mode-selector { padding: 5px 6px !important; }
+  #title-screen .menu-mode-selector-heading { margin-bottom: 4px !important; }
+  #title-screen .menu-mode-selector-heading .menu-mode-eyebrow { font-size: 7px !important; }
+  #title-screen .menu-mode-selector-heading h2 { font-size: 11px !important; }
+  #title-screen .menu-mode-grid { gap: 5px !important; }
+  #title-screen .menu-mode-card,
+  #title-screen .menu-mode-card[data-mode="pvp"] {
+    min-height: 48px !important;
+    grid-template-columns: 22px minmax(0,1fr) !important;
+    padding: 5px !important;
+  }
+  #title-screen .menu-mode-card-icon { width: 21px !important; height: 21px !important; }
+  #title-screen .menu-tabs-bar {
+    grid-template-columns: repeat(4,minmax(0,1fr)) !important;
+    gap: 4px !important;
+    padding: 4px !important;
+  }
+  #title-screen .menu-nav-group { gap: 3px !important; padding: 4px !important; }
+  #title-screen .menu-nav-group-label { font-size: 7px !important; margin-bottom: 1px !important; }
+  #title-screen .menu-tab-btn {
+    min-height: 34px !important;
+    padding: 4px !important;
+    grid-template-columns: 14px minmax(0,1fr) !important;
+    gap: 3px !important;
+    font-size: 8px !important;
+  }
+  #title-screen .menu-tab-btn .tab-icon,
+  #title-screen .menu-tab-btn .ui-svg-icon {
+    width: 14px !important;
+    height: 14px !important;
+    flex-basis: 14px !important;
+  }
+  #title-screen .menu-tab-content-area { padding: 6px 7px calc(8px + env(safe-area-inset-bottom)) !important; }
+  #title-screen .tab-panel { gap: 8px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #title-screen .menu-mode-card,
+  #title-screen .menu-tab-btn,
+  #title-screen .char-card,
+  .game-modal :is(.btn-modal,.btn-submit-score) {
+    transition: none !important;
+    animation: none !important;
+  }
+}
