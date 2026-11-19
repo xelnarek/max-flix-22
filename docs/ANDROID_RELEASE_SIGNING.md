@@ -42,7 +42,7 @@ Na zaufanym komputerze przygotuj GitHub CLI (`gh`) i JDK, zaloguj się przez `gh
 bash scripts/configure-github-android-signing.sh
 ```
 
-Skrypt pobiera ścieżkę do keystore, alias oraz hasła bez wyświetlania ich wartości. Weryfikuje certyfikat uploadowy, pyta o wyraźne potwierdzenie `USTAW`, zapisuje cztery sekrety i uruchamia workflow Android na `main`.
+Skrypt pobiera ścieżkę do keystore, alias oraz hasła bez wyświetlania ich wartości. Weryfikuje certyfikat uploadowy, zapisuje cztery sekrety i uruchamia workflow Android na `main`. Uruchomienie skryptu jest równoznaczne ze zgodą na te działania.
 
 **Uwaga:** jeżeli `GOOGLE_PLAY_UPLOAD_ENABLED` jest ustawione na `true` i sekret konta usługi jest prawidłowy, ten workflow może wysłać podpisany AAB na track `internal`. Nie uruchamiaj skryptu, dopóki nie sprawdzisz ustawień publikacji.
 
