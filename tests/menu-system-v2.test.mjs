@@ -49,13 +49,13 @@ test('desktop uses a fixed left navigation rail and an independent content viewp
 test('touch navigation requires choosing a segment before viewing its destination tabs', async () => {
   const app = await read('src/index.ts');
   const mobileCss = await read('src/crimson-shift-mobile-layout-v3.css');
-  assert.match(app, /mobileMenuSegmentQuery = window\.matchMedia\('\(max-width: 1100px\)'\)/);
+  assert.match(app, /mobileMenuSegmentQuery = window\.matchMedia\('\(max-width: 900px\)'\)/);
   assert.match(app, /group\.hidden = !visible/);
   assert.match(app, /group\.inert = !visible/);
   assert.match(mobileCss, /\.menu-mobile-segments\s*\{[\\s\\S]*?grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
   assert.match(mobileCss, /\.menu-nav-group\[hidden\]\s*\{[\\s\\S]*?display:\s*none !important/);
   assert.match(mobileCss, /grid-template-columns:\s*repeat\(auto-fit, minmax\(min\(100%, 96px\), 1fr\)\)/);
-  assert.match(mobileCss, /@media \(max-height: 620px\) and \(max-width: 1100px\)/);
+  assert.match(mobileCss, /@media \(max-height: 620px\) and \(max-width: 900px\)/);
   assert.doesNotMatch(mobileCss, /\.menu-tabs-bar\s*\{[^}]*overflow-x:\s*auto !important/);
 });
 
@@ -109,9 +109,9 @@ test('coarse-pointer devices wider than 900 CSS pixels retain the desktop menu g
 });
 
 
-test('ARIA orientation follows the same 1100px breakpoint as the rendered navigation layout', async () => {
+test('ARIA orientation follows the same 900px breakpoint as the rendered navigation layout', async () => {
   const app = await read('src/index.ts');
-  assert.match(app, /matchMedia\('\(min-width: 1101px\)'\)/);
+  assert.match(app, /matchMedia\('\(min-width: 901px\)'\)/);
   assert.match(app, /aria-orientation', desktopMenuNavigationQuery\.matches \? 'vertical' : 'horizontal'/);
   assert.match(app, /desktopMenuNavigationQuery\.addEventListener\('change'/);
 });
