@@ -511,7 +511,7 @@ function bake(type:EnemyType):THREE.Group|null{
     bx(groups,'torso',0x27372a,[0,.63,.31],[.12,.055,.012],[0,0,0],.12);
   }
   source.updateMatrixWorld(true);
-  const root=new THREE.Group();root.name='enemy-role-kit-'+type;root.userData.enemyRole=type;root.userData.roleForm=spec.form;root.userData.roleKitVersion=3;root.userData.actorRoleSilhouette=true;
+  const root=new THREE.Group();root.name='enemy-role-kit-'+type;root.userData.enemyRole=type;root.userData.roleForm=spec.form;root.userData.roleKitVersion=2;root.userData.actorRoleSilhouette=true;
   for(const a of anchors){
     const parts:THREE.BufferGeometry[]=[];
     const sourceMeshes:THREE.Mesh[]=[];
@@ -564,7 +564,7 @@ export function createEnemyRoleKit(type:EnemyType,actorRoot:THREE.Group):THREE.G
     if(bone)bone.attach(attachment);else actorRoot.attach(attachment);
   }
   const handle=new THREE.Group();handle.name='enemy-role-kit-handle-'+type;handle.visible=false;
-  handle.userData.actorRoleSilhouette=true;handle.userData.enemyRole=type;handle.userData.roleForm=template.userData.roleForm;handle.userData.roleKitVersion=3;actorRoot.add(handle);
+  handle.userData.actorRoleSilhouette=true;handle.userData.enemyRole=type;handle.userData.roleForm=template.userData.roleForm;handle.userData.roleKitVersion=2;actorRoot.add(handle);
   actorRoot.userData.enemyRoleKit=type;
   return handle;
 }
