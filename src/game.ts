@@ -2257,7 +2257,7 @@ export class PaleciakiGameEngine {
       const root = cloneGobkitModel(gltf);
       const visualProfile = ENEMY_VISUAL_PROFILES[requestedType];
       fitGobkitModel(root, visualProfile.targetHeight, this.threeRenderer?.capabilities.getMaxAnisotropy() ?? 1, gltf.scene);
-      applyEnemyRoleAnatomy(root, requestedType);
+      if (!visualProfile.base44Model) applyEnemyRoleAnatomy(root, requestedType);
       // Refine the body footprint from the fitted visible rig without letting
       // weapons and decorative equipment inflate the type-specific hitbox.
       const modelBounds = new THREE.Box3().setFromObject(root);
@@ -2274,9 +2274,10 @@ export class PaleciakiGameEngine {
       this.hideProceduralVisuals(mesh as THREE.Group, overlays);
       this.installActorVisualRoot(mesh as THREE.Group, root);
       this.installEnemyVisualLodProxy(enemy, root);
-      // Role equipment is attached to head, torso, right-arm, back and leg bones.
-      // It follows the imported rig instead of floating as a static colour decal.
-      createEnemyRoleKit(requestedType, root);
+      // Existing Gobkit rigs need the role-specific PPE attachment kit. The
+      // Base44 models are already fully authored silhouettes, so do not stack
+      // a second set of props on top of their baked-in character design.
+      if (!visualProfile.base44Model) createEnemyRoleKit(requestedType, root);
       enemy.legL = undefined;
       enemy.legR = undefined;
       enemy.armL = undefined;
@@ -2295,6 +2296,11 @@ export class PaleciakiGameEngine {
       if (!this.enemies.includes(enemy) || enemy.mesh !== mesh || enemy.type !== requestedType ||
           mesh.parent !== this.levelRoot || enemy.state === 'defeated') return;
       console.warn('[Gobkit] Enemy model unavailable; keeping procedural fallback:', modelId, requestedType, error);
+      const fallback = ENEMY_GOBKIT_MODELS[requestedType];
+      if (fallback && fallback !== modelId) {
+        console.warn('[Base44] Switching to the bundled fallback rig:', fallback, requestedType);
+        void this.attachGobkitEnemyModel(enemy, fallback);
+      }
     }
   }
 
@@ -2392,7 +2398,8 @@ export class PaleciakiGameEngine {
     activeEnemies.clear();
     for (const enemy of this.enemies) activeEnemies.add(enemy);
     for (const enemy of this.enemies) {
-      const modelId = ENEMY_VISUAL_PROFILES[enemy.type].gobkitModel;
+      const visualProfile = ENEMY_VISUAL_PROFILES[enemy.type];
+      const modelId = visualProfile.base44Model ?? visualProfile.gobkitModel;
       if (!modelId || !enemy.mesh) continue;
       if (!this.requestedGobkitEnemies.has(enemy)) {
         this.requestedGobkitEnemies.add(enemy);
