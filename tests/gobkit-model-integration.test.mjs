@@ -261,8 +261,8 @@ test('the build downloader validates CC0, rigging, animation clips and GLB binar
   assert.match(script, /model\.rigged !== true/);
   assert.match(script, /'Idle', 'Walk', 'Run', 'Death', 'Hit'/);
   assert.match(script, /validateGlbAsset\(bytes, model\.id, model\.clipNames\)/);
-  assert.ok(pkg.includes('"prebuild": "node scripts/fetch-gobkit-assets.mjs --strict && node scripts/fetch-polyhaven-assets.mjs --strict"'));
-  assert.ok(pkg.includes('"predev": "node scripts/fetch-gobkit-assets.mjs && node scripts/fetch-polyhaven-assets.mjs"'));
+  assert.ok(pkg.includes('"prebuild": "node scripts/fetch-base44-enemy-assets.mjs --strict && node scripts/fetch-gobkit-assets.mjs --strict && node scripts/fetch-polyhaven-assets.mjs --strict"'));
+  assert.ok(pkg.includes('"predev": "node scripts/fetch-base44-enemy-assets.mjs && node scripts/fetch-gobkit-assets.mjs && node scripts/fetch-polyhaven-assets.mjs"'));
 });
 
 test('playable operators retain the original stylized models in Survival and both PvP slots', async () => {
@@ -271,7 +271,7 @@ test('playable operators retain the original stylized models in Survival and bot
   assert.match(game, /const built = createCharacterModel\(def\)/);
   assert.doesNotMatch(game, /void this\.attachMakeHumanOperatorModel/);
   assert.doesNotMatch(game, /void this\.attachMakeHumanEnemyModel/);
-  assert.match(game, /ENEMY_VISUAL_PROFILES\[enemy\.type\]\.gobkitModel/);
+  assert.match(game, /visualProfile\.base44Model \?\? visualProfile\.gobkitModel/);
   assert.match(game, /void this\.attachGobkitEnemyModel\(enemy, modelId\)/);
   assert.match(game, /createEnemyRoleKit\(requestedType, root\)/);
 });
