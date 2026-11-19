@@ -12201,7 +12201,6 @@ export class PaleciakiGameEngine {
     return this.survivalChaosRouletteLastResult;
   }
 
-  /** Spin the B4 machine once, only after the normal third-level draft. */
   /** Clear hostile shots through the normal ownership/disposal path for a defensive jackpot. */
   private clearSurvivalEnemyProjectiles(): number {
     let cleared = 0;
@@ -12222,6 +12221,7 @@ export class PaleciakiGameEngine {
     return cleared;
   }
 
+  /** Spin the B4 machine once, only after the normal third-level draft. */
   public spinSurvivalChaosRoulette(): boolean {
     if (
       this.gameMode !== 'survival' ||
