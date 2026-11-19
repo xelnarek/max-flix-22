@@ -182,10 +182,14 @@ test('Overdrive only completes at three damage stacks and two attack-speed stack
   assert.match(complete || '', /DOMKNIESZ SYNERGIĘ: Overdrive/);
 });
 
-test('already unlocked synergies are not advertised as still progressing', () => {
+test('already unlocked or already-complete synergies are not advertised as still progressing', () => {
   assert.equal(getSurvivalDraftSynergyHint('critical', {
     stacks: { critical: 2, critical_damage: 2 },
     evolutions: ['critical_protocol'],
+  }), null);
+  assert.equal(getSurvivalDraftSynergyHint('critical', {
+    stacks: { critical: 3, critical_damage: 2 },
+    evolutions: [],
   }), null);
 });
 
