@@ -15,6 +15,9 @@ test('Android CI caches Gradle and retries transient network failures across nat
   assert.match(workflow, /if \[ "\$ANDROID_SIGNING_ENABLED" = "true" \]/);
   assert.match(workflow, /bundleRelease assembleDebug assembleRelease/);
   assert.match(workflow, /bundleRelease assembleDebug/);
+  assert.match(workflow, /POLYHAVEN_RESOLUTION:\s*'1k'/);
+  assert.match(workflow, /scripts\/fetch-polyhaven-assets\.mjs/);
+  assert.match(workflow, /scripts\/polyHavenPack\.mjs/);
   assert.match(workflow, /unsigned release APK is not installable and wastes ~170 MB/);
   assert.match(workflow, /compression-level: 0/);
   assert.match(workflow, /android\/app\/build\/outputs\/apk\/debug\/\*\.apk/);
@@ -111,6 +114,8 @@ test('Android artifact verifier blocks unsigned Play uploads and records hashes'
   assert.match(script, /signingConfigured && !releaseApk/);
   assert.match(script, /await sha256\(path\)/);
   assert.match(script, /android-build-report\.json/);
+  assert.match(script, /const texturePack = polyHavenAssets\.length/);
+  assert.match(script, /megabytes:/);
 });
 
 test('Google Play upload is opt-in, credential-gated and limited to internal testing', async () => {
