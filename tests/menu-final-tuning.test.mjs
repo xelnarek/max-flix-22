@@ -25,7 +25,7 @@ test('responsive menu keeps every destination reachable and content scrolling is
   assert.match(css, /\.menu-tab-content-area[^}]*overflow-y: auto/s);
   assert.ok(html.indexOf('/src/warehouse-maddnes-unified-menu.css') > html.indexOf('/src/menu-final-tuning.css'),
     'the responsive acceptance layer must load after the legacy menu stylesheet');
-  const responsiveTokens = responsiveCss.replace(/\\s+/g, '');
+  const responsiveTokens = responsiveCss.replaceAll(' ', '').replaceAll('\n', '').replaceAll('\r', '').replaceAll('\t', '');
   assert.ok(responsiveTokens.includes('pointer:coarse'), 'missing coarse-pointer responsive layout');
   assert.ok(responsiveTokens.includes('max-width:900px'), 'missing phone/tablet breakpoint');
   assert.ok(responsiveTokens.includes('max-width:640px'), 'missing compact-card breakpoint');
