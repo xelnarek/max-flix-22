@@ -54,8 +54,10 @@ test('menu tabs expose tab semantics and runtime keyboard navigation without dup
   assert.match(app, /setAttribute\('role', 'tab'\)/);
   assert.match(app, /setAttribute\('aria-selected', String\(active\)\)/);
   assert.match(app, /setAttribute\('role', 'tabpanel'\)/);
-  assert.match(app, /getMenuTabIndexForKey\(event\.key, currentNavigationIndex, navigationTabs\.length, desktopMenuNavigationQuery\.matches \? 'vertical' : 'horizontal'\)/);
-  assert.match(app, /navigationTabs = mobileMenuSegmentQuery\.matches/);
+  assert.match(app, /getMenuTabIndexForKey\(event\.key, currentNavigationIndex, navigationTabs\.length, 'vertical'\)/);
+  assert.match(app, /const navigationTabs = menuTabButtons/);
+  assert.match(app, /group\.setAttribute\('aria-orientation', 'vertical'\)/);
+  assert.doesNotMatch(app, /desktopMenuNavigationQuery|mobileMenuSegmentQuery/);
   assert.doesNotMatch(app.slice(app.indexOf('const menuTabButtons'), app.indexOf("document.querySelectorAll<HTMLElement>('.char-card')")), /addEventListener\('touchend'/);
   assert.match(navigation, /ArrowRight/);
   assert.match(navigation, /ArrowLeft/);
