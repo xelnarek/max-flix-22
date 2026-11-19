@@ -121,9 +121,9 @@ test('perk catalogue places its description below the structured card header', a
   assert.ok(start >= 0 && end > start);
   const panel = html.slice(start, end);
   assert.equal((panel.match(/class="perk-card"/g) || []).length, 15);
-  assert.match(panel, /class="perk-card-top"[\\s\\S]*?class="perk-card-desc"/);
-  assert.match(css, /#title-screen #tab-perks \\.perk-card\\s*\\{[\\s\\S]*?grid-template-rows:\\s*auto auto !important/);
-  assert.match(css, /#title-screen #tab-perks \\.perk-card-top\\s*\\{[\\s\\S]*?grid-template-columns:\\s*38px minmax\\(0, 1fr\\) auto !important/);
-  assert.match(css, /#title-screen #tab-perks \\.perk-card-desc\\s*\\{[\\s\\S]*?grid-column:\\s*1 \\/ -1 !important/);
-  assert.match(css, /@media \\(max-width: 640px\\)[\\s\\S]*?#title-screen #tab-perks \\.perk-card-top/);
+  assert.match(panel, /class="perk-card-top"[\s\S]*?class="perk-card-desc"/);
+  assert.match(css, /#title-screen #tab-perks \.perk-card\s*\{[\s\S]*?grid-template-rows:\s*auto auto !important/);
+  assert.match(css, /#title-screen #tab-perks \.perk-card-top\s*\{[\s\S]*?grid-template-columns:\s*38px minmax\(0, 1fr\) auto !important/);
+  assert.match(css, /#title-screen #tab-perks \.perk-card-desc\s*\{[\s\S]*?grid-column:\s*1 \/ -1 !important/);
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*?#title-screen #tab-perks \.perk-card-top/);
 });
