@@ -2308,8 +2308,8 @@ export class PaleciakiGameEngine {
       root.name = 'gobkit-enemy-' + modelId + '-' + enemy.id;
       const overlays = [
         enemy.hpBar, enemy.hpFill, enemy.threatRing, enemy.shieldRing,
-        enemy.auraRing, enemy.survivalEliteInsignia, enemy.speechMesh, enemy.propeller,
-        enemy.aiRangedTelegraphMesh, enemy.aiMeleeTelegraphMesh, ...(enemy.bikeWheels || []),
+        enemy.auraRing, enemy.survivalEliteInsignia, enemy.speechMesh,
+        enemy.aiRangedTelegraphMesh, enemy.aiMeleeTelegraphMesh,
       ].filter((object): object is THREE.Object3D => object instanceof THREE.Object3D);
       this.removeAttachedActorVisuals(mesh as THREE.Group);
       removeLegacyEnemyBodyVisuals(mesh as THREE.Group, overlays);
