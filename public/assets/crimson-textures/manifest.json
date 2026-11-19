@@ -1,0 +1,72 @@
+{
+  "name": "MAX FLIX 22 — Crimson Texture Pack",
+  "version": "1.0.0",
+  "branch": "feature/crimson-texture-pack-v1",
+  "renderer": "Three.js 0.186 / Vite / WebGL",
+  "coordinateSystem": "top-down 3D arena",
+  "textures": [
+    {
+      "file": "assets/crimson-textures/floors/b4-worn-concrete.svg",
+      "resolution": "1024x1024",
+      "format": "SVG",
+      "tileable": true,
+      "role": "floor-surface"
+    },
+    {
+      "file": "assets/crimson-textures/floors/port-asphalt.svg",
+      "resolution": "1024x1024",
+      "format": "SVG",
+      "tileable": true,
+      "role": "floor-surface"
+    },
+    {
+      "file": "assets/crimson-textures/floors/cold-storage-sealed.svg",
+      "resolution": "1024x1024",
+      "format": "SVG",
+      "tileable": true,
+      "role": "floor-surface"
+    },
+    {
+      "file": "assets/crimson-textures/floors/night-sorter-rubber.svg",
+      "resolution": "1024x1024",
+      "format": "SVG",
+      "tileable": true,
+      "role": "floor-surface"
+    },
+    {
+      "file": "assets/crimson-textures/props/container-corrugated-steel.svg",
+      "resolution": "1024x1024",
+      "format": "SVG",
+      "tileable": true,
+      "role": "environment-material"
+    },
+    {
+      "file": "assets/crimson-textures/props/rusted-steel-plate.svg",
+      "resolution": "1024x1024",
+      "format": "SVG",
+      "tileable": true,
+      "role": "environment-material"
+    },
+    {
+      "file": "assets/crimson-textures/props/pallet-timber.svg",
+      "resolution": "1024x1024",
+      "format": "SVG",
+      "tileable": true,
+      "role": "environment-material"
+    },
+    {
+      "file": "assets/crimson-textures/props/hazard-chevron.svg",
+      "resolution": "1024x1024",
+      "format": "SVG",
+      "tileable": true,
+      "role": "environment-material"
+    }
+  ],
+  "materialPolicy": {
+    "colorMap": "THREE.SRGBColorSpace",
+    "normalOrDataMap": "THREE.NoColorSpace",
+    "wrap": "THREE.RepeatWrapping",
+    "anisotropy": 4
+  },
+  "integration": "Additive pack. Does not replace the current procedural Survival floor atlas or existing B4 visual atlases. Runtime hookup should be tested on Android before switching map materials."
+}
