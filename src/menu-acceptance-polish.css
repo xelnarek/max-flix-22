@@ -255,3 +255,283 @@
   #title-screen .menu-mode-card:hover,
   #title-screen .menu-mode-card:focus-visible { transform: none !important; }
 }
+
+
+/* ==========================================================================
+   MAX FLIX 22 — CRIMSON SHIFT
+   Final art-direction override. Keeps all existing menu actions, panels,
+   data IDs, save/progression logic and responsive layout intact.
+   Inspired by gritty arcade-survival interfaces; original game styling.
+   ========================================================================== */
+:root {
+  --menu-ink: #09090b;
+  --menu-panel: #151316;
+  --menu-panel-raised: #21191c;
+  --menu-ivory: #f2ece8;
+  --menu-muted: #b7a9a8;
+  --menu-champagne: #e04442;
+  --menu-mint: #9ab8a0;
+  --menu-steel: #8fa7b8;
+  --menu-line: rgba(224, 68, 66, .26);
+  --crimson: #e12c32;
+  --crimson-hot: #ff4a43;
+  --crimson-deep: #650f18;
+  --crimson-glass: rgba(20, 8, 11, .94);
+  --crimson-steel: #9ba6ad;
+}
+#title-screen {
+  color: var(--menu-ivory) !important;
+  background:
+    radial-gradient(ellipse at 50% 12%, rgba(132,20,29,.26), transparent 48%),
+    radial-gradient(ellipse at 50% 100%, rgba(85,10,18,.25), transparent 48%),
+    #09090b !important;
+}
+#title-screen .title-backdrop {
+  opacity: .92 !important;
+  background:
+    linear-gradient(90deg, rgba(7,6,8,.92) 0%, rgba(9,7,9,.66) 48%, rgba(8,6,8,.82) 100%),
+    radial-gradient(ellipse at 68% 35%, rgba(201,34,40,.27), transparent 42%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,.018) 0 1px, transparent 1px 7px),
+    #100b0e !important;
+}
+#title-screen .title-sheet {
+  border-color: rgba(231,65,65,.24) !important;
+  background: linear-gradient(145deg, rgba(10,9,11,.91), rgba(17,10,13,.88)) !important;
+  box-shadow: 0 22px 70px rgba(0,0,0,.58), inset 0 1px 0 rgba(255,255,255,.045) !important;
+}
+#title-screen .brand-badge-pill {
+  color: #ff7770 !important;
+  border-color: rgba(231,65,65,.38) !important;
+  background: rgba(64,12,18,.45) !important;
+}
+#title-screen .menu-game-title {
+  color: #f4f0ee !important;
+  text-shadow: 0 3px 22px rgba(0,0,0,.75), 2px 2px 0 rgba(91,13,21,.9) !important;
+  letter-spacing: -.045em !important;
+}
+#title-screen .menu-game-title span {
+  color: var(--crimson-hot) !important;
+  text-shadow: 0 0 24px rgba(232,43,49,.34) !important;
+}
+#title-screen .menu-game-subtitle,
+#title-screen .menu-mode-selector-heading p { color: #b7aaab !important; }
+#title-screen .menu-release-strip {
+  border-color: rgba(224,68,66,.24) !important;
+}
+#title-screen .menu-release-pill {
+  color: #fff !important;
+  background: linear-gradient(135deg, #b51e29, #5e1018) !important;
+  border: 1px solid rgba(255,112,104,.48) !important;
+}
+#title-screen .menu-mode-selector {
+  border: 1px solid rgba(224,68,66,.25) !important;
+  border-radius: 15px !important;
+  background: linear-gradient(145deg, rgba(28,14,17,.86), rgba(12,10,12,.93)) !important;
+  box-shadow: 0 12px 34px rgba(0,0,0,.26), inset 0 1px 0 rgba(255,255,255,.035) !important;
+}
+#title-screen .menu-mode-eyebrow,
+#title-screen .menu-mode-selector-heading h2 {
+  color: #f07870 !important;
+  letter-spacing: .15em !important;
+}
+#title-screen .menu-mode-card {
+  position: relative !important;
+  overflow: hidden !important;
+  color: #f2ece8 !important;
+  border: 1px solid rgba(172,151,151,.25) !important;
+  border-radius: 10px !important;
+  background:
+    linear-gradient(105deg, rgba(11,9,11,.98), rgba(33,15,19,.92)),
+    #160d10 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.055), 0 9px 22px rgba(0,0,0,.28) !important;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px)) !important;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease !important;
+}
+#title-screen .menu-mode-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, rgba(255,255,255,.055), transparent 38%, rgba(226,37,45,.08));
+}
+#title-screen .menu-mode-card[data-mode="survival"] {
+  border-color: rgba(255,72,65,.72) !important;
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(215,35,42,.25), transparent 54%),
+    linear-gradient(105deg, rgba(73,10,17,.97), rgba(18,9,12,.98)) !important;
+  box-shadow: inset 3px 0 0 #ed393c, 0 0 24px rgba(205,29,38,.14), 0 12px 28px rgba(0,0,0,.34) !important;
+}
+#title-screen .menu-mode-card[data-mode="campaign"] {
+  border-color: rgba(191,148,93,.38) !important;
+  background: linear-gradient(105deg, rgba(37,25,18,.96), rgba(17,12,12,.98)) !important;
+}
+#title-screen .menu-mode-card[data-mode="pvp"] {
+  border-color: rgba(107,151,180,.42) !important;
+  background: linear-gradient(105deg, rgba(13,27,39,.96), rgba(12,11,15,.98)) !important;
+}
+#title-screen .menu-mode-card:hover,
+#title-screen .menu-mode-card:focus-visible {
+  transform: translateY(-2px) !important;
+  border-color: var(--crimson-hot) !important;
+  box-shadow: 0 0 0 1px rgba(255,74,67,.2), 0 13px 28px rgba(0,0,0,.38) !important;
+}
+#title-screen .menu-mode-card-icon {
+  color: #f5d6d1 !important;
+  filter: drop-shadow(0 0 8px rgba(230,49,55,.25));
+}
+#title-screen .menu-mode-card[data-mode="survival"] .menu-mode-card-icon { color: #ff655e !important; }
+#title-screen .menu-mode-card[data-mode="campaign"] .menu-mode-card-icon { color: #e4b875 !important; }
+#title-screen .menu-mode-card[data-mode="pvp"] .menu-mode-card-icon { color: #9bc5df !important; }
+#title-screen .menu-mode-card-copy strong {
+  color: #fff4f1 !important;
+  text-shadow: 0 2px 8px rgba(0,0,0,.6) !important;
+  letter-spacing: .025em !important;
+}
+#title-screen .menu-mode-card-copy small { color: #c0b1b0 !important; }
+#title-screen .menu-mode-card-kicker { color: #df8a83 !important; }
+#title-screen .menu-mode-card-action {
+  color: #ffaaa1 !important;
+  border-top-color: rgba(224,68,66,.24) !important;
+}
+#title-screen .menu-mode-card[data-mode="survival"] .menu-mode-card-action {
+  color: #fff !important;
+  text-shadow: 0 0 12px rgba(255,58,58,.5);
+}
+#title-screen .menu-tabs-bar {
+  border: 1px solid rgba(224,68,66,.3) !important;
+  border-radius: 12px !important;
+  background: linear-gradient(155deg, rgba(25,12,15,.96), rgba(9,9,11,.97)) !important;
+  box-shadow: 0 10px 28px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.04) !important;
+}
+#title-screen .menu-nav-group {
+  border-color: rgba(224,68,66,.18) !important;
+  border-radius: 9px !important;
+  background: rgba(255,255,255,.018) !important;
+}
+#title-screen .menu-nav-group-label {
+  color: #e56b65 !important;
+  letter-spacing: .12em !important;
+}
+#title-screen .menu-tab-btn {
+  color: #b8acad !important;
+  border-color: transparent !important;
+  background: transparent !important;
+}
+#title-screen .menu-tab-btn .tab-icon { color: #c57b78 !important; }
+#title-screen .menu-tab-btn.active,
+#title-screen .menu-tab-btn[aria-selected="true"] {
+  color: #fff5f2 !important;
+  border-color: rgba(255,80,72,.45) !important;
+  background: linear-gradient(110deg, rgba(161,24,32,.34), rgba(44,14,18,.74)) !important;
+  box-shadow: inset 3px 0 0 #ed3d40, 0 4px 14px rgba(0,0,0,.24) !important;
+}
+#title-screen .menu-tab-btn.active .tab-icon { color: #ff716a !important; }
+#title-screen .menu-tab-content-area {
+  border: 1px solid rgba(224,68,66,.22) !important;
+  border-radius: 13px !important;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(142,24,31,.11), transparent 58%),
+    rgba(10,9,11,.84) !important;
+  scrollbar-color: rgba(224,68,66,.52) rgba(255,255,255,.04) !important;
+}
+#title-screen .tab-panel :is(h2,h3,h4,.section-title,.panel-title) {
+  color: #f4e8e5 !important;
+}
+#title-screen .tab-panel :is(p,.description,.subtitle,.muted) { color: #b9acad; }
+#title-screen .tab-panel :is(.char-card,.enemy-guide-card,.boss-guide-card,.perk-card,.field-guide-card,.char-details-box,.character-mastery-panel,.account-progression-panel,.account-ranks-panel,.leaderboard-container,.survival-achievement-section,.survival-map-choice,.survival-map-directory-card) {
+  color: #f1e9e6 !important;
+  border-color: rgba(195,117,113,.25) !important;
+  background: linear-gradient(150deg, rgba(34,19,22,.96), rgba(13,11,14,.98)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 8px 22px rgba(0,0,0,.2) !important;
+}
+#title-screen .tab-panel :is(.char-card.active,.survival-map-choice.active,.survival-map-choice.selected,.survival-map-choice[aria-pressed="true"]) {
+  border-color: rgba(255,86,77,.72) !important;
+  box-shadow: inset 3px 0 0 #ed3d40, 0 0 0 1px rgba(255,65,58,.12) !important;
+}
+#title-screen .tab-panel button:not(.menu-tab-btn) {
+  accent-color: var(--crimson-hot);
+}
+#title-screen .tab-panel button:not(.menu-tab-btn):not(.btn-danger) {
+  border-color: rgba(206,104,99,.28);
+}
+#title-screen :is(input,select,textarea) {
+  color: #f4eeeb !important;
+  border-color: rgba(206,104,99,.32) !important;
+  background: rgba(8,8,10,.9) !important;
+}
+#title-screen :is(button,input,select,textarea):focus-visible,
+#title-screen [role="button"]:focus-visible {
+  outline: 2px solid #ff6a62 !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 5px rgba(239,54,58,.14) !important;
+}
+#title-screen .menu-tab-content-area::-webkit-scrollbar-thumb,
+#title-screen .title-sheet::-webkit-scrollbar-thumb {
+  background: rgba(224,68,66,.52) !important;
+}
+.asset-loader-overlay {
+  color: #f4eae7 !important;
+  background:
+    radial-gradient(ellipse at 50% 25%, rgba(145,18,29,.25), transparent 54%),
+    rgba(6,6,8,.98) !important;
+  backdrop-filter: blur(10px) !important;
+}
+.asset-loader-overlay .loader-modal-card {
+  border: 1px solid rgba(239,65,63,.45) !important;
+  border-radius: 14px !important;
+  background: linear-gradient(145deg, rgba(35,15,19,.98), rgba(9,9,11,.99)) !important;
+  box-shadow: 0 24px 80px rgba(0,0,0,.65), 0 0 34px rgba(177,25,34,.13) !important;
+}
+.asset-loader-overlay .loader-header,
+.asset-loader-overlay .loader-header span { color: #fff0ed !important; }
+.asset-loader-overlay .loader-kicker,
+.asset-loader-overlay .loader-category-badge { color: #ff7770 !important; }
+.asset-loader-overlay .loader-subtitle,
+.asset-loader-overlay .tip-text { color: #c3b2b1 !important; }
+.asset-loader-overlay .loader-category-pill,
+.asset-loader-overlay .loader-tip-box {
+  border-color: rgba(224,68,66,.24) !important;
+  background: rgba(255,255,255,.035) !important;
+}
+.asset-loader-overlay .loader-fill {
+  background: linear-gradient(90deg, #7e111b, #e12c32, #ff7166) !important;
+  box-shadow: 0 0 16px rgba(235,46,51,.35) !important;
+}
+.cinematic-intro-overlay {
+  color: #f5eae7 !important;
+  background:
+    radial-gradient(ellipse at 50% 38%, rgba(151,19,30,.26), transparent 48%),
+    #08080a !important;
+}
+.cinematic-intro-overlay .cinematic-intro-brand,
+.cinematic-intro-overlay .cinematic-intro-kicker { color: #ff716a !important; }
+.cinematic-intro-overlay .cinematic-intro-copy h1 {
+  color: #fff4f1 !important;
+  text-shadow: 0 4px 30px rgba(0,0,0,.85), 0 0 28px rgba(221,36,43,.28) !important;
+}
+.cinematic-intro-overlay .cinematic-intro-copy p { color: #d0bdbc !important; }
+.cinematic-intro-overlay :is(.cinematic-intro-skip,.cinematic-intro-play) {
+  border-color: rgba(255,94,86,.52) !important;
+  background: linear-gradient(135deg, rgba(143,19,29,.94), rgba(44,10,15,.96)) !important;
+  color: #fff !important;
+}
+@media (max-width: 760px), (pointer: coarse) {
+  #title-screen .title-sheet { padding: clamp(10px, 2.8vw, 16px) !important; }
+  #title-screen .menu-mode-card[data-mode="survival"] { min-height: 108px !important; }
+  #title-screen .menu-tabs-bar { gap: 6px !important; }
+  #title-screen .menu-nav-group { background: rgba(22,9,12,.72) !important; }
+  #title-screen .menu-tab-btn { min-height: 44px !important; }
+  #title-screen .menu-tab-content-area { padding: 10px 9px calc(18px + env(safe-area-inset-bottom)) !important; }
+}
+@media (max-width: 380px) and (orientation: portrait) {
+  #title-screen .menu-mode-grid { gap: 6px !important; }
+  #title-screen .menu-mode-card { min-height: 96px !important; }
+  #title-screen .menu-tab-btn { min-height: 42px !important; }
+}
+@media (max-height: 560px) and (orientation: landscape) and (pointer: coarse) {
+  #title-screen .menu-mode-card[data-mode="survival"] { min-height: 74px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #title-screen .menu-mode-card,
+  #title-screen .menu-tab-btn { transition: none !important; }
+}
