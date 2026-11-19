@@ -53,8 +53,7 @@
 }
 
 
-#title-screen .menu-nav-group,
-#title-screen .menu-nav-group[hidden] {
+#title-screen .menu-nav-group {
   display: grid !important;
   flex: 0 0 auto !important;
   grid-template-columns: minmax(0, 1fr) !important;
@@ -577,8 +576,7 @@
     touch-action: pan-y !important;
   }
 
-  #title-screen .menu-nav-group,
-  #title-screen .menu-nav-group[hidden] {
+  #title-screen .menu-nav-group {
     display: grid !important;
     flex: 0 0 auto !important;
     grid-template-columns: minmax(0, 1fr) !important;
