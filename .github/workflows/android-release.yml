@@ -208,10 +208,10 @@ jobs:
 
           This public download is intended for installation and device testing.
 
-          - Application ID: `pl.paleciaki.magazynchaosu`
-          - Version: `$VERSION`
+          - Application ID: pl.paleciaki.magazynchaosu
+          - Version: $VERSION
           - APK type: $APK_KIND
-          - Source commit: `$GITHUB_SHA`
+          - Source commit: $GITHUB_SHA
 
           **Google Play status:** this release is not a Play Store production release. The AAB is not attached unless a separate signed release procedure is completed. Review the readiness report before any store submission.
 
