@@ -2464,9 +2464,11 @@ class PaleciakiScene extends xb.Script {
         const definition = CHARACTERS[cardId];
         const accent = definition.color.toString(16).padStart(6, '0');
         const badge = card.querySelector<HTMLElement>('.operator-emblem');
+        const nameLabel = card.querySelector<HTMLElement>('.char-card-name');
         const roleLabel = card.querySelector<HTMLElement>('.char-card-role');
         const identityLabel = card.querySelector<HTMLElement>('.char-card-ability');
         card.style.setProperty('--operator-accent', `#${accent}`);
+        if (nameLabel) nameLabel.textContent = definition.name;
         if (roleLabel) roleLabel.textContent = definition.className;
         if (identityLabel) identityLabel.textContent = definition.combatIdentity;
         let modelLabel = card.querySelector<HTMLElement>('.char-card-model-label');
@@ -2729,6 +2731,75 @@ class PaleciakiScene extends xb.Script {
     let currentMenuTargetId = menuTabButtons.find((button) => button.classList.contains('active'))?.getAttribute('data-tab') || 'tab-team';
     const menuScrollMemory = new MenuScrollMemory();
     const menuContentArea = document.querySelector<HTMLElement>('.menu-tab-content-area');
+    const menuRootElement = document.getElementById('title-screen');
+    if (menuRootElement) menuRootElement.dataset.menuDensity = 'compact';
+
+    // One persistent density control keeps long reference copy out of the way
+    // until the player explicitly asks for full descriptions.
+    if (menuContentArea && !menuContentArea.querySelector('.menu-density-toolbar')) {
+      const toolbar = document.createElement('div');
+      toolbar.className = 'menu-density-toolbar';
+      toolbar.setAttribute('role', 'group');
+      toolbar.setAttribute('aria-label', 'Gęstość informacji w menu');
+      const densityLabel = document.createElement('span');
+      densityLabel.className = 'menu-density-label';
+      densityLabel.textContent = 'WIDOK MENU';
+      const densityButton = document.createElement('button');
+      densityButton.className = 'menu-density-toggle';
+      densityButton.type = 'button';
+      densityButton.textContent = 'PEŁNE OPISY';
+      densityButton.setAttribute('aria-pressed', 'false');
+      densityButton.setAttribute('aria-label', 'Pokaż pełne opisy we wszystkich sekcjach menu');
+      densityButton.addEventListener('click', () => {
+        const expanded = menuRootElement?.dataset.menuDensity !== 'full';
+        if (menuRootElement) menuRootElement.dataset.menuDensity = expanded ? 'full' : 'compact';
+        densityButton.textContent = expanded ? 'WIDOK ZWIĘZŁY' : 'PEŁNE OPISY';
+        densityButton.setAttribute('aria-pressed', String(expanded));
+        densityButton.setAttribute('aria-label', expanded
+          ? 'Przełącz menu na widok zwięzły'
+          : 'Pokaż pełne opisy we wszystkich sekcjach menu');
+      });
+      toolbar.append(densityLabel, densityButton);
+      menuContentArea.insertBefore(toolbar, menuContentArea.firstChild);
+    }
+
+    // Operator information is split into three focused views. The existing
+    // profile, combat descriptions and mastery tree remain intact in the DOM.
+    const characterDetailsBox = document.getElementById('char-details-box');
+    const characterViewButtons = new Map<string, HTMLButtonElement>();
+    const setCharacterDetailView = (view: 'profile' | 'abilities' | 'mastery') => {
+      if (!characterDetailsBox) return;
+      characterDetailsBox.dataset.charView = view;
+      characterViewButtons.forEach((button, id) => {
+        const active = id === view;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+      });
+    };
+    if (characterDetailsBox && !characterDetailsBox.querySelector('.char-detail-view-nav')) {
+      const viewNav = document.createElement('div');
+      viewNav.className = 'char-detail-view-nav';
+      viewNav.setAttribute('role', 'group');
+      viewNav.setAttribute('aria-label', 'Informacje o wybranym operatorze');
+      const views = [
+        { id: 'profile', label: 'PROFIL' },
+        { id: 'abilities', label: 'ZDOLNOŚCI' },
+        { id: 'mastery', label: 'MISTRZOSTWO' },
+      ] as const;
+      for (const view of views) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'char-detail-view-btn';
+        button.textContent = view.label;
+        button.setAttribute('aria-pressed', 'false');
+        button.addEventListener('click', () => setCharacterDetailView(view.id));
+        characterViewButtons.set(view.id, button);
+        viewNav.appendChild(button);
+      }
+      characterDetailsBox.insertBefore(viewNav, characterDetailsBox.firstChild);
+      setCharacterDetailView('profile');
+    }
+
     menuContentArea?.addEventListener('scroll', () => {
       menuScrollMemory.save(currentMenuTargetId, menuContentArea.scrollTop);
     }, { passive: true });
@@ -2862,6 +2933,7 @@ class PaleciakiScene extends xb.Script {
         });
         card.classList.add('active');
         card.setAttribute('aria-pressed', 'true');
+        setCharacterDetailView('profile');
         const charId = card.getAttribute('data-char') as CharacterId;
         if (charId) updateCharacterUI(charId);
       };
