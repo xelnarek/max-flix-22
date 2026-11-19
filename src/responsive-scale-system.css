@@ -1,0 +1,261 @@
+/*
+ * GLOBAL RESPONSIVE SCALE SYSTEM
+ * One viewport profile now drives the menu, overlays, HUD and touch surfaces.
+ * Keep WebGL resolution/camera scaling in renderQuality.ts and GameEngine.
+ */
+
+:root {
+  --ui-scale: 1;
+  --ui-font-scale: 1;
+  --ui-panel-max: 1320px;
+  --ui-gap-xs: calc(4px * var(--ui-scale));
+  --ui-gap-sm: calc(7px * var(--ui-scale));
+  --ui-gap-md: calc(11px * var(--ui-scale));
+  --ui-gap-lg: calc(16px * var(--ui-scale));
+  --ui-control-height: clamp(32px, calc(38px * var(--ui-scale)), 46px);
+  --ui-touch-action-size: clamp(54px, calc(60px * var(--ui-scale)), 68px);
+  --ui-joystick-size: clamp(108px, calc(128px * var(--ui-scale)), 148px);
+  --ui-touch-font: clamp(9px, calc(11px * var(--ui-font-scale)), 13px);
+}
+
+/* The menu is a single scaled design canvas. Its inverse layout dimensions
+   keep the visible sheet fitted to the actual viewport after CSS zoom. */
+#title-screen .title-sheet {
+  zoom: var(--ui-scale) !important;
+  width: min(
+    calc(var(--ui-panel-max) / var(--ui-scale)),
+    calc((100vw - 28px - env(safe-area-inset-left) - env(safe-area-inset-right)) / var(--ui-scale))
+  ) !important;
+  height: min(
+    calc(940px / var(--ui-scale)),
+    calc((100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / var(--ui-scale))
+  ) !important;
+  max-width: none !important;
+  max-height: calc((100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / var(--ui-scale)) !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: auto !important;
+}
+
+/* All modal families inherit the same scaling rule, including level-up,
+   pause, defeat, account and PvP lobby/end panels. */
+.game-modal > .modal-card {
+  zoom: var(--ui-scale) !important;
+  width: calc(95% / var(--ui-scale)) !important;
+  max-height: calc(min(92dvh, 650px) / var(--ui-scale)) !important;
+  min-width: 0 !important;
+}
+.game-modal {
+  padding:
+    max(12px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left)) !important;
+}
+.loader-modal-card.loader-maddnes-card {
+  zoom: var(--ui-scale) !important;
+  width: min(calc(520px / var(--ui-scale)), calc((100vw - 24px) / var(--ui-scale))) !important;
+  max-width: min(calc(520px / var(--ui-scale)), calc((100vw - 24px) / var(--ui-scale))) !important;
+  max-height: calc((100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / var(--ui-scale)) !important;
+}
+
+/* Campaign and Survival share the same scaled top status lane. The inverse
+   width cancels the outer zoom so the lane still spans the viewport. */
+#game-shell #hud-top:not(.hidden) {
+  zoom: var(--ui-scale) !important;
+  width: calc(100vw / var(--ui-scale)) !important;
+  max-width: calc(100vw / var(--ui-scale)) !important;
+  left: 0 !important;
+}
+#game-shell #hud-top .hud-cluster.top-left {
+  max-width: calc(48vw / var(--ui-scale)) !important;
+}
+#game-shell #hud-top .hud-cluster.top-right {
+  max-width: calc(50vw / var(--ui-scale)) !important;
+}
+#game-shell #hud-bottom .bottom-dock,
+#game-shell #hud-perks-row:not(.hidden),
+#game-shell .dialogue-side-container,
+#game-shell .boss-hud-bar,
+#game-shell .survival-event-announcement,
+#game-shell #perk-drop-banner,
+#game-shell #fps-badge {
+  zoom: var(--ui-scale) !important;
+}
+#game-shell #survival-hud:not(.hidden) {
+  zoom: var(--ui-scale) !important;
+}
+body > #pvp-hud:not(.hidden) {
+  zoom: var(--ui-scale) !important;
+  width: min(calc(96vw / var(--ui-scale)), calc(860px / var(--ui-scale))) !important;
+  max-width: calc((100vw - 12px) / var(--ui-scale)) !important;
+}
+body > #pvp-hud .pvp-hud-main {
+  min-width: 0 !important;
+}
+#game-shell .dialogue-side-container {
+  max-width: calc(100vw / var(--ui-scale)) !important;
+}
+
+/* Touch controls are not zoomed as one container: pointer coordinates remain
+   viewport CSS pixels. Each visible control scales independently and the
+   pointer geometry reads its actual rendered dimensions. */
+#game-shell .joystick-base {
+  width: var(--ui-joystick-size) !important;
+  height: var(--ui-joystick-size) !important;
+}
+#game-shell .joystick-knob {
+  width: clamp(42px, calc(52px * var(--ui-scale)), 60px) !important;
+  height: clamp(42px, calc(52px * var(--ui-scale)), 60px) !important;
+}
+#game-shell .touch-actions-zone {
+  gap: clamp(6px, calc(8px * var(--ui-scale)), 12px) !important;
+  right: max(calc(8px * var(--ui-scale)), env(safe-area-inset-right)) !important;
+  bottom: max(calc(10px * var(--ui-scale)), env(safe-area-inset-bottom)) !important;
+}
+#game-shell .touch-actions-zone .touch-action-btn {
+  width: var(--ui-touch-action-size) !important;
+  height: var(--ui-touch-action-size) !important;
+  min-width: 54px !important;
+  min-height: 54px !important;
+  padding: 2px !important;
+  font-size: var(--ui-touch-font) !important;
+}
+#game-shell .touch-pause-btn {
+  width: clamp(38px, calc(42px * var(--ui-scale)), 48px) !important;
+  height: clamp(38px, calc(42px * var(--ui-scale)), 48px) !important;
+  min-width: 38px !important;
+  min-height: 38px !important;
+  font-size: clamp(15px, calc(17px * var(--ui-font-scale)), 19px) !important;
+}
+#touch-controls .pvp-aim-zone {
+  width: clamp(108px, calc(124px * var(--ui-scale)), 138px) !important;
+  height: clamp(124px, calc(142px * var(--ui-scale)), 156px) !important;
+}
+#touch-controls .pvp-aim-base {
+  width: clamp(98px, calc(112px * var(--ui-scale)), 126px) !important;
+  height: clamp(98px, calc(112px * var(--ui-scale)), 126px) !important;
+}
+#touch-controls .pvp-aim-knob {
+  width: clamp(40px, calc(46px * var(--ui-scale)), 52px) !important;
+  height: clamp(40px, calc(46px * var(--ui-scale)), 52px) !important;
+}
+#touch-controls .pvp-aim-crosshair {
+  font-size: clamp(22px, calc(26px * var(--ui-font-scale)), 30px) !important;
+}
+#touch-controls .pvp-fire-control {
+  width: clamp(58px, calc(78px * var(--ui-scale)), 88px) !important;
+  height: clamp(58px, calc(78px * var(--ui-scale)), 88px) !important;
+}
+body #touch-controls.manual-aim-mode:not(.hidden) .pvp-fire-btn:not(.hidden) {
+  width: clamp(58px, calc(76px * var(--ui-scale)), 86px) !important;
+  height: clamp(58px, calc(76px * var(--ui-scale)), 86px) !important;
+  min-width: clamp(58px, calc(76px * var(--ui-scale)), 86px) !important;
+  min-height: clamp(58px, calc(76px * var(--ui-scale)), 86px) !important;
+  flex-basis: clamp(58px, calc(76px * var(--ui-scale)), 86px) !important;
+  padding: clamp(4px, calc(7px * var(--ui-scale)), 8px) 3px !important;
+  gap: 1px !important;
+}
+body #touch-controls.manual-aim-mode:not(.hidden) .touch-actions-zone {
+  gap: clamp(5px, calc(6px * var(--ui-scale)), 9px) !important;
+  width: clamp(64px, calc(80px * var(--ui-scale)), 90px) !important;
+  max-width: clamp(64px, calc(80px * var(--ui-scale)), 90px) !important;
+}
+
+/* Common controls maintain proportional padding and type in every screen. */
+#game-shell .top-icon-btn {
+  min-height: var(--ui-control-height) !important;
+  padding: calc(6px * var(--ui-scale)) calc(10px * var(--ui-scale)) !important;
+  gap: calc(5px * var(--ui-scale)) !important;
+  font-size: clamp(9px, calc(11px * var(--ui-font-scale)), 13px) !important;
+}
+#game-shell .btn-ctrl-icon {
+  font-size: clamp(11px, calc(13px * var(--ui-font-scale)), 16px) !important;
+}
+#game-shell .stat-pill {
+  min-height: clamp(28px, calc(34px * var(--ui-scale)), 40px) !important;
+  padding: calc(4px * var(--ui-scale)) calc(8px * var(--ui-scale)) !important;
+}
+#game-shell .stat-value {
+  font-size: clamp(10px, calc(12px * var(--ui-font-scale)), 14px) !important;
+}
+#game-shell .hero-badge {
+  padding: calc(6px * var(--ui-scale)) calc(10px * var(--ui-scale)) !important;
+  gap: calc(7px * var(--ui-scale)) !important;
+}
+#game-shell .hero-avatar {
+  width: clamp(24px, calc(32px * var(--ui-scale)), 36px) !important;
+  height: clamp(24px, calc(32px * var(--ui-scale)), 36px) !important;
+  font-size: clamp(14px, calc(22px * var(--ui-font-scale)), 24px) !important;
+}
+#game-shell .hero-name {
+  font-size: clamp(10px, calc(14px * var(--ui-font-scale)), 16px) !important;
+}
+#game-shell .hero-role {
+  font-size: clamp(8px, calc(10px * var(--ui-font-scale)), 12px) !important;
+}
+#game-shell .hp-mug {
+  font-size: clamp(10px, calc(14px * var(--ui-font-scale)), 16px) !important;
+}
+
+/* Short viewports need their content area to scroll, not force the whole
+   overlay beyond the visible browser/WebView surface. */
+@media (max-height: 560px) {
+  #title-screen .title-sheet {
+    height: calc((100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / var(--ui-scale)) !important;
+    max-height: calc((100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / var(--ui-scale)) !important;
+  }
+  .game-modal > .modal-card {
+    max-height: calc((100dvh - 18px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / var(--ui-scale)) !important;
+  }
+  #game-shell .top-icon-btn {
+    min-height: clamp(30px, calc(34px * var(--ui-scale)), 38px) !important;
+  }
+  #game-shell .joystick-base {
+    width: clamp(108px, calc(122px * var(--ui-scale)), 142px) !important;
+    height: clamp(108px, calc(122px * var(--ui-scale)), 142px) !important;
+  }
+}
+
+@media (min-width: 1440px) and (pointer: fine) {
+  #title-screen .title-sheet {
+    width: min(calc(var(--ui-panel-max) / var(--ui-scale)), calc((100vw - 48px) / var(--ui-scale))) !important;
+  }
+}
+
+@media (max-width: 360px) {
+  #title-screen .title-sheet {
+    width: min(
+      calc((100vw - 20px - env(safe-area-inset-left) - env(safe-area-inset-right)) / var(--ui-scale)),
+      calc(var(--ui-panel-max) / var(--ui-scale))
+    ) !important;
+  }
+  #game-shell .touch-actions-zone .touch-action-btn {
+    width: 54px !important;
+    height: 54px !important;
+    min-width: 54px !important;
+    min-height: 54px !important;
+  }
+}
+
+@media (max-height: 430px) and (orientation: landscape) {
+  #game-shell #hud-top:not(.hidden) {
+    padding-top: max(2px, env(safe-area-inset-top)) !important;
+    padding-bottom: 2px !important;
+  }
+  #game-shell .survival-event-announcement {
+    max-height: 34dvh !important;
+    overflow: hidden !important;
+  }
+  #touch-controls .pvp-aim-zone {
+    top: 36% !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #game-shell .top-icon-btn,
+  #game-shell .touch-action-btn,
+  #touch-controls .pvp-fire-btn {
+    transition: none !important;
+  }
+}
