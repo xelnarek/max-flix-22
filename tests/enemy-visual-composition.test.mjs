@@ -61,7 +61,7 @@ test('a preserved overlay nested inside an old model container is extracted from
   legacyContainer.add(body.mesh, overlay);
   actor.add(legacyContainer);
 
-  removeLegacyEnemyBodyVisuals(actor, [overlay]);
+  removeLegacyEnemyBodyVisuals(actor, [overlay, marker.mesh]);
 
   assert.equal(legacyContainer.parent, null, 'empty legacy model hierarchy must leave the live actor');
   assert.equal(body.mesh.parent, legacyContainer, 'the old subtree is detached with its discarded parent');
