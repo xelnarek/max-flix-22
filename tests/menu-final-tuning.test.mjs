@@ -22,7 +22,7 @@ test('responsive menu keeps every destination reachable and content scrolling is
   for (const area of ['"header header"', '"modes modes"', '"navigation content"']) {
     assert.ok(gridAreas[1].includes(area), 'missing title-sheet grid area: ' + area);
   }
-  const compactCss = css.replace(/\\s+/g, '');
+  const compactCss = css.replaceAll(' ', '').replaceAll('\n', '').replaceAll('\r', '').replaceAll('\t', '');
   const contentRuleStart = compactCss.indexOf('#title-screen.menu-tab-content-area{');
   assert.ok(contentRuleStart >= 0, 'menu content viewport must be styled');
   const contentRuleEnd = compactCss.indexOf('}', contentRuleStart);
@@ -38,7 +38,7 @@ test('responsive menu keeps every destination reachable and content scrolling is
 });
 
 test('menu retains keyboard focus visibility and honors reduced motion', () => {
-  const compactCss = css.replace(/\\s+/g, '');
+  const compactCss = css.replaceAll(' ', '').replaceAll('\n', '').replaceAll('\r', '').replaceAll('\t', '');
   assert.ok(compactCss.includes(':focus-visible'), 'keyboard focus styling is required');
   assert.ok(compactCss.includes('@media(prefers-reduced-motion:reduce)'), 'reduced-motion styling is required');
 });
