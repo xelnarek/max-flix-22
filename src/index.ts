@@ -3828,7 +3828,12 @@ class PaleciakiScene extends xb.Script {
       const baseRect = joystickBase.getBoundingClientRect();
       const joystickSize = Math.min(baseRect.width || 148, baseRect.height || 148);
       const isPvpTouch = touchLayer?.classList.contains('manual-aim-mode') === true;
-      const fireControlSize = viewportHeight <= 430 ? 68 : 78;
+      const fireControlWrapper = document.getElementById('pvp-fire-control');
+      const measuredFireSize = fireControlWrapper?.getBoundingClientRect().width || 0;
+      const fireControlSize = Math.max(58, Math.min(
+        88,
+        measuredFireSize || Math.min(viewportWidth * 0.20, viewportHeight * 0.22),
+      ));
       const origin = clampTouchJoystickOrigin({
         viewportWidth,
         viewportHeight,
@@ -3836,7 +3841,7 @@ class PaleciakiScene extends xb.Script {
         touchX: event.clientX,
         touchY: event.clientY,
         joystickSize,
-        fireButtonSize: viewportHeight <= 430 ? 68 : 78,
+        fireButtonSize: fireControlSize,
         fireGap: 10,
         topHudClearance: 88,
         safeBottom: 12,
