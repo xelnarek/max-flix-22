@@ -1,7 +1,7 @@
 export interface SurvivalDifficultyProfile {
   /** Multiplier applied to each archetype's configured base HP. */
   readonly enemyHealthMultiplier: number;
-  /** Applied after the archetype's normal movement tuning. */
+  /** Reserved for explicit wave modifiers; normal Survival progression keeps movement neutral. */
   readonly enemySpeedMultiplier: number;
   /** Time between regular enemy groups; lower values mean more pressure. */
   readonly spawnIntervalSeconds: number;
@@ -17,12 +17,12 @@ function safeWave(value: number): number {
 
 /**
  * A controlled Survival difficulty curve:
- * - Enemy health and arrival cadence start slightly higher than before.
- * - Enemy movement speed is intentionally unchanged to preserve readable dodges.
- * - Attack cooldowns tighten only a little; visible projectile speed and wind-up
- *   windows are not modified here.
- * - Groups grow every three waves, while the device-specific live-enemy cap
- *   remains the final performance guardrail on handheld hardware.
+ * - Enemy health and arrival cadence start higher and continue scaling by wave.
+ * - Normal wave progression never accelerates enemy movement. Game combat
+ *   tuning keeps the 0.88x movement baseline, preserving readable dodge windows.
+ * - Enemy ability cadence and group sizes increase pressure without making
+ *   ordinary enemies run faster; named wave mutators may still define exceptions.
+ * - Device-specific live-enemy caps remain the final performance guardrail.
  * - All values have explicit limits so late runs stay predictable.
  */
 export function getSurvivalDifficultyProfile(wave: number): SurvivalDifficultyProfile {
@@ -30,7 +30,7 @@ export function getSurvivalDifficultyProfile(wave: number): SurvivalDifficultyPr
   const waveIndex = currentWave - 1;
   return {
     enemyHealthMultiplier: 1.45 + Math.min(2.55, waveIndex * 0.09),
-    enemySpeedMultiplier: Number((1 + Math.min(0.14, waveIndex * 0.005)).toFixed(2)),
+    enemySpeedMultiplier: 1,
     spawnIntervalSeconds: Math.max(4.55, 5.15 - waveIndex * 0.025),
     extraGroupSize: Math.min(6, Math.floor(waveIndex / 3)),
     enemyAbilityRateMultiplier: Number((1.18 + Math.min(0.78, waveIndex * 0.025)).toFixed(2)),
