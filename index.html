@@ -457,10 +457,47 @@
             <div class="menu-release-strip">
               <span class="menu-release-pill">NOWA ZMIANA</span>
               <span>SHIFT OVERHAUL</span><span>20 TYPÓW WROGÓW</span><span>15 PERKÓW</span><span>4 BUILDY + 12 BRONI</span>
-              <button id="btn-open-campaign" type="button" class="btn-intro-chip btn-campaign-chip" title="Otwórz tryb fabularny i wybierz etap kampanii">⚔ KAMPANIA • 5 ETAPÓW</button>
+              
               <button id="btn-open-intro" type="button" class="btn-intro-chip" title="Obejrzyj odprawę fabularną Warehouse MaDDnes">🎬 ODPRAWA</button>
             </div>
           </div>
+
+          <section class="menu-mode-selector" aria-labelledby="menu-mode-heading">
+            <div class="menu-mode-selector-heading">
+              <span class="menu-mode-eyebrow">WYBIERZ SPOSÓB ROZGRYWKI</span>
+              <h2 id="menu-mode-heading">TRYBY GRY</h2>
+              <p>Trzy niezależne drogi. Wybierz jedną bez szukania jej w zakładkach.</p>
+            </div>
+            <div class="menu-mode-grid" role="group" aria-label="Wybór trybu gry">
+              <button id="btn-start-survival" class="menu-mode-card" data-mode="survival" type="button" aria-label="Rozpocznij tryb Survival">
+                <span class="menu-mode-card-icon" aria-hidden="true">◉</span>
+                <span class="menu-mode-card-copy">
+                  <span class="menu-mode-card-kicker">TRYB BEZ KOŃCA</span>
+                  <strong>SURVIVAL</strong>
+                  <small>Fale przeciwników, ewolucje broni, eventy i rozwój buildu.</small>
+                </span>
+                <span class="menu-mode-card-action">GRAJ TERAZ <span aria-hidden="true">→</span></span>
+              </button>
+              <button id="btn-open-campaign" class="menu-mode-card" data-mode="campaign" type="button" aria-label="Otwórz kampanię i wybierz etap">
+                <span class="menu-mode-card-icon" aria-hidden="true">✦</span>
+                <span class="menu-mode-card-copy">
+                  <span class="menu-mode-card-kicker">5 MISJI • ZAPIS POSTĘPU</span>
+                  <strong>KAMPANIA</strong>
+                  <small>Krótkie etapy, bossowie, cele mistrzowskie i nagrody.</small>
+                </span>
+                <span class="menu-mode-card-action">WYBIERZ ETAP <span aria-hidden="true">→</span></span>
+              </button>
+              <button id="btn-open-pvp" class="menu-mode-card" data-mode="pvp" type="button" aria-label="Otwórz lobby Areny PvP">
+                <span class="menu-mode-card-icon" aria-hidden="true">⌖</span>
+                <span class="menu-mode-card-copy">
+                  <span class="menu-mode-card-kicker">POJEDYNEK 1 NA 1</span>
+                  <strong>ARENA PvP</strong>
+                  <small>Ręczne celowanie, trening z botem i pojedynki sieciowe.</small>
+                </span>
+                <span class="menu-mode-card-action">OTWÓRZ LOBBY <span aria-hidden="true">→</span></span>
+              </button>
+            </div>
+          </section>
 
           <div class="menu-tabs-bar">
             <button class="menu-tab-btn active" data-tab="tab-team">
@@ -1339,27 +1376,7 @@
           </div>
 
           <div class="menu-fixed-bottom-bar">
-            <div class="menu-cta-row">
-              <button id="btn-start-survival" class="btn-primary-start btn-survival-start" aria-label="Rozpocznij Survival">
-                <span class="menu-cta-icon" aria-hidden="true">
-                  <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="16" r="11"/><circle cx="16" cy="16" r="4"/><path d="M16 2v5M16 25v5M2 16h5M25 16h5M23.5 8.5l-3 3M11.5 20.5l-3 3M23.5 23.5l-3-3M11.5 11.5l-3-3"/></svg>
-                </span>
-                <span class="menu-cta-copy">
-                  <span class="survival-start-title">SURVIVAL SHIFT</span>
-                  <span class="survival-start-subtitle">ENDLESS • BEZ LIMITU CZASU • FALE CO 60 S • EVENTY • EWOLUCJE</span>
-                </span>
-              </button>
-
-              <button id="btn-open-pvp" type="button" class="btn-primary-start btn-pvp-start" aria-label="Arena PvP 1v1">
-                <span class="menu-cta-icon" aria-hidden="true">
-                  <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l8 8M14 6l-8 8M26 6l-8 8M18 6l8 8M16 16v10M12 26h8"/></svg>
-                </span>
-                <span class="menu-cta-copy">
-                  <span class="survival-start-title">ARENA PVP 1v1</span>
-                  <span class="survival-start-subtitle">POJEDYNKI SIECIOWE • TWIN-STICK • BOT TRENING</span>
-                </span>
-              </button>
-            </div>
+            
             
             <div class="menu-controls-hint">
               <span class="menu-controls-hint-survival">SURVIVAL: WSAD / strzałki / joystick • F / klik = atak • E = superumiejętność</span>
