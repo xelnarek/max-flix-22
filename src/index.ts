@@ -40,6 +40,7 @@ import { CAMPAIGN_STAGES, createInitialCampaignProgress, consumePendingCampaignR
 import { launchOniricPlatformer } from './oniricPlatformer.ts';
 import { launchCthulhuRetroArena } from './cthulhuRetroArena.ts';
 import { getMenuTabIndexForKey } from './menuTabNavigation.ts';
+import { MenuScrollMemory } from './menuScrollMemory.ts';
 import { getVisibilityPauseAction } from './visibilityPause.ts';
 import { observeWebGLContextRecovery } from './webglContextRecovery.ts';
 import { FloatingToastPool } from './floatingToastPool.ts';
@@ -2726,6 +2727,26 @@ class PaleciakiScene extends xb.Script {
     menuTabList?.setAttribute('aria-orientation', desktopMenuNavigationQuery.matches ? 'vertical' : 'horizontal');
     const menuTabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.menu-tab-btn'));
     let currentMenuTargetId = menuTabButtons.find((button) => button.classList.contains('active'))?.getAttribute('data-tab') || 'tab-team';
+    const menuScrollMemory = new MenuScrollMemory();
+    const menuContentArea = document.querySelector<HTMLElement>('.menu-tab-content-area');
+    menuContentArea?.addEventListener('scroll', () => {
+      menuScrollMemory.save(currentMenuTargetId, menuContentArea.scrollTop);
+    }, { passive: true });
+
+    const ensureMenuTabVisible = (tab: HTMLButtonElement) => {
+      if (!menuTabList) return;
+      const rail = menuTabList.getBoundingClientRect();
+      const tabBounds = tab.getBoundingClientRect();
+      if (menuTabList.scrollWidth > menuTabList.clientWidth + 1) {
+        const left = menuTabList.scrollLeft + tabBounds.left - rail.left -
+          Math.max(8, (menuTabList.clientWidth - tabBounds.width) / 2);
+        menuTabList.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
+      } else if (menuTabList.scrollHeight > menuTabList.clientHeight + 1) {
+        const top = menuTabList.scrollTop + tabBounds.top - rail.top -
+          Math.max(8, (menuTabList.clientHeight - tabBounds.height) / 2);
+        menuTabList.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+      }
+    };
 
     // One selected destination owns the content viewport on every device.
     // Mobile no longer expands eleven panels into one long dashboard.
@@ -2756,8 +2777,7 @@ class PaleciakiScene extends xb.Script {
         panel.inert = !active;
       });
 
-      const contentArea = document.querySelector<HTMLElement>('.menu-tab-content-area');
-      if (contentArea) contentArea.scrollTop = 0;
+      if (menuContentArea) menuContentArea.scrollTop = menuScrollMemory.restore(targetId);
     };
 
     document.getElementById('btn-account-cloud-sync')?.addEventListener('click', () => {
@@ -2770,7 +2790,11 @@ class PaleciakiScene extends xb.Script {
     const activateMenuTab = (selectedTab: HTMLButtonElement) => {
       const targetId = selectedTab.getAttribute('data-tab');
       if (!targetId) return;
+      if (targetId !== currentMenuTargetId && menuContentArea) {
+        menuScrollMemory.save(currentMenuTargetId, menuContentArea.scrollTop);
+      }
       currentMenuTargetId = targetId;
+      ensureMenuTabVisible(selectedTab);
 
       // The selected section owns the accent color and mode-specific launch action.
       syncMenuPanelPresentation(targetId);
@@ -2805,7 +2829,10 @@ class PaleciakiScene extends xb.Script {
 
       // A native click is generated for touch input; a second touchend handler
       // caused the same selection and lazy panel work to run twice on phones.
-      tabBtn.addEventListener('click', () => activateMenuTab(tabBtn));
+      tabBtn.addEventListener('click', () => {
+        activateMenuTab(tabBtn);
+        ensureMenuTabVisible(tabBtn);
+      });
       tabBtn.addEventListener('keydown', (event: KeyboardEvent) => {
         const nextIndex = getMenuTabIndexForKey(event.key, index, menuTabButtons.length);
         if (nextIndex === null) return;
@@ -2814,9 +2841,7 @@ class PaleciakiScene extends xb.Script {
         if (!nextTab) return;
         activateMenuTab(nextTab);
         nextTab.focus();
-        if (menuTabList && menuTabList.scrollWidth > menuTabList.clientWidth) {
-          nextTab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-        }
+        ensureMenuTabVisible(nextTab);
       });
     });
 
