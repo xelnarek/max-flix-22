@@ -611,3 +611,24 @@ test('runtime registers canonical aliases and only fills missing baseline clips'
   assert.match(game, /createRigLocomotionFallbackClips\(root, enemyType\)/);
   assert.match(game, /if \(!actions\.has\(clip\.name\)\) actions\.set\(clip\.name, mixer\.clipAction\(clip\)\)/);
 });
+
+
+test('imported enemy Attack clip peaks on the 60 percent telegraph release frame', async () => {
+  const { createRigCombatClips } = await import('../src/rigCombatClips.ts');
+  const root = new THREE.Group();
+  const hips = new THREE.Bone(); hips.name = 'Hips'; root.add(hips);
+  const spine = new THREE.Bone(); spine.name = 'Spine'; hips.add(spine);
+  const chest = new THREE.Bone(); chest.name = 'Chest'; spine.add(chest);
+  const head = new THREE.Bone(); head.name = 'Head'; chest.add(head);
+  const leftArm = new THREE.Bone(); leftArm.name = 'LeftUpperArm'; chest.add(leftArm);
+  const rightArm = new THREE.Bone(); rightArm.name = 'RightUpperArm'; chest.add(rightArm);
+  const leftForearm = new THREE.Bone(); leftForearm.name = 'LeftLowerArm'; leftArm.add(leftForearm);
+  const rightForearm = new THREE.Bone(); rightForearm.name = 'RightLowerArm'; rightArm.add(rightForearm);
+  const clips = createRigCombatClips(root, 'tool-melee', 'customer');
+  const attack = clips.find((clip) => clip.name === 'Attack');
+  assert.ok(attack, 'generated rig should have an Attack clip');
+  const shoulderTrack = attack.tracks.find((track) => track.name === 'RightUpperArm.quaternion');
+  assert.ok(shoulderTrack, 'attack must articulate the leading arm');
+  assert.ok(Math.abs(shoulderTrack.times[2] / attack.duration - 0.60) < 0.002,
+    'strike peak must coincide with the telegraph release frame');
+});
