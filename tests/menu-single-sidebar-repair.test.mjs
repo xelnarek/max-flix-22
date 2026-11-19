@@ -16,6 +16,8 @@ test('single-sidebar repair is the final menu layout layer', () => {
   );
   assert.match(css, /grid-template-areas:[\s\S]*"header header"[\s\S]*"modes modes"[\s\S]*"navigation content"/);
   assert.match(css, /\.menu-tabs-bar\s*\{[\s\S]*flex-direction:\s*column !important/);
+  assert.doesNotMatch(html, /menu-mobile-segments|menu-mobile-segment/);
+  assert.ok(!css.includes('.menu-nav-group[hidden]'));
 });
 
 test('all eleven destinations stay in one vertical navigation rail', () => {
