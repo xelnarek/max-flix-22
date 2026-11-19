@@ -15,6 +15,7 @@ import { createEnemyRoleKit } from './enemyRoleKits.ts';
 import { applyEnemyRoleAnatomy, applyEnemyRoleSecondaryMotion, clearEnemyRoleSecondaryMotion } from './enemyAnimationPolish.ts';
 import { createMakeHumanActor, MAKEHUMAN_OPERATOR_STYLES, type MakeHumanStyleId } from './makeHumanAssets.ts';
 import {
+  canonicalizeGobkitClipName,
   clampGobkitActionDuration,
   getGobkitActionPriority,
   isGobkitOneShotAction,
