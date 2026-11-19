@@ -50,3 +50,15 @@ test('invalid totals and radii cannot produce non-finite spawn coordinates', () 
   assert.ok(Number.isFinite(point.z));
   assert.equal(Math.hypot(point.x - 5, point.z - 6), 0);
 });
+
+test('horde settings return stable immutable profiles instead of per-call objects', async () => {
+  const firstMobile = getSurvivalHordeSettings(true);
+  const secondMobile = getSurvivalHordeSettings(true);
+  const firstDesktop = getSurvivalHordeSettings(false);
+  const secondDesktop = getSurvivalHordeSettings(false);
+  assert.equal(firstMobile, secondMobile);
+  assert.equal(firstDesktop, secondDesktop);
+  assert.notEqual(firstMobile, firstDesktop);
+  assert.ok(Object.isFrozen(firstMobile));
+  assert.ok(Object.isFrozen(firstDesktop));
+});

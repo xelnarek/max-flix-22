@@ -167,6 +167,10 @@ const TEMPLATES: readonly SurvivalAnomalyTemplate[] = Object.freeze([
   },
 ] as const);
 
+const TEMPLATE_BY_ID = new Map<SurvivalAnomalyId, SurvivalAnomalyTemplate>(
+  TEMPLATES.map((template) => [template.id, template] as const),
+);
+
 function clampRoll(value: number): number {
   return Number.isFinite(value) ? Math.max(0, Math.min(0.999999999, value)) : 0.5;
 }
@@ -240,9 +244,9 @@ export function advanceSurvivalAnomaly(
 
 export function getSurvivalAnomalyModifiers(state: SurvivalAnomalyState): SurvivalAnomalyModifiers {
   if (!state.active) return NEUTRAL;
-  return TEMPLATES.find((template) => template.id === state.active?.id)?.modifiers ?? NEUTRAL;
+  return TEMPLATE_BY_ID.get(state.active.id)?.modifiers ?? NEUTRAL;
 }
 
 export function getSurvivalAnomalyDefinition(id: SurvivalAnomalyId): SurvivalAnomalyTemplate | undefined {
-  return TEMPLATES.find((template) => template.id === id);
+  return TEMPLATE_BY_ID.get(id);
 }
