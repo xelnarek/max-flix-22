@@ -74,7 +74,9 @@ test('mobile menu uses real tabs and keeps exactly one panel active', async () =
   assert.match(app, /panel\.inert = !active/);
   assert.match(app, /aria-orientation', desktopMenuNavigationQuery\.matches \? 'vertical' : 'horizontal'/);
   assert.match(app, /desktopMenuNavigationQuery\.addEventListener\('change'/);
-  assert.match(app, /if \(contentArea\) contentArea\.scrollTop = 0/);
+  assert.match(app, /new MenuScrollMemory\(\)/);
+  assert.match(app, /menuScrollMemory\.save\(currentMenuTargetId, menuContentArea\.scrollTop\)/);
+  assert.match(app, /menuScrollMemory\.restore\(targetId\)/);
   const presentationStart = app.indexOf('const syncMenuPanelPresentation');
   const presentationEnd = app.indexOf("document.getElementById('btn-account-cloud-sync')", presentationStart);
   const presentation = app.slice(presentationStart, presentationEnd);

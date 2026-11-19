@@ -3,12 +3,15 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkinnedScene } from 'three/addons/utils/SkeletonUtils.js';
 import type { CharacterId, EnemyType } from './types.ts';
 import { ENEMY_VISUAL_PROFILES } from './enemyVisualProfiles.ts';
+import { BASE44_ENEMY_ASSETS } from './base44EnemyAssets.js';
 
+export type Base44EnemyModelId = keyof typeof BASE44_ENEMY_ASSETS;
 export type GobkitModelId =
   | 'storemanager' | 'firechief' | 'stockclerk' | 'baggagehandler' | 'securityguard'
   | 'foodcourier' | 'shoplifter' | 'salesrep' | 'officemanager' | 'hazmattech'
   | 'stitchedbrute' | 'bloodironjuggernaut' | 'nightwitch' | 'androidcommander'
-  | 'werewolfcaptain' | 'forcibleentryfirefighter' | 'bloodirongrunt';
+  | 'werewolfcaptain' | 'forcibleentryfirefighter' | 'bloodirongrunt'
+  | Base44EnemyModelId;
 
 export const GOBKIT_MODEL_FILES: Readonly<Record<GobkitModelId, string>> = Object.freeze({
   storemanager: 'storemanager.glb',
@@ -28,6 +31,12 @@ export const GOBKIT_MODEL_FILES: Readonly<Record<GobkitModelId, string>> = Objec
   werewolfcaptain: 'werewolfcaptain.glb',
   forcibleentryfirefighter: 'forcibleentryfirefighter.glb',
   bloodirongrunt: 'bloodirongrunt.glb',
+  pierogowy_kolos: BASE44_ENEMY_ASSETS.pierogowy_kolos.file,
+  ksiegowy_otchlani: BASE44_ENEMY_ASSETS.ksiegowy_otchlani.file,
+  turbo_golab: BASE44_ENEMY_ASSETS.turbo_golab.file,
+  janusz_rakietnik: BASE44_ENEMY_ASSETS.janusz_rakietnik.file,
+  kapibara_mafioso: BASE44_ENEMY_ASSETS.kapibara_mafioso.file,
+  parowkowy_berserker: BASE44_ENEMY_ASSETS.parowkowy_berserker.file,
 });
 
 export const CHARACTER_GOBKIT_MODELS: Readonly<Record<CharacterId, GobkitModelId>> = Object.freeze({
@@ -62,8 +71,18 @@ const modelCache = new Map<GobkitModelId, Promise<LoadedGobkitModel>>();
 export function loadGobkitModel(id: GobkitModelId): Promise<LoadedGobkitModel> {
   let pending = modelCache.get(id);
   if (!pending) {
-    const url = new URL('assets/gobkit/' + GOBKIT_MODEL_FILES[id], document.baseURI).href;
-    pending = loader.loadAsync(url).catch((error: unknown) => {
+    const base44Asset = Object.prototype.hasOwnProperty.call(BASE44_ENEMY_ASSETS, id)
+      ? BASE44_ENEMY_ASSETS[id as Base44EnemyModelId]
+      : undefined;
+    const assetDirectory = base44Asset ? 'assets/base44-enemies/' : 'assets/gobkit/';
+    const localUrl = new URL(assetDirectory + GOBKIT_MODEL_FILES[id], document.baseURI).href;
+    // Production and Android builds bundle the six user-authored GLBs locally.
+    // Preview/dev can still work when the preparation script was skipped.
+    pending = loader.loadAsync(localUrl).catch((localError: unknown) => {
+      if (!base44Asset) throw localError;
+      console.warn('[Base44] Local enemy rig unavailable; trying the source CDN:', id, localError);
+      return loader.loadAsync(base44Asset.url);
+    }).catch((error: unknown) => {
       modelCache.delete(id);
       throw error;
     });
