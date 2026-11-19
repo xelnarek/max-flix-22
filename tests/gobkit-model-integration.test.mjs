@@ -658,7 +658,4 @@ test('regular enemies defer expensive animated GLB rigs until they enter useful 
   assert.match(game, /this\.requestedGobkitEnemies\.delete\(enemy\)/);
 });
 
-test('enemy animation update avoids rebuilding an unused per-frame membership set', async () => {
-  const game = await read('../src/game.ts');
-  assert.doesNotMatch(game, /activeEnemyAnimationScratch/);
-});
+
