@@ -843,3 +843,35 @@
     padding-inline: 3px !important;
   }
 }
+
+/* Desktop grid repair: the always-visible mode launcher gets its own full-width row. */
+@media (min-width: 761px) and (pointer: fine) {
+  #title-screen .title-sheet {
+    grid-template-rows: auto auto minmax(0, 1fr) auto !important;
+  }
+
+  #title-screen .menu-mode-selector {
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  #title-screen .menu-tabs-bar {
+    grid-column: 1 !important;
+    grid-row: 3 !important;
+    min-height: 0 !important;
+  }
+
+  #title-screen .menu-tab-content-area {
+    grid-column: 2 !important;
+    grid-row: 3 !important;
+    min-height: 0 !important;
+  }
+
+  #title-screen .menu-fixed-bottom-bar {
+    grid-column: 1 / -1 !important;
+    grid-row: 4 !important;
+  }
+}
