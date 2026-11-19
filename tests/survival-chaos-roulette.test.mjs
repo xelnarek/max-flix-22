@@ -73,7 +73,7 @@ test('roulette avoids the two most recent results without changing the remaining
     'duplicate history entries must not accidentally remove extra outcomes');
 });
 
-test('roulette re-normalizes remaining weights and falls back safely for an exhausted history', () => {
+test('roulette re-normalizes remaining weights and uses only the last two entries of a longer history', () => {
   const recent = ['skill', 'perk'];
   const eligible = SURVIVAL_CHAOS_ROULETTE_TABLE.filter((entry) => !recent.includes(entry.kind));
   const seen = new Set();
@@ -83,5 +83,6 @@ test('roulette re-normalizes remaining weights and falls back safely for an exha
     seen.add(kind);
   }
   assert.equal(seen.size, eligible.length);
-  assert.equal(rollSurvivalChaosRoulette(0.5, SURVIVAL_CHAOS_ROULETTE_TABLE.map((entry) => entry.kind)), 'nova');
+  const longHistory = [...SURVIVAL_CHAOS_ROULETTE_TABLE.map((entry) => entry.kind), 'skill', 'perk'];
+  assert.equal(rollSurvivalChaosRoulette(0, longHistory), 'shield');
 });
