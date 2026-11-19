@@ -673,3 +673,16 @@
     transform: none !important;
   }
 }
+
+#title-screen .menu-mode-card-icon svg {
+  display: block;
+  width: 21px;
+  height: 21px;
+  flex: 0 0 auto;
+}
+@media (max-width: 760px) {
+  #title-screen .menu-mode-card-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+}
