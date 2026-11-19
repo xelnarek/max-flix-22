@@ -33,6 +33,7 @@
     <link rel="stylesheet" href="/src/campaign-mode.css" />
     <link rel="stylesheet" href="/src/menu-premium-refresh.css" />
     <link rel="stylesheet" href="/src/menu-scroll-repair.css" />
+    <link rel="stylesheet" href="/src/menu-system-v2.css" />
     <meta name="application-name" content="Warehouse MaDDnes" />
     <meta name="color-scheme" content="dark" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -500,69 +501,81 @@
             </div>
           </section>
 
-          <div class="menu-tabs-bar">
-            <button class="menu-tab-btn active" data-tab="tab-team">
+          <div class="menu-tabs-bar" data-menu-layout="v2" aria-label="Nawigacja menu gry">
+            <div class="menu-nav-group" role="group" aria-label="ROZGRYWKA">
+              <span class="menu-nav-group-label">01 / ROZGRYWKA</span>
+              <button type="button" class="menu-tab-btn active" data-tab="tab-team" aria-controls="tab-team">
               <span class="tab-icon">
                 <svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
               </span>
               <span class="tab-label">OPERATORZY</span>
             </button>
-            <button class="menu-tab-btn campaign-menu-tab" data-tab="tab-map" aria-controls="tab-map" aria-label="Tryb fabularny: kampania pięciu etapów oraz atlas świata" title="KAMPANIA • ATLAS ŚWIATA">
+              <button type="button" class="menu-tab-btn campaign-menu-tab" data-tab="tab-map" aria-controls="tab-map" aria-label="Tryb fabularny: kampania pięciu etapów oraz atlas świata" title="KAMPANIA • ATLAS ŚWIATA">
               <span class="tab-icon" aria-hidden="true">
                 <svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg>
               </span>
               <span class="tab-label">KAMPANIA</span>
             </button>
-            <button class="menu-tab-btn pvp-menu-tab" data-tab="tab-pvp" aria-controls="tab-pvp" aria-label="Arena PvP 1 na 1">
+              <button type="button" class="menu-tab-btn pvp-menu-tab" data-tab="tab-pvp" aria-controls="tab-pvp" aria-label="Arena PvP 1 na 1">
               <span class="tab-icon" aria-hidden="true">
                 <svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m4 4 6 6m-3-8 5 5m8 9-6-6m8 4-5-5M5 19l4-4m-2 7 5-5m7-12-4 4m7-2-5 5"/></svg>
               </span>
               <span class="tab-label">ARENA PVP</span>
             </button>
-            <button class="menu-tab-btn" data-tab="tab-enemies">
+            </div>
+            <div class="menu-nav-group" role="group" aria-label="ŚWIAT I BHP">
+              <span class="menu-nav-group-label">02 / ŚWIAT I BHP</span>
+              <button type="button" class="menu-tab-btn" data-tab="tab-enemies" aria-controls="tab-enemies">
               <span class="tab-icon">
                 <svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
               </span>
               <span class="tab-label">ZAGROŻENIA</span>
             </button>
-            <button class="menu-tab-btn" data-tab="tab-perks">
+              <button type="button" class="menu-tab-btn" data-tab="tab-perks" aria-controls="tab-perks">
               <span class="tab-icon">
                 <svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
               </span>
               <span class="tab-label">MODUŁY BHP</span>
             </button>
-            <button class="menu-tab-btn codex-tab-btn" data-tab="tab-field-guide" aria-label="Otwórz kodeks">
+              <button type="button" class="menu-tab-btn codex-tab-btn" data-tab="tab-field-guide" aria-controls="tab-field-guide" aria-label="Otwórz kodeks">
               <span class="tab-icon" aria-hidden="true">
                 <svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 5.5v16M8 7h8M8 11h7"/></svg>
               </span>
               <span class="tab-label">KODEKS</span>
             </button>
-            <button class="menu-tab-btn account-menu-tab" data-tab="tab-talent-tree" aria-controls="tab-talent-tree" aria-label="Drzewko rozwoju konta">
+            </div>
+            <div class="menu-nav-group" role="group" aria-label="POSTĘPY">
+              <span class="menu-nav-group-label">03 / POSTĘPY</span>
+              <button type="button" class="menu-tab-btn account-menu-tab" data-tab="tab-talent-tree" aria-controls="tab-talent-tree" aria-label="Drzewko rozwoju konta">
               <span class="tab-icon" aria-hidden="true"><svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-7M12 8v6M12 10 7 6M12 10l5-4M7 6 5 3M7 6l-1 4M17 6l2-3M17 6l1 4M12 14l-4 3M12 14l4 3"/><circle cx="5" cy="3" r="1.2"/><circle cx="19" cy="3" r="1.2"/></svg></span>
               <span class="tab-label">DRZEWKO</span>
             </button>
-            <button class="menu-tab-btn account-menu-tab" data-tab="tab-ranks" aria-controls="tab-ranks" aria-label="Rangi i bonusy konta">
+              <button type="button" class="menu-tab-btn account-menu-tab" data-tab="tab-ranks" aria-controls="tab-ranks" aria-label="Rangi i bonusy konta">
               <span class="tab-icon" aria-hidden="true"><svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="m8 12-2 10 6-3 6 3-2-10M10 8l1.4 1.4L14.5 6.5"/></svg></span>
               <span class="tab-label">RANGI</span>
             </button>
-            <button class="menu-tab-btn" data-tab="tab-leaderboard">
+              <button type="button" class="menu-tab-btn" data-tab="tab-leaderboard" aria-controls="tab-leaderboard">
               <span class="tab-icon">
                 <svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
               </span>
               <span class="tab-label">RANKING</span>
             </button>
-            <button class="menu-tab-btn" data-tab="tab-achievements" aria-controls="tab-achievements" aria-label="Osiągnięcia i sekrety">
+              <button type="button" class="menu-tab-btn" data-tab="tab-achievements" aria-controls="tab-achievements" aria-label="Osiągnięcia i sekrety">
               <span class="tab-icon" aria-hidden="true">
                 <svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 6H4v2a4 4 0 0 0 4 4M17 6h3v2a4 4 0 0 1-4 4"/></svg>
               </span>
               <span class="tab-label">OSIĄGNIĘCIA</span>
             </button>
-            <button class="menu-tab-btn" data-tab="tab-settings" aria-controls="tab-settings" aria-label="Ustawienia">
+            </div>
+            <div class="menu-nav-group" role="group" aria-label="SYSTEM">
+              <span class="menu-nav-group-label">04 / SYSTEM</span>
+              <button type="button" class="menu-tab-btn" data-tab="tab-settings" aria-controls="tab-settings" aria-label="Ustawienia">
               <span class="tab-icon" aria-hidden="true">
                 <svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z"/><path d="m19.4 13.5 1.1.8-1.7 3-1.3-.6a7.6 7.6 0 0 1-1.7 1l-.2 1.5h-3.4l-.2-1.5a7.6 7.6 0 0 1-1.8-1l-1.3.6-1.7-3 1.2-.8a7 7 0 0 1 0-2l-1.2-.8 1.7-3 1.3.6a7.6 7.6 0 0 1 1.8-1l.2-1.5h3.4l.2 1.5a7.6 7.6 0 0 1 1.7 1l1.3-.6 1.7 3-1.1.8a7 7 0 0 1 0 2Z"/></svg>
               </span>
               <span class="tab-label">USTAWIENIA</span>
             </button>
+            </div>
           </div>
 
           <div class="menu-tab-content-area">
