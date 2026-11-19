@@ -109,3 +109,21 @@ test('ARIA orientation follows the same 900px breakpoint as the rendered navigat
   assert.match(app, /aria-orientation', desktopMenuNavigationQuery\.matches \? 'vertical' : 'horizontal'/);
   assert.match(app, /desktopMenuNavigationQuery\.addEventListener\('change'/);
 });
+
+
+test('perk catalogue places its description below the structured card header', async () => {
+  const [html, css] = await Promise.all([
+    read('index.html'),
+    read('src/menu-system-v2.css'),
+  ]);
+  const start = html.indexOf('<div id="tab-perks"');
+  const end = html.indexOf('<div id="tab-field-guide"', start);
+  assert.ok(start >= 0 && end > start);
+  const panel = html.slice(start, end);
+  assert.equal((panel.match(/class="perk-card"/g) || []).length, 15);
+  assert.match(panel, /class="perk-card-top"[\\s\\S]*?class="perk-card-desc"/);
+  assert.match(css, /#title-screen #tab-perks \\.perk-card\\s*\\{[\\s\\S]*?grid-template-rows:\\s*auto auto !important/);
+  assert.match(css, /#title-screen #tab-perks \\.perk-card-top\\s*\\{[\\s\\S]*?grid-template-columns:\\s*38px minmax\\(0, 1fr\\) auto !important/);
+  assert.match(css, /#title-screen #tab-perks \\.perk-card-desc\\s*\\{[\\s\\S]*?grid-column:\\s*1 \\/ -1 !important/);
+  assert.match(css, /@media \\(max-width: 640px\\)[\\s\\S]*?#title-screen #tab-perks \\.perk-card-top/);
+});
