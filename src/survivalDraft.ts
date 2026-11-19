@@ -64,23 +64,29 @@ const WEAPON_ROLES: Readonly<Record<string, string>> = Object.freeze({
   wz_boomerang: 'return',
 });
 
-const SYNERGIES: Readonly<Record<string, DraftSynergy>> = Object.freeze({
-  critical: { partner: 'critical_damage', evolutionId: 'critical_protocol', label: 'Protokół krytyczny' },
-  critical_damage: { partner: 'critical', evolutionId: 'critical_protocol', label: 'Protokół krytyczny' },
-  ability: { partner: 'rapid', evolutionId: 'ultimate_charge_chain', label: 'Łańcuch mocy' },
-  rapid: { partner: 'ability', evolutionId: 'ultimate_charge_chain', label: 'Łańcuch mocy' },
-  dash: { partner: 'boots', evolutionId: 'ghost_protocol', label: 'Krok widma' },
-  boots: { partner: 'dash', evolutionId: 'ghost_protocol', label: 'Krok widma' },
-  damage: { partner: 'rapid', evolutionId: 'overdrive', label: 'Overdrive: linia ognia' },
-  drone: { partner: 'range', evolutionId: 'piorun_mk2', label: 'Piorun MK II' },
-  range: { partner: 'drone', evolutionId: 'piorun_mk2', label: 'Piorun MK II' },
-  growth: { partner: 'scavenger', evolutionId: 'premium_logistics', label: 'Premium Logistics' },
-  scavenger: { partner: 'growth', evolutionId: 'premium_logistics', label: 'Premium Logistics' },
-  regen: { partner: 'armor', evolutionId: 'bhp_fortress', label: 'Fort BHP' },
-  armor: { partner: 'regen', evolutionId: 'bhp_fortress', label: 'Fort BHP' },
-  ricochet: { partner: 'radiation', evolutionId: 'chain_reactor', label: 'Reaktor łańcuchowy' },
-  radiation: { partner: 'ricochet', evolutionId: 'chain_reactor', label: 'Reaktor łańcuchowy' },
-  shrapnel: { partner: 'ricochet', evolutionId: 'crystal_cascade', label: 'Kryształowa kaskada' },
+const SYNERGIES: Readonly<Record<string, readonly DraftSynergy[]>> = Object.freeze({
+  critical: [{ partner: 'critical_damage', evolutionId: 'critical_protocol', label: 'Protokół krytyczny' }],
+  critical_damage: [{ partner: 'critical', evolutionId: 'critical_protocol', label: 'Protokół krytyczny' }],
+  ability: [{ partner: 'rapid', evolutionId: 'ultimate_charge_chain', label: 'Łańcuch mocy' }],
+  rapid: [
+    { partner: 'ability', evolutionId: 'ultimate_charge_chain', label: 'Łańcuch mocy' },
+    { partner: 'damage', evolutionId: 'overdrive', label: 'Overdrive: linia ognia' },
+  ],
+  dash: [{ partner: 'boots', evolutionId: 'ghost_protocol', label: 'Krok widma' }],
+  boots: [{ partner: 'dash', evolutionId: 'ghost_protocol', label: 'Krok widma' }],
+  damage: [{ partner: 'rapid', evolutionId: 'overdrive', label: 'Overdrive: linia ognia' }],
+  drone: [{ partner: 'range', evolutionId: 'piorun_mk2', label: 'Piorun MK II' }],
+  range: [{ partner: 'drone', evolutionId: 'piorun_mk2', label: 'Piorun MK II' }],
+  growth: [{ partner: 'scavenger', evolutionId: 'premium_logistics', label: 'Premium Logistics' }],
+  scavenger: [{ partner: 'growth', evolutionId: 'premium_logistics', label: 'Premium Logistics' }],
+  regen: [{ partner: 'armor', evolutionId: 'bhp_fortress', label: 'Fort BHP' }],
+  armor: [{ partner: 'regen', evolutionId: 'bhp_fortress', label: 'Fort BHP' }],
+  ricochet: [
+    { partner: 'radiation', evolutionId: 'chain_reactor', label: 'Reaktor łańcuchowy' },
+    { partner: 'shrapnel', evolutionId: 'crystal_cascade', label: 'Kryształowa kaskada' },
+  ],
+  radiation: [{ partner: 'ricochet', evolutionId: 'chain_reactor', label: 'Reaktor łańcuchowy' }],
+  shrapnel: [{ partner: 'ricochet', evolutionId: 'crystal_cascade', label: 'Kryształowa kaskada' }],
 });
 
 const BASE_WEIGHTS: Readonly<Record<string, number>> = Object.freeze({
@@ -145,14 +151,18 @@ function getPairBonus(
   context: SurvivalDraftContext,
   plannedIds: ReadonlySet<string>,
 ): number {
-  const synergy = SYNERGIES[id];
-  if (!synergy || getEvolutions(context).has(synergy.evolutionId)) return 0;
-  const partnerOwned = safeCount(getStacks(context)[synergy.partner]);
-  const partnerPlanned = plannedIds.has(synergy.partner);
-  if (partnerOwned > 0 || partnerPlanned) {
-    return 25 + Math.min(2, partnerOwned) * 5 + (partnerPlanned ? 8 : 0);
+  const synergies = SYNERGIES[id] || [];
+  const stacks = getStacks(context);
+  let bestBonus = 0;
+  for (const synergy of synergies) {
+    if (getEvolutions(context).has(synergy.evolutionId)) continue;
+    const partnerOwned = safeCount(stacks[synergy.partner]);
+    const partnerPlanned = plannedIds.has(synergy.partner);
+    if (partnerOwned > 0 || partnerPlanned) {
+      bestBonus = Math.max(bestBonus, 25 + Math.min(2, partnerOwned) * 5 + (partnerPlanned ? 8 : 0));
+    }
   }
-  return 0;
+  return bestBonus;
 }
 
 /** A transparent relevance score used to rank choices, not to change their effect. */
@@ -177,7 +187,7 @@ export function scoreSurvivalDraftOption(
     const role = WEAPON_ROLES[weapon.weaponId];
     const ownedRoles = new Set((context.weapons || []).map((entry) => WEAPON_ROLES[entry.id]).filter(Boolean));
     const roleBonus = role && !ownedRoles.has(role) ? 14 : -10;
-    return 170 + passiveStacks * 18 + (passiveStacks >= 2 ? 8 : 0) + roleBonus;
+    return 300 + passiveStacks * 18 + (passiveStacks >= 2 ? 8 : 0) + roleBonus;
   }
 
   let score = BASE_WEIGHTS[id] ?? 50;
@@ -306,11 +316,15 @@ export function getSurvivalDraftSynergyHint(
     if (weapon.kind === 'evolve') return 'EWOLUCJA GOTOWA: wymagane połączenie broni i modułu jest już kompletne.';
   }
 
-  const synergy = SYNERGIES[id];
-  if (!synergy) return null;
-  const partnerOwned = safeCount(getStacks(context)[synergy.partner]) > 0;
-  const partnerPlanned = plannedIds.includes(synergy.partner);
-  if (!partnerOwned && !partnerPlanned) return null;
-  if (getEvolutions(context).has(synergy.evolutionId)) return 'EWOLUCJA ODBLOKOWANA: ' + synergy.label + '.';
-  return 'ZGRANIE ZESTAWU: zbliża do ewolucji „' + synergy.label + '”.';
+  const synergies = SYNERGIES[id] || [];
+  for (const synergy of synergies) {
+    const partnerOwned = safeCount(getStacks(context)[synergy.partner]) > 0;
+    const partnerPlanned = plannedIds.includes(synergy.partner);
+    if (!partnerOwned && !partnerPlanned) continue;
+    if (getEvolutions(context).has(synergy.evolutionId)) {
+      return 'EWOLUCJA ODBLOKOWANA: ' + synergy.label + '.';
+    }
+    return 'ZGRANIE ZESTAWU: zbliża do ewolucji „' + synergy.label + '”.';
+  }
+  return null;
 }
