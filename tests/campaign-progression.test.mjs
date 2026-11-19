@@ -128,6 +128,7 @@ test('field orders are optional until boss victory and apply direction-aware thr
   assert.equal(getCampaignSideOrderProgress(night, { playerHpPercent: 60, bossDefeated: true }).completed, true);
   assert.equal(getCampaignSideOrderProgress(final, { bossKillSeconds: 36, bossDefeated: true }).completed, false);
   assert.equal(getCampaignSideOrderProgress(final, { bossKillSeconds: 35, bossDefeated: true }).completed, true);
+  assert.equal(getCampaignSideOrderProgress(final, { bossKillSeconds: 35.01, bossDefeated: true }).completed, false);
   assert.equal(getCampaignSideOrderProgress(final, { bossKillSeconds: 20, bossDefeated: false }).completed, false);
 });
 
