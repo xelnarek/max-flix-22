@@ -115,3 +115,27 @@ test('enemy HUD, telegraphs, proxy and active rig remain separate from the disca
   assert.equal(rangedTelegraph.visible, true);
   assert.equal(meleeTelegraph.visible, true);
 });
+
+
+test('both imported enemy rig paths remove the full procedural body and retire old model-only appendages', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
+  const attachBlocks = [
+    ['private async attachMakeHumanEnemyModel', 'private async attachGobkitOperatorModel'],
+    ['private async attachGobkitEnemyModel', 'private updateGobkitAnimations'],
+  ];
+  for (const [startMarker, endMarker] of attachBlocks) {
+    const start = game.indexOf(startMarker);
+    const end = game.indexOf(endMarker, start + startMarker.length);
+    assert.ok(start >= 0 && end > start, 'expected enemy model attachment path');
+    const block = game.slice(start, end);
+    assert.match(block, /removeLegacyEnemyBodyVisuals\(mesh as THREE\.Group, overlays\)/);
+    assert.match(block, /enemy\.propeller = undefined/);
+    assert.match(block, /enemy\.bikeWheels = undefined/);
+    const overlayStart = block.indexOf('const overlays = [');
+    const overlayEnd = block.indexOf('].filter', overlayStart);
+    const overlayList = block.slice(overlayStart, overlayEnd);
+    assert.doesNotMatch(overlayList, /enemy\.propeller|bikeWheels/,
+      'obsolete model appendages must not be carried into the imported rig');
+  }
+});
