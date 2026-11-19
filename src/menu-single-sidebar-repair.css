@@ -745,3 +745,142 @@
     scroll-behavior: auto !important;
   }
 }
+
+
+/* READABILITY PASS — clearer group hierarchy and practical touch targets. */
+#title-screen .menu-nav-group {
+  border-left: 2px solid transparent !important;
+  padding-left: 5px !important;
+  transition: border-color .16s ease !important;
+}
+#title-screen .menu-nav-group[data-active-group="true"] {
+  border-left-color: rgba(239, 69, 69, .78) !important;
+}
+#title-screen .menu-nav-group[data-active-group="true"] .menu-nav-group-label {
+  color: #e6b2ad !important;
+}
+#title-screen .menu-nav-group[data-active-group="true"] .menu-nav-group-label::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin: 0 6px 1px 0;
+  border-radius: 50%;
+  background: #f05250;
+  box-shadow: 0 0 8px rgba(240, 82, 80, .55);
+}
+#title-screen .menu-tab-btn:focus-visible {
+  outline: 2px solid rgba(255, 123, 115, .92) !important;
+  outline-offset: 2px !important;
+}
+#title-screen .menu-tab-btn.active::after,
+#title-screen .menu-tab-btn[aria-selected="true"]::after {
+  content: "";
+  flex: 0 0 5px;
+  width: 5px;
+  height: 5px;
+  margin-left: auto;
+  border-radius: 50%;
+  background: #ff7770;
+  box-shadow: 0 0 8px rgba(255, 90, 83, .42);
+}
+
+@media (max-width: 900px) {
+  #title-screen .title-sheet {
+    grid-template-columns: clamp(122px, 31vw, 188px) minmax(0, 1fr) !important;
+  }
+  #title-screen .menu-tabs-bar {
+    gap: 7px !important;
+    padding: 6px !important;
+  }
+  #title-screen .menu-nav-group {
+    gap: 4px !important;
+    padding-left: 4px !important;
+  }
+  #title-screen .menu-nav-group-label {
+    padding: 0 3px 3px !important;
+    font-size: 7.5px !important;
+    line-height: 1.25 !important;
+    letter-spacing: .045em !important;
+  }
+  #title-screen .menu-tab-btn {
+    min-height: 42px !important;
+    gap: 6px !important;
+    padding: 6px 5px !important;
+    font-size: clamp(7.8px, 2.1vw, 9px) !important;
+    line-height: 1.15 !important;
+  }
+  #title-screen .menu-tab-btn .tab-icon,
+  #title-screen .menu-tab-btn .ui-svg-icon {
+    flex-basis: 16px !important;
+    width: 16px !important;
+    height: 16px !important;
+  }
+  #title-screen .menu-tab-btn .tab-icon svg,
+  #title-screen .menu-tab-btn .ui-svg-icon {
+    width: 15px !important;
+    height: 15px !important;
+    max-width: 15px !important;
+    max-height: 15px !important;
+  }
+  #title-screen .menu-mode-card,
+  #title-screen .menu-mode-card[data-mode="pvp"] {
+    min-height: 66px !important;
+  }
+  #title-screen .menu-mode-card-copy strong {
+    font-size: clamp(9px, 2.6vw, 11px) !important;
+  }
+  #title-screen .menu-mode-card-action {
+    font-size: 7px !important;
+  }
+  #title-screen #tab-team .char-detail-view-nav {
+    gap: 4px !important;
+    padding: 4px !important;
+  }
+  #title-screen #tab-team .char-detail-view-btn {
+    min-height: 34px !important;
+    padding: 6px 4px !important;
+    font-size: 7.8px !important;
+    line-height: 1.15 !important;
+  }
+}
+
+@media (max-width: 380px) {
+  #title-screen .title-sheet {
+    grid-template-columns: 116px minmax(0, 1fr) !important;
+  }
+  #title-screen .menu-tab-btn {
+    min-height: 40px !important;
+    padding-inline: 4px !important;
+    font-size: 7.6px !important;
+  }
+  #title-screen .menu-nav-group-label {
+    font-size: 7px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  #title-screen #tab-enemies .enemies-guide-grid,
+  #title-screen #tab-perks .perk-shop-grid,
+  #title-screen #tab-field-guide .field-guide-card-grid,
+  #title-screen #tab-map .campaign-stage-grid,
+  #title-screen #tab-map .mega-map-biome-grid,
+  #title-screen #tab-map .mega-map-route-grid,
+  #title-screen #tab-pvp .pvp-menu-feature-grid,
+  #title-screen #tab-achievements .survival-achievement-grid,
+  #title-screen #tab-talent-tree .account-tree-grid,
+  #title-screen #tab-team .character-talent-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    align-items: stretch !important;
+  }
+  #title-screen .tab-panel :is(.enemy-guide-card,.perk-card,.field-guide-card,.campaign-stage-card,.mega-map-biome-card,.mega-map-route,.pvp-menu-feature-card,.achievement-card,.character-talent-card) {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #title-screen .menu-nav-group {
+    transition: none !important;
+  }
+}
