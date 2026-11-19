@@ -125,7 +125,9 @@ test('regular ranged enemies telegraph a locked shot and stop moving during wind
   assert.match(game, /private advanceEnemyRangedAttackTelegraph\(enemy: EnemyItem, dt: number\)/);
   assert.match(game, /private cancelEnemyRangedAttackTelegraph\(enemy: EnemyItem/);
   assert.match(game, /enemy\.aiRangedLockedDirection = direction/);
-  assert.match(game, /spawnBossLaneTelegraph\([\s\S]*?profile\.laneWidth[\s\S]*?profile\.windupSeconds/);
+  assert.match(game, /enemy\.aiRangedTelegraphMesh = this\.spawnEnemyTelegraphCue/);
+  assert.match(game, /this\.clearEnemyRangedTelegraphVisual\(enemy\)/);
+  assert.match(game, /this\.activeEnemyAttackTelegraphIds\.add\(enemy\.id\)/);
   assert.match(game, /const isTelegraphingRangedBoss = enemy\.aiRangedWindupTimer !== undefined/);
   assert.match(game, /enemy\.mesh\.rotation\.y = enemy\.aiRangedWindupTimer !== undefined/);
   assert.match(game, /if \(factionBrawlActive\) \{[\s\S]*?cancelEnemyRangedAttackTelegraph\(e, true\)/);
@@ -175,7 +177,27 @@ test('regular melee enemies use role-specific wind-up lanes and delayed contact 
   assert.match(game, /if \(meleeProfile && !meleeStrikeReady && !meleeCounterActive\)/);
   assert.match(game, /if \(meleeStrikeReady && !meleeStrikeConnected\)/);
   assert.match(game, /actualDamage > 0 && \(enemy\.aiMeleeWindupTimer !== undefined \|\| enemy\.aiMeleeStrikePending\)/);
-  assert.match(game, /activeEnemyMeleeTelegraphIds\.size >= platformLimit/);
+  assert.match(game, /enemy\.aiMeleeTelegraphMesh = this\.spawnEnemyTelegraphCue/);
+  assert.match(game, /hasEnemyAttackTelegraphCapacity\(this\.activeEnemyAttackTelegraphIds\.size, this\.isHandheldViewport\)/);
+});
+
+test('regular enemy attack cues float over the attacker and are removed instead of drawing floor trails', () => {
+  assert.match(game, /private spawnEnemyTelegraphCue\(/);
+  assert.match(game, /cue\.name = 'ENEMY_ATTACK_TELEGRAPH_CUE'/);
+  assert.match(game, /cue\.position\.set\(0, 1\.85, 0\)/);
+  assert.match(game, /enemy\.mesh\.add\(cue\)/);
+  assert.match(game, /new THREE\.TorusGeometry\(0\.27, 0\.038, 5, 20\)/);
+  assert.match(game, /new THREE\.ConeGeometry\(0\.15, 0\.26, 4\)/);
+  assert.match(game, /cleanup: \(\) => \{[\s\S]*?cue\.removeFromParent\(\)/);
+  assert.match(game, /private clearEnemyTelegraphCue\(cue: THREE\.Group \| undefined\)/);
+  assert.match(game, /private clearEnemyRangedTelegraphVisual\(enemy: EnemyItem\)/);
+});
+
+test('melee and ranged attacks share a small handheld warning budget and retry after pressure clears', () => {
+  assert.match(game, /hasEnemyAttackTelegraphCapacity\(this\.activeEnemyAttackTelegraphIds\.size, this\.isHandheldViewport\)/);
+  assert.match(game, /enemy\.specialActionTimer = Math\.max\(enemy\.specialActionTimer \?\? 0, 0\.24\)/);
+  assert.match(game, /enemy\.aiMeleeCooldownTimer = Math\.max\(enemy\.aiMeleeCooldownTimer \?\? 0, 0\.24\)/);
+  assert.match(game, /this\.activeEnemyAttackTelegraphIds\.clear\(\)/);
 });
 
 test('ordinary melee attacks hold position briefly after impact and player damage interrupts recovery', () => {
