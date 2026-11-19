@@ -420,3 +420,134 @@
   }
   #title-screen :is(.menu-mode-card,.menu-tab-btn,.char-card,.campaign-stage-card):hover { transform: none !important; }
 }
+
+/* Loading screen and cinematic briefing share the menu's visual language. */
+.asset-loader-overlay {
+  background:
+    radial-gradient(ellipse at 50% 32%, rgba(145,184,162,.13), transparent 54%),
+    linear-gradient(145deg, rgba(8,14,12,.97), rgba(17,27,22,.985)) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+}
+.asset-loader-overlay .loader-modal-card.loader-maddnes-card {
+  border: 1px solid rgba(212,183,124,.28) !important;
+  border-radius: 20px !important;
+  background:
+    radial-gradient(ellipse at 15% 0%, rgba(145,184,162,.11), transparent 45%),
+    linear-gradient(150deg, rgba(35,48,40,.985), rgba(13,20,16,.995)) !important;
+  box-shadow: 0 30px 100px rgba(0,0,0,.62), inset 0 1px 0 rgba(255,255,255,.06) !important;
+}
+.asset-loader-overlay .loader-brand-row {
+  align-items: center !important;
+  gap: 18px !important;
+}
+.asset-loader-overlay .loader-art {
+  border: 1px solid rgba(212,183,124,.24) !important;
+  border-radius: 16px !important;
+  background: linear-gradient(145deg, rgba(145,184,162,.12), rgba(212,183,124,.045)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06) !important;
+}
+.asset-loader-overlay .loader-kicker { color: var(--wmx-brass) !important; letter-spacing: .16em !important; }
+.asset-loader-overlay .loader-header { color: var(--wmx-text) !important; letter-spacing: -.035em !important; }
+.asset-loader-overlay .loader-header span { color: var(--wmx-brass) !important; }
+.asset-loader-overlay .loader-subtitle { color: var(--wmx-muted) !important; }
+.asset-loader-overlay .loader-category-pill {
+  border: 1px solid var(--wmx-line) !important;
+  border-radius: 11px !important;
+  background: rgba(255,255,255,.035) !important;
+}
+.asset-loader-overlay .loader-category-pill .cat-icon { color: var(--wmx-brass) !important; }
+.asset-loader-overlay .loader-category-pill .cat-name { color: var(--wmx-muted) !important; }
+.asset-loader-overlay .loader-category-pill .cat-count { color: var(--wmx-text) !important; }
+.asset-loader-overlay .loader-track {
+  height: 8px !important;
+  border: 1px solid rgba(212,183,124,.18) !important;
+  border-radius: 99px !important;
+  background: rgba(0,0,0,.34) !important;
+  overflow: hidden !important;
+}
+.asset-loader-overlay .loader-fill {
+  border-radius: inherit !important;
+  background: linear-gradient(90deg, #789d83, #d4b77c) !important;
+  box-shadow: 0 0 16px rgba(145,184,162,.24) !important;
+}
+.asset-loader-overlay .loader-category-badge {
+  border: 1px solid rgba(145,184,162,.28) !important;
+  border-radius: 99px !important;
+  background: rgba(145,184,162,.09) !important;
+  color: #b5d2bd !important;
+}
+.asset-loader-overlay .loader-status-text,
+.asset-loader-overlay .loader-percent { color: var(--wmx-text) !important; }
+.asset-loader-overlay .loader-tip-box {
+  border: 1px solid rgba(212,183,124,.18) !important;
+  border-radius: 11px !important;
+  background: rgba(212,183,124,.055) !important;
+  color: #c7c2b2 !important;
+}
+.cinematic-intro-overlay {
+  background:
+    radial-gradient(ellipse at 50% 38%, rgba(145,184,162,.15), transparent 56%),
+    linear-gradient(145deg, #0d1511, #19231d 52%, #0c120f) !important;
+}
+.cinematic-intro-overlay :is(.cinematic-intro-top,.cinematic-intro-bottom) {
+  border-color: var(--wmx-line) !important;
+}
+.cinematic-intro-overlay :is(h1,h2,.cinematic-intro-title) { color: var(--wmx-text) !important; }
+.cinematic-intro-overlay :is(p,.cinematic-intro-copy,.cinematic-intro-subtitle) { color: var(--wmx-muted) !important; }
+.cinematic-intro-overlay :is(button,.cinematic-intro-action) {
+  border-color: rgba(212,183,124,.32) !important;
+  border-radius: 999px !important;
+  background: rgba(212,183,124,.10) !important;
+  color: var(--wmx-brass) !important;
+}
+/* Modal surfaces, audio controls and post-run reports use one coherent system. */
+.game-modal {
+  background: rgba(5,9,7,.78) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+.game-modal > .modal-card {
+  border: 1px solid rgba(212,183,124,.22) !important;
+  border-radius: 18px !important;
+  background:
+    radial-gradient(ellipse at 12% 0%, rgba(145,184,162,.08), transparent 44%),
+    linear-gradient(150deg, #202c25, #111a15 78%) !important;
+  box-shadow: 0 28px 90px rgba(0,0,0,.58), inset 0 1px 0 rgba(255,255,255,.045) !important;
+  color: var(--wmx-text) !important;
+}
+.game-modal .modal-title { color: var(--wmx-text) !important; letter-spacing: -.02em !important; }
+.game-modal .modal-desc,
+.game-modal :is(.summary-label,.gameover-damage-note,.campaign-reward-note) { color: var(--wmx-muted) !important; }
+.game-modal .summary-item,
+.game-modal :is(.gameover-damage-panel,.campaign-reward-panel,.pvp-network-box,.pvp-practice-box,.pvp-end-comparison) {
+  border-color: var(--wmx-line) !important;
+  border-radius: 12px !important;
+  background: rgba(255,255,255,.035) !important;
+}
+.game-modal :is(.btn-modal,.btn-submit-score) {
+  min-height: 42px !important;
+  border: 1px solid rgba(212,183,124,.24) !important;
+  border-radius: 10px !important;
+  background: linear-gradient(145deg, rgba(54,69,57,.96), rgba(26,38,30,.98)) !important;
+  color: var(--wmx-text) !important;
+  font-weight: 800 !important;
+  letter-spacing: .035em !important;
+}
+.game-modal :is(.btn-modal.btn-primary,.btn-submit-score) {
+  border-color: rgba(212,183,124,.45) !important;
+  background: linear-gradient(110deg, #8f7950, #5f795f) !important;
+  color: #fff8e9 !important;
+}
+.game-modal :is(input,select) {
+  border-color: var(--wmx-line-strong) !important;
+  border-radius: 9px !important;
+  background: rgba(7,13,9,.55) !important;
+  color: var(--wmx-text) !important;
+}
+@media (max-width: 560px) {
+  .asset-loader-overlay .loader-brand-row { gap: 10px !important; }
+  .asset-loader-overlay .loader-art { width: 86px !important; min-width: 86px !important; }
+  .asset-loader-overlay .loader-header { font-size: clamp(17px,5vw,23px) !important; }
+  .asset-loader-overlay .loader-subtitle { font-size: 10px !important; line-height: 1.35 !important; }
+}
