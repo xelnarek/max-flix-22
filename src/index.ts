@@ -744,7 +744,9 @@ class PaleciakiScene extends xb.Script {
       panel?.classList.toggle('hidden', !visible);
       if (!optionsRoot) return;
       optionsRoot.replaceChildren();
-      if (count) count.textContent = campaignRewardChoices.length === 4 ? '4 KARTY • BONUS ZA ZLECENIE' : '3 KARTY • 1 WYBÓR';
+      const hasBonusChoice = campaignRewardChoices.length === 4;
+      optionsRoot.classList.toggle('has-bonus', hasBonusChoice);
+      if (count) count.textContent = hasBonusChoice ? '4 KARTY • BONUS ZA ZLECENIE' : '3 KARTY • 1 WYBÓR';
       if (!visible) return;
 
       for (const reward of campaignRewardChoices) {
@@ -777,6 +779,7 @@ class PaleciakiScene extends xb.Script {
         note.textContent = selectedReward
           ? 'Wybrano: ' + selectedReward.title + '. Premia zostanie zastosowana przy rozpoczęciu następnego etapu.'
           : 'Wybierz jedną premię dla następnego etapu.';
+        if (hasBonusChoice) note.textContent += ' Zlecenie specjalne odblokowało czwartą kartę.';
       }
     };
 
