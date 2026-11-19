@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { isPng, makePolyHavenMapUrl, POLYHAVEN_TEXTURE_ASSETS } from '../scripts/polyHavenPack.mjs';
+import { getPolyHavenResolutions, isPng, makePolyHavenMapUrl, POLYHAVEN_TEXTURE_ASSETS } from '../scripts/polyHavenPack.mjs';
 
 test('curated CC0 warehouse surfaces point to pinned 2K Poly Haven texture URLs', () => {
   const floor = makePolyHavenMapUrl('concrete_floor_worn_001', 'diff', '2k');
@@ -26,4 +26,11 @@ test('Survival and Campaign high-bay structures use the shared CC0 steel PBR set
   assert.match(game, /applyPolyHavenPbrMaps\(floorMaterial, 'concrete_floor_worn_001'/);
   assert.match(game, /applyPolyHavenPbrMaps\(wallMaterial, 'factory_wall'/);
   assert.match(game, /applyPolyHavenPbrMaps\(barrierMaterial, 'metal_plate_02'/);
+});
+
+test('Android uses 1K PBR textures while web keeps the sharper 2K tier with a 1K fallback', () => {
+  assert.deepEqual(getPolyHavenResolutions('1k'), ['1k']);
+  assert.deepEqual(getPolyHavenResolutions(undefined), ['2k', '1k']);
+  assert.deepEqual(getPolyHavenResolutions('2k'), ['2k', '1k']);
+  assert.deepEqual(getPolyHavenResolutions('unexpected'), ['2k', '1k']);
 });
