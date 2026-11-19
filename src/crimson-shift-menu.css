@@ -110,3 +110,181 @@
 @media (prefers-reduced-motion:reduce) {
  #title-screen .menu-mode-card,#title-screen .menu-tab-btn {transition:none!important}
 }
+
+
+/* CRIMSON SHIFT — final menu finish; presentation only, existing actions preserved. */
+#title-screen {
+  --cs-red:#e12c32; --cs-red-hot:#ff625b; --cs-blood:#7c111b;
+  --cs-ink:#08080a; --cs-panel:#141114; --cs-line:rgba(226,70,68,.24);
+  --cs-copy:#f3ece9; --cs-muted:#b5a8a8;
+}
+#title-screen .title-sheet {
+  position:relative !important; isolation:isolate;
+  border:1px solid rgba(237,74,70,.3) !important;
+  background:
+    radial-gradient(ellipse at 100% 0%,rgba(175,28,39,.13),transparent 38%),
+    radial-gradient(ellipse at 0% 100%,rgba(109,17,27,.12),transparent 42%),
+    linear-gradient(145deg,rgba(18,13,16,.985),rgba(7,7,9,.99)) !important;
+  box-shadow:0 28px 90px rgba(0,0,0,.72),0 0 42px rgba(174,28,38,.09),inset 0 1px 0 rgba(255,255,255,.045) !important;
+}
+#title-screen .title-sheet::before {
+  content:""; position:absolute; inset:0; z-index:-1; pointer-events:none; opacity:.32;
+  background:repeating-linear-gradient(118deg,transparent 0 46px,rgba(255,255,255,.018) 47px,transparent 48px 94px),
+    linear-gradient(90deg,transparent 0 49.8%,rgba(255,80,72,.045) 50%,transparent 50.2%);
+}
+#title-screen .menu-top-header {
+  position:relative !important; border-bottom:1px solid rgba(230,73,68,.25) !important;
+  background:linear-gradient(105deg,rgba(13,9,12,.86),rgba(48,12,18,.42),rgba(10,9,11,.88)) !important;
+}
+#title-screen .menu-top-header::after {
+  content:"B4  /  CRIMSON SHIFT"; position:absolute; right:clamp(8px,2vw,24px); bottom:8px;
+  color:rgba(255,105,96,.28); font:800 9px/1 "JetBrains Mono",monospace; letter-spacing:.2em; pointer-events:none;
+}
+#title-screen .brand-badge-pill {
+  color:#ff8b82 !important; border-color:rgba(255,91,82,.42) !important;
+  background:rgba(97,13,23,.32) !important; box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 0 18px rgba(212,38,46,.08) !important;
+}
+#title-screen .menu-game-title { color:#fff5f1 !important; text-shadow:0 4px 28px rgba(0,0,0,.8),0 0 28px rgba(200,36,43,.12) !important; }
+#title-screen .menu-game-title span { color:#ff4c48 !important; text-shadow:0 0 22px rgba(235,44,51,.34) !important; }
+#title-screen .menu-game-subtitle { color:#c6b6b4 !important; letter-spacing:.15em !important; }
+#title-screen .menu-release-strip > span:not(.menu-release-pill) {
+  color:#bdaead !important; border:1px solid rgba(231,82,75,.15) !important;
+  border-radius:999px !important; padding:3px 8px !important; background:rgba(255,255,255,.025) !important;
+}
+#title-screen .btn-intro-chip {
+  color:#ffe5e0 !important; border:1px solid rgba(255,91,82,.45) !important;
+  background:linear-gradient(135deg,rgba(139,18,29,.62),rgba(25,10,14,.86)) !important;
+}
+#title-screen .menu-mode-selector {
+  border-color:rgba(232,76,69,.26) !important;
+  background:radial-gradient(ellipse at 50% 0%,rgba(165,30,39,.11),transparent 55%),linear-gradient(150deg,rgba(26,13,17,.88),rgba(10,9,11,.96)) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 12px 30px rgba(0,0,0,.26) !important;
+}
+#title-screen .menu-mode-selector-heading h2 { color:#f7eeeb !important; }
+#title-screen .menu-mode-selector-heading p { color:#b6a7a7 !important; }
+#title-screen .menu-mode-eyebrow { color:#f07870 !important; }
+#title-screen .menu-mode-card { min-width:0 !important; border-radius:11px !important; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
+#title-screen .menu-mode-card::after {
+  content:""; position:absolute; inset:0; pointer-events:none; opacity:.36;
+  background:repeating-linear-gradient(135deg,transparent 0 13px,rgba(255,255,255,.035) 14px,transparent 15px 28px);
+  mask-image:linear-gradient(90deg,black,transparent 88%);
+}
+#title-screen .menu-mode-card[data-mode="survival"] {
+  border-color:rgba(255,77,70,.74) !important;
+  background:radial-gradient(ellipse at 100% 0%,rgba(225,44,50,.22),transparent 58%),linear-gradient(115deg,rgba(74,10,18,.97),rgba(13,9,12,.99)) !important;
+  box-shadow:inset 3px 0 0 #ed393c,0 0 26px rgba(221,36,45,.16),0 12px 28px rgba(0,0,0,.38) !important;
+}
+#title-screen .menu-mode-card[data-mode="campaign"] {
+  border-color:rgba(201,157,101,.46) !important;
+  background:radial-gradient(ellipse at 100% 0%,rgba(174,113,54,.18),transparent 55%),linear-gradient(115deg,rgba(45,28,17,.96),rgba(13,10,11,.99)) !important;
+}
+#title-screen .menu-mode-card[data-mode="pvp"] {
+  border-color:rgba(113,159,190,.48) !important;
+  background:radial-gradient(ellipse at 100% 0%,rgba(60,119,157,.18),transparent 55%),linear-gradient(115deg,rgba(13,28,41,.97),rgba(10,10,13,.99)) !important;
+}
+#title-screen .menu-mode-card-copy strong { color:#fff5f1 !important; }
+#title-screen .menu-mode-card-copy small { color:#c5b7b4 !important; }
+#title-screen .menu-mode-card[data-mode="survival"] .menu-mode-card-icon { color:#ff625b !important; }
+#title-screen .menu-mode-card[data-mode="campaign"] .menu-mode-card-icon { color:#e8bd7d !important; }
+#title-screen .menu-mode-card[data-mode="pvp"] .menu-mode-card-icon { color:#9bc5df !important; }
+#title-screen .menu-mode-card-action { border-top-color:rgba(229,81,74,.2) !important; }
+#title-screen .menu-mode-card:hover,#title-screen .menu-mode-card:focus-visible {
+  transform:translateY(-2px) !important; border-color:rgba(255,99,91,.82) !important; filter:brightness(1.1);
+}
+#title-screen .menu-tabs-bar {
+  border:1px solid rgba(228,73,69,.28) !important;
+  background:linear-gradient(180deg,rgba(25,12,16,.98),rgba(9,8,10,.99)) !important;
+  box-shadow:0 12px 30px rgba(0,0,0,.33),inset 0 1px 0 rgba(255,255,255,.04) !important;
+}
+#title-screen .menu-nav-group { border-color:rgba(226,73,68,.17) !important; background:linear-gradient(145deg,rgba(255,255,255,.025),rgba(0,0,0,.08)) !important; }
+#title-screen .menu-nav-group-label { color:#e87970 !important; font-family:"JetBrains Mono",monospace !important; letter-spacing:.13em !important; }
+#title-screen .menu-tab-btn { color:#c0b1b0 !important; border-radius:9px !important; }
+#title-screen .menu-tab-btn .tab-icon { color:#c17b77 !important; }
+#title-screen .menu-tab-btn:hover { color:#fff0ec !important; background:rgba(185,31,40,.12) !important; }
+#title-screen .menu-tab-btn.active,#title-screen .menu-tab-btn[aria-selected="true"] {
+  color:#fff8f5 !important; border-color:rgba(255,89,81,.46) !important;
+  background:linear-gradient(105deg,rgba(151,20,30,.43),rgba(37,12,16,.8)) !important;
+  box-shadow:inset 3px 0 0 #ed393c,0 5px 16px rgba(0,0,0,.28) !important;
+}
+#title-screen .menu-tab-btn.active .tab-icon,#title-screen .menu-tab-btn[aria-selected="true"] .tab-icon { color:#ff746c !important; }
+#title-screen .menu-tab-content-area {
+  border:1px solid rgba(224,73,68,.23) !important;
+  background:radial-gradient(ellipse at 50% 0%,rgba(124,18,28,.11),transparent 55%),linear-gradient(150deg,rgba(17,12,15,.97),rgba(8,8,10,.99)) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035) !important;
+}
+#title-screen .tab-panel :is(h1,h2,h3,h4,.section-title,.panel-title,.field-guide-heading) { color:#f4e9e5 !important; }
+#title-screen .tab-panel :is(p,.description,.subtitle,.muted,.field-guide-kicker) { color:#b9abaa; }
+#title-screen .tab-panel :is(
+  .char-card,.char-details-box,.character-mastery-panel,.enemy-guide-card,.combat-guide-banner,
+  .perk-card,.field-guide-card,.field-guide-section,.field-guide-hero,.field-guide-callout,
+  .campaign-board,.campaign-stage-card,.mega-map-hero,.mega-map-biome-card,
+  .survival-map-choice,.survival-map-directory-card,.pvp-menu-hero,.pvp-menu-feature-card,
+  .pvp-menu-roster-note,.account-progression-card,.account-ranks-panel,.account-progression-panel,
+  .leaderboard-container,.survival-achievement-section,.achievement-card,.settings-section,
+  .settings-card,.settings-group,.setting-row
+) {
+  color:#f1e8e4 !important; border-color:rgba(201,112,106,.25) !important;
+  background:linear-gradient(148deg,rgba(35,18,22,.96),rgba(12,10,13,.985)) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 9px 23px rgba(0,0,0,.22) !important;
+}
+#title-screen .tab-panel :is(
+  .char-card.active,.survival-map-choice.active,.survival-map-choice.selected,
+  .survival-map-choice[aria-pressed="true"],.pvp-operator-btn.selected
+) {
+  border-color:rgba(255,91,82,.75) !important;
+  box-shadow:inset 3px 0 0 #e12c32,0 0 0 1px rgba(255,65,58,.12),0 8px 22px rgba(0,0,0,.24) !important;
+}
+#title-screen .tab-panel :is(.enemy-guide-card,.perk-card,.field-guide-card,.campaign-stage-card,.survival-map-directory-card,.pvp-menu-feature-card) {
+  transition:transform .16s ease,border-color .16s ease,filter .16s ease !important;
+}
+#title-screen .tab-panel :is(.enemy-guide-card,.perk-card,.field-guide-card,.campaign-stage-card,.survival-map-directory-card,.pvp-menu-feature-card):hover {
+  border-color:rgba(255,91,82,.5) !important; filter:brightness(1.07); transform:translateY(-1px);
+}
+#title-screen .tab-panel :is(.char-card-name,.enemy-guide-title,.perk-card-title,.field-guide-card h3,.campaign-stage-title,.pvp-menu-feature-card h3) { color:#fff1ed !important; }
+#title-screen .tab-panel :is(.char-details-bio,.char-details-attack,.char-details-skill,.char-details-passive,.enemy-guide-desc,.perk-card-desc,.field-guide-card p) { color:#c6b7b4 !important; }
+#title-screen .tab-panel :is(.stat-bar-track,.character-mastery-track,.progress-track,.account-progress-track) {
+  background:rgba(255,255,255,.075) !important; border-color:rgba(255,255,255,.09) !important;
+}
+#title-screen .tab-panel :is(.stat-bar-fill,.character-mastery-fill,.progress-fill) {
+  background:linear-gradient(90deg,#7e111b,#e12c32,#ff766c) !important; box-shadow:0 0 12px rgba(225,44,50,.28) !important;
+}
+#title-screen .tab-panel button:not(.menu-tab-btn):not(:disabled) { border-color:rgba(218,91,84,.3); }
+#title-screen .tab-panel button:not(.menu-tab-btn):not(:disabled):hover { filter:brightness(1.1); }
+#title-screen .tab-panel button:disabled { opacity:.48 !important; cursor:not-allowed !important; filter:saturate(.4); }
+#title-screen :is(input,select,textarea) { color:#f5ece8 !important; border:1px solid rgba(210,101,95,.32) !important; background:rgba(7,7,9,.9) !important; }
+#title-screen :is(input,select,textarea)::placeholder { color:#8e7f80 !important; }
+#title-screen :is(input,select,textarea):focus { border-color:#ff625b !important; outline:2px solid rgba(255,98,91,.2) !important; }
+#title-screen .tab-panel :is(.field-guide-stamp,.field-guide-index,.perk-source-tag,.firestore-status-badge) {
+  border-color:rgba(229,87,79,.26) !important; background:rgba(121,19,28,.17) !important; color:#e9a19a !important;
+}
+#title-screen .tab-panel :is(.leaderboard-status-msg,.field-guide-controls,.field-guide-last) { color:#bcaead !important; }
+#title-screen .tab-panel :is(.field-guide-card,.enemy-guide-card,.perk-card) :is(svg,.icon,.enemy-guide-badge,.perk-card-icon) { filter:drop-shadow(0 0 8px rgba(225,44,50,.16)); }
+#title-screen :is(button,[role="button"],a):focus-visible {
+  outline:2px solid #ff746c !important; outline-offset:3px !important; box-shadow:0 0 0 5px rgba(225,44,50,.14) !important;
+}
+.asset-loader-overlay .loader-header { color:#fff3ef !important; text-shadow:0 2px 20px rgba(225,44,50,.2); }
+.asset-loader-overlay .loader-header span { color:#ff625b !important; }
+.cinematic-intro-overlay { background:radial-gradient(ellipse at 50% 38%,rgba(170,20,31,.28),transparent 48%),#08080a !important; }
+.cinematic-intro-overlay .cinematic-intro-copy h1 { color:#fff4f1 !important; text-shadow:0 4px 30px rgba(0,0,0,.86),0 0 30px rgba(225,44,50,.32) !important; }
+.cinematic-intro-overlay .cinematic-intro-subtitle { color:#ff6861 !important; letter-spacing:.18em; }
+@media (max-width:760px),(pointer:coarse) {
+  #title-screen .title-sheet { width:100% !important; max-width:none !important; max-height:100% !important; border-radius:12px !important; padding:clamp(6px,1.8vw,12px) !important; }
+  #title-screen .menu-top-header::after { display:none; }
+  #title-screen .menu-mode-card { min-width:0 !important; }
+  #title-screen .menu-tab-content-area { padding:9px 8px calc(18px + env(safe-area-inset-bottom)) !important; }
+  #title-screen .tab-panel :is(img,svg,canvas,video) { max-width:100%; }
+}
+@media (max-width:380px) and (orientation:portrait) {
+  #title-screen .menu-game-subtitle { font-size:9px !important; letter-spacing:.08em !important; }
+  #title-screen .menu-mode-card-copy strong { font-size:12px !important; }
+  #title-screen .menu-tab-btn { min-width:0 !important; }
+}
+@media (max-height:560px) and (orientation:landscape) and (pointer:coarse) {
+  #title-screen .title-sheet { gap:5px !important; }
+  #title-screen .menu-mode-card[data-mode="survival"] { min-height:58px !important; }
+}
+@media (prefers-reduced-motion:reduce) {
+  #title-screen .menu-mode-card,#title-screen .menu-tab-btn,#title-screen .tab-panel :is(.enemy-guide-card,.perk-card,.field-guide-card) {
+    transition:none !important; animation:none !important;
+  }
+}
