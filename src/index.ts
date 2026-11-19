@@ -3084,13 +3084,18 @@ class PaleciakiScene extends xb.Script {
     });
 
     window.addEventListener('keydown', (e) => {
-      if (titleScreen && !titleScreen.classList.contains('hidden')) {
-        if (e.code === 'Enter' || e.code === 'Space') {
-          selectedCampaignStageId = null;
-          doStartSurvival();
-          e.preventDefault();
-        }
-      }
+      if (!titleScreen || titleScreen.classList.contains('hidden')) return;
+      if (e.code !== 'Enter' && e.code !== 'Space') return;
+
+      // Let focused menu controls keep their native keyboard activation.
+      // The global quick-start shortcut only applies to the non-interactive
+      // title-screen background, never to Campaign or PvP buttons.
+      const target = e.target instanceof Element ? e.target : null;
+      if (target?.closest('button, a, input, textarea, select, [role="button"], [contenteditable="true"]')) return;
+
+      selectedCampaignStageId = null;
+      void doStartSurvival();
+      e.preventDefault();
     });
 
     let cinematicIntroLaunchPending = false;
