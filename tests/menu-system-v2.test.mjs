@@ -46,7 +46,8 @@ test('desktop uses a fixed left navigation rail and an independent content viewp
 });
 
 test('touch screens expose every section in a three-column grid and short landscape uses one swipeable rail', () => {
-  assert.match(css, /@media \(max-width: 900px\), \(pointer: coarse\)[\s\S]*?grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(css, /@media \(max-width: 900px\)[\s\S]*?grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.doesNotMatch(css, /@media \(max-width: 900px\), \(pointer: coarse\)/);
   assert.match(css, /\.menu-nav-group\s*\{[\s\S]*?grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
   assert.match(css, /@media \(max-width: 900px\) and \(max-height: 600px\) and \(orientation: landscape\)[\s\S]*?overflow-x:\s*auto !important/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
@@ -62,4 +63,41 @@ test('all navigation controls map to a real panel and are explicit non-submit bu
   assert.ok(buttons.every((match) => /type="button"/.test(match[1] + match[3])));
   assert.ok(buttons.every((match) => /aria-controls="tab-[^"]+"/.test(match[1] + match[3])));
   assert.deepEqual(new Set(buttons.map((match) => match[2])), new Set(panels));
+});
+
+
+test('Field Manual has a complete responsive card system for its four section widths', async () => {
+  const [html, css] = await Promise.all([
+    read('index.html'),
+    read('src/menu-system-v2.css'),
+  ]);
+  const start = html.indexOf('<div id="tab-field-guide"');
+  const end = html.indexOf('<div id="tab-leaderboard"', start);
+  assert.ok(start >= 0 && end > start);
+  const guide = html.slice(start, end);
+  assert.match(guide, /class="field-guide-card-grid three-col"/);
+  assert.match(guide, /class="field-guide-card-grid four-col"/);
+  assert.match(guide, /class="field-guide-card-grid two-col"/);
+  for (const selector of [
+    '#title-screen #tab-field-guide .field-guide-hero',
+    '#title-screen #tab-field-guide .field-guide-metrics',
+    '#title-screen #tab-field-guide .field-guide-section',
+    '#title-screen #tab-field-guide .field-guide-card-grid.three-col',
+    '#title-screen #tab-field-guide .field-guide-card-grid.four-col',
+    '#title-screen #tab-field-guide .field-guide-card-grid.two-col',
+    '#title-screen #tab-field-guide .field-guide-controls',
+  ]) {
+    assert.ok(css.includes(selector), 'missing Field Manual layout rule: ' + selector);
+  }
+  assert.match(guide, /<div><strong>7<\\/strong><span>eventów<\\/span><\\/div>/);
+  assert.match(guide, /WYDARZENIA MAGAZYNOWE • 7 SCENARIUSZY/);
+});
+
+test('global leaderboard uses the menu content viewport instead of a nested vertical scroller', () => {
+  assert.match(css, /#title-screen #tab-leaderboard \\.leaderboard-list\\s*\\{[\\s\\S]*?max-height:\\s*none !important;[\\s\\S]*?overflow:\\s*visible !important/);
+});
+
+test('coarse-pointer devices wider than 900 CSS pixels retain the desktop menu geometry', () => {
+  assert.match(css, /@media \\(max-width: 900px\\) \\{/);
+  assert.doesNotMatch(css, /@media \\(pointer: coarse\\)\\s*\\{/);
 });
