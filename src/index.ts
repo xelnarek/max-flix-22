@@ -2842,11 +2842,16 @@ class PaleciakiScene extends xb.Script {
 
       // All four labelled groups remain visible; only the destination panel
       // changes. Groups keep their semantic group role from the HTML markup.
-      menuNavigationGroups.forEach((group) => {
+      menuNavigationGroups.forEach((group, index) => {
         group.hidden = false;
         group.inert = false;
         group.setAttribute('role', 'group');
         group.setAttribute('aria-hidden', 'false');
+        const groupLabel = group.querySelector<HTMLElement>('.menu-nav-group-label');
+        if (groupLabel) {
+          groupLabel.id = groupLabel.id || `menu-group-label-${group.dataset.menuGroup || index}`;
+          group.setAttribute('aria-labelledby', groupLabel.id);
+        }
         group.dataset.activeGroup = String(group.dataset.menuGroup === owningSegment?.id);
       });
 
