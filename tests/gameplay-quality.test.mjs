@@ -1916,7 +1916,7 @@ test('campaign reward drafts render after a clear and are consumed only by their
     read('../index.html'),
     read('../src/campaign-mode.css'),
   ]);
-  assert.match(game, /public startCampaignStage(stageId: CampaignStageId, rewardId: CampaignRewardId | null = null, bonusXp = 0)/);
+  assert.match(game, /public startCampaignStage\(stageId: CampaignStageId, rewardId: CampaignRewardId \| null = null, bonusXp = 0\)/);
   assert.match(game, /getCampaignRewardDefinition\(rewardId\)/);
   assert.match(game, /case 'armor':[\s\S]*?this\.maxHp = Math\.min\(this\.charDef\.maxHp \+ 1/);
   assert.match(game, /case 'damage':[\s\S]*?this\.survivalDamageMultiplier = Math\.min\(1\.80/);
