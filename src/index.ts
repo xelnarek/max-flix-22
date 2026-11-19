@@ -3366,7 +3366,8 @@ class PaleciakiScene extends xb.Script {
       const retryStageId = nextCampaignStageId ?? lastCampaignStageId;
       if (retryStageId) {
         const campaignRewardId = consumeCampaignRewardForStage(retryStageId);
-        this.engine.startCampaignStage(retryStageId, campaignRewardId);
+        const campaignBonusXp = consumeCampaignXpBonusForStage(retryStageId);
+        this.engine.startCampaignStage(retryStageId, campaignRewardId, campaignBonusXp);
         nextCampaignStageId = null;
         campaignRewardChoices = [];
         campaignRewardTargetStageId = null;
