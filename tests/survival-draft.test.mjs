@@ -100,6 +100,17 @@ test('two complementary cards in the same draft are recognised as a planned syne
   );
 });
 
+
+test('a passive without an owned or planned partner does not receive a false synergy score bonus', () => {
+  const alone = scoreSurvivalDraftOption('critical_damage', {});
+  const paired = scoreSurvivalDraftOption('critical_damage', {}, ['critical']);
+  assert.ok(paired > alone);
+  assert.equal(
+    getSurvivalDraftSynergyHint('critical_damage', {}),
+    null,
+  );
+});
+
 test('low health sharply raises the value of recovery and defensive options', () => {
   const options = [
     { id: 'damage' },
@@ -155,7 +166,7 @@ test('Overdrive only completes at three damage stacks and two attack-speed stack
     stacks: { damage: 2, rapid: 1 },
   });
   assert.match(incomplete || '', /POSTĘP SYNERGII/);
-  assert.match(incomplete || '', /3\/3/);
+  assert.match(incomplete || '', /2\/3/);
   assert.match(incomplete || '', /2\/2/);
   assert.doesNotMatch(incomplete || '', /DOMKNIESZ SYNERGIĘ/);
 
