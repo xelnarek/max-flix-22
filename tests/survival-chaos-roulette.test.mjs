@@ -45,7 +45,7 @@ test('roulette roll covers all eighteen outcomes across the weighted intervals',
 test('invalid roulette input falls back safely to the table midpoint', () => {
   assert.equal(rollSurvivalChaosRoulette(Number.NaN), 'nova');
   assert.equal(rollSurvivalChaosRoulette(-100), 'skill');
-  assert.equal(rollSurvivalChaosRoulette(100), 'elite_delivery');
+  assert.equal(rollSurvivalChaosRoulette(100), 'weapon_draft');
 });
 
 test('roulette reel feedback is synchronized to the three stop events and final reward class', async () => {
@@ -57,7 +57,7 @@ test('roulette reel feedback is synchronized to the three stop events and final 
   assert.match(ui, /sound\.playRouletteSpin\(\)/);
   assert.match(ui, /sound\.playRouletteStop\(index\)/);
   assert.match(ui, /sound\.playRouletteResult\(isRisk\)/);
-  assert.match(ui, /const isRisk = result\.kind === 'enemy_pack' \|\| result\.kind === 'elite_delivery'/);
+  assert.match(ui, /const isRisk = result\\.kind === 'enemy_pack' \\|\\| result\\.kind === 'elite_delivery' \\|\\| result\\.kind === 'double_or_nothing'/);
   assert.match(sound, /public playRouletteSpin\(\)/);
   assert.match(sound, /public playRouletteStop\(reelIndex: number\)/);
   assert.match(sound, /public playRouletteResult\(isRisk = false\)/);
