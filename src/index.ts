@@ -2721,7 +2721,7 @@ class PaleciakiScene extends xb.Script {
     });
 
     const menuTabList = document.querySelector<HTMLElement>('.menu-tabs-bar');
-    const desktopMenuNavigationQuery = window.matchMedia('(min-width: 761px) and (pointer: fine)');
+    const desktopMenuNavigationQuery = window.matchMedia('(min-width: 901px) and (pointer: fine)');
     menuTabList?.setAttribute('role', 'tablist');
     menuTabList?.setAttribute('aria-label', 'Sekcje menu głównego');
     menuTabList?.setAttribute('aria-orientation', desktopMenuNavigationQuery.matches ? 'vertical' : 'horizontal');
