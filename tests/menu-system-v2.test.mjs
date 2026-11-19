@@ -46,19 +46,20 @@ test('desktop uses a fixed left navigation rail and an independent content viewp
   assert.match(css, /\.menu-tab-content-area\s*\{[\s\S]*?overflow-x:\s*hidden !important/);
 });
 
-test('all screen sizes use one always-visible vertical sidebar with a selected category marker', async () => {
+test('all screen sizes use one native left navigation with four always-visible labelled groups', async () => {
   const app = await read('src/index.ts');
   const repair = await read('src/menu-single-sidebar-repair.css');
-  assert.doesNotMatch(app, /mobileMenuSegmentQuery|desktopMenuNavigationQuery/);
-  assert.match(app, /group\.hidden = false/);
-  assert.match(app, /group\.inert = false/);
-  assert.match(app, /group\.dataset\.activeGroup = String\(group\.dataset\.menuGroup === segment\.id\)/);
-  assert.match(app, /group\.setAttribute\('role', 'tablist'\)/);
-  assert.match(app, /group\.setAttribute\('aria-orientation', 'vertical'\)/);
-  assert.match(repair, /#title-screen \.menu-tabs-bar\s*\{[\s\S]*?flex-direction: column !important/);
-  assert.match(repair, /#title-screen \.menu-mobile-segments\s*\{\s*display: none !important/);
-  assert.match(repair, /\.menu-nav-group\[hidden\]\s*\{[\s\S]*?display: grid !important/);
-  assert.match(repair, /grid-template-columns: clamp\(122px, 31vw, 188px\) minmax\(0, 1fr\)/);
+  assert.doesNotMatch(app, /menuMobileSegmentButtons|activeMobileSegmentId|setActiveMobileSegment|MENU_SEGMENTS|MenuSegmentId/);
+  assert.match(app, /group\\.hidden = false/);
+  assert.match(app, /group\\.inert = false/);
+  assert.match(app, /group\\.dataset\\.activeGroup = String\\(group\\.dataset\\.menuGroup === owningSegment\\?\\.id\\)/);
+  assert.match(app, /group\\.setAttribute\\('role', 'group'\\)/);
+  assert.match(app, /button\\.setAttribute\\('aria-current', 'page'\\)/);
+  assert.match(app, /panel\\.setAttribute\\('role', 'region'\\)/);
+  assert.doesNotMatch(app, /setAttribute\\('role', 'tab'\\)|setAttribute\\('role', 'tabpanel'\\)|aria-selected/);
+  assert.match(repair, /#title-screen \\\.menu-tabs-bar\\s*\\{[\\s\\S]*?flex-direction: column !important/);
+  assert.match(repair, /\\.menu-nav-group\\[hidden\\]\\s*\\{[\\s\\S]*?display: grid !important/);
+  assert.match(repair, /grid-template-columns: clamp\\(122px, 31vw, 188px\\) minmax\\(0, 1fr\\)/);
 });
 
 test('all navigation controls map to a real panel and are explicit non-submit buttons', () => {
@@ -111,12 +112,14 @@ test('coarse-pointer devices wider than 900 CSS pixels retain the desktop menu g
 });
 
 
-test('ARIA orientation stays vertical at desktop, tablet and phone widths', async () => {
-  const app = await read('src/index.ts');
-  assert.match(app, /group\.setAttribute\('role', 'tablist'\)/);
-  assert.match(app, /group\.setAttribute\('aria-orientation', 'vertical'\)/);
-  assert.match(app, /getMenuTabIndexForKey\(event\.key, currentNavigationIndex, navigationTabs\.length, 'vertical'\)/);
-  assert.doesNotMatch(app, /desktopMenuNavigationQuery|mobileMenuSegmentQuery/);
+test('navigation groups expose the selected destination without separate tab widgets', async () => {
+  const [app, html] = await Promise.all([read('src/index.ts'), read('index.html')]);
+  assert.match(app, /menuTabList\\?\\.setAttribute\\('role', 'navigation'\\)/);
+  assert.match(app, /group\\.setAttribute\\('role', 'group'\\)/);
+  assert.match(app, /button\\.setAttribute\\('aria-current', 'page'\\)/);
+  assert.match(app, /panel\\.setAttribute\\('role', 'region'\\)/);
+  assert.doesNotMatch(app, /role', 'tablist|role', 'tab'|role', 'tabpanel|aria-selected/);
+  assert.doesNotMatch(html, /menu-mobile-segments|menu-mobile-segment/);
 });
 
 test('perk catalogue places its description below the structured card header', async () => {
