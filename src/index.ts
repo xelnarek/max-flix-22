@@ -2835,7 +2835,6 @@ class PaleciakiScene extends xb.Script {
         button.classList.toggle('active', active);
         button.removeAttribute('role');
         button.removeAttribute('aria-pressed');
-        button.removeAttribute('aria-selected');
         button.setAttribute('aria-controls', button.getAttribute('data-tab') || '');
         if (active) button.setAttribute('aria-current', 'page');
         else button.removeAttribute('aria-current');
