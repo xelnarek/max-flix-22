@@ -21,7 +21,7 @@
 #title-screen #tab-team .char-detail-view-nav{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 3px;padding-bottom:7px;border-bottom:1px solid rgba(225,65,62,.2)}
 #title-screen #tab-team .char-detail-view-btn{flex:1 1 90px;min-height:34px;padding:6px 9px;border:1px solid rgba(213,103,96,.26);border-radius:7px;background:rgba(255,255,255,.025);color:#c7b8b6;font:800 8px/1.1 "JetBrains Mono",monospace;letter-spacing:.08em}
 #title-screen #tab-team .char-detail-view-btn.active,#title-screen #tab-team .char-detail-view-btn[aria-pressed="true"]{color:#fff4f0;border-color:rgba(255,98,91,.65);background:linear-gradient(110deg,rgba(145,20,30,.48),rgba(42,12,17,.86));box-shadow:inset 0 -2px 0 #e12c32}
-#title-screen #tab-team .char-details-box[data-char-view="profile"] :is(.char-details-attack,.char-details-skill,.char-details-passive){display:none!important}
+#title-screen #tab-team .char-details-box[data-char-view="profile"] :is(.char-details-attack,.char-details-skill,.char-details-passive,.character-mastery-panel){display:none!important}
 #title-screen #tab-team .char-details-box[data-char-view="abilities"] :is(.char-details-bio,.char-stats-container,.character-mastery-panel){display:none!important}
 #title-screen #tab-team .char-details-box[data-char-view="mastery"] :is(.char-details-bio,.char-details-attack,.char-details-skill,.char-details-passive,.char-stats-container){display:none!important}
 #title-screen .tab-panel :is(article,section,.card,.settings-group,.setting-row){min-width:0!important;max-width:100%}
