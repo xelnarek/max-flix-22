@@ -10,23 +10,18 @@ const [html, css, rosterCss] = await Promise.all([
   read('src/operator-roster-v2.css'),
 ]);
 
-test('mobile menu exposes all eleven destinations in an adaptive grid without horizontal swiping', () => {
-  assert.match(html, /href="\/src\/mobile-menu-grid\.css"/);
+test('mobile menu keeps all eleven destinations in one vertical sidebar with readable touch targets', async () => {
   const tabs = [...html.matchAll(/class="menu-tab-btn[^"]*" data-tab="(tab-[^"]+)"/g)];
   assert.equal(tabs.length, 11);
-  assert.match(css, /@media \(max-width: 760px\), \(pointer: coarse\)/);
-  assert.match(css, /grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 92px\), 1fr\)\) !important/);
-  assert.match(css, /overflow-x: visible !important/);
-  assert.match(css, /scroll-snap-type: none !important/);
-  assert.doesNotMatch(css, /overflow-x:\s*auto !important/);
-});
-
-test('touch menu segments scale their hit area, icon and labels together', () => {
-  assert.match(css, /min-height: clamp\(48px, 11\.5vw, 56px\) !important/);
-  assert.match(css, /font-size: clamp\(7\.5px, 2\.1vw, 9\.25px\) !important/);
-  assert.match(css, /\.menu-tab-btn\.active[\s\S]*?var\(--menu-accent\)/);
-  assert.match(css, /:focus-visible[\s\S]*?outline: 2px solid var\(--menu-accent\)/);
-  assert.match(css, /border-radius: 11px !important/);
+  const repair = await read('src/menu-single-sidebar-repair.css');
+  assert.match(repair, /#title-screen \.menu-tabs-bar\s*\{[\s\S]*?flex-direction: column !important/);
+  assert.match(repair, /#title-screen \.menu-tabs-bar\s*\{[\s\S]*?overflow-y: auto !important/);
+  assert.match(repair, /@media \(max-width: 900px\)[\s\S]*grid-template-columns: clamp\(122px, 31vw, 188px\)/);
+  assert.match(repair, /\.menu-mobile-segments\s*\{\s*display: none !important/);
+  assert.match(repair, /min-height: 42px !important/);
+  assert.match(repair, /font-size: clamp\(7\.8px, 2\.1vw, 9px\) !important/);
+  assert.match(repair, /\.menu-nav-group\[data-active-group="true"\]/);
+  assert.doesNotMatch(repair, /#title-screen \.menu-tabs-bar\s*\{[^}]*overflow-x: auto !important/);
 });
 
 test('operator roster uses a fresh, bounded two-column mobile grid instead of a horizontal rail', () => {
@@ -64,30 +59,23 @@ test('existing roster repair keeps the operator profile after the card grid', ()
   assert.match(rosterFix, /#char-details-box[\s\S]*?width: 100% !important/);
 });
 
-test('mobile menu uses real tabs and keeps exactly one panel active', async () => {
+test('one tab activates one panel while every sidebar category remains accessible', async () => {
   const app = await read('src/index.ts');
   assert.match(app, /menuTabList\?\.setAttribute\('role', 'navigation'\)/);
+  assert.match(app, /group\.hidden = false/);
+  assert.match(app, /group\.inert = false/);
   assert.match(app, /group\.setAttribute\('role', 'tablist'\)/);
-  assert.match(app, /group\.hidden = !visible/);
-  assert.match(app, /mobileMenuSegmentQuery\.addEventListener\('change'/);
+  assert.match(app, /group\.setAttribute\('aria-orientation', 'vertical'\)/);
   assert.match(app, /button\.setAttribute\('role', 'tab'\)/);
   assert.match(app, /button\.setAttribute\('aria-selected', String\(active\)\)/);
   assert.match(app, /panel\.classList\.toggle\('active', active\)/);
   assert.match(app, /panel\.setAttribute\('aria-hidden', String\(!active\)\)/);
   assert.match(app, /panel\.inert = !active/);
-  assert.match(app, /aria-orientation', desktopMenuNavigationQuery\.matches \? 'vertical' : 'horizontal'/);
-  assert.match(app, /desktopMenuNavigationQuery\.addEventListener\('change'/);
+  assert.match(app, /getMenuTabIndexForKey\(event\.key, currentNavigationIndex, navigationTabs\.length, 'vertical'\)/);
+  assert.doesNotMatch(app, /desktopMenuNavigationQuery|mobileMenuSegmentQuery/);
   assert.match(app, /new MenuScrollMemory\(\)/);
   assert.match(app, /menuScrollMemory\.save\(currentMenuTargetId, menuContentArea\.scrollTop\)/);
   assert.match(app, /menuScrollMemory\.restore\(targetId\)/);
-  const presentationStart = app.indexOf('const syncMenuPanelPresentation');
-  const presentationEnd = app.indexOf("document.getElementById('btn-account-cloud-sync')", presentationStart);
-  const presentation = app.slice(presentationStart, presentationEnd);
-  assert.doesNotMatch(presentation, /mobileMenuOverviewQuery|mobile-menu-overview|scrollIntoView/);
-  assert.doesNotMatch(css, /mobile-menu-overview/);
-  assert.match(css, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\) !important/);
-  assert.match(css, /\.tab-panel\[aria-hidden="true"\]\s*\{[\s\S]*?display: none !important/);
-  assert.match(css, /\.tab-panel\.active\s*\{[\s\S]*?display: flex !important/);
 });
 
 test('the three mobile launch modes use compact, equal-width cards', async () => {
