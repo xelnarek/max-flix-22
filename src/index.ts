@@ -2905,7 +2905,7 @@ class PaleciakiScene extends xb.Script {
         ensureMenuTabVisible(tabBtn);
       });
       tabBtn.addEventListener('keydown', (event: KeyboardEvent) => {
-        const nextIndex = getMenuTabIndexForKey(event.key, index, menuTabButtons.length);
+        const nextIndex = getMenuTabIndexForKey(event.key, index, menuTabButtons.length, desktopMenuNavigationQuery.matches ? 'vertical' : 'horizontal');
         if (nextIndex === null) return;
         event.preventDefault();
         const nextTab = menuTabButtons[nextIndex];
