@@ -37,7 +37,7 @@ export const SURVIVAL_BASIC_ATTACK_COOLDOWN_SECONDS: Readonly<Record<CharacterId
   piotr: 1.92,
 });
 /** Survival-only primary-attack lift; campaign damage and auto-weapons are unchanged. */
-export const SURVIVAL_PRIMARY_ATTACK_DAMAGE_MULTIPLIER = 1.16;
+export const SURVIVAL_PRIMARY_ATTACK_DAMAGE_MULTIPLIER = 1.12;
 
 export interface PrimaryAttackDamageProfile {
   readonly regular: number;
