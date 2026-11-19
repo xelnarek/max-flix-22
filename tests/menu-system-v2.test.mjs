@@ -46,17 +46,19 @@ test('desktop uses a fixed left navigation rail and an independent content viewp
   assert.match(css, /\.menu-tab-content-area\s*\{[\s\S]*?overflow-x:\s*hidden !important/);
 });
 
-test('touch navigation requires choosing a segment before viewing its destination tabs', async () => {
+test('all screen sizes use one always-visible vertical sidebar with a selected category marker', async () => {
   const app = await read('src/index.ts');
-  const mobileCss = await read('src/crimson-shift-mobile-layout-v3.css');
-  assert.match(app, /mobileMenuSegmentQuery = window\.matchMedia\('\(max-width: 900px\)'\)/);
-  assert.match(app, /group\.hidden = !visible/);
-  assert.match(app, /group\.inert = !visible/);
-  assert.match(mobileCss, /\.menu-mobile-segments\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
-  assert.match(mobileCss, /\.menu-nav-group\[hidden\]\s*\{[\s\S]*?display:\s*none !important/);
-  assert.match(mobileCss, /grid-template-columns:\s*repeat\(auto-fit, minmax\(min\(100%, 96px\), 1fr\)\)/);
-  assert.match(mobileCss, /@media \(max-height: 620px\) and \(max-width: 900px\)/);
-  assert.doesNotMatch(mobileCss, /\.menu-tabs-bar\s*\{[^}]*overflow-x:\s*auto !important/);
+  const repair = await read('src/menu-single-sidebar-repair.css');
+  assert.doesNotMatch(app, /mobileMenuSegmentQuery|desktopMenuNavigationQuery/);
+  assert.match(app, /group\.hidden = false/);
+  assert.match(app, /group\.inert = false/);
+  assert.match(app, /group\.dataset\.activeGroup = String\(group\.dataset\.menuGroup === segment\.id\)/);
+  assert.match(app, /group\.setAttribute\('role', 'tablist'\)/);
+  assert.match(app, /group\.setAttribute\('aria-orientation', 'vertical'\)/);
+  assert.match(repair, /#title-screen \.menu-tabs-bar\s*\{[\s\S]*?flex-direction: column !important/);
+  assert.match(repair, /#title-screen \.menu-mobile-segments\s*\{\s*display: none !important/);
+  assert.match(repair, /\.menu-nav-group\[hidden\]\s*\{[\s\S]*?display: grid !important/);
+  assert.match(repair, /grid-template-columns: clamp\(122px, 31vw, 188px\) minmax\(0, 1fr\)/);
 });
 
 test('all navigation controls map to a real panel and are explicit non-submit buttons', () => {
@@ -109,13 +111,13 @@ test('coarse-pointer devices wider than 900 CSS pixels retain the desktop menu g
 });
 
 
-test('ARIA orientation follows the same 900px breakpoint as the rendered navigation layout', async () => {
+test('ARIA orientation stays vertical at desktop, tablet and phone widths', async () => {
   const app = await read('src/index.ts');
-  assert.match(app, /matchMedia\('\(min-width: 901px\)'\)/);
-  assert.match(app, /aria-orientation', desktopMenuNavigationQuery\.matches \? 'vertical' : 'horizontal'/);
-  assert.match(app, /desktopMenuNavigationQuery\.addEventListener\('change'/);
+  assert.match(app, /group\.setAttribute\('role', 'tablist'\)/);
+  assert.match(app, /group\.setAttribute\('aria-orientation', 'vertical'\)/);
+  assert.match(app, /getMenuTabIndexForKey\(event\.key, currentNavigationIndex, navigationTabs\.length, 'vertical'\)/);
+  assert.doesNotMatch(app, /desktopMenuNavigationQuery|mobileMenuSegmentQuery/);
 });
-
 
 test('perk catalogue places its description below the structured card header', async () => {
   const [html, css] = await Promise.all([
