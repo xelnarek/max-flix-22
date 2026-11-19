@@ -188,7 +188,9 @@ test('regular enemy attack cues float over the attacker and are removed instead 
   assert.match(game, /enemy\.mesh\.add\(cue\)/);
   assert.match(game, /new THREE\.TorusGeometry\(0\.27, 0\.038, 5, 20\)/);
   assert.match(game, /new THREE\.ConeGeometry\(0\.15, 0\.26, 4\)/);
-  assert.match(game, /cleanup: \(\) => \{[\s\S]*?cue\.removeFromParent\(\)/);
+  assert.match(game, /private updateEnemyTelegraphCue\(/);
+  assert.match(game, /this\.disposeTemporaryObject\(cue\)/);
+  assert.match(game, /this\.updateEnemyTelegraphCue\([\s\S]*?timing\.progress/);
   assert.match(game, /private clearEnemyTelegraphCue\(cue: THREE\.Group \| undefined\)/);
   assert.match(game, /private clearEnemyRangedTelegraphVisual\(enemy: EnemyItem\)/);
 });
