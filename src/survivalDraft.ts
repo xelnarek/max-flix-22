@@ -300,7 +300,7 @@ export function getSurvivalDraftSynergyHint(
     const passive = WEAPON_EVOLUTION_PASSIVES[weapon.weaponId];
     const passiveStacks = passive ? safeCount(getStacks(context)[passive]) : 0;
     const passivePlanned = passive ? plannedIds.includes(passive) : false;
-    if (weapon.kind !== 'evolve' && passive && (passiveStacks > 0 || passivePlanned)) {
+    if (weapon.kind === 'unlock' && passive && (passiveStacks > 0 || passivePlanned)) {
       const labels: Readonly<Record<string, string>> = {
         damage: 'Wzmocniona amunicja',
         range: 'Zasięg audytu',
