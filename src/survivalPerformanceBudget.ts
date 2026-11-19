@@ -24,52 +24,54 @@ function safeTier(value: number): number {
  * profile, tier 2 is the most constrained. Desktop deliberately has a higher
  * cap, but still uses fixed ceilings to avoid runaway allocations.
  */
+const DESKTOP_BUDGET: Readonly<SurvivalPerformanceBudget> = Object.freeze({
+  enemyCap: 42,
+  groupCap: 10,
+  maxRouletteExtraEnemies: 4,
+  novaProjectileCount: 20,
+  explosionParticleCount: 26,
+  timeLockImpactLimit: 18,
+  xpRainGemCount: 10,
+});
+
+const MOBILE_TIER_0_BUDGET: Readonly<SurvivalPerformanceBudget> = Object.freeze({
+  enemyCap: 22,
+  groupCap: 8,
+  maxRouletteExtraEnemies: 3,
+  novaProjectileCount: 16,
+  explosionParticleCount: 18,
+  timeLockImpactLimit: 9,
+  xpRainGemCount: 8,
+});
+
+const MOBILE_TIER_1_BUDGET: Readonly<SurvivalPerformanceBudget> = Object.freeze({
+  enemyCap: 20,
+  groupCap: 7,
+  maxRouletteExtraEnemies: 2,
+  novaProjectileCount: 14,
+  explosionParticleCount: 14,
+  timeLockImpactLimit: 7,
+  xpRainGemCount: 8,
+});
+
+const MOBILE_TIER_2_BUDGET: Readonly<SurvivalPerformanceBudget> = Object.freeze({
+  enemyCap: 16,
+  groupCap: 5,
+  maxRouletteExtraEnemies: 1,
+  novaProjectileCount: 10,
+  explosionParticleCount: 10,
+  timeLockImpactLimit: 5,
+  xpRainGemCount: 6,
+});
+
+/** Return a shared immutable profile; adaptive tier changes are infrequent. */
 export function getSurvivalPerformanceBudget(
   isMobile: boolean,
   adaptiveTier: number,
-): SurvivalPerformanceBudget {
-  if (!isMobile) {
-    return {
-      enemyCap: 42,
-      groupCap: 10,
-      maxRouletteExtraEnemies: 4,
-      novaProjectileCount: 20,
-      explosionParticleCount: 26,
-      timeLockImpactLimit: 18,
-      xpRainGemCount: 10,
-    };
-  }
-
+): Readonly<SurvivalPerformanceBudget> {
+  if (!isMobile) return DESKTOP_BUDGET;
   const tier = safeTier(adaptiveTier);
-  if (tier >= 2) {
-    return {
-      enemyCap: 16,
-      groupCap: 5,
-      maxRouletteExtraEnemies: 1,
-      novaProjectileCount: 10,
-      explosionParticleCount: 10,
-      timeLockImpactLimit: 5,
-      xpRainGemCount: 6,
-    };
-  }
-  if (tier === 1) {
-    return {
-      enemyCap: 20,
-      groupCap: 7,
-      maxRouletteExtraEnemies: 2,
-      novaProjectileCount: 14,
-      explosionParticleCount: 14,
-      timeLockImpactLimit: 7,
-      xpRainGemCount: 8,
-    };
-  }
-  return {
-    enemyCap: 22,
-    groupCap: 8,
-    maxRouletteExtraEnemies: 3,
-    novaProjectileCount: 16,
-    explosionParticleCount: 18,
-    timeLockImpactLimit: 9,
-    xpRainGemCount: 8,
-  };
+  if (tier >= 2) return MOBILE_TIER_2_BUDGET;
+  if (tier === 1) return MOBILE_TIER_1_BUDGET;
+  return MOBILE_TIER_0_BUDGET;
 }
