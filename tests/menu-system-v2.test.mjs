@@ -8,14 +8,15 @@ const [html, css] = await Promise.all([
   read('src/menu-system-v2.css'),
 ]);
 
-test('main menu exposes all eleven destinations in four meaningful navigation groups', () => {
-  const navStart = html.indexOf('<div class="menu-tabs-bar"');
+test('main menu exposes all eleven destinations through four named navigation groups', () => {
+  const navStart = html.indexOf('<div class="menu-tabs-bar">');
   const contentStart = html.indexOf('<div class="menu-tab-content-area">', navStart);
   assert.ok(navStart >= 0 && contentStart > navStart);
   const nav = html.slice(navStart, contentStart);
-  const groupIds = [...nav.matchAll(/<div class="menu-nav-group" role="group" aria-label="([^"]+)">([\s\S]*?)<\/div>/g)];
-  assert.deepEqual(groupIds.map((match) => match[1]), ['ROZGRYWKA', 'ŚWIAT I BHP', 'POSTĘPY', 'SYSTEM']);
-  const tabIds = groupIds.flatMap((match) => [...match[2].matchAll(/data-tab="(tab-[^"]+)"/g)].map((item) => item[1]));
+  const groupIds = [...nav.matchAll(/<div class="menu-nav-group" data-menu-group="([^"]+)" role="group" aria-label="([^"]+)">([\s\S]*?)<\/div>/g)];
+  assert.deepEqual(groupIds.map((match) => match[1]), ['play', 'world', 'progress', 'system']);
+  assert.deepEqual(groupIds.map((match) => match[2]), ['ROZGRYWKA', 'ŚWIAT I BHP', 'POSTĘPY', 'SYSTEM']);
+  const tabIds = groupIds.flatMap((match) => [...match[3].matchAll(/data-tab="(tab-[^"]+)"/g)].map((item) => item[1]));
   assert.equal(tabIds.length, 11);
   assert.equal(new Set(tabIds).size, 11);
   assert.deepEqual(tabIds, [
@@ -45,12 +46,17 @@ test('desktop uses a fixed left navigation rail and an independent content viewp
   assert.match(css, /\.menu-tab-content-area\s*\{[\s\S]*?overflow-x:\s*hidden !important/);
 });
 
-test('touch screens expose every section in a three-column grid and short landscape uses one swipeable rail', () => {
-  assert.match(css, /@media \(max-width: 900px\)[\s\S]*?grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
-  assert.doesNotMatch(css, /@media \(max-width: 900px\), \(pointer: coarse\)/);
-  assert.match(css, /\.menu-nav-group\s*\{[\s\S]*?grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
-  assert.match(css, /@media \(max-width: 900px\) and \(max-height: 600px\) and \(orientation: landscape\)[\s\S]*?overflow-x:\s*auto !important/);
-  assert.match(css, /prefers-reduced-motion:\s*reduce/);
+test('touch navigation requires choosing a segment before viewing its destination tabs', async () => {
+  const app = await read('src/index.ts');
+  const mobileCss = await read('src/crimson-shift-mobile-layout-v3.css');
+  assert.match(app, /mobileMenuSegmentQuery = window\.matchMedia\('\(max-width: 900px\)'\)/);
+  assert.match(app, /group\.hidden = !visible/);
+  assert.match(app, /group\.inert = !visible/);
+  assert.match(mobileCss, /\.menu-mobile-segments\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(mobileCss, /\.menu-nav-group\[hidden\]\s*\{[\s\S]*?display:\s*none !important/);
+  assert.match(mobileCss, /grid-template-columns:\s*repeat\(auto-fit, minmax\(min\(100%, 96px\), 1fr\)\)/);
+  assert.match(mobileCss, /@media \(max-height: 620px\) and \(max-width: 900px\)/);
+  assert.doesNotMatch(mobileCss, /\.menu-tabs-bar\s*\{[^}]*overflow-x:\s*auto !important/);
 });
 
 test('all navigation controls map to a real panel and are explicit non-submit buttons', () => {
@@ -103,7 +109,7 @@ test('coarse-pointer devices wider than 900 CSS pixels retain the desktop menu g
 });
 
 
-test('ARIA orientation follows the same 900px breakpoint as the rendered navigation rail', async () => {
+test('ARIA orientation follows the same 900px breakpoint as the rendered navigation layout', async () => {
   const app = await read('src/index.ts');
   assert.match(app, /matchMedia\('\(min-width: 901px\)'\)/);
   assert.match(app, /aria-orientation', desktopMenuNavigationQuery\.matches \? 'vertical' : 'horizontal'/);
