@@ -41,6 +41,6 @@ test('Google Play preflight reports owner setup without failing normal CI builds
   assert.ok(report.blockers.some((item) => /Polityka prywatności/.test(item)));
   assert.ok(report.warnings.some((item) => /AdMob/.test(item)));
   assert.ok(report.manualChecks.some((item) => /Anonymous/.test(item)));
-  assert.ok(report.manualChecks.some((item) => /12 testerami/.test(item)));
+  assert.ok(report.manualChecks.some((item) => /12 tester/.test(item)));
   assert.equal(report.ads.productionConfigured, false);
 });
