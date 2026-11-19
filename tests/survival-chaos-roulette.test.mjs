@@ -65,3 +65,23 @@ test('roulette reel feedback is synchronized to the three stop events and final 
   assert.match(style, /survival-chaos-machine\.is-risk/);
   assert.match(style, /survival-chaos-machine \.survival-chaos-reel-symbol\.is-locked/);
 });
+
+test('roulette avoids the two most recent results without changing the remaining weighted order', () => {
+  assert.equal(rollSurvivalChaosRoulette(0, ['skill', 'perk']), 'shield');
+  assert.equal(rollSurvivalChaosRoulette(0.999999, ['double_or_nothing', 'weapon_draft']), 'hazard_clear');
+  assert.equal(rollSurvivalChaosRoulette(0, ['skill', 'skill']), 'perk',
+    'duplicate history entries must not accidentally remove extra outcomes');
+});
+
+test('roulette re-normalizes remaining weights and falls back safely for an exhausted history', () => {
+  const recent = ['skill', 'perk'];
+  const eligible = SURVIVAL_CHAOS_ROULETTE_TABLE.filter((entry) => !recent.includes(entry.kind));
+  const seen = new Set();
+  for (let index = 0; index < 10000; index++) {
+    const kind = rollSurvivalChaosRoulette(index / 10000, recent);
+    assert.ok(!recent.includes(kind));
+    seen.add(kind);
+  }
+  assert.equal(seen.size, eligible.length);
+  assert.equal(rollSurvivalChaosRoulette(0.5, SURVIVAL_CHAOS_ROULETTE_TABLE.map((entry) => entry.kind)), 'nova');
+});
