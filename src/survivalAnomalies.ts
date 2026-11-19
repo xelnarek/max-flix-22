@@ -244,7 +244,7 @@ export function advanceSurvivalAnomaly(
 
 export function getSurvivalAnomalyModifiers(state: SurvivalAnomalyState): SurvivalAnomalyModifiers {
   if (!state.active) return NEUTRAL;
-  return state.active ? TEMPLATE_BY_ID.get(state.active.id)?.modifiers ?? NEUTRAL : NEUTRAL;
+  return TEMPLATE_BY_ID.get(state.active.id)?.modifiers ?? NEUTRAL;
 }
 
 export function getSurvivalAnomalyDefinition(id: SurvivalAnomalyId): SurvivalAnomalyTemplate | undefined {
