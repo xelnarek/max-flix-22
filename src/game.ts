@@ -59,6 +59,7 @@ import { createEnemyHitReaction, getEnemyHitPulse, getEnemyImpactBurstProfile } 
 import { getEnemyDeathMotionPose, getEnemyDeathMotionProfile } from './enemyDeathMotion.ts';
 import { ENEMY_GAIT_PRESETS, ENEMY_VISUAL_PROFILES } from './enemyVisualProfiles.ts';
 import { createEnemyVisualLodProxy, shouldUseEnemyVisualLodProxy, updateEnemyVisualLodProxy } from './enemyVisualLod.ts';
+import { removeLegacyEnemyBodyVisuals } from './enemyVisualComposition.ts';
 import { addProceduralLimbPose, getProceduralHitPulse, setProceduralJointRotation, setProceduralLimbPose } from './proceduralActorAnimation.ts';
 import { isEffectiveBossLaneDodge, isInsideBossAttackLane, isWithinBossImpactRadius } from './combatTelegraphs.ts';
 import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
@@ -2207,10 +2208,11 @@ export class PaleciakiGameEngine {
       actor.root.name = 'makehuman-enemy-' + style + '-' + enemy.id;
       const overlays = [
         enemy.hpBar, enemy.hpFill, enemy.threatRing, enemy.shieldRing, enemy.auraRing,
-        enemy.survivalEliteInsignia, enemy.speechMesh, enemy.propeller, ...(enemy.bikeWheels || []),
+        enemy.survivalEliteInsignia, enemy.speechMesh, enemy.propeller,
+        enemy.aiRangedTelegraphMesh, enemy.aiMeleeTelegraphMesh, ...(enemy.bikeWheels || []),
       ].filter((object): object is THREE.Object3D => object instanceof THREE.Object3D);
       this.removeAttachedActorVisuals(mesh as THREE.Group);
-      this.hideProceduralVisuals(mesh as THREE.Group, overlays);
+      removeLegacyEnemyBodyVisuals(mesh as THREE.Group, overlays);
       this.installActorVisualRoot(mesh as THREE.Group, actor.root);
       this.installEnemyVisualLodProxy(enemy, actor.root);
       enemy.legL = undefined;
@@ -2303,10 +2305,11 @@ export class PaleciakiGameEngine {
       root.name = 'gobkit-enemy-' + modelId + '-' + enemy.id;
       const overlays = [
         enemy.hpBar, enemy.hpFill, enemy.threatRing, enemy.shieldRing,
-        enemy.auraRing, enemy.survivalEliteInsignia, enemy.speechMesh, enemy.propeller, ...(enemy.bikeWheels || []),
+        enemy.auraRing, enemy.survivalEliteInsignia, enemy.speechMesh, enemy.propeller,
+        enemy.aiRangedTelegraphMesh, enemy.aiMeleeTelegraphMesh, ...(enemy.bikeWheels || []),
       ].filter((object): object is THREE.Object3D => object instanceof THREE.Object3D);
       this.removeAttachedActorVisuals(mesh as THREE.Group);
-      this.hideProceduralVisuals(mesh as THREE.Group, overlays);
+      removeLegacyEnemyBodyVisuals(mesh as THREE.Group, overlays);
       this.installActorVisualRoot(mesh as THREE.Group, root);
       this.installEnemyVisualLodProxy(enemy, root);
       // Existing Gobkit rigs need the role-specific PPE attachment kit. The
