@@ -13,6 +13,8 @@ export interface SurvivalXpDropResult {
   readonly dropClass: SurvivalXpDropClass;
   readonly value: number;
   readonly isMilestone: boolean;
+  /** True when bad-luck protection, rather than the base roll, secured this crystal. */
+  readonly isPityDrop: boolean;
 }
 
 const BOSS_TYPES: ReadonlySet<EnemyType> = new Set([
@@ -48,6 +50,17 @@ function safeChanceMultiplier(value: number): number {
   return Number.isFinite(value) ? Math.max(0, Math.min(2, value)) : 1;
 }
 
+function safeMissStreak(value: number): number {
+  return Number.isFinite(value) ? Math.max(0, Math.min(8, Math.floor(value))) : 0;
+}
+
+function getPityThreshold(dropClass: SurvivalXpDropClass): number {
+  if (dropClass === 'regular') return 4;
+  if (dropClass === 'heavy') return 2;
+  if (dropClass === 'elite') return 1;
+  return Number.POSITIVE_INFINITY;
+}
+
 /**
  * Regular workers no longer drop XP on every kill. Heavy/elite enemies are
  * better sources; milestone kills and bosses remain guaranteed rewards.
@@ -60,11 +73,23 @@ export function rollSurvivalXpDrop(
   anomalyChanceMultiplier = 1,
   anomalyValueMultiplier = 1,
   milestoneBonus = 0,
+  consecutiveMisses = 0,
 ): SurvivalXpDropResult | null {
   const profile = getSurvivalXpDropProfile(type);
   const isMilestone = Number.isFinite(milestoneBonus) && milestoneBonus > 0;
-  const chance = Math.min(1, profile.chance * safeChanceMultiplier(anomalyChanceMultiplier));
-  if (!isMilestone && safeRoll(chanceRoll) >= chance) return null;
+  const chanceMultiplier = safeChanceMultiplier(anomalyChanceMultiplier);
+  const baseChance = Math.min(1, profile.chance * chanceMultiplier);
+  const threshold = getPityThreshold(profile.dropClass);
+  const misses = safeMissStreak(consecutiveMisses);
+  // Pity fills only the remaining gap to 100%: regular enemies are protected
+  // after four misses, heavies after two and elites after one. A zero chance
+  // anomaly remains an intentional hard block and cannot be bypassed.
+  const pityProgress = chanceMultiplier > 0 && Number.isFinite(threshold)
+    ? Math.min(1, misses / threshold)
+    : 0;
+  const chance = Math.min(1, baseChance + (1 - baseChance) * pityProgress);
+  const roll = safeRoll(chanceRoll);
+  if (!isMilestone && roll >= chance) return null;
 
   const range = profile.maxValue - profile.minValue + 1;
   const rolledBase = profile.minValue + Math.floor(safeRoll(valueRoll) * range);
@@ -74,5 +99,6 @@ export function rollSurvivalXpDrop(
     dropClass: profile.dropClass,
     value: Math.max(1, Math.min(18, scaled + bonus)),
     isMilestone,
+    isPityDrop: !isMilestone && pityProgress > 0 && roll >= baseChance,
   };
 }

@@ -855,6 +855,8 @@ export class PaleciakiGameEngine {
   private cachedSurvivalDifficultyWave = 0;
   private cachedSurvivalDifficultyProfile: ReturnType<typeof getSurvivalDifficultyProfile> | null = null;
   private survivalKills = 0;
+  /** Consecutive Survival eliminations that failed to produce an XP crystal. */
+  private survivalXpDropMissStreak = 0;
   private survivalContract: SurvivalContractState = createSurvivalContract(1);
   private survivalShiftEvent: SurvivalShiftEventState = createSurvivalShiftEventState();
   private survivalAnomaly: SurvivalAnomalyState = createSurvivalAnomalyState();
@@ -2813,6 +2815,7 @@ export class PaleciakiGameEngine {
     this.survivalUiTimer = 0;
     this.survivalWave = 1;
     this.survivalKills = 0;
+    this.survivalXpDropMissStreak = 0;
     this.survivalContract = createSurvivalContract(1);
     this.survivalShiftEvent = createSurvivalShiftEventState();
     this.survivalAnomaly = createSurvivalAnomalyState();
@@ -20376,8 +20379,18 @@ export class PaleciakiGameEngine {
         anomalyXp.xpDropChanceMultiplier,
         anomalyXp.xpValueMultiplier,
         isShiftMilestone ? 2 : 0,
+        this.survivalXpDropMissStreak,
       );
       if (xpDrop) this.spawnSurvivalXpGem(e.x, e.y, e.z, xpDrop.value);
+      if (xpDrop) {
+        this.survivalXpDropMissStreak = 0;
+        if (xpDrop.isPityDrop) {
+          this.emitFloatingToast('📦 ŁUP AWARYJNY • PECH POKONANY', e.x, e.y + 1.6, e.z, 'perk');
+          this.spawnParticleRing(e.x, e.y + 0.55, e.z, 0x38bdf8);
+        }
+      } else {
+        this.survivalXpDropMissStreak = Math.min(4, this.survivalXpDropMissStreak + 1);
+      }
       if (isShiftMilestone) {
         this.spawnParticleRing(e.x, e.y + 0.7, e.z, 0x38bdf8);
         this.emitFloatingToast('📦 NORMA ZMIANY x8 — BONUS +2 XP DO ZEBRANIA!', e.x, e.y + 1.8, e.z, 'combo');
