@@ -878,6 +878,7 @@ export class PaleciakiGameEngine {
   private survivalRankUpPending = false;
   private survivalChaosRoulettePending = false;
   private survivalChaosRouletteLastResult: { kind: SurvivalChaosRouletteKind; title: string; icon: string } | null = null;
+  private survivalChaosRouletteRecentKinds: SurvivalChaosRouletteKind[] = [];
   private survivalXp = 0;
   private survivalXpToNext = 6;
   private survivalXpStreak: SurvivalXpStreakState = createSurvivalXpStreakState();
@@ -2759,6 +2760,7 @@ export class PaleciakiGameEngine {
     this.survivalRankUpPending = false;
     this.survivalChaosRoulettePending = false;
     this.survivalChaosRouletteLastResult = null;
+    this.survivalChaosRouletteRecentKinds = [];
     this.survivalXp = 0;
     this.survivalXpToNext = getSurvivalXpRequirement(1);
     this.survivalXpStreak = createSurvivalXpStreakState();
@@ -2809,6 +2811,7 @@ export class PaleciakiGameEngine {
     this.clearRadiationFieldAura();
     this.survivalChaosRoulettePending = false;
     this.survivalChaosRouletteLastResult = null;
+    this.survivalChaosRouletteRecentKinds = [];
     this.survivalPendingOptions = [];
     this.survivalBossRewardPending = false;
     this.marcinReclamationTimer = 0;
@@ -12237,7 +12240,8 @@ export class PaleciakiGameEngine {
       !this.survivalChaosRoulettePending
     ) return false;
 
-    const outcome = rollSurvivalChaosRoulette(Math.random());
+    const outcome = rollSurvivalChaosRoulette(Math.random(), this.survivalChaosRouletteRecentKinds);
+    this.survivalChaosRouletteRecentKinds = [...this.survivalChaosRouletteRecentKinds.slice(-1), outcome];
     this.survivalChaosRouletteLastResult = null;
     const finishSpin = (title: string, detail: string, icon = '🎰'): boolean => {
       this.survivalChaosRouletteLastResult = { kind: outcome, title, icon };
@@ -12292,7 +12296,9 @@ export class PaleciakiGameEngine {
       case 'enemy_pack': {
         const budget = getSurvivalPerformanceBudget(this.isHandheldViewport, this.adaptivePerformanceTier);
         const alive = this.enemies.reduce((count, enemy) => count + (enemy.state === 'defeated' ? 0 : 1), 0);
-        const count = Math.min(budget.maxRouletteExtraEnemies, Math.max(0, budget.enemyCap - alive));
+        const maxDelivery = Math.max(1, Math.floor(budget.maxRouletteExtraEnemies));
+        const requestedCount = 1 + Math.floor(Math.random() * maxDelivery);
+        const count = Math.min(requestedCount, Math.max(0, budget.enemyCap - alive));
         for (let index = 0; index < count; index++) this.spawnSurvivalEnemy(this.survivalWave);
         return finishSpin(
           count > 0 ? 'DOSTAWA ' + count + ' NIEPROSZONYCH GOŚCI' : 'MAGAZYN PEŁNY — NIC NIE DOJECHAŁO',
@@ -12369,8 +12375,8 @@ export class PaleciakiGameEngine {
         this.activatePerk('xp_surge', 20);
         return finishSpin('DOPALACZ DOŚWIADCZENIA', 'Przez 20 sekund każdy zebrany kryształ XP ma zwiększoną wartość.', '📈');
       case 'golden_crate': {
-        const bonus = 650 + Math.floor(Math.random() * 901);
-        const gemCount = 3 + Math.floor(Math.random() * 3);
+        const bonus = 650 + Math.floor(Math.random() * 1551);
+        const gemCount = 2 + Math.floor(Math.random() * 5);
         this.score += bonus;
         this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
         for (let index = 0; index < gemCount; index++) {
