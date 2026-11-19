@@ -36,11 +36,13 @@ test('successful rig replacement removes the old procedural body instead of leav
   fullRig.add(newBody.mesh);
   actor.add(fullRig);
 
+  let bodyGeometryDisposed = false;
+  body.geometry.addEventListener('dispose', () => { bodyGeometryDisposed = true; });
   const removed = removeLegacyEnemyBodyVisuals(actor, [overlay]);
 
   assert.equal(removed, 1);
   assert.equal(legacyBody.parent, null, 'the old procedural root must leave the live scene graph');
-  assert.equal(body.geometry.userData.disposed, undefined);
+  assert.equal(bodyGeometryDisposed, true, 'old fallback geometry is released after removal');
   assert.equal(overlay.parent, actor, 'health overlays must remain attached');
   assert.equal(hp.mesh.visible, true);
   assert.equal(fullRig.parent, actor, 'the newly loaded rig must remain attached');
