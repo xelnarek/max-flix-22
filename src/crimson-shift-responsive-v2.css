@@ -265,7 +265,7 @@
 }
 
 /* Tablet / compact desktop: move navigation into a single horizontal rail. */
-@media (max-width: 1100px) {
+@media (max-width: 900px) {
   #title-screen .title-sheet {
     grid-template-columns: minmax(0, 1fr) !important;
     grid-template-rows: auto auto auto minmax(0, 1fr) !important;
