@@ -490,9 +490,12 @@ test('Gobkit rig clones share immutable geometry and marked source materials wit
 });
 
 
-test('enemy animation update avoids rebuilding an unused per-frame membership set', async () => {
+test('per-frame animation cleanup reuses the active-enemy membership set', async () => {
   const game = await read('../src/game.ts');
-  assert.doesNotMatch(game, /activeEnemyAnimationScratch/);
+  assert.match(game, /private readonly activeEnemyAnimationScratch = new Set<EnemyItem>\(\)/);
+  assert.match(game, /const activeEnemies = this\.activeEnemyAnimationScratch/);
+  assert.match(game, /activeEnemies\.clear\(\)/);
+  assert.match(game, /for \(const enemy of this\.enemies\) activeEnemies\.add\(enemy\)/);
 });
 
 
