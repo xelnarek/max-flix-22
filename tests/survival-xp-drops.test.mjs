@@ -46,8 +46,8 @@ test('wave and anomaly bonuses stack but remain bounded', () => {
 
 
 test('regular XP drops receive bounded bad-luck protection and are guaranteed after four misses', () => {
-  assert.equal(rollSurvivalXpDrop('zombie_pracownik', 0.82, 0, 1, 1, 1, 0, 3), null);
-  const protectedDrop = rollSurvivalXpDrop('zombie_pracownik', 0.82, 0, 1, 1, 1, 0, 4);
+  assert.equal(rollSurvivalXpDrop('zombie_pracownik', 0.9, 0, 1, 1, 1, 0, 3), null);
+  const protectedDrop = rollSurvivalXpDrop('zombie_pracownik', 0.9, 0, 1, 1, 1, 0, 4);
   assert.deepEqual(protectedDrop, {
     dropClass: 'regular', value: 1, isMilestone: false, isPityDrop: true,
   });
