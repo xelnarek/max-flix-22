@@ -359,6 +359,22 @@ test('enemy death action supersedes any active hit reaction', async () => {
   assert.match(game, /this\.requestGobkitAction\(track, 'Death', 1\.08\)/);
 });
 
+test('late enemy model attachment cannot reveal both the full rig and its LOD proxy after defeat', async () => {
+  const game = await read('../src/game.ts');
+  const attachStart = game.indexOf('private installEnemyVisualLodProxy(enemy: EnemyItem, fullRoot: THREE.Group)');
+  const attachEnd = game.indexOf('\n  }', attachStart) + 4;
+  assert.ok(attachStart >= 0 && attachEnd > attachStart, 'enemy LOD attachment method should exist');
+  const attach = game.slice(attachStart, attachEnd);
+  assert.match(attach, /enemy\.state === 'defeated' \|\| mesh\.userData\.actorDeathVisualLocked === true/);
+  assert.match(attach, /proxy\.visible = !deathVisualLocked/);
+  const lodStart = game.indexOf('const deathVisualLocked = enemy.state === \'defeated\'', attachEnd);
+  assert.ok(lodStart > attachEnd, 'runtime LOD update should enforce the death visibility lock');
+  const lodSlice = game.slice(lodStart, lodStart + 700);
+  assert.match(lodSlice, /const useProxy = !deathVisualLocked/);
+  assert.match(lodSlice, /lodProxy\.visible = useProxy/);
+  assert.match(lodSlice, /fullVisual\.visible = !useProxy/);
+});
+
 test('procedural fallback hides every renderable body primitive but keeps explicit overlays', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /object instanceof THREE\.Mesh \|\| object instanceof THREE\.Line/);
