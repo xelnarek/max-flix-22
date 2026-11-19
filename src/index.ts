@@ -2926,7 +2926,7 @@ class PaleciakiScene extends xb.Script {
       });
     });
 
-    menuTabButtons.forEach((tabBtn) => {
+    menuTabButtons.forEach((tabBtn, index) => {
       const targetId = tabBtn.getAttribute('data-tab');
       tabBtn.id = tabBtn.id || (targetId ? 'menu-' + targetId : 'menu-tab-' + index);
       tabBtn.setAttribute('role', 'tab');
