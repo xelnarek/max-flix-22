@@ -51,7 +51,7 @@ test('the public UI exposes Endless Survival and a separate stage campaign', asy
   assert.doesNotMatch(html, /RANKING GLOBALNY • .*KAMPANIA/i);
   assert.doesNotMatch(app, /launchCampaignGame|doStartGame|id="btn-start-game"|story-intro-modal/);
   assert.match(app, /bindTap\(document\.getElementById\('btn-start-survival'\), \(event\) =>/);
-  assert.match(app, /this\.engine\.startCampaignStage\(chosenStage, campaignRewardId\)/);
+  assert.match(app, /this\.engine\.startCampaignStage\(chosenStage, campaignRewardId, campaignBonusXp\)/);
   assert.match(app, /this\.engine\.startSurvival\(\)/);
 });
 
