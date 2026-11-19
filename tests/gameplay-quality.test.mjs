@@ -81,7 +81,7 @@ test('Endless has a distinct launch path while campaign stages start independent
   assert.doesNotMatch(html, /id="btn-start-game"|id="story-intro-modal"|data-tab="tab-zones"/);
   assert.match(app, /bindTap\(document\.getElementById\('btn-start-survival'\), \(event\) =>/);
   assert.match(app, /selectedCampaignStageId = null;[\s\S]*?doStartSurvival\(event\)/);
-  assert.match(app, /this\.engine\.startCampaignStage(chosenStage, campaignRewardId, campaignBonusXp)/);
+  assert.match(app, /this\.engine\.startCampaignStage\(chosenStage, campaignRewardId, campaignBonusXp\)/);
   assert.doesNotMatch(app, /this\.engine\.startCampaignStage\(chosenStage\)/);
   assert.match(app, /doStartSurvival\(\);/);
   assert.match(game, /private resetSurvivalRun\(\)/);
@@ -110,7 +110,7 @@ test('legacy campaign startGame entry points stay retired while the new mission 
   assert.match(html, /id="btn-start-survival"/);
   assert.doesNotMatch(app, /this\.engine\.startGame\(/);
   assert.match(app, /this\.engine\.startSurvival\(\)/);
-  assert.match(app, /this\.engine\.startCampaignStage(chosenStage, campaignRewardId, campaignBonusXp)/);
+  assert.match(app, /this\.engine\.startCampaignStage\(chosenStage, campaignRewardId, campaignBonusXp\)/);
   assert.doesNotMatch(app, /selectedSurvivalMapId|readSurvivalMapPreference|writeSurvivalMapPreference/);
   assert.match(game, /private resetSurvivalRun\(\)/);
   assert.doesNotMatch(game, /public startGame\(/);
