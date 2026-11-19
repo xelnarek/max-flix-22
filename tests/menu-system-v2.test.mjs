@@ -13,7 +13,7 @@ test('main menu exposes all eleven destinations through four named navigation gr
   const contentStart = html.indexOf('<div class="menu-tab-content-area">', navStart);
   assert.ok(navStart >= 0 && contentStart > navStart);
   const nav = html.slice(navStart, contentStart);
-  const groupIds = [...nav.matchAll(/<div class="menu-nav-group" data-menu-group="([^"]+)" role="group" aria-label="([^"]+)">([\\s\\S]*?)<\\/div>/g)];
+  const groupIds = [...nav.matchAll(/<div class="menu-nav-group" data-menu-group="([^"]+)" role="group" aria-label="([^"]+)">([\s\S]*?)<\/div>/g)];
   assert.deepEqual(groupIds.map((match) => match[1]), ['play', 'world', 'progress', 'system']);
   assert.deepEqual(groupIds.map((match) => match[2]), ['ROZGRYWKA', 'ŚWIAT I BHP', 'POSTĘPY', 'SYSTEM']);
   const tabIds = groupIds.flatMap((match) => [...match[3].matchAll(/data-tab="(tab-[^"]+)"/g)].map((item) => item[1]));
@@ -52,8 +52,8 @@ test('touch navigation requires choosing a segment before viewing its destinatio
   assert.match(app, /mobileMenuSegmentQuery = window\.matchMedia\('\(max-width: 900px\)'\)/);
   assert.match(app, /group\.hidden = !visible/);
   assert.match(app, /group\.inert = !visible/);
-  assert.match(mobileCss, /\.menu-mobile-segments\s*\{[\\s\\S]*?grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
-  assert.match(mobileCss, /\.menu-nav-group\[hidden\]\s*\{[\\s\\S]*?display:\s*none !important/);
+  assert.match(mobileCss, /\.menu-mobile-segments\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(mobileCss, /\.menu-nav-group\[hidden\]\s*\{[\s\S]*?display:\s*none !important/);
   assert.match(mobileCss, /grid-template-columns:\s*repeat\(auto-fit, minmax\(min\(100%, 96px\), 1fr\)\)/);
   assert.match(mobileCss, /@media \(max-height: 620px\) and \(max-width: 900px\)/);
   assert.doesNotMatch(mobileCss, /\.menu-tabs-bar\s*\{[^}]*overflow-x:\s*auto !important/);
