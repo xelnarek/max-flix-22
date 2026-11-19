@@ -126,6 +126,8 @@ export interface CampaignProgress {
   completedStages: Partial<Record<CampaignStageId, CampaignStageResult>>;
   pendingRewardId: CampaignRewardId | null;
   pendingRewardStageId: CampaignStageId | null;
+  pendingBonusXp: number;
+  pendingBonusXpStageId: CampaignStageId | null;
 }
 
 export interface CampaignMasteryStats {
@@ -178,6 +180,8 @@ export function createInitialCampaignProgress(): CampaignProgress {
     completedStages: {},
     pendingRewardId: null,
     pendingRewardStageId: null,
+    pendingBonusXp: 0,
+    pendingBonusXpStageId: null,
   };
 }
 
@@ -286,6 +290,13 @@ export function sanitizeCampaignProgress(value: unknown): CampaignProgress {
     && pendingRewardId
     ? raw.pendingRewardStageId
     : null;
+  const rawBonusXp = safeInt(raw.pendingBonusXp, 0, 12);
+  const pendingBonusXpStageId = isCampaignStageId(raw.pendingBonusXpStageId)
+    && unlockedStageIds.includes(raw.pendingBonusXpStageId)
+    && rawBonusXp > 0
+    ? raw.pendingBonusXpStageId
+    : null;
+  const pendingBonusXp = pendingBonusXpStageId ? rawBonusXp : 0;
 
   return {
     version: 1,
@@ -293,6 +304,8 @@ export function sanitizeCampaignProgress(value: unknown): CampaignProgress {
     completedStages,
     pendingRewardId: pendingRewardStageId ? pendingRewardId : null,
     pendingRewardStageId,
+    pendingBonusXp,
+    pendingBonusXpStageId,
   };
 }
 
@@ -351,6 +364,22 @@ export function setPendingCampaignReward(value: unknown, stageId: CampaignStageI
   return sanitizeCampaignProgress(progress);
 }
 
+/** Consume a field-order XP grant once, only when its exact next stage starts. */
+export function consumePendingCampaignXpBonus(
+  value: unknown,
+  stageId: CampaignStageId,
+): { progress: CampaignProgress; bonusXp: number } {
+  const progress = sanitizeCampaignProgress(value);
+  if (progress.pendingBonusXpStageId !== stageId || progress.pendingBonusXp <= 0) {
+    return { progress, bonusXp: 0 };
+  }
+
+  const bonusXp = progress.pendingBonusXp;
+  progress.pendingBonusXp = 0;
+  progress.pendingBonusXpStageId = null;
+  return { progress: sanitizeCampaignProgress(progress), bonusXp };
+}
+
 /** Consume the carried reward once, only when the matching next stage starts. */
 export function consumePendingCampaignReward(
   value: unknown,
@@ -403,6 +432,11 @@ export function recordCampaignStageResult(
   const nextStage = CAMPAIGN_STAGES[index + 1];
   if (nextStage && !progress.unlockedStageIds.includes(nextStage.id)) {
     progress.unlockedStageIds.push(nextStage.id);
+  }
+  if (nextStage && sideOrder.completed &&
+      (!progress.pendingBonusXpStageId || progress.pendingBonusXpStageId === nextStage.id)) {
+    progress.pendingBonusXpStageId = nextStage.id;
+    progress.pendingBonusXp = Math.min(12, progress.pendingBonusXp + 4 + stage.order);
   }
   return sanitizeCampaignProgress(progress);
 }
