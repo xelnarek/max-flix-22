@@ -53,7 +53,9 @@ export function loadCrimsonTexture(
     });
     cache.set(id, pending);
   }
-  return pending.then((texture) => {
+  return pending.then((baseTexture) => {
+    // Each material gets its own repeat state; the decoded image source stays shared.
+    const texture = baseTexture.clone();
     texture.repeat.set(
       Math.max(0.25, Number.isFinite(repeatX) ? repeatX : 1),
       Math.max(0.25, Number.isFinite(repeatY) ? repeatY : 1),
