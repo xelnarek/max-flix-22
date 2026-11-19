@@ -5418,7 +5418,7 @@ const injectThemeStyles = () => {
 };
 
 async function startApp() {
-  console.log('%c[App:Boot] 🚀 Start gry Warehouse MaDDnes...', 'color: #38bdf8; font-weight: bold;');
+  console.log('%c[App:Boot] 🚀 Start gry MAX FLIX 22...', 'color: #38bdf8; font-weight: bold;');
   injectThemeStyles();
 
   // The touch layer must not be a descendant of the WebGL shell: Android
@@ -5577,7 +5577,7 @@ async function startApp() {
 
     console.log('[App:Boot] 🛠️ Inicjalizacja silnika 3D (XR Blocks Core)...');
     const options = new xb.Options();
-    options.setAppTitle('Warehouse MaDDnes');
+    options.setAppTitle('MAX FLIX 22');
     
     // Explicitly disable all AR/XR features for desktop-only gameplay
     options.reticles.enabled = false;
