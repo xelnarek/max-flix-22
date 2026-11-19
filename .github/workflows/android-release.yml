@@ -19,6 +19,7 @@ on:
       - 'scripts/fetch-gobkit-assets.mjs'
       - 'scripts/fetch-polyhaven-assets.mjs'
       - 'scripts/polyHavenPack.mjs'
+      - 'scripts/prune-distribution-assets.mjs'
       - '.github/workflows/android-release.yml'
 
 permissions:
