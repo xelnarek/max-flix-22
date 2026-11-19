@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   CAMPAIGN_STAGES,
   CAMPAIGN_PROGRESS_STORAGE_KEY,
+  consumePendingCampaignXpBonus,
   createInitialCampaignProgress,
   evaluateCampaignStars,
   getCampaignMasteryProgress,
@@ -156,9 +157,34 @@ test('field-order records preserve completion and the best qualifying metric', (
   assert.equal(progress.completedStages.b4_intro?.bestSideOrderValue, 5);
 });
 
+test('field-order XP bonus is saved for one exact next stage and consumed only once', () => {
+  let progress = createInitialCampaignProgress();
+  progress = recordCampaignStageResult(progress, 'b4_intro', {
+    bossDefeated: true, kills: 10, elapsedSeconds: 72, perfectDodges: 1, xpPickups: 5,
+  });
+  assert.equal(progress.pendingBonusXpStageId, 'port_17');
+  assert.equal(progress.pendingBonusXp, 5);
+
+  const storage = new Map();
+  const storageApi = { getItem: (key) => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) };
+  assert.equal(writeCampaignProgress(storageApi, progress), true);
+  progress = readCampaignProgress(storageApi);
+  assert.equal(progress.pendingBonusXp, 5);
+
+  const unrelated = consumePendingCampaignXpBonus(progress, 'cold_zero');
+  assert.equal(unrelated.bonusXp, 0);
+  assert.equal(unrelated.progress.pendingBonusXp, 5);
+
+  const consumed = consumePendingCampaignXpBonus(unrelated.progress, 'port_17');
+  assert.equal(consumed.bonusXp, 5);
+  assert.equal(consumed.progress.pendingBonusXp, 0);
+  assert.equal(consumed.progress.pendingBonusXpStageId, null);
+  assert.equal(consumePendingCampaignXpBonus(consumed.progress, 'port_17').bonusXp, 0);
+});
+
 test('time-based field order keeps the fastest qualifying boss clear', () => {
   let progress = createInitialCampaignProgress();
-  for (const stage of CAMPAIGN_STAGES.slice(0, 4)) {
+  for (const [index, stage] of CAMPAIGN_STAGES.slice(0, 4).entries()) {
     progress = recordCampaignStageResult(progress, stage.id, {
       bossDefeated: true,
       kills: stage.bonusKillTarget,
@@ -172,6 +198,8 @@ test('time-based field order keeps the fastest qualifying boss clear', () => {
       playerHpPercent: 85,
       bossKillSeconds: 20,
     });
+    const nextStage = CAMPAIGN_STAGES[index + 1];
+    if (nextStage) progress = consumePendingCampaignXpBonus(progress, nextStage.id).progress;
   }
   assert.ok(progress.unlockedStageIds.includes('final_audit'));
   for (const bossKillSeconds of [30, 24, 36]) {
