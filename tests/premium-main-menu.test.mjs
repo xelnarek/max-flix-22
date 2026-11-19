@@ -18,11 +18,17 @@ test('premium final menu is loaded and preserves real destinations', () => {
 });
 
 test('premium menu has isolated scrolling and short-screen geometry', () => {
-  assert.match(css, /\.menu-tab-content-area[^}]*overflow-y:\s*auto/s);
-  assert.match(css, /@media \(max-width: 1100px\)/);
-  assert.match(css, /@media \(max-width: 760px\)/);
-  assert.match(css, /@media \(max-height: 560px\) and \(orientation: landscape\) and \(pointer: coarse\)/);
-  assert.match(css, /prefers-reduced-motion: reduce/);
+  const compactCss = css.replace(/\\s+/g, '');
+  const contentRuleStart = compactCss.indexOf('#title-screen.menu-tab-content-area{');
+  assert.ok(contentRuleStart >= 0, 'menu content viewport must be styled');
+  const contentRuleEnd = compactCss.indexOf('}', contentRuleStart);
+  assert.ok(compactCss.slice(contentRuleStart, contentRuleEnd).includes('overflow-y:auto'),
+    'menu content viewport must own vertical scrolling');
+  assert.ok(compactCss.includes('@media(max-width:1100px)'), 'tablet breakpoint must remain');
+  assert.ok(compactCss.includes('@media(max-width:760px)'), 'phone breakpoint must remain');
+  assert.ok(compactCss.includes('@media(max-height:560px)and(orientation:landscape)and(pointer:coarse)'),
+    'compact landscape breakpoint must remain');
+  assert.ok(compactCss.includes('@media(prefers-reduced-motion:reduce)'), 'reduced-motion support must remain');
 });
 
 test('cinematic intro keeps procedural Canvas 2D and accessible fallback', () => {
