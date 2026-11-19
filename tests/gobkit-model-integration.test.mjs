@@ -632,3 +632,16 @@ test('imported enemy Attack clip peaks on the 60 percent telegraph release frame
   assert.ok(Math.abs(shoulderTrack.times[2] / attack.duration - 0.60) < 0.002,
     'strike peak must coincide with the telegraph release frame');
 });
+
+test('enemy model attachment never displays the imported rig and LOD proxy together', async () => {
+  const game = await read('../src/game.ts');
+  const start = game.indexOf('private installEnemyVisualLodProxy(');
+  const end = game.indexOf('\n  /**', start);
+  assert.ok(start >= 0 && end > start, 'enemy visual installation method must exist');
+  const install = game.slice(start, end);
+  assert.match(install, /proxy\.visible = false/);
+  assert.match(install, /fullRoot\.visible = !deathVisualLocked/);
+  assert.doesNotMatch(install, /proxy\.visible = !deathVisualLocked/);
+  assert.match(game, /lodProxy\.visible = useProxy;\s*fullVisual\.visible = !useProxy/);
+  assert.match(game, /if \(lodProxy\) lodProxy\.visible = false;\s*if \(fullVisual\) fullVisual\.visible = true/);
+});
