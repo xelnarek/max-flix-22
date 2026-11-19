@@ -22,10 +22,10 @@ test('the branded loader keeps one progress system and every asset callback targ
       assert.ok(assets.includes('id="' + id + '"'), 'fallback loader missing ' + id);
     }
   }
-  assert.match(html, /WAREHOUSE\s*<span>MaDDnes<\/span>/);
+  assert.match(html, /MAX FLIX\s*<span>22<\/span>/);
   assert.match(html, /loader-art/);
   assert.match(html, /role="progressbar"/);
-  assert.match(assets, /WAREHOUSE\s*<span>MaDDnes<\/span>/);
+  assert.match(assets, /MAX FLIX\s*<span>22<\/span>/);
   assert.match(assets, /setAttribute\('aria-valuenow'/);
   assert.doesNotMatch(html, /CENTRUM B4 3D LOGISTICS ENGINE/);
   assert.match(css, /\.loader-modal-card\.loader-maddnes-card/);
