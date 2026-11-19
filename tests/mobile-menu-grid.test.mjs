@@ -60,7 +60,7 @@ test('operator cards adapt to tablet, landscape and narrow portrait layouts', ()
 
 test('existing roster repair keeps the operator profile after the card grid', () => {
   const rosterFix = css.slice(css.indexOf('/* OPERATOR ROSTER REPAIR'));
-  assert.match(rosterFix, /#title-screen #tab-team \.char-grid,[\s\S]*?display: grid !important/);
+  assert.match(rosterFix, /#title-screen #tab-team \.char-grid\s*\{[\s\S]*?display: grid !important/);
   assert.match(rosterFix, /#char-details-box[\s\S]*?width: 100% !important/);
 });
 
