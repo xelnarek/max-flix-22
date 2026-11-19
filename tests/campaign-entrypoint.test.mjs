@@ -9,7 +9,8 @@ test('Campaign is exposed as a primary menu destination and one-tap title-screen
     readFile(new URL('../src/campaignProgression.ts', import.meta.url), 'utf8'),
   ]);
   assert.match(html, /id="btn-open-campaign"/);
-  assert.match(html, /KAMPANIA • 5 ETAPÓW/);
+  assert.match(html, /data-mode="campaign"/);
+  assert.match(html, /5 MISJI • ZAPIS POSTĘPU/);
   assert.match(html, /data-tab="tab-map".*aria-label="Tryb fabularny: kampania pięciu etapów oraz atlas świata"/);
   assert.match(html, /<span class="tab-label">KAMPANIA<\/span>/);
   assert.match(html, /id="campaign-board-title">KAMPANIA ZMIAN/);
