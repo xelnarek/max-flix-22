@@ -46,24 +46,33 @@ test('rare combat drops use existing perk pickup cleanup and a live protective a
   assert.match(game, /damageSource: 'ability'[\s\S]*?homingTrailColor: 0xffa34a/);
 });
 
-test('twelve roulette outcomes have concrete handlers for loot, control, overdrive and elite delivery', async () => {
+test('eighteen roulette outcomes have concrete handlers for loot, control, weapon draft and risk/reward RNG', async () => {
   const [game, roulette, app, css] = await Promise.all([
     read('../src/game.ts'), read('../src/survivalChaosRoulette.ts'), read('../src/index.ts'),
     read('../src/visual-polish.css')
   ]);
-  for (const outcome of ['xp_rain', 'overdrive', 'bounty', 'time_lock', 'elite_delivery']) {
+  for (const outcome of [
+    'xp_rain', 'overdrive', 'bounty', 'time_lock', 'elite_delivery',
+    'magnet_surge', 'xp_surge', 'golden_crate', 'hazard_clear', 'double_or_nothing', 'weapon_draft',
+  ]) {
     assert.ok(roulette.includes("'" + outcome + "'"), 'missing roulette outcome ' + outcome);
     assert.ok(game.includes("case '" + outcome + "'"), 'missing gameplay handler ' + outcome);
   }
   assert.match(game, /private triggerSurvivalXpRain\(\)/);
   assert.match(game, /private triggerSurvivalTimeLock\(\)/);
   assert.match(game, /private spawnSurvivalEliteDelivery\(\)/);
+  assert.match(game, /private clearSurvivalEnemyProjectiles\(\)/);
+  assert.match(game, /this\.activatePerk\('order_magnet', 18\)/);
+  assert.match(game, /this\.activatePerk\('xp_surge', 20\)/);
+  assert.match(game, /650 \+ Math\.floor\(Math\.random\(\) \* 901\)/);
+  assert.match(game, /if \(Math\.random\(\) < 0\.55\)/);
+  assert.match(game, /weaponOptions = this\.rollSurvivalUpgradeOptions\(\)\.filter/);
   assert.match(game, /enemy\.stunTimer = Math\.max\(enemy\.stunTimer, isBoss \? 0\.82 : 1\.8\)/);
   assert.match(game, /enemy\.state = 'stunned'/);
   assert.match(game, /DOSTAWA PRIORYTETOWA ×/);
   assert.match(game, /ELITA B4 • KONTROLER/);
   assert.match(game, /ELITA B4 • KURIER/);
-  assert.match(app, /Trzy obracające się bębny, dwanaście możliwych wyników, jeden spin/);
+  assert.match(app, /Trzy obracające się bębny, osiemnaście możliwych wyników, jeden spin/);
   assert.match(app, /survival-chaos-reels/);
   assert.match(css, /survival-chaos-marquee \.survival-chaos-lamp/);
   assert.match(app, /survival-chaos-reel-symbol/);
