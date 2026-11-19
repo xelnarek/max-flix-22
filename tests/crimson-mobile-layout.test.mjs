@@ -24,5 +24,6 @@ test('mobile menu has one persistent vertical sidebar and one independent conten
   assert.ok(repairCss.includes('flex-direction: column !important;'));
   assert.ok(repairCss.includes('overflow-y: auto !important;'));
   assert.ok(repairCss.includes('overflow-x: hidden !important;'));
-  assert.doesNotMatch(mobileCss + repairCss, /menu-mobile-segments|menu-mobile-segment|menu-nav-group\\[hidden\\]/);
+  assert.doesNotMatch(mobileCss + repairCss, /menu-mobile-segments|menu-mobile-segment/);
+  assert.ok(!(mobileCss + repairCss).includes('menu-nav-group[hidden]'));
 });
