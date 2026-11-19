@@ -571,3 +571,43 @@ test('Gobkit actor clones keep unique skeleton roots while sharing immutable sou
     THREE.Box3.prototype.setFromObject = originalSetFromObject;
   }
 });
+
+
+test('Base44 and DCC-exported rig clips resolve to stable runtime action names', async () => {
+  const { canonicalizeGobkitClipName } = await import('../src/gobkitAnimation.ts');
+  assert.equal(canonicalizeGobkitClipName('Armature|Idle_01'), 'Idle');
+  assert.equal(canonicalizeGobkitClipName('mixamorig:Walk_Cycle'), 'Walk');
+  assert.equal(canonicalizeGobkitClipName('Character_Run_Fast'), 'Run');
+  assert.equal(canonicalizeGobkitClipName('Take_02_Death'), 'Death');
+  assert.equal(canonicalizeGobkitClipName('Damage_Reaction'), 'Hit');
+  assert.equal(canonicalizeGobkitClipName('Uppercut_Attack'), 'Attack');
+  assert.equal(canonicalizeGobkitClipName('Take_001'), null);
+});
+
+test('humanoid rigs without canonical locomotion/death clips receive articulated fallbacks', async () => {
+  const { createRigLocomotionFallbackClips } = await import('../src/rigCombatClips.ts');
+  const root = new THREE.Group();
+  const hips = new THREE.Bone(); hips.name = 'Hips'; root.add(hips);
+  const spine = new THREE.Bone(); spine.name = 'Spine'; hips.add(spine);
+  const chest = new THREE.Bone(); chest.name = 'Chest'; spine.add(chest);
+  const head = new THREE.Bone(); head.name = 'Head'; chest.add(head);
+  const leftArm = new THREE.Bone(); leftArm.name = 'LeftUpperArm'; chest.add(leftArm);
+  const rightArm = new THREE.Bone(); rightArm.name = 'RightUpperArm'; chest.add(rightArm);
+  const leftLeg = new THREE.Bone(); leftLeg.name = 'LeftThigh'; hips.add(leftLeg);
+  const rightLeg = new THREE.Bone(); rightLeg.name = 'RightThigh'; hips.add(rightLeg);
+  const clips = createRigLocomotionFallbackClips(root, 'krol_leto');
+  const byName = new Map(clips.map((clip) => [clip.name, clip]));
+  for (const name of ['Idle', 'Walk', 'Run', 'Death']) {
+    assert.ok(byName.has(name), 'missing generated clip ' + name);
+    assert.ok(byName.get(name).tracks.length >= 3, 'clip should animate multiple joints: ' + name);
+    assert.ok(byName.get(name).duration > 0.4);
+  }
+  assert.equal(byName.get('Death').duration, 0.94);
+});
+
+test('runtime registers canonical aliases and only fills missing baseline clips', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /canonicalizeGobkitClipName\(safeClip\.name\)/);
+  assert.match(game, /createRigLocomotionFallbackClips\(root, enemyType\)/);
+  assert.match(game, /if \(!actions\.has\(clip\.name\)\) actions\.set\(clip\.name, mixer\.clipAction\(clip\)\)/);
+});
