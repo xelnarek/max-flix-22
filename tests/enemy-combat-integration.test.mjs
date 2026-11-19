@@ -246,3 +246,13 @@ test('distant visual LOD never changes hostile projectile, collision or damage l
   assert.match(game, /resolvePlayerMovementAgainstEnemies\(/);
   assert.match(game, /findFirstProjectileEnemyImpact\(/);
 });
+
+
+test('enemy death hides the LOD proxy and keeps only the full rig visible until cleanup', () => {
+  assert.match(game, /private lockEnemyDeathVisualToSingleRig\(mesh: THREE\.Object3D\)/);
+  assert.match(game, /if \(lodProxy\) lodProxy\.visible = false/);
+  assert.match(game, /if \(fullVisual\) fullVisual\.visible = true/);
+  assert.match(game, /this\.lockEnemyDeathVisualToSingleRig\(mesh\)/);
+  assert.match(game, /enemy\.state !== 'defeated' && shouldUseEnemyVisualLodProxy/);
+  assert.match(game, /if \(fullVisual\) fullVisual\.visible = false/);
+});
