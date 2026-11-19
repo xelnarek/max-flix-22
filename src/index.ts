@@ -1436,8 +1436,6 @@ class PaleciakiScene extends xb.Script {
               secretsFound: snapshot.secretsFound,
               playerHpPercent: snapshot.playerHpPercent,
               bossKillSeconds: snapshot.campaignBossKillSeconds,
-              killStreak: snapshot.killStreak,
-              bossDefeated: true,
             });
             nextCampaignStageId = getNextCampaignStageId(campaignProgress, snapshot.campaignStageId);
             if (nextCampaignStageId) {
