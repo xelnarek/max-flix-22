@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   advanceEnemyAttackTelegraph,
   getEnemyRangedAttackTelegraphProfile,
+  getEnemyAttackTelegraphConcurrencyLimit,
+  hasEnemyAttackTelegraphCapacity,
 } from '../src/enemyAttackTelegraphs.ts';
 
 const EXPECTED_TYPES = [
@@ -76,4 +78,16 @@ test('invalid durations fail closed and expired warnings complete deterministica
   const expired = advanceEnemyAttackTelegraph(0, 0.5, 0.1);
   assert.equal(expired.completed, true);
   assert.equal(expired.progress, 1);
+});
+
+test('shared warning budget caps simultaneous melee and ranged cues on handheld and desktop', () => {
+  assert.equal(getEnemyAttackTelegraphConcurrencyLimit(true), 2);
+  assert.equal(getEnemyAttackTelegraphConcurrencyLimit(false), 4);
+  assert.equal(hasEnemyAttackTelegraphCapacity(0, true), true);
+  assert.equal(hasEnemyAttackTelegraphCapacity(1, true), true);
+  assert.equal(hasEnemyAttackTelegraphCapacity(2, true), false);
+  assert.equal(hasEnemyAttackTelegraphCapacity(3, false), true);
+  assert.equal(hasEnemyAttackTelegraphCapacity(4, false), false);
+  assert.equal(hasEnemyAttackTelegraphCapacity(Number.NaN, false), false);
+  assert.equal(hasEnemyAttackTelegraphCapacity(Number.POSITIVE_INFINITY, true), false);
 });

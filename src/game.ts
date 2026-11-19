@@ -50,7 +50,7 @@ import { calculateStableEnemySteering, getEnemyEngageRadius } from './enemySteer
 import { calculateEnemyProjectileDodge, predictEnemyAimPoint } from './enemyTactics.ts';
 import { EnemyProjectileThreatIndex } from './enemyProjectileThreatIndex.ts';
 import { getCampaignEnemyFlankProfile, getCampaignEnemyFlankVector, resolveCampaignEnemyFlankSide } from './enemyCampaignTactics.ts';
-import { advanceEnemyAttackTelegraph, getEnemyRangedAttackTelegraphProfile } from './enemyAttackTelegraphs.ts';
+import { advanceEnemyAttackTelegraph, getEnemyRangedAttackTelegraphProfile, hasEnemyAttackTelegraphCapacity } from './enemyAttackTelegraphs.ts';
 import { getEnemyMeleeTelegraphProfile, type EnemyMeleeTelegraphProfile } from './enemyMeleeTelegraphs.ts';
 import { getEnemyPlayerContactDistance, projectVelocityOutOfEnemyContacts, resolvePlayerMovementAgainstEnemies } from './enemyPlayerCollision.ts';
 import { findFirstProjectileBodyImpact, findFirstProjectileEnemyImpact, type MutableProjectileSegmentPoint, type ProjectileEnemyImpactScratch, type ProjectileImpactScratch } from './projectileImpact.ts';
@@ -760,8 +760,8 @@ export class PaleciakiGameEngine {
   private bulldozerHitCooldowns = new Map<string, number>();
   private globalEnemyShoutCooldown = 0;
   private globalEnemyTelegraphToastCooldown = 0;
-  /** Bounded per-frame warning budget prevents a melee crowd from filling the floor with lanes. */
-  private readonly activeEnemyMeleeTelegraphIds = new Set<string>();
+  /** Shared visual warning budget keeps simultaneous melee and ranged cues readable. */
+  private readonly activeEnemyAttackTelegraphIds = new Set<string>();
   /** Remaining duration of Mateusz's enemy-only faction brawl. */
   private enemyFactionBrawlRemaining = 0;
   /** Reused target-load snapshot prevents the whole brawl from dogpiling one enemy. */
@@ -7225,7 +7225,7 @@ export class PaleciakiGameEngine {
 
   private clearLevel() {
     this.enemyFactionBrawlRemaining = 0;
-    this.activeEnemyMeleeTelegraphIds.clear();
+    this.activeEnemyAttackTelegraphIds.clear();
     this.clearMateuszRivals();
     this.restoreCameraOccluders();
     if (this.survivalSightlineMarker) {
@@ -14942,32 +14942,110 @@ export class PaleciakiGameEngine {
     }
   }
 
+  /**
+   * Attach a compact direction marker above the attacking enemy. The cue stays
+   * on the actor rather than painting the floor, so it cannot leave map stains
+   * or coloured trails after the warning has resolved.
+   */
+  private spawnEnemyTelegraphCue(
+    enemy: EnemyItem,
+    color: number,
+    durationSeconds: number,
+  ): THREE.Group | null {
+    if (!enemy.mesh || !Number.isFinite(color)) return null;
+    const duration = Number.isFinite(durationSeconds)
+      ? THREE.MathUtils.clamp(durationSeconds, 0.12, 1.2)
+      : 0.48;
+    const material = new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.96,
+      depthTest: false,
+      depthWrite: false,
+      toneMapped: false,
+    });
+    const cue = new THREE.Group();
+    cue.name = 'ENEMY_ATTACK_TELEGRAPH_CUE';
+    cue.position.set(0, 1.85, 0);
+    cue.renderOrder = 20;
+
+    const halo = new THREE.Mesh(
+      new THREE.TorusGeometry(0.27, 0.038, 5, 20),
+      material,
+    );
+    halo.rotation.x = Math.PI / 2;
+    halo.position.y = 0.025;
+    const shaft = new THREE.Mesh(
+      new THREE.BoxGeometry(0.105, 0.055, 0.34),
+      material,
+    );
+    shaft.position.z = 0.105;
+    const arrowHead = new THREE.Mesh(
+      new THREE.ConeGeometry(0.15, 0.26, 4),
+      material,
+    );
+    arrowHead.rotation.x = Math.PI / 2;
+    arrowHead.position.z = 0.345;
+    cue.add(halo, shaft, arrowHead);
+    enemy.mesh.add(cue);
+
+    return cue;
+  }
+
+  /** Pulse the overhead cue from the same bounded wind-up clock that controls attack release. */
+  private updateEnemyTelegraphCue(
+    cue: THREE.Group | undefined,
+    deltaSeconds: number,
+    progress: number,
+  ): void {
+    if (!cue) return;
+    const safeProgress = Number.isFinite(progress) ? THREE.MathUtils.clamp(progress, 0, 1) : 0;
+    const pulse = 1 + Math.sin(safeProgress * Math.PI * 7) * 0.075;
+    cue.scale.setScalar(pulse);
+    const halo = cue.children[0] as THREE.Mesh | undefined;
+    if (halo) halo.rotation.y += Math.max(0, Math.min(0.25, Number.isFinite(deltaSeconds) ? deltaSeconds : 0)) * 2.2;
+    const material = halo?.material as THREE.MeshBasicMaterial | undefined;
+    if (material) material.opacity = 0.96 - safeProgress * 0.28;
+  }
+
+  /** Remove and dispose a cue immediately on release, interruption or actor cleanup. */
+  private clearEnemyTelegraphCue(cue: THREE.Group | undefined): void {
+    if (!cue) return;
+    cue.removeFromParent();
+    this.disposeTemporaryObject(cue);
+  }
+
+  private clearEnemyRangedTelegraphVisual(enemy: EnemyItem): void {
+    this.clearEnemyTelegraphCue(enemy.aiRangedTelegraphMesh as THREE.Group | undefined);
+    enemy.aiRangedTelegraphMesh = undefined;
+    this.activeEnemyAttackTelegraphIds.delete(enemy.id);
+  }
+
   private beginEnemyRangedAttackTelegraph(enemy: EnemyItem): boolean {
     const profile = getEnemyRangedAttackTelegraphProfile(enemy.type);
     if (!profile || !enemy.mesh || ![enemy.x, enemy.z, this.playerPos.x, this.playerPos.z].every(Number.isFinite)) {
       return false;
     }
+    if (!hasEnemyAttackTelegraphCapacity(this.activeEnemyAttackTelegraphIds.size, this.isHandheldViewport)) {
+      // Retry after a short pause instead of polling the warning budget every rendered frame.
+      enemy.specialActionTimer = Math.max(enemy.specialActionTimer ?? 0, 0.24);
+      return false;
+    }
 
     const direction = Math.atan2(this.playerPos.x - enemy.x, this.playerPos.z - enemy.z);
-    const distance = Math.hypot(this.playerPos.x - enemy.x, this.playerPos.z - enemy.z);
-    const laneLength = THREE.MathUtils.clamp(distance + 1.4, 2.8, 15.5);
     enemy.aiRangedWindupTimer = profile.windupSeconds;
     enemy.aiRangedWindupDuration = profile.windupSeconds;
     enemy.aiRangedLockedDirection = direction;
     enemy.mesh.rotation.y = direction;
-    enemy.aiRangedTelegraphMesh = this.spawnBossLaneTelegraph(
-      enemy.x,
-      enemy.z,
-      direction,
-      laneLength,
-      profile.laneWidth,
-      profile.color,
-      profile.windupSeconds,
+    enemy.aiRangedTelegraphMesh = this.spawnEnemyTelegraphCue(
       enemy,
+      profile.color,
+      profile.windupSeconds + 0.12,
     );
+    this.activeEnemyAttackTelegraphIds.add(enemy.id);
     this.requestEnemyAttackAnimation(enemy, profile.windupSeconds);
 
-    // The lane is per-attacker; radio text and warning sound are globally throttled.
+    // Per-attacker direction cues are always visible; radio text and sound stay globally throttled.
     if (this.globalEnemyTelegraphToastCooldown <= 0) {
       this.emitFloatingToast(profile.warningText, enemy.x, enemy.y + 1.25, enemy.z, 'damage');
       this.globalEnemyTelegraphToastCooldown = 1.15;
@@ -14985,34 +15063,28 @@ export class PaleciakiGameEngine {
       dt,
     );
     enemy.aiRangedWindupTimer = timing.remainingSeconds;
+    this.updateEnemyTelegraphCue(
+      enemy.aiRangedTelegraphMesh as THREE.Group | undefined,
+      dt,
+      timing.progress,
+    );
     if (!timing.completed) return null;
 
     const release = {
       direction: enemy.aiRangedLockedDirection ?? enemy.mesh?.rotation?.y ?? 0,
     };
+    this.clearEnemyRangedTelegraphVisual(enemy);
     enemy.aiRangedWindupTimer = undefined;
     enemy.aiRangedWindupDuration = undefined;
     enemy.aiRangedLockedDirection = undefined;
-    enemy.aiRangedTelegraphMesh = undefined;
     return release;
   }
 
   private cancelEnemyRangedAttackTelegraph(enemy: EnemyItem, applyRecoveryDelay = false): void {
-    const telegraph = enemy.aiRangedTelegraphMesh as THREE.Group | undefined;
-    if (telegraph) {
-      const effectIndex = this.specialEffects.findIndex((effect) => effect.mesh === telegraph);
-      if (effectIndex >= 0) {
-        const [effect] = this.specialEffects.splice(effectIndex, 1);
-        if (effect.cleanup) effect.cleanup();
-        else if (effect.disposeOnRemove) this.disposeTemporaryObject(effect.mesh);
-      } else if (telegraph.parent) {
-        this.disposeTemporaryObject(telegraph);
-      }
-    }
+    this.clearEnemyRangedTelegraphVisual(enemy);
     enemy.aiRangedWindupTimer = undefined;
     enemy.aiRangedWindupDuration = undefined;
     enemy.aiRangedLockedDirection = undefined;
-    enemy.aiRangedTelegraphMesh = undefined;
     if (applyRecoveryDelay) {
       enemy.specialActionTimer = Math.max(enemy.specialActionTimer ?? 0, 0.82);
     }
@@ -15029,25 +15101,22 @@ export class PaleciakiGameEngine {
       ![enemy.x, enemy.z, this.playerPos.x, this.playerPos.z, distance].every(Number.isFinite)
     ) return false;
 
-    const platformLimit = this.isHandheldViewport ? 2 : 4;
-    if (this.activeEnemyMeleeTelegraphIds.size >= platformLimit) return false;
+    if (!hasEnemyAttackTelegraphCapacity(this.activeEnemyAttackTelegraphIds.size, this.isHandheldViewport)) {
+      enemy.aiMeleeCooldownTimer = Math.max(enemy.aiMeleeCooldownTimer ?? 0, 0.24);
+      return false;
+    }
 
     const direction = Math.atan2(this.playerPos.x - enemy.x, this.playerPos.z - enemy.z);
-    const laneLength = THREE.MathUtils.clamp(distance + 0.38, 1.5, 3.8);
     enemy.aiMeleeWindupTimer = profile.windupSeconds;
     enemy.aiMeleeWindupDuration = profile.windupSeconds;
     enemy.aiMeleeLockedDirection = direction;
     enemy.mesh.rotation.y = direction;
-    enemy.aiMeleeTelegraphMesh = this.spawnBossLaneTelegraph(
-      enemy.x,
-      enemy.z,
-      direction,
-      laneLength,
-      profile.laneWidth,
+    enemy.aiMeleeTelegraphMesh = this.spawnEnemyTelegraphCue(
+      enemy,
       profile.color,
       profile.windupSeconds + 0.22,
     );
-    this.activeEnemyMeleeTelegraphIds.add(enemy.id);
+    this.activeEnemyAttackTelegraphIds.add(enemy.id);
 
     // The procedural strike peaks at 60% of this pose, aligned with the end of the warning.
     this.requestEnemyAttackAnimation(enemy, profile.windupSeconds / 0.60);
@@ -15073,6 +15142,11 @@ export class PaleciakiGameEngine {
       dt,
     );
     enemy.aiMeleeWindupTimer = timing.remainingSeconds;
+    this.updateEnemyTelegraphCue(
+      enemy.aiMeleeTelegraphMesh as THREE.Group | undefined,
+      dt,
+      timing.progress,
+    );
     if (!timing.completed) return false;
 
     this.clearEnemyMeleeTelegraphVisual(enemy);
@@ -15083,19 +15157,9 @@ export class PaleciakiGameEngine {
   }
 
   private clearEnemyMeleeTelegraphVisual(enemy: EnemyItem): void {
-    const telegraph = enemy.aiMeleeTelegraphMesh as THREE.Group | undefined;
-    if (telegraph) {
-      const effectIndex = this.specialEffects.findIndex((effect) => effect.mesh === telegraph);
-      if (effectIndex >= 0) {
-        const [effect] = this.specialEffects.splice(effectIndex, 1);
-        if (effect.cleanup) effect.cleanup();
-        else if (effect.disposeOnRemove) this.disposeTemporaryObject(effect.mesh);
-      } else if (telegraph.parent) {
-        this.disposeTemporaryObject(telegraph);
-      }
-    }
+    this.clearEnemyTelegraphCue(enemy.aiMeleeTelegraphMesh as THREE.Group | undefined);
     enemy.aiMeleeTelegraphMesh = undefined;
-    this.activeEnemyMeleeTelegraphIds.delete(enemy.id);
+    this.activeEnemyAttackTelegraphIds.delete(enemy.id);
   }
 
   private cancelEnemyMeleeAttackTelegraph(enemy: EnemyItem, applyRecoveryDelay = false): void {
