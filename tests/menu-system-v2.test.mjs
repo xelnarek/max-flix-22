@@ -101,3 +101,11 @@ test('coarse-pointer devices wider than 900 CSS pixels retain the desktop menu g
   assert.match(css, /@media \(max-width: 900px\) \{/);
   assert.doesNotMatch(css, /@media \(pointer: coarse\)\s*\{/);
 });
+
+
+test('ARIA orientation follows the same 900px breakpoint as the rendered navigation rail', async () => {
+  const app = await read('src/index.ts');
+  assert.match(app, /matchMedia\('\(min-width: 901px\) and \(pointer: fine\)'\)/);
+  assert.match(app, /aria-orientation', desktopMenuNavigationQuery\.matches \? 'vertical' : 'horizontal'/);
+  assert.match(app, /desktopMenuNavigationQuery\.addEventListener\('change'/);
+});
