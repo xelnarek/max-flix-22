@@ -117,7 +117,7 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          ANDROID_VERSION_NAME: '0.1.0'
+          ANDROID_VERSION_NAME: '0.2.0'
           ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID }}
         run: |
           if [ -n "${ANDROID_UPLOAD_KEYSTORE_BASE64:-}" ]; then
@@ -177,7 +177,7 @@ jobs:
           releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
           tracks: internal
           status: completed
-          releaseName: Paleciaki-0.1.0-${{ github.run_number }}
+          releaseName: Paleciaki-0.2.0-${{ github.run_number }}
 
       - name: Upload Android QA and release artifacts
         uses: actions/upload-artifact@v4
