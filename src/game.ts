@@ -15,13 +15,14 @@ import { createEnemyRoleKit } from './enemyRoleKits.ts';
 import { applyEnemyRoleAnatomy, applyEnemyRoleSecondaryMotion, clearEnemyRoleSecondaryMotion } from './enemyAnimationPolish.ts';
 import { createMakeHumanActor, MAKEHUMAN_OPERATOR_STYLES, type MakeHumanStyleId } from './makeHumanAssets.ts';
 import {
+  canonicalizeGobkitClipName,
   clampGobkitActionDuration,
   getGobkitActionPriority,
   isGobkitOneShotAction,
   resolveGobkitActionName,
   shouldKeepGobkitAction,
 } from './gobkitAnimation.ts';
-import { createRigCombatClips, type RigCombatStyle } from './rigCombatClips.ts';
+import { createRigCombatClips, createRigLocomotionFallbackClips, type RigCombatStyle } from './rigCombatClips.ts';
 import { disposePvpObjectTree } from './pvpResourceCleanup.ts';
 import { calculatePvpCameraFrame, calculatePvpCameraTrackingBounds, isPvpPortraitViewport } from './pvpCamera.ts';
 import { createArenaObstacleFootprint, createPvpContactShadowTexture, createPvpFloorTexture, createPvpObstacleTexture } from './pvpTextures.ts';
@@ -1743,13 +1744,22 @@ export class PaleciakiGameEngine {
     const actions = new Map<string, THREE.AnimationAction>();
     for (const clip of gltf.animations) {
       const safeClip = cloneRootMotionFreeClip(clip);
-      actions.set(safeClip.name, mixer.clipAction(safeClip));
+      const action = mixer.clipAction(safeClip);
+      actions.set(safeClip.name, action);
+      // Blender, Mixamo and Base44 exporters frequently prefix names with the
+      // armature or append take indices. Register a canonical alias without
+      // discarding the original action name.
+      const canonicalName = canonicalizeGobkitClipName(safeClip.name);
+      if (canonicalName && !actions.has(canonicalName)) actions.set(canonicalName, action);
     }
-    // The downloaded rigs are guaranteed to contain locomotion/hit/death clips,
-    // but not every pack supplies a readable attack or airborne animation.
-    // Overlay original project-authored clips without changing the source GLBs.
+    // Authored attack / hit poses are kept consistent across rigs. Baseline
+    // locomotion and death are only generated when the GLB did not supply a
+    // canonical (or recognised aliased) clip.
     for (const clip of createRigCombatClips(root, combatStyle, enemyType)) {
       actions.set(clip.name, mixer.clipAction(clip));
+    }
+    for (const clip of createRigLocomotionFallbackClips(root, enemyType)) {
+      if (!actions.has(clip.name)) actions.set(clip.name, mixer.clipAction(clip));
     }
     const track: GobkitAnimationTrack = {
       root, mixer, actions, currentAction: '', lastPosition: initialPosition.clone(),

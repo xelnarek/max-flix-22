@@ -133,6 +133,121 @@ function skeletonSignature(bones: readonly THREE.Bone[], style: RigCombatStyle):
   }).join('|');
 }
 
+
+const locomotionClipCache = new Map<string, readonly THREE.AnimationClip[]>();
+
+/**
+ * Generate a compact baseline set for imported humanoid rigs whose source GLB
+ * does not expose standard Idle / Walk / Run / Death names. Source-authored
+ * clips remain preferred; these clips only fill missing action slots.
+ */
+export function createRigLocomotionFallbackClips(
+  root: THREE.Object3D,
+  enemyType?: EnemyType,
+): readonly THREE.AnimationClip[] {
+  const { all, slots } = collectHumanoidBones(root);
+  if (all.length < 4 || !Object.values(slots).some(Boolean)) return [];
+  const cacheKey = skeletonSignature(all, 'tool-melee') + '|locomotion|' + (enemyType ?? 'generic');
+  const cached = locomotionClipCache.get(cacheKey);
+  if (cached) return cached;
+
+  const motion = getRigCombatMotionProfile(enemyType);
+  const power = THREE.MathUtils.clamp(motion.power, 0.72, 1.34);
+  const clips: THREE.AnimationClip[] = [];
+  const addClip = (
+    name: string,
+    duration: number,
+    author: (add: (bone: THREE.Bone | undefined, axis: THREE.Vector3, times: number[], angles: number[]) => void) => void,
+  ) => {
+    const tracks: THREE.KeyframeTrack[] = [];
+    const add = (bone: THREE.Bone | undefined, axis: THREE.Vector3, times: number[], angles: number[]) => {
+      if (!bone || times.length !== angles.length || times.length < 2) return;
+      const rest = bone.quaternion.clone();
+      const values: number[] = [];
+      for (const angle of angles) {
+        const frame = rest.clone().multiply(new THREE.Quaternion().setFromAxisAngle(axis, angle)).normalize();
+        values.push(frame.x, frame.y, frame.z, frame.w);
+      }
+      tracks.push(new THREE.QuaternionKeyframeTrack(bone.name + '.quaternion', times, values));
+    };
+    author(add);
+    if (tracks.length) clips.push(new THREE.AnimationClip(name, duration, tracks));
+  };
+
+  // Breathing, gaze shifts and a small weight shift prevent imported actors
+  // from freezing when their authoring package uses non-standard clip labels.
+  addClip('Idle', 2.4, (add) => {
+    const t = [0, 0.6, 1.2, 1.8, 2.4];
+    add(slots.pelvis, AXIS_Z, t, [0, 0.008, 0, -0.008, 0]);
+    add(slots.spine, AXIS_X, t, [0, -0.018, 0, 0.018, 0]);
+    add(slots.chest, AXIS_X, t, [0, 0.026, 0, -0.026, 0]);
+    add(slots.head, AXIS_Y, t, [0, 0.025, 0, -0.025, 0]);
+    add(slots.leftUpperArm, AXIS_Z, t, [0, -0.012, 0, 0.012, 0]);
+    add(slots.rightUpperArm, AXIS_Z, t, [0, 0.012, 0, -0.012, 0]);
+  });
+
+  // Opposed arm / leg phases and a slight pelvis counter-rotation create a
+  // readable planted stride rather than a whole-body sliding loop.
+  const walkTimes = [0, 0.22, 0.44, 0.66, 0.88];
+  addClip('Walk', 0.88, (add) => {
+    const leg = 0.43 * power;
+    const arm = 0.26 * power;
+    add(slots.pelvis, AXIS_Y, walkTimes, [0, 0.035, 0, -0.035, 0]);
+    add(slots.spine, AXIS_X, walkTimes, [-0.018, -0.038, 0.018, 0.038, -0.018]);
+    add(slots.chest, AXIS_Y, walkTimes, [0, -0.045, 0, 0.045, 0]);
+    add(slots.leftThigh, AXIS_X, walkTimes, [0, leg, 0, -leg, 0]);
+    add(slots.rightThigh, AXIS_X, walkTimes, [0, -leg, 0, leg, 0]);
+    add(slots.leftCalf, AXIS_X, walkTimes, [0, 0.08, 0.20, 0.08, 0]);
+    add(slots.rightCalf, AXIS_X, walkTimes, [0, 0.20, 0.08, 0.02, 0]);
+    add(slots.leftUpperArm, AXIS_Z, walkTimes, [0, arm, 0, -arm, 0]);
+    add(slots.rightUpperArm, AXIS_Z, walkTimes, [0, -arm, 0, arm, 0]);
+    add(slots.leftLowerArm, AXIS_X, walkTimes, [0, -0.06, -0.12, -0.06, 0]);
+    add(slots.rightLowerArm, AXIS_X, walkTimes, [0, -0.12, -0.06, -0.02, 0]);
+    add(slots.head, AXIS_Y, walkTimes, [0, 0.018, 0, -0.018, 0]);
+  });
+
+  const runTimes = [0, 0.14, 0.28, 0.42, 0.56];
+  addClip('Run', 0.56, (add) => {
+    const leg = 0.62 * power;
+    const arm = 0.43 * power;
+    add(slots.pelvis, AXIS_X, runTimes, [0.025, -0.035, -0.015, -0.035, 0.025]);
+    add(slots.spine, AXIS_X, runTimes, [-0.10, -0.14, -0.10, -0.14, -0.10]);
+    add(slots.chest, AXIS_Y, runTimes, [0, -0.055, 0, 0.055, 0]);
+    add(slots.leftThigh, AXIS_X, runTimes, [0, leg, 0, -leg, 0]);
+    add(slots.rightThigh, AXIS_X, runTimes, [0, -leg, 0, leg, 0]);
+    add(slots.leftCalf, AXIS_X, runTimes, [0, 0.25, 0.06, 0.22, 0]);
+    add(slots.rightCalf, AXIS_X, runTimes, [0, 0.06, 0.25, 0.06, 0]);
+    add(slots.leftUpperArm, AXIS_Z, runTimes, [0, arm, 0, -arm, 0]);
+    add(slots.rightUpperArm, AXIS_Z, runTimes, [0, -arm, 0, arm, 0]);
+    add(slots.leftLowerArm, AXIS_X, runTimes, [0, -0.18, -0.08, -0.18, 0]);
+    add(slots.rightLowerArm, AXIS_X, runTimes, [0, -0.08, -0.18, -0.08, 0]);
+  });
+
+  // A real one-shot fall is essential for Base44 models: unlike the CC0 pack,
+  // those GLBs are not required to name an embedded clip "Death".
+  const deathTimes = [0, 0.12, 0.34, 0.62, 0.94];
+  const side = motion.leadSide;
+  const fall = 0.62 + power * 0.10;
+  addClip('Death', 0.94, (add) => {
+    add(slots.pelvis, AXIS_Z, deathTimes, [0, side * 0.04, side * 0.15, side * 0.25, side * 0.28]);
+    add(slots.pelvis, AXIS_X, deathTimes, [0, 0.04, 0.12, 0.18, 0.18]);
+    add(slots.spine, AXIS_X, deathTimes, [0, -0.18, -0.42, -fall, -fall]);
+    add(slots.chest, AXIS_Z, deathTimes, [0, side * 0.08, side * 0.20, side * 0.30, side * 0.32]);
+    add(slots.head, AXIS_X, deathTimes, [0, 0.08, 0.15, 0.12, 0.10]);
+    add(slots.leftUpperArm, AXIS_Z, deathTimes, [0, -0.20, -0.50, -0.64, -0.66]);
+    add(slots.rightUpperArm, AXIS_Z, deathTimes, [0, 0.20, 0.50, 0.64, 0.66]);
+    add(slots.leftLowerArm, AXIS_X, deathTimes, [0, 0.08, 0.26, 0.34, 0.34]);
+    add(slots.rightLowerArm, AXIS_X, deathTimes, [0, 0.08, 0.26, 0.34, 0.34]);
+    add(slots.leftThigh, AXIS_X, deathTimes, [0, 0.08, 0.18, 0.22, 0.22]);
+    add(slots.rightThigh, AXIS_X, deathTimes, [0, -0.04, -0.12, -0.16, -0.16]);
+  });
+
+  const result = Object.freeze(clips);
+  locomotionClipCache.set(cacheKey, result);
+  if (locomotionClipCache.size > 96) locomotionClipCache.delete(locomotionClipCache.keys().next().value as string);
+  return result;
+}
+
 /**
  * Build reusable combat and airborne clips for a rig whose source pack only
  * contains locomotion, hit and death clips. Clips are authored against the

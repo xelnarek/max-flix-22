@@ -6,6 +6,29 @@ export type GobkitActionName =
 
 type ActionLookup = { has(name: string): boolean };
 
+/**
+ * Map common DCC / Mixamo / Blender clip labels to the runtime action contract.
+ * Imported GLBs often prefix clips with an armature name or suffix them with
+ * an index; exact-name lookup alone silently left those rigs without locomotion.
+ */
+export function canonicalizeGobkitClipName(sourceName: string): string | null {
+  const name = String(sourceName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!name) return null;
+  if (/(death|dead|dying|defeat|knockout)/.test(name)) return 'Death';
+  if (/(special|ultimate|powerattack)/.test(name)) return 'Special';
+  if (/(hit|hurt|damage|flinch|stagger)/.test(name)) return 'Hit';
+  if (/(attack|strike|punch|melee|slash|swing|shoot|fire)/.test(name)) return 'Attack';
+  if (/(walkbackward|walkback|backwalk|reversewalk)/.test(name)) return 'WalkBackward';
+  if (/(strafeleft|leftstrafe|sidestepleft)/.test(name)) return 'StrafeLeft';
+  if (/(straferight|rightstrafe|sidestepright)/.test(name)) return 'StrafeRight';
+  if (/(run|sprint|jog)/.test(name)) return 'Run';
+  if (/(idlelook|lookaround|lookidle)/.test(name)) return 'IdleLook';
+  if (/(fidget|idlebusy)/.test(name)) return 'IdleFidget';
+  if (/(walk|locomotion|move)/.test(name)) return 'Walk';
+  if (/(idle|stand|breath|rest)/.test(name)) return 'Idle';
+  return null;
+}
+
 const ACTION_FALLBACKS: Readonly<Record<string, readonly string[]>> = Object.freeze({
   Attack: ['Run', 'Walk', 'Idle'],
   Special: ['Attack', 'Run', 'Walk', 'Idle'],
