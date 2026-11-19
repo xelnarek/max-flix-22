@@ -767,17 +767,6 @@
   outline: 2px solid rgba(255, 123, 115, .92) !important;
   outline-offset: 2px !important;
 }
-#title-screen .menu-tab-btn.active::after,
-#title-screen .menu-tab-btn[aria-selected="true"]::after {
-  content: "";
-  flex: 0 0 5px;
-  width: 5px;
-  height: 5px;
-  margin-left: auto;
-  border-radius: 50%;
-  background: #ff7770;
-  box-shadow: 0 0 8px rgba(255, 90, 83, .42);
-}
 
 @media (max-width: 900px) {
   #title-screen .title-sheet {
