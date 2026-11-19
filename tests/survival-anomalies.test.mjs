@@ -102,3 +102,17 @@ test('new anomalies remain inside the existing event duration and anti-repeat ru
   assert.equal(second.started?.id, 'maintenance_window');
   assert.notEqual(second.started?.id, first.started?.id);
 });
+
+test('anomaly modifier and definition lookups return stable template references', () => {
+  const active = {
+    active: { id: 'overflow_loading', title: '', description: '', durationSeconds: 20, remainingSeconds: 20 },
+    nextAt: 100,
+    sequence: 1,
+    recentIds: [],
+  };
+  const firstModifiers = getSurvivalAnomalyModifiers(active);
+  const secondModifiers = getSurvivalAnomalyModifiers(active);
+  assert.equal(firstModifiers, secondModifiers);
+  assert.equal(getSurvivalAnomalyDefinition('overflow_loading'), getSurvivalAnomalyDefinition('overflow_loading'));
+  assert.equal(getSurvivalAnomalyModifiers(createSurvivalAnomalyState()), getSurvivalAnomalyModifiers(createSurvivalAnomalyState()));
+});
