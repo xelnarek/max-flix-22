@@ -108,21 +108,21 @@ export class CinematicIntroManager {
       <canvas class="cinematic-intro-canvas" aria-hidden="true"></canvas>
       <div class="cinematic-intro-vignette" aria-hidden="true"></div>
       <div class="cinematic-intro-top">
-        <div class="cinematic-intro-brand"><span class="cinematic-live-dot"></span> WAREHOUSE <span>•</span> NIGHT SHIFT</div>
+        <div class="cinematic-intro-brand"><span class="cinematic-live-dot"></span> WAREHOUSE <span>•</span> INDUSTRIAL NOIR</div>
         <div class="cinematic-intro-status"><span id="cinematic-intro-scene">SYSTEM ONLINE</span><span id="cinematic-intro-time">00:00</span></div>
         <button id="cinematic-intro-skip" class="cinematic-intro-skip" type="button">POMIŃ ODPRAWĘ <span aria-hidden="true">↗</span></button>
       </div>
       <div class="cinematic-intro-copy">
-        <div class="cinematic-intro-kicker">3D ARCADE • INDUSTRIAL SURVIVAL</div>
+        <div class="cinematic-intro-kicker">INDUSTRIAL NOIR • ARCADE SURVIVAL</div>
         <h1>WAREHOUSE</h1>
         <div class="cinematic-intro-subtitle">MaDDnes</div>
-        <p>Po godzinach magazyn przejmuje chaos. Zbieraj perki, rozwijaj broń i przetrwaj zmianę. BHP? Dzisiaj ma wolne.</p>
-        <div class="cinematic-intro-tags"><span>SURVIVAL 3D</span><span>SURVIVAL • HORDY</span><span>PERKI • EWOLUCJE</span></div>
+        <p>Po zamknięciu hali zaczyna się druga zmiana. Zbieraj moduły, rozwijaj arsenał i przetrwaj noc. Procedury? Zaginęły w systemie.</p>
+        <div class="cinematic-intro-tags"><span>SURVIVAL 3D</span><span>KAMPANIA • 5 MISJI</span><span>ARENA PvP • 1v1</span></div>
       </div>
       <div class="cinematic-intro-bottom">
         <div class="cinematic-intro-progress"><span id="cinematic-intro-progress"></span></div>
         <div class="cinematic-intro-bottom-row">
-          <span>SEKTOR B4 <b> / </b> BHP: NIE ODBIERA</span>
+          <span>SEKTOR B4 <b> / </b> ZMIANA NOCNA</span>
           <button id="cinematic-intro-play" type="button">ODPAL ZMIANĘ <span aria-hidden="true">→</span></button>
         </div>
       </div>`;
@@ -207,15 +207,15 @@ export class CinematicIntroManager {
     const impact = Math.max(0, 1 - Math.abs(seconds - 3.55) / 0.26);
 
     const bg = ctx.createLinearGradient(0, 0, w, h);
-    bg.addColorStop(0, '#091b2b');
-    bg.addColorStop(0.48, '#142b3a');
-    bg.addColorStop(1, '#050a12');
+    bg.addColorStop(0, '#17211f');
+    bg.addColorStop(0.48, '#293630');
+    bg.addColorStop(1, '#090f10');
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, w, h);
 
     const warehouseGlow = ctx.createRadialGradient(w * 0.52, h * 0.38, 0, w * 0.52, h * 0.38, w * 0.72);
-    warehouseGlow.addColorStop(0, 'rgba(70,154,179,0.30)');
-    warehouseGlow.addColorStop(0.45, 'rgba(20,57,78,0.19)');
+    warehouseGlow.addColorStop(0, 'rgba(160,166,128,0.22)');
+    warehouseGlow.addColorStop(0.45, 'rgba(75,103,83,0.18)');
     warehouseGlow.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = warehouseGlow;
     ctx.fillRect(0, 0, w, h);
@@ -329,7 +329,7 @@ export class CinematicIntroManager {
       for (let level = 0; level < 5; level++) {
         const y = horizon * (0.72 + level * 0.13);
         const inset = (xInner - xEdge) * (0.2 + level * 0.12);
-        ctx.strokeStyle = level === 0 ? 'rgba(245,158,11,0.36)' : 'rgba(113,159,185,0.3)';
+        ctx.strokeStyle = level === 0 ? 'rgba(197,173,123,0.36)' : 'rgba(113,159,185,0.3)';
         ctx.beginPath();
         ctx.moveTo(xEdge + inset * (side < 0 ? 1 : -1), y);
         ctx.lineTo(xInner, y + level * h * 0.025);
@@ -369,9 +369,9 @@ export class CinematicIntroManager {
 
     const beamX = w * (0.2 + 0.6 * ((Math.sin(t * 0.5) + 1) / 2));
     const beam = ctx.createLinearGradient(beamX - w * 0.08, 0, beamX + w * 0.08, h * 0.72);
-    beam.addColorStop(0, 'rgba(56,189,248,0)');
-    beam.addColorStop(0.5, 'rgba(56,189,248,0.09)');
-    beam.addColorStop(1, 'rgba(56,189,248,0)');
+    beam.addColorStop(0, 'rgba(142,170,152,0)');
+    beam.addColorStop(0.5, 'rgba(142,170,152,0.09)');
+    beam.addColorStop(1, 'rgba(142,170,152,0)');
     ctx.fillStyle = beam;
     ctx.fillRect(0, 0, w, h * 0.8);
     ctx.restore();
