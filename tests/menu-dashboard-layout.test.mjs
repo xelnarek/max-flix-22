@@ -51,6 +51,8 @@ test('left navigation uses native destination buttons, one active region and ver
   const navigation = await readFile(new URL('../src/menuTabNavigation.ts', import.meta.url), 'utf8');
   assert.ok(app.includes("menuTabList?.setAttribute('role', 'navigation')"));
   assert.ok(app.includes("group.setAttribute('role', 'group')"));
+  assert.ok(app.includes("group.setAttribute('aria-labelledby', groupLabel.id)"));
+  assert.ok(app.includes("group.querySelector<HTMLElement>('.menu-nav-group-label')"));
   assert.ok(app.includes("button.setAttribute('aria-current', 'page')"));
   assert.ok(app.includes("panel.setAttribute('role', 'region')"));
   assert.ok(app.includes("panel.inert = !active"));
