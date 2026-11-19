@@ -366,7 +366,9 @@ test('late enemy model attachment cannot reveal both the full rig and its LOD pr
   assert.ok(attachStart >= 0 && attachEnd > attachStart, 'enemy LOD attachment method should exist');
   const attach = game.slice(attachStart, attachEnd);
   assert.match(attach, /enemy\.state === 'defeated' \|\| mesh\.userData\.actorDeathVisualLocked === true/);
-  assert.match(attach, /proxy\.visible = !deathVisualLocked/);
+  assert.match(attach, /proxy\.visible = false/);
+  assert.match(attach, /fullRoot\.visible = !deathVisualLocked/);
+  assert.doesNotMatch(attach, /proxy\.visible = !deathVisualLocked/);
   const lodStart = game.indexOf('const deathVisualLocked = enemy.state === \'defeated\'', attachEnd);
   assert.ok(lodStart > attachEnd, 'runtime LOD update should enforce the death visibility lock');
   const lodSlice = game.slice(lodStart, lodStart + 700);
@@ -644,4 +646,19 @@ test('enemy model attachment never displays the imported rig and LOD proxy toget
   assert.doesNotMatch(install, /proxy\.visible = !deathVisualLocked/);
   assert.match(game, /lodProxy\.visible = useProxy;\s*fullVisual\.visible = !useProxy/);
   assert.match(game, /if \(lodProxy\) lodProxy\.visible = false;\s*if \(fullVisual\) fullVisual\.visible = true/);
+});
+
+
+test('regular enemies defer expensive animated GLB rigs until they enter useful detail range', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /private shouldLoadEnemyFullRig\(enemy: EnemyItem, distanceSquared: number\)/);
+  assert.match(game, /const detailRadius = this\.isHandheldViewport \? 23 : 31/);
+  assert.match(game, /isMajorSurvivalBossType\(enemy\.type\) \|\| enemy\.type === 'sebix_m'/);
+  assert.match(game, /!this\.requestedGobkitEnemies\.has\(enemy\) && this\.shouldLoadEnemyFullRig\(enemy, distanceSquared\)/);
+  assert.match(game, /this\.requestedGobkitEnemies\.delete\(enemy\)/);
+});
+
+test('enemy animation update avoids rebuilding an unused per-frame membership set', async () => {
+  const game = await read('../src/game.ts');
+  assert.doesNotMatch(game, /activeEnemyAnimationScratch/);
 });
