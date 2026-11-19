@@ -4,13 +4,13 @@ import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
-test('Warehouse MaDDnes final menu layer is loaded last and uses the matching browser theme', async () => {
+test('Crimson Shift final menu layer is loaded and uses the matching browser theme', async () => {
   const html = await read('../index.html');
   const cssLink = html.lastIndexOf('/src/warehouse-maddnes-unified-menu.css');
   const appCssLinks = [...html.matchAll(/<link rel="stylesheet"/g)];
   assert.ok(cssLink >= 0, 'unified menu stylesheet must be loaded');
   assert.ok(cssLink > html.indexOf('/src/menu-final-tuning.css'), 'unified layer must follow prior menu styles');
-  assert.match(html, /<meta name="theme-color" content="#101716"\s*\/>/);
+  assert.match(html, /<meta name="theme-color" content="#09090b"\s*\/>/);
   assert.ok(appCssLinks.length >= 20, 'existing game stylesheet stack must remain intact');
 });
 
