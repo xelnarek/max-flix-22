@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getSurvivalDifficultyProfile } from '../src/survivalDifficulty.ts';
+import { ENEMY_MOVEMENT_SPEED_MULTIPLIER } from '../src/combatBalance.ts';
 import { scaleSurvivalOutgoingDamage, scaleSurvivalIncomingDamage, SURVIVAL_OUTGOING_DAMAGE_MULTIPLIER, SURVIVAL_HIT_INVULNERABILITY_SECONDS } from '../src/characterBalance.ts';
 
-test('Survival adds a small opening pressure bump and scales difficulty monotonically', () => {
+test('Survival difficulty escalates health, cadence and special pressure without accelerating enemies', () => {
   const early = getSurvivalDifficultyProfile(1);
   const middle = getSurvivalDifficultyProfile(10);
   const late = getSurvivalDifficultyProfile(30);
@@ -13,20 +14,27 @@ test('Survival adds a small opening pressure bump and scales difficulty monotoni
   assert.equal(early.enemyAbilityRateMultiplier, 1.18);
   assert.ok(middle.enemyHealthMultiplier > early.enemyHealthMultiplier);
   assert.ok(late.enemyHealthMultiplier > middle.enemyHealthMultiplier);
-  assert.ok(middle.enemySpeedMultiplier > early.enemySpeedMultiplier);
-  assert.ok(late.enemySpeedMultiplier > middle.enemySpeedMultiplier);
+  assert.equal(middle.enemySpeedMultiplier, 1);
+  assert.equal(late.enemySpeedMultiplier, 1);
   assert.ok(middle.spawnIntervalSeconds < early.spawnIntervalSeconds);
   assert.ok(late.spawnIntervalSeconds < middle.spawnIntervalSeconds);
   assert.ok(late.enemyAbilityRateMultiplier > middle.enemyAbilityRateMultiplier);
   assert.deepEqual(getSurvivalDifficultyProfile(Number.NaN), early);
 });
 
-test('the small difficulty increase leaves movement tuning intact and keeps late-game values bounded', () => {
-  const early = getSurvivalDifficultyProfile(1);
+test('normal Survival movement stays at the 0.88x dodge-friendly baseline across late waves', () => {
+  assert.equal(ENEMY_MOVEMENT_SPEED_MULTIPLIER, 0.88);
+  for (const wave of [1, 10, 30, 1000]) {
+    const profile = getSurvivalDifficultyProfile(wave);
+    assert.equal(profile.enemySpeedMultiplier, 1);
+    assert.equal(profile.enemySpeedMultiplier * ENEMY_MOVEMENT_SPEED_MULTIPLIER, 0.88);
+  }
+});
+
+test('late-game health, spawn cadence, group size and enemy ability pressure remain bounded', () => {
   const late = getSurvivalDifficultyProfile(1000);
-  assert.equal(early.enemySpeedMultiplier, 1);
   assert.equal(late.enemyHealthMultiplier, 4.0);
-  assert.equal(late.enemySpeedMultiplier, 1.14);
+  assert.equal(late.enemySpeedMultiplier, 1);
   assert.equal(late.spawnIntervalSeconds, 4.55);
   assert.equal(late.extraGroupSize, 6);
   assert.equal(late.enemyAbilityRateMultiplier, 1.96);
