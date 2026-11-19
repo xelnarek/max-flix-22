@@ -23,7 +23,7 @@ test('Android upload signer requires the expected certificate and does not expos
   }
 
   assert.match(script, /EXPECTED_UPLOAD_CERT_SHA256/);
-  assert.match(script, /CERT_SHA256.*EXPECTED_UPLOAD_CERT_SHA256/);
+  assert.ok(script.includes('CERT_SHA256=') && script.includes('EXPECTED_UPLOAD_CERT_SHA256'), 'helper must verify the expected upload certificate');
   assert.match(script, /gh secret set/);
   assert.match(script, /set \+x/);
   assert.doesNotMatch(script, /set -x/);
