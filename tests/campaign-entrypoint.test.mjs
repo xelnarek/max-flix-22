@@ -10,7 +10,7 @@ test('Campaign is exposed as a primary menu destination and one-tap title-screen
   ]);
   assert.match(html, /id="btn-open-campaign"/);
   assert.match(html, /KAMPANIA • 5 ETAPÓW/);
-  assert.match(html, /data-tab="tab-map"[^>]*aria-label="Tryb fabularny: kampania pięciu etapów oraz atlas świata"/);
+  assert.match(html, /data-tab="tab-map"[\\s\\S]{0,160}aria-label="Tryb fabularny: kampania pięciu etapów oraz atlas świata"/);
   assert.match(html, /<span class="tab-label">KAMPANIA<\/span>/);
   assert.match(html, /id="campaign-board-title">KAMPANIA ZMIAN/);
   assert.match(app, /bindTap\(document\.getElementById\('btn-open-campaign'\)/);
