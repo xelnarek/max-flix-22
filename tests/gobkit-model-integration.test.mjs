@@ -456,7 +456,7 @@ test('ranged and special enemy attacks release only after their wind-up or commi
   ]) {
     assert.ok(game.includes(marker), 'missing ranged/special release: ' + marker);
   }
-  assert.match(game, /this\.requestEnemyAttackAnimation\(enemy, profile\.windupSeconds\)/);
+  assert.match(game, /this\.requestEnemyAttackAnimation\(enemy, profile\.windupSeconds\s*\/\s*0\.60\)/);
   assert.match(game, /const release = this\.advanceEnemyRangedAttackTelegraph\(e, dt\)/);
   assert.match(game, /this\.beginEnemyRangedAttackTelegraph\(e\)/);
 });
