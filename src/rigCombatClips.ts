@@ -291,7 +291,9 @@ export function createRigCombatClips(
   const clips: THREE.AnimationClip[] = [];
   const push = (clip: THREE.AnimationClip | null) => { if (clip) clips.push(clip); };
 
-  const attackTimes = [0, 0.09, 0.20, 0.32, 0.46];
+  // The strike pose is authored at 60%: melee/ranged telegraphs use that
+  // fraction as their exact release frame, then the clip follows through.
+  const attackTimes = [0, 0.12, 0.276, 0.36, 0.46];
   push(createClip('Attack', 0.46, (add) => {
     const side = motion.leadSide;
     const power = motion.power;
