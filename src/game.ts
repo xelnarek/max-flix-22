@@ -1888,15 +1888,17 @@ export class PaleciakiGameEngine {
     const previous = mesh.userData.actorLodProxyRoot as THREE.Group | undefined;
     previous?.removeFromParent();
     const proxy = createEnemyVisualLodProxy(enemy.type);
-    // A GLB may finish loading after this enemy has already been defeated.
-    // Never expose both the new proxy and the full rig during that async attach.
+    // Install exactly one representation on the attach frame. The previous
+    // implementation exposed the proxy and the imported rig together until the
+    // next animation tick, producing two overlapping enemy bodies (especially
+    // visible on mobile during a burst of asynchronous GLB completions).
     const deathVisualLocked = enemy.state === 'defeated' || mesh.userData.actorDeathVisualLocked === true;
     if (deathVisualLocked) mesh.userData.actorDeathVisualLocked = true;
-    proxy.visible = !deathVisualLocked;
+    proxy.visible = false;
+    fullRoot.visible = !deathVisualLocked;
     mesh.add(proxy);
     mesh.userData.actorLodProxyRoot = proxy;
     mesh.userData.actorVisualRoot = fullRoot;
-    fullRoot.visible = true;
   }
 
   /**
