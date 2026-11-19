@@ -254,7 +254,9 @@ test('enemy death hides the LOD proxy and keeps only the full rig visible until 
   assert.match(game, /if \(fullVisual\) fullVisual\.visible = true/);
   assert.match(game, /this\.lockEnemyDeathVisualToSingleRig\(mesh\)/);
   assert.match(game, /enemy\.state === 'defeated' \|\| enemy\.mesh\.userData\.actorDeathVisualLocked === true/);
-  assert.match(game, /proxy\.visible = !deathVisualLocked/);
+  assert.match(game, /proxy\.visible = false/);
+  assert.match(game, /fullRoot\.visible = !deathVisualLocked/);
+  assert.doesNotMatch(game, /proxy\.visible = !deathVisualLocked/);
   assert.match(game, /const useProxy = !deathVisualLocked && shouldUseEnemyVisualLodProxy/);
   assert.match(game, /lodProxy\.visible = useProxy/);
   assert.match(game, /if \(fullVisual\) fullVisual\.visible = false/);

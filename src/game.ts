@@ -1083,7 +1083,7 @@ export class PaleciakiGameEngine {
   private remoteGobkitSequence = 0;
   private requestedGobkitEnemies = new WeakSet<EnemyItem>();
   private gobkitEnemyTracks = new Map<EnemyItem, GobkitAnimationTrack>();
-  /** Reused membership set for the per-frame animation cleanup pass. */
+  /** Snapshot of live enemy membership used to prune stale animation tracks. */
   private readonly activeEnemyAnimationScratch = new Set<EnemyItem>();
   private leftLeg: THREE.Group | null = null;
   private rightLeg: THREE.Group | null = null;
@@ -1888,15 +1888,17 @@ export class PaleciakiGameEngine {
     const previous = mesh.userData.actorLodProxyRoot as THREE.Group | undefined;
     previous?.removeFromParent();
     const proxy = createEnemyVisualLodProxy(enemy.type);
-    // A GLB may finish loading after this enemy has already been defeated.
-    // Never expose both the new proxy and the full rig during that async attach.
+    // Install exactly one representation on the attach frame. The previous
+    // implementation exposed the proxy and the imported rig together until the
+    // next animation tick, producing two overlapping enemy bodies (especially
+    // visible on mobile during a burst of asynchronous GLB completions).
     const deathVisualLocked = enemy.state === 'defeated' || mesh.userData.actorDeathVisualLocked === true;
     if (deathVisualLocked) mesh.userData.actorDeathVisualLocked = true;
-    proxy.visible = !deathVisualLocked;
+    proxy.visible = false;
+    fullRoot.visible = !deathVisualLocked;
     mesh.add(proxy);
     mesh.userData.actorLodProxyRoot = proxy;
     mesh.userData.actorVisualRoot = fullRoot;
-    fullRoot.visible = true;
   }
 
   /**
@@ -2255,6 +2257,20 @@ export class PaleciakiGameEngine {
     }
   }
 
+  /**
+   * Full animated rigs are expensive to clone and animate. Keep distant regular
+   * enemies on their lightweight procedural silhouette; load the authored GLB
+   * only when it can be seen at useful detail. Boss rigs remain detailed at all
+   * distances. This reduces burst loading and skinned-mesh/mixer memory on phones.
+   */
+  private shouldLoadEnemyFullRig(enemy: EnemyItem, distanceSquared: number): boolean {
+    if (enemy.state === 'defeated') return false;
+    if (isMajorSurvivalBossType(enemy.type) || enemy.type === 'sebix_m') return true;
+    if (!Number.isFinite(distanceSquared) || distanceSquared < 0) return false;
+    const detailRadius = this.isHandheldViewport ? 23 : 31;
+    return distanceSquared <= detailRadius * detailRadius;
+  }
+
   private async attachGobkitEnemyModel(enemy: EnemyItem, modelId: GobkitModelId) {
     const mesh = enemy.mesh;
     const requestedType = enemy.type;
@@ -2264,6 +2280,12 @@ export class PaleciakiGameEngine {
       // Match the archetype and mesh captured before awaiting the asset request.
       if (!this.enemies.includes(enemy) || enemy.mesh !== mesh || enemy.type !== requestedType ||
           mesh.parent !== this.levelRoot || enemy.state === 'defeated') return;
+      const dx = enemy.x - this.playerPos.x;
+      const dz = enemy.z - this.playerPos.z;
+      if (!this.shouldLoadEnemyFullRig(enemy, dx * dx + dz * dz)) {
+        this.requestedGobkitEnemies.delete(enemy);
+        return;
+      }
       const root = cloneGobkitModel(gltf);
       const visualProfile = ENEMY_VISUAL_PROFILES[requestedType];
       fitGobkitModel(root, visualProfile.targetHeight, this.threeRenderer?.capabilities.getMaxAnisotropy() ?? 1, gltf.scene);
@@ -2305,6 +2327,12 @@ export class PaleciakiGameEngine {
     } catch (error) {
       if (!this.enemies.includes(enemy) || enemy.mesh !== mesh || enemy.type !== requestedType ||
           mesh.parent !== this.levelRoot || enemy.state === 'defeated') return;
+      const dx = enemy.x - this.playerPos.x;
+      const dz = enemy.z - this.playerPos.z;
+      if (!this.shouldLoadEnemyFullRig(enemy, dx * dx + dz * dz)) {
+        this.requestedGobkitEnemies.delete(enemy);
+        return;
+      }
       console.warn('[Gobkit] Enemy model unavailable; keeping procedural fallback:', modelId, requestedType, error);
       const fallback = ENEMY_GOBKIT_MODELS[requestedType];
       if (fallback && fallback !== modelId) {
@@ -2411,9 +2439,12 @@ export class PaleciakiGameEngine {
       const visualProfile = ENEMY_VISUAL_PROFILES[enemy.type];
       const modelId = visualProfile.base44Model ?? visualProfile.gobkitModel;
       if (!modelId || !enemy.mesh) continue;
-      if (!this.requestedGobkitEnemies.has(enemy)) {
+      const distanceX = enemy.x - this.playerPos.x;
+      const distanceZ = enemy.z - this.playerPos.z;
+      const distanceSquared = distanceX * distanceX + distanceZ * distanceZ;
+      if (!this.requestedGobkitEnemies.has(enemy) && this.shouldLoadEnemyFullRig(enemy, distanceSquared)) {
         this.requestedGobkitEnemies.add(enemy);
-        if (enemy.state !== 'defeated') void this.attachGobkitEnemyModel(enemy, modelId);
+        void this.attachGobkitEnemyModel(enemy, modelId);
       }
       const track = this.gobkitEnemyTracks.get(enemy);
       if (!track) continue;
@@ -2426,9 +2457,6 @@ export class PaleciakiGameEngine {
 
       // Use squared distance and defer expensive world-space transforms until
       // this actor's LOD tick is due. Nearby or reacting actors still update now.
-      const distanceX = enemy.x - this.playerPos.x;
-      const distanceZ = enemy.z - this.playerPos.z;
-      const distanceSquared = distanceX * distanceX + distanceZ * distanceZ;
       const lodProxy = enemy.mesh.userData.actorLodProxyRoot as THREE.Group | undefined;
       const fullVisual = enemy.mesh.userData.actorVisualRoot as THREE.Group | undefined;
       if (lodProxy && fullVisual) {
