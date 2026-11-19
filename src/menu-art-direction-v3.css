@@ -1,0 +1,397 @@
+/*
+ * WAREHOUSE MaDDnes — menu art direction v3
+ * Unified industrial-arcade palette. Visual-only: no selectors or game logic changed.
+ */
+#title-screen {
+  --menu-bg: #07111c !important;
+  --menu-panel: rgba(11, 25, 39, .97) !important;
+  --menu-panel-raised: rgba(17, 36, 53, .98) !important;
+  --menu-line: rgba(113, 177, 201, .19) !important;
+  --menu-line-strong: rgba(113, 195, 218, .34) !important;
+  --menu-ink: #edf7fb !important;
+  --menu-muted: #a0b6c5 !important;
+  --menu-subtle: #718c9d !important;
+  --menu-teal: #53d5c4 !important;
+  --menu-gold: #ffc66e !important;
+  --menu-accent: #62d7e5 !important;
+  --menu-accent-soft: rgba(72, 192, 213, .13) !important;
+  --menu-accent-line: rgba(98, 215, 229, .46) !important;
+  color: var(--menu-ink) !important;
+  background:
+    radial-gradient(ellipse at 12% 8%, rgba(34, 150, 177, .22), transparent 34%),
+    radial-gradient(ellipse at 88% 18%, rgba(145, 99, 207, .13), transparent 32%),
+    radial-gradient(ellipse at 52% 100%, rgba(214, 142, 54, .10), transparent 42%),
+    #050c14 !important;
+}
+#title-screen .title-backdrop {
+  opacity: 1 !important;
+  background:
+    linear-gradient(rgba(91, 153, 177, .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(91, 153, 177, .035) 1px, transparent 1px),
+    radial-gradient(ellipse at 50% 42%, rgba(27, 78, 99, .24), transparent 66%),
+    linear-gradient(135deg, #071421 0%, #09111d 52%, #100f1b 100%) !important;
+  background-size: 34px 34px, 34px 34px, auto, auto !important;
+}
+#title-screen .title-sheet {
+  border: 1px solid rgba(110, 196, 218, .24) !important;
+  border-radius: 24px !important;
+  background:
+    radial-gradient(ellipse at 4% 0%, rgba(49, 183, 196, .13), transparent 35%),
+    radial-gradient(ellipse at 100% 0%, rgba(148, 111, 206, .10), transparent 30%),
+    linear-gradient(145deg, rgba(14, 29, 44, .99), rgba(6, 14, 24, .99) 72%) !important;
+  box-shadow: 0 30px 90px rgba(0,0,0,.62), 0 0 42px rgba(42,153,182,.08),
+    inset 0 1px 0 rgba(226,247,255,.09) !important;
+}
+#title-screen .menu-top-header {
+  border-bottom-color: rgba(117, 190, 210, .19) !important;
+}
+#title-screen .brand-badge-pill {
+  color: #85e2e2 !important;
+  border: 1px solid rgba(84, 210, 210, .38) !important;
+  border-radius: 999px !important;
+  background: linear-gradient(90deg, rgba(27,123,133,.22), rgba(23,70,95,.22)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 4px 18px rgba(23,151,160,.08) !important;
+  letter-spacing: .15em !important;
+}
+#title-screen .menu-game-title {
+  color: #f4fbff !important;
+  text-shadow: 0 4px 24px rgba(63, 192, 215, .17) !important;
+}
+#title-screen .menu-game-title span {
+  color: #ffc56b !important;
+  text-shadow: 0 3px 20px rgba(255,176,75,.20) !important;
+}
+#title-screen .menu-game-subtitle {
+  color: #91aebd !important;
+  letter-spacing: .12em !important;
+}
+#title-screen .menu-release-strip > span {
+  border: 1px solid rgba(108, 166, 192, .18) !important;
+  border-radius: 7px !important;
+  background: rgba(18, 42, 59, .62) !important;
+  color: #9db8c7 !important;
+}
+#title-screen .menu-release-strip .menu-release-pill {
+  color: #ffd28d !important;
+  border-color: rgba(255, 190, 99, .4) !important;
+  background: rgba(135, 80, 24, .22) !important;
+}
+#title-screen .btn-intro-chip {
+  color: #e4f7fb !important;
+  border: 1px solid rgba(89, 206, 219, .36) !important;
+  border-radius: 9px !important;
+  background: linear-gradient(110deg, rgba(24,111,130,.55), rgba(19,49,70,.78)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08) !important;
+}
+#title-screen .btn-intro-chip:hover {
+  border-color: rgba(111, 232, 237, .72) !important;
+  filter: brightness(1.12) !important;
+}
+
+/* Three launch choices: same geometry, unmistakably different identities. */
+#title-screen .menu-mode-selector {
+  border: 1px solid rgba(105, 187, 208, .22) !important;
+  border-radius: 18px !important;
+  background:
+    radial-gradient(ellipse at 12% 0%, rgba(45,175,187,.11), transparent 48%),
+    linear-gradient(115deg, rgba(18,42,58,.96), rgba(8,19,31,.98) 62%) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.055), 0 12px 32px rgba(0,0,0,.20) !important;
+}
+#title-screen .menu-mode-eyebrow {
+  color: #73d8d2 !important;
+}
+#title-screen .menu-mode-selector-heading h2 {
+  color: #f1f8fc !important;
+}
+#title-screen .menu-mode-selector-heading p {
+  color: #9bb1bf !important;
+}
+#title-screen .menu-mode-card,
+#title-screen #btn-start-survival.menu-mode-card {
+  border: 1px solid var(--mode-line) !important;
+  border-radius: 15px !important;
+  color: #f4f9fc !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.075), 0 9px 24px rgba(0,0,0,.25) !important;
+}
+#title-screen .menu-mode-card[data-mode="survival"] {
+  --mode-accent: #55e0ce !important;
+  --mode-accent-soft: rgba(42, 196, 176, .19) !important;
+  --mode-line: rgba(63, 220, 196, .48) !important;
+  background: linear-gradient(145deg, rgba(18,104,100,.46), rgba(8,26,37,.98) 76%) !important;
+}
+#title-screen .menu-mode-card[data-mode="campaign"] {
+  --mode-accent: #ffc46c !important;
+  --mode-accent-soft: rgba(232, 158, 62, .18) !important;
+  --mode-line: rgba(255, 194, 103, .48) !important;
+  background: linear-gradient(145deg, rgba(112,72,26,.48), rgba(29,25,24,.98) 76%) !important;
+}
+#title-screen .menu-mode-card[data-mode="pvp"] {
+  --mode-accent: #c2a4ff !important;
+  --mode-accent-soft: rgba(155, 116, 237, .19) !important;
+  --mode-line: rgba(185, 151, 255, .48) !important;
+  background: linear-gradient(145deg, rgba(78,56,126,.49), rgba(20,22,42,.98) 76%) !important;
+}
+#title-screen .menu-mode-card::before {
+  width: 3px !important;
+  opacity: .95 !important;
+  box-shadow: 0 0 14px var(--mode-accent) !important;
+}
+#title-screen .menu-mode-card-icon {
+  border: 1px solid var(--mode-line) !important;
+  border-radius: 11px !important;
+  background: var(--mode-accent-soft) !important;
+  color: var(--mode-accent) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 0 17px color-mix(in srgb, var(--mode-accent) 15%, transparent) !important;
+}
+#title-screen .menu-mode-card-copy strong {
+  color: #f6fbff !important;
+}
+#title-screen .menu-mode-card-kicker {
+  color: var(--mode-accent) !important;
+}
+#title-screen .menu-mode-card-copy small {
+  color: #b0c3ce !important;
+}
+#title-screen .menu-mode-card-action {
+  border-top-color: color-mix(in srgb, var(--mode-accent) 24%, transparent) !important;
+  color: var(--mode-accent) !important;
+}
+#title-screen .menu-mode-card:hover:not(:disabled) {
+  border-color: var(--mode-accent) !important;
+  filter: brightness(1.13) saturate(1.08) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 13px 30px rgba(0,0,0,.32),
+    0 0 18px color-mix(in srgb, var(--mode-accent) 14%, transparent) !important;
+}
+
+/* Navigation rail: clear groups, high-contrast active destination. */
+#title-screen .menu-tabs-bar {
+  border: 1px solid rgba(103, 177, 201, .22) !important;
+  border-radius: 17px !important;
+  background: linear-gradient(180deg, rgba(10,25,39,.99), rgba(7,17,29,.99)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.045), 0 10px 25px rgba(0,0,0,.18) !important;
+  scrollbar-color: rgba(81,177,197,.58) rgba(7,17,29,.3) !important;
+}
+#title-screen .menu-nav-group-label {
+  color: #668da0 !important;
+  letter-spacing: .16em !important;
+}
+#title-screen .menu-nav-group + .menu-nav-group {
+  border-top-color: rgba(111,174,194,.17) !important;
+}
+#title-screen .menu-tab-btn {
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+  color: #9eb5c3 !important;
+  background: transparent !important;
+  transition: color .16s ease, border-color .16s ease, background .16s ease, transform .16s ease !important;
+}
+#title-screen .menu-tab-btn:hover {
+  color: #eefaff !important;
+  border-color: rgba(101,191,212,.22) !important;
+  background: rgba(48,129,154,.13) !important;
+  transform: translateX(2px) !important;
+}
+#title-screen .menu-tab-btn.active {
+  color: #eafcff !important;
+  border-color: var(--menu-accent-line) !important;
+  background: linear-gradient(105deg, var(--menu-accent-soft), rgba(38,105,131,.08)) !important;
+  box-shadow: inset 3px 0 0 var(--menu-accent), 0 5px 17px rgba(0,0,0,.22),
+    0 0 18px color-mix(in srgb, var(--menu-accent) 10%, transparent) !important;
+}
+#title-screen[data-active-menu-tab="tab-team"] {
+  --menu-accent: #62d7e5 !important; --menu-accent-soft: rgba(72,192,213,.15) !important; --menu-accent-line: rgba(98,215,229,.48) !important;
+}
+#title-screen[data-active-menu-tab="tab-map"] {
+  --menu-accent: #ffc66e !important; --menu-accent-soft: rgba(255,190,94,.15) !important; --menu-accent-line: rgba(255,198,110,.48) !important;
+}
+#title-screen[data-active-menu-tab="tab-pvp"] {
+  --menu-accent: #bba0ff !important; --menu-accent-soft: rgba(173,139,255,.16) !important; --menu-accent-line: rgba(187,160,255,.48) !important;
+}
+#title-screen[data-active-menu-tab="tab-enemies"] {
+  --menu-accent: #ff907e !important; --menu-accent-soft: rgba(255,126,104,.14) !important; --menu-accent-line: rgba(255,144,126,.46) !important;
+}
+#title-screen[data-active-menu-tab="tab-perks"],
+#title-screen[data-active-menu-tab="tab-talent-tree"] {
+  --menu-accent: #65dfaa !important; --menu-accent-soft: rgba(76,213,153,.14) !important; --menu-accent-line: rgba(101,223,170,.46) !important;
+}
+#title-screen[data-active-menu-tab="tab-field-guide"],
+#title-screen[data-active-menu-tab="tab-ranks"],
+#title-screen[data-active-menu-tab="tab-leaderboard"] {
+  --menu-accent: #75c8ff !important; --menu-accent-soft: rgba(91,174,236,.14) !important; --menu-accent-line: rgba(117,200,255,.46) !important;
+}
+#title-screen[data-active-menu-tab="tab-achievements"] {
+  --menu-accent: #f39ac2 !important; --menu-accent-soft: rgba(230,122,174,.14) !important; --menu-accent-line: rgba(243,154,194,.46) !important;
+}
+#title-screen[data-active-menu-tab="tab-settings"] {
+  --menu-accent: #9eb4c5 !important; --menu-accent-soft: rgba(147,174,194,.14) !important; --menu-accent-line: rgba(158,180,197,.44) !important;
+}
+
+/* Content workspace and the panels inside it. */
+#title-screen .menu-tab-content-area {
+  border: 1px solid rgba(99,174,199,.22) !important;
+  border-radius: 17px !important;
+  background:
+    radial-gradient(ellipse at 0 0, rgba(36,120,149,.09), transparent 48%),
+    linear-gradient(145deg, rgba(8,20,32,.93), rgba(7,15,26,.97)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04) !important;
+  scrollbar-color: rgba(81,177,197,.6) rgba(7,17,29,.35) !important;
+}
+#title-screen .tab-panel > h2,
+#title-screen .tab-panel > h3,
+#title-screen .tab-panel .section-title,
+#title-screen .tab-panel .panel-heading {
+  color: #eff8fc !important;
+}
+#title-screen .tab-panel p,
+#title-screen .tab-panel .section-description {
+  color: #a1b6c3;
+}
+#title-screen .char-card,
+#title-screen .char-details-box,
+#title-screen .campaign-board,
+#title-screen .campaign-stage-card,
+#title-screen .mega-map-hero,
+#title-screen .mega-map-biome-card,
+#title-screen .mega-map-route,
+#title-screen .pvp-menu-hero,
+#title-screen .pvp-menu-feature-card,
+#title-screen .pvp-menu-roster-note,
+#title-screen .audio-settings-frame {
+  border-color: rgba(107,179,203,.22) !important;
+  background: linear-gradient(145deg, rgba(18,40,57,.94), rgba(8,20,32,.98)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.045), 0 9px 24px rgba(0,0,0,.17) !important;
+}
+#title-screen .char-card {
+  border-radius: 15px !important;
+  color: #edf7fb !important;
+}
+#title-screen .char-card:hover,
+#title-screen .char-card.active {
+  border-color: rgba(84,218,207,.56) !important;
+  background: linear-gradient(145deg, rgba(20,83,82,.64), rgba(9,25,37,.99)) !important;
+  box-shadow: inset 0 0 0 1px rgba(91,220,203,.12), 0 13px 28px rgba(0,0,0,.25) !important;
+}
+#title-screen .char-card-name { color: #f3faff !important; }
+#title-screen .char-card-role { color: #72d9d2 !important; }
+#title-screen .char-card-ability { color: #a9bdc9 !important; }
+#title-screen .char-code-tag {
+  border-color: rgba(100,181,205,.25) !important;
+  background: rgba(4,14,25,.7) !important;
+  color: #8fb4c5 !important;
+}
+#title-screen .campaign-board {
+  border-color: rgba(255,190,99,.30) !important;
+  background: radial-gradient(ellipse at 0 0, rgba(208,139,55,.12), transparent 48%),
+    linear-gradient(145deg, rgba(43,35,27,.95), rgba(13,22,31,.99)) !important;
+}
+#title-screen .campaign-board-kicker,
+#title-screen .campaign-stage-stars,
+#title-screen .campaign-board-stats strong {
+  color: #ffd18a !important;
+}
+#title-screen .campaign-board-heading h2,
+#title-screen .campaign-stage-card strong { color: #fff4df !important; }
+#title-screen .campaign-stage-card.is-complete {
+  border-color: rgba(82,218,169,.42) !important;
+  background: linear-gradient(145deg, rgba(17,77,63,.55), rgba(8,25,34,.98)) !important;
+}
+#title-screen .campaign-stage-card.is-locked {
+  filter: saturate(.45) !important;
+}
+#title-screen .pvp-menu-hero {
+  border-color: rgba(187,160,255,.33) !important;
+  background: radial-gradient(ellipse at 0 0, rgba(142,106,232,.17), transparent 52%),
+    linear-gradient(145deg, rgba(35,29,63,.96), rgba(12,18,34,.99)) !important;
+}
+#title-screen .pvp-menu-kicker { color: #c5adff !important; }
+#title-screen .pvp-menu-hero h2 { color: #f4efff !important; }
+#title-screen .pvp-menu-hero p,
+#title-screen .pvp-menu-feature-card p,
+#title-screen .pvp-menu-roster-note p { color: #b5aecb !important; }
+#title-screen .audio-settings-frame {
+  border-color: rgba(104,193,222,.30) !important;
+  background: linear-gradient(145deg, rgba(15,44,62,.94), rgba(8,21,34,.99)) !important;
+}
+
+/* Consistent action hierarchy. Keep existing button IDs and actions intact. */
+#title-screen .btn-primary-start,
+#title-screen .btn-survival-start,
+#title-screen .campaign-primary-action {
+  border: 1px solid rgba(255,211,143,.58) !important;
+  border-radius: 12px !important;
+  background: linear-gradient(105deg, #d98732, #ffc86f 52%, #e8a345) !important;
+  color: #1b1a18 !important;
+  font-weight: 900 !important;
+  box-shadow: 0 9px 24px rgba(206,129,44,.22), inset 0 1px 0 rgba(255,255,255,.42) !important;
+}
+#title-screen .btn-primary-start:hover:not(:disabled),
+#title-screen .btn-survival-start:hover:not(:disabled),
+#title-screen .campaign-primary-action:hover:not(:disabled) {
+  filter: brightness(1.08) saturate(1.08) !important;
+  transform: translateY(-1px) !important;
+}
+#title-screen .btn-secondary,
+#title-screen .btn-map-action,
+#title-screen .btn-pvp-start {
+  border-color: rgba(110,191,211,.34) !important;
+  background: linear-gradient(110deg, rgba(24,87,111,.72), rgba(15,42,61,.95)) !important;
+  color: #e7f8ff !important;
+}
+#title-screen button:focus-visible,
+#title-screen [role="button"]:focus-visible {
+  outline: 2px solid #72e1e6 !important;
+  outline-offset: 3px !important;
+}
+
+/* Scrollbars match the new palette without changing scroll containers. */
+#title-screen * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(79,177,199,.58) transparent;
+}
+#title-screen ::-webkit-scrollbar { width: 7px; height: 7px; }
+#title-screen ::-webkit-scrollbar-track { background: rgba(4,13,23,.35); border-radius: 99px; }
+#title-screen ::-webkit-scrollbar-thumb {
+  border: 1px solid rgba(6,18,29,.8);
+  border-radius: 99px;
+  background: linear-gradient(180deg, #4bbdc3, #327b9b);
+}
+#title-screen .menu-fixed-bottom-bar {
+  border-top-color: rgba(109,185,207,.20) !important;
+  background: linear-gradient(180deg, rgba(9,22,35,.9), rgba(6,14,24,.99)) !important;
+}
+
+/* Mobile: preserve the established three-card launch row and scroll behavior. */
+@media (max-width: 900px) {
+  #title-screen .title-sheet {
+    border-radius: 16px !important;
+    background:
+      radial-gradient(ellipse at 0 0, rgba(42,158,174,.12), transparent 43%),
+      linear-gradient(145deg, rgba(12,27,42,.99), rgba(5,13,23,.99)) !important;
+  }
+  #title-screen .menu-mode-card,
+  #title-screen #btn-start-survival.menu-mode-card {
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 6px 15px rgba(0,0,0,.23) !important;
+  }
+  #title-screen .menu-tab-content-area {
+    border-radius: 13px !important;
+  }
+}
+@media (max-width: 420px) {
+  #title-screen .menu-mode-selector {
+    border-radius: 11px !important;
+  }
+  #title-screen .menu-mode-card[data-mode="survival"] {
+    background: linear-gradient(155deg, rgba(18,103,99,.52), rgba(8,26,37,.99)) !important;
+  }
+  #title-screen .menu-mode-card[data-mode="campaign"] {
+    background: linear-gradient(155deg, rgba(112,72,26,.52), rgba(29,25,24,.99)) !important;
+  }
+  #title-screen .menu-mode-card[data-mode="pvp"] {
+    background: linear-gradient(155deg, rgba(78,56,126,.54), rgba(20,22,42,.99)) !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #title-screen *,
+  #title-screen *::before,
+  #title-screen *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
