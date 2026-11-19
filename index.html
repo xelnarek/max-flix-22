@@ -44,6 +44,7 @@
     <link rel="stylesheet" href="/src/crimson-shift-menu.css" />
     <link rel="stylesheet" href="/src/crimson-shift-responsive-v2.css" />
     <link rel="stylesheet" href="/src/crimson-shift-functional-menu.css" />
+    <link rel="stylesheet" href="/src/crimson-shift-mobile-layout-v3.css" />
     <meta name="application-name" content="MAX FLIX 22" />
     <meta name="color-scheme" content="dark" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -511,8 +512,14 @@
             </div>
           </section>
 
-          <div class="menu-tabs-bar">
-            <div class="menu-nav-group" role="group" aria-label="ROZGRYWKA">
+          <div class="menu-tabs-bar" aria-label="Nawigacja menu">
+            <div class="menu-mobile-segments" role="group" aria-label="Główne segmenty menu">
+              <button type="button" class="menu-mobile-segment active" data-menu-segment="play" aria-pressed="true"><span class="segment-index">01</span><span class="segment-label">GRA</span></button>
+              <button type="button" class="menu-mobile-segment" data-menu-segment="world" aria-pressed="false"><span class="segment-index">02</span><span class="segment-label">ŚWIAT</span></button>
+              <button type="button" class="menu-mobile-segment" data-menu-segment="progress" aria-pressed="false"><span class="segment-index">03</span><span class="segment-label">POSTĘPY</span></button>
+              <button type="button" class="menu-mobile-segment" data-menu-segment="system" aria-pressed="false"><span class="segment-index">04</span><span class="segment-label">SYSTEM</span></button>
+            </div>
+            <div class="menu-nav-group" data-menu-group="play" role="group" aria-label="ROZGRYWKA">
               <span class="menu-nav-group-label">01 / ROZGRYWKA</span>
               <button type="button" class="menu-tab-btn active" data-tab="tab-team" aria-controls="tab-team">
               <span class="tab-icon">
@@ -533,7 +540,7 @@
               <span class="tab-label">ARENA PVP</span>
             </button>
             </div>
-            <div class="menu-nav-group" role="group" aria-label="ŚWIAT I BHP">
+            <div class="menu-nav-group" data-menu-group="world" role="group" aria-label="ŚWIAT I BHP">
               <span class="menu-nav-group-label">02 / ŚWIAT I BHP</span>
               <button type="button" class="menu-tab-btn" data-tab="tab-enemies" aria-controls="tab-enemies">
               <span class="tab-icon">
@@ -554,7 +561,7 @@
               <span class="tab-label">KODEKS</span>
             </button>
             </div>
-            <div class="menu-nav-group" role="group" aria-label="POSTĘPY">
+            <div class="menu-nav-group" data-menu-group="progress" role="group" aria-label="POSTĘPY">
               <span class="menu-nav-group-label">03 / POSTĘPY</span>
               <button type="button" class="menu-tab-btn account-menu-tab" data-tab="tab-talent-tree" aria-controls="tab-talent-tree" aria-label="Drzewko rozwoju konta">
               <span class="tab-icon" aria-hidden="true"><svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-7M12 8v6M12 10 7 6M12 10l5-4M7 6 5 3M7 6l-1 4M17 6l2-3M17 6l1 4M12 14l-4 3M12 14l4 3"/><circle cx="5" cy="3" r="1.2"/><circle cx="19" cy="3" r="1.2"/></svg></span>
@@ -577,7 +584,7 @@
               <span class="tab-label">OSIĄGNIĘCIA</span>
             </button>
             </div>
-            <div class="menu-nav-group" role="group" aria-label="SYSTEM">
+            <div class="menu-nav-group" data-menu-group="system" role="group" aria-label="SYSTEM">
               <span class="menu-nav-group-label">04 / SYSTEM</span>
               <button type="button" class="menu-tab-btn" data-tab="tab-settings" aria-controls="tab-settings" aria-label="Ustawienia">
               <span class="tab-icon" aria-hidden="true">
