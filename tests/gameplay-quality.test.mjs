@@ -81,7 +81,7 @@ test('Endless has a distinct launch path while campaign stages start independent
   assert.doesNotMatch(html, /id="btn-start-game"|id="story-intro-modal"|data-tab="tab-zones"/);
   assert.match(app, /bindTap\(document\.getElementById\('btn-start-survival'\), \(event\) =>/);
   assert.match(app, /selectedCampaignStageId = null;[\s\S]*?doStartSurvival\(event\)/);
-  assert.match(app, /this\.engine\.startCampaignStage\(chosenStage, campaignRewardId\)/);
+  assert.match(app, /this\.engine\.startCampaignStage(chosenStage, campaignRewardId, campaignBonusXp)/);
   assert.doesNotMatch(app, /this\.engine\.startCampaignStage\(chosenStage\)/);
   assert.match(app, /doStartSurvival\(\);/);
   assert.match(game, /private resetSurvivalRun\(\)/);
@@ -110,7 +110,7 @@ test('legacy campaign startGame entry points stay retired while the new mission 
   assert.match(html, /id="btn-start-survival"/);
   assert.doesNotMatch(app, /this\.engine\.startGame\(/);
   assert.match(app, /this\.engine\.startSurvival\(\)/);
-  assert.match(app, /this\.engine\.startCampaignStage\(chosenStage, campaignRewardId\)/);
+  assert.match(app, /this\.engine\.startCampaignStage(chosenStage, campaignRewardId, campaignBonusXp)/);
   assert.doesNotMatch(app, /selectedSurvivalMapId|readSurvivalMapPreference|writeSurvivalMapPreference/);
   assert.match(game, /private resetSurvivalRun\(\)/);
   assert.doesNotMatch(game, /public startGame\(/);
@@ -1916,7 +1916,7 @@ test('campaign reward drafts render after a clear and are consumed only by their
     read('../index.html'),
     read('../src/campaign-mode.css'),
   ]);
-  assert.match(game, /public startCampaignStage\(stageId: CampaignStageId, rewardId: CampaignRewardId \| null = null\)/);
+  assert.match(game, /public startCampaignStage(stageId: CampaignStageId, rewardId: CampaignRewardId | null = null, bonusXp = 0)/);
   assert.match(game, /getCampaignRewardDefinition\(rewardId\)/);
   assert.match(game, /case 'armor':[\s\S]*?this\.maxHp = Math\.min\(this\.charDef\.maxHp \+ 1/);
   assert.match(game, /case 'damage':[\s\S]*?this\.survivalDamageMultiplier = Math\.min\(1\.80/);
@@ -1924,15 +1924,33 @@ test('campaign reward drafts render after a clear and are consumed only by their
   assert.match(game, /case 'xp':[\s\S]*?this\.survivalXpMultiplier/);
   assert.match(game, /case 'mobility':[\s\S]*?this\.survivalMoveMultiplier/);
   assert.match(game, /case 'reserve':[\s\S]*?this\.survivalRerolls/);
-  assert.match(app, /getCampaignRewardChoices\(snapshot\.campaignStageId, completions\)/);
+  assert.match(app, /getCampaignRewardChoices(snapshot.campaignStageId, completions, savedStageResult?.bestSideOrderCompleted === true)/);
   assert.match(app, /setPendingCampaignReward\(campaignProgress, nextCampaignStageId, defaultReward\.id\)/);
-  assert.match(app, /consumePendingCampaignReward\(campaignProgress, stageId\)/);
-  assert.match(app, /startCampaignStage\(chosenStage, campaignRewardId\)/);
-  assert.match(app, /startCampaignStage\(retryStageId, campaignRewardId\)/);
+  assert.match(app, /consumePendingCampaignReward(campaignProgress, stageId)/);
+  assert.match(app, /startCampaignStage(chosenStage, campaignRewardId, campaignBonusXp)/);
+  assert.match(app, /startCampaignStage(retryStageId, campaignRewardId, campaignBonusXp)/);
   assert.match(html, /id="campaign-reward-panel"/);
   assert.match(html, /id="campaign-reward-options"/);
   assert.match(campaignCss, /\.campaign-reward-card\.is-selected/);
   assert.match(campaignCss, /@media\(max-width:760px\)[\s\S]*?\.campaign-reward-grid\{grid-template-columns:1fr/);
+});
+
+
+test('campaign field orders are tracked and their XP bonus is stage-scoped', async () => {
+  const [game, app, campaign] = await Promise.all([
+    read('../src/game.ts'),
+    read('../src/index.ts'),
+    read('../src/campaignProgression.ts'),
+  ]);
+  assert.match(game, /survivalXpPickups\+\+/);
+  assert.match(game, /campaignBossSpawnedAtSeconds = this\.survivalElapsed/);
+  assert.match(game, /getCampaignSideOrderProgress\(stage,\s*\{/);
+  assert.match(game, /campaignSideOrderCompleted = sideOrder\.completed/);
+  assert.match(app, /consumePendingCampaignXpBonus\(campaignProgress, stageId\)/);
+  assert.match(app, /consumeCampaignXpBonusForStage\(chosenStage\)/);
+  assert.match(app, /consumeCampaignXpBonusForStage\(retryStageId\)/);
+  assert.match(campaign, /pendingBonusXpStageId !== stageId/);
+  assert.match(campaign, /getCampaignRewardChoices\(stageId, completionNumber = 1, includeBonusChoice = false\)/);
 });
 
 test('PvP projectile visual sync reuses its active-ID buffer and immutable perk palette', async () => {
