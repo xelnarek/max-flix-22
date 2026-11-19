@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import type { SurvivalMapId } from './survivalMaps.ts';\nimport { createCrimsonRack, createCrimsonPalletStack, createCrimsonBarrelCluster, createCrimsonConveyor, createCrimsonColdCompressor, createCrimsonContainer } from './crimsonEnvironmentPack.ts';
+import type { SurvivalMapId } from './survivalMaps.ts';
+import { createCrimsonRack, createCrimsonPalletStack, createCrimsonBarrelCluster, createCrimsonConveyor, createCrimsonColdCompressor, createCrimsonContainer } from './crimsonEnvironmentPack.ts';
 
 export interface SurvivalWorldObstacle {
   x: number;
