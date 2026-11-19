@@ -16,7 +16,7 @@ test('final menu polish is loaded last and preserves the three launch actions', 
 });
 
 test('responsive menu keeps every destination reachable and content scrolling isolated', () => {
-  assert.match(css, /grid-template-areas: "header header" "modes modes" "navigation content"/);
+  assert.match(css, /grid-template-areas:[\\s\\S]*"header header"[\\s\\S]*"modes modes"[\\s\\S]*"navigation content"/);
   assert.match(css, /\.menu-tab-content-area[^}]*overflow-y: auto/s);
   assert.match(css, /@media \(max-width: 900px\)/);
   assert.match(css, /@media \(max-width: 760px\)/);
