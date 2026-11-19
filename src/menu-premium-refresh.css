@@ -713,3 +713,133 @@
     grid-template-rows: auto auto !important;
   }
 }
+
+/* Compact launch console: three equal mode cards keep all entry points visible. */
+@media (max-width: 760px), (pointer: coarse) {
+  #title-screen .menu-mode-selector {
+    flex: 0 0 auto !important;
+    gap: 7px !important;
+    margin: 0 0 2px !important;
+    padding: 8px !important;
+    border-radius: 13px !important;
+  }
+
+  #title-screen .menu-mode-selector-heading {
+    gap: 2px !important;
+  }
+
+  #title-screen .menu-mode-eyebrow {
+    font-size: 6px !important;
+    letter-spacing: .12em !important;
+  }
+
+  #title-screen .menu-mode-selector-heading h2 {
+    font-size: 12px !important;
+  }
+
+  #title-screen .menu-mode-selector-heading p {
+    display: none !important;
+  }
+
+  #title-screen .menu-mode-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    align-items: stretch !important;
+  }
+
+  #title-screen .menu-mode-card,
+  #title-screen #btn-start-survival.menu-mode-card {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: 28px auto auto !important;
+    align-items: center !important;
+    justify-items: center !important;
+    gap: 3px !important;
+    min-width: 0 !important;
+    min-height: 88px !important;
+    padding: 7px 4px 6px !important;
+    border-radius: 10px !important;
+    text-align: center !important;
+  }
+
+  #title-screen .menu-mode-card-icon,
+  #title-screen #btn-start-survival.menu-mode-card .menu-mode-card-icon {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    width: 27px !important;
+    height: 27px !important;
+    border-radius: 8px !important;
+  }
+
+  #title-screen .menu-mode-card-icon svg {
+    width: 17px !important;
+    height: 17px !important;
+  }
+
+  #title-screen .menu-mode-card-copy,
+  #title-screen #btn-start-survival.menu-mode-card .menu-mode-card-copy {
+    display: flex !important;
+    flex-direction: column !important;
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 2px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    text-align: center !important;
+  }
+
+  #title-screen .menu-mode-card-kicker {
+    display: none !important;
+  }
+
+  #title-screen .menu-mode-card-copy strong {
+    font-size: clamp(8px, 2.5vw, 11px) !important;
+    line-height: 1.05 !important;
+    overflow-wrap: anywhere !important;
+    text-align: center !important;
+  }
+
+  #title-screen .menu-mode-card-copy small {
+    display: none !important;
+  }
+
+  #title-screen .menu-mode-card-action,
+  #title-screen #btn-start-survival.menu-mode-card .menu-mode-card-action {
+    display: flex !important;
+    grid-column: 1 !important;
+    grid-row: 3 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 3px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 2px 0 0 !important;
+    border: 0 !important;
+    color: var(--mode-accent) !important;
+    font-size: 6px !important;
+    line-height: 1.05 !important;
+    letter-spacing: .025em !important;
+    text-align: center !important;
+    white-space: normal !important;
+  }
+
+  #title-screen .menu-mode-card-action span {
+    font-size: 10px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  #title-screen .menu-mode-grid {
+    gap: 4px !important;
+  }
+
+  #title-screen .menu-mode-card,
+  #title-screen #btn-start-survival.menu-mode-card {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: 26px auto auto !important;
+    min-height: 82px !important;
+    padding-inline: 3px !important;
+  }
+}
