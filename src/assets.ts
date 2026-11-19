@@ -128,8 +128,8 @@ export class B4AssetLoader {
             <span class="loader-icon-spinner" id="loader-spinner-icon">🏗️</span>
           </div>
           <div class="loader-brand-copy">
-            <div class="loader-kicker">CENTRUM B4 • ZMIANA W TOKU</div>
-            <div class="loader-header">WAREHOUSE <span>MaDDnes</span></div>
+            <div class="loader-kicker">CRIMSON SHIFT • SYSTEM ONLINE</div>
+            <div class="loader-header">MAX FLIX <span>22</span></div>
             <div class="loader-subtitle" id="loader-subtitle">Odpalamy silniki, kompletujemy ekipę i sprawdzamy, czy ktoś pilnuje BHP.</div>
           </div>
         </div>
