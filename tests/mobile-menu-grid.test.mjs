@@ -59,23 +59,24 @@ test('existing roster repair keeps the operator profile after the card grid', ()
   assert.match(rosterFix, /#char-details-box[\s\S]*?width: 100% !important/);
 });
 
-test('one tab activates one panel while every sidebar category remains accessible', async () => {
+test('native sidebar navigation keeps all groups available and activates exactly one content region', async () => {
   const app = await read('src/index.ts');
-  assert.match(app, /menuTabList\?\.setAttribute\('role', 'navigation'\)/);
-  assert.match(app, /group\.hidden = false/);
-  assert.match(app, /group\.inert = false/);
-  assert.match(app, /group\.setAttribute\('role', 'tablist'\)/);
-  assert.match(app, /group\.setAttribute\('aria-orientation', 'vertical'\)/);
-  assert.match(app, /button\.setAttribute\('role', 'tab'\)/);
-  assert.match(app, /button\.setAttribute\('aria-selected', String\(active\)\)/);
-  assert.match(app, /panel\.classList\.toggle\('active', active\)/);
-  assert.match(app, /panel\.setAttribute\('aria-hidden', String\(!active\)\)/);
-  assert.match(app, /panel\.inert = !active/);
-  assert.match(app, /getMenuTabIndexForKey\(event\.key, currentNavigationIndex, navigationTabs\.length, 'vertical'\)/);
-  assert.doesNotMatch(app, /desktopMenuNavigationQuery|mobileMenuSegmentQuery/);
-  assert.match(app, /new MenuScrollMemory\(\)/);
-  assert.match(app, /menuScrollMemory\.save\(currentMenuTargetId, menuContentArea\.scrollTop\)/);
-  assert.match(app, /menuScrollMemory\.restore\(targetId\)/);
+  const html = await read('index.html');
+  assert.match(app, /menuTabList\\?\\.setAttribute\\('role', 'navigation'\\)/);
+  assert.match(app, /group\\.hidden = false/);
+  assert.match(app, /group\\.inert = false/);
+  assert.match(app, /group\\.setAttribute\\('role', 'group'\\)/);
+  assert.match(app, /button\\.setAttribute\\('aria-current', 'page'\\)/);
+  assert.match(app, /panel\\.classList\\.toggle\\('active', active\\)/);
+  assert.match(app, /panel\\.setAttribute\\('role', 'region'\\)/);
+  assert.match(app, /panel\\.setAttribute\\('aria-hidden', String\\(!active\\)\\)/);
+  assert.match(app, /panel\\.inert = !active/);
+  assert.match(app, /getMenuTabIndexForKey\\(event\\.key, currentNavigationIndex, navigationTabs\\.length, 'vertical'\\)/);
+  assert.doesNotMatch(app, /menuMobileSegmentButtons|activeMobileSegmentId|setActiveMobileSegment|role', 'tab'|role', 'tabpanel|aria-selected/);
+  assert.doesNotMatch(html, /menu-mobile-segments|menu-mobile-segment/);
+  assert.match(app, /new MenuScrollMemory\\(\\)/);
+  assert.match(app, /menuScrollMemory\\.save\\(currentMenuTargetId, menuContentArea\\.scrollTop\\)/);
+  assert.match(app, /menuScrollMemory\\.restore\\(targetId\\)/);
 });
 
 test('the three mobile launch modes use compact, equal-width cards', async () => {
