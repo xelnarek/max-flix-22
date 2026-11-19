@@ -1947,6 +1947,19 @@ export class PaleciakiGameEngine {
   }
 
   private resumeEnemyAnimationAfterModelAttach(enemy: EnemyItem, track: GobkitAnimationTrack): void {
+    // A rig can finish loading after its enemy has already been defeated.
+    // In that race, beginEnemyDeathVisual had no track to start the Death clip,
+    // while updateDefeatedEnemyVisual intentionally avoids layering procedural
+    // transforms over a skinned rig. Reconcile the state here before any other
+    // animation priority so the late rig never appears alive or duplicates its LOD.
+    if (enemy.state === 'defeated') {
+      const mesh = enemy.mesh as THREE.Object3D | undefined;
+      if (mesh) this.lockEnemyDeathVisualToSingleRig(mesh);
+      this.enemyPendingAttackUntil.delete(enemy);
+      this.requestGobkitAction(track, 'Death', Math.max(0.1, enemy.deathVisualTimer || 0.1));
+      return;
+    }
+
     const hitRemaining = Math.max(enemy.hitReactTimer || 0, enemy.stunTimer || 0);
     if (hitRemaining > 0.015 || enemy.state === 'stunned') {
       this.enemyPendingAttackUntil.delete(enemy);
