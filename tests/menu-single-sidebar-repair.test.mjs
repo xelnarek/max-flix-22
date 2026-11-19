@@ -42,3 +42,18 @@ test('operator portraits and details have bounded non-overlapping geometry', () 
   assert.match(css, /\.char-card-mastery\s*\{[\s\S]*position:\s*static !important/);
   assert.match(css, /#char-details-box[\s\S]*overflow:\s*visible !important/);
 });
+
+
+test('the selected category is indicated without hiding other sidebar groups', () => {
+  assert.match(app, /group\.dataset\.activeGroup = String\(group\.dataset\.menuGroup === segment\.id\)/);
+  assert.match(app, /group\.hidden = false;/);
+  assert.match(css, /\.menu-nav-group\[data-active-group="true"\]/);
+  assert.match(css, /\.menu-nav-group\[data-active-group="true"\] \.menu-nav-group-label::before/);
+});
+
+test('mobile navigation has readable touch targets and narrow content grids remain legible', () => {
+  assert.match(css, /@media \(max-width: 900px\)[\s\S]*grid-template-columns: clamp\(122px, 31vw, 188px\)/);
+  assert.match(css, /\.menu-tab-btn\s*\{[\s\S]*min-height: 42px !important/);
+  assert.match(css, /@media \(max-width: 480px\)[\s\S]*\.enemies-guide-grid[\s\S]*grid-template-columns: minmax\(0, 1fr\) !important/);
+  assert.match(css, /\.char-detail-view-btn\s*\{[\s\S]*min-height: 34px !important/);
+});
