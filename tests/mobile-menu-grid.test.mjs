@@ -64,16 +64,27 @@ test('existing roster repair keeps the operator profile after the card grid', ()
   assert.match(rosterFix, /#char-details-box[\s\S]*?width: 100% !important/);
 });
 
-test('phone layout presents all menu panels together and turns navigation tiles into section shortcuts', async () => {
+test('mobile menu uses real tabs and keeps exactly one panel active', async () => {
   const app = await read('src/index.ts');
-  assert.match(app, /window\.matchMedia\('\(max-width: 760px\), \(pointer: coarse\)'\)/);
-  assert.match(app, /classList\.toggle\('mobile-menu-overview', overview\)/);
-  assert.match(app, /panel\.classList\.toggle\('active', overview \|\| active\)/);
-  assert.match(app, /panel\.setAttribute\('aria-hidden', 'false'\)/);
-  assert.match(app, /panel\.inert = false/);
-  assert.match(app, /getElementById\(targetId\)\?\.scrollIntoView/);
-  assert.match(css, /#title-screen\.mobile-menu-overview \.tab-panel\[aria-hidden="true"\]\s*\{[\s\S]*?display: flex !important/);
-  for (const section of ['tab-team', 'tab-map', 'tab-pvp', 'tab-enemies', 'tab-perks', 'tab-field-guide', 'tab-talent-tree', 'tab-ranks', 'tab-leaderboard', 'tab-achievements', 'tab-settings']) {
-    assert.ok(css.includes('#title-screen.mobile-menu-overview #' + section + '::before'), 'missing section heading ' + section);
-  }
+  assert.match(app, /menuTabList\?\.setAttribute\('role', 'tablist'\)/);
+  assert.match(app, /button\.setAttribute\('role', 'tab'\)/);
+  assert.match(app, /button\.setAttribute\('aria-selected', String\(active\)\)/);
+  assert.match(app, /panel\.classList\.toggle\('active', active\)/);
+  assert.match(app, /panel\.setAttribute\('aria-hidden', String\(!active\)\)/);
+  assert.match(app, /panel\.inert = !active/);
+  assert.match(app, /if \(contentArea\) contentArea\.scrollTop = 0/);
+  assert.doesNotMatch(app, /mobileMenuOverviewQuery|mobile-menu-overview|scrollIntoView/);
+  assert.doesNotMatch(css, /mobile-menu-overview/);
+  assert.match(css, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\) !important/);
+  assert.match(css, /\.tab-panel\[aria-hidden="true"\]\s*\{[\s\S]*?display: none !important/);
+  assert.match(css, /\.tab-panel\.active\s*\{[\s\S]*?display: flex !important/);
+});
+
+test('the three mobile launch modes use compact, equal-width cards', async () => {
+  const premium = await read('src/menu-premium-refresh.css');
+  assert.match(premium, /\.menu-mode-grid\s*\{[\s\S]*?grid-template-columns: repeat\(3, minmax\(0, 1fr\)\) !important/);
+  assert.match(premium, /#title-screen \.menu-mode-card,[\s\S]*?grid-template-rows: 28px auto auto !important/);
+  assert.match(premium, /#title-screen \.menu-mode-card-copy small\s*\{\s*display: none !important/);
+  assert.match(premium, /#title-screen #btn-start-survival\.menu-mode-card/);
+  assert.match(premium, /min-height: 88px !important/);
 });
