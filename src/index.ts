@@ -2724,8 +2724,8 @@ class PaleciakiScene extends xb.Script {
     });
 
     const menuTabList = document.querySelector<HTMLElement>('.menu-tabs-bar');
-    const desktopMenuNavigationQuery = window.matchMedia('(min-width: 901px)');
-    const mobileMenuSegmentQuery = window.matchMedia('(max-width: 900px)');
+    // The menu uses one vertical sidebar on desktop, tablet and mobile.
+    // No viewport-dependent segment filtering is used.
     menuTabList?.setAttribute('role', 'navigation');
     menuTabList?.setAttribute('aria-label', 'Nawigacja menu głównego');
     const menuTabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.menu-tab-btn'));
@@ -2813,11 +2813,7 @@ class PaleciakiScene extends xb.Script {
       if (!menuTabList) return;
       const rail = menuTabList.getBoundingClientRect();
       const tabBounds = tab.getBoundingClientRect();
-      if (menuTabList.scrollWidth > menuTabList.clientWidth + 1) {
-        const left = menuTabList.scrollLeft + tabBounds.left - rail.left -
-          Math.max(8, (menuTabList.clientWidth - tabBounds.width) / 2);
-        menuTabList.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
-      } else if (menuTabList.scrollHeight > menuTabList.clientHeight + 1) {
+      if (menuTabList.scrollHeight > menuTabList.clientHeight + 1) {
         const top = menuTabList.scrollTop + tabBounds.top - rail.top -
           Math.max(8, (menuTabList.clientHeight - tabBounds.height) / 2);
         menuTabList.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
@@ -2887,8 +2883,9 @@ class PaleciakiScene extends xb.Script {
       }
     };
 
-    // On touch layouts, navigation is hierarchical: choose one of the four
-    // real game sections first, then choose a destination inside that section.
+    // Keep every destination visible in the left rail at every viewport size.
+    // Selecting a tab changes only its matching content panel; groups are visual
+    // labels and never act as a second navigation layer.
     setActiveMobileSegment = (segmentId: MenuSegmentId) => {
       const segment = MENU_SEGMENTS.find((item) => item.id === segmentId);
       if (!segment) return;
@@ -2903,12 +2900,11 @@ class PaleciakiScene extends xb.Script {
       });
 
       menuNavigationGroups.forEach((group) => {
-        const visible = !mobileMenuSegmentQuery.matches || group.dataset.menuGroup === segment.id;
-        group.hidden = !visible;
-        group.inert = !visible;
-        group.setAttribute('aria-hidden', String(!visible));
-        group.setAttribute('role', 'tablist');
-        group.setAttribute('aria-orientation', desktopMenuNavigationQuery.matches ? 'vertical' : 'horizontal');
+        group.hidden = false;
+        group.inert = false;
+        group.setAttribute('aria-hidden', 'false');
+        group.setAttribute('role', 'group');
+        group.removeAttribute('aria-orientation');
       });
     };
 
@@ -2950,11 +2946,9 @@ class PaleciakiScene extends xb.Script {
         ensureMenuTabVisible(tabBtn);
       });
       tabBtn.addEventListener('keydown', (event: KeyboardEvent) => {
-        const navigationTabs = mobileMenuSegmentQuery.matches
-          ? menuTabButtons.filter((candidate) => getMenuSegmentForTab(candidate.dataset.tab || '')?.id === activeMobileSegmentId)
-          : menuTabButtons;
+        const navigationTabs = menuTabButtons;
         const currentNavigationIndex = navigationTabs.indexOf(tabBtn);
-        const nextIndex = getMenuTabIndexForKey(event.key, currentNavigationIndex, navigationTabs.length, desktopMenuNavigationQuery.matches ? 'vertical' : 'horizontal');
+        const nextIndex = getMenuTabIndexForKey(event.key, currentNavigationIndex, navigationTabs.length, 'vertical');
         if (nextIndex === null) return;
         event.preventDefault();
         const nextTab = navigationTabs[nextIndex];
@@ -2967,11 +2961,6 @@ class PaleciakiScene extends xb.Script {
 
     setActiveMobileSegment(activeMobileSegmentId);
     syncMenuPanelPresentation(currentMenuTargetId);
-    desktopMenuNavigationQuery.addEventListener('change', () => {
-      setActiveMobileSegment(activeMobileSegmentId);
-      syncMenuPanelPresentation(currentMenuTargetId);
-    });
-    mobileMenuSegmentQuery.addEventListener('change', () => setActiveMobileSegment(activeMobileSegmentId));
 
     document.querySelectorAll<HTMLElement>('.char-card').forEach((card) => {
       card.setAttribute('role', 'button');
