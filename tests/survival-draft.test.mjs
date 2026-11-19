@@ -141,6 +141,12 @@ test('weapon evolution is only described as ready when the actual weapon and pas
   assert.equal(getSurvivalDraftSynergyHint('weapon_evolve:pallet_cannon', {
     ...eligible, elapsedSeconds: 209,
   }), null);
+  assert.equal(getSurvivalDraftSynergyHint('weapon_evolve:pallet_cannon', {
+    ...eligible, stacks: {},
+  }), null);
+  assert.equal(getSurvivalDraftSynergyHint('weapon_evolve:pallet_cannon', {
+    ...eligible, weapons: [{ id: 'pallet_cannon', level: 5, evolved: true }],
+  }), null);
   assert.equal(getSurvivalDraftSynergyHint('damage', {}), null);
 });
 
