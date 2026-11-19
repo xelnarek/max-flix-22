@@ -1,0 +1,331 @@
+/* Warehouse MaDDnes — final menu refinement */
+
+#title-screen {
+  --menu-surface: rgba(8, 20, 31, .96);
+  --menu-surface-2: rgba(13, 31, 45, .98);
+  --menu-line: rgba(137, 196, 209, .20);
+  --menu-teal: #63d6c5;
+  --menu-gold: #ffc66e;
+  --menu-violet: #bba4f4;
+}
+
+#title-screen .title-sheet {
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 14% 0%, rgba(74, 191, 190, .10), transparent 28%),
+    linear-gradient(145deg, rgba(12, 29, 42, .985), rgba(5, 13, 23, .985)) !important;
+}
+
+#title-screen .title-sheet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(133, 191, 205, .025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(133, 191, 205, .025) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(to bottom, black, transparent 80%);
+}
+
+#title-screen .menu-top-header {
+  position: relative;
+  min-height: 74px;
+  padding: 10px 14px 9px !important;
+}
+
+#title-screen .menu-game-title {
+  margin: 3px 0 1px !important;
+  line-height: .96 !important;
+  letter-spacing: .055em !important;
+}
+
+#title-screen .menu-release-strip {
+  flex-wrap: nowrap !important;
+  overflow: hidden;
+}
+
+#title-screen .menu-mode-selector {
+  min-height: 138px;
+  padding: 10px 12px !important;
+}
+
+#title-screen .menu-mode-grid {
+  gap: 10px !important;
+}
+
+#title-screen .menu-mode-card {
+  position: relative;
+  min-height: 112px;
+  overflow: hidden;
+  border-radius: 13px !important;
+  transition: transform .18s ease, border-color .18s ease, filter .18s ease, box-shadow .18s ease;
+}
+
+#title-screen .menu-mode-card::after {
+  content: "";
+  position: absolute;
+  width: 140px;
+  height: 140px;
+  right: -82px;
+  top: -84px;
+  border: 1px solid color-mix(in srgb, var(--mode-accent) 32%, transparent);
+  border-radius: 50%;
+  box-shadow: 0 0 0 18px color-mix(in srgb, var(--mode-accent) 4%, transparent);
+  pointer-events: none;
+}
+
+#title-screen .menu-mode-card:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+#title-screen .menu-mode-card:active:not(:disabled) {
+  transform: translateY(0) scale(.995);
+}
+
+#title-screen .menu-mode-card-icon {
+  border-radius: 10px !important;
+}
+
+#title-screen .menu-tabs-bar {
+  scrollbar-gutter: stable;
+}
+
+#title-screen .menu-nav-group {
+  padding: 7px 6px 8px !important;
+}
+
+#title-screen .menu-nav-group-label {
+  font-size: 7px !important;
+  line-height: 1.2 !important;
+}
+
+#title-screen .menu-tab-btn {
+  position: relative;
+  overflow: hidden;
+  min-height: 40px;
+}
+
+#title-screen .menu-tab-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  background: var(--menu-accent, var(--menu-teal));
+  opacity: 0;
+  transition: opacity .16s ease;
+}
+
+#title-screen .menu-tab-btn.active::after,
+#title-screen .menu-tab-btn:hover::after {
+  opacity: 1;
+}
+
+#title-screen .menu-tab-content-area {
+  border-radius: 15px !important;
+  scroll-padding-block: 12px;
+}
+
+#title-screen .tab-panel.active {
+  animation: menu-panel-enter .22s ease-out both;
+}
+
+@keyframes menu-panel-enter {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+#title-screen .char-card,
+#title-screen .campaign-stage-card,
+#title-screen .enemy-guide-card,
+#title-screen .perk-card,
+#title-screen .field-guide-card,
+#title-screen .pvp-menu-feature-card {
+  transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease, filter .16s ease;
+}
+
+#title-screen .char-card:hover,
+#title-screen .campaign-stage-card:hover,
+#title-screen .enemy-guide-card:hover,
+#title-screen .perk-card:hover,
+#title-screen .field-guide-card:hover,
+#title-screen .pvp-menu-feature-card:hover {
+  transform: translateY(-2px);
+}
+
+#title-screen .char-card-badge,
+#title-screen .char-showcase-portrait,
+#title-screen .operator-emblem {
+  contain: paint;
+}
+
+#title-screen :is(button, input, select, [role="button"]):focus-visible {
+  outline: 2px solid var(--menu-gold) !important;
+  outline-offset: 3px !important;
+}
+
+@media (max-width: 900px) {
+  #title-screen .title-sheet {
+    grid-template-rows: auto auto auto minmax(0, 1fr) !important;
+  }
+
+  #title-screen .menu-top-header {
+    min-height: 58px;
+  }
+
+  #title-screen .menu-mode-selector {
+    min-height: 0;
+  }
+
+  #title-screen .menu-tabs-bar {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scroll-snap-type: x proximity;
+  }
+
+  #title-screen .menu-nav-group {
+    display: flex !important;
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: stretch;
+    width: auto !important;
+    min-width: max-content;
+    border-top: 0 !important;
+  }
+
+  #title-screen .menu-nav-group-label {
+    display: none !important;
+  }
+
+  #title-screen .menu-tab-btn {
+    flex: 0 0 82px;
+    min-width: 82px !important;
+    min-height: 44px;
+    scroll-snap-align: center;
+  }
+
+  #title-screen .menu-mode-card {
+    min-height: 94px;
+  }
+
+  #title-screen .char-card:hover,
+  #title-screen .campaign-stage-card:hover,
+  #title-screen .enemy-guide-card:hover,
+  #title-screen .perk-card:hover,
+  #title-screen .field-guide-card:hover,
+  #title-screen .pvp-menu-feature-card:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 760px) {
+  #title-screen .menu-top-header {
+    min-height: 52px;
+  }
+
+  #title-screen .menu-game-title {
+    font-size: clamp(22px, 7vw, 34px) !important;
+  }
+
+  #title-screen .menu-mode-grid {
+    gap: 6px !important;
+  }
+
+  #title-screen .menu-mode-card {
+    min-height: 88px;
+  }
+
+  #title-screen .menu-release-strip {
+    max-height: 28px;
+  }
+
+  #title-screen .menu-release-strip > span:not(.menu-release-pill) {
+    display: none !important;
+  }
+
+  #title-screen .menu-tabs-bar {
+    gap: 5px;
+  }
+
+  #title-screen .menu-tab-btn {
+    flex-basis: 76px;
+    min-width: 76px !important;
+  }
+}
+
+@media (max-width: 380px) and (orientation: portrait) {
+  #title-screen .brand-badge-pill {
+    display: none !important;
+  }
+
+  #title-screen .menu-top-header {
+    min-height: 44px;
+  }
+
+  #title-screen .menu-game-title {
+    font-size: 20px !important;
+  }
+
+  #title-screen .menu-mode-card {
+    min-height: 78px;
+  }
+
+  #title-screen .menu-tab-btn {
+    flex-basis: 68px;
+    min-width: 68px !important;
+  }
+}
+
+@media (max-height: 560px) and (orientation: landscape) and (pointer: coarse) {
+  #title-screen .menu-top-header {
+    min-height: 42px;
+  }
+
+  #title-screen .menu-game-subtitle,
+  #title-screen .menu-release-strip {
+    display: none !important;
+  }
+
+  #title-screen .menu-mode-selector {
+    padding: 5px !important;
+  }
+
+  #title-screen .menu-mode-card {
+    min-height: 56px;
+  }
+
+  #title-screen .menu-tabs-bar {
+    min-height: 38px;
+  }
+
+  #title-screen .menu-tab-btn {
+    flex-basis: 70px;
+    min-width: 70px !important;
+    min-height: 34px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #title-screen *,
+  #title-screen *::before,
+  #title-screen *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+
+  #title-screen .menu-mode-card:hover:not(:disabled),
+  #title-screen .menu-tab-btn:hover,
+  #title-screen .char-card:hover,
+  #title-screen .campaign-stage-card:hover,
+  #title-screen .enemy-guide-card:hover,
+  #title-screen .perk-card:hover,
+  #title-screen .field-guide-card:hover,
+  #title-screen .pvp-menu-feature-card:hover {
+    transform: none !important;
+  }
+}
