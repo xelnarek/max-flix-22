@@ -207,10 +207,18 @@ function getPairBonus(
   context: SurvivalDraftContext,
   plannedIds: ReadonlySet<string>,
 ): number {
-  if (getEvolutions(context).size === 0 && !SYNERGIES[id]) return 0;
+  const synergies = SYNERGIES[id] || [];
+  if (synergies.length === 0) return 0;
+  const stacks = getStacks(context);
+  const evolutions = getEvolutions(context);
   let bestBonus = 0;
-  for (const synergy of SYNERGIES[id] || []) {
-    if (getEvolutions(context).has(synergy.evolutionId)) continue;
+  for (const synergy of synergies) {
+    if (evolutions.has(synergy.evolutionId)) continue;
+    const partnerCount = safeCount(stacks[synergy.partner]) +
+      [...plannedIds].filter((planned) => planned === synergy.partner).length;
+    // Do not reward a passive as a "synergy pick" until its other half is
+    // actually owned or selected in this draft.
+    if (partnerCount <= 0) continue;
     const progress = getSynergyProgress(id, synergy, context, plannedIds);
     bestBonus = Math.max(bestBonus, progress.bonus);
   }
