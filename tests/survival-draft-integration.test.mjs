@@ -56,3 +56,21 @@ test('every draft synergy matches the exact passive thresholds used by the live 
     assert.match(draft, requirement.draft, requirement.id + ' draft requirement');
   }
 });
+
+
+test('weapon unlock draft synergies use the same evolution passive as the live weapon definitions', async () => {
+  const game = await read('../src/game.ts');
+  const draft = await read('../src/survivalDraft.ts');
+  const start = game.indexOf('const SURVIVAL_WEAPON_DEFS:');
+  const end = game.indexOf('\n};', start);
+  const mapStart = draft.indexOf('const WEAPON_EVOLUTION_PASSIVES:');
+  const mapEnd = draft.indexOf('\n});', mapStart);
+  assert.ok(start >= 0 && end > start && mapStart >= 0 && mapEnd > mapStart);
+  const definitions = game.slice(start, end);
+  const draftMap = draft.slice(mapStart, mapEnd);
+  const weapons = [...definitions.matchAll(/(?:^\s*)([a-z0-9_]+): \{[^}]*evolutionPassive: '([a-z0-9_]+)'/gm)];
+  assert.equal(weapons.length, 12);
+  for (const [, weaponId, passiveId] of weapons) {
+    assert.match(draftMap, new RegExp(weaponId + ": '" + passiveId + "'"));
+  }
+});
