@@ -550,7 +550,13 @@
 /* Short landscape devices: reduce vertical chrome and keep modes in one row. */
 @media (max-height: 560px) and (orientation: landscape) and (pointer: coarse) {
   #title-screen .title-sheet {
-    grid-template-rows: auto auto auto minmax(0, 1fr) !important;
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto !important;
+    grid-template-areas:
+      "header"
+      "modes"
+      "navigation"
+      "content"
+      "footer" !important;
     gap: 5px !important;
     padding: 6px !important;
   }
