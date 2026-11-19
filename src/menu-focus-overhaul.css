@@ -1,0 +1,415 @@
+/*
+ * MENU FOCUS OVERHAUL
+ * One compact information hierarchy for every menu destination.
+ * Full descriptions remain available from the sticky density switch.
+ */
+
+/* Persistent control: it stays visible while the active section scrolls. */
+#title-screen .menu-density-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 36px;
+  margin: 0 0 10px;
+  padding: 5px 8px;
+  border: 1px solid rgba(128, 169, 183, .18);
+  border-radius: 10px;
+  background: rgba(7, 17, 26, .96);
+  box-shadow: 0 5px 14px rgba(0, 0, 0, .22);
+}
+#title-screen .menu-density-label {
+  color: #91aab5;
+  font: 800 8px/1.2 "JetBrains Mono", monospace;
+  letter-spacing: .12em;
+}
+#title-screen .menu-density-toggle {
+  min-height: 27px;
+  padding: 5px 10px;
+  border: 1px solid rgba(116, 197, 190, .34);
+  border-radius: 7px;
+  background: linear-gradient(135deg, rgba(26, 100, 94, .38), rgba(13, 36, 44, .96));
+  color: #c9f2e9;
+  font: 800 8px/1 "JetBrains Mono", monospace;
+  letter-spacing: .05em;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+#title-screen .menu-density-toggle:focus-visible,
+#title-screen .char-detail-view-btn:focus-visible {
+  outline: 2px solid #77d7ce;
+  outline-offset: 2px;
+}
+
+/* Compact mode is the default. The toggle reveals the unabridged copy. */
+#title-screen[data-menu-density="compact"] .tab-panel.active p,
+#title-screen[data-menu-density="compact"] #tab-enemies .enemy-guide-desc,
+#title-screen[data-menu-density="compact"] #tab-perks .perk-card-desc,
+#title-screen[data-menu-density="compact"] #tab-field-guide .field-guide-callout,
+#title-screen[data-menu-density="compact"] #tab-enemies .combat-method .method-text span {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+#title-screen[data-menu-density="compact"] #tab-enemies .enemy-sig,
+#title-screen[data-menu-density="compact"] #tab-field-guide .field-guide-card small {
+  display: none !important;
+}
+#title-screen[data-menu-density="compact"] #tab-perks .perk-source-tag {
+  display: none !important;
+}
+#title-screen[data-menu-density="compact"] #tab-map .campaign-stage-card small {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
+}
+#title-screen[data-menu-density="full"] .tab-panel.active p,
+#title-screen[data-menu-density="full"] #tab-enemies .enemy-guide-desc,
+#title-screen[data-menu-density="full"] #tab-perks .perk-card-desc,
+#title-screen[data-menu-density="full"] #tab-field-guide .field-guide-callout,
+#title-screen[data-menu-density="full"] #tab-enemies .combat-method .method-text span,
+#title-screen[data-menu-density="full"] #tab-map .campaign-stage-card small {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+}
+#title-screen[data-menu-density="full"] #tab-enemies .enemy-sig,
+#title-screen[data-menu-density="full"] #tab-field-guide .field-guide-card small,
+#title-screen[data-menu-density="full"] #tab-perks .perk-source-tag {
+  display: inline !important;
+}
+
+/* Five clear operator choices: the portrait is an identifier, not the card. */
+#title-screen #tab-team > .char-grid {
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  grid-auto-flow: row !important;
+  grid-auto-rows: minmax(0, auto) !important;
+  align-items: stretch !important;
+  gap: 7px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 0 8px !important;
+}
+#title-screen #tab-team > .char-grid > .char-card {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 3px !important;
+  min-width: 0 !important;
+  min-height: 82px !important;
+  height: auto !important;
+  padding: 6px 3px !important;
+  border-radius: 9px !important;
+  overflow: hidden !important;
+  text-align: center !important;
+}
+#title-screen #tab-team .char-code-tag,
+#title-screen #tab-team .char-card-ability,
+#title-screen #tab-team .char-card-model-label,
+#title-screen #tab-team .char-card-mastery {
+  display: none !important;
+}
+#title-screen #tab-team .char-card-badge.operator-emblem {
+  display: grid !important;
+  place-items: center !important;
+  flex: 0 0 34px !important;
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
+  margin: 0 auto 2px !important;
+  padding: 0 !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+#title-screen #tab-team .char-card-badge.operator-emblem .operator-portrait,
+#title-screen #tab-team .char-card-badge.operator-emblem > svg {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+}
+#title-screen #tab-team .char-card-name {
+  display: block !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  color: #f1f6f8 !important;
+  font: 900 clamp(7px, 1.8vw, 10px)/1.15 "Space Grotesk", sans-serif !important;
+  letter-spacing: .015em !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+#title-screen #tab-team .char-card-role {
+  display: block !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  font: 700 clamp(6px, 1.35vw, 7.5px)/1.15 "JetBrains Mono", monospace !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* Three subviews prevent profile, combat kit and mastery from becoming one
+   continuous wall of text. */
+#title-screen #tab-team .char-detail-view-nav {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  margin: 0 0 8px;
+  padding: 4px;
+  border: 1px solid rgba(128, 169, 183, .16);
+  border-radius: 9px;
+  background: rgba(5, 13, 20, .72);
+}
+#title-screen #tab-team .char-detail-view-btn {
+  min-width: 0;
+  min-height: 31px;
+  padding: 6px 4px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #93aab5;
+  font: 800 8px/1.15 "JetBrains Mono", monospace;
+  letter-spacing: .035em;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+#title-screen #tab-team .char-detail-view-btn.active,
+#title-screen #tab-team .char-detail-view-btn[aria-pressed="true"] {
+  border-color: rgba(112, 203, 194, .35);
+  background: linear-gradient(135deg, rgba(34, 111, 102, .42), rgba(13, 33, 42, .96));
+  color: #e0fbf4;
+}
+#title-screen #tab-team #char-details-box {
+  min-width: 0 !important;
+  gap: 8px !important;
+  padding: 10px !important;
+}
+#title-screen #tab-team .arcade-showcase-top {
+  align-items: center !important;
+  gap: 9px !important;
+}
+#title-screen #tab-team .char-showcase-portrait {
+  flex: 0 0 46px !important;
+  width: 46px !important;
+  height: 46px !important;
+  max-width: 46px !important;
+  max-height: 46px !important;
+  overflow: hidden !important;
+}
+#title-screen #tab-team .char-showcase-portrait > svg,
+#title-screen #tab-team .char-showcase-portrait .operator-portrait {
+  width: 100% !important;
+  height: 100% !important;
+}
+#title-screen #tab-team .char-details-title {
+  font-size: clamp(12px, 2.6vw, 17px) !important;
+  line-height: 1.15 !important;
+}
+#title-screen #tab-team .char-details-class,
+#title-screen #tab-team .char-details-movement {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
+  font-size: 8px !important;
+  line-height: 1.3 !important;
+}
+#title-screen #tab-team .btn-voiceline-preview {
+  min-height: 27px !important;
+  padding: 5px 8px !important;
+  font-size: 8px !important;
+}
+#title-screen #tab-team #char-details-box[data-char-view="profile"] #char-detail-attack,
+#title-screen #tab-team #char-details-box[data-char-view="profile"] #char-detail-skill,
+#title-screen #tab-team #char-details-box[data-char-view="profile"] #char-detail-passive,
+#title-screen #tab-team #char-details-box[data-char-view="profile"] #character-mastery-panel,
+#title-screen #tab-team #char-details-box[data-char-view="abilities"] #char-detail-bio,
+#title-screen #tab-team #char-details-box[data-char-view="abilities"] .char-stats-container,
+#title-screen #tab-team #char-details-box[data-char-view="abilities"] #character-mastery-panel,
+#title-screen #tab-team #char-details-box[data-char-view="mastery"] #char-detail-bio,
+#title-screen #tab-team #char-details-box[data-char-view="mastery"] #char-detail-attack,
+#title-screen #tab-team #char-details-box[data-char-view="mastery"] #char-detail-skill,
+#title-screen #tab-team #char-details-box[data-char-view="mastery"] #char-detail-passive,
+#title-screen #tab-team #char-details-box[data-char-view="mastery"] .char-stats-container {
+  display: none !important;
+}
+#title-screen #tab-team #char-detail-bio,
+#title-screen #tab-team #char-detail-attack,
+#title-screen #tab-team #char-detail-skill,
+#title-screen #tab-team #char-detail-passive {
+  margin: 0 !important;
+  padding: 8px 10px !important;
+  border-radius: 8px !important;
+  font-size: 10px !important;
+  line-height: 1.45 !important;
+}
+#title-screen #tab-team .char-stats-container {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 5px 10px !important;
+  padding: 7px 8px !important;
+}
+#title-screen #tab-team .stat-bar-row {
+  min-width: 0 !important;
+  gap: 5px !important;
+}
+#title-screen #tab-team .stat-name,
+#title-screen #tab-team .stat-num {
+  font-size: 7px !important;
+}
+#title-screen #tab-team #character-mastery-panel {
+  max-height: min(380px, 48vh);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+#title-screen #tab-team #character-talent-list {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)) !important;
+}
+
+/* Smaller reference icons leave titles and actions unobstructed. */
+#title-screen #tab-enemies .enemy-guide-badge,
+#title-screen #tab-perks .perk-card-icon,
+#title-screen #tab-field-guide .field-guide-icon,
+#title-screen #tab-pvp .pvp-menu-feature-icon {
+  flex: 0 0 32px !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  font-size: 20px !important;
+}
+#title-screen #tab-enemies .enemy-guide-card,
+#title-screen #tab-field-guide .field-guide-card,
+#title-screen #tab-perks .perk-card,
+#title-screen #tab-pvp .pvp-menu-feature-card {
+  min-width: 0 !important;
+  overflow: hidden;
+}
+#title-screen #tab-enemies .enemy-guide-title,
+#title-screen #tab-perks .perk-card-title,
+#title-screen #tab-field-guide .field-guide-card h4 {
+  overflow-wrap: anywhere;
+  line-height: 1.2 !important;
+}
+#title-screen #tab-perks .perk-card-top {
+  gap: 7px !important;
+}
+#title-screen #tab-perks .btn-perk-activate {
+  flex: 0 0 auto;
+  min-height: 27px !important;
+  padding: 5px 7px !important;
+  font-size: 7px !important;
+}
+
+@media (max-width: 640px) {
+  #title-screen .menu-density-toolbar {
+    min-height: 34px;
+    margin-bottom: 7px;
+    padding: 4px 6px;
+  }
+  #title-screen .menu-density-toggle {
+    min-height: 25px;
+    padding-inline: 8px;
+    font-size: 7px;
+  }
+  #title-screen #tab-team > .char-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 4px !important;
+  }
+  #title-screen #tab-team > .char-grid > .char-card {
+    min-height: 74px !important;
+    padding: 5px 2px !important;
+  }
+  #title-screen #tab-team .char-card-badge.operator-emblem {
+    flex-basis: 29px !important;
+    width: 29px !important;
+    height: 29px !important;
+    min-width: 29px !important;
+    min-height: 29px !important;
+  }
+  #title-screen #tab-team .char-card-role {
+    font-size: 5.8px !important;
+  }
+  #title-screen #tab-team .char-card-name {
+    font-size: clamp(6px, 1.8vw, 8px) !important;
+  }
+  #title-screen #tab-team .char-detail-view-nav {
+    gap: 3px;
+    padding: 3px;
+  }
+  #title-screen #tab-team .char-detail-view-btn {
+    min-height: 29px;
+    font-size: 7px;
+  }
+  #title-screen #tab-team #char-details-box {
+    padding: 8px !important;
+  }
+  #title-screen #tab-team .char-stats-container {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+  }
+  #title-screen #tab-field-guide .field-guide-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+  }
+  #title-screen #tab-field-guide .field-guide-card {
+    padding: 9px !important;
+    gap: 5px !important;
+  }
+  #title-screen #tab-enemies .enemies-guide-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+  }
+  #title-screen #tab-enemies .enemy-guide-card {
+    padding: 9px !important;
+    gap: 5px !important;
+  }
+  #title-screen #tab-perks .perk-shop-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+  }
+  #title-screen #tab-perks .perk-card {
+    padding: 8px !important;
+    gap: 6px !important;
+  }
+  #title-screen #tab-perks .perk-card-top {
+    align-items: flex-start !important;
+    flex-wrap: wrap;
+  }
+  #title-screen #tab-perks .perk-card-head-info {
+    min-width: 0 !important;
+    flex: 1 1 calc(100% - 40px);
+  }
+  #title-screen #tab-perks .btn-perk-activate {
+    margin-left: 39px;
+  }
+}
+
+@media (max-width: 360px) {
+  #title-screen #tab-field-guide .field-guide-card-grid,
+  #title-screen #tab-enemies .enemies-guide-grid,
+  #title-screen #tab-perks .perk-shop-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #title-screen .menu-density-toggle,
+  #title-screen .char-detail-view-btn,
+  #title-screen #tab-team .char-card {
+    transition: none !important;
+    animation: none !important;
+  }
+}
