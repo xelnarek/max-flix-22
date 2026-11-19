@@ -61,7 +61,7 @@ test('a preserved overlay nested inside an old model container is extracted from
   legacyContainer.add(body.mesh, overlay);
   actor.add(legacyContainer);
 
-  removeLegacyEnemyBodyVisuals(actor, [overlay]);
+  removeLegacyEnemyBodyVisuals(actor, [overlay, marker.mesh]);
 
   assert.equal(legacyContainer.parent, null, 'empty legacy model hierarchy must leave the live actor');
   assert.equal(body.mesh.parent, legacyContainer, 'the old subtree is detached with its discarded parent');
@@ -138,4 +138,27 @@ test('both imported enemy rig paths remove the full procedural body and retire o
     assert.doesNotMatch(overlayList, /enemy\.propeller|bikeWheels/,
       'obsolete model appendages must not be carried into the imported rig');
   }
+});
+
+
+test('health-bar fill remains inside its preserved parent when both are listed', () => {
+  const actor = new THREE.Group();
+  const legacyBody = new THREE.Group();
+  const body = createMesh('legacy-enemy-body');
+  const hpBar = new THREE.Group();
+  hpBar.name = 'enemy-health-bar';
+  hpBar.position.set(0, 1.7, 0);
+  const background = createMesh('hp-background');
+  const fill = createMesh('hp-fill');
+  hpBar.add(background.mesh, fill.mesh);
+  legacyBody.add(body.mesh, hpBar);
+  actor.add(legacyBody);
+
+  removeLegacyEnemyBodyVisuals(actor, [hpBar, fill.mesh]);
+
+  assert.equal(legacyBody.parent, null, 'old body hierarchy is removed');
+  assert.equal(hpBar.parent, actor, 'the complete health bar is kept as one overlay root');
+  assert.equal(background.mesh.parent, hpBar);
+  assert.equal(fill.mesh.parent, hpBar, 'the fill remains aligned inside its background');
+  assert.equal(fill.mesh.visible, true);
 });
