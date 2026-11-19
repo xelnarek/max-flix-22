@@ -17,6 +17,8 @@ on:
       - 'scripts/verify-android-release.mjs'
       - 'scripts/prepare-play-store-artwork.mjs'
       - 'scripts/fetch-gobkit-assets.mjs'
+      - 'scripts/fetch-polyhaven-assets.mjs'
+      - 'scripts/polyHavenPack.mjs'
       - '.github/workflows/android-release.yml'
 
 permissions:
@@ -73,6 +75,7 @@ jobs:
           VITE_ADMOB_REWARDED_ID: ${{ vars.VITE_ADMOB_REWARDED_ID }}
           VITE_ADMOB_INTERSTITIAL_ID: ${{ vars.VITE_ADMOB_INTERSTITIAL_ID }}
           VITE_PVP_WS_URL: ${{ vars.VITE_PVP_WS_URL || 'wss://paleciaki-pvp.onrender.com/pvp-ws' }}
+          POLYHAVEN_RESOLUTION: '1k'
         run: npm run build
 
       - name: Install pinned Capacitor toolchain
