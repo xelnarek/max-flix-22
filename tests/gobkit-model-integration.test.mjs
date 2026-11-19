@@ -143,7 +143,7 @@ test('each imported enemy rig is role-mapped, correctly fitted and attached to t
   }
   assert.match(game, /fitGobkitModel\(root, visualProfile\.targetHeight/);
   assert.match(game, /void this\.attachGobkitEnemyModel\(enemy, modelId\)/);
-  assert.match(game, /this\.hideProceduralVisuals\(mesh as THREE\.Group, overlays\)/);
+  assert.match(game, /removeLegacyEnemyBodyVisuals\(mesh as THREE\.Group, overlays\)/);
 });
 
 
