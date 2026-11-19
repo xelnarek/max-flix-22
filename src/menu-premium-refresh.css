@@ -686,3 +686,30 @@
     height: 20px;
   }
 }
+
+/* Override legacy high-specificity Survival launch-button grid styles. */
+#title-screen #btn-start-survival.menu-mode-card {
+  grid-template-columns: 36px minmax(0,1fr) !important;
+  grid-template-rows: minmax(0,1fr) auto !important;
+  align-items: start !important;
+  justify-items: stretch !important;
+  gap: 8px 10px !important;
+  min-height: 116px !important;
+  padding: 12px !important;
+}
+@media (max-width: 760px) {
+  #title-screen #btn-start-survival.menu-mode-card {
+    grid-template-columns: 36px minmax(0,1fr) auto !important;
+    grid-template-rows: auto !important;
+    align-items: center !important;
+    gap: 8px 10px !important;
+    min-height: 72px !important;
+    padding: 9px 11px !important;
+  }
+}
+@media (max-width: 360px) {
+  #title-screen #btn-start-survival.menu-mode-card {
+    grid-template-columns: 32px minmax(0,1fr) !important;
+    grid-template-rows: auto auto !important;
+  }
+}
