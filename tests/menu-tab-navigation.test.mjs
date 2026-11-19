@@ -27,3 +27,10 @@ test('eleven-tab menu keeps Home and End aligned with the current destination co
   assert.equal(getMenuTabIndexForKey('End', 0, 11), 10);
   assert.equal(getMenuTabIndexForKey('ArrowRight', 10, 11), 0);
 });
+
+test('vertical navigation keys also move through the desktop side rail', () => {
+  assert.equal(getMenuTabIndexForKey('ArrowDown', 0, 11), 1);
+  assert.equal(getMenuTabIndexForKey('ArrowUp', 0, 11), 10);
+  assert.equal(getMenuTabIndexForKey('ArrowDown', 10, 11), 0);
+  assert.equal(getMenuTabIndexForKey('ArrowUp', 10, 11), 9);
+});
