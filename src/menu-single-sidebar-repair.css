@@ -52,9 +52,6 @@
   touch-action: pan-y !important;
 }
 
-#title-screen .menu-mobile-segments {
-  display: none !important;
-}
 
 #title-screen .menu-nav-group,
 #title-screen .menu-nav-group[hidden] {
@@ -149,8 +146,7 @@
   background: rgba(239, 65, 63, .07) !important;
 }
 
-#title-screen .menu-tab-btn.active,
-#title-screen .menu-tab-btn[aria-selected="true"] {
+#title-screen .menu-tab-btn.active {
   color: #fff2ef !important;
   border-color: rgba(255, 95, 85, .58) !important;
   background: linear-gradient(100deg, rgba(143, 31, 37, .42), rgba(47, 16, 20, .64)) !important;
