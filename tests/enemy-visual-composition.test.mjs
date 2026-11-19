@@ -75,9 +75,9 @@ test('shared GLB geometry and materials are not disposed when legacy wrappers ar
   const legacy = new THREE.Group();
   const geometry = new THREE.BoxGeometry();
   const material = new THREE.MeshStandardMaterial();
+  const mesh = new THREE.Mesh(geometry, material);
   mesh.userData.gobkitSharedGeometry = true;
   material.userData.gobkitSharedMaterial = true;
-  const mesh = new THREE.Mesh(geometry, material);
   let geometryDisposed = false;
   let materialDisposed = false;
   geometry.addEventListener('dispose', () => { geometryDisposed = true; });
