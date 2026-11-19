@@ -500,7 +500,8 @@
 
 /* Touch layout: all destinations remain discoverable in a compact 3-column
    index; only the selected panel scrolls vertically. */
-@media (max-width: 900px), (pointer: coarse) {
+/* Use viewport width, not pointer type: large touch laptops/tablets keep desktop layout. */
+@media (max-width: 900px) {
   #title-screen {
     padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right))
       max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left)) !important;
@@ -910,5 +911,530 @@
     transition: none !important;
     transform: none !important;
     scroll-behavior: auto !important;
+  }
+}
+
+
+/* -------------------------------------------------------------------------
+   MENU CONTENT REFINEMENT
+   The single content viewport owns vertical scrolling. Inner panels must not
+   create competing scroll areas, and every long-form panel gets a real grid.
+   ------------------------------------------------------------------------- */
+
+/* B4 Field Manual: this page contains ten sections and close to one hundred
+   reference cards. Give it a proper editorial hierarchy instead of relying
+   on browser-default block flow. */
+#title-screen #tab-field-guide {
+  width: min(100%, 1280px) !important;
+  max-width: 1280px !important;
+  min-width: 0 !important;
+  margin-inline: auto !important;
+  gap: clamp(12px, 1.25vw, 18px) !important;
+}
+
+#title-screen #tab-field-guide .field-guide-hero {
+  display: grid !important;
+  gap: clamp(10px, 1.1vw, 15px) !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: clamp(14px, 1.7vw, 22px) !important;
+  border: 1px solid rgba(116, 183, 197, .2) !important;
+  border-radius: 17px !important;
+  background:
+    radial-gradient(ellipse at 95% 0%, rgba(73, 163, 175, .16), transparent 38%),
+    linear-gradient(145deg, rgba(20, 39, 51, .98), rgba(8, 17, 26, .99)) !important;
+}
+
+#title-screen #tab-field-guide .field-guide-kicker {
+  color: #79c9c1 !important;
+  font: 800 8px/1.35 "JetBrains Mono", monospace !important;
+  letter-spacing: .13em !important;
+  overflow-wrap: anywhere !important;
+}
+
+#title-screen #tab-field-guide .field-guide-heading-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: end !important;
+  gap: 12px !important;
+  min-width: 0 !important;
+}
+
+#title-screen #tab-field-guide .field-guide-heading-row h2 {
+  margin: 0 0 6px !important;
+  color: #f1f7f8 !important;
+  font: 900 clamp(22px, 2.4vw, 34px)/1.02 "Outfit", sans-serif !important;
+  letter-spacing: .045em !important;
+  text-wrap: balance !important;
+}
+
+#title-screen #tab-field-guide .field-guide-heading-row p {
+  max-width: 760px !important;
+  margin: 0 !important;
+  color: #a8bac6 !important;
+  font: 500 11px/1.55 "Plus Jakarta Sans", sans-serif !important;
+  overflow-wrap: anywhere !important;
+}
+
+#title-screen #tab-field-guide .field-guide-stamp {
+  align-self: start !important;
+  min-width: 94px !important;
+  padding: 8px 10px !important;
+  border: 1px solid rgba(116, 183, 197, .2) !important;
+  border-radius: 9px !important;
+  background: rgba(3, 11, 18, .55) !important;
+  color: #92c7ca !important;
+  font: 800 8px/1.5 "JetBrains Mono", monospace !important;
+  letter-spacing: .08em !important;
+  text-align: center !important;
+}
+
+#title-screen #tab-field-guide .field-guide-metrics {
+  display: grid !important;
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  gap: 7px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+#title-screen #tab-field-guide .field-guide-metrics > div {
+  display: grid !important;
+  align-content: center !important;
+  justify-items: start !important;
+  gap: 3px !important;
+  min-width: 0 !important;
+  min-height: 58px !important;
+  padding: 8px 9px !important;
+  border: 1px solid rgba(135, 171, 190, .14) !important;
+  border-radius: 10px !important;
+  background: linear-gradient(145deg, rgba(27, 48, 61, .76), rgba(8, 19, 28, .9)) !important;
+}
+
+#title-screen #tab-field-guide .field-guide-metrics strong {
+  color: #f5d28a !important;
+  font: 900 clamp(15px, 1.45vw, 20px)/1 "Outfit", sans-serif !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+#title-screen #tab-field-guide .field-guide-metrics span {
+  color: #91a8b5 !important;
+  font: 700 7px/1.35 "JetBrains Mono", monospace !important;
+  letter-spacing: .035em !important;
+  overflow-wrap: anywhere !important;
+}
+
+#title-screen #tab-field-guide .field-guide-section {
+  display: grid !important;
+  gap: clamp(10px, 1.1vw, 15px) !important;
+  min-width: 0 !important;
+  padding: clamp(12px, 1.35vw, 18px) !important;
+  border: 1px solid rgba(135, 171, 190, .14) !important;
+  border-radius: 15px !important;
+  background:
+    linear-gradient(145deg, rgba(15, 29, 41, .86), rgba(7, 15, 23, .94)) !important;
+}
+
+#title-screen #tab-field-guide .field-guide-section-head {
+  display: grid !important;
+  grid-template-columns: 32px minmax(0, 1fr) !important;
+  align-items: start !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+  padding-bottom: 10px !important;
+  border-bottom: 1px solid rgba(135, 171, 190, .13) !important;
+}
+
+#title-screen #tab-field-guide .field-guide-index {
+  display: grid !important;
+  place-items: center !important;
+  width: 30px !important;
+  height: 30px !important;
+  border: 1px solid rgba(105, 195, 188, .28) !important;
+  border-radius: 9px !important;
+  background: rgba(42, 113, 111, .15) !important;
+  color: #8edbd1 !important;
+  font: 900 10px/1 "JetBrains Mono", monospace !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+#title-screen #tab-field-guide .field-guide-section-head h3 {
+  margin: 0 0 5px !important;
+  color: #e7f0f3 !important;
+  font: 900 clamp(12px, 1.1vw, 15px)/1.2 "Outfit", sans-serif !important;
+  letter-spacing: .035em !important;
+  text-wrap: balance !important;
+  overflow-wrap: anywhere !important;
+}
+
+#title-screen #tab-field-guide .field-guide-section-head p {
+  max-width: 930px !important;
+  margin: 0 !important;
+  color: #93a8b5 !important;
+  font: 500 9px/1.5 "Plus Jakarta Sans", sans-serif !important;
+  overflow-wrap: anywhere !important;
+}
+
+#title-screen #tab-field-guide .field-guide-card-grid {
+  display: grid !important;
+  align-items: stretch !important;
+  align-content: start !important;
+  gap: clamp(7px, .8vw, 11px) !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  grid-auto-flow: row !important;
+}
+
+#title-screen #tab-field-guide .field-guide-card-grid.three-col {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+#title-screen #tab-field-guide .field-guide-card-grid.four-col {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+
+#title-screen #tab-field-guide .field-guide-card-grid.two-col {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+#title-screen #tab-field-guide .field-guide-card {
+  display: grid !important;
+  grid-template-columns: 34px minmax(0, 1fr) !important;
+  grid-template-rows: auto auto auto !important;
+  align-content: start !important;
+  align-items: start !important;
+  gap: 7px 9px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: clamp(9px, 1vw, 13px) !important;
+  border: 1px solid rgba(135, 171, 190, .15) !important;
+  border-radius: 11px !important;
+  background: linear-gradient(150deg, rgba(22, 40, 53, .94), rgba(9, 19, 28, .98)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .025) !important;
+  text-align: left !important;
+  overflow-wrap: anywhere !important;
+}
+
+#title-screen #tab-field-guide .field-guide-icon {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  border: 1px solid rgba(143, 179, 198, .16) !important;
+  border-radius: 9px !important;
+  background: rgba(3, 12, 20, .56) !important;
+  font-size: 17px !important;
+  line-height: 1 !important;
+}
+
+#title-screen #tab-field-guide .field-guide-card h4 {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  align-self: center !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  color: #e7f0f4 !important;
+  font: 900 10px/1.3 "Outfit", sans-serif !important;
+  letter-spacing: .025em !important;
+  text-wrap: balance !important;
+  overflow-wrap: anywhere !important;
+}
+
+#title-screen #tab-field-guide .field-guide-card p {
+  grid-column: 1 / -1 !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  color: #a3b5c1 !important;
+  font: 500 9px/1.55 "Plus Jakarta Sans", sans-serif !important;
+  overflow-wrap: anywhere !important;
+}
+
+#title-screen #tab-field-guide .field-guide-card p strong {
+  color: #d9e9ed !important;
+  font-weight: 800 !important;
+}
+
+#title-screen #tab-field-guide .field-guide-card small {
+  grid-column: 1 / -1 !important;
+  min-width: 0 !important;
+  margin-top: 2px !important;
+  padding-top: 6px !important;
+  border-top: 1px solid rgba(135, 171, 190, .1) !important;
+  color: #87b9b7 !important;
+  font: 800 7px/1.4 "JetBrains Mono", monospace !important;
+  letter-spacing: .045em !important;
+  overflow-wrap: anywhere !important;
+}
+
+#title-screen #tab-field-guide .field-guide-card.enemy {
+  border-left: 2px solid rgba(96, 165, 250, .56) !important;
+}
+
+#title-screen #tab-field-guide .field-guide-card.boss {
+  border-color: rgba(226, 119, 105, .32) !important;
+  border-left: 2px solid #e78a75 !important;
+  background: linear-gradient(145deg, rgba(58, 28, 34, .58), rgba(14, 19, 28, .98)) !important;
+}
+
+#title-screen #tab-field-guide .field-guide-card.hazard {
+  border-left: 2px solid rgba(251, 146, 60, .72) !important;
+}
+
+#title-screen #tab-field-guide .field-guide-card.event {
+  border-left: 2px solid rgba(56, 189, 248, .66) !important;
+}
+
+#title-screen #tab-field-guide .field-guide-card.perk {
+  border-left: 2px solid rgba(167, 139, 250, .68) !important;
+}
+
+#title-screen #tab-field-guide .field-guide-card.upgrade {
+  border-left: 2px solid rgba(74, 222, 128, .58) !important;
+}
+
+#title-screen #tab-field-guide .field-guide-card.evolution {
+  border-left: 2px solid rgba(45, 212, 191, .68) !important;
+}
+
+#title-screen #tab-field-guide .field-guide-card.secret {
+  border-left: 2px solid rgba(216, 180, 254, .68) !important;
+  background: linear-gradient(145deg, rgba(40, 30, 60, .62), rgba(12, 17, 28, .98)) !important;
+}
+
+#title-screen #tab-field-guide .field-guide-callout {
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 10px 12px !important;
+  border: 1px solid rgba(222, 177, 95, .2) !important;
+  border-radius: 10px !important;
+  background: rgba(79, 57, 23, .18) !important;
+  color: #adbac1 !important;
+  font: 500 9px/1.55 "Plus Jakarta Sans", sans-serif !important;
+  overflow-wrap: anywhere !important;
+}
+
+#title-screen #tab-field-guide .field-guide-callout strong {
+  color: #f0cc83 !important;
+  font-weight: 900 !important;
+}
+
+#title-screen #tab-field-guide .weapon-evolution-subhead {
+  margin-top: 4px !important;
+  padding-top: 12px !important;
+  border-top: 1px solid rgba(135, 171, 190, .14) !important;
+}
+
+#title-screen #tab-field-guide .field-guide-controls {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 7px !important;
+  min-width: 0 !important;
+}
+
+#title-screen #tab-field-guide .field-guide-controls > div {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 5px !important;
+  min-width: 0 !important;
+  min-height: 43px !important;
+  padding: 7px 8px !important;
+  border: 1px solid rgba(135, 171, 190, .14) !important;
+  border-radius: 9px !important;
+  background: rgba(5, 14, 22, .62) !important;
+  color: #9fb2bd !important;
+  font: 600 8px/1.35 "Plus Jakarta Sans", sans-serif !important;
+}
+
+#title-screen #tab-field-guide .field-guide-controls kbd {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 23px !important;
+  min-height: 22px !important;
+  padding: 3px 5px !important;
+  border: 1px solid rgba(160, 185, 201, .22) !important;
+  border-bottom-width: 2px !important;
+  border-radius: 6px !important;
+  background: rgba(28, 45, 57, .9) !important;
+  color: #e1edf1 !important;
+  font: 900 8px/1 "JetBrains Mono", monospace !important;
+}
+
+#title-screen #tab-field-guide .field-guide-controls span {
+  min-width: 0 !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* The content viewport is the one vertical scroller. A second scroll box
+   inside the global leaderboard trapped touch gestures on shorter phones. */
+#title-screen #tab-leaderboard .leaderboard-list {
+  max-height: none !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  overscroll-behavior: auto !important;
+  scrollbar-width: auto !important;
+}
+
+#title-screen #tab-leaderboard .leaderboard-item,
+#title-screen #tab-leaderboard .leaderboard-player-name,
+#title-screen #tab-leaderboard .leaderboard-player-meta {
+  min-width: 0 !important;
+  overflow-wrap: anywhere !important;
+}
+
+#title-screen #tab-leaderboard .leaderboard-item {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Prevent content controls and long labels from widening the outer panel. */
+#title-screen .tab-panel :where(button, input, select, textarea) {
+  max-width: 100%;
+}
+
+#title-screen .tab-panel :where(img, canvas, video, svg) {
+  max-width: 100%;
+}
+
+@media (max-width: 1100px) {
+  #title-screen #tab-field-guide .field-guide-card-grid.three-col,
+  #title-screen #tab-field-guide .field-guide-card-grid.four-col {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  #title-screen #tab-field-guide .field-guide-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  #title-screen #tab-field-guide .field-guide-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  #title-screen #tab-field-guide {
+    gap: 9px !important;
+    padding-bottom: 18px !important;
+  }
+
+  #title-screen #tab-field-guide .field-guide-hero {
+    gap: 9px !important;
+    padding: 11px !important;
+    border-radius: 12px !important;
+  }
+
+  #title-screen #tab-field-guide .field-guide-heading-row {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 7px !important;
+  }
+
+  #title-screen #tab-field-guide .field-guide-heading-row h2 {
+    font-size: clamp(20px, 6vw, 27px) !important;
+  }
+
+  #title-screen #tab-field-guide .field-guide-heading-row p {
+    font-size: 9px !important;
+  }
+
+  #title-screen #tab-field-guide .field-guide-stamp {
+    justify-self: start !important;
+    min-width: 0 !important;
+    padding: 4px 7px !important;
+    font-size: 7px !important;
+  }
+
+  #title-screen #tab-field-guide .field-guide-section {
+    gap: 9px !important;
+    padding: 9px !important;
+    border-radius: 11px !important;
+  }
+
+  #title-screen #tab-field-guide .field-guide-section-head {
+    grid-template-columns: 27px minmax(0, 1fr) !important;
+    gap: 8px !important;
+    padding-bottom: 8px !important;
+  }
+
+  #title-screen #tab-field-guide .field-guide-index {
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 8px !important;
+  }
+
+  #title-screen #tab-field-guide .field-guide-section-head h3 {
+    font-size: 11px !important;
+  }
+
+  #title-screen #tab-field-guide .field-guide-section-head p {
+    font-size: 8px !important;
+  }
+
+  #title-screen #tab-field-guide .field-guide-card-grid.three-col,
+  #title-screen #tab-field-guide .field-guide-card-grid.four-col,
+  #title-screen #tab-field-guide .field-guide-card-grid.two-col {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 6px !important;
+  }
+
+  #title-screen #tab-field-guide .field-guide-card {
+    grid-template-columns: 30px minmax(0, 1fr) !important;
+    gap: 6px 8px !important;
+    padding: 9px !important;
+  }
+
+  #title-screen #tab-field-guide .field-guide-icon {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 15px !important;
+  }
+
+  #title-screen #tab-field-guide .field-guide-card h4 {
+    font-size: 10px !important;
+  }
+
+  #title-screen #tab-field-guide .field-guide-card p {
+    font-size: 9px !important;
+    line-height: 1.5 !important;
+  }
+
+  #title-screen #tab-field-guide .field-guide-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+  }
+
+  #title-screen #tab-field-guide .field-guide-metrics > div {
+    min-height: 48px !important;
+    padding: 6px 7px !important;
+  }
+
+  #title-screen #tab-field-guide .field-guide-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+  }
+
+  #title-screen #tab-field-guide .field-guide-controls > div {
+    min-height: 39px !important;
+    padding: 6px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  #title-screen #tab-field-guide .field-guide-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  #title-screen #tab-field-guide .field-guide-controls {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #title-screen #tab-field-guide .field-guide-card {
+    transition: none !important;
+    animation: none !important;
   }
 }
