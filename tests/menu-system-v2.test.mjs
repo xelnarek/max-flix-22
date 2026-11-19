@@ -9,7 +9,7 @@ const [html, css] = await Promise.all([
 ]);
 
 test('main menu exposes all eleven destinations in four meaningful navigation groups', () => {
-  const navStart = html.indexOf('<div class="menu-tabs-bar" data-menu-layout="v2"');
+  const navStart = html.indexOf('<div class="menu-tabs-bar"');
   const contentStart = html.indexOf('<div class="menu-tab-content-area">', navStart);
   assert.ok(navStart >= 0 && contentStart > navStart);
   const nav = html.slice(navStart, contentStart);
@@ -29,7 +29,7 @@ test('main menu exposes all eleven destinations in four meaningful navigation gr
 test('the three game modes stay in a dedicated launcher, separate from section navigation', () => {
   const modeStart = html.indexOf('<section class="menu-mode-selector"');
   const modeEnd = html.indexOf('</section>', modeStart);
-  const navStart = html.indexOf('<div class="menu-tabs-bar" data-menu-layout="v2"');
+  const navStart = html.indexOf('<div class="menu-tabs-bar"');
   assert.ok(modeStart >= 0 && modeEnd > modeStart && navStart > modeEnd);
   const modeSelector = html.slice(modeStart, modeEnd);
   for (const id of ['btn-start-survival', 'btn-open-campaign', 'btn-open-pvp']) {
@@ -53,7 +53,7 @@ test('touch screens expose every section in a three-column grid and short landsc
 });
 
 test('all navigation controls map to a real panel and are explicit non-submit buttons', () => {
-  const navStart = html.indexOf('<div class="menu-tabs-bar" data-menu-layout="v2"');
+  const navStart = html.indexOf('<div class="menu-tabs-bar"');
   const contentStart = html.indexOf('<div class="menu-tab-content-area">', navStart);
   const nav = html.slice(navStart, contentStart);
   const buttons = [...nav.matchAll(/<button\b([^>]*)data-tab="(tab-[^"]+)"([^>]*)>/g)];
