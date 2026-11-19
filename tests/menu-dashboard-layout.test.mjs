@@ -17,7 +17,7 @@ test('the desktop menu is a control room with a left navigation rail and indepen
   assert.match(premium, /\.menu-mode-selector\s*\{[\s\S]*?grid-column:\s*1 \/ -1 !important;[\s\S]*?grid-row:\s*2 !important/);
   assert.match(premium, /\.menu-tabs-bar\s*\{[\s\S]*?grid-column:\s*1 !important;[\s\S]*?grid-row:\s*3 !important/);
   assert.match(premium, /\.menu-tab-content-area\s*\{[\s\S]*?grid-column:\s*2 !important;[\s\S]*?grid-row:\s*3 !important/);
-  assert.match(layout, /\.menu-fixed-bottom-bar\s*\{[\s\S]*?grid-row:\s*3/);
+  assert.match(premium, /\.menu-fixed-bottom-bar\s*\{[\s\S]*?grid-row:\s*4 !important/);
 });
 
 test('all eleven menu destinations remain available as buttons and panels', () => {
