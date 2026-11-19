@@ -630,7 +630,7 @@
 }
 
 /* The active content panel is the only menu scroll surface on touch devices. */
-@media (max-width: 1100px), (pointer: coarse) {
+@media (max-width: 1100px) {
   #title-screen .menu-tabs-bar,
   #title-screen .menu-nav-group {
     overflow: visible !important;
