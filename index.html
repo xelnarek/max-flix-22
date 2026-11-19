@@ -31,6 +31,7 @@
     <link rel="stylesheet" href="/src/responsive-gameplay-polish.css" />
     <link rel="stylesheet" href="/src/quality-overhaul.css" />
     <link rel="stylesheet" href="/src/campaign-mode.css" />
+    <link rel="stylesheet" href="/src/menu-premium-refresh.css" />
     <meta name="application-name" content="Warehouse MaDDnes" />
     <meta name="color-scheme" content="dark" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -1264,6 +1265,13 @@
             <div id="tab-map" class="tab-panel world-atlas-panel" aria-label="Kampania i atlas połączonej mega-mapy">
               <section class="campaign-board" aria-labelledby="campaign-board-title">
                 <div class="campaign-board-heading"><div><span class="campaign-board-kicker">TRYB FABULARNY • KRÓTKIE PRÓBY</span><h2 id="campaign-board-title">KAMPANIA ZMIAN</h2><p>Pięć krótkich etapów z różnymi celami mistrzowskimi i tajnymi zleceniami. Boss kończy misję; eliminacje dają 2. gwiazdkę, a unikalne zadanie — 3. Zlecenie specjalne zapewnia dodatkowe punkty, XP i czwartą kartę zaopatrzenia.</p></div><div class="campaign-board-stats"><strong id="campaign-board-progress">ODKRYTE ETAPY: 1/5</strong><span>1–3 GWIAZDKI ZA WYNIK</span></div></div>
+                <button id="btn-campaign-continue" class="campaign-primary-action" type="button" aria-label="Kontynuuj kampanię">
+                  <span class="campaign-primary-action-icon" aria-hidden="true">▶</span>
+                  <span class="campaign-primary-action-copy">
+                    <strong id="campaign-continue-title">KONTYNUUJ KAMPANIĘ</strong>
+                    <small id="campaign-continue-subtitle">ETAP 01 • MAGAZYN B4</small>
+                  </span>
+                </button>
                 <div class="campaign-stage-grid" aria-label="Wybór etapu kampanii">
                   <button type="button" class="campaign-stage-card" data-campaign-stage="b4_intro"><span class="campaign-stage-top"><span>01 / START</span><span class="campaign-stage-status">DOSTĘPNY</span></span><strong>MAGAZYN B4</strong><small>Przejmij główną aleję i pokonaj Nadzorcę Rampy.</small><span class="campaign-stage-bottom"><span class="campaign-stage-stars">☆☆☆</span><span>~ 1:30</span></span></button>
                   <button type="button" class="campaign-stage-card is-locked" data-campaign-stage="port_17" disabled aria-disabled="true"><span class="campaign-stage-top"><span>02 / PORT</span><span class="campaign-stage-status">ZABLOKOWANY</span></span><strong>PORT KONTENEROWY 17</strong><small>Przebij się przez plac i pokonaj Dyrektora Widmo.</small><span class="campaign-stage-bottom"><span class="campaign-stage-stars">☆☆☆</span><span>~ 2:00</span></span></button>
