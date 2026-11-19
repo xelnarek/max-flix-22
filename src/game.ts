@@ -85,6 +85,7 @@ import { buildSurvivalDamageReport, createSurvivalDamageStats, getSurvivalWeapon
 import { getSurvivalDifficultyProfile } from './survivalDifficulty.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
 import { chooseSurvivalRicochetTarget, getSurvivalRadiationProfile, getSurvivalRicochetProfile } from './survivalCombatDraft.ts';
+import { getSurvivalDraftSynergyHint, selectSurvivalDraftOptions, type SurvivalDraftContext } from './survivalDraft.ts';
 import { getSurvivalShrapnelProfile } from './survivalShrapnel.ts';
 import { buildSurvivalCoalitionOrders, getSurvivalCoalitionRole } from './survivalCoalition.ts';
 import { getSurvivalCommanderProfile, selectSurvivalCommanderTargets } from './survivalCommander.ts';
@@ -6991,10 +6992,15 @@ export class PaleciakiGameEngine {
           description: 'Wymagania: broń poziom 5, 3,5 minuty Survival i moduł „' + definition.evolutionPassiveLabel + '”. Otrzymasz unikalną wersję tej broni.' });
       }
     }
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [pool[i], pool[j]] = [pool[j], pool[i]];
-    }
+    const draftContext: SurvivalDraftContext = {
+      stacks: this.survivalUpgradeStacks,
+      weapons: this.survivalWeapons,
+      evolutions: [...this.survivalEvolutions],
+      healthRatio: this.maxHp > 0 ? this.hp / this.maxHp : 1,
+      elapsedSeconds: this.survivalElapsed,
+    };
+    const selectedOptions = selectSurvivalDraftOptions(pool, draftContext);
+    const selectedIds = selectedOptions.map((option) => option.id);
     const promotionRarityFloor = getSurvivalPromotionRarityFloor(this.survivalLevel);
     let promotionCardAssigned = false;
     const withRarity = (options: BaseOption[]): SurvivalUpgradeOption[] => options.map((option) => {
@@ -7016,9 +7022,13 @@ export class PaleciakiGameEngine {
         const weaponId = option.id.slice('weapon_unlock:'.length) as SurvivalWeaponId;
         const definition = SURVIVAL_WEAPON_DEFS[weaponId];
         const initialLevel = getSurvivalWeaponInitialLevel(rarity);
+        const synergyHint = getSurvivalDraftSynergyHint(
+          option.id, draftContext, selectedIds.filter((id) => id !== option.id)
+        );
         return {
           ...option,
-          description: definition.description + ' Poziom startowy tej karty: ' + initialLevel + '/5.',
+          description: definition.description + ' Poziom startowy tej karty: ' + initialLevel + '/5.' +
+            (synergyHint ? ' ' + synergyHint : ''),
           ...meta,
         };
       }
@@ -7039,39 +7049,26 @@ export class PaleciakiGameEngine {
       }
 
       if (option.id.startsWith('weapon_evolve:')) {
+        const synergyHint = getSurvivalDraftSynergyHint(option.id, draftContext, selectedIds);
         return {
           ...option,
-          description: option.description + ' Rzadkość ewolucji: LEGENDARNA.',
+          description: option.description + ' Rzadkość ewolucji: LEGENDARNA.' +
+            (synergyHint ? ' ' + synergyHint : ''),
           ...meta,
         };
       }
 
+      const synergyHint = getSurvivalDraftSynergyHint(
+        option.id, draftContext, selectedIds.filter((id) => id !== option.id)
+      );
       return {
         ...option,
-        description: option.description + ' Siła modułu: ×' + meta.strengthMultiplier.toFixed(2).replace('.', ',') + '.',
+        description: option.description + ' Siła modułu: ×' + meta.strengthMultiplier.toFixed(2).replace('.', ',') + '.' +
+          (synergyHint ? ' ' + synergyHint : ''),
         ...meta,
       };
     });
-    // Guaranteed new-weapon offer while the arsenal is still incomplete.
-    // This avoids a long string of stat-only level-ups before the player gets a build identity.
-    const newWeaponOffer = pool.find((option) => option.id.startsWith('weapon_unlock:'));
-    if (newWeaponOffer) {
-      // Never show two new weapons in one level-up. Unchosen, time-unlocked weapons
-      // stay eligible for later level-ups instead of blocking the rest of the arsenal.
-      const remaining = pool.filter((option) =>
-        option.id !== newWeaponOffer.id && !option.id.startsWith('weapon_unlock:')
-      );
-      return withRarity([newWeaponOffer, ...remaining.slice(0, 2)]);
-    }
-    const weaponProgressOffer = pool.find((option) => option.id.startsWith('weapon_'));
-    if (weaponProgressOffer) {
-      // Offer at most one weapon upgrade/evolution at a time to keep choices readable.
-      const remaining = pool.filter((option) =>
-        option.id !== weaponProgressOffer.id && !option.id.startsWith('weapon_')
-      );
-      return withRarity([weaponProgressOffer, ...remaining.slice(0, 2)]);
-    }
-    return withRarity(pool.slice(0, 3));
+    return withRarity(selectedOptions);
   }
 
   public rerollSurvivalUpgrades(): boolean {
