@@ -36,7 +36,7 @@ import {
   updateSurvivalAchievementProgress,
 } from './survivalAchievements.ts';
 import { SURVIVAL_MAPS, type SurvivalMapId } from './survivalMaps.ts';
-import { CAMPAIGN_STAGES, createInitialCampaignProgress, consumePendingCampaignReward, getCampaignMasteryProgress, getCampaignRewardChoices, getCampaignStageDefinition, getNextCampaignStageId, readCampaignProgress, recordCampaignStageResult, setPendingCampaignReward, writeCampaignProgress, type CampaignProgress, type CampaignRewardDefinition, type CampaignRewardId, type CampaignStageId } from './campaignProgression.ts';
+import { CAMPAIGN_STAGES, createInitialCampaignProgress, consumePendingCampaignReward, getCampaignMasteryProgress, getCampaignRewardChoices, getCampaignSideOrderProgress, getCampaignStageDefinition, getNextCampaignStageId, readCampaignProgress, recordCampaignStageResult, setPendingCampaignReward, writeCampaignProgress, type CampaignProgress, type CampaignRewardDefinition, type CampaignRewardId, type CampaignStageId } from './campaignProgression.ts';
 import { launchOniricPlatformer } from './oniricPlatformer.ts';
 import { launchCthulhuRetroArena } from './cthulhuRetroArena.ts';
 import { getMenuTabIndexForKey } from './menuTabNavigation.ts';
@@ -739,10 +739,12 @@ class PaleciakiScene extends xb.Script {
       const panel = document.getElementById('campaign-reward-panel');
       const optionsRoot = document.getElementById('campaign-reward-options');
       const note = document.getElementById('campaign-reward-note');
+      const count = document.getElementById('campaign-reward-count');
       const visible = Boolean(campaignRewardTargetStageId && campaignRewardChoices.length);
       panel?.classList.toggle('hidden', !visible);
       if (!optionsRoot) return;
       optionsRoot.replaceChildren();
+      if (count) count.textContent = campaignRewardChoices.length === 4 ? '4 KARTY • BONUS ZA ZLECENIE' : '3 KARTY • 1 WYBÓR';
       if (!visible) return;
 
       for (const reward of campaignRewardChoices) {
@@ -812,10 +814,14 @@ class PaleciakiScene extends xb.Script {
         if (label) label.textContent = result?.bestStars ? 'UKOŃCZONO • ' + (result.completions > 1 ? result.completions + ' PRÓBY' : 'REKORD ZAPISANY') : available ? 'DOSTĘPNY' : 'ZABLOKOWANY';
         if (stars) stars.textContent = '★'.repeat(result?.bestStars ?? 0) + '☆'.repeat(3 - (result?.bestStars ?? 0));
         if (description) {
-          const masteryRecord = result?.bestMasteryValue ? ' • REKORD CELU: ' + result.bestMasteryValue : '';
-          description.textContent = stage.objective + ' 3★: ' + stage.mastery.description + masteryRecord;
+          const masteryRecord = result?.bestMasteryValue ? ' • REKORD 3★: ' + result.bestMasteryValue : '';
+          const orderRecord = result?.bestSideOrderCompleted ? ' • ZLECENIE ZALICZONE' : '';
+          description.textContent = stage.objective + ' 3★: ' + stage.mastery.description + masteryRecord
+            + ' • ZLECENIE: ' + stage.sideOrder.description + orderRecord;
         }
-        button.title = available ? stage.objective + ' Cel 3★: ' + stage.mastery.description : 'Najpierw ukończ poprzedni etap.';
+        button.title = available
+          ? stage.objective + ' Cel 3★: ' + stage.mastery.description + ' Zlecenie: ' + stage.sideOrder.description
+          : 'Najpierw ukończ poprzedni etap.';
       }
     };
     renderCampaignBoard();
@@ -1414,11 +1420,18 @@ class PaleciakiScene extends xb.Script {
               killStreak: snapshot.killStreak,
               xpStreak: snapshot.xpStreak,
               level: snapshot.level,
+              xpPickups: snapshot.xpPickups,
+              secretsFound: snapshot.secretsFound,
+              playerHpPercent: snapshot.playerHpPercent,
+              bossKillSeconds: snapshot.campaignBossKillSeconds,
+              killStreak: snapshot.killStreak,
+              bossDefeated: true,
             });
             nextCampaignStageId = getNextCampaignStageId(campaignProgress, snapshot.campaignStageId);
             if (nextCampaignStageId) {
-              const completions = campaignProgress.completedStages[snapshot.campaignStageId]?.completions ?? 1;
-              campaignRewardChoices = getCampaignRewardChoices(snapshot.campaignStageId, completions);
+              const savedStageResult = campaignProgress.completedStages[snapshot.campaignStageId];
+              const completions = savedStageResult?.completions ?? 1;
+              campaignRewardChoices = getCampaignRewardChoices(snapshot.campaignStageId, completions, savedStageResult?.bestSideOrderCompleted === true);
               campaignRewardTargetStageId = nextCampaignStageId;
               const savedReward = campaignProgress.pendingRewardStageId === nextCampaignStageId
                 ? campaignRewardChoices.find((reward) => reward.id === campaignProgress.pendingRewardId)
@@ -1639,6 +1652,7 @@ class PaleciakiScene extends xb.Script {
             const title = document.getElementById('campaign-stage-title');
             const progress = document.getElementById('campaign-stage-progress');
             const clock = document.getElementById('campaign-stage-clock');
+            const orderLabel = document.getElementById('campaign-stage-order');
             if (title && stage) title.textContent = 'ETAP ' + stage.order + '/5 • ' + stage.title.toUpperCase();
             if (progress && stage) {
               const mastery = getCampaignMasteryProgress(stage, {
@@ -1652,6 +1666,24 @@ class PaleciakiScene extends xb.Script {
                 : 'ELIMINACJE ' + snapshot.kills + '/' + stage.bonusKillTarget;
               progress.textContent = primaryGoal + ' • ' + mastery.label + ' ' + mastery.value + '/' + mastery.target;
               progress.title = mastery.description + ' • ' + mastery.value + '/' + mastery.target;
+            }
+            if (orderLabel && stage) {
+              const sideOrder = getCampaignSideOrderProgress(stage, {
+                xpPickups: snapshot.xpPickups,
+                killStreak: snapshot.killStreak,
+                secretsFound: snapshot.secretsFound,
+                playerHpPercent: snapshot.playerHpPercent,
+                bossKillSeconds: snapshot.campaignBossKillSeconds,
+                bossDefeated: snapshot.campaignSuccess,
+              });
+              const valueText = sideOrder.metric === 'boss_kill_seconds'
+                ? (snapshot.campaignBossSpawned ? snapshot.campaignBossKillSeconds + '/' + sideOrder.target + ' s' : '≤ ' + sideOrder.target + ' s')
+                : sideOrder.metric === 'player_hp_percent'
+                  ? snapshot.playerHpPercent + '/' + sideOrder.target + '% HP'
+                  : sideOrder.value + '/' + sideOrder.target;
+              orderLabel.textContent = (snapshot.campaignSideOrderCompleted ? '✓ ZLECENIE ZALICZONE' : 'ZLECENIE: ' + sideOrder.label + ' • ' + valueText);
+              orderLabel.title = sideOrder.description + ' • ' + valueText;
+              orderLabel.classList.toggle('is-complete', snapshot.campaignSideOrderCompleted);
             }
             if (clock && snapshot.campaignRemainingSeconds !== null) { const left = Math.max(0, snapshot.campaignRemainingSeconds); clock.textContent = 'CEL ' + String(Math.floor(left / 60)).padStart(2,'0') + ':' + String(left % 60).padStart(2,'0'); }
           }
