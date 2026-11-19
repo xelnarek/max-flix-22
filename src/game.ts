@@ -14989,40 +14989,30 @@ export class PaleciakiGameEngine {
     cue.add(halo, shaft, arrowHead);
     enemy.mesh.add(cue);
 
-    this.specialEffects.push({
-      mesh: cue,
-      life: duration,
-      maxLife: duration,
-      grow: 0,
-      spin: 0,
-      update: (_dt, progress) => {
-        const pulse = 1 + Math.sin(progress * Math.PI * 7) * 0.075;
-        cue.scale.setScalar(pulse);
-        material.opacity = 0.96 - progress * 0.28;
-      },
-      cleanup: () => {
-        cue.removeFromParent();
-        this.disposeTemporaryObject(cue);
-      },
-    });
     return cue;
   }
 
-  /** Remove a cue from its owner and from the timed-effect queue exactly once. */
+  /** Pulse the overhead cue from the same bounded wind-up clock that controls attack release. */
+  private updateEnemyTelegraphCue(
+    cue: THREE.Group | undefined,
+    deltaSeconds: number,
+    progress: number,
+  ): void {
+    if (!cue) return;
+    const safeProgress = Number.isFinite(progress) ? THREE.MathUtils.clamp(progress, 0, 1) : 0;
+    const pulse = 1 + Math.sin(safeProgress * Math.PI * 7) * 0.075;
+    cue.scale.setScalar(pulse);
+    const halo = cue.children[0] as THREE.Mesh | undefined;
+    if (halo) halo.rotation.y += Math.max(0, Math.min(0.25, Number.isFinite(deltaSeconds) ? deltaSeconds : 0)) * 2.2;
+    const material = halo?.material as THREE.MeshBasicMaterial | undefined;
+    if (material) material.opacity = 0.96 - safeProgress * 0.28;
+  }
+
+  /** Remove and dispose a cue immediately on release, interruption or actor cleanup. */
   private clearEnemyTelegraphCue(cue: THREE.Group | undefined): void {
     if (!cue) return;
-    const effectIndex = this.specialEffects.findIndex((effect) => effect.mesh === cue);
-    if (effectIndex >= 0) {
-      const [effect] = this.specialEffects.splice(effectIndex, 1);
-      if (effect.cleanup) effect.cleanup();
-      else {
-        cue.removeFromParent();
-        if (effect.disposeOnRemove) this.disposeTemporaryObject(cue);
-      }
-    } else if (cue.parent) {
-      cue.removeFromParent();
-      this.disposeTemporaryObject(cue);
-    }
+    cue.removeFromParent();
+    this.disposeTemporaryObject(cue);
   }
 
   private clearEnemyRangedTelegraphVisual(enemy: EnemyItem): void {
@@ -15075,6 +15065,11 @@ export class PaleciakiGameEngine {
       dt,
     );
     enemy.aiRangedWindupTimer = timing.remainingSeconds;
+    this.updateEnemyTelegraphCue(
+      enemy.aiRangedTelegraphMesh as THREE.Group | undefined,
+      dt,
+      timing.progress,
+    );
     if (!timing.completed) return null;
 
     const release = {
@@ -15150,6 +15145,11 @@ export class PaleciakiGameEngine {
       dt,
     );
     enemy.aiMeleeWindupTimer = timing.remainingSeconds;
+    this.updateEnemyTelegraphCue(
+      enemy.aiMeleeTelegraphMesh as THREE.Group | undefined,
+      dt,
+      timing.progress,
+    );
     if (!timing.completed) return false;
 
     this.clearEnemyMeleeTelegraphVisual(enemy);
