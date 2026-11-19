@@ -33,7 +33,21 @@ export function removeLegacyEnemyBodyVisuals(
   preservedRoots: readonly THREE.Object3D[] = [],
 ): number {
   container.updateWorldMatrix(true, false);
-  for (const preserved of preservedRoots) {
+  const requestedRoots = [...new Set(preservedRoots)];
+  const requestedRootSet = new Set(requestedRoots);
+  // A child such as hpFill may also be listed separately while already living
+  // inside hpBar. Move only the highest preserved ancestor; keep that complete
+  // overlay subtree intact rather than pulling its children out of alignment.
+  const topLevelPreservedRoots = requestedRoots.filter((preserved) => {
+    let ancestor = preserved.parent;
+    while (ancestor && ancestor !== container) {
+      if (requestedRootSet.has(ancestor)) return false;
+      ancestor = ancestor.parent;
+    }
+    return true;
+  });
+
+  for (const preserved of topLevelPreservedRoots) {
     // A status marker can be parented to a legacy body part. Detach it first,
     // preserving its world transform, so pruning the old body cannot hide it.
     let ancestor = preserved.parent;
