@@ -2937,7 +2937,7 @@ export class PaleciakiGameEngine {
   }
 
   /** Start a compact campaign mission using the existing Survival combat loop. */
-  public startCampaignStage(stageId: CampaignStageId, rewardId: CampaignRewardId | null = null): boolean {
+  public startCampaignStage(stageId: CampaignStageId, rewardId: CampaignRewardId | null = null, bonusXp = 0): boolean {
     const stage = getCampaignStageDefinition(stageId);
     if (!stage) return false;
     this.startSurvival(stage.mapId);
@@ -2984,8 +2984,19 @@ export class PaleciakiGameEngine {
       this.emitFloatingToast(reward.icon + ' NAGRODA: ' + reward.title.toUpperCase(), this.playerPos.x, this.playerPos.y + 1.85, this.playerPos.z, 'perk');
     }
 
+    const safeBonusXp = Number.isFinite(bonusXp) ? Math.max(0, Math.min(12, Math.floor(bonusXp))) : 0;
+    this.survivalXp = Math.min(Math.max(0, this.survivalXpToNext - 1), this.survivalXp + safeBonusXp);
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
-    this.callbacks.onSurvivalAnnouncement?.('KAMPANIA ZMIAN • ETAP ' + stage.order + '/5', stage.title.toUpperCase(), stage.objective + ' Boss pojawi się po około ' + stage.bossSpawnAtSeconds + ' sekundach. Cel 3★: ' + stage.mastery.description + '. Zlecenie specjalne: ' + stage.sideOrder.description + '. Eliminacje do 2★: ' + stage.bonusKillTarget + '.');
+    this.callbacks.onSurvivalAnnouncement?.(
+      'KAMPANIA ZMIAN • ETAP ' + stage.order + '/5',
+      stage.title.toUpperCase(),
+      stage.objective + ' Boss pojawi się po około ' + stage.bossSpawnAtSeconds + ' sekundach. Cel 3★: ' + stage.mastery.description
+        + '. Zlecenie specjalne: ' + stage.sideOrder.description + '. Eliminacje do 2★: ' + stage.bonusKillTarget
+        + (safeBonusXp > 0 ? '. Premia z poprzedniego zlecenia: +' + safeBonusXp + ' XP na start.' : '.')
+    );
+    if (safeBonusXp > 0) {
+      this.emitFloatingToast('📦 PREMIA ZA POPRZEDNIE ZLECENIE • +' + safeBonusXp + ' XP', this.playerPos.x, this.playerPos.y + 1.9, this.playerPos.z, 'perk');
+    }
     return true;
   }
 
