@@ -36,7 +36,7 @@ import {
   updateSurvivalAchievementProgress,
 } from './survivalAchievements.ts';
 import { SURVIVAL_MAPS, type SurvivalMapId } from './survivalMaps.ts';
-import { CAMPAIGN_STAGES, createInitialCampaignProgress, consumePendingCampaignReward, getCampaignMasteryProgress, getCampaignRewardChoices, getCampaignSideOrderProgress, getCampaignStageDefinition, getNextCampaignStageId, readCampaignProgress, recordCampaignStageResult, setPendingCampaignReward, writeCampaignProgress, type CampaignProgress, type CampaignRewardDefinition, type CampaignRewardId, type CampaignStageId } from './campaignProgression.ts';
+import { CAMPAIGN_STAGES, createInitialCampaignProgress, consumePendingCampaignReward, consumePendingCampaignXpBonus, getCampaignMasteryProgress, getCampaignRewardChoices, getCampaignSideOrderProgress, getCampaignStageDefinition, getNextCampaignStageId, readCampaignProgress, recordCampaignStageResult, setPendingCampaignReward, writeCampaignProgress, type CampaignProgress, type CampaignRewardDefinition, type CampaignRewardId, type CampaignStageId } from './campaignProgression.ts';
 import { launchOniricPlatformer } from './oniricPlatformer.ts';
 import { launchCthulhuRetroArena } from './cthulhuRetroArena.ts';
 import { getMenuTabIndexForKey } from './menuTabNavigation.ts';
@@ -735,6 +735,12 @@ class PaleciakiScene extends xb.Script {
       if (consumed.rewardId) saveCampaignProgress();
       return consumed.rewardId;
     };
+    const consumeCampaignXpBonusForStage = (stageId: CampaignStageId): number => {
+      const consumed = consumePendingCampaignXpBonus(campaignProgress, stageId);
+      campaignProgress = consumed.progress;
+      if (consumed.bonusXp > 0) saveCampaignProgress();
+      return consumed.bonusXp;
+    };
     const renderCampaignRewardPanel = () => {
       const panel = document.getElementById('campaign-reward-panel');
       const optionsRoot = document.getElementById('campaign-reward-options');
@@ -780,6 +786,9 @@ class PaleciakiScene extends xb.Script {
           ? 'Wybrano: ' + selectedReward.title + '. Premia zostanie zastosowana przy rozpoczęciu następnego etapu.'
           : 'Wybierz jedną premię dla następnego etapu.';
         if (hasBonusChoice) note.textContent += ' Zlecenie specjalne odblokowało czwartą kartę.';
+        if (campaignProgress.pendingBonusXpStageId === campaignRewardTargetStageId && campaignProgress.pendingBonusXp > 0) {
+          note.textContent += ' Dodatkowo otrzymasz +' + campaignProgress.pendingBonusXp + ' XP na start następnej misji.';
+        }
       }
     };
 
@@ -818,7 +827,7 @@ class PaleciakiScene extends xb.Script {
         if (stars) stars.textContent = '★'.repeat(result?.bestStars ?? 0) + '☆'.repeat(3 - (result?.bestStars ?? 0));
         if (description) {
           const masteryRecord = result?.bestMasteryValue ? ' • REKORD 3★: ' + result.bestMasteryValue : '';
-          const orderRecord = result?.bestSideOrderCompleted ? ' • ZLECENIE ZALICZONE' : '';
+          const orderRecord = result?.bestSideOrderCompleted ? ' • ZLECENIE ZALICZONE • BONUS XP' : '';
           description.textContent = stage.objective + ' 3★: ' + stage.mastery.description + masteryRecord
             + ' • ZLECENIE: ' + stage.sideOrder.description + orderRecord;
         }
@@ -2909,13 +2918,14 @@ class PaleciakiScene extends xb.Script {
         const chosenStage = selectedCampaignStageId;
         selectedCampaignStageId = null;
         const campaignRewardId = consumeCampaignRewardForStage(chosenStage);
+        const campaignBonusXp = consumeCampaignXpBonusForStage(chosenStage);
         lastCampaignStageId = null;
         nextCampaignStageId = null;
         campaignRewardChoices = [];
         campaignRewardTargetStageId = null;
         campaignRewardSelectionId = null;
         renderCampaignRewardPanel();
-        if (!this.engine.startCampaignStage(chosenStage, campaignRewardId)) throw new Error('Nie udało się uruchomić etapu kampanii.');
+        if (!this.engine.startCampaignStage(chosenStage, campaignRewardId, campaignBonusXp)) throw new Error('Nie udało się uruchomić etapu kampanii.');
       } else {
         lastCampaignStageId = null;
         nextCampaignStageId = null;
