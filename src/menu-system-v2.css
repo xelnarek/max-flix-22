@@ -652,12 +652,10 @@
   }
 
   #title-screen .menu-tabs-bar {
-    display: grid !important;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    grid-auto-rows: minmax(39px, auto) !important;
-    grid-auto-flow: row !important;
+    display: flex !important;
+    flex-direction: column !important;
     align-items: stretch !important;
-    gap: 4px !important;
+    gap: 5px !important;
     min-height: 0 !important;
     max-height: none !important;
     padding: 5px !important;
@@ -667,7 +665,17 @@
   }
 
   #title-screen .menu-nav-group {
-    display: contents !important;
+    display: grid !important;
+    flex: 0 0 auto !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    align-items: stretch !important;
+    gap: 4px !important;
+    min-width: 0 !important;
+  }
+
+  #title-screen .menu-nav-group + .menu-nav-group {
+    padding-top: 0 !important;
+    border-top: 0 !important;
   }
 
   #title-screen .menu-nav-group-label {
@@ -843,7 +851,16 @@
   }
 
   #title-screen .menu-nav-group {
-    display: contents !important;
+    display: flex !important;
+    flex: 0 0 auto !important;
+    align-items: stretch !important;
+    gap: 4px !important;
+    min-width: max-content !important;
+  }
+
+  #title-screen .menu-nav-group + .menu-nav-group {
+    padding-top: 0 !important;
+    border-top: 0 !important;
   }
 
   #title-screen .menu-tab-btn {
