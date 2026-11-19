@@ -2720,8 +2720,10 @@ class PaleciakiScene extends xb.Script {
     });
 
     const menuTabList = document.querySelector<HTMLElement>('.menu-tabs-bar');
+    const desktopMenuNavigationQuery = window.matchMedia('(min-width: 761px) and (pointer: fine)');
     menuTabList?.setAttribute('role', 'tablist');
     menuTabList?.setAttribute('aria-label', 'Sekcje menu głównego');
+    menuTabList?.setAttribute('aria-orientation', desktopMenuNavigationQuery.matches ? 'vertical' : 'horizontal');
     const menuTabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.menu-tab-btn'));
     let currentMenuTargetId = menuTabButtons.find((button) => button.classList.contains('active'))?.getAttribute('data-tab') || 'tab-team';
 
@@ -2731,6 +2733,7 @@ class PaleciakiScene extends xb.Script {
       const titleScreenRoot = document.getElementById('title-screen');
       if (titleScreenRoot) titleScreenRoot.dataset.activeMenuTab = targetId;
       menuTabList?.setAttribute('role', 'tablist');
+      menuTabList?.setAttribute('aria-orientation', desktopMenuNavigationQuery.matches ? 'vertical' : 'horizontal');
 
       menuTabButtons.forEach((button) => {
         const active = button.getAttribute('data-tab') === targetId;
@@ -2818,6 +2821,7 @@ class PaleciakiScene extends xb.Script {
     });
 
     syncMenuPanelPresentation(currentMenuTargetId);
+    desktopMenuNavigationQuery.addEventListener('change', () => syncMenuPanelPresentation(currentMenuTargetId));
 
     document.querySelectorAll<HTMLElement>('.char-card').forEach((card) => {
       card.setAttribute('role', 'button');
