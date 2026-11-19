@@ -3,16 +3,20 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL('../' + path, import.meta.url), 'utf8');
-const [html, layout] = await Promise.all([
+const [html, layout, premium] = await Promise.all([
   read('index.html'),
   read('src/menu-layout-fixes.css'),
+  read('src/menu-premium-refresh.css'),
 ]);
 
 test('the desktop menu is a control room with a left navigation rail and independent content panel', () => {
   assert.match(layout, /@media \(min-width: 761px\) and \(pointer: fine\)[\s\S]*?grid-template-columns:\s*clamp\(172px, 17vw, 206px\) minmax\(0, 1fr\)/);
   assert.match(layout, /\.menu-tabs-bar\s*\{[\s\S]*?flex-direction:\s*column !important/);
   assert.match(layout, /\.menu-tab-content-area\s*\{[\s\S]*?grid-column:\s*2/);
-  assert.match(layout, /grid-template-rows:\s*auto minmax\(0, 1fr\) auto/);
+  assert.match(premium, /grid-template-rows:\s*auto auto minmax\(0, 1fr\) auto !important/);
+  assert.match(premium, /\.menu-mode-selector\s*\{[\s\S]*?grid-column:\s*1 \/ -1 !important;[\s\S]*?grid-row:\s*2 !important/);
+  assert.match(premium, /\.menu-tabs-bar\s*\{[\s\S]*?grid-column:\s*1 !important;[\s\S]*?grid-row:\s*3 !important/);
+  assert.match(premium, /\.menu-tab-content-area\s*\{[\s\S]*?grid-column:\s*2 !important;[\s\S]*?grid-row:\s*3 !important/);
   assert.match(layout, /\.menu-fixed-bottom-bar\s*\{[\s\S]*?grid-row:\s*3/);
 });
 
