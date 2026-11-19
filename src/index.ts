@@ -2770,7 +2770,6 @@ class PaleciakiScene extends xb.Script {
       currentMenuTargetId = targetId;
 
       // The selected section owns the accent color and mode-specific launch action.
-      // On phones it also becomes the scroll destination within the full menu overview.
       syncMenuPanelPresentation(targetId);
 
       if (targetId === 'tab-leaderboard') {
