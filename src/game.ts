@@ -2985,7 +2985,7 @@ export class PaleciakiGameEngine {
     }
 
     this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
-    this.callbacks.onSurvivalAnnouncement?.('KAMPANIA ZMIAN • ETAP ' + stage.order + '/5', stage.title.toUpperCase(), stage.objective + ' Boss pojawi się po około ' + stage.bossSpawnAtSeconds + ' sekundach. Cel 3★: ' + stage.mastery.description + '. Wymagane eliminacje: ' + stage.bonusKillTarget + '.');
+    this.callbacks.onSurvivalAnnouncement?.('KAMPANIA ZMIAN • ETAP ' + stage.order + '/5', stage.title.toUpperCase(), stage.objective + ' Boss pojawi się po około ' + stage.bossSpawnAtSeconds + ' sekundach. Cel 3★: ' + stage.mastery.description + '. Zlecenie specjalne: ' + stage.sideOrder.description + '. Eliminacje do 2★: ' + stage.bonusKillTarget + '.');
     return true;
   }
 
@@ -2997,6 +2997,9 @@ export class PaleciakiGameEngine {
     this.campaignBossEnemyId = null;
     this.campaignStageCompleted = false;
     this.campaignStars = 0;
+    this.campaignSideOrderCompleted = false;
+    this.campaignSideOrderValue = 0;
+    this.campaignBossSpawnedAtSeconds = 0;
     this.clearLevel();
     this.gameMode = 'pvp';
     this.scene.background = new THREE.Color(PVP_LIGHTING_PROFILE.backgroundColor);
@@ -6591,7 +6594,7 @@ export class PaleciakiGameEngine {
       campaignStars: this.campaignStars,
       campaignSideOrderCompleted: this.campaignSideOrderCompleted,
       campaignSideOrderValue: this.campaignSideOrderValue,
-      campaignBossKillSeconds: this.campaignBossSpawnedAtSeconds > 0 ? Math.max(0, Math.floor(this.survivalElapsed - this.campaignBossSpawnedAtSeconds)) : 0,
+      campaignBossKillSeconds: this.campaignBossSpawnedAtSeconds > 0 ? Math.max(0, Math.ceil(this.survivalElapsed - this.campaignBossSpawnedAtSeconds)) : 0,
     };
   }
 
