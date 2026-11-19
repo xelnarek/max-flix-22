@@ -18,6 +18,6 @@ test('Industrial Noir is the final visual layer without replacing gameplay menu 
   }
   assert.match(css, /@media \(max-width: 760px\)/);
   assert.match(css, /prefers-reduced-motion/);
-  assert.match(intro, /INDUSTRIAL NOIR/);
+  assert.match(intro, /CRIMSON SHIFT/);
   assert.match(intro, /private readonly duration = 11\.8/);
 });
