@@ -2898,6 +2898,11 @@ class PaleciakiScene extends xb.Script {
       if (owningSegment) setActiveMobileSegment(owningSegment.id);
       ensureMenuTabVisible(selectedTab);
 
+      // A newly selected section must open at its first item. Restoring an old
+      // scroll offset for a long panel could hide its heading and leave a large
+      // apparently empty area above the remaining content on mobile.
+      menuScrollMemory.clear(targetId);
+
       // The selected section owns the accent color and mode-specific launch action.
       syncMenuPanelPresentation(targetId);
 
