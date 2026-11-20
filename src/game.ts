@@ -824,6 +824,7 @@ export class PaleciakiGameEngine {
   private pvpWantAbility = false;
   private pvpWantReload = false;
   private pvpLastObservedShotsFired = 0;
+  private pvpLastObservedRemoteShotsFired = 0;
   private pvpLastObservedReloading = false;
   private pvpLastFirearmExplosionId = 0;
   private pvpFirearmDropMesh: THREE.Group | null = null;
@@ -3067,6 +3068,7 @@ export class PaleciakiGameEngine {
     this.pvpWantAbility = false;
     this.pvpWantReload = false;
     this.pvpLastObservedShotsFired = 0;
+    this.pvpLastObservedRemoteShotsFired = 0;
     this.pvpLastObservedReloading = false;
     this.pvpLastFirearmExplosionId = 0;
     this.pvpFirearmDropLastActive = false;
@@ -3791,6 +3793,29 @@ export class PaleciakiGameEngine {
       }
       sound.playFirearmShot(firearmDefinition.archetype);
     }
+
+    // Mirror the opponent's actual shot counter too: both PvP players receive
+    // the same archetype-specific muzzle flash and weapon report, not only the
+    // locally controlled player.
+    const remoteShotsSinceLastSync = Math.max(0, remote.shotsFired - this.pvpLastObservedRemoteShotsFired);
+    this.pvpLastObservedRemoteShotsFired = remote.shotsFired;
+    if (remoteShotsSinceLastSync > 0 && this.remotePlayerGroup) {
+      const remoteFirearmDefinition = SURVIVAL_FIREARM_DEFS[remote.primaryFirearmId];
+      const remoteDirection = pvpAimDirectionFromAngle(remote.aimAngle);
+      const remoteForward = new THREE.Vector3(remoteDirection.x, 0, remoteDirection.z);
+      const remoteMuzzle = new THREE.Vector3(remote.x, remote.y + 0.92, remote.z)
+        .addScaledVector(remoteForward, 0.72);
+      for (let shot = 0; shot < Math.min(2, remoteShotsSinceLastSync); shot++) {
+        this.spawnSurvivalFirearmMuzzleFx(
+          remoteFirearmDefinition.archetype,
+          remoteFirearmDefinition.color,
+          remoteMuzzle,
+          remoteForward,
+        );
+      }
+      sound.playFirearmShot(remoteFirearmDefinition.archetype);
+    }
+
     const isReloading = local.reloadRemainingSeconds > 0;
     if (isReloading && !this.pvpLastObservedReloading) sound.playFirearmReload(firearmDefinition.archetype, 'start');
     else if (!isReloading && this.pvpLastObservedReloading) sound.playFirearmReload(firearmDefinition.archetype, 'complete');
