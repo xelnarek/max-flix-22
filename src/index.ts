@@ -2740,7 +2740,101 @@ class PaleciakiScene extends xb.Script {
     const menuScrollMemory = new MenuScrollMemory();
     const menuContentArea = document.querySelector<HTMLElement>('.menu-tab-content-area');
 
-    // Build the armory from the same runtime definitions that drive weapon behaviour.
+    const renderSurvivalFirearmCatalogIcon = (() => {
+  let renderer: THREE.WebGLRenderer | null = null;
+  let scene: THREE.Scene | null = null;
+  let camera: THREE.PerspectiveCamera | null = null;
+  try {
+    renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true });
+    renderer.setPixelRatio(1);
+    renderer.setSize(144, 96, false);
+    renderer.setClearColor(0x000000, 0);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(34, 1.5, 0.1, 30);
+    camera.position.set(3.1, 2.35, 4.6);
+    camera.lookAt(0, 0, 0);
+    scene.add(new THREE.AmbientLight(0xffffff, 1.65));
+    const key = new THREE.DirectionalLight(0xffffff, 2.2);
+    key.position.set(3, 5, 4);
+    scene.add(key);
+    const rim = new THREE.DirectionalLight(0x7dd3fc, 1.25);
+    rim.position.set(-4, 1, -3);
+    scene.add(rim);
+  } catch {
+    renderer?.dispose();
+    renderer = null;
+  }
+
+  return (archetype: string, color: number): string | null => {
+    if (!renderer || !scene || !camera) return null;
+    const accent = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.38, metalness: 0.68, roughness: 0.27 });
+    const dark = new THREE.MeshStandardMaterial({ color: 0x182333, metalness: 0.78, roughness: 0.32 });
+    const steel = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.2 });
+    const glow = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1.8, metalness: 0.3, roughness: 0.2 });
+    const gun = new THREE.Group();
+    const box = (w: number, h: number, d: number, x: number, y: number, z: number, material = dark) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      gun.add(mesh);
+    };
+    const barrel = (radius: number, length: number, x: number, y: number, z: number, material = steel) => {
+      const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.9, radius, length, 12), material);
+      mesh.rotation.x = Math.PI / 2;
+      mesh.position.set(x, y, z);
+      gun.add(mesh);
+    };
+    const grip = () => box(0.16, 0.34, 0.22, 0.02, -0.25, -0.12, dark);
+    const stock = () => box(0.18, 0.16, 0.48, 0, 0.02, -0.48, steel);
+    box(0.34, 0.2, 0.66, 0, 0, 0, dark);
+    switch (archetype) {
+      case 'pistol':
+        barrel(0.055, 0.52, 0, 0.02, 0.56, steel); box(0.38, 0.1, 0.7, 0, 0.15, 0.02, steel); grip(); break;
+      case 'smg':
+        barrel(0.05, 0.7, 0, 0.02, 0.65); box(0.22, 0.1, 0.48, 0, 0.17, -0.02, accent); grip(); stock(); box(0.16, 0.3, 0.2, 0, -0.23, 0.08, steel); break;
+      case 'rifle':
+        barrel(0.045, 1.02, 0, 0.02, 0.82); box(0.18, 0.1, 0.58, 0, 0.17, 0.1, accent); grip(); stock(); break;
+      case 'shotgun':
+        barrel(0.075, 0.96, 0, 0.03, 0.82, steel); box(0.23, 0.16, 0.62, 0, 0, 0.04, accent); grip(); stock(); box(0.22, 0.12, 0.34, 0, -0.12, 0.55, dark); break;
+      case 'heavy-rifle':
+        barrel(0.07, 1.22, 0, 0.03, 0.94, steel); box(0.16, 0.16, 0.44, 0, 0.22, 0.12, accent); box(0.12, 0.13, 0.34, 0, 0.32, 0.04, glow); grip(); stock(); break;
+      case 'minigun':
+        for (let n = 0; n < 4; n++) barrel(0.045, 1.05, (n - 1.5) * 0.13, 0.02, 0.88, n % 2 ? accent : steel);
+        box(0.46, 0.27, 0.55, 0, 0, -0.05, dark); box(0.22, 0.12, 0.34, 0, 0.22, -0.1, accent); grip(); break;
+      case 'rocket':
+        barrel(0.17, 1.25, 0, 0.03, 0.8, dark); barrel(0.21, 0.12, 0, 0.03, 1.39, accent); stock(); box(0.32, 0.18, 0.3, 0, -0.17, 0.08, steel); break;
+      case 'flame':
+        barrel(0.12, 0.72, 0, 0.02, 0.68, accent); box(0.28, 0.34, 0.36, -0.28, 0.03, -0.08, steel); box(0.24, 0.32, 0.38, 0.28, 0.03, -0.08, dark); grip(); break;
+      case 'plasma':
+        barrel(0.09, 0.88, 0, 0.04, 0.76, glow); box(0.3, 0.24, 0.48, 0, 0.12, 0.08, accent); box(0.38, 0.08, 0.2, 0, 0.26, -0.02, glow); grip(); stock(); break;
+      case 'gauss':
+        barrel(0.045, 1.55, 0, 0.03, 1.1, glow); 
+        for (let n = 0; n < 5; n++) barrel(0.075, 0.075, 0, 0.03, 0.48 + n * 0.22, accent);
+        box(0.24, 0.16, 0.62, 0, 0.14, 0.02, steel); grip(); stock(); break;
+      default:
+        barrel(0.05, 0.7, 0, 0.02, 0.62, accent); grip(); stock();
+    }
+    gun.rotation.set(-0.16, -0.42, 0.08);
+    gun.scale.setScalar(0.78);
+    scene.add(gun);
+    try {
+      renderer.render(scene, camera);
+      return renderer.domElement.toDataURL('image/png');
+    } catch {
+      return null;
+    } finally {
+      scene.remove(gun);
+      gun.traverse((object) => {
+        const mesh = object as THREE.Mesh;
+        if (mesh.geometry) mesh.geometry.dispose();
+      });
+      for (const material of [accent, dark, steel, glow]) material.dispose();
+    }
+  };
+})();
+
+// Build the armory from the same runtime definitions that drive weapon behaviour.
     const firearmCatalogGrid = document.getElementById('firearm-catalog-grid');
     if (firearmCatalogGrid && firearmCatalogGrid.dataset.rendered !== 'true') {
       firearmCatalogGrid.dataset.rendered = 'true';
@@ -2753,10 +2847,13 @@ class PaleciakiScene extends xb.Script {
 
         const header = document.createElement('div');
         header.className = 'armory-card-head';
-        const icon = document.createElement('span');
+        const icon = document.createElement('img');
         icon.className = 'armory-card-icon';
-        icon.textContent = firearm.icon;
+        icon.alt = '';
         icon.setAttribute('aria-hidden', 'true');
+        icon.src = renderSurvivalFirearmCatalogIcon(firearm.archetype, firearm.color) ?? '';
+        icon.dataset.fallbackIcon = firearm.icon;
+        if (!icon.src) icon.classList.add('armory-card-icon-fallback');
         const heading = document.createElement('div');
         heading.className = 'armory-card-title-wrap';
         const title = document.createElement('h3');
