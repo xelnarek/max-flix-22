@@ -31,7 +31,7 @@ test('firearm pickups have a unique world silhouette, bobbing timer and direct w
   assert.match(game, /new THREE\.CanvasTexture\(canvas\)/);
   assert.match(game, /drop\.mesh\.position\.y = drop\.baseY \+ 0\.13 \+ Math\.sin/);
   assert.match(game, /const distance = Math\.hypot\(drop\.x - this\.playerPos\.x/);
-  assert.match(game, /this\.survivalFirearm = createSurvivalFirearmState\(drop\.firearmId\)/);
+  assert.match(game, /const storedFirearmState = this\\.survivalFirearmStates\\.get\\(drop\\.firearmId\\)/);
   assert.match(game, /gun\.position\.set\(0, -0\.36, 0\.18\)/);
   assert.match(game, /\(this\.rightArm \?\? this\.playerGroup\)\.add\(gun\)/);
   assert.match(game, /life: 28/);
