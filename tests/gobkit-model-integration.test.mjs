@@ -359,23 +359,21 @@ test('enemy death action supersedes any active hit reaction', async () => {
   assert.match(game, /this\.requestGobkitAction\(track, 'Death', 1\.08\)/);
 });
 
-test('late enemy model attachment cannot reveal both the full rig and its LOD proxy after defeat', async () => {
+test('late enemy model attachment resumes Death on the one full rig after the actor was defeated', async () => {
   const game = await read('../src/game.ts');
-  const attachStart = game.indexOf('private installEnemyVisualLodProxy(enemy: EnemyItem, fullRoot: THREE.Group)');
-  const attachEnd = game.indexOf('\n  }', attachStart) + 4;
-  assert.ok(attachStart >= 0 && attachEnd > attachStart, 'enemy LOD attachment method should exist');
-  const attach = game.slice(attachStart, attachEnd);
-  assert.match(attach, /enemy\.state === 'defeated' \|\| mesh\.userData\.actorDeathVisualLocked === true/);
-  assert.match(attach, /proxy\.visible = false/);
-  assert.match(attach, /fullRoot\.visible = !deathVisualLocked/);
-  assert.doesNotMatch(attach, /proxy\.visible = !deathVisualLocked/);
-  const lodStart = game.indexOf('const deathVisualLocked = enemy.state === \'defeated\'', attachEnd);
-  assert.ok(lodStart > attachEnd, 'runtime LOD update should enforce the death visibility lock');
-  const lodSlice = game.slice(lodStart, lodStart + 700);
-  assert.match(lodSlice, /const useProxy = !deathVisualLocked/);
-  assert.match(lodSlice, /lodProxy\.visible = useProxy/);
-  assert.match(lodSlice, /fullVisual\.visible = !useProxy/);
+  const start = game.indexOf('private resumeEnemyAnimationAfterModelAttach');
+  const end = game.indexOf('private hideProceduralVisuals', start);
+  assert.ok(start >= 0 && end > start, 'enemy model attach recovery handler must exist');
+  const handler = game.slice(start, end);
+  const defeated = handler.indexOf("if (enemy.state === 'defeated')");
+  const hit = handler.indexOf('const hitRemaining');
+  assert.ok(defeated >= 0 && hit > defeated, 'defeat must take priority over stale hit/idle state');
+  const defeatPath = handler.slice(defeated, hit);
+  assert.match(defeatPath, /this\.enemyPendingAttackUntil\.delete\(enemy\)/);
+  assert.match(defeatPath, /this\.requestGobkitAction\(track, 'Death', Math\.max\(0\.1, enemy\.deathVisualTimer \|\| 0\.1\)\)/);
+  assert.doesNotMatch(game, /actorLodProxy|actorLodProxyRoot|lockEnemyDeathVisualToSingleRig|shouldUseEnemyVisualLodProxy/);
 });
+
 
 test('procedural fallback hides every renderable body primitive but keeps explicit overlays', async () => {
   const game = await read('../src/game.ts');
@@ -469,8 +467,6 @@ test('orphan imported rigs are cleaned without disposing shared MakeHuman assets
   assert.match(game, /private disposeUntrackedActorVisualRoot\(root: THREE\.Object3D\)/);
   assert.match(game, /object\.userData\.gobkitAsset === true/);
   assert.match(game, /object\.userData\.gobkitSharedGeometry !== true/);
-  assert.match(game, /object\.userData\.actorLodSharedGeometry !== true/);
-  assert.match(game, /material\.userData\.actorLodSharedMaterial !== true/);
   assert.match(game, /material\.userData\.makeHumanShared !== true/);
   assert.match(game, /this\.disposeUntrackedActorVisualRoot\(child\)/);
 });
@@ -635,27 +631,25 @@ test('imported enemy Attack clip peaks on the 60 percent telegraph release frame
     'strike peak must coincide with the telegraph release frame');
 });
 
-test('enemy model attachment never displays the imported rig and LOD proxy together', async () => {
+test('enemy model attachment installs one full rig and removes its procedural body without adding a proxy', async () => {
   const game = await read('../src/game.ts');
-  const start = game.indexOf('private installEnemyVisualLodProxy(');
-  const end = game.indexOf('\n  /**', start);
-  assert.ok(start >= 0 && end > start, 'enemy visual installation method must exist');
-  const install = game.slice(start, end);
-  assert.match(install, /proxy\.visible = false/);
-  assert.match(install, /fullRoot\.visible = !deathVisualLocked/);
-  assert.doesNotMatch(install, /proxy\.visible = !deathVisualLocked/);
-  assert.match(game, /lodProxy\.visible = useProxy;\s*fullVisual\.visible = !useProxy/);
-  assert.match(game, /if \(lodProxy\) lodProxy\.visible = false;\s*if \(fullVisual\) fullVisual\.visible = true/);
+  const start = game.indexOf('private async attachGobkitEnemyModel');
+  const end = game.indexOf('private updateGobkitAnimations', start);
+  assert.ok(start >= 0 && end > start, 'enemy full-rig attachment path must exist');
+  const attach = game.slice(start, end);
+  assert.match(attach, /removeLegacyEnemyBodyVisuals\(mesh as THREE\.Group, overlays\)/);
+  assert.match(attach, /this\.installActorVisualRoot\(mesh as THREE\.Group, root\)/);
+  assert.doesNotMatch(attach, /createEnemyVisualLodProxy|installEnemyVisualLodProxy|actorLodProxy/);
+  assert.doesNotMatch(game, /shouldLoadEnemyFullRig|shouldUseEnemyVisualLodProxy|updateEnemyVisualLodProxy/);
 });
 
 
-test('regular enemies defer expensive animated GLB rigs until they enter useful detail range', async () => {
-  const game = await read('../src/game.ts');
-  assert.match(game, /private shouldLoadEnemyFullRig\(enemy: EnemyItem, distanceSquared: number\)/);
-  assert.match(game, /const detailRadius = this\.isHandheldViewport \? 23 : 31/);
-  assert.match(game, /isMajorSurvivalBossType\(enemy\.type\) \|\| enemy\.type === 'sebix_m'/);
-  assert.match(game, /!this\.requestedGobkitEnemies\.has\(enemy\) && this\.shouldLoadEnemyFullRig\(enemy, distanceSquared\)/);
-  assert.match(game, /this\.requestedGobkitEnemies\.delete\(enemy\)/);
+test('every mapped enemy requests its full-detail model without a distance gate', async () => {
+  const [game, profiles] = await Promise.all([
+    read('../src/game.ts'), import('../src/enemyVisualProfiles.ts')
+  ]);
+  assert.equal(Object.keys(profiles.ENEMY_VISUAL_PROFILES).length, 23);
+  assert.match(game, /Every mapped enemy uses its single full-detail rig, independent of distance/);
+  assert.match(game, /if \(!this\.requestedGobkitEnemies\.has\(enemy\)\) \{[\s\S]*?void this\.attachGobkitEnemyModel\(enemy, modelId\)/);
+  assert.doesNotMatch(game, /shouldLoadEnemyFullRig|detailRadius = this\.isHandheldViewport/);
 });
-
-
