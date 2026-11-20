@@ -16,7 +16,7 @@ import {
 } from './ads.ts';
 import { CharacterId, PerkType } from './types.ts';
 import { PvpNetworkSession, PvpLocalBotSession, type IPvpSession } from './pvpClient.ts';
-import { getPvpOperatorAttackCooldown, PVP_OPERATOR_PROFILES, PVP_RAPID_FIRE_COOLDOWN_MULTIPLIER } from './pvpArena.ts';
+import { getPvpFirearmAttackCooldown, PVP_OPERATOR_PROFILES, PVP_RAPID_FIRE_COOLDOWN_MULTIPLIER } from './pvpArena.ts';
 import type { PvpArenaState, PvpSlot } from './pvpArena.ts';
 import { AssetItem, assetLoader } from './assets.ts';
 import { SelectiveBloomPipeline } from './selectiveBloom.ts';
@@ -650,6 +650,7 @@ const escapeLeaderboardText = (value: string): string => value.replace(/[&<>"']/
 class PaleciakiScene extends xb.Script {
   private engine!: PaleciakiGameEngine;
   private pvpFireCooldownMultiplier = 1;
+  private pvpFirearmCooldownSeconds = 3.0;
   private cinematicIntro: CinematicIntroManager | null = null;
   private selectedCharId: CharacterId = 'marcin';
   private lastScore: number = 0;
@@ -4734,9 +4735,7 @@ class PaleciakiScene extends xb.Script {
 
     const triggerPrimaryPvpShot = () => {
       if (!this.engine.triggerPvpFire()) return;
-      const operatorId = (pvpFireButton?.dataset.operator as CharacterId | undefined) || this.selectedPvpOperator;
-      startPvpFireCooldown(getPvpOperatorAttackCooldown(operatorId));
-      sound.playAttackWhoosh();
+      startPvpFireCooldown(this.pvpFirearmCooldownSeconds);
     };
     bindPvpTap(pvpFireButton, triggerPrimaryPvpShot);
     // Desktop uses the existing bottom-dock attack slot; mobile uses the
@@ -5394,6 +5393,8 @@ class PaleciakiScene extends xb.Script {
 
     const localPlayer = localSlot === 'p1' ? state.p1 : state.p2;
     const primaryDefinition = SURVIVAL_FIREARM_DEFS[localPlayer.primaryFirearmId];
+    this.pvpFirearmCooldownSeconds = getPvpFirearmAttackCooldown(localPlayer.primaryFirearmId) *
+      (localPlayer.progressionBonuses?.cooldownMultiplier ?? 1);
     const primaryAmmo = localPlayer.firearmAmmoById[localPlayer.primaryFirearmId] ?? primaryDefinition.magazineSize;
     const isReloading = localPlayer.reloadRemainingSeconds > 0;
     const isCycling = !isReloading && localPlayer.attackCooldownTimer > 0;
