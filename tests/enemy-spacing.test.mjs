@@ -286,8 +286,10 @@ test('crowd solver ignores defeated and vertically separated actors', () => {
   assert.deepEqual({x:actors[2].x,z:actors[2].z},{x:0,z:0});
 });
 
-test('fitted visual footprints stay within a safe archetype-specific range', () => {
+test('fitted visual footprints preserve real rig size but remain globally bounded', () => {
   const radius = getEnemyCollisionRadius('customer', 50);
-  assert.ok(radius < 0.8);
-  assert.ok(radius >= getEnemyCollisionRadius('customer'));
+  assert.equal(radius, 1.45, 'extreme fitted bounds must stop at the global safety cap');
+  assert.equal(getEnemyCollisionRadius('customer', 1.05), 1.05,
+    'a genuinely wider fitted rig must not be clipped to the old 22% archetype cap');
+  assert.ok(getEnemyCollisionRadius('customer', 0.2) >= getEnemyCollisionRadius('customer') * 0.82);
 });
