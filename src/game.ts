@@ -15739,7 +15739,6 @@ export class PaleciakiGameEngine {
   private updateDefeatedEnemyVisual(enemy: EnemyItem, dt: number): void {
     const mesh = enemy.mesh as THREE.Object3D | undefined;
     if (!mesh || !mesh.visible) return;
-    this.lockEnemyDeathVisualToSingleRig(mesh);
     const timer = Math.max(0, (enemy.deathVisualTimer || 0) - dt);
     enemy.deathVisualTimer = timer;
     const duration = Math.max(0.1, enemy.deathVisualDuration || 0.82);
@@ -15785,7 +15784,6 @@ export class PaleciakiGameEngine {
 
     if (timer <= 0) {
       mesh.visible = false;
-      delete mesh.userData.actorDeathVisualLocked;
       if (track) {
         this.stopGobkitTrack(track);
         this.gobkitEnemyTracks.delete(enemy);
