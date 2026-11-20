@@ -8,7 +8,7 @@ test('boss rewards are three unique legendary choices', () => {
   assert.equal(new Set(options.map((option) => option.id)).size, 3);
   assert.deepEqual(options.map((option) => option.id), [
     'boss_damage_core',
-    'boss_weapon_overdrive',
+    'boss_mobility_core',
     'boss_bulwark',
   ]);
   for (const option of options) {
@@ -18,35 +18,11 @@ test('boss rewards are three unique legendary choices', () => {
   }
 });
 
-test('boss reward can unlock a new weapon at legendary level three', () => {
-  const options = createSurvivalBossRewardOptions({
-    kind: 'unlock',
-    id: 'diamond_saw',
-    name: 'Tarcza diamentowa',
-    icon: '💿',
-  });
-  assert.equal(options[1].id, 'weapon_unlock:diamond_saw');
-  assert.match(options[1].title, /TARCZA DIAMENTOWA/);
-  assert.match(options[1].description, /3\/5/);
-});
-
-test('boss reward advances an owned weapon by two levels, capped at five', () => {
-  const options = createSurvivalBossRewardOptions({
-    kind: 'upgrade',
-    id: 'diamond_saw',
-    name: 'Tarcza diamentowa',
-    icon: '💿',
-    currentLevel: 3,
-  });
-  assert.equal(options[1].id, 'weapon_upgrade:diamond_saw');
-  assert.match(options[1].title, /POZIOM 5/);
-  assert.match(options[1].description, /3 → 5\/5/);
-});
-
-test('boss reward has a useful fallback when every weapon is maxed', () => {
+test('boss rewards no longer expose unlocks, levels or evolutions from the retired weapon system', () => {
   const options = createSurvivalBossRewardOptions();
-  assert.equal(options[1].id, 'boss_weapon_overdrive');
-  assert.match(options[1].description, /8% szybciej/);
+  assert.equal(options[1].id, 'boss_mobility_core');
+  assert.match(options[1].description, /szybkości ruchu/);
+  assert.ok(options.every((option) => !/weapon_unlock:|weapon_upgrade:|weapon_evolve:/.test(option.id)));
 });
 
 test('boss rewards pause Survival, trigger on boss defeat and cannot be bypassed', async () => {
@@ -73,11 +49,12 @@ test('boss rewards pause Survival, trigger on boss defeat and cannot be bypassed
   assert.ok(css.includes('#survival-levelup[data-mode="boss-reward"] .survival-upgrade-actions'));
 });
 
-test('boss weapon overdrive improves melee and weapon reload cadence and resets each run', async () => {
+test('boss mobility reward strengthens only operator movement and dodge cadence', async () => {
   const { readFile } = await import('node:fs/promises');
   const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
-  assert.ok(game.includes('this.survivalWeaponReloadMultiplier = Math.max(0.72, this.survivalWeaponReloadMultiplier * 0.92)'));
-  assert.ok(game.includes('this.survivalAttackRateMultiplier = Math.max(0.78, this.survivalAttackRateMultiplier * 0.92)'));
-  assert.ok(game.includes('readyWeapon.id, readyWeapon.level, !!readyWeapon.evolved'));
-  assert.ok(game.includes('this.survivalWeaponReloadMultiplier = 1;'));
+  assert.ok(game.includes("choice.id === 'boss_mobility_core'"));
+  assert.ok(game.includes('this.survivalMoveMultiplier = Math.min(1.38, this.survivalMoveMultiplier * 1.08)'));
+  assert.ok(game.includes('this.survivalDashCooldownMultiplier = Math.max(0.48, this.survivalDashCooldownMultiplier * 0.92)'));
+  assert.ok(!game.includes('survivalWeaponReloadMultiplier'));
+  assert.ok(!game.includes("choice.id === 'boss_weapon_overdrive'"));
 });
