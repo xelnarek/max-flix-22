@@ -318,7 +318,10 @@ export function getEnemyCollisionRadius(type: string, measuredRadius?: number): 
   const base = ENEMY_BODY_RADII[type] ?? 0.60;
   if (!Number.isFinite(measuredRadius)) return base;
   const measured = Math.max(0.42, Math.min(MAX_ENEMY_BODY_RADIUS, measuredRadius as number));
-  return Math.max(base * 0.82, Math.min(base * 1.22, measured));
+  // Preserve the fitted rig's measured footprint. The old +22% archetype cap
+  // discarded large GLB silhouettes and spawned-size multipliers, so visible
+  // shoulders, armour and wide bodies could overlap despite a successful solve.
+  return Math.max(base * 0.82, measured);
 }
 
 /**
@@ -335,9 +338,9 @@ export function resolveEnemyCrowdOverlaps<T extends MutableEnemySpacingActor>(
 ): number {
   if (![bounds.minX, bounds.maxX, bounds.minZ, bounds.maxZ].every(Number.isFinite)) return 0;
   const safeClearance = Number.isFinite(clearance) ? Math.max(0.06, Math.min(0.5, clearance)) : 0.16;
-  const safePasses = Number.isFinite(passes) ? Math.max(1, Math.min(4, Math.floor(passes))) : 2;
+  const safePasses = Number.isFinite(passes) ? Math.max(1, Math.min(16, Math.floor(passes))) : 2;
   const maxCorrection = Number.isFinite(maximumCorrectionPerPass)
-    ? Math.max(0.08, Math.min(0.8, maximumCorrectionPerPass))
+    ? Math.max(0.08, Math.min(1.2, maximumCorrectionPerPass))
     : 0.52;
   const minX = Math.min(bounds.minX, bounds.maxX);
   const maxX = Math.max(bounds.minX, bounds.maxX);
@@ -384,7 +387,7 @@ export function resolveEnemyCrowdOverlaps<T extends MutableEnemySpacingActor>(
         }
 
         const penetration = minimumDistance - distance;
-        const correction = Math.min(maxCorrection, penetration * 0.72);
+        const correction = Math.min(maxCorrection, penetration * 0.9);
         const selfMass = selfRadius * selfRadius;
         const otherMass = otherRadius * otherRadius;
         const totalMass = Math.max(1e-5, selfMass + otherMass);
