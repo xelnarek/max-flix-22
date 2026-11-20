@@ -63,9 +63,13 @@ test('all enemy kills can spawn firearms while PvP remains on its authoritative 
 test('each firearm archetype has a dedicated synthesized report rather than a melee whoosh', async () => {
   const sound = await read('../src/sound.ts');
   assert.match(sound, /public playFirearmShot\(archetype:/);
+  const profilesStart = sound.indexOf('const profiles = {');
+  const profilesEnd = sound.indexOf('} as const', profilesStart);
+  const profileSource = sound.slice(profilesStart, profilesEnd);
   for (const archetype of ['pistol', 'smg', 'rifle', 'shotgun', 'heavy-rifle', 'minigun', 'rocket', 'flame', 'plasma', 'gauss']) {
-    assert.ok(sound.includes(archetype + ': { wave:'), 'missing audio profile: ' + archetype);
+    assert.ok(profileSource.includes(archetype), 'missing audio profile: ' + archetype);
   }
+  assert.equal((profileSource.match(/wave:/g) || []).length, 10);
   assert.match(sound, /body\.frequency\.exponentialRampToValueAtTime/);
   assert.match(sound, /transientEnvelope\.gain\.exponentialRampToValueAtTime/);
   const game = await read('../src/game.ts');
