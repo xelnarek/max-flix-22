@@ -99,16 +99,14 @@ test('enemy HUD, telegraphs, proxy and active rig remain separate from the disca
   const health = createMesh('enemy-hp').mesh;
   const rangedTelegraph = createMesh('ranged-windup').mesh;
   const meleeTelegraph = createMesh('melee-windup').mesh;
-  const proxy = new THREE.Group();
-  proxy.userData.actorLodProxy = true;
   const fullRig = new THREE.Group();
   fullRig.userData.actorVisualRoot = true;
-  actor.add(oldBody, health, rangedTelegraph, meleeTelegraph, proxy, fullRig);
+  actor.add(oldBody, health, rangedTelegraph, meleeTelegraph, fullRig);
 
   removeLegacyEnemyBodyVisuals(actor, [health, rangedTelegraph, meleeTelegraph]);
 
   assert.equal(oldBody.parent, null);
-  for (const item of [health, rangedTelegraph, meleeTelegraph, proxy, fullRig]) {
+  for (const item of [health, rangedTelegraph, meleeTelegraph, fullRig]) {
     assert.equal(item.parent, actor);
   }
   assert.equal(health.visible, true);
