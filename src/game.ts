@@ -1187,6 +1187,7 @@ export class PaleciakiGameEngine {
   private readonly particleColorScratch = new THREE.Color();
   // One bounded pool owns all short-lived combat-fragment geometry/materials.
   private readonly particlePool = new ParticleMeshPool(PARTICLE_STATE_CAPACITY);
+  private readonly survivalFirearmProjectileVisualCache = new Map<string, THREE.Mesh>();
   private particlePoolDisposed = false;
 
   /** Release pooled GPU resources when this engine is permanently torn down. */
@@ -1194,6 +1195,10 @@ export class PaleciakiGameEngine {
     if (this.particlePoolDisposed) return;
     this.particlePoolDisposed = true;
     this.clearLevel();
+    for (const template of this.survivalFirearmProjectileVisualCache.values()) {
+      this.disposeTemporaryObject(template);
+    }
+    this.survivalFirearmProjectileVisualCache.clear();
     this.particlePool.dispose();
   }
 
@@ -4129,6 +4134,9 @@ export class PaleciakiGameEngine {
       if (!activeIds.has(id)) {
         this.levelRoot.remove(mesh);
         mesh.traverse((object) => {
+          // Immutable geometry/materials belong to the shared firearm template
+          // cache and are released once with the engine, not once per shot.
+          if (object.userData.sharedFirearmProjectileResource === true) return;
           if (object instanceof THREE.Mesh) object.geometry.dispose();
           if (!(object instanceof THREE.Mesh) && !(object instanceof THREE.Sprite)) return;
           const materials = Array.isArray(object.material) ? object.material : [object.material];
@@ -10834,7 +10842,6 @@ export class PaleciakiGameEngine {
         firearmId: definition.id,
         firearmColor: definition.color,
         damageSource: getSurvivalFirearmDamageSource(definition.id),
-        disposeOnRemove: true,
         hitIds: new Set<string>(),
         spinSpeed: definition.archetype === 'rocket' || definition.archetype === 'plasma' ? 6.5 : 0,
       });
@@ -10885,6 +10892,9 @@ export class PaleciakiGameEngine {
     const profile = SURVIVAL_FIREARM_PRESENTATION[archetype];
     const width = Math.max(profile.projectileWidth, fallbackRadius * 0.55);
     const length = Math.max(profile.projectileLength, width * 1.8);
+    const cacheKey = profile.projectileStyle + ':' + color + ':' + width.toFixed(5) + ':' + length.toFixed(5);
+    const cachedTemplate = this.survivalFirearmProjectileVisualCache.get(cacheKey);
+    if (cachedTemplate) return cachedTemplate.clone(true) as THREE.Mesh;
     let geometry: THREE.BufferGeometry;
     switch (profile.projectileStyle) {
       case 'pistol-slug':
@@ -11027,7 +11037,13 @@ export class PaleciakiGameEngine {
     mesh.userData.firearmMuzzleStyle = profile.muzzleStyle;
     mesh.userData.firearmTrailStyle = profile.trailStyle;
     mesh.userData.firearmImpactStyle = profile.impactStyle;
-    return mesh;
+    // All nested meshes share immutable cached geometry and materials. Each
+    // active projectile only clones transforms, keeping shot creation cheap.
+    mesh.traverse((object) => {
+      object.userData.sharedFirearmProjectileResource = true;
+    });
+    this.survivalFirearmProjectileVisualCache.set(cacheKey, mesh);
+    return mesh.clone(true) as THREE.Mesh;
   }
 
   private spawnSurvivalFirearmMuzzleFx(
