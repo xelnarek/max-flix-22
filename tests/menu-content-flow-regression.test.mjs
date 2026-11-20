@@ -23,5 +23,5 @@ test('switching menu tabs clears a stale saved scroll offset before showing the 
   const end = app.indexOf('menuTabButtons.forEach((tabBtn, index) =>', start);
   assert.ok(start >= 0 && end > start, 'menu tab activation handler should exist');
   const activation = app.slice(start, end);
-  assert.match(activation, /menuScrollMemory\.clear\(targetId\);[\s\S]*?syncMenuPanelPresentation\(targetId\)/);
+  assert.match(activation, /const changingTab = targetId !== currentMenuTargetId;[\s\S]*?if \(changingTab\) menuScrollMemory\.clear\(targetId\);[\s\S]*?syncMenuPanelPresentation\(targetId\)/);
 });
