@@ -63,7 +63,7 @@ import { addProceduralLimbPose, getProceduralHitPulse, setProceduralJointRotatio
 import { isEffectiveBossLaneDodge, isInsideBossAttackLane, isWithinBossImpactRadius } from './combatTelegraphs.ts';
 import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
 import { chooseSurvivalEventSpawnPoint } from './survivalSpawn.ts';
-import { getSurvivalUpgradeRarityMeta, getSurvivalWeaponInitialLevel, getSurvivalWeaponUpgradeSteps, promoteSurvivalUpgradeRarity, rollSurvivalUpgradeRarity, type SurvivalUpgradeRarity } from './survivalRarity.ts';
+import { getSurvivalUpgradeRarityMeta, promoteSurvivalUpgradeRarity, rollSurvivalUpgradeRarity, type SurvivalUpgradeRarity } from './survivalRarity.ts';
 import { createSurvivalBossRewardOptions } from './survivalBossRewards.ts';
 import { getSurvivalBossVariant, isMajorSurvivalBossType, shouldSpawnBosmanKrakow } from './survivalEncounters.ts';
 import { applySurvivalWaveMutator, getSurvivalWaveMutator, getSurvivalWaveSpawnTuning } from './survivalWaveMutators.ts';
@@ -1225,6 +1225,8 @@ export class PaleciakiGameEngine {
     firearmColor?: number;
     firearmProjectile?: boolean;
     firearmExplosion?: boolean;
+    maxRangeMeters?: number;
+    travelledDistance?: number;
     aoeDamageMultiplier?: number;
     damageSource?: SurvivalDamageSource;
     trailTimer?: number;
@@ -6650,52 +6652,7 @@ export class PaleciakiGameEngine {
     const choice = this.survivalPendingOptions.find((option) => option.id === id);
     if (!choice) return false;
 
-    if (choice.id.startsWith('weapon_unlock:')) {
-      const weaponId = choice.id.slice('weapon_unlock:'.length) as SurvivalWeaponId;
-      if (!this.survivalWeapons.some((weapon) => weapon.id === weaponId)) {
-        const initialLevel = getSurvivalWeaponInitialLevel(choice.rarity);
-        this.survivalWeapons.push({
-          id: weaponId,
-          level: initialLevel,
-          // Preserve a readable first reload while rewarding higher-rarity unlocks with a head start.
-          cooldown: this.getScaledSurvivalWeaponReloadSeconds(weaponId, initialLevel, false) * SURVIVAL_WEAPON_INITIAL_RELOAD_FACTOR,
-        });
-        sound.playAbility(this.currentCharacterId);
-      }
-    } else if (choice.id.startsWith('weapon_upgrade:')) {
-      const weaponId = choice.id.slice('weapon_upgrade:'.length) as SurvivalWeaponId;
-      const weapon = this.survivalWeapons.find((entry) => entry.id === weaponId);
-      if (weapon && weapon.level < 5) {
-        weapon.level = Math.min(5, weapon.level + getSurvivalWeaponUpgradeSteps(choice.rarity));
-        const upgradedCooldown = this.getScaledSurvivalWeaponReloadSeconds(
-          weaponId, weapon.level, !!weapon.evolved
-        );
-        // Keep the current reload; if it was already ready, add a short recovery
-        // instead of firing immediately as a side effect of the level-up.
-        weapon.cooldown = getWeaponRecoveryAfterUpgrade(weapon.cooldown, upgradedCooldown);
-      }
-    } else if (choice.id.startsWith('weapon_evolve:')) {
-      const weaponId = choice.id.slice('weapon_evolve:'.length) as SurvivalWeaponId;
-      const weapon = this.survivalWeapons.find((entry) => entry.id === weaponId);
-      const definition = SURVIVAL_WEAPON_DEFS[weaponId];
-      const hasPassivePair = (this.survivalUpgradeStacks[definition.evolutionPassive] || 0) > 0;
-      if (weapon && weapon.level >= 5 && !weapon.evolved && this.survivalElapsed >= 210 && hasPassivePair) {
-        weapon.evolved = true;
-        const evolvedCooldown = this.getScaledSurvivalWeaponReloadSeconds(weaponId, weapon.level, true);
-        // Evolution changes impact and grants only a modest reload improvement.
-        weapon.cooldown = getWeaponRecoveryAfterUpgrade(weapon.cooldown, evolvedCooldown);
-        this.triggerBloomPulse(0.7);
-        this.triggerScreenShake(0.24, 0.2);
-        this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.6, this.playerPos.z, definition.color);
-        this.callbacks.onPerkDropBanner?.(
-          definition.evolvedName,
-          '✦',
-          definition.name + ' osiągnęła pełną ewolucję. Jej zachowanie i siła ataku zostały ulepszone.',
-          '#fbbf24'
-        );
-        sound.playAbility(this.currentCharacterId);
-      }
-    } else if (choice.id === 'boss_damage_core') {
+    if (choice.id === 'boss_damage_core') {    } else if (choice.id === 'boss_damage_core') {
       this.survivalDamageMultiplier = Math.min(2.05, this.survivalDamageMultiplier * 1.24);
     } else if (choice.id === 'boss_weapon_overdrive') {
       this.survivalAttackRateMultiplier = Math.max(0.78, this.survivalAttackRateMultiplier * 0.92);
@@ -6914,34 +6871,8 @@ export class PaleciakiGameEngine {
       (option.id !== 'ricochet' || (this.survivalUpgradeStacks.ricochet || 0) < 3) &&
       (option.id !== 'radiation' || (this.survivalUpgradeStacks.radiation || 0) < 3) &&
       (option.id !== 'shrapnel' || (this.survivalUpgradeStacks.shrapnel || 0) < 3));
-    for (const [weaponId, definition] of Object.entries(SURVIVAL_WEAPON_DEFS) as Array<[SurvivalWeaponId, typeof SURVIVAL_WEAPON_DEFS[SurvivalWeaponId]]>) {
-      const owned = this.survivalWeapons.find((weapon) => weapon.id === weaponId);
-      if (!owned) {
-        if (this.survivalElapsed >= definition.unlockAfter) {
-          const unlockMinute = Math.ceil(definition.unlockAfter / 60);
-          pool.push({ id: 'weapon_unlock:' + weaponId, icon: definition.icon,
-            title: 'NOWA BROŃ: ' + definition.name.toUpperCase(),
-            description: definition.description + ' Dostępna od około ' + unlockMinute + '. minuty. Odstęp: ' + definition.cooldown.toFixed(1) + ' s.' });
-        }
-      } else if (owned.level < 5) {
-        pool.push({ id: 'weapon_upgrade:' + weaponId, icon: definition.icon,
-          title: definition.name.toUpperCase() + ' • POZIOM ' + (owned.level + 1),
-          description: 'Nieznacznie zwiększ obrażenia i skróć przeładowanie. Poziom ' + (owned.level + 1) + '/5.' });
-      } else if (
-        !owned.evolved &&
-        owned.level >= 5 &&
-        this.survivalElapsed >= 210 &&
-        (this.survivalUpgradeStacks[definition.evolutionPassive] || 0) > 0
-      ) {
-        pool.push({ id: 'weapon_evolve:' + weaponId, icon: '✦',
-          title: 'EWOLUCJA: ' + definition.evolvedName,
-          description: 'Wymagania: broń poziom 5, 3,5 minuty Survival i moduł „' + definition.evolutionPassiveLabel + '”. Otrzymasz unikalną wersję tej broni.' });
-      }
-    }
-    const draftContext: SurvivalDraftContext = {
+    const draftContext: SurvivalDraftContext = {    const draftContext: SurvivalDraftContext = {
       stacks: this.survivalUpgradeStacks,
-      weapons: this.survivalWeapons,
-      evolutions: [...this.survivalEvolutions],
       healthRatio: this.maxHp > 0 ? this.hp / this.maxHp : 1,
       elapsedSeconds: this.survivalElapsed,
     };
@@ -6950,60 +6881,12 @@ export class PaleciakiGameEngine {
     const promotionRarityFloor = getSurvivalPromotionRarityFloor(this.survivalLevel);
     let promotionCardAssigned = false;
     const withRarity = (options: BaseOption[]): SurvivalUpgradeOption[] => options.map((option) => {
-      // Weapon evolutions are always Legendary; at promotions one card is
-      // guaranteed to meet the rank's rarity floor even after a reroll.
-      const isEvolution = option.id.startsWith('weapon_evolve:');
-      let rarity: SurvivalUpgradeRarity = isEvolution
-        ? 'legendary'
-        : rollSurvivalUpgradeRarity(Math.random(), this.survivalLevel);
+      let rarity: SurvivalUpgradeRarity = rollSurvivalUpgradeRarity(Math.random(), this.survivalLevel);
       if (promotionRarityFloor && !promotionCardAssigned) {
-        rarity = isEvolution
-          ? 'legendary'
-          : promoteSurvivalUpgradeRarity(rarity, promotionRarityFloor);
+        rarity = promoteSurvivalUpgradeRarity(rarity, promotionRarityFloor);
         promotionCardAssigned = true;
       }
       const meta = getSurvivalUpgradeRarityMeta(rarity);
-
-      if (option.id.startsWith('weapon_unlock:')) {
-        const weaponId = option.id.slice('weapon_unlock:'.length) as SurvivalWeaponId;
-        const definition = SURVIVAL_WEAPON_DEFS[weaponId];
-        const initialLevel = getSurvivalWeaponInitialLevel(rarity);
-        const synergyHint = getSurvivalDraftSynergyHint(
-          option.id, draftContext, selectedIds.filter((id) => id !== option.id)
-        );
-        return {
-          ...option,
-          description: definition.description + ' Poziom startowy tej karty: ' + initialLevel + '/5.' +
-            (synergyHint ? ' ' + synergyHint : ''),
-          ...meta,
-        };
-      }
-
-      if (option.id.startsWith('weapon_upgrade:')) {
-        const weaponId = option.id.slice('weapon_upgrade:'.length) as SurvivalWeaponId;
-        const definition = SURVIVAL_WEAPON_DEFS[weaponId];
-        const weapon = this.survivalWeapons.find((entry) => entry.id === weaponId);
-        const currentLevel = weapon?.level || 1;
-        const targetLevel = Math.min(5, currentLevel + getSurvivalWeaponUpgradeSteps(rarity));
-        return {
-          ...option,
-          title: definition.name.toUpperCase() + ' • POZIOM ' + targetLevel,
-          description: 'Rozwijasz broń z poziomu ' + currentLevel + ' do ' + targetLevel + '/5.' +
-            (rarity === 'legendary' ? ' Legendarna karta podnosi poziom o dwa stopnie.' : ''),
-          ...meta,
-        };
-      }
-
-      if (option.id.startsWith('weapon_evolve:')) {
-        const synergyHint = getSurvivalDraftSynergyHint(option.id, draftContext, selectedIds);
-        return {
-          ...option,
-          description: option.description + ' Rzadkość ewolucji: LEGENDARNA.' +
-            (synergyHint ? ' ' + synergyHint : ''),
-          ...meta,
-        };
-      }
-
       const synergyHint = getSurvivalDraftSynergyHint(
         option.id, draftContext, selectedIds.filter((id) => id !== option.id)
       );
@@ -7014,7 +6897,7 @@ export class PaleciakiGameEngine {
         ...meta,
       };
     });
-    return withRarity(selectedOptions);
+    return withRarity(selectedOptions);    return withRarity(selectedOptions);
   }
 
   public rerollSurvivalUpgrades(): boolean {
@@ -10027,11 +9910,12 @@ export class PaleciakiGameEngine {
     // Tactical aim: a nearby elite, boss or committed charging threat can be
     // more valuable than the closest low-risk grunt. A distant boss never
     // overrides a threat already in the operator's face.
+    const firearmRange = SURVIVAL_FIREARM_DEFS[this.survivalFirearm.id].rangeMeters;
     const selection = selectSurvivalAutoTarget(
       this.enemies,
       this.playerPos.x,
       this.playerPos.z,
-      SURVIVAL_AUTO_AIM_RANGE_METERS * this.survivalRangeMultiplier * (this.oniricDreamRemainingSeconds > 0 ? 1.22 : 1)
+      firearmRange * this.survivalRangeMultiplier * (this.oniricDreamRemainingSeconds > 0 ? 1.22 : 1)
     );
     const target = selection?.target ?? null;
 
@@ -10065,6 +9949,157 @@ export class PaleciakiGameEngine {
     this.survivalWeaponDispatchCooldown = SURVIVAL_WEAPON_DISPATCH_COOLDOWN_SECONDS / oniricRate;
   }
 
+  private createSurvivalFirearmModel(firearmId: SurvivalFirearmId): THREE.Group {
+    const definition = SURVIVAL_FIREARM_DEFS[firearmId];
+    const gun = new THREE.Group();
+    gun.name = 'survival_firearm_model_' + firearmId;
+    const dark = new THREE.MeshStandardMaterial({ color: 0x111827, metalness: 0.72, roughness: 0.36 });
+    const metal = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.82, roughness: 0.24 });
+    const accent = new THREE.MeshStandardMaterial({
+      color: definition.color, emissive: definition.color, emissiveIntensity: 0.34, metalness: 0.54, roughness: 0.28,
+    });
+    const glow = new THREE.MeshStandardMaterial({
+      color: definition.color, emissive: definition.color, emissiveIntensity: 1.15, metalness: 0.22, roughness: 0.2,
+    });
+    const addBox = (width: number, height: number, depth: number, x: number, y: number, z: number,
+      material: THREE.Material = dark): THREE.Mesh => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      gun.add(mesh);
+      return mesh;
+    };
+    const addCylinder = (radiusTop: number, radiusBottom: number, length: number, x: number, y: number, z: number,
+      material: THREE.Material = metal, segments = 9): THREE.Mesh => {
+      const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radiusTop, radiusBottom, length, segments), material);
+      mesh.rotation.x = Math.PI / 2;
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      gun.add(mesh);
+      return mesh;
+    };
+    const addGrip = () => {
+      const grip = addBox(0.13, 0.25, 0.17, 0.015, -0.17, -0.13, dark);
+      grip.rotation.x = -0.20;
+      addBox(0.15, 0.045, 0.18, 0.015, -0.29, -0.16, metal);
+    };
+    const addStock = () => addBox(0.18, 0.13, 0.30, 0, -0.015, -0.48, dark);
+    const addRail = (length = 0.38) => addBox(0.08, 0.055, length, 0, 0.12, 0.03, metal);
+    const archetype = definition.archetype;
+
+    switch (archetype) {
+      case 'pistol':
+        addBox(0.19, 0.14, 0.54, 0, 0.025, 0.02, metal);
+        addBox(0.17, 0.075, 0.40, 0, 0.105, -0.01, dark);
+        addCylinder(0.038, 0.038, 0.30, 0, 0.025, 0.43, accent, 8);
+        addGrip();
+        addBox(0.20, 0.045, 0.18, 0, 0.005, -0.31, dark);
+        break;
+      case 'smg':
+        addBox(0.22, 0.16, 0.58, 0, 0.02, 0.02, dark);
+        addBox(0.20, 0.06, 0.42, 0, 0.11, 0.02, metal);
+        addCylinder(0.034, 0.04, 0.40, 0, 0.02, 0.49, accent, 8);
+        addStock();
+        addGrip();
+        addBox(0.055, 0.20, 0.13, 0, -0.02, 0.09, metal);
+        break;
+      case 'rifle':
+        addBox(0.22, 0.16, 0.70, 0, 0.02, 0.00, dark);
+        addBox(0.18, 0.105, 0.48, 0, 0.025, 0.40, metal);
+        addCylinder(0.032, 0.046, 0.56, 0, 0.035, 0.87, accent, 8);
+        addRail(0.58);
+        addBox(0.18, 0.12, 0.20, 0, 0.19, 0.12, accent);
+        addGrip();
+        addStock();
+        break;
+      case 'shotgun':
+        addBox(0.23, 0.15, 0.56, 0, 0.02, 0.00, dark);
+        addCylinder(0.038, 0.042, 0.74, 0, 0.055, 0.62, accent, 9);
+        addCylinder(0.050, 0.052, 0.64, 0, -0.055, 0.56, metal, 9);
+        addBox(0.22, 0.09, 0.26, 0, -0.055, 0.32, dark);
+        addGrip();
+        addStock();
+        break;
+      case 'heavy-rifle':
+        addBox(0.25, 0.18, 0.72, 0, 0.02, 0.00, dark);
+        addBox(0.20, 0.10, 0.46, 0, -0.005, 0.42, metal);
+        addCylinder(0.052, 0.065, 0.88, 0, 0.045, 0.93, accent, 10);
+        addRail(0.74);
+        addBox(0.20, 0.15, 0.24, 0, 0.22, 0.07, metal);
+        addBox(0.15, 0.09, 0.18, 0, 0.30, 0.07, glow);
+        addGrip();
+        addStock();
+        break;
+      case 'minigun':
+        addBox(0.32, 0.23, 0.48, 0, 0.015, -0.02, dark);
+        addCylinder(0.14, 0.14, 0.13, 0, 0.02, 0.27, accent, 12);
+        for (let row = -1; row <= 1; row++) {
+          for (let column = -1; column <= 1; column++) {
+            if (Math.abs(row) + Math.abs(column) !== 1) continue;
+            addCylinder(0.026, 0.032, 0.82, column * 0.095, 0.02 + row * 0.072, 0.70, metal, 7);
+          }
+        }
+        addGrip();
+        addBox(0.24, 0.10, 0.25, 0, -0.02, -0.42, accent);
+        break;
+      case 'rocket':
+        addCylinder(0.13, 0.13, 1.08, 0, 0.02, 0.04, accent, 12);
+        addCylinder(0.17, 0.17, 0.16, 0, 0.02, -0.48, dark, 12);
+        addCylinder(0.115, 0.115, 0.16, 0, 0.02, 0.62, metal, 10);
+        for (let index = 0; index < 4; index++) {
+          const angle = index * Math.PI / 2;
+          const fin = addBox(0.045, 0.20, 0.22, Math.cos(angle) * 0.13, Math.sin(angle) * 0.13, -0.36, dark);
+          fin.rotation.z = angle;
+        }
+        addBox(0.24, 0.10, 0.28, 0, -0.20, -0.04, dark);
+        break;
+      case 'flame':
+        addBox(0.22, 0.17, 0.58, 0, 0.02, 0.02, dark);
+        const fuelTank = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.42, 10), accent);
+        fuelTank.rotation.z = Math.PI / 2;
+        fuelTank.position.set(-0.20, 0.04, -0.18);
+        fuelTank.castShadow = true;
+        gun.add(fuelTank);
+        addCylinder(0.065, 0.105, 0.46, 0, 0.025, 0.52, metal, 9);
+        addCylinder(0.085, 0.055, 0.16, 0, 0.025, 0.82, glow, 9);
+        addGrip();
+        addStock();
+        break;
+      case 'plasma':
+        addBox(0.25, 0.17, 0.62, 0, 0.02, 0.02, dark);
+        addBox(0.21, 0.10, 0.42, 0, 0.12, 0.08, metal);
+        addCylinder(0.07, 0.07, 0.38, 0, 0.03, 0.48, glow, 10);
+        addCylinder(0.12, 0.12, 0.10, 0, 0.03, 0.70, accent, 12);
+        for (const side of [-1, 1]) {
+          const coil = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.025, 6, 12), glow);
+          coil.position.set(side * 0.15, 0.04, 0.12);
+          coil.rotation.y = Math.PI / 2;
+          gun.add(coil);
+        }
+        addGrip();
+        addStock();
+        break;
+      case 'gauss':
+        addBox(0.22, 0.15, 0.88, 0, 0.02, 0.00, dark);
+        addBox(0.055, 0.09, 1.05, -0.10, 0.045, 0.46, accent);
+        addBox(0.055, 0.09, 1.05, 0.10, 0.045, 0.46, accent);
+        addCylinder(0.042, 0.05, 1.12, 0, 0.04, 0.95, glow, 9);
+        addBox(0.18, 0.09, 0.22, 0, 0.18, 0.03, metal);
+        addBox(0.14, 0.07, 0.18, 0, 0.26, 0.03, glow);
+        addGrip();
+        addStock();
+        break;
+      default:
+        addBox(0.20, 0.15, 0.62, 0, 0.02, 0, dark);
+        addCylinder(0.04, 0.04, 0.42, 0, 0.02, 0.48, accent);
+        addGrip();
+        break;
+    }
+    return gun;
+  }
+
   private updateHeldSurvivalFirearmVisual(): void {
     if (!this.playerGroup) return;
     const previous = this.playerGroup.getObjectByName('survival_primary_firearm');
@@ -10072,63 +10107,15 @@ export class PaleciakiGameEngine {
       this.playerGroup.remove(previous);
       this.disposeTemporaryObject(previous);
     }
-    const definition = SURVIVAL_FIREARM_DEFS[this.survivalFirearm.id];
-    const gun = new THREE.Group();
+    const gun = this.createSurvivalFirearmModel(this.survivalFirearm.id);
     gun.name = 'survival_primary_firearm';
-    const dark = new THREE.MeshStandardMaterial({ color: 0x1f2937, metalness: 0.72, roughness: 0.34 });
-    const accent = new THREE.MeshStandardMaterial({ color: definition.color, emissive: definition.color, emissiveIntensity: 0.22, metalness: 0.45, roughness: 0.32 });
-    const receiver = new THREE.Mesh(new THREE.BoxGeometry(definition.archetype === 'rocket' || definition.archetype === 'minigun' ? 0.24 : 0.17, 0.16, definition.archetype === 'pistol' ? 0.42 : 0.72), dark);
-    receiver.position.set(0, 0, 0.04);
-    gun.add(receiver);
-    const grip = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.23, 0.15), dark);
-    grip.position.set(0, -0.17, -0.08);
-    grip.rotation.x = -0.18;
-    gun.add(grip);
-    if (definition.archetype === 'rocket') {
-      const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.86, 10), accent);
-      tube.rotation.x = Math.PI / 2;
-      tube.position.z = 0.38;
-      gun.add(tube);
-      const rear = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.12, 10), dark);
-      rear.rotation.x = Math.PI / 2;
-      rear.position.z = -0.12;
-      gun.add(rear);
-    } else if (definition.archetype === 'flame') {
-      const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.42, 9), accent);
-      tank.rotation.z = Math.PI / 2;
-      tank.position.set(-0.16, 0.02, -0.12);
-      gun.add(tank);
-      const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.11, 0.34, 8), dark);
-      nozzle.rotation.x = Math.PI / 2;
-      nozzle.position.z = 0.45;
-      gun.add(nozzle);
-    } else {
-      const barrelLength = definition.archetype === 'pistol' ? 0.34 : definition.archetype === 'shotgun' || definition.archetype === 'gauss' ? 0.88 : 0.68;
-      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.052, barrelLength, 8), accent);
-      barrel.rotation.x = Math.PI / 2;
-      barrel.position.z = 0.28 + barrelLength * 0.38;
-      gun.add(barrel);
-      if (definition.archetype === 'minigun') {
-        for (let index = 0; index < 4; index++) {
-          const offset = (index - 1.5) * 0.075;
-          const muzzle = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.025, 0.66, 6), dark);
-          muzzle.rotation.x = Math.PI / 2;
-          muzzle.position.set(offset, 0.05, 0.52);
-          gun.add(muzzle);
-        }
-      }
-      if (definition.archetype === 'plasma' || definition.archetype === 'gauss') {
-        const sight = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.12, 0.14), accent);
-        sight.position.set(0, 0.13, 0.02);
-        gun.add(sight);
-      }
-    }
+    gun.scale.setScalar(0.72);
     gun.position.set(0, -0.36, 0.18);
     gun.rotation.set(-0.05, 0, 0.03);
     (this.rightArm ?? this.playerGroup).add(gun);
   }
 
-  private clearSurvivalFirearmDrops(): void {
+  private clearSurvivalFirearmDrops(): void {  private clearSurvivalFirearmDrops(): void {
     for (const drop of this.survivalFirearmDrops) {
       this.levelRoot.remove(drop.mesh);
       this.disposeTemporaryObject(drop.mesh);
@@ -10141,69 +10128,34 @@ export class PaleciakiGameEngine {
     const group = new THREE.Group();
     group.name = 'firearm_drop_' + firearmId;
     const color = new THREE.Color(definition.color);
-    const baseMaterial = new THREE.MeshStandardMaterial({ color: 0x101827, metalness: 0.5, roughness: 0.42, emissive: color, emissiveIntensity: 0.12 });
+    const baseMaterial = new THREE.MeshStandardMaterial({
+      color: 0x101827, metalness: 0.58, roughness: 0.38, emissive: color, emissiveIntensity: 0.15,
+    });
     const base = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.72, 0.12, 24), baseMaterial);
     base.position.y = 0.06;
+    base.castShadow = true;
+    base.receiveShadow = true;
     group.add(base);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.035, 8, 28), new THREE.MeshBasicMaterial({ color: definition.color, transparent: true, opacity: 0.92 }));
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.035, 8, 28),
+      new THREE.MeshBasicMaterial({ color: definition.color, transparent: true, opacity: 0.92 }));
     ring.rotation.x = Math.PI / 2;
     ring.position.y = 0.14;
     group.add(ring);
 
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 256;
-    const context = canvas.getContext('2d');
-    if (context) {
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      context.fillStyle = 'rgba(4, 12, 24, 0.94)';
-      context.fillRect(12, 12, 488, 232);
-      context.strokeStyle = '#' + definition.color.toString(16).padStart(6, '0');
-      context.lineWidth = 7;
-      context.strokeRect(14, 14, 484, 232);
-      context.lineCap = 'round';
-      context.lineJoin = 'round';
-      context.fillStyle = '#' + definition.color.toString(16).padStart(6, '0');
-      context.strokeStyle = '#' + definition.color.toString(16).padStart(6, '0');
-      const y = 104;
-      switch (definition.archetype) {
-        case 'smg':
-          context.fillRect(110, y - 17, 235, 34); context.fillRect(175, y + 16, 42, 52); context.fillRect(346, y - 9, 38, 18); context.fillRect(75, y - 7, 38, 14); break;
-        case 'rifle':
-          context.fillRect(92, y - 16, 270, 32); context.fillRect(164, y + 13, 38, 54); context.fillRect(362, y - 5, 82, 10); context.fillRect(52, y - 8, 48, 16); context.fillRect(225, y - 38, 54, 18); break;
-        case 'shotgun':
-          context.fillRect(80, y - 20, 290, 40); context.fillRect(160, y + 18, 42, 52); context.fillRect(368, y - 12, 90, 24); context.fillRect(56, y - 11, 42, 22); break;
-        case 'heavy-rifle':
-          context.fillRect(85, y - 18, 270, 36); context.fillRect(150, y + 15, 45, 55); context.fillRect(354, y - 6, 115, 12); context.fillRect(224, y - 46, 76, 22); break;
-        case 'minigun':
-          context.fillRect(125, y - 22, 190, 44); context.fillRect(310, y - 5, 130, 10); context.fillRect(310, y + 5, 130, 10); context.fillRect(310, y - 15, 130, 10); context.fillRect(310, y + 15, 130, 10); context.fillRect(170, y + 20, 46, 50); break;
-        case 'rocket':
-          context.fillRect(88, y - 28, 285, 56); context.fillRect(360, y - 18, 92, 36); context.fillRect(140, y + 27, 54, 50); context.beginPath(); context.moveTo(452, y - 30); context.lineTo(490, y); context.lineTo(452, y + 30); context.fill(); break;
-        case 'flame':
-          context.fillRect(85, y - 23, 210, 46); context.fillRect(280, y - 12, 120, 24); context.fillRect(145, y + 22, 44, 55); context.fillRect(100, y - 44, 65, 20); break;
-        case 'plasma':
-          context.fillRect(82, y - 20, 280, 40); context.fillRect(170, y + 18, 42, 56); context.fillRect(365, y - 12, 62, 24); context.beginPath(); context.arc(245, y - 30, 19, 0, Math.PI * 2); context.fill(); break;
-        case 'gauss':
-          context.fillRect(70, y - 11, 330, 22); context.fillRect(400, y - 5, 72, 10); context.fillRect(135, y + 12, 46, 48); context.fillRect(235, y - 30, 70, 16); break;
-        default:
-          context.fillRect(140, y - 18, 180, 36); context.fillRect(185, y + 18, 40, 42); context.fillRect(320, y - 6, 70, 12); break;
-      }
-      context.fillStyle = '#f8fafc';
-      context.font = '900 27px system-ui, sans-serif';
-      context.textAlign = 'center';
-      context.fillText(definition.name.toUpperCase(), 256, 220, 460);
-    }
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.userData.disposeOnObjectCleanup = true;
-    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false, toneMapped: false }));
-    sprite.scale.set(2.25, 1.12, 1);
-    sprite.position.set(0, 1.42, 0);
-    group.add(sprite);
+    const weaponModel = this.createSurvivalFirearmModel(firearmId);
+    weaponModel.position.set(0, 0.36, 0);
+    weaponModel.scale.setScalar(1.24);
+    weaponModel.rotation.set(-0.24, -0.38, 0.12);
+    group.add(weaponModel);
+
+    const pickupGlow = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6),
+      new THREE.MeshBasicMaterial({ color: definition.color, transparent: true, opacity: 0.9 }));
+    pickupGlow.position.set(0, 0.72, 0.58);
+    group.add(pickupGlow);
     return group;
   }
 
-  private spawnSurvivalFirearmDrop(x: number, y: number, z: number, firearmId: SurvivalFirearmId, isPityDrop = false): void {
+  private spawnSurvivalFirearmDrop(  private spawnSurvivalFirearmDrop(x: number, y: number, z: number, firearmId: SurvivalFirearmId, isPityDrop = false): void {
     const definition = SURVIVAL_FIREARM_DEFS[firearmId];
     if (this.survivalFirearmDrops.length >= 3) {
       const oldest = this.survivalFirearmDrops.shift();
@@ -10327,6 +10279,7 @@ export class PaleciakiGameEngine {
       this.emitFloatingToast('✦ KONTRATAK! NASTĘPNY STRZAŁ +1', this.playerPos.x, this.playerPos.y + 1.25, this.playerPos.z, 'combo');
     }
     const spreadSeed = firearm.shotCounter * 0.37;
+    const projectileLifeSeconds = definition.rangeMeters / Math.max(0.1, definition.projectileSpeed);
     for (let index = 0; index < pelletCount; index++) {
       const lane = pelletCount <= 1 ? 0 : (index / (pelletCount - 1)) * 2 - 1;
       const randomSpread = (Math.random() - 0.5) * 0.42;
@@ -10364,8 +10317,10 @@ export class PaleciakiGameEngine {
       this.projectiles.push({
         mesh,
         vel: direction.multiplyScalar(definition.projectileSpeed),
-        life: definition.projectileLifeSeconds,
-        maxLife: definition.projectileLifeSeconds,
+        life: projectileLifeSeconds,
+        maxLife: projectileLifeSeconds,
+        maxRangeMeters: definition.rangeMeters,
+        travelledDistance: 0,
         damage,
         pierce: definition.pierce,
         aoeRadius: definition.aoeRadius > 0 ? definition.aoeRadius : undefined,
@@ -12775,24 +12730,7 @@ export class PaleciakiGameEngine {
           '🎲',
         );
       }
-      case 'weapon_draft': {
-        const weaponOptions = this.rollSurvivalUpgradeOptions().filter((option) =>
-          option.id.startsWith('weapon_unlock:') ||
-          option.id.startsWith('weapon_upgrade:') ||
-          option.id.startsWith('weapon_evolve:')
-        );
-        if (weaponOptions.length > 0) {
-          this.survivalPendingOptions = weaponOptions;
-          const selected = weaponOptions[Math.floor(Math.random() * weaponOptions.length)];
-          this.survivalChaosRouletteLastResult = { kind: outcome, title: selected.title, icon: selected.icon };
-          this.survivalChaosRoulettePending = false;
-          this.emitFloatingToast('🎰 SKRZYNIA BRONI: ' + selected.title, this.playerPos.x, this.playerPos.y + 2.1, this.playerPos.z, 'combo');
-          return this.chooseSurvivalUpgrade(selected.id);
-        }
-        const count = this.triggerSurvivalXpRain();
-        return finishSpin('MAGAZYN BRONI PUSTY • XP', 'Nie było dostępnej nowej broni ani ulepszenia. Zamiast tego automat wydał ' + count + ' kryształów XP.', '🔧');
-      }
-      default:
+      default:      default:
         this.activatePerk('crimson_burst', 0);
         return finishSpin('NIEZNANY ŁADUNEK', 'Automat wyrzucił awaryjny wybuch. Reklamacje przyjmujemy na bramie 404.', '💥');
     }
@@ -17650,7 +17588,16 @@ export class PaleciakiGameEngine {
           this.playerPos.z + Math.sin(orbitAngle) * radius
         );
       } else {
-        p.mesh.position.addScaledVector(p.vel, dt);
+        const projectileSpeed = p.vel.length();
+        const frameDistance = p.maxRangeMeters !== undefined
+          ? Math.min(projectileSpeed * dt, Math.max(0, p.maxRangeMeters - (p.travelledDistance ?? 0)))
+          : projectileSpeed * dt;
+        const movementSeconds = projectileSpeed > 0.0001 ? frameDistance / projectileSpeed : dt;
+        p.mesh.position.addScaledVector(p.vel, movementSeconds);
+        if (p.maxRangeMeters !== undefined) {
+          p.travelledDistance = (p.travelledDistance ?? 0) + frameDistance;
+          if (p.travelledDistance >= p.maxRangeMeters - 0.0001) p.life = 0;
+        }
       }
       if (p.spinSpeed) {
         p.mesh.rotation.y += p.spinSpeed * dt;
