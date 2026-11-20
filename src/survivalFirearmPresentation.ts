@@ -113,6 +113,8 @@ const smoothstep = (value: number): number => {
   return t * t * (3 - 2 * t);
 };
 
+const cleanOffset = (value: number): number => Math.abs(value) < 1e-9 ? 0 : value;
+
 export function getSurvivalFirearmReloadPose(
   archetype: SurvivalFirearmPresentationArchetype,
   progress: number,
@@ -126,13 +128,13 @@ export function getSurvivalFirearmReloadPose(
   const pumpPhase = Math.sin(Math.PI * p);
 
   return {
-    magazineOffsetY: -profile.magazineDrop * magazineMotion,
+    magazineOffsetY: cleanOffset(-profile.magazineDrop * magazineMotion),
     magazineVisible: profile.magazineDrop <= 0 || p < 0.28 || p > 0.58,
-    boltOffsetZ: profile.boltTravel * boltPhase,
-    pumpOffsetZ: profile.pumpTravel * pumpPhase,
-    rocketCellOffsetZ: profile.rocketCellTravel * magazineMotion,
-    tankValveRotation: profile.tankValveTurn * Math.sin(Math.PI * p),
-    energyCellOffsetY: -profile.energyCellDrop * magazineMotion,
+    boltOffsetZ: cleanOffset(profile.boltTravel * boltPhase),
+    pumpOffsetZ: cleanOffset(profile.pumpTravel * pumpPhase),
+    rocketCellOffsetZ: cleanOffset(profile.rocketCellTravel * magazineMotion),
+    tankValveRotation: cleanOffset(profile.tankValveTurn * Math.sin(Math.PI * p)),
+    energyCellOffsetY: cleanOffset(-profile.energyCellDrop * magazineMotion),
     coilPulse: Math.sin(Math.PI * p),
     rotorBrake: profile.rotorBrake && p > 0.1 && p < 0.9,
   };
