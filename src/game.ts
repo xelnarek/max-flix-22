@@ -2259,8 +2259,12 @@ export class PaleciakiGameEngine {
     try {
       const gltf = await loadGobkitModel(modelId);
       // Match the archetype and mesh captured before awaiting the asset request.
+      // If defeat happened during the load, still replace the fallback while its
+      // death animation is visible; resumeEnemyAnimationAfterModelAttach starts Death.
+      const deathVisualExpired = enemy.state === 'defeated' &&
+        !(Number.isFinite(enemy.deathVisualTimer) && (enemy.deathVisualTimer as number) > 0);
       if (!this.enemies.includes(enemy) || enemy.mesh !== mesh || enemy.type !== requestedType ||
-          mesh.parent !== this.levelRoot || enemy.state === 'defeated') return;
+          mesh.parent !== this.levelRoot || deathVisualExpired) return;
       const root = cloneGobkitModel(gltf);
       const visualProfile = ENEMY_VISUAL_PROFILES[requestedType];
       fitGobkitModel(root, visualProfile.targetHeight, this.threeRenderer?.capabilities.getMaxAnisotropy() ?? 1, gltf.scene);
@@ -2451,7 +2455,7 @@ export class PaleciakiGameEngine {
 
       const advanceMixer = shouldAdvanceActorAnimation(interval, accumulatedDt, forceAnimationUpdate);
       if (!advanceMixer) {
-        // Keep the physical origin unchanged: the next LOD tick measures the
+        // Keep the physical origin unchanged: the next scheduled animation update measures the
         // complete displacement over the accumulated animation interval.
         track.animationAccumulator = accumulatedDt;
         continue;
