@@ -2899,13 +2899,14 @@ class PaleciakiScene extends xb.Script {
       if (owningSegment) setActiveMobileSegment(owningSegment.id);
       ensureMenuTabVisible(selectedTab);
 
-      // A newly selected section must open at its first item. Restoring an old
-      // scroll offset for a long panel could hide its heading and leave a large
-      // apparently empty area above the remaining content on mobile.
+      // Clear the destination before panel sync: syncMenuPanelPresentation restores
+      // scrollTop immediately. Clearing after it would leave the stale offset active
+      // for this frame and make the campaign board appear far below an empty viewport.
       if (changingTab) menuScrollMemory.clear(targetId);
 
       // The selected section owns the accent color and mode-specific launch action.
       syncMenuPanelPresentation(targetId);
+      if (changingTab && menuContentArea) menuContentArea.scrollTop = 0;
 
       if (targetId === 'tab-leaderboard') {
         leaderboardHasBeenOpened = true;
