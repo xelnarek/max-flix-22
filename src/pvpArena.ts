@@ -332,6 +332,75 @@ function firstProjectileObstacleHit(
   return null;
 }
 
+function recordPvpFirearmExplosion(
+  state: PvpArenaState,
+  projectile: PvpProjectile,
+  x: number,
+  y: number,
+  z: number,
+): void {
+  if (!projectile.firearmId) return;
+  state.firearmExplosionEvents.push({
+    id: ++state.firearmExplosionSequence,
+    ownerSlot: projectile.ownerSlot,
+    firearmId: projectile.firearmId,
+    x,
+    y,
+    z,
+    color: projectile.color,
+  });
+}
+
+function applyPvpProjectileSplashDamage(
+  state: PvpArenaState,
+  projectile: PvpProjectile,
+  shooter: PvpPlayerState,
+  target: PvpPlayerState,
+  impactX: number,
+  impactZ: number,
+): number {
+  const radius = Math.max(0, Number.isFinite(projectile.aoeRadius) ? projectile.aoeRadius ?? 0 : 0);
+  const multiplier = Math.max(0, Number.isFinite(projectile.aoeDamageMultiplier)
+    ? projectile.aoeDamageMultiplier ?? 0
+    : 0);
+  if (radius <= 0 || multiplier <= 0 ||
+    Math.hypot(target.x - impactX, target.z - impactZ) > radius + PVP_PLAYER_RADIUS) return 0;
+
+  let damageRemaining = Math.max(0, Number.isFinite(projectile.damage) ? projectile.damage : 0)
+    * multiplier
+    * getPlayerProgressionBonuses(shooter).damageMultiplier
+    * getPlayerProgressionBonuses(target).damageTakenMultiplier;
+  const actualDamage = Math.min(damageRemaining, target.shieldHp + target.hp);
+  if (actualDamage <= 0) return 0;
+  shooter.damageDealt += actualDamage;
+  target.damageTaken += actualDamage;
+  if (projectile.kind === 'ability') {
+    shooter.abilityDamageDealt += actualDamage;
+    shooter.abilityHits += 1;
+  } else {
+    shooter.primaryDamageDealt += actualDamage;
+    shooter.shotsHit += 1;
+  }
+  if (target.shieldHp > 0) {
+    const absorbed = Math.min(target.shieldHp, damageRemaining);
+    target.shieldHp -= absorbed;
+    damageRemaining -= absorbed;
+  }
+  if (damageRemaining > 0) target.hp = Math.max(0, target.hp - damageRemaining);
+  const event: PvpHitEvent = {
+    id: ++state.hitEventSequence,
+    targetSlot: target.slot,
+    damage: actualDamage,
+    sourceSlot: shooter.slot,
+    x: target.x,
+    z: target.z,
+  };
+  state.lastHitEvent = event;
+  state.hitEvents.push(event);
+  if (target.hp <= 0) handleKnockout(state, shooter.slot);
+  return actualDamage;
+}
+
 export function hasPvpLineOfSight(
   source: PvpPlayerState,
   target: PvpPlayerState,
@@ -839,33 +908,61 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
     }
   }
 
-  // Swept projectile collision prevents fast shots or a delayed server tick from skipping cover.
+  // Swept collision plus server-authoritative vertical ballistics for the grenade launcher.
   for (let i = state.projectiles.length - 1; i >= 0; i--) {
     const proj = state.projectiles[i];
     const startX = proj.x;
+    const startY = proj.y;
     const startZ = proj.z;
+    const startVy = proj.vy ?? 0;
+    const gravity = Math.max(0, Number.isFinite(proj.gravity) ? proj.gravity ?? 0 : 0);
     const travelX = proj.vx * safeDt;
     const travelZ = proj.vz * safeDt;
     const endX = startX + travelX;
     const endZ = startZ + travelZ;
-    proj.life -= safeDt;
+    proj.life = Math.max(0, proj.life - safeDt);
+    if (proj.fuseRemainingSeconds !== undefined) {
+      proj.fuseRemainingSeconds = Math.max(0, proj.fuseRemainingSeconds - safeDt);
+    }
 
-    if (proj.life <= 0) {
+    const heightAtT = (t: number): number =>
+      startY + startVy * safeDt * t - 0.5 * gravity * safeDt * safeDt * t * t;
+    const nextY = gravity > 0 ? heightAtT(1) : startY;
+    proj.vy = gravity > 0 ? startVy - gravity * safeDt : startVy;
+    proj.y = nextY;
+    const fuseExpired = proj.fuseRemainingSeconds !== undefined && proj.fuseRemainingSeconds <= 0;
+    const groundContact = proj.detonateOnGround === true && nextY <= 0.14 && startY > 0.14;
+    const groundDetonation = proj.detonateOnGround === true &&
+      (groundContact || fuseExpired || proj.life <= 0);
+    if (groundContact) proj.y = 0.14;
+
+    if (proj.life <= 0 && !groundDetonation) {
       state.projectiles.splice(i, 1);
       continue;
     }
 
-    const obstacleT = firstProjectileObstacleHit(startX, startZ, endX, endZ, proj.radius, state.obstacles);
+    const obstacleT = firstProjectileObstacleHit(
+      startX,
+      startZ,
+      endX,
+      endZ,
+      proj.radius,
+      state.obstacles,
+      gravity > 0 ? heightAtT : undefined,
+    );
     const targetPlayer = proj.ownerSlot === 'p1' ? state.p2 : state.p1;
     const shooterPlayer = proj.ownerSlot === 'p1' ? state.p1 : state.p2;
     const targetHit = pointSegmentDistanceSq(targetPlayer.x, targetPlayer.z, startX, startZ, endX, endZ);
     const playerHitRadius = PVP_PLAYER_RADIUS + proj.radius;
-    const hitPlayer = targetHit.distanceSq <= playerHitRadius * playerHitRadius;
+    const playerHeight = targetHit.t < 0 ? startY : heightAtT(targetHit.t);
+    const hitPlayer = targetHit.distanceSq <= playerHitRadius * playerHitRadius &&
+      (gravity <= 0 || playerHeight <= 1.7 + proj.radius);
     const playerT = hitPlayer ? targetHit.t : Number.POSITIVE_INFINITY;
 
     if (hitPlayer && (obstacleT === null || playerT <= obstacleT)) {
       proj.x = startX + travelX * playerT;
       proj.z = startZ + travelZ * playerT;
+      proj.y = gravity > 0 ? Math.max(0.12, heightAtT(playerT)) : startY;
       const impactDistance = Math.hypot(targetPlayer.x - proj.x, targetPlayer.z - proj.z);
       const splashMultiplier = (proj.aoeRadius ?? 0) > 0 && impactDistance <= (proj.aoeRadius ?? 0) + PVP_PLAYER_RADIUS
         ? Math.max(0, Number.isFinite(proj.aoeDamageMultiplier) ? proj.aoeDamageMultiplier ?? 0 : 0)
@@ -902,62 +999,38 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
       };
       state.lastHitEvent = hitEvent;
       state.hitEvents.push(hitEvent);
+      if (proj.detonateOnImpact) {
+        recordPvpFirearmExplosion(state, proj, proj.x, proj.y, proj.z);
+      }
 
       proj.pierce--;
-      if (proj.pierce <= 0) state.projectiles.splice(i, 1);
+      if (proj.detonateOnImpact || proj.pierce <= 0) state.projectiles.splice(i, 1);
       if (targetPlayer.hp <= 0) {
         handleKnockout(state, shooterPlayer.slot);
         break;
       }
     } else if (obstacleT !== null) {
-      // Explosive weapons must remain useful against cover: apply a reduced
-      // radial blast when the server-authoritative impact lands near a player.
       const impactX = startX + travelX * obstacleT;
       const impactZ = startZ + travelZ * obstacleT;
-      const blastRadius = Math.max(0, Number.isFinite(proj.aoeRadius) ? proj.aoeRadius ?? 0 : 0);
-      const blastMultiplier = Math.max(0, Number.isFinite(proj.aoeDamageMultiplier) ? proj.aoeDamageMultiplier ?? 0 : 0);
-      const blastDistance = Math.hypot(targetPlayer.x - impactX, targetPlayer.z - impactZ);
-      if (blastRadius > 0 && blastMultiplier > 0 && blastDistance <= blastRadius + PVP_PLAYER_RADIUS) {
-        let damageRemaining = Math.max(0, Number.isFinite(proj.damage) ? proj.damage : 0)
-          * blastMultiplier
-          * getPlayerProgressionBonuses(shooterPlayer).damageMultiplier
-          * getPlayerProgressionBonuses(targetPlayer).damageTakenMultiplier;
-        const actualDamage = Math.min(damageRemaining, targetPlayer.shieldHp + targetPlayer.hp);
-        shooterPlayer.damageDealt += actualDamage;
-        targetPlayer.damageTaken += actualDamage;
-        if (proj.kind === 'ability') {
-          shooterPlayer.abilityDamageDealt += actualDamage;
-          if (actualDamage > 0) shooterPlayer.abilityHits += 1;
-        } else {
-          shooterPlayer.primaryDamageDealt += actualDamage;
-          if (actualDamage > 0) shooterPlayer.shotsHit += 1;
-        }
-        if (targetPlayer.shieldHp > 0) {
-          const absorb = Math.min(targetPlayer.shieldHp, damageRemaining);
-          targetPlayer.shieldHp -= absorb;
-          damageRemaining -= absorb;
-        }
-        if (damageRemaining > 0) targetPlayer.hp = Math.max(0, targetPlayer.hp - damageRemaining);
-        const hitEvent: PvpHitEvent = {
-          id: ++state.hitEventSequence,
-          targetSlot: targetPlayer.slot,
-          damage: actualDamage,
-          sourceSlot: shooterPlayer.slot,
-          x: targetPlayer.x,
-          z: targetPlayer.z,
-        };
-        state.lastHitEvent = hitEvent;
-        state.hitEvents.push(hitEvent);
-        if (targetPlayer.hp <= 0) {
-          state.projectiles.splice(i, 1);
-          handleKnockout(state, shooterPlayer.slot);
-          break;
-        }
+      const impactY = gravity > 0 ? Math.max(0.12, heightAtT(obstacleT)) : startY;
+      if (proj.aoeRadius && proj.aoeRadius > 0) {
+        applyPvpProjectileSplashDamage(state, proj, shooterPlayer, targetPlayer, impactX, impactZ);
       }
+      if (proj.detonateOnImpact) recordPvpFirearmExplosion(state, proj, impactX, impactY, impactZ);
       state.projectiles.splice(i, 1);
+      if (state.status !== 'in_round') break;
     } else {
       proj.x = endX;
       proj.z = endZ;
+      if (groundDetonation) {
+        if (proj.detonateOnGround) {
+          applyPvpProjectileSplashDamage(state, proj, shooterPlayer, targetPlayer, proj.x, proj.z);
+          recordPvpFirearmExplosion(state, proj, proj.x, proj.y, proj.z);
+        }
+        state.projectiles.splice(i, 1);
+        if (state.status !== 'in_round') break;
+        continue;
+      }
       if (
         proj.x < PVP_ARENA_BOUNDS.minX - 2 ||
         proj.x > PVP_ARENA_BOUNDS.maxX + 2 ||
