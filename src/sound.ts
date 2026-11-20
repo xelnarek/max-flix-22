@@ -21,7 +21,7 @@ class SoundEngine {
   private musicBus: GainNode | null = null;
   private effectsBus: GainNode | null = null;
   private lastAttackWhooshAt = -Infinity;
-  private lastFirearmImpactAt: Partial<Record<'pistol' | 'smg' | 'rifle' | 'shotgun' | 'heavy-rifle' | 'minigun' | 'rocket' | 'flame' | 'plasma' | 'gauss', number>> = {};
+  private lastFirearmImpactAt: Partial<Record<'pistol' | 'smg' | 'rifle' | 'shotgun' | 'heavy-rifle' | 'minigun' | 'rocket' | 'flame' | 'plasma' | 'gauss' | 'grenade', number>> = {};
   private settings: AudioSettings = { master: 0.82, music: 0.48, effects: 0.82 };
 
   constructor() {
@@ -886,7 +886,7 @@ class SoundEngine {
   }
 
   /** Short original synthesized report for each firearm class; deliberately distinct from melee whooshes. */
-  public playFirearmShot(archetype: 'pistol' | 'smg' | 'rifle' | 'shotgun' | 'heavy-rifle' | 'minigun' | 'rocket' | 'flame' | 'plasma' | 'gauss') {
+  public playFirearmShot(archetype: 'pistol' | 'smg' | 'rifle' | 'shotgun' | 'heavy-rifle' | 'minigun' | 'rocket' | 'flame' | 'plasma' | 'gauss' | 'grenade') {
     if (this.isMuted) return;
     this.initCtx();
     if (!this.ctx) return;
@@ -902,6 +902,7 @@ class SoundEngine {
       flame: { wave: 'sawtooth' as OscillatorType, start: 390, end: 165, duration: 0.09, volume: 0.065, tick: 0 },
       plasma: { wave: 'sine' as OscillatorType, start: 720, end: 155, duration: 0.15, volume: 0.12, tick: 2140 },
       gauss: { wave: 'sawtooth' as OscillatorType, start: 980, end: 58, duration: 0.19, volume: 0.15, tick: 2480 },
+      grenade: { wave: 'sine' as OscillatorType, start: 68, end: 24, duration: 0.22, volume: 0.18, tick: 430 },
     } as const;
     const profile = profiles[archetype];
     const t = this.ctx.currentTime;
@@ -935,13 +936,13 @@ class SoundEngine {
   }
 
   /** Per-firearm reload handling: a mechanical rack on start and a crisp chamber-ready cue. */
-  public playFirearmReload(archetype: 'pistol' | 'smg' | 'rifle' | 'shotgun' | 'heavy-rifle' | 'minigun' | 'rocket' | 'flame' | 'plasma' | 'gauss', phase: 'start' | 'complete') {
+  public playFirearmReload(archetype: 'pistol' | 'smg' | 'rifle' | 'shotgun' | 'heavy-rifle' | 'minigun' | 'rocket' | 'flame' | 'plasma' | 'gauss' | 'grenade', phase: 'start' | 'complete') {
     if (this.isMuted) return;
     this.initCtx();
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     const bus = this.effectsBus ?? this.ctx.destination;
-    const heavy = archetype === 'rocket' || archetype === 'minigun' || archetype === 'heavy-rifle' || archetype === 'gauss';
+    const heavy = archetype === 'rocket' || archetype === 'grenade' || archetype === 'minigun' || archetype === 'heavy-rifle' || archetype === 'gauss';
     const base = archetype === 'shotgun' ? 115 : heavy ? 82 : archetype === 'plasma' ? 360 : 175;
     const oscillator = this.ctx.createOscillator();
     const envelope = this.ctx.createGain();
@@ -973,23 +974,23 @@ class SoundEngine {
   }
 
   /** Short, weapon-class-specific impact ticks; avoids stacking the generic melee smack on every bullet. */
-  public playFirearmImpact(archetype: 'pistol' | 'smg' | 'rifle' | 'shotgun' | 'heavy-rifle' | 'minigun' | 'rocket' | 'flame' | 'plasma' | 'gauss') {
+  public playFirearmImpact(archetype: 'pistol' | 'smg' | 'rifle' | 'shotgun' | 'heavy-rifle' | 'minigun' | 'rocket' | 'flame' | 'plasma' | 'gauss' | 'grenade') {
     if (this.isMuted) return;
     this.initCtx();
     if (!this.ctx) return;
     const profiles = {
       pistol: [880, 0.045, 0.045], smg: [1180, 0.026, 0.025], rifle: [690, 0.052, 0.04],
       shotgun: [250, 0.095, 0.075], 'heavy-rifle': [420, 0.075, 0.065], minigun: [1420, 0.022, 0.022],
-      rocket: [95, 0.18, 0.12], flame: [520, 0.065, 0.035], plasma: [1540, 0.12, 0.055], gauss: [2100, 0.09, 0.07],
+      rocket: [95, 0.18, 0.12], grenade: [108, 0.23, 0.15], flame: [520, 0.065, 0.035], plasma: [1540, 0.12, 0.055], gauss: [2100, 0.09, 0.07],
     } as const;
     const [frequency, duration, volume] = profiles[archetype];
     const t = this.ctx.currentTime;
-    const minimumGap = archetype === 'shotgun' || archetype === 'rocket' || archetype === 'gauss' ? 0.065 : 0.028;
+    const minimumGap = archetype === 'shotgun' || archetype === 'rocket' || archetype === 'grenade' || archetype === 'gauss' ? 0.065 : 0.028;
     if (t - (this.lastFirearmImpactAt[archetype] ?? -Infinity) < minimumGap) return;
     this.lastFirearmImpactAt[archetype] = t;
     const oscillator = this.ctx.createOscillator();
     const envelope = this.ctx.createGain();
-    oscillator.type = archetype === 'rocket' || archetype === 'shotgun' ? 'sine' : 'triangle';
+    oscillator.type = archetype === 'rocket' || archetype === 'grenade' || archetype === 'shotgun' ? 'sine' : 'triangle';
     oscillator.frequency.setValueAtTime(frequency, t);
     oscillator.frequency.exponentialRampToValueAtTime(Math.max(45, frequency * 0.42), t + duration);
     envelope.gain.setValueAtTime(volume, t);
