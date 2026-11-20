@@ -319,7 +319,7 @@
   }
 }
 
-/* Landscape touch screens fit all eleven sections into two compact rows. */
+/* Landscape touch screens fit all twelve sections into two compact rows. */
 @media (max-height: 560px) and (orientation: landscape) and (pointer: coarse) {
   #title-screen .menu-tabs-bar {
     grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
