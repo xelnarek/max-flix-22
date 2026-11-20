@@ -73,7 +73,8 @@ test('every primary firearm has a unique hard range and that range is enforced i
     assert.match(firearms, new RegExp(id + ': \\{[\\s\\S]*?rangeMeters: ' + range));
   }
   assert.ok(game.includes('firearmRange * this.survivalRangeMultiplier'));
-  assert.ok(game.includes('maxRangeMeters: definition.rangeMeters'));
+  assert.ok(game.includes('maxRangeMeters: effectiveRangeMeters'));
+  assert.ok(game.includes("const effectiveRangeMeters = definition.rangeMeters * (this.gameMode === 'survival' ? this.survivalRangeMultiplier : 1)"));
   assert.ok(game.includes('p.travelledDistance = (p.travelledDistance ?? 0) + frameDistance'));
   assert.ok(game.includes('if (p.travelledDistance >= p.maxRangeMeters - 0.0001) p.life = 0'));
 });
