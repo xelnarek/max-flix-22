@@ -702,7 +702,7 @@ test('all operators use the same shared starting firearm and deliberate primary-
   assert.equal(state.p2.firearmAmmoById[STARTING_SURVIVAL_FIREARM], SURVIVAL_FIREARM_DEFS[STARTING_SURVIVAL_FIREARM].magazineSize);
   const cooldowns = operators.map(id => getPvpOperatorAttackCooldown(id));
   assert.equal(new Set(cooldowns).size, 1, 'operator identity must not change primary weapon cadence');
-  assert.ok(cooldowns[0] >= 2.8 && cooldowns[0] <= 3.2);
+  assert.ok(cooldowns[0] >= 3.7 && cooldowns[0] <= 3.9, 'the slower shared service-pistol cadence must also apply in PvP');
   assert.equal(cooldowns[0], SURVIVAL_FIREARM_DEFS[STARTING_SURVIVAL_FIREARM].fireIntervalSeconds * PVP_FIREARM_COOLDOWN_MULTIPLIER);
   assert.equal(Object.keys(SURVIVAL_FIREARM_DEFS).length, 11);
 });
@@ -802,6 +802,9 @@ test('PvP firearm pickups are real shared-catalog 3D weapon drops with one fair 
   const droppedId = state.firearmDrop.firearmId;
   assert.ok(SURVIVAL_FIREARM_DEFS[droppedId]);
   assert.notEqual(droppedId, STARTING_SURVIVAL_FIREARM);
+  const equallyWeightedDrops = Object.values(SURVIVAL_FIREARM_DEFS).filter((weapon) => weapon.id !== STARTING_SURVIVAL_FIREARM && weapon.dropWeight > 0);
+  assert.equal(equallyWeightedDrops.length, 10);
+  assert.deepEqual([...new Set(equallyWeightedDrops.map((weapon) => weapon.dropWeight))], [1], 'PvP must expose the same equal weapon odds as PvE');
   assert.equal(state.p1.primaryFirearmId, STARTING_SURVIVAL_FIREARM);
   assert.equal(state.p2.primaryFirearmId, STARTING_SURVIVAL_FIREARM);
 
