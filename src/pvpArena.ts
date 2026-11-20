@@ -1,4 +1,5 @@
 import type { CharacterId } from './types.ts';
+import { STARTING_SURVIVAL_FIREARM, SURVIVAL_FIREARM_DEFS, type SurvivalFirearmId } from './survivalFirearms.ts';
 
 export interface PvpVector2 {
   x: number;
@@ -28,6 +29,16 @@ export interface PvpPickup {
 export type PvpPerkType = 'power' | 'sprint' | 'shield' | 'rapid';
 export interface PvpPerkDrop { active: boolean; type: PvpPerkType; x: number; z: number; timeLeft: number; spawnTimer: number; }
 
+export interface PvpFirearmDrop {
+  id: string;
+  firearmId: SurvivalFirearmId;
+  x: number;
+  z: number;
+  active: boolean;
+  timeLeft: number;
+  spawnTimer: number;
+}
+
 export interface PvpProjectile {
   id: string;
   ownerSlot: 'p1' | 'p2';
@@ -43,6 +54,9 @@ export interface PvpProjectile {
   color: number;
   /** Missing on legacy/test fixtures; omitted kind is treated as a standard primary shot. */
   kind?: 'primary' | 'ability';
+  firearmId?: SurvivalFirearmId;
+  aoeRadius?: number;
+  aoeDamageMultiplier?: number;
 }
 
 export interface PvpProgressionBonuses {
@@ -112,6 +126,9 @@ export interface PvpPlayerState extends PvpCombatStats {
   dashCooldownTimer: number;
   attackCooldownTimer: number;
   abilityCooldownTimer: number;
+  primaryFirearmId: SurvivalFirearmId;
+  firearmAmmoById: Record<SurvivalFirearmId, number>;
+  reloadRemainingSeconds: number;
   score: number; // rounds won
   isReady: boolean;
   connected: boolean;
@@ -154,6 +171,7 @@ export interface PvpArenaState {
   obstacles: PvpObstacle[];
   pickup: PvpPickup;
   perkDrop: PvpPerkDrop;
+  firearmDrop: PvpFirearmDrop;
   projectiles: PvpProjectile[];
   hitEventSequence: number;
   hitEvents: PvpHitEvent[];
@@ -169,6 +187,7 @@ export interface PvpInputIntent {
   wantFire?: boolean;
   wantDash?: boolean;
   wantAbility?: boolean;
+  wantReload?: boolean;
 }
 
 /** Normalize untrusted client input at both the network and simulation boundaries. */
@@ -192,6 +211,7 @@ export function sanitizePvpInputIntent(input: Partial<PvpInputIntent> | null | u
     wantFire: input?.wantFire === true,
     wantDash: input?.wantDash === true,
     wantAbility: input?.wantAbility === true,
+    wantReload: input?.wantReload === true,
   };
 }
 
@@ -460,9 +480,12 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
 };
 
 /** Authoritative primary-shot recovery shared by simulation and touch UI. */
-export function getPvpOperatorAttackCooldown(operatorId: CharacterId): number {
-  const cooldown = PVP_OPERATOR_PROFILES[operatorId]?.attackCooldown;
-  return Number.isFinite(cooldown) ? Math.max(0.12, cooldown) : PVP_OPERATOR_PROFILES.marcin.attackCooldown;
+export const PVP_FIREARM_COOLDOWN_MULTIPLIER = 3.6;
+export const PVP_FIREARM_DAMAGE_SCALE = PVP_NORMALIZED_HP / (10 * SURVIVAL_FIREARM_DEFS[STARTING_SURVIVAL_FIREARM].damage);
+
+/** Every operator shares the same firearm cycle; operator identity only changes abilities. */
+export function getPvpOperatorAttackCooldown(_operatorId: CharacterId): number {
+  return SURVIVAL_FIREARM_DEFS[STARTING_SURVIVAL_FIREARM].fireIntervalSeconds * PVP_FIREARM_COOLDOWN_MULTIPLIER;
 }
 
 export function createDefaultPvpObstacles(): PvpObstacle[] {
@@ -483,6 +506,12 @@ export function createDefaultPvpObstacles(): PvpObstacle[] {
     { id: 'pillar_ne', x: 14.0, z: -7.5, width: 2.0, depth: 2.0, height: 3.5, type: 'pillar' },
     { id: 'pillar_se', x: 14.0, z: 7.5, width: 2.0, depth: 2.0, height: 3.5, type: 'pillar' },
   ];
+}
+
+function createPvpFirearmAmmoState(): Record<SurvivalFirearmId, number> {
+  return Object.fromEntries(
+    Object.values(SURVIVAL_FIREARM_DEFS).map((definition) => [definition.id, definition.magazineSize]),
+  ) as Record<SurvivalFirearmId, number>;
 }
 
 export function createInitialPvpPlayer(
@@ -510,6 +539,9 @@ export function createInitialPvpPlayer(
     dashCooldownTimer: 0,
     attackCooldownTimer: 0,
     abilityCooldownTimer: 0,
+    primaryFirearmId: STARTING_SURVIVAL_FIREARM,
+    firearmAmmoById: createPvpFirearmAmmoState(),
+    reloadRemainingSeconds: 0,
     score: 0,
     isReady: false,
     connected: true,
@@ -571,6 +603,7 @@ export function createInitialPvpArenaState(
       respawnTimer: 0,
     },
     perkDrop: { active: false, type: 'power', x: -5, z: -9, timeLeft: 0, spawnTimer: 5.5 },
+    firearmDrop: { id: 'pvp-primary-firearm', firearmId: STARTING_SURVIVAL_FIREARM, x: 0, z: 0, active: false, timeLeft: 0, spawnTimer: 28 },
     projectiles: [],
     hitEventSequence: 0,
     hitEvents: [],
@@ -590,6 +623,8 @@ export function resetPvpRound(state: PvpArenaState) {
   state.p1.dashCooldownTimer = 0;
   state.p1.attackCooldownTimer = 0;
   state.p1.abilityCooldownTimer = 0;
+  state.p1.reloadRemainingSeconds = 0;
+  state.p1.firearmAmmoById[state.p1.primaryFirearmId] = SURVIVAL_FIREARM_DEFS[state.p1.primaryFirearmId].magazineSize;
   state.p1.stunTimer = 0;
   state.p1.isFiring = false;
   state.p1.activePerk = null;
@@ -607,6 +642,8 @@ export function resetPvpRound(state: PvpArenaState) {
   state.p2.dashCooldownTimer = 0;
   state.p2.attackCooldownTimer = 0;
   state.p2.abilityCooldownTimer = 0;
+  state.p2.reloadRemainingSeconds = 0;
+  state.p2.firearmAmmoById[state.p2.primaryFirearmId] = SURVIVAL_FIREARM_DEFS[state.p2.primaryFirearmId].magazineSize;
   state.p2.stunTimer = 0;
   state.p2.isFiring = false;
   state.p2.activePerk = null;
@@ -618,6 +655,9 @@ export function resetPvpRound(state: PvpArenaState) {
   state.perkDrop.active = false;
   state.perkDrop.timeLeft = 0;
   state.perkDrop.spawnTimer = 5.5;
+  state.firearmDrop.active = false;
+  state.firearmDrop.timeLeft = 0;
+  state.firearmDrop.spawnTimer = 5.5;
   state.roundWinner = null;
   state.roundEndTimer = 0;
   state.lastHitEvent = undefined;
@@ -733,6 +773,7 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
   }
   separatePvpPlayers(state);
   updatePvpPerkDrop(state, safeDt);
+  updatePvpFirearmDrop(state, safeDt);
 
   // One fair medkit claim per spawn: nearest eligible player wins. Exact ties
   // alternate by round, so P1 never receives a permanent update-order advantage.
@@ -788,6 +829,7 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
       proj.x = startX + travelX * playerT;
       proj.z = startZ + travelZ * playerT;
       let damageRemaining = Math.max(0, Number.isFinite(proj.damage) ? proj.damage : 0)
+        * (1 + Math.max(0, Number.isFinite(proj.aoeDamageMultiplier) ? proj.aoeDamageMultiplier : 0))
         * getPlayerProgressionBonuses(shooterPlayer).damageMultiplier
         * getPlayerProgressionBonuses(targetPlayer).damageTakenMultiplier;
       const actualDamage = Math.min(damageRemaining, targetPlayer.shieldHp + targetPlayer.hp);
@@ -865,6 +907,13 @@ function stepPlayer(player: PvpPlayerState, input: PvpInputIntent | undefined, s
   // Cooldown updates
   if (player.dashCooldownTimer > 0) player.dashCooldownTimer = Math.max(0, player.dashCooldownTimer - dt);
   if (player.attackCooldownTimer > 0) player.attackCooldownTimer = Math.max(0, player.attackCooldownTimer - dt);
+  if (player.reloadRemainingSeconds > 0) {
+    player.reloadRemainingSeconds = Math.max(0, player.reloadRemainingSeconds - dt);
+    if (player.reloadRemainingSeconds <= 0) {
+      const firearm = SURVIVAL_FIREARM_DEFS[player.primaryFirearmId];
+      player.firearmAmmoById[player.primaryFirearmId] = firearm.magazineSize;
+    }
+  }
   if (player.abilityCooldownTimer > 0) player.abilityCooldownTimer = Math.max(0, player.abilityCooldownTimer - dt);
   if (player.perkTimer > 0) {
     player.perkTimer = Math.max(0, player.perkTimer - dt);
@@ -895,6 +944,7 @@ function stepPlayer(player: PvpPlayerState, input: PvpInputIntent | undefined, s
   player.aimAngle = safeInput.aimAngle;
   player.rot = player.aimAngle;
   player.isFiring = safeInput.isFiring;
+  if (safeInput.wantReload) reloadPvpPrimaryFirearm(player);
 
   // Dash initiation
   if (safeInput.wantDash && !player.isDashing && player.dashCooldownTimer <= 0) {
@@ -961,7 +1011,7 @@ function stepPlayer(player: PvpPlayerState, input: PvpInputIntent | undefined, s
   clampPvpPosition(player);
 
   // Firing primary attack
-  if ((safeInput.wantFire || player.isFiring) && player.attackCooldownTimer <= 0) {
+  if ((safeInput.wantFire || player.isFiring) && player.attackCooldownTimer <= 0 && player.reloadRemainingSeconds <= 0) {
     firePlayerPrimary(player, state);
   }
 }
@@ -1003,36 +1053,124 @@ function updatePvpPerkDrop(state: PvpArenaState, dt: number): void {
   drop.timeLeft = 11;
 }
 
-function firePlayerPrimary(player: PvpPlayerState, state: PvpArenaState) {
-  const profile = PVP_OPERATOR_PROFILES[player.operatorId] || PVP_OPERATOR_PROFILES.marcin;
+function reloadPvpPrimaryFirearm(player: PvpPlayerState): void {
+  const definition = SURVIVAL_FIREARM_DEFS[player.primaryFirearmId];
+  const ammo = player.firearmAmmoById[player.primaryFirearmId] ?? definition.magazineSize;
+  if (player.reloadRemainingSeconds > 0 || ammo >= definition.magazineSize) return;
+  player.reloadRemainingSeconds = definition.reloadSeconds;
+}
+
+function firePlayerPrimary(player: PvpPlayerState, state: PvpArenaState): void {
+  const definition = SURVIVAL_FIREARM_DEFS[player.primaryFirearmId];
+  if (player.reloadRemainingSeconds > 0) return;
+  const ammo = player.firearmAmmoById[player.primaryFirearmId] ?? definition.magazineSize;
+  if (ammo <= 0) {
+    reloadPvpPrimaryFirearm(player);
+    return;
+  }
+
   const rapidMultiplier = player.activePerk === 'rapid' && player.perkTimer > 0 ? PVP_RAPID_FIRE_COOLDOWN_MULTIPLIER : 1;
   const progression = getPlayerProgressionBonuses(player);
-  player.attackCooldownTimer = profile.attackCooldown * rapidMultiplier * progression.cooldownMultiplier;
+  player.attackCooldownTimer = Math.max(
+    0.12,
+    definition.fireIntervalSeconds * PVP_FIREARM_COOLDOWN_MULTIPLIER * rapidMultiplier * progression.cooldownMultiplier,
+  );
   player.shotsFired++;
+  player.firearmAmmoById[player.primaryFirearmId] = Math.max(0, ammo - 1);
 
+  // PvP retains manual timing/aim. Only the weapon profile supplies ballistics.
   const angle = player.aimAngle;
-  const dirX = Math.sin(angle);
-  const dirZ = Math.cos(angle);
-
   const spawnOffset = PVP_PLAYER_RADIUS + 0.35;
-  const spawnX = player.x + dirX * spawnOffset;
-  const spawnZ = player.z + dirZ * spawnOffset;
+  const powerMultiplier = player.activePerk === 'power' && player.perkTimer > 0 ? 1.22 : 1;
+  const projectileLife = definition.rangeMeters / Math.max(0.1, definition.projectileSpeed);
+  const pelletCount = Math.max(1, definition.pellets);
+  const spreadSeed = player.shotsFired * 0.754877666;
+  for (let pellet = 0; pellet < pelletCount; pellet++) {
+    const lane = pelletCount <= 1 ? 0 : (pellet / (pelletCount - 1)) * 2 - 1;
+    const deterministicJitter = Math.sin(spreadSeed + pellet * 12.9898) * 0.18;
+    const shotAngle = angle + lane * definition.spreadRadians + deterministicJitter * definition.spreadRadians;
+    const dirX = Math.sin(shotAngle);
+    const dirZ = Math.cos(shotAngle);
+    state.projectiles.push({
+      id: `proj_${player.slot}_${Date.now()}_${player.shotsFired}_${pellet}`,
+      ownerSlot: player.slot,
+      x: player.x + dirX * spawnOffset,
+      y: 0.6,
+      z: player.z + dirZ * spawnOffset,
+      vx: dirX * definition.projectileSpeed,
+      vz: dirZ * definition.projectileSpeed,
+      radius: Math.max(0.12, definition.projectileRadius * 4.4),
+      damage: definition.damage * PVP_FIREARM_DAMAGE_SCALE * powerMultiplier,
+      life: projectileLife,
+      pierce: Math.max(1, definition.pierce + 1),
+      color: definition.color,
+      kind: 'primary',
+      firearmId: definition.id,
+      aoeRadius: definition.aoeRadius > 0 ? definition.aoeRadius : undefined,
+      aoeDamageMultiplier: definition.aoeDamageMultiplier > 0 ? definition.aoeDamageMultiplier : undefined,
+    });
+  }
 
-  state.projectiles.push({
-    id: `proj_${player.slot}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-    ownerSlot: player.slot,
-    x: spawnX,
-    y: 0.6,
-    z: spawnZ,
-    vx: dirX * profile.projectileSpeed,
-    vz: dirZ * profile.projectileSpeed,
-    radius: profile.projectileRadius,
-    damage: profile.projectileDamage * (player.activePerk === 'power' && player.perkTimer > 0 ? 1.22 : 1),
-    life: 3.0,
-    pierce: 1,
-    color: profile.color,
-    kind: 'primary',
-  });
+  if (player.firearmAmmoById[player.primaryFirearmId] <= 0) reloadPvpPrimaryFirearm(player);
+}
+
+function updatePvpFirearmDrop(state: PvpArenaState, dt: number): void {
+  const drop = state.firearmDrop;
+  if (!drop.active) {
+    drop.spawnTimer = Math.max(0, drop.spawnTimer - dt);
+    if (drop.spawnTimer > 0) return;
+
+    const held = new Set([state.p1.primaryFirearmId, state.p2.primaryFirearmId]);
+    const eligible = Object.values(SURVIVAL_FIREARM_DEFS).filter((weapon) =>
+      weapon.id !== STARTING_SURVIVAL_FIREARM && weapon.dropWeight > 0 && !held.has(weapon.id));
+    if (eligible.length === 0) {
+      drop.spawnTimer = 18;
+      return;
+    }
+    const totalWeight = eligible.reduce((sum, weapon) => sum + weapon.dropWeight, 0);
+    let pick = Math.random() * totalWeight;
+    let selected = eligible[eligible.length - 1]!;
+    for (const weapon of eligible) {
+      pick -= weapon.dropWeight;
+      if (pick < 0) { selected = weapon; break; }
+    }
+    const locations = [{ x: -5, z: -8 }, { x: 5, z: -8 }, { x: -5, z: 8 }, { x: 5, z: 8 }];
+    const location = locations[Math.floor(Math.random() * locations.length)]!;
+    drop.firearmId = selected.id;
+    drop.x = location.x;
+    drop.z = location.z;
+    drop.active = true;
+    drop.timeLeft = 22;
+    drop.spawnTimer = 75;
+    return;
+  }
+
+  drop.timeLeft = Math.max(0, drop.timeLeft - dt);
+  if (drop.timeLeft <= 0) {
+    drop.active = false;
+    drop.spawnTimer = 18;
+    return;
+  }
+
+  const radius = PVP_PLAYER_RADIUS + 0.72;
+  const contenders = ([state.p1, state.p2] as const)
+    .map((player) => ({ player, distance: Math.hypot(player.x - drop.x, player.z - drop.z) }))
+    .filter(({ player, distance }) => player.hp > 0 && distance <= radius)
+    .sort((a, b) => a.distance - b.distance ||
+      (state.round % 2 === 1 ? (a.player.slot === 'p1' ? -1 : 1) : (a.player.slot === 'p2' ? -1 : 1)));
+  const winner = contenders[0]?.player;
+  if (!winner) return;
+
+  winner.primaryFirearmId = drop.firearmId;
+  const definition = SURVIVAL_FIREARM_DEFS[drop.firearmId];
+  if (!Number.isFinite(winner.firearmAmmoById[drop.firearmId])) {
+    winner.firearmAmmoById[drop.firearmId] = definition.magazineSize;
+  }
+  winner.attackCooldownTimer = 0;
+  winner.reloadRemainingSeconds = 0;
+  drop.active = false;
+  drop.timeLeft = 0;
+  drop.spawnTimer = 75;
 }
 
 function triggerPlayerAbility(player: PvpPlayerState, state: PvpArenaState) {
