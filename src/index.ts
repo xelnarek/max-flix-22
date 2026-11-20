@@ -5393,8 +5393,11 @@ class PaleciakiScene extends xb.Script {
 
     const localPlayer = localSlot === 'p1' ? state.p1 : state.p2;
     const primaryDefinition = SURVIVAL_FIREARM_DEFS[localPlayer.primaryFirearmId];
+    const rapidFireMultiplier = localPlayer.activePerk === 'rapid' && localPlayer.perkTimer > 0
+      ? PVP_RAPID_FIRE_COOLDOWN_MULTIPLIER
+      : 1;
     this.pvpFirearmCooldownSeconds = getPvpFirearmAttackCooldown(localPlayer.primaryFirearmId) *
-      (localPlayer.progressionBonuses?.cooldownMultiplier ?? 1);
+      (localPlayer.progressionBonuses?.cooldownMultiplier ?? 1) * rapidFireMultiplier;
     const primaryAmmo = localPlayer.firearmAmmoById[localPlayer.primaryFirearmId] ?? primaryDefinition.magazineSize;
     const isReloading = localPlayer.reloadRemainingSeconds > 0;
     const isCycling = !isReloading && localPlayer.attackCooldownTimer > 0;
