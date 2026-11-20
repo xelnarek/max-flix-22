@@ -53,36 +53,61 @@ jobs:
           name: github-pages
           path: ./dist
 
-      - name: Wait for Pages artifact metadata
-        run: |
-          for attempt in $(seq 1 15); do
-            artifact_response="$(curl --silent --show-error --fail \
-              --request POST \
-              --header "Authorization: Bearer ${ACTIONS_RUNTIME_TOKEN}" \
-              --header "Content-Type: application/json" \
-              "${ACTIONS_RESULTS_URL}/twirp/github.actions.results.api.v1.ArtifactService/ListArtifacts" \
-              --data '{}')" || {
-                echo "Artifact service temporarily unavailable (attempt $attempt/15)."
-                sleep 2
-                continue
-              }
-            artifact_count="$(printf '%s' "$artifact_response" | jq '[.artifacts[]? | select(.name == "github-pages")] | length')"
-            if [ "$artifact_count" = "1" ]; then
-              echo "GitHub Pages artifact is visible to the same Twirp API used by deploy-pages."
-              exit 0
-            fi
-            if [ "$artifact_count" -gt 1 ]; then
-              echo "More than one github-pages artifact is present; refusing an ambiguous deployment." >&2
-              exit 1
-            fi
-            echo "Waiting for Pages artifact indexing (attempt $attempt/15)..."
-            sleep 2
-          done
-          echo "The uploaded Pages artifact is not visible to the deployment artifact service." >&2
-          exit 1
-
       - name: Deploy website
         id: deployment
-        uses: actions/deploy-pages@v5.0.1
-        with:
-          artifact_name: github-pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          artifact_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts")"
+          artifact_count="$(printf '%s' "$artifact_json" | jq '[.artifacts[]? | select(.name == "github-pages" and .expired == false)] | length')"
+          if [ "$artifact_count" != "1" ]; then
+            echo "Expected exactly one unexpired github-pages artifact; found $artifact_count." >&2
+            exit 1
+          fi
+          artifact_id="$(printf '%s' "$artifact_json" | jq -er '[.artifacts[] | select(.name == "github-pages" and .expired == false)][0].id')"
+
+          oidc_response="$(curl --silent --show-error --fail \
+            --header "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL")"
+          oidc_token="$(printf '%s' "$oidc_response" | jq -er '.value')"
+
+          deployment_payload="$(jq -n \
+            --argjson artifact_id "$artifact_id" \
+            --arg pages_build_version "$GITHUB_SHA" \
+            --arg oidc_token "$oidc_token" \
+            '{artifact_id: $artifact_id, environment: "github-pages", pages_build_version: $pages_build_version, oidc_token: $oidc_token}')"
+          deployment_response="$(curl --silent --show-error --fail \
+            --request POST \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --header "X-GitHub-Api-Version: 2026-03-10" \
+            --header "Content-Type: application/json" \
+            --data "$deployment_payload" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/pages/deployments")"
+
+          deployment_id="$(printf '%s' "$deployment_response" | jq -er '.id')"
+          page_url="$(printf '%s' "$deployment_response" | jq -er '.page_url')"
+          status_url="$(printf '%s' "$deployment_response" | jq -er '.status_url')"
+          echo "page_url=$page_url" >> "$GITHUB_OUTPUT"
+          echo "Created GitHub Pages deployment $deployment_id for $GITHUB_SHA."
+
+          for attempt in $(seq 1 60); do
+            status_response="$(curl --silent --show-error --fail \
+              --header "Accept: application/vnd.github+json" \
+              --header "Authorization: Bearer $GH_TOKEN" \
+              --header "X-GitHub-Api-Version: 2026-03-10" \
+              "$status_url")"
+            deployment_status="$(printf '%s' "$status_response" | jq -er '.status')"
+            if [ "$deployment_status" = "succeed" ]; then
+              echo "GitHub Pages deployment succeeded: $page_url"
+              exit 0
+            fi
+            if [ "$deployment_status" = "failure" ] || [ "$deployment_status" = "failed" ] || [ "$deployment_status" = "error" ]; then
+              echo "GitHub Pages deployment failed with status: $deployment_status" >&2
+              exit 1
+            fi
+            echo "GitHub Pages deployment status: $deployment_status (attempt $attempt/60)."
+            sleep 5
+          done
+          echo "Timed out waiting for GitHub Pages deployment $deployment_id." >&2
+          exit 1
