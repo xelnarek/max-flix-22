@@ -20744,7 +20744,6 @@ export class PaleciakiGameEngine {
         if (firearmId) {
           this.spawnSurvivalFirearmDrop(e.x, e.y + 0.08, e.z, firearmId, firearmDrop.isPityDrop || firearmDrop.isGuaranteed);
           this.survivalFirearmDropMissStreak = 0;
-    this.survivalFirearmSoundCooldown = 0;
         } else {
           this.survivalFirearmDropMissStreak = Math.min(5, this.survivalFirearmDropMissStreak + 1);
         }
