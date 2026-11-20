@@ -363,7 +363,8 @@ export function resolveEnemyCrowdOverlaps<T extends MutableEnemySpacingActor>(
       );
 
       for (const other of nearby) {
-        if (other.id <= self.id || other.state === 'defeated') continue;
+        const otherIsActiveCorpse = other.state === 'defeated' && Number.isFinite(other.deathVisualTimer) && (other.deathVisualTimer as number) > 0;
+        if (!otherIsActiveCorpse && (other.state === 'defeated' || other.id <= self.id)) continue;
         if (![other.x, other.z].every(Number.isFinite)) continue;
         // Drones and ground enemies may pass above/below one another.
         if (Number.isFinite(self.y) && Number.isFinite(other.y) &&
