@@ -354,7 +354,9 @@ export function resolveEnemyCrowdOverlaps<T extends MutableEnemySpacingActor>(
     // Refresh between passes so crossing a grid cell cannot hide a contact.
     spatialIndex.rebuild(actors);
     for (const self of actors) {
-      if (self.state === 'defeated' || !Number.isFinite(self.x) || !Number.isFinite(self.z)) continue;
+      const selfIsActiveCorpse = self.state === 'defeated' &&
+        Number.isFinite(self.deathVisualTimer) && (self.deathVisualTimer as number) > 0;
+      if ((self.state === 'defeated' && !selfIsActiveCorpse) || !Number.isFinite(self.x) || !Number.isFinite(self.z)) continue;
       const selfRadius = getEnemyCollisionRadius(self.type ?? '', self.collisionRadius);
       const nearby = spatialIndex.query(
         self.x,
@@ -363,8 +365,15 @@ export function resolveEnemyCrowdOverlaps<T extends MutableEnemySpacingActor>(
       );
 
       for (const other of nearby) {
-        const otherIsActiveCorpse = other.state === 'defeated' && Number.isFinite(other.deathVisualTimer) && (other.deathVisualTimer as number) > 0;
-        if (!otherIsActiveCorpse && (other.state === 'defeated' || other.id <= self.id)) continue;
+        const otherIsActiveCorpse = other.state === 'defeated' &&
+          Number.isFinite(other.deathVisualTimer) && (other.deathVisualTimer as number) > 0;
+        // A corpse never yields to a living actor; the living actor's pass moves
+        // around it. Two overlapping corpses are separated from each other so
+        // simultaneous area-effect kills cannot freeze a stack of models.
+        if (selfIsActiveCorpse && !otherIsActiveCorpse) continue;
+        if (selfIsActiveCorpse && otherIsActiveCorpse && other.id <= self.id) continue;
+        if (!selfIsActiveCorpse && !otherIsActiveCorpse && other.id <= self.id) continue;
+        if (other.state === 'defeated' && !otherIsActiveCorpse) continue;
         if (![other.x, other.z].every(Number.isFinite)) continue;
         // Drones and ground enemies may pass above/below one another.
         if (Number.isFinite(self.y) && Number.isFinite(other.y) &&
@@ -395,8 +404,12 @@ export function resolveEnemyCrowdOverlaps<T extends MutableEnemySpacingActor>(
         const otherMass = otherRadius * otherRadius;
         const totalMass = Math.max(1e-5, selfMass + otherMass);
         // The smaller body yields more; large bosses and vehicles stay planted.
-        const selfShare = otherMass / totalMass;
-        const otherShare = otherIsActiveCorpse ? 0 : selfMass / totalMass;
+        const selfShare = selfIsActiveCorpse && otherIsActiveCorpse
+          ? otherMass / totalMass
+          : otherIsActiveCorpse ? 1 : otherMass / totalMass;
+        const otherShare = selfIsActiveCorpse && otherIsActiveCorpse
+          ? selfMass / totalMass
+          : otherIsActiveCorpse ? 0 : selfMass / totalMass;
         const selfInset = Math.min(selfRadius * 0.72, (maxX - minX) * 0.25, (maxZ - minZ) * 0.25);
         const otherInset = Math.min(otherRadius * 0.72, (maxX - minX) * 0.25, (maxZ - minZ) * 0.25);
 
