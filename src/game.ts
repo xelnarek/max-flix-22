@@ -21139,8 +21139,8 @@ export class PaleciakiGameEngine {
       const firearmBoss = e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' || e.type === 'sebix_m' || e.maxHp >= 16;
       const firearmElite = firearmBoss || e.type === 'elite_walczak_guard' || e.type === 'mutant_gamma_forklift' || e.type === 'radioactive_pip' || e.type === 'cyber_salesman' || e.maxHp >= 4;
       const firearmTier: SurvivalFirearmEnemyTier = firearmBoss ? 'boss' : firearmElite ? 'elite' : 'normal';
-      // Campaign has its own stage clock; Survival's director clock intentionally stays separate.
-      const firearmElapsed = this.gameMode === 'campaign' ? this.activeElapsedSeconds : this.survivalElapsed;
+      // Campaign stages run on the shared Survival simulation clock; use the same elapsed timer in both modes.
+      const firearmElapsed = this.survivalElapsed;
       const firearmSpawnUnlocked = firearmElapsed >= 45 && this.survivalFirearmKillCount >= 8;
       const firearmSpawnAllowed = firearmSpawnUnlocked
         && this.survivalFirearmDrops.length === 0
