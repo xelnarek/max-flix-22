@@ -24,7 +24,7 @@ test('firearm pickups have a unique world silhouette, bobbing timer and direct w
   const game = await read('../src/game.ts');
   assert.match(game, /private createSurvivalFirearmDropVisual\(firearmId: SurvivalFirearmId\)/);
   assert.match(game, /texture\.userData\.disposeOnObjectCleanup = true/);
-  assert.match(game, /survivalFirearmSoundCooldown = Math\\.min\\(0\\.12, definition\\.fireIntervalSeconds \\* 0\\.65\\)/);
+  assert.ok(game.includes('survivalFirearmSoundCooldown = Math.min(0.12, definition.fireIntervalSeconds * 0.65)'));
   assert.match(game, /case 'shotgun':[\s\S]*?context\.fillRect/);
   assert.match(game, /case 'rocket':[\s\S]*?context\.beginPath/);
   assert.match(game, /case 'gauss':[\s\S]*?context\.fillRect/);
@@ -89,35 +89,6 @@ test('Survival HUD exposes the primary firearm, magazine and live reload state s
   assert.match(app, /primaryFirearm\.reloadRemainingSeconds/);
   assert.match(css, /survival-firearm-status/);
   assert.match(css, /survival-firearm-ammo/);
-});
-
-test('each firearm keeps its own magazine and reload progress when swapped out', async () => {
-  const game = await read('../src/game.ts');
-  assert.match(game, /private survivalFirearmStates = new Map<SurvivalFirearmId, SurvivalFirearmState>\(\)/);
-  assert.match(game, /survivalFirearmStates\.set\(this\.survivalFirearm\.id, this\.survivalFirearm\)/);
-  assert.match(game, /const storedFirearmState = this\.survivalFirearmStates\.get\(drop\.firearmId\)/);
-  assert.match(game, /this\.survivalFirearmStates\.clear\(\)/);
-  assert.match(game, /sound\.playFirearmReload\(definition\.archetype, 'start'\)/);
-  assert.match(game, /sound\.playFirearmReload\(definition\.archetype, 'complete'\)/);
-});
-
-test('firearm hits use distinct synthesized impact audio and class-specific hit effects', async () => {
-  const [game, sound] = await Promise.all([read('../src/game.ts'), read('../src/sound.ts')]);
-  assert.match(sound, /public playFirearmReload\(archetype:/);
-  assert.match(sound, /public playFirearmImpact\(archetype:/);
-  assert.match(game, /sound\.playFirearmImpact\(SURVIVAL_FIREARM_DEFS\[p\.firearmId\]\.archetype\)/);
-  for (const archetype of ['shotgun', 'rocket', 'flame', 'plasma', 'gauss', 'heavy-rifle', 'minigun']) {
-    assert.ok(game.includes("case '" + archetype + "':"), 'missing hit feedback: ' + archetype);
-  }
-});
-
-test('fire rate and firing animation are individually tuned for all primary firearms', async () => {
-  const [game, firearms] = await Promise.all([read('../src/game.ts'), read('../src/survivalFirearms.ts')]);
-  assert.match(game, /const recoilAnimationSeconds: Readonly<Record<SurvivalFirearmId, number>>/);
-  for (const id of ['starter_pistol', 'smg_45', 'assault_rifle', 'shotgun_12g', 'battle_rifle', 'minigun', 'rocket_launcher', 'flamethrower', 'plasma_rifle', 'gauss_rifle']) {
-    assert.ok(firearms.includes(id + ':'), 'missing firearm definition: ' + id);
-    assert.ok(game.includes(id + ':'), 'missing firing animation profile: ' + id);
-  }
 });
 
 test('each firearm keeps its own magazine and reload progress when swapped out', async () => {
