@@ -46,7 +46,7 @@ test('rare combat drops use existing perk pickup cleanup and a live protective a
   assert.match(game, /damageSource: 'ability'[\s\S]*?homingTrailColor: 0xffa34a/);
 });
 
-test('eighteen roulette outcomes have concrete handlers for loot, control, weapon draft and risk/reward RNG', async () => {
+test('seventeen roulette outcomes have concrete handlers for loot, control and risk/reward RNG', async () => {
   const [game, roulette, app, css] = await Promise.all([
     read('../src/game.ts'), read('../src/survivalChaosRoulette.ts'), read('../src/index.ts'),
     read('../src/visual-polish.css')
