@@ -828,8 +828,12 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
     if (hitPlayer && (obstacleT === null || playerT <= obstacleT)) {
       proj.x = startX + travelX * playerT;
       proj.z = startZ + travelZ * playerT;
+      const impactDistance = Math.hypot(targetPlayer.x - proj.x, targetPlayer.z - proj.z);
+      const splashMultiplier = (proj.aoeRadius ?? 0) > 0 && impactDistance <= (proj.aoeRadius ?? 0) + PVP_PLAYER_RADIUS
+        ? Math.max(0, Number.isFinite(proj.aoeDamageMultiplier) ? proj.aoeDamageMultiplier ?? 0 : 0)
+        : 0;
       let damageRemaining = Math.max(0, Number.isFinite(proj.damage) ? proj.damage : 0)
-        * (1 + Math.max(0, Number.isFinite(proj.aoeDamageMultiplier) ? proj.aoeDamageMultiplier : 0))
+        * (1 + splashMultiplier)
         * getPlayerProgressionBonuses(shooterPlayer).damageMultiplier
         * getPlayerProgressionBonuses(targetPlayer).damageTakenMultiplier;
       const actualDamage = Math.min(damageRemaining, targetPlayer.shieldHp + targetPlayer.hp);
@@ -868,6 +872,50 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
         break;
       }
     } else if (obstacleT !== null) {
+      // Explosive weapons must remain useful against cover: apply a reduced
+      // radial blast when the server-authoritative impact lands near a player.
+      const impactX = startX + travelX * obstacleT;
+      const impactZ = startZ + travelZ * obstacleT;
+      const blastRadius = Math.max(0, Number.isFinite(proj.aoeRadius) ? proj.aoeRadius ?? 0 : 0);
+      const blastMultiplier = Math.max(0, Number.isFinite(proj.aoeDamageMultiplier) ? proj.aoeDamageMultiplier ?? 0 : 0);
+      const blastDistance = Math.hypot(targetPlayer.x - impactX, targetPlayer.z - impactZ);
+      if (blastRadius > 0 && blastMultiplier > 0 && blastDistance <= blastRadius + PVP_PLAYER_RADIUS) {
+        let damageRemaining = Math.max(0, Number.isFinite(proj.damage) ? proj.damage : 0)
+          * blastMultiplier
+          * getPlayerProgressionBonuses(shooterPlayer).damageMultiplier
+          * getPlayerProgressionBonuses(targetPlayer).damageTakenMultiplier;
+        const actualDamage = Math.min(damageRemaining, targetPlayer.shieldHp + targetPlayer.hp);
+        shooterPlayer.damageDealt += actualDamage;
+        targetPlayer.damageTaken += actualDamage;
+        if (proj.kind === 'ability') {
+          shooterPlayer.abilityDamageDealt += actualDamage;
+          if (actualDamage > 0) shooterPlayer.abilityHits += 1;
+        } else {
+          shooterPlayer.primaryDamageDealt += actualDamage;
+          if (actualDamage > 0) shooterPlayer.shotsHit += 1;
+        }
+        if (targetPlayer.shieldHp > 0) {
+          const absorb = Math.min(targetPlayer.shieldHp, damageRemaining);
+          targetPlayer.shieldHp -= absorb;
+          damageRemaining -= absorb;
+        }
+        if (damageRemaining > 0) targetPlayer.hp = Math.max(0, targetPlayer.hp - damageRemaining);
+        const hitEvent: PvpHitEvent = {
+          id: ++state.hitEventSequence,
+          targetSlot: targetPlayer.slot,
+          damage: actualDamage,
+          sourceSlot: shooterPlayer.slot,
+          x: targetPlayer.x,
+          z: targetPlayer.z,
+        };
+        state.lastHitEvent = hitEvent;
+        state.hitEvents.push(hitEvent);
+        if (targetPlayer.hp <= 0) {
+          state.projectiles.splice(i, 1);
+          handleKnockout(state, shooterPlayer.slot);
+          break;
+        }
+      }
       state.projectiles.splice(i, 1);
     } else {
       proj.x = endX;
