@@ -1,13 +1,5 @@
-export interface SurvivalDraftWeaponState {
-  readonly id: string;
-  readonly level: number;
-  readonly evolved?: boolean;
-}
-
 export interface SurvivalDraftContext {
   readonly stacks?: Readonly<Record<string, number>>;
-  readonly weapons?: readonly SurvivalDraftWeaponState[];
-  readonly evolutions?: readonly string[];
   readonly healthRatio?: number;
   readonly elapsedSeconds?: number;
 }
@@ -17,7 +9,6 @@ export interface SurvivalDraftOption {
 }
 
 type DraftCategory =
-  | 'weapon'
   | 'damage'
   | 'tempo'
   | 'precision'
@@ -35,36 +26,6 @@ interface DraftSynergy {
   readonly evolutionId: string;
   readonly label: string;
 }
-
-const WEAPON_EVOLUTION_PASSIVES: Readonly<Record<string, string>> = Object.freeze({
-  pallet_cannon: 'damage',
-  diamond_saw: 'range',
-  glue_mine: 'magnet',
-  kfc_bomber: 'scavenger',
-  piorun_drone: 'drone',
-  forklift_bolter: 'rapid',
-  scanner_pulse: 'range',
-  orbit_blades: 'armor',
-  calacatta_shards: 'damage',
-  steam_bomb: 'regen',
-  forklift_horn: 'armor',
-  wz_boomerang: 'growth',
-});
-
-const WEAPON_ROLES: Readonly<Record<string, string>> = Object.freeze({
-  pallet_cannon: 'burst',
-  diamond_saw: 'pierce',
-  glue_mine: 'control',
-  kfc_bomber: 'area',
-  piorun_drone: 'homing',
-  forklift_bolter: 'line',
-  scanner_pulse: 'homing',
-  orbit_blades: 'orbit',
-  calacatta_shards: 'fan',
-  steam_bomb: 'control',
-  forklift_horn: 'control',
-  wz_boomerang: 'return',
-});
 
 const SYNERGIES: Readonly<Record<string, readonly DraftSynergy[]>> = Object.freeze({
   critical: [{ partner: 'critical_damage', selfRequired: 3, partnerRequired: 2, evolutionId: 'critical_protocol', label: 'Protokół krytyczny' }],
@@ -133,6 +94,10 @@ const BASE_WEIGHTS: Readonly<Record<string, number>> = Object.freeze({
   shrapnel: 56,
 });
 
+function isLegacyWeaponOffer(id: string): boolean {
+  return id.startsWith('weapon_unlock:') || id.startsWith('weapon_upgrade:') || id.startsWith('weapon_evolve:');
+}
+
 function safeCount(value: number | undefined): number {
   return Number.isFinite(value) ? Math.max(0, Math.floor(value as number)) : 0;
 }
@@ -141,21 +106,8 @@ function getStacks(context: SurvivalDraftContext): Readonly<Record<string, numbe
   return context.stacks || {};
 }
 
-function getEvolutions(context: SurvivalDraftContext): ReadonlySet<string> {
-  return new Set(context.evolutions || []);
-}
-
-function parseWeaponOffer(id: string): { kind: 'unlock' | 'upgrade' | 'evolve'; weaponId: string } | null {
-  for (const kind of ['unlock', 'upgrade', 'evolve'] as const) {
-    const prefix = 'weapon_' + kind + ':';
-    if (id.startsWith(prefix)) return { kind, weaponId: id.slice(prefix.length) };
-  }
-  return null;
-}
-
 function getCategory(id: string): DraftCategory {
-  const weapon = parseWeaponOffer(id);
-  if (weapon || id.startsWith('boss_')) return 'weapon';
+  if (id.startsWith('boss_')) return 'support';
   if (id === 'damage') return 'damage';
   if (id === 'rapid') return 'tempo';
   if (id === 'critical' || id === 'critical_damage') return 'precision';
@@ -210,10 +162,8 @@ function getPairBonus(
   const synergies = SYNERGIES[id] || [];
   if (synergies.length === 0) return 0;
   const stacks = getStacks(context);
-  const evolutions = getEvolutions(context);
   let bestBonus = 0;
   for (const synergy of synergies) {
-    if (evolutions.has(synergy.evolutionId)) continue;
     const partnerCount = safeCount(stacks[synergy.partner]) +
       [...plannedIds].filter((planned) => planned === synergy.partner).length;
     // Do not reward a passive as a "synergy pick" until its other half is
@@ -233,22 +183,7 @@ export function scoreSurvivalDraftOption(
 ): number {
   const stacks = getStacks(context);
   const planned = new Set(plannedIds);
-  const weapon = parseWeaponOffer(id);
-
-  if (weapon) {
-    const ownedWeapon = context.weapons?.find((entry) => entry.id === weapon.weaponId);
-    if (weapon.kind === 'evolve') return 420;
-    if (weapon.kind === 'upgrade') {
-      const level = Math.max(1, Math.min(5, safeCount(ownedWeapon?.level) || 1));
-      return 150 + level * 4 + (level >= 4 ? 12 : 0);
-    }
-    const passive = WEAPON_EVOLUTION_PASSIVES[weapon.weaponId];
-    const passiveStacks = passive ? safeCount(stacks[passive]) : 0;
-    const role = WEAPON_ROLES[weapon.weaponId];
-    const ownedRoles = new Set((context.weapons || []).map((entry) => WEAPON_ROLES[entry.id]).filter(Boolean));
-    const roleBonus = role && !ownedRoles.has(role) ? 14 : -10;
-    return 300 + passiveStacks * 18 + (passiveStacks >= 2 ? 8 : 0) + roleBonus;
-  }
+  if (isLegacyWeaponOffer(id)) return Number.NEGATIVE_INFINITY;
 
   let score = BASE_WEIGHTS[id] ?? 50;
   const stackCount = safeCount(stacks[id]);
@@ -298,20 +233,11 @@ export function selectSurvivalDraftOptions<T extends SurvivalDraftOption>(
       unique.set(option.id, option);
     }
   }
-  const remaining = [...unique.values()];
+  const remaining = [...unique.values()].filter((option) => !isLegacyWeaponOffer(option.id));
   if (remaining.length === 0) return [];
 
   const tieBreak = new Map(remaining.map((option) => [option.id, boundedRandom(random)]));
-  const weaponOffers = remaining.filter((option) => parseWeaponOffer(option.id) !== null);
   const selected: T[] = [];
-
-  if (weaponOffers.length > 0) {
-    weaponOffers.sort((a, b) =>
-      scoreSurvivalDraftOption(b.id, context) - scoreSurvivalDraftOption(a.id, context) ||
-      (tieBreak.get(b.id) || 0) - (tieBreak.get(a.id) || 0),
-    );
-    selected.push(weaponOffers[0]);
-  }
 
   const selectedIds = new Set(selected.map((option) => option.id));
   const chosenCategories = new Map<DraftCategory, number>();
@@ -326,7 +252,7 @@ export function selectSurvivalDraftOptions<T extends SurvivalDraftOption>(
     const plannedIds = selected.map((option) => option.id);
 
     for (const option of remaining) {
-      if (selectedIds.has(option.id) || parseWeaponOffer(option.id)) continue;
+      if (selectedIds.has(option.id)) continue;
       const category = getCategory(option.id);
       const repeatedCategoryCount = chosenCategories.get(category) || 0;
       const diversityPenalty = repeatedCategoryCount * 15;
@@ -355,35 +281,11 @@ export function getSurvivalDraftSynergyHint(
   context: SurvivalDraftContext = {},
   plannedIds: readonly string[] = [],
 ): string | null {
-  const weapon = parseWeaponOffer(id);
-  if (weapon) {
-    const passive = WEAPON_EVOLUTION_PASSIVES[weapon.weaponId];
-    if (weapon.kind === 'unlock') {
-      const alreadyOwned = context.weapons?.some((entry) => entry.id === weapon.weaponId) || false;
-      const passiveStacks = passive ? safeCount(getStacks(context)[passive]) : 0;
-      const passivePlanned = passive ? plannedIds.includes(passive) : false;
-      if (alreadyOwned || !passive || (passiveStacks <= 0 && !passivePlanned)) return null;
-      const source = passivePlanned ? 'wybierasz teraz moduł „' : 'masz już moduł „';
-      return 'SYNERGIA BRONI: ' + source + (PASSIVE_LABELS[passive] || passive) +
-        '”, wymagany do ewolucji tej broni.';
-    }
-
-    if (weapon.kind === 'evolve') {
-      const ownedWeapon = context.weapons?.find((entry) => entry.id === weapon.weaponId);
-      const passiveStacks = passive ? safeCount(getStacks(context)[passive]) : 0;
-      const elapsed = Number.isFinite(context.elapsedSeconds) ? Math.max(0, context.elapsedSeconds as number) : 0;
-      if (!ownedWeapon || ownedWeapon.evolved || ownedWeapon.level < 5 || elapsed < 210 || passiveStacks < 1) {
-        return null;
-      }
-      return 'EWOLUCJA GOTOWA: broń 5/5, wymagany moduł i limit czasu spełnione.';
-    }
-    return null;
-  }
+  if (isLegacyWeaponOffer(id)) return null;
 
   const planned = new Set(plannedIds);
   const synergies = SYNERGIES[id] || [];
   const candidates = synergies
-    .filter((synergy) => !getEvolutions(context).has(synergy.evolutionId))
     .map((synergy) => ({
       synergy,
       progress: getSynergyProgress(id, synergy, context, planned),
