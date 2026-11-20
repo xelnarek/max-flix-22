@@ -349,6 +349,7 @@ function recordPvpFirearmExplosion(
     z,
     color: projectile.color,
   });
+  if (state.firearmExplosionEvents.length > 16) state.firearmExplosionEvents.shift();
 }
 
 function applyPvpProjectileSplashDamage(
@@ -768,7 +769,6 @@ export function resetPvpRound(state: PvpArenaState) {
   state.roundEndTimer = 0;
   state.lastHitEvent = undefined;
   state.hitEvents = [];
-  state.firearmExplosionEvents = [];
   state.countdownTimer = 3.0;
   state.status = 'countdown';
 }
