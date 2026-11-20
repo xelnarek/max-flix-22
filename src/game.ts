@@ -18612,7 +18612,8 @@ export class PaleciakiGameEngine {
 
   public triggerAttack() {
     if (this.state !== 'playing') return;
-    if (this.gameMode !== 'pvp') {
+    const currentGameMode = this.gameMode;
+    if (currentGameMode !== 'pvp') {
       this.fireSurvivalFirearm();
       return;
     }
