@@ -3495,6 +3495,9 @@ class PaleciakiScene extends xb.Script {
     document.getElementById('btn-survival-reload')?.addEventListener('click', () => {
       this.engine.requestSurvivalFirearmReload();
     });
+    document.getElementById('btn-pvp-reload')?.addEventListener('click', () => {
+      this.engine.requestSurvivalFirearmReload();
+    });
 
     document.getElementById('btn-ability')?.addEventListener('click', () => {
       if (this.engine.getGameMode() === 'pvp') {
@@ -5388,6 +5391,48 @@ class PaleciakiScene extends xb.Script {
       else if (state.perkDrop.active) perkStatus.textContent = `KAPSUŁA: ${perkNames[state.perkDrop.type] || 'LOSOWY PERK'} • ZBIERZ NA ARENIE`;
       else perkStatus.textContent = `NOWA KAPSUŁA ZA ${Math.ceil(state.perkDrop.spawnTimer)} s • SPRAWDŹ MAPĘ`;
     }
+
+    const localPlayer = localSlot === 'p1' ? state.p1 : state.p2;
+    const primaryDefinition = SURVIVAL_FIREARM_DEFS[localPlayer.primaryFirearmId];
+    const primaryAmmo = localPlayer.firearmAmmoById[localPlayer.primaryFirearmId] ?? primaryDefinition.magazineSize;
+    const isReloading = localPlayer.reloadRemainingSeconds > 0;
+    const isCycling = !isReloading && localPlayer.attackCooldownTimer > 0;
+    const firearmPanel = document.getElementById('pvp-firearm-panel');
+    const firearmSignature = [
+      localPlayer.primaryFirearmId,
+      primaryAmmo,
+      Math.ceil(localPlayer.reloadRemainingSeconds * 4),
+      Math.ceil(localPlayer.attackCooldownTimer * 4),
+      state.firearmDrop.active ? state.firearmDrop.firearmId : 'waiting',
+      Math.ceil(state.firearmDrop.spawnTimer),
+    ].join(':');
+    if (firearmPanel && firearmPanel.dataset.signature !== firearmSignature) {
+      firearmPanel.dataset.signature = firearmSignature;
+      const firearmName = document.getElementById('pvp-firearm-name');
+      const firearmAmmo = document.getElementById('pvp-firearm-ammo');
+      const firearmAction = document.getElementById('pvp-firearm-action');
+      const firearmAmmoFill = document.getElementById('pvp-firearm-ammo-fill');
+      const reloadButton = document.getElementById('btn-pvp-reload') as HTMLButtonElement | null;
+      const dropStatus = document.getElementById('pvp-firearm-drop-status');
+      if (firearmName) firearmName.textContent = primaryDefinition.shortName.toUpperCase();
+      if (firearmAmmo) firearmAmmo.textContent = isReloading
+        ? `— / ${primaryDefinition.magazineSize}`
+        : `${primaryAmmo} / ${primaryDefinition.magazineSize}`;
+      if (firearmAction) firearmAction.textContent = isReloading
+        ? `PRZEŁADOWANIE ${localPlayer.reloadRemainingSeconds.toFixed(1)} s`
+        : isCycling
+          ? `CYKL ${localPlayer.attackCooldownTimer.toFixed(1)} s`
+          : 'GOTOWY';
+      if (firearmAmmoFill) firearmAmmoFill.style.width = `${Math.max(0, Math.min(100, primaryAmmo / Math.max(1, primaryDefinition.magazineSize) * 100))}%`;
+      if (reloadButton) {
+        reloadButton.disabled = isReloading || primaryAmmo >= primaryDefinition.magazineSize || state.status !== 'in_round';
+        reloadButton.classList.toggle('is-ready', !reloadButton.disabled);
+      }
+      if (dropStatus) dropStatus.textContent = state.firearmDrop.active
+        ? `ZWIADOWCZY ZRZUT • ${SURVIVAL_FIREARM_DEFS[state.firearmDrop.firearmId].shortName.toUpperCase()} • PODNIEŚ NA ARENIE`
+        : `KOLEJNY ZRZUT BRONI ZA ${Math.ceil(state.firearmDrop.spawnTimer)} s`;
+    }
+
     const banner = document.getElementById('pvp-status-banner');
     if (banner) {
       if (state.status === 'countdown') {
