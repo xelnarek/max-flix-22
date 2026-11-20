@@ -824,6 +824,7 @@ export class PaleciakiGameEngine {
   private pvpWantReload = false;
   private pvpLastObservedShotsFired = 0;
   private pvpLastObservedReloading = false;
+  private pvpLastFirearmExplosionId = 0;
   private pvpFirearmDropMesh: THREE.Group | null = null;
   private pvpFirearmDropModelId: SurvivalFirearmId | null = null;
   private pvpFirearmDropLastActive = false;
@@ -3065,6 +3066,7 @@ export class PaleciakiGameEngine {
     this.pvpWantReload = false;
     this.pvpLastObservedShotsFired = 0;
     this.pvpLastObservedReloading = false;
+    this.pvpLastFirearmExplosionId = 0;
     this.pvpFirearmDropLastActive = false;
     this.pvpRemoteFirearmId = null;
     this.survivalFirearm = createStartingSurvivalFirearmState();
@@ -3210,6 +3212,7 @@ export class PaleciakiGameEngine {
     this.pvpWantReload = false;
     this.pvpLastObservedShotsFired = 0;
     this.pvpLastObservedReloading = false;
+    this.pvpLastFirearmExplosionId = 0;
     this.pvpFirearmDropMesh = null;
     this.pvpFirearmDropModelId = null;
     this.pvpFirearmDropLastActive = false;
@@ -3748,6 +3751,13 @@ export class PaleciakiGameEngine {
     if (!currentState) return;
 
     const state = currentState;
+    for (const explosion of state.firearmExplosionEvents ?? []) {
+      if (explosion.id <= this.pvpLastFirearmExplosionId) continue;
+      this.pvpLastFirearmExplosionId = explosion.id;
+      if (explosion.firearmId === 'ballistic_grenade_launcher') {
+        this.spawnBallisticGrenadeDetonationFx(explosion.x, explosion.y, explosion.z, explosion.color);
+      }
+    }
     const local = this.pvpSlot === 'p1' ? state.p1 : state.p2;
     const remote = this.pvpSlot === 'p1' ? state.p2 : state.p1;
 
