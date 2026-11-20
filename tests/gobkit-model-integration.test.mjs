@@ -371,6 +371,11 @@ test('late enemy model attachment resumes Death on the one full rig after the ac
   const defeatPath = handler.slice(defeated, hit);
   assert.match(defeatPath, /this\.enemyPendingAttackUntil\.delete\(enemy\)/);
   assert.match(defeatPath, /this\.requestGobkitAction\(track, 'Death', Math\.max\(0\.1, enemy\.deathVisualTimer \|\| 0\.1\)\)/);
+  const attachStart = game.indexOf('private async attachGobkitEnemyModel');
+  const attachEnd = game.indexOf('private updateGobkitAnimations', attachStart);
+  const attach = game.slice(attachStart, attachEnd);
+  assert.match(attach, /const deathVisualExpired = enemy\.state === 'defeated'/);
+  assert.match(attach, /mesh\.parent !== this\.levelRoot \|\| deathVisualExpired/);
   assert.doesNotMatch(game, /actorLodProxy|actorLodProxyRoot|lockEnemyDeathVisualToSingleRig|shouldUseEnemyVisualLodProxy/);
 });
 
