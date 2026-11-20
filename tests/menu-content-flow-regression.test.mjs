@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const css = await readFile(new URL('../src/menu-final-tuning.css', import.meta.url), 'utf8');
+const css = await readFile(new URL('../src/menu-single-sidebar-repair.css', import.meta.url), 'utf8');
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 
 test('active menu content is anchored to the top instead of being vertically distributed', () => {
