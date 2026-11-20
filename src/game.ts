@@ -58,7 +58,6 @@ import { findFirstProjectileBodyImpact, findFirstProjectileEnemyImpact, type Mut
 import { createEnemyHitReaction, getEnemyHitPulse, getEnemyImpactBurstProfile } from './enemyCombatFeedback.ts';
 import { getEnemyDeathMotionPose, getEnemyDeathMotionProfile } from './enemyDeathMotion.ts';
 import { ENEMY_GAIT_PRESETS, ENEMY_VISUAL_PROFILES } from './enemyVisualProfiles.ts';
-import { createEnemyVisualLodProxy, shouldUseEnemyVisualLodProxy, updateEnemyVisualLodProxy } from './enemyVisualLod.ts';
 import { removeLegacyEnemyBodyVisuals } from './enemyVisualComposition.ts';
 import { addProceduralLimbPose, getProceduralHitPulse, setProceduralJointRotation, setProceduralLimbPose } from './proceduralActorAnimation.ts';
 import { isEffectiveBossLaneDodge, isInsideBossAttackLane, isWithinBossImpactRadius } from './combatTelegraphs.ts';
@@ -1853,7 +1852,6 @@ export class PaleciakiGameEngine {
       // Gobkit clones own their geometry; MakeHuman body/wearable geometry and
       // equipment geometry are cache-shared and must remain available to peers.
       if (
-        object.userData.actorLodSharedGeometry !== true &&
         object.userData.gobkitAsset === true &&
         object.userData.gobkitSharedGeometry !== true
       ) object.geometry.dispose();
@@ -1861,8 +1859,7 @@ export class PaleciakiGameEngine {
       for (const material of materials) {
         if (
           material.userData.makeHumanShared !== true &&
-          material.userData.gobkitSharedMaterial !== true &&
-          material.userData.actorLodSharedMaterial !== true
+          material.userData.gobkitSharedMaterial !== true
         ) material.dispose();
       }
     });
@@ -1892,7 +1889,6 @@ export class PaleciakiGameEngine {
     // attachment. Each overlay owns its own geometry/materials.
     for (const child of [...group.children]) {
       const isActorRoot = child.userData.actorVisualRoot === true ||
-        child.userData.actorLodProxy === true ||
         /^(makehuman|gobkit)-(operator|enemy)-/.test(child.name);
       if (isActorRoot || child.userData.actorRoleSilhouette === true) {
         this.disposeUntrackedActorVisualRoot(child);
@@ -1900,25 +1896,6 @@ export class PaleciakiGameEngine {
       }
     }
     delete group.userData.actorVisualRoot;
-  }
-
-  private installEnemyVisualLodProxy(enemy: EnemyItem, fullRoot: THREE.Group): void {
-    const mesh = enemy.mesh;
-    if (!(mesh instanceof THREE.Group)) return;
-    const previous = mesh.userData.actorLodProxyRoot as THREE.Group | undefined;
-    previous?.removeFromParent();
-    const proxy = createEnemyVisualLodProxy(enemy.type);
-    // Install exactly one representation on the attach frame. The previous
-    // implementation exposed the proxy and the imported rig together until the
-    // next animation tick, producing two overlapping enemy bodies (especially
-    // visible on mobile during a burst of asynchronous GLB completions).
-    const deathVisualLocked = enemy.state === 'defeated' || mesh.userData.actorDeathVisualLocked === true;
-    if (deathVisualLocked) mesh.userData.actorDeathVisualLocked = true;
-    proxy.visible = false;
-    fullRoot.visible = !deathVisualLocked;
-    mesh.add(proxy);
-    mesh.userData.actorLodProxyRoot = proxy;
-    mesh.userData.actorVisualRoot = fullRoot;
   }
 
   /**
@@ -1980,13 +1957,8 @@ export class PaleciakiGameEngine {
 
   private resumeEnemyAnimationAfterModelAttach(enemy: EnemyItem, track: GobkitAnimationTrack): void {
     // A rig can finish loading after its enemy has already been defeated.
-    // In that race, beginEnemyDeathVisual had no track to start the Death clip,
-    // while updateDefeatedEnemyVisual intentionally avoids layering procedural
-    // transforms over a skinned rig. Reconcile the state here before any other
-    // animation priority so the late rig never appears alive or duplicates its LOD.
+    // Restore the correct one-shot reaction before any locomotion or stale attack.
     if (enemy.state === 'defeated') {
-      const mesh = enemy.mesh as THREE.Object3D | undefined;
-      if (mesh) this.lockEnemyDeathVisualToSingleRig(mesh);
       this.enemyPendingAttackUntil.delete(enemy);
       this.requestGobkitAction(track, 'Death', Math.max(0.1, enemy.deathVisualTimer || 0.1));
       return;
@@ -2230,7 +2202,6 @@ export class PaleciakiGameEngine {
       this.removeAttachedActorVisuals(mesh as THREE.Group);
       removeLegacyEnemyBodyVisuals(mesh as THREE.Group, overlays);
       this.installActorVisualRoot(mesh as THREE.Group, actor.root);
-      this.installEnemyVisualLodProxy(enemy, actor.root);
       enemy.legL = undefined;
       enemy.legR = undefined;
       enemy.armL = undefined;
@@ -2281,20 +2252,6 @@ export class PaleciakiGameEngine {
     }
   }
 
-  /**
-   * Full animated rigs are expensive to clone and animate. Keep distant regular
-   * enemies on their lightweight procedural silhouette; load the authored GLB
-   * only when it can be seen at useful detail. Boss rigs remain detailed at all
-   * distances. This reduces burst loading and skinned-mesh/mixer memory on phones.
-   */
-  private shouldLoadEnemyFullRig(enemy: EnemyItem, distanceSquared: number): boolean {
-    if (enemy.state === 'defeated') return false;
-    if (isMajorSurvivalBossType(enemy.type) || enemy.type === 'sebix_m') return true;
-    if (!Number.isFinite(distanceSquared) || distanceSquared < 0) return false;
-    const detailRadius = this.isHandheldViewport ? 23 : 31;
-    return distanceSquared <= detailRadius * detailRadius;
-  }
-
   private async attachGobkitEnemyModel(enemy: EnemyItem, modelId: GobkitModelId) {
     const mesh = enemy.mesh;
     const requestedType = enemy.type;
@@ -2304,12 +2261,6 @@ export class PaleciakiGameEngine {
       // Match the archetype and mesh captured before awaiting the asset request.
       if (!this.enemies.includes(enemy) || enemy.mesh !== mesh || enemy.type !== requestedType ||
           mesh.parent !== this.levelRoot || enemy.state === 'defeated') return;
-      const dx = enemy.x - this.playerPos.x;
-      const dz = enemy.z - this.playerPos.z;
-      if (!this.shouldLoadEnemyFullRig(enemy, dx * dx + dz * dz)) {
-        this.requestedGobkitEnemies.delete(enemy);
-        return;
-      }
       const root = cloneGobkitModel(gltf);
       const visualProfile = ENEMY_VISUAL_PROFILES[requestedType];
       fitGobkitModel(root, visualProfile.targetHeight, this.threeRenderer?.capabilities.getMaxAnisotropy() ?? 1, gltf.scene);
@@ -2330,7 +2281,6 @@ export class PaleciakiGameEngine {
       this.removeAttachedActorVisuals(mesh as THREE.Group);
       removeLegacyEnemyBodyVisuals(mesh as THREE.Group, overlays);
       this.installActorVisualRoot(mesh as THREE.Group, root);
-      this.installEnemyVisualLodProxy(enemy, root);
       // Existing Gobkit rigs need the role-specific PPE attachment kit. The
       // Base44 models are already fully authored silhouettes, so do not stack
       // a second set of props on top of their baked-in character design.
@@ -2355,13 +2305,7 @@ export class PaleciakiGameEngine {
     } catch (error) {
       if (!this.enemies.includes(enemy) || enemy.mesh !== mesh || enemy.type !== requestedType ||
           mesh.parent !== this.levelRoot || enemy.state === 'defeated') return;
-      const dx = enemy.x - this.playerPos.x;
-      const dz = enemy.z - this.playerPos.z;
-      if (!this.shouldLoadEnemyFullRig(enemy, dx * dx + dz * dz)) {
-        this.requestedGobkitEnemies.delete(enemy);
-        return;
-      }
-      console.warn('[Gobkit] Enemy model unavailable; keeping procedural fallback:', modelId, requestedType, error);
+      console.warn('[Gobkit] Enemy model unavailable; keeping the single procedural fallback:', modelId, requestedType, error);
       const fallback = ENEMY_GOBKIT_MODELS[requestedType];
       if (fallback && fallback !== modelId) {
         console.warn('[Base44] Switching to the bundled fallback rig:', fallback, requestedType);
@@ -2470,7 +2414,9 @@ export class PaleciakiGameEngine {
       const distanceX = enemy.x - this.playerPos.x;
       const distanceZ = enemy.z - this.playerPos.z;
       const distanceSquared = distanceX * distanceX + distanceZ * distanceZ;
-      if (!this.requestedGobkitEnemies.has(enemy) && this.shouldLoadEnemyFullRig(enemy, distanceSquared)) {
+      // Every mapped enemy uses its single full-detail rig, independent of distance.
+      // Distance still controls animation cadence below, not which model is rendered.
+      if (!this.requestedGobkitEnemies.has(enemy)) {
         this.requestedGobkitEnemies.add(enemy);
         void this.attachGobkitEnemyModel(enemy, modelId);
       }
@@ -2483,47 +2429,8 @@ export class PaleciakiGameEngine {
         continue;
       }
 
-      // Use squared distance and defer expensive world-space transforms until
-      // this actor's LOD tick is due. Nearby or reacting actors still update now.
-      const lodProxy = enemy.mesh.userData.actorLodProxyRoot as THREE.Group | undefined;
-      const fullVisual = enemy.mesh.userData.actorVisualRoot as THREE.Group | undefined;
-      if (lodProxy && fullVisual) {
-        const now = performance.now();
-        const pendingAttackUntil = this.enemyPendingAttackUntil.get(enemy) ?? 0;
-        const attackAnimationUntil = this.enemyAttackAnimationUntil.get(enemy) ?? 0;
-        const combatCritical =
-          enemy.state === 'charging' ||
-          enemy.state === 'defeated' ||
-          enemy.state === 'stunned' ||
-          (enemy.hitReactTimer || 0) > 0.015 ||
-          (enemy.stunTimer || 0) > 0 ||
-          (enemy.attackPoseTimer || 0) > 0 ||
-          (enemy.aiRangedWindupTimer || 0) > 0 ||
-          (enemy.aiMeleeWindupTimer || 0) > 0 ||
-          (enemy.aiCommanderWindupTimer || 0) > 0 ||
-          pendingAttackUntil > now ||
-          attackAnimationUntil > now ||
-          (track.oneShotRemaining || 0) > 0;
-        const deathVisualLocked = enemy.state === 'defeated' || enemy.mesh.userData.actorDeathVisualLocked === true;
-        if (deathVisualLocked) enemy.mesh.userData.actorDeathVisualLocked = true;
-        const useProxy = !deathVisualLocked && shouldUseEnemyVisualLodProxy(
-          distanceSquared,
-          this.isHandheldViewport,
-          lodProxy.visible,
-          combatCritical,
-        );
-        // During death the full animated rig is the only renderable body.
-        lodProxy.visible = useProxy;
-        fullVisual.visible = !useProxy;
-        if (useProxy) {
-          updateEnemyVisualLodProxy(lodProxy, enemy.walkCycle || this.activeElapsedSeconds, enemy.state !== 'patrol');
-          // Do not spend CPU advancing a hidden skinned rig. Keep its origin current
-          // so it resumes without a position spike when the full model returns.
-          track.lastPosition.copy(enemy.mesh.position);
-          track.animationAccumulator = 0;
-          continue;
-        }
-      }
+      // Keep the same full-detail rig at every distance. Only its animation
+      // evaluation cadence is distance-aware to limit CPU cost.
       const interval = getActorAnimationIntervalFromDistanceSquared(distanceSquared, this.isHandheldViewport);
       const accumulatedDt = (track.animationAccumulator ?? 0) + dt;
 
@@ -15796,19 +15703,9 @@ export class PaleciakiGameEngine {
     enemy.mesh.position.z = resolved.z;
   }
 
-  /** Keep one render representation during death: the full rig, never its LOD proxy. */
-  private lockEnemyDeathVisualToSingleRig(mesh: THREE.Object3D): void {
-    const lodProxy = mesh.userData.actorLodProxyRoot as THREE.Group | undefined;
-    const fullVisual = mesh.userData.actorVisualRoot as THREE.Group | undefined;
-    if (lodProxy) lodProxy.visible = false;
-    if (fullVisual) fullVisual.visible = true;
-    mesh.userData.actorDeathVisualLocked = true;
-  }
-
   private beginEnemyDeathVisual(enemy: EnemyItem): void {
     const mesh = enemy.mesh as THREE.Object3D | undefined;
     if (!mesh) return;
-    this.lockEnemyDeathVisualToSingleRig(mesh);
     if (enemy.aiRangedWindupTimer !== undefined) this.cancelEnemyRangedAttackTelegraph(enemy);
     if (enemy.aiMeleeWindupTimer !== undefined || enemy.aiMeleeStrikePending) this.cancelEnemyMeleeAttackTelegraph(enemy);
     const isCthulhuDeath = enemy.name.includes('CTHULHU');
@@ -15887,10 +15784,6 @@ export class PaleciakiGameEngine {
     }
 
     if (timer <= 0) {
-      const lodProxy = mesh.userData.actorLodProxyRoot as THREE.Group | undefined;
-      const fullVisual = mesh.userData.actorVisualRoot as THREE.Group | undefined;
-      if (lodProxy) lodProxy.visible = false;
-      if (fullVisual) fullVisual.visible = false;
       mesh.visible = false;
       delete mesh.userData.actorDeathVisualLocked;
       if (track) {
