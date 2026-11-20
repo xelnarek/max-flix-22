@@ -10457,10 +10457,7 @@ export class PaleciakiGameEngine {
       });
     }
     if (this.survivalFirearmSoundCooldown <= 0) {
-      if (definition.archetype === 'shotgun') sound.playAttackWhoosh();
-      else if (definition.archetype === 'rocket') sound.playBossWarning();
-      else if (definition.archetype === 'flame') sound.playElectricalSparks();
-      else sound.playAttackWhoosh();
+      sound.playFirearmShot(definition.archetype);
       this.survivalFirearmSoundCooldown = ['smg', 'minigun', 'flame'].includes(definition.archetype) ? 0.20 : 0.075;
     }
 
