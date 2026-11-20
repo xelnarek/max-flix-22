@@ -896,6 +896,10 @@ export class PaleciakiGameEngine {
   private survivalEvolutions = new Set<string>();
   private survivalWeapons: SurvivalWeaponState[] = [];
   private survivalFirearm: SurvivalFirearmState = createStartingSurvivalFirearmState();
+  private readonly survivalFirearmAttackAnimationSeconds: Readonly<Record<SurvivalFirearmId, number>> = {
+    starter_pistol: 0.13, smg_45: 0.075, assault_rifle: 0.11, shotgun_12g: 0.26, battle_rifle: 0.22,
+    minigun: 0.06, rocket_launcher: 0.30, flamethrower: 0.075, plasma_rifle: 0.18, gauss_rifle: 0.24,
+  };
   private survivalFirearmStates = new Map<SurvivalFirearmId, SurvivalFirearmState>();
   private survivalFirearmKillCount = 0;
   private survivalFirearmDropMissStreak = 0;
@@ -10309,11 +10313,7 @@ export class PaleciakiGameEngine {
     firearm.cooldown = definition.fireIntervalSeconds * hasteFactor / Math.max(0.5, attackRate);
     firearm.ammoInMagazine = Math.max(0, firearm.ammoInMagazine - 1);
     firearm.shotCounter++;
-    const recoilAnimationSeconds: Readonly<Record<SurvivalFirearmId, number>> = {
-      starter_pistol: 0.13, smg_45: 0.075, assault_rifle: 0.11, shotgun_12g: 0.26, battle_rifle: 0.22,
-      minigun: 0.06, rocket_launcher: 0.30, flamethrower: 0.075, plasma_rifle: 0.18, gauss_rifle: 0.24,
-    };
-    this.attackSwingDuration = recoilAnimationSeconds[definition.id];
+    this.attackSwingDuration = this.survivalFirearmAttackAnimationSeconds[definition.id];
     this.attackSwingTimer = this.attackSwingDuration;
     this.requestGobkitAction(this.playerGobkitTrack, 'Attack', this.attackSwingDuration);
 
@@ -10353,6 +10353,7 @@ export class PaleciakiGameEngine {
         case 'smg': geometry = new THREE.BoxGeometry(0.055, 0.055, 0.27); break;
         case 'minigun': geometry = new THREE.BoxGeometry(0.045, 0.045, 0.22); break;
         case 'shotgun': geometry = new THREE.SphereGeometry(definition.projectileRadius, 7, 6); break;
+        default: geometry = new THREE.BoxGeometry(0.07, 0.07, 0.30); break;
       }
       const mesh = new THREE.Mesh(geometry, material);
       if (['rocket', 'gauss', 'heavy-rifle', 'pistol', 'rifle'].includes(definition.archetype)) mesh.rotation.x = Math.PI / 2;
