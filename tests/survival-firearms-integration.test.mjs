@@ -60,6 +60,18 @@ test('all enemy kills can spawn firearms while PvP remains on its authoritative 
   assert.match(game, /if \(this\.gameMode === 'pvp'\) \{\s*this\.updatePvpMode/);
 });
 
+test('each firearm archetype has a dedicated synthesized report rather than a melee whoosh', async () => {
+  const sound = await read('../src/sound.ts');
+  assert.match(sound, /public playFirearmShot\(archetype:/);
+  for (const archetype of ['pistol', 'smg', 'rifle', 'shotgun', 'heavy-rifle', 'minigun', 'rocket', 'flame', 'plasma', 'gauss']) {
+    assert.ok(sound.includes(archetype + ': { wave:'), 'missing audio profile: ' + archetype);
+  }
+  assert.match(sound, /body\.frequency\.exponentialRampToValueAtTime/);
+  assert.match(sound, /transientEnvelope\.gain\.exponentialRampToValueAtTime/);
+  const game = await read('../src/game.ts');
+  assert.match(game, /sound\.playFirearmShot\(definition\.archetype\)/);
+});
+
 test('Survival HUD exposes the primary firearm, magazine and live reload state separately from module arsenal', async () => {
   const [html, app, css] = await Promise.all([
     read('../index.html'), read('../src/index.ts'), read('../src/hud-layout.css')
