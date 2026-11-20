@@ -1822,31 +1822,6 @@ class PaleciakiScene extends xb.Script {
               firearmStatus.setAttribute('aria-label', primaryFirearm.name + ', amunicja ' + primaryFirearm.ammoInMagazine + ' na ' + primaryFirearm.magazineSize + (primaryFirearm.reloadRemainingSeconds > 0 ? ', przeładowanie' : ''));
             }
           }
-          const weaponRack = document.getElementById('survival-weapons-list');
-          if (weaponRack) {
-            // The Survival snapshot refreshes four times per second; rebuild chips only when the arsenal changes.
-            const signature = snapshot.weapons.map((weapon) => weapon.id + ':' + weapon.level + ':' + Number(weapon.evolved)).join('|');
-            if (weaponRack.dataset.signature !== signature) {
-              weaponRack.dataset.signature = signature;
-              weaponRack.replaceChildren();
-              if (!snapshot.weapons.length) {
-                const starter = document.createElement('span');
-                starter.className = 'survival-weapon-chip starter';
-                starter.textContent = '🥊 Operator';
-                starter.title = 'Broń operatora • broń podstawowa';
-                weaponRack.appendChild(starter);
-              }
-              for (const weapon of snapshot.weapons) {
-                const chip = document.createElement('span');
-                chip.className = 'survival-weapon-chip' + (weapon.evolved ? ' evolved' : '');
-                const fullLabel = weapon.icon + ' ' + weapon.name + ' • poziom ' + weapon.level + '/5' + (weapon.evolved ? ' • ewolucja' : '');
-                chip.textContent = weapon.icon + ' ' + weapon.name + ' ' + weapon.level + '/5' + (weapon.evolved ? ' ✦' : '');
-                chip.title = fullLabel;
-                chip.setAttribute('aria-label', fullLabel);
-                weaponRack.appendChild(chip);
-              }
-            }
-          }
           if (survivalRerollBtn) {
             survivalRerollBtn.textContent = '🔄 PRZELOSUJ (' + snapshot.rerolls + ')';
             survivalRerollBtn.disabled = snapshot.rerolls <= 0;
@@ -1873,9 +1848,9 @@ class PaleciakiScene extends xb.Script {
               ? 'NAGRODA ZA POKONANIE BOSS-A'
               : isRankUp ? 'AWANS RANGI: ' + currentRank : 'AWANS OPERATORA';
           if (descriptionElement) descriptionElement.textContent = isChaosRoulette
-            ? 'Co trzeci poziom: 12 możliwych wyników — ulepszenie, perk, deszcz XP, overdrive, premia punktowa, zamrożenie fali, wybuch, nova, osłona, leczenie albo elitarna/nieproszona dostawa.'
+            ? 'Co trzeci poziom: 17 możliwych wyników — premie bojowe, leczenie, kontrola tłumu, deszcz XP, łupy i dostawy przeciwników.'
             : isBossReward
-              ? 'Boss pokonany. Wybierz jedno z trzech legendarnych wzmocnień: moc, rozwój broni albo obronę.'
+              ? 'Boss pokonany. Wybierz jedno z trzech legendarnych wzmocnień operatora: moc, mobilność albo obronę.'
               : isRankUp
                 ? 'Awansujesz do rangi ' + currentRank + '. Jedna karta ma gwarantowaną wyższą rzadkość, a zapas przerzutów zwiększono o 1.'
                 : 'Wybierz jeden z trzech modułów. Rzadkie, epickie i legendarne wersje wzmacniają ten sam efekt.';
@@ -1886,7 +1861,7 @@ class PaleciakiScene extends xb.Script {
               ? 'Nagroda jest obowiązkowa i nie podlega przerzuceniu ani pominięciu. Akcja pozostaje wstrzymana do wyboru.'
               : isRankUp
                 ? 'Awans co 5 poziomów: karta ma co najmniej Rare, Epic lub Legendary zależnie od rangi. Dodatkowy przerzut jest ograniczony do 3.'
-                : 'Wybór zatrzymuje akcję. Rzadkość wzmacnia efekt; legendarna broń może odblokować się na wyższym poziomie.';
+                : 'Wybór zatrzymuje akcję. Rzadkość wzmacnia efekt wybranego perku operatora.';
           survivalRerollBtn?.classList.toggle('hidden', isBossReward || isChaosRoulette);
           survivalSkipBtn?.classList.toggle('hidden', isBossReward || isChaosRoulette);
           survivalUpgradeOptions.replaceChildren();
