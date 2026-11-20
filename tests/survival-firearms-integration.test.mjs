@@ -19,6 +19,38 @@ test('the shared ballistic model computes deterministic arc height and ground-co
   assert.equal(getBallisticGroundContactTime(0.6, 0, 0), null);
 });
 
+test('each 3D firearm model has unique visible weapon-specific accessories and silhouette details', async () => {
+  const game = await read('../src/game.ts');
+  const detailParts = [
+    'firearm-detail-pistol-rear-sight',
+    'firearm-detail-smg-suppressor',
+    'firearm-detail-smg-optic',
+    'firearm-detail-rifle-optic',
+    'firearm-detail-rifle-muzzle-brake',
+    'firearm-detail-shotgun-shell-saddle',
+    'firearm-detail-shotgun-spare-shell-',
+    'firearm-detail-heavy-rifle-scope',
+    'firearm-detail-heavy-rifle-bipod-',
+    'firearm-detail-minigun-barrel-brace',
+    'firearm-detail-minigun-belt-link-',
+    'firearm-detail-rocket-shoulder-pad',
+    'firearm-detail-rocket-sight',
+    'firearm-detail-grenade-drum',
+    'firearm-detail-flame-pressure-gauge',
+    'firearm-detail-flame-tank-strap-',
+    'firearm-detail-plasma-left-coil-guard',
+    'firearm-detail-plasma-charge-indicator-',
+    'firearm-detail-gauss-muzzle-aperture',
+    'firearm-detail-gauss-cooling-vent-',
+  ];
+  for (const partName of detailParts) {
+    assert.ok(game.includes(partName), 'missing 3D weapon detail: ' + partName);
+  }
+  assert.equal((game.match(/firearm-detail-/g) || []).length >= 35, true,
+    'the shared 3D weapon builder must expose a substantial set of dedicated model details');
+  assert.match(game, /private createSurvivalFirearmModel\(firearmId: SurvivalFirearmId\)/);
+});
+
 test('the ballistic grenade is a shared 11th firearm with its own projectile, sound, reload, impact and damage source', async () => {
   const [firearms, presentation, sound, game] = await Promise.all([
     read('../src/survivalFirearms.ts'),
