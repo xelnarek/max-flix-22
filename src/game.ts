@@ -10348,11 +10348,14 @@ export class PaleciakiGameEngine {
         case 'plasma': geometry = new THREE.IcosahedronGeometry(definition.projectileRadius, 0); break;
         case 'gauss':
         case 'heavy-rifle': geometry = new THREE.CylinderGeometry(0.045, 0.045, 0.52, 7); break;
+        case 'pistol': geometry = new THREE.CylinderGeometry(0.032, 0.045, 0.25, 6); break;
+        case 'rifle': geometry = new THREE.CylinderGeometry(0.035, 0.045, 0.34, 6); break;
+        case 'smg': geometry = new THREE.BoxGeometry(0.055, 0.055, 0.27); break;
+        case 'minigun': geometry = new THREE.BoxGeometry(0.045, 0.045, 0.22); break;
         case 'shotgun': geometry = new THREE.SphereGeometry(definition.projectileRadius, 7, 6); break;
-        default: geometry = new THREE.BoxGeometry(0.09, 0.09, definition.archetype === 'pistol' ? 0.24 : 0.34); break;
       }
       const mesh = new THREE.Mesh(geometry, material);
-      if (definition.archetype === 'rocket' || definition.archetype === 'gauss' || definition.archetype === 'heavy-rifle') mesh.rotation.x = Math.PI / 2;
+      if (['rocket', 'gauss', 'heavy-rifle', 'pistol', 'rifle'].includes(definition.archetype)) mesh.rotation.x = Math.PI / 2;
       mesh.rotation.y = Math.atan2(direction.x, direction.z);
       mesh.position.copy(start).addScaledVector(direction, 0.18);
       mesh.castShadow = false;
