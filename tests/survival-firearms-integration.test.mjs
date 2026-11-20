@@ -119,3 +119,11 @@ test('fire rate and firing animation are individually tuned for all primary fire
     assert.ok(game.includes(id + ':'), 'missing firing animation profile: ' + id);
   }
 });
+
+test('pistol, SMG, rifle and minigun use distinct projectile silhouettes', async () => {
+  const game = await read('../src/game.ts');
+  assert.ok(game.includes("case 'pistol': geometry = new THREE.CylinderGeometry"));
+  assert.ok(game.includes("case 'smg': geometry = new THREE.BoxGeometry"));
+  assert.ok(game.includes("case 'rifle': geometry = new THREE.CylinderGeometry"));
+  assert.ok(game.includes("case 'minigun': geometry = new THREE.BoxGeometry"));
+});
