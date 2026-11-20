@@ -37,7 +37,7 @@ test('firearm pickups are physical 3D models with weapon-specific silhouettes', 
   assert.doesNotMatch(dropFactory, /CanvasTexture|THREE\.Sprite/);
   assert.match(modelFactory, /new THREE\.Mesh\(new THREE\.BoxGeometry/);
   assert.match(modelFactory, /new THREE\.Mesh\(new THREE\.CylinderGeometry/);
-  for (const archetype of ['pistol', 'smg', 'rifle', 'shotgun', 'heavy-rifle', 'minigun', 'rocket', 'flame', 'plasma', 'gauss']) {
+  for (const archetype of ['pistol', 'smg', 'rifle', 'shotgun', 'heavy-rifle', 'minigun', 'rocket', 'flame', 'plasma', 'gauss', 'grenade']) {
     assert.ok(modelFactory.includes("case '" + archetype + "':"), 'missing 3D model: ' + archetype);
   }
   assert.match(game, /drop\.mesh\.position\.y = drop\.baseY \+ 0\.13 \+ Math\.sin/);
@@ -68,7 +68,7 @@ test('magazine, reload, projectile archetype and damage are driven by the active
   assert.match(game, /profile\.pumpTravel \* cycleMotion/);
   assert.match(game, /case 'gauss':/);
   assert.match(game, /firearmProjectile: true/);
-  assert.match(game, /firearmExplosion: definition\.archetype === 'rocket'/);
+  assert.match(game, /firearmExplosion: definition\.archetype === 'rocket' \|\| definition\.archetype === 'grenade'/);
   assert.match(game, /aoeDamageMultiplier: definition\.aoeDamageMultiplier/);
   assert.match(game, /damageSource: getSurvivalFirearmDamageSource\(definition\.id\)/);
   assert.match(game, /const adjustedProjectileDamage = p\.firearmProjectile/);
@@ -80,7 +80,7 @@ test('every primary firearm has a unique hard range and that range is enforced i
   for (const [id, range] of [
     ['starter_pistol', 26], ['smg_45', 23], ['assault_rifle', 36], ['shotgun_12g', 9],
     ['battle_rifle', 42], ['minigun', 27], ['rocket_launcher', 32], ['flamethrower', 5],
-    ['plasma_rifle', 30], ['gauss_rifle', 75],
+    ['plasma_rifle', 30], ['gauss_rifle', 75], ['ballistic_grenade_launcher', 24],
   ]) {
     assert.match(firearms, new RegExp(id + ': \\{[\\s\\S]*?rangeMeters: ' + range));
   }
@@ -110,10 +110,10 @@ test('each firearm archetype has a dedicated synthesized report rather than a me
   const profilesStart = sound.indexOf('const profiles = {');
   const profilesEnd = sound.indexOf('} as const', profilesStart);
   const profileSource = sound.slice(profilesStart, profilesEnd);
-  for (const archetype of ['pistol', 'smg', 'rifle', 'shotgun', 'heavy-rifle', 'minigun', 'rocket', 'flame', 'plasma', 'gauss']) {
+  for (const archetype of ['pistol', 'smg', 'rifle', 'shotgun', 'heavy-rifle', 'minigun', 'rocket', 'flame', 'plasma', 'gauss', 'grenade']) {
     assert.ok(profileSource.includes(archetype), 'missing audio profile: ' + archetype);
   }
-  assert.equal((profileSource.match(/wave:/g) || []).length, 10);
+  assert.equal((profileSource.match(/wave:/g) || []).length, 11);
   assert.match(sound, /body\.frequency\.exponentialRampToValueAtTime/);
   assert.match(sound, /transientEnvelope\.gain\.exponentialRampToValueAtTime/);
   const game = await read('../src/game.ts');
@@ -190,7 +190,7 @@ test('fire rate and firing animation are individually tuned for all primary fire
 test('pistol, SMG, rifle and minigun use distinct projectile silhouettes', async () => {
   const game = await read('../src/game.ts');
   const presentation = await read('../src/survivalFirearmPresentation.ts');
-  for (const style of ['pistol-slug', 'compact-tracer', 'rifle-tracer', 'buckshot', 'heavy-slug', 'rotary-tracer', 'rocket', 'flame', 'plasma', 'gauss-lance']) {
+  for (const style of ['pistol-slug', 'compact-tracer', 'rifle-tracer', 'buckshot', 'heavy-slug', 'rotary-tracer', 'rocket', 'flame', 'plasma', 'gauss-lance', 'grenade-ballistic']) {
     assert.ok(presentation.includes("projectileStyle: '" + style + "'"), 'missing projectile profile ' + style);
   }
   assert.match(game, /case 'pistol-slug':\s*geometry = new THREE\.CylinderGeometry/);
