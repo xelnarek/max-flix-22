@@ -4012,9 +4012,20 @@ export class PaleciakiGameEngine {
       activeIds.add(proj.id);
       let mesh = this.pvpProjectileMeshes.get(proj.id);
       if (!mesh) {
-        const geo = new THREE.SphereGeometry(proj.radius, 14, 12);
-        const mat = new THREE.MeshBasicMaterial({ color: proj.color, toneMapped: false });
-        mesh = new THREE.Mesh(geo, mat);
+        const firearmDefinition = proj.firearmId ? SURVIVAL_FIREARM_DEFS[proj.firearmId] : null;
+        if (firearmDefinition) {
+          // Reuse each weapon's own slug, tracer, pellet, rocket or energy-bolt silhouette.
+          mesh = this.createSurvivalFirearmProjectileMesh(
+            firearmDefinition.archetype,
+            proj.color,
+            proj.radius / 4.4,
+          );
+          mesh.scale.multiplyScalar(1.12);
+        } else {
+          const geo = new THREE.SphereGeometry(proj.radius, 14, 12);
+          const mat = new THREE.MeshBasicMaterial({ color: proj.color, toneMapped: false });
+          mesh = new THREE.Mesh(geo, mat);
+        }
         mesh.renderOrder = 4;
 
         // A tapered, color-matched streak makes incoming fire readable on
@@ -21003,19 +21014,21 @@ export class PaleciakiGameEngine {
       const firearmBoss = e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' || e.type === 'sebix_m' || e.maxHp >= 16;
       const firearmElite = firearmBoss || e.type === 'elite_walczak_guard' || e.type === 'mutant_gamma_forklift' || e.type === 'radioactive_pip' || e.type === 'cyber_salesman' || e.maxHp >= 4;
       const firearmTier: SurvivalFirearmEnemyTier = firearmBoss ? 'boss' : firearmElite ? 'elite' : 'normal';
-      const firearmSpawnUnlocked = this.survivalElapsed >= 45 && this.survivalFirearmKillCount >= 8;
+      // Campaign has its own stage clock; Survival's director clock intentionally stays separate.
+      const firearmElapsed = this.gameMode === 'campaign' ? this.activeElapsedSeconds : this.survivalElapsed;
+      const firearmSpawnUnlocked = firearmElapsed >= 45 && this.survivalFirearmKillCount >= 8;
       const firearmSpawnAllowed = firearmSpawnUnlocked
         && this.survivalFirearmDrops.length === 0
-        && this.survivalElapsed - this.survivalFirearmLastDropSeconds >= 75;
+        && firearmElapsed - this.survivalFirearmLastDropSeconds >= 75;
       if (firearmSpawnAllowed) {
         const firearmDrop = rollSurvivalFirearmDrop(
           this.survivalFirearmKillCount, firearmTier, this.survivalFirearmDropMissStreak, Math.random(),
         );
         if (firearmDrop.shouldDrop) {
-          const firearmId = rollSurvivalFirearmId(this.survivalFirearm.id, this.survivalElapsed, Math.random());
+          const firearmId = rollSurvivalFirearmId(this.survivalFirearm.id, firearmElapsed, Math.random());
           if (firearmId) {
             this.spawnSurvivalFirearmDrop(e.x, e.y + 0.08, e.z, firearmId, firearmDrop.isPityDrop || firearmDrop.isGuaranteed);
-            this.survivalFirearmLastDropSeconds = this.survivalElapsed;
+            this.survivalFirearmLastDropSeconds = firearmElapsed;
             this.survivalFirearmDropMissStreak = 0;
           }
         } else {
