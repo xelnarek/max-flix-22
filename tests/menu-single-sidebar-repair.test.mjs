@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL('../' + path, import.meta.url), 'utf8');
-const [html, app, css] = await Promise.all([
+const [html, app, css, mobileCss] = await Promise.all([
   read('index.html'),
   read('src/index.ts'),
   read('src/menu-single-sidebar-repair.css'),
+  read('src/crimson-shift-mobile-layout-v3.css'),
 ]);
 
 test('single-sidebar repair is the final menu layout layer', () => {
@@ -18,7 +19,8 @@ test('single-sidebar repair is the final menu layout layer', () => {
   assert.match(css, /\.menu-tabs-bar\s*\{[\s\S]*flex-direction:\s*column !important/);
   assert.doesNotMatch(html, /menu-mobile-segment/);
   assert.doesNotMatch(app, /menuMobileSegmentButtons|activeMobileSegmentId|setActiveMobileSegment|MENU_SEGMENTS|MenuSegmentId/);
-  assert.doesNotMatch(css, /menu-mobile-segment|menu-nav-group\\[hidden\\]/);
+  assert.doesNotMatch(css, /menu-mobile-segment|menu-nav-group\[hidden\]/);
+  assert.doesNotMatch(mobileCss, /menu-mobile-segment|menu-nav-group\[hidden\]/);
 });
 
 test('all twelve destinations stay in one vertical navigation rail', () => {
