@@ -36,6 +36,7 @@ import {
   updateSurvivalAchievementProgress,
 } from './survivalAchievements.ts';
 import { SURVIVAL_MAPS, type SurvivalMapId } from './survivalMaps.ts';
+import { SURVIVAL_FIREARM_DEFS } from './survivalFirearms.ts';
 import { CAMPAIGN_STAGES, createInitialCampaignProgress, consumePendingCampaignReward, consumePendingCampaignXpBonus, getCampaignMasteryProgress, getCampaignRewardChoices, getCampaignSideOrderProgress, getCampaignStageDefinition, getNextCampaignStageId, readCampaignProgress, recordCampaignStageResult, setPendingCampaignReward, writeCampaignProgress, type CampaignProgress, type CampaignRewardDefinition, type CampaignRewardId, type CampaignStageId } from './campaignProgression.ts';
 import { launchOniricPlatformer } from './oniricPlatformer.ts';
 import { launchCthulhuRetroArena } from './cthulhuRetroArena.ts';
@@ -1906,7 +1907,7 @@ class PaleciakiScene extends xb.Script {
               <div class="survival-chaos-machine-caption">18 WYNIKÓW <i>•</i> WIĘCEJ RNG <i>•</i> JEDEN SPIN</div>
               <div class="survival-chaos-result" aria-live="polite">NAGRODA CZEKA NA LOS</div>
             `;
-            machine.setAttribute('aria-label', 'Jednoręki bandyta B4. Trzy obracające się bębny, osiemnaście możliwych wyników, jeden spin');
+            machine.setAttribute('aria-label', 'Jednoręki bandyta B4. Trzy obracające się bębny, siedemnaście możliwych wyników, jeden spin');
             const reelSymbols = [
               { icon: '💎', accent: '#38bdf8' }, { icon: '⚡', accent: '#facc15' },
               { icon: '☢️', accent: '#4ade80' }, { icon: '👾', accent: '#fb7185' },
@@ -1936,7 +1937,6 @@ class PaleciakiScene extends xb.Script {
               golden_crate: { category: 'ZŁOTA PALETA', accent: '#fbbf24' },
               hazard_clear: { category: 'CZYSZCZENIE ZAGROŻEŃ', accent: '#67e8f9' },
               double_or_nothing: { category: 'PODWÓJNE ALBO NIC', accent: '#fb7185' },
-              weapon_draft: { category: 'SKRZYNIA BRONI', accent: '#cbd5e1' },
             };
             const reelNodes = Array.from(machine.querySelectorAll<HTMLElement>('.survival-chaos-reel-symbol'));
             const resultNode = machine.querySelector<HTMLElement>('.survival-chaos-result');
@@ -2764,6 +2764,80 @@ class PaleciakiScene extends xb.Script {
     let activeMobileSegmentId: MenuSegmentId = getMenuSegmentForTab(currentMenuTargetId)?.id || 'play';
     const menuScrollMemory = new MenuScrollMemory();
     const menuContentArea = document.querySelector<HTMLElement>('.menu-tab-content-area');
+
+    // Build the armory from the same runtime definitions that drive weapon behaviour.
+    const firearmCatalogGrid = document.getElementById('firearm-catalog-grid');
+    if (firearmCatalogGrid && firearmCatalogGrid.dataset.rendered !== 'true') {
+      firearmCatalogGrid.dataset.rendered = 'true';
+      firearmCatalogGrid.setAttribute('role', 'list');
+      for (const firearm of Object.values(SURVIVAL_FIREARM_DEFS)) {
+        const card = document.createElement('article');
+        card.className = 'armory-card';
+        card.setAttribute('role', 'listitem');
+        card.style.setProperty('--armory-color', '#' + firearm.color.toString(16).padStart(6, '0'));
+
+        const header = document.createElement('div');
+        header.className = 'armory-card-head';
+        const icon = document.createElement('span');
+        icon.className = 'armory-card-icon';
+        icon.textContent = firearm.icon;
+        icon.setAttribute('aria-hidden', 'true');
+        const heading = document.createElement('div');
+        heading.className = 'armory-card-title-wrap';
+        const title = document.createElement('h3');
+        title.textContent = firearm.name.toUpperCase();
+        const role = document.createElement('span');
+        role.className = 'armory-card-role';
+        role.textContent = firearm.archetype.toUpperCase();
+        heading.append(title, role);
+        header.append(icon, heading);
+
+        const description = document.createElement('p');
+        description.className = 'armory-card-description';
+        description.textContent = firearm.roleDescription;
+
+        const damageValue = firearm.damage.toFixed(2).replace('.', ',') +
+          (firearm.pellets > 1 ? ' / śrut × ' + firearm.pellets : ' / pocisk');
+        const rateValue = (1 / firearm.fireIntervalSeconds).toFixed(1).replace('.', ',') +
+          (firearm.pellets > 1 ? ' salw/s' : ' strz./s');
+        const metrics = document.createElement('div');
+        metrics.className = 'armory-card-stats';
+        const metricRows: Array<[string, string]> = [
+          ['OBRAŻENIA', damageValue],
+          ['ZASIĘG MAKS.', firearm.rangeMeters + ' m'],
+          ['SZYBKOSTRZELNOŚĆ', rateValue],
+          ['MAGAZYNEK', firearm.magazineSize + ' nab.'],
+          ['PRZEŁADOWANIE', firearm.reloadSeconds.toFixed(2).replace('.', ',') + ' s'],
+        ];
+        for (const [label, value] of metricRows) {
+          const metric = document.createElement('div');
+          metric.className = 'armory-stat';
+          const metricLabel = document.createElement('span');
+          metricLabel.textContent = label;
+          const metricValue = document.createElement('strong');
+          metricValue.textContent = value;
+          metric.append(metricLabel, metricValue);
+          metrics.appendChild(metric);
+        }
+
+        const traits = document.createElement('div');
+        traits.className = 'armory-card-traits';
+        const traitLabels: string[] = [];
+        if (firearm.pellets > 1) traitLabels.push(firearm.pellets + ' pocisków na salwę');
+        if (firearm.pierce > 0) traitLabels.push('Przebicie: ' + firearm.pierce);
+        if (firearm.aoeRadius > 0) traitLabels.push('Obszar: ' + firearm.aoeRadius.toFixed(1).replace('.', ',') + ' m');
+        if (firearm.igniteOnHit) traitLabels.push('Podpalenie');
+        if (traitLabels.length === 0) traitLabels.push('Pojedynczy cel');
+        for (const label of traitLabels) {
+          const chip = document.createElement('span');
+          chip.className = 'armory-trait';
+          chip.textContent = label;
+          traits.appendChild(chip);
+        }
+        card.append(header, description, metrics, traits);
+        firearmCatalogGrid.appendChild(card);
+      }
+    }
     const menuRootElement = document.getElementById('title-screen');
     let setActiveMobileSegment: (segmentId: MenuSegmentId) => void = () => undefined;
     if (menuRootElement) menuRootElement.dataset.menuDensity = 'compact';
