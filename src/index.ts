@@ -2890,7 +2890,8 @@ class PaleciakiScene extends xb.Script {
     const activateMenuTab = (selectedTab: HTMLButtonElement) => {
       const targetId = selectedTab.getAttribute('data-tab');
       if (!targetId) return;
-      if (targetId !== currentMenuTargetId && menuContentArea) {
+      const changingTab = targetId !== currentMenuTargetId;
+      if (changingTab && menuContentArea) {
         menuScrollMemory.save(currentMenuTargetId, menuContentArea.scrollTop);
       }
       currentMenuTargetId = targetId;
@@ -2901,7 +2902,7 @@ class PaleciakiScene extends xb.Script {
       // A newly selected section must open at its first item. Restoring an old
       // scroll offset for a long panel could hide its heading and leave a large
       // apparently empty area above the remaining content on mobile.
-      menuScrollMemory.clear(targetId);
+      if (changingTab) menuScrollMemory.clear(targetId);
 
       // The selected section owns the accent color and mode-specific launch action.
       syncMenuPanelPresentation(targetId);
