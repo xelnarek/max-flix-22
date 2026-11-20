@@ -154,5 +154,5 @@ test('handheld crowd overlap correction follows the spatial-index cadence and re
   assert.match(method, /const enemyCountChanged = this\.enemies\.length !== this\.enemyCrowdResolutionCachedCount/);
   assert.match(method, /if \(this\.isHandheldViewport && !enemyCountChanged && now < this\.enemyCrowdResolutionNextAt\) return/);
   assert.match(method, /this\.enemyCrowdResolutionNextAt = this\.isHandheldViewport \? now \+ 24 : now/);
-  assert.match(method, /solveEnemyCrowdOverlaps\(this\.enemies, this\.enemySpatialIndex, bounds, 0\.16, 2, 0\.52\)/);
+  assert.match(method, /solveEnemyCrowdOverlaps\(this\.enemies, this\.enemySpatialIndex, bounds, 0\.16, 16, 1\.2\)/);
 });
