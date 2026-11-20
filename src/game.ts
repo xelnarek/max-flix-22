@@ -1237,6 +1237,12 @@ export class PaleciakiGameEngine {
     maxRangeMeters?: number;
     travelledDistance?: number;
     aoeDamageMultiplier?: number;
+    ballisticGravity?: number;
+    fuseRemainingSeconds?: number;
+    detonateOnImpact?: boolean;
+    detonateOnGround?: boolean;
+    groundDetonationPending?: boolean;
+    detonated?: boolean;
     damageSource?: SurvivalDamageSource;
     trailTimer?: number;
   }[] = [];
@@ -10267,6 +10273,33 @@ export class PaleciakiGameEngine {
         }
         break;
       }
+      case 'grenade': {
+        addBox(0.30, 0.19, 0.66, 0, 0.02, -0.01, dark);
+        addBox(0.25, 0.10, 0.44, 0, 0.12, 0.02, metal);
+        addCylinder(0.095, 0.12, 0.76, 0, 0.045, 0.55, accent, 12);
+        addCylinder(0.135, 0.135, 0.13, 0, 0.045, 0.89, metal, 12);
+        addCylinder(0.105, 0.12, 0.14, 0, 0.045, 0.99, glow, 12);
+        const barrelSleeve = addBox(0.26, 0.07, 0.42, 0, -0.085, 0.43, metal);
+        barrelSleeve.rotation.x = -0.035;
+        addGrip();
+        addStock();
+        addRail(0.50);
+        addBox(0.11, 0.08, 0.20, 0, 0.20, -0.08, accent);
+        const chamber = addMovingGroup('firearm-rocket-cell', 0, 0.035, 0.02);
+        addCylinder(0.082, 0.092, 0.40, 0, 0, 0.12, glow, 10, chamber);
+        const nose = new THREE.Mesh(new THREE.ConeGeometry(0.086, 0.16, 9), accent);
+        nose.rotation.x = Math.PI / 2;
+        nose.position.z = 0.39;
+        chamber.add(nose);
+        for (let index = 0; index < 4; index++) {
+          const angle = index * Math.PI / 2;
+          const fin = addBox(0.025, 0.11, 0.11, Math.cos(angle) * 0.09, Math.sin(angle) * 0.09, -0.10, metal, chamber);
+          fin.rotation.z = angle;
+        }
+        addBox(0.08, 0.13, 0.07, -0.16, 0.22, 0.02, dark);
+        addBox(0.075, 0.025, 0.18, 0, 0.22, 0.06, glow);
+        break;
+      }
       case 'flame': {
         addBox(0.22, 0.17, 0.58, 0, 0.02, 0.02, dark);
         const fuelTank = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.42, 12), accent);
@@ -10600,19 +10633,21 @@ export class PaleciakiGameEngine {
     }
     const spreadSeed = firearm.shotCounter * 0.37;
     const effectiveRangeMeters = definition.rangeMeters * (this.gameMode === 'survival' ? this.survivalRangeMultiplier : 1);
-    const projectileLifeSeconds = effectiveRangeMeters / Math.max(0.1, definition.projectileSpeed);
+    const projectileLifeSeconds = definition.projectileFuseSeconds ?? effectiveRangeMeters / Math.max(0.1, definition.projectileSpeed);
     for (let index = 0; index < pelletCount; index++) {
       const lane = pelletCount <= 1 ? 0 : (index / (pelletCount - 1)) * 2 - 1;
       const randomSpread = (Math.random() - 0.5) * 0.42;
       const angle = lane * definition.spreadRadians + randomSpread * definition.spreadRadians + spreadSeed * 0.001;
       const direction = forward.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), angle).normalize();
+      const projectileVelocity = direction.multiplyScalar(definition.projectileSpeed);
+      if (definition.projectileLaunchVelocity !== undefined) projectileVelocity.y = definition.projectileLaunchVelocity;
       const mesh = this.createSurvivalFirearmProjectileMesh(definition.archetype, definition.color, definition.projectileRadius);
       mesh.rotation.y = Math.atan2(direction.x, direction.z);
       mesh.position.copy(start).addScaledVector(direction, 0.18);
       this.levelRoot.add(mesh);
       this.projectiles.push({
         mesh,
-        vel: direction.multiplyScalar(definition.projectileSpeed),
+        vel: projectileVelocity,
         life: projectileLifeSeconds,
         maxLife: projectileLifeSeconds,
         maxRangeMeters: effectiveRangeMeters,
@@ -10621,9 +10656,13 @@ export class PaleciakiGameEngine {
         pierce: definition.pierce,
         aoeRadius: definition.aoeRadius > 0 ? definition.aoeRadius : undefined,
         aoeDamageMultiplier: definition.aoeDamageMultiplier > 0 ? definition.aoeDamageMultiplier : undefined,
+        ballisticGravity: definition.projectileGravity,
+        fuseRemainingSeconds: definition.projectileFuseSeconds,
+        detonateOnImpact: definition.detonateOnImpact,
+        detonateOnGround: definition.projectileGravity !== undefined,
         igniteOnHit: definition.igniteOnHit,
         firearmProjectile: true,
-        firearmExplosion: definition.archetype === 'rocket',
+        firearmExplosion: definition.archetype === 'rocket' || definition.archetype === 'grenade',
         firearmId: definition.id,
         firearmColor: definition.color,
         damageSource: getSurvivalFirearmDamageSource(definition.id),
@@ -10639,6 +10678,35 @@ export class PaleciakiGameEngine {
     }
 
     if (firearm.ammoInMagazine <= 0) this.reloadSurvivalFirearm();
+  }
+
+  private spawnBallisticGrenadeDetonationFx(x: number, y: number, z: number, color: number): void {
+    this.spawnExplosionParticles(x, y + 0.16, z, color, this.isHandheldViewport ? 16 : 26);
+    this.spawnParticleRing(x, Math.max(0.08, y), z, 0xffd166);
+    this.spawnCompactImpact(x, y + 0.08, z, color);
+    this.triggerScreenShake(0.15, 0.12);
+    this.triggerBloomPulse(0.12);
+  }
+
+  private detonateBallisticFirearmProjectile(
+    projectile: (typeof this.projectiles)[number],
+    damageMultiplier: number,
+  ): void {
+    const x = projectile.mesh.position.x;
+    const y = projectile.mesh.position.y;
+    const z = projectile.mesh.position.z;
+    const radius = Math.max(0, projectile.aoeRadius ?? 0);
+    const splashMultiplier = Math.max(0, projectile.aoeDamageMultiplier ?? 0);
+    this.spawnBallisticGrenadeDetonationFx(x, y, z, projectile.firearmColor ?? 0xd4a24f);
+    if (radius <= 0 || splashMultiplier <= 0) return;
+    const baseSplashDamage = Math.max(0.1, (projectile.damage ?? 1) * splashMultiplier * damageMultiplier);
+    for (const enemy of this.enemies) {
+      if (enemy.state === 'defeated' || Math.hypot(enemy.x - x, enemy.z - z) > radius) continue;
+      this.damageEnemy(enemy, baseSplashDamage, x, z, projectile.damageSource);
+      enemy.stunTimer = Math.max(enemy.stunTimer, 0.24);
+      if (enemy.hp <= 0) this.defeatEnemy(enemy, 240, true);
+    }
+    sound.playFirearmImpact('grenade');
   }
 
   private createSurvivalFirearmProjectileMesh(
@@ -10672,6 +10740,9 @@ export class PaleciakiGameEngine {
       case 'rocket':
         geometry = new THREE.ConeGeometry(width * 0.88, length, 10);
         break;
+      case 'grenade-ballistic':
+        geometry = new THREE.CylinderGeometry(width * 0.38, width * 0.56, length, 9, 1, false);
+        break;
       case 'flame':
         geometry = new THREE.SphereGeometry(width * 0.56, 9, 7);
         break;
@@ -10693,7 +10764,7 @@ export class PaleciakiGameEngine {
       opacity: profile.projectileStyle === 'flame' ? 0.82 : profile.projectileStyle === 'plasma' ? 0.92 : 1,
     });
     const mesh = new THREE.Mesh(geometry, material);
-    if (['pistol-slug', 'rifle-tracer', 'heavy-slug', 'rocket', 'gauss-lance'].includes(profile.projectileStyle)) {
+    if (['pistol-slug', 'rifle-tracer', 'heavy-slug', 'rocket', 'grenade-ballistic', 'gauss-lance'].includes(profile.projectileStyle)) {
       mesh.rotation.x = Math.PI / 2;
     } else if (profile.projectileStyle === 'flame' || profile.projectileStyle === 'plasma') {
       mesh.scale.set(0.92, 0.92, Math.max(1, length / Math.max(0.01, width)));
@@ -17882,6 +17953,12 @@ export class PaleciakiGameEngine {
       p.life -= dt;
 
       // Boomerang return logic (Operator 05's Pipe Wrench)
+      if (p.ballisticGravity && p.ballisticGravity > 0) p.vel.y -= p.ballisticGravity * dt;
+      if (p.fuseRemainingSeconds !== undefined) {
+        p.fuseRemainingSeconds = Math.max(0, p.fuseRemainingSeconds - dt);
+        if (p.fuseRemainingSeconds <= 0) p.groundDetonationPending = true;
+      }
+
       if (p.boomerang && !p.returning && p.maxLife && p.life < p.maxLife * 0.52) {
         p.returning = true;
         p.hitIds?.clear(); // Can hit enemies again on return!
@@ -17967,6 +18044,10 @@ export class PaleciakiGameEngine {
           : projectileSpeed * dt;
         const movementSeconds = projectileSpeed > 0.0001 ? frameDistance / projectileSpeed : dt;
         p.mesh.position.addScaledVector(p.vel, movementSeconds);
+        if (p.detonateOnGround && p.mesh.position.y <= 0.14) {
+          p.mesh.position.y = 0.14;
+          p.groundDetonationPending = true;
+        }
         if (p.maxRangeMeters !== undefined) {
           p.travelledDistance = (p.travelledDistance ?? 0) + frameDistance;
           if (p.travelledDistance >= p.maxRangeMeters - 0.0001) p.life = 0;
@@ -18125,6 +18206,10 @@ export class PaleciakiGameEngine {
                     this.spawnExplosionParticles(e.x, e.y + 0.48, e.z, impactColor, 20);
                     this.spawnParticleRing(e.x, e.y + 0.28, e.z, 0xffd166);
                     break;
+                  case 'grenade':
+                    this.spawnExplosionParticles(e.x, e.y + 0.32, e.z, impactColor, this.isHandheldViewport ? 16 : 26);
+                    this.spawnParticleRing(e.x, e.y + 0.12, e.z, 0xffd166);
+                    break;
                   case 'flame':
                     this.spawnExplosionParticles(e.x, e.y + 0.52, e.z, impactColor, 7);
                     this.spawnParticleRing(e.x, e.y + 0.42, e.z, 0xff6b35);
@@ -18153,8 +18238,8 @@ export class PaleciakiGameEngine {
                 }
               }
               if (p.firearmExplosion) {
-                this.triggerScreenShake(0.22, 0.16);
-                sound.playBossWarning();
+                this.triggerScreenShake(p.firearmId === 'ballistic_grenade_launcher' ? 0.15 : 0.22, 0.16);
+                if (p.firearmId !== 'ballistic_grenade_launcher') sound.playBossWarning();
               }
               // A restrained hit-stop cue makes each shot feel connected without
               // shaking the camera on every pellet or overwhelming mobile play.
@@ -18210,6 +18295,13 @@ export class PaleciakiGameEngine {
             }
           }
 
+          if (p.detonateOnImpact) {
+            p.detonated = true;
+            this.spawnBallisticGrenadeDetonationFx(p.mesh.position.x, p.mesh.position.y, p.mesh.position.z, p.firearmColor ?? 0xd4a24f);
+            destroyProj = true;
+            break;
+          }
+
           if (p.chainable && (p.bouncesRemaining || 0) > 0 && p.hitIds) {
             const nextTarget = chooseSurvivalRicochetTarget(
               { x: e.x, z: e.z },
@@ -18243,6 +18335,15 @@ export class PaleciakiGameEngine {
             break;
           }
         }
+      }
+
+      if (p.groundDetonationPending && p.detonateOnGround && !p.detonated && !destroyProj) {
+        p.detonated = true;
+        this.detonateBallisticFirearmProjectile(
+          p,
+          firearmDamageMultiplier * berserkMult * (p.chainDamageMultiplier || 1),
+        );
+        destroyProj = true;
       }
 
       if (destroyProj || p.life <= 0) {
