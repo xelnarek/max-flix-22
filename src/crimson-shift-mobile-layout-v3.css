@@ -2,12 +2,7 @@
  * MAX FLIX 22 — CRIMSON SHIFT / mobile layout repair V3
  * The phone layout uses a native viewport grid and a persistent vertical left rail
  * with one scrollable content viewport. It overrides legacy inverse-zoom sizing.
- * legacy inverse-zoom menu sizing instead of stacking another scaled canvas.
  */
-
-
-
-
 
 /* Tablet and phone widths keep the same complete vertical navigation rail. */
 @media (min-width: 901px) and (max-width: 1100px) {
@@ -27,8 +22,6 @@
     gap: 9px !important;
     overflow: hidden !important;
   }
-
-
 
   #title-screen .menu-tabs-bar {
     grid-area: navigation !important;
@@ -57,8 +50,6 @@
     gap: 4px !important;
     border-right: 0 !important;
   }
-
-
 
   #title-screen .menu-nav-group-label {
     display: block !important;
@@ -283,18 +274,6 @@
     box-shadow: none !important;
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
   #title-screen .menu-nav-group {
     display: grid !important;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 96px), 1fr)) !important;
@@ -308,8 +287,6 @@
     background: linear-gradient(150deg, rgba(29, 17, 20, .97), rgba(10, 10, 12, .99)) !important;
     overflow: visible !important;
   }
-
-
 
   #title-screen .menu-nav-group-label {
     display: block !important;
@@ -568,12 +545,6 @@
     padding: 6px !important;
   }
 
-
-
-
-
-
-
   #title-screen .menu-nav-group {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 90px), 1fr)) !important;
     gap: 5px !important;
@@ -635,8 +606,6 @@
   #title-screen .menu-tabs-bar {
     gap: 5px !important;
   }
-
-
 
   #title-screen .menu-nav-group {
     padding: 5px !important;
