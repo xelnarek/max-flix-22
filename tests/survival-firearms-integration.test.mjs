@@ -45,7 +45,7 @@ test('magazine, reload, projectile archetype and damage are driven by the active
   assert.match(game, /firearmExplosion: definition\.archetype === 'rocket'/);
   assert.match(game, /aoeDamageMultiplier: definition\.aoeDamageMultiplier/);
   assert.match(game, /damageSource: getSurvivalFirearmDamageSource\(definition\.id\)/);
-  assert.match(game, /if \(p\.firearmProjectile\)[\s\S]*?adjustedProjectileDamage/);
+  assert.match(game, /const adjustedProjectileDamage = p\.firearmProjectile/);
 });
 
 test('all enemy kills can spawn firearms while PvP remains on its authoritative shooting path', async () => {
