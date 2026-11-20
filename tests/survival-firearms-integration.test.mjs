@@ -109,12 +109,14 @@ test('Survival HUD exposes the primary firearm, magazine and live reload state s
   for (const id of ['survival-firearm-status', 'survival-firearm-icon', 'survival-firearm-name', 'survival-firearm-ammo', 'survival-firearm-reload']) {
     assert.ok(html.includes('id="' + id + '"'), 'missing HUD field ' + id);
   }
-  assert.match(html, /survival-weapon-rack-label">MODUŁY/);
+  assert.doesNotMatch(html, /survival-weapons-list|survival-weapon-rack-label/);
+  assert.match(html, /survival-firearm-name/);
   assert.match(app, /const primaryFirearm = snapshot\.primaryFirearm/);
   assert.match(app, /primaryFirearm\.ammoInMagazine/);
   assert.match(app, /primaryFirearm\.reloadRemainingSeconds/);
   assert.match(css, /survival-firearm-status/);
   assert.match(css, /survival-firearm-ammo/);
+  assert.doesNotMatch(app, /survival-weapons-list/);
 });
 
 
