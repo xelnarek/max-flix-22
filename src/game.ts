@@ -17292,8 +17292,10 @@ export class PaleciakiGameEngine {
 
     // Keep authoritative coordinates, rendered rigs and next-frame broadphase aligned.
     for (const enemy of this.enemies) {
-      if (enemy.state === 'defeated' || !enemy.mesh) continue;
-      this.clampEnemyToArena(enemy);
+      if (!enemy.mesh) continue;
+      if (enemy.state !== 'defeated') this.clampEnemyToArena(enemy);
+      // Active corpses may be separated from other corpses after simultaneous
+      // area damage; keep their rendered rig aligned with the reserved footprint.
       enemy.mesh.position.x = enemy.x;
       enemy.mesh.position.z = enemy.z;
     }
