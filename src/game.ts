@@ -2318,7 +2318,7 @@ export class PaleciakiGameEngine {
       // weapons and decorative equipment inflate the type-specific hitbox.
       const modelBounds = new THREE.Box3().setFromObject(root);
       const modelSize = modelBounds.getSize(new THREE.Vector3());
-      enemy.collisionRadius = getEnemyCollisionRadius(requestedType, Math.max(modelSize.x, modelSize.z) * 0.44);
+      enemy.collisionRadius = getEnemyCollisionRadius(requestedType, Math.max(modelSize.x, modelSize.z) * 0.46);
       this.applyHandheldActorShadowBudget(root);
       root.position.y -= mesh.position.y;
       root.name = 'gobkit-enemy-' + modelId + '-' + enemy.id;
@@ -17284,10 +17284,11 @@ export class PaleciakiGameEngine {
     const bounds = this.gameMode === 'survival'
       ? this.levelBounds
       : { minX: -34.5, maxX: 204.5, minZ: -21.0, maxZ: 21.0 };
-    // Four bounded passes converge even when a wave spawns several enemies
-    // at nearly identical coordinates. The 0.8 m cap avoids leaving visible
-    // torso intersections after the old two-pass correction.
-    solveEnemyCrowdOverlaps(this.enemies, this.enemySpatialIndex, bounds, 0.16, 4, 0.8);
+    // Sixteen bounded relaxation passes handle dense spawn clusters and mixed-size
+    // rigs without leaving the visible torso intersections seen on handheld devices.
+    // The spatial hash limits each pass to nearby bodies; movement and combat AI
+    // remain unchanged, and the per-pass cap prevents unbounded teleport corrections.
+    solveEnemyCrowdOverlaps(this.enemies, this.enemySpatialIndex, bounds, 0.16, 16, 1.2);
 
     // Keep authoritative coordinates, rendered rigs and next-frame broadphase aligned.
     for (const enemy of this.enemies) {
