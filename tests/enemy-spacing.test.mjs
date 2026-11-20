@@ -64,6 +64,12 @@ test('spawn selection prefers an unobstructed candidate with the required cleara
   assert.deepEqual(chooseSpacedSpawnPoint(candidates, occupied, 3.2), { x: 8, z: 0 });
 });
 
+test('new spawns avoid corpses that are still visible during their death animation', () => {
+  const occupied = [{ id: 'corpse', x: 0, z: 0, state: 'defeated', deathVisualTimer: 0.45 }];
+  const candidates = [{ x: 1, z: 0 }, { x: 7, z: 0 }];
+  assert.deepEqual(chooseSpacedSpawnPoint(candidates, occupied, 3.2), { x: 7, z: 0 });
+});
+
 test('when every spawn point is crowded, choose the least crowded valid candidate', () => {
   const occupied = [
     { id: 'a', x: 0, z: 0 },
