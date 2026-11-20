@@ -10254,10 +10254,12 @@ export class PaleciakiGameEngine {
     const momentumRate = this.gameMode === 'survival'
       ? getSurvivalMomentumRateMultiplier(this.survivalMomentum.overdriveRemainingSeconds, this.survivalMomentum.killStreak)
       : 1;
-    const attackRate = this.gameMode === 'survival'
+    const uncappedAttackRate = this.gameMode === 'survival'
       ? this.survivalAttackRateMultiplier * getSurvivalAnomalyModifiers(this.survivalAnomaly).attackCooldownMultiplier * momentumRate
       : 1;
-    firearm.cooldown = definition.fireIntervalSeconds * hasteFactor / Math.max(0.5, attackRate);
+    // Keep perk/momentum synergies meaningful without allowing the previous machine-gun cadence to return.
+    const attackRate = Math.min(1.12, Math.max(0.5, uncappedAttackRate));
+    firearm.cooldown = definition.fireIntervalSeconds * hasteFactor / attackRate;
     firearm.ammoInMagazine = Math.max(0, firearm.ammoInMagazine - 1);
     firearm.shotCounter++;
     this.attackSwingDuration = this.survivalFirearmAttackAnimationSeconds[definition.id];
