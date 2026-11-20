@@ -685,7 +685,8 @@ test('PvP random perk capsule spawns and grants its effect on pickup', () => {
     state.obstacles = [];
     state.p1.x = -5; state.p1.z = 0; state.p2.x = 5; state.p2.z = 0;
     stepPvpArena(state, 0.04, { moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantFire: true });
-    assert.ok(state.projectiles.some(projectile => projectile.damage > 100));
+    assert.equal(state.p1.shotsFired, 1);
+    assert.ok(state.projectiles.some(projectile => projectile.damage > 100), 'Power must increase the shared firearm hit above its normalized 100-damage baseline.');
   } finally { Math.random = oldRandom; }
 });
 
@@ -732,16 +733,19 @@ test('one-shot fire intent shoots once, respects firearm recovery, and can be ta
   state.p1.z = -9;
   state.p2.x = 18;
   state.p2.z = -9;
+  const { getPvpOperatorAttackCooldown } = await import('../src/pvpArena.ts');
+  const recovery = getPvpOperatorAttackCooldown('marcin');
   const input = { moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantFire: true };
   stepPvpArena(state, 0.03, input);
   assert.equal(state.p1.shotsFired, 1);
   stepPvpArena(state, 0.05, { ...input, wantFire: false });
   assert.equal(state.p1.shotsFired, 1, 'neutral input must not auto-fire');
-  advanceArena(state, 2.90, { ...input, wantFire: false });
+  advanceArena(state, recovery - 0.15, { ...input, wantFire: false });
   stepPvpArena(state, 0.03, input);
-  assert.equal(state.p1.shotsFired, 1, 'a tap before the 3-second recovery must be rejected');
+  assert.equal(state.p1.shotsFired, 1, 'a tap before the active firearm recovery must be rejected');
+  advanceArena(state, 0.25, { ...input, wantFire: false });
   stepPvpArena(state, 0.03, input);
-  assert.equal(state.p1.shotsFired, 2, 'a fresh tap after recovery fires again');
+  assert.equal(state.p1.shotsFired, 2, 'a fresh tap after the active firearm recovery fires again');
 });
 
 
@@ -837,7 +841,7 @@ test('PvP grenade follows a ballistic arc and clears cover that a straight bulle
   const projectile = state.projectiles[0];
   assert.equal(projectile.firearmId, 'ballistic_grenade_launcher');
   assert.equal(projectile.gravity, 12.5);
-  assert.equal(projectile.vy, 7.4);
+  assert.ok(Math.abs(projectile.vy - (7.4 - 12.5 * 0.05)) < 1e-9, 'vertical velocity must advance with gravity during the shot tick');
   assert.equal(projectile.detonateOnGround, true);
 
   advanceArena(state, 0.8);
