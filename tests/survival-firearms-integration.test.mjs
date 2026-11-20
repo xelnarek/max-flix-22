@@ -78,6 +78,18 @@ test('every firearm renders a unique physical projectile, muzzle signature, trai
   assert.match(game, /pvpLastObservedRemoteShotsFired/);
   assert.match(game, /remoteShotsSinceLastSync/);
   assert.match(game, /this\.spawnSurvivalFirearmMuzzleFx\([\s\S]*?remoteFirearmDefinition\.archetype/);
+  assert.match(game, /private readonly survivalFirearmProjectileVisualCache = new Map<string, THREE\.Mesh>\(\)/,
+    'immutable projectile templates must be kept in a bounded per-engine cache');
+  assert.match(game, /cachedTemplate\.clone\(true\) as THREE\.Mesh/,
+    'new shots must clone transforms without rebuilding GPU geometry and materials');
+  assert.match(game, /object\.userData\.sharedFirearmProjectileResource = true/);
+  assert.match(game, /this\.disposeTemporaryObject\(template\)/,
+    'cached GPU resources must be explicitly released when the game engine is disposed');
+  assert.match(game, /if \(object\.userData\.sharedFirearmProjectileResource === true\) return/,
+    'PVP cleanup must not dispose shared projectile resources after each shot');
+  assert.doesNotMatch(game.slice(game.indexOf('private fireSurvivalFirearm('), game.indexOf('private spawnBallisticGrenadeDetonationFx(')),
+    /disposeOnRemove: true/,
+    'cached firearm projectiles must not be disposed individually');
   assert.doesNotMatch(game, /spawnCompactImpact\(start\.x, start\.y, start\.z, definition\.color\)/,
     'firearm muzzle effects must not be masked by the same generic three-particle burst');
 });
