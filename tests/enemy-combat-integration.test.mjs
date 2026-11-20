@@ -235,29 +235,24 @@ test('special Inspector, Gamma Mutant and Pip abilities never overlap committed 
 });
 
 
-test('distant visual LOD never changes hostile projectile, collision or damage logic', () => {
+test('full-detail enemy rigs keep distance-aware animation cadence without swapping visual models', () => {
   const lodStart = game.indexOf('private updateGobkitAnimations(dt: number)');
   const lodEnd = game.indexOf('private rebuildPlayerMesh()', lodStart);
   const animation = game.slice(lodStart, lodEnd);
-  assert.match(animation, /shouldUseEnemyVisualLodProxy/);
-  assert.match(animation, /combatCritical/);
-  assert.match(animation, /track\.lastPosition\.copy\(enemy\.mesh\.position\)/);
+  assert.match(animation, /getActorAnimationIntervalFromDistanceSquared/);
+  assert.match(animation, /track\.mixer\.update\(animationDt\)/);
+  assert.match(animation, /enemy\.state === 'defeated'/);
+  assert.doesNotMatch(animation, /actorLodProxy|shouldUseEnemyVisualLodProxy|updateEnemyVisualLodProxy|const useProxy/);
   assert.match(game, /getEnemyCollisionRadius\(requestedType/);
   assert.match(game, /resolvePlayerMovementAgainstEnemies\(/);
   assert.match(game, /findFirstProjectileEnemyImpact\(/);
 });
 
 
-test('enemy death hides the LOD proxy and keeps only the full rig visible until cleanup', () => {
-  assert.match(game, /private lockEnemyDeathVisualToSingleRig\(mesh: THREE\.Object3D\)/);
-  assert.match(game, /if \(lodProxy\) lodProxy\.visible = false/);
-  assert.match(game, /if \(fullVisual\) fullVisual\.visible = true/);
-  assert.match(game, /this\.lockEnemyDeathVisualToSingleRig\(mesh\)/);
-  assert.match(game, /enemy\.state === 'defeated' \|\| enemy\.mesh\.userData\.actorDeathVisualLocked === true/);
-  assert.match(game, /proxy\.visible = false/);
-  assert.match(game, /fullRoot\.visible = !deathVisualLocked/);
-  assert.doesNotMatch(game, /proxy\.visible = !deathVisualLocked/);
-  assert.match(game, /const useProxy = !deathVisualLocked && shouldUseEnemyVisualLodProxy/);
-  assert.match(game, /lodProxy\.visible = useProxy/);
-  assert.match(game, /if \(fullVisual\) fullVisual\.visible = false/);
+test('enemy death animates the one full rig and hides its actor only after the defeat animation', () => {
+  assert.match(game, /private beginEnemyDeathVisual\(enemy: EnemyItem\)/);
+  assert.match(game, /this\.requestGobkitAction\(track, 'Death', duration\)/);
+  assert.match(game, /private updateDefeatedEnemyVisual\(enemy: EnemyItem, dt: number\)/);
+  assert.match(game, /if \(timer <= 0\) \{[\s\S]*?mesh\.visible = false/);
+  assert.doesNotMatch(game, /actorLodProxy|actorLodProxyRoot|lockEnemyDeathVisualToSingleRig|shouldUseEnemyVisualLodProxy/);
 });
