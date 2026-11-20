@@ -58,7 +58,7 @@ test('all screen sizes use one always-visible vertical sidebar with a selected c
   assert.doesNotMatch(app, /group\.setAttribute\('role', 'tablist'\)/);
   assert.match(repair, /#title-screen \.menu-tabs-bar\s*\{[\s\S]*?flex-direction: column !important/);
   assert.doesNotMatch(html, /menu-mobile-segment/);
-  assert.doesNotMatch(repair, /menu-mobile-segment|menu-nav-group\\[hidden\\]/);
+  assert.doesNotMatch(repair, /menu-mobile-segment|menu-nav-group\[hidden\]/);
   assert.match(repair, /grid-template-columns: clamp\(122px, 31vw, 188px\) minmax\(0, 1fr\)/);
 });
 

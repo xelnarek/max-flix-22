@@ -24,10 +24,10 @@ test('mobile menu has one navigation surface and one independent vertical conten
   assert.ok(html.indexOf('crimson-shift-mobile-layout-v3.css') > html.indexOf('crimson-shift-functional-menu.css'));
   assert.match(css, /#title-screen \.title-sheet\s*\{[^}]*zoom:\s*1\s*!important/s);
   assert.doesNotMatch(html, /menu-mobile-segment/);
-  assert.doesNotMatch(css, /menu-mobile-segment|menu-nav-group\\[hidden\\]/);
-  assert.match(repair, /@media \\(max-width: 900px\\)[\\s\\S]*grid-template-columns: clamp\\(122px, 31vw, 188px\\)/);
-  assert.match(repair, /#title-screen \\.menu-tabs-bar\\s*\\{[\\s\\S]*?flex-direction: column !important/);
-  assert.match(repair, /#title-screen \\.menu-tabs-bar\\s*\\{[\\s\\S]*?overflow-y: auto !important/);
+  assert.doesNotMatch(css, /menu-mobile-segment|menu-nav-group\[hidden\]/);
+  assert.match(repair, /@media \(max-width: 900px\)[\s\S]*grid-template-columns: clamp\(122px, 31vw, 188px\)/);
+  assert.match(repair, /#title-screen \.menu-tabs-bar\s*\{[\s\S]*?flex-direction: column !important/);
+  assert.match(repair, /#title-screen \.menu-tabs-bar\s*\{[\s\S]*?overflow-y: auto !important/);
   assert.match(css, /\.menu-tab-content-area\s*\{[^}]*overflow-y:\s*auto\s*!important/s);
   assert.match(css, /\.menu-tab-content-area\s*\{[^}]*overflow-x:\s*hidden\s*!important/s);
   assert.doesNotMatch(css, /\.menu-tabs-bar\s*\{[^}]*overflow-x:\s*auto\s*!important/s);

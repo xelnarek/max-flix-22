@@ -18,7 +18,7 @@ test('mobile menu keeps all twelve destinations in one vertical sidebar with rea
   assert.match(repair, /#title-screen \.menu-tabs-bar\s*\{[\s\S]*?overflow-y: auto !important/);
   assert.match(repair, /@media \(max-width: 900px\)[\s\S]*grid-template-columns: clamp\(122px, 31vw, 188px\)/);
   assert.doesNotMatch(html, /menu-mobile-segment/);
-  assert.doesNotMatch(repair, /menu-mobile-segment|menu-nav-group\\[hidden\\]/);
+  assert.doesNotMatch(repair, /menu-mobile-segment|menu-nav-group\[hidden\]/);
   assert.match(repair, /min-height: 42px !important/);
   assert.match(repair, /font-size: clamp\(7\.8px, 2\.1vw, 9px\) !important/);
   assert.match(repair, /\.menu-nav-group\[data-active-group="true"\]/);
