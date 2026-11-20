@@ -16,7 +16,9 @@ test('single-sidebar repair is the final menu layout layer', () => {
   );
   assert.match(css, /grid-template-areas:[\s\S]*"header header"[\s\S]*"modes modes"[\s\S]*"navigation content"/);
   assert.match(css, /\.menu-tabs-bar\s*\{[\s\S]*flex-direction:\s*column !important/);
-  assert.match(css, /\.menu-mobile-segments\s*\{\s*display:\s*none !important/);
+  assert.doesNotMatch(html, /menu-mobile-segment/);
+  assert.doesNotMatch(app, /menuMobileSegmentButtons|activeMobileSegmentId|setActiveMobileSegment|MENU_SEGMENTS|MenuSegmentId/);
+  assert.doesNotMatch(css, /menu-mobile-segment|menu-nav-group\\[hidden\\]/);
 });
 
 test('all twelve destinations stay in one vertical navigation rail', () => {
@@ -45,7 +47,7 @@ test('operator portraits and details have bounded non-overlapping geometry', () 
 
 
 test('the selected category is indicated without hiding other sidebar groups', () => {
-  assert.match(app, /group\.dataset\.activeGroup = String\(group\.dataset\.menuGroup === segment\.id\)/);
+  assert.match(app, /group\\.dataset\\.activeGroup = String\\(group\\.dataset\\.menuGroup === groupId\\)/);
   assert.match(app, /group\.hidden = false;/);
   assert.match(css, /\.menu-nav-group\[data-active-group="true"\]/);
   assert.match(css, /\.menu-nav-group\[data-active-group="true"\] \.menu-nav-group-label::before/);
