@@ -896,6 +896,7 @@ export class PaleciakiGameEngine {
   private survivalEvolutions = new Set<string>();
   private survivalWeapons: SurvivalWeaponState[] = [];
   private survivalFirearm: SurvivalFirearmState = createStartingSurvivalFirearmState();
+  private survivalFirearmStates = new Map<SurvivalFirearmId, SurvivalFirearmState>();
   private survivalFirearmKillCount = 0;
   private survivalFirearmDropMissStreak = 0;
   private survivalFirearmSoundCooldown = 0;
@@ -2718,6 +2719,7 @@ export class PaleciakiGameEngine {
     this.survivalElapsed = 0;
     this.clearSurvivalFirearmDrops();
     this.survivalFirearm = createStartingSurvivalFirearmState();
+    this.survivalFirearmStates.clear();
     this.survivalFirearmKillCount = 0;
     this.survivalFirearmDropMissStreak = 0;
     this.survivalFirearmSoundCooldown = 0;
@@ -7535,6 +7537,7 @@ export class PaleciakiGameEngine {
     this.clearSurvivalFirearmDrops();
     this.clearLevel();
     this.survivalFirearm = createStartingSurvivalFirearmState();
+    this.survivalFirearmStates.clear();
     this.survivalFirearmKillCount = 0;
     this.survivalFirearmDropMissStreak = 0;
     this.survivalFirearmSoundCooldown = 0;
@@ -10229,7 +10232,7 @@ export class PaleciakiGameEngine {
       if (this.survivalFirearm.reloadRemaining <= 0) {
         this.survivalFirearm.ammoInMagazine = definition.magazineSize;
         this.emitFloatingToast('MAGAZYNEK GOTOWY • ' + definition.shortName, this.playerPos.x, this.playerPos.y + 1.35, this.playerPos.z, 'perk');
-        sound.playPickup(1);
+        sound.playFirearmReload(definition.archetype, 'complete');
       }
     }
 
@@ -10249,7 +10252,10 @@ export class PaleciakiGameEngine {
       if (distance > 1.22 || Math.abs(drop.y - this.playerPos.y) > 1.8) continue;
 
       const picked = SURVIVAL_FIREARM_DEFS[drop.firearmId];
-      this.survivalFirearm = createSurvivalFirearmState(drop.firearmId);
+      this.survivalFirearmStates.set(this.survivalFirearm.id, this.survivalFirearm);
+      const storedFirearmState = this.survivalFirearmStates.get(drop.firearmId);
+      this.survivalFirearm = storedFirearmState ?? createSurvivalFirearmState(drop.firearmId);
+      this.survivalFirearmStates.set(drop.firearmId, this.survivalFirearm);
       this.updateHeldSurvivalFirearmVisual();
       this.levelRoot.remove(drop.mesh);
       this.disposeTemporaryObject(drop.mesh);
@@ -10270,7 +10276,7 @@ export class PaleciakiGameEngine {
       this.survivalFirearm.ammoInMagazine >= definition.magazineSize) return;
     this.survivalFirearm.reloadRemaining = definition.reloadSeconds * (this.gameMode === 'survival' ? this.survivalWeaponReloadMultiplier : 1);
     this.emitFloatingToast('PRZEŁADOWANIE • ' + definition.shortName, this.playerPos.x, this.playerPos.y + 1.25, this.playerPos.z, 'perk');
-    sound.playPickup(1);
+    sound.playFirearmReload(definition.archetype, 'start');
   }
 
   private fireSurvivalFirearm(target?: EnemyItem): void {
@@ -10303,7 +10309,11 @@ export class PaleciakiGameEngine {
     firearm.cooldown = definition.fireIntervalSeconds * hasteFactor / Math.max(0.5, attackRate);
     firearm.ammoInMagazine = Math.max(0, firearm.ammoInMagazine - 1);
     firearm.shotCounter++;
-    this.attackSwingDuration = definition.archetype === 'shotgun' || definition.archetype === 'rocket' || definition.archetype === 'gauss' ? 0.24 : 0.15;
+    const recoilAnimationSeconds: Readonly<Record<SurvivalFirearmId, number>> = {
+      starter_pistol: 0.13, smg_45: 0.075, assault_rifle: 0.11, shotgun_12g: 0.26, battle_rifle: 0.22,
+      minigun: 0.06, rocket_launcher: 0.30, flamethrower: 0.075, plasma_rifle: 0.18, gauss_rifle: 0.24,
+    };
+    this.attackSwingDuration = recoilAnimationSeconds[definition.id];
     this.attackSwingTimer = this.attackSwingDuration;
     this.requestGobkitAction(this.playerGobkitTrack, 'Attack', this.attackSwingDuration);
 
@@ -10369,10 +10379,11 @@ export class PaleciakiGameEngine {
     }
     if (this.survivalFirearmSoundCooldown <= 0) {
       sound.playFirearmShot(definition.archetype);
-      this.survivalFirearmSoundCooldown = ['smg', 'minigun', 'flame'].includes(definition.archetype) ? 0.20 : 0.075;
+      // The gate only suppresses duplicate same-frame calls; it never drops the next real shot.
+      this.survivalFirearmSoundCooldown = Math.min(0.12, definition.fireIntervalSeconds * 0.65);
     }
 
-    if (firearm.ammoInMagazine <= 0) firearm.reloadRemaining = definition.reloadSeconds * (this.gameMode === 'survival' ? this.survivalWeaponReloadMultiplier : 1);
+    if (firearm.ammoInMagazine <= 0) this.reloadSurvivalFirearm();
   }
 
   private spawnSurvivalFirearmTrail(projectile: { mesh: THREE.Object3D; vel: THREE.Vector3; firearmId?: SurvivalFirearmId }): void {
@@ -17772,12 +17783,49 @@ export class PaleciakiGameEngine {
               p.criticalBurstState.consumed = true;
               this.applySurvivalCriticalShrapnel(e, baseDmg, projectileDamageSource);
             }
-            sound.playSmack();
+            if (p.firearmProjectile && p.firearmId) sound.playFirearmImpact(SURVIVAL_FIREARM_DEFS[p.firearmId].archetype);
+            else sound.playSmack();
             if (p.weaponProjectile || p.firearmProjectile) {
               const impactColor = p.firearmColor ?? (p.weaponId ? SURVIVAL_DAMAGE_WEAPONS[p.weaponId].color : 0x7dd3fc);
               this.spawnCompactImpact(e.x, e.y + 0.72, e.z, impactColor);
+              if (p.firearmProjectile && p.firearmId) {
+                const archetype = SURVIVAL_FIREARM_DEFS[p.firearmId].archetype;
+                switch (archetype) {
+                  case 'shotgun':
+                    this.spawnExplosionParticles(e.x, e.y + 0.50, e.z, impactColor, 10);
+                    this.spawnParticleRing(e.x, e.y + 0.35, e.z, impactColor);
+                    break;
+                  case 'rocket':
+                    this.spawnExplosionParticles(e.x, e.y + 0.48, e.z, impactColor, 20);
+                    this.spawnParticleRing(e.x, e.y + 0.28, e.z, 0xffd166);
+                    break;
+                  case 'flame':
+                    this.spawnExplosionParticles(e.x, e.y + 0.52, e.z, impactColor, 7);
+                    this.spawnParticleRing(e.x, e.y + 0.42, e.z, 0xff6b35);
+                    break;
+                  case 'plasma':
+                    this.spawnExplosionParticles(e.x, e.y + 0.50, e.z, impactColor, 13);
+                    this.spawnParticleRing(e.x, e.y + 0.34, e.z, impactColor);
+                    this.triggerBloomPulse(0.14);
+                    break;
+                  case 'gauss':
+                    this.spawnExplosionParticles(e.x, e.y + 0.54, e.z, impactColor, 12);
+                    this.triggerHitStop(0.025);
+                    break;
+                  case 'heavy-rifle':
+                    this.spawnExplosionParticles(e.x, e.y + 0.48, e.z, impactColor, 8);
+                    break;
+                  case 'minigun':
+                    this.spawnExplosionParticles(e.x, e.y + 0.48, e.z, impactColor, 4);
+                    break;
+                  case 'pistol':
+                  case 'smg':
+                  case 'rifle':
+                    this.spawnExplosionParticles(e.x, e.y + 0.48, e.z, impactColor, 5);
+                    break;
+                }
+              }
               if (p.firearmExplosion) {
-                this.spawnExplosionParticles(e.x, e.y + 0.48, e.z, impactColor, 20);
                 this.triggerScreenShake(0.22, 0.16);
                 sound.playBossWarning();
               }
