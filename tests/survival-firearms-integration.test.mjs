@@ -47,6 +47,8 @@ test('firearm pickups are physical 3D models with weapon-specific silhouettes', 
   for (const part of ['firearm-magazine', 'firearm-bolt', 'firearm-pump', 'firearm-rotor', 'firearm-rocket-cell', 'firearm-tank-valve', 'firearm-coils', 'firearm-energy-cell']) {
     assert.ok(modelFactory.includes("'" + part + "'"), 'missing animated model part: ' + part);
   }
+  const minigunModel = modelFactory.slice(modelFactory.indexOf("case 'minigun':"), modelFactory.indexOf("case 'rocket':"));
+  assert.match(minigunModel, /addMagazine\(/, 'minigun needs a visible feed drum that can drop during reload');
   assert.match(game, /life: 40/);
 });
 
