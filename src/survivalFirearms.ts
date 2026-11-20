@@ -53,70 +53,70 @@ export const STARTING_SURVIVAL_FIREARM: SurvivalFirearmId = 'starter_pistol';
 export const SURVIVAL_FIREARM_DEFS: Readonly<Record<SurvivalFirearmId, SurvivalFirearmDefinition>> = Object.freeze({
   starter_pistol: {
     id: 'starter_pistol', name: 'Pistolet serwisowy', shortName: 'PISTOLET', icon: '🔫',
-    color: 0xcbd5e1, archetype: 'pistol', roleDescription: 'Broń startowa • stabilny pojedynczy strzał', rangeMeters: 26, fireIntervalSeconds: 0.31, magazineSize: 12,
+    color: 0xcbd5e1, archetype: 'pistol', roleDescription: 'Broń startowa • stabilny pojedynczy strzał', rangeMeters: 26, fireIntervalSeconds: 0.58, magazineSize: 12,
     reloadSeconds: 1.05, damage: 1.0, pellets: 1, spreadRadians: 0.012,
     projectileSpeed: 31, projectileRadius: 0.075,
     pierce: 0, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 0,
   },
   smg_45: {
     id: 'smg_45', name: 'Pistolet maszynowy .45', shortName: 'PM .45', icon: '🔫',
-    color: 0x94a3b8, archetype: 'smg', roleDescription: 'Bardzo szybka seria • niski koszt amunicji na eliminację', rangeMeters: 23, fireIntervalSeconds: 0.11, magazineSize: 32,
+    color: 0x94a3b8, archetype: 'smg', roleDescription: 'Bardzo szybka seria • niski koszt amunicji na eliminację', rangeMeters: 23, fireIntervalSeconds: 0.22, magazineSize: 32,
     reloadSeconds: 1.42, damage: 0.62, pellets: 1, spreadRadians: 0.055,
     projectileSpeed: 27, projectileRadius: 0.065,
     pierce: 0, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 15,
   },
   assault_rifle: {
     id: 'assault_rifle', name: 'Karabin szturmowy', shortName: 'KARABIN', icon: '🪖',
-    color: 0x86a873, archetype: 'rifle', roleDescription: 'Uniwersalna broń automatyczna • umiarkowany rozrzut', rangeMeters: 36, fireIntervalSeconds: 0.165, magazineSize: 27,
+    color: 0x86a873, archetype: 'rifle', roleDescription: 'Uniwersalna broń automatyczna • umiarkowany rozrzut', rangeMeters: 36, fireIntervalSeconds: 0.31, magazineSize: 27,
     reloadSeconds: 1.58, damage: 0.96, pellets: 1, spreadRadians: 0.026,
     projectileSpeed: 34, projectileRadius: 0.07,
     pierce: 0, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 15,
   },
   shotgun_12g: {
     id: 'shotgun_12g', name: 'Strzelba 12G', shortName: 'STRZELBA', icon: '💥',
-    color: 0xfbbf24, archetype: 'shotgun', roleDescription: 'Krótki dystans • 7 śrutów w jednej salwie', rangeMeters: 9, fireIntervalSeconds: 0.72, magazineSize: 8,
+    color: 0xfbbf24, archetype: 'shotgun', roleDescription: 'Krótki dystans • 7 śrutów w jednej salwie', rangeMeters: 9, fireIntervalSeconds: 1.15, magazineSize: 8,
     reloadSeconds: 1.9, damage: 0.43, pellets: 7, spreadRadians: 0.235,
     projectileSpeed: 23, projectileRadius: 0.09,
     pierce: 0, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 13,
   },
   battle_rifle: {
     id: 'battle_rifle', name: 'Karabin bojowy 7.62', shortName: '7.62', icon: '🎯',
-    color: 0x60a5fa, archetype: 'heavy-rifle', roleDescription: 'Ciężki pocisk • przebicie pierwszego celu', rangeMeters: 42, fireIntervalSeconds: 0.58, magazineSize: 10,
+    color: 0x60a5fa, archetype: 'heavy-rifle', roleDescription: 'Ciężki pocisk • przebicie pierwszego celu', rangeMeters: 42, fireIntervalSeconds: 1.05, magazineSize: 10,
     reloadSeconds: 1.72, damage: 2.05, pellets: 1, spreadRadians: 0.009,
     projectileSpeed: 42, projectileRadius: 0.085,
     pierce: 1, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 10,
   },
   minigun: {
     id: 'minigun', name: 'Minigun', shortName: 'MINIGUN', icon: '⚙️',
-    color: 0xf97316, archetype: 'minigun', roleDescription: 'Ekstremalna szybkostrzelność • szeroki rozrzut', rangeMeters: 27, fireIntervalSeconds: 0.07, magazineSize: 72,
+    color: 0xf97316, archetype: 'minigun', roleDescription: 'Ekstremalna szybkostrzelność • szeroki rozrzut', rangeMeters: 27, fireIntervalSeconds: 0.14, magazineSize: 72,
     reloadSeconds: 2.55, damage: 0.42, pellets: 1, spreadRadians: 0.078,
     projectileSpeed: 32, projectileRadius: 0.062,
     pierce: 0, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 7,
   },
   rocket_launcher: {
     id: 'rocket_launcher', name: 'Wyrzutnia rakiet', shortName: 'RAKIETY', icon: '🚀',
-    color: 0xef4444, archetype: 'rocket', roleDescription: 'Rakieta • obrażenia obszarowe i podpalenie', rangeMeters: 32, fireIntervalSeconds: 1.34, magazineSize: 5,
+    color: 0xef4444, archetype: 'rocket', roleDescription: 'Rakieta • obrażenia obszarowe i podpalenie', rangeMeters: 32, fireIntervalSeconds: 2.2, magazineSize: 5,
     reloadSeconds: 2.45, damage: 3.35, pellets: 1, spreadRadians: 0.006,
     projectileSpeed: 13.8, projectileRadius: 0.16,
     pierce: 0, aoeRadius: 2.9, aoeDamageMultiplier: 0.48, igniteOnHit: true, dropWeight: 8,
   },
   flamethrower: {
     id: 'flamethrower', name: 'Miotacz płomieni', shortName: 'MIOTACZ', icon: '🔥',
-    color: 0xfb923c, archetype: 'flame', roleDescription: 'Stożek ognia • podpalenie celów', rangeMeters: 5, fireIntervalSeconds: 0.095, magazineSize: 46,
+    color: 0xfb923c, archetype: 'flame', roleDescription: 'Stożek ognia • podpalenie celów', rangeMeters: 5, fireIntervalSeconds: 0.19, magazineSize: 46,
     reloadSeconds: 2.18, damage: 0.30, pellets: 2, spreadRadians: 0.20,
     projectileSpeed: 12.8, projectileRadius: 0.095,
     pierce: 0, aoeRadius: 0.38, aoeDamageMultiplier: 0.32, igniteOnHit: true, dropWeight: 7,
   },
   plasma_rifle: {
     id: 'plasma_rifle', name: 'Karabin plazmowy', shortName: 'PLAZMA', icon: '🟣',
-    color: 0xa78bfa, archetype: 'plasma', roleDescription: 'Pocisk plazmowy • niewielkie obrażenia obszarowe', rangeMeters: 30, fireIntervalSeconds: 0.33, magazineSize: 20,
+    color: 0xa78bfa, archetype: 'plasma', roleDescription: 'Pocisk plazmowy • niewielkie obrażenia obszarowe', rangeMeters: 30, fireIntervalSeconds: 0.65, magazineSize: 20,
     reloadSeconds: 1.78, damage: 1.22, pellets: 1, spreadRadians: 0.018,
     projectileSpeed: 18.5, projectileRadius: 0.13,
     pierce: 0, aoeRadius: 0.76, aoeDamageMultiplier: 0.34, igniteOnHit: false, dropWeight: 9,
   },
   gauss_rifle: {
     id: 'gauss_rifle', name: 'Karabin Gaussa', shortName: 'GAUSS', icon: '⚡',
-    color: 0x22d3ee, archetype: 'gauss', roleDescription: 'Strzał precyzyjny • przebija do 5 celów', rangeMeters: 75, fireIntervalSeconds: 0.88, magazineSize: 6,
+    color: 0x22d3ee, archetype: 'gauss', roleDescription: 'Strzał precyzyjny • przebija do 5 celów', rangeMeters: 75, fireIntervalSeconds: 1.55, magazineSize: 6,
     reloadSeconds: 2.12, damage: 3.05, pellets: 1, spreadRadians: 0.002,
     projectileSpeed: 58, projectileRadius: 0.095,
     pierce: 5, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 6,
@@ -136,17 +136,23 @@ export function createSurvivalFirearmState(id: SurvivalFirearmId): SurvivalFirea
   return { id: definition.id, ammoInMagazine: definition.magazineSize, cooldown: 0, reloadRemaining: 0, shotCounter: 0 };
 }
 
-/** First kill guarantees the initial swap; ordinary 14%, elite 58%, boss 100%, six-kill pity. */
+/** Rare Survival-only world loot: 4% normal, 22% elite, boss guaranteed; pity after 18 eligible kills. */
 export function rollSurvivalFirearmDrop(
   killCount: number, enemyTier: SurvivalFirearmEnemyTier, consecutiveMisses: number, roll: number,
 ): SurvivalFirearmDropRoll {
   const safeRoll = Number.isFinite(roll) ? Math.max(0, Math.min(0.999999, roll)) : 0.5;
+  const safeKills = Number.isFinite(killCount) ? Math.max(0, Math.floor(killCount)) : 0;
   const misses = Number.isFinite(consecutiveMisses) ? Math.max(0, Math.floor(consecutiveMisses)) : 0;
-  const firstKill = Number.isFinite(killCount) && killCount <= 1;
-  const baseChance = enemyTier === 'boss' ? 1 : enemyTier === 'elite' ? 0.58 : 0.14;
-  const isPityDrop = !firstKill && enemyTier !== 'boss' && baseChance < 1 && misses >= 5;
-  const isGuaranteed = firstKill || enemyTier === 'boss' || isPityDrop;
-  return { shouldDrop: isGuaranteed || safeRoll < baseChance, isGuaranteed, isPityDrop, chance: isGuaranteed ? 1 : baseChance };
+  const minimumKillsReached = safeKills >= 8;
+  const baseChance = enemyTier === 'boss' ? 1 : enemyTier === 'elite' ? 0.22 : 0.04;
+  const isPityDrop = minimumKillsReached && enemyTier !== 'boss' && misses >= 17;
+  const isGuaranteed = minimumKillsReached && (enemyTier === 'boss' || isPityDrop);
+  return {
+    shouldDrop: minimumKillsReached && (isGuaranteed || safeRoll < baseChance),
+    isGuaranteed,
+    isPityDrop,
+    chance: minimumKillsReached ? (isGuaranteed ? 1 : baseChance) : 0,
+  };
 }
 
 /** Weighted world loot excludes the starter pistol and the weapon already held. */
