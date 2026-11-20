@@ -750,6 +750,29 @@ test('one-shot fire intent shoots once, respects firearm recovery, and can be ta
 
 
 
+test('PvP firearm hit events preserve the exact source weapon for per-weapon impact effects', () => {
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  resetPvpRound(state);
+  advanceArena(state, 3.1);
+  state.obstacles = [];
+  state.pickup.active = false;
+  state.perkDrop.active = false;
+  state.firearmDrop.active = false;
+  state.p1.x = -5;
+  state.p1.z = 0;
+  state.p2.x = -1.5;
+  state.p2.z = 0;
+
+  stepPvpArena(state, 0.05, {
+    moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantFire: true,
+  });
+
+  const hit = state.hitEvents.find((event) => event.sourceSlot === 'p1');
+  assert.ok(hit, 'the close, unobstructed primary shot should register a hit');
+  assert.equal(hit.firearmId, 'starter_pistol',
+    'authoritative hit events must retain the firearm identity for client-side impact rendering');
+});
+
 test('shared PvP firearms use server-owned magazines, manual reload and automatic empty-magazine reload', async () => {
   const { SURVIVAL_FIREARM_DEFS } = await import('../src/survivalFirearms.ts');
   const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');

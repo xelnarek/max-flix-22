@@ -4231,7 +4231,18 @@ export class PaleciakiGameEngine {
         else sound.playSmack();
         playedHitSound = true;
       }
-      this.spawnParticleRing(hit.x, 1.2, hit.z, 0xef4444);
+      if (hit.firearmId) {
+        const hitFirearm = SURVIVAL_FIREARM_DEFS[hit.firearmId];
+        this.spawnSurvivalFirearmImpactFx(
+          hitFirearm.archetype,
+          hit.x,
+          0.62,
+          hit.z,
+          hitFirearm.color,
+        );
+      } else {
+        this.spawnParticleRing(hit.x, 1.2, hit.z, 0xef4444);
+      }
 
       if (hit.targetSlot === this.pvpSlot) {
         this.playerHitReactDuration = getCharacterHitReactionProfile(this.currentCharacterId).durationSeconds;
