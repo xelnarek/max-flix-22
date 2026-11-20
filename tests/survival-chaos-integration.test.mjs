@@ -69,7 +69,8 @@ test('seventeen roulette outcomes have concrete handlers for loot, control and r
   assert.match(game, /const maxDelivery = Math\.max\(1, Math\.floor\(budget\.maxRouletteExtraEnemies\)\)/);
   assert.match(game, /const requestedCount = 1 \+ Math\.floor\(Math\.random\(\) \* maxDelivery\)/);
   assert.ok(game.includes('this.survivalChaosRouletteRecentKinds = [...this.survivalChaosRouletteRecentKinds.slice(-1), outcome]'));
-  assert.match(game, /weaponOptions = this\.rollSurvivalUpgradeOptions\(\)\.filter/);
+  assert.doesNotMatch(game, /weaponOptions = this\.rollSurvivalUpgradeOptions/);
+  assert.doesNotMatch(game, /weapon_draft/);
   assert.match(game, /enemy\.stunTimer = Math\.max\(enemy\.stunTimer, isBoss \? 0\.82 : 1\.8\)/);
   assert.match(game, /enemy\.state = 'stunned'/);
   assert.doesNotMatch(roulette, /weapon_draft/);
