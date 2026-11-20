@@ -82,6 +82,7 @@ import { chooseSurvivalEnemySpawnType, SURVIVAL_SPAWN_VARIETY_MEMORY, type Survi
 import { findNextReadyWeaponIndex, getNextWeaponDispatchCursor } from './survivalWeaponDispatch.ts';
 import { buildSurvivalDamageReport, createSurvivalDamageStats, getSurvivalWeaponDamageSource, getSurvivalFirearmDamageSource, recordSurvivalDamage, recordSurvivalKill, SURVIVAL_DAMAGE_WEAPONS, type SurvivalDamageReport, type SurvivalDamageSource, type SurvivalDamageWeaponId, type SurvivalDamageStats } from './survivalDamageStats.ts';
 import { createStartingSurvivalFirearmState, createSurvivalFirearmState, rollSurvivalFirearmDrop, rollSurvivalFirearmId, STARTING_SURVIVAL_FIREARM, SURVIVAL_FIREARM_DEFS, type SurvivalFirearmId, type SurvivalFirearmState, type SurvivalFirearmEnemyTier, type SurvivalFirearmArchetype } from './survivalFirearms.ts';
+import { evaluateBallisticHeight } from './survivalFirearmBallistics.ts';
 import { SURVIVAL_FIREARM_PRESENTATION, getSurvivalFirearmReloadPose } from './survivalFirearmPresentation.ts';
 import { getSurvivalDifficultyProfile } from './survivalDifficulty.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
@@ -17968,7 +17969,9 @@ export class PaleciakiGameEngine {
       p.life -= dt;
 
       // Boomerang return logic (Operator 05's Pipe Wrench)
-      if (p.ballisticGravity && p.ballisticGravity > 0) p.vel.y -= p.ballisticGravity * dt;
+      const ballisticStartY = p.mesh.position.y;
+      const ballisticStartVerticalVelocity = p.vel.y;
+      const ballisticGravity = Math.max(0, p.ballisticGravity ?? 0);
       if (p.fuseRemainingSeconds !== undefined) {
         p.fuseRemainingSeconds = Math.max(0, p.fuseRemainingSeconds - dt);
         if (p.fuseRemainingSeconds <= 0) p.groundDetonationPending = true;
@@ -18053,12 +18056,18 @@ export class PaleciakiGameEngine {
           this.playerPos.z + Math.sin(orbitAngle) * radius
         );
       } else {
-        const projectileSpeed = p.vel.length();
+        const projectileSpeed = ballisticGravity > 0 ? Math.hypot(p.vel.x, p.vel.z) : p.vel.length();
         const frameDistance = p.maxRangeMeters !== undefined
           ? Math.min(projectileSpeed * dt, Math.max(0, p.maxRangeMeters - (p.travelledDistance ?? 0)))
           : projectileSpeed * dt;
         const movementSeconds = projectileSpeed > 0.0001 ? frameDistance / projectileSpeed : dt;
         p.mesh.position.addScaledVector(p.vel, movementSeconds);
+        if (ballisticGravity > 0) {
+          p.mesh.position.y = evaluateBallisticHeight(
+            ballisticStartY, ballisticStartVerticalVelocity, ballisticGravity, movementSeconds,
+          );
+          p.vel.y = ballisticStartVerticalVelocity - ballisticGravity * movementSeconds;
+        }
         if (p.detonateOnGround && p.mesh.position.y <= 0.14) {
           p.mesh.position.y = 0.14;
           p.groundDetonationPending = true;
