@@ -53,7 +53,7 @@ test('eighteen roulette outcomes have concrete handlers for loot, control, weapo
   ]);
   for (const outcome of [
     'xp_rain', 'overdrive', 'bounty', 'time_lock', 'elite_delivery',
-    'magnet_surge', 'xp_surge', 'golden_crate', 'hazard_clear', 'double_or_nothing', 'weapon_draft',
+    'magnet_surge', 'xp_surge', 'golden_crate', 'hazard_clear', 'double_or_nothing',
   ]) {
     assert.ok(roulette.includes("'" + outcome + "'"), 'missing roulette outcome ' + outcome);
     assert.ok(game.includes("case '" + outcome + "'"), 'missing gameplay handler ' + outcome);
@@ -72,10 +72,11 @@ test('eighteen roulette outcomes have concrete handlers for loot, control, weapo
   assert.match(game, /weaponOptions = this\.rollSurvivalUpgradeOptions\(\)\.filter/);
   assert.match(game, /enemy\.stunTimer = Math\.max\(enemy\.stunTimer, isBoss \? 0\.82 : 1\.8\)/);
   assert.match(game, /enemy\.state = 'stunned'/);
+  assert.doesNotMatch(roulette, /weapon_draft/);
   assert.match(game, /DOSTAWA PRIORYTETOWA ×/);
   assert.match(game, /ELITA B4 • KONTROLER/);
   assert.match(game, /ELITA B4 • KURIER/);
-  assert.match(app, /Trzy obracające się bębny, osiemnaście możliwych wyników, jeden spin/);
+  assert.match(app, /Trzy obracające się bębny, siedemnaście możliwych wyników, jeden spin/);
   assert.match(app, /survival-chaos-reels/);
   assert.match(css, /survival-chaos-marquee \.survival-chaos-lamp/);
   assert.match(app, /survival-chaos-reel-symbol/);
