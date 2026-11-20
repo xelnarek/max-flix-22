@@ -187,3 +187,9 @@ test('the armory renders individual firearm icons from actual Three.js meshes, n
   assert.match(app, /new THREE\.CylinderGeometry/);
   assert.match(app, /iconData && icon instanceof HTMLImageElement/);
 });
+test('Survival haste is capped so operator synergies cannot undo the slower primary-firearm cadence', async () => {
+  const game = await read('../src/game.ts');
+  assert.match(game, /const uncappedAttackRate = this\.gameMode === 'survival'/);
+  assert.match(game, /const attackRate = Math\.min\(1\.12, Math\.max\(0\.5, uncappedAttackRate\)\)/);
+  assert.match(game, /firearm\.cooldown = definition\.fireIntervalSeconds \* hasteFactor \/ attackRate/);
+});
