@@ -508,7 +508,7 @@ test('PvP HUD shows each operator ability that the arena actually executes and r
     readFile(new URL('../src/pvpArena.ts', import.meta.url), 'utf8'),
     readFile(new URL('../index.html', import.meta.url), 'utf8'),
   ]);
-  assert.match(app, /import \\{ getPvpFirearmAttackCooldown, PVP_OPERATOR_PROFILES/);
+  assert.match(app, /import \{ getPvpFirearmAttackCooldown, PVP_OPERATOR_PROFILES/);
   const presentationStart = app.indexOf('const applyPvpAbilityPresentation');
   const presentationEnd = app.indexOf('const startPvpMatchUI', presentationStart);
   const presentation = app.slice(presentationStart, presentationEnd);
