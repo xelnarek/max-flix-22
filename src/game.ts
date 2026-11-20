@@ -899,6 +899,7 @@ export class PaleciakiGameEngine {
   private survivalFirearm: SurvivalFirearmState = createStartingSurvivalFirearmState();
   private survivalFirearmKillCount = 0;
   private survivalFirearmDropMissStreak = 0;
+  private survivalFirearmSoundCooldown = 0;
   private survivalFirearmDrops: Array<{ id: string; firearmId: SurvivalFirearmId; mesh: THREE.Group; x: number; y: number; z: number; baseY: number; age: number; life: number }> = [];
   private survivalMomentum: SurvivalMomentumState = createSurvivalMomentumState();
   // Serializes ready weapon shots so a full cooldown queue never empties in one frame.
@@ -2808,6 +2809,7 @@ export class PaleciakiGameEngine {
     this.survivalFirearm = createStartingSurvivalFirearmState();
     this.survivalFirearmKillCount = 0;
     this.survivalFirearmDropMissStreak = 0;
+    this.survivalFirearmSoundCooldown = 0;
     this.campaignStage = null;
     this.campaignBossScheduled = false;
     this.campaignBossSpawned = false;
@@ -7624,6 +7626,7 @@ export class PaleciakiGameEngine {
     this.survivalFirearm = createStartingSurvivalFirearmState();
     this.survivalFirearmKillCount = 0;
     this.survivalFirearmDropMissStreak = 0;
+    this.survivalFirearmSoundCooldown = 0;
     this.rebuildPlayerMesh();
 
     // Unified Mega-Map Layout: Sektor A (-36..+36) -> Sektor B (+36..+116) -> Sektor C (+116..+206)
@@ -10274,6 +10277,7 @@ export class PaleciakiGameEngine {
     }
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
+    texture.userData.disposeOnObjectCleanup = true;
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false, toneMapped: false }));
     sprite.scale.set(2.25, 1.12, 1);
     sprite.position.set(0, 1.42, 0);
@@ -10308,6 +10312,7 @@ export class PaleciakiGameEngine {
     if (this.gameMode === 'pvp' || this.state !== 'playing') return;
     const definition = SURVIVAL_FIREARM_DEFS[this.survivalFirearm.id];
     this.survivalFirearm.cooldown = Math.max(0, this.survivalFirearm.cooldown - dt);
+    this.survivalFirearmSoundCooldown = Math.max(0, this.survivalFirearmSoundCooldown - dt);
     if (this.survivalFirearm.reloadRemaining > 0) {
       this.survivalFirearm.reloadRemaining = Math.max(0, this.survivalFirearm.reloadRemaining - dt);
       if (this.survivalFirearm.reloadRemaining <= 0) {
@@ -10451,10 +10456,13 @@ export class PaleciakiGameEngine {
         spinSpeed: definition.archetype === 'rocket' || definition.archetype === 'plasma' ? 6.5 : 0,
       });
     }
-    if (definition.archetype === 'shotgun') sound.playAttackWhoosh();
-    else if (definition.archetype === 'rocket') sound.playBossWarning();
-    else if (definition.archetype === 'flame') sound.playElectricalSparks();
-    else sound.playAttackWhoosh();
+    if (this.survivalFirearmSoundCooldown <= 0) {
+      if (definition.archetype === 'shotgun') sound.playAttackWhoosh();
+      else if (definition.archetype === 'rocket') sound.playBossWarning();
+      else if (definition.archetype === 'flame') sound.playElectricalSparks();
+      else sound.playAttackWhoosh();
+      this.survivalFirearmSoundCooldown = ['smg', 'minigun', 'flame'].includes(definition.archetype) ? 0.20 : 0.075;
+    }
 
     if (firearm.ammoInMagazine <= 0) firearm.reloadRemaining = definition.reloadSeconds * (this.gameMode === 'survival' ? this.survivalWeaponReloadMultiplier : 1);
   }
@@ -20739,6 +20747,7 @@ export class PaleciakiGameEngine {
         if (firearmId) {
           this.spawnSurvivalFirearmDrop(e.x, e.y + 0.08, e.z, firearmId, firearmDrop.isPityDrop || firearmDrop.isGuaranteed);
           this.survivalFirearmDropMissStreak = 0;
+    this.survivalFirearmSoundCooldown = 0;
         } else {
           this.survivalFirearmDropMissStreak = Math.min(5, this.survivalFirearmDropMissStreak + 1);
         }
