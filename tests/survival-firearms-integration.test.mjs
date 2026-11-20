@@ -43,7 +43,10 @@ test('firearm pickups are physical 3D models with weapon-specific silhouettes', 
   assert.match(game, /drop\.mesh\.position\.y = drop\.baseY \+ 0\.13 \+ Math\.sin/);
   assert.match(game, /const distance = Math\.hypot\(drop\.x - this\.playerPos\.x/);
   assert.ok(game.includes('const storedFirearmState = this.survivalFirearmStates.get(drop.firearmId)'));
-  assert.match(game, /gun\.position\.set\(0, -0\.36, 0\.18\)/);
+  assert.match(game, /gun\.position\.set\(\s*0,\s*-0\.36 - reloadDip \* 0\.12/);
+  for (const part of ['firearm-magazine', 'firearm-bolt', 'firearm-pump', 'firearm-rotor', 'firearm-rocket-cell', 'firearm-tank-valve', 'firearm-coils', 'firearm-energy-cell']) {
+    assert.ok(modelFactory.includes("'" + part + "'"), 'missing animated model part: ' + part);
+  }
   assert.match(game, /life: 40/);
 });
 
@@ -51,12 +54,16 @@ test('magazine, reload, projectile archetype and damage are driven by the active
   const game = await read('../src/game.ts');
   assert.match(game, /private reloadSurvivalFirearm\(\)/);
   assert.match(game, /public requestSurvivalFirearmReload\(\)/);
-  assert.match(game, /private updateHeldSurvivalFirearmAction\(\)/);
+  assert.match(game, /private updateHeldSurvivalFirearmAction\(dt: number\)/);
   assert.match(game, /this\.survivalFirearm\.reloadRemaining = definition\.reloadSeconds/);
-  assert.match(game, /survivalFirearmRecoilTimer = 0\.13/);
+  assert.match(game, /survivalFirearmRecoilTimer = SURVIVAL_FIREARM_PRESENTATION\[definition\.archetype\]\.recoilSettleSeconds/);
   assert.match(game, /if \(firearm\.ammoInMagazine <= 0\)/);
-  assert.match(game, /case 'rocket': geometry = new THREE\.ConeGeometry/);
-  assert.match(game, /case 'flame': geometry = new THREE\.SphereGeometry/);
+  assert.match(game, /createSurvivalFirearmProjectileMesh\(definition\.archetype, definition\.color, definition\.projectileRadius\)/);
+  assert.match(game, /case 'rocket':\s*geometry = new THREE\.ConeGeometry/);
+  assert.match(game, /case 'flame':\s*geometry = new THREE\.SphereGeometry/);
+  assert.match(game, /spawnSurvivalFirearmMuzzleFx\(definition\.archetype, definition\.color, start, forward\)/);
+  assert.match(game, /profile\.boltTravel \* cycleMotion/);
+  assert.match(game, /profile\.pumpTravel \* cycleMotion/);
   assert.match(game, /case 'gauss':/);
   assert.match(game, /firearmProjectile: true/);
   assert.match(game, /firearmExplosion: definition\.archetype === 'rocket'/);
@@ -179,10 +186,14 @@ test('fire rate and firing animation are individually tuned for all primary fire
 
 test('pistol, SMG, rifle and minigun use distinct projectile silhouettes', async () => {
   const game = await read('../src/game.ts');
-  assert.ok(game.includes("case 'pistol': geometry = new THREE.CylinderGeometry"));
-  assert.ok(game.includes("case 'smg': geometry = new THREE.BoxGeometry"));
-  assert.ok(game.includes("case 'rifle': geometry = new THREE.CylinderGeometry"));
-  assert.ok(game.includes("case 'minigun': geometry = new THREE.BoxGeometry"));
+  const presentation = await read('../src/survivalFirearmPresentation.ts');
+  for (const style of ['pistol-slug', 'compact-tracer', 'rifle-tracer', 'buckshot', 'heavy-slug', 'rotary-tracer', 'rocket', 'flame', 'plasma', 'gauss-lance']) {
+    assert.ok(presentation.includes("projectileStyle: '" + style + "'"), 'missing projectile profile ' + style);
+  }
+  assert.match(game, /case 'pistol-slug':\s*geometry = new THREE\.CylinderGeometry/);
+  assert.match(game, /case 'compact-tracer':\s*geometry = new THREE\.BoxGeometry/);
+  assert.match(game, /case 'rifle-tracer':\s*geometry = new THREE\.CylinderGeometry/);
+  assert.match(game, /case 'rotary-tracer':\s*geometry = new THREE\.BoxGeometry/);
 });
 
 
