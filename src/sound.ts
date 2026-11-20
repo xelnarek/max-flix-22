@@ -933,6 +933,69 @@ class SoundEngine {
     }
   }
 
+  /** Per-firearm reload handling: a mechanical rack on start and a crisp chamber-ready cue. */
+  public playFirearmReload(archetype: 'pistol' | 'smg' | 'rifle' | 'shotgun' | 'heavy-rifle' | 'minigun' | 'rocket' | 'flame' | 'plasma' | 'gauss', phase: 'start' | 'complete') {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const bus = this.effectsBus ?? this.ctx.destination;
+    const heavy = archetype === 'rocket' || archetype === 'minigun' || archetype === 'heavy-rifle' || archetype === 'gauss';
+    const base = archetype === 'shotgun' ? 115 : heavy ? 82 : archetype === 'plasma' ? 360 : 175;
+    const oscillator = this.ctx.createOscillator();
+    const envelope = this.ctx.createGain();
+    oscillator.type = phase === 'start' ? (heavy ? 'sawtooth' : 'square') : 'triangle';
+    oscillator.frequency.setValueAtTime(phase === 'start' ? base * 2.1 : base * 3.2, t);
+    oscillator.frequency.exponentialRampToValueAtTime(phase === 'start' ? base * 0.72 : base * 4.4, t + (phase === 'start' ? 0.16 : 0.085));
+    envelope.gain.setValueAtTime(0.0001, t);
+    envelope.gain.exponentialRampToValueAtTime(phase === 'start' ? 0.095 : 0.075, t + 0.012);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, t + (phase === 'start' ? 0.18 : 0.11));
+    oscillator.connect(envelope);
+    envelope.connect(bus);
+    oscillator.start(t);
+    oscillator.stop(t + (phase === 'start' ? 0.19 : 0.12));
+
+    if (phase === 'start') {
+      const latch = this.ctx.createOscillator();
+      const latchGain = this.ctx.createGain();
+      latch.type = 'square';
+      latch.frequency.setValueAtTime(680 + (heavy ? 120 : 0), t + 0.035);
+      latch.frequency.exponentialRampToValueAtTime(250, t + 0.075);
+      latchGain.gain.setValueAtTime(0.0001, t + 0.035);
+      latchGain.gain.exponentialRampToValueAtTime(0.045, t + 0.04);
+      latchGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.085);
+      latch.connect(latchGain);
+      latchGain.connect(bus);
+      latch.start(t + 0.035);
+      latch.stop(t + 0.09);
+    }
+  }
+
+  /** Short, weapon-class-specific impact ticks; avoids stacking the generic melee smack on every bullet. */
+  public playFirearmImpact(archetype: 'pistol' | 'smg' | 'rifle' | 'shotgun' | 'heavy-rifle' | 'minigun' | 'rocket' | 'flame' | 'plasma' | 'gauss') {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const profiles = {
+      pistol: [880, 0.045, 0.045], smg: [1180, 0.026, 0.025], rifle: [690, 0.052, 0.04],
+      shotgun: [250, 0.095, 0.075], 'heavy-rifle': [420, 0.075, 0.065], minigun: [1420, 0.022, 0.022],
+      rocket: [95, 0.18, 0.12], flame: [520, 0.065, 0.035], plasma: [1540, 0.12, 0.055], gauss: [2100, 0.09, 0.07],
+    } as const;
+    const [frequency, duration, volume] = profiles[archetype];
+    const t = this.ctx.currentTime;
+    const oscillator = this.ctx.createOscillator();
+    const envelope = this.ctx.createGain();
+    oscillator.type = archetype === 'rocket' || archetype === 'shotgun' ? 'sine' : 'triangle';
+    oscillator.frequency.setValueAtTime(frequency, t);
+    oscillator.frequency.exponentialRampToValueAtTime(Math.max(45, frequency * 0.42), t + duration);
+    envelope.gain.setValueAtTime(volume, t);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+    oscillator.connect(envelope);
+    envelope.connect(this.effectsBus ?? this.ctx.destination);
+    oscillator.start(t);
+    oscillator.stop(t + duration + 0.01);
+  }
+
   public playAttackWhoosh() {
     if (this.isMuted) return;
     this.initCtx();
