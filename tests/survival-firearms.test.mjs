@@ -32,6 +32,11 @@ test('firearm catalogue has clearly differentiated cadence, ammunition, projecti
   assert.ok(definitions.some((entry) => entry.archetype === 'gauss' && entry.projectileSpeed >= 50 && entry.pierce >= 4));
   assert.ok(Math.max(...definitions.map((entry) => entry.fireIntervalSeconds)) /
     Math.min(...definitions.map((entry) => entry.fireIntervalSeconds)) >= 10);
+  const cadenceById = Object.fromEntries(definitions.map((entry) => [entry.id, entry.fireIntervalSeconds]));
+  assert.deepEqual(cadenceById, {
+    starter_pistol: 0.58, smg_45: 0.22, assault_rifle: 0.31, shotgun_12g: 1.15, battle_rifle: 1.05,
+    minigun: 0.14, rocket_launcher: 2.2, flamethrower: 0.19, plasma_rifle: 0.65, gauss_rifle: 1.55,
+  });
 });
 
 test('firearm drops unlock after eight kills: 4% normal, 22% elite, boss guaranteed and 18-kill pity', () => {
