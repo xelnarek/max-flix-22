@@ -24,6 +24,10 @@ test('firearm catalogue has clearly differentiated cadence, ammunition, projecti
   assert.equal(new Set(definitions.map((entry) => entry.archetype)).size, definitions.length);
   assert.ok(definitions.every((entry) => entry.icon.length > 0));
   assert.ok(definitions.every((entry) => entry.magazineSize > 0 && entry.reloadSeconds > 0));
+  assert.equal(new Set(definitions.map((entry) => entry.rangeMeters)).size, definitions.length, 'every firearm needs its own effective range');
+  assert.equal(new Set(definitions.map((entry) => entry.reloadSeconds)).size, definitions.length, 'reload duration must be weapon-specific');
+  assert.equal(new Set(definitions.map((entry) => entry.damage)).size, definitions.length, 'each weapon needs a distinct base hit value');
+  assert.ok(Math.min(...definitions.map((entry) => entry.fireIntervalSeconds)) >= 0.5, 'no primary firearm may return to rapid automatic fire');
   assert.ok(definitions.every((entry) => entry.fireIntervalSeconds > 0 && entry.projectileSpeed > 0));
   assert.ok(definitions.every((entry) => entry.pellets >= 1 && entry.spreadRadians >= 0));
   assert.ok(definitions.some((entry) => entry.archetype === 'shotgun' && entry.pellets >= 6));
@@ -34,15 +38,15 @@ test('firearm catalogue has clearly differentiated cadence, ammunition, projecti
     Math.min(...definitions.map((entry) => entry.fireIntervalSeconds)) >= 10);
   const cadenceById = Object.fromEntries(definitions.map((entry) => [entry.id, entry.fireIntervalSeconds]));
   assert.deepEqual(cadenceById, {
-    starter_pistol: 0.82, smg_45: 0.38, assault_rifle: 0.52, shotgun_12g: 1.45, battle_rifle: 1.38,
-    minigun: 0.26, rocket_launcher: 3.0, flamethrower: 0.34, plasma_rifle: 0.88, gauss_rifle: 2.1,
-    ballistic_grenade_launcher: 2.25,
+    starter_pistol: 1.05, smg_45: 0.68, assault_rifle: 0.92, shotgun_12g: 1.8, battle_rifle: 1.85,
+    minigun: 0.5, rocket_launcher: 3.6, flamethrower: 0.65, plasma_rifle: 1.2, gauss_rifle: 2.7,
+    ballistic_grenade_launcher: 2.9,
   });
   const impactById = Object.fromEntries(definitions.map((entry) => [entry.id, entry.damage]));
   assert.deepEqual(impactById, {
-    starter_pistol: 1.38, smg_45: 0.85, assault_rifle: 1.25, shotgun_12g: 0.54, battle_rifle: 2.72,
-    minigun: 0.58, rocket_launcher: 4.3, flamethrower: 0.42, plasma_rifle: 1.55, gauss_rifle: 3.95,
-    ballistic_grenade_launcher: 3.4,
+    starter_pistol: 1.55, smg_45: 1.05, assault_rifle: 1.5, shotgun_12g: 0.62, battle_rifle: 3.1,
+    minigun: 0.68, rocket_launcher: 4.8, flamethrower: 0.5, plasma_rifle: 1.8, gauss_rifle: 4.65,
+    ballistic_grenade_launcher: 3.9,
   });
   assert.ok(definitions.every((entry) => entry.reloadSeconds >= 1.2), 'every firearm has a meaningful reload window');
 });
@@ -66,12 +70,23 @@ test('firearm drops unlock after eight kills: 4% normal, 22% elite, boss guarant
   assert.equal(rollSurvivalFirearmDrop(8, 'boss', 0, 0.999).isGuaranteed, true);
 });
 
-test('weighted drops never offer the starter pistol or the firearm already in hand', () => {
-  for (let roll = 0; roll < 1; roll += 0.001) {
-    const id = rollSurvivalFirearmId('starter_pistol', 0, roll);
+test('every available firearm has an identical drop-selection probability', () => {
+  const eligible = Object.values(SURVIVAL_FIREARM_DEFS).filter((entry) =>
+    entry.id !== STARTING_SURVIVAL_FIREARM && entry.dropWeight > 0);
+  assert.equal(eligible.length, 10);
+  assert.deepEqual([...new Set(eligible.map((entry) => entry.dropWeight))], [1],
+    'PvE, Campaign and PvP must use equal selection weights for every weapon');
+
+  const counts = new Map(eligible.map((entry) => [entry.id, 0]));
+  for (let sample = 0; sample < 1000; sample++) {
+    const id = rollSurvivalFirearmId('starter_pistol', 0, (sample + 0.5) / 1000);
     assert.ok(id);
-    assert.notEqual(id, 'starter_pistol');
+    assert.ok(counts.has(id), 'the starting pistol and currently held firearm cannot drop');
+    counts.set(id, counts.get(id) + 1);
   }
+  assert.deepEqual([...counts.values()], Array(10).fill(100),
+    'each of the ten world pickups must occupy exactly one tenth of the selection interval');
+
   const replacement = rollSurvivalFirearmId('gauss_rifle', 0, 0.999);
   assert.ok(replacement);
   assert.notEqual(replacement, 'gauss_rifle');
