@@ -20,7 +20,7 @@ test('every operator receives the same full-magazine starter sidearm', () => {
 
 test('firearm catalogue has clearly differentiated cadence, ammunition, projectile and impact profiles', () => {
   const definitions = Object.values(SURVIVAL_FIREARM_DEFS);
-  assert.equal(definitions.length, 10);
+  assert.equal(definitions.length, 11);
   assert.equal(new Set(definitions.map((entry) => entry.archetype)).size, definitions.length);
   assert.ok(definitions.every((entry) => entry.icon.length > 0));
   assert.ok(definitions.every((entry) => entry.magazineSize > 0 && entry.reloadSeconds > 0));
@@ -36,11 +36,13 @@ test('firearm catalogue has clearly differentiated cadence, ammunition, projecti
   assert.deepEqual(cadenceById, {
     starter_pistol: 0.82, smg_45: 0.38, assault_rifle: 0.52, shotgun_12g: 1.45, battle_rifle: 1.38,
     minigun: 0.26, rocket_launcher: 3.0, flamethrower: 0.34, plasma_rifle: 0.88, gauss_rifle: 2.1,
+    ballistic_grenade_launcher: 2.25,
   });
   const impactById = Object.fromEntries(definitions.map((entry) => [entry.id, entry.damage]));
   assert.deepEqual(impactById, {
     starter_pistol: 1.38, smg_45: 0.85, assault_rifle: 1.25, shotgun_12g: 0.54, battle_rifle: 2.72,
     minigun: 0.58, rocket_launcher: 4.3, flamethrower: 0.42, plasma_rifle: 1.55, gauss_rifle: 3.95,
+    ballistic_grenade_launcher: 3.4,
   });
   assert.ok(definitions.every((entry) => entry.reloadSeconds >= 1.2), 'every firearm has a meaningful reload window');
 });

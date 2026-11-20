@@ -7,7 +7,7 @@ import {
 
 const archetypes = [
   'pistol', 'smg', 'rifle', 'shotgun', 'heavy-rifle',
-  'minigun', 'rocket', 'flame', 'plasma', 'gauss',
+  'minigun', 'rocket', 'flame', 'plasma', 'gauss', 'grenade',
 ];
 
 test('every firearm archetype has its own projectile, recoil, reload and feedback profile', () => {
@@ -50,6 +50,7 @@ test('shotgun, minigun, rocket launcher, flamethrower and energy weapons animate
   const flame = getSurvivalFirearmReloadPose('flame', 0.42);
   const plasma = getSurvivalFirearmReloadPose('plasma', 0.42);
   const gauss = getSurvivalFirearmReloadPose('gauss', 0.42);
+  const grenade = getSurvivalFirearmReloadPose('grenade', 0.42);
 
   assert.notEqual(shotgun.pumpOffsetZ, 0);
   assert.equal(minigun.rotorBrake, true);
@@ -57,6 +58,7 @@ test('shotgun, minigun, rocket launcher, flamethrower and energy weapons animate
   assert.notEqual(flame.tankValveRotation, 0);
   assert.ok(plasma.coilPulse > 0);
   assert.notEqual(gauss.energyCellOffsetY, 0);
+  assert.notEqual(grenade.rocketCellOffsetZ, 0);
 });
 
 test('reload animation inputs are clamped and every pose is finite at boundaries', () => {

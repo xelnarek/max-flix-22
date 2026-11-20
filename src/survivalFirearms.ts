@@ -1,10 +1,10 @@
 export type SurvivalFirearmId =
   | 'starter_pistol' | 'smg_45' | 'assault_rifle' | 'shotgun_12g' | 'battle_rifle'
-  | 'minigun' | 'rocket_launcher' | 'flamethrower' | 'plasma_rifle' | 'gauss_rifle';
+  | 'minigun' | 'rocket_launcher' | 'flamethrower' | 'plasma_rifle' | 'gauss_rifle' | 'ballistic_grenade_launcher';
 
 export type SurvivalFirearmArchetype =
   | 'pistol' | 'smg' | 'rifle' | 'shotgun' | 'heavy-rifle'
-  | 'minigun' | 'rocket' | 'flame' | 'plasma' | 'gauss';
+  | 'minigun' | 'rocket' | 'flame' | 'plasma' | 'gauss' | 'grenade';
 
 export interface SurvivalFirearmDefinition {
   readonly id: SurvivalFirearmId;
@@ -28,6 +28,11 @@ export interface SurvivalFirearmDefinition {
   readonly aoeDamageMultiplier: number;
   readonly igniteOnHit: boolean;
   readonly dropWeight: number;
+  /** Optional ballistic parameters; omitted weapons remain straight, constant-speed shots. */
+  readonly projectileGravity?: number;
+  readonly projectileLaunchVelocity?: number;
+  readonly projectileFuseSeconds?: number;
+  readonly detonateOnImpact?: boolean;
 }
 
 export interface SurvivalFirearmState {
@@ -113,6 +118,14 @@ export const SURVIVAL_FIREARM_DEFS: Readonly<Record<SurvivalFirearmId, SurvivalF
     reloadSeconds: 2.05, damage: 1.55, pellets: 1, spreadRadians: 0.018,
     projectileSpeed: 21, projectileRadius: 0.13,
     pierce: 0, aoeRadius: 0.86, aoeDamageMultiplier: 0.40, igniteOnHit: false, dropWeight: 9,
+  },
+  ballistic_grenade_launcher: {
+    id: 'ballistic_grenade_launcher', name: 'Granatnik balistyczny', shortName: 'GRANATNIK', icon: '💣',
+    color: 0xd4a24f, archetype: 'grenade', roleDescription: 'Łuk balistyczny z zapalnikiem • eksplozja obszarowa przy kontakcie z podłożem lub celem',
+    rangeMeters: 24, fireIntervalSeconds: 2.25, magazineSize: 4, reloadSeconds: 3.2,
+    damage: 3.4, pellets: 1, spreadRadians: 0.004, projectileSpeed: 17, projectileRadius: 0.12,
+    pierce: 0, aoeRadius: 3.8, aoeDamageMultiplier: 0.72, igniteOnHit: false, dropWeight: 5,
+    projectileGravity: 12.5, projectileLaunchVelocity: 7.4, projectileFuseSeconds: 1.4, detonateOnImpact: true,
   },
   gauss_rifle: {
     id: 'gauss_rifle', name: 'Karabin Gaussa', shortName: 'GAUSS', icon: '⚡',

@@ -4,10 +4,11 @@ import {
   createInitialPvpArenaState,
   NEUTRAL_PVP_PROGRESSION_BONUSES,
   PVP_BASE_SPEED,
-  PVP_OPERATOR_PROFILES,
+  getPvpFirearmAttackCooldown,
   sanitizePvpProgressionBonuses,
   stepPvpArena,
 } from '../src/pvpArena.ts';
+import { STARTING_SURVIVAL_FIREARM } from '../src/survivalFirearms.ts';
 
 const neutralInput = (angle = 0) => ({
   moveX: 0,
@@ -88,7 +89,7 @@ test('account damage and cooldown bonuses are applied by the authoritative PvP s
   assert.equal(state.p1.primaryDamageDealt, 108);
   assert.equal(state.p2.damageTaken, 108);
   assert.equal(state.p2.hp, 1000 - 108);
-  assert.ok(Math.abs(state.p1.attackCooldownTimer - PVP_OPERATOR_PROFILES.marcin.attackCooldown * 0.90) < 1e-9);
+  assert.ok(Math.abs(state.p1.attackCooldownTimer - getPvpFirearmAttackCooldown(STARTING_SURVIVAL_FIREARM) * 0.90) < 1e-9);
 });
 
 test('defender progression mitigation is applied to real projectile HP loss', () => {

@@ -390,6 +390,21 @@
             <div class="pvp-player-avatar" id="pvp-p2-avatar">🔧</div>
           </div>
         </div>
+        <section id="pvp-firearm-panel" class="pvp-firearm-panel" aria-label="Aktualna broń w PvP">
+          <div class="pvp-firearm-heading">
+            <span class="pvp-firearm-kicker">UZBROJENIE • WSPÓLNY ARSENAŁ</span>
+            <strong id="pvp-firearm-name">PISTOLET SERWISOWY</strong>
+          </div>
+          <div class="pvp-firearm-ammo-block">
+            <div class="pvp-firearm-ammo-row">
+              <strong id="pvp-firearm-ammo">12 / 12</strong>
+              <span id="pvp-firearm-action">GOTOWY</span>
+            </div>
+            <div class="pvp-firearm-ammo-track"><i id="pvp-firearm-ammo-fill"></i></div>
+          </div>
+          <button id="btn-pvp-reload" type="button" aria-label="Ręcznie przeładuj broń PvP" title="Ręczne przeładowanie • R">R <span>PRZEŁADUJ</span></button>
+          <span id="pvp-firearm-drop-status" class="pvp-firearm-drop-status">Zrzut uzbrojenia za 28 s</span>
+        </section>
       </div>
 
       <div id="hud-bottom" class="hud-layer hidden">
@@ -883,14 +898,14 @@
 
             <div id="tab-arsenal" class="tab-panel firearm-armory-panel">
               <section class="armory-hero">
-                <div class="armory-kicker">SURVIVAL • PRIMARY WEAPONS DATABASE</div>
+                <div class="armory-kicker">SURVIVAL • KAMPANIA • PVP / WSPÓLNY ARSENAŁ</div>
                 <div class="armory-heading-row">
-                  <div><h2>UZBROJENIE</h2><p>Dziesięć broni głównych. Każda ma własny zasięg, obrażenia, tempo ognia, magazynek i model 3D. Parametry pochodzą bezpośrednio z aktywnych definicji gry.</p></div>
-                  <span class="armory-status">10 MODELI<br>AKTUALNY ARSENAŁ</span>
+                  <div><h2>UZBROJENIE</h2><p>Jedenaście wspólnych broni głównych we wszystkich trybach. Każda zachowuje własny zasięg, obrażenia, tempo ognia, magazynek, przeładowanie, pociski i model 3D. PvP używa ręcznego celowania i serwerowej walidacji, ale tych samych profili broni.</p></div>
+                  <span class="armory-status">11 MODELI<br>3 TRYBY GRY</span>
                 </div>
                 <div class="armory-rules">
                   <span><strong>01</strong> Broń podstawowa zajmuje jeden slot</span>
-                  <span><strong>02</strong> Zrzuty przeciwników zmieniają aktualną broń</span>
+                  <span><strong>02</strong> Zrzuty broni pozwalają wymieniać uzbrojenie</span>
                   <span><strong>03</strong> Nie ma już poziomów ani ewolucji starych broni</span>
                 </div>
               </section>
@@ -1040,11 +1055,11 @@
               </section>
 
               <section class="field-guide-section">
-                <div class="field-guide-section-head"><span class="field-guide-index">01</span><div><h3>SURVIVAL I PVP • DWA ODRĘBNE TRYBY</h3><p>Survival to rozgrywka PvE z automatycznym namierzaniem, falami i rozwojem builda. Arena PvP 1v1 ma osobny HUD, ręczny timing strzału, własne tempo walki i umiejętności. Sterowanie jednego trybu nie przenika do drugiego.</p></div></div>
+                <div class="field-guide-section-head"><span class="field-guide-index">01</span><div><h3>WSPÓLNY ARSENAŁ • RÓŻNE ZASADY WALKI</h3><p>Survival, Kampania i PvP korzystają z tych samych definicji broni, zasięgów, obrażeń, magazynków, przeładowania oraz modeli. Survival i Kampania zachowują sterowanie PvE; PvP zachowuje ręczne celowanie i autorytatywną symulację serwera. Umiejętności operatorów pozostają niezależne od broni.</p></div></div>
                 <div class="field-guide-card-grid three-col">
                   <article class="field-guide-card"><span class="field-guide-icon">⚔️</span><h4>SURVIVAL SHIFT • ROGUELITE</h4><p>Samodzielna arena, fale co 60 sekund i automatyczne namierzanie. Ataki mają niezależne, długie przeładowania. Co 5 fal pojawia się główny boss w rotacji trzech modeli: Nadzorca Zero (fala 5), Dyrektor Widmo (10) i Bosman Kraków (15), potem cykl się powtarza. Boss zostawia skrzynię z łupem i dodatkowe XP.</p><small>CEL: PRZETRWAJ • ZBIERAJ XP • SKŁADAJ BUILD</small></article>
                   <article class="field-guide-card"><span class="field-guide-icon">🎯</span><h4>ARENA PVP • POJEDYNEK 1v1</h4><p>Osobna arena i zestaw zasad. Przeciwnik nie jest automatycznie namierzany: obok operatora porusza się wskaźnik na łuku, a strzał oddajesz przyciskiem STRZAŁ w chwili, gdy kierunek pokrywa się z przeciwnikiem. Lewy joystick (na PC: WASD / strzałki) ustawia bazowy kierunek łuku; po zatrzymaniu wskaźnik nadal wykonuje wahadłowy ruch. Strzelasz przyciskiem STRZAŁ dokładnie w chwili, gdy wskaźnik wskazuje wybrany kierunek. Na telefonie STRZAŁ znajduje się bezpośrednio nad joystickiem, a MOC i UNIK są po prawej. Na PC STRZAŁ jest w dolnym panelu, działa też klawisz F i kliknięcie areny.</p><small>CEL: WYBIERZ MOMENT • ZACHOWAJ DYSTANS • WYGRAJ 2 RUNDY</small></article>
-                  <article class="field-guide-card"><span class="field-guide-icon">🔫</span><h4>ARSENAŁ • 10 BRONI GŁÓWNYCH</h4><p>Pistolet startowy, pistolet maszynowy, karabin szturmowy, strzelba 12G, karabin bojowy, minigun, wyrzutnia rakiet, miotacz ognia, karabin plazmowy i Gauss. Każda broń ma własny bazowy zasięg i obrażenia, szybkostrzelność, pojemność magazynka oraz czas przeładowania. Perki operatora mogą modyfikować parametry w trakcie rozgrywki. Broń wypada losowo jako łup z przeciwników i zastępuje broń aktualnie trzymaną. Nie ma już osobnych kart poziomów ani ewolucji tych dawnych 12 modułów.</p><small>TAKTYKA: DOBIERAJ BROŃ DO DYSTANSU I GĘSTOŚCI CELÓW</small></article>
+                  <article class="field-guide-card"><span class="field-guide-icon">🔫</span><h4>ARSENAŁ • 11 BRONI GŁÓWNYCH</h4><p>Pistolet startowy, pistolet maszynowy, karabin szturmowy, strzelba 12G, karabin bojowy, minigun, wyrzutnia rakiet, miotacz ognia, karabin plazmowy, Gauss i granatnik balistyczny. Każda broń ma własny bazowy zasięg, obrażenia, szybkostrzelność, pojemność magazynka, przeładowanie i zachowanie pocisku. Granatnik wystrzeliwuje granat po łuku balistycznym, który detonuje przy kontakcie albo po zapalniku. Perki operatora mogą modyfikować parametry w trakcie rozgrywki. Broń wypada losowo jako łup z przeciwników i zastępuje broń aktualnie trzymaną. Nie ma już osobnych kart poziomów ani ewolucji tych dawnych 12 modułów.</p><small>TAKTYKA: DOBIERAJ BROŃ DO DYSTANSU I GĘSTOŚCI CELÓW</small></article>
                 </div>
                 <div class="field-guide-callout"><strong>Tempo i czytelność:</strong> fale przychodzą co 60 sekund, liczebność grup i limit przeciwników są ograniczone. Maksymalnie 22 aktywnych przeciwników na urządzeniach mobilnych i 34 na desktopie. Sekretna fala Pomazańców otrzymuje pięć krótkotrwałych, dodatkowych slotów. Im dalej w zmianę, tym bardziej wytrzymali są wrogowie.</div>
               </section>
@@ -1418,7 +1433,7 @@
                 </article>
                 <article class="pvp-menu-feature-card">
                   <span class="pvp-menu-feature-icon">⚖</span>
-                  <div><strong>RÓWNE WARUNKI</strong><p>Symetryczna arena, wspólna pula zdrowia i osobne zdolności operatorów. Survivalowe premie nie przenikają do PvP.</p></div>
+                  <div><strong>WSPÓLNE UZBROJENIE</strong><p>Każdy operator rozpoczyna z tym samym pistoletem. Zrzuty pozwalają zdobywać pozostałe modele, a ich parametry są wspólne dla całej gry.</p></div>
                 </article>
                 <article class="pvp-menu-feature-card">
                   <span class="pvp-menu-feature-icon">◎</span>

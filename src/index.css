@@ -8060,3 +8060,91 @@ body #touch-controls.manual-aim-mode:not(.hidden) .pvp-control-guide {
   }
   .cthulhu-retro-controls button small { font-size: 6px; }
 }
+
+
+/* Shared weapon state in the PvP HUD: readable on desktop and touch screens. */
+.pvp-firearm-panel {
+  pointer-events: auto;
+  width: min(430px, 92vw);
+  margin: 8px auto 0;
+  display: grid;
+  grid-template-columns: minmax(116px, 1fr) minmax(112px, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 9px 12px;
+  border: 1px solid rgba(125, 211, 252, .28);
+  border-radius: 14px;
+  color: #eaf4ff;
+  background: linear-gradient(115deg, rgba(7, 25, 43, .94), rgba(10, 16, 29, .94) 55%, rgba(22, 35, 56, .94));
+  box-shadow: 0 9px 26px rgba(0, 0, 0, .32), inset 0 1px 0 rgba(255, 255, 255, .08);
+  -webkit-backdrop-filter: blur(14px) saturate(135%);
+  backdrop-filter: blur(14px) saturate(135%);
+}
+.pvp-firearm-heading { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.pvp-firearm-kicker {
+  color: #7dd3fc;
+  font: 800 7px/1.1 'JetBrains Mono', monospace;
+  letter-spacing: .12em;
+}
+#pvp-firearm-name {
+  overflow: hidden;
+  color: #f8fafc;
+  font: 900 12px/1.15 'Outfit', sans-serif;
+  letter-spacing: .055em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pvp-firearm-ammo-block { min-width: 0; display: grid; gap: 5px; }
+.pvp-firearm-ammo-row { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+#pvp-firearm-ammo { color: #fff; font: 900 13px/1 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#pvp-firearm-action { overflow: hidden; color: #a5b4fc; font: 800 7px/1.1 'JetBrains Mono', monospace; text-overflow: ellipsis; white-space: nowrap; }
+.pvp-firearm-ammo-track { height: 5px; overflow: hidden; border-radius: 999px; background: rgba(148, 163, 184, .22); }
+.pvp-firearm-ammo-track i { display: block; width: 100%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #38bdf8, #60a5fa); box-shadow: 0 0 9px rgba(56, 189, 248, .38); transition: width .12s linear; }
+#btn-pvp-reload {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(125, 211, 252, .42);
+  border-radius: 9px;
+  color: #e0f2fe;
+  background: linear-gradient(145deg, rgba(14, 116, 144, .34), rgba(15, 23, 42, .92));
+  font: 900 10px/1 'JetBrains Mono', monospace;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+#btn-pvp-reload span { font: 800 8px/1 'Outfit', sans-serif; }
+#btn-pvp-reload.is-ready { border-color: rgba(56, 189, 248, .76); box-shadow: 0 0 13px rgba(56, 189, 248, .13); }
+#btn-pvp-reload:disabled { opacity: .48; cursor: default; }
+.pvp-firearm-drop-status {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  color: #bae6fd;
+  font: 800 7px/1.2 'JetBrains Mono', monospace;
+  letter-spacing: .055em;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .pvp-firearm-panel {
+    width: min(94vw, 390px);
+    grid-template-columns: minmax(92px, .95fr) minmax(90px, 1fr) auto;
+    gap: 6px 8px;
+    margin-top: 6px;
+    padding: 7px 9px;
+    border-radius: 12px;
+  }
+  #pvp-firearm-name { font-size: 10px; }
+  #pvp-firearm-ammo { font-size: 11px; }
+  #pvp-firearm-action { font-size: 6px; }
+  #btn-pvp-reload { min-height: 31px; padding: 0 8px; font-size: 9px; }
+  #btn-pvp-reload span { font-size: 7px; }
+}
+@media (max-width: 360px) {
+  .pvp-firearm-panel { gap: 5px; padding: 6px 7px; }
+  .pvp-firearm-kicker { font-size: 6px; }
+  #pvp-firearm-name { font-size: 9px; }
+  #btn-pvp-reload { padding: 0 6px; }
+}

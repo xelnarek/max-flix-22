@@ -4,6 +4,39 @@ import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
+
+test('the shared ballistic model computes deterministic arc height and ground-contact timing', async () => {
+  const { evaluateBallisticHeight, getBallisticGroundContactTime } = await import('../src/survivalFirearmBallistics.ts');
+  const initialHeight = 0.6;
+  const launchVelocity = 7.4;
+  const gravity = 12.5;
+  const apexTime = launchVelocity / gravity;
+  const apexHeight = evaluateBallisticHeight(initialHeight, launchVelocity, gravity, apexTime);
+  const landingTime = getBallisticGroundContactTime(initialHeight, launchVelocity, gravity, 0.14);
+  assert.ok(apexHeight > initialHeight + 2);
+  assert.ok(landingTime > apexTime && landingTime < 1.4);
+  assert.ok(Math.abs(evaluateBallisticHeight(initialHeight, launchVelocity, gravity, landingTime) - 0.14) < 1e-9);
+  assert.equal(getBallisticGroundContactTime(0.6, 0, 0), null);
+});
+
+test('the ballistic grenade is a shared 11th firearm with its own projectile, sound, reload, impact and damage source', async () => {
+  const [firearms, presentation, sound, game] = await Promise.all([
+    read('../src/survivalFirearms.ts'),
+    read('../src/survivalFirearmPresentation.ts'),
+    read('../src/sound.ts'),
+    read('../src/game.ts'),
+  ]);
+  assert.match(firearms, /ballistic_grenade_launcher: \{[\s\S]*?rangeMeters: 24[\s\S]*?magazineSize: 4[\s\S]*?reloadSeconds: 3\.2[\s\S]*?projectileGravity: 12\.5[\s\S]*?projectileFuseSeconds: 1\.4/);
+  assert.match(presentation, /grenade: \{[\s\S]*?projectileStyle: 'grenade-ballistic'/);
+  assert.match(sound, /grenade: \{ wave: 'sine'/);
+  assert.match(sound, /grenade: \[108, 0\.23, 0\.15\]/);
+  assert.match(game, /case 'grenade':/);
+  assert.match(game, /case 'grenade-ballistic':/);
+  assert.match(game, /detonateBallisticFirearmProjectile/);
+  assert.match(game, /damageEnemy\(enemy, baseSplashDamage,[\s\S]*?projectile\.damageSource/);
+  assert.match(game, /ballistic_grenade_launcher: 0\.42/);
+});
+
 test('primary firearms are a separate shared slot, not a perk or roulette reward', async () => {
   const [game, firearms, draft, roulette] = await Promise.all([
     read('../src/game.ts'), read('../src/survivalFirearms.ts'),
@@ -37,7 +70,7 @@ test('firearm pickups are physical 3D models with weapon-specific silhouettes', 
   assert.doesNotMatch(dropFactory, /CanvasTexture|THREE\.Sprite/);
   assert.match(modelFactory, /new THREE\.Mesh\(new THREE\.BoxGeometry/);
   assert.match(modelFactory, /new THREE\.Mesh\(new THREE\.CylinderGeometry/);
-  for (const archetype of ['pistol', 'smg', 'rifle', 'shotgun', 'heavy-rifle', 'minigun', 'rocket', 'flame', 'plasma', 'gauss']) {
+  for (const archetype of ['pistol', 'smg', 'rifle', 'shotgun', 'heavy-rifle', 'minigun', 'rocket', 'flame', 'plasma', 'gauss', 'grenade']) {
     assert.ok(modelFactory.includes("case '" + archetype + "':"), 'missing 3D model: ' + archetype);
   }
   assert.match(game, /drop\.mesh\.position\.y = drop\.baseY \+ 0\.13 \+ Math\.sin/);
@@ -68,7 +101,7 @@ test('magazine, reload, projectile archetype and damage are driven by the active
   assert.match(game, /profile\.pumpTravel \* cycleMotion/);
   assert.match(game, /case 'gauss':/);
   assert.match(game, /firearmProjectile: true/);
-  assert.match(game, /firearmExplosion: definition\.archetype === 'rocket'/);
+  assert.match(game, /firearmExplosion: definition\.archetype === 'rocket' \|\| definition\.archetype === 'grenade'/);
   assert.match(game, /aoeDamageMultiplier: definition\.aoeDamageMultiplier/);
   assert.match(game, /damageSource: getSurvivalFirearmDamageSource\(definition\.id\)/);
   assert.match(game, /const adjustedProjectileDamage = p\.firearmProjectile/);
@@ -80,7 +113,7 @@ test('every primary firearm has a unique hard range and that range is enforced i
   for (const [id, range] of [
     ['starter_pistol', 26], ['smg_45', 23], ['assault_rifle', 36], ['shotgun_12g', 9],
     ['battle_rifle', 42], ['minigun', 27], ['rocket_launcher', 32], ['flamethrower', 5],
-    ['plasma_rifle', 30], ['gauss_rifle', 75],
+    ['plasma_rifle', 30], ['gauss_rifle', 75], ['ballistic_grenade_launcher', 24],
   ]) {
     assert.match(firearms, new RegExp(id + ': \\{[\\s\\S]*?rangeMeters: ' + range));
   }
@@ -91,14 +124,16 @@ test('every primary firearm has a unique hard range and that range is enforced i
   assert.ok(game.includes('if (p.travelledDistance >= p.maxRangeMeters - 0.0001) p.life = 0'));
 });
 
-test('firearm drops are Survival-only, rare, time-gated, single-pickup and globally rate-limited', async () => {
+test('firearm drops are shared by Survival and Campaign, rare, time-gated, single-pickup and globally rate-limited', async () => {
   const game = await read('../src/game.ts');
-  assert.match(game, /if \(this\.gameMode === 'survival'\) \{[\s\S]*?this\.survivalFirearmKillCount\+\+/);
-  assert.match(game, /this\.survivalElapsed >= 45 && this\.survivalFirearmKillCount >= 8/);
+  assert.match(game, /if \(this\.gameMode === 'survival' \|\| this\.gameMode === 'campaign'\) \{[\s\S]*?this\.survivalFirearmKillCount\+\+/);
+  assert.match(game, /const firearmElapsed = this\.survivalElapsed/);
+  assert.match(game, /campaignRemainingSeconds: this\.campaignStage \? Math\.max\(0, Math\.ceil\(this\.campaignStage\.durationSeconds - this\.survivalElapsed\)\)/);
+  assert.match(game, /firearmElapsed >= 45 && this\.survivalFirearmKillCount >= 8/);
   assert.match(game, /this\.survivalFirearmDrops\.length === 0/);
-  assert.match(game, /this\.survivalElapsed - this\.survivalFirearmLastDropSeconds >= 75/);
+  assert.match(game, /firearmElapsed - this\.survivalFirearmLastDropSeconds >= 75/);
   assert.match(game, /baseY: y, age: 0, life: 40/);
-  assert.match(game, /this\.gameMode !== 'survival' \|\| this\.survivalFirearmDrops\.length > 0/);
+  assert.match(game, /this\.gameMode !== 'survival' && this\.gameMode !== 'campaign'/);
   assert.match(game, /const currentGameMode = this\.gameMode;\s*if \(currentGameMode !== 'pvp'\) \{\s*this\.fireSurvivalFirearm\(\)/);
   assert.match(game, /if \(this\.gameMode === 'pvp'\) \{\s*this\.updatePvpMode/);
 });
@@ -109,10 +144,10 @@ test('each firearm archetype has a dedicated synthesized report rather than a me
   const profilesStart = sound.indexOf('const profiles = {');
   const profilesEnd = sound.indexOf('} as const', profilesStart);
   const profileSource = sound.slice(profilesStart, profilesEnd);
-  for (const archetype of ['pistol', 'smg', 'rifle', 'shotgun', 'heavy-rifle', 'minigun', 'rocket', 'flame', 'plasma', 'gauss']) {
+  for (const archetype of ['pistol', 'smg', 'rifle', 'shotgun', 'heavy-rifle', 'minigun', 'rocket', 'flame', 'plasma', 'gauss', 'grenade']) {
     assert.ok(profileSource.includes(archetype), 'missing audio profile: ' + archetype);
   }
-  assert.equal((profileSource.match(/wave:/g) || []).length, 10);
+  assert.equal((profileSource.match(/wave:/g) || []).length, 11);
   assert.match(sound, /body\.frequency\.exponentialRampToValueAtTime/);
   assert.match(sound, /transientEnvelope\.gain\.exponentialRampToValueAtTime/);
   const game = await read('../src/game.ts');
@@ -189,7 +224,7 @@ test('fire rate and firing animation are individually tuned for all primary fire
 test('pistol, SMG, rifle and minigun use distinct projectile silhouettes', async () => {
   const game = await read('../src/game.ts');
   const presentation = await read('../src/survivalFirearmPresentation.ts');
-  for (const style of ['pistol-slug', 'compact-tracer', 'rifle-tracer', 'buckshot', 'heavy-slug', 'rotary-tracer', 'rocket', 'flame', 'plasma', 'gauss-lance']) {
+  for (const style of ['pistol-slug', 'compact-tracer', 'rifle-tracer', 'buckshot', 'heavy-slug', 'rotary-tracer', 'rocket', 'flame', 'plasma', 'gauss-lance', 'grenade-ballistic']) {
     assert.ok(presentation.includes("projectileStyle: '" + style + "'"), 'missing projectile profile ' + style);
   }
   assert.match(game, /case 'pistol-slug':\s*geometry = new THREE\.CylinderGeometry/);

@@ -183,6 +183,7 @@ test('sanitizes malformed and over-length player input before simulation', () =>
     isFiring: 'yes',
     wantDash: 1,
     wantAbility: true,
+    wantReload: 'yes',
   });
   assert.ok(Math.abs(Math.hypot(input.moveX, input.moveZ) - 1) < 1e-10);
   assert.equal(input.aimAngle, 0);
@@ -190,6 +191,7 @@ test('sanitizes malformed and over-length player input before simulation', () =>
   assert.equal(input.wantFire, false);
   assert.equal(input.wantDash, false);
   assert.equal(input.wantAbility, true);
+  assert.equal(input.wantReload, false);
 });
 
 test('fast projectile cannot tunnel through an opponent during a single server tick', () => {
@@ -683,18 +685,26 @@ test('PvP random perk capsule spawns and grants its effect on pickup', () => {
     state.obstacles = [];
     state.p1.x = -5; state.p1.z = 0; state.p2.x = 5; state.p2.z = 0;
     stepPvpArena(state, 0.04, { moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantFire: true });
-    assert.ok(state.projectiles.some(projectile => projectile.damage > 100));
+    assert.equal(state.p1.shotsFired, 1);
+    assert.ok(state.projectiles.some(projectile => projectile.damage > 100), 'Power must increase the shared firearm hit above its normalized 100-damage baseline.');
   } finally { Math.random = oldRandom; }
 });
 
-test('PvP weapons use a deliberate ~3-second primary-shot cycle with readable projectile speeds', async () => {
-  const { getPvpOperatorAttackCooldown, PVP_OPERATOR_PROFILES } = await import('../src/pvpArena.ts');
-  for (const id of ['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr']) {
-    const cooldown = getPvpOperatorAttackCooldown(id);
-    assert.ok(cooldown >= 2.8 && cooldown <= 3.2, `${id} cooldown should be close to 3 seconds`);
-    assert.ok(PVP_OPERATOR_PROFILES[id].projectileSpeed >= 13 && PVP_OPERATOR_PROFILES[id].projectileSpeed <= 18);
-  }
-  assert.equal(new Set(Object.values(PVP_OPERATOR_PROFILES).map(profile => profile.attackCooldown)).size, 5);
+test('all operators use the same shared starting firearm and deliberate primary-shot cadence', async () => {
+  const { getPvpOperatorAttackCooldown, PVP_FIREARM_COOLDOWN_MULTIPLIER } = await import('../src/pvpArena.ts');
+  const { STARTING_SURVIVAL_FIREARM, SURVIVAL_FIREARM_DEFS } = await import('../src/survivalFirearms.ts');
+  const operators = ['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr'];
+  const state = createInitialPvpArenaState(operators[0], 'P1', operators[1], 'P2');
+  assert.equal(STARTING_SURVIVAL_FIREARM, 'starter_pistol');
+  assert.equal(state.p1.primaryFirearmId, STARTING_SURVIVAL_FIREARM);
+  assert.equal(state.p2.primaryFirearmId, STARTING_SURVIVAL_FIREARM);
+  assert.equal(state.p1.firearmAmmoById[STARTING_SURVIVAL_FIREARM], SURVIVAL_FIREARM_DEFS[STARTING_SURVIVAL_FIREARM].magazineSize);
+  assert.equal(state.p2.firearmAmmoById[STARTING_SURVIVAL_FIREARM], SURVIVAL_FIREARM_DEFS[STARTING_SURVIVAL_FIREARM].magazineSize);
+  const cooldowns = operators.map(id => getPvpOperatorAttackCooldown(id));
+  assert.equal(new Set(cooldowns).size, 1, 'operator identity must not change primary weapon cadence');
+  assert.ok(cooldowns[0] >= 2.8 && cooldowns[0] <= 3.2);
+  assert.equal(cooldowns[0], SURVIVAL_FIREARM_DEFS[STARTING_SURVIVAL_FIREARM].fireIntervalSeconds * PVP_FIREARM_COOLDOWN_MULTIPLIER);
+  assert.equal(Object.keys(SURVIVAL_FIREARM_DEFS).length, 11);
 });
 
 test('PvP standard movement and dash are slower and more controlled', async () => {
@@ -715,7 +725,7 @@ test('PvP standard movement and dash are slower and more controlled', async () =
   assert.ok(Math.abs((state.p1.x - startX) - 0.5) < 1e-6, 'normal movement should travel 0.5 units in 0.1s');
 });
 
-test('one-shot fire intent shoots once, respects operator recovery, and can be tapped again', () => {
+test('one-shot fire intent shoots once, respects firearm recovery, and can be tapped again', async () => {
   const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
   resetPvpRound(state);
   advanceArena(state, 3.1);
@@ -723,18 +733,151 @@ test('one-shot fire intent shoots once, respects operator recovery, and can be t
   state.p1.z = -9;
   state.p2.x = 18;
   state.p2.z = -9;
+  const { getPvpOperatorAttackCooldown } = await import('../src/pvpArena.ts');
+  const recovery = getPvpOperatorAttackCooldown('marcin');
   const input = { moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantFire: true };
   stepPvpArena(state, 0.03, input);
   assert.equal(state.p1.shotsFired, 1);
   stepPvpArena(state, 0.05, { ...input, wantFire: false });
   assert.equal(state.p1.shotsFired, 1, 'neutral input must not auto-fire');
-  advanceArena(state, 2.90, { ...input, wantFire: false });
+  advanceArena(state, recovery - 0.15, { ...input, wantFire: false });
   stepPvpArena(state, 0.03, input);
-  assert.equal(state.p1.shotsFired, 1, 'a tap before the 3-second recovery must be rejected');
+  assert.equal(state.p1.shotsFired, 1, 'a tap before the active firearm recovery must be rejected');
+  advanceArena(state, 0.25, { ...input, wantFire: false });
   stepPvpArena(state, 0.03, input);
-  assert.equal(state.p1.shotsFired, 2, 'a fresh tap after recovery fires again');
+  assert.equal(state.p1.shotsFired, 2, 'a fresh tap after the active firearm recovery fires again');
 });
 
+
+
+test('shared PvP firearms use server-owned magazines, manual reload and automatic empty-magazine reload', async () => {
+  const { SURVIVAL_FIREARM_DEFS } = await import('../src/survivalFirearms.ts');
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  resetPvpRound(state);
+  advanceArena(state, 3.1);
+  state.obstacles = [];
+  state.pickup.active = false;
+  state.perkDrop.active = false;
+
+  const player = state.p1;
+  const firearm = SURVIVAL_FIREARM_DEFS[player.primaryFirearmId];
+  player.firearmAmmoById[player.primaryFirearmId] = 2;
+
+  stepPvpArena(state, 0.05, {
+    moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantReload: true,
+  });
+  assert.equal(player.reloadRemainingSeconds, firearm.reloadSeconds);
+  assert.equal(player.shotsFired, 0);
+
+  stepPvpArena(state, 0.1, {
+    moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantFire: true,
+  });
+  assert.equal(player.shotsFired, 0, 'a reload in progress must prevent a shot');
+
+  advanceArena(state, firearm.reloadSeconds + 0.1);
+  assert.equal(player.reloadRemainingSeconds, 0);
+  assert.equal(player.firearmAmmoById[player.primaryFirearmId], firearm.magazineSize);
+
+  player.firearmAmmoById[player.primaryFirearmId] = 1;
+  stepPvpArena(state, 0.05, {
+    moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantFire: true,
+  });
+  assert.equal(player.shotsFired, 1);
+  assert.equal(player.firearmAmmoById[player.primaryFirearmId], 0);
+  assert.ok(player.reloadRemainingSeconds > 0, 'empty magazine should begin its weapon-specific reload automatically');
+});
+
+test('PvP firearm pickups are real shared-catalog 3D weapon drops with one fair claim', async () => {
+  const { SURVIVAL_FIREARM_DEFS, STARTING_SURVIVAL_FIREARM } = await import('../src/survivalFirearms.ts');
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  resetPvpRound(state);
+  advanceArena(state, 3.1);
+  state.obstacles = [];
+  state.pickup.active = false;
+  state.perkDrop.active = false;
+  state.firearmDrop.spawnTimer = 0;
+
+  stepPvpArena(state, 0.05);
+  assert.equal(state.firearmDrop.active, true);
+  const droppedId = state.firearmDrop.firearmId;
+  assert.ok(SURVIVAL_FIREARM_DEFS[droppedId]);
+  assert.notEqual(droppedId, STARTING_SURVIVAL_FIREARM);
+  assert.equal(state.p1.primaryFirearmId, STARTING_SURVIVAL_FIREARM);
+  assert.equal(state.p2.primaryFirearmId, STARTING_SURVIVAL_FIREARM);
+
+  state.p1.x = state.firearmDrop.x;
+  state.p1.z = state.firearmDrop.z;
+  state.p2.x = 18;
+  state.p2.z = 10;
+  stepPvpArena(state, 0.05);
+
+  assert.equal(state.firearmDrop.active, false);
+  assert.equal(state.p1.primaryFirearmId, droppedId);
+  assert.equal(state.p1.firearmAmmoById[droppedId], SURVIVAL_FIREARM_DEFS[droppedId].magazineSize);
+  assert.equal(state.p2.primaryFirearmId, STARTING_SURVIVAL_FIREARM);
+});
+
+
+test('PvP grenade follows a ballistic arc and clears cover that a straight bullet would hit', async () => {
+  const { SURVIVAL_FIREARM_DEFS } = await import('../src/survivalFirearms.ts');
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  resetPvpRound(state);
+  advanceArena(state, 3.1);
+  state.pickup.active = false;
+  state.perkDrop.active = false;
+  state.obstacles = [{ id: 'short-cover', x: 1.5, z: 0, width: 2.2, depth: 2.2, height: 1.45 }];
+
+  state.p1.x = -10;
+  state.p1.z = 0;
+  state.p2.x = 1.5;
+  state.p2.z = 0;
+  state.p1.primaryFirearmId = 'ballistic_grenade_launcher';
+  state.p1.firearmAmmoById.ballistic_grenade_launcher = SURVIVAL_FIREARM_DEFS.ballistic_grenade_launcher.magazineSize;
+
+  stepPvpArena(state, 0.05, {
+    moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantFire: true,
+  });
+  assert.equal(state.p1.shotsFired, 1);
+  const projectile = state.projectiles[0];
+  assert.equal(projectile.firearmId, 'ballistic_grenade_launcher');
+  assert.equal(projectile.gravity, 12.5);
+  assert.ok(Math.abs(projectile.vy - (7.4 - 12.5 * 0.05)) < 1e-9, 'vertical velocity must advance with gravity during the shot tick');
+  assert.equal(projectile.detonateOnGround, true);
+
+  advanceArena(state, 0.8);
+  assert.ok(projectile.y > 1.7, 'the projectile should travel above player height during the middle of its arc');
+  assert.equal(state.p2.hp, state.p2.maxHp, 'the descending shell must not hit a player beneath its elevated flight path');
+  assert.ok(state.projectiles.includes(projectile), 'the shell should remain live after clearing low cover');
+});
+
+test('PvP ballistic grenade detonates on the floor and applies server-owned radial damage with an FX event', async () => {
+  const { SURVIVAL_FIREARM_DEFS } = await import('../src/survivalFirearms.ts');
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  resetPvpRound(state);
+  advanceArena(state, 3.1);
+  state.obstacles = [];
+  state.pickup.active = false;
+  state.perkDrop.active = false;
+  state.p1.x = -10;
+  state.p1.z = 0;
+  state.p2.x = 12.1;
+  state.p2.z = 2.5;
+  state.p1.primaryFirearmId = 'ballistic_grenade_launcher';
+  state.p1.firearmAmmoById.ballistic_grenade_launcher = SURVIVAL_FIREARM_DEFS.ballistic_grenade_launcher.magazineSize;
+
+  stepPvpArena(state, 0.05, {
+    moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantFire: true,
+  });
+  assert.equal(state.projectiles.length, 1);
+  advanceArena(state, 1.35);
+
+  assert.equal(state.projectiles.length, 0, 'the grenade should be removed after detonating');
+  assert.ok(state.p2.hp < state.p2.maxHp, 'a nearby player outside the direct flight line should take splash damage');
+  assert.ok(state.p1.primaryDamageDealt > 0);
+  assert.ok(state.firearmExplosionEvents.length > 0, 'the room must publish a reliable explosion event for both clients');
+  assert.equal(state.firearmExplosionEvents.at(-1).firearmId, 'ballistic_grenade_launcher');
+  assert.ok(Number.isFinite(state.firearmExplosionEvents.at(-1).y));
+});
 
 test('Marcin PvP ability grants the intended shield and only pushes a nearby visible opponent', () => {
   const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
