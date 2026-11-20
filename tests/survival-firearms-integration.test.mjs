@@ -23,6 +23,8 @@ test('primary firearms are a separate shared slot, not a perk or roulette reward
 test('firearm pickups have a unique world silhouette, bobbing timer and direct weapon replacement', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /private createSurvivalFirearmDropVisual\(firearmId: SurvivalFirearmId\)/);
+  assert.match(game, /texture\.userData\.disposeOnObjectCleanup = true/);
+  assert.match(game, /survivalFirearmSoundCooldown = \['smg', 'minigun', 'flame'\]\.includes/);
   assert.match(game, /case 'shotgun':[\s\S]*?context\.fillRect/);
   assert.match(game, /case 'rocket':[\s\S]*?context\.beginPath/);
   assert.match(game, /case 'gauss':[\s\S]*?context\.fillRect/);
@@ -30,6 +32,8 @@ test('firearm pickups have a unique world silhouette, bobbing timer and direct w
   assert.match(game, /drop\.mesh\.position\.y = drop\.baseY \+ 0\.13 \+ Math\.sin/);
   assert.match(game, /const distance = Math\.hypot\(drop\.x - this\.playerPos\.x/);
   assert.match(game, /this\.survivalFirearm = createSurvivalFirearmState\(drop\.firearmId\)/);
+  assert.match(game, /gun\.position\.set\(0, -0\.36, 0\.18\)/);
+  assert.match(game, /\(this\.rightArm \?\? this\.playerGroup\)\.add\(gun\)/);
   assert.match(game, /life: 28/);
 });
 
