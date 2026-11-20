@@ -81,7 +81,8 @@ import { chooseCampaignNearbyRewardSpawnPoint } from './campaignRewards.ts';
 import { chooseNearbySpawnPoint } from './arenaSpawn.ts';
 import { chooseSurvivalEnemySpawnType, SURVIVAL_SPAWN_VARIETY_MEMORY, type SurvivalEnemySpawnType } from './survivalEnemySpawns.ts';
 import { findNextReadyWeaponIndex, getNextWeaponDispatchCursor } from './survivalWeaponDispatch.ts';
-import { buildSurvivalDamageReport, createSurvivalDamageStats, getSurvivalWeaponDamageSource, recordSurvivalDamage, recordSurvivalKill, SURVIVAL_DAMAGE_WEAPONS, type SurvivalDamageReport, type SurvivalDamageSource, type SurvivalDamageWeaponId, type SurvivalDamageStats } from './survivalDamageStats.ts';
+import { buildSurvivalDamageReport, createSurvivalDamageStats, getSurvivalWeaponDamageSource, getSurvivalFirearmDamageSource, recordSurvivalDamage, recordSurvivalKill, SURVIVAL_DAMAGE_WEAPONS, type SurvivalDamageReport, type SurvivalDamageSource, type SurvivalDamageWeaponId, type SurvivalDamageStats } from './survivalDamageStats.ts';
+import { createStartingSurvivalFirearmState, createSurvivalFirearmState, rollSurvivalFirearmDrop, rollSurvivalFirearmId, SURVIVAL_FIREARM_DEFS, type SurvivalFirearmId, type SurvivalFirearmState, type SurvivalFirearmEnemyTier } from './survivalFirearms.ts';
 import { getSurvivalDifficultyProfile } from './survivalDifficulty.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
 import { chooseSurvivalRicochetTarget, getSurvivalRadiationProfile, getSurvivalRicochetProfile } from './survivalCombatDraft.ts';
@@ -295,6 +296,7 @@ export interface SurvivalSnapshot {
   contract: SurvivalContractState;
   event: SurvivalShiftEvent | null;
   weapons: Array<{ id: SurvivalWeaponId; name: string; icon: string; level: number; evolved: boolean }>;
+  primaryFirearm: { id: SurvivalFirearmId; name: string; icon: string; color: number; ammoInMagazine: number; magazineSize: number; reloadRemainingSeconds: number; fireIntervalSeconds: number };
   campaignStageId: CampaignStageId | null; campaignStageTitle: string | null; campaignRemainingSeconds: number | null; campaignGoalKills: number | null; campaignBossSpawned: boolean; campaignSuccess: boolean; campaignStars: number; campaignSideOrderCompleted: boolean; campaignSideOrderValue: number; campaignBossKillSeconds: number;
 }
 
@@ -894,6 +896,10 @@ export class PaleciakiGameEngine {
   private survivalUpgradeStacks: Record<string, number> = {};
   private survivalEvolutions = new Set<string>();
   private survivalWeapons: SurvivalWeaponState[] = [];
+  private survivalFirearm: SurvivalFirearmState = createStartingSurvivalFirearmState();
+  private survivalFirearmKillCount = 0;
+  private survivalFirearmDropMissStreak = 0;
+  private survivalFirearmDrops: Array<{ id: string; firearmId: SurvivalFirearmId; mesh: THREE.Group; x: number; y: number; z: number; baseY: number; age: number; life: number }> = [];
   private survivalMomentum: SurvivalMomentumState = createSurvivalMomentumState();
   // Serializes ready weapon shots so a full cooldown queue never empties in one frame.
   private survivalWeaponDispatchCooldown = 0;
@@ -1210,6 +1216,11 @@ export class PaleciakiGameEngine {
     chainDamageMultiplier?: number;
     criticalBurstState?: { consumed: boolean };
     weaponId?: SurvivalDamageWeaponId;
+    firearmId?: SurvivalFirearmId;
+    firearmColor?: number;
+    firearmProjectile?: boolean;
+    firearmExplosion?: boolean;
+    aoeDamageMultiplier?: number;
     damageSource?: SurvivalDamageSource;
     trailTimer?: number;
   }[] = [];
@@ -2730,6 +2741,7 @@ export class PaleciakiGameEngine {
 
     this.playerGroup.position.copy(this.playerPos);
     this.levelRoot.add(this.playerGroup);
+    this.updateHeldSurvivalFirearmVisual();
     // Keep the original bespoke operator designs from createCharacterModel.
     // The realistic MakeHuman replacement was flattening the five visual identities.
   }
@@ -2791,6 +2803,10 @@ export class PaleciakiGameEngine {
     this.activeChaserIds.clear();
     this.threatTier = 0;
     this.survivalElapsed = 0;
+    this.clearSurvivalFirearmDrops();
+    this.survivalFirearm = createStartingSurvivalFirearmState();
+    this.survivalFirearmKillCount = 0;
+    this.survivalFirearmDropMissStreak = 0;
     this.campaignStage = null;
     this.campaignBossScheduled = false;
     this.campaignBossSpawned = false;
@@ -6681,6 +6697,16 @@ export class PaleciakiGameEngine {
         level: weapon.level,
         evolved: Boolean(weapon.evolved),
       })),
+      primaryFirearm: {
+        id: this.survivalFirearm.id,
+        name: SURVIVAL_FIREARM_DEFS[this.survivalFirearm.id].name,
+        icon: SURVIVAL_FIREARM_DEFS[this.survivalFirearm.id].icon,
+        color: SURVIVAL_FIREARM_DEFS[this.survivalFirearm.id].color,
+        ammoInMagazine: this.survivalFirearm.ammoInMagazine,
+        magazineSize: SURVIVAL_FIREARM_DEFS[this.survivalFirearm.id].magazineSize,
+        reloadRemainingSeconds: this.survivalFirearm.reloadRemaining,
+        fireIntervalSeconds: SURVIVAL_FIREARM_DEFS[this.survivalFirearm.id].fireIntervalSeconds,
+      },
       campaignStageId: this.campaignStage?.id ?? null,
       campaignStageTitle: this.campaignStage?.title ?? null,
       campaignRemainingSeconds: this.campaignStage ? Math.max(0, Math.ceil(this.campaignStage.durationSeconds - this.survivalElapsed)) : null,
@@ -7592,7 +7618,11 @@ export class PaleciakiGameEngine {
   public loadLevel(levelId: number) {
     this.currentLevelId = levelId;
     this.currentActiveSector = levelId;
+    this.clearSurvivalFirearmDrops();
     this.clearLevel();
+    this.survivalFirearm = createStartingSurvivalFirearmState();
+    this.survivalFirearmKillCount = 0;
+    this.survivalFirearmDropMissStreak = 0;
     this.rebuildPlayerMesh();
 
     // Unified Mega-Map Layout: Sektor A (-36..+36) -> Sektor B (+36..+116) -> Sektor C (+116..+206)
@@ -10006,6 +10036,7 @@ export class PaleciakiGameEngine {
       this.updateCollectibles(simDt);
       if (this.gameMode === 'survival') this.updateSurvivalSecrets(simDt);
       this.updateDroppedPerks(simDt);
+      this.updateSurvivalFirearmRuntime(simDt);
       this.updateHazards(simDt);
       if (this.gameMode !== 'survival') {
         this.updateExplosiveBarrels(simDt);
@@ -10085,7 +10116,7 @@ export class PaleciakiGameEngine {
     if (target) {
       this.playerRot = Math.atan2(target.x - this.playerPos.x, target.z - this.playerPos.z);
       if (this.playerGroup) this.playerGroup.rotation.y = this.playerRot;
-      if (this.attackCooldownTimer <= 0) this.triggerAttack();
+      if (this.survivalFirearm.cooldown <= 0) this.fireSurvivalFirearm(target);
     }
 
     // All reloads progress independently, even while no target is in range.
@@ -10110,6 +10141,325 @@ export class PaleciakiGameEngine {
     );
     this.survivalWeaponDispatchCursor = getNextWeaponDispatchCursor(readyWeaponIndex, this.survivalWeapons.length);
     this.survivalWeaponDispatchCooldown = SURVIVAL_WEAPON_DISPATCH_COOLDOWN_SECONDS / oniricRate;
+  }
+
+  private updateHeldSurvivalFirearmVisual(): void {
+    if (!this.playerGroup) return;
+    const previous = this.playerGroup.getObjectByName('survival_primary_firearm');
+    if (previous) {
+      this.playerGroup.remove(previous);
+      this.disposeTemporaryObject(previous);
+    }
+    const definition = SURVIVAL_FIREARM_DEFS[this.survivalFirearm.id];
+    const gun = new THREE.Group();
+    gun.name = 'survival_primary_firearm';
+    const dark = new THREE.MeshStandardMaterial({ color: 0x1f2937, metalness: 0.72, roughness: 0.34 });
+    const accent = new THREE.MeshStandardMaterial({ color: definition.color, emissive: definition.color, emissiveIntensity: 0.22, metalness: 0.45, roughness: 0.32 });
+    const receiver = new THREE.Mesh(new THREE.BoxGeometry(definition.archetype === 'rocket' || definition.archetype === 'minigun' ? 0.24 : 0.17, 0.16, definition.archetype === 'pistol' ? 0.42 : 0.72), dark);
+    receiver.position.set(0, 0, 0.04);
+    gun.add(receiver);
+    const grip = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.23, 0.15), dark);
+    grip.position.set(0, -0.17, -0.08);
+    grip.rotation.x = -0.18;
+    gun.add(grip);
+    if (definition.archetype === 'rocket') {
+      const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.86, 10), accent);
+      tube.rotation.x = Math.PI / 2;
+      tube.position.z = 0.38;
+      gun.add(tube);
+      const rear = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.12, 10), dark);
+      rear.rotation.x = Math.PI / 2;
+      rear.position.z = -0.12;
+      gun.add(rear);
+    } else if (definition.archetype === 'flame') {
+      const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.42, 9), accent);
+      tank.rotation.z = Math.PI / 2;
+      tank.position.set(-0.16, 0.02, -0.12);
+      gun.add(tank);
+      const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.11, 0.34, 8), dark);
+      nozzle.rotation.x = Math.PI / 2;
+      nozzle.position.z = 0.45;
+      gun.add(nozzle);
+    } else {
+      const barrelLength = definition.archetype === 'pistol' ? 0.34 : definition.archetype === 'shotgun' || definition.archetype === 'gauss' ? 0.88 : 0.68;
+      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.052, barrelLength, 8), accent);
+      barrel.rotation.x = Math.PI / 2;
+      barrel.position.z = 0.28 + barrelLength * 0.38;
+      gun.add(barrel);
+      if (definition.archetype === 'minigun') {
+        for (let index = 0; index < 4; index++) {
+          const offset = (index - 1.5) * 0.075;
+          const muzzle = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.025, 0.66, 6), dark);
+          muzzle.rotation.x = Math.PI / 2;
+          muzzle.position.set(offset, 0.05, 0.52);
+          gun.add(muzzle);
+        }
+      }
+      if (definition.archetype === 'plasma' || definition.archetype === 'gauss') {
+        const sight = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.12, 0.14), accent);
+        sight.position.set(0, 0.13, 0.02);
+        gun.add(sight);
+      }
+    }
+    gun.position.set(0.34, 0.82, 0.34);
+    gun.rotation.set(-0.05, 0, 0.03);
+    this.playerGroup.add(gun);
+  }
+
+  private clearSurvivalFirearmDrops(): void {
+    for (const drop of this.survivalFirearmDrops) {
+      this.levelRoot.remove(drop.mesh);
+      this.disposeTemporaryObject(drop.mesh);
+    }
+    this.survivalFirearmDrops = [];
+  }
+
+  private createSurvivalFirearmDropVisual(firearmId: SurvivalFirearmId): THREE.Group {
+    const definition = SURVIVAL_FIREARM_DEFS[firearmId];
+    const group = new THREE.Group();
+    group.name = 'firearm_drop_' + firearmId;
+    const color = new THREE.Color(definition.color);
+    const baseMaterial = new THREE.MeshStandardMaterial({ color: 0x101827, metalness: 0.5, roughness: 0.42, emissive: color, emissiveIntensity: 0.12 });
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.72, 0.12, 24), baseMaterial);
+    base.position.y = 0.06;
+    group.add(base);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.035, 8, 28), new THREE.MeshBasicMaterial({ color: definition.color, transparent: true, opacity: 0.92 }));
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = 0.14;
+    group.add(ring);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 256;
+    const context = canvas.getContext('2d');
+    if (context) {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = 'rgba(4, 12, 24, 0.94)';
+      context.fillRect(12, 12, 488, 232);
+      context.strokeStyle = '#' + definition.color.toString(16).padStart(6, '0');
+      context.lineWidth = 7;
+      context.strokeRect(14, 14, 484, 232);
+      context.lineCap = 'round';
+      context.lineJoin = 'round';
+      context.fillStyle = '#' + definition.color.toString(16).padStart(6, '0');
+      context.strokeStyle = '#' + definition.color.toString(16).padStart(6, '0');
+      const y = 104;
+      switch (definition.archetype) {
+        case 'smg':
+          context.fillRect(110, y - 17, 235, 34); context.fillRect(175, y + 16, 42, 52); context.fillRect(346, y - 9, 38, 18); context.fillRect(75, y - 7, 38, 14); break;
+        case 'rifle':
+          context.fillRect(92, y - 16, 270, 32); context.fillRect(164, y + 13, 38, 54); context.fillRect(362, y - 5, 82, 10); context.fillRect(52, y - 8, 48, 16); context.fillRect(225, y - 38, 54, 18); break;
+        case 'shotgun':
+          context.fillRect(80, y - 20, 290, 40); context.fillRect(160, y + 18, 42, 52); context.fillRect(368, y - 12, 90, 24); context.fillRect(56, y - 11, 42, 22); break;
+        case 'heavy-rifle':
+          context.fillRect(85, y - 18, 270, 36); context.fillRect(150, y + 15, 45, 55); context.fillRect(354, y - 6, 115, 12); context.fillRect(224, y - 46, 76, 22); break;
+        case 'minigun':
+          context.fillRect(125, y - 22, 190, 44); context.fillRect(310, y - 5, 130, 10); context.fillRect(310, y + 5, 130, 10); context.fillRect(310, y - 15, 130, 10); context.fillRect(310, y + 15, 130, 10); context.fillRect(170, y + 20, 46, 50); break;
+        case 'rocket':
+          context.fillRect(88, y - 28, 285, 56); context.fillRect(360, y - 18, 92, 36); context.fillRect(140, y + 27, 54, 50); context.beginPath(); context.moveTo(452, y - 30); context.lineTo(490, y); context.lineTo(452, y + 30); context.fill(); break;
+        case 'flame':
+          context.fillRect(85, y - 23, 210, 46); context.fillRect(280, y - 12, 120, 24); context.fillRect(145, y + 22, 44, 55); context.fillRect(100, y - 44, 65, 20); break;
+        case 'plasma':
+          context.fillRect(82, y - 20, 280, 40); context.fillRect(170, y + 18, 42, 56); context.fillRect(365, y - 12, 62, 24); context.beginPath(); context.arc(245, y - 30, 19, 0, Math.PI * 2); context.fill(); break;
+        case 'gauss':
+          context.fillRect(70, y - 11, 330, 22); context.fillRect(400, y - 5, 72, 10); context.fillRect(135, y + 12, 46, 48); context.fillRect(235, y - 30, 70, 16); break;
+        default:
+          context.fillRect(140, y - 18, 180, 36); context.fillRect(185, y + 18, 40, 42); context.fillRect(320, y - 6, 70, 12); break;
+      }
+      context.fillStyle = '#f8fafc';
+      context.font = '900 27px system-ui, sans-serif';
+      context.textAlign = 'center';
+      context.fillText(definition.name.toUpperCase(), 256, 220, 460);
+    }
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false, toneMapped: false }));
+    sprite.scale.set(2.25, 1.12, 1);
+    sprite.position.set(0, 1.42, 0);
+    group.add(sprite);
+    return group;
+  }
+
+  private spawnSurvivalFirearmDrop(x: number, y: number, z: number, firearmId: SurvivalFirearmId, isPityDrop = false): void {
+    const definition = SURVIVAL_FIREARM_DEFS[firearmId];
+    if (this.survivalFirearmDrops.length >= 3) {
+      const oldest = this.survivalFirearmDrops.shift();
+      if (oldest) {
+        this.levelRoot.remove(oldest.mesh);
+        this.disposeTemporaryObject(oldest.mesh);
+      }
+    }
+    const safeX = THREE.MathUtils.clamp(x, this.levelBounds.minX + 1, this.levelBounds.maxX - 1);
+    const safeZ = THREE.MathUtils.clamp(z, this.levelBounds.minZ + 1, this.levelBounds.maxZ - 1);
+    const mesh = this.createSurvivalFirearmDropVisual(firearmId);
+    mesh.position.set(safeX, y, safeZ);
+    this.levelRoot.add(mesh);
+    this.survivalFirearmDrops.push({
+      id: 'firearm_drop_' + Math.floor(performance.now()) + '_' + Math.floor(Math.random() * 100000),
+      firearmId, mesh, x: safeX, y, z: safeZ, baseY: y, age: 0, life: 28,
+    });
+    this.spawnParticleRing(safeX, y + 0.2, safeZ, definition.color);
+    this.emitFloatingToast((isPityDrop ? '📦 ŁUP PEWNY: ' : '🔫 ZRZUT BRONI: ') + definition.name.toUpperCase(), safeX, y + 1.8, safeZ, 'perk');
+    sound.playPickup(1);
+  }
+
+  private updateSurvivalFirearmRuntime(dt: number): void {
+    if (this.gameMode === 'pvp' || this.state !== 'playing') return;
+    const definition = SURVIVAL_FIREARM_DEFS[this.survivalFirearm.id];
+    this.survivalFirearm.cooldown = Math.max(0, this.survivalFirearm.cooldown - dt);
+    if (this.survivalFirearm.reloadRemaining > 0) {
+      this.survivalFirearm.reloadRemaining = Math.max(0, this.survivalFirearm.reloadRemaining - dt);
+      if (this.survivalFirearm.reloadRemaining <= 0) {
+        this.survivalFirearm.ammoInMagazine = definition.magazineSize;
+        this.emitFloatingToast('MAGAZYNEK GOTOWY • ' + definition.shortName, this.playerPos.x, this.playerPos.y + 1.35, this.playerPos.z, 'perk');
+        sound.playPickup(1);
+      }
+    }
+
+    for (let index = this.survivalFirearmDrops.length - 1; index >= 0; index--) {
+      const drop = this.survivalFirearmDrops[index];
+      drop.age += dt;
+      drop.life -= dt;
+      if (drop.life <= 0) {
+        this.levelRoot.remove(drop.mesh);
+        this.disposeTemporaryObject(drop.mesh);
+        this.survivalFirearmDrops.splice(index, 1);
+        continue;
+      }
+      drop.mesh.rotation.y += dt * 0.55;
+      drop.mesh.position.y = drop.baseY + 0.13 + Math.sin(drop.age * 3.1) * 0.13;
+      const distance = Math.hypot(drop.x - this.playerPos.x, drop.z - this.playerPos.z);
+      if (distance > 1.22 || Math.abs(drop.y - this.playerPos.y) > 1.8) continue;
+
+      const picked = SURVIVAL_FIREARM_DEFS[drop.firearmId];
+      this.survivalFirearm = createSurvivalFirearmState(drop.firearmId);
+      this.updateHeldSurvivalFirearmVisual();
+      this.levelRoot.remove(drop.mesh);
+      this.disposeTemporaryObject(drop.mesh);
+      this.survivalFirearmDrops.splice(index, 1);
+      this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.5, this.playerPos.z, picked.color);
+      this.triggerBloomPulse(0.22);
+      this.emitFloatingToast('BROŃ ZMIENIONA: ' + picked.name.toUpperCase(), this.playerPos.x, this.playerPos.y + 1.65, this.playerPos.z, 'combo');
+      this.callbacks.onPerkDropBanner?.(picked.name, picked.icon, 'Nowa broń podstawowa. Magazynek ' + picked.magazineSize + ' • przeładowanie ' + picked.reloadSeconds.toFixed(2) + ' s.', '#' + picked.color.toString(16).padStart(6, '0'));
+      sound.playPickup(3);
+      if (this.gameMode === 'survival') this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+    }
+  }
+
+  private reloadSurvivalFirearm(): void {
+    const definition = SURVIVAL_FIREARM_DEFS[this.survivalFirearm.id];
+    if (this.gameMode === 'pvp' || this.state !== 'playing' ||
+      this.survivalFirearm.reloadRemaining > 0 ||
+      this.survivalFirearm.ammoInMagazine >= definition.magazineSize) return;
+    this.survivalFirearm.reloadRemaining = definition.reloadSeconds;
+    this.emitFloatingToast('PRZEŁADOWANIE • ' + definition.shortName, this.playerPos.x, this.playerPos.y + 1.25, this.playerPos.z, 'perk');
+    sound.playPickup(1);
+  }
+
+  private fireSurvivalFirearm(target?: EnemyItem): void {
+    if (this.state !== 'playing' || this.gameMode === 'pvp' || this.survivalFirearm.cooldown > 0) return;
+    const firearm = this.survivalFirearm;
+    const definition = SURVIVAL_FIREARM_DEFS[firearm.id];
+    if (firearm.reloadRemaining > 0) return;
+    if (firearm.ammoInMagazine <= 0) {
+      this.reloadSurvivalFirearm();
+      return;
+    }
+
+    const forward = target
+      ? new THREE.Vector3(target.x - this.playerPos.x, 0, target.z - this.playerPos.z)
+      : this.manualAimEnabled
+        ? new THREE.Vector3(this.manualAimDirection.x, 0, this.manualAimDirection.z)
+        : new THREE.Vector3(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
+    if (forward.lengthSq() < 0.001) forward.set(Math.sin(this.playerRot), 0, Math.cos(this.playerRot));
+    forward.normalize();
+    this.playerRot = Math.atan2(forward.x, forward.z);
+    if (this.playerGroup) this.playerGroup.rotation.y = this.playerRot;
+
+    const hasteFactor = (this.activePerks.attackHaste || 0) > 0 ? 0.92 : 1;
+    firearm.cooldown = definition.fireIntervalSeconds * hasteFactor;
+    firearm.ammoInMagazine = Math.max(0, firearm.ammoInMagazine - 1);
+    firearm.shotCounter++;
+    this.attackSwingDuration = definition.archetype === 'shotgun' || definition.archetype === 'rocket' || definition.archetype === 'gauss' ? 0.24 : 0.15;
+    this.attackSwingTimer = this.attackSwingDuration;
+    this.requestGobkitAction(this.playerGobkitTrack, 'Attack', this.attackSwingDuration);
+
+    const start = new THREE.Vector3(this.playerPos.x, this.playerPos.y + 0.92, this.playerPos.z).addScaledVector(forward, 0.86);
+    this.spawnCompactImpact(start.x, start.y, start.z, definition.color);
+    const pelletCount = definition.pellets;
+    const damage = definition.damage;
+    const spreadSeed = firearm.shotCounter * 0.37;
+    for (let index = 0; index < pelletCount; index++) {
+      const lane = pelletCount <= 1 ? 0 : (index / (pelletCount - 1)) * 2 - 1;
+      const randomSpread = (Math.random() - 0.5) * 0.42;
+      const angle = lane * definition.spreadRadians + randomSpread * definition.spreadRadians + spreadSeed * 0.001;
+      const direction = forward.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), angle).normalize();
+      const material = new THREE.MeshStandardMaterial({
+        color: definition.color,
+        emissive: definition.color,
+        emissiveIntensity: definition.archetype === 'plasma' || definition.archetype === 'gauss' ? 1.1 : 0.34,
+        metalness: definition.archetype === 'heavy-rifle' || definition.archetype === 'gauss' ? 0.55 : 0.2,
+        roughness: 0.28,
+        transparent: definition.archetype === 'flame',
+        opacity: definition.archetype === 'flame' ? 0.88 : 1,
+      });
+      let geometry: THREE.BufferGeometry;
+      switch (definition.archetype) {
+        case 'rocket': geometry = new THREE.ConeGeometry(definition.projectileRadius, 0.48, 8); break;
+        case 'flame': geometry = new THREE.SphereGeometry(definition.projectileRadius, 7, 6); break;
+        case 'plasma': geometry = new THREE.IcosahedronGeometry(definition.projectileRadius, 0); break;
+        case 'gauss':
+        case 'heavy-rifle': geometry = new THREE.CylinderGeometry(0.045, 0.045, 0.52, 7); break;
+        case 'shotgun': geometry = new THREE.SphereGeometry(definition.projectileRadius, 7, 6); break;
+        default: geometry = new THREE.BoxGeometry(0.09, 0.09, definition.archetype === 'pistol' ? 0.24 : 0.34); break;
+      }
+      const mesh = new THREE.Mesh(geometry, material);
+      if (definition.archetype === 'rocket' || definition.archetype === 'gauss' || definition.archetype === 'heavy-rifle') mesh.rotation.x = Math.PI / 2;
+      mesh.rotation.y = Math.atan2(direction.x, direction.z);
+      mesh.position.copy(start).addScaledVector(direction, 0.18);
+      mesh.castShadow = false;
+      this.levelRoot.add(mesh);
+      this.projectiles.push({
+        mesh,
+        vel: direction.multiplyScalar(definition.projectileSpeed),
+        life: definition.projectileLifeSeconds,
+        maxLife: definition.projectileLifeSeconds,
+        damage,
+        pierce: definition.pierce,
+        aoeRadius: definition.aoeRadius > 0 ? definition.aoeRadius : undefined,
+        aoeDamageMultiplier: definition.aoeDamageMultiplier > 0 ? definition.aoeDamageMultiplier : undefined,
+        igniteOnHit: definition.igniteOnHit,
+        firearmProjectile: true,
+        firearmExplosion: definition.archetype === 'rocket',
+        firearmId: definition.id,
+        firearmColor: definition.color,
+        damageSource: getSurvivalFirearmDamageSource(definition.id),
+        disposeOnRemove: true,
+        hitIds: new Set<string>(),
+        spinSpeed: definition.archetype === 'rocket' || definition.archetype === 'plasma' ? 6.5 : 0,
+      });
+    }
+    if (definition.archetype === 'shotgun') sound.playAttackWhoosh();
+    else if (definition.archetype === 'rocket') sound.playBossWarning();
+    else if (definition.archetype === 'flame') sound.playElectricalSparks();
+    else sound.playAttackWhoosh();
+
+    if (firearm.ammoInMagazine <= 0) firearm.reloadRemaining = definition.reloadSeconds;
+  }
+
+  private spawnSurvivalFirearmTrail(projectile: { mesh: THREE.Object3D; vel: THREE.Vector3; firearmId?: SurvivalFirearmId }): void {
+    if (!projectile.firearmId) return;
+    const definition = SURVIVAL_FIREARM_DEFS[projectile.firearmId];
+    if (!['rocket', 'flame', 'plasma', 'gauss'].includes(definition.archetype)) return;
+    const size = definition.archetype === 'rocket' ? 0.105 : 0.065;
+    const mesh = this.particlePool.acquire(definition.archetype === 'flame' ? 'sphere' : 'octahedron', definition.color, size, 0.72);
+    if (!mesh) return;
+    mesh.position.copy(projectile.mesh.position);
+    mesh.rotation.set(0.2, 0.4, 0.15);
+    this.levelRoot.add(mesh);
+    const speed = projectile.vel.length();
+    const scale = speed > 0.1 ? -0.36 / speed : 0;
+    this.addParticle(mesh, projectile.vel.x * scale, 0.10 + projectile.vel.y * scale, projectile.vel.z * scale, 0.22, null, size);
   }
 
   private spawnSurvivalWeaponMuzzleFx(weapon: SurvivalWeaponState, target: EnemyItem): void {
@@ -17391,6 +17741,13 @@ export class PaleciakiGameEngine {
           this.spawnSurvivalWeaponTrail(p);
           p.trailTimer = trailInterval * (p.orbiting ? 1.6 : 1);
         }
+      } else if (p.firearmId) {
+        p.trailTimer = (p.trailTimer ?? 0) - dt;
+        const trailInterval = this.adaptivePerformanceTier >= 2 ? 0.34 : this.adaptivePerformanceTier === 1 ? 0.25 : 0.16;
+        if (p.trailTimer <= 0) {
+          this.spawnSurvivalFirearmTrail(p);
+          p.trailTimer = trailInterval;
+        }
       }
 
       // Dawid's ceramic blades ricochet at the active mode boundary. Survival is a
@@ -17427,9 +17784,12 @@ export class PaleciakiGameEngine {
       const projectileDamageSource: SurvivalDamageSource = p.damageSource ?? (p.weaponId
         ? getSurvivalWeaponDamageSource(p.weaponId)
         : 'ability');
-      const adjustedProjectileDamage =
-        this.scaleSurvivalDamage(p.damage ?? (this.charDef.id === 'dawid' ? 2 : 1)) *
-        berserkMult * (p.chainDamageMultiplier || 1);
+      const firearmDamageMultiplier = this.gameMode === 'survival'
+        ? this.survivalDamageMultiplier * getSurvivalMomentumDamageMultiplier(this.survivalMomentum.overdriveRemainingSeconds, this.survivalMomentum.killStreak)
+        : 1;
+      const adjustedProjectileDamage = p.firearmProjectile
+        ? Math.max(0.1, p.damage ?? 1) * firearmDamageMultiplier * berserkMult * (p.chainDamageMultiplier || 1)
+        : this.scaleSurvivalDamage(p.damage ?? (this.charDef.id === 'dawid' ? 2 : 1)) * berserkMult * (p.chainDamageMultiplier || 1);
       const primaryDamageFactor = this.gameMode === 'survival' ? SURVIVAL_PRIMARY_ATTACK_DAMAGE_MULTIPLIER : 1;
       const baseDmg = projectileDamageSource === 'basic_attack'
         ? scaleCharacterBasicAttackDamage(adjustedProjectileDamage, this.charDef.basicAttackDamageMultiplier * this.characterMasteryBonuses.attackMultiplier * primaryDamageFactor)
@@ -17493,9 +17853,14 @@ export class PaleciakiGameEngine {
               this.applySurvivalCriticalShrapnel(e, baseDmg, projectileDamageSource);
             }
             sound.playSmack();
-            if (p.weaponProjectile) {
-              const impactColor = p.weaponId ? SURVIVAL_DAMAGE_WEAPONS[p.weaponId].color : 0x7dd3fc;
+            if (p.weaponProjectile || p.firearmProjectile) {
+              const impactColor = p.firearmColor ?? (p.weaponId ? SURVIVAL_DAMAGE_WEAPONS[p.weaponId].color : 0x7dd3fc);
               this.spawnCompactImpact(e.x, e.y + 0.72, e.z, impactColor);
+              if (p.firearmExplosion) {
+                this.spawnExplosionParticles(e.x, e.y + 0.48, e.z, impactColor, 20);
+                this.triggerScreenShake(0.22, 0.16);
+                sound.playBossWarning();
+              }
               // A restrained hit-stop cue makes each shot feel connected without
               // shaking the camera on every pellet or overwhelming mobile play.
               if (this.gameMode === 'survival' && !this.isHandheldViewport) {
@@ -17519,19 +17884,21 @@ export class PaleciakiGameEngine {
 
             // AoE shockwave on hit (Operator 01's WZ Binder Stamp)
             if (p.aoeRadius && p.aoeRadius > 0) {
-              if (p.weaponProjectile) this.spawnCompactImpact(e.x, e.y + 0.36, e.z, p.weaponId ? SURVIVAL_DAMAGE_WEAPONS[p.weaponId].color : 0xf59e0b);
+              if (p.weaponProjectile || p.firearmProjectile) this.spawnCompactImpact(e.x, e.y + 0.36, e.z, p.firearmColor ?? (p.weaponId ? SURVIVAL_DAMAGE_WEAPONS[p.weaponId].color : 0xf59e0b));
               else this.spawnParticleRing(e.x, e.y + 0.4, e.z, p.homingTrailColor ?? 0xf59e0b);
               for (const other of this.enemies) {
                 if (other.id !== e.id && other.state !== 'defeated') {
                   if (Math.hypot(other.x - e.x, other.z - e.z) <= p.aoeRadius) {
                     const primaryDamageFactor = this.gameMode === 'survival' ? SURVIVAL_PRIMARY_ATTACK_DAMAGE_MULTIPLIER : 1;
-                    const splashDamage = projectileDamageSource === 'basic_attack'
-                      ? scaleCharacterBasicAttackDamage(this.scaleSurvivalDamage(1), this.charDef.basicAttackDamageMultiplier * this.characterMasteryBonuses.attackMultiplier * primaryDamageFactor)
-                      : this.scaleSurvivalDamage(1);
+                    const splashDamage = p.aoeDamageMultiplier !== undefined && p.firearmProjectile
+                      ? Math.max(0.1, (p.damage ?? 1) * p.aoeDamageMultiplier * firearmDamageMultiplier * berserkMult)
+                      : projectileDamageSource === 'basic_attack'
+                        ? scaleCharacterBasicAttackDamage(this.scaleSurvivalDamage(1), this.charDef.basicAttackDamageMultiplier * this.characterMasteryBonuses.attackMultiplier * primaryDamageFactor)
+                        : this.scaleSurvivalDamage(1);
                     this.damageEnemy(other, splashDamage, e.x, e.z, projectileDamageSource);
                     other.stunTimer = Math.max(other.stunTimer, this.gameMode === 'survival' ? 0.22 : (p.stunDuration || 1.2));
                     if (this.gameMode !== 'survival' || (p.stunDuration || 0) > 0.8) other.state = 'stunned';
-                    if (!p.weaponProjectile) this.emitFloatingToast('📑 AUDYT AoE -1 HP!', other.x, other.y + 1.1, other.z, 'damage');
+                    if (!p.weaponProjectile && !p.firearmProjectile) this.emitFloatingToast('📑 AUDYT AoE -1 HP!', other.x, other.y + 1.1, other.z, 'damage');
                     if (other.hp <= 0) {
                       this.defeatEnemy(other, 240, true);
                     }
@@ -18230,7 +18597,12 @@ export class PaleciakiGameEngine {
   }
 
   public triggerAttack() {
-    if (this.state !== 'playing' || this.attackCooldownTimer > 0) return;
+    if (this.state !== 'playing') return;
+    if (this.gameMode !== 'pvp') {
+      this.fireSurvivalFirearm();
+      return;
+    }
+    if (this.attackCooldownTimer > 0) return;
 
     const campaignCounterattackReady = this.gameMode === 'campaign' && this.campaignCounterattackReady;
     if (campaignCounterattackReady) {
@@ -20341,6 +20713,25 @@ export class PaleciakiGameEngine {
     const isAbilityRechargeElite = isAbilityRechargeBoss ||
       e.type === 'elite_walczak_guard' || e.type === 'sebix_m' || e.maxHp >= 4;
     this.rechargeAbilityFromKill(isAbilityRechargeElite, isAbilityRechargeBoss);
+    if (this.gameMode !== 'pvp') {
+      this.survivalFirearmKillCount++;
+      const firearmBoss = e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' || e.type === 'sebix_m' || e.maxHp >= 16;
+      const firearmElite = firearmBoss || e.type === 'elite_walczak_guard' || e.type === 'mutant_gamma_forklift' || e.type === 'radioactive_pip' || e.type === 'cyber_salesman' || e.maxHp >= 4;
+      const firearmTier: SurvivalFirearmEnemyTier = firearmBoss ? 'boss' : firearmElite ? 'elite' : 'normal';
+      const firearmDrop = rollSurvivalFirearmDrop(this.survivalFirearmKillCount, firearmTier, this.survivalFirearmDropMissStreak, Math.random());
+      if (firearmDrop.shouldDrop) {
+        const firearmId = rollSurvivalFirearmId(this.survivalFirearm.id, this.survivalElapsed, Math.random());
+        if (firearmId) {
+          this.spawnSurvivalFirearmDrop(e.x, e.y + 0.08, e.z, firearmId, firearmDrop.isPityDrop || firearmDrop.isGuaranteed);
+          this.survivalFirearmDropMissStreak = 0;
+        } else {
+          this.survivalFirearmDropMissStreak = Math.min(5, this.survivalFirearmDropMissStreak + 1);
+        }
+      } else {
+        this.survivalFirearmDropMissStreak = Math.min(5, this.survivalFirearmDropMissStreak + 1);
+      }
+    }
+
     if (this.gameMode === 'survival') {
       this.survivalKills++;
       this.registerSurvivalContractAction('eliminations', 1);
