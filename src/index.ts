@@ -2778,8 +2778,8 @@ class PaleciakiScene extends xb.Script {
         const metrics = document.createElement('div');
         metrics.className = 'armory-card-stats';
         const metricRows: Array<[string, string]> = [
-          ['OBRAŻENIA', damageValue],
-          ['ZASIĘG MAKS.', firearm.rangeMeters + ' m'],
+          ['OBRAŻENIA BAZOWE', damageValue],
+          ['ZASIĘG BAZOWY', firearm.rangeMeters + ' m'],
           ['SZYBKOSTRZELNOŚĆ', rateValue],
           ['MAGAZYNEK', firearm.magazineSize + ' nab.'],
           ['PRZEŁADOWANIE', firearm.reloadSeconds.toFixed(2).replace('.', ',') + ' s'],
