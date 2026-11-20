@@ -10339,6 +10339,11 @@ export class PaleciakiGameEngine {
     const pose = getSurvivalFirearmReloadPose(definition.archetype, progress);
     const recoil = THREE.MathUtils.clamp(this.survivalFirearmRecoilTimer / profile.recoilSettleSeconds, 0, 1);
     const reloadDip = reloading ? Math.sin(progress * Math.PI) : 0;
+    const cycling = !reloading && this.survivalFirearm.cooldown > 0;
+    const cycleProgress = cycling
+      ? THREE.MathUtils.clamp(1 - this.survivalFirearm.cooldown / Math.max(0.01, definition.fireIntervalSeconds), 0, 1)
+      : 0;
+    const cycleMotion = Math.sin(cycleProgress * Math.PI);
 
     const part = (name: string): THREE.Group | undefined =>
       gun.getObjectByName(name) as THREE.Group | undefined;
@@ -10362,9 +10367,9 @@ export class PaleciakiGameEngine {
       const base = energyCell.userData.basePosition as THREE.Vector3 | undefined;
       if (base) energyCell.visible = !reloading || pose.energyCellOffsetY > -0.12;
     }
-    applyOffset('firearm-bolt', 'z', pose.boltOffsetZ);
-    applyOffset('firearm-pump', 'z', pose.pumpOffsetZ);
-    applyOffset('firearm-rocket-cell', 'z', pose.rocketCellOffsetZ);
+    applyOffset('firearm-bolt', 'z', pose.boltOffsetZ + profile.boltTravel * cycleMotion);
+    applyOffset('firearm-pump', 'z', pose.pumpOffsetZ + profile.pumpTravel * cycleMotion);
+    applyOffset('firearm-rocket-cell', 'z', pose.rocketCellOffsetZ + profile.rocketCellTravel * cycleProgress);
     const valve = part('firearm-tank-valve');
     if (valve) valve.rotation.z = pose.tankValveRotation;
     const coils = part('firearm-coils');
@@ -10446,7 +10451,7 @@ export class PaleciakiGameEngine {
 
     const start = new THREE.Vector3(this.playerPos.x, this.playerPos.y + 0.92, this.playerPos.z).addScaledVector(forward, 0.86);
     this.spawnCompactImpact(start.x, start.y, start.z, definition.color);
-    this.spawnSurvivalFirearmMuzzleFx(definition.archetype, start, forward);
+    this.spawnSurvivalFirearmMuzzleFx(definition.archetype, definition.color, start, forward);
     const pelletCount = definition.pellets;
     let damage = definition.damage;
     if (this.gameMode === 'campaign' && this.campaignCounterattackReady) {
@@ -10561,14 +10566,11 @@ export class PaleciakiGameEngine {
 
   private spawnSurvivalFirearmMuzzleFx(
     archetype: SurvivalFirearmArchetype,
+    color: number,
     position: THREE.Vector3,
     forward: THREE.Vector3,
   ): void {
     const profile = SURVIVAL_FIREARM_PRESENTATION[archetype];
-    const color = SURVIVAL_FIREARM_DEFS[
-      (Object.keys(SURVIVAL_FIREARM_DEFS) as SurvivalFirearmId[])
-        .find((id) => SURVIVAL_FIREARM_DEFS[id].archetype === archetype) ?? 'starter_pistol'
-    ].color;
     const handheld = this.isHandheldViewport || window.innerWidth < 900;
     const particleBudget = handheld ? (this.adaptivePerformanceTier >= 2 ? 0.30 : 0.48) : 1;
     const count = Math.max(1, Math.floor(profile.muzzleParticles * particleBudget));
