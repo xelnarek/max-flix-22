@@ -127,7 +127,8 @@ test('every primary firearm has a unique hard range and that range is enforced i
 test('firearm drops are shared by Survival and Campaign, rare, time-gated, single-pickup and globally rate-limited', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /if \(this\.gameMode === 'survival' \|\| this\.gameMode === 'campaign'\) \{[\s\S]*?this\.survivalFirearmKillCount\+\+/);
-  assert.match(game, /const firearmElapsed = this\.gameMode === 'campaign' \? this\.activeElapsedSeconds : this\.survivalElapsed/);
+  assert.match(game, /const firearmElapsed = this\.survivalElapsed/);
+  assert.match(game, /campaignRemainingSeconds: this\.campaignStage \? Math\.max\(0, Math\.ceil\(this\.campaignStage\.durationSeconds - this\.survivalElapsed\)\)/);
   assert.match(game, /firearmElapsed >= 45 && this\.survivalFirearmKillCount >= 8/);
   assert.match(game, /this\.survivalFirearmDrops\.length === 0/);
   assert.match(game, /firearmElapsed - this\.survivalFirearmLastDropSeconds >= 75/);
