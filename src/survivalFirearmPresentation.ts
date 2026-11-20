@@ -1,10 +1,10 @@
 export type SurvivalFirearmPresentationArchetype =
   | 'pistol' | 'smg' | 'rifle' | 'shotgun' | 'heavy-rifle'
-  | 'minigun' | 'rocket' | 'flame' | 'plasma' | 'gauss';
+  | 'minigun' | 'rocket' | 'flame' | 'plasma' | 'gauss' | 'grenade';
 
 export type SurvivalFirearmProjectileStyle =
   | 'pistol-slug' | 'compact-tracer' | 'rifle-tracer' | 'buckshot'
-  | 'heavy-slug' | 'rotary-tracer' | 'rocket' | 'flame' | 'plasma' | 'gauss-lance';
+  | 'heavy-slug' | 'rotary-tracer' | 'rocket' | 'flame' | 'plasma' | 'gauss-lance' | 'grenade-ballistic';
 
 export interface SurvivalFirearmPresentationProfile {
   readonly projectileStyle: SurvivalFirearmProjectileStyle;
@@ -84,6 +84,12 @@ export const SURVIVAL_FIREARM_PRESENTATION: Readonly<Record<
     trailIntervalSeconds: 0.095, trailParticleSize: 0.052, muzzleParticles: 7, muzzleSpread: 0.22, impactParticles: 13,
     recoilDepth: 0.11, recoilPitch: 0.20, recoilSettleSeconds: 0.22,
     magazineDrop: 0, boltTravel: 0, pumpTravel: 0, rocketCellTravel: 0, tankValveTurn: 0, energyCellDrop: 0.28, rotorBrake: false,
+  },
+  grenade: {
+    projectileStyle: 'grenade-ballistic', projectileLength: 0.34, projectileWidth: 0.12,
+    trailIntervalSeconds: 0.095, trailParticleSize: 0.038, muzzleParticles: 6, muzzleSpread: 0.18, impactParticles: 24,
+    recoilDepth: 0.23, recoilPitch: 0.39, recoilSettleSeconds: 0.30,
+    magazineDrop: 0, boltTravel: -0.13, pumpTravel: 0, rocketCellTravel: 0.26, tankValveTurn: 0, energyCellDrop: 0, rotorBrake: false,
   },
   gauss: {
     projectileStyle: 'gauss-lance', projectileLength: 0.78, projectileWidth: 0.048,
