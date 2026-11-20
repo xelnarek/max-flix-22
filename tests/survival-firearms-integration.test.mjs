@@ -111,9 +111,9 @@ test('magazine, reload, projectile archetype and damage are driven by the active
 test('every primary firearm has a unique hard range and that range is enforced in gameplay', async () => {
   const [game, firearms] = await Promise.all([read('../src/game.ts'), read('../src/survivalFirearms.ts')]);
   for (const [id, range] of [
-    ['starter_pistol', 26], ['smg_45', 23], ['assault_rifle', 36], ['shotgun_12g', 9],
-    ['battle_rifle', 42], ['minigun', 27], ['rocket_launcher', 32], ['flamethrower', 5],
-    ['plasma_rifle', 30], ['gauss_rifle', 75], ['ballistic_grenade_launcher', 24],
+    ['starter_pistol', 28], ['smg_45', 23], ['assault_rifle', 38], ['shotgun_12g', 10],
+    ['battle_rifle', 46], ['minigun', 29], ['rocket_launcher', 34], ['flamethrower', 6],
+    ['plasma_rifle', 32], ['gauss_rifle', 80], ['ballistic_grenade_launcher', 24],
   ]) {
     assert.match(firearms, new RegExp(id + ': \\{[\\s\\S]*?rangeMeters: ' + range));
   }
