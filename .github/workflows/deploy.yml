@@ -54,18 +54,31 @@ jobs:
           path: ./dist
 
       - name: Wait for Pages artifact metadata
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          for attempt in $(seq 1 10); do
-            if gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" --jq '.artifacts[] | select(.name == "github-pages") | .id' | grep -q .; then
-              echo "GitHub Pages artifact is visible to the deployment API."
+          for attempt in $(seq 1 15); do
+            artifact_response="$(curl --silent --show-error --fail \
+              --request POST \
+              --header "Authorization: Bearer ${ACTIONS_RUNTIME_TOKEN}" \
+              --header "Content-Type: application/json" \
+              "${ACTIONS_RESULTS_URL}/twirp/github.actions.results.api.v1.ArtifactService/ListArtifacts" \
+              --data '{}')" || {
+                echo "Artifact service temporarily unavailable (attempt $attempt/15)."
+                sleep 2
+                continue
+              }
+            artifact_count="$(printf '%s' "$artifact_response" | jq '[.artifacts[]? | select(.name == "github-pages")] | length')"
+            if [ "$artifact_count" = "1" ]; then
+              echo "GitHub Pages artifact is visible to the same Twirp API used by deploy-pages."
               exit 0
             fi
-            echo "Waiting for GitHub Pages artifact indexing (attempt $attempt/10)..."
+            if [ "$artifact_count" -gt 1 ]; then
+              echo "More than one github-pages artifact is present; refusing an ambiguous deployment." >&2
+              exit 1
+            fi
+            echo "Waiting for Pages artifact indexing (attempt $attempt/15)..."
             sleep 2
           done
-          echo "The uploaded GitHub Pages artifact is not visible to the deployment API." >&2
+          echo "The uploaded Pages artifact is not visible to the deployment artifact service." >&2
           exit 1
 
       - name: Deploy website
