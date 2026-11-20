@@ -10,9 +10,9 @@ const [html, css, rosterCss] = await Promise.all([
   read('src/operator-roster-v2.css'),
 ]);
 
-test('mobile menu keeps all eleven destinations in one vertical sidebar with readable touch targets', async () => {
+test('mobile menu keeps all twelve destinations in one vertical sidebar with readable touch targets', async () => {
   const tabs = [...html.matchAll(/class="menu-tab-btn[^"]*" data-tab="(tab-[^"]+)"/g)];
-  assert.equal(tabs.length, 11);
+  assert.equal(tabs.length, 12);
   const repair = await read('src/menu-single-sidebar-repair.css');
   assert.match(repair, /#title-screen \.menu-tabs-bar\s*\{[\s\S]*?flex-direction: column !important/);
   assert.match(repair, /#title-screen \.menu-tabs-bar\s*\{[\s\S]*?overflow-y: auto !important/);
