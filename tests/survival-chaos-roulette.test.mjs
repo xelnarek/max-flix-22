@@ -30,13 +30,13 @@ test('roulette roll boundaries select the first and final outcomes deterministic
   assert.equal(rollSurvivalChaosRoulette(0.5), 'nova');
 });
 
-test('roulette roll covers all eighteen outcomes across the weighted intervals', () => {
+test('roulette roll covers all seventeen outcomes across the weighted intervals', () => {
   const counts = new Map();
   for (let index = 0; index < 10000; index++) {
     const kind = rollSurvivalChaosRoulette(index / 10000);
     counts.set(kind, (counts.get(kind) || 0) + 1);
   }
-  assert.equal(counts.size, 18);
+  assert.equal(counts.size, 17);
   for (const entry of SURVIVAL_CHAOS_ROULETTE_TABLE) {
     assert.equal(counts.get(entry.kind), entry.weight * 100, entry.kind + ' probability interval');
   }
@@ -45,7 +45,7 @@ test('roulette roll covers all eighteen outcomes across the weighted intervals',
 test('invalid roulette input falls back safely to the table midpoint', () => {
   assert.equal(rollSurvivalChaosRoulette(Number.NaN), 'nova');
   assert.equal(rollSurvivalChaosRoulette(-100), 'skill');
-  assert.equal(rollSurvivalChaosRoulette(100), 'weapon_draft');
+  assert.equal(rollSurvivalChaosRoulette(100), 'double_or_nothing');
 });
 
 test('roulette reel feedback is synchronized to the three stop events and final reward class', async () => {
