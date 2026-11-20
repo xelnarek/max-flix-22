@@ -51,6 +51,34 @@ test('each 3D firearm model has unique visible weapon-specific accessories and s
   assert.match(game, /private createSurvivalFirearmModel\(firearmId: SurvivalFirearmId\)/);
 });
 
+test('every firearm renders a unique physical projectile, muzzle signature, trail and impact in the shared game renderer', async () => {
+  const [game, presentation] = await Promise.all([
+    read('../src/game.ts'),
+    read('../src/survivalFirearmPresentation.ts'),
+  ]);
+  for (const style of [
+    'pistol-crack', 'smg-stutter', 'rifle-flash', 'buckshot-fan', 'heavy-charge',
+    'rotary-strobe', 'rocket-ignition', 'flame-cone', 'plasma-pulse', 'grenade-launch', 'gauss-discharge',
+  ]) assert.ok(presentation.includes(style), 'missing dedicated muzzle signature: ' + style);
+  for (const style of [
+    'warm-brass', 'compact-dash', 'copper-line', 'pellet-glint', 'heavy-streak',
+    'rotary-dash', 'exhaust-smoke', 'ember-wake', 'ion-residue', 'smoke-fragment', 'magnetic-lance',
+  ]) assert.ok(presentation.includes(style), 'missing dedicated projectile trail: ' + style);
+  for (const style of [
+    'pin-spark', 'micro-hit', 'clean-punch', 'buckshot-burst', 'armor-punch',
+    'rotary-chips', 'pressure-blast', 'ember-splash', 'ion-bloom', 'fragmentation-burst', 'magnetic-punch',
+  ]) assert.ok(presentation.includes(style), 'missing dedicated impact signature: ' + style);
+  assert.match(game, /private createSurvivalFirearmProjectileMesh\([\s\S]*?firearm-projectile-smg-tracer-stripe[\s\S]*?firearmProjectileStyle/);
+  assert.match(game, /private spawnSurvivalFirearmMuzzleFx\([\s\S]*?switch \(profile\.muzzleStyle\)/);
+  assert.match(game, /private spawnSurvivalFirearmTrail\([\s\S]*?switch \(profile\.trailStyle\)[\s\S]*?this\.particlePool\.acquire/);
+  assert.match(game, /private spawnSurvivalFirearmImpactFx\([\s\S]*?switch \(profile\.impactStyle\)/);
+  assert.match(game, /opacity: firearmProfile\?\.trailOpacity/);
+  assert.match(game, /profile\.muzzleLifeSeconds/);
+  assert.match(game, /profile\.trailLifeSeconds/);
+  assert.doesNotMatch(game, /spawnCompactImpact\(start\.x, start\.y, start\.z, definition\.color\)/,
+    'firearm muzzle effects must not be masked by the same generic three-particle burst');
+});
+
 test('the ballistic grenade is a shared 11th firearm with its own projectile, sound, reload, impact and damage source', async () => {
   const [firearms, presentation, sound, game] = await Promise.all([
     read('../src/survivalFirearms.ts'),
