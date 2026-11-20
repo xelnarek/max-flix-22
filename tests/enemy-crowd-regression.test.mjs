@@ -23,7 +23,7 @@ test('crowd resolver clears coincident regular enemies in one bounded update', (
     { id: 'kurier-b', type: 'kurier', x: 0, z: 0 },
     { id: 'sebix-c', type: 'sebix_m', x: 0.12, z: 0.04 },
   ];
-  const corrected = resolveEnemyCrowdOverlaps(actors, new EnemySpatialIndex(4), bounds, 0.16, 4, 0.8);
+  const corrected = resolveEnemyCrowdOverlaps(actors, new EnemySpatialIndex(4), bounds, 0.16, 16, 1.2);
   assert.ok(corrected > 0);
   assertCrowdClear(actors);
 });
@@ -40,6 +40,26 @@ test('crowd resolver respects large boss footprints and arena bounds', () => {
     assert.ok(actor.x >= bounds.minX && actor.x <= bounds.maxX);
     assert.ok(actor.z >= bounds.minZ && actor.z <= bounds.maxZ);
   }
+});
+
+
+test('dense mixed-size handheld wave clears visible body intersections in one update', () => {
+  const types = [
+    'customer', 'kurier', 'sebix_m', 'walczak',
+    'customer', 'architect', 'sztaplar_szalony', 'piorun_dron',
+    'customer', 'handlowiec', 'monter', 'pan_roman',
+    'kurier', 'customer', 'sebix_m', 'customer',
+  ];
+  const actors = types.map((type, index) => ({
+    id: 'e-' + String(index).padStart(2, '0'),
+    type,
+    x: 0.02 * (index % 3),
+    y: 0.4,
+    z: 0.02 * (index % 4),
+  }));
+  const corrected = resolveEnemyCrowdOverlaps(actors, new EnemySpatialIndex(4), bounds, 0.16, 16, 1.2);
+  assert.ok(corrected > 0);
+  assertCrowdClear(actors);
 });
 
 test('defeated actors do not push live enemy models', () => {
