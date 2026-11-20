@@ -270,6 +270,7 @@ export class EnemySpatialIndex<T extends EnemySpacingActor = EnemySpacingActor> 
  * Chooses the first spawn candidate with enough room from live actors. If the
  * sampled perimeter is crowded, returns the candidate with the greatest
  * distance to its nearest neighbour instead of returning a random pile-up.
+ * Visible death-animation corpses also reserve their footprint until cleanup.
  */
 export function chooseSpacedSpawnPoint(
   candidates: readonly HorizontalVector[],
