@@ -2847,13 +2847,17 @@ class PaleciakiScene extends xb.Script {
 
         const header = document.createElement('div');
         header.className = 'armory-card-head';
-        const icon = document.createElement('img');
+        const iconData = renderSurvivalFirearmCatalogIcon(firearm.archetype, firearm.color);
+        const icon = document.createElement(iconData ? 'img' : 'span');
         icon.className = 'armory-card-icon';
-        icon.alt = '';
         icon.setAttribute('aria-hidden', 'true');
-        icon.src = renderSurvivalFirearmCatalogIcon(firearm.archetype, firearm.color) ?? '';
-        icon.dataset.fallbackIcon = firearm.icon;
-        if (!icon.src) icon.classList.add('armory-card-icon-fallback');
+        if (iconData && icon instanceof HTMLImageElement) {
+          icon.alt = '';
+          icon.src = iconData;
+        } else {
+          icon.textContent = firearm.icon;
+          icon.classList.add('armory-card-icon-fallback');
+        }
         const heading = document.createElement('div');
         heading.className = 'armory-card-title-wrap';
         const title = document.createElement('h3');
