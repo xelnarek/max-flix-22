@@ -62,7 +62,7 @@ test('existing roster repair keeps the operator profile after the card grid', ()
 
 test('one tab activates one panel while every sidebar category remains accessible', async () => {
   const app = await read('src/index.ts');
-  assert.match(app, /menuTabList\?\.setAttribute\('role', 'navigation'\)/);
+  assert.doesNotMatch(app, /menuTabList\?\.setAttribute\('role', 'navigation'\)/);
   assert.match(app, /group\.hidden = false/);
   assert.match(app, /group\.inert = false/);
   assert.match(app, /menuTabList\?\.setAttribute\('role', 'tablist'\)/);
