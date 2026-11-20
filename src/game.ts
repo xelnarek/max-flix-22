@@ -10922,6 +10922,8 @@ export class PaleciakiGameEngine {
         break;
     }
     const energyProjectile = profile.projectileStyle === 'plasma' || profile.projectileStyle === 'gauss-lance';
+    const barrelAxisUsesLocalY = ['pistol-slug', 'rifle-tracer', 'heavy-slug', 'rocket', 'grenade-ballistic', 'gauss-lance'].includes(profile.projectileStyle);
+    if (barrelAxisUsesLocalY) geometry.rotateX(Math.PI / 2);
     const material = new THREE.MeshStandardMaterial({
       color,
       emissive: color,
@@ -10951,7 +10953,7 @@ export class PaleciakiGameEngine {
     };
     const barrelAxisUsesLocalY = ['pistol-slug', 'rifle-tracer', 'heavy-slug', 'rocket', 'grenade-ballistic', 'gauss-lance'].includes(profile.projectileStyle);
     const addRing = (z: number, radius: number, tube: number): void => {
-      addDetail(new THREE.TorusGeometry(radius, tube, 5, 10), z, 0, 0, barrelAxisUsesLocalY);
+      addDetail(new THREE.TorusGeometry(radius, tube, 5, 10), z, 0, 0, false);
     };
     const addFin = (z: number, angle: number, radial: number, finLength: number): void => {
       const fin = addDetail(
@@ -10963,9 +10965,7 @@ export class PaleciakiGameEngine {
       fin.rotation.z = angle;
     };
 
-    if (['pistol-slug', 'rifle-tracer', 'heavy-slug', 'rocket', 'grenade-ballistic', 'gauss-lance'].includes(profile.projectileStyle)) {
-      mesh.rotation.x = Math.PI / 2;
-    } else if (profile.projectileStyle === 'flame' || profile.projectileStyle === 'plasma') {
+    if (profile.projectileStyle === 'flame' || profile.projectileStyle === 'plasma') {
       mesh.scale.set(0.92, 0.92, Math.max(1, length / Math.max(0.01, width)));
     }
 
@@ -10982,7 +10982,7 @@ export class PaleciakiGameEngine {
         break;
       }
       case 'rifle-tracer':
-        addDetail(new THREE.ConeGeometry(width * 0.36, length * 0.24, 7), length * 0.43);
+        addDetail(new THREE.ConeGeometry(width * 0.36, length * 0.24, 7), length * 0.43, 0, 0, true);
         addRing(-length * 0.30, width * 0.42, width * 0.06);
         break;
       case 'buckshot':
@@ -10990,7 +10990,7 @@ export class PaleciakiGameEngine {
         // visible spread instead of a single fake shotgun slug.
         break;
       case 'heavy-slug':
-        addDetail(new THREE.ConeGeometry(width * 0.48, length * 0.25, 8), length * 0.42);
+        addDetail(new THREE.ConeGeometry(width * 0.48, length * 0.25, 8), length * 0.42, 0, 0, true);
         addRing(-length * 0.24, width * 0.58, width * 0.09);
         break;
       case 'rotary-tracer':
@@ -11016,7 +11016,7 @@ export class PaleciakiGameEngine {
       case 'gauss-lance':
         addRing(-length * 0.28, width * 1.10, width * 0.15);
         addRing(length * 0.10, width * 0.92, width * 0.11);
-        addDetail(new THREE.ConeGeometry(width * 0.36, length * 0.12, 7), length * 0.48);
+        addDetail(new THREE.ConeGeometry(width * 0.36, length * 0.12, 7), length * 0.48, 0, 0, true);
         break;
     }
 
