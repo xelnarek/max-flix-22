@@ -1293,7 +1293,7 @@ test('Crimsonland-style Survival Overdrive is chained, timed and surfaced in the
   assert.match(game, /getSurvivalMomentumDamageMultiplier\(this\.survivalMomentum\.overdriveRemainingSeconds,\s*this\.survivalMomentum\.killStreak\)/);
   assert.match(game, /getSurvivalMomentumMoveMultiplier\(this\.survivalMomentum\.overdriveRemainingSeconds,\s*this\.survivalMomentum\.killStreak\)/);
   assert.match(game, /getSurvivalMomentumRateMultiplier\(this\.survivalMomentum\.overdriveRemainingSeconds,\s*this\.survivalMomentum\.killStreak\)/);
-  assert.match(game, /selectSurvivalAutoTarget\([\s\S]*?this\.enemies[\s\S]*?firearmRange \* this\.survivalRangeMultiplier/);
+  assert.match(game, /const firearmRange = SURVIVAL_FIREARM_DEFS\[this\.survivalFirearm\.id\]\.rangeMeters;[\s\S]*?selectSurvivalAutoTarget\([\s\S]*?this\.enemies[\s\S]*?firearmRange \* this\.survivalRangeMultiplier/);
   assert.match(game, /killStreak: this\.survivalMomentum\.killStreak/);
   assert.match(game, /overdriveRemainingSeconds: this\.survivalMomentum\.overdriveRemainingSeconds/);
   assert.match(app, /snapshot\.killStreak >= 2/);
