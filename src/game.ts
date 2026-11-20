@@ -81,7 +81,7 @@ import { chooseNearbySpawnPoint } from './arenaSpawn.ts';
 import { chooseSurvivalEnemySpawnType, SURVIVAL_SPAWN_VARIETY_MEMORY, type SurvivalEnemySpawnType } from './survivalEnemySpawns.ts';
 import { findNextReadyWeaponIndex, getNextWeaponDispatchCursor } from './survivalWeaponDispatch.ts';
 import { buildSurvivalDamageReport, createSurvivalDamageStats, getSurvivalWeaponDamageSource, getSurvivalFirearmDamageSource, recordSurvivalDamage, recordSurvivalKill, SURVIVAL_DAMAGE_WEAPONS, type SurvivalDamageReport, type SurvivalDamageSource, type SurvivalDamageWeaponId, type SurvivalDamageStats } from './survivalDamageStats.ts';
-import { createStartingSurvivalFirearmState, createSurvivalFirearmState, rollSurvivalFirearmDrop, rollSurvivalFirearmId, SURVIVAL_FIREARM_DEFS, type SurvivalFirearmId, type SurvivalFirearmState, type SurvivalFirearmEnemyTier, type SurvivalFirearmArchetype } from './survivalFirearms.ts';
+import { createStartingSurvivalFirearmState, createSurvivalFirearmState, rollSurvivalFirearmDrop, rollSurvivalFirearmId, STARTING_SURVIVAL_FIREARM, SURVIVAL_FIREARM_DEFS, type SurvivalFirearmId, type SurvivalFirearmState, type SurvivalFirearmEnemyTier, type SurvivalFirearmArchetype } from './survivalFirearms.ts';
 import { SURVIVAL_FIREARM_PRESENTATION, getSurvivalFirearmReloadPose } from './survivalFirearmPresentation.ts';
 import { getSurvivalDifficultyProfile } from './survivalDifficulty.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
@@ -3137,7 +3137,8 @@ export class PaleciakiGameEngine {
       this.lastPvpState?.status !== 'in_round'
     ) return false;
     const localPvpPlayer = this.pvpSlot === 'p1' ? this.lastPvpState.p1 : this.lastPvpState.p2;
-    if (localPvpPlayer.attackCooldownTimer > 0.08) return false;
+    if (localPvpPlayer.attackCooldownTimer > 0.08 || localPvpPlayer.reloadRemainingSeconds > 0 ||
+      (localPvpPlayer.firearmAmmoById[localPvpPlayer.primaryFirearmId] ?? 0) <= 0) return false;
     this.pvpWantFire = true;
     return true;
   }
