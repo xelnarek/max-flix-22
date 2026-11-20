@@ -123,6 +123,7 @@ test('Overdrive only completes at three damage stacks and two attack-speed stack
 test('already-complete synergies are not advertised as still progressing', () => {
   assert.equal(getSurvivalDraftSynergyHint('critical', {
     stacks: { critical: 2, critical_damage: 2 },
+    evolutions: ['critical_protocol'],
   }), null);
   assert.equal(getSurvivalDraftSynergyHint('critical', {
     stacks: { critical: 3, critical_damage: 2 },
