@@ -10912,7 +10912,7 @@ export class PaleciakiGameEngine {
       z: number,
       x = 0,
       y = 0,
-      rotateAlongProjectile = true,
+      rotateAlongProjectile = false,
     ): THREE.Mesh => {
       const detail = new THREE.Mesh(detailGeometry, material);
       detail.position.set(x, y, z);
@@ -10924,8 +10924,9 @@ export class PaleciakiGameEngine {
       mesh.add(detail);
       return detail;
     };
+    const barrelAxisUsesLocalY = ['pistol-slug', 'rifle-tracer', 'heavy-slug', 'rocket', 'grenade-ballistic', 'gauss-lance'].includes(profile.projectileStyle);
     const addRing = (z: number, radius: number, tube: number): void => {
-      addDetail(new THREE.TorusGeometry(radius, tube, 5, 10), z, 0, 0, false);
+      addDetail(new THREE.TorusGeometry(radius, tube, 5, 10), z, 0, 0, barrelAxisUsesLocalY);
     };
     const addFin = (z: number, angle: number, radial: number, finLength: number): void => {
       const fin = addDetail(
