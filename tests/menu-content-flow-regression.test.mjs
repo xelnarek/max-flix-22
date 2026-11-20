@@ -9,7 +9,7 @@ const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
 test('active menu content is anchored to the top instead of being vertically distributed', () => {
   assert.match(css, /\.menu-tab-content-area > \.tab-panel\.active\s*\{[\s\S]*?justify-content:\s*flex-start\s*!important/);
   assert.match(css, /#title-screen #tab-map\s*\{[\s\S]*?min-height:\s*max-content\s*!important/);
-  assert.match(css, /#title-screen #tab-map > \.campaign-board\s*\{[\s\S]*?margin-block:\s*0\s*!important/);
+  assert.match(css, /#title-screen #tab-map > \.campaign-board\s*\{[\s\S]*?margin:\s*0\s*!important/);
 });
 
 test('campaign content remains present and attached to its single active menu panel', () => {
