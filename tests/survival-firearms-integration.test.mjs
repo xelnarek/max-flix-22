@@ -113,7 +113,7 @@ test('firearm hits use distinct synthesized impact audio and class-specific hit 
 
 test('fire rate and firing animation are individually tuned for all primary firearms', async () => {
   const [game, firearms] = await Promise.all([read('../src/game.ts'), read('../src/survivalFirearms.ts')]);
-  assert.match(game, /const recoilAnimationSeconds: Readonly<Record<SurvivalFirearmId, number>>/);
+  assert.match(game, /private readonly survivalFirearmAttackAnimationSeconds: Readonly<Record<SurvivalFirearmId, number>>/);
   for (const id of ['starter_pistol', 'smg_45', 'assault_rifle', 'shotgun_12g', 'battle_rifle', 'minigun', 'rocket_launcher', 'flamethrower', 'plasma_rifle', 'gauss_rifle']) {
     assert.ok(firearms.includes(id + ':'), 'missing firearm definition: ' + id);
     assert.ok(game.includes(id + ':'), 'missing firing animation profile: ' + id);
