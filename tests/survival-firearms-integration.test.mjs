@@ -125,12 +125,12 @@ test('the armory menu is a real navigation destination driven by live firearm de
   assert.match(html, /data-tab="tab-arsenal"/);
   assert.match(html, /id="tab-arsenal" class="tab-panel firearm-armory-panel"/);
   assert.match(html, /id="firearm-catalog-grid"/);
-  assert.match(app, /import \\{ SURVIVAL_FIREARM_DEFS \\} from '\\.\\/survivalFirearms\\.ts'/);
-  assert.match(app, /firearm\\.rangeMeters/);
-  assert.match(app, /firearm\\.damage/);
-  assert.match(app, /firearm\\.fireIntervalSeconds/);
-  assert.match(app, /firearm\\.reloadSeconds/);
-  assert.match(css, /#title-screen #tab-arsenal \\.armory-grid/);
+  assert.ok(app.includes("import { SURVIVAL_FIREARM_DEFS } from './survivalFirearms.ts'"));
+  assert.ok(app.includes('firearm.rangeMeters'));
+  assert.ok(app.includes('firearm.damage'));
+  assert.ok(app.includes('firearm.fireIntervalSeconds'));
+  assert.ok(app.includes('firearm.reloadSeconds'));
+  assert.ok(css.includes('#title-screen #tab-arsenal .armory-grid'));
   assert.match(menu, /'tab-arsenal'/);
 });
 
