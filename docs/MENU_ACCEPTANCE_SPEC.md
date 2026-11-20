@@ -131,7 +131,7 @@ Use thin borders, restrained depth, quiet gradients, readable contrast and consi
 ## 9. Acceptance checklist
 
 - [ ] Survival, Kampania and Arena PvP are visible together and retain current actions.
-- [ ] All eleven destinations remain present.
+- [ ] All twelve destinations remain present, including the current armory catalogue.
 - [ ] Four navigation categories remain named and visually distinct.
 - [ ] Only one content panel is visible at a time.
 - [ ] Panel scroll memory survives tab switches.
