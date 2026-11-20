@@ -15,8 +15,7 @@ function hasRenderableDescendant(object: THREE.Object3D): boolean {
 
 function hasPreservedDescendant(object: THREE.Object3D): boolean {
   if (object.userData.gobkitKeep === true ||
-      object.userData.actorVisualRoot === true ||
-      object.userData.actorLodProxy === true) return true;
+      object.userData.actorVisualRoot === true) return true;
   return object.children.some(hasPreservedDescendant);
 }
 
@@ -70,8 +69,7 @@ export function removeLegacyEnemyBodyVisuals(
   const prune = (parent: THREE.Object3D): void => {
     for (const child of [...parent.children]) {
       if (child.userData.gobkitKeep === true ||
-          child.userData.actorVisualRoot === true ||
-          child.userData.actorLodProxy === true) continue;
+          child.userData.actorVisualRoot === true) continue;
 
       const hasKeptDescendant = hasPreservedDescendant(child);
       if (!hasKeptDescendant && hasRenderableDescendant(child)) {
