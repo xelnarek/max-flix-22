@@ -1796,30 +1796,56 @@ class PaleciakiScene extends xb.Script {
           const primaryFirearm = snapshot.primaryFirearm;
           const firearmStatus = document.getElementById('survival-firearm-status');
           if (firearmStatus && primaryFirearm) {
+            const reloading = primaryFirearm.reloadRemainingSeconds > 0;
+            const cycling = !reloading && primaryFirearm.fireCooldownSeconds > 0;
+            const reloadProgress = reloading
+              ? Math.max(0, Math.min(1, 1 - primaryFirearm.reloadRemainingSeconds / Math.max(0.01, primaryFirearm.reloadDurationSeconds)))
+              : 0;
+            const cycleProgress = cycling
+              ? Math.max(0, Math.min(1, 1 - primaryFirearm.fireCooldownSeconds / Math.max(0.01, primaryFirearm.fireIntervalSeconds)))
+              : 0;
+            const ammoProgress = primaryFirearm.ammoInMagazine / Math.max(1, primaryFirearm.magazineSize);
             const signature = [
               primaryFirearm.id, primaryFirearm.ammoInMagazine,
-              Math.ceil(primaryFirearm.reloadRemainingSeconds * 10),
+              Math.ceil(primaryFirearm.reloadRemainingSeconds * 4),
+              Math.ceil(primaryFirearm.fireCooldownSeconds * 4),
             ].join(':');
             if (firearmStatus.dataset.signature !== signature) {
               firearmStatus.dataset.signature = signature;
               const icon = document.getElementById('survival-firearm-icon');
               const name = document.getElementById('survival-firearm-name');
               const ammo = document.getElementById('survival-firearm-ammo');
-              const reload = document.getElementById('survival-firearm-reload');
+              const action = document.getElementById('survival-firearm-reload');
+              const ammoFill = document.getElementById('survival-firearm-ammo-fill');
+              const actionFill = document.getElementById('survival-firearm-action-fill');
+              const reloadButton = document.getElementById('btn-survival-reload') as HTMLButtonElement | null;
               if (icon) icon.textContent = primaryFirearm.icon;
               if (name) name.textContent = primaryFirearm.name.toUpperCase();
-              if (ammo) ammo.textContent = primaryFirearm.reloadRemainingSeconds > 0
+              if (ammo) ammo.textContent = reloading
                 ? '— / ' + primaryFirearm.magazineSize
                 : primaryFirearm.ammoInMagazine + ' / ' + primaryFirearm.magazineSize;
-              if (reload) {
-                reload.classList.toggle('hidden', primaryFirearm.reloadRemainingSeconds <= 0);
-                reload.textContent = primaryFirearm.reloadRemainingSeconds > 0
+              if (action) {
+                action.textContent = reloading
                   ? 'PRZEŁADOWANIE ' + primaryFirearm.reloadRemainingSeconds.toFixed(1) + ' s'
-                  : 'PRZEŁADOWANIE';
+                  : cycling
+                    ? 'CYKL ZAMKA ' + primaryFirearm.fireCooldownSeconds.toFixed(1) + ' s'
+                    : 'GOTOWY';
+              }
+              if (ammoFill) ammoFill.style.width = (ammoProgress * 100).toFixed(1) + '%';
+              if (actionFill) actionFill.style.width = ((reloading ? reloadProgress : cycleProgress) * 100).toFixed(1) + '%';
+              if (reloadButton) {
+                reloadButton.disabled = reloading || primaryFirearm.ammoInMagazine >= primaryFirearm.magazineSize;
+                reloadButton.classList.toggle('is-ready', !reloading && primaryFirearm.ammoInMagazine > 0 && primaryFirearm.ammoInMagazine < primaryFirearm.magazineSize);
+                reloadButton.setAttribute('aria-label', reloading
+                  ? 'Broń jest przeładowywana'
+                  : primaryFirearm.ammoInMagazine >= primaryFirearm.magazineSize
+                    ? 'Magazynek jest pełny'
+                    : 'Ręcznie przeładuj broń (R)');
               }
               firearmStatus.style.setProperty('--firearm-color', '#' + primaryFirearm.color.toString(16).padStart(6, '0'));
-              firearmStatus.classList.toggle('is-reloading', primaryFirearm.reloadRemainingSeconds > 0);
-              firearmStatus.setAttribute('aria-label', primaryFirearm.name + ', amunicja ' + primaryFirearm.ammoInMagazine + ' na ' + primaryFirearm.magazineSize + (primaryFirearm.reloadRemainingSeconds > 0 ? ', przeładowanie' : ''));
+              firearmStatus.classList.toggle('is-reloading', reloading);
+              firearmStatus.classList.toggle('is-cycling', cycling);
+              firearmStatus.setAttribute('aria-label', primaryFirearm.name + ', amunicja ' + primaryFirearm.ammoInMagazine + ' na ' + primaryFirearm.magazineSize + (reloading ? ', przeładowanie magazynka' : cycling ? ', cykl broni' : ', gotowa'));
             }
           }
           if (survivalRerollBtn) {
@@ -3464,6 +3490,10 @@ class PaleciakiScene extends xb.Script {
       // In PvP this dock slot is rebound to the one-shot timing fire action.
       // Survival keeps its original direct attack.
       if (this.engine.getGameMode() !== 'pvp') this.engine.triggerAttack();
+    });
+
+    document.getElementById('btn-survival-reload')?.addEventListener('click', () => {
+      this.engine.requestSurvivalFirearmReload();
     });
 
     document.getElementById('btn-ability')?.addEventListener('click', () => {

@@ -295,7 +295,7 @@ export interface SurvivalSnapshot {
   contract: SurvivalContractState;
   event: SurvivalShiftEvent | null;
   weapons: Array<{ id: SurvivalWeaponId; name: string; icon: string; level: number; evolved: boolean }>;
-  primaryFirearm: { id: SurvivalFirearmId; name: string; icon: string; color: number; ammoInMagazine: number; magazineSize: number; reloadRemainingSeconds: number; fireIntervalSeconds: number };
+  primaryFirearm: { id: SurvivalFirearmId; name: string; icon: string; color: number; ammoInMagazine: number; magazineSize: number; reloadRemainingSeconds: number; reloadDurationSeconds: number; fireCooldownSeconds: number; fireIntervalSeconds: number };
   campaignStageId: CampaignStageId | null; campaignStageTitle: string | null; campaignRemainingSeconds: number | null; campaignGoalKills: number | null; campaignBossSpawned: boolean; campaignSuccess: boolean; campaignStars: number; campaignSideOrderCompleted: boolean; campaignSideOrderValue: number; campaignBossKillSeconds: number;
 }
 
@@ -897,14 +897,15 @@ export class PaleciakiGameEngine {
   private survivalWeapons: SurvivalWeaponState[] = [];
   private survivalFirearm: SurvivalFirearmState = createStartingSurvivalFirearmState();
   private readonly survivalFirearmAttackAnimationSeconds: Readonly<Record<SurvivalFirearmId, number>> = {
-    starter_pistol: 0.18, smg_45: 0.12, assault_rifle: 0.17, shotgun_12g: 0.34, battle_rifle: 0.31,
-    minigun: 0.10, rocket_launcher: 0.42, flamethrower: 0.12, plasma_rifle: 0.25, gauss_rifle: 0.35,
+    starter_pistol: 0.22, smg_45: 0.16, assault_rifle: 0.20, shotgun_12g: 0.42, battle_rifle: 0.38,
+    minigun: 0.14, rocket_launcher: 0.50, flamethrower: 0.19, plasma_rifle: 0.30, gauss_rifle: 0.42,
   };
   private survivalFirearmStates = new Map<SurvivalFirearmId, SurvivalFirearmState>();
   private survivalFirearmKillCount = 0;
   private survivalFirearmDropMissStreak = 0;
   private survivalFirearmLastDropSeconds = Number.NEGATIVE_INFINITY;
   private survivalFirearmSoundCooldown = 0;
+  private survivalFirearmRecoilTimer = 0;
   private survivalFirearmDrops: Array<{ id: string; firearmId: SurvivalFirearmId; mesh: THREE.Group; x: number; y: number; z: number; baseY: number; age: number; life: number }> = [];
   private survivalMomentum: SurvivalMomentumState = createSurvivalMomentumState();
   // Serializes ready weapon shots so a full cooldown queue never empties in one frame.
@@ -6625,6 +6626,8 @@ export class PaleciakiGameEngine {
         ammoInMagazine: this.survivalFirearm.ammoInMagazine,
         magazineSize: SURVIVAL_FIREARM_DEFS[this.survivalFirearm.id].magazineSize,
         reloadRemainingSeconds: this.survivalFirearm.reloadRemaining,
+        reloadDurationSeconds: SURVIVAL_FIREARM_DEFS[this.survivalFirearm.id].reloadSeconds,
+        fireCooldownSeconds: this.survivalFirearm.cooldown,
         fireIntervalSeconds: SURVIVAL_FIREARM_DEFS[this.survivalFirearm.id].fireIntervalSeconds,
       },
       campaignStageId: this.campaignStage?.id ?? null,
@@ -10107,6 +10110,7 @@ export class PaleciakiGameEngine {
       this.playerGroup.remove(previous);
       this.disposeTemporaryObject(previous);
     }
+    this.survivalFirearmRecoilTimer = 0;
     const gun = this.createSurvivalFirearmModel(this.survivalFirearm.id);
     gun.name = 'survival_primary_firearm';
     gun.scale.setScalar(0.72);
@@ -10178,6 +10182,8 @@ export class PaleciakiGameEngine {
     const definition = SURVIVAL_FIREARM_DEFS[this.survivalFirearm.id];
     this.survivalFirearm.cooldown = Math.max(0, this.survivalFirearm.cooldown - dt);
     this.survivalFirearmSoundCooldown = Math.max(0, this.survivalFirearmSoundCooldown - dt);
+    this.survivalFirearmRecoilTimer = Math.max(0, this.survivalFirearmRecoilTimer - dt);
+    this.updateHeldSurvivalFirearmAction();
     if (this.survivalFirearm.reloadRemaining > 0) {
       this.survivalFirearm.reloadRemaining = Math.max(0, this.survivalFirearm.reloadRemaining - dt);
       if (this.survivalFirearm.reloadRemaining <= 0) {
@@ -10220,6 +10226,27 @@ export class PaleciakiGameEngine {
     }
   }
 
+  private updateHeldSurvivalFirearmAction(): void {
+    const gun = this.playerGroup?.getObjectByName('survival_primary_firearm') as THREE.Group | undefined;
+    if (!gun) return;
+    const definition = SURVIVAL_FIREARM_DEFS[this.survivalFirearm.id];
+    if (this.survivalFirearm.reloadRemaining > 0) {
+      const progress = THREE.MathUtils.clamp(1 - this.survivalFirearm.reloadRemaining / definition.reloadSeconds, 0, 1);
+      const reloadPose = Math.sin(progress * Math.PI);
+      gun.position.set(0, -0.36 - reloadPose * 0.15, 0.18 - reloadPose * 0.04);
+      gun.rotation.set(-0.05 + reloadPose * 0.28, 0, 0.03 + reloadPose * 0.17);
+      return;
+    }
+    const recoil = THREE.MathUtils.clamp(this.survivalFirearmRecoilTimer / 0.13, 0, 1);
+    gun.position.set(0, -0.36 - recoil * 0.035, 0.18 - recoil * 0.07);
+    gun.rotation.set(-0.05 + recoil * 0.14, 0, 0.03 - recoil * 0.08);
+  }
+
+  public requestSurvivalFirearmReload(): void {
+    this.reloadSurvivalFirearm();
+    if (this.gameMode === 'survival') this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+  }
+
   private reloadSurvivalFirearm(): void {
     const definition = SURVIVAL_FIREARM_DEFS[this.survivalFirearm.id];
     if (this.gameMode === 'pvp' || this.state !== 'playing' ||
@@ -10258,8 +10285,9 @@ export class PaleciakiGameEngine {
       ? this.survivalAttackRateMultiplier * getSurvivalAnomalyModifiers(this.survivalAnomaly).attackCooldownMultiplier * momentumRate
       : 1;
     // Keep perk/momentum synergies meaningful without allowing the previous machine-gun cadence to return.
-    const attackRate = Math.min(1.12, Math.max(0.5, uncappedAttackRate));
+    const attackRate = Math.min(1.05, Math.max(0.65, uncappedAttackRate));
     firearm.cooldown = definition.fireIntervalSeconds * hasteFactor / attackRate;
+    this.survivalFirearmRecoilTimer = 0.13;
     firearm.ammoInMagazine = Math.max(0, firearm.ammoInMagazine - 1);
     firearm.shotCounter++;
     this.attackSwingDuration = this.survivalFirearmAttackAnimationSeconds[definition.id];

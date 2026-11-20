@@ -34,9 +34,15 @@ test('firearm catalogue has clearly differentiated cadence, ammunition, projecti
     Math.min(...definitions.map((entry) => entry.fireIntervalSeconds)) >= 10);
   const cadenceById = Object.fromEntries(definitions.map((entry) => [entry.id, entry.fireIntervalSeconds]));
   assert.deepEqual(cadenceById, {
-    starter_pistol: 0.58, smg_45: 0.22, assault_rifle: 0.31, shotgun_12g: 1.15, battle_rifle: 1.05,
-    minigun: 0.14, rocket_launcher: 2.2, flamethrower: 0.19, plasma_rifle: 0.65, gauss_rifle: 1.55,
+    starter_pistol: 0.82, smg_45: 0.38, assault_rifle: 0.52, shotgun_12g: 1.45, battle_rifle: 1.38,
+    minigun: 0.26, rocket_launcher: 3.0, flamethrower: 0.34, plasma_rifle: 0.88, gauss_rifle: 2.1,
   });
+  const impactById = Object.fromEntries(definitions.map((entry) => [entry.id, entry.damage]));
+  assert.deepEqual(impactById, {
+    starter_pistol: 1.38, smg_45: 0.85, assault_rifle: 1.25, shotgun_12g: 0.54, battle_rifle: 2.72,
+    minigun: 0.58, rocket_launcher: 4.3, flamethrower: 0.42, plasma_rifle: 1.55, gauss_rifle: 3.95,
+  });
+  assert.ok(definitions.every((entry) => entry.reloadSeconds >= 1.2), 'every firearm has a meaningful reload window');
 });
 
 test('firearm drops unlock after eight kills: 4% normal, 22% elite, boss guaranteed and 18-kill pity', () => {
