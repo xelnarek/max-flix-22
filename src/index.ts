@@ -5384,29 +5384,29 @@ class PaleciakiScene extends xb.Script {
     this.pvpFireCooldownMultiplier = localPerkPlayer.activePerk === 'rapid' && localPerkPlayer.perkTimer > 0 ? PVP_RAPID_FIRE_COOLDOWN_MULTIPLIER : 1;
     if (perkStatus) {
       const perkNames: Record<string, string> = { power: 'MOC +22% OBRAŻEŃ', sprint: 'SPRINT +16% RUCHU', shield: 'TARCZA +165 HP', rapid: 'SZYBSZE ŁADOWANIE' };
-      const localPlayer = localSlot === 'p1' ? state.p1 : state.p2;
-      if (localPlayer.activePerk === 'shield' && localPlayer.shieldHp > 0) perkStatus.textContent = `TARCZA AKTYWNA • ${Math.ceil(localPlayer.shieldHp)} HP`;
-      else if (localPlayer.activePerk && localPlayer.perkTimer > 0) perkStatus.textContent = `TWÓJ PERK: ${perkNames[localPlayer.activePerk] || 'AKTYWNY'} • ${Math.ceil(localPlayer.perkTimer)} s`;
+      const localFirearmPlayer = localSlot === 'p1' ? state.p1 : state.p2;
+      if (localFirearmPlayer.activePerk === 'shield' && localFirearmPlayer.shieldHp > 0) perkStatus.textContent = `TARCZA AKTYWNA • ${Math.ceil(localFirearmPlayer.shieldHp)} HP`;
+      else if (localFirearmPlayer.activePerk && localFirearmPlayer.perkTimer > 0) perkStatus.textContent = `TWÓJ PERK: ${perkNames[localFirearmPlayer.activePerk] || 'AKTYWNY'} • ${Math.ceil(localFirearmPlayer.perkTimer)} s`;
       else if (state.perkDrop.active) perkStatus.textContent = `KAPSUŁA: ${perkNames[state.perkDrop.type] || 'LOSOWY PERK'} • ZBIERZ NA ARENIE`;
       else perkStatus.textContent = `NOWA KAPSUŁA ZA ${Math.ceil(state.perkDrop.spawnTimer)} s • SPRAWDŹ MAPĘ`;
     }
 
-    const localPlayer = localSlot === 'p1' ? state.p1 : state.p2;
-    const primaryDefinition = SURVIVAL_FIREARM_DEFS[localPlayer.primaryFirearmId];
-    const rapidFireMultiplier = localPlayer.activePerk === 'rapid' && localPlayer.perkTimer > 0
+    const localFirearmPlayer = localSlot === 'p1' ? state.p1 : state.p2;
+    const primaryDefinition = SURVIVAL_FIREARM_DEFS[localFirearmPlayer.primaryFirearmId];
+    const rapidFireMultiplier = localFirearmPlayer.activePerk === 'rapid' && localFirearmPlayer.perkTimer > 0
       ? PVP_RAPID_FIRE_COOLDOWN_MULTIPLIER
       : 1;
-    this.pvpFirearmCooldownSeconds = getPvpFirearmAttackCooldown(localPlayer.primaryFirearmId) *
-      (localPlayer.progressionBonuses?.cooldownMultiplier ?? 1) * rapidFireMultiplier;
-    const primaryAmmo = localPlayer.firearmAmmoById[localPlayer.primaryFirearmId] ?? primaryDefinition.magazineSize;
-    const isReloading = localPlayer.reloadRemainingSeconds > 0;
-    const isCycling = !isReloading && localPlayer.attackCooldownTimer > 0;
+    this.pvpFirearmCooldownSeconds = getPvpFirearmAttackCooldown(localFirearmPlayer.primaryFirearmId) *
+      (localFirearmPlayer.progressionBonuses?.cooldownMultiplier ?? 1) * rapidFireMultiplier;
+    const primaryAmmo = localFirearmPlayer.firearmAmmoById[localFirearmPlayer.primaryFirearmId] ?? primaryDefinition.magazineSize;
+    const isReloading = localFirearmPlayer.reloadRemainingSeconds > 0;
+    const isCycling = !isReloading && localFirearmPlayer.attackCooldownTimer > 0;
     const firearmPanel = document.getElementById('pvp-firearm-panel');
     const firearmSignature = [
-      localPlayer.primaryFirearmId,
+      localFirearmPlayer.primaryFirearmId,
       primaryAmmo,
-      Math.ceil(localPlayer.reloadRemainingSeconds * 4),
-      Math.ceil(localPlayer.attackCooldownTimer * 4),
+      Math.ceil(localFirearmPlayer.reloadRemainingSeconds * 4),
+      Math.ceil(localFirearmPlayer.attackCooldownTimer * 4),
       state.firearmDrop.active ? state.firearmDrop.firearmId : 'waiting',
       Math.ceil(state.firearmDrop.spawnTimer),
     ].join(':');
@@ -5423,9 +5423,9 @@ class PaleciakiScene extends xb.Script {
         ? `— / ${primaryDefinition.magazineSize}`
         : `${primaryAmmo} / ${primaryDefinition.magazineSize}`;
       if (firearmAction) firearmAction.textContent = isReloading
-        ? `PRZEŁADOWANIE ${localPlayer.reloadRemainingSeconds.toFixed(1)} s`
+        ? `PRZEŁADOWANIE ${localFirearmPlayer.reloadRemainingSeconds.toFixed(1)} s`
         : isCycling
-          ? `CYKL ${localPlayer.attackCooldownTimer.toFixed(1)} s`
+          ? `CYKL ${localFirearmPlayer.attackCooldownTimer.toFixed(1)} s`
           : 'GOTOWY';
       if (firearmAmmoFill) firearmAmmoFill.style.width = `${Math.max(0, Math.min(100, primaryAmmo / Math.max(1, primaryDefinition.magazineSize) * 100))}%`;
       if (reloadButton) {
