@@ -4074,6 +4074,10 @@ export class PaleciakiGameEngine {
       }
       mesh.position.set(proj.x, proj.y, proj.z);
       mesh.rotation.y = Math.atan2(proj.vx, proj.vz);
+      if (proj.gravity && proj.gravity > 0) {
+        const horizontalSpeed = Math.max(0.001, Math.hypot(proj.vx, proj.vz));
+        mesh.rotation.x = Math.PI / 2 - Math.atan2(proj.vy ?? 0, horizontalSpeed);
+      }
     }
 
     for (const [id, mesh] of this.pvpProjectileMeshes.entries()) {
