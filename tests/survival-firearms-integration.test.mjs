@@ -72,10 +72,10 @@ test('every primary firearm has a unique hard range and that range is enforced i
   ]) {
     assert.match(firearms, new RegExp(id + ': \\{[\\s\\S]*?rangeMeters: ' + range));
   }
-  assert.match(game, /firearmRange \\* this\\.survivalRangeMultiplier/);
-  assert.match(game, /maxRangeMeters: definition\\.rangeMeters/);
-  assert.match(game, /p\\.travelledDistance = \\(p\\.travelledDistance \\?\\? 0\\) \\+ frameDistance/);
-  assert.match(game, /if \\(p\\.travelledDistance >= p\\.maxRangeMeters - 0\\.0001\\) p\\.life = 0/);
+  assert.ok(game.includes('firearmRange * this.survivalRangeMultiplier'));
+  assert.ok(game.includes('maxRangeMeters: definition.rangeMeters'));
+  assert.ok(game.includes('p.travelledDistance = (p.travelledDistance ?? 0) + frameDistance'));
+  assert.ok(game.includes('if (p.travelledDistance >= p.maxRangeMeters - 0.0001) p.life = 0'));
 });
 
 test('all enemy kills can spawn firearms while PvP remains on its authoritative shooting path', async () => {
@@ -102,7 +102,7 @@ test('each firearm archetype has a dedicated synthesized report rather than a me
   assert.match(game, /sound\.playFirearmShot\(definition\.archetype\)/);
 });
 
-test('Survival HUD exposes the primary firearm, magazine and live reload state separately from module arsenal', async () => {
+test('Survival HUD exposes the active primary firearm and removes the retired module rack', async () => {
   const [html, app, css] = await Promise.all([
     read('../index.html'), read('../src/index.ts'), read('../src/hud-layout.css')
   ]);
