@@ -183,6 +183,7 @@ test('sanitizes malformed and over-length player input before simulation', () =>
     isFiring: 'yes',
     wantDash: 1,
     wantAbility: true,
+    wantReload: 'yes',
   });
   assert.ok(Math.abs(Math.hypot(input.moveX, input.moveZ) - 1) < 1e-10);
   assert.equal(input.aimAngle, 0);
@@ -190,6 +191,7 @@ test('sanitizes malformed and over-length player input before simulation', () =>
   assert.equal(input.wantFire, false);
   assert.equal(input.wantDash, false);
   assert.equal(input.wantAbility, true);
+  assert.equal(input.wantReload, false);
 });
 
 test('fast projectile cannot tunnel through an opponent during a single server tick', () => {
@@ -687,14 +689,21 @@ test('PvP random perk capsule spawns and grants its effect on pickup', () => {
   } finally { Math.random = oldRandom; }
 });
 
-test('PvP weapons use a deliberate ~3-second primary-shot cycle with readable projectile speeds', async () => {
-  const { getPvpOperatorAttackCooldown, PVP_OPERATOR_PROFILES } = await import('../src/pvpArena.ts');
-  for (const id of ['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr']) {
-    const cooldown = getPvpOperatorAttackCooldown(id);
-    assert.ok(cooldown >= 2.8 && cooldown <= 3.2, `${id} cooldown should be close to 3 seconds`);
-    assert.ok(PVP_OPERATOR_PROFILES[id].projectileSpeed >= 13 && PVP_OPERATOR_PROFILES[id].projectileSpeed <= 18);
-  }
-  assert.equal(new Set(Object.values(PVP_OPERATOR_PROFILES).map(profile => profile.attackCooldown)).size, 5);
+test('all operators use the same shared starting firearm and deliberate primary-shot cadence', async () => {
+  const { getPvpOperatorAttackCooldown, PVP_FIREARM_COOLDOWN_MULTIPLIER } = await import('../src/pvpArena.ts');
+  const { STARTING_SURVIVAL_FIREARM, SURVIVAL_FIREARM_DEFS } = await import('../src/survivalFirearms.ts');
+  const operators = ['marcin', 'grzesiek', 'dawid', 'mateusz', 'piotr'];
+  const state = createInitialPvpArenaState(operators[0], 'P1', operators[1], 'P2');
+  assert.equal(STARTING_SURVIVAL_FIREARM, 'starter_pistol');
+  assert.equal(state.p1.primaryFirearmId, STARTING_SURVIVAL_FIREARM);
+  assert.equal(state.p2.primaryFirearmId, STARTING_SURVIVAL_FIREARM);
+  assert.equal(state.p1.firearmAmmoById[STARTING_SURVIVAL_FIREARM], SURVIVAL_FIREARM_DEFS[STARTING_SURVIVAL_FIREARM].magazineSize);
+  assert.equal(state.p2.firearmAmmoById[STARTING_SURVIVAL_FIREARM], SURVIVAL_FIREARM_DEFS[STARTING_SURVIVAL_FIREARM].magazineSize);
+  const cooldowns = operators.map(id => getPvpOperatorAttackCooldown(id));
+  assert.equal(new Set(cooldowns).size, 1, 'operator identity must not change primary weapon cadence');
+  assert.ok(cooldowns[0] >= 2.8 && cooldowns[0] <= 3.2);
+  assert.equal(cooldowns[0], SURVIVAL_FIREARM_DEFS[STARTING_SURVIVAL_FIREARM].fireIntervalSeconds * PVP_FIREARM_COOLDOWN_MULTIPLIER);
+  assert.equal(Object.keys(SURVIVAL_FIREARM_DEFS).length, 10);
 });
 
 test('PvP standard movement and dash are slower and more controlled', async () => {
