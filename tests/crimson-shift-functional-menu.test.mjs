@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
-test('Crimson Shift keeps all three launch actions and eleven destinations connected', async () => {
+test('Crimson Shift keeps all three launch actions and twelve destinations connected', async () => {
  const [html,app]=await Promise.all([read('../index.html'),read('../src/index.ts')]);
  for(const id of ['btn-start-survival','btn-open-campaign','btn-open-pvp']) assert.ok(html.includes('id="'+id+'"'),'missing launch action '+id);
- const ids=['tab-team','tab-map','tab-pvp','tab-enemies','tab-perks','tab-field-guide','tab-talent-tree','tab-ranks','tab-leaderboard','tab-achievements','tab-settings'];
+ const ids=['tab-team','tab-map','tab-pvp','tab-enemies','tab-arsenal','tab-perks','tab-field-guide','tab-talent-tree','tab-ranks','tab-leaderboard','tab-achievements','tab-settings'];
  for(const id of ids){assert.ok(html.includes('id="'+id+'"'),'missing panel '+id);assert.ok(html.includes('data-tab="'+id+'"'),'missing tab '+id);}
  assert.match(app,/syncMenuPanelPresentation/);assert.match(app,/panel\.inert = !active/);assert.match(app,/activateMenuTab\(tabBtn\)/);assert.match(app,/menuScrollMemory\.restore\(targetId\)/);
 });
