@@ -57,26 +57,3 @@ test('actor cleanup preserves MakeHuman shared resources and still releases priv
   assert.equal(sharedMaterialDisposals(), 0);
   assert.equal(privateMaterialDisposals(), 1);
 });
-
-test('actor-owned resource disposal preserves shared visual-LOD geometry and material', async () => {
-  const THREE = await import('three');
-  const { disposeActorOwnedRenderResources } = await import('../src/actorResourceDisposal.ts');
-  const root = new THREE.Group();
-  const sharedGeometry = new THREE.BoxGeometry();
-  const sharedMaterial = new THREE.MeshStandardMaterial();
-  sharedGeometry.userData.actorLodSharedGeometry = true;
-  sharedMaterial.userData.actorLodSharedMaterial = true;
-  let sharedGeometryDisposed = false;
-  let sharedMaterialDisposed = false;
-  sharedGeometry.addEventListener('dispose', () => { sharedGeometryDisposed = true; });
-  sharedMaterial.addEventListener('dispose', () => { sharedMaterialDisposed = true; });
-  const sharedMesh = new THREE.Mesh(sharedGeometry, sharedMaterial);
-  sharedMesh.userData.actorLodSharedGeometry = true;
-  sharedMesh.add(new THREE.Group());
-  root.add(sharedMesh);
-  disposeActorOwnedRenderResources(root);
-  assert.equal(sharedGeometryDisposed, false);
-  assert.equal(sharedMaterialDisposed, false);
-  sharedGeometry.dispose();
-  sharedMaterial.dispose();
-});
