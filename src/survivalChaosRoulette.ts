@@ -9,7 +9,7 @@ export interface SurvivalChaosRouletteEntry {
 }
 
 /**
- * Eighteen weighted outcomes total 100%. Direct enemy deliveries remain at 8%;
+ * Seventeen weighted outcomes total 100%. Direct enemy deliveries remain at 8%;
  * double-or-nothing adds a 2% entry with a 45% hostile second roll.
  */
 export const SURVIVAL_CHAOS_ROULETTE_TABLE: readonly SurvivalChaosRouletteEntry[] = [
