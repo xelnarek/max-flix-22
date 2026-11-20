@@ -15,6 +15,15 @@ test('every firearm archetype has its own projectile, recoil, reload and feedbac
   const projectileStyles = new Set(archetypes.map((archetype) =>
     SURVIVAL_FIREARM_PRESENTATION[archetype].projectileStyle));
   assert.equal(projectileStyles.size, archetypes.length, 'projectile silhouettes must be distinguishable');
+  assert.equal(new Set(archetypes.map((archetype) => SURVIVAL_FIREARM_PRESENTATION[archetype].muzzleStyle)).size, archetypes.length,
+    'each weapon must have its own muzzle signature');
+  assert.equal(new Set(archetypes.map((archetype) => SURVIVAL_FIREARM_PRESENTATION[archetype].trailStyle)).size, archetypes.length,
+    'each weapon must leave a visually distinct projectile trail');
+  assert.equal(new Set(archetypes.map((archetype) => SURVIVAL_FIREARM_PRESENTATION[archetype].impactStyle)).size, archetypes.length,
+    'each weapon must have its own hit/impact signature');
+  assert.equal(new Set(archetypes.map((archetype) => SURVIVAL_FIREARM_PRESENTATION[archetype].trailStretch)).size, archetypes.length,
+    'projectile trails must have a distinct silhouette and scale');
+  assert.equal(projectileStyles.size, archetypes.length, 'projectile silhouettes must be distinguishable');
   assert.equal(new Set(archetypes.map((archetype) => SURVIVAL_FIREARM_PRESENTATION[archetype].projectileLength)).size, archetypes.length, 'projectile lengths must be visibly distinct');
   assert.equal(new Set(archetypes.map((archetype) => SURVIVAL_FIREARM_PRESENTATION[archetype].trailParticleSize)).size, archetypes.length, 'every firearm needs its own trail scale');
   assert.equal(new Set(archetypes.map((archetype) => SURVIVAL_FIREARM_PRESENTATION[archetype].impactParticles)).size, archetypes.length, 'impact signatures must have distinct particle budgets');
@@ -22,6 +31,9 @@ test('every firearm archetype has its own projectile, recoil, reload and feedbac
     const profile = SURVIVAL_FIREARM_PRESENTATION[archetype];
     assert.ok(profile.projectileLength > 0);
     assert.ok(profile.projectileWidth > 0);
+    assert.ok(profile.muzzleFlashScale > 0 && profile.muzzleLifeSeconds >= 0.06);
+    assert.ok(profile.trailOpacity > 0 && profile.trailOpacity <= 1);
+    assert.ok(profile.trailLifeSeconds >= 0.06 && profile.trailStretch > 0);
     assert.ok(profile.muzzleParticles >= 1);
     assert.ok(profile.impactParticles >= 1);
     assert.ok(profile.trailIntervalSeconds === 0 || profile.trailIntervalSeconds >= 0.06);
