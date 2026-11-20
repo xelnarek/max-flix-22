@@ -14,8 +14,8 @@ const [html, app, css, hudCss, mobileGrid] = await Promise.all([
 test('each top-level menu destination has one dedicated panel', () => {
   const buttons = [...html.matchAll(/class="menu-tab-btn[^"]*" data-tab="(tab-[^"]+)"/g)].map((match) => match[1]);
   const panels = [...html.matchAll(/<div id="(tab-[^"]+)" class="tab-panel[^"]*"/g)].map((match) => match[1]);
-  assert.equal(buttons.length, 11);
-  assert.equal(new Set(buttons).size, 11);
+  assert.equal(buttons.length, 12);
+  assert.equal(new Set(buttons).size, 12);
   assert.deepEqual(new Set(buttons), new Set(panels));
 });
 
@@ -65,7 +65,7 @@ test('runtime keeps inactive panels inert and changes the section theme with the
   assert.match(app, /titleScreenRoot\.dataset\.activeMenuTab = targetId/);
   assert.match(app, /panel\.inert = !active/);
   assert.match(app, /panel\.setAttribute\('aria-hidden', String\(!active\)\)/);
-  for (const tab of ['tab-team', 'tab-map', 'tab-pvp', 'tab-enemies', 'tab-perks', 'tab-settings']) {
+  for (const tab of ['tab-team', 'tab-map', 'tab-pvp', 'tab-enemies', 'tab-arsenal', 'tab-perks', 'tab-settings']) {
     assert.ok(css.includes('data-active-menu-tab="' + tab + '"') || tab === 'tab-team' || tab === 'tab-enemies' || tab === 'tab-perks' || tab === 'tab-settings');
   }
 });

@@ -46,6 +46,7 @@
     <link rel="stylesheet" href="/src/crimson-shift-functional-menu.css" />
     <link rel="stylesheet" href="/src/crimson-shift-mobile-layout-v3.css" />
     <link rel="stylesheet" href="/src/menu-single-sidebar-repair.css" />
+    <link rel="stylesheet" href="/src/firearm-armory.css" />
     <meta name="application-name" content="MAX FLIX 22" />
     <meta name="color-scheme" content="dark" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -313,10 +314,6 @@
           <strong id="survival-firearm-ammo" class="survival-firearm-ammo">12 / 12</strong>
           <span id="survival-firearm-reload" class="survival-firearm-reload hidden">PRZEŁADOWANIE</span>
         </div>
-        <div class="survival-weapon-rack">
-          <span class="survival-weapon-rack-label">MODUŁY</span>
-          <div id="survival-weapons-list" class="survival-weapons-list"><span class="survival-weapon-chip starter">🥊 Moduły bojowe • brak</span></div>
-        </div>
       </div>
 
       <div id="survival-levelup" class="game-modal hidden survival-levelup-modal">
@@ -555,6 +552,12 @@
               </span>
               <span class="tab-label">ZAGROŻENIA</span>
             </button>
+              <button type="button" class="menu-tab-btn armory-menu-tab" data-tab="tab-arsenal" aria-controls="tab-arsenal" aria-label="Katalog aktualnego uzbrojenia">
+                <span class="tab-icon" aria-hidden="true">
+                  <svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3 8 10-3 5 2-2 3-5 1-3 5-2-1 2-5-3-2z"/><path d="m14 8 5 1 2 3-3 2-5-2M7 16l-2 4M17 15l2 4"/></svg>
+                </span>
+                <span class="tab-label">UZBROJENIE</span>
+              </button>
               <button type="button" class="menu-tab-btn" data-tab="tab-perks" aria-controls="tab-perks">
               <span class="tab-icon">
                 <svg class="ui-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
@@ -866,6 +869,23 @@
               </div>
             </div>
 
+            <div id="tab-arsenal" class="tab-panel firearm-armory-panel">
+              <section class="armory-hero">
+                <div class="armory-kicker">SURVIVAL • PRIMARY WEAPONS DATABASE</div>
+                <div class="armory-heading-row">
+                  <div><h2>UZBROJENIE</h2><p>Dziesięć broni głównych. Każda ma własny zasięg, obrażenia, tempo ognia, magazynek i model 3D. Parametry pochodzą bezpośrednio z aktywnych definicji gry.</p></div>
+                  <span class="armory-status">10 MODELI<br>AKTUALNY ARSENAŁ</span>
+                </div>
+                <div class="armory-rules">
+                  <span><strong>01</strong> Broń podstawowa zajmuje jeden slot</span>
+                  <span><strong>02</strong> Zrzuty przeciwników zmieniają aktualną broń</span>
+                  <span><strong>03</strong> Nie ma już poziomów ani ewolucji starych broni</span>
+                </div>
+              </section>
+              <div id="firearm-catalog-grid" class="armory-grid" aria-label="Parametry dziesięciu broni głównych"></div>
+              <p class="armory-footnote">Zasięg i obrażenia są wartościami bazowymi broni; perki operatora mogą je modyfikować. Limit lotu pocisku uwzględnia aktywny mnożnik zasięgu. Obrażenia strzelby są podane na pojedynczy śrut; liczba śrutów w salwie jest pokazana osobno.</p>
+            </div>
+
             <div id="tab-perks" class="tab-panel">
               <div class="perks-panel-header">
                 <div class="perks-panel-title">SYSTEM ZRZUTÓW MODUŁÓW BHP & POWER-UPÓW W ŚWIECIE 3D</div>
@@ -1001,9 +1021,9 @@
             <div id="tab-field-guide" class="tab-panel field-guide-panel">
               <section class="field-guide-hero">
                 <div class="field-guide-kicker">CENTRUM B4 INTELLIGENCE DIVISION • FIELD MANUAL 02.6</div>
-                <div class="field-guide-heading-row"><div><h2>BAZA TAKTYCZNA</h2><p>Pełny przewodnik po Survival Shift, przeciwnicy, pułapki, eventy, perki, ulepszenia i sekrety. Wszystko w jednym miejscu, przed wejściem na halę.</p></div><div class="field-guide-stamp">AKTUALNE<br>08.11.2026</div></div>
+                <div class="field-guide-heading-row"><div><h2>BAZA TAKTYCZNA</h2><p>Pełny przewodnik po Survival Shift, zagrożenia, pułapki, eventy, perki, sekrety i zasady rozgrywki.</p></div><div class="field-guide-stamp">AKTUALNE<br>08.11.2026</div></div>
                 <div class="field-guide-metrics">
-                  <div><strong>20</strong><span>typów zagrożeń</span></div><div><strong>4</strong><span>pułapki</span></div><div><strong>7</strong><span>eventów</span></div><div><strong>15</strong><span>perków</span></div><div><strong>12</strong><span>ulepszeń pasywnych</span></div><div><strong>12 + 4</strong><span>ewolucji broni + synergii buildów</span></div>
+                  <div><strong>20</strong><span>typów zagrożeń</span></div><div><strong>4</strong><span>pułapki</span></div><div><strong>7</strong><span>eventów</span></div><div><strong>15</strong><span>perków</span></div><div><strong>12</strong><span>ulepszeń pasywnych</span></div><div><strong>4</strong><span>synergie buildów</span></div>
                 </div>
               </section>
 
@@ -1012,7 +1032,7 @@
                 <div class="field-guide-card-grid three-col">
                   <article class="field-guide-card"><span class="field-guide-icon">⚔️</span><h4>SURVIVAL SHIFT • ROGUELITE</h4><p>Samodzielna arena, fale co 60 sekund i automatyczne namierzanie. Ataki mają niezależne, długie przeładowania. Co 5 fal pojawia się główny boss w rotacji trzech modeli: Nadzorca Zero (fala 5), Dyrektor Widmo (10) i Bosman Kraków (15), potem cykl się powtarza. Boss zostawia skrzynię z łupem i dodatkowe XP.</p><small>CEL: PRZETRWAJ • ZBIERAJ XP • SKŁADAJ BUILD</small></article>
                   <article class="field-guide-card"><span class="field-guide-icon">🎯</span><h4>ARENA PVP • POJEDYNEK 1v1</h4><p>Osobna arena i zestaw zasad. Przeciwnik nie jest automatycznie namierzany: obok operatora porusza się wskaźnik na łuku, a strzał oddajesz przyciskiem STRZAŁ w chwili, gdy kierunek pokrywa się z przeciwnikiem. Lewy joystick (na PC: WASD / strzałki) ustawia bazowy kierunek łuku; po zatrzymaniu wskaźnik nadal wykonuje wahadłowy ruch. Strzelasz przyciskiem STRZAŁ dokładnie w chwili, gdy wskaźnik wskazuje wybrany kierunek. Na telefonie STRZAŁ znajduje się bezpośrednio nad joystickiem, a MOC i UNIK są po prawej. Na PC STRZAŁ jest w dolnym panelu, działa też klawisz F i kliknięcie areny.</p><small>CEL: WYBIERZ MOMENT • ZACHOWAJ DYSTANS • WYGRAJ 2 RUNDY</small></article>
-                  <article class="field-guide-card"><span class="field-guide-icon">🔫</span><h4>ARSENAŁ • 12 BRONI AUTONOMICZNYCH</h4><p>Działo paletowe (fala uderzeniowa), Tarcza diamentowa (przebicie i rykoszet), Mina Mapei (spowolnienie), Kubełek bombowy (ogień), Dron Piorun (naprowadzanie), Nitownica UDT (szybkie przebicie), Impuls skanera B4 (precyzyjne namierzanie), Wirujące tarcze (obrona orbitalna), Odłamki Calacatty (wachlarz przebijających odłamków), Bomba Parowa (strefa spowolnienia), Klakson Sztaplarki (fala ogłuszająca) i WZ-Bumerang (powracający pocisk). Broń rozwijasz do poziomu 5. Unikalna ewolucja wymaga 5 minut Survival oraz co najmniej jednego poziomu przypisanego modułu pasywnego.</p><small>TAKTYKA: DOBIERAJ WZORY ATAKU, NIE TYLKO SUROWE OBRAŻENIA</small></article>
+                  <article class="field-guide-card"><span class="field-guide-icon">🔫</span><h4>ARSENAŁ • 10 BRONI GŁÓWNYCH</h4><p>Pistolet startowy, pistolet maszynowy, karabin szturmowy, strzelba 12G, karabin bojowy, minigun, wyrzutnia rakiet, miotacz ognia, karabin plazmowy i Gauss. Każda broń ma własny bazowy zasięg i obrażenia, szybkostrzelność, pojemność magazynka oraz czas przeładowania. Perki operatora mogą modyfikować parametry w trakcie rozgrywki. Broń wypada losowo jako łup z przeciwników i zastępuje broń aktualnie trzymaną. Nie ma już osobnych kart poziomów ani ewolucji tych dawnych 12 modułów.</p><small>TAKTYKA: DOBIERAJ BROŃ DO DYSTANSU I GĘSTOŚCI CELÓW</small></article>
                 </div>
                 <div class="field-guide-callout"><strong>Tempo i czytelność:</strong> fale przychodzą co 60 sekund, liczebność grup i limit przeciwników są ograniczone. Maksymalnie 22 aktywnych przeciwników na urządzeniach mobilnych i 34 na desktopie. Sekretna fala Pomazańców otrzymuje pięć krótkotrwałych, dodatkowych slotów. Im dalej w zmianę, tym bardziej wytrzymali są wrogowie.</div>
               </section>
@@ -1109,33 +1129,17 @@
               </section>
 
               <section class="field-guide-section">
-                <div class="field-guide-section-head"><span class="field-guide-index">07</span><div><h3>EWOLUCJE BUILDÓW • ŁĄCZ MODUŁY</h3><p>To stałe bonusy w ramach bieżącego biegu Survival. Nie są osobnymi dropami — odblokowują się automatycznie po spełnieniu warunków.</p></div></div>
+                <div class="field-guide-section-head"><span class="field-guide-index">07</span><div><h3>SYNERGIE BUILDÓW • ŁĄCZ MODUŁY OPERATORA</h3><p>To stałe bonusy w ramach bieżącego biegu Survival. Łączą ogólne moduły operatora; nie zmieniają poziomu ani ewolucji konkretnej broni.</p></div></div>
                 <div class="field-guide-card-grid two-col">
                   <article class="field-guide-card evolution"><span class="field-guide-icon">🔥</span><h4>OVERDRIVE: LINIA OGNIA</h4><p><strong>Warunek:</strong> 3× Wzmocniona amunicja + 2× Szybszy atak. <strong>Efekt:</strong> +35% obrażeń i dodatkowe 16% przyspieszenia ataku.</p></article>
                   <article class="field-guide-card evolution"><span class="field-guide-icon">⚡</span><h4>PIORUN MK II</h4><p><strong>Warunek:</strong> 2× Dron asystujący + 2× Zasięg audytu. <strong>Efekt:</strong> częstsze impulsy drona i zwiększony zasięg namierzania.</p></article>
                   <article class="field-guide-card evolution"><span class="field-guide-icon">📦</span><h4>PREMIUM LOGISTICS</h4><p><strong>Warunek:</strong> 2× Premia za normę + 2× Łowca okazji. <strong>Efekt:</strong> +25% XP oraz +20% mnożnika szansy na dodatkowe zrzuty.</p></article>
                   <article class="field-guide-card evolution"><span class="field-guide-icon">🛡️</span><h4>FORT BHP</h4><p><strong>Warunek:</strong> 2× Przerwa regeneracyjna + 2× Paleta ochronna. <strong>Efekt:</strong> szybsza regeneracja i wydłużona osłona.</p></article>
                 </div>
-                <div class="field-guide-section-head weapon-evolution-subhead"><span class="field-guide-index">08</span><div><h3>EWOLUCJE BRONI • 12 UNIKALNYCH FINAŁÓW</h3><p>Każda broń ma własną specjalizację końcową. Nie wystarczy samo maksowanie poziomu — trzeba dobrać właściwy moduł pasywny.</p></div></div>
-                <div class="field-guide-callout"><strong>EWOLUCJE BRONI:</strong> każda broń ma własną formę końcową. Wymagany jest poziom 5 broni, co najmniej 5 minut Survival oraz jeden poziom przypisanego modułu pasywnego.</div>
-                <div class="field-guide-card-grid two-col weapon-evolution-grid">
-                  <article class="field-guide-card evolution"><span class="field-guide-icon">🧱</span><h4>PALETA GIGA</h4><p><strong>Połączenie:</strong> Działo paletowe + Wzmocniona amunicja. <strong>Efekt:</strong> większa fala uderzeniowa, mocniejszy pocisk i dodatkowe przebicie.</p></article>
-                  <article class="field-guide-card evolution"><span class="field-guide-icon">💿</span><h4>TARCZA RYKOSZETU</h4><p><strong>Połączenie:</strong> Tarcza diamentowa + Zasięg audytu. <strong>Efekt:</strong> szybsza tarcza przebija więcej celów i odbija się od granicy areny.</p></article>
-                  <article class="field-guide-card evolution"><span class="field-guide-icon">🟣</span><h4>MAPEI BLACKOUT</h4><p><strong>Połączenie:</strong> Mina Mapei + Magnes XP. <strong>Efekt:</strong> szersza strefa spowolnienia i dodatkowe trafienia w skupisku przeciwników.</p></article>
-                  <article class="field-guide-card evolution"><span class="field-guide-icon">⚡</span><h4>KUBEŁEK FURII</h4><p><strong>Połączenie:</strong> Kubełek bombowy + Łowca okazji. <strong>Efekt:</strong> większy wybuch, podpalanie i przebicie pierwszego celu.</p></article>
-                  <article class="field-guide-card evolution"><span class="field-guide-icon">🤖</span><h4>PIORUN CHAIN MK II</h4><p><strong>Połączenie:</strong> Dron Piorun + Dron asystujący. <strong>Efekt:</strong> dłuższe naprowadzanie i przebicie kilku celów w jednej linii.</p></article>
-                  <article class="field-guide-card evolution"><span class="field-guide-icon">🔩</span><h4>NITOWNICA OBLĘŻNICZA</h4><p><strong>Połączenie:</strong> Nitownica UDT + Rytm ataku. <strong>Efekt:</strong> szybszy pocisk o znacznie większej sile przebicia.</p></article>
-                  <article class="field-guide-card evolution"><span class="field-guide-icon">📡</span><h4>SKANER TOTALNY</h4><p><strong>Połączenie:</strong> Impuls skanera B4 + Zasięg audytu. <strong>Efekt:</strong> szybsze namierzanie i przebicie zwartej formacji.</p></article>
-                  <article class="field-guide-card evolution"><span class="field-guide-icon">⚙️</span><h4>ORBITALNA STREFA BHP</h4><p><strong>Połączenie:</strong> Wirujące tarcze + Paleta ochronna. <strong>Efekt:</strong> pięć ostrzy, szerszy promień ochrony i dłuższe działanie.</p></article>
-                  <article class="field-guide-card evolution"><span class="field-guide-icon">💎</span><h4>BURZA WIELKIEGO FORMATU</h4><p><strong>Połączenie:</strong> Odłamki Calacatty + Wzmocniona amunicja. <strong>Efekt:</strong> pięć odłamków leci w wachlarzu i przebija kilka celów.</p></article>
-                  <article class="field-guide-card evolution"><span class="field-guide-icon">♨️</span><h4>KOCIOŁ B4</h4><p><strong>Połączenie:</strong> Bomba Parowa + Przerwa regeneracyjna. <strong>Efekt:</strong> większa strefa pary, która zatrzymuje napór przeciwników.</p></article>
-                  <article class="field-guide-card evolution"><span class="field-guide-icon">📣</span><h4>ALARM CAŁEJ HALI</h4><p><strong>Połączenie:</strong> Klakson Sztaplarki + Paleta ochronna. <strong>Efekt:</strong> potężniejszy impuls ogłuszający w dużym promieniu.</p></article>
-                  <article class="field-guide-card evolution"><span class="field-guide-icon">📜</span><h4>PROTOKÓŁ POWROTU</h4><p><strong>Połączenie:</strong> WZ-Bumerang + Premia za normę. <strong>Efekt:</strong> szybszy dokument przebija więcej celów i wraca do operatora.</p></article>
-                </div>
               </section>
 
               <section class="field-guide-section">
-                <div class="field-guide-section-head"><span class="field-guide-index">09</span><div><h3>SEKRETY I SKRZYNIE Z ŁUPEM</h3><p>Nie wszystko leży na środku alejki. Czasem trzeba zejść z głównej trasy i sprawdzić obrzeża hali.</p></div></div>
+                <div class="field-guide-section-head"><span class="field-guide-index">08</span><div><h3>SEKRETY I SKRZYNIE Z ŁUPEM</h3><p>Nie wszystko leży na środku alejki. Czasem trzeba zejść z głównej trasy i sprawdzić obrzeża hali.</p></div></div>
                 <div class="field-guide-card-grid three-col">
                   <article class="field-guide-card secret"><span class="field-guide-icon">📁</span><h4>Teczka z premią Nadzorcy Zero</h4><p>Ukryty obiekt specjalny. Nadzorca Zero twierdzi, że w środku są dokumenty do podpisu. Lepiej nie sprawdzać.</p></article>
                   <article class="field-guide-card secret"><span class="field-guide-icon">☕</span><h4>Zapomniany automat z 1998 roku</h4><p>Relikt przerwy kawowej sprzed ery terminali. Nikt nie wie, czy kawa działa, ale automat nadal pobiera drobne.</p></article>
@@ -1151,7 +1155,7 @@
               </section>
 
               <section class="field-guide-section field-guide-last">
-                <div class="field-guide-section-head"><span class="field-guide-index">10</span><div><h3>PROTOKÓŁ STEROWANIA</h3><p>Najpierw pozycja, potem atak. W Survival poruszaj się tak, by zbierać XP i nie zamknąć sobie drogi odwrotu.</p></div></div>
+                <div class="field-guide-section-head"><span class="field-guide-index">09</span><div><h3>PROTOKÓŁ STEROWANIA</h3><p>Najpierw pozycja, potem atak. W Survival poruszaj się tak, by zbierać XP i nie zamknąć sobie drogi odwrotu.</p></div></div>
                 <div class="field-guide-controls">
                   <div><kbd>W A S D</kbd><kbd>↑ ↓ ← →</kbd><span>Ruch</span></div>
                   <div><kbd>SPACJA</kbd><span>Skok / stomp na wroga</span></div>

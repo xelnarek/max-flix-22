@@ -19,9 +19,9 @@ test('single-sidebar repair is the final menu layout layer', () => {
   assert.match(css, /\.menu-mobile-segments\s*\{\s*display:\s*none !important/);
 });
 
-test('all eleven destinations stay in one vertical navigation rail', () => {
+test('all twelve destinations stay in one vertical navigation rail', () => {
   const buttons = [...html.matchAll(/class="menu-tab-btn[^"]*" data-tab="(tab-[^"]+)"/g)];
-  assert.equal(buttons.length, 11, 'all original destinations must remain available');
+  assert.equal(buttons.length, 12, 'all destinations including the new armory must remain available');
   assert.match(app, /group\.hidden = false;/);
   assert.match(app, /group\.inert = false;/);
   assert.match(app, /getMenuTabIndexForKey\(event\.key, currentNavigationIndex, navigationTabs\.length, 'vertical'\)/);

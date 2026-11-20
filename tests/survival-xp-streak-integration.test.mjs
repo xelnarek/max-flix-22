@@ -10,8 +10,7 @@ test('XP pickup streak is wired into real Survival XP collection and resets on e
   assert.match(game, /ŁAŃCUCH XP/);
 });
 
-test('weapon evolution unlock timing is reduced to 3.5 minutes in both offer and acceptance checks', async () => {
+test('obsolete primary-weapon progression timing and passive pair gates are removed', async () => {
   const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
-  assert.equal((game.match(/this\.survivalElapsed >= 210/g) || []).length, 2);
-  assert.match(game, /3,5 minuty Survival/);
+  assert.doesNotMatch(game, /weapon_unlock:|weapon_upgrade:|weapon_evolve:|definition\.unlockAfter|3,5 minuty Survival/);
 });

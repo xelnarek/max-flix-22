@@ -126,8 +126,8 @@ test('main-menu navigation, Survival and PvP use separate vector-icon entry acti
   assert.ok(codexStart >= 0 && html.slice(codexStart, codexStart + 500).includes('<svg'));
   assert.ok(settingsStart >= 0 && html.slice(settingsStart, settingsStart + 700).includes('<svg'));
   const menuIcons = [...html.matchAll(/<span class="tab-icon"[^>]*>([\s\S]*?)<\/span>/g)].map((match) => match[1]);
-  assert.equal(menuIcons.length, 11, 'every top-level menu destination needs an icon');
-  assert.ok(menuIcons.every((icon) => icon.includes('<svg')), 'all eleven menu tabs use consistent vector icons');
+  assert.equal(menuIcons.length, 12, 'all twelve menu destinations need an icon');
+  assert.ok(menuIcons.every((icon) => icon.includes('<svg')), 'all twelve menu tabs use consistent vector icons');
   assert.ok(survivalStart >= 0 && html.slice(survivalStart, survivalStart + 800).includes('menu-mode-card-icon'));
   const modeCards = ['btn-start-survival', 'btn-open-campaign', 'btn-open-pvp'].map((id) => {
     const start = html.indexOf('<button id="' + id + '"');
@@ -318,9 +318,9 @@ test('the Survival archive directory exposes four arenas and all twenty fixed se
   assert.match(css, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
 });
 
-test('the field guide documents the Necronomicon secret without changing menu navigation or layout', async () => {
+test('the field guide documents the Necronomicon secret while preserving the remaining navigation and layout', async () => {
   const html = await read('../index.html');
-  const sectionStart = html.indexOf('<span class="field-guide-index">09</span>');
+  const sectionStart = html.indexOf('<span class="field-guide-index">08</span>');
   const sectionEnd = html.indexOf('</section>', sectionStart);
   assert.ok(sectionStart >= 0 && sectionEnd > sectionStart, 'the existing secrets section should remain intact');
   const secretsSection = html.slice(sectionStart, sectionEnd);
@@ -334,13 +334,13 @@ test('the field guide documents the Necronomicon secret without changing menu na
   assert.match(secretsSection, /syntetyczny bas/);
   assert.match(secretsSection, /\+6 000 PKT/);
   assert.match(secretsSection, /field-guide-card-grid three-col/);
-  assert.equal((html.match(/class="menu-tab-btn/g) || []).length, 11, 'all existing menu tabs must remain');
+  assert.equal((html.match(/class="menu-tab-btn/g) || []).length, 12, 'all twelve menu tabs, including the armory, must remain');
   assert.ok(html.includes('id="tab-field-guide"'), 'the existing Field Guide tab must remain');
 });
 
 test('the map-secret guide documents all five fixed secrets separately from bonus events', async () => {
   const [html, game] = await Promise.all([read('../index.html'), read('../src/game.ts')]);
-  const sectionStart = html.indexOf('<span class="field-guide-index">09</span>');
+  const sectionStart = html.indexOf('<span class="field-guide-index">08</span>');
   const sectionEnd = html.indexOf('</section>', sectionStart);
   assert.ok(sectionStart >= 0 && sectionEnd > sectionStart);
   const section = html.slice(sectionStart, sectionEnd);

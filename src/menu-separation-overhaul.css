@@ -654,3 +654,9 @@
     font-size: 7px;
   }
 }
+
+#title-screen[data-active-menu-tab="tab-arsenal"] {
+  --menu-accent: #6fc7d3;
+  --menu-accent-soft: rgba(111,199,211,.14);
+  --menu-accent-line: rgba(111,199,211,.42);
+}

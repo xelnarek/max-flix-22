@@ -4,17 +4,17 @@ import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
-test('the live Survival level-up draft uses current build, weapon and health state', async () => {
+test('the live Survival level-up draft uses the current build and health state, not weapon progression', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /import \{ getSurvivalDraftSynergyHint, selectSurvivalDraftOptions, type SurvivalDraftContext \} from '\.\/survivalDraft\.ts'/);
   assert.match(game, /const draftContext: SurvivalDraftContext = \{/);
   assert.match(game, /stacks: this\.survivalUpgradeStacks/);
-  assert.match(game, /weapons: this\.survivalWeapons/);
   assert.match(game, /evolutions: \[\.\.\.this\.survivalEvolutions\]/);
   assert.match(game, /healthRatio: this\.maxHp > 0 \? this\.hp \/ this\.maxHp : 1/);
   assert.match(game, /const selectedOptions = selectSurvivalDraftOptions\(pool, draftContext\)/);
   assert.match(game, /getSurvivalDraftSynergyHint\(/);
   assert.match(game, /return withRarity\(selectedOptions\)/);
+  assert.doesNotMatch(game, /weapon_unlock:|weapon_upgrade:|weapon_evolve:/);
 });
 
 test('rerolls use the same build-aware selection and preserve the current cards as exclusions', async () => {
@@ -24,20 +24,20 @@ test('rerolls use the same build-aware selection and preserve the current cards 
   assert.match(game, /if \(this\.gameMode !== 'survival' \|\| this\.state !== 'levelup'/);
 });
 
-test('the weapon offer still requires the actual time unlock and passive pairing for an evolution', async () => {
+test('legacy weapon unlocks, level upgrades and evolutions are absent from the level-up and acceptance paths', async () => {
   const game = await read('../src/game.ts');
   const start = game.indexOf('  private rollSurvivalUpgradeOptions');
   const end = game.indexOf('  public rerollSurvivalUpgrades()', start);
-  assert.ok(start >= 0 && end > start);
+  const chooseStart = game.indexOf('  public chooseSurvivalUpgrade');
+  const chooseEnd = game.indexOf('  public rerollSurvivalUpgrades()', chooseStart);
+  assert.ok(start >= 0 && end > start && chooseStart >= 0 && chooseEnd > chooseStart);
   const draft = game.slice(start, end);
-  assert.match(draft, /this\.survivalElapsed >= definition\.unlockAfter/);
-  assert.match(draft, /owned\.level >= 5/);
-  assert.match(draft, /this\.survivalElapsed >= 210/);
-  assert.match(draft, /this\.survivalUpgradeStacks\[definition\.evolutionPassive\]/);
+  const acceptance = game.slice(chooseStart, chooseEnd);
+  assert.doesNotMatch(draft, /weapon_unlock:|weapon_upgrade:|weapon_evolve:|evolutionPassive|unlockAfter/);
+  assert.doesNotMatch(acceptance, /weapon_unlock:|weapon_upgrade:|weapon_evolve:|evolutionPassive/);
 });
 
-
-test('every draft synergy matches the exact passive thresholds used by the live evolution unlocks', async () => {
+test('all remaining build synergies match the live operator perk thresholds', async () => {
   const game = await read('../src/game.ts');
   const draft = await read('../src/survivalDraft.ts');
   const requirements = [
@@ -54,23 +54,5 @@ test('every draft synergy matches the exact passive thresholds used by the live 
   for (const requirement of requirements) {
     assert.match(game, requirement.game, requirement.id + ' live unlock condition');
     assert.match(draft, requirement.draft, requirement.id + ' draft requirement');
-  }
-});
-
-
-test('weapon unlock draft synergies use the same evolution passive as the live weapon definitions', async () => {
-  const game = await read('../src/game.ts');
-  const draft = await read('../src/survivalDraft.ts');
-  const start = game.indexOf('const SURVIVAL_WEAPON_DEFS:');
-  const end = game.indexOf('\n};', start);
-  const mapStart = draft.indexOf('const WEAPON_EVOLUTION_PASSIVES:');
-  const mapEnd = draft.indexOf('\n});', mapStart);
-  assert.ok(start >= 0 && end > start && mapStart >= 0 && mapEnd > mapStart);
-  const definitions = game.slice(start, end);
-  const draftMap = draft.slice(mapStart, mapEnd);
-  const weapons = [...definitions.matchAll(/(?:^\s*)([a-z0-9_]+): \{[^}]*evolutionPassive: '([a-z0-9_]+)'/gm)];
-  assert.equal(weapons.length, 12);
-  for (const [, weaponId, passiveId] of weapons) {
-    assert.match(draftMap, new RegExp(weaponId + ": '" + passiveId + "'"));
   }
 });

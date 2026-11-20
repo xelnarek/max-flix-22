@@ -256,24 +256,17 @@ test('cinematic intro is launched deliberately from the menu, not automatically 
   assert.doesNotMatch(app, /PixelIntroManager|pixelIntro/i);
 });
 
-test('Survival upgrade draft has visible rarity tiers with stronger higher-tier effects', async () => {
+test('Survival operator perk drafts use visible rarity tiers without old weapon progression cards', async () => {
   const [game, app, html] = await Promise.all([
     read('../src/game.ts'), read('../src/index.ts'), read('../index.html')
   ]);
   assert.match(game, /rollSurvivalUpgradeRarity\(Math\.random\(\), this\.survivalLevel\)/);
-  assert.match(game, /const isEvolution = option\.id\.startsWith\('weapon_evolve:'\)/);
-  assert.match(game, /let rarity: SurvivalUpgradeRarity = isEvolution[\s\S]*?'legendary'/);
+  assert.doesNotMatch(game, /weapon_evolve:|getSurvivalWeaponInitialLevel|getSurvivalWeaponUpgradeSteps/);
   assert.match(game, /promotionCardAssigned/);
   assert.match(game, /promoteSurvivalUpgradeRarity\(rarity, promotionRarityFloor\)/);
   assert.match(game, /const strength = choice\.strengthMultiplier/);
   assert.match(game, /this\.survivalDamageMultiplier = Math\.min\(2\.05, this\.survivalDamageMultiplier \* \(1 \+ 0\.12 \* strength\)\)/);
-  assert.match(game, /getSurvivalWeaponInitialLevel\(choice\.rarity\)/);
-  assert.match(game, /getSurvivalWeaponUpgradeSteps\(choice\.rarity\)/);
-  assert.match(game, /Poziom startowy tej karty: ' \+ initialLevel \+ '\/5\.'/);
-  assert.match(game, /title: definition\.name\.toUpperCase\(\) \+ ' • POZIOM ' \+ targetLevel/);
-  assert.match(game, /Legendarna karta podnosi poziom o dwa stopnie/);
   assert.match(game, /Siła modułu: ×' \+ meta\.strengthMultiplier\.toFixed\(2\)/);
-  assert.match(game, /Rzadkość ewolucji: LEGENDARNA/);
   assert.match(app, /rarityBadge\.textContent = option\.rarityLabel/);
   assert.match(app, /card\.className = 'survival-upgrade-card rarity-' \+ option\.rarity/);
   assert.match(html, /rzadkie, epickie i legendarne wersje wzmacniają ten sam efekt/i);
@@ -1300,7 +1293,7 @@ test('Crimsonland-style Survival Overdrive is chained, timed and surfaced in the
   assert.match(game, /getSurvivalMomentumDamageMultiplier\(this\.survivalMomentum\.overdriveRemainingSeconds,\s*this\.survivalMomentum\.killStreak\)/);
   assert.match(game, /getSurvivalMomentumMoveMultiplier\(this\.survivalMomentum\.overdriveRemainingSeconds,\s*this\.survivalMomentum\.killStreak\)/);
   assert.match(game, /getSurvivalMomentumRateMultiplier\(this\.survivalMomentum\.overdriveRemainingSeconds,\s*this\.survivalMomentum\.killStreak\)/);
-  assert.match(game, /selectSurvivalAutoTarget\([\s\S]*?this\.enemies[\s\S]*?SURVIVAL_AUTO_AIM_RANGE_METERS \* this\.survivalRangeMultiplier/);
+  assert.match(game, /const firearmRange = SURVIVAL_FIREARM_DEFS\[this\.survivalFirearm\.id\]\.rangeMeters;[\s\S]*?selectSurvivalAutoTarget\([\s\S]*?this\.enemies[\s\S]*?firearmRange \* this\.survivalRangeMultiplier/);
   assert.match(game, /killStreak: this\.survivalMomentum\.killStreak/);
   assert.match(game, /overdriveRemainingSeconds: this\.survivalMomentum\.overdriveRemainingSeconds/);
   assert.match(app, /snapshot\.killStreak >= 2/);

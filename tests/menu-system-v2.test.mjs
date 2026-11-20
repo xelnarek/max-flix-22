@@ -8,7 +8,7 @@ const [html, css] = await Promise.all([
   read('src/menu-system-v2.css'),
 ]);
 
-test('main menu exposes all eleven destinations through four named navigation groups', () => {
+test('main menu exposes all twelve destinations through four named navigation groups', () => {
   const navStart = html.indexOf('<div class="menu-tabs-bar">');
   const contentStart = html.indexOf('<div class="menu-tab-content-area">', navStart);
   assert.ok(navStart >= 0 && contentStart > navStart);
@@ -17,11 +17,11 @@ test('main menu exposes all eleven destinations through four named navigation gr
   assert.deepEqual(groupIds.map((match) => match[1]), ['play', 'world', 'progress', 'system']);
   assert.deepEqual(groupIds.map((match) => match[2]), ['ROZGRYWKA', 'ŚWIAT I BHP', 'POSTĘPY', 'SYSTEM']);
   const tabIds = groupIds.flatMap((match) => [...match[3].matchAll(/data-tab="(tab-[^"]+)"/g)].map((item) => item[1]));
-  assert.equal(tabIds.length, 11);
-  assert.equal(new Set(tabIds).size, 11);
+  assert.equal(tabIds.length, 12);
+  assert.equal(new Set(tabIds).size, 12);
   assert.deepEqual(tabIds, [
     'tab-team', 'tab-map', 'tab-pvp',
-    'tab-enemies', 'tab-perks', 'tab-field-guide',
+    'tab-enemies', 'tab-arsenal', 'tab-perks', 'tab-field-guide',
     'tab-talent-tree', 'tab-ranks', 'tab-leaderboard', 'tab-achievements',
     'tab-settings',
   ]);
@@ -66,8 +66,8 @@ test('all navigation controls map to a real panel and are explicit non-submit bu
   const contentStart = html.indexOf('<div class="menu-tab-content-area">', navStart);
   const nav = html.slice(navStart, contentStart);
   const buttons = [...nav.matchAll(/<button\b([^>]*)data-tab="(tab-[^"]+)"([^>]*)>/g)];
-  const panels = [...html.slice(contentStart).matchAll(/<div id="(tab-(?:team|map|pvp|enemies|perks|field-guide|talent-tree|ranks|leaderboard|achievements|settings))" class="tab-panel[^"]*"/g)].map((m) => m[1]);
-  assert.equal(buttons.length, 11);
+  const panels = [...html.slice(contentStart).matchAll(/<div id="(tab-(?:team|map|pvp|enemies|arsenal|perks|field-guide|talent-tree|ranks|leaderboard|achievements|settings))" class="tab-panel[^"]*"/g)].map((m) => m[1]);
+  assert.equal(buttons.length, 12);
   assert.ok(buttons.every((match) => /type="button"/.test(match[1] + match[3])));
   assert.ok(buttons.every((match) => /aria-controls="tab-[^"]+"/.test(match[1] + match[3])));
   assert.deepEqual(new Set(buttons.map((match) => match[2])), new Set(panels));

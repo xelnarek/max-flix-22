@@ -1,0 +1,225 @@
+/* Dedicated catalogue for the active Survival primary-firearm system. */
+#title-screen #tab-arsenal.firearm-armory-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: clamp(14px, 2vw, 24px);
+  color: #e7edf3;
+  min-width: 0;
+}
+#title-screen #tab-arsenal .armory-hero {
+  display: grid;
+  gap: 14px;
+  padding: clamp(16px, 2.4vw, 26px);
+  border: 1px solid rgba(117, 151, 174, .24);
+  border-radius: 17px;
+  background:
+    radial-gradient(circle at 88% 10%, rgba(57, 170, 198, .13), transparent 34%),
+    linear-gradient(140deg, rgba(20, 35, 47, .97), rgba(12, 19, 28, .98));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.055), 0 12px 32px rgba(0,0,0,.18);
+}
+#title-screen #tab-arsenal .armory-kicker {
+  color: #7dd3fc;
+  font: 800 10px/1.2 "JetBrains Mono", monospace;
+  letter-spacing: .16em;
+}
+#title-screen #tab-arsenal .armory-heading-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+#title-screen #tab-arsenal .armory-heading-row h2 {
+  margin: 0 0 7px;
+  color: #f8fafc;
+  font: 900 clamp(23px, 3.1vw, 34px)/1 "Space Grotesk", sans-serif;
+  letter-spacing: -.045em;
+}
+#title-screen #tab-arsenal .armory-heading-row p {
+  max-width: 710px;
+  margin: 0;
+  color: #aebdca;
+  font-size: 13px;
+  line-height: 1.55;
+}
+#title-screen #tab-arsenal .armory-status {
+  flex: 0 0 auto;
+  padding: 9px 11px;
+  border: 1px solid rgba(125,211,252,.28);
+  border-radius: 9px;
+  color: #bae6fd;
+  background: rgba(8, 47, 73, .28);
+  font: 800 9px/1.55 "JetBrains Mono", monospace;
+  letter-spacing: .07em;
+  text-align: center;
+}
+#title-screen #tab-arsenal .armory-rules {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 8px;
+}
+#title-screen #tab-arsenal .armory-rules span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(148,163,184,.13);
+  border-radius: 9px;
+  color: #c1ccd6;
+  background: rgba(4, 12, 20, .32);
+  font-size: 10px;
+  line-height: 1.4;
+}
+#title-screen #tab-arsenal .armory-rules strong {
+  color: #67e8f9;
+  font: 800 10px "JetBrains Mono", monospace;
+}
+#title-screen #tab-arsenal .armory-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 12px;
+  min-width: 0;
+}
+#title-screen #tab-arsenal .armory-card {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 11px;
+  min-width: 0;
+  padding: 15px;
+  overflow: hidden;
+  border: 1px solid rgba(122,145,164,.21);
+  border-radius: 13px;
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--armory-color) 8%, transparent), transparent 54%),
+    linear-gradient(135deg, rgba(25,35,46,.97), rgba(13,20,29,.98));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 8px 18px rgba(0,0,0,.13);
+}
+#title-screen #tab-arsenal .armory-card::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  content: "";
+  background: var(--armory-color);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--armory-color) 55%, transparent);
+}
+#title-screen #tab-arsenal .armory-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+#title-screen #tab-arsenal .armory-card-icon {
+  display: block;
+  flex: 0 0 76px;
+  width: 76px;
+  height: 58px;
+  object-fit: contain;
+  border: 1px solid color-mix(in srgb, var(--armory-color) 55%, #334155);
+  border-radius: 11px;
+  background: radial-gradient(circle at 35% 24%, color-mix(in srgb, var(--armory-color) 30%, #1e293b), #0b1420 74%);
+  box-shadow: inset 0 2px 4px rgba(255,255,255,.08), 0 5px 12px rgba(0,0,0,.34), 0 0 16px color-mix(in srgb, var(--armory-color) 17%, transparent);
+}
+#title-screen #tab-arsenal .armory-card-icon-fallback {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+}
+#title-screen #tab-arsenal .armory-card-title-wrap {
+  min-width: 0;
+}
+#title-screen #tab-arsenal .armory-card-title-wrap h3 {
+  margin: 0 0 4px;
+  color: #f1f5f9;
+  font: 850 15px/1.2 "Space Grotesk", sans-serif;
+  letter-spacing: -.015em;
+}
+#title-screen #tab-arsenal .armory-card-role {
+  color: var(--armory-color);
+  font: 800 9px/1.2 "JetBrains Mono", monospace;
+  letter-spacing: .12em;
+}
+#title-screen #tab-arsenal .armory-card-description {
+  min-height: 32px;
+  margin: 0;
+  color: #aab8c6;
+  font-size: 11px;
+  line-height: 1.5;
+}
+#title-screen #tab-arsenal .armory-card-stats {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 6px;
+}
+#title-screen #tab-arsenal .armory-stat {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid rgba(148,163,184,.11);
+  border-radius: 8px;
+  background: rgba(5,12,20,.44);
+}
+#title-screen #tab-arsenal .armory-stat span {
+  color: #8394a5;
+  font: 700 8px/1.2 "JetBrains Mono", monospace;
+  letter-spacing: .07em;
+}
+#title-screen #tab-arsenal .armory-stat strong {
+  overflow-wrap: anywhere;
+  color: #eff6ff;
+  font: 800 12px/1.25 "JetBrains Mono", monospace;
+  font-variant-numeric: tabular-nums;
+}
+#title-screen #tab-arsenal .armory-card-traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+#title-screen #tab-arsenal .armory-trait {
+  padding: 5px 7px;
+  border: 1px solid color-mix(in srgb, var(--armory-color) 29%, rgba(148,163,184,.12));
+  border-radius: 6px;
+  color: #c8d8e5;
+  background: color-mix(in srgb, var(--armory-color) 8%, transparent);
+  font-size: 9px;
+  line-height: 1.2;
+}
+#title-screen #tab-arsenal .armory-footnote {
+  margin: 0;
+  padding: 0 2px 4px;
+  color: #8192a2;
+  font-size: 10px;
+  line-height: 1.5;
+}
+@media (max-width: 760px) {
+  #title-screen #tab-arsenal .armory-rules {
+    grid-template-columns: 1fr;
+  }
+  #title-screen #tab-arsenal .armory-rules span {
+    min-height: 34px;
+  }
+}
+@media (max-width: 560px) {
+  #title-screen #tab-arsenal.firearm-armory-panel {
+    gap: 12px;
+    padding: 10px;
+  }
+  #title-screen #tab-arsenal .armory-heading-row {
+    flex-direction: column;
+  }
+  #title-screen #tab-arsenal .armory-status {
+    align-self: flex-start;
+  }
+  #title-screen #tab-arsenal .armory-grid {
+    grid-template-columns: minmax(0,1fr);
+    gap: 9px;
+  }
+  #title-screen #tab-arsenal .armory-card {
+    padding: 12px;
+  }
+  #title-screen #tab-arsenal .armory-card-description {
+    min-height: 0;
+  }
+}

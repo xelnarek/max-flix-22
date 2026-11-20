@@ -36,6 +36,7 @@ import {
   updateSurvivalAchievementProgress,
 } from './survivalAchievements.ts';
 import { SURVIVAL_MAPS, type SurvivalMapId } from './survivalMaps.ts';
+import { SURVIVAL_FIREARM_DEFS } from './survivalFirearms.ts';
 import { CAMPAIGN_STAGES, createInitialCampaignProgress, consumePendingCampaignReward, consumePendingCampaignXpBonus, getCampaignMasteryProgress, getCampaignRewardChoices, getCampaignSideOrderProgress, getCampaignStageDefinition, getNextCampaignStageId, readCampaignProgress, recordCampaignStageResult, setPendingCampaignReward, writeCampaignProgress, type CampaignProgress, type CampaignRewardDefinition, type CampaignRewardId, type CampaignStageId } from './campaignProgression.ts';
 import { launchOniricPlatformer } from './oniricPlatformer.ts';
 import { launchCthulhuRetroArena } from './cthulhuRetroArena.ts';
@@ -1821,31 +1822,6 @@ class PaleciakiScene extends xb.Script {
               firearmStatus.setAttribute('aria-label', primaryFirearm.name + ', amunicja ' + primaryFirearm.ammoInMagazine + ' na ' + primaryFirearm.magazineSize + (primaryFirearm.reloadRemainingSeconds > 0 ? ', przeładowanie' : ''));
             }
           }
-          const weaponRack = document.getElementById('survival-weapons-list');
-          if (weaponRack) {
-            // The Survival snapshot refreshes four times per second; rebuild chips only when the arsenal changes.
-            const signature = snapshot.weapons.map((weapon) => weapon.id + ':' + weapon.level + ':' + Number(weapon.evolved)).join('|');
-            if (weaponRack.dataset.signature !== signature) {
-              weaponRack.dataset.signature = signature;
-              weaponRack.replaceChildren();
-              if (!snapshot.weapons.length) {
-                const starter = document.createElement('span');
-                starter.className = 'survival-weapon-chip starter';
-                starter.textContent = '🥊 Operator';
-                starter.title = 'Broń operatora • broń podstawowa';
-                weaponRack.appendChild(starter);
-              }
-              for (const weapon of snapshot.weapons) {
-                const chip = document.createElement('span');
-                chip.className = 'survival-weapon-chip' + (weapon.evolved ? ' evolved' : '');
-                const fullLabel = weapon.icon + ' ' + weapon.name + ' • poziom ' + weapon.level + '/5' + (weapon.evolved ? ' • ewolucja' : '');
-                chip.textContent = weapon.icon + ' ' + weapon.name + ' ' + weapon.level + '/5' + (weapon.evolved ? ' ✦' : '');
-                chip.title = fullLabel;
-                chip.setAttribute('aria-label', fullLabel);
-                weaponRack.appendChild(chip);
-              }
-            }
-          }
           if (survivalRerollBtn) {
             survivalRerollBtn.textContent = '🔄 PRZELOSUJ (' + snapshot.rerolls + ')';
             survivalRerollBtn.disabled = snapshot.rerolls <= 0;
@@ -1872,9 +1848,9 @@ class PaleciakiScene extends xb.Script {
               ? 'NAGRODA ZA POKONANIE BOSS-A'
               : isRankUp ? 'AWANS RANGI: ' + currentRank : 'AWANS OPERATORA';
           if (descriptionElement) descriptionElement.textContent = isChaosRoulette
-            ? 'Co trzeci poziom: 12 możliwych wyników — ulepszenie, perk, deszcz XP, overdrive, premia punktowa, zamrożenie fali, wybuch, nova, osłona, leczenie albo elitarna/nieproszona dostawa.'
+            ? 'Co trzeci poziom: 17 możliwych wyników — premie bojowe, leczenie, kontrola tłumu, deszcz XP, łupy i dostawy przeciwników.'
             : isBossReward
-              ? 'Boss pokonany. Wybierz jedno z trzech legendarnych wzmocnień: moc, rozwój broni albo obronę.'
+              ? 'Boss pokonany. Wybierz jedno z trzech legendarnych wzmocnień operatora: moc, mobilność albo obronę.'
               : isRankUp
                 ? 'Awansujesz do rangi ' + currentRank + '. Jedna karta ma gwarantowaną wyższą rzadkość, a zapas przerzutów zwiększono o 1.'
                 : 'Wybierz jeden z trzech modułów. Rzadkie, epickie i legendarne wersje wzmacniają ten sam efekt.';
@@ -1885,7 +1861,7 @@ class PaleciakiScene extends xb.Script {
               ? 'Nagroda jest obowiązkowa i nie podlega przerzuceniu ani pominięciu. Akcja pozostaje wstrzymana do wyboru.'
               : isRankUp
                 ? 'Awans co 5 poziomów: karta ma co najmniej Rare, Epic lub Legendary zależnie od rangi. Dodatkowy przerzut jest ograniczony do 3.'
-                : 'Wybór zatrzymuje akcję. Rzadkość wzmacnia efekt; legendarna broń może odblokować się na wyższym poziomie.';
+                : 'Wybór zatrzymuje akcję. Rzadkość wzmacnia efekt wybranego perku operatora.';
           survivalRerollBtn?.classList.toggle('hidden', isBossReward || isChaosRoulette);
           survivalSkipBtn?.classList.toggle('hidden', isBossReward || isChaosRoulette);
           survivalUpgradeOptions.replaceChildren();
@@ -1903,10 +1879,10 @@ class PaleciakiScene extends xb.Script {
                 <div class="survival-chaos-reel-window"><span class="survival-chaos-reel-symbol">⚡</span></div>
                 <div class="survival-chaos-reel-window"><span class="survival-chaos-reel-symbol">☢️</span></div>
               </div>
-              <div class="survival-chaos-machine-caption">18 WYNIKÓW <i>•</i> WIĘCEJ RNG <i>•</i> JEDEN SPIN</div>
+              <div class="survival-chaos-machine-caption">17 WYNIKÓW <i>•</i> WIĘCEJ RNG <i>•</i> JEDEN SPIN</div>
               <div class="survival-chaos-result" aria-live="polite">NAGRODA CZEKA NA LOS</div>
             `;
-            machine.setAttribute('aria-label', 'Jednoręki bandyta B4. Trzy obracające się bębny, osiemnaście możliwych wyników, jeden spin');
+            machine.setAttribute('aria-label', 'Jednoręki bandyta B4. Trzy obracające się bębny, siedemnaście możliwych wyników, jeden spin');
             const reelSymbols = [
               { icon: '💎', accent: '#38bdf8' }, { icon: '⚡', accent: '#facc15' },
               { icon: '☢️', accent: '#4ade80' }, { icon: '👾', accent: '#fb7185' },
@@ -1936,7 +1912,6 @@ class PaleciakiScene extends xb.Script {
               golden_crate: { category: 'ZŁOTA PALETA', accent: '#fbbf24' },
               hazard_clear: { category: 'CZYSZCZENIE ZAGROŻEŃ', accent: '#67e8f9' },
               double_or_nothing: { category: 'PODWÓJNE ALBO NIC', accent: '#fb7185' },
-              weapon_draft: { category: 'SKRZYNIA BRONI', accent: '#cbd5e1' },
             };
             const reelNodes = Array.from(machine.querySelectorAll<HTMLElement>('.survival-chaos-reel-symbol'));
             const resultNode = machine.querySelector<HTMLElement>('.survival-chaos-result');
@@ -2764,6 +2739,181 @@ class PaleciakiScene extends xb.Script {
     let activeMobileSegmentId: MenuSegmentId = getMenuSegmentForTab(currentMenuTargetId)?.id || 'play';
     const menuScrollMemory = new MenuScrollMemory();
     const menuContentArea = document.querySelector<HTMLElement>('.menu-tab-content-area');
+
+    const renderSurvivalFirearmCatalogIcon = (() => {
+  let renderer: THREE.WebGLRenderer | null = null;
+  let scene: THREE.Scene | null = null;
+  let camera: THREE.PerspectiveCamera | null = null;
+  try {
+    renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true });
+    renderer.setPixelRatio(1);
+    renderer.setSize(144, 96, false);
+    renderer.setClearColor(0x000000, 0);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(34, 1.5, 0.1, 30);
+    camera.position.set(3.1, 2.35, 4.6);
+    camera.lookAt(0, 0, 0);
+    scene.add(new THREE.AmbientLight(0xffffff, 1.65));
+    const key = new THREE.DirectionalLight(0xffffff, 2.2);
+    key.position.set(3, 5, 4);
+    scene.add(key);
+    const rim = new THREE.DirectionalLight(0x7dd3fc, 1.25);
+    rim.position.set(-4, 1, -3);
+    scene.add(rim);
+  } catch {
+    renderer?.dispose();
+    renderer = null;
+  }
+
+  return (archetype: string, color: number): string | null => {
+    if (!renderer || !scene || !camera) return null;
+    const accent = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.38, metalness: 0.68, roughness: 0.27 });
+    const dark = new THREE.MeshStandardMaterial({ color: 0x182333, metalness: 0.78, roughness: 0.32 });
+    const steel = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.2 });
+    const glow = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1.8, metalness: 0.3, roughness: 0.2 });
+    const gun = new THREE.Group();
+    const box = (w: number, h: number, d: number, x: number, y: number, z: number, material = dark) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      gun.add(mesh);
+    };
+    const barrel = (radius: number, length: number, x: number, y: number, z: number, material = steel) => {
+      const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.9, radius, length, 12), material);
+      mesh.rotation.x = Math.PI / 2;
+      mesh.position.set(x, y, z);
+      gun.add(mesh);
+    };
+    const grip = () => box(0.16, 0.34, 0.22, 0.02, -0.25, -0.12, dark);
+    const stock = () => box(0.18, 0.16, 0.48, 0, 0.02, -0.48, steel);
+    box(0.34, 0.2, 0.66, 0, 0, 0, dark);
+    switch (archetype) {
+      case 'pistol':
+        barrel(0.055, 0.52, 0, 0.02, 0.56, steel); box(0.38, 0.1, 0.7, 0, 0.15, 0.02, steel); grip(); break;
+      case 'smg':
+        barrel(0.05, 0.7, 0, 0.02, 0.65); box(0.22, 0.1, 0.48, 0, 0.17, -0.02, accent); grip(); stock(); box(0.16, 0.3, 0.2, 0, -0.23, 0.08, steel); break;
+      case 'rifle':
+        barrel(0.045, 1.02, 0, 0.02, 0.82); box(0.18, 0.1, 0.58, 0, 0.17, 0.1, accent); grip(); stock(); break;
+      case 'shotgun':
+        barrel(0.075, 0.96, 0, 0.03, 0.82, steel); box(0.23, 0.16, 0.62, 0, 0, 0.04, accent); grip(); stock(); box(0.22, 0.12, 0.34, 0, -0.12, 0.55, dark); break;
+      case 'heavy-rifle':
+        barrel(0.07, 1.22, 0, 0.03, 0.94, steel); box(0.16, 0.16, 0.44, 0, 0.22, 0.12, accent); box(0.12, 0.13, 0.34, 0, 0.32, 0.04, glow); grip(); stock(); break;
+      case 'minigun':
+        for (let n = 0; n < 4; n++) barrel(0.045, 1.05, (n - 1.5) * 0.13, 0.02, 0.88, n % 2 ? accent : steel);
+        box(0.46, 0.27, 0.55, 0, 0, -0.05, dark); box(0.22, 0.12, 0.34, 0, 0.22, -0.1, accent); grip(); break;
+      case 'rocket':
+        barrel(0.17, 1.25, 0, 0.03, 0.8, dark); barrel(0.21, 0.12, 0, 0.03, 1.39, accent); stock(); box(0.32, 0.18, 0.3, 0, -0.17, 0.08, steel); break;
+      case 'flame':
+        barrel(0.12, 0.72, 0, 0.02, 0.68, accent); box(0.28, 0.34, 0.36, -0.28, 0.03, -0.08, steel); box(0.24, 0.32, 0.38, 0.28, 0.03, -0.08, dark); grip(); break;
+      case 'plasma':
+        barrel(0.09, 0.88, 0, 0.04, 0.76, glow); box(0.3, 0.24, 0.48, 0, 0.12, 0.08, accent); box(0.38, 0.08, 0.2, 0, 0.26, -0.02, glow); grip(); stock(); break;
+      case 'gauss':
+        barrel(0.045, 1.55, 0, 0.03, 1.1, glow); 
+        for (let n = 0; n < 5; n++) barrel(0.075, 0.075, 0, 0.03, 0.48 + n * 0.22, accent);
+        box(0.24, 0.16, 0.62, 0, 0.14, 0.02, steel); grip(); stock(); break;
+      default:
+        barrel(0.05, 0.7, 0, 0.02, 0.62, accent); grip(); stock();
+    }
+    gun.rotation.set(-0.16, -0.42, 0.08);
+    gun.scale.setScalar(0.78);
+    scene.add(gun);
+    try {
+      renderer.render(scene, camera);
+      return renderer.domElement.toDataURL('image/png');
+    } catch {
+      return null;
+    } finally {
+      scene.remove(gun);
+      gun.traverse((object) => {
+        const mesh = object as THREE.Mesh;
+        if (mesh.geometry) mesh.geometry.dispose();
+      });
+      for (const material of [accent, dark, steel, glow]) material.dispose();
+    }
+  };
+})();
+
+// Build the armory from the same runtime definitions that drive weapon behaviour.
+    const firearmCatalogGrid = document.getElementById('firearm-catalog-grid');
+    if (firearmCatalogGrid && firearmCatalogGrid.dataset.rendered !== 'true') {
+      firearmCatalogGrid.dataset.rendered = 'true';
+      firearmCatalogGrid.setAttribute('role', 'list');
+      for (const firearm of Object.values(SURVIVAL_FIREARM_DEFS)) {
+        const card = document.createElement('article');
+        card.className = 'armory-card';
+        card.setAttribute('role', 'listitem');
+        card.style.setProperty('--armory-color', '#' + firearm.color.toString(16).padStart(6, '0'));
+
+        const header = document.createElement('div');
+        header.className = 'armory-card-head';
+        const iconData = renderSurvivalFirearmCatalogIcon(firearm.archetype, firearm.color);
+        const icon = document.createElement(iconData ? 'img' : 'span');
+        icon.className = 'armory-card-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        if (iconData && icon instanceof HTMLImageElement) {
+          icon.alt = '';
+          icon.src = iconData;
+        } else {
+          icon.textContent = firearm.icon;
+          icon.classList.add('armory-card-icon-fallback');
+        }
+        const heading = document.createElement('div');
+        heading.className = 'armory-card-title-wrap';
+        const title = document.createElement('h3');
+        title.textContent = firearm.name.toUpperCase();
+        const role = document.createElement('span');
+        role.className = 'armory-card-role';
+        role.textContent = firearm.archetype.toUpperCase();
+        heading.append(title, role);
+        header.append(icon, heading);
+
+        const description = document.createElement('p');
+        description.className = 'armory-card-description';
+        description.textContent = firearm.roleDescription;
+
+        const damageValue = firearm.damage.toFixed(2).replace('.', ',') +
+          (firearm.pellets > 1 ? ' / śrut × ' + firearm.pellets : ' / pocisk');
+        const rateValue = (1 / firearm.fireIntervalSeconds).toFixed(1).replace('.', ',') +
+          (firearm.pellets > 1 ? ' salw/s' : ' strz./s');
+        const metrics = document.createElement('div');
+        metrics.className = 'armory-card-stats';
+        const metricRows: Array<[string, string]> = [
+          ['OBRAŻENIA BAZOWE', damageValue],
+          ['ZASIĘG BAZOWY', firearm.rangeMeters + ' m'],
+          ['SZYBKOSTRZELNOŚĆ', rateValue],
+          ['MAGAZYNEK', firearm.magazineSize + ' nab.'],
+          ['PRZEŁADOWANIE', firearm.reloadSeconds.toFixed(2).replace('.', ',') + ' s'],
+        ];
+        for (const [label, value] of metricRows) {
+          const metric = document.createElement('div');
+          metric.className = 'armory-stat';
+          const metricLabel = document.createElement('span');
+          metricLabel.textContent = label;
+          const metricValue = document.createElement('strong');
+          metricValue.textContent = value;
+          metric.append(metricLabel, metricValue);
+          metrics.appendChild(metric);
+        }
+
+        const traits = document.createElement('div');
+        traits.className = 'armory-card-traits';
+        const traitLabels: string[] = [];
+        if (firearm.pellets > 1) traitLabels.push(firearm.pellets + ' pocisków na salwę');
+        if (firearm.pierce > 0) traitLabels.push('Przebicie: ' + firearm.pierce);
+        if (firearm.aoeRadius > 0) traitLabels.push('Obszar: ' + firearm.aoeRadius.toFixed(1).replace('.', ',') + ' m');
+        if (firearm.igniteOnHit) traitLabels.push('Podpalenie');
+        if (traitLabels.length === 0) traitLabels.push('Pojedynczy cel');
+        for (const label of traitLabels) {
+          const chip = document.createElement('span');
+          chip.className = 'armory-trait';
+          chip.textContent = label;
+          traits.appendChild(chip);
+        }
+        card.append(header, description, metrics, traits);
+        firearmCatalogGrid.appendChild(card);
+      }
+    }
     const menuRootElement = document.getElementById('title-screen');
     let setActiveMobileSegment: (segmentId: MenuSegmentId) => void = () => undefined;
     if (menuRootElement) menuRootElement.dataset.menuDensity = 'compact';

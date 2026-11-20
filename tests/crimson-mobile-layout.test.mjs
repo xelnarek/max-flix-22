@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL('../' + path, import.meta.url), 'utf8');
 
-test('phone navigation starts with four clear segments and preserves the eleven existing destinations', async () => {
+test('phone navigation starts with four clear segments and preserves all twelve destinations', async () => {
   const html = await read('index.html');
   const groups = [...html.matchAll(/class="menu-nav-group" data-menu-group="([^"]+)"/g)].map((match) => match[1]);
   const segments = [...html.matchAll(/class="menu-mobile-segment[^"]*" data-menu-segment="([^"]+)"/g)].map((match) => match[1]);
@@ -12,8 +12,8 @@ test('phone navigation starts with four clear segments and preserves the eleven 
 
   assert.deepEqual(groups, ['play', 'world', 'progress', 'system']);
   assert.deepEqual(segments, ['play', 'world', 'progress', 'system']);
-  assert.equal(tabs.length, 11);
-  assert.equal(new Set(tabs).size, 11);
+  assert.equal(tabs.length, 12);
+  assert.equal(new Set(tabs).size, 12);
 });
 
 test('mobile menu has one navigation surface and one independent vertical content viewport', async () => {
