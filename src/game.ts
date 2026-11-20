@@ -908,6 +908,7 @@ export class PaleciakiGameEngine {
   private readonly survivalFirearmAttackAnimationSeconds: Readonly<Record<SurvivalFirearmId, number>> = {
     starter_pistol: 0.22, smg_45: 0.16, assault_rifle: 0.20, shotgun_12g: 0.42, battle_rifle: 0.38,
     minigun: 0.14, rocket_launcher: 0.50, flamethrower: 0.19, plasma_rifle: 0.30, gauss_rifle: 0.42,
+    ballistic_grenade_launcher: 0.42,
   };
   private survivalFirearmStates = new Map<SurvivalFirearmId, SurvivalFirearmState>();
   private survivalFirearmKillCount = 0;
