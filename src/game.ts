@@ -81,7 +81,8 @@ import { chooseNearbySpawnPoint } from './arenaSpawn.ts';
 import { chooseSurvivalEnemySpawnType, SURVIVAL_SPAWN_VARIETY_MEMORY, type SurvivalEnemySpawnType } from './survivalEnemySpawns.ts';
 import { findNextReadyWeaponIndex, getNextWeaponDispatchCursor } from './survivalWeaponDispatch.ts';
 import { buildSurvivalDamageReport, createSurvivalDamageStats, getSurvivalWeaponDamageSource, getSurvivalFirearmDamageSource, recordSurvivalDamage, recordSurvivalKill, SURVIVAL_DAMAGE_WEAPONS, type SurvivalDamageReport, type SurvivalDamageSource, type SurvivalDamageWeaponId, type SurvivalDamageStats } from './survivalDamageStats.ts';
-import { createStartingSurvivalFirearmState, createSurvivalFirearmState, rollSurvivalFirearmDrop, rollSurvivalFirearmId, SURVIVAL_FIREARM_DEFS, type SurvivalFirearmId, type SurvivalFirearmState, type SurvivalFirearmEnemyTier } from './survivalFirearms.ts';
+import { createStartingSurvivalFirearmState, createSurvivalFirearmState, rollSurvivalFirearmDrop, rollSurvivalFirearmId, SURVIVAL_FIREARM_DEFS, type SurvivalFirearmId, type SurvivalFirearmState, type SurvivalFirearmEnemyTier, type SurvivalFirearmArchetype } from './survivalFirearms.ts';
+import { SURVIVAL_FIREARM_PRESENTATION, getSurvivalFirearmReloadPose } from './survivalFirearmPresentation.ts';
 import { getSurvivalDifficultyProfile } from './survivalDifficulty.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
 import { chooseSurvivalRicochetTarget, getSurvivalRadiationProfile, getSurvivalRicochetProfile } from './survivalCombatDraft.ts';
@@ -9957,143 +9958,243 @@ export class PaleciakiGameEngine {
     const gun = new THREE.Group();
     gun.name = 'survival_firearm_model_' + firearmId;
     const dark = new THREE.MeshStandardMaterial({ color: 0x111827, metalness: 0.72, roughness: 0.36 });
-    const metal = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.82, roughness: 0.24 });
+    const metal = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.84, roughness: 0.22 });
     const accent = new THREE.MeshStandardMaterial({
-      color: definition.color, emissive: definition.color, emissiveIntensity: 0.34, metalness: 0.54, roughness: 0.28,
+      color: definition.color, emissive: definition.color, emissiveIntensity: 0.38, metalness: 0.58, roughness: 0.26,
     });
     const glow = new THREE.MeshStandardMaterial({
-      color: definition.color, emissive: definition.color, emissiveIntensity: 1.15, metalness: 0.22, roughness: 0.2,
+      color: definition.color, emissive: definition.color, emissiveIntensity: 1.35, metalness: 0.2, roughness: 0.18,
     });
     const addBox = (width: number, height: number, depth: number, x: number, y: number, z: number,
-      material: THREE.Material = dark): THREE.Mesh => {
+      material: THREE.Material = dark, parent: THREE.Object3D = gun): THREE.Mesh => {
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material);
       mesh.position.set(x, y, z);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
-      gun.add(mesh);
+      parent.add(mesh);
       return mesh;
     };
     const addCylinder = (radiusTop: number, radiusBottom: number, length: number, x: number, y: number, z: number,
-      material: THREE.Material = metal, segments = 9): THREE.Mesh => {
+      material: THREE.Material = metal, segments = 10, parent: THREE.Object3D = gun): THREE.Mesh => {
       const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radiusTop, radiusBottom, length, segments), material);
       mesh.rotation.x = Math.PI / 2;
       mesh.position.set(x, y, z);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
-      gun.add(mesh);
+      parent.add(mesh);
       return mesh;
+    };
+    const addMovingGroup = (name: string, x: number, y: number, z: number): THREE.Group => {
+      const group = new THREE.Group();
+      group.name = name;
+      group.position.set(x, y, z);
+      group.userData.basePosition = group.position.clone();
+      gun.add(group);
+      return group;
     };
     const addGrip = () => {
       const grip = addBox(0.13, 0.25, 0.17, 0.015, -0.17, -0.13, dark);
       grip.rotation.x = -0.20;
       addBox(0.15, 0.045, 0.18, 0.015, -0.29, -0.16, metal);
+      addBox(0.045, 0.16, 0.018, 0.015, -0.17, -0.22, accent);
     };
-    const addStock = () => addBox(0.18, 0.13, 0.30, 0, -0.015, -0.48, dark);
-    const addRail = (length = 0.38) => addBox(0.08, 0.055, length, 0, 0.12, 0.03, metal);
+    const addStock = () => {
+      addBox(0.18, 0.13, 0.30, 0, -0.015, -0.48, dark);
+      addBox(0.19, 0.075, 0.11, 0, -0.01, -0.63, metal);
+    };
+    const addRail = (length = 0.38) => {
+      addBox(0.08, 0.055, length, 0, 0.12, 0.03, metal);
+      addBox(0.055, 0.02, length * 0.8, 0, 0.158, 0.03, dark);
+    };
+    const addMagazine = (x: number, y: number, z: number, width: number, height: number, depth: number): THREE.Group => {
+      const magazine = addMovingGroup('firearm-magazine', x, y, z);
+      addBox(width, height, depth, 0, 0, 0, dark, magazine);
+      addBox(width + 0.025, 0.035, depth + 0.025, 0, -height * 0.48, 0, metal, magazine);
+      addBox(width * 0.32, height * 0.72, depth * 0.87, 0, 0.005, 0, accent, magazine);
+      addBox(width + 0.03, 0.025, depth + 0.03, 0, height * 0.48, 0, metal, magazine);
+      return magazine;
+    };
+    const addBolt = (x: number, y: number, z: number, width: number, length: number): THREE.Group => {
+      const bolt = addMovingGroup('firearm-bolt', x, y, z);
+      addBox(width, 0.045, length, 0, 0, 0, metal, bolt);
+      addBox(width * 0.38, 0.018, length * 0.62, 0, 0.034, 0, accent, bolt);
+      addBox(0.045, 0.055, 0.09, width * 0.62, -0.01, -0.04, dark, bolt);
+      return bolt;
+    };
     const archetype = definition.archetype;
 
     switch (archetype) {
-      case 'pistol':
+      case 'pistol': {
         addBox(0.19, 0.14, 0.54, 0, 0.025, 0.02, metal);
         addBox(0.17, 0.075, 0.40, 0, 0.105, -0.01, dark);
-        addCylinder(0.038, 0.038, 0.30, 0, 0.025, 0.43, accent, 8);
-        addGrip();
+        addBox(0.15, 0.035, 0.17, 0, 0.105, 0.12, accent);
+        const slide = addBolt(0, 0.13, 0.045, 0.18, 0.46);
+        addCylinder(0.038, 0.038, 0.34, 0, 0.025, 0.46, accent, 10);
         addBox(0.20, 0.045, 0.18, 0, 0.005, -0.31, dark);
+        addGrip();
+        addMagazine(0.015, -0.265, -0.13, 0.095, 0.22, 0.12);
+        addBox(0.075, 0.04, 0.045, 0, 0.18, 0.17, metal);
+        addBox(0.035, 0.065, 0.03, 0, 0.17, 0.48, dark);
+        slide.name = 'firearm-bolt';
         break;
-      case 'smg':
+      }
+      case 'smg': {
         addBox(0.22, 0.16, 0.58, 0, 0.02, 0.02, dark);
         addBox(0.20, 0.06, 0.42, 0, 0.11, 0.02, metal);
         addCylinder(0.034, 0.04, 0.40, 0, 0.02, 0.49, accent, 8);
         addStock();
         addGrip();
         addBox(0.055, 0.20, 0.13, 0, -0.02, 0.09, metal);
+        addMagazine(0, -0.23, 0.08, 0.10, 0.31, 0.15);
+        addBolt(0, 0.135, -0.015, 0.19, 0.32);
+        addBox(0.24, 0.08, 0.18, 0, 0.015, 0.26, metal);
+        for (let index = 0; index < 4; index++) addBox(0.23, 0.012, 0.025, 0, -0.045, 0.08 + index * 0.055, accent);
+        addBox(0.045, 0.08, 0.045, 0, 0.15, 0.12, metal);
         break;
-      case 'rifle':
+      }
+      case 'rifle': {
         addBox(0.22, 0.16, 0.70, 0, 0.02, 0.00, dark);
         addBox(0.18, 0.105, 0.48, 0, 0.025, 0.40, metal);
-        addCylinder(0.032, 0.046, 0.56, 0, 0.035, 0.87, accent, 8);
+        addCylinder(0.032, 0.046, 0.58, 0, 0.035, 0.87, accent, 8);
         addRail(0.58);
         addBox(0.18, 0.12, 0.20, 0, 0.19, 0.12, accent);
         addGrip();
         addStock();
+        addMagazine(0, -0.215, 0.02, 0.12, 0.28, 0.18);
+        addBolt(0, 0.135, -0.02, 0.18, 0.39);
+        addBox(0.07, 0.11, 0.07, 0, 0.20, 0.45, metal);
+        addBox(0.10, 0.035, 0.055, 0, 0.17, 0.88, dark);
+        for (let index = 0; index < 5; index++) addBox(0.23, 0.018, 0.028, 0, -0.065, 0.20 + index * 0.075, metal);
         break;
-      case 'shotgun':
+      }
+      case 'shotgun': {
         addBox(0.23, 0.15, 0.56, 0, 0.02, 0.00, dark);
-        addCylinder(0.038, 0.042, 0.74, 0, 0.055, 0.62, accent, 9);
-        addCylinder(0.050, 0.052, 0.64, 0, -0.055, 0.56, metal, 9);
-        addBox(0.22, 0.09, 0.26, 0, -0.055, 0.32, dark);
+        addCylinder(0.038, 0.042, 0.76, 0, 0.055, 0.62, accent, 10);
+        addCylinder(0.050, 0.052, 0.67, 0, -0.055, 0.55, metal, 10);
+        const pump = addMovingGroup('firearm-pump', 0, -0.055, 0.35);
+        addBox(0.20, 0.13, 0.25, 0, 0, 0, dark, pump);
+        for (let index = 0; index < 4; index++) addBox(0.205, 0.018, 0.027, 0, 0, -0.09 + index * 0.055, metal, pump);
         addGrip();
         addStock();
+        addBox(0.08, 0.07, 0.20, 0, 0.02, -0.16, metal);
+        addBox(0.13, 0.06, 0.08, 0, 0.13, 0.08, accent);
+        addBox(0.04, 0.045, 0.14, 0.08, 0.02, 0.47, dark);
         break;
-      case 'heavy-rifle':
+      }
+      case 'heavy-rifle': {
         addBox(0.25, 0.18, 0.72, 0, 0.02, 0.00, dark);
         addBox(0.20, 0.10, 0.46, 0, -0.005, 0.42, metal);
-        addCylinder(0.052, 0.065, 0.88, 0, 0.045, 0.93, accent, 10);
+        addCylinder(0.052, 0.065, 0.92, 0, 0.045, 0.96, accent, 12);
         addRail(0.74);
         addBox(0.20, 0.15, 0.24, 0, 0.22, 0.07, metal);
         addBox(0.15, 0.09, 0.18, 0, 0.30, 0.07, glow);
         addGrip();
         addStock();
+        addMagazine(0, -0.22, 0.03, 0.13, 0.30, 0.18);
+        addBolt(0, 0.15, -0.02, 0.20, 0.43);
+        addBox(0.08, 0.065, 0.18, 0, 0.27, -0.11, metal);
+        addCylinder(0.028, 0.028, 0.30, 0, 0.27, 0.10, glow, 8);
         break;
-      case 'minigun':
+      }
+      case 'minigun': {
         addBox(0.32, 0.23, 0.48, 0, 0.015, -0.02, dark);
-        addCylinder(0.14, 0.14, 0.13, 0, 0.02, 0.27, accent, 12);
-        for (let row = -1; row <= 1; row++) {
-          for (let column = -1; column <= 1; column++) {
-            if (Math.abs(row) + Math.abs(column) !== 1) continue;
-            addCylinder(0.026, 0.032, 0.82, column * 0.095, 0.02 + row * 0.072, 0.70, metal, 7);
-          }
+        const rotor = addMovingGroup('firearm-rotor', 0, 0.02, 0.28);
+        addCylinder(0.145, 0.145, 0.15, 0, 0, 0, accent, 14, rotor);
+        for (let index = 0; index < 6; index++) {
+          const angle = index * Math.PI / 3;
+          const x = Math.cos(angle) * 0.102;
+          const y = Math.sin(angle) * 0.102;
+          addCylinder(0.024, 0.029, 0.88, x, y, 0.52, metal, 8, rotor);
+          addCylinder(0.032, 0.037, 0.055, x, y, 0.965, glow, 8, rotor);
         }
         addGrip();
         addBox(0.24, 0.10, 0.25, 0, -0.02, -0.42, accent);
+        addBox(0.28, 0.08, 0.13, 0, 0.18, -0.02, metal);
+        addBox(0.11, 0.04, 0.16, 0, 0.23, 0.00, glow);
         break;
-      case 'rocket':
-        addCylinder(0.13, 0.13, 1.08, 0, 0.02, 0.04, accent, 12);
-        addCylinder(0.17, 0.17, 0.16, 0, 0.02, -0.48, dark, 12);
-        addCylinder(0.115, 0.115, 0.16, 0, 0.02, 0.62, metal, 10);
+      }
+      case 'rocket': {
+        addCylinder(0.13, 0.13, 1.08, 0, 0.02, 0.04, accent, 14);
+        addCylinder(0.17, 0.17, 0.16, 0, 0.02, -0.48, dark, 14);
+        addCylinder(0.115, 0.115, 0.16, 0, 0.02, 0.62, metal, 12);
         for (let index = 0; index < 4; index++) {
           const angle = index * Math.PI / 2;
           const fin = addBox(0.045, 0.20, 0.22, Math.cos(angle) * 0.13, Math.sin(angle) * 0.13, -0.36, dark);
           fin.rotation.z = angle;
         }
         addBox(0.24, 0.10, 0.28, 0, -0.20, -0.04, dark);
+        addBox(0.08, 0.12, 0.12, 0, 0.16, -0.22, metal);
+        const rocketCell = addMovingGroup('firearm-rocket-cell', 0, 0.035, 0.08);
+        addCylinder(0.065, 0.065, 0.58, 0, 0, 0, glow, 12, rocketCell);
+        const nose = new THREE.Mesh(new THREE.ConeGeometry(0.066, 0.18, 10), accent);
+        nose.rotation.x = Math.PI / 2;
+        nose.position.z = 0.37;
+        rocketCell.add(nose);
+        for (let index = 0; index < 3; index++) {
+          const fin = addBox(0.025, 0.10, 0.16, index === 0 ? 0.075 : index === 1 ? -0.075 : 0, index === 2 ? 0.075 : 0, -0.20, metal, rocketCell);
+          if (index === 1) fin.rotation.z = Math.PI;
+        }
         break;
-      case 'flame':
+      }
+      case 'flame': {
         addBox(0.22, 0.17, 0.58, 0, 0.02, 0.02, dark);
-        const fuelTank = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.42, 10), accent);
+        const fuelTank = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.42, 12), accent);
         fuelTank.rotation.z = Math.PI / 2;
         fuelTank.position.set(-0.20, 0.04, -0.18);
         fuelTank.castShadow = true;
         gun.add(fuelTank);
-        addCylinder(0.065, 0.105, 0.46, 0, 0.025, 0.52, metal, 9);
-        addCylinder(0.085, 0.055, 0.16, 0, 0.025, 0.82, glow, 9);
+        addCylinder(0.065, 0.105, 0.46, 0, 0.025, 0.52, metal, 10);
+        addCylinder(0.085, 0.055, 0.16, 0, 0.025, 0.82, glow, 10);
         addGrip();
         addStock();
+        const valve = addMovingGroup('firearm-tank-valve', -0.20, 0.30, -0.18);
+        addCylinder(0.045, 0.045, 0.07, 0, 0, 0, glow, 8, valve);
+        addBox(0.17, 0.025, 0.025, 0, 0, 0, metal, valve);
+        addBox(0.045, 0.12, 0.045, 0.08, 0, 0, metal, valve);
+        addBox(0.08, 0.07, 0.10, 0, 0.14, 0.10, accent);
         break;
-      case 'plasma':
+      }
+      case 'plasma': {
         addBox(0.25, 0.17, 0.62, 0, 0.02, 0.02, dark);
         addBox(0.21, 0.10, 0.42, 0, 0.12, 0.08, metal);
-        addCylinder(0.07, 0.07, 0.38, 0, 0.03, 0.48, glow, 10);
-        addCylinder(0.12, 0.12, 0.10, 0, 0.03, 0.70, accent, 12);
-        for (const side of [-1, 1]) {
-          const coil = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.025, 6, 12), glow);
-          coil.position.set(side * 0.15, 0.04, 0.12);
+        addCylinder(0.07, 0.07, 0.42, 0, 0.03, 0.48, glow, 12);
+        addCylinder(0.12, 0.12, 0.10, 0, 0.03, 0.70, accent, 14);
+        const coils = addMovingGroup('firearm-coils', 0, 0.04, 0.12);
+        for (let index = 0; index < 3; index++) {
+          const coil = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.022, 7, 16), glow);
+          coil.position.z = index * 0.17;
           coil.rotation.y = Math.PI / 2;
-          gun.add(coil);
+          coils.add(coil);
         }
         addGrip();
         addStock();
+        const energyCell = addMovingGroup('firearm-energy-cell', 0.16, -0.18, -0.12);
+        addBox(0.11, 0.21, 0.13, 0, 0, 0, dark, energyCell);
+        addBox(0.07, 0.15, 0.025, 0, 0, 0.077, glow, energyCell);
         break;
-      case 'gauss':
+      }
+      case 'gauss': {
         addBox(0.22, 0.15, 0.88, 0, 0.02, 0.00, dark);
         addBox(0.055, 0.09, 1.05, -0.10, 0.045, 0.46, accent);
         addBox(0.055, 0.09, 1.05, 0.10, 0.045, 0.46, accent);
-        addCylinder(0.042, 0.05, 1.12, 0, 0.04, 0.95, glow, 9);
+        addCylinder(0.042, 0.05, 1.16, 0, 0.04, 0.99, glow, 10);
         addBox(0.18, 0.09, 0.22, 0, 0.18, 0.03, metal);
         addBox(0.14, 0.07, 0.18, 0, 0.26, 0.03, glow);
         addGrip();
         addStock();
+        addBolt(0, 0.13, -0.04, 0.16, 0.44);
+        const energyCell = addMovingGroup('firearm-energy-cell', 0, -0.22, 0.02);
+        addBox(0.13, 0.28, 0.18, 0, 0, 0, dark, energyCell);
+        addBox(0.085, 0.22, 0.035, 0, 0, 0.105, glow, energyCell);
+        const coils = addMovingGroup('firearm-coils', 0, 0.045, 0.55);
+        for (let index = 0; index < 4; index++) {
+          const coil = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.018, 6, 14), glow);
+          coil.position.z = index * 0.18;
+          coil.rotation.y = Math.PI / 2;
+          coils.add(coil);
+        }
         break;
+      }
       default:
         addBox(0.20, 0.15, 0.62, 0, 0.02, 0, dark);
         addCylinder(0.04, 0.04, 0.42, 0, 0.02, 0.48, accent);
@@ -10183,7 +10284,7 @@ export class PaleciakiGameEngine {
     this.survivalFirearm.cooldown = Math.max(0, this.survivalFirearm.cooldown - dt);
     this.survivalFirearmSoundCooldown = Math.max(0, this.survivalFirearmSoundCooldown - dt);
     this.survivalFirearmRecoilTimer = Math.max(0, this.survivalFirearmRecoilTimer - dt);
-    this.updateHeldSurvivalFirearmAction();
+    this.updateHeldSurvivalFirearmAction(dt);
     if (this.survivalFirearm.reloadRemaining > 0) {
       this.survivalFirearm.reloadRemaining = Math.max(0, this.survivalFirearm.reloadRemaining - dt);
       if (this.survivalFirearm.reloadRemaining <= 0) {
@@ -10226,20 +10327,69 @@ export class PaleciakiGameEngine {
     }
   }
 
-  private updateHeldSurvivalFirearmAction(): void {
+  private updateHeldSurvivalFirearmAction(dt: number): void {
     const gun = this.playerGroup?.getObjectByName('survival_primary_firearm') as THREE.Group | undefined;
     if (!gun) return;
     const definition = SURVIVAL_FIREARM_DEFS[this.survivalFirearm.id];
-    if (this.survivalFirearm.reloadRemaining > 0) {
-      const progress = THREE.MathUtils.clamp(1 - this.survivalFirearm.reloadRemaining / definition.reloadSeconds, 0, 1);
-      const reloadPose = Math.sin(progress * Math.PI);
-      gun.position.set(0, -0.36 - reloadPose * 0.15, 0.18 - reloadPose * 0.04);
-      gun.rotation.set(-0.05 + reloadPose * 0.28, 0, 0.03 + reloadPose * 0.17);
-      return;
+    const profile = SURVIVAL_FIREARM_PRESENTATION[definition.archetype];
+    const reloading = this.survivalFirearm.reloadRemaining > 0;
+    const progress = reloading
+      ? THREE.MathUtils.clamp(1 - this.survivalFirearm.reloadRemaining / definition.reloadSeconds, 0, 1)
+      : 0;
+    const pose = getSurvivalFirearmReloadPose(definition.archetype, progress);
+    const recoil = THREE.MathUtils.clamp(this.survivalFirearmRecoilTimer / profile.recoilSettleSeconds, 0, 1);
+    const reloadDip = reloading ? Math.sin(progress * Math.PI) : 0;
+
+    const part = (name: string): THREE.Group | undefined =>
+      gun.getObjectByName(name) as THREE.Group | undefined;
+    const applyOffset = (name: string, axis: 'x' | 'y' | 'z', offset: number): void => {
+      const group = part(name);
+      if (!group) return;
+      const base = group.userData.basePosition as THREE.Vector3 | undefined;
+      if (!base) return;
+      group.position.copy(base);
+      group.position[axis] += offset;
+    };
+
+    const magazine = part('firearm-magazine');
+    if (magazine) {
+      magazine.visible = pose.magazineVisible;
+      applyOffset('firearm-magazine', 'y', pose.magazineOffsetY);
     }
-    const recoil = THREE.MathUtils.clamp(this.survivalFirearmRecoilTimer / 0.13, 0, 1);
-    gun.position.set(0, -0.36 - recoil * 0.035, 0.18 - recoil * 0.07);
-    gun.rotation.set(-0.05 + recoil * 0.14, 0, 0.03 - recoil * 0.08);
+    const energyCell = part('firearm-energy-cell');
+    if (energyCell) {
+      applyOffset('firearm-energy-cell', 'y', pose.energyCellOffsetY);
+      const base = energyCell.userData.basePosition as THREE.Vector3 | undefined;
+      if (base) energyCell.visible = !reloading || pose.energyCellOffsetY > -0.12;
+    }
+    applyOffset('firearm-bolt', 'z', pose.boltOffsetZ);
+    applyOffset('firearm-pump', 'z', pose.pumpOffsetZ);
+    applyOffset('firearm-rocket-cell', 'z', pose.rocketCellOffsetZ);
+    const valve = part('firearm-tank-valve');
+    if (valve) valve.rotation.z = pose.tankValveRotation;
+    const coils = part('firearm-coils');
+    if (coils) {
+      const pulse = reloading ? pose.coilPulse : 0.18 + Math.sin(performance.now() * 0.006) * 0.08;
+      coils.scale.setScalar(1 + Math.max(0, pulse) * 0.20);
+      coils.rotation.z = reloading ? 0 : Math.sin(performance.now() * 0.004) * 0.055;
+    }
+    const rotor = part('firearm-rotor');
+    if (rotor) {
+      const spinning = !reloading && this.survivalFirearm.cooldown > 0;
+      if (pose.rotorBrake || reloading) rotor.rotation.z *= Math.max(0, 1 - dt * 10);
+      else rotor.rotation.z += dt * (spinning ? 22 : 2.2);
+    }
+
+    gun.position.set(
+      0,
+      -0.36 - reloadDip * 0.12 - recoil * profile.recoilDepth * 0.28,
+      0.18 - reloadDip * 0.045 - recoil * profile.recoilDepth,
+    );
+    gun.rotation.set(
+      -0.05 + reloadDip * 0.28 + recoil * profile.recoilPitch,
+      0,
+      0.03 + reloadDip * 0.17 - recoil * profile.recoilPitch * 0.28,
+    );
   }
 
   public requestSurvivalFirearmReload(): void {
@@ -10287,7 +10437,7 @@ export class PaleciakiGameEngine {
     // Keep perk/momentum synergies meaningful without allowing the previous machine-gun cadence to return.
     const attackRate = Math.min(1.05, Math.max(0.65, uncappedAttackRate));
     firearm.cooldown = definition.fireIntervalSeconds * hasteFactor / attackRate;
-    this.survivalFirearmRecoilTimer = 0.13;
+    this.survivalFirearmRecoilTimer = SURVIVAL_FIREARM_PRESENTATION[definition.archetype].recoilSettleSeconds;
     firearm.ammoInMagazine = Math.max(0, firearm.ammoInMagazine - 1);
     firearm.shotCounter++;
     this.attackSwingDuration = this.survivalFirearmAttackAnimationSeconds[definition.id];
@@ -10296,6 +10446,7 @@ export class PaleciakiGameEngine {
 
     const start = new THREE.Vector3(this.playerPos.x, this.playerPos.y + 0.92, this.playerPos.z).addScaledVector(forward, 0.86);
     this.spawnCompactImpact(start.x, start.y, start.z, definition.color);
+    this.spawnSurvivalFirearmMuzzleFx(definition.archetype, start, forward);
     const pelletCount = definition.pellets;
     let damage = definition.damage;
     if (this.gameMode === 'campaign' && this.campaignCounterattackReady) {
@@ -10311,34 +10462,9 @@ export class PaleciakiGameEngine {
       const randomSpread = (Math.random() - 0.5) * 0.42;
       const angle = lane * definition.spreadRadians + randomSpread * definition.spreadRadians + spreadSeed * 0.001;
       const direction = forward.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), angle).normalize();
-      const material = new THREE.MeshStandardMaterial({
-        color: definition.color,
-        emissive: definition.color,
-        emissiveIntensity: definition.archetype === 'plasma' || definition.archetype === 'gauss' ? 1.1 : 0.34,
-        metalness: definition.archetype === 'heavy-rifle' || definition.archetype === 'gauss' ? 0.55 : 0.2,
-        roughness: 0.28,
-        transparent: definition.archetype === 'flame',
-        opacity: definition.archetype === 'flame' ? 0.88 : 1,
-      });
-      let geometry: THREE.BufferGeometry;
-      switch (definition.archetype) {
-        case 'rocket': geometry = new THREE.ConeGeometry(definition.projectileRadius, 0.48, 8); break;
-        case 'flame': geometry = new THREE.SphereGeometry(definition.projectileRadius, 7, 6); break;
-        case 'plasma': geometry = new THREE.IcosahedronGeometry(definition.projectileRadius, 0); break;
-        case 'gauss':
-        case 'heavy-rifle': geometry = new THREE.CylinderGeometry(0.045, 0.045, 0.52, 7); break;
-        case 'pistol': geometry = new THREE.CylinderGeometry(0.032, 0.045, 0.25, 6); break;
-        case 'rifle': geometry = new THREE.CylinderGeometry(0.035, 0.045, 0.34, 6); break;
-        case 'smg': geometry = new THREE.BoxGeometry(0.055, 0.055, 0.27); break;
-        case 'minigun': geometry = new THREE.BoxGeometry(0.045, 0.045, 0.22); break;
-        case 'shotgun': geometry = new THREE.SphereGeometry(definition.projectileRadius, 7, 6); break;
-        default: geometry = new THREE.BoxGeometry(0.07, 0.07, 0.30); break;
-      }
-      const mesh = new THREE.Mesh(geometry, material);
-      if (['rocket', 'gauss', 'heavy-rifle', 'pistol', 'rifle'].includes(definition.archetype)) mesh.rotation.x = Math.PI / 2;
+      const mesh = this.createSurvivalFirearmProjectileMesh(definition.archetype, definition.color, definition.projectileRadius);
       mesh.rotation.y = Math.atan2(direction.x, direction.z);
       mesh.position.copy(start).addScaledVector(direction, 0.18);
-      mesh.castShadow = false;
       this.levelRoot.add(mesh);
       this.projectiles.push({
         mesh,
@@ -10371,19 +10497,130 @@ export class PaleciakiGameEngine {
     if (firearm.ammoInMagazine <= 0) this.reloadSurvivalFirearm();
   }
 
+  private createSurvivalFirearmProjectileMesh(
+    archetype: SurvivalFirearmArchetype,
+    color: number,
+    fallbackRadius: number,
+  ): THREE.Mesh {
+    const profile = SURVIVAL_FIREARM_PRESENTATION[archetype];
+    const width = Math.max(profile.projectileWidth, fallbackRadius * 0.55);
+    const length = Math.max(profile.projectileLength, width * 1.8);
+    let geometry: THREE.BufferGeometry;
+    switch (profile.projectileStyle) {
+      case 'pistol-slug':
+        geometry = new THREE.CylinderGeometry(width * 0.34, width * 0.48, length, 8);
+        break;
+      case 'compact-tracer':
+        geometry = new THREE.BoxGeometry(width * 0.68, width * 0.68, length);
+        break;
+      case 'rifle-tracer':
+        geometry = new THREE.CylinderGeometry(width * 0.36, width * 0.52, length, 8);
+        break;
+      case 'buckshot':
+        geometry = new THREE.DodecahedronGeometry(width * 0.58, 0);
+        break;
+      case 'heavy-slug':
+        geometry = new THREE.CylinderGeometry(width * 0.40, width * 0.56, length, 10);
+        break;
+      case 'rotary-tracer':
+        geometry = new THREE.BoxGeometry(width * 0.62, width * 0.62, length);
+        break;
+      case 'rocket':
+        geometry = new THREE.ConeGeometry(width * 0.88, length, 10);
+        break;
+      case 'flame':
+        geometry = new THREE.SphereGeometry(width * 0.56, 9, 7);
+        break;
+      case 'plasma':
+        geometry = new THREE.IcosahedronGeometry(width * 0.64, 1);
+        break;
+      case 'gauss-lance':
+        geometry = new THREE.CylinderGeometry(width * 0.35, width * 0.55, length, 10);
+        break;
+    }
+    const energyProjectile = profile.projectileStyle === 'plasma' || profile.projectileStyle === 'gauss-lance';
+    const material = new THREE.MeshStandardMaterial({
+      color,
+      emissive: color,
+      emissiveIntensity: energyProjectile || profile.projectileStyle === 'rocket' ? 1.15 : 0.42,
+      metalness: energyProjectile || profile.projectileStyle === 'heavy-slug' ? 0.54 : 0.25,
+      roughness: 0.22,
+      transparent: profile.projectileStyle === 'flame' || profile.projectileStyle === 'plasma',
+      opacity: profile.projectileStyle === 'flame' ? 0.82 : profile.projectileStyle === 'plasma' ? 0.92 : 1,
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    if (['pistol-slug', 'rifle-tracer', 'heavy-slug', 'rocket', 'gauss-lance'].includes(profile.projectileStyle)) {
+      mesh.rotation.x = Math.PI / 2;
+    } else if (profile.projectileStyle === 'flame' || profile.projectileStyle === 'plasma') {
+      mesh.scale.set(0.92, 0.92, Math.max(1, length / Math.max(0.01, width)));
+    }
+    mesh.castShadow = false;
+    mesh.userData.firearmProjectileStyle = profile.projectileStyle;
+    return mesh;
+  }
+
+  private spawnSurvivalFirearmMuzzleFx(
+    archetype: SurvivalFirearmArchetype,
+    position: THREE.Vector3,
+    forward: THREE.Vector3,
+  ): void {
+    const profile = SURVIVAL_FIREARM_PRESENTATION[archetype];
+    const color = SURVIVAL_FIREARM_DEFS[
+      (Object.keys(SURVIVAL_FIREARM_DEFS) as SurvivalFirearmId[])
+        .find((id) => SURVIVAL_FIREARM_DEFS[id].archetype === archetype) ?? 'starter_pistol'
+    ].color;
+    const handheld = this.isHandheldViewport || window.innerWidth < 900;
+    const particleBudget = handheld ? (this.adaptivePerformanceTier >= 2 ? 0.30 : 0.48) : 1;
+    const count = Math.max(1, Math.floor(profile.muzzleParticles * particleBudget));
+    const side = new THREE.Vector3(-forward.z, 0, forward.x);
+    for (let index = 0; index < count; index++) {
+      const size = profile.trailParticleSize * (0.8 + Math.random() * 0.8);
+      const mesh = this.particlePool.acquire(
+        archetype === 'flame' || archetype === 'rocket' ? 'sphere' : 'tetrahedron',
+        color,
+        size,
+        0.94,
+      );
+      if (!mesh) break;
+      const lateral = (Math.random() - 0.5) * profile.muzzleSpread;
+      const speed = 1.2 + Math.random() * (archetype === 'rocket' || archetype === 'shotgun' ? 3.2 : 1.8);
+      mesh.position.copy(position).addScaledVector(forward, 0.05);
+      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+      this.levelRoot.add(mesh);
+      const life = archetype === 'rocket' || archetype === 'flame' || archetype === 'plasma' ? 0.22 : 0.12;
+      this.addParticle(
+        mesh,
+        forward.x * speed + side.x * lateral,
+        0.12 + Math.random() * 0.60,
+        forward.z * speed + side.z * lateral,
+        life,
+        null,
+        size,
+        2 + Math.random() * 5,
+        2 + Math.random() * 5,
+        2 + Math.random() * 5,
+      );
+    }
+    if (archetype === 'gauss') this.triggerBloomPulse(0.12);
+    if (archetype === 'rocket' && !handheld) this.triggerScreenShake(0.06, 0.04);
+  }
+
   private spawnSurvivalFirearmTrail(projectile: { mesh: THREE.Object3D; vel: THREE.Vector3; firearmId?: SurvivalFirearmId }): void {
     if (!projectile.firearmId) return;
     const definition = SURVIVAL_FIREARM_DEFS[projectile.firearmId];
-    if (!['rocket', 'flame', 'plasma', 'gauss'].includes(definition.archetype)) return;
-    const size = definition.archetype === 'rocket' ? 0.105 : 0.065;
-    const mesh = this.particlePool.acquire(definition.archetype === 'flame' ? 'sphere' : 'octahedron', definition.color, size, 0.72);
+    const profile = SURVIVAL_FIREARM_PRESENTATION[definition.archetype];
+    const size = profile.trailParticleSize;
+    const shape = definition.archetype === 'flame' || definition.archetype === 'rocket' ? 'sphere' : 'octahedron';
+    const opacity = definition.archetype === 'plasma' || definition.archetype === 'gauss' ? 0.88 : 0.66;
+    const mesh = this.particlePool.acquire(shape, definition.color, size, opacity);
     if (!mesh) return;
     mesh.position.copy(projectile.mesh.position);
     mesh.rotation.set(0.2, 0.4, 0.15);
     this.levelRoot.add(mesh);
     const speed = projectile.vel.length();
-    const scale = speed > 0.1 ? -0.36 / speed : 0;
-    this.addParticle(mesh, projectile.vel.x * scale, 0.10 + projectile.vel.y * scale, projectile.vel.z * scale, 0.22, null, size);
+    const scale = speed > 0.1 ? -0.30 / speed : 0;
+    const life = definition.archetype === 'flame' || definition.archetype === 'rocket' ? 0.28 : 0.16;
+    this.addParticle(mesh, projectile.vel.x * scale, 0.06 + projectile.vel.y * scale, projectile.vel.z * scale, life, null, size);
   }
 
   private spawnSurvivalWeaponMuzzleFx(weapon: SurvivalWeaponState, target: EnemyItem): void {
@@ -17618,8 +17855,10 @@ export class PaleciakiGameEngine {
         }
       } else if (p.firearmId) {
         p.trailTimer = (p.trailTimer ?? 0) - dt;
-        const trailInterval = this.adaptivePerformanceTier >= 2 ? 0.34 : this.adaptivePerformanceTier === 1 ? 0.25 : 0.16;
-        if (p.trailTimer <= 0) {
+        const firearmProfile = SURVIVAL_FIREARM_PRESENTATION[SURVIVAL_FIREARM_DEFS[p.firearmId].archetype];
+        const performanceFactor = this.adaptivePerformanceTier >= 2 ? 1.75 : this.adaptivePerformanceTier === 1 ? 1.30 : 1;
+        const trailInterval = firearmProfile.trailIntervalSeconds * performanceFactor;
+        if (trailInterval > 0 && p.trailTimer <= 0) {
           this.spawnSurvivalFirearmTrail(p);
           p.trailTimer = trailInterval;
         }
@@ -17767,7 +18006,8 @@ export class PaleciakiGameEngine {
                   case 'pistol':
                   case 'smg':
                   case 'rifle':
-                    this.spawnExplosionParticles(e.x, e.y + 0.48, e.z, impactColor, 5);
+                    this.spawnExplosionParticles(e.x, e.y + 0.48, e.z, impactColor, SURVIVAL_FIREARM_PRESENTATION[archetype].impactParticles);
+                    if (archetype === 'pistol' || archetype === 'rifle') this.spawnParticleRing(e.x, e.y + 0.35, e.z, impactColor);
                     break;
                 }
               }
