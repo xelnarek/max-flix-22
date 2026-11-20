@@ -3758,6 +3758,7 @@ export class PaleciakiGameEngine {
       this.pvpLastFirearmExplosionId = explosion.id;
       if (explosion.firearmId === 'ballistic_grenade_launcher') {
         this.spawnBallisticGrenadeDetonationFx(explosion.x, explosion.y, explosion.z, explosion.color);
+        sound.playFirearmImpact('grenade');
       }
     }
     const local = this.pvpSlot === 'p1' ? state.p1 : state.p2;
@@ -3792,6 +3793,7 @@ export class PaleciakiGameEngine {
     }
     const isReloading = local.reloadRemainingSeconds > 0;
     if (isReloading && !this.pvpLastObservedReloading) sound.playFirearmReload(firearmDefinition.archetype, 'start');
+    else if (!isReloading && this.pvpLastObservedReloading) sound.playFirearmReload(firearmDefinition.archetype, 'complete');
     this.pvpLastObservedReloading = isReloading;
     this.survivalFirearmRecoilTimer = Math.max(0, this.survivalFirearmRecoilTimer - dt);
     this.updateHeldSurvivalFirearmAction(dt);
