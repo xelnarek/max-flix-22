@@ -993,7 +993,7 @@ export class PaleciakiGameEngine {
       SURVIVAL_WEAPON_DEFS[weaponId].cooldown,
       level,
       evolved,
-    ) * this.survivalWeaponReloadMultiplier;
+    );
   }
 
   private scaleSurvivalDamage(baseDamage: number): number {
@@ -2910,7 +2910,6 @@ export class PaleciakiGameEngine {
     this.survivalShrapnelStrength = 1;
     this.survivalRadiationTimer = 1.4;
     this.survivalAttackRateMultiplier = 1;
-    this.survivalWeaponReloadMultiplier = 1;
     this.survivalMoveMultiplier = 1;
     this.survivalMagnetMultiplier = 1;
     this.survivalRangeMultiplier = 1;
@@ -2987,7 +2986,6 @@ export class PaleciakiGameEngine {
           break;
         case 'rapid':
           this.survivalAttackRateMultiplier = Math.max(0.78, this.survivalAttackRateMultiplier * 0.92);
-          this.survivalWeaponReloadMultiplier = Math.max(0.72, this.survivalWeaponReloadMultiplier * 0.92);
           break;
         case 'xp':
           this.survivalXpMultiplier = Math.min(2.40, this.survivalXpMultiplier * 1.20);
