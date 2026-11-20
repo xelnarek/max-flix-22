@@ -897,12 +897,13 @@ export class PaleciakiGameEngine {
   private survivalWeapons: SurvivalWeaponState[] = [];
   private survivalFirearm: SurvivalFirearmState = createStartingSurvivalFirearmState();
   private readonly survivalFirearmAttackAnimationSeconds: Readonly<Record<SurvivalFirearmId, number>> = {
-    starter_pistol: 0.13, smg_45: 0.075, assault_rifle: 0.11, shotgun_12g: 0.26, battle_rifle: 0.22,
-    minigun: 0.06, rocket_launcher: 0.30, flamethrower: 0.075, plasma_rifle: 0.18, gauss_rifle: 0.24,
+    starter_pistol: 0.18, smg_45: 0.12, assault_rifle: 0.17, shotgun_12g: 0.34, battle_rifle: 0.31,
+    minigun: 0.10, rocket_launcher: 0.42, flamethrower: 0.12, plasma_rifle: 0.25, gauss_rifle: 0.35,
   };
   private survivalFirearmStates = new Map<SurvivalFirearmId, SurvivalFirearmState>();
   private survivalFirearmKillCount = 0;
   private survivalFirearmDropMissStreak = 0;
+  private survivalFirearmLastDropSeconds = Number.NEGATIVE_INFINITY;
   private survivalFirearmSoundCooldown = 0;
   private survivalFirearmDrops: Array<{ id: string; firearmId: SurvivalFirearmId; mesh: THREE.Group; x: number; y: number; z: number; baseY: number; age: number; life: number }> = [];
   private survivalMomentum: SurvivalMomentumState = createSurvivalMomentumState();
@@ -2727,6 +2728,7 @@ export class PaleciakiGameEngine {
     this.survivalFirearmStates.clear();
     this.survivalFirearmKillCount = 0;
     this.survivalFirearmDropMissStreak = 0;
+    this.survivalFirearmLastDropSeconds = Number.NEGATIVE_INFINITY;
     this.survivalFirearmSoundCooldown = 0;
     this.campaignStage = null;
     this.campaignBossScheduled = false;
@@ -7424,6 +7426,7 @@ export class PaleciakiGameEngine {
     this.survivalFirearmStates.clear();
     this.survivalFirearmKillCount = 0;
     this.survivalFirearmDropMissStreak = 0;
+    this.survivalFirearmLastDropSeconds = Number.NEGATIVE_INFINITY;
     this.survivalFirearmSoundCooldown = 0;
     this.rebuildPlayerMesh();
 
@@ -10154,13 +10157,8 @@ export class PaleciakiGameEngine {
 
   private spawnSurvivalFirearmDrop(x: number, y: number, z: number, firearmId: SurvivalFirearmId, isPityDrop = false): void {
     const definition = SURVIVAL_FIREARM_DEFS[firearmId];
-    if (this.survivalFirearmDrops.length >= 3) {
-      const oldest = this.survivalFirearmDrops.shift();
-      if (oldest) {
-        this.levelRoot.remove(oldest.mesh);
-        this.disposeTemporaryObject(oldest.mesh);
-      }
-    }
+    // One physical weapon pickup at a time; never erase a previous drop to force another.
+    if (this.gameMode !== 'survival' || this.survivalFirearmDrops.length > 0) return;
     const safeX = THREE.MathUtils.clamp(x, this.levelBounds.minX + 1, this.levelBounds.maxX - 1);
     const safeZ = THREE.MathUtils.clamp(z, this.levelBounds.minZ + 1, this.levelBounds.maxZ - 1);
     const mesh = this.createSurvivalFirearmDropVisual(firearmId);
@@ -10168,7 +10166,7 @@ export class PaleciakiGameEngine {
     this.levelRoot.add(mesh);
     this.survivalFirearmDrops.push({
       id: 'firearm_drop_' + Math.floor(performance.now()) + '_' + Math.floor(Math.random() * 100000),
-      firearmId, mesh, x: safeX, y, z: safeZ, baseY: y, age: 0, life: 28,
+      firearmId, mesh, x: safeX, y, z: safeZ, baseY: y, age: 0, life: 40,
     });
     this.spawnParticleRing(safeX, y + 0.2, safeZ, definition.color);
     this.emitFloatingToast((isPityDrop ? '📦 ŁUP PEWNY: ' : '🔫 ZRZUT BRONI: ') + definition.name.toUpperCase(), safeX, y + 1.8, safeZ, 'perk');
@@ -20600,22 +20598,29 @@ export class PaleciakiGameEngine {
     const isAbilityRechargeElite = isAbilityRechargeBoss ||
       e.type === 'elite_walczak_guard' || e.type === 'sebix_m' || e.maxHp >= 4;
     this.rechargeAbilityFromKill(isAbilityRechargeElite, isAbilityRechargeBoss);
-    if (this.gameMode !== 'pvp') {
+    if (this.gameMode === 'survival') {
       this.survivalFirearmKillCount++;
       const firearmBoss = e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' || e.type === 'sebix_m' || e.maxHp >= 16;
       const firearmElite = firearmBoss || e.type === 'elite_walczak_guard' || e.type === 'mutant_gamma_forklift' || e.type === 'radioactive_pip' || e.type === 'cyber_salesman' || e.maxHp >= 4;
       const firearmTier: SurvivalFirearmEnemyTier = firearmBoss ? 'boss' : firearmElite ? 'elite' : 'normal';
-      const firearmDrop = rollSurvivalFirearmDrop(this.survivalFirearmKillCount, firearmTier, this.survivalFirearmDropMissStreak, Math.random());
-      if (firearmDrop.shouldDrop) {
-        const firearmId = rollSurvivalFirearmId(this.survivalFirearm.id, this.survivalElapsed, Math.random());
-        if (firearmId) {
-          this.spawnSurvivalFirearmDrop(e.x, e.y + 0.08, e.z, firearmId, firearmDrop.isPityDrop || firearmDrop.isGuaranteed);
-          this.survivalFirearmDropMissStreak = 0;
+      const firearmSpawnUnlocked = this.survivalElapsed >= 45 && this.survivalFirearmKillCount >= 8;
+      const firearmSpawnAllowed = firearmSpawnUnlocked
+        && this.survivalFirearmDrops.length === 0
+        && this.survivalElapsed - this.survivalFirearmLastDropSeconds >= 75;
+      if (firearmSpawnAllowed) {
+        const firearmDrop = rollSurvivalFirearmDrop(
+          this.survivalFirearmKillCount, firearmTier, this.survivalFirearmDropMissStreak, Math.random(),
+        );
+        if (firearmDrop.shouldDrop) {
+          const firearmId = rollSurvivalFirearmId(this.survivalFirearm.id, this.survivalElapsed, Math.random());
+          if (firearmId) {
+            this.spawnSurvivalFirearmDrop(e.x, e.y + 0.08, e.z, firearmId, firearmDrop.isPityDrop || firearmDrop.isGuaranteed);
+            this.survivalFirearmLastDropSeconds = this.survivalElapsed;
+            this.survivalFirearmDropMissStreak = 0;
+          }
         } else {
-          this.survivalFirearmDropMissStreak = Math.min(5, this.survivalFirearmDropMissStreak + 1);
+          this.survivalFirearmDropMissStreak = Math.min(17, this.survivalFirearmDropMissStreak + 1);
         }
-      } else {
-        this.survivalFirearmDropMissStreak = Math.min(5, this.survivalFirearmDropMissStreak + 1);
       }
     }
 
