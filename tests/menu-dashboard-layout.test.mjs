@@ -20,10 +20,10 @@ test('the desktop menu is a control room with a left navigation rail and indepen
   assert.match(premium, /\.menu-fixed-bottom-bar\s*\{[\s\S]*?grid-row:\s*4 !important/);
 });
 
-test('all eleven menu destinations remain available as buttons and panels', () => {
+test('all twelve menu destinations remain available as buttons and panels', () => {
   const buttons = [...html.matchAll(/class="menu-tab-btn[^"]*" data-tab="(tab-[^"]+)"/g)].map((match) => match[1]);
-  const panels = [...html.matchAll(/id="(tab-(?:team|map|pvp|enemies|perks|field-guide|talent-tree|ranks|leaderboard|achievements|settings))"/g)].map((match) => match[1]);
-  assert.equal(buttons.length, 11);
+  const panels = [...html.matchAll(/id="(tab-(?:team|map|pvp|enemies|arsenal|perks|field-guide|talent-tree|ranks|leaderboard|achievements|settings))"/g)].map((match) => match[1]);
+  assert.equal(buttons.length, 12);
   assert.deepEqual(new Set(buttons), new Set(panels));
   assert.match(layout, /grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/);
 });
