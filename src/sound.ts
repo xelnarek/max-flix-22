@@ -21,6 +21,7 @@ class SoundEngine {
   private musicBus: GainNode | null = null;
   private effectsBus: GainNode | null = null;
   private lastAttackWhooshAt = -Infinity;
+  private lastFirearmImpactAt: Partial<Record<'pistol' | 'smg' | 'rifle' | 'shotgun' | 'heavy-rifle' | 'minigun' | 'rocket' | 'flame' | 'plasma' | 'gauss', number>> = {};
   private settings: AudioSettings = { master: 0.82, music: 0.48, effects: 0.82 };
 
   constructor() {
@@ -983,6 +984,9 @@ class SoundEngine {
     } as const;
     const [frequency, duration, volume] = profiles[archetype];
     const t = this.ctx.currentTime;
+    const minimumGap = archetype === 'shotgun' || archetype === 'rocket' || archetype === 'gauss' ? 0.065 : 0.028;
+    if (t - (this.lastFirearmImpactAt[archetype] ?? -Infinity) < minimumGap) return;
+    this.lastFirearmImpactAt[archetype] = t;
     const oscillator = this.ctx.createOscillator();
     const envelope = this.ctx.createGain();
     oscillator.type = archetype === 'rocket' || archetype === 'shotgun' ? 'sine' : 'triangle';
