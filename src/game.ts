@@ -17284,7 +17284,10 @@ export class PaleciakiGameEngine {
     const bounds = this.gameMode === 'survival'
       ? this.levelBounds
       : { minX: -34.5, maxX: 204.5, minZ: -21.0, maxZ: 21.0 };
-    solveEnemyCrowdOverlaps(this.enemies, this.enemySpatialIndex, bounds, 0.16, 2, 0.52);
+    // Four bounded passes converge even when a wave spawns several enemies
+    // at nearly identical coordinates. The 0.8 m cap avoids leaving visible
+    // torso intersections after the old two-pass correction.
+    solveEnemyCrowdOverlaps(this.enemies, this.enemySpatialIndex, bounds, 0.16, 4, 0.8);
 
     // Keep authoritative coordinates, rendered rigs and next-frame broadphase aligned.
     for (const enemy of this.enemies) {
