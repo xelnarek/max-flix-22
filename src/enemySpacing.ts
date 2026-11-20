@@ -6,6 +6,8 @@ export interface EnemySpacingActor {
   readonly type?: string;
   readonly collisionRadius?: number;
   readonly y?: number;
+  /** Remaining visible death-animation time; corpses reserve space until removed. */
+  readonly deathVisualTimer?: number;
 }
 
 export interface MutableEnemySpacingActor extends EnemySpacingActor {
@@ -224,7 +226,7 @@ export class EnemySpatialIndex<T extends EnemySpacingActor = EnemySpacingActor> 
     this.nextReusableBucket = 0;
 
     for (const actor of actors) {
-      if (actor.state === "defeated" || !Number.isFinite(actor.x) || !Number.isFinite(actor.z)) continue;
+      if ((actor.state === "defeated" && !(Number.isFinite(actor.deathVisualTimer) && (actor.deathVisualTimer as number) > 0)) || !Number.isFinite(actor.x) || !Number.isFinite(actor.z)) continue;
       const cellX = Math.floor(actor.x / this.cellSize);
       const cellZ = Math.floor(actor.z / this.cellSize);
       const key = this.cellKey(cellX, cellZ);
@@ -284,7 +286,7 @@ export function chooseSpacedSpawnPoint(
 
     let nearestSquared = Number.POSITIVE_INFINITY;
     for (const actor of occupied) {
-      if (actor.state === "defeated" || !Number.isFinite(actor.x) || !Number.isFinite(actor.z)) continue;
+      if ((actor.state === "defeated" && !(Number.isFinite(actor.deathVisualTimer) && (actor.deathVisualTimer as number) > 0)) || !Number.isFinite(actor.x) || !Number.isFinite(actor.z)) continue;
       const dx = candidate.x - actor.x;
       const dz = candidate.z - actor.z;
       nearestSquared = Math.min(nearestSquared, dx * dx + dz * dz);
@@ -393,7 +395,7 @@ export function resolveEnemyCrowdOverlaps<T extends MutableEnemySpacingActor>(
         const totalMass = Math.max(1e-5, selfMass + otherMass);
         // The smaller body yields more; large bosses and vehicles stay planted.
         const selfShare = otherMass / totalMass;
-        const otherShare = selfMass / totalMass;
+        const otherShare = otherIsActiveCorpse ? 0 : selfMass / totalMass;
         const selfInset = Math.min(selfRadius * 0.72, (maxX - minX) * 0.25, (maxZ - minZ) * 0.25);
         const otherInset = Math.min(otherRadius * 0.72, (maxX - minX) * 0.25, (maxZ - minZ) * 0.25);
 
