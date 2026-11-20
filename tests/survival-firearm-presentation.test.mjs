@@ -15,6 +15,9 @@ test('every firearm archetype has its own projectile, recoil, reload and feedbac
   const projectileStyles = new Set(archetypes.map((archetype) =>
     SURVIVAL_FIREARM_PRESENTATION[archetype].projectileStyle));
   assert.equal(projectileStyles.size, archetypes.length, 'projectile silhouettes must be distinguishable');
+  assert.equal(new Set(archetypes.map((archetype) => SURVIVAL_FIREARM_PRESENTATION[archetype].projectileLength)).size, archetypes.length, 'projectile lengths must be visibly distinct');
+  assert.equal(new Set(archetypes.map((archetype) => SURVIVAL_FIREARM_PRESENTATION[archetype].trailParticleSize)).size, archetypes.length, 'every firearm needs its own trail scale');
+  assert.equal(new Set(archetypes.map((archetype) => SURVIVAL_FIREARM_PRESENTATION[archetype].impactParticles)).size, archetypes.length, 'impact signatures must have distinct particle budgets');
   for (const archetype of archetypes) {
     const profile = SURVIVAL_FIREARM_PRESENTATION[archetype];
     assert.ok(profile.projectileLength > 0);

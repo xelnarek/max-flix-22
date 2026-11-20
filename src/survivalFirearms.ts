@@ -58,81 +58,81 @@ export const STARTING_SURVIVAL_FIREARM: SurvivalFirearmId = 'starter_pistol';
 export const SURVIVAL_FIREARM_DEFS: Readonly<Record<SurvivalFirearmId, SurvivalFirearmDefinition>> = Object.freeze({
   starter_pistol: {
     id: 'starter_pistol', name: 'Pistolet serwisowy', shortName: 'PISTOLET', icon: '🔫',
-    color: 0xcbd5e1, archetype: 'pistol', roleDescription: 'Broń startowa • mocniejszy pojedynczy strzał, spokojny rytm', rangeMeters: 26, fireIntervalSeconds: 0.82, magazineSize: 12,
-    reloadSeconds: 1.25, damage: 1.38, pellets: 1, spreadRadians: 0.012,
+    color: 0xcbd5e1, archetype: 'pistol', roleDescription: 'Broń startowa • mocniejszy pojedynczy strzał, spokojny rytm', rangeMeters: 28, fireIntervalSeconds: 1.05, magazineSize: 12,
+    reloadSeconds: 1.6, damage: 1.55, pellets: 1, spreadRadians: 0.012,
     projectileSpeed: 34, projectileRadius: 0.075,
     pierce: 0, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 0,
   },
   smg_45: {
     id: 'smg_45', name: 'Pistolet maszynowy .45', shortName: 'PM .45', icon: '🔫',
-    color: 0x94a3b8, archetype: 'smg', roleDescription: 'Szybka seria cięższych pocisków • kontroluj zużycie amunicji', rangeMeters: 23, fireIntervalSeconds: 0.38, magazineSize: 32,
-    reloadSeconds: 1.75, damage: 0.85, pellets: 1, spreadRadians: 0.055,
+    color: 0x94a3b8, archetype: 'smg', roleDescription: 'Szybka seria cięższych pocisków • kontroluj zużycie amunicji', rangeMeters: 23, fireIntervalSeconds: 0.68, magazineSize: 30,
+    reloadSeconds: 2.2, damage: 1.05, pellets: 1, spreadRadians: 0.055,
     projectileSpeed: 30, projectileRadius: 0.065,
-    pierce: 0, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 15,
+    pierce: 0, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 1,
   },
   assault_rifle: {
     id: 'assault_rifle', name: 'Karabin szturmowy', shortName: 'KARABIN', icon: '🪖',
-    color: 0x86a873, archetype: 'rifle', roleDescription: 'Uniwersalny karabin • stabilna siła i średnia szybkostrzelność', rangeMeters: 36, fireIntervalSeconds: 0.52, magazineSize: 27,
-    reloadSeconds: 1.85, damage: 1.25, pellets: 1, spreadRadians: 0.026,
+    color: 0x86a873, archetype: 'rifle', roleDescription: 'Uniwersalny karabin • stabilna siła i średnia szybkostrzelność', rangeMeters: 38, fireIntervalSeconds: 0.92, magazineSize: 27,
+    reloadSeconds: 2.35, damage: 1.5, pellets: 1, spreadRadians: 0.026,
     projectileSpeed: 38, projectileRadius: 0.07,
-    pierce: 0, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 15,
+    pierce: 0, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 1,
   },
   shotgun_12g: {
     id: 'shotgun_12g', name: 'Strzelba 12G', shortName: 'STRZELBA', icon: '💥',
-    color: 0xfbbf24, archetype: 'shotgun', roleDescription: 'Ciężka salwa siedmiu śrutów • zabójcza z bliska, długi cykl', rangeMeters: 9, fireIntervalSeconds: 1.45, magazineSize: 8,
-    reloadSeconds: 2.15, damage: 0.54, pellets: 7, spreadRadians: 0.235,
+    color: 0xfbbf24, archetype: 'shotgun', roleDescription: 'Ciężka salwa siedmiu śrutów • zabójcza z bliska, długi cykl', rangeMeters: 10, fireIntervalSeconds: 1.8, magazineSize: 6,
+    reloadSeconds: 2.75, damage: 0.62, pellets: 7, spreadRadians: 0.235,
     projectileSpeed: 25, projectileRadius: 0.09,
-    pierce: 0, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 13,
+    pierce: 0, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 1,
   },
   battle_rifle: {
     id: 'battle_rifle', name: 'Karabin bojowy 7.62', shortName: '7.62', icon: '🎯',
-    color: 0x60a5fa, archetype: 'heavy-rifle', roleDescription: 'Precyzyjny pocisk dużego kalibru • mocne trafienie i przebicie', rangeMeters: 42, fireIntervalSeconds: 1.38, magazineSize: 10,
-    reloadSeconds: 2.0, damage: 2.72, pellets: 1, spreadRadians: 0.009,
+    color: 0x60a5fa, archetype: 'heavy-rifle', roleDescription: 'Precyzyjny pocisk dużego kalibru • mocne trafienie i przebicie', rangeMeters: 46, fireIntervalSeconds: 1.85, magazineSize: 10,
+    reloadSeconds: 2.9, damage: 3.1, pellets: 1, spreadRadians: 0.009,
     projectileSpeed: 45, projectileRadius: 0.085,
-    pierce: 1, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 10,
+    pierce: 1, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 1,
   },
   minigun: {
     id: 'minigun', name: 'Minigun', shortName: 'MINIGUN', icon: '⚙️',
-    color: 0xf97316, archetype: 'minigun', roleDescription: 'Długie serie z ciężkiej broni • szeroki rozrzut i długi reload', rangeMeters: 27, fireIntervalSeconds: 0.26, magazineSize: 72,
-    reloadSeconds: 3.1, damage: 0.58, pellets: 1, spreadRadians: 0.078,
+    color: 0xf97316, archetype: 'minigun', roleDescription: 'Długie serie z ciężkiej broni • szeroki rozrzut i długi reload', rangeMeters: 29, fireIntervalSeconds: 0.5, magazineSize: 60,
+    reloadSeconds: 4.2, damage: 0.68, pellets: 1, spreadRadians: 0.078,
     projectileSpeed: 35, projectileRadius: 0.062,
-    pierce: 0, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 7,
+    pierce: 0, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 1,
   },
   rocket_launcher: {
     id: 'rocket_launcher', name: 'Wyrzutnia rakiet', shortName: 'RAKIETY', icon: '🚀',
-    color: 0xef4444, archetype: 'rocket', roleDescription: 'Ciężka rakieta • duża detonacja obszarowa, bardzo wolny cykl', rangeMeters: 32, fireIntervalSeconds: 3.0, magazineSize: 5,
-    reloadSeconds: 2.8, damage: 4.3, pellets: 1, spreadRadians: 0.006,
+    color: 0xef4444, archetype: 'rocket', roleDescription: 'Ciężka rakieta • duża detonacja obszarowa, bardzo wolny cykl', rangeMeters: 34, fireIntervalSeconds: 3.6, magazineSize: 5,
+    reloadSeconds: 3.6, damage: 4.8, pellets: 1, spreadRadians: 0.006,
     projectileSpeed: 15.5, projectileRadius: 0.16,
-    pierce: 0, aoeRadius: 3.1, aoeDamageMultiplier: 0.55, igniteOnHit: true, dropWeight: 8,
+    pierce: 0, aoeRadius: 3.1, aoeDamageMultiplier: 0.55, igniteOnHit: true, dropWeight: 1,
   },
   flamethrower: {
     id: 'flamethrower', name: 'Miotacz płomieni', shortName: 'MIOTACZ', icon: '🔥',
-    color: 0xfb923c, archetype: 'flame', roleDescription: 'Krótki stożek ognia • podpalenie i kontrola przestrzeni', rangeMeters: 5, fireIntervalSeconds: 0.34, magazineSize: 46,
-    reloadSeconds: 2.45, damage: 0.42, pellets: 2, spreadRadians: 0.20,
+    color: 0xfb923c, archetype: 'flame', roleDescription: 'Krótki stożek ognia • podpalenie i kontrola przestrzeni', rangeMeters: 6, fireIntervalSeconds: 0.65, magazineSize: 40,
+    reloadSeconds: 2.8, damage: 0.5, pellets: 2, spreadRadians: 0.20,
     projectileSpeed: 14, projectileRadius: 0.095,
-    pierce: 0, aoeRadius: 0.45, aoeDamageMultiplier: 0.38, igniteOnHit: true, dropWeight: 7,
+    pierce: 0, aoeRadius: 0.45, aoeDamageMultiplier: 0.38, igniteOnHit: true, dropWeight: 1,
   },
   plasma_rifle: {
     id: 'plasma_rifle', name: 'Karabin plazmowy', shortName: 'PLAZMA', icon: '🟣',
-    color: 0xa78bfa, archetype: 'plasma', roleDescription: 'Skondensowany pocisk plazmowy • mocny wybuch punktowy', rangeMeters: 30, fireIntervalSeconds: 0.88, magazineSize: 20,
-    reloadSeconds: 2.05, damage: 1.55, pellets: 1, spreadRadians: 0.018,
+    color: 0xa78bfa, archetype: 'plasma', roleDescription: 'Skondensowany pocisk plazmowy • mocny wybuch punktowy', rangeMeters: 32, fireIntervalSeconds: 1.2, magazineSize: 18,
+    reloadSeconds: 2.65, damage: 1.8, pellets: 1, spreadRadians: 0.018,
     projectileSpeed: 21, projectileRadius: 0.13,
-    pierce: 0, aoeRadius: 0.86, aoeDamageMultiplier: 0.40, igniteOnHit: false, dropWeight: 9,
+    pierce: 0, aoeRadius: 0.86, aoeDamageMultiplier: 0.40, igniteOnHit: false, dropWeight: 1,
   },
   ballistic_grenade_launcher: {
     id: 'ballistic_grenade_launcher', name: 'Granatnik balistyczny', shortName: 'GRANATNIK', icon: '💣',
     color: 0xd4a24f, archetype: 'grenade', roleDescription: 'Łuk balistyczny z zapalnikiem • eksplozja obszarowa przy kontakcie z podłożem lub celem',
-    rangeMeters: 24, fireIntervalSeconds: 2.25, magazineSize: 4, reloadSeconds: 3.2,
-    damage: 3.4, pellets: 1, spreadRadians: 0.004, projectileSpeed: 17, projectileRadius: 0.12,
-    pierce: 0, aoeRadius: 3.8, aoeDamageMultiplier: 0.72, igniteOnHit: false, dropWeight: 5,
+    rangeMeters: 24, fireIntervalSeconds: 2.9, magazineSize: 4, reloadSeconds: 3.2,
+    damage: 3.9, pellets: 1, spreadRadians: 0.004, projectileSpeed: 17, projectileRadius: 0.12,
+    pierce: 0, aoeRadius: 3.8, aoeDamageMultiplier: 0.72, igniteOnHit: false, dropWeight: 1,
     projectileGravity: 12.5, projectileLaunchVelocity: 7.4, projectileFuseSeconds: 1.4, detonateOnImpact: true,
   },
   gauss_rifle: {
     id: 'gauss_rifle', name: 'Karabin Gaussa', shortName: 'GAUSS', icon: '⚡',
-    color: 0x22d3ee, archetype: 'gauss', roleDescription: 'Wolny strzał snajperski • najwyższa penetracja i ciężkie trafienie', rangeMeters: 75, fireIntervalSeconds: 2.1, magazineSize: 6,
-    reloadSeconds: 2.45, damage: 3.95, pellets: 1, spreadRadians: 0.002,
+    color: 0x22d3ee, archetype: 'gauss', roleDescription: 'Wolny strzał snajperski • najwyższa penetracja i ciężkie trafienie', rangeMeters: 80, fireIntervalSeconds: 2.7, magazineSize: 5,
+    reloadSeconds: 3.05, damage: 4.65, pellets: 1, spreadRadians: 0.002,
     projectileSpeed: 62, projectileRadius: 0.095,
-    pierce: 5, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 6,
+    pierce: 5, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 1,
   },
 });
 
@@ -168,7 +168,7 @@ export function rollSurvivalFirearmDrop(
   };
 }
 
-/** Weighted world loot excludes the starter pistol and the weapon already held. */
+/** Equal-probability world loot excludes the starter pistol and the weapon already held. */
 export function rollSurvivalFirearmId(currentId: SurvivalFirearmId, elapsedSeconds: number, roll: number): SurvivalFirearmId | null {
   const safeRoll = Number.isFinite(roll) ? Math.max(0, Math.min(0.999999, roll)) : 0.5;
   const eligible = Object.values(SURVIVAL_FIREARM_DEFS).filter((definition) =>
