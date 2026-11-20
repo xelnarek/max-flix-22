@@ -41,7 +41,7 @@ test('the Survival atlas is isolated from the dedicated PvP configuration entry'
   assert.match(survivalPanel, /MAGAZYN B4|PORT KONTENEROWY 17/);
   assert.doesNotMatch(survivalPanel, /survival-map-picker|data-survival-map=|id="pvp-operator-picker"/);
   assert.match(pvpPanel, /RĘCZNE CELOWANIE AKTYWNE/);
-  assert.match(pvpPanel, /RÓWNE WARUNKI/);
+  assert.match(pvpPanel, /WSPÓLNE UZBROJENIE/);
   assert.match(pvpPanel, /POJEDYNEK LUB TRENING/);
   assert.doesNotMatch(pvpPanel, /survival-map-picker|survival-map-choice/);
 });
