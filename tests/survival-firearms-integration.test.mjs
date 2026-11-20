@@ -52,7 +52,7 @@ test('all enemy kills can spawn firearms while PvP remains on its authoritative 
   const game = await read('../src/game.ts');
   assert.match(game, /if \(this\.gameMode !== 'pvp'\) \{[\s\S]*?this\.survivalFirearmKillCount\+\+/);
   assert.match(game, /const firearmBoss =[\s\S]*?const firearmElite =[\s\S]*?const firearmTier:/);
-  assert.match(game, /if \(this\.gameMode !== 'pvp'\) \{\s*this\.fireSurvivalFirearm\(\)/);
+  assert.match(game, /const currentGameMode = this\.gameMode;\s*if \(currentGameMode !== 'pvp'\) \{\s*this\.fireSurvivalFirearm\(\)/);
   assert.match(game, /if \(this\.gameMode === 'pvp'\) \{\s*this\.updatePvpMode/);
 });
 
