@@ -483,9 +483,14 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
 export const PVP_FIREARM_COOLDOWN_MULTIPLIER = 3.6;
 export const PVP_FIREARM_DAMAGE_SCALE = PVP_NORMALIZED_HP / (10 * SURVIVAL_FIREARM_DEFS[STARTING_SURVIVAL_FIREARM].damage);
 
-/** Every operator shares the same firearm cycle; operator identity only changes abilities. */
+/** Weapon-specific PvP recovery, derived from the exact same profile as Survival/Campaign. */
+export function getPvpFirearmAttackCooldown(firearmId: SurvivalFirearmId): number {
+  return SURVIVAL_FIREARM_DEFS[firearmId].fireIntervalSeconds * PVP_FIREARM_COOLDOWN_MULTIPLIER;
+}
+
+/** Every operator shares the same starting pistol cycle; operator identity only changes abilities. */
 export function getPvpOperatorAttackCooldown(_operatorId: CharacterId): number {
-  return SURVIVAL_FIREARM_DEFS[STARTING_SURVIVAL_FIREARM].fireIntervalSeconds * PVP_FIREARM_COOLDOWN_MULTIPLIER;
+  return getPvpFirearmAttackCooldown(STARTING_SURVIVAL_FIREARM);
 }
 
 export function createDefaultPvpObstacles(): PvpObstacle[] {
