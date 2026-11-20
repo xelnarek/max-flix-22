@@ -10383,7 +10383,7 @@ export class PaleciakiGameEngine {
   private spawnSurvivalFirearmDrop(x: number, y: number, z: number, firearmId: SurvivalFirearmId, isPityDrop = false): void {
     const definition = SURVIVAL_FIREARM_DEFS[firearmId];
     // One physical weapon pickup at a time; never erase a previous drop to force another.
-    if (this.gameMode !== 'survival' || this.survivalFirearmDrops.length > 0) return;
+    if ((this.gameMode !== 'survival' && this.gameMode !== 'campaign') || this.survivalFirearmDrops.length > 0) return;
     const safeX = THREE.MathUtils.clamp(x, this.levelBounds.minX + 1, this.levelBounds.maxX - 1);
     const safeZ = THREE.MathUtils.clamp(z, this.levelBounds.minZ + 1, this.levelBounds.maxZ - 1);
     const mesh = this.createSurvivalFirearmDropVisual(firearmId);
@@ -10443,7 +10443,7 @@ export class PaleciakiGameEngine {
       this.emitFloatingToast('BROŃ ZMIENIONA: ' + picked.name.toUpperCase(), this.playerPos.x, this.playerPos.y + 1.65, this.playerPos.z, 'combo');
       this.callbacks.onPerkDropBanner?.(picked.name, picked.icon, 'Nowa broń podstawowa. Magazynek ' + picked.magazineSize + ' • przeładowanie ' + picked.reloadSeconds.toFixed(2) + ' s.', '#' + picked.color.toString(16).padStart(6, '0'));
       sound.playPickup(3);
-      if (this.gameMode === 'survival') this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+      if (this.gameMode === 'survival' || this.gameMode === 'campaign') this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
     }
   }
 
@@ -20998,7 +20998,7 @@ export class PaleciakiGameEngine {
     const isAbilityRechargeElite = isAbilityRechargeBoss ||
       e.type === 'elite_walczak_guard' || e.type === 'sebix_m' || e.maxHp >= 4;
     this.rechargeAbilityFromKill(isAbilityRechargeElite, isAbilityRechargeBoss);
-    if (this.gameMode === 'survival') {
+    if (this.gameMode === 'survival' || this.gameMode === 'campaign') {
       this.survivalFirearmKillCount++;
       const firearmBoss = e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' || e.type === 'sebix_m' || e.maxHp >= 16;
       const firearmElite = firearmBoss || e.type === 'elite_walczak_guard' || e.type === 'mutant_gamma_forklift' || e.type === 'radioactive_pip' || e.type === 'cyber_salesman' || e.maxHp >= 4;
