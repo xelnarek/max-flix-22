@@ -98,6 +98,9 @@ test('PvP combat feedback keeps simultaneous hits and renders lightweight projec
   ]);
   assert.match(arena, /hitEvents: PvpHitEvent\[\]/);
   assert.match(arena, /state\.hitEvents\.push\(hitEvent\)/);
+  assert.match(arena, /firearmId: projectile\.firearmId/);
+  assert.match(arena, /firearmId: proj\.firearmId/);
+  assert.match(game, /if \(hit\.firearmId\) \{[\s\S]*?spawnSurvivalFirearmImpactFx/);
   assert.match(game, /pendingPvpHitEvents/);
   assert.match(game, /new THREE\.CylinderGeometry\(trailRadius \* 0\.24, trailRadius, trailLength, 6, 1, true\)/);
   assert.match(game, /opacity: firearmProfile\?\.trailOpacity \?\? 0\.58/);
