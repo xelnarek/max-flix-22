@@ -10205,9 +10205,9 @@ export class PaleciakiGameEngine {
         gun.add(sight);
       }
     }
-    gun.position.set(0.34, 0.82, 0.34);
+    gun.position.set(0, -0.36, 0.18);
     gun.rotation.set(-0.05, 0, 0.03);
-    this.playerGroup.add(gun);
+    (this.rightArm ?? this.playerGroup).add(gun);
   }
 
   private clearSurvivalFirearmDrops(): void {
