@@ -2730,8 +2730,9 @@ class PaleciakiScene extends xb.Script {
     const menuTabList = document.querySelector<HTMLElement>('.menu-tabs-bar');
     // The menu uses one vertical sidebar on desktop, tablet and mobile.
     // No viewport-dependent segment filtering is used.
-    menuTabList?.setAttribute('role', 'navigation');
-    menuTabList?.setAttribute('aria-label', 'Nawigacja menu głównego');
+    menuTabList?.setAttribute('role', 'tablist');
+    menuTabList?.setAttribute('aria-orientation', 'vertical');
+    menuTabList?.setAttribute('aria-label', 'Sekcje menu głównego');
     const menuTabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.menu-tab-btn'));
     const menuNavigationGroups = Array.from(document.querySelectorAll<HTMLElement>('.menu-nav-group'));
 
@@ -3010,7 +3011,8 @@ class PaleciakiScene extends xb.Script {
     const syncMenuPanelPresentation = (targetId: string) => {
       const titleScreenRoot = document.getElementById('title-screen');
       if (titleScreenRoot) titleScreenRoot.dataset.activeMenuTab = targetId;
-      menuTabList?.setAttribute('role', 'navigation');
+      menuTabList?.setAttribute('role', 'tablist');
+      menuTabList?.setAttribute('aria-orientation', 'vertical');
 
       menuTabButtons.forEach((button) => {
         const active = button.getAttribute('data-tab') === targetId;

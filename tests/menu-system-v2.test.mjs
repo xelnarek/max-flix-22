@@ -52,12 +52,13 @@ test('all screen sizes use one always-visible vertical sidebar with a selected c
   assert.doesNotMatch(app, /mobileMenuSegmentQuery|desktopMenuNavigationQuery/);
   assert.match(app, /group\.hidden = false/);
   assert.match(app, /group\.inert = false/);
-  assert.match(app, /group\.dataset\.activeGroup = String\(group\.dataset\.menuGroup === segment\.id\)/);
-  assert.match(app, /group\.setAttribute\('role', 'tablist'\)/);
-  assert.match(app, /group\.setAttribute\('aria-orientation', 'vertical'\)/);
+  assert.match(app, /group\.dataset\.activeGroup = String\(group\.dataset\.menuGroup === groupId\)/);
+  assert.match(app, /menuTabList\?\.setAttribute\('role', 'tablist'\)/);
+  assert.match(app, /menuTabList\?\.setAttribute\('aria-orientation', 'vertical'\)/);
+  assert.doesNotMatch(app, /group\.setAttribute\('role', 'tablist'\)/);
   assert.match(repair, /#title-screen \.menu-tabs-bar\s*\{[\s\S]*?flex-direction: column !important/);
-  assert.match(repair, /#title-screen \.menu-mobile-segments\s*\{\s*display: none !important/);
-  assert.match(repair, /\.menu-nav-group\[hidden\]\s*\{[\s\S]*?display: grid !important/);
+  assert.doesNotMatch(html, /menu-mobile-segment/);
+  assert.doesNotMatch(repair, /menu-mobile-segment|menu-nav-group\\[hidden\\]/);
   assert.match(repair, /grid-template-columns: clamp\(122px, 31vw, 188px\) minmax\(0, 1fr\)/);
 });
 
@@ -113,8 +114,8 @@ test('coarse-pointer devices wider than 900 CSS pixels retain the desktop menu g
 
 test('ARIA orientation stays vertical at desktop, tablet and phone widths', async () => {
   const app = await read('src/index.ts');
-  assert.match(app, /group\.setAttribute\('role', 'tablist'\)/);
-  assert.match(app, /group\.setAttribute\('aria-orientation', 'vertical'\)/);
+  assert.match(app, /menuTabList\?\.setAttribute\('role', 'tablist'\)/);
+  assert.match(app, /menuTabList\?\.setAttribute\('aria-orientation', 'vertical'\)/);
   assert.match(app, /getMenuTabIndexForKey\(event\.key, currentNavigationIndex, navigationTabs\.length, 'vertical'\)/);
   assert.doesNotMatch(app, /desktopMenuNavigationQuery|mobileMenuSegmentQuery/);
 });
