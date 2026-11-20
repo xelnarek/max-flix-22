@@ -164,6 +164,8 @@ export interface PvpHitEvent {
   sourceSlot: PvpSlot;
   x: number;
   z: number;
+  /** Present for firearm projectiles so the client can render the weapon-specific impact signature. */
+  firearmId?: SurvivalFirearmId;
 }
 
 export interface PvpArenaState {
@@ -396,6 +398,7 @@ function applyPvpProjectileSplashDamage(
     sourceSlot: shooter.slot,
     x: target.x,
     z: target.z,
+    firearmId: projectile.firearmId,
   };
   state.lastHitEvent = event;
   state.hitEvents.push(event);
@@ -997,6 +1000,7 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
         sourceSlot: shooterPlayer.slot,
         x: targetPlayer.x,
         z: targetPlayer.z,
+        firearmId: proj.firearmId,
       };
       state.lastHitEvent = hitEvent;
       state.hitEvents.push(hitEvent);
