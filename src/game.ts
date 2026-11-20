@@ -915,7 +915,6 @@ export class PaleciakiGameEngine {
   private survivalAbilityKillRechargeMultiplier = 1;
   private survivalAbilityKillRechargeCapRatio = 0.22;
   private survivalAttackRateMultiplier = 1;
-  private survivalWeaponReloadMultiplier = 1;
   private survivalCriticalChance = 0.05;
   private survivalCriticalDamageMultiplier = 1.75;
   private survivalRicochetStrength = 1;
@@ -2786,7 +2785,6 @@ export class PaleciakiGameEngine {
     this.survivalAbilityKillRechargeMultiplier = 1;
     this.survivalAbilityKillRechargeCapRatio = 0.22;
     this.survivalAttackRateMultiplier = 1;
-    this.survivalWeaponReloadMultiplier = 1;
     this.survivalCriticalChance = 0.05;
     this.survivalCriticalDamageMultiplier = 1.75;
     this.survivalShrapnelStrength = 1;
@@ -6654,9 +6652,9 @@ export class PaleciakiGameEngine {
 
     if (choice.id === 'boss_damage_core') {
       this.survivalDamageMultiplier = Math.min(2.05, this.survivalDamageMultiplier * 1.24);
-    } else if (choice.id === 'boss_weapon_overdrive') {
-      this.survivalAttackRateMultiplier = Math.max(0.78, this.survivalAttackRateMultiplier * 0.92);
-      this.survivalWeaponReloadMultiplier = Math.max(0.72, this.survivalWeaponReloadMultiplier * 0.92);
+    } else if (choice.id === 'boss_mobility_core') {
+      this.survivalMoveMultiplier = Math.min(1.38, this.survivalMoveMultiplier * 1.08);
+      this.survivalDashCooldownMultiplier = Math.max(0.48, this.survivalDashCooldownMultiplier * 0.92);
     } else if (choice.id === 'boss_bulwark') {
       this.maxHp += 2;
       this.hp = Math.min(this.maxHp, this.hp + 2);
@@ -10231,7 +10229,7 @@ export class PaleciakiGameEngine {
     if (this.gameMode === 'pvp' || this.state !== 'playing' ||
       this.survivalFirearm.reloadRemaining > 0 ||
       this.survivalFirearm.ammoInMagazine >= definition.magazineSize) return;
-    this.survivalFirearm.reloadRemaining = definition.reloadSeconds * (this.gameMode === 'survival' ? this.survivalWeaponReloadMultiplier : 1);
+    this.survivalFirearm.reloadRemaining = definition.reloadSeconds;
     this.emitFloatingToast('PRZEŁADOWANIE • ' + definition.shortName, this.playerPos.x, this.playerPos.y + 1.25, this.playerPos.z, 'perk');
     sound.playFirearmReload(definition.archetype, 'start');
   }
@@ -12914,38 +12912,7 @@ export class PaleciakiGameEngine {
       this.survivalBossRewardPending
     ) return;
 
-    const ownedWeaponIds = new Set(this.survivalWeapons.map((weapon) => weapon.id));
-    let weaponOffer:
-      | { kind: 'unlock'; id: string; name: string; icon: string }
-      | { kind: 'upgrade'; id: string; name: string; icon: string; currentLevel: number }
-      | undefined;
-
-    // Prefer a new weapon whose time gate has already opened. If the arsenal is
-    // complete, advance the least-developed owned weapon by two legendary levels.
-    for (const [weaponId, definition] of Object.entries(SURVIVAL_WEAPON_DEFS) as Array<[SurvivalWeaponId, typeof SURVIVAL_WEAPON_DEFS[SurvivalWeaponId]]>) {
-      if (!ownedWeaponIds.has(weaponId) && this.survivalElapsed >= definition.unlockAfter) {
-        weaponOffer = { kind: 'unlock', id: weaponId, name: definition.name, icon: definition.icon };
-        break;
-      }
-    }
-
-    if (!weaponOffer) {
-      const nextWeapon = this.survivalWeapons
-        .filter((weapon) => weapon.level < 5)
-        .sort((a, b) => a.level - b.level || a.id.localeCompare(b.id))[0];
-      if (nextWeapon) {
-        const definition = SURVIVAL_WEAPON_DEFS[nextWeapon.id];
-        weaponOffer = {
-          kind: 'upgrade',
-          id: nextWeapon.id,
-          name: definition.name,
-          icon: definition.icon,
-          currentLevel: nextWeapon.level,
-        };
-      }
-    }
-
-    this.survivalPendingOptions = createSurvivalBossRewardOptions(weaponOffer);
+    this.survivalPendingOptions = createSurvivalBossRewardOptions();
     this.survivalRankUpPending = false;
     this.survivalBossRewardPending = true;
     this.state = 'levelup';
