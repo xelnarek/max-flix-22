@@ -75,6 +75,9 @@ test('every firearm renders a unique physical projectile, muzzle signature, trai
   assert.match(game, /opacity: firearmProfile\?\.trailOpacity/);
   assert.match(game, /profile\.muzzleLifeSeconds/);
   assert.match(game, /profile\.trailLifeSeconds/);
+  assert.match(game, /pvpLastObservedRemoteShotsFired/);
+  assert.match(game, /remoteShotsSinceLastSync/);
+  assert.match(game, /this\.spawnSurvivalFirearmMuzzleFx\([\s\S]*?remoteFirearmDefinition\.archetype/);
   assert.doesNotMatch(game, /spawnCompactImpact\(start\.x, start\.y, start\.z, definition\.color\)/,
     'firearm muzzle effects must not be masked by the same generic three-particle burst');
 });
