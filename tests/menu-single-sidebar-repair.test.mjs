@@ -49,7 +49,7 @@ test('operator portraits and details have bounded non-overlapping geometry', () 
 
 
 test('the selected category is indicated without hiding other sidebar groups', () => {
-  assert.match(app, /group\\.dataset\\.activeGroup = String\\(group\\.dataset\\.menuGroup === groupId\\)/);
+  assert.match(app, /group\.dataset\.activeGroup = String\(group\.dataset\.menuGroup === groupId\)/);
   assert.match(app, /group\.hidden = false;/);
   assert.match(css, /\.menu-nav-group\[data-active-group="true"\]/);
   assert.match(css, /\.menu-nav-group\[data-active-group="true"\] \.menu-nav-group-label::before/);
