@@ -1904,7 +1904,7 @@ class PaleciakiScene extends xb.Script {
                 <div class="survival-chaos-reel-window"><span class="survival-chaos-reel-symbol">⚡</span></div>
                 <div class="survival-chaos-reel-window"><span class="survival-chaos-reel-symbol">☢️</span></div>
               </div>
-              <div class="survival-chaos-machine-caption">18 WYNIKÓW <i>•</i> WIĘCEJ RNG <i>•</i> JEDEN SPIN</div>
+              <div class="survival-chaos-machine-caption">17 WYNIKÓW <i>•</i> WIĘCEJ RNG <i>•</i> JEDEN SPIN</div>
               <div class="survival-chaos-result" aria-live="polite">NAGRODA CZEKA NA LOS</div>
             `;
             machine.setAttribute('aria-label', 'Jednoręki bandyta B4. Trzy obracające się bębny, siedemnaście możliwych wyników, jeden spin');
