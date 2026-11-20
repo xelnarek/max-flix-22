@@ -50,7 +50,10 @@ test('firearm pickups are physical 3D models with weapon-specific silhouettes', 
 test('magazine, reload, projectile archetype and damage are driven by the active firearm profile', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /private reloadSurvivalFirearm\(\)/);
+  assert.match(game, /public requestSurvivalFirearmReload\(\)/);
+  assert.match(game, /private updateHeldSurvivalFirearmAction\(\)/);
   assert.match(game, /this\.survivalFirearm\.reloadRemaining = definition\.reloadSeconds/);
+  assert.match(game, /survivalFirearmRecoilTimer = 0\.13/);
   assert.match(game, /if \(firearm\.ammoInMagazine <= 0\)/);
   assert.match(game, /case 'rocket': geometry = new THREE\.ConeGeometry/);
   assert.match(game, /case 'flame': geometry = new THREE\.SphereGeometry/);
@@ -111,7 +114,7 @@ test('Survival HUD exposes the active primary firearm and removes the retired mo
   const [html, app, css] = await Promise.all([
     read('../index.html'), read('../src/index.ts'), read('../src/hud-layout.css')
   ]);
-  for (const id of ['survival-firearm-status', 'survival-firearm-icon', 'survival-firearm-name', 'survival-firearm-ammo', 'survival-firearm-reload']) {
+  for (const id of ['survival-firearm-status', 'survival-firearm-icon', 'survival-firearm-name', 'survival-firearm-ammo', 'survival-firearm-reload', 'survival-firearm-ammo-fill', 'survival-firearm-action-fill', 'btn-survival-reload']) {
     assert.ok(html.includes('id="' + id + '"'), 'missing HUD field ' + id);
   }
   assert.doesNotMatch(html, /survival-weapons-list|survival-weapon-rack-label/);
@@ -119,7 +122,11 @@ test('Survival HUD exposes the active primary firearm and removes the retired mo
   assert.match(app, /const primaryFirearm = snapshot\.primaryFirearm/);
   assert.match(app, /primaryFirearm\.ammoInMagazine/);
   assert.match(app, /primaryFirearm\.reloadRemainingSeconds/);
-  assert.match(css, /survival-firearm-status/);
+  assert.match(app, /primaryFirearm\.reloadDurationSeconds/);
+  assert.match(app, /primaryFirearm\.fireCooldownSeconds/);
+  assert.match(app, /const reloadProgress = reloading/);
+  assert.match(app, /const cycleProgress = cycling/);
+  assert.match(css, /survival-firearm-action-track/);
   assert.match(css, /survival-firearm-ammo/);
   assert.doesNotMatch(app, /survival-weapons-list/);
 });
@@ -190,6 +197,6 @@ test('the armory renders individual firearm icons from actual Three.js meshes, n
 test('Survival haste is capped so operator synergies cannot undo the slower primary-firearm cadence', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /const uncappedAttackRate = this\.gameMode === 'survival'/);
-  assert.match(game, /const attackRate = Math\.min\(1\.12, Math\.max\(0\.5, uncappedAttackRate\)\)/);
+  assert.match(game, /const attackRate = Math\.min\(1\.05, Math\.max\(0\.65, uncappedAttackRate\)\)/);
   assert.match(game, /firearm\.cooldown = definition\.fireIntervalSeconds \* hasteFactor \/ attackRate/);
 });

@@ -308,11 +308,23 @@
             <div class="survival-contract-track"><span id="survival-event-fill"></span></div>
           </div>
         </div>
-        <div id="survival-firearm-status" class="survival-firearm-status" aria-live="polite" aria-label="Aktualna broń podstawowa">
-          <span id="survival-firearm-icon" class="survival-firearm-icon">🔫</span>
-          <span id="survival-firearm-name" class="survival-firearm-name">PISTOLET</span>
-          <strong id="survival-firearm-ammo" class="survival-firearm-ammo">12 / 12</strong>
-          <span id="survival-firearm-reload" class="survival-firearm-reload hidden">PRZEŁADOWANIE</span>
+        <div id="survival-firearm-status" class="survival-firearm-status" aria-label="Aktualna broń podstawowa">
+          <div class="survival-firearm-main">
+            <span id="survival-firearm-icon" class="survival-firearm-icon" aria-hidden="true">🔫</span>
+            <div class="survival-firearm-copy">
+              <span id="survival-firearm-name" class="survival-firearm-name">PISTOLET</span>
+              <span id="survival-firearm-reload" class="survival-firearm-reload">GOTOWY</span>
+            </div>
+            <strong id="survival-firearm-ammo" class="survival-firearm-ammo">12 / 12</strong>
+            <button id="btn-survival-reload" class="survival-firearm-reload-button" type="button"
+              aria-label="Ręcznie przeładuj broń (R)" title="Ręczne przeładowanie • klawisz R">
+              <span aria-hidden="true">↻</span><kbd>R</kbd>
+            </button>
+          </div>
+          <div class="survival-firearm-progress" aria-hidden="true">
+            <div class="survival-firearm-ammo-track"><span id="survival-firearm-ammo-fill"></span></div>
+            <div class="survival-firearm-action-track"><span id="survival-firearm-action-fill"></span></div>
+          </div>
         </div>
       </div>
 
