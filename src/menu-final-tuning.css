@@ -267,34 +267,3 @@
   #title-screen *, #title-screen *::before, #title-screen *::after, .cinematic-intro-overlay *, .cinematic-intro-overlay *::before, .cinematic-intro-overlay *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
   #title-screen .menu-mode-card:hover, #title-screen .menu-tab-btn:hover, #title-screen .char-card:hover, #title-screen .campaign-stage-card:hover, #title-screen .enemy-guide-card:hover, #title-screen .perk-card:hover, #title-screen .field-guide-card:hover, #title-screen .pvp-menu-feature-card:hover { transform:none !important; }
 }
-
-
-/* Final menu content-flow repair.
-   Keep the selected panel at the top of the scroll viewport. Older responsive
-   layers could leave the active tab at full-height while distributing its
-   children, which created a large blank band above the actual content. */
-#title-screen .menu-tab-content-area > .tab-panel.active {
-  display: flex !important;
-  flex: 0 0 auto !important;
-  align-self: stretch !important;
-  justify-content: flex-start !important;
-  align-content: flex-start !important;
-  align-items: stretch !important;
-  min-height: max-content !important;
-  height: auto !important;
-  margin-block: 0 !important;
-}
-#title-screen #tab-map {
-  justify-content: flex-start !important;
-  align-content: flex-start !important;
-  align-items: stretch !important;
-  min-height: max-content !important;
-  height: auto !important;
-}
-#title-screen #tab-map > .campaign-board {
-  flex: 0 0 auto !important;
-  align-self: stretch !important;
-  margin-block: 0 !important;
-  margin-inline: 0 !important;
-  width: 100% !important;
-}
