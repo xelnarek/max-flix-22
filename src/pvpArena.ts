@@ -765,7 +765,7 @@ export function resetPvpRound(state: PvpArenaState) {
   state.perkDrop.spawnTimer = 5.5;
   state.firearmDrop.active = false;
   state.firearmDrop.timeLeft = 0;
-  state.firearmDrop.spawnTimer = 5.5;
+  state.firearmDrop.spawnTimer = 28;
   state.roundWinner = null;
   state.roundEndTimer = 0;
   state.lastHitEvent = undefined;
