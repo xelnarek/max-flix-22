@@ -1509,6 +1509,7 @@ export class PaleciakiGameEngine {
       if (e.code === 'Escape' || e.code === 'KeyP') {
         this.togglePause();
       }
+      if (e.code === 'KeyR') this.reloadSurvivalFirearm();
       if (e.code === 'KeyC' || e.code === 'KeyV') {
         this.toggleCameraMode();
       }
@@ -10351,7 +10352,7 @@ export class PaleciakiGameEngine {
     if (this.gameMode === 'pvp' || this.state !== 'playing' ||
       this.survivalFirearm.reloadRemaining > 0 ||
       this.survivalFirearm.ammoInMagazine >= definition.magazineSize) return;
-    this.survivalFirearm.reloadRemaining = definition.reloadSeconds;
+    this.survivalFirearm.reloadRemaining = definition.reloadSeconds * (this.gameMode === 'survival' ? this.survivalWeaponReloadMultiplier : 1);
     this.emitFloatingToast('PRZEŁADOWANIE • ' + definition.shortName, this.playerPos.x, this.playerPos.y + 1.25, this.playerPos.z, 'perk');
     sound.playPickup(1);
   }
@@ -10377,7 +10378,13 @@ export class PaleciakiGameEngine {
     if (this.playerGroup) this.playerGroup.rotation.y = this.playerRot;
 
     const hasteFactor = (this.activePerks.attackHaste || 0) > 0 ? 0.92 : 1;
-    firearm.cooldown = definition.fireIntervalSeconds * hasteFactor;
+    const momentumRate = this.gameMode === 'survival'
+      ? getSurvivalMomentumRateMultiplier(this.survivalMomentum.overdriveRemainingSeconds, this.survivalMomentum.killStreak)
+      : 1;
+    const attackRate = this.gameMode === 'survival'
+      ? this.survivalAttackRateMultiplier * getSurvivalAnomalyModifiers(this.survivalAnomaly).attackCooldownMultiplier * momentumRate
+      : 1;
+    firearm.cooldown = definition.fireIntervalSeconds * hasteFactor / Math.max(0.5, attackRate);
     firearm.ammoInMagazine = Math.max(0, firearm.ammoInMagazine - 1);
     firearm.shotCounter++;
     this.attackSwingDuration = definition.archetype === 'shotgun' || definition.archetype === 'rocket' || definition.archetype === 'gauss' ? 0.24 : 0.15;
@@ -10387,7 +10394,12 @@ export class PaleciakiGameEngine {
     const start = new THREE.Vector3(this.playerPos.x, this.playerPos.y + 0.92, this.playerPos.z).addScaledVector(forward, 0.86);
     this.spawnCompactImpact(start.x, start.y, start.z, definition.color);
     const pelletCount = definition.pellets;
-    const damage = definition.damage;
+    let damage = definition.damage;
+    if (this.gameMode === 'campaign' && this.campaignCounterattackReady) {
+      this.campaignCounterattackReady = false;
+      damage += 1;
+      this.emitFloatingToast('✦ KONTRATAK! NASTĘPNY STRZAŁ +1', this.playerPos.x, this.playerPos.y + 1.25, this.playerPos.z, 'combo');
+    }
     const spreadSeed = firearm.shotCounter * 0.37;
     for (let index = 0; index < pelletCount; index++) {
       const lane = pelletCount <= 1 ? 0 : (index / (pelletCount - 1)) * 2 - 1;
@@ -10444,7 +10456,7 @@ export class PaleciakiGameEngine {
     else if (definition.archetype === 'flame') sound.playElectricalSparks();
     else sound.playAttackWhoosh();
 
-    if (firearm.ammoInMagazine <= 0) firearm.reloadRemaining = definition.reloadSeconds;
+    if (firearm.ammoInMagazine <= 0) firearm.reloadRemaining = definition.reloadSeconds * (this.gameMode === 'survival' ? this.survivalWeaponReloadMultiplier : 1);
   }
 
   private spawnSurvivalFirearmTrail(projectile: { mesh: THREE.Object3D; vel: THREE.Vector3; firearmId?: SurvivalFirearmId }): void {
@@ -17791,9 +17803,11 @@ export class PaleciakiGameEngine {
         ? Math.max(0.1, p.damage ?? 1) * firearmDamageMultiplier * berserkMult * (p.chainDamageMultiplier || 1)
         : this.scaleSurvivalDamage(p.damage ?? (this.charDef.id === 'dawid' ? 2 : 1)) * berserkMult * (p.chainDamageMultiplier || 1);
       const primaryDamageFactor = this.gameMode === 'survival' ? SURVIVAL_PRIMARY_ATTACK_DAMAGE_MULTIPLIER : 1;
-      const baseDmg = projectileDamageSource === 'basic_attack'
-        ? scaleCharacterBasicAttackDamage(adjustedProjectileDamage, this.charDef.basicAttackDamageMultiplier * this.characterMasteryBonuses.attackMultiplier * primaryDamageFactor)
-        : Math.max(1, Math.round(adjustedProjectileDamage));
+      const baseDmg = p.firearmProjectile
+        ? adjustedProjectileDamage
+        : projectileDamageSource === 'basic_attack'
+          ? scaleCharacterBasicAttackDamage(adjustedProjectileDamage, this.charDef.basicAttackDamageMultiplier * this.characterMasteryBonuses.attackMultiplier * primaryDamageFactor)
+          : Math.max(1, Math.round(adjustedProjectileDamage));
       const segmentX = p.mesh.position.x - previousProjectileX;
       const segmentY = p.mesh.position.y - previousProjectileY;
       const segmentZ = p.mesh.position.z - previousProjectileZ;
