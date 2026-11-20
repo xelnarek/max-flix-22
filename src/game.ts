@@ -10193,6 +10193,16 @@ export class PaleciakiGameEngine {
         addMagazine(0.015, -0.265, -0.13, 0.095, 0.22, 0.12);
         addBox(0.075, 0.04, 0.045, 0, 0.18, 0.17, metal);
         addBox(0.035, 0.065, 0.03, 0, 0.17, 0.48, dark);
+        const rearSight = addBox(0.11, 0.045, 0.035, 0, 0.205, -0.205, metal);
+        rearSight.name = 'firearm-detail-pistol-rear-sight';
+        const frontSight = addBox(0.045, 0.055, 0.035, 0, 0.205, 0.43, glow);
+        frontSight.name = 'firearm-detail-pistol-front-sight';
+        for (let index = 0; index < 5; index++) {
+          const serration = addBox(0.018, 0.052, 0.026, -0.096, 0.13, -0.17 + index * 0.065, metal);
+          serration.name = 'firearm-detail-pistol-slide-serration-' + index;
+        }
+        const triggerGuardTop = addBox(0.025, 0.025, 0.19, 0.015, -0.075, -0.12, metal);
+        triggerGuardTop.name = 'firearm-detail-pistol-trigger-guard';
         slide.name = 'firearm-bolt';
         break;
       }
@@ -10208,6 +10218,18 @@ export class PaleciakiGameEngine {
         addBox(0.24, 0.08, 0.18, 0, 0.015, 0.26, metal);
         for (let index = 0; index < 4; index++) addBox(0.23, 0.012, 0.025, 0, -0.045, 0.08 + index * 0.055, accent);
         addBox(0.045, 0.08, 0.045, 0, 0.15, 0.12, metal);
+        const smgSuppressor = addCylinder(0.055, 0.055, 0.22, 0, 0.02, 0.77, dark, 10);
+        smgSuppressor.name = 'firearm-detail-smg-suppressor';
+        const smgSight = addCylinder(0.065, 0.065, 0.16, 0, 0.20, 0.12, metal, 10);
+        smgSight.name = 'firearm-detail-smg-optic';
+        const smgLens = addCylinder(0.046, 0.046, 0.018, 0, 0.20, 0.215, glow, 10);
+        smgLens.name = 'firearm-detail-smg-optic-lens';
+        const smgForegrip = addBox(0.105, 0.20, 0.13, 0, -0.13, 0.38, dark);
+        smgForegrip.name = 'firearm-detail-smg-foregrip';
+        for (let index = 0; index < 3; index++) {
+          const magRib = addBox(0.012, 0.045, 0.20, -0.058, -0.23, 0.025 + index * 0.05, metal);
+          magRib.name = 'firearm-detail-smg-magazine-rib-' + index;
+        }
         break;
       }
       case 'rifle': {
@@ -10223,6 +10245,18 @@ export class PaleciakiGameEngine {
         addBox(0.07, 0.11, 0.07, 0, 0.20, 0.45, metal);
         addBox(0.10, 0.035, 0.055, 0, 0.17, 0.88, dark);
         for (let index = 0; index < 5; index++) addBox(0.23, 0.018, 0.028, 0, -0.065, 0.20 + index * 0.075, metal);
+        const rifleOptic = addCylinder(0.067, 0.067, 0.34, 0, 0.285, 0.08, dark, 12);
+        rifleOptic.name = 'firearm-detail-rifle-optic';
+        const rifleOpticGlass = addCylinder(0.052, 0.052, 0.018, 0, 0.285, 0.255, glow, 12);
+        rifleOpticGlass.name = 'firearm-detail-rifle-optic-glass';
+        const rifleGasBlock = addBox(0.12, 0.11, 0.16, 0, 0.035, 1.06, metal);
+        rifleGasBlock.name = 'firearm-detail-rifle-gas-block';
+        const rifleMuzzleBrake = addCylinder(0.062, 0.062, 0.16, 0, 0.035, 1.24, dark, 10);
+        rifleMuzzleBrake.name = 'firearm-detail-rifle-muzzle-brake';
+        for (let index = 0; index < 4; index++) {
+          const brakePort = addBox(0.016, 0.05, 0.045, -0.06, 0.04, 1.20 + index * 0.012, accent);
+          brakePort.name = 'firearm-detail-rifle-brake-port-' + index;
+        }
         break;
       }
       case 'shotgun': {
@@ -10237,6 +10271,16 @@ export class PaleciakiGameEngine {
         addBox(0.08, 0.07, 0.20, 0, 0.02, -0.16, metal);
         addBox(0.13, 0.06, 0.08, 0, 0.13, 0.08, accent);
         addBox(0.04, 0.045, 0.14, 0.08, 0.02, 0.47, dark);
+        const shellSaddle = addBox(0.06, 0.27, 0.44, -0.16, 0.035, -0.02, dark);
+        shellSaddle.name = 'firearm-detail-shotgun-shell-saddle';
+        for (let index = 0; index < 4; index++) {
+          const shell = addCylinder(0.027, 0.027, 0.16, -0.17, 0.04, -0.17 + index * 0.105, accent, 9);
+          shell.name = 'firearm-detail-shotgun-spare-shell-' + index;
+          const shellRim = addCylinder(0.03, 0.03, 0.025, -0.17, 0.04, -0.255 + index * 0.105, metal, 9);
+          shellRim.name = 'firearm-detail-shotgun-shell-rim-' + index;
+        }
+        const shotgunFrontSight = addCylinder(0.022, 0.022, 0.08, 0, 0.15, 0.94, glow, 8);
+        shotgunFrontSight.name = 'firearm-detail-shotgun-front-bead';
         break;
       }
       case 'heavy-rifle': {
@@ -10251,7 +10295,19 @@ export class PaleciakiGameEngine {
         addMagazine(0, -0.22, 0.03, 0.13, 0.30, 0.18);
         addBolt(0, 0.15, -0.02, 0.20, 0.43);
         addBox(0.08, 0.065, 0.18, 0, 0.27, -0.11, metal);
-        addCylinder(0.028, 0.028, 0.30, 0, 0.27, 0.10, glow, 8);
+        const heavyScopeBody = addCylinder(0.09, 0.09, 0.43, 0, 0.35, 0.02, dark, 12);
+        heavyScopeBody.name = 'firearm-detail-heavy-rifle-scope';
+        const heavyScopeObjective = addCylinder(0.076, 0.076, 0.025, 0, 0.35, 0.245, glow, 12);
+        heavyScopeObjective.name = 'firearm-detail-heavy-rifle-scope-objective';
+        const heavyScopeEyepiece = addCylinder(0.082, 0.082, 0.09, 0, 0.35, -0.225, metal, 12);
+        heavyScopeEyepiece.name = 'firearm-detail-heavy-rifle-scope-eyepiece';
+        for (let index = 0; index < 2; index++) {
+          const bipodLeg = addBox(0.045, 0.34, 0.055, index === 0 ? -0.13 : 0.13, -0.18, 0.68, metal);
+          bipodLeg.rotation.x = index === 0 ? -0.12 : 0.12;
+          bipodLeg.name = 'firearm-detail-heavy-rifle-bipod-' + index;
+          const bipodFoot = addBox(0.12, 0.035, 0.075, index === 0 ? -0.13 : 0.13, -0.36, 0.69, dark);
+          bipodFoot.name = 'firearm-detail-heavy-rifle-bipod-foot-' + index;
+        }
         break;
       }
       case 'minigun': {
@@ -10269,6 +10325,16 @@ export class PaleciakiGameEngine {
         addMagazine(0, -0.13, -0.42, 0.20, 0.22, 0.21);
         addBox(0.28, 0.08, 0.13, 0, 0.18, -0.02, metal);
         addBox(0.11, 0.04, 0.16, 0, 0.23, 0.00, glow);
+        const minigunBrace = addCylinder(0.22, 0.22, 0.09, 0, 0.02, 0.58, metal, 14);
+        minigunBrace.name = 'firearm-detail-minigun-barrel-brace';
+        const ammoFeed = addBox(0.12, 0.15, 0.42, -0.205, -0.045, -0.04, dark);
+        ammoFeed.name = 'firearm-detail-minigun-ammo-feed';
+        for (let index = 0; index < 6; index++) {
+          const beltLink = addBox(0.045, 0.035, 0.055, -0.235, -0.10 + (index % 2) * 0.045, -0.20 + index * 0.065, accent);
+          beltLink.name = 'firearm-detail-minigun-belt-link-' + index;
+        }
+        const minigunHandle = addBox(0.10, 0.18, 0.12, 0.19, -0.13, -0.20, dark);
+        minigunHandle.name = 'firearm-detail-minigun-side-handle';
         break;
       }
       case 'rocket': {
@@ -10292,6 +10358,14 @@ export class PaleciakiGameEngine {
           const fin = addBox(0.025, 0.10, 0.16, index === 0 ? 0.075 : index === 1 ? -0.075 : 0, index === 2 ? 0.075 : 0, -0.20, metal, rocketCell);
           if (index === 1) fin.rotation.z = Math.PI;
         }
+        const rocketRearGrip = addBox(0.12, 0.22, 0.15, 0, -0.28, -0.28, dark);
+        rocketRearGrip.name = 'firearm-detail-rocket-rear-grip';
+        const rocketShoulderPad = addBox(0.32, 0.17, 0.18, 0, -0.18, -0.50, metal);
+        rocketShoulderPad.name = 'firearm-detail-rocket-shoulder-pad';
+        const rocketSight = addCylinder(0.052, 0.052, 0.22, 0, 0.20, 0.02, dark, 10);
+        rocketSight.name = 'firearm-detail-rocket-sight';
+        const rocketSightLens = addCylinder(0.034, 0.034, 0.018, 0, 0.20, 0.14, glow, 10);
+        rocketSightLens.name = 'firearm-detail-rocket-sight-lens';
         break;
       }
       case 'grenade': {
@@ -10319,6 +10393,16 @@ export class PaleciakiGameEngine {
         }
         addBox(0.08, 0.13, 0.07, -0.16, 0.22, 0.02, dark);
         addBox(0.075, 0.025, 0.18, 0, 0.22, 0.06, glow);
+        const grenadeDrum = addCylinder(0.15, 0.15, 0.28, -0.19, -0.08, -0.12, dark, 12);
+        grenadeDrum.name = 'firearm-detail-grenade-drum';
+        for (let index = 0; index < 5; index++) {
+          const drumRib = addBox(0.035, 0.22, 0.045, -0.22, -0.08, -0.28 + index * 0.08, metal);
+          drumRib.name = 'firearm-detail-grenade-drum-rib-' + index;
+        }
+        const grenadeSightRail = addBox(0.08, 0.045, 0.40, 0, 0.26, 0.20, metal);
+        grenadeSightRail.name = 'firearm-detail-grenade-sight-rail';
+        const grenadeRangeLens = addCylinder(0.045, 0.045, 0.08, 0, 0.31, 0.20, glow, 10);
+        grenadeRangeLens.name = 'firearm-detail-grenade-rangefinder';
         break;
       }
       case 'flame': {
@@ -10337,6 +10421,16 @@ export class PaleciakiGameEngine {
         addBox(0.17, 0.025, 0.025, 0, 0, 0, metal, valve);
         addBox(0.045, 0.12, 0.045, 0.08, 0, 0, metal, valve);
         addBox(0.08, 0.07, 0.10, 0, 0.14, 0.10, accent);
+        const pressureGauge = addCylinder(0.075, 0.075, 0.055, -0.20, 0.25, 0.02, metal, 12);
+        pressureGauge.name = 'firearm-detail-flame-pressure-gauge';
+        const gaugeFace = addCylinder(0.055, 0.055, 0.012, -0.20, 0.25, 0.055, glow, 12);
+        gaugeFace.name = 'firearm-detail-flame-gauge-face';
+        for (let index = 0; index < 3; index++) {
+          const tankStrap = addBox(0.035, 0.44, 0.035, -0.20 + index * 0.035, 0.04, -0.18, metal);
+          tankStrap.name = 'firearm-detail-flame-tank-strap-' + index;
+        }
+        const hoseConnector = addCylinder(0.045, 0.045, 0.12, 0.16, 0.06, 0.34, accent, 9);
+        hoseConnector.name = 'firearm-detail-flame-hose-connector';
         break;
       }
       case 'plasma': {
@@ -10356,6 +10450,14 @@ export class PaleciakiGameEngine {
         const energyCell = addMovingGroup('firearm-energy-cell', 0.16, -0.18, -0.12);
         addBox(0.11, 0.21, 0.13, 0, 0, 0, dark, energyCell);
         addBox(0.07, 0.15, 0.025, 0, 0, 0.077, glow, energyCell);
+        const plasmaShieldLeft = addBox(0.035, 0.18, 0.56, -0.16, 0.07, 0.34, metal);
+        plasmaShieldLeft.name = 'firearm-detail-plasma-left-coil-guard';
+        const plasmaShieldRight = addBox(0.035, 0.18, 0.56, 0.16, 0.07, 0.34, metal);
+        plasmaShieldRight.name = 'firearm-detail-plasma-right-coil-guard';
+        for (let index = 0; index < 3; index++) {
+          const chargeBar = addBox(0.035, 0.025, 0.09, 0.15, 0.05 + index * 0.055, -0.12, glow);
+          chargeBar.name = 'firearm-detail-plasma-charge-indicator-' + index;
+        }
         break;
       }
       case 'gauss': {
@@ -10377,6 +10479,14 @@ export class PaleciakiGameEngine {
           coil.position.z = index * 0.18;
           coil.rotation.y = Math.PI / 2;
           coils.add(coil);
+        }
+        const gaussMuzzleAperture = addCylinder(0.075, 0.075, 0.08, 0, 0.04, 1.59, metal, 12);
+        gaussMuzzleAperture.name = 'firearm-detail-gauss-muzzle-aperture';
+        const gaussCore = addCylinder(0.032, 0.032, 0.11, 0, 0.04, 1.64, glow, 10);
+        gaussCore.name = 'firearm-detail-gauss-core';
+        for (let index = 0; index < 5; index++) {
+          const coolingVent = addBox(0.018, 0.075, 0.09, 0.12, 0.045, 0.22 + index * 0.12, accent);
+          coolingVent.name = 'firearm-detail-gauss-cooling-vent-' + index;
         }
         break;
       }
