@@ -52,8 +52,6 @@
   touch-action: pan-y !important;
 }
 
-
-
 #title-screen .menu-nav-group {
   display: grid !important;
   flex: 0 0 auto !important;
@@ -742,7 +740,6 @@
   }
 }
 
-
 /* READABILITY PASS — clearer group hierarchy and practical touch targets. */
 #title-screen .menu-nav-group {
   border-left: 2px solid transparent !important;
@@ -880,7 +877,6 @@
     transition: none !important;
   }
 }
-
 
 /* Last-loaded override: this file follows the previous menu theme layers.
    Keep the active panel's own content at the top of the available viewport. */
