@@ -50,11 +50,26 @@ jobs:
       - name: Upload production build
         uses: actions/upload-pages-artifact@v4
         with:
-          name: github-pages-${{ github.run_attempt }}
+          name: github-pages
           path: ./dist
+
+      - name: Wait for Pages artifact metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in $(seq 1 10); do
+            if gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" --jq '.artifacts[] | select(.name == "github-pages") | .id' | grep -q .; then
+              echo "GitHub Pages artifact is visible to the deployment API."
+              exit 0
+            fi
+            echo "Waiting for GitHub Pages artifact indexing (attempt $attempt/10)..."
+            sleep 2
+          done
+          echo "The uploaded GitHub Pages artifact is not visible to the deployment API." >&2
+          exit 1
 
       - name: Deploy website
         id: deployment
         uses: actions/deploy-pages@v4
         with:
-          artifact_name: github-pages-${{ github.run_attempt }}
+          artifact_name: github-pages
