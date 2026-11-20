@@ -10108,7 +10108,7 @@ export class PaleciakiGameEngine {
           addCylinder(0.032, 0.037, 0.055, x, y, 0.965, glow, 8, rotor);
         }
         addGrip();
-        addBox(0.24, 0.10, 0.25, 0, -0.02, -0.42, accent);
+        addMagazine(0, -0.13, -0.42, 0.20, 0.22, 0.21);
         addBox(0.28, 0.08, 0.13, 0, 0.18, -0.02, metal);
         addBox(0.11, 0.04, 0.16, 0, 0.23, 0.00, glow);
         break;
@@ -10369,7 +10369,7 @@ export class PaleciakiGameEngine {
     }
     applyOffset('firearm-bolt', 'z', pose.boltOffsetZ + profile.boltTravel * cycleMotion);
     applyOffset('firearm-pump', 'z', pose.pumpOffsetZ + profile.pumpTravel * cycleMotion);
-    applyOffset('firearm-rocket-cell', 'z', pose.rocketCellOffsetZ + profile.rocketCellTravel * cycleProgress);
+    applyOffset('firearm-rocket-cell', 'z', pose.rocketCellOffsetZ + profile.rocketCellTravel * cycleMotion);
     const valve = part('firearm-tank-valve');
     if (valve) valve.rotation.z = pose.tankValveRotation;
     const coils = part('firearm-coils');
