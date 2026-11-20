@@ -29,7 +29,7 @@ test('legacy weapon unlocks, level upgrades and evolutions are absent from the l
   const start = game.indexOf('  private rollSurvivalUpgradeOptions');
   const end = game.indexOf('  public rerollSurvivalUpgrades()', start);
   const chooseStart = game.indexOf('  public chooseSurvivalUpgrade');
-  const chooseEnd = game.indexOf('  private checkSurvivalEvolutions', chooseStart);
+  const chooseEnd = game.indexOf('  public rerollSurvivalUpgrades()', chooseStart);
   assert.ok(start >= 0 && end > start && chooseStart >= 0 && chooseEnd > chooseStart);
   const draft = game.slice(start, end);
   const acceptance = game.slice(chooseStart, chooseEnd);
