@@ -1,4 +1,5 @@
 import type { CharacterId } from './types.ts';
+import { evaluateBallisticHeight } from './survivalFirearmBallistics.ts';
 import { STARTING_SURVIVAL_FIREARM, SURVIVAL_FIREARM_DEFS, type SurvivalFirearmId } from './survivalFirearms.ts';
 
 export interface PvpVector2 {
@@ -926,7 +927,7 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
     }
 
     const heightAtT = (t: number): number =>
-      startY + startVy * safeDt * t - 0.5 * gravity * safeDt * safeDt * t * t;
+      evaluateBallisticHeight(startY, startVy, gravity, safeDt * t);
     const nextY = gravity > 0 ? heightAtT(1) : startY;
     proj.vy = gravity > 0 ? startVy - gravity * safeDt : startVy;
     proj.y = nextY;
