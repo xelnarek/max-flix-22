@@ -1,7 +1,7 @@
 export type SurvivalChaosRouletteKind =
   | 'skill' | 'perk' | 'shield' | 'heal' | 'explosion' | 'nova'
   | 'enemy_pack' | 'xp_rain' | 'overdrive' | 'bounty' | 'time_lock' | 'elite_delivery'
-  | 'magnet_surge' | 'xp_surge' | 'golden_crate' | 'hazard_clear' | 'double_or_nothing' | 'weapon_draft';
+  | 'magnet_surge' | 'xp_surge' | 'golden_crate' | 'hazard_clear' | 'double_or_nothing';
 
 export interface SurvivalChaosRouletteEntry {
   kind: SurvivalChaosRouletteKind;
@@ -20,8 +20,8 @@ export const SURVIVAL_CHAOS_ROULETTE_TABLE: readonly SurvivalChaosRouletteEntry[
   { kind: 'explosion', weight: 6 },
   { kind: 'nova', weight: 6 },
   { kind: 'enemy_pack', weight: 6 },
-  { kind: 'xp_rain', weight: 5 },
-  { kind: 'overdrive', weight: 4 },
+  { kind: 'xp_rain', weight: 6 },
+  { kind: 'overdrive', weight: 5 },
   { kind: 'bounty', weight: 4 },
   { kind: 'time_lock', weight: 4 },
   { kind: 'elite_delivery', weight: 2 },
@@ -30,7 +30,6 @@ export const SURVIVAL_CHAOS_ROULETTE_TABLE: readonly SurvivalChaosRouletteEntry[
   { kind: 'golden_crate', weight: 4 },
   { kind: 'hazard_clear', weight: 3 },
   { kind: 'double_or_nothing', weight: 2 },
-  { kind: 'weapon_draft', weight: 2 },
 ];
 
 /**
