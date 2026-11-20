@@ -2,14 +2,12 @@ import * as THREE from 'three';
 
 function isSharedGeometry(object: THREE.Object3D): boolean {
   return object.userData.gobkitSharedGeometry === true ||
-    object.userData.makeHumanSharedGeometry === true ||
-    object.userData.actorLodSharedGeometry === true;
+    object.userData.makeHumanSharedGeometry === true;
 }
 
 function isSharedMaterial(material: THREE.Material): boolean {
   return material.userData.gobkitSharedMaterial === true ||
-    material.userData.makeHumanShared === true ||
-    material.userData.actorLodSharedMaterial === true;
+    material.userData.makeHumanShared === true;
 }
 
 /**
