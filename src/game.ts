@@ -6652,7 +6652,7 @@ export class PaleciakiGameEngine {
     const choice = this.survivalPendingOptions.find((option) => option.id === id);
     if (!choice) return false;
 
-    if (choice.id === 'boss_damage_core') {    } else if (choice.id === 'boss_damage_core') {
+    if (choice.id === 'boss_damage_core') {
       this.survivalDamageMultiplier = Math.min(2.05, this.survivalDamageMultiplier * 1.24);
     } else if (choice.id === 'boss_weapon_overdrive') {
       this.survivalAttackRateMultiplier = Math.max(0.78, this.survivalAttackRateMultiplier * 0.92);
@@ -6871,8 +6871,9 @@ export class PaleciakiGameEngine {
       (option.id !== 'ricochet' || (this.survivalUpgradeStacks.ricochet || 0) < 3) &&
       (option.id !== 'radiation' || (this.survivalUpgradeStacks.radiation || 0) < 3) &&
       (option.id !== 'shrapnel' || (this.survivalUpgradeStacks.shrapnel || 0) < 3));
-    const draftContext: SurvivalDraftContext = {    const draftContext: SurvivalDraftContext = {
+    const draftContext: SurvivalDraftContext = {
       stacks: this.survivalUpgradeStacks,
+      evolutions: [...this.survivalEvolutions],
       healthRatio: this.maxHp > 0 ? this.hp / this.maxHp : 1,
       elapsedSeconds: this.survivalElapsed,
     };
@@ -6897,7 +6898,7 @@ export class PaleciakiGameEngine {
         ...meta,
       };
     });
-    return withRarity(selectedOptions);    return withRarity(selectedOptions);
+    return withRarity(selectedOptions);
   }
 
   public rerollSurvivalUpgrades(): boolean {
@@ -10115,7 +10116,7 @@ export class PaleciakiGameEngine {
     (this.rightArm ?? this.playerGroup).add(gun);
   }
 
-  private clearSurvivalFirearmDrops(): void {  private clearSurvivalFirearmDrops(): void {
+  private clearSurvivalFirearmDrops(): void {
     for (const drop of this.survivalFirearmDrops) {
       this.levelRoot.remove(drop.mesh);
       this.disposeTemporaryObject(drop.mesh);
@@ -10155,7 +10156,7 @@ export class PaleciakiGameEngine {
     return group;
   }
 
-  private spawnSurvivalFirearmDrop(  private spawnSurvivalFirearmDrop(x: number, y: number, z: number, firearmId: SurvivalFirearmId, isPityDrop = false): void {
+  private spawnSurvivalFirearmDrop(x: number, y: number, z: number, firearmId: SurvivalFirearmId, isPityDrop = false): void {
     const definition = SURVIVAL_FIREARM_DEFS[firearmId];
     if (this.survivalFirearmDrops.length >= 3) {
       const oldest = this.survivalFirearmDrops.shift();
@@ -12730,7 +12731,7 @@ export class PaleciakiGameEngine {
           '🎲',
         );
       }
-      default:      default:
+      default:
         this.activatePerk('crimson_burst', 0);
         return finishSpin('NIEZNANY ŁADUNEK', 'Automat wyrzucił awaryjny wybuch. Reklamacje przyjmujemy na bramie 404.', '💥');
     }
