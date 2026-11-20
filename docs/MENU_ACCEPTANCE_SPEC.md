@@ -7,7 +7,7 @@ Constraint: preserve game modes, saves, progression and existing action IDs
 
 ## 1. Audit basis
 
-The current `main` already contains a three-mode front page, four navigation groups, eleven section destinations, compact operator details, per-tab scroll memory, keyboard navigation, shared responsive scaling, an Industrial Noir visual layer, a procedural intro and an asset loader. This pass consolidates those systems rather than introducing a competing menu.
+The current `main` already contains a three-mode front page, four navigation groups, twelve section destinations, compact operator details, per-tab scroll memory, keyboard navigation, shared responsive scaling, an Industrial Noir visual layer, a procedural intro and an asset loader. This pass consolidates those systems rather than introducing a competing menu.
 
 A separate document explicitly named "Hub report" was not found in the available project library or repository. The available Android build report is packaging/QA evidence, not a menu UX study; it is not treated as the basis for UX claims. Decisions here are tied to source files and regression tests currently in the repository.
 
@@ -19,7 +19,7 @@ A separate document explicitly named "Hub report" was not found in the available
    - **Survival** — immediate endless run; primary "Graj teraz" action.
    - **Kampania** — opens five-stage campaign board and continues the next available stage.
    - **Arena PvP** — opens the PvP lobby; online readiness and local bot practice must be described honestly.
-3. **Four grouped navigation categories** — eleven destinations remain individually addressable.
+3. **Four grouped navigation categories** — twelve destinations remain individually addressable, including Uzbrojenie.
 4. **One active content viewport** — only the selected destination is visible; details expand within it.
 5. **Persistent launch/confirm action** — stays separated from scrollable reference content wherever the existing mode contract provides it.
 
@@ -31,6 +31,7 @@ A separate document explicitly named "Hub report" was not found in the available
 | 01 / Rozgrywka | Kampania | Stage selection, continue, stars, mastery objectives and rewards |
 | 01 / Rozgrywka | Arena PvP | Match type, manual-aim guidance, bot/online state and lobby |
 | 02 / Świat i BHP | Zagrożenia | Enemy catalogue, telegraphs and counterplay |
+| 02 / Świat i BHP | Uzbrojenie | Current ten primary firearms, ranges, damage, cadence and reload data |
 | 02 / Świat i BHP | Moduły BHP | Perks, passive modules, unlock/use descriptions |
 | 02 / Świat i BHP | Kodeks | Controls, weapons, rules, mechanics and field reference |
 | 03 / Postępy | Drzewko | Account-level talents and long-term development |
