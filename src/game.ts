@@ -10276,7 +10276,8 @@ export class PaleciakiGameEngine {
       this.emitFloatingToast('✦ KONTRATAK! NASTĘPNY STRZAŁ +1', this.playerPos.x, this.playerPos.y + 1.25, this.playerPos.z, 'combo');
     }
     const spreadSeed = firearm.shotCounter * 0.37;
-    const projectileLifeSeconds = definition.rangeMeters / Math.max(0.1, definition.projectileSpeed);
+    const effectiveRangeMeters = definition.rangeMeters * (this.gameMode === 'survival' ? this.survivalRangeMultiplier : 1);
+    const projectileLifeSeconds = effectiveRangeMeters / Math.max(0.1, definition.projectileSpeed);
     for (let index = 0; index < pelletCount; index++) {
       const lane = pelletCount <= 1 ? 0 : (index / (pelletCount - 1)) * 2 - 1;
       const randomSpread = (Math.random() - 0.5) * 0.42;
@@ -10316,7 +10317,7 @@ export class PaleciakiGameEngine {
         vel: direction.multiplyScalar(definition.projectileSpeed),
         life: projectileLifeSeconds,
         maxLife: projectileLifeSeconds,
-        maxRangeMeters: definition.rangeMeters,
+        maxRangeMeters: effectiveRangeMeters,
         travelledDistance: 0,
         damage,
         pierce: definition.pierce,
