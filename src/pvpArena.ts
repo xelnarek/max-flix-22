@@ -39,6 +39,16 @@ export interface PvpFirearmDrop {
   spawnTimer: number;
 }
 
+export interface PvpFirearmExplosionEvent {
+  id: number;
+  ownerSlot: 'p1' | 'p2';
+  firearmId: SurvivalFirearmId;
+  x: number;
+  y: number;
+  z: number;
+  color: number;
+}
+
 export interface PvpProjectile {
   id: string;
   ownerSlot: 'p1' | 'p2';
@@ -57,6 +67,11 @@ export interface PvpProjectile {
   firearmId?: SurvivalFirearmId;
   aoeRadius?: number;
   aoeDamageMultiplier?: number;
+  vy?: number;
+  gravity?: number;
+  fuseRemainingSeconds?: number;
+  detonateOnImpact?: boolean;
+  detonateOnGround?: boolean;
 }
 
 export interface PvpProgressionBonuses {
@@ -176,6 +191,8 @@ export interface PvpArenaState {
   hitEventSequence: number;
   hitEvents: PvpHitEvent[];
   lastHitEvent?: PvpHitEvent;
+  firearmExplosionSequence: number;
+  firearmExplosionEvents: PvpFirearmExplosionEvent[];
 }
 
 export interface PvpInputIntent {
@@ -291,6 +308,7 @@ function firstProjectileObstacleHit(
   endZ: number,
   radius: number,
   obstacles: PvpObstacle[],
+  heightAtT?: (t: number) => number,
 ): number | null {
   const distance = Math.hypot(endX - startX, endZ - startZ);
   const steps = Math.max(1, Math.ceil(distance / Math.max(0.08, radius * 0.45)));
@@ -298,7 +316,18 @@ function firstProjectileObstacleHit(
     const t = step / steps;
     const x = startX + (endX - startX) * t;
     const z = startZ + (endZ - startZ) * t;
-    if (checkObstacleCollision(x, z, radius, obstacles).hit) return t;
+    if (!heightAtT) {
+      if (checkObstacleCollision(x, z, radius, obstacles).hit) return t;
+      continue;
+    }
+    const projectileHeight = heightAtT(t);
+    for (const obstacle of obstacles) {
+      const closestX = Math.max(obstacle.x - obstacle.width / 2, Math.min(x, obstacle.x + obstacle.width / 2));
+      const closestZ = Math.max(obstacle.z - obstacle.depth / 2, Math.min(z, obstacle.z + obstacle.depth / 2));
+      const dx = x - closestX;
+      const dz = z - closestZ;
+      if (dx * dx + dz * dz < radius * radius && projectileHeight <= obstacle.height + radius * 0.5) return t;
+    }
   }
   return null;
 }
@@ -612,6 +641,8 @@ export function createInitialPvpArenaState(
     projectiles: [],
     hitEventSequence: 0,
     hitEvents: [],
+    firearmExplosionSequence: 0,
+    firearmExplosionEvents: [],
   };
 }
 
@@ -655,6 +686,7 @@ export function resetPvpRound(state: PvpArenaState) {
   state.p2.perkTimer = 0;
 
   state.projectiles = [];
+  state.firearmExplosionEvents = [];
   state.pickup.active = true;
   state.pickup.respawnTimer = 0;
   state.perkDrop.active = false;
@@ -667,6 +699,7 @@ export function resetPvpRound(state: PvpArenaState) {
   state.roundEndTimer = 0;
   state.lastHitEvent = undefined;
   state.hitEvents = [];
+  state.firearmExplosionEvents = [];
   state.countdownTimer = 3.0;
   state.status = 'countdown';
 }
@@ -1154,13 +1187,18 @@ function firePlayerPrimary(player: PvpPlayerState, state: PvpArenaState): void {
       vz: dirZ * definition.projectileSpeed,
       radius: Math.max(0.12, definition.projectileRadius * 4.4),
       damage: definition.damage * PVP_FIREARM_DAMAGE_SCALE * powerMultiplier,
-      life: projectileLife,
+      life: definition.projectileFuseSeconds ?? projectileLife,
       pierce: Math.max(1, definition.pierce + 1),
       color: definition.color,
       kind: 'primary',
       firearmId: definition.id,
       aoeRadius: definition.aoeRadius > 0 ? definition.aoeRadius : undefined,
       aoeDamageMultiplier: definition.aoeDamageMultiplier > 0 ? definition.aoeDamageMultiplier : undefined,
+      vy: definition.projectileLaunchVelocity ?? 0,
+      gravity: definition.projectileGravity,
+      fuseRemainingSeconds: definition.projectileFuseSeconds,
+      detonateOnImpact: definition.detonateOnImpact,
+      detonateOnGround: definition.projectileGravity !== undefined,
     });
   }
 
