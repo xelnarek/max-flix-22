@@ -1,5 +1,6 @@
 export interface SurvivalDraftContext {
   readonly stacks?: Readonly<Record<string, number>>;
+  readonly evolutions?: readonly string[];
   readonly healthRatio?: number;
   readonly elapsedSeconds?: number;
 }
@@ -106,6 +107,10 @@ function getStacks(context: SurvivalDraftContext): Readonly<Record<string, numbe
   return context.stacks || {};
 }
 
+function getEvolutions(context: SurvivalDraftContext): ReadonlySet<string> {
+  return new Set(context.evolutions || []);
+}
+
 function getCategory(id: string): DraftCategory {
   if (id.startsWith('boss_')) return 'support';
   if (id === 'damage') return 'damage';
@@ -162,8 +167,10 @@ function getPairBonus(
   const synergies = SYNERGIES[id] || [];
   if (synergies.length === 0) return 0;
   const stacks = getStacks(context);
+  const evolutions = getEvolutions(context);
   let bestBonus = 0;
   for (const synergy of synergies) {
+    if (evolutions.has(synergy.evolutionId)) continue;
     const partnerCount = safeCount(stacks[synergy.partner]) +
       [...plannedIds].filter((planned) => planned === synergy.partner).length;
     // Do not reward a passive as a "synergy pick" until its other half is
@@ -286,6 +293,7 @@ export function getSurvivalDraftSynergyHint(
   const planned = new Set(plannedIds);
   const synergies = SYNERGIES[id] || [];
   const candidates = synergies
+    .filter((synergy) => !getEvolutions(context).has(synergy.evolutionId))
     .map((synergy) => ({
       synergy,
       progress: getSynergyProgress(id, synergy, context, planned),
