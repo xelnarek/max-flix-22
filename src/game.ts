@@ -821,6 +821,13 @@ export class PaleciakiGameEngine {
   private pvpWantFire = false;
   private pvpWantDash = false;
   private pvpWantAbility = false;
+  private pvpWantReload = false;
+  private pvpLastObservedShotsFired = 0;
+  private pvpLastObservedReloading = false;
+  private pvpFirearmDropMesh: THREE.Group | null = null;
+  private pvpFirearmDropModelId: SurvivalFirearmId | null = null;
+  private pvpFirearmDropLastActive = false;
+  private pvpRemoteFirearmId: SurvivalFirearmId | null = null;
   private pvpInputSendAccumulator = 0;
   private pvpMatchEndHandled = false;
   private lastPvpHitEventId = 0;
@@ -1592,6 +1599,7 @@ export class PaleciakiGameEngine {
     this.manualAimEnabled = enabled;
     this.manualPvpAimOverride = false;
     this.pvpWantFire = false;
+    this.pvpWantReload = false;
     this.pvpAimSweepElapsed = 0;
     this.pvpAimSweepRound = 0;
     this.pvpAimSweepCenterAngle = Number.isFinite(this.playerRot) ? this.playerRot : Math.PI / 2;
@@ -3048,6 +3056,12 @@ export class PaleciakiGameEngine {
     this.pvpWantFire = false;
     this.pvpWantDash = false;
     this.pvpWantAbility = false;
+    this.pvpWantReload = false;
+    this.pvpLastObservedShotsFired = 0;
+    this.pvpLastObservedReloading = false;
+    this.pvpFirearmDropLastActive = false;
+    this.pvpRemoteFirearmId = null;
+    this.survivalFirearm = createStartingSurvivalFirearmState();
     this.setManualAimMode(true);
     this.state = 'playing';
 
@@ -3186,6 +3200,13 @@ export class PaleciakiGameEngine {
     this.pvpWantFire = false;
     this.pvpWantDash = false;
     this.pvpWantAbility = false;
+    this.pvpWantReload = false;
+    this.pvpLastObservedShotsFired = 0;
+    this.pvpLastObservedReloading = false;
+    this.pvpFirearmDropMesh = null;
+    this.pvpFirearmDropModelId = null;
+    this.pvpFirearmDropLastActive = false;
+    this.pvpRemoteFirearmId = null;
     this.prevPvpLocalHp = -1;
     this.gameMode = 'survival';
     this.setManualAimMode(false);
@@ -3561,6 +3582,28 @@ export class PaleciakiGameEngine {
     this.pvpMedkitMesh = medGroup;
     this.pvpArenaRoot.add(medGroup);
 
+    const firearmDropGroup = new THREE.Group();
+    const firearmDropRing = new THREE.Mesh(
+      new THREE.TorusGeometry(0.88, 0.075, 9, 32),
+      new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.92, depthWrite: false }),
+    );
+    firearmDropRing.rotation.x = -Math.PI / 2;
+    firearmDropRing.position.y = 0.08;
+    const firearmDropBeacon = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.035, 0.13, 1.8, 8, 1, true),
+      new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.24, blending: THREE.AdditiveBlending, depthWrite: false }),
+    );
+    firearmDropBeacon.position.y = 1.45;
+    const firearmDropModel = this.createSurvivalFirearmModel(STARTING_SURVIVAL_FIREARM);
+    firearmDropModel.name = 'pvp-firearm-drop-model';
+    firearmDropModel.scale.setScalar(0.58);
+    firearmDropModel.position.y = 0.78;
+    firearmDropGroup.add(firearmDropRing, firearmDropBeacon, firearmDropModel);
+    firearmDropGroup.visible = false;
+    this.pvpFirearmDropMesh = firearmDropGroup;
+    this.pvpFirearmDropModelId = STARTING_SURVIVAL_FIREARM;
+    this.pvpArenaRoot.add(firearmDropGroup);
+
     const perkGroup = new THREE.Group();
     const perkBase = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.075, 8, 28), new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.92, depthWrite: false }));
     perkBase.rotation.x = -Math.PI / 2; perkBase.position.y = 0.08;
@@ -3687,10 +3730,12 @@ export class PaleciakiGameEngine {
         wantFire: this.pvpWantFire,
         wantDash: this.pvpWantDash,
         wantAbility: this.pvpWantAbility,
+        wantReload: this.pvpWantReload,
       });
       this.pvpWantFire = false;
       this.pvpWantDash = false;
       this.pvpWantAbility = false;
+      this.pvpWantReload = false;
     }
 
     if (!currentState) return;
@@ -3698,6 +3743,51 @@ export class PaleciakiGameEngine {
     const state = currentState;
     const local = this.pvpSlot === 'p1' ? state.p1 : state.p2;
     const remote = this.pvpSlot === 'p1' ? state.p2 : state.p1;
+
+    // The PvP room owns ammunition and reload timing. Render that authoritative
+    // state through the same animated weapon rig used by Survival and Campaign.
+    const firearmChanged = this.survivalFirearm.id !== local.primaryFirearmId;
+    const firearmDefinition = SURVIVAL_FIREARM_DEFS[local.primaryFirearmId];
+    this.survivalFirearm.id = local.primaryFirearmId;
+    this.survivalFirearm.ammoInMagazine = local.firearmAmmoById[local.primaryFirearmId] ?? firearmDefinition.magazineSize;
+    this.survivalFirearm.cooldown = local.attackCooldownTimer;
+    this.survivalFirearm.reloadRemaining = local.reloadRemainingSeconds;
+    this.survivalFirearm.shotCounter = local.shotsFired;
+    if (firearmChanged) this.updateHeldSurvivalFirearmVisual();
+
+    const shotsSinceLastSync = Math.max(0, local.shotsFired - this.pvpLastObservedShotsFired);
+    this.pvpLastObservedShotsFired = local.shotsFired;
+    if (shotsSinceLastSync > 0) {
+      const profile = SURVIVAL_FIREARM_PRESENTATION[firearmDefinition.archetype];
+      this.survivalFirearmRecoilTimer = profile.recoilSettleSeconds;
+      const forward = pvpAimDirectionFromAngle(local.aimAngle);
+      const muzzle = new THREE.Vector3(this.playerPos.x, this.playerPos.y + 0.92, this.playerPos.z)
+        .addScaledVector(new THREE.Vector3(forward.x, 0, forward.z), 0.86);
+      for (let shot = 0; shot < Math.min(3, shotsSinceLastSync); shot++) {
+        this.spawnSurvivalFirearmMuzzleFx(firearmDefinition.archetype, firearmDefinition.color, muzzle, new THREE.Vector3(forward.x, 0, forward.z));
+      }
+      sound.playFirearmShot(firearmDefinition.archetype);
+    }
+    const isReloading = local.reloadRemainingSeconds > 0;
+    if (isReloading && !this.pvpLastObservedReloading) sound.playFirearmReload(firearmDefinition.archetype, 'start');
+    this.pvpLastObservedReloading = isReloading;
+    this.survivalFirearmRecoilTimer = Math.max(0, this.survivalFirearmRecoilTimer - dt);
+    this.updateHeldSurvivalFirearmAction(dt);
+
+    if (this.remotePlayerGroup && this.pvpRemoteFirearmId !== remote.primaryFirearmId) {
+      const previousRemoteGun = this.remotePlayerGroup.getObjectByName('pvp_remote_primary_firearm');
+      if (previousRemoteGun) {
+        this.remotePlayerGroup.remove(previousRemoteGun);
+        this.disposeTemporaryObject(previousRemoteGun);
+      }
+      const remoteGun = this.createSurvivalFirearmModel(remote.primaryFirearmId);
+      remoteGun.name = 'pvp_remote_primary_firearm';
+      remoteGun.scale.setScalar(0.50);
+      remoteGun.position.set(0.23, 0.62, 0.36);
+      remoteGun.rotation.x = -0.12;
+      this.remotePlayerGroup.add(remoteGun);
+      this.pvpRemoteFirearmId = remote.primaryFirearmId;
+    }
 
     this.playerPos.x = THREE.MathUtils.lerp(this.playerPos.x, local.x, Math.min(1, dt * 18));
     this.playerPos.z = THREE.MathUtils.lerp(this.playerPos.z, local.z, Math.min(1, dt * 18));
@@ -3968,6 +4058,35 @@ export class PaleciakiGameEngine {
           materials.forEach((material) => material.dispose());
         });
         this.pvpProjectileMeshes.delete(id);
+      }
+    }
+
+    if (this.pvpFirearmDropMesh) {
+      const drop = state.firearmDrop;
+      if (drop.active && this.pvpFirearmDropModelId !== drop.firearmId) {
+        const previousModel = this.pvpFirearmDropMesh.getObjectByName('pvp-firearm-drop-model');
+        if (previousModel) {
+          this.pvpFirearmDropMesh.remove(previousModel);
+          this.disposeTemporaryObject(previousModel);
+        }
+        const weaponModel = this.createSurvivalFirearmModel(drop.firearmId);
+        weaponModel.name = 'pvp-firearm-drop-model';
+        weaponModel.scale.setScalar(0.58);
+        weaponModel.position.y = 0.78;
+        this.pvpFirearmDropMesh.add(weaponModel);
+        this.pvpFirearmDropModelId = drop.firearmId;
+      }
+      if (this.pvpFirearmDropLastActive && !drop.active) {
+        this.spawnParticleRing(drop.x, 0.5, drop.z, 0x38bdf8);
+        sound.playPickup();
+      }
+      this.pvpFirearmDropLastActive = drop.active;
+      this.pvpFirearmDropMesh.visible = drop.active;
+      if (drop.active) {
+        this.pvpFirearmDropMesh.position.set(drop.x, 0, drop.z);
+        this.pvpFirearmDropMesh.rotation.y += dt * 1.1;
+        const model = this.pvpFirearmDropMesh.getObjectByName('pvp-firearm-drop-model');
+        if (model) model.position.y = 0.78 + Math.sin(performance.now() * 0.0032) * 0.10;
       }
     }
 
@@ -10398,13 +10517,21 @@ export class PaleciakiGameEngine {
   }
 
   public requestSurvivalFirearmReload(): void {
+    if (this.gameMode === 'pvp') {
+      this.pvpWantReload = true;
+      return;
+    }
     this.reloadSurvivalFirearm();
-    if (this.gameMode === 'survival') this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
+    if (this.gameMode === 'survival' || this.gameMode === 'campaign') this.callbacks.onSurvivalUpdate?.(this.getSurvivalSnapshot());
   }
 
   private reloadSurvivalFirearm(): void {
+    if (this.gameMode === 'pvp') {
+      this.pvpWantReload = true;
+      return;
+    }
     const definition = SURVIVAL_FIREARM_DEFS[this.survivalFirearm.id];
-    if (this.gameMode === 'pvp' || this.state !== 'playing' ||
+    if (this.state !== 'playing' ||
       this.survivalFirearm.reloadRemaining > 0 ||
       this.survivalFirearm.ammoInMagazine >= definition.magazineSize) return;
     this.survivalFirearm.reloadRemaining = definition.reloadSeconds;
