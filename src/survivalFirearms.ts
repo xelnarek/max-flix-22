@@ -65,7 +65,7 @@ export const SURVIVAL_FIREARM_DEFS: Readonly<Record<SurvivalFirearmId, SurvivalF
   },
   smg_45: {
     id: 'smg_45', name: 'Pistolet maszynowy .45', shortName: 'PM .45', icon: '🔫',
-    color: 0x94a3b8, archetype: 'smg', roleDescription: 'Szybka seria cięższych pocisków • kontroluj zużycie amunicji', rangeMeters: 22, fireIntervalSeconds: 0.68, magazineSize: 30,
+    color: 0x94a3b8, archetype: 'smg', roleDescription: 'Szybka seria cięższych pocisków • kontroluj zużycie amunicji', rangeMeters: 23, fireIntervalSeconds: 0.68, magazineSize: 30,
     reloadSeconds: 2.2, damage: 1.05, pellets: 1, spreadRadians: 0.055,
     projectileSpeed: 30, projectileRadius: 0.065,
     pierce: 0, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 1,
@@ -100,7 +100,7 @@ export const SURVIVAL_FIREARM_DEFS: Readonly<Record<SurvivalFirearmId, SurvivalF
   },
   rocket_launcher: {
     id: 'rocket_launcher', name: 'Wyrzutnia rakiet', shortName: 'RAKIETY', icon: '🚀',
-    color: 0xef4444, archetype: 'rocket', roleDescription: 'Ciężka rakieta • duża detonacja obszarowa, bardzo wolny cykl', rangeMeters: 34, fireIntervalSeconds: 3.6, magazineSize: 4,
+    color: 0xef4444, archetype: 'rocket', roleDescription: 'Ciężka rakieta • duża detonacja obszarowa, bardzo wolny cykl', rangeMeters: 34, fireIntervalSeconds: 3.6, magazineSize: 5,
     reloadSeconds: 3.6, damage: 4.8, pellets: 1, spreadRadians: 0.006,
     projectileSpeed: 15.5, projectileRadius: 0.16,
     pierce: 0, aoeRadius: 3.1, aoeDamageMultiplier: 0.55, igniteOnHit: true, dropWeight: 1,
@@ -108,7 +108,7 @@ export const SURVIVAL_FIREARM_DEFS: Readonly<Record<SurvivalFirearmId, SurvivalF
   flamethrower: {
     id: 'flamethrower', name: 'Miotacz płomieni', shortName: 'MIOTACZ', icon: '🔥',
     color: 0xfb923c, archetype: 'flame', roleDescription: 'Krótki stożek ognia • podpalenie i kontrola przestrzeni', rangeMeters: 6, fireIntervalSeconds: 0.65, magazineSize: 40,
-    reloadSeconds: 2.9, damage: 0.5, pellets: 2, spreadRadians: 0.20,
+    reloadSeconds: 2.8, damage: 0.5, pellets: 2, spreadRadians: 0.20,
     projectileSpeed: 14, projectileRadius: 0.095,
     pierce: 0, aoeRadius: 0.45, aoeDamageMultiplier: 0.38, igniteOnHit: true, dropWeight: 1,
   },
@@ -122,7 +122,7 @@ export const SURVIVAL_FIREARM_DEFS: Readonly<Record<SurvivalFirearmId, SurvivalF
   ballistic_grenade_launcher: {
     id: 'ballistic_grenade_launcher', name: 'Granatnik balistyczny', shortName: 'GRANATNIK', icon: '💣',
     color: 0xd4a24f, archetype: 'grenade', roleDescription: 'Łuk balistyczny z zapalnikiem • eksplozja obszarowa przy kontakcie z podłożem lub celem',
-    rangeMeters: 26, fireIntervalSeconds: 2.9, magazineSize: 4, reloadSeconds: 4.1,
+    rangeMeters: 24, fireIntervalSeconds: 2.9, magazineSize: 4, reloadSeconds: 3.2,
     damage: 3.9, pellets: 1, spreadRadians: 0.004, projectileSpeed: 17, projectileRadius: 0.12,
     pierce: 0, aoeRadius: 3.8, aoeDamageMultiplier: 0.72, igniteOnHit: false, dropWeight: 1,
     projectileGravity: 12.5, projectileLaunchVelocity: 7.4, projectileFuseSeconds: 1.4, detonateOnImpact: true,
