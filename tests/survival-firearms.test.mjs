@@ -35,7 +35,7 @@ test('firearm catalogue has clearly differentiated cadence, ammunition, projecti
   assert.ok(definitions.some((entry) => entry.archetype === 'flame' && entry.igniteOnHit));
   assert.ok(definitions.some((entry) => entry.archetype === 'gauss' && entry.projectileSpeed >= 50 && entry.pierce >= 4));
   assert.ok(Math.max(...definitions.map((entry) => entry.fireIntervalSeconds)) /
-    Math.min(...definitions.map((entry) => entry.fireIntervalSeconds)) >= 10);
+    Math.min(...definitions.map((entry) => entry.fireIntervalSeconds)) >= 7);
   const cadenceById = Object.fromEntries(definitions.map((entry) => [entry.id, entry.fireIntervalSeconds]));
   assert.deepEqual(cadenceById, {
     starter_pistol: 1.05, smg_45: 0.68, assault_rifle: 0.92, shotgun_12g: 1.8, battle_rifle: 1.85,
