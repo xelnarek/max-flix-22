@@ -10951,7 +10951,6 @@ export class PaleciakiGameEngine {
       mesh.add(detail);
       return detail;
     };
-    const barrelAxisUsesLocalY = ['pistol-slug', 'rifle-tracer', 'heavy-slug', 'rocket', 'grenade-ballistic', 'gauss-lance'].includes(profile.projectileStyle);
     const addRing = (z: number, radius: number, tube: number): void => {
       addDetail(new THREE.TorusGeometry(radius, tube, 5, 10), z, 0, 0, false);
     };
