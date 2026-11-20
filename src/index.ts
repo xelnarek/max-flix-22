@@ -1792,6 +1792,35 @@ class PaleciakiScene extends xb.Script {
             if (survivalEventFillElem) survivalEventFillElem.style.width = Math.min(100, (event.progress / Math.max(1, event.target)) * 100) + '%';
             if (survivalEventElem) survivalEventElem.setAttribute('aria-label', event.title + ': ' + event.progress + ' z ' + event.target + ', pozostało ' + Math.ceil(event.remainingSeconds) + ' sekund.');
           }
+          const primaryFirearm = snapshot.primaryFirearm;
+          const firearmStatus = document.getElementById('survival-firearm-status');
+          if (firearmStatus && primaryFirearm) {
+            const signature = [
+              primaryFirearm.id, primaryFirearm.ammoInMagazine,
+              Math.ceil(primaryFirearm.reloadRemainingSeconds * 10),
+            ].join(':');
+            if (firearmStatus.dataset.signature !== signature) {
+              firearmStatus.dataset.signature = signature;
+              const icon = document.getElementById('survival-firearm-icon');
+              const name = document.getElementById('survival-firearm-name');
+              const ammo = document.getElementById('survival-firearm-ammo');
+              const reload = document.getElementById('survival-firearm-reload');
+              if (icon) icon.textContent = primaryFirearm.icon;
+              if (name) name.textContent = primaryFirearm.name.toUpperCase();
+              if (ammo) ammo.textContent = primaryFirearm.reloadRemainingSeconds > 0
+                ? '— / ' + primaryFirearm.magazineSize
+                : primaryFirearm.ammoInMagazine + ' / ' + primaryFirearm.magazineSize;
+              if (reload) {
+                reload.classList.toggle('hidden', primaryFirearm.reloadRemainingSeconds <= 0);
+                reload.textContent = primaryFirearm.reloadRemainingSeconds > 0
+                  ? 'PRZEŁADOWANIE ' + primaryFirearm.reloadRemainingSeconds.toFixed(1) + ' s'
+                  : 'PRZEŁADOWANIE';
+              }
+              firearmStatus.style.setProperty('--firearm-color', '#' + primaryFirearm.color.toString(16).padStart(6, '0'));
+              firearmStatus.classList.toggle('is-reloading', primaryFirearm.reloadRemainingSeconds > 0);
+              firearmStatus.setAttribute('aria-label', primaryFirearm.name + ', amunicja ' + primaryFirearm.ammoInMagazine + ' na ' + primaryFirearm.magazineSize + (primaryFirearm.reloadRemainingSeconds > 0 ? ', przeładowanie' : ''));
+            }
+          }
           const weaponRack = document.getElementById('survival-weapons-list');
           if (weaponRack) {
             // The Survival snapshot refreshes four times per second; rebuild chips only when the arsenal changes.
