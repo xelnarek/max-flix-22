@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
 
-test('an enemy rig that loads after defeat starts its Death clip and suppresses the LOD proxy', () => {
+test('an enemy rig that loads after defeat starts its Death clip on the single visible model', () => {
   const start = game.indexOf('private resumeEnemyAnimationAfterModelAttach');
   const end = game.indexOf('private hideProceduralVisuals', start);
   assert.ok(start >= 0 && end > start, 'enemy model attach recovery handler must exist');
@@ -13,8 +13,7 @@ test('an enemy rig that loads after defeat starts its Death clip and suppresses 
   const hit = handler.indexOf('const hitRemaining');
   assert.ok(defeated >= 0 && hit > defeated, 'defeat must take priority over stale hit/idle state');
   const defeatPath = handler.slice(defeated, hit);
-  assert.match(defeatPath, /this\.lockEnemyDeathVisualToSingleRig\(mesh\)/);
   assert.match(defeatPath, /this\.enemyPendingAttackUntil\.delete\(enemy\)/);
   assert.match(defeatPath, /this\.requestGobkitAction\(track, 'Death', Math\.max\(0\.1, enemy\.deathVisualTimer \|\| 0\.1\)\)/);
-  assert.match(game, /const deathVisualLocked = enemy\.state === 'defeated' \|\| mesh\.userData\.actorDeathVisualLocked === true/);
+  assert.doesNotMatch(game, /actorLodProxy|actorLodProxyRoot|lockEnemyDeathVisualToSingleRig/);
 });
