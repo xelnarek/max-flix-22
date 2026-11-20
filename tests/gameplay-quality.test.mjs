@@ -1853,25 +1853,22 @@ test('Campaign and Survival run a scale-aware enemy body-overlap solver after AI
 });
 
 
-test('enemy distance LOD swaps imported skinned rigs for one-mesh silhouettes and preserves combat-critical animation', async () => {
-  const [game, lod] = await Promise.all([
-    read('../src/game.ts'), read('../src/enemyVisualLod.ts')
+test('enemy rendering keeps one full-detail rig for every mapped archetype at all distances', async () => {
+  const [game, profiles] = await Promise.all([
+    read('../src/game.ts'), import('../src/enemyVisualProfiles.ts')
   ]);
-  assert.match(game, /installEnemyVisualLodProxy\(enemy, actor\.root\)/);
-  assert.match(game, /installEnemyVisualLodProxy\(enemy, root\)/);
-  assert.match(game, /shouldUseEnemyVisualLodProxy\(/);
-  assert.match(game, /lodProxy\.visible = useProxy/);
-  assert.match(game, /fullVisual\.visible = !useProxy/);
-  assert.match(game, /enemy\.state === 'charging'[\s\S]*?enemy\.state === 'defeated'[\s\S]*?enemy\.state === 'stunned'/);
-  assert.match(game, /if \(useProxy\)[\s\S]*?track\.animationAccumulator = 0/);
-  assert.match(game, /child\.userData\.actorLodProxy === true/);
-  assert.match(lod, /mergeGeometries\(parts, false\)/);
-  assert.match(lod, /vertexColors: true/);
-  assert.match(lod, /mesh\.castShadow = false/);
+  assert.equal(Object.keys(profiles.ENEMY_VISUAL_PROFILES).length, 23);
+  assert.ok(game.includes('if (!this.requestedGobkitEnemies.has(enemy)) {'));
+  assert.ok(game.includes('this.attachGobkitEnemyModel(enemy, modelId)'));
+  assert.ok(game.includes('Every mapped enemy uses its single full-detail rig, independent of distance.'));
+  assert.ok(game.includes('this.installActorVisualRoot(mesh as THREE.Group, root)'));
+  assert.ok(game.includes('removeLegacyEnemyBodyVisuals(mesh as THREE.Group, overlays)'));
+  assert.ok(game.includes('getActorAnimationIntervalFromDistanceSquared'));
+  assert.doesNotMatch(game, /actorLodProxy|actorLodProxyRoot|shouldUseEnemyVisualLodProxy|updateEnemyVisualLodProxy|shouldLoadEnemyFullRig|createEnemyVisualLodProxy/);
 });
 
 
-test('late-loaded actor rigs apply anisotropic texture filtering and retain combat-critical proxy exits', async () => {
+test('late-loaded actor rigs keep high-quality textures without creating visual proxies', async () => {
   const [game, cleanup] = await Promise.all([
     read('../src/game.ts'), read('../src/actorResourceDisposal.ts')
   ]);
@@ -1880,10 +1877,9 @@ test('late-loaded actor rigs apply anisotropic texture filtering and retain comb
   assert.match(game, /this\.applyActorTextureQuality\(root\)/);
   assert.match(game, /enemy\.aiRangedWindupTimer/);
   assert.match(game, /enemy\.aiMeleeWindupTimer/);
-  assert.match(game, /pendingAttackUntil > now/);
-  assert.match(game, /attackAnimationUntil > now/);
-  assert.match(cleanup, /actorLodSharedGeometry/);
-  assert.match(cleanup, /actorLodSharedMaterial/);
+  assert.match(cleanup, /gobkitSharedGeometry/);
+  assert.match(cleanup, /gobkitSharedMaterial/);
+  assert.doesNotMatch(game + cleanup, /actorLodProxy|actorLodSharedGeometry|actorLodSharedMaterial|shouldUseEnemyVisualLodProxy/);
 });
 
 
