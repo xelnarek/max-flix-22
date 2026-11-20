@@ -306,6 +306,17 @@ test('living enemies move around visible corpses while corpse transforms stay fi
   assert.ok(Math.hypot(live.x - corpse.x, live.z - corpse.z) >= minimum - 0.035);
 });
 
+test('simultaneous corpses are separated without moving living enemies', () => {
+  const first = { id: 'corpse-a', type: 'customer', x: 0, y: 0.4, z: 0, state: 'defeated', deathVisualTimer: 0.8 };
+  const second = { id: 'corpse-b', type: 'kurier', x: 0.05, y: 0.4, z: 0, state: 'defeated', deathVisualTimer: 0.8 };
+  const live = { id: 'live', type: 'customer', x: 5, y: 0.4, z: 0 };
+  const liveStart = { x: live.x, z: live.z };
+  resolveEnemyCrowdOverlaps([first, second, live], new EnemySpatialIndex(4), testArena, 0.16, 16, 1.2);
+  const required = getEnemyCollisionRadius('customer') + getEnemyCollisionRadius('kurier') + 0.16;
+  assert.ok(Math.hypot(first.x - second.x, first.z - second.z) >= required - 0.035);
+  assert.deepEqual({ x: live.x, z: live.z }, liveStart);
+});
+
 test('fitted visual footprints preserve real rig size but remain globally bounded', () => {
   const radius = getEnemyCollisionRadius('customer', 50);
   assert.equal(radius, 1.45, 'extreme fitted bounds must stop at the global safety cap');
