@@ -4051,15 +4051,25 @@ export class PaleciakiGameEngine {
         }
         mesh.renderOrder = 4;
 
-        // A tapered, color-matched streak makes incoming fire readable on
-        // small phone screens without requiring expensive particle emitters.
+        // PvP keeps one inexpensive attached streak, but its width, length and
+        // opacity now follow the same firearm profile as Survival and Campaign.
+        const firearmProfile = firearmDefinition
+          ? SURVIVAL_FIREARM_PRESENTATION[firearmDefinition.archetype]
+          : null;
         const speed = Math.hypot(proj.vx, proj.vz);
-        const trailLength = THREE.MathUtils.clamp(speed * 0.035, 0.5, 1.15);
-        const trailGeo = new THREE.CylinderGeometry(0.018, 0.075, trailLength, 7, 1, true);
+        const trailLength = THREE.MathUtils.clamp(
+          speed * 0.035,
+          firearmProfile ? Math.max(0.16, firearmProfile.projectileLength * 0.68) : 0.5,
+          firearmProfile ? Math.max(0.34, firearmProfile.projectileLength * 1.8) : 1.15,
+        );
+        const trailRadius = firearmProfile
+          ? Math.max(0.012, firearmProfile.trailParticleSize * firearmProfile.trailStretch * 0.23)
+          : 0.075;
+        const trailGeo = new THREE.CylinderGeometry(trailRadius * 0.24, trailRadius, trailLength, 6, 1, true);
         const trailMat = new THREE.MeshBasicMaterial({
           color: proj.color,
           transparent: true,
-          opacity: 0.58,
+          opacity: firearmProfile?.trailOpacity ?? 0.58,
           depthWrite: false,
           blending: THREE.AdditiveBlending,
           side: THREE.DoubleSide,
@@ -4069,6 +4079,9 @@ export class PaleciakiGameEngine {
         trail.rotation.x = Math.PI / 2;
         trail.position.z = -trailLength * 0.42;
         trail.renderOrder = 3;
+        trail.userData.firearmTrailStyle = firearmDefinition
+          ? SURVIVAL_FIREARM_PRESENTATION[firearmDefinition.archetype].trailStyle
+          : 'generic-projectile-trail';
         mesh.add(trail);
 
         const shooter = proj.ownerSlot === 'p1' ? state.p1 : state.p2;
@@ -10753,7 +10766,6 @@ export class PaleciakiGameEngine {
     this.requestGobkitAction(this.playerGobkitTrack, 'Attack', this.attackSwingDuration);
 
     const start = new THREE.Vector3(this.playerPos.x, this.playerPos.y + 0.92, this.playerPos.z).addScaledVector(forward, 0.86);
-    this.spawnCompactImpact(start.x, start.y, start.z, definition.color);
     this.spawnSurvivalFirearmMuzzleFx(definition.archetype, definition.color, start, forward);
     const pelletCount = definition.pellets;
     let damage = definition.damage;
@@ -10869,39 +10881,127 @@ export class PaleciakiGameEngine {
         geometry = new THREE.BoxGeometry(width * 0.62, width * 0.62, length);
         break;
       case 'rocket':
-        geometry = new THREE.ConeGeometry(width * 0.88, length, 10);
+        geometry = new THREE.ConeGeometry(width * 0.88, length, 9);
         break;
       case 'grenade-ballistic':
         geometry = new THREE.CylinderGeometry(width * 0.38, width * 0.56, length, 9, 1, false);
         break;
       case 'flame':
-        geometry = new THREE.SphereGeometry(width * 0.56, 9, 7);
+        geometry = new THREE.SphereGeometry(width * 0.56, 8, 6);
         break;
       case 'plasma':
         geometry = new THREE.IcosahedronGeometry(width * 0.64, 1);
         break;
       case 'gauss-lance':
-        geometry = new THREE.CylinderGeometry(width * 0.35, width * 0.55, length, 10);
+        geometry = new THREE.CylinderGeometry(width * 0.35, width * 0.55, length, 8);
         break;
     }
     const energyProjectile = profile.projectileStyle === 'plasma' || profile.projectileStyle === 'gauss-lance';
     const material = new THREE.MeshStandardMaterial({
       color,
       emissive: color,
-      emissiveIntensity: energyProjectile || profile.projectileStyle === 'rocket' ? 1.15 : 0.42,
+      emissiveIntensity: energyProjectile || profile.projectileStyle === 'rocket' ? 1.35 : 0.52,
       metalness: energyProjectile || profile.projectileStyle === 'heavy-slug' ? 0.54 : 0.25,
       roughness: 0.22,
       transparent: profile.projectileStyle === 'flame' || profile.projectileStyle === 'plasma',
-      opacity: profile.projectileStyle === 'flame' ? 0.82 : profile.projectileStyle === 'plasma' ? 0.92 : 1,
+      opacity: profile.projectileStyle === 'flame' ? 0.84 : profile.projectileStyle === 'plasma' ? 0.94 : 1,
     });
     const mesh = new THREE.Mesh(geometry, material);
+    const addDetail = (
+      detailGeometry: THREE.BufferGeometry,
+      z: number,
+      x = 0,
+      y = 0,
+      rotateAlongProjectile = true,
+    ): THREE.Mesh => {
+      const detail = new THREE.Mesh(detailGeometry, material);
+      detail.position.set(x, y, z);
+      if (rotateAlongProjectile) detail.rotation.x = Math.PI / 2;
+      detail.castShadow = false;
+      detail.receiveShadow = false;
+      detail.frustumCulled = false;
+      detail.renderOrder = 5;
+      mesh.add(detail);
+      return detail;
+    };
+    const addRing = (z: number, radius: number, tube: number): void => {
+      addDetail(new THREE.TorusGeometry(radius, tube, 5, 10), z, 0, 0, false);
+    };
+    const addFin = (z: number, angle: number, radial: number, finLength: number): void => {
+      const fin = addDetail(
+        new THREE.BoxGeometry(width * 0.20, width * 0.48, finLength),
+        z,
+        Math.cos(angle) * radial,
+        Math.sin(angle) * radial,
+      );
+      fin.rotation.z = angle;
+    };
+
     if (['pistol-slug', 'rifle-tracer', 'heavy-slug', 'rocket', 'grenade-ballistic', 'gauss-lance'].includes(profile.projectileStyle)) {
       mesh.rotation.x = Math.PI / 2;
     } else if (profile.projectileStyle === 'flame' || profile.projectileStyle === 'plasma') {
       mesh.scale.set(0.92, 0.92, Math.max(1, length / Math.max(0.01, width)));
     }
+
+    // Low-polygon, per-archetype nose/body details make the actual flying round
+    // readable at gameplay zoom. Details share one material per projectile.
+    switch (profile.projectileStyle) {
+      case 'pistol-slug':
+        addDetail(new THREE.SphereGeometry(width * 0.34, 6, 4), length * 0.43, 0, 0, false);
+        addRing(-length * 0.31, width * 0.43, width * 0.075);
+        break;
+      case 'compact-tracer': {
+        const tracerStripe = addDetail(new THREE.BoxGeometry(width * 0.16, width * 0.88, length * 0.58), 0, width * 0.31, 0, false);
+        tracerStripe.name = 'firearm-projectile-smg-tracer-stripe';
+        break;
+      }
+      case 'rifle-tracer':
+        addDetail(new THREE.ConeGeometry(width * 0.36, length * 0.24, 7), length * 0.43);
+        addRing(-length * 0.30, width * 0.42, width * 0.06);
+        break;
+      case 'buckshot':
+        // Shotgun pellets stay separate: seven independently moving beads form a
+        // visible spread instead of a single fake shotgun slug.
+        break;
+      case 'heavy-slug':
+        addDetail(new THREE.ConeGeometry(width * 0.48, length * 0.25, 8), length * 0.42);
+        addRing(-length * 0.24, width * 0.58, width * 0.09);
+        break;
+      case 'rotary-tracer':
+        addDetail(new THREE.BoxGeometry(width * 0.18, width * 0.86, length * 0.46), 0, width * 0.28, 0, false);
+        break;
+      case 'rocket':
+        for (let fin = 0; fin < 3; fin++) addFin(-length * 0.30, fin * Math.PI * 2 / 3, width * 0.62, length * 0.23);
+        addRing(-length * 0.42, width * 0.52, width * 0.14);
+        addDetail(new THREE.SphereGeometry(width * 0.31, 6, 4), -length * 0.45, 0, 0, false);
+        break;
+      case 'grenade-ballistic':
+        addRing(length * 0.20, width * 0.55, width * 0.12);
+        addRing(-length * 0.22, width * 0.54, width * 0.10);
+        for (let fin = 0; fin < 4; fin++) addFin(-length * 0.39, fin * Math.PI / 2, width * 0.66, length * 0.19);
+        break;
+      case 'flame':
+        addDetail(new THREE.SphereGeometry(width * 0.30, 6, 4), length * 0.30, 0, 0, false);
+        break;
+      case 'plasma':
+        addRing(0, width * 0.86, width * 0.10);
+        addRing(-length * 0.22, width * 0.58, width * 0.07);
+        break;
+      case 'gauss-lance':
+        addRing(-length * 0.28, width * 1.10, width * 0.15);
+        addRing(length * 0.10, width * 0.92, width * 0.11);
+        addDetail(new THREE.ConeGeometry(width * 0.36, length * 0.12, 7), length * 0.48);
+        break;
+    }
+
     mesh.castShadow = false;
+    mesh.receiveShadow = false;
+    mesh.frustumCulled = true;
+    mesh.renderOrder = 4;
     mesh.userData.firearmProjectileStyle = profile.projectileStyle;
+    mesh.userData.firearmMuzzleStyle = profile.muzzleStyle;
+    mesh.userData.firearmTrailStyle = profile.trailStyle;
+    mesh.userData.firearmImpactStyle = profile.impactStyle;
     return mesh;
   }
 
@@ -10913,57 +11013,209 @@ export class PaleciakiGameEngine {
   ): void {
     const profile = SURVIVAL_FIREARM_PRESENTATION[archetype];
     const handheld = this.isHandheldViewport || window.innerWidth < 900;
-    const particleBudget = handheld ? (this.adaptivePerformanceTier >= 2 ? 0.30 : 0.48) : 1;
-    const count = Math.max(1, Math.floor(profile.muzzleParticles * particleBudget));
-    const side = new THREE.Vector3(-forward.z, 0, forward.x);
+    const maxMobileParticles = this.adaptivePerformanceTier >= 2 ? 2 : this.adaptivePerformanceTier === 1 ? 3 : 4;
+    const count = handheld ? Math.min(profile.muzzleParticles, maxMobileParticles) : Math.min(profile.muzzleParticles, 12);
+    const sideX = -forward.z;
+    const sideZ = forward.x;
+    let shape: ParticleShape = 'tetrahedron';
+    let speed = 3.2;
+    let spreadScale = 1;
+    let verticalKick = 0.24;
+    let gravity: number | null = null;
+
+    switch (profile.muzzleStyle) {
+      case 'pistol-crack':
+        shape = 'flat-box'; speed = 4.1; spreadScale = 0.52; verticalKick = 0.12;
+        break;
+      case 'smg-stutter':
+        shape = 'box'; speed = 3.2; spreadScale = 0.72; verticalKick = 0.08;
+        break;
+      case 'rifle-flash':
+        shape = 'octahedron'; speed = 4.4; spreadScale = 0.45; verticalKick = 0.16;
+        break;
+      case 'buckshot-fan':
+        shape = 'tetrahedron'; speed = 4.6; spreadScale = 1.7; verticalKick = 0.30;
+        break;
+      case 'heavy-charge':
+        shape = 'flat-box'; speed = 5.2; spreadScale = 0.28; verticalKick = 0.18;
+        break;
+      case 'rotary-strobe':
+        shape = 'box'; speed = 2.7; spreadScale = 0.58; verticalKick = 0.10;
+        break;
+      case 'rocket-ignition':
+        shape = 'sphere'; speed = 2.1; spreadScale = 0.50; verticalKick = 0.62; gravity = 1.4;
+        break;
+      case 'flame-cone':
+        shape = 'sphere'; speed = 3.7; spreadScale = 1.8; verticalKick = 0.74; gravity = 0.9;
+        break;
+      case 'plasma-pulse':
+        shape = 'octahedron'; speed = 3.5; spreadScale = 0.84; verticalKick = 0.42;
+        break;
+      case 'grenade-launch':
+        shape = 'tetrahedron'; speed = 2.6; spreadScale = 0.62; verticalKick = 0.86; gravity = 1.8;
+        break;
+      case 'gauss-discharge':
+        shape = 'flat-box'; speed = 7.2; spreadScale = 0.16; verticalKick = 0.08;
+        break;
+    }
+
     for (let index = 0; index < count; index++) {
-      const size = profile.trailParticleSize * (0.8 + Math.random() * 0.8);
-      const mesh = this.particlePool.acquire(
-        archetype === 'flame' || archetype === 'rocket' ? 'sphere' : 'tetrahedron',
-        color,
-        size,
-        0.94,
-      );
+      const lane = count <= 1 ? 0 : (index / (count - 1)) * 2 - 1;
+      const lateral = lane * profile.muzzleSpread * spreadScale + (Math.random() - 0.5) * profile.muzzleSpread * 0.18;
+      const particleSize = profile.muzzleFlashScale * (0.78 + Math.random() * 0.58);
+      const mesh = this.particlePool.acquire(shape, color, particleSize, 0.96);
       if (!mesh) break;
-      const lateral = (Math.random() - 0.5) * profile.muzzleSpread;
-      const speed = 1.2 + Math.random() * (archetype === 'rocket' || archetype === 'shotgun' ? 3.2 : 1.8);
-      mesh.position.copy(position).addScaledVector(forward, 0.05);
-      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+      mesh.position.copy(position).addScaledVector(forward, 0.06);
+      mesh.rotation.set(index * 0.55, index * 0.8, index * 0.35);
       this.levelRoot.add(mesh);
-      const life = archetype === 'rocket' || archetype === 'flame' || archetype === 'plasma' ? 0.22 : 0.12;
+      const particleSpeed = speed * (0.76 + Math.random() * 0.48);
+      const vx = forward.x * particleSpeed + sideX * lateral;
+      const vz = forward.z * particleSpeed + sideZ * lateral;
+      const vy = verticalKick + Math.random() * (profile.muzzleStyle === 'rocket-ignition' || profile.muzzleStyle === 'grenade-launch' ? 0.72 : 0.34);
       this.addParticle(
         mesh,
-        forward.x * speed + side.x * lateral,
-        0.12 + Math.random() * 0.60,
-        forward.z * speed + side.z * lateral,
-        life,
-        null,
-        size,
+        vx,
+        vy,
+        vz,
+        profile.muzzleLifeSeconds * (0.82 + Math.random() * 0.36),
+        gravity,
+        particleSize,
         2 + Math.random() * 5,
         2 + Math.random() * 5,
         2 + Math.random() * 5,
       );
     }
-    if (archetype === 'gauss') this.triggerBloomPulse(0.12);
-    if (archetype === 'rocket' && !handheld) this.triggerScreenShake(0.06, 0.04);
+
+    if (profile.muzzleStyle === 'plasma-pulse') this.triggerBloomPulse(0.10);
+    if (profile.muzzleStyle === 'gauss-discharge') this.triggerBloomPulse(0.16);
+    if ((profile.muzzleStyle === 'rocket-ignition' || profile.muzzleStyle === 'heavy-charge') && !handheld) {
+      this.triggerScreenShake(0.045, 0.035);
+    }
   }
 
   private spawnSurvivalFirearmTrail(projectile: { mesh: THREE.Object3D; vel: THREE.Vector3; firearmId?: SurvivalFirearmId }): void {
     if (!projectile.firearmId) return;
     const definition = SURVIVAL_FIREARM_DEFS[projectile.firearmId];
     const profile = SURVIVAL_FIREARM_PRESENTATION[definition.archetype];
-    const size = profile.trailParticleSize;
-    const shape = definition.archetype === 'flame' || definition.archetype === 'rocket' ? 'sphere' : 'octahedron';
-    const opacity = definition.archetype === 'plasma' || definition.archetype === 'gauss' ? 0.88 : 0.66;
-    const mesh = this.particlePool.acquire(shape, definition.color, size, opacity);
+    let shape: ParticleShape;
+    let gravity: number | null = null;
+    switch (profile.trailStyle) {
+      case 'warm-brass':
+        shape = 'flat-box';
+        break;
+      case 'compact-dash':
+        shape = 'box';
+        break;
+      case 'copper-line':
+        shape = 'octahedron';
+        break;
+      case 'pellet-glint':
+        shape = 'sphere';
+        break;
+      case 'heavy-streak':
+        shape = 'flat-box';
+        break;
+      case 'rotary-dash':
+        shape = 'tetrahedron';
+        break;
+      case 'exhaust-smoke':
+        shape = 'sphere'; gravity = 0.5;
+        break;
+      case 'ember-wake':
+        shape = 'sphere'; gravity = 0.85;
+        break;
+      case 'ion-residue':
+        shape = 'octahedron';
+        break;
+      case 'smoke-fragment':
+        shape = 'tetrahedron'; gravity = 0.75;
+        break;
+      case 'magnetic-lance':
+        shape = 'flat-box';
+        break;
+    }
+    const size = profile.trailParticleSize * profile.trailStretch;
+    const mesh = this.particlePool.acquire(shape, definition.color, size, profile.trailOpacity);
     if (!mesh) return;
     mesh.position.copy(projectile.mesh.position);
-    mesh.rotation.set(0.2, 0.4, 0.15);
+    mesh.rotation.y = Math.atan2(projectile.vel.x, projectile.vel.z);
+    mesh.rotation.x = -Math.atan2(projectile.vel.y, Math.max(0.001, Math.hypot(projectile.vel.x, projectile.vel.z)));
     this.levelRoot.add(mesh);
-    const speed = projectile.vel.length();
-    const scale = speed > 0.1 ? -0.30 / speed : 0;
-    const life = definition.archetype === 'flame' || definition.archetype === 'rocket' ? 0.28 : 0.16;
-    this.addParticle(mesh, projectile.vel.x * scale, 0.06 + projectile.vel.y * scale, projectile.vel.z * scale, life, null, size);
+    const speedSquared = projectile.vel.lengthSq();
+    const inverseSpeed = speedSquared > 0.01 ? 1 / Math.sqrt(speedSquared) : 0;
+    const trailKick = 0.28;
+    const verticalDrift = profile.trailStyle === 'ember-wake' || profile.trailStyle === 'smoke-fragment' ? 0.22 : 0.06;
+    this.addParticle(
+      mesh,
+      -projectile.vel.x * inverseSpeed * trailKick,
+      verticalDrift - projectile.vel.y * inverseSpeed * trailKick,
+      -projectile.vel.z * inverseSpeed * trailKick,
+      profile.trailLifeSeconds,
+      gravity,
+      size,
+      0.4,
+      0.9,
+      0.2,
+    );
+  }
+
+  private spawnSurvivalFirearmImpactFx(
+    archetype: SurvivalFirearmArchetype,
+    x: number,
+    y: number,
+    z: number,
+    color: number,
+  ): void {
+    const profile = SURVIVAL_FIREARM_PRESENTATION[archetype];
+    const burstY = y + (profile.impactStyle === 'magnetic-punch' ? 0.54 : 0.48);
+    switch (profile.impactStyle) {
+      case 'pin-spark':
+        this.spawnExplosionParticles(x, burstY, z, color, profile.impactParticles);
+        this.spawnParticleRing(x, y + 0.32, z, color);
+        break;
+      case 'micro-hit':
+        this.spawnExplosionParticles(x, burstY, z, color, profile.impactParticles);
+        break;
+      case 'clean-punch':
+        this.spawnExplosionParticles(x, burstY, z, color, profile.impactParticles);
+        this.spawnParticleRing(x, y + 0.34, z, color);
+        break;
+      case 'buckshot-burst':
+        this.spawnExplosionParticles(x, y + 0.50, z, color, profile.impactParticles);
+        this.spawnParticleRing(x, y + 0.35, z, color);
+        break;
+      case 'armor-punch':
+        this.spawnExplosionParticles(x, burstY, z, color, profile.impactParticles);
+        this.triggerHitStop(0.022);
+        break;
+      case 'rotary-chips':
+        this.spawnExplosionParticles(x, burstY, z, color, profile.impactParticles);
+        break;
+      case 'pressure-blast':
+        this.spawnExplosionParticles(x, y + 0.48, z, color, profile.impactParticles);
+        this.spawnParticleRing(x, y + 0.28, z, 0xffd166);
+        break;
+      case 'ember-splash':
+        this.spawnExplosionParticles(x, y + 0.52, z, color, profile.impactParticles);
+        this.spawnParticleRing(x, y + 0.42, z, 0xff6b35);
+        break;
+      case 'ion-bloom':
+        this.spawnExplosionParticles(x, y + 0.50, z, color, profile.impactParticles);
+        this.spawnParticleRing(x, y + 0.34, z, color);
+        this.triggerBloomPulse(0.14);
+        break;
+      case 'fragmentation-burst':
+        // The grenade's dedicated ballistic detonation already produces a large,
+        // ringed blast. Keep its contact cue intentionally small to avoid doubling it.
+        this.spawnExplosionParticles(x, y + 0.32, z, color, Math.min(6, profile.impactParticles));
+        break;
+      case 'magnetic-punch':
+        this.spawnExplosionParticles(x, y + 0.54, z, color, profile.impactParticles);
+        this.spawnParticleRing(x, y + 0.34, z, color);
+        this.triggerHitStop(0.025);
+        this.triggerBloomPulse(0.16);
+        break;
+    }
   }
 
   private spawnSurvivalWeaponMuzzleFx(weapon: SurvivalWeaponState, target: EnemyItem): void {
@@ -18335,46 +18587,13 @@ export class PaleciakiGameEngine {
               const impactColor = p.firearmColor ?? (p.weaponId ? SURVIVAL_DAMAGE_WEAPONS[p.weaponId].color : 0x7dd3fc);
               this.spawnCompactImpact(e.x, e.y + 0.72, e.z, impactColor);
               if (p.firearmProjectile && p.firearmId) {
-                const archetype = SURVIVAL_FIREARM_DEFS[p.firearmId].archetype;
-                switch (archetype) {
-                  case 'shotgun':
-                    this.spawnExplosionParticles(e.x, e.y + 0.50, e.z, impactColor, 10);
-                    this.spawnParticleRing(e.x, e.y + 0.35, e.z, impactColor);
-                    break;
-                  case 'rocket':
-                    this.spawnExplosionParticles(e.x, e.y + 0.48, e.z, impactColor, 20);
-                    this.spawnParticleRing(e.x, e.y + 0.28, e.z, 0xffd166);
-                    break;
-                  case 'grenade':
-                    this.spawnExplosionParticles(e.x, e.y + 0.32, e.z, impactColor, this.isHandheldViewport ? 16 : 26);
-                    this.spawnParticleRing(e.x, e.y + 0.12, e.z, 0xffd166);
-                    break;
-                  case 'flame':
-                    this.spawnExplosionParticles(e.x, e.y + 0.52, e.z, impactColor, 7);
-                    this.spawnParticleRing(e.x, e.y + 0.42, e.z, 0xff6b35);
-                    break;
-                  case 'plasma':
-                    this.spawnExplosionParticles(e.x, e.y + 0.50, e.z, impactColor, 13);
-                    this.spawnParticleRing(e.x, e.y + 0.34, e.z, impactColor);
-                    this.triggerBloomPulse(0.14);
-                    break;
-                  case 'gauss':
-                    this.spawnExplosionParticles(e.x, e.y + 0.54, e.z, impactColor, 12);
-                    this.triggerHitStop(0.025);
-                    break;
-                  case 'heavy-rifle':
-                    this.spawnExplosionParticles(e.x, e.y + 0.48, e.z, impactColor, 8);
-                    break;
-                  case 'minigun':
-                    this.spawnExplosionParticles(e.x, e.y + 0.48, e.z, impactColor, 4);
-                    break;
-                  case 'pistol':
-                  case 'smg':
-                  case 'rifle':
-                    this.spawnExplosionParticles(e.x, e.y + 0.48, e.z, impactColor, SURVIVAL_FIREARM_PRESENTATION[archetype].impactParticles);
-                    if (archetype === 'pistol' || archetype === 'rifle') this.spawnParticleRing(e.x, e.y + 0.35, e.z, impactColor);
-                    break;
-                }
+                this.spawnSurvivalFirearmImpactFx(
+                  SURVIVAL_FIREARM_DEFS[p.firearmId].archetype,
+                  e.x,
+                  e.y,
+                  e.z,
+                  impactColor,
+                );
               }
               if (p.firearmExplosion) {
                 this.triggerScreenShake(p.firearmId === 'ballistic_grenade_launcher' ? 0.15 : 0.22, 0.16);
