@@ -34,7 +34,7 @@ test('crowd resolver respects large boss footprints and arena bounds', () => {
     { id: 'customer-a', type: 'customer', x: 0.2, z: 0 },
     { id: 'customer-b', type: 'customer', x: 0.2, z: 0.1 },
   ];
-  resolveEnemyCrowdOverlaps(actors, new EnemySpatialIndex(4), bounds, 0.16, 4, 0.8);
+  resolveEnemyCrowdOverlaps(actors, new EnemySpatialIndex(4), bounds, 0.16, 16, 1.2);
   assertCrowdClear(actors);
   for (const actor of actors) {
     assert.ok(actor.x >= bounds.minX && actor.x <= bounds.maxX);
@@ -67,7 +67,7 @@ test('defeated actors do not push live enemy models', () => {
     { id: 'live', type: 'customer', x: 0, z: 0 },
     { id: 'dead', type: 'customer', x: 0, z: 0, state: 'defeated' },
   ];
-  const corrected = resolveEnemyCrowdOverlaps(actors, new EnemySpatialIndex(4), bounds, 0.16, 4, 0.8);
+  const corrected = resolveEnemyCrowdOverlaps(actors, new EnemySpatialIndex(4), bounds, 0.16, 16, 1.2);
   assert.equal(corrected, 0);
   assert.deepEqual({ x: actors[0].x, z: actors[0].z }, { x: 0, z: 0 });
 });
