@@ -91,14 +91,15 @@ test('every primary firearm has a unique hard range and that range is enforced i
   assert.ok(game.includes('if (p.travelledDistance >= p.maxRangeMeters - 0.0001) p.life = 0'));
 });
 
-test('firearm drops are Survival-only, rare, time-gated, single-pickup and globally rate-limited', async () => {
+test('firearm drops are shared by Survival and Campaign, rare, time-gated, single-pickup and globally rate-limited', async () => {
   const game = await read('../src/game.ts');
-  assert.match(game, /if \(this\.gameMode === 'survival'\) \{[\s\S]*?this\.survivalFirearmKillCount\+\+/);
-  assert.match(game, /this\.survivalElapsed >= 45 && this\.survivalFirearmKillCount >= 8/);
+  assert.match(game, /if \(this\.gameMode === 'survival' \|\| this\.gameMode === 'campaign'\) \{[\s\S]*?this\.survivalFirearmKillCount\+\+/);
+  assert.match(game, /const firearmElapsed = this\.gameMode === 'campaign' \? this\.activeElapsedSeconds : this\.survivalElapsed/);
+  assert.match(game, /firearmElapsed >= 45 && this\.survivalFirearmKillCount >= 8/);
   assert.match(game, /this\.survivalFirearmDrops\.length === 0/);
-  assert.match(game, /this\.survivalElapsed - this\.survivalFirearmLastDropSeconds >= 75/);
+  assert.match(game, /firearmElapsed - this\.survivalFirearmLastDropSeconds >= 75/);
   assert.match(game, /baseY: y, age: 0, life: 40/);
-  assert.match(game, /this\.gameMode !== 'survival' \|\| this\.survivalFirearmDrops\.length > 0/);
+  assert.match(game, /this\.gameMode !== 'survival' && this\.gameMode !== 'campaign'/);
   assert.match(game, /const currentGameMode = this\.gameMode;\s*if \(currentGameMode !== 'pvp'\) \{\s*this\.fireSurvivalFirearm\(\)/);
   assert.match(game, /if \(this\.gameMode === 'pvp'\) \{\s*this\.updatePvpMode/);
 });
