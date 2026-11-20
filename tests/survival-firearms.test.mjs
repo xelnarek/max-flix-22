@@ -34,17 +34,23 @@ test('firearm catalogue has clearly differentiated cadence, ammunition, projecti
     Math.min(...definitions.map((entry) => entry.fireIntervalSeconds)) >= 10);
 });
 
-test('first elimination guarantees a world firearm, then normal drops are random with pity protection', () => {
-  const first = rollSurvivalFirearmDrop(1, 'normal', 0, 0.999);
-  assert.equal(first.shouldDrop, true);
-  assert.equal(first.isGuaranteed, true);
+test('firearm drops unlock after eight kills: 4% normal, 22% elite, boss guaranteed and 18-kill pity', () => {
+  const beforeUnlock = rollSurvivalFirearmDrop(7, 'boss', 0, 0);
+  assert.equal(beforeUnlock.shouldDrop, false);
+  assert.equal(beforeUnlock.chance, 0);
 
-  assert.equal(rollSurvivalFirearmDrop(2, 'normal', 0, 0.99).shouldDrop, false);
-  assert.equal(rollSurvivalFirearmDrop(2, 'normal', 0, 0.13).shouldDrop, true);
-  assert.equal(rollSurvivalFirearmDrop(8, 'normal', 5, 0.999).isPityDrop, true);
-  assert.equal(rollSurvivalFirearmDrop(8, 'normal', 5, 0.999).shouldDrop, true);
+  assert.equal(rollSurvivalFirearmDrop(8, 'normal', 0, 0.04).shouldDrop, false);
+  assert.equal(rollSurvivalFirearmDrop(8, 'normal', 0, 0.039).shouldDrop, true);
+  assert.equal(rollSurvivalFirearmDrop(8, 'elite', 0, 0.22).shouldDrop, false);
+  assert.equal(rollSurvivalFirearmDrop(8, 'elite', 0, 0.219).shouldDrop, true);
+
+  const pity = rollSurvivalFirearmDrop(25, 'normal', 17, 0.999);
+  assert.equal(pity.isPityDrop, true);
+  assert.equal(pity.isGuaranteed, true);
+  assert.equal(pity.shouldDrop, true);
+
   assert.equal(rollSurvivalFirearmDrop(8, 'boss', 0, 0.999).shouldDrop, true);
-  assert.equal(rollSurvivalFirearmDrop(8, 'elite', 0, 0.57).shouldDrop, true);
+  assert.equal(rollSurvivalFirearmDrop(8, 'boss', 0, 0.999).isGuaranteed, true);
 });
 
 test('weighted drops never offer the starter pistol or the firearm already in hand', () => {
