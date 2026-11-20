@@ -8,7 +8,7 @@ import {
 
 const stableRandom = () => 0;
 
-test('a draft offers at most one weapon and two meaningfully different passive categories', () => {
+test('a draft presents only operator perks across meaningfully different categories', () => {
   const options = [
     'damage', 'rapid', 'critical', 'critical_damage',
     'dash', 'boots', 'medkit', 'growth', 'drone',
@@ -17,59 +17,23 @@ test('a draft offers at most one weapon and two meaningfully different passive c
   assert.equal(selected.length, 3);
   assert.equal(new Set(selected.map((option) => option.id)).size, 3);
   assert.ok(selected.some((option) => ['damage', 'rapid', 'growth', 'drone'].includes(option.id)));
-  const weaponCount = selected.filter((option) => option.id.startsWith('weapon_')).length;
-  assert.equal(weaponCount, 0);
+  assert.ok(selected.every((option) => !option.id.startsWith('weapon_')));
 });
 
-test('a selected weapon is paired with two passive choices, never a second weapon', () => {
-  const options = [
+test('legacy weapon unlock, upgrade and evolution offers are filtered out of all operator drafts', () => {
+  const legacy = [
     { id: 'weapon_unlock:pallet_cannon' },
-    { id: 'weapon_unlock:glue_mine' },
     { id: 'weapon_upgrade:piorun_drone' },
     { id: 'weapon_evolve:diamond_saw' },
-    { id: 'damage' },
-    { id: 'medkit' },
-    { id: 'growth' },
-    { id: 'boots' },
   ];
-  const selected = selectSurvivalDraftOptions(options, {
-    stacks: { damage: 2, range: 1 },
-    weapons: [{ id: 'diamond_saw', level: 5 }],
-  }, stableRandom);
+  const selected = selectSurvivalDraftOptions([
+    ...legacy,
+    { id: 'damage' }, { id: 'medkit' }, { id: 'growth' }, { id: 'boots' },
+  ], {}, stableRandom);
   assert.equal(selected.length, 3);
-  assert.equal(selected[0].id, 'weapon_evolve:diamond_saw');
-  assert.equal(selected.filter((option) => option.id.startsWith('weapon_')).length, 1);
-});
-
-test('a new weapon remains ahead of ordinary weapon level-ups when both are available', () => {
-  const selected = selectSurvivalDraftOptions([
-    { id: 'weapon_unlock:glue_mine' },
-    { id: 'weapon_upgrade:pallet_cannon' },
-    { id: 'damage' },
-    { id: 'medkit' },
-    { id: 'growth' },
-  ], {
-    weapons: [{ id: 'pallet_cannon', level: 5 }],
-  }, stableRandom);
-  assert.equal(selected[0].id, 'weapon_unlock:glue_mine');
-});
-
-test('weapon unlocks follow the owned passive and favour a missing weapon role', () => {
-  const selected = selectSurvivalDraftOptions([
-    { id: 'weapon_unlock:pallet_cannon' },
-    { id: 'weapon_unlock:glue_mine' },
-    { id: 'weapon_unlock:kfc_bomber' },
-    { id: 'damage' },
-    { id: 'medkit' },
-  ], {
-    stacks: { damage: 2 },
-    weapons: [{ id: 'glue_mine', level: 2 }],
-  }, stableRandom);
-  assert.equal(selected[0].id, 'weapon_unlock:pallet_cannon');
-  assert.match(
-    getSurvivalDraftSynergyHint(selected[0].id, { stacks: { damage: 1 } }) || '',
-    /Wzmocniona amunicja/,
-  );
+  assert.ok(selected.every((option) => !option.id.startsWith('weapon_')));
+  assert.equal(getSurvivalDraftSynergyHint('weapon_evolve:pallet_cannon', {}), null);
+  assert.equal(scoreSurvivalDraftOption('weapon_upgrade:pallet_cannon', {}), Number.NEGATIVE_INFINITY);
 });
 
 test('the draft actively completes an existing passive pair before unrelated upgrades', () => {
@@ -124,32 +88,6 @@ test('low health sharply raises the value of recovery and defensive options', ()
     scoreSurvivalDraftOption('medkit', { healthRatio: 1 }));
 });
 
-test('weapon evolution is only described as ready when the actual weapon and passive requirements are met', () => {
-  const eligible = {
-    stacks: { damage: 1 },
-    weapons: [{ id: 'pallet_cannon', level: 5 }],
-    elapsedSeconds: 210,
-  };
-  assert.match(
-    getSurvivalDraftSynergyHint('weapon_evolve:pallet_cannon', eligible) || '',
-    /EWOLUCJA GOTOWA/,
-  );
-  assert.equal(getSurvivalDraftSynergyHint('weapon_evolve:pallet_cannon', {}), null);
-  assert.equal(getSurvivalDraftSynergyHint('weapon_evolve:pallet_cannon', {
-    ...eligible, weapons: [{ id: 'pallet_cannon', level: 4 }],
-  }), null);
-  assert.equal(getSurvivalDraftSynergyHint('weapon_evolve:pallet_cannon', {
-    ...eligible, elapsedSeconds: 209,
-  }), null);
-  assert.equal(getSurvivalDraftSynergyHint('weapon_evolve:pallet_cannon', {
-    ...eligible, stacks: {},
-  }), null);
-  assert.equal(getSurvivalDraftSynergyHint('weapon_evolve:pallet_cannon', {
-    ...eligible, weapons: [{ id: 'pallet_cannon', level: 5, evolved: true }],
-  }), null);
-  assert.equal(getSurvivalDraftSynergyHint('damage', {}), null);
-});
-
 test('critical synergy progress uses the exact 3 plus 2 requirements and does not promise an early unlock', () => {
   const nearlyReady = getSurvivalDraftSynergyHint('critical', {
     stacks: { critical: 2, critical_damage: 1 },
@@ -182,14 +120,12 @@ test('Overdrive only completes at three damage stacks and two attack-speed stack
   assert.match(complete || '', /DOMKNIESZ SYNERGIĘ: Overdrive/);
 });
 
-test('already unlocked or already-complete synergies are not advertised as still progressing', () => {
+test('already-complete synergies are not advertised as still progressing', () => {
   assert.equal(getSurvivalDraftSynergyHint('critical', {
     stacks: { critical: 2, critical_damage: 2 },
-    evolutions: ['critical_protocol'],
   }), null);
   assert.equal(getSurvivalDraftSynergyHint('critical', {
     stacks: { critical: 3, critical_damage: 2 },
-    evolutions: [],
   }), null);
 });
 
