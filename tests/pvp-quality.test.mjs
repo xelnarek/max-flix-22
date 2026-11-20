@@ -49,7 +49,7 @@ test('timing-based PvP aim, server-origin checks, six-character invite codes and
   assert.match(game, /this\.pvpInputSendAccumulator %= inputInterval/);
   assert.match(app, /pvpAimZone/);
   assert.match(app, /setPvpAimStickInput/);
-  assert.match(app, /getPvpFirearmAttackCooldown\(localPlayer\.primaryFirearmId\)/);
+  assert.match(app, /getPvpFirearmAttackCooldown\(localFirearmPlayer\.primaryFirearmId\)/);
   assert.match(app, /startPvpFireCooldown\(/);
   assert.match(app, /button\.dataset\.roundActive = String\(roundActive\)/);
   assert.match(app, /REWANŻ ZGŁOSZONY • CZEKAJ NA RYWALA/);
