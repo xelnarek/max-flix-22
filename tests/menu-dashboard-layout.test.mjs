@@ -49,14 +49,16 @@ test('the active atlas tab owns its content and the shared launch action remains
 test('menu tabs expose tab semantics and runtime keyboard navigation without duplicate touch handlers', async () => {
   const app = await readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
   const navigation = await readFile(new URL('../src/menuTabNavigation.ts', import.meta.url), 'utf8');
-  assert.match(app, /menuTabList\?\.setAttribute\('role', 'navigation'\)/);
-  assert.match(app, /group\.setAttribute\('role', 'tablist'\)/);
+  assert.doesNotMatch(app, /menuTabList\?\.setAttribute\('role', 'navigation'\)/);
+  assert.match(app, /menuTabList\?\.setAttribute\('role', 'tablist'\)/);
+  assert.match(app, /menuTabList\?\.setAttribute\('aria-orientation', 'vertical'\)/);
+  assert.doesNotMatch(app, /group\.setAttribute\('role', 'tablist'\)/);
   assert.match(app, /setAttribute\('role', 'tab'\)/);
   assert.match(app, /setAttribute\('aria-selected', String\(active\)\)/);
   assert.match(app, /setAttribute\('role', 'tabpanel'\)/);
   assert.match(app, /getMenuTabIndexForKey\(event\.key, currentNavigationIndex, navigationTabs\.length, 'vertical'\)/);
   assert.match(app, /const navigationTabs = menuTabButtons/);
-  assert.match(app, /group\.setAttribute\('aria-orientation', 'vertical'\)/);
+  assert.doesNotMatch(app, /group\.setAttribute\('aria-orientation', 'vertical'\)/);
   assert.doesNotMatch(app, /desktopMenuNavigationQuery|mobileMenuSegmentQuery/);
   assert.doesNotMatch(app.slice(app.indexOf('const menuTabButtons'), app.indexOf("document.querySelectorAll<HTMLElement>('.char-card')")), /addEventListener\('touchend'/);
   assert.match(navigation, /ArrowRight/);

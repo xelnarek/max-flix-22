@@ -1,19 +1,10 @@
 /*
  * MAX FLIX 22 — CRIMSON SHIFT / mobile layout repair V3
- * The phone layout uses a native viewport grid, a four-segment nav and one
- * vertically scrollable content viewport. It intentionally overrides the
- * legacy inverse-zoom menu sizing instead of stacking another scaled canvas.
+ * The phone layout uses a native viewport grid and a persistent vertical left rail
+ * with one scrollable content viewport. It overrides legacy inverse-zoom sizing.
  */
 
-#title-screen .menu-mobile-segments {
-  display: none;
-}
-
-#title-screen .menu-nav-group[hidden] {
-  display: none !important;
-}
-
-/* Tablet widths keep the complete desktop-style rail; only phones use segment drill-down. */
+/* Tablet and phone widths keep the same complete vertical navigation rail. */
 @media (min-width: 901px) and (max-width: 1100px) {
   #title-screen .title-sheet {
     zoom: 1 !important;
@@ -31,8 +22,6 @@
     gap: 9px !important;
     overflow: hidden !important;
   }
-
-  #title-screen .menu-mobile-segments { display: none !important; }
 
   #title-screen .menu-tabs-bar {
     grid-area: navigation !important;
@@ -61,8 +50,6 @@
     gap: 4px !important;
     border-right: 0 !important;
   }
-
-  #title-screen .menu-nav-group[hidden] { display: none !important; }
 
   #title-screen .menu-nav-group-label {
     display: block !important;
@@ -287,60 +274,6 @@
     box-shadow: none !important;
   }
 
-  #title-screen .menu-mobile-segments {
-    display: grid !important;
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    gap: 5px !important;
-    width: 100%;
-    min-width: 0;
-  }
-
-  #title-screen .menu-mobile-segment {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    min-width: 0;
-    min-height: 44px !important;
-    padding: 5px 3px !important;
-    border: 1px solid rgba(202, 111, 107, .26) !important;
-    border-radius: 6px !important;
-    background: linear-gradient(160deg, rgba(36, 26, 29, .98), rgba(13, 12, 15, .99)) !important;
-    color: #d5c7c5 !important;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  #title-screen .menu-mobile-segment .segment-index {
-    color: #a98988;
-    font: 800 8px/1 "JetBrains Mono", monospace;
-    letter-spacing: .12em;
-  }
-
-  #title-screen .menu-mobile-segment .segment-label {
-    color: inherit;
-    font-size: clamp(8px, 2.3vw, 10px) !important;
-    font-weight: 900;
-    line-height: 1.05;
-    letter-spacing: .025em;
-    text-align: center;
-    white-space: nowrap;
-  }
-
-  #title-screen .menu-mobile-segment.active,
-  #title-screen .menu-mobile-segment[aria-pressed="true"] {
-    border-color: rgba(244, 83, 78, .76) !important;
-    background: linear-gradient(145deg, rgba(127, 27, 33, .92), rgba(39, 14, 19, .99)) !important;
-    color: #fff3f0 !important;
-    box-shadow: inset 0 -2px 0 #ec4145, 0 0 14px rgba(210, 42, 49, .16) !important;
-  }
-
-  #title-screen .menu-mobile-segment.active .segment-index,
-  #title-screen .menu-mobile-segment[aria-pressed="true"] .segment-index {
-    color: #ffb5ad;
-  }
-
   #title-screen .menu-nav-group {
     display: grid !important;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 96px), 1fr)) !important;
@@ -353,10 +286,6 @@
     border-radius: 8px !important;
     background: linear-gradient(150deg, rgba(29, 17, 20, .97), rgba(10, 10, 12, .99)) !important;
     overflow: visible !important;
-  }
-
-  #title-screen .menu-nav-group[hidden] {
-    display: none !important;
   }
 
   #title-screen .menu-nav-group-label {
@@ -616,20 +545,6 @@
     padding: 6px !important;
   }
 
-  #title-screen .menu-mobile-segments {
-    gap: 4px !important;
-  }
-
-  #title-screen .menu-mobile-segment {
-    min-height: 42px !important;
-    padding-inline: 2px !important;
-  }
-
-  #title-screen .menu-mobile-segment .segment-label {
-    font-size: 8px !important;
-    letter-spacing: 0 !important;
-  }
-
   #title-screen .menu-nav-group {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 90px), 1fr)) !important;
     gap: 5px !important;
@@ -692,10 +607,6 @@
     gap: 5px !important;
   }
 
-  #title-screen .menu-mobile-segment {
-    min-height: 38px !important;
-  }
-
   #title-screen .menu-nav-group {
     padding: 5px !important;
   }
@@ -722,7 +633,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #title-screen .menu-mobile-segment,
   #title-screen .menu-tab-btn,
   #title-screen .menu-mode-card,
   #title-screen .char-card {
