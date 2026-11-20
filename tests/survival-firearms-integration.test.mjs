@@ -4,6 +4,39 @@ import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
+
+test('the shared ballistic model computes deterministic arc height and ground-contact timing', async () => {
+  const { evaluateBallisticHeight, getBallisticGroundContactTime } = await import('../src/survivalFirearmBallistics.ts');
+  const initialHeight = 0.6;
+  const launchVelocity = 7.4;
+  const gravity = 12.5;
+  const apexTime = launchVelocity / gravity;
+  const apexHeight = evaluateBallisticHeight(initialHeight, launchVelocity, gravity, apexTime);
+  const landingTime = getBallisticGroundContactTime(initialHeight, launchVelocity, gravity, 0.14);
+  assert.ok(apexHeight > initialHeight + 2);
+  assert.ok(landingTime > apexTime && landingTime < 1.4);
+  assert.ok(Math.abs(evaluateBallisticHeight(initialHeight, launchVelocity, gravity, landingTime) - 0.14) < 1e-9);
+  assert.equal(getBallisticGroundContactTime(0.6, 0, 0), null);
+});
+
+test('the ballistic grenade is a shared 11th firearm with its own projectile, sound, reload, impact and damage source', async () => {
+  const [firearms, presentation, sound, game] = await Promise.all([
+    read('../src/survivalFirearms.ts'),
+    read('../src/survivalFirearmPresentation.ts'),
+    read('../src/sound.ts'),
+    read('../src/game.ts'),
+  ]);
+  assert.match(firearms, /ballistic_grenade_launcher: \{[\s\S]*?rangeMeters: 24[\s\S]*?magazineSize: 4[\s\S]*?reloadSeconds: 3\.2[\s\S]*?projectileGravity: 12\.5[\s\S]*?projectileFuseSeconds: 1\.4/);
+  assert.match(presentation, /grenade: \{[\s\S]*?projectileStyle: 'grenade-ballistic'/);
+  assert.match(sound, /grenade: \{ wave: 'sine'/);
+  assert.match(sound, /grenade: \[108, 0\.23, 0\.15\]/);
+  assert.match(game, /case 'grenade':/);
+  assert.match(game, /case 'grenade-ballistic':/);
+  assert.match(game, /detonateBallisticFirearmProjectile/);
+  assert.match(game, /damageEnemy\(enemy, baseSplashDamage,[\s\S]*?projectile\.damageSource/);
+  assert.match(game, /ballistic_grenade_launcher: 0\.42/);
+});
+
 test('primary firearms are a separate shared slot, not a perk or roulette reward', async () => {
   const [game, firearms, draft, roulette] = await Promise.all([
     read('../src/game.ts'), read('../src/survivalFirearms.ts'),
