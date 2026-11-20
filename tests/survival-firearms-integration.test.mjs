@@ -177,9 +177,9 @@ test('pistol, SMG, rifle and minigun use distinct projectile silhouettes', async
 
 test('the armory renders individual firearm icons from actual Three.js meshes, not emoji glyphs', async () => {
   const app = await read('../src/index.ts');
-  assert.match(app, /new THREE\\.WebGLRenderer\\(\\{ alpha: true, antialias: true, preserveDrawingBuffer: true \\}\\)/);
-  assert.match(app, /renderSurvivalFirearmCatalogIcon\\(firearm\\.archetype, firearm\\.color\\)/);
-  assert.match(app, /new THREE\\.BoxGeometry/);
-  assert.match(app, /new THREE\\.CylinderGeometry/);
-  assert.match(app, /icon\\.dataset\\.fallbackIcon = firearm\\.icon/);
+  assert.match(app, /new THREE\.WebGLRenderer\(\{ alpha: true, antialias: true, preserveDrawingBuffer: true \}\)/);
+  assert.match(app, /renderSurvivalFirearmCatalogIcon\(firearm\.archetype, firearm\.color\)/);
+  assert.match(app, /new THREE\.BoxGeometry/);
+  assert.match(app, /new THREE\.CylinderGeometry/);
+  assert.match(app, /iconData && icon instanceof HTMLImageElement/);
 });
