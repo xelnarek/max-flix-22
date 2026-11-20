@@ -99,7 +99,9 @@ test('PvP combat feedback keeps simultaneous hits and renders lightweight projec
   assert.match(arena, /hitEvents: PvpHitEvent\[\]/);
   assert.match(arena, /state\.hitEvents\.push\(hitEvent\)/);
   assert.match(game, /pendingPvpHitEvents/);
-  assert.match(game, /new THREE\.CylinderGeometry\(0\.018, 0\.075/);
+  assert.match(game, /new THREE\.CylinderGeometry\(trailRadius \* 0\.24, trailRadius, trailLength, 6, 1, true\)/);
+  assert.match(game, /opacity: firearmProfile\?\.trailOpacity \?\? 0\.58/);
+  assert.match(game, /trailLength = THREE\.MathUtils\.clamp/);
   assert.match(game, /mesh\.rotation\.y = Math\.atan2\(proj\.vx, proj\.vz\)/);
   assert.match(game, /pulsePvpFeedback\('pvp-hit-vignette'\)/);
   assert.match(game, /pulsePvpFeedback\('pvp-hit-confirm'\)/);
