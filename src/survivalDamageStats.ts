@@ -1,3 +1,5 @@
+import { SURVIVAL_FIREARM_DEFS, type SurvivalFirearmId } from './survivalFirearms.ts';
+
 export type SurvivalDamageWeaponId =
   | 'pallet_cannon'
   | 'diamond_saw'
@@ -15,7 +17,8 @@ export type SurvivalDamageWeaponId =
 export type SurvivalDamageSource =
   | 'basic_attack'
   | 'ability'
-  | `weapon:${SurvivalDamageWeaponId}`;
+  | `weapon:${SurvivalDamageWeaponId}`
+  | `firearm:${SurvivalFirearmId}`;
 
 export interface SurvivalDamageSourceMeta {
   readonly label: string;
@@ -37,6 +40,12 @@ export const SURVIVAL_DAMAGE_WEAPONS: Readonly<Record<SurvivalDamageWeaponId, Su
   forklift_horn: { label: 'Klakson sztaplarki', color: 0xfbbf24, category: 'BROŃ' },
   wz_boomerang: { label: 'Bumerang WZ', color: 0x34d399, category: 'BROŃ' },
 });
+
+const SURVIVAL_DAMAGE_FIREARMS: Readonly<Record<SurvivalFirearmId, SurvivalDamageSourceMeta>> = Object.freeze(
+  Object.fromEntries(Object.entries(SURVIVAL_FIREARM_DEFS).map(([id, definition]) => [id, {
+    label: definition.name, color: definition.color, category: 'BROŃ' as const,
+  }])) as Record<SurvivalFirearmId, SurvivalDamageSourceMeta>,
+);
 
 export interface SurvivalDamageStatValue {
   damage: number;
@@ -101,6 +110,10 @@ export function getSurvivalWeaponDamageSource(weaponId: SurvivalDamageWeaponId):
   return `weapon:${weaponId}`;
 }
 
+export function getSurvivalFirearmDamageSource(firearmId: SurvivalFirearmId): SurvivalDamageSource {
+  return `firearm:${firearmId}`;
+}
+
 /** Count only real HP removed after shields and defeated targets are excluded. */
 export function recordSurvivalDamage(
   stats: SurvivalDamageStats,
@@ -134,13 +147,16 @@ export function buildSurvivalDamageReport(stats: Readonly<Record<string, Surviva
 
     const source = sourceKey as SurvivalDamageSource;
     const weaponId = source.startsWith('weapon:') ? source.slice('weapon:'.length) as SurvivalDamageWeaponId : null;
+    const firearmId = source.startsWith('firearm:') ? source.slice('firearm:'.length) as SurvivalFirearmId : null;
     const meta = weaponId && Object.prototype.hasOwnProperty.call(SURVIVAL_DAMAGE_WEAPONS, weaponId)
       ? SURVIVAL_DAMAGE_WEAPONS[weaponId]
-      : source === 'basic_attack'
+      : firearmId && Object.prototype.hasOwnProperty.call(SURVIVAL_DAMAGE_FIREARMS, firearmId)
+        ? SURVIVAL_DAMAGE_FIREARMS[firearmId]
+        : source === 'basic_attack'
         ? BASIC_ATTACK_META
         : ABILITY_META;
     entries.push({
-      source: weaponId ? getSurvivalWeaponDamageSource(weaponId) : source === 'basic_attack' ? 'basic_attack' : 'ability',
+      source: weaponId ? getSurvivalWeaponDamageSource(weaponId) : firearmId ? getSurvivalFirearmDamageSource(firearmId) : source === 'basic_attack' ? 'basic_attack' : 'ability',
       label: meta.label,
       category: meta.category,
       damage: Math.round(rawDamage * 10) / 10,

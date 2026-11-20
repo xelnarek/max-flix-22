@@ -884,6 +884,55 @@ class SoundEngine {
     osc.stop(t + 0.15);
   }
 
+  /** Short original synthesized report for each firearm class; deliberately distinct from melee whooshes. */
+  public playFirearmShot(archetype: 'pistol' | 'smg' | 'rifle' | 'shotgun' | 'heavy-rifle' | 'minigun' | 'rocket' | 'flame' | 'plasma' | 'gauss') {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+
+    const profiles = {
+      pistol: { wave: 'triangle' as OscillatorType, start: 190, end: 48, duration: 0.085, volume: 0.14, tick: 1320 },
+      smg: { wave: 'square' as OscillatorType, start: 255, end: 82, duration: 0.052, volume: 0.085, tick: 1760 },
+      rifle: { wave: 'sawtooth' as OscillatorType, start: 145, end: 39, duration: 0.105, volume: 0.13, tick: 1180 },
+      shotgun: { wave: 'sawtooth' as OscillatorType, start: 96, end: 26, duration: 0.17, volume: 0.19, tick: 920 },
+      'heavy-rifle': { wave: 'square' as OscillatorType, start: 118, end: 32, duration: 0.14, volume: 0.17, tick: 740 },
+      minigun: { wave: 'square' as OscillatorType, start: 290, end: 112, duration: 0.045, volume: 0.07, tick: 2040 },
+      rocket: { wave: 'sine' as OscillatorType, start: 72, end: 25, duration: 0.25, volume: 0.22, tick: 510 },
+      flame: { wave: 'sawtooth' as OscillatorType, start: 390, end: 165, duration: 0.09, volume: 0.065, tick: 0 },
+      plasma: { wave: 'sine' as OscillatorType, start: 720, end: 155, duration: 0.15, volume: 0.12, tick: 2140 },
+      gauss: { wave: 'sawtooth' as OscillatorType, start: 980, end: 58, duration: 0.19, volume: 0.15, tick: 2480 },
+    } as const;
+    const profile = profiles[archetype];
+    const t = this.ctx.currentTime;
+    const bus = this.effectsBus ?? this.ctx.destination;
+
+    const body = this.ctx.createOscillator();
+    const envelope = this.ctx.createGain();
+    body.type = profile.wave;
+    body.frequency.setValueAtTime(profile.start, t);
+    body.frequency.exponentialRampToValueAtTime(profile.end, t + profile.duration);
+    envelope.gain.setValueAtTime(profile.volume, t);
+    envelope.gain.exponentialRampToValueAtTime(0.001, t + profile.duration);
+    body.connect(envelope);
+    envelope.connect(bus);
+    body.start(t);
+    body.stop(t + profile.duration + 0.01);
+
+    if (profile.tick > 0) {
+      const transient = this.ctx.createOscillator();
+      const transientEnvelope = this.ctx.createGain();
+      transient.type = 'square';
+      transient.frequency.setValueAtTime(profile.tick, t);
+      transient.frequency.exponentialRampToValueAtTime(Math.max(90, profile.tick * 0.35), t + 0.024);
+      transientEnvelope.gain.setValueAtTime(archetype === 'rocket' || archetype === 'shotgun' ? 0.065 : 0.035, t);
+      transientEnvelope.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+      transient.connect(transientEnvelope);
+      transientEnvelope.connect(bus);
+      transient.start(t);
+      transient.stop(t + 0.035);
+    }
+  }
+
   public playAttackWhoosh() {
     if (this.isMuted) return;
     this.initCtx();
