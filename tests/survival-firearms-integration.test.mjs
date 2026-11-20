@@ -13,7 +13,7 @@ test('primary firearms are a separate shared slot, not a perk or roulette reward
   assert.match(game, /this\.survivalFirearm = createStartingSurvivalFirearmState\(\)/);
   assert.match(game, /private fireSurvivalFirearm\(target\?: EnemyItem\)/);
   assert.match(game, /this\.fireSurvivalFirearm\(target\)/);
-  assert.match(game, /rollSurvivalFirearmDrop\(this\.survivalFirearmKillCount/);
+  assert.match(game, /rollSurvivalFirearmDrop\(\s*this\.survivalFirearmKillCount/);
   assert.match(game, /rollSurvivalFirearmId\(this\.survivalFirearm\.id/);
   assert.match(firearms, /STARTING_SURVIVAL_FIREARM: SurvivalFirearmId = 'starter_pistol'/);
   assert.doesNotMatch(draft, /SurvivalFirearmId|firearm:/);
@@ -44,7 +44,7 @@ test('firearm pickups are physical 3D models with weapon-specific silhouettes', 
   assert.match(game, /const distance = Math\.hypot\(drop\.x - this\.playerPos\.x/);
   assert.ok(game.includes('const storedFirearmState = this.survivalFirearmStates.get(drop.firearmId)'));
   assert.match(game, /gun\.position\.set\(0, -0\.36, 0\.18\)/);
-  assert.match(game, /life: 28/);
+  assert.match(game, /life: 40/);
 });
 
 test('magazine, reload, projectile archetype and damage are driven by the active firearm profile', async () => {
