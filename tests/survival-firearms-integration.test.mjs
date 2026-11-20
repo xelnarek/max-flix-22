@@ -93,9 +93,9 @@ test('Survival HUD exposes the primary firearm, magazine and live reload state s
 
 test('each firearm keeps its own magazine and reload progress when swapped out', async () => {
   const game = await read('../src/game.ts');
-  assert.match(game, /private survivalFirearmStates = new Map<SurvivalFirearmId, SurvivalFirearmState>\(\)/);
+  assert.ok(game.includes('private survivalFirearmStates = new Map<SurvivalFirearmId, SurvivalFirearmState>()'));
   assert.match(game, /survivalFirearmStates\.set\(this\.survivalFirearm\.id, this\.survivalFirearm\)/);
-  assert.match(game, /const storedFirearmState = this\.survivalFirearmStates\.get\(drop\.firearmId\)/);
+  assert.ok(game.includes('const storedFirearmState = this.survivalFirearmStates.get(drop.firearmId)'));
   assert.match(game, /this\.survivalFirearmStates\.clear\(\)/);
   assert.match(game, /sound\.playFirearmReload\(definition\.archetype, 'start'\)/);
   assert.match(game, /sound\.playFirearmReload\(definition\.archetype, 'complete'\)/);
@@ -103,8 +103,8 @@ test('each firearm keeps its own magazine and reload progress when swapped out',
 
 test('firearm hits use distinct synthesized impact audio and class-specific hit effects', async () => {
   const [game, sound] = await Promise.all([read('../src/game.ts'), read('../src/sound.ts')]);
-  assert.match(sound, /public playFirearmReload\(archetype:/);
-  assert.match(sound, /public playFirearmImpact\(archetype:/);
+  assert.ok(sound.includes('public playFirearmReload(archetype:'));
+  assert.ok(sound.includes('public playFirearmImpact(archetype:'));
   assert.match(game, /sound\.playFirearmImpact\(SURVIVAL_FIREARM_DEFS\[p\.firearmId\]\.archetype\)/);
   for (const archetype of ['shotgun', 'rocket', 'flame', 'plasma', 'gauss', 'heavy-rifle', 'minigun']) {
     assert.ok(game.includes("case '" + archetype + "':"), 'missing hit feedback: ' + archetype);
