@@ -51,8 +51,10 @@
   box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 8px 22px rgba(0,0,0,.18) !important;
   touch-action: pan-y !important;
 }
-#title-screen .menu-nav-group
-{
+
+
+
+#title-screen .menu-nav-group {
   display: grid !important;
   flex: 0 0 auto !important;
   grid-template-columns: minmax(0, 1fr) !important;
@@ -575,8 +577,8 @@
     border-radius: 9px !important;
     touch-action: pan-y !important;
   }
-#title-screen .menu-nav-group
-{
+
+  #title-screen .menu-nav-group {
     display: grid !important;
     flex: 0 0 auto !important;
     grid-template-columns: minmax(0, 1fr) !important;
