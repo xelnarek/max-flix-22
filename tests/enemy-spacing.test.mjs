@@ -274,16 +274,36 @@ test('bulky bosses reserve more room and remain inside arena bounds', () => {
   }
 });
 
-test('crowd solver ignores defeated and vertically separated actors', () => {
+test('expired defeated actors and vertically separated actors do not affect live crowd separation', () => {
   const actors = [
     { id: 'ground', type: 'customer', x: 0, y: 0.4, z: 0 },
     { id: 'drone', type: 'piorun_dron', x: 0, y: 1.9, z: 0 },
-    { id: 'dead', type: 'customer', x: 0, y: 0.4, z: 0, state: 'defeated' },
+    { id: 'dead', type: 'customer', x: 0, y: 0.4, z: 0, state: 'defeated', deathVisualTimer: 0 },
   ];
   resolveEnemyCrowdOverlaps(actors, new EnemySpatialIndex(4), testArena, 0.16, 2, 0.52);
   assert.deepEqual({x:actors[0].x,z:actors[0].z},{x:0,z:0});
   assert.deepEqual({x:actors[1].x,z:actors[1].z},{x:0,z:0});
   assert.deepEqual({x:actors[2].x,z:actors[2].z},{x:0,z:0});
+});
+
+test('visible death-animation corpses remain in the spatial index until their timer expires', () => {
+  const live = { id: 'live', x: 0, z: 0 };
+  const activeCorpse = { id: 'corpse', x: 0.2, z: 0, state: 'defeated', deathVisualTimer: 0.55 };
+  const expiredCorpse = { id: 'expired', x: 0.25, z: 0, state: 'defeated', deathVisualTimer: 0 };
+  const index = new EnemySpatialIndex(4);
+  index.rebuild([live, activeCorpse, expiredCorpse]);
+  assert.deepEqual(index.query(0, 0, 2).map(actor => actor.id).sort(), ['corpse', 'live']);
+});
+
+test('living enemies move around visible corpses while corpse transforms stay fixed', () => {
+  const corpse = { id: 'a-corpse', type: 'customer', x: 0, y: 0.4, z: 0, state: 'defeated', deathVisualTimer: 0.7 };
+  const live = { id: 'z-live', type: 'kurier', x: 0.12, y: 0.4, z: 0 };
+  const corpseStart = { x: corpse.x, z: corpse.z };
+  const pairs = resolveEnemyCrowdOverlaps([corpse, live], new EnemySpatialIndex(4), testArena, 0.16, 16, 1.2);
+  assert.ok(pairs > 0);
+  assert.deepEqual({ x: corpse.x, z: corpse.z }, corpseStart, 'the dying model must not be displaced');
+  const minimum = getEnemyCollisionRadius('customer') + getEnemyCollisionRadius('kurier') + 0.16;
+  assert.ok(Math.hypot(live.x - corpse.x, live.z - corpse.z) >= minimum - 0.035);
 });
 
 test('fitted visual footprints preserve real rig size but remain globally bounded', () => {
