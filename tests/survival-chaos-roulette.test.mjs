@@ -5,12 +5,12 @@ import {
   SURVIVAL_CHAOS_ROULETTE_TABLE,
 } from '../src/survivalChaosRoulette.ts';
 
-test('B4 roulette exposes eighteen reward/risk classes and a bounded weighted table', () => {
+test('B4 roulette exposes seventeen reward/risk classes and a bounded weighted table', () => {
   const kinds = new Set(SURVIVAL_CHAOS_ROULETTE_TABLE.map((entry) => entry.kind));
   assert.deepEqual([...kinds].sort(), [
     'bounty', 'double_or_nothing', 'elite_delivery', 'enemy_pack', 'explosion', 'golden_crate',
     'hazard_clear', 'heal', 'magnet_surge', 'nova', 'overdrive', 'perk', 'shield',
-    'skill', 'time_lock', 'weapon_draft', 'xp_rain', 'xp_surge',
+    'skill', 'time_lock', 'xp_rain', 'xp_surge',
   ]);
   assert.equal(SURVIVAL_CHAOS_ROULETTE_TABLE.reduce((sum, entry) => sum + entry.weight, 0), 100);
   assert.ok(SURVIVAL_CHAOS_ROULETTE_TABLE.every((entry) => Number.isInteger(entry.weight) && entry.weight > 0));
@@ -26,7 +26,7 @@ test('B4 roulette exposes eighteen reward/risk classes and a bounded weighted ta
 
 test('roulette roll boundaries select the first and final outcomes deterministically', () => {
   assert.equal(rollSurvivalChaosRoulette(0), 'skill');
-  assert.equal(rollSurvivalChaosRoulette(0.999999), 'weapon_draft');
+  assert.equal(rollSurvivalChaosRoulette(0.999999), 'double_or_nothing');
   assert.equal(rollSurvivalChaosRoulette(0.5), 'nova');
 });
 
