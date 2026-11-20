@@ -884,3 +884,32 @@
     transition: none !important;
   }
 }
+
+
+/* Last-loaded override: this file follows the previous menu theme layers.
+   Keep the active panel's own content at the top of the available viewport. */
+#title-screen .menu-tab-content-area > .tab-panel.active {
+  display: flex !important;
+  flex: 0 0 auto !important;
+  align-self: stretch !important;
+  justify-content: flex-start !important;
+  align-content: flex-start !important;
+  align-items: stretch !important;
+  min-height: max-content !important;
+  height: auto !important;
+  margin-block: 0 !important;
+}
+#title-screen #tab-map {
+  justify-content: flex-start !important;
+  align-content: flex-start !important;
+  align-items: stretch !important;
+  min-height: max-content !important;
+  height: auto !important;
+}
+#title-screen #tab-map > .campaign-board {
+  flex: 0 0 auto !important;
+  align-self: stretch !important;
+  justify-self: stretch !important;
+  margin: 0 !important;
+  width: 100% !important;
+}
