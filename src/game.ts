@@ -3767,11 +3767,14 @@ export class PaleciakiGameEngine {
     // state through the same animated weapon rig used by Survival and Campaign.
     const firearmChanged = this.survivalFirearm.id !== local.primaryFirearmId;
     const firearmDefinition = SURVIVAL_FIREARM_DEFS[local.primaryFirearmId];
-    this.survivalFirearm.id = local.primaryFirearmId;
-    this.survivalFirearm.ammoInMagazine = local.firearmAmmoById[local.primaryFirearmId] ?? firearmDefinition.magazineSize;
-    this.survivalFirearm.cooldown = local.attackCooldownTimer;
-    this.survivalFirearm.reloadRemaining = local.reloadRemainingSeconds;
-    this.survivalFirearm.shotCounter = local.shotsFired;
+    this.survivalFirearm = {
+      ...this.survivalFirearm,
+      id: local.primaryFirearmId,
+      ammoInMagazine: local.firearmAmmoById[local.primaryFirearmId] ?? firearmDefinition.magazineSize,
+      cooldown: local.attackCooldownTimer,
+      reloadRemaining: local.reloadRemainingSeconds,
+      shotCounter: local.shotsFired,
+    };
     if (firearmChanged) this.updateHeldSurvivalFirearmVisual();
 
     const shotsSinceLastSync = Math.max(0, local.shotsFired - this.pvpLastObservedShotsFired);
