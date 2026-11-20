@@ -21,7 +21,8 @@ test('every operator receives the same full-magazine starter sidearm', () => {
 test('firearm catalogue has clearly differentiated cadence, ammunition, projectile and impact profiles', () => {
   const definitions = Object.values(SURVIVAL_FIREARM_DEFS);
   assert.equal(definitions.length, 10);
-  assert.equal(new Set(definitions.map((entry) => entry.icon)).size, definitions.length);
+  assert.equal(new Set(definitions.map((entry) => entry.archetype)).size, definitions.length);
+  assert.ok(definitions.every((entry) => entry.icon.length > 0));
   assert.ok(definitions.every((entry) => entry.magazineSize > 0 && entry.reloadSeconds > 0));
   assert.ok(definitions.every((entry) => entry.fireIntervalSeconds > 0 && entry.projectileSpeed > 0));
   assert.ok(definitions.every((entry) => entry.pellets >= 1 && entry.spreadRadians >= 0));
@@ -52,8 +53,11 @@ test('weighted drops never offer the starter pistol or the firearm already in ha
     assert.ok(id);
     assert.notEqual(id, 'starter_pistol');
   }
-  assert.equal(rollSurvivalFirearmId('gauss_rifle', 0, 0.999), 'starter_pistol');
-  assert.equal(rollSurvivalFirearmId('starter_pistol', -1, 0.5), 'starter_pistol');
+  const replacement = rollSurvivalFirearmId('gauss_rifle', 0, 0.999);
+  assert.ok(replacement);
+  assert.notEqual(replacement, 'gauss_rifle');
+  assert.notEqual(replacement, 'starter_pistol');
+  assert.equal(rollSurvivalFirearmId('starter_pistol', -1, 0.5), null);
 });
 
 test('pickup creates a fresh loaded magazine and damage accounting source is unique', () => {
