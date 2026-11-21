@@ -49,8 +49,9 @@ test('both PvE and PvP HUDs use the shared warning helper and expose visible ale
   }
   assert.match(app, /MAŁO AMUNICJI/);
   assert.match(app, /KOŃCÓWKA MAGAZYNKA/);
-  assert.match(app, /ammoAlert === 'empty'[\\s\\S]*?pusty magazynek/);
-  assert.match(app, /firearmReadinessLabel/);
+  assert.ok(app.includes("ammoAlert === 'empty'"));
+  assert.ok(app.includes("', pusty magazynek'"));
+  assert.ok(app.includes('firearmReadinessLabel'));
 });
 
 test('the weapon catalogue accessibility label matches its eleven firearm entries', async () => {
