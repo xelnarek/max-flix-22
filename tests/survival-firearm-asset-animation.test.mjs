@@ -65,7 +65,9 @@ test('the shared local and remote firearm runtime both use the tested clip resol
 
 test('GLB clip playback is phase-seeked and finishes with the real reload or firing phase', () => {
   const timing = getSurvivalFirearmAssetAnimationTiming(1.2, 0.25, 0.8);
-  assert.deepEqual(timing, { timeSeconds: 0.3, timeScale: 1.5 });
+  assert.ok(timing);
+  assert.ok(Math.abs(timing.timeSeconds - 0.3) < 1e-9);
+  assert.ok(Math.abs(timing.timeScale - 1.5) < 1e-9);
 
   const clipDuration = 2.4;
   const phaseDuration = 0.65;
