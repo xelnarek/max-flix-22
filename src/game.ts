@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { loadSurvivalFirearmModelAsset, SURVIVAL_FIREARM_ASSETS } from './survivalFirearmAssets.ts';
 import { removeAtSwap } from './swapRemove.ts';
 import { disposeActorOwnedRenderResources } from './actorResourceDisposal.ts';
 import { applyPolyHavenPbrMaps } from './polyHavenTextures.ts';
@@ -10553,13 +10554,127 @@ export class PaleciakiGameEngine {
         addGrip();
         break;
     }
+    this.attachSurvivalFirearmAsset(gun, firearmId);
     return gun;
+  }
+
+  private attachSurvivalFirearmAsset(gun: THREE.Group, firearmId: SurvivalFirearmId): void {
+    const archetype = SURVIVAL_FIREARM_DEFS[firearmId].archetype;
+    const assetDefinition = (SURVIVAL_FIREARM_ASSETS as Readonly<Record<string, { maxDimension: number }>>)[archetype];
+    if (!assetDefinition) return;
+
+    void loadSurvivalFirearmModelAsset(archetype).then((asset) => {
+      if (!asset) return;
+
+      let owner: THREE.Object3D | null = gun;
+      while (owner) {
+        if (owner.userData.survivalFirearmDisposed === true) {
+          this.disposeTemporaryObject(asset.model);
+          return;
+        }
+        owner = owner.parent;
+      }
+      if (this.particlePoolDisposed) {
+        this.disposeTemporaryObject(asset.model);
+        return;
+      }
+
+      const fallbackBounds = new THREE.Box3().setFromObject(gun);
+      const fallbackCenter = fallbackBounds.getCenter(new THREE.Vector3());
+      const sourceBounds = new THREE.Box3().setFromObject(asset.model);
+      const sourceSize = sourceBounds.getSize(new THREE.Vector3());
+      const sourceMaxDimension = Math.max(sourceSize.x, sourceSize.y, sourceSize.z);
+      if (!Number.isFinite(sourceMaxDimension) || sourceMaxDimension < 0.001) {
+        this.disposeTemporaryObject(asset.model);
+        return;
+      }
+
+      // Keep the artist's proportions, but normalize the model to the silhouette scale
+      // already tuned for the matching procedural archetype.
+      const fitScale = assetDefinition.maxDimension / sourceMaxDimension;
+      const sourceCenter = sourceBounds.getCenter(new THREE.Vector3());
+      asset.model.scale.setScalar(fitScale);
+      asset.model.position.set(
+        fallbackCenter.x - sourceCenter.x * fitScale,
+        fallbackCenter.y - sourceCenter.y * fitScale,
+        fallbackCenter.z - sourceCenter.z * fitScale,
+      );
+      asset.model.name = 'survival-firearm-asset-' + asset.sourceId;
+      asset.model.updateMatrixWorld(true);
+
+      // Replace only the visual children. The parent weapon transform, recoil,
+      // swap, ammo, projectile, damage and mode logic remain the shared game code.
+      for (const child of [...gun.children]) {
+        gun.remove(child);
+        this.disposeTemporaryObject(child);
+      }
+      gun.add(asset.model);
+      gun.userData.survivalFirearmAssetSource = asset.sourceId;
+      gun.userData.survivalFirearmAssetAnimations = asset.animations;
+      gun.userData.survivalFirearmAssetMixer = asset.animations.length > 0
+        ? new THREE.AnimationMixer(asset.model)
+        : null;
+      gun.userData.survivalFirearmAssetPhase = 'idle';
+    }).catch((error: unknown) => {
+      console.warn('[Firearm assets] Model upgrade failed; procedural model remains available:', archetype, error);
+    });
+  }
+
+  private updateSurvivalFirearmAssetAnimation(
+    gun: THREE.Group,
+    archetype: string,
+    reloading: boolean,
+    reloadProgress: number,
+    cycling: boolean,
+    cycleProgress: number,
+  ): void {
+    const mixer = gun.userData.survivalFirearmAssetMixer as THREE.AnimationMixer | null | undefined;
+    if (!mixer) return;
+
+    const phase = reloading
+      ? (reloadProgress < 0.52 ? 'reload-open' : 'reload-close')
+      : cycling
+        ? (cycleProgress < 0.52 ? 'fire-open' : 'fire-close')
+        : 'idle';
+    if (gun.userData.survivalFirearmAssetPhase === phase) return;
+
+    mixer.stopAllAction();
+    const clips = gun.userData.survivalFirearmAssetAnimations as readonly THREE.AnimationClip[] | undefined;
+    if (!clips?.length) {
+      gun.userData.survivalFirearmAssetPhase = phase;
+      return;
+    }
+
+    let wanted: readonly string[] = [];
+    if (archetype === 'shotgun') {
+      wanted = phase.endsWith('open') ? ['open'] : phase.endsWith('close') ? ['close'] : [];
+    } else if (archetype === 'pistol') {
+      wanted = phase === 'reload-open' ? ['magazine-open', 'slide-open']
+        : phase === 'reload-close' ? ['magazine-close', 'slide-close']
+          : phase === 'fire-open' ? ['slide-open']
+            : phase === 'fire-close' ? ['slide-close'] : [];
+    } else if (phase === 'reload-open') {
+      wanted = ['magazine-open'];
+    } else if (phase === 'reload-close') {
+      wanted = ['magazine-close'];
+    }
+
+    for (const clip of clips) {
+      if (!wanted.includes(clip.name.toLowerCase())) continue;
+      const action = mixer.clipAction(clip);
+      action.reset();
+      action.setLoop(THREE.LoopOnce, 1);
+      action.clampWhenFinished = true;
+      action.play();
+    }
+    gun.userData.survivalFirearmAssetPhase = phase;
   }
 
   private updateHeldSurvivalFirearmVisual(): void {
     if (!this.playerGroup) return;
     const previous = this.playerGroup.getObjectByName('survival_primary_firearm');
     if (previous) {
+      previous.userData.survivalFirearmDisposed = true;
       this.playerGroup.remove(previous);
       this.disposeTemporaryObject(previous);
     }
@@ -10574,6 +10689,7 @@ export class PaleciakiGameEngine {
 
   private clearSurvivalFirearmDrops(): void {
     for (const drop of this.survivalFirearmDrops) {
+      drop.mesh.userData.survivalFirearmDisposed = true;
       this.levelRoot.remove(drop.mesh);
       this.disposeTemporaryObject(drop.mesh);
     }
@@ -10651,6 +10767,7 @@ export class PaleciakiGameEngine {
       drop.age += dt;
       drop.life -= dt;
       if (drop.life <= 0) {
+        drop.mesh.userData.survivalFirearmDisposed = true;
         this.levelRoot.remove(drop.mesh);
         this.disposeTemporaryObject(drop.mesh);
         this.survivalFirearmDrops.splice(index, 1);
@@ -10667,6 +10784,7 @@ export class PaleciakiGameEngine {
       this.survivalFirearm = storedFirearmState ?? createSurvivalFirearmState(drop.firearmId);
       this.survivalFirearmStates.set(drop.firearmId, this.survivalFirearm);
       this.updateHeldSurvivalFirearmVisual();
+      drop.mesh.userData.survivalFirearmDisposed = true;
       this.levelRoot.remove(drop.mesh);
       this.disposeTemporaryObject(drop.mesh);
       this.survivalFirearmDrops.splice(index, 1);
@@ -10696,6 +10814,11 @@ export class PaleciakiGameEngine {
       ? THREE.MathUtils.clamp(1 - this.survivalFirearm.cooldown / Math.max(0.01, definition.fireIntervalSeconds), 0, 1)
       : 0;
     const cycleMotion = Math.sin(cycleProgress * Math.PI);
+    this.updateSurvivalFirearmAssetAnimation(
+      gun, definition.archetype, reloading, progress, cycling, cycleProgress,
+    );
+    const assetMixer = gun.userData.survivalFirearmAssetMixer as THREE.AnimationMixer | null | undefined;
+    assetMixer?.update(dt);
 
     const part = (name: string): THREE.Group | undefined =>
       gun.getObjectByName(name) as THREE.Group | undefined;
