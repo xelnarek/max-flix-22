@@ -225,7 +225,7 @@ export const SURVIVAL_FIREARM_CYCLE_TIMING: Readonly<Record<
   rifle: { peakProgress: 0.18, returnStartProgress: 0.36 },
   shotgun: { peakProgress: 0.24, returnStartProgress: 0.50 },
   'heavy-rifle': { peakProgress: 0.20, returnStartProgress: 0.41 },
-  minigun: { peakProgress: 0.10, returnStartProgress: 0.28 },
+  minigun: { peakProgress: 0.10, returnStartProgress: 0.82 },
   rocket: { peakProgress: 0.26, returnStartProgress: 0.54 },
   flame: { peakProgress: 0.15, returnStartProgress: 0.38 },
   plasma: { peakProgress: 0.22, returnStartProgress: 0.47 },
@@ -240,6 +240,7 @@ export interface SurvivalFirearmCyclePose {
   readonly tankValveRotation: number;
   readonly energyCellOffsetY: number;
   readonly coilPulse: number;
+  readonly rotorSpin: number;
 }
 
 export interface SurvivalFirearmReloadPose {
@@ -284,6 +285,7 @@ export function getSurvivalFirearmCyclePose(
     tankValveRotation: cleanOffset(profile.tankValveTurn * stroke * 0.35),
     energyCellOffsetY: cleanOffset(-profile.energyCellDrop * stroke * 0.45),
     coilPulse: cleanOffset(stroke),
+    rotorSpin: profile.rotorBrake ? cleanOffset(stroke) : 0,
   };
 }
 
