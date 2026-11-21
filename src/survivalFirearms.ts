@@ -188,6 +188,33 @@ export function getSurvivalFirearmDamageSource(id: SurvivalFirearmId): `firearm:
   return `firearm:${id}`;
 }
 
+export type SurvivalFirearmAmmoAlert = 'ready' | 'low' | 'critical' | 'empty';
+
+/**
+ * Shared magazine warning thresholds for Survival, Campaign and PvP HUDs.
+ * The final quarter is amber, the final 10% is critical, and an empty magazine
+ * is reported separately. Small magazines always retain at least one warning
+ * round so four-shot launchers can still communicate their remaining capacity.
+ */
+export function getSurvivalFirearmAmmoAlert(
+  ammoInMagazine: number,
+  magazineSize: number,
+): SurvivalFirearmAmmoAlert {
+  const safeMagazineSize = Number.isFinite(magazineSize)
+    ? Math.max(1, Math.floor(magazineSize))
+    : 1;
+  const safeAmmo = Number.isFinite(ammoInMagazine)
+    ? Math.max(0, Math.min(safeMagazineSize, Math.floor(ammoInMagazine)))
+    : 0;
+  if (safeAmmo <= 0) return 'empty';
+
+  const criticalThreshold = Math.max(1, Math.floor(safeMagazineSize * 0.1));
+  const lowThreshold = Math.max(criticalThreshold + 1, Math.ceil(safeMagazineSize * 0.25));
+  if (safeAmmo <= criticalThreshold) return 'critical';
+  if (safeAmmo <= lowThreshold) return 'low';
+  return 'ready';
+}
+
 export function isSurvivalFirearmId(value: string): value is SurvivalFirearmId {
   return Object.prototype.hasOwnProperty.call(SURVIVAL_FIREARM_DEFS, value);
 }

@@ -36,7 +36,7 @@ import {
   updateSurvivalAchievementProgress,
 } from './survivalAchievements.ts';
 import { SURVIVAL_MAPS, type SurvivalMapId } from './survivalMaps.ts';
-import { SURVIVAL_FIREARM_DEFS } from './survivalFirearms.ts';
+import { getSurvivalFirearmAmmoAlert, SURVIVAL_FIREARM_DEFS } from './survivalFirearms.ts';
 import { CAMPAIGN_STAGES, createInitialCampaignProgress, consumePendingCampaignReward, consumePendingCampaignXpBonus, getCampaignMasteryProgress, getCampaignRewardChoices, getCampaignSideOrderProgress, getCampaignStageDefinition, getNextCampaignStageId, readCampaignProgress, recordCampaignStageResult, setPendingCampaignReward, writeCampaignProgress, type CampaignProgress, type CampaignRewardDefinition, type CampaignRewardId, type CampaignStageId } from './campaignProgression.ts';
 import { launchOniricPlatformer } from './oniricPlatformer.ts';
 import { launchCthulhuRetroArena } from './cthulhuRetroArena.ts';
@@ -1806,6 +1806,9 @@ class PaleciakiScene extends xb.Script {
               ? Math.max(0, Math.min(1, 1 - primaryFirearm.fireCooldownSeconds / Math.max(0.01, primaryFirearm.fireIntervalSeconds)))
               : 0;
             const ammoProgress = primaryFirearm.ammoInMagazine / Math.max(1, primaryFirearm.magazineSize);
+            const ammoAlert = reloading
+              ? 'ready'
+              : getSurvivalFirearmAmmoAlert(primaryFirearm.ammoInMagazine, primaryFirearm.magazineSize);
             const signature = [
               primaryFirearm.id, primaryFirearm.ammoInMagazine,
               Math.ceil(primaryFirearm.reloadRemainingSeconds * 4),
@@ -1830,13 +1833,21 @@ class PaleciakiScene extends xb.Script {
                   ? 'PRZEŁADOWANIE ' + primaryFirearm.reloadRemainingSeconds.toFixed(1) + ' s'
                   : cycling
                     ? 'CYKL ZAMKA ' + primaryFirearm.fireCooldownSeconds.toFixed(1) + ' s'
-                    : 'GOTOWY';
+                    : ammoAlert === 'low'
+                      ? 'MAŁO AMUNICJI • R'
+                      : ammoAlert === 'critical'
+                        ? 'KOŃCÓWKA AMUNICJI • R'
+                        : ammoAlert === 'empty'
+                          ? 'PUSTY MAGAZYNEK'
+                          : 'GOTOWY';
               }
               if (ammoFill) ammoFill.style.width = (ammoProgress * 100).toFixed(1) + '%';
               if (actionFill) actionFill.style.width = ((reloading ? reloadProgress : cycleProgress) * 100).toFixed(1) + '%';
               if (reloadButton) {
                 reloadButton.disabled = reloading || primaryFirearm.ammoInMagazine >= primaryFirearm.magazineSize;
                 reloadButton.classList.toggle('is-ready', !reloading && primaryFirearm.ammoInMagazine > 0 && primaryFirearm.ammoInMagazine < primaryFirearm.magazineSize);
+                reloadButton.classList.toggle('is-low-ammo', ammoAlert === 'low');
+                reloadButton.classList.toggle('is-critical-ammo', ammoAlert === 'critical' || ammoAlert === 'empty');
                 reloadButton.setAttribute('aria-label', reloading
                   ? 'Broń jest przeładowywana'
                   : primaryFirearm.ammoInMagazine >= primaryFirearm.magazineSize
@@ -1846,7 +1857,21 @@ class PaleciakiScene extends xb.Script {
               firearmStatus.style.setProperty('--firearm-color', '#' + primaryFirearm.color.toString(16).padStart(6, '0'));
               firearmStatus.classList.toggle('is-reloading', reloading);
               firearmStatus.classList.toggle('is-cycling', cycling);
-              firearmStatus.setAttribute('aria-label', primaryFirearm.name + ', amunicja ' + primaryFirearm.ammoInMagazine + ' na ' + primaryFirearm.magazineSize + (reloading ? ', przeładowanie magazynka' : cycling ? ', cykl broni' : ', gotowa'));
+              firearmStatus.classList.toggle('is-low-ammo', ammoAlert === 'low');
+              firearmStatus.classList.toggle('is-critical-ammo', ammoAlert === 'critical');
+              firearmStatus.classList.toggle('is-empty-ammo', ammoAlert === 'empty');
+              const firearmReadinessLabel = reloading
+                ? ', przeładowanie magazynka'
+                : cycling
+                  ? ', cykl broni'
+                  : ammoAlert === 'low'
+                    ? ', mało amunicji'
+                    : ammoAlert === 'critical'
+                      ? ', końcówka magazynka'
+                      : ammoAlert === 'empty'
+                        ? ', pusty magazynek'
+                        : ', gotowa';
+              firearmStatus.setAttribute('aria-label', primaryFirearm.name + ', amunicja ' + primaryFirearm.ammoInMagazine + ' na ' + primaryFirearm.magazineSize + firearmReadinessLabel);
             }
           }
           if (survivalRerollBtn) {
@@ -5401,6 +5426,9 @@ class PaleciakiScene extends xb.Script {
     const primaryAmmo = localFirearmPlayer.firearmAmmoById[localFirearmPlayer.primaryFirearmId] ?? primaryDefinition.magazineSize;
     const isReloading = localFirearmPlayer.reloadRemainingSeconds > 0;
     const isCycling = !isReloading && localFirearmPlayer.attackCooldownTimer > 0;
+    const ammoAlert = isReloading
+      ? 'ready'
+      : getSurvivalFirearmAmmoAlert(primaryAmmo, primaryDefinition.magazineSize);
     const firearmPanel = document.getElementById('pvp-firearm-panel');
     const firearmSignature = [
       localFirearmPlayer.primaryFirearmId,
@@ -5412,6 +5440,9 @@ class PaleciakiScene extends xb.Script {
     ].join(':');
     if (firearmPanel && firearmPanel.dataset.signature !== firearmSignature) {
       firearmPanel.dataset.signature = firearmSignature;
+      firearmPanel.classList.toggle('is-low-ammo', ammoAlert === 'low');
+      firearmPanel.classList.toggle('is-critical-ammo', ammoAlert === 'critical');
+      firearmPanel.classList.toggle('is-empty-ammo', ammoAlert === 'empty');
       const firearmName = document.getElementById('pvp-firearm-name');
       const firearmAmmo = document.getElementById('pvp-firearm-ammo');
       const firearmAction = document.getElementById('pvp-firearm-action');
@@ -5419,18 +5450,36 @@ class PaleciakiScene extends xb.Script {
       const reloadButton = document.getElementById('btn-pvp-reload') as HTMLButtonElement | null;
       const dropStatus = document.getElementById('pvp-firearm-drop-status');
       if (firearmName) firearmName.textContent = primaryDefinition.shortName.toUpperCase();
-      if (firearmAmmo) firearmAmmo.textContent = isReloading
-        ? `— / ${primaryDefinition.magazineSize}`
-        : `${primaryAmmo} / ${primaryDefinition.magazineSize}`;
+      if (firearmAmmo) {
+        firearmAmmo.textContent = isReloading
+          ? `— / ${primaryDefinition.magazineSize}`
+          : `${primaryAmmo} / ${primaryDefinition.magazineSize}`;
+        const ammoAlertLabel = ammoAlert === 'low'
+          ? 'mało amunicji'
+          : ammoAlert === 'critical'
+            ? 'końcówka magazynka'
+            : ammoAlert === 'empty'
+              ? 'pusty magazynek'
+              : 'amunicja wystarczająca';
+        firearmAmmo.setAttribute('aria-label', `${primaryAmmo} z ${primaryDefinition.magazineSize}, ${ammoAlertLabel}`);
+      }
       if (firearmAction) firearmAction.textContent = isReloading
         ? `PRZEŁADOWANIE ${localFirearmPlayer.reloadRemainingSeconds.toFixed(1)} s`
         : isCycling
           ? `CYKL ${localFirearmPlayer.attackCooldownTimer.toFixed(1)} s`
-          : 'GOTOWY';
+          : ammoAlert === 'low'
+            ? 'MAŁO AMUNICJI'
+            : ammoAlert === 'critical'
+              ? 'KOŃCÓWKA MAGAZYNKA'
+              : ammoAlert === 'empty'
+                ? 'PUSTY MAGAZYNEK'
+                : 'GOTOWY';
       if (firearmAmmoFill) firearmAmmoFill.style.width = `${Math.max(0, Math.min(100, primaryAmmo / Math.max(1, primaryDefinition.magazineSize) * 100))}%`;
       if (reloadButton) {
         reloadButton.disabled = isReloading || primaryAmmo >= primaryDefinition.magazineSize || state.status !== 'in_round';
         reloadButton.classList.toggle('is-ready', !reloadButton.disabled);
+        reloadButton.classList.toggle('is-low-ammo', ammoAlert === 'low');
+        reloadButton.classList.toggle('is-critical-ammo', ammoAlert === 'critical' || ammoAlert === 'empty');
       }
       if (dropStatus) dropStatus.textContent = state.firearmDrop.active
         ? `ZWIADOWCZY ZRZUT • ${SURVIVAL_FIREARM_DEFS[state.firearmDrop.firearmId].shortName.toUpperCase()} • PODNIEŚ NA ARENIE`

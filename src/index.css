@@ -8148,3 +8148,42 @@ body #touch-controls.manual-aim-mode:not(.hidden) .pvp-control-guide {
   #pvp-firearm-name { font-size: 9px; }
   #btn-pvp-reload { padding: 0 6px; }
 }
+
+
+/* PvP magazine warnings use the same shared ammo thresholds as PvE. */
+.pvp-firearm-panel.is-low-ammo {
+  border-color: rgba(251, 191, 36, .78);
+  box-shadow: 0 0 14px rgba(251, 191, 36, .12), inset 0 1px 0 rgba(255,255,255,.08);
+}
+.pvp-firearm-panel.is-low-ammo #pvp-firearm-ammo,
+.pvp-firearm-panel.is-low-ammo #pvp-firearm-action {
+  color: #fbbf24;
+}
+.pvp-firearm-panel.is-low-ammo .pvp-firearm-ammo-track i {
+  background: linear-gradient(90deg, #d97706, #fbbf24);
+  box-shadow: 0 0 9px rgba(251, 191, 36, .32);
+}
+.pvp-firearm-panel.is-critical-ammo,
+.pvp-firearm-panel.is-empty-ammo {
+  border-color: rgba(248, 113, 113, .88);
+  box-shadow: 0 0 15px rgba(248, 113, 113, .16), inset 0 1px 0 rgba(255,255,255,.08);
+}
+.pvp-firearm-panel.is-critical-ammo #pvp-firearm-ammo,
+.pvp-firearm-panel.is-empty-ammo #pvp-firearm-ammo,
+.pvp-firearm-panel.is-critical-ammo #pvp-firearm-action,
+.pvp-firearm-panel.is-empty-ammo #pvp-firearm-action {
+  color: #f87171;
+}
+.pvp-firearm-panel.is-critical-ammo .pvp-firearm-ammo-track i,
+.pvp-firearm-panel.is-empty-ammo .pvp-firearm-ammo-track i {
+  background: linear-gradient(90deg, #b91c1c, #f87171);
+  box-shadow: 0 0 9px rgba(248, 113, 113, .32);
+}
+#btn-pvp-reload.is-low-ammo {
+  border-color: rgba(251, 191, 36, .9);
+  color: #fbbf24;
+}
+#btn-pvp-reload.is-critical-ammo {
+  border-color: rgba(248, 113, 113, .94);
+  color: #f87171;
+}
