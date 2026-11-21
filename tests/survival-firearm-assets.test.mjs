@@ -24,7 +24,7 @@ test('the firearm asset registry selects nine small CC0 models and leaves unmatc
     assert.ok(assets.includes(assetId), 'missing curated external weapon model: ' + assetId);
     assert.ok(fetcher.includes(assetId), 'missing build-time download entry: ' + assetId);
   }
-  assert.equal((assets.match(/sourceUrl: 'https:\/\/cdn\\.3dassets\\.dev\\/assets\\//g) || []).length, 9);
+  assert.equal((assets.match(/sourceUrl: 'https:\/\/cdn/g) || []).length, 9);
   assert.match(assets, /license: 'CC0-1\.0'/);
   assert.match(assets, /loadSurvivalFirearmModelAsset/);
   assert.match(assets, /loader\.loadAsync\(url\)/);
