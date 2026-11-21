@@ -176,8 +176,10 @@ test('magazine, reload, projectile archetype and damage are driven by the active
   assert.match(game, /case 'rocket':\s*geometry = new THREE\.ConeGeometry/);
   assert.match(game, /case 'flame':\s*geometry = new THREE\.SphereGeometry/);
   assert.match(game, /spawnSurvivalFirearmMuzzleFx\(definition\.archetype, definition\.color, start, forward\)/);
-  assert.match(game, /profile\.boltTravel \* cycleMotion/);
-  assert.match(game, /profile\.pumpTravel \* cycleMotion/);
+  assert.match(game, /getSurvivalFirearmCyclePose\(archetype, cycleProgress\)/);
+  assert.match(game, /cyclePose\.boltOffsetZ/);
+  assert.match(game, /cyclePose\.pumpOffsetZ/);
+  assert.match(game, /cyclePose\.rotorSpin/);
   assert.match(game, /case 'gauss':/);
   assert.match(game, /firearmProjectile: true/);
   assert.match(game, /firearmExplosion: definition\.archetype === 'rocket' \|\| definition\.archetype === 'grenade'/);
@@ -209,7 +211,9 @@ test('firearm drops are shared by Survival and Campaign and use the central boun
   assert.match(game, /SURVIVAL_FIREARM_DROP_POLICY/);
   assert.match(game, /if \(this\.gameMode === 'survival' \|\| this\.gameMode === 'campaign'\) \{[\s\S]*?this\.survivalFirearmKillCount\+\+/);
   assert.match(game, /const firearmElapsed = this\.survivalElapsed/);
+  assert.match(game, /campaignRemainingSeconds: this\.campaignStage \? Math\.max\(0, Math\.ceil\(this\.campaignStage\.durationSeconds - this\.survivalElapsed\)\)/);
   assert.match(game, /firearmElapsed >= SURVIVAL_FIREARM_DROP_POLICY\.unlockElapsedSeconds/);
+  assert.match(game, /this\.survivalFirearmKillCount >= SURVIVAL_FIREARM_DROP_POLICY\.minimumKills/);
   assert.match(game, /this\.survivalFirearmDrops\.length < SURVIVAL_FIREARM_DROP_POLICY\.maximumActiveDrops/);
   assert.match(game, /firearmElapsed - this\.survivalFirearmLastDropSeconds >= SURVIVAL_FIREARM_DROP_POLICY\.minimumIntervalSeconds/);
   assert.match(game, /SURVIVAL_FIREARM_DROP_POLICY\.dropLifetimeSeconds/);
@@ -279,7 +283,7 @@ test('the armory menu is a real navigation destination driven by live firearm de
   assert.match(html, /data-tab="tab-arsenal"/);
   assert.match(html, /id="tab-arsenal" class="tab-panel firearm-armory-panel"/);
   assert.match(html, /id="firearm-catalog-grid"/);
-  assert.ok(app.includes("import { getSurvivalFirearmAmmoAlert, SURVIVAL_FIREARM_DEFS } from './survivalFirearms.ts'"));
+  assert.ok(app.includes("import { getSurvivalFirearmAmmoAlert, SURVIVAL_FIREARM_DEFS, SURVIVAL_FIREARM_DROP_POLICY } from './survivalFirearms.ts'"));
   assert.ok(app.includes('firearm.rangeMeters'));
   assert.ok(app.includes('firearm.damage'));
   assert.ok(app.includes('firearm.fireIntervalSeconds'));
