@@ -86,10 +86,10 @@ import { chooseNearbySpawnPoint } from './arenaSpawn.ts';
 import { chooseSurvivalEnemySpawnType, SURVIVAL_SPAWN_VARIETY_MEMORY, type SurvivalEnemySpawnType } from './survivalEnemySpawns.ts';
 import { findNextReadyWeaponIndex, getNextWeaponDispatchCursor } from './survivalWeaponDispatch.ts';
 import { buildSurvivalDamageReport, createSurvivalDamageStats, getSurvivalWeaponDamageSource, getSurvivalFirearmDamageSource, recordSurvivalDamage, recordSurvivalKill, SURVIVAL_DAMAGE_WEAPONS, type SurvivalDamageReport, type SurvivalDamageSource, type SurvivalDamageWeaponId, type SurvivalDamageStats } from './survivalDamageStats.ts';
-import { createStartingSurvivalFirearmState, createSurvivalFirearmState, rollSurvivalFirearmDrop, rollSurvivalFirearmId, STARTING_SURVIVAL_FIREARM, SURVIVAL_FIREARM_DEFS, type SurvivalFirearmId, type SurvivalFirearmState, type SurvivalFirearmEnemyTier, type SurvivalFirearmArchetype } from './survivalFirearms.ts';
+import { createStartingSurvivalFirearmState, createSurvivalFirearmState, rollSurvivalFirearmDrop, rollSurvivalFirearmId, STARTING_SURVIVAL_FIREARM, SURVIVAL_FIREARM_DEFS, SURVIVAL_FIREARM_DROP_POLICY, type SurvivalFirearmId, type SurvivalFirearmState, type SurvivalFirearmEnemyTier, type SurvivalFirearmArchetype } from './survivalFirearms.ts';
 import { evaluateBallisticHeight } from './survivalFirearmBallistics.ts';
 import { getSurvivalFirearmAssetAnimationClips, getSurvivalFirearmAssetAnimationTiming } from './survivalFirearmAssetAnimation.ts';
-import { SURVIVAL_FIREARM_PRESENTATION, getSurvivalFirearmReloadPose } from './survivalFirearmPresentation.ts';
+import { SURVIVAL_FIREARM_PRESENTATION, getSurvivalFirearmCyclePose, getSurvivalFirearmReloadPose } from './survivalFirearmPresentation.ts';
 import { getSurvivalDifficultyProfile } from './survivalDifficulty.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
 import { chooseSurvivalRicochetTarget, getSurvivalRadiationProfile, getSurvivalRicochetProfile } from './survivalCombatDraft.ts';
@@ -10822,7 +10822,7 @@ export class PaleciakiGameEngine {
     this.levelRoot.add(mesh);
     this.survivalFirearmDrops.push({
       id: 'firearm_drop_' + Math.floor(performance.now()) + '_' + Math.floor(Math.random() * 100000),
-      firearmId, mesh, x: safeX, y, z: safeZ, baseY: y, age: 0, life: 40,
+      firearmId, mesh, x: safeX, y, z: safeZ, baseY: y, age: 0, life: SURVIVAL_FIREARM_DROP_POLICY.dropLifetimeSeconds,
     });
     this.spawnParticleRing(safeX, y + 0.2, safeZ, definition.color);
     this.emitFloatingToast((isPityDrop ? '📦 ŁUP PEWNY: ' : '🔫 ZRZUT BRONI: ') + definition.name.toUpperCase(), safeX, y + 1.8, safeZ, 'perk');
@@ -10891,7 +10891,7 @@ export class PaleciakiGameEngine {
   ): void {
     const profile = SURVIVAL_FIREARM_PRESENTATION[archetype];
     const pose = getSurvivalFirearmReloadPose(archetype, reloadProgress);
-    const cycleMotion = Math.sin(cycleProgress * Math.PI);
+    const cyclePose = getSurvivalFirearmCyclePose(archetype, cycleProgress);
     const part = (name: string): THREE.Group | undefined =>
       gun.getObjectByName(name) as THREE.Group | undefined;
     const applyOffset = (name: string, axis: 'x' | 'y' | 'z', offset: number): void => {
@@ -10910,25 +10910,31 @@ export class PaleciakiGameEngine {
     }
     const energyCell = part('firearm-energy-cell');
     if (energyCell) {
-      applyOffset('firearm-energy-cell', 'y', pose.energyCellOffsetY);
+      applyOffset('firearm-energy-cell', 'y', pose.energyCellOffsetY + cyclePose.energyCellOffsetY);
       if (energyCell.userData.basePosition) energyCell.visible = !reloading || pose.energyCellOffsetY > -0.12;
     }
-    applyOffset('firearm-bolt', 'z', pose.boltOffsetZ + profile.boltTravel * cycleMotion);
-    applyOffset('firearm-pump', 'z', pose.pumpOffsetZ + profile.pumpTravel * cycleMotion);
-    applyOffset('firearm-rocket-cell', 'z', pose.rocketCellOffsetZ + profile.rocketCellTravel * cycleMotion);
+    applyOffset('firearm-bolt', 'z', pose.boltOffsetZ + cyclePose.boltOffsetZ);
+    applyOffset('firearm-pump', 'z', pose.pumpOffsetZ + cyclePose.pumpOffsetZ);
+    applyOffset('firearm-rocket-cell', 'z', pose.rocketCellOffsetZ + cyclePose.rocketCellOffsetZ);
     const valve = part('firearm-tank-valve');
-    if (valve) valve.rotation.z = pose.tankValveRotation;
+    if (valve) valve.rotation.z = pose.tankValveRotation + cyclePose.tankValveRotation;
     const coils = part('firearm-coils');
     if (coils) {
-      const pulse = reloading ? pose.coilPulse : 0.18 + Math.sin(performance.now() * 0.006) * 0.08;
+      const pulse = reloading ? pose.coilPulse : 0.18 + Math.sin(performance.now() * 0.006) * 0.08 + cyclePose.coilPulse * 0.35;
       coils.scale.setScalar(1 + Math.max(0, pulse) * 0.20);
       coils.rotation.z = reloading ? 0 : Math.sin(performance.now() * 0.004) * 0.055;
     }
     const rotor = part('firearm-rotor');
     if (rotor) {
-      const spinning = !reloading && cycling;
-      if (pose.rotorBrake || reloading) rotor.rotation.z *= Math.max(0, 1 - dt * 10);
-      else rotor.rotation.z += dt * (spinning ? 22 : 2.2);
+      const currentSpeed = Number.isFinite(rotor.userData.angularSpeed)
+        ? rotor.userData.angularSpeed as number
+        : 0;
+      const targetSpeed = !reloading && cycling ? 28 : 0;
+      const response = reloading && pose.rotorBrake ? 22 : cycling ? 10 : 4;
+      const blend = 1 - Math.exp(-response * Math.max(0, dt));
+      const angularSpeed = currentSpeed + (targetSpeed - currentSpeed) * blend;
+      rotor.userData.angularSpeed = angularSpeed;
+      rotor.rotation.z += angularSpeed * dt;
     }
   }
 
@@ -21755,10 +21761,11 @@ export class PaleciakiGameEngine {
       const firearmTier: SurvivalFirearmEnemyTier = firearmBoss ? 'boss' : firearmElite ? 'elite' : 'normal';
       // Campaign stages run on the shared Survival simulation clock; use the same elapsed timer in both modes.
       const firearmElapsed = this.survivalElapsed;
-      const firearmSpawnUnlocked = firearmElapsed >= 45 && this.survivalFirearmKillCount >= 8;
+      const firearmSpawnUnlocked = firearmElapsed >= SURVIVAL_FIREARM_DROP_POLICY.unlockElapsedSeconds
+        && this.survivalFirearmKillCount >= SURVIVAL_FIREARM_DROP_POLICY.minimumKills;
       const firearmSpawnAllowed = firearmSpawnUnlocked
-        && this.survivalFirearmDrops.length === 0
-        && firearmElapsed - this.survivalFirearmLastDropSeconds >= 75;
+        && this.survivalFirearmDrops.length < SURVIVAL_FIREARM_DROP_POLICY.maximumActiveDrops
+        && firearmElapsed - this.survivalFirearmLastDropSeconds >= SURVIVAL_FIREARM_DROP_POLICY.minimumIntervalSeconds;
       if (firearmSpawnAllowed) {
         const firearmDrop = rollSurvivalFirearmDrop(
           this.survivalFirearmKillCount, firearmTier, this.survivalFirearmDropMissStreak, Math.random(),
@@ -21771,7 +21778,7 @@ export class PaleciakiGameEngine {
             this.survivalFirearmDropMissStreak = 0;
           }
         } else {
-          this.survivalFirearmDropMissStreak = Math.min(17, this.survivalFirearmDropMissStreak + 1);
+          this.survivalFirearmDropMissStreak = Math.min(SURVIVAL_FIREARM_DROP_POLICY.pityMisses, this.survivalFirearmDropMissStreak + 1);
         }
       }
     }
