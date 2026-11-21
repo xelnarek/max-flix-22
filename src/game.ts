@@ -88,7 +88,7 @@ import { findNextReadyWeaponIndex, getNextWeaponDispatchCursor } from './surviva
 import { buildSurvivalDamageReport, createSurvivalDamageStats, getSurvivalWeaponDamageSource, getSurvivalFirearmDamageSource, recordSurvivalDamage, recordSurvivalKill, SURVIVAL_DAMAGE_WEAPONS, type SurvivalDamageReport, type SurvivalDamageSource, type SurvivalDamageWeaponId, type SurvivalDamageStats } from './survivalDamageStats.ts';
 import { createStartingSurvivalFirearmState, createSurvivalFirearmState, rollSurvivalFirearmDrop, rollSurvivalFirearmId, STARTING_SURVIVAL_FIREARM, SURVIVAL_FIREARM_DEFS, type SurvivalFirearmId, type SurvivalFirearmState, type SurvivalFirearmEnemyTier, type SurvivalFirearmArchetype } from './survivalFirearms.ts';
 import { evaluateBallisticHeight } from './survivalFirearmBallistics.ts';
-import { getSurvivalFirearmAssetAnimationClips } from './survivalFirearmAssetAnimation.ts';
+import { getSurvivalFirearmAssetAnimationClips, getSurvivalFirearmAssetAnimationTiming } from './survivalFirearmAssetAnimation.ts';
 import { SURVIVAL_FIREARM_PRESENTATION, getSurvivalFirearmReloadPose } from './survivalFirearmPresentation.ts';
 import { getSurvivalDifficultyProfile } from './survivalDifficulty.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
@@ -3868,7 +3868,14 @@ export class PaleciakiGameEngine {
         ? THREE.MathUtils.clamp(1 - remote.attackCooldownTimer / Math.max(0.01, remoteDefinition.fireIntervalSeconds), 0, 1)
         : 0;
       this.updateSurvivalFirearmAssetAnimation(
-        remoteGun, remoteDefinition.archetype, remoteReloading, remoteReloadProgress, remoteCycling, remoteCycleProgress,
+        remoteGun,
+        remoteDefinition.archetype,
+        remoteReloading,
+        remoteReloadProgress,
+        remoteCycling,
+        remoteCycleProgress,
+        remoteDefinition.reloadSeconds,
+        remoteDefinition.fireIntervalSeconds,
       );
       const remoteAssetMixer = remoteGun.userData.survivalFirearmAssetMixer as THREE.AnimationMixer | null | undefined;
       remoteAssetMixer?.update(dt);
@@ -10693,6 +10700,8 @@ export class PaleciakiGameEngine {
     reloadProgress: number,
     cycling: boolean,
     cycleProgress: number,
+    reloadDurationSeconds: number,
+    cycleDurationSeconds: number,
   ): void {
     const mixer = gun.userData.survivalFirearmAssetMixer as THREE.AnimationMixer | null | undefined;
     if (!mixer) return;
@@ -10712,13 +10721,33 @@ export class PaleciakiGameEngine {
     }
 
     const wanted = getSurvivalFirearmAssetAnimationClips(archetype, phase);
+    const activeProgress = reloading ? reloadProgress : cycleProgress;
+    const openingPhase = phase.endsWith('open');
+    const phaseStartProgress = openingPhase ? 0 : 0.52;
+    const phaseProgressSpan = openingPhase ? 0.52 : 0.48;
+    const phaseProgress = THREE.MathUtils.clamp(
+      (activeProgress - phaseStartProgress) / phaseProgressSpan,
+      0,
+      1,
+    );
+    const actionDurationSeconds = reloading ? reloadDurationSeconds : cycleDurationSeconds;
+    const phaseDurationSeconds = actionDurationSeconds * phaseProgressSpan;
 
     for (const clip of clips) {
       if (!wanted.includes(clip.name.toLowerCase())) continue;
+      const timing = getSurvivalFirearmAssetAnimationTiming(
+        clip.duration,
+        phaseProgress,
+        phaseDurationSeconds,
+      );
+      if (!timing) continue;
+
       const action = mixer.clipAction(clip);
       action.reset();
       action.setLoop(THREE.LoopOnce, 1);
       action.clampWhenFinished = true;
+      action.setEffectiveTimeScale(timing.timeScale);
+      action.time = timing.timeSeconds;
       action.play();
     }
     gun.userData.survivalFirearmAssetPhase = phase;
@@ -10919,7 +10948,14 @@ export class PaleciakiGameEngine {
       ? THREE.MathUtils.clamp(1 - this.survivalFirearm.cooldown / Math.max(0.01, definition.fireIntervalSeconds), 0, 1)
       : 0;
     this.updateSurvivalFirearmAssetAnimation(
-      gun, definition.archetype, reloading, progress, cycling, cycleProgress,
+      gun,
+      definition.archetype,
+      reloading,
+      progress,
+      cycling,
+      cycleProgress,
+      definition.reloadSeconds,
+      definition.fireIntervalSeconds,
     );
     const assetMixer = gun.userData.survivalFirearmAssetMixer as THREE.AnimationMixer | null | undefined;
     assetMixer?.update(dt);

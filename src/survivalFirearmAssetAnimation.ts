@@ -40,3 +40,35 @@ export function getSurvivalFirearmAssetAnimationClips(
 
   return [];
 }
+
+export interface SurvivalFirearmAssetAnimationTiming {
+  /** Clip-local time at which playback should begin for the current phase. */
+  readonly timeSeconds: number;
+  /** Playback multiplier that makes the remaining clip fit the remaining phase. */
+  readonly timeScale: number;
+}
+
+/**
+ * Synchronize a GLB clip to a normalized action phase and its real-world duration.
+ * This lets authored reload/slide animations finish exactly at the game-state
+ * transition instead of depending on the artist's original clip playback speed.
+ */
+export function getSurvivalFirearmAssetAnimationTiming(
+  clipDurationSeconds: number,
+  phaseProgress: number,
+  phaseDurationSeconds: number,
+): SurvivalFirearmAssetAnimationTiming | null {
+  if (
+    !Number.isFinite(clipDurationSeconds) ||
+    !Number.isFinite(phaseProgress) ||
+    !Number.isFinite(phaseDurationSeconds) ||
+    clipDurationSeconds <= 0 ||
+    phaseDurationSeconds <= 0
+  ) return null;
+
+  const progress = Math.max(0, Math.min(1, phaseProgress));
+  return {
+    timeSeconds: clipDurationSeconds * progress,
+    timeScale: clipDurationSeconds / phaseDurationSeconds,
+  };
+}
