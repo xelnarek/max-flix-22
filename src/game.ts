@@ -10929,7 +10929,7 @@ export class PaleciakiGameEngine {
       const currentSpeed = Number.isFinite(rotor.userData.angularSpeed)
         ? rotor.userData.angularSpeed as number
         : 0;
-      const targetSpeed = !reloading && cycling ? 28 : 0;
+      const targetSpeed = !reloading && cycling ? 28 * cyclePose.rotorSpin : 0;
       const response = reloading && pose.rotorBrake ? 22 : cycling ? 10 : 4;
       const blend = 1 - Math.exp(-response * Math.max(0, dt));
       const angularSpeed = currentSpeed + (targetSpeed - currentSpeed) * blend;
