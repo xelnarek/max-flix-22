@@ -42,7 +42,7 @@ import { launchOniricPlatformer } from './oniricPlatformer.ts';
 import { launchCthulhuRetroArena } from './cthulhuRetroArena.ts';
 import { getMenuTabIndexForKey } from './menuTabNavigation.ts';
 import { MenuScrollMemory } from './menuScrollMemory.ts';
-import { getMenuSegmentForTab, MENU_SEGMENTS, type MenuSegmentId } from './menuSegments.ts';
+import { getMenuSegmentForTab } from './menuSegments.ts';
 import { getVisibilityPauseAction } from './visibilityPause.ts';
 import { observeWebGLContextRecovery } from './webglContextRecovery.ts';
 import { FloatingToastPool } from './floatingToastPool.ts';
@@ -2782,13 +2782,21 @@ class PaleciakiScene extends xb.Script {
     const menuTabList = document.querySelector<HTMLElement>('.menu-tabs-bar');
     // The menu uses one vertical sidebar on desktop, tablet and mobile.
     // No viewport-dependent segment filtering is used.
-    menuTabList?.setAttribute('role', 'navigation');
-    menuTabList?.setAttribute('aria-label', 'Nawigacja menu głównego');
+    menuTabList?.setAttribute('role', 'tablist');
+    menuTabList?.setAttribute('aria-orientation', 'vertical');
+    menuTabList?.setAttribute('aria-label', 'Sekcje menu głównego');
     const menuTabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.menu-tab-btn'));
-    const menuMobileSegmentButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.menu-mobile-segment'));
     const menuNavigationGroups = Array.from(document.querySelectorAll<HTMLElement>('.menu-nav-group'));
+
+    // Categories remain permanently visible and only mark the owning section.
+    const updateActiveMenuGroup = (groupId: string) => {
+      menuNavigationGroups.forEach((group) => {
+        group.hidden = false;
+        group.inert = false;
+        group.dataset.activeGroup = String(group.dataset.menuGroup === groupId);
+      });
+    };
     let currentMenuTargetId = menuTabButtons.find((button) => button.classList.contains('active'))?.getAttribute('data-tab') || 'tab-team';
-    let activeMobileSegmentId: MenuSegmentId = getMenuSegmentForTab(currentMenuTargetId)?.id || 'play';
     const menuScrollMemory = new MenuScrollMemory();
     const menuContentArea = document.querySelector<HTMLElement>('.menu-tab-content-area');
 
@@ -2967,7 +2975,6 @@ class PaleciakiScene extends xb.Script {
       }
     }
     const menuRootElement = document.getElementById('title-screen');
-    let setActiveMobileSegment: (segmentId: MenuSegmentId) => void = () => undefined;
     if (menuRootElement) menuRootElement.dataset.menuDensity = 'compact';
 
     // One persistent density control keeps long reference copy out of the way
@@ -3056,7 +3063,8 @@ class PaleciakiScene extends xb.Script {
     const syncMenuPanelPresentation = (targetId: string) => {
       const titleScreenRoot = document.getElementById('title-screen');
       if (titleScreenRoot) titleScreenRoot.dataset.activeMenuTab = targetId;
-      menuTabList?.setAttribute('role', 'navigation');
+      menuTabList?.setAttribute('role', 'tablist');
+      menuTabList?.setAttribute('aria-orientation', 'vertical');
 
       menuTabButtons.forEach((button) => {
         const active = button.getAttribute('data-tab') === targetId;
@@ -3098,7 +3106,7 @@ class PaleciakiScene extends xb.Script {
       }
       currentMenuTargetId = targetId;
       const owningSegment = getMenuSegmentForTab(targetId);
-      if (owningSegment) setActiveMobileSegment(owningSegment.id);
+      if (owningSegment) updateActiveMenuGroup(owningSegment.id);
       ensureMenuTabVisible(selectedTab);
 
       // Clear the destination before panel sync: syncMenuPanelPresentation restores
@@ -3120,46 +3128,6 @@ class PaleciakiScene extends xb.Script {
         void this.syncAccountProgressionWithCloud();
       }
     };
-
-    // Keep every destination visible in the left rail at every viewport size.
-    // Selecting a tab changes only its matching content panel; groups are visual
-    // labels and never act as a second navigation layer.
-    setActiveMobileSegment = (segmentId: MenuSegmentId) => {
-      const segment = MENU_SEGMENTS.find((item) => item.id === segmentId);
-      if (!segment) return;
-
-      activeMobileSegmentId = segment.id;
-      if (menuRootElement) menuRootElement.dataset.activeMenuSegment = segment.id;
-
-      menuMobileSegmentButtons.forEach((button) => {
-        const active = button.dataset.menuSegment === segment.id;
-        button.classList.toggle('active', active);
-        button.setAttribute('aria-pressed', String(active));
-      });
-
-      menuNavigationGroups.forEach((group) => {
-        group.hidden = false;
-        group.inert = false;
-        group.dataset.activeGroup = String(group.dataset.menuGroup === segment.id);
-        group.setAttribute('aria-hidden', 'false');
-        group.setAttribute('role', 'tablist');
-        group.setAttribute('aria-orientation', 'vertical');
-      });
-    };
-
-    menuMobileSegmentButtons.forEach((button) => {
-      button.addEventListener('click', () => {
-        const segmentId = button.dataset.menuSegment as MenuSegmentId | undefined;
-        const segment = MENU_SEGMENTS.find((item) => item.id === segmentId);
-        if (!segment) return;
-
-        setActiveMobileSegment(segment.id);
-        const firstTab = menuTabButtons.find((tab) => tab.dataset.tab === segment.tabIds[0]);
-        if (!firstTab) return;
-        activateMenuTab(firstTab);
-        firstTab.focus();
-      });
-    });
 
     menuTabButtons.forEach((tabBtn, index) => {
       const targetId = tabBtn.getAttribute('data-tab');
@@ -3198,7 +3166,8 @@ class PaleciakiScene extends xb.Script {
       });
     });
 
-    setActiveMobileSegment(activeMobileSegmentId);
+    const initialMenuGroup = getMenuSegmentForTab(currentMenuTargetId);
+    if (initialMenuGroup) updateActiveMenuGroup(initialMenuGroup.id);
     syncMenuPanelPresentation(currentMenuTargetId);
 
     document.querySelectorAll<HTMLElement>('.char-card').forEach((card) => {
