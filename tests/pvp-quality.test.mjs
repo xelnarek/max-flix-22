@@ -560,3 +560,20 @@ test('PvP operator picker summaries are sourced from the live combat profiles', 
     '110 / stun 1,1 s',
   ]) assert.ok(arena.includes(`menuSummary: '${summary}'`), `missing catalog summary: ${summary}`);
 });
+
+
+test('remote PvP firearm gets profile-scaled whole-weapon recoil and a reload body dip from authoritative shot/reload state', async () => {
+  const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
+  assert.match(game, /private remoteSurvivalFirearmRecoilTimer = 0/);
+  assert.match(game, /this\.remoteSurvivalFirearmRecoilTimer = SURVIVAL_FIREARM_PRESENTATION\[remoteFirearmDefinition\.archetype\]\.recoilSettleSeconds/);
+  assert.match(game, /const remoteRecoil = THREE\.MathUtils\.clamp\([\s\S]*?remoteProfile\.recoilSettleSeconds/);
+  assert.match(game, /const remoteRecoilEase = remoteRecoil \* remoteRecoil/);
+  assert.match(game, /const remoteReloadDip = remoteReloading \? Math\.sin\(remoteReloadProgress \* Math\.PI\) : 0/);
+  assert.match(game, /remoteGun\.position\.set\([\s\S]*?remoteRecoilEase \* remoteProfile\.recoilDepth/);
+  assert.match(game, /remoteGun\.rotation\.set\([\s\S]*?remoteRecoilEase \* remoteProfile\.recoilPitch/);
+  assert.match(game, /this\.remoteSurvivalFirearmRecoilTimer = Math\.max\(0, this\.remoteSurvivalFirearmRecoilTimer - dt\)/);
+  for (const archetype of ['pistol', 'smg', 'rifle', 'shotgun', 'heavy-rifle', 'minigun', 'rocket', 'flame', 'plasma', 'gauss', 'grenade']) {
+    assert.ok(game.includes("" + archetype + ": {" ) || game.includes("'" + archetype + "': {" ) || game.includes(archetype),
+      'missing recoil profile archetype: ' + archetype);
+  }
+});

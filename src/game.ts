@@ -919,6 +919,8 @@ export class PaleciakiGameEngine {
   private survivalFirearmLastDropSeconds = Number.NEGATIVE_INFINITY;
   private survivalFirearmSoundCooldown = 0;
   private survivalFirearmRecoilTimer = 0;
+  /** Opponent weapon recoil is driven by authoritative remote shot counters. */
+  private remoteSurvivalFirearmRecoilTimer = 0;
   private survivalFirearmDrops: Array<{ id: string; firearmId: SurvivalFirearmId; mesh: THREE.Group; x: number; y: number; z: number; baseY: number; age: number; life: number }> = [];
   private survivalMomentum: SurvivalMomentumState = createSurvivalMomentumState();
   // Serializes ready weapon shots so a full cooldown queue never empties in one frame.
@@ -3807,6 +3809,7 @@ export class PaleciakiGameEngine {
     this.pvpLastObservedRemoteShotsFired = remote.shotsFired;
     if (remoteShotsSinceLastSync > 0 && this.remotePlayerGroup) {
       const remoteFirearmDefinition = SURVIVAL_FIREARM_DEFS[remote.primaryFirearmId];
+      this.remoteSurvivalFirearmRecoilTimer = SURVIVAL_FIREARM_PRESENTATION[remoteFirearmDefinition.archetype].recoilSettleSeconds;
       const remoteDirection = pvpAimDirectionFromAngle(remote.aimAngle);
       const remoteForward = new THREE.Vector3(remoteDirection.x, 0, remoteDirection.z);
       const remoteMuzzle = new THREE.Vector3(remote.x, remote.y + 0.92, remote.z)
@@ -3845,10 +3848,12 @@ export class PaleciakiGameEngine {
       this.pvpRemoteFirearmId = remote.primaryFirearmId;
     }
 
-    // Remote PvP operators use the same GLB reload/slide clips as the local player.
+    // Remote PvP operators share the GLB reload/slide clips and the same
+    // profile-scaled whole-weapon recoil used by the locally controlled player.
     const remoteGun = this.remotePlayerGroup?.getObjectByName('pvp_remote_primary_firearm') as THREE.Group | undefined;
     if (remoteGun) {
       const remoteDefinition = SURVIVAL_FIREARM_DEFS[remote.primaryFirearmId];
+      const remoteProfile = SURVIVAL_FIREARM_PRESENTATION[remoteDefinition.archetype];
       const remoteReloading = remote.reloadRemainingSeconds > 0;
       const remoteReloadProgress = remoteReloading
         ? THREE.MathUtils.clamp(1 - remote.reloadRemainingSeconds / remoteDefinition.reloadSeconds, 0, 1)
@@ -3862,6 +3867,23 @@ export class PaleciakiGameEngine {
       );
       const remoteAssetMixer = remoteGun.userData.survivalFirearmAssetMixer as THREE.AnimationMixer | null | undefined;
       remoteAssetMixer?.update(dt);
+
+      const remoteRecoil = THREE.MathUtils.clamp(
+        this.remoteSurvivalFirearmRecoilTimer / Math.max(0.01, remoteProfile.recoilSettleSeconds), 0, 1,
+      );
+      const remoteRecoilEase = remoteRecoil * remoteRecoil;
+      const remoteReloadDip = remoteReloading ? Math.sin(remoteReloadProgress * Math.PI) : 0;
+      remoteGun.position.set(
+        0.23,
+        0.62 - remoteReloadDip * 0.075 - remoteRecoilEase * remoteProfile.recoilDepth * 0.28,
+        0.36 - remoteReloadDip * 0.035 - remoteRecoilEase * remoteProfile.recoilDepth,
+      );
+      remoteGun.rotation.set(
+        -0.12 + remoteReloadDip * 0.18 + remoteRecoilEase * remoteProfile.recoilPitch,
+        0,
+        -remoteRecoilEase * remoteProfile.recoilPitch * 0.28,
+      );
+      this.remoteSurvivalFirearmRecoilTimer = Math.max(0, this.remoteSurvivalFirearmRecoilTimer - dt);
     }
 
     this.playerPos.x = THREE.MathUtils.lerp(this.playerPos.x, local.x, Math.min(1, dt * 18));
