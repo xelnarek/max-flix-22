@@ -163,8 +163,8 @@ function cloneWeaponScene(source: THREE.Object3D): THREE.Group {
 export async function loadSurvivalFirearmModelAsset(
   archetype: string,
 ): Promise<LoadedSurvivalFirearmAsset | null> {
-  const definition = (SURVIVAL_FIREARM_ASSETS as Readonly<Record<string, SurvivalFirearmAssetDefinition>>)[archetype];
-  if (!definition) return null;
+  if (!Object.prototype.hasOwnProperty.call(SURVIVAL_FIREARM_ASSETS, archetype)) return null;
+  const definition = SURVIVAL_FIREARM_ASSETS[archetype as SurvivalFirearmAssetArchetype];
   const gltf = await getSource(definition);
   if (!gltf) return null;
   return {
