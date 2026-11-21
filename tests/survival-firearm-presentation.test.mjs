@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   SURVIVAL_FIREARM_PRESENTATION,
+  SURVIVAL_FIREARM_CYCLE_TIMING,
+  getSurvivalFirearmCyclePose,
   getSurvivalFirearmReloadPose,
 } from '../src/survivalFirearmPresentation.ts';
 
@@ -39,6 +41,25 @@ test('every firearm archetype has its own projectile, recoil, reload and feedbac
     assert.ok(profile.trailIntervalSeconds === 0 || profile.trailIntervalSeconds >= 0.06);
     assert.ok(profile.recoilDepth > 0);
     assert.ok(profile.recoilSettleSeconds >= 0.12);
+  }
+});
+
+test('all eleven weapons have distinct asymmetric firing-cycle timing and return to a neutral pose', () => {
+  assert.deepEqual(Object.keys(SURVIVAL_FIREARM_CYCLE_TIMING).sort(), [...archetypes].sort());
+  const signatures = new Set(archetypes.map((archetype) => {
+    const timing = SURVIVAL_FIREARM_CYCLE_TIMING[archetype];
+    assert.ok(timing.peakProgress > 0 && timing.peakProgress < timing.returnStartProgress);
+    assert.ok(timing.returnStartProgress < 1);
+    return timing.peakProgress + ':' + timing.returnStartProgress;
+  }));
+  assert.equal(signatures.size, archetypes.length);
+  for (const archetype of archetypes) {
+    const start = getSurvivalFirearmCyclePose(archetype, 0);
+    const peak = getSurvivalFirearmCyclePose(archetype, SURVIVAL_FIREARM_CYCLE_TIMING[archetype].peakProgress);
+    const complete = getSurvivalFirearmCyclePose(archetype, 1);
+    for (const value of Object.values(start)) assert.equal(value, 0);
+    for (const value of Object.values(complete)) assert.equal(value, 0);
+    assert.ok(Object.values(peak).some((value) => Math.abs(value) > 0));
   }
 });
 
