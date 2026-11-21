@@ -10560,7 +10560,9 @@ export class PaleciakiGameEngine {
 
   private attachSurvivalFirearmAsset(gun: THREE.Group, firearmId: SurvivalFirearmId): void {
     const archetype = SURVIVAL_FIREARM_DEFS[firearmId].archetype;
-    const assetDefinition = (SURVIVAL_FIREARM_ASSETS as Readonly<Record<string, { maxDimension: number }>>)[archetype];
+    const assetDefinition = Object.prototype.hasOwnProperty.call(SURVIVAL_FIREARM_ASSETS, archetype)
+      ? SURVIVAL_FIREARM_ASSETS[archetype as keyof typeof SURVIVAL_FIREARM_ASSETS]
+      : undefined;
     if (!assetDefinition) return;
 
     void loadSurvivalFirearmModelAsset(archetype).then((asset) => {
