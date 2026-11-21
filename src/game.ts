@@ -3832,6 +3832,7 @@ export class PaleciakiGameEngine {
     if (this.remotePlayerGroup && this.pvpRemoteFirearmId !== remote.primaryFirearmId) {
       const previousRemoteGun = this.remotePlayerGroup.getObjectByName('pvp_remote_primary_firearm');
       if (previousRemoteGun) {
+        previousRemoteGun.userData.survivalFirearmDisposed = true;
         this.remotePlayerGroup.remove(previousRemoteGun);
         this.disposeTemporaryObject(previousRemoteGun);
       }
@@ -3842,6 +3843,25 @@ export class PaleciakiGameEngine {
       remoteGun.rotation.x = -0.12;
       this.remotePlayerGroup.add(remoteGun);
       this.pvpRemoteFirearmId = remote.primaryFirearmId;
+    }
+
+    // Remote PvP operators use the same GLB reload/slide clips as the local player.
+    const remoteGun = this.remotePlayerGroup?.getObjectByName('pvp_remote_primary_firearm') as THREE.Group | undefined;
+    if (remoteGun) {
+      const remoteDefinition = SURVIVAL_FIREARM_DEFS[remote.primaryFirearmId];
+      const remoteReloading = remote.reloadRemainingSeconds > 0;
+      const remoteReloadProgress = remoteReloading
+        ? THREE.MathUtils.clamp(1 - remote.reloadRemainingSeconds / remoteDefinition.reloadSeconds, 0, 1)
+        : 0;
+      const remoteCycling = remote.attackCooldownTimer > 0;
+      const remoteCycleProgress = remoteCycling
+        ? THREE.MathUtils.clamp(1 - remote.attackCooldownTimer / Math.max(0.01, remoteDefinition.fireIntervalSeconds), 0, 1)
+        : 0;
+      this.updateSurvivalFirearmAssetAnimation(
+        remoteGun, remoteDefinition.archetype, remoteReloading, remoteReloadProgress, remoteCycling, remoteCycleProgress,
+      );
+      const remoteAssetMixer = remoteGun.userData.survivalFirearmAssetMixer as THREE.AnimationMixer | null | undefined;
+      remoteAssetMixer?.update(dt);
     }
 
     this.playerPos.x = THREE.MathUtils.lerp(this.playerPos.x, local.x, Math.min(1, dt * 18));
@@ -4152,6 +4172,7 @@ export class PaleciakiGameEngine {
       if (drop.active && this.pvpFirearmDropModelId !== drop.firearmId) {
         const previousModel = this.pvpFirearmDropMesh.getObjectByName('pvp-firearm-drop-model');
         if (previousModel) {
+          previousModel.userData.survivalFirearmDisposed = true;
           this.pvpFirearmDropMesh.remove(previousModel);
           this.disposeTemporaryObject(previousModel);
         }
