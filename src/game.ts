@@ -11140,9 +11140,11 @@ export class PaleciakiGameEngine {
 
     if (profile.muzzleStyle === 'plasma-pulse') this.triggerBloomPulse(0.10);
     if (profile.muzzleStyle === 'gauss-discharge') this.triggerBloomPulse(0.16);
-    if ((profile.muzzleStyle === 'rocket-ignition' || profile.muzzleStyle === 'heavy-charge') && !handheld) {
-      this.triggerScreenShake(0.045, 0.035);
-    }
+    // Every firearm now has a restrained camera impulse, scaled by its physical
+    // recoil profile. Touch devices receive a reduced impulse to avoid motion fatigue.
+    const recoilKick = THREE.MathUtils.clamp(profile.recoilDepth * 0.18, 0.008, 0.045);
+    const recoilDuration = THREE.MathUtils.clamp(profile.recoilSettleSeconds * 0.18, 0.025, 0.065);
+    this.triggerScreenShake(recoilKick * (handheld ? 0.42 : 1), recoilDuration);
   }
 
   private spawnSurvivalFirearmTrail(projectile: { mesh: THREE.Object3D; vel: THREE.Vector3; firearmId?: SurvivalFirearmId }): void {
