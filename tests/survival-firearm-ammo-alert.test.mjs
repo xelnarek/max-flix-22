@@ -50,3 +50,8 @@ test('both PvE and PvP HUDs use the shared warning helper and expose visible ale
   assert.match(app, /MAŁO AMUNICJI/);
   assert.match(app, /KOŃCÓWKA MAGAZYNKA/);
 });
+
+test('the weapon catalogue accessibility label matches its eleven firearm entries', async () => {
+  const html = await read('../index.html');
+  assert.match(html, /id="firearm-catalog-grid"[^>]*aria-label="Parametry jedenastu broni głównych"/);
+});
