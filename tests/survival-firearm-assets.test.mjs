@@ -24,7 +24,7 @@ test('the firearm asset registry selects nine small CC0 models and leaves unmatc
     assert.ok(assets.includes(assetId), 'missing curated external weapon model: ' + assetId);
     assert.ok(fetcher.includes(assetId), 'missing build-time download entry: ' + assetId);
   }
-  assert.equal((assets.match(/sourceUrl:/g) || []).length, 9);
+  assert.equal((assets.match(/sourceUrl: 'https:\/\/cdn\\.3dassets\\.dev\\/assets\\//g) || []).length, 9);
   assert.match(assets, /license: 'CC0-1\.0'/);
   assert.match(assets, /loadSurvivalFirearmModelAsset/);
   assert.match(assets, /loader\.loadAsync\(url\)/);
@@ -45,7 +45,7 @@ test('external firearm models replace visuals asynchronously while preserving sh
   assert.match(game, /new THREE\.AnimationMixer\(asset\.model\)/);
   assert.match(game, /action\.setLoop\(THREE\.LoopOnce, 1\)/);
   assert.match(game, /assetMixer\?\.update\(dt\)/);
-  assert.match(game, /fallback model remains available/);
+  assert.match(game, /procedural model remains available/);
   assert.match(game, /previous\.userData\.survivalFirearmDisposed = true/);
   assert.match(game, /drop\.mesh\.userData\.survivalFirearmDisposed = true/);
   assert.match(game, /this\.fireSurvivalFirearm\(/);
