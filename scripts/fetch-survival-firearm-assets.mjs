@@ -10,15 +10,15 @@ const strict = process.argv.includes('--strict');
 const MAX_ASSET_BYTES = 2 * 1024 * 1024;
 
 const ASSETS = [
-  { file: 'pistol.glb', id: 'fps-compact-pistol-19430', url: 'https://cdn.3dassets.dev/assets/19430/v1/model.glb', label: 'Compact pistol · FPS Guns and Shooting Range', triangles: 10024 },
-  { file: 'smg.glb', id: 'fps-compact-smg-19433', url: 'https://cdn.3dassets.dev/assets/19433/v1/model.glb', label: 'Compact submachine gun · FPS Guns and Shooting Range', triangles: 11324 },
-  { file: 'rifle.glb', id: 'fps-assault-carbine-19436', url: 'https://cdn.3dassets.dev/assets/19436/v1/model.glb', label: 'Assault carbine · FPS Guns and Shooting Range', triangles: 11324 },
-  { file: 'shotgun.glb', id: 'fps-pump-shotgun-19439', url: 'https://cdn.3dassets.dev/assets/19439/v1/model.glb', label: 'Pump shotgun · FPS Guns and Shooting Range', triangles: 9984 },
-  { file: 'heavy-rifle.glb', id: 'fps-battle-rifle-19437', url: 'https://cdn.3dassets.dev/assets/19437/v1/model.glb', label: 'Battle rifle · FPS Guns and Shooting Range', triangles: 11324 },
-  { file: 'rocket.glb', id: 'arena-rocket-launcher-23139', url: 'https://cdn.3dassets.dev/assets/23139/v1/model.glb', label: 'Rocket Launcher Pickup · Arena Shooter Map Kit', triangles: 4600 },
-  { file: 'plasma.glb', id: 'arena-plasma-gun-23143', url: 'https://cdn.3dassets.dev/assets/23143/v1/model.glb', label: 'Plasma Gun Pickup · Arena Shooter Map Kit', triangles: 5448 },
-  { file: 'gauss.glb', id: 'arena-rail-gun-23142', url: 'https://cdn.3dassets.dev/assets/23142/v1/model.glb', label: 'Rail Gun Pickup · Arena Shooter Map Kit', triangles: 3000 },
-  { file: 'grenade.glb', id: 'arena-grenade-launcher-23140', url: 'https://cdn.3dassets.dev/assets/23140/v1/model.glb', label: 'Grenade Launcher Pickup · Arena Shooter Map Kit', triangles: 3000 },
+  { file: 'pistol.glb', id: 'fps-compact-pistol-19430', url: 'https://cdn.3dassets.dev/assets/19430/v1/model.glb', label: 'Compact pistol · FPS Guns and Shooting Range', triangles: 10024, expectedAnimations: ['magazine-open', 'magazine-close', 'slide-open', 'slide-close'] },
+  { file: 'smg.glb', id: 'fps-compact-smg-19433', url: 'https://cdn.3dassets.dev/assets/19433/v1/model.glb', label: 'Compact submachine gun · FPS Guns and Shooting Range', triangles: 11324, expectedAnimations: ['stock-open', 'stock-close', 'magazine-open', 'magazine-close'] },
+  { file: 'rifle.glb', id: 'fps-assault-carbine-19436', url: 'https://cdn.3dassets.dev/assets/19436/v1/model.glb', label: 'Assault carbine · FPS Guns and Shooting Range', triangles: 11324, expectedAnimations: ['stock-open', 'stock-close', 'magazine-open', 'magazine-close'] },
+  { file: 'shotgun.glb', id: 'fps-pump-shotgun-19439', url: 'https://cdn.3dassets.dev/assets/19439/v1/model.glb', label: 'Pump shotgun · FPS Guns and Shooting Range', triangles: 9984, expectedAnimations: ['open', 'close'] },
+  { file: 'heavy-rifle.glb', id: 'fps-battle-rifle-19437', url: 'https://cdn.3dassets.dev/assets/19437/v1/model.glb', label: 'Battle rifle · FPS Guns and Shooting Range', triangles: 11324, expectedAnimations: ['stock-open', 'stock-close', 'magazine-open', 'magazine-close'] },
+  { file: 'rocket.glb', id: 'arena-rocket-launcher-23139', url: 'https://cdn.3dassets.dev/assets/23139/v1/model.glb', label: 'Rocket Launcher Pickup · Arena Shooter Map Kit', triangles: 4600, expectedAnimations: [] },
+  { file: 'plasma.glb', id: 'arena-plasma-gun-23143', url: 'https://cdn.3dassets.dev/assets/23143/v1/model.glb', label: 'Plasma Gun Pickup · Arena Shooter Map Kit', triangles: 5448, expectedAnimations: [] },
+  { file: 'gauss.glb', id: 'arena-rail-gun-23142', url: 'https://cdn.3dassets.dev/assets/23142/v1/model.glb', label: 'Rail Gun Pickup · Arena Shooter Map Kit', triangles: 3000, expectedAnimations: [] },
+  { file: 'grenade.glb', id: 'arena-grenade-launcher-23140', url: 'https://cdn.3dassets.dev/assets/23140/v1/model.glb', label: 'Grenade Launcher Pickup · Arena Shooter Map Kit', triangles: 3000, expectedAnimations: [] },
 ];
 
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
@@ -116,6 +116,10 @@ async function run() {
       downloaded++;
     }
     const validation = inspectGlb(bytes, asset.id);
+    const missingAnimations = asset.expectedAnimations.filter((name) => !validation.animations.includes(name));
+    if (missingAnimations.length > 0) {
+      throw new Error('GLB is missing required animation clips for ' + asset.id + ': ' + missingAnimations.join(', '));
+    }
     manifest.assets[asset.id] = {
       file: asset.file,
       label: asset.label,
@@ -128,7 +132,7 @@ async function run() {
       meshes: validation.meshCount,
       animations: validation.animations,
     };
-    console.log('[Firearm assets] ' + asset.id + ' • ' + validation.meshCount + ' meshes • ' + validation.animations.length + ' animation clips');
+    console.log('[Firearm assets] ' + asset.id + ' • ' + validation.meshCount + ' meshes • ' + validation.animations.length + ' animation clips • ' + asset.expectedAnimations.length + ' required clips validated');
   }
 
   await writeFile(MANIFEST_PATH, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
