@@ -107,11 +107,10 @@ async function run() {
   let reused = 0;
   for (const asset of ASSETS) {
     const filePath = path.join(OUTPUT_DIR, asset.file);
-    const bytes = await existingAssetIsValid(filePath, asset.id)
-      ? await readFile(filePath)
-      : await fetchWithRetry(asset.url, asset.id);
+    const canReuse = await existingAssetIsValid(filePath, asset.id);
+    const bytes = canReuse ? await readFile(filePath) : await fetchWithRetry(asset.url, asset.id);
     if (bytes.length < 2048) throw new Error('Downloaded GLB is unexpectedly small: ' + asset.id);
-    if (await existingAssetIsValid(filePath, asset.id)) reused++;
+    if (canReuse) reused++;
     else {
       await writeFile(filePath, bytes);
       downloaded++;
