@@ -20,6 +20,8 @@ export interface SurvivalFirearmAssetDefinition {
   readonly maxDimension: number;
   readonly license: 'CC0-1.0';
   readonly animated: boolean;
+  /** Exact GLTF clip names required by the runtime reload/slide animation mapping. */
+  readonly expectedAnimations: readonly string[];
 }
 
 /**
@@ -38,6 +40,7 @@ export const SURVIVAL_FIREARM_ASSETS: Readonly<
     maxDimension: 0.62,
     license: 'CC0-1.0',
     animated: true,
+    expectedAnimations: ['magazine-open', 'magazine-close', 'slide-open', 'slide-close'],
   },
   smg: {
     file: 'smg.glb',
@@ -47,6 +50,7 @@ export const SURVIVAL_FIREARM_ASSETS: Readonly<
     maxDimension: 0.84,
     license: 'CC0-1.0',
     animated: true,
+    expectedAnimations: ['stock-open', 'stock-close', 'magazine-open', 'magazine-close'],
   },
   rifle: {
     file: 'rifle.glb',
@@ -56,6 +60,7 @@ export const SURVIVAL_FIREARM_ASSETS: Readonly<
     maxDimension: 0.96,
     license: 'CC0-1.0',
     animated: true,
+    expectedAnimations: ['stock-open', 'stock-close', 'magazine-open', 'magazine-close'],
   },
   shotgun: {
     file: 'shotgun.glb',
@@ -65,6 +70,7 @@ export const SURVIVAL_FIREARM_ASSETS: Readonly<
     maxDimension: 0.98,
     license: 'CC0-1.0',
     animated: true,
+    expectedAnimations: ['open', 'close'],
   },
   'heavy-rifle': {
     file: 'heavy-rifle.glb',
@@ -74,6 +80,7 @@ export const SURVIVAL_FIREARM_ASSETS: Readonly<
     maxDimension: 1.04,
     license: 'CC0-1.0',
     animated: true,
+    expectedAnimations: ['stock-open', 'stock-close', 'magazine-open', 'magazine-close'],
   },
   rocket: {
     file: 'rocket.glb',
@@ -83,6 +90,7 @@ export const SURVIVAL_FIREARM_ASSETS: Readonly<
     maxDimension: 0.98,
     license: 'CC0-1.0',
     animated: false,
+    expectedAnimations: [],
   },
   plasma: {
     file: 'plasma.glb',
@@ -92,6 +100,7 @@ export const SURVIVAL_FIREARM_ASSETS: Readonly<
     maxDimension: 0.92,
     license: 'CC0-1.0',
     animated: false,
+    expectedAnimations: [],
   },
   gauss: {
     file: 'gauss.glb',
@@ -101,6 +110,7 @@ export const SURVIVAL_FIREARM_ASSETS: Readonly<
     maxDimension: 1.08,
     license: 'CC0-1.0',
     animated: false,
+    expectedAnimations: [],
   },
   grenade: {
     file: 'grenade.glb',
@@ -110,7 +120,23 @@ export const SURVIVAL_FIREARM_ASSETS: Readonly<
     maxDimension: 0.94,
     license: 'CC0-1.0',
     animated: false,
+    expectedAnimations: [],
   },
+});
+
+
+/**
+ * The four curated sci-fi models have no embedded GLTF animation clips.
+ * Retain only the matching procedural moving assemblies as lightweight overlays
+ * so the shared reload-pose driver can animate chambers, cells and coils.
+ */
+export const SURVIVAL_FIREARM_PROCEDURAL_MECHANISM_PARTS: Readonly<
+  Partial<Record<SurvivalFirearmAssetArchetype, readonly string[]>>
+> = Object.freeze({
+  rocket: ['firearm-rocket-cell'],
+  plasma: ['firearm-coils', 'firearm-energy-cell'],
+  gauss: ['firearm-bolt', 'firearm-energy-cell', 'firearm-coils'],
+  grenade: ['firearm-rocket-cell'],
 });
 
 export interface LoadedSurvivalFirearmAsset {
