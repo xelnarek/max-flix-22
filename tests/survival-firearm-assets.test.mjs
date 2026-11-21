@@ -50,6 +50,8 @@ test('external firearm models replace visuals asynchronously while preserving sh
   assert.match(game, /drop\.mesh\.userData\.survivalFirearmDisposed = true/);
   assert.match(game, /this\.fireSurvivalFirearm\(/);
   assert.match(game, /private createSurvivalFirearmProjectileMesh\(/);
+  assert.match(game, /remoteGun = this\.remotePlayerGroup\?\.getObjectByName\('pvp_remote_primary_firearm'\)/);
+  assert.match(game, /remoteAssetMixer\?\.update\(dt\)/);
 });
 
 test('the nine selected external GLBs are fetched locally before development and strict production builds', async () => {
