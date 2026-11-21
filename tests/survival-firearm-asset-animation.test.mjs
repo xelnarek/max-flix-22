@@ -58,7 +58,7 @@ test('every runtime-selected GLB clip exists in that archetype production asset 
 
 test('the shared local and remote firearm runtime both use the tested clip resolver', async () => {
   const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
-  assert.match(game, /import \{ getSurvivalFirearmAssetAnimationClips \} from '\.\/survivalFirearmAssetAnimation\.ts'/);
+  assert.match(game, /import \{ getSurvivalFirearmAssetAnimationClips, getSurvivalFirearmAssetAnimationTiming \} from '\.\/survivalFirearmAssetAnimation\.ts'/);
   assert.match(game, /const wanted = getSurvivalFirearmAssetAnimationClips\(archetype, phase\)/);
   assert.doesNotMatch(game, /else if \(phase === 'reload-open'\)\s*\{\s*wanted = \['magazine-open'\]/);
 });
