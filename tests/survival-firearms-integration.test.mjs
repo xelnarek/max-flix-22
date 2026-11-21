@@ -161,7 +161,7 @@ test('firearm pickups are physical 3D models with weapon-specific silhouettes', 
   }
   const minigunModel = modelFactory.slice(modelFactory.indexOf("case 'minigun':"), modelFactory.indexOf("case 'rocket':"));
   assert.match(minigunModel, /addMagazine\(/, 'minigun needs a visible feed drum that can drop during reload');
-  assert.match(game, /life: 40/);
+  assert.match(game, /SURVIVAL_FIREARM_DROP_POLICY\.dropLifetimeSeconds/);
 });
 
 test('magazine, reload, projectile archetype and damage are driven by the active firearm profile', async () => {
@@ -203,15 +203,17 @@ test('every primary firearm has a unique hard range and that range is enforced i
   assert.ok(game.includes('if (p.travelledDistance >= p.maxRangeMeters - 0.0001) p.life = 0'));
 });
 
-test('firearm drops are shared by Survival and Campaign, rare, time-gated, single-pickup and globally rate-limited', async () => {
-  const game = await read('../src/game.ts');
+test('firearm drops are shared by Survival and Campaign and use the central bounded policy', async () => {
+  const [game, firearms] = await Promise.all([read('../src/game.ts'), read('../src/survivalFirearms.ts')]);
+  assert.match(firearms, /SURVIVAL_FIREARM_DROP_POLICY/);
+  assert.match(game, /SURVIVAL_FIREARM_DROP_POLICY/);
   assert.match(game, /if \(this\.gameMode === 'survival' \|\| this\.gameMode === 'campaign'\) \{[\s\S]*?this\.survivalFirearmKillCount\+\+/);
   assert.match(game, /const firearmElapsed = this\.survivalElapsed/);
-  assert.match(game, /campaignRemainingSeconds: this\.campaignStage \? Math\.max\(0, Math\.ceil\(this\.campaignStage\.durationSeconds - this\.survivalElapsed\)\)/);
-  assert.match(game, /firearmElapsed >= 45 && this\.survivalFirearmKillCount >= 8/);
-  assert.match(game, /this\.survivalFirearmDrops\.length === 0/);
-  assert.match(game, /firearmElapsed - this\.survivalFirearmLastDropSeconds >= 75/);
-  assert.match(game, /baseY: y, age: 0, life: 40/);
+  assert.match(game, /firearmElapsed >= SURVIVAL_FIREARM_DROP_POLICY\.unlockElapsedSeconds/);
+  assert.match(game, /this\.survivalFirearmDrops\.length < SURVIVAL_FIREARM_DROP_POLICY\.maximumActiveDrops/);
+  assert.match(game, /firearmElapsed - this\.survivalFirearmLastDropSeconds >= SURVIVAL_FIREARM_DROP_POLICY\.minimumIntervalSeconds/);
+  assert.match(game, /SURVIVAL_FIREARM_DROP_POLICY\.dropLifetimeSeconds/);
+  assert.match(game, /SURVIVAL_FIREARM_DROP_POLICY\.pityMisses/);
   assert.match(game, /this\.gameMode !== 'survival' && this\.gameMode !== 'campaign'/);
   assert.match(game, /const currentGameMode = this\.gameMode;\s*if \(currentGameMode !== 'pvp'\) \{\s*this\.fireSurvivalFirearm\(\)/);
   assert.match(game, /if \(this\.gameMode === 'pvp'\) \{\s*this\.updatePvpMode/);
@@ -255,6 +257,21 @@ test('Survival HUD exposes the active primary firearm and removes the retired mo
 });
 
 
+test('the armory explains drop odds and renders a dedicated 3D grenade-launcher icon', async () => {
+  const [html, app, firearms] = await Promise.all([read('../index.html'), read('../src/index.ts'), read('../src/survivalFirearms.ts')]);
+  assert.ok(html.includes('id="armory-drop-policy"'));
+  assert.ok(app.includes('SURVIVAL_FIREARM_DROP_POLICY'));
+  assert.ok(app.includes('firearmDropPolicyElement.textContent'));
+  const iconStart = app.indexOf('const renderSurvivalFirearmCatalogIcon');
+  const iconEnd = app.indexOf('// Build the armory', iconStart);
+  assert.ok(iconStart >= 0 && iconEnd > iconStart);
+  const iconBuilder = app.slice(iconStart, iconEnd);
+  assert.ok(iconBuilder.includes("case 'grenade': {"));
+  assert.ok(iconBuilder.includes('CylinderGeometry') && iconBuilder.includes('drum'));
+  for (const name of ['Broń rezerwowa na średni dystans', 'Siedem śrutów w szerokim stożku', 'Granatnik z łukiem balistycznym', 'Broń precyzyjna na bardzo daleki dystans']) {
+    assert.ok(firearms.includes(name), 'missing tactical armory description: ' + name);
+  }
+});
 test('the armory menu is a real navigation destination driven by live firearm definitions', async () => {
   const [html, app, css, menu] = await Promise.all([
     read('../index.html'), read('../src/index.ts'), read('../src/firearm-armory.css'), read('../src/menuSegments.ts'),
