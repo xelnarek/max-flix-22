@@ -1191,3 +1191,40 @@
   #game-shell.survival-mode .survival-firearm-ammo { font-size: 9px; }
   #game-shell.survival-mode .survival-firearm-reload-button { min-width: 32px; min-height: 28px; }
 }
+
+
+/* Magazine-state warnings shared by Survival and Campaign. */
+#game-shell.survival-mode .survival-firearm-status.is-low-ammo {
+  border-color: rgba(251, 191, 36, .82);
+  box-shadow: 0 0 12px rgba(251, 191, 36, .12), inset 0 0 18px rgba(251, 191, 36, .08);
+}
+#game-shell.survival-mode .survival-firearm-status.is-low-ammo .survival-firearm-ammo,
+#game-shell.survival-mode .survival-firearm-status.is-low-ammo .survival-firearm-reload {
+  color: #fbbf24;
+}
+#game-shell.survival-mode .survival-firearm-status.is-low-ammo .survival-firearm-ammo-track > span {
+  background: #fbbf24;
+}
+#game-shell.survival-mode .survival-firearm-status.is-critical-ammo,
+#game-shell.survival-mode .survival-firearm-status.is-empty-ammo {
+  border-color: rgba(248, 113, 113, .88);
+  box-shadow: 0 0 14px rgba(248, 113, 113, .16), inset 0 0 18px rgba(248, 113, 113, .08);
+}
+#game-shell.survival-mode .survival-firearm-status.is-critical-ammo .survival-firearm-ammo,
+#game-shell.survival-mode .survival-firearm-status.is-empty-ammo .survival-firearm-ammo,
+#game-shell.survival-mode .survival-firearm-status.is-critical-ammo .survival-firearm-reload,
+#game-shell.survival-mode .survival-firearm-status.is-empty-ammo .survival-firearm-reload {
+  color: #f87171;
+}
+#game-shell.survival-mode .survival-firearm-status.is-critical-ammo .survival-firearm-ammo-track > span,
+#game-shell.survival-mode .survival-firearm-status.is-empty-ammo .survival-firearm-ammo-track > span {
+  background: #f87171;
+}
+#game-shell.survival-mode .survival-firearm-reload-button.is-low-ammo {
+  border-color: rgba(251, 191, 36, .9);
+  color: #fbbf24;
+}
+#game-shell.survival-mode .survival-firearm-reload-button.is-critical-ammo {
+  border-color: rgba(248, 113, 113, .94);
+  color: #f87171;
+}
