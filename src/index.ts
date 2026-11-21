@@ -1860,14 +1860,18 @@ class PaleciakiScene extends xb.Script {
               firearmStatus.classList.toggle('is-low-ammo', ammoAlert === 'low');
               firearmStatus.classList.toggle('is-critical-ammo', ammoAlert === 'critical');
               firearmStatus.classList.toggle('is-empty-ammo', ammoAlert === 'empty');
-              const ammoAlertLabel = ammoAlert === 'low'
-                ? ', mało amunicji'
-                : ammoAlert === 'critical'
-                  ? ', końcówka magazynka'
-                  : ammoAlert === 'empty'
-                    ? ', pusty magazynek'
-                    : '';
-              firearmStatus.setAttribute('aria-label', primaryFirearm.name + ', amunicja ' + primaryFirearm.ammoInMagazine + ' na ' + primaryFirearm.magazineSize + (reloading ? ', przeładowanie magazynka' : cycling ? ', cykl broni' : ', gotowa') + ammoAlertLabel);
+              const firearmReadinessLabel = reloading
+                ? ', przeładowanie magazynka'
+                : cycling
+                  ? ', cykl broni'
+                  : ammoAlert === 'low'
+                    ? ', mało amunicji'
+                    : ammoAlert === 'critical'
+                      ? ', końcówka magazynka'
+                      : ammoAlert === 'empty'
+                        ? ', pusty magazynek'
+                        : ', gotowa';
+              firearmStatus.setAttribute('aria-label', primaryFirearm.name + ', amunicja ' + primaryFirearm.ammoInMagazine + ' na ' + primaryFirearm.magazineSize + firearmReadinessLabel);
             }
           }
           if (survivalRerollBtn) {
