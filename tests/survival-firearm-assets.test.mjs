@@ -26,6 +26,8 @@ test('the firearm asset registry selects nine small CC0 models and leaves unmatc
   }
   assert.equal((assets.match(/sourceUrl: 'https:\/\/cdn/g) || []).length, 9);
   assert.match(assets, /license: 'CC0-1\.0'/);
+  assert.match(assets, /expectedAnimations/);
+  assert.match(assets, /SURVIVAL_FIREARM_PROCEDURAL_MECHANISM_PARTS/);
   assert.match(assets, /loadSurvivalFirearmModelAsset/);
   assert.match(assets, /loader\.loadAsync\(url\)/);
   assert.match(assets, /sourceCache/);
@@ -58,4 +60,34 @@ test('the nine selected external GLBs are fetched locally before development and
   const pkg = JSON.parse(await read('../package.json'));
   assert.ok(pkg.scripts.predev.includes('fetch-survival-firearm-assets.mjs'));
   assert.ok(pkg.scripts.prebuild.includes('fetch-survival-firearm-assets.mjs --strict'));
+});
+
+
+test('static sci-fi GLBs retain matching procedural reload mechanisms in local and remote weapon rigs', async () => {
+  const [assets, game, docs] = await Promise.all([
+    read('../src/survivalFirearmAssets.ts'),
+    read('../src/game.ts'),
+    read('../docs/SURVIVAL_FIREARM_ASSETS.md'),
+  ]);
+  for (const part of [
+    "rocket: ['firearm-rocket-cell']",
+    "plasma: ['firearm-coils', 'firearm-energy-cell']",
+    "gauss: ['firearm-bolt', 'firearm-energy-cell', 'firearm-coils']",
+    "grenade: ['firearm-rocket-cell']",
+  ]) assert.ok(assets.includes(part), 'missing static-model mechanism mapping: ' + part);
+  assert.match(game, /asset\.animations\.length === 0[\s\S]*?SURVIVAL_FIREARM_PROCEDURAL_MECHANISM_PARTS/);
+  assert.match(game, /if \(mechanismNames\.has\(child\.name\)\)[\s\S]*?preservedMechanisms\.push\(child\)/);
+  assert.match(game, /private updateSurvivalFirearmMechanismParts\(/);
+  assert.match(game, /this\.updateSurvivalFirearmMechanismParts\([\s\S]*?gun, definition\.archetype/);
+  assert.match(game, /this\.updateSurvivalFirearmMechanismParts\([\s\S]*?remoteGun, remoteDefinition\.archetype/);
+  assert.match(docs, /retained as lightweight overlays/);
+});
+
+test('production asset preparation rejects missing required GLB reload and slide clips', async () => {
+  const fetcher = await read('../scripts/fetch-survival-firearm-assets.mjs');
+  for (const clip of ['magazine-open', 'magazine-close', 'slide-open', 'slide-close', 'stock-open', 'stock-close', 'open', 'close']) {
+    assert.ok(fetcher.includes("'" + clip + "'"), 'missing required clip: ' + clip);
+  }
+  assert.match(fetcher, /missingAnimations = asset\.expectedAnimations\.filter/);
+  assert.match(fetcher, /GLB is missing required animation clips/);
 });
