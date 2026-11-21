@@ -210,6 +210,39 @@ export const SURVIVAL_FIREARM_PRESENTATION: Readonly<Record<
   },
 });
 
+export interface SurvivalFirearmCycleTiming {
+  readonly peakProgress: number;
+  readonly returnStartProgress: number;
+}
+
+/** Distinct firing cadence for each weapon mechanism. */
+export const SURVIVAL_FIREARM_CYCLE_TIMING: Readonly<Record<
+  SurvivalFirearmPresentationArchetype,
+  SurvivalFirearmCycleTiming
+>> = Object.freeze({
+  pistol: { peakProgress: 0.16, returnStartProgress: 0.34 },
+  smg: { peakProgress: 0.12, returnStartProgress: 0.29 },
+  rifle: { peakProgress: 0.18, returnStartProgress: 0.36 },
+  shotgun: { peakProgress: 0.24, returnStartProgress: 0.50 },
+  'heavy-rifle': { peakProgress: 0.20, returnStartProgress: 0.41 },
+  minigun: { peakProgress: 0.10, returnStartProgress: 0.82 },
+  rocket: { peakProgress: 0.26, returnStartProgress: 0.54 },
+  flame: { peakProgress: 0.15, returnStartProgress: 0.38 },
+  plasma: { peakProgress: 0.22, returnStartProgress: 0.47 },
+  gauss: { peakProgress: 0.30, returnStartProgress: 0.62 },
+  grenade: { peakProgress: 0.25, returnStartProgress: 0.56 },
+});
+
+export interface SurvivalFirearmCyclePose {
+  readonly boltOffsetZ: number;
+  readonly pumpOffsetZ: number;
+  readonly rocketCellOffsetZ: number;
+  readonly tankValveRotation: number;
+  readonly energyCellOffsetY: number;
+  readonly coilPulse: number;
+  readonly rotorSpin: number;
+}
+
 export interface SurvivalFirearmReloadPose {
   readonly magazineOffsetY: number;
   readonly magazineVisible: boolean;
@@ -231,6 +264,30 @@ const smoothstep = (value: number): number => {
 };
 
 const cleanOffset = (value: number): number => Math.abs(value) < 1e-9 ? 0 : value;
+
+/** Asymmetric mechanism stroke: quick action, brief firing beat, then return. */
+export function getSurvivalFirearmCyclePose(
+  archetype: SurvivalFirearmPresentationArchetype,
+  progress: number,
+): SurvivalFirearmCyclePose {
+  const p = clamp01(progress);
+  const timing = SURVIVAL_FIREARM_CYCLE_TIMING[archetype];
+  const stroke = p < timing.peakProgress
+    ? smoothstep(p / timing.peakProgress)
+    : p < timing.returnStartProgress
+      ? 1
+      : 1 - smoothstep((p - timing.returnStartProgress) / (1 - timing.returnStartProgress));
+  const profile = SURVIVAL_FIREARM_PRESENTATION[archetype];
+  return {
+    boltOffsetZ: cleanOffset(profile.boltTravel * stroke),
+    pumpOffsetZ: cleanOffset(profile.pumpTravel * stroke),
+    rocketCellOffsetZ: cleanOffset(profile.rocketCellTravel * stroke),
+    tankValveRotation: cleanOffset(profile.tankValveTurn * stroke * 0.35),
+    energyCellOffsetY: cleanOffset(-profile.energyCellDrop * stroke * 0.45),
+    coilPulse: cleanOffset(stroke),
+    rotorSpin: profile.rotorBrake ? cleanOffset(stroke) : 0,
+  };
+}
 
 export function getSurvivalFirearmReloadPose(
   archetype: SurvivalFirearmPresentationArchetype,

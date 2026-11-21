@@ -75,6 +75,16 @@
   color: #67e8f9;
   font: 800 10px "JetBrains Mono", monospace;
 }
+#title-screen #tab-arsenal .armory-drop-policy {
+  margin: 12px 0 0;
+  padding: 11px 13px;
+  border: 1px solid rgba(125, 211, 252, .18);
+  border-left: 3px solid rgba(103, 232, 249, .72);
+  border-radius: 9px;
+  color: #c4d2df;
+  background: rgba(4, 18, 30, .5);
+  font: 650 10px/1.6 "JetBrains Mono", monospace;
+}
 #title-screen #tab-arsenal .armory-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0,1fr));
@@ -112,9 +122,9 @@
 }
 #title-screen #tab-arsenal .armory-card-icon {
   display: block;
-  flex: 0 0 76px;
-  width: 76px;
-  height: 58px;
+  flex: 0 0 84px;
+  width: 84px;
+  height: 64px;
   object-fit: contain;
   border: 1px solid color-mix(in srgb, var(--armory-color) 55%, #334155);
   border-radius: 11px;
@@ -122,8 +132,8 @@
   box-shadow: inset 0 2px 4px rgba(255,255,255,.08), 0 5px 12px rgba(0,0,0,.34), 0 0 16px color-mix(in srgb, var(--armory-color) 17%, transparent);
 }
 #title-screen #tab-arsenal .armory-card-icon-fallback {
-  width: 46px;
-  height: 46px;
+  width: 50px;
+  height: 50px;
   object-fit: contain;
 }
 #title-screen #tab-arsenal .armory-card-title-wrap {

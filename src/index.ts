@@ -36,7 +36,7 @@ import {
   updateSurvivalAchievementProgress,
 } from './survivalAchievements.ts';
 import { SURVIVAL_MAPS, type SurvivalMapId } from './survivalMaps.ts';
-import { getSurvivalFirearmAmmoAlert, SURVIVAL_FIREARM_DEFS } from './survivalFirearms.ts';
+import { getSurvivalFirearmAmmoAlert, SURVIVAL_FIREARM_DEFS, SURVIVAL_FIREARM_DROP_POLICY } from './survivalFirearms.ts';
 import { CAMPAIGN_STAGES, createInitialCampaignProgress, consumePendingCampaignReward, consumePendingCampaignXpBonus, getCampaignMasteryProgress, getCampaignRewardChoices, getCampaignSideOrderProgress, getCampaignStageDefinition, getNextCampaignStageId, readCampaignProgress, recordCampaignStageResult, setPendingCampaignReward, writeCampaignProgress, type CampaignProgress, type CampaignRewardDefinition, type CampaignRewardId, type CampaignStageId } from './campaignProgression.ts';
 import { launchOniricPlatformer } from './oniricPlatformer.ts';
 import { launchCthulhuRetroArena } from './cthulhuRetroArena.ts';
@@ -2799,7 +2799,7 @@ class PaleciakiScene extends xb.Script {
   try {
     renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true });
     renderer.setPixelRatio(1);
-    renderer.setSize(144, 96, false);
+    renderer.setSize(180, 120, false);
     renderer.setClearColor(0x000000, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     scene = new THREE.Scene();
@@ -2860,8 +2860,21 @@ class PaleciakiScene extends xb.Script {
         barrel(0.12, 0.72, 0, 0.02, 0.68, accent); box(0.28, 0.34, 0.36, -0.28, 0.03, -0.08, steel); box(0.24, 0.32, 0.38, 0.28, 0.03, -0.08, dark); grip(); break;
       case 'plasma':
         barrel(0.09, 0.88, 0, 0.04, 0.76, glow); box(0.3, 0.24, 0.48, 0, 0.12, 0.08, accent); box(0.38, 0.08, 0.2, 0, 0.26, -0.02, glow); grip(); stock(); break;
+      case 'grenade': {
+        barrel(0.105, 1.02, 0, 0.04, 0.82, steel);
+        box(0.34, 0.22, 0.56, 0, 0.02, 0.05, dark);
+        box(0.25, 0.13, 0.31, 0, 0.21, 0.04, accent);
+        const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.28, 18), accent);
+        drum.rotation.z = Math.PI / 2;
+        drum.position.set(-0.23, -0.03, -0.06);
+        gun.add(drum);
+        barrel(0.13, 0.085, 0, 0.04, 1.35, glow);
+        box(0.12, 0.1, 0.22, 0, 0.28, 0.16, glow);
+        grip(); stock();
+        break;
+      }
       case 'gauss':
-        barrel(0.045, 1.55, 0, 0.03, 1.1, glow); 
+        barrel(0.045, 1.55, 0, 0.03, 1.1, glow);
         for (let n = 0; n < 5; n++) barrel(0.075, 0.075, 0, 0.03, 0.48 + n * 0.22, accent);
         box(0.24, 0.16, 0.62, 0, 0.14, 0.02, steel); grip(); stock(); break;
       default:
@@ -2887,6 +2900,16 @@ class PaleciakiScene extends xb.Script {
 })();
 
 // Build the armory from the same runtime definitions that drive weapon behaviour.
+    // Drop-rate copy is generated from the exact policy used by the simulation.
+    const firearmDropPolicyElement = document.getElementById('armory-drop-policy');
+    if (firearmDropPolicyElement) {
+      const policy = SURVIVAL_FIREARM_DROP_POLICY;
+      const normalPercent = Math.round(policy.normalChance * 100);
+      const elitePercent = Math.round(policy.eliteChance * 100);
+      firearmDropPolicyElement.textContent =
+        `ZRZUTY PVE • od ${policy.minimumKills} eliminacji i ${policy.unlockElapsedSeconds} s: zwykły wróg ${normalPercent}% · elita ${elitePercent}% · boss 100%. Po ${policy.pityMisses} nieudanych losowaniach następne kwalifikowane jest gwarantowane. Maks. ${policy.maximumActiveDrops} aktywny zasobnik, minimum ${policy.minimumIntervalSeconds} s między zrzutami. Każda dostępna broń ma równą szansę; pistolet startowy i aktualna broń są wykluczone.`;
+    }
+
     const firearmCatalogGrid = document.getElementById('firearm-catalog-grid');
     if (firearmCatalogGrid && firearmCatalogGrid.dataset.rendered !== 'true') {
       firearmCatalogGrid.dataset.rendered = 'true';
@@ -2916,7 +2939,20 @@ class PaleciakiScene extends xb.Script {
         title.textContent = firearm.name.toUpperCase();
         const role = document.createElement('span');
         role.className = 'armory-card-role';
-        role.textContent = firearm.archetype.toUpperCase();
+        const firearmRoleLabels: Record<string, string> = {
+          pistol: 'BROŃ REZERWOWA',
+          smg: 'KRÓTKI DYSTANS',
+          rifle: 'UNIWERSALNA',
+          shotgun: 'OBRAŻENIA Z BLISKA',
+          'heavy-rifle': 'PRECYZJA I PRZEBICIE',
+          minigun: 'KONTROLA TŁUMU',
+          rocket: 'OBRAŻENIA OBSZAROWE',
+          flame: 'OGIEŃ I PRESJA',
+          plasma: 'ENERGIA / OBSZAR',
+          gauss: 'SNIPER / PENETRACJA',
+          grenade: 'BALISTYKA / OBSZAR',
+        };
+        role.textContent = firearmRoleLabels[firearm.archetype] || firearm.archetype.toUpperCase();
         heading.append(title, role);
         header.append(icon, heading);
 
@@ -2925,7 +2961,7 @@ class PaleciakiScene extends xb.Script {
         description.textContent = firearm.roleDescription;
 
         const damageValue = firearm.damage.toFixed(2).replace('.', ',') +
-          (firearm.pellets > 1 ? ' / śrut × ' + firearm.pellets : ' / pocisk');
+          (firearm.id === 'shotgun_12g' ? ' / śrut × ' + firearm.pellets : firearm.pellets > 1 ? ' / cząstki × ' + firearm.pellets : ' / pocisk');
         const rateValue = (1 / firearm.fireIntervalSeconds).toFixed(1).replace('.', ',') +
           (firearm.pellets > 1 ? ' salw/s' : ' strz./s');
         const metrics = document.createElement('div');

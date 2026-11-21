@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   STARTING_SURVIVAL_FIREARM,
   SURVIVAL_FIREARM_DEFS,
+  SURVIVAL_FIREARM_DROP_POLICY,
   createStartingSurvivalFirearmState,
   createSurvivalFirearmState,
   rollSurvivalFirearmDrop,
@@ -51,23 +52,28 @@ test('firearm catalogue has clearly differentiated cadence, ammunition, projecti
   assert.ok(definitions.every((entry) => entry.reloadSeconds >= 1.2), 'every firearm has a meaningful reload window');
 });
 
-test('firearm drops unlock after eight kills: 4% normal, 22% elite, boss guaranteed and 18-kill pity', () => {
+test('firearm drops use the shared 7% / 30% / guaranteed-boss policy and bounded pity', () => {
   const beforeUnlock = rollSurvivalFirearmDrop(7, 'boss', 0, 0);
   assert.equal(beforeUnlock.shouldDrop, false);
   assert.equal(beforeUnlock.chance, 0);
 
-  assert.equal(rollSurvivalFirearmDrop(8, 'normal', 0, 0.04).shouldDrop, false);
-  assert.equal(rollSurvivalFirearmDrop(8, 'normal', 0, 0.039).shouldDrop, true);
-  assert.equal(rollSurvivalFirearmDrop(8, 'elite', 0, 0.22).shouldDrop, false);
-  assert.equal(rollSurvivalFirearmDrop(8, 'elite', 0, 0.219).shouldDrop, true);
+  assert.equal(rollSurvivalFirearmDrop(8, 'normal', 0, 0.07).shouldDrop, false);
+  assert.equal(rollSurvivalFirearmDrop(8, 'normal', 0, 0.069).shouldDrop, true);
+  assert.equal(rollSurvivalFirearmDrop(8, 'elite', 0, 0.30).shouldDrop, false);
+  assert.equal(rollSurvivalFirearmDrop(8, 'elite', 0, 0.299).shouldDrop, true);
 
-  const pity = rollSurvivalFirearmDrop(25, 'normal', 17, 0.999);
+  const pity = rollSurvivalFirearmDrop(18, 'normal', SURVIVAL_FIREARM_DROP_POLICY.pityMisses, 0.999);
   assert.equal(pity.isPityDrop, true);
   assert.equal(pity.isGuaranteed, true);
   assert.equal(pity.shouldDrop, true);
 
   assert.equal(rollSurvivalFirearmDrop(8, 'boss', 0, 0.999).shouldDrop, true);
   assert.equal(rollSurvivalFirearmDrop(8, 'boss', 0, 0.999).isGuaranteed, true);
+  assert.deepEqual(SURVIVAL_FIREARM_DROP_POLICY, {
+    unlockElapsedSeconds: 45, minimumKills: 8, minimumIntervalSeconds: 75,
+    dropLifetimeSeconds: 40, maximumActiveDrops: 1, normalChance: 0.07,
+    eliteChance: 0.30, pityMisses: 10,
+  });
 });
 
 test('every available firearm has an identical drop-selection probability', () => {

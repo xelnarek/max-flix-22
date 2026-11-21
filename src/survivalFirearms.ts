@@ -55,73 +55,85 @@ export interface SurvivalFirearmDropRoll {
 /** Independent primary-weapon system; never part of the perk deck or roulette. */
 export const STARTING_SURVIVAL_FIREARM: SurvivalFirearmId = 'starter_pistol';
 
+/** Shared PvE world-drop rules for Survival and Campaign. */
+export const SURVIVAL_FIREARM_DROP_POLICY = Object.freeze({
+  unlockElapsedSeconds: 45,
+  minimumKills: 8,
+  minimumIntervalSeconds: 75,
+  dropLifetimeSeconds: 40,
+  maximumActiveDrops: 1,
+  normalChance: 0.07,
+  eliteChance: 0.30,
+  pityMisses: 10,
+});
+
 export const SURVIVAL_FIREARM_DEFS: Readonly<Record<SurvivalFirearmId, SurvivalFirearmDefinition>> = Object.freeze({
   starter_pistol: {
     id: 'starter_pistol', name: 'Pistolet serwisowy', shortName: 'PISTOLET', icon: '🔫',
-    color: 0xcbd5e1, archetype: 'pistol', roleDescription: 'Broń startowa • mocniejszy pojedynczy strzał, spokojny rytm', rangeMeters: 28, fireIntervalSeconds: 1.05, magazineSize: 12,
+    color: 0xcbd5e1, archetype: 'pistol', roleDescription: 'Broń rezerwowa na średni dystans. Celny, mocny strzał i przewidywalny odrzut; mały magazynek wymaga selekcji celów.', rangeMeters: 28, fireIntervalSeconds: 1.05, magazineSize: 12,
     reloadSeconds: 1.6, damage: 1.55, pellets: 1, spreadRadians: 0.012,
     projectileSpeed: 34, projectileRadius: 0.075,
     pierce: 0, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 0,
   },
   smg_45: {
     id: 'smg_45', name: 'Pistolet maszynowy .45', shortName: 'PM .45', icon: '🔫',
-    color: 0x94a3b8, archetype: 'smg', roleDescription: 'Szybka seria cięższych pocisków • kontroluj zużycie amunicji', rangeMeters: 23, fireIntervalSeconds: 0.68, magazineSize: 30,
+    color: 0x94a3b8, archetype: 'smg', roleDescription: 'Broń do krótkiego i średniego dystansu. Szybki rytm i 30 nabojów rekompensują niższe obrażenia pojedynczego pocisku oraz większy rozrzut.', rangeMeters: 23, fireIntervalSeconds: 0.68, magazineSize: 30,
     reloadSeconds: 2.2, damage: 1.05, pellets: 1, spreadRadians: 0.055,
     projectileSpeed: 30, projectileRadius: 0.065,
     pierce: 0, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 1,
   },
   assault_rifle: {
     id: 'assault_rifle', name: 'Karabin szturmowy', shortName: 'KARABIN', icon: '🪖',
-    color: 0x86a873, archetype: 'rifle', roleDescription: 'Uniwersalny karabin • stabilna siła i średnia szybkostrzelność', rangeMeters: 38, fireIntervalSeconds: 0.92, magazineSize: 27,
+    color: 0x86a873, archetype: 'rifle', roleDescription: 'Uniwersalny karabin na średni i dalszy dystans. Dobra równowaga zasięgu, obrażeń i magazynka; nie przebija kolejnych celów.', rangeMeters: 38, fireIntervalSeconds: 0.92, magazineSize: 27,
     reloadSeconds: 2.35, damage: 1.5, pellets: 1, spreadRadians: 0.026,
     projectileSpeed: 38, projectileRadius: 0.07,
     pierce: 0, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 1,
   },
   shotgun_12g: {
     id: 'shotgun_12g', name: 'Strzelba 12G', shortName: 'STRZELBA', icon: '💥',
-    color: 0xfbbf24, archetype: 'shotgun', roleDescription: 'Ciężka salwa siedmiu śrutów • zabójcza z bliska, długi cykl', rangeMeters: 10, fireIntervalSeconds: 1.8, magazineSize: 6,
+    color: 0xfbbf24, archetype: 'shotgun', roleDescription: 'Siedem śrutów w szerokim stożku. Najgroźniejsza z bliska; rozrzut i krótki zasięg mocno ograniczają skuteczność na dystansie.', rangeMeters: 10, fireIntervalSeconds: 1.8, magazineSize: 6,
     reloadSeconds: 2.75, damage: 0.62, pellets: 7, spreadRadians: 0.235,
     projectileSpeed: 25, projectileRadius: 0.09,
     pierce: 0, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 1,
   },
   battle_rifle: {
     id: 'battle_rifle', name: 'Karabin bojowy 7.62', shortName: '7.62', icon: '🎯',
-    color: 0x60a5fa, archetype: 'heavy-rifle', roleDescription: 'Precyzyjny pocisk dużego kalibru • mocne trafienie i przebicie', rangeMeters: 46, fireIntervalSeconds: 1.85, magazineSize: 10,
+    color: 0x60a5fa, archetype: 'heavy-rifle', roleDescription: 'Precyzyjny kaliber 7,62 z przebiciem jednego celu. Wysokie obrażenia i zasięg okupione małym magazynkiem oraz długim cyklem.', rangeMeters: 46, fireIntervalSeconds: 1.85, magazineSize: 10,
     reloadSeconds: 2.9, damage: 3.1, pellets: 1, spreadRadians: 0.009,
     projectileSpeed: 45, projectileRadius: 0.085,
     pierce: 1, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 1,
   },
   minigun: {
     id: 'minigun', name: 'Minigun', shortName: 'MINIGUN', icon: '⚙️',
-    color: 0xf97316, archetype: 'minigun', roleDescription: 'Długie serie z ciężkiej broni • szeroki rozrzut i długi reload', rangeMeters: 29, fireIntervalSeconds: 0.5, magazineSize: 60,
+    color: 0xf97316, archetype: 'minigun', roleDescription: 'Broń do kontroli tłumu. Duży magazynek i regularna seria trzymają wrogów pod presją, lecz rozrzut i długie przeładowanie karzą za złe ustawienie.', rangeMeters: 29, fireIntervalSeconds: 0.5, magazineSize: 60,
     reloadSeconds: 4.2, damage: 0.68, pellets: 1, spreadRadians: 0.078,
     projectileSpeed: 35, projectileRadius: 0.062,
     pierce: 0, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 1,
   },
   rocket_launcher: {
     id: 'rocket_launcher', name: 'Wyrzutnia rakiet', shortName: 'RAKIETY', icon: '🚀',
-    color: 0xef4444, archetype: 'rocket', roleDescription: 'Ciężka rakieta • duża detonacja obszarowa, bardzo wolny cykl', rangeMeters: 34, fireIntervalSeconds: 3.6, magazineSize: 5,
+    color: 0xef4444, archetype: 'rocket', roleDescription: 'Wyrzutnia obszarowa do zwartych grup. Rakieta zadaje wysokie obrażenia przy detonacji; wolny pocisk i pięć ładunków wymuszają przewidywanie ruchu.', rangeMeters: 34, fireIntervalSeconds: 3.6, magazineSize: 5,
     reloadSeconds: 3.6, damage: 4.8, pellets: 1, spreadRadians: 0.006,
     projectileSpeed: 15.5, projectileRadius: 0.16,
     pierce: 0, aoeRadius: 3.1, aoeDamageMultiplier: 0.55, igniteOnHit: true, dropWeight: 1,
   },
   flamethrower: {
     id: 'flamethrower', name: 'Miotacz płomieni', shortName: 'MIOTACZ', icon: '🔥',
-    color: 0xfb923c, archetype: 'flame', roleDescription: 'Krótki stożek ognia • podpalenie i kontrola przestrzeni', rangeMeters: 6, fireIntervalSeconds: 0.65, magazineSize: 40,
+    color: 0xfb923c, archetype: 'flame', roleDescription: 'Stożek ognia do walki na krótkim dystansie. Podpala cele i utrudnia podejście grupie, ale wymaga wejścia w niebezpieczny zasięg.', rangeMeters: 6, fireIntervalSeconds: 0.65, magazineSize: 40,
     reloadSeconds: 2.8, damage: 0.5, pellets: 2, spreadRadians: 0.20,
     projectileSpeed: 14, projectileRadius: 0.095,
     pierce: 0, aoeRadius: 0.45, aoeDamageMultiplier: 0.38, igniteOnHit: true, dropWeight: 1,
   },
   plasma_rifle: {
     id: 'plasma_rifle', name: 'Karabin plazmowy', shortName: 'PLAZMA', icon: '🟣',
-    color: 0xa78bfa, archetype: 'plasma', roleDescription: 'Skondensowany pocisk plazmowy • mocny wybuch punktowy', rangeMeters: 32, fireIntervalSeconds: 1.2, magazineSize: 18,
+    color: 0xa78bfa, archetype: 'plasma', roleDescription: 'Karabin energetyczny na średni dystans. Pocisk plazmowy wybucha punktowo i uderza obszar wokół celu; tempo ognia jest umiarkowane.', rangeMeters: 32, fireIntervalSeconds: 1.2, magazineSize: 18,
     reloadSeconds: 2.65, damage: 1.8, pellets: 1, spreadRadians: 0.018,
     projectileSpeed: 21, projectileRadius: 0.13,
     pierce: 0, aoeRadius: 0.86, aoeDamageMultiplier: 0.40, igniteOnHit: false, dropWeight: 1,
   },
   ballistic_grenade_launcher: {
     id: 'ballistic_grenade_launcher', name: 'Granatnik balistyczny', shortName: 'GRANATNIK', icon: '💣',
-    color: 0xd4a24f, archetype: 'grenade', roleDescription: 'Łuk balistyczny z zapalnikiem • eksplozja obszarowa przy kontakcie z podłożem lub celem',
+    color: 0xd4a24f, archetype: 'grenade', roleDescription: 'Granatnik z łukiem balistycznym i zapalnikiem. Eksplozja obejmuje większy obszar przy kontakcie z celem lub podłożem; mały magazynek wymaga planowania.',
     rangeMeters: 24, fireIntervalSeconds: 2.9, magazineSize: 4, reloadSeconds: 3.2,
     damage: 3.9, pellets: 1, spreadRadians: 0.004, projectileSpeed: 17, projectileRadius: 0.12,
     pierce: 0, aoeRadius: 3.8, aoeDamageMultiplier: 0.72, igniteOnHit: false, dropWeight: 1,
@@ -129,7 +141,7 @@ export const SURVIVAL_FIREARM_DEFS: Readonly<Record<SurvivalFirearmId, SurvivalF
   },
   gauss_rifle: {
     id: 'gauss_rifle', name: 'Karabin Gaussa', shortName: 'GAUSS', icon: '⚡',
-    color: 0x22d3ee, archetype: 'gauss', roleDescription: 'Wolny strzał snajperski • najwyższa penetracja i ciężkie trafienie', rangeMeters: 80, fireIntervalSeconds: 2.7, magazineSize: 5,
+    color: 0x22d3ee, archetype: 'gauss', roleDescription: 'Broń precyzyjna na bardzo daleki dystans. Pocisk przebija do pięciu celów; pięć ładunków i najdłuższy cykl premiują dokładne strzały.', rangeMeters: 80, fireIntervalSeconds: 2.7, magazineSize: 5,
     reloadSeconds: 3.05, damage: 4.65, pellets: 1, spreadRadians: 0.002,
     projectileSpeed: 62, projectileRadius: 0.095,
     pierce: 5, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 1,
@@ -149,16 +161,19 @@ export function createSurvivalFirearmState(id: SurvivalFirearmId): SurvivalFirea
   return { id: definition.id, ammoInMagazine: definition.magazineSize, cooldown: 0, reloadRemaining: 0, shotCounter: 0 };
 }
 
-/** Rare Survival-only world loot: 4% normal, 22% elite, boss guaranteed; pity after 18 eligible kills. */
+/** Shared Survival/Campaign world loot with a bounded pity guarantee. */
 export function rollSurvivalFirearmDrop(
   killCount: number, enemyTier: SurvivalFirearmEnemyTier, consecutiveMisses: number, roll: number,
 ): SurvivalFirearmDropRoll {
   const safeRoll = Number.isFinite(roll) ? Math.max(0, Math.min(0.999999, roll)) : 0.5;
   const safeKills = Number.isFinite(killCount) ? Math.max(0, Math.floor(killCount)) : 0;
   const misses = Number.isFinite(consecutiveMisses) ? Math.max(0, Math.floor(consecutiveMisses)) : 0;
-  const minimumKillsReached = safeKills >= 8;
-  const baseChance = enemyTier === 'boss' ? 1 : enemyTier === 'elite' ? 0.22 : 0.04;
-  const isPityDrop = minimumKillsReached && enemyTier !== 'boss' && misses >= 17;
+  const minimumKillsReached = safeKills >= SURVIVAL_FIREARM_DROP_POLICY.minimumKills;
+  const baseChance = enemyTier === 'boss' ? 1
+    : enemyTier === 'elite' ? SURVIVAL_FIREARM_DROP_POLICY.eliteChance
+      : SURVIVAL_FIREARM_DROP_POLICY.normalChance;
+  const isPityDrop = minimumKillsReached && enemyTier !== 'boss'
+    && misses >= SURVIVAL_FIREARM_DROP_POLICY.pityMisses;
   const isGuaranteed = minimumKillsReached && (enemyTier === 'boss' || isPityDrop);
   return {
     shouldDrop: minimumKillsReached && (isGuaranteed || safeRoll < baseChance),
