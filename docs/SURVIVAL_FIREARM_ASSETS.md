@@ -11,12 +11,14 @@ The live weapon model is upgraded asynchronously from the built-in procedural me
 | Rifle | Assault carbine | FPS Guns and Shooting Range | Magazine + stock |
 | Shotgun | Pump shotgun | FPS Guns and Shooting Range | Open / close |
 | Heavy rifle | Battle rifle | FPS Guns and Shooting Range | Magazine + stock |
-| Rocket | Rocket Launcher Pickup | Arena Shooter Map Kit | Procedural recoil |
-| Plasma | Plasma Gun Pickup | Arena Shooter Map Kit | Procedural recoil |
-| Gauss | Rail Gun Pickup | Arena Shooter Map Kit | Procedural recoil |
-| Grenade | Grenade Launcher Pickup | Arena Shooter Map Kit | Procedural recoil |
+| Rocket | Rocket Launcher Pickup | Arena Shooter Map Kit | Procedural chamber movement + recoil |
+| Plasma | Plasma Gun Pickup | Arena Shooter Map Kit | Procedural coil and energy-cell movement |
+| Gauss | Rail Gun Pickup | Arena Shooter Map Kit | Procedural bolt, coil and cell movement |
+| Grenade | Grenade Launcher Pickup | Arena Shooter Map Kit | Procedural chamber movement + recoil |
 
 Minigun and flamethrower deliberately keep their bespoke procedural models: the chosen third-party catalogues did not offer an equally suitable rotary multi-barrel or fuel-tank flamethrower model. The existing model is preferable to a misleading substitution.
+
+The rocket, plasma, Gauss and grenade GLBs contain no embedded animation clips. Their matching procedural chamber, coil, bolt and energy-cell assemblies are retained as lightweight overlays and continue to use the shared reload-pose driver in Survival, Campaign and PvP.
 
 ## Rights and provenance
 

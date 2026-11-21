@@ -1,5 +1,9 @@
 import * as THREE from 'three';
-import { loadSurvivalFirearmModelAsset, SURVIVAL_FIREARM_ASSETS } from './survivalFirearmAssets.ts';
+import {
+  loadSurvivalFirearmModelAsset,
+  SURVIVAL_FIREARM_ASSETS,
+  SURVIVAL_FIREARM_PROCEDURAL_MECHANISM_PARTS,
+} from './survivalFirearmAssets.ts';
 import { removeAtSwap } from './swapRemove.ts';
 import { disposeActorOwnedRenderResources } from './actorResourceDisposal.ts';
 import { applyPolyHavenPbrMaps } from './polyHavenTextures.ts';
@@ -3867,6 +3871,9 @@ export class PaleciakiGameEngine {
       );
       const remoteAssetMixer = remoteGun.userData.survivalFirearmAssetMixer as THREE.AnimationMixer | null | undefined;
       remoteAssetMixer?.update(dt);
+      this.updateSurvivalFirearmMechanismParts(
+        remoteGun, remoteDefinition.archetype, remoteReloading, remoteReloadProgress, remoteCycling, remoteCycleProgress, dt,
+      );
 
       const remoteRecoil = THREE.MathUtils.clamp(
         this.remoteSurvivalFirearmRecoilTimer / Math.max(0.01, remoteProfile.recoilSettleSeconds), 0, 1,
@@ -10647,13 +10654,26 @@ export class PaleciakiGameEngine {
       asset.model.name = 'survival-firearm-asset-' + asset.sourceId;
       asset.model.updateMatrixWorld(true);
 
-      // Replace only the visual children. The parent weapon transform, recoil,
-      // swap, ammo, projectile, damage and mode logic remain the shared game code.
+      // Static sci-fi GLBs have no embedded moving-part clips. Preserve only
+      // the matching procedural chamber/cell/coil groups; animated GLBs use
+      // their own authored magazine/slide/pump clips and do not need overlays.
+      const mechanismNames = new Set<string>(asset.animations.length === 0
+        ? (SURVIVAL_FIREARM_PROCEDURAL_MECHANISM_PARTS[archetype as keyof typeof SURVIVAL_FIREARM_PROCEDURAL_MECHANISM_PARTS] ?? [])
+        : []);
+      const preservedMechanisms: THREE.Object3D[] = [];
+      // Replace visual children while leaving the shared parent transform,
+      // recoil, swap, ammo, projectile, damage and mode logic untouched.
       for (const child of [...gun.children]) {
         gun.remove(child);
+        if (mechanismNames.has(child.name)) {
+          preservedMechanisms.push(child);
+          continue;
+        }
         this.disposeTemporaryObject(child);
       }
       gun.add(asset.model);
+      for (const mechanism of preservedMechanisms) gun.add(mechanism);
+      gun.userData.survivalFirearmMechanismOverlays = preservedMechanisms.map((part) => part.name);
       gun.userData.survivalFirearmAssetSource = asset.sourceId;
       gun.userData.survivalFirearmAssetAnimations = asset.animations;
       gun.userData.survivalFirearmAssetMixer = asset.animations.length > 0
@@ -10842,29 +10862,18 @@ export class PaleciakiGameEngine {
     }
   }
 
-  private updateHeldSurvivalFirearmAction(dt: number): void {
-    const gun = this.playerGroup?.getObjectByName('survival_primary_firearm') as THREE.Group | undefined;
-    if (!gun) return;
-    const definition = SURVIVAL_FIREARM_DEFS[this.survivalFirearm.id];
-    const profile = SURVIVAL_FIREARM_PRESENTATION[definition.archetype];
-    const reloading = this.survivalFirearm.reloadRemaining > 0;
-    const progress = reloading
-      ? THREE.MathUtils.clamp(1 - this.survivalFirearm.reloadRemaining / definition.reloadSeconds, 0, 1)
-      : 0;
-    const pose = getSurvivalFirearmReloadPose(definition.archetype, progress);
-    const recoil = THREE.MathUtils.clamp(this.survivalFirearmRecoilTimer / profile.recoilSettleSeconds, 0, 1);
-    const reloadDip = reloading ? Math.sin(progress * Math.PI) : 0;
-    const cycling = !reloading && this.survivalFirearm.cooldown > 0;
-    const cycleProgress = cycling
-      ? THREE.MathUtils.clamp(1 - this.survivalFirearm.cooldown / Math.max(0.01, definition.fireIntervalSeconds), 0, 1)
-      : 0;
+    private updateSurvivalFirearmMechanismParts(
+    gun: THREE.Group,
+    archetype: SurvivalFirearmArchetype,
+    reloading: boolean,
+    reloadProgress: number,
+    cycling: boolean,
+    cycleProgress: number,
+    dt: number,
+  ): void {
+    const profile = SURVIVAL_FIREARM_PRESENTATION[archetype];
+    const pose = getSurvivalFirearmReloadPose(archetype, reloadProgress);
     const cycleMotion = Math.sin(cycleProgress * Math.PI);
-    this.updateSurvivalFirearmAssetAnimation(
-      gun, definition.archetype, reloading, progress, cycling, cycleProgress,
-    );
-    const assetMixer = gun.userData.survivalFirearmAssetMixer as THREE.AnimationMixer | null | undefined;
-    assetMixer?.update(dt);
-
     const part = (name: string): THREE.Group | undefined =>
       gun.getObjectByName(name) as THREE.Group | undefined;
     const applyOffset = (name: string, axis: 'x' | 'y' | 'z', offset: number): void => {
@@ -10884,8 +10893,7 @@ export class PaleciakiGameEngine {
     const energyCell = part('firearm-energy-cell');
     if (energyCell) {
       applyOffset('firearm-energy-cell', 'y', pose.energyCellOffsetY);
-      const base = energyCell.userData.basePosition as THREE.Vector3 | undefined;
-      if (base) energyCell.visible = !reloading || pose.energyCellOffsetY > -0.12;
+      if (energyCell.userData.basePosition) energyCell.visible = !reloading || pose.energyCellOffsetY > -0.12;
     }
     applyOffset('firearm-bolt', 'z', pose.boltOffsetZ + profile.boltTravel * cycleMotion);
     applyOffset('firearm-pump', 'z', pose.pumpOffsetZ + profile.pumpTravel * cycleMotion);
@@ -10900,10 +10908,35 @@ export class PaleciakiGameEngine {
     }
     const rotor = part('firearm-rotor');
     if (rotor) {
-      const spinning = !reloading && this.survivalFirearm.cooldown > 0;
+      const spinning = !reloading && cycling;
       if (pose.rotorBrake || reloading) rotor.rotation.z *= Math.max(0, 1 - dt * 10);
       else rotor.rotation.z += dt * (spinning ? 22 : 2.2);
     }
+  }
+
+  private updateHeldSurvivalFirearmAction(dt: number): void {
+    const gun = this.playerGroup?.getObjectByName('survival_primary_firearm') as THREE.Group | undefined;
+    if (!gun) return;
+    const definition = SURVIVAL_FIREARM_DEFS[this.survivalFirearm.id];
+    const profile = SURVIVAL_FIREARM_PRESENTATION[definition.archetype];
+    const reloading = this.survivalFirearm.reloadRemaining > 0;
+    const progress = reloading
+      ? THREE.MathUtils.clamp(1 - this.survivalFirearm.reloadRemaining / definition.reloadSeconds, 0, 1)
+      : 0;
+    const recoil = THREE.MathUtils.clamp(this.survivalFirearmRecoilTimer / profile.recoilSettleSeconds, 0, 1);
+    const reloadDip = reloading ? Math.sin(progress * Math.PI) : 0;
+    const cycling = !reloading && this.survivalFirearm.cooldown > 0;
+    const cycleProgress = cycling
+      ? THREE.MathUtils.clamp(1 - this.survivalFirearm.cooldown / Math.max(0.01, definition.fireIntervalSeconds), 0, 1)
+      : 0;
+    this.updateSurvivalFirearmAssetAnimation(
+      gun, definition.archetype, reloading, progress, cycling, cycleProgress,
+    );
+    const assetMixer = gun.userData.survivalFirearmAssetMixer as THREE.AnimationMixer | null | undefined;
+    assetMixer?.update(dt);
+    this.updateSurvivalFirearmMechanismParts(
+      gun, definition.archetype, reloading, progress, cycling, cycleProgress, dt,
+    );
 
     gun.position.set(
       0,
