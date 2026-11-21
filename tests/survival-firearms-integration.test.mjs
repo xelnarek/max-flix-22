@@ -70,6 +70,10 @@ test('every firearm renders a unique physical projectile, muzzle signature, trai
   ]) assert.ok(presentation.includes(style), 'missing dedicated impact signature: ' + style);
   assert.match(game, /private createSurvivalFirearmProjectileMesh\([\s\S]*?firearm-projectile-smg-tracer-stripe[\s\S]*?firearmProjectileStyle/);
   assert.match(game, /private spawnSurvivalFirearmMuzzleFx\([\s\S]*?switch \(profile\.muzzleStyle\)/);
+  assert.match(game, /const recoilKick = THREE\.MathUtils\.clamp\(profile\.recoilDepth \* 0\.18, 0\.008, 0\.045\)/,
+    'every primary firearm must provide profile-scaled camera recoil');
+  assert.match(game, /this\.triggerScreenShake\(recoilKick \* \(handheld \? 0\.42 : 1\), recoilDuration\)/,
+    'camera recoil must be reduced on touch devices rather than omitted');
   assert.match(game, /private spawnSurvivalFirearmTrail\([\s\S]*?switch \(profile\.trailStyle\)[\s\S]*?this\.particlePool\.acquire/);
   assert.match(game, /private spawnSurvivalFirearmImpactFx\([\s\S]*?switch \(profile\.impactStyle\)/);
   assert.match(game, /opacity: firearmProfile\?\.trailOpacity/);

@@ -6,3 +6,7 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Downloaded, checksum-tracked CC0 weapon GLBs are fetched by predev/prebuild.
+public/assets/survival-firearms/*.glb
+public/assets/survival-firearms/manifest.json
