@@ -88,6 +88,7 @@ import { findNextReadyWeaponIndex, getNextWeaponDispatchCursor } from './surviva
 import { buildSurvivalDamageReport, createSurvivalDamageStats, getSurvivalWeaponDamageSource, getSurvivalFirearmDamageSource, recordSurvivalDamage, recordSurvivalKill, SURVIVAL_DAMAGE_WEAPONS, type SurvivalDamageReport, type SurvivalDamageSource, type SurvivalDamageWeaponId, type SurvivalDamageStats } from './survivalDamageStats.ts';
 import { createStartingSurvivalFirearmState, createSurvivalFirearmState, rollSurvivalFirearmDrop, rollSurvivalFirearmId, STARTING_SURVIVAL_FIREARM, SURVIVAL_FIREARM_DEFS, type SurvivalFirearmId, type SurvivalFirearmState, type SurvivalFirearmEnemyTier, type SurvivalFirearmArchetype } from './survivalFirearms.ts';
 import { evaluateBallisticHeight } from './survivalFirearmBallistics.ts';
+import { getSurvivalFirearmAssetAnimationClips } from './survivalFirearmAssetAnimation.ts';
 import { SURVIVAL_FIREARM_PRESENTATION, getSurvivalFirearmReloadPose } from './survivalFirearmPresentation.ts';
 import { getSurvivalDifficultyProfile } from './survivalDifficulty.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
@@ -10710,19 +10711,7 @@ export class PaleciakiGameEngine {
       return;
     }
 
-    let wanted: readonly string[] = [];
-    if (archetype === 'shotgun') {
-      wanted = phase.endsWith('open') ? ['open'] : phase.endsWith('close') ? ['close'] : [];
-    } else if (archetype === 'pistol') {
-      wanted = phase === 'reload-open' ? ['magazine-open', 'slide-open']
-        : phase === 'reload-close' ? ['magazine-close', 'slide-close']
-          : phase === 'fire-open' ? ['slide-open']
-            : phase === 'fire-close' ? ['slide-close'] : [];
-    } else if (phase === 'reload-open') {
-      wanted = ['magazine-open'];
-    } else if (phase === 'reload-close') {
-      wanted = ['magazine-close'];
-    }
+    const wanted = getSurvivalFirearmAssetAnimationClips(archetype, phase);
 
     for (const clip of clips) {
       if (!wanted.includes(clip.name.toLowerCase())) continue;
