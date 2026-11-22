@@ -37,6 +37,7 @@ import {
 } from './survivalAchievements.ts';
 import { SURVIVAL_MAPS, type SurvivalMapId } from './survivalMaps.ts';
 import { getSurvivalFirearmAmmoAlert, SURVIVAL_FIREARM_DEFS, SURVIVAL_FIREARM_DROP_POLICY } from './survivalFirearms.ts';
+import { getSurvivalFirearmBalance } from './survivalFirearmBalance.ts';
 import { CAMPAIGN_STAGES, createInitialCampaignProgress, consumePendingCampaignReward, consumePendingCampaignXpBonus, getCampaignMasteryProgress, getCampaignRewardChoices, getCampaignSideOrderProgress, getCampaignStageDefinition, getNextCampaignStageId, readCampaignProgress, recordCampaignStageResult, setPendingCampaignReward, writeCampaignProgress, type CampaignProgress, type CampaignRewardDefinition, type CampaignRewardId, type CampaignStageId } from './campaignProgression.ts';
 import { launchOniricPlatformer } from './oniricPlatformer.ts';
 import { launchCthulhuRetroArena } from './cthulhuRetroArena.ts';
@@ -2960,14 +2961,19 @@ class PaleciakiScene extends xb.Script {
         description.className = 'armory-card-description';
         description.textContent = firearm.roleDescription;
 
+        const balance = getSurvivalFirearmBalance(firearm);
         const damageValue = firearm.damage.toFixed(2).replace('.', ',') +
           (firearm.id === 'shotgun_12g' ? ' / śrut × ' + firearm.pellets : firearm.pellets > 1 ? ' / cząstki × ' + firearm.pellets : ' / pocisk');
+        const salvoValue = balance.damagePerTrigger.toFixed(2).replace('.', ',');
+        const sustainedDpsValue = balance.sustainedDirectDps.toFixed(2).replace('.', ',') + ' DPS';
         const rateValue = (1 / firearm.fireIntervalSeconds).toFixed(1).replace('.', ',') +
           (firearm.pellets > 1 ? ' salw/s' : ' strz./s');
         const metrics = document.createElement('div');
         metrics.className = 'armory-card-stats';
         const metricRows: Array<[string, string]> = [
           ['OBRAŻENIA BAZOWE', damageValue],
+          ['SALWA • PEŁNE TRAFIENIE', salvoValue],
+          ['DPS • Z PRZEŁADOWANIEM', sustainedDpsValue],
           ['ZASIĘG BAZOWY', firearm.rangeMeters + ' m'],
           ['SZYBKOSTRZELNOŚĆ', rateValue],
           ['MAGAZYNEK', firearm.magazineSize + ' nab.'],
