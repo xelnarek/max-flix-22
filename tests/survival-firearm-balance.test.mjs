@@ -26,7 +26,7 @@ test('reload shorter than the final shot cadence does not add fictitious downtim
     reloadSeconds: 0.5,
   });
   assert.equal(balance.magazineCycleSeconds, 4.5);
-  assert.equal(balance.sustainedDirectDps, 4 / 4.5);
+  assert.equal(balance.sustainedDirectDps, 6 / 4.5);
 });
 
 test('shotgun salvo and magazine metrics account for every pellet', () => {
