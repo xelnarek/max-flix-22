@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "app": {
+    "name": "Warehouse MaDDnes",
+    "applicationId": "pl.paleciaki.magazynchaosu",
+    "versionName": "0.2.0",
+    "shortDescriptionCharacters": 68,
+    "fullDescriptionCharacters": 1317,
+    "firebaseProjectId": "round-tracker-6q6d2",
+    "firestoreDatabaseId": "ai-studio-maxflixvol2-938de3b7-0d7d-4164-9dae-7d99b2e46560"
+  },
+  "ads": {
+    "productionConfigured": false,
+    "mode": "google-demo-ids-testing",
+    "appAdsTxtPresent": false
+  },
+  "storeAssets": {
+    "phoneScreenshots": 0
+  },
+  "blockers": [
+    "Polityka prywatności nadal zawiera pola do uzupełnienia: dane prawne wydawcy i działający e-mail kontaktowy."
+  ],
+  "warnings": [
+    "Brak kompletu produkcyjnych identyfikatorów AdMob. Build korzysta z bezpiecznych jednostek demo i nie generuje przychodu z reklam.",
+    "Brak public/app-ads.txt. Dodaj go po uzyskaniu własnego Publisher ID w AdMob.",
+    "Brak co najmniej dwóch zrzutów ekranu z prawdziwego urządzenia w play-store/screenshots/."
+  ],
+  "manualChecks": [
+    "W Firebase Console włącz Firebase Authentication → Anonymous i opublikuj reguły Firestore dla bazy ai-studio-maxflixvol2-938de3b7-0d7d-4164-9dae-7d99b2e46560 w projekcie round-tracker-6q6d2.",
+    "Na fizycznym Androidzie sprawdź zimny start, dłuższą rozgrywkę, dotyk, tryb Oniryczny 2D, powrót z tła, tryby Survival/Campaign/PvP i zachowanie bez sieci.",
+    "W Play Console uzupełnij App access, Ads declaration, Content rating, Target audience, Data safety i dane kontaktowe; uwzględnij SDK firm trzecich.",
+    "Dla nowych kont osobistych utworzonych po 13.11.2023 sprawdź aktualny wymóg testu zamkniętego: co najmniej 12 testerów przez 14 dni.",
+    "Dodaj co najmniej dwa prawdziwe zrzuty ekranu z urządzenia do karty sklepu.",
+    "Zweryfikuj nazwę wydawcy, stronę pomocy, politykę prywatności, kraje dystrybucji, kategorię i ocenę treści."
+  ],
+  "releaseReady": false
+}

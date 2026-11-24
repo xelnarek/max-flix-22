@@ -1,0 +1,80 @@
+{
+  "provider": "Poly Haven",
+  "credit": "Powered by Poly Haven",
+  "licence": "CC0-1.0",
+  "fetchedAt": "2026-11-24T20:30:10.291Z",
+  "assets": {
+    "concrete_floor_worn_001": {
+      "role": "warehouse-concrete-floor",
+      "resolution": "2k",
+      "maps": {
+        "diffuse": {
+          "file": "assets/polyhaven/concrete_floor_worn_001/concrete_floor_worn_001_diff_2k.png",
+          "bytes": 20982246,
+          "sha256": "843aae212472d07be046382c4f9480cf68c630f7b3a897eab17a57370e88c608",
+          "source": "https://dl.polyhaven.org/file/ph-assets/Textures/png/2k/concrete_floor_worn_001/concrete_floor_worn_001_diff_2k.png"
+        },
+        "normal": {
+          "file": "assets/polyhaven/concrete_floor_worn_001/concrete_floor_worn_001_nor_gl_2k.png",
+          "bytes": 22874866,
+          "sha256": "c300b26f84b094c04ee1d45db47b349561b03c6b371f2f6b85b95584f7f507c7",
+          "source": "https://dl.polyhaven.org/file/ph-assets/Textures/png/2k/concrete_floor_worn_001/concrete_floor_worn_001_nor_gl_2k.png"
+        },
+        "arm": {
+          "file": "assets/polyhaven/concrete_floor_worn_001/concrete_floor_worn_001_arm_2k.png",
+          "bytes": 17319988,
+          "sha256": "aba4e2463b185b920301b04259827172e15c156a6840e040e44727a37193fb24",
+          "source": "https://dl.polyhaven.org/file/ph-assets/Textures/png/2k/concrete_floor_worn_001/concrete_floor_worn_001_arm_2k.png"
+        }
+      }
+    },
+    "factory_wall": {
+      "role": "industrial-corrugated-wall",
+      "resolution": "2k",
+      "maps": {
+        "diffuse": {
+          "file": "assets/polyhaven/factory_wall/factory_wall_diff_2k.png",
+          "bytes": 5403874,
+          "sha256": "59980a02489550d2e7c1764bac2b63d68ecc35e14ee2bc7abb14b7b1da531a0f",
+          "source": "https://dl.polyhaven.org/file/ph-assets/Textures/png/2k/factory_wall/factory_wall_diff_2k.png"
+        },
+        "normal": {
+          "file": "assets/polyhaven/factory_wall/factory_wall_nor_gl_2k.png",
+          "bytes": 2455344,
+          "sha256": "04dd5a7b411626a02328e419358744efc7d21d09256696b0d88c5c6ff2aaa68c",
+          "source": "https://dl.polyhaven.org/file/ph-assets/Textures/png/2k/factory_wall/factory_wall_nor_gl_2k.png"
+        },
+        "arm": {
+          "file": "assets/polyhaven/factory_wall/factory_wall_arm_2k.png",
+          "bytes": 11633427,
+          "sha256": "6589b240a20f1f831ed6e8897ee8787632a273e38a5979ae42d3605ec0fbf2a7",
+          "source": "https://dl.polyhaven.org/file/ph-assets/Textures/png/2k/factory_wall/factory_wall_arm_2k.png"
+        }
+      }
+    },
+    "metal_plate_02": {
+      "role": "worn-steel-barriers-and-trims",
+      "resolution": "2k",
+      "maps": {
+        "diffuse": {
+          "file": "assets/polyhaven/metal_plate_02/metal_plate_02_diff_2k.png",
+          "bytes": 21788040,
+          "sha256": "a28f2b0976c471c24f51c32bd2aa23331dcf72749d96e3e9c08fa320d5a5e13e",
+          "source": "https://dl.polyhaven.org/file/ph-assets/Textures/png/2k/metal_plate_02/metal_plate_02_diff_2k.png"
+        },
+        "normal": {
+          "file": "assets/polyhaven/metal_plate_02/metal_plate_02_nor_gl_2k.png",
+          "bytes": 12046578,
+          "sha256": "b6fce599aeb0e92735e812b36bfeab8e7f0029bd3b99747bfb2a456ab93a29fe",
+          "source": "https://dl.polyhaven.org/file/ph-assets/Textures/png/2k/metal_plate_02/metal_plate_02_nor_gl_2k.png"
+        },
+        "arm": {
+          "file": "assets/polyhaven/metal_plate_02/metal_plate_02_arm_2k.png",
+          "bytes": 21410360,
+          "sha256": "9043c57427d9cf05a469add45d9ee713cdd7468a365103ab897fd6935b83e29f",
+          "source": "https://dl.polyhaven.org/file/ph-assets/Textures/png/2k/metal_plate_02/metal_plate_02_arm_2k.png"
+        }
+      }
+    }
+  }
+}

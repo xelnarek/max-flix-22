@@ -22,6 +22,7 @@ class SoundEngine {
   private effectsBus: GainNode | null = null;
   private lastAttackWhooshAt = -Infinity;
   private lastFirearmImpactAt: Partial<Record<'pistol' | 'smg' | 'rifle' | 'shotgun' | 'heavy-rifle' | 'minigun' | 'rocket' | 'flame' | 'plasma' | 'gauss' | 'grenade', number>> = {};
+  private gunshotNoiseBuffer: AudioBuffer | null = null;
   private settings: AudioSettings = { master: 0.82, music: 0.48, effects: 0.82 };
 
   constructor() {
@@ -933,6 +934,80 @@ class SoundEngine {
       transient.start(t);
       transient.stop(t + 0.035);
     }
+
+    // Crimsonland-style ballistic transient noise layer: adds gunpowder crack,
+    // shotgun blast, flamethrower rush, or gauss discharge tail using one cached buffer.
+    const noiseBuffer = this.getGunshotNoiseBuffer();
+    if (noiseBuffer) {
+      const noiseSource = this.ctx.createBufferSource();
+      noiseSource.buffer = noiseBuffer;
+      const filter = this.ctx.createBiquadFilter();
+      const noiseGain = this.ctx.createGain();
+      const isEnergy = archetype === 'plasma' || archetype === 'gauss';
+      const isBlast = archetype === 'shotgun' || archetype === 'rocket' || archetype === 'grenade';
+      const isHeavy = archetype === 'heavy-rifle' || archetype === 'rifle';
+      filter.type = archetype === 'flame' ? 'bandpass' : isEnergy ? 'highpass' : 'bandpass';
+      filter.frequency.setValueAtTime(
+        archetype === 'flame' ? 680
+          : isEnergy ? 2200
+            : isBlast ? 540
+              : isHeavy ? 1150 : 1580,
+        t,
+      );
+      filter.Q.setValueAtTime(archetype === 'flame' ? 0.65 : isEnergy ? 1.8 : 0.85, t);
+      const noiseDuration = archetype === 'rocket' || archetype === 'grenade' ? 0.24
+        : archetype === 'shotgun' ? 0.16
+          : archetype === 'flame' ? 0.12
+            : isHeavy || archetype === 'gauss' ? 0.11 : 0.068;
+      const noisePeak = archetype === 'shotgun' ? 0.15
+        : archetype === 'rocket' || archetype === 'grenade' ? 0.16
+          : archetype === 'flame' ? 0.085
+            : isHeavy || archetype === 'gauss' ? 0.11
+              : archetype === 'minigun' || archetype === 'smg' ? 0.06 : 0.085;
+      noiseGain.gain.setValueAtTime(noisePeak, t);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, t + noiseDuration);
+      noiseSource.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(bus);
+      noiseSource.start(t);
+      noiseSource.stop(t + noiseDuration + 0.01);
+    }
+  }
+
+  private getGunshotNoiseBuffer(): AudioBuffer | null {
+    if (!this.ctx) return null;
+    if (this.gunshotNoiseBuffer && this.gunshotNoiseBuffer.sampleRate === this.ctx.sampleRate) {
+      return this.gunshotNoiseBuffer;
+    }
+    const sampleRate = this.ctx.sampleRate || 44100;
+    const length = Math.max(1024, Math.floor(sampleRate * 0.26));
+    const buffer = this.ctx.createBuffer(1, length, sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < length; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    this.gunshotNoiseBuffer = buffer;
+    return buffer;
+  }
+
+  /** Crisp mechanical chamber click when trying to shoot on an empty/reloading weapon. */
+  public playFirearmDryClick() {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const bus = this.effectsBus ?? this.ctx.destination;
+    const osc = this.ctx.createOscillator();
+    const env = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1640, t);
+    osc.frequency.exponentialRampToValueAtTime(520, t + 0.022);
+    env.gain.setValueAtTime(0.055, t);
+    env.gain.exponentialRampToValueAtTime(0.0001, t + 0.026);
+    osc.connect(env);
+    env.connect(bus);
+    osc.start(t);
+    osc.stop(t + 0.03);
   }
 
   /** Per-firearm reload handling: a mechanical rack on start and a crisp chamber-ready cue. */

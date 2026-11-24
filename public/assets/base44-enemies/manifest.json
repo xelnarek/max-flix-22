@@ -1,0 +1,103 @@
+{
+  "provider": "Base44 · Absurd Enemy Asset Lab",
+  "source": "User-authored assets from the Base44 media library",
+  "retrievedAt": "2026-11-24T20:23:22.367Z",
+  "models": {
+    "pierogowy_kolos": {
+      "file": "Pierogowy_Kolos.glb",
+      "sourceUrl": "https://media.base44.com/files/public/6afe90bbe1413d39425726f1/cf5a4bd40_Pierogowy_Kolos.glb",
+      "label": "Pierogowy Kolos",
+      "bytes": 185692,
+      "sha256": "76ed9c44ae801aca473a19e929bfd55d2797a282675b06d0c5093f3de2c0fbff",
+      "meshes": 55,
+      "skins": 0,
+      "animations": [
+        "Idle",
+        "Walk",
+        "Attack_Bulionowy_Slam",
+        "Hit",
+        "Death"
+      ]
+    },
+    "ksiegowy_otchlani": {
+      "file": "Ksiegowy_Otchlani.glb",
+      "sourceUrl": "https://media.base44.com/files/public/6afe90bbe1413d39425726f1/c727adac2_Ksiegowy_Otchlani.glb",
+      "label": "Księgowy Otchłani",
+      "bytes": 185636,
+      "sha256": "fb207ece02d3279b677fe4f7944e7d62194d604ae9623e9a2d10521ff8dc2a98",
+      "meshes": 60,
+      "skins": 0,
+      "animations": [
+        "Idle",
+        "Walk",
+        "Attack_Faktura_Piekielna",
+        "Hit",
+        "Death"
+      ]
+    },
+    "turbo_golab": {
+      "file": "Turbo_Golab.glb",
+      "sourceUrl": "https://media.base44.com/files/public/6afe90bbe1413d39425726f1/2114d6ff9_Turbo_Golab.glb",
+      "label": "Turbo Gołąb",
+      "bytes": 230592,
+      "sha256": "81eb49e74ec944d232d1313864e323fbddd6be5a59c009c386e6c198099fcc6e",
+      "meshes": 57,
+      "skins": 0,
+      "animations": [
+        "Idle",
+        "Walk",
+        "Attack_Espresso_Dive",
+        "Hit",
+        "Death"
+      ]
+    },
+    "janusz_rakietnik": {
+      "file": "Janusz_Rakietnik.glb",
+      "sourceUrl": "https://media.base44.com/files/public/6afe90bbe1413d39425726f1/fd164ab2a_Janusz_Rakietnik.glb",
+      "label": "Janusz Rakietnik",
+      "bytes": 199340,
+      "sha256": "6271cae262b686c7d0f70884c2789758428b53231ab742fb66eb3228a0b2c8ea",
+      "meshes": 46,
+      "skins": 0,
+      "animations": [
+        "Idle",
+        "Walk",
+        "Attack_Paletowy_Slam",
+        "Hit",
+        "Death"
+      ]
+    },
+    "kapibara_mafioso": {
+      "file": "Kapibara_Mafioso.glb",
+      "sourceUrl": "https://media.base44.com/files/public/6afe90bbe1413d39425726f1/80c3f7e49_Kapibara_Mafioso.glb",
+      "label": "Kapibara Mafioso",
+      "bytes": 203728,
+      "sha256": "c7fd20df6c85bb21df03dd141091d0323232340bbcfabc7fa7f40708ae5e7a63",
+      "meshes": 38,
+      "skins": 0,
+      "animations": [
+        "Idle",
+        "Walk",
+        "Attack_Haracz",
+        "Hit",
+        "Death"
+      ]
+    },
+    "parowkowy_berserker": {
+      "file": "Parowkowy_Berserker.glb",
+      "sourceUrl": "https://media.base44.com/files/public/6afe90bbe1413d39425726f1/e486dd164_Parowkowy_Berserker.glb",
+      "label": "Parówkowy Berserker",
+      "bytes": 168412,
+      "sha256": "2be276d1e53fa07bfd8617026b3cdfee7242d1c0067e6dad5dec324e2414e270",
+      "meshes": 40,
+      "skins": 0,
+      "animations": [
+        "Idle",
+        "Walk",
+        "Attack_Pikantna_Szarza",
+        "Hit",
+        "Death"
+      ]
+    }
+  }
+}

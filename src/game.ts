@@ -90,6 +90,13 @@ import { createStartingSurvivalFirearmState, createSurvivalFirearmState, rollSur
 import { evaluateBallisticHeight } from './survivalFirearmBallistics.ts';
 import { getSurvivalFirearmAssetAnimationClips, getSurvivalFirearmAssetAnimationTiming } from './survivalFirearmAssetAnimation.ts';
 import { SURVIVAL_FIREARM_PRESENTATION, getSurvivalFirearmCyclePose, getSurvivalFirearmReloadPose } from './survivalFirearmPresentation.ts';
+import {
+  ProjectileTracerPool,
+  getFirearmTracerStyle,
+  getOperatorTracerStyle,
+  getSurvivalWeaponTracerStyle,
+  type TracerStyle,
+} from './projectileTracerPool.ts';
 import { getSurvivalDifficultyProfile } from './survivalDifficulty.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
 import { chooseSurvivalRicochetTarget, getSurvivalRadiationProfile, getSurvivalRicochetProfile } from './survivalCombatDraft.ts';
@@ -822,6 +829,7 @@ export class PaleciakiGameEngine {
   private pvpAimSweepCenterAngle = Math.PI / 2;
   private pvpLocalMarker: THREE.Group | null = null;
   private pvpProjectileMeshes = new Map<string, THREE.Mesh>();
+  private readonly pvpProjectileLastPositions = new Map<string, { x: number; y: number; z: number }>();
   /** Reused membership scratch; updatePvpMode clears and fills it every sync. */
   private readonly pvpProjectileActiveIds = new Set<string>();
   private pvpArenaRoot: THREE.Group | null = null;
@@ -923,6 +931,7 @@ export class PaleciakiGameEngine {
   private survivalFirearmDropMissStreak = 0;
   private survivalFirearmLastDropSeconds = Number.NEGATIVE_INFINITY;
   private survivalFirearmSoundCooldown = 0;
+  private firearmDryClickCooldown = 0;
   private survivalFirearmRecoilTimer = 0;
   /** Opponent weapon recoil is driven by authoritative remote shot counters. */
   private remoteSurvivalFirearmRecoilTimer = 0;
@@ -1195,6 +1204,8 @@ export class PaleciakiGameEngine {
   private readonly particleColorScratch = new THREE.Color();
   // One bounded pool owns all short-lived combat-fragment geometry/materials.
   private readonly particlePool = new ParticleMeshPool(PARTICLE_STATE_CAPACITY);
+  // Bounded pool of continuous 3D projectile tracer ribbons/beams (Crimsonland feel).
+  private readonly tracerPool = new ProjectileTracerPool(340);
   private readonly survivalFirearmProjectileVisualCache = new Map<string, THREE.Mesh>();
   private particlePoolDisposed = false;
 
@@ -1207,6 +1218,7 @@ export class PaleciakiGameEngine {
       this.disposeTemporaryObject(template);
     }
     this.survivalFirearmProjectileVisualCache.clear();
+    this.tracerPool.dispose();
     this.particlePool.dispose();
   }
 
@@ -1262,6 +1274,7 @@ export class PaleciakiGameEngine {
     detonated?: boolean;
     damageSource?: SurvivalDamageSource;
     trailTimer?: number;
+    tracerStyle?: TracerStyle;
   }[] = [];
   private specialEffects: {
     mesh: THREE.Mesh | THREE.Group;
@@ -2241,6 +2254,7 @@ export class PaleciakiGameEngine {
       ].filter((object): object is THREE.Object3D => object instanceof THREE.Object3D);
       this.removeAttachedActorVisuals(mesh as THREE.Group);
       removeLegacyEnemyBodyVisuals(mesh as THREE.Group, overlays);
+      delete mesh.userData.enemyVisualPolishPending;
       this.installActorVisualRoot(mesh as THREE.Group, actor.root);
       enemy.legL = undefined;
       enemy.legR = undefined;
@@ -2313,7 +2327,12 @@ export class PaleciakiGameEngine {
       // weapons and decorative equipment inflate the type-specific hitbox.
       const modelBounds = new THREE.Box3().setFromObject(root);
       const modelSize = modelBounds.getSize(new THREE.Vector3());
-      enemy.collisionRadius = getEnemyCollisionRadius(requestedType, Math.max(modelSize.x, modelSize.z) * 0.46);
+      const horizontalScale = enemy.hitBaseScale
+        ? Math.max(enemy.hitBaseScale.x, enemy.hitBaseScale.z)
+        : Math.max(mesh.scale.x, mesh.scale.z);
+      enemy.collisionRadius = getEnemyCollisionRadius(requestedType, Math.max(modelSize.x, modelSize.z) * 0.46) *
+        (Number.isFinite(horizontalScale) && horizontalScale > 0.1 ? horizontalScale : 1);
+      this.enemyCrowdResolutionNextAt = 0;
       this.applyHandheldActorShadowBudget(root);
       root.position.y -= mesh.position.y;
       root.name = 'gobkit-enemy-' + modelId + '-' + enemy.id;
@@ -2324,6 +2343,7 @@ export class PaleciakiGameEngine {
       ].filter((object): object is THREE.Object3D => object instanceof THREE.Object3D);
       this.removeAttachedActorVisuals(mesh as THREE.Group);
       removeLegacyEnemyBodyVisuals(mesh as THREE.Group, overlays);
+      delete mesh.userData.enemyVisualPolishPending;
       this.installActorVisualRoot(mesh as THREE.Group, root);
       // Existing Gobkit rigs need the role-specific PPE attachment kit. The
       // Base44 models are already fully authored silhouettes, so do not stack
@@ -2454,7 +2474,7 @@ export class PaleciakiGameEngine {
     for (const enemy of this.enemies) {
       const visualProfile = ENEMY_VISUAL_PROFILES[enemy.type];
       const modelId = visualProfile.base44Model ?? visualProfile.gobkitModel;
-      if (!modelId || !enemy.mesh) continue;
+      if (!modelId || !enemy.mesh || enemy.mesh.userData.skipGobkitRig) continue;
       const distanceX = enemy.x - this.playerPos.x;
       const distanceZ = enemy.z - this.playerPos.z;
       const distanceSquared = distanceX * distanceX + distanceZ * distanceZ;
@@ -3214,6 +3234,8 @@ export class PaleciakiGameEngine {
       disposePvpObjectTree(mesh);
     });
     this.pvpProjectileMeshes.clear();
+    this.pvpProjectileLastPositions.clear();
+    this.tracerPool.clear();
     if (this.pvpSession) {
       this.pvpSession.dispose();
       this.pvpSession = null;
@@ -3434,6 +3456,8 @@ export class PaleciakiGameEngine {
       disposePvpObjectTree(mesh);
     });
     this.pvpProjectileMeshes.clear();
+    this.pvpProjectileLastPositions.clear();
+    this.tracerPool.clear();
 
     const bounds = PVP_ARENA_BOUNDS;
     const width = bounds.maxX - bounds.minX;
@@ -3799,11 +3823,13 @@ export class PaleciakiGameEngine {
       const profile = SURVIVAL_FIREARM_PRESENTATION[firearmDefinition.archetype];
       this.survivalFirearmRecoilTimer = profile.recoilSettleSeconds;
       const forward = pvpAimDirectionFromAngle(local.aimAngle);
+      const forwardVec = new THREE.Vector3(forward.x, 0, forward.z);
       const muzzle = new THREE.Vector3(this.playerPos.x, this.playerPos.y + 0.92, this.playerPos.z)
-        .addScaledVector(new THREE.Vector3(forward.x, 0, forward.z), 0.86);
+        .addScaledVector(forwardVec, 0.86);
       for (let shot = 0; shot < Math.min(3, shotsSinceLastSync); shot++) {
-        this.spawnSurvivalFirearmMuzzleFx(firearmDefinition.archetype, firearmDefinition.color, muzzle, new THREE.Vector3(forward.x, 0, forward.z));
+        this.spawnSurvivalFirearmMuzzleFx(firearmDefinition.archetype, firearmDefinition.color, muzzle, forwardVec);
       }
+      this.spawnFirearmShellCasing(firearmDefinition.archetype, muzzle, forwardVec);
       sound.playFirearmShot(firearmDefinition.archetype);
     }
 
@@ -3827,6 +3853,7 @@ export class PaleciakiGameEngine {
           remoteForward,
         );
       }
+      this.spawnFirearmShellCasing(remoteFirearmDefinition.archetype, remoteMuzzle, remoteForward);
       sound.playFirearmShot(remoteFirearmDefinition.archetype);
     }
 
@@ -4186,6 +4213,39 @@ export class PaleciakiGameEngine {
         const horizontalSpeed = Math.max(0.001, Math.hypot(proj.vx, proj.vz));
         mesh.rotation.x = Math.PI / 2 - Math.atan2(proj.vy ?? 0, horizontalSpeed);
       }
+      const projFirearm = proj.firearmId ? SURVIVAL_FIREARM_DEFS[proj.firearmId] : null;
+      const tracerStyle = projFirearm
+        ? getFirearmTracerStyle(projFirearm.archetype, proj.color)
+        : {
+            color: proj.color,
+            width: 0.085,
+            lifeSeconds: 0.22,
+            minLength: 0.65,
+            opacity: 0.88,
+            coreOpacity: 0.96,
+            coreWhiteMix: 0.56,
+          };
+      const prev = this.pvpProjectileLastPositions.get(proj.id);
+      if (prev) {
+        this.tracerPool.emitSegment(this.levelRoot, prev.x, prev.y, prev.z, proj.x, proj.y, proj.z, tracerStyle);
+        prev.x = proj.x;
+        prev.y = proj.y;
+        prev.z = proj.z;
+      } else {
+        const speedMag = Math.hypot(proj.vx, proj.vy ?? 0, proj.vz);
+        const tailBack = speedMag > 0.01 ? 0.65 / speedMag : 0;
+        this.tracerPool.emitSegment(
+          this.levelRoot,
+          proj.x - proj.vx * tailBack,
+          proj.y - (proj.vy ?? 0) * tailBack,
+          proj.z - proj.vz * tailBack,
+          proj.x,
+          proj.y,
+          proj.z,
+          tracerStyle,
+        );
+        this.pvpProjectileLastPositions.set(proj.id, { x: proj.x, y: proj.y, z: proj.z });
+      }
     }
 
     for (const [id, mesh] of this.pvpProjectileMeshes.entries()) {
@@ -4201,6 +4261,7 @@ export class PaleciakiGameEngine {
           materials.forEach((material) => material.dispose());
         });
         this.pvpProjectileMeshes.delete(id);
+        this.pvpProjectileLastPositions.delete(id);
       }
     }
 
@@ -7506,6 +7567,8 @@ export class PaleciakiGameEngine {
     this.hazards = [];
     this.explosiveBarrels = [];
     this.clearParticles();
+    this.tracerPool.clear();
+    this.pvpProjectileLastPositions.clear();
     this.enemies = [];
     this.activeChaserIds.clear();
     this.waveDirectorCooldown = 0;
@@ -7535,6 +7598,10 @@ export class PaleciakiGameEngine {
   private applyEnemyVisualPolish(enemy: EnemyItem) {
     const root = enemy.mesh as THREE.Group | undefined;
     if (!root || root.userData.enemyVisualPolishApplied) return;
+    if (root.userData.actorVisualRoot || root.children.some((child) => child.userData.actorVisualRoot === true)) {
+      delete root.userData.enemyVisualPolishPending;
+      return;
+    }
     root.userData.enemyVisualPolishApplied = true;
 
     const palette: Record<string, number> = {
@@ -8431,6 +8498,7 @@ export class PaleciakiGameEngine {
     built.group.position.set(x, groundY, z);
     built.group.scale.setScalar(0.075);
     built.group.userData.cthulhuRiseTimer = 1.35;
+    built.group.userData.skipGobkitRig = true;
     this.applyHandheldActorShadowBudget(built.group);
     this.levelRoot.add(built.group);
 
@@ -10141,6 +10209,7 @@ export class PaleciakiGameEngine {
       this.updateSpecialEffects(simDt);
       this.updateParticles(simDt);
     }
+    this.tracerPool.update(simDt);
     this.updateGobkitAnimations(simDt);
 
     if (!this.envMapInitialized && this.threeRenderer && this.scene) {
@@ -10834,6 +10903,7 @@ export class PaleciakiGameEngine {
     const definition = SURVIVAL_FIREARM_DEFS[this.survivalFirearm.id];
     this.survivalFirearm.cooldown = Math.max(0, this.survivalFirearm.cooldown - dt);
     this.survivalFirearmSoundCooldown = Math.max(0, this.survivalFirearmSoundCooldown - dt);
+    this.firearmDryClickCooldown = Math.max(0, this.firearmDryClickCooldown - dt);
     this.survivalFirearmRecoilTimer = Math.max(0, this.survivalFirearmRecoilTimer - dt);
     this.updateHeldSurvivalFirearmAction(dt);
     if (this.survivalFirearm.reloadRemaining > 0) {
@@ -11008,8 +11078,18 @@ export class PaleciakiGameEngine {
     if (this.state !== 'playing' || this.gameMode === 'pvp' || this.survivalFirearm.cooldown > 0) return;
     const firearm = this.survivalFirearm;
     const definition = SURVIVAL_FIREARM_DEFS[firearm.id];
-    if (firearm.reloadRemaining > 0) return;
+    if (firearm.reloadRemaining > 0) {
+      if (!target && this.firearmDryClickCooldown <= 0) {
+        sound.playFirearmDryClick();
+        this.firearmDryClickCooldown = 0.24;
+      }
+      return;
+    }
     if (firearm.ammoInMagazine <= 0) {
+      if (!target && this.firearmDryClickCooldown <= 0) {
+        sound.playFirearmDryClick();
+        this.firearmDryClickCooldown = 0.24;
+      }
       this.reloadSurvivalFirearm();
       return;
     }
@@ -11043,6 +11123,8 @@ export class PaleciakiGameEngine {
 
     const start = new THREE.Vector3(this.playerPos.x, this.playerPos.y + 0.92, this.playerPos.z).addScaledVector(forward, 0.86);
     this.spawnSurvivalFirearmMuzzleFx(definition.archetype, definition.color, start, forward);
+    this.spawnFirearmShellCasing(definition.archetype, start, forward);
+    const tracerStyle = getFirearmTracerStyle(definition.archetype, definition.color);
     const pelletCount = definition.pellets;
     let damage = definition.damage;
     if (this.gameMode === 'campaign' && this.campaignCounterattackReady) {
@@ -11062,8 +11144,23 @@ export class PaleciakiGameEngine {
       if (definition.projectileLaunchVelocity !== undefined) projectileVelocity.y = definition.projectileLaunchVelocity;
       const mesh = this.createSurvivalFirearmProjectileMesh(definition.archetype, definition.color, definition.projectileRadius);
       mesh.rotation.y = Math.atan2(direction.x, direction.z);
+      if (definition.projectileLaunchVelocity !== undefined) {
+        mesh.rotation.x = -Math.atan2(definition.projectileLaunchVelocity, definition.projectileSpeed);
+      }
       mesh.position.copy(start).addScaledVector(direction, 0.18);
       this.levelRoot.add(mesh);
+      // Emit initial barrel-to-round tracer streak immediately so even point-blank hits leave a clear tracer.
+      const initialRise = definition.projectileLaunchVelocity !== undefined
+        ? (definition.projectileLaunchVelocity / Math.max(0.1, definition.projectileSpeed)) * 0.34
+        : 0;
+      this.tracerPool.emitSegment(
+        this.levelRoot,
+        start.x, start.y, start.z,
+        mesh.position.x + direction.x * 0.34,
+        mesh.position.y + initialRise,
+        mesh.position.z + direction.z * 0.34,
+        tracerStyle,
+      );
       this.projectiles.push({
         mesh,
         vel: projectileVelocity,
@@ -11087,6 +11184,7 @@ export class PaleciakiGameEngine {
         damageSource: getSurvivalFirearmDamageSource(definition.id),
         hitIds: new Set<string>(),
         spinSpeed: definition.archetype === 'rocket' || definition.archetype === 'plasma' ? 6.5 : 0,
+        tracerStyle,
       });
     }
     if (this.survivalFirearmSoundCooldown <= 0) {
@@ -11121,6 +11219,7 @@ export class PaleciakiGameEngine {
     for (const enemy of this.enemies) {
       if (enemy.state === 'defeated' || Math.hypot(enemy.x - x, enemy.z - z) > radius) continue;
       this.damageEnemy(enemy, baseSplashDamage, x, z, projectile.damageSource);
+      this.applyCrimsonlandWeaponKnockback(enemy, enemy.x - x, enemy.z - z, 'grenade', 1.15);
       enemy.stunTimer = Math.max(enemy.stunTimer, 0.24);
       if (enemy.hp <= 0) this.defeatEnemy(enemy, 240, true);
     }
@@ -11372,11 +11471,102 @@ export class PaleciakiGameEngine {
 
     if (profile.muzzleStyle === 'plasma-pulse') this.triggerBloomPulse(0.10);
     if (profile.muzzleStyle === 'gauss-discharge') this.triggerBloomPulse(0.16);
+    // Sharp Crimsonland muzzle flash lance along barrel axis so every shot snaps forward cleanly.
+    const beamLen = archetype === 'gauss' ? 1.05
+      : archetype === 'heavy-rifle' || archetype === 'shotgun' ? 0.72
+        : archetype === 'flame' ? 0.85 : 0.52;
+    this.tracerPool.emitSegment(
+      this.levelRoot,
+      position.x, position.y, position.z,
+      position.x + forward.x * beamLen,
+      position.y,
+      position.z + forward.z * beamLen,
+      {
+        color,
+        width: profile.muzzleFlashScale * 0.92,
+        lifeSeconds: Math.min(0.085, profile.muzzleLifeSeconds),
+        minLength: beamLen,
+        opacity: 0.95,
+        coreOpacity: 1.0,
+        coreWhiteMix: 0.72,
+      },
+    );
     // Every firearm now has a restrained camera impulse, scaled by its physical
     // recoil profile. Touch devices receive a reduced impulse to avoid motion fatigue.
     const recoilKick = THREE.MathUtils.clamp(profile.recoilDepth * 0.18, 0.008, 0.045);
     const recoilDuration = THREE.MathUtils.clamp(profile.recoilSettleSeconds * 0.18, 0.025, 0.065);
     this.triggerScreenShake(recoilKick * (handheld ? 0.42 : 1), recoilDuration);
+  }
+
+  /** Eject a spinning spent brass casing, shotgun hull, or power cell on shot fire. */
+  private spawnFirearmShellCasing(
+    archetype: SurvivalFirearmArchetype,
+    position: THREE.Vector3,
+    forward: THREE.Vector3,
+  ): void {
+    if (archetype === 'rocket' || archetype === 'flame') return;
+    if (this.adaptivePerformanceTier >= 2) return;
+    const isEnergy = archetype === 'plasma' || archetype === 'gauss';
+    const isShell = archetype === 'shotgun' || archetype === 'grenade';
+    const color = isShell ? 0xdc2626 : isEnergy ? (archetype === 'gauss' ? 0x22d3ee : 0x38bdf8) : 0xfbbf24;
+    const size = isShell ? 0.042 : isEnergy ? 0.046 : 0.032;
+    const casing = this.particlePool.acquire(isShell ? 'box' : 'flat-box', color, size, 0.92);
+    if (!casing) return;
+    // Rightward ejection perpendicular to barrel vector
+    const rightX = -forward.z;
+    const rightZ = forward.x;
+    casing.position.set(
+      position.x - forward.x * 0.34 + rightX * 0.18,
+      position.y + 0.04,
+      position.z - forward.z * 0.34 + rightZ * 0.18,
+    );
+    this.levelRoot.add(casing);
+    const sideSpeed = (isShell ? 2.6 : 2.1) + Math.random() * 1.1;
+    const backSpeed = 0.55 + Math.random() * 0.75;
+    this.addParticle(
+      casing,
+      rightX * sideSpeed - forward.x * backSpeed,
+      2.3 + Math.random() * 1.15,
+      rightZ * sideSpeed - forward.z * backSpeed,
+      0.38,
+      9.8,
+      size,
+      14 + Math.random() * 10,
+      16 + Math.random() * 12,
+      12 + Math.random() * 8,
+    );
+  }
+
+  /** Crimsonland kinetic stopping power: bullets push and stagger incoming enemies. */
+  private applyCrimsonlandWeaponKnockback(
+    enemy: EnemyItem,
+    dirX: number,
+    dirZ: number,
+    archetype: SurvivalFirearmArchetype,
+    scale = 1,
+  ): void {
+    if (!enemy || enemy.state === 'defeated') return;
+    const len = Math.hypot(dirX, dirZ);
+    if (len < 0.0001) return;
+    const nx = dirX / len;
+    const nz = dirZ / len;
+    const knockbackByArchetype: Record<SurvivalFirearmArchetype, number> = {
+      pistol: 2.1,
+      smg: 1.05,
+      rifle: 2.55,
+      shotgun: 5.5,
+      'heavy-rifle': 6.4,
+      minigun: 1.15,
+      rocket: 7.4,
+      grenade: 7.2,
+      flame: 0.65,
+      plasma: 2.9,
+      gauss: 8.2,
+    };
+    const isBoss = isMajorSurvivalBossType(enemy.type) || enemy.type === 'sebix_m';
+    const strength = (knockbackByArchetype[archetype] ?? 2.0) * scale * (isBoss ? 0.22 : 1);
+    enemy.hitRecoilX = (enemy.hitRecoilX || 0) + nx * strength;
+    enemy.hitRecoilZ = (enemy.hitRecoilZ || 0) + nz * strength;
   }
 
   private spawnSurvivalFirearmTrail(projectile: { mesh: THREE.Object3D; vel: THREE.Vector3; firearmId?: SurvivalFirearmId }): void {
@@ -11451,6 +11641,8 @@ export class PaleciakiGameEngine {
     y: number,
     z: number,
     color: number,
+    dirX = 0,
+    dirZ = 0,
   ): void {
     const profile = SURVIVAL_FIREARM_PRESENTATION[archetype];
     const burstY = y + (profile.impactStyle === 'magnetic-punch' ? 0.54 : 0.48);
@@ -11501,6 +11693,35 @@ export class PaleciakiGameEngine {
         this.triggerHitStop(0.025);
         this.triggerBloomPulse(0.16);
         break;
+    }
+
+    // Crimsonland directional exit spray along bullet trajectory for tactile stopping punch.
+    const dirLen = Math.hypot(dirX, dirZ);
+    if (dirLen > 0.001 && archetype !== 'flame' && archetype !== 'grenade' && this.adaptivePerformanceTier < 2) {
+      const nx = dirX / dirLen;
+      const nz = dirZ / dirLen;
+      const sideX = -nz;
+      const sideZ = nx;
+      const sprayCount = archetype === 'gauss' || archetype === 'heavy-rifle' ? 4 : archetype === 'shotgun' || archetype === 'rifle' ? 3 : 2;
+      const spraySpeed = archetype === 'gauss' ? 11.5 : archetype === 'heavy-rifle' ? 9.5 : 7.0;
+      for (let idx = 0; idx < sprayCount; idx++) {
+        const spark = this.particlePool.acquire('flat-box', color, archetype === 'gauss' ? 0.052 : 0.038, 0.94);
+        if (!spark) break;
+        spark.position.set(x + nx * 0.25, burstY, z + nz * 0.25);
+        this.levelRoot.add(spark);
+        const fan = (idx - (sprayCount - 1) * 0.5) * 1.45 + (Math.random() - 0.5) * 0.6;
+        const fwd = spraySpeed * (0.75 + Math.random() * 0.5);
+        this.addParticle(
+          spark,
+          nx * fwd + sideX * fan,
+          0.9 + Math.random() * 1.4,
+          nz * fwd + sideZ * fan,
+          0.19,
+          7.5,
+          archetype === 'gauss' ? 0.052 : 0.038,
+          6, 9, 5,
+        );
+      }
     }
   }
 
@@ -11634,6 +11855,7 @@ export class PaleciakiGameEngine {
       if (base.lengthSq() < 0.001) return;
       base.normalize();
       const spread = weapon.evolved ? [-0.44, -0.22, 0, 0.22, 0.44] : [-0.20, 0, 0.20];
+      const shardTracerStyle = getSurvivalWeaponTracerStyle(weapon.id, definition.color);
       for (const angle of spread) {
         const direction = base.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
         const shardMaterial = new THREE.MeshStandardMaterial({
@@ -11645,6 +11867,12 @@ export class PaleciakiGameEngine {
         shard.rotation.set(0.25, angle * 2, 0.45);
         shard.castShadow = false;
         this.levelRoot.add(shard);
+        this.tracerPool.emitSegment(
+          this.levelRoot,
+          this.playerPos.x, this.playerPos.y + 0.88, this.playerPos.z,
+          shard.position.x, shard.position.y, shard.position.z,
+          shardTracerStyle,
+        );
         this.projectiles.push({
           mesh: shard,
           vel: direction.multiplyScalar(weapon.evolved ? 15.8 : 13.4),
@@ -11658,6 +11886,7 @@ export class PaleciakiGameEngine {
           hitIds: new Set<string>(),
           criticalBurstState,
           spinSpeed: weapon.evolved ? 8.5 : 5.5,
+          tracerStyle: shardTracerStyle,
         });
       }
       sound.playAttackWhoosh();
@@ -11710,11 +11939,12 @@ export class PaleciakiGameEngine {
       color: definition.color, emissive: definition.color, emissiveIntensity: weapon.evolved ? 1.8 : 0.9,
       metalness: 0.28, roughness: 0.26,
     });
+    const weaponTracerStyle = getSurvivalWeaponTracerStyle(weapon.id, definition.color);
     const projectile: {
       mesh: THREE.Object3D; vel: THREE.Vector3; life: number; maxLife: number; damage: number;
       pierce?: number; homing?: boolean; weaponProjectile?: boolean; weaponId?: SurvivalDamageWeaponId; damageSource?: SurvivalDamageSource; aoeRadius?: number; slowOnHit?: boolean;
       igniteOnHit?: boolean; spinSpeed?: number; ricochet?: boolean; boomerang?: boolean; hitIds: Set<string>;
-      criticalBurstState?: { consumed: boolean };
+      criticalBurstState?: { consumed: boolean }; tracerStyle?: TracerStyle;
     } = {
       mesh: new THREE.Group(),
       vel: direction.clone().multiplyScalar(10.5), life: 2.8, maxLife: 2.8, damage, hitIds: new Set<string>(),
@@ -11722,6 +11952,7 @@ export class PaleciakiGameEngine {
       weaponId: weapon.id,
       damageSource: weaponDamageSource,
       criticalBurstState,
+      tracerStyle: weaponTracerStyle,
     };
     switch (weapon.id) {
       case 'pallet_cannon':
@@ -11806,6 +12037,12 @@ export class PaleciakiGameEngine {
     projectile.mesh.position.copy(start);
     (projectile.mesh as THREE.Mesh).castShadow = false;
     this.levelRoot.add(projectile.mesh);
+    this.tracerPool.emitSegment(
+      this.levelRoot,
+      this.playerPos.x, this.playerPos.y + 0.9, this.playerPos.z,
+      start.x, start.y, start.z,
+      weaponTracerStyle,
+    );
     this.projectiles.push(projectile);
     sound.playAttackWhoosh();
   }
@@ -13304,11 +13541,25 @@ export class PaleciakiGameEngine {
     const fallback = chooseSpacedSpawnPoint(safeFallbacks, this.enemies, 3.2);
     if (fallback) return fallback;
 
-    // Last-resort bounded point: choose the farthest arena corner from the player.
-    return fallbackCandidates.sort((a, b) =>
+    // Last-resort bounded point: choose the farthest arena corner from the player
+    // and fan candidates radially so simultaneous wave spawns never overlap at exact identical coordinates.
+    const anchor = fallbackCandidates.sort((a, b) =>
       Math.hypot(b.x - this.playerPos.x, b.z - this.playerPos.z) -
       Math.hypot(a.x - this.playerPos.x, a.z - this.playerPos.z)
     )[0] ?? { x: midX, z: midZ };
+    const dispersed: { x: number; z: number }[] = [];
+    for (let ring = 0; ring < 8; ring++) {
+      const offsetAngle = ring * 2.39996 + this.enemies.length * 1.1;
+      const offsetRadius = 2.2 + (ring % 3) * 1.1;
+      const candidateX = THREE.MathUtils.clamp(anchor.x + Math.cos(offsetAngle) * offsetRadius, minX, maxX);
+      const candidateZ = THREE.MathUtils.clamp(anchor.z + Math.sin(offsetAngle) * offsetRadius, minZ, maxZ);
+      const blocked = this.survivalObstacles.some((obstacle) =>
+        Math.abs(candidateX - obstacle.x) < obstacle.halfWidth + 1.1 &&
+        Math.abs(candidateZ - obstacle.z) < obstacle.halfDepth + 1.1
+      );
+      if (!blocked) dispersed.push({ x: candidateX, z: candidateZ });
+    }
+    return chooseSpacedSpawnPoint(dispersed, this.enemies, 2.2) ?? dispersed[0] ?? anchor;
   }
 
   private spawnSurvivalEnemy(wave: number, options: { allowSpecialEncounters?: boolean } = {}) {
@@ -13490,6 +13741,7 @@ export class PaleciakiGameEngine {
       );
     }
     this.applySurvivalEnemySize(enemy);
+    this.enemyCrowdResolutionNextAt = 0;
     enemy.shoutTimer = 2.0 + Math.random() * 4.0;
   }
 
@@ -13501,6 +13753,7 @@ export class PaleciakiGameEngine {
 
     enemy.mesh.scale.multiplyScalar(profile.scaleMultiplier);
     enemy.collisionRadius = getEnemyCollisionRadius(enemy.type, enemy.collisionRadius) * profile.scaleMultiplier;
+    this.enemyCrowdResolutionNextAt = 0;
     enemy.maxHp = Math.max(1, Math.ceil(enemy.maxHp * profile.healthMultiplier));
     enemy.hp = enemy.maxHp;
     enemy.speed = Math.max(0.7, enemy.speed * profile.speedMultiplier);
@@ -13954,6 +14207,7 @@ export class PaleciakiGameEngine {
       }
       enemy.survivalEliteRole = profile.role;
       enemy.collisionRadius = getEnemyCollisionRadius(enemy.type, enemy.collisionRadius) * profile.scale;
+      this.enemyCrowdResolutionNextAt = 0;
       enemy.maxHp = Math.max(1, Math.ceil(enemy.maxHp * profile.health));
       enemy.hp = enemy.maxHp;
       enemy.speed = Math.max(0.7, enemy.speed * profile.speed);
@@ -14041,6 +14295,15 @@ export class PaleciakiGameEngine {
         hitIds: new Set(),
         homingTrail: true,
         homingTrailColor: 0xffa34a,
+        tracerStyle: {
+          color: 0xffd166,
+          width: 0.088,
+          lifeSeconds: 0.22,
+          minLength: 0.72,
+          opacity: 0.88,
+          coreOpacity: 0.96,
+          coreWhiteMix: 0.62,
+        },
       });
     }
     material.dispose();
@@ -18642,6 +18905,14 @@ export class PaleciakiGameEngine {
         );
         const distBack = toPlayer.length();
         if (distBack < 0.75) {
+          if (p.tracerStyle) {
+            this.tracerPool.emitSegment(
+              this.levelRoot,
+              p.mesh.position.x, p.mesh.position.y, p.mesh.position.z,
+              this.playerPos.x, this.playerPos.y + 0.75, this.playerPos.z,
+              p.tracerStyle,
+            );
+          }
           this.levelRoot.remove(p.mesh);
           if (p.weaponProjectile || p.disposeOnRemove) this.disposeTemporaryObject(p.mesh);
           removeAtSwap(this.projectiles, i);
@@ -18736,7 +19007,12 @@ export class PaleciakiGameEngine {
         // Directional shots keep their nose on the actual velocity vector,
         // including homing and returning projectiles, instead of sliding sideways.
         const horizontalSpeedSq = p.vel.x * p.vel.x + p.vel.z * p.vel.z;
-        if (horizontalSpeedSq > 0.0001) p.mesh.rotation.y = Math.atan2(p.vel.x, p.vel.z);
+        if (horizontalSpeedSq > 0.0001) {
+          p.mesh.rotation.y = Math.atan2(p.vel.x, p.vel.z);
+          if (ballisticGravity > 0) {
+            p.mesh.rotation.x = -Math.atan2(p.vel.y, Math.sqrt(horizontalSpeedSq));
+          }
+        }
       }
       if (p.homing) {
         const exhaust = p.mesh.userData.exhaust as THREE.Mesh | undefined;
@@ -18744,6 +19020,29 @@ export class PaleciakiGameEngine {
         if (exhaust) exhaust.scale.setScalar(0.88 + Math.sin(performance.now() * 0.045 + p.mesh.position.x) * 0.20);
         if (exhaustCore) exhaustCore.scale.setScalar(0.78 + Math.sin(performance.now() * 0.062 + p.mesh.position.z) * 0.28);
       }
+
+      // Resolve tracer style once; actual segment is emitted after collision so
+      // terminating impacts clip cleanly to the hit point without doubling up.
+      const activeTracerStyle = p.tracerStyle ?? (
+        p.firearmId
+          ? getFirearmTracerStyle(SURVIVAL_FIREARM_DEFS[p.firearmId].archetype, p.firearmColor ?? SURVIVAL_FIREARM_DEFS[p.firearmId].color)
+          : p.weaponId
+            ? getSurvivalWeaponTracerStyle(p.weaponId, SURVIVAL_DAMAGE_WEAPONS[p.weaponId].color)
+            : p.homingTrailColor
+              ? {
+                  color: p.homingTrailColor,
+                  width: 0.082,
+                  lifeSeconds: 0.22,
+                  minLength: 0.65,
+                  opacity: 0.84,
+                  coreOpacity: 0.94,
+                  coreWhiteMix: 0.54,
+                }
+              : null
+      );
+      let tracerEndX = p.mesh.position.x;
+      let tracerEndY = p.mesh.position.y;
+      let tracerEndZ = p.mesh.position.z;
 
       if (p.weaponId) {
         p.trailTimer = (p.trailTimer ?? 0) - dt;
@@ -18873,13 +19172,17 @@ export class PaleciakiGameEngine {
               const impactColor = p.firearmColor ?? (p.weaponId ? SURVIVAL_DAMAGE_WEAPONS[p.weaponId].color : 0x7dd3fc);
               this.spawnCompactImpact(e.x, e.y + 0.72, e.z, impactColor);
               if (p.firearmProjectile && p.firearmId) {
+                const archetype = SURVIVAL_FIREARM_DEFS[p.firearmId].archetype;
                 this.spawnSurvivalFirearmImpactFx(
-                  SURVIVAL_FIREARM_DEFS[p.firearmId].archetype,
+                  archetype,
                   e.x,
                   e.y,
                   e.z,
                   impactColor,
+                  p.vel.x,
+                  p.vel.z,
                 );
+                this.applyCrimsonlandWeaponKnockback(e, p.vel.x, p.vel.z, archetype);
               }
               if (p.firearmExplosion) {
                 this.triggerScreenShake(p.firearmId === 'ballistic_grenade_launcher' ? 0.15 : 0.22, 0.16);
@@ -18942,6 +19245,9 @@ export class PaleciakiGameEngine {
           if (p.detonateOnImpact) {
             p.detonated = true;
             this.spawnBallisticGrenadeDetonationFx(p.mesh.position.x, p.mesh.position.y, p.mesh.position.z, p.firearmColor ?? 0xd4a24f);
+            tracerEndX = closestX;
+            tracerEndY = Math.max(0.42, closestY);
+            tracerEndZ = closestZ;
             destroyProj = true;
             break;
           }
@@ -18959,6 +19265,9 @@ export class PaleciakiGameEngine {
               const projectileSpeed = Math.max(6, p.vel.length());
               p.vel.set(directionX, 0, directionZ).normalize().multiplyScalar(projectileSpeed);
               p.mesh.position.set(e.x, e.y + 0.72, e.z);
+              tracerEndX = e.x;
+              tracerEndY = e.y + 0.72;
+              tracerEndZ = e.z;
               p.bouncesRemaining = Math.max(0, (p.bouncesRemaining ?? 0) - 1);
               p.chainDamageMultiplier = (p.chainDamageMultiplier || 1) * (p.chainDamageRetention || 0.7);
               p.pierce = 0;
@@ -18975,10 +19284,26 @@ export class PaleciakiGameEngine {
           } else if (p.pierce && p.pierce > 0) {
             p.pierce--;
           } else {
+            tracerEndX = closestX;
+            tracerEndY = Math.max(0.42, closestY);
+            tracerEndZ = closestZ;
             destroyProj = true;
             break;
           }
         }
+      }
+
+      if (activeTracerStyle) {
+        this.tracerPool.emitSegment(
+          this.levelRoot,
+          previousProjectileX,
+          previousProjectileY,
+          previousProjectileZ,
+          tracerEndX,
+          tracerEndY,
+          tracerEndZ,
+          activeTracerStyle,
+        );
       }
 
       if (p.groundDetonationPending && p.detonateOnGround && !p.detonated && !destroyProj) {
@@ -19494,6 +19819,15 @@ export class PaleciakiGameEngine {
         homingTrailColor: 0x34d399,
         disposeOnRemove: true,
         hitIds: new Set<string>(),
+        tracerStyle: {
+          color: 0x34d399,
+          width: 0.085,
+          lifeSeconds: 0.24,
+          minLength: 0.72,
+          opacity: 0.86,
+          coreOpacity: 0.94,
+          coreWhiteMix: 0.56,
+        },
       });
     }
     this.emitFloatingToast('44 CM ZAGŁADY • 5 LATAJĄCYCH RAMION NAPROWADZAJĄCYCH', this.playerPos.x, this.playerPos.y + 1.55, this.playerPos.z, 'combo');
@@ -19869,10 +20203,12 @@ export class PaleciakiGameEngine {
 
     // A small billboard insignia follows each primary projectile so the weapon
     // family remains readable at the elevated warehouse camera distance.
+    const operatorTracerStyle = getOperatorTracerStyle(charId, isThirdCombo);
     for (let index = firstPrimaryProjectile; index < this.projectiles.length; index++) {
       const signature = createB4CombatSprite(charId, 0.34);
       signature.position.set(0, 0.24, 0);
       this.projectiles[index].mesh.add(signature);
+      this.projectiles[index].tracerStyle = operatorTracerStyle;
     }
 
     if (this.gameMode === 'survival' && (this.survivalUpgradeStacks.ricochet || 0) > 0) {
@@ -20200,6 +20536,15 @@ export class PaleciakiGameEngine {
       weaponProjectile: true,
       disposeOnRemove: true,
       hitIds: new Set<string>(),
+      tracerStyle: {
+        color: 0xfbbf24,
+        width: 0.115,
+        lifeSeconds: 0.28,
+        minLength: 0.95,
+        opacity: 0.92,
+        coreOpacity: 0.98,
+        coreWhiteMix: 0.65,
+      },
     });
     tank.recoilTimer = 0.16;
     sound.playTankCannon();
@@ -21024,6 +21369,15 @@ export class PaleciakiGameEngine {
           disposeOnRemove: true,
           stunDuration: 0.22,
           hitIds: new Set<string>(),
+          tracerStyle: {
+            color: 0xffd166,
+            width: 0.062,
+            lifeSeconds: 0.19,
+            minLength: 0.80,
+            opacity: 0.90,
+            coreOpacity: 0.96,
+            coreWhiteMix: 0.58,
+          },
         });
         capybara.attackCooldown = capybara.index === 0 ? 0.72 : 0.88;
         this.spawnCompactImpact(muzzlePosition.x, muzzlePosition.y, muzzlePosition.z, 0xffd166);
@@ -21443,6 +21797,15 @@ export class PaleciakiGameEngine {
           homingTrail: true,
           homingTrailColor: 0xf59e0b,
           hitIds: new Set(),
+          tracerStyle: {
+            color: 0xf59e0b,
+            width: 0.095,
+            lifeSeconds: 0.24,
+            minLength: 0.78,
+            opacity: 0.86,
+            coreOpacity: 0.94,
+            coreWhiteMix: 0.54,
+          },
         });
       });
       this.emitFloatingToast('🧱 SALWA GRESU 120x280 + ⚡ Kubełek Mocy!', this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
