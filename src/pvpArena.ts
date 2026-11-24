@@ -586,8 +586,36 @@ export const PVP_OPERATOR_PROFILES: Record<CharacterId, OperatorPvpProfile> = {
 export const PVP_FIREARM_COOLDOWN_MULTIPLIER = 3.6;
 export const PVP_FIREARM_DAMAGE_SCALE = PVP_NORMALIZED_HP / (10 * SURVIVAL_FIREARM_DEFS[STARTING_SURVIVAL_FIREARM].damage);
 
-/** Weapon-specific PvP recovery, derived from the exact same profile as Survival/Campaign. */
+const PVP_FIREARM_COOLDOWN_OVERRIDES: Readonly<Partial<Record<SurvivalFirearmId, number>>> = Object.freeze({
+  smg_45: 0.56,
+  assault_rifle: 0.72,
+  shotgun_12g: 2.4,
+  battle_rifle: 2.2,
+  minigun: 0.42,
+  rocket_launcher: 3.9,
+  flamethrower: 0.44,
+  plasma_rifle: 0.92,
+  ballistic_grenade_launcher: 3.6,
+  gauss_rifle: 4.2,
+});
+
+const PVP_FIREARM_DAMAGE_SCALE_MULTIPLIER: Readonly<Partial<Record<SurvivalFirearmId, number>>> = Object.freeze({
+  smg_45: 0.44,
+  assault_rifle: 0.48,
+  shotgun_12g: 0.52,
+  battle_rifle: 0.62,
+  minigun: 0.34,
+  rocket_launcher: 0.68,
+  flamethrower: 0.42,
+  plasma_rifle: 0.48,
+  ballistic_grenade_launcher: 0.68,
+  gauss_rifle: 0.54,
+});
+
+/** Weapon-specific PvP recovery, keeping starter_pistol synced with the shared multiplier while preventing burst melts from rapid drops. */
 export function getPvpFirearmAttackCooldown(firearmId: SurvivalFirearmId): number {
+  const override = PVP_FIREARM_COOLDOWN_OVERRIDES[firearmId];
+  if (override !== undefined) return override;
   return SURVIVAL_FIREARM_DEFS[firearmId].fireIntervalSeconds * PVP_FIREARM_COOLDOWN_MULTIPLIER;
 }
 
@@ -1235,17 +1263,19 @@ function firePlayerPrimary(player: PvpPlayerState, state: PvpArenaState): void {
 
   const rapidMultiplier = player.activePerk === 'rapid' && player.perkTimer > 0 ? PVP_RAPID_FIRE_COOLDOWN_MULTIPLIER : 1;
   const progression = getPlayerProgressionBonuses(player);
+  const basePvpCooldown = getPvpFirearmAttackCooldown(definition.id);
   player.attackCooldownTimer = Math.max(
     0.12,
-    definition.fireIntervalSeconds * PVP_FIREARM_COOLDOWN_MULTIPLIER * rapidMultiplier * progression.cooldownMultiplier,
+    basePvpCooldown * rapidMultiplier * progression.cooldownMultiplier,
   );
   player.shotsFired++;
   player.firearmAmmoById[player.primaryFirearmId] = Math.max(0, ammo - 1);
 
   // PvP retains manual timing/aim. Only the weapon profile supplies ballistics.
   const angle = player.aimAngle;
-  const spawnOffset = PVP_PLAYER_RADIUS + 0.35;
+  const spawnOffset = PVP_PLAYER_RADIUS + 0.45;
   const powerMultiplier = player.activePerk === 'power' && player.perkTimer > 0 ? 1.22 : 1;
+  const pvpScaleMultiplier = PVP_FIREARM_DAMAGE_SCALE_MULTIPLIER[definition.id] ?? 1;
   const projectileLife = definition.rangeMeters / Math.max(0.1, definition.projectileSpeed);
   const pelletCount = Math.max(1, definition.pellets);
   const spreadSeed = player.shotsFired * 0.754877666;
@@ -1264,7 +1294,7 @@ function firePlayerPrimary(player: PvpPlayerState, state: PvpArenaState): void {
       vx: dirX * definition.projectileSpeed,
       vz: dirZ * definition.projectileSpeed,
       radius: Math.max(0.12, definition.projectileRadius * 4.4),
-      damage: definition.damage * PVP_FIREARM_DAMAGE_SCALE * powerMultiplier,
+      damage: definition.damage * PVP_FIREARM_DAMAGE_SCALE * pvpScaleMultiplier * powerMultiplier,
       life: definition.projectileFuseSeconds ?? projectileLife,
       pierce: Math.max(1, definition.pierce + 1),
       color: definition.color,

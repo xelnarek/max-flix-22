@@ -35,17 +35,17 @@ const COLOR_WHITE = new THREE.Color(0xffffff);
 const COLOR_CORE_SCRATCH = new THREE.Color();
 
 const FIREARM_TRACER_PRESETS: Readonly<Record<SurvivalFirearmArchetype, Omit<TracerStyle, 'color'>>> = {
-  pistol: { width: 0.056, lifeSeconds: 0.16, minLength: 0.56, opacity: 0.88, coreOpacity: 0.96, coreWhiteMix: 0.52 },
-  smg: { width: 0.048, lifeSeconds: 0.14, minLength: 0.58, opacity: 0.84, coreOpacity: 0.95, coreWhiteMix: 0.48 },
-  rifle: { width: 0.062, lifeSeconds: 0.21, minLength: 0.90, opacity: 0.90, coreOpacity: 0.98, coreWhiteMix: 0.56 },
-  shotgun: { width: 0.052, lifeSeconds: 0.18, minLength: 0.64, opacity: 0.88, coreOpacity: 0.95, coreWhiteMix: 0.50 },
-  'heavy-rifle': { width: 0.098, lifeSeconds: 0.30, minLength: 1.25, opacity: 0.94, coreOpacity: 1.0, coreWhiteMix: 0.62 },
-  minigun: { width: 0.046, lifeSeconds: 0.14, minLength: 0.72, opacity: 0.86, coreOpacity: 0.96, coreWhiteMix: 0.55 },
-  rocket: { width: 0.125, lifeSeconds: 0.35, minLength: 0.84, opacity: 0.84, coreOpacity: 0.92, coreWhiteMix: 0.54 },
-  grenade: { width: 0.088, lifeSeconds: 0.28, minLength: 0.58, opacity: 0.80, coreOpacity: 0.88, coreWhiteMix: 0.42 },
-  flame: { width: 0.155, lifeSeconds: 0.21, minLength: 0.50, opacity: 0.74, coreOpacity: 0.84, coreWhiteMix: 0.46 },
-  plasma: { width: 0.115, lifeSeconds: 0.25, minLength: 0.82, opacity: 0.92, coreOpacity: 1.0, coreWhiteMix: 0.64 },
-  gauss: { width: 0.118, lifeSeconds: 0.44, minLength: 1.75, opacity: 0.98, coreOpacity: 1.0, coreWhiteMix: 0.80 },
+  pistol: { width: 0.064, lifeSeconds: 0.19, minLength: 0.64, opacity: 0.90, coreOpacity: 0.98, coreWhiteMix: 0.56 },
+  smg: { width: 0.056, lifeSeconds: 0.17, minLength: 0.66, opacity: 0.88, coreOpacity: 0.96, coreWhiteMix: 0.54 },
+  rifle: { width: 0.070, lifeSeconds: 0.24, minLength: 0.98, opacity: 0.92, coreOpacity: 1.0, coreWhiteMix: 0.60 },
+  shotgun: { width: 0.060, lifeSeconds: 0.20, minLength: 0.72, opacity: 0.90, coreOpacity: 0.97, coreWhiteMix: 0.56 },
+  'heavy-rifle': { width: 0.106, lifeSeconds: 0.34, minLength: 1.38, opacity: 0.96, coreOpacity: 1.0, coreWhiteMix: 0.66 },
+  minigun: { width: 0.054, lifeSeconds: 0.17, minLength: 0.80, opacity: 0.88, coreOpacity: 0.98, coreWhiteMix: 0.60 },
+  rocket: { width: 0.135, lifeSeconds: 0.38, minLength: 0.92, opacity: 0.88, coreOpacity: 0.94, coreWhiteMix: 0.58 },
+  grenade: { width: 0.096, lifeSeconds: 0.30, minLength: 0.64, opacity: 0.84, coreOpacity: 0.90, coreWhiteMix: 0.46 },
+  flame: { width: 0.165, lifeSeconds: 0.24, minLength: 0.58, opacity: 0.78, coreOpacity: 0.88, coreWhiteMix: 0.50 },
+  plasma: { width: 0.125, lifeSeconds: 0.28, minLength: 0.90, opacity: 0.95, coreOpacity: 1.0, coreWhiteMix: 0.68 },
+  gauss: { width: 0.132, lifeSeconds: 0.48, minLength: 1.90, opacity: 1.0, coreOpacity: 1.0, coreWhiteMix: 0.84 },
 };
 
 const WEAPON_TRACER_PRESETS: Readonly<Record<SurvivalDamageWeaponId, Omit<TracerStyle, 'color'>>> = {

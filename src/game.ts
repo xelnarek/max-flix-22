@@ -922,8 +922,8 @@ export class PaleciakiGameEngine {
   private survivalWeapons: SurvivalWeaponState[] = [];
   private survivalFirearm: SurvivalFirearmState = createStartingSurvivalFirearmState();
   private readonly survivalFirearmAttackAnimationSeconds: Readonly<Record<SurvivalFirearmId, number>> = {
-    starter_pistol: 0.22, smg_45: 0.16, assault_rifle: 0.20, shotgun_12g: 0.42, battle_rifle: 0.38,
-    minigun: 0.14, rocket_launcher: 0.50, flamethrower: 0.19, plasma_rifle: 0.30, gauss_rifle: 0.42,
+    starter_pistol: 0.22, smg_45: 0.13, assault_rifle: 0.16, shotgun_12g: 0.34, battle_rifle: 0.30,
+    minigun: 0.10, rocket_launcher: 0.44, flamethrower: 0.12, plasma_rifle: 0.22, gauss_rifle: 0.36,
     ballistic_grenade_launcher: 0.42,
   };
   private survivalFirearmStates = new Map<SurvivalFirearmId, SurvivalFirearmState>();
@@ -3798,6 +3798,16 @@ export class PaleciakiGameEngine {
       if (explosion.firearmId === 'ballistic_grenade_launcher') {
         this.spawnBallisticGrenadeDetonationFx(explosion.x, explosion.y, explosion.z, explosion.color);
         sound.playFirearmImpact('grenade');
+      } else if (explosion.firearmId === 'rocket_launcher') {
+        this.spawnExplosionParticles(explosion.x, explosion.y + 0.2, explosion.z, explosion.color || 0xef4444, this.isHandheldViewport ? 18 : 28);
+        this.spawnParticleRing(explosion.x, Math.max(0.1, explosion.y), explosion.z, 0xf97316);
+        this.triggerScreenShake(0.16, 0.12);
+        this.triggerBloomPulse(0.14);
+        sound.playFirearmImpact('rocket');
+      } else if (explosion.firearmId === 'plasma_rifle') {
+        this.spawnExplosionParticles(explosion.x, explosion.y + 0.15, explosion.z, explosion.color || 0xa78bfa, this.isHandheldViewport ? 12 : 18);
+        this.spawnParticleRing(explosion.x, Math.max(0.1, explosion.y), explosion.z, 0xa78bfa);
+        sound.playFirearmImpact('plasma');
       }
     }
     const local = this.pvpSlot === 'p1' ? state.p1 : state.p2;
@@ -3824,8 +3834,9 @@ export class PaleciakiGameEngine {
       this.survivalFirearmRecoilTimer = profile.recoilSettleSeconds;
       const forward = pvpAimDirectionFromAngle(local.aimAngle);
       const forwardVec = new THREE.Vector3(forward.x, 0, forward.z);
+      const pvpMuzzleOffset = 0.72 + (profile.muzzleForwardOffset - 0.78) * 0.45;
       const muzzle = new THREE.Vector3(this.playerPos.x, this.playerPos.y + 0.92, this.playerPos.z)
-        .addScaledVector(forwardVec, 0.86);
+        .addScaledVector(forwardVec, pvpMuzzleOffset);
       for (let shot = 0; shot < Math.min(3, shotsSinceLastSync); shot++) {
         this.spawnSurvivalFirearmMuzzleFx(firearmDefinition.archetype, firearmDefinition.color, muzzle, forwardVec);
       }
@@ -3840,11 +3851,13 @@ export class PaleciakiGameEngine {
     this.pvpLastObservedRemoteShotsFired = remote.shotsFired;
     if (remoteShotsSinceLastSync > 0 && this.remotePlayerGroup) {
       const remoteFirearmDefinition = SURVIVAL_FIREARM_DEFS[remote.primaryFirearmId];
-      this.remoteSurvivalFirearmRecoilTimer = SURVIVAL_FIREARM_PRESENTATION[remoteFirearmDefinition.archetype].recoilSettleSeconds;
+      const remoteProfile = SURVIVAL_FIREARM_PRESENTATION[remoteFirearmDefinition.archetype];
+      this.remoteSurvivalFirearmRecoilTimer = remoteProfile.recoilSettleSeconds;
       const remoteDirection = pvpAimDirectionFromAngle(remote.aimAngle);
       const remoteForward = new THREE.Vector3(remoteDirection.x, 0, remoteDirection.z);
+      const remoteMuzzleOffset = 0.68 + (remoteProfile.muzzleForwardOffset - 0.78) * 0.42;
       const remoteMuzzle = new THREE.Vector3(remote.x, remote.y + 0.92, remote.z)
-        .addScaledVector(remoteForward, 0.72);
+        .addScaledVector(remoteForward, remoteMuzzleOffset);
       for (let shot = 0; shot < Math.min(2, remoteShotsSinceLastSync); shot++) {
         this.spawnSurvivalFirearmMuzzleFx(
           remoteFirearmDefinition.archetype,
@@ -10512,6 +10525,8 @@ export class PaleciakiGameEngine {
         addBox(0.11, 0.04, 0.16, 0, 0.23, 0.00, glow);
         const minigunBrace = addCylinder(0.22, 0.22, 0.09, 0, 0.02, 0.58, metal, 14);
         minigunBrace.name = 'firearm-detail-minigun-barrel-brace';
+        const minigunFrontCollar = addCylinder(0.18, 0.18, 0.07, 0, 0.02, 0.96, dark, 14);
+        minigunFrontCollar.name = 'firearm-detail-minigun-front-collar';
         const ammoFeed = addBox(0.12, 0.15, 0.42, -0.205, -0.045, -0.04, dark);
         ammoFeed.name = 'firearm-detail-minigun-ammo-feed';
         for (let index = 0; index < 6; index++) {
@@ -10616,6 +10631,10 @@ export class PaleciakiGameEngine {
         }
         const hoseConnector = addCylinder(0.045, 0.045, 0.12, 0.16, 0.06, 0.34, accent, 9);
         hoseConnector.name = 'firearm-detail-flame-hose-connector';
+        const pilotTip = addCylinder(0.024, 0.024, 0.14, 0, -0.075, 0.84, glow, 8);
+        pilotTip.name = 'firearm-detail-flame-pilot-igniter';
+        const flameShield = addBox(0.16, 0.035, 0.22, 0, 0.11, 0.62, metal);
+        flameShield.name = 'firearm-detail-flame-heat-shield';
         break;
       }
       case 'plasma': {
@@ -10877,6 +10896,21 @@ export class PaleciakiGameEngine {
       new THREE.MeshBasicMaterial({ color: definition.color, transparent: true, opacity: 0.9 }));
     pickupGlow.position.set(0, 0.72, 0.58);
     group.add(pickupGlow);
+
+    const auraBeacon = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.46, 0.56, 0.92, 20, 1, true),
+      new THREE.MeshBasicMaterial({
+        color: definition.color,
+        transparent: true,
+        opacity: 0.16,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+        toneMapped: false,
+      }),
+    );
+    auraBeacon.position.y = 0.54;
+    group.add(auraBeacon);
     return group;
   }
 
@@ -11121,7 +11155,9 @@ export class PaleciakiGameEngine {
     this.attackSwingTimer = this.attackSwingDuration;
     this.requestGobkitAction(this.playerGobkitTrack, 'Attack', this.attackSwingDuration);
 
-    const start = new THREE.Vector3(this.playerPos.x, this.playerPos.y + 0.92, this.playerPos.z).addScaledVector(forward, 0.86);
+    const profile = SURVIVAL_FIREARM_PRESENTATION[definition.archetype];
+    const start = new THREE.Vector3(this.playerPos.x, this.playerPos.y + 0.92, this.playerPos.z)
+      .addScaledVector(forward, profile.muzzleForwardOffset);
     this.spawnSurvivalFirearmMuzzleFx(definition.archetype, definition.color, start, forward);
     this.spawnFirearmShellCasing(definition.archetype, start, forward);
     const tracerStyle = getFirearmTracerStyle(definition.archetype, definition.color);
@@ -11337,8 +11373,8 @@ export class PaleciakiGameEngine {
         addRing(-length * 0.30, width * 0.42, width * 0.06);
         break;
       case 'buckshot':
-        // Shotgun pellets stay separate: seven independently moving beads form a
-        // visible spread instead of a single fake shotgun slug.
+        // Seven bright pellets with crisp glinting tails form a readable Crimsonland cone.
+        addDetail(new THREE.CylinderGeometry(width * 0.14, width * 0.34, length * 1.45, 6), -length * 0.65, 0, 0, true);
         break;
       case 'heavy-slug':
         addDetail(new THREE.ConeGeometry(width * 0.48, length * 0.25, 8), length * 0.42, 0, 0, true);
@@ -11350,7 +11386,8 @@ export class PaleciakiGameEngine {
       case 'rocket':
         for (let fin = 0; fin < 3; fin++) addFin(-length * 0.30, fin * Math.PI * 2 / 3, width * 0.62, length * 0.23);
         addRing(-length * 0.42, width * 0.52, width * 0.14);
-        addDetail(new THREE.SphereGeometry(width * 0.31, 6, 4), -length * 0.45, 0, 0, false);
+        addDetail(new THREE.SphereGeometry(width * 0.34, 6, 4), -length * 0.46, 0, 0, false);
+        addDetail(new THREE.ConeGeometry(width * 0.28, length * 0.32, 7), -length * 0.62, 0, 0, true);
         break;
       case 'grenade-ballistic':
         addRing(length * 0.20, width * 0.55, width * 0.12);
@@ -11358,9 +11395,11 @@ export class PaleciakiGameEngine {
         for (let fin = 0; fin < 4; fin++) addFin(-length * 0.39, fin * Math.PI / 2, width * 0.66, length * 0.19);
         break;
       case 'flame':
-        addDetail(new THREE.SphereGeometry(width * 0.30, 6, 4), length * 0.30, 0, 0, false);
+        addDetail(new THREE.SphereGeometry(width * 0.34, 6, 4), length * 0.28, 0, 0, false);
+        addDetail(new THREE.SphereGeometry(width * 0.26, 6, 4), -length * 0.26, 0, 0, false);
         break;
       case 'plasma':
+        addDetail(new THREE.SphereGeometry(width * 0.40, 8, 6), 0, 0, 0, false);
         addRing(0, width * 0.86, width * 0.10);
         addRing(-length * 0.22, width * 0.58, width * 0.07);
         break;

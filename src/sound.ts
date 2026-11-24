@@ -908,12 +908,13 @@ class SoundEngine {
     const profile = profiles[archetype];
     const t = this.ctx.currentTime;
     const bus = this.effectsBus ?? this.ctx.destination;
+    const pitchJitter = 0.94 + Math.random() * 0.12;
 
     const body = this.ctx.createOscillator();
     const envelope = this.ctx.createGain();
     body.type = profile.wave;
-    body.frequency.setValueAtTime(profile.start, t);
-    body.frequency.exponentialRampToValueAtTime(profile.end, t + profile.duration);
+    body.frequency.setValueAtTime(profile.start * pitchJitter, t);
+    body.frequency.exponentialRampToValueAtTime(Math.max(18, profile.end * pitchJitter), t + profile.duration);
     envelope.gain.setValueAtTime(profile.volume, t);
     envelope.gain.exponentialRampToValueAtTime(0.001, t + profile.duration);
     body.connect(envelope);
@@ -925,14 +926,17 @@ class SoundEngine {
       const transient = this.ctx.createOscillator();
       const transientEnvelope = this.ctx.createGain();
       transient.type = 'square';
-      transient.frequency.setValueAtTime(profile.tick, t);
-      transient.frequency.exponentialRampToValueAtTime(Math.max(90, profile.tick * 0.35), t + 0.024);
-      transientEnvelope.gain.setValueAtTime(archetype === 'rocket' || archetype === 'shotgun' ? 0.065 : 0.035, t);
-      transientEnvelope.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+      transient.frequency.setValueAtTime(profile.tick * (0.96 + Math.random() * 0.08), t);
+      transient.frequency.exponentialRampToValueAtTime(Math.max(90, profile.tick * 0.35), t + 0.026);
+      transientEnvelope.gain.setValueAtTime(
+        archetype === 'rocket' || archetype === 'shotgun' || archetype === 'grenade' ? 0.072 : 0.04,
+        t,
+      );
+      transientEnvelope.gain.exponentialRampToValueAtTime(0.001, t + 0.032);
       transient.connect(transientEnvelope);
       transientEnvelope.connect(bus);
       transient.start(t);
-      transient.stop(t + 0.035);
+      transient.stop(t + 0.036);
     }
 
     // Crimsonland-style ballistic transient noise layer: adds gunpowder crack,
@@ -948,22 +952,22 @@ class SoundEngine {
       const isHeavy = archetype === 'heavy-rifle' || archetype === 'rifle';
       filter.type = archetype === 'flame' ? 'bandpass' : isEnergy ? 'highpass' : 'bandpass';
       filter.frequency.setValueAtTime(
-        archetype === 'flame' ? 680
-          : isEnergy ? 2200
+        (archetype === 'flame' ? 680
+          : isEnergy ? 2250
             : isBlast ? 540
-              : isHeavy ? 1150 : 1580,
+              : isHeavy ? 1180 : 1620) * (0.95 + Math.random() * 0.1),
         t,
       );
       filter.Q.setValueAtTime(archetype === 'flame' ? 0.65 : isEnergy ? 1.8 : 0.85, t);
       const noiseDuration = archetype === 'rocket' || archetype === 'grenade' ? 0.24
-        : archetype === 'shotgun' ? 0.16
-          : archetype === 'flame' ? 0.12
-            : isHeavy || archetype === 'gauss' ? 0.11 : 0.068;
-      const noisePeak = archetype === 'shotgun' ? 0.15
-        : archetype === 'rocket' || archetype === 'grenade' ? 0.16
-          : archetype === 'flame' ? 0.085
-            : isHeavy || archetype === 'gauss' ? 0.11
-              : archetype === 'minigun' || archetype === 'smg' ? 0.06 : 0.085;
+        : archetype === 'shotgun' ? 0.17
+          : archetype === 'flame' ? 0.125
+            : isHeavy || archetype === 'gauss' ? 0.115 : 0.072;
+      const noisePeak = archetype === 'shotgun' ? 0.165
+        : archetype === 'rocket' || archetype === 'grenade' ? 0.17
+          : archetype === 'flame' ? 0.092
+            : isHeavy || archetype === 'gauss' ? 0.115
+              : archetype === 'minigun' || archetype === 'smg' ? 0.068 : 0.092;
       noiseGain.gain.setValueAtTime(noisePeak, t);
       noiseGain.gain.exponentialRampToValueAtTime(0.001, t + noiseDuration);
       noiseSource.connect(filter);
