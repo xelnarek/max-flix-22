@@ -26,11 +26,12 @@ test('operator portraits no longer show old dumbbell or ratchet-wrench artwork',
 test('enemy role kits retire handheld tools previously used as improvised weapons', async () => {
   const source = await read('src/enemyRoleKits.ts');
   assert.match(source, /type Prop = [^;]*'none'/);
-  for (const retired of ['wrench', 'jackHandle', 'sceptre', 'pipe', 'baton', 'brick', 'forks', 'sprayer']) {
+  for (const retired of ['wrench', 'jackHandle', 'sceptre', 'pipe', 'baton', 'brick', 'sprayer']) {
     assert.doesNotMatch(source, new RegExp("prop:'" + retired + "'"));
     assert.doesNotMatch(source, new RegExp("case '" + retired + "':"));
   }
   assert.match(source, /s\.prop==='none'/);
+  assert.match(source, /case 'forks'/, 'the mutant forklift keeps its integrated tine silhouette');
   assert.match(source, /segmented chest rig/);
   assert.match(source, /high-vis shin bands/);
 });
