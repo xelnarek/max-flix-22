@@ -239,7 +239,8 @@ test('pixel-art portraits give each operator a different visual signature', asyn
   assert.ok(app.includes('Dawid: Orange cap backwards'));
   assert.ok(app.includes('Mateusz: Cyber-purple hoodie'));
   assert.ok(app.includes('Piotr: Crimson tactical beret'));
-  assert.ok(app.includes('Ratchet Wrench B4'));
+  assert.doesNotMatch(app, /Ratchet Wrench B4|<!-- Dumbbell -->/);
+  assert.ok(app.includes('B4 veteran shoulder insignia'));
   assert.match(app, /if \(heroAvatar\) heroAvatar\.innerHTML = operatorPortrait\(id\)/);
   assert.match(app, /badge\.innerHTML = operatorPortrait\(cardId\)/);
 });
