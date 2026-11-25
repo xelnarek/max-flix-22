@@ -35,6 +35,12 @@ test('enemy role kits retire handheld tools previously used as improvised weapon
   assert.match(source, /high-vis shin bands/);
 });
 
+test('Unity migration preview also omits legacy hand-held props', async () => {
+  const source = await read('unity/MaxFlixUnity/Assets/Scripts/Runtime/WarehouseWorldFactory.cs');
+  assert.doesNotMatch(source, /Training dumbbell|Stretch film roll|Ratchet wrench|"Taser"|"Wrench"/);
+  assert.match(source, /Firearms are attached by the active weapon system/);
+});
+
 test('enemy procedural role geometry remains merged into the existing rig anchors', async () => {
   const source = await read('src/enemyRoleKits.ts');
   assert.match(source, /mergeGeometries\(parts,false\)/);
