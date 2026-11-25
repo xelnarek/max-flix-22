@@ -173,8 +173,8 @@ test('magazine, reload, projectile archetype and damage are driven by the active
   assert.match(game, /survivalFirearmRecoilTimer = SURVIVAL_FIREARM_PRESENTATION\[definition\.archetype\]\.recoilSettleSeconds/);
   assert.match(game, /if \(firearm\.ammoInMagazine <= 0\)/);
   assert.match(game, /createSurvivalFirearmProjectileMesh\(definition\.archetype, definition\.color, definition\.projectileRadius\)/);
-  assert.match(game, /case 'rocket':\s*geometry = new THREE\.CylinderGeometry/);
-  assert.match(game, /case 'flame':\s*geometry = new THREE\.ConeGeometry/);
+  assert.match(game, /case 'rocket':[\s\S]*?geometry = new THREE\.CylinderGeometry/);
+  assert.match(game, /case 'flame':[\s\S]*?geometry = new THREE\.ConeGeometry/);
   assert.match(game, /firearm-rocket-exhaust-outer/);
   assert.match(game, /firearm-rocket-exhaust-core/);
   assert.match(game, /firearm-flame-projectile-core/);

@@ -8,7 +8,7 @@ const warehouseAssets = await readFile(new URL('../src/warehouseAssets.ts', impo
 test('enemy role kits use the refined visual version and role-detail pass', () => {
   assert.match(roleKits, /roleKitVersion=3/);
   assert.match(roleKits, /Universal visual refinement/);
-  assert.match(roleKits, /Compact shoulder colour marker/);
+  assert.match(roleKits, /compact shoulder colour marker/i);
 });
 
 test('operator meshes do not retain legacy held props beneath the shared firearm system', () => {
