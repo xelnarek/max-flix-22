@@ -3,8 +3,10 @@ import type { SurvivalDamageWeaponId } from './survivalDamageStats.ts';
 import type { SurvivalFirearmArchetype } from './survivalFirearms.ts';
 import type { CharacterId } from './types.ts';
 
+export type TracerEffectKind = 'kinetic' | 'rocket-exhaust' | 'flame-jet' | 'smoke' | 'plasma' | 'gauss';
 export interface TracerStyle {
   readonly color: number;
+  readonly effectKind?: TracerEffectKind;
   readonly width: number;
   readonly lifeSeconds: number;
   readonly minLength: number;
@@ -15,6 +17,8 @@ export interface TracerStyle {
 
 interface TracerSlot {
   readonly group: THREE.Group;
+  readonly outerMesh: THREE.Mesh;
+  readonly innerMesh: THREE.Mesh;
   readonly outerMat: THREE.MeshBasicMaterial;
   readonly innerMat: THREE.MeshBasicMaterial;
   active: boolean;
@@ -34,7 +38,7 @@ const QUAT_SCRATCH = new THREE.Quaternion();
 const COLOR_WHITE = new THREE.Color(0xffffff);
 const COLOR_CORE_SCRATCH = new THREE.Color();
 
-const FIREARM_TRACER_PRESETS: Readonly<Record<SurvivalFirearmArchetype, Omit<TracerStyle, 'color'>>> = {
+const FIREARM_TRACER_PRESETS: Readonly<Record<SurvivalFirearmArchetype, Omit<TracerStyle, 'color' | 'effectKind'>>> = {
   pistol: { width: 0.064, lifeSeconds: 0.19, minLength: 0.64, opacity: 0.90, coreOpacity: 0.98, coreWhiteMix: 0.56 },
   smg: { width: 0.056, lifeSeconds: 0.17, minLength: 0.66, opacity: 0.88, coreOpacity: 0.96, coreWhiteMix: 0.54 },
   rifle: { width: 0.070, lifeSeconds: 0.24, minLength: 0.98, opacity: 0.92, coreOpacity: 1.0, coreWhiteMix: 0.60 },
@@ -48,7 +52,7 @@ const FIREARM_TRACER_PRESETS: Readonly<Record<SurvivalFirearmArchetype, Omit<Tra
   gauss: { width: 0.132, lifeSeconds: 0.48, minLength: 1.90, opacity: 1.0, coreOpacity: 1.0, coreWhiteMix: 0.84 },
 };
 
-const WEAPON_TRACER_PRESETS: Readonly<Record<SurvivalDamageWeaponId, Omit<TracerStyle, 'color'>>> = {
+const WEAPON_TRACER_PRESETS: Readonly<Record<SurvivalDamageWeaponId, Omit<TracerStyle, 'color' | 'effectKind'>>> = {
   pallet_cannon: { width: 0.088, lifeSeconds: 0.24, minLength: 0.66, opacity: 0.82, coreOpacity: 0.90, coreWhiteMix: 0.45 },
   diamond_saw: { width: 0.082, lifeSeconds: 0.22, minLength: 0.74, opacity: 0.86, coreOpacity: 0.94, coreWhiteMix: 0.52 },
   glue_mine: { width: 0.072, lifeSeconds: 0.20, minLength: 0.46, opacity: 0.76, coreOpacity: 0.84, coreWhiteMix: 0.40 },
@@ -63,8 +67,20 @@ const WEAPON_TRACER_PRESETS: Readonly<Record<SurvivalDamageWeaponId, Omit<Tracer
   wz_boomerang: { width: 0.072, lifeSeconds: 0.22, minLength: 0.64, opacity: 0.84, coreOpacity: 0.92, coreWhiteMix: 0.50 },
 };
 
+const FIREARM_TRACER_EFFECTS: Readonly<Record<SurvivalFirearmArchetype, TracerEffectKind>> = {
+  pistol: 'kinetic', smg: 'kinetic', rifle: 'kinetic', shotgun: 'kinetic',
+  'heavy-rifle': 'kinetic', minigun: 'kinetic', rocket: 'rocket-exhaust',
+  grenade: 'smoke', flame: 'flame-jet', plasma: 'plasma', gauss: 'gauss',
+};
+const FIREARM_TRACER_COLORS: Partial<Record<SurvivalFirearmArchetype, number>> = {
+  rocket: 0xff7135, flame: 0xff8a28, grenade: 0xc5a477,
+};
 export function getFirearmTracerStyle(archetype: SurvivalFirearmArchetype, color: number): TracerStyle {
-  return { color, ...FIREARM_TRACER_PRESETS[archetype] };
+  return {
+    color: FIREARM_TRACER_COLORS[archetype] ?? color,
+    ...FIREARM_TRACER_PRESETS[archetype],
+    effectKind: FIREARM_TRACER_EFFECTS[archetype],
+  };
 }
 
 export function getSurvivalWeaponTracerStyle(weaponId: SurvivalDamageWeaponId, color: number): TracerStyle {
@@ -96,9 +112,9 @@ export function getOperatorTracerStyle(charId: CharacterId, isThirdCombo: boolea
  * Every slot combines a translucent additive sheath with an incandescent inner
  * core filament so shot streaks stay as unmistakable as the projectile itself.
  */
+type TracerGeometryPair = { readonly outer: THREE.BufferGeometry; readonly inner: THREE.BufferGeometry };
 export class ProjectileTracerPool {
-  private readonly outerGeo: THREE.CylinderGeometry;
-  private readonly innerGeo: THREE.CylinderGeometry;
+  private readonly geometries: Readonly<Record<TracerEffectKind, TracerGeometryPair>>;
   private readonly slots: TracerSlot[] = [];
   private readonly activeSlots: TracerSlot[] = [];
   private readonly freeSlots: TracerSlot[] = [];
@@ -111,9 +127,14 @@ export class ProjectileTracerPool {
       throw new RangeError('ProjectileTracerPool maxTracers must be a positive integer.');
     }
     this.maxTracers = maxTracers;
-    // Open-ended sheath + solid inner core aligned along local +Y of unit length 1.
-    this.outerGeo = new THREE.CylinderGeometry(0.42, 1.0, 1.0, 6, 1, true);
-    this.innerGeo = new THREE.CylinderGeometry(0.24, 0.68, 1.0, 5, 1, false);
+    this.geometries = {
+      kinetic: { outer: new THREE.CylinderGeometry(0.42, 1, 1, 6, 1, true), inner: new THREE.CylinderGeometry(0.24, 0.68, 1, 5) },
+      'rocket-exhaust': { outer: new THREE.ConeGeometry(0.82, 1, 8, 1, true), inner: new THREE.ConeGeometry(0.36, 1, 7) },
+      'flame-jet': { outer: new THREE.ConeGeometry(0.94, 1, 9), inner: new THREE.ConeGeometry(0.46, 1, 7) },
+      smoke: { outer: new THREE.SphereGeometry(0.66, 8, 6), inner: new THREE.SphereGeometry(0.34, 7, 5) },
+      plasma: { outer: new THREE.IcosahedronGeometry(0.58, 1), inner: new THREE.SphereGeometry(0.30, 8, 6) },
+      gauss: { outer: new THREE.CylinderGeometry(0.25, 0.38, 1, 7, 1, true), inner: new THREE.CylinderGeometry(0.12, 0.19, 1, 6) },
+    };
   }
 
   get activeCount(): number {
@@ -148,12 +169,12 @@ export class ProjectileTracerPool {
         toneMapped: false,
       });
       innerMat.userData.bloomEmitter = true;
-      const outerMesh = new THREE.Mesh(this.outerGeo, outerMat);
+      const outerMesh = new THREE.Mesh(this.geometries.kinetic.outer, outerMat);
       outerMesh.castShadow = false;
       outerMesh.receiveShadow = false;
       outerMesh.renderOrder = 3;
 
-      const innerMesh = new THREE.Mesh(this.innerGeo, innerMat);
+      const innerMesh = new THREE.Mesh(this.geometries.kinetic.inner, innerMat);
       innerMesh.castShadow = false;
       innerMesh.receiveShadow = false;
       innerMesh.renderOrder = 4;
@@ -165,6 +186,8 @@ export class ProjectileTracerPool {
 
       slot = {
         group,
+        outerMesh,
+        innerMesh,
         outerMat,
         innerMat,
         active: false,
@@ -242,6 +265,11 @@ export class ProjectileTracerPool {
     slot.baseOpacity = style.opacity;
     slot.baseCoreOpacity = style.coreOpacity;
 
+    const pair = this.geometries[style.effectKind ?? 'kinetic'];
+    slot.outerMesh.geometry = pair.outer;
+    slot.innerMesh.geometry = pair.inner;
+    slot.outerMesh.scale.set(1, 1, 1);
+    slot.innerMesh.scale.set(1, 1, 1);
     slot.outerMat.color.setHex(style.color);
     slot.outerMat.opacity = style.opacity;
 
@@ -306,7 +334,9 @@ export class ProjectileTracerPool {
     }
     this.slots.length = 0;
     this.freeSlots.length = 0;
-    this.outerGeo.dispose();
-    this.innerGeo.dispose();
+    for (const pair of Object.values(this.geometries)) {
+      pair.outer.dispose();
+      pair.inner.dispose();
+    }
   }
 }

@@ -173,8 +173,14 @@ test('magazine, reload, projectile archetype and damage are driven by the active
   assert.match(game, /survivalFirearmRecoilTimer = SURVIVAL_FIREARM_PRESENTATION\[definition\.archetype\]\.recoilSettleSeconds/);
   assert.match(game, /if \(firearm\.ammoInMagazine <= 0\)/);
   assert.match(game, /createSurvivalFirearmProjectileMesh\(definition\.archetype, definition\.color, definition\.projectileRadius\)/);
-  assert.match(game, /case 'rocket':\s*geometry = new THREE\.ConeGeometry/);
-  assert.match(game, /case 'flame':\s*geometry = new THREE\.SphereGeometry/);
+  assert.match(game, /case 'rocket':\s*geometry = new THREE\.CylinderGeometry/);
+  assert.match(game, /case 'flame':\s*geometry = new THREE\.ConeGeometry/);
+  assert.match(game, /firearm-rocket-exhaust-outer/);
+  assert.match(game, /firearm-rocket-exhaust-core/);
+  assert.match(game, /firearm-flame-projectile-core/);
+  assert.match(game, /private spawnFlamethrowerMuzzleJet\(/);
+  assert.match(game, /private spawnRocketDetonationFx\(/);
+  assert.match(game, /private detonateRocketFirearmProjectile\(/);
   assert.match(game, /spawnSurvivalFirearmMuzzleFx\(definition\.archetype, definition\.color, start, forward\)/);
   assert.match(game, /getSurvivalFirearmCyclePose\(archetype, cycleProgress\)/);
   assert.match(game, /cyclePose\.boltOffsetZ/);
@@ -183,6 +189,9 @@ test('magazine, reload, projectile archetype and damage are driven by the active
   assert.match(game, /case 'gauss':/);
   assert.match(game, /firearmProjectile: true/);
   assert.match(game, /firearmExplosion: definition\.archetype === 'rocket' \|\| definition\.archetype === 'grenade'/);
+  assert.match(firearms, /rocket_launcher: \{[\s\S]*?detonateOnImpact: true/);
+  assert.match(game, /p\.firearmId === 'rocket_launcher'[\s\S]*?this\.detonateRocketFirearmProjectile/);
+  assert.doesNotMatch(game, /p\.firearmId !== 'ballistic_grenade_launcher'\) sound\.playBossWarning/);
   assert.match(game, /aoeDamageMultiplier: definition\.aoeDamageMultiplier/);
   assert.match(game, /damageSource: getSurvivalFirearmDamageSource\(definition\.id\)/);
   assert.match(game, /const adjustedProjectileDamage = p\.firearmProjectile/);

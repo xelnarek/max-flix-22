@@ -55,7 +55,11 @@ test('all firearms, survival weapons, and operators produce vivid tracer profile
     assert.ok(style.width > 0 && style.lifeSeconds >= 0.13);
     assert.ok(style.opacity >= 0.7 && style.coreOpacity >= 0.8);
     assert.ok(style.minLength >= 0.45);
+    assert.ok(style.effectKind, 'every firearm must resolve to a dedicated tracer family');
   }
+  assert.equal(getFirearmTracerStyle('rocket', 0xef4444).effectKind, 'rocket-exhaust');
+  assert.equal(getFirearmTracerStyle('flame', 0xfb923c).effectKind, 'flame-jet');
+  assert.equal(getFirearmTracerStyle('grenade', 0xd4a24f).effectKind, 'smoke');
 
   for (const [id, meta] of Object.entries(SURVIVAL_DAMAGE_WEAPONS)) {
     const style = getSurvivalWeaponTracerStyle(id, meta.color);

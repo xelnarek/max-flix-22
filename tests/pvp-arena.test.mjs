@@ -844,6 +844,35 @@ test('PvP firearm pickups are real shared-catalog 3D weapon drops with one fair 
 });
 
 
+test('PvP rocket impacts publish an explosion event and apply server-owned splash damage', async () => {
+  const { SURVIVAL_FIREARM_DEFS } = await import('../src/survivalFirearms.ts');
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  resetPvpRound(state);
+  advanceArena(state, 3.1);
+  state.obstacles = [];
+  state.pickup.active = false;
+  state.perkDrop.active = false;
+  state.p1.x = -10;
+  state.p1.z = 0;
+  state.p2.x = -3;
+  state.p2.z = 0;
+  state.p1.primaryFirearmId = 'rocket_launcher';
+  state.p1.firearmAmmoById.rocket_launcher = SURVIVAL_FIREARM_DEFS.rocket_launcher.magazineSize;
+
+  stepPvpArena(state, 0.05, {
+    moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: false, wantFire: true,
+  });
+  assert.equal(state.projectiles.length, 1);
+  assert.equal(state.projectiles[0].firearmId, 'rocket_launcher');
+  assert.equal(state.projectiles[0].detonateOnImpact, true);
+  advanceArena(state, 0.40);
+
+  assert.equal(state.projectiles.length, 0, 'rocket should be consumed by its first impact');
+  assert.ok(state.p2.hp < state.p2.maxHp, 'direct and area damage should reach the target');
+  assert.ok(state.firearmExplosionEvents.length > 0, 'the room must publish an explosion event for both clients');
+  assert.equal(state.firearmExplosionEvents.at(-1).firearmId, 'rocket_launcher');
+});
+
 test('PvP grenade follows a ballistic arc and clears cover that a straight bullet would hit', async () => {
   const { SURVIVAL_FIREARM_DEFS } = await import('../src/survivalFirearms.ts');
   const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
