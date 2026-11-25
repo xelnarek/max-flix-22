@@ -264,7 +264,7 @@ test('player-fired projectiles use shared swept first-contact collision in Survi
   const update = game.slice(start, end);
   assert.ok(start >= 0 && end > start, 'shared projectile update must remain present');
   assert.match(update, /findFirstProjectileEnemyImpact\([\s\S]*?this\.playerProjectileEnemyImpactScratch[\s\S]*?p\.hitIds,[\s\S]*?false,[\s\S]*?1\.0/);
-  assert.match(update, /const e = enemyImpact\.actor/);
+  assert.match(update, /const e = enemyImpact\.actor as EnemyItem/);
   assert.match(update, /const closestX = enemyImpact\.x/);
   assert.match(update, /this\.damageEnemy\(e, baseDmg, closestX, closestZ, projectileDamageSource\)/);
   assert.match(update, /if \(p\.aoeRadius && p\.aoeRadius > 0 && !\(p\.firearmProjectile && p\.detonateOnImpact\)\)/);
