@@ -3028,12 +3028,12 @@ class PaleciakiScene extends xb.Script {
           smg: 'KRÓTKI DYSTANS',
           rifle: 'UNIWERSALNA',
           shotgun: 'OBRAŻENIA Z BLISKA',
-          'heavy-rifle': 'PRECYZJA I PRZEBICIE',
+          'heavy-rifle': 'PRECYZJA / SIŁA',
           minigun: 'KONTROLA TŁUMU',
           rocket: 'OBRAŻENIA OBSZAROWE',
           flame: 'OGIEŃ I PRESJA',
           plasma: 'ENERGIA / OBSZAR',
-          gauss: 'SNIPER / PENETRACJA',
+          gauss: 'SNIPER / PRECYZJA',
           grenade: 'BALISTYKA / OBSZAR',
         };
         role.textContent = firearmRoleLabels[firearm.archetype] || firearm.archetype.toUpperCase();
@@ -3080,7 +3080,6 @@ class PaleciakiScene extends xb.Script {
         traits.className = 'armory-card-traits';
         const traitLabels: string[] = [];
         if (firearm.pellets > 1) traitLabels.push(firearm.pellets + ' pocisków na salwę');
-        if (firearm.pierce > 0) traitLabels.push('Przebicie: ' + firearm.pierce);
         if (firearm.aoeRadius > 0) traitLabels.push('Obszar: ' + firearm.aoeRadius.toFixed(1).replace('.', ',') + ' m');
         if (firearm.igniteOnHit) traitLabels.push('Podpalenie');
         if (traitLabels.length === 0) traitLabels.push('Pojedynczy cel');

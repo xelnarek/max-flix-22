@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import {
   STARTING_SURVIVAL_FIREARM,
   SURVIVAL_FIREARM_DEFS,
@@ -105,4 +106,16 @@ test('pickup creates a fresh loaded magazine and damage accounting source is uni
   assert.equal(state.ammoInMagazine, 5);
   assert.equal(state.reloadRemaining, 0);
   assert.equal(getSurvivalFirearmDamageSource('rocket_launcher'), 'firearm:rocket_launcher');
+});
+
+
+test('firearm armory copy no longer advertises standard-projectile penetration', async () => {
+  const [app, catalogue] = await Promise.all([
+    readFile(new URL('../src/index.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/survivalFirearms.ts', import.meta.url), 'utf8'),
+  ]);
+
+  assert.doesNotMatch(app, /Przebicie: /);
+  assert.doesNotMatch(app, /SNIPER \/ PENETRACJA|PRECYZJA I PRZEBICIE/);
+  assert.doesNotMatch(catalogue, /lekkie przebicie|przebiciu do trzech celów|przebija kolejne szeregi|przebija pierwszy cel|przebija całe linie/i);
 });
