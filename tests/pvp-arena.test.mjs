@@ -1050,3 +1050,45 @@ test('PvP projectile resolves its final swept segment before lifetime expiry', (
   assert.equal(state.p1.shotsHit, 1, 'the final-frame hit must update authoritative accuracy');
   assert.equal(state.projectiles.length, 0, 'the expired projectile must be consumed after the hit');
 });
+
+
+test('PvP consumes a high-pierce firearm projectile on its first authoritative player hit', () => {
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  resetPvpRound(state);
+  state.status = 'in_round';
+  state.countdownTimer = 0;
+  state.obstacles = [];
+  state.pickup.active = false;
+  state.perkDrop.active = false;
+  state.firearmDrop.active = false;
+  state.p1.x = -3;
+  state.p1.z = 0;
+  state.p2.x = 0;
+  state.p2.z = 0;
+  state.projectiles = [{
+    id: 'high-pierce-first-contact',
+    ownerSlot: 'p1',
+    x: -1.5,
+    y: 0.6,
+    z: 0,
+    vx: 20,
+    vz: 0,
+    radius: 0.2,
+    damage: 50,
+    life: 1,
+    pierce: 8,
+    color: 0x3b82f6,
+    kind: 'primary',
+    firearmId: 'gauss_rifle',
+  }];
+  const targetHpBefore = state.p2.hp;
+
+  stepPvpArena(state, 0.05);
+
+  assert.equal(state.p2.hp, targetHpBefore - 50, 'the authoritative first hit must apply damage once');
+  assert.equal(state.p1.shotsHit, 1);
+  assert.equal(state.p1.damageDealt, 50);
+  assert.equal(state.hitEvents.length, 1);
+  assert.equal(state.hitEvents[0].firearmId, 'gauss_rifle');
+  assert.equal(state.projectiles.length, 0, 'a positive legacy pierce value must not let the shot continue through the opponent');
+});
