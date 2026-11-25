@@ -263,12 +263,13 @@ test('player-fired projectiles use shared swept first-contact collision in Survi
   const end = game.indexOf('private updateSpecialEffects(dt: number)', start);
   const update = game.slice(start, end);
   assert.ok(start >= 0 && end > start, 'shared projectile update must remain present');
-  assert.match(update, /findFirstProjectileEnemyImpact\\([\\s\\S]*?this\\.playerProjectileEnemyImpactScratch[\\s\\S]*?p\\.hitIds,[\\s\\S]*?false,[\\s\\S]*?1\\.0/);
-  assert.match(update, /const e = enemyImpact\\.actor/);
-  assert.match(update, /const closestX = enemyImpact\\.x/);
-  assert.match(update, /this\\.damageEnemy\\(e, baseDmg, closestX, closestZ, projectileDamageSource\\)/);
-  assert.match(game, /private fireSurvivalFirearm\\(target\\?: EnemyItem\\)/);
-  assert.match(game, /if \\(currentGameMode !== 'pvp'\\) \\{\\s*this\\.fireSurvivalFirearm\\(\\)/);
+  assert.match(update, /findFirstProjectileEnemyImpact\([\s\S]*?this\.playerProjectileEnemyImpactScratch[\s\S]*?p\.hitIds,[\s\S]*?false,[\s\S]*?1\.0/);
+  assert.match(update, /const e = enemyImpact\.actor/);
+  assert.match(update, /const closestX = enemyImpact\.x/);
+  assert.match(update, /this\.damageEnemy\(e, baseDmg, closestX, closestZ, projectileDamageSource\)/);
+  assert.match(update, /if \(p\.aoeRadius && p\.aoeRadius > 0 && !\(p\.firearmProjectile && p\.detonateOnImpact\)\)/);
+  assert.match(game, /private fireSurvivalFirearm\(target\?: EnemyItem\)/);
+  assert.match(game, /if \(currentGameMode !== 'pvp'\) \{\s*this\.fireSurvivalFirearm\(\)/);
 });
 
 test('direct rocket and ballistic grenade impacts detonate at the contact point and splash nearby enemies once', () => {
