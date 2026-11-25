@@ -19704,7 +19704,7 @@ export class PaleciakiGameEngine {
           1.0,
         );
         if (enemyImpact) {
-          const e = enemyImpact.actor;
+          const e = enemyImpact.actor as EnemyItem;
           const closestX = enemyImpact.x;
           const closestY = enemyImpact.y;
           const closestZ = enemyImpact.z;
