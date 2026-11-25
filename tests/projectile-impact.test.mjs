@@ -102,3 +102,42 @@ test('enemy impact reuses output and target/body scratch records without changin
   assert.equal(target.y, near.y + 0.62);
   assert.ok(hit && hit.t > 0 && hit.t < 0.5);
 });
+
+
+test('player-fired projectiles register point-blank muzzle overlap instead of treating the target as the shooter', () => {
+  const target = { id: 'point-blank', type: 'inspector', x: 0, y: 0.5, z: 0, state: 'chase' };
+  const hit = findFirstProjectileEnemyImpact(
+    { x: 0, y: 1.12, z: 0 },
+    { x: 3, y: 1.12, z: 0 },
+    [target],
+    0.9,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    false,
+    1.0,
+  );
+  assert.ok(hit, 'a living enemy overlapping the muzzle must receive the shot');
+  assert.equal(hit.actor.id, target.id);
+  assert.equal(hit.t, 0);
+});
+
+test('piercing projectiles skip targets already hit and select the next body along the segment', () => {
+  const near = { id: 'near', type: 'inspector', x: 0, y: 0.5, z: 0, state: 'chase' };
+  const far = { id: 'far', type: 'walczak', x: 3, y: 0.5, z: 0, state: 'chase' };
+  const hit = findFirstProjectileEnemyImpact(
+    { x: -4, y: 1.12, z: 0 },
+    { x: 5, y: 1.12, z: 0 },
+    [far, near],
+    0.9,
+    undefined,
+    undefined,
+    undefined,
+    new Set(['near']),
+    false,
+    1.0,
+  );
+  assert.ok(hit);
+  assert.equal(hit.actor.id, 'far');
+});

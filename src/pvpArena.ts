@@ -970,16 +970,6 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
 
     const targetPlayer = proj.ownerSlot === 'p1' ? state.p2 : state.p1;
     const shooterPlayer = proj.ownerSlot === 'p1' ? state.p1 : state.p2;
-    if (proj.life <= 0 && !groundDetonation) {
-      if (proj.firearmId === 'rocket_launcher') {
-        proj.x = endX; proj.y = nextY; proj.z = endZ;
-        applyPvpProjectileSplashDamage(state, proj, shooterPlayer, targetPlayer, proj.x, proj.z);
-        recordPvpFirearmExplosion(state, proj, proj.x, proj.y, proj.z);
-      }
-      state.projectiles.splice(i, 1);
-      continue;
-    }
-
     const obstacleT = firstProjectileObstacleHit(
       startX, startZ, endX, endZ, proj.radius, state.obstacles,
       gravity > 0 ? heightAtT : undefined,
@@ -1037,7 +1027,8 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
       }
 
       proj.pierce--;
-      if (proj.detonateOnImpact || proj.pierce <= 0) state.projectiles.splice(i, 1);
+      // Resolve the final swept segment before consuming an expiring round.
+      if (proj.detonateOnImpact || proj.pierce <= 0 || proj.life <= 0) state.projectiles.splice(i, 1);
       if (targetPlayer.hp <= 0) {
         handleKnockout(state, shooterPlayer.slot);
         break;
@@ -1069,7 +1060,9 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
         proj.x > PVP_ARENA_BOUNDS.maxX + 2 ||
         proj.z < PVP_ARENA_BOUNDS.minZ - 2 ||
         proj.z > PVP_ARENA_BOUNDS.maxZ + 2;
-      if (projectileOutOfBounds) {
+      if (proj.life <= 0 || projectileOutOfBounds) {
+        // Lifetime expiry is a range-end event, but only after the last swept
+        // segment has had a chance to hit a player or warehouse cover.
         if (proj.firearmId === 'rocket_launcher') {
           applyPvpProjectileSplashDamage(state, proj, shooterPlayer, targetPlayer, proj.x, proj.z);
           recordPvpFirearmExplosion(state, proj, proj.x, proj.y, proj.z);

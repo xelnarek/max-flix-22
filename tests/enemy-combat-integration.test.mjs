@@ -256,3 +256,26 @@ test('enemy death animates the one full rig and hides its actor only after the d
   assert.match(game, /if \(timer <= 0\) \{[\s\S]*?mesh\.visible = false/);
   assert.doesNotMatch(game, /actorLodProxy|actorLodProxyRoot|lockEnemyDeathVisualToSingleRig|shouldUseEnemyVisualLodProxy/);
 });
+
+
+test('player-fired projectiles use shared swept first-contact collision in Survival and Campaign', () => {
+  const start = game.indexOf('private updateProjectiles(dt: number)');
+  const end = game.indexOf('private updateSpecialEffects(dt: number)', start);
+  const update = game.slice(start, end);
+  assert.ok(start >= 0 && end > start, 'shared projectile update must remain present');
+  assert.match(update, /findFirstProjectileEnemyImpact\([\s\S]*?this\.playerProjectileEnemyImpactScratch[\s\S]*?p\.hitIds,[\s\S]*?false,[\s\S]*?1\.0/);
+  assert.match(update, /const e = enemyImpact\.actor as EnemyItem/);
+  assert.match(update, /const closestX = enemyImpact\.x/);
+  assert.match(update, /this\.damageEnemy\(e, baseDmg, closestX, closestZ, projectileDamageSource\)/);
+  assert.match(update, /if \(p\.aoeRadius && p\.aoeRadius > 0 && !\(p\.firearmProjectile && p\.detonateOnImpact\)\)/);
+  assert.match(game, /private fireSurvivalFirearm\(target\?: EnemyItem\)/);
+  assert.match(game, /if \(currentGameMode !== 'pvp'\) \{\s*this\.fireSurvivalFirearm\(\)/);
+});
+
+test('direct rocket and ballistic grenade impacts detonate at the contact point and splash nearby enemies once', () => {
+  assert.match(game, /private detonateRocketFirearmProjectile\([\s\S]*?directHitEnemyId\?: string/);
+  assert.match(game, /this\.detonateRocketFirearmProjectile\([\s\S]*?true, e\.id/);
+  assert.match(game, /enemy\.id === directHitEnemyId/);
+  assert.match(game, /this\.detonateBallisticFirearmProjectile\([\s\S]*?e\.id/);
+  assert.match(game, /p\.mesh\.position\.set\(closestX, Math\.max\(0\.14, closestY\), closestZ\)/);
+});

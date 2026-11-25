@@ -1023,3 +1023,30 @@ test('PvP rapid-fire weapon drops apply balanced PvP cooldown overrides and dama
   assert.ok(state.projectiles.length >= 1);
   assert.ok(state.projectiles[0].damage < 50, 'minigun PvP damage per bullet must be scaled to avoid instant melts');
 });
+
+
+test('PvP projectile resolves its final swept segment before lifetime expiry', () => {
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  resetPvpRound(state);
+  advanceArena(state, 3.0);
+  state.obstacles = [];
+  state.pickup.active = false;
+  state.perkDrop.active = false;
+  state.p1.x = -8;
+  state.p1.z = 0;
+  state.p2.x = 0;
+  state.p2.z = 0;
+  state.projectiles = [{
+    id: 'last-frame-hit', ownerSlot: 'p1',
+    x: -2, y: 0.6, z: 0, vx: 30, vz: 0,
+    radius: 0.1, damage: 80, life: 0.05, pierce: 0,
+    color: 0xffffff, kind: 'primary', firearmId: 'starter_pistol',
+  }];
+  const hpBefore = state.p2.hp;
+
+  stepPvpArena(state, 0.1);
+
+  assert.ok(state.p2.hp < hpBefore, 'the shot must hit during its final movement segment');
+  assert.equal(state.p1.shotsHit, 1, 'the final-frame hit must update authoritative accuracy');
+  assert.equal(state.projectiles.length, 0, 'the expired projectile must be consumed after the hit');
+});

@@ -713,6 +713,12 @@ export class PaleciakiGameEngine {
   private readonly enemyProjectilePlayerImpactScratch: ProjectileImpactScratch = { t: 0, x: 0, y: 0, z: 0 };
   private readonly enemyProjectileBodyImpactScratch: ProjectileImpactScratch = { t: 0, x: 0, y: 0, z: 0 };
   private readonly enemyProjectileEnemyImpactScratch: ProjectileEnemyImpactScratch = { t: 0, x: 0, y: 0, z: 0, actor: null };
+  // Shared swept-collision scratch for every player-fired weapon in Survival and Campaign.
+  private readonly playerProjectileStartScratch: MutableProjectileSegmentPoint = { x: 0, y: 0, z: 0 };
+  private readonly playerProjectileEndScratch: MutableProjectileSegmentPoint = { x: 0, y: 0, z: 0 };
+  private readonly playerProjectileEnemyTargetScratch: MutableProjectileSegmentPoint = { x: 0, y: 0, z: 0 };
+  private readonly playerProjectileBodyImpactScratch: ProjectileImpactScratch = { t: 0, x: 0, y: 0, z: 0 };
+  private readonly playerProjectileEnemyImpactScratch: ProjectileEnemyImpactScratch = { t: 0, x: 0, y: 0, z: 0, actor: null };
   private readonly enemySeparationScratch = { x: 0, z: 0 };
   private readonly enemyObstacleAvoidanceScratch = { x: 0, z: 0 };
   private readonly enemyProjectileDodgeScratch = { x: 0, z: 0 };
@@ -11435,6 +11441,7 @@ export class PaleciakiGameEngine {
     projectile: (typeof this.projectiles)[number],
     damageMultiplier: number,
     applySplashDamage = true,
+    directHitEnemyId?: string,
   ): void {
     const x = projectile.mesh.position.x;
     const y = projectile.mesh.position.y;
@@ -11446,7 +11453,7 @@ export class PaleciakiGameEngine {
     if (radius <= 0 || splashMultiplier <= 0) return;
     const splashDamage = Math.max(0.1, (projectile.damage ?? 1) * splashMultiplier * damageMultiplier);
     for (const enemy of this.enemies) {
-      if (enemy.state === 'defeated' || Math.hypot(enemy.x - x, enemy.z - z) > radius) continue;
+      if (enemy.state === 'defeated' || enemy.id === directHitEnemyId || Math.hypot(enemy.x - x, enemy.z - z) > radius) continue;
       this.damageEnemy(enemy, splashDamage, x, z, projectile.damageSource);
       this.applyCrimsonlandWeaponKnockback(enemy, enemy.x - x, enemy.z - z, 'rocket', 1.18);
       enemy.onFireTimer = Math.max(enemy.onFireTimer || 0, 2.5);
@@ -11467,6 +11474,7 @@ export class PaleciakiGameEngine {
   private detonateBallisticFirearmProjectile(
     projectile: (typeof this.projectiles)[number],
     damageMultiplier: number,
+    directHitEnemyId?: string,
   ): void {
     const x = projectile.mesh.position.x;
     const y = projectile.mesh.position.y;
@@ -11477,7 +11485,7 @@ export class PaleciakiGameEngine {
     if (radius <= 0 || splashMultiplier <= 0) return;
     const baseSplashDamage = Math.max(0.1, (projectile.damage ?? 1) * splashMultiplier * damageMultiplier);
     for (const enemy of this.enemies) {
-      if (enemy.state === 'defeated' || Math.hypot(enemy.x - x, enemy.z - z) > radius) continue;
+      if (enemy.state === 'defeated' || enemy.id === directHitEnemyId || Math.hypot(enemy.x - x, enemy.z - z) > radius) continue;
       this.damageEnemy(enemy, baseSplashDamage, x, z, projectile.damageSource);
       this.applyCrimsonlandWeaponKnockback(enemy, enemy.x - x, enemy.z - z, 'grenade', 1.15);
       enemy.stunTimer = Math.max(enemy.stunTimer, 0.24);
@@ -19665,33 +19673,41 @@ export class PaleciakiGameEngine {
 
       const segmentMidX = (previousProjectileX + p.mesh.position.x) * 0.5;
       const segmentMidZ = (previousProjectileZ + p.mesh.position.z) * 0.5;
-      // Exact hit radius is 1.35 m; a compact margin keeps fast-shot segment tests conservative without flooding the candidate set.
+      // Keep the broadphase conservative; the shared body sweep resolves the exact first contact.
       const broadphaseRadius = Math.sqrt(segmentLengthSq) * 0.5 + 1.65;
       const collisionCandidates = this.enemies.length >= 12
         ? this.enemySpatialIndex.query(segmentMidX, segmentMidZ, broadphaseRadius)
         : this.enemies;
-      for (const e of collisionCandidates) {
-        if (e.state === 'defeated') continue;
-        if (p.hitIds && p.hitIds.has(e.id)) continue;
 
-        // Test the closest point on this frame's movement segment, not only
-        // the projectile endpoint. Fast shots remain reliable on lower-FPS phones.
-        const projection = segmentLengthSq > 0.000001
-          ? THREE.MathUtils.clamp(
-              ((e.x - previousProjectileX) * segmentX +
-                (e.y - previousProjectileY) * segmentY +
-                (e.z - previousProjectileZ) * segmentZ) / segmentLengthSq,
-              0,
-              1
-            )
-          : 0;
-        const closestX = previousProjectileX + segmentX * projection;
-        const closestY = previousProjectileY + segmentY * projection;
-        const closestZ = previousProjectileZ + segmentZ * projection;
-        const offsetX = closestX - e.x;
-        const offsetZ = closestZ - e.z;
-        if (offsetX * offsetX + offsetZ * offsetZ < 1.35 * 1.35 &&
-          Math.abs(closestY - e.y) < 1.35) {
+      // The same swept vertical-body test is used for every primary weapon.
+      // Player shots do not have an enemy owner in the candidate list, so a
+      // target already touching the muzzle remains a valid point-blank hit.
+      {
+        const projectileStart = this.playerProjectileStartScratch;
+        projectileStart.x = previousProjectileX;
+        projectileStart.y = previousProjectileY;
+        projectileStart.z = previousProjectileZ;
+        const projectileEnd = this.playerProjectileEndScratch;
+        projectileEnd.x = p.mesh.position.x;
+        projectileEnd.y = p.mesh.position.y;
+        projectileEnd.z = p.mesh.position.z;
+        const enemyImpact = findFirstProjectileEnemyImpact(
+          projectileStart,
+          projectileEnd,
+          collisionCandidates,
+          1.12,
+          this.playerProjectileEnemyImpactScratch,
+          this.playerProjectileEnemyTargetScratch,
+          this.playerProjectileBodyImpactScratch,
+          p.hitIds,
+          false,
+          1.0,
+        );
+        if (enemyImpact) {
+          const e = enemyImpact.actor as EnemyItem;
+          const closestX = enemyImpact.x;
+          const closestY = enemyImpact.y;
+          const closestZ = enemyImpact.z;
           p.hitIds?.add(e.id);
 
           // Check if guard has active shield
@@ -19706,7 +19722,7 @@ export class PaleciakiGameEngine {
               e.shieldActive = false;
               if (e.shieldRing) e.shieldRing.visible = false;
             }
-            this.damageEnemy(e, baseDmg, p.mesh.position.x, p.mesh.position.z, projectileDamageSource);
+            this.damageEnemy(e, baseDmg, closestX, closestZ, projectileDamageSource);
             if (p.homingTrail) {
               const impactColor = p.homingTrailColor ?? 0x34d399;
               this.spawnExplosionParticles(e.x, e.y + 0.42, e.z, impactColor, 9);
@@ -19720,14 +19736,14 @@ export class PaleciakiGameEngine {
             else sound.playSmack();
             if (p.weaponProjectile || p.firearmProjectile) {
               const impactColor = p.firearmColor ?? (p.weaponId ? SURVIVAL_DAMAGE_WEAPONS[p.weaponId].color : 0x7dd3fc);
-              this.spawnCompactImpact(e.x, e.y + 0.72, e.z, impactColor);
+              this.spawnCompactImpact(closestX, closestY, closestZ, impactColor);
               if (p.firearmProjectile && p.firearmId) {
                 const archetype = SURVIVAL_FIREARM_DEFS[p.firearmId].archetype;
                 this.spawnSurvivalFirearmImpactFx(
                   archetype,
-                  e.x,
-                  e.y,
-                  e.z,
+                  closestX,
+                  closestY,
+                  closestZ,
                   impactColor,
                   p.vel.x,
                   p.vel.z,
@@ -19758,19 +19774,19 @@ export class PaleciakiGameEngine {
             }
 
             // AoE shockwave on hit (Operator 01's WZ Binder Stamp)
-            if (p.aoeRadius && p.aoeRadius > 0) {
-              if (p.weaponProjectile || p.firearmProjectile) this.spawnCompactImpact(e.x, e.y + 0.36, e.z, p.firearmColor ?? (p.weaponId ? SURVIVAL_DAMAGE_WEAPONS[p.weaponId].color : 0xf59e0b));
+            if (p.aoeRadius && p.aoeRadius > 0 && !(p.firearmProjectile && p.detonateOnImpact)) {
+              if (p.weaponProjectile || p.firearmProjectile) this.spawnCompactImpact(closestX, closestY, closestZ, p.firearmColor ?? (p.weaponId ? SURVIVAL_DAMAGE_WEAPONS[p.weaponId].color : 0xf59e0b));
               else this.spawnParticleRing(e.x, e.y + 0.4, e.z, p.homingTrailColor ?? 0xf59e0b);
               for (const other of this.enemies) {
                 if (other.id !== e.id && other.state !== 'defeated') {
-                  if (Math.hypot(other.x - e.x, other.z - e.z) <= p.aoeRadius) {
+                  if (Math.hypot(other.x - closestX, other.z - closestZ) <= p.aoeRadius) {
                     const primaryDamageFactor = this.gameMode === 'survival' ? SURVIVAL_PRIMARY_ATTACK_DAMAGE_MULTIPLIER : 1;
                     const splashDamage = p.aoeDamageMultiplier !== undefined && p.firearmProjectile
                       ? Math.max(0.1, (p.damage ?? 1) * p.aoeDamageMultiplier * firearmDamageMultiplier * berserkMult)
                       : projectileDamageSource === 'basic_attack'
                         ? scaleCharacterBasicAttackDamage(this.scaleSurvivalDamage(1), this.charDef.basicAttackDamageMultiplier * this.characterMasteryBonuses.attackMultiplier * primaryDamageFactor)
                         : this.scaleSurvivalDamage(1);
-                    this.damageEnemy(other, splashDamage, e.x, e.z, projectileDamageSource);
+                    this.damageEnemy(other, splashDamage, closestX, closestZ, projectileDamageSource);
                     other.stunTimer = Math.max(other.stunTimer, this.gameMode === 'survival' ? 0.22 : (p.stunDuration || 1.2));
                     if (this.gameMode !== 'survival' || (p.stunDuration || 0) > 0.8) other.state = 'stunned';
                     if (!p.weaponProjectile && !p.firearmProjectile) this.emitFloatingToast('📑 AUDYT AoE -1 HP!', other.x, other.y + 1.1, other.z, 'damage');
@@ -19795,11 +19811,14 @@ export class PaleciakiGameEngine {
             if (p.firearmId === 'rocket_launcher') {
               p.mesh.position.set(closestX, Math.max(0.42, closestY), closestZ);
               this.detonateRocketFirearmProjectile(
-                p, firearmDamageMultiplier * berserkMult * (p.chainDamageMultiplier || 1), false,
+                p, firearmDamageMultiplier * berserkMult * (p.chainDamageMultiplier || 1), true, e.id,
               );
             } else {
-              this.spawnBallisticGrenadeDetonationFx(
-                p.mesh.position.x, p.mesh.position.y, p.mesh.position.z, p.firearmColor ?? 0xd4a24f,
+              p.mesh.position.set(closestX, Math.max(0.14, closestY), closestZ);
+              this.detonateBallisticFirearmProjectile(
+                p,
+                firearmDamageMultiplier * berserkMult * (p.chainDamageMultiplier || 1),
+                e.id,
               );
             }
             tracerEndX = closestX;

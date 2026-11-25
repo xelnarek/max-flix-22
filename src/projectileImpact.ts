@@ -125,6 +125,9 @@ export function findFirstProjectileEnemyImpact(
   out?: ProjectileEnemyImpactScratch,
   targetScratch?: MutableProjectileSegmentPoint,
   bodyImpactScratch?: ProjectileImpactScratch,
+  ignoredActorIds?: ReadonlySet<string>,
+  ignoreActorContainingStart = true,
+  radiusMultiplier = 0.68,
 ): ProjectileEnemyImpact | null {
   if (
     !Number.isFinite(start.x) || !Number.isFinite(start.y) || !Number.isFinite(start.z) ||
@@ -136,25 +139,33 @@ export function findFirstProjectileEnemyImpact(
 
   let owner: EnemyContactBody | null = null;
   let ownerDistanceSq = Number.POSITIVE_INFINITY;
+  const safeRadiusMultiplier = Number.isFinite(radiusMultiplier)
+    ? Math.max(0.25, Math.min(2.0, radiusMultiplier))
+    : 0.68;
 
-  for (const actor of enemies) {
-    if (
-      actor.state === 'defeated' ||
-      !Number.isFinite(actor.x) || !Number.isFinite(actor.y) || !Number.isFinite(actor.z)
-    ) {
-      continue;
-    }
-    const radius = Math.max(0.45, getEnemyPlayerContactDistance(actor.type) * 0.68);
-    const dx = start.x - actor.x;
-    const dz = start.z - actor.z;
-    const distanceSq = dx * dx + dz * dz;
-    if (
-      distanceSq <= radius * radius &&
-      Math.abs(start.y - (actor.y + 0.62)) <= Math.max(0.3, verticalTolerance) &&
-      distanceSq < ownerDistanceSq
-    ) {
-      owner = actor;
-      ownerDistanceSq = distanceSq;
+  // Hostile volleys can contain their shooter in the candidate list. Player
+  // shots must disable this rule: a nearby enemy at the muzzle is a valid hit.
+  if (ignoreActorContainingStart) {
+    for (const actor of enemies) {
+      if (
+        ignoredActorIds?.has(actor.id) ||
+        actor.state === 'defeated' ||
+        !Number.isFinite(actor.x) || !Number.isFinite(actor.y) || !Number.isFinite(actor.z)
+      ) {
+        continue;
+      }
+      const radius = Math.max(0.45, getEnemyPlayerContactDistance(actor.type) * safeRadiusMultiplier);
+      const dx = start.x - actor.x;
+      const dz = start.z - actor.z;
+      const distanceSq = dx * dx + dz * dz;
+      if (
+        distanceSq <= radius * radius &&
+        Math.abs(start.y - (actor.y + 0.62)) <= Math.max(0.3, verticalTolerance) &&
+        distanceSq < ownerDistanceSq
+      ) {
+        owner = actor;
+        ownerDistanceSq = distanceSq;
+      }
     }
   }
 
@@ -169,6 +180,7 @@ export function findFirstProjectileEnemyImpact(
   for (const actor of enemies) {
     if (
       actor === owner ||
+      ignoredActorIds?.has(actor.id) ||
       actor.state === 'defeated' ||
       !Number.isFinite(actor.x) || !Number.isFinite(actor.y) || !Number.isFinite(actor.z)
     ) {
@@ -182,7 +194,7 @@ export function findFirstProjectileEnemyImpact(
       start,
       end,
       target,
-      Math.max(0.45, getEnemyPlayerContactDistance(actor.type) * 0.68),
+      Math.max(0.45, getEnemyPlayerContactDistance(actor.type) * safeRadiusMultiplier),
       verticalTolerance,
       bodyImpact,
     );
