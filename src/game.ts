@@ -19871,7 +19871,10 @@ export class PaleciakiGameEngine {
             }
           }
 
-          if (p.boomerang) {
+          if (p.orbiting) {
+            // Orbiting blades are persistent contact weapons, not travelling
+            // bullets. Their hitIds prevent repeat damage to the same actor.
+          } else if (p.boomerang) {
             // The returning weapon still uses its designed outbound/return path,
             // but its visible outbound model must end the frame at first contact.
             p.mesh.position.set(closestX, closestY, closestZ);
