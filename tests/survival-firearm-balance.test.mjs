@@ -31,8 +31,8 @@ test('reload shorter than the final shot cadence does not add fictitious downtim
 
 test('shotgun salvo and magazine metrics account for every pellet', () => {
   const balance = getSurvivalFirearmBalance(SURVIVAL_FIREARM_DEFS.shotgun_12g);
-  assert.equal(balance.damagePerTrigger, 0.62 * 7);
-  assert.equal(balance.magazineDamage, 0.62 * 7 * 6);
+  assert.equal(balance.damagePerTrigger, 0.92 * 7);
+  assert.equal(balance.magazineDamage, 0.92 * 7 * 8);
 });
 
 test('all catalogue profiles produce finite, positive balance metrics', () => {
