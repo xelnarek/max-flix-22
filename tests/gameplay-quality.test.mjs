@@ -397,7 +397,7 @@ test('projectile collision checks the full movement segment and resolves the fir
   assert.match(game, /const closestX = enemyImpact\.x/);
   assert.match(game, /this\.playerProjectileEnemyImpactScratch/);
   assert.match(game, /p\.hitIds/);
-});;
+});
 
 test('fullscreen and orientation changes reset touch input and reflow the viewport', async () => {
   const app = await read('../src/index.ts');
