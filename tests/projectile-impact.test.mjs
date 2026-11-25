@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { findFirstProjectileEnemyImpact } from '../src/projectileImpact.ts';
+import { findFirstProjectileEnemyImpact, stopProjectileAtImpact } from '../src/projectileImpact.ts';
 
 test('fast enemy projectile is caught at the first enemy along its full travel segment', () => {
   const first = { id: 'first', type: 'inspector', x: 0, y: 0.5, z: 0, state: 'chase' };
@@ -140,4 +140,40 @@ test('piercing projectiles skip targets already hit and select the next body alo
   );
   assert.ok(hit);
   assert.equal(hit.actor.id, 'far');
+});
+
+
+test('a normal projectile is frozen at its first confirmed body contact', () => {
+  const position = { x: 99, y: 99, z: 99, set(x, y, z) { this.x = x; this.y = y; this.z = z; } };
+  const velocity = { x: 12, y: 3, z: -4, set(x, y, z) { this.x = x; this.y = y; this.z = z; } };
+  const projectile = { mesh: { position }, vel: velocity, life: 9 };
+  const impact = { x: 1.25, y: 0.92, z: -3.5 };
+
+  assert.equal(stopProjectileAtImpact(projectile, impact), true);
+  assert.deepEqual(position, { x: 1.25, y: 0.92, z: -3.5, set: position.set });
+  assert.deepEqual({ x: velocity.x, y: velocity.y, z: velocity.z }, { x: 0, y: 0, z: 0 });
+  assert.equal(projectile.life, 0.085);
+  assert.equal(projectile.impactStopped, true);
+});
+
+test('a stopped projectile cannot be stopped or dealt another hit a second time', () => {
+  const position = { x: 1, y: 2, z: 3, set(x, y, z) { this.x = x; this.y = y; this.z = z; } };
+  const velocity = { x: 0, y: 0, z: 0, set(x, y, z) { this.x = x; this.y = y; this.z = z; } };
+  const projectile = { mesh: { position }, vel: velocity, life: 0.085, impactStopped: true };
+
+  assert.equal(stopProjectileAtImpact(projectile, { x: 8, y: 8, z: 8 }), false);
+  assert.deepEqual({ x: position.x, y: position.y, z: position.z }, { x: 1, y: 2, z: 3 });
+  assert.equal(projectile.life, 0.085);
+});
+
+test('invalid impact coordinates never mutate projectile state', () => {
+  const position = { x: 1, y: 2, z: 3, set(x, y, z) { this.x = x; this.y = y; this.z = z; } };
+  const velocity = { x: 4, y: 5, z: 6, set(x, y, z) { this.x = x; this.y = y; this.z = z; } };
+  const projectile = { mesh: { position }, vel: velocity, life: 5 };
+
+  assert.equal(stopProjectileAtImpact(projectile, { x: Number.NaN, y: 0, z: 0 }), false);
+  assert.equal(projectile.life, 5);
+  assert.equal(projectile.impactStopped, undefined);
+  assert.deepEqual({ x: position.x, y: position.y, z: position.z }, { x: 1, y: 2, z: 3 });
+  assert.deepEqual({ x: velocity.x, y: velocity.y, z: velocity.z }, { x: 4, y: 5, z: 6 });
 });
