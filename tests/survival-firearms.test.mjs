@@ -28,7 +28,7 @@ test('firearm catalogue has clearly differentiated cadence, ammunition, projecti
   assert.equal(new Set(definitions.map((entry) => entry.rangeMeters)).size, definitions.length, 'every firearm needs its own effective range');
   assert.equal(new Set(definitions.map((entry) => entry.reloadSeconds)).size, definitions.length, 'reload duration must be weapon-specific');
   assert.equal(new Set(definitions.map((entry) => entry.damage)).size, definitions.length, 'each weapon needs a distinct base hit value');
-  assert.ok(Math.min(...definitions.map((entry) => entry.fireIntervalSeconds)) >= 0.5, 'no primary firearm may return to rapid automatic fire');
+  assert.ok(Math.min(...definitions.map((entry) => entry.fireIntervalSeconds)) >= 0.14, 'rapid-fire automatic weapons stay bounded within Crimsonland cadence');
   assert.ok(definitions.every((entry) => entry.fireIntervalSeconds > 0 && entry.projectileSpeed > 0));
   assert.ok(definitions.every((entry) => entry.pellets >= 1 && entry.spreadRadians >= 0));
   assert.ok(definitions.some((entry) => entry.archetype === 'shotgun' && entry.pellets >= 6));
@@ -39,15 +39,15 @@ test('firearm catalogue has clearly differentiated cadence, ammunition, projecti
     Math.min(...definitions.map((entry) => entry.fireIntervalSeconds)) >= 7);
   const cadenceById = Object.fromEntries(definitions.map((entry) => [entry.id, entry.fireIntervalSeconds]));
   assert.deepEqual(cadenceById, {
-    starter_pistol: 1.05, smg_45: 0.68, assault_rifle: 0.92, shotgun_12g: 1.8, battle_rifle: 1.85,
-    minigun: 0.5, rocket_launcher: 3.6, flamethrower: 0.65, plasma_rifle: 1.2, gauss_rifle: 2.7,
-    ballistic_grenade_launcher: 2.9,
+    starter_pistol: 1.05, smg_45: 0.24, assault_rifle: 0.32, shotgun_12g: 0.94, battle_rifle: 0.78,
+    minigun: 0.14, rocket_launcher: 1.55, flamethrower: 0.15, plasma_rifle: 0.36, gauss_rifle: 1.38,
+    ballistic_grenade_launcher: 1.18,
   });
   const impactById = Object.fromEntries(definitions.map((entry) => [entry.id, entry.damage]));
   assert.deepEqual(impactById, {
-    starter_pistol: 1.55, smg_45: 1.05, assault_rifle: 1.5, shotgun_12g: 0.62, battle_rifle: 3.1,
-    minigun: 0.68, rocket_launcher: 4.8, flamethrower: 0.5, plasma_rifle: 1.8, gauss_rifle: 4.65,
-    ballistic_grenade_launcher: 3.9,
+    starter_pistol: 1.55, smg_45: 0.78, assault_rifle: 1.24, shotgun_12g: 0.92, battle_rifle: 3.15,
+    minigun: 0.68, rocket_launcher: 3.85, flamethrower: 0.42, plasma_rifle: 1.65, gauss_rifle: 7.4,
+    ballistic_grenade_launcher: 3.7,
   });
   assert.ok(definitions.every((entry) => entry.reloadSeconds >= 1.2), 'every firearm has a meaningful reload window');
 });

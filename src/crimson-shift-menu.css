@@ -79,7 +79,7 @@
 #title-screen :is(input,select,textarea) {color:#f4eeeb!important;border-color:rgba(206,104,99,.32)!important;background:rgba(8,8,10,.9)!important}
 #title-screen :is(button,input,select,textarea):focus-visible,#title-screen [role="button"]:focus-visible {outline:2px solid #ff6a62!important;outline-offset:3px!important;box-shadow:0 0 0 5px rgba(239,54,58,.14)!important}
 #title-screen .menu-tab-content-area::-webkit-scrollbar-thumb,#title-screen .title-sheet::-webkit-scrollbar-thumb {background:rgba(224,68,66,.52)!important}
-.asset-loader-overlay {color:#f4eae7!important;background:radial-gradient(ellipse at 50% 25%,rgba(145,18,29,.25),transparent 54%),rgba(6,6,8,.98)!important;backdrop-filter:blur(10px)!important}
+.asset-loader-overlay {color:#f4eae7!important;background:radial-gradient(ellipse at 50% 25%,rgba(145,18,29,.25),transparent 54%),rgba(6,6,8,.98)!important}
 .asset-loader-overlay .loader-modal-card {border:1px solid rgba(239,65,63,.45)!important;border-radius:14px!important;background:linear-gradient(145deg,rgba(35,15,19,.98),rgba(9,9,11,.99))!important;box-shadow:0 24px 80px rgba(0,0,0,.65),0 0 34px rgba(177,25,34,.13)!important}
 .asset-loader-overlay .loader-header,.asset-loader-overlay .loader-header span {color:#fff0ed!important}
 .asset-loader-overlay .loader-kicker,.asset-loader-overlay .loader-category-badge {color:#ff7770!important}
@@ -163,11 +163,11 @@
 #title-screen .menu-mode-selector-heading h2 { color:#f7eeeb !important; }
 #title-screen .menu-mode-selector-heading p { color:#b6a7a7 !important; }
 #title-screen .menu-mode-eyebrow { color:#f07870 !important; }
-#title-screen .menu-mode-card { min-width:0 !important; border-radius:11px !important; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
+#title-screen .menu-mode-card { min-width:0 !important; border-radius:11px !important; }
 #title-screen .menu-mode-card::after {
-  content:""; position:absolute; inset:0; pointer-events:none; opacity:.36;
-  background:repeating-linear-gradient(135deg,transparent 0 13px,rgba(255,255,255,.035) 14px,transparent 15px 28px);
-  mask-image:linear-gradient(90deg,black,transparent 88%);
+  content:""; position:absolute; inset:0; pointer-events:none; opacity:.18;
+  background:repeating-linear-gradient(135deg,transparent 0 13px,rgba(255,255,255,.028) 14px,transparent 15px 28px);
+  mask-image:linear-gradient(90deg,black,transparent 82%);
 }
 #title-screen .menu-mode-card[data-mode="survival"] {
   border-color:rgba(255,77,70,.74) !important;

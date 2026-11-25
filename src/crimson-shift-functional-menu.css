@@ -1,8 +1,8 @@
 /* MAX FLIX 22 — CRIMSON SHIFT / functional menu finish */
 #title-screen .menu-tab-content-area{position:relative}
-#title-screen .menu-density-toolbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:36px;margin:-2px 0 10px;padding:5px 8px;border:1px solid rgba(225,65,62,.24);border-radius:9px;background:linear-gradient(100deg,rgba(29,13,17,.97),rgba(10,9,11,.96));box-shadow:0 6px 18px rgba(0,0,0,.25);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
-#title-screen .menu-density-label{color:#c7aaa8;font:800 9px/1 "JetBrains Mono",monospace;letter-spacing:.14em}
-#title-screen .menu-density-toggle{min-height:28px;padding:5px 10px;border:1px solid rgba(255,99,91,.42);border-radius:7px;background:rgba(126,17,27,.32);color:#ffe8e4;font:800 9px/1 "JetBrains Mono",monospace;letter-spacing:.06em;cursor:pointer;touch-action:manipulation}
+#title-screen .menu-density-toolbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:40px;margin:-2px 0 10px;padding:6px 10px;border:1px solid rgba(225,65,62,.28);border-radius:10px;background:linear-gradient(100deg,rgba(28,12,16,.98),rgba(11,9,12,.98));box-shadow:0 8px 20px rgba(0,0,0,.32)}
+#title-screen .menu-density-label{color:#d3b8b6;font:800 10px/1 "JetBrains Mono",monospace;letter-spacing:.14em}
+#title-screen .menu-density-toggle{min-height:32px;padding:6px 12px;border:1px solid rgba(255,99,91,.46);border-radius:7px;background:rgba(134,19,29,.42);color:#fff0ec;font:800 10px/1 "JetBrains Mono",monospace;letter-spacing:.06em;cursor:pointer;touch-action:manipulation}
 #title-screen .menu-density-toggle:hover,#title-screen .menu-density-toggle:focus-visible{border-color:#ff746c;background:rgba(155,24,33,.52)}
 #title-screen .tab-panel{gap:clamp(7px,.9vw,12px)!important}
 #title-screen[data-menu-density="compact"] .tab-panel :is(.enemy-guide-desc,.perk-card-desc,.field-guide-card p,.campaign-stage-desc,.campaign-board-heading p,.mega-map-biome-card p,.pvp-menu-feature-card p,.char-details-bio,.setting-description,.account-progression-copy){display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden!important}

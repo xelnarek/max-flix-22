@@ -2277,7 +2277,8 @@ export function createHighBayLamp(): THREE.Group {
     metalness: 0.72,
     roughness: 0.34,
   });
-  const emissiveLed = new THREE.MeshBasicMaterial({ color: 0xfffbeb });
+  const emissiveLed = new THREE.MeshBasicMaterial({ color: 0xfffbeb, toneMapped: false });
+  emissiveLed.userData.bloomEmitter = true;
 
   // UFO Heatsink fixture
   const fixture = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, 0.2, 24), metalMat);
@@ -2296,9 +2297,18 @@ export function createHighBayLamp(): THREE.Group {
   housingRim.position.y = -0.01;
   group.add(housingRim);
 
+  const diffuserMat = new THREE.MeshBasicMaterial({
+    color: 0xe0f2fe,
+    transparent: true,
+    opacity: 0.88,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    toneMapped: false,
+  });
+  diffuserMat.userData.bloomEmitter = true;
   const diffuserRim = new THREE.Mesh(
     new THREE.TorusGeometry(0.43, 0.018, 6, 24),
-    new THREE.MeshBasicMaterial({ color: 0xe0f2fe, transparent: true, opacity: 0.82 }),
+    diffuserMat,
   );
   diffuserRim.rotation.x = Math.PI / 2;
   diffuserRim.position.y = -0.105;
@@ -2312,7 +2322,13 @@ export function createHighBayLamp(): THREE.Group {
   // Soft translucent floor light pool
   const pool = new THREE.Mesh(
     new THREE.CircleGeometry(3.5, 32),
-    new THREE.MeshBasicMaterial({ color: 0xfffbeb, transparent: true, opacity: 0.12, depthWrite: false })
+    new THREE.MeshBasicMaterial({
+      color: 0xfffbeb,
+      transparent: true,
+      opacity: 0.14,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    })
   );
   pool.rotation.x = -Math.PI / 2;
   pool.position.y = -5.8;
@@ -3031,7 +3047,8 @@ export function createVolumetricLightBeam(): THREE.Mesh {
   const mat = new THREE.MeshBasicMaterial({
     color: 0xfffbeb,
     transparent: true,
-    opacity: 0.06,
+    opacity: 0.07,
+    blending: THREE.AdditiveBlending,
     side: THREE.DoubleSide,
     depthWrite: false,
   });

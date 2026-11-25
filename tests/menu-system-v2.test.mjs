@@ -46,7 +46,7 @@ test('desktop uses a fixed left navigation rail and an independent content viewp
   assert.match(css, /\.menu-tab-content-area\s*\{[\s\S]*?overflow-x:\s*hidden !important/);
 });
 
-test('all screen sizes use one always-visible vertical sidebar with a selected category marker', async () => {
+test('desktop uses an always-visible vertical sidebar while narrow screens switch cleanly to category segments', async () => {
   const app = await read('src/index.ts');
   const repair = await read('src/menu-single-sidebar-repair.css');
   assert.doesNotMatch(app, /mobileMenuSegmentQuery|desktopMenuNavigationQuery/);
@@ -55,10 +55,11 @@ test('all screen sizes use one always-visible vertical sidebar with a selected c
   assert.match(app, /group\.dataset\.activeGroup = String\(group\.dataset\.menuGroup === segment\.id\)/);
   assert.match(app, /group\.setAttribute\('role', 'tablist'\)/);
   assert.match(app, /group\.setAttribute\('aria-orientation', 'vertical'\)/);
+  assert.match(repair, /grid-template-columns: clamp\(206px, 18vw, 246px\) minmax\(0, 1fr\)/);
   assert.match(repair, /#title-screen \.menu-tabs-bar\s*\{[\s\S]*?flex-direction: column !important/);
   assert.match(repair, /#title-screen \.menu-mobile-segments\s*\{\s*display: none !important/);
   assert.match(repair, /\.menu-nav-group\[hidden\]\s*\{[\s\S]*?display: grid !important/);
-  assert.match(repair, /grid-template-columns: clamp\(122px, 31vw, 188px\) minmax\(0, 1fr\)/);
+  assert.match(repair, /@media \(max-width: 760px\)[\s\S]*\.menu-nav-group\[data-active-group="true"\]/);
 });
 
 test('all navigation controls map to a real panel and are explicit non-submit buttons', () => {

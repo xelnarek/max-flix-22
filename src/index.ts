@@ -20,6 +20,7 @@ import { getPvpFirearmAttackCooldown, PVP_OPERATOR_PROFILES, PVP_RAPID_FIRE_COOL
 import type { PvpArenaState, PvpSlot } from './pvpArena.ts';
 import { AssetItem, assetLoader } from './assets.ts';
 import { SelectiveBloomPipeline } from './selectiveBloom.ts';
+import { disposeCombatVfxResources, getSoftGlowTexture, isSoftwareWebGLRenderer } from './combatVfx.ts';
 import { ThreeClickTrigger } from './menuInteraction.ts';
 import { calculateUiViewport, shouldShowTouchControls } from './uiViewport.ts';
 import { getAdaptiveEffectsTier, getAdaptiveRenderScale, getDeviceRenderProfile, shouldApplyPixelRatioChange, type AdaptiveEffectsTier } from './renderQuality.ts';
@@ -2818,7 +2819,7 @@ class PaleciakiScene extends xb.Script {
     renderer = null;
   }
 
-  return (archetype: string, color: number): string | null => {
+  const renderIcon = (archetype: string, color: number): string | null => {
     if (!renderer || !scene || !camera) return null;
     const accent = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.38, metalness: 0.68, roughness: 0.27 });
     const dark = new THREE.MeshStandardMaterial({ color: 0x182333, metalness: 0.78, roughness: 0.32 });
@@ -2842,24 +2843,88 @@ class PaleciakiScene extends xb.Script {
     box(0.34, 0.2, 0.66, 0, 0, 0, dark);
     switch (archetype) {
       case 'pistol':
-        barrel(0.055, 0.52, 0, 0.02, 0.56, steel); box(0.38, 0.1, 0.7, 0, 0.15, 0.02, steel); grip(); break;
+        barrel(0.055, 0.56, 0, 0.03, 0.56, steel);
+        box(0.36, 0.11, 0.72, 0, 0.14, 0.03, steel);
+        box(0.24, 0.06, 0.36, 0, -0.09, 0.36, accent);
+        box(0.05, 0.06, 0.06, 0, 0.21, 0.31, glow);
+        grip();
+        break;
       case 'smg':
-        barrel(0.05, 0.7, 0, 0.02, 0.65); box(0.22, 0.1, 0.48, 0, 0.17, -0.02, accent); grip(); stock(); box(0.16, 0.3, 0.2, 0, -0.23, 0.08, steel); break;
+        barrel(0.052, 0.52, 0, 0.02, 0.54, steel);
+        barrel(0.088, 0.42, 0, 0.02, 0.94, dark);
+        box(0.22, 0.1, 0.48, 0, 0.17, -0.02, accent);
+        box(0.14, 0.12, 0.24, 0, 0.26, 0.04, glow);
+        box(0.15, 0.34, 0.18, 0, -0.25, 0.1, steel);
+        grip();
+        stock();
+        break;
       case 'rifle':
-        barrel(0.045, 1.02, 0, 0.02, 0.82); box(0.18, 0.1, 0.58, 0, 0.17, 0.1, accent); grip(); stock(); break;
+        barrel(0.045, 1.06, 0, 0.02, 0.84, steel);
+        barrel(0.072, 0.16, 0, 0.02, 1.38, accent);
+        box(0.22, 0.14, 0.56, 0, 0.05, 0.52, dark);
+        box(0.18, 0.1, 0.58, 0, 0.18, 0.08, accent);
+        box(0.14, 0.26, 0.18, 0, -0.24, 0.14, steel);
+        grip();
+        stock();
+        break;
       case 'shotgun':
-        barrel(0.075, 0.96, 0, 0.03, 0.82, steel); box(0.23, 0.16, 0.62, 0, 0, 0.04, accent); grip(); stock(); box(0.22, 0.12, 0.34, 0, -0.12, 0.55, dark); break;
+        barrel(0.072, 0.98, 0, 0.05, 0.82, steel);
+        barrel(0.052, 0.84, 0, -0.07, 0.74, dark);
+        box(0.24, 0.18, 0.64, 0, 0.01, 0.04, accent);
+        box(0.22, 0.13, 0.36, 0, -0.1, 0.56, accent);
+        box(0.07, 0.12, 0.22, 0.15, 0.02, 0.04, glow);
+        grip();
+        stock();
+        break;
       case 'heavy-rifle':
-        barrel(0.07, 1.22, 0, 0.03, 0.94, steel); box(0.16, 0.16, 0.44, 0, 0.22, 0.12, accent); box(0.12, 0.13, 0.34, 0, 0.32, 0.04, glow); grip(); stock(); break;
-      case 'minigun':
-        for (let n = 0; n < 4; n++) barrel(0.045, 1.05, (n - 1.5) * 0.13, 0.02, 0.88, n % 2 ? accent : steel);
-        box(0.46, 0.27, 0.55, 0, 0, -0.05, dark); box(0.22, 0.12, 0.34, 0, 0.22, -0.1, accent); grip(); break;
+        barrel(0.068, 1.28, 0, 0.03, 0.96, steel);
+        box(0.18, 0.14, 0.16, 0, 0.03, 1.56, accent);
+        box(0.16, 0.16, 0.44, 0, 0.22, 0.12, accent);
+        box(0.12, 0.13, 0.38, 0, 0.33, 0.05, glow);
+        box(0.06, 0.24, 0.06, -0.16, -0.15, 0.72, steel);
+        box(0.06, 0.24, 0.06, 0.16, -0.15, 0.72, steel);
+        grip();
+        stock();
+        break;
+      case 'minigun': {
+        for (let n = 0; n < 6; n++) {
+          const angle = (n / 6) * Math.PI * 2;
+          barrel(0.034, 1.12, Math.cos(angle) * 0.11, 0.03 + Math.sin(angle) * 0.11, 0.9, n % 2 ? accent : steel);
+        }
+        barrel(0.16, 0.12, 0, 0.03, 1.32, dark);
+        box(0.46, 0.27, 0.58, 0, 0, -0.05, dark);
+        box(0.26, 0.12, 0.36, 0, 0.22, -0.08, accent);
+        const ammoDrum = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.28, 16), accent);
+        ammoDrum.rotation.z = Math.PI / 2;
+        ammoDrum.position.set(0, -0.26, 0.08);
+        gun.add(ammoDrum);
+        grip();
+        break;
+      }
       case 'rocket':
-        barrel(0.17, 1.25, 0, 0.03, 0.8, dark); barrel(0.21, 0.12, 0, 0.03, 1.39, accent); stock(); box(0.32, 0.18, 0.3, 0, -0.17, 0.08, steel); break;
+        barrel(0.17, 1.28, 0, 0.03, 0.8, dark);
+        barrel(0.22, 0.14, 0, 0.03, 1.42, accent);
+        barrel(0.19, 0.12, 0, 0.03, -0.45, steel);
+        box(0.12, 0.15, 0.3, -0.21, 0.12, 0.42, glow);
+        stock();
+        box(0.32, 0.18, 0.3, 0, -0.17, 0.08, steel);
+        break;
       case 'flame':
-        barrel(0.12, 0.72, 0, 0.02, 0.68, accent); box(0.28, 0.34, 0.36, -0.28, 0.03, -0.08, steel); box(0.24, 0.32, 0.38, 0.28, 0.03, -0.08, dark); grip(); break;
+        barrel(0.11, 0.78, 0, 0.02, 0.72, steel);
+        barrel(0.14, 0.12, 0, 0.02, 1.12, glow);
+        box(0.26, 0.34, 0.36, -0.28, 0.03, -0.08, accent);
+        box(0.26, 0.34, 0.36, 0.28, 0.03, -0.08, accent);
+        box(0.14, 0.12, 0.34, 0, 0.16, 0.58, dark);
+        grip();
+        break;
       case 'plasma':
-        barrel(0.09, 0.88, 0, 0.04, 0.76, glow); box(0.3, 0.24, 0.48, 0, 0.12, 0.08, accent); box(0.38, 0.08, 0.2, 0, 0.26, -0.02, glow); grip(); stock(); break;
+        barrel(0.085, 0.92, 0, 0.04, 0.78, glow);
+        box(0.32, 0.24, 0.52, 0, 0.12, 0.08, accent);
+        box(0.4, 0.08, 0.24, 0, 0.26, 0.04, glow);
+        box(0.14, 0.18, 0.34, 0, 0.04, 0.82, dark);
+        grip();
+        stock();
+        break;
       case 'grenade': {
         barrel(0.105, 1.02, 0, 0.04, 0.82, steel);
         box(0.34, 0.22, 0.56, 0, 0.02, 0.05, dark);
@@ -2874,9 +2939,14 @@ class PaleciakiScene extends xb.Script {
         break;
       }
       case 'gauss':
-        barrel(0.045, 1.55, 0, 0.03, 1.1, glow);
-        for (let n = 0; n < 5; n++) barrel(0.075, 0.075, 0, 0.03, 0.48 + n * 0.22, accent);
-        box(0.24, 0.16, 0.62, 0, 0.14, 0.02, steel); grip(); stock(); break;
+        barrel(0.042, 1.56, 0, 0.03, 1.12, glow);
+        box(0.06, 0.06, 1.32, -0.11, 0.03, 0.98, steel);
+        box(0.06, 0.06, 1.32, 0.11, 0.03, 0.98, steel);
+        for (let n = 0; n < 5; n++) barrel(0.085, 0.075, 0, 0.03, 0.48 + n * 0.22, accent);
+        box(0.24, 0.16, 0.62, 0, 0.14, 0.02, steel);
+        grip();
+        stock();
+        break;
       default:
         barrel(0.05, 0.7, 0, 0.02, 0.62, accent); grip(); stock();
     }
@@ -2897,6 +2967,20 @@ class PaleciakiScene extends xb.Script {
       for (const material of [accent, dark, steel, glow]) material.dispose();
     }
   };
+  const disposeRenderer = () => {
+    if (!renderer) return;
+    try {
+      const gl = renderer.getContext();
+      renderer.dispose();
+      (gl?.getExtension('WEBGL_lose_context') as { loseContext?: () => void } | null)?.loseContext?.();
+    } catch {
+      // Context already lost or unavailable.
+    }
+    renderer = null;
+    scene = null;
+    camera = null;
+  };
+  return Object.assign(renderIcon, { dispose: disposeRenderer });
 })();
 
 // Build the armory from the same runtime definitions that drive weapon behaviour.
@@ -2964,10 +3048,13 @@ class PaleciakiScene extends xb.Script {
           (firearm.id === 'shotgun_12g' ? ' / śrut × ' + firearm.pellets : firearm.pellets > 1 ? ' / cząstki × ' + firearm.pellets : ' / pocisk');
         const rateValue = (1 / firearm.fireIntervalSeconds).toFixed(1).replace('.', ',') +
           (firearm.pellets > 1 ? ' salw/s' : ' strz./s');
+        const burstDps = (firearm.damage * firearm.pellets) / firearm.fireIntervalSeconds;
+        const dpsValue = burstDps.toFixed(1).replace('.', ',') + ' / s';
         const metrics = document.createElement('div');
         metrics.className = 'armory-card-stats';
         const metricRows: Array<[string, string]> = [
           ['OBRAŻENIA BAZOWE', damageValue],
+          ['OBRAŻENIA / S', dpsValue],
           ['ZASIĘG BAZOWY', firearm.rangeMeters + ' m'],
           ['SZYBKOSTRZELNOŚĆ', rateValue],
           ['MAGAZYNEK', firearm.magazineSize + ' nab.'],
@@ -3002,6 +3089,7 @@ class PaleciakiScene extends xb.Script {
         firearmCatalogGrid.appendChild(card);
       }
     }
+    renderSurvivalFirearmCatalogIcon.dispose();
     const menuRootElement = document.getElementById('title-screen');
     let setActiveMobileSegment: (segmentId: MenuSegmentId) => void = () => undefined;
     if (menuRootElement) menuRootElement.dataset.menuDensity = 'compact';
@@ -4293,15 +4381,37 @@ class PaleciakiScene extends xb.Script {
   }
 
   init() {
-    // 1. Particle System Setup (from top init)
+    // 1. Particle System Setup (soft glowing warehouse motes)
     const geometry = new THREE.BufferGeometry();
-    const count = 1000;
+    const count = 900;
     const positions = new Float32Array(count * 3);
-    for (let i = 0; i < count * 3; i++) {
-      positions[i] = (Math.random() - 0.5) * 100;
+    const colors = new Float32Array(count * 3);
+    const palette = [
+      new THREE.Color(0xf59e0b),
+      new THREE.Color(0xfef3c7),
+      new THREE.Color(0x38bdf8),
+    ];
+    for (let i = 0; i < count; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 95;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 65;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 95;
+      const swatch = palette[i % palette.length];
+      colors[i * 3] = swatch.r;
+      colors[i * 3 + 1] = swatch.g;
+      colors[i * 3 + 2] = swatch.b;
     }
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    const material = new THREE.PointsMaterial({ color: 0xf59e0b, size: 0.15, transparent: true, opacity: 0.4 });
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    const material = new THREE.PointsMaterial({
+      map: getSoftGlowTexture(),
+      vertexColors: true,
+      size: 0.34,
+      transparent: true,
+      opacity: 0.72,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      sizeAttenuation: true,
+    });
     this.particleSystem = new THREE.Points(geometry, material);
     this.add(this.particleSystem);
 
@@ -4344,7 +4454,8 @@ class PaleciakiScene extends xb.Script {
     // The selective bloom hook uses XR Blocks' supported scene-render override.
     // Non-WebGL backends retain their normal render path.
     const core = xb.core;
-    if (renderer && core && scene && currentDeviceRenderProfile(width).bloomEnabled && renderer.extensions.has('EXT_color_buffer_float')) {
+    const isSoftwareGpu = renderer ? isSoftwareWebGLRenderer(renderer) : false;
+    if (renderer && core && scene && !isSoftwareGpu && currentDeviceRenderProfile(width).bloomEnabled && renderer.extensions.has('EXT_color_buffer_float')) {
       this.restoreSelectiveBloomOverride?.();
       this.restoreSelectiveBloomOverride = null;
       this.selectiveBloom?.dispose();
@@ -4428,8 +4539,9 @@ class PaleciakiScene extends xb.Script {
       const gameState = this.engine?.getGameState() || 'title';
       if (gameState === 'title') {
         this.particleSystem.visible = true;
-        this.particleSystem.rotation.y += 0.0005;
-        this.particleSystem.rotation.x += 0.0002;
+        this.particleSystem.rotation.y += dt * 0.045;
+        this.particleSystem.rotation.x += dt * 0.015;
+        this.particleSystem.position.y = Math.sin(this.lastLoopTick * 0.0007) * 0.45;
       } else {
         this.particleSystem.visible = false;
       }
@@ -5731,10 +5843,22 @@ class PaleciakiScene extends xb.Script {
   override dispose(): void {
     this.engine?.dispose();
 
+    if (this.particleSystem) {
+      this.particleSystem.geometry.dispose();
+      const particleMaterial = this.particleSystem.material;
+      if (Array.isArray(particleMaterial)) {
+        particleMaterial.forEach((mat) => mat.dispose());
+      } else {
+        particleMaterial.dispose();
+      }
+      this.particleSystem = null;
+    }
+
     this.restoreSelectiveBloomOverride?.();
     this.restoreSelectiveBloomOverride = null;
     this.selectiveBloom?.dispose();
     this.selectiveBloom = null;
+    disposeCombatVfxResources();
     super.dispose();
   }
 }

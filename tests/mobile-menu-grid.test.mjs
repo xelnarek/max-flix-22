@@ -10,16 +10,16 @@ const [html, css, rosterCss] = await Promise.all([
   read('src/operator-roster-v2.css'),
 ]);
 
-test('mobile menu keeps all twelve destinations in one vertical sidebar with readable touch targets', async () => {
+test('responsive menu keeps desktop vertical sidebar and clean full-width mobile segments with readable touch targets', async () => {
   const tabs = [...html.matchAll(/class="menu-tab-btn[^"]*" data-tab="(tab-[^"]+)"/g)];
   assert.equal(tabs.length, 12);
   const repair = await read('src/menu-single-sidebar-repair.css');
   assert.match(repair, /#title-screen \.menu-tabs-bar\s*\{[\s\S]*?flex-direction: column !important/);
   assert.match(repair, /#title-screen \.menu-tabs-bar\s*\{[\s\S]*?overflow-y: auto !important/);
-  assert.match(repair, /@media \(max-width: 900px\)[\s\S]*grid-template-columns: clamp\(122px, 31vw, 188px\)/);
-  assert.match(repair, /\.menu-mobile-segments\s*\{\s*display: none !important/);
-  assert.match(repair, /min-height: 42px !important/);
-  assert.match(repair, /font-size: clamp\(7\.8px, 2\.1vw, 9px\) !important/);
+  assert.match(repair, /@media \(min-width: 761px\) and \(max-width: 960px\)[\s\S]*grid-template-columns: clamp\(182px, 24vw, 214px\)/);
+  assert.match(repair, /@media \(max-width: 760px\)[\s\S]*\.menu-mobile-segments\s*\{[\s\S]*display: grid !important/);
+  assert.match(repair, /min-height: 44px !important/);
+  assert.match(repair, /font:\s*700 10\.5px\/1\.2 "JetBrains Mono", monospace !important/);
   assert.match(repair, /\.menu-nav-group\[data-active-group="true"\]/);
   assert.doesNotMatch(repair, /#title-screen \.menu-tabs-bar\s*\{[^}]*overflow-x: auto !important/);
 });

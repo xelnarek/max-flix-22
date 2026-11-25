@@ -95,16 +95,21 @@
   position: relative;
   display: grid;
   align-content: start;
-  gap: 11px;
+  gap: 12px;
   min-width: 0;
-  padding: 15px;
+  padding: 16px;
   overflow: hidden;
-  border: 1px solid rgba(122,145,164,.21);
-  border-radius: 13px;
+  border: 1px solid rgba(122,145,164,.25);
+  border-radius: 14px;
   background:
-    linear-gradient(145deg, color-mix(in srgb, var(--armory-color) 8%, transparent), transparent 54%),
-    linear-gradient(135deg, rgba(25,35,46,.97), rgba(13,20,29,.98));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 8px 18px rgba(0,0,0,.13);
+    linear-gradient(145deg, color-mix(in srgb, var(--armory-color) 11%, transparent), transparent 56%),
+    linear-gradient(135deg, rgba(24,33,44,.98), rgba(12,18,26,.99));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.045), 0 10px 22px rgba(0,0,0,.2);
+  transition: border-color .16s ease, transform .16s ease;
+}
+#title-screen #tab-arsenal .armory-card:hover {
+  border-color: color-mix(in srgb, var(--armory-color) 52%, rgba(148,163,184,.35));
+  transform: translateY(-1px);
 }
 #title-screen #tab-arsenal .armory-card::before {
   position: absolute;
@@ -117,19 +122,19 @@
 #title-screen #tab-arsenal .armory-card-head {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 13px;
   min-width: 0;
 }
 #title-screen #tab-arsenal .armory-card-icon {
   display: block;
-  flex: 0 0 84px;
-  width: 84px;
-  height: 64px;
+  flex: 0 0 96px;
+  width: 96px;
+  height: 68px;
   object-fit: contain;
-  border: 1px solid color-mix(in srgb, var(--armory-color) 55%, #334155);
+  border: 1px solid color-mix(in srgb, var(--armory-color) 58%, #334155);
   border-radius: 11px;
-  background: radial-gradient(circle at 35% 24%, color-mix(in srgb, var(--armory-color) 30%, #1e293b), #0b1420 74%);
-  box-shadow: inset 0 2px 4px rgba(255,255,255,.08), 0 5px 12px rgba(0,0,0,.34), 0 0 16px color-mix(in srgb, var(--armory-color) 17%, transparent);
+  background: radial-gradient(circle at 35% 24%, color-mix(in srgb, var(--armory-color) 32%, #1e293b), #0a121d 76%);
+  box-shadow: inset 0 2px 4px rgba(255,255,255,.09), 0 6px 14px rgba(0,0,0,.38), 0 0 16px color-mix(in srgb, var(--armory-color) 19%, transparent);
 }
 #title-screen #tab-arsenal .armory-card-icon-fallback {
   width: 50px;
@@ -137,48 +142,56 @@
   object-fit: contain;
 }
 #title-screen #tab-arsenal .armory-card-title-wrap {
+  display: grid;
+  gap: 5px;
   min-width: 0;
 }
 #title-screen #tab-arsenal .armory-card-title-wrap h3 {
-  margin: 0 0 4px;
-  color: #f1f5f9;
-  font: 850 15px/1.2 "Space Grotesk", sans-serif;
+  margin: 0;
+  color: #f8fafc;
+  font: 850 15.5px/1.2 "Space Grotesk", sans-serif;
   letter-spacing: -.015em;
 }
 #title-screen #tab-arsenal .armory-card-role {
-  color: var(--armory-color);
+  display: inline-block;
+  justify-self: start;
+  padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--armory-color) 36%, transparent);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--armory-color) 11%, rgba(8,14,22,.6));
+  color: color-mix(in srgb, var(--armory-color) 85%, #ffffff);
   font: 800 9px/1.2 "JetBrains Mono", monospace;
-  letter-spacing: .12em;
+  letter-spacing: .1em;
 }
 #title-screen #tab-arsenal .armory-card-description {
-  min-height: 32px;
+  min-height: 34px;
   margin: 0;
-  color: #aab8c6;
-  font-size: 11px;
+  color: #b5c3d1;
+  font-size: 11.5px;
   line-height: 1.5;
 }
 #title-screen #tab-arsenal .armory-card-stats {
   display: grid;
-  grid-template-columns: repeat(2,minmax(0,1fr));
-  gap: 6px;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 7px;
 }
 #title-screen #tab-arsenal .armory-stat {
   display: grid;
   gap: 3px;
   min-width: 0;
   padding: 8px 9px;
-  border: 1px solid rgba(148,163,184,.11);
+  border: 1px solid rgba(148,163,184,.14);
   border-radius: 8px;
-  background: rgba(5,12,20,.44);
+  background: rgba(5,12,20,.52);
 }
 #title-screen #tab-arsenal .armory-stat span {
-  color: #8394a5;
+  color: #8b9dae;
   font: 700 8px/1.2 "JetBrains Mono", monospace;
-  letter-spacing: .07em;
+  letter-spacing: .06em;
 }
 #title-screen #tab-arsenal .armory-stat strong {
-  overflow-wrap: anywhere;
-  color: #eff6ff;
+  overflow-wrap: break-word;
+  color: #f1f7ff;
   font: 800 12px/1.25 "JetBrains Mono", monospace;
   font-variant-numeric: tabular-nums;
 }
@@ -188,27 +201,35 @@
   gap: 6px;
 }
 #title-screen #tab-arsenal .armory-trait {
-  padding: 5px 7px;
-  border: 1px solid color-mix(in srgb, var(--armory-color) 29%, rgba(148,163,184,.12));
+  padding: 5px 8px;
+  border: 1px solid color-mix(in srgb, var(--armory-color) 32%, rgba(148,163,184,.15));
   border-radius: 6px;
-  color: #c8d8e5;
-  background: color-mix(in srgb, var(--armory-color) 8%, transparent);
-  font-size: 9px;
-  line-height: 1.2;
+  color: #d1e0ec;
+  background: color-mix(in srgb, var(--armory-color) 9%, transparent);
+  font: 600 9.5px/1.2 "Plus Jakarta Sans", sans-serif;
 }
 #title-screen #tab-arsenal .armory-footnote {
   margin: 0;
   padding: 0 2px 4px;
-  color: #8192a2;
-  font-size: 10px;
+  color: #8b9dad;
+  font-size: 10.5px;
   line-height: 1.5;
+}
+@media (max-width: 1040px) {
+  #title-screen #tab-arsenal .armory-card-stats {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
 }
 @media (max-width: 760px) {
   #title-screen #tab-arsenal .armory-rules {
     grid-template-columns: 1fr;
   }
   #title-screen #tab-arsenal .armory-rules span {
-    min-height: 34px;
+    min-height: 36px;
+  }
+  #title-screen #tab-arsenal .armory-grid {
+    grid-template-columns: minmax(0,1fr);
+    gap: 10px;
   }
 }
 @media (max-width: 560px) {
@@ -222,14 +243,20 @@
   #title-screen #tab-arsenal .armory-status {
     align-self: flex-start;
   }
-  #title-screen #tab-arsenal .armory-grid {
-    grid-template-columns: minmax(0,1fr);
-    gap: 9px;
-  }
   #title-screen #tab-arsenal .armory-card {
     padding: 12px;
   }
+  #title-screen #tab-arsenal .armory-card-icon {
+    flex-basis: 84px;
+    width: 84px;
+    height: 60px;
+  }
   #title-screen #tab-arsenal .armory-card-description {
     min-height: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #title-screen #tab-arsenal .armory-card {
+    transition: none;
   }
 }

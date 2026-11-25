@@ -62,9 +62,9 @@ export class SelectiveBloomPipeline {
     this.renderPass = new RenderPass(scene, camera);
     this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(1, 1),
-      isMobile ? 0.62 : 0.82,
-      0.42,
-      0.80
+      isMobile ? 0.68 : 0.90,
+      0.36,
+      0.72
     );
     this.bloomPass.renderToScreen = false;
     this.composer.addPass(this.renderPass);
@@ -73,7 +73,7 @@ export class SelectiveBloomPipeline {
     this.overlayMaterial = new THREE.ShaderMaterial({
       uniforms: {
         bloomTexture: { value: this.bloomPass.renderTargetsHorizontal[0].texture },
-        bloomStrength: { value: isMobile ? 0.30 : 0.38 },
+        bloomStrength: { value: isMobile ? 0.34 : 0.44 },
       },
       vertexShader: `
         varying vec2 vUv;
@@ -113,8 +113,8 @@ export class SelectiveBloomPipeline {
     if (this.disposed) return;
     // Bloom is a secondary polish pass. Keep it cheaper than the main scene,
     // especially on mobile GPUs where high-resolution post FX compete with gameplay.
-    const scale = this.isMobile ? 0.42 : 0.58;
-    const cap = this.isMobile ? 0.82 : 1.0;
+    const scale = this.isMobile ? 0.42 : 0.62;
+    const cap = this.isMobile ? 0.85 : 1.05;
     this.composer.setPixelRatio(Math.max(0.35, Math.min(cap, pixelRatio * scale)));
     this.composer.setSize(Math.max(1, width), Math.max(1, height));
   }
@@ -129,7 +129,7 @@ export class SelectiveBloomPipeline {
       return;
     }
 
-    if (now - this.lastScanAt >= 1200) this.refreshCandidates(now);
+    if (now - this.lastScanAt >= 800) this.refreshCandidates(now);
 
     const darkened = this.darkenedMeshes;
     darkened.length = 0;
@@ -238,6 +238,14 @@ export class SelectiveBloomPipeline {
   private isEmissive(material: THREE.Material | THREE.Material[]): boolean {
     const entries = Array.isArray(material) ? material : [material];
     return entries.some((entry) => {
+      if (entry.userData?.bloomEmitter === true) return true;
+      if (
+        entry instanceof THREE.MeshBasicMaterial &&
+        entry.blending === THREE.AdditiveBlending &&
+        entry.toneMapped === false
+      ) {
+        return true;
+      }
       const candidate = entry as DarkenableMaterial;
       if (!candidate.emissive) return false;
       const intensity = candidate.emissiveIntensity ?? 1;

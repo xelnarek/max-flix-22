@@ -44,16 +44,18 @@ test('operator portraits and details have bounded non-overlapping geometry', () 
 });
 
 
-test('the selected category is indicated without hiding other sidebar groups', () => {
+test('the selected category is indicated without circular dots or hiding desktop groups', () => {
   assert.match(app, /group\.dataset\.activeGroup = String\(group\.dataset\.menuGroup === segment\.id\)/);
   assert.match(app, /group\.hidden = false;/);
   assert.match(css, /\.menu-nav-group\[data-active-group="true"\]/);
-  assert.match(css, /\.menu-nav-group\[data-active-group="true"\] \.menu-nav-group-label::before/);
+  assert.match(css, /\.menu-nav-group\[data-active-group="true"\]\s*\{[\s\S]*border-left-color:/);
+  assert.match(css, /\.menu-nav-group\[data-active-group="true"\] \.menu-nav-group-label\s*\{/);
 });
 
 test('mobile navigation has readable touch targets and narrow content grids remain legible', () => {
-  assert.match(css, /@media \(max-width: 900px\)[\s\S]*grid-template-columns: clamp\(122px, 31vw, 188px\)/);
-  assert.match(css, /\.menu-tab-btn\s*\{[\s\S]*min-height: 42px !important/);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*grid-template-columns: minmax\(0, 1fr\) !important/);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*\.menu-mobile-segments\s*\{[\s\S]*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\) !important/);
+  assert.match(css, /\.menu-tab-btn\s*\{[\s\S]*min-height: 44px !important/);
   assert.match(css, /@media \(max-width: 480px\)[\s\S]*\.enemies-guide-grid[\s\S]*grid-template-columns: minmax\(0, 1fr\) !important/);
-  assert.match(css, /\.char-detail-view-btn\s*\{[\s\S]*min-height: 34px !important/);
+  assert.match(css, /\.char-detail-view-btn\s*\{[\s\S]*min-height: 36px !important/);
 });

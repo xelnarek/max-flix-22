@@ -40,7 +40,8 @@ export class ParticleMeshPool {
     shape: ParticleShape,
     color: THREE.ColorRepresentation,
     scale = 1,
-    opacity = 0.96
+    opacity = 0.96,
+    additive = false,
   ): THREE.Mesh | null {
     if (this.disposed) return null;
 
@@ -65,6 +66,12 @@ export class ParticleMeshPool {
     const material = mesh.material as THREE.MeshBasicMaterial;
     material.color.set(color);
     material.opacity = THREE.MathUtils.clamp(opacity, 0, 1);
+    const targetBlending = additive ? THREE.AdditiveBlending : THREE.NormalBlending;
+    if (material.blending !== targetBlending) {
+      material.blending = targetBlending;
+      material.needsUpdate = true;
+    }
+    material.userData.bloomEmitter = additive;
     mesh.position.set(0, 0, 0);
     mesh.rotation.set(0, 0, 0);
     mesh.scale.setScalar(Math.max(0.001, scale));
@@ -81,7 +88,9 @@ export class ParticleMeshPool {
     mesh.position.set(0, 0, 0);
     mesh.rotation.set(0, 0, 0);
     mesh.scale.setScalar(0);
-    (mesh.material as THREE.MeshBasicMaterial).opacity = 0;
+    const material = mesh.material as THREE.MeshBasicMaterial;
+    material.opacity = 0;
+    material.userData.bloomEmitter = false;
     this.available.push(mesh);
   }
 

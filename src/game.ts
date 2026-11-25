@@ -97,6 +97,16 @@ import {
   getSurvivalWeaponTracerStyle,
   type TracerStyle,
 } from './projectileTracerPool.ts';
+import {
+  CombatFlashLightPool,
+  disposeCombatVfxResources,
+  getBillboardVfxQuadGeometry,
+  getHorizontalVfxQuadGeometry,
+  getMuzzleStarTexture,
+  getScorchMarkTexture,
+  getShockwaveRingTexture,
+  getSoftGlowTexture,
+} from './combatVfx.ts';
 import { getSurvivalDifficultyProfile } from './survivalDifficulty.ts';
 import { getSurvivalKillScoreMultiplier, getSurvivalWaveClearBonus } from './survivalScoring.ts';
 import { chooseSurvivalRicochetTarget, getSurvivalRadiationProfile, getSurvivalRicochetProfile } from './survivalCombatDraft.ts';
@@ -1206,6 +1216,8 @@ export class PaleciakiGameEngine {
   private readonly particlePool = new ParticleMeshPool(PARTICLE_STATE_CAPACITY);
   // Bounded pool of continuous 3D projectile tracer ribbons/beams (Crimsonland feel).
   private readonly tracerPool = new ProjectileTracerPool(340);
+  // Preallocated transient point lights for muzzle flashes and explosions (zero shader recompiles).
+  private readonly combatFlashLights = new CombatFlashLightPool(3);
   private readonly survivalFirearmProjectileVisualCache = new Map<string, THREE.Mesh>();
   private particlePoolDisposed = false;
 
@@ -1220,6 +1232,8 @@ export class PaleciakiGameEngine {
     this.survivalFirearmProjectileVisualCache.clear();
     this.tracerPool.dispose();
     this.particlePool.dispose();
+    this.combatFlashLights.dispose();
+    disposeCombatVfxResources();
   }
 
   private projectiles: {
@@ -1377,6 +1391,7 @@ export class PaleciakiGameEngine {
     this.camera.far = 160;
     this.scene.background = new THREE.Color(0x07131d);
     this.scene.add(this.levelRoot);
+    this.scene.add(this.combatFlashLights.group);
 
     // Enhanced Hero Tactical Ground Ring (Podwyższony wskaźnik taktyczny pod stopami)
     const ringGroup = new THREE.Group();
@@ -3801,12 +3816,14 @@ export class PaleciakiGameEngine {
       } else if (explosion.firearmId === 'rocket_launcher') {
         this.spawnExplosionParticles(explosion.x, explosion.y + 0.2, explosion.z, explosion.color || 0xef4444, this.isHandheldViewport ? 18 : 28);
         this.spawnParticleRing(explosion.x, Math.max(0.1, explosion.y), explosion.z, 0xf97316);
+        this.spawnExplosionCompositeFx(explosion.x, explosion.y + 0.16, explosion.z, explosion.color || 0xef4444, 1.35, true, 16);
         this.triggerScreenShake(0.16, 0.12);
         this.triggerBloomPulse(0.14);
         sound.playFirearmImpact('rocket');
       } else if (explosion.firearmId === 'plasma_rifle') {
         this.spawnExplosionParticles(explosion.x, explosion.y + 0.15, explosion.z, explosion.color || 0xa78bfa, this.isHandheldViewport ? 12 : 18);
         this.spawnParticleRing(explosion.x, Math.max(0.1, explosion.y), explosion.z, 0xa78bfa);
+        this.spawnExplosionCompositeFx(explosion.x, explosion.y + 0.14, explosion.z, explosion.color || 0xa78bfa, 0.95, false, 10);
         sound.playFirearmImpact('plasma');
       }
     }
@@ -3852,7 +3869,7 @@ export class PaleciakiGameEngine {
     if (remoteShotsSinceLastSync > 0 && this.remotePlayerGroup) {
       const remoteFirearmDefinition = SURVIVAL_FIREARM_DEFS[remote.primaryFirearmId];
       const remoteProfile = SURVIVAL_FIREARM_PRESENTATION[remoteFirearmDefinition.archetype];
-      this.remoteSurvivalFirearmRecoilTimer = remoteProfile.recoilSettleSeconds;
+      this.remoteSurvivalFirearmRecoilTimer = SURVIVAL_FIREARM_PRESENTATION[remoteFirearmDefinition.archetype].recoilSettleSeconds;
       const remoteDirection = pvpAimDirectionFromAngle(remote.aimAngle);
       const remoteForward = new THREE.Vector3(remoteDirection.x, 0, remoteDirection.z);
       const remoteMuzzleOffset = 0.68 + (remoteProfile.muzzleForwardOffset - 0.78) * 0.42;
@@ -4483,8 +4500,8 @@ export class PaleciakiGameEngine {
     // It blends distinct industrial surfaces using the same bilinear field as
     // biome lighting, so the seams and the central junction have no hard edge.
     const texture = createSurvivalFloorAtlasTexture(
-      this.isHandheldViewport ? 1024 : 1536,
-      this.isHandheldViewport ? 342 : 512,
+      this.isHandheldViewport ? 1024 : 2048,
+      this.isHandheldViewport ? 342 : 682,
     );
     if (!texture) {
       console.warn('[Survival:World] Floor atlas unavailable; keeping the four PBR base floors.');
@@ -4726,10 +4743,12 @@ export class PaleciakiGameEngine {
       const fixtureMaterial = new THREE.MeshStandardMaterial({
         color: 0xc5d9e2,
         emissive: 0x4c91a9,
-        emissiveIntensity: 0.48,
+        emissiveIntensity: 0.92,
         roughness: 0.28,
         metalness: 0.42,
+        toneMapped: false,
       });
+      fixtureMaterial.userData.bloomEmitter = true;
       const fixture = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.12, 0.38), fixtureMaterial);
       fixture.name = 'survival-ceiling-light-' + (i + 1);
       fixture.position.set(-49 + i * 14, 8.35, 0);
@@ -4738,6 +4757,24 @@ export class PaleciakiGameEngine {
       this.registerCameraOccluder(fixture, 0.07, 3.15);
       this.survivalCeilingFixtures.push(fixture);
       this.levelRoot.add(fixture);
+
+      const floorHaloMaterial = new THREE.MeshBasicMaterial({
+        map: getSoftGlowTexture(),
+        color: 0xbbe8ff,
+        transparent: true,
+        opacity: 0.14,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+      this.survivalArenaInstanceMaterials.add(floorHaloMaterial);
+      const floorHalo = new THREE.Mesh(getHorizontalVfxQuadGeometry(), floorHaloMaterial);
+      floorHalo.name = 'survival-ceiling-floor-halo-' + (i + 1);
+      floorHalo.position.set(-49 + i * 14, 0.016, 0);
+      floorHalo.scale.setScalar(8.5);
+      floorHalo.castShadow = false;
+      floorHalo.receiveShadow = false;
+      floorHalo.renderOrder = 1;
+      this.levelRoot.add(floorHalo);
     }
 
     // Shared north/south biome edges are completely open; only closed outer edges get walls.
@@ -7581,6 +7618,7 @@ export class PaleciakiGameEngine {
     this.explosiveBarrels = [];
     this.clearParticles();
     this.tracerPool.clear();
+    this.combatFlashLights.clear();
     this.pvpProjectileLastPositions.clear();
     this.enemies = [];
     this.activeChaserIds.clear();
@@ -10154,6 +10192,10 @@ export class PaleciakiGameEngine {
       if (this.gameMode === 'pvp') {
         this.updatePvpMode(simDt);
         this.updateGobkitAnimations(simDt);
+        this.updateSpecialEffects(simDt);
+        this.updateParticles(simDt);
+        this.tracerPool.update(simDt);
+        this.combatFlashLights.update(simDt);
         return;
       }
       this.activeElapsedSeconds += simDt;
@@ -10221,6 +10263,7 @@ export class PaleciakiGameEngine {
       if (this.gameMode === 'survival') this.updateSurvivalXpGems(simDt);
       this.updateSpecialEffects(simDt);
       this.updateParticles(simDt);
+      this.combatFlashLights.update(simDt);
     }
     this.tracerPool.update(simDt);
     this.updateGobkitAnimations(simDt);
@@ -11232,10 +11275,127 @@ export class PaleciakiGameEngine {
     if (firearm.ammoInMagazine <= 0) this.reloadSurvivalFirearm();
   }
 
+  private spawnExplosionCompositeFx(
+    x: number,
+    y: number,
+    z: number,
+    color: number,
+    scale = 1.2,
+    includeScorch = true,
+    lightIntensity = 12,
+  ): void {
+    this.combatFlashLights.flash(
+      x,
+      Math.max(0.5, y + 0.45),
+      z,
+      color,
+      lightIntensity,
+      8.5 + scale * 3.5,
+      0.18 + scale * 0.04,
+      this.adaptivePerformanceTier,
+    );
+    if (!this.levelRoot || this.specialEffects.length >= 48) return;
+
+    const coreMat = new THREE.MeshBasicMaterial({
+      map: getSoftGlowTexture(),
+      color: 0xfff3d1,
+      transparent: true,
+      opacity: 0.94,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      toneMapped: false,
+    });
+    coreMat.userData.bloomEmitter = true;
+    const coreMesh = new THREE.Mesh(getBillboardVfxQuadGeometry(), coreMat);
+    coreMesh.position.set(x, Math.max(0.22, y + 0.16), z);
+    coreMesh.renderOrder = 10;
+    const startCoreScale = 0.52 * scale;
+    const endCoreScale = 2.45 * scale;
+    coreMesh.scale.setScalar(startCoreScale);
+    coreMesh.quaternion.copy(this.camera.quaternion);
+    this.levelRoot.add(coreMesh);
+    this.specialEffects.push({
+      mesh: coreMesh,
+      life: 0.22,
+      maxLife: 0.22,
+      grow: 0,
+      spin: 0,
+      cleanup: () => coreMat.dispose(),
+      update: (_dt, progress) => {
+        const eased = 1 - Math.pow(1 - progress, 2.2);
+        coreMesh.scale.setScalar(THREE.MathUtils.lerp(startCoreScale, endCoreScale, eased));
+        coreMesh.quaternion.copy(this.camera.quaternion);
+        coreMat.opacity = 0.94 * Math.pow(1 - progress, 1.5);
+      },
+    });
+
+    const ringMat = new THREE.MeshBasicMaterial({
+      map: getShockwaveRingTexture(),
+      color,
+      transparent: true,
+      opacity: 0.88,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      toneMapped: false,
+    });
+    ringMat.userData.bloomEmitter = true;
+    const ringMesh = new THREE.Mesh(getHorizontalVfxQuadGeometry(), ringMat);
+    ringMesh.position.set(x, Math.max(0.05, y * 0.25 + 0.05), z);
+    ringMesh.renderOrder = 8;
+    const startRingScale = 0.42 * scale;
+    const endRingScale = 3.65 * scale;
+    ringMesh.scale.setScalar(startRingScale);
+    this.levelRoot.add(ringMesh);
+    this.specialEffects.push({
+      mesh: ringMesh,
+      life: 0.32,
+      maxLife: 0.32,
+      grow: 0,
+      spin: 0,
+      cleanup: () => ringMat.dispose(),
+      update: (_dt, progress) => {
+        const eased = 1 - Math.pow(1 - progress, 2.4);
+        ringMesh.scale.setScalar(THREE.MathUtils.lerp(startRingScale, endRingScale, eased));
+        ringMat.opacity = 0.88 * Math.pow(1 - progress, 1.45);
+      },
+    });
+
+    if (includeScorch && this.adaptivePerformanceTier < 2 && this.specialEffects.length < 44) {
+      const scorchMat = new THREE.MeshBasicMaterial({
+        map: getScorchMarkTexture(),
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.62,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -3,
+        polygonOffsetUnits: -3,
+      });
+      const scorchMesh = new THREE.Mesh(getHorizontalVfxQuadGeometry(), scorchMat);
+      scorchMesh.position.set(x, 0.024, z);
+      scorchMesh.rotation.y = Math.random() * Math.PI * 2;
+      scorchMesh.scale.setScalar(1.65 * scale);
+      scorchMesh.renderOrder = 3;
+      this.levelRoot.add(scorchMesh);
+      this.specialEffects.push({
+        mesh: scorchMesh,
+        life: 2.4,
+        maxLife: 2.4,
+        grow: 0,
+        spin: 0,
+        cleanup: () => scorchMat.dispose(),
+        update: (_dt, progress) => {
+          scorchMat.opacity = 0.62 * (1 - progress * progress);
+        },
+      });
+    }
+  }
+
   private spawnBallisticGrenadeDetonationFx(x: number, y: number, z: number, color: number): void {
     this.spawnExplosionParticles(x, y + 0.16, z, color, this.isHandheldViewport ? 16 : 26);
     this.spawnParticleRing(x, Math.max(0.08, y), z, 0xffd166);
     this.spawnCompactImpact(x, y + 0.08, z, color);
+    this.spawnExplosionCompositeFx(x, y, z, color, 1.15, true, 14);
     this.triggerScreenShake(0.15, 0.12);
     this.triggerBloomPulse(0.12);
   }
@@ -11481,11 +11641,12 @@ export class PaleciakiGameEngine {
         break;
     }
 
+    const glowMuzzle = archetype !== 'grenade';
     for (let index = 0; index < count; index++) {
       const lane = count <= 1 ? 0 : (index / (count - 1)) * 2 - 1;
       const lateral = lane * profile.muzzleSpread * spreadScale + (Math.random() - 0.5) * profile.muzzleSpread * 0.18;
       const particleSize = profile.muzzleFlashScale * (0.78 + Math.random() * 0.58);
-      const mesh = this.particlePool.acquire(shape, color, particleSize, 0.96);
+      const mesh = this.particlePool.acquire(shape, color, particleSize, 0.96, glowMuzzle);
       if (!mesh) break;
       mesh.position.copy(position).addScaledVector(forward, 0.06);
       mesh.rotation.set(index * 0.55, index * 0.8, index * 0.35);
@@ -11510,6 +11671,62 @@ export class PaleciakiGameEngine {
 
     if (profile.muzzleStyle === 'plasma-pulse') this.triggerBloomPulse(0.10);
     if (profile.muzzleStyle === 'gauss-discharge') this.triggerBloomPulse(0.16);
+    if (this.adaptivePerformanceTier < 2) {
+      const flashLightIntensity = archetype === 'gauss' ? 7.5
+        : archetype === 'rocket' || archetype === 'grenade' || archetype === 'heavy-rifle' || archetype === 'shotgun' ? 6.2
+          : archetype === 'plasma' ? 5.8
+            : archetype === 'rifle' || archetype === 'minigun' || archetype === 'flame' ? 4.2
+              : 3.2;
+      this.combatFlashLights.flash(
+        position.x + forward.x * 0.18,
+        position.y + 0.12,
+        position.z + forward.z * 0.18,
+        color,
+        flashLightIntensity,
+        5.5,
+        0.08,
+        this.adaptivePerformanceTier,
+      );
+      if (this.levelRoot && this.specialEffects.length < 48) {
+        const starLife = archetype === 'gauss' || archetype === 'heavy-rifle' ? 0.095 : 0.075;
+        const baseScale = THREE.MathUtils.clamp(profile.muzzleFlashScale * 5.2, 0.34, 0.92);
+        const flareMat = new THREE.MeshBasicMaterial({
+          map: getMuzzleStarTexture(),
+          color,
+          transparent: true,
+          opacity: 0.96,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          toneMapped: false,
+        });
+        flareMat.userData.bloomEmitter = true;
+        const flareMesh = new THREE.Mesh(getBillboardVfxQuadGeometry(), flareMat);
+        flareMesh.position.set(
+          position.x + forward.x * 0.08,
+          position.y,
+          position.z + forward.z * 0.08,
+        );
+        flareMesh.scale.setScalar(baseScale);
+        flareMesh.quaternion.copy(this.camera.quaternion);
+        flareMesh.rotateZ(Math.random() * Math.PI);
+        flareMesh.renderOrder = 11;
+        this.levelRoot.add(flareMesh);
+        this.specialEffects.push({
+          mesh: flareMesh,
+          life: starLife,
+          maxLife: starLife,
+          grow: 0,
+          spin: 0,
+          cleanup: () => flareMat.dispose(),
+          update: (_dt, progress) => {
+            const shrink = 1 - progress * 0.55;
+            flareMesh.scale.setScalar(baseScale * shrink);
+            flareMat.opacity = 0.96 * (1 - progress * progress);
+            flareMesh.quaternion.copy(this.camera.quaternion);
+          },
+        });
+      }
+    }
     // Sharp Crimsonland muzzle flash lance along barrel axis so every shot snaps forward cleanly.
     const beamLen = archetype === 'gauss' ? 1.05
       : archetype === 'heavy-rifle' || archetype === 'shotgun' ? 0.72
@@ -11650,7 +11867,8 @@ export class PaleciakiGameEngine {
         break;
     }
     const size = profile.trailParticleSize * profile.trailStretch;
-    const mesh = this.particlePool.acquire(shape, definition.color, size, profile.trailOpacity);
+    const glowTrail = profile.trailStyle !== 'exhaust-smoke' && profile.trailStyle !== 'smoke-fragment';
+    const mesh = this.particlePool.acquire(shape, definition.color, size, profile.trailOpacity, glowTrail);
     if (!mesh) return;
     mesh.position.copy(projectile.mesh.position);
     mesh.rotation.y = Math.atan2(projectile.vel.x, projectile.vel.z);
@@ -11734,6 +11952,19 @@ export class PaleciakiGameEngine {
         break;
     }
 
+    if (archetype === 'plasma' || archetype === 'gauss' || archetype === 'rocket') {
+      this.combatFlashLights.flash(
+        x,
+        Math.max(0.55, burstY),
+        z,
+        color,
+        archetype === 'gauss' ? 7.0 : 5.4,
+        6.0,
+        0.11,
+        this.adaptivePerformanceTier,
+      );
+    }
+
     // Crimsonland directional exit spray along bullet trajectory for tactile stopping punch.
     const dirLen = Math.hypot(dirX, dirZ);
     if (dirLen > 0.001 && archetype !== 'flame' && archetype !== 'grenade' && this.adaptivePerformanceTier < 2) {
@@ -11744,7 +11975,7 @@ export class PaleciakiGameEngine {
       const sprayCount = archetype === 'gauss' || archetype === 'heavy-rifle' ? 4 : archetype === 'shotgun' || archetype === 'rifle' ? 3 : 2;
       const spraySpeed = archetype === 'gauss' ? 11.5 : archetype === 'heavy-rifle' ? 9.5 : 7.0;
       for (let idx = 0; idx < sprayCount; idx++) {
-        const spark = this.particlePool.acquire('flat-box', color, archetype === 'gauss' ? 0.052 : 0.038, 0.94);
+        const spark = this.particlePool.acquire('flat-box', color, archetype === 'gauss' ? 0.052 : 0.038, 0.94, true);
         if (!spark) break;
         spark.position.set(x + nx * 0.25, burstY, z + nz * 0.25);
         this.levelRoot.add(spark);
@@ -14286,6 +14517,7 @@ export class PaleciakiGameEngine {
     const budget = getSurvivalPerformanceBudget(this.isHandheldViewport, this.adaptivePerformanceTier);
     this.spawnExplosionParticles(x, 0.18, z, 0xff6938, budget.explosionParticleCount);
     this.spawnParticleRing(x, 0.24, z, 0xff8a46);
+    this.spawnExplosionCompositeFx(x, 0.18, z, 0xff6938, 1.9, true, 22);
     this.triggerScreenShake(0.38, 0.24);
     this.triggerBloomPulse(0.42);
     sound.playBossWarning();
@@ -15397,7 +15629,9 @@ export class PaleciakiGameEngine {
           this.platforms = this.platforms.filter((platform) => platform.mesh !== b.mesh);
           sound.playExplosion();
           this.triggerScreenShake(1.2, 0.8);
+          this.spawnExplosionParticles(b.x, b.y + 0.35, b.z, 0xf97316, this.isHandheldViewport ? 16 : 26);
           this.spawnParticleRing(b.x, b.y + 0.5, b.z, 0xef4444);
+          this.spawnExplosionCompositeFx(b.x, b.y + 0.25, b.z, 0xf97316, 1.75, true, 20);
           this.emitFloatingToast('💥 EKSPLOZJA KLEJU PRO FLEX!', b.x, b.y + 1.2, b.z, 'damage');
 
           // Detonate and damage enemies in 5.2m radius
@@ -16691,6 +16925,7 @@ export class PaleciakiGameEngine {
         color,
         profile.particleScale,
         0.94,
+        true,
       );
       if (!mesh) break;
 
@@ -16712,6 +16947,37 @@ export class PaleciakiGameEngine {
         4 + index * 0.5,
       );
     }
+
+    if (this.levelRoot && this.adaptivePerformanceTier < 2 && this.specialEffects.length < 46) {
+      const hitGlowMat = new THREE.MeshBasicMaterial({
+        map: getSoftGlowTexture(),
+        color,
+        transparent: true,
+        opacity: 0.72,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        toneMapped: false,
+      });
+      hitGlowMat.userData.bloomEmitter = true;
+      const hitGlow = new THREE.Mesh(getBillboardVfxQuadGeometry(), hitGlowMat);
+      hitGlow.position.set(enemy.x, enemy.y + 0.68, enemy.z);
+      hitGlow.quaternion.copy(this.camera.quaternion);
+      hitGlow.scale.setScalar(isBoss ? 0.92 : 0.62);
+      hitGlow.renderOrder = 9;
+      this.levelRoot.add(hitGlow);
+      this.specialEffects.push({
+        mesh: hitGlow,
+        life: 0.085,
+        maxLife: 0.085,
+        grow: 0,
+        spin: 0,
+        cleanup: () => hitGlowMat.dispose(),
+        update: (_dt, progress) => {
+          hitGlow.quaternion.copy(this.camera.quaternion);
+          hitGlowMat.opacity = 0.72 * (1 - progress * progress);
+        },
+      });
+    }
   }
 
   private triggerEnemyHitReaction(enemy: EnemyItem, damage: number, sourceX: number, sourceZ: number): void {
@@ -16730,6 +16996,34 @@ export class PaleciakiGameEngine {
     this.requestGobkitAction(this.gobkitEnemyTracks.get(enemy) || null, 'Hit', reaction.duration);
     enemy.hitRecoilX = (enemy.hitRecoilX || 0) + reaction.impulseX;
     enemy.hitRecoilZ = (enemy.hitRecoilZ || 0) + reaction.impulseZ;
+
+    // Brief emissive impact flash exclusively on per-instance procedural enemy
+    // materials; shared MakeHuman/Gobkit rig materials remain untouched.
+    type HitEmissiveEntry = { mat: THREE.MeshStandardMaterial; baseColor: number; baseIntensity: number };
+    let entries = enemy.mesh.userData.hitEmissiveOriginals as HitEmissiveEntry[] | undefined;
+    if (!entries) {
+      entries = [];
+      const seen = new Set<THREE.Material>();
+      enemy.mesh.traverse((node: THREE.Object3D) => {
+        if (!(node instanceof THREE.Mesh)) return;
+        const mats = Array.isArray(node.material) ? node.material : [node.material];
+        for (const mat of mats) {
+          if (!(mat instanceof THREE.MeshStandardMaterial) || seen.has(mat)) continue;
+          if (mat.userData.gobkitSharedMaterial || mat.userData.makeHumanShared) continue;
+          seen.add(mat);
+          entries!.push({
+            mat,
+            baseColor: mat.emissive.getHex(),
+            baseIntensity: mat.emissiveIntensity,
+          });
+        }
+      });
+      enemy.mesh.userData.hitEmissiveOriginals = entries;
+    }
+    for (let i = 0; i < entries.length; i++) {
+      entries[i].mat.emissive.setHex(0xffffff);
+      entries[i].mat.emissiveIntensity = 0.68;
+    }
   }
 
   private requestEnemyAttackAnimation(enemy: EnemyItem, durationSeconds = 0.48): void {
@@ -16993,6 +17287,9 @@ export class PaleciakiGameEngine {
 
     const timer = Math.max(0, (enemy.hitReactTimer || 0) - dt);
     enemy.hitReactTimer = timer;
+    const emissiveEntries = enemy.mesh.userData.hitEmissiveOriginals as
+      | Array<{ mat: THREE.MeshStandardMaterial; baseColor: number; baseIntensity: number }>
+      | undefined;
     if (timer > 0 && enemy.hitBaseScale) {
       const pulse = getEnemyHitPulse(timer, enemy.hitReactDuration || 0.21, enemy.type);
       const squash = pulse * (enemy.hitReactStrength || 0.08);
@@ -17001,10 +17298,24 @@ export class PaleciakiGameEngine {
         enemy.hitBaseScale.y * (1 - squash),
         enemy.hitBaseScale.z * (1 + squash * 0.45),
       );
+      if (emissiveEntries && emissiveEntries.length > 0) {
+        const flashWeight = Math.min(1, timer / Math.max(0.06, enemy.hitReactDuration || 0.21));
+        for (let i = 0; i < emissiveEntries.length; i++) {
+          const entry = emissiveEntries[i];
+          entry.mat.emissiveIntensity = THREE.MathUtils.lerp(entry.baseIntensity, 0.68, flashWeight);
+        }
+      }
     } else if (enemy.hitBaseScale) {
       enemy.mesh.scale.set(enemy.hitBaseScale.x, enemy.hitBaseScale.y, enemy.hitBaseScale.z);
       enemy.hitBaseScale = undefined;
       enemy.hitReactStrength = 0;
+      if (emissiveEntries) {
+        for (let i = 0; i < emissiveEntries.length; i++) {
+          const entry = emissiveEntries[i];
+          entry.mat.emissive.setHex(entry.baseColor);
+          entry.mat.emissiveIntensity = entry.baseIntensity;
+        }
+      }
     }
 
     const recoilX = enemy.hitRecoilX || 0;
@@ -17086,6 +17397,15 @@ export class PaleciakiGameEngine {
     if (enemy.hitBaseScale) {
       mesh.scale.set(enemy.hitBaseScale.x, enemy.hitBaseScale.y, enemy.hitBaseScale.z);
       enemy.hitBaseScale = undefined;
+    }
+    const emissiveEntries = mesh.userData.hitEmissiveOriginals as
+      | Array<{ mat: THREE.MeshStandardMaterial; baseColor: number; baseIntensity: number }>
+      | undefined;
+    if (emissiveEntries) {
+      for (let i = 0; i < emissiveEntries.length; i++) {
+        emissiveEntries[i].mat.emissive.setHex(emissiveEntries[i].baseColor);
+        emissiveEntries[i].mat.emissiveIntensity = emissiveEntries[i].baseIntensity;
+      }
     }
     enemy.deathVisualDuration = duration;
     enemy.deathVisualTimer = duration;
@@ -22606,7 +22926,8 @@ export class PaleciakiGameEngine {
       }
       const baseScale = size * shapeScale * (0.7 + Math.random() * 0.8);
       const tint = this.particleColorScratch.set(color).offsetHSL(0, 0, (Math.random() - 0.5) * 0.18);
-      const mesh = this.particlePool.acquire(shape, tint, baseScale, 0.96);
+      const additive = i % 2 === 0 && color !== 0xf3f4f6;
+      const mesh = this.particlePool.acquire(shape, tint, baseScale, 0.96, additive);
       if (!mesh) continue;
 
       mesh.position.set(x, y, z);

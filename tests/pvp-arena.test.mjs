@@ -963,3 +963,34 @@ test('Piotr PvP ability applies its electrical damage and stun exactly once per 
   assert.equal(state.p1.abilityUses, 1, 'cooldown prevents a duplicate activation');
   assert.equal(state.p1.abilityDamageDealt, 110);
 });
+
+test('PvP rapid-fire weapon drops apply balanced PvP cooldown overrides and damage scaling', async () => {
+  const { getPvpFirearmAttackCooldown, stepPvpArena, createInitialPvpArenaState, resetPvpRound } = await import('../src/pvpArena.ts');
+  const { SURVIVAL_FIREARM_DEFS } = await import('../src/survivalFirearms.ts');
+
+  assert.equal(getPvpFirearmAttackCooldown('smg_45'), 0.56);
+  assert.equal(getPvpFirearmAttackCooldown('minigun'), 0.42);
+  assert.equal(getPvpFirearmAttackCooldown('flamethrower'), 0.44);
+
+  const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
+  resetPvpRound(state);
+  advanceArena(state, 3.1);
+  state.obstacles = [];
+  state.pickup.active = false;
+  state.perkDrop.active = false;
+  state.firearmDrop.active = false;
+  state.p1.x = -4;
+  state.p1.z = 0;
+  state.p2.x = 4;
+  state.p2.z = 0;
+  state.p1.primaryFirearmId = 'minigun';
+  state.p1.firearmAmmoById.minigun = SURVIVAL_FIREARM_DEFS.minigun.magazineSize;
+
+  stepPvpArena(state, 0.05, {
+    moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: true,
+  });
+  assert.equal(state.p1.shotsFired, 1);
+  assert.ok(state.p1.attackCooldownTimer > 0.35 && state.p1.attackCooldownTimer <= 0.42);
+  assert.ok(state.projectiles.length >= 1);
+  assert.ok(state.projectiles[0].damage < 50, 'minigun PvP damage per bullet must be scaled to avoid instant melts');
+});

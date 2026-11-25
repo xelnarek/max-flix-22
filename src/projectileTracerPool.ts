@@ -138,6 +138,7 @@ export class ProjectileTracerPool {
         side: THREE.DoubleSide,
         toneMapped: false,
       });
+      outerMat.userData.bloomEmitter = true;
       const innerMat = new THREE.MeshBasicMaterial({
         color: 0xffffff,
         transparent: true,
@@ -146,6 +147,7 @@ export class ProjectileTracerPool {
         blending: THREE.AdditiveBlending,
         toneMapped: false,
       });
+      innerMat.userData.bloomEmitter = true;
       const outerMesh = new THREE.Mesh(this.outerGeo, outerMat);
       outerMesh.castShadow = false;
       outerMesh.receiveShadow = false;
