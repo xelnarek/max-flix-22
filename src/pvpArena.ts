@@ -61,6 +61,7 @@ export interface PvpProjectile {
   radius: number;
   damage: number;
   life: number;
+  /** Legacy network/catalogue field; player hits always consume the authoritative projectile. */
   pierce: number;
   color: number;
   /** Missing on legacy/test fixtures; omitted kind is treated as a standard primary shot. */
@@ -1026,9 +1027,11 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
         recordPvpFirearmExplosion(state, proj, proj.x, proj.y, proj.z);
       }
 
-      proj.pierce--;
-      // Resolve the final swept segment before consuming an expiring round.
-      if (proj.detonateOnImpact || proj.pierce <= 0 || proj.life <= 0) state.projectiles.splice(i, 1);
+      // PvP shots are authoritative room objects: consume every standard
+      // projectile on its first player-body contact, even when a legacy weapon
+      // definition still carries a positive pierce count. Explosives have already
+      // emitted their impact event above and are consumed by the same first hit.
+      state.projectiles.splice(i, 1);
       if (targetPlayer.hp <= 0) {
         handleKnockout(state, shooterPlayer.slot);
         break;
