@@ -5,7 +5,7 @@ import type { EnemyType } from './types.ts';
 type Anchor = 'head' | 'torso' | 'rightArm' | 'back' | 'legs';
 type P3 = readonly [number, number, number];
 type Gear = 'cap' | 'beret' | 'hardhat' | 'navyCap' | 'crown' | 'visor' | 'gasMask' | 'wolf' | 'none';
-type Prop = 'clipboard' | 'swatches' | 'shield' | 'parcel' | 'screen' | 'espresso' | 'scanner' | 'claw' | 'mechArm' | 'riotShield' | 'talons' | 'none';
+type Prop = 'clipboard' | 'swatches' | 'shield' | 'parcel' | 'screen' | 'espresso' | 'scanner' | 'claw' | 'forks' | 'mechArm' | 'riotShield' | 'talons' | 'none';
 type Pack = 'briefcase' | 'blueprints' | 'delivery' | 'radio' | 'toolRoll' | 'mantle' | 'ceramic' | 'tanks' | 'battery' | 'pallet' | 'tail' | 'none';
 
 interface RoleSpec {
@@ -38,7 +38,7 @@ const ROLE: Partial<Record<EnemyType, RoleSpec>> = Object.freeze({
   bosman_krakow: {w:.84,h:.60,d:.45,shoulder:1.02,head:1.00,main:0x1b3155,dark:0x111a2d,accent:0xd8b148,metal:0xb0becb,gear:'navyCap',prop:'none',pack:'radio',form:'heavy'},
   zombie_pracownik: {w:.60,h:.56,d:.36,shoulder:.69,head:.91,main:0x657044,dark:0x292e22,accent:0x9cae43,metal:0xb6b69b,gear:'none',prop:'claw',pack:'none',form:'hunched'},
   sebix_m: {w:.75,h:.50,d:.43,shoulder:.90,head:.92,main:0x27252a,dark:0x151518,accent:0xb72b37,metal:0xc39b43,gear:'cap',prop:'none',pack:'none',form:'heavy'},
-  mutant_gamma_forklift: {w:.96,h:.72,d:.62,shoulder:1.16,head:1.04,main:0x3e4b39,dark:0x202728,accent:0x9cbb28,metal:0x9ba6a8,gear:'hardhat',prop:'none',pack:'pallet',form:'beast'},
+  mutant_gamma_forklift: {w:.96,h:.72,d:.62,shoulder:1.16,head:1.04,main:0x3e4b39,dark:0x202728,accent:0x9cbb28,metal:0x9ba6a8,gear:'hardhat',prop:'forks',pack:'pallet',form:'beast'},
   radioactive_pip: {w:.69,h:.63,d:.50,shoulder:.83,head:1.00,main:0x788b32,dark:0x252d22,accent:0xb7e34b,metal:0xa6b2a0,gear:'gasMask',prop:'none',pack:'tanks',form:'hazmat'},
   cyber_salesman: {w:.59,h:.61,d:.35,shoulder:.78,head:1.02,main:0x384c5b,dark:0x111f2a,accent:0x28d9ec,metal:0x9db3c2,gear:'visor',prop:'mechArm',pack:'battery',form:'robotic'},
   elite_walczak_guard: {w:.83,h:.62,d:.50,shoulder:1.08,head:.96,main:0x343d50,dark:0x171e2a,accent:0xa72f40,metal:0xb3c0c9,gear:'visor',prop:'riotShield',pack:'radio',form:'heavy'},
@@ -311,6 +311,11 @@ function heldProp(groups:Record<Anchor,THREE.Group>,prop:Prop,accent:number,meta
     case 'scanner':
       bx(groups,'rightArm',0x23313b,[.39,.72,.15],[.17,.25,.12],[0,0,-.16],.65);
       bx(groups,'rightArm',accent,[.39,.80,.22],[.11,.075,.015],[0,0,-.16],.35);
+      break;
+    case 'forks':
+      // Integrated forklift-tine gauntlet is part of the mutant's silhouette, not a carried hand tool.
+      bx(groups,'rightArm',metal,[.43,.63,.20],[.16,.10,.54],[0,0,-.05],.8);
+      bx(groups,'rightArm',metal,[.43,.81,.20],[.16,.10,.50],[0,0,-.05],.8);
       break;
     case 'claw':
     case 'talons':
