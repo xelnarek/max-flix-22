@@ -165,7 +165,7 @@ test('firearm pickups are physical 3D models with weapon-specific silhouettes', 
 });
 
 test('magazine, reload, projectile archetype and damage are driven by the active firearm profile', async () => {
-  const game = await read('../src/game.ts');
+  const [game, firearms] = await Promise.all([read('../src/game.ts'), read('../src/survivalFirearms.ts')]);
   assert.match(game, /private reloadSurvivalFirearm\(\)/);
   assert.match(game, /public requestSurvivalFirearmReload\(\)/);
   assert.match(game, /private updateHeldSurvivalFirearmAction\(dt: number\)/);
