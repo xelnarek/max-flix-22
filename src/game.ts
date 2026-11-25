@@ -19774,7 +19774,7 @@ export class PaleciakiGameEngine {
             }
 
             // AoE shockwave on hit (Operator 01's WZ Binder Stamp)
-            if (p.aoeRadius && p.aoeRadius > 0) {
+            if (p.aoeRadius && p.aoeRadius > 0 && !(p.firearmProjectile && p.detonateOnImpact)) {
               if (p.weaponProjectile || p.firearmProjectile) this.spawnCompactImpact(closestX, closestY, closestZ, p.firearmColor ?? (p.weaponId ? SURVIVAL_DAMAGE_WEAPONS[p.weaponId].color : 0xf59e0b));
               else this.spawnParticleRing(e.x, e.y + 0.4, e.z, p.homingTrailColor ?? 0xf59e0b);
               for (const other of this.enemies) {
