@@ -37,7 +37,7 @@ function geometrySignature(root) {
 
 test('all 19 humanoid and creature enemy roles have a dedicated authored geometry kit', () => {
   const expected = Object.keys(ENEMY_VISUAL_PROFILES)
-    .filter((type) => !['forklift', 'agv_robot', 'piorun_dron', 'pomazaniec'].includes(type))
+    .filter((type) => !['forklift', 'agv_robot', 'piorun_dron', 'pomazaniec', 'wkurzona_zona', 'kluska_piekielna'].includes(type))
     .sort();
   assert.deepEqual([...ENEMY_ROLE_KIT_TYPES].sort(), expected);
 });
@@ -203,7 +203,7 @@ test('all non-vehicle humanoid archetypes have anatomical tuning', () => {
 
 test('all humanoid enemy archetypes carry bounded and distinct role-motion accents', () => {
   const expected = Object.keys(ENEMY_VISUAL_PROFILES)
-    .filter((type) => !['forklift', 'agv_robot', 'piorun_dron', 'pomazaniec'].includes(type))
+    .filter((type) => !['forklift', 'agv_robot', 'piorun_dron', 'pomazaniec', 'wkurzona_zona', 'kluska_piekielna'].includes(type))
     .sort();
   assert.deepEqual(Object.keys(ENEMY_ROLE_MOTION_ACCENTS).sort(), expected);
   const signatures = new Set();
@@ -248,7 +248,7 @@ test('role accents measurably change head and torso motion for the same animatio
 
 test('every animated enemy role has bounded wind-up, follow-through and hit-stagger accents', () => {
   const types = Object.keys(ENEMY_VISUAL_PROFILES).filter((type) =>
-    !['forklift', 'agv_robot', 'piorun_dron', 'pomazaniec'].includes(type)
+    !['forklift', 'agv_robot', 'piorun_dron', 'pomazaniec', 'wkurzona_zona', 'kluska_piekielna'].includes(type)
   );
   const profiles = types.map((type) => getEnemyCombatMotionProfile(type));
   assert.equal(profiles.length, 19);

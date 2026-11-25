@@ -59,6 +59,8 @@ export const ENEMY_DEATH_MOTION_PROFILES: Readonly<Record<EnemyType, EnemyDeathM
   mutant_gamma_forklift: profile(1.44, 0.84, 0.18, 0.28, 0.31),
   radioactive_pip: profile(0.90, 0.44, -0.38, 0.16, 0.17),
   cyber_salesman: profile(0.88, 0.18, 0.10, 0.12, 0.12),
+  wkurzona_zona: profile(0.98, 0.46, 0.50, 0.16, 0.18),
+  kluska_piekielna: profile(0.82, 0.24, 0.62, 0.10, 0.14),
 });
 
 const clamp01 = (value: number): number =>

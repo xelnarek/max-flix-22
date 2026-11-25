@@ -1853,7 +1853,7 @@ test('enemy rendering keeps one full-detail rig for every mapped archetype at al
   const [game, profiles] = await Promise.all([
     read('../src/game.ts'), import('../src/enemyVisualProfiles.ts')
   ]);
-  assert.equal(Object.keys(profiles.ENEMY_VISUAL_PROFILES).length, 23);
+  assert.equal(Object.keys(profiles.ENEMY_VISUAL_PROFILES).length, 25);
   assert.ok(game.includes('if (!this.requestedGobkitEnemies.has(enemy)) {'));
   assert.ok(game.includes('this.attachGobkitEnemyModel(enemy, modelId)'));
   assert.ok(game.includes('Every mapped enemy uses its single full-detail rig, independent of distance.'));

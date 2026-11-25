@@ -68,7 +68,9 @@ namespace MaxFlix.Unity.Runtime
                 { EnemyKind.Sebix, Make(EnemyKind.Sebix, "Operator Turbo", 14, 1.65f, 1.05f, 2.1f, 28f, 2.2f, EnemyBehaviorStyle.Boss, new Color(0.97f, 0.34f, 0.15f), true, false) },
                 { EnemyKind.MutantGammaForklift, Make(EnemyKind.MutantGammaForklift, "Mutant Gamma-Sztaplarka", 7, 3.6f, 1.1f, 2.0f, 22f, 2f, EnemyBehaviorStyle.Boss, new Color(0.22f, 0.92f, 0.35f), true, false, 2, 90f, 4) },
                 { EnemyKind.RadioactivePip, Make(EnemyKind.RadioactivePip, "Radioaktywny Inspektor PIP", 6, 3.2f, 2.3f, 7.5f, 20f, 1.25f, EnemyBehaviorStyle.Support, new Color(0.65f, 0.93f, 0.17f), false, false, 3, 150f, 4) },
-                { EnemyKind.CyberSalesman, Make(EnemyKind.CyberSalesman, "Cyber-Handlowiec 3.0", 5, 4.5f, 1.35f, 8f, 23f, 1.35f, EnemyBehaviorStyle.Ranged, new Color(0.18f, 0.90f, 0.93f), false, false, 4, 210f, 3) }
+                { EnemyKind.CyberSalesman, Make(EnemyKind.CyberSalesman, "Cyber-Handlowiec 3.0", 5, 4.5f, 1.35f, 8f, 23f, 1.35f, EnemyBehaviorStyle.Ranged, new Color(0.18f, 0.90f, 0.93f), false, false, 4, 210f, 3) },
+                { EnemyKind.WkurzonaZona, Make(EnemyKind.WkurzonaZona, "wkUrzona zOna", 9, 2.55f, 2.15f, 1.25f, 22f, 2f, EnemyBehaviorStyle.MeleeChaser, new Color(0.15f, 0.29f, 0.78f), false, false, 4, 120f, 5) },
+                { EnemyKind.KluskaPiekielna, Make(EnemyKind.KluskaPiekielna, "Kluska — Pies z piekła rodem", 8, 3.75f, 1.32f, 1.25f, 22f, 1.25f, EnemyBehaviorStyle.Charger, new Color(0.42f, 0.24f, 0.16f), false, false, 6, 210f, 4) }
             };
 
         private static readonly EnemyKind[] SurvivalRoster =
@@ -78,7 +80,8 @@ namespace MaxFlix.Unity.Runtime
             EnemyKind.Customer, EnemyKind.Architect, EnemyKind.ItalianVendor,
             EnemyKind.Serwisant, EnemyKind.PiorunDrone, EnemyKind.AgvRobot,
             EnemyKind.PanRoman, EnemyKind.EliteWalczakGuard, EnemyKind.MutantGammaForklift,
-            EnemyKind.RadioactivePip, EnemyKind.CyberSalesman
+            EnemyKind.RadioactivePip, EnemyKind.CyberSalesman,
+            EnemyKind.WkurzonaZona, EnemyKind.KluskaPiekielna
         };
 
         public static EnemyArchetypeProfile Get(EnemyKind id)

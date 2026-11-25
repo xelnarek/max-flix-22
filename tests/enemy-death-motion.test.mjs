@@ -12,6 +12,7 @@ const enemyTypes = [
   'przedstawiciel_włoski', 'sztaplar_szalony', 'krol_leto', 'pan_roman',
   'serwisant', 'bosman_krakow', 'zombie_pracownik', 'pomazaniec', 'sebix_m',
   'mutant_gamma_forklift', 'radioactive_pip', 'cyber_salesman',
+  'wkurzona_zona', 'kluska_piekielna',
 ];
 
 test('every enemy archetype has a bounded and explicit defeat motion profile', () => {

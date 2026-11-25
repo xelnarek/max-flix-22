@@ -18,6 +18,8 @@ export type SurvivalEnemySpawnType = Extract<EnemyType,
   | 'mutant_gamma_forklift'
   | 'radioactive_pip'
   | 'cyber_salesman'
+  | 'wkurzona_zona'
+  | 'kluska_piekielna'
 >;
 
 /** Per-run memory used only by regular random Survival deliveries. */
@@ -51,6 +53,8 @@ const SURVIVAL_ENEMY_ROSTER: readonly SurvivalEnemySpawnWeight[] = [
   { type: 'mutant_gamma_forklift', minWave: 2, minElapsedSeconds: 90, weight: 4 },
   { type: 'radioactive_pip', minWave: 3, minElapsedSeconds: 150, weight: 4 },
   { type: 'cyber_salesman', minWave: 4, minElapsedSeconds: 210, weight: 3 },
+  { type: 'wkurzona_zona', minWave: 4, minElapsedSeconds: 120, weight: 5 },
+  { type: 'kluska_piekielna', minWave: 6, minElapsedSeconds: 210, weight: 4 },
 ];
 
 function safeWave(wave: number): number {

@@ -119,7 +119,7 @@ try {
 
   const enemyIds = typeUnionMembers(sourceTypes, 'EnemyType');
   const unityEnemyIds = enumMembers(domain, 'EnemyKind');
-  if (enemyIds.length !== 23 || unityEnemyIds.length !== 23) fail('Expected 23 stable enemy IDs on both sides.');
+  if (enemyIds.length !== 25 || unityEnemyIds.length !== 25) fail('Expected 25 stable enemy IDs on both sides.');
 
   const perkIds = typeUnionMembers(sourceTypes, 'PerkType');
   const unityPerkIds = enumMembers(domain, 'PerkKind');

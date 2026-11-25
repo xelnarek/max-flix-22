@@ -11,6 +11,7 @@ const allRegularTypes = [
   'handlowiec', 'customer', 'architect', 'przedstawiciel_włoski', 'serwisant',
   'piorun_dron', 'agv_robot', 'pan_roman', 'elite_walczak_guard',
   'mutant_gamma_forklift', 'radioactive_pip', 'cyber_salesman',
+  'wkurzona_zona', 'kluska_piekielna',
 ];
 
 test('early waves have a six-type baseline and gated archetypes unlock progressively', () => {
@@ -24,6 +25,10 @@ test('early waves have a six-type baseline and gated archetypes unlock progressi
   assert.equal(getSurvivalEnemySpawnWeights(5, 70).some((entry) => entry.type === 'przedstawiciel_włoski'), true);
   assert.equal(getSurvivalEnemySpawnWeights(5, 200).some((entry) => entry.type === 'piorun_dron'), false);
   assert.equal(getSurvivalEnemySpawnWeights(6, 200).some((entry) => entry.type === 'piorun_dron'), true);
+  assert.equal(getSurvivalEnemySpawnWeights(3, 180).some((entry) => entry.type === 'wkurzona_zona'), false);
+  assert.equal(getSurvivalEnemySpawnWeights(4, 120).some((entry) => entry.type === 'wkurzona_zona'), true);
+  assert.equal(getSurvivalEnemySpawnWeights(5, 240).some((entry) => entry.type === 'kluska_piekielna'), false);
+  assert.equal(getSurvivalEnemySpawnWeights(6, 210).some((entry) => entry.type === 'kluska_piekielna'), true);
 });
 
 test('every regular archetype has a non-trivial weighted share in late Survival', () => {
