@@ -480,7 +480,7 @@ const operatorPortrait = (id: CharacterId): string => {
       <rect x="25" y="27" width="3" height="3" fill="#ef4444"/>
     `;
   } else if (id === 'grzesiek') {
-    // Grzesiek: Green sweatband, square jaw, stubble, massive 44cm flexed bicep & dumbbell
+    // Grzesiek: Green sweatband, square jaw, stubble, massive flexed bicep and reinforced glove cuff
     pixelLayers = `
       <!-- Hair & Buzzcut -->
       <rect x="9" y="3" width="14" height="3" fill="#1c1917"/>
@@ -505,10 +505,9 @@ const operatorPortrait = (id: CharacterId): string => {
       <rect x="22" y="14" width="7" height="6" fill="#f59e0b"/>
       <rect x="24" y="13" width="5" height="8" fill="#fbbf24"/>
       <rect x="25" y="16" width="3" height="1" fill="#ef4444" opacity="0.6"/> <!-- Vein -->
-      <!-- Dumbbell -->
-      <rect x="26" y="8" width="4" height="3" fill="#64748b"/>
-      <rect x="27" y="11" width="2" height="3" fill="#94a3b8"/>
-      <rect x="26" y="14" width="4" height="3" fill="#64748b"/>
+      <!-- Reinforced glove cuff -->
+      <rect x="26" y="8" width="3" height="8" fill="#14532d"/>
+      <rect x="25" y="9" width="5" height="2" fill="#86efac"/>
     `;
   } else if (id === 'dawid') {
     // Dawid: Orange cap backwards, panoramic yellow goggles, massive 120x280 marble tile
@@ -572,7 +571,7 @@ const operatorPortrait = (id: CharacterId): string => {
       <rect x="3" y="7" width="2" height="1" fill="#ffffff"/>
     `;
   } else {
-    // Piotr: Crimson tactical beret, golden B4 pin, veteran mustache, ratchet wrench & capybara
+    // Piotr: Crimson tactical beret, golden B4 pin, veteran mustache and capybara
     pixelLayers = `
       <!-- Crimson Tactical Beret -->
       <rect x="8" y="4" width="18" height="4" fill="#b91c1c"/>
@@ -595,10 +594,10 @@ const operatorPortrait = (id: CharacterId): string => {
       <!-- Tactical Jacket -->
       <rect x="6" y="20" width="20" height="11" fill="#292524"/>
       <rect x="13" y="20" width="6" height="11" fill="#991b1b"/>
-      <!-- Ratchet Wrench B4 -->
-      <rect x="22" y="12" width="4" height="4" fill="#94a3b8"/>
-      <rect x="23" y="16" width="2" height="14" fill="#cbd5e1"/>
-      <rect x="22" y="28" width="4" height="3" fill="#dc2626"/> <!-- Handle grip -->
+      <!-- B4 veteran shoulder insignia -->
+      <rect x="22" y="22" width="6" height="4" fill="#7f1d1d"/>
+      <rect x="23" y="23" width="4" height="2" fill="#facc15"/>
+      <rect x="24" y="23" width="2" height="2" fill="#292524"/>
       <!-- Golden Capybara Silhouette Pin -->
       <rect x="8" y="22" width="4" height="3" fill="#facc15"/>
       <rect x="7" y="23" width="2" height="2" fill="#facc15"/>
@@ -610,7 +609,7 @@ const operatorPortrait = (id: CharacterId): string => {
     grzesiek: '<path d="M25 15l-2 2 2 1-2 2M24 17l-1 .5M27 18l-2 1" fill="none" stroke="#8b3d32" stroke-width=".9"/><path d="M23 14l3-1" stroke="#ffe2bf" stroke-width=".8"/><path d="M8 24h16" stroke="#bbf7d0" stroke-opacity=".38" stroke-width=".8"/>',
     dawid: '<path d="M8 12h5m6 0h5M10 14h3m7 0h3" stroke="#fff9dc" stroke-opacity=".9" stroke-width=".8"/><path d="M23 6l2-2 2 2" fill="none" stroke="#fff2cf" stroke-width=".8"/><path d="M23 23l5 5" stroke="#a3b4c0" stroke-width=".7"/>',
     mateusz: '<path d="M5 11v5M27 11v5" stroke="#a5f3fc" stroke-width="1"/><path d="M6 18h4l2 2" fill="none" stroke="#67e8f9" stroke-width=".9"/><path d="M19 24l-2 3h2l-1 2 4-5h-2z" fill="#fde68a"/>',
-    piotr: '<path d="M10 17h4m4 0h4" stroke="#292524" stroke-width="1"/><path d="M8 6l4-1m10 1-4-1" stroke="#ffb4a9" stroke-width=".8"/><path d="M24 13v7m-2-7h4" stroke="#e2e8f0" stroke-width=".8"/>'
+    piotr: '<path d="M10 17h4m4 0h4" stroke="#292524" stroke-width="1"/><path d="M8 6l4-1m10 1-4-1" stroke="#ffb4a9" stroke-width=".8"/><path d="M23 23h5m-5 2h5" stroke="#facc15" stroke-width=".8"/>'
   };
   return [
     '<svg class="operator-portrait pixel-art-portrait" viewBox="0 0 32 32" role="img" aria-label="Portret pixel art ' + m.name + '" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">',
