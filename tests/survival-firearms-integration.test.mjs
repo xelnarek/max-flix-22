@@ -357,3 +357,5 @@ test('Survival haste is capped so operator synergies cannot undo the slower prim
   assert.match(game, /const attackRate = Math\.min\(1\.05, Math\.max\(0\.65, uncappedAttackRate\)\)/);
   assert.match(game, /firearm\.cooldown = definition\.fireIntervalSeconds \* hasteFactor \/ attackRate/);
 });
+
+// VFX regression coverage also guards against stale generic rocket and flame projectiles.
