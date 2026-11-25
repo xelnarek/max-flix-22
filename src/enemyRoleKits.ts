@@ -5,7 +5,7 @@ import type { EnemyType } from './types.ts';
 type Anchor = 'head' | 'torso' | 'rightArm' | 'back' | 'legs';
 type P3 = readonly [number, number, number];
 type Gear = 'cap' | 'beret' | 'hardhat' | 'navyCap' | 'crown' | 'visor' | 'gasMask' | 'wolf' | 'none';
-type Prop = 'clipboard' | 'swatches' | 'shield' | 'parcel' | 'screen' | 'wrench' | 'espresso' | 'jackHandle' | 'sceptre' | 'pipe' | 'scanner' | 'baton' | 'claw' | 'brick' | 'forks' | 'sprayer' | 'mechArm' | 'riotShield' | 'talons';
+type Prop = 'clipboard' | 'swatches' | 'shield' | 'parcel' | 'screen' | 'espresso' | 'scanner' | 'claw' | 'forks' | 'mechArm' | 'riotShield' | 'talons' | 'none';
 type Pack = 'briefcase' | 'blueprints' | 'delivery' | 'radio' | 'toolRoll' | 'mantle' | 'ceramic' | 'tanks' | 'battery' | 'pallet' | 'tail' | 'none';
 
 interface RoleSpec {
@@ -29,17 +29,17 @@ const ROLE: Partial<Record<EnemyType, RoleSpec>> = Object.freeze({
   inspector: {w:.57,h:.54,d:.34,shoulder:.80,head:1.00,main:0xf07825,dark:0x26313c,accent:0xf8e45c,metal:0xa5b2bb,gear:'hardhat',prop:'shield',pack:'radio',form:'heavy'},
   kurier: {w:.47,h:.49,d:.31,shoulder:.63,head:.94,main:0x176b91,dark:0x102b42,accent:0xf3c84b,metal:0xa7b2b9,gear:'cap',prop:'scanner',pack:'delivery',form:'slim'},
   handlowiec: {w:.42,h:.60,d:.28,shoulder:.64,head:.95,main:0x253451,dark:0x111827,accent:0x9b6cdd,metal:0xd8dde4,gear:'none',prop:'screen',pack:'briefcase',form:'slim'},
-  monter: {w:.62,h:.52,d:.38,shoulder:.80,head:1.02,main:0x1e5e59,dark:0x182b2d,accent:0xd8a13e,metal:0xaebbc0,gear:'hardhat',prop:'wrench',pack:'toolRoll',form:'heavy'},
+  monter: {w:.62,h:.52,d:.38,shoulder:.80,head:1.02,main:0x1e5e59,dark:0x182b2d,accent:0xd8a13e,metal:0xaebbc0,gear:'hardhat',prop:'none',pack:'toolRoll',form:'heavy'},
   'przedstawiciel_włoski': {w:.40,h:.61,d:.27,shoulder:.56,head:.95,main:0x3b3942,dark:0x17191e,accent:0x2e9b64,metal:0xd6c4a0,gear:'beret',prop:'espresso',pack:'briefcase',form:'slim'},
-  sztaplar_szalony: {w:.76,h:.50,d:.47,shoulder:.90,head:.92,main:0x9b6a13,dark:0x26282a,accent:0xf3cd32,metal:0xaeb7bd,gear:'hardhat',prop:'jackHandle',pack:'pallet',form:'heavy'},
-  krol_leto: {w:.88,h:.69,d:.53,shoulder:1.08,head:1.18,main:0x393b49,dark:0x171a24,accent:0xe8b849,metal:0x9ea6b1,gear:'crown',prop:'sceptre',pack:'mantle',form:'heavy'},
-  pan_roman: {w:.70,h:.56,d:.43,shoulder:.74,head:1.00,main:0xb65c1f,dark:0x3e3025,accent:0xe7e4d8,metal:0xa8b6bf,gear:'cap',prop:'pipe',pack:'ceramic',form:'round'},
+  sztaplar_szalony: {w:.76,h:.50,d:.47,shoulder:.90,head:.92,main:0x9b6a13,dark:0x26282a,accent:0xf3cd32,metal:0xaeb7bd,gear:'hardhat',prop:'none',pack:'pallet',form:'heavy'},
+  krol_leto: {w:.88,h:.69,d:.53,shoulder:1.08,head:1.18,main:0x393b49,dark:0x171a24,accent:0xe8b849,metal:0x9ea6b1,gear:'crown',prop:'none',pack:'mantle',form:'heavy'},
+  pan_roman: {w:.70,h:.56,d:.43,shoulder:.74,head:1.00,main:0xb65c1f,dark:0x3e3025,accent:0xe7e4d8,metal:0xa8b6bf,gear:'cap',prop:'none',pack:'ceramic',form:'round'},
   serwisant: {w:.47,h:.54,d:.32,shoulder:.65,head:.98,main:0x245066,dark:0x17232c,accent:0x25a6be,metal:0x9baab5,gear:'hardhat',prop:'scanner',pack:'toolRoll',form:'slim'},
-  bosman_krakow: {w:.84,h:.60,d:.45,shoulder:1.02,head:1.00,main:0x1b3155,dark:0x111a2d,accent:0xd8b148,metal:0xb0becb,gear:'navyCap',prop:'baton',pack:'radio',form:'heavy'},
+  bosman_krakow: {w:.84,h:.60,d:.45,shoulder:1.02,head:1.00,main:0x1b3155,dark:0x111a2d,accent:0xd8b148,metal:0xb0becb,gear:'navyCap',prop:'none',pack:'radio',form:'heavy'},
   zombie_pracownik: {w:.60,h:.56,d:.36,shoulder:.69,head:.91,main:0x657044,dark:0x292e22,accent:0x9cae43,metal:0xb6b69b,gear:'none',prop:'claw',pack:'none',form:'hunched'},
-  sebix_m: {w:.75,h:.50,d:.43,shoulder:.90,head:.92,main:0x27252a,dark:0x151518,accent:0xb72b37,metal:0xc39b43,gear:'cap',prop:'brick',pack:'none',form:'heavy'},
+  sebix_m: {w:.75,h:.50,d:.43,shoulder:.90,head:.92,main:0x27252a,dark:0x151518,accent:0xb72b37,metal:0xc39b43,gear:'cap',prop:'none',pack:'none',form:'heavy'},
   mutant_gamma_forklift: {w:.96,h:.72,d:.62,shoulder:1.16,head:1.04,main:0x3e4b39,dark:0x202728,accent:0x9cbb28,metal:0x9ba6a8,gear:'hardhat',prop:'forks',pack:'pallet',form:'beast'},
-  radioactive_pip: {w:.69,h:.63,d:.50,shoulder:.83,head:1.00,main:0x788b32,dark:0x252d22,accent:0xb7e34b,metal:0xa6b2a0,gear:'gasMask',prop:'sprayer',pack:'tanks',form:'hazmat'},
+  radioactive_pip: {w:.69,h:.63,d:.50,shoulder:.83,head:1.00,main:0x788b32,dark:0x252d22,accent:0xb7e34b,metal:0xa6b2a0,gear:'gasMask',prop:'none',pack:'tanks',form:'hazmat'},
   cyber_salesman: {w:.59,h:.61,d:.35,shoulder:.78,head:1.02,main:0x384c5b,dark:0x111f2a,accent:0x28d9ec,metal:0x9db3c2,gear:'visor',prop:'mechArm',pack:'battery',form:'robotic'},
   elite_walczak_guard: {w:.83,h:.62,d:.50,shoulder:1.08,head:.96,main:0x343d50,dark:0x171e2a,accent:0xa72f40,metal:0xb3c0c9,gear:'visor',prop:'riotShield',pack:'radio',form:'heavy'},
   walczak: {w:.95,h:.73,d:.58,shoulder:1.16,head:1.12,main:0x40332f,dark:0x1d1919,accent:0x7e4139,metal:0xb7a98a,gear:'wolf',prop:'talons',pack:'tail',form:'beast'},
@@ -144,6 +144,28 @@ function body(groups:Record<Anchor,THREE.Group>,type:EnemyType,s:RoleSpec):void{
     bx(groups,'legs',s.accent,[side*.14,.245,.271],[.072,.018,.012],[0,0,0],.2);
     sp(groups,'legs',metal,[side*.14,.105,.236],[.092,.048,.075],.72);
     bx(groups,'legs',dark,[side*.14,.055,.16],[.19,.035,.22],[0,0,0],.02);
+  }
+
+  // A unified modular PPE pass: a segmented chest rig, role badge, belt pouches
+  // and high-vis shin bands add shape and readable material breaks to every rig.
+  // All pieces are merged into the existing anchors, so runtime draw calls do not rise.
+  const chestFront=d*.5+.055;
+  bx(groups,'torso',dark,[0,.73,chestFront],[w*.62,.24,.045],[0,0,0],.34);
+  bx(groups,'torso',metal,[0,.85,chestFront+.028],[w*.48,.025,.014],[0,0,0],.68);
+  bx(groups,'torso',s.accent,[-w*.22,.75,chestFront+.031],[Math.max(.075,w*.16),.085,.016],[0,0,0],.22);
+  bx(groups,'torso',0x111b27,[w*.22,.75,chestFront+.031],[Math.max(.075,w*.16),.085,.016],[0,0,0],.34);
+  for(const side of [-1,1]){
+    bx(groups,'torso',dark,[side*w*.25,.51,d*.5+.055],[.12,.14,.055],[0,0,side*-.06],.22);
+    bx(groups,'torso',metal,[side*w*.25,.56,d*.5+.086],[.075,.018,.012],[0,0,0],.66);
+    bx(groups,'legs',s.accent,[side*.14,.205,.286],[.14,.025,.014],[0,0,0],.18);
+  }
+
+  // Unarmed roles receive a reinforced open-hand gauntlet instead of a legacy
+  // tool or improvised club. Natural claws and purpose-built shields remain intact.
+  if(s.prop==='none'){
+    bx(groups,'rightArm',dark,[.40,.58,.14],[.22,.12,.13],[0,0,-.10],.30);
+    bx(groups,'rightArm',metal,[.40,.62,.205],[.17,.035,.018],[0,0,-.10],.72);
+    bx(groups,'rightArm',s.accent,[.40,.67,.205],[.12,.018,.012],[0,0,-.10],.24);
   }
   if(s.form==='round')sp(groups,'torso',0xc89b78,[0,.73,.13],[w*.38,.23,.18]);
   if(s.form==='hunched'){
@@ -281,57 +303,32 @@ function heldProp(groups:Record<Anchor,THREE.Group>,prop:Prop,accent:number,meta
       bx(groups,'rightArm',accent,[.39,.72,.20],[.25,.22,.02],[0,0,-.10],.3);
       bx(groups,'rightArm',0xf1f7f5,[.39,.80,.22],[.16,.025,.008]);
       break;
-    case 'wrench':
-      cy(groups,'rightArm',0xb16a32,[.40,.76,.14],.028,.028,.48,[0,0,-.72],.6);
-      cy(groups,'rightArm',metal,[.49,.95,.14],.083,.083,.18,[0,0,Math.PI/2],.78);
-      break;
     case 'espresso':
       cy(groups,'rightArm',0xece6d9,[.39,.87,.17],.065,.055,.12);
       tor(groups,'rightArm',accent,[.45,.87,.17],.04,.01,[Math.PI/2,0,0]);
       bx(groups,'rightArm',0x292a2f,[.39,.95,.17],[.17,.07,.13]);
       break;
-    case 'jackHandle':
-      cy(groups,'rightArm',0x24292f,[.42,.75,.12],.027,.027,.49,[0,0,-.18],.65);
-      bx(groups,'rightArm',metal,[.46,.99,.12],[.22,.07,.10],[0,0,-.18],.7);
-      break;
-    case 'sceptre':
-      cy(groups,'rightArm',0xd3aa4d,[.43,.73,.12],.032,.032,.70,[0,0,-.15],.75);
-      sp(groups,'rightArm',0x68e5f0,[.45,1.11,.12],[.13,.13,.13],.65);
-      break;
-    case 'pipe':
-      cy(groups,'rightArm',metal,[.42,.75,.15],.027,.027,.52,[0,0,-.42],.72);
-      bx(groups,'rightArm',0x23272a,[.50,.96,.16],[.18,.08,.08],[0,0,0],.72);
-      break;
     case 'scanner':
       bx(groups,'rightArm',0x23313b,[.39,.72,.15],[.17,.25,.12],[0,0,-.16],.65);
       bx(groups,'rightArm',accent,[.39,.80,.22],[.11,.075,.015],[0,0,-.16],.35);
       break;
-    case 'baton':
-      cy(groups,'rightArm',0xb68b3a,[.40,.72,.13],.027,.027,.48,[0,0,-.12],.75);
-      sp(groups,'rightArm',accent,[.40,.97,.13],[.08,.08,.08],.4);
+    case 'forks':
+      // Integrated forklift-tine gauntlet is part of the mutant's silhouette, not a carried hand tool.
+      bx(groups,'rightArm',metal,[.43,.63,.20],[.16,.10,.54],[0,0,-.05],.8);
+      bx(groups,'rightArm',metal,[.43,.81,.20],[.16,.10,.50],[0,0,-.05],.8);
       break;
     case 'claw':
     case 'talons':
       for(let i=0;i<3;i++)cn(groups,'rightArm',prop==='talons'?0xd9c8a6:0xd5d1ad,[.38+i*.06,.54,.21],.045,.23,[Math.PI/2,0,0]);
-      break;
-    case 'brick':
-      bx(groups,'rightArm',0x9b542d,[.40,.66,.15],[.25,.14,.18],[0,0,-.16]);
-      bx(groups,'rightArm',0x673c2c,[.40,.66,.25],[.21,.025,.012]);
-      break;
-    case 'forks':
-      bx(groups,'rightArm',metal,[.43,.63,.20],[.16,.10,.54],[0,0,-.05],.8);
-      bx(groups,'rightArm',metal,[.43,.81,.20],[.16,.10,.50],[0,0,-.05],.8);
-      break;
-    case 'sprayer':
-      cy(groups,'rightArm',0x25362a,[.39,.74,.15],.08,.08,.23,[0,0,0],.25);
-      cy(groups,'rightArm',metal,[.39,.90,.18],.025,.025,.27,[0,0,-.70],.8);
       break;
     case 'mechArm':
       bx(groups,'rightArm',0x879da8,[.40,.70,.13],[.21,.32,.19],[0,0,-.15],.8);
       bx(groups,'rightArm',accent,[.40,.71,.24],[.16,.07,.025],[0,0,-.15],.3);
       cn(groups,'rightArm',metal,[.43,.50,.18],.08,.16,[Math.PI/2,0,0]);
       break;
-    default: break;
+    case 'none':
+    default:
+      break;
   }
 }
 function addFaceDetails(groups:Record<Anchor,THREE.Group>,type:EnemyType,s:RoleSpec):void{

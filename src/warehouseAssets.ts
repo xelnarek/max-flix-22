@@ -1476,9 +1476,14 @@ export function createCharacterModel(def: CharacterDef): {
     metalness: 0.035,
   });
   const handGeo = new THREE.BoxGeometry(0.09, 0.09, 0.09);
+  const gloveFingerMat = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(gloveColors[def.id]).multiplyScalar(0.78),
+    roughness: 0.9,
+    metalness: 0.02,
+  });
+  const gloveFingerGeo = new THREE.CapsuleGeometry(0.011, 0.034, 2, 6);
   const addGloveBack = (hand: THREE.Mesh) => {
-    // The domed knuckle guard and narrow reflective tab are parented to the
-    // hand mesh, so they follow the animated arm without a detached prop rig.
+    // Domed knuckle guard and reflective tab remain part of the animated glove.
     const knuckleGuard = new THREE.Mesh(
       new THREE.SphereGeometry(0.038, 10, 7),
       armorMat,
@@ -1494,6 +1499,29 @@ export function createCharacterModel(def: CharacterDef): {
     );
     reflectiveTab.position.set(0, -0.022, 0.047);
     hand.add(reflectiveTab);
+
+    // Five segmented finger guards add a readable glove silhouette at gameplay zoom.
+    // A single InstancedMesh keeps this detail to one additional draw call per hand.
+    const fingerSegments = new THREE.InstancedMesh(gloveFingerGeo, gloveFingerMat, 5);
+    fingerSegments.name = 'role-coloured-glove-fingers';
+    const transforms = new THREE.Object3D();
+    const fingerLayout = [
+      [-0.030, -0.052, 0.030, -0.06],
+      [-0.010, -0.057, 0.035, -0.02],
+      [0.010, -0.057, 0.035, 0.02],
+      [0.030, -0.052, 0.030, 0.06],
+      [0.052, -0.010, 0.012, -0.66],
+    ] as const;
+    fingerLayout.forEach(([x, y, z, rotation], index) => {
+      transforms.position.set(x, y, z);
+      transforms.rotation.set(0, 0, rotation);
+      transforms.updateMatrix();
+      fingerSegments.setMatrixAt(index, transforms.matrix);
+    });
+    fingerSegments.instanceMatrix.needsUpdate = true;
+    fingerSegments.castShadow = false;
+    fingerSegments.receiveShadow = false;
+    hand.add(fingerSegments);
   };
   const leftHand = new THREE.Mesh(handGeo, gloveMat);
   leftHand.position.set(0, -0.18, 0);
@@ -1525,126 +1553,19 @@ export function createCharacterModel(def: CharacterDef): {
 
   group.add(leftArm, rightArm);
 
-  // 5. Unique signature equipment: the five operators should be readable at a glance.
+  // Current firearms are owned by the shared weapon system, not baked into operator bodies.
+  // Retired held props (dumbbell, stretch roll, taser and ratchet wrench) are removed from
+  // the character mesh so operators never display obsolete weapons underneath a picked-up gun.
+  // Keep a neutral mount on the animated right-hand pivot for runtime weapon presentation.
   const accessory = new THREE.Group();
-  if (def.id === 'marcin') {
-    // B4 logistics spell-console: a compact company-software tablet with a glowing work-order screen.
-    const consoleBody = new THREE.Mesh(
-      new THREE.BoxGeometry(0.32, 0.23, 0.055),
-      new THREE.MeshStandardMaterial({ color: 0x172554, metalness: 0.55, roughness: 0.3 })
-    );
-    const screenCanvas = document.createElement('canvas');
-    screenCanvas.width = 256; screenCanvas.height = 160;
-    const screenCtx = screenCanvas.getContext('2d')!;
-    screenCtx.fillStyle = '#071426'; screenCtx.fillRect(0, 0, 256, 160);
-    screenCtx.fillStyle = '#38bdf8'; screenCtx.font = '900 34px sans-serif';
-    screenCtx.fillText('B4 ERP', 18, 54);
-    screenCtx.fillStyle = '#86efac'; screenCtx.font = '700 22px monospace';
-    screenCtx.fillText('WZ  ✓  404', 18, 96);
-    screenCtx.fillStyle = '#fbbf24'; screenCtx.fillRect(18, 118, 184, 8);
-    const screenTexture = new THREE.CanvasTexture(screenCanvas);
-    screenTexture.colorSpace = THREE.SRGBColorSpace;
-    const screen = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.285, 0.18),
-      new THREE.MeshBasicMaterial({ map: screenTexture })
-    );
-    screen.position.z = 0.031;
-    consoleBody.add(screen);
-    accessory.add(consoleBody);
-    accessory.position.set(0.25, 0.53, 0.17);
-    accessory.rotation.x = 0.42;
-  } else if (def.id === 'grzesiek') {
-    // Heavy dumbbell: two dark steel plates joined by a thick grip.
-    const steel = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.86, roughness: 0.22 });
-    const green = new THREE.MeshStandardMaterial({ color: 0x22c55e, metalness: 0.45, roughness: 0.3 });
-    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.66, 10), steel);
-    bar.rotation.x = Math.PI / 2;
-    accessory.add(bar);
-    [-0.31, 0.31].forEach((z) => {
-      const weight = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.16, 12), steel);
-      weight.rotation.x = Math.PI / 2;
-      weight.position.z = z;
-      accessory.add(weight);
-      const collar = new THREE.Mesh(new THREE.TorusGeometry(0.105, 0.018, 6, 12), green);
-      collar.position.z = z > 0 ? z - 0.085 : z + 0.085;
-      accessory.add(collar);
-    });
-    accessory.position.set(0.27, 0.50, 0.18);
-    accessory.rotation.x = 0.38;
-  } else if (def.id === 'dawid') {
-    // A clearly visible roll of stretch film, with a dark cardboard core and glossy wrapping.
-    const film = new THREE.MeshStandardMaterial({ color: 0xdbeafe, roughness: 0.13, metalness: 0.12, transparent: true, opacity: 0.78 });
-    const core = new THREE.MeshStandardMaterial({ color: 0x374151, roughness: 0.85 });
-    const roll = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.42, 16), film);
-    const innerCore = new THREE.Mesh(new THREE.CylinderGeometry(0.047, 0.047, 0.44, 12), core);
-    roll.add(innerCore);
-    accessory.add(roll);
-    [-0.19, 0.19].forEach((y) => {
-      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.012, 6, 16), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.18, metalness: 0.2 }));
-      rim.rotation.x = Math.PI / 2;
-      rim.position.y = y;
-      accessory.add(rim);
-    });
-    accessory.position.set(0.28, 0.51, 0.17);
-    accessory.rotation.x = 0.25;
-  } else if (def.id === 'mateusz') {
-    // Compact two-prong stun gun with a bright electric contact.
-    const gunBody = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.12, 0.31), new THREE.MeshStandardMaterial({ color: 0x7c3aed, metalness: 0.55, roughness: 0.28 }));
-    const grip = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.2, 0.12), new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.7 }));
-    grip.position.set(0, -0.13, -0.04);
-    const emitter = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.06, 0.08), new THREE.MeshBasicMaterial({ color: 0x67e8f9 }));
-    emitter.position.set(0, 0.025, 0.18);
-    gunBody.add(grip, emitter);
-    [-0.065, 0.065].forEach((x) => {
-      const prong = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.02, 0.16, 6), new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.85 }));
-      prong.position.set(x, 0.02, 0.27);
-      prong.rotation.x = Math.PI / 2;
-      gunBody.add(prong);
-    });
-    accessory.add(gunBody);
-    accessory.position.set(0.28, 0.51, 0.18);
-    accessory.rotation.x = 0.18;
-  } else {
-    // Signature heavy ratchet wrench: recognisable open jaw, chrome shaft and red grip.
-    const chrome = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.92, roughness: 0.18 });
-    const darkSteel = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.86, roughness: 0.24 });
-    const redRubber = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.68 });
-    const wrench = new THREE.Group();
-    const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.105, 0.57, 0.075), chrome);
-    shaft.position.y = -0.06;
-    wrench.add(shaft);
-    const grip = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.23, 0.09), redRubber);
-    grip.position.set(0, -0.27, 0.008);
-    wrench.add(grip);
-    const neck = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.13, 0.09), darkSteel);
-    neck.position.set(0, 0.25, 0);
-    wrench.add(neck);
-    const jawBase = new THREE.Mesh(new THREE.TorusGeometry(0.145, 0.045, 8, 20, Math.PI * 1.48), chrome);
-    jawBase.position.set(0, 0.40, 0);
-    jawBase.rotation.z = -Math.PI * 0.24;
-    wrench.add(jawBase);
-    const jawLeft = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.19, 0.09), chrome);
-    jawLeft.position.set(-0.12, 0.51, 0);
-    jawLeft.rotation.z = -0.40;
-    const jawRight = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.19, 0.09), chrome);
-    jawRight.position.set(0.12, 0.51, 0);
-    jawRight.rotation.z = 0.40;
-    wrench.add(jawLeft, jawRight);
-    const ratchetInset = new THREE.Mesh(new THREE.CylinderGeometry(0.057, 0.057, 0.025, 12), darkSteel);
-    ratchetInset.position.set(0, 0.39, 0.052);
-    ratchetInset.rotation.x = Math.PI / 2;
-    wrench.add(ratchetInset);
-    const redMark = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.10, 0.018), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
-    redMark.position.set(0, -0.26, 0.055);
-    wrench.add(redMark);
-    accessory.add(wrench);
-    accessory.scale.setScalar(0.92);
-    accessory.position.set(0.28, 0.51, 0.18);
-    accessory.rotation.x = 0.18;
-  }
+  accessory.name = `character_${def.id}_weapon_mount`;
+  accessory.userData.weaponMount = true;
+  accessory.userData.legacyHeldPropsRemoved = true;
+  accessory.position.set(0, -0.32, 0.12);
   group.add(accessory);
   group.updateMatrixWorld(true);
   rightArm.attach(accessory);
+
   // High-readability class gear: broad forms are visible from behind and at
   // the standard Survival camera distance, not just in close-up portraits.
   if (def.id === 'marcin') {

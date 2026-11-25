@@ -759,16 +759,7 @@ namespace MaxFlix.Unity.Runtime
             OperatorAnimationRig animationRig = root.gameObject.AddComponent<OperatorAnimationRig>();
             animationRig.Initialize(leftShoulder, rightShoulder, leftHip, rightHip, profile);
 
-            if (profile.Id == OperatorId.Marcin)
-                CreateVisualPart(rightShoulder, PrimitiveType.Cube, "B4 ERP tablet", new Vector3(0.02f, -0.32f, 0.24f), new Vector3(0.22f, 0.16f, 0.035f), new Color(0.10f, 0.55f, 0.86f));
-            else if (profile.Id == OperatorId.Grzesiek)
-                CreateVisualPart(rightShoulder, PrimitiveType.Cylinder, "Training dumbbell", new Vector3(0f, -0.32f, 0.22f), new Vector3(0.13f, 0.42f, 0.13f), new Color(0.13f, 0.18f, 0.21f));
-            else if (profile.Id == OperatorId.Dawid)
-                CreateVisualPart(rightShoulder, PrimitiveType.Cylinder, "Stretch film roll", new Vector3(0f, -0.34f, 0.22f), new Vector3(0.16f, 0.24f, 0.16f), new Color(0.78f, 0.86f, 0.91f));
-            else if (profile.Id == OperatorId.Mateusz)
-                CreateVisualPart(rightShoulder, PrimitiveType.Cube, "Taser", new Vector3(0f, -0.32f, 0.24f), new Vector3(0.19f, 0.13f, 0.25f), new Color(0.48f, 0.20f, 0.86f));
-            else
-                CreateVisualPart(rightShoulder, PrimitiveType.Cube, "Ratchet wrench", new Vector3(0f, -0.33f, 0.22f), new Vector3(0.12f, 0.46f, 0.09f), new Color(0.75f, 0.80f, 0.85f));
+            // Firearms are attached by the active weapon system, never baked into operator models.
         }
 
         private static Transform CreatePivot(Transform parent, string name, Vector3 localPosition)
@@ -885,7 +876,7 @@ namespace MaxFlix.Unity.Runtime
             else if (kind == EnemyKind.Monter)
             {
                 CreateVisualPart(enemy.transform, PrimitiveType.Cube, "Tool belt", new Vector3(0f, 0.54f, 0.20f), new Vector3(0.68f, 0.16f, 0.12f), new Color(0.13f, 0.11f, 0.09f));
-                CreateVisualPart(enemy.transform, PrimitiveType.Cylinder, "Wrench", new Vector3(0.40f, 0.88f, 0.20f), new Vector3(0.07f, 0.26f, 0.07f), new Color(0.65f, 0.71f, 0.76f));
+                // The fitter carries PPE and tool-belt details, not a handheld weapon prop.
             }
             else if (kind == EnemyKind.Pomazaniec)
             {
