@@ -23,7 +23,7 @@ export function createWkurzonaZonaModel():BuiltCustomEnemyModel{
 }
 export function createKluskaHellhoundModel():BuiltCustomEnemyModel{
  const group=new THREE.Group();group.name='enemy_kluska_hellhound_custom_3d';group.userData.customEnemyModel='kluska_piekielna';group.scale.setScalar(.88);
- const coat=mat(0x35211c,.92),coat2=mat(0x4b2d23,.9),dark=mat(0x1d1716,.96),tan=mat(0x9b633a,.9),tan2=mat(0xb77b4b,.88),muzzle=mat(0x5a3528,.9),black=mat(0xd0d0d0,.58),eye=mat(0xffbd59,.3,.12,0x9a470d),collar=mat(0x7b1d22,.64,.12),tag=mat(0xc7a752,.36,.66);
+ const coat=mat(0x35211c,.92),coat2=mat(0x4b2d23,.9),dark=mat(0x1d1716,.96),tan=mat(0x9b633a,.9),tan2=mat(0xb77b4b,.88),muzzle=mat(0x5a3528,.9),black=mat(0x0d0d10,.58),eye=mat(0xffbd59,.3,.12,0x9a470d),collar=mat(0x7b1d22,.64,.12),tag=mat(0xc7a752,.36,.66);
  sph(group,coat,[0,.6,-.04],[.43,.34,.72],'dark_canine_body');sph(group,coat2,[0,.58,.22],[.35,.28,.42],'brown_chest');sph(group,dark,[0,.82,-.12],[.36,.20,.48],'dark_back_saddle');
  const legs:THREE.Group[]=[];for(const[x,z,n]of[[-.27,.34,'front_left'],[.27,.34,'front_right'],[-.28,-.47,'rear_left'],[.28,-.47,'rear_right']]as const){const l=pivot(group,'kluska_'+n,[x,.55,z]);limb(l,tan,[0,0,0],[x<0?-.015:.015,-.28,.02],.095,'tan_leg');limb(l,tan2,[0,-.27,.02],[0,-.46,.1],.072,'lower_leg');sph(l,tan,[0,-.47,.17],[.12,.07,.17],'paw');legs.push(l);}
  const head=pivot(group,'kluska_head',[0,.8,.52]);sph(head,coat,[0,.03,.04],[.31,.30,.32],'dark_head');sph(head,tan,[0,-.10,.28],[.225,.16,.26],'tan_muzzle_mask');sph(head,muzzle,[0,-.08,.46],[.18,.12,.16],'muzzle');sph(head,black,[0,-.015,.59],[.085,.065,.075],'black_nose');sph(head,black,[0,-.2,.35],[.12,.04,.12],'jaw');

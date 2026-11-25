@@ -72,7 +72,7 @@ test('the visual registry explicitly covers every declared enemy type and has a 
   const declared = [...typesSource.slice(unionStart, unionEnd).matchAll(/'([^']+)'/g)].map((match) => match[1]);
   const configured = Object.keys(profiles.ENEMY_VISUAL_PROFILES).sort();
   assert.deepEqual(configured, [...declared].sort());
-  assert.equal(configured.length, 23);
+  assert.equal(configured.length, 25);
   for (const [type, profile] of Object.entries(profiles.ENEMY_VISUAL_PROFILES)) {
     assert.ok(profile.visualBrief.length >= 24, 'visual brief missing for ' + type);
     assert.ok(profile.fallbackFactory.startsWith('create'), 'fallback model factory missing for ' + type);
