@@ -12,7 +12,7 @@ test('playable operator bodies keep a neutral runtime weapon mount instead of le
   const model = source.slice(start, end);
   assert.match(model, /accessory\.userData\.weaponMount = true/);
   assert.match(model, /accessory\.userData\.legacyHeldPropsRemoved = true/);
-  assert.match(model, /rightArm\.add\(accessory\)/);
+  assert.match(model, /rightArm\.attach\(accessory\)/);
   assert.doesNotMatch(model, /const (?:bar|roll|gunBody|wrench) = new THREE\./);
   assert.doesNotMatch(model, /B4 ERP|WZ  ✓  404/);
 });
