@@ -215,3 +215,36 @@ export function findFirstProjectileEnemyImpact(
   result.actor = firstActor;
   return result as ProjectileEnemyImpact;
 }
+
+/** Minimal mutable projectile shape accepted by the impact-stop operation. */
+export interface ImpactStoppableProjectile {
+  life: number;
+  impactStopped?: boolean;
+  readonly vel: { set(x: number, y: number, z: number): unknown };
+  readonly mesh: { readonly position: { set(x: number, y: number, z: number): unknown } };
+}
+
+/**
+ * Terminates a standard projectile at its first confirmed body contact.
+ * The short hold is visual only: velocity is zeroed and impactStopped prevents
+ * any further collision/damage work while the model remains at the contact point.
+ */
+export function stopProjectileAtImpact(
+  projectile: ImpactStoppableProjectile,
+  impact: ProjectileSegmentPoint,
+  holdSeconds = 0.085,
+): boolean {
+  if (
+    projectile.impactStopped ||
+    !Number.isFinite(impact.x) || !Number.isFinite(impact.y) || !Number.isFinite(impact.z) ||
+    !Number.isFinite(holdSeconds) || holdSeconds <= 0
+  ) {
+    return false;
+  }
+
+  projectile.mesh.position.set(impact.x, impact.y, impact.z);
+  projectile.vel.set(0, 0, 0);
+  projectile.life = Math.max(0.025, Math.min(0.18, holdSeconds));
+  projectile.impactStopped = true;
+  return true;
+}
