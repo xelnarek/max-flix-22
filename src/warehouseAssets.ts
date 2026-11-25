@@ -1562,7 +1562,9 @@ export function createCharacterModel(def: CharacterDef): {
   accessory.userData.weaponMount = true;
   accessory.userData.legacyHeldPropsRemoved = true;
   accessory.position.set(0, -0.32, 0.12);
-  rightArm.add(accessory);
+  group.add(accessory);
+  group.updateMatrixWorld(true);
+  rightArm.attach(accessory);
 
   // High-readability class gear: broad forms are visible from behind and at
   // the standard Survival camera distance, not just in close-up portraits.
