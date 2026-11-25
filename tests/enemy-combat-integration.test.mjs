@@ -290,6 +290,7 @@ test('standard player projectiles stop at first contact and skip later damage fr
   assert.match(impact, /export function stopProjectileAtImpact\(/);
   assert.match(update, /if \(p\.impactStopped\) \{[\s\S]*?p\.life -= dt;[\s\S]*?removeAtSwap\(this\.projectiles, i\);[\s\S]*?continue;/);
   assert.match(update, /stopProjectileAtImpact\(p, enemyImpact\)/);
+  assert.match(update, /if \(p\.orbiting\) \{[\s\S]*?persistent contact weapons/);
   assert.doesNotMatch(update, /else if \(p\.pierce && p\.pierce > 0\)/);
   assert.match(update, /this\.damageEnemy\(e, baseDmg, closestX, closestZ, projectileDamageSource\)/);
 });
