@@ -59,7 +59,7 @@ import { getCampaignEnemyFlankProfile, getCampaignEnemyFlankVector, resolveCampa
 import { advanceEnemyAttackTelegraph, getEnemyRangedAttackTelegraphProfile, hasEnemyAttackTelegraphCapacity } from './enemyAttackTelegraphs.ts';
 import { getEnemyMeleeTelegraphProfile, type EnemyMeleeTelegraphProfile } from './enemyMeleeTelegraphs.ts';
 import { getEnemyPlayerContactDistance, projectVelocityOutOfEnemyContacts, resolvePlayerMovementAgainstEnemies } from './enemyPlayerCollision.ts';
-import { findFirstProjectileBodyImpact, findFirstProjectileEnemyImpact, type MutableProjectileSegmentPoint, type ProjectileEnemyImpactScratch, type ProjectileImpactScratch } from './projectileImpact.ts';
+import { findFirstProjectileBodyImpact, findFirstProjectileEnemyImpact, stopProjectileAtImpact, type MutableProjectileSegmentPoint, type ProjectileEnemyImpactScratch, type ProjectileImpactScratch } from './projectileImpact.ts';
 import { createEnemyHitReaction, getEnemyHitPulse, getEnemyImpactBurstProfile } from './enemyCombatFeedback.ts';
 import { getEnemyDeathMotionPose, getEnemyDeathMotionProfile } from './enemyDeathMotion.ts';
 import { ENEMY_GAIT_PRESETS, ENEMY_VISUAL_PROFILES } from './enemyVisualProfiles.ts';
@@ -1246,6 +1246,8 @@ export class PaleciakiGameEngine {
     mesh: THREE.Object3D;
     vel: THREE.Vector3;
     life: number;
+    /** A confirmed body hit has frozen this projectile at its contact point. */
+    impactStopped?: boolean;
     maxLife?: number;
     damage?: number;
     pierce?: number;
@@ -19427,6 +19429,17 @@ export class PaleciakiGameEngine {
   private updateProjectiles(dt: number) {
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
       const p = this.projectiles[i];
+      if (p.impactStopped) {
+        // The impact pose is presentation-only. A stopped projectile cannot
+        // enter the collision/damage pipeline again while its short hit hold expires.
+        p.life -= dt;
+        if (p.life <= 0) {
+          this.levelRoot.remove(p.mesh);
+          if (p.weaponProjectile || p.disposeOnRemove) this.disposeTemporaryObject(p.mesh);
+          removeAtSwap(this.projectiles, i);
+        }
+        continue;
+      }
       p.life -= dt;
 
       // Boomerang return logic (Operator 05's Pipe Wrench)
@@ -19675,8 +19688,12 @@ export class PaleciakiGameEngine {
       const segmentMidZ = (previousProjectileZ + p.mesh.position.z) * 0.5;
       // Keep the broadphase conservative; the shared body sweep resolves the exact first contact.
       const broadphaseRadius = Math.sqrt(segmentLengthSq) * 0.5 + 1.65;
-      const collisionCandidates = this.enemies.length >= 12
-        ? this.enemySpatialIndex.query(segmentMidX, segmentMidZ, broadphaseRadius)
+      // A direct scan is more reliable for small/medium fights. Use the
+      // cached grid only for large hordes, with a wider conservative margin
+      // to absorb enemy movement between handheld index refreshes.
+      const collisionCandidates = this.enemies.length >= 48 &&
+        this.enemySpatialIndexCachedCount === this.enemies.length
+        ? this.enemySpatialIndex.query(segmentMidX, segmentMidZ, broadphaseRadius + 0.55)
         : this.enemies;
 
       // The same swept vertical-body test is used for every primary weapon.
@@ -19855,15 +19872,18 @@ export class PaleciakiGameEngine {
           }
 
           if (p.boomerang) {
-            // Boomerang keeps flying and turns back after hitting
+            // The returning weapon still uses its designed outbound/return path,
+            // but its visible outbound model must end the frame at first contact.
+            p.mesh.position.set(closestX, closestY, closestZ);
             if (!p.returning) p.returning = true;
-          } else if (p.pierce && p.pierce > 0) {
-            p.pierce--;
           } else {
+            // Ordinary shots stop at the first living body even when their weapon
+            // catalogue has a legacy pierce value. Only explicit chain ricochets
+            // and impact-detonating explosives may continue through a special path.
             tracerEndX = closestX;
-            tracerEndY = Math.max(0.42, closestY);
+            tracerEndY = closestY;
             tracerEndZ = closestZ;
-            destroyProj = true;
+            stopProjectileAtImpact(p, enemyImpact);
             break;
           }
         }
