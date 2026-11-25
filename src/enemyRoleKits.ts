@@ -507,8 +507,29 @@ function bake(type:EnemyType):THREE.Group|null{
     bx(groups,'torso',0xd2d9a0,[0,.63,.29],[.34,.055,.018],[0,0,0],.12);
     bx(groups,'torso',0x27372a,[0,.63,.31],[.12,.055,.012],[0,0,0],.12);
   }
+  // Universal visual refinement: layered utility belt, reinforced cuffs and role-coloured ID patches.
+  // These details are baked into the shared role kit, so no per-enemy texture/material allocation at runtime.
+  if (!['mutant_gamma_forklift','walczak','krol_leto'].includes(type)) {
+    bx(groups,'torso',spec.dark,[0,.48,.24],[spec.w*.72,.055,.055],[0,0,0],.18);
+    bx(groups,'torso',spec.accent,[0,.49,.278],[spec.w*.24,.055,.012],[0,0,0],.35);
+    bx(groups,'torso',spec.metal,[spec.w*.25,.92,.19],[spec.w*.22,.09,.04],[0,0,-.12],.55);
+    for (const side of [-1,1]) {
+      bx(groups,'rightArm',spec.accent,[side*.42,.48,.20],[.15,.035,.035],[0,0,side*.08],.22);
+      bx(groups,'legs',spec.dark,[side*.13,.20,.16],[.12,.08,.04],[0,0,0],.12);
+    }
+  }
+  if (type==='customer' || type==='kurier' || type==='handlowiec') {
+    // Clear, readable chest badge and compact shoulder colour marker.
+    bx(groups,'torso',spec.metal,[0,.93,.255],[.13,.10,.025],[0,0,0],.55);
+    bx(groups,'torso',spec.accent,[0,.93,.273],[.09,.025,.012],[0,0,0],.25);
+  }
+  if (type==='monter' || type==='serwisant') {
+    // Technician identity is now tool-belt and safety bands only; no held wrench prop.
+    bx(groups,'torso',0x242d33,[0,.54,.25],[.40,.09,.06],[0,0,0],.25);
+    for(let i=0;i<3;i++)bx(groups,'torso',spec.accent,[-.20+i*.20,.57,.285],[.07,.09,.012],[0,0,0],.3);
+  }
   source.updateMatrixWorld(true);
-  const root=new THREE.Group();root.name='enemy-role-kit-'+type;root.userData.enemyRole=type;root.userData.roleForm=spec.form;root.userData.roleKitVersion=2;root.userData.actorRoleSilhouette=true;
+  const root=new THREE.Group();root.name='enemy-role-kit-'+type;root.userData.enemyRole=type;root.userData.roleForm=spec.form;root.userData.roleKitVersion=3;root.userData.actorRoleSilhouette=true;
   for(const a of anchors){
     const parts:THREE.BufferGeometry[]=[];
     const sourceMeshes:THREE.Mesh[]=[];
