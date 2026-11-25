@@ -273,9 +273,9 @@ test('player-fired projectiles use shared swept first-contact collision in Survi
 });
 
 test('direct rocket and ballistic grenade impacts detonate at the contact point and splash nearby enemies once', () => {
-  assert.match(game, /private detonateRocketFirearmProjectile\\([\\s\\S]*?directHitEnemyId\\?: string/);
-  assert.match(game, /this\\.detonateRocketFirearmProjectile\\([\\s\\S]*?true, e\\.id/);
-  assert.match(game, /enemy\\.id === directHitEnemyId/);
-  assert.match(game, /this\\.detonateBallisticFirearmProjectile\\([\\s\\S]*?e\\.id/);
-  assert.match(game, /p\\.mesh\\.position\\.set\\(closestX, Math\\.max\\(0\\.14, closestY\\), closestZ\\)/);
+  assert.match(game, /private detonateRocketFirearmProjectile\([\s\S]*?directHitEnemyId\?: string/);
+  assert.match(game, /this\.detonateRocketFirearmProjectile\([\s\S]*?true, e\.id/);
+  assert.match(game, /enemy\.id === directHitEnemyId/);
+  assert.match(game, /this\.detonateBallisticFirearmProjectile\([\s\S]*?e\.id/);
+  assert.match(game, /p\.mesh\.position\.set\(closestX, Math\.max\(0\.14, closestY\), closestZ\)/);
 });
