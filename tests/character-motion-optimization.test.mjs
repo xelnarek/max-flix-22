@@ -83,7 +83,8 @@ test('homing and high-speed projectile collision use the enemy broad phase and r
   assert.match(game, /enemySpatialIndex\.query\(p\.mesh\.position\.x, p\.mesh\.position\.z, homingRange\)/);
   assert.match(game, /const toPlayer = this\.projectileSteeringScratch\.set\(/);
   assert.match(game, /const broadphaseRadius = Math\.sqrt\(segmentLengthSq\) \* 0\.5 \+ 1\.65/);
-  assert.match(game, /closest point on this frame's movement segment/);
+  assert.match(game, /findFirstProjectileEnemyImpact\(/);
+  assert.match(game, /this\.playerProjectileEnemyImpactScratch/);
 });
 
 test('handheld enemy broadphase refreshes below display rate and immediately after roster changes', async () => {
