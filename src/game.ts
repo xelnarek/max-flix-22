@@ -7696,6 +7696,18 @@ export class PaleciakiGameEngine {
     }
     root.userData.enemyVisualPolishApplied = true;
 
+    // These two custom 3D silhouettes already contain their own signature props:
+    // do not stack the generic shoulder/chest/belt armour over the frying pan,
+    // vacuum canister or the dog's quadruped anatomy.
+    if (enemy.type === 'wkurzona_zona' || enemy.type === 'kluska_piekielna') {
+      root.traverse((child) => {
+        if (!(child instanceof THREE.Mesh)) return;
+        child.castShadow = !this.isHandheldViewport;
+        child.receiveShadow = false;
+      });
+      return;
+    }
+
     const palette: Record<string, number> = {
       customer: 0xef4444, architect: 0xa78bfa, inspector: 0x38bdf8,
       handlowiec: 0xf59e0b, monter: 0x22c55e, kurier: 0xf97316,
