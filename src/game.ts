@@ -64,6 +64,7 @@ import { createEnemyHitReaction, getEnemyHitPulse, getEnemyImpactBurstProfile } 
 import { getEnemyDeathMotionPose, getEnemyDeathMotionProfile } from './enemyDeathMotion.ts';
 import { ENEMY_GAIT_PRESETS, ENEMY_VISUAL_PROFILES } from './enemyVisualProfiles.ts';
 import { removeLegacyEnemyBodyVisuals } from './enemyVisualComposition.ts';
+import { createKluskaHellhoundModel, createWkurzonaZonaModel } from './customEnemyModels.ts';
 import { addProceduralLimbPose, getProceduralHitPulse, setProceduralJointRotation, setProceduralLimbPose } from './proceduralActorAnimation.ts';
 import { isEffectiveBossLaneDodge, isInsideBossAttackLane, isWithinBossImpactRadius } from './combatTelegraphs.ts';
 import { getHordeRingPoint, getHordeRingRadius, getSurvivalHordeSettings } from './survivalHorde.ts';
@@ -576,6 +577,8 @@ export class PaleciakiGameEngine {
       "MOJE PREZENTACJE POWERPOINT ZADAJĄ REALNE OBRAŻENIA OBSZAROWE!",
       "CYBER-CERAMIKA: ZERO FUGI, 100% MIESIĘCZNEJ SUBKRYPCJI!",
     ],
+    wkurzona_zona: ['ILE RAZY MAM POWTARZAĆ?! PATELNIA IDZIE W RUCH!','ODŁÓŻ TEN BAŁAGAN, ZANIM WŁĄCZĘ ODKURZACZ NA TURBO!','TU SIĘ SAMO NIE POSPRZĄTA — NADCHODZI KONTROLA PORZĄDKU!'],
+    kluska_piekielna: ['WUF! WUF! TERAZ NIE MA UCIECZKI!','KTO RUSZYŁ MOJĄ KOSTKĘ?! GRRR!','PIEKIELNY SZCZEK — WSZYSCY NA PODŁOGĘ!'],
     bosman_krakow: [
       "Odprawa 3-miesięczna czeka na każdego marudera!",
       "W Krakowie na centrali nikt tak flegmatycznie palet nie nosił!",
@@ -7700,6 +7703,7 @@ export class PaleciakiGameEngine {
       pan_roman: 0x92400e, serwisant: 0x06b6d4, zombie_pracownik: 0x84cc16,
       elite_walczak_guard: 0xf43f5e, walczak: 0xf59e0b, krol_leto: 0xa855f7,
       bosman_krakow: 0x0ea5e9, agv_robot: 0x38bdf8, piorun_dron: 0x22d3ee,
+      wkurzona_zona: 0x2563eb, kluska_piekielna: 0x9b633a,
     };
     const accent = palette[enemy.type] || 0x38bdf8;
     const isBoss = isMajorSurvivalBossType(enemy.type);
@@ -8453,6 +8457,36 @@ export class PaleciakiGameEngine {
       length: 2.8,
       dir: 1,
       active: true,
+    });
+  }
+
+  private addWkurzonaZonaEnemy(id: string, x: number, minZ: number, maxZ: number, name = 'wkUrzona zOna — Egzekutorka Porządku') {
+    const built = createWkurzonaZonaModel();
+    built.group.position.set(x, 0.4, minZ);
+    this.applyHandheldActorShadowBudget(built.group);
+    this.levelRoot.add(built.group);
+    this.enemies.push({
+      id, type: 'wkurzona_zona', name, mesh: built.group, speechMesh: null,
+      x, y: 0.4, z: minZ, collisionRadius: 0.70, startX: minZ, endX: maxZ,
+      speed: 2.55, dir: 1, hp: 9, maxHp: 9, state: 'patrol', stunTimer: 0,
+      shoutTimer: 3.0, shoutText: '', attackCooldown: 0, walkCycle: 0,
+      legL: built.legL, legR: built.legR, armL: built.armL, armR: built.armR,
+      head: built.head, vacuumCooldownTimer: 5.2,
+    });
+  }
+
+  private addKluskaHellhoundEnemy(id: string, x: number, minZ: number, maxZ: number, name = 'Kluska — Pies z piekła rodem') {
+    const built = createKluskaHellhoundModel();
+    built.group.position.set(x, 0.12, minZ);
+    this.applyHandheldActorShadowBudget(built.group);
+    this.levelRoot.add(built.group);
+    this.enemies.push({
+      id, type: 'kluska_piekielna', name, mesh: built.group, speechMesh: null,
+      x, y: 0.12, z: minZ, collisionRadius: 0.56, startX: minZ, endX: maxZ,
+      speed: 3.75, dir: 1, hp: 8, maxHp: 8, state: 'patrol', stunTimer: 0,
+      shoutTimer: 2.0, shoutText: '', attackCooldown: 0, walkCycle: 0,
+      legL: built.legL, legR: built.legR, armL: built.armL, armR: built.armR,
+      head: built.head, barkCooldownTimer: 5.8, dogChargeCooldownTimer: 4.4,
     });
   }
 
@@ -9939,6 +9973,7 @@ export class PaleciakiGameEngine {
     this.addKurierEnemy('kurier_l2_1', offsetX - 16, -6, 6, 'Kurier Ekspresowy');
     this.addItalianVendorEnemy('ital_l2_1', offsetX + 2, -6, 6, 'Przedstawiciel Fabryki z Bolonii');
     this.addSztaplarEnemy('sztaplar_l2_1', offsetX + 18, -6, 6, 'Kierowca Sztaplarki Showroomu');
+    this.addWkurzonaZonaEnemy('wkurzona_l2_1', offsetX - 8, -6, 6);
     this.addArchitectEnemy('arch_l2_1', offsetX - 12, offsetX - 2, -4, 'Główny Projektant Wnętrz z Warszawy');
     this.addArchitectEnemy('arch_l2_2', offsetX + 6, offsetX + 16, 4, 'Krytyk Mieszanek Tynkarskich i Beżu');
     this.addInspectorEnemy('insp_l2_1', offsetX - 4, -6, 6, 'Inspektor BHP z PIP-u');
@@ -10134,6 +10169,7 @@ export class PaleciakiGameEngine {
     this.addWalczakBossEnemy('boss_walczak', offsetX + 30, -5);
     this.addKrolLetoBossEnemy('boss_krol_leto_l3', offsetX + 30, 5);
     this.addBosmanKrakowBossEnemy('bosman_l3', offsetX + 15, 0);
+    this.addKluskaHellhoundEnemy('kluska_l3_1', offsetX - 7, -6, 6);
     
     this.addEliteGuardEnemy('guard_l3_1', offsetX, -8, 8, 'Elitarna Straż');
     this.addKurierEnemy('kurier_l3_1', offsetX - 25, -6, 6, 'Kurier Ekspresowy');
@@ -14092,6 +14128,12 @@ export class PaleciakiGameEngine {
         case 'cyber_salesman':
           this.addCyberSalesmanEnemy(id, x, minZ, maxZ);
           break;
+        case 'wkurzona_zona':
+          this.addWkurzonaZonaEnemy(id, x, minZ, maxZ);
+          break;
+        case 'kluska_piekielna':
+          this.addKluskaHellhoundEnemy(id, x, minZ, maxZ);
+          break;
         case 'elite_walczak_guard':
         default:
           this.addEliteGuardEnemy(id, x, minZ, maxZ, 'Elitarny strażnik sektora');
@@ -17950,6 +17992,21 @@ export class PaleciakiGameEngine {
       const gaitWave = Math.sin(e.walkCycle);
       const gaitHalfWave = Math.sin(e.walkCycle * 0.5);
       this.updateEnemyHitReaction(e, dt);
+      if (e.type === 'kluska_piekielna') {
+        const tail = e.mesh.userData.tail as THREE.Group | undefined;
+        if (tail) {
+          tail.rotation.z = Math.sin(e.walkCycle * 1.65) * (e.state === 'chase' ? 0.42 : 0.25);
+          tail.rotation.x = Math.sin(e.walkCycle * 0.88) * 0.12;
+        }
+        if (e.head) {
+          const barkPose = e.barkWindupTimer !== undefined ? -0.30 : 0;
+          e.head.rotation.x = barkPose + Math.sin(e.walkCycle * 0.62) * 0.045;
+          e.head.rotation.z = Math.sin(e.walkCycle * 0.8) * 0.035;
+        }
+      } else if (e.type === 'wkurzona_zona') {
+        const pan = e.mesh.userData.pan as THREE.Group | undefined;
+        if (pan) pan.rotation.x = Math.sin(e.walkCycle * 0.9) * 0.05;
+      }
 
       // Every archetype has its own gait profile: heavy bosses take slower,
       // wider steps; couriers move briskly; zombies limp and stagger; robots
@@ -18212,7 +18269,7 @@ export class PaleciakiGameEngine {
       if (this.gameMode === 'survival') this.updateSurvivalCommanderPulse(e, dt);
 
       // Check whether this enemy is allowed to engage or must hold position in wave
-      const canActivelyChase = e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' || e.type === 'pomazaniec' || e.type === 'sebix_m' || !!e.surgeRunner || this.activeChaserIds.has(e.id);
+      const canActivelyChase = e.type === 'walczak' || e.type === 'krol_leto' || e.type === 'bosman_krakow' || e.type === 'pomazaniec' || e.type === 'sebix_m' || e.type === 'wkurzona_zona' || e.type === 'kluska_piekielna' || !!e.surgeRunner || this.activeChaserIds.has(e.id);
 
       // SIGHT & DETECTION LOGIC
       const threatAwareness = 1 + this.threatTier * 0.025;
@@ -18896,6 +18953,91 @@ export class PaleciakiGameEngine {
         }
       }
 
+      if (e.type === 'wkurzona_zona') {
+        if (e.vacuumWindupTimer !== undefined) {
+          e.vacuumWindupTimer -= dt;
+          if (e.vacuumWindupTimer <= 0) {
+            e.vacuumWindupTimer = undefined;
+            const vx = e.x - this.playerPos.x, vz = e.z - this.playerPos.z;
+            const length = Math.hypot(vx, vz);
+            if (length > 0.1 && length <= 7.6 && Math.abs(e.y - this.playerPos.y) < 1.1) {
+              this.playerVel.x += vx / length * 2.7;
+              this.playerVel.z += vz / length * 2.7;
+              this.emitFloatingToast('🧹 TURBOODKURZACZ — WCIĄGANIE!', this.playerPos.x, this.playerPos.y + 1.0, this.playerPos.z, 'damage');
+              this.triggerScreenShake(0.16, 0.12);
+            }
+          }
+        } else {
+          e.vacuumCooldownTimer = Math.max(0, (e.vacuumCooldownTimer ?? 0) - dt * survivalAbilityRate);
+          if (e.vacuumCooldownTimer <= 0 && distToPlayer < 8.0) {
+            e.vacuumCooldownTimer = 7.8;
+            e.vacuumWindupTimer = 0.82;
+            const direction = Math.atan2(dx, dz);
+            e.mesh.rotation.y = direction;
+            this.spawnBossLaneTelegraph(e.x, e.z, direction, 7.4, 3.1, 0x22d3ee, 0.82, e);
+            this.emitFloatingToast('🧹 UWAGA! ODKURZACZ NA TURBO — ZŁAP SIĘ REGAŁU!', e.x, e.y + 1.35, e.z, 'damage');
+            sound.playBossWarning();
+          }
+        }
+      }
+
+      if (e.type === 'kluska_piekielna') {
+        if (e.barkWindupTimer !== undefined) {
+          e.barkWindupTimer -= dt;
+          if (e.barkWindupTimer <= 0) {
+            e.barkWindupTimer = undefined;
+            const distance = Math.hypot(this.playerPos.x - e.x, this.playerPos.z - e.z);
+            const px = (this.playerPos.x - e.x) / Math.max(0.1, distance);
+            const pz = (this.playerPos.z - e.z) / Math.max(0.1, distance);
+            const facing = Math.sin(e.mesh.rotation.y) * px + Math.cos(e.mesh.rotation.y) * pz;
+            if (distance <= 5.8 && facing > 0.25 && Math.abs(e.y - this.playerPos.y) < 1.1) {
+              this.playerVel.x += px * 3.6;
+              this.playerVel.z += pz * 3.6;
+              this.takeDamage('🐕 PIEKIELNY SZCZEK KLUSKI!');
+              this.emitFloatingToast('🐕 PIEKIELNY SZCZEK — ODRZUT!', this.playerPos.x, this.playerPos.y + 1.0, this.playerPos.z, 'damage');
+              this.triggerScreenShake(0.24, 0.16);
+            }
+          }
+        } else {
+          e.barkCooldownTimer = Math.max(0, (e.barkCooldownTimer ?? 0) - dt * survivalAbilityRate);
+          if (e.barkCooldownTimer <= 0 && distToPlayer < 6.4 && e.dogChargeWindupTimer === undefined) {
+            e.barkCooldownTimer = 7.2;
+            e.barkWindupTimer = 0.68;
+            const direction = Math.atan2(dx, dz);
+            e.mesh.rotation.y = direction;
+            this.spawnBossLaneTelegraph(e.x, e.z, direction, 6.1, 5.1, 0xf97316, 0.68, e);
+            this.emitFloatingToast('🐕 KLUSKA NABIERA POWIETRZA — PIEKIELNY SZCZEK!', e.x, e.y + 1.0, e.z, 'damage');
+            sound.playBossWarning();
+          }
+        }
+        if (e.dogChargeWindupTimer !== undefined) {
+          e.dogChargeWindupTimer -= dt;
+          if (e.dogChargeWindupTimer <= 0) {
+            e.dogChargeWindupTimer = undefined;
+            const direction = e.chargeDir ?? Math.atan2(dx, dz);
+            e.mesh.rotation.y = direction;
+            e.x += Math.sin(direction) * 3.1;
+            e.z += Math.cos(direction) * 3.1;
+            this.clampEnemyToArena(e);
+            e.mesh.position.set(e.x, e.y, e.z);
+            this.emitFloatingToast('🐾 KLUSKA — SZARŻA BESTII!', e.x, e.y + 0.9, e.z, 'damage');
+            sound.playBossWarning();
+          }
+        } else {
+          e.dogChargeCooldownTimer = Math.max(0, (e.dogChargeCooldownTimer ?? 0) - dt);
+          if (e.dogChargeCooldownTimer <= 0 && e.barkWindupTimer === undefined &&
+              distToPlayer >= 3.2 && distToPlayer <= 8.8) {
+            e.dogChargeWindupTimer = 0.58;
+            e.dogChargeCooldownTimer = 8.4;
+            e.chargeDir = Math.atan2(dx, dz);
+            e.mesh.rotation.y = e.chargeDir;
+            this.spawnBossLaneTelegraph(e.x, e.z, e.chargeDir, 7.0, 1.75, 0xf97316, 0.58, e);
+            this.emitFloatingToast('🐕 KLUSKA ZBIERA SIĘ DO SZARŻY — ZEJDŹ Z LINII!', e.x, e.y + 0.95, e.z, 'damage');
+            sound.playBossWarning();
+          }
+        }
+      }
+
       // One final guard after every archetype-specific movement path. Several
       // bosses and special enemies move directly (dash/chase), bypassing patrol
       // bounds; keep the rendered mesh and hit-test position in sync.
@@ -18911,7 +19053,7 @@ export class PaleciakiGameEngine {
         e.mesh.position.y = e.y + Math.sin(e.walkCycle * 1.65) * 0.025;
         e.mesh.rotation.z = Math.sin(e.walkCycle * 1.1) * 0.018;
       }
-      const hitRadius = e.type === 'sebix_m' ? (e.dashTimer && e.dashTimer > 0 ? 1.85 : 1.35) : isMajorSurvivalBossType(e.type) ? 1.5 : e.type === 'elite_walczak_guard' ? 1.3 : 1.1;
+      const hitRadius = e.type === 'sebix_m' ? (e.dashTimer && e.dashTimer > 0 ? 1.85 : 1.35) : e.type === 'kluska_piekielna' ? 0.98 : isMajorSurvivalBossType(e.type) ? 1.5 : e.type === 'elite_walczak_guard' ? 1.3 : 1.1;
       const contactRadius = hitRadius + 0.18;
       const meleeProfile = getEnemyMeleeTelegraphProfile(e.type);
       const meleeCounterActive = (this.activePerks.bulldozer || 0) > 0 ||

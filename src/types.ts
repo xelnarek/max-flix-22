@@ -122,6 +122,8 @@ export interface EnemyItem {
   barkWindupTimer?: number;
   dogChargeWindupTimer?: number;
   dogChargeCooldownTimer?: number;
+  vacuumCooldownTimer?: number;
+  barkCooldownTimer?: number;
   bossPhase?: number;
   chargeDir?: number;
   chargeTimer?: number;
