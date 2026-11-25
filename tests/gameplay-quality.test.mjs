@@ -389,13 +389,15 @@ test('primary attacks use character-specific range-based projectile lifetimes', 
   assert.match(game, /getPiotrBoomerangMaxLifeSeconds\(22\.5\)/);
 });
 
-test('projectile collision checks the full movement segment rather than only its endpoint', async () => {
+test('projectile collision checks the full movement segment and resolves the first enemy body contact', async () => {
   const game = await read('../src/game.ts');
   assert.match(game, /previousProjectileX/);
   assert.match(game, /segmentLengthSq/);
-  assert.match(game, /const closestX = previousProjectileX \+ segmentX \* projection/);
-  assert.match(game, /Math\.abs\(closestY - e\.y\) < 1\.35/);
-});
+  assert.match(game, /findFirstProjectileEnemyImpact\(/);
+  assert.match(game, /const closestX = enemyImpact\.x/);
+  assert.match(game, /this\.playerProjectileEnemyImpactScratch/);
+  assert.match(game, /p\.hitIds/);
+});;
 
 test('fullscreen and orientation changes reset touch input and reflow the viewport', async () => {
   const app = await read('../src/index.ts');
