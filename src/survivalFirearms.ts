@@ -116,6 +116,7 @@ export const SURVIVAL_FIREARM_DEFS: Readonly<Record<SurvivalFirearmId, SurvivalF
     reloadSeconds: 2.25, damage: 3.85, pellets: 1, spreadRadians: 0.006,
     projectileSpeed: 23, projectileRadius: 0.17,
     pierce: 0, aoeRadius: 4.4, aoeDamageMultiplier: 1.05, igniteOnHit: true, dropWeight: 1,
+    detonateOnImpact: true,
   },
   flamethrower: {
     id: 'flamethrower', name: 'Miotacz płomieni', shortName: 'MIOTACZ', icon: '🔥',

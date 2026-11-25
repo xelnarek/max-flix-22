@@ -968,22 +968,22 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
       (groundContact || fuseExpired || proj.life <= 0);
     if (groundContact) proj.y = 0.14;
 
+    const targetPlayer = proj.ownerSlot === 'p1' ? state.p2 : state.p1;
+    const shooterPlayer = proj.ownerSlot === 'p1' ? state.p1 : state.p2;
     if (proj.life <= 0 && !groundDetonation) {
+      if (proj.firearmId === 'rocket_launcher') {
+        proj.x = endX; proj.y = nextY; proj.z = endZ;
+        applyPvpProjectileSplashDamage(state, proj, shooterPlayer, targetPlayer, proj.x, proj.z);
+        recordPvpFirearmExplosion(state, proj, proj.x, proj.y, proj.z);
+      }
       state.projectiles.splice(i, 1);
       continue;
     }
 
     const obstacleT = firstProjectileObstacleHit(
-      startX,
-      startZ,
-      endX,
-      endZ,
-      proj.radius,
-      state.obstacles,
+      startX, startZ, endX, endZ, proj.radius, state.obstacles,
       gravity > 0 ? heightAtT : undefined,
     );
-    const targetPlayer = proj.ownerSlot === 'p1' ? state.p2 : state.p1;
-    const shooterPlayer = proj.ownerSlot === 'p1' ? state.p1 : state.p2;
     const targetHit = pointSegmentDistanceSq(targetPlayer.x, targetPlayer.z, startX, startZ, endX, endZ);
     const playerHitRadius = PVP_PLAYER_RADIUS + proj.radius;
     const playerHeight = targetHit.t < 0 ? startY : heightAtT(targetHit.t);
@@ -1064,12 +1064,18 @@ export function stepPvpArena(state: PvpArenaState, dt: number, p1Input?: PvpInpu
         if (state.status !== 'in_round') break;
         continue;
       }
-      if (
+      const projectileOutOfBounds =
         proj.x < PVP_ARENA_BOUNDS.minX - 2 ||
         proj.x > PVP_ARENA_BOUNDS.maxX + 2 ||
         proj.z < PVP_ARENA_BOUNDS.minZ - 2 ||
-        proj.z > PVP_ARENA_BOUNDS.maxZ + 2
-      ) state.projectiles.splice(i, 1);
+        proj.z > PVP_ARENA_BOUNDS.maxZ + 2;
+      if (projectileOutOfBounds) {
+        if (proj.firearmId === 'rocket_launcher') {
+          applyPvpProjectileSplashDamage(state, proj, shooterPlayer, targetPlayer, proj.x, proj.z);
+          recordPvpFirearmExplosion(state, proj, proj.x, proj.y, proj.z);
+        }
+        state.projectiles.splice(i, 1);
+      }
     }
   }
   // Publish the results of this tick before a room snapshot or match-end panel is emitted.

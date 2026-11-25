@@ -79,6 +79,27 @@ test('ProjectileTracerPool tags tracer outer and inner layers for selective bloo
   pool.dispose();
 });
 
+test('weapon tracer families use distinct rocket exhaust, flame, smoke and energy geometry', () => {
+  const cases = [
+    ['rocket', 'rocket-exhaust', THREE.ConeGeometry],
+    ['flame', 'flame-jet', THREE.ConeGeometry],
+    ['grenade', 'smoke', THREE.SphereGeometry],
+    ['plasma', 'plasma', THREE.IcosahedronGeometry],
+    ['gauss', 'gauss', THREE.CylinderGeometry],
+  ];
+  for (const [archetype, effectKind, geometryType] of cases) {
+    const parent = new THREE.Group();
+    const pool = new ProjectileTracerPool(2);
+    const style = getFirearmTracerStyle(archetype, 0xffaa44);
+    assert.equal(style.effectKind, effectKind);
+    assert.equal(pool.emitSegment(parent, 0, 1, 0, 0, 1, 2, style), true);
+    assert.ok(parent.children[0].children[0].geometry instanceof geometryType);
+    const innerGeometryType = effectKind === 'plasma' ? THREE.SphereGeometry : geometryType;
+    assert.ok(parent.children[0].children[1].geometry instanceof innerGeometryType);
+    pool.dispose();
+  }
+});
+
 test('isSoftwareWebGLRenderer flags SwiftShader/llvmpipe and ignores hardware GPUs', () => {
   const makeMockRenderer = (rendererName) => ({
     getContext: () => ({

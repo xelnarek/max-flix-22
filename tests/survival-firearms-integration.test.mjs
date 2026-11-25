@@ -165,7 +165,7 @@ test('firearm pickups are physical 3D models with weapon-specific silhouettes', 
 });
 
 test('magazine, reload, projectile archetype and damage are driven by the active firearm profile', async () => {
-  const game = await read('../src/game.ts');
+  const [game, firearms] = await Promise.all([read('../src/game.ts'), read('../src/survivalFirearms.ts')]);
   assert.match(game, /private reloadSurvivalFirearm\(\)/);
   assert.match(game, /public requestSurvivalFirearmReload\(\)/);
   assert.match(game, /private updateHeldSurvivalFirearmAction\(dt: number\)/);
@@ -173,8 +173,14 @@ test('magazine, reload, projectile archetype and damage are driven by the active
   assert.match(game, /survivalFirearmRecoilTimer = SURVIVAL_FIREARM_PRESENTATION\[definition\.archetype\]\.recoilSettleSeconds/);
   assert.match(game, /if \(firearm\.ammoInMagazine <= 0\)/);
   assert.match(game, /createSurvivalFirearmProjectileMesh\(definition\.archetype, definition\.color, definition\.projectileRadius\)/);
-  assert.match(game, /case 'rocket':\s*geometry = new THREE\.ConeGeometry/);
-  assert.match(game, /case 'flame':\s*geometry = new THREE\.SphereGeometry/);
+  assert.match(game, /case 'rocket':[\s\S]*?geometry = new THREE\.CylinderGeometry/);
+  assert.match(game, /case 'flame':[\s\S]*?geometry = new THREE\.ConeGeometry/);
+  assert.match(game, /firearm-rocket-exhaust-outer/);
+  assert.match(game, /firearm-rocket-exhaust-core/);
+  assert.match(game, /firearm-flame-projectile-core/);
+  assert.match(game, /private spawnFlamethrowerMuzzleJet\(/);
+  assert.match(game, /private spawnRocketDetonationFx\(/);
+  assert.match(game, /private detonateRocketFirearmProjectile\(/);
   assert.match(game, /spawnSurvivalFirearmMuzzleFx\(definition\.archetype, definition\.color, start, forward\)/);
   assert.match(game, /getSurvivalFirearmCyclePose\(archetype, cycleProgress\)/);
   assert.match(game, /cyclePose\.boltOffsetZ/);
@@ -183,6 +189,9 @@ test('magazine, reload, projectile archetype and damage are driven by the active
   assert.match(game, /case 'gauss':/);
   assert.match(game, /firearmProjectile: true/);
   assert.match(game, /firearmExplosion: definition\.archetype === 'rocket' \|\| definition\.archetype === 'grenade'/);
+  assert.match(firearms, /rocket_launcher: \{[\s\S]*?detonateOnImpact: true/);
+  assert.match(game, /p\.firearmId === 'rocket_launcher'[\s\S]*?this\.detonateRocketFirearmProjectile/);
+  assert.doesNotMatch(game, /p\.firearmId !== 'ballistic_grenade_launcher'\) sound\.playBossWarning/);
   assert.match(game, /aoeDamageMultiplier: definition\.aoeDamageMultiplier/);
   assert.match(game, /damageSource: getSurvivalFirearmDamageSource\(definition\.id\)/);
   assert.match(game, /const adjustedProjectileDamage = p\.firearmProjectile/);
@@ -348,3 +357,5 @@ test('Survival haste is capped so operator synergies cannot undo the slower prim
   assert.match(game, /const attackRate = Math\.min\(1\.05, Math\.max\(0\.65, uncappedAttackRate\)\)/);
   assert.match(game, /firearm\.cooldown = definition\.fireIntervalSeconds \* hasteFactor \/ attackRate/);
 });
+
+// VFX regression coverage also guards against stale generic rocket and flame projectiles.
