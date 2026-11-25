@@ -279,3 +279,24 @@ test('direct rocket and ballistic grenade impacts detonate at the contact point 
   assert.match(game, /this\.detonateBallisticFirearmProjectile\([\s\S]*?e\.id/);
   assert.match(game, /p\.mesh\.position\.set\(closestX, Math\.max\(0\.14, closestY\), closestZ\)/);
 });
+
+
+test('standard player projectiles stop at first contact and skip later damage frames', async () => {
+  const impact = await readFile(new URL('../src/projectileImpact.ts', import.meta.url), 'utf8');
+  const start = game.indexOf('private updateProjectiles(dt: number)');
+  const end = game.indexOf('private updateSpecialEffects(dt: number)', start);
+  const update = game.slice(start, end);
+
+  assert.match(impact, /export function stopProjectileAtImpact\(/);
+  assert.match(update, /if \(p\.impactStopped\) \{[\s\S]*?p\.life -= dt;[\s\S]*?removeAtSwap\(this\.projectiles, i\);[\s\S]*?continue;/);
+  assert.match(update, /stopProjectileAtImpact\(p, enemyImpact\)/);
+  assert.doesNotMatch(update, /else if \(p\.pierce && p\.pierce > 0\)/);
+  assert.match(update, /this\.damageEnemy\(e, baseDmg, closestX, closestZ, projectileDamageSource\)/);
+});
+
+test('large-horde projectile broadphase falls back to a direct scan when its cache is stale', () => {
+  const start = game.indexOf('private updateProjectiles(dt: number)');
+  const end = game.indexOf('private updateSpecialEffects(dt: number)', start);
+  const update = game.slice(start, end);
+  assert.match(update, /this\.enemies\.length >= 48 &&[\s\S]*?this\.enemySpatialIndexCachedCount === this\.enemies\.length[\s\S]*?this\.enemySpatialIndex\.query\([\s\S]*?broadphaseRadius \+ 0\.55[\s\S]*?: this\.enemies/);
+});
