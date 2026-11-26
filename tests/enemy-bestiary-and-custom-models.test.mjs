@@ -20,8 +20,15 @@ test('Bestiariusz zawiera obie nowe karty, właściwe ikony i komplet opisów', 
   assert.match(html, /aria-label="Patelnia Wściekłej Żony">🍳/);
   assert.match(html, /Kluska Piekielna — Tropiciel B4/);
   assert.match(html, /Wściekła Żona — Patelniowa Egzekutorka/);
-  assert.match(html, /szarżą i ugryzieniem/);
-  assert.match(html, /odkurzaczu na plecach/);
+  assert.match(html, /atakuje pyskiem/);
+  assert.match(html, /0,34 s/);
+  assert.match(html, /0,18 s/);
+  assert.match(html, /0,72 s/);
+  assert.match(html, /0,42 s/);
+  assert.match(html, /0,98 m/);
+  assert.match(html, /odkurzacz na plecach/);
+  assert.match(html, /Kobaltowy sweter/);
+  assert.match(html, /unik w bok/);
   assert.match(html, /enemy-guide-card--kluska/);
   assert.match(css, /enemy-guide-card--kluska/);
   assert.match(css, /enemy-guide-card--zona/);
@@ -35,6 +42,9 @@ test('Wściekła Żona ma poprawiony detal twarzy i kompletną końcówkę odkur
   assert.ok(model.group.getObjectByName('dark_pupil'));
   assert.ok(model.group.getObjectByName('vacuum_floor_nozzle'));
   assert.ok(model.group.getObjectByName('vacuum_nozzle_head'));
+  assert.ok(model.group.getObjectByName('side_swept_fringe'));
+  assert.ok(model.group.getObjectByName('pan_inner_rim'));
+  assert.ok(model.group.getObjectByName('pan_rivet'));
   assert.ok(model.group.userData.vacuumNozzle);
 });
 
@@ -45,6 +55,9 @@ test('Kluska ma detale pyska, wnętrza uszu, pazury i niezależne przeguby uszu 
   assert.ok(model.group.getObjectByName('upper_fang_-1'));
   assert.ok(model.group.getObjectByName('floppy_ear_inner'));
   assert.ok(model.group.getObjectByName('paw_claw_center'));
+  assert.ok(model.group.getObjectByName('nostril_-1'));
+  assert.ok(model.group.getObjectByName('tail_tip_marking'));
+  assert.ok(model.group.getObjectByName('raised_back_scruff'));
   assert.ok(model.group.userData.tail);
   assert.equal(model.group.userData.ears.length, 2);
 });
