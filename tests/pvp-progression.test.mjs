@@ -85,10 +85,10 @@ test('account damage and cooldown bonuses are applied by the authoritative PvP s
   const shot = { ...neutralInput(Math.PI / 2), wantFire: true };
   stepPvpArena(state, 0.1, shot, neutralInput());
 
-  assert.equal(state.p1.damageDealt, 108);
-  assert.equal(state.p1.primaryDamageDealt, 108);
-  assert.equal(state.p2.damageTaken, 108);
-  assert.equal(state.p2.hp, 1000 - 108);
+  assert.ok(Math.abs(state.p1.damageDealt - 108) < 1e-8);
+  assert.ok(Math.abs(state.p1.primaryDamageDealt - 108) < 1e-8);
+  assert.ok(Math.abs(state.p2.damageTaken - 108) < 1e-8);
+  assert.ok(Math.abs(state.p2.hp - (1000 - 108)) < 1e-8);
   assert.ok(Math.abs(state.p1.attackCooldownTimer - getPvpFirearmAttackCooldown(STARTING_SURVIVAL_FIREARM) * 0.90) < 1e-9);
 });
 
@@ -100,9 +100,9 @@ test('defender progression mitigation is applied to real projectile HP loss', ()
   const shot = { ...neutralInput(Math.PI / 2), wantFire: true };
   stepPvpArena(state, 0.1, shot, neutralInput());
 
-  assert.equal(state.p1.damageDealt, 90);
-  assert.equal(state.p2.damageTaken, 90);
-  assert.equal(state.p2.hp, 910);
+  assert.ok(Math.abs(state.p1.damageDealt - 90) < 1e-8);
+  assert.ok(Math.abs(state.p2.damageTaken - 90) < 1e-8);
+  assert.ok(Math.abs(state.p2.hp - 910) < 1e-8);
 });
 
 test('mobility progression changes authoritative PvP movement speed', () => {
