@@ -588,29 +588,31 @@ export const PVP_FIREARM_COOLDOWN_MULTIPLIER = 3.6;
 export const PVP_FIREARM_DAMAGE_SCALE = PVP_NORMALIZED_HP / (10 * SURVIVAL_FIREARM_DEFS[STARTING_SURVIVAL_FIREARM].damage);
 
 const PVP_FIREARM_COOLDOWN_OVERRIDES: Readonly<Partial<Record<SurvivalFirearmId, number>>> = Object.freeze({
-  smg_45: 0.56,
-  assault_rifle: 0.72,
-  shotgun_12g: 2.4,
-  battle_rifle: 2.2,
-  minigun: 0.42,
-  rocket_launcher: 3.9,
-  flamethrower: 0.44,
-  plasma_rifle: 0.92,
-  ballistic_grenade_launcher: 3.6,
-  gauss_rifle: 4.2,
+  // Slower, heavier weapon identities; PvP remains manually aimed and separately balanced.
+  smg_45: 0.78,
+  assault_rifle: 0.95,
+  shotgun_12g: 2.85,
+  battle_rifle: 2.85,
+  minigun: 0.58,
+  rocket_launcher: 4.80,
+  flamethrower: 0.62,
+  plasma_rifle: 1.15,
+  ballistic_grenade_launcher: 4.20,
+  gauss_rifle: 5.00,
 });
 
 const PVP_FIREARM_DAMAGE_SCALE_MULTIPLIER: Readonly<Partial<Record<SurvivalFirearmId, number>>> = Object.freeze({
-  smg_45: 0.44,
-  assault_rifle: 0.48,
-  shotgun_12g: 0.52,
-  battle_rifle: 0.62,
-  minigun: 0.34,
-  rocket_launcher: 0.68,
-  flamethrower: 0.42,
-  plasma_rifle: 0.48,
-  ballistic_grenade_launcher: 0.68,
-  gauss_rifle: 0.54,
+  // Preserve each weapon's previous effective PvP damage after the PvE profile rebalance.
+  smg_45: 0.454,
+  assault_rifle: 0.473,
+  shotgun_12g: 0.582,
+  battle_rifle: 0.766,
+  minigun: 0.403,
+  rocket_launcher: 0.824,
+  flamethrower: 0.584,
+  plasma_rifle: 0.565,
+  ballistic_grenade_launcher: 0.840,
+  gauss_rifle: 0.589,
 });
 
 /** Weapon-specific PvP recovery, keeping starter_pistol synced with the shared multiplier while preventing burst melts from rapid drops. */
