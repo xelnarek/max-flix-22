@@ -1,0 +1,61 @@
+/* Dedicated, low-overhead art direction for the two bespoke enemy cards. */
+#title-screen #tab-enemies .enemy-guide-card--zona {
+  border-color: rgba(96, 165, 250, .46) !important;
+  background: linear-gradient(145deg, rgba(20, 47, 78, .92), rgba(15, 22, 31, .98)) !important;
+  box-shadow: inset 0 1px 0 rgba(191, 219, 254, .08), 0 10px 24px rgba(0, 0, 0, .24) !important;
+}
+#title-screen #tab-enemies .enemy-guide-card--kluska {
+  border-color: rgba(249, 115, 22, .42) !important;
+  background: linear-gradient(145deg, rgba(69, 35, 25, .92), rgba(22, 19, 20, .98)) !important;
+  box-shadow: inset 0 1px 0 rgba(254, 215, 170, .07), 0 10px 24px rgba(0, 0, 0, .24) !important;
+}
+#title-screen #tab-enemies .enemy-guide-card--zona .enemy-guide-badge,
+#title-screen #tab-enemies .enemy-guide-card--kluska .enemy-guide-badge {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border-radius: 14px;
+  font-size: 27px;
+  line-height: 1;
+}
+#title-screen #tab-enemies .enemy-guide-card--zona .enemy-guide-badge {
+  color: #dbeafe !important;
+  border: 1px solid rgba(147, 197, 253, .48) !important;
+  background: radial-gradient(circle at 32% 24%, rgba(147, 197, 253, .34), rgba(37, 99, 235, .16) 68%), rgba(10, 28, 48, .94) !important;
+  box-shadow: 0 0 18px rgba(59, 130, 246, .16), inset 0 1px 0 rgba(255, 255, 255, .12) !important;
+}
+#title-screen #tab-enemies .enemy-guide-card--kluska .enemy-guide-badge {
+  color: #ffedd5 !important;
+  border: 1px solid rgba(251, 146, 60, .46) !important;
+  background: radial-gradient(circle at 32% 24%, rgba(251, 146, 60, .30), rgba(154, 52, 18, .18) 68%), rgba(39, 20, 17, .94) !important;
+  box-shadow: 0 0 18px rgba(249, 115, 22, .15), inset 0 1px 0 rgba(255, 255, 255, .12) !important;
+}
+#title-screen #tab-enemies .enemy-guide-card--zona .enemy-guide-title {
+  color: #dbeafe !important;
+}
+#title-screen #tab-enemies .enemy-guide-card--kluska .enemy-guide-title {
+  color: #ffedd5 !important;
+}
+#title-screen #tab-enemies .enemy-guide-card--zona .enemy-sig {
+  color: #93c5fd !important;
+}
+#title-screen #tab-enemies .enemy-guide-card--kluska .enemy-sig {
+  color: #fdba74 !important;
+}
+@media (max-width: 600px) {
+  #title-screen #tab-enemies .enemy-guide-card--zona .enemy-guide-badge,
+  #title-screen #tab-enemies .enemy-guide-card--kluska .enemy-guide-badge {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    font-size: 24px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #title-screen #tab-enemies .enemy-guide-card--zona,
+  #title-screen #tab-enemies .enemy-guide-card--kluska {
+    transition: none !important;
+  }
+}
