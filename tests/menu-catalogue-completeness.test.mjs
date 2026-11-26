@@ -128,22 +128,27 @@ test('kampania, mapy, operatorzy i PvP pokazują komplet danych źródłowych', 
   const mapStart = html.indexOf('<div id="tab-map"');
   const mapEnd = html.indexOf('<div id="tab-pvp"', mapStart);
   const mapSection = html.slice(mapStart, mapEnd);
+  const directoryStart = html.indexOf('<section class="survival-map-directory" aria-label="Mapy Survival">');
+  const directoryEnd = html.indexOf('</section>', directoryStart);
+  const survivalMapDirectory = html.slice(directoryStart, directoryEnd);
   const stageIds = [...mapSection.matchAll(/data-campaign-stage="([^"]+)"/g)].map((m) => m[1]);
-  const mapCards = [...mapSection.matchAll(/<article class="survival-map-directory-card ([^"]+)">([\s\S]*?)<\/article>/g)];
+  const mapCards = [...survivalMapDirectory.matchAll(/<article class="survival-map-directory-card ([^"]+)">([\s\S]*?)<\/article>/g)];
 
   assert.equal(CAMPAIGN_STAGES.length, 5);
   assert.deepEqual(sort(stageIds), sort(CAMPAIGN_STAGES.map((stage) => stage.id)));
   assert.equal(mapCards.length, SURVIVAL_MAP_IDS.length);
   for (const mapId of SURVIVAL_MAP_IDS) {
     const map = SURVIVAL_MAPS[mapId];
-    assert.ok(mapSection.includes(map.name.toUpperCase()), 'map card missing: ' + mapId);
+    assert.ok(survivalMapDirectory.includes(map.name.toUpperCase()), 'map card missing: ' + mapId);
   }
+  assert.ok(mapCards.every((m) => m[2].includes('survival-map-directory-icon')), 'every Survival arena needs an emblem');
   assert.match(mapSection, /campaign-stage-icon/);
   assert.match(mapSection, /survival-map-directory-icon/);
-  assert.match(mapSection, /BRAK MODYFIKATORÓW/);
-  assert.match(mapSection, /WROGOWIE \+8% SZYBCIEJ/);
-  assert.match(mapSection, /WROGOWIE −10% SZYBCIEJ/);
-  assert.match(mapSection, /XP \+15%/);
+  assert.match(survivalMapDirectory, /BRAK MODYFIKATORÓW/);
+  assert.match(survivalMapDirectory, /WROGOWIE \+8% SZYBCIEJ/);
+  assert.match(survivalMapDirectory, /WROGOWIE −10% SZYBCIEJ/);
+  assert.match(survivalMapDirectory, /WROGOWIE \+4% SZYBCIEJ • −2% HP/);
+  assert.match(survivalMapDirectory, /XP \+15%/);
 
   const teamStart = html.indexOf('<div id="tab-team"');
   const teamEnd = html.indexOf('<div id="tab-enemies"', teamStart);
