@@ -602,17 +602,17 @@ const PVP_FIREARM_COOLDOWN_OVERRIDES: Readonly<Partial<Record<SurvivalFirearmId,
 });
 
 const PVP_FIREARM_DAMAGE_SCALE_MULTIPLIER: Readonly<Partial<Record<SurvivalFirearmId, number>>> = Object.freeze({
-  // Preserve each weapon's previous effective PvP damage after the PvE profile rebalance.
-  smg_45: 0.454,
-  assault_rifle: 0.473,
-  shotgun_12g: 0.582,
-  battle_rifle: 0.766,
-  minigun: 0.403,
-  rocket_launcher: 0.824,
-  flamethrower: 0.584,
-  plasma_rifle: 0.565,
-  ballistic_grenade_launcher: 0.840,
-  gauss_rifle: 0.589,
+  // Preserve each weapon's previous effective PvP damage after the shared starter profile changes.
+  smg_45: 0.457,
+  assault_rifle: 0.471,
+  shotgun_12g: 0.559,
+  battle_rifle: 0.638,
+  minigun: 0.333,
+  rocket_launcher: 0.698,
+  flamethrower: 0.373,
+  plasma_rifle: 0.452,
+  ballistic_grenade_launcher: 0.643,
+  gauss_rifle: 0.557,
 });
 
 /** Weapon-specific PvP recovery, keeping starter_pistol synced with the shared multiplier while preventing burst melts from rapid drops. */
