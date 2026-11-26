@@ -940,9 +940,10 @@ export class PaleciakiGameEngine {
   private survivalWeapons: SurvivalWeaponState[] = [];
   private survivalFirearm: SurvivalFirearmState = createStartingSurvivalFirearmState();
   private readonly survivalFirearmAttackAnimationSeconds: Readonly<Record<SurvivalFirearmId, number>> = {
-    starter_pistol: 0.22, smg_45: 0.13, assault_rifle: 0.16, shotgun_12g: 0.34, battle_rifle: 0.30,
-    minigun: 0.10, rocket_launcher: 0.44, flamethrower: 0.12, plasma_rifle: 0.22, gauss_rifle: 0.36,
-    ballistic_grenade_launcher: 0.42,
+    // The held model has enough time to show the weapon's individual mechanical cycle.
+    starter_pistol: 0.28, smg_45: 0.17, assault_rifle: 0.24, shotgun_12g: 0.48, battle_rifle: 0.46,
+    minigun: 0.18, rocket_launcher: 0.62, flamethrower: 0.20, plasma_rifle: 0.32, gauss_rifle: 0.54,
+    ballistic_grenade_launcher: 0.58,
   };
   private survivalFirearmStates = new Map<SurvivalFirearmId, SurvivalFirearmState>();
   private survivalFirearmKillCount = 0;
