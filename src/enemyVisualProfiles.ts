@@ -306,7 +306,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     category: 'warehouse-caricature',
     attackStyle: 'heavy-melee',
     targetHeight: 1.78,
-    visualBrief: 'Wściekła Żona: wyrazista karykaturalna sylwetka z czytelną mimiką i spiętymi ciemnymi włosami z grzywką; niebieski sweter z widocznym dzianinowym detalem, bordowe spodnie. Patelnia ma metaliczny rant, nitowany uchwyt i osobny pivot w dłoni. Odkurzacz na plecach ma turkusową lampkę, widoczny elastyczny wąż i końcówkę ssącą. Priorytet: czytelność sylwetki, wyrazista twarz i mocny kontur rekwizytów',
+    visualBrief: 'Wściekła Żona: wyrazista karykaturalna sylwetka z czytelną mimiką i spiętymi ciemnymi włosami z grzywką; niebieski sweter z widocznym dzianinowym detalem, bordowe spodnie. Patelnia ma metaliczny rant, widoczne nity na powierzchni i osobny pivot w dłoni. Odkurzacz na plecach ma turkusową lampkę, widoczny elastyczny wąż i końcówkę ssącą. Priorytet: czytelność sylwetki, wyrazista twarz i mocny kontur rekwizytów',
   },
   kluska_piekielna: {
     gaitStyle: 'stalking',
