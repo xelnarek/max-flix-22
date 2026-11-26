@@ -29,6 +29,17 @@ test('every firearm archetype has its own projectile, recoil, reload and feedbac
   assert.equal(new Set(archetypes.map((archetype) => SURVIVAL_FIREARM_PRESENTATION[archetype].projectileLength)).size, archetypes.length, 'projectile lengths must be visibly distinct');
   assert.equal(new Set(archetypes.map((archetype) => SURVIVAL_FIREARM_PRESENTATION[archetype].trailParticleSize)).size, archetypes.length, 'every firearm needs its own trail scale');
   assert.equal(new Set(archetypes.map((archetype) => SURVIVAL_FIREARM_PRESENTATION[archetype].impactParticles)).size, archetypes.length, 'impact signatures must have distinct particle budgets');
+  const compact = SURVIVAL_FIREARM_PRESENTATION.smg;
+  const rotary = SURVIVAL_FIREARM_PRESENTATION.minigun;
+  const heavy = SURVIVAL_FIREARM_PRESENTATION['heavy-rifle'];
+  const rocket = SURVIVAL_FIREARM_PRESENTATION.rocket;
+  const gauss = SURVIVAL_FIREARM_PRESENTATION.gauss;
+  assert.ok(gauss.projectileLength > heavy.projectileLength * 1.8, 'Gauss lance must read as a long charged projectile');
+  assert.ok(heavy.recoilDepth > compact.recoilDepth * 3, 'heavy rifle recoil must be clearly stronger than SMG recoil');
+  assert.ok(rocket.impactParticles > compact.impactParticles * 4, 'rocket detonation needs a heavy impact budget');
+  assert.ok(compact.trailParticleSize < rotary.trailParticleSize, 'SMG and minigun tracer particles must not look identical');
+  assert.ok(gauss.recoilSettleSeconds > compact.recoilSettleSeconds, 'Gauss should have a deliberate recovery animation');
+
   for (const archetype of archetypes) {
     const profile = SURVIVAL_FIREARM_PRESENTATION[archetype];
     assert.ok(profile.projectileLength > 0);
