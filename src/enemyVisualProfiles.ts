@@ -301,5 +301,5 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Cyber-handlowiec: android z neonowym wizjerem, ekranem ofertowym i mechanicznymi kończynami',
   },
   wkurzona_zona: { gaitStyle:'aggressive', fallbackFactory:'createWkurzonaZonaModel', category:'warehouse-caricature', attackStyle:'heavy-melee', targetHeight:1.78, visualBrief:'wkUrzona zOna: ciemne spięte włosy, niebieski sweter, bordowe spodnie, patelnia i odkurzacz na plecach' },
-  kluska_piekielna: { gaitStyle:'stalking', fallbackFactory:'createKluskaHellhoundModel', category:'boss-creature', attackStyle:'heavy-melee', targetHeight:0.98, visualBrief:'Kluska — pies z piekła rodem: ciemny brązowo-czarny grzbiet, jasnobrązowy pysk i łapy, opadające uszy' },
+  kluska_piekielna: { gaitStyle:'stalking', fallbackFactory:'createKluskaHellhoundModel', category:'boss-creature', attackStyle:'heavy-melee', targetHeight:0.98, visualBrief:'Kluska — pies z piekła rodem: zwarte psie proporcje, ciemny brązowo-czarny grzbiet, jasnobrązowy pysk i łapy, opadające uszy; czytelne łapy i pysk, animacja skradania, szarży, warczenia i reakcji na trafienie; aura piekielna subtelna, nie zasłania modelu' },
 });
