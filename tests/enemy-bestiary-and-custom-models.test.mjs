@@ -5,33 +5,33 @@ import { createKluskaHellhoundModel, createWkurzonaZonaModel } from '../src/cust
 
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
-test('Bestiariusz zawiera obie nowe karty, właściwe ikony i komplet opisów', async () => {
+test('Wściekła Żona i Kluska są obecne w kompletnym Bestiariuszu', async () => {
   const [html, css, profiles] = await Promise.all([
     read('../index.html'),
     read('../src/enemy-bestiary-polish.css'),
     import('../src/enemyVisualProfiles.ts'),
   ]);
 
-  assert.equal((html.match(/<div class="enemy-guide-card/g) || []).length, 22);
-  assert.match(html, /<span>22<\/span> POZYCJE/);
-  assert.match(html, /enemy-guide-card--kluska/);
-  assert.match(html, /enemy-guide-card--zona/);
+  assert.equal((html.match(/<article class="enemy-guide-card/g) || []).length, 25);
+  assert.match(html, /<span>25<\/span> TYPÓW/);
+  assert.match(html, /data-enemy-type="kluska_piekielna"/);
+  assert.match(html, /data-enemy-type="wkurzona_zona"/);
   assert.match(html, /aria-label="Kluska, piekielny pies">🐕‍🔥/);
   assert.match(html, /aria-label="Patelnia Wściekłej Żony">🍳/);
-  assert.match(html, /Kluska Piekielna <span class="enemy-guide-title-sub">Tropiciel B4<\/span>/);
-  assert.match(html, /Wściekła Żona <span class="enemy-guide-title-sub">Patelniowa Egzekutorka<\/span>/);
+  assert.match(html, /Kluska Piekielna — Tropiciel B4/);
+  assert.match(html, /Wściekła Żona — Patelniowa Egzekutorka/);
   assert.match(html, /atakuje pyskiem/);
   assert.match(html, /0,34 s/);
   assert.match(html, /0,18 s/);
   assert.match(html, /0,72 s/);
   assert.match(html, /0,42 s/);
   assert.match(html, /0,98 m/);
-  assert.match(html, /odkurzacz na plecach/);
+  assert.match(html, /odkurzacz z widocznym wężem na plecach/);
   assert.match(html, /Kobaltowy sweter/);
   assert.match(html, /unik w bok/);
-  assert.match(html, /enemy-guide-card--kluska/);
   assert.match(css, /enemy-guide-card--kluska/);
   assert.match(css, /enemy-guide-card--zona/);
+  assert.match(css, /enemy-guide-tactic/);
   assert.ok(profiles.ENEMY_VISUAL_PROFILES.wkurzona_zona.visualBrief.length > 80);
   assert.ok(profiles.ENEMY_VISUAL_PROFILES.kluska_piekielna.visualBrief.length > 80);
 });
