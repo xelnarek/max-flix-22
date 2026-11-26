@@ -40,17 +40,25 @@ test('firearm catalogue has clearly differentiated cadence, ammunition, projecti
     Math.min(...definitions.map((entry) => entry.fireIntervalSeconds)) >= 7);
   const cadenceById = Object.fromEntries(definitions.map((entry) => [entry.id, entry.fireIntervalSeconds]));
   assert.deepEqual(cadenceById, {
-    starter_pistol: 1.05, smg_45: 0.24, assault_rifle: 0.32, shotgun_12g: 0.94, battle_rifle: 0.78,
-    minigun: 0.14, rocket_launcher: 1.55, flamethrower: 0.15, plasma_rifle: 0.36, gauss_rifle: 1.38,
-    ballistic_grenade_launcher: 1.18,
+    starter_pistol: 1.30, smg_45: 0.38, assault_rifle: 0.55, shotgun_12g: 1.25, battle_rifle: 1.15,
+    minigun: 0.22, rocket_launcher: 2.15, flamethrower: 0.28, plasma_rifle: 0.72, gauss_rifle: 1.95,
+    ballistic_grenade_launcher: 1.75,
   });
   const impactById = Object.fromEntries(definitions.map((entry) => [entry.id, entry.damage]));
   assert.deepEqual(impactById, {
-    starter_pistol: 1.55, smg_45: 0.78, assault_rifle: 1.24, shotgun_12g: 0.92, battle_rifle: 3.15,
-    minigun: 0.68, rocket_launcher: 3.85, flamethrower: 0.42, plasma_rifle: 1.65, gauss_rifle: 7.4,
-    ballistic_grenade_launcher: 3.7,
+    starter_pistol: 1.90, smg_45: 0.92, assault_rifle: 1.55, shotgun_12g: 1.05, battle_rifle: 3.75,
+    minigun: 0.85, rocket_launcher: 4.60, flamethrower: 0.58, plasma_rifle: 2.15, gauss_rifle: 8.80,
+    ballistic_grenade_launcher: 4.80,
   });
-  assert.ok(definitions.every((entry) => entry.reloadSeconds >= 1.2), 'every firearm has a meaningful reload window');
+  const reloadById = Object.fromEntries(definitions.map((entry) => [entry.id, entry.reloadSeconds]));
+  assert.deepEqual(reloadById, {
+    starter_pistol: 2.20, smg_45: 2.80, assault_rifle: 2.80, shotgun_12g: 2.90, battle_rifle: 3.20,
+    minigun: 4.40, rocket_launcher: 4.50, flamethrower: 3.40, plasma_rifle: 3.50, gauss_rifle: 4.00,
+    ballistic_grenade_launcher: 4.60,
+  });
+  assert.ok(definitions.every((entry) => entry.reloadSeconds >= 2.0), 'every firearm has a meaningful deliberate reload window');
+  assert.ok(definitions.every((entry) => entry.fireIntervalSeconds >= 0.22), 'automatic fire must not return to near-continuous bullet spam');
+  assert.ok(Math.min(...definitions.map((entry) => entry.reloadSeconds)) >= 2.0);
 });
 
 test('firearm drops use the shared 7% / 30% / guaranteed-boss policy and bounded pity', () => {
