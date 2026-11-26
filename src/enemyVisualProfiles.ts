@@ -300,6 +300,20 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     category: 'machine', attackStyle: 'ranged', targetHeight: 1.78,
     visualBrief: 'Cyber-handlowiec: android z neonowym wizjerem, ekranem ofertowym i mechanicznymi kończynami',
   },
-  wkurzona_zona: { gaitStyle:'aggressive', fallbackFactory:'createWkurzonaZonaModel', category:'warehouse-caricature', attackStyle:'heavy-melee', targetHeight:1.78, visualBrief:'wkUrzona zOna: ciemne spięte włosy, niebieski sweter, bordowe spodnie, patelnia i odkurzacz na plecach' },
-  kluska_piekielna: { gaitStyle:'stalking', fallbackFactory:'createKluskaHellhoundModel', category:'boss-creature', attackStyle:'heavy-melee', targetHeight:0.98, visualBrief:'Kluska — pies z piekła rodem: zwarte psie proporcje, ciemny brązowo-czarny grzbiet, jasnobrązowy pysk i łapy, opadające uszy; czytelne łapy i pysk, animacja skradania, szarży, warczenia i reakcji na trafienie; aura piekielna subtelna, nie zasłania modelu' },
+  wkurzona_zona: {
+    gaitStyle: 'aggressive',
+    fallbackFactory: 'createWkurzonaZonaModel',
+    category: 'warehouse-caricature',
+    attackStyle: 'heavy-melee',
+    targetHeight: 1.78,
+    visualBrief: 'Wściekła Żona: czytelna karykaturalna sylwetka, spięte ciemne włosy, mocno zarysowane brwi i gniewna mimika, niebieski sweter, bordowe spodnie; patelnia w dłoni jako główny rekwizyt, odkurzacz na plecach z widoczną rurą i końcówką. Animacja agresywnego podejścia, zamachu, odbicia i reakcji na trafienie',
+  },
+  kluska_piekielna: {
+    gaitStyle: 'stalking',
+    fallbackFactory: 'createKluskaHellhoundModel',
+    category: 'boss-creature',
+    attackStyle: 'heavy-melee',
+    targetHeight: 0.98,
+    visualBrief: 'Kluska — pies z piekła rodem: zwarte, nisko osadzone proporcje czworonożne, ciemnobrązowo-czarny grzbiet, jasnobrązowa maska pyska i łapy, opadające uszy z jaśniejszym wnętrzem, bursztynowe oczy, widoczne kły i czerwony obrożowy identyfikator. Animacja skradania, szarży, warczenia, pracy uszu i ogona oraz reakcji na trafienie; efekty piekielne subtelne i niezasłaniające sylwetki',
+  },
 });
