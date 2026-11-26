@@ -1003,17 +1003,17 @@ class SoundEngine {
     if (!this.ctx) return;
 
     const profiles = {
-      pistol: { wave: 'triangle' as OscillatorType, start: 190, end: 48, duration: 0.085, volume: 0.14, tick: 1320 },
-      smg: { wave: 'square' as OscillatorType, start: 255, end: 82, duration: 0.052, volume: 0.085, tick: 1760 },
-      rifle: { wave: 'sawtooth' as OscillatorType, start: 145, end: 39, duration: 0.105, volume: 0.13, tick: 1180 },
-      shotgun: { wave: 'sawtooth' as OscillatorType, start: 96, end: 26, duration: 0.17, volume: 0.19, tick: 920 },
-      'heavy-rifle': { wave: 'square' as OscillatorType, start: 118, end: 32, duration: 0.14, volume: 0.17, tick: 740 },
-      minigun: { wave: 'square' as OscillatorType, start: 290, end: 112, duration: 0.045, volume: 0.07, tick: 2040 },
-      rocket: { wave: 'sine' as OscillatorType, start: 72, end: 25, duration: 0.25, volume: 0.22, tick: 510 },
-      flame: { wave: 'sawtooth' as OscillatorType, start: 390, end: 165, duration: 0.09, volume: 0.065, tick: 0 },
-      plasma: { wave: 'sine' as OscillatorType, start: 720, end: 155, duration: 0.15, volume: 0.12, tick: 2140 },
-      gauss: { wave: 'sawtooth' as OscillatorType, start: 980, end: 58, duration: 0.19, volume: 0.15, tick: 2480 },
-      grenade: { wave: 'sine' as OscillatorType, start: 68, end: 24, duration: 0.22, volume: 0.18, tick: 430 },
+      pistol: { wave: 'triangle' as OscillatorType, start: 190, end: 48, duration: 0.10, volume: 0.15, tick: 1320 },
+      smg: { wave: 'square' as OscillatorType, start: 255, end: 82, duration: 0.060, volume: 0.084, tick: 1760 },
+      rifle: { wave: 'sawtooth' as OscillatorType, start: 145, end: 39, duration: 0.13, volume: 0.14, tick: 1180 },
+      shotgun: { wave: 'sawtooth' as OscillatorType, start: 96, end: 26, duration: 0.21, volume: 0.22, tick: 920 },
+      'heavy-rifle': { wave: 'square' as OscillatorType, start: 118, end: 32, duration: 0.18, volume: 0.20, tick: 740 },
+      minigun: { wave: 'square' as OscillatorType, start: 290, end: 112, duration: 0.060, volume: 0.075, tick: 2040 },
+      rocket: { wave: 'sine' as OscillatorType, start: 72, end: 25, duration: 0.31, volume: 0.24, tick: 510 },
+      flame: { wave: 'sawtooth' as OscillatorType, start: 390, end: 165, duration: 0.12, volume: 0.08, tick: 0 },
+      plasma: { wave: 'sine' as OscillatorType, start: 720, end: 155, duration: 0.18, volume: 0.14, tick: 2140 },
+      gauss: { wave: 'sawtooth' as OscillatorType, start: 980, end: 58, duration: 0.24, volume: 0.17, tick: 2480 },
+      grenade: { wave: 'sine' as OscillatorType, start: 68, end: 24, duration: 0.28, volume: 0.21, tick: 430 },
     } as const;
     const profile = profiles[archetype];
     const t = this.ctx.currentTime;
@@ -1069,15 +1069,16 @@ class SoundEngine {
         t,
       );
       filter.Q.setValueAtTime(archetype === 'flame' ? 0.65 : isEnergy ? 1.8 : 0.85, t);
-      const noiseDuration = archetype === 'rocket' || archetype === 'grenade' ? 0.24
-        : archetype === 'shotgun' ? 0.17
-          : archetype === 'flame' ? 0.125
-            : isHeavy || archetype === 'gauss' ? 0.115 : 0.072;
-      const noisePeak = archetype === 'shotgun' ? 0.165
-        : archetype === 'rocket' || archetype === 'grenade' ? 0.17
-          : archetype === 'flame' ? 0.092
-            : isHeavy || archetype === 'gauss' ? 0.115
-              : archetype === 'minigun' || archetype === 'smg' ? 0.068 : 0.092;
+      const noiseDuration = archetype === 'rocket' || archetype === 'grenade' ? 0.30
+        : archetype === 'shotgun' ? 0.20
+          : archetype === 'flame' ? 0.15
+            : isHeavy || archetype === 'gauss' ? 0.14
+              : archetype === 'smg' || archetype === 'minigun' ? 0.078 : 0.09;
+      const noisePeak = archetype === 'shotgun' ? 0.19
+        : archetype === 'rocket' || archetype === 'grenade' ? 0.18
+          : archetype === 'flame' ? 0.10
+            : isHeavy || archetype === 'gauss' ? 0.13
+              : archetype === 'minigun' || archetype === 'smg' ? 0.075 : 0.10;
       noiseGain.gain.setValueAtTime(noisePeak, t);
       noiseGain.gain.exponentialRampToValueAtTime(0.001, t + noiseDuration);
       noiseSource.connect(filter);
