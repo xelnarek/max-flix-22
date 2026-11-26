@@ -25,7 +25,7 @@ All eleven primary firearms now use deliberately slower weapon-specific timing. 
 |---|---:|---:|---|
 | Service pistol | 1.30 s | 2.20 s | Accurate, repeatable single shots |
 | .45 SMG | 0.38 s | 2.80 s | Fastest conventional fire, short-range pressure |
-| Assault rifle | 0.55 s | 2.80 s | Controlled medium-range bursts |
+| Assault rifle | 0.55 s | 2.65 s | Controlled medium-range bursts |
 | 12G shotgun | 1.25 s | 2.90 s | Seven-pellet close-range stopping blast |
 | 7.62 battle rifle | 1.15 s | 3.20 s | Heavy, high-recoil single slug |
 | Minigun | 0.22 s | 4.40 s | Sustained six-barrel stream, long drum change |
