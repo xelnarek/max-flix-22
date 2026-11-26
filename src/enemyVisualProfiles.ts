@@ -306,7 +306,7 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     category: 'warehouse-caricature',
     attackStyle: 'heavy-melee',
     targetHeight: 1.78,
-    visualBrief: 'Wściekła Żona: czytelna karykaturalna sylwetka, spięte ciemne włosy, mocno zarysowane brwi i gniewna mimika, niebieski sweter, bordowe spodnie; patelnia w dłoni jako główny rekwizyt, odkurzacz na plecach z widoczną rurą i końcówką. Animacja agresywnego podejścia, zamachu, odbicia i reakcji na trafienie',
+    visualBrief: 'Wściekła Żona: wyrazista karykaturalna sylwetka z czytelną mimiką i spiętymi ciemnymi włosami z grzywką; niebieski sweter z widocznym dzianinowym detalem, bordowe spodnie. Patelnia ma metaliczny rant, nitowany uchwyt i osobny pivot w dłoni. Odkurzacz na plecach ma turkusową lampkę, widoczny elastyczny wąż i końcówkę ssącą. Priorytet: czytelność sylwetki, wyrazista twarz i mocny kontur rekwizytów',
   },
   kluska_piekielna: {
     gaitStyle: 'stalking',
@@ -314,6 +314,6 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     category: 'boss-creature',
     attackStyle: 'heavy-melee',
     targetHeight: 0.98,
-    visualBrief: 'Kluska — pies z piekła rodem: zwarte, nisko osadzone proporcje czworonożne, ciemnobrązowo-czarny grzbiet, jasnobrązowa maska pyska i łapy, opadające uszy z jaśniejszym wnętrzem, bursztynowe oczy, widoczne kły i czerwony obrożowy identyfikator. Animacja skradania, szarży, warczenia, pracy uszu i ogona oraz reakcji na trafienie; efekty piekielne subtelne i niezasłaniające sylwetki',
+    visualBrief: 'Kluska — pies z piekła rodem: zwarte, nisko osadzone proporcje czworonożne, ciemnobrązowo-czarny grzbiet z wyraźną linią karku, jasnobrązowa maska pyska i łapy, krótka jasna smuga na czole, opadające uszy z widocznym wnętrzem, bursztynowe oczy, nos z nozdrzami, rozchylony pysk z kłami i czerwony obrożowy identyfikator. Ogon i uszy na niezależnych pivotach gotowych do animacji. Priorytet: czytelna psia anatomia i mimika, mocny kontrast pyska z grzbietem; efekty piekielne subtelne, bez zasłaniania modelu',
   },
 });
