@@ -105,7 +105,7 @@ test('the ballistic grenade is a shared 11th firearm with its own projectile, so
     read('../src/sound.ts'),
     read('../src/game.ts'),
   ]);
-  assert.match(firearms, /ballistic_grenade_launcher: \{[\s\S]*?rangeMeters: 24[\s\S]*?magazineSize: 4[\s\S]*?reloadSeconds: 3\.2[\s\S]*?projectileGravity: 12\.5[\s\S]*?projectileFuseSeconds: 1\.4/);
+  assert.match(firearms, /ballistic_grenade_launcher: \{[\s\S]*?rangeMeters: 24[\s\S]*?magazineSize: 4[\s\S]*?reloadSeconds: 4\.6[\s\S]*?projectileGravity: 12\.5[\s\S]*?projectileFuseSeconds: 1\.4/);
   assert.match(presentation, /grenade: \{[\s\S]*?projectileStyle: 'grenade-ballistic'/);
   assert.match(sound, /grenade: \{ wave: 'sine'/);
   assert.match(sound, /grenade: \[108, 0\.23, 0\.15\]/);
@@ -113,7 +113,7 @@ test('the ballistic grenade is a shared 11th firearm with its own projectile, so
   assert.match(game, /case 'grenade-ballistic':/);
   assert.match(game, /detonateBallisticFirearmProjectile/);
   assert.match(game, /damageEnemy\(enemy, baseSplashDamage,[\s\S]*?projectile\.damageSource/);
-  assert.match(game, /ballistic_grenade_launcher: 0\.42/);
+  assert.match(game, /ballistic_grenade_launcher: 0\.58/);
 });
 
 test('primary firearms are a separate shared slot, not a perk or roulette reward', async () => {
@@ -281,7 +281,7 @@ test('the armory explains drop odds and renders a dedicated 3D grenade-launcher 
   const iconBuilder = app.slice(iconStart, iconEnd);
   assert.ok(iconBuilder.includes("case 'grenade': {"));
   assert.ok(iconBuilder.includes('CylinderGeometry') && iconBuilder.includes('drum'));
-  for (const name of ['Broń rezerwowa na średni dystans', 'Siedem śrutów w szerokim stożku', 'Granatnik z łukiem balistycznym', 'Broń precyzyjna na bardzo daleki dystans']) {
+  for (const name of ['Pojedynczy, celny strzał do kontrolowania tempa walki', 'Ciężka salwa siedmiu śrutów', 'Wyrzuca ciężki granat po łuku balistycznym', 'Ładuje i wystrzeliwuje długą lancę elektromagnetyczną']) {
     assert.ok(firearms.includes(name), 'missing tactical armory description: ' + name);
   }
 });
@@ -321,9 +321,22 @@ test('firearm hits use distinct synthesized impact audio and class-specific hit 
   }
 });
 
-test('fire rate and firing animation are individually tuned for all primary firearms', async () => {
+test('all eleven firearm rates are slower and every firing animation has a deliberate weapon-specific duration', async () => {
   const [game, firearms] = await Promise.all([read('../src/game.ts'), read('../src/survivalFirearms.ts')]);
   assert.match(game, /private readonly survivalFirearmAttackAnimationSeconds: Readonly<Record<SurvivalFirearmId, number>>/);
+  const timingBlock = game.slice(
+    game.indexOf('private readonly survivalFirearmAttackAnimationSeconds:'),
+    game.indexOf('};', game.indexOf('private readonly survivalFirearmAttackAnimationSeconds:')) + 2,
+  );
+  for (const [id, duration] of Object.entries({
+    starter_pistol: 0.28, smg_45: 0.17, assault_rifle: 0.24, shotgun_12g: 0.48, battle_rifle: 0.46,
+    minigun: 0.18, rocket_launcher: 0.62, flamethrower: 0.20, plasma_rifle: 0.32, gauss_rifle: 0.54,
+    ballistic_grenade_launcher: 0.58,
+  })) {
+    assert.ok(timingBlock.includes(id + ': ' + duration), 'wrong attack animation duration: ' + id);
+  }
+  assert.match(firearms, /fireIntervalSeconds: 2\.15/);
+  assert.match(firearms, /reloadSeconds: 4\.60/);
   for (const id of ['starter_pistol', 'smg_45', 'assault_rifle', 'shotgun_12g', 'battle_rifle', 'minigun', 'rocket_launcher', 'flamethrower', 'plasma_rifle', 'gauss_rifle']) {
     assert.ok(firearms.includes(id + ':'), 'missing firearm definition: ' + id);
     assert.ok(game.includes(id + ':'), 'missing firing animation profile: ' + id);
