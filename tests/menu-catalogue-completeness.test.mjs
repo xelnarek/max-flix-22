@@ -40,9 +40,9 @@ test('Bestiariusz ma osobną kartę, ikonę, opis i kontrę dla każdego typu pr
   }
 
   for (const id of ['wkurzona_zona', 'kluska_piekielna']) {
-    const match = cards.find((m) => m[2] === id);
+    const match = cards.find((m) => m[1] === id);
     assert.ok(match, 'missing custom enemy card: ' + id);
-    assert.ok(match[1].includes('enemy-guide-card--' + (id === 'wkurzona_zona' ? 'zona' : 'kluska')));
+    assert.ok(match[0].includes('enemy-guide-card--' + (id === 'wkurzona_zona' ? 'zona' : 'kluska')));
   }
   assert.match(html, /data-enemy-type="wkurzona_zona"[\s\S]*?Patelniowa Egzekutorka/);
   assert.match(html, /data-enemy-type="kluska_piekielna"[\s\S]*?Tropiciel B4/);
