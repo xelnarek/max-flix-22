@@ -20,6 +20,7 @@ import { getPvpFirearmAttackCooldown, PVP_OPERATOR_PROFILES, PVP_RAPID_FIRE_COOL
 import type { PvpArenaState, PvpSlot } from './pvpArena.ts';
 import { AssetItem, assetLoader } from './assets.ts';
 import { SelectiveBloomPipeline } from './selectiveBloom.ts';
+import { prewarmEnemyModels } from './gobkitAssets.ts';
 import { disposeCombatVfxResources, getSoftGlowTexture, isSoftwareWebGLRenderer } from './combatVfx.ts';
 import { ThreeClickTrigger } from './menuInteraction.ts';
 import { calculateUiViewport, shouldShowTouchControls } from './uiViewport.ts';
@@ -1886,6 +1887,7 @@ class PaleciakiScene extends xb.Script {
         },
         onSurvivalLevelUp: (options: SurvivalUpgradeOption[], context: 'levelup' | 'rank-up' | 'boss-reward' | 'chaos-roulette' = 'levelup') => {
           if (!survivalUpgradeOptions || !survivalLevelUp) return;
+          sound.playLevelUpFanfare(context);
           const isBossReward = context === 'boss-reward';
           const isRankUp = context === 'rank-up';
           const isChaosRoulette = context === 'chaos-roulette';
@@ -2065,6 +2067,7 @@ class PaleciakiScene extends xb.Script {
             description.textContent = option.description;
             card.append(rarityBadge, icon, title, description);
             card.addEventListener('click', () => {
+              sound.playUiConfirm();
               survivalLevelUp.classList.add('hidden');
               if (!this.engine.chooseSurvivalUpgrade(option.id)) {
                 survivalLevelUp.classList.remove('hidden');
@@ -3115,6 +3118,7 @@ class PaleciakiScene extends xb.Script {
       densityButton.setAttribute('aria-pressed', 'false');
       densityButton.setAttribute('aria-label', 'Pokaż pełne opisy we wszystkich sekcjach menu');
       densityButton.addEventListener('click', () => {
+        sound.playUiSelect();
         const expanded = menuRootElement?.dataset.menuDensity !== 'full';
         if (menuRootElement) menuRootElement.dataset.menuDensity = expanded ? 'full' : 'compact';
         densityButton.textContent = expanded ? 'WIDOK ZWIĘZŁY' : 'PEŁNE OPISY';
@@ -3156,7 +3160,10 @@ class PaleciakiScene extends xb.Script {
         button.className = 'char-detail-view-btn';
         button.textContent = view.label;
         button.setAttribute('aria-pressed', 'false');
-        button.addEventListener('click', () => setCharacterDetailView(view.id));
+        button.addEventListener('click', () => {
+          sound.playUiSelect();
+          setCharacterDetailView(view.id);
+        });
         characterViewButtons.set(view.id, button);
         viewNav.appendChild(button);
       }
@@ -3221,8 +3228,9 @@ class PaleciakiScene extends xb.Script {
       const targetId = selectedTab.getAttribute('data-tab');
       if (!targetId) return;
       const changingTab = targetId !== currentMenuTargetId;
-      if (changingTab && menuContentArea) {
-        menuScrollMemory.save(currentMenuTargetId, menuContentArea.scrollTop);
+      if (changingTab) {
+        sound.playUiTabSwitch();
+        if (menuContentArea) menuScrollMemory.save(currentMenuTargetId, menuContentArea.scrollTop);
       }
       currentMenuTargetId = targetId;
       const owningSegment = getMenuSegmentForTab(targetId);
@@ -3344,6 +3352,7 @@ class PaleciakiScene extends xb.Script {
         card.classList.add('active');
         card.setAttribute('aria-pressed', 'true');
         setCharacterDetailView('profile');
+        sound.playUiSelect();
         const charId = card.getAttribute('data-char') as CharacterId;
         if (charId) updateCharacterUI(charId);
       };
@@ -3360,6 +3369,7 @@ class PaleciakiScene extends xb.Script {
     document.querySelectorAll('.btn-perk-activate').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
+        sound.playUiConfirm();
         const btnEl = e.currentTarget as HTMLElement;
         const perkId = btnEl.getAttribute('data-perk') as PerkType | null;
         if (perkId && this.engine) {
@@ -3544,12 +3554,14 @@ class PaleciakiScene extends xb.Script {
         ?? (allComplete ? CAMPAIGN_STAGES[CAMPAIGN_STAGES.length - 1] : [...CAMPAIGN_STAGES].reverse().find((stage) => unlocked.has(stage.id)))
         ?? CAMPAIGN_STAGES[0];
       if (!nextStage || !unlocked.has(nextStage.id)) return;
+      sound.playUiConfirm();
       selectedCampaignStageId = nextStage.id;
       void doStartSurvival(event);
     });
 
     bindTap(document.getElementById('btn-start-survival'), (event) => {
       if (startingGame) return;
+      sound.playUiConfirm();
       selectedCampaignStageId = null;
       doStartSurvival(event);
     });
@@ -3559,6 +3571,7 @@ class PaleciakiScene extends xb.Script {
         if (startingGame) return;
         const id = button.dataset.campaignStage as CampaignStageId | undefined;
         if (!id || !campaignProgress.unlockedStageIds.includes(id)) return;
+        sound.playUiConfirm();
         selectedCampaignStageId = id;
         doStartSurvival(event);
       });
@@ -3815,6 +3828,7 @@ class PaleciakiScene extends xb.Script {
 
     const handlePause = () => {
       if (this.engine.getGameState() !== 'playing') return;
+      sound.playUiBack();
       this.resetTouchJoystick?.();
       this.engine.togglePause();
       setTouchControlsVisibility(false);
@@ -3842,6 +3856,7 @@ class PaleciakiScene extends xb.Script {
 
     bindTap(document.getElementById('btn-resume'), () => {
       if (this.engine.getGameState() !== 'paused') return;
+      sound.playUiConfirm();
       this.engine.togglePause();
       pauseModal?.classList.add('hidden');
       pauseModal?.setAttribute('aria-hidden', 'true');
@@ -3854,6 +3869,7 @@ class PaleciakiScene extends xb.Script {
 
     bindTap(document.getElementById('btn-restart-pause'), () => {
       if (this.engine.getGameMode() !== 'survival') return;
+      sound.playUiConfirm();
       pauseModal?.classList.add('hidden');
       pauseModal?.setAttribute('aria-hidden', 'true');
       pauseModal?.style.removeProperty('display');
@@ -3867,6 +3883,7 @@ class PaleciakiScene extends xb.Script {
     });
 
     const exitPausedRunToMenu = () => {
+      sound.playUiBack();
       const leavingPvp = this.engine.getGameMode() === 'pvp';
       const networkNotice = document.getElementById('pvp-network-status');
       networkNotice?.classList.add('hidden');
@@ -3899,6 +3916,7 @@ class PaleciakiScene extends xb.Script {
 
     bindTap(document.getElementById('btn-retry'), () => {
       if (this.lastMode !== 'survival') return;
+      sound.playUiConfirm();
       gameoverModal?.classList.add('hidden');
       gameoverModal?.setAttribute('aria-hidden', 'true');
       survivalLevelUp?.classList.add('hidden');
@@ -4391,6 +4409,7 @@ class PaleciakiScene extends xb.Script {
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
     const palette = [
+      new THREE.Color(0xff4a43),
       new THREE.Color(0xf59e0b),
       new THREE.Color(0xfef3c7),
       new THREE.Color(0x38bdf8),
@@ -4409,9 +4428,9 @@ class PaleciakiScene extends xb.Script {
     const material = new THREE.PointsMaterial({
       map: getSoftGlowTexture(),
       vertexColors: true,
-      size: 0.34,
+      size: 0.38,
       transparent: true,
-      opacity: 0.72,
+      opacity: 0.78,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
       sizeAttenuation: true,
@@ -4935,7 +4954,7 @@ class PaleciakiScene extends xb.Script {
         const opId = btn.dataset.op as CharacterId;
         if (opId && CHARACTERS[opId]) {
           this.selectedPvpOperator = opId;
-          sound.playSmack();
+          sound.playUiSelect();
         }
       });
     });
@@ -4950,7 +4969,7 @@ class PaleciakiScene extends xb.Script {
         setPvpConnectionStatus('idle', 'ONLINE GOTOWE', 'Wybierz „Szukaj przeciwnika” albo utwórz pokój i udostępnij kod.');
       }
       (document.getElementById('btn-pvp-find-match') as HTMLButtonElement | null)?.focus();
-      sound.playSmack();
+      sound.playUiSelect();
     };
 
     const closeLobby = () => {
@@ -5193,7 +5212,7 @@ class PaleciakiScene extends xb.Script {
         setPvpConnectionStatus('error', 'WYSZUKIWANIE NIEUDANE', error);
       };
       session.findMatch(this.selectedPvpOperator, playerNick, getAccountPvpProgressionBonuses(accountProgressionProfile));
-      sound.playSmack();
+      sound.playUiConfirm();
     });
 
     bindPvpTap(btnCancelMatch, () => {
@@ -5209,7 +5228,7 @@ class PaleciakiScene extends xb.Script {
       this.pvpLocalReady = false;
       setMatchmakingUiPhase('idle');
       setPvpConnectionStatus('cancelled', 'WYSZUKIWANIE ANULOWANE', 'Możesz rozpocząć nowe wyszukiwanie, kiedy będziesz gotowy.');
-      sound.playSmack();
+      sound.playUiBack();
     });
 
     // Online WebSocket Host
@@ -5307,7 +5326,7 @@ class PaleciakiScene extends xb.Script {
       };
 
       netSession.createRoom(this.selectedPvpOperator, playerNick, getAccountPvpProgressionBonuses(accountProgressionProfile));
-      sound.playSmack();
+      sound.playUiConfirm();
     });
 
     // Online WebSocket Join
@@ -5406,7 +5425,7 @@ class PaleciakiScene extends xb.Script {
       };
 
       netSession.joinRoom(code, this.selectedPvpOperator, playerNick, getAccountPvpProgressionBonuses(accountProgressionProfile));
-      sound.playSmack();
+      sound.playUiConfirm();
     });
 
     bindPvpTap(readyBtn, () => {
@@ -5414,7 +5433,8 @@ class PaleciakiScene extends xb.Script {
       this.pvpLocalReady = !this.pvpLocalReady;
       this.pvpSession.setReady?.(this.pvpLocalReady);
       if (readyBtn) readyBtn.textContent = this.pvpLocalReady ? '✓ JESTEŚ GOTOWY' : 'ZGŁOŚ GOTOWOŚĆ';
-      sound.playSmack();
+      if (this.pvpLocalReady) sound.playUiConfirm();
+      else sound.playUiBack();
     });
 
     bindPvpTap(btnRematch, () => {
@@ -5427,7 +5447,7 @@ class PaleciakiScene extends xb.Script {
         btnRematch.textContent = 'REWANŻ ZGŁOSZONY • CZEKAJ NA RYWALA';
         btnRematch.disabled = true;
       }
-      sound.playSmack();
+      sound.playUiConfirm();
     });
 
     bindPvpTap(btnExitToMenu, () => {
@@ -5474,7 +5494,7 @@ class PaleciakiScene extends xb.Script {
         titleScreen.classList.remove('hidden');
         titleScreen.style.setProperty('display', 'flex', 'important');
       }
-      sound.playSmack();
+      sound.playUiBack();
     });
   }
 
@@ -6250,6 +6270,9 @@ async function startApp() {
     clearTimeout(safetyTimeout);
     document.getElementById('boot-recovery-notice')?.remove();
     assetLoader.hide();
+    // Prewarm character & enemy 3D rigs asynchronously after boot completes so
+    // enemies spawn directly with one cohesive 3D model without impacting startup time.
+    prewarmEnemyModels();
 
     // UMP must refresh consent on every native app launch, before any ad request.
     // It runs in parallel with the final UI reveal; the game itself is never gated by ads.

@@ -107,7 +107,7 @@ test('handheld actor shadow budget removes per-rig shadow casters and reduces ma
   assert.match(game, /object\.castShadow = false/);
   assert.match(game, /object\.receiveShadow = false/);
   assert.match(game, /root\.userData\.handheldActorShadowBudgetApplied === true/);
-  assert.match(game, /const shadowMapSize = isMobile \? 512 : 2048/);
+  assert.match(game, /const shadowMapSize = isMobile \? 1024 : 2048/);
   assert.match(game, /this\.adaptivePerformanceTier >= 2 \? 6 : this\.adaptivePerformanceTier === 1 \? 9 : 12/);
   assert.match(game, /this\.applyHandheldActorShadowBudget\(e\.mesh\)/);
   assert.match(game, /this\.applyHandheldActorShadowBudget\(root\)/);

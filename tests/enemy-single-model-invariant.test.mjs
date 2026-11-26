@@ -16,7 +16,7 @@ test('enemy model replacement removes the legacy procedural body while preservin
     read('../src/game.ts'),
     read('../src/enemyVisualComposition.ts'),
   ]);
-  assert.match(game, /removeLegacyEnemyBodyVisuals\(mesh as THREE\.Group, overlays\)/);
+  assert.match(game, /removeLegacyEnemyBodyVisuals\(mesh, overlays\)/);
   assert.match(composition, /export function removeLegacyEnemyBodyVisuals/);
   assert.match(composition, /const topLevelPreservedRoots = requestedRoots\.filter/);
   assert.match(composition, /disposeActorOwnedRenderResources\(child\)/);
@@ -24,10 +24,11 @@ test('enemy model replacement removes the legacy procedural body while preservin
   assert.match(composition, /object\.userData\.gobkitKeep === true/);
 });
 
-test('Base44 enemy models do not receive a second procedural role anatomy kit', async () => {
+test('Base44 enemy models do not receive procedural role anatomy or secondary blocky kits', async () => {
   const game = await read('../src/game.ts');
-  assert.match(game, /if \(!visualProfile\.base44Model\) applyEnemyRoleAnatomy\(root, requestedType\)/);
-  assert.match(game, /if \(!visualProfile\.base44Model\) createEnemyRoleKit\(requestedType, root\)/);
+  assert.match(game, /const isBase44 = modelId === visualProfile\.base44Model;/);
+  assert.match(game, /if \(!isBase44\) applyEnemyRoleAnatomy\(root, requestedType\)/);
+  assert.doesNotMatch(game, /createEnemyRoleKit\(requestedType, root\)/);
 });
 
 test('async enemy model loads cannot attach to recycled, replaced, or expired enemy entities', async () => {

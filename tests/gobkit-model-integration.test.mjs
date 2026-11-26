@@ -143,7 +143,8 @@ test('each imported enemy rig is role-mapped, correctly fitted and attached to t
   }
   assert.match(game, /fitGobkitModel\(root, visualProfile\.targetHeight/);
   assert.match(game, /void this\.attachGobkitEnemyModel\(enemy, modelId\)/);
-  assert.match(game, /removeLegacyEnemyBodyVisuals\(mesh as THREE\.Group, overlays\)/);
+  assert.match(game, /this\.attachMappedEnemyModelOnSpawn\(enemy\)/);
+  assert.match(game, /removeLegacyEnemyBodyVisuals\(mesh, overlays\)/);
 });
 
 
@@ -272,38 +273,20 @@ test('playable operators retain the original stylized models in Survival and bot
   assert.doesNotMatch(game, /void this\.attachMakeHumanOperatorModel/);
   assert.doesNotMatch(game, /void this\.attachMakeHumanEnemyModel/);
   assert.match(game, /visualProfile\.base44Model \?\? visualProfile\.gobkitModel/);
-  assert.match(game, /void this\.attachGobkitEnemyModel\(enemy, modelId\)/);
-  assert.match(game, /createEnemyRoleKit\(requestedType, root\)/);
+  assert.match(game, /this\.attachMappedEnemyModelOnSpawn\(enemy\)/);
+  assert.match(game, /this\.installEnemyRigFromGltf\(enemy, modelId, gltf\)/);
+  assert.doesNotMatch(game, /createEnemyRoleKit\(requestedType, root\)/);
 });
 
-test('CC0 enemy rigs receive articulated, role-specific body shapes and equipment', async () => {
+test('CC0 and Base44 enemy rigs stay single-model without second blocky role kits', async () => {
   const kits = await read('../src/enemyRoleKits.ts');
   const game = await read('../src/game.ts');
-  for (const role of ['architect', 'inspector', 'kurier', 'handlowiec', 'customer', 'monter', 'serwisant', 'przedstawiciel_włoski', 'sztaplar_szalony', 'pan_roman', 'sebix_m', 'zombie_pracownik', 'mutant_gamma_forklift', 'radioactive_pip', 'cyber_salesman', 'walczak', 'krol_leto', 'bosman_krakow', 'elite_walczak_guard']) {
-    assert.ok(kits.includes(role + ':'), 'missing geometry profile: ' + role);
-  }
-  assert.match(kits, /case 'wolf'/);
-  assert.match(kits, /case 'gasMask'/);
-  assert.match(kits, /case 'crown'/);
-  assert.match(kits, /case 'forks'/);
-  assert.match(kits, /bone\.attach\(attachment\)/);
-  assert.match(kits, /out\[a\]\.name='role-kit-'\+a/);
-  assert.match(kits, /out\[a\]\.userData\.actorRigAnchor=a/);
-  assert.match(game, /createEnemyRoleKit\(requestedType, root\)/);
+  assert.match(kits, /ENEMY_ROLE_KIT_TYPES/);
+  assert.match(kits, /object\.userData\.actorRoleSilhouette === true/);
+  assert.match(kits, /actorRoot\.userData\.enemyRoleKit = type/);
+  assert.match(kits, /return null;/);
+  assert.doesNotMatch(game, /createEnemyRoleKit\(requestedType, root\)/);
   assert.match(game, /ENEMY_GAIT_PRESETS\[ENEMY_VISUAL_PROFILES\[enemy\.type\]\.gaitStyle\]/);
-});
-
-
-test('articulated role kits merge by rig anchor and share immutable crowd geometry', async () => {
-  const kits = await read('../src/enemyRoleKits.ts');
-  assert.match(kits, /mergeGeometries\(parts,false\)/);
-  assert.match(kits, /vertexColors:true/);
-  assert.match(kits, /const templates\s*=\s*new Map<EnemyType,\s*THREE\.Group\s*\|\s*null>\(\)/);
-  assert.match(kits, /mesh\.castShadow=false/);
-  assert.match(kits, /mesh\.userData\.gobkitSharedGeometry=true/);
-  assert.match(kits, /sharedKitMaterial\.userData\.gobkitSharedMaterial\s*=\s*true/);
-  assert.match(kits, /template\.clone\(true\)/);
-  assert.match(kits, /actorRoot\.userData\.enemyRoleKit=type/);
 });
 
 test('Gobkit build validates the embedded GLB JSON, skeleton, animation clips and checksum before reuse', async () => {
@@ -371,8 +354,8 @@ test('late enemy model attachment resumes Death on the one full rig after the ac
   const defeatPath = handler.slice(defeated, hit);
   assert.match(defeatPath, /this\.enemyPendingAttackUntil\.delete\(enemy\)/);
   assert.match(defeatPath, /this\.requestGobkitAction\(track, 'Death', Math\.max\(0\.1, enemy\.deathVisualTimer \|\| 0\.1\)\)/);
-  const attachStart = game.indexOf('private async attachGobkitEnemyModel');
-  const attachEnd = game.indexOf('private updateGobkitAnimations', attachStart);
+  const attachStart = game.indexOf('private installEnemyRigFromGltf(');
+  const attachEnd = game.indexOf('private updateGobkitAnimations(', attachStart);
   const attach = game.slice(attachStart, attachEnd);
   assert.match(attach, /const deathVisualExpired = enemy\.state === 'defeated'/);
   assert.match(attach, /mesh\.parent !== this\.levelRoot \|\| deathVisualExpired/);
@@ -638,13 +621,13 @@ test('imported enemy Attack clip peaks on the 60 percent telegraph release frame
 
 test('enemy model attachment installs one full rig and removes its procedural body without adding a proxy', async () => {
   const game = await read('../src/game.ts');
-  const start = game.indexOf('private async attachGobkitEnemyModel');
-  const end = game.indexOf('private updateGobkitAnimations', start);
+  const start = game.indexOf('private installEnemyRigFromGltf(');
+  const end = game.indexOf('private updateGobkitAnimations(', start);
   assert.ok(start >= 0 && end > start, 'enemy full-rig attachment path must exist');
   const attach = game.slice(start, end);
-  assert.match(attach, /removeLegacyEnemyBodyVisuals\(mesh as THREE\.Group, overlays\)/);
-  assert.match(attach, /this\.installActorVisualRoot\(mesh as THREE\.Group, root\)/);
-  assert.doesNotMatch(attach, /createEnemyVisualLodProxy|installEnemyVisualLodProxy|actorLodProxy/);
+  assert.match(attach, /removeLegacyEnemyBodyVisuals\(mesh, overlays\)/);
+  assert.match(attach, /this\.installActorVisualRoot\(mesh, root\)/);
+  assert.doesNotMatch(attach, /createEnemyRoleKit|createEnemyVisualLodProxy|installEnemyVisualLodProxy|actorLodProxy/);
   assert.doesNotMatch(game, /shouldLoadEnemyFullRig|shouldUseEnemyVisualLodProxy|updateEnemyVisualLodProxy/);
 });
 

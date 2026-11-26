@@ -66,9 +66,44 @@ export const ENEMY_GOBKIT_MODELS: Readonly<Partial<Record<EnemyType, GobkitModel
 type LoadedGobkitModel = Awaited<ReturnType<GLTFLoader['loadAsync']>>;
 const loader = new GLTFLoader();
 const modelCache = new Map<GobkitModelId, Promise<LoadedGobkitModel>>();
+const resolvedModelCache = new Map<GobkitModelId, LoadedGobkitModel>();
+let prewarmStarted = false;
+
+/** Synchronously retrieve an already-loaded GLB rig so spawns avoid any placeholder frame. */
+export function getCachedGobkitModel(id: GobkitModelId): LoadedGobkitModel | null {
+  return resolvedModelCache.get(id) ?? null;
+}
+
+/** Prewarm all enemy and operator GLBs in small non-blocking idle slices after the title menu reveals. */
+export function prewarmEnemyModels(batchSize = 2): void {
+  if (prewarmStarted || typeof window === 'undefined') return;
+  prewarmStarted = true;
+  const ids = new Set<GobkitModelId>();
+  for (const modelId of Object.values(CHARACTER_GOBKIT_MODELS)) {
+    ids.add(modelId);
+  }
+  for (const profile of Object.values(ENEMY_VISUAL_PROFILES)) {
+    const modelId = profile.base44Model ?? profile.gobkitModel;
+    if (modelId) ids.add(modelId);
+  }
+  const queue = Array.from(ids).filter((id) => !resolvedModelCache.has(id));
+  if (queue.length === 0) return;
+
+  const step = Math.max(1, batchSize);
+  const runSlice = () => {
+    const slice = queue.splice(0, step);
+    if (slice.length === 0) return;
+    void Promise.allSettled(slice.map((id) => loadGobkitModel(id))).finally(() => {
+      if (queue.length > 0) window.setTimeout(runSlice, 60);
+    });
+  };
+  window.setTimeout(runSlice, 120);
+}
 
 /** Loads a model once; every runtime instance is then cloned with its skeleton intact. */
 export function loadGobkitModel(id: GobkitModelId): Promise<LoadedGobkitModel> {
+  const resolved = resolvedModelCache.get(id);
+  if (resolved) return Promise.resolve(resolved);
   let pending = modelCache.get(id);
   if (!pending) {
     const base44Asset = Object.prototype.hasOwnProperty.call(BASE44_ENEMY_ASSETS, id)
@@ -82,6 +117,9 @@ export function loadGobkitModel(id: GobkitModelId): Promise<LoadedGobkitModel> {
       if (!base44Asset) throw localError;
       console.warn('[Base44] Local enemy rig unavailable; trying the source CDN:', id, localError);
       return loader.loadAsync(base44Asset.url);
+    }).then((gltf) => {
+      resolvedModelCache.set(id, gltf);
+      return gltf;
     }).catch((error: unknown) => {
       modelCache.delete(id);
       throw error;
@@ -177,7 +215,7 @@ export function fitGobkitModel(
       // Shared source materials must not be flagged for shader recompilation
       // every time another horde actor is fitted.
       if (material.userData.gobkitFitConfigured !== true) {
-        material.envMapIntensity = Math.min(1.2, material.envMapIntensity || 1);
+        material.envMapIntensity = Math.max(0.95, Math.min(1.35, material.envMapIntensity || 1.1));
         material.needsUpdate = true;
         material.userData.gobkitFitConfigured = true;
       }

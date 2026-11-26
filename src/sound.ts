@@ -18,11 +18,19 @@ class SoundEngine {
   private musicRequested: boolean = false;
   private musicGain: GainNode | null = null;
   private masterBus: GainNode | null = null;
+  private masterCompressor: DynamicsCompressorNode | null = null;
   private musicBus: GainNode | null = null;
   private effectsBus: GainNode | null = null;
+  private musicIntensity: 'menu' | 'combat' | 'boss' = 'combat';
   private lastAttackWhooshAt = -Infinity;
+  private lastUiHoverAt = -Infinity;
+  private lastXpPickupAt = -Infinity;
+  private lastEnemyDeathAt = -Infinity;
+  private lastCritPingAt = -Infinity;
+  private lastDashAt = -Infinity;
   private lastFirearmImpactAt: Partial<Record<'pistol' | 'smg' | 'rifle' | 'shotgun' | 'heavy-rifle' | 'minigun' | 'rocket' | 'flame' | 'plasma' | 'gauss' | 'grenade', number>> = {};
   private gunshotNoiseBuffer: AudioBuffer | null = null;
+  private explosionNoiseBuffer: AudioBuffer | null = null;
   private settings: AudioSettings = { master: 0.82, music: 0.48, effects: 0.82 };
 
   constructor() {
@@ -58,9 +66,18 @@ class SoundEngine {
 
   private ensureAudioGraph() {
     if (!this.ctx) return;
+    if (!this.masterCompressor) {
+      this.masterCompressor = this.ctx.createDynamicsCompressor();
+      this.masterCompressor.threshold.setValueAtTime(-14, this.ctx.currentTime);
+      this.masterCompressor.knee.setValueAtTime(12, this.ctx.currentTime);
+      this.masterCompressor.ratio.setValueAtTime(8, this.ctx.currentTime);
+      this.masterCompressor.attack.setValueAtTime(0.003, this.ctx.currentTime);
+      this.masterCompressor.release.setValueAtTime(0.14, this.ctx.currentTime);
+      this.masterCompressor.connect(this.ctx.destination);
+    }
     if (!this.masterBus) {
       this.masterBus = this.ctx.createGain();
-      this.masterBus.connect(this.ctx.destination);
+      this.masterBus.connect(this.masterCompressor);
     }
     if (!this.musicBus) {
       this.musicBus = this.ctx.createGain();
@@ -576,40 +593,70 @@ class SoundEngine {
     tick.stop(t + 0.08);
   }
 
+  private getExplosionNoiseBuffer(): AudioBuffer | null {
+    if (!this.ctx) return null;
+    const targetLength = Math.floor(this.ctx.sampleRate * 0.65);
+    if (!this.explosionNoiseBuffer || this.explosionNoiseBuffer.length !== targetLength) {
+      const buffer = this.ctx.createBuffer(1, targetLength, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < targetLength; i++) {
+        const decay = Math.pow(1 - i / targetLength, 0.45);
+        data[i] = (Math.random() * 2 - 1) * decay;
+      }
+      this.explosionNoiseBuffer = buffer;
+    }
+    return this.explosionNoiseBuffer;
+  }
+
   public playExplosion() {
     if (this.isMuted) return;
     this.initCtx();
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
+    const bus = this.effectsBus ?? this.ctx.destination;
+
+    const sub = this.ctx.createOscillator();
+    const subGain = this.ctx.createGain();
+    sub.type = 'sine';
+    sub.frequency.setValueAtTime(95, t);
+    sub.frequency.exponentialRampToValueAtTime(26, t + 0.56);
+    subGain.gain.setValueAtTime(0.42, t);
+    subGain.gain.exponentialRampToValueAtTime(0.001, t + 0.58);
+    sub.connect(subGain);
+    subGain.connect(bus);
+    sub.start(t);
+    sub.stop(t + 0.6);
 
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = 'sawtooth';
     osc.frequency.setValueAtTime(140, t);
-    osc.frequency.exponentialRampToValueAtTime(30, t + 0.6);
-
-    gain.gain.setValueAtTime(0.6, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
-
+    osc.frequency.exponentialRampToValueAtTime(30, t + 0.48);
+    gain.gain.setValueAtTime(0.32, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
     osc.connect(gain);
-    gain.connect(this.effectsBus ?? this.ctx.destination);
+    gain.connect(bus);
     osc.start(t);
-    osc.stop(t + 0.62);
+    osc.stop(t + 0.52);
 
-    const bufferSize = Math.floor(this.ctx.sampleRate * 0.4);
-    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.random() * 2 - 1;
+    const buffer = this.getExplosionNoiseBuffer();
+    if (buffer) {
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buffer;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.Q.value = 1.2;
+      filter.frequency.setValueAtTime(1250, t);
+      filter.frequency.exponentialRampToValueAtTime(95, t + 0.56);
+      const noiseGain = this.ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.46, t);
+      noiseGain.gain.exponentialRampToValueAtTime(0.002, t + 0.58);
+      noise.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(bus);
+      noise.start(t);
+      noise.stop(t + 0.6);
     }
-    const noise = this.ctx.createBufferSource();
-    noise.buffer = buffer;
-    const noiseGain = this.ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.5, t);
-    noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
-    noise.connect(noiseGain);
-    noiseGain.connect(this.effectsBus ?? this.ctx.destination);
-    noise.start(t);
   }
 
   public playWin() {
@@ -700,11 +747,16 @@ class SoundEngine {
     });
   }
 
+  public setMusicIntensity(intensity: 'menu' | 'combat' | 'boss') {
+    this.musicIntensity = intensity;
+  }
+
   /**
-   * A quiet, original industrial synth loop. It is generated locally with Web Audio,
-   * so the game needs no downloaded music assets and works offline.
+   * Layered procedural industrial synth loop generated locally with Web Audio
+   * so gameplay adapts between calm menu/sector transitions, combat, and bosses.
    */
-  public startMusic() {
+  public startMusic(intensity?: 'menu' | 'combat' | 'boss') {
+    if (intensity) this.musicIntensity = intensity;
     this.musicRequested = true;
     if (this.isMuted || this.musicPlaying) return;
     this.initCtx();
@@ -713,12 +765,12 @@ class SoundEngine {
     const now = this.ctx.currentTime;
     this.musicGain = this.ctx.createGain();
     this.musicGain.gain.setValueAtTime(0.001, now);
-    this.musicGain.gain.exponentialRampToValueAtTime(0.34, now + 0.8);
+    this.musicGain.gain.exponentialRampToValueAtTime(0.36, now + 0.75);
     this.musicGain.connect(this.musicBus ?? this.ctx.destination);
     this.musicStep = 0;
     this.musicPlaying = true;
     this.playMusicStep();
-    this.musicInterval = window.setInterval(() => this.playMusicStep(), 310);
+    this.musicInterval = window.setInterval(() => this.playMusicStep(), 240);
   }
 
   private playMusicStep() {
@@ -728,49 +780,107 @@ class SoundEngine {
     const step = this.musicStep;
     this.musicStep = (this.musicStep + 1) % 16;
 
-    // Slow minor-key bass motif with restrained metallic accents.
-    const bassline = [55, 0, 55, 0, 65.41, 0, 73.42, 0, 49, 0, 49, 0, 58.27, 0, 65.41, 0];
+    const mode = this.musicIntensity;
+    const isBoss = mode === 'boss';
+    const isMenu = mode === 'menu';
+
+    // Minor-key warehouse synth bassline; extra octave/syncopation kicks in during combat & boss phases.
+    const bassline = isBoss
+      ? [55, 55, 110, 55, 65.41, 0, 73.42, 73.42, 49, 49, 98, 49, 58.27, 65.41, 73.42, 82.41]
+      : [55, 0, 55, 0, 65.41, 0, 73.42, 0, 49, 0, 49, 0, 58.27, 0, 65.41, 0];
     const bassFrequency = bassline[step];
     if (bassFrequency > 0) {
       const oscillator = ctx.createOscillator();
+      const filter = ctx.createBiquadFilter();
       const envelope = ctx.createGain();
-      oscillator.type = 'triangle';
+      oscillator.type = isMenu ? 'triangle' : 'sawtooth';
       oscillator.frequency.setValueAtTime(bassFrequency, now);
-      envelope.gain.setValueAtTime(0.12, now);
-      envelope.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-      oscillator.connect(envelope);
+      filter.type = 'lowpass';
+      filter.Q.value = isBoss ? 3.2 : 1.8;
+      filter.frequency.setValueAtTime(isBoss ? 520 : isMenu ? 240 : 360, now);
+      filter.frequency.exponentialRampToValueAtTime(isMenu ? 120 : 165, now + 0.21);
+      envelope.gain.setValueAtTime(isBoss ? 0.14 : 0.11, now);
+      envelope.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+      oscillator.connect(filter);
+      filter.connect(envelope);
       envelope.connect(this.musicGain);
       oscillator.start(now);
-      oscillator.stop(now + 0.27);
+      oscillator.stop(now + 0.23);
     }
 
-    // Soft industrial kick on each second beat; deliberately low in the mix.
-    if (step % 4 === 0) {
+    // Punchy industrial kick on downbeats (plus boss syncopation on step 14).
+    if (step % 4 === 0 || (isBoss && step === 14)) {
       const kick = ctx.createOscillator();
       const kickGain = ctx.createGain();
       kick.type = 'sine';
-      kick.frequency.setValueAtTime(82, now);
-      kick.frequency.exponentialRampToValueAtTime(38, now + 0.16);
-      kickGain.gain.setValueAtTime(0.16, now);
-      kickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.17);
+      kick.frequency.setValueAtTime(isBoss ? 105 : 88, now);
+      kick.frequency.exponentialRampToValueAtTime(36, now + 0.15);
+      kickGain.gain.setValueAtTime(isMenu ? 0.11 : isBoss ? 0.22 : 0.17, now);
+      kickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
       kick.connect(kickGain);
       kickGain.connect(this.musicGain);
       kick.start(now);
-      kick.stop(now + 0.18);
+      kick.stop(now + 0.17);
     }
 
-    // A short, distant metal chime gives the loop progression without crowding SFX.
-    if (step === 6 || step === 14) {
+    // Crisp filtered hi-hat pulse on off-beats during combat/boss waves.
+    if (!isMenu && step % 2 === 1) {
+      const noiseBuf = this.getGunshotNoiseBuffer();
+      if (noiseBuf) {
+        const hat = ctx.createBufferSource();
+        hat.buffer = noiseBuf;
+        const hp = ctx.createBiquadFilter();
+        hp.type = 'highpass';
+        hp.frequency.value = 6800;
+        const hatGain = ctx.createGain();
+        const accent = step % 4 === 2 || isBoss ? 0.036 : 0.022;
+        hatGain.gain.setValueAtTime(accent, now);
+        hatGain.gain.exponentialRampToValueAtTime(0.0005, now + 0.045);
+        hat.connect(hp);
+        hp.connect(hatGain);
+        hatGain.connect(this.musicGain);
+        hat.start(now);
+        hat.stop(now + 0.05);
+      }
+    }
+
+    // Tight industrial snare on beats 2 & 4 (steps 4 and 12).
+    if (!isMenu && (step === 4 || step === 12)) {
+      const noiseBuf = this.getGunshotNoiseBuffer();
+      if (noiseBuf) {
+        const snare = ctx.createBufferSource();
+        snare.buffer = noiseBuf;
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.value = 1850;
+        bp.Q.value = 0.9;
+        const snareGain = ctx.createGain();
+        snareGain.gain.setValueAtTime(isBoss ? 0.09 : 0.065, now);
+        snareGain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+        snare.connect(bp);
+        bp.connect(snareGain);
+        snareGain.connect(this.musicGain);
+        snare.start(now);
+        snare.stop(now + 0.12);
+      }
+    }
+
+    // Distant minor synth arp / chime motif gives harmonic progression without crowding SFX.
+    const arpNotes = isBoss
+      ? [220, 0, 261.63, 329.63, 0, 392, 329.63, 0, 293.66, 0, 349.23, 440, 0, 493.88, 440, 392]
+      : [0, 0, 329.63, 0, 0, 0, 392, 0, 0, 0, 293.66, 0, 0, 0, 440, 0];
+    const arpFreq = arpNotes[step];
+    if (arpFreq > 0) {
       const chime = ctx.createOscillator();
       const chimeGain = ctx.createGain();
-      chime.type = 'sine';
-      chime.frequency.setValueAtTime(step === 6 ? 392 : 440, now);
-      chimeGain.gain.setValueAtTime(0.045, now);
-      chimeGain.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
+      chime.type = isBoss ? 'triangle' : 'sine';
+      chime.frequency.setValueAtTime(arpFreq, now);
+      chimeGain.gain.setValueAtTime(isBoss ? 0.052 : 0.04, now);
+      chimeGain.gain.exponentialRampToValueAtTime(0.001, now + (isBoss ? 0.24 : 0.36));
       chime.connect(chimeGain);
       chimeGain.connect(this.musicGain);
       chime.start(now);
-      chime.stop(now + 0.44);
+      chime.stop(now + (isBoss ? 0.25 : 0.38));
     }
   }
 
@@ -1473,6 +1583,264 @@ class SoundEngine {
     gain.connect(this.effectsBus ?? this.ctx.destination);
     osc.start(t);
     osc.stop(t + 0.13);
+  }
+
+  public playUiHover() {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    if (t - this.lastUiHoverAt < 0.09) return;
+    this.lastUiHoverAt = t;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(760, t);
+    osc.frequency.exponentialRampToValueAtTime(980, t + 0.028);
+    gain.gain.setValueAtTime(0.025, t);
+    gain.gain.exponentialRampToValueAtTime(0.0005, t + 0.03);
+    osc.connect(gain);
+    gain.connect(this.effectsBus ?? this.ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.035);
+  }
+
+  public playUiTabSwitch() {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const bus = this.effectsBus ?? this.ctx.destination;
+    [540, 810].forEach((freq, idx) => {
+      const at = t + idx * 0.028;
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, at);
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.12, at + 0.045);
+      gain.gain.setValueAtTime(idx === 0 ? 0.06 : 0.045, at);
+      gain.gain.exponentialRampToValueAtTime(0.0005, at + 0.055);
+      osc.connect(gain);
+      gain.connect(bus);
+      osc.start(at);
+      osc.stop(at + 0.06);
+    });
+  }
+
+  public playUiSelect() {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const bus = this.effectsBus ?? this.ctx.destination;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(620, t);
+    osc.frequency.exponentialRampToValueAtTime(930, t + 0.055);
+    gain.gain.setValueAtTime(0.075, t);
+    gain.gain.exponentialRampToValueAtTime(0.0005, t + 0.065);
+    osc.connect(gain);
+    gain.connect(bus);
+    osc.start(t);
+    osc.stop(t + 0.07);
+  }
+
+  public playUiConfirm() {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const bus = this.effectsBus ?? this.ctx.destination;
+    [523.25, 783.99].forEach((freq, idx) => {
+      const at = t + idx * 0.045;
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, at);
+      gain.gain.setValueAtTime(0.095, at);
+      gain.gain.exponentialRampToValueAtTime(0.0008, at + 0.13);
+      osc.connect(gain);
+      gain.connect(bus);
+      osc.start(at);
+      osc.stop(at + 0.14);
+    });
+  }
+
+  public playUiBack() {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(520, t);
+    osc.frequency.exponentialRampToValueAtTime(290, t + 0.08);
+    gain.gain.setValueAtTime(0.075, t);
+    gain.gain.exponentialRampToValueAtTime(0.0005, t + 0.09);
+    osc.connect(gain);
+    gain.connect(this.effectsBus ?? this.ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.095);
+  }
+
+  public playDash() {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    if (t - this.lastDashAt < 0.09) return;
+    this.lastDashAt = t;
+    const bus = this.effectsBus ?? this.ctx.destination;
+
+    const thump = this.ctx.createOscillator();
+    const thumpGain = this.ctx.createGain();
+    thump.type = 'sine';
+    thump.frequency.setValueAtTime(190, t);
+    thump.frequency.exponentialRampToValueAtTime(58, t + 0.13);
+    thumpGain.gain.setValueAtTime(0.18, t);
+    thumpGain.gain.exponentialRampToValueAtTime(0.0008, t + 0.14);
+    thump.connect(thumpGain);
+    thumpGain.connect(bus);
+    thump.start(t);
+    thump.stop(t + 0.15);
+
+    const buffer = this.getGunshotNoiseBuffer();
+    if (buffer) {
+      const air = this.ctx.createBufferSource();
+      air.buffer = buffer;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.Q.value = 1.6;
+      filter.frequency.setValueAtTime(520, t);
+      filter.frequency.exponentialRampToValueAtTime(1950, t + 0.09);
+      filter.frequency.exponentialRampToValueAtTime(680, t + 0.17);
+      const airGain = this.ctx.createGain();
+      airGain.gain.setValueAtTime(0.15, t);
+      airGain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+      air.connect(filter);
+      filter.connect(airGain);
+      airGain.connect(bus);
+      air.start(t);
+      air.stop(t + 0.19);
+    }
+  }
+
+  public playXpPickup(streakTier = 1) {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    if (t - this.lastXpPickupAt < 0.045) return;
+    this.lastXpPickupAt = t;
+    const bus = this.effectsBus ?? this.ctx.destination;
+    const pitchScale = Math.min(1.55, 1 + Math.max(0, streakTier - 1) * 0.085);
+    const osc = this.ctx.createOscillator();
+    const shimmer = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    shimmer.type = 'triangle';
+    osc.frequency.setValueAtTime(660 * pitchScale, t);
+    osc.frequency.exponentialRampToValueAtTime(990 * pitchScale, t + 0.09);
+    shimmer.frequency.setValueAtTime(1320 * pitchScale, t);
+    gain.gain.setValueAtTime(0.095, t);
+    gain.gain.exponentialRampToValueAtTime(0.0006, t + 0.13);
+    osc.connect(gain);
+    shimmer.connect(gain);
+    gain.connect(bus);
+    osc.start(t);
+    shimmer.start(t);
+    osc.stop(t + 0.14);
+    shimmer.stop(t + 0.11);
+  }
+
+  public playEnemyDeath(isHeavy = false) {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    if (t - this.lastEnemyDeathAt < (isHeavy ? 0.04 : 0.065)) return;
+    this.lastEnemyDeathAt = t;
+    const bus = this.effectsBus ?? this.ctx.destination;
+
+    const punch = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    punch.type = isHeavy ? 'sawtooth' : 'triangle';
+    punch.frequency.setValueAtTime(isHeavy ? 145 : 185, t);
+    punch.frequency.exponentialRampToValueAtTime(isHeavy ? 36 : 54, t + (isHeavy ? 0.22 : 0.11));
+    gain.gain.setValueAtTime(isHeavy ? 0.19 : 0.11, t);
+    gain.gain.exponentialRampToValueAtTime(0.0008, t + (isHeavy ? 0.23 : 0.12));
+    punch.connect(gain);
+    gain.connect(bus);
+    punch.start(t);
+    punch.stop(t + (isHeavy ? 0.24 : 0.13));
+
+    const noiseBuf = this.getGunshotNoiseBuffer();
+    if (noiseBuf) {
+      const puff = this.ctx.createBufferSource();
+      puff.buffer = noiseBuf;
+      const lp = this.ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = isHeavy ? 950 : 1200;
+      const puffGain = this.ctx.createGain();
+      puffGain.gain.setValueAtTime(isHeavy ? 0.12 : 0.065, t);
+      puffGain.gain.exponentialRampToValueAtTime(0.0008, t + (isHeavy ? 0.14 : 0.08));
+      puff.connect(lp);
+      lp.connect(puffGain);
+      puffGain.connect(bus);
+      puff.start(t);
+      puff.stop(t + (isHeavy ? 0.15 : 0.09));
+    }
+  }
+
+  public playCritPing() {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    if (t - this.lastCritPingAt < 0.08) return;
+    this.lastCritPingAt = t;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1480, t);
+    osc.frequency.exponentialRampToValueAtTime(2220, t + 0.055);
+    gain.gain.setValueAtTime(0.065, t);
+    gain.gain.exponentialRampToValueAtTime(0.0006, t + 0.09);
+    osc.connect(gain);
+    gain.connect(this.effectsBus ?? this.ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.095);
+  }
+
+  public playLevelUpFanfare(context: 'levelup' | 'rank-up' | 'boss-reward' | 'chaos-roulette' = 'levelup') {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const bus = this.effectsBus ?? this.ctx.destination;
+    const chord =
+      context === 'boss-reward'
+        ? [523.25, 659.25, 783.99, 1046.5, 1318.5]
+        : context === 'rank-up'
+          ? [440, 554.37, 659.25, 880, 1108.73]
+          : context === 'chaos-roulette'
+            ? [493.88, 622.25, 739.99, 987.77]
+            : [440, 554.37, 659.25, 880];
+    chord.forEach((freq, idx) => {
+      const at = t + idx * 0.055;
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+      osc.type = idx === chord.length - 1 ? 'triangle' : 'sine';
+      osc.frequency.setValueAtTime(freq, at);
+      gain.gain.setValueAtTime(idx === chord.length - 1 ? 0.14 : 0.1, at);
+      gain.gain.exponentialRampToValueAtTime(0.0008, at + 0.34);
+      osc.connect(gain);
+      gain.connect(bus);
+      osc.start(at);
+      osc.stop(at + 0.36);
+    });
   }
 }
 

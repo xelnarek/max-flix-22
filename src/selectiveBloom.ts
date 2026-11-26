@@ -30,11 +30,15 @@ export class SelectiveBloomPipeline {
   private readonly darkenedMeshes: DarkenedMesh[] = [];
   private readonly blackBackground = new THREE.Color(0x000000);
   private readonly overlayScene = new THREE.Scene();
+  private readonly vignetteScene = new THREE.Scene();
   private readonly overlayCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   private readonly overlayMaterial: THREE.ShaderMaterial;
   private readonly overlayQuad: THREE.Mesh;
+  private readonly vignetteMaterial: THREE.ShaderMaterial;
+  private readonly vignetteQuad: THREE.Mesh;
   private readonly isMobile: boolean;
   private lastScanAt = 0;
+  private lastSceneChildCount = -1;
   private enabled = false;
   private disposed = false;
   private failureLogged = false;
@@ -62,9 +66,9 @@ export class SelectiveBloomPipeline {
     this.renderPass = new RenderPass(scene, camera);
     this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(1, 1),
-      isMobile ? 0.68 : 0.90,
-      0.36,
-      0.72
+      isMobile ? 0.88 : 1.24,
+      isMobile ? 0.54 : 0.78,
+      0.48
     );
     this.bloomPass.renderToScreen = false;
     this.composer.addPass(this.renderPass);
@@ -73,7 +77,7 @@ export class SelectiveBloomPipeline {
     this.overlayMaterial = new THREE.ShaderMaterial({
       uniforms: {
         bloomTexture: { value: this.bloomPass.renderTargetsHorizontal[0].texture },
-        bloomStrength: { value: isMobile ? 0.34 : 0.44 },
+        bloomStrength: { value: isMobile ? 0.46 : 0.62 },
       },
       vertexShader: `
         varying vec2 vUv;
@@ -88,7 +92,8 @@ export class SelectiveBloomPipeline {
         varying vec2 vUv;
         void main() {
           vec3 bloom = texture2D(bloomTexture, vUv).rgb;
-          gl_FragColor = vec4(bloom * bloomStrength, 1.0);
+          vec3 softBloom = (bloom * bloomStrength) / (vec3(1.0) + bloom * 0.22);
+          gl_FragColor = vec4(softBloom, 1.0);
         }
       `,
       transparent: true,
@@ -100,6 +105,33 @@ export class SelectiveBloomPipeline {
     this.overlayQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.overlayMaterial);
     this.overlayQuad.frustumCulled = false;
     this.overlayScene.add(this.overlayQuad);
+
+    this.vignetteMaterial = new THREE.ShaderMaterial({
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = vec4(position.xy, 0.0, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec2 vUv;
+        void main() {
+          vec2 centered = (vUv - 0.5) * vec2(1.0, 0.88);
+          float dist = length(centered);
+          float edge = smoothstep(0.42, 0.86, dist);
+          gl_FragColor = vec4(0.015, 0.032, 0.055, edge * 0.16);
+        }
+      `,
+      transparent: true,
+      blending: THREE.NormalBlending,
+      depthTest: false,
+      depthWrite: false,
+      toneMapped: false,
+    });
+    this.vignetteQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.vignetteMaterial);
+    this.vignetteQuad.frustumCulled = false;
+    this.vignetteScene.add(this.vignetteQuad);
 
     this.resize(width, height, pixelRatio);
     this.refreshCandidates(0);
@@ -113,9 +145,9 @@ export class SelectiveBloomPipeline {
     if (this.disposed) return;
     // Bloom is a secondary polish pass. Keep it cheaper than the main scene,
     // especially on mobile GPUs where high-resolution post FX compete with gameplay.
-    const scale = this.isMobile ? 0.42 : 0.62;
-    const cap = this.isMobile ? 0.85 : 1.05;
-    this.composer.setPixelRatio(Math.max(0.35, Math.min(cap, pixelRatio * scale)));
+    const scale = this.isMobile ? 0.45 : 0.68;
+    const cap = this.isMobile ? 0.90 : 1.15;
+    this.composer.setPixelRatio(Math.max(0.40, Math.min(cap, pixelRatio * scale)));
     this.composer.setSize(Math.max(1, width), Math.max(1, height));
   }
 
@@ -129,7 +161,11 @@ export class SelectiveBloomPipeline {
       return;
     }
 
-    if (now - this.lastScanAt >= 800) this.refreshCandidates(now);
+    const sceneChildCount = this.scene.children.length;
+    if (now - this.lastScanAt >= 120 || sceneChildCount !== this.lastSceneChildCount) {
+      this.lastSceneChildCount = sceneChildCount;
+      this.refreshCandidates(now);
+    }
 
     const darkened = this.darkenedMeshes;
     darkened.length = 0;
@@ -173,6 +209,7 @@ export class SelectiveBloomPipeline {
       try {
         this.renderer.autoClear = false;
         this.renderer.render(this.overlayScene, this.overlayCamera);
+        this.renderer.render(this.vignetteScene, this.overlayCamera);
       } catch (error) {
         if (!this.failureLogged) {
           console.warn('Selective Bloom overlay disabled after a render error:', error);
@@ -193,6 +230,9 @@ export class SelectiveBloomPipeline {
     this.overlayQuad.removeFromParent();
     this.overlayQuad.geometry.dispose();
     this.overlayMaterial.dispose();
+    this.vignetteQuad.removeFromParent();
+    this.vignetteQuad.geometry.dispose();
+    this.vignetteMaterial.dispose();
     for (const material of this.darkMaterialCache.values()) material.dispose();
     this.darkMaterialCache.clear();
     this.darkMaterialArrayCache.clear();

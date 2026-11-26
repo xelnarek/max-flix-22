@@ -6,6 +6,7 @@ interface PolyHavenManifest { assets: Record<string, PolyHavenAssetFiles> }
 
 const textureLoader = new THREE.TextureLoader();
 const textureCache = new Map<string, Promise<THREE.Texture>>();
+const configuredTextureCache = new Map<string, THREE.Texture>();
 let manifestPromise: Promise<PolyHavenManifest> | null = null;
 const warnedAssets = new Set<string>();
 
@@ -33,9 +34,34 @@ function loadPbrTexture(file: string): Promise<THREE.Texture> {
   return pending;
 }
 
+function getConfiguredPbrTexture(
+  baseTexture: THREE.Texture,
+  file: string,
+  colorSpace: THREE.ColorSpace,
+  repeatX: number,
+  repeatY: number,
+): THREE.Texture {
+  const safeX = Math.max(0.25, repeatX);
+  const safeY = Math.max(0.25, repeatY);
+  const key = `${file}|${colorSpace}|${safeX}|${safeY}`;
+  let configured = configuredTextureCache.get(key);
+  if (!configured) {
+    configured = baseTexture.clone();
+    configured.colorSpace = colorSpace;
+    configured.wrapS = THREE.RepeatWrapping;
+    configured.wrapT = THREE.RepeatWrapping;
+    configured.repeat.set(safeX, safeY);
+    configured.anisotropy = Math.max(baseTexture.anisotropy || 1, 8);
+    configured.needsUpdate = true;
+    configuredTextureCache.set(key, configured);
+  }
+  return configured;
+}
+
 /**
  * Replace a generated placeholder surface with real CC0 Poly Haven PBR maps.
- * Textures are cached for the app lifetime and shared by repeated rack/floor meshes.
+ * Base textures are cached once, and repeat-configured clones prevent different
+ * surfaces (e.g. trusses vs. pipes vs. barriers) from overwriting each other.
  */
 export function applyPolyHavenPbrMaps(
   material: THREE.MeshStandardMaterial,
@@ -50,28 +76,23 @@ export function applyPolyHavenPbrMaps(
     if (!files?.maps?.diffuse || !files.maps.normal || !files.maps.arm) {
       throw new Error('Missing required PBR maps for ' + assetId);
     }
-    const [diffuse, normal, arm] = await Promise.all([
+    const [diffuseBase, normalBase, armBase] = await Promise.all([
       loadPbrTexture(files.maps.diffuse.file),
       loadPbrTexture(files.maps.normal.file),
       loadPbrTexture(files.maps.arm.file),
     ]);
     if (material.userData.polyHavenAssetId !== assetId) return;
 
-    const configure = (texture: THREE.Texture, colorSpace: THREE.ColorSpace) => {
-      texture.colorSpace = colorSpace;
-      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-      texture.repeat.set(Math.max(0.25, repeatX), Math.max(0.25, repeatY));
-      texture.anisotropy = Math.max(texture.anisotropy, 4);
-      texture.needsUpdate = true;
-    };
-    configure(diffuse, THREE.SRGBColorSpace);
-    configure(normal, THREE.NoColorSpace);
-    configure(arm, THREE.NoColorSpace);
+    const diffuse = getConfiguredPbrTexture(diffuseBase, files.maps.diffuse.file, THREE.SRGBColorSpace, repeatX, repeatY);
+    const normal = getConfiguredPbrTexture(normalBase, files.maps.normal.file, THREE.NoColorSpace, repeatX, repeatY);
+    const arm = getConfiguredPbrTexture(armBase, files.maps.arm.file, THREE.NoColorSpace, repeatX, repeatY);
 
     material.map = diffuse;
     material.normalMap = normal;
     material.normalScale.set(normalStrength, normalStrength);
     // Poly Haven's ARM texture packs AO in R, roughness in G and metalness in B.
+    material.aoMap = arm;
+    material.aoMapIntensity = 0.72;
     material.roughnessMap = arm;
     material.metalnessMap = arm;
     material.bumpMap = null;

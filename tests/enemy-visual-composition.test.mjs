@@ -120,14 +120,14 @@ test('both imported enemy rig paths remove the full procedural body and retire o
   const game = await readFile(new URL('../src/game.ts', import.meta.url), 'utf8');
   const attachBlocks = [
     ['private async attachMakeHumanEnemyModel', 'private async attachGobkitOperatorModel'],
-    ['private async attachGobkitEnemyModel', 'private updateGobkitAnimations'],
+    ['private installEnemyRigFromGltf(', 'private attachMappedEnemyModelOnSpawn('],
   ];
   for (const [startMarker, endMarker] of attachBlocks) {
     const start = game.indexOf(startMarker);
     const end = game.indexOf(endMarker, start + startMarker.length);
     assert.ok(start >= 0 && end > start, 'expected enemy model attachment path');
     const block = game.slice(start, end);
-    assert.match(block, /removeLegacyEnemyBodyVisuals\(mesh as THREE\.Group, overlays\)/);
+    assert.match(block, /removeLegacyEnemyBodyVisuals\(mesh(?: as THREE\.Group)?, overlays\)/);
     assert.match(block, /enemy\.propeller = undefined/);
     assert.match(block, /enemy\.bikeWheels = undefined/);
     const overlayStart = block.indexOf('const overlays = [');

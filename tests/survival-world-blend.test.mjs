@@ -98,8 +98,8 @@ test('floor albedo remains muted and each biome keeps a restrained material resp
   assert.ok(((junction >> 16) & 255) < 150);
   for (const id of ['warehouse_b4', 'container_terminal', 'cold_storage', 'night_sorting']) {
     const surface = getSurvivalSurfaceProfile(id);
-    assert.ok(surface.floorRoughness >= 0.84);
-    assert.ok(surface.floorMetalness <= 0.06);
+    assert.ok(surface.floorRoughness >= 0.40 && surface.floorRoughness <= 0.65);
+    assert.ok(surface.floorMetalness >= 0.06 && surface.floorMetalness <= 0.22);
   }
 });
 
@@ -113,7 +113,7 @@ test('the connected floor atlas uses weighted alpha and low-contrast surface det
   assert.match(atlas, /const aggregate =/);
   assert.match(atlas, /const frostLine =/);
   assert.match(atlas, /const grooveShade =/);
-  assert.match(game, /roughness: 0\.97/);
+  assert.match(game, /roughness: 0\.52/);
   assert.match(game, /depthWrite: false/);
   assert.doesNotMatch(game, /survival-biome-gateway-posts|survival-biome-gateway-beams/);
 });

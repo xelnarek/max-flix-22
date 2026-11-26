@@ -37,7 +37,8 @@ test('all six Base44 GLBs are registered and mapped onto existing live enemy arc
   }
 
   assert.match(game, /visualProfile\.base44Model \?\? visualProfile\.gobkitModel/);
-  assert.match(game, /if \(!visualProfile\.base44Model\) createEnemyRoleKit/);
+  assert.match(game, /const isBase44 = modelId === visualProfile\.base44Model;/);
+  assert.doesNotMatch(game, /createEnemyRoleKit\(/);
   assert.match(game, /if \(fallback && fallback !== modelId\)/);
   assert.match(packageJson, /fetch-base44-enemy-assets\.mjs --strict/);
   assert.match(packageJson, /fetch-base44-enemy-assets\.mjs &&/);

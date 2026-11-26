@@ -13,23 +13,22 @@ test('attaching a GLB or MakeHuman rig cancels pending delayed procedural enemy 
   );
   assert.match(
     game,
-    /attachGobkitEnemyModel[\s\S]*?removeLegacyEnemyBodyVisuals\(mesh as THREE\.Group, overlays\);\s*delete mesh\.userData\.enemyVisualPolishPending;\s*this\.installActorVisualRoot/,
+    /installEnemyRigFromGltf[\s\S]*?removeLegacyEnemyBodyVisuals\(mesh, overlays\);\s*delete mesh\.userData\.enemyVisualPolishPending;\s*this\.installActorVisualRoot/,
   );
 
   const polishStart = game.indexOf('private applyEnemyVisualPolish(enemy: EnemyItem)');
   const polishEnd = game.indexOf('private applyStorybookStyle(', polishStart);
   assert.ok(polishStart >= 0 && polishEnd > polishStart);
   const polish = game.slice(polishStart, polishEnd);
-  assert.match(
-    polish,
-    /if \(root\.userData\.actorVisualRoot \|\| root\.children\.some\(\(child\) => child\.userData\.actorVisualRoot === true\)\) \{\s*delete root\.userData\.enemyVisualPolishPending;\s*return;\s*\}/,
-  );
+  assert.match(polish, /this\.ensureEnemyContactShadow\(enemy\);/);
+  assert.match(polish, /delete root\.userData\.enemyVisualPolishPending;/);
+  assert.doesNotMatch(polish, /new THREE\.SphereGeometry|new THREE\.BoxGeometry|shoulderBeacon/);
 });
 
-test('async GLB model attachment preserves scaled collisionRadius and forces immediate crowd resolution', async () => {
+test('GLB model attachment preserves scaled collisionRadius and forces immediate crowd resolution', async () => {
   const game = await read('../src/game.ts');
-  const attachStart = game.indexOf('private async attachGobkitEnemyModel');
-  const attachEnd = game.indexOf('private updateGobkitAnimations', attachStart);
+  const attachStart = game.indexOf('private installEnemyRigFromGltf(');
+  const attachEnd = game.indexOf('private updateGobkitAnimations(', attachStart);
   assert.ok(attachStart >= 0 && attachEnd > attachStart);
   const attach = game.slice(attachStart, attachEnd);
 

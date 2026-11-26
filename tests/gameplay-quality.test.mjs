@@ -359,11 +359,11 @@ test('Survival crowd rendering defers distant model attachments and limits shado
   const game = await read('../src/game.ts');
   assert.match(game, /enemy\.mesh\.userData\.enemyVisualPolishPending = true/);
   assert.match(game, /e\.mesh\.userData\.enemyVisualPolishPending[\s\S]*?distToPlayer <= \(this\.isHandheldViewport \? 15 : 20\)/);
-  assert.match(game, /const canCastShadow = \(isBoss \|\| enemy\.type === 'sebix_m'\) && !this\.isHandheldViewport/);
+  assert.match(game, /const canCastShadow = \([\s\S]*?isBoss \|\|[\s\S]*?enemy\.type === 'sebix_m'[\s\S]*?\) && !this\.isHandheldViewport/);
   assert.match(game, /child\.castShadow = canCastShadow/);
   assert.match(game, /this\.dirLight\.shadow\.autoUpdate = !isMobile/);
   assert.match(game, /this\.mobileShadowRefreshCooldown -= dt \/ this\.timeScale/);
-  assert.match(game, /const shadowMapSize = isMobile \? 512 : 2048/);
+  assert.match(game, /const shadowMapSize = isMobile \? 1024 : 2048/);
   assert.match(game, /this\.applyHandheldActorShadowBudget\(e\.mesh\)/);
   assert.match(game, /const shadowHz = this\.adaptivePerformanceTier >= 2 \? 6 : this\.adaptivePerformanceTier === 1 \? 9 : 12/);
 });
@@ -1238,7 +1238,7 @@ test('mobile performance tiers limit crowd, particles and shadow refresh under l
   assert.match(game, /const num = isMobile \? \(this\.adaptivePerformanceTier >= 2 \? 4 : this\.adaptivePerformanceTier === 1 \? 6 : 8\) : 14/);
   assert.match(game, /const mobileBurstCap = this\.adaptivePerformanceTier >= 2 \? 4 : this\.adaptivePerformanceTier === 1 \? 7 : 10/);
   assert.match(game, /this\.mobileShadowRefreshCooldown -= dt \/ this\.timeScale/);
-  assert.match(game, /const shadowMapSize = isMobile \? 512 : 2048/);
+  assert.match(game, /const shadowMapSize = isMobile \? 1024 : 2048/);
   assert.match(game, /this\.applyHandheldActorShadowBudget\(e\.mesh\)/);
   assert.match(game, /const shadowHz = this\.adaptivePerformanceTier >= 2 \? 6 : this\.adaptivePerformanceTier === 1 \? 9 : 12/);
 });
@@ -1660,7 +1660,7 @@ test('Survival floor atlas uses four muted surface signatures with smooth biome-
   assert.match(maps, /floorColor: 0x756f65/);
   assert.match(maps, /floorColor: 0x647983/);
   assert.match(maps, /floorColor: 0x5b5365/);
-  assert.match(visual, /floorRoughness: 0\.90, floorMetalness: 0\.045/);
+  assert.match(visual, /floorRoughness: 0\.48, floorMetalness: 0\.08/);
   assert.match(game, /surface\.name = 'survival-biome-floor-atlas'/);
   assert.match(atlas, /warehouse_b4: \[78, 75, 68\]/);
   assert.match(atlas, /container_terminal: \[67, 69, 66\]/);
@@ -1856,9 +1856,10 @@ test('enemy rendering keeps one full-detail rig for every mapped archetype at al
   assert.equal(Object.keys(profiles.ENEMY_VISUAL_PROFILES).length, 25);
   assert.ok(game.includes('if (!this.requestedGobkitEnemies.has(enemy)) {'));
   assert.ok(game.includes('this.attachGobkitEnemyModel(enemy, modelId)'));
+  assert.ok(game.includes('this.attachMappedEnemyModelOnSpawn(enemy)'));
   assert.ok(game.includes('Every mapped enemy uses its single full-detail rig, independent of distance.'));
-  assert.ok(game.includes('this.installActorVisualRoot(mesh as THREE.Group, root)'));
-  assert.ok(game.includes('removeLegacyEnemyBodyVisuals(mesh as THREE.Group, overlays)'));
+  assert.ok(game.includes('this.installActorVisualRoot(mesh, root)'));
+  assert.ok(game.includes('removeLegacyEnemyBodyVisuals(mesh, overlays)'));
   assert.ok(game.includes('getActorAnimationIntervalFromDistanceSquared'));
   assert.doesNotMatch(game, /actorLodProxy|actorLodProxyRoot|shouldUseEnemyVisualLodProxy|updateEnemyVisualLodProxy|shouldLoadEnemyFullRig|createEnemyVisualLodProxy/);
 });

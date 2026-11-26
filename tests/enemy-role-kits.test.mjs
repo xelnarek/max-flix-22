@@ -25,84 +25,43 @@ function makeRig() {
   return { root, bones };
 }
 
-function geometrySignature(root) {
-  const counts = [];
+function collectSilhouetteMeshes(root) {
+  const meshes = [];
   root.traverse((object) => {
     if (object instanceof THREE.Mesh && object.userData.actorRoleSilhouette === true) {
-      counts.push(object.geometry.getAttribute('position').count);
+      meshes.push(object);
     }
   });
-  return counts.sort((a, b) => a - b).join(',');
+  return meshes;
 }
 
-test('all 19 humanoid and creature enemy roles have a dedicated authored geometry kit', () => {
+test('all 19 humanoid and creature enemy roles are listed without attaching extra blocky kit geometry', () => {
   const expected = Object.keys(ENEMY_VISUAL_PROFILES)
     .filter((type) => !['forklift', 'agv_robot', 'piorun_dron', 'pomazaniec', 'wkurzona_zona', 'kluska_piekielna'].includes(type))
     .sort();
   assert.deepEqual([...ENEMY_ROLE_KIT_TYPES].sort(), expected);
-});
-
-test('role kits change body proportions and props, not just material colours', () => {
-  const signatures = new Set();
   for (const type of ENEMY_ROLE_KIT_TYPES) {
     const { root } = makeRig();
     const handle = createEnemyRoleKit(type, root);
-    assert.ok(handle, 'missing role kit: ' + type);
-    assert.equal(handle.visible, false);
-    signatures.add(geometrySignature(root));
-  }
-  assert.ok(signatures.size >= 16, 'enemy silhouettes must have materially different geometry signatures');
-});
-
-test('helmet, torso, arm equipment, back gear and footwear attach to animated rig bones', () => {
-  const { root, bones } = makeRig();
-  createEnemyRoleKit('inspector', root);
-  const head = bones.get('mixamorigHead');
-  const chest = bones.get('mixamorigSpine2');
-  const arm = bones.get('mixamorigRightArm');
-  const hips = bones.get('mixamorigHips');
-  assert.ok(head.children.some((child) => child.name === 'role-kit-head'));
-  assert.ok(chest.children.some((child) => child.name === 'role-kit-torso'));
-  assert.ok(chest.children.some((child) => child.name === 'role-kit-back'));
-  assert.ok(arm.children.some((child) => child.name === 'role-kit-rightArm'));
-  assert.ok(hips.children.some((child) => child.name === 'role-kit-legs'));
-});
-
-test('role-kit geometry and materials are shared and do not cast extra crowd shadows', () => {
-  const first = makeRig();
-  const second = makeRig();
-  createEnemyRoleKit('zombie_pracownik', first.root);
-  createEnemyRoleKit('zombie_pracownik', second.root);
-  const collect = (root) => {
-    const meshes = [];
-    root.traverse((object) => {
-      if (object instanceof THREE.Mesh && object.userData.actorRoleSilhouette === true) meshes.push(object);
-    });
-    return meshes;
-  };
-  const a = collect(first.root);
-  const b = collect(second.root);
-  assert.ok(a.length >= 4 && a.length <= 5);
-  assert.equal(a.length, b.length);
-  for (let i = 0; i < a.length; i++) {
-    assert.equal(a[i].geometry, b[i].geometry);
-    assert.equal(a[i].material, b[i].material);
-    assert.equal(a[i].castShadow, false);
-    assert.equal(a[i].receiveShadow, false);
-    assert.equal(a[i].userData.gobkitSharedGeometry, true);
+    assert.equal(handle, null);
+    assert.equal(root.userData.enemyRoleKit, type);
+    assert.equal(root.userData.roleKitVersion, 0);
+    assert.equal(collectSilhouetteMeshes(root).length, 0);
   }
 });
 
-test('humanoid rig attachments follow the corresponding skeleton joints', () => {
+test('createEnemyRoleKit strips any stray blocky actorRoleSilhouette overlays from an enemy rig', () => {
   const { root, bones } = makeRig();
-  createEnemyRoleKit('architect', root);
-  const headPart = bones.get('mixamorigHead').children.find((child) => child.name === 'role-kit-head');
-  root.updateMatrixWorld(true);
-  const before = headPart.getWorldQuaternion(new THREE.Quaternion()).clone();
-  bones.get('mixamorigHead').rotation.y = 0.65;
-  root.updateMatrixWorld(true);
-  const after = headPart.getWorldQuaternion(new THREE.Quaternion());
-  assert.ok(before.angleTo(after) > 0.25);
+  const strayHeadProp = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1), new THREE.MeshBasicMaterial());
+  strayHeadProp.userData.actorRoleSilhouette = true;
+  bones.get('mixamorigHead').add(strayHeadProp);
+  const strayChestProp = new THREE.Mesh(new THREE.SphereGeometry(0.1), new THREE.MeshBasicMaterial());
+  strayChestProp.userData.actorRoleSilhouette = true;
+  bones.get('mixamorigSpine2').add(strayChestProp);
+
+  const handle = createEnemyRoleKit('inspector', root);
+  assert.equal(handle, null);
+  assert.equal(collectSilhouetteMeshes(root).length, 0);
 });
 
 test('enemy anatomy alters cloned rig proportions once without mutating other archetypes', () => {
@@ -217,21 +176,13 @@ test('all humanoid enemy archetypes carry bounded and distinct role-motion accen
   assert.equal(signatures.size, expected.length, 'every role needs a distinct motion signature');
 });
 
-test('beast and hazmat role kits expose a different authored silhouette form', () => {
-  const walczak = makeRig();
-  const mutant = makeRig();
-  const pip = makeRig();
-  const architect = makeRig();
-  const walczakKit = createEnemyRoleKit('walczak', walczak.root);
-  const mutantKit = createEnemyRoleKit('mutant_gamma_forklift', mutant.root);
-  const pipKit = createEnemyRoleKit('radioactive_pip', pip.root);
-  const architectKit = createEnemyRoleKit('architect', architect.root);
-  assert.equal(walczakKit.userData.roleForm, 'beast');
-  assert.equal(mutantKit.userData.roleForm, 'beast');
-  assert.equal(pipKit.userData.roleForm, 'hazmat');
-  assert.equal(architectKit.userData.roleForm, 'slim');
-  for (const kit of [walczakKit, mutantKit, pipKit, architectKit]) {
-    assert.equal(kit.userData.roleKitVersion, 2);
+test('beast and hazmat archetypes no longer attach second blocky kit layers', () => {
+  for (const type of ['walczak', 'mutant_gamma_forklift', 'radioactive_pip', 'architect']) {
+    const { root } = makeRig();
+    const kit = createEnemyRoleKit(type, root);
+    assert.equal(kit, null);
+    assert.equal(root.userData.enemyRoleKit, type);
+    assert.equal(root.userData.roleKitVersion, 0);
   }
 });
 

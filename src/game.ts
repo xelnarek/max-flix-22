@@ -16,7 +16,6 @@ import {
 } from './cthulhuCombat.ts';
 import { chooseMakeHumanLocomotion, getMakeHumanPlaybackRate, isMakeHumanVelocityAction, type MakeHumanLocomotionAction } from './makeHumanLocomotion.ts';
 import { dampActorAngle, getActorAnimationIntervalFromDistanceSquared, getEnemyRigPlaybackRate, shouldAdvanceActorAnimation } from './actorMotion.ts';
-import { createEnemyRoleKit } from './enemyRoleKits.ts';
 import { applyEnemyRoleAnatomy, applyEnemyRoleSecondaryMotion, clearEnemyRoleSecondaryMotion } from './enemyAnimationPolish.ts';
 import { createMakeHumanActor, MAKEHUMAN_OPERATOR_STYLES, type MakeHumanStyleId } from './makeHumanAssets.ts';
 import {
@@ -170,7 +169,7 @@ import { CHARACTERS } from './characters.ts';
 import { selectCharacterAbilityShout } from './characterAbilityShouts.ts';
 import {
   CHARACTER_GOBKIT_MODELS, ENEMY_GOBKIT_MODELS, cloneGobkitModel,
-  fitGobkitModel, loadGobkitModel, type GobkitModelId,
+  fitGobkitModel, getCachedGobkitModel, loadGobkitModel, type GobkitModelId,
 } from './gobkitAssets.ts';
 import { NEUTRAL_CHARACTER_COMBAT_BONUSES, type CharacterCombatBonuses } from './characterProgression.ts';
 import { getCharacterMotionProfile } from './characterMotion.ts';
@@ -1004,6 +1003,7 @@ export class PaleciakiGameEngine {
   private radiationFieldAura: THREE.Mesh | null = null;
   private survivalPendingOptions: SurvivalUpgradeOption[] = [];
   private survivalXpGems: { mesh: THREE.Mesh; value: number; life: number; phase: number }[] = [];
+  private readonly xpTargetScratch = new THREE.Vector3();
   // Every XP pickup shares these GPU resources instead of allocating a geometry/material per kill.
   private readonly survivalXpGemGeometry = new THREE.OctahedronGeometry(0.20, 0);
   // Shared lightweight shield ring for temporary coalition support pulses.
@@ -1015,6 +1015,7 @@ export class PaleciakiGameEngine {
     emissiveIntensity: 1.5,
     metalness: 0.2,
     roughness: 0.28,
+    userData: { bloomEmitter: true },
   });
 
   public getPacingFactor(): number {
@@ -1147,6 +1148,9 @@ export class PaleciakiGameEngine {
   private remoteGobkitSequence = 0;
   private requestedGobkitEnemies = new WeakSet<EnemyItem>();
   private gobkitEnemyTracks = new Map<EnemyItem, GobkitAnimationTrack>();
+  private sharedEnemyContactShadowGeo: THREE.PlaneGeometry | null = null;
+  private sharedEnemyContactShadowMat: THREE.MeshBasicMaterial | null = null;
+  private sharedEnemyContactShadowTex: THREE.CanvasTexture | null = null;
   /** Snapshot of live enemy membership used to prune stale animation tracks. */
   private readonly activeEnemyAnimationScratch = new Set<EnemyItem>();
   private leftLeg: THREE.Group | null = null;
@@ -1469,23 +1473,21 @@ export class PaleciakiGameEngine {
     // render at the display's 60–120 Hz rate during dense Survival waves.
     this.dirLight.shadow.autoUpdate = !isMobile;
 
-    // Actor shadows are disabled separately on phones; 512² environment
-    // shadows keep the aisle grounding without a million depth pixels.
-    // Desktop retains full-resolution contact shadows.
-    const shadowMapSize = isMobile ? 512 : 2048;
+    // Upgrade shadow resolution and tighten the frustum around the operator for crisper PBR grounding.
+    const shadowMapSize = isMobile ? 1024 : 2048;
     this.dirLight.shadow.mapSize.width = shadowMapSize;
     this.dirLight.shadow.mapSize.height = shadowMapSize;
     this.dirLight.shadow.camera.near = 0.5;
-    this.dirLight.shadow.camera.far = isMobile ? 50 : 65;
-    const d = isMobile ? 16 : 22;
+    this.dirLight.shadow.camera.far = isMobile ? 48 : 62;
+    const d = isMobile ? 12 : 16;
     this.dirLight.shadow.camera.left = -d;
     this.dirLight.shadow.camera.right = d;
     this.dirLight.shadow.camera.top = d;
     this.dirLight.shadow.camera.bottom = -d;
     this.dirLight.shadow.camera.updateProjectionMatrix();
-    this.dirLight.shadow.bias = isMobile ? -0.00045 : -0.00025;
-    this.dirLight.shadow.normalBias = isMobile ? 0.035 : 0.025;
-    this.dirLight.shadow.radius = isMobile ? 1 : 2;
+    this.dirLight.shadow.bias = isMobile ? -0.00030 : -0.00022;
+    this.dirLight.shadow.normalBias = isMobile ? 0.028 : 0.020;
+    this.dirLight.shadow.radius = isMobile ? 1.5 : 2.5;
     this.scene.add(this.dirLight);
 
     this.rimLight = new THREE.DirectionalLight(0x38bdf8, 2.15);
@@ -1494,10 +1496,13 @@ export class PaleciakiGameEngine {
 
     this.scene.fog = new THREE.Fog(0x091827, 34, 125);
 
-    // Subtle camera-space vignette. This is intentionally not called DOF:
-    // a real depth-of-field blur needs a depth-aware post-processing pass.
-    // The vignette is restrained so it never darkens the operator or combat HUD.
+    // Subtle camera-space vignette with declared uniforms so updateCamera never
+    // reads undefined uniform slots.
     const dofMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uScreenSize: { value: new THREE.Vector2(1280, 720) },
+      },
       vertexShader: `
         varying vec2 vUv;
         void main() {
@@ -1506,12 +1511,14 @@ export class PaleciakiGameEngine {
         }
       `,
       fragmentShader: `
+        uniform float uTime;
+        uniform vec2 uScreenSize;
         varying vec2 vUv;
         void main() {
           vec2 centered = (vUv - 0.5) * vec2(1.0, 0.86);
-          float edge = smoothstep(0.38, 0.78, length(centered));
-          vec3 vignetteColor = vec3(0.012, 0.026, 0.040);
-          float alpha = edge * 0.075;
+          float edge = smoothstep(0.40, 0.82, length(centered));
+          vec3 vignetteColor = vec3(0.012, 0.026, 0.042);
+          float alpha = edge * 0.11;
           gl_FragColor = vec4(vignetteColor, alpha);
         }
       `,
@@ -1732,7 +1739,23 @@ export class PaleciakiGameEngine {
     if (!this.scene.children.includes(this.levelRoot)) {
       this.scene.add(this.levelRoot);
     }
+    this.ensureEnvironmentMap();
     this.applySceneTextureQuality();
+  }
+
+  private ensureEnvironmentMap(): void {
+    if (this.envMapInitialized || !this.threeRenderer || !this.scene) return;
+    try {
+      const pmrem = new THREE.PMREMGenerator(this.threeRenderer);
+      pmrem.compileEquirectangularShader();
+      const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+      this.scene.environment = envTex;
+      (this.scene as any).environmentIntensity = this.environmentIntensity;
+      pmrem.dispose();
+      this.envMapInitialized = true;
+    } catch (_e) {
+      this.envMapInitialized = true;
+    }
   }
 
   /**
@@ -2332,6 +2355,74 @@ export class PaleciakiGameEngine {
     }
   }
 
+  private installEnemyRigFromGltf(
+    enemy: EnemyItem,
+    modelId: GobkitModelId,
+    gltf: Awaited<ReturnType<typeof loadGobkitModel>>,
+  ): void {
+    const mesh = enemy.mesh as THREE.Group | undefined;
+    if (!mesh) return;
+    const requestedType = enemy.type;
+    const visualProfile = ENEMY_VISUAL_PROFILES[requestedType];
+    const isBase44 = modelId === visualProfile.base44Model;
+    const root = cloneGobkitModel(gltf);
+    fitGobkitModel(root, visualProfile.targetHeight, this.threeRenderer?.capabilities.getMaxAnisotropy() ?? 1, gltf.scene);
+    if (!isBase44) applyEnemyRoleAnatomy(root, requestedType);
+    // Refine the body footprint from the fitted visible rig without letting
+    // weapons and decorative equipment inflate the type-specific hitbox.
+    const modelBounds = new THREE.Box3().setFromObject(root);
+    const modelSize = modelBounds.getSize(new THREE.Vector3());
+    const horizontalScale = enemy.hitBaseScale
+      ? Math.max(enemy.hitBaseScale.x, enemy.hitBaseScale.z)
+      : Math.max(mesh.scale.x, mesh.scale.z);
+    enemy.collisionRadius = getEnemyCollisionRadius(requestedType, Math.max(modelSize.x, modelSize.z) * 0.46) *
+      (Number.isFinite(horizontalScale) && horizontalScale > 0.1 ? horizontalScale : 1);
+    this.enemyCrowdResolutionNextAt = 0;
+    this.applyHandheldActorShadowBudget(root);
+    root.position.y -= mesh.position.y;
+    root.name = 'gobkit-enemy-' + modelId + '-' + enemy.id;
+    this.ensureEnemyContactShadow(enemy);
+    const overlays = [
+      enemy.hpBar, enemy.hpFill, enemy.threatRing, enemy.shieldRing, enemy.contactShadow,
+      enemy.auraRing, enemy.survivalEliteInsignia, enemy.speechMesh,
+      enemy.aiRangedTelegraphMesh, enemy.aiMeleeTelegraphMesh,
+    ].filter((object): object is THREE.Object3D => object instanceof THREE.Object3D);
+    this.removeAttachedActorVisuals(mesh);
+    removeLegacyEnemyBodyVisuals(mesh, overlays);
+    delete mesh.userData.enemyVisualPolishPending;
+    this.installActorVisualRoot(mesh, root);
+    enemy.legL = undefined;
+    enemy.legR = undefined;
+    enemy.armL = undefined;
+    enemy.armR = undefined;
+    enemy.head = undefined;
+    // These were child parts of the retired procedural body, not HUD overlays.
+    enemy.propeller = undefined;
+    enemy.bikeWheels = undefined;
+    const track = this.createGobkitAnimationTrack(
+      gltf,
+      root,
+      mesh.position,
+      visualProfile.attackStyle,
+      requestedType,
+    );
+    this.gobkitEnemyTracks.set(enemy, track);
+    this.resumeEnemyAnimationAfterModelAttach(enemy, track);
+  }
+
+  private attachMappedEnemyModelOnSpawn(enemy: EnemyItem): void {
+    const visualProfile = ENEMY_VISUAL_PROFILES[enemy.type];
+    const modelId = visualProfile.base44Model ?? visualProfile.gobkitModel;
+    if (!modelId || !enemy.mesh || enemy.mesh.userData.skipGobkitRig) return;
+    this.requestedGobkitEnemies.add(enemy);
+    const cached = getCachedGobkitModel(modelId);
+    if (cached) {
+      this.installEnemyRigFromGltf(enemy, modelId, cached);
+      return;
+    }
+    void this.attachGobkitEnemyModel(enemy, modelId);
+  }
+
   private async attachGobkitEnemyModel(enemy: EnemyItem, modelId: GobkitModelId) {
     const mesh = enemy.mesh;
     const requestedType = enemy.type;
@@ -2345,53 +2436,7 @@ export class PaleciakiGameEngine {
         !(Number.isFinite(enemy.deathVisualTimer) && (enemy.deathVisualTimer as number) > 0);
       if (!this.enemies.includes(enemy) || enemy.mesh !== mesh || enemy.type !== requestedType ||
           mesh.parent !== this.levelRoot || deathVisualExpired) return;
-      const root = cloneGobkitModel(gltf);
-      const visualProfile = ENEMY_VISUAL_PROFILES[requestedType];
-      fitGobkitModel(root, visualProfile.targetHeight, this.threeRenderer?.capabilities.getMaxAnisotropy() ?? 1, gltf.scene);
-      if (!visualProfile.base44Model) applyEnemyRoleAnatomy(root, requestedType);
-      // Refine the body footprint from the fitted visible rig without letting
-      // weapons and decorative equipment inflate the type-specific hitbox.
-      const modelBounds = new THREE.Box3().setFromObject(root);
-      const modelSize = modelBounds.getSize(new THREE.Vector3());
-      const horizontalScale = enemy.hitBaseScale
-        ? Math.max(enemy.hitBaseScale.x, enemy.hitBaseScale.z)
-        : Math.max(mesh.scale.x, mesh.scale.z);
-      enemy.collisionRadius = getEnemyCollisionRadius(requestedType, Math.max(modelSize.x, modelSize.z) * 0.46) *
-        (Number.isFinite(horizontalScale) && horizontalScale > 0.1 ? horizontalScale : 1);
-      this.enemyCrowdResolutionNextAt = 0;
-      this.applyHandheldActorShadowBudget(root);
-      root.position.y -= mesh.position.y;
-      root.name = 'gobkit-enemy-' + modelId + '-' + enemy.id;
-      const overlays = [
-        enemy.hpBar, enemy.hpFill, enemy.threatRing, enemy.shieldRing,
-        enemy.auraRing, enemy.survivalEliteInsignia, enemy.speechMesh,
-        enemy.aiRangedTelegraphMesh, enemy.aiMeleeTelegraphMesh,
-      ].filter((object): object is THREE.Object3D => object instanceof THREE.Object3D);
-      this.removeAttachedActorVisuals(mesh as THREE.Group);
-      removeLegacyEnemyBodyVisuals(mesh as THREE.Group, overlays);
-      delete mesh.userData.enemyVisualPolishPending;
-      this.installActorVisualRoot(mesh as THREE.Group, root);
-      // Existing Gobkit rigs need the role-specific PPE attachment kit. The
-      // Base44 models are already fully authored silhouettes, so do not stack
-      // a second set of props on top of their baked-in character design.
-      if (!visualProfile.base44Model) createEnemyRoleKit(requestedType, root);
-      enemy.legL = undefined;
-      enemy.legR = undefined;
-      enemy.armL = undefined;
-      enemy.armR = undefined;
-      enemy.head = undefined;
-      // These were child parts of the retired procedural body, not HUD overlays.
-      enemy.propeller = undefined;
-      enemy.bikeWheels = undefined;
-      const track = this.createGobkitAnimationTrack(
-        gltf,
-        root,
-        mesh.position,
-        ENEMY_VISUAL_PROFILES[requestedType].attackStyle,
-        requestedType,
-      );
-      this.gobkitEnemyTracks.set(enemy, track);
-      this.resumeEnemyAnimationAfterModelAttach(enemy, track);
+      this.installEnemyRigFromGltf(enemy, modelId, gltf);
     } catch (error) {
       if (!this.enemies.includes(enemy) || enemy.mesh !== mesh || enemy.type !== requestedType ||
           mesh.parent !== this.levelRoot || enemy.state === 'defeated') return;
@@ -2746,6 +2791,7 @@ export class PaleciakiGameEngine {
   }
 
   public startTitle() {
+    sound.setMusicIntensity('menu');
     sound.stopMusic();
     this.oniricDreamRemainingSeconds = 0;
     if (this.oniricDreamCameraActive) {
@@ -2787,7 +2833,7 @@ export class PaleciakiGameEngine {
   private resetSurvivalRun() {
     this.gameMode = 'survival';
     this.state = 'playing';
-    sound.startMusic();
+    sound.startMusic('combat');
     this.maxHp = this.charDef.maxHp;
     this.hp = this.maxHp;
     this.characterDamageRemainder = 0;
@@ -3135,6 +3181,7 @@ export class PaleciakiGameEngine {
     this.survivalFirearm = createStartingSurvivalFirearmState();
     this.setManualAimMode(true);
     this.state = 'playing';
+    sound.startMusic('boss');
 
     this.currentCharacterId = localOperatorId;
     this.charDef = CHARACTERS[localOperatorId];
@@ -4552,8 +4599,8 @@ export class PaleciakiGameEngine {
     const material = new THREE.MeshStandardMaterial({
       map: texture,
       color: 0xffffff,
-      roughness: 0.97,
-      metalness: 0.015,
+      roughness: 0.52,
+      metalness: 0.08,
       transparent: true,
       opacity: 1,
       alphaTest: 0.006,
@@ -7687,181 +7734,78 @@ export class PaleciakiGameEngine {
   private currentActiveSector = 1;
 
 
+  private ensureEnemyContactShadow(enemy: EnemyItem): void {
+    const root = enemy.mesh as THREE.Group | undefined;
+    if (!root || enemy.contactShadow || enemy.type === 'piorun_dron') return;
+    if (!this.sharedEnemyContactShadowGeo) {
+      this.sharedEnemyContactShadowGeo = new THREE.PlaneGeometry(1, 1);
+    }
+    if (!this.sharedEnemyContactShadowTex) {
+      this.sharedEnemyContactShadowTex = createPvpContactShadowTexture();
+    }
+    if (!this.sharedEnemyContactShadowMat) {
+      this.sharedEnemyContactShadowMat = new THREE.MeshBasicMaterial({
+        map: this.sharedEnemyContactShadowTex,
+        transparent: true,
+        opacity: 0.74,
+        depthWrite: false,
+        toneMapped: false,
+      });
+      this.sharedEnemyContactShadowMat.userData.gobkitSharedMaterial = true;
+    }
+    const isBoss = isMajorSurvivalBossType(enemy.type);
+    const radiusScale = isBoss ? 2.15 : enemy.type === 'sebix_m' ? 1.85 : enemy.type === 'agv_robot' ? 1.65 : 1.35;
+    const shadow = new THREE.Mesh(this.sharedEnemyContactShadowGeo, this.sharedEnemyContactShadowMat);
+    shadow.name = 'enemy-contact-shadow';
+    shadow.userData.gobkitSharedGeometry = true;
+    shadow.userData.gobkitKeep = true;
+    shadow.userData.enemyContactShadow = true;
+    shadow.rotation.x = -Math.PI / 2;
+    shadow.scale.set(radiusScale, radiusScale, 1);
+    const sy = Math.max(0.25, root.scale.y || 1);
+    shadow.position.set(0, (-(root.position.y || 0) + 0.025) / sy, 0);
+    shadow.renderOrder = 1;
+    shadow.castShadow = false;
+    shadow.receiveShadow = false;
+    root.add(shadow);
+    enemy.contactShadow = shadow;
+  }
+
   private applyEnemyVisualPolish(enemy: EnemyItem) {
     const root = enemy.mesh as THREE.Group | undefined;
-    if (!root || root.userData.enemyVisualPolishApplied) return;
-    if (root.userData.actorVisualRoot || root.children.some((child) => child.userData.actorVisualRoot === true)) {
-      delete root.userData.enemyVisualPolishPending;
-      return;
-    }
+    if (!root) return;
+    this.ensureEnemyContactShadow(enemy);
+    if (root.userData.enemyVisualPolishApplied) return;
     root.userData.enemyVisualPolishApplied = true;
+    delete root.userData.enemyVisualPolishPending;
 
-    // These two custom 3D silhouettes already contain their own signature props:
-    // do not stack the generic shoulder/chest/belt armour over the frying pan,
-    // vacuum canister or the dog's quadruped anatomy.
-    if (enemy.type === 'wkurzona_zona' || enemy.type === 'kluska_piekielna') {
-      root.traverse((child) => {
-        if (!(child instanceof THREE.Mesh)) return;
-        child.castShadow = !this.isHandheldViewport;
-        child.receiveShadow = false;
-      });
-      return;
-    }
-
-    const palette: Record<string, number> = {
-      customer: 0xef4444, architect: 0xa78bfa, inspector: 0x38bdf8,
-      handlowiec: 0xf59e0b, monter: 0x22c55e, kurier: 0xf97316,
-      przedstawiciel_włoski: 0xdc2626, sztaplar_szalony: 0xfacc15,
-      pan_roman: 0x92400e, serwisant: 0x06b6d4, zombie_pracownik: 0x84cc16,
-      elite_walczak_guard: 0xf43f5e, walczak: 0xf59e0b, krol_leto: 0xa855f7,
-      bosman_krakow: 0x0ea5e9, agv_robot: 0x38bdf8, piorun_dron: 0x22d3ee,
-      wkurzona_zona: 0x2563eb, kluska_piekielna: 0x9b633a,
-    };
-    const accent = palette[enemy.type] || 0x38bdf8;
     const isBoss = isMajorSurvivalBossType(enemy.type);
-    const canCastShadow = (isBoss || enemy.type === 'sebix_m') && !this.isHandheldViewport;
-    // A horde of shadow-casting skinned/part-based models is expensive on mobile.
-    // Keep boss silhouettes elevated on desktop; handhelds use the operator and
-    // warehouse lighting for depth rather than hundreds of moving shadow casters.
-    const applyShadowBudget = () => root.traverse((child) => {
-      if (!(child instanceof THREE.Mesh)) return;
+    const canCastShadow = (
+      isBoss ||
+      enemy.type === 'sebix_m' ||
+      enemy.type === 'wkurzona_zona' ||
+      enemy.type === 'kluska_piekielna'
+    ) && !this.isHandheldViewport;
+    root.traverse((child) => {
+      if (!(child instanceof THREE.Mesh) || child.userData.enemyContactShadow === true) return;
       child.castShadow = canCastShadow;
       child.receiveShadow = false;
     });
-    const scale = isBoss ? 1.35 : 1;
-    const armorMat = new THREE.MeshStandardMaterial({ color: 0x26384b, roughness: 0.68, metalness: 0.42 });
-    const accentMat = new THREE.MeshStandardMaterial({ color: accent, roughness: 0.48, metalness: 0.22, emissive: accent, emissiveIntensity: 0.10 });
-    const darkMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.82, metalness: 0.16 });
-
-    if (enemy.type === 'agv_robot' || enemy.type === 'piorun_dron') {
-      // Wheeled AGV and quadcopter keep machine silhouettes instead of receiving humanoid armour.
-      if (enemy.type === 'agv_robot') {
-        const sensorRail = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.075, 0.12), accentMat);
-        sensorRail.position.set(0, 0.56, 0);
-        const frontScanner = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.09, 0.055), darkMat);
-        frontScanner.position.set(0, 0.48, 0.37);
-        const statusBeacon = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), accentMat);
-        statusBeacon.position.set(-0.31, 0.42, -0.2);
-        root.add(sensorRail, frontScanner, statusBeacon);
-      } else {
-        const sidePods = [-1, 1].map((side) => {
-          const pod = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 0.22), armorMat);
-          pod.position.set(side * 0.31, 0.52, -0.04);
-          pod.rotation.z = side * 0.16;
-          return pod;
-        });
-        const topFin = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.22, 5), accentMat);
-        topFin.position.set(0, 0.78, -0.03);
-        const sensorEye = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), accentMat);
-        sensorEye.position.set(0, 0.51, 0.29);
-        root.add(...sidePods, topFin, sensorEye);
-      }
-      applyShadowBudget();
-      return;
-    }
-
-    // Refined curved accents stay on the existing meshes: smoother close-up silhouettes
-    // without adding extra objects or draw calls to a crowded Survival wave.
-    // Rounded shoulder guards and a sculpted chest badge add depth without changing hitboxes.
-    for (const side of [-1, 1]) {
-      const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.13 * scale, 14, 10), armorMat);
-      shoulder.scale.set(1.42, 0.74, 1.0);
-      shoulder.position.set(side * 0.235 * scale, 0.73 * scale, 0.015);
-      shoulder.rotation.z = side * -0.12;
-      shoulder.castShadow = false;
-      root.add(shoulder);
-    }
-    const chestPlate = new THREE.Mesh(new THREE.SphereGeometry(0.13 * scale, 18, 12), accentMat);
-    chestPlate.scale.set(1.28, 0.76, 0.34);
-    chestPlate.position.set(0, 0.59 * scale, 0.155 * scale);
-    chestPlate.castShadow = false;
-    const chestStripe = new THREE.Mesh(new THREE.BoxGeometry(0.19 * scale, 0.025 * scale, 0.018 * scale), darkMat);
-    chestStripe.position.set(0, 0.60 * scale, 0.199 * scale);
-    chestStripe.castShadow = false;
-    root.add(chestPlate, chestStripe);
-    const belt = new THREE.Mesh(new THREE.BoxGeometry(0.34 * scale, 0.075 * scale, 0.26 * scale), darkMat);
-    belt.position.set(0, 0.34 * scale, 0);
-    belt.castShadow = false;
-    root.add(belt);
-    const backModule = new THREE.Mesh(new THREE.BoxGeometry(0.20 * scale, 0.25 * scale, 0.12 * scale), armorMat);
-    backModule.position.set(0, 0.57 * scale, -0.15 * scale);
-    backModule.castShadow = false;
-    root.add(backModule);
-    const insignia = new THREE.Mesh(new THREE.SphereGeometry(0.055 * scale, 10, 8), accentMat);
-    insignia.position.set(0, 0.61 * scale, 0.19 * scale);
-    insignia.castShadow = false;
-    root.add(insignia);
-
-    // Role-specific silhouettes: readable at a distance without enlarging collision bodies.
-    if (isBoss) {
-      const crest = new THREE.Mesh(new THREE.SphereGeometry(0.18 * scale, 16, 12), accentMat);
-      crest.scale.set(1.65, 0.58, 0.72);
-      crest.position.set(0, 1.16 * scale, 0.015);
-      crest.castShadow = false;
-      root.add(crest);
-      for (const side of [-1, 1]) {
-        const horn = new THREE.Mesh(new THREE.ConeGeometry(0.075 * scale, 0.24 * scale, 5), accentMat);
-        horn.position.set(side * 0.19 * scale, 1.22 * scale, 0);
-        horn.rotation.z = side * -0.34;
-        horn.castShadow = false;
-        root.add(horn);
-      }
-    } else if (enemy.type === 'kurier' || enemy.type === 'pan_roman') {
-      const pack = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.34, 0.20), accentMat);
-      pack.position.set(0, 0.66, -0.22);
-      pack.castShadow = false;
-      const packBand = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.055, 0.215), armorMat);
-      packBand.position.set(0, 0.69, -0.22);
-      root.add(pack, packBand);
-    } else if (enemy.type === 'inspector') {
-      const visor = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.055, 0.13), accentMat);
-      visor.position.set(0, 1.04, 0.025);
-      visor.castShadow = false;
-      root.add(visor);
-    } else if (enemy.type === 'zombie_pracownik') {
-      const tornBib = new THREE.Mesh(new THREE.BoxGeometry(0.23, 0.17, 0.055), accentMat);
-      tornBib.position.set(-0.045, 0.69, 0.16);
-      tornBib.rotation.z = -0.18;
-      const exposedPatch = new THREE.Mesh(new THREE.DodecahedronGeometry(0.065, 0), darkMat);
-      exposedPatch.position.set(0.16, 0.56, 0.12);
-      root.add(tornBib, exposedPatch);
-    } else if (enemy.type === 'sztaplar_szalony' || enemy.type === 'elite_walczak_guard') {
-      const hazardBar = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.045, 0.075), accentMat);
-      hazardBar.position.set(0, 0.88, 0.13);
-      hazardBar.castShadow = false;
-      root.add(hazardBar);
-    } else if (enemy.type === 'handlowiec' || enemy.type === 'przedstawiciel_włoski' || enemy.type === 'serwisant') {
-      const shoulderBeacon = new THREE.Mesh(new THREE.SphereGeometry(0.075, 9, 8), accentMat);
-      shoulderBeacon.position.set(0.25, 0.82, -0.04);
-      shoulderBeacon.castShadow = false;
-      root.add(shoulderBeacon);
-    }
-    applyShadowBudget();
   }
 
-  // Retain a low-poly industrial look on hard edges, but do not facet the
-  // rounded faces, heads, limbs and equipment that define character silhouettes.
+  /** Calibrate full PBR shading and IBL reflection response without crushing specular surfaces. */
   private applyStorybookStyle(root: THREE.Object3D) {
     root.traverse((object) => {
       if (!(object instanceof THREE.Mesh)) return;
-      const geometry = object.geometry;
-      const isCurvedSurface =
-        geometry instanceof THREE.SphereGeometry ||
-        geometry instanceof THREE.CapsuleGeometry ||
-        geometry instanceof THREE.CylinderGeometry ||
-        geometry instanceof THREE.ConeGeometry ||
-        geometry instanceof THREE.TorusGeometry ||
-        geometry instanceof THREE.TorusKnotGeometry;
       const materials = Array.isArray(object.material) ? object.material : [object.material];
       for (const material of materials) {
-        if (material instanceof THREE.MeshStandardMaterial || material instanceof THREE.MeshPhysicalMaterial) {
-          if (isCurvedSurface) material.userData.preserveSmoothShading = true;
-          material.flatShading = material.userData.preserveSmoothShading !== true;
-          material.roughness = Math.max(material.roughness, 0.58);
-          material.metalness = Math.min(material.metalness, 0.42);
-          if (material.color) material.color.offsetHSL(0, 0.10, 0.015);
-          material.needsUpdate = true;
-        }
+        if (!(material instanceof THREE.MeshStandardMaterial || material instanceof THREE.MeshPhysicalMaterial)) continue;
+        if (material.userData.gobkitSharedMaterial === true || material.userData.makeHumanShared === true) continue;
+        if (material.userData.pbrCalibrated === true) continue;
+        material.userData.pbrCalibrated = true;
+        material.flatShading = material.userData.forceFlatShading === true;
+        material.envMapIntensity = material.metalness > 0.35 || material.roughness < 0.38 ? 1.25 : 0.95;
+        material.needsUpdate = true;
       }
       object.castShadow = object.castShadow && object.geometry !== undefined;
     });
@@ -7879,6 +7823,7 @@ export class PaleciakiGameEngine {
     this.survivalFirearmLastDropSeconds = Number.NEGATIVE_INFINITY;
     this.survivalFirearmSoundCooldown = 0;
     this.rebuildPlayerMesh();
+    this.ensureEnvironmentMap();
 
     // Unified Mega-Map Layout: Sektor A (-36..+36) -> Sektor B (+36..+116) -> Sektor C (+116..+206)
     this.scene.background = new THREE.Color(0x07131d);
@@ -7900,7 +7845,10 @@ export class PaleciakiGameEngine {
         halfWidth: Math.max(0.45, platform.width * 0.5),
         halfDepth: Math.max(0.45, platform.depth * 0.5),
       }));
-    for (const enemy of this.enemies) this.applyEnemyVisualPolish(enemy);
+    for (const enemy of this.enemies) {
+      this.applyEnemyVisualPolish(enemy);
+      this.attachMappedEnemyModelOnSpawn(enemy);
+    }
     this.applyStorybookStyle(this.levelRoot);
     this.sectorGates = [null, null, null, null];
     this.buildSectorGate(36, 2);
@@ -10354,19 +10302,7 @@ export class PaleciakiGameEngine {
     this.tracerPool.update(simDt);
     this.updateGobkitAnimations(simDt);
 
-    if (!this.envMapInitialized && this.threeRenderer && this.scene) {
-      try {
-        const pmrem = new THREE.PMREMGenerator(this.threeRenderer);
-        pmrem.compileEquirectangularShader();
-        const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-        this.scene.environment = envTex;
-        (this.scene as any).environmentIntensity = this.environmentIntensity;
-        pmrem.dispose();
-        this.envMapInitialized = true;
-      } catch (_e) {
-        this.envMapInitialized = true;
-      }
-    }
+    this.ensureEnvironmentMap();
 
     if (this.bloomPulseTimer > 0) {
       this.bloomPulseTimer = Math.max(0, this.bloomPulseTimer - dt);
@@ -11009,8 +10945,10 @@ export class PaleciakiGameEngine {
     base.castShadow = true;
     base.receiveShadow = true;
     group.add(base);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.035, 8, 28),
-      new THREE.MeshBasicMaterial({ color: definition.color, transparent: true, opacity: 0.92 }));
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(0.55, 0.035, 8, 28),
+      new THREE.MeshBasicMaterial({ color: definition.color, transparent: true, opacity: 0.92, userData: { bloomEmitter: true } }),
+    );
     ring.rotation.x = Math.PI / 2;
     ring.position.y = 0.14;
     group.add(ring);
@@ -11021,24 +10959,27 @@ export class PaleciakiGameEngine {
     weaponModel.rotation.set(-0.24, -0.38, 0.12);
     group.add(weaponModel);
 
-    const pickupGlow = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6),
-      new THREE.MeshBasicMaterial({ color: definition.color, transparent: true, opacity: 0.9 }));
+    const pickupGlow = new THREE.Mesh(
+      new THREE.SphereGeometry(0.08, 8, 6),
+      new THREE.MeshBasicMaterial({ color: definition.color, transparent: true, opacity: 0.94, userData: { bloomEmitter: true } }),
+    );
     pickupGlow.position.set(0, 0.72, 0.58);
     group.add(pickupGlow);
 
     const auraBeacon = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.46, 0.56, 0.92, 20, 1, true),
+      new THREE.CylinderGeometry(0.32, 0.56, 1.55, 20, 1, true),
       new THREE.MeshBasicMaterial({
         color: definition.color,
         transparent: true,
-        opacity: 0.16,
+        opacity: 0.22,
         depthWrite: false,
         side: THREE.DoubleSide,
         blending: THREE.AdditiveBlending,
         toneMapped: false,
+        userData: { bloomEmitter: true },
       }),
     );
-    auraBeacon.position.y = 0.54;
+    auraBeacon.position.y = 0.85;
     group.add(auraBeacon);
     return group;
   }
@@ -11057,6 +10998,7 @@ export class PaleciakiGameEngine {
       firearmId, mesh, x: safeX, y, z: safeZ, baseY: y, age: 0, life: SURVIVAL_FIREARM_DROP_POLICY.dropLifetimeSeconds,
     });
     this.spawnParticleRing(safeX, y + 0.2, safeZ, definition.color);
+    if (this.adaptivePerformanceTier < 2) this.triggerBloomPulse(0.18);
     this.emitFloatingToast((isPityDrop ? '📦 ŁUP PEWNY: ' : '🔫 ZRZUT BRONI: ') + definition.name.toUpperCase(), safeX, y + 1.8, safeZ, 'perk');
     sound.playPickup(1);
   }
@@ -13055,6 +12997,9 @@ export class PaleciakiGameEngine {
     runner.shoutTimer = 1.4 + Math.random() * 1.2;
     runner.z = z;
     runner.mesh.position.set(x, runner.y, z);
+    this.applyEnemyVisualPolish(runner);
+    this.applyStorybookStyle(runner.mesh);
+    this.attachMappedEnemyModelOnSpawn(runner);
   }
 
   private spawnSurvivalAuditor() {
@@ -13075,6 +13020,9 @@ export class PaleciakiGameEngine {
     auditor.specialActionTimer = 2.6;
     auditor.bossPhase = 1;
     auditor.survivalAuditor = true;
+    this.applyEnemyVisualPolish(auditor);
+    this.applyStorybookStyle(auditor.mesh);
+    this.attachMappedEnemyModelOnSpawn(auditor);
     // Distance-based Auditor influence remains active without a floor aura.
     this.callbacks.onBossUpdate?.(auditor.name, auditor.hp, auditor.maxHp, true, 1);
     this.callbacks.onSurvivalAnnouncement?.(
@@ -14156,17 +14104,9 @@ export class PaleciakiGameEngine {
     const enemy = this.enemies[this.enemies.length - 1];
     if (!enemy) return;
     if (enemy.mesh) {
-      const majorEnemy = enemy.type === 'walczak' || enemy.type === 'krol_leto'
-        || enemy.type === 'bosman_krakow' || enemy.type === 'sebix_m';
-      const detailDistance = this.isHandheldViewport ? 15 : 20;
-      const nearEnoughForDetail = Math.hypot(enemy.x - this.playerPos.x, enemy.z - this.playerPos.z) <= detailDistance;
-      if (majorEnemy || nearEnoughForDetail) {
-        this.applyEnemyVisualPolish(enemy);
-        this.applyStorybookStyle(enemy.mesh);
-      } else {
-        enemy.mesh.userData.enemyVisualPolishPending = true;
-        this.applyStorybookStyle(enemy.mesh);
-      }
+      this.applyEnemyVisualPolish(enemy);
+      this.applyStorybookStyle(enemy.mesh);
+      this.attachMappedEnemyModelOnSpawn(enemy);
     }
     if (enemy.type !== 'architect' && enemy.type !== 'piorun_dron') {
       enemy.z = z;
@@ -14264,6 +14204,10 @@ export class PaleciakiGameEngine {
     if (profile.scaleMultiplier === 1) return;
 
     enemy.mesh.scale.multiplyScalar(profile.scaleMultiplier);
+    if (enemy.contactShadow) {
+      const sy = Math.max(0.25, enemy.mesh.scale.y || 1);
+      enemy.contactShadow.position.y = (-(enemy.mesh.position.y || enemy.y || 0) + 0.025) / sy;
+    }
     enemy.collisionRadius = getEnemyCollisionRadius(enemy.type, enemy.collisionRadius) * profile.scaleMultiplier;
     this.enemyCrowdResolutionNextAt = 0;
     enemy.maxHp = Math.max(1, Math.ceil(enemy.maxHp * profile.healthMultiplier));
@@ -14292,6 +14236,7 @@ export class PaleciakiGameEngine {
     if (boss) {
       this.applyEnemyVisualPolish(boss);
       if (boss.mesh) this.applyStorybookStyle(boss.mesh);
+      this.attachMappedEnemyModelOnSpawn(boss);
       boss.aiOrbitSign = wave % 2 === 0 ? 1 : -1;
       if (wave === 5) boss.name = 'Inwentaryzacja Gigant • Nadzorca Zero';
       else if (variant === 'bosman_krakow') boss.name = 'Bosman Kraków • Dowódca rampy';
@@ -14317,6 +14262,7 @@ export class PaleciakiGameEngine {
     }
 
     sound.playSirens();
+    sound.setMusicIntensity('boss');
     this.triggerScreenShake(0.9, 0.65);
     this.triggerHitStop(0.14);
     this.triggerBloomPulse(0.7);
@@ -14366,8 +14312,8 @@ export class PaleciakiGameEngine {
         (this.activePerks.magnet > 0 ? 6.5 : 0);
 
       if (distance < pickupRadius) {
-        const target = new THREE.Vector3(this.playerPos.x, this.playerPos.y + 0.7, this.playerPos.z);
-        gem.mesh.position.lerp(target, Math.min(1, dt * 7.5));
+        this.xpTargetScratch.set(this.playerPos.x, this.playerPos.y + 0.7, this.playerPos.z);
+        gem.mesh.position.lerp(this.xpTargetScratch, Math.min(1, dt * 7.5));
       }
 
       if (distance < 1.25) {
@@ -14393,7 +14339,20 @@ export class PaleciakiGameEngine {
         this.registerSurvivalShiftEventAction('xp', xpValue);
         this.score += xpValue * 12;
         this.callbacks.onScoreUpdate(this.score, this.collectedVipCount, this.totalVipCount);
-        sound.playPickup();
+        sound.playXpPickup(streak.tier);
+        if (this.adaptivePerformanceTier < 2) {
+          const sparkCount = streak.tier >= 3 ? 3 : 2;
+          const sparkColor = streak.tier >= 3 ? 0xfbbf24 : 0x38bdf8;
+          for (let s = 0; s < sparkCount; s++) {
+            const sparkMesh = this.particlePool.acquire('octahedron', sparkColor, 0.085, 0.95, true);
+            if (!sparkMesh) break;
+            sparkMesh.position.set(gem.mesh.position.x, gem.mesh.position.y + 0.15, gem.mesh.position.z);
+            this.levelRoot.add(sparkMesh);
+            const ang = Math.random() * Math.PI * 2;
+            const spd = 1.4 + Math.random() * 1.8;
+            this.addParticle(sparkMesh, Math.cos(ang) * spd, 1.5 + Math.random() * 1.6, Math.sin(ang) * spd, 0.32, 3.2, 0.085, 5, 7, 4);
+          }
+        }
         this.levelRoot.remove(gem.mesh);
         this.survivalXpGems.splice(i, 1);
         this.emitFloatingToast('+' + xpValue + ' XP' + (streak.tier >= 3 ? ' • ŁAŃCUCH XP ×' + streak.multiplier.toFixed(2) : ''), this.playerPos.x, this.playerPos.y + 1.2, this.playerPos.z, 'perk');
@@ -17108,6 +17067,19 @@ export class PaleciakiGameEngine {
       const comicWords = ['POW!', 'BUM!', 'KRACH!', 'WZ-CRIT!', '44 TON!', 'FAKTURA!', 'DYLATACJA!'];
       const chosenWord = comicWords[Math.floor(Math.random() * comicWords.length)];
       if (isCrit) {
+        sound.playCritPing();
+        if (this.adaptivePerformanceTier < 2) {
+          this.triggerBloomPulse(0.14);
+          for (let s = 0; s < 2; s++) {
+            const critSpark = this.particlePool.acquire('tetrahedron', 0xfacc15, 0.095, 0.96, true);
+            if (!critSpark) break;
+            critSpark.position.set(enemy.x, enemy.y + 0.85, enemy.z);
+            this.levelRoot.add(critSpark);
+            const ang = Math.random() * Math.PI * 2;
+            const spd = 2.6 + Math.random() * 2.4;
+            this.addParticle(critSpark, Math.cos(ang) * spd, 2.1 + Math.random() * 1.6, Math.sin(ang) * spd, 0.28, 4.0, 0.095, 8, 10, 7);
+          }
+        }
         this.emitFloatingToast(`💥 ${chosenWord} -${actualDamage}`, enemy.x, enemy.y + 1.25, enemy.z, 'combo');
       } else {
         this.emitFloatingToast(`-${actualDamage}`, enemy.x, enemy.y + 1.05, enemy.z, 'damage');
@@ -22378,8 +22350,37 @@ export class PaleciakiGameEngine {
     this.invulnerableTimer = Math.max(this.invulnerableTimer, 0.32);
     if (!this.manualAimEnabled) this.playerRot = Math.atan2(directionX, directionZ);
     this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.28, this.playerPos.z, isPerfectDodge ? 0xfacc15 : 0x67e8f9);
+    if (this.adaptivePerformanceTier < 2) {
+      const trailColor = isPerfectDodge ? 0xfacc15 : 0x67e8f9;
+      const streakCount = isPerfectDodge ? 6 : 4;
+      for (let d = 0; d < streakCount; d++) {
+        const streakSize = 0.09 + (d % 2) * 0.03;
+        const streakMesh = this.particlePool.acquire('flat-box', trailColor, streakSize, 0.92, true);
+        if (!streakMesh) break;
+        const spread = (d - (streakCount - 1) * 0.5) * 0.22;
+        streakMesh.position.set(
+          this.playerPos.x - this.survivalDashDirection.z * spread,
+          this.playerPos.y + 0.42 + (d % 2) * 0.24,
+          this.playerPos.z + this.survivalDashDirection.x * spread,
+        );
+        this.levelRoot.add(streakMesh);
+        this.addParticle(
+          streakMesh,
+          -this.survivalDashDirection.x * (3.2 + Math.random() * 1.8),
+          0.35 + Math.random() * 0.6,
+          -this.survivalDashDirection.z * (3.2 + Math.random() * 1.8),
+          0.26,
+          0.8,
+          streakSize,
+          4,
+          6,
+          4,
+        );
+      }
+      if (!isPerfectDodge) this.triggerBloomPulse(0.14);
+    }
     this.triggerScreenShake(isPerfectDodge ? 0.20 : 0.10, isPerfectDodge ? 0.14 : 0.09);
-    sound.playAttackWhoosh();
+    sound.playDash();
 
     if (isPerfectDodge) {
       if (this.gameMode === 'survival') {
@@ -22402,7 +22403,7 @@ export class PaleciakiGameEngine {
       this.abilityCooldownState = advanceAbilityCooldown(this.abilityCooldownState, 0.65);
       this.updateAbilityCooldown(0, true);
       this.spawnParticleRing(this.playerPos.x, this.playerPos.y + 0.65, this.playerPos.z, 0xfacc15);
-      this.triggerBloomPulse(0.32);
+      this.triggerBloomPulse(0.36);
       this.emitFloatingToast(
         this.gameMode === 'survival'
           ? '✦ PERFECT DODGE! +100 PKT • SALWA +1 • SUPER +0,65 s'
@@ -22877,6 +22878,13 @@ export class PaleciakiGameEngine {
     if (this.gameMode === 'survival' && isAbilityRechargeBoss) this.survivalBossesDefeated++;
     const isAbilityRechargeElite = isAbilityRechargeBoss ||
       e.type === 'elite_walczak_guard' || e.type === 'sebix_m' || e.maxHp >= 4;
+    sound.playEnemyDeath(isAbilityRechargeElite);
+    if (isAbilityRechargeBoss) {
+      const anyBossAlive = this.enemies.some((other) =>
+        other !== e && other.state !== 'defeated' && isMajorSurvivalBossType(other.type)
+      );
+      if (!anyBossAlive) sound.setMusicIntensity('combat');
+    }
     this.rechargeAbilityFromKill(isAbilityRechargeElite, isAbilityRechargeBoss);
     if (this.gameMode === 'survival' || this.gameMode === 'campaign') {
       this.survivalFirearmKillCount++;
@@ -23100,6 +23108,9 @@ export class PaleciakiGameEngine {
       // A compact shard burst gives ordinary enemies a visible but lightweight hit-confirm.
       const impactColor = e.type === 'pomazaniec' ? 0xf472b6 : e.id.includes('sebix') ? 0xf97316 : 0x38bdf8;
       this.spawnCompactImpact(e.x, e.y + 0.62, e.z, impactColor);
+      if (this.adaptivePerformanceTier < 2) {
+        this.spawnExplosionParticles(e.x, e.y + 0.65, e.z, impactColor, this.adaptivePerformanceTier === 0 ? 5 : 3);
+      }
       this.triggerScreenShake(0.35, 0.25);
     }
 
@@ -23565,8 +23576,15 @@ export class PaleciakiGameEngine {
     this.updateCameraOcclusion(dt);
 
     if (this.dirLight) {
-      this.dirLight.position.set(this.playerPos.x + 14, 28, this.playerPos.z + 12);
-      this.dirLight.target.position.copy(this.playerPos);
+      // Snap directional shadow target to texel boundaries so moving across
+      // concrete/steel warehouse bays never causes shimmering shadow edges.
+      const shadowExtent = this.dirLight.shadow.camera.right - this.dirLight.shadow.camera.left;
+      const mapWidth = Math.max(1, this.dirLight.shadow.mapSize.width);
+      const texelSize = shadowExtent / mapWidth;
+      const snappedX = Math.round(this.playerPos.x / texelSize) * texelSize;
+      const snappedZ = Math.round(this.playerPos.z / texelSize) * texelSize;
+      this.dirLight.position.set(snappedX + 14, 28, snappedZ + 12);
+      this.dirLight.target.position.set(snappedX, this.playerPos.y, snappedZ);
       this.dirLight.target.updateMatrixWorld();
       if (this.isHandheldViewport) {
         // Shadow refresh is wall-clock paced: a 2x simulation must not double
@@ -23580,8 +23598,8 @@ export class PaleciakiGameEngine {
       }
     }
 
-    // Dynamic Shader Uniform Updates for Depth of Field and Stencil Outline
-    if (this.dofBlurMaterial) {
+    // Dynamic Shader Uniform Updates for Vignette and Stencil Outline
+    if (this.dofBlurMaterial?.uniforms?.uTime && this.dofBlurMaterial.uniforms.uScreenSize) {
       this.dofBlurMaterial.uniforms.uTime.value = now * 0.001;
       this.dofBlurMaterial.uniforms.uScreenSize.value.set(
         window.visualViewport?.width || window.innerWidth || 1280,

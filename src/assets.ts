@@ -362,12 +362,20 @@ export class B4AssetLoader {
       const totalTextures = assetList.length;
       let loadedTextures = 0;
 
-      // Sequential batch processing with visual rendering yields
-      const batchSize = 2;
+      // Kick off SVG pack fetches in parallel so slow dev proxies or browsers do not serialize 17 round-trips.
+      for (const item of assetList) {
+        if (item.id.startsWith('b4-pack/')) {
+          void Promise.resolve().then(() => item.execute()).catch(() => null);
+        }
+      }
+
+      // Parallel batch processing with bounded frame yields (avoids 35+ throttled timers in background tabs).
+      const batchSize = 6;
+      let lastYieldAt = performance.now();
       for (let i = 0; i < assetList.length; i += batchSize) {
         const batch = assetList.slice(i, i + batchSize);
 
-        for (const item of batch) {
+        await Promise.all(batch.map(async (item) => {
           const itemStartTime = performance.now();
           this.loadingManager.itemStart(item.id);
 
@@ -386,22 +394,20 @@ export class B4AssetLoader {
             // Texture warming covers 0% to 70% of engine bootstrap.
             const currentPct = Math.round((loadedTextures / totalTextures) * 70);
             this.updateProgress(currentPct, `Wczytano: ${item.name}`, item.category);
-
           } catch (err) {
             console.warn(`[AssetLoader] ⚠️ Safe mode fallback dla zasobu ${item.id}:`, err);
             this.loadedAssets.set(item.id, { category: item.category, durationMs: 0, success: false });
             this.loadingManager.itemError(item.id);
             this.loadingManager.itemEnd(item.id);
           }
+        }));
 
-          // Small yield to allow browser DOM paint and smooth CSS animation
-          await new Promise(r => setTimeout(r, 20));
+        // Do not gate boot on requestAnimationFrame or per-item timers: browsers clamp timers
+        // in backgrounded tabs/iframes, which would stall startup beyond the 12s boot budget.
+        if (performance.now() - lastYieldAt > 18) {
+          await new Promise<void>(resolve => setTimeout(resolve, 0));
+          lastYieldAt = performance.now();
         }
-
-        // Do not gate boot on requestAnimationFrame: browsers pause RAF when
-        // a mobile tab/app is backgrounded, which can leave the loader frozen
-        // forever after returning to the game. A short task yield is reliable.
-        await new Promise<void>(resolve => setTimeout(resolve, 16));
       }
 
       const totalTime = Math.round(performance.now() - overallStartTime);

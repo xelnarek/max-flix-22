@@ -72,16 +72,9 @@ test('map signage uses map-specific subtitles and releases cached GPU textures o
   assert.match(game, /for \(const material of this\.survivalArenaLabelMaterials\.values\(\)\) \{\s*material\.map\?\.dispose\(\);\s*material\.dispose\(\);/);
 });
 
-test('enemy role kits add PPE knee pads and steel-toe details without increasing draw calls', async () => {
+test('enemy role kits strip legacy blocky PPE overlays instead of stacking a second body model', async () => {
   const source = await readFile(new URL('../src/enemyRoleKits.ts', import.meta.url), 'utf8');
-  const start = source.indexOf('function body(');
-  const end = source.indexOf('\nfunction backGear(', start);
-  assert.ok(start >= 0 && end > start, 'enemy role body builder should exist');
-  const body = source.slice(start, end);
-  assert.match(body, /Warehouse PPE: sculpted knee pads/);
-  assert.match(body, /for\(const side of \[-1,1\]\)/);
-  assert.match(body, /sp\(groups,'legs',dark,\[side\*\.14,\.245,\.228\]/);
-  assert.match(body, /bx\(groups,'legs',s\.accent,\[side\*\.14,\.245,\.271\]/);
-  assert.match(body, /sp\(groups,'legs',metal,\[side\*\.14,\.105,\.236\]/);
-  assert.match(source, /mergeGeometries\(parts,false\)/);
+  assert.match(source, /object\.userData\.actorRoleSilhouette === true/);
+  assert.match(source, /overlay\.removeFromParent\(\)/);
+  assert.match(source, /return null;/);
 });

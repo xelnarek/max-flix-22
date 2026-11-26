@@ -65,23 +65,40 @@ const textureLoader = new THREE.TextureLoader();
  */
 function createEntry(kind: B4VisualTextureKind): B4TextureEntry {
   const url = textureUrls[kind];
+  let settled = false;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
   let resolveReady!: (texture: THREE.Texture) => void;
   const ready = new Promise<THREE.Texture>((resolve) => { resolveReady = resolve; });
+  const finish = (texture: THREE.Texture) => {
+    if (settled) return;
+    settled = true;
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+    resolveReady(texture);
+  };
   const texture = textureLoader.load(
     url,
     () => {
       texture.colorSpace = THREE.SRGBColorSpace;
       texture.needsUpdate = true;
-      resolveReady(texture);
+      finish(texture);
     },
     undefined,
     (error) => {
       console.warn('[B4 Asset Pack] Visual texture could not be loaded:', kind, error);
       // The texture is already a valid Three.js object. Resolve fail-soft so
       // asset loading never blocks the first playable frame.
-      resolveReady(texture);
+      finish(texture);
     },
   );
+  timeoutId = setTimeout(() => {
+    if (!settled) {
+      console.warn('[B4 Asset Pack] Visual texture warm-up timed out; continuing fail-soft:', kind);
+      finish(texture);
+    }
+  }, 2000);
   texture.name = 'max-flix-b4-' + kind;
   texture.colorSpace = THREE.SRGBColorSpace;
   const isAtlas = kind === 'spriteAtlas' || kind === 'enemyAtlas' || kind === 'enemyAtlas2' || kind === 'enemyAtlas3' || kind === 'operatorAtlas' || kind === 'combatAtlas' || kind === 'rackAtlas';
