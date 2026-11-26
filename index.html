@@ -786,7 +786,7 @@
                   <div class="enemy-guide-title">Klient z Fakturą — Reklamacja B4</div>
                   <div class="enemy-guide-desc enemy-guide-desc--complete">
                     <span class="enemy-guide-kind">WRĘCZ • ZWYKŁY</span>
-                    <p class="enemy-guide-copy">Nerwowy klient z fakturą i wielką teczką. Biega po alejkach, skraca dystans i próbuje trafić operatora zamachem dokumentami.</p>
+                    <p class="enemy-guide-copy">Nerwowy klient z fakturą i pokaźną teczką reklamacyjną. Krąży po alejkach, nagle skraca dystans i atakuje szerokim zamachem dokumentami.</p>
                     <div class="enemy-guide-tactic"><strong>KONTRA</strong><span>Nie uciekaj wzdłuż jego ataku. Odskocz w bok, poczekaj aż teczka minie cel i wykorzystaj krótką przerwę.</span></div>
                     <div class="enemy-guide-readouts" aria-label="Parametry sygnału ataku"><span><b>0,48 s</b><small>sygnał</small></span><span><b>0,72 m</b><small>dosięg</small></span><span><b>0,20 s</b><small>regeneracja</small></span></div>
                     <small class="enemy-sig">„PROSZĘ KIEROWNIKA, JA TYLKO ZŁOŻĘ REKLAMACJĘ!”</small>
@@ -810,7 +810,7 @@
                   <div class="enemy-guide-title">Wózek Widłowy — Tryb Awaryjny</div>
                   <div class="enemy-guide-desc enemy-guide-desc--complete">
                     <span class="enemy-guide-kind">POJAZD • TARAN</span>
-                    <p class="enemy-guide-copy">Stalowy wózek z masztem, widłami, kabiną i lampą ostrzegawczą. Zamiast pojedynkuje się z operatorem, próbuje przejąć całą alejkę ruchem pojazdu.</p>
+                    <p class="enemy-guide-copy">Stalowy wózek z masztem, widłami, kabiną i lampą ostrzegawczą. Nie walczy jak humanoidalny przeciwnik — próbuje przejąć całą alejkę ruchem pojazdu.</p>
                     <div class="enemy-guide-tactic"><strong>KONTRA</strong><span>Nigdy nie zatrzymuj go czołowo. Zejdź z toru przejazdu, pozwól mu minąć pozycję i atakuj z boku.</span></div>
                     
                     
@@ -1337,7 +1337,7 @@
             <div id="tab-field-guide" class="tab-panel field-guide-panel">
               <section class="field-guide-hero">
                 <div class="field-guide-kicker">CENTRUM B4 INTELLIGENCE DIVISION • FIELD MANUAL 02.6</div>
-                <div class="field-guide-heading-row"><div><h2>BAZA TAKTYCZNA</h2><p>Pełny przewodnik po Survival Shift, zagrożenia, pułapki, eventy, perki, sekrety i zasady rozgrywki.</p></div><div class="field-guide-stamp">AKTUALNE<br>08.11.2026</div></div>
+                <div class="field-guide-heading-row"><div><h2>BAZA TAKTYCZNA</h2><p>Pełny przewodnik po Survival Shift, zagrożenia, pułapki, eventy, perki, sekrety i zasady rozgrywki.</p></div><div class="field-guide-stamp">KATALOG<br>26.11.2026</div></div>
                 <div class="field-guide-metrics">
                   <div><strong>25</strong><span>typów przeciwników</span></div><div><strong>4</strong><span>zagrożenia mapy</span></div><div><strong>7</strong><span>eventów</span></div><div><strong>18</strong><span>modułów BHP</span></div><div><strong>12</strong><span>ulepszeń pasywnych</span></div><div><strong>4</strong><span>synergie buildów</span></div>
                 </div>
@@ -1595,10 +1595,18 @@
               </section>
 
               <section class="survival-map-directory" aria-label="Mapy Survival">
-                <article class="survival-map-directory-card map-warehouse"><span>01 / SKŁAD</span><strong>MAGAZYN B4</strong><small>Wielka hala paletowa</small><em data-map-visited="warehouse_b4">NIEODKRYTA</em></article>
-                <article class="survival-map-directory-card map-port"><span>02 / PORT</span><strong>PORT KONTENEROWY 17</strong><small>Slalom kontenerów i suwnica</small><em data-map-visited="container_terminal">NIEODKRYTA</em></article>
-                <article class="survival-map-directory-card map-cold"><span>03 / CHŁODNIA</span><strong>CHŁODNIA ZERO</strong><small>Agregaty i rury chłodnicze</small><em data-map-visited="cold_storage">NIEODKRYTA</em></article>
-                <article class="survival-map-directory-card map-night"><span>04 / NOCNA ZMIANA</span><strong>SORTOWNIA WIDMOWA</strong><small>Neonowe skanery i fioletowe pasy tras</small><em data-map-visited="night_sorting">NIEODKRYTA</em></article>
+                <article class="survival-map-directory-card map-warehouse"><span>01 / SKŁAD</span><span class="survival-map-directory-icon" aria-hidden="true">🏭</span>
+                  <strong>MAGAZYN B4</strong><small>Wielka hala paletowa</small><em data-map-visited="warehouse_b4">NIEODKRYTA</em><em class="map-combat-modifier">BRAK MODYFIKATORÓW • BAZA</em>
+                </article>
+                <article class="survival-map-directory-card map-port"><span>02 / PORT</span><span class="survival-map-directory-icon" aria-hidden="true">⚓</span>
+                  <strong>PORT KONTENEROWY 17</strong><small>Slalom kontenerów i suwnica</small><em data-map-visited="container_terminal">NIEODKRYTA</em><em class="map-combat-modifier">WROGOWIE +8% SZYBCIEJ • −6% HP • XP +12%</em>
+                </article>
+                <article class="survival-map-directory-card map-cold"><span>03 / CHŁODNIA</span><span class="survival-map-directory-icon" aria-hidden="true">🧊</span>
+                  <strong>CHŁODNIA ZERO</strong><small>Agregaty i rury chłodnicze</small><em data-map-visited="cold_storage">NIEODKRYTA</em><em class="map-combat-modifier">WROGOWIE −10% SZYBCIEJ • +12% HP • XP +12%</em>
+                </article>
+                <article class="survival-map-directory-card map-night"><span>04 / NOCNA ZMIANA</span><span class="survival-map-directory-icon" aria-hidden="true">🌃</span>
+                  <strong>SORTOWNIA WIDMOWA</strong><small>Neonowe skanery i fioletowe pasy tras</small><em data-map-visited="night_sorting">NIEODKRYTA</em><em class="map-combat-modifier">WROGOWIE +4% SZYBCIEJ • XP +15%</em>
+                </article>
               </section>
 
               <section class="survival-achievement-section">
@@ -1672,11 +1680,11 @@
                   </span>
                 </button>
                 <div class="campaign-stage-grid" aria-label="Wybór etapu kampanii">
-                  <button type="button" class="campaign-stage-card" data-campaign-stage="b4_intro"><span class="campaign-stage-top"><span>01 / START</span><span class="campaign-stage-status">DOSTĘPNY</span></span><strong>MAGAZYN B4</strong><small>Przejmij główną aleję i pokonaj Nadzorcę Rampy.</small><span class="campaign-stage-bottom"><span class="campaign-stage-stars">☆☆☆</span><span>~ 1:30</span></span></button>
-                  <button type="button" class="campaign-stage-card is-locked" data-campaign-stage="port_17" disabled aria-disabled="true"><span class="campaign-stage-top"><span>02 / PORT</span><span class="campaign-stage-status">ZABLOKOWANY</span></span><strong>PORT KONTENEROWY 17</strong><small>Przebij się przez plac i pokonaj Dyrektora Widmo.</small><span class="campaign-stage-bottom"><span class="campaign-stage-stars">☆☆☆</span><span>~ 2:00</span></span></button>
-                  <button type="button" class="campaign-stage-card is-locked" data-campaign-stage="cold_zero" disabled aria-disabled="true"><span class="campaign-stage-top"><span>03 / -18°C</span><span class="campaign-stage-status">ZABLOKOWANY</span></span><strong>CHŁODNIA ZERO</strong><small>Przetrwaj mroźne strefy i pokonaj Bosmana Kraków.</small><span class="campaign-stage-bottom"><span class="campaign-stage-stars">☆☆☆</span><span>~ 2:30</span></span></button>
-                  <button type="button" class="campaign-stage-card is-locked" data-campaign-stage="night_sorting" disabled aria-disabled="true"><span class="campaign-stage-top"><span>04 / NOCNA ZMIANA</span><span class="campaign-stage-status">ZABLOKOWANY</span></span><strong>SORTOWNIA WIDMOWA</strong><small>Unikaj skanerów i pokonaj Nadzorcę Zero.</small><span class="campaign-stage-bottom"><span class="campaign-stage-stars">☆☆☆</span><span>~ 3:00</span></span></button>
-                  <button type="button" class="campaign-stage-card campaign-stage-final is-locked" data-campaign-stage="final_audit" disabled aria-disabled="true"><span class="campaign-stage-top"><span>05 / FINAŁ</span><span class="campaign-stage-status">ZABLOKOWANY</span></span><strong>AUDYT KOŃCOWY</strong><small>Najtrudniejsza próba i odznaka Mistrza Zmiany.</small><span class="campaign-stage-bottom"><span class="campaign-stage-stars">☆☆☆</span><span>~ 3:30</span></span></button>
+                  <button type="button" class="campaign-stage-card" data-campaign-stage="b4_intro"><span class="campaign-stage-icon" data-stage-icon="b4_intro" aria-hidden="true">📦</span><span class="campaign-stage-top"><span>01 / START</span><span class="campaign-stage-status">DOSTĘPNY</span></span><strong>MAGAZYN B4</strong><small>Przejmij główną aleję i pokonaj Nadzorcę Rampy.</small><span class="campaign-stage-bottom"><span class="campaign-stage-stars">☆☆☆</span><span>~ 1:30</span></span></button>
+                  <button type="button" class="campaign-stage-card is-locked" data-campaign-stage="port_17" disabled aria-disabled="true"><span class="campaign-stage-icon" data-stage-icon="port_17" aria-hidden="true">⚓</span><span class="campaign-stage-top"><span>02 / PORT</span><span class="campaign-stage-status">ZABLOKOWANY</span></span><strong>PORT KONTENEROWY 17</strong><small>Przebij się przez plac i pokonaj Dyrektora Widmo.</small><span class="campaign-stage-bottom"><span class="campaign-stage-stars">☆☆☆</span><span>~ 2:00</span></span></button>
+                  <button type="button" class="campaign-stage-card is-locked" data-campaign-stage="cold_zero" disabled aria-disabled="true"><span class="campaign-stage-icon" data-stage-icon="cold_zero" aria-hidden="true">🧊</span><span class="campaign-stage-top"><span>03 / -18°C</span><span class="campaign-stage-status">ZABLOKOWANY</span></span><strong>CHŁODNIA ZERO</strong><small>Przetrwaj mroźne strefy i pokonaj Bosmana Kraków.</small><span class="campaign-stage-bottom"><span class="campaign-stage-stars">☆☆☆</span><span>~ 2:30</span></span></button>
+                  <button type="button" class="campaign-stage-card is-locked" data-campaign-stage="night_sorting" disabled aria-disabled="true"><span class="campaign-stage-icon" data-stage-icon="night_sorting" aria-hidden="true">🌙</span><span class="campaign-stage-top"><span>04 / NOCNA ZMIANA</span><span class="campaign-stage-status">ZABLOKOWANY</span></span><strong>SORTOWNIA WIDMOWA</strong><small>Unikaj skanerów i pokonaj Nadzorcę Zero.</small><span class="campaign-stage-bottom"><span class="campaign-stage-stars">☆☆☆</span><span>~ 3:00</span></span></button>
+                  <button type="button" class="campaign-stage-card campaign-stage-final is-locked" data-campaign-stage="final_audit" disabled aria-disabled="true"><span class="campaign-stage-icon" data-stage-icon="final_audit" aria-hidden="true">🏆</span><span class="campaign-stage-top"><span>05 / FINAŁ</span><span class="campaign-stage-status">ZABLOKOWANY</span></span><strong>AUDYT KOŃCOWY</strong><small>Najtrudniejsza próba i odznaka Mistrza Zmiany.</small><span class="campaign-stage-bottom"><span class="campaign-stage-stars">☆☆☆</span><span>~ 3:30</span></span></button>
                 </div>
                 <div class="campaign-board-footer"><span>⭐ BOSS • ⭐⭐ ELIMINACJE • ⭐⭐⭐ CEL MISTRZOWSKI • ✦ ZLECENIE SPECJALNE</span><span>POSTĘP I REKORDY ZAPISUJĄ SIĘ NA URZĄDZENIU</span></div>
               </section>
