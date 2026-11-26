@@ -29,7 +29,7 @@ test('firearm catalogue has clearly differentiated cadence, ammunition, projecti
   assert.equal(new Set(definitions.map((entry) => entry.rangeMeters)).size, definitions.length, 'every firearm needs its own effective range');
   assert.equal(new Set(definitions.map((entry) => entry.reloadSeconds)).size, definitions.length, 'reload duration must be weapon-specific');
   assert.equal(new Set(definitions.map((entry) => entry.damage)).size, definitions.length, 'each weapon needs a distinct base hit value');
-  assert.ok(Math.min(...definitions.map((entry) => entry.fireIntervalSeconds)) >= 0.14, 'rapid-fire automatic weapons stay bounded within Crimsonland cadence');
+  assert.ok(Math.min(...definitions.map((entry) => entry.fireIntervalSeconds)) >= 0.22, 'even the rotary weapon must keep a readable Crimsonland firing cadence');
   assert.ok(definitions.every((entry) => entry.fireIntervalSeconds > 0 && entry.projectileSpeed > 0));
   assert.ok(definitions.every((entry) => entry.pellets >= 1 && entry.spreadRadians >= 0));
   assert.ok(definitions.some((entry) => entry.archetype === 'shotgun' && entry.pellets >= 6));
