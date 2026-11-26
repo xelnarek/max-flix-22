@@ -52,7 +52,7 @@ test('firearm catalogue has clearly differentiated cadence, ammunition, projecti
   });
   const reloadById = Object.fromEntries(definitions.map((entry) => [entry.id, entry.reloadSeconds]));
   assert.deepEqual(reloadById, {
-    starter_pistol: 2.20, smg_45: 2.80, assault_rifle: 2.80, shotgun_12g: 2.90, battle_rifle: 3.20,
+    starter_pistol: 2.20, smg_45: 2.80, assault_rifle: 2.65, shotgun_12g: 2.90, battle_rifle: 3.20,
     minigun: 4.40, rocket_launcher: 4.50, flamethrower: 3.40, plasma_rifle: 3.50, gauss_rifle: 4.00,
     ballistic_grenade_launcher: 4.60,
   });
