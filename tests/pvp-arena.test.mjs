@@ -702,7 +702,7 @@ test('all operators use the same shared starting firearm and deliberate primary-
   assert.equal(state.p2.firearmAmmoById[STARTING_SURVIVAL_FIREARM], SURVIVAL_FIREARM_DEFS[STARTING_SURVIVAL_FIREARM].magazineSize);
   const cooldowns = operators.map(id => getPvpOperatorAttackCooldown(id));
   assert.equal(new Set(cooldowns).size, 1, 'operator identity must not change primary weapon cadence');
-  assert.ok(cooldowns[0] >= 3.7 && cooldowns[0] <= 3.9, 'the slower shared service-pistol cadence must also apply in PvP');
+  assert.ok(cooldowns[0] >= 4.6 && cooldowns[0] <= 4.8, 'the deliberate service-pistol cadence must also apply in PvP');
   assert.equal(cooldowns[0], SURVIVAL_FIREARM_DEFS[STARTING_SURVIVAL_FIREARM].fireIntervalSeconds * PVP_FIREARM_COOLDOWN_MULTIPLIER);
   assert.equal(Object.keys(SURVIVAL_FIREARM_DEFS).length, 11);
 });
@@ -993,13 +993,13 @@ test('Piotr PvP ability applies its electrical damage and stun exactly once per 
   assert.equal(state.p1.abilityDamageDealt, 110);
 });
 
-test('PvP rapid-fire weapon drops apply balanced PvP cooldown overrides and damage scaling', async () => {
+test('PvP weapon drops preserve tactical cooldown differences and normalized damage scaling', async () => {
   const { getPvpFirearmAttackCooldown, stepPvpArena, createInitialPvpArenaState, resetPvpRound } = await import('../src/pvpArena.ts');
   const { SURVIVAL_FIREARM_DEFS } = await import('../src/survivalFirearms.ts');
 
-  assert.equal(getPvpFirearmAttackCooldown('smg_45'), 0.56);
-  assert.equal(getPvpFirearmAttackCooldown('minigun'), 0.42);
-  assert.equal(getPvpFirearmAttackCooldown('flamethrower'), 0.44);
+  assert.equal(getPvpFirearmAttackCooldown('smg_45'), 0.78);
+  assert.equal(getPvpFirearmAttackCooldown('minigun'), 0.58);
+  assert.equal(getPvpFirearmAttackCooldown('flamethrower'), 0.62);
 
   const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
   resetPvpRound(state);
@@ -1019,7 +1019,7 @@ test('PvP rapid-fire weapon drops apply balanced PvP cooldown overrides and dama
     moveX: 0, moveZ: 0, aimAngle: Math.PI / 2, isFiring: true,
   });
   assert.equal(state.p1.shotsFired, 1);
-  assert.ok(state.p1.attackCooldownTimer > 0.35 && state.p1.attackCooldownTimer <= 0.42);
+  assert.ok(state.p1.attackCooldownTimer > 0.50 && state.p1.attackCooldownTimer <= 0.58);
   assert.ok(state.projectiles.length >= 1);
   assert.ok(state.projectiles[0].damage < 50, 'minigun PvP damage per bullet must be scaled to avoid instant melts');
 });
