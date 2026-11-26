@@ -60,6 +60,12 @@ test('all firearms, survival weapons, and operators produce vivid tracer profile
   assert.equal(getFirearmTracerStyle('rocket', 0xef4444).effectKind, 'rocket-exhaust');
   assert.equal(getFirearmTracerStyle('flame', 0xfb923c).effectKind, 'flame-jet');
   assert.equal(getFirearmTracerStyle('grenade', 0xd4a24f).effectKind, 'smoke');
+  const pistolTracer = getFirearmTracerStyle('pistol', 0xcbd5e1);
+  const smgTracer = getFirearmTracerStyle('smg', 0x94a3b8);
+  const gaussTracer = getFirearmTracerStyle('gauss', 0x22d3ee);
+  assert.ok(pistolTracer.minLength > smgTracer.minLength * 1.5, 'pistol has a clean single-shot streak, SMG uses compact tracers');
+  assert.ok(gaussTracer.width > smgTracer.width * 3, 'Gauss discharge needs a heavier beam core');
+  assert.ok(gaussTracer.lifeSeconds > smgTracer.lifeSeconds * 3, 'Gauss charge trail should remain visible much longer');
 
   for (const [id, meta] of Object.entries(SURVIVAL_DAMAGE_WEAPONS)) {
     const style = getSurvivalWeaponTracerStyle(id, meta.color);
