@@ -30,9 +30,9 @@ A separate document explicitly named "Hub report" was not found in the available
 | 01 / Rozgrywka | Operatorzy | Pick one of five operators and inspect their profile |
 | 01 / Rozgrywka | Kampania | Stage selection, continue, stars, mastery objectives and rewards |
 | 01 / Rozgrywka | Arena PvP | Match type, manual-aim guidance, bot/online state and lobby |
-| 02 / Świat i BHP | Zagrożenia | Enemy catalogue, telegraphs and counterplay |
-| 02 / Świat i BHP | Uzbrojenie | Current ten primary firearms, ranges, damage, cadence and reload data |
-| 02 / Świat i BHP | Moduły BHP | Perks, passive modules, unlock/use descriptions |
+| 02 / Świat i BHP | Zagrożenia | 25 enemy archetypes, attack telegraphs, visual identifiers and counterplay; environmental hazards are listed separately |
+| 02 / Świat i BHP | Uzbrojenie | Current eleven primary firearms, ranges, damage, cadence, magazine and reload data |
+| 02 / Świat i BHP | Moduły BHP | 18 pickup modules, 12 passive upgrades, build synergies and exact effect descriptions |
 | 02 / Świat i BHP | Kodeks | Controls, weapons, rules, mechanics and field reference |
 | 03 / Postępy | Drzewko | Account-level talents and long-term development |
 | 03 / Postępy | Rangi | Account ranks, thresholds and bonuses |
@@ -129,7 +129,17 @@ Use thin borders, restrained depth, quiet gradients, readable contrast and consi
 - Do not rewrite game logic, progression schemas, save keys or Android packaging in a menu-only pass.
 - PvP online readiness is a runtime service state, not a decorative promise.
 
-## 9. Acceptance checklist
+## 9. Catalogue and data integrity
+
+- Bestiary contains one individually identified card for each of the 25 `EnemyType` values; no archetype is silently omitted or merged into a generic card.
+- Melee warning, reach and recovery values shown on cards must be read from the runtime telegraph profile, not maintained as a second balance table.
+- Environmental hazards are visually separated from enemies and are not counted as enemy archetypes.
+- Armory renders all eleven entries from `SURVIVAL_FIREARM_DEFS`; names, fallback icons, descriptions and numeric values come from the same definitions used by gameplay.
+- Perk catalogue renders all eighteen IDs from `AVAILABLE_PERKS`; every `DROP W GRZE` action uses the matching source ID.
+- Campaign stages and map cards retain their real IDs; map modifier labels match `SURVIVAL_MAPS` combat modifiers.
+- Operator portrait, identity and ability copy remain bound to the five `CHARACTERS` definitions.
+
+## 10. Acceptance checklist
 
 - [ ] Survival, Kampania and Arena PvP are visible together and retain current actions.
 - [ ] All twelve destinations remain present, including the current armory catalogue.
@@ -144,6 +154,6 @@ Use thin borders, restrained depth, quiet gradients, readable contrast and consi
 - [ ] Keyboard arrows follow current navigation orientation.
 - [ ] Existing game logic, progression and saved data remain unchanged.
 
-## 10. Validation status
+## 11. Validation status
 
 Regression tests cover stylesheet order, retained destinations, the single-scroll-owner contract, touch layout and orientation-aware keyboard navigation. A full Vite build, TypeScript lint and physical device visual pass still need to run in CI/project build environment; source-level tests do not substitute for those checks.
