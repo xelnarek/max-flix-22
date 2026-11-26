@@ -85,7 +85,7 @@ export const SURVIVAL_FIREARM_DEFS: Readonly<Record<SurvivalFirearmId, SurvivalF
   assault_rifle: {
     id: 'assault_rifle', name: 'Karabin szturmowy', shortName: 'KARABIN', icon: '🪖',
     color: 0x86a873, archetype: 'rifle', roleDescription: 'Karabin do kontrolowanych serii na średnim dystansie. Łączy zasięg, umiarkowany rozrzut i pojedynczy pocisk z wyraźniejszym uderzeniem niż SMG; trzydziestonabojowy magazynek wystarcza na kilka starć, ale przeładowanie wymaga wybrania bezpiecznego momentu.', rangeMeters: 38, fireIntervalSeconds: 0.55, magazineSize: 30,
-    reloadSeconds: 2.80, damage: 1.55, pellets: 1, spreadRadians: 0.036,
+    reloadSeconds: 2.65, damage: 1.55, pellets: 1, spreadRadians: 0.036,
     projectileSpeed: 38, projectileRadius: 0.078,
     pierce: 1, aoeRadius: 0, aoeDamageMultiplier: 0, igniteOnHit: false, dropWeight: 1,
   },
