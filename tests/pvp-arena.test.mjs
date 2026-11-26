@@ -1000,6 +1000,14 @@ test('PvP weapon drops preserve tactical cooldown differences and normalized dam
   assert.equal(getPvpFirearmAttackCooldown('smg_45'), 0.78);
   assert.equal(getPvpFirearmAttackCooldown('minigun'), 0.58);
   assert.equal(getPvpFirearmAttackCooldown('flamethrower'), 0.62);
+  assert.deepEqual(Object.fromEntries([
+    'smg_45', 'assault_rifle', 'shotgun_12g', 'battle_rifle', 'minigun',
+    'rocket_launcher', 'flamethrower', 'plasma_rifle', 'ballistic_grenade_launcher', 'gauss_rifle',
+  ].map((id) => [id, getPvpFirearmAttackCooldown(id)])), {
+    smg_45: 0.78, assault_rifle: 0.95, shotgun_12g: 2.85, battle_rifle: 2.85,
+    minigun: 0.58, rocket_launcher: 4.80, flamethrower: 0.62, plasma_rifle: 1.15,
+    ballistic_grenade_launcher: 4.20, gauss_rifle: 5.00,
+  });
 
   const state = createInitialPvpArenaState('marcin', 'P1', 'grzesiek', 'P2');
   resetPvpRound(state);
