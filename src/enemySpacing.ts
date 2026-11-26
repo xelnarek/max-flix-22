@@ -312,6 +312,7 @@ const ENEMY_BODY_RADII: Readonly<Record<string, number>> = Object.freeze({
   pan_roman: 0.65, serwisant: 0.58, bosman_krakow: 0.86,
   zombie_pracownik: 0.64, pomazaniec: 0.78, sebix_m: 0.74,
   mutant_gamma_forklift: 1.08, radioactive_pip: 0.66, cyber_salesman: 0.70,
+  wkurzona_zona: 0.70, kluska_piekielna: 0.56,
 });
 
 export const MAX_ENEMY_BODY_RADIUS = 1.45;

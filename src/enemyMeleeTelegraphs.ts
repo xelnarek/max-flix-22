@@ -54,6 +54,8 @@ const PROFILES: Readonly<Partial<Record<EnemyType, EnemyMeleeTelegraphProfile>>>
     windupSeconds: 0.54, reachMeters: 0.82, laneWidth: 1.35, color: 0xa3e635, cooldownSeconds: 1.60, recoverySeconds: 0.26,
     warningText: 'PIP WYKONUJE SKAŻONY ZAMACH — ODSKOCZ!', missText: 'UNIK! PIP NIE DOSIĘGNĄŁ!',
   },
+  wkurzona_zona: { windupSeconds:0.72, reachMeters:0.98, laneWidth:1.55, color:0xef4444, cooldownSeconds:2.15, recoverySeconds:0.42, warningText:'WKURZONA ŻONA PODNOSI PATELNIĘ — ODSKOCZ!', missText:'UNIK! PATELNIA POSZŁA W POWIETRZE!' },
+  kluska_piekielna: { windupSeconds:0.34, reachMeters:0.70, laneWidth:1.12, color:0xf97316, cooldownSeconds:1.32, recoverySeconds:0.18, warningText:'KLUSKA RZUCA SIĘ DO GRYZIENIA — ZRÓB UNIK!', missText:'UNIK! KLUSKA KŁAPNĘŁA W POWIETRZE!' },
 });
 
 export function getEnemyMeleeTelegraphProfile(

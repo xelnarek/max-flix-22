@@ -23,12 +23,12 @@ const BOSS_TYPES: ReadonlySet<EnemyType> = new Set([
 
 const ELITE_TYPES: ReadonlySet<EnemyType> = new Set([
   'elite_walczak_guard', 'sebix_m', 'mutant_gamma_forklift',
-  'radioactive_pip', 'cyber_salesman', 'pomazaniec',
+  'radioactive_pip', 'cyber_salesman', 'pomazaniec', 'wkurzona_zona',
 ]);
 
 const HEAVY_TYPES: ReadonlySet<EnemyType> = new Set([
   'sztaplar_szalony', 'monter', 'inspector', 'serwisant',
-  'pan_roman', 'piorun_dron', 'agv_robot', 'forklift',
+  'pan_roman', 'piorun_dron', 'agv_robot', 'forklift', 'kluska_piekielna',
 ]);
 
 export function getSurvivalXpDropProfile(type: EnemyType): SurvivalXpDropProfile {

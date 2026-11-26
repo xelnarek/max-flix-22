@@ -91,9 +91,8 @@ export interface EnemyVisualProfile {
 
 /**
  * One complete visual contract for every EnemyType.
- * All 19 humanoid/creature archetypes use bundled animated CC0 rigs. Only the
- * purpose-built forklift, AGV, patrol drone and secret bicycle rider retain their
- * dedicated non-humanoid models. Spawn names, AI and combat balance stay unchanged.
+ * The 19 original humanoid/creature archetypes use bundled animated CC0 rigs;
+ * forklift, AGV, patrol drone, secret rider and two custom enemies retain bespoke 3D models.
  */
 export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfile>> = Object.freeze({
   customer: {
@@ -297,12 +296,10 @@ export const ENEMY_VISUAL_PROFILES: Readonly<Record<EnemyType, EnemyVisualProfil
     visualBrief: 'Skażony inspektor PIP z toksycznymi oczami, żółto-czarnymi oznaczeniami i zieloną aurą',
   },
   cyber_salesman: {
-    gaitStyle: 'robotic',
-    fallbackFactory: 'createCyberSalesmanModel',
-    gobkitModel: 'androidcommander',
-    category: 'machine',
-    attackStyle: 'ranged',
-    targetHeight: 1.78,
+    gaitStyle: 'robotic', fallbackFactory: 'createCyberSalesmanModel', gobkitModel: 'androidcommander',
+    category: 'machine', attackStyle: 'ranged', targetHeight: 1.78,
     visualBrief: 'Cyber-handlowiec: android z neonowym wizjerem, ekranem ofertowym i mechanicznymi kończynami',
   },
+  wkurzona_zona: { gaitStyle:'aggressive', fallbackFactory:'createWkurzonaZonaModel', category:'warehouse-caricature', attackStyle:'heavy-melee', targetHeight:1.78, visualBrief:'wkUrzona zOna: ciemne spięte włosy, niebieski sweter, bordowe spodnie, patelnia i odkurzacz na plecach' },
+  kluska_piekielna: { gaitStyle:'stalking', fallbackFactory:'createKluskaHellhoundModel', category:'boss-creature', attackStyle:'heavy-melee', targetHeight:0.98, visualBrief:'Kluska — pies z piekła rodem: ciemny brązowo-czarny grzbiet, jasnobrązowy pysk i łapy, opadające uszy' },
 });

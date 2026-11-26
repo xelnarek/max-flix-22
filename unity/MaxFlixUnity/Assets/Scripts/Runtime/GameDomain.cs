@@ -126,7 +126,9 @@ namespace MaxFlix.Unity.Runtime
         Sebix = 19,
         MutantGammaForklift = 20,
         RadioactivePip = 21,
-        CyberSalesman = 22
+        CyberSalesman = 22,
+        WkurzonaZona = 23,
+        KluskaPiekielna = 24
     }
 
     [Serializable]

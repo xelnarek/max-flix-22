@@ -38,14 +38,14 @@ test('non-human enemy threats use dedicated rigged GLB variants from the visual 
     assert.equal(GOBKIT_MODEL_FILES[model], model + '.glb', 'missing enemy GLB: ' + model);
   }
 });
-test('all humanoid and creature enemies use bundled animated GLB rigs; only four non-humanoid archetypes stay bespoke', async () => {
+test('all humanoid and creature enemies use bundled animated GLB rigs; non-humanoid and new custom characters stay bespoke', async () => {
   const [profiles, assets, downloader] = await Promise.all([
     import('../src/enemyVisualProfiles.ts'),
     import('../src/gobkitAssets.ts'),
     read('../scripts/fetch-gobkit-assets.mjs'),
   ]);
-  const bespoke = new Set(['forklift', 'agv_robot', 'piorun_dron', 'pomazaniec']);
-  assert.equal(Object.keys(profiles.ENEMY_VISUAL_PROFILES).length, 23);
+  const bespoke = new Set(['forklift', 'agv_robot', 'piorun_dron', 'pomazaniec', 'wkurzona_zona', 'kluska_piekielna']);
+  assert.equal(Object.keys(profiles.ENEMY_VISUAL_PROFILES).length, 25);
   const mapped = Object.entries(profiles.ENEMY_VISUAL_PROFILES).filter(([type]) => !bespoke.has(type));
   assert.equal(mapped.length, 19);
   for (const [type, profile] of Object.entries(profiles.ENEMY_VISUAL_PROFILES)) {
@@ -72,7 +72,7 @@ test('the visual registry explicitly covers every declared enemy type and has a 
   const declared = [...typesSource.slice(unionStart, unionEnd).matchAll(/'([^']+)'/g)].map((match) => match[1]);
   const configured = Object.keys(profiles.ENEMY_VISUAL_PROFILES).sort();
   assert.deepEqual(configured, [...declared].sort());
-  assert.equal(configured.length, 23);
+  assert.equal(configured.length, 25);
   for (const [type, profile] of Object.entries(profiles.ENEMY_VISUAL_PROFILES)) {
     assert.ok(profile.visualBrief.length >= 24, 'visual brief missing for ' + type);
     assert.ok(profile.fallbackFactory.startsWith('create'), 'fallback model factory missing for ' + type);
@@ -653,7 +653,7 @@ test('every mapped enemy requests its full-detail model without a distance gate'
   const [game, profiles] = await Promise.all([
     read('../src/game.ts'), import('../src/enemyVisualProfiles.ts')
   ]);
-  assert.equal(Object.keys(profiles.ENEMY_VISUAL_PROFILES).length, 23);
+  assert.equal(Object.keys(profiles.ENEMY_VISUAL_PROFILES).length, 25);
   assert.match(game, /Every mapped enemy uses its single full-detail rig, independent of distance/);
   assert.match(game, /if \(!this\.requestedGobkitEnemies\.has\(enemy\)\) \{[\s\S]*?void this\.attachGobkitEnemyModel\(enemy, modelId\)/);
   assert.doesNotMatch(game, /shouldLoadEnemyFullRig|detailRadius = this\.isHandheldViewport/);

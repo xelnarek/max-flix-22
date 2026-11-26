@@ -109,17 +109,17 @@ test('Unity character damage uses the source rounding bounds and fractional armo
 });
 
 
-test('Unity enemy catalog preserves all 23 legacy IDs and the Survival unlock roster', async () => {
+test('Unity enemy catalog preserves all 23 legacy IDs plus both new enemies and the Survival unlock roster', async () => {
   const catalog = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/EnemyArchetypeCatalog.cs');
   const domain = await read('../unity/MaxFlixUnity/Assets/Scripts/Runtime/GameDomain.cs');
   const enemyKinds = domain.slice(domain.indexOf('public enum EnemyKind'), domain.indexOf('[Serializable]', domain.indexOf('public enum EnemyKind')));
-  assert.equal((catalog.match(/Make\(EnemyKind\./g) || []).length, 23);
+  assert.equal((catalog.match(/Make\(EnemyKind\./g) || []).length, 25);
   for (const id of [
     'Customer', 'Walczak', 'Forklift', 'Architect', 'Inspector', 'AgvRobot',
     'Handlowiec', 'Monter', 'PiorunDrone', 'EliteWalczakGuard', 'Kurier',
     'ItalianVendor', 'CrazyStacker', 'KingLeto', 'PanRoman', 'Serwisant',
     'BosmanKrakow', 'ZombieWorker', 'Pomazaniec', 'Sebix',
-    'MutantGammaForklift', 'RadioactivePip', 'CyberSalesman'
+    'MutantGammaForklift', 'RadioactivePip', 'CyberSalesman', 'WkurzonaZona', 'KluskaPiekielna'
   ]) {
     assert.match(enemyKinds, new RegExp(id));
     assert.match(catalog, new RegExp('EnemyKind\.' + id));
@@ -131,7 +131,7 @@ test('Unity enemy catalog preserves all 23 legacy IDs and the Survival unlock ro
   assert.match(catalog, /EnemyKind\.ZombieWorker, EnemyKind\.Kurier, EnemyKind\.CrazyStacker/);
   const roster = catalog.match(/private static readonly EnemyKind\[\] SurvivalRoster\s*=\s*\{([\s\S]*?)\};/);
   assert.ok(roster, 'missing Survival roster block');
-  assert.equal((roster[1].match(/EnemyKind\./g) || []).length, 17);
+  assert.equal((roster[1].match(/EnemyKind\./g) || []).length, 19);
   for (const sourceUnlock of ['MinimumSurvivalWave = minWave', 'MinimumSurvivalElapsedSeconds = minElapsed', 'SurvivalSpawnWeight = spawnWeight']) {
     assert.ok(catalog.includes(sourceUnlock));
   }

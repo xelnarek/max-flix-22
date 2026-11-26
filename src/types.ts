@@ -83,7 +83,9 @@ export type EnemyType =
   | 'sebix_m'
   | 'mutant_gamma_forklift'
   | 'radioactive_pip'
-  | 'cyber_salesman';
+  | 'cyber_salesman'
+  | 'wkurzona_zona'
+  | 'kluska_piekielna';
 
 export interface EnemyItem {
   id: string;
@@ -116,6 +118,12 @@ export interface EnemyItem {
   armR?: any;
   head?: any;
   specialActionTimer?: number;
+  vacuumWindupTimer?: number;
+  barkWindupTimer?: number;
+  dogChargeWindupTimer?: number;
+  dogChargeCooldownTimer?: number;
+  vacuumCooldownTimer?: number;
+  barkCooldownTimer?: number;
   bossPhase?: number;
   chargeDir?: number;
   chargeTimer?: number;
