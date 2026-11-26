@@ -22,14 +22,14 @@ test('Bestiariusz ma osobną kartę, ikonę, opis i kontrę dla każdego typu pr
   const unionStart = typesSource.indexOf('export type EnemyType =');
   const unionEnd = typesSource.indexOf(';', unionStart);
   const sourceIds = [...typesSource.slice(unionStart, unionEnd).matchAll(/'([^']+)'/g)].map((m) => m[1]);
-  const cards = [...html.matchAll(/<article class="enemy-guide-card[^"]*" data-enemy-type="([^"]+)">([\\s\\S]*?)<\\/article>/g)];
+  const cards = [...html.matchAll(/<article class="enemy-guide-card[^"]*" data-enemy-type="([^"]+)">([\s\S]*?)<\/article>/g)];
   const cardIds = cards.map((m) => m[1]);
 
   assert.equal(sourceIds.length, 25);
   assert.equal(cards.length, 25);
   assert.equal(new Set(cardIds).size, 25, 'enemy cards must not duplicate an archetype');
   assert.deepEqual(sort(cardIds), sort(sourceIds));
-  assert.match(html, /<span>25<\\/span> TYPÓW/);
+  assert.match(html, /<span>25<\/span> TYPÓW/);
 
   for (const [, id, card] of cards) {
     assert.match(card, /enemy-guide-badge/);
@@ -43,8 +43,8 @@ test('Bestiariusz ma osobną kartę, ikonę, opis i kontrę dla każdego typu pr
     const card = cards.find((m) => m[1] === id)?.[2] || '';
     assert.ok(card.includes('enemy-guide-card--' + (id === 'wkurzona_zona' ? 'zona' : 'kluska')));
   }
-  assert.match(html, /data-enemy-type="wkurzona_zona"[\\s\\S]*?Patelniowa Egzekutorka/);
-  assert.match(html, /data-enemy-type="kluska_piekielna"[\\s\\S]*?Tropiciel B4/);
+  assert.match(html, /data-enemy-type="wkurzona_zona"[\s\S]*?Patelniowa Egzekutorka/);
+  assert.match(html, /data-enemy-type="kluska_piekielna"[\s\S]*?Tropiciel B4/);
   assert.match(html, /enemy-hazards-strip/);
   assert.match(html, /Gilotyna CNC/);
   assert.match(html, /Prasa 500T/);
@@ -57,7 +57,7 @@ test('Bestiariusz ma osobną kartę, ikonę, opis i kontrę dla każdego typu pr
 
 test('parametry sygnału, zasięgu i regeneracji w Bestiariuszu są zgodne z telegraphami walki', async () => {
   const html = await read('../index.html');
-  const cards = new Map([...html.matchAll(/<article class="enemy-guide-card[^"]*" data-enemy-type="([^"]+)">([\\s\\S]*?)<\\/article>/g)].map((m) => [m[1], m[2]]));
+  const cards = new Map([...html.matchAll(/<article class="enemy-guide-card[^"]*" data-enemy-type="([^"]+)">([\s\S]*?)<\/article>/g)].map((m) => [m[1], m[2]]));
   let measured = 0;
   for (const type of Object.keys((await import('../src/enemyVisualProfiles.ts')).ENEMY_VISUAL_PROFILES)) {
     const profile = getEnemyMeleeTelegraphProfile(type);
@@ -129,7 +129,7 @@ test('kampania, mapy, operatorzy i PvP pokazują komplet danych źródłowych', 
   const mapEnd = html.indexOf('<div id="tab-pvp"', mapStart);
   const mapSection = html.slice(mapStart, mapEnd);
   const stageIds = [...mapSection.matchAll(/data-campaign-stage="([^"]+)"/g)].map((m) => m[1]);
-  const mapCards = [...mapSection.matchAll(/<article class="survival-map-directory-card ([^"]+)">([\\s\\S]*?)<\\/article>/g)];
+  const mapCards = [...mapSection.matchAll(/<article class="survival-map-directory-card ([^"]+)">([\s\S]*?)<\/article>/g)];
 
   assert.equal(CAMPAIGN_STAGES.length, 5);
   assert.deepEqual(sort(stageIds), sort(CAMPAIGN_STAGES.map((stage) => stage.id)));
