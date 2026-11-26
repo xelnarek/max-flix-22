@@ -16,10 +16,10 @@ test('Bestiariusz zawiera obie nowe karty, właściwe ikony i komplet opisów', 
   assert.match(html, /<span>22<\/span> POZYCJE/);
   assert.match(html, /enemy-guide-card--kluska/);
   assert.match(html, /enemy-guide-card--zona/);
-  assert.match(html, /aria-label="Pies z płomieniem">🐕‍🔥/);
+  assert.match(html, /aria-label="Kluska, piekielny pies">🐕‍🔥/);
   assert.match(html, /aria-label="Patelnia Wściekłej Żony">🍳/);
-  assert.match(html, /Kluska Piekielna — Tropiciel B4/);
-  assert.match(html, /Wściekła Żona — Patelniowa Egzekutorka/);
+  assert.match(html, /Kluska Piekielna <span class="enemy-guide-title-sub">Tropiciel B4<\/span>/);
+  assert.match(html, /Wściekła Żona <span class="enemy-guide-title-sub">Patelniowa Egzekutorka<\/span>/);
   assert.match(html, /atakuje pyskiem/);
   assert.match(html, /0,34 s/);
   assert.match(html, /0,18 s/);
