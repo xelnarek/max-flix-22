@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { AVAILABLE_PERKS, type EnemyType } from '../src/types.ts';
+import { AVAILABLE_PERKS } from '../src/types.ts';
 import { SURVIVAL_FIREARM_DEFS } from '../src/survivalFirearms.ts';
 import { getEnemyMeleeTelegraphProfile } from '../src/enemyMeleeTelegraphs.ts';
 import { CHARACTERS } from '../src/characters.ts';
@@ -59,7 +59,7 @@ test('parametry sygnału, zasięgu i regeneracji w Bestiariuszu są zgodne z tel
   const html = await read('../index.html');
   const cards = new Map([...html.matchAll(/<article class="enemy-guide-card[^"]*" data-enemy-type="([^"]+)">([\\s\\S]*?)<\\/article>/g)].map((m) => [m[1], m[2]]));
   let measured = 0;
-  for (const type of Object.keys((await import('../src/enemyVisualProfiles.ts')).ENEMY_VISUAL_PROFILES) as EnemyType[]) {
+  for (const type of Object.keys((await import('../src/enemyVisualProfiles.ts')).ENEMY_VISUAL_PROFILES)) {
     const profile = getEnemyMeleeTelegraphProfile(type);
     if (!profile) continue;
     measured += 1;
