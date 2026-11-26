@@ -597,3 +597,105 @@
     animation: none !important;
   }
 }
+
+/* Field manual mirrors the same 25 enemy IDs and 18 module definitions. */
+#title-screen #tab-field-guide .field-guide-card.enemy {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  min-width: 0;
+  border-color: rgba(151, 173, 187, .17) !important;
+  background: linear-gradient(145deg, rgba(21, 32, 42, .93), rgba(9, 16, 23, .98)) !important;
+}
+#title-screen #tab-field-guide .field-guide-card.enemy.boss {
+  border-color: rgba(240, 113, 120, .30) !important;
+  background: linear-gradient(145deg, rgba(66, 34, 41, .62), rgba(14, 18, 25, .98)) !important;
+}
+#title-screen #tab-field-guide .field-guide-card.enemy .field-guide-icon,
+#title-screen #tab-field-guide .field-guide-card.perk .field-guide-icon {
+  display: grid !important;
+  place-items: center !important;
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  min-height: 38px !important;
+  margin: 0 !important;
+  border: 1px solid rgba(170, 192, 205, .18) !important;
+  border-radius: 11px !important;
+  background: rgba(5, 12, 19, .52) !important;
+  font-size: 21px !important;
+  line-height: 1 !important;
+}
+#title-screen #tab-field-guide .field-guide-card.enemy.boss .field-guide-icon {
+  border-color: rgba(251, 113, 133, .25) !important;
+  background: rgba(83, 22, 39, .25) !important;
+}
+#title-screen #tab-field-guide .field-guide-card.enemy h4,
+#title-screen #tab-field-guide .field-guide-card.perk h4 {
+  margin: 0 !important;
+  color: #f0f4f7 !important;
+  font: 900 10px/1.3 "Space Grotesk", sans-serif !important;
+  letter-spacing: -.01em;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+#title-screen #tab-field-guide .field-guide-role {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px 6px;
+  border: 1px solid rgba(151, 173, 187, .15);
+  border-radius: 5px;
+  background: rgba(3, 9, 15, .4);
+  color: #9eb4c2 !important;
+  font: 800 7px/1.2 "JetBrains Mono", monospace !important;
+  letter-spacing: .06em;
+  overflow-wrap: anywhere;
+}
+#title-screen #tab-field-guide .field-guide-card.enemy p,
+#title-screen #tab-field-guide .field-guide-card.perk p {
+  margin: 0 !important;
+  color: #bac7d0 !important;
+  font: 500 9px/1.5 "Plus Jakarta Sans", sans-serif !important;
+}
+#title-screen #tab-field-guide .field-guide-counter {
+  display: block;
+  margin-top: auto;
+  padding: 6px 7px;
+  border: 1px solid rgba(197, 173, 123, .14);
+  border-left: 2px solid rgba(197, 173, 123, .55);
+  border-radius: 7px;
+  background: rgba(3, 8, 14, .32);
+  color: #c8ba9b !important;
+  font: 500 8px/1.4 "Plus Jakarta Sans", sans-serif !important;
+}
+#title-screen #tab-field-guide .field-guide-counter strong {
+  color: #e3c995 !important;
+  font: 900 7px/1.3 "JetBrains Mono", monospace !important;
+  letter-spacing: .07em;
+}
+#title-screen #tab-field-guide .field-guide-card.perk {
+  border-color: rgba(197, 173, 123, .16) !important;
+  background: linear-gradient(145deg, rgba(31, 35, 32, .94), rgba(9, 16, 18, .98)) !important;
+}
+#title-screen #tab-field-guide .field-guide-section-head h3 {
+  text-wrap: balance;
+}
+@media (max-width: 640px) {
+  #title-screen #tab-field-guide .field-guide-card-grid.three-col {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+  }
+  #title-screen #tab-field-guide .field-guide-card.enemy,
+  #title-screen #tab-field-guide .field-guide-card.perk {
+    padding: 9px !important;
+    gap: 6px !important;
+  }
+}
+@media (max-width: 380px) {
+  #title-screen #tab-field-guide .field-guide-card-grid.three-col,
+  #title-screen #tab-field-guide .field-guide-card-grid.two-col {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
